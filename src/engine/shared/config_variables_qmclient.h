@@ -192,11 +192,6 @@ MACRO_CONFIG_INT(QmWaterHammerHighlight, qm_water_hammer_highlight, 1, 0, 1, CFG
 // QmVulkan 扩展：SDF 常驻，不再提供关闭 SDF/增强管线的配置。
 MACRO_CONFIG_INT(QmEnhancedProceduralRing, qm_enhanced_procedural_ring, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use procedural ring pipeline")
 
-// Report / 举报
-MACRO_CONFIG_STR(QmReportEndpoint, qm_report_endpoint, 128, "http://124.222.146.111:8790", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Report service URL")
-MACRO_CONFIG_STR(QmReportAppId, qm_report_app_id, 128, "desktop", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Report service App ID")
-MACRO_CONFIG_STR(QmReportSecret, qm_report_secret, 128, "SsF-7wLdC9dO-RCb5sGieLII9gVW0v5lPpiK6zitUNo", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Report service signing key")
-
 // UI / 界面
 MACRO_CONFIG_INT(QmGaussianBlur, qm_gaussian_blur, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable backdrop blur for translucent interface and selected HUD backgrounds")
 MACRO_CONFIG_INT(QmBlurMode, qm_blur_mode, 2, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Backdrop blur algorithm: 0=Gaussian, 1=Kawase, 2=Dual Kawase")
@@ -315,7 +310,6 @@ MACRO_CONFIG_INT(QmEntityOverlayTeleCheckpointAlpha, qm_entity_overlay_tele_chec
 MACRO_CONFIG_INT(QmEntityOverlaySwitchAlpha, qm_entity_overlay_switch_alpha, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Switch tile overlay alpha (0-100)")
 
 // Q1menG Client Recognition / Q1menG客户端识别
-MACRO_CONFIG_INT(QmClientMarkTrail, qm_client_mark_trail, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Remote particles: sync and render other players via central server (requires both local+remote enabled)")
 MACRO_CONFIG_INT(QmClientShowBadge, qm_client_show_badge, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show Qm badge: identify via central server and mark QmClient users on nameplate/scoreboard")
 
 // Fast Input / 快速输入
@@ -594,6 +588,8 @@ MACRO_CONFIG_INT(QmDemoShowStrongWeak, qm_demo_show_strong_weak, 0, 0, 2, CFGFLA
 MACRO_CONFIG_INT(QmDemoStrongWeakScope, qm_demo_strong_weak_scope, 4, 0, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Demo hook strength scope (0=Own 1=Others 2=Strong 3=Weak 4=All)")
 MACRO_CONFIG_INT(QmDemoShowHud, qm_demo_show_hud, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show in-game HUD in demo preview and video")
 MACRO_CONFIG_INT(QmDemoShowChat, qm_demo_show_chat, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show chat in demo preview and video")
+// 仅渲染 demo：导出时隐藏 HUD、聊天、旁观信息与键鼠/钩索提示，但仍允许切视角和调整速度。
+MACRO_CONFIG_INT(QmVideoRenderDemoOnly, qm_video_render_demo_only, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Render demo content only during video export (hide HUD, chat and spectator overlays)")
 MACRO_CONFIG_INT(QmNameplateTextDemoMode, qm_nameplate_text_demo_mode, 1, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Nameplate text effects demo mode (0=Off 1=Smart 2=Manual target 3=Manual scope)")
 MACRO_CONFIG_INT(QmNameplateTextDemoTarget, qm_nameplate_text_demo_target, -1, -1, 63, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Nameplate text effects demo manual target client ID (-1=None)")
 MACRO_CONFIG_INT(QmNameplateClanOffsetX, qm_nameplate_clan_offset_x, 0, -300, 300, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Name plate clan line X offset")
@@ -751,9 +747,6 @@ MACRO_CONFIG_INT(QmDummySkinQueueLength, qm_dummy_skin_queue_length, 20, 0, 1024
 MACRO_CONFIG_INT(QmDummySkinQueueIndex, qm_dummy_skin_queue_index, 0, 0, 1024, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dummy skin queue current position")
 MACRO_CONFIG_INT(QmDummySkinQueueRotateMap, qm_dummy_skin_queue_rotate_map, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-fetch all players' skins for dummy rotation queue")
 MACRO_CONFIG_INT(QmDummySkinQueueRandomJoin, qm_dummy_skin_queue_random_join, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Start dummy skin queue from a random position when entering a map")
-
-// Foot Particles - 粒子效果
-MACRO_CONFIG_INT(QmFootParticles, qm_foot_particles, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Local particles: show particles behind own Tee (e.g. freeze snow)")
 
 // Settings performance - 性能
 MACRO_CONFIG_INT(QmSettingsPrewarm, qm_settings_prewarm, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pre-warm settings page on startup and menu idle")

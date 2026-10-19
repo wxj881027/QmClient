@@ -10,10 +10,13 @@
 #include <engine/keys.h>
 #include <engine/shared/config.h>
 
+#include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiTokens.h>
 
+#include <algorithm>
 #include <cmath>
 
 CScrollRegion::CScrollRegion()
@@ -29,6 +32,8 @@ void CScrollRegion::Reset()
 	m_ScrollSpeedMultiplier = 1.0f;
 	m_WheelConsumedThisFrame = false;
 	m_ClipRect = m_RailRect = m_LastAddedRect = CUIRect{0.0f, 0.0f, 0.0f, 0.0f};
+	m_ScrollbarReserveWidth = 0.0f;
+	m_ScrollbarReserveInitialized = false;
 	m_Params = CScrollRegionParams();
 }
 
@@ -258,10 +263,41 @@ CUIRect CScrollRegion::SplitContentArea()
 {
 	CUIRect ScrollbarBg;
 	const bool ReserveScrollbarSpace = QmScrollRegionShouldReserveScrollbarSpace(m_Params.m_ScrollbarAlwaysReserved, ScrollbarShown());
+	float ReserveWidth = ReserveScrollbarSpace ? m_Params.m_ScrollbarThickness : 0.0f;
+	// 占位宽度和内容裁剪使用同一条动画轨道，滚动条出现/消失时卡片宽度连续变化。
+	if(m_Params.m_AnimateScrollbarReserve)
+	{
+		auto *pAnimRuntime = Ui()->QmAnimationRuntime();
+		const uint64_t NodeKey = BuildUiAnimNodeKey(MakeUiScopeHash("scroll_region_reserve"), reinterpret_cast<uint64_t>(this));
+		if(pAnimRuntime == nullptr || g_Config.m_QmUiMotionLevel == 0 || Ui()->AnimationsBlocked())
+		{
+			if(pAnimRuntime != nullptr)
+				pAnimRuntime->SetValue(NodeKey, EUiAnimProperty::WIDTH, ReserveWidth);
+			m_ScrollbarReserveInitialized = true;
+		}
+		else if(!m_ScrollbarReserveInitialized)
+		{
+			// 首次布局直接落在目标宽度，避免页面打开时从无滚动条位置飞入。
+			pAnimRuntime->SetValue(NodeKey, EUiAnimProperty::WIDTH, ReserveWidth);
+			m_ScrollbarReserveInitialized = true;
+		}
+		else
+		{
+			ReserveWidth = ResolveUiAnimValue(*pAnimRuntime, NodeKey, EUiAnimProperty::WIDTH, ReserveWidth, ui_token::motion::HOVER_FADE.m_DurationSec, ui_token::motion::HOVER_FADE.m_Easing);
+		}
+		ReserveWidth = std::clamp(ReserveWidth, 0.0f, m_Params.m_ScrollbarThickness);
+	}
+	m_ScrollbarReserveWidth = ReserveWidth;
+
 	if(m_Params.m_ScrollHorizontal)
-		m_ClipRect.HSplitBottom(m_Params.m_ScrollbarThickness, ReserveScrollbarSpace ? &m_ClipRect : nullptr, &ScrollbarBg);
+		m_ClipRect.HSplitBottom(ReserveWidth, &m_ClipRect, &ScrollbarBg);
 	else
-		m_ClipRect.VSplitRight(m_Params.m_ScrollbarThickness, ReserveScrollbarSpace ? &m_ClipRect : nullptr, &ScrollbarBg);
+		m_ClipRect.VSplitRight(ReserveWidth, &m_ClipRect, &ScrollbarBg);
+	if(ScrollbarBg.w <= 0.0f || ScrollbarBg.h <= 0.0f)
+	{
+		m_RailRect = CUIRect{0.0f, 0.0f, 0.0f, 0.0f};
+		return ScrollbarBg;
+	}
 	if(m_Params.m_ScrollbarNoOuterMargin)
 	{
 		if(m_Params.m_ScrollHorizontal)
@@ -279,6 +315,8 @@ CUIRect CScrollRegion::SplitContentArea()
 	{
 		ScrollbarBg.Margin(m_Params.m_ScrollbarMargin, &m_RailRect);
 	}
+	m_RailRect.w = std::max(0.0f, m_RailRect.w);
+	m_RailRect.h = std::max(0.0f, m_RailRect.h);
 
 	return ScrollbarBg;
 }
@@ -341,9 +379,9 @@ CUIRect CScrollRegion::WheelHotRect() const
 	if(ScrollbarShown())
 	{
 		if(m_Params.m_ScrollHorizontal)
-			RegionRect.h += m_Params.m_ScrollbarThickness;
+			RegionRect.h += m_ScrollbarReserveWidth;
 		else
-			RegionRect.w += m_Params.m_ScrollbarThickness;
+			RegionRect.w += m_ScrollbarReserveWidth;
 	}
 	return RegionRect;
 }

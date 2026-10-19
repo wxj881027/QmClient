@@ -3055,6 +3055,22 @@ turkish = "Bind movement, jump, hook, and fire actions"
 polish = "Bind movement, jump, hook, and fire actions"
 
 [[message]]
+key = "Bind overview"
+[message.translations]
+simplified_chinese = "绑定一览"
+traditional_chinese = "綁定一覽"
+japanese = "キー割り当て一覧"
+korean = "키 지정 개요"
+russian = "Обзор привязок клавиш"
+german = "Belegungsübersicht"
+spanish = "Resumen de asignaciones"
+french = "Aperçu des raccourcis"
+brazilian_portuguese = "Visão geral dos atalhos"
+portuguese = "Visão geral dos atalhos"
+turkish = "Tuş ataması özeti"
+polish = "Przegląd przypisań klawiszy"
+
+[[message]]
 key = "Bind scoreboard, emote, and console actions"
 [message.translations]
 simplified_chinese = "绑定计分板、表情和控制台操作"
@@ -3213,6 +3229,22 @@ brazilian_portuguese = "Quicar"
 portuguese = "Ressalto"
 turkish = "Sekme"
 polish = "Odbicie"
+
+[[message]]
+key = "Browse all key bindings grouped by function"
+[message.translations]
+simplified_chinese = "按功能分组查看所有键位绑定"
+traditional_chinese = "按功能分組查看所有鍵位綁定"
+japanese = "機能ごとにすべてのキー割り当てを表示"
+korean = "기능별로 그룹화된 모든 키 지정 보기"
+russian = "Просмотр всех привязок клавиш, сгруппированных по функциям"
+german = "Alle Tastaturbelegungen nach Funktion gruppiert anzeigen"
+spanish = "Ver todas las asignaciones de teclas agrupadas por función"
+french = "Afficher tous les raccourcis regroupés par fonction"
+brazilian_portuguese = "Ver todos os atalhos agrupados por função"
+portuguese = "Ver todos os atalhos agrupados por função"
+turkish = "Tüm tuş atamalarını işleve göre gruplandırılmış olarak görüntüle"
+polish = "Przeglądaj wszystkie przypisania klawiszy pogrupowane według funkcji"
 
 [[message]]
 key = "Bound functions"
@@ -5581,6 +5613,22 @@ brazilian_portuguese = "Controlado pelo modo Zen"
 portuguese = "Controlado pelo modo Zen"
 turkish = "Zen modu tarafından yönetiliyor"
 polish = "Kontrolowane przez tryb Zen"
+
+[[message]]
+key = "Copy all"
+[message.translations]
+simplified_chinese = "复制全部"
+traditional_chinese = "複製全部"
+japanese = "すべてコピー"
+korean = "모두 복사"
+russian = "Копировать все"
+german = "Alle kopieren"
+spanish = "Copiar todo"
+french = "Tout copier"
+brazilian_portuguese = "Copiar tudo"
+portuguese = "Copiar tudo"
+turkish = "Tümünü kopyala"
+polish = "Kopiuj wszystko"
 
 [[message]]
 key = "Copy name option color"
@@ -15151,38 +15199,6 @@ turkish = "Yalnızca yerel"
 polish = "Tylko lokalny"
 
 [[message]]
-key = "Local particle effects"
-[message.translations]
-simplified_chinese = "本地粒子效果"
-traditional_chinese = "本地粒子效果"
-japanese = "ローカルパーティクルエフェクト"
-korean = "로컬 파티클 효과"
-russian = "Локальные эффекты частиц"
-german = "Lokale Partikeleffekte"
-spanish = "Efectos de partículas locales"
-french = "Effets de particules locaux"
-brazilian_portuguese = "Efeitos de partículas locais"
-portuguese = "Efeitos de partículas locais"
-turkish = "Yerel parçacık efektleri"
-polish = "Lokalne efekty cząsteczkowe"
-
-[[message]]
-key = "Local particles: show particles behind own Tee (e.g. freeze snow)"
-[message.translations]
-simplified_chinese = "本地粒子：显示自己 Tee 身后的粒子（例如冻结雪花）"
-traditional_chinese = "本地粒子：顯示自己 Tee 身後掉落的粒子（如凍結雪花）"
-japanese = "ローカルパーティクル：自分の Tee の後ろに落ちるパーティクル（凍結雪など）を表示"
-korean = "로컬 파티클: 자신의 Tee 뒤에 떨어지는 파티클 표시 (예: 얼음 결정)"
-russian = "Локальные частицы: показывать частицы, падающие за вашим Tee (например, снежинки заморозки)"
-german = "Lokale Partikel: Zeige Partikel, die hinter deinem eigenen Tee fallen (z.B. Frostschnee)"
-spanish = "Partículas locales: mostrar partículas que caen detrás de tu Tee (ej. copos de congelación)"
-french = "Particules locales : affiche les particules tombant derrière votre Tee (ex. flocons de gel)"
-brazilian_portuguese = "Partículas locais: mostrar partículas caindo atrás do seu Tee (ex.: flocos de gelo congelados)"
-portuguese = "Partículas locais: mostrar partículas a cair atrás do seu Tee (por exemplo, flocos de neve de congelamento)"
-turkish = "Yerel parçacıklar: Kendi Tee'nizin arkasına düşen parçacıkları göster (donma kar taneleri gibi)"
-polish = "Lokalne cząsteczki: pokazuj cząsteczki spadające za własnym Tee (np. płatki śniegu podczas zamrożenia)"
-
-[[message]]
 key = "Local test mode"
 [message.translations]
 simplified_chinese = "本地测试模式"
@@ -23039,38 +23055,6 @@ turkish = "Sürüm notları"
 polish = "Informacje o wydaniu"
 
 [[message]]
-key = "Remote particle effects"
-[message.translations]
-simplified_chinese = "远程粒子效果"
-traditional_chinese = "遠程粒子效果"
-japanese = "リモートパーティクルエフェクト"
-korean = "원격 파티클 효과"
-russian = "Удалить из избранного"
-german = "Remote-Partikeleffekte"
-spanish = "Efectos de partículas remotos"
-french = "Effets de particules distants"
-brazilian_portuguese = "Efeitos de partículas remotas"
-portuguese = "Efeitos de partículas remotas"
-turkish = "Uzak parçacık efektleri"
-polish = "Zdalne efekty cząsteczkowe"
-
-[[message]]
-key = "Remote particles: sync and render other players via central server (requires both local+remote enabled)"
-[message.translations]
-simplified_chinese = "远程粒子：通过中心服同步并渲染其他玩家（需对方开启本地+远程）"
-traditional_chinese = "遠程粒子：通過中心服同步並渲染其他玩家（需對方開啟本地+遠程）"
-japanese = "リモートパーティクル：中央サーバー経由で他のプレイヤーを同期・レンダリング（相手がローカル＋リモートを有効にする必要あり）"
-korean = "원격 파티클: 중앙 서버를 통해 다른 플레이어 동기화 및 렌더링 (상대방이 로컬+원격을 켜야 함)"
-russian = "Удалённые частицы: синхронизация и отображение других игроков через центральный сервер (требуется включение локального + удалённого у собеседника)"
-german = "Remote-Partikel: Synchronisiere und rendere andere Spieler über den Zentralserver (erfordert, dass der andere lokale + Remote-Partikel aktiviert hat)"
-spanish = "Partículas remotas: sincronizar y renderizar otros jugadores a través del servidor central (el otro debe tener activado local+remoto)"
-french = "Particules à distance : synchronisation et rendu des autres joueurs via le serveur central (nécessite que l'autre active local + distant)"
-brazilian_portuguese = "Partículas remotas: sincronizar e renderizar outros jogadores através do servidor central (o outro lado precisa ativar local + remoto)"
-portuguese = "Partículas remotas: sincronizar e renderizar outros jogadores através do servidor central (requer que o outro ative local + remoto)"
-turkish = "Uzaktaki parçacıklar: Merkez sunucu aracılığıyla diğer oyuncuları senkronize et ve işle (karşı tarafın yerel+uzak seçeneğini açması gerekir)"
-polish = "Zdalne cząsteczki: synchronizuj i renderuj innych graczy przez serwer centralny (wymaga włączenia lokalnego + zdalnego u drugiej osoby)"
-
-[[message]]
 key = "Remove from favorites"
 [message.translations]
 simplified_chinese = "取消收藏"
@@ -23325,54 +23309,6 @@ brazilian_portuguese = "Responder com Dummy"
 portuguese = "Responder com dummy"
 turkish = "Dummy ile yanıtla"
 polish = "Odpowiedz kukłą"
-
-[[message]]
-key = "Report service App ID"
-[message.translations]
-simplified_chinese = "举报服务 App ID"
-traditional_chinese = "檢舉服務 App ID"
-japanese = "報告サービスのApp ID"
-korean = "신고 서비스 앱 ID"
-russian = "App ID службы жалоб"
-german = "App-ID des Meldedienstes"
-spanish = "ID de aplicación del servicio de reportes"
-french = "ID d'application du service de signalements"
-brazilian_portuguese = "ID do aplicativo do serviço de relatórios"
-portuguese = "ID da aplicação do serviço de relatórios"
-turkish = "Şikayet hizmeti uygulama kimliği"
-polish = "Identyfikator aplikacji usługi zgłoszeń"
-
-[[message]]
-key = "Report service signing key"
-[message.translations]
-simplified_chinese = "举报服务签名密钥"
-traditional_chinese = "檢舉服務簽名金鑰"
-japanese = "報告サービスの署名キー"
-korean = "신고 서비스 서명 키"
-russian = "Ключ подписи службы жалоб"
-german = "Signaturschlüssel des Meldedienstes"
-spanish = "Clave de firma del servicio de reportes"
-french = "Clé de signature du service de signalements"
-brazilian_portuguese = "Chave de assinatura do serviço de relatórios"
-portuguese = "Chave de assinatura do serviço de relatórios"
-turkish = "Şikayet hizmeti imzalama anahtarı"
-polish = "Klucz podpisywania usługi zgłoszeń"
-
-[[message]]
-key = "Report service URL"
-[message.translations]
-simplified_chinese = "举报服务 URL"
-traditional_chinese = "檢舉服務 URL"
-japanese = "報告サービスのURL"
-korean = "신고 서비스 URL"
-russian = "URL службы жалоб"
-german = "URL des Meldedienstes"
-spanish = "URL del servicio de reportes"
-french = "URL du service de signalements"
-brazilian_portuguese = "URL do serviço de relatórios"
-portuguese = "URL do serviço de relatórios"
-turkish = "Şikayet hizmeti URL'si"
-polish = "Adres URL usługi zgłoszeń"
 
 [[message]]
 key = "Requires extra animations"
@@ -28130,6 +28066,38 @@ brazilian_portuguese = "Tecla para sair da divisão solo"
 portuguese = "Tecla para sair da divisão a solo"
 turkish = "Solo bölmeden çıkma tuşu"
 polish = "Klawisz wyjścia z podziału solo"
+
+[[message]]
+key = "Sort by command"
+[message.translations]
+simplified_chinese = "按命令排序"
+traditional_chinese = "按命令排序"
+japanese = "コマンド順で並べ替え"
+korean = "명령 기준 정렬"
+russian = "Сортировать по команде"
+german = "Nach Befehl sortieren"
+spanish = "Ordenar por comando"
+french = "Trier par commande"
+brazilian_portuguese = "Ordenar por comando"
+portuguese = "Ordenar por comando"
+turkish = "Komuta göre sırala"
+polish = "Sortuj według komendy"
+
+[[message]]
+key = "Sort by key"
+[message.translations]
+simplified_chinese = "按按键排序"
+traditional_chinese = "按按鍵排序"
+japanese = "キー順で並べ替え"
+korean = "키 기준 정렬"
+russian = "Сортировать по клавише"
+german = "Nach Taste sortieren"
+spanish = "Ordenar por tecla"
+french = "Trier par touche"
+brazilian_portuguese = "Ordenar por tecla"
+portuguese = "Ordenar por tecla"
+turkish = "Tuşa göre sırala"
+polish = "Sortuj według klawisza"
 
 [[message]]
 key = "Source language code for translation (auto=auto-detect)"
@@ -38502,3 +38470,19 @@ brazilian_portuguese = "Alterne manualmente a morte iniciada pelo cliente com os
 portuguese = "Alterne manualmente a morte iniciada pelo cliente com os comandos vinculáveis qm_self_kill_off e qm_self_kill_on"
 turkish = "İstemci kaynaklı intiharı bağlanabilir qm_self_kill_off ve qm_self_kill_on komutlarıyla elle açıp kapatın"
 polish = "Ręcznie przełączaj samobójstwa inicjowane przez klienta za pomocą poleceń qm_self_kill_off i qm_self_kill_on"
+
+[[message]]
+key = "Render demo content only during video export (hide HUD, chat and spectator overlays)"
+[message.translations]
+simplified_chinese = "仅渲染 demo：导出时隐藏 HUD、聊天和旁观信息"
+traditional_chinese = "僅渲染 demo：匯出時隱藏 HUD、聊天與旁觀資訊"
+japanese = "デモのみを書き出す：書き出し中は HUD、チャット、観戦情報を非表示にします"
+korean = "데모만 렌더링: 내보내는 동안 HUD, 채팅, 관전 정보를 숨깁니다"
+russian = "Рендерить только демо: скрывать HUD, чат и информацию наблюдателя при экспорте"
+german = "Nur Demo rendern: HUD, Chat und Zuschauerinformationen beim Export ausblenden"
+spanish = "Renderizar solo la demo: ocultar HUD, chat e información de espectador al exportar"
+french = "Rendre uniquement la démo : masquer le HUD, le chat et les infos spectateur pendant l’exportation"
+brazilian_portuguese = "Renderizar apenas a demo: ocultar HUD, chat e informações de espectador ao exportar"
+portuguese = "Renderizar apenas a demo: ocultar HUD, chat e informações de espetador ao exportar"
+turkish = "Yalnızca demoyu işle: dışa aktarırken HUD, sohbet ve izleyici bilgilerini gizle"
+polish = "Renderuj tylko demo: ukryj HUD, czat i informacje widza podczas eksportu"

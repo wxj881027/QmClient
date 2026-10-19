@@ -196,9 +196,6 @@
 (On Latest)
 == (已是最新版本)
 
-(paused)
-== (暂停)
-
 (Update required)
 == （需要更新）
 
@@ -255,6 +252,9 @@
 
 0 disables timed rotation; skins only switch on random start events
 == 0 表示不做时间轮换；仅在随机起点事件时切换皮肤
+
+0-51, empty = default
+== 0-51，留空 = 默认
 
 1% low
 == 1% 最低帧
@@ -701,6 +701,9 @@ Allow left-click to toggle between spectating nearest player and free view
 Allow mic permission in system settings, then reopen voice
 == 需要在系统设置里允许麦克风权限，然后重新打开语音
 
+Allow the client to send kill requests (0 = ignore client-initiated kills)
+== Allow the client to send kill requests (0 = ignore client-initiated kills)
+
 Allow voting to kick players
 == 允许投票踢出玩家
 
@@ -745,6 +748,9 @@ Always translate
 
 Amount
 == 预测量
+
+An export preset applies an encoder, container and quality combination. Choose Custom to edit each setting.
+== 导出预设会套用编码器、容器和画质的组合；选择“自定义”可分别调整。
 
 And pick one randomly
 == 并随机抽取一张
@@ -1307,6 +1313,9 @@ Automatically record demos
 Automatically record replays
 == 自动录制回放
 
+Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
+== Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
+
 Automatically reply to muted players
 == 对已屏蔽发言的玩家自动回复
 
@@ -1475,6 +1484,9 @@ Baidu Translate
 Balance master, music, and game volume
 == 平衡主音量、音乐和游戏音量
 
+Balanced (recommended)
+== 均衡（推荐）
+
 Ban a certain nickname
 == 禁止某个昵称
 
@@ -1529,6 +1541,9 @@ Benchmark frame times for number of seconds to file, then quit
 Best
 == 最高
 
+Better compression, slower
+== 压缩更好，速度较慢
+
 Better scoreboard
 == 更好的计分板
 
@@ -1552,6 +1567,9 @@ Bind movement, jump, hook, and fire actions
 
 Bind only to IPv4, otherwise bind to all interfaces
 == 仅绑定到 IPv4，否则绑定到所有接口
+
+Bind overview
+== 绑定一览
 
 Bind scoreboard, emote, and console actions
 == 绑定计分板、表情和控制台操作
@@ -1652,6 +1670,9 @@ Bounce
 Bound functions
 == 已绑定功能
 
+Bounded capture frame queue depth for demo export (higher values use more memory)
+== Bounded capture frame queue depth for demo export (higher values use more memory)
+
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 方括号头衔颜色：0 = 跟随服务器，1 = 单色，2 = 彩虹
 
@@ -1675,6 +1696,9 @@ Broadcast shown to players with known bot client
 
 Broadcast shown to players without DDNet client
 == 向没有 DDNet 客户端的玩家显示
+
+Browse all key bindings grouped by function
+== 按功能分组查看所有键位绑定
 
 Browse and activate custom audio packs
 == 浏览并启用自定义音频包
@@ -1943,9 +1967,6 @@ Chat fade smooth time (milliseconds)
 Chat font size
 == 聊天字体大小
 
-Chat line spacing
-== 聊天行间隔
-
 Chat gradient angle in degrees
 == 渐变方向 (聊天，°)
 
@@ -1960,6 +1981,9 @@ Chat gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
 
 Chat gradient vertical position percentage
 == 渐变垂直位置 (聊天，%)
+
+Chat line spacing
+== 聊天行间隔
 
 Chat log retention days
 == 聊天记录保留天数
@@ -2047,6 +2071,9 @@ Chinese font:
 
 CHN
 == 中国
+
+Choose a preset, or Custom to enter width and height. Follow window uses the current render size.
+== 选择常用档位，或选“自定义”手动输入宽和高；跟随窗口使用当前渲染分辨率。
 
 Choose colors for weapons and entity lasers
 == 选择武器和实体激光的颜色
@@ -2270,8 +2297,20 @@ Client performance pressure is high
 Client prediction time is high
 == 客户端预测耗时偏高
 
+Client self-kill is disabled (K key / kill command will be ignored)
+== 客户端自杀已关闭（K 键 /kill 命令将无效）
+
+Client self-kill is disabled (server commands are not affected)
+== 客户端自杀已被禁用（服务端命令不受影响）
+
+Client self-kill is enabled
+== 客户端自杀已开启
+
 Client uptime
 == 客户端启动时间
+
+Client-side self-kill protection
+== 客户端侧自杀保护
 
 Close
 == 关闭
@@ -2534,9 +2573,6 @@ Configure nameplate text, badges, and visibility
 Configure player identity and country
 == 配置玩家身份与国旗
 
-Configure qm_report_app_id and qm_report_secret first
-== 请先设置 qm_report_app_id 和 qm_report_secret
-
 Configure QmClient gameplay helpers
 == 配置栖梦客户端的游戏辅助功能
 
@@ -2608,9 +2644,6 @@ Connect dummy automatically for solo split mode
 
 Connect dummy to enable
 == 连接分身后可启用
-
-Connect to a server first
-== 需要先连接到服务器
 
 Connect to server first to establish voice network link
 == 需要先进入服务器，语音网络链路才会建立
@@ -2717,6 +2750,12 @@ Console text color
 Contacting title server
 == 正在连接头衔服务器
 
+Container format: MP4 is the most compatible, MOV suits editing, MKV suits lossless archives.
+== 封装格式：MP4 兼容性最好，MOV 适合剪辑，MKV 适合无损归档。
+
+Container:
+== 封装格式：
+
 Continue anyway?
 == 仍要退出？
 
@@ -2783,6 +2822,9 @@ Copy
 Copy a .qmconfig file into the package folder, then refresh.
 == 将 .qmconfig 文件放入配置包文件夹后刷新。
 
+Copy all
+== 复制全部
+
 Copy info
 == 复制服务器信息
 
@@ -2822,9 +2864,6 @@ Could not connect dummy
 Could not connect to the translation service. Please try again later.
 == 无法连接翻译服务，请稍后重试。
 
-Could not create report scan request
-== 创建举报扫描请求失败
-
 Could not find a Tutorial server. Check your internet connection.
 == 未找到教程服务器。请检查你的网络连接。
 
@@ -2833,9 +2872,6 @@ Could not find online Tutorial server.\nStarting and connecting to local server�
 
 Could not find your Team
 == 找不到你的队伍
-
-Could not get current server address
-== 无法获取当前服务器地址
 
 Could not get server list from master server
 == 无法从主服务器获取服务器列表
@@ -3017,6 +3053,9 @@ Custom command
 Custom community list fetch URL (must be https, leave empty to disable)
 == 自定义社区列表的获取 URL（必须是 https，留空则禁用）
 
+Custom export container: mp4, mov or mkv
+== Custom export container: mp4, mov or mkv
+
 Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
 == 中文 /CJK 文本的自定义字体（字族，或字族 + 样式）；留空则跟随拉丁自定义字体
 
@@ -3025,6 +3064,9 @@ Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
 
 Custom font for Latin text (family, or family + style)
 == 拉丁文本的自定义字体（字族，或字族 + 样式）
+
+Custom pressed hook line colors
+== 自定义按下后颜色
 
 Custom prompt template
 == 自定义提示词模板
@@ -3086,6 +3128,9 @@ Cut interval
 Cut length
 == 裁剪时长
 
+Cut points can only land on keyframes. Smaller values add more cut points and larger files; 0 uses the encoder default.
+== 剪辑切点只能落在关键帧上；数值越小切点越密、文件越大；0 使用编码器默认值。
+
 Cut segments
 == 裁剪片段
 
@@ -3112,6 +3157,9 @@ Cyrillic
 
 d = Prediction latency
 == d = 预测延迟
+
+Daily (H.264 / MP4)
+== 日常分享 (H.264 / MP4)
 
 Dark translucent
 == 深色半透明
@@ -3317,6 +3365,9 @@ Default
 default
 == 默认
 
+Default (software)
+== 默认（软件）
+
 Default appearance profile migration version
 == 默认外观配置迁移版本
 
@@ -3410,6 +3461,9 @@ Demo display
 Demo effects
 == Demo 特效
 
+Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
+== Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
+
 Demo hook strength (0=Off 1=Icon 2=Icon and number)
 == 回放钩子强弱（0=关闭 1=图标 2=图标与数字）
 
@@ -3427,6 +3481,9 @@ Demo player is currently active.
 
 Demo target
 == Demo 目标
+
+Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
+== Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
 
 Demofile: %s
 == 回放文件：%s
@@ -3514,6 +3571,9 @@ disable
 
 Disable after picking up other weapons
 == 拿到其他武器时停用
+
+Disable client-initiated self-kill (K key / kill command)
+== Disable client-initiated self-kill (K key / kill command)
 
 Disable clipping
 == 禁用裁剪
@@ -4043,6 +4103,12 @@ Edit this custom command on the Bind Wheel page.
 Edit touch controls
 == 编辑触控设置
 
+Editing (DNxHR HQX / MOV)
+== 专业剪辑 (DNxHR HQX / MOV)
+
+Editing (ProRes 422 HQ / MOV)
+== 专业剪辑 (ProRes 422 HQ / MOV)
+
 Editor
 == 编辑器
 
@@ -4159,6 +4225,9 @@ Enable cheats for your current team's run, but you can't earn a rank
 
 Enable client stutter diagnostics at startup
 == 启动时启用客户端卡顿诊断
+
+Enable client-initiated self-kill (K key / kill command)
+== Enable client-initiated self-kill (K key / kill command)
 
 Enable colored console output
 == 启用控制台彩色输出
@@ -4508,6 +4577,15 @@ Enable/disable test commands (aka cheats) (setting only effective in initial con
 Enables/disables active moderator mode for the player
 == 启用/禁用该玩家的活跃管理员模式
 
+Encoder used for export. Hardware encoders appear only when available.
+== 导出使用的编码器；硬件编码器仅在可用时显示。
+
+Encoder:
+== 编码器：
+
+End (s)
+== 结束 (秒)
+
 End marker of replay slice
 == 回放切片的结束标记
 
@@ -4700,6 +4778,24 @@ Export demo cut
 Export name contains invalid characters.
 == 导出名称包含无效字符。
 
+Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+
+Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+
+Export playback speed. The value snaps to the nearest available speed.
+== 导出播放速度；输入值会吸附到最接近的可用速度。
+
+Export preset:
+== 导出预设：
+
+Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc_nvenc/mp4), 3=editing(ProRes/mov), 4=editing(DNxHR/mov), 5=lossless archive(FFV1/mkv)
+== Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc_nvenc/mp4), 3=editing(ProRes/mov), 4=editing(DNxHR/mov), 5=lossless archive(FFV1/mkv)
+
+Export range (seconds):
+== 导出范围 (秒):
+
 Export selected
 == 导出选中项
 
@@ -4721,8 +4817,14 @@ Expose playback controls to the operating system
 External console password. Must be set to enable economy.
 == 外部控制台密码。需要设置此选项才能启用经济。
 
+Extra vertical spacing between chat lines in pixels (0 = default)
+== Extra vertical spacing between chat lines in pixels (0 = default)
+
 Extras
 == 其他
+
+Extremely slow, for testing only
+== 极慢，仅测试用
 
 f = Frame rate
 == f = 帧率
@@ -4811,14 +4913,23 @@ Failed to save screenshot
 Failed to save video
 == 视频保存失败
 
+Failed to save video. See local console for details.
+== Failed to save video. See local console for details.
+
 Failed to write PNG export.
 == 写入 PNG 导出文件失败。
+
+Fairly fast encode
+== 编码较快
 
 Fake CTF flags
 == 伪 CTF 旗帜
 
 Fallback simple noise reduction strength
 == 回退后的简单降噪强度
+
+Fast encode
+== 编码快
 
 Fast input
 == 快速输入
@@ -4834,6 +4945,15 @@ Fast practice
 
 Fast, lightweight blur with a softer approximation.
 == 快速、轻量的模糊效果，采用较柔和的近似处理。
+
+Faster export playback
+== 提高导出播放速度
+
+Faster presets encode quicker but produce larger files
+== 越快的预设编码越快，但文件更大
+
+Fastest encode, largest files
+== 编码最快，文件最大
 
 Fat skins (DDFat)
 == 胖胖的皮肤（DDFat）
@@ -5027,6 +5147,9 @@ Follow Tee
 Follow UI icon color
 == 跟随界面图标颜色
 
+Follow window
+== 跟随窗口
+
 Following
 == 当前
 
@@ -5101,6 +5224,9 @@ Frags
 
 Frame rate
 == 帧率
+
+Frame rate of the recorded video; higher means smoother playback and larger files
+== 录像的帧率，越高越流畅、文件越大
 
 Frame time
 == 帧耗时
@@ -5798,6 +5924,9 @@ Hide system message prefix
 Hide the *** prefix before server chat messages
 == 隐藏服务器聊天消息前的 *** 前缀
 
+Hide the in-game HUD, chat and spectator overlays while recording. Camera switching still works.
+== 录制时隐藏游戏内 HUD、聊天和旁观信息；切换相机仍然可用。
+
 Hide toast
 == 隐藏通知
 
@@ -5813,8 +5942,17 @@ Hide weapon fire effects in Zen Mode
 Hide weapon muzzle flashes
 == 隐藏武器火焰
 
+High (recommended)
+== 高（推荐）
+
 High Detail
 == 显示地图细节
+
+High quality (HEVC / MP4)
+== 高画质 (HEVC / MP4)
+
+High quality, slow
+== 高质量，速度慢
 
 Higher input latency
 == 增加输入延迟
@@ -5923,27 +6061,6 @@ Hook interaction
 
 Hook line tip
 == 辅助线提示
-
-Custom pressed hook line colors
-== 自定义按下后颜色
-
-Pressed hook line color; always used when custom pressed colors are enabled
-== 按下后颜色；开启自定义按下后颜色时始终生效
-
-Pressed: A Tee
-== 按下后：其他玩家
-
-Pressed: Hook line tip
-== 按下后：辅助线提示
-
-Pressed: Nothing hookable
-== 按下后：未瞄准可钩物体
-
-Pressed: Something hookable
-== 按下后：可钩物体
-
-Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== 按住显示钩索碰撞线时使用下方的自定义颜色；关闭=自动反色
 
 Hook loop
 == 钩子循环音
@@ -6161,6 +6278,9 @@ In-game crosshair scale percent (50=half, 200=double)
 Inactive color
 == 按键未激活时颜色
 
+Include chat in the recording.
+== 录制时包含聊天框。
+
 Include clan when saving/loading config preset
 == 保存/加载配置方案时包含战队
 
@@ -6172,6 +6292,9 @@ Include country flag when saving/loading config preset
 
 Include emoticon when saving/loading config preset
 == 保存/加载配置方案时包含表情
+
+Include game audio in the recording.
+== 录制时包含游戏声音。
 
 Include name when saving/loading config preset
 == 保存/加载配置方案时包含昵称
@@ -6187,6 +6310,9 @@ Include Team 0
 
 Include Team 0 in the Gores team drown board
 == 在 Gores 落水榜中包括 Team 0 玩家
+
+Include the in-game HUD in the recording.
+== 录制时包含游戏内 HUD。
 
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 == 收到消息自动翻译方式（0=仅在非目标语言时翻译，1=始终翻译）
@@ -6607,6 +6733,12 @@ Keyboard size
 
 Keyframe %d/%d: %s
 == 关键帧 %d/%d：%s
+
+Keyframe interval (GOP) in frames for demo export (0 = encoder default, 60 = recommended)
+== Keyframe interval (GOP) in frames for demo export (0 = encoder default, 60 = recommended)
+
+Keyframe interval (GOP):
+== 关键帧间隔 (GOP):
 
 Keyword reply
 == 关键词回复
@@ -7070,12 +7202,6 @@ Local game mode statistics
 Local only
 == 仅本地
 
-Local particle effects
-== 本地粒子效果
-
-Local particles: show particles behind own Tee (e.g. freeze snow)
-== 本地粒子：显示自己 Tee 身后的粒子（例如冻结雪花）
-
 Local saves
 == 本地存档
 
@@ -7135,6 +7261,15 @@ Long frames
 
 Lose weapons when teleporting (useful for race maps)
 == 传送时失去武器（对某些竞速地图有用）
+
+Lossless archive (FFV1 / MKV)
+== 无损归档 (FFV1 / MKV)
+
+Low
+== 低
+
+Lower means better quality and larger files; 18 is recommended
+== 数字越低越清晰、文件越大；推荐使用 18
 
 LXGW WenKai is available.
 == 霞鹜文楷可用。
@@ -7234,6 +7369,9 @@ Manual Steam path is invalid; using automatic detection
 
 Manual target
 == 手动目标
+
+Manually toggle client-initiated self-kill with the bindable commands qm_self_kill_off and qm_self_kill_on
+== 通过可绑定命令 qm_self_kill_off / qm_self_kill_on 手动开关客户端自杀能力
 
 Map
 == 地图
@@ -7507,6 +7645,9 @@ may cause delay
 
 May overload the service
 == 可能导致服务过载
+
+Medium
+== 中
 
 Memory
 == 内存
@@ -8471,6 +8612,9 @@ Number of slots reserved for spectators
 Number of threads backend can use for rendering (Note: value may be ignored by backend)
 == 渲染后端可用线程数（后端可能忽略该设置）
 
+Number of video pixel-format conversion threads for demo export (2-4 recommended)
+== Number of video pixel-format conversion threads for demo export (2-4 recommended)
+
 Number of vote options sent per tick
 == 每 tick 发送的投票选项数量
 
@@ -8660,6 +8804,9 @@ Optional
 Optional authentication key for the DNSBL provider
 == 指定 DNSBL 提供商的可选身份验证密钥
 
+Optional export range in seconds. Leave empty to export the whole demo.
+== 可选的导出范围（秒）；留空导出整个回放。
+
 Or visit DDNet.org
 == 或访问 DDNet.org
 
@@ -8723,8 +8870,14 @@ Output device open failed
 Output device open failed, try reconnecting speakers/headphones or reselecting output device
 == 输出设备打开失败，建议重插耳机/扬声器后刷新，或重新选择输出设备
 
+Output file name without extension.
+== 输出文件名，不含扩展名。
+
 Output KCP negotiation, fallback, and session lifecycle debug logs
 == 输出 KCP 协商、回退和会话生命周期调试日志
+
+Output resolution
+== 输出分辨率
 
 Output switch
 == 输出切换
@@ -9025,6 +9178,9 @@ Play/Pause
 
 Play/pause the current demo
 == 播放/暂停当前回放
+
+Playback options
+== 播放选项
 
 Playback volume
 == 播放音量
@@ -9467,6 +9623,33 @@ Press Esc to exit the HUD editor
 Press F2, log in, then use: change_map map_name
 == 按 F2 登录管理后，输入：change_map 地图名
 
+Pressed hook collision line color when hitting a tee
+== Pressed hook collision line color when hitting a tee
+
+Pressed hook collision line color when hitting something hookable
+== Pressed hook collision line color when hitting something hookable
+
+Pressed hook collision line color when not aiming at anything hookable
+== Pressed hook collision line color when not aiming at anything hookable
+
+Pressed hook line color; always used when custom pressed colors are enabled
+== 按下后颜色；开启自定义按下后颜色时始终生效
+
+Pressed hook line tip color
+== Pressed hook line tip color
+
+Pressed: A Tee
+== 按下后：其他玩家
+
+Pressed: Hook line tip
+== 按下后：辅助线提示
+
+Pressed: Nothing hookable
+== 按下后：未瞄准可钩物体
+
+Pressed: Something hookable
+== 按下后：可钩物体
+
 Prev. weapon
 == 上一个武器
 
@@ -9674,9 +9857,6 @@ Pyramid
 q = Connection quality
 == q = 连接质量
 
-Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
-== Qm 增强渲染：0=关闭（纯 Vulkan），1=自动回退，2=强制开启
-
 Qm recommended appearance
 == 栖梦推荐外观
 
@@ -9737,8 +9917,32 @@ QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
 == 显示用作背景装饰的贴图
 
+Quality (CQ):
+== 画质 (CQ):
+
+Quality (CRF):
+== 画质 (CRF):
+
+Quality (fixed):
+== 画质（格式固定）:
+
+Quality (ICQ):
+== 画质 (ICQ):
+
+Quality (QP):
+== 画质 (QP):
+
+Quality from 0 to 51; lower is clearer and larger. Leave empty to use the video encoding CRF.
+== 画质范围 0-51，数值越低越清晰、文件越大；留空使用下方视频编码的 CRF。
+
+Quality is fixed by the selected format.
+== 画质由所选格式固定。
+
 Quality tier
 == 跟随网络质量
+
+Quality:
+== 画质：
 
 Query current map info
 == 查询当前地图信息
@@ -10019,6 +10223,9 @@ Record demo
 Record to a file
 == 记录到文件
 
+Recorder FPS
+== 录制帧率
+
 Red
 == 红色
 
@@ -10147,12 +10354,6 @@ Remote console password for helper (limited access)
 
 Remote console password for moderator (limited access)
 == 主持人的远程控制台密码（有限访问）
-
-Remote particle effects
-== 远程粒子效果
-
-Remote particles: sync and render other players via central server (requires both local+remote enabled)
-== 远程粒子：通过中心服同步并渲染其他玩家（需对方开启本地+远程）
 
 Remove
 == 删除
@@ -10334,6 +10535,12 @@ Render cut to video
 Render demo
 == 渲染回放
 
+Render demo content only during video export (hide HUD, chat and spectator overlays)
+== 仅渲染 demo：导出时隐藏 HUD、聊天和旁观信息
+
+Render demo only
+== 仅渲染 demo
+
 Render entity text data
 == 渲染实体文本数据
 
@@ -10348,6 +10555,9 @@ Render ghosts as circles instead of Tee
 
 Render graphics when window is in background
 == 窗口在后台时仍渲染画面
+
+Render preset
+== 渲染预设
 
 Render quads as triangles (fixes quad shading on some GPUs)
 == 将四边形渲染为三角形（修复了某些 GPU 上的四边形着色）
@@ -10441,36 +10651,6 @@ Reply to the last whisper target: %s
 
 Reply with dummy
 == 使用分身回复
-
-Report
-== 举报
-
-Report request canceled
-== 举报请求已取消
-
-Report request failed due to network error
-== 举报请求失败，网络请求异常
-
-Report request failed with HTTP status: %d
-== 举报请求失败，HTTP 状态码：%d
-
-Report request is already in progress
-== 举报请求正在处理中
-
-Report scan request submitted
-== 举报扫描请求已提交
-
-Report service App ID
-== 举报服务 App ID
-
-Report service signing key
-== 举报服务签名密钥
-
-Report service URL
-== 举报服务 URL
-
-Reports are not available on Axiom servers
-== Axiom 服务器内不可使用举报功能
 
 Request a position swap
 == 请求交换位置
@@ -10633,6 +10813,9 @@ Restore Kugou files
 
 Restore old single-segment hook collision line behavior
 == 恢复旧版单段钩子辅助线行为
+
+Restore recommended
+== 恢复推荐
 
 Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
 == 恢复原版滚轮手感：每格重新开始平滑滚动，不继承速度
@@ -10847,6 +11030,9 @@ Save ghost
 Save last %d min
 == 保存前 %d 分钟
 
+Save loaded and marked as used.
+== 存档已载入并标记为已使用。
+
 Save loaded; local record removed.
 == 存档读取成功，已删除本地记录。
 
@@ -10942,12 +11128,6 @@ Scale max mouse distance to 1000 for better aim
 
 Scale uncertainty duration by ping (100=1.0x)
 == 按 ping 比例缩放不确定性时长（100=1.0 倍）
-
-Scanning current server
-== 正在扫描当前服务器
-
-Scanning current server...
-== 正在扫描当前服务器……
 
 Score
 == 分数
@@ -11197,6 +11377,12 @@ Self and friends
 
 Self only
 == 仅自己
+
+Self-kill off
+== 关闭自杀
+
+Self-kill on
+== 开启自杀
 
 Send & Receive
 == 收发
@@ -12692,11 +12878,17 @@ Skip Tutorial
 Slide left
 == 向左滑切
 
+Slightly fast encode
+== 编码稍快
+
 Slow down the demo
 == 减慢播放速度
 
 Slower
 == 较慢
+
+Slower export playback
+== 降低导出播放速度
 
 Small Tee size
 == 小 Tee 尺寸
@@ -12818,8 +13010,14 @@ Some map sounds could not be loaded. Check the local console for details.
 Something hookable
 == 可钩物体
 
+Sort by command
+== 按命令排序
+
 Sort by favorites
 == 按收藏排序
+
+Sort by key
+== 按按键排序
 
 Sort by number of friends
 == 按好友人数排序
@@ -12992,6 +13190,9 @@ Squishy Tee deformation intensity
 Star
 == 星形
 
+Start (s)
+== 开始 (秒)
+
 Start and connect to local server
 == 启动并连接到本地服务器
 
@@ -13021,6 +13222,9 @@ Start recording a video
 
 Start skin queue from a random position when entering a map
 == 进入地图时从皮肤队列随机位置开始
+
+Start the export paused
+== 导出开始时暂停
 
 Statboard
 == 统计板
@@ -14033,6 +14237,9 @@ Title wave strength (0-3, 0 = off)
 to check a server setting say /settings and setting's name, setting names are:
 == 输入 /settings 加设置名即可查看服务器设置。可用设置有：
 
+To prevent accidental kills while racing, use the two bind rows above to toggle. To self-kill, press the enable key first, then press K. Server commands are not affected
+== 跑图防误触：用上方两行绑定开关键，需要自杀时先按开启键再按 K；服务端命令不受影响
+
 To save all players in your team have to be alive and not in '/spec'
 == 要保存队伍，队内所有玩家都必须存活且不能处于 '/spec'
 
@@ -14582,6 +14789,9 @@ Unfreeze tile outline color
 Unfreeze/Deep unfreeze tile outline width
 == 解冻/深解冻图块轮廓宽度
 
+Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
+== Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
+
 Uninvite player from team
 == 取消对玩家的队伍邀请
 
@@ -14756,6 +14966,9 @@ Use current name
 Use current settings
 == 读取当前设置
 
+Use custom colors for the pressed hook collision line (0 = always invert)
+== Use custom colors for the pressed hook collision line (0 = always invert)
+
 Use custom skins instead of the ninja tee
 == 使用自定义皮肤代替忍者 Tee
 
@@ -14837,11 +15050,8 @@ Use original style for Dynamic Island
 Use pre-input to predict other players for more accurate input prediction
 == 使用预输入预测其他玩家以获得更精确的输入预测
 
-Use procedural ring pipeline when enhanced rendering is active
-== 启用增强渲染时使用程序化圆环管线
-
-Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
-== 启用增强渲染时，为灵动岛和圆角矩形使用 SDF 管线
+Use procedural ring pipeline
+== Use procedural ring pipeline
 
 Use server defaults
 == 使用服务默认值
@@ -14864,6 +15074,9 @@ Use team colors for name plates
 Use Tee icons instead of circles
 == 用 Tee 图标代替圆圈
 
+Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
+== 按住显示钩索碰撞线时使用下方的自定义颜色；关闭=自动反色
+
 Use the mouse wheel on a hovered module to scale it by 5%
 == 将鼠标悬停在 HUD 模块上并滚动滚轮可按 5% 缩放
 
@@ -14884,6 +15097,9 @@ Use warlist colors instead of regular colors
 
 Use warlist groups for indicator
 == 使用敌对列表作为指示器
+
+Used
+== 已使用
 
 Used by active shared text and numeric input fields
 == 用于已激活的共享文本与数值输入框
@@ -14939,17 +15155,38 @@ Vertical sync (may cause lag)
 Vertical wave
 == 上下波动
 
+Very fast encode
+== 编码非常快
+
+Very high
+== 极高
+
+Very high quality, very slow
+== 质量很高，速度非常慢
+
 Video Background
 == 视频背景
 
 Video directory
 == 视频导出目录
 
+Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
+== Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
+
+Video encoding
+== 视频编码
+
+Video export
+== 视频导出
+
 Video name
 == 视频名称
 
 Video name:
 == 视频名称：
+
+Video quality CRF
+== 渲染质量 CRF
 
 Video rendering is unavailable during online replay.
 == 在线回放期间无法渲染视频。
@@ -20311,33 +20548,3 @@ Included
 [Translation credits: Add your own name here when you update translations]
 English translation by the DDNet Team
 == 简体中文翻译由 DDNet 团队和 QmClient 贡献者维护
-
-Save loaded and marked as used.
-== 存档已载入并标记为已使用。
-
-Used
-== 已使用
-
-Client self-kill is disabled (K key / kill command will be ignored)
-== 客户端自杀已关闭（K 键 /kill 命令将无效）
-
-Client self-kill is disabled (server commands are not affected)
-== 客户端自杀已被禁用（服务端命令不受影响）
-
-Client self-kill is enabled
-== 客户端自杀已开启
-
-Client-side self-kill protection
-== 客户端侧自杀保护
-
-Self-kill off
-== 关闭自杀
-
-Self-kill on
-== 开启自杀
-
-To prevent accidental kills while racing, use the two bind rows above to toggle. To self-kill, press the enable key first, then press K. Server commands are not affected
-== 跑图防误触：用上方两行绑定开关键，需要自杀时先按开启键再按 K；服务端命令不受影响
-
-Manually toggle client-initiated self-kill with the bindable commands qm_self_kill_off and qm_self_kill_on
-== 通过可绑定命令 qm_self_kill_off / qm_self_kill_on 手动开关客户端自杀能力

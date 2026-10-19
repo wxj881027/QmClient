@@ -578,10 +578,16 @@ public:
 
 	// 分段渲染与断点续渲（M3）。任务为空指针表示未激活；
 	// 进度持久化在 videos/<名>.progress，任务指纹不匹配或损坏时整单重渲。
-	// 返回 false 表示未走分段路径（状态不符或不超过一段），调用方回退整段导出。
-	// RangeSec < 0 表示使用 demo 全范围；否则为渲染选区（秒，相对 demo 起点）。
+	// 只有 FALLBACK 允许整段直录；FAILED 必须交回调用方报告错误。
+	// 选区端点相对 demo 起点，负数表示该端点未指定。
 	std::unique_ptr<CVideoExportTask> m_pVideoExportTask;
-	bool StartSegmentedVideoExport(const char *pName, bool AppendTimestamp, float RangeStartSec = -1.0f, float RangeEndSec = -1.0f);
+	enum class EVideoExportStartResult
+	{
+		FALLBACK,
+		STARTED,
+		FAILED,
+	};
+	EVideoExportStartResult StartSegmentedVideoExport(const char *pName, bool AppendTimestamp, float RangeStartSec = -1.0f, float RangeEndSec = -1.0f);
 	void CancelSegmentedVideoExport();
 	void FinishSegmentedExport();
 	void DriveSegmentedExport(int CurrentTick);

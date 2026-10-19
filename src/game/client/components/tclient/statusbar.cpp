@@ -4,6 +4,7 @@
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 
+#include <game/client/components/qmclient/demo_display.h>
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
 #include <game/client/ui.h>
@@ -491,8 +492,8 @@ void CStatusBar::OnRender()
 		return;
 
 #if defined(CONF_VIDEORECORDER)
-	// 渲染（录制）demo 视频时跟随 cl_video_showhud，避免状态栏被一起录进视频
-	if(IVideo::Current() && !g_Config.m_ClVideoShowhud)
+	// 回放/导出跟随回放显示配置，普通录制跟随 cl_video_showhud，避免状态栏被一起录进视频。
+	if(IVideo::Current() && !qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive(), true).m_Hud)
 		return;
 #endif
 

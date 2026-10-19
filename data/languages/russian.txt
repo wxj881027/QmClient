@@ -196,9 +196,6 @@
 (On Latest)
 == (Последняя версия)
 
-(paused)
-== (пауза)
-
 (Update required)
 == (Требуется обновление)
 
@@ -255,6 +252,9 @@
 
 0 disables timed rotation; skins only switch on random start events
 == 0 отключает ротацию по времени; скины меняются только при случайном старте
+
+0-51, empty = default
+== 0-51, пусто = по умолчанию
 
 1% low
 == 1% низких кадров
@@ -701,6 +701,9 @@ Allow left-click to toggle between spectating nearest player and free view
 Allow mic permission in system settings, then reopen voice
 == Разрешите доступ к микрофону в настройках системы, затем снова включите голос.
 
+Allow the client to send kill requests (0 = ignore client-initiated kills)
+== Allow the client to send kill requests (0 = ignore client-initiated kills)
+
 Allow voting to kick players
 == Разрешить голосование за кик игроков
 
@@ -745,6 +748,9 @@ Always translate
 
 Amount
 == Количество
+
+An export preset applies an encoder, container and quality combination. Choose Custom to edit each setting.
+== Пресет экспорта применяет сочетание кодировщика, контейнера и качества. Выберите «Другой», чтобы настроить каждый параметр отдельно.
 
 And pick one randomly
 == И выбрать одну случайно
@@ -1307,6 +1313,9 @@ Automatically record demos
 Automatically record replays
 == Автоматически записывать повторы
 
+Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
+== Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
+
 Automatically reply to muted players
 == Автоматически отвечать заглушённым игрокам
 
@@ -1475,6 +1484,9 @@ Baidu Translate
 Balance master, music, and game volume
 == Balance master, music, and game volume
 
+Balanced (recommended)
+== Сбалансированный (рекомендуется)
+
 Ban a certain nickname
 == Забанить определённый никнейм
 
@@ -1529,6 +1541,9 @@ Benchmark frame times for number of seconds to file, then quit
 Best
 == Лучший
 
+Better compression, slower
+== Лучшее сжатие, медленнее
+
 Better scoreboard
 == Улучшенная таблица лидеров
 
@@ -1552,6 +1567,9 @@ Bind movement, jump, hook, and fire actions
 
 Bind only to IPv4, otherwise bind to all interfaces
 == Привязывать только к IPv4, иначе ко всем интерфейсам
+
+Bind overview
+== Обзор привязок клавиш
 
 Bind scoreboard, emote, and console actions
 == Bind scoreboard, emote, and console actions
@@ -1652,6 +1670,9 @@ Bounce
 Bound functions
 == Назначенные действия
 
+Bounded capture frame queue depth for demo export (higher values use more memory)
+== Bounded capture frame queue depth for demo export (higher values use more memory)
+
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Цвет титула в скобках: 0 = как на сервере, 1 = один цвет, 2 = радуга
 
@@ -1675,6 +1696,9 @@ Broadcast shown to players with known bot client
 
 Broadcast shown to players without DDNet client
 == Трансляция, показываемая игрокам без клиента DDNet
+
+Browse all key bindings grouped by function
+== Просмотр всех привязок клавиш, сгруппированных по функциям
 
 Browse and activate custom audio packs
 == Browse and activate custom audio packs
@@ -1958,6 +1982,9 @@ Chat gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
 Chat gradient vertical position percentage
 == Вертикальное положение градиента (чат, %)
 
+Chat line spacing
+== Chat line spacing
+
 Chat log retention days
 == Дни хранения лога чата
 
@@ -2044,6 +2071,9 @@ Chinese font:
 
 CHN
 == Китай
+
+Choose a preset, or Custom to enter width and height. Follow window uses the current render size.
+== Выберите пресет или «Другой», чтобы ввести ширину и высоту. «По размеру окна» использует текущее разрешение рендеринга.
 
 Choose colors for weapons and entity lasers
 == Choose colors for weapons and entity lasers
@@ -2267,8 +2297,20 @@ Client performance pressure is high
 Client prediction time is high
 == Высокое время предсказания клиента
 
+Client self-kill is disabled (K key / kill command will be ignored)
+== Самоубийство со стороны клиента отключено (клавиша K / команда kill игнорируются)
+
+Client self-kill is disabled (server commands are not affected)
+== Самоубийство со стороны клиента отключено (команды сервера не затрагиваются)
+
+Client self-kill is enabled
+== Самоубийство со стороны клиента включено
+
 Client uptime
 == Аптайм клиента
+
+Client-side self-kill protection
+== Защита от самоубийства на стороне клиента
 
 Close
 == Закрыть
@@ -2531,9 +2573,6 @@ Configure nameplate text, badges, and visibility
 Configure player identity and country
 == Настроить профиль игрока и флаг
 
-Configure qm_report_app_id and qm_report_secret first
-== Сначала настройте qm_report_app_id и qm_report_secret
-
 Configure QmClient gameplay helpers
 == Настроить игровые помощники QmClient
 
@@ -2605,9 +2644,6 @@ Connect dummy automatically for solo split mode
 
 Connect dummy to enable
 == Подключите дамми, чтобы включить
-
-Connect to a server first
-== Сначала подключитесь к серверу
 
 Connect to server first to establish voice network link
 == Сначала подключитесь к серверу, чтобы установить голосовую сетевую связь.
@@ -2714,6 +2750,12 @@ Console text color
 Contacting title server
 == Подключение к серверу титулов
 
+Container format: MP4 is the most compatible, MOV suits editing, MKV suits lossless archives.
+== Формат контейнера: MP4 — максимальная совместимость, MOV — для монтажа, MKV — для архива без потерь.
+
+Container:
+== Контейнер:
+
 Continue anyway?
 == Всё равно продолжить?
 
@@ -2780,6 +2822,9 @@ Copy
 Copy a .qmconfig file into the package folder, then refresh.
 == Скопируйте файл .qmconfig в папку пакетов, затем обновите список.
 
+Copy all
+== Копировать все
+
 Copy info
 == Копировать информацию
 
@@ -2819,9 +2864,6 @@ Could not connect dummy
 Could not connect to the translation service. Please try again later.
 == Не удалось подключиться к сервису перевода. Повторите попытку позже.
 
-Could not create report scan request
-== Не удалось создать запрос сканирования жалобы
-
 Could not find a Tutorial server. Check your internet connection.
 == Не удалось найти учебный сервер. Проверьте ваше интернет-соединение.
 
@@ -2830,9 +2872,6 @@ Could not find online Tutorial server.\nStarting and connecting to local server�
 
 Could not find your Team
 == Не удалось найти вашу команду
-
-Could not get current server address
-== Не удалось получить адрес текущего сервера
 
 Could not get server list from master server
 == Не удалось получить список серверов от мастер-сервера
@@ -3014,6 +3053,9 @@ Custom command
 Custom community list fetch URL (must be https, leave empty to disable)
 == URL для загрузки пользовательского списка сообществ (должен быть https, оставьте пустым для отключения)
 
+Custom export container: mp4, mov or mkv
+== Custom export container: mp4, mov or mkv
+
 Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
 == Свой шрифт для китайского/CJK текста (семейство или семейство + стиль); пусто — как у латинского своего шрифта
 
@@ -3022,6 +3064,9 @@ Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
 
 Custom font for Latin text (family, or family + style)
 == Свой шрифт для латинского текста (семейство или семейство + стиль)
+
+Custom pressed hook line colors
+== Свои цвета линии при нажатии
 
 Custom prompt template
 == Пользовательский шаблон промпта
@@ -3083,6 +3128,9 @@ Cut interval
 Cut length
 == Длина обрезки
 
+Cut points can only land on keyframes. Smaller values add more cut points and larger files; 0 uses the encoder default.
+== Точки обрезки могут попадать только на ключевые кадры. Меньшие значения добавляют точки и увеличивают файл; 0 — значение кодировщика по умолчанию.
+
 Cut segments
 == Отрезки обрезки
 
@@ -3109,6 +3157,9 @@ Cyrillic
 
 d = Prediction latency
 == d = Задержка предсказания
+
+Daily (H.264 / MP4)
+== Повседневный (H.264 / MP4)
 
 Dark translucent
 == Тёмный полупрозрачный
@@ -3314,6 +3365,9 @@ Default
 default
 == по умолчанию
 
+Default (software)
+== По умолчанию (программный)
+
 Default appearance profile migration version
 == Версия миграции настроек внешнего вида по умолчанию
 
@@ -3407,6 +3461,9 @@ Demo display
 Demo effects
 == Эффекты демо
 
+Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
+== Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
+
 Demo hook strength (0=Off 1=Icon 2=Icon and number)
 == Сила крюка в демо (0=выкл. 1=значок 2=значок и число)
 
@@ -3424,6 +3481,9 @@ Demo player is currently active.
 
 Demo target
 == Цель демо
+
+Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
+== Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
 
 Demofile: %s
 == Файл демо: %s
@@ -3511,6 +3571,9 @@ disable
 
 Disable after picking up other weapons
 == Отключить после подбора другого оружия
+
+Disable client-initiated self-kill (K key / kill command)
+== Disable client-initiated self-kill (K key / kill command)
 
 Disable clipping
 == Отключить обрезку.
@@ -4040,6 +4103,12 @@ Edit this custom command on the Bind Wheel page.
 Edit touch controls
 == Редактировать сенсорное управление
 
+Editing (DNxHR HQX / MOV)
+== Монтаж (DNxHR HQX / MOV)
+
+Editing (ProRes 422 HQ / MOV)
+== Монтаж (ProRes 422 HQ / MOV)
+
 Editor
 == Редактор
 
@@ -4156,6 +4225,9 @@ Enable cheats for your current team's run, but you can't earn a rank
 
 Enable client stutter diagnostics at startup
 == Включить диагностику рывков клиента при запуске
+
+Enable client-initiated self-kill (K key / kill command)
+== Enable client-initiated self-kill (K key / kill command)
 
 Enable colored console output
 == Включить цветной вывод консоли
@@ -4505,6 +4577,15 @@ Enable/disable test commands (aka cheats) (setting only effective in initial con
 Enables/disables active moderator mode for the player
 == Включает/отключает режим активного модератора для игрока
 
+Encoder used for export. Hardware encoders appear only when available.
+== Кодировщик для экспорта. Аппаратные кодировщики показываются только при доступности.
+
+Encoder:
+== Кодировщик:
+
+End (s)
+== Конец (с)
+
 End marker of replay slice
 == Конечный маркер фрагмента повтора
 
@@ -4697,6 +4778,24 @@ Export demo cut
 Export name contains invalid characters.
 == Имя экспорта содержит недопустимые символы.
 
+Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+
+Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+
+Export playback speed. The value snaps to the nearest available speed.
+== Скорость воспроизведения при экспорте. Значение привязывается к ближайшей доступной скорости.
+
+Export preset:
+== Пресет экспорта:
+
+Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc_nvenc/mp4), 3=editing(ProRes/mov), 4=editing(DNxHR/mov), 5=lossless archive(FFV1/mkv)
+== Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc_nvenc/mp4), 3=editing(ProRes/mov), 4=editing(DNxHR/mov), 5=lossless archive(FFV1/mkv)
+
+Export range (seconds):
+== Диапазон экспорта (сек):
+
 Export selected
 == Экспортировать выбранное
 
@@ -4718,8 +4817,14 @@ Expose playback controls to the operating system
 External console password. Must be set to enable economy.
 == Пароль внешней консоли. Должен быть установлен для включения экономики.
 
+Extra vertical spacing between chat lines in pixels (0 = default)
+== Extra vertical spacing between chat lines in pixels (0 = default)
+
 Extras
 == Дополнительно
+
+Extremely slow, for testing only
+== Крайне медленно, только для тестирования
 
 f = Frame rate
 == f = Частота кадров
@@ -4808,14 +4913,23 @@ Failed to save screenshot
 Failed to save video
 == Не удалось сохранить видео
 
+Failed to save video. See local console for details.
+== Failed to save video. See local console for details.
+
 Failed to write PNG export.
 == Не удалось записать PNG экспорт.
+
+Fairly fast encode
+== Довольно быстрое кодирование
 
 Fake CTF flags
 == Фальшивые флаги CTF
 
 Fallback simple noise reduction strength
 == Запасная простая сила шумоподавления
+
+Fast encode
+== Быстрое кодирование
 
 Fast input
 == Быстрый ввод
@@ -4831,6 +4945,15 @@ Fast practice
 
 Fast, lightweight blur with a softer approximation.
 == Быстрое и лёгкое размытие с более мягким приближением.
+
+Faster export playback
+== Ускорить воспроизведение при экспорте
+
+Faster presets encode quicker but produce larger files
+== Быстрые пресеты кодируют быстрее, но файлы получаются больше
+
+Fastest encode, largest files
+== Самое быстрое кодирование, самые большие файлы
 
 Fat skins (DDFat)
 == Толстые скины (DDFat)
@@ -5021,6 +5144,9 @@ Follow Tee
 Follow UI icon color
 == Как цвет значков интерфейса
 
+Follow window
+== По размеру окна
+
 Following
 == Следую
 
@@ -5095,6 +5221,9 @@ Frags
 
 Frame rate
 == Частота кадров
+
+Frame rate of the recorded video; higher means smoother playback and larger files
+== Частота кадров записываемого видео; выше — плавнее воспроизведение, но больше файл
 
 Frame time
 == Время кадра
@@ -5792,6 +5921,9 @@ Hide system message prefix
 Hide the *** prefix before server chat messages
 == Скрывать префикс *** перед сообщениями серверного чата
 
+Hide the in-game HUD, chat and spectator overlays while recording. Camera switching still works.
+== Скрывать игровой HUD, чат и информацию наблюдателя при записи. Переключение камеры остаётся доступным.
+
 Hide toast
 == Скрыть toast
 
@@ -5807,8 +5939,17 @@ Hide weapon fire effects in Zen Mode
 Hide weapon muzzle flashes
 == Скрыть вспышки оружия
 
+High (recommended)
+== Высокое (рекомендуется)
+
 High Detail
 == Высокая детализация
+
+High quality (HEVC / MP4)
+== Высокое качество (HEVC / MP4)
+
+High quality, slow
+== Высокое качество, медленно
 
 Higher input latency
 == более высокая задержка ввода
@@ -6134,6 +6275,9 @@ In-game crosshair scale percent (50=half, 200=double)
 Inactive color
 == Цвет бездействия
 
+Include chat in the recording.
+== Включать чат в запись.
+
 Include clan when saving/loading config preset
 == Включать клан при сохранении/загрузке пресета конфигурации
 
@@ -6145,6 +6289,9 @@ Include country flag when saving/loading config preset
 
 Include emoticon when saving/loading config preset
 == Включать эмоцию при сохранении/загрузке пресета конфигурации
+
+Include game audio in the recording.
+== Включать звук игры в запись.
 
 Include name when saving/loading config preset
 == Включать имя при сохранении/загрузке пресета конфигурации
@@ -6160,6 +6307,9 @@ Include Team 0
 
 Include Team 0 in the Gores team drown board
 == Включить Team 0 в список утоплений Gores
+
+Include the in-game HUD in the recording.
+== Включать игровой HUD в запись.
 
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 == Режим автоперевода входящих сообщений (0=только если сообщение не на целевом языке, 1=всегда переводить)
@@ -6580,6 +6730,12 @@ Keyboard size
 
 Keyframe %d/%d: %s
 == Ключевой кадр %d/%d: %s
+
+Keyframe interval (GOP) in frames for demo export (0 = encoder default, 60 = recommended)
+== Keyframe interval (GOP) in frames for demo export (0 = encoder default, 60 = recommended)
+
+Keyframe interval (GOP):
+== Интервал ключевых кадров (GOP):
 
 Keyword reply
 == Ответ по ключевому слову
@@ -7043,12 +7199,6 @@ Local game mode statistics
 Local only
 == Только локальный
 
-Local particle effects
-== Локальные эффекты частиц
-
-Local particles: show particles behind own Tee (e.g. freeze snow)
-== Локальные частицы: показывать частицы, падающие за вашим Tee (например, снежинки заморозки)
-
 Local saves
 == Локальные сохранения
 
@@ -7108,6 +7258,15 @@ Long frames
 
 Lose weapons when teleporting (useful for race maps)
 == Терять оружие при телепортации (полезно для гоночных карт)
+
+Lossless archive (FFV1 / MKV)
+== Архив без потерь (FFV1 / MKV)
+
+Low
+== Низкое
+
+Lower means better quality and larger files; 18 is recommended
+== Чем ниже значение, тем лучше качество и больше файл; рекомендуется 18
 
 LXGW WenKai is available.
 == Шрифт LXGW WenKai доступен.
@@ -7207,6 +7366,9 @@ Manual Steam path is invalid; using automatic detection
 
 Manual target
 == Ручная цель
+
+Manually toggle client-initiated self-kill with the bindable commands qm_self_kill_off and qm_self_kill_on
+== Переключайте самоубийство по инициативе клиента вручную с помощью привязываемых команд qm_self_kill_off и qm_self_kill_on
 
 Map
 == Карта
@@ -7480,6 +7642,9 @@ may cause delay
 
 May overload the service
 == может перегрузить сервис
+
+Medium
+== Среднее
 
 Memory
 == Память
@@ -8444,6 +8609,9 @@ Number of slots reserved for spectators
 Number of threads backend can use for rendering (Note: value may be ignored by backend)
 == Количество потоков, которое может использовать бэкенд для рендеринга (примечание: значение может игнорироваться бэкендом)
 
+Number of video pixel-format conversion threads for demo export (2-4 recommended)
+== Number of video pixel-format conversion threads for demo export (2-4 recommended)
+
 Number of vote options sent per tick
 == Количество вариантов голосования, отправляемых за тик
 
@@ -8633,6 +8801,9 @@ Optional
 Optional authentication key for the DNSBL provider
 == Необязательный ключ аутентификации для провайдера DNSBL
 
+Optional export range in seconds. Leave empty to export the whole demo.
+== Необязательный диапазон экспорта в секундах. Оставьте пустым для всего демо.
+
 Or visit DDNet.org
 == Или посетите DDNet.org
 
@@ -8696,8 +8867,14 @@ Output device open failed
 Output device open failed, try reconnecting speakers/headphones or reselecting output device
 == Ошибка открытия устройства вывода, попробуйте переподключить колонки/наушники или выбрать другое устройство вывода.
 
+Output file name without extension.
+== Имя выходного файла без расширения.
+
 Output KCP negotiation, fallback, and session lifecycle debug logs
 == Выводить отладочные логи переговоров KCP, отката и жизненного цикла сессии
+
+Output resolution
+== Разрешение вывода
 
 Output switch
 == Переключение вывода
@@ -8998,6 +9175,9 @@ Play/Pause
 
 Play/pause the current demo
 == Воспроизвести/поставить на паузу текущее демо
+
+Playback options
+== Параметры воспроизведения
 
 Playback volume
 == Громкость воспроизведения
@@ -9440,6 +9620,33 @@ Press Esc to exit the HUD editor
 Press F2, log in, then use: change_map map_name
 == Нажмите F2, войдите и выполните: change_map map_name
 
+Pressed hook collision line color when hitting a tee
+== Pressed hook collision line color when hitting a tee
+
+Pressed hook collision line color when hitting something hookable
+== Pressed hook collision line color when hitting something hookable
+
+Pressed hook collision line color when not aiming at anything hookable
+== Pressed hook collision line color when not aiming at anything hookable
+
+Pressed hook line color; always used when custom pressed colors are enabled
+== Цвет линии при нажатии; всегда применяется при включении своих цветов нажатия
+
+Pressed hook line tip color
+== Pressed hook line tip color
+
+Pressed: A Tee
+== При нажатии: Другой игрок
+
+Pressed: Hook line tip
+== При нажатии: Кончик линии
+
+Pressed: Nothing hookable
+== При нажатии: Ничего не зацепляется
+
+Pressed: Something hookable
+== При нажатии: Зацепляемое
+
 Prev. weapon
 == Пред. оружие
 
@@ -9647,9 +9854,6 @@ Pyramid
 q = Connection quality
 == q = Качество соединения
 
-Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
-== Расширенный рендеринг Qm: 0=выкл. (чистый Vulkan), 1=автооткат, 2=вкл. принудительно
-
 Qm recommended appearance
 == Рекомендуемый вид Qm
 
@@ -9710,8 +9914,32 @@ QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
 == Квады используются для фонового декора
 
+Quality (CQ):
+== Качество (CQ):
+
+Quality (CRF):
+== Качество (CRF):
+
+Quality (fixed):
+== Качество (фиксированное):
+
+Quality (ICQ):
+== Качество (ICQ):
+
+Quality (QP):
+== Качество (QP):
+
+Quality from 0 to 51; lower is clearer and larger. Leave empty to use the video encoding CRF.
+== Качество от 0 до 51: меньше — четче и больше файл. Оставьте пустым, чтобы использовать CRF из раздела кодирования видео.
+
+Quality is fixed by the selected format.
+== Качество фиксируется выбранным форматом.
+
 Quality tier
 == По качеству сети
+
+Quality:
+== Качество:
 
 Query current map info
 == Запросить информацию о текущей карте
@@ -9992,6 +10220,9 @@ Record demo
 Record to a file
 == Записать в файл
 
+Recorder FPS
+== Частота кадров записи
+
 Red
 == Красный
 
@@ -10120,12 +10351,6 @@ Remote console password for helper (limited access)
 
 Remote console password for moderator (limited access)
 == Пароль удалённой консоли для модератора (ограниченный доступ)
-
-Remote particle effects
-== Удалить из избранного
-
-Remote particles: sync and render other players via central server (requires both local+remote enabled)
-== Удалённые частицы: синхронизация и отображение других игроков через центральный сервер (требуется включение локального + удалённого у собеседника)
 
 Remove
 == Удалить
@@ -10307,6 +10532,12 @@ Render cut to video
 Render demo
 == Рендерить демо
 
+Render demo content only during video export (hide HUD, chat and spectator overlays)
+== Рендерить только демо: скрывать HUD, чат и информацию наблюдателя при экспорте
+
+Render demo only
+== Только демо
+
 Render entity text data
 == Рендерить текстовые данные сущностей
 
@@ -10321,6 +10552,9 @@ Render ghosts as circles instead of Tee
 
 Render graphics when window is in background
 == Рендерить графику, когда окно в фоне
+
+Render preset
+== Пресет рендеринга
 
 Render quads as triangles (fixes quad shading on some GPUs)
 == Рендерить четырёхугольники как треугольники (исправляет затенение на некоторых GPU)
@@ -10414,36 +10648,6 @@ Reply to the last whisper target: %s
 
 Reply with dummy
 == Ответить дамми
-
-Report
-== Пожаловаться
-
-Report request canceled
-== Запрос жалобы отменен
-
-Report request failed due to network error
-== Запрос жалобы не удался из-за ошибки сети
-
-Report request failed with HTTP status: %d
-== Запрос жалобы не удался, HTTP-статус: %d
-
-Report request is already in progress
-== Запрос жалобы уже выполняется
-
-Report scan request submitted
-== Запрос сканирования жалобы отправлен
-
-Report service App ID
-== App ID службы жалоб
-
-Report service signing key
-== Ключ подписи службы жалоб
-
-Report service URL
-== URL службы жалоб
-
-Reports are not available on Axiom servers
-== Жалобы недоступны на серверах Axiom
 
 Request a position swap
 == Запросить обмен позициями
@@ -10606,6 +10810,9 @@ Restore Kugou files
 
 Restore old single-segment hook collision line behavior
 == Восстановить старое поведение линии столкновения крюка с одним сегментом
+
+Restore recommended
+== Вернуть рекомендованные
 
 Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
 == Вернуть прежнюю прокрутку колёсиком: каждый шаг заново запускает плавную прокрутку без сохранения скорости
@@ -10820,6 +11027,9 @@ Save ghost
 Save last %d min
 == Сохранить последние %d мин
 
+Save loaded and marked as used.
+== Save loaded and marked as used.
+
 Save loaded; local record removed.
 == Сохранение загружено, локальная запись удалена.
 
@@ -10915,12 +11125,6 @@ Scale max mouse distance to 1000 for better aim
 
 Scale uncertainty duration by ping (100=1.0x)
 == Масштабировать длительность неопределённости по пингу (100=1.0x)
-
-Scanning current server
-== Сканирование текущего сервера
-
-Scanning current server...
-== Сканирование текущего сервера...
 
 Score
 == Очки
@@ -11170,6 +11374,12 @@ Self and friends
 
 Self only
 == Отправить
+
+Self-kill off
+== Выключить самоубийство
+
+Self-kill on
+== Включить самоубийство
 
 Send & Receive
 == Отправить эмоцию в воде
@@ -12665,11 +12875,17 @@ Skip Tutorial
 Slide left
 == Сдвиг влево
 
+Slightly fast encode
+== Немного быстрое кодирование
+
 Slow down the demo
 == Замедлить демо
 
 Slower
 == медленнее
+
+Slower export playback
+== Замедлить воспроизведение при экспорте
 
 Small Tee size
 == Размер маленького Tee
@@ -12791,8 +13007,14 @@ Some map sounds could not be loaded. Check the local console for details.
 Something hookable
 == Что-то зацепляемое
 
+Sort by command
+== Сортировать по команде
+
 Sort by favorites
 == Сортировать по избранному
+
+Sort by key
+== Сортировать по клавише
 
 Sort by number of friends
 == Сортировать по числу друзей
@@ -12965,6 +13187,9 @@ Squishy Tee deformation intensity
 Star
 == Звезда
 
+Start (s)
+== Начало (с)
+
 Start and connect to local server
 == Запустить и подключиться к локальному серверу
 
@@ -12994,6 +13219,9 @@ Start recording a video
 
 Start skin queue from a random position when entering a map
 == Начинать очередь скинов со случайной позиции при входе на карту
+
+Start the export paused
+== Начать экспорт на паузе
 
 Statboard
 == Статистика
@@ -14006,6 +14234,9 @@ Title wave strength (0-3, 0 = off)
 to check a server setting say /settings and setting's name, setting names are:
 == Чтобы посмотреть настройку сервера, введите /settings и её название. Названия настроек:
 
+To prevent accidental kills while racing, use the two bind rows above to toggle. To self-kill, press the enable key first, then press K. Server commands are not affected
+== Чтобы избежать случайных самоубийств на трассах, используйте две строки привязки выше для переключения. Чтобы совершить самоубийство, сначала нажмите клавишу включения, затем K. Команды сервера не затрагиваются
+
 To save all players in your team have to be alive and not in '/spec'
 == Чтобы сохранить команду, все игроки в ней должны быть живы и не в '/spec'
 
@@ -14555,6 +14786,9 @@ Unfreeze tile outline color
 Unfreeze/Deep unfreeze tile outline width
 == Ширина контура тайлов разморозки/глубокой разморозки
 
+Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
+== Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
+
 Uninvite player from team
 == Отменить приглашение игрока в команду
 
@@ -14729,6 +14963,9 @@ Use current name
 Use current settings
 == Использовать текущие настройки
 
+Use custom colors for the pressed hook collision line (0 = always invert)
+== Use custom colors for the pressed hook collision line (0 = always invert)
+
 Use custom skins instead of the ninja tee
 == Использовать пользовательские скины вместо скина ниндзя
 
@@ -14810,11 +15047,8 @@ Use original style for Dynamic Island
 Use pre-input to predict other players for more accurate input prediction
 == Использовать предварительный ввод для прогнозирования других игроков для более точного прогнозирования ввода
 
-Use procedural ring pipeline when enhanced rendering is active
-== Использовать процедурный конвейер колец при включённом расширенном рендеринге
-
-Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
-== Использовать конвейеры SDF для Dynamic Island и скруглённых прямоугольников при включённом расширенном рендеринге
+Use procedural ring pipeline
+== Use procedural ring pipeline
 
 Use server defaults
 == Использовать настройки сервера
@@ -14837,6 +15071,9 @@ Use team colors for name plates
 Use Tee icons instead of circles
 == Использовать иконки Tee вместо кругов
 
+Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
+== Использовать указанные ниже цвета линии крюка при нажатой клавише крюка; если отключено, цвета автоматически инвертируются
+
 Use the mouse wheel on a hovered module to scale it by 5%
 == Используйте колесо мыши на наведённом модуле для масштабирования на 5%
 
@@ -14857,6 +15094,9 @@ Use warlist colors instead of regular colors
 
 Use warlist groups for indicator
 == Использовать группы списка врагов для индикатора
+
+Used
+== Used
 
 Used by active shared text and numeric input fields
 == Используется активными общими полями ввода текста и чисел
@@ -14912,17 +15152,38 @@ Vertical sync (may cause lag)
 Vertical wave
 == Вертикальная волна
 
+Very fast encode
+== Очень быстрое кодирование
+
+Very high
+== Очень высокое
+
+Very high quality, very slow
+== Очень высокое качество, очень медленно
+
 Video Background
 == Фоновое видео
 
 Video directory
 == Папка видеозаписей
 
+Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
+== Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
+
+Video encoding
+== Кодирование видео
+
+Video export
+== Экспорт видео
+
 Video name
 == Имя видео
 
 Video name:
 == Имя видео:
+
+Video quality CRF
+== Качество видео (CRF)
 
 Video rendering is unavailable during online replay.
 == Рендеринг видео недоступен во время онлайн-повтора.

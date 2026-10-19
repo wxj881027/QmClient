@@ -606,6 +606,17 @@ TEST(InputField, AffordanceSlotsOnlyExistWhenRequested)
 	EXPECT_FLOAT_EQ(Both.m_ShellRect.w, Rect.w);
 }
 
+TEST(InputField, ClearButtonFollowsContentAndFadesAfterClearing)
+{
+	// 空态且没有“刚清空”的旧内容时不显示；有内容时显示；清空后的
+	// 过渡帧仍保留，让 × 随内容淡出而不是瞬间消失。
+	EXPECT_FALSE(ui_widget::QmInputFieldClearVisible(true, false, false));
+	EXPECT_FALSE(ui_widget::QmInputFieldClearVisible(true, true, true));
+	EXPECT_TRUE(ui_widget::QmInputFieldClearVisible(false, false, false));
+	EXPECT_TRUE(ui_widget::QmInputFieldClearVisible(false, true, true));
+	EXPECT_TRUE(ui_widget::QmInputFieldClearVisible(true, true, false));
+}
+
 TEST(InputField, ContentRectStaysInsideOuterShell)
 {
 	const CUIRect Rect{4.0f, 8.0f, 96.0f, 24.0f};

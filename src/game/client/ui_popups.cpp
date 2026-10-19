@@ -183,9 +183,7 @@ void CUi::RenderPopupMenus()
 	CUiScopedGaussianBlur PopupBlurScope(this);
 	// 禁用弹层模糊时，背景和分隔线的半透明绘制也不能触发自动背板模糊。
 	CUiScopedGaussianBlurSuppression PopupBlurSuppression(this, g_Config.m_QmGaussianBlur == 0);
-	// 页面文字绘制晚于菜单背板捕获；弹层栈需要完整页面的新快照，栈内继续复用。
-	if(!m_vPopupMenus.empty() && g_Config.m_QmGaussianBlur != 0 && GaussianBlurScopeActive())
-		m_GaussianBlurPrepared = false;
+	// 弹层沿用本帧在文字之前冻结的背景层；不能再捕获页面文字作为背板。
 	m_RenderingPopupMenus = true;
 	for(size_t i = 0; i < m_vPopupMenus.size(); ++i)
 	{

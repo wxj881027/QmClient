@@ -316,7 +316,10 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	}
 	// 进入「搜索」页第一帧自动聚焦输入框：同时建立 ActiveItem 与 CLineInput 激活态，
 	// 之后由 DoEditBox 的激活维持逻辑接管；一次性消费，点击其他控件可正常移走焦点。
-	if(!ReadOnly && m_FocusSettingsSearchOnEntry && !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive() && !s_GlobalSearchInputCollapsed)
+	// 页签在按下帧切换页面，同一帧的这次按下会让 DoEditBox 判成「点击输入框外部」并
+	// 立刻释放刚建立的焦点；推迟到按下事件已消费的下一帧再聚焦，避免聚焦被同一次点击撤销。
+	if(!ReadOnly && m_FocusSettingsSearchOnEntry && !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive() &&
+		!s_GlobalSearchInputCollapsed && !Ui()->MouseButtonClicked(0))
 	{
 		m_FocusSettingsSearchOnEntry = false;
 		Ui()->SetActiveItem(&m_GlobalCardSearchInput);

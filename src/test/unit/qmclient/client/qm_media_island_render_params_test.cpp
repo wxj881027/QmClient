@@ -72,19 +72,6 @@ TEST(QmHudMediaIslandBackdrop, TransparentOpacityIncludesPureBlurAndSkipsOpaqueB
 	EXPECT_FALSE(QmHudMediaIslandShouldPrepareBackdropBlur(99, false));
 }
 
-TEST(QmHudMediaIslandBackdrop, RefreshesEveryNewFrameAndReusesTheSameFrameAttempt)
-{
-	EXPECT_TRUE(QmHudMediaIslandShouldRefreshBackdropBlur(10, 0, false));
-	// 同一次主循环里的重复绘制复用结果，下一次绘制不受循环限速方式影响。
-	EXPECT_FALSE(QmHudMediaIslandShouldRefreshBackdropBlur(10, 10, true));
-	EXPECT_TRUE(QmHudMediaIslandShouldRefreshBackdropBlur(11, 10, true));
-	EXPECT_TRUE(QmHudMediaIslandShouldRefreshBackdropBlur(12, 11, true));
-	EXPECT_TRUE(QmHudMediaIslandShouldRefreshBackdropBlur(13, 10, true));
-	EXPECT_TRUE(QmHudMediaIslandShouldRefreshBackdropBlur(9, 10, true));
-	EXPECT_TRUE(QmHudMediaIslandShouldRefreshBackdropBlur(0, UINT64_MAX, true));
-	EXPECT_FALSE(QmHudMediaIslandShouldRefreshBackdropBlur(0, 0, true));
-}
-
 TEST(QmHudMediaIslandBackdrop, MapsTheAnimatedOuterRectToTheCapturedScreenTexture)
 {
 	const CUIRect OuterRect = {120.0f, 30.0f, 80.0f, 40.0f};

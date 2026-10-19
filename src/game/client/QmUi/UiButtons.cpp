@@ -58,6 +58,8 @@ namespace ui_widget
 		auto Style = ResolveUiButtonStyle(Options.m_Role, Base, Backdrop, Theme, State);
 		if(Options.m_TransparentInactive && !State.m_Hovered && !State.m_Selected)
 			Style.m_Border = ColorRGBA();
+		if(Options.m_BorderOverride.has_value())
+			Style.m_Border = *Options.m_BorderOverride;
 		if(pUi->DrawingSuppressed())
 			return Style.m_Fill;
 

@@ -286,6 +286,12 @@ void qm_card_catalog::QmCardRenderHook::RenderQmBindEditorContent(CMenus *pMenus
 		pMenus->RenderSettingsQmClientBindCard(Content, ReadOnly);
 }
 
+void qm_card_catalog::QmCardRenderHook::RenderQmBindOverviewContent(CMenus *pMenus, CUIRect &Content, const bool ReadOnly)
+{
+	if(pMenus != nullptr)
+		pMenus->RenderQmBindOverviewContent(Content, ReadOnly);
+}
+
 void qm_card_catalog::QmCardRenderHook::RenderQmSteamContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly)
 {
 	pMenus->RenderQmSteamContent(Content, Metrics, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));

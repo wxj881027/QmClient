@@ -64,7 +64,6 @@
 (Follow Chinese font)
 (Follow English font)
 (On Latest)
-(paused)
 (Update required)
 - Save codes in order:
 - Save owners in order:
@@ -84,6 +83,7 @@
 0 - Disabled, 1-9999 minutes
 0 = auto
 0 disables timed rotation; skins only switch on random start events
+0-51, empty = default
 1% low
 128 player id <-> 64 player id map update rate
 3D background
@@ -232,6 +232,7 @@ Allow FTAPI auto-translate (may cause overload)
 Allow insecure HTTP protocol in addition to secure HTTPS. Primarily for testing.
 Allow left-click to toggle between spectating nearest player and free view
 Allow mic permission in system settings, then reopen voice
+Allow the client to send kill requests (0 = ignore client-initiated kills)
 Allow voting to kick players
 Allow voting to move players to spectators
 Allow voting to pause players (instead of moving to spectators)
@@ -247,6 +248,7 @@ Always show own player's hook collision line
 Always show song title and artist
 Always translate
 Amount
+An export preset applies an encoder, container and quality combination. Choose Custom to edit each setting.
 And pick one randomly
 Angle
 Angle:
@@ -434,6 +436,7 @@ Automatically launch Steam when the client is started externally, so Steam can t
 Automatically re-join team 0 after finish (only if unlocked).
 Automatically record demos
 Automatically record replays
+Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
 Automatically reply to muted players
 Automatically reply while the window is unfocused
 Automatically switch hammer/gun in Gores mode
@@ -490,6 +493,7 @@ Background stroke color
 Background stroke width
 Baidu Translate
 Balance master, music, and game volume
+Balanced (recommended)
 Ban a certain nickname
 Ban ip for x minutes for any reason
 Ban ip range for x minutes for any reason
@@ -508,6 +512,7 @@ Behavior
 Behavior type
 Benchmark frame times for number of seconds to file, then quit
 Best
+Better compression, slower
 Better scoreboard
 Bind
 Bind address for client/server
@@ -516,6 +521,7 @@ Bind dummy control and copy actions
 Bind key to execute a command or view keybindings
 Bind movement, jump, hook, and fire actions
 Bind only to IPv4, otherwise bind to all interfaces
+Bind overview
 Bind scoreboard, emote, and console actions
 Bind voting and server browser actions
 Bind weapon selection and switching actions
@@ -549,6 +555,7 @@ Bottom left
 Bottom right
 Bounce
 Bound functions
+Bounded capture frame queue depth for demo export (higher values use more memory)
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 Bracketed title opacity (0-100)
 Bracketed title single color
@@ -557,6 +564,7 @@ Broadcast message
 Broadcast shown to players using old DDNet client
 Broadcast shown to players with known bot client
 Broadcast shown to players without DDNet client
+Browse all key bindings grouped by function
 Browse and activate custom audio packs
 Browse font store…
 Browser
@@ -651,6 +659,7 @@ Chat gradient horizontal position percentage
 Chat gradient range percentage
 Chat gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
 Chat gradient vertical position percentage
+Chat line spacing
 Chat log retention days
 Chat mention / vote alert
 Chat message
@@ -680,6 +689,7 @@ Chinese (Simplified)
 Chinese (Traditional)
 Chinese font:
 CHN
+Choose a preset, or Custom to enter width and height. Follow window uses the current render size.
 Choose colors for weapons and entity lasers
 Choose country flag
 Choose default eyes when joining a server
@@ -754,7 +764,11 @@ Client message color
 Client message text gradient color
 Client performance pressure is high
 Client prediction time is high
+Client self-kill is disabled (K key / kill command will be ignored)
+Client self-kill is disabled (server commands are not affected)
+Client self-kill is enabled
 Client uptime
+Client-side self-kill protection
 Close
 Close the demo player
 Close window after changing settings
@@ -842,7 +856,6 @@ Configure keyword-based automatic replies
 Configure laser shape, glow, and animation
 Configure nameplate text, badges, and visibility
 Configure player identity and country
-Configure qm_report_app_id and qm_report_secret first
 Configure QmClient gameplay helpers
 Configure QmClient HUD elements
 Configure remaining DDNet client preferences
@@ -867,7 +880,6 @@ Connect address error
 Connect dummy
 Connect dummy automatically for solo split mode
 Connect dummy to enable
-Connect to a server first
 Connect to server first to establish voice network link
 Connect to the specified host/ip
 Connected
@@ -903,6 +915,8 @@ Console settings
 Console string color
 Console text color
 Contacting title server
+Container format: MP4 is the most compatible, MOV suits editing, MKV suits lossless archives.
+Container:
 Continue anyway?
 Contributors
 Control custom background drawing
@@ -925,6 +939,7 @@ Coords size
 Copied
 Copy
 Copy a .qmconfig file into the package folder, then refresh.
+Copy all
 Copy info
 Copy name
 Copy name option color
@@ -938,11 +953,9 @@ Could not back up configuration files.
 Could not check for existing player with your name. Check your internet connection.
 Could not connect dummy
 Could not connect to the translation service. Please try again later.
-Could not create report scan request
 Could not find a Tutorial server. Check your internet connection.
 Could not find online Tutorial server.\nStarting and connecting to local server…
 Could not find your Team
-Could not get current server address
 Could not get server list from master server
 Could not list configuration files.
 Could not load default touch controls from file. See local console for details.
@@ -1003,9 +1016,11 @@ Custom color
 Custom colors
 Custom command
 Custom community list fetch URL (must be https, leave empty to disable)
+Custom export container: mp4, mov or mkv
 Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
 Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
 Custom font for Latin text (family, or family + style)
+Custom pressed hook line colors
 Custom prompt template
 Custom Provider API Key
 Custom Provider endpoint
@@ -1026,6 +1041,7 @@ Customize vote display and interaction
 Custom…
 Cut interval
 Cut length
+Cut points can only land on keyframes. Smaller values add more cut points and larger files; 0 uses the encoder default.
 Cut segments
 Cute:
 Cycle custom Tee hue
@@ -1035,6 +1051,7 @@ Cycle custom Tee hue speed (deg/s)
 Cycle through emotes
 Cyrillic
 d = Prediction latency
+Daily (H.264 / MP4)
 Dark translucent
 Darken Tee color when frozen (0-100)
 Data
@@ -1103,6 +1120,7 @@ DeepSeek endpoint (leave empty for default)
 DeepSeek model name
 Default
 default
+Default (software)
 Default appearance profile migration version
 Default display mode for time: game/round timer or broadcast. 0 = game/round timer, 1 = broadcast, 2 = 0+1, 3 = none
 Default input open failed
@@ -1134,12 +1152,14 @@ Demo cut saved, but its camera path could not be saved
 Demo directory
 Demo display
 Demo effects
+Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
 Demo hook strength (0=Off 1=Icon 2=Icon and number)
 Demo hook strength scope (0=Own 1=Others 2=Strong 3=Weak 4=All)
 Demo key presses (0=Off 1=Others 2=All 3=Own)
 Demo marker added
 Demo player is currently active.
 Demo target
+Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
 Demofile: %s
 Demos
 Demos directory
@@ -1169,6 +1189,7 @@ Direct touch input while spectating
 Direction Keys
 disable
 Disable after picking up other weapons
+Disable client-initiated self-kill (K key / kill command)
 Disable clipping
 Disable Gores auto-switch when picking up extra weapon
 Disabled
@@ -1345,6 +1366,8 @@ Edit player and dummy identity information
 Edit skin texture
 Edit this custom command on the Bind Wheel page.
 Edit touch controls
+Editing (DNxHR HQX / MOV)
+Editing (ProRes 422 HQ / MOV)
 Editor
 Elastic
 Elastic back
@@ -1384,6 +1407,7 @@ Enable chat message sound
 Enable chat with all/team mode
 Enable cheats for your current team's run, but you can't earn a rank
 Enable client stutter diagnostics at startup
+Enable client-initiated self-kill (K key / kill command)
 Enable colored console output
 Enable coloring and hearts for friends
 Enable connections from vanilla 0.6 clients
@@ -1500,6 +1524,9 @@ Enable/disable quad alignment. When enabled, red lines show how moving quads/poi
 Enable/disable replays
 Enable/disable test commands (aka cheats) (setting only effective in initial config).
 Enables/disables active moderator mode for the player
+Encoder used for export. Hardware encoders appear only when available.
+Encoder:
+End (s)
 End marker of replay slice
 Endless hook has been activated
 Endless hook has been deactivated
@@ -1564,6 +1591,12 @@ Export configuration package
 Export cut as a separate demo
 Export demo cut
 Export name contains invalid characters.
+Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+Export playback speed. The value snaps to the nearest available speed.
+Export preset:
+Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc_nvenc/mp4), 3=editing(ProRes/mov), 4=editing(DNxHR/mov), 5=lossless archive(FFV1/mkv)
+Export range (seconds):
 Export selected
 Export to clipboard
 Exported %d chat messages
@@ -1571,7 +1604,9 @@ Exported to %s
 Exporting chat images: %d
 Expose playback controls to the operating system
 External console password. Must be set to enable economy.
+Extra vertical spacing between chat lines in pixels (0 = default)
 Extras
+Extremely slow, for testing only
 f = Frame rate
 Fade and slide
 Fade in
@@ -1601,14 +1636,20 @@ Failed to save camera path
 Failed to save demo
 Failed to save screenshot
 Failed to save video
+Failed to save video. See local console for details.
 Failed to write PNG export.
+Fairly fast encode
 Fake CTF flags
 Fallback simple noise reduction strength
+Fast encode
 Fast input
 Fast input (reduce visual latency)
 Fast input others
 Fast practice
 Fast, lightweight blur with a softer approximation.
+Faster export playback
+Faster presets encode quicker but produce larger files
+Fastest encode, largest files
 Fat skins (DDFat)
 Favorite
 Favorite friend
@@ -1673,6 +1714,7 @@ Follow remote placements in the collaborative editor
 Follow server
 Follow Tee
 Follow UI icon color
+Follow window
 Following
 Following %s across servers
 Following: %s
@@ -1698,6 +1740,7 @@ FPS
 Fraction of players needed to pass a vote
 Frags
 Frame rate
+Frame rate of the recorded video; higher means smoother playback and larger files
 Frame time
 Frame time p95
 Frame time p99
@@ -1930,12 +1973,16 @@ Hide server tip notifications (including notification bar) in Zen mode
 Hide sponsor QR code
 Hide system message prefix
 Hide the *** prefix before server chat messages
+Hide the in-game HUD, chat and spectator overlays while recording. Camera switching still works.
 Hide toast
 Hide typing emoji during input
 Hide UI for focused gameplay
 Hide weapon fire effects in Zen Mode
 Hide weapon muzzle flashes
+High (recommended)
 High Detail
+High quality (HEVC / MP4)
+High quality, slow
 Higher input latency
 Higher values make the wave move faster. Zero stops the movement.
 Highlight Color
@@ -2044,15 +2091,18 @@ In memory of me
 In-game controller sensitivity
 In-game crosshair scale percent (50=half, 200=double)
 Inactive color
+Include chat in the recording.
 Include clan when saving/loading config preset
 Include color when saving/loading config preset
 Include country flag when saving/loading config preset
 Include emoticon when saving/loading config preset
+Include game audio in the recording.
 Include name when saving/loading config preset
 Include seconds in local time display
 Include skin when saving/loading config preset
 Include Team 0
 Include Team 0 in the Gores team drown board
+Include the in-game HUD in the recording.
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 Incoming language
 Indicate map finish
@@ -2193,6 +2243,8 @@ Key Sticking: Reset Self
 Keyboard focus ring color
 Keyboard size
 Keyframe %d/%d: %s
+Keyframe interval (GOP) in frames for demo export (0 = encoder default, 60 = recommended)
+Keyframe interval (GOP):
 Keyword reply
 Keyword reply rules (each line: [rename] [regex] keyword=>reply)
 Keyword reply use Dummy
@@ -2347,8 +2399,6 @@ Local + Dummy
 Local console log category filter mask (bit flags)
 Local game mode statistics
 Local only
-Local particle effects
-Local particles: show particles behind own Tee (e.g. freeze snow)
 Local saves
 Local service without authentication
 Local statistics file is invalid, saving paused
@@ -2369,6 +2419,9 @@ Logout of econ
 Logout of rcon
 Long frames
 Lose weapons when teleporting (useful for race maps)
+Lossless archive (FFV1 / MKV)
+Low
+Lower means better quality and larger files; 18 is recommended
 LXGW WenKai is available.
 LXGW WenKai is unavailable. Current fonts and weights will be kept.
 Lyrics
@@ -2402,6 +2455,7 @@ Manual scope
 Manual source file
 Manual Steam path is invalid; using automatic detection
 Manual target
+Manually toggle client-initiated self-kill with the bindable commands qm_self_kill_off and qm_self_kill_on
 Map
 Map browser difficulty star filter bitmask (bits 1-5)
 Map browser: show empty servers only
@@ -2493,6 +2547,7 @@ Maximum team size.
 Maximum undo steps in editor history (editor, envelope editor, and server settings editor are independent)
 may cause delay
 May overload the service
+Medium
 Memory
 Mention
 Mention option color
@@ -2814,6 +2869,7 @@ Novice
 Number of reserved slots for special players.
 Number of slots reserved for spectators
 Number of threads backend can use for rendering (Note: value may be ignored by backend)
+Number of video pixel-format conversion threads for demo export (2-4 recommended)
 Number of vote options sent per tick
 o = Send rate
 Off
@@ -2877,6 +2933,7 @@ Optimistic prediction along stable direction
 Option color
 Optional
 Optional authentication key for the DNSBL provider
+Optional export range in seconds. Leave empty to export the whole demo.
 Or visit DDNet.org
 Original
 Original language for both received and outgoing messages. Use Auto to detect each message.
@@ -2898,7 +2955,9 @@ Output device
 Output device not found
 Output device open failed
 Output device open failed, try reconnecting speakers/headphones or reselecting output device
+Output file name without extension.
 Output KCP negotiation, fallback, and session lifecycle debug logs
+Output resolution
 Output switch
 Output voice debug log
 Overlay entities
@@ -2999,6 +3058,7 @@ Play the selected demo
 Play time
 Play/Pause
 Play/pause the current demo
+Playback options
 Playback volume
 Played for chat highlights and vote alerts when their notification sound is enabled.
 Played for incoming player chat messages when their notification sound is enabled.
@@ -3146,6 +3206,15 @@ Press a key…
 Press ESC to close. Watch the scale-in spring on open.
 Press Esc to exit the HUD editor
 Press F2, log in, then use: change_map map_name
+Pressed hook collision line color when hitting a tee
+Pressed hook collision line color when hitting something hookable
+Pressed hook collision line color when not aiming at anything hookable
+Pressed hook line color; always used when custom pressed colors are enabled
+Pressed hook line tip color
+Pressed: A Tee
+Pressed: Hook line tip
+Pressed: Nothing hookable
+Pressed: Something hookable
 Prev. weapon
 Preview
 Preview 'Hook collisions' being pressed
@@ -3215,7 +3284,6 @@ Puts you out of live freeze
 Puts you out of solo part
 Pyramid
 q = Connection quality
-Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 Qm recommended appearance
 Qm UI custom icon color
 Qm UI icon color: 1=White, 2=Black, 3=Custom, 4=Rainbow
@@ -3236,7 +3304,15 @@ QQ group: 1076765929 (click to copy)
 QQ Music hook heartbeat timeout (milliseconds)
 QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
+Quality (CQ):
+Quality (CRF):
+Quality (fixed):
+Quality (ICQ):
+Quality (QP):
+Quality from 0 to 51; lower is clearer and larger. Leave empty to use the video encoding CRF.
+Quality is fixed by the selected format.
 Quality tier
+Quality:
 Query current map info
 Query isolated serverlist consumer state
 Query map info for %s
@@ -3330,6 +3406,7 @@ Reconnect in %d sec
 Record chat replays.
 Record demo
 Record to a file
+Recorder FPS
 Red
 Red team
 Red team wins!
@@ -3373,8 +3450,6 @@ Remote console
 Remote console password (full access)
 Remote console password for helper (limited access)
 Remote console password for moderator (limited access)
-Remote particle effects
-Remote particles: sync and render other players via central server (requires both local+remote enabled)
 Remove
 Remove [group] [clan]:
 Remove [group] [name]:
@@ -3435,11 +3510,14 @@ Render complete
 Render crosshair in free spectate mode
 Render cut to video
 Render demo
+Render demo content only during video export (hide HUD, chat and spectator overlays)
+Render demo only
 Render entity text data
 Render entity text data in editor
 Render ghosts as circles
 Render ghosts as circles instead of Tee
 Render graphics when window is in background
+Render preset
 Render quads as triangles (fixes quad shading on some GPUs)
 Render refresh rate (Hz, limited by cl_refresh_rate)
 Render tiny tees instead of circles
@@ -3471,16 +3549,6 @@ Reply to messages from muted players
 Reply to the last whisper target
 Reply to the last whisper target: %s
 Reply with dummy
-Report
-Report request canceled
-Report request failed due to network error
-Report request failed with HTTP status: %d
-Report request is already in progress
-Report scan request submitted
-Report service App ID
-Report service signing key
-Report service URL
-Reports are not available on Axiom servers
 Request a position swap
 Request to swap positions with %s
 Request to swap your tee with another team member
@@ -3535,6 +3603,7 @@ Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects anoth
 Restore configuration package
 Restore Kugou files
 Restore old single-segment hook collision line behavior
+Restore recommended
 Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
 Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
 Restoring save %d: main '%s', dummy '%s'.
@@ -3606,6 +3675,7 @@ Save drawings to a given csv file (defaults to map name)
 Save failed!
 Save ghost
 Save last %d min
+Save loaded and marked as used.
 Save loaded; local record removed.
 Save loaded; the local record could not be removed.
 Save player names in replay
@@ -3638,8 +3708,6 @@ Scale down other Tees as well
 Scale down Tee
 Scale max mouse distance to 1000 for better aim
 Scale uncertainty duration by ping (100=1.0x)
-Scanning current server
-Scanning current server...
 Score
 Score earned
 Score limit
@@ -3723,6 +3791,8 @@ Selection background color
 Self
 Self and friends
 Self only
+Self-kill off
+Self-kill on
 Send & Receive
 Send a moderator alert message to player
 Send a server alert message to all players
@@ -4221,8 +4291,10 @@ Skip the main menu
 Skip the weapon switch animation for hammer switches in Gores mode
 Skip Tutorial
 Slide left
+Slightly fast encode
 Slow down the demo
 Slower
+Slower export playback
 Small Tee size
 Smaller tees
 Smart
@@ -4263,7 +4335,9 @@ Some fonts could not be loaded. Check the local console for details.
 Some map images could not be loaded. Check the local console for details.
 Some map sounds could not be loaded. Check the local console for details.
 Something hookable
+Sort by command
 Sort by favorites
+Sort by key
 Sort by number of friends
 Sort by number of QmClient players
 Sort column in ghost list
@@ -4321,6 +4395,7 @@ SQL Server name for record table
 Squishy Tee deformation duration
 Squishy Tee deformation intensity
 Star
+Start (s)
 Start and connect to local server
 Start dummy skin queue from a random position when entering a map
 Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
@@ -4331,6 +4406,7 @@ Start playback of ghosts
 Start recording a demo
 Start recording a video
 Start skin queue from a random position when entering a map
+Start the export paused
 Statboard
 Stats
 Stats notes
@@ -4668,6 +4744,7 @@ Title too long or contains unsupported characters
 Title visibility and appearance
 Title wave strength (0-3, 0 = off)
 to check a server setting say /settings and setting's name, setting names are:
+To prevent accidental kills while racing, use the two bind rows above to toggle. To self-kill, press the enable key first, then press K. Server commands are not affected
 To save all players in your team have to be alive and not in '/spec'
 Toast uses UiTokens + QmMotion slide
 Toggle auto camera
@@ -4851,6 +4928,7 @@ Unfreeze
 Unfreeze opacity
 Unfreeze tile outline color
 Unfreeze/Deep unfreeze tile outline width
+Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
 Uninvite player from team
 Unix socket server for IP address recording (Unix only)
 Unknown
@@ -4909,6 +4987,7 @@ Use compact list view for config variables
 Use current map as background
 Use current name
 Use current settings
+Use custom colors for the pressed hook collision line (0 = always invert)
 Use custom skins instead of the ninja tee
 Use custom UI icon color
 Use default flags on scoreboard
@@ -4936,8 +5015,7 @@ Use old rainbow team colors (restores old behavior)
 Use original style
 Use original style for Dynamic Island
 Use pre-input to predict other players for more accurate input prediction
-Use procedural ring pipeline when enhanced rendering is active
-Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
+Use procedural ring pipeline
 Use server defaults
 Use skin color for frozen Tee's feet
 Use skin color when Tee is frozen
@@ -4945,6 +5023,7 @@ Use sounds
 Use style colors
 Use team colors for name plates
 Use Tee icons instead of circles
+Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
 Use the mouse wheel on a hovered module to scale it by 5%
 Use the scoreboard cursor mode to scroll the list
 Use the selected tee trail style palette
@@ -4952,6 +5031,7 @@ Use this after `add_favorite` to group favorites. Start with `begin_favorite_gro
 Use this before `add_favorite` to group favorites. End with `end_favorite_group`
 Use warlist colors instead of regular colors
 Use warlist groups for indicator
+Used
 Used by active shared text and numeric input fields
 Uses the active action with the current aiming position.
 UTF-8 text, one word per line (max 2 MiB).
@@ -4970,10 +5050,17 @@ Version performing the analysis
 Vertical position
 Vertical sync (may cause lag)
 Vertical wave
+Very fast encode
+Very high
+Very high quality, very slow
 Video Background
 Video directory
+Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
+Video encoding
+Video export
 Video name
 Video name:
+Video quality CRF
 Video rendering is unavailable during online replay.
 Video was saved to '%s'
 Videos directory

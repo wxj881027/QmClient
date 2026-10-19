@@ -234,7 +234,7 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderRoundedRectSdf(const CComman
 
 	UseProgram(m_pRoundedRectSdfProgram);
 	SetState(pCommand->m_State, m_pRoundedRectSdfProgram);
-	m_pRoundedRectSdfProgram->SetUniformVec4(m_pRoundedRectSdfProgram->m_LocData, 5, (const float *)&pCommand->m_Params);
+	m_pRoundedRectSdfProgram->SetUniformVec4(m_pRoundedRectSdfProgram->m_LocData, (int)(sizeof(pCommand->m_Params) / sizeof(vec4)), (const float *)&pCommand->m_Params);
 	UploadStreamBufferData(pCommand->m_PrimType, pCommand->m_pVertices, sizeof(CCommandBuffer::SVertex), pCommand->m_PrimCount);
 	glBindVertexArray(m_aPrimitiveDrawVertexId[m_LastStreamBuffer]);
 	if(m_aLastIndexBufferBound[m_LastStreamBuffer] != m_QuadDrawIndexBufferId)
@@ -335,7 +335,7 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderTarget_CaptureBackbuffer(con
 	if(m_RenderTargetActive || pCommand->m_TargetId < 0 || (size_t)pCommand->m_TargetId >= m_vRenderTargets.size() || m_CanvasWidth == 0 || m_CanvasHeight == 0)
 		return;
 	const SOpenGLRenderTarget &Target = m_vRenderTargets[pCommand->m_TargetId];
-	if(Target.m_Framebuffer == 0 || Target.m_Width <= 0 || Target.m_Height <= 0)
+	if(Target.m_SampleCount != 1 || Target.m_Framebuffer == 0 || Target.m_Width <= 0 || Target.m_Height <= 0)
 		return;
 
 	GLint PreviousReadFramebuffer = 0;

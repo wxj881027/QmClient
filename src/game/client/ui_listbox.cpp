@@ -44,6 +44,10 @@ void CListBox::Reset()
 	m_SelectedItemActiveColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f);
 	m_SelectedItemInactiveColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.33f);
 	m_HoveredItemColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.33f);
+	m_SelectedFeedback.Reset();
+	m_HoverFeedback.Reset();
+	m_ScrollFeedbackSnap = false;
+	m_FeedbackNumItems = -1;
 }
 
 void CListBox::DoHeader(const CUIRect *pRect, const char *pTitle, float HeaderHeight, float Spacing, int BackgroundCorners)
@@ -156,6 +160,20 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 	m_ScrollRegion.SetContentHeightForNextFrame(NumRows * m_ListBoxRowHeight + maximum(0, NumRows - 1) * m_AutoSpacing);
 	m_ScrollRegion.Begin(&m_ListBoxView, &ScrollOffset, &ScrollParams);
 	m_ListBoxView.y += ScrollOffset.y;
+
+	// 选中/悬停反馈与滚动同帧：滚动时直接 snap，停止后再多 snap 一帧，
+	// 避免上一帧的行索引在滚动位移中错位成另一行。
+	const bool ScrollAnimating = m_ScrollRegion.Animating();
+	// 条目数变化通常意味着筛选/换页，旧行索引不再指向同一项，直接 snap，
+	// 避免旧的选中淡出落在一条无关的新行上。
+	const bool NumItemsChanged = m_FeedbackNumItems != NumItems;
+	m_FeedbackNumItems = NumItems;
+	const bool Snap = g_Config.m_QmUiMotionLevel == 0 || ScrollAnimating || m_ScrollFeedbackSnap || NumItemsChanged;
+	m_ScrollFeedbackSnap = ScrollAnimating;
+	const bool UpdateFeedback = !Ui()->AnimationsBlocked();
+	const uint64_t FeedbackKey = BuildUiAnimNodeKey(str_quickhash("qm-listbox-row-feedback"), reinterpret_cast<uint64_t>(this));
+	m_SelectedFeedback.BeginFrame(Ui()->QmAnimationRuntime(), FeedbackKey, Snap, UpdateFeedback);
+	m_HoverFeedback.BeginFrame(Ui()->QmAnimationRuntime(), FeedbackKey ^ 0x9E3779B97F4A7C15ULL, Snap, UpdateFeedback);
 }
 
 CListboxItem CListBox::DoNextRow()
@@ -240,24 +258,34 @@ CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRa
 			}
 		}
 
-		// 选中/悬浮反馈默认铺满条目矩形（行列表）。卡片网格设置了内容内缩，
-		// 反馈矩形贴合卡片本身。选中描边固定白色（用户指定）——不走亮度自动
-		// 前景：选中填充为白色低透明，与底合成后亮度会跨过阈值被解析成黑。
+		m_SelectedFeedback.Observe(ThisItemIndex);
+	}
+	// 选中/悬浮反馈默认铺满条目矩形（行列表）。卡片网格设置了内容内缩，
+	// 反馈矩形贴合卡片本身。选中描边固定白色（用户指定）——不走亮度自动
+	// 前景：选中填充为白色低透明，与底合成后亮度会跨过阈值被解析成黑。
+	// 旧选中行即使已经不再被选中，也要继续画到淡出结束，才能和新行走成
+	// 真正的交叉淡变，而不是先消失再淡入。
+	const float SelectionAlpha = m_SelectedFeedback.Alpha(ThisItemIndex);
+	if(SelectionAlpha > 0.001f)
+	{
 		CUIRect SelectionRect = Item.m_Rect;
 		if(m_ItemSelectionInset > 0.0f)
 			SelectionRect.Margin(m_ItemSelectionInset, &SelectionRect);
-		const ColorRGBA SelectionFill = Ui()->ScaleBackgroundAlpha(m_Active ? m_SelectedItemActiveColor : m_SelectedItemInactiveColor);
+		const ColorRGBA SelectionFill = Ui()->ScaleBackgroundAlpha(m_Active ? m_SelectedItemActiveColor : m_SelectedItemInactiveColor).WithMultipliedAlpha(SelectionAlpha);
 		ColorRGBA SelectionBorder = ColorRGBA();
 		if(m_ItemSelectionInset > 0.0f)
-			SelectionBorder = ui_token::color::NEUTRAL_WHITE.WithAlpha(ui_token::feedback::ICON_BORDER_ALPHA);
+			SelectionBorder = ui_token::color::NEUTRAL_WHITE.WithAlpha(ui_token::feedback::ICON_BORDER_ALPHA * SelectionAlpha);
 		DrawRoundedSurface(Ui(), SelectionRect, SelectionFill, SelectionBorder, CornerRadius, 1.0f);
 	}
-	if(Ui()->HotItem() == pId && !m_ScrollRegion.Animating())
+	if(Ui()->HotItem() == pId)
+		m_HoverFeedback.Observe(ThisItemIndex);
+	const float HoverAlpha = m_HoverFeedback.Alpha(ThisItemIndex);
+	if(HoverAlpha > 0.001f && !m_ScrollRegion.Animating())
 	{
 		CUIRect HoverRect = Item.m_Rect;
 		if(m_ItemSelectionInset > 0.0f)
 			HoverRect.Margin(m_ItemSelectionInset, &HoverRect);
-		DrawRoundedSurface(Ui(), HoverRect, Ui()->ScaleBackgroundAlpha(m_HoveredItemColor), ColorRGBA(), CornerRadius);
+		DrawRoundedSurface(Ui(), HoverRect, Ui()->ScaleBackgroundAlpha(m_HoveredItemColor).WithMultipliedAlpha(HoverAlpha), ColorRGBA(), CornerRadius);
 	}
 
 	return Item;
@@ -324,6 +352,8 @@ CListboxItem CListBox::DoSubheader()
 int CListBox::DoEnd()
 {
 	QmRestoreEntryScope();
+	m_SelectedFeedback.EndFrame();
+	m_HoverFeedback.EndFrame();
 	m_ScrollRegion.End();
 	m_Active |= m_ScrollRegion.Active();
 

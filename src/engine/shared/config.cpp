@@ -919,7 +919,12 @@ void CConfigManager::StoreUnknownCommand(const char *pCommand, ConfigDomain Conf
 		str_comp_nocase(Token.c_str(), "qm_enhanced_rendering") == 0 ||
 		str_comp_nocase(Token.c_str(), "qm_enhanced_sdf") == 0 ||
 		str_comp_nocase(Token.c_str(), "qm_enhanced_blur") == 0 ||
-		str_comp_nocase(Token.c_str(), "qm_ui_popup_blur") == 0)
+		str_comp_nocase(Token.c_str(), "qm_ui_popup_blur") == 0 ||
+		str_comp_nocase(Token.c_str(), "qm_report_endpoint") == 0 ||
+		str_comp_nocase(Token.c_str(), "qm_report_app_id") == 0 ||
+		str_comp_nocase(Token.c_str(), "qm_report_secret") == 0 ||
+		str_comp_nocase(Token.c_str(), "qm_foot_particles") == 0 ||
+		str_comp_nocase(Token.c_str(), "qm_client_mark_trail") == 0)
 		return;
 	m_avpUnknownCommands[ConfigDomain].push_back(m_ConfigHeap.StoreString(pCommand));
 }

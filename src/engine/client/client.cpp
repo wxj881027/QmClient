@@ -68,6 +68,7 @@
 #include <generated/protocol7.h>
 #include <generated/protocolglue.h>
 
+#include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/media_paths.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/screenshot_viewer.h>
@@ -5094,20 +5095,16 @@ void CClient::Con_StartVideo(IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = static_cast<CClient *>(pUserData);
 
-	// Range 与断点续渲统一由分段任务负责；只有段长配置为 0 时才退回整段导出。
-	// 可选参数：<name> [start_sec] [end_sec]：起止秒相对 demo 起点，与渲染弹窗 Range 输入同语义（供脚本/测试驱动）
-	// start/end 各自单独判断，只给 start 时表示"从该处到结尾"，不会被静默丢弃。
+	// 选区与断点续渲共用任务入口；失败时不能回退为整段录制。
 	const int NumArgs = pResult->NumArguments();
 	const float RangeStartSec = NumArgs >= 2 ? pResult->GetFloat(1) : -1.0f;
 	const float RangeEndSec = NumArgs >= 3 ? pResult->GetFloat(2) : -1.0f;
-	// 指定了 Range 时即使段长为 0 也走任务状态机，让区间导出只有一条经过校验的实现路径。
-	if((g_Config.m_QmVideoSegmentSeconds > 0 || RangeStartSec >= 0.0f) && pSelf->StartSegmentedVideoExport(pResult->NumArguments() ? pResult->GetString(0) : "video", !pResult->NumArguments(),
-										      RangeStartSec, RangeEndSec))
-		return;
-
-	// 走到这里说明任务没接管：Range 无法生效，明确告警而不是让用户以为导出了区间。
-	if(RangeStartSec >= 0.0f)
-		log_warn("video", "start_video range could not be applied (not in demo playback, export already running, or empty range); exporting the whole demo instead.");
+	if(g_Config.m_QmVideoSegmentSeconds > 0 || CVideoExportTask::HasRange(RangeStartSec, RangeEndSec))
+	{
+		const auto Result = pSelf->StartSegmentedVideoExport(NumArgs ? pResult->GetString(0) : "video", !NumArgs, RangeStartSec, RangeEndSec);
+		if(Result != EVideoExportStartResult::FALLBACK)
+			return;
+	}
 
 	if(pResult->NumArguments())
 	{
@@ -5120,26 +5117,26 @@ void CClient::Con_StartVideo(IConsole::IResult *pResult, void *pUserData)
 }
 
 // —— 分段渲染与断点续渲（M3）——
-// 返回 false 表示未走分段路径（状态不符或段数不超过 1），调用方回退整段导出。
-bool CClient::StartSegmentedVideoExport(const char *pName, bool AppendTimestamp, float RangeStartSec, float RangeEndSec)
+// 区分无需分段与启动失败，只有前者允许调用方回退整段导出。
+CClient::EVideoExportStartResult CClient::StartSegmentedVideoExport(const char *pName, bool AppendTimestamp, float RangeStartSec, float RangeEndSec)
 {
 	if(State() != IClient::STATE_DEMOPLAYBACK || !m_DemoPlayer.IsPlaying())
 	{
 		log_error("video_export", "Segmented export can only be started in demo player.");
-		return false;
+		return EVideoExportStartResult::FAILED;
 	}
 	if(m_pVideoExportTask)
 	{
 		log_error("video_export", "A segmented export is already running ('%s').", m_pVideoExportTask->Name());
-		return true; // 已有任务时按已处理处理，避免再次整段导出
+		return EVideoExportStartResult::FAILED;
 	}
 	// 上一次导出的拼接线程仍在读段文件：此时开始新导出会重写同名段文件
 	// （<name>_p%03d）并可能与 <output>.part 替换目标并发，撕裂成片。
-	// 按已处理返回，避免调用方回退整段导出与拼接并发写同名输出。
+	// 返回启动失败，避免调用方回退整段导出与拼接并发写同名输出。
 	if(VideoExportConcatPending())
 	{
 		log_error("video_export", "The previous export is still concatenating; wait for it to finish before starting a new export.");
-		return true;
+		return EVideoExportStartResult::FAILED;
 	}
 
 	// 新一轮导出：重置上一次的拼接结果，避免 UI 沿用旧的"完成/失败"状态。
@@ -5159,26 +5156,11 @@ bool CClient::StartSegmentedVideoExport(const char *pName, bool AppendTimestamp,
 	int FirstTick = pInfo->m_Info.m_FirstTick;
 	int LastTick = pInfo->m_Info.m_LastTick;
 
-	// 渲染选区（秒，相对 demo 起点）换算为 tick：先把秒数钳到 [0, demo 时长] 再换算，
-	// 避免超大输入在浮点转整型、以及 std::clamp 出现 lo > hi 时触发未定义行为。
-	// 只给 start（end < 0）表示从起点到 demo 结尾。
-	if(RangeStartSec >= 0.0f)
+	const bool HasRange = CVideoExportTask::HasRange(RangeStartSec, RangeEndSec);
+	if(!CVideoExportTask::ResolveRange(FirstTick, LastTick, RangeStartSec, RangeEndSec))
 	{
-		const int OriginalFirst = FirstTick;
-		const int OriginalLast = LastTick;
-		const int DemoTicks = maximum(1, OriginalLast - OriginalFirst);
-		const float MaxSec = (float)DemoTicks / (float)SERVER_TICK_SPEED;
-		const float ClampedStart = std::clamp(RangeStartSec, 0.0f, MaxSec);
-		const float ClampedEnd = RangeEndSec >= 0.0f ? std::clamp(RangeEndSec, 0.0f, MaxSec) : MaxSec;
-		const int RangeFirst = std::clamp(OriginalFirst + (int)(ClampedStart * SERVER_TICK_SPEED), OriginalFirst, OriginalLast);
-		const int RangeLast = std::clamp(OriginalFirst + (int)(ClampedEnd * SERVER_TICK_SPEED), OriginalFirst, OriginalLast);
-		if(RangeLast > RangeFirst)
-		{
-			FirstTick = RangeFirst;
-			LastTick = RangeLast;
-		}
-		else
-			log_warn("video_export", "Range [%.1fs, %.1fs] is empty or inverted; exporting the whole demo.", RangeStartSec, RangeEndSec);
+		log_error("video_export", "Invalid export range [%.3fs, %.3fs]; export was not started.", RangeStartSec, RangeEndSec);
+		return EVideoExportStartResult::FAILED;
 	}
 
 	// demo 文件属性（任务指纹）。Resolve 的默认配置结果可能是相对路径（锚定 IStorage 语义），
@@ -5203,19 +5185,18 @@ bool CClient::StartSegmentedVideoExport(const char *pName, bool AppendTimestamp,
 		g_Config.m_QmVideoSegmentSeconds, g_Config.m_ClVideoRecorderFPS,
 		Graphics()->ScreenWidth(), Graphics()->ScreenHeight(),
 		g_Config.m_ClVideoX264Crf, g_Config.m_ClVideoX264Preset, g_Config.m_QmVideoSegmentWarmup);
+	// 导出启动时冻结显示配置：所有段都用这一份渲染，指纹也用它判断旧段是否仍适用。
+	const SVideoDisplaySnapshot DisplaySnapshot = qm_demo_display::Capture(g_Config);
+	pTask->SetDisplaySnapshot(DisplaySnapshot);
 	// 指纹附加参数：只影响产物、不影响段切分的导出设置。任一变化都必须让旧段失效，
 	// 否则续渲会把不同编码器/质量/容器/尺寸的旧段拼进同一个文件。
-	char aFingerprintParams[512];
-	str_format(aFingerprintParams, sizeof(aFingerprintParams), "%s|%d|%d|%s|%dx%d|%d",
-		g_Config.m_QmVideoEncoder, g_Config.m_QmVideoQuality, g_Config.m_QmVideoGop,
-		g_Config.m_QmVideoContainer, g_Config.m_QmVideoWidth, g_Config.m_QmVideoHeight,
-		g_Config.m_ClVideoSndEnable);
-	pTask->ComputeFingerprint(DemoSize, DemoMtime, aFingerprintParams);
+	const std::string FingerprintParams = VideoExportConfigParams(g_Config, DisplaySnapshot);
+	pTask->ComputeFingerprint(DemoSize, DemoMtime, FingerprintParams.c_str());
 
 	// 未指定 Range 且只有一段：走原有整段导出，省去分段任务与流复制拼接的开销。
 	// 指定了 Range 时必须留在任务里，否则选区会被 StartVideo 的整段导出静默丢弃。
-	if(pTask->Segments().size() <= 1 && RangeStartSec < 0.0f)
-		return false;
+	if(pTask->Segments().size() <= 1 && !HasRange)
+		return EVideoExportStartResult::FALLBACK;
 
 	// 复用已有进度：进度文件损坏或指纹不匹配时整单从头渲染（新任务段默认未完成）
 	char aProgress[IO_MAX_PATH_LENGTH];
@@ -5245,7 +5226,7 @@ bool CClient::StartSegmentedVideoExport(const char *pName, bool AppendTimestamp,
 		m_pVideoExportTask = std::move(pTask);
 		StartSegmentConcat(m_pVideoExportTask.get());
 		m_pVideoExportTask.reset();
-		return true;
+		return EVideoExportStartResult::STARTED;
 	}
 
 	m_pVideoExportTask = std::move(pTask);
@@ -5258,7 +5239,7 @@ bool CClient::StartSegmentedVideoExport(const char *pName, bool AppendTimestamp,
 		aName, FirstTick, LastTick, (LastTick - FirstTick) / (float)SERVER_TICK_SPEED,
 		(int)m_pVideoExportTask->Segments().size(), g_Config.m_QmVideoSegmentSeconds, m_pVideoExportTask->WarmupTicks());
 	log_info("video_export", "Segmented export '%s' starting at segment %d/%d.", aName, Pending + 1, (int)m_pVideoExportTask->Segments().size());
-	return true;
+	return EVideoExportStartResult::STARTED;
 }
 
 void CClient::CancelSegmentedVideoExport()
@@ -5316,7 +5297,7 @@ void CClient::FinishSegmentedExport()
 	// VerifySegmentFile 走 libavformat 的裸文件 IO（不经 IStorage），必须用绝对路径
 	const std::string WholePath = qmclient::media_paths::CompletePath(Storage(),
 		qmclient::media_paths::Resolve(Storage(), g_Config, aLogical));
-	if(WholePath.empty() || !CVideoExportTask::VerifySegmentFile(WholePath.c_str()))
+	if(WholePath.empty() || !pTask->CompleteSegmentFile(SegmentIndex, WholePath.c_str()))
 	{
 		// 段文件不完整：终止任务（进度文件保留，续渲时将重渲该段），避免状态滞留被误判为外部停录
 		log_error("video_export", "Segment file '%s' is incomplete; segmented export cancelled (will re-render on resume).", aSegmentName);
@@ -5327,7 +5308,6 @@ void CClient::FinishSegmentedExport()
 		return;
 	}
 
-	pTask->MarkSegmentDone(SegmentIndex);
 	char aProgress[IO_MAX_PATH_LENGTH];
 	str_format(aProgress, sizeof(aProgress), "videos/%s.progress", pTask->Name());
 	const std::string ProgressPath = qmclient::media_paths::CompletePath(Storage(),
@@ -5350,6 +5330,8 @@ void CClient::FinishSegmentedExport()
 	{
 		// 全部完成：流复制拼接为最终文件（后台线程，避免阻塞主循环）
 		StartSegmentConcat(pTask);
+		// 拼接线程已持有自己的文件列表，释放任务以允许拼接完成后再次导出。
+		m_pVideoExportTask.reset();
 	}
 }
 
@@ -5457,6 +5439,12 @@ void CClient::DriveSegmentedExport(int CurrentTick)
 
 void CClient::StartVideo(const char *pFilename, bool WithTimestamp)
 {
+	// 整段直录入口也必须等待拼接，避免绕过任务入口覆盖正在生成的同名成片。
+	if(VideoExportConcatPending())
+	{
+		log_error("videorecorder", "The previous export is still concatenating; wait for it to finish before recording.");
+		return;
+	}
 	if(State() != IClient::STATE_DEMOPLAYBACK)
 	{
 		log_error("videorecorder", "Video can only be recorded in demo player.");
@@ -5495,7 +5483,9 @@ void CClient::StartVideo(const char *pFilename, bool WithTimestamp)
 	Sound()->PauseAudioDevice();
 	// 输出分辨率（M7 超采样）：qm_video_width/height 为 0 时跟随渲染分辨率；
 	// 配置值大于渲染分辨率时 CVideo 构造函数自动回退到渲染分辨率（防上采样伪影）。
-	new CVideo(Graphics(), Sound(), Storage(), Graphics()->ScreenWidth(), Graphics()->ScreenHeight(), aFilename, g_Config.m_QmVideoWidth, g_Config.m_QmVideoHeight);
+	// 分段导出使用任务启动时冻结的显示配置；整段直录在开始时捕获一份。
+	const SVideoDisplaySnapshot DisplaySnapshot = m_pVideoExportTask ? m_pVideoExportTask->DisplaySnapshot() : qm_demo_display::Capture(g_Config);
+	new CVideo(Graphics(), Sound(), Storage(), Graphics()->ScreenWidth(), Graphics()->ScreenHeight(), aFilename, g_Config.m_QmVideoWidth, g_Config.m_QmVideoHeight, &DisplaySnapshot);
 	Sound()->UnpauseAudioDevice();
 	if(!IVideo::Current()->Start())
 	{
@@ -5509,7 +5499,11 @@ void CClient::StartVideo(const char *pFilename, bool WithTimestamp)
 	{
 		IVideo::Current()->Pause(true);
 	}
-	log_info("videorecorder", "Recording to '%s'", aFilename);
+	// 段启动时记录冻结的显示快照：E2E 用它证明导出中改配置不会影响已启动的段，
+	// 同时便于定位"同一任务不同段画面不一致"的报告。
+	log_info("videorecorder", "Recording to '%s' (display snapshot: hud=%d chat=%d direction=%d strong_weak=%d strong_scope=%d strong_size=%d)",
+		aFilename, DisplaySnapshot.m_Hud, DisplaySnapshot.m_Chat, DisplaySnapshot.m_Direction,
+		DisplaySnapshot.m_StrongWeak, DisplaySnapshot.m_StrongWeakScope, DisplaySnapshot.m_StrongWeakSize);
 }
 
 void CClient::Con_StopVideo(IConsole::IResult *pResult, void *pUserData)
@@ -5846,15 +5840,19 @@ const char *CClient::DemoPlayer_Render(const char *pFilename, int StorageType, c
 	if(pError)
 		return pError;
 
-	// 分段渲染启用时交给任务状态机（首段在预热后自动开录）；单段/禁用时回退整段导出。
-	// 指定了 Range 时即使段长为 0 也走任务状态机，与控制台 start_video 入口同策略：
-	// 否则弹窗里填起止秒 + 段长 0 会被静默整段导出，区间失效。
-	if((g_Config.m_QmVideoSegmentSeconds > 0 || RangeStartSec >= 0.0f) && StartSegmentedVideoExport(pVideoName, false, RangeStartSec, RangeEndSec))
+	// 两个入口共享选区校验；启动失败返回错误，不能把非法选区变成整段录像。
+	if(g_Config.m_QmVideoSegmentSeconds > 0 || CVideoExportTask::HasRange(RangeStartSec, RangeEndSec))
 	{
-		m_DemoPlayer.SetSpeedIndex(SpeedIndex);
-		if(StartPaused)
-			m_DemoPlayer.Pause();
-		return nullptr;
+		const auto Result = StartSegmentedVideoExport(pVideoName, false, RangeStartSec, RangeEndSec);
+		if(Result == EVideoExportStartResult::FAILED)
+			return Localize("Failed to save video");
+		if(Result == EVideoExportStartResult::STARTED)
+		{
+			m_DemoPlayer.SetSpeedIndex(SpeedIndex);
+			if(StartPaused)
+				m_DemoPlayer.Pause();
+			return nullptr;
+		}
 	}
 
 	StartVideo(pVideoName, false);
@@ -6220,29 +6218,17 @@ bool CClient::HandleQmGraphicsFatalError()
 {
 	// 图形后端已经记录了致命错误（例如 Vulkan VK_ERROR_DEVICE_LOST）。
 	// TakeFatalError 已保存第一份诊断并停止提交；这里写诊断报告再干净退出。
-	// 用户的渲染后端与窗口
-	// 模式等显式设置保持原样。
-	// 例外（qm_vulkan_ext 的设计语义）：device lost 且 qm_enhanced_rendering
-	// 处于 AUTO 时，把配置持久化写回 0（纯净 Vulkan）并自动重启一次。AUTO
-	// 的含义就是「自动回退」，后端运行期已按会话禁用增强管线，这里完成持久
-	// 化。下一次会话已是 OFF，不会再进入本分支，因此重启有界、无循环风险。
+	// 用户的渲染后端与窗口模式等显式设置保持原样。
+	// qm_enhanced_rendering 已移除：SDF 常驻，设备丢失不再持久化改写渲染开关，
+	// 避免自动重启循环；下一次会话由 SDF 管线重新尝试创建。
 	if(m_QmGraphicsFatalErrorHandled)
 		return false;
 	m_QmGraphicsFatalErrorHandled = true;
 
 	const char *pFatalError = Graphics()->GetFatalError();
 
-	bool QmEnhancedAutoFallback = false;
-	const int EnhancedRenderingMode = g_Config.m_QmEnhancedRendering;
-	char aQmFallbackInfo[256] = "none";
-	if(pFatalError[0] != '\0' && str_find(pFatalError, "device lost") != nullptr && g_Config.m_QmEnhancedRendering == 1)
-	{
-		g_Config.m_QmEnhancedRendering = 0;
-		g_Config.m_QmGaussianBlur = 0;
-		QmEnhancedAutoFallback = true;
-		str_copy(aQmFallbackInfo, "device lost with qm_enhanced_rendering=AUTO; disabled enhanced rendering and backdrop blur, requested auto-restart");
-		log_error("gfx", "device lost while qm_enhanced_rendering=AUTO; disabling enhanced rendering and backdrop blur before auto-restart");
-	}
+	const int EnhancedRenderingMode = 0; // 配置已移除；保留报告字段兼容旧日志格式
+	char aQmFallbackInfo[256] = "none (qm_enhanced_rendering removed)";
 
 	char aGpuInfo[512];
 	GetGpuInfoString(aGpuInfo);
@@ -6295,17 +6281,7 @@ bool CClient::HandleQmGraphicsFatalError()
 
 	log_error("gfx", "graphics backend reported a fatal error, stopping the client: %s",
 		pFatalError[0] != '\0' ? pFatalError : "(no details)");
-	if(QmEnhancedAutoFallback)
-	{
-		// 配置会在 Run() 主循环结束后的正常保存流程里落盘；
-		// 下一次启动关闭增强绘制与模糊提交，不再进入本分支。
-		log_info("gfx", "auto-restarting client to finish the enhanced-rendering fallback");
-		SetState(IClient::STATE_RESTARTING);
-	}
-	else
-	{
-		SetState(IClient::STATE_QUITTING);
-	}
+	SetState(IClient::STATE_QUITTING);
 	return true;
 }
 

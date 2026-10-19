@@ -98,10 +98,39 @@ TEST(QmDemoUi, SliceContentAccountsForFourVisibleSegmentsAndDisplayOptions)
 	EXPECT_FLOAT_EQ(qm_demo_ui::SliceContentHeight(1, false), 204.0f);
 	EXPECT_FLOAT_EQ(qm_demo_ui::SliceContentHeight(4, false), 264.0f);
 	EXPECT_FLOAT_EQ(qm_demo_ui::SliceContentHeight(5, false), 280.0f);
-	EXPECT_FLOAT_EQ(qm_demo_ui::SliceContentHeight(5, true), 400.0f);
-	// +168：渲染设置七行（选区/预设/编码器/质量/容器/输出尺寸/GOP 各 24）；GOP 说明为悬浮 Tips 不占正文
-	EXPECT_FLOAT_EQ(qm_demo_ui::RenderContentHeight(false, false), 288.0f);
-	EXPECT_FLOAT_EQ(qm_demo_ui::RenderContentHeight(true, true), 438.0f);
+	EXPECT_FLOAT_EQ(qm_demo_ui::SliceContentHeight(5, true), 414.0f);
+	// 顶部 4 + 回放显示 110 + 10 + 视频导出 230 + 10 + 播放选项 110 + 10 + 视频编码 110 = 594。
+	// 在线时追加断线提示 30。
+	EXPECT_FLOAT_EQ(qm_demo_ui::RenderContentHeight(false), 594.0f);
+	EXPECT_FLOAT_EQ(qm_demo_ui::RenderContentHeight(true), 624.0f);
+}
+
+TEST(QmDemoUi, ResolutionCustomKeepsInputsEqualAndDropDownCapped)
+{
+	for(const float Width : {300.0f, 360.0f, 500.0f})
+	{
+		SCOPED_TRACE(Width);
+		const CUIRect Control{10.0f, 20.0f, Width, 20.0f};
+		const auto PresetLayout = qm_demo_ui::ResolutionControlLayout(Control, false);
+		EXPECT_FLOAT_EQ(PresetLayout.m_DropDown.w, Control.w);
+		EXPECT_FLOAT_EQ(PresetLayout.m_WidthInput.w, 0.0f);
+		EXPECT_FLOAT_EQ(PresetLayout.m_HeightInput.w, 0.0f);
+
+		const auto CustomLayout = qm_demo_ui::ResolutionControlLayout(Control, true);
+		EXPECT_FLOAT_EQ(CustomLayout.m_WidthInput.w, CustomLayout.m_HeightInput.w);
+		EXPECT_GT(CustomLayout.m_WidthInput.w, 0.0f);
+		EXPECT_LE(CustomLayout.m_DropDown.w, qm_demo_ui::RESOLUTION_DROPDOWN_MAX_WIDTH);
+		EXPECT_GE(CustomLayout.m_DropDown.w, 0.0f);
+		EXPECT_FLOAT_EQ(CustomLayout.m_DropDown.x + CustomLayout.m_DropDown.w, Control.x + Control.w);
+		EXPECT_FLOAT_EQ(CustomLayout.m_WidthInput.x, Control.x);
+		EXPECT_LE(CustomLayout.m_HeightInput.x + CustomLayout.m_HeightInput.w, CustomLayout.m_DropDown.x);
+		EXPECT_GT(CustomLayout.m_Separator.w, 0.0f);
+	}
+
+	EXPECT_EQ(qm_demo_ui::MatchResolutionPreset(0, 0), 0);
+	EXPECT_EQ(qm_demo_ui::MatchResolutionPreset(1280, 720), 1);
+	EXPECT_EQ(qm_demo_ui::MatchResolutionPreset(1920, 1080), 2);
+	EXPECT_EQ(qm_demo_ui::MatchResolutionPreset(1919, 1080), qm_demo_ui::RESOLUTION_PRESET_CUSTOM);
 }
 
 TEST(QmDemoUi, PopupFitsTheViewportAndKeepsContentHeightWhenPossible)

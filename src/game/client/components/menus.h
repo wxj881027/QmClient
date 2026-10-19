@@ -1845,6 +1845,9 @@ protected:
 	// 输出分辨率（M7 超采样）：空 = 跟随窗口渲染分辨率；小于窗口 = 高倍渲染缩小
 	CLineInputBuffered<8> m_DemoRenderOutputWidth;
 	CLineInputBuffered<8> m_DemoRenderOutputHeight;
+	// 分辨率下拉的会话选择：0 = 跟随窗口，1-4 = 固定档位，5 = 自定义。
+	// 自定义期间输入宽高也不会自动跳回固定档位，避免输入到标准值时输入框突然收起。
+	int m_DemoRenderResolutionPreset = -1;
 	// 关键帧间隔（M9 UI）：空 = 沿用 qm_video_gop；剪辑切点只能落在关键帧上
 	CLineInputBuffered<8> m_DemoRenderGop;
 	// 预设选择（M6）：本会话（弹窗开→关）内的下拉状态，-1 = 未动过（跟随 qm_video_preset）。
@@ -2165,8 +2168,16 @@ protected:
 	void RenderDemoCard(const CUIRect &Rect);
 	void RenderDemoPlayer(CUIRect MainView);
 	void RenderDemoPlayerSliceSavePopup(CUIRect MainView);
-	// 回放/导出共用的显示选项面板与其折叠开关。
-	void RenderDemoDisplaySettings(CUIRect View, bool Enabled = true);
+	// 回放/导出共用的显示选项面板与其折叠开关；WithToggles=false 时只渲染标题与三组段选
+	//（渲染弹窗平铺用，HUD/聊天开关由弹窗主区提供）。
+	void RenderDemoDisplaySettings(CUIRect View, bool Enabled = true, bool WithToggles = true);
+	// 渲染回放确认弹窗中的视频导出分组（分辨率/编码器/容器/画质/导出预设/GOP/名称/范围）。
+	void RenderDemoExportSettings(CUIRect View);
+	// 渲染回放确认弹窗中的播放选项分组（HUD/聊天/声音开关与导出速度）。
+	void RenderDemoPlaybackSettings(CUIRect View);
+	// 渲染回放确认弹窗中的视频编码分组（cl_video_crf / cl_video_preset / cl_video_recorder_fps），
+	// 改动即时写 g_Config。
+	void RenderDemoEncodeSettings(CUIRect View);
 	void RenderDemoCameraPanel(CUIRect View, bool Enabled);
 	void RenderDemoDisplayToggle(const CUIRect &Rect, bool &Expanded, CButtonContainer &Button, bool Enabled = true);
 	bool m_DemoBrowserListInitialized = false;
@@ -2288,13 +2299,6 @@ protected:
 	std::vector<SMenuTextContainerBuildRequest> m_vMenuTextContainerBuildRequests;
 	SIngameServerInfoTextSnapshot m_IngameServerInfoTextSnapshot;
 	SIngameMotdParagraphCache m_IngameMotdParagraphCache;
-	enum class EReportScanState
-	{
-		IDLE,
-		SCANNING,
-	};
-
-	std::shared_ptr<IHttpRequest> m_pReportScanRequest;
 	QmMapUpload::CUpload m_QmMapUpload;
 	// 地图上传选择器（卡片目录的 qm:map_upload 卡使用）：带搜索的文件列表弹窗。
 	// 本地差异：远程命名空间为小写 qm_map_upload，本地既有为 QmMapUpload（全树 23 处引用），
@@ -2320,11 +2324,6 @@ protected:
 	static int QmMapUploadScan(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser);
 	static CUi::EPopupMenuFunctionResult PopupQmMapUploadPicker(void *pContext, CUIRect View, bool Active);
 	const char *QmMapUploadPlayerName() const;
-	EReportScanState m_ReportScanState = EReportScanState::IDLE;
-	char m_aReportScanAddress[NETADDR_MAXSTRSIZE] = "";
-	void ResetReportScan();
-	void StartReportScan();
-	void UpdateReportScan();
 	void RenderGame(CUIRect MainView);
 	void PopupConfirmDisconnect();
 	void PopupConfirmDisconnectDummy();
@@ -3286,6 +3285,7 @@ private:
 	void RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOnly);
 	void RenderSettingsQmClientBindDeck(CUIRect MainView, bool PrewarmOnly);
 	void RenderSettingsQmClientBindCard(CUIRect &Content, bool ReadOnly);
+	void RenderQmBindOverviewContent(CUIRect &Content, bool ReadOnly);
 	void RenderQmBindCommandEditor(CUIRect &Content, CBindSlot Slot, bool ReadOnly);
 	static CUi::EPopupMenuFunctionResult PopupQmBindCommands(void *pContext, CUIRect View, bool Active);
 	void RenderQmSettingsSliderWithValueInput(const void *pId, const CUIRect &ControlColumn, int *pValue, int MinValue, int MaxValue, const char *pSuffix, bool PrewarmOnly, unsigned Flags = 0u);

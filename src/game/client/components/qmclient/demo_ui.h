@@ -7,8 +7,100 @@
 
 namespace qm_demo_ui
 {
-	constexpr float DISPLAY_HEIGHT = 116.0f;
+	constexpr float DISPLAY_HEIGHT = 130.0f;
 	constexpr float CAMERA_HEIGHT = 146.0f;
+
+	// 渲染回放弹窗与设置页卡片共用同一套单行控件节奏：20 高、4 间距。
+	// 分组上下各留 8，标题行 18，标题与首行间隔 4。
+	constexpr float RENDER_ROW_HEIGHT = 20.0f;
+	constexpr float RENDER_ROW_GAP = 4.0f;
+	constexpr float RENDER_SECTION_PADDING = 8.0f;
+	constexpr float RENDER_SECTION_TITLE_HEIGHT = 18.0f;
+	constexpr float RENDER_SECTION_TITLE_GAP = 4.0f;
+	constexpr float RENDER_SECTION_GAP = 10.0f;
+	constexpr float RENDER_TOP_GAP = 4.0f;
+
+	// 分辨率行：自定义时左侧两个等宽输入框，中间乘号，右侧保留下拉框。
+	constexpr float RESOLUTION_DROPDOWN_MIN_WIDTH = 150.0f;
+	constexpr float RESOLUTION_DROPDOWN_MAX_WIDTH = 176.0f;
+	constexpr float RESOLUTION_INPUT_GAP = 6.0f;
+	constexpr float RESOLUTION_SEPARATOR_WIDTH = 12.0f;
+
+	struct SResolutionPreset
+	{
+		int m_Width;
+		int m_Height;
+	};
+
+	// 0 = 跟随窗口；中间四项为常用固定档位；最后一项是自定义。
+	constexpr int RESOLUTION_PRESET_COUNT = 6;
+	constexpr int RESOLUTION_PRESET_CUSTOM = RESOLUTION_PRESET_COUNT - 1;
+	inline constexpr SResolutionPreset RESOLUTION_PRESETS[RESOLUTION_PRESET_COUNT] = {
+		{0, 0},
+		{1280, 720},
+		{1920, 1080},
+		{2560, 1440},
+		{3840, 2160},
+		{0, 0},
+	};
+
+	inline int MatchResolutionPreset(int Width, int Height)
+	{
+		if(Width <= 0 || Height <= 0)
+			return 0;
+		for(int i = 1; i < RESOLUTION_PRESET_CUSTOM; ++i)
+		{
+			if(RESOLUTION_PRESETS[i].m_Width == Width && RESOLUTION_PRESETS[i].m_Height == Height)
+				return i;
+		}
+		return RESOLUTION_PRESET_CUSTOM;
+	}
+
+	struct SResolutionControlLayout
+	{
+		CUIRect m_WidthInput{};
+		CUIRect m_Separator{};
+		CUIRect m_HeightInput{};
+		CUIRect m_DropDown{};
+	};
+
+	inline SResolutionControlLayout ResolutionControlLayout(const CUIRect &Control, bool Custom)
+	{
+		SResolutionControlLayout Layout;
+		if(!Custom)
+		{
+			Layout.m_DropDown = Control;
+			return Layout;
+		}
+
+		const float DropDownWidth = std::min(Control.w, std::clamp(Control.w * 0.38f, RESOLUTION_DROPDOWN_MIN_WIDTH, RESOLUTION_DROPDOWN_MAX_WIDTH));
+		CUIRect Inputs;
+		Control.VSplitRight(DropDownWidth, &Inputs, &Layout.m_DropDown);
+		Inputs.VSplitRight(RESOLUTION_INPUT_GAP, &Inputs, nullptr);
+		const float Available = std::max(0.0f, Inputs.w - RESOLUTION_SEPARATOR_WIDTH - 2.0f * RESOLUTION_INPUT_GAP);
+		const float InputWidth = Available * 0.5f;
+		Layout.m_WidthInput = {Inputs.x, Inputs.y, InputWidth, Inputs.h};
+		Layout.m_Separator = {Inputs.x + InputWidth + RESOLUTION_INPUT_GAP, Inputs.y, RESOLUTION_SEPARATOR_WIDTH, Inputs.h};
+		Layout.m_HeightInput = {Layout.m_Separator.x + RESOLUTION_SEPARATOR_WIDTH + RESOLUTION_INPUT_GAP, Inputs.y, InputWidth, Inputs.h};
+		return Layout;
+	}
+
+	// 渲染回放弹窗中平铺的"回放显示"分组（标题 + 三组段选，无开关行）的高度：
+	// 上下内边距 16 + 标题行 18 + 标题间隔 4 + 3×(20 + 4) = 110。
+	constexpr float DISPLAY_GROUP_HEIGHT = 2.0f * RENDER_SECTION_PADDING + RENDER_SECTION_TITLE_HEIGHT +
+					       RENDER_SECTION_TITLE_GAP + 3.0f * (RENDER_ROW_HEIGHT + RENDER_ROW_GAP);
+
+	// 视频导出分组：标题 + 8 行（分辨率/编码器/容器/画质/导出预设/GOP/名称/范围）= 230。
+	constexpr float EXPORT_GROUP_HEIGHT = 2.0f * RENDER_SECTION_PADDING + RENDER_SECTION_TITLE_HEIGHT +
+					      RENDER_SECTION_TITLE_GAP + 8.0f * (RENDER_ROW_HEIGHT + RENDER_ROW_GAP);
+
+	// 播放选项分组：标题 + 纯净渲染开关 + HUD/聊天/声音行 + 速度行 = 110。
+	constexpr float PLAYBACK_GROUP_HEIGHT = 2.0f * RENDER_SECTION_PADDING + RENDER_SECTION_TITLE_HEIGHT +
+						RENDER_SECTION_TITLE_GAP + 3.0f * (RENDER_ROW_HEIGHT + RENDER_ROW_GAP);
+
+	// 视频编码分组：标题 + CRF + 渲染预设 + 录制帧率 = 110。
+	constexpr float ENCODE_HEIGHT = 2.0f * RENDER_SECTION_PADDING + RENDER_SECTION_TITLE_HEIGHT +
+					RENDER_SECTION_TITLE_GAP + 3.0f * (RENDER_ROW_HEIGHT + RENDER_ROW_GAP);
 
 	inline CUIRect PlayerRect(const CUIRect &Screen, bool DisplayExpanded, bool CameraExpanded = false)
 	{
@@ -69,10 +161,13 @@ namespace qm_demo_ui
 		return 154.0f + SegmentsHeight + (DisplayExpanded ? DISPLAY_HEIGHT + 4.0f : 0.0f);
 	}
 
-	inline float RenderContentHeight(bool DisplayExpanded, bool Online)
+	// 渲染回放弹窗内容总高：顶部 4 + 回放显示 110 + 10 + 视频导出 230 + 10 +
+	// 播放选项 110 + 10 + 视频编码 110 = 594；在线时追加断线提示 30。
+	inline float RenderContentHeight(bool Online)
 	{
-		// +168：渲染设置七行（选区/预设/编码器/质量/容器/输出尺寸/GOP 各 24）；GOP 说明为悬浮 Tips 不占正文
-		return 120.0f + 168.0f + (DisplayExpanded ? DISPLAY_HEIGHT + 4.0f : 0.0f) + (Online ? 30.0f : 0.0f);
+		return RENDER_TOP_GAP + DISPLAY_GROUP_HEIGHT + RENDER_SECTION_GAP + EXPORT_GROUP_HEIGHT +
+		       RENDER_SECTION_GAP + PLAYBACK_GROUP_HEIGHT + RENDER_SECTION_GAP + ENCODE_HEIGHT +
+		       (Online ? 30.0f : 0.0f);
 	}
 
 	inline CUIRect PopupRect(const CUIRect &Screen, float ContentHeight, float Width = 560.0f)

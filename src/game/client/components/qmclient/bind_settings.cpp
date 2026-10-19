@@ -116,6 +116,8 @@ void CMenus::RenderSettingsQmClientBindDeck(CUIRect MainView, const bool Prewarm
 		SSettingsCardDefinition Definition;
 		if(qm_card_catalog::BuildBindCard(Context, Definition))
 			vCards.push_back(std::move(Definition));
+		if(qm_card_catalog::BuildBindOverviewCard(Context, Definition))
+			vCards.push_back(std::move(Definition));
 	};
 
 	const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy({EQmScrollProfile::SETTINGS_OUTER}, UiScale, 0.0f);

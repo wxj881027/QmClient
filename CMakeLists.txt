@@ -3467,6 +3467,7 @@ if(CLIENT)
     components/qmclient/axiom_scores_parse_job.h
     components/qmclient/bind_editor.cpp
     components/qmclient/bind_editor.h
+    components/qmclient/bind_overview.h
     components/qmclient/bind_settings.cpp
     components/qmclient/browser_status_layout.h
     components/qmclient/browser_map_preview.h
@@ -3532,6 +3533,7 @@ if(CLIENT)
     components/qmclient/scoreboard_media_controls.cpp
     components/qmclient/scoreboard_media_controls.h
     components/qmclient/voting_hud.h
+    components/qmclient/video_preset_labels.h
     components/qmclient/menus_qmclient.cpp
     components/qmclient/menus_qmclient_internal.h
     components/qmclient/menus_qmclient_popups.cpp
@@ -4629,6 +4631,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/QmDiscreteSliderTest.cpp
     src/test/unit/client/map_browser_filter_slider_test.cpp
     src/test/unit/qmclient/ui/QmAnimScrollTest.cpp
+    src/test/unit/qmclient/ui/QmListRowFeedbackTest.cpp
     src/test/unit/qmclient/ui/QmAnimTreeTest.cpp
     src/test/unit/qmclient/ui/qm_icon_policy_test.cpp
     src/test/unit/qmclient/ui/qm_icon_diagnostics_test.cpp
@@ -4789,6 +4792,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/base/prng_test.cpp
     src/test/unit/qmclient/client/qm_bind_editor_console_test.cpp
     src/test/unit/qmclient/client/qm_bind_editor_test.cpp
+    src/test/unit/qmclient/client/qm_bind_overview_test.cpp
     src/test/unit/qmclient/client/qm_background_particles_test.cpp
     src/test/unit/qmclient/client/qm_axiom_scores_test.cpp
     src/test/contract/qmclient/client/qm_axiom_scores_contract_test.cpp
@@ -4830,6 +4834,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_water_hammer_indicator_test.cpp
     src/test/unit/qmclient/client/qm_demo_display_test.cpp
     src/test/unit/qmclient/client/qm_demo_ui_test.cpp
+    src/test/unit/qmclient/client/qm_video_preset_labels_test.cpp
     src/test/unit/client/online_replay_player_test.cpp
     src/test/unit/qmclient/client/qm_jump_hint_utils_test.cpp
     src/test/unit/qmclient/client/qm_dummy_mini_view_layout_test.cpp
@@ -5310,6 +5315,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   if(VIDEORECORDER AND FFMPEG_FOUND)
     list(APPEND TESTS
       src/test/unit/engine/video_export_test.cpp
+      src/test/integration/engine/video_export_storage_test.cpp
+      src/test/integration/engine/video_audio_test.cpp
       src/test/unit/engine/video_encoder_test.cpp
     )
     list(APPEND TESTS_EXTRA
@@ -5500,6 +5507,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_settings_paragraph_test.cpp
       src/test/integration/qmclient/ui/qm_console_settings_scroll_test.cpp
       src/test/integration/qmclient/ui/qm_scrollbar_color_submission_test.cpp
+      src/test/integration/qmclient/ui/qm_scrollbar_reserve_transition_test.cpp
       src/test/integration/qmclient/ui/qm_background_controls_test.cpp
       src/test/integration/qmclient/ui/qm_navigation_selection_test.cpp
       src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp

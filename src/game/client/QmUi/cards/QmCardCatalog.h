@@ -124,6 +124,7 @@ namespace qm_card_catalog
 	bool BuildTooltipCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
 	bool BuildChatCompletionCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
 	bool BuildBindCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
+	bool BuildBindOverviewCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
 	bool BuildSelfKillProtectionCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
 
 	// 卡片模块调用菜单内容渲染/输入助手的受控入口（CMenus 只对本结构开放友元）。
@@ -213,6 +214,7 @@ namespace qm_card_catalog
 		static size_t FavoriteMapCount(CMenus *pMenus);
 		static bool GameConsoleActive(CMenus *pMenus);
 		static void RenderQmBindEditorContent(CMenus *pMenus, CUIRect &Content, bool ReadOnly);
+		static void RenderQmBindOverviewContent(CMenus *pMenus, CUIRect &Content, bool ReadOnly);
 	};
 } // namespace qm_card_catalog
 

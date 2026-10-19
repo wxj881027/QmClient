@@ -9,6 +9,7 @@
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/menus.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
@@ -33,7 +34,7 @@ void CMenus::RenderQmSelfKillProtectionContent(CUIRect &Content, float LineHeigh
 			SLabelProperties Props;
 			Props.m_MaxWidth = Hint.w;
 			Props.m_EllipsisAtEnd = true;
-			TextRender()->TextColor(ColorRGBA(0.65f, 0.65f, 0.65f, 1.0f));
+			TextRender()->TextColor(ui_token::color::TEXT_TIP);
 			Ui()->DoLabel(&Hint, pText, BodySize, TEXTALIGN_ML, Props);
 			TextRender()->TextColor(TextRender()->DefaultTextColor()); });
 }

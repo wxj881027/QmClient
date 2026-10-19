@@ -196,9 +196,6 @@
 (On Latest)
 == (최신 버전)
 
-(paused)
-== (일시 중지됨)
-
 (Update required)
 == (업데이트 필요)
 
@@ -255,6 +252,9 @@
 
 0 disables timed rotation; skins only switch on random start events
 == 0이면 시간 순환을 비활성화하고 무작위 시작 이벤트 때만 스킨을 전환합니다
+
+0-51, empty = default
+== 0-51, 비우면 기본값
 
 1% low
 == 1% 최저 프레임
@@ -701,6 +701,9 @@ Allow left-click to toggle between spectating nearest player and free view
 Allow mic permission in system settings, then reopen voice
 == 시스템 설정에서 마이크 권한을 허용한 후 음성을 다시 켜세요
 
+Allow the client to send kill requests (0 = ignore client-initiated kills)
+== Allow the client to send kill requests (0 = ignore client-initiated kills)
+
 Allow voting to kick players
 == 플레이어 추방 투표 허용
 
@@ -745,6 +748,9 @@ Always translate
 
 Amount
 == 양
+
+An export preset applies an encoder, container and quality combination. Choose Custom to edit each setting.
+== 내보내기 프리셋은 인코더, 컨테이너, 품질 조합을 적용합니다. 각 항목을 따로 바꾸려면 '사용자 지정'을 선택하세요.
 
 And pick one randomly
 == 무작위로 하나 선택
@@ -1307,6 +1313,9 @@ Automatically record demos
 Automatically record replays
 == 리플레이 자동 녹화
 
+Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
+== Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
+
 Automatically reply to muted players
 == 음소거된 플레이어에게 자동 응답
 
@@ -1475,6 +1484,9 @@ Baidu Translate
 Balance master, music, and game volume
 == Balance master, music, and game volume
 
+Balanced (recommended)
+== 균형 (권장)
+
 Ban a certain nickname
 == 특정 닉네임을 차단합니다
 
@@ -1529,6 +1541,9 @@ Benchmark frame times for number of seconds to file, then quit
 Best
 == 최고
 
+Better compression, slower
+== 압축률이 더 좋지만 느림
+
 Better scoreboard
 == 더 나은 점수판
 
@@ -1552,6 +1567,9 @@ Bind movement, jump, hook, and fire actions
 
 Bind only to IPv4, otherwise bind to all interfaces
 == IPv4에만 바인딩, 그렇지 않으면 모든 인터페이스에 바인딩
+
+Bind overview
+== 키 지정 개요
 
 Bind scoreboard, emote, and console actions
 == Bind scoreboard, emote, and console actions
@@ -1652,6 +1670,9 @@ Bounce
 Bound functions
 == 지정된 기능
 
+Bounded capture frame queue depth for demo export (higher values use more memory)
+== Bounded capture frame queue depth for demo export (higher values use more memory)
+
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 대괄호 칭호 색상: 0 = 서버 설정 따르기, 1 = 단색, 2 = 무지개
 
@@ -1675,6 +1696,9 @@ Broadcast shown to players with known bot client
 
 Broadcast shown to players without DDNet client
 == DDNet 클라이언트가 없는 플레이어에게 표시되는 방송
+
+Browse all key bindings grouped by function
+== 기능별로 그룹화된 모든 키 지정 보기
 
 Browse and activate custom audio packs
 == Browse and activate custom audio packs
@@ -1958,6 +1982,9 @@ Chat gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
 Chat gradient vertical position percentage
 == 그라데이션 세로 위치 (채팅, %)
 
+Chat line spacing
+== Chat line spacing
+
 Chat log retention days
 == 채팅 로그 보관 일수
 
@@ -2044,6 +2071,9 @@ Chinese font:
 
 CHN
 == 중국
+
+Choose a preset, or Custom to enter width and height. Follow window uses the current render size.
+== 프리셋을 선택하거나 '사용자 지정'에서 너비와 높이를 입력하세요. '창 크기 따르기'는 현재 렌더링 해상도를 사용합니다.
 
 Choose colors for weapons and entity lasers
 == Choose colors for weapons and entity lasers
@@ -2267,8 +2297,20 @@ Client performance pressure is high
 Client prediction time is high
 == 클라이언트 예측 시간이 높습니다
 
+Client self-kill is disabled (K key / kill command will be ignored)
+== 클라이언트 자살이 꺼졌습니다 (K 키 / kill 명령이 무시됩니다)
+
+Client self-kill is disabled (server commands are not affected)
+== 클라이언트 자살이 비활성화되었습니다 (서버 명령은 영향을 받지 않습니다)
+
+Client self-kill is enabled
+== 클라이언트 자살이 켜졌습니다
+
 Client uptime
 == 클라이언트 가동 시간
+
+Client-side self-kill protection
+== 클라이언트 측 자살 보호
 
 Close
 == 닫기
@@ -2531,9 +2573,6 @@ Configure nameplate text, badges, and visibility
 Configure player identity and country
 == 플레이어 정보 및 국기 구성
 
-Configure qm_report_app_id and qm_report_secret first
-== 먼저 qm_report_app_id와 qm_report_secret을 설정하세요
-
 Configure QmClient gameplay helpers
 == QmClient 게임 도우미 구성
 
@@ -2605,9 +2644,6 @@ Connect dummy automatically for solo split mode
 
 Connect dummy to enable
 == 더미 연결 후 활성화
-
-Connect to a server first
-== 먼저 서버에 연결하세요
 
 Connect to server first to establish voice network link
 == 먼저 서버에 연결하여 음성 네트워크 링크를 설정해야 합니다
@@ -2714,6 +2750,12 @@ Console text color
 Contacting title server
 == 칭호 서버에 연결 중
 
+Container format: MP4 is the most compatible, MOV suits editing, MKV suits lossless archives.
+== 컨테이너 형식: MP4는 호환성이 가장 좋고, MOV는 편집에, MKV는 무손실 보관에 적합합니다.
+
+Container:
+== 컨테이너:
+
 Continue anyway?
 == 그래도 계속하시겠습니까?
 
@@ -2780,6 +2822,9 @@ Copy
 Copy a .qmconfig file into the package folder, then refresh.
 == .qmconfig 파일을 패키지 폴더에 복사한 뒤 새로 고침하세요.
 
+Copy all
+== 모두 복사
+
 Copy info
 == 정보 복사
 
@@ -2819,9 +2864,6 @@ Could not connect dummy
 Could not connect to the translation service. Please try again later.
 == 번역 서비스에 연결할 수 없습니다. 잠시 후 다시 시도하세요.
 
-Could not create report scan request
-== 신고 스캔 요청을 생성할 수 없습니다
-
 Could not find a Tutorial server. Check your internet connection.
 == 튜토리얼 서버를 찾을 수 없습니다. 인터넷 연결을 확인하세요.
 
@@ -2830,9 +2872,6 @@ Could not find online Tutorial server.\nStarting and connecting to local server�
 
 Could not find your Team
 == 팀을 찾을 수 없습니다
-
-Could not get current server address
-== 현재 서버 주소를 가져올 수 없습니다
 
 Could not get server list from master server
 == 마스터 서버에서 서버 목록을 가져올 수 없습니다
@@ -3014,6 +3053,9 @@ Custom command
 Custom community list fetch URL (must be https, leave empty to disable)
 == 사용자 정의 커뮤니티 목록 가져오기 URL (https여야 함, 비우면 비활성화)
 
+Custom export container: mp4, mov or mkv
+== Custom export container: mp4, mov or mkv
+
 Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
 == 중국어/CJK 텍스트용 사용자 정의 글꼴(패밀리 또는 패밀리 + 스타일), 비우면 라틴 사용자 정의 글꼴을 따릅니다
 
@@ -3022,6 +3064,9 @@ Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
 
 Custom font for Latin text (family, or family + style)
 == 라틴 텍스트용 사용자 정의 글꼴(패밀리 또는 패밀리 + 스타일)
+
+Custom pressed hook line colors
+== 누른 후 사용자 지정 갈고리선 색
 
 Custom prompt template
 == 사용자 정의 프롬프트 템플릿
@@ -3083,6 +3128,9 @@ Cut interval
 Cut length
 == 잘라낸 길이
 
+Cut points can only land on keyframes. Smaller values add more cut points and larger files; 0 uses the encoder default.
+== 잘라내기 지점은 키프레임에만 놓을 수 있습니다. 값이 작을수록 잘라내기 지점이 많아지고 파일이 커집니다. 0은 인코더 기본값을 사용합니다.
+
 Cut segments
 == 잘라낸 구간들
 
@@ -3109,6 +3157,9 @@ Cyrillic
 
 d = Prediction latency
 == d = 예측 지연 시간
+
+Daily (H.264 / MP4)
+== 일상 공유 (H.264 / MP4)
 
 Dark translucent
 == 어두운 반투명
@@ -3314,6 +3365,9 @@ Default
 default
 == 기본값
 
+Default (software)
+== 기본 (소프트웨어)
+
 Default appearance profile migration version
 == 기본 외관 설정 마이그레이션 버전
 
@@ -3407,6 +3461,9 @@ Demo display
 Demo effects
 == 데모 효과
 
+Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
+== Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
+
 Demo hook strength (0=Off 1=Icon 2=Icon and number)
 == 데모 훅 강도(0=끔 1=아이콘 2=아이콘과 숫자)
 
@@ -3424,6 +3481,9 @@ Demo player is currently active.
 
 Demo target
 == 데모 대상
+
+Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
+== Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
 
 Demofile: %s
 == 데모 파일: %s
@@ -3511,6 +3571,9 @@ disable
 
 Disable after picking up other weapons
 == 다른 무기를 획득한 후 비활성화
+
+Disable client-initiated self-kill (K key / kill command)
+== Disable client-initiated self-kill (K key / kill command)
 
 Disable clipping
 == 클리핑 비활성화
@@ -4040,6 +4103,12 @@ Edit this custom command on the Bind Wheel page.
 Edit touch controls
 == 터치 컨트롤 편집
 
+Editing (DNxHR HQX / MOV)
+== 전문 편집 (DNxHR HQX / MOV)
+
+Editing (ProRes 422 HQ / MOV)
+== 전문 편집 (ProRes 422 HQ / MOV)
+
 Editor
 == 편집기
 
@@ -4156,6 +4225,9 @@ Enable cheats for your current team's run, but you can't earn a rank
 
 Enable client stutter diagnostics at startup
 == 시작 시 클라이언트 끊김 진단 활성화
+
+Enable client-initiated self-kill (K key / kill command)
+== Enable client-initiated self-kill (K key / kill command)
 
 Enable colored console output
 == 콘솔 컬러 출력 활성화
@@ -4505,6 +4577,15 @@ Enable/disable test commands (aka cheats) (setting only effective in initial con
 Enables/disables active moderator mode for the player
 == 플레이어의 활성 중재자 모드 활성화/비활성화
 
+Encoder used for export. Hardware encoders appear only when available.
+== 내보내기에 사용할 인코더입니다. 하드웨어 인코더는 사용 가능할 때만 표시됩니다.
+
+Encoder:
+== 인코더:
+
+End (s)
+== 끝 (초)
+
 End marker of replay slice
 == 리플레이 슬라이스의 끝 마커
 
@@ -4697,6 +4778,24 @@ Export demo cut
 Export name contains invalid characters.
 == 내보내기 이름에 유효하지 않은 문자가 포함되어 있습니다.
 
+Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+
+Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+
+Export playback speed. The value snaps to the nearest available speed.
+== 내보내기 재생 속도입니다. 입력값은 사용 가능한 가장 가까운 속도로 맞춰집니다.
+
+Export preset:
+== 내보내기 프리셋:
+
+Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc_nvenc/mp4), 3=editing(ProRes/mov), 4=editing(DNxHR/mov), 5=lossless archive(FFV1/mkv)
+== Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc_nvenc/mp4), 3=editing(ProRes/mov), 4=editing(DNxHR/mov), 5=lossless archive(FFV1/mkv)
+
+Export range (seconds):
+== 내보내기 범위(초):
+
 Export selected
 == 선택 항목 내보내기
 
@@ -4718,8 +4817,14 @@ Expose playback controls to the operating system
 External console password. Must be set to enable economy.
 == 외부 콘솔 비밀번호. 경제를 활성화하려면 설정해야 함
 
+Extra vertical spacing between chat lines in pixels (0 = default)
+== Extra vertical spacing between chat lines in pixels (0 = default)
+
 Extras
 == 기타
+
+Extremely slow, for testing only
+== 극도로 느림, 테스트 전용
 
 f = Frame rate
 == f = 프레임 속도
@@ -4808,14 +4913,23 @@ Failed to save screenshot
 Failed to save video
 == 동영상 저장에 실패했습니다
 
+Failed to save video. See local console for details.
+== Failed to save video. See local console for details.
+
 Failed to write PNG export.
 == PNG 내보내기 쓰기에 실패했습니다.
+
+Fairly fast encode
+== 꽤 빠른 인코딩
 
 Fake CTF flags
 == 가짜 CTF 깃발
 
 Fallback simple noise reduction strength
 == 대체 단순 노이즈 감소 강도
+
+Fast encode
+== 빠른 인코딩
 
 Fast input
 == 빠른 입력
@@ -4831,6 +4945,15 @@ Fast practice
 
 Fast, lightweight blur with a softer approximation.
 == 빠르고 가벼운 블러로, 더 부드러운 근사 효과를 제공합니다.
+
+Faster export playback
+== 내보내기 재생 속도 높이기
+
+Faster presets encode quicker but produce larger files
+== 빠른 프리셋은 인코딩이 빠르지만 파일이 커집니다
+
+Fastest encode, largest files
+== 가장 빠른 인코딩, 가장 큰 파일
 
 Fat skins (DDFat)
 == 통통한 스킨 (DDFat)
@@ -5021,6 +5144,9 @@ Follow Tee
 Follow UI icon color
 == UI 아이콘 색상 따르기
 
+Follow window
+== 창 크기 따르기
+
 Following
 == 현재
 
@@ -5095,6 +5221,9 @@ Frags
 
 Frame rate
 == 프레임 속도
+
+Frame rate of the recorded video; higher means smoother playback and larger files
+== 녹화된 영상의 프레임 레이트입니다. 높을수록 재생이 부드럽지만 파일이 커집니다
 
 Frame time
 == 프레임 시간
@@ -5792,6 +5921,9 @@ Hide system message prefix
 Hide the *** prefix before server chat messages
 == 서버 채팅 메시지 앞의 *** 접두사 숨기기
 
+Hide the in-game HUD, chat and spectator overlays while recording. Camera switching still works.
+== 녹화 중 게임 내 HUD, 채팅, 관전 정보를 숨깁니다. 카메라 전환은 계속 사용할 수 있습니다.
+
 Hide toast
 == 알림 숨기기
 
@@ -5807,8 +5939,17 @@ Hide weapon fire effects in Zen Mode
 Hide weapon muzzle flashes
 == 무기 총구 섬광 숨기기
 
+High (recommended)
+== 높음 (권장)
+
 High Detail
 == 높은 상세도
+
+High quality (HEVC / MP4)
+== 고품질 (HEVC / MP4)
+
+High quality, slow
+== 고품질, 느림
 
 Higher input latency
 == 입력 지연 증가
@@ -6134,6 +6275,9 @@ In-game crosshair scale percent (50=half, 200=double)
 Inactive color
 == 비활성 색상
 
+Include chat in the recording.
+== 녹화에 채팅을 포함합니다.
+
 Include clan when saving/loading config preset
 == 설정 프리셋 저장/불러오기 시 클랜 포함
 
@@ -6145,6 +6289,9 @@ Include country flag when saving/loading config preset
 
 Include emoticon when saving/loading config preset
 == 설정 프리셋 저장/불러오기 시 이모티콘 포함
+
+Include game audio in the recording.
+== 녹화에 게임 오디오를 포함합니다.
 
 Include name when saving/loading config preset
 == 설정 프리셋 저장/불러오기 시 이름 포함
@@ -6160,6 +6307,9 @@ Include Team 0
 
 Include Team 0 in the Gores team drown board
 == Gores 낙수 순위에 Team 0 포함
+
+Include the in-game HUD in the recording.
+== 녹화에 게임 내 HUD를 포함합니다.
 
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 == 수신 메시지 자동 번역 모드 (0=대상 언어가 아닐 때만 번역, 1=항상 번역)
@@ -6580,6 +6730,12 @@ Keyboard size
 
 Keyframe %d/%d: %s
 == 키프레임 %d/%d: %s
+
+Keyframe interval (GOP) in frames for demo export (0 = encoder default, 60 = recommended)
+== Keyframe interval (GOP) in frames for demo export (0 = encoder default, 60 = recommended)
+
+Keyframe interval (GOP):
+== 키프레임 간격 (GOP):
 
 Keyword reply
 == 키워드 응답
@@ -7043,12 +7199,6 @@ Local game mode statistics
 Local only
 == 로컬 전용
 
-Local particle effects
-== 로컬 파티클 효과
-
-Local particles: show particles behind own Tee (e.g. freeze snow)
-== 로컬 파티클: 자신의 Tee 뒤에 떨어지는 파티클 표시 (예: 얼음 결정)
-
 Local saves
 == 로컬 저장
 
@@ -7108,6 +7258,15 @@ Long frames
 
 Lose weapons when teleporting (useful for race maps)
 == 순간이동 시 무기 손실 (레이스 맵에 유용)
+
+Lossless archive (FFV1 / MKV)
+== 무손실 보관 (FFV1 / MKV)
+
+Low
+== 낮음
+
+Lower means better quality and larger files; 18 is recommended
+== 값이 낮을수록 화질이 좋고 파일이 커집니다. 18 권장
 
 LXGW WenKai is available.
 == LXGW WenKai를 사용할 수 있습니다.
@@ -7207,6 +7366,9 @@ Manual Steam path is invalid; using automatic detection
 
 Manual target
 == 수동 대상
+
+Manually toggle client-initiated self-kill with the bindable commands qm_self_kill_off and qm_self_kill_on
+== 바인딩 가능한 명령 qm_self_kill_off / qm_self_kill_on으로 클라이언트 자살을 수동으로 전환합니다
 
 Map
 == 맵
@@ -7480,6 +7642,9 @@ may cause delay
 
 May overload the service
 == 서비스에 과부하가 걸릴 수 있음
+
+Medium
+== 중간
 
 Memory
 == 메모리
@@ -8444,6 +8609,9 @@ Number of slots reserved for spectators
 Number of threads backend can use for rendering (Note: value may be ignored by backend)
 == 백엔드가 렌더링에 사용할 수 있는 스레드 수 (참고: 백엔드에서 값을 무시할 수 있음)
 
+Number of video pixel-format conversion threads for demo export (2-4 recommended)
+== Number of video pixel-format conversion threads for demo export (2-4 recommended)
+
 Number of vote options sent per tick
 == 틱당 전송되는 투표 옵션 수
 
@@ -8633,6 +8801,9 @@ Optional
 Optional authentication key for the DNSBL provider
 == DNSBL 제공자의 선택적 인증 키
 
+Optional export range in seconds. Leave empty to export the whole demo.
+== 선택적 내보내기 범위(초)입니다. 비워 두면 전체 데모를 내보냅니다.
+
 Or visit DDNet.org
 == 또는 DDNet.org 를 방문하세요
 
@@ -8696,8 +8867,14 @@ Output device open failed
 Output device open failed, try reconnecting speakers/headphones or reselecting output device
 == 출력 장치 열기 실패, 스피커/헤드폰을 다시 연결하거나 출력 장치를 다시 선택해 보세요
 
+Output file name without extension.
+== 확장자를 제외한 출력 파일 이름입니다.
+
 Output KCP negotiation, fallback, and session lifecycle debug logs
 == KCP 협상, 폴백 및 세션 수명 주기 디버그 로그 출력
+
+Output resolution
+== 출력 해상도
 
 Output switch
 == 출력 전환
@@ -8998,6 +9175,9 @@ Play/Pause
 
 Play/pause the current demo
 == 현재 데모 재생/일시정지
+
+Playback options
+== 재생 옵션
 
 Playback volume
 == 재생 볼륨
@@ -9440,6 +9620,33 @@ Press Esc to exit the HUD editor
 Press F2, log in, then use: change_map map_name
 == F2를 눌러 로그인한 후 change_map map_name을 입력하세요
 
+Pressed hook collision line color when hitting a tee
+== Pressed hook collision line color when hitting a tee
+
+Pressed hook collision line color when hitting something hookable
+== Pressed hook collision line color when hitting something hookable
+
+Pressed hook collision line color when not aiming at anything hookable
+== Pressed hook collision line color when not aiming at anything hookable
+
+Pressed hook line color; always used when custom pressed colors are enabled
+== 누른 후 갈고리선 색. 사용자 지정 누른 후 색이 켜져 있을 때 항상 사용
+
+Pressed hook line tip color
+== Pressed hook line tip color
+
+Pressed: A Tee
+== 누른 후: 다른 플레이어
+
+Pressed: Hook line tip
+== 누른 후: 갈고리선 끝
+
+Pressed: Nothing hookable
+== 누른 후: 걸 수 있는 대상 없음
+
+Pressed: Something hookable
+== 누른 후: 걸 수 있는 대상
+
 Prev. weapon
 == 이전 무기
 
@@ -9647,9 +9854,6 @@ Pyramid
 q = Connection quality
 == q = 연결 품질
 
-Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
-== Qm 향상된 렌더링: 0=끄기(순수 Vulkan), 1=자동 폴백, 2=강제 켜기
-
 Qm recommended appearance
 == Qm 권장 외관
 
@@ -9710,8 +9914,32 @@ QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
 == 배경 장식에 사용되는 쿼드 표시
 
+Quality (CQ):
+== 품질 (CQ):
+
+Quality (CRF):
+== 품질 (CRF):
+
+Quality (fixed):
+== 품질 (형식 고정):
+
+Quality (ICQ):
+== 품질 (ICQ):
+
+Quality (QP):
+== 품질 (QP):
+
+Quality from 0 to 51; lower is clearer and larger. Leave empty to use the video encoding CRF.
+== 품질 범위는 0-51이며 낮을수록 선명하고 파일이 커집니다. 비워 두면 아래 동영상 인코딩 CRF를 사용합니다.
+
+Quality is fixed by the selected format.
+== 품질은 선택한 형식에 따라 고정됩니다.
+
 Quality tier
 == 네트워크 품질 따르기
+
+Quality:
+== 품질:
 
 Query current map info
 == 현재 맵 정보 조회
@@ -9992,6 +10220,9 @@ Record demo
 Record to a file
 == 파일에 기록
 
+Recorder FPS
+== 녹화 FPS
+
 Red
 == 빨간색
 
@@ -10120,12 +10351,6 @@ Remote console password for helper (limited access)
 
 Remote console password for moderator (limited access)
 == 중재자용 원격 콘솔 비밀번호 (제한된 접근)
-
-Remote particle effects
-== 원격 파티클 효과
-
-Remote particles: sync and render other players via central server (requires both local+remote enabled)
-== 원격 파티클: 중앙 서버를 통해 다른 플레이어 동기화 및 렌더링 (상대방이 로컬+원격을 켜야 함)
 
 Remove
 == 제거
@@ -10307,6 +10532,12 @@ Render cut to video
 Render demo
 == 데모 렌더링
 
+Render demo content only during video export (hide HUD, chat and spectator overlays)
+== 데모만 렌더링: 내보내는 동안 HUD, 채팅, 관전 정보를 숨깁니다
+
+Render demo only
+== 데모만 렌더링
+
 Render entity text data
 == 엔티티 텍스트 데이터 렌더링
 
@@ -10321,6 +10552,9 @@ Render ghosts as circles instead of Tee
 
 Render graphics when window is in background
 == 창이 백그라운드에 있을 때 그래픽 렌더링
+
+Render preset
+== 렌더링 프리셋
 
 Render quads as triangles (fixes quad shading on some GPUs)
 == 쿼드를 삼각형으로 렌더링 (일부 GPU에서 쿼드 셰이딩 수정)
@@ -10414,36 +10648,6 @@ Reply to the last whisper target: %s
 
 Reply with dummy
 == 더미로 답장
-
-Report
-== 신고
-
-Report request canceled
-== 신고 요청이 취소되었습니다
-
-Report request failed due to network error
-== 네트워크 오류로 인해 신고 요청이 실패했습니다
-
-Report request failed with HTTP status: %d
-== HTTP 상태 %d로 인해 신고 요청이 실패했습니다
-
-Report request is already in progress
-== 신고 요청이 이미 진행 중입니다
-
-Report scan request submitted
-== 신고 스캔 요청이 제출되었습니다
-
-Report service App ID
-== 신고 서비스 앱 ID
-
-Report service signing key
-== 신고 서비스 서명 키
-
-Report service URL
-== 신고 서비스 URL
-
-Reports are not available on Axiom servers
-== Axiom 서버에서는 신고 기능을 사용할 수 없습니다
 
 Request a position swap
 == 위치 교환 요청
@@ -10606,6 +10810,9 @@ Restore Kugou files
 
 Restore old single-segment hook collision line behavior
 == 이전 단일 세그먼트 갈고리 충돌선 동작 복원
+
+Restore recommended
+== 권장값으로 복원
 
 Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
 == 기존 휠 스크롤 복원: 매 눈금마다 속도를 이어받지 않고 부드러운 스크롤을 다시 시작
@@ -10820,6 +11027,9 @@ Save ghost
 Save last %d min
 == 마지막 %d분 저장
 
+Save loaded and marked as used.
+== Save loaded and marked as used.
+
 Save loaded; local record removed.
 == 저장 데이터를 불러왔으며 로컬 기록을 삭제했습니다.
 
@@ -10915,12 +11125,6 @@ Scale max mouse distance to 1000 for better aim
 
 Scale uncertainty duration by ping (100=1.0x)
 == 핑에 따라 불확실성 지속 시간 조정 (100=1.0배)
-
-Scanning current server
-== 현재 서버 스캔 중
-
-Scanning current server...
-== 현재 서버 스캔 중...
 
 Score
 == 점수
@@ -11170,6 +11374,12 @@ Self and friends
 
 Self only
 == 자신만
+
+Self-kill off
+== 자살 끄기
+
+Self-kill on
+== 자살 켜기
 
 Send & Receive
 == 보내기 및 받기
@@ -12665,11 +12875,17 @@ Skip Tutorial
 Slide left
 == 왼쪽으로 슬라이드
 
+Slightly fast encode
+== 약간 빠른 인코딩
+
 Slow down the demo
 == 데모 속도 느리게
 
 Slower
 == 느림
+
+Slower export playback
+== 내보내기 재생 속도 낮추기
 
 Small Tee size
 == 작은 Tee 크기
@@ -12791,8 +13007,14 @@ Some map sounds could not be loaded. Check the local console for details.
 Something hookable
 == 갈고리 가능한 블록
 
+Sort by command
+== 명령 기준 정렬
+
 Sort by favorites
 == 즐겨찾기순 정렬
+
+Sort by key
+== 키 기준 정렬
 
 Sort by number of friends
 == 친구 수순 정렬
@@ -12965,6 +13187,9 @@ Squishy Tee deformation intensity
 Star
 == 별
 
+Start (s)
+== 시작 (초)
+
 Start and connect to local server
 == 로컬 서버를 시작하고 연결
 
@@ -12994,6 +13219,9 @@ Start recording a video
 
 Start skin queue from a random position when entering a map
 == 맵 입장 시 스킨 큐를 무작위 위치에서 시작
+
+Start the export paused
+== 내보내기를 일시 정지 상태로 시작
 
 Statboard
 == 통계판
@@ -14006,6 +14234,9 @@ Title wave strength (0-3, 0 = off)
 to check a server setting say /settings and setting's name, setting names are:
 == 서버 설정을 확인하려면 /settings 와 설정 이름을 입력하세요. 설정 이름은 다음과 같습니다:
 
+To prevent accidental kills while racing, use the two bind rows above to toggle. To self-kill, press the enable key first, then press K. Server commands are not affected
+== 레이스 중 실수 방지: 위의 두 바인딩 행으로 전환하세요. 자살하려면 먼저 활성화 키를 누른 뒤 K를 누릅니다. 서버 명령은 영향을 받지 않습니다
+
 To save all players in your team have to be alive and not in '/spec'
 == 팀을 저장하려면 모든 팀원이 살아 있고 '/spec' 상태가 아니어야 합니다
 
@@ -14555,6 +14786,9 @@ Unfreeze tile outline color
 Unfreeze/Deep unfreeze tile outline width
 == 언프리즈/딥 언프리즈 타일 윤곽선 두께
 
+Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
+== Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
+
 Uninvite player from team
 == 플레이어의 팀 초대 취소
 
@@ -14729,6 +14963,9 @@ Use current name
 Use current settings
 == 현재 설정 가져오기
 
+Use custom colors for the pressed hook collision line (0 = always invert)
+== Use custom colors for the pressed hook collision line (0 = always invert)
+
 Use custom skins instead of the ninja tee
 == 닌자 티 대신 사용자 정의 스킨 사용
 
@@ -14810,11 +15047,8 @@ Use original style for Dynamic Island
 Use pre-input to predict other players for more accurate input prediction
 == 사전 입력을 사용하여 다른 플레이어를 예측해 더 정확한 입력 예측
 
-Use procedural ring pipeline when enhanced rendering is active
-== 향상된 렌더링이 활성화되면 절차적 링 파이프라인 사용
-
-Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
-== 향상된 렌더링이 활성화되면 Dynamic Island 및 둥근 사각형에 SDF 파이프라인 사용
+Use procedural ring pipeline
+== Use procedural ring pipeline
 
 Use server defaults
 == 서버 기본값 사용
@@ -14837,6 +15071,9 @@ Use team colors for name plates
 Use Tee icons instead of circles
 == 원 대신 Tee 아이콘 사용
 
+Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
+== 훅 키를 누르는 동안 훅 충돌선이 표시될 때 아래의 사용자 지정 색상을 사용합니다. 비활성화하면 누르지 않은 색이 자동으로 반전됩니다
+
 Use the mouse wheel on a hovered module to scale it by 5%
 == 마우스를 모듈 위에 올리고 휠을 굴리면 5% 씩 크기 조정
 
@@ -14857,6 +15094,9 @@ Use warlist colors instead of regular colors
 
 Use warlist groups for indicator
 == 표시기에 전쟁 목록 그룹 사용
+
+Used
+== Used
 
 Used by active shared text and numeric input fields
 == 활성화된 공용 텍스트 및 숫자 입력 필드에서 사용됩니다
@@ -14912,17 +15152,38 @@ Vertical sync (may cause lag)
 Vertical wave
 == 상하 물결
 
+Very fast encode
+== 매우 빠른 인코딩
+
+Very high
+== 매우 높음
+
+Very high quality, very slow
+== 매우 고품질, 매우 느림
+
 Video Background
 == 비디오 배경
 
 Video directory
 == 동영상 저장 폴더
 
+Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
+== Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
+
+Video encoding
+== 동영상 인코딩
+
+Video export
+== 동영상 내보내기
+
 Video name
 == 비디오 이름
 
 Video name:
 == 비디오 이름:
+
+Video quality CRF
+== 동영상 품질 CRF
 
 Video rendering is unavailable during online replay.
 == 온라인 리플레이 중에는 동영상을 렌더링할 수 없습니다.

@@ -77,6 +77,7 @@ namespace qm_card_catalog
 
 		const std::vector<const char *> s_vBindCards = {
 			"qm:bind_editor",
+			"qm:bind_overview",
 		};
 
 		const std::vector<const char *> s_vNameplateCards = {

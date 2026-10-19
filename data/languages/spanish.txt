@@ -196,9 +196,6 @@
 (On Latest)
 == (En la última versión)
 
-(paused)
-== (pausado)
-
 (Update required)
 == (Actualización requerida)
 
@@ -255,6 +252,9 @@
 
 0 disables timed rotation; skins only switch on random start events
 == 0 desactiva la rotación temporizada; las skins solo cambian en eventos de inicio aleatorio
+
+0-51, empty = default
+== 0-51, vacío = predeterminado
 
 1% low
 == 1% más bajo
@@ -701,6 +701,9 @@ Allow left-click to toggle between spectating nearest player and free view
 Allow mic permission in system settings, then reopen voice
 == Permite el permiso del micrófono en la configuración del sistema, luego vuelve a abrir la voz
 
+Allow the client to send kill requests (0 = ignore client-initiated kills)
+== Allow the client to send kill requests (0 = ignore client-initiated kills)
+
 Allow voting to kick players
 == Permitir votar para expulsar jugadores
 
@@ -745,6 +748,9 @@ Always translate
 
 Amount
 == Cantidad
+
+An export preset applies an encoder, container and quality combination. Choose Custom to edit each setting.
+== Un preajuste de exportación aplica una combinación de codificador, contenedor y calidad. Elige «Personalizado» para ajustar cada opción.
 
 And pick one randomly
 == Y elegir uno al azar
@@ -1307,6 +1313,9 @@ Automatically record demos
 Automatically record replays
 == Grabar repeticiones automáticamente
 
+Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
+== Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
+
 Automatically reply to muted players
 == Responder automáticamente a jugadores silenciados
 
@@ -1475,6 +1484,9 @@ Baidu Translate
 Balance master, music, and game volume
 == Balance master, music, and game volume
 
+Balanced (recommended)
+== Equilibrado (recomendado)
+
 Ban a certain nickname
 == Banear un apodo específico
 
@@ -1529,6 +1541,9 @@ Benchmark frame times for number of seconds to file, then quit
 Best
 == Mejor
 
+Better compression, slower
+== Mejor compresión, más lento
+
 Better scoreboard
 == Tabla de puntuaciones mejorada
 
@@ -1552,6 +1567,9 @@ Bind movement, jump, hook, and fire actions
 
 Bind only to IPv4, otherwise bind to all interfaces
 == Enlazar solo a IPv4, de lo contrario enlazar a todas las interfaces
+
+Bind overview
+== Resumen de asignaciones
 
 Bind scoreboard, emote, and console actions
 == Bind scoreboard, emote, and console actions
@@ -1652,6 +1670,9 @@ Bounce
 Bound functions
 == Funciones asignadas
 
+Bounded capture frame queue depth for demo export (higher values use more memory)
+== Bounded capture frame queue depth for demo export (higher values use more memory)
+
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Color del título entre corchetes: 0 = seguir al servidor, 1 = color único, 2 = arcoíris
 
@@ -1675,6 +1696,9 @@ Broadcast shown to players with known bot client
 
 Broadcast shown to players without DDNet client
 == Mensaje mostrado a jugadores sin el cliente DDNet
+
+Browse all key bindings grouped by function
+== Ver todas las asignaciones de teclas agrupadas por función
 
 Browse and activate custom audio packs
 == Browse and activate custom audio packs
@@ -1958,6 +1982,9 @@ Chat gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
 Chat gradient vertical position percentage
 == Posición vertical del degradado (chat, %)
 
+Chat line spacing
+== Chat line spacing
+
 Chat log retention days
 == Días de retención del registro de chat
 
@@ -2044,6 +2071,9 @@ Chinese font:
 
 CHN
 == China
+
+Choose a preset, or Custom to enter width and height. Follow window uses the current render size.
+== Elige un preajuste o «Personalizado» para introducir ancho y alto. «Seguir ventana» usa la resolución de render actual.
 
 Choose colors for weapons and entity lasers
 == Choose colors for weapons and entity lasers
@@ -2267,8 +2297,20 @@ Client performance pressure is high
 Client prediction time is high
 == El tiempo de predicción del cliente es alto
 
+Client self-kill is disabled (K key / kill command will be ignored)
+== El suicidio del cliente está deshabilitado (la tecla K / el comando kill se ignorarán)
+
+Client self-kill is disabled (server commands are not affected)
+== El suicidio del cliente está deshabilitado (los comandos del servidor no se ven afectados)
+
+Client self-kill is enabled
+== El suicidio del cliente está habilitado
+
 Client uptime
 == Uptime del cliente
+
+Client-side self-kill protection
+== Protección contra autodestrucción del cliente
 
 Close
 == Cerrar
@@ -2531,9 +2573,6 @@ Configure nameplate text, badges, and visibility
 Configure player identity and country
 == Configurar la identidad y el país del jugador
 
-Configure qm_report_app_id and qm_report_secret first
-== Configura primero qm_report_app_id y qm_report_secret
-
 Configure QmClient gameplay helpers
 == Configurar las ayudas de juego de QmClient
 
@@ -2605,9 +2644,6 @@ Connect dummy automatically for solo split mode
 
 Connect dummy to enable
 == Conectar dummy para habilitar
-
-Connect to a server first
-== Conéctate primero a un servidor
 
 Connect to server first to establish voice network link
 == Conéctate primero al servidor para establecer el enlace de red de voz
@@ -2714,6 +2750,12 @@ Console text color
 Contacting title server
 == Conectando al servidor de títulos
 
+Container format: MP4 is the most compatible, MOV suits editing, MKV suits lossless archives.
+== Formato de contenedor: MP4 es el más compatible, MOV va bien para edición y MKV para archivos sin pérdidas.
+
+Container:
+== Contenedor:
+
 Continue anyway?
 == ¿Continuar de todas formas?
 
@@ -2780,6 +2822,9 @@ Copy
 Copy a .qmconfig file into the package folder, then refresh.
 == Copia un archivo .qmconfig a la carpeta de paquetes y actualiza la lista.
 
+Copy all
+== Copiar todo
+
 Copy info
 == Copiar información
 
@@ -2819,9 +2864,6 @@ Could not connect dummy
 Could not connect to the translation service. Please try again later.
 == No se pudo conectar al servicio de traducción. Inténtalo más tarde.
 
-Could not create report scan request
-== No se pudo crear la solicitud de escaneo de reporte
-
 Could not find a Tutorial server. Check your internet connection.
 == No se pudo encontrar un servidor de Tutorial. Verifica tu conexión a internet.
 
@@ -2830,9 +2872,6 @@ Could not find online Tutorial server.\nStarting and connecting to local server�
 
 Could not find your Team
 == No se pudo encontrar tu equipo
-
-Could not get current server address
-== No se pudo obtener la dirección del servidor actual
 
 Could not get server list from master server
 == No se pudo obtener la lista de servidores del servidor maestro
@@ -3014,6 +3053,9 @@ Custom command
 Custom community list fetch URL (must be https, leave empty to disable)
 == URL de obtención de lista de comunidades personalizada (debe ser https, dejar vacío para deshabilitar)
 
+Custom export container: mp4, mov or mkv
+== Custom export container: mp4, mov or mkv
+
 Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
 == Fuente personalizada para texto chino/CJK (familia, o familia + estilo); vacío = seguir la fuente personalizada latina
 
@@ -3022,6 +3064,9 @@ Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
 
 Custom font for Latin text (family, or family + style)
 == Fuente personalizada para texto latino (familia, o familia + estilo)
+
+Custom pressed hook line colors
+== Colores personalizados de la línea al pulsar
 
 Custom prompt template
 == Plantilla de aviso personalizada
@@ -3083,6 +3128,9 @@ Cut interval
 Cut length
 == Duración del corte
 
+Cut points can only land on keyframes. Smaller values add more cut points and larger files; 0 uses the encoder default.
+== Los puntos de corte solo pueden caer en fotogramas clave. Valores menores añaden más puntos y archivos más grandes; 0 usa el valor predeterminado del codificador.
+
 Cut segments
 == Segmentos de corte
 
@@ -3109,6 +3157,9 @@ Cyrillic
 
 d = Prediction latency
 == d = Latencia de predicción
+
+Daily (H.264 / MP4)
+== Diario (H.264 / MP4)
 
 Dark translucent
 == Oscuro translúcido
@@ -3314,6 +3365,9 @@ Default
 default
 == predeterminado
 
+Default (software)
+== Predeterminado (software)
+
 Default appearance profile migration version
 == Versión de migración de la apariencia predeterminada
 
@@ -3407,6 +3461,9 @@ Demo display
 Demo effects
 == Efectos de demo
 
+Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
+== Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
+
 Demo hook strength (0=Off 1=Icon 2=Icon and number)
 == Fuerza del gancho en demo (0=Desactivado 1=Icono 2=Icono y número)
 
@@ -3424,6 +3481,9 @@ Demo player is currently active.
 
 Demo target
 == Destino de la demo
+
+Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
+== Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
 
 Demofile: %s
 == Archivo de demo: %s
@@ -3511,6 +3571,9 @@ disable
 
 Disable after picking up other weapons
 == Desactivar al recoger otras armas
+
+Disable client-initiated self-kill (K key / kill command)
+== Disable client-initiated self-kill (K key / kill command)
 
 Disable clipping
 == Deshabilitar recorte
@@ -4040,6 +4103,12 @@ Edit this custom command on the Bind Wheel page.
 Edit touch controls
 == Editar controles táctiles
 
+Editing (DNxHR HQX / MOV)
+== Edición (DNxHR HQX / MOV)
+
+Editing (ProRes 422 HQ / MOV)
+== Edición (ProRes 422 HQ / MOV)
+
 Editor
 == Editor
 
@@ -4156,6 +4225,9 @@ Enable cheats for your current team's run, but you can't earn a rank
 
 Enable client stutter diagnostics at startup
 == Activar el diagnóstico de tirones del cliente al iniciar
+
+Enable client-initiated self-kill (K key / kill command)
+== Enable client-initiated self-kill (K key / kill command)
 
 Enable colored console output
 == Habilitar salida de consola en color
@@ -4505,6 +4577,15 @@ Enable/disable test commands (aka cheats) (setting only effective in initial con
 Enables/disables active moderator mode for the player
 == Activa/desactiva el modo moderador activo para el jugador
 
+Encoder used for export. Hardware encoders appear only when available.
+== Codificador usado para la exportación. Los codificadores de hardware solo aparecen si están disponibles.
+
+Encoder:
+== Codificador:
+
+End (s)
+== Fin (s)
+
 End marker of replay slice
 == Marcador final del segmento de repetición
 
@@ -4697,6 +4778,24 @@ Export demo cut
 Export name contains invalid characters.
 == El nombre de exportación contiene caracteres no válidos.
 
+Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+
+Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+
+Export playback speed. The value snaps to the nearest available speed.
+== Velocidad de reproducción de exportación. El valor se ajusta a la velocidad disponible más cercana.
+
+Export preset:
+== Preajuste de exportación:
+
+Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc_nvenc/mp4), 3=editing(ProRes/mov), 4=editing(DNxHR/mov), 5=lossless archive(FFV1/mkv)
+== Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc_nvenc/mp4), 3=editing(ProRes/mov), 4=editing(DNxHR/mov), 5=lossless archive(FFV1/mkv)
+
+Export range (seconds):
+== Rango de exportación (segundos):
+
 Export selected
 == Exportar seleccionado
 
@@ -4718,8 +4817,14 @@ Expose playback controls to the operating system
 External console password. Must be set to enable economy.
 == Contraseña de consola externa. Debe configurarse para habilitar la economía.
 
+Extra vertical spacing between chat lines in pixels (0 = default)
+== Extra vertical spacing between chat lines in pixels (0 = default)
+
 Extras
 == Extras
+
+Extremely slow, for testing only
+== Extremadamente lento, solo para pruebas
 
 f = Frame rate
 == f = Fotogramas por segundo
@@ -4808,14 +4913,23 @@ Failed to save screenshot
 Failed to save video
 == No se pudo guardar el vídeo
 
+Failed to save video. See local console for details.
+== Failed to save video. See local console for details.
+
 Failed to write PNG export.
 == Error al escribir la exportación PNG.
+
+Fairly fast encode
+== Codificación bastante rápida
 
 Fake CTF flags
 == Banderas falsas de CTF
 
 Fallback simple noise reduction strength
 == Fuerza de reducción de ruido simple de respaldo
+
+Fast encode
+== Codificación rápida
 
 Fast input
 == Entrada rápida
@@ -4831,6 +4945,15 @@ Fast practice
 
 Fast, lightweight blur with a softer approximation.
 == Desenfoque rápido y ligero con una aproximación más suave.
+
+Faster export playback
+== Acelerar la reproducción de exportación
+
+Faster presets encode quicker but produce larger files
+== Los preajustes rápidos codifican más rápido pero generan archivos más grandes
+
+Fastest encode, largest files
+== Codificación más rápida, archivos más grandes
 
 Fat skins (DDFat)
 == Skins gordos (DDFat)
@@ -5021,6 +5144,9 @@ Follow Tee
 Follow UI icon color
 == Según color de iconos de la interfaz
 
+Follow window
+== Seguir ventana
+
 Following
 == Siguiendo
 
@@ -5095,6 +5221,9 @@ Frags
 
 Frame rate
 == Tasa de fotogramas
+
+Frame rate of the recorded video; higher means smoother playback and larger files
+== Frecuencia de fotogramas del vídeo grabado; más alta significa una reproducción más fluida y archivos más grandes
 
 Frame time
 == Tiempo de fotograma
@@ -5792,6 +5921,9 @@ Hide system message prefix
 Hide the *** prefix before server chat messages
 == Ocultar el prefijo *** antes de los mensajes de chat del servidor
 
+Hide the in-game HUD, chat and spectator overlays while recording. Camera switching still works.
+== Ocultar el HUD del juego, el chat y la información de espectador al grabar. El cambio de cámara sigue disponible.
+
 Hide toast
 == Ocultar toast
 
@@ -5807,8 +5939,17 @@ Hide weapon fire effects in Zen Mode
 Hide weapon muzzle flashes
 == Ocultar destellos del cañón del arma
 
+High (recommended)
+== Alta (recomendado)
+
 High Detail
 == Alto detalle
+
+High quality (HEVC / MP4)
+== Alta calidad (HEVC / MP4)
+
+High quality, slow
+== Alta calidad, lento
 
 Higher input latency
 == mayor latencia de entrada
@@ -6134,6 +6275,9 @@ In-game crosshair scale percent (50=half, 200=double)
 Inactive color
 == Color inactivo
 
+Include chat in the recording.
+== Incluir el chat en la grabación.
+
 Include clan when saving/loading config preset
 == Incluir clan al guardar/cargar preajuste de configuración
 
@@ -6145,6 +6289,9 @@ Include country flag when saving/loading config preset
 
 Include emoticon when saving/loading config preset
 == Incluir emoticono al guardar/cargar preajuste de configuración
+
+Include game audio in the recording.
+== Incluir el audio del juego en la grabación.
 
 Include name when saving/loading config preset
 == Incluir nombre al guardar/cargar preajuste de configuración
@@ -6160,6 +6307,9 @@ Include Team 0
 
 Include Team 0 in the Gores team drown board
 == Incluir Team 0 en la lista de ahogamientos de Gores
+
+Include the in-game HUD in the recording.
+== Incluir el HUD del juego en la grabación.
 
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 == Modo de traducción automática de mensajes recibidos (0=solo si no está en el idioma de destino, 1=traducir siempre)
@@ -6580,6 +6730,12 @@ Keyboard size
 
 Keyframe %d/%d: %s
 == Fotograma clave %d/%d: %s
+
+Keyframe interval (GOP) in frames for demo export (0 = encoder default, 60 = recommended)
+== Keyframe interval (GOP) in frames for demo export (0 = encoder default, 60 = recommended)
+
+Keyframe interval (GOP):
+== Intervalo de fotogramas clave (GOP):
 
 Keyword reply
 == Respuesta por palabra clave
@@ -7043,12 +7199,6 @@ Local game mode statistics
 Local only
 == Solo local
 
-Local particle effects
-== Efectos de partículas locales
-
-Local particles: show particles behind own Tee (e.g. freeze snow)
-== Partículas locales: mostrar partículas que caen detrás de tu Tee (ej. copos de congelación)
-
 Local saves
 == Guardados locales
 
@@ -7108,6 +7258,15 @@ Long frames
 
 Lose weapons when teleporting (useful for race maps)
 == Perder armas al teletransportarse (útil para mapas de carrera)
+
+Lossless archive (FFV1 / MKV)
+== Archivo sin pérdidas (FFV1 / MKV)
+
+Low
+== Baja
+
+Lower means better quality and larger files; 18 is recommended
+== Un valor más bajo significa mejor calidad y archivos más grandes; se recomienda 18
 
 LXGW WenKai is available.
 == LXGW WenKai está disponible.
@@ -7207,6 +7366,9 @@ Manual Steam path is invalid; using automatic detection
 
 Manual target
 == Objetivo manual
+
+Manually toggle client-initiated self-kill with the bindable commands qm_self_kill_off and qm_self_kill_on
+== Active o desactive manualmente el suicidio del cliente con los comandos vinculables qm_self_kill_off y qm_self_kill_on
 
 Map
 == Mapa
@@ -7480,6 +7642,9 @@ may cause delay
 
 May overload the service
 == puede sobrecargar el servicio
+
+Medium
+== Media
 
 Memory
 == Memoria
@@ -8444,6 +8609,9 @@ Number of slots reserved for spectators
 Number of threads backend can use for rendering (Note: value may be ignored by backend)
 == Número de hilos que el backend puede usar para renderizar (Nota: el valor puede ser ignorado por el backend)
 
+Number of video pixel-format conversion threads for demo export (2-4 recommended)
+== Number of video pixel-format conversion threads for demo export (2-4 recommended)
+
 Number of vote options sent per tick
 == Número de opciones de voto enviadas por tick
 
@@ -8633,6 +8801,9 @@ Optional
 Optional authentication key for the DNSBL provider
 == Clave de autenticación opcional para el proveedor de DNSBL
 
+Optional export range in seconds. Leave empty to export the whole demo.
+== Rango de exportación opcional en segundos. Déjalo vacío para exportar la demo completa.
+
 Or visit DDNet.org
 == O visita DDNet.org
 
@@ -8696,8 +8867,14 @@ Output device open failed
 Output device open failed, try reconnecting speakers/headphones or reselecting output device
 == Fallo al abrir el dispositivo de salida, intenta reconectar los altavoces/auriculares o seleccionar otro dispositivo de salida
 
+Output file name without extension.
+== Nombre del archivo de salida sin extensión.
+
 Output KCP negotiation, fallback, and session lifecycle debug logs
 == Mostrar registros de depuración de negociación KCP, fallback y ciclo de vida de sesión
+
+Output resolution
+== Resolución de salida
 
 Output switch
 == Cambio de salida
@@ -8998,6 +9175,9 @@ Play/Pause
 
 Play/pause the current demo
 == Reproducir/pausar la demo actual
+
+Playback options
+== Opciones de reproducción
 
 Playback volume
 == Volumen de reproducción
@@ -9440,6 +9620,33 @@ Press Esc to exit the HUD editor
 Press F2, log in, then use: change_map map_name
 == Pulsa F2, inicia sesión y usa: change_map map_name
 
+Pressed hook collision line color when hitting a tee
+== Pressed hook collision line color when hitting a tee
+
+Pressed hook collision line color when hitting something hookable
+== Pressed hook collision line color when hitting something hookable
+
+Pressed hook collision line color when not aiming at anything hookable
+== Pressed hook collision line color when not aiming at anything hookable
+
+Pressed hook line color; always used when custom pressed colors are enabled
+== Color de la línea al pulsar; se usa siempre cuando los colores personalizados al pulsar están activados
+
+Pressed hook line tip color
+== Pressed hook line tip color
+
+Pressed: A Tee
+== Al pulsar: Un Tee
+
+Pressed: Hook line tip
+== Al pulsar: Punta de la línea
+
+Pressed: Nothing hookable
+== Al pulsar: Nada enganchable
+
+Pressed: Something hookable
+== Al pulsar: Algo enganchable
+
 Prev. weapon
 == Arma anterior
 
@@ -9647,9 +9854,6 @@ Pyramid
 q = Connection quality
 == q = Calidad de conexión
 
-Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
-== Renderizado mejorado de Qm: 0=desactivado (Vulkan puro), 1=retroceso automático, 2=forzado
-
 Qm recommended appearance
 == Apariencia recomendada de Qm
 
@@ -9710,8 +9914,32 @@ QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
 == Los quads se usan para decoración de fondo
 
+Quality (CQ):
+== Calidad (CQ):
+
+Quality (CRF):
+== Calidad (CRF):
+
+Quality (fixed):
+== Calidad (fija):
+
+Quality (ICQ):
+== Calidad (ICQ):
+
+Quality (QP):
+== Calidad (QP):
+
+Quality from 0 to 51; lower is clearer and larger. Leave empty to use the video encoding CRF.
+== Calidad de 0 a 51; más bajo es más nítido y más grande. Déjalo vacío para usar el CRF de codificación de vídeo.
+
+Quality is fixed by the selected format.
+== La calidad la fija el formato seleccionado.
+
 Quality tier
 == Según calidad de red
+
+Quality:
+== Calidad:
 
 Query current map info
 == Consultar información del mapa actual
@@ -9992,6 +10220,9 @@ Record demo
 Record to a file
 == Grabar en un archivo
 
+Recorder FPS
+== FPS de grabación
+
 Red
 == Rojo
 
@@ -10120,12 +10351,6 @@ Remote console password for helper (limited access)
 
 Remote console password for moderator (limited access)
 == Contraseña de consola remota para moderador (acceso limitado)
-
-Remote particle effects
-== Efectos de partículas remotos
-
-Remote particles: sync and render other players via central server (requires both local+remote enabled)
-== Partículas remotas: sincronizar y renderizar otros jugadores a través del servidor central (el otro debe tener activado local+remoto)
 
 Remove
 == Eliminar
@@ -10307,6 +10532,12 @@ Render cut to video
 Render demo
 == Renderizar demo
 
+Render demo content only during video export (hide HUD, chat and spectator overlays)
+== Renderizar solo la demo: ocultar HUD, chat e información de espectador al exportar
+
+Render demo only
+== Solo demo
+
 Render entity text data
 == Renderizar datos de texto de entidades
 
@@ -10321,6 +10552,9 @@ Render ghosts as circles instead of Tee
 
 Render graphics when window is in background
 == Renderizar gráficos cuando la ventana está en segundo plano
+
+Render preset
+== Preajuste de renderizado
 
 Render quads as triangles (fixes quad shading on some GPUs)
 == Renderizar quads como triángulos (corrige el sombreado de quads en algunas GPU)
@@ -10414,36 +10648,6 @@ Reply to the last whisper target: %s
 
 Reply with dummy
 == Responder con el dummy
-
-Report
-== Reportar
-
-Report request canceled
-== Solicitud de reporte cancelada
-
-Report request failed due to network error
-== La solicitud de reporte falló por un error de red
-
-Report request failed with HTTP status: %d
-== La solicitud de reporte falló con estado HTTP: %d
-
-Report request is already in progress
-== La solicitud de reporte ya está en curso
-
-Report scan request submitted
-== Solicitud de escaneo de reporte enviada
-
-Report service App ID
-== ID de aplicación del servicio de reportes
-
-Report service signing key
-== Clave de firma del servicio de reportes
-
-Report service URL
-== URL del servicio de reportes
-
-Reports are not available on Axiom servers
-== Los reportes no están disponibles en servidores Axiom
 
 Request a position swap
 == Solicitar intercambio de posición
@@ -10606,6 +10810,9 @@ Restore Kugou files
 
 Restore old single-segment hook collision line behavior
 == Restaurar el comportamiento antiguo de línea de colisión de gancho de un solo segmento
+
+Restore recommended
+== Restaurar recomendados
 
 Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
 == Restaurar el desplazamiento original: cada paso de la rueda reinicia el desplazamiento suave sin heredar la velocidad
@@ -10820,6 +11027,9 @@ Save ghost
 Save last %d min
 == Guardar los últimos %d min
 
+Save loaded and marked as used.
+== Save loaded and marked as used.
+
 Save loaded; local record removed.
 == Partida cargada; registro local eliminado.
 
@@ -10915,12 +11125,6 @@ Scale max mouse distance to 1000 for better aim
 
 Scale uncertainty duration by ping (100=1.0x)
 == Escalar la duración de incertidumbre por ping (100=1.0x)
-
-Scanning current server
-== Escaneando el servidor actual
-
-Scanning current server...
-== Escaneando el servidor actual...
 
 Score
 == Puntuación
@@ -11170,6 +11374,12 @@ Self and friends
 
 Self only
 == Solo yo
+
+Self-kill off
+== Desactivar autodestrucción
+
+Self-kill on
+== Activar autodestrucción
 
 Send & Receive
 == Enviar y recibir
@@ -12665,11 +12875,17 @@ Skip Tutorial
 Slide left
 == Deslizar a la izquierda
 
+Slightly fast encode
+== Codificación ligeramente rápida
+
 Slow down the demo
 == Ralentizar la demo
 
 Slower
 == más lento
+
+Slower export playback
+== Ralentizar la reproducción de exportación
 
 Small Tee size
 == Tamaño de Tee pequeño
@@ -12791,8 +13007,14 @@ Some map sounds could not be loaded. Check the local console for details.
 Something hookable
 == Algo enganchable
 
+Sort by command
+== Ordenar por comando
+
 Sort by favorites
 == Ordenar por favoritos
+
+Sort by key
+== Ordenar por tecla
 
 Sort by number of friends
 == Ordenar por número de amigos
@@ -12965,6 +13187,9 @@ Squishy Tee deformation intensity
 Star
 == Estrella
 
+Start (s)
+== Inicio (s)
+
 Start and connect to local server
 == Iniciar y conectarse al servidor local
 
@@ -12994,6 +13219,9 @@ Start recording a video
 
 Start skin queue from a random position when entering a map
 == Iniciar la cola de skins desde una posición aleatoria al entrar al mapa
+
+Start the export paused
+== Iniciar la exportación en pausa
 
 Statboard
 == Tabla de estadísticas
@@ -14006,6 +14234,9 @@ Title wave strength (0-3, 0 = off)
 to check a server setting say /settings and setting's name, setting names are:
 == Para consultar un ajuste del servidor escribe /settings y su nombre. Los nombres son:
 
+To prevent accidental kills while racing, use the two bind rows above to toggle. To self-kill, press the enable key first, then press K. Server commands are not affected
+== Para evitar suicidios accidentales al correr, usa las dos filas de vinculación de arriba para alternar. Para suicidarte, pulsa primero la tecla de activación y luego K. Los comandos del servidor no se ven afectados
+
 To save all players in your team have to be alive and not in '/spec'
 == Para guardar, todos los jugadores de tu equipo deben estar vivos y no en '/spec'
 
@@ -14555,6 +14786,9 @@ Unfreeze tile outline color
 Unfreeze/Deep unfreeze tile outline width
 == Ancho del contorno de loseta de descongelación/descongelación profunda
 
+Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
+== Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
+
 Uninvite player from team
 == Desinvitar jugador del equipo
 
@@ -14729,6 +14963,9 @@ Use current name
 Use current settings
 == Usar ajustes actuales
 
+Use custom colors for the pressed hook collision line (0 = always invert)
+== Use custom colors for the pressed hook collision line (0 = always invert)
+
 Use custom skins instead of the ninja tee
 == Usar pieles personalizadas en lugar del tee ninja
 
@@ -14810,11 +15047,8 @@ Use original style for Dynamic Island
 Use pre-input to predict other players for more accurate input prediction
 == Usar pre-entrada para predecir a otros jugadores para una predicción de entrada más precisa
 
-Use procedural ring pipeline when enhanced rendering is active
-== Usar la canalización de anillos procedurales con el renderizado mejorado activo
-
-Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
-== Usar canalizaciones SDF para Dynamic Island y rectángulos redondeados con el renderizado mejorado activo
+Use procedural ring pipeline
+== Use procedural ring pipeline
 
 Use server defaults
 == Usar valores predeterminados del servidor
@@ -14837,6 +15071,9 @@ Use team colors for name plates
 Use Tee icons instead of circles
 == Usar iconos de Tee en lugar de círculos
 
+Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
+== Usa los colores personalizados de abajo cuando la línea de colisión se muestra al pulsar la tecla de gancho; si se desactiva, los colores sin pulsar se invierten automáticamente
+
 Use the mouse wheel on a hovered module to scale it by 5%
 == Usa la rueda del ratón sobre un módulo para escalarlo un 5%
 
@@ -14857,6 +15094,9 @@ Use warlist colors instead of regular colors
 
 Use warlist groups for indicator
 == Usar grupos de la lista de guerra para el indicador
+
+Used
+== Used
 
 Used by active shared text and numeric input fields
 == Lo usan los campos compartidos activos de texto y números
@@ -14912,17 +15152,38 @@ Vertical sync (may cause lag)
 Vertical wave
 == Onda vertical
 
+Very fast encode
+== Codificación muy rápida
+
+Very high
+== Muy alta
+
+Very high quality, very slow
+== Calidad muy alta, muy lento
+
 Video Background
 == Fondo de video
 
 Video directory
 == Carpeta de vídeos
 
+Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
+== Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
+
+Video encoding
+== Codificación de vídeo
+
+Video export
+== Exportación de vídeo
+
 Video name
 == Nombre del video
 
 Video name:
 == Nombre del video:
+
+Video quality CRF
+== Calidad de vídeo (CRF)
 
 Video rendering is unavailable during online replay.
 == No se puede renderizar vídeo durante una repetición en línea.

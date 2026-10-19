@@ -278,22 +278,40 @@ bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect
 	Options.m_Radius *= Metrics.m_UiScale;
 	// 与 F1 筛选相同，以选中底色表达启用状态，不再另画滑动开关。
 	Options.m_Color = Options.m_Selected ? color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(1.0f) : ResolveConfiguredControlSurface();
+	// 开关选中后保留浅色描边，不随浅色底翻成深色；文字也维持原前景色。
+	if(Options.m_Selected)
+		Options.m_BorderOverride = ui_token::color::TEXT_PRIMARY.WithAlpha(0.72f);
+	else
+		Options.m_BorderOverride.reset();
 	ColorRGBA Fill = *Options.m_Color;
 	if(!Options.m_Enabled)
 		Fill.a *= 0.65f;
 	if(!m_MenuTextPlanCollecting)
 		Fill = ui_widget::DrawButtonSurface(Context, CanProcessInput ? pId : nullptr, Button, Options);
 	const CUiScopedSurfaceText SurfaceText(TextRender(), Fill);
-	if(Entry.m_ShowCheckmark && Options.m_Selected && !m_MenuTextPlanCollecting)
+	if(Entry.m_ShowCheckmark && !m_MenuTextPlanCollecting)
 	{
 		CUIRect Indicator = ResolveSettingsToggleButtonLabel(Button, PaddingX, PaddingY);
 		Indicator.w = std::min(Metrics.m_BodySize, Indicator.w);
-		const EFontPreset PreviousFont = TextRender()->GetFontPreset();
-		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		char aCheck[8] = {};
-		str_utf8_encode(aCheck, CQmIconRegistry::Codepoint(EQmIcon::CHECK));
-		Ui()->DoLabel(&Indicator, aCheck, Metrics.m_BodySize, TEXTALIGN_MC);
-		TextRender()->SetFontPreset(PreviousFont);
+		if(Options.m_Selected)
+		{
+			const EFontPreset PreviousFont = TextRender()->GetFontPreset();
+			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+			char aCheck[8] = {};
+			str_utf8_encode(aCheck, CQmIconRegistry::Codepoint(EQmIcon::CHECK));
+			Ui()->DoLabel(&Indicator, aCheck, Metrics.m_BodySize, TEXTALIGN_MC);
+			TextRender()->SetFontPreset(PreviousFont);
+		}
+		else
+		{
+			// 关闭态也给出空心圆提示，和选中态的勾选图标共用同一槽位。
+			const float Diameter = std::min(Metrics.m_BodySize * 0.72f, std::min(Indicator.w, Indicator.h));
+			CUIRect Ring;
+			Ring.w = Ring.h = Diameter;
+			Ring.x = Indicator.x + (Indicator.w - Diameter) * 0.5f;
+			Ring.y = Indicator.y + (Indicator.h - Diameter) * 0.5f;
+			DrawRoundedSurface(Ui(), Ring, ColorRGBA(), ui_token::color::TEXT_PRIMARY.WithAlpha(0.52f), Diameter * 0.5f, 1.0f);
+		}
 	}
 	SLabelProperties Props;
 	Props.m_MaxWidth = Label.w;
@@ -301,8 +319,10 @@ bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect
 	Props.m_MinimumFontSize = Metrics.m_BodySize;
 	if(pOverrideTooltip != nullptr)
 		Props.SetColor(ui_token::color::TEXT_DISABLED);
+	else if(Options.m_Selected)
+		Props.SetColor(ui_token::color::TEXT_PRIMARY);
 	ExecuteSettingsCardLabel(Label, [&]() {
-		DoSettingsMenuLabel(Page, Tab, Subtab, Entry.m_pTextId, &Label, Entry.m_pLabel, Metrics.m_BodySize, TEXTALIGN_MC, Props);
+		DoSettingsMenuLabel(Page, Tab, Subtab, Entry.m_pTextId, &Label, Entry.m_pLabel, Metrics.m_BodySize, TEXTALIGN_ML, Props);
 	});
 	if(!m_MenuTextPlanCollecting && !Ui()->RenderOnly() && Context.m_pTooltips != nullptr)
 	{

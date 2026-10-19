@@ -168,6 +168,7 @@ namespace qm_card_registry
 			{"qm:nameplate_text", "hud", ECardColumn::Right, 18, "Nameplate text", "nameplate text hud 名字 mingzi 名牌 mingpai 文字 wenzi", "Customize additional nameplate text", "appearance-name-plate", "deck:appearance-name-plate-text"}, // 旧模块入口继续定位到外观页的文字卡片。
 			{"qm:laser", "visual", ECardColumn::Right, 3, "Laser", "激光设置 jiguang laser 增强特效 zengqiang texiao 辉光强度 huiguang qiangdu 激光大小 daxiao 半透明 bantouming 圆角端点 yuanjiao duandian 脉冲速度 maichong sudu 脉冲幅度 maichong fudu visual", "Customize laser shape and effects", "appearance-laser", "deck:appearance-laser-enhanced"}, // 数据债：原无 tab 归属，B1 补 visual；功能由外观页承载
 			{"qm:bind_editor", "bind", ECardColumn::Full, 0, Localizable("Bind"), "绑定 bangding bind keyboard 键盘 anjian 按键 mouse 鼠标 wheel 滚轮 modifier 修饰键 command 命令", Localizable("Configure keyboard, mouse, wheel, and modifier bindings")},
+			{"qm:bind_overview", "bind", ECardColumn::Full, 1, Localizable("Bind overview"), "绑定一览 bangding yilan bind overview 所有按键 suoyou anjian key bindings 键位列表 jianwei liebiao 分组展示 fenzu zhanshi 复制全部 fuzhi quanbu copy all", Localizable("Browse all key bindings grouped by function")},
 
 			// === Tclient section（19）· tclient:<name>（id 不变；column/order 按当前 section 顺序显式化）===
 			{"tclient:visual-font-cursor", "tclient", ECardColumn::Left, 0, "Font cursor", "font cursor tclient visual", "Choose the menu font and cursor appearance", "tclient", "tclient:font"},

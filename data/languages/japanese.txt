@@ -196,9 +196,6 @@
 (On Latest)
 == （最新版です）
 
-(paused)
-== (一時停止中)
-
 (Update required)
 == （アップデートが必要です）
 
@@ -255,6 +252,9 @@
 
 0 disables timed rotation; skins only switch on random start events
 == 0 で時間によるローテーションを無効化。ランダム開始時のみスキンを切り替えます
+
+0-51, empty = default
+== 0-51、空 = 既定
 
 1% low
 == 1%最低フレーム
@@ -701,6 +701,9 @@ Allow left-click to toggle between spectating nearest player and free view
 Allow mic permission in system settings, then reopen voice
 == システム設定でマイクの許可を許可してから、ボイスを再度開いてください
 
+Allow the client to send kill requests (0 = ignore client-initiated kills)
+== Allow the client to send kill requests (0 = ignore client-initiated kills)
+
 Allow voting to kick players
 == プレイヤーをキックする投票を許可
 
@@ -745,6 +748,9 @@ Always translate
 
 Amount
 == 量
+
+An export preset applies an encoder, container and quality combination. Choose Custom to edit each setting.
+== 書き出しプリセットはエンコーダー、コンテナ、画質の組み合わせを適用します。各項目を個別に変更するには「カスタム」を選びます。
 
 And pick one randomly
 == ランダムに1つ選ぶ
@@ -1307,6 +1313,9 @@ Automatically record demos
 Automatically record replays
 == リプレイを自動録画
 
+Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
+== Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
+
 Automatically reply to muted players
 == ミュートされたプレイヤーに自動返信
 
@@ -1475,6 +1484,9 @@ Baidu Translate
 Balance master, music, and game volume
 == Balance master, music, and game volume
 
+Balanced (recommended)
+== バランス（推奨）
+
 Ban a certain nickname
 == 特定のニックネームを禁止
 
@@ -1529,6 +1541,9 @@ Benchmark frame times for number of seconds to file, then quit
 Best
 == 最高
 
+Better compression, slower
+== 圧縮率は向上するが遅い
+
 Better scoreboard
 == より良いスコアボード
 
@@ -1552,6 +1567,9 @@ Bind movement, jump, hook, and fire actions
 
 Bind only to IPv4, otherwise bind to all interfaces
 == IPv4 のみにバインドする。それ以外の場合はすべてのインターフェースにバインドする
+
+Bind overview
+== キー割り当て一覧
 
 Bind scoreboard, emote, and console actions
 == Bind scoreboard, emote, and console actions
@@ -1652,6 +1670,9 @@ Bounce
 Bound functions
 == 割り当て済みの機能
 
+Bounded capture frame queue depth for demo export (higher values use more memory)
+== Bounded capture frame queue depth for demo export (higher values use more memory)
+
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 括弧内の称号の色：0 = サーバーに従う、1 = 単色、2 = 虹色
 
@@ -1675,6 +1696,9 @@ Broadcast shown to players with known bot client
 
 Broadcast shown to players without DDNet client
 == DDNet クライアントを使用していないプレイヤーに表示されるブロードキャスト
+
+Browse all key bindings grouped by function
+== 機能ごとにすべてのキー割り当てを表示
 
 Browse and activate custom audio packs
 == Browse and activate custom audio packs
@@ -1958,6 +1982,9 @@ Chat gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
 Chat gradient vertical position percentage
 == グラデーションの垂直位置 (チャット, %)
 
+Chat line spacing
+== Chat line spacing
+
 Chat log retention days
 == チャットログ保持日数
 
@@ -2044,6 +2071,9 @@ Chinese font:
 
 CHN
 == 中国
+
+Choose a preset, or Custom to enter width and height. Follow window uses the current render size.
+== プリセットを選ぶか、「カスタム」で幅と高さを入力します。「ウィンドウに合わせる」は現在のレンダリング解像度を使用します。
 
 Choose colors for weapons and entity lasers
 == Choose colors for weapons and entity lasers
@@ -2267,8 +2297,20 @@ Client performance pressure is high
 Client prediction time is high
 == クライアントの予測時間が長い
 
+Client self-kill is disabled (K key / kill command will be ignored)
+== クライアントの自殺は無効になりました（K キー / kill コマンドは無視されます）
+
+Client self-kill is disabled (server commands are not affected)
+== クライアントの自殺は無効になっています（サーバーのコマンドは影響を受けません）
+
+Client self-kill is enabled
+== クライアントの自殺は有効になりました
+
 Client uptime
 == クライアント稼働時間
+
+Client-side self-kill protection
+== クライアント側自殺保護
 
 Close
 == 閉じる
@@ -2531,9 +2573,6 @@ Configure nameplate text, badges, and visibility
 Configure player identity and country
 == プレイヤー情報と国旗を設定
 
-Configure qm_report_app_id and qm_report_secret first
-== 最初に qm_report_app_id と qm_report_secret を設定してください
-
 Configure QmClient gameplay helpers
 == QmClient のゲーム補助機能を設定
 
@@ -2605,9 +2644,6 @@ Connect dummy automatically for solo split mode
 
 Connect dummy to enable
 == ダミーに接続すると有効になります
-
-Connect to a server first
-== 最初にサーバーに接続してください
 
 Connect to server first to establish voice network link
 == まずサーバーに接続して音声ネットワークリンクを確立する
@@ -2714,6 +2750,12 @@ Console text color
 Contacting title server
 == 称号サーバーに接続中
 
+Container format: MP4 is the most compatible, MOV suits editing, MKV suits lossless archives.
+== コンテナ形式: MP4 は互換性が最も高く、MOV は編集向け、MKV は可逆圧縮の保存向けです。
+
+Container:
+== コンテナ:
+
 Continue anyway?
 == それでも続行しますか？
 
@@ -2780,6 +2822,9 @@ Copy
 Copy a .qmconfig file into the package folder, then refresh.
 == .qmconfig ファイルをパッケージフォルダーにコピーしてから更新してください。
 
+Copy all
+== すべてコピー
+
 Copy info
 == 情報をコピー
 
@@ -2819,9 +2864,6 @@ Could not connect dummy
 Could not connect to the translation service. Please try again later.
 == 翻訳サービスに接続できませんでした。しばらくしてから再試行してください。
 
-Could not create report scan request
-== レポートスキャンリクエストを作成できませんでした
-
 Could not find a Tutorial server. Check your internet connection.
 == チュートリアルサーバーが見つかりませんでした。インターネット接続を確認してください。
 
@@ -2830,9 +2872,6 @@ Could not find online Tutorial server.\nStarting and connecting to local server�
 
 Could not find your Team
 == あなたのチームが見つかりませんでした
-
-Could not get current server address
-== 現在のサーバーアドレスを取得できませんでした
 
 Could not get server list from master server
 == マスターサーバーからサーバーリストを取得できませんでした
@@ -3014,6 +3053,9 @@ Custom command
 Custom community list fetch URL (must be https, leave empty to disable)
 == カスタムコミュニティリスト取得 URL（https 必須、空欄で無効）
 
+Custom export container: mp4, mov or mkv
+== Custom export container: mp4, mov or mkv
+
 Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
 == 中国語/CJK テキスト用のカスタムフォント（ファミリー、またはファミリー + スタイル）。空欄ならラテン用カスタムフォントに従います
 
@@ -3022,6 +3064,9 @@ Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
 
 Custom font for Latin text (family, or family + style)
 == ラテン文字用のカスタムフォント（ファミリー、またはファミリー + スタイル）
+
+Custom pressed hook line colors
+== 押下時のフックラインのカスタム色
 
 Custom prompt template
 == カスタムプロンプトテンプレート
@@ -3083,6 +3128,9 @@ Cut interval
 Cut length
 == カット長
 
+Cut points can only land on keyframes. Smaller values add more cut points and larger files; 0 uses the encoder default.
+== カット位置はキーフレーム上のみ指定できます。小さい値ほどカット位置が増え、ファイルも大きくなります。0 はエンコーダーの既定値です。
+
 Cut segments
 == カットセグメント
 
@@ -3109,6 +3157,9 @@ Cyrillic
 
 d = Prediction latency
 == d = 予測レイテンシ
+
+Daily (H.264 / MP4)
+== 日常向け (H.264 / MP4)
 
 Dark translucent
 == 暗色半透明
@@ -3314,6 +3365,9 @@ Default
 default
 == デフォルト
 
+Default (software)
+== 既定（ソフトウェア）
+
 Default appearance profile migration version
 == 既定の外観設定の移行バージョン
 
@@ -3407,6 +3461,9 @@ Demo display
 Demo effects
 == デモエフェクト
 
+Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
+== Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
+
 Demo hook strength (0=Off 1=Icon 2=Icon and number)
 == デモのフック強弱（0=オフ 1=アイコン 2=アイコンと数値）
 
@@ -3424,6 +3481,9 @@ Demo player is currently active.
 
 Demo target
 == デモターゲット
+
+Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
+== Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
 
 Demofile: %s
 == デモファイル：%s
@@ -3511,6 +3571,9 @@ disable
 
 Disable after picking up other weapons
 == 他の武器を拾ったら無効化
+
+Disable client-initiated self-kill (K key / kill command)
+== Disable client-initiated self-kill (K key / kill command)
 
 Disable clipping
 == クリッピングを無効化
@@ -4040,6 +4103,12 @@ Edit this custom command on the Bind Wheel page.
 Edit touch controls
 == タッチコントロールを編集
 
+Editing (DNxHR HQX / MOV)
+== 編集向け (DNxHR HQX / MOV)
+
+Editing (ProRes 422 HQ / MOV)
+== 編集向け (ProRes 422 HQ / MOV)
+
 Editor
 == エディター
 
@@ -4156,6 +4225,9 @@ Enable cheats for your current team's run, but you can't earn a rank
 
 Enable client stutter diagnostics at startup
 == 起動時にクライアントのスタッター診断を有効にする
+
+Enable client-initiated self-kill (K key / kill command)
+== Enable client-initiated self-kill (K key / kill command)
 
 Enable colored console output
 == コンソールのカラー出力を有効にする
@@ -4505,6 +4577,15 @@ Enable/disable test commands (aka cheats) (setting only effective in initial con
 Enables/disables active moderator mode for the player
 == プレイヤーのアクティブモデレーターモードを有効/無効にします
 
+Encoder used for export. Hardware encoders appear only when available.
+== 書き出しに使用するエンコーダーです。ハードウェアエンコーダーは利用可能な場合のみ表示されます。
+
+Encoder:
+== エンコーダー:
+
+End (s)
+== 終了 (秒)
+
 End marker of replay slice
 == リプレイスライスの終了マーカー
 
@@ -4697,6 +4778,24 @@ Export demo cut
 Export name contains invalid characters.
 == エクスポート名に無効な文字が含まれています。
 
+Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+
+Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+
+Export playback speed. The value snaps to the nearest available speed.
+== 書き出しの再生速度です。入力値は利用可能な最も近い速度にスナップします。
+
+Export preset:
+== 書き出しプリセット:
+
+Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc_nvenc/mp4), 3=editing(ProRes/mov), 4=editing(DNxHR/mov), 5=lossless archive(FFV1/mkv)
+== Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc_nvenc/mp4), 3=editing(ProRes/mov), 4=editing(DNxHR/mov), 5=lossless archive(FFV1/mkv)
+
+Export range (seconds):
+== 書き出し範囲 (秒):
+
 Export selected
 == 選択項目をエクスポート
 
@@ -4718,8 +4817,14 @@ Expose playback controls to the operating system
 External console password. Must be set to enable economy.
 == 外部コンソールパスワード。エコノミーを有効にするには設定が必要
 
+Extra vertical spacing between chat lines in pixels (0 = default)
+== Extra vertical spacing between chat lines in pixels (0 = default)
+
 Extras
 == その他
+
+Extremely slow, for testing only
+== 極めて遅い、テスト用
 
 f = Frame rate
 == f = フレームレート
@@ -4808,14 +4913,23 @@ Failed to save screenshot
 Failed to save video
 == 動画の保存に失敗しました
 
+Failed to save video. See local console for details.
+== Failed to save video. See local console for details.
+
 Failed to write PNG export.
 == PNG エクスポートの書き込みに失敗しました。
+
+Fairly fast encode
+== やや速いエンコード
 
 Fake CTF flags
 == 偽の CTF フラッグ
 
 Fallback simple noise reduction strength
 == フォールバック簡易ノイズ低減強度
+
+Fast encode
+== 速いエンコード
 
 Fast input
 == 高速入力
@@ -4831,6 +4945,15 @@ Fast practice
 
 Fast, lightweight blur with a softer approximation.
 == 高速で軽量なぼかしで、やや柔らかい近似表現になります。
+
+Faster export playback
+== 書き出しの再生を速くする
+
+Faster presets encode quicker but produce larger files
+== 速いプリセットはエンコードが速くなりますが、ファイルは大きくなります
+
+Fastest encode, largest files
+== 最速のエンコード、最大のファイル
 
 Fat skins (DDFat)
 == ふっくらスキン（DDFat）
@@ -5021,6 +5144,9 @@ Follow Tee
 Follow UI icon color
 == UIアイコン色に追従
 
+Follow window
+== ウィンドウに合わせる
+
 Following
 == フォロー中
 
@@ -5095,6 +5221,9 @@ Frags
 
 Frame rate
 == フレームレート
+
+Frame rate of the recorded video; higher means smoother playback and larger files
+== 録画動画のフレームレート。高いほど滑らかに再生されますが、ファイルは大きくなります
 
 Frame time
 == フレーム時間
@@ -5792,6 +5921,9 @@ Hide system message prefix
 Hide the *** prefix before server chat messages
 == サーバーチャットメッセージの前の *** 接頭辞を非表示
 
+Hide the in-game HUD, chat and spectator overlays while recording. Camera switching still works.
+== 録画中はゲーム内 HUD、チャット、観戦情報を非表示にします。カメラ切り替えは引き続き使用できます。
+
 Hide toast
 == トーストを隠す
 
@@ -5807,8 +5939,17 @@ Hide weapon fire effects in Zen Mode
 Hide weapon muzzle flashes
 == 武器の発射炎を非表示
 
+High (recommended)
+== 高（推奨）
+
 High Detail
 == 高精細
+
+High quality (HEVC / MP4)
+== 高画質 (HEVC / MP4)
+
+High quality, slow
+== 高画質、遅い
 
 Higher input latency
 == 入力遅延増加
@@ -6134,6 +6275,9 @@ In-game crosshair scale percent (50=half, 200=double)
 Inactive color
 == 非アクティブカラー
 
+Include chat in the recording.
+== 録画にチャットを含めます。
+
 Include clan when saving/loading config preset
 == 設定プリセットの保存/読み込み時にクランを含める
 
@@ -6145,6 +6289,9 @@ Include country flag when saving/loading config preset
 
 Include emoticon when saving/loading config preset
 == 設定プリセットの保存/読み込み時に絵文字を含める
+
+Include game audio in the recording.
+== 録画にゲーム音声を含めます。
 
 Include name when saving/loading config preset
 == 設定プリセットの保存/読み込み時に名前を含める
@@ -6160,6 +6307,9 @@ Include Team 0
 
 Include Team 0 in the Gores team drown board
 == Gores の落水ランキングに Team 0 を含める
+
+Include the in-game HUD in the recording.
+== 録画にゲーム内 HUD を含めます。
 
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 == 受信メッセージの自動翻訳方式（0=対象言語でない場合のみ翻訳、1=常に翻訳）
@@ -6580,6 +6730,12 @@ Keyboard size
 
 Keyframe %d/%d: %s
 == キーフレーム %d/%d：%s
+
+Keyframe interval (GOP) in frames for demo export (0 = encoder default, 60 = recommended)
+== Keyframe interval (GOP) in frames for demo export (0 = encoder default, 60 = recommended)
+
+Keyframe interval (GOP):
+== キーフレーム間隔 (GOP):
 
 Keyword reply
 == キーワード返信
@@ -7043,12 +7199,6 @@ Local game mode statistics
 Local only
 == ローカルのみ
 
-Local particle effects
-== ローカルパーティクルエフェクト
-
-Local particles: show particles behind own Tee (e.g. freeze snow)
-== ローカルパーティクル：自分の Tee の後ろに落ちるパーティクル（凍結雪など）を表示
-
 Local saves
 == ローカルセーブ
 
@@ -7108,6 +7258,15 @@ Long frames
 
 Lose weapons when teleporting (useful for race maps)
 == テレポート時に武器を失う（レースマップに便利）
+
+Lossless archive (FFV1 / MKV)
+== 可逆アーカイブ (FFV1 / MKV)
+
+Low
+== 低
+
+Lower means better quality and larger files; 18 is recommended
+== 数値が低いほど高画質でファイルは大きくなります。18 を推奨
 
 LXGW WenKai is available.
 == LXGW WenKai を利用できます。
@@ -7207,6 +7366,9 @@ Manual Steam path is invalid; using automatic detection
 
 Manual target
 == 手動ターゲット
+
+Manually toggle client-initiated self-kill with the bindable commands qm_self_kill_off and qm_self_kill_on
+== バインド可能なコマンド qm_self_kill_off / qm_self_kill_on でクライアントの自殺を手動で切り替えます
 
 Map
 == マップ
@@ -7480,6 +7642,9 @@ may cause delay
 
 May overload the service
 == サービスに過負荷がかかる可能性あり
+
+Medium
+== 中
 
 Memory
 == メモリ
@@ -8444,6 +8609,9 @@ Number of slots reserved for spectators
 Number of threads backend can use for rendering (Note: value may be ignored by backend)
 == バックエンドがレンダリングに使用できるスレッド数（注: バックエンドによって値が無視される場合があります）
 
+Number of video pixel-format conversion threads for demo export (2-4 recommended)
+== Number of video pixel-format conversion threads for demo export (2-4 recommended)
+
 Number of vote options sent per tick
 == 1 ティックあたりに送る投票オプション数
 
@@ -8633,6 +8801,9 @@ Optional
 Optional authentication key for the DNSBL provider
 == DNSBL プロバイダーのオプションの認証キー
 
+Optional export range in seconds. Leave empty to export the whole demo.
+== 省略可能な書き出し範囲（秒）。空欄ならデモ全体を書き出します。
+
 Or visit DDNet.org
 == または DDNet.org をご覧ください
 
@@ -8696,8 +8867,14 @@ Output device open failed
 Output device open failed, try reconnecting speakers/headphones or reselecting output device
 == 出力デバイスのオープンに失敗しました。スピーカー/ヘッドフォンを再接続するか、出力デバイスを再選択してください
 
+Output file name without extension.
+== 拡張子を除いた出力ファイル名です。
+
 Output KCP negotiation, fallback, and session lifecycle debug logs
 == KCP ネゴシエーション、フォールバック、セッションライフサイクルのデバッグログを出力
+
+Output resolution
+== 出力解像度
 
 Output switch
 == 出力切り替え
@@ -8998,6 +9175,9 @@ Play/Pause
 
 Play/pause the current demo
 == 現在のデモを再生/一時停止
+
+Playback options
+== 再生オプション
 
 Playback volume
 == 再生音量
@@ -9440,6 +9620,33 @@ Press Esc to exit the HUD editor
 Press F2, log in, then use: change_map map_name
 == F2 を押してログイン後、change_map map_name を実行します
 
+Pressed hook collision line color when hitting a tee
+== Pressed hook collision line color when hitting a tee
+
+Pressed hook collision line color when hitting something hookable
+== Pressed hook collision line color when hitting something hookable
+
+Pressed hook collision line color when not aiming at anything hookable
+== Pressed hook collision line color when not aiming at anything hookable
+
+Pressed hook line color; always used when custom pressed colors are enabled
+== 押下時のフックライン色。カスタム押下色が有効なとき常に使用
+
+Pressed hook line tip color
+== Pressed hook line tip color
+
+Pressed: A Tee
+== 押下時：他のプレイヤー
+
+Pressed: Hook line tip
+== 押下時：ラインの先端
+
+Pressed: Nothing hookable
+== 押下時：フック可能なものはありません
+
+Pressed: Something hookable
+== 押下時：フック可能なもの
+
 Prev. weapon
 == 前の武器
 
@@ -9647,9 +9854,6 @@ Pyramid
 q = Connection quality
 == q = 接続品質
 
-Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
-== Qm 拡張レンダリング：0=オフ（純粋な Vulkan）、1=自動フォールバック、2=強制オン
-
 Qm recommended appearance
 == Qm 推奨の外観
 
@@ -9710,8 +9914,32 @@ QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
 == 背景装飾に使用されるクアッド
 
+Quality (CQ):
+== 画質 (CQ):
+
+Quality (CRF):
+== 画質 (CRF):
+
+Quality (fixed):
+== 画質（形式固定）:
+
+Quality (ICQ):
+== 画質 (ICQ):
+
+Quality (QP):
+== 画質 (QP):
+
+Quality from 0 to 51; lower is clearer and larger. Leave empty to use the video encoding CRF.
+== 画質は 0～51 です。小さいほど高画質でファイルが大きくなります。空欄の場合は下の動画エンコード CRF を使用します。
+
+Quality is fixed by the selected format.
+== 画質は選択した形式で固定されます。
+
 Quality tier
 == ネット品質に追従
+
+Quality:
+== 画質:
 
 Query current map info
 == 現在のマップ情報を照会
@@ -9992,6 +10220,9 @@ Record demo
 Record to a file
 == ファイルに記録
 
+Recorder FPS
+== 録画フレームレート
+
 Red
 == 赤
 
@@ -10120,12 +10351,6 @@ Remote console password for helper (limited access)
 
 Remote console password for moderator (limited access)
 == モデレーター用リモートコンソールパスワード（制限付きアクセス）
-
-Remote particle effects
-== リモートパーティクルエフェクト
-
-Remote particles: sync and render other players via central server (requires both local+remote enabled)
-== リモートパーティクル：中央サーバー経由で他のプレイヤーを同期・レンダリング（相手がローカル＋リモートを有効にする必要あり）
 
 Remove
 == 削除
@@ -10307,6 +10532,12 @@ Render cut to video
 Render demo
 == デモをレンダリング
 
+Render demo content only during video export (hide HUD, chat and spectator overlays)
+== デモのみを書き出す：書き出し中は HUD、チャット、観戦情報を非表示にします
+
+Render demo only
+== デモのみを書き出す
+
 Render entity text data
 == エンティティテキストデータをレンダリング
 
@@ -10321,6 +10552,9 @@ Render ghosts as circles instead of Tee
 
 Render graphics when window is in background
 == ウィンドウがバックグラウンドの時にグラフィックをレンダリング
+
+Render preset
+== レンダリングプリセット
 
 Render quads as triangles (fixes quad shading on some GPUs)
 == クアッドを三角形としてレンダリング（一部の GPU でのクアッドシェーディングを修正）
@@ -10414,36 +10648,6 @@ Reply to the last whisper target: %s
 
 Reply with dummy
 == ダミーで返信
-
-Report
-== 報告
-
-Report request canceled
-== 報告リクエストがキャンセルされました
-
-Report request failed due to network error
-== ネットワークエラーのため報告リクエストが失敗しました
-
-Report request failed with HTTP status: %d
-== 報告リクエストが HTTP ステータス %d で失敗しました
-
-Report request is already in progress
-== 報告リクエストは既に進行中です
-
-Report scan request submitted
-== 報告スキャンリクエストが送信されました
-
-Report service App ID
-== 報告サービスのApp ID
-
-Report service signing key
-== 報告サービスの署名キー
-
-Report service URL
-== 報告サービスのURL
-
-Reports are not available on Axiom servers
-== Axiom サーバーではレポート機能は利用できません
 
 Request a position swap
 == 位置交換をリクエスト
@@ -10606,6 +10810,9 @@ Restore Kugou files
 
 Restore old single-segment hook collision line behavior
 == 旧式の単一セグメントフック衝突線動作を復元
+
+Restore recommended
+== 推奨値に戻す
 
 Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
 == 従来のホイール操作に戻す：各刻みで速度を引き継がず、滑らかなスクロールを再開
@@ -10820,6 +11027,9 @@ Save ghost
 Save last %d min
 == 最後の %d 分を保存
 
+Save loaded and marked as used.
+== Save loaded and marked as used.
+
 Save loaded; local record removed.
 == セーブを読み込み、ローカルの記録を削除しました。
 
@@ -10915,12 +11125,6 @@ Scale max mouse distance to 1000 for better aim
 
 Scale uncertainty duration by ping (100=1.0x)
 == 不確実性の持続時間を ping で拡大縮小 (100=1.0 倍)
-
-Scanning current server
-== 現在のサーバーをスキャン中
-
-Scanning current server...
-== 現在のサーバーをスキャン中...
 
 Score
 == スコア
@@ -11170,6 +11374,12 @@ Self and friends
 
 Self only
 == 自分のみ
+
+Self-kill off
+== 自殺を無効化
+
+Self-kill on
+== 自殺を有効化
 
 Send & Receive
 == 送受信
@@ -12665,11 +12875,17 @@ Skip Tutorial
 Slide left
 == 左スライド
 
+Slightly fast encode
+== やや速めのエンコード
+
 Slow down the demo
 == デモの速度を下げる
 
 Slower
 == 低速
+
+Slower export playback
+== 書き出しの再生を遅くする
 
 Small Tee size
 == 小さな Tee のサイズ
@@ -12791,8 +13007,14 @@ Some map sounds could not be loaded. Check the local console for details.
 Something hookable
 == フック可能なブロック
 
+Sort by command
+== コマンド順で並べ替え
+
 Sort by favorites
 == お気に入り順に並べ替え
+
+Sort by key
+== キー順で並べ替え
 
 Sort by number of friends
 == フレンド数順に並べ替え
@@ -12965,6 +13187,9 @@ Squishy Tee deformation intensity
 Star
 == 星形
 
+Start (s)
+== 開始 (秒)
+
 Start and connect to local server
 == ローカルサーバーを起動して接続
 
@@ -12994,6 +13219,9 @@ Start recording a video
 
 Start skin queue from a random position when entering a map
 == マップ参加時にスキンキューをランダムな位置から開始
+
+Start the export paused
+== 書き出しを一時停止状態で開始
 
 Statboard
 == 統計ボード
@@ -14006,6 +14234,9 @@ Title wave strength (0-3, 0 = off)
 to check a server setting say /settings and setting's name, setting names are:
 == サーバー設定を確認するには /settings と設定名を入力します。設定名は次のとおりです:
 
+To prevent accidental kills while racing, use the two bind rows above to toggle. To self-kill, press the enable key first, then press K. Server commands are not affected
+== 走行中の誤爆防止：上の2つのバインド行で切り替えてください。自殺したい場合は、有効化キーを押してから K を押します。サーバーのコマンドには影響しません
+
 To save all players in your team have to be alive and not in '/spec'
 == 保存するには、チーム内の全プレイヤーが生存し、'/spec' 状態でない必要があります
 
@@ -14555,6 +14786,9 @@ Unfreeze tile outline color
 Unfreeze/Deep unfreeze tile outline width
 == フリーズ解除/ディープフリーズ解除タイルのアウトライン幅
 
+Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
+== Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
+
 Uninvite player from team
 == チームへのプレイヤー招待を取り消し
 
@@ -14729,6 +14963,9 @@ Use current name
 Use current settings
 == 現在の設定を使用
 
+Use custom colors for the pressed hook collision line (0 = always invert)
+== Use custom colors for the pressed hook collision line (0 = always invert)
+
 Use custom skins instead of the ninja tee
 == ニンジャ Tee の代わりにカスタムスキンを使用
 
@@ -14810,11 +15047,8 @@ Use original style for Dynamic Island
 Use pre-input to predict other players for more accurate input prediction
 == プリ入力を使用して他のプレイヤーを予測し、より正確な入力予測を実現
 
-Use procedural ring pipeline when enhanced rendering is active
-== 拡張レンダリング有効時に手続き型リングパイプラインを使用
-
-Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
-== 拡張レンダリング有効時に Dynamic Island と角丸矩形で SDF パイプラインを使用
+Use procedural ring pipeline
+== Use procedural ring pipeline
 
 Use server defaults
 == サーバーの既定値を使用
@@ -14837,6 +15071,9 @@ Use team colors for name plates
 Use Tee icons instead of circles
 == 円の代わりに Tee アイコンを使用
 
+Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
+== フックキー押下中にフック衝突ラインを表示する際、下のカスタム色を使用します。無効の場合は非押下時の色を自動反転します
+
 Use the mouse wheel on a hovered module to scale it by 5%
 == ホバーした HUD モジュール上でマウスホイールを使用すると 5% 単位で拡大縮小します
 
@@ -14857,6 +15094,9 @@ Use warlist colors instead of regular colors
 
 Use warlist groups for indicator
 == インジケーターに敵対リストグループを使用
+
+Used
+== Used
 
 Used by active shared text and numeric input fields
 == 有効な共通テキスト・数値入力欄で使用されます
@@ -14912,17 +15152,38 @@ Vertical sync (may cause lag)
 Vertical wave
 == 上下の波
 
+Very fast encode
+== 非常に速いエンコード
+
+Very high
+== 非常に高い
+
+Very high quality, very slow
+== 非常に高画質、非常に遅い
+
 Video Background
 == ビデオ背景
 
 Video directory
 == 動画の保存先
 
+Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
+== Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
+
+Video encoding
+== 動画エンコード
+
+Video export
+== 動画の書き出し
+
 Video name
 == ビデオ名
 
 Video name:
 == ビデオ名：
+
+Video quality CRF
+== 動画品質 CRF
 
 Video rendering is unavailable during online replay.
 == オンラインリプレイ中は動画を書き出せません。

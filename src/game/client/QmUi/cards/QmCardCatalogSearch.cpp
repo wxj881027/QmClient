@@ -470,6 +470,12 @@ namespace qm_card_catalog
 			{Localizable("Max demos"), nullptr, "最大回放数"},
 			{Localizable("Demo directory"), "qm_demo_directory", "回放保存目录 路径 demos"},
 			{Localizable("Video directory"), "qm_video_directory", "视频导出目录 路径 videos"},
+			{Localizable("Video quality CRF"), nullptr, "渲染质量 画质 crf"},
+			{nullptr, "cl_video_crf", nullptr},
+			{Localizable("Recorder FPS"), nullptr, "录制帧率 录像帧率 帧率 fps"},
+			{nullptr, "cl_video_recorder_fps", nullptr},
+			{Localizable("Render preset"), nullptr, "渲染预设 编码预设 preset"},
+			{nullptr, "cl_video_x264_preset", nullptr},
 			{Localizable("Screenshot directory"), "qm_screenshot_directory", "截图保存目录 路径 screenshots"},
 			{nullptr, "cl_auto_csv", nullptr},
 			{nullptr, "cl_auto_csv_max", nullptr},
@@ -2699,10 +2705,8 @@ namespace qm_card_catalog
 			{Localizable("Enable repeat"), nullptr, "启用复读"},
 			{Localizable("Hide input emoticon"), nullptr, "隐藏输入表情"},
 			{Localizable("Hide server information on join"), nullptr, "进图时隐藏服务器信息"},
-			{Localizable("Local particle effects"), nullptr, "本地粒子效果"},
 			{Localizable("Message merging"), nullptr, "消息合并"},
 			{Localizable("Random emoticon"), nullptr, "随机表情"},
-			{Localizable("Remote particle effects"), nullptr, "远程粒子效果"},
 			{Localizable("Short server names"), nullptr, "短服务器名称"},
 			{Localizable("Show Qm badge"), nullptr, "显示 Qm 标识"},
 			{Localizable("Show outdated version warning"), nullptr, "显示版本过旧提示"},
@@ -2710,10 +2714,8 @@ namespace qm_card_catalog
 			{Localizable("Sponsor reminder"), nullptr, "赞助提醒"},
 			{nullptr, "qm_auto_update", nullptr},
 			{nullptr, "qm_blank_asset_fallback", nullptr},
-			{nullptr, "qm_client_mark_trail", nullptr},
 			{nullptr, "qm_client_show_badge", nullptr},
 			{nullptr, "qm_combo_popup", nullptr},
-			{nullptr, "qm_foot_particles", nullptr},
 			{nullptr, "qm_hide_join_server_info", nullptr},
 			{nullptr, "qm_message_merge", nullptr},
 			{nullptr, "qm_random_emote_on_hit", nullptr},
@@ -2854,6 +2856,14 @@ namespace qm_card_catalog
 		static constexpr SCardSettingSearch s_aqm_water_hammer[] = {
 			{Localizable("Highlight teammates hammering in death or freeze areas"), nullptr, "高亮在死亡或冻结区域卡锤的队友"},
 			{nullptr, "qm_water_hammer_highlight", nullptr},
+		};
+
+		static constexpr SCardSettingSearch s_aqm_bind_overview[] = {
+			{Localizable("Bind overview"), nullptr, "绑定一览"},
+			{Localizable("Browse all key bindings grouped by function"), nullptr, "按功能分组查看所有键位绑定"},
+			{Localizable("Copy all"), nullptr, "复制全部"},
+			{Localizable("Sort by command"), nullptr, "按命令排序"},
+			{Localizable("Sort by key"), nullptr, "按按键排序"},
 		};
 
 		static constexpr SCardSettingSearch s_aqm_bind_editor[] = {
@@ -3261,6 +3271,7 @@ namespace qm_card_catalog
 			{"qm:tooltip", s_aqm_tooltip, std::size(s_aqm_tooltip)},
 			{"qm:water_hammer", s_aqm_water_hammer, std::size(s_aqm_water_hammer)},
 			{"qm:bind_editor", s_aqm_bind_editor, std::size(s_aqm_bind_editor)},
+			{"qm:bind_overview", s_aqm_bind_overview, std::size(s_aqm_bind_overview)},
 			{"deck:qmclient-contributors-title", s_adeck_qmclient_contributors_title, std::size(s_adeck_qmclient_contributors_title)},
 			{"deck:qmclient-contributors-title-display", s_adeck_qmclient_contributors_title_display, std::size(s_adeck_qmclient_contributors_title_display)},
 			{"deck:tclient-chat-binds-kaomoji", s_adeck_tclient_chat_binds_kaomoji, std::size(s_adeck_tclient_chat_binds_kaomoji)},

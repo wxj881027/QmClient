@@ -3215,7 +3215,7 @@ void CHud::RenderFollowHookCountdown()
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 	const float ScreenPixelSize = QmHudMediaIslandScreenPixelSize(ScreenX0, ScreenY0, ScreenX1, ScreenY1, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
-	// 剪切半径必须跟着可调尺寸一起放大，否则调大后边缘会被提前裁掉。
+	// 裁剪半径必须跟着可调尺寸一起放大，否则调大后边缘会被提前裁掉。
 	const float Radius = (Visual.m_EndlessHook ? qm_hook_countdown_ui::INFINITY_OUTER_RADIUS : qm_hook_countdown_ui::OUTER_RADIUS) *
 				     Visual.m_Scale * qm_hook_countdown_ui::CountdownSizeScale() +
 			     ScreenPixelSize * 2.5f;
@@ -6949,12 +6949,14 @@ void CHud::OnRender()
 	const bool VideoRendering = false;
 #endif
 	// 回放/导出走独立显示选项；其余情况沿用 cl_showhud / cl_video_showhud。
-	const bool MainHudVisible = qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive(), VideoRendering).m_Hud;
-	const bool FocusSpectatorHudVisible = ShouldRenderFocusSpectatorHud(
-		GameClient()->m_Snap.m_SpecInfo.m_Active,
-		g_Config.m_ClShowhudSpectator != 0,
-		MainHudVisible,
-		GetQmFocusModeDecisions().m_HideHud);
+	const auto DisplaySettings = qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive(), VideoRendering);
+	const bool MainHudVisible = DisplaySettings.m_Hud;
+	const bool RenderDemoOnly = DisplaySettings.m_RenderDemoOnly;
+	const bool FocusSpectatorHudVisible = !RenderDemoOnly && ShouldRenderFocusSpectatorHud(
+									 GameClient()->m_Snap.m_SpecInfo.m_Active,
+									 g_Config.m_ClShowhudSpectator != 0,
+									 MainHudVisible,
+									 GetQmFocusModeDecisions().m_HideHud);
 	const bool LocalCharacterHudVisible = !GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_Snap.m_pLocalCharacter &&
 					      !GameClient()->m_Snap.m_SpecInfo.m_Active &&
 					      !(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER);
@@ -7056,8 +7058,11 @@ void CHud::OnRender()
 	{
 		RenderSpectatorHud();
 	}
-	GameClient()->m_Voice.RenderOverlay();
-	RenderCursor();
+	if(!RenderDemoOnly)
+	{
+		GameClient()->m_Voice.RenderOverlay();
+		RenderCursor();
+	}
 }
 
 void CHud::OnMessage(int MsgType, void *pRawMsg)

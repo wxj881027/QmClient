@@ -7,6 +7,7 @@
 #include "qmclient/demo_ui.h"
 #include "qmclient/perf_logging.h"
 #include "qmclient/rank_demo_manifest.h"
+#include "qmclient/video_preset_labels.h"
 
 #include <base/hash.h>
 #include <base/math.h>
@@ -23,11 +24,15 @@
 #include <engine/shared/snapshot.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
+#if defined(CONF_VIDEORECORDER)
+#include <engine/client/video_encoder.h>
+#endif
 
 #include <generated/client_data.h>
 
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
+#include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/console.h>
 #include <game/client/components/qmclient/media_paths.h>
@@ -237,32 +242,55 @@ void CMenus::RenderDemoDisplayToggle(const CUIRect &Rect, bool &Expanded, CButto
 	Ui()->DoLabel(&Arrow, Expanded ? "-" : "+", 12.0f, TEXTALIGN_MC);
 }
 
-void CMenus::RenderDemoDisplaySettings(CUIRect View, bool Enabled)
+void CMenus::RenderDemoDisplaySettings(CUIRect View, bool Enabled, bool WithToggles)
 {
 	CUiScopedGaussianBlurSuppression BlurSuppression(Ui());
 	View.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.05f), IGraphics::CORNER_ALL, 8.0f);
-	View.Margin(6.0f, &View);
+	View.Margin(qm_demo_ui::RENDER_SECTION_PADDING, &View);
+	constexpr float LabelFontSize = 11.5f;
+	constexpr float SegmentFontSize = 10.0f;
 	CUIRect Row;
-	View.HSplitTop(16.0f, &Row, &View);
+	View.HSplitTop(qm_demo_ui::RENDER_SECTION_TITLE_HEIGHT, &Row, &View);
 	Ui()->DoLabel(&Row, Localize("Demo display"), 11.0f, TEXTALIGN_ML);
-	View.HSplitTop(2.0f, nullptr, &View);
+	View.HSplitTop(qm_demo_ui::RENDER_SECTION_TITLE_GAP, nullptr, &View);
 
-	// 三组段选：值就是配置项本身的下标，点哪档写哪档。
+	// 三组段选使用胶囊滑块：整排是一条深色轨道，选中项由滑动胶囊指示。
+	// 槽位仍按等宽均分，长标签由绘制层裁切，不在窄视口退化成下拉框。
 	const auto Segments = [&](const char *pLabel, int *pValue, const char *const *ppLabels, int Count, CButtonContainer *pButtons, bool Available = true) {
 		CUIRect Label, Options;
-		View.HSplitTop(20.0f, &Row, &View);
-		View.HSplitTop(2.0f, nullptr, &View);
+		View.HSplitTop(qm_demo_ui::RENDER_ROW_HEIGHT, &Row, &View);
+		View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
 		Row.VSplitLeft(std::min(116.0f, Row.w * 0.27f), &Label, &Options);
-		Ui()->DoLabel(&Label, pLabel, 11.0f, TEXTALIGN_ML, {.m_MaxWidth = Label.w - 4.0f});
+		Ui()->DoLabel(&Label, pLabel, LabelFontSize, TEXTALIGN_ML, {.m_MaxWidth = Label.w - 4.0f});
+
+		CUIRect Slots[8];
 		const float Gap = 4.0f;
-		const float Width = (Options.w - Gap * (Count - 1)) / Count;
+		const float SlotWidth = (Options.w - Gap * (Count - 1)) / Count;
+		for(int i = 0; i < Count; ++i)
+			Slots[i] = {Options.x + (SlotWidth + Gap) * i, Options.y, SlotWidth, Options.h};
+
+		const auto Style = CapsuleTabBarStyleFor(ColorRGBA(0.10f, 0.11f, 0.14f, 1.0f));
+		const uint64_t Group = MakeUiScopeHash("demo_display_segments") ^ reinterpret_cast<uint64_t>(pButtons);
+		ui_widget::CapsuleTabBarChrome(TabBarUiContext(), Group, Slots, Count, Available ? *pValue : -1, Style);
+
+		const bool InputEnabled = Enabled && !Ui()->IsPopupOpen() && Available;
 		for(int i = 0; i < Count; ++i)
 		{
-			CUIRect Option{Options.x + (Width + Gap) * i, Options.y, Width, Options.h};
-			const ColorRGBA Fill = *pValue == i ? ui_token::color::ACCENT_PRIMARY_DIM : ColorRGBA(1.0f, 1.0f, 1.0f, 0.02f);
-			if(DoButton_Menu(&pButtons[i], ppLabels[i], Enabled && Available ? static_cast<int>(*pValue == i) : -1, &Option, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 4.0f, 0.0f, Fill, nullptr, 10.0f) && Enabled && Available)
+			bool Clicked = false;
+			if(InputEnabled)
+			{
+				Clicked = DoButton_MenuTab(&pButtons[i], ppLabels[i], *pValue == i, &Slots[i], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, Slots[i].h * 0.5f, nullptr, nullptr, SegmentFontSize, true) != 0;
+			}
+			else
+			{
+				const ColorRGBA PreviousColor = TextRender()->GetTextColor();
+				TextRender()->TextColor(!Available ? ui_token::color::TEXT_DISABLED : (*pValue == i ? Style.m_ActiveLabelColor : Style.m_InactiveLabelColor));
+				Ui()->DoLabel(&Slots[i], ppLabels[i], SegmentFontSize, TEXTALIGN_MC, {.m_MaxWidth = Slots[i].w - 4.0f});
+				TextRender()->TextColor(PreviousColor);
+			}
+			if(Clicked)
 				*pValue = i;
-			GameClient()->m_Tooltips.DoToolTip(&pButtons[i], &Option, ppLabels[i]);
+			GameClient()->m_Tooltips.DoToolTipForRect(&pButtons[i], &Slots[i], ppLabels[i], 220.0f);
 		}
 	};
 	static CButtonContainer s_aDirectionButtons[4], s_aStrongWeakButtons[3], s_aScopeButtons[5];
@@ -273,20 +301,24 @@ void CMenus::RenderDemoDisplaySettings(CUIRect View, bool Enabled)
 	const char *apScope[] = {Localize("Self"), Localize("Others"), Localize("Strong hook"), Localize("Weak hook"), Localize("All")};
 	Segments(Localize("Hook strength scope"), &g_Config.m_QmDemoStrongWeakScope, apScope, std::size(apScope), s_aScopeButtons, !GameClient()->m_RankGhost.IsViewModeActive());
 
+	// 渲染回放弹窗的 HUD 与聊天开关由主区提供，显示分组内不重复绘制。
+	if(!WithToggles)
+		return;
+
 	// 两个开关并排：回放里是否画主 HUD 与聊天。
 	IUiContext Context;
 	Context.m_pUi = Ui();
 	Context.m_pAnim = &GameClient()->UiRuntimeV2()->AnimRuntime();
 	Context.m_ScopeHash = MakeUiScopeHash("demo_display");
 	Context.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
-	View.HSplitTop(20.0f, &Row, &View);
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_HEIGHT, &Row, &View);
 	CUIRect Hud, Chat;
 	Row.VSplitMid(&Hud, &Chat, 16.0f);
 	const auto Toggle = [&](CUIRect Rect, const char *pLabel, int *pValue) {
 		CUIRect Switch;
 		Rect.VSplitRight(34.0f, &Rect, &Switch);
 		Switch.HMargin(2.0f, &Switch);
-		Ui()->DoLabel(&Rect, pLabel, 11.0f, TEXTALIGN_ML, {.m_MaxWidth = Rect.w - 4.0f});
+		Ui()->DoLabel(&Rect, pLabel, LabelFontSize, TEXTALIGN_ML, {.m_MaxWidth = Rect.w - 4.0f});
 		bool Value = *pValue != 0;
 		if(ui_widget::Toggle(Context, pValue, &Value, Switch, Enabled))
 			*pValue = Value;
@@ -294,6 +326,579 @@ void CMenus::RenderDemoDisplaySettings(CUIRect View, bool Enabled)
 	const auto Bindings = qm_demo_display::ConfigBindings(g_Config, GameClient()->m_RankGhost.IsViewModeActive());
 	Toggle(Hud, Localize("Show ingame HUD"), Bindings.m_pHud);
 	Toggle(Chat, Localize("Show chat"), Bindings.m_pChat);
+}
+
+#if defined(CONF_VIDEORECORDER)
+// 渲染回放弹窗中的视频导出分组：分辨率/编码器/容器/画质/导出预设/GOP/名称/范围。
+// 所有行共用 20 高控件与 4 间距；分辨率在普通状态只显示下拉框，选“自定义”后
+// 左侧展开两个等宽输入框，下拉框移到右侧。
+void CMenus::RenderDemoExportSettings(CUIRect View)
+{
+	CUiScopedGaussianBlurSuppression BlurSuppression(Ui());
+	View.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.05f), IGraphics::CORNER_ALL, 8.0f);
+	View.Margin(qm_demo_ui::RENDER_SECTION_PADDING, &View);
+
+	constexpr float FontSize = 11.5f;
+	constexpr float LabelWidth = 140.0f;
+	constexpr float TipWidth = 360.0f;
+
+	IUiContext InputCtx;
+	InputCtx.m_pUi = Ui();
+	InputCtx.m_pAnim = &GameClient()->UiRuntimeV2()->AnimRuntime();
+	InputCtx.m_pTree = &GameClient()->UiRuntimeV2()->Tree();
+	InputCtx.m_ScopeHash = MakeUiScopeHash("demo_export_input");
+	InputCtx.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
+
+	static char s_aRowTipIds[8];
+	CUIRect Row, Label, Control;
+
+	View.HSplitTop(qm_demo_ui::RENDER_SECTION_TITLE_HEIGHT, &Row, &View);
+	Ui()->DoLabel(&Row, Localize("Video export"), 11.0f, TEXTALIGN_ML);
+	View.HSplitTop(qm_demo_ui::RENDER_SECTION_TITLE_GAP, nullptr, &View);
+
+	// 分辨率：固定档位下拉；自定义时左侧两个等宽输入框，中间乘号，右侧下拉框。
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_HEIGHT, &Row, &View);
+	const CUIRect ResolutionRow = Row;
+	Row.VSplitLeft(std::min(LabelWidth, Row.w * 0.3f), &Label, &Control);
+	Ui()->DoLabel(&Label, Localize("Output resolution"), FontSize, TEXTALIGN_ML, {.m_MaxWidth = Label.w - 4.0f});
+	if(m_DemoRenderResolutionPreset < 0 || m_DemoRenderResolutionPreset >= qm_demo_ui::RESOLUTION_PRESET_COUNT)
+		m_DemoRenderResolutionPreset = qm_demo_ui::MatchResolutionPreset(str_toint(m_DemoRenderOutputWidth.GetString()), str_toint(m_DemoRenderOutputHeight.GetString()));
+	const int CurrentResolution = std::clamp(m_DemoRenderResolutionPreset, 0, qm_demo_ui::RESOLUTION_PRESET_COUNT - 1);
+	const bool CustomResolution = CurrentResolution == qm_demo_ui::RESOLUTION_PRESET_CUSTOM;
+	qm_demo_ui::SResolutionControlLayout ResolutionLayout = qm_demo_ui::ResolutionControlLayout(Control, CustomResolution);
+
+	static CUi::SDropDownState s_ResolutionDropDownState;
+	char aaResolutionLabels[qm_demo_ui::RESOLUTION_PRESET_COUNT][64];
+	const char *apResolutionLabels[qm_demo_ui::RESOLUTION_PRESET_COUNT];
+	str_format(aaResolutionLabels[0], sizeof(aaResolutionLabels[0]), "%s (%d × %d)", Localize("Follow window"), Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
+	apResolutionLabels[0] = aaResolutionLabels[0];
+	for(int i = 1; i < qm_demo_ui::RESOLUTION_PRESET_CUSTOM; ++i)
+	{
+		str_format(aaResolutionLabels[i], sizeof(aaResolutionLabels[i]), "%d × %d", qm_demo_ui::RESOLUTION_PRESETS[i].m_Width, qm_demo_ui::RESOLUTION_PRESETS[i].m_Height);
+		apResolutionLabels[i] = aaResolutionLabels[i];
+	}
+	str_format(aaResolutionLabels[qm_demo_ui::RESOLUTION_PRESET_CUSTOM], sizeof(aaResolutionLabels[0]), "%s", Localize("Custom"));
+	apResolutionLabels[qm_demo_ui::RESOLUTION_PRESET_CUSTOM] = aaResolutionLabels[qm_demo_ui::RESOLUTION_PRESET_CUSTOM];
+
+	CUi::SDropDownProperties ResolutionDropDownProps;
+	ResolutionDropDownProps.m_FontSize = FontSize;
+	const int NewResolution = Ui()->DoDropDown(&ResolutionLayout.m_DropDown, CurrentResolution, apResolutionLabels, qm_demo_ui::RESOLUTION_PRESET_COUNT, s_ResolutionDropDownState, ResolutionDropDownProps);
+	if(NewResolution != CurrentResolution)
+	{
+		m_DemoRenderResolutionPreset = NewResolution;
+		if(NewResolution == 0)
+		{
+			m_DemoRenderOutputWidth.Clear();
+			m_DemoRenderOutputHeight.Clear();
+		}
+		else if(NewResolution == qm_demo_ui::RESOLUTION_PRESET_CUSTOM)
+		{
+			char aValue[8];
+			if(m_DemoRenderOutputWidth.IsEmpty())
+			{
+				str_format(aValue, sizeof(aValue), "%d", Graphics()->ScreenWidth());
+				m_DemoRenderOutputWidth.Set(aValue);
+			}
+			if(m_DemoRenderOutputHeight.IsEmpty())
+			{
+				str_format(aValue, sizeof(aValue), "%d", Graphics()->ScreenHeight());
+				m_DemoRenderOutputHeight.Set(aValue);
+			}
+		}
+		else
+		{
+			char aValue[8];
+			str_format(aValue, sizeof(aValue), "%d", qm_demo_ui::RESOLUTION_PRESETS[NewResolution].m_Width);
+			m_DemoRenderOutputWidth.Set(aValue);
+			str_format(aValue, sizeof(aValue), "%d", qm_demo_ui::RESOLUTION_PRESETS[NewResolution].m_Height);
+			m_DemoRenderOutputHeight.Set(aValue);
+		}
+	}
+
+	if(CustomResolution)
+	{
+		ui_widget::SInputFieldOptions WidthOptions;
+		WidthOptions.m_pPlaceholder = Localize("Width");
+		WidthOptions.m_FontSize = FontSize;
+		WidthOptions.m_TextAlign = TEXTALIGN_MC;
+		ui_widget::InputField(InputCtx, &m_DemoRenderOutputWidth, ResolutionLayout.m_WidthInput, WidthOptions);
+		Ui()->DoLabel(&ResolutionLayout.m_Separator, "×", FontSize, TEXTALIGN_MC);
+		ui_widget::SInputFieldOptions HeightOptions;
+		HeightOptions.m_pPlaceholder = Localize("Height");
+		HeightOptions.m_FontSize = FontSize;
+		HeightOptions.m_TextAlign = TEXTALIGN_MC;
+		ui_widget::InputField(InputCtx, &m_DemoRenderOutputHeight, ResolutionLayout.m_HeightInput, HeightOptions);
+	}
+	GameClient()->m_Tooltips.DoToolTipForRect(&s_aRowTipIds[0], &ResolutionRow, Localize("Choose a preset, or Custom to enter width and height. Follow window uses the current render size."), TipWidth);
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
+
+	// 编码器：只列出运行时探测可用的硬件编码器；默认软件编码器固定在首项。
+	static const std::vector<video_encoder::SProbeResult> &s_vProbed = video_encoder::ProbeEncoders();
+	static CUi::SDropDownState s_EncoderDropDownState;
+	static std::vector<std::string> s_vEncoderNames;
+	static std::vector<const char *> s_vpEncoderNames;
+	static std::vector<int> s_vProbeIndex;
+	static bool s_EncoderListBuilt = false;
+	if(!s_EncoderListBuilt)
+	{
+		s_vEncoderNames.emplace_back(Localize("Default (software)"));
+		s_vProbeIndex.push_back(-1);
+		for(size_t i = 0; i < s_vProbed.size(); ++i)
+		{
+			if(!s_vProbed[i].m_Available || str_comp(s_vProbed[i].m_aName, "libx264") == 0)
+				continue;
+			s_vEncoderNames.push_back(s_vProbed[i].m_aDescription);
+			s_vProbeIndex.push_back((int)i);
+		}
+		s_vpEncoderNames.reserve(s_vEncoderNames.size());
+		for(const std::string &Name : s_vEncoderNames)
+			s_vpEncoderNames.push_back(Name.c_str());
+		s_EncoderListBuilt = true;
+	}
+
+	int CurrentEncoder = 0;
+	for(size_t i = 0; i < s_vProbeIndex.size(); ++i)
+	{
+		const char *pEntryName = s_vProbeIndex[i] < 0 ? "" : s_vProbed[s_vProbeIndex[i]].m_aName;
+		if(str_comp(pEntryName, m_DemoRenderEncoder.GetString()) == 0)
+			CurrentEncoder = (int)i;
+	}
+
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_HEIGHT, &Row, &View);
+	const CUIRect EncoderRow = Row;
+	Row.VSplitLeft(std::min(LabelWidth, Row.w * 0.3f), &Label, &Control);
+	Ui()->DoLabel(&Label, Localize("Encoder:"), FontSize, TEXTALIGN_ML, {.m_MaxWidth = Label.w - 4.0f});
+	CUi::SDropDownProperties EncoderDropDownProps;
+	EncoderDropDownProps.m_FontSize = FontSize;
+	const int NewEncoder = Ui()->DoDropDown(&Control, CurrentEncoder, s_vpEncoderNames.data(), (int)s_vpEncoderNames.size(), s_EncoderDropDownState, EncoderDropDownProps);
+	if(NewEncoder != CurrentEncoder)
+	{
+		const int ProbeIndex = s_vProbeIndex[NewEncoder];
+		m_DemoRenderEncoder.Set(ProbeIndex < 0 ? "" : s_vProbed[ProbeIndex].m_aName);
+		// 手动改编码器 → 导出预设回到自定义，Ok 时兜底不再覆盖用户选择。
+		m_DemoRenderPresetSel = 0;
+	}
+	GameClient()->m_Tooltips.DoToolTipForRect(&s_aRowTipIds[1], &EncoderRow, Localize("Encoder used for export. Hardware encoders appear only when available."), TipWidth);
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
+
+	// 画质：0-51，留空沿用下方视频编码 CRF；ProRes/DNxHR/FFV1 的质量由格式固定。
+	const video_encoder::SProbeResult *pSelected = video_encoder::FindProbed(m_DemoRenderEncoder.GetString());
+	const bool FixedQuality = pSelected && pSelected->m_Available && pSelected->m_QualityKind == video_encoder::EQualityKind::NONE;
+	const char *pQualityLabel = Localize("Quality (CRF):");
+	if(pSelected && pSelected->m_Available)
+	{
+		switch(pSelected->m_QualityKind)
+		{
+		case video_encoder::EQualityKind::CQ_NVENC: pQualityLabel = Localize("Quality (CQ):"); break;
+		case video_encoder::EQualityKind::CQP_AMF: pQualityLabel = Localize("Quality (QP):"); break;
+		case video_encoder::EQualityKind::ICQ_QSV: pQualityLabel = Localize("Quality (ICQ):"); break;
+		case video_encoder::EQualityKind::Q_VT: pQualityLabel = Localize("Quality:"); break;
+		case video_encoder::EQualityKind::NONE: pQualityLabel = Localize("Quality (fixed):"); break;
+		default: break;
+		}
+	}
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_HEIGHT, &Row, &View);
+	const CUIRect QualityRow = Row;
+	Row.VSplitLeft(std::min(LabelWidth, Row.w * 0.3f), &Label, &Control);
+	Ui()->DoLabel(&Label, pQualityLabel, FontSize, TEXTALIGN_ML, {.m_MaxWidth = Label.w - 4.0f});
+	if(FixedQuality)
+	{
+		CUIRect FixedControl = Control;
+		FixedControl.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.04f), IGraphics::CORNER_ALL, 5.0f);
+		FixedControl.VMargin(8.0f, &FixedControl);
+		Ui()->DoLabel(&FixedControl, "—", FontSize, TEXTALIGN_MC);
+	}
+	else
+	{
+		ui_widget::SInputFieldOptions QualityOptions;
+		QualityOptions.m_pPlaceholder = Localize("0-51, empty = default");
+		QualityOptions.m_FontSize = FontSize;
+		ui_widget::InputField(InputCtx, &m_DemoRenderQuality, Control, QualityOptions);
+	}
+	GameClient()->m_Tooltips.DoToolTipForRect(&s_aRowTipIds[2], &QualityRow, FixedQuality ? Localize("Quality is fixed by the selected format.") : Localize("Quality from 0 to 51; lower is clearer and larger. Leave empty to use the video encoding CRF."), TipWidth);
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
+
+	// 容器：自定义预设下可换 mp4/mov/mkv；导出文件后缀跟随此选择。
+	static CUi::SDropDownState s_ContainerDropDownState;
+	static const char *const s_apContainers[] = {"MP4", "MOV", "MKV"};
+	static const char *const s_apContainerValues[] = {"mp4", "mov", "mkv"};
+	int ContainerSelection = 0;
+	for(int i = 0; i < (int)std::size(s_apContainerValues); ++i)
+	{
+		if(str_comp(s_apContainerValues[i], m_DemoRenderContainer.GetString()) == 0)
+			ContainerSelection = i;
+	}
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_HEIGHT, &Row, &View);
+	const CUIRect ContainerRow = Row;
+	Row.VSplitLeft(std::min(LabelWidth, Row.w * 0.3f), &Label, &Control);
+	Ui()->DoLabel(&Label, Localize("Container:"), FontSize, TEXTALIGN_ML, {.m_MaxWidth = Label.w - 4.0f});
+	CUi::SDropDownProperties ContainerDropDownProps;
+	ContainerDropDownProps.m_FontSize = FontSize;
+	const int NewContainer = Ui()->DoDropDown(&Control, ContainerSelection, s_apContainers, (int)std::size(s_apContainers), s_ContainerDropDownState, ContainerDropDownProps);
+	if(NewContainer != ContainerSelection)
+	{
+		m_DemoRenderContainer.Set(s_apContainerValues[NewContainer]);
+		// 手动改容器 → 导出预设回到自定义。
+		m_DemoRenderPresetSel = 0;
+	}
+	GameClient()->m_Tooltips.DoToolTipForRect(&s_aRowTipIds[3], &ContainerRow, Localize("Container format: MP4 is the most compatible, MOV suits editing, MKV suits lossless archives."), TipWidth);
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
+
+	// 导出预设：选择即展开为编码器+容器组合；自定义时三项独立可选。
+	static CUi::SDropDownState s_ExportPresetDropDownState;
+	static const char *const s_apExportPresets[] = {
+		Localize("Custom"),
+		Localize("Daily (H.264 / MP4)"),
+		Localize("High quality (HEVC / MP4)"),
+		Localize("Editing (ProRes 422 HQ / MOV)"),
+		Localize("Editing (DNxHR HQX / MOV)"),
+		Localize("Lossless archive (FFV1 / MKV)"),
+	};
+	if(m_DemoRenderContainer.IsEmpty())
+		m_DemoRenderContainer.Set(g_Config.m_QmVideoContainer[0] != '\0' ? g_Config.m_QmVideoContainer : "mp4");
+	const int CurrentExportPreset = m_DemoRenderPresetSel >= 0 ? m_DemoRenderPresetSel : g_Config.m_QmVideoPreset;
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_HEIGHT, &Row, &View);
+	const CUIRect ExportPresetRow = Row;
+	Row.VSplitLeft(std::min(LabelWidth, Row.w * 0.3f), &Label, &Control);
+	Ui()->DoLabel(&Label, Localize("Export preset:"), FontSize, TEXTALIGN_ML, {.m_MaxWidth = Label.w - 4.0f});
+	CUi::SDropDownProperties ExportPresetDropDownProps;
+	ExportPresetDropDownProps.m_FontSize = FontSize;
+	const int NewExportPreset = Ui()->DoDropDown(&Control, CurrentExportPreset, s_apExportPresets, (int)std::size(s_apExportPresets), s_ExportPresetDropDownState, ExportPresetDropDownProps);
+	if(NewExportPreset != CurrentExportPreset)
+	{
+		m_DemoRenderPresetSel = NewExportPreset;
+		// 展开预设：把组合写入弹窗输入，用户可看到并可切回自定义微调。
+		switch(NewExportPreset)
+		{
+		case 1:
+			m_DemoRenderEncoder.Set("");
+			m_DemoRenderContainer.Set("mp4");
+			break;
+		case 2:
+			m_DemoRenderEncoder.Set("hevc_nvenc");
+			m_DemoRenderContainer.Set("mp4");
+			break;
+		case 3:
+			m_DemoRenderEncoder.Set("prores_ks");
+			m_DemoRenderContainer.Set("mov");
+			break;
+		case 4:
+			m_DemoRenderEncoder.Set("dnxhd");
+			m_DemoRenderContainer.Set("mov");
+			break;
+		case 5:
+			m_DemoRenderEncoder.Set("ffv1");
+			m_DemoRenderContainer.Set("mkv");
+			break;
+		default: break;
+		}
+	}
+	GameClient()->m_Tooltips.DoToolTipForRect(&s_aRowTipIds[4], &ExportPresetRow, Localize("An export preset applies an encoder, container and quality combination. Choose Custom to edit each setting."), TipWidth);
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
+
+	// 关键帧间隔：剪辑切点只能落在关键帧上；0 = 编码器默认。
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_HEIGHT, &Row, &View);
+	const CUIRect GopRow = Row;
+	Row.VSplitLeft(std::min(LabelWidth, Row.w * 0.3f), &Label, &Control);
+	Ui()->DoLabel(&Label, Localize("Keyframe interval (GOP):"), FontSize, TEXTALIGN_ML, {.m_MaxWidth = Label.w - 4.0f});
+	ui_widget::SInputFieldOptions GopOptions;
+	GopOptions.m_pPlaceholder = Localize("0 = auto");
+	GopOptions.m_FontSize = FontSize;
+	ui_widget::InputField(InputCtx, &m_DemoRenderGop, Control, GopOptions);
+	GameClient()->m_Tooltips.DoToolTipForRect(&s_aRowTipIds[5], &GopRow, Localize("Cut points can only land on keyframes. Smaller values add more cut points and larger files; 0 uses the encoder default."), TipWidth);
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
+
+	// 视频名称：不含扩展名，扩展名由容器决定。
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_HEIGHT, &Row, &View);
+	const CUIRect NameRow = Row;
+	Row.VSplitLeft(std::min(LabelWidth, Row.w * 0.3f), &Label, &Control);
+	Ui()->DoLabel(&Label, Localize("Video name:"), FontSize, TEXTALIGN_ML, {.m_MaxWidth = Label.w - 4.0f});
+	ui_widget::SInputFieldOptions NameOptions;
+	NameOptions.m_pPlaceholder = Localize("Video name");
+	NameOptions.m_FontSize = FontSize;
+	ui_widget::InputField(InputCtx, &m_DemoRenderInput, Control, NameOptions);
+	GameClient()->m_Tooltips.DoToolTipForRect(&s_aRowTipIds[6], &NameRow, Localize("Output file name without extension."), TipWidth);
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
+
+	// 导出范围（秒）：留空使用 demo 全范围（分段渲染 M3）。
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_HEIGHT, &Row, &View);
+	const CUIRect RangeRow = Row;
+	Row.VSplitLeft(std::min(LabelWidth, Row.w * 0.3f), &Label, &Control);
+	Ui()->DoLabel(&Label, Localize("Export range (seconds):"), FontSize, TEXTALIGN_ML, {.m_MaxWidth = Label.w - 4.0f});
+	CUIRect RangeStart, RangeEnd;
+	Control.VSplitMid(&RangeStart, &RangeEnd, 10.0f);
+	ui_widget::SInputFieldOptions RangeStartOptions;
+	RangeStartOptions.m_pPlaceholder = Localize("Start (s)");
+	RangeStartOptions.m_FontSize = FontSize;
+	ui_widget::InputField(InputCtx, &m_DemoRenderRangeStart, RangeStart, RangeStartOptions);
+	ui_widget::SInputFieldOptions RangeEndOptions;
+	RangeEndOptions.m_pPlaceholder = Localize("End (s)");
+	RangeEndOptions.m_FontSize = FontSize;
+	ui_widget::InputField(InputCtx, &m_DemoRenderRangeEnd, RangeEnd, RangeEndOptions);
+	GameClient()->m_Tooltips.DoToolTipForRect(&s_aRowTipIds[7], &RangeRow, Localize("Optional export range in seconds. Leave empty to export the whole demo."), TipWidth);
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
+}
+
+// 渲染回放弹窗中的播放选项：纯净渲染开关、三个录制开关、速度与暂停控制。
+void CMenus::RenderDemoPlaybackSettings(CUIRect View)
+{
+	CUiScopedGaussianBlurSuppression BlurSuppression(Ui());
+	View.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.05f), IGraphics::CORNER_ALL, 8.0f);
+	View.Margin(qm_demo_ui::RENDER_SECTION_PADDING, &View);
+
+	constexpr float FontSize = 11.5f;
+	CUIRect Row, Label;
+	View.HSplitTop(qm_demo_ui::RENDER_SECTION_TITLE_HEIGHT, &Row, &View);
+	Ui()->DoLabel(&Row, Localize("Playback options"), 11.0f, TEXTALIGN_ML);
+	View.HSplitTop(qm_demo_ui::RENDER_SECTION_TITLE_GAP, nullptr, &View);
+
+	IUiContext ToggleCtx;
+	ToggleCtx.m_pUi = Ui();
+	ToggleCtx.m_pAnim = &GameClient()->UiRuntimeV2()->AnimRuntime();
+	ToggleCtx.m_pTree = &GameClient()->UiRuntimeV2()->Tree();
+	ToggleCtx.m_ScopeHash = MakeUiScopeHash("demo_playback");
+	ToggleCtx.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
+
+	static char s_aPlaybackTipIds[6];
+	const auto Bindings = qm_demo_display::ConfigBindings(g_Config);
+	const auto Toggle = [&](CUIRect Cell, const char *pText, int *pValue, bool InputEnabled = true, bool ForceOff = false) {
+		CUIRect Switch;
+		Cell.VSplitRight(38.0f, &Cell, &Switch);
+		Switch.HMargin(1.0f, &Switch);
+		SLabelProperties LabelProps;
+		LabelProps.m_MaxWidth = Cell.w - 4.0f;
+		if(ForceOff)
+			LabelProps.SetColor(ui_token::color::TEXT_DISABLED);
+		Ui()->DoLabel(&Cell, pText, FontSize, TEXTALIGN_ML, LabelProps);
+		bool Value = ForceOff ? false : *pValue != 0;
+		if(ui_widget::Toggle(ToggleCtx, pValue, &Value, Switch, InputEnabled && !ForceOff))
+			*pValue = Value;
+	};
+
+	// 仅渲染 demo：导出开始后不再把 HUD、聊天、旁观信息和操作提示录进视频。
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_HEIGHT, &Row, &View);
+	const CUIRect RenderDemoOnlyRow = Row;
+	CUIRect RenderDemoOnlyLabel = Row;
+	CUIRect RenderDemoOnlySwitch;
+	RenderDemoOnlyLabel.VSplitRight(38.0f, &RenderDemoOnlyLabel, &RenderDemoOnlySwitch);
+	RenderDemoOnlySwitch.HMargin(1.0f, &RenderDemoOnlySwitch);
+	Ui()->DoLabel(&RenderDemoOnlyLabel, Localize("Render demo only"), FontSize, TEXTALIGN_ML, {.m_MaxWidth = RenderDemoOnlyLabel.w - 4.0f});
+	bool RenderDemoOnly = g_Config.m_QmVideoRenderDemoOnly != 0;
+	if(ui_widget::Toggle(ToggleCtx, &g_Config.m_QmVideoRenderDemoOnly, &RenderDemoOnly, RenderDemoOnlySwitch, true))
+		g_Config.m_QmVideoRenderDemoOnly = RenderDemoOnly ? 1 : 0;
+	RenderDemoOnly = g_Config.m_QmVideoRenderDemoOnly != 0;
+	GameClient()->m_Tooltips.DoToolTipForRect(&s_aPlaybackTipIds[0], &RenderDemoOnlyRow, Localize("Hide the in-game HUD, chat and spectator overlays while recording. Camera switching still works."), 320.0f);
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
+
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_HEIGHT, &Row, &View);
+	const float ToggleGap = 12.0f;
+	const float ToggleWidth = (Row.w - 2.0f * ToggleGap) / 3.0f;
+	CUIRect HudCell{Row.x, Row.y, ToggleWidth, Row.h};
+	CUIRect ChatCell{Row.x + ToggleWidth + ToggleGap, Row.y, ToggleWidth, Row.h};
+	CUIRect SoundCell{Row.x + 2.0f * (ToggleWidth + ToggleGap), Row.y, ToggleWidth, Row.h};
+	Toggle(HudCell, Localize("Show ingame HUD"), Bindings.m_pHud, !RenderDemoOnly, RenderDemoOnly);
+	Toggle(ChatCell, Localize("Show chat"), Bindings.m_pChat, !RenderDemoOnly, RenderDemoOnly);
+	Toggle(SoundCell, Localize("Use sounds"), &g_Config.m_ClVideoSndEnable);
+	GameClient()->m_Tooltips.DoToolTipForRect(&s_aPlaybackTipIds[1], &HudCell, Localize("Include the in-game HUD in the recording."), 220.0f);
+	GameClient()->m_Tooltips.DoToolTipForRect(&s_aPlaybackTipIds[2], &ChatCell, Localize("Include chat in the recording."), 220.0f);
+	GameClient()->m_Tooltips.DoToolTipForRect(&s_aPlaybackTipIds[3], &SoundCell, Localize("Include game audio in the recording."), 220.0f);
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
+
+	// 速度行：左侧说明、数字输入（带 × 单位），随后是回退/暂停/快进图标。
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_HEIGHT, &Row, &View);
+	const CUIRect SpeedRow = Row;
+	CUIRect SpeedLabel, SpeedBox;
+	Row.VSplitLeft(110.0f, &SpeedLabel, &Row);
+	Row.VSplitLeft(8.0f, nullptr, &Row);
+	Row.VSplitLeft(std::min(96.0f, Row.w), &SpeedBox, &Row);
+	Row.VSplitLeft(10.0f, nullptr, &Row);
+	Ui()->DoLabel(&SpeedLabel, Localize("Speed"), FontSize, TEXTALIGN_ML, {.m_MaxWidth = SpeedLabel.w - 4.0f});
+
+	static CLineInputBuffered<16> s_SpeedInput;
+	static int s_LastSpeed = -1;
+	if(m_Speed != s_LastSpeed && !Ui()->IsActiveItem(&s_SpeedInput))
+	{
+		char aSpeed[16];
+		str_format(aSpeed, sizeof(aSpeed), "%g", DEMO_SPEEDS[m_Speed]);
+		s_SpeedInput.Set(aSpeed);
+		s_LastSpeed = m_Speed;
+	}
+	ui_widget::SInputFieldOptions SpeedOptions;
+	SpeedOptions.m_pTrailingText = "×";
+	SpeedOptions.m_InlineTrailingText = true;
+	SpeedOptions.m_TrailingWidth = 12.0f;
+	SpeedOptions.m_FontSize = FontSize;
+	SpeedOptions.m_TextAlign = TEXTALIGN_MC;
+	const auto SpeedResult = ui_widget::InputField(ToggleCtx, &s_SpeedInput, SpeedBox, SpeedOptions);
+	if(SpeedResult.m_Committed)
+	{
+		const float RequestedSpeed = str_tofloat(s_SpeedInput.GetString());
+		if(RequestedSpeed > 0.0f)
+		{
+			int ClosestSpeed = 0;
+			float ClosestDistance = 1e9f;
+			for(int i = 0; i < (int)std::size(DEMO_SPEEDS); ++i)
+			{
+				const float Distance = std::abs((float)DEMO_SPEEDS[i] - RequestedSpeed);
+				if(Distance < ClosestDistance)
+				{
+					ClosestDistance = Distance;
+					ClosestSpeed = i;
+				}
+			}
+			m_Speed = ClosestSpeed;
+		}
+		s_LastSpeed = -1;
+	}
+	GameClient()->m_Tooltips.DoToolTipForRect(&s_aPlaybackTipIds[4], &SpeedRow, Localize("Export playback speed. The value snaps to the nearest available speed."), 240.0f);
+
+	CUIRect SlowDownButton, PausedButton, FastForwardButton;
+	Row.VSplitLeft(20.0f, &SlowDownButton, &Row);
+	Row.VSplitLeft(5.0f, nullptr, &Row);
+	Row.VSplitLeft(20.0f, &PausedButton, &Row);
+	Row.VSplitLeft(5.0f, nullptr, &Row);
+	Row.VSplitLeft(20.0f, &FastForwardButton, &Row);
+
+	static CButtonContainer s_SlowDownButton;
+	if(Ui()->DoButton_QmIcon(&s_SlowDownButton, EQmIcon::BACKWARD, FONT_ICON_BACKWARD, 0, &SlowDownButton, BUTTONFLAG_LEFT))
+		m_Speed = std::clamp(m_Speed - 1, 0, (int)(std::size(DEMO_SPEEDS) - 1));
+	GameClient()->m_Tooltips.DoToolTip(&s_SlowDownButton, &SlowDownButton, Localize("Slower export playback"));
+
+	static CButtonContainer s_PausedButton;
+	if(Ui()->DoButton_QmIcon(&s_PausedButton, EQmIcon::PAUSE, FONT_ICON_PAUSE, 0, &PausedButton, BUTTONFLAG_LEFT))
+		m_StartPaused ^= 1;
+	GameClient()->m_Tooltips.DoToolTip(&s_PausedButton, &PausedButton, Localize("Start the export paused"));
+
+	static CButtonContainer s_FastForwardButton;
+	if(Ui()->DoButton_QmIcon(&s_FastForwardButton, EQmIcon::FORWARD, FONT_ICON_FORWARD, 0, &FastForwardButton, BUTTONFLAG_LEFT))
+		m_Speed = std::clamp(m_Speed + 1, 0, (int)(std::size(DEMO_SPEEDS) - 1));
+	GameClient()->m_Tooltips.DoToolTip(&s_FastForwardButton, &FastForwardButton, Localize("Faster export playback"));
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
+}
+#endif
+
+// 渲染回放弹窗内的视频编码分组：CRF / Preset / 录制帧率，改动即时写 g_Config。
+// 每行两栏：左标签、右控件；数值行用 DoScrollbarH + 数值输入框（ui_widget::IntegerField，
+// 与"视频名称"输入框同族），Preset 用 DoDropDown；三行控件列相互对齐。
+void CMenus::RenderDemoEncodeSettings(CUIRect View)
+{
+	CUiScopedGaussianBlurSuppression BlurSuppression(Ui());
+	View.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.05f), IGraphics::CORNER_ALL, 8.0f);
+	View.Margin(qm_demo_ui::RENDER_SECTION_PADDING, &View);
+
+	constexpr float FontSize = 11.5f;
+	constexpr float LabelWidth = 110.0f;
+	CUIRect Row;
+
+	// 分组标题 + 行尾"恢复推荐"小按钮（CRF / Preset / FPS 一起恢复默认值）。
+	CUIRect ResetButton;
+	const char *pResetLabel = Localize("Restore recommended");
+	const float ResetWidth = std::clamp(TextRender()->TextWidth(10.0f, pResetLabel) + 12.0f, 60.0f, 160.0f);
+	View.HSplitTop(qm_demo_ui::RENDER_SECTION_TITLE_HEIGHT, &Row, &View);
+	Row.VSplitRight(ResetWidth, &Row, &ResetButton);
+	Ui()->DoLabel(&Row, Localize("Video encoding"), 11.0f, TEXTALIGN_ML);
+	static CButtonContainer s_ResetEncodeButton;
+	if(DoButton_Menu(&s_ResetEncodeButton, pResetLabel, 0, &ResetButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ResetButton.h * 0.5f, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), nullptr, 10.0f))
+	{
+		g_Config.m_ClVideoX264Crf = qm_video_encode::CRF_DEFAULT;
+		g_Config.m_ClVideoX264Preset = qm_video_encode::PRESET_RECOMMENDED;
+		g_Config.m_ClVideoRecorderFPS = qm_video_encode::FPS_DEFAULT;
+	}
+	GameClient()->m_Tooltips.DoToolTip(&s_ResetEncodeButton, &ResetButton, Localize("Restore recommended"));
+
+	// 两栏行：先切行间隔，再切左标签列，右侧整块交给控件。
+	const auto TwoColumn = [&](float Height, const char *pLabel, CUIRect *pControl) {
+		View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
+		View.HSplitTop(Height, &Row, &View);
+		CUIRect Label;
+		Row.VSplitLeft(std::min(LabelWidth, Row.w * 0.3f), &Label, pControl);
+		Ui()->DoLabel(&Label, pLabel, FontSize, TEXTALIGN_ML, {.m_MaxWidth = Label.w - 4.0f});
+	};
+
+	// 数值输入框与"视频名称"同族（ui_widget 输入框组件）：失焦或回车写回配置，
+	// 非法/越界输入回落钳制值。
+	IUiContext EncodeInputCtx;
+	EncodeInputCtx.m_pUi = Ui();
+	EncodeInputCtx.m_pAnim = &GameClient()->UiRuntimeV2()->AnimRuntime();
+	EncodeInputCtx.m_pTree = &GameClient()->UiRuntimeV2()->Tree();
+	EncodeInputCtx.m_ScopeHash = MakeUiScopeHash("demo_encode_input");
+	EncodeInputCtx.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
+
+	// 行尾说明列 + 数值输入框列的固定宽度：三行控件列起点一致——CRF/FPS 滑条同宽、
+	// Preset 下拉与滑条左缘平齐且行尾说明右缘对齐、数值输入框右缘对齐。
+	constexpr float TierWidth = 96.0f;
+	constexpr float ValueWidth = 48.0f;
+
+	// CRF 行：滑条 0-51 + 数值输入框，行尾显示当前档位人话；越低越清晰、文件越大。
+	CUIRect Control, FieldArea, Value, TierLabel;
+	TwoColumn(qm_demo_ui::RENDER_ROW_HEIGHT, Localize("Video quality CRF"), &Control);
+	Control.VSplitRight(TierWidth, &FieldArea, &TierLabel);
+	TierLabel.VSplitLeft(4.0f, nullptr, &TierLabel);
+	FieldArea.VSplitRight(ValueWidth, &Control, &Value);
+	Value.VSplitLeft(4.0f, nullptr, &Value);
+	static CLineInputNumber s_CrfInput;
+	ui_widget::STextFieldOptions CrfFieldOptions;
+	CrfFieldOptions.m_FontSize = FontSize;
+	CrfFieldOptions.m_TextAlign = TEXTALIGN_MC;
+	ui_widget::IntegerField(EncodeInputCtx, &s_CrfInput, &g_Config.m_ClVideoX264Crf, 0, 51, Value, CrfFieldOptions);
+	const int SliderCrf = std::clamp(g_Config.m_ClVideoX264Crf, 0, 51);
+	const int NewCrf = CUi::ms_LinearScrollbarScale.ToAbsolute(Ui()->DoScrollbarH(&g_Config.m_ClVideoX264Crf, &Control, CUi::ms_LinearScrollbarScale.ToRelative(SliderCrf, 0, 51)), 0, 51);
+	if(NewCrf != SliderCrf)
+		g_Config.m_ClVideoX264Crf = NewCrf;
+	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClVideoX264Crf, &Row, Localize("Lower means better quality and larger files; 18 is recommended"));
+	Ui()->DoLabel(&TierLabel, qm_video_encode::QmVideoCrfTierLabel(g_Config.m_ClVideoX264Crf), FontSize, TEXTALIGN_MR, {.m_MaxWidth = TierLabel.w - 2.0f});
+
+	// Preset 行：独立下拉（选项自带名称+说明），行尾跟随显示当前选中的说明；
+	// placebo（最慢，官方不推荐）说明红色警示。
+	CUIRect HintLabel;
+	TwoColumn(qm_demo_ui::RENDER_ROW_HEIGHT, Localize("Render preset"), &Control);
+	Control.VSplitRight(TierWidth + ValueWidth, &Control, &HintLabel);
+	HintLabel.VSplitLeft(4.0f, nullptr, &HintLabel);
+	static std::vector<std::string> s_vPresetLabels;
+	static std::vector<const char *> s_vpPresetLabels;
+	s_vPresetLabels.resize(qm_video_encode::PRESET_COUNT);
+	s_vpPresetLabels.resize(qm_video_encode::PRESET_COUNT);
+	for(int i = 0; i < qm_video_encode::PRESET_COUNT; ++i)
+	{
+		char aBuf[256];
+		str_format(aBuf, sizeof(aBuf), "%s - %s", qm_video_encode::QmVideoPresetName(i), qm_video_encode::QmVideoPresetHint(i));
+		s_vPresetLabels[i] = aBuf;
+		s_vpPresetLabels[i] = s_vPresetLabels[i].c_str();
+	}
+	static CUi::SDropDownState s_PresetDropDownState;
+	static CScrollRegion s_PresetDropDownScrollRegion;
+	s_PresetDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_PresetDropDownScrollRegion;
+	CUi::SDropDownProperties PresetProps;
+	PresetProps.m_FontSize = FontSize;
+	g_Config.m_ClVideoX264Preset = Ui()->DoDropDown(&Control, g_Config.m_ClVideoX264Preset, s_vpPresetLabels.data(), qm_video_encode::PRESET_COUNT, s_PresetDropDownState, PresetProps);
+	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClVideoX264Preset, &Row, Localize("Faster presets encode quicker but produce larger files"));
+	const bool PlaceboPreset = g_Config.m_ClVideoX264Preset == qm_video_encode::PRESET_COUNT - 1;
+	const ColorRGBA PreviousColor = TextRender()->GetTextColor();
+	if(PlaceboPreset)
+		TextRender()->TextColor(ColorRGBA(1.0f, 0.25f, 0.25f, 1.0f));
+	Ui()->DoLabel(&HintLabel, qm_video_encode::QmVideoPresetHint(g_Config.m_ClVideoX264Preset), FontSize, TEXTALIGN_MR, {.m_MaxWidth = HintLabel.w - 2.0f});
+	TextRender()->TextColor(PreviousColor);
+
+	// 录制帧率行：滑条 30-240 + 数值输入框；输入框允许 1-1000（含滑条外的值），
+	// 滑条只在被拖动时写回，避免覆盖输入框写入的超范围值。
+	CUIRect RangeHint;
+	TwoColumn(qm_demo_ui::RENDER_ROW_HEIGHT, Localize("Recorder FPS"), &Control);
+	Control.VSplitRight(TierWidth, &FieldArea, &RangeHint);
+	RangeHint.VSplitLeft(4.0f, nullptr, &RangeHint);
+	FieldArea.VSplitRight(ValueWidth, &Control, &Value);
+	Value.VSplitLeft(4.0f, nullptr, &Value);
+	static CLineInputNumber s_FpsInput;
+	ui_widget::STextFieldOptions FpsFieldOptions;
+	FpsFieldOptions.m_FontSize = FontSize;
+	FpsFieldOptions.m_TextAlign = TEXTALIGN_MC;
+	ui_widget::IntegerField(EncodeInputCtx, &s_FpsInput, &g_Config.m_ClVideoRecorderFPS, 1, 1000, Value, FpsFieldOptions);
+	const int SliderFps = std::clamp(g_Config.m_ClVideoRecorderFPS, qm_video_encode::FPS_SLIDER_MIN, qm_video_encode::FPS_SLIDER_MAX);
+	const int NewFps = CUi::ms_LinearScrollbarScale.ToAbsolute(Ui()->DoScrollbarH(&g_Config.m_ClVideoRecorderFPS, &Control, CUi::ms_LinearScrollbarScale.ToRelative(SliderFps, qm_video_encode::FPS_SLIDER_MIN, qm_video_encode::FPS_SLIDER_MAX)), qm_video_encode::FPS_SLIDER_MIN, qm_video_encode::FPS_SLIDER_MAX);
+	if(NewFps != SliderFps)
+		g_Config.m_ClVideoRecorderFPS = NewFps;
+	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClVideoRecorderFPS, &Row, Localize("Frame rate of the recorded video; higher means smoother playback and larger files"));
+	Ui()->DoLabel(&RangeHint, "1-1000", FontSize, TEXTALIGN_MR, {.m_MaxWidth = RangeHint.w - 2.0f});
+	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
 }
 
 bool CMenus::DemoFilterChat(const void *pData, int Size, void *pUser)
