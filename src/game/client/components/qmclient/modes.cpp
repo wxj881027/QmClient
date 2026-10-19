@@ -8,8 +8,6 @@
 
 #include <generated/protocol.h>
 
-#include <game/gamecore.h>
-
 #include <algorithm>
 #include <limits>
 
@@ -146,118 +144,34 @@ bool ShouldTriggerQmGoresHammerWakeup(bool GoresCycleActive, bool HammerRequeste
 	return GoresCycleActive && HammerRequested && ExternalHammerWakeup;
 }
 
-bool QmHasExtraGoresWeapon(int CurrentWeapon, const CNetObj_DDNetCharacter *pExtended, const CCharacterCore *pCore)
+int QmGoresHammerWakeupFireState(int CurrentFire)
 {
-	if(CurrentWeapon >= WEAPON_SHOTGUN && CurrentWeapon <= WEAPON_NINJA)
-		return true;
-	if(pExtended)
-	{
-		// 当前快照的库存优先，不能让旧预测中的武器延迟停用或阻止重新启用。
-		constexpr int EXTRA_WEAPON_FLAGS = CHARACTERFLAG_WEAPON_SHOTGUN | CHARACTERFLAG_WEAPON_GRENADE | CHARACTERFLAG_WEAPON_LASER | CHARACTERFLAG_WEAPON_NINJA;
-		return (pExtended->m_Flags & EXTRA_WEAPON_FLAGS) != 0;
-	}
-	return pCore && (pCore->m_aWeapons[WEAPON_SHOTGUN].m_Got ||
-				pCore->m_aWeapons[WEAPON_GRENADE].m_Got ||
-				pCore->m_aWeapons[WEAPON_LASER].m_Got ||
-				pCore->m_aWeapons[WEAPON_NINJA].m_Got);
+	return ((CurrentFire + 1) | 1) & INPUT_STATE_MASK;
 }
 
-bool ShouldEnableQmGoresWeaponCycle(bool GoresEnabled, bool AutoWeaponSwitch, bool HasExtraWeapon, bool DisableIfWeapons)
+bool ShouldReleaseQmGoresHammerWakeupFire(bool PendingRelease, int CurrentFire)
 {
-	return GoresEnabled && AutoWeaponSwitch && !(HasExtraWeapon && DisableIfWeapons);
+	return PendingRelease && (CurrentFire & 1) != 0;
 }
 
-void ApplyQmGoresWeaponPickupInput(CNetObj_PlayerInput &Input, int Weapon, bool AutoSwitchOnPickup, bool KeepCurrentWeapon)
+int QmGoresHammerWakeupReleaseFireState(int CurrentFire)
 {
-	if(AutoSwitchOnPickup && !KeepCurrentWeapon)
-		Input.m_WantedWeapon = Weapon + 1;
+	return ((CurrentFire + 1) & ~1) & INPUT_STATE_MASK;
 }
 
-void CQmGoresWeaponCycle::AdvanceFire(int Presses, bool Held)
+int GoresRestoreWeaponAfterHammer(int PreHammerWeapon, bool HasPreHammerWeapon)
 {
-	for(int Press = 0; Press < Presses; ++Press)
-		m_Fire = ((m_Fire + 1) | 1) & INPUT_STATE_MASK;
-	if((m_Fire & 1) != static_cast<int>(Held))
-		m_Fire = (m_Fire + 1) & INPUT_STATE_MASK;
+	return HasPreHammerWeapon ? PreHammerWeapon : WEAPON_GUN;
 }
 
-bool CQmGoresWeaponCycle::Apply(CNetObj_PlayerInput &Input, int PreviousRawFire, bool CycleActive, int CurrentWeapon, bool InFreeze, bool ExternalHammerWakeup, int SnapshotTick, int InputTick, bool Playing)
+bool ShouldPulseGoresHammerOnFire(bool GoresCycleActive, bool FireJustPressed, bool CurrentWeaponIsHammer, bool FreezeWakeupActive)
 {
-	if(!m_Initialized)
-	{
-		if(!CycleActive)
-			return false;
-		m_Initialized = true;
-		m_RawFire = PreviousRawFire;
-		m_Fire = PreviousRawFire;
-		m_WantedWeapon = Input.m_WantedWeapon;
-	}
+	return GoresCycleActive && FireJustPressed && !CurrentWeaponIsHammer && !FreezeWakeupActive;
+}
 
-	const int PreviousFire = m_Fire;
-	const int PreviousWeapon = m_WantedWeapon;
-	const int Presses = CountInput(m_RawFire, Input.m_Fire).m_Presses;
-	const bool FireHeld = (Input.m_Fire & 1) != 0;
-	m_RawFire = Input.m_Fire;
-	bool StartedSwitch = false;
-
-	if(!CycleActive)
-	{
-		m_AttackPending = false;
-		m_SwitchInputTick = -1;
-		m_AttackInputTick = -1;
-		AdvanceFire(Playing ? Presses : 0, Playing && FireHeld);
-	}
-	else
-	{
-		const bool HammerRequested = PreviousWeapon == WEAPON_HAMMER + 1 || Input.m_WantedWeapon == WEAPON_HAMMER + 1;
-		if(Presses > 0 || ShouldTriggerQmGoresHammerWakeup(true, HammerRequested, ExternalHammerWakeup))
-		{
-			if(!m_AttackPending)
-				m_SwitchInputTick = -1;
-			m_AttackPending = true;
-			m_AttackInputTick = -1;
-		}
-
-		if(m_AttackPending)
-		{
-			Input.m_WantedWeapon = WEAPON_HAMMER + 1;
-			// 直接选武器与开火在服务器上读取的输入阶段不同，先只送切锤。
-			// 必须等该输入 tick 的服务器快照确认锤子，旧的锤子快照不能提前放行。
-			if(m_SwitchInputTick >= 0 && SnapshotTick >= m_SwitchInputTick && CurrentWeapon == WEAPON_HAMMER)
-			{
-				AdvanceFire(1, FireHeld);
-				m_AttackPending = false;
-				m_AttackInputTick = InputTick;
-			}
-			else
-			{
-				if(m_SwitchInputTick < 0)
-				{
-					m_SwitchInputTick = InputTick;
-					StartedSwitch = true;
-				}
-				AdvanceFire(0, false);
-			}
-		}
-		else if(m_AttackInputTick >= 0)
-		{
-			const bool RestoreGun = SnapshotTick >= m_AttackInputTick && CurrentWeapon == WEAPON_HAMMER && !InFreeze;
-			Input.m_WantedWeapon = (RestoreGun ? WEAPON_GUN : WEAPON_HAMMER) + 1;
-			AdvanceFire(0, !RestoreGun && FireHeld);
-			if(RestoreGun)
-				m_AttackInputTick = -1;
-		}
-		else
-		{
-			if(CurrentWeapon == WEAPON_HAMMER && !ShouldKeepQmGoresHammerInFreeze(true, InFreeze, HammerRequested))
-				Input.m_WantedWeapon = WEAPON_GUN + 1;
-			AdvanceFire(0, false);
-		}
-	}
-
-	Input.m_Fire = m_Fire;
-	m_WantedWeapon = Input.m_WantedWeapon;
-	return StartedSwitch || PreviousFire != m_Fire || PreviousWeapon != m_WantedWeapon;
+bool ShouldRestoreGoresWeaponAfterHammer(bool CurrentWeaponIsHammer, bool HasPreHammerWeapon)
+{
+	return CurrentWeaponIsHammer && HasPreHammerWeapon;
 }
 
 bool ShouldShowQmHookStrongWeakScope(int Scope, bool Self, bool Strong, bool Weak)

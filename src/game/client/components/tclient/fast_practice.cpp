@@ -668,7 +668,6 @@ void CFastPractice::ReleaseBufferedInputState()
 		NeutralizeInput(GameClient()->m_Controls.m_aLastData[Conn]);
 		GameClient()->m_Controls.m_aInputData[Conn].m_Fire = ReleasedFireState(GameClient()->m_Controls.m_aInputData[Conn].m_Fire);
 		GameClient()->m_Controls.m_aLastData[Conn].m_Fire = ReleasedFireState(GameClient()->m_Controls.m_aLastData[Conn].m_Fire);
-		GameClient()->m_TClient.ResetGoresWeaponCycleInput(Conn, GameClient()->m_Controls.m_aInputData[Conn].m_Fire);
 	}
 	NeutralizeInput(GameClient()->m_Controls.m_aFastInput[g_Config.m_ClDummy]);
 	GameClient()->m_Controls.m_aFastInput[g_Config.m_ClDummy].m_Fire = ReleasedFireState(GameClient()->m_Controls.m_aFastInput[g_Config.m_ClDummy].m_Fire);
@@ -686,7 +685,7 @@ void CFastPractice::CaptureServerReleasedFireStates()
 	{
 		int FireState = GameClient()->m_DummyInput.m_Fire;
 		if(Slot == g_Config.m_ClDummy)
-			FireState = GameClient()->m_Controls.m_aLastGoresInput[Slot].m_Fire;
+			FireState = GameClient()->m_Controls.m_aLastData[Slot].m_Fire;
 		else if(g_Config.m_ClDummyHammer)
 			FireState = GameClient()->m_HammerInput.m_Fire;
 		m_aServerReleasedFireStates[Slot] = ReleasedFireState(FireState);
@@ -701,7 +700,6 @@ void CFastPractice::ReleaseBufferedActionInputState()
 		SuppressActionInput(GameClient()->m_Controls.m_aInputData[Conn], ReleasedFire);
 		SuppressActionInput(GameClient()->m_Controls.m_aLastData[Conn], ReleasedFire);
 		SuppressActionInput(GameClient()->m_Controls.m_aFastInput[Conn], ReleasedFire);
-		GameClient()->m_TClient.ResetGoresWeaponCycleInput(Conn, ReleasedFire);
 	}
 
 	const int DummySlot = !g_Config.m_ClDummy;

@@ -236,8 +236,7 @@ class CTClient : public CComponent
 	bool m_aWasInFreezeForSwitch[NUM_DUMMIES] = {false, false};
 	void CheckAutoSwitchOnUnfreeze();
 	bool m_aWasInFreezeForGoresHammer[NUM_DUMMIES] = {false, false};
-	bool m_aGoresHammerWakeup[NUM_DUMMIES] = {false, false};
-	CQmGoresWeaponCycle m_aGoresWeaponCycle[NUM_DUMMIES];
+	bool m_aGoresHammerWakeupFirePendingRelease[NUM_DUMMIES] = {false, false};
 
 	// Auto Close Chat on Unfreeze (HJ大佬辅助)
 	bool m_aWasInFreezeForChatClose[NUM_DUMMIES] = {false, false};
@@ -322,8 +321,12 @@ class CTClient : public CComponent
 	int m_aGoresRunStartDistanceToFinish[NUM_DUMMIES] = {0, 0};
 	bool m_aGoresMapProgressValid[NUM_DUMMIES] = {false, false};
 	float m_aGoresMapProgress[NUM_DUMMIES] = {0.0f, 0.0f};
+	int m_aGoresPreHammerWeapon[NUM_DUMMIES] = {WEAPON_GUN, WEAPON_GUN};
+	bool m_aGoresHasPreHammerWeapon[NUM_DUMMIES] = {false, false};
+	bool m_aPrevFireForGores[NUM_DUMMIES] = {false, false};
 	bool IsGoresMapProgressMap() const;
 	bool IsGoresModuleEnabled() const;
+	bool HasBlockingGoresWeapon() const;
 	bool HasExtraGoresWeapon() const;
 	void UpdateGoresWeaponCycle();
 	void InvalidateGoresDistanceField();
@@ -462,12 +465,6 @@ public:
 	{
 		CancelSoloSplit();
 		m_VoteCallerId = -1;
-		for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
-		{
-			m_aWasInFreezeForGoresHammer[Dummy] = false;
-			m_aGoresHammerWakeup[Dummy] = false;
-			m_aGoresWeaponCycle[Dummy].Reset();
-		}
 	}
 	void SetVoteCallerId(int ClientId) { m_VoteCallerId = ClientId; }
 	void CancelSoloSplit() { m_SoloSplit.Reset(); }
@@ -478,10 +475,9 @@ public:
 	void OnUpdate() override;
 	void OnRender() override;
 	bool OnInput(const IInput::CEvent &Event) override;
-	// Gores 锤枪循环是否正在接管武器；拿到额外武器时按停用选项决定是否继续。
+	bool ShouldAppendGoresPrevWeapon() const;
+	// Gores 自动切锤是否正在接管武器（锤后自动切回，或拿到额外武器后的脉冲模式）。
 	bool IsGoresWeaponCycleActive() const;
-	bool PrepareGoresWeaponCycleInput(CNetObj_PlayerInput &Input, bool Preview);
-	void ResetGoresWeaponCycleInput(int Dummy, int Fire);
 	// Gores 自动切锤引起的锤子切换是否要跳过切换动画（受 qm_gores_suppress_switch_anim 控制）。
 	bool ShouldSkipGoresHammerSwitchAnimation(int ClientId, int PreviousWeapon, int CurrentWeapon) const;
 	bool IsGoresGameMode() const;

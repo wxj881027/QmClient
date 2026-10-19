@@ -36,7 +36,6 @@ public:
 	int64_t m_LastSendTime;
 	CNetObj_PlayerInput m_aInputData[NUM_DUMMIES];
 	CNetObj_PlayerInput m_aLastData[NUM_DUMMIES];
-	CNetObj_PlayerInput m_aLastGoresInput[NUM_DUMMIES] = {};
 	int m_aInputDirectionLeft[NUM_DUMMIES];
 	int m_aInputDirectionRight[NUM_DUMMIES];
 	int m_aShowHookColl[NUM_DUMMIES];
