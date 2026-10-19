@@ -7,6 +7,20 @@
 
 typedef std::function<void(short *pFinalOut, unsigned Frames)> ISoundMixFunc;
 
+// 录制开始时冻结的 demo 显示配置。渲染与续渲指纹都读这一份，
+// 避免导出途中改配置后不同片段采用不同 HUD、聊天或强弱钩画面。
+struct SVideoDisplaySnapshot
+{
+	int m_Direction = 0;
+	int m_StrongWeak = 0;
+	int m_StrongWeakScope = 0;
+	int m_StrongWeakSize = 0;
+	bool m_Hud = false;
+	bool m_Chat = false;
+	// 仅渲染 demo：导出期间隐藏 HUD/聊天/旁观信息，切换相机仍由玩家控制。
+	bool m_RenderDemoOnly = false;
+};
+
 class IVideo
 {
 public:
@@ -17,6 +31,8 @@ public:
 	virtual void Pause(bool Pause) = 0;
 	virtual bool IsRecording() const = 0;
 	virtual bool HasError() const = 0;
+	// 当前录制实例持有的显示配置快照；未录制或实现不支持时为空。
+	virtual const SVideoDisplaySnapshot *DisplaySnapshot() const { return nullptr; }
 
 	virtual void NextVideoFrame() = 0;
 	virtual void NextVideoFrameThread() = 0;

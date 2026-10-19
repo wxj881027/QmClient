@@ -36,6 +36,21 @@ TEST(VideoEncoder, FindProbedRejectsUnknownName)
 	EXPECT_EQ(video_encoder::FindProbed(""), nullptr);
 }
 
+TEST(VideoEncoder, RecordingLookupResolvesRegisteredCandidate)
+{
+	const AVCodec *pCodec = video_encoder::FindEncoderForRecording("libx264");
+	ASSERT_NE(pCodec, nullptr);
+	EXPECT_EQ(pCodec, avcodec_find_encoder_by_name("libx264"));
+	EXPECT_EQ(video_encoder::FindEncoderForRecording("h264_nvenc"), avcodec_find_encoder_by_name("h264_nvenc"));
+}
+
+TEST(VideoEncoder, RecordingLookupRejectsUnknownOrEmptyNames)
+{
+	EXPECT_EQ(video_encoder::FindEncoderForRecording("no_such_encoder"), nullptr);
+	EXPECT_EQ(video_encoder::FindEncoderForRecording(""), nullptr);
+	EXPECT_EQ(video_encoder::FindEncoderForRecording(nullptr), nullptr);
+}
+
 TEST(VideoEncoder, NegotiateDefaultPrefersYuv420P)
 {
 	const AVCodec *pCodec = avcodec_find_encoder_by_name("libx264");

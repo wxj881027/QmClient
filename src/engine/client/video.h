@@ -22,6 +22,7 @@ extern "C" {
 class IGraphics;
 class ISound;
 class IStorage;
+class CVideoExportOutput;
 
 // a wrapper around a single output AVStream
 class COutputStream
@@ -46,7 +47,7 @@ class CVideo : public IVideo
 public:
 	// Width/Height 是渲染（readback）尺寸；OutputWidth/OutputHeight 是编码输出尺寸，
 	// 0 表示跟随渲染尺寸。输出小于渲染时 swscale 以高质量滤波下采样（超采样抗锯齿，M7）。
-	CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Width, int Height, const char *pName, int OutputWidth = 0, int OutputHeight = 0);
+	CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Width, int Height, const char *pName, int OutputWidth = 0, int OutputHeight = 0, const SVideoDisplaySnapshot *pDisplaySnapshot = nullptr);
 	~CVideo() override;
 
 	bool Start() override REQUIRES(!m_WriteLock);
@@ -54,6 +55,7 @@ public:
 	void Pause(bool Pause) override;
 	bool IsRecording() const override { return m_Recording && !HasError(); }
 	bool HasError() const override { return m_FrameCapture.HasError() || m_EncodeError.load(std::memory_order_acquire); }
+	const SVideoDisplaySnapshot *DisplaySnapshot() const override { return &m_DisplaySnapshot; }
 
 	void NextVideoFrame() override;
 	void NextVideoFrameThread() override;
@@ -69,7 +71,7 @@ private:
 	bool UpdateVideoBufferFromGraphics(size_t SlotIndex);
 
 	void RunAudioThread(size_t ParentThreadIndex, size_t ThreadIndex) REQUIRES(!m_WriteLock);
-	void FillAudioFrame(size_t ThreadIndex);
+	bool FillAudioFrame(size_t ThreadIndex);
 
 	bool OpenVideo();
 	bool OpenAudio();
@@ -99,6 +101,9 @@ private:
 	int m_OutputHeight;
 	CVideoFrameCapture m_FrameCapture;
 	char m_aName[IO_MAX_PATH_LENGTH];
+	std::unique_ptr<CVideoExportOutput> m_pOutput;
+	// 录制显示配置快照；由调用方在创建时传入，避免导出途中配置变化影响后续段。
+	SVideoDisplaySnapshot m_DisplaySnapshot;
 	uint64_t m_VideoFrameIndex = 0;
 	uint64_t m_AudioFrameIndex = 0;
 	// 编码/封装错误状态：录制线程与主线程置位，IsRecording/HasError 消费，

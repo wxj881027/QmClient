@@ -47,6 +47,10 @@ namespace video_encoder
 	// 按名称查探测结果；未知名返回 nullptr。
 	const SProbeResult *FindProbed(const char *pName);
 
+	// 录制入口只查候选清单和 FFmpeg 注册，不探测其他编码器或初始化硬件。
+	// 可用性由实际输出参数下的 avcodec_open2 判断；未知/未编入返回 nullptr。
+	const AVCodec *FindEncoderForRecording(const char *pName);
+
 	// 像素格式协商：从编码器支持列表里按期望顺序选第一个可用的；
 	// 都不支持时返回 AV_PIX_FMT_NONE。pWanted 列表以 AV_PIX_FMT_NONE 结尾。
 	AVPixelFormat NegotiatePixelFormat(const AVCodec *pCodec, const AVCodecContext *pContext, const AVPixelFormat *pWanted);

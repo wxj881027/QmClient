@@ -3,6 +3,7 @@
 #include <base/log.h>
 #include <base/system.h>
 
+#include <engine/shared/config.h>
 #include <engine/shared/protocol.h>
 
 extern "C" {
@@ -10,8 +11,52 @@ extern "C" {
 #include <libavutil/avutil.h>
 }
 
+#include <cmath>
 #include <cstdio>
 #include <cstring>
+
+namespace
+{
+
+	int64_t VideoFileSize(const char *pPath)
+	{
+		IOHANDLE File = io_open(pPath, IOFLAG_READ);
+		if(!File)
+			return -1;
+		const int64_t Size = io_length(File);
+		return io_close(File) == 0 ? Size : -1;
+	}
+}
+
+CVideoExportOutput::CVideoExportOutput(const char *pTarget, const char *pSuffix) :
+	m_Target(pTarget), m_Temporary(m_Target + pSuffix) {}
+
+CVideoExportOutput::~CVideoExportOutput()
+{
+	if(m_OwnsTemporary)
+		fs_remove(m_Temporary.c_str());
+}
+
+bool CVideoExportOutput::Commit()
+{
+	// 禁用 Windows 的先删除目标再重试兜底，替换失败必须保留旧文件。
+	if(!m_OwnsTemporary || fs_rename(m_Temporary.c_str(), m_Target.c_str(), false) != 0)
+		return false;
+	m_OwnsTemporary = false;
+	return true;
+}
+
+std::string VideoExportConfigParams(const CConfig &Config, const SVideoDisplaySnapshot &Display)
+{
+	char aParams[1024];
+	str_format(aParams, sizeof(aParams), "%s|%d|%d|%s|%dx%d|%d|display-v2:%d,%d,%d,%d,%d,%d,%d",
+		Config.m_QmVideoEncoder, Config.m_QmVideoQuality, Config.m_QmVideoGop,
+		Config.m_QmVideoContainer, Config.m_QmVideoWidth, Config.m_QmVideoHeight,
+		Config.m_ClVideoSndEnable, Display.m_Hud, Display.m_Chat,
+		Display.m_Direction, Display.m_StrongWeak, Display.m_StrongWeakScope,
+		Display.m_StrongWeakSize, Display.m_RenderDemoOnly);
+	return aParams;
+}
 
 // 段切分：按 SERVER_TICK_SPEED 把 [FirstTick, LastTick) 切成固定时长片段。
 std::vector<CVideoExportTask::CSegment> CVideoExportTask::PlanSegments(int FirstTick, int LastTick, int SegmentSeconds)
@@ -20,8 +65,8 @@ std::vector<CVideoExportTask::CSegment> CVideoExportTask::PlanSegments(int First
 	if(LastTick <= FirstTick)
 		return vSegments;
 
-	int TicksPerSegment = SegmentSeconds <= 0 ? 0 : SegmentSeconds * SERVER_TICK_SPEED;
-	if(TicksPerSegment <= 0 || LastTick - FirstTick <= TicksPerSegment)
+	const int64_t TicksPerSegment = SegmentSeconds <= 0 ? 0 : (int64_t)SegmentSeconds * SERVER_TICK_SPEED;
+	if(TicksPerSegment <= 0 || (int64_t)LastTick - FirstTick <= TicksPerSegment)
 	{
 		CSegment All;
 		All.m_StartTick = FirstTick;
@@ -30,14 +75,41 @@ std::vector<CVideoExportTask::CSegment> CVideoExportTask::PlanSegments(int First
 		return vSegments;
 	}
 
-	for(int Start = FirstTick; Start < LastTick; Start += TicksPerSegment)
+	for(int64_t Start = FirstTick; Start < LastTick; Start += TicksPerSegment)
 	{
 		CSegment Segment;
-		Segment.m_StartTick = Start;
-		Segment.m_EndTick = std::min(Start + TicksPerSegment, LastTick);
+		Segment.m_StartTick = (int)Start;
+		Segment.m_EndTick = (int)std::min(Start + TicksPerSegment, (int64_t)LastTick);
 		vSegments.push_back(Segment);
 	}
 	return vSegments;
+}
+
+bool CVideoExportTask::HasRange(float StartSeconds, float EndSeconds)
+{
+	return StartSeconds >= 0.0f || EndSeconds >= 0.0f || !std::isfinite(StartSeconds) || !std::isfinite(EndSeconds);
+}
+
+bool CVideoExportTask::ResolveRange(int &FirstTick, int &LastTick, float StartSeconds, float EndSeconds)
+{
+	if(LastTick <= FirstTick || !std::isfinite(StartSeconds) || !std::isfinite(EndSeconds))
+		return false;
+	const int64_t DemoTicks = (int64_t)LastTick - FirstTick;
+	// 先按宽整数跨度钳位，再沿用秒到 tick 的浮点精度，避免整型转换溢出。
+	const auto Offset = [DemoTicks](float Seconds, int64_t Default) {
+		if(Seconds < 0.0f)
+			return Default;
+		if((double)Seconds >= (double)DemoTicks / SERVER_TICK_SPEED)
+			return DemoTicks;
+		return (int64_t)std::min((double)(Seconds * SERVER_TICK_SPEED), (double)DemoTicks);
+	};
+	const int64_t StartOffset = Offset(StartSeconds, 0);
+	const int64_t EndOffset = Offset(EndSeconds, DemoTicks);
+	if(EndOffset <= StartOffset)
+		return false;
+	LastTick = (int)((int64_t)FirstTick + EndOffset);
+	FirstTick = (int)((int64_t)FirstTick + StartOffset);
+	return true;
 }
 
 CVideoExportTask::CVideoExportTask(const char *pName, const char *pDemoPath, int FirstTick, int LastTick, int SegmentSeconds,
@@ -61,9 +133,9 @@ CVideoExportTask::CVideoExportTask(const char *pName, const char *pDemoPath, int
 void CVideoExportTask::ComputeFingerprint(uint64_t DemoFileSize, int64_t DemoMtime, const char *pExtraParams)
 {
 	char aInput[2048];
-	str_format(aInput, sizeof(aInput), "%" PRIu64 "|%" PRIi64 "|%s|%d|%dx%d|%d|%d|%d|%d|%d|%s",
+	str_format(aInput, sizeof(aInput), "%" PRIu64 "|%" PRIi64 "|%s|%d|%dx%d|%d|%d|%d|%d|%d|%d|%s",
 		DemoFileSize, DemoMtime, m_aDemoPath, m_Fps, m_Width, m_Height, m_Crf, m_Preset, m_SegmentSeconds,
-		m_FirstTick, m_LastTick, pExtraParams != nullptr ? pExtraParams : "");
+		m_FirstTick, m_LastTick, m_WarmupTicks, pExtraParams != nullptr ? pExtraParams : "");
 	MD5_DIGEST Digest = md5(aInput, str_length(aInput));
 	md5_str(Digest, m_aFingerprint, sizeof(m_aFingerprint));
 }
@@ -101,6 +173,12 @@ void CVideoExportTask::FinalOutputName(char *pBuffer, size_t BufferSize) const
 // 进度文件：videos/<name>.progress，一行一个 key=value 的纯文本键值对。
 bool CVideoExportTask::LoadProgress(const char *pProgressPath)
 {
+	// 失败不能留下上一次加载的完成标记。
+	for(CSegment &Segment : m_vSegments)
+	{
+		Segment.m_Done = false;
+		Segment.m_FileSize = -1;
+	}
 	IOHANDLE File = io_open(pProgressPath, IOFLAG_READ);
 	if(!File)
 		return false;
@@ -112,7 +190,9 @@ bool CVideoExportTask::LoadProgress(const char *pProgressPath)
 
 	bool VersionOk = false;
 	bool FingerprintOk = false;
+	bool SegmentCountOk = false;
 	std::vector<bool> vDone(m_vSegments.size(), false);
+	std::vector<int64_t> vSizes(m_vSegments.size(), -1);
 	// 逐行扫描（\n 或 \r\n 分隔），每行格式 key=value
 	char *pLine = pContents;
 	while(pLine && *pLine)
@@ -144,6 +224,7 @@ bool CVideoExportTask::LoadProgress(const char *pProgressPath)
 					free(pContents);
 					return false; // 段数不一致（参数变更），整单重置
 				}
+				SegmentCountOk = true;
 			}
 			else if(str_startswith(aKey, "segment_") && str_endswith(aKey, "_done"))
 			{
@@ -151,17 +232,46 @@ bool CVideoExportTask::LoadProgress(const char *pProgressPath)
 				if(Index >= 0 && Index < (int)vDone.size())
 					vDone[Index] = str_toint(pValue) != 0;
 			}
+			else if(str_startswith(aKey, "segment_") && str_endswith(aKey, "_size"))
+			{
+				const int Index = str_toint(aKey + str_length("segment_"));
+				const int64_t Size = str_toint64_base(pValue);
+				if(Index < 0 || Index >= (int)vSizes.size() || Size <= 0)
+				{
+					free(pContents);
+					return false;
+				}
+				vSizes[Index] = Size;
+			}
 		}
 
 		pLine = pEnd ? pEnd + 1 : nullptr;
 	}
 	free(pContents);
 
-	if(!VersionOk || !FingerprintOk)
+	if(!VersionOk || !FingerprintOk || !SegmentCountOk)
 		return false;
 
 	for(size_t i = 0; i < m_vSegments.size(); ++i)
+	{
 		m_vSegments[i].m_Done = vDone[i];
+		m_vSegments[i].m_FileSize = vDone[i] ? vSizes[i] : -1;
+	}
+	return true;
+}
+
+bool CVideoExportTask::CompleteSegmentFile(int SegmentIndex, const char *pPath)
+{
+	CSegment &Segment = m_vSegments[SegmentIndex];
+	Segment.m_Done = false;
+	Segment.m_FileSize = -1;
+	if(!VerifySegmentFile(pPath))
+		return false;
+	const int64_t Size = VideoFileSize(pPath);
+	if(Size <= 0)
+		return false;
+	Segment.m_FileSize = Size;
+	Segment.m_Done = true;
 	return true;
 }
 
@@ -181,39 +291,64 @@ void CVideoExportTask::RestoreMissingDoneSegments(const std::function<const char
 		char aLogical[IO_MAX_PATH_LENGTH];
 		str_format(aLogical, sizeof(aLogical), "videos/%s", aSegmentName);
 		const char *pWholePath = pResolvePath ? pResolvePath(aLogical) : nullptr;
-		if(!pWholePath || !pWholePath[0] || !VerifySegmentFile(pWholePath))
+		const int64_t Size = pWholePath && pWholePath[0] ? VideoFileSize(pWholePath) : -1;
+		if(Size <= 0 || (m_vSegments[i].m_FileSize >= 0 && Size != m_vSegments[i].m_FileSize) || !VerifySegmentFile(pWholePath))
 		{
 			m_vSegments[i].m_Done = false;
+			m_vSegments[i].m_FileSize = -1;
 			++Restored;
 		}
+		else
+			m_vSegments[i].m_FileSize = Size; // 旧进度在下次保存时补齐文件大小
 	}
 	if(Restored > 0)
 		log_info("video_export", "%d previously finished segment(s) missing or unreadable; re-rendering them on resume.", Restored);
 }
 
-bool CVideoExportTask::SaveProgress(const char *pProgressPath) const
+bool CVideoExportTask::SaveProgress(const char *pProgressPath, const SVideoExportIo *pIo) const
 {
-	IOHANDLE File = io_open(pProgressPath, IOFLAG_WRITE);
+	const SVideoExportIo DefaultIo;
+	const SVideoExportIo &Io = pIo ? *pIo : DefaultIo;
+	CVideoExportOutput Output(pProgressPath, ".tmp");
+	IOHANDLE File = io_open(Output.TemporaryPath(), IOFLAG_WRITE);
 	if(!File)
 	{
 		log_error("video_export", "Could not write progress file '%s'", pProgressPath);
 		return false;
 	}
+	Output.Opened();
+	bool Written = true;
+	const auto WriteLine = [&](const char *pLine) {
+		const unsigned Length = str_length(pLine);
+		if(Written && Io.m_pWrite(File, pLine, Length) != Length)
+			Written = false;
+	};
 
 	char aLine[256];
 	str_copy(aLine, "qmexport_version=1\n");
-	io_write(File, aLine, str_length(aLine));
+	WriteLine(aLine);
 	str_format(aLine, sizeof(aLine), "fingerprint=%s\n", m_aFingerprint);
-	io_write(File, aLine, str_length(aLine));
+	WriteLine(aLine);
 	str_format(aLine, sizeof(aLine), "segment_count=%d\n", (int)m_vSegments.size());
-	io_write(File, aLine, str_length(aLine));
+	WriteLine(aLine);
 	for(size_t i = 0; i < m_vSegments.size(); ++i)
 	{
 		str_format(aLine, sizeof(aLine), "segment_%d_done=%d\n", (int)i, m_vSegments[i].m_Done ? 1 : 0);
-		io_write(File, aLine, str_length(aLine));
+		WriteLine(aLine);
+		if(m_vSegments[i].m_Done && m_vSegments[i].m_FileSize > 0)
+		{
+			str_format(aLine, sizeof(aLine), "segment_%d_size=%" PRIi64 "\n", (int)i, m_vSegments[i].m_FileSize);
+			WriteLine(aLine);
+		}
 	}
-	io_close(File);
-	return true;
+	const bool Synced = Written && Io.m_pSync(File) == 0 && io_error(File) == 0;
+	const bool Closed = Io.m_pClose(File) == 0;
+	if(!Synced || !Closed)
+	{
+		log_error("video_export", "Could not finish progress file '%s'; previous progress kept", pProgressPath);
+		return false;
+	}
+	return Output.Commit();
 }
 
 CVideoExportTask::EAction CVideoExportTask::UpdatePlayback(int CurrentTick)
@@ -245,7 +380,7 @@ void CVideoExportTask::OnRecordingStopped()
 		m_State = EState::IDLE;
 }
 
-// 段文件完整性验证：容器可打开且含视频流即认为该段封装完整（可拼接）。
+// 轻量格式检查。文件大小记录负责检测完成后的截断，不把能打开容器等同于内容完整。
 bool CVideoExportTask::VerifySegmentFile(const char *pPath)
 {
 	AVFormatContext *pContext = nullptr;
@@ -266,28 +401,18 @@ bool CVideoExportTask::VerifySegmentFile(const char *pPath)
 // 阶段一：以首个片段为基准建立输出流并写入表头；阶段二：逐段拷贝包并平移时间戳。
 // 时间轴：CFR 网格步长已知时按「包序 × 步长」重建 dts（matroska 段首缺 dts 不丢包），
 // pts 保留真实值；步长未知时回退「段首 dts 归零 + 全局累计偏移」。流参数不一致时失败（调用方保留独立片段）。
-bool ConcatVideoFiles(const std::vector<std::string> &vInputs, const char *pOutput, const char *pFormatName)
+bool ConcatVideoFiles(const std::vector<std::string> &vInputs, const char *pOutput, const char *pFormatName, const SVideoExportIo *pIo)
 {
 	if(vInputs.empty())
 		return false;
 
 	// 写入先落到 <output>.part，成功写完 trailer 后再替换目标文件：
 	// 直接 avio_open 目标会把上一次的有效成片截断，任何中途失败都会留下不可播放的残文件。
-	const std::string TempOutput = std::string(pOutput) + ".part";
-	bool OutputCommitted = false;
-	struct SOutputGuard
-	{
-		const std::string &m_TempOutput;
-		bool &m_OutputCommitted;
-		~SOutputGuard()
-		{
-			if(!m_OutputCommitted)
-				fs_remove(m_TempOutput.c_str());
-		}
-	} OutputGuard{TempOutput, OutputCommitted};
+	CVideoExportOutput Output(pOutput, ".part");
+	const auto CloseVideo = pIo && pIo->m_pCloseVideo ? pIo->m_pCloseVideo : avio_closep;
 
 	AVFormatContext *pOutContext = nullptr;
-	const int AllocResult = avformat_alloc_output_context2(&pOutContext, nullptr, pFormatName, TempOutput.c_str());
+	const int AllocResult = avformat_alloc_output_context2(&pOutContext, nullptr, pFormatName, Output.TemporaryPath());
 	if(AllocResult < 0 || !pOutContext)
 	{
 		char aError[AV_ERROR_MAX_STRING_SIZE];
@@ -356,7 +481,7 @@ bool ConcatVideoFiles(const std::vector<std::string> &vInputs, const char *pOutp
 	// 打开输出文件并写表头（全部流已就绪）
 	if(!(pOutContext->oformat->flags & AVFMT_NOFILE))
 	{
-		const int OpenFileResult = avio_open(&pOutContext->pb, TempOutput.c_str(), AVIO_FLAG_WRITE);
+		const int OpenFileResult = avio_open(&pOutContext->pb, Output.TemporaryPath(), AVIO_FLAG_WRITE);
 		if(OpenFileResult < 0)
 		{
 			char aError[AV_ERROR_MAX_STRING_SIZE];
@@ -365,6 +490,7 @@ bool ConcatVideoFiles(const std::vector<std::string> &vInputs, const char *pOutp
 			avformat_free_context(pOutContext);
 			return false;
 		}
+		Output.Opened();
 	}
 	const int HeaderResult = avformat_write_header(pOutContext, nullptr);
 	if(HeaderResult < 0)
@@ -663,17 +789,22 @@ bool ConcatVideoFiles(const std::vector<std::string> &vInputs, const char *pOutp
 		return false;
 	}
 
-	if(!(pOutContext->oformat->flags & AVFMT_NOFILE))
-		avio_closep(&pOutContext->pb);
+	const int CloseResult = !(pOutContext->oformat->flags & AVFMT_NOFILE) ? CloseVideo(&pOutContext->pb) : 0;
 	avformat_free_context(pOutContext);
-
-	// 关掉输出后才替换目标文件，保证目标要么是完整的旧成片、要么是完整的新成片。
-	if(fs_rename(TempOutput.c_str(), pOutput) != 0)
+	if(CloseResult < 0)
 	{
-		log_error("video_export", "Could not replace concat output '%s' with '%s'", pOutput, TempOutput.c_str());
+		char aError[AV_ERROR_MAX_STRING_SIZE];
+		av_strerror(CloseResult, aError, sizeof(aError));
+		log_error("video_export", "Could not close concat output (previous output kept): %s", aError);
 		return false;
 	}
-	OutputCommitted = true;
+
+	// 关掉输出后才替换目标文件，保证目标要么是完整的旧成片、要么是完整的新成片。
+	if(!Output.Commit())
+	{
+		log_error("video_export", "Could not replace concat output '%s'", pOutput);
+		return false;
+	}
 	log_info("video_export", "Concatenated %d segment(s) into '%s'", (int)vInputs.size(), pOutput);
 	return true;
 }

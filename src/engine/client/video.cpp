@@ -2,7 +2,9 @@
 
 #include "video.h"
 
+#include "video_audio.h"
 #include "video_encoder.h"
+#include "video_export.h"
 
 #include <base/log.h>
 
@@ -20,11 +22,22 @@ extern "C" {
 
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <memory>
 #include <mutex>
 #include <thread>
 
 using namespace std::chrono_literals;
+
+#if defined(CONF_QMCLIENT_TEST_STORAGE)
+// 仅隔离存储的进程测试构建启用：在真实客户端里注入音频转换失败，
+// 验证转换错误不会被当成静音继续提交，也不会提交半成品成片。
+static bool QmVideoTestAudioFailureRequested()
+{
+	static const bool s_Requested = std::getenv("QMCLIENT_TEST_VIDEO_AUDIO_FAIL") != nullptr;
+	return s_Requested;
+}
+#endif
 
 // This code is mostly stolen from https://github.com/FFmpeg/FFmpeg/blob/master/doc/examples/muxing.c
 
@@ -79,12 +92,18 @@ void CVideo::Init()
 	av_log_set_callback(AvLogCallback);
 }
 
-CVideo::CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Width, int Height, const char *pName, int OutputWidth, int OutputHeight) :
+CVideo::CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Width, int Height, const char *pName, int OutputWidth, int OutputHeight, const SVideoDisplaySnapshot *pDisplaySnapshot) :
 	m_pGraphics(pGraphics),
 	m_pStorage(pStorage),
 	m_pSound(pSound),
 	m_FrameCapture(Width, Height)
 {
+	if(pDisplaySnapshot)
+		m_DisplaySnapshot = *pDisplaySnapshot;
+	else
+		m_DisplaySnapshot = {g_Config.m_QmDemoShowDirection, g_Config.m_QmDemoShowStrongWeak, g_Config.m_QmDemoStrongWeakScope,
+			g_Config.m_ClNamePlatesStrongSize, g_Config.m_QmDemoShowHud != 0, g_Config.m_QmDemoShowChat != 0};
+
 	m_pFormatContext = nullptr;
 	m_pFormat = nullptr;
 	m_pOptDict = nullptr;
@@ -131,16 +150,20 @@ bool CVideo::Start()
 	m_VideoStream = {};
 
 	char aWholePath[IO_MAX_PATH_LENGTH];
-	IOHANDLE File = m_pStorage->OpenFile(m_aName, IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE, aWholePath, sizeof(aWholePath));
-	if(File)
+	char aTemporaryPath[IO_MAX_PATH_LENGTH];
+	const std::string TemporaryName = std::string(m_aName) + ".recording";
+	// 仍经 Storage 校验路径；前置可写检查只打开临时文件，绝不截断旧成片。
+	IOHANDLE File = m_pStorage->OpenFile(TemporaryName.c_str(), IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE, aTemporaryPath, sizeof(aTemporaryPath));
+	if(!File)
 	{
-		io_close(File);
-	}
-	else
-	{
-		log_error("videorecorder", "Could not open file '%s'", aWholePath);
+		log_error("videorecorder", "Could not open temporary file for '%s'", m_aName);
 		return false;
 	}
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE_OR_ABSOLUTE, m_aName, aWholePath, sizeof(aWholePath));
+	m_pOutput = std::make_unique<CVideoExportOutput>(aWholePath, ".recording");
+	m_pOutput->Opened();
+	if(io_close(File) != 0)
+		return false;
 
 	// 容器格式按输出文件名后缀推断（M6）：.mp4/.mov/.mkv 由 qm_video_container 决定，
 	// format_name 传 nullptr 让 libavformat 自行匹配，避免容器与后缀不一致。
@@ -240,7 +263,7 @@ bool CVideo::Start()
 	/* open the output file, if needed */
 	if(!(m_pFormat->flags & AVFMT_NOFILE))
 	{
-		const int OpenResult = avio_open(&m_pFormatContext->pb, aWholePath, AVIO_FLAG_WRITE);
+		const int OpenResult = avio_open(&m_pFormatContext->pb, m_pOutput->TemporaryPath(), AVIO_FLAG_WRITE);
 		if(OpenResult < 0)
 		{
 			char aError[AV_ERROR_MAX_STRING_SIZE];
@@ -383,6 +406,13 @@ void CVideo::Stop()
 		}
 
 		avformat_free_context(m_pFormatContext);
+	}
+
+	// 初始化失败、录制/收尾失败均不提交；替换失败也必须向分段调用方传播。
+	if(m_Started && !HasError() && m_pOutput && !m_pOutput->Commit())
+	{
+		log_error("videorecorder", "Could not commit recording '%s'; previous output kept", m_aName);
+		m_EncodeError.store(true, std::memory_order_release);
 	}
 
 	// HasError() 此时已含录制期 + 排空/trailer/关闭的全部失败；Stop 即将自删除，
@@ -532,7 +562,7 @@ void CVideo::RunAudioThread(size_t ParentThreadIndex, size_t ThreadIndex)
 
 		if(pThreadData->m_HasAudioFrame)
 		{
-			FillAudioFrame(ThreadIndex);
+			const bool Converted = FillAudioFrame(ThreadIndex);
 			// check if we need to wait for the parent to finish
 			{
 				std::unique_lock<std::mutex> LockParent(pParentThreadData->m_AudioFillMutex);
@@ -548,7 +578,8 @@ void CVideo::RunAudioThread(size_t ParentThreadIndex, size_t ThreadIndex)
 				{
 					const CLockScope LockScope(m_WriteLock);
 					m_AudioStream.m_vpFrames[ThreadIndex]->pts = av_rescale_q(pThreadData->m_SampleCountStart, AVRational{1, m_AudioStream.m_pCodecContext->sample_rate}, m_AudioStream.m_pCodecContext->time_base);
-					WriteFrame(&m_AudioStream, ThreadIndex);
+					if(Converted && !m_EncodeError.load(std::memory_order_acquire))
+						WriteFrame(&m_AudioStream, ThreadIndex);
 				}
 
 				pThreadData->m_AudioFrameToFill = 0;
@@ -562,48 +593,27 @@ void CVideo::RunAudioThread(size_t ParentThreadIndex, size_t ThreadIndex)
 	}
 }
 
-void CVideo::FillAudioFrame(size_t ThreadIndex)
+bool CVideo::FillAudioFrame(size_t ThreadIndex)
 {
-	const int FillArrayResult = av_samples_fill_arrays(
-		(uint8_t **)m_AudioStream.m_vpTmpFrames[ThreadIndex]->data,
-		nullptr, // pointer to linesize (int*)
-		(const uint8_t *)m_vAudioBuffers[ThreadIndex].m_aBuffer,
-		2, // channels
-		m_AudioStream.m_vpTmpFrames[ThreadIndex]->nb_samples,
-		AV_SAMPLE_FMT_S16,
-		0 // align
-	);
-	if(FillArrayResult < 0)
+#if defined(CONF_QMCLIENT_TEST_STORAGE)
+	if(QmVideoTestAudioFailureRequested())
 	{
-		char aError[AV_ERROR_MAX_STRING_SIZE];
-		av_strerror(FillArrayResult, aError, sizeof(aError));
-		log_error("videorecorder", "Could not fill audio frame: %s", aError);
-		return;
+		log_error("videorecorder", "Could not convert audio frame: injected test failure");
+		m_EncodeError.store(true, std::memory_order_release);
+		return false;
 	}
-
-	const int MakeWritableResult = av_frame_make_writable(m_AudioStream.m_vpFrames[ThreadIndex]);
-	if(MakeWritableResult < 0)
+#endif
+	const int Result = ConvertVideoAudioFrame(m_AudioStream.m_vpTmpFrames[ThreadIndex], m_AudioStream.m_vpFrames[ThreadIndex],
+		m_AudioStream.m_vpSwrContexts[ThreadIndex], m_vAudioBuffers[ThreadIndex].m_aBuffer);
+	if(Result < 0)
 	{
 		char aError[AV_ERROR_MAX_STRING_SIZE];
-		av_strerror(MakeWritableResult, aError, sizeof(aError));
-		log_error("videorecorder", "Could not make audio frame writeable: %s", aError);
-		return;
-	}
-
-	/* convert to destination format */
-	const int ConvertResult = swr_convert(
-		m_AudioStream.m_vpSwrContexts[ThreadIndex],
-		m_AudioStream.m_vpFrames[ThreadIndex]->data,
-		m_AudioStream.m_vpFrames[ThreadIndex]->nb_samples,
-		(const uint8_t **)m_AudioStream.m_vpTmpFrames[ThreadIndex]->data,
-		m_AudioStream.m_vpTmpFrames[ThreadIndex]->nb_samples);
-	if(ConvertResult < 0)
-	{
-		char aError[AV_ERROR_MAX_STRING_SIZE];
-		av_strerror(ConvertResult, aError, sizeof(aError));
+		av_strerror(Result, aError, sizeof(aError));
 		log_error("videorecorder", "Could not convert audio frame: %s", aError);
-		return;
+		m_EncodeError.store(true, std::memory_order_release);
+		return false;
 	}
+	return true;
 }
 
 void CVideo::RunVideoConvertThread(size_t ThreadIndex)
@@ -900,6 +910,7 @@ bool CVideo::OpenAudio()
 			return false;
 		}
 	}
+	log_info("videorecorder", "Audio recording enabled (AAC, %d Hz, stereo)", m_pSound->MixingRate());
 
 	m_AudioFrameIndex = 0;
 	return true;
@@ -911,20 +922,14 @@ bool CVideo::AddStream(COutputStream *pStream, AVFormatContext *pFormatContext, 
 	/* find the encoder */
 	if(pStream == &m_VideoStream && g_Config.m_QmVideoEncoder[0] != '\0')
 	{
-		// 编码器按名称选择（M4）：视频流按流身份判断（不依赖 muxer 默认 codec 恰为 H264）；
-		// 探测不可用时明确失败，不静默回退软件编码器。
-		const video_encoder::SProbeResult *pProbed = video_encoder::FindProbed(g_Config.m_QmVideoEncoder);
-		if(!pProbed)
+		// 只查所选编码器；全清单探测会初始化无关 GPU 驱动并阻塞主线程。
+		// 实际 OpenVideo 按输出参数初始化并报告失败，不静默回退软件编码器。
+		*ppCodec = video_encoder::FindEncoderForRecording(g_Config.m_QmVideoEncoder);
+		if(!*ppCodec)
 		{
-			log_error("videorecorder", "Video encoder '%s' is unknown; clear qm_video_encoder or pick one from the export settings.", g_Config.m_QmVideoEncoder);
+			log_error("videorecorder", "Video encoder '%s' is unknown or not built into FFmpeg; clear qm_video_encoder or pick one from the export settings.", g_Config.m_QmVideoEncoder);
 			return false;
 		}
-		if(!pProbed->m_Available)
-		{
-			log_error("videorecorder", "Video encoder '%s' is not usable on this system (%s); clear qm_video_encoder or pick another encoder.", g_Config.m_QmVideoEncoder, pProbed->m_aFailReason);
-			return false;
-		}
-		*ppCodec = avcodec_find_encoder_by_name(g_Config.m_QmVideoEncoder);
 	}
 	else
 	{

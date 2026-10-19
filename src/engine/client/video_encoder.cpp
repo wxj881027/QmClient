@@ -172,6 +172,18 @@ namespace video_encoder
 		return nullptr;
 	}
 
+	const AVCodec *FindEncoderForRecording(const char *pName)
+	{
+		if(!pName)
+			return nullptr;
+		for(const SCandidate &Candidate : s_aCandidates)
+		{
+			if(str_comp(Candidate.m_pName, pName) == 0)
+				return avcodec_find_encoder_by_name(pName);
+		}
+		return nullptr;
+	}
+
 	AVPixelFormat NegotiateDefaultPixelFormat(const AVCodec *pCodec, const AVCodecContext *pContext)
 	{
 		return NegotiatePixelFormat(pCodec, pContext, s_aWantedPixelFormats);
