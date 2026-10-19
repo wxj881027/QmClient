@@ -49,8 +49,15 @@ inline void CCommandProcessorFragment_Vulkan::DestroyRenderTarget(SRenderTarget 
 	}
 	if(Target.m_Framebuffer != VK_NULL_HANDLE)
 		vkDestroyFramebuffer(m_VKDevice, Target.m_Framebuffer, nullptr);
+	if(Target.m_AttachmentImageView != VK_NULL_HANDLE)
+		vkDestroyImageView(m_VKDevice, Target.m_AttachmentImageView, nullptr);
 	if(Target.m_ImageView != VK_NULL_HANDLE)
 		vkDestroyImageView(m_VKDevice, Target.m_ImageView, nullptr);
+	if(Target.m_ResolveImage != VK_NULL_HANDLE)
+	{
+		FreeImageMemBlock(Target.m_ResolveImageMem);
+		vkDestroyImage(m_VKDevice, Target.m_ResolveImage, nullptr);
+	}
 	if(Target.m_Image != VK_NULL_HANDLE)
 	{
 		FreeImageMemBlock(Target.m_ImageMem);
@@ -219,30 +226,79 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Create(const CCom
 	DestroyRenderTarget(Target);
 	Target.m_Width = pCommand->m_Width;
 	Target.m_Height = pCommand->m_Height;
-	if(!CreateImage(Target.m_Width, Target.m_Height, 1, 1, RenderTargetReadbackFormat(), VK_IMAGE_TILING_OPTIMAL, Target.m_Image, Target.m_ImageMem, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_SAMPLE_COUNT_1_BIT))
-	{
-		DestroyRenderTarget(Target);
-		return false;
-	}
-	Target.m_ImageView = CreateImageView(Target.m_Image, RenderTargetReadbackFormat(), VK_IMAGE_VIEW_TYPE_2D, 1, 1);
-	if(Target.m_ImageView == VK_NULL_HANDLE)
-	{
-		DestroyRenderTarget(Target);
-		return false;
-	}
 
-	VkFramebufferCreateInfo FramebufferInfo{};
-	FramebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	FramebufferInfo.renderPass = m_VKRenderTargetRenderPass;
-	FramebufferInfo.attachmentCount = 1;
-	FramebufferInfo.pAttachments = &Target.m_ImageView;
-	FramebufferInfo.width = Target.m_Width;
-	FramebufferInfo.height = Target.m_Height;
-	FramebufferInfo.layers = 1;
-	if(vkCreateFramebuffer(m_VKDevice, &FramebufferInfo, nullptr, &Target.m_Framebuffer) != VK_SUCCESS)
+	const bool Multisampled = pCommand->m_SampleCount > 1 && m_VKRenderTargetMsaaRenderPass != VK_NULL_HANDLE && GetSampleCount() != VK_SAMPLE_COUNT_1_BIT;
+	if(Multisampled)
 	{
-		DestroyRenderTarget(Target);
-		return false;
+		// 背景层复用交换链的附件格式与子通道结构，因此可以直接使用为交换链
+		// render pass 创建的普通管线；不能使用只读回读用的 RGBA8 格式。
+		Target.m_Format = m_VKSurfFormat.format;
+		Target.m_SampleCount = (uint32_t)GetSampleCount();
+		if(!CreateImage(Target.m_Width, Target.m_Height, 1, 1, Target.m_Format, VK_IMAGE_TILING_OPTIMAL, Target.m_Image, Target.m_ImageMem, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, GetSampleCount()))
+		{
+			DestroyRenderTarget(Target);
+			return false;
+		}
+		Target.m_AttachmentImageView = CreateImageView(Target.m_Image, Target.m_Format, VK_IMAGE_VIEW_TYPE_2D, 1, 1);
+		if(Target.m_AttachmentImageView == VK_NULL_HANDLE)
+		{
+			DestroyRenderTarget(Target);
+			return false;
+		}
+		if(!CreateImage(Target.m_Width, Target.m_Height, 1, 1, Target.m_Format, VK_IMAGE_TILING_OPTIMAL, Target.m_ResolveImage, Target.m_ResolveImageMem, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_SAMPLE_COUNT_1_BIT))
+		{
+			DestroyRenderTarget(Target);
+			return false;
+		}
+		Target.m_ImageView = CreateImageView(Target.m_ResolveImage, Target.m_Format, VK_IMAGE_VIEW_TYPE_2D, 1, 1);
+		if(Target.m_ImageView == VK_NULL_HANDLE)
+		{
+			DestroyRenderTarget(Target);
+			return false;
+		}
+		VkImageView aAttachments[2] = {Target.m_AttachmentImageView, Target.m_ImageView};
+		VkFramebufferCreateInfo FramebufferInfo{};
+		FramebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		FramebufferInfo.renderPass = m_VKRenderTargetMsaaRenderPass;
+		FramebufferInfo.attachmentCount = 2;
+		FramebufferInfo.pAttachments = aAttachments;
+		FramebufferInfo.width = Target.m_Width;
+		FramebufferInfo.height = Target.m_Height;
+		FramebufferInfo.layers = 1;
+		if(vkCreateFramebuffer(m_VKDevice, &FramebufferInfo, nullptr, &Target.m_Framebuffer) != VK_SUCCESS)
+		{
+			DestroyRenderTarget(Target);
+			return false;
+		}
+	}
+	else
+	{
+		Target.m_Format = RenderTargetReadbackFormat();
+		Target.m_SampleCount = 1;
+		if(!CreateImage(Target.m_Width, Target.m_Height, 1, 1, Target.m_Format, VK_IMAGE_TILING_OPTIMAL, Target.m_Image, Target.m_ImageMem, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_SAMPLE_COUNT_1_BIT))
+		{
+			DestroyRenderTarget(Target);
+			return false;
+		}
+		Target.m_ImageView = CreateImageView(Target.m_Image, Target.m_Format, VK_IMAGE_VIEW_TYPE_2D, 1, 1);
+		if(Target.m_ImageView == VK_NULL_HANDLE)
+		{
+			DestroyRenderTarget(Target);
+			return false;
+		}
+		VkFramebufferCreateInfo FramebufferInfo{};
+		FramebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		FramebufferInfo.renderPass = m_VKRenderTargetRenderPass;
+		FramebufferInfo.attachmentCount = 1;
+		FramebufferInfo.pAttachments = &Target.m_ImageView;
+		FramebufferInfo.width = Target.m_Width;
+		FramebufferInfo.height = Target.m_Height;
+		FramebufferInfo.layers = 1;
+		if(vkCreateFramebuffer(m_VKDevice, &FramebufferInfo, nullptr, &Target.m_Framebuffer) != VK_SUCCESS)
+		{
+			DestroyRenderTarget(Target);
+			return false;
+		}
 	}
 	if(!CreateRenderTargetDescriptorSet(Target, 0) || !CreateRenderTargetDescriptorSet(Target, 1))
 	{
@@ -290,13 +346,26 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Begin(const CComm
 	if(!EndSwapRenderPassForExternalWork())
 		return false;
 	auto &CommandBuffer = GetMainGraphicCommandBuffer();
-	if(Target.m_Layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && !ImageBarrier(CommandBuffer, Target.m_Image, 0, 1, 0, 1, RenderTargetReadbackFormat(), Target.m_Layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL))
-		return false;
-	Target.m_Layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	const bool Multisampled = Target.m_SampleCount > 1 && Target.m_ResolveImage != VK_NULL_HANDLE;
+	if(Multisampled)
+	{
+		if(Target.m_MSAALayout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && !ImageBarrier(CommandBuffer, Target.m_Image, 0, 1, 0, 1, Target.m_Format, Target.m_MSAALayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL))
+			return false;
+		Target.m_MSAALayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		if(Target.m_Layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && !ImageBarrier(CommandBuffer, Target.m_ResolveImage, 0, 1, 0, 1, Target.m_Format, Target.m_Layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL))
+			return false;
+		Target.m_Layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	}
+	else
+	{
+		if(Target.m_Layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && !ImageBarrier(CommandBuffer, Target.m_Image, 0, 1, 0, 1, Target.m_Format, Target.m_Layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL))
+			return false;
+		Target.m_Layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	}
 
 	VkRenderPassBeginInfo RenderPassInfo{};
 	RenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	RenderPassInfo.renderPass = m_VKRenderTargetRenderPass;
+	RenderPassInfo.renderPass = Multisampled ? m_VKRenderTargetMsaaRenderPass : m_VKRenderTargetRenderPass;
 	RenderPassInfo.framebuffer = Target.m_Framebuffer;
 	RenderPassInfo.renderArea.offset = {0, 0};
 	RenderPassInfo.renderArea.extent = {Target.m_Width, Target.m_Height};
@@ -329,7 +398,11 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_End(const CComman
 	auto &CommandBuffer = GetMainGraphicCommandBuffer();
 	vkCmdEndRenderPass(CommandBuffer);
 	SRenderTarget &Target = m_vRenderTargets[m_ActiveRenderTargetId];
+	// 多采样 render pass 在结束子通道时已完成 resolve，resolve 图从此可被采样；
+	// MSAA 附件停留在 COLOR_ATTACHMENT，下一次 Begin 可直接复用。
 	Target.m_Layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	if(Target.m_SampleCount > 1 && Target.m_ResolveImage != VK_NULL_HANDLE)
+		Target.m_MSAALayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	m_RenderTargetActive = false;
 	m_ActiveRenderTargetId = -1;
 	m_HasDynamicViewport = m_SavedHasDynamicViewport;
@@ -360,7 +433,11 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Readback(const CC
 	if(m_RenderingPaused)
 		return true;
 	SRenderTarget &Target = m_vRenderTargets[pCommand->m_TargetId];
-	if(Target.m_Image == VK_NULL_HANDLE || Target.m_Width == 0 || Target.m_Height == 0)
+	// 背景层使用交换链格式，回读像素格式不匹配；它只用于屏幕合成/模糊，不提供 CPU 回读。
+	if(Target.m_SampleCount != 1)
+		return true;
+	const VkImage ReadbackImage = Target.m_Image;
+	if(ReadbackImage == VK_NULL_HANDLE || Target.m_Width == 0 || Target.m_Height == 0)
 		return true;
 	if(!SubmitCurrentCommandsAndRestartSwapPass())
 		return false;
@@ -371,7 +448,7 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Readback(const CC
 	uint8_t *pResImageData;
 	if(!PreparePresentedImageDataImage(CommandBuffer, pResImageData, Target.m_Width, Target.m_Height))
 		return false;
-	if(!ImageBarrier(CommandBuffer, Target.m_Image, 0, 1, 0, 1, RenderTargetReadbackFormat(), Target.m_Layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL))
+	if(!ImageBarrier(CommandBuffer, ReadbackImage, 0, 1, 0, 1, Target.m_Format, Target.m_Layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL))
 		return false;
 	Target.m_Layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 	if(!ImageBarrier(CommandBuffer, m_GetPresentedImgDataHelperImage, 0, 1, 0, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL))
@@ -388,7 +465,7 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Readback(const CC
 		ImageBlitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		ImageBlitRegion.dstSubresource.layerCount = 1;
 		ImageBlitRegion.dstOffsets[1] = {(int32_t)Target.m_Width, (int32_t)Target.m_Height, 1};
-		vkCmdBlitImage(CommandBuffer, Target.m_Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_GetPresentedImgDataHelperImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &ImageBlitRegion, VK_FILTER_NEAREST);
+		vkCmdBlitImage(CommandBuffer, ReadbackImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_GetPresentedImgDataHelperImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &ImageBlitRegion, VK_FILTER_NEAREST);
 		IsB8G8R8A8 = false;
 	}
 	else
@@ -399,11 +476,11 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Readback(const CC
 		ImageCopyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		ImageCopyRegion.dstSubresource.layerCount = 1;
 		ImageCopyRegion.extent = {Target.m_Width, Target.m_Height, 1};
-		vkCmdCopyImage(CommandBuffer, Target.m_Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_GetPresentedImgDataHelperImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &ImageCopyRegion);
+		vkCmdCopyImage(CommandBuffer, ReadbackImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_GetPresentedImgDataHelperImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &ImageCopyRegion);
 	}
 	if(!ImageBarrier(CommandBuffer, m_GetPresentedImgDataHelperImage, 0, 1, 0, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL))
 		return false;
-	if(!ImageBarrier(CommandBuffer, Target.m_Image, 0, 1, 0, 1, RenderTargetReadbackFormat(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL))
+	if(!ImageBarrier(CommandBuffer, ReadbackImage, 0, 1, 0, 1, Target.m_Format, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL))
 		return false;
 	Target.m_Layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	if(!CheckVulkanResult(vkEndCommandBuffer(CommandBuffer), GFX_ERROR_TYPE_RENDER_RECORDING, "vkEndCommandBuffer (render target readback) failed."))
@@ -487,7 +564,8 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Draw(const CComma
 	if(pCommand->m_TargetId < 0 || (size_t)pCommand->m_TargetId >= m_vRenderTargets.size() || pCommand->m_W <= 0.0f || pCommand->m_H <= 0.0f || pCommand->m_pVertices == nullptr || pCommand->m_PrimCount == 0)
 		return true;
 	SRenderTarget &Target = m_vRenderTargets[pCommand->m_TargetId];
-	if(Target.m_Image == VK_NULL_HANDLE || Target.m_aVKStandardTexturedDescrSets[0].m_Descriptor == VK_NULL_HANDLE)
+	const VkImage SampleImage = Target.m_ResolveImage != VK_NULL_HANDLE ? Target.m_ResolveImage : Target.m_Image;
+	if(SampleImage == VK_NULL_HANDLE || Target.m_aVKStandardTexturedDescrSets[0].m_Descriptor == VK_NULL_HANDLE)
 		return true;
 	FinishRenderThreads();
 	if(m_HasError)
@@ -498,7 +576,7 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Draw(const CComma
 	{
 		if(!EndSwapRenderPassForExternalWork())
 			return false;
-		if(!ImageBarrier(GetMainGraphicCommandBuffer(), Target.m_Image, 0, 1, 0, 1, RenderTargetReadbackFormat(), Target.m_Layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL))
+		if(!ImageBarrier(GetMainGraphicCommandBuffer(), SampleImage, 0, 1, 0, 1, Target.m_Format, Target.m_Layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL))
 			return false;
 		Target.m_Layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		BeginSwapRenderPass(m_VKRenderPassLoad);
@@ -567,7 +645,7 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_CaptureBackbuffer
 		return true;
 	}
 	SRenderTarget &Target = m_vRenderTargets[pCommand->m_TargetId];
-	if(Target.m_Image == VK_NULL_HANDLE || Target.m_Width == 0 || Target.m_Height == 0 ||
+	if(Target.m_SampleCount != 1 || Target.m_Image == VK_NULL_HANDLE || Target.m_Width == 0 || Target.m_Height == 0 ||
 		(Target.m_Layout != VK_IMAGE_LAYOUT_UNDEFINED && Target.m_Layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL))
 		return true;
 

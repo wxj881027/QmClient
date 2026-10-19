@@ -112,20 +112,69 @@ float RoundedRectCoverage(float DistanceValue, float PixelSize)
 	return 1.0 - smoothstep(-Feather * 0.5, Feather * 0.5, DistanceValue);
 }
 
+// 渐变语义与 CPU 端 SQmColorGradient::Position/Sample 保持一致。
+float RoundedRectGradientAmount(float2 UV, float4 Params0, float4 Params1)
+{
+	const float2 Offset = UV - Params0.yz;
+	const float Along = dot(Offset, Params1.xy);
+	const float Across = dot(Offset, float2(-Params1.y, Params1.x));
+	const float Extent = abs(Params1.x) + abs(Params1.y);
+	const float Range = max(Params0.w, 0.0001);
+	float Amount = 0.0;
+	const int Type = int(Params0.x + 0.5);
+	if(Type == 0)
+		Amount = 0.5 + Along / max(Range * Extent, 0.0001);
+	else if(Type == 1)
+		Amount = length(Offset) * 2.0 / Range;
+	else if(Type == 2)
+	{
+		if(length(Offset) > 0.00001)
+		{
+			Amount = atan2(Across, Along) / (2.0 * 3.14159265359);
+			Amount -= floor(Amount);
+			Amount /= Range;
+		}
+	}
+	else if(Type == 3)
+		Amount = abs(Along) * 2.0 / max(Range * Extent, 0.0001);
+	else
+		Amount = (abs(Along) + abs(Across)) * 2.0 / Range;
+	Amount = clamp(Amount, 0.0, 1.0);
+	return Params1.z > 0.5 ? 1.0 - Amount : Amount;
+}
+
+float4 RoundedRectGradientColor(float2 UV, float4 SolidColor, constant float4 *Params)
+{
+	if(Params[14].x < 0.5)
+		return SolidColor;
+	const int Count = clamp(int(Params[13].w + 0.5), 1, 7);
+	if(Count <= 1)
+		return Params[5];
+	const float Amount = RoundedRectGradientAmount(UV, Params[12], Params[13]);
+	const float Scaled = Amount * float(Count - 1);
+	const int Index = min(int(floor(Scaled)), Count - 2);
+	const float T = Scaled - float(Index);
+	return mix(Params[5 + Index], Params[5 + Index + 1], T);
+}
+
 fragment float4 qmclient_rounded_rect_sdf_fragment(SMetalVertexOut Input [[stage_in]], constant float4 *Params [[buffer(1)]])
 {
 	const float4 Rect = Params[0];
-	const float4 FillColor = Params[1];
+	float4 FillColor = Params[1];
 	const float4 BorderColor = Params[2];
 	const float4 CornerRadii = Params[3];
 	const float4 RenderParams = Params[4];
 	const float2 HalfSize = Rect.zw * 0.5;
 	const float2 Point = (Input.m_TexCoord - float2(0.5)) * (Rect.zw + float2(RenderParams.z * 2.0));
+	const float BorderWidth = clamp(RenderParams.x, 0.0, min(HalfSize.x, HalfSize.y));
+	// 渐变坐标必须和几何回退一致：都以边框内缩后的矩形为 0..1 范围。
+	const float2 InnerHalfSize = HalfSize - float2(BorderWidth);
+	const float2 GradientExtent = max(InnerHalfSize, float2(0.0));
+	const float2 GradientUV = clamp((Point + GradientExtent) / max(GradientExtent * 2.0, float2(0.0001)), float2(0.0), float2(1.0));
+	FillColor = RoundedRectGradientColor(GradientUV, FillColor, Params);
 	const float Radius = clamp(RoundedRectCornerRadius(Point, CornerRadii), 0.0, min(HalfSize.x, HalfSize.y));
 	const float OuterDistance = RoundedRectDistance(Point, HalfSize, Radius);
 	const float OuterCoverage = RoundedRectCoverage(OuterDistance, RenderParams.y);
-	const float BorderWidth = clamp(RenderParams.x, 0.0, min(HalfSize.x, HalfSize.y));
-	const float2 InnerHalfSize = HalfSize - float2(BorderWidth);
 	const float4 InnerCornerRadii = max(CornerRadii - float4(BorderWidth), float4(0.0));
 	const float InnerRadius = clamp(RoundedRectCornerRadius(Point, InnerCornerRadii), 0.0, min(InnerHalfSize.x, InnerHalfSize.y));
 	const float InnerDistance = RoundedRectDistance(Point, InnerHalfSize, InnerRadius);

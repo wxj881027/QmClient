@@ -70,6 +70,33 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Create(const CCommandBuf
 
 	Target.m_Width = pCommand->m_Width;
 	Target.m_Height = pCommand->m_Height;
+	Target.m_SampleCount = 1;
+
+	// GL 3.0+/ES3 才有多采样 renderbuffer；调用方只在能力位为真时请求。
+	if(pCommand->m_SampleCount > 1)
+	{
+		glGenFramebuffers(1, &Target.m_MultisampleFramebuffer);
+		glGenRenderbuffers(1, &Target.m_MultisampleRenderbuffer);
+		glBindRenderbuffer(GL_RENDERBUFFER, Target.m_MultisampleRenderbuffer);
+		glRenderbufferStorageMultisample(GL_RENDERBUFFER, pCommand->m_SampleCount, GL_RGBA8, Target.m_Width, Target.m_Height);
+		glBindFramebuffer(GL_FRAMEBUFFER, Target.m_MultisampleFramebuffer);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, Target.m_MultisampleRenderbuffer);
+		const GLenum MultisampleStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		glBindRenderbuffer(GL_RENDERBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		if(MultisampleStatus == GL_FRAMEBUFFER_COMPLETE)
+		{
+			Target.m_SampleCount = pCommand->m_SampleCount;
+		}
+		else
+		{
+			dbg_msg("opengl", "multisample render target %d incomplete: 0x%x; falling back to single sample", pCommand->m_TargetId, MultisampleStatus);
+			glDeleteFramebuffers(1, &Target.m_MultisampleFramebuffer);
+			glDeleteRenderbuffers(1, &Target.m_MultisampleRenderbuffer);
+			Target.m_MultisampleFramebuffer = 0;
+			Target.m_MultisampleRenderbuffer = 0;
+		}
+	}
 }
 
 void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Destroy(const CCommandBuffer::SCommand_RenderTarget_Destroy *pCommand)
@@ -77,6 +104,10 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Destroy(const CCommandBu
 	if(pCommand->m_TargetId < 0 || (size_t)pCommand->m_TargetId >= m_vRenderTargets.size())
 		return;
 	SOpenGLRenderTarget &Target = m_vRenderTargets[pCommand->m_TargetId];
+	if(Target.m_MultisampleFramebuffer != 0)
+		glDeleteFramebuffers(1, &Target.m_MultisampleFramebuffer);
+	if(Target.m_MultisampleRenderbuffer != 0)
+		glDeleteRenderbuffers(1, &Target.m_MultisampleRenderbuffer);
 	if(Target.m_Framebuffer != 0)
 		glDeleteFramebuffers(1, &Target.m_Framebuffer);
 	if(Target.m_Texture != 0)
@@ -103,7 +134,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Begin(const CCommandBuff
 	glGetFloatv(GL_COLOR_CLEAR_VALUE, m_aRenderTargetPreviousClearColor);
 	m_RenderTargetActive = true;
 	m_ActiveRenderTargetId = pCommand->m_TargetId;
-	glBindFramebuffer(GL_FRAMEBUFFER, Target.m_Framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, Target.m_SampleCount > 1 && Target.m_MultisampleFramebuffer != 0 ? Target.m_MultisampleFramebuffer : Target.m_Framebuffer);
 	glViewport(0, 0, Target.m_Width, Target.m_Height);
 	glDisable(GL_SCISSOR_TEST);
 	m_LastClipEnable = false;
@@ -115,6 +146,17 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_End(const CCommandBuffer
 {
 	if(!m_RenderTargetActive)
 		return;
+	if(m_ActiveRenderTargetId >= 0 && (size_t)m_ActiveRenderTargetId < m_vRenderTargets.size())
+	{
+		const SOpenGLRenderTarget &Target = m_vRenderTargets[m_ActiveRenderTargetId];
+		if(Target.m_SampleCount > 1 && Target.m_MultisampleFramebuffer != 0)
+		{
+			// 多采样 renderbuffer 不能直接采样；结束前一次性 resolve 到单采样纹理。
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, Target.m_MultisampleFramebuffer);
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, Target.m_Framebuffer);
+			glBlitFramebuffer(0, 0, Target.m_Width, Target.m_Height, 0, 0, Target.m_Width, Target.m_Height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+		}
+	}
 	glBindFramebuffer(GL_FRAMEBUFFER, m_RenderTargetPreviousFramebuffer);
 	glViewport(m_aRenderTargetPreviousViewport[0], m_aRenderTargetPreviousViewport[1], m_aRenderTargetPreviousViewport[2], m_aRenderTargetPreviousViewport[3]);
 	m_RenderTargetActive = false;

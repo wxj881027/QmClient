@@ -87,13 +87,15 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 	for(const char *pShaderPath : {"data/shader/rounded_rect_sdf.frag", "data/shader/vulkan/rounded_rect_sdf.frag"})
 	{
 		const std::string Shader = ReadTextFile(pShaderPath);
-		EXPECT_NE(Shader.find("gRoundedRectSdfData[5]"), std::string::npos);
+		EXPECT_NE(Shader.find("gRoundedRectSdfData[15]"), std::string::npos);
 		EXPECT_NE(Shader.find("float CornerRadius(vec2 Point, vec4 CornerRadii)"), std::string::npos);
 		EXPECT_NE(Shader.find("float SdfFeather(float DistanceValue, float PixelSize)"), std::string::npos);
 		EXPECT_NE(Shader.find("return max(PixelSize, length(vec2(dFdx(DistanceValue), dFdy(DistanceValue))));"), std::string::npos);
 		EXPECT_NE(Shader.find("return 1.0 - smoothstep(-Feather * 0.5, Feather * 0.5, DistanceValue);"), std::string::npos);
 		EXPECT_NE(Shader.find("vec4 InnerCornerRadii = max(CornerRadii - vec4(BorderWidth), vec4(0.0));"), std::string::npos);
 		EXPECT_NE(Shader.find("float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);"), std::string::npos);
+		EXPECT_NE(Shader.find("vec4 GradientColor(vec2 UV, vec4 SolidColor)"), std::string::npos);
+		EXPECT_NE(Shader.find("vec4 FillColor = GradientColor(GradientUV, "), std::string::npos);
 		EXPECT_NE(Shader.find("float OuterCoverage = Coverage(OuterDistance, Params.y);"), std::string::npos);
 		EXPECT_NE(Shader.find("InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? Coverage(InnerDistance, Params.y) : 0.0;"), std::string::npos);
 		EXPECT_EQ(Shader.find("* 0.8"), std::string::npos);
@@ -115,6 +117,7 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 		const std::string MetalSdfFragment = FunctionBody(MetalShader, "fragment float4 qmclient_rounded_rect_sdf_fragment(");
 		ASSERT_FALSE(MetalSdfFragment.empty());
 		EXPECT_NE(MetalShader.find("fragment float4 qmclient_rounded_rect_sdf_fragment("), std::string::npos);
+		EXPECT_NE(MetalShader.find("float4 RoundedRectGradientColor("), std::string::npos);
 		EXPECT_NE(MetalShader.find("constant float4 *Params [[buffer(1)]]"), std::string::npos);
 		EXPECT_NE(MetalShader.find("float RoundedRectDistance(float2 Point, float2 HalfSize, float Radius)"), std::string::npos);
 		EXPECT_NE(MetalShader.find("float RoundedRectCornerRadius(float2 Point, float4 CornerRadii)"), std::string::npos);
@@ -202,7 +205,7 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 
 	const std::string GraphicsHeader = ReadTextFile("src/engine/graphics.h");
 	const std::string GraphicsThreaded = ReadTextFile("src/engine/client/graphics_threaded.cpp");
-	EXPECT_NE(GraphicsHeader.find("static_assert(sizeof(SRoundedRectSdfParams) == sizeof(vec4) * 5);"), std::string::npos);
+	EXPECT_NE(GraphicsHeader.find("static_assert(sizeof(SRoundedRectSdfParams) == sizeof(vec4) * 15);"), std::string::npos);
 	const std::string RoundedCommand = FunctionBody(GraphicsThreaded, "void CGraphics_Threaded::RenderRoundedRectSdf");
 	EXPECT_NE(RoundedCommand.find("Params.m_Params.z"), std::string::npos);
 	EXPECT_NE(RoundedCommand.find("if(m_NumVertices > 0)"), std::string::npos);

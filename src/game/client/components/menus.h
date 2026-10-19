@@ -2529,6 +2529,9 @@ protected:
 
 public:
 	void RenderBackground();
+	// 在 HUD/文字之前绘制世界之外的菜单背景，并冻结背景绘制阶段。
+	// 由 CGameClient::OnRender 在背景层目标内调用；直接调用 Render 的测试也可作为回退入口。
+	void RenderBackgroundLayer();
 
 	CMenus();
 	// 析构保持隐式：持有 GPU 资源的成员统一在 OnShutdown（图形接口存活期）释放，

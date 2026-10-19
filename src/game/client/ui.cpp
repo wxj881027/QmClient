@@ -313,7 +313,133 @@ void CUi::OnElementsReset()
 void CUi::OnWindowResize()
 {
 	DestroyGaussianBlurTargets();
+	DestroyBackgroundLayerTarget();
 	OnElementsReset();
+}
+
+void CUi::DestroyBackgroundLayerTarget()
+{
+	if(m_BackgroundLayerActive)
+		return;
+	if(m_pGraphics == nullptr)
+	{
+		m_BackgroundLayerTarget.Invalidate();
+	}
+	else if(m_BackgroundLayerTarget.IsValid())
+	{
+		Graphics()->DestroyRenderTarget(&m_BackgroundLayerTarget);
+	}
+	m_BackgroundLayerWidth = 0;
+	m_BackgroundLayerHeight = 0;
+	m_BackgroundLayerSamples = 0;
+}
+
+bool CUi::BeginBackgroundLayer(ColorRGBA ClearColor)
+{
+	if(m_BackgroundLayerActive)
+	{
+		// 上一帧异常路径未结束离屏层：先收口，避免第二帧嵌套 Begin 被后端忽略。
+		Graphics()->EndRenderTarget();
+		m_BackgroundLayerActive = false;
+	}
+	if(Graphics()->IsBackbufferCaptureSupported())
+	{
+		// 交换链捕获会在背景边界处冻结完整背景；离屏层在部分多采样驱动上
+		// resolve 后内容不完整，先优先走捕获路径，离屏层仅作不支持捕获时的回退。
+		return false;
+	}
+	if(!g_Config.m_QmGaussianBlur || !Graphics()->IsRenderTargetSupported() || !Graphics()->IsRenderTargetGaussianBlurSupported() || !Graphics()->IsMultisampleRenderTargetSupported())
+	{
+		DestroyBackgroundLayerTarget();
+		return false;
+	}
+
+	const int Width = Graphics()->ScreenWidth();
+	const int Height = Graphics()->ScreenHeight();
+	const int Samples = Graphics()->MultiSamplingCount();
+	if(Width <= 0 || Height <= 0 || Samples <= 1)
+	{
+		DestroyBackgroundLayerTarget();
+		return false;
+	}
+
+	if(Width != m_BackgroundLayerWidth || Height != m_BackgroundLayerHeight || Samples != m_BackgroundLayerSamples || !m_BackgroundLayerTarget.IsValid())
+	{
+		DestroyBackgroundLayerTarget();
+		m_BackgroundLayerTarget = Graphics()->CreateRenderTarget(Width, Height, Samples);
+		if(!m_BackgroundLayerTarget.IsValid())
+			return false;
+		m_BackgroundLayerWidth = Width;
+		m_BackgroundLayerHeight = Height;
+		m_BackgroundLayerSamples = Samples;
+	}
+
+	if(!Graphics()->BeginRenderTarget(m_BackgroundLayerTarget, ColorRGBA(ClearColor.r, ClearColor.g, ClearColor.b, 1.0f)))
+	{
+		DestroyBackgroundLayerTarget();
+		return false;
+	}
+	m_BackgroundLayerActive = true;
+	return true;
+}
+
+void CUi::EndBackgroundLayer()
+{
+	if(!m_BackgroundLayerActive)
+		return;
+	Graphics()->EndRenderTarget();
+	m_BackgroundLayerActive = false;
+	if(!m_BackgroundLayerTarget.IsValid())
+		return;
+
+	// EndRenderTarget 会恢复进入背景层前的裁剪状态；上一帧 UI 可能留下窄裁剪区，
+	// 若不清除，全屏背景合成只会画在该区域，表现为背景图只剩左侧一条。
+	Graphics()->ClipDisable();
+	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+	const int Width = Graphics()->ScreenWidth();
+	const int Height = Graphics()->ScreenHeight();
+	Graphics()->MapScreen(0.0f, 0.0f, (float)Width, (float)Height);
+	IGraphics::SRenderTargetDrawParams Params;
+	Params.m_X = 0.0f;
+	Params.m_Y = 0.0f;
+	Params.m_W = (float)Width;
+	Params.m_H = (float)Height;
+	Params.m_Opaque = true;
+	Graphics()->DrawRenderTarget(m_BackgroundLayerTarget, Params);
+	Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+}
+
+void CUi::BeginBackgroundFrame()
+{
+	const uint64_t Frame = Client()->PerfFrame();
+	if(m_BackgroundFrame == Frame)
+		return;
+	// 背景层仍处于活动状态时不能降采样（会嵌套 BeginRenderTarget）；
+	// 正常调用顺序保证先 EndBackgroundLayer。
+	if(m_BackgroundLayerActive)
+		return;
+	m_BackgroundFrame = Frame;
+	m_BackgroundBlurFrame = 0;
+	m_GaussianBlurPrepared = false;
+	m_GaussianBlurPreparedFrame = 0;
+	m_GaussianBlurFailedFrame = 0;
+	if(!g_Config.m_QmGaussianBlur)
+	{
+		m_BackgroundBlurFrame = Frame;
+		DestroyBackgroundLayerTarget();
+		return;
+	}
+	// 离屏背景层已经冻结了本帧背景，模糊可延迟到第一个消费者出现时再做；
+	// 没有离屏层（FSAA 关闭/后端不支持）才必须在此刻、文字之前捕获交换链。
+	if(m_BackgroundLayerTarget.IsValid())
+		return;
+	PrepareGaussianBlur();
+}
+
+bool CUi::BackgroundFrameBegun() const
+{
+	return Client() != nullptr && m_BackgroundFrame == Client()->PerfFrame();
 }
 
 void CUi::BeginGaussianBlurScope(float Alpha)
@@ -322,6 +448,8 @@ void CUi::BeginGaussianBlurScope(float Alpha)
 	const bool HasTemporaryTarget = std::any_of(m_aGaussianBlurTemporary.begin(), m_aGaussianBlurTemporary.end(), [](const auto &Target) { return Target.IsValid(); });
 	if(!g_Config.m_QmGaussianBlur && (m_GaussianBlurSource.IsValid() || HasTemporaryTarget || m_GaussianBlurTarget.IsValid()))
 		DestroyGaussianBlurTargets();
+	if(!g_Config.m_QmGaussianBlur)
+		DestroyBackgroundLayerTarget();
 }
 
 void CUi::EndGaussianBlurScope()
@@ -354,19 +482,33 @@ void CUi::DestroyGaussianBlurTargets()
 
 bool CUi::PrepareGaussianBlur()
 {
+	const uint64_t PerfFrame = Client()->PerfFrame();
+	if(m_BackgroundBlurFrame == PerfFrame)
+		return g_Config.m_QmGaussianBlur != 0 && m_GaussianBlurPrepared;
 	if(!g_Config.m_QmGaussianBlur)
 	{
 		m_GaussianBlurPrepared = false;
 		return false;
 	}
-	if(!Graphics()->IsBackbufferCaptureSupported() || !Graphics()->IsRenderTargetGaussianBlurSupported())
+	if(m_BackgroundFrame != PerfFrame || (!m_BackgroundLayerTarget.IsValid() && !Graphics()->IsBackbufferCaptureSupported()))
 	{
+		// 没有背景层也没有帧边界时，宁可不模糊，也不能把已经画出的文字捕获进背板。
 		m_GaussianBlurPrepared = false;
 		const bool HasTemporaryTarget = std::any_of(m_aGaussianBlurTemporary.begin(), m_aGaussianBlurTemporary.end(), [](const auto &Target) { return Target.IsValid(); });
 		if(m_GaussianBlurSource.IsValid() || HasTemporaryTarget || m_GaussianBlurTarget.IsValid())
 			DestroyGaussianBlurTargets();
 		return false;
 	}
+	if(!Graphics()->IsRenderTargetGaussianBlurSupported())
+	{
+		m_BackgroundBlurFrame = PerfFrame;
+		m_GaussianBlurPrepared = false;
+		const bool HasTemporaryTarget = std::any_of(m_aGaussianBlurTemporary.begin(), m_aGaussianBlurTemporary.end(), [](const auto &Target) { return Target.IsValid(); });
+		if(m_GaussianBlurSource.IsValid() || HasTemporaryTarget || m_GaussianBlurTarget.IsValid())
+			DestroyGaussianBlurTargets();
+		return false;
+	}
+	m_BackgroundBlurFrame = PerfFrame;
 
 	const int BlurWidth = UiGaussianBlurTargetDimension(Graphics()->ScreenWidth());
 	const int BlurHeight = UiGaussianBlurTargetDimension(Graphics()->ScreenHeight());
@@ -402,7 +544,6 @@ bool CUi::PrepareGaussianBlur()
 		m_GaussianBlurMode = BlurMode;
 	}
 
-	const uint64_t PerfFrame = Client()->PerfFrame();
 	if(m_GaussianBlurPrepared && m_GaussianBlurPreparedFrame == PerfFrame)
 		return true;
 	// 同帧失败闩：GPU 侧失败在帧内不会自行恢复，后续矩形重试只会重复
@@ -412,7 +553,26 @@ bool CUi::PrepareGaussianBlur()
 
 	FlushQuadBatch();
 	Graphics()->FlushVertices();
-	if(!Graphics()->CaptureBackbufferToRenderTarget(m_GaussianBlurSource))
+	if(m_BackgroundLayerTarget.IsValid())
+	{
+		// 背景层已经 resolve 成单采样纹理；这里只做 1/4 降采样，不读取交换链。
+		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+		if(!Graphics()->BeginRenderTarget(m_GaussianBlurSource, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)))
+		{
+			m_GaussianBlurFailedFrame = PerfFrame;
+			m_GaussianBlurPrepared = false;
+			return false;
+		}
+		Graphics()->MapScreen(0.0f, 0.0f, (float)BlurWidth, (float)BlurHeight);
+		IGraphics::SRenderTargetDrawParams DownsampleParams;
+		DownsampleParams.m_W = (float)BlurWidth;
+		DownsampleParams.m_H = (float)BlurHeight;
+		Graphics()->DrawRenderTarget(m_BackgroundLayerTarget, DownsampleParams);
+		Graphics()->EndRenderTarget();
+		Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+	}
+	else if(!Graphics()->CaptureBackbufferToRenderTarget(m_GaussianBlurSource))
 	{
 		m_GaussianBlurFailedFrame = PerfFrame;
 		m_GaussianBlurPrepared = false;
@@ -1049,6 +1209,13 @@ void CUi::ClipDisable()
 	dbg_assert(IsClipped(), "no clip region");
 	m_vClips.pop_back();
 	UpdateClipping();
+}
+
+void CUi::ResetClipState()
+{
+	while(IsClipped())
+		ClipDisable();
+	Graphics()->ClipDisable();
 }
 
 const CUIRect *CUi::ClipArea() const

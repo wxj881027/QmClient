@@ -916,6 +916,8 @@ void CConfigManager::StoreUnknownCommand(const char *pCommand, ConfigDomain Conf
 	std::string_view Command(pCommand);
 	const std::string Token = QmRemovedConfig::ReadToken(Command);
 	if(str_comp_nocase(Token.c_str(), "qm_new_ui") == 0 ||
+		str_comp_nocase(Token.c_str(), "qm_enhanced_rendering") == 0 ||
+		str_comp_nocase(Token.c_str(), "qm_enhanced_sdf") == 0 ||
 		str_comp_nocase(Token.c_str(), "qm_enhanced_blur") == 0 ||
 		str_comp_nocase(Token.c_str(), "qm_ui_popup_blur") == 0)
 		return;

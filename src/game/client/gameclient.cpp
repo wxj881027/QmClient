@@ -32,6 +32,7 @@
 #include "components/nameplates.h"
 #include "components/particles.h"
 #include "components/players.h"
+#include "components/qmclient/ime_gradient_probe.h"
 #include "components/qmclient/jelly_tee.h"
 #include "components/qmclient/modes.h"
 #include "components/qmclient/perf_logging.h"
@@ -1064,6 +1065,8 @@ void CGameClient::OnInit()
 
 	// setup load amount, load textures
 	const char *pLoadingMessageAssets = Localize("Initializing assets");
+	// 测试专用：IME 渐变圆角 SDF 的像素回归探针。玩家不可触发，避免屏幕上出现测试色块。
+	m_QmImeGradientProbeEnabled = std::getenv("QMCLIENT_TEST_IME_GRADIENT_PROBE") != nullptr;
 	// 测试专用：逐项延迟可复现总加载超过看门狗阈值，以及单项真正停滞的两条路径。
 	const char *pTestAssetDelay = std::getenv("QMCLIENT_TEST_ASSET_LOAD_DELAY_MS");
 	const int TestAssetDelayMs = pTestAssetDelay != nullptr ? std::clamp(str_toint(pTestAssetDelay), 0, 20000) : 0;
@@ -1980,6 +1983,7 @@ void CGameClient::OnRender()
 	}
 
 	const ColorRGBA ClearColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClOverlayEntities ? g_Config.m_ClBackgroundEntitiesColor : g_Config.m_ClBackgroundColor));
+	const bool BackgroundLayerActive = Ui()->BeginBackgroundLayer(ClearColor);
 
 #if defined(CONF_PLATFORM_MACOS)
 	if(g_Config.m_QmMacosGraphicsDiagnostics != 0)
@@ -2002,7 +2006,8 @@ void CGameClient::OnRender()
 		}
 	}
 #endif
-	Graphics()->Clear(ClearColor.r, ClearColor.g, ClearColor.b);
+	if(!BackgroundLayerActive)
+		Graphics()->Clear(ClearColor.r, ClearColor.g, ClearColor.b);
 
 	// check if multi view got activated
 	if(!m_MultiView.m_IsInit && m_MultiViewActivated)
@@ -2063,7 +2068,20 @@ void CGameClient::OnRender()
 
 	// render all systems
 	CPerfTimer ComponentsTimer(PerfEnabled);
+	bool BackgroundBoundaryReached = false;
+	const auto ReachBackgroundBoundary = [&]() {
+		if(BackgroundBoundaryReached)
+			return;
+		BackgroundBoundaryReached = true;
+		// 菜单背景属于背景层；必须在 HUD/文字之前画完并结束离屏层。
+		m_Menus.RenderBackgroundLayer();
+		if(BackgroundLayerActive)
+			Ui()->EndBackgroundLayer();
+		Ui()->BeginBackgroundFrame();
+	};
 	const auto RenderComponent = [&](CComponent *pComponent) {
+		if(pComponent == &m_Hud)
+			ReachBackgroundBoundary();
 		if(pComponent == &m_Menus)
 		{
 			CPerfTimer StageTimer(PerfEnabled);
@@ -2117,6 +2135,11 @@ void CGameClient::OnRender()
 	// 开启后永远不会产生 perf/stutter 报告；这里在渲染帧末尾统一消费。
 	ProcessQmStutterFrame();
 	LogQmIconDiagnostics(Client());
+
+	// 像素回归探针：只在测试进程里、由 QMCLIENT_TEST_IME_GRADIENT_PROBE 开启。
+	// 每帧重绘，这样它之后的任意一次 screenshot 都能拍到。
+	if(m_QmImeGradientProbeEnabled)
+		QmImeGradientProbeDraw(this);
 
 	m_pFrameScheduler->EndFrame();
 	// resend player and dummy info if it was filtered by server

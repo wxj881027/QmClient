@@ -5,7 +5,8 @@
 
 inline qm_vulkan_ext::EEnhancedMode CCommandProcessorFragment_Vulkan::QmEnhancedMode() const
 {
-	return qm_vulkan_ext::ModeFromConfig(g_Config.m_QmEnhancedRendering);
+	// SDF 已常驻；保留 AUTO 语义仅用于可选管线失败时的会话内熔断。
+	return qm_vulkan_ext::EEnhancedMode::AUTO;
 }
 
 inline bool CCommandProcessorFragment_Vulkan::QmEnhancedShouldLoad() const
@@ -18,15 +19,11 @@ inline void CCommandProcessorFragment_Vulkan::QmEnhancedMarkDisabled(const qm_vu
 	m_QmEnhancedSessionDisabled = true;
 	m_QmEnhancedDisableReason = Reason;
 	m_QmMediaIslandSdfPipelineValid = false;
-	m_QmRoundedRectSdfPipelineValid = false;
 	m_ProceduralRingPipelineValid = false;
 	SyncProceduralRingCapability();
 	if(m_pBackendCapabilities != nullptr)
-	{
 		m_pBackendCapabilities->m_MediaIslandSdf = false;
-		m_pBackendCapabilities->m_RoundedRectSdf = false;
-	}
-	log_info("vulkan", "Qm enhanced rendering disabled: %s", qm_vulkan_ext::DisableReasonLabel(Reason));
+	log_info("vulkan", "Qm optional enhanced pipelines disabled: %s", qm_vulkan_ext::DisableReasonLabel(Reason));
 }
 
 inline void CCommandProcessorFragment_Vulkan::SyncProceduralRingCapability()
@@ -273,34 +270,31 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderProceduralRing(const CCo
 inline int CCommandProcessorFragment_Vulkan::InitQmPipelines()
 {
 	m_LastPipelineCreateResult = VK_SUCCESS;
-	// ==== QmVulkan 扩展管线：仅在增强渲染启用时创建 ====
+	// ==== QmVulkan 扩展管线：增强效果与核心 UI AA 分开创建 ====
 	m_QmMediaIslandSdfPipelineValid = false;
 	m_QmRoundedRectSdfPipelineValid = false;
 	m_ProceduralRingPipelineValid = false;
 	m_GaussianBlurPipelineValid = false;
+	// 圆角 SDF 是普通 UI 的核心 AA 路径，不能随增强渲染开关一起停用：
+	// 关闭后 UI 会退回几何圆角，只能依赖全屏 FSAA 补边，既贵又与模糊捕获冲突。
+	m_QmRoundedRectSdfPipelineValid = CreateRoundedRectSdfGraphicsPipeline("shader/vulkan/rounded_rect_sdf.vert.spv", "shader/vulkan/rounded_rect_sdf.frag.spv");
+	if(m_HasError || m_LastPipelineCreateResult == VK_ERROR_DEVICE_LOST)
+		return -1;
+	if(!m_QmRoundedRectSdfPipelineValid)
+	{
+		m_RoundedRectSdfPipeline.Destroy(m_VKDevice);
+		SetWarning(EGfxWarningType::GFX_WARNING_TYPE_INIT_FAILED, "Rounded-rect SDF pipeline unavailable, falling back to geometry.");
+	}
 	if(QmEnhancedShouldLoad())
 	{
-		if(g_Config.m_QmEnhancedSdf)
+		// SDF 常驻：Media Island 与圆角使用同一类自定义管线，失败只回退几何，不关闭 SDF。
+		m_QmMediaIslandSdfPipelineValid = CreateMediaIslandSdfGraphicsPipeline("shader/vulkan/media_island_sdf.vert.spv", "shader/vulkan/media_island_sdf.frag.spv");
+		if(m_HasError || m_LastPipelineCreateResult == VK_ERROR_DEVICE_LOST)
+			return -1;
+		if(!m_QmMediaIslandSdfPipelineValid)
 		{
-			m_QmMediaIslandSdfPipelineValid = CreateMediaIslandSdfGraphicsPipeline("shader/vulkan/media_island_sdf.vert.spv", "shader/vulkan/media_island_sdf.frag.spv");
-			if(m_HasError || m_LastPipelineCreateResult == VK_ERROR_DEVICE_LOST)
-				return -1;
-			m_QmRoundedRectSdfPipelineValid = CreateRoundedRectSdfGraphicsPipeline("shader/vulkan/rounded_rect_sdf.vert.spv", "shader/vulkan/rounded_rect_sdf.frag.spv");
-			if(m_HasError || m_LastPipelineCreateResult == VK_ERROR_DEVICE_LOST)
-				return -1;
-			if(!m_QmMediaIslandSdfPipelineValid || !m_QmRoundedRectSdfPipelineValid)
-			{
-				m_MediaIslandSdfPipeline.Destroy(m_VKDevice);
-				m_RoundedRectSdfPipeline.Destroy(m_VKDevice);
-				m_QmMediaIslandSdfPipelineValid = false;
-				m_QmRoundedRectSdfPipelineValid = false;
-				if(QmEnhancedMode() == qm_vulkan_ext::EEnhancedMode::ON)
-				{
-					SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating Qm SDF pipelines failed.");
-					return -1;
-				}
-				QmEnhancedMarkDisabled(qm_vulkan_ext::EDisableReason::PIPELINE_CREATE_FAILED);
-			}
+			m_MediaIslandSdfPipeline.Destroy(m_VKDevice);
+			QmEnhancedMarkDisabled(qm_vulkan_ext::EDisableReason::PIPELINE_CREATE_FAILED);
 		}
 		if(!m_QmEnhancedSessionDisabled && g_Config.m_QmEnhancedProceduralRing)
 		{

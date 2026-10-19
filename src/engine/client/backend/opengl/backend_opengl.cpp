@@ -611,6 +611,7 @@ bool CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
 		}
 	}
 
+	pCommand->m_pCapabilities->m_RenderTargetMSAA = pCommand->m_pCapabilities->m_RenderTargets && pCommand->m_pCapabilities->m_ShaderSupport && MajorV >= 3;
 	pCommand->m_pCapabilities->m_pRenderTargetSupportReason = pCommand->m_pCapabilities->m_RenderTargets ? "supported" : "opengl_context_without_render_target_support";
 
 	if(*pCommand->m_pInitError != -2)

@@ -2769,6 +2769,8 @@ void CMenus::RenderLoadingDirect(const char *pCaption, const char *pContent, std
 	ms_GuiColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_UiColor, true));
 
 	Ui()->MapScreen();
+	// ClipDisable 需要与 ClipEnable 配对；统一走 ResetClipState 清理帧边界残留。
+	Ui()->ResetClipState();
 
 	if(GameClient()->m_MenuBackground.IsLoading())
 	{
@@ -4002,6 +4004,16 @@ void CMenus::Render()
 	m_MenuUiPerfScrollActive = false;
 	Ui()->MapScreen();
 	Ui()->SetMouseSlow(false);
+	// 正常主循环已在 HUD 之前完成背景层；直接调用 Render 的测试/加载路径在此回退。
+	if(!Ui()->BackgroundFrameBegun())
+	{
+		RenderBackgroundLayer();
+		// 背景层只容纳菜单背景；菜单 UI（导航栏、卡片、文字）必须画到交换链上，
+		// 否则整帧 UI 会被背景层合成覆盖，表现为导航栏等元素消失。
+		if(Ui()->BackgroundLayerActive())
+			Ui()->EndBackgroundLayer();
+		Ui()->BeginBackgroundFrame();
+	}
 
 	if(MenuOpenFrame == 0)
 	{
@@ -4070,10 +4082,6 @@ void CMenus::Render()
 	}
 	else
 	{
-		if(!GameClient()->m_MenuBackground.Render())
-		{
-			RenderBackground();
-		}
 		ms_ColorTabbarInactive = ms_ColorTabbarInactiveOutgame;
 		ms_ColorTabbarActive = ms_ColorTabbarActiveOutgame;
 		ms_ColorTabbarHover = ms_ColorTabbarHoverOutgame;
@@ -8496,6 +8504,32 @@ void CMenus::UpdateColors()
 	ms_ColorTabbarInactiveIngame = MenuUiColorSurface(0.45f, 0.16f);
 	ms_ColorTabbarActiveIngame = MenuUiColorSurface(0.70f, 0.16f);
 	ms_ColorTabbarHoverIngame = MenuUiColorSurface(0.62f, 0.20f);
+}
+
+void CMenus::RenderBackgroundLayer()
+{
+	if(Ui()->BackgroundFrameBegun())
+		return;
+	// 菜单背景原先在 Ui()->MapScreen() 之后绘制。现在提前到组件循环边界，
+	// 必须显式恢复 UI 屏幕映射，否则会沿用世界/HUD 留下的投影，背景图会偏移。
+	Ui()->MapScreen();
+	// 上一帧 UI 可能留下未关闭的窄裁剪区；不清除会把菜单背景裁成左侧一条。
+	Ui()->ResetClipState();
+	const IClient::EClientState ClientState = Client()->State();
+	UpdateColors();
+	if(ClientState == IClient::STATE_ONLINE || ClientState == IClient::STATE_DEMOPLAYBACK)
+	{
+		ms_ColorTabbarInactive = ms_ColorTabbarInactiveIngame;
+		ms_ColorTabbarActive = ms_ColorTabbarActiveIngame;
+		ms_ColorTabbarHover = ms_ColorTabbarHoverIngame;
+		return;
+	}
+
+	ms_ColorTabbarInactive = ms_ColorTabbarInactiveOutgame;
+	ms_ColorTabbarActive = ms_ColorTabbarActiveOutgame;
+	ms_ColorTabbarHover = ms_ColorTabbarHoverOutgame;
+	if(!GameClient()->m_MenuBackground.Render())
+		RenderBackground();
 }
 
 void CMenus::RenderBackground()

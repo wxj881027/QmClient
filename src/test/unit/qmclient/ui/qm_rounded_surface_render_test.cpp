@@ -265,12 +265,20 @@ TEST_F(CQmRoundedSurfaceRender, TranslucentGradientDoesNotHaveBorderBehindInteri
 		Gradient.m_aColors[1] = ColorRGBA(0, 1, 0, 0.4f);
 		ASSERT_TRUE(DrawRoundedGradientSurface(&Graphics, m_Rect, Gradient, 0.5f, ColorRGBA(0, 0, 1, 0.7f), m_Params));
 		const vec2 Point(10.37f, 6.23f);
-		ExpectColor(Graphics.Sample(Point), Gradient.Sample((Point - vec2(1, 1)) / vec2(28, 18)).WithMultipliedAlpha(0.5f));
 		if(HasSdf)
 		{
 			ASSERT_EQ(Graphics.m_vSdf.size(), 1u);
-			EXPECT_FLOAT_EQ(Graphics.m_vSdf[0].m_FillColor.a, 0.0f);
-			EXPECT_FLOAT_EQ(Graphics.m_vSdf[0].m_BorderColor.a, 0.7f);
+			const auto &Sdf = Graphics.m_vSdf[0];
+			EXPECT_FLOAT_EQ(Sdf.m_GradientParams2.x, 1.0f);
+			EXPECT_FLOAT_EQ(Sdf.m_GradientParams0.w, Gradient.m_Range);
+			EXPECT_FLOAT_EQ(Sdf.m_GradientParams1.w, 2.0f);
+			EXPECT_EQ(Sdf.m_aGradientColors[0], vec4(1, 0, 0, 0.2f));
+			EXPECT_EQ(Sdf.m_aGradientColors[1], vec4(0, 1, 0, 0.2f));
+			EXPECT_FLOAT_EQ(Sdf.m_BorderColor.a, 0.7f);
+		}
+		else
+		{
+			ExpectColor(Graphics.Sample(Point), Gradient.Sample((Point - vec2(1, 1)) / vec2(28, 18)).WithMultipliedAlpha(0.5f));
 		}
 	}
 }

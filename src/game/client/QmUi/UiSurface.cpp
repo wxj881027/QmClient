@@ -102,6 +102,29 @@ bool DrawRoundedGradientSurface(IGraphics *pGraphics, const CUIRect &Rect, const
 		return DrawRoundedSurface(pGraphics, Rect, Fill, Border, Params);
 	}
 	const SRoundedSurfacePlan Plan = ResolveRoundedSurfacePlan(Rect, Params, pGraphics->HasRoundedRectSdf());
+	// 渐变填充在 SDF 片元里按同一套语义采样，避免 32x16 网格在圆角处露出多边形边缘。
+	if(Plan.m_UseSdf)
+	{
+		IGraphics::SRoundedRectSdfParams SdfParams;
+		SdfParams.m_Rect = vec4(Plan.m_Rect.x, Plan.m_Rect.y, Plan.m_Rect.w, Plan.m_Rect.h);
+		const ColorRGBA First = Gradient.m_aColors[0];
+		SdfParams.m_FillColor = vec4(First.r, First.g, First.b, First.a * Alpha);
+		const ColorRGBA ResolvedBorder = Plan.m_BorderWidth > 0.0f ? Border : First;
+		SdfParams.m_BorderColor = vec4(ResolvedBorder.r, ResolvedBorder.g, ResolvedBorder.b, ResolvedBorder.a);
+		SdfParams.m_CornerRadii = Plan.m_CornerRadii;
+		SdfParams.m_Params = vec4(Plan.m_BorderWidth, Plan.m_PixelSize, Plan.m_PixelSize * 2.0f, 0.0f);
+		const int Count = std::clamp(Gradient.m_NumColors, 1, (int)IGraphics::ROUNDED_RECT_SDF_GRADIENT_MAX_COLORS);
+		for(int i = 0; i < Count; ++i)
+		{
+			const ColorRGBA Color = Gradient.m_aColors[i];
+			SdfParams.m_aGradientColors[i] = vec4(Color.r, Color.g, Color.b, Color.a * Alpha);
+		}
+		SdfParams.m_GradientParams0 = vec4((float)Gradient.m_Type, Gradient.m_Center.x, Gradient.m_Center.y, Gradient.m_Range);
+		SdfParams.m_GradientParams1 = vec4(Gradient.m_Direction.x, Gradient.m_Direction.y, Gradient.m_Reverse ? 1.0f : 0.0f, (float)Count);
+		SdfParams.m_GradientParams2.x = 1.0f;
+		pGraphics->RenderRoundedRectSdf(SdfParams);
+		return true;
+	}
 	CUIRect Inner = Plan.m_Rect;
 	if(Plan.m_BorderWidth > 0.0f)
 	{

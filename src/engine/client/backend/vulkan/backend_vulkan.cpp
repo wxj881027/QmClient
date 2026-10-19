@@ -510,13 +510,21 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 
 	struct SRenderTarget
 	{
+		// 多采样目标：m_Image 是 MSAA 颜色附件，resolve 到 m_ResolveImage；
+		// m_ImageView 始终是可供采样/回读的单采样视图，因此调用方无需区分目标类型。
 		VkImage m_Image = VK_NULL_HANDLE;
 		SMemoryImageBlock<IMAGE_BUFFER_CACHE_ID> m_ImageMem;
 		VkImageView m_ImageView = VK_NULL_HANDLE;
+		VkImageView m_AttachmentImageView = VK_NULL_HANDLE;
+		VkImage m_ResolveImage = VK_NULL_HANDLE;
+		SMemoryImageBlock<IMAGE_BUFFER_CACHE_ID> m_ResolveImageMem;
 		VkFramebuffer m_Framebuffer = VK_NULL_HANDLE;
+		VkFormat m_Format = VK_FORMAT_UNDEFINED;
 		VkImageLayout m_Layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		VkImageLayout m_MSAALayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		uint32_t m_Width = 0;
 		uint32_t m_Height = 0;
+		uint32_t m_SampleCount = 1;
 		std::array<SDeviceDescriptorSet, 2> m_aVKStandardTexturedDescrSets;
 	};
 
@@ -1320,6 +1328,7 @@ private:
 	VkRenderPass m_VKRenderPassDiscard = VK_NULL_HANDLE;
 	VkRenderPass m_VKRenderPassLoadDiscard = VK_NULL_HANDLE;
 	VkRenderPass m_VKRenderTargetRenderPass = VK_NULL_HANDLE;
+	VkRenderPass m_VKRenderTargetMsaaRenderPass = VK_NULL_HANDLE;
 
 	VkSurfaceFormatKHR m_VKSurfFormat;
 
@@ -3735,6 +3744,7 @@ protected:
 			SourceStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 			DestinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 		}
+
 		else if(OldLayout == VK_IMAGE_LAYOUT_UNDEFINED && NewLayout == VK_IMAGE_LAYOUT_GENERAL)
 		{
 			Barrier.srcAccessMask = 0;
@@ -5655,9 +5665,12 @@ public:
 		m_VKRenderPassLoadDiscard = VK_NULL_HANDLE;
 		if(m_VKRenderTargetRenderPass != VK_NULL_HANDLE)
 			vkDestroyRenderPass(m_VKDevice, m_VKRenderTargetRenderPass, nullptr);
+		if(m_VKRenderTargetMsaaRenderPass != VK_NULL_HANDLE)
+			vkDestroyRenderPass(m_VKDevice, m_VKRenderTargetMsaaRenderPass, nullptr);
 		m_VKRenderPass = VK_NULL_HANDLE;
 		m_VKRenderPassLoad = VK_NULL_HANDLE;
 		m_VKRenderTargetRenderPass = VK_NULL_HANDLE;
+		m_VKRenderTargetMsaaRenderPass = VK_NULL_HANDLE;
 	}
 
 	[[nodiscard]] bool CreateFramebuffers()
@@ -7481,9 +7494,17 @@ public:
 			return -1;
 		if(!CreateRenderPass(m_VKRenderTargetRenderPass, true, false, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, true, RenderTargetReadbackFormat()))
 			return -1;
+		// 背景层使用与交换链同采样数的离屏目标：世界渲染进 MSAA 附件，render pass
+		// 结束时 resolve 到单采样图像，模糊/合成只读取该图像，文字随后直接写交换链。
+		if(HasMultiSampling() && !CreateRenderPass(m_VKRenderTargetMsaaRenderPass, true, false, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, false, m_VKSurfFormat.format, false))
+			return -1;
+		if(m_pBackendCapabilities != nullptr)
+			m_pBackendCapabilities->m_RenderTargetMSAA = m_VKRenderTargetMsaaRenderPass != VK_NULL_HANDLE;
 
 		if(!CreateFramebuffers())
 			return -1;
+
+		log_info("vulkan", "swapchain fsaa requested=%u selected=%u multisample=%d", (uint32_t)g_Config.m_GfxFsaaSamples, (uint32_t)GetSampleCount(), HasMultiSampling() ? 1 : 0);
 
 		if(!CreateStandardGraphicsPipeline("shader/vulkan/prim.vert.spv", "shader/vulkan/prim.frag.spv", false, false))
 			return -1;
@@ -8463,6 +8484,7 @@ public:
 		pCommand->m_pCapabilities->m_ProceduralRing.store(false, std::memory_order_release);
 		pCommand->m_pCapabilities->m_RenderTargetGaussianBlur = false;
 		pCommand->m_pCapabilities->m_BackbufferCapture = false;
+		pCommand->m_pCapabilities->m_RenderTargetMSAA = false;
 		// 交换链通道结束时已 resolve，捕获读取单采样交换链；离屏管线也独立使用单采样。
 		pCommand->m_pCapabilities->m_RenderTargetExternalPassRequiresSingleSample = false;
 		pCommand->m_pCapabilities->m_TileBuffering = true;

@@ -427,6 +427,11 @@ public:
 	static_assert(sizeof(vec4) == sizeof(float) * 4);
 	static_assert(sizeof(SMediaIslandSdfParams) == SMediaIslandSdfParams::DATA_COUNT * sizeof(vec4));
 
+	enum
+	{
+		ROUNDED_RECT_SDF_GRADIENT_MAX_COLORS = 7,
+	};
+
 	// A compact rounded-rectangle primitive shared by UI chrome. It intentionally
 	// remains separate from the Media Island data layout so UI controls do not
 	// inherit HUD-specific shape semantics.
@@ -439,8 +444,16 @@ public:
 		vec4 m_CornerRadii{};
 		// 边框宽度、逻辑像素大小、外部 quad padding、保留字段
 		vec4 m_Params{};
+		// 可选渐变填充：最多七色，和 CPU 端 SQmColorGradient 使用同一套语义。
+		vec4 m_aGradientColors[ROUNDED_RECT_SDF_GRADIENT_MAX_COLORS]{};
+		// x=类型, y=中心 x, z=中心 y, w=范围
+		vec4 m_GradientParams0{};
+		// x=方向 x, y=方向 y, z=反向, w=颜色数
+		vec4 m_GradientParams1{};
+		// x=是否启用渐变
+		vec4 m_GradientParams2{};
 	};
-	static_assert(sizeof(SRoundedRectSdfParams) == sizeof(vec4) * 5);
+	static_assert(sizeof(SRoundedRectSdfParams) == sizeof(vec4) * 15);
 
 	enum
 	{
@@ -647,8 +660,18 @@ public:
 	virtual bool IsRenderTargetSupported() const = 0;
 	virtual bool IsRenderTargetGaussianBlurSupported() const = 0;
 	virtual bool IsBackbufferCaptureSupported() const = 0;
+	// 仅后端能创建与交换链同采样数的离屏目标时返回 true。背景/文字分层依赖它：
+	// 世界先写入多采样离屏目标并 resolve，文字再直接写交换链，模糊只采样已 resolve 的背景。
+	virtual bool IsMultisampleRenderTargetSupported() const { return false; }
+	virtual int MultiSamplingCount() const { return 0; }
 	virtual const char *RenderTargetSupportReason() const = 0;
 	virtual CRenderTargetHandle CreateRenderTarget(int Width, int Height) = 0;
+	// 默认退回单采样，旧后端与测试 fake 不需要感知多采样目标。
+	virtual CRenderTargetHandle CreateRenderTarget(int Width, int Height, int SampleCount)
+	{
+		(void)SampleCount;
+		return CreateRenderTarget(Width, Height);
+	}
 	virtual void DestroyRenderTarget(CRenderTargetHandle *pTarget) = 0;
 	virtual bool BeginRenderTarget(CRenderTargetHandle Target, ColorRGBA ClearColor) = 0;
 	virtual void EndRenderTarget() = 0;

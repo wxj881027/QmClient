@@ -307,6 +307,7 @@ public:
 		int m_TargetId = -1;
 		int m_Width = 0;
 		int m_Height = 0;
+		int m_SampleCount = 1;
 	};
 
 	struct SCommand_RenderTarget_Destroy : public SCommand
@@ -945,6 +946,7 @@ public:
 	virtual bool HasRenderTargets() { return false; }
 	virtual bool HasRenderTargetGaussianBlur() { return false; }
 	virtual bool HasBackbufferCapture() { return false; }
+	virtual bool HasRenderTargetMSAA() { return false; }
 	virtual bool RenderTargetExternalPassRequiresSingleSample() { return false; }
 	virtual const char *RenderTargetSupportReason() { return HasRenderTargets() ? "supported" : "unsupported_by_backend"; }
 	virtual bool Uses2DTextureArrays() { return false; }
@@ -1000,6 +1002,7 @@ class CGraphics_Threaded : public IEngineGraphics
 	bool m_GLRenderTargetsSupported;
 	bool m_GLRenderTargetGaussianBlurSupported;
 	bool m_GLBackbufferCaptureSupported;
+	bool m_GLRenderTargetMSAASupported;
 	bool m_GLRenderTargetExternalPassRequiresSingleSample;
 	uint32_t m_MultiSamplingCount;
 	int m_PendingMultiSamplingCount;
@@ -1216,8 +1219,11 @@ public:
 	bool IsRenderTargetSupported() const override;
 	bool IsRenderTargetGaussianBlurSupported() const override;
 	bool IsBackbufferCaptureSupported() const override;
+	bool IsMultisampleRenderTargetSupported() const override;
+	int MultiSamplingCount() const override { return (int)m_MultiSamplingCount; }
 	const char *RenderTargetSupportReason() const override;
 	CRenderTargetHandle CreateRenderTarget(int Width, int Height) override;
+	CRenderTargetHandle CreateRenderTarget(int Width, int Height, int SampleCount) override;
 	void DestroyRenderTarget(CRenderTargetHandle *pTarget) override;
 	bool BeginRenderTarget(CRenderTargetHandle Target, ColorRGBA ClearColor) override;
 	void EndRenderTarget() override;

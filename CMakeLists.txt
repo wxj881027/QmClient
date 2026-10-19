@@ -3633,6 +3633,8 @@ if(CLIENT)
     components/qmclient/mobile_spectator.h
     components/qmclient/mobile_spectator_controls.h
     components/qmclient/screenshot_manager.cpp
+    components/qmclient/ime_gradient_probe.cpp
+    components/qmclient/ime_gradient_probe.h
     components/qmclient/config_package.cpp
     components/qmclient/config_package.h
     components/qmclient/screenshot_manager.h

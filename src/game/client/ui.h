@@ -736,6 +736,15 @@ private:
 	IGraphics::CRenderTargetHandle m_GaussianBlurSource;
 	std::array<IGraphics::CRenderTargetHandle, IGraphics::DUAL_KAWASE_PYRAMID_LEVELS> m_aGaussianBlurTemporary;
 	IGraphics::CRenderTargetHandle m_GaussianBlurTarget;
+	// 世界/菜单背景离屏层：多采样附件在 End 时 resolve，模糊只采样 resolve 图。
+	IGraphics::CRenderTargetHandle m_BackgroundLayerTarget;
+	int m_BackgroundLayerWidth = 0;
+	int m_BackgroundLayerHeight = 0;
+	int m_BackgroundLayerSamples = 0;
+	bool m_BackgroundLayerActive = false;
+	uint64_t m_BackgroundFrame = 0;
+	// 本帧模糊源已尝试准备（成功或失败）；同帧任何弹层重绘都不得再次捕获。
+	uint64_t m_BackgroundBlurFrame = 0;
 	int m_GaussianBlurWidth = 0;
 	int m_GaussianBlurHeight = 0;
 	int m_GaussianBlurMode = -1;
@@ -902,8 +911,19 @@ private:
 	int QuadBatchRectContainer(float Width, float Height, float Rounding, int Corners) const;
 	void RenderQuadContainerBatchable(int QuadContainerIndex, float X, float Y, const ColorRGBA &Color) const;
 	void DestroyGaussianBlurTargets();
+	void DestroyBackgroundLayerTarget();
 
 public:
+	// 背景层：世界/菜单背景单独写入多采样离屏目标并 resolve，供模糊采样。
+	// 必须在任何前景文字之前调用；失败时返回 false，调用方回退到直接渲染交换链。
+	bool BeginBackgroundLayer(ColorRGBA ClearColor);
+	void EndBackgroundLayer();
+	bool BackgroundLayerActive() const { return m_BackgroundLayerActive; }
+	// 标记“背景已结束、前景尚未开始”的帧边界，并准备本帧模糊源。
+	// 同一帧重复调用无副作用；未调用时 PrepareGaussianBlur 不会读取交换链。
+	void BeginBackgroundFrame();
+	bool BackgroundFrameBegun() const;
+
 	static const CLinearScrollbarScale ms_LinearScrollbarScale;
 	static const CLogarithmicScrollbarScale ms_LogarithmicScrollbarScale;
 	static const CDarkButtonColorFunction ms_DarkButtonColorFunction;
@@ -1188,6 +1208,8 @@ public:
 
 	void ClipEnable(const CUIRect *pRect);
 	void ClipDisable();
+	// 清掉帧边界可能残留的 CUi 裁剪栈与后端裁剪状态；不要求当前有裁剪。
+	void ResetClipState();
 	const CUIRect *ClipArea() const;
 	const CUIRect *OutermostClipArea() const;
 	bool IsClipped() const { return !m_vClips.empty(); }

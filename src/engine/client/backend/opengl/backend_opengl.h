@@ -60,10 +60,15 @@ protected:
 
 	struct SOpenGLRenderTarget
 	{
+		// 多采样目标把绘制写入 MSAA renderbuffer，End 时 blit 到 m_Texture；
+		// 因此采样、回读和模糊都只接触单采样 m_Texture。
 		TWGLuint m_Framebuffer = 0;
 		TWGLuint m_Texture = 0;
+		TWGLuint m_MultisampleFramebuffer = 0;
+		TWGLuint m_MultisampleRenderbuffer = 0;
 		int m_Width = 0;
 		int m_Height = 0;
+		int m_SampleCount = 1;
 	};
 	std::vector<SOpenGLRenderTarget> m_vRenderTargets;
 	TWGLint m_aRenderTargetPreviousViewport[4] = {0, 0, 0, 0};

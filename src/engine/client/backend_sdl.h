@@ -151,6 +151,7 @@ struct SBackendCapabilities
 	bool m_RenderTargets = false;
 	bool m_RenderTargetGaussianBlur = false;
 	bool m_BackbufferCapture = false;
+	bool m_RenderTargetMSAA = false;
 	bool m_RenderTargetExternalPassRequiresSingleSample = false;
 	const char *m_pRenderTargetSupportReason = "not_initialized";
 
@@ -185,6 +186,7 @@ struct SBackendCapabilities
 		m_RenderTargets = false;
 		m_RenderTargetGaussianBlur = false;
 		m_BackbufferCapture = false;
+		m_RenderTargetMSAA = false;
 		m_RenderTargetExternalPassRequiresSingleSample = false;
 		m_pRenderTargetSupportReason = "not_initialized";
 		m_TrianglesAsQuads = false;
@@ -367,6 +369,7 @@ public:
 	bool HasRenderTargets() override { return m_Capabilities.m_RenderTargets; }
 	bool HasRenderTargetGaussianBlur() override { return m_Capabilities.m_RenderTargetGaussianBlur; }
 	bool HasBackbufferCapture() override { return m_Capabilities.m_BackbufferCapture; }
+	bool HasRenderTargetMSAA() override { return m_Capabilities.m_RenderTargetMSAA; }
 	bool RenderTargetExternalPassRequiresSingleSample() override { return m_Capabilities.m_RenderTargetExternalPassRequiresSingleSample; }
 	const char *RenderTargetSupportReason() override { return m_Capabilities.m_RenderTargets ? "supported" : m_Capabilities.m_pRenderTargetSupportReason; }
 	bool Uses2DTextureArrays() override { return m_Capabilities.m_2DArrayTextures; }

@@ -62,6 +62,8 @@ namespace
 		}
 
 	public:
+		bool IsBackbufferCaptureSupported() const override { return false; }
+		bool IsRenderTargetGaussianBlurSupported() const override { return false; }
 		struct SQuadSubmission
 		{
 			CUIRect m_Rect;

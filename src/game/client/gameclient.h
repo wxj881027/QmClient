@@ -472,6 +472,9 @@ private:
 	static void ConTuneZone(IConsole::IResult *pResult, void *pUserData);
 	static void ConMapbug(IConsole::IResult *pResult, void *pUserData);
 	static void ConQmSponsorNudgePreview(IConsole::IResult *pResult, void *pUserData);
+	// 仅由测试环境变量 QMCLIENT_TEST_IME_GRADIENT_PROBE 开启，不提供控制台命令：
+	// 这个探针会在屏幕上画出彩色胶囊，不能成为玩家可触发的正式功能。
+	bool m_QmImeGradientProbeEnabled = false;
 
 	static void ConchainMenuMap(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 

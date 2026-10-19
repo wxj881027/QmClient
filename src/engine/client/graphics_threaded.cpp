@@ -249,6 +249,7 @@ CGraphics_Threaded::CGraphics_Threaded()
 	m_GLRenderTargetsSupported = false;
 	m_GLRenderTargetGaussianBlurSupported = false;
 	m_GLBackbufferCaptureSupported = false;
+	m_GLRenderTargetMSAASupported = false;
 	m_GLRenderTargetExternalPassRequiresSingleSample = false;
 	m_MultiSamplingCount = 0;
 	m_PendingMultiSamplingCount = -1;
@@ -753,6 +754,11 @@ bool CGraphics_Threaded::IsBackbufferCaptureSupported() const
 	return IGraphics::SingleSampleFeatureAllowedUnderMsaa(m_GLBackbufferCaptureSupported, m_GLRenderTargetExternalPassRequiresSingleSample, m_MultiSamplingCount);
 }
 
+bool CGraphics_Threaded::IsMultisampleRenderTargetSupported() const
+{
+	return m_GLRenderTargetsSupported && m_GLRenderTargetMSAASupported && m_MultiSamplingCount > 1;
+}
+
 const char *CGraphics_Threaded::RenderTargetSupportReason() const
 {
 	if(m_GLRenderTargetsSupported)
@@ -764,10 +770,19 @@ const char *CGraphics_Threaded::RenderTargetSupportReason() const
 
 IGraphics::CRenderTargetHandle CGraphics_Threaded::CreateRenderTarget(int Width, int Height)
 {
+	return CreateRenderTarget(Width, Height, 1);
+}
+
+IGraphics::CRenderTargetHandle CGraphics_Threaded::CreateRenderTarget(int Width, int Height, int SampleCount)
+{
 	if(!IsRenderTargetSupported() || Width <= 0 || Height <= 0)
 		return CRenderTargetHandle();
 
-	const int TargetId = m_RenderTargets.Allocate(Width, Height);
+	const int Samples = std::clamp(SampleCount, 1, (int)m_MultiSamplingCount > 1 ? (int)m_MultiSamplingCount : 1);
+	if(Samples > 1 && !IsMultisampleRenderTargetSupported())
+		return CRenderTargetHandle();
+
+	const int TargetId = m_RenderTargets.Allocate(Width, Height, Samples);
 	if(TargetId < 0)
 		return CRenderTargetHandle();
 
@@ -775,6 +790,7 @@ IGraphics::CRenderTargetHandle CGraphics_Threaded::CreateRenderTarget(int Width,
 	Cmd.m_TargetId = TargetId;
 	Cmd.m_Width = Width;
 	Cmd.m_Height = Height;
+	Cmd.m_SampleCount = Samples;
 	AddCmd(Cmd);
 
 	return CreateRenderTargetHandle(TargetId);
@@ -3617,6 +3633,7 @@ int CGraphics_Threaded::IssueInit()
 		m_GLRenderTargetsSupported = m_pBackend->HasRenderTargets();
 		m_GLRenderTargetGaussianBlurSupported = m_pBackend->HasRenderTargetGaussianBlur();
 		m_GLBackbufferCaptureSupported = m_pBackend->HasBackbufferCapture();
+		m_GLRenderTargetMSAASupported = m_pBackend->HasRenderTargetMSAA();
 		m_GLRenderTargetExternalPassRequiresSingleSample = m_pBackend->RenderTargetExternalPassRequiresSingleSample();
 		m_MultiSamplingCount = (uint32_t)std::max(g_Config.m_GfxFsaaSamples, 0);
 		m_PendingMultiSamplingCount = -1;
