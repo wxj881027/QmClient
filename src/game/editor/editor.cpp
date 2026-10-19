@@ -5672,7 +5672,15 @@ void CEditor::HandleWriterFinishJobs()
 			SetCollabStatus(Localizable("Sync failed: map snapshot save failed", "Editor"));
 		}
 		if(MapIt != m_vpMaps.end())
+		{
 			(*MapIt)->m_CloseOnSave = false;
+			if(!CollabSnapshotJob)
+			{
+				if(str_comp_nocase((*MapIt)->m_aFilename, pJob->RealFilename()) == 0)
+					(*MapIt)->m_Modified = true;
+				(*MapIt)->m_ModifiedAuto = true;
+			}
+		}
 		ShowFileDialogError("%s", pErrorMessage);
 		log_error("editor/save", "%s", pErrorMessage);
 		return;
