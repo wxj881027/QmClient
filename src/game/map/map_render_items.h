@@ -5,12 +5,20 @@
 
 #include <game/mapitems.h>
 
+#include <algorithm>
 #include <cstddef>
+#include <iterator>
 #include <optional>
 #include <span>
 
 namespace MapRenderItems
 {
+	enum class EDataCountPolicy
+	{
+		REQUIRE_ALL,
+		ALLOW_PARTIAL,
+	};
+
 	// 读取值快照；旧版只含 v1 字段，不能借用成完整 v2 对象读取扩展。
 	inline std::optional<CMapItemImage_v2> ReadImage(IMap &Map, int ItemIndex)
 	{
@@ -31,6 +39,56 @@ namespace MapRenderItems
 		return Image;
 	}
 
+	// 只读取实际消费的前缀，废弃的 SoundDataSize 不参与解码长度判断。
+	inline std::optional<CMapItemSound> ReadSound(IMap &Map, int ItemIndex)
+	{
+		if(ItemIndex < 0 || ItemIndex >= Map.NumItems() ||
+			Map.GetItemSize(ItemIndex) < static_cast<int>(offsetof(CMapItemSound, m_SoundDataSize)))
+			return std::nullopt;
+		int Type;
+		const auto *pItem = static_cast<const CMapItemSound *>(Map.GetItem(ItemIndex, &Type));
+		if(pItem == nullptr || Type != MAPITEMTYPE_SOUND)
+			return std::nullopt;
+		CMapItemSound Sound{};
+		Sound.m_Version = pItem->m_Version;
+		Sound.m_External = pItem->m_External;
+		Sound.m_SoundName = pItem->m_SoundName;
+		Sound.m_SoundData = pItem->m_SoundData;
+		return Sound;
+	}
+
+	// 未支持的版本只读取版本前缀，保留消费者原有的跳过行为。
+	// 名称仅在完整尾部存在时复制；需要名称的调用者仍须检查完整尺寸。
+	inline std::optional<CMapItemLayerSounds> ReadSoundLayer(IMap &Map, int ItemIndex)
+	{
+		if(ItemIndex < 0 || ItemIndex >= Map.NumItems())
+			return std::nullopt;
+		const int ItemSize = Map.GetItemSize(ItemIndex);
+		if(ItemSize < static_cast<int>(offsetof(CMapItemLayerSounds, m_NumSources)))
+			return std::nullopt;
+		int Type;
+		const auto *pItem = static_cast<const CMapItemLayerSounds *>(Map.GetItem(ItemIndex, &Type));
+		if(pItem == nullptr || Type != MAPITEMTYPE_LAYER ||
+			(pItem->m_Layer.m_Type != LAYERTYPE_SOUNDS && pItem->m_Layer.m_Type != LAYERTYPE_SOUNDS_DEPRECATED))
+			return std::nullopt;
+		CMapItemLayerSounds Layer{};
+		Layer.m_Layer = pItem->m_Layer;
+		Layer.m_Version = pItem->m_Version;
+		if(Layer.m_Version < 1 || Layer.m_Version > 2)
+			return Layer;
+		if(ItemSize < static_cast<int>(offsetof(CMapItemLayerSounds, m_aName)))
+			return std::nullopt;
+		Layer.m_NumSources = pItem->m_NumSources;
+		Layer.m_Data = pItem->m_Data;
+		Layer.m_Sound = pItem->m_Sound;
+		if(ItemSize >= static_cast<int>(sizeof(CMapItemLayerSounds)))
+		{
+			for(size_t i = 0; i < std::size(Layer.m_aName); ++i)
+				Layer.m_aName[i] = pItem->m_aName[i];
+		}
+		return Layer;
+	}
+
 	// 返回地图拥有的固定头；名称是可选尾部，使用名称的调用方还须检查完整尺寸。
 	inline CMapItemLayerQuads *QuadLayer(IMap &Map, int ItemIndex)
 	{
@@ -44,7 +102,28 @@ namespace MapRenderItems
 		return pLayer;
 	}
 
-	// Layer 的固定字段须完整；返回的借用在 UnloadData/地图销毁前有效。
+	// 返回的借用在 UnloadData/地图销毁前有效；部分数量仅用于既有前缀回退。
+	template<typename T>
+	inline std::span<T> ReadDataItems(IMap &Map, int DataIndex, int NumItems,
+		EDataCountPolicy Policy = EDataCountPolicy::REQUIRE_ALL, bool Swap = true)
+	{
+		if(NumItems <= 0 || DataIndex < 0 || DataIndex >= Map.NumData())
+			return {};
+		auto *pData = static_cast<T *>(Swap ? Map.GetDataSwapped(DataIndex) : Map.GetData(DataIndex));
+		if(pData == nullptr)
+			return {};
+		const int Size = Map.GetDataSize(DataIndex);
+		if(Size < 0)
+			return {};
+		const size_t Available = static_cast<size_t>(Size) / sizeof(T);
+		const size_t Count = static_cast<size_t>(NumItems);
+		const size_t ResultCount = Policy == EDataCountPolicy::ALLOW_PARTIAL ? std::min(Count, Available) : Count;
+		if(ResultCount > Available)
+			return {};
+		return {pData, ResultCount};
+	}
+
+	// Layer 的固定字段须完整；保留四边形既有的解码前尺寸检查。
 	inline std::span<CQuad> QuadData(IMap &Map, const CMapItemLayerQuads &Layer, bool Swap = true)
 	{
 		if(Layer.m_NumQuads <= 0 || Layer.m_Data < 0 || Layer.m_Data >= Map.NumData())
@@ -53,11 +132,7 @@ namespace MapRenderItems
 		const auto Fits = [Count](int Size) { return Size >= 0 && Count <= static_cast<size_t>(Size) / sizeof(CQuad); };
 		if(!Fits(Map.GetDataSize(Layer.m_Data)))
 			return {};
-		auto *pQuads = static_cast<CQuad *>(Swap ? Map.GetDataSwapped(Layer.m_Data) : Map.GetData(Layer.m_Data));
-		// 数据处理器可在解压后替换数据与长度，不能继续使用解压前的尺寸。
-		if(pQuads == nullptr || !Fits(Map.GetDataSize(Layer.m_Data)))
-			return {};
-		return {pQuads, Count};
+		return ReadDataItems<CQuad>(Map, Layer.m_Data, Layer.m_NumQuads, EDataCountPolicy::REQUIRE_ALL, Swap);
 	}
 }
 

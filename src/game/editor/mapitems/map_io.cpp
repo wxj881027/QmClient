@@ -1,4 +1,5 @@
 #include "image.h"
+#include "legacy_sound_source.h"
 #include "load_info.h"
 #include "load_resources.h"
 #include "sound.h"
@@ -23,20 +24,6 @@
 
 #include <limits>
 #include <utility>
-
-// compatibility with old sound layers
-class CSoundSourceDeprecated
-{
-public:
-	CPoint m_Position;
-	int m_Loop;
-	int m_TimeDelay; // in s
-	int m_FalloffDistance;
-	int m_PosEnv;
-	int m_PosEnvOffset;
-	int m_SoundEnv;
-	int m_SoundEnvOffset;
-};
 
 static bool CheckedDatafileSize(size_t DataSize)
 {
@@ -800,11 +787,9 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 
 	// load sounds
 	{
-		int Start, Num;
-		pMap->GetType(MAPITEMTYPE_SOUND, &Start, &Num);
-		for(int i = 0; i < Num; i++)
+		for(size_t i = 0; i < Resources->m_vSounds.size(); i++)
 		{
-			CMapItemSound *pItem = (CMapItemSound *)pMap->GetItem(Start + i);
+			const CMapItemSound *pItem = &Resources->m_vSounds[i];
 
 			// copy base info
 			std::shared_ptr<CEditorSound> pSound = std::make_shared<CEditorSound>(this);
@@ -813,7 +798,7 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 			if(pName == nullptr || pName[0] == '\0')
 			{
 				char aBuf[128];
-				str_format(aBuf, sizeof(aBuf), Localize("Error: Failed to read name of sound %d.", "Editor"), i);
+				str_format(aBuf, sizeof(aBuf), Localize("Error: Failed to read name of sound %d.", "Editor"), static_cast<int>(i));
 				ErrorHandler(aBuf);
 			}
 			else
@@ -1116,13 +1101,13 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 				}
 				else if(pLayerItem->m_Type == LAYERTYPE_SOUNDS)
 				{
-					const CMapItemLayerSounds *pSoundsItem = (CMapItemLayerSounds *)pLayerItem;
-					if(pSoundsItem->m_Version < 1 || pSoundsItem->m_Version > 2)
+					const auto SoundsItem = MapRenderItems::ReadSoundLayer(*pMap, LayersStart + pGItem->m_StartLayer + l);
+					if(!SoundsItem || SoundsItem->m_Version < 1 || SoundsItem->m_Version > 2)
 						continue;
 
 					std::shared_ptr<CLayerSounds> pSounds = std::make_shared<CLayerSounds>(this);
 					pSounds->m_Flags = pLayerItem->m_Flags;
-					pSounds->m_Sound = pSoundsItem->m_Sound;
+					pSounds->m_Sound = SoundsItem->m_Sound;
 
 					// validate sound index
 					if(pSounds->m_Sound < -1 || pSounds->m_Sound >= (int)m_vpSounds.size())
@@ -1131,16 +1116,15 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 					}
 
 					// load layer name
-					IntsToStr(pSoundsItem->m_aName, std::size(pSoundsItem->m_aName), pSounds->m_aName, std::size(pSounds->m_aName));
+					IntsToStr(SoundsItem->m_aName, std::size(SoundsItem->m_aName), pSounds->m_aName, std::size(pSounds->m_aName));
 
 					// load data
-					if(pSoundsItem->m_NumSources > 0)
+					if(SoundsItem->m_NumSources > 0)
 					{
-						const void *pData = pMap->GetDataSwapped(pSoundsItem->m_Data);
-						if(pData != nullptr && (size_t)pMap->GetDataSize(pSoundsItem->m_Data) >= sizeof(CSoundSource) * (size_t)pSoundsItem->m_NumSources)
+						const auto Sources = MapRenderItems::ReadDataItems<CSoundSource>(*pMap, SoundsItem->m_Data, SoundsItem->m_NumSources);
+						if(!Sources.empty())
 						{
-							pSounds->m_vSources.resize(pSoundsItem->m_NumSources);
-							mem_copy(pSounds->m_vSources.data(), pData, sizeof(CSoundSource) * pSoundsItem->m_NumSources);
+							pSounds->m_vSources.assign(Sources.begin(), Sources.end());
 						}
 						else
 						{
@@ -1148,7 +1132,7 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 							str_format(aBuf, sizeof(aBuf), "Error: Failed to read sound sources of layer %d.", l);
 							ErrorHandler(aBuf);
 						}
-						pMap->UnloadData(pSoundsItem->m_Data);
+						pMap->UnloadData(SoundsItem->m_Data);
 					}
 
 					pGroup->AddLayer(pSounds);
@@ -1156,13 +1140,13 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 				else if(pLayerItem->m_Type == LAYERTYPE_SOUNDS_DEPRECATED)
 				{
 					// compatibility with old sound layers
-					const CMapItemLayerSounds *pSoundsItem = (CMapItemLayerSounds *)pLayerItem;
-					if(pSoundsItem->m_Version < 1 || pSoundsItem->m_Version > 2)
+					const auto SoundsItem = MapRenderItems::ReadSoundLayer(*pMap, LayersStart + pGItem->m_StartLayer + l);
+					if(!SoundsItem || SoundsItem->m_Version < 1 || SoundsItem->m_Version > 2)
 						continue;
 
 					std::shared_ptr<CLayerSounds> pSounds = std::make_shared<CLayerSounds>(this);
 					pSounds->m_Flags = pLayerItem->m_Flags;
-					pSounds->m_Sound = pSoundsItem->m_Sound;
+					pSounds->m_Sound = SoundsItem->m_Sound;
 
 					// validate sound index
 					if(pSounds->m_Sound < -1 || pSounds->m_Sound >= (int)m_vpSounds.size())
@@ -1171,15 +1155,15 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 					}
 
 					// load layer name
-					IntsToStr(pSoundsItem->m_aName, std::size(pSoundsItem->m_aName), pSounds->m_aName, std::size(pSounds->m_aName));
+					IntsToStr(SoundsItem->m_aName, std::size(SoundsItem->m_aName), pSounds->m_aName, std::size(pSounds->m_aName));
 
 					pGroup->AddLayer(pSounds);
 
 					// load data
-					if(pSoundsItem->m_NumSources > 0)
+					if(SoundsItem->m_NumSources > 0)
 					{
-						const CSoundSourceDeprecated *pData = (const CSoundSourceDeprecated *)pMap->GetDataSwapped(pSoundsItem->m_Data);
-						if(pData == nullptr || (size_t)pMap->GetDataSize(pSoundsItem->m_Data) < sizeof(CSoundSourceDeprecated) * (size_t)pSoundsItem->m_NumSources)
+						const auto Sources = MapRenderItems::ReadDataItems<CSoundSourceDeprecated>(*pMap, SoundsItem->m_Data, SoundsItem->m_NumSources);
+						if(Sources.empty())
 						{
 							char aBuf[128];
 							str_format(aBuf, sizeof(aBuf), "Error: Failed to read sound sources of layer %d.", l);
@@ -1187,30 +1171,12 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 						}
 						else
 						{
-							pSounds->m_vSources.resize(pSoundsItem->m_NumSources);
-
-							for(int i = 0; i < pSoundsItem->m_NumSources; i++)
-							{
-								const CSoundSourceDeprecated *pOldSource = &pData[i];
-
-								CSoundSource &Source = pSounds->m_vSources[i];
-								Source.m_Position = pOldSource->m_Position;
-								Source.m_Loop = pOldSource->m_Loop;
-								Source.m_Pan = true;
-								Source.m_TimeDelay = pOldSource->m_TimeDelay;
-								Source.m_Falloff = 0;
-
-								Source.m_PosEnv = pOldSource->m_PosEnv;
-								Source.m_PosEnvOffset = pOldSource->m_PosEnvOffset;
-								Source.m_SoundEnv = pOldSource->m_SoundEnv;
-								Source.m_SoundEnvOffset = pOldSource->m_SoundEnvOffset;
-
-								Source.m_Shape.m_Type = CSoundShape::SHAPE_CIRCLE;
-								Source.m_Shape.m_Circle.m_Radius = pOldSource->m_FalloffDistance;
-							}
+							pSounds->m_vSources.reserve(Sources.size());
+							for(const auto &Source : Sources)
+								pSounds->m_vSources.push_back(EditorMapLoad::ConvertLegacySoundSource(Source));
 						}
 
-						pMap->UnloadData(pSoundsItem->m_Data);
+						pMap->UnloadData(SoundsItem->m_Data);
 					}
 				}
 			}

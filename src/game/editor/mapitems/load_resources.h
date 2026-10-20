@@ -13,6 +13,7 @@ namespace EditorMapLoad
 	struct SResourceItems
 	{
 		std::vector<CMapItemImage_v2> m_vImages;
+		std::vector<CMapItemSound> m_vSounds;
 	};
 
 	// 共享 CMap 已校验组与图层基础头；在编辑器清空旧地图前补查资源尾部。
@@ -35,6 +36,19 @@ namespace EditorMapLoad
 			}
 			Resources.m_vImages.push_back(*Image);
 		}
+		int SoundsStart, SoundsNum;
+		Map.GetType(MAPITEMTYPE_SOUND, &SoundsStart, &SoundsNum);
+		Resources.m_vSounds.reserve(static_cast<size_t>(SoundsNum));
+		for(int i = 0; i < SoundsNum; ++i)
+		{
+			const auto Sound = MapRenderItems::ReadSound(Map, SoundsStart + i);
+			if(!Sound)
+			{
+				log_error("editor/load", "Sound %d has a truncated or invalid header.", i);
+				return std::nullopt;
+			}
+			Resources.m_vSounds.push_back(*Sound);
+		}
 
 		int GroupsStart, GroupsNum, LayersStart, LayersNum;
 		Map.GetType(MAPITEMTYPE_GROUP, &GroupsStart, &GroupsNum);
@@ -49,14 +63,25 @@ namespace EditorMapLoad
 			{
 				const int ItemIndex = LayersStart + pGroup->m_StartLayer + l;
 				const auto *pLayer = static_cast<const CMapItemLayer *>(Map.GetItem(ItemIndex));
-				if(pLayer->m_Type != LAYERTYPE_QUADS)
-					continue;
-				const auto *pQuads = MapRenderItems::QuadLayer(Map, ItemIndex);
-				if(pQuads == nullptr ||
-					(pQuads->m_Version >= 2 && Map.GetItemSize(ItemIndex) < static_cast<int>(sizeof(CMapItemLayerQuads))))
+				if(pLayer->m_Type == LAYERTYPE_QUADS)
 				{
-					log_error("editor/load", "Quad layer %d in group %d has a truncated header or name.", l, g);
-					return std::nullopt;
+					const auto *pQuads = MapRenderItems::QuadLayer(Map, ItemIndex);
+					if(pQuads == nullptr ||
+						(pQuads->m_Version >= 2 && Map.GetItemSize(ItemIndex) < static_cast<int>(sizeof(CMapItemLayerQuads))))
+					{
+						log_error("editor/load", "Quad layer %d in group %d has a truncated header or name.", l, g);
+						return std::nullopt;
+					}
+				}
+				else if(pLayer->m_Type == LAYERTYPE_SOUNDS || pLayer->m_Type == LAYERTYPE_SOUNDS_DEPRECATED)
+				{
+					const auto SoundLayer = MapRenderItems::ReadSoundLayer(Map, ItemIndex);
+					if(!SoundLayer ||
+						(SoundLayer->m_Version >= 1 && SoundLayer->m_Version <= 2 && Map.GetItemSize(ItemIndex) < static_cast<int>(sizeof(CMapItemLayerSounds))))
+					{
+						log_error("editor/load", "Sound layer %d in group %d has a truncated header or name.", l, g);
+						return std::nullopt;
+					}
 				}
 			}
 		}

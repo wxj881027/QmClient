@@ -3946,6 +3946,7 @@ if(CLIENT)
     mapitems/layer_tiles.h
     mapitems/layer_tune.cpp
     mapitems/layer_tune.h
+    mapitems/legacy_sound_source.h
     mapitems/load_info.h
     mapitems/load_resources.h
     mapitems/map.cpp
@@ -4821,6 +4822,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/map_render_items_test.cpp
     src/test/integration/client/map_render_items_test.cpp
     src/test/integration/client/editor_map_resources_test.cpp
+    src/test/integration/client/editor_map_sounds_test.cpp
     src/test/integration/client/editor_map_info_test.cpp
     src/test/integration/engine/datafile_string_processor_test.cpp
     src/test/integration/engine/map_group_load_test.cpp
