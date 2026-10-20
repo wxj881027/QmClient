@@ -197,8 +197,8 @@ public:
 	void RemoveAllowed(const char *pCountryName);
 	void RemoveAllowed(const char *pCommunityId, const char *pCountryName);
 	// 把可选国家里既不在排除名单、也不在保留基线里的国家补进排除名单。
-	// @return 排除名单是否发生变化（调用方需要据此重新过滤服务器列表）
-	bool AutoExcludeNewCountries();
+	// 失败时保留原名单并返回 false，后续刷新可重试；仅发布变化时才需要重新过滤。
+	bool AutoExcludeNewCountries() noexcept;
 	void Clear() override;
 	bool Filtered(const char *pCountryName) const override;
 	bool Empty() const override;
@@ -216,7 +216,7 @@ private:
 	// 确保当前 key 存在保留基线：缺失时按"当前可见的可选国家"（可选国家减去排除名单）建立。
 	// 供 AutoExcludeNewCountries 与"用户让某国可见"使用，避免基线只包含刚点的那一个国家，
 	// 从而在其他国家出现时把它们误当成新国家排除掉。
-	void EnsureAllowedBaseline();
+	void EnsureAllowedBaseline(const CCommunityId &Key);
 
 	const ICommunityCache *m_pCommunityCache;
 	std::map<CCommunityId, std::set<CCommunityCountryName>> m_Entries;

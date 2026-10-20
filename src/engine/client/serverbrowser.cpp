@@ -2757,25 +2757,27 @@ void CExcludedCommunityCountryFilterList::Add(const char *pCommunityId, const ch
 
 void CExcludedCommunityCountryFilterList::AddAllowed(const char *pCountryName)
 {
-	EnsureAllowedBaseline();
-	AddAllowed(m_pCommunityCache->CountryTypeFilterKey(), pCountryName);
+	const CCommunityId Key(m_pCommunityCache->CountryTypeFilterKey());
+	EnsureAllowedBaseline(Key);
+	AddAllowed(Key.Id(), pCountryName);
 }
 
-void CExcludedCommunityCountryFilterList::EnsureAllowedBaseline()
+void CExcludedCommunityCountryFilterList::EnsureAllowedBaseline(const CCommunityId &Key)
 {
-	const CCommunityId Key(m_pCommunityCache->CountryTypeFilterKey());
 	if(m_AllowedCountries.contains(Key))
 		return;
 
-	auto DeniedEntry = m_Entries.find(Key);
-	m_AllowedCountries[Key] = {};
+	const auto DeniedEntry = m_Entries.find(Key);
+	std::set<CCommunityCountryName> Prepared;
 	for(const CCommunityCountry *pCountry : m_pCommunityCache->SelectableCountries())
 	{
 		if(DeniedEntry == m_Entries.end() || !DeniedEntry->second.contains(CCommunityCountryName(pCountry->Name())))
 		{
-			m_AllowedCountries[Key].emplace(pCountry->Name());
+			Prepared.emplace(pCountry->Name());
 		}
 	}
+	// 构造完成后一次发布，失败时不能留下被当作有效基线的空项。
+	m_AllowedCountries.emplace(Key, std::move(Prepared));
 }
 
 void CExcludedCommunityCountryFilterList::AddAllowed(const char *pCommunityId, const char *pCountryName)
@@ -2802,9 +2804,11 @@ void CExcludedCommunityCountryFilterList::RemoveAllowed(const char *pCommunityId
 	}
 }
 
-bool CExcludedCommunityCountryFilterList::AutoExcludeNewCountries()
+bool CExcludedCommunityCountryFilterList::AutoExcludeNewCountries() noexcept
+try
 {
-	auto DeniedEntry = m_Entries.find(CCommunityId(m_pCommunityCache->CountryTypeFilterKey()));
+	const CCommunityId Key(m_pCommunityCache->CountryTypeFilterKey());
+	auto DeniedEntry = m_Entries.find(Key);
 	if(DeniedEntry == m_Entries.end() || DeniedEntry->second.empty())
 		return false; // 未设置国家筛选，没有需要保持的结果
 
@@ -2819,15 +2823,15 @@ bool CExcludedCommunityCountryFilterList::AutoExcludeNewCountries()
 		return false;
 	}
 
-	const CCommunityId Key(m_pCommunityCache->CountryTypeFilterKey());
 	const bool HadBaseline = m_AllowedCountries.contains(Key);
 	// 旧配置或本次会话第一次同步：没有保留基线，无法区分"新出现的国家"和"用户保留的国家"。
 	// 按当前可见的国家建立基线，本次不自动排除任何国家，用户已有的结果原样保留。
-	EnsureAllowedBaseline();
+	EnsureAllowedBaseline(Key);
 	if(!HadBaseline)
 		return false;
 
-	const auto &AllowedCountries = m_AllowedCountries[Key];
+	const auto &AllowedCountries = m_AllowedCountries.find(Key)->second;
+	std::set<CCommunityCountryName> Prepared;
 	bool Changed = false;
 	for(const CCommunityCountry *pCountry : vpSelectable)
 	{
@@ -2838,10 +2842,19 @@ bool CExcludedCommunityCountryFilterList::AutoExcludeNewCountries()
 		}
 		if(CountryEntries.contains(CCommunityCountryName(pCountry->Name())) || AllowedCountries.contains(CCommunityCountryName(pCountry->Name())))
 			continue;
-		DeniedEntry->second.emplace(pCountry->Name());
+		// 无新增国家时不复制；有变化时先完整准备，避免异常只排除一部分新国家。
+		if(!Changed)
+			Prepared = CountryEntries;
+		Prepared.emplace(pCountry->Name());
 		Changed = true;
 	}
+	if(Changed)
+		DeniedEntry->second.swap(Prepared);
 	return Changed;
+}
+catch(...)
+{
+	return false;
 }
 
 void CExcludedCommunityCountryFilterList::Remove(const char *pCountryName)
