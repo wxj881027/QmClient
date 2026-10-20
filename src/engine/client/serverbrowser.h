@@ -27,6 +27,7 @@ class IServerBrowserHttp;
 class IServerBrowserPingCache;
 class IStorage;
 class IHttp;
+class IHttpRequest;
 
 class CCommunityId
 {
@@ -323,7 +324,7 @@ public:
 	const CServerInfo *SortedGet(int Index) const override;
 	void SetQmClientServerCounts(const std::unordered_map<std::string, int> &Counts) override;
 
-	const json_value *LoadDDNetInfo();
+	const json_value *LoadDDNetInfo(IHttpRequest *pResponse = nullptr);
 	bool LoadDDNetServers();
 	void UpdateServerFilteredPlayers(CServerInfo *pInfo) const;
 	void UpdateServerFriends(CServerInfo *pInfo) const;

@@ -500,7 +500,7 @@ public:
 	EInfoState InfoState() const override { return m_InfoState; }
 	void RequestDDNetInfo() override;
 	void ResetDDNetInfoTask();
-	void LoadDDNetInfo();
+	void LoadDDNetInfo(IHttpRequest *pResponse = nullptr);
 
 	bool IsSixup() const override { return m_Sixup; }
 

@@ -37,6 +37,7 @@ void CCustomCommunities::DownloadCustomCommunitiesDDNetInfo()
 		m_pCustomCommunitiesCacheJob = std::make_shared<CQmCustomCommunityCacheJob>(Storage());
 		Engine()->AddJob(m_pCustomCommunitiesCacheJob);
 		m_pCustomCommunitiesDDNetInfoTask = HttpGetBoth(g_Config.m_QmCustomCommunitiesUrl, Storage(), QMCLIENT_CUSTOM_COMMUNITIES_INFO_FILE, IStorage::TYPE_SAVE);
+		m_pCustomCommunitiesDDNetInfoTask->ValidateBeforeOverwrite(true);
 		m_pCustomCommunitiesDDNetInfoTask->Timeout(CTimeout{10000, 0, 500, 10});
 		m_pCustomCommunitiesDDNetInfoTask->SkipByFileTime(false); // Always re-download.
 		// Use ipv4 so we can know the ingame ip addresses of players before they join game servers
@@ -119,7 +120,7 @@ void CCustomCommunities::OnRender()
 			// 失败保留已经加载的社区；成功只消费内存响应，不在交互帧重读缓存。
 			if(State == EHttpState::DONE)
 			{
-				m_pCustomCommunitiesResponseJob = std::make_shared<CQmCustomCommunityCacheJob>(Storage(), m_pCustomCommunitiesDDNetInfoTask);
+				m_pCustomCommunitiesResponseJob = std::make_shared<CQmCustomCommunityCacheJob>(Storage(), m_pCustomCommunitiesDDNetInfoTask, true);
 				Engine()->AddJob(m_pCustomCommunitiesResponseJob);
 			}
 			m_pCustomCommunitiesDDNetInfoTask = nullptr;

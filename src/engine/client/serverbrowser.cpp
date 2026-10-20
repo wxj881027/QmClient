@@ -15,6 +15,7 @@
 #include <engine/favorites.h>
 #include <engine/friends.h>
 #include <engine/http.h>
+#include <engine/http_response_validation.h>
 #include <engine/shared/config.h>
 #include <engine/shared/json.h>
 #include <engine/shared/masterserver.h>
@@ -1972,19 +1973,42 @@ public:
 	}
 };
 
-const json_value *CServerBrowser::LoadDDNetInfo()
+const json_value *CServerBrowser::LoadDDNetInfo(IHttpRequest *pResponse)
 {
+	std::optional<CHttpResponseValidation> Validation;
+	if(pResponse)
+	{
+		if(pResponse->State() != EHttpState::DONE)
+			return nullptr;
+		Validation.emplace(*pResponse);
+		if(pResponse->IsAbortRequested())
+			return nullptr;
+	}
 	try
 	{
 		void *pRawBuffer = nullptr;
-		unsigned Length = 0;
-		if(!m_pStorage->ReadFile(DDNET_INFO_FILE, IStorage::TYPE_SAVE, &pRawBuffer, &Length))
-			return LoadDDNetServers() ? m_pDDNetInfo : nullptr;
-		std::unique_ptr<void, decltype(&free)> pBuffer(pRawBuffer, free);
+		size_t Length = 0;
+		std::unique_ptr<void, decltype(&free)> pBuffer(nullptr, free);
+		if(pResponse)
+		{
+			unsigned char *pData;
+			pResponse->Result(&pData, &Length);
+			pRawBuffer = pData;
+		}
+		else
+		{
+			unsigned FileLength = 0;
+			if(!m_pStorage->ReadFile(DDNET_INFO_FILE, IStorage::TYPE_SAVE, &pRawBuffer, &FileLength))
+				return LoadDDNetServers() ? m_pDDNetInfo : nullptr;
+			pBuffer.reset(pRawBuffer);
+			Length = FileLength;
+		}
+		if(!pRawBuffer || Length == 0)
+			return nullptr;
 		json_settings Settings{};
 		char aError[json_error_max];
 		std::unique_ptr<json_value, decltype(&json_value_free)> pInfo(
-			JsonParseEx(&Settings, static_cast<const json_char *>(pBuffer.get()), Length, aError), json_value_free);
+			JsonParseEx(&Settings, static_cast<const json_char *>(pRawBuffer), Length, aError), json_value_free);
 		if(!pInfo)
 		{
 			log_error("serverbrowser", "invalid info json: '%s'", aError);
@@ -1995,9 +2019,11 @@ const json_value *CServerBrowser::LoadDDNetInfo()
 			log_error("serverbrowser", "invalid info root");
 			return nullptr;
 		}
-		const SHA256_DIGEST Digest = sha256(pBuffer.get(), Length);
+		const SHA256_DIGEST Digest = sha256(pRawBuffer, Length);
 		CCommunityUpdate Update(*this, pInfo.get(), Digest, true);
 		Update.Prepare();
+		if(Validation && !Validation->Commit())
+			return nullptr;
 		Update.Commit();
 		// JSON 所有权和摘要与准备好的元数据一起发布，失败的摘要不会阻止以后重试。
 		json_value *pOldInfo = m_pDDNetInfo;

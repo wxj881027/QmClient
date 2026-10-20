@@ -161,9 +161,9 @@ void IHttpRequest::OnValidation(bool Success)
 		}
 		if(fs_rename(m_aDestAbsoluteTmp, m_aDestAbsolute))
 		{
-			log_error("http", "i/o error, cannot move file: %s", m_aDest);
 			m_State = EHttpState::ERROR;
 			(void)fs_remove(m_aDestAbsoluteTmp);
+			log_error("http", "i/o error, cannot move file: %s", m_aDest);
 		}
 	}
 	else

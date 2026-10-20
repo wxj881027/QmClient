@@ -33,6 +33,7 @@
 #include <engine/favorites.h>
 #include <engine/graphics.h>
 #include <engine/http.h>
+#include <engine/http_response_validation.h>
 #include <engine/input.h>
 #include <engine/keys.h>
 #include <engine/map.h>
@@ -3363,9 +3364,9 @@ static TVersion ToVersion(char *pStr)
 	return std::make_tuple(aVersion[0], aVersion[1], aVersion[2]);
 }
 
-void CClient::LoadDDNetInfo()
+void CClient::LoadDDNetInfo(IHttpRequest *pResponse)
 {
-	const json_value *pDDNetInfo = m_ServerBrowser.LoadDDNetInfo();
+	const json_value *pDDNetInfo = m_ServerBrowser.LoadDDNetInfo(pResponse);
 
 	if(!pDDNetInfo)
 	{
@@ -4035,12 +4036,13 @@ void CClient::Update()
 			if(m_ServerBrowser.DDNetInfoSha256() == m_pDDNetInfoTask->ResultSha256())
 			{
 				log_debug("client/info", "DDNet info already up-to-date");
-				m_InfoState = EInfoState::SUCCESS;
+				CHttpResponseValidation Validation(*m_pDDNetInfoTask);
+				m_InfoState = Validation.Commit() ? EInfoState::SUCCESS : EInfoState::ERROR;
 			}
 			else
 			{
 				log_debug("client/info", "Loading new DDNet info");
-				LoadDDNetInfo();
+				LoadDDNetInfo(m_pDDNetInfoTask.get());
 			}
 
 			ResetDDNetInfoTask();
@@ -7225,7 +7227,8 @@ void CClient::RequestDDNetInfo()
 		str_append(aUrl, aEscaped);
 	}
 
-	m_pDDNetInfoTask = HttpGetFile(aUrl, Storage(), DDNET_INFO_FILE, IStorage::TYPE_SAVE);
+	m_pDDNetInfoTask = HttpGetBoth(aUrl, Storage(), DDNET_INFO_FILE, IStorage::TYPE_SAVE);
+	m_pDDNetInfoTask->ValidateBeforeOverwrite(true);
 	m_pDDNetInfoTask->Timeout(CTimeout{10000, 0, 500, 10});
 	m_pDDNetInfoTask->SkipByFileTime(false); // Always re-download.
 	// Use ipv4 so we can know the ingame ip addresses of players before they join game servers

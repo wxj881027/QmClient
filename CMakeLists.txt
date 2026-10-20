@@ -2770,6 +2770,7 @@ set_src(ENGINE_INTERFACE GLOB src/engine
   graphics.h
   http.cpp
   http.h
+  http_response_validation.h
   image.h
   input.h
   kernel.h
@@ -4700,6 +4701,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/config_migration_backup_test.cpp
     src/test/integration/qmclient/client/bounded_file_reader_test.cpp
     src/test/integration/qmclient/client/custom_community_info_test.cpp
+    src/test/integration/qmclient/client/custom_community_cache_download_test.cpp
     src/test/integration/qmclient/client/qm_sponsors_draft_test.cpp
     src/test/integration/qmclient/client/rank_view_timeline_test.cpp
     src/test/integration/qmclient/music/netease_shared_memory_readonly_test.cpp
@@ -5112,6 +5114,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/serverbrowser_sort_recovery_test.cpp
     src/test/integration/client/serverbrowser_community_load_test.cpp
     src/test/integration/client/serverbrowser_metadata_recovery_test.cpp
+    src/test/integration/client/serverbrowser_info_download_test.cpp
     src/test/unit/client/qm_hang_snapshot_test.cpp
     src/test/integration/client/qm_hang_dump_report_test.cpp
     src/test/unit/engine/serverinfo_test.cpp
