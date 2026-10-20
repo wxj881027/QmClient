@@ -3215,10 +3215,9 @@ void CHud::RenderFollowHookCountdown()
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 	const float ScreenPixelSize = QmHudMediaIslandScreenPixelSize(ScreenX0, ScreenY0, ScreenX1, ScreenY1, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
-	// 裁剪半径必须跟着可调尺寸一起放大，否则调大后边缘会被提前裁掉。
-	const float Radius = (Visual.m_EndlessHook ? qm_hook_countdown_ui::INFINITY_OUTER_RADIUS : qm_hook_countdown_ui::OUTER_RADIUS) *
-				     Visual.m_Scale * qm_hook_countdown_ui::CountdownSizeScale() +
-			     ScreenPixelSize * 2.5f;
+	// 裁剪半径必须跟着可调尺寸一起放大，并且带上彩虹光晕的外圈，
+	// 否则调大后光晕边缘会被提前裁成一条硬边。
+	const float Radius = qm_hook_countdown_ui::RenderClipRadius(Visual) + ScreenPixelSize * 2.5f;
 	if(in_range(Visual.m_Position.x, ScreenX0 - Radius, ScreenX1 + Radius) &&
 		in_range(Visual.m_Position.y, ScreenY0 - Radius, ScreenY1 + Radius))
 		qm_hook_countdown_ui::Render(Graphics(), Visual, ScreenPixelSize);

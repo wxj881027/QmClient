@@ -1,4 +1,4 @@
-﻿ min
+ min
 == 分钟
 
  seconds
@@ -4595,6 +4595,12 @@ Endless hook has been activated
 Endless hook has been deactivated
 == 无限钩已关闭
 
+Endless hook indicator
+== 无限钩指示
+
+Endless hook indicator style (0=infinity symbol, 1=rainbow ring)
+== 无限钩指示样式（0=无限符号，1=彩虹圆环）
+
 Endpoint
 == 端点
 
@@ -6053,6 +6059,24 @@ Hook Collisions
 Hook collisions
 == 钩子辅助线
 
+Hook countdown colors
+== 钩子倒计时颜色
+
+Hook countdown ring color
+== 钩子倒计时圆环颜色
+
+Hook countdown size
+== 钩子倒计时尺寸
+
+Hook countdown size percentage
+== 钩子倒计时尺寸百分比
+
+Hook countdown urgent color
+== 钩子倒计时紧急颜色
+
+Hook countdown warning color
+== 钩子倒计时警告颜色
+
 Hook hits unhookable surface
 == 钩到不可钩表面
 
@@ -6364,6 +6388,9 @@ Indicator transparency
 
 Infinite hook for super players on/off.
 == 超级玩家无限钩索开/关
+
+Infinity symbol
+== 无限符号
 
 Info
 == 信息
@@ -10018,6 +10045,9 @@ Rainbow mode (1=Rainbow, 2=Pulse, 3=Dark, 4=Random)
 
 Rainbow others
 == 将彩虹带给每个人！
+
+Rainbow ring
+== 彩虹圆环
 
 Rainbow speed
 == 颜色变化速度

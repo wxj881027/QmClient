@@ -4595,6 +4595,12 @@ Endless hook has been activated
 Endless hook has been deactivated
 == Nieograniczony hak został wyłączony.
 
+Endless hook indicator
+== Wskaźnik nieskończonego haka
+
+Endless hook indicator style (0=infinity symbol, 1=rainbow ring)
+== Styl wskaźnika nieskończonego haka (0=symbol nieskończoności, 1=tęczowy pierścień)
+
 Endpoint
 == Punkt końcowy
 
@@ -6050,6 +6056,24 @@ Hook Collisions
 Hook collisions
 == Linie kolizji haka
 
+Hook countdown colors
+== Kolory odliczania haka
+
+Hook countdown ring color
+== Kolor pierścienia odliczania haka
+
+Hook countdown size
+== Rozmiar odliczania haka
+
+Hook countdown size percentage
+== Procent rozmiaru odliczania haka
+
+Hook countdown urgent color
+== Kolor pilny odliczania haka
+
+Hook countdown warning color
+== Kolor ostrzeżenia odliczania haka
+
 Hook hits unhookable surface
 == Hak uderza w powierzchnię nie do zaczepienia
 
@@ -6361,6 +6385,9 @@ Indicator transparency
 
 Infinite hook for super players on/off.
 == Nieskończony hak dla super graczy włączony/wyłączony.
+
+Infinity symbol
+== Symbol nieskończoności
 
 Info
 == Informacje
@@ -10015,6 +10042,9 @@ Rainbow mode (1=Rainbow, 2=Pulse, 3=Dark, 4=Random)
 
 Rainbow others
 == Tęcza dla innych
+
+Rainbow ring
+== Tęczowy pierścień
 
 Rainbow speed
 == Prędkość tęczy

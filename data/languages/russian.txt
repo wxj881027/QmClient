@@ -4595,6 +4595,12 @@ Endless hook has been activated
 Endless hook has been deactivated
 == Бесконечный крюк деактивирован
 
+Endless hook indicator
+== Индикатор бесконечного крюка
+
+Endless hook indicator style (0=infinity symbol, 1=rainbow ring)
+== Стиль индикатора бесконечного крюка (0=символ бесконечности, 1=радужное кольцо)
+
 Endpoint
 == Конечная точка
 
@@ -6050,6 +6056,24 @@ Hook Collisions
 Hook collisions
 == Столкновения крюка
 
+Hook countdown colors
+== Цвета отсчёта крюка
+
+Hook countdown ring color
+== Цвет кольца отсчёта крюка
+
+Hook countdown size
+== Размер отсчёта крюка
+
+Hook countdown size percentage
+== Размер отсчёта крюка в процентах
+
+Hook countdown urgent color
+== Критический цвет отсчёта крюка
+
+Hook countdown warning color
+== Предупреждающий цвет отсчёта крюка
+
 Hook hits unhookable surface
 == Хук ударился о незацепляемую поверхность
 
@@ -6361,6 +6385,9 @@ Indicator transparency
 
 Infinite hook for super players on/off.
 == Бесконечный крюк для супер-игроков вкл/выкл.
+
+Infinity symbol
+== Символ бесконечности
 
 Info
 == Информация
@@ -10015,6 +10042,9 @@ Rainbow mode (1=Rainbow, 2=Pulse, 3=Dark, 4=Random)
 
 Rainbow others
 == Радуга для всех!
+
+Rainbow ring
+== Радужное кольцо
 
 Rainbow speed
 == Скорость смены цвета

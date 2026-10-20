@@ -1530,6 +1530,8 @@ End (s)
 End marker of replay slice
 Endless hook has been activated
 Endless hook has been deactivated
+Endless hook indicator
+Endless hook indicator style (0=infinity symbol, 1=rainbow ring)
 Endpoint
 Endpoint (optional)
 English font:
@@ -2016,6 +2018,12 @@ Hook collision line length follows cursor distance
 Hook collision line opacity
 Hook Collisions
 Hook collisions
+Hook countdown colors
+Hook countdown ring color
+Hook countdown size
+Hook countdown size percentage
+Hook countdown urgent color
+Hook countdown warning color
 Hook hits unhookable surface
 Hook interaction
 Hook line tip
@@ -2120,6 +2128,7 @@ Indicator safe color
 Indicator size
 Indicator transparency
 Infinite hook for super players on/off.
+Infinity symbol
 Info
 Info Messages
 Ingame controller mode
@@ -3338,6 +3347,7 @@ Rainbow card titles
 Rainbow hook
 Rainbow mode (1=Rainbow, 2=Pulse, 3=Dark, 4=Random)
 Rainbow others
+Rainbow ring
 Rainbow speed
 Rainbow speed percent (50=half speed, 200=double)
 Rainbow Tees

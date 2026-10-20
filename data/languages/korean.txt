@@ -4595,6 +4595,12 @@ Endless hook has been activated
 Endless hook has been deactivated
 == 무한 갈고리가 비활성화되었습니다
 
+Endless hook indicator
+== 무한 훅 표시
+
+Endless hook indicator style (0=infinity symbol, 1=rainbow ring)
+== 무한 훅 표시 스타일 (0=무한 기호, 1=무지개 링)
+
 Endpoint
 == 엔드포인트
 
@@ -6050,6 +6056,24 @@ Hook Collisions
 Hook collisions
 == 갈고리 충돌
 
+Hook countdown colors
+== 훅 카운트다운 색상
+
+Hook countdown ring color
+== 훅 카운트다운 링 색상
+
+Hook countdown size
+== 훅 카운트다운 크기
+
+Hook countdown size percentage
+== 훅 카운트다운 크기 백분율
+
+Hook countdown urgent color
+== 훅 카운트다운 긴급 색상
+
+Hook countdown warning color
+== 훅 카운트다운 경고 색상
+
 Hook hits unhookable surface
 == 갈고리가 걸 수 없는 표면에 부딪힘
 
@@ -6361,6 +6385,9 @@ Indicator transparency
 
 Infinite hook for super players on/off.
 == 슈퍼 플레이어용 무한 갈고리 켜기/끄기
+
+Infinity symbol
+== 무한 기호
 
 Info
 == 정보
@@ -10015,6 +10042,9 @@ Rainbow mode (1=Rainbow, 2=Pulse, 3=Dark, 4=Random)
 
 Rainbow others
 == 다른 사람에게도 무지개 적용
+
+Rainbow ring
+== 무지개 링
 
 Rainbow speed
 == 색상 변화 속도

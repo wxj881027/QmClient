@@ -4595,6 +4595,12 @@ Endless hook has been activated
 Endless hook has been deactivated
 == 無限鉤已關閉
 
+Endless hook indicator
+== 無限鉤指示
+
+Endless hook indicator style (0=infinity symbol, 1=rainbow ring)
+== 無限鉤指示樣式（0=無限符號，1=彩虹圓環）
+
 Endpoint
 == 端點
 
@@ -6050,6 +6056,24 @@ Hook Collisions
 Hook collisions
 == 鉤子輔助線
 
+Hook countdown colors
+== 鉤子倒數顏色
+
+Hook countdown ring color
+== 鉤子倒數圓環顏色
+
+Hook countdown size
+== 鉤子倒數尺寸
+
+Hook countdown size percentage
+== 鉤子倒數尺寸百分比
+
+Hook countdown urgent color
+== 鉤子倒數緊急顏色
+
+Hook countdown warning color
+== 鉤子倒數警告顏色
+
 Hook hits unhookable surface
 == 鉤到不可鉤表面
 
@@ -6361,6 +6385,9 @@ Indicator transparency
 
 Infinite hook for super players on/off.
 == 超級玩家開/關的無盡鉤子
+
+Infinity symbol
+== 無限符號
 
 Info
 == 信息
@@ -10015,6 +10042,9 @@ Rainbow mode (1=Rainbow, 2=Pulse, 3=Dark, 4=Random)
 
 Rainbow others
 == 將彩虹帶給每個人！
+
+Rainbow ring
+== 彩虹圓環
 
 Rainbow speed
 == 顏色變化速度

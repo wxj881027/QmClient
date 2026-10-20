@@ -19,6 +19,7 @@
 
 #include <game/client/QmUi/QmColorGradient.h>
 #include <game/client/QmUi/QmDropdown.h>
+#include <game/client/QmUi/QmNeonRainbow.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiDiscreteSlider.h>
@@ -372,16 +373,9 @@ static SFriendRingSample FriendRingSample(const CUIRect &Rect, float Radius, flo
 
 static ColorRGBA FriendRainbowColor(float Hue, float Wave, float Alpha)
 {
-	// ColorHSLA 的色相不自动循环，先归一化到 [0,1)，否则超过一圈会落到黑色。
-	Hue -= std::floor(Hue);
-	const ColorRGBA Rainbow = color_cast<ColorRGBA>(ColorHSLA(Hue, 0.86f, 0.60f + Wave * 0.18f, 1.0f));
-	// 混入少量白色提高亮度，让细描边在暗背景上仍像霓虹灯而不是暗色轮廓。
-	constexpr float Lift = 0.16f;
-	return ColorRGBA(
-		Lift + (1.0f - Lift) * Rainbow.r,
-		Lift + (1.0f - Lift) * Rainbow.g,
-		Lift + (1.0f - Lift) * Rainbow.b,
-		Alpha);
+	// 与无限钩标记共用 QmNeonRainbowColor：同一界面里的两处彩虹必须是同一套公式，
+	// 否则色相、饱和度和高光会各自漂移成两种不同的"彩虹"。
+	return QmNeonRainbowColor(Hue, Wave, Alpha);
 }
 
 // 把彩虹色环铺成七段 ANGULAR 渐变：数量固定为 7（SDF 上限）。

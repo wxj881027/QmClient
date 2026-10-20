@@ -4595,6 +4595,12 @@ Endless hook has been activated
 Endless hook has been deactivated
 == Sonsuz kanca devre dışı bırakıldı
 
+Endless hook indicator
+== Sonsuz kanca göstergesi
+
+Endless hook indicator style (0=infinity symbol, 1=rainbow ring)
+== Sonsuz kanca göstergesi stili (0=sonsuzluk simgesi, 1=gökkuşağı halkası)
+
 Endpoint
 == Uç nokta
 
@@ -6050,6 +6056,24 @@ Hook Collisions
 Hook collisions
 == Kanca çarpışma çizgileri
 
+Hook countdown colors
+== Kanca geri sayımı renkleri
+
+Hook countdown ring color
+== Kanca geri sayımı halka rengi
+
+Hook countdown size
+== Kanca geri sayımı boyutu
+
+Hook countdown size percentage
+== Kanca geri sayımı boyutu yüzdesi
+
+Hook countdown urgent color
+== Kanca geri sayımı acil renk
+
+Hook countdown warning color
+== Kanca geri sayımı uyarı rengi
+
 Hook hits unhookable surface
 == Kanca tutunulamaz yüzeye çarptı
 
@@ -6361,6 +6385,9 @@ Indicator transparency
 
 Infinite hook for super players on/off.
 == Süper oyuncular için sonsuz kanca açık/kapalı.
+
+Infinity symbol
+== Sonsuzluk simgesi
 
 Info
 == Bilgi
@@ -10015,6 +10042,9 @@ Rainbow mode (1=Rainbow, 2=Pulse, 3=Dark, 4=Random)
 
 Rainbow others
 == Gökkuşağını herkese göster!
+
+Rainbow ring
+== Gökkuşağı halkası
 
 Rainbow speed
 == Gökkuşağı hızı

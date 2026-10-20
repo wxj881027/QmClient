@@ -4595,6 +4595,12 @@ Endless hook has been activated
 Endless hook has been deactivated
 == Grappin infini désactivé
 
+Endless hook indicator
+== Indicateur de grappin infini
+
+Endless hook indicator style (0=infinity symbol, 1=rainbow ring)
+== Style de l'indicateur de grappin infini (0=symbole infini, 1=anneau arc-en-ciel)
+
 Endpoint
 == Point d'accès
 
@@ -6050,6 +6056,24 @@ Hook Collisions
 Hook collisions
 == Collisions de crochet
 
+Hook countdown colors
+== Couleurs du compte à rebours du grappin
+
+Hook countdown ring color
+== Couleur de l'anneau du compte à rebours du grappin
+
+Hook countdown size
+== Taille du compte à rebours du grappin
+
+Hook countdown size percentage
+== Pourcentage de la taille du compte à rebours du grappin
+
+Hook countdown urgent color
+== Couleur urgente du compte à rebours du grappin
+
+Hook countdown warning color
+== Couleur d'avertissement du compte à rebours du grappin
+
 Hook hits unhookable surface
 == Le grappin touche une surface non accrochable
 
@@ -6361,6 +6385,9 @@ Indicator transparency
 
 Infinite hook for super players on/off.
 == Crochet infini pour les super joueurs activé/désactivé.
+
+Infinity symbol
+== Symbole infini
 
 Info
 == Infos
@@ -10015,6 +10042,9 @@ Rainbow mode (1=Rainbow, 2=Pulse, 3=Dark, 4=Random)
 
 Rainbow others
 == Arc-en-ciel pour tout le monde !
+
+Rainbow ring
+== Anneau arc-en-ciel
 
 Rainbow speed
 == Vitesse de l'arc-en-ciel

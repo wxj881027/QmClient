@@ -4595,6 +4595,12 @@ Endless hook has been activated
 Endless hook has been deactivated
 == エンドレスフックが無効化されました
 
+Endless hook indicator
+== 無限フックのインジケーター
+
+Endless hook indicator style (0=infinity symbol, 1=rainbow ring)
+== 無限フックのインジケータースタイル（0=無限記号、1=レインボーリング）
+
 Endpoint
 == エンドポイント
 
@@ -6050,6 +6056,24 @@ Hook Collisions
 Hook collisions
 == フック衝突
 
+Hook countdown colors
+== フックのカウントダウン色
+
+Hook countdown ring color
+== フックのカウントダウンリング色
+
+Hook countdown size
+== フックのカウントダウンサイズ
+
+Hook countdown size percentage
+== フックのカウントダウンサイズ（%）
+
+Hook countdown urgent color
+== フックのカウントダウン緊急色
+
+Hook countdown warning color
+== フックのカウントダウン警告色
+
 Hook hits unhookable surface
 == フックがフック不可壁に衝突
 
@@ -6361,6 +6385,9 @@ Indicator transparency
 
 Infinite hook for super players on/off.
 == スーパープレイヤーの無限フックのオン/オフ。
+
+Infinity symbol
+== 無限記号
 
 Info
 == 情報
@@ -10015,6 +10042,9 @@ Rainbow mode (1=Rainbow, 2=Pulse, 3=Dark, 4=Random)
 
 Rainbow others
 == 他プレイヤーを虹色に
+
+Rainbow ring
+== レインボーリング
 
 Rainbow speed
 == 色変化速度

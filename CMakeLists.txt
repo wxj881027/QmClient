@@ -3202,6 +3202,7 @@ if(CLIENT)
     QmUi/QmLegacyMediaHud.cpp
     QmUi/QmLegacyMediaHud.h
     QmUi/QmColorGradient.h
+    QmUi/QmNeonRainbow.h
     QmUi/QmGradientGeometry.h
     QmUi/QmImeAppearance.h
     QmUi/QmChatCompletionAppearance.h

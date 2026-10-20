@@ -4595,6 +4595,12 @@ Endless hook has been activated
 Endless hook has been deactivated
 == El gancho infinito se ha desactivado
 
+Endless hook indicator
+== Indicador de gancho infinito
+
+Endless hook indicator style (0=infinity symbol, 1=rainbow ring)
+== Estilo del indicador de gancho infinito (0=símbolo de infinito, 1=anillo arcoíris)
+
 Endpoint
 == Punto final
 
@@ -6050,6 +6056,24 @@ Hook Collisions
 Hook collisions
 == Colisiones de gancho
 
+Hook countdown colors
+== Colores de la cuenta atrás del gancho
+
+Hook countdown ring color
+== Color del anillo de la cuenta atrás del gancho
+
+Hook countdown size
+== Tamaño de la cuenta atrás del gancho
+
+Hook countdown size percentage
+== Porcentaje del tamaño de la cuenta atrás del gancho
+
+Hook countdown urgent color
+== Color urgente de la cuenta atrás del gancho
+
+Hook countdown warning color
+== Color de advertencia de la cuenta atrás del gancho
+
 Hook hits unhookable surface
 == El gancho golpea una superficie no enganchable
 
@@ -6361,6 +6385,9 @@ Indicator transparency
 
 Infinite hook for super players on/off.
 == Gancho infinito para superjugadores activado/desactivado.
+
+Infinity symbol
+== Símbolo de infinito
 
 Info
 == Información
@@ -10015,6 +10042,9 @@ Rainbow mode (1=Rainbow, 2=Pulse, 3=Dark, 4=Random)
 
 Rainbow others
 == Arcoíris para todos
+
+Rainbow ring
+== Anillo arcoíris
 
 Rainbow speed
 == Velocidad del arcoíris

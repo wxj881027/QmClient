@@ -655,6 +655,9 @@ MACRO_CONFIG_INT(QmSwitchCountdownMode, qm_switch_countdown_mode, 1, 0, 2, CFGFL
 MACRO_CONFIG_INT(QmHookCountdown, qm_hook_countdown, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable hook countdown")
 MACRO_CONFIG_INT(QmHookCountdownSize, qm_hook_countdown_size, 100, 50, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hook countdown size percentage")
 MACRO_CONFIG_INT(QmHookCountdownEndlessStyle, qm_hook_countdown_endless_style, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Endless hook indicator style (0=infinity symbol, 1=rainbow ring)")
+MACRO_CONFIG_COL(QmHookCountdownColor, qm_hook_countdown_color, 0x0092FF99, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hook countdown ring color")
+MACRO_CONFIG_COL(QmHookCountdownWarningColor, qm_hook_countdown_warning_color, 0x001BFF93, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hook countdown warning color")
+MACRO_CONFIG_COL(QmHookCountdownUrgentColor, qm_hook_countdown_urgent_color, 0x0000FF9F, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hook countdown urgent color")
 
 // Hook Collision Pressed Colors - 钩索辅助线按下后颜色（开关 + 四类自定义；开=四色始终生效，无回退）
 // 默认按下色 = 对应原色配置默认值做 HSL 提亮（L + 0.25，H/S 不变，alpha 置 FF）得到的高亮变体。

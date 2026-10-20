@@ -38486,3 +38486,83 @@ brazilian_portuguese = "Renderizar apenas a demo: ocultar HUD, chat e informaç�
 portuguese = "Renderizar apenas a demo: ocultar HUD, chat e informações de espetador ao exportar"
 turkish = "Yalnızca demoyu işle: dışa aktarırken HUD, sohbet ve izleyici bilgilerini gizle"
 polish = "Renderuj tylko demo: ukryj HUD, czat i informacje widza podczas eksportu"
+
+[[message]]
+key = "Endless hook indicator style (0=infinity symbol, 1=rainbow ring)"
+[message.translations]
+simplified_chinese = "无限钩指示样式（0=无限符号，1=彩虹圆环）"
+traditional_chinese = "無限鉤指示樣式（0=無限符號，1=彩虹圓環）"
+japanese = "無限フックのインジケータースタイル（0=無限記号、1=レインボーリング）"
+korean = "무한 훅 표시 스타일 (0=무한 기호, 1=무지개 링)"
+russian = "Стиль индикатора бесконечного крюка (0=символ бесконечности, 1=радужное кольцо)"
+german = "Stil der Unendlich-Haken-Anzeige (0=Unendlichkeitssymbol, 1=Regenbogenring)"
+spanish = "Estilo del indicador de gancho infinito (0=símbolo de infinito, 1=anillo arcoíris)"
+french = "Style de l'indicateur de grappin infini (0=symbole infini, 1=anneau arc-en-ciel)"
+brazilian_portuguese = "Estilo do indicador de gancho infinito (0=símbolo de infinito, 1=anel arco-íris)"
+portuguese = "Estilo do indicador de gancho infinito (0=símbolo de infinito, 1=anel arco-íris)"
+turkish = "Sonsuz kanca göstergesi stili (0=sonsuzluk simgesi, 1=gökkuşağı halkası)"
+polish = "Styl wskaźnika nieskończonego haka (0=symbol nieskończoności, 1=tęczowy pierścień)"
+
+[[message]]
+key = "Hook countdown ring color"
+[message.translations]
+simplified_chinese = "钩子倒计时圆环颜色"
+traditional_chinese = "鉤子倒數圓環顏色"
+japanese = "フックのカウントダウンリング色"
+korean = "훅 카운트다운 링 색상"
+russian = "Цвет кольца отсчёта крюка"
+german = "Ringfarbe des Haken-Countdowns"
+spanish = "Color del anillo de la cuenta atrás del gancho"
+french = "Couleur de l'anneau du compte à rebours du grappin"
+brazilian_portuguese = "Cor do anel da contagem regressiva do gancho"
+portuguese = "Cor do anel da contagem decrescente do gancho"
+turkish = "Kanca geri sayımı halka rengi"
+polish = "Kolor pierścienia odliczania haka"
+
+[[message]]
+key = "Hook countdown size percentage"
+[message.translations]
+simplified_chinese = "钩子倒计时尺寸百分比"
+traditional_chinese = "鉤子倒數尺寸百分比"
+japanese = "フックのカウントダウンサイズ（%）"
+korean = "훅 카운트다운 크기 백분율"
+russian = "Размер отсчёта крюка в процентах"
+german = "Größe des Haken-Countdowns in Prozent"
+spanish = "Porcentaje del tamaño de la cuenta atrás del gancho"
+french = "Pourcentage de la taille du compte à rebours du grappin"
+brazilian_portuguese = "Porcentagem do tamanho da contagem regressiva do gancho"
+portuguese = "Percentagem do tamanho da contagem decrescente do gancho"
+turkish = "Kanca geri sayımı boyutu yüzdesi"
+polish = "Procent rozmiaru odliczania haka"
+
+[[message]]
+key = "Hook countdown urgent color"
+[message.translations]
+simplified_chinese = "钩子倒计时紧急颜色"
+traditional_chinese = "鉤子倒數緊急顏色"
+japanese = "フックのカウントダウン緊急色"
+korean = "훅 카운트다운 긴급 색상"
+russian = "Критический цвет отсчёта крюка"
+german = "Dringlichkeitsfarbe des Haken-Countdowns"
+spanish = "Color urgente de la cuenta atrás del gancho"
+french = "Couleur urgente du compte à rebours du grappin"
+brazilian_portuguese = "Cor de urgência da contagem regressiva do gancho"
+portuguese = "Cor de urgência da contagem decrescente do gancho"
+turkish = "Kanca geri sayımı acil renk"
+polish = "Kolor pilny odliczania haka"
+
+[[message]]
+key = "Hook countdown warning color"
+[message.translations]
+simplified_chinese = "钩子倒计时警告颜色"
+traditional_chinese = "鉤子倒數警告顏色"
+japanese = "フックのカウントダウン警告色"
+korean = "훅 카운트다운 경고 색상"
+russian = "Предупреждающий цвет отсчёта крюка"
+german = "Warnfarbe des Haken-Countdowns"
+spanish = "Color de advertencia de la cuenta atrás del gancho"
+french = "Couleur d'avertissement du compte à rebours du grappin"
+brazilian_portuguese = "Cor de aviso da contagem regressiva do gancho"
+portuguese = "Cor de aviso da contagem decrescente do gancho"
+turkish = "Kanca geri sayımı uyarı rengi"
+polish = "Kolor ostrzeżenia odliczania haka"

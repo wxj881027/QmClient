@@ -206,6 +206,30 @@ void CMenus::RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight,
 		}
 		Flow.Space(LineSpacing);
 
+		// 环色是三段色阶（普通 / 警告 / 紧急），三段并排占一行：同一组颜色横向排开，
+		// 既省掉两行高度，也能一眼看出它们是同一条时间轴上的颜色。
+		// 无限钩是另一套彩虹色，这里只管普通钩的进度环。
+		{
+			CUIRect ColorRow;
+			if(Flow.Control("qmclient-hook-countdown-colors", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow))
+			{
+				CUIRect ColorLabel, ColorControls;
+				SplitSettingsControlRow(ColorRow, CurrentSettingsContentMetrics(), &ColorLabel, &ColorControls);
+				DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, "qmclient-hook-countdown-colors-label", &ColorLabel, Localize("Hook countdown colors"), 10.0f, TEXTALIGN_ML, {}, (int)ColorLabel.w);
+				constexpr float SwatchGap = 4.0f;
+				const float SwatchWidth = (ColorControls.w - SwatchGap * 2.0f) / 3.0f;
+				unsigned int *apStageColors[] = {&g_Config.m_QmHookCountdownColor, &g_Config.m_QmHookCountdownWarningColor, &g_Config.m_QmHookCountdownUrgentColor};
+				for(int Stage = 0; Stage < 3; ++Stage)
+				{
+					CUIRect Swatch = ColorControls;
+					Swatch.x += (SwatchWidth + SwatchGap) * Stage;
+					Swatch.w = SwatchWidth;
+					DoButton_ColorPicker(&Swatch, apStageColors[Stage], false);
+				}
+			}
+			Flow.Space(LineSpacing);
+		}
+
 		// 无限钩的指示样式：∞ 符号或圆环，两者都用同一套彩虹流动色。
 		CUIRect StyleRow;
 		if(Flow.Control("qmclient-hook-countdown-endless-style", CurrentSettingsContentMetrics().m_LineHeight, StyleRow))
