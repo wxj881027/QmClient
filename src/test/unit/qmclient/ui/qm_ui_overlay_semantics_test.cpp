@@ -1,8 +1,8 @@
-// 弹窗/轻提示的语义契约：默认安全焦点、队列上限、锚定几何。
+// 弹窗/轻提示/卡片重排的语义契约：队列上限、锚定几何、FLIP 偏移收敛。
 // 这些行为不依赖渲染上下文，按纯函数与队列状态断言，避免源码字符串合同。
 #include <gtest/gtest.h>
 
-#include <game/client/QmUi/QmDialogLogic.h>
+#include <game/client/QmUi/QmCardReflow.h>
 #include <game/client/QmUi/QmPopconfirmGeometry.h>
 #include <game/client/QmUi/QmToast.h>
 
@@ -20,22 +20,6 @@ namespace
 		return Rect;
 	}
 } // namespace
-
-TEST(QmDialogLogic, EnterOnDefaultFocusCancels)
-{
-	// 默认焦点在取消：随手回车不确认危险操作。
-	EXPECT_EQ(qm_dialog::NormalizeFocus(-1), qm_dialog::FOCUS_CANCEL);
-	EXPECT_EQ(qm_dialog::NormalizeFocus(qm_dialog::FOCUS_CANCEL), qm_dialog::FOCUS_CANCEL);
-	EXPECT_EQ(qm_dialog::ResolveEnter(qm_dialog::FOCUS_CANCEL), qm_dialog::EEnterOutcome::CANCEL);
-}
-
-TEST(QmDialogLogic, EnterOnConfirmFocusConfirms)
-{
-	EXPECT_EQ(qm_dialog::ToggleFocus(qm_dialog::FOCUS_CANCEL), qm_dialog::FOCUS_CONFIRM);
-	EXPECT_EQ(qm_dialog::ResolveEnter(qm_dialog::FOCUS_CONFIRM), qm_dialog::EEnterOutcome::CONFIRM);
-	// 再按一次回到取消侧，焦点不会卡在确认上。
-	EXPECT_EQ(qm_dialog::ToggleFocus(qm_dialog::FOCUS_CONFIRM), qm_dialog::FOCUS_CANCEL);
-}
 
 TEST(QmToastQueue, KeepsOnlyNewestEntries)
 {
@@ -114,4 +98,51 @@ TEST(QmPopconfirmLayout, ClampsInsideViewport)
 	EXPECT_FLOAT_EQ(Rect.x, qm_popconfirm_layout::SCREEN_MARGIN);
 	EXPECT_GE(Rect.y, qm_popconfirm_layout::SCREEN_MARGIN);
 	EXPECT_LE(Rect.x + Rect.w, Screen.w);
+}
+
+TEST(QmCardReflow, NewCardStartsWithoutOffset)
+{
+	CQmCardReflow Reflow;
+	Reflow.BeginFrame(1.0f / 60.0f, false);
+	EXPECT_FLOAT_EQ(Reflow.Track("A", MakeRect(0.0f, 100.0f, 80.0f, 80.0f)).y, 0.0f);
+}
+
+TEST(QmCardReflow, LayoutMoveIsInvertedThenSettles)
+{
+	CQmCardReflow Reflow;
+	Reflow.BeginFrame(1.0f / 60.0f, false);
+	Reflow.Track("A", MakeRect(0.0f, 100.0f, 80.0f, 80.0f));
+	// 布局瞬移到 y=180：视觉上仍停在 100，偏移 = -80。
+	Reflow.BeginFrame(1.0f / 60.0f, false);
+	const float FirstOffset = Reflow.Track("A", MakeRect(0.0f, 180.0f, 80.0f, 80.0f)).y;
+	EXPECT_NEAR(FirstOffset, -80.0f, 0.01f);
+	// 1 秒后应收敛回布局位置。
+	float Offset = FirstOffset;
+	for(int Frame = 0; Frame < 60; ++Frame)
+	{
+		Reflow.BeginFrame(1.0f / 60.0f, false);
+		Offset = Reflow.Track("A", MakeRect(0.0f, 180.0f, 80.0f, 80.0f)).y;
+	}
+	EXPECT_LT(std::abs(Offset), 0.5f);
+}
+
+TEST(QmCardReflow, SnapClearsPendingOffset)
+{
+	CQmCardReflow Reflow;
+	Reflow.BeginFrame(1.0f / 60.0f, false);
+	Reflow.Track("A", MakeRect(0.0f, 100.0f, 80.0f, 80.0f));
+	Reflow.BeginFrame(1.0f / 60.0f, false);
+	EXPECT_LT(Reflow.Track("A", MakeRect(0.0f, 180.0f, 80.0f, 80.0f)).y, 0.0f);
+	// 滚动中直接对齐：偏移归零，不做追随。
+	Reflow.BeginFrame(1.0f / 60.0f, true);
+	EXPECT_FLOAT_EQ(Reflow.Track("A", MakeRect(0.0f, 180.0f, 80.0f, 80.0f)).y, 0.0f);
+}
+
+TEST(QmCardReflow, SeedPlacesNewCardAtSourcePosition)
+{
+	CQmCardReflow Reflow;
+	Reflow.BeginFrame(1.0f / 60.0f, false);
+	const CUIRect Seed = MakeRect(0.0f, 400.0f, 24.0f, 24.0f);
+	const vec2 Offset = Reflow.Track("Fresh", MakeRect(0.0f, 100.0f, 80.0f, 80.0f), &Seed);
+	EXPECT_NEAR(Offset.y, 300.0f, 0.01f);
 }

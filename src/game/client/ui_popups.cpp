@@ -2,7 +2,6 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "QmUi/ColorPickerSlider.h"
 #include "QmUi/QmAnimResolve.h"
-#include "QmUi/QmDialogLogic.h"
 #include "QmUi/QmDropdown.h"
 #include "QmUi/QmPopupPointer.h"
 #include "QmUi/QmPopupSource.h"
@@ -773,8 +772,6 @@ CUi::SConfirmPopupContext::SConfirmPopupContext()
 void CUi::SConfirmPopupContext::Reset()
 {
 	m_Result = SConfirmPopupContext::UNSET;
-	m_FocusedButton = 0;
-	m_KeyboardFocus = false;
 }
 
 void CUi::SConfirmPopupContext::YesNoButtons()
@@ -819,27 +816,6 @@ CUi::EPopupMenuFunctionResult CUi::PopupConfirm(void *pContext, CUIRect View, bo
 
 	pUI->TextRender()->Text(Label.x, Label.y, SConfirmPopupContext::POPUP_FONT_SIZE, pConfirmPopup->m_aMessage, Label.w);
 
-	// 键盘导航：左/上回取消，右/下到确认，Tab 来回切。只有用过键盘才画焦点环，
-	// 鼠标用户不受额外视觉噪声影响。
-	if(Active)
-	{
-		if(pUI->ConsumeHotkey(HOTKEY_LEFT) || pUI->ConsumeHotkey(HOTKEY_UP))
-		{
-			pConfirmPopup->m_FocusedButton = 0;
-			pConfirmPopup->m_KeyboardFocus = true;
-		}
-		if(pUI->ConsumeHotkey(HOTKEY_RIGHT) || pUI->ConsumeHotkey(HOTKEY_DOWN))
-		{
-			pConfirmPopup->m_FocusedButton = 1;
-			pConfirmPopup->m_KeyboardFocus = true;
-		}
-		if(pUI->ConsumeHotkey(HOTKEY_TAB))
-		{
-			pConfirmPopup->m_FocusedButton = qm_dialog::ToggleFocus(pConfirmPopup->m_FocusedButton);
-			pConfirmPopup->m_KeyboardFocus = true;
-		}
-	}
-
 	if(pUI->DoButton_PopupMenu(&pConfirmPopup->m_CancelButton, pConfirmPopup->m_aNegativeButtonLabel, &CancelButton, SConfirmPopupContext::POPUP_FONT_SIZE, TEXTALIGN_MC))
 	{
 		pConfirmPopup->m_Result = SConfirmPopupContext::CANCELED;
@@ -852,22 +828,6 @@ CUi::EPopupMenuFunctionResult CUi::PopupConfirm(void *pContext, CUIRect View, bo
 	{
 		pConfirmPopup->m_Result = SConfirmPopupContext::CONFIRMED;
 		return CUi::POPUP_CLOSE_CURRENT;
-	}
-
-	// Enter 跟随焦点执行：默认焦点是「取消」，所以误按回车不再等于确认。
-	if(Active && pUI->ConsumeHotkey(HOTKEY_ENTER))
-	{
-		pConfirmPopup->m_Result = qm_dialog::ResolveEnter(pConfirmPopup->m_FocusedButton) == qm_dialog::EEnterOutcome::CONFIRM ?
-						  SConfirmPopupContext::CONFIRMED :
-						  SConfirmPopupContext::CANCELED;
-		return CUi::POPUP_CLOSE_CURRENT;
-	}
-
-	if(pConfirmPopup->m_KeyboardFocus)
-	{
-		const SUiTheme Theme = pUI->QmControlTheme();
-		const CUIRect &FocusRect = pConfirmPopup->m_FocusedButton == 1 ? ConfirmButton : CancelButton;
-		DrawRoundedSurface(pUI, FocusRect, ColorRGBA(), Theme.m_FocusRing, ui_token::radius::BASE, 1.5f);
 	}
 
 	return CUi::POPUP_KEEP_OPEN;

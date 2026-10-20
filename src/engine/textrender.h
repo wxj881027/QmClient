@@ -87,6 +87,7 @@ namespace FontIcons
 	[[maybe_unused]] static const char *FONT_ICON_FLAG_CHECKERED = "\xEE\xA8\xB8";
 	[[maybe_unused]] static const char *FONT_ICON_BAN = "\xEE\x8F\x9E";
 	[[maybe_unused]] static const char *FONT_ICON_CIRCLE_CHEVRON_DOWN = "\xEE\x84\x9E";
+	[[maybe_unused]] static const char *FONT_ICON_DOWNLOAD_SIMPLE = "\xEE\x88\x8C";
 	[[maybe_unused]] static const char *FONT_ICON_KEY = "\xEE\x8B\x96";
 	[[maybe_unused]] static const char *FONT_ICON_LANGUAGE = "\xEE\x92\xA2";
 	[[maybe_unused]] static const char *FONT_ICON_SQUARE_MINUS = "\xEE\xB5\x8C";
@@ -203,6 +204,7 @@ namespace FontIcons
 		FONT_ICON_FLAG_CHECKERED,
 		FONT_ICON_BAN,
 		FONT_ICON_CIRCLE_CHEVRON_DOWN,
+		FONT_ICON_DOWNLOAD_SIMPLE,
 		FONT_ICON_KEY,
 		FONT_ICON_LANGUAGE,
 		FONT_ICON_SQUARE_MINUS,

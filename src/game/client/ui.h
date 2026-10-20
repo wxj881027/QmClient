@@ -1429,11 +1429,6 @@ public:
 		char m_aMessage[1024];
 		EConfirmationResult m_Result;
 		ETone m_Tone = ETone::NEUTRAL;
-		// 键盘焦点：0 = 取消，1 = 确认。默认停在取消，Enter 跟随焦点执行，
-		// 不再无条件确认——删除类弹窗里回车误触的代价太高。
-		int m_FocusedButton = 0;
-		// 只有用过方向键/Tab 才画焦点环，鼠标操作时不额外增加视觉噪声。
-		bool m_KeyboardFocus = false;
 
 		CButtonContainer m_CancelButton;
 		CButtonContainer m_ConfirmButton;

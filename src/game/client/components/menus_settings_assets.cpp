@@ -22,6 +22,7 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/QmCardReflow.h>
 #include <game/client/QmUi/QmPopconfirm.h>
 #include <game/client/QmUi/QmToast.h>
 #include <game/client/QmUi/QmUiPerf.h>
@@ -5940,6 +5941,22 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		static char s_aPendingDeleteName[IO_MAX_PATH_LENGTH] = "";
 		static SQmPopconfirmContext s_DeleteConfirmPopup;
 		static CUIRect s_DeleteConfirmAnchor;
+		// 目标行本帧是否仍在列表里：滚出视口就自动取消确认。
+		static bool s_DeleteConfirmAnchorVisible = false;
+		s_DeleteConfirmAnchorVisible = false;
+		// 卡片重排追随：下载完成/删除后整列前移时滑过去，而不是瞬移。
+		static CQmCardReflow s_LocalCardReflow;
+		static double s_LocalReflowLastSec = -1.0;
+		static float s_LocalReflowLastScroll = -1.0f;
+		{
+			const double ReflowNow = time_get();
+			const float ReflowDt = s_LocalReflowLastSec > 0.0 ? (float)(ReflowNow - s_LocalReflowLastSec) : 0.0f;
+			s_LocalReflowLastSec = ReflowNow;
+			const float ReflowScroll = s_ListBox.ScrollOffsetY();
+			const bool ReflowSnap = s_LocalReflowLastScroll < 0.0f || std::fabs(ReflowScroll - s_LocalReflowLastScroll) > 0.01f;
+			s_LocalReflowLastScroll = ReflowScroll;
+			s_LocalCardReflow.BeginFrame(ReflowDt, ReflowSnap);
+		}
 		bool DeleteLocalRequested = false;
 		char aDeleteLocalName[IO_MAX_PATH_LENGTH] = "";
 		int FirstVisibleIndex = -1;
@@ -6001,6 +6018,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			ItemRect.Margin(Margin / 2, &ItemRect);
 			if(!Item.m_Visible)
 				continue;
+			const vec2 CardReflowOffset = s_LocalCardReflow.Track(pItem->m_aName, ItemRect);
+			ItemRect.x += CardReflowOffset.x;
+			ItemRect.y += CardReflowOffset.y;
 			auto GaussianBlurSuppression = Item.SuppressGaussianBlur();
 			if(FirstVisibleIndex < 0)
 				FirstVisibleIndex = (int)i;
@@ -6066,6 +6086,12 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 			if(HasDeleteButton)
 			{
+				if(s_aPendingDeleteName[0] != '\0' && str_comp(pItem->m_aName, s_aPendingDeleteName) == 0)
+				{
+					s_DeleteConfirmAnchor = Shell.m_ActionButtonRect;
+					s_DeleteConfirmAnchorVisible = true;
+				}
+				GameClient()->m_Tooltips.DoToolTip(&s_vLocalDeleteButtons[i], &Shell.m_ActionButtonRect, Localize("Delete"));
 				if(Ui()->DoButton_QmIcon(&s_vLocalDeleteButtons[i], EQmIcon::TRASH, FONT_ICON_TRASH, 0, &Shell.m_ActionButtonRect, IGraphics::CORNER_ALL, IGraphics::CORNER_ALL, true, std::nullopt, false, true))
 				{
 					DeleteLocalRequested = true;
@@ -6188,7 +6214,17 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			s_DeleteConfirmPopup.DefaultButtons();
 			str_format(s_DeleteConfirmPopup.m_aMessage, sizeof(s_DeleteConfirmPopup.m_aMessage), Localize("Delete \"%s\"?"), s_aPendingDeleteName);
 			s_DeleteConfirmPopup.m_ToneDanger = true;
-			QmShowPopconfirm(Ui(), &s_DeleteConfirmPopup, s_DeleteConfirmAnchor);
+			s_DeleteConfirmAnchorVisible = true;
+		}
+
+		// 每帧按目标行的当前矩形重放一次：列表滚动时气泡跟着按钮走；
+		// 目标滚出视口（本帧没渲染到）则直接关闭并判定为取消。
+		if(s_aPendingDeleteName[0] != '\0')
+		{
+			if(s_DeleteConfirmAnchorVisible)
+				QmShowPopconfirm(Ui(), &s_DeleteConfirmPopup, s_DeleteConfirmAnchor);
+			else if(Ui()->IsPopupVisible(&s_DeleteConfirmPopup))
+				Ui()->ClosePopupMenu(&s_DeleteConfirmPopup);
 		}
 
 		if(s_DeleteConfirmPopup.m_Confirmed)
@@ -7005,6 +7041,22 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			static size_t s_PendingDownloadAssetIndex = SIZE_MAX;
 			static SQmPopconfirmContext s_WorkshopDownloadConfirmPopup;
 			static CUIRect s_WorkshopDownloadConfirmAnchor;
+			static bool s_WorkshopDeleteAnchorVisible = false;
+			static bool s_WorkshopDownloadAnchorVisible = false;
+			s_WorkshopDeleteAnchorVisible = false;
+			s_WorkshopDownloadAnchorVisible = false;
+			static CQmCardReflow s_WorkshopCardReflow;
+			static double s_WorkshopReflowLastSec = -1.0;
+			static float s_WorkshopReflowLastScroll = -1.0f;
+			{
+				const double ReflowNow = time_get();
+				const float ReflowDt = s_WorkshopReflowLastSec > 0.0 ? (float)(ReflowNow - s_WorkshopReflowLastSec) : 0.0f;
+				s_WorkshopReflowLastSec = ReflowNow;
+				const float ReflowScroll = s_WorkshopAssetsListBox.ScrollOffsetY();
+				const bool ReflowSnap = s_WorkshopReflowLastScroll < 0.0f || std::fabs(ReflowScroll - s_WorkshopReflowLastScroll) > 0.01f;
+				s_WorkshopReflowLastScroll = ReflowScroll;
+				s_WorkshopCardReflow.BeginFrame(ReflowDt, ReflowSnap);
+			}
 
 			bool DeleteLocalRequested = false;
 			char aDeleteLocalName[IO_MAX_PATH_LENGTH] = "";
@@ -7260,6 +7312,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					ItemRect.Margin(Margin / 2, &ItemRect);
 					if(!Item.m_Visible)
 						continue;
+					const vec2 CardReflowOffset = s_WorkshopCardReflow.Track(pItem->m_aName, ItemRect);
+					ItemRect.x += CardReflowOffset.x;
+					ItemRect.y += CardReflowOffset.y;
 					auto GaussianBlurSuppression = Item.SuppressGaussianBlur();
 					if(FirstVisibleLocalIndex < 0)
 						FirstVisibleLocalIndex = (int)LocalIndex;
@@ -7376,6 +7431,12 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 					if(HasDeleteButton)
 					{
+						if(s_aWorkshopPendingDeleteName[0] != '\0' && str_comp(pItem->m_aName, s_aWorkshopPendingDeleteName) == 0)
+						{
+							s_WorkshopDeleteConfirmAnchor = Shell.m_ActionButtonRect;
+							s_WorkshopDeleteAnchorVisible = true;
+						}
+						GameClient()->m_Tooltips.DoToolTip(&s_vWorkshopLocalDeleteButtons[LocalIndex], &Shell.m_ActionButtonRect, Localize("Delete"));
 						if(Ui()->DoButton_QmIcon(&s_vWorkshopLocalDeleteButtons[LocalIndex], EQmIcon::TRASH, FONT_ICON_TRASH, 0, &Shell.m_ActionButtonRect, IGraphics::CORNER_ALL, IGraphics::CORNER_ALL, true, std::nullopt, false, true))
 						{
 							DeleteLocalRequested = true;
@@ -7395,6 +7456,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					ItemRect.Margin(Margin / 2, &ItemRect);
 					if(!Item.m_Visible)
 						continue;
+					// 下载项用 id 作键：装上后本地项用它自己的文件名，两者不会互相串。
+					const vec2 CardReflowOffset = s_WorkshopCardReflow.Track(Asset.m_Id.empty() ? Asset.m_Name.c_str() : Asset.m_Id.c_str(), ItemRect);
+					ItemRect.x += CardReflowOffset.x;
+					ItemRect.y += CardReflowOffset.y;
 					auto GaussianBlurSuppression = Item.SuppressGaussianBlur();
 
 					const int VisibleDownloadableIndex = static_cast<int>(DownloadableIndex);
@@ -7460,8 +7525,15 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					RenderAssetsCardPreview(Shell, PreviewState, true, CardHydrationScheduler.CanRenderPreview(CombinedVisible, PreviewReady));
 					WorkshopCardPreviewDrawMs += CardPreviewDrawTimer.ElapsedMs();
 
-					const EQmIcon ActionIconEnum = Downloading ? EQmIcon::ARROW_ROTATE_RIGHT : EQmIcon::CIRCLE_CHEVRON_DOWN;
-					const char *pActionIcon = Downloading ? FONT_ICON_ARROW_ROTATE_RIGHT : FONT_ICON_CIRCLE_CHEVRON_DOWN;
+					if(s_PendingDownloadAssetIndex == AssetIndex)
+					{
+						s_WorkshopDownloadConfirmAnchor = Shell.m_ActionButtonRect;
+						s_WorkshopDownloadAnchorVisible = true;
+					}
+
+					const EQmIcon ActionIconEnum = Downloading ? EQmIcon::ARROW_ROTATE_RIGHT : EQmIcon::DOWNLOAD_SIMPLE;
+					const char *pActionIcon = Downloading ? FONT_ICON_ARROW_ROTATE_RIGHT : FONT_ICON_DOWNLOAD_SIMPLE;
+					GameClient()->m_Tooltips.DoToolTip(&vWorkshopActionButtons[AssetIndex], &Shell.m_ActionButtonRect, Downloading ? Localize("Downloading…") : Localize("Download"));
 					if(Ui()->DoButton_QmIcon(&vWorkshopActionButtons[AssetIndex], ActionIconEnum, pActionIcon, 0, &Shell.m_ActionButtonRect, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, !Downloading, std::nullopt, false, true))
 					{
 						DownloadRequested = true;
@@ -7545,7 +7617,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				s_WorkshopDeleteConfirmPopup.DefaultButtons();
 				str_format(s_WorkshopDeleteConfirmPopup.m_aMessage, sizeof(s_WorkshopDeleteConfirmPopup.m_aMessage), Localize("Delete \"%s\"?"), s_aWorkshopPendingDeleteName);
 				s_WorkshopDeleteConfirmPopup.m_ToneDanger = true;
-				QmShowPopconfirm(Ui(), &s_WorkshopDeleteConfirmPopup, s_WorkshopDeleteConfirmAnchor);
+				s_WorkshopDeleteAnchorVisible = true;
 			}
 			if(DownloadRequested && RequestedDownloadAssetIndex < WorkshopState.m_vAssets.size())
 			{
@@ -7553,7 +7625,23 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				s_WorkshopDownloadConfirmPopup.Reset();
 				s_WorkshopDownloadConfirmPopup.DefaultButtons();
 				str_format(s_WorkshopDownloadConfirmPopup.m_aMessage, sizeof(s_WorkshopDownloadConfirmPopup.m_aMessage), Localize("Download \"%s\"?"), WorkshopState.m_vAssets[RequestedDownloadAssetIndex].m_Name.c_str());
-				QmShowPopconfirm(Ui(), &s_WorkshopDownloadConfirmPopup, s_WorkshopDownloadConfirmAnchor);
+				s_WorkshopDownloadAnchorVisible = true;
+			}
+
+			// 与本地删除同规则：跟着按钮走，目标滚出视口就关闭并取消。
+			if(s_aWorkshopPendingDeleteName[0] != '\0')
+			{
+				if(s_WorkshopDeleteAnchorVisible)
+					QmShowPopconfirm(Ui(), &s_WorkshopDeleteConfirmPopup, s_WorkshopDeleteConfirmAnchor);
+				else if(Ui()->IsPopupVisible(&s_WorkshopDeleteConfirmPopup))
+					Ui()->ClosePopupMenu(&s_WorkshopDeleteConfirmPopup);
+			}
+			if(s_PendingDownloadAssetIndex != SIZE_MAX)
+			{
+				if(s_WorkshopDownloadAnchorVisible)
+					QmShowPopconfirm(Ui(), &s_WorkshopDownloadConfirmPopup, s_WorkshopDownloadConfirmAnchor);
+				else if(Ui()->IsPopupVisible(&s_WorkshopDownloadConfirmPopup))
+					Ui()->ClosePopupMenu(&s_WorkshopDownloadConfirmPopup);
 			}
 
 			if(s_WorkshopDeleteConfirmPopup.m_Confirmed)
