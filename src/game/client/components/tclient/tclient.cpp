@@ -40,6 +40,7 @@
 #include <game/gamecore.h>
 #include <game/layers.h>
 #include <game/localization.h>
+#include <game/map/map_render_items.h>
 #include <game/mapitems.h>
 #include <game/version.h>
 
@@ -3886,13 +3887,13 @@ void CTClient::StepGoresDistanceFieldVisualLayers(int Budget)
 				m_vGoresDistanceFieldBuildImageSemantics.assign((size_t)maximum(ImageCount, 0), GORES_CMAP_NORMAL);
 				for(int ImageIndex = 0; ImageIndex < ImageCount; ++ImageIndex)
 				{
-					const auto *pImage = static_cast<const CMapItemImage_v2 *>(pMap->GetItem(ImageStart + ImageIndex));
-					if(!pImage)
+					const auto ImageItem = MapRenderItems::ReadImage(*pMap, ImageStart + ImageIndex);
+					if(!ImageItem)
 						continue;
 
-					const char *pImageName = pMap->GetDataString(pImage->m_ImageName);
+					const char *pImageName = pMap->GetDataString(ImageItem->m_ImageName);
 					m_vGoresDistanceFieldBuildImageSemantics[(size_t)ImageIndex] = GoresSemanticImageToCMapValue(pImageName);
-					pMap->UnloadData(pImage->m_ImageName);
+					pMap->UnloadData(ImageItem->m_ImageName);
 				}
 			}
 

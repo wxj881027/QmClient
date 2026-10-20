@@ -3974,6 +3974,7 @@ if(CLIENT)
     envelope_manager.h
     map_preview_common.cpp
     map_preview_common.h
+    map_render_items.h
     map_renderer.cpp
     map_renderer.h
     render_component.cpp
@@ -4811,6 +4812,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/map_history_test.cpp
     src/test/unit/client/map_tile_border_test.cpp
     src/test/unit/engine/map_load_test.cpp
+    src/test/unit/engine/map_render_items_test.cpp
+    src/test/integration/client/map_render_items_test.cpp
     src/test/unit/engine/linereader_test.cpp
     src/test/unit/base/mapbugs_test.cpp
     src/test/unit/base/mapitems_test.cpp

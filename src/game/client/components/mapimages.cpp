@@ -19,6 +19,7 @@
 #include <game/client/gameclient.h>
 #include <game/layers.h>
 #include <game/localization.h>
+#include <game/map/map_render_items.h>
 #include <game/mapitems.h>
 
 static bool ImageDataSizeValid(const CImageInfo &Image, size_t &DataSize)
@@ -187,6 +188,9 @@ void CMapImages::OnMapLoadImpl(class CLayers *pLayers, IMap *pMap)
 	pMap->GetType(MAPITEMTYPE_IMAGE, &Start, &m_Count);
 	m_Count = std::clamp<int>(m_Count, 0, MAX_MAPIMAGES);
 
+	int LayersStart, LayersCount;
+	pMap->GetType(MAPITEMTYPE_LAYER, &LayersStart, &LayersCount);
+	bool ShowWarning = false;
 	unsigned char aTextureUsedByTileOrQuadLayerFlag[MAX_MAPIMAGES] = {0}; // 0: nothing, 1(as flag): tile layer, 2(as flag): quad layer
 	for(int GroupIndex = 0; GroupIndex < pLayers->NumGroups(); GroupIndex++)
 	{
@@ -214,7 +218,13 @@ void CMapImages::OnMapLoadImpl(class CLayers *pLayers, IMap *pMap)
 			}
 			else if(pLayer->m_Type == LAYERTYPE_QUADS)
 			{
-				const CMapItemLayerQuads *pLayerQuads = reinterpret_cast<const CMapItemLayerQuads *>(pLayer);
+				const auto *pLayerQuads = MapRenderItems::QuadLayer(*pMap, LayersStart + pGroup->m_StartLayer + LayerIndex);
+				if(pLayerQuads == nullptr)
+				{
+					log_error("mapimages", "Ignoring truncated quad layer %d.", pGroup->m_StartLayer + LayerIndex);
+					ShowWarning = true;
+					continue;
+				}
 				if(pLayerQuads->m_Image >= 0 && pLayerQuads->m_Image < m_Count)
 				{
 					aTextureUsedByTileOrQuadLayerFlag[pLayerQuads->m_Image] |= 2;
@@ -226,7 +236,6 @@ void CMapImages::OnMapLoadImpl(class CLayers *pLayers, IMap *pMap)
 	const int TextureLoadFlag = Graphics()->Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE;
 
 	// load new textures
-	bool ShowWarning = false;
 	for(int i = 0; i < m_Count; i++)
 	{
 		if(aTextureUsedByTileOrQuadLayerFlag[i] == 0)
@@ -236,12 +245,18 @@ void CMapImages::OnMapLoadImpl(class CLayers *pLayers, IMap *pMap)
 		}
 
 		const int LoadFlag = (((aTextureUsedByTileOrQuadLayerFlag[i] & 1) != 0) ? TextureLoadFlag : 0) | (((aTextureUsedByTileOrQuadLayerFlag[i] & 2) != 0) ? 0 : (Graphics()->HasTextureArraysSupport() ? IGraphics::TEXLOAD_NO_2D_TEXTURE : 0));
-		const CMapItemImage_v2 *pImg = static_cast<const CMapItemImage_v2 *>(pMap->GetItem(Start + i));
+		const auto ImageItem = MapRenderItems::ReadImage(*pMap, Start + i);
+		if(!ImageItem)
+		{
+			log_error("mapimages", "Failed to load truncated map image %d.", i);
+			ShowWarning = true;
+			continue;
+		}
 
-		const char *pName = pMap->GetDataString(pImg->m_ImageName);
+		const char *pName = pMap->GetDataString(ImageItem->m_ImageName);
 		if(pName == nullptr || pName[0] == '\0')
 		{
-			if(pImg->m_External)
+			if(ImageItem->m_External)
 			{
 				log_error("mapimages", "Failed to load map image %d: failed to load name.", i);
 				ShowWarning = true;
@@ -250,14 +265,14 @@ void CMapImages::OnMapLoadImpl(class CLayers *pLayers, IMap *pMap)
 			pName = "(error)";
 		}
 
-		if(pImg->m_Version > 1 && pImg->m_MustBe1 != 1)
+		if(ImageItem->m_Version > 1 && ImageItem->m_MustBe1 != 1)
 		{
 			log_error("mapimages", "Failed to load map image %d '%s': invalid map image type.", i, pName);
 			ShowWarning = true;
 			continue;
 		}
 
-		if(pImg->m_External)
+		if(ImageItem->m_External)
 		{
 			char aPath[IO_MAX_PATH_LENGTH];
 			bool Translated = false;
@@ -276,7 +291,7 @@ void CMapImages::OnMapLoadImpl(class CLayers *pLayers, IMap *pMap)
 		}
 		else
 		{
-			if(pImg->m_Width <= 0 || pImg->m_Height <= 0)
+			if(ImageItem->m_Width <= 0 || ImageItem->m_Height <= 0)
 			{
 				log_error("mapimages", "Failed to load map image %d '%s': invalid image dimensions.", i, pName);
 				ShowWarning = true;
@@ -284,28 +299,28 @@ void CMapImages::OnMapLoadImpl(class CLayers *pLayers, IMap *pMap)
 			}
 
 			CImageInfo ImageInfo;
-			ImageInfo.m_Width = pImg->m_Width;
-			ImageInfo.m_Height = pImg->m_Height;
+			ImageInfo.m_Width = ImageItem->m_Width;
+			ImageInfo.m_Height = ImageItem->m_Height;
 			ImageInfo.m_Format = CImageInfo::FORMAT_RGBA;
-			ImageInfo.m_pData = static_cast<uint8_t *>(pMap->GetData(pImg->m_ImageData));
+			ImageInfo.m_pData = static_cast<uint8_t *>(pMap->GetData(ImageItem->m_ImageData));
 			size_t ImageDataSize = 0;
-			const int FileDataSize = pMap->GetDataSize(pImg->m_ImageData);
+			const int FileDataSize = pMap->GetDataSize(ImageItem->m_ImageData);
 			if(ImageInfo.m_pData && FileDataSize >= 0 && ImageInfo.DataSize(ImageDataSize) && (size_t)FileDataSize >= ImageDataSize)
 			{
 				char aTexName[IO_MAX_PATH_LENGTH];
 				str_format(aTexName, sizeof(aTexName), "embedded: %s", pName);
 				m_aTextures[i] = Graphics()->LoadTextureRaw(ImageInfo, LoadFlag, aTexName);
-				pMap->UnloadData(pImg->m_ImageData);
+				pMap->UnloadData(ImageItem->m_ImageData);
 			}
 			else
 			{
-				pMap->UnloadData(pImg->m_ImageData);
+				pMap->UnloadData(ImageItem->m_ImageData);
 				log_error("mapimages", "Failed to load map image %d: failed to load data.", i);
 				ShowWarning = true;
 				continue;
 			}
 		}
-		pMap->UnloadData(pImg->m_ImageName);
+		pMap->UnloadData(ImageItem->m_ImageName);
 		ShowWarning = ShowWarning || m_aTextures[i].IsNullTexture();
 	}
 	if(ShowWarning)

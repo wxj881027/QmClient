@@ -8,6 +8,7 @@
 #include <engine/storage.h>
 
 #include <game/localization.h>
+#include <game/map/map_render_items.h>
 #include <game/mapitems.h>
 
 #include <array>
@@ -1121,9 +1122,7 @@ void CRenderLayerQuads::RenderQuadLayer(float Alpha, const CRenderLayerParams &P
 void CRenderLayerQuads::OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages)
 {
 	CRenderLayer::OnInit(pGraphics, pTextRender, pRenderMap, pEnvelopeManager, pMap, pMapImages);
-	int DataSize = m_pMap->GetDataSize(m_pLayerQuads->m_Data);
-	if(m_pLayerQuads->m_NumQuads > 0 && DataSize / (int)sizeof(CQuad) >= m_pLayerQuads->m_NumQuads)
-		m_pQuads = (CQuad *)m_pMap->GetDataSwapped(m_pLayerQuads->m_Data);
+	m_pQuads = MapRenderItems::QuadData(*m_pMap, *m_pLayerQuads).data();
 }
 
 void CRenderLayerQuads::Init()

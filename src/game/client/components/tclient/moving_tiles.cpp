@@ -9,6 +9,7 @@
 
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/gameclient.h>
+#include <game/map/map_render_items.h>
 
 #include <algorithm>
 #include <cmath>
@@ -65,13 +66,13 @@ static bool QuadLayerUsesMovingWaterImage(IMap *pMap, const CMapItemLayerQuads *
 	if(pQuadLayer->m_Image < 0 || pQuadLayer->m_Image >= ImagesNum)
 		return false;
 
-	const auto *pImage = static_cast<const CMapItemImage_v2 *>(pMap->GetItem(ImagesStart + pQuadLayer->m_Image));
-	if(!pImage)
+	const auto ImageItem = MapRenderItems::ReadImage(*pMap, ImagesStart + pQuadLayer->m_Image);
+	if(!ImageItem)
 		return false;
 
-	const char *pImageName = pMap->GetDataString(pImage->m_ImageName);
+	const char *pImageName = pMap->GetDataString(ImageItem->m_ImageName);
 	const bool IsMovingWater = IsMovingWaterImageName(pImageName);
-	pMap->UnloadData(pImage->m_ImageName);
+	pMap->UnloadData(ImageItem->m_ImageName);
 	return IsMovingWater;
 }
 
@@ -141,9 +142,13 @@ void CMovingTiles::OnMapLoad()
 			if(pLayer->m_Type != LAYERTYPE_QUADS)
 				continue;
 
-			char aLayerName[30];
-			CMapItemLayerQuads *pQuadLayer = reinterpret_cast<CMapItemLayerQuads *>(pLayer);
-			QuadName(pQuadLayer->m_aName, std::size(pQuadLayer->m_aName), aLayerName, sizeof(aLayerName));
+			const int ItemIndex = LayersStart + pGroup->m_StartLayer + LayerIndex;
+			CMapItemLayerQuads *pQuadLayer = MapRenderItems::QuadLayer(*pMap, ItemIndex);
+			if(pQuadLayer == nullptr)
+				continue;
+			char aLayerName[30]{};
+			if(pMap->GetItemSize(ItemIndex) >= static_cast<int>(sizeof(CMapItemLayerQuads)))
+				QuadName(pQuadLayer->m_aName, std::size(pQuadLayer->m_aName), aLayerName, sizeof(aLayerName));
 
 			EQType Type = EQType::NONE;
 			bool RequiresAxiomOrGores = false;
@@ -173,11 +178,10 @@ void CMovingTiles::OnMapLoad()
 			if(m_RenderAbove && Type != EQType::HOOKABLE && Type != EQType::UNHOOKABLE)
 				continue;
 
-			CQuad *pQuads = static_cast<CQuad *>(pMap->GetDataSwapped(pQuadLayer->m_Data));
-			for(int QuadIndex = 0; QuadIndex < pQuadLayer->m_NumQuads; QuadIndex++)
+			for(CQuad &Quad : MapRenderItems::QuadData(*pMap, *pQuadLayer))
 			{
 				CQuadData QuadData;
-				QuadData.m_pQuad = &pQuads[QuadIndex];
+				QuadData.m_pQuad = &Quad;
 				QuadData.m_pGroup = pGroup;
 				QuadData.m_pLayer = pQuadLayer;
 				QuadData.m_Type = Type;
