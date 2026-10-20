@@ -3622,33 +3622,13 @@ void CMenus::RefreshEntityBgHierarchyView()
 	m_aaCustomPreviewReadyQueue[ASSETS_TAB_ENTITY_BG].clear();
 	m_aaCustomPreviewReadyQueued[ASSETS_TAB_ENTITY_BG].clear();
 
-	// 重建只应更新「有哪些条目」，不该让用户看见贴图消失再淡入
-	// （下载完成 / 删除后的那一帧闪烁就来自这里）。先把已加载的贴图按名字
-	// 取出来接管所有权，重建后再按名字还给对应条目。
-	struct SCarriedEntityBgTexture
-	{
-		std::string m_Name;
-		IGraphics::CTextureHandle m_Texture;
-		size_t m_ResidentBytes;
-		int m_RequestedTextureSize;
-	};
-	std::vector<SCarriedEntityBgTexture> vCarriedTextures;
-	vCarriedTextures.reserve(m_vEntityBgList.size());
-	for(SCustomEntityBg &Item : m_vEntityBgList)
-	{
-		if(!Item.m_RenderTexture.IsValid())
-			continue;
-		SCarriedEntityBgTexture Carried;
-		Carried.m_Name = Item.m_aName;
-		Carried.m_Texture = Item.m_RenderTexture;
-		Carried.m_ResidentBytes = Item.m_PreviewResidentBytes;
-		Carried.m_RequestedTextureSize = Item.m_PreviewRequestedTextureSize;
-		// 移交所有权：不清空条目里的句柄，下面的 ClearAssetList 会把它当垃圾卸载。
-		Item.m_RenderTexture = IGraphics::CTextureHandle();
-		vCarriedTextures.push_back(std::move(Carried));
-	}
-
-	ClearAssetList(m_vEntityBgList, Graphics());
+	// 重建只应更新「有哪些条目、什么顺序」，不该让用户看见贴图消失再淡入。
+	// 旧实现是 ClearAssetList + 全新建对象：所有卡片的贴图会被卸载、预览状态
+	// 清零，重建后的那几帧就整片闪。这里改为把旧对象先摘出来，重建时按名字
+	// 搬回贴图与预览状态，只有真正消失的条目才卸载。
+	std::vector<SCustomEntityBg> vPreviousItems;
+	vPreviousItems.swap(m_vEntityBgList);
+	m_vEntityBgList.clear();
 	gs_vpSearchEntityBgList.clear();
 
 	::EnsureDefaultAssetVisible(m_vEntityBgSourceNames);
@@ -3708,34 +3688,32 @@ void CMenus::RefreshEntityBgHierarchyView()
 		Item.m_IsDirectory = Entry.m_IsDirectory;
 		if(!Item.m_IsDirectory)
 			PopulateLocalAssetAuthor(Item, ASSETS_TAB_ENTITY_BG, Storage());
+		for(SCustomEntityBg &Previous : vPreviousItems)
+		{
+			if(str_comp(Previous.m_aName, Item.m_aName) != 0)
+				continue;
+			// 同名条目：搬走贴图与预览状态，并把旧句柄作废（所有权移交）。
+			Item.m_RenderTexture = Previous.m_RenderTexture;
+			Item.m_PreviewState = Previous.m_PreviewState;
+			Item.m_PreviewBytes = Previous.m_PreviewBytes;
+			Item.m_PreviewRequestedTextureSize = Previous.m_PreviewRequestedTextureSize;
+			Item.m_PreviewResidentBytes = Previous.m_PreviewResidentBytes;
+			Item.m_PreviewResized = Previous.m_PreviewResized;
+			Item.m_PreviewHighPriority = Previous.m_PreviewHighPriority;
+			Previous.m_RenderTexture = IGraphics::CTextureHandle();
+			break;
+		}
 		m_vEntityBgList.push_back(Item);
 	}
 
 	dbg_assert(s_CurCustomTab == ASSETS_TAB_ENTITY_BG, "entity bg hierarchy refresh is only valid for entity bg tab");
 	gs_aInitCustomList[s_CurCustomTab] = true;
 
-	for(SCustomEntityBg &Item : m_vEntityBgList)
+	// 已经不在列表里的条目（被删除 / 被筛掉）才卸载贴图。
+	for(SCustomEntityBg &Previous : vPreviousItems)
 	{
-		if(Item.m_RenderTexture.IsValid())
-			continue;
-		for(SCarriedEntityBgTexture &Carried : vCarriedTextures)
-		{
-			if(Carried.m_Name != Item.m_aName || !Carried.m_Texture.IsValid())
-				continue;
-			Item.m_RenderTexture = Carried.m_Texture;
-			Item.m_PreviewResidentBytes = Carried.m_ResidentBytes;
-			Item.m_PreviewRequestedTextureSize = Carried.m_RequestedTextureSize;
-			Item.m_PreviewState = SCustomItem::PREVIEW_STATE_READY;
-			// 移交给条目；留在 carry 表里的句柄无效化，避免下面重复卸载。
-			Carried.m_Texture.Invalidate();
-			break;
-		}
-	}
-	// 对应资源已被删除的贴图没人认领，这里才是它们的归宿。
-	for(SCarriedEntityBgTexture &Carried : vCarriedTextures)
-	{
-		if(Carried.m_Texture.IsValid())
-			Graphics()->UnloadTexture(&Carried.m_Texture);
+		if(Previous.m_RenderTexture.IsValid())
+			Graphics()->UnloadTexture(&Previous.m_RenderTexture);
 	}
 }
 
@@ -6336,8 +6314,34 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				str_format(aToastText, sizeof(aToastText), Localize("Deleted \"%s\""), s_aPendingDeleteName);
 				qm_ui::Toast(EQmToastKind::SUCCESS, aToastText);
 				ResetSelectedAssetToDefault(s_aPendingDeleteName);
-				// 同样延到下一帧：删除后本帧仍画旧卡片，下一帧才少一张。
-				QueueLocalListRefresh(s_CurCustomTab, 1);
+				if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
+				{
+					// 实体层只摘掉这一条：整表重载会把「商店资源」文件夹一起清掉，
+					// 用户会以为商店里的资源也被删了。
+					const auto EntryIt = std::find(m_vEntityBgSourceNames.begin(), m_vEntityBgSourceNames.end(), std::string(s_aPendingDeleteName));
+					if(EntryIt != m_vEntityBgSourceNames.end())
+						m_vEntityBgSourceNames.erase(EntryIt);
+					const auto SourceIt = m_vEntityBgSourceKinds.find(s_aPendingDeleteName);
+					if(SourceIt != m_vEntityBgSourceKinds.end() && SourceIt->second == EEntityBgHierarchyEntrySource::WORKSHOP)
+						m_vEntityBgSourceKinds.erase(SourceIt);
+					if(SWorkshopHudState *pEntityBgWorkshopState = WorkshopStateByTab(ASSETS_TAB_ENTITY_BG))
+					{
+						for(SWorkshopHudAsset &Asset : pEntityBgWorkshopState->m_vAssets)
+						{
+							if(str_comp(Asset.m_LocalName.c_str(), s_aPendingDeleteName) == 0)
+							{
+								Asset.m_Installed = false;
+								break;
+							}
+						}
+					}
+					QueueLocalListRefresh(s_CurCustomTab, 2);
+				}
+				else
+				{
+					// 同样延到下一帧：删除后本帧仍画旧卡片，下一帧才少一张。
+					QueueLocalListRefresh(s_CurCustomTab, 1);
+				}
 			}
 			else
 			{

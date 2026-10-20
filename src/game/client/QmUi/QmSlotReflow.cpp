@@ -3,6 +3,8 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "QmSlotReflow.h"
 
+#include <base/system.h>
+
 #include <algorithm>
 #include <cmath>
 
@@ -10,8 +12,8 @@ namespace
 {
 	// 欠阻尼弹簧：ζ = c / (2√k) ≈ 0.66，收尾有一次轻微回弹（果冻感），
 	// 但不会来回晃到让人眼晕。60Hz 下显式积分稳定（Δt·ω ≈ 0.38）。
-	constexpr float SLOT_REFLOW_STIFFNESS = 520.0f;
-	constexpr float SLOT_REFLOW_DAMPING = 30.0f;
+	constexpr float SLOT_REFLOW_STIFFNESS = 380.0f;
+	constexpr float SLOT_REFLOW_DAMPING = 26.0f;
 	constexpr float SLOT_REFLOW_REST_OFFSET = 0.05f;
 	constexpr float SLOT_REFLOW_REST_VELOCITY = 0.5f;
 	// 一次换位跨过太多槽位时不当作「让位」，当作换了一整个列表，直接对齐。
@@ -107,6 +109,8 @@ vec2 CQmSlotReflow::Track(const char *pKey, int Slot, float StepX, float StepY)
 			const vec2 Delta = SlotDeltaOffset(State.m_Slot, Slot, m_Columns, StepX, StepY);
 			State.m_OffsetX += Delta.x;
 			State.m_OffsetY += Delta.y;
+			// 换位日志：实机排查「看不到动画」时直接看这一行（每张卡每次换位一条）。
+			dbg_msg("assets_reflow", "slot %d -> %d offset=(%.1f,%.1f) key=%s", State.m_Slot, Slot, Delta.x, Delta.y, pKey);
 		}
 		State.m_Slot = Slot;
 	}
