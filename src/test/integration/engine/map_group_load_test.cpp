@@ -3,6 +3,7 @@
 
 #include <game/gamecore.h>
 #include <game/layers.h>
+#include <game/mapitems.h>
 
 #include <gtest/gtest.h>
 #include <test/test.h>
