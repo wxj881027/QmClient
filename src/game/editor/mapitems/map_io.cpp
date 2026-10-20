@@ -964,13 +964,10 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 
 					if(pTiles->m_HasTele)
 					{
-						void *pTeleData = pMap->GetData(pTilemapItem->m_Tele);
-						unsigned int Size = pMap->GetDataSize(pTilemapItem->m_Tele);
-						if(Size >= (size_t)pTiles->m_Width * pTiles->m_Height * sizeof(CTeleTile))
+						CTeleTile *pLayerTeleTiles = std::static_pointer_cast<CLayerTele>(pTiles)->m_pTeleTile;
+						if(MapRenderItems::CopyTileData<CTeleTile>(*pMap, pTilemapItem->m_Tele,
+							{pLayerTeleTiles, static_cast<size_t>(pTiles->m_Width) * pTiles->m_Height}))
 						{
-							CTeleTile *pLayerTeleTiles = std::static_pointer_cast<CLayerTele>(pTiles)->m_pTeleTile;
-							mem_copy(pLayerTeleTiles, pTeleData, (size_t)pTiles->m_Width * pTiles->m_Height * sizeof(CTeleTile));
-
 							for(int i = 0; i < pTiles->m_Width * pTiles->m_Height; i++)
 							{
 								if(IsValidTeleTile(pLayerTeleTiles[i].m_Type))
@@ -983,14 +980,10 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 					}
 					else if(pTiles->m_HasSpeedup)
 					{
-						void *pSpeedupData = pMap->GetData(pTilemapItem->m_Speedup);
-						unsigned int Size = pMap->GetDataSize(pTilemapItem->m_Speedup);
-
-						if(Size >= (size_t)pTiles->m_Width * pTiles->m_Height * sizeof(CSpeedupTile))
+						CSpeedupTile *pLayerSpeedupTiles = std::static_pointer_cast<CLayerSpeedup>(pTiles)->m_pSpeedupTile;
+						if(MapRenderItems::CopyTileData<CSpeedupTile>(*pMap, pTilemapItem->m_Speedup,
+							{pLayerSpeedupTiles, static_cast<size_t>(pTiles->m_Width) * pTiles->m_Height}))
 						{
-							CSpeedupTile *pLayerSpeedupTiles = std::static_pointer_cast<CLayerSpeedup>(pTiles)->m_pSpeedupTile;
-							mem_copy(pLayerSpeedupTiles, pSpeedupData, (size_t)pTiles->m_Width * pTiles->m_Height * sizeof(CSpeedupTile));
-
 							for(int i = 0; i < pTiles->m_Width * pTiles->m_Height; i++)
 							{
 								if(IsValidSpeedupTile(pLayerSpeedupTiles[i].m_Type) && pLayerSpeedupTiles[i].m_Force > 0)

@@ -4824,6 +4824,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/map_render_items_test.cpp
     src/test/integration/client/editor_map_resources_test.cpp
     src/test/integration/client/editor_map_automapper_test.cpp
+    src/test/integration/client/editor_map_tile_data_test.cpp
     src/test/integration/client/editor_map_sounds_test.cpp
     src/test/integration/client/map_envelope_items_test.cpp
     src/test/integration/client/editor_map_info_test.cpp

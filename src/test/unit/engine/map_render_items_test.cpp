@@ -23,7 +23,9 @@ namespace
 		int m_SwappedReads = 0;
 		std::array<CQuad, 2> m_aData{};
 		std::array<CSoundSource, 2> m_aSoundData{};
+		std::array<CTeleTile, 2> m_aTileData{};
 		bool m_UseSoundData = false;
+		bool m_UseTileData = false;
 		int m_DataSize = sizeof(m_aData);
 		int m_SizeAfterDecode = -1;
 		bool m_NullItem = false;
@@ -44,6 +46,8 @@ namespace
 				m_DataSize = m_SizeAfterDecode;
 			if(m_DecodeFails)
 				return nullptr;
+			if(m_UseTileData)
+				return m_aTileData.data();
 			return m_UseSoundData ? static_cast<void *>(m_aSoundData.data()) : static_cast<void *>(m_aData.data());
 		}
 		void *GetDataSwapped(int Index) override
@@ -670,4 +674,77 @@ TEST(MapRenderItemsEnvelope, IncompleteNameIsNotReadAsAWholeArray)
 	const auto Item = MapRenderItems::ReadEnvelope(Map, 0);
 	ASSERT_TRUE(Item);
 	EXPECT_EQ(Item->m_aName[0], 0);
+}
+
+namespace
+{
+	void UseTileData(CItemMap &Map)
+	{
+		Map.m_UseTileData = true;
+		Map.m_DataSize = sizeof(Map.m_aTileData);
+		Map.m_aTileData = {{{1, TILE_TELEIN}, {2, TILE_TELEOUT}}};
+	}
+}
+
+TEST(MapRenderItemsTileCopy, SuccessfulCopyKeepsTheRawByteOrder)
+{
+	CItemMap Map;
+	UseTileData(Map);
+	std::array<CTeleTile, 2> aDestination{};
+	ASSERT_TRUE(MapRenderItems::CopyTileData<CTeleTile>(Map, 0, aDestination));
+	EXPECT_EQ(aDestination[0].m_Number, 1);
+	EXPECT_EQ(aDestination[1].m_Number, 2);
+	EXPECT_EQ(aDestination[0].m_Type, TILE_TELEIN);
+	EXPECT_EQ(aDestination[1].m_Type, TILE_TELEOUT);
+	EXPECT_EQ(Map.m_SwappedReads, 0);
+}
+
+TEST(MapRenderItemsTileCopy, ExtraSourceElementsDoNotOverwriteOutsideTheDestination)
+{
+	CItemMap Map;
+	UseTileData(Map);
+	std::array<CTeleTile, 2> aDestination{{{77, 0}, {88, 0}}};
+	ASSERT_TRUE(MapRenderItems::CopyTileData<CTeleTile>(Map, 0, std::span(aDestination).first(1)));
+	EXPECT_EQ(aDestination[0].m_Number, 1);
+	EXPECT_EQ(aDestination[1].m_Number, 88);
+}
+
+TEST(MapRenderItemsTileCopy, FailedDecodeLeavesTheDestinationUntouched)
+{
+	CItemMap Map;
+	UseTileData(Map);
+	Map.m_DecodeFails = true;
+	std::array<CTeleTile, 2> aDestination{{{77, 0}, {88, 0}}};
+	EXPECT_FALSE(MapRenderItems::CopyTileData<CTeleTile>(Map, 0, aDestination));
+	EXPECT_EQ(aDestination[0].m_Number, 77);
+	EXPECT_EQ(aDestination[1].m_Number, 88);
+}
+
+TEST(MapRenderItemsTileCopy, ShortProcessedDataDoesNotCopyAPartialDestination)
+{
+	CItemMap Map;
+	UseTileData(Map);
+	Map.m_SizeAfterDecode = sizeof(CTeleTile);
+	std::array<CTeleTile, 2> aDestination{{{77, 0}, {88, 0}}};
+	EXPECT_FALSE(MapRenderItems::CopyTileData<CTeleTile>(Map, 0, aDestination));
+	EXPECT_EQ(aDestination[0].m_Number, 77);
+	EXPECT_EQ(aDestination[1].m_Number, 88);
+}
+
+TEST(MapRenderItemsTileCopy, InvalidIndexDoesNotReadOrModifyData)
+{
+	CItemMap Map;
+	UseTileData(Map);
+	std::array<CTeleTile, 1> aDestination{{{77, 0}}};
+	EXPECT_FALSE(MapRenderItems::CopyTileData<CTeleTile>(Map, 1, aDestination));
+	EXPECT_EQ(Map.m_DataReads, 0);
+	EXPECT_EQ(aDestination[0].m_Number, 77);
+}
+
+TEST(MapRenderItemsTileCopy, EmptyDestinationDoesNotStartDecode)
+{
+	CItemMap Map;
+	UseTileData(Map);
+	EXPECT_FALSE(MapRenderItems::CopyTileData<CTeleTile>(Map, 0, {}));
+	EXPECT_EQ(Map.m_DataReads, 0);
 }

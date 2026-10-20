@@ -1,6 +1,8 @@
 #ifndef GAME_MAP_MAP_RENDER_ITEMS_H
 #define GAME_MAP_MAP_RENDER_ITEMS_H
 
+#include <base/mem.h>
+
 #include <engine/map.h>
 
 #include <game/mapitems.h>
@@ -8,8 +10,10 @@
 #include <algorithm>
 #include <cstddef>
 #include <iterator>
+#include <limits>
 #include <optional>
 #include <span>
+#include <type_traits>
 
 namespace MapRenderItems
 {
@@ -148,6 +152,20 @@ namespace MapRenderItems
 		if(ResultCount > Available)
 			return {};
 		return {pData, ResultCount};
+	}
+
+	// 瓦片保持原始字节序；读失败或容量不足时不修改目标数组。
+	template<typename T>
+	inline bool CopyTileData(IMap &Map, int DataIndex, std::span<T> Destination)
+	{
+		static_assert(std::is_trivially_copyable_v<T>);
+		if(Destination.empty() || Destination.size() > static_cast<size_t>(std::numeric_limits<int>::max()))
+			return false;
+		const auto Data = ReadDataItems<T>(Map, DataIndex, static_cast<int>(Destination.size()), EDataCountPolicy::REQUIRE_ALL, false);
+		if(Data.empty())
+			return false;
+		mem_copy(Destination.data(), Data.data(), Data.size_bytes());
+		return true;
 	}
 
 	// Layer 的固定字段须完整；保留四边形既有的解码前尺寸检查。
