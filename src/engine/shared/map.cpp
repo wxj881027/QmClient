@@ -11,6 +11,9 @@
 #include <game/gamecore.h>
 #include <game/mapitems.h>
 
+#include <cstdlib>
+#include <limits>
+
 CMap::CMap(IStorage *pStorage) :
 	m_pStorage(pStorage)
 {
@@ -250,18 +253,38 @@ int CMap::Size() const
 	return m_DataFile.Size();
 }
 
-bool CMap::ExtractTiles(CTile *pDest, size_t DestSize, const CTile *pSrc, size_t SrcSize)
+bool CMap::ValidateTileskip(size_t DestSize, const CTile *pSrc, size_t SrcSize)
 {
 	size_t DestIndex = 0;
-	size_t SrcIndex = 0;
-	while(DestIndex < DestSize && SrcIndex < SrcSize)
+	for(size_t SrcIndex = 0; SrcIndex < SrcSize; ++SrcIndex)
 	{
+		if(DestIndex == DestSize)
+		{
+			log_error("map/load", "Too much tile layer data (read %" PRIzu ", total %" PRIzu ").", SrcIndex, SrcSize);
+			return false;
+		}
 		if(pSrc[SrcIndex].m_MustBe0 != 0)
 		{
 			log_error("map/load", "Tile layer data contains non-zero padding value %d at index %" PRIzu ".",
 				pSrc[SrcIndex].m_MustBe0, SrcIndex);
 			return false;
 		}
+		// 保留旧解码器对最后一段的截断行为，计数不会超过目标范围。
+		DestIndex += minimum(static_cast<size_t>(pSrc[SrcIndex].m_Skip) + 1, DestSize - DestIndex);
+	}
+	if(DestIndex != DestSize)
+	{
+		log_error("map/load", "Tile layer data is truncated (got %" PRIzu ", wanted %" PRIzu ").", DestIndex, DestSize);
+		return false;
+	}
+	return true;
+}
+
+void CMap::ExtractValidatedTiles(CTile *pDest, size_t DestSize, const CTile *pSrc, size_t SrcSize)
+{
+	size_t DestIndex = 0;
+	for(size_t SrcIndex = 0; SrcIndex < SrcSize; ++SrcIndex)
+	{
 		for(unsigned Counter = 0; Counter <= pSrc[SrcIndex].m_Skip && DestIndex < DestSize; Counter++)
 		{
 			pDest[DestIndex].m_Index = pSrc[SrcIndex].m_Index;
@@ -270,21 +293,29 @@ bool CMap::ExtractTiles(CTile *pDest, size_t DestSize, const CTile *pSrc, size_t
 			pDest[DestIndex].m_MustBe0 = 0;
 			DestIndex++;
 		}
-		SrcIndex++;
 	}
-	if(DestIndex != DestSize)
-	{
-		log_error("map/load", "Tile layer data is truncated (got %" PRIzu ", wanted %" PRIzu ").",
-			DestIndex, DestSize);
+}
+
+bool CMap::ExtractTiles(CTile *pDest, size_t DestSize, const CTile *pSrc, size_t SrcSize)
+{
+	if(!ValidateTileskip(DestSize, pSrc, SrcSize))
 		return false;
-	}
-	if(SrcIndex != SrcSize)
-	{
-		log_error("map/load", "Too much tile layer data (read %" PRIzu ", total %" PRIzu ").",
-			SrcIndex, SrcSize);
-		return false;
-	}
+	ExtractValidatedTiles(pDest, DestSize, pSrc, SrcSize);
 	return true;
+}
+
+CTile *CMap::DecodeTileskip(size_t DestSize, const CTile *pSrc, size_t SrcSize, const std::function<void *(size_t)> &Allocate)
+{
+	if(DestSize == 0 || DestSize > std::numeric_limits<size_t>::max() / sizeof(CTile) || !ValidateTileskip(DestSize, pSrc, SrcSize))
+		return nullptr;
+	CTile *pTiles = static_cast<CTile *>(Allocate ? Allocate(DestSize * sizeof(CTile)) : malloc(DestSize * sizeof(CTile)));
+	if(pTiles == nullptr)
+	{
+		log_error("map/load", "Failed to allocate memory for tile layer data (tiles %" PRIzu ").", DestSize);
+		return nullptr;
+	}
+	ExtractValidatedTiles(pTiles, DestSize, pSrc, SrcSize);
+	return pTiles;
 }
 
 bool CMap::ValidateMapVersion(CDataFileReader &NewDataFile)
@@ -662,23 +693,13 @@ bool CMap::ValidateAndUnpackTilesLayerData(CDataFileReader &NewDataFile, int Gro
 				free(pData);
 				return std::make_pair(nullptr, 0);
 			}
-			CTile *pTiles = static_cast<CTile *>(malloc(TilemapSize));
+			CTile *pTiles = DecodeTileskip(TilemapCount, static_cast<const CTile *>(pData), SavedTilesSize);
+			free(pData);
 			if(pTiles == nullptr)
 			{
-				log_error("map/load", "Failed to allocate memory for layer %d in group %d (size %d * %d).",
-					LayerIndex, GroupIndex, pLayerTilemap->m_Width, pLayerTilemap->m_Height);
-				free(pData);
+				log_error("map/load", "Failed to extract tiles of layer %d in group %d.", LayerIndex, GroupIndex);
 				return std::make_pair(nullptr, 0);
 			}
-			else if(!ExtractTiles(pTiles, (size_t)pLayerTilemap->m_Width * pLayerTilemap->m_Height, static_cast<const CTile *>(pData), SavedTilesSize))
-			{
-				log_error("map/load", "Failed to extract tiles of layer %d in group %d.",
-					LayerIndex, GroupIndex);
-				free(pTiles);
-				free(pData);
-				return std::make_pair(nullptr, 0);
-			}
-			free(pData);
 			return std::make_pair(pTiles, TilemapSize);
 		}
 		else if(SavedTilesSize < TilemapCount)

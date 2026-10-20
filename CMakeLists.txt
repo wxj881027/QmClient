@@ -4820,6 +4820,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/map_history_test.cpp
     src/test/unit/client/map_tile_border_test.cpp
     src/test/unit/engine/map_load_test.cpp
+    src/test/unit/engine/map_tileskip_test.cpp
+    src/test/integration/engine/map_tileskip_test.cpp
     src/test/unit/engine/map_render_items_test.cpp
     src/test/integration/client/map_render_items_test.cpp
     src/test/integration/client/editor_map_resources_test.cpp

@@ -9,6 +9,7 @@
 
 #include <engine/map.h>
 
+#include <functional>
 #include <set>
 
 class CMapItemLayerTilemap;
@@ -50,8 +51,12 @@ public:
 
 	// map_generator 等本地工具需要直接解包 tileskip 数据
 	static bool ExtractTiles(class CTile *pDest, size_t DestSize, const class CTile *pSrc, size_t SrcSize);
+	// 完整校验压缩流后才分配；分配器返回可交由 free 回收的缓冲，成功时由调用方接管。
+	static class CTile *DecodeTileskip(size_t DestSize, const class CTile *pSrc, size_t SrcSize, const std::function<void *(size_t)> &Allocate = {});
 
 private:
+	static bool ValidateTileskip(size_t DestSize, const class CTile *pSrc, size_t SrcSize);
+	static void ExtractValidatedTiles(class CTile *pDest, size_t DestSize, const class CTile *pSrc, size_t SrcSize);
 	static bool ValidateMapVersion(CDataFileReader &NewDataFile);
 	bool UpgradeAndValidateTilesLayerItem(CDataFileReader &NewDataFile, int GroupIndex, int LayerIndex,
 		CMapItemLayerTilemap_v2 *pLayerTilemapBase, int LayerItemIndex, size_t LayerItemSize);
