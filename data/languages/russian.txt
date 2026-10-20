@@ -1655,9 +1655,6 @@ Bound functions
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Цвет титула в скобках: 0 = как на сервере, 1 = один цвет, 2 = радуга
 
-Bracketed title opacity (0-100)
-== Прозрачность титула в скобках (0-100)
-
 Bracketed title single color
 == Один цвет для титула в скобках
 
@@ -6398,6 +6395,9 @@ Invalid spectator id used
 Invalid sponsor code
 == Неверный код спонсора
 
+Invalid title appearance
+== Недопустимые параметры внешнего вида титула
+
 Invalid translation backend
 == Неверный бэкенд перевода
 
@@ -7685,6 +7685,9 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 Monospace
 == Моноширинный
 
+Moon
+== Луна
+
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Более оптимистичное предсказание вдоль стабильного направления Tee, уменьшает задержку стабилизации
 
@@ -8716,6 +8719,9 @@ Output switch
 
 Output voice debug log
 == Выводить отладочный лог голосового чата
+
+Overall sponsor title badge color
+== Общий цвет титула спонсора
 
 Overlay entities
 == Наложение сущностей
@@ -12956,6 +12962,12 @@ Sponsor support
 Sponsor title
 == Титул спонсора
 
+Sponsor title badge opacity (0-100)
+== Непрозрачность титула спонсора (0-100)
+
+Sponsor title badge: 0 = moon, 1 = sun
+== Стиль титула спонсора: 0 = луна, 1 = солнце
+
 Sponsors:
 == Спонсоры:
 
@@ -13186,6 +13198,9 @@ Sudden Death
 
 Suicides
 == Самоубийства
+
+Sun
+== Солнце
 
 Super
 == Супер
@@ -13993,6 +14008,9 @@ Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visibl
 
 Title preview
 == Предпросмотр титула
+
+Title server does not support badge appearance yet
+== Сервер титулов пока не поддерживает внешний вид значков
 
 Title server does not support chat styles yet
 == Сервер титулов пока не поддерживает стили чата

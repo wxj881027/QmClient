@@ -1655,9 +1655,6 @@ Bound functions
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Color del título entre corchetes: 0 = seguir al servidor, 1 = color único, 2 = arcoíris
 
-Bracketed title opacity (0-100)
-== Opacidad del título entre corchetes (0-100)
-
 Bracketed title single color
 == Color único del título entre corchetes
 
@@ -6398,6 +6395,9 @@ Invalid spectator id used
 Invalid sponsor code
 == Código de patrocinador no válido
 
+Invalid title appearance
+== Apariencia del título no válida
+
 Invalid translation backend
 == Backend de traducción inválido
 
@@ -7685,6 +7685,9 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 Monospace
 == Monoespaciada
 
+Moon
+== Luna
+
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Predicción más optimista a lo largo de la dirección estable del Tee, reduce el retraso para estabilizar
 
@@ -8716,6 +8719,9 @@ Output switch
 
 Output voice debug log
 == Generar registro de depuración de voz
+
+Overall sponsor title badge color
+== Color general de la insignia del título de patrocinador
 
 Overlay entities
 == Superponer entidades
@@ -12956,6 +12962,12 @@ Sponsor support
 Sponsor title
 == Título de patrocinador
 
+Sponsor title badge opacity (0-100)
+== Opacidad de la insignia del título de patrocinador (0-100)
+
+Sponsor title badge: 0 = moon, 1 = sun
+== Insignia del título de patrocinador: 0 = luna, 1 = sol
+
 Sponsors:
 == Patrocinadores:
 
@@ -13186,6 +13198,9 @@ Sudden Death
 
 Suicides
 == Suicidios
+
+Sun
+== Sol
 
 Super
 == Súper
@@ -13993,6 +14008,9 @@ Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visibl
 
 Title preview
 == Vista previa del título
+
+Title server does not support badge appearance yet
+== El servidor de títulos aún no admite la apariencia de insignias
 
 Title server does not support chat styles yet
 == El servidor de títulos aún no admite estilos de chat

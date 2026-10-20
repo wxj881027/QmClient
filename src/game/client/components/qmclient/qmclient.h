@@ -9,6 +9,7 @@
 #include "qm_realtime.h"
 #include "qm_realtime_users.h"
 #include "qm_sponsors.h"
+#include "qm_title_badge.h"
 #include "qmclient_utils.h"
 #include "sponsor_chat_style.h"
 
@@ -60,6 +61,9 @@ class CQmClient : public CComponent
 	char m_aTitleProfileStyle[64] = "";
 	EQmSponsorChatStyle m_TitleProfileChatStyle = EQmSponsorChatStyle::NONE;
 	bool m_TitleChatStyleSupported = false;
+	bool m_TitleAppearanceSupported = false;
+	SQmTitleAppearance m_TitleAppearance;
+	SQmTitleAppearance m_aPlayerTitleAppearances[MAX_CLIENTS];
 	char m_aaPlayerTitles[MAX_CLIENTS][64] = {};
 	char m_aaPlayerTitleStyles[MAX_CLIENTS][48] = {};
 	EQmSponsorChatStyle m_aPlayerChatStyles[MAX_CLIENTS] = {};
@@ -144,6 +148,7 @@ class CQmClient : public CComponent
 	char m_aQmDdnetPlayerName[MAX_NAME_LENGTH] = "";
 	char m_aQmDdnetFavoritePartner[MAX_NAME_LENGTH] = "";
 	CQmDeveloperBadge m_DeveloperBadge;
+	CQmTitleBadge m_TitleBadge;
 	char m_aQmDeveloperToken[65] = "";
 	char m_aQmDeveloperSessionId[33] = "";
 	int64_t m_QmClientServerNow = 0;
@@ -264,7 +269,7 @@ public:
 	void QmSponsorsReloadDraft();
 	void QmSponsorsPublishDraft();
 	void RedeemTitleCode(const char *pCode);
-	void SaveTitleProfile(const char *pTitle, const char *pBoundName, const char *pStyle, EQmSponsorChatStyle ChatStyle);
+	void SaveTitleProfile(const char *pTitle, const char *pBoundName, const char *pStyle, EQmSponsorChatStyle ChatStyle, const SQmTitleAppearance &Appearance);
 	void RefreshTitleProfile();
 	bool TitleBusy() const { return m_pTitleOperation != nullptr; }
 	bool TitleAuthenticated() const { return m_TitleAuthenticated; }
@@ -272,6 +277,9 @@ public:
 	const char *TitleText() const { return m_aTitleText; }
 	const char *TitleBoundName() const { return m_aTitleBoundName; }
 	const char *TitleProfileStyle() const { return m_aTitleProfileStyle; }
+	const SQmTitleAppearance &TitleProfileAppearance() const { return m_TitleAppearance; }
+	SQmTitleAppearance PlayerTitleAppearance(int ClientId, bool ForNameplateLayout = false) const;
+	const CQmTitleBadge &TitleBadge() const { return m_TitleBadge; }
 	EQmSponsorChatStyle TitleProfileChatStyle() const { return m_TitleProfileChatStyle; }
 	int TitleRevision() const { return m_TitleRevision; }
 	// 名牌测量可读取被屏蔽内容，但绘制时仍须遵循隐私状态。
