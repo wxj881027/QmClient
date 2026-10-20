@@ -46,13 +46,20 @@ int IEnvelopePointAccess::FindPointIndex(CFixedTime Time) const
 
 CMapBasedEnvelopePointAccess::CMapBasedEnvelopePointAccess(CDataFileReader *pReader)
 {
+	m_pPoints = nullptr;
+	m_pPointsBezier = nullptr;
+	m_pPointsBezierUpstream = nullptr;
+	m_NumPointsMax = 0;
 	bool FoundBezierEnvelope = false;
 	int EnvelopeStart, EnvelopeNum;
 	pReader->GetType(MAPITEMTYPE_ENVELOPE, &EnvelopeStart, &EnvelopeNum);
 	for(int EnvelopeIndex = 0; EnvelopeIndex < EnvelopeNum; EnvelopeIndex++)
 	{
-		CMapItemEnvelope *pEnvelope = static_cast<CMapItemEnvelope *>(pReader->GetItem(EnvelopeStart + EnvelopeIndex));
-		if(pEnvelope->m_Version >= CMapItemEnvelope::VERSION_TEEWORLDS_BEZIER)
+		const int ItemIndex = EnvelopeStart + EnvelopeIndex;
+		if(pReader->GetItemSize(ItemIndex) < static_cast<int>(sizeof(int)))
+			continue;
+		const auto *pVersion = static_cast<const int *>(pReader->GetItem(ItemIndex));
+		if(pVersion != nullptr && *pVersion >= CMapItemEnvelope::VERSION_TEEWORLDS_BEZIER)
 		{
 			FoundBezierEnvelope = true;
 			break;
@@ -61,38 +68,36 @@ CMapBasedEnvelopePointAccess::CMapBasedEnvelopePointAccess(CDataFileReader *pRea
 
 	if(FoundBezierEnvelope)
 	{
-		m_pPoints = nullptr;
-		m_pPointsBezier = nullptr;
-
 		int EnvPointStart, FakeEnvPointNum;
 		pReader->GetType(MAPITEMTYPE_ENVPOINTS, &EnvPointStart, &FakeEnvPointNum);
 		if(FakeEnvPointNum > 0)
+		{
 			m_pPointsBezierUpstream = static_cast<CEnvPointBezier_upstream *>(pReader->GetItem(EnvPointStart));
-		else
-			m_pPointsBezierUpstream = nullptr;
-
-		m_NumPointsMax = pReader->GetItemSize(EnvPointStart) / sizeof(CEnvPointBezier_upstream);
+			const int Size = pReader->GetItemSize(EnvPointStart);
+			if(m_pPointsBezierUpstream != nullptr && Size >= 0)
+				m_NumPointsMax = Size / static_cast<int>(sizeof(CEnvPointBezier_upstream));
+		}
 	}
 	else
 	{
 		int EnvPointStart, FakeEnvPointNum;
 		pReader->GetType(MAPITEMTYPE_ENVPOINTS, &EnvPointStart, &FakeEnvPointNum);
 		if(FakeEnvPointNum > 0)
+		{
 			m_pPoints = static_cast<CEnvPoint *>(pReader->GetItem(EnvPointStart));
-		else
-			m_pPoints = nullptr;
-
-		m_NumPointsMax = pReader->GetItemSize(EnvPointStart) / sizeof(CEnvPoint);
+			const int Size = pReader->GetItemSize(EnvPointStart);
+			if(m_pPoints != nullptr && Size >= 0)
+				m_NumPointsMax = Size / static_cast<int>(sizeof(CEnvPoint));
+		}
 
 		int EnvPointBezierStart, FakeEnvPointBezierNum;
 		pReader->GetType(MAPITEMTYPE_ENVPOINTS_BEZIER, &EnvPointBezierStart, &FakeEnvPointBezierNum);
-		const int NumPointsBezier = pReader->GetItemSize(EnvPointBezierStart) / sizeof(CEnvPointBezier);
-		if(FakeEnvPointBezierNum > 0 && m_NumPointsMax == NumPointsBezier)
-			m_pPointsBezier = static_cast<CEnvPointBezier *>(pReader->GetItem(EnvPointBezierStart));
-		else
-			m_pPointsBezier = nullptr;
-
-		m_pPointsBezierUpstream = nullptr;
+		if(FakeEnvPointBezierNum > 0)
+		{
+			const int Size = pReader->GetItemSize(EnvPointBezierStart);
+			if(Size >= 0 && m_NumPointsMax == Size / static_cast<int>(sizeof(CEnvPointBezier)))
+				m_pPointsBezier = static_cast<CEnvPointBezier *>(pReader->GetItem(EnvPointBezierStart));
+		}
 	}
 
 	SetPointsRange(0, m_NumPointsMax);

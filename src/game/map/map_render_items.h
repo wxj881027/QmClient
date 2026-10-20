@@ -89,6 +89,33 @@ namespace MapRenderItems
 		return Layer;
 	}
 
+	// 包络渲染只消费固定前缀；编辑器读取名称/同步字段前另查相应尾部。
+	inline std::optional<CMapItemEnvelope> ReadEnvelope(IMap &Map, int ItemIndex)
+	{
+		if(ItemIndex < 0 || ItemIndex >= Map.NumItems())
+			return std::nullopt;
+		const int ItemSize = Map.GetItemSize(ItemIndex);
+		if(ItemSize < static_cast<int>(offsetof(CMapItemEnvelope_v1, m_aName)))
+			return std::nullopt;
+		int Type;
+		const auto *pItem = static_cast<const CMapItemEnvelope_v1 *>(Map.GetItem(ItemIndex, &Type));
+		if(pItem == nullptr || Type != MAPITEMTYPE_ENVELOPE)
+			return std::nullopt;
+		CMapItemEnvelope Envelope{};
+		Envelope.m_Version = pItem->m_Version;
+		Envelope.m_Channels = pItem->m_Channels;
+		Envelope.m_StartPoint = pItem->m_StartPoint;
+		Envelope.m_NumPoints = pItem->m_NumPoints;
+		if(ItemSize >= static_cast<int>(sizeof(CMapItemEnvelope_v1)))
+		{
+			for(size_t i = 0; i < std::size(Envelope.m_aName); ++i)
+				Envelope.m_aName[i] = pItem->m_aName[i];
+		}
+		if(Envelope.m_Version >= 2 && ItemSize >= static_cast<int>(sizeof(CMapItemEnvelope)))
+			Envelope.m_Synchronized = static_cast<const CMapItemEnvelope *>(pItem)->m_Synchronized;
+		return Envelope;
+	}
+
 	// 返回地图拥有的固定头；名称是可选尾部，使用名称的调用方还须检查完整尺寸。
 	inline CMapItemLayerQuads *QuadLayer(IMap &Map, int ItemIndex)
 	{

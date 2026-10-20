@@ -573,3 +573,101 @@ TEST(MapRenderItemsSoundData, WrappingByteCountCannotExposeDataForCopy)
 	const int Count = static_cast<int>(std::numeric_limits<uint32_t>::max() / sizeof(CSoundSource) + 1);
 	EXPECT_TRUE(MapRenderItems::ReadDataItems<CSoundSource>(Map, 0, Count).empty());
 }
+
+namespace
+{
+	CMapItemEnvelope Envelope(int Version = 2)
+	{
+		CMapItemEnvelope Item{};
+		Item.m_Version = Version;
+		Item.m_Channels = 3;
+		Item.m_StartPoint = 1;
+		Item.m_NumPoints = 2;
+		Item.m_aName[0] = 123;
+		Item.m_Synchronized = 1;
+		return Item;
+	}
+}
+
+TEST(MapRenderItemsEnvelope, RenderingPrefixDoesNotRequireName)
+{
+	CItemMap Map;
+	Map.SetItem(Envelope(1), offsetof(CMapItemEnvelope_v1, m_aName), MAPITEMTYPE_ENVELOPE);
+	const auto Item = MapRenderItems::ReadEnvelope(Map, 0);
+	ASSERT_TRUE(Item);
+	EXPECT_EQ(Item->m_Channels, 3);
+	EXPECT_EQ(Item->m_StartPoint, 1);
+	EXPECT_EQ(Item->m_NumPoints, 2);
+	EXPECT_EQ(Item->m_aName[0], 0);
+}
+
+TEST(MapRenderItemsEnvelope, RenderingVersionTwoDoesNotConsumeMissingSyncTail)
+{
+	CItemMap Map;
+	Map.SetItem(Envelope(), sizeof(CMapItemEnvelope_v1), MAPITEMTYPE_ENVELOPE);
+	const auto Item = MapRenderItems::ReadEnvelope(Map, 0);
+	ASSERT_TRUE(Item);
+	EXPECT_EQ(Item->m_Synchronized, 0);
+	EXPECT_EQ(Item->m_aName[0], 123);
+}
+
+TEST(MapRenderItemsEnvelope, CompleteNameAndSyncRemainOwnedAfterItemReplacement)
+{
+	CItemMap Map;
+	Map.SetItem(Envelope(), sizeof(CMapItemEnvelope), MAPITEMTYPE_ENVELOPE);
+	const auto Item = MapRenderItems::ReadEnvelope(Map, 0);
+	ASSERT_TRUE(Item);
+	Map.SetItem(Envelope(1), sizeof(CMapItemEnvelope_v1), MAPITEMTYPE_ENVELOPE);
+	EXPECT_EQ(Item->m_Version, 2);
+	EXPECT_EQ(Item->m_aName[0], 123);
+	EXPECT_EQ(Item->m_Synchronized, 1);
+}
+
+TEST(MapRenderItemsEnvelope, LegacyVersionDoesNotConsumeSynchronizationField)
+{
+	CItemMap Map;
+	Map.SetItem(Envelope(1), sizeof(CMapItemEnvelope), MAPITEMTYPE_ENVELOPE);
+	const auto Item = MapRenderItems::ReadEnvelope(Map, 0);
+	ASSERT_TRUE(Item);
+	EXPECT_EQ(Item->m_Synchronized, 0);
+}
+
+TEST(MapRenderItemsEnvelope, ShortFixedPrefixIsRejectedBeforeLookup)
+{
+	CItemMap Map;
+	Map.SetItem(Envelope(), offsetof(CMapItemEnvelope_v1, m_NumPoints), MAPITEMTYPE_ENVELOPE);
+	EXPECT_FALSE(MapRenderItems::ReadEnvelope(Map, 0));
+	EXPECT_EQ(Map.m_ItemReads, 0);
+}
+
+TEST(MapRenderItemsEnvelope, WrongItemTypeDoesNotPublishEnvelope)
+{
+	CItemMap Map;
+	Map.SetItem(Envelope(), sizeof(CMapItemEnvelope), MAPITEMTYPE_IMAGE);
+	EXPECT_FALSE(MapRenderItems::ReadEnvelope(Map, 0));
+}
+
+TEST(MapRenderItemsEnvelope, InvalidIndexDoesNotReadStorage)
+{
+	CItemMap Map;
+	for(int Index : {-1, 1, INT_MAX})
+		EXPECT_FALSE(MapRenderItems::ReadEnvelope(Map, Index));
+	EXPECT_EQ(Map.m_ItemReads, 0);
+}
+
+TEST(MapRenderItemsEnvelope, NullItemDoesNotPublishMetadata)
+{
+	CItemMap Map;
+	Map.SetItem(Envelope(), sizeof(CMapItemEnvelope), MAPITEMTYPE_ENVELOPE);
+	Map.m_NullItem = true;
+	EXPECT_FALSE(MapRenderItems::ReadEnvelope(Map, 0));
+}
+
+TEST(MapRenderItemsEnvelope, IncompleteNameIsNotReadAsAWholeArray)
+{
+	CItemMap Map;
+	Map.SetItem(Envelope(), sizeof(CMapItemEnvelope_v1) - sizeof(int), MAPITEMTYPE_ENVELOPE);
+	const auto Item = MapRenderItems::ReadEnvelope(Map, 0);
+	ASSERT_TRUE(Item);
+	EXPECT_EQ(Item->m_aName[0], 0);
+}

@@ -548,12 +548,12 @@ namespace MapPreview
 		if(EnvelopeIndex < 0 || EnvelopeIndex >= EnvelopeNum)
 			return;
 
-		const CMapItemEnvelope *pItem = static_cast<const CMapItemEnvelope *>(m_pMap->GetItem(EnvelopeStart + EnvelopeIndex));
-		if(!pItem || pItem->m_Channels <= 0)
+		const auto Item = MapRenderItems::ReadEnvelope(*m_pMap, EnvelopeStart + EnvelopeIndex);
+		if(!Item || Item->m_Channels <= 0)
 			return;
 
-		Channels = minimum<size_t>(Channels, pItem->m_Channels, CEnvPoint::MAX_CHANNELS);
-		m_pEnvelopePoints->SetPointsRange(pItem->m_StartPoint, pItem->m_NumPoints);
+		Channels = minimum<size_t>(Channels, Item->m_Channels, CEnvPoint::MAX_CHANNELS);
+		m_pEnvelopePoints->SetPointsRange(Item->m_StartPoint, Item->m_NumPoints);
 		if(m_pEnvelopePoints->NumPoints() == 0)
 			return;
 

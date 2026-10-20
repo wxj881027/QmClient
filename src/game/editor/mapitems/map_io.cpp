@@ -1,5 +1,6 @@
 #include "image.h"
 #include "legacy_sound_source.h"
+#include "load_envelopes.h"
 #include "load_info.h"
 #include "load_resources.h"
 #include "sound.h"
@@ -642,6 +643,11 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 		ErrorHandler(Localize("Error: Failed to open map file. See local console for details.", "Editor"));
 		return false;
 	}
+	if(!EditorMapLoad::ValidateEnvelopeItems(*pMap))
+	{
+		ErrorHandler(Localize("Error: Failed to open map file. See local console for details.", "Editor"));
+		return false;
+	}
 
 	Clean();
 
@@ -1191,7 +1197,10 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 		pMap->GetType(MAPITEMTYPE_ENVELOPE, &EnvelopeStart, &EnvelopeNum);
 		for(int EnvelopeIndex = 0; EnvelopeIndex < EnvelopeNum; EnvelopeIndex++)
 		{
-			CMapItemEnvelope *pItem = (CMapItemEnvelope *)pMap->GetItem(EnvelopeStart + EnvelopeIndex);
+			const auto Item = MapRenderItems::ReadEnvelope(*pMap, EnvelopeStart + EnvelopeIndex);
+			if(!Item)
+				continue;
+			const CMapItemEnvelope *pItem = &*Item;
 			int Channels = pItem->m_Channels;
 			if(Channels <= 0 || Channels == 2 || Channels > CEnvPoint::MAX_CHANNELS)
 			{

@@ -2,6 +2,7 @@
 
 #include <game/client/gameclient.h>
 #include <game/localization.h>
+#include <game/map/map_render_items.h>
 
 #include <chrono>
 
@@ -26,12 +27,12 @@ void CEnvelopeState::EnvelopeEval(int TimeOffsetMillis, int EnvelopeIndex, Color
 	if(EnvelopeIndex < 0 || EnvelopeIndex >= EnvelopeNum)
 		return;
 
-	const CMapItemEnvelope *pItem = (CMapItemEnvelope *)m_pMap->GetItem(EnvelopeStart + EnvelopeIndex);
-	if(pItem->m_Channels <= 0)
+	const auto Item = MapRenderItems::ReadEnvelope(*m_pMap, EnvelopeStart + EnvelopeIndex);
+	if(!Item || Item->m_Channels <= 0)
 		return;
-	Channels = minimum<size_t>(Channels, pItem->m_Channels, CEnvPoint::MAX_CHANNELS);
+	Channels = minimum<size_t>(Channels, Item->m_Channels, CEnvPoint::MAX_CHANNELS);
 
-	m_pEnvelopePoints->SetPointsRange(pItem->m_StartPoint, pItem->m_NumPoints);
+	m_pEnvelopePoints->SetPointsRange(Item->m_StartPoint, Item->m_NumPoints);
 	if(m_pEnvelopePoints->NumPoints() == 0)
 		return;
 
