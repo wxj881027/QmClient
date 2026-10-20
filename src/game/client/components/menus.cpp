@@ -35,6 +35,7 @@
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmDropdown.h>
 #include <game/client/QmUi/QmModuleLayoutAdapter.h>
+#include <game/client/QmUi/QmToast.h>
 #include <game/client/QmUi/QmTree.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SettingsCard.h>
@@ -4712,6 +4713,9 @@ void CMenus::Render()
 			Ui()->RenderPopupMenus();
 		LogPerfStage(Client(), "popup_menus", StageTimer.ElapsedMs());
 	}
+
+	// 轻提示位于所有弹层之上，只是画面，不参与命中测试，也不抢焦点。
+	qm_ui::RenderToasts(Ui());
 
 	// Prevent UI elements from being hovered while a key reader is active
 	if(GameClient()->m_KeyBinder.IsActive())

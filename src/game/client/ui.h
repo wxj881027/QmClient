@@ -1411,6 +1411,13 @@ public:
 			CONFIRMED,
 			CANCELED,
 		};
+		// 危险等级：DANGER 只改确认键配色，不改变布局；删除类操作必须显式指定，
+		// 避免「删除」和「保存」长得一模一样。
+		enum class ETone
+		{
+			NEUTRAL = 0,
+			DANGER,
+		};
 		static constexpr float POPUP_MAX_WIDTH = 200.0f;
 		static constexpr float POPUP_FONT_SIZE = 10.0f;
 		static constexpr float POPUP_BUTTON_HEIGHT = 12.0f;
@@ -1421,6 +1428,12 @@ public:
 		char m_aNegativeButtonLabel[128];
 		char m_aMessage[1024];
 		EConfirmationResult m_Result;
+		ETone m_Tone = ETone::NEUTRAL;
+		// 键盘焦点：0 = 取消，1 = 确认。默认停在取消，Enter 跟随焦点执行，
+		// 不再无条件确认——删除类弹窗里回车误触的代价太高。
+		int m_FocusedButton = 0;
+		// 只有用过方向键/Tab 才画焦点环，鼠标操作时不额外增加视觉噪声。
+		bool m_KeyboardFocus = false;
 
 		CButtonContainer m_CancelButton;
 		CButtonContainer m_ConfirmButton;
@@ -1428,6 +1441,8 @@ public:
 		SConfirmPopupContext();
 		void Reset();
 		void YesNoButtons();
+		// 语义化按钮：Cancel / OK。新调用点优先用它，避免 Yes/No 在中文语境里指代不明。
+		void DefaultButtons();
 	};
 	void ShowPopupConfirm(float X, float Y, SConfirmPopupContext *pContext, bool CenterInViewport = true);
 

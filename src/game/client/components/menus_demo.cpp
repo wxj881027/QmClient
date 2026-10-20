@@ -30,6 +30,7 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/QmToast.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
@@ -3157,8 +3158,13 @@ void CMenus::FinishRankDemoDownload(bool Success, const char *pMessage)
 	{
 		DemolistPopulate();
 		DemolistOnUpdate(false);
+		// 下载成功不需要打断操作：轻提示即可；失败才用模态说明原因。
+		qm_ui::Toast(EQmToastKind::SUCCESS, pMessage);
 	}
-	PopupMessage(Localize("Rank 1 demo"), pMessage, Localize("Ok"));
+	else
+	{
+		PopupMessage(Localize("Rank 1 demo"), pMessage, Localize("Ok"));
+	}
 }
 
 void CMenus::StartRankDemoDownload(const char *pMapName)

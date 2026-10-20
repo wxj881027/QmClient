@@ -22,6 +22,8 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/QmPopconfirm.h>
+#include <game/client/QmUi/QmToast.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiForms.h>
@@ -5936,7 +5938,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		static std::vector<CButtonContainer> s_vLocalDeleteButtons;
 		s_vLocalDeleteButtons.resize(SearchListSize);
 		static char s_aPendingDeleteName[IO_MAX_PATH_LENGTH] = "";
-		static CUi::SConfirmPopupContext s_DeleteConfirmPopup;
+		static SQmPopconfirmContext s_DeleteConfirmPopup;
+		static CUIRect s_DeleteConfirmAnchor;
 		bool DeleteLocalRequested = false;
 		char aDeleteLocalName[IO_MAX_PATH_LENGTH] = "";
 		int FirstVisibleIndex = -1;
@@ -6067,6 +6070,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				{
 					DeleteLocalRequested = true;
 					str_copy(aDeleteLocalName, pItem->m_aName, sizeof(aDeleteLocalName));
+					// 记下按钮矩形：删除确认要贴在这一行上，而不是跳到屏幕中央。
+					s_DeleteConfirmAnchor = Shell.m_ActionButtonRect;
 				}
 			}
 		}
@@ -6180,32 +6185,39 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		{
 			str_copy(s_aPendingDeleteName, aDeleteLocalName, sizeof(s_aPendingDeleteName));
 			s_DeleteConfirmPopup.Reset();
-			s_DeleteConfirmPopup.YesNoButtons();
-			str_copy(s_DeleteConfirmPopup.m_aMessage, Localize("Are you sure you want to delete this asset?"));
-			Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_DeleteConfirmPopup);
+			s_DeleteConfirmPopup.DefaultButtons();
+			str_format(s_DeleteConfirmPopup.m_aMessage, sizeof(s_DeleteConfirmPopup.m_aMessage), Localize("Delete \"%s\"?"), s_aPendingDeleteName);
+			s_DeleteConfirmPopup.m_ToneDanger = true;
+			QmShowPopconfirm(Ui(), &s_DeleteConfirmPopup, s_DeleteConfirmAnchor);
 		}
 
-		if(s_DeleteConfirmPopup.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+		if(s_DeleteConfirmPopup.m_Confirmed)
 		{
 			if(DeleteLocalAssetByTab(Storage(), s_CurCustomTab, s_aPendingDeleteName))
 			{
+				char aToastText[IO_MAX_PATH_LENGTH + 64];
+				str_format(aToastText, sizeof(aToastText), Localize("Deleted \"%s\""), s_aPendingDeleteName);
+				qm_ui::Toast(EQmToastKind::SUCCESS, aToastText);
 				ResetSelectedAssetToDefault(s_aPendingDeleteName);
 				ClearCustomItems(s_CurCustomTab);
 			}
 			else
 			{
+				char aToastText[IO_MAX_PATH_LENGTH + 64];
+				str_format(aToastText, sizeof(aToastText), Localize("Could not delete \"%s\""), s_aPendingDeleteName);
+				qm_ui::Toast(EQmToastKind::FAILED, aToastText);
 				dbg_msg("assets", "failed to delete local asset '%s' in tab %d", s_aPendingDeleteName, s_CurCustomTab);
 			}
 			s_DeleteConfirmPopup.Reset();
 			s_aPendingDeleteName[0] = '\0';
 		}
-		else if(s_DeleteConfirmPopup.m_Result == CUi::SConfirmPopupContext::CANCELED)
+		else if(s_DeleteConfirmPopup.m_Canceled)
 		{
 			s_DeleteConfirmPopup.Reset();
 			s_aPendingDeleteName[0] = '\0';
 		}
 
-		if(!DeleteLocalRequested && s_DeleteConfirmPopup.m_Result == CUi::SConfirmPopupContext::UNSET && s_ListBox.WasItemSelected() && NewSelected >= 0 && OldSelected != NewSelected)
+		if(!DeleteLocalRequested && !s_DeleteConfirmPopup.m_Confirmed && !s_DeleteConfirmPopup.m_Canceled && s_ListBox.WasItemSelected() && NewSelected >= 0 && OldSelected != NewSelected)
 		{
 			const SCustomItem *pSelectedItem = GetCustomItem(s_CurCustomTab, NewSelected);
 			if(pSelectedItem->m_aName[0] != '\0')
@@ -6600,12 +6612,20 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				const bool DownloadOk = Asset.m_pDownloadTask->State() == EHttpState::DONE && Asset.m_pDownloadTask->StatusCode() == 200;
 				Asset.m_pDownloadTask.reset();
 				Asset.m_DownloadFailed = !DownloadOk;
+				char aToastText[512];
 				if(DownloadOk)
 				{
 					Asset.m_Installed = true;
 					PersistLocalAssetAuthorForWorkshopAsset(s_CurCustomTab, Asset, Storage());
 					FlushPersistedLocalAssetAuthorsIfDirty(Storage(), s_CurCustomTab);
 					RefreshLocalList = true;
+					str_format(aToastText, sizeof(aToastText), Localize("Downloaded \"%s\""), Asset.m_Name.c_str());
+					qm_ui::Toast(EQmToastKind::SUCCESS, aToastText);
+				}
+				else
+				{
+					str_format(aToastText, sizeof(aToastText), Localize("Could not download \"%s\""), Asset.m_Name.c_str());
+					qm_ui::Toast(EQmToastKind::FAILED, aToastText);
 				}
 			}
 		}
@@ -6980,16 +7000,16 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			s_vWorkshopLocalDeleteButtons.resize(LocalAssetTotalCount);
 
 			static char s_aWorkshopPendingDeleteName[IO_MAX_PATH_LENGTH] = "";
-			static CUi::SConfirmPopupContext s_WorkshopDeleteConfirmPopup;
+			static SQmPopconfirmContext s_WorkshopDeleteConfirmPopup;
+			static CUIRect s_WorkshopDeleteConfirmAnchor;
 			static size_t s_PendingDownloadAssetIndex = SIZE_MAX;
-			static CUi::SConfirmPopupContext s_WorkshopDownloadConfirmPopup;
+			static SQmPopconfirmContext s_WorkshopDownloadConfirmPopup;
+			static CUIRect s_WorkshopDownloadConfirmAnchor;
 
 			bool DeleteLocalRequested = false;
 			char aDeleteLocalName[IO_MAX_PATH_LENGTH] = "";
 			bool DownloadRequested = false;
 			size_t RequestedDownloadAssetIndex = SIZE_MAX;
-			float RequestedDownloadPopupX = 0.0f;
-			float RequestedDownloadPopupY = 0.0f;
 			bool WorkshopActionTriggered = false;
 			CPerfTimer WorkshopCardsTimer;
 			int FirstVisibleLocalIndex = -1;
@@ -7360,6 +7380,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						{
 							DeleteLocalRequested = true;
 							str_copy(aDeleteLocalName, pItem->m_aName, sizeof(aDeleteLocalName));
+							s_WorkshopDeleteConfirmAnchor = Shell.m_ActionButtonRect;
 						}
 					}
 				}
@@ -7445,8 +7466,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					{
 						DownloadRequested = true;
 						RequestedDownloadAssetIndex = AssetIndex;
-						RequestedDownloadPopupX = Shell.m_ActionButtonRect.x + Shell.m_ActionButtonRect.w;
-						RequestedDownloadPopupY = Shell.m_ActionButtonRect.y + Shell.m_ActionButtonRect.h + 4.0f;
+						// 确认气泡贴在下载按钮下方，归属感来自锚点而不是屏幕中央。
+						s_WorkshopDownloadConfirmAnchor = Shell.m_ActionButtonRect;
 						WorkshopActionTriggered = true;
 					}
 				}
@@ -7521,23 +7542,27 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			{
 				str_copy(s_aWorkshopPendingDeleteName, aDeleteLocalName, sizeof(s_aWorkshopPendingDeleteName));
 				s_WorkshopDeleteConfirmPopup.Reset();
-				s_WorkshopDeleteConfirmPopup.YesNoButtons();
-				str_copy(s_WorkshopDeleteConfirmPopup.m_aMessage, Localize("Are you sure you want to delete this asset?"));
-				Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_WorkshopDeleteConfirmPopup);
+				s_WorkshopDeleteConfirmPopup.DefaultButtons();
+				str_format(s_WorkshopDeleteConfirmPopup.m_aMessage, sizeof(s_WorkshopDeleteConfirmPopup.m_aMessage), Localize("Delete \"%s\"?"), s_aWorkshopPendingDeleteName);
+				s_WorkshopDeleteConfirmPopup.m_ToneDanger = true;
+				QmShowPopconfirm(Ui(), &s_WorkshopDeleteConfirmPopup, s_WorkshopDeleteConfirmAnchor);
 			}
 			if(DownloadRequested && RequestedDownloadAssetIndex < WorkshopState.m_vAssets.size())
 			{
 				s_PendingDownloadAssetIndex = RequestedDownloadAssetIndex;
 				s_WorkshopDownloadConfirmPopup.Reset();
-				s_WorkshopDownloadConfirmPopup.YesNoButtons();
-				str_copy(s_WorkshopDownloadConfirmPopup.m_aMessage, Localize("Download this asset?"));
-				Ui()->ShowPopupConfirm(RequestedDownloadPopupX, RequestedDownloadPopupY, &s_WorkshopDownloadConfirmPopup, false);
+				s_WorkshopDownloadConfirmPopup.DefaultButtons();
+				str_format(s_WorkshopDownloadConfirmPopup.m_aMessage, sizeof(s_WorkshopDownloadConfirmPopup.m_aMessage), Localize("Download \"%s\"?"), WorkshopState.m_vAssets[RequestedDownloadAssetIndex].m_Name.c_str());
+				QmShowPopconfirm(Ui(), &s_WorkshopDownloadConfirmPopup, s_WorkshopDownloadConfirmAnchor);
 			}
 
-			if(s_WorkshopDeleteConfirmPopup.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+			if(s_WorkshopDeleteConfirmPopup.m_Confirmed)
 			{
 				if(DeleteLocalAssetByTab(Storage(), s_CurCustomTab, s_aWorkshopPendingDeleteName))
 				{
+					char aToastText[IO_MAX_PATH_LENGTH + 64];
+					str_format(aToastText, sizeof(aToastText), Localize("Deleted \"%s\""), s_aWorkshopPendingDeleteName);
+					qm_ui::Toast(EQmToastKind::SUCCESS, aToastText);
 					if(IsLocalAssetSelected(s_aWorkshopPendingDeleteName))
 						ApplyLocalAssetSelection("default");
 					for(SWorkshopHudAsset &Asset : WorkshopState.m_vAssets)
@@ -7565,18 +7590,21 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				}
 				else
 				{
+					char aToastText[IO_MAX_PATH_LENGTH + 64];
+					str_format(aToastText, sizeof(aToastText), Localize("Could not delete \"%s\""), s_aWorkshopPendingDeleteName);
+					qm_ui::Toast(EQmToastKind::FAILED, aToastText);
 					dbg_msg("assets", "failed to delete local asset '%s' in tab %d", s_aWorkshopPendingDeleteName, s_CurCustomTab);
 				}
 				s_WorkshopDeleteConfirmPopup.Reset();
 				s_aWorkshopPendingDeleteName[0] = '\0';
 			}
-			else if(s_WorkshopDeleteConfirmPopup.m_Result == CUi::SConfirmPopupContext::CANCELED)
+			else if(s_WorkshopDeleteConfirmPopup.m_Canceled)
 			{
 				s_WorkshopDeleteConfirmPopup.Reset();
 				s_aWorkshopPendingDeleteName[0] = '\0';
 			}
 
-			if(s_WorkshopDownloadConfirmPopup.m_Result == CUi::SConfirmPopupContext::CONFIRMED && s_PendingDownloadAssetIndex < WorkshopState.m_vAssets.size())
+			if(s_WorkshopDownloadConfirmPopup.m_Confirmed && s_PendingDownloadAssetIndex < WorkshopState.m_vAssets.size())
 			{
 				SWorkshopHudAsset &Asset = WorkshopState.m_vAssets[s_PendingDownloadAssetIndex];
 				Storage()->CreateFolder("assets", IStorage::TYPE_SAVE);
@@ -7594,13 +7622,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				s_WorkshopDownloadConfirmPopup.Reset();
 				s_PendingDownloadAssetIndex = SIZE_MAX;
 			}
-			else if(s_WorkshopDownloadConfirmPopup.m_Result == CUi::SConfirmPopupContext::CANCELED)
+			else if(s_WorkshopDownloadConfirmPopup.m_Canceled)
 			{
 				s_WorkshopDownloadConfirmPopup.Reset();
 				s_PendingDownloadAssetIndex = SIZE_MAX;
 			}
 
-			if(!DeleteLocalRequested && s_WorkshopDeleteConfirmPopup.m_Result == CUi::SConfirmPopupContext::UNSET && s_WorkshopDownloadConfirmPopup.m_Result == CUi::SConfirmPopupContext::UNSET && !WorkshopActionTriggered && s_WorkshopAssetsListBox.WasItemSelected() && NewCombinedSelected >= 0 && NewCombinedSelected != OldCombinedSelected && static_cast<size_t>(NewCombinedSelected) < LocalAssetCount)
+			if(!DeleteLocalRequested && !s_WorkshopDeleteConfirmPopup.m_Confirmed && !s_WorkshopDeleteConfirmPopup.m_Canceled && !s_WorkshopDownloadConfirmPopup.m_Confirmed && !s_WorkshopDownloadConfirmPopup.m_Canceled && !WorkshopActionTriggered && s_WorkshopAssetsListBox.WasItemSelected() && NewCombinedSelected >= 0 && NewCombinedSelected != OldCombinedSelected && static_cast<size_t>(NewCombinedSelected) < LocalAssetCount)
 			{
 				const size_t LocalIndex = vVisibleLocalAssetIndices[static_cast<size_t>(NewCombinedSelected)];
 				const SCustomItem *pNewItem = GetCustomItem(s_CurCustomTab, LocalIndex);

@@ -3188,6 +3188,13 @@ if(CLIENT)
     QmUi/QmAnimCurves.h
     QmUi/QmDropdown.cpp
     QmUi/QmDropdown.h
+    QmUi/QmDialogLogic.h
+    QmUi/QmPopconfirm.cpp
+    QmUi/QmPopconfirm.h
+    QmUi/QmPopconfirmGeometry.h
+    QmUi/QmToast.cpp
+    QmUi/QmToast.h
+    QmUi/QmToastRender.cpp
     QmUi/QmConsoleUi.h
     QmUi/QmVoteMenu.cpp
     QmUi/QmVoteMenu.h
@@ -5504,6 +5511,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/client/qm_text_initialization_test.cpp
       src/test/integration/qmclient/client/qm_text_device_recovery_test.cpp
       src/test/integration/qmclient/ui/qm_popup_blur_scope_test.cpp
+      src/test/unit/qmclient/ui/qm_ui_overlay_semantics_test.cpp
+      src/game/client/QmUi/QmToast.cpp
       src/test/integration/qmclient/ui/qm_settings_search_session_test.cpp
       src/test/integration/qmclient/ui/qm_settings_paragraph_test.cpp
       src/test/integration/qmclient/ui/qm_console_settings_scroll_test.cpp
