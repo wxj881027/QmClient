@@ -253,12 +253,13 @@ TEST_F(QmNavigationSelection, HidingActiveSlotFadesIndicatorInPlaceAndBack)
 	DrawWithoutActiveSlot();
 	Frame({0, 0}, false);
 	DrawWithoutActiveSlot();
-	// 与原位一致，只是变淡。
+	// 中心不动，只是变淡并向中心缩小。
 	ASSERT_EQ(Graphics().m_vRoundedSubmissions.size(), 2u);
 	const IGraphics::SRoundedRectSdfParams Fading = Graphics().m_vRoundedSubmissions.back();
 	EXPECT_LT(Fading.m_FillColor.a, Initial.m_FillColor.a);
-	EXPECT_FLOAT_EQ(Fading.m_Rect.x, Initial.m_Rect.x);
-	EXPECT_FLOAT_EQ(Fading.m_Rect.z, Initial.m_Rect.z);
+	EXPECT_LT(Fading.m_Rect.z - Fading.m_Rect.x, Initial.m_Rect.z - Initial.m_Rect.x);
+	// 亚像素级余量：滑块位置由弹簧推进，两次采样之间可能还差不到 1px。
+	EXPECT_NEAR((Fading.m_Rect.x + Fading.m_Rect.z) * 0.5f, (Initial.m_Rect.x + Initial.m_Rect.z) * 0.5f, 1.0f);
 
 	// 淡出结束后不再提交滑块，只留容器。
 	for(int Step = 0; Step < 15; ++Step)

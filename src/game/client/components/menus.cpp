@@ -2879,7 +2879,8 @@ void CMenus::RenderNews(CUIRect MainView)
 
 void CMenus::RenderStatistics(CUIRect MainView)
 {
-	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_NEWS);
+	// 统计数据和收藏地图是同一个工作区：背景停在收藏地图那一站，切页签时运镜不跳。
+	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_BROWSER_FAVORITES);
 
 	// 外间距和页签条直接取收藏地图页那套工作区度量：页签宽度、离顶部导航的距离、
 	// 与下方内容的间距都和其它页签页一致，卡片也铺到同一条内容线上。
@@ -8629,6 +8630,12 @@ void CMenus::SetMenuPage(int NewPage)
 	auto IsBrowserPage = [](int Page) {
 		return (Page >= PAGE_INTERNET && Page <= PAGE_FAVORITE_COMMUNITY_5) || Page == PAGE_FAVORITE_MAPS;
 	};
+	// 统计数据是收藏地图工作区里的第 4 个页签，两者共用同一条页签条和同一块面板。
+	// 在这两页之间切换时页面内容原位替换，不做整页位移，也不重放背景运镜。
+	auto IsMapWorkspacePage = [](int Page) {
+		return Page == PAGE_FAVORITE_MAPS || Page == PAGE_STATS;
+	};
+	const bool SameMapWorkspace = IsMapWorkspacePage(OldPage) && IsMapWorkspacePage(NewPage) && OldPage != NewPage;
 	auto BrowserPageVisualOrder = [](int Page) {
 		if(Page == PAGE_INTERNET)
 			return 0;
@@ -8653,7 +8660,7 @@ void CMenus::SetMenuPage(int NewPage)
 	{
 		m_BrowserTabTransitionDirection = 0.0f;
 	}
-	if(OldPage != NewPage && !(OldIsBrowser && NewIsBrowser))
+	if(OldPage != NewPage && !(OldIsBrowser && NewIsBrowser) && !SameMapWorkspace)
 	{
 		m_MenuPageTransitionDirection = ResolveUiSwitchDirection(GameClient()->UiRuntimeV2()->AnimRuntime(), UiAnimNodeKey("menu_page_switch"), m_MenuPageTransitionDirection, NewPage > OldPage ? 1.0f : -1.0f);
 		TriggerUiSwitchAnimation(UiAnimNodeKey("menu_page_switch"), MENU_SWITCH_DURATION);

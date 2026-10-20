@@ -295,6 +295,9 @@ namespace ui_token::motion
 	};
 	inline constexpr SUiAnimTransition PAGE_SLIDE{.m_DurationSec = 0.22f, .m_Easing = EEasing::EASE_OUT_QUART};
 	inline constexpr SUiAnimTransition TAB_SWITCH{.m_DurationSec = 0.16f, .m_Easing = EEasing::EASE_OUT_QUART};
+	// 导航滑块出现／消失：比普通悬停反馈长一档，配合由小到大的缩放才读得出「长出来」，
+	// 0.12 秒的纯淡入在整页切换的同一帧里几乎看不见。
+	inline constexpr SUiAnimTransition NAVIGATION_APPEAR{.m_DurationSec = 0.26f, .m_Easing = EEasing::EASE_OUT_QUART};
 	inline constexpr const SUiAnimTransition &INPUT_FOCUS_RING = HOVER_FADE;
 	inline constexpr SUiAnimTransition TOAST_SLIDE{
 		.m_DurationSec = 0.22f,

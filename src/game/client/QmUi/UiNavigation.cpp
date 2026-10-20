@@ -152,18 +152,25 @@ namespace ui_widget
 
 		const float TargetAlpha = HasIndicator ? 1.0f : 0.0f;
 		float Alpha = TargetAlpha;
+		// 出现时从略小一号长到目标尺寸，消失时缩回去 —— 单靠透明度在整页切换那一帧
+		// 几乎看不出变化，配上缩放才读得出「长出来」。
+		float AppearScale = 1.0f;
 		if(Animating)
 		{
 			const float Stored = Ctx.m_pAnim->GetValue(FadeKey, EUiAnimProperty::ALPHA, std::numeric_limits<float>::quiet_NaN());
 			if(std::isnan(Stored))
 			{
-				// 首次出现直接就位：页面刚打开时不该补一段淡入。
+				// 首次出现直接就位：页面刚打开时不该补一段入场。
 				Ctx.m_pAnim->SetValue(FadeKey, EUiAnimProperty::ALPHA, TargetAlpha);
+				Ctx.m_pAnim->SetValue(FadeKey, EUiAnimProperty::SCALE, 1.0f);
 			}
 			else if(std::abs(Stored - TargetAlpha) > 1e-4f || Ctx.m_pAnim->HasActiveAnimation(FadeKey, EUiAnimProperty::ALPHA))
 			{
-				// 只有状态真的翻转才起一条过渡轨道，静止时不留动画轨道。
-				Alpha = std::clamp(ResolveUiAnimValue(*Ctx.m_pAnim, FadeKey, EUiAnimProperty::ALPHA, TargetAlpha, ui_token::motion::HOVER_FADE.m_DurationSec, ui_token::motion::HOVER_FADE.m_Easing), 0.0f, 1.0f);
+				// 只有状态真的翻转才起过渡轨道，静止时不留动画轨道。
+				const SUiAnimTransition &Appear = ui_token::motion::NAVIGATION_APPEAR;
+				Alpha = std::clamp(ResolveUiAnimValue(*Ctx.m_pAnim, FadeKey, EUiAnimProperty::ALPHA, TargetAlpha, Appear.m_DurationSec, Appear.m_Easing), 0.0f, 1.0f);
+				const float Scale = ResolveUiAnimValue(*Ctx.m_pAnim, FadeKey, EUiAnimProperty::SCALE, TargetAlpha, Appear.m_DurationSec, Appear.m_Easing);
+				AppearScale = 1.0f - (1.0f - std::clamp(Scale, 0.0f, 1.0f)) * 0.18f;
 			}
 		}
 		if(!HasIndicator)
@@ -178,6 +185,17 @@ namespace ui_widget
 			if(std::isnan(X) || std::isnan(Y) || std::isnan(W) || std::isnan(H) || W <= 0.0f || H <= 0.0f)
 				return;
 			Indicator = {X, Y, W, H};
+		}
+
+		// 缩放围绕滑块中心，避免出现／消失时向一侧偏移。
+		if(std::abs(AppearScale - 1.0f) > 1e-4f)
+		{
+			const float CenterX = Indicator.x + Indicator.w * 0.5f;
+			const float CenterY = Indicator.y + Indicator.h * 0.5f;
+			Indicator.w *= AppearScale;
+			Indicator.h *= AppearScale;
+			Indicator.x = CenterX - Indicator.w * 0.5f;
+			Indicator.y = CenterY - Indicator.h * 0.5f;
 		}
 
 		ColorRGBA IndicatorColor = Style.m_IndicatorColor;
