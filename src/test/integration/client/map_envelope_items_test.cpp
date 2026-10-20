@@ -6,6 +6,7 @@
 #include <game/editor/mapitems/load_envelopes.h>
 #include <game/gamecore.h>
 #include <game/map/envelope_extrema.h>
+#include <game/mapitems_ex.h>
 
 #include <gtest/gtest.h>
 #include <test/test.h>

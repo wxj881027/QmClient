@@ -966,7 +966,7 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 					{
 						CTeleTile *pLayerTeleTiles = std::static_pointer_cast<CLayerTele>(pTiles)->m_pTeleTile;
 						if(MapRenderItems::CopyTileData<CTeleTile>(*pMap, pTilemapItem->m_Tele,
-							{pLayerTeleTiles, static_cast<size_t>(pTiles->m_Width) * pTiles->m_Height}))
+							   {pLayerTeleTiles, static_cast<size_t>(pTiles->m_Width) * pTiles->m_Height}))
 						{
 							for(int i = 0; i < pTiles->m_Width * pTiles->m_Height; i++)
 							{
@@ -982,7 +982,7 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 					{
 						CSpeedupTile *pLayerSpeedupTiles = std::static_pointer_cast<CLayerSpeedup>(pTiles)->m_pSpeedupTile;
 						if(MapRenderItems::CopyTileData<CSpeedupTile>(*pMap, pTilemapItem->m_Speedup,
-							{pLayerSpeedupTiles, static_cast<size_t>(pTiles->m_Width) * pTiles->m_Height}))
+							   {pLayerSpeedupTiles, static_cast<size_t>(pTiles->m_Width) * pTiles->m_Height}))
 						{
 							for(int i = 0; i < pTiles->m_Width * pTiles->m_Height; i++)
 							{

@@ -123,7 +123,7 @@ namespace EditorMapLoad
 					{
 						const auto *pTiles = static_cast<const CMapItemLayerTilemap *>(Map.GetItem(ItemIndex));
 						IsTarget = !(pTiles->m_Flags & (TILESLAYERFLAG_GAME | TILESLAYERFLAG_TELE | TILESLAYERFLAG_SPEEDUP |
-							TILESLAYERFLAG_FRONT | TILESLAYERFLAG_SWITCH | TILESLAYERFLAG_TUNE));
+										       TILESLAYERFLAG_FRONT | TILESLAYERFLAG_SWITCH | TILESLAYERFLAG_TUNE));
 					}
 					pAutoMapperTargets->push_back(IsTarget);
 				}

@@ -31,8 +31,8 @@
 #include <game/client/components/chat.h>
 #include <game/client/components/countryflags.h>
 #include <game/client/components/qmclient/browser_column_layout.h>
-#include <game/client/components/qmclient/browser_score.h>
 #include <game/client/components/qmclient/browser_map_preview_loader.h>
+#include <game/client/components/qmclient/browser_score.h>
 #include <game/client/components/qmclient/browser_status_layout.h>
 #include <game/client/components/qmclient/dummy_mini_view_layout.h>
 #include <game/client/components/qmclient/friends_category_drag.h>
@@ -363,7 +363,8 @@ namespace
 		CMapImages &m_Shared;
 
 	public:
-		explicit CMapPreviewImages(CMapImages &Shared) : m_Shared(Shared) {}
+		explicit CMapPreviewImages(CMapImages &Shared) :
+			m_Shared(Shared) {}
 		IGraphics::CTextureHandle Get(int Index) const override { return m_vTextures[Index]; }
 		int Num() const override { return m_vTextures.size(); }
 		void Resize(int Count) { m_vTextures.resize(Count); }

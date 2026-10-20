@@ -83,7 +83,7 @@ namespace
 			{
 				vData[i].m_Force = static_cast<unsigned char>(10 + i);
 				vData[i].m_MaxSpeed = 20;
-				vData[i].m_Type = TILE_BOOST;
+				vData[i].m_Type = TILE_SPEED_BOOST;
 				vData[i].m_Angle = -45;
 			}
 			return vData;
@@ -99,7 +99,7 @@ TEST_F(EditorMapTileData, ValidSpeedupDataCopiesItsRawValues)
 	EXPECT_EQ(aDestination[0].m_Force, 10);
 	EXPECT_EQ(aDestination[3].m_Force, 13);
 	EXPECT_EQ(aDestination[0].m_MaxSpeed, 20);
-	EXPECT_EQ(aDestination[0].m_Type, TILE_BOOST);
+	EXPECT_EQ(aDestination[0].m_Type, TILE_SPEED_BOOST);
 	EXPECT_EQ(aDestination[0].m_Angle, -45);
 }
 

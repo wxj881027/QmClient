@@ -29,7 +29,7 @@ namespace EditorMapLoad
 			// 空包络不消费起点；非空范围先做减法比较，避免加法溢出。
 			if(Item->m_NumPoints < 0 ||
 				(Item->m_NumPoints > 0 && (Item->m_StartPoint < 0 || Item->m_StartPoint > Points.NumPointsMax() ||
-					Item->m_NumPoints > Points.NumPointsMax() - Item->m_StartPoint)))
+								  Item->m_NumPoints > Points.NumPointsMax() - Item->m_StartPoint)))
 			{
 				log_error("editor/load", "Envelope %d has an invalid point range.", i);
 				return false;
