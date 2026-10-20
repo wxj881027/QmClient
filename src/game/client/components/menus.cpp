@@ -2878,17 +2878,16 @@ void CMenus::RenderStatistics(CUIRect MainView)
 {
 	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_NEWS);
 
+	// 外间距和页签条直接取收藏地图页那套工作区度量：页签宽度、离顶部导航的距离、
+	// 与下方内容的间距都和其它页签页一致，卡片也铺到同一条内容线上。
+	const QmMapHistoryUi::SWorkspaceMetrics StatisticsWorkspace = QmMapHistoryUi::WorkspaceMetrics(MainView.h);
 	CUIRect Window = MainView;
-	// 内容左右与其他页面的卡片内容线对齐（窗口 10px + 内容 10px = 20px）。
-	Window.VMargin(10.0f, &Window);
-	Window.HMargin(8.0f, &Window);
+	Window.Margin(StatisticsWorkspace.m_OuterMargin, &Window);
 
 	// 与收藏地图页共用的工作区页签：贴在内容顶端、离顶部导航和其它页面同一条基线，
 	// 且不随统计内容滚动；统计数据是第 4 个页签，点其它页签直接跳回收藏地图。
-	const QmMapHistoryUi::SWorkspaceMetrics StatisticsWorkspace = QmMapHistoryUi::WorkspaceMetrics(MainView.h);
 	{
 		CUIRect WorkspaceTabs = Window;
-		WorkspaceTabs.VMargin(12.0f, &WorkspaceTabs);
 		WorkspaceTabs.h = StatisticsWorkspace.m_TabHeight;
 		const int PickedWorkspaceTab = DoMapWorkspaceTabs(WorkspaceTabs, StatisticsWorkspace.m_TabHeight * 0.20f, 3);
 		if(PickedWorkspaceTab >= 0 && PickedWorkspaceTab < 3)
@@ -2906,7 +2905,6 @@ void CMenus::RenderStatistics(CUIRect MainView)
 
 	// 页面标题由顶部导航页签承担，这里不再重复大标题，内容直接从卡片行开始。
 	CUIRect Content = Window;
-	Content.Margin(12.0f, &Content);
 	const auto &vLocalModeStats = GameClient()->m_QmClient.QmClientLocalModeStats();
 	std::vector<SQmClientLocalModeStats> vModeStats;
 	std::vector<int64_t> vDominantPlaytimes;
