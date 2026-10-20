@@ -2621,7 +2621,7 @@ bool CChat::OnPrepareLines(float y)
 			const char *pTitle = VisibleTitle(FirstAuthor.m_aQmTitle, FirstAuthor.m_ClientId);
 			const float TitleWidth = pTitle[0] != '\0' && FirstAuthor.m_DeveloperBadge && DeveloperBadgeAvailable ?
 							 QmDeveloperBadgeAdvance(FontSize) :
-							 (pTitle[0] != '\0' ? QmTitleBadgeSize(TextRender()->TextWidth(FontSize * 13.0f / 24.0f, QmTitleBadgeText(pTitle).c_str()), FontSize * 13.0f / 24.0f).x + FontSize * 0.15f : 0.0f);
+							 (pTitle[0] != '\0' ? QmTitleBadgeSize(TextRender()->TextWidth(QmTitleBadgeLabelFontSize(FontSize), QmTitleBadgeText(pTitle).c_str()), QmTitleBadgeLabelFontSize(FontSize)).x + FontSize * 0.15f : 0.0f);
 			FirstAuthorPrefixWidth = TitleWidth +
 						 TextRender()->TextWidth(FontSize, FirstAuthor.m_aName) + TextRender()->TextWidth(FontSize, ": ");
 		}
@@ -2745,7 +2745,7 @@ bool CChat::OnPrepareLines(float y)
 				if(pTitle[0] != '\0' && DeveloperBadge && DeveloperBadgeAvailable)
 					QmLayoutDeveloperBadge(MeasureCursor);
 				else if(pTitle[0])
-					QmLayoutTitleBadge(MeasureCursor, TextRender()->TextWidth(FontSize * 13.0f / 24.0f, QmTitleBadgeText(pTitle).c_str()));
+					QmLayoutTitleBadge(MeasureCursor, TextRender()->TextWidth(QmTitleBadgeLabelFontSize(FontSize), QmTitleBadgeText(pTitle).c_str()));
 			};
 			TextRender()->TextEx(&MeasureCursor, aClientId);
 			if(MergedPlayerMessages)
@@ -2884,16 +2884,25 @@ bool CChat::OnPrepareLines(float y)
 				return;
 			}
 			const std::string Text = QmTitleBadgeText(pTitle);
-			const float LabelFontSize = LineCursor.m_FontSize * 13.0f / 24.0f;
-			const float LabelWidth = TextRender()->TextWidth(LabelFontSize, Text.c_str());
-			const vec2 Desired = QmTitleBadgeSize(LabelWidth, LabelFontSize);
-			const CUIRect Rect = QmLayoutTitleBadge(LineCursor, LabelWidth);
+			const auto MeasureLabel = [&](float FontSize) {
+				CTextCursor Cursor;
+				Cursor.m_FontSize = FontSize;
+				Cursor.m_Flags = 0;
+				Cursor.m_CalculateVisualBoundingBox = true;
+				TextRender()->TextEx(&Cursor, Text.c_str());
+				return Cursor;
+			};
+			CTextCursor LabelMetrics = MeasureLabel(QmTitleBadgeLabelFontSize(LineCursor.m_FontSize));
+			const CUIRect Rect = QmLayoutTitleBadge(LineCursor, LabelMetrics.m_LongestLineWidth);
+			const float LabelFontSize = QmTitleBadgeLabelFontSize(Rect.h);
+			if(LabelMetrics.m_FontSize != LabelFontSize)
+				LabelMetrics = MeasureLabel(LabelFontSize);
 			Line.m_vTitleBadges.push_back({Rect, Appearance});
-			CTextCursor TitleCursor = LineCursor;
-			TitleCursor.SetPosition(vec2(Rect.x + 30.0f * Rect.h / 24.0f, Rect.y + 3.0f * Rect.h / 24.0f));
-			TitleCursor.m_FontSize = LabelFontSize * Rect.h / Desired.y;
-			TitleCursor.m_AlignedFontSize = 0.0f;
-			TitleCursor.m_LineWidth = -1.0f;
+			CTextCursor TitleCursor;
+			TitleCursor.SetPosition(QmTitleBadgeTextPosition(Rect, QmTitleBadgeVisualBounds(LabelMetrics)));
+			TitleCursor.m_FontSize = LabelFontSize;
+			TitleCursor.m_CharCount = LineCursor.m_CharCount;
+			TitleCursor.m_GlyphCount = LineCursor.m_GlyphCount;
 			TextRender()->TextColor(QmTitleBadgePalette(Appearance).m_Text);
 			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &TitleCursor, Text.c_str());
 			LineCursor.m_CharCount = TitleCursor.m_CharCount;

@@ -830,8 +830,9 @@ public:
 
 class CNamePlatePartTitle : public CNamePlatePartText
 {
-	static constexpr float ms_LabelFontSizeScale = 0.8f * 13.0f / 24.0f;
+	static constexpr float ms_LabelFontSizeScale = 0.8f * QM_TITLE_BADGE_LABEL_FONT_SIZE / QM_TITLE_BADGE_HEIGHT;
 	char m_aText[64] = "";
+	CUIRect m_TextVisualBounds{};
 	float m_FontSize = -INFINITY;
 	float m_Alpha = 1.0f;
 	bool m_AboveName;
@@ -853,10 +854,12 @@ protected:
 		m_FontSize = Data.m_FontSize * ms_LabelFontSizeScale;
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
+		Cursor.m_CalculateVisualBoundingBox = true;
 		const ColorRGBA PreviousColor = This.TextRender()->GetTextColor();
 		This.TextRender()->TextColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
 		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, QmTitleBadgeText(m_aText).c_str());
 		This.TextRender()->TextColor(PreviousColor);
+		m_TextVisualBounds = QmTitleBadgeVisualBounds(Cursor);
 	}
 
 public:
@@ -875,9 +878,9 @@ public:
 			return;
 		const CUIRect Rect{Pos.x - m_Size.x * 0.5f, Pos.y - m_Size.y * 0.5f, m_Size.x, m_Size.y};
 		This.m_QmClient.TitleBadge().RenderSurface(This.Graphics(), Rect, m_Appearance, m_Alpha);
-		const float Scale = Rect.h / 24.0f;
+		const vec2 TextPosition = QmTitleBadgeTextPosition(Rect, m_TextVisualBounds);
 		This.TextRender()->RenderTextContainer(m_TextContainerIndex, QmTitleBadgePalette(m_Appearance, m_Alpha).m_Text,
-			ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), Rect.x + 30.0f * Scale, Pos.y - m_RenderSize.y * 0.5f);
+			ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), TextPosition.x, TextPosition.y);
 	}
 };
 

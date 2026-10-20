@@ -56,6 +56,7 @@ static void RenderQmTitleFinishedPreview(IGraphics *pGraphics, ITextRender *pTex
 	FontSize *= std::min({1.0f, Area.w / DesiredSize.x, Area.h / DesiredSize.y});
 	CTextCursor Cursor;
 	Cursor.m_FontSize = FontSize;
+	Cursor.m_CalculateVisualBoundingBox = true;
 	Cursor.SetPosition(vec2(0.0f, 0.0f));
 	const ColorRGBA PreviousColor = pTextRender->GetTextColor();
 	pTextRender->TextColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
@@ -69,8 +70,9 @@ static void RenderQmTitleFinishedPreview(IGraphics *pGraphics, ITextRender *pTex
 	const CUIRect Rect{Area.x + (Area.w - Size.x) * 0.5f, Area.y + (Area.h - Size.y) * 0.5f, Size.x, Size.y};
 	const SQmTitleAppearance Appearance = QmTitleDraftAppearance();
 	TitleBadge.RenderSurface(pGraphics, Rect, Appearance, 1.0f);
+	const vec2 TextPosition = QmTitleBadgeTextPosition(Rect, QmTitleBadgeVisualBounds(Cursor));
 	pTextRender->RenderTextContainer(s_TitleFinishedPreviewContainer, QmTitleBadgePalette(Appearance).m_Text,
-		ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), Rect.x + 30.0f * Size.y / 24.0f - Bounds.m_X, Rect.y + (Rect.h - Bounds.m_H) * 0.5f - Bounds.m_Y);
+		ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), TextPosition.x, TextPosition.y);
 }
 
 static void RenderQmSponsorChatPreview(IGraphics *pGraphics, ITextRender *pTextRender, const CUIRect &Rect, float FontSize, EQmSponsorChatStyle Style, double TimeSeconds)

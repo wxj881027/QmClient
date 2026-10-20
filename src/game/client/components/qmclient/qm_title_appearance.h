@@ -48,11 +48,19 @@ inline std::string QmTitleBadgeText(const char *pTitle)
 	return pTitle;
 }
 
-// Figma 的 13px 标签位于 24px 胶囊中，宽度只随用户文字增长。
+constexpr float QM_TITLE_BADGE_HEIGHT = 24.0f;
+constexpr float QM_TITLE_BADGE_LABEL_FONT_SIZE = 16.0f;
+
+inline float QmTitleBadgeLabelFontSize(float Height)
+{
+	return std::max(0.0f, Height) * QM_TITLE_BADGE_LABEL_FONT_SIZE / QM_TITLE_BADGE_HEIGHT;
+}
+
+// 保持胶囊和图标高度，标签放大后只增加文字所需的宽度。
 inline vec2 QmTitleBadgeSize(float LabelWidth, float LabelFontSize)
 {
-	const float Scale = std::max(0.0f, LabelFontSize) / 13.0f;
-	return vec2(std::max(0.0f, LabelWidth) + 39.0f * Scale, 24.0f * Scale);
+	const float Scale = std::max(0.0f, LabelFontSize) / QM_TITLE_BADGE_LABEL_FONT_SIZE;
+	return vec2(std::max(0.0f, LabelWidth) + 39.0f * Scale, QM_TITLE_BADGE_HEIGHT * Scale);
 }
 
 struct SQmTitleBadgePalette

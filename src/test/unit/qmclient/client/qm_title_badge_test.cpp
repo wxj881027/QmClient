@@ -23,21 +23,58 @@ TEST(QmTitleBadge, CustomTextKeepsContentAndRemovesLegacyBrackets)
 	EXPECT_EQ(QmTitleBadgeText(nullptr), "");
 }
 
-TEST(QmTitleBadge, SixChineseGlyphsMatchTheDesignGeometry)
+TEST(QmTitleBadge, LargerLabelKeepsTheCapsuleHeight)
 {
-	const vec2 Size = QmTitleBadgeSize(78.0f, 13.0f);
-	EXPECT_FLOAT_EQ(Size.x, 117.0f);
+	EXPECT_FLOAT_EQ(QmTitleBadgeLabelFontSize(24.0f), 16.0f);
+	const vec2 Size = QmTitleBadgeSize(96.0f, 16.0f);
+	EXPECT_FLOAT_EQ(Size.x, 135.0f);
 	EXPECT_FLOAT_EQ(Size.y, 24.0f);
-	const vec2 Large = QmTitleBadgeSize(234.0f, 39.0f);
-	EXPECT_FLOAT_EQ(Large.x, 351.0f);
+	const vec2 Large = QmTitleBadgeSize(288.0f, 48.0f);
+	EXPECT_FLOAT_EQ(Large.x, 405.0f);
 	EXPECT_FLOAT_EQ(Large.y, 72.0f);
 }
 
 TEST(QmTitleBadge, ShortTextKeepsTheIconAndPadding)
 {
-	EXPECT_FLOAT_EQ(QmTitleBadgeSize(6.5f, 13.0f).x, 45.5f);
-	EXPECT_FLOAT_EQ(QmTitleBadgeSize(0.0f, 13.0f).x, 39.0f);
+	EXPECT_FLOAT_EQ(QmTitleBadgeSize(8.0f, 16.0f).x, 47.0f);
+	EXPECT_FLOAT_EQ(QmTitleBadgeSize(0.0f, 16.0f).x, 39.0f);
 	EXPECT_FLOAT_EQ(QmTitleBadgeSize(-1.0f, -1.0f).y, 0.0f);
+}
+
+TEST(QmTitleBadge, VisibleGlyphsAreCenteredDespiteDifferentFontBearings)
+{
+	const CUIRect Rect{10.0f, 20.0f, 135.0f, 24.0f};
+	for(const CUIRect Bounds : {CUIRect{0.0f, 2.0f, 96.0f, 12.0f}, CUIRect{1.0f, 5.0f, 38.0f, 8.0f}, CUIRect{-1.0f, 3.0f, 48.0f, 16.0f}})
+	{
+		SCOPED_TRACE(::testing::Message() << "Bearing " << Bounds.x << ", " << Bounds.y);
+		const vec2 Position = QmTitleBadgeTextPosition(Rect, Bounds);
+		EXPECT_FLOAT_EQ(Position.x + Bounds.x + Bounds.w * 0.5f, 88.0f);
+		EXPECT_FLOAT_EQ(Position.y + Bounds.y + Bounds.h * 0.5f, 32.0f);
+	}
+}
+
+TEST(QmTitleBadge, ScaledCapsuleKeepsGlyphsCenteredInItsTextArea)
+{
+	const CUIRect Bounds{0.5f, 1.0f, 47.0f, 6.0f};
+	const vec2 Position = QmTitleBadgeTextPosition({5.0f, 7.0f, 67.5f, 12.0f}, Bounds);
+	EXPECT_FLOAT_EQ(Position.x + Bounds.x + Bounds.w * 0.5f, 44.0f);
+	EXPECT_FLOAT_EQ(Position.y + Bounds.y + Bounds.h * 0.5f, 13.0f);
+}
+
+TEST(QmTitleBadge, VisualBoundsAreRelativeToTheBakedTextOrigin)
+{
+	CTextCursor Cursor;
+	Cursor.SetPosition(vec2(10.0f, 20.0f));
+	Cursor.m_HasVisualBoundingBox = true;
+	Cursor.m_VisualLeft = 12.0f;
+	Cursor.m_VisualRight = 62.0f;
+	Cursor.m_VisualTop = 23.0f;
+	Cursor.m_VisualBottom = 37.0f;
+	const CUIRect Bounds = QmTitleBadgeVisualBounds(Cursor);
+	EXPECT_FLOAT_EQ(Bounds.x, 2.0f);
+	EXPECT_FLOAT_EQ(Bounds.y, 3.0f);
+	EXPECT_FLOAT_EQ(Bounds.w, 50.0f);
+	EXPECT_FLOAT_EQ(Bounds.h, 14.0f);
 }
 
 TEST(QmTitleBadge, DefaultMoonPaletteMatchesDarkFigmaVariant)
@@ -82,10 +119,10 @@ TEST(QmTitleBadge, InlinePlacementKeepsTheWholeCapsuleBeforeTheNickname)
 	CTextCursor Cursor;
 	Cursor.SetPosition(vec2(10.0f, 20.0f));
 	Cursor.m_FontSize = 24.0f;
-	const CUIRect Rect = QmLayoutTitleBadge(Cursor, 78.0f);
+	const CUIRect Rect = QmLayoutTitleBadge(Cursor, 96.0f);
 	EXPECT_FLOAT_EQ(Rect.x, 10.0f);
 	EXPECT_FLOAT_EQ(Rect.y, 20.0f);
-	EXPECT_FLOAT_EQ(Rect.w, 117.0f);
+	EXPECT_FLOAT_EQ(Rect.w, 135.0f);
 	EXPECT_FLOAT_EQ(Rect.h, 24.0f);
 	EXPECT_GT(Cursor.m_X, Rect.x + Rect.w);
 }
@@ -99,7 +136,7 @@ TEST(QmTitleBadge, InsufficientWidthWrapsTheWholeCapsule)
 	Cursor.m_FontSize = 24.0f;
 	Cursor.m_AlignedFontSize = 26.0f;
 	Cursor.m_AlignedLineSpacing = 2.0f;
-	const CUIRect Rect = QmLayoutTitleBadge(Cursor, 78.0f);
+	const CUIRect Rect = QmLayoutTitleBadge(Cursor, 96.0f);
 	EXPECT_EQ(Cursor.m_LineCount, 2);
 	EXPECT_FLOAT_EQ(Rect.x, 10.0f);
 	EXPECT_FLOAT_EQ(Cursor.m_Y, 48.0f);
@@ -110,9 +147,9 @@ TEST(QmTitleBadge, NarrowLineScalesTheWholeCapsuleProportionally)
 	CTextCursor Cursor;
 	Cursor.m_FontSize = 24.0f;
 	Cursor.m_LineWidth = 30.0f;
-	const CUIRect Rect = QmLayoutTitleBadge(Cursor, 78.0f);
+	const CUIRect Rect = QmLayoutTitleBadge(Cursor, 96.0f);
 	EXPECT_LE(Rect.w, 30.0f);
-	EXPECT_NEAR(Rect.w / Rect.h, 117.0f / 24.0f, 0.00001f);
+	EXPECT_NEAR(Rect.w / Rect.h, 135.0f / 24.0f, 0.00001f);
 	EXPECT_FLOAT_EQ(Cursor.m_X, 30.0f);
 }
 

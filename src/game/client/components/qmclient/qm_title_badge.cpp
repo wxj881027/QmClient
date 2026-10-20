@@ -40,8 +40,6 @@ void CQmTitleBadge::RenderSurface(IGraphics *pGraphics, const CUIRect &Rect, con
 	CUIRect Inside;
 	Rect.Margin(Scale, &Inside);
 	DrawPill(Inside, Palette.m_Background);
-	const CUIRect Glint{Inside.x + Inside.h * 0.5f, Inside.y, std::max(0.0f, Inside.w - Inside.h), Scale};
-	pGraphics->DrawRect(Glint.x, Glint.y, Glint.w, Glint.h, ColorRGBA(1.0f, 1.0f, 1.0f, 0.23f * Palette.m_Background.a), IGraphics::CORNER_ALL, 0.0f);
 
 	const auto Draw = [&](IGraphics::CTextureHandle Texture, const CUIRect &Area, ColorRGBA Color, float U0, float U1) {
 		if(!Texture.IsValid() || Area.w <= 0.0f)
