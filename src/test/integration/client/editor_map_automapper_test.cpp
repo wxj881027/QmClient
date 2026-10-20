@@ -90,6 +90,7 @@ namespace
 			Layer.m_Flags = Flags;
 			Layer.m_Color = CColor(255, 255, 255, 255);
 			Layer.m_ColorEnv = Layer.m_Image = -1;
+			StrToInts(Layer.m_aName, std::size(Layer.m_aName), "");
 			Layer.m_Tele = Layer.m_Speedup = Layer.m_Front = Layer.m_Switch = Layer.m_Tune = -1;
 			const std::array<CTile, 4> aTiles{};
 			Layer.m_Data = Writer.AddData(sizeof(aTiles), aTiles.data());

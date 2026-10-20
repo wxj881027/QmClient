@@ -98,6 +98,7 @@ namespace
 			Game.m_Color = CColor(255, 255, 255, 255);
 			Game.m_ColorEnv = -1;
 			Game.m_Image = -1;
+			StrToInts(Game.m_aName, std::size(Game.m_aName), "Game");
 			Game.m_Data = Writer.AddData(aTiles.size() * sizeof(CTile), aTiles.data());
 			Game.m_Tele = Game.m_Speedup = Game.m_Front = Game.m_Switch = Game.m_Tune = -1;
 			Writer.AddItem(MAPITEMTYPE_LAYER, 1, sizeof(Game), &Game);
