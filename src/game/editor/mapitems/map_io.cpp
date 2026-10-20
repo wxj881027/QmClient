@@ -900,7 +900,7 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 			for(int l = 0; l < pGItem->m_NumLayers; l++)
 			{
 				CMapItemLayer *pLayerItem = (CMapItemLayer *)pMap->GetItem(LayersStart + pGItem->m_StartLayer + l);
-				if(!pLayerItem)
+				if(!pLayerItem || !EditorMapLoad::ImportsLayer(*pMap, LayersStart + pGItem->m_StartLayer + l))
 					continue;
 
 				if(pLayerItem->m_Type == LAYERTYPE_TILES)
@@ -1245,11 +1245,9 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 
 	// load automapper configurations
 	{
-		int AutomapperConfigStart, AutomapperConfigNum;
-		pMap->GetType(MAPITEMTYPE_AUTOMAPPER_CONFIG, &AutomapperConfigStart, &AutomapperConfigNum);
-		for(int i = 0; i < AutomapperConfigNum; i++)
+		for(const auto &Item : Resources->m_vAutoMapperConfigs)
 		{
-			CMapItemAutoMapperConfig *pItem = (CMapItemAutoMapperConfig *)pMap->GetItem(AutomapperConfigStart + i);
+			const CMapItemAutoMapperConfig *pItem = &Item;
 			if(pItem->m_Version == 1)
 			{
 				if(pItem->m_GroupId >= 0 && (size_t)pItem->m_GroupId < m_vpGroups.size() &&
