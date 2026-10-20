@@ -153,6 +153,7 @@ Add clan
 Add command
 Add current cut to the export list
 Add debug dummy to server (Debug build only)
+Add default presets
 Add demo timeline marker
 Add Entry
 Add friend
@@ -166,6 +167,7 @@ Add one
 Add team clan:
 Add team name:
 Add to %s
+Add to bind wheel
 Add to blocked words
 Add to category
 Add to queue
@@ -248,6 +250,7 @@ Amount
 And pick one randomly
 Angle
 Angle:
+Angry
 Angular gradient
 Animate chat box, emote selector, scoreboard, and spectate selection
 Animate lists when entering a page
@@ -290,6 +293,7 @@ Apply Qm recommended appearance
 Apply quick input to other Tees as well
 Apply squishy Tee deformation to other players
 Apply this preset
+Apply to
 Apply to dummy
 Apply to player
 Apply watermark
@@ -316,10 +320,12 @@ Are you sure that you want to reset the touch controls to default?
 Are you sure that you want to restart?
 Are you sure you want to delete this asset?
 Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
+Arrow
 Arrow assets
 ASI
 Aspect ratio preset
 Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)
+Asset preset
 Asset with this name already exists.
 Assets
 Assets directory
@@ -522,6 +528,7 @@ Blank material
 Blank: hides this asset
 Blend mode
 Blend strength
+Blink
 Blink the active local tee
 Block enemy chat
 Block votes from blacklisted addresses
@@ -552,7 +559,6 @@ Broadcast shown to players with known bot client
 Broadcast shown to players without DDNet client
 Browse and activate custom audio packs
 Browse font store…
-Browse profiles saved on this device
 Browser
 Brutal
 Bubble opacity
@@ -651,6 +657,7 @@ Chat message
 Chat message preview
 Chat message style
 Chat messages to send when entering freeze, comma-separated (empty=none)
+Chat phrase
 Chat score increases per message and decreases by 1 per tick
 Chat sound volume
 Chat translation settings
@@ -665,6 +672,7 @@ Check for updates
 Check if voice server address is reachable
 Check input device, system default mic, and mic permission first
 Check output device, confirm headphones/speakers are still online
+Check the preset fields, label, and wheel capacity (64 entries).
 Checking for existing player with your name
 Checking for updates...
 Checking Steam...
@@ -869,6 +877,8 @@ Connecting dummy
 Connecting to
 Connection disconnected
 Connection elevated
+Connection icon color
+Connection icon custom color
 Connection normal
 Connection Problems…
 Connection Quality
@@ -953,12 +963,14 @@ Could not save touch controls to file. See local console for details.
 Could not stage configuration restore.
 Count players only
 Countries
+Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
 CP border overlay alpha (0-100)
 CP opacity
 Crazy shotgun bullet sound on/off
 Create a random skin
 Create category
+Create wheel presets here. Existing wheel entries are kept.
 Created
 Credits
 Crescent
@@ -1008,6 +1020,7 @@ Customize interface appearance and previews
 Customize laser shape and effects
 Customize QmClient visuals and effects
 Customize the position jump hint
+Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
 Customize translate button and menu colors
 Customize vote display and interaction
 Custom…
@@ -1230,6 +1243,7 @@ Downscaled (0.78)
 Draft file is empty
 Drag HUD modules with the left mouse button
 Drag to another category to move this friend.
+Drag to pan, scroll to zoom
 Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
 Dragger Inner Color
 Dragger laser inner color
@@ -1310,6 +1324,8 @@ Dynamic FOV smoothness (0=instant, 100=smoothest)
 Dynamic island
 Dynamic Island background alpha
 Dynamic Island background color
+Dynamic island connection icon color: 1=Quality tier, 2=Follow global icon color, 3=Custom
+Dynamic island connection icon custom color
 Ease in out quad
 Ease out cubic
 Echo follows the original chat color
@@ -1327,6 +1343,7 @@ Edit individual Tee 7 skin parts
 Edit note
 Edit player and dummy identity information
 Edit skin texture
+Edit this custom command on the Bind Wheel page.
 Edit touch controls
 Editor
 Elastic
@@ -1655,6 +1672,7 @@ Follow option color
 Follow remote placements in the collaborative editor
 Follow server
 Follow Tee
+Follow UI icon color
 Following
 Following %s across servers
 Following: %s
@@ -1733,6 +1751,7 @@ Full quality nameplate count
 Full width
 Full: each enabled animation category uses its complete transition
 Fullscreen
+Fully block enemy players
 Fun
 Functions
 Game
@@ -1842,6 +1861,7 @@ Grenade launch
 Grenade pickup
 Ground jump
 Group name
+GUI cursor
 GUI cursor assets
 Guide line color
 Gun fire
@@ -1853,6 +1873,7 @@ Hammer skin steal
 Hammer swing
 Hammer: %s
 Handwriting
+Happy
 Has people playing
 Has save
 Has unread news
@@ -1871,6 +1892,7 @@ Hide direction in Zen mode
 Hide direction indicators
 Hide Echo messages
 Hide Echo messages in Zen mode
+Hide enemy chat, replace enemy names with client IDs and use default skins; keep local players visible
 Hide explosion effects
 Hide freeze effects
 Hide freeze effects in Zen Mode
@@ -1991,6 +2013,7 @@ I muted you
 Icon and number
 Icon symbols:
 Icons
+Identity preset
 If 1, auto record only once on connect; if 0, auto record restarts after game end
 If 1, current driver is in blocking error state.
 If chat score exceeds this value, the player is muted for sv_spam_mute_duration seconds
@@ -2058,6 +2081,7 @@ Ingame mouse sens.
 Initializing assets
 Initializing components
 Initializing layers
+Initializing map layers
 Initializing map logic
 Input
 Input background color
@@ -2298,7 +2322,6 @@ Load save %s
 Load sound files in thread
 Load the official rank replay of a map as a ghost (default: current map, rank 1)
 Load with code r. /load to check your existing saves
-Load, save, overwrite, or delete profiles
 Loaded %d items
 Loaded %d items (discarded %d items)
 Loading
@@ -2354,6 +2377,8 @@ Lyrics
 Magic: Spirit Script
 Main Asset
 Main menu
+Main Tee
+Main Tee and dummy
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
 Make sure the backend supports OpenAI-compatible thinking parameters
 Make sure you use the same name as you had when saving. 
@@ -2370,6 +2395,7 @@ Manage client theme and menu preferences
 Manage hostile players, groups, and display rules
 Manage hostile-list chat shortcuts
 Manage kaomoji chat shortcuts
+Manage profiles and bind wheel presets
 Manage the skin rotation queue
 Manga: Ink Slash
 Manual
@@ -2388,7 +2414,9 @@ Map download send window
 Map exceeds the client limit of 64 MiB.
 Map folders
 Map name
+Map not downloaded yet — join the server to preview it
 Map play history
+Map preview rendering unavailable
 Map Preview TODO
 Map progress
 Map progress bar
@@ -2656,6 +2684,7 @@ New IME candidate bar background color
 New IME candidate bar opacity
 New name
 New name:
+New preset
 New preset name
 New random timeout code
 New version available
@@ -2807,6 +2836,8 @@ Only allow authorized clients to vote
 Only save ghost if better than previous record
 Only save improvements
 Only show after joining a team
+Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players
+Only show messages related to me
 Only show outlines in the entities layer
 Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
@@ -2855,6 +2886,7 @@ Original
 Original language for both received and outgoing messages. Use Auto to detect each message.
 Original message language
 Original options
+Original scroll feel
 Other
 Other game modes
 Other modes
@@ -2890,6 +2922,7 @@ Own hook line width
 Own team only
 p = Ping latency
 Pack name
+Pain
 Panel opacity
 Parent Folder
 Parsing voice server address
@@ -3111,6 +3144,7 @@ Preparing demo playback
 Presentation animations
 Preset %d
 Preset bar
+Preset type
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 Press a key…
 Press ESC to close. Watch the scale-in spring on open.
@@ -3153,7 +3187,6 @@ Privately shows you your current time in this current running race in the broadc
 Probability of sending freeze chat message (0-100%)
 Process UDP RX (est.)
 Process UDP TX (est.)
-Profile Options
 Profiles
 Profiles file
 Progress bar color
@@ -3207,6 +3240,7 @@ QQ group: 1076765929 (click to copy)
 QQ Music hook heartbeat timeout (milliseconds)
 QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
+Quality tier
 Query current map info
 Query isolated serverlist consumer state
 Query map info for %s
@@ -3505,6 +3539,8 @@ Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects anoth
 Restore configuration package
 Restore Kugou files
 Restore old single-segment hook collision line behavior
+Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
+Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
 Restoring save %d: main '%s', dummy '%s'.
 Retry
 Retry details
@@ -3597,7 +3633,7 @@ Save/Load Emote
 Save/Load Flag
 Save/Load Name
 Save/Load Skin
-Saved Profiles
+Saved to the bind wheel.
 Saved with your title and shared with other QmClient players.
 Saves file
 Say in chat
@@ -3643,6 +3679,7 @@ Screenshots directory
 Scroll mode
 Scroll mode: Off
 Scroll mode: On
+Scroll step
 Search
 Search and navigate settings
 Search country flag…
@@ -3677,7 +3714,6 @@ Select button by touch
 Select export
 Select map
 Select the country flag for each player
-Select which player fields a profile stores
 Selected %d
 Selected button not visible
 Selected candidate %d/%d under cursor.
@@ -3715,6 +3751,7 @@ Server address to filter
 Server address:
 Server alert
 Server best:
+Server browser content column order (comma separated ids: community,name,map,difficulty,gametype,friends,players,qm,ping; empty = default)
 Server browser exclude string
 Server browser filter string
 Server browser sort column
@@ -3871,6 +3908,7 @@ Show enemy color in spectator menu
 Show enemy group players
 Show enemy reason
 Show entities
+Show entities only (hide textures)
 Show existing saves
 Show eye wheel and expressions
 Show feat-003 shared UI primitives dogfood page (takes over QmClient settings page, for visual verification of 11 primitives + spring/easing animations)
@@ -4042,7 +4080,7 @@ Show server help and usage messages
 Show server prompts and Echo messages as popups
 Show server settings
 Show settings card borders
-Show short server names in browser
+Show short server names in browser (applies to China community servers)
 Show skin date and author
 Show skin name on name plate to find missing skins
 Show skin names in nameplate
@@ -4345,6 +4383,7 @@ Strict gametype filter
 Strict mode
 Stroke fade time
 Stroke retention time (0=Never disappear)
+Strong / Weak
 Strong hook
 Strong hook color
 Strong Weak Hook
@@ -4358,6 +4397,7 @@ Sudden Death
 Suicides
 Super
 Support ♥
+Surprise
 Swap
 Swap ghosts with regular players
 Swap is disabled on this server.
@@ -4520,6 +4560,7 @@ Text input focus ring color
 Text is too long for the selected translation service.
 Thank you for your company and trust. This is what gives me the courage to keep going.
 Thanks for supporting QmClient
+Thanks!
 The audio device couldn't be initialised.
 The auth level you need to tele others
 The command is empty, incomplete, or exceeds the local config line limit.
@@ -4539,6 +4580,7 @@ The selected part stays highlighted while you adjust its color.
 The server is running a non-standard tuning on a pure game type.
 The server rejected the map upload.
 The watermarked screenshot was saved next to the original
+The wheel changed. Your draft can be added as a new preset.
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 Theme
 Themes directory
@@ -4647,6 +4689,7 @@ Toggle ghost key
 Toggle ghost view mode: play the ghost on an independent timeline (in-game demo player)
 Toggle keyboard shortcuts
 Toggle local console
+Toggle map preview
 Toggle microphone mute
 Toggle or set the switch on or off for the specified time (or indefinitely by default)
 Toggle receiving whispers
@@ -4869,6 +4912,7 @@ Use colored skins for frozen tees
 Use compact list view for config variables
 Use current map as background
 Use current name
+Use current settings
 Use custom skins instead of the ninja tee
 Use custom UI icon color
 Use default flags on scoreboard
@@ -4881,6 +4925,7 @@ Use emote
 Use enemy color instead of frozen color
 Use enemy list to drive player indicators
 Use high bandwidth mode (doubles server bandwidth, LAN only)
+Use installed asset names. Empty fields keep the current asset.
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 Use large emote
 Use mouse sensitivity when dynamic camera is on
@@ -5053,6 +5098,8 @@ Weapons
 Website
 Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
+Wheel label
+Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 When TClient rainbow Tee is enabled, this feature has no effect.
 When you cross the start line, show a ghost tee replicating the movements of your best time
 Whether a switch is deactivated by default (otherwise activated)
@@ -5089,6 +5136,7 @@ White
 Why are you slowmo replaying to read this?
 Width
 Width and height are required to be within the range from %d to %d.
+Width of difficulty column in server browser
 Width of friends column in server browser
 Width of latency column in server browser
 Width of map column in server browser

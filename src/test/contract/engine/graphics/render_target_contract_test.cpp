@@ -92,6 +92,20 @@ TEST(GraphicsRenderTargetBackbufferCapture, RuntimeMultiSamplingChangesKeepCapab
 	EXPECT_NE(SwapBody.find("m_PendingMultiSamplingCount"), std::string::npos);
 }
 
+TEST(GraphicsRenderTargetGaussianBlur, ThreadedFrontendBuildsModeSpecificPassChain)
+{
+	const std::string Source = ReadFile("src/engine/client/graphics_threaded.cpp");
+	const std::string Body = ExtractFunctionBody(Source, "bool CGraphics_Threaded::GaussianBlurRenderTarget");
+	ASSERT_FALSE(Body.empty());
+	EXPECT_NE(Body.find("CalculateGaussianBlurKernel"), std::string::npos);
+	EXPECT_NE(Body.find("aTemporary[Index].Id() == Source.Id()"), std::string::npos);
+	EXPECT_NE(Body.find("m_RenderTargets.Size(Source.Id())"), std::string::npos);
+	EXPECT_NE(Body.find("DualKawasePyramidDimension"), std::string::npos);
+	EXPECT_NE(Body.find("DUAL_KAWASE_PYRAMID_LEVELS"), std::string::npos);
+	EXPECT_NE(Body.find("AddBlurPass"), std::string::npos);
+	EXPECT_NE(Body.find("Command.m_Upsample = Upsample"), std::string::npos);
+}
+
 TEST(GraphicsRenderTargetBackbufferCapture, VulkanRecordsPostCaptureDrawsInline)
 {
 	const std::string Source = ReadFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
@@ -101,7 +115,8 @@ TEST(GraphicsRenderTargetBackbufferCapture, VulkanRecordsPostCaptureDrawsInline)
 	ASSERT_FALSE(Body.empty());
 	ASSERT_FALSE(StartBody.empty());
 	ASSERT_FALSE(PrepareBody.empty());
-	EXPECT_NE(Body.find("m_ThreadCount < 2 || m_ForceSingleThreadedRender"), std::string::npos);
+	EXPECT_NE(Body.find("if(m_RenderTargetActive)"), std::string::npos);
+	EXPECT_NE(Body.find("if(RenderThreadIndex == 0)"), std::string::npos);
 	EXPECT_NE(Body.find("m_vMainDrawCommandBuffers[m_CurImageIndex]"), std::string::npos);
 	EXPECT_EQ(StartBody.find("m_ForceSingleThreadedRender = false"), std::string::npos);
 	EXPECT_NE(PrepareBody.find("m_ForceSingleThreadedRender = false"), std::string::npos);

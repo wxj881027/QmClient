@@ -1122,31 +1122,42 @@ void CEditorActionEditLayerTilesProp::RestoreLayer(int Layer, const std::shared_
 	if(m_SavedLayers[Layer] != nullptr)
 	{
 		std::shared_ptr<CLayerTiles> pSavedLayerTiles = std::static_pointer_cast<CLayerTiles>(m_SavedLayers[Layer]);
-		mem_copy(pLayerTiles->m_pTiles, pSavedLayerTiles->m_pTiles, (size_t)pLayerTiles->m_Width * pLayerTiles->m_Height * sizeof(CTile));
+		auto CopyLayer = [](void *pDst, const void *pSrc, int DstW, int DstH, int SrcW, int SrcH, size_t TileSize) {
+			const int CopyW = minimum(DstW, SrcW);
+			const int CopyH = minimum(DstH, SrcH);
+			for(int y = 0; y < CopyH; y++)
+			{
+				mem_copy(static_cast<unsigned char *>(pDst) + (size_t)y * DstW * TileSize,
+					static_cast<const unsigned char *>(pSrc) + (size_t)y * SrcW * TileSize,
+					(size_t)CopyW * TileSize);
+			}
+		};
+
+		CopyLayer(pLayerTiles->m_pTiles, pSavedLayerTiles->m_pTiles, pLayerTiles->m_Width, pLayerTiles->m_Height, pSavedLayerTiles->m_Width, pSavedLayerTiles->m_Height, sizeof(CTile));
 
 		if(pLayerTiles->m_HasTele)
 		{
 			std::shared_ptr<CLayerTele> pLayerTele = std::static_pointer_cast<CLayerTele>(pLayerTiles);
 			std::shared_ptr<CLayerTele> pSavedLayerTele = std::static_pointer_cast<CLayerTele>(pSavedLayerTiles);
-			mem_copy(pLayerTele->m_pTeleTile, pSavedLayerTele->m_pTeleTile, (size_t)pLayerTiles->m_Width * pLayerTiles->m_Height * sizeof(CTeleTile));
+			CopyLayer(pLayerTele->m_pTeleTile, pSavedLayerTele->m_pTeleTile, pLayerTele->m_Width, pLayerTele->m_Height, pSavedLayerTele->m_Width, pSavedLayerTele->m_Height, sizeof(CTeleTile));
 		}
 		else if(pLayerTiles->m_HasSpeedup)
 		{
 			std::shared_ptr<CLayerSpeedup> pLayerSpeedup = std::static_pointer_cast<CLayerSpeedup>(pLayerTiles);
 			std::shared_ptr<CLayerSpeedup> pSavedLayerSpeedup = std::static_pointer_cast<CLayerSpeedup>(pSavedLayerTiles);
-			mem_copy(pLayerSpeedup->m_pSpeedupTile, pSavedLayerSpeedup->m_pSpeedupTile, (size_t)pLayerTiles->m_Width * pLayerTiles->m_Height * sizeof(CSpeedupTile));
+			CopyLayer(pLayerSpeedup->m_pSpeedupTile, pSavedLayerSpeedup->m_pSpeedupTile, pLayerSpeedup->m_Width, pLayerSpeedup->m_Height, pSavedLayerSpeedup->m_Width, pSavedLayerSpeedup->m_Height, sizeof(CSpeedupTile));
 		}
 		else if(pLayerTiles->m_HasSwitch)
 		{
 			std::shared_ptr<CLayerSwitch> pLayerSwitch = std::static_pointer_cast<CLayerSwitch>(pLayerTiles);
 			std::shared_ptr<CLayerSwitch> pSavedLayerSwitch = std::static_pointer_cast<CLayerSwitch>(pSavedLayerTiles);
-			mem_copy(pLayerSwitch->m_pSwitchTile, pSavedLayerSwitch->m_pSwitchTile, (size_t)pLayerTiles->m_Width * pLayerTiles->m_Height * sizeof(CSwitchTile));
+			CopyLayer(pLayerSwitch->m_pSwitchTile, pSavedLayerSwitch->m_pSwitchTile, pLayerSwitch->m_Width, pLayerSwitch->m_Height, pSavedLayerSwitch->m_Width, pSavedLayerSwitch->m_Height, sizeof(CSwitchTile));
 		}
 		else if(pLayerTiles->m_HasTune)
 		{
 			std::shared_ptr<CLayerTune> pLayerTune = std::static_pointer_cast<CLayerTune>(pLayerTiles);
 			std::shared_ptr<CLayerTune> pSavedLayerTune = std::static_pointer_cast<CLayerTune>(pSavedLayerTiles);
-			mem_copy(pLayerTune->m_pTuneTile, pSavedLayerTune->m_pTuneTile, (size_t)pLayerTiles->m_Width * pLayerTiles->m_Height * sizeof(CTuneTile));
+			CopyLayer(pLayerTune->m_pTuneTile, pSavedLayerTune->m_pTuneTile, pLayerTune->m_Width, pLayerTune->m_Height, pSavedLayerTune->m_Width, pSavedLayerTune->m_Height, sizeof(CTuneTile));
 		}
 	}
 }

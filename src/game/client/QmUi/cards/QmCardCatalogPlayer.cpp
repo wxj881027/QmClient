@@ -214,7 +214,7 @@ uint64_t CMenus::BuildPlayerSettingsCards(const qm_card_catalog::SQmCardBuildCon
 				const float OldWidth = FlagRect.w;
 				FlagRect.w = FlagRect.h * 2.0f;
 				FlagRect.x += (OldWidth - FlagRect.w) / 2.0f;
-				GameClient()->m_CountryFlags.Render(Entry.m_pFlag->m_CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h);
+				GameClient()->m_CountryFlags.Render(Entry.m_pFlag->m_CountryCode, ui_token::color::NEUTRAL_WHITE, FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h);
 				if(Entry.m_pFlag->m_Texture.IsValid() || Entry.m_pFlag->m_CountryCode == -1)
 				{
 					SLabelProperties Props;

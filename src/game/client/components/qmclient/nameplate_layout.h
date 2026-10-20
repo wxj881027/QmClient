@@ -1,9 +1,40 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_NAMEPLATE_LAYOUT_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_NAMEPLATE_LAYOUT_H
 
+#include <base/vmath.h>
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
+
+// 隐私屏蔽只停止绘制，布局继续使用当前内容的尺寸。
+class CQmNameplatePartLayout
+{
+protected:
+	vec2 m_Size = vec2(0.0f, 0.0f);
+	vec2 m_Padding;
+	bool m_Visible = true;
+	bool m_HiddenForPrivacy = false;
+	bool m_ShiftOnInvis = false;
+	bool m_ReserveLineHeight = false;
+
+public:
+	explicit CQmNameplatePartLayout(vec2 Padding = vec2(0.0f, 0.0f)) :
+		m_Padding(Padding) {}
+	vec2 Size() const { return m_Size; }
+	vec2 Padding() const { return m_Padding; }
+	bool Visible() const { return m_Visible && !m_HiddenForPrivacy; }
+	bool ShiftOnInvis() const { return m_ShiftOnInvis || (m_Visible && m_HiddenForPrivacy); }
+	bool HasLayout() const { return m_Visible || m_ShiftOnInvis || m_ReserveLineHeight; }
+	vec2 LayoutSize() const
+	{
+		if(m_Visible || m_ShiftOnInvis)
+			return m_Size + m_Padding;
+		if(m_ReserveLineHeight)
+			return vec2(0.0f, m_Size.y + m_Padding.y);
+		return vec2(0.0f, 0.0f);
+	}
+};
 
 enum class ENameplateCoreRow
 {

@@ -267,7 +267,8 @@ bool CWarList::GetClanWar(int ClientId)
 
 bool CWarList::IsEnemy(int ClientId) const
 {
-	return ClientId >= 0 && ClientId < MAX_CLIENTS && MatchesEnemyGroup(m_WarPlayers[ClientId]);
+	return ClientId >= 0 && ClientId < MAX_CLIENTS && GameClient()->m_aClients[ClientId].m_Active &&
+	       MatchesEnemy(GameClient()->m_aClients[ClientId].m_aName, GameClient()->m_aClients[ClientId].m_aClan);
 }
 
 void CWarList::GetReason(char *pReason, int ClientId)

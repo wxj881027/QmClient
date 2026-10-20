@@ -328,6 +328,9 @@ void CScrollRegion::DoScrollInput()
 	float WheelDelta = 0.0f;
 	if(!Ui()->TryConsumeWheel(pWheelOwnerId, &WheelDelta))
 		return;
+	// Alt+滚轮 = 3 倍步长（加速滚动）。
+	if(Input() != nullptr && Input()->AltIsPressed())
+		WheelDelta *= 3.0f;
 	m_WheelConsumedThisFrame = true;
 	m_ScrollState.AddWheelImpulse(WheelDelta, ScrollMetrics(), ScrollConfig());
 }

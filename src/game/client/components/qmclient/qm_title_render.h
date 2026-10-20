@@ -6,6 +6,7 @@
 #include <base/str.h>
 #include <base/vmath.h>
 
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/qmclient/qm_title_style.h>
 
 #include <array>
@@ -121,7 +122,7 @@ SQmTitleRenderStyle QmTitleResolveRenderStyle(const char *pServerStyleId, bool L
 //
 // 返回 true 表示内容随时间变化，调用方需要按帧重建文本容器；false 表示静态，只需建一次。
 // 与 QmAddTitleRainbowSplits 一样，色段使用字节偏移作为字符序号（与引擎的 m_CharCount 语义一致）。
-bool QmTitleRenderFillCursor(ITextRender *pTextRender, CTextCursor &Cursor, const char *pText, float FontSize, const SQmTitleRenderStyle &Style, float TimeSec, float Alpha, const SQmTitleShimmer &Shimmer = {}, const CQmTitleTextMetrics *pMetrics = nullptr, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), const ColorRGBA &ColorEnd = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+bool QmTitleRenderFillCursor(ITextRender *pTextRender, CTextCursor &Cursor, const char *pText, float FontSize, const SQmTitleRenderStyle &Style, float TimeSec, float Alpha, const SQmTitleShimmer &Shimmer = {}, const CQmTitleTextMetrics *pMetrics = nullptr, const ColorRGBA &Color = ui_token::color::NEUTRAL_WHITE, const ColorRGBA &ColorEnd = ui_token::color::NEUTRAL_WHITE);
 
 // 只写逐字符位移与缩放，不写任何色段：配色交给调用方自己的档位（单色走文本色，彩虹走 QmAddTitleRainbowSplits）。
 // 风格颜色的优先级低于本地配色档，此时仍要保留浮动与掠光，所以不能整条跳过风格。

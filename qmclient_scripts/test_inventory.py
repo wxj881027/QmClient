@@ -41,13 +41,14 @@ SOURCE_DEFINITION = re.compile(
 
 
 # 源码路径继续保守计数；资源路径只在读取内容或查询目录结构时计数。
+# data/fonts/ 是生产字体扫描器的输入，保留 master 对字体目录的资源分类。
 DIRECT_REPO_READ = re.compile(
 	r'TestSourcePath\s*\(\s*"(?:src/|qmclient_scripts/|datasrc/|other/|scripts/|CMakeLists\.txt)'
 	r'|std::ifstream\s+\w+\s*\([^;\n]*DDNET_TEST_SOURCE_DIR'
 )
 DIRECT_RESOURCE_READ = re.compile(
 	r'(?:std::ifstream\s+\w+|fs_is_dir|fs_exists|std::filesystem::(?:exists|is_directory))\s*\(\s*'
-	r'(TestSourcePath\s*\(\s*"data/[^"\n]+"\s*\))'
+	r'(TestSourcePath\s*\(\s*"data/(?!fonts/)[^"\n]+"\s*\))'
 )
 
 

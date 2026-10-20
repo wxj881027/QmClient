@@ -653,6 +653,17 @@ bool CServerBrowser::SortCompareQmClients(int Index1, int Index2) const
 	return m_vpServerlist[Index1]->m_Info.m_QmClientCount > m_vpServerlist[Index2]->m_Info.m_QmClientCount;
 }
 
+bool CServerBrowser::SortCompareDifficulty(int Index1, int Index2) const
+{
+	// 难度星级来自客户端注入的地图难度目录；未注入或未收录（-1）稳定排后，
+	// 同星级的相对顺序交给 stable_sort 保持，不在比较器里引入次级键。
+	const int Stars1 = m_MapDifficultyStarsFunction ? m_MapDifficultyStarsFunction(&m_vpServerlist[Index1]->m_Info) : -1;
+	const int Stars2 = m_MapDifficultyStarsFunction ? m_MapDifficultyStarsFunction(&m_vpServerlist[Index2]->m_Info) : -1;
+	if(Stars1 < 0 || Stars2 < 0)
+		return Stars2 < 0 && Stars1 >= 0;
+	return Stars1 < Stars2;
+}
+
 void CServerBrowser::SetQmClientServerCounts(const std::unordered_map<std::string, int> &Counts)
 {
 	if(m_QmClientServerCounts == Counts)
@@ -1042,6 +1053,8 @@ void CServerBrowser::Sort()
 		std::stable_sort(m_vSortedServerlist.begin(), m_vSortedServerlist.end(), CSortWrap(this, &CServerBrowser::SortCompareFavoritesNumPlayersAndPing));
 	else if(g_Config.m_BrSort == IServerBrowser::SORT_QM_CLIENTS)
 		std::stable_sort(m_vSortedServerlist.begin(), m_vSortedServerlist.end(), CSortWrap(this, &CServerBrowser::SortCompareQmClients));
+	else if(g_Config.m_BrSort == IServerBrowser::SORT_DIFFICULTY)
+		std::stable_sort(m_vSortedServerlist.begin(), m_vSortedServerlist.end(), CSortWrap(this, &CServerBrowser::SortCompareDifficulty));
 
 	m_Sorthash = SortHash();
 	// 服务器筛选和排序完成后再整理社区，最后的资源交换不分配内存。

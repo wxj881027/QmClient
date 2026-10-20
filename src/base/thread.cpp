@@ -57,7 +57,17 @@ static unsigned long __stdcall thread_run(void *user)
 	void (*threadfunc)(void *) = data->threadfunc;
 	void *u = data->u;
 	free(data);
-	threadfunc(u);
+	// 线程入口没有调用者可以接收异常：C++ 标准要求异常逃出线程函数时调用
+	// std::terminate（libc++ 表现为 Abort trap），整个进程随单个后台任务失败
+	// 退出。作业层各自记录并吞掉自身异常，这里作为最后防线再兜一次，避免任何
+	// 未预期的异常直接终止客户端。
+	try
+	{
+		threadfunc(u);
+	}
+	catch(...)
+	{
+	}
 	return 0;
 }
 

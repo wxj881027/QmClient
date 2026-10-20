@@ -1,6 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "QmUi/ColorPickerSlider.h"
+#include "QmUi/QmAnimResolve.h"
 #include "QmUi/QmDropdown.h"
 #include "QmUi/QmPopupPointer.h"
 #include "QmUi/QmPopupSource.h"
@@ -30,6 +31,17 @@
 
 #include <algorithm>
 #include <cmath>
+
+namespace
+{
+	// 弹层转场引擎轨道作用域：单一 ALPHA 值驱动开/合全程（开场目标 1、
+	// 出场目标 0），打断由 MERGE_TARGET 速度继承续接，不再保存时间戳。
+	constexpr uint64_t POPUP_ANIM_SCOPE = 0x9D1A7E5Bull;
+	uint64_t PopupAnimKey(const SPopupMenuId *pId)
+	{
+		return BuildUiAnimNodeKey(POPUP_ANIM_SCOPE, reinterpret_cast<uint64_t>(pId));
+	}
+}
 
 SPopupMenuProperties CUi::SecondaryPanelProperties()
 {
@@ -74,6 +86,23 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 		m_ActiveButtonLogicButton = -1;
 	};
 	SPopupMenuProperties ResolvedProps = Props;
+	// 三组件规约之「popup（动作展开菜单）」：调用方未显式配色（仍是旧默认
+	// 黑底灰边）时，解析为统一下拉列表主题色——编辑器与客户端的裸
+	// DoPopupMenu 调用点一次性接入设计语言；显式配色（二级面板、好友主题、
+	// 下拉框等）不受影响。
+	if(ResolvedProps.m_BackgroundColor == SPopupMenuProperties{}.m_BackgroundColor && ResolvedProps.m_BorderColor == SPopupMenuProperties{}.m_BorderColor)
+	{
+		const SUiTheme Theme = ResolveConfiguredDropdownListTheme();
+		ResolvedProps.m_BackgroundColor = Theme.m_Surface;
+		ResolvedProps.m_BorderColor = Theme.m_Border;
+	}
+	// 转场连续性默认启用，但受两重资格门控：
+	// 1. 动效等级 qm_ui_motion_level == 0 时全局硬切（分级动效规约，
+	//    各封装弹窗的局部门控同义，统一收口到此裁决）；
+	// 2. 无动画运行时的环境（部分 UI 单测）没有轨道时钟，静默退化为硬切
+	//    （转场已由引擎 ALPHA 轨道驱动，依赖运行时而非 IClient 时钟）。
+	if(g_Config.m_QmUiMotionLevel <= 0 || QmAnimationRuntime() == nullptr)
+		ResolvedProps.m_Animate = false;
 	if(ResolvedProps.m_CenterInViewport)
 	{
 		// 居中模态弹层阻断底层滚动，动画开关保留调用方配置。
@@ -106,7 +135,9 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 		ExistingPopupMenu->m_Rect.h = Height;
 		ExistingPopupMenu->m_pContext = pContext;
 		ExistingPopupMenu->m_pfnFunc = pfnFunc;
-		// 出场动画期间被重新打开：取消关闭状态并重放入场动画。
+		// 出场动画期间被重新打开：取消关闭状态即可——引擎 ALPHA 轨道按
+		// MERGE_TARGET 从当前值带速度继续回到展开态，天然无跳变
+		//（旧「等效进度反推」数学已随引擎迁移删除）。
 		if(ExistingPopupMenu->m_Closing)
 		{
 			SPopupFocus Focus = CaptureFocus();
@@ -116,7 +147,6 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 			ExistingPopupMenu->m_ReturnFocus = ResolvedProps.m_ReturnFocus ? Focus : SPopupFocus{};
 			ExistingPopupMenu->m_OpenedFrame = PopupSourceFrame();
 			ExistingPopupMenu->m_Closing = false;
-			ExistingPopupMenu->m_OpenStart = ResolvedProps.m_Animate ? Client()->LocalTime() : -1.0f;
 			if(ResolvedProps.m_BlockUnderlyingPointerInput)
 				SuspendFocus();
 		}
@@ -136,7 +166,9 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 	pNewMenu->m_Rect.h = Height;
 	pNewMenu->m_pContext = pContext;
 	pNewMenu->m_pfnFunc = pfnFunc;
-	pNewMenu->m_OpenStart = ResolvedProps.m_Animate ? Client()->LocalTime() : -1.0f;
+	// 引擎轨道预置 0：首帧渲染从全透明展开，且地址复用不会继承旧轨道值。
+	if(ResolvedProps.m_Animate && QmAnimationRuntime() != nullptr)
+		QmAnimationRuntime()->SetValue(PopupAnimKey(pId), EUiAnimProperty::ALPHA, 0.0f);
 	if(ResolvedProps.m_BlockUnderlyingPointerInput)
 	{
 		SuspendFocus();
@@ -155,7 +187,6 @@ void CUi::RenderPopupMenus()
 	if(!m_vPopupMenus.empty() && g_Config.m_QmGaussianBlur != 0 && GaussianBlurScopeActive())
 		m_GaussianBlurPrepared = false;
 	m_RenderingPopupMenus = true;
-	const float Now = Client()->LocalTime();
 	for(size_t i = 0; i < m_vPopupMenus.size(); ++i)
 	{
 		const SPopupMenu &PopupMenu = m_vPopupMenus[i];
@@ -165,30 +196,37 @@ void CUi::RenderPopupMenus()
 		// 动画结束后由本循环移除（不触发关闭回调，逻辑关闭时已触发过）。
 		if(PopupMenu.m_Closing)
 		{
-			const float Progress = std::clamp((Now - PopupMenu.m_CloseStart) / SPopupMenu::POPUP_CLOSE_DURATION, 0.0f, 1.0f);
+			const float SpatialScale = g_Config.m_QmUiMotionLevel == 1 ? 0.35f : 1.0f;
+			// 出场唯一事实源：引擎 ALPHA 轨道（MERGE_TARGET 打断继承速度）。
+			// 壳几何与内容淡出全部由同一值派生（Carry 一致性）；动效等级的
+			// 时长缩放由引擎内部应用。运行时缺失（异常环境）直接按已收完处理。
+			float Alpha = 0.0f;
+			if(CUiV2AnimationRuntime *pAnim = QmAnimationRuntime())
+				Alpha = ResolveUiAnimValue(*pAnim, PopupAnimKey(pId), EUiAnimProperty::ALPHA, 0.0f, ui_token::motion::POPUP_CLOSE_SEC, EEasing::EASE_OUT);
+			const float Remain = 1.0f - Alpha;
 			CUIRect ShrinkRect = PopupMenu.m_Rect;
-			// 平滑出场缓动：三阶 smoothstep 配合平滑透明度衰减，消除收起瞬间的生硬与突兀感
-			const float Eased = Progress * Progress * (3.0f - 2.0f * Progress);
-			const float Alpha = 1.0f - Progress * Progress;
 			const bool HasAlignedAnchorClosing = PopupMenu.m_Props.m_HasAnchorSurface &&
 							     PopupMenu.m_Props.m_AnchorSurface.w > 0.0f && PopupMenu.m_Props.m_AnchorSurface.h > 0.0f &&
 							     std::fabs(PopupMenu.m_Props.m_AnchorSurface.x - ShrinkRect.x) < 1.5f &&
 							     std::fabs(PopupMenu.m_Props.m_AnchorSurface.w - ShrinkRect.w) < 1.5f;
 			if(HasAlignedAnchorClosing)
 			{
-				const float ScaleY = 1.0f - 0.18f * Eased;
+				const float ScaleY = 1.0f - 0.18f * SpatialScale * Remain;
 				const bool Below = ShrinkRect.y >= PopupMenu.m_Props.m_AnchorSurface.y;
 				if(!Below)
 					ShrinkRect.y += ShrinkRect.h * (1.0f - ScaleY);
 				ShrinkRect.h *= ScaleY;
 			}
+			else if(PopupMenu.m_Props.m_CenterInViewport)
+			{
+				// 居中模态面板与入场（上浮 8px）保持对称轨迹：退场向下微沉，不改變宽高。
+				ShrinkRect.y += 8.0f * SpatialScale * Remain;
+			}
 			else
 			{
-				const float Scale = 1.0f - 0.10f * Eased;
-				ShrinkRect.x += ShrinkRect.w * (1.0f - Scale) * 0.5f;
-				ShrinkRect.y += ShrinkRect.h * (1.0f - Scale) * 0.5f;
-				ShrinkRect.w *= Scale;
-				ShrinkRect.h *= Scale;
+				// 与入场（顶部锚定向下展开）互逆：顶部固定向上收起，不做中心缩放。
+				const float ScaleY = 1.0f - 0.10f * SpatialScale * Remain;
+				ShrinkRect.h *= ScaleY;
 			}
 			if(PopupMenu.m_Props.m_CenterInViewport && PopupMenu.m_Props.m_BlockUnderlyingPointerInput)
 			{
@@ -243,7 +281,8 @@ void CUi::RenderPopupMenus()
 					BorderColor.WithAlpha(BorderColor.a * Alpha),
 					CornerRadius, SPopupMenu::POPUP_BORDER, PopupMenu.m_Props.m_Corners);
 			}
-			if(Progress >= 1.0f)
+			// 逻辑关闭后调用方可以立即重置或释放上下文；退场只绘制弹层外壳，不能再次调用内容回调。
+			if(Alpha <= 0.001f)
 			{
 				m_vPopupMenus.erase(m_vPopupMenus.begin() + i);
 				--i;
@@ -309,6 +348,8 @@ void CUi::RenderPopupMenus()
 				ClipEnable(&PopupMenu.m_Props.m_Viewport);
 
 			CUIRect PopupRect = PopupMenu.m_Rect;
+			// 满幅矩形：抽屉展开期内容按它布局（见下方 RevealDrawer）。
+			const CUIRect FullPopupRect = PopupRect;
 			const SPopupMenuProperties &PopupProps = PopupMenu.m_Props;
 			// 对齐判定留浮点余量：几何端 AlignToAnchor 已保证严格相等，
 			// 余量只吸收布局趟/渲染趟的舍入误差。
@@ -317,16 +358,20 @@ void CUi::RenderPopupMenus()
 						      std::fabs(PopupProps.m_AnchorSurface.x - PopupRect.x) < 1.5f &&
 						      std::fabs(PopupProps.m_AnchorSurface.w - PopupRect.w) < 1.5f;
 
-			// 入场缩放动画：矩形平滑放大到 100%（内容随矩形重排），
-			// 背景/边框同步渐显；非动画弹窗乘子恒 1，路径零变化。
+			// 入场转场：引擎 ALPHA 轨道为唯一事实源（首帧已预置 0），壳几何
+			// 与内容透明度由同一值派生；与关闭共用一条轨道，中途反转由
+			// MERGE_TARGET 带速度续接。非动画弹窗乘子恒 1，路径零变化。
 			float AnimAlphaMul = 1.0f;
-			if(PopupProps.m_Animate && PopupMenu.m_OpenStart >= 0.0f)
+			if(PopupProps.m_Animate)
 			{
-				const float Progress = std::clamp((Now - PopupMenu.m_OpenStart) / SPopupMenu::POPUP_OPEN_DURATION, 0.0f, 1.0f);
-				const float Eased = 1.0f - (1.0f - Progress) * (1.0f - Progress);
+				const float SpatialScale = g_Config.m_QmUiMotionLevel == 1 ? 0.35f : 1.0f;
+				float OpenAlpha = 1.0f;
+				if(CUiV2AnimationRuntime *pAnim = QmAnimationRuntime())
+					OpenAlpha = ResolveUiAnimValue(*pAnim, PopupAnimKey(pId), EUiAnimProperty::ALPHA, 1.0f, ui_token::motion::POPUP_OPEN_SEC, EEasing::EASE_OUT);
+				const float Remain = 1.0f - OpenAlpha;
 				if(HasAlignedAnchor)
 				{
-					const float ScaleY = 0.88f + 0.12f * Eased;
+					const float ScaleY = 1.0f - 0.12f * SpatialScale * Remain;
 					const bool Below = PopupRect.y >= PopupProps.m_AnchorSurface.y;
 					if(!Below)
 					{
@@ -342,17 +387,17 @@ void CUi::RenderPopupMenus()
 				else if(PopupProps.m_CenterInViewport)
 				{
 					// 模态面板保持内容尺寸，避免动画重排触发临时滚动条与命中漂移。
-					PopupRect.y += 8.0f * (1.0f - Eased);
+					PopupRect.y += 8.0f * SpatialScale * Remain;
 				}
 				else
 				{
-					const float Scale = 0.92f + 0.08f * Eased;
-					PopupRect.x += PopupRect.w * (1.0f - Scale) * 0.5f;
-					PopupRect.y += PopupRect.h * (1.0f - Scale) * 0.5f;
-					PopupRect.w *= Scale;
-					PopupRect.h *= Scale;
+					// 无锚点弹层（下拉列表/上下文菜单等）：统一为顶部锚定的
+					// 向下展开，与对齐锚点弹层同一抽屉语言；不再中心缩放——
+					// 内容随缩放重排读作「弹一下」（onetake：大 ground 稳定）。
+					const float ScaleY = 1.0f - 0.10f * SpatialScale * Remain;
+					PopupRect.h *= ScaleY;
 				}
-				AnimAlphaMul = Eased;
+				AnimAlphaMul = OpenAlpha;
 			}
 			if(PopupProps.m_CenterInViewport && PopupProps.m_BlockUnderlyingPointerInput)
 			{
@@ -419,6 +464,23 @@ void CUi::RenderPopupMenus()
 			const float ContentInset = PopupProps.m_ContentInset >= 0.0f ? PopupProps.m_ContentInset : SPopupMenu::POPUP_BORDER + SPopupMenu::POPUP_MARGIN;
 			PopupRect.Margin(ContentInset, &PopupRect);
 
+			// 抽屉展开期（尺寸在变的分支）内容按满幅矩形布局、用动画矩形做揭示
+			// 裁剪：若让内容跟随临时高度布局，滚动区会把选中项滚进临时视口、
+			// 抽屉长满后又移回（列表内容整体平移，读作弹跳——选中项在列表末尾
+			// 的下拉必现，如模糊模式默认选中最后一项；选中首项的下拉从不触发，
+			// 这就是「有的弹有的不弹」的根源）。满幅布局下滚动偏移从首帧就是
+			// 终值，抽屉只做逐行揭示，展开方向始终从按钮边缘向外。居中模态
+			// 只位移不改尺寸，无需揭示。
+			const bool RevealDrawer = PopupProps.m_Animate && AnimAlphaMul < 0.999f &&
+						  (HasAlignedAnchor || !PopupProps.m_CenterInViewport);
+			CUIRect ContentRect = PopupRect;
+			if(RevealDrawer)
+			{
+				ContentRect = FullPopupRect;
+				ContentRect.Margin(ContentInset, &ContentRect);
+				ClipEnable(&PopupRect);
+			}
+
 			// The popup render function can open/close popups, which may resize the vector and thus
 			// invalidate the variable PopupMenu. We therefore store pId in a separate variable.
 			CUiScopedSurfaceText SurfaceText(TextRender(), ForegroundSurface);
@@ -426,8 +488,10 @@ void CUi::RenderPopupMenus()
 			CUiScopedControlAlphaScale ContentAlpha(this, AnimAlphaMul);
 			CUiScopedInteractionOwner InteractionOwner(this, PopupMenu.m_Source.Context(), PopupMenu.m_Source.CardId());
 			m_pRenderingPopupId = pId;
-			Result = PopupMenu.m_pfnFunc(PopupMenu.m_pContext, PopupRect, Active);
+			Result = PopupMenu.m_pfnFunc(PopupMenu.m_pContext, ContentRect, Active);
 			m_pRenderingPopupId = nullptr;
+			if(RevealDrawer)
+				ClipDisable();
 			if(ClipToViewport)
 				ClipDisable();
 		}
@@ -478,8 +542,9 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants, bool 
 		if(!IncludeDescendants && PopupMenuToClose->m_Props.m_Animate)
 		{
 			m_vPopupMenus.erase(PopupMenuToClose + 1, m_vPopupMenus.end());
+			// 出场由引擎 ALPHA 轨道接管：目标翻转为 0，MERGE_TARGET 从当前值
+			// 带速度继续（中途关闭不再需要等效进度换算，旧数学已删）。
 			PopupMenuToClose->m_Closing = true;
-			PopupMenuToClose->m_CloseStart = Client()->LocalTime();
 			SetActiveItem(nullptr);
 			if(RestoreFocus)
 				QueuePopupFocusRestore(ReturnFocus);
@@ -501,7 +566,6 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants, bool 
 				if(It->m_Closing || !It->m_Props.m_Animate)
 					continue;
 				It->m_Closing = true;
-				It->m_CloseStart = Client()->LocalTime();
 			}
 			m_vPopupMenus.erase(
 				std::remove_if(PopupMenuToClose, m_vPopupMenus.end(), [](const SPopupMenu &PopupMenu) { return !PopupMenu.m_Closing; }),
@@ -983,10 +1047,8 @@ void CUi::ShowPopupSelection(float X, float Y, SSelectionPopupContext *pContext)
 	// 阻断底层指针输入：点击弹窗（含触发按钮）以外区域时立即关闭弹窗。
 	// 几何判定不可见的路径会在下方直接 ClosePopupMenu，阻断标志无副作用。
 	pContext->m_Props.m_BlockUnderlyingPointerInput = true;
-	if(g_Config.m_QmUiMotionLevel > 0)
-	{
-		pContext->m_Props.m_Animate = true;
-	}
+	// 动画资格（动效等级 / IClient 可用性）由 DoPopupMenu 入口统一裁决。
+	pContext->m_Props.m_Animate = true;
 	float PopupWidth = pContext->m_Width;
 	float PopupHeightResolved = PopupHeight;
 	if(pContext->m_AlignmentHeight >= 0.0f)
@@ -2037,8 +2099,7 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 			ValueRenderOptions.m_DrawBackground = false;
 			// 命中区仍是整块底板：文本内缩只为排版留白，不该让边缘点击落空。
 			ValueRenderOptions.m_pHitRect = &ValueRect;
-			pUI->DoEditBox(&Input, &ValueTextRect, 7.0f, IGraphics::CORNER_ALL, {}, TEXTALIGN_MC, ValueRenderOptions);
-			if(Input.WasChanged())
+			if(pUI->DoEditBox(&Input, &ValueTextRect, 7.0f, IGraphics::CORNER_ALL, {}, TEXTALIGN_MC, ValueRenderOptions))
 			{
 				const char *pText = pColorPicker->m_aacChannelBuffers[ChannelIndex];
 				char *pEnd = nullptr;
@@ -2191,9 +2252,9 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 			CUi::SEditBoxRenderOptions HexRenderOptions;
 			HexRenderOptions.m_DrawBackground = false;
 			HexRenderOptions.m_pHitRect = &HexBox;
-			pUI->DoEditBox(&pColorPicker->m_HexInput, &HexTextRect, 7.0f, IGraphics::CORNER_ALL, {}, TEXTALIGN_ML, HexRenderOptions);
+			const bool HexChanged = pUI->DoEditBox(&pColorPicker->m_HexInput, &HexTextRect, 7.0f, IGraphics::CORNER_ALL, {}, TEXTALIGN_ML, HexRenderOptions);
 			pUI->DoSmallTooltip(&pColorPicker->m_HexInput, &HexBox, "支持 3/4/6/8 位十六进制颜色（例如 #F00、#FF0000）");
-			if(pColorPicker->m_HexInput.WasChanged())
+			if(HexChanged)
 			{
 				ColorRGBA ParsedColor;
 				if(qm_picker_palette::ParseHexColor(pColorPicker->m_aHexBuffer, ParsedColor))

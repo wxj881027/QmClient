@@ -464,6 +464,9 @@ Add current cut to the export list
 Add debug dummy to server (Debug build only)
 == Добавить отладочного дамми на сервер (только для отладочной сборки)
 
+Add default presets
+== Добавить стандартные наборы
+
 Add demo timeline marker
 == Добавить маркер временной шкалы демо
 
@@ -502,6 +505,9 @@ Add team name:
 
 Add to %s
 == Добавить в %s
+
+Add to bind wheel
+== Добавить в колесо команд
 
 Add to blocked words
 == Добавить в заблокированные слова
@@ -749,6 +755,9 @@ Angle
 Angle:
 == Угол:
 
+Angry
+== Злость
+
 Angular gradient
 == Угловой градиент
 
@@ -875,6 +884,9 @@ Apply squishy Tee deformation to other players
 Apply this preset
 == Применить этот пресет
 
+Apply to
+== Применить к
+
 Apply to dummy
 == Применить к Дами
 
@@ -953,6 +965,9 @@ Are you sure you want to delete this asset?
 Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == Вы уверены, что хотите сохранить свой скин? Если скин с таким именем уже существует, он будет заменен.
 
+Arrow
+== Текстура стрелок
+
 Arrow assets
 == Ресурсы стрелок
 
@@ -964,6 +979,9 @@ Aspect ratio preset
 
 Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)
 == Предустановка соотношения сторон экрана (0=выкл, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=пользовательская)
+
+Asset preset
+== Набор текстур
 
 Asset with this name already exists.
 == Ресурс с таким именем уже существует.
@@ -1571,6 +1589,9 @@ Blend mode
 Blend strength
 == Сила смешивания
 
+Blink
+== Моргание
+
 Blink the active local tee
 == Заставить активного локального персонажа мигнуть
 
@@ -1660,9 +1681,6 @@ Browse and activate custom audio packs
 
 Browse font store…
 == Открыть магазин шрифтов…
-
-Browse profiles saved on this device
-== Browse profiles saved on this device
 
 Browser
 == Обзор
@@ -1958,6 +1976,9 @@ Chat message style
 Chat messages to send when entering freeze, comma-separated (empty=none)
 == Сообщения в чат при входе в заморозку, через запятую (пусто=нет)
 
+Chat phrase
+== Фраза для чата
+
 Chat score increases per message and decreases by 1 per tick
 == Очки чата увеличиваются за каждое сообщение и уменьшаются на 1 за каждый тик
 
@@ -1999,6 +2020,9 @@ Check input device, system default mic, and mic permission first
 
 Check output device, confirm headphones/speakers are still online
 == Сначала проверьте устройство вывода, убедитесь, что наушники/колонки всё ещё работают.
+
+Check the preset fields, label, and wheel capacity (64 entries).
+== Проверьте поля набора, название и вместимость колеса (64 пункта).
 
 Checking for existing player with your name
 == Проверка существующего игрока с вашим именем
@@ -2612,6 +2636,12 @@ Connection disconnected
 Connection elevated
 == Соединение слегка нестабильно
 
+Connection icon color
+== Цвет значка подключения
+
+Connection icon custom color
+== Свой цвет значка подключения
+
 Connection normal
 == Нормальное соединение
 
@@ -2864,6 +2894,9 @@ Count players only
 Countries
 == Страны
 
+Country code
+== Код страны/региона
+
 Country flag for grouping this community (ISO 3166-1 numeric)
 == Флаг страны для группировки этого сообщества (ISO 3166-1 числовой)
 
@@ -2881,6 +2914,9 @@ Create a random skin
 
 Create category
 == Создать категорию
+
+Create wheel presets here. Existing wheel entries are kept.
+== Здесь можно редактировать наборы колеса. Существующие пункты сохраняются.
 
 Created
 == Создано
@@ -3028,6 +3064,9 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == Customize the position jump hint
+
+Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
+== Расстояние прокрутки за шаг колёсика. Удерживайте Alt для увеличения шага в 3 раза
 
 Customize translate button and menu colors
 == Настройка цветов кнопки перевода и меню
@@ -3695,6 +3734,9 @@ Drag HUD modules with the left mouse button
 Drag to another category to move this friend.
 == Перетащите этого друга в другую категорию, чтобы переместить его.
 
+Drag to pan, scroll to zoom
+== Перетаскивание — перемещение, колесо — масштаб
+
 Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
 == Перетащите, чтобы изменить порядок; нажмите, чтобы развернуть или свернуть. Щелкните правой кнопкой мыши или используйте шестеренку для управления категориями
 
@@ -3935,6 +3977,12 @@ Dynamic Island background alpha
 Dynamic Island background color
 == Цвет фона Dynamic Island
 
+Dynamic island connection icon color: 1=Quality tier, 2=Follow global icon color, 3=Custom
+== Цвет значка подключения на острове: 1=по качеству сети, 2=как цвет значков интерфейса, 3=свой
+
+Dynamic island connection icon custom color
+== Свой цвет значка подключения на острове
+
 Ease in out quad
 == Ease in-out quad
 
@@ -3985,6 +4033,9 @@ Edit player and dummy identity information
 
 Edit skin texture
 == Редактировать текстуру скина
+
+Edit this custom command on the Bind Wheel page.
+== Измените эту пользовательскую команду на странице колеса команд.
 
 Edit touch controls
 == Редактировать сенсорное управление
@@ -4967,6 +5018,9 @@ Follow server
 Follow Tee
 == Следовать за Tee
 
+Follow UI icon color
+== Как цвет значков интерфейса
+
 Following
 == Следую
 
@@ -5200,6 +5254,9 @@ Full: each enabled animation category uses its complete transition
 
 Fullscreen
 == Полноэкранный режим
+
+Fully block enemy players
+== Полностью блокировать враждебных игроков
 
 Fun
 == Развлечение
@@ -5528,6 +5585,9 @@ Ground jump
 Group name
 == Имя группы
 
+GUI cursor
+== Курсор интерфейса
+
 GUI cursor assets
 == Ресурсы курсора GUI
 
@@ -5560,6 +5620,9 @@ Hammer: %s
 
 Handwriting
 == Рукописный
+
+Happy
+== Радость
 
 Has people playing
 == Есть игроки
@@ -5614,6 +5677,9 @@ Hide Echo messages
 
 Hide Echo messages in Zen mode
 == Скрывать сообщения Echo в режиме дзен
+
+Hide enemy chat, replace enemy names with client IDs and use default skins; keep local players visible
+== Скрывать чат врагов, заменять их имена ID клиента и использовать стандартные скины; своего персонажа и дамми показывать как обычно
 
 Hide explosion effects
 == Скрыть эффекты взрывов
@@ -5975,6 +6041,9 @@ Icon symbols:
 Icons
 == Значки
 
+Identity preset
+== Набор профиля
+
 If 1, auto record only once on connect; if 0, auto record restarts after game end
 == Если 1, автоматическая запись только один раз при подключении; если 0, автоматическая запись перезапускается после окончания игры
 
@@ -6175,6 +6244,9 @@ Initializing components
 
 Initializing layers
 == Инициализация слоёв
+
+Initializing map layers
+== Инициализация слоёв карты
 
 Initializing map logic
 == Инициализация логики карты
@@ -6896,9 +6968,6 @@ Load the official rank replay of a map as a ghost (default: current map, rank 1)
 Load with code r. /load to check your existing saves
 == Загрузить с кодом r. /load для проверки существующих сохранений
 
-Load, save, overwrite, or delete profiles
-== Load, save, overwrite, or delete profiles
-
 Loaded %d items
 == Загружено %d элементов
 
@@ -7064,6 +7133,12 @@ Main Asset
 Main menu
 == Главное меню
 
+Main Tee
+== Основной Tee
+
+Main Tee and dummy
+== Основной Tee и дамми
+
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
 == Делать замороженных игроков похожими на волейбольные мячи (0=Отключено, 1=Только на картах волейбола, 2=Всегда)
 
@@ -7111,6 +7186,9 @@ Manage hostile-list chat shortcuts
 
 Manage kaomoji chat shortcuts
 == Manage kaomoji chat shortcuts
+
+Manage profiles and bind wheel presets
+== Управление профилями и наборами колеса команд
 
 Manage the skin rotation queue
 == Управление очередью ротации скинов
@@ -7166,8 +7244,14 @@ Map folders
 Map name
 == Название карты
 
+Map not downloaded yet — join the server to preview it
+== Карта ещё не загружена. Зайдите на сервер для предпросмотра
+
 Map play history
 == История прохождения карт
+
+Map preview rendering unavailable
+== Предпросмотр карты недоступен
 
 Map Preview TODO
 == Предпросмотр карты в работе
@@ -7970,6 +8054,9 @@ New name
 New name:
 == Новое имя:
 
+New preset
+== Новый набор
+
 New preset name
 == Новое имя пресета
 
@@ -8423,6 +8510,12 @@ Only save improvements
 Only show after joining a team
 == Показывать только после присоединения к команде
 
+Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players
+== Показывать только упоминания, личные и собственные сообщения независимо от фильтров друзей и команды; сохранять системные сообщения и блокировку игроков
+
+Only show messages related to me
+== Показывать только сообщения, связанные со мной
+
 Only show outlines in the entities layer
 == Показывать только контуры в слое объектов
 
@@ -8567,6 +8660,9 @@ Original message language
 Original options
 == Исходные варианты
 
+Original scroll feel
+== Прежнее ощущение прокрутки
+
 Other
 == Другое
 
@@ -8671,6 +8767,9 @@ p = Ping latency
 
 Pack name
 == Имя пакета
+
+Pain
+== Боль
 
 Panel opacity
 == Непрозрачность панели
@@ -9335,6 +9434,9 @@ Preset %d
 Preset bar
 == Панель пресетов
 
+Preset type
+== Тип набора
+
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == Пресет при кодировании видео с libx264, по умолчанию 5 (medium), 0 = ultrafast, 9 = placebo (самый медленный, не рекомендуется)
 
@@ -9460,9 +9562,6 @@ Process UDP RX (est.)
 
 Process UDP TX (est.)
 == Отправка UDP процессом (оценка)
-
-Profile Options
-== Параметры профиля
 
 Profiles
 == Профили
@@ -9622,6 +9721,9 @@ QQ Music hook helper path (empty=beside QmClient)
 
 Quads are used for background decoration
 == Квады используются для фонового декора
+
+Quality tier
+== По качеству сети
 
 Query current map info
 == Запросить информацию о текущей карте
@@ -10517,6 +10619,12 @@ Restore Kugou files
 Restore old single-segment hook collision line behavior
 == Восстановить старое поведение линии столкновения крюка с одним сегментом
 
+Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
+== Вернуть прежнюю прокрутку колёсиком: каждый шаг заново запускает плавную прокрутку без сохранения скорости
+
+Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
+== Вернуть прежнюю прокрутку колёсиком: каждый шаг заново запускает плавную прокрутку без сохранения скорости
+
 Restoring save %d: main '%s', dummy '%s'.
 == Восстановление сохранения %d: основной '%s', дамми '%s'.
 
@@ -10793,8 +10901,8 @@ Save/Load Name
 Save/Load Skin
 == Сохранить/Загрузить скин
 
-Saved Profiles
-== Сохранённые профили
+Saved to the bind wheel.
+== Сохранено в колесо команд.
 
 Saved with your title and shared with other QmClient players.
 == Сохраняется вместе с титулом и передаётся другим игрокам QmClient.
@@ -10931,6 +11039,9 @@ Scroll mode: Off
 Scroll mode: On
 == Режим прокрутки: вкл.
 
+Scroll step
+== Шаг прокрутки
+
 Search
 == Поиск
 
@@ -11032,9 +11143,6 @@ Select map
 
 Select the country flag for each player
 == Select the country flag for each player
-
-Select which player fields a profile stores
-== Select which player fields a profile stores
 
 Selected %d
 == Выбрано %d
@@ -11146,6 +11254,9 @@ Server alert
 
 Server best:
 == Лучший на сервере:
+
+Server browser content column order (comma separated ids: community,name,map,difficulty,gametype,friends,players,qm,ping; empty = default)
+== Порядок столбцов браузера серверов (ID через запятую: community,name,map,difficulty,gametype,friends,players,qm,ping; пусто = по умолчанию)
 
 Server browser exclude string
 == Строка исключения в браузере серверов
@@ -11614,6 +11725,9 @@ Show enemy reason
 
 Show entities
 == Показать сущности
+
+Show entities only (hide textures)
+== Только объекты (скрыть текстуры)
 
 Show existing saves
 == Показать существующие сохранения
@@ -12128,8 +12242,8 @@ Show server settings
 Show settings card borders
 == Показывать границы карточек настроек
 
-Show short server names in browser
-== Показывать короткие названия серверов в списке серверов
+Show short server names in browser (applies to China community servers)
+== Показывать короткие названия серверов в списке серверов (для серверов китайского сообщества)
 
 Show skin date and author
 == Показывать дату и автора скина
@@ -13037,6 +13151,9 @@ Stroke fade time
 Stroke retention time (0=Never disappear)
 == Время удержания обводки (0=Никогда не исчезать)
 
+Strong / Weak
+== Текстуры сильного/слабого хука
+
 Strong hook
 == Сильный крюк
 
@@ -13075,6 +13192,9 @@ Super
 
 Support ♥
 == Поддержка ♥
+
+Surprise
+== Удивление
 
 Swap
 == Обмен
@@ -13562,6 +13682,9 @@ Thank you for your company and trust. This is what gives me the courage to keep 
 Thanks for supporting QmClient
 == Спасибо за поддержку QmClient
 
+Thanks!
+== Спасибо!
+
 The audio device couldn't be initialised.
 == Не удалось инициализировать аудиоустройство.
 
@@ -13618,6 +13741,9 @@ The server rejected the map upload.
 
 The watermarked screenshot was saved next to the original
 == Снимок с водяным знаком сохранён рядом с оригиналом
+
+The wheel changed. Your draft can be added as a new preset.
+== Колесо изменилось. Черновик можно добавить как новый набор.
 
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == Ширина текстуры %s не делится на %d, или высота не делится на %d, что может вызвать визуальные ошибки.
@@ -13942,6 +14068,9 @@ Toggle keyboard shortcuts
 
 Toggle local console
 == Переключить локальную консоль
+
+Toggle map preview
+== Предпросмотр карты
 
 Toggle microphone mute
 == Переключить отключение микрофона
@@ -14609,6 +14738,9 @@ Use current map as background
 Use current name
 == Использовать текущее имя
 
+Use current settings
+== Использовать текущие настройки
+
 Use custom skins instead of the ninja tee
 == Использовать пользовательские скины вместо скина ниндзя
 
@@ -14644,6 +14776,9 @@ Use enemy list to drive player indicators
 
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 == Использовать режим высокой пропускной способности (удваивает пропускную способность сервера, только LAN)
+
+Use installed asset names. Empty fields keep the current asset.
+== Введите названия установленных текстур. Пустое поле сохраняет текущую текстуру.
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == Используйте клавишу K, чтобы убить (перезапустить), Q, чтобы поставить на паузу и смотреть за другими игроками. Другие привязки клавиш смотрите в настройках.
@@ -15161,6 +15296,12 @@ Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 == Какой уровень привязки DDRace установлен (автоматически, вам не нужно его использовать).
 
+Wheel label
+== Название в колесе
+
+Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
+== Шаг колёсика в пикселях интерфейса; страницы карточек настроек прокручиваются на 12 таких шагов
+
 When TClient rainbow Tee is enabled, this feature has no effect.
 == Если включен радужный Tee TClient, эта функция не действует.
 
@@ -15268,6 +15409,9 @@ Width
 
 Width and height are required to be within the range from %d to %d.
 == Ширина и высота должны быть в диапазоне от %d до %d.
+
+Width of difficulty column in server browser
+== Ширина столбца сложности в браузере серверов
 
 Width of friends column in server browser
 == Ширина столбца друзей в браузере серверов

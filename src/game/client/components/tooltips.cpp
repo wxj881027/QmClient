@@ -219,7 +219,8 @@ void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char 
 			Hint->second.SetFallbackDescription(pText);
 		else
 			Hint->second.SetDescription(pText);
-		pText = Hint->second.Text();
+		const bool ShowCommands = GameClient()->m_Menus.IsSettingsPageActive() && g_Config.m_UiSettingsPage == CMenus::SETTINGS_SEARCH;
+		pText = Hint->second.Text(ShowCommands);
 	}
 	if(pText == nullptr || pText[0] == '\0')
 	{
@@ -297,7 +298,10 @@ void CTooltips::OnRender()
 	const bool MotionEnabled = g_Config.m_QmTooltipAnimation && g_Config.m_QmUiMotionLevel > 0;
 	const bool Animate = QmTooltipAnimate(Tooltip, MotionEnabled);
 	const float SecondsFadeIn = !Animate || Tooltip.m_Immediate ? 0.0f : CQmTooltipHoverState::FADE_IN_SECONDS;
-	const float AlphaFactor = SecondsFadeIn > 0.0f ? std::min(VisibleSeconds / SecondsFadeIn, 1.0f) : 1.0f;
+	const float FadeInAlpha = SecondsFadeIn > 0.0f ? std::min(VisibleSeconds / SecondsFadeIn, 1.0f) : 1.0f;
+	const float AlphaFactor = FadeInAlpha * m_HoverState.RetainAlpha(Now, Animate);
+	if(AlphaFactor <= 0.001f)
+		return;
 	CUiScopedGaussianBlur GaussianBlurScope(Ui(), AlphaFactor);
 	CQmTooltipTextScope TextScope(*TextRender());
 

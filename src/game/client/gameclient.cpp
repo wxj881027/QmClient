@@ -35,6 +35,7 @@
 #include "components/qmclient/jelly_tee.h"
 #include "components/qmclient/modes.h"
 #include "components/qmclient/perf_logging.h"
+#include "components/qmclient/player_display_privacy.h"
 #include "components/qmclient/predicted_event_queue.h"
 #include "components/qmclient/qmclient_utils.h"
 #include "components/qmclient/screenshot_manager.h"
@@ -676,7 +677,6 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_Emoticon.m_RenderProjectiles, "emoticon_projectiles");
 	AddComponent(&m_DemoCamera, "demo_camera");
 	AddComponent(&m_Hud, "hud");
-	AddComponent(&m_Spectator, "spectator");
 	AddComponent(&m_Emoticon, "emoticon");
 	AddComponent(&m_BindChat, "bind_chat");
 	AddComponent(&m_BindWheel, "bind_wheel");
@@ -684,6 +684,9 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_StatusBar, "status_bar");
 	AddComponent(&m_InfoMessages, "info_messages");
 	AddComponent(&m_Chat, "chat");
+	// 旁观选择器覆盖聊天和按键显示，菜单与计分板仍保留在上层。
+	AddComponent(&m_InputOverlay, "input_overlay");
+	AddComponent(&m_Spectator, "spectator");
 	AddComponent(&m_QmHudNotifications, "hud_notifications");
 	AddComponent(&m_Broadcast, "broadcast");
 	AddComponent(&m_ImportantAlert, "important_alert");
@@ -695,7 +698,6 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_Motd, "motd");
 	AddComponent(&m_Menus, "menus");
 	AddComponent(&m_PieMenu, "pie_menu");
-	AddComponent(&m_InputOverlay, "input_overlay");
 	AddComponent(&m_HudEditor, "hud_editor");
 	AddComponent(&m_Tooltips, "tooltips");
 	AddComponent(&m_Scripting, "scripting");
@@ -1345,12 +1347,16 @@ void CGameClient::RefreshStreamerSkinPrivacyAfterStateChange()
 {
 	const uint64_t FriendsRevision = Friends() != nullptr ? Friends()->Revision() : 0;
 	if(m_LastStreamerHideSkins == g_Config.m_QmStreamerHideSkins &&
+		m_LastWarListBlockEnemies == g_Config.m_QmWarListBlockEnemies &&
+		(!g_Config.m_QmWarListBlockEnemies || m_LastWarListPrivacyRevision == m_WarList.Revision()) &&
 		m_LastStreamerFriendsIgnoreClan == g_Config.m_ClFriendsIgnoreClan &&
 		m_aLastStreamerLocalIds[0] == m_aLocalIds[0] &&
 		m_aLastStreamerLocalIds[1] == m_aLocalIds[1] &&
 		m_LastStreamerFriendsRevision == FriendsRevision)
 		return;
 	m_LastStreamerHideSkins = g_Config.m_QmStreamerHideSkins;
+	m_LastWarListBlockEnemies = g_Config.m_QmWarListBlockEnemies;
+	m_LastWarListPrivacyRevision = m_WarList.Revision();
 	m_LastStreamerFriendsIgnoreClan = g_Config.m_ClFriendsIgnoreClan;
 	std::copy(std::begin(m_aLocalIds), std::end(m_aLocalIds), std::begin(m_aLastStreamerLocalIds));
 	m_LastStreamerFriendsRevision = FriendsRevision;
@@ -2561,16 +2567,33 @@ bool CGameClient::ShouldRunSkinChangeTransition(int ClientId) const
 	}
 }
 
+static QmPlayerDisplayPrivacy::SDecisions ResolvePlayerDisplayPrivacy(const CGameClient &GameClient, int ClientId)
+{
+	const QmPlayerDisplayPrivacy::SSettings Settings{g_Config.m_QmStreamerHideNames != 0, g_Config.m_QmStreamerHideSkins != 0, g_Config.m_QmWarListBlockEnemies != 0};
+	QmPlayerDisplayPrivacy::SPlayer Player;
+	Player.m_ClientId = ClientId;
+	if(ClientId >= 0 && ClientId < MAX_CLIENTS)
+	{
+		Player.m_Local = GameClient.IsLocalClientId(ClientId);
+		Player.m_Friend = GameClient.m_aClients[ClientId].m_Friend;
+		Player.m_Enemy = Settings.m_BlockEnemies && !Player.m_Local && GameClient.m_WarList.IsEnemy(ClientId);
+	}
+	return QmPlayerDisplayPrivacy::Resolve(Settings, Player);
+}
+
+bool CGameClient::ShouldBlockWarListPlayer(int ClientId) const
+{
+	return ResolvePlayerDisplayPrivacy(*this, ClientId).m_BlockChat;
+}
+
 bool CGameClient::ShouldHideStreamerIdentity(int ClientId) const
 {
-	return g_Config.m_QmStreamerHideNames && ClientId >= 0 && ClientId < MAX_CLIENTS &&
-	       !IsLocalClientId(ClientId) && !m_aClients[ClientId].m_Friend;
+	return ResolvePlayerDisplayPrivacy(*this, ClientId).m_HideIdentity;
 }
 
 bool CGameClient::ShouldHideStreamerSkin(int ClientId) const
 {
-	return g_Config.m_QmStreamerHideSkins && ClientId >= 0 && ClientId < MAX_CLIENTS &&
-	       !IsLocalClientId(ClientId) && !m_aClients[ClientId].m_Friend;
+	return ResolvePlayerDisplayPrivacy(*this, ClientId).m_HideSkin;
 }
 
 void CGameClient::FormatStreamerName(int ClientId, char *pBuf, int BufSize) const
@@ -2735,7 +2758,7 @@ void CGameClient::FormatStreamerVoteText(const char *pText, char *pBuf, int BufS
 	if(!pText)
 		return;
 
-	if(!g_Config.m_QmStreamerHideNames)
+	if(!g_Config.m_QmStreamerHideNames && !g_Config.m_QmWarListBlockEnemies)
 	{
 		str_copy(pBuf, pText, BufSize);
 		return;
@@ -4243,11 +4266,6 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		m_Teams.m_NumDDRaceTeams = m_GameInfo.m_NumDDRaceTeams;
 
 	LogSnapshotStage("snapshot_decode");
-	for(CClientData &Client : m_aClients)
-	{
-		Client.UpdateSkinInfo();
-	}
-	LogSnapshotStage("snapshot_skins");
 	// setup local pointers
 	if(m_Snap.m_LocalClientId >= 0)
 	{
@@ -4279,6 +4297,7 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 
 	for(CClientData &Client : m_aClients)
 		Client.UpdateSkinInfo();
+	LogSnapshotStage("snapshot_skins");
 
 	if(m_FastPractice.Enabled())
 		m_PredictedDummyId = m_FastPractice.CurrentPracticeDummyId();
@@ -6097,8 +6116,8 @@ void CGameClient::CClientData::UpdateRenderInfo()
 
 		if(!ApplyDefaultSkin(m_pGameClient, NewRenderInfo, SkinDescriptor.m_Flags))
 		{
-			// 默认皮肤不可绘制时沿用原渲染信息，避免留下无贴图的白色方块。
-			if(OriginalInfo.Valid())
+			// 完全屏蔽时不能回退原皮肤；其他情况沿用已有的资源缺失回退。
+			if(OriginalInfo.Valid() && !m_pGameClient->ShouldBlockWarListPlayer(m_ClientId))
 			{
 				const CTeeRenderInfo SkinProperties = NewRenderInfo;
 				NewRenderInfo = OriginalInfo;
@@ -6404,11 +6423,13 @@ CSkinDescriptor CGameClient::CClientData::ToSkinDescriptor() const
 		return SkinDescriptor;
 	}
 
+	const bool Sixup = m_pGameClient->m_pClient->IsSixup();
+	// 0.6 远端玩家始终使用快照皮肤，无需查询本地皮肤的服务器策略。
 	const bool UseServerControlledSkin =
-		m_pGameClient->m_pClient->State() == IClient::STATE_ONLINE && m_pGameClient->ShouldUseServerControlledLocalSkin();
+		Sixup && m_pGameClient->m_pClient->State() == IClient::STATE_ONLINE && m_pGameClient->ShouldUseServerControlledLocalSkin();
 	// 与 BuildLocalSkinDescriptor 同源：协议版本决定可用皮肤部件族，白名单只决定是否采用服务器皮肤。
 	const EServerSkinProtocol Protocol = ResolveServerSkinProtocol(
-		m_pGameClient->m_pClient->IsSixup(), UseServerControlledSkin, TranslatedClient.m_Active);
+		Sixup, UseServerControlledSkin, TranslatedClient.m_Active);
 	if(Protocol == EServerSkinProtocol::SEVEN)
 	{
 		SkinDescriptor.m_Flags |= CSkinDescriptor::FLAG_SEVEN;

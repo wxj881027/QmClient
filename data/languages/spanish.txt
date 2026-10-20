@@ -464,6 +464,9 @@ Add current cut to the export list
 Add debug dummy to server (Debug build only)
 == Agregar dummy de depuración al servidor (solo compilación Debug)
 
+Add default presets
+== Añadir preajustes predeterminados
+
 Add demo timeline marker
 == Añadir marcador de línea de tiempo de demo
 
@@ -502,6 +505,9 @@ Add team name:
 
 Add to %s
 == Añadir a %s
+
+Add to bind wheel
+== Añadir a la rueda de comandos
 
 Add to blocked words
 == Añadir a palabras bloqueadas
@@ -749,6 +755,9 @@ Angle
 Angle:
 == Ángulo:
 
+Angry
+== Enfadado
+
 Angular gradient
 == Degradado angular
 
@@ -875,6 +884,9 @@ Apply squishy Tee deformation to other players
 Apply this preset
 == Aplicar este preset
 
+Apply to
+== Aplicar a
+
 Apply to dummy
 == Aplicar al dummy
 
@@ -953,6 +965,9 @@ Are you sure you want to delete this asset?
 Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == ¿Estás seguro de que quieres guardar tu skin? Si ya existe un skin con este nombre, será reemplazado.
 
+Arrow
+== Textura de flechas
+
 Arrow assets
 == Recursos de flecha
 
@@ -964,6 +979,9 @@ Aspect ratio preset
 
 Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)
 == Preajuste de relación de aspecto de pantalla (0=desactivado, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=personalizado)
+
+Asset preset
+== Preajuste de texturas
 
 Asset with this name already exists.
 == Ya existe un activo con este nombre.
@@ -1571,6 +1589,9 @@ Blend mode
 Blend strength
 == Intensidad de mezcla
 
+Blink
+== Parpadeo
+
 Blink the active local tee
 == Hacer parpadear al personaje local activo
 
@@ -1660,9 +1681,6 @@ Browse and activate custom audio packs
 
 Browse font store…
 == Explorar la tienda de fuentes…
-
-Browse profiles saved on this device
-== Browse profiles saved on this device
 
 Browser
 == Examinar
@@ -1958,6 +1976,9 @@ Chat message style
 Chat messages to send when entering freeze, comma-separated (empty=none)
 == Mensajes de chat para enviar al entrar en congelación, separados por comas (vacío=ninguno)
 
+Chat phrase
+== Frase de chat
+
 Chat score increases per message and decreases by 1 per tick
 == Puntuación de chat aumenta por mensaje y disminuye en 1 por tick
 
@@ -1999,6 +2020,9 @@ Check input device, system default mic, and mic permission first
 
 Check output device, confirm headphones/speakers are still online
 == Revisa el dispositivo de salida, confirma que los auriculares/altavoces siguen conectados
+
+Check the preset fields, label, and wheel capacity (64 entries).
+== Revisa los campos, el nombre y la capacidad de la rueda (64 entradas).
 
 Checking for existing player with your name
 == Comprobando si ya existe un jugador con tu nombre
@@ -2612,6 +2636,12 @@ Connection disconnected
 Connection elevated
 == Conexión algo elevada
 
+Connection icon color
+== Color del icono de conexión
+
+Connection icon custom color
+== Color personalizado del icono de conexión
+
 Connection normal
 == Conexión normal
 
@@ -2864,6 +2894,9 @@ Count players only
 Countries
 == Países
 
+Country code
+== Código de país/región
+
 Country flag for grouping this community (ISO 3166-1 numeric)
 == Bandera de país para agrupar esta comunidad (ISO 3166-1 numérico)
 
@@ -2881,6 +2914,9 @@ Create a random skin
 
 Create category
 == Crear categoría
+
+Create wheel presets here. Existing wheel entries are kept.
+== Edita aquí los preajustes de la rueda. Se conservan las entradas existentes.
 
 Created
 == Creado
@@ -3028,6 +3064,9 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == Customize the position jump hint
+
+Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
+== Personaliza la distancia por paso de la rueda. Mantén Alt al desplazar para un paso 3 veces mayor
 
 Customize translate button and menu colors
 == Personalizar colores del botón de traducción y del menú
@@ -3695,6 +3734,9 @@ Drag HUD modules with the left mouse button
 Drag to another category to move this friend.
 == Arrastra a este amigo a otra categoría para moverlo.
 
+Drag to pan, scroll to zoom
+== Arrastra para mover, usa la rueda para ampliar
+
 Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
 == Arrastra para reordenar; haz clic para expandir o contraer. Haz clic derecho o usa el engranaje para gestionar categorías
 
@@ -3935,6 +3977,12 @@ Dynamic Island background alpha
 Dynamic Island background color
 == Color del fondo de la isla dinámica
 
+Dynamic island connection icon color: 1=Quality tier, 2=Follow global icon color, 3=Custom
+== Color del icono de conexión de la isla: 1=por calidad de red, 2=según color de iconos de la interfaz, 3=personalizado
+
+Dynamic island connection icon custom color
+== Color personalizado del icono de conexión de la isla
+
 Ease in out quad
 == Ease in-out quad
 
@@ -3985,6 +4033,9 @@ Edit player and dummy identity information
 
 Edit skin texture
 == Editar textura del skin
+
+Edit this custom command on the Bind Wheel page.
+== Edita este comando personalizado en la página Rueda de comandos.
 
 Edit touch controls
 == Editar controles táctiles
@@ -4967,6 +5018,9 @@ Follow server
 Follow Tee
 == Seguir al Tee
 
+Follow UI icon color
+== Según color de iconos de la interfaz
+
 Following
 == Siguiendo
 
@@ -5200,6 +5254,9 @@ Full: each enabled animation category uses its complete transition
 
 Fullscreen
 == Pantalla completa
+
+Fully block enemy players
+== Bloquear por completo a los jugadores enemigos
 
 Fun
 == Diversión
@@ -5528,6 +5585,9 @@ Ground jump
 Group name
 == Nombre del grupo
 
+GUI cursor
+== Cursor de interfaz
+
 GUI cursor assets
 == Recursos del cursor de la GUI
 
@@ -5560,6 +5620,9 @@ Hammer: %s
 
 Handwriting
 == Manuscrita
+
+Happy
+== Feliz
 
 Has people playing
 == Tiene gente jugando
@@ -5614,6 +5677,9 @@ Hide Echo messages
 
 Hide Echo messages in Zen mode
 == Ocultar mensajes Echo en modo Zen
+
+Hide enemy chat, replace enemy names with client IDs and use default skins; keep local players visible
+== Ocultar el chat enemigo, sustituir sus nombres por ID de cliente y usar aspectos predeterminados; mostrar tu personaje y dummy con normalidad
 
 Hide explosion effects
 == Ocultar efectos de explosión
@@ -5975,6 +6041,9 @@ Icon symbols:
 Icons
 == Iconos
 
+Identity preset
+== Preajuste de identidad
+
 If 1, auto record only once on connect; if 0, auto record restarts after game end
 == Si es 1, grabar automáticamente solo una vez al conectar; si es 0, la grabación automática se reinicia después de que termine la partida
 
@@ -6175,6 +6244,9 @@ Initializing components
 
 Initializing layers
 == Inicializando capas
+
+Initializing map layers
+== Inicializando capas del mapa
 
 Initializing map logic
 == Inicializando lógica del mapa
@@ -6896,9 +6968,6 @@ Load the official rank replay of a map as a ghost (default: current map, rank 1)
 Load with code r. /load to check your existing saves
 == Cargar con código r. /load para revisar tus guardados existentes
 
-Load, save, overwrite, or delete profiles
-== Load, save, overwrite, or delete profiles
-
 Loaded %d items
 == %d elementos cargados
 
@@ -7064,6 +7133,12 @@ Main Asset
 Main menu
 == Menú principal
 
+Main Tee
+== Tee principal
+
+Main Tee and dummy
+== Tee principal y dummy
+
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
 == Hacer que los jugadores congelados parezcan más balones de voleibol (0=Desactivado, 1=Solo mapas de voleibol, 2=Siempre)
 
@@ -7111,6 +7186,9 @@ Manage hostile-list chat shortcuts
 
 Manage kaomoji chat shortcuts
 == Manage kaomoji chat shortcuts
+
+Manage profiles and bind wheel presets
+== Gestionar perfiles y preajustes de la rueda
 
 Manage the skin rotation queue
 == Gestionar la cola de rotación de skins
@@ -7166,8 +7244,14 @@ Map folders
 Map name
 == Nombre del mapa
 
+Map not downloaded yet — join the server to preview it
+== Mapa sin descargar. Únete al servidor para verlo
+
 Map play history
 == Historial de juego de mapas
+
+Map preview rendering unavailable
+== No se puede mostrar la vista previa del mapa
 
 Map Preview TODO
 == Vista previa del mapa pendiente
@@ -7970,6 +8054,9 @@ New name
 New name:
 == Nuevo nombre:
 
+New preset
+== Nuevo preajuste
+
 New preset name
 == Nuevo nombre de preconfiguración
 
@@ -8423,6 +8510,12 @@ Only save improvements
 Only show after joining a team
 == Mostrar solo después de unirse a un equipo
 
+Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players
+== Mostrar solo menciones, mensajes privados y propios sin aplicar filtros de amigos o equipo; conservar los mensajes del sistema y respetar los jugadores silenciados
+
+Only show messages related to me
+== Mostrar solo mensajes relacionados conmigo
+
 Only show outlines in the entities layer
 == Mostrar solo contornos en la capa de entidades
 
@@ -8567,6 +8660,9 @@ Original message language
 Original options
 == Opciones originales
 
+Original scroll feel
+== Sensación de desplazamiento original
+
 Other
 == Otro
 
@@ -8671,6 +8767,9 @@ p = Ping latency
 
 Pack name
 == Nombre del paquete
+
+Pain
+== Dolor
 
 Panel opacity
 == Opacidad del panel
@@ -9335,6 +9434,9 @@ Preset %d
 Preset bar
 == Barra de preconfiguraciones
 
+Preset type
+== Tipo de preajuste
+
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == Preajuste al codificar video con libx264, predeterminado 5 (medium), 0 es ultrafast, 9 es placebo (más lento, no recomendado)
 
@@ -9460,9 +9562,6 @@ Process UDP RX (est.)
 
 Process UDP TX (est.)
 == Envío UDP del proceso (estimado)
-
-Profile Options
-== Opciones de Perfil
 
 Profiles
 == Perfiles
@@ -9622,6 +9721,9 @@ QQ Music hook helper path (empty=beside QmClient)
 
 Quads are used for background decoration
 == Los quads se usan para decoración de fondo
+
+Quality tier
+== Según calidad de red
 
 Query current map info
 == Consultar información del mapa actual
@@ -10517,6 +10619,12 @@ Restore Kugou files
 Restore old single-segment hook collision line behavior
 == Restaurar el comportamiento antiguo de línea de colisión de gancho de un solo segmento
 
+Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
+== Restaurar el desplazamiento original: cada paso de la rueda reinicia el desplazamiento suave sin heredar la velocidad
+
+Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
+== Restaurar el desplazamiento original: cada paso de la rueda reinicia el desplazamiento suave sin heredar la velocidad
+
 Restoring save %d: main '%s', dummy '%s'.
 == Restaurando partida %d: principal '%s', dummy '%s'.
 
@@ -10793,8 +10901,8 @@ Save/Load Name
 Save/Load Skin
 == Guardar/Cargar Piel
 
-Saved Profiles
-== Perfiles Guardados
+Saved to the bind wheel.
+== Guardado en la rueda de comandos.
 
 Saved with your title and shared with other QmClient players.
 == Se guarda con tu título y se comparte con otros jugadores de QmClient.
@@ -10931,6 +11039,9 @@ Scroll mode: Off
 Scroll mode: On
 == Modo de desplazamiento: activado
 
+Scroll step
+== Paso de desplazamiento
+
 Search
 == Buscar
 
@@ -11032,9 +11143,6 @@ Select map
 
 Select the country flag for each player
 == Select the country flag for each player
-
-Select which player fields a profile stores
-== Select which player fields a profile stores
 
 Selected %d
 == Seleccionado %d
@@ -11146,6 +11254,9 @@ Server alert
 
 Server best:
 == Mejor del servidor:
+
+Server browser content column order (comma separated ids: community,name,map,difficulty,gametype,friends,players,qm,ping; empty = default)
+== Orden de columnas del navegador de servidores (ID separados por comas: community,name,map,difficulty,gametype,friends,players,qm,ping; vacío = predeterminado)
 
 Server browser exclude string
 == Cadena de exclusión del navegador de servidores
@@ -11614,6 +11725,9 @@ Show enemy reason
 
 Show entities
 == Mostrar entidades
+
+Show entities only (hide textures)
+== Mostrar solo entidades (ocultar texturas)
 
 Show existing saves
 == Mostrar guardados existentes
@@ -12128,8 +12242,8 @@ Show server settings
 Show settings card borders
 == Mostrar los bordes de las tarjetas de configuración
 
-Show short server names in browser
-== Mostrar nombre corto del servidor en el navegador de servidores
+Show short server names in browser (applies to China community servers)
+== Mostrar nombre corto del servidor en el navegador de servidores (para servidores de la comunidad china)
 
 Show skin date and author
 == Mostrar fecha y autor del skin
@@ -13037,6 +13151,9 @@ Stroke fade time
 Stroke retention time (0=Never disappear)
 == Tiempo de retención del trazo (0=Nunca desaparece)
 
+Strong / Weak
+== Texturas de fuerte/débil
+
 Strong hook
 == Gancho fuerte
 
@@ -13075,6 +13192,9 @@ Super
 
 Support ♥
 == Apoya ♥
+
+Surprise
+== Sorpresa
 
 Swap
 == Intercambiar
@@ -13562,6 +13682,9 @@ Thank you for your company and trust. This is what gives me the courage to keep 
 Thanks for supporting QmClient
 == Gracias por apoyar a QmClient
 
+Thanks!
+== ¡Gracias!
+
 The audio device couldn't be initialised.
 == No se pudo inicializar el dispositivo de audio.
 
@@ -13618,6 +13741,9 @@ The server rejected the map upload.
 
 The watermarked screenshot was saved next to the original
 == La captura con marca de agua se guardó junto a la original
+
+The wheel changed. Your draft can be added as a new preset.
+== La rueda ha cambiado. Puedes añadir el borrador como un nuevo preajuste.
 
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == El ancho de la textura %s no es divisible por %d, o la altura no es divisible por %d, lo que podría causar errores visuales.
@@ -13942,6 +14068,9 @@ Toggle keyboard shortcuts
 
 Toggle local console
 == Alternar consola local
+
+Toggle map preview
+== Vista previa del mapa
 
 Toggle microphone mute
 == Alternar silencio del micrófono
@@ -14609,6 +14738,9 @@ Use current map as background
 Use current name
 == Usar el nombre actual
 
+Use current settings
+== Usar ajustes actuales
+
 Use custom skins instead of the ninja tee
 == Usar pieles personalizadas en lugar del tee ninja
 
@@ -14644,6 +14776,9 @@ Use enemy list to drive player indicators
 
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 == Usar modo de ancho de banda alto (duplica el ancho de banda del servidor, solo LAN)
+
+Use installed asset names. Empty fields keep the current asset.
+== Introduce nombres de texturas instaladas. Los campos vacíos conservan la textura actual.
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == Usa la tecla k para matarte (reiniciar), q para pausar y ver a otros jugadores. Consulta los ajustes para otras combinaciones de teclas.
@@ -15161,6 +15296,12 @@ Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 == A qué nivel está configurada la vinculación DDRace (automático, no necesitas usarlo)
 
+Wheel label
+== Nombre en la rueda
+
+Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
+== Paso de la rueda en píxeles de interfaz; las páginas de ajustes desplazan 12 veces este valor por paso
+
 When TClient rainbow Tee is enabled, this feature has no effect.
 == Cuando el Tee arcoíris de TClient está activado, esta función no tiene efecto.
 
@@ -15268,6 +15409,9 @@ Width
 
 Width and height are required to be within the range from %d to %d.
 == El ancho y el alto deben estar dentro del rango de %d a %d.
+
+Width of difficulty column in server browser
+== Ancho de la columna de dificultad en el navegador de servidores
 
 Width of friends column in server browser
 == Ancho de la columna de amigos en el navegador de servidores

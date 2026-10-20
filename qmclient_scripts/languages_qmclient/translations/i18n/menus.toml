@@ -6703,6 +6703,70 @@ turkish = "Arkadaş mesajı kalp rengi"
 polish = "Kolor serduszka wiadomości od znajomego"
 
 [[message]]
+key = "Connection icon color"
+[message.translations]
+simplified_chinese = "连接图标颜色"
+traditional_chinese = "連線圖示顏色"
+japanese = "接続アイコンの色"
+korean = "연결 아이콘 색상"
+russian = "Цвет значка подключения"
+german = "Verbindungssymbolfarbe"
+spanish = "Color del icono de conexión"
+french = "Couleur de l'icône de connexion"
+brazilian_portuguese = "Cor do ícone de conexão"
+portuguese = "Cor do ícone de conexão"
+turkish = "Bağlantı simge rengi"
+polish = "Kolor ikony połączenia"
+
+[[message]]
+key = "Connection icon custom color"
+[message.translations]
+simplified_chinese = "连接图标自定义颜色"
+traditional_chinese = "連線圖示自訂顏色"
+japanese = "接続アイコンのカスタム色"
+korean = "연결 아이콘 사용자 지정 색상"
+russian = "Свой цвет значка подключения"
+german = "Eigene Verbindungssymbolfarbe"
+spanish = "Color personalizado del icono de conexión"
+french = "Couleur personnalisée de l'icône de connexion"
+brazilian_portuguese = "Cor personalizada do ícone de conexão"
+portuguese = "Cor personalizada do ícone de conexão"
+turkish = "Özel bağlantı simge rengi"
+polish = "Niestandardowy kolor ikony połączenia"
+
+[[message]]
+key = "Quality tier"
+[message.translations]
+simplified_chinese = "跟随网络质量"
+traditional_chinese = "跟隨網路品質"
+japanese = "ネット品質に追従"
+korean = "네트워크 품질 따르기"
+russian = "По качеству сети"
+german = "Nach Netzqualität"
+spanish = "Según calidad de red"
+french = "Selon la qualité du réseau"
+brazilian_portuguese = "Conforme a qualidade da rede"
+portuguese = "Conforme a qualidade da rede"
+turkish = "Ağ kalitesine göre"
+polish = "Według jakości sieci"
+
+[[message]]
+key = "Follow UI icon color"
+[message.translations]
+simplified_chinese = "跟随界面图标颜色"
+traditional_chinese = "跟隨介面圖示顏色"
+japanese = "UIアイコン色に追従"
+korean = "UI 아이콘 색상 따르기"
+russian = "Как цвет значков интерфейса"
+german = "Wie UI-Symbolfarbe"
+spanish = "Según color de iconos de la interfaz"
+french = "Comme la couleur des icônes de l'interface"
+brazilian_portuguese = "Conforme a cor dos ícones da interface"
+portuguese = "Conforme a cor dos ícones da interface"
+turkish = "Arayüz simge rengine göre"
+polish = "Jak kolor ikon interfejsu"
+
+[[message]]
 key = "FSAA samples"
 [message.translations]
 simplified_chinese = "全屏抗锯齿（FSAA）采样倍数"
@@ -15592,6 +15656,22 @@ turkish = "Eski DDRace istemci kayıtlarını göster"
 polish = "Pokaż stare rekordy klienta DDRace"
 
 [[message]]
+key = "Only show messages related to me"
+[message.translations]
+simplified_chinese = "只显示与我相关的消息"
+traditional_chinese = "只顯示與我相關的訊息"
+japanese = "自分に関係するメッセージのみ表示"
+korean = "나와 관련된 메시지만 표시"
+russian = "Показывать только сообщения, связанные со мной"
+german = "Nur Nachrichten mit Bezug zu mir anzeigen"
+spanish = "Mostrar solo mensajes relacionados conmigo"
+french = "Afficher uniquement les messages qui me concernent"
+brazilian_portuguese = "Mostrar apenas mensagens relacionadas comigo"
+portuguese = "Mostrar apenas mensagens relacionadas comigo"
+turkish = "Yalnızca benimle ilgili mesajları göster"
+polish = "Pokazuj tylko wiadomości dotyczące mnie"
+
+[[message]]
 key = "Show only chat messages from friends"
 [message.translations]
 simplified_chinese = "只显示好友聊天消息"
@@ -22859,3 +22939,99 @@ brazilian_portuguese = "Backend gráfico atual"
 portuguese = "Backend gráfico atual"
 turkish = "Geçerli grafik arka ucu"
 polish = "Bieżący backend graficzny"
+
+[[message]]
+key = "Original scroll feel"
+[message.translations]
+simplified_chinese = "原版滚动手感"
+traditional_chinese = "原版捲動手感"
+japanese = "従来のスクロール感"
+korean = "기존 스크롤 감각"
+russian = "Прежнее ощущение прокрутки"
+german = "Ursprüngliches Scrollgefühl"
+spanish = "Sensación de desplazamiento original"
+french = "Défilement d’origine"
+brazilian_portuguese = "Sensação de rolagem original"
+portuguese = "Sensação de deslocamento original"
+turkish = "Özgün kaydırma hissi"
+polish = "Oryginalne odczucie przewijania"
+
+[[message]]
+key = "Scroll step"
+[message.translations]
+simplified_chinese = "滚动步长"
+traditional_chinese = "捲動步長"
+japanese = "スクロール幅"
+korean = "스크롤 간격"
+russian = "Шаг прокрутки"
+german = "Scrollschritt"
+spanish = "Paso de desplazamiento"
+french = "Pas de défilement"
+brazilian_portuguese = "Passo de rolagem"
+portuguese = "Passo de deslocamento"
+turkish = "Kaydırma adımı"
+polish = "Krok przewijania"
+
+[[message]]
+key = "Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step"
+[message.translations]
+simplified_chinese = "自定义滚轮每格的滚动距离。按住 Alt 滚动时使用 3 倍步长"
+traditional_chinese = "自訂滾輪每格的捲動距離。按住 Alt 捲動時使用 3 倍步長"
+japanese = "ホイール1刻みの移動距離を設定。Alt を押しながらスクロールすると3倍の幅"
+korean = "휠 한 눈금당 이동 거리를 설정합니다. Alt를 누르고 스크롤하면 간격이 3배가 됩니다"
+russian = "Расстояние прокрутки за шаг колёсика. Удерживайте Alt для увеличения шага в 3 раза"
+german = "Scrollstrecke pro Mausradraste anpassen. Mit gedrückter Alt-Taste ist der Schritt 3-mal so groß"
+spanish = "Personaliza la distancia por paso de la rueda. Mantén Alt al desplazar para un paso 3 veces mayor"
+french = "Personnaliser la distance par cran de molette. Maintenir Alt pour un pas 3 fois plus grand"
+brazilian_portuguese = "Personalize a distância por passo da roda. Segure Alt ao rolar para um passo 3 vezes maior"
+portuguese = "Personalize a distância por passo da roda. Mantenha Alt premido para um passo 3 vezes maior"
+turkish = "Tekerlek kademesi başına kaydırma mesafesini ayarlayın. Alt basılıyken adım 3 katına çıkar"
+polish = "Dostosuj odległość na skok kółka. Przytrzymaj Alt, aby zwiększyć krok 3 razy"
+
+[[message]]
+key = "Width of difficulty column in server browser"
+[message.translations]
+simplified_chinese = "服务器浏览器中难度列的宽度"
+traditional_chinese = "伺服器瀏覽器中難度列的寬度"
+japanese = "サーバーブラウザの難易度列の幅"
+korean = "서버 브라우저의 난이도 열 너비"
+russian = "Ширина столбца сложности в браузере серверов"
+german = "Breite der Schwierigkeitsspalte im Server-Browser"
+spanish = "Ancho de la columna de dificultad en el navegador de servidores"
+french = "Largeur de la colonne de difficulté dans le navigateur de serveurs"
+brazilian_portuguese = "Largura da coluna de dificuldade no navegador de servidores"
+portuguese = "Largura da coluna de dificuldade no navegador de servidores"
+turkish = "Sunucu tarayıcısında zorluk sütununun genişliği"
+polish = "Szerokość kolumny trudności w przeglądarce serwerów"
+
+[[message]]
+key = "Server browser content column order (comma separated ids: community,name,map,difficulty,gametype,friends,players,qm,ping; empty = default)"
+[message.translations]
+simplified_chinese = "服务器浏览器内容列顺序（逗号分隔的标识：community,name,map,difficulty,gametype,friends,players,qm,ping；留空使用默认顺序）"
+traditional_chinese = "伺服器瀏覽器內容列順序（逗號分隔的識別碼：community,name,map,difficulty,gametype,friends,players,qm,ping；留空使用預設順序）"
+japanese = "サーバーブラウザの列順（カンマ区切りのID：community,name,map,difficulty,gametype,friends,players,qm,ping。空欄で既定値）"
+korean = "서버 브라우저 열 순서 (쉼표로 구분한 ID: community,name,map,difficulty,gametype,friends,players,qm,ping; 비우면 기본값)"
+russian = "Порядок столбцов браузера серверов (ID через запятую: community,name,map,difficulty,gametype,friends,players,qm,ping; пусто = по умолчанию)"
+german = "Spaltenreihenfolge im Server-Browser (kommagetrennte IDs: community,name,map,difficulty,gametype,friends,players,qm,ping; leer = Standard)"
+spanish = "Orden de columnas del navegador de servidores (ID separados por comas: community,name,map,difficulty,gametype,friends,players,qm,ping; vacío = predeterminado)"
+french = "Ordre des colonnes du navigateur de serveurs (identifiants séparés par des virgules : community,name,map,difficulty,gametype,friends,players,qm,ping ; vide = par défaut)"
+brazilian_portuguese = "Ordem das colunas do navegador de servidores (IDs separados por vírgulas: community,name,map,difficulty,gametype,friends,players,qm,ping; vazio = padrão)"
+portuguese = "Ordem das colunas do navegador de servidores (IDs separados por vírgulas: community,name,map,difficulty,gametype,friends,players,qm,ping; vazio = predefinição)"
+turkish = "Sunucu tarayıcısı sütun sırası (virgülle ayrılmış kimlikler: community,name,map,difficulty,gametype,friends,players,qm,ping; boş = varsayılan)"
+polish = "Kolejność kolumn przeglądarki serwerów (ID oddzielone przecinkami: community,name,map,difficulty,gametype,friends,players,qm,ping; puste = domyślna)"
+
+[[message]]
+key = "Fully block enemy players"
+[message.translations]
+simplified_chinese = "完全屏蔽敌对玩家"
+traditional_chinese = "完全封鎖敵對玩家"
+japanese = "敵対プレイヤーを完全にブロック"
+korean = "적대 플레이어 완전히 차단"
+russian = "Полностью блокировать враждебных игроков"
+german = "Feindliche Spieler vollständig blockieren"
+spanish = "Bloquear por completo a los jugadores enemigos"
+french = "Bloquer complètement les joueurs ennemis"
+brazilian_portuguese = "Bloquear completamente jogadores inimigos"
+portuguese = "Bloquear completamente jogadores inimigos"
+turkish = "Düşman oyuncuları tamamen engelle"
+polish = "Całkowicie blokuj wrogich graczy"

@@ -27,11 +27,14 @@
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiSurfaceText.h>
 #include <game/client/animstate.h>
+#include <game/client/components/background.h>
 #include <game/client/components/chat.h>
 #include <game/client/components/countryflags.h>
 #include <game/client/components/qmclient/browser_column_layout.h>
 #include <game/client/components/qmclient/browser_score.h>
+#include <game/client/components/qmclient/browser_map_preview_loader.h>
 #include <game/client/components/qmclient/browser_status_layout.h>
+#include <game/client/components/qmclient/dummy_mini_view_layout.h>
 #include <game/client/components/qmclient/friends_category_drag.h>
 #include <game/client/components/qmclient/local_save_display.h>
 #include <game/client/components/qmclient/map_history_ui.h>
@@ -41,6 +44,7 @@
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
 #include <game/client/ui_scrollregion.h>
+#include <game/layers.h>
 #include <game/localization.h>
 #include <game/voting.h>
 
@@ -211,10 +215,10 @@ static const char *MapDifficultyStars(int Stars)
 	return Stars >= 0 && Stars <= 5 ? s_apStarLabels[Stars] : "";
 }
 
-// 名称列的地图难度后缀：星级跟在服务器名后面。服务器名本身已写明难度分类
-//（如 "DDNet CHN2 上海 - Moderate 中阶"）时只补星级，否则补上分类词，
-// 让名称看不出难度的服务器（如 "Cartoon"）仍能读出难度。后缀与名称之间留一个空格。
-static void FormatMapDifficultySuffix(const char *pDisplayName, const CQmMapDifficultyCatalog::SEntry *pDifficulty, char *pOut, size_t OutSize)
+// 独立难度列的单元格文本：恒定「类别显示名 + 星级」（如「简单 ★★★☆☆」）。
+// 名称列只显示区段短名、不承担类别信息（2026-10-14 校准），去重逻辑随之删除；
+// 无目录条目返回空串，由调用方显示占位符。
+static void FormatMapDifficultyText(const CQmMapDifficultyCatalog::SEntry *pDifficulty, char *pOut, size_t OutSize)
 {
 	if(pOut == nullptr || OutSize == 0)
 		return;
@@ -224,12 +228,24 @@ static void FormatMapDifficultySuffix(const char *pDisplayName, const CQmMapDiff
 	const char *pStars = MapDifficultyStars(pDifficulty->m_Stars);
 	if(pStars[0] == '\0')
 		return;
-	char aSuffix[64];
-	if(FavoriteMapCategoryKeyFromText(pDisplayName) != nullptr)
-		str_copy(aSuffix, pStars, sizeof(aSuffix));
-	else
-		str_format(aSuffix, sizeof(aSuffix), "%s%s", FavoriteMapCategoryDisplayName(pDifficulty->m_Category.c_str()), pStars);
-	str_format(pOut, OutSize, " %s", aSuffix);
+	str_format(pOut, OutSize, "%s %s", FavoriteMapCategoryDisplayName(pDifficulty->m_Category.c_str()), pStars);
+}
+
+// 浏览器名称列的区段短名：解析器输出「类别 - 区段」（如「简单 - CHN5 上海」），
+// 名称列剥掉「类别 - 」前缀只留区段；类别信息由难度列恒定承担。
+// 好友菜单沿用完整解析短名（既有测试钉住），不受影响。
+static const char *BrowserSegmentDisplayName(const char *pParsedShortName, char *pBuffer, size_t BufferSize)
+{
+	if(const char *pSep = str_find(pParsedShortName, " - "))
+	{
+		const char *pSegment = str_skip_whitespaces_const(pSep + 3);
+		if(pSegment[0] != '\0')
+		{
+			str_copy(pBuffer, pSegment, BufferSize);
+			return pBuffer;
+		}
+	}
+	return pParsedShortName;
 }
 
 static const char *MapCategoryHintFromServer(const CServerInfo *pServer)
@@ -327,11 +343,496 @@ static ColorRGBA GetServerListPingColor(const CServerInfo *pInfo, int OwnLocatio
 	return GetPingTextColor(pInfo->m_Latency);
 }
 
+// ================= 地图预览（二级面板） =================
+// 地图列图标的富内容二级面板（字体商店同款：大面板 + 标题行 + 关闭 X）：
+// 本地已缓存 .map 的离屏渲染（未缓存绝不联网）。相机或图层模式变化时
+// 重绘纹理，静止时复用；放大直接绘制地图细节，不采样整图缩略图。
+namespace
+{
+	constexpr size_t MAP_PREVIEW_CACHE_CAPACITY = 3;
+	// LRU 逐出前的最小驻留时长：刚用过的条目即使超出容量也先保留一拍。
+	constexpr float MAP_PREVIEW_LRU_MIN_AGE = 0.4f;
+	// 失败条目的重查间隔：浏览器停留期间地图下载完成后，占位应自行换成预览。
+	constexpr float MAP_PREVIEW_FAILED_RETRY_DELAY = 2.0f;
+
+	// 地图贴图属于缓存项；实体和数字图集复用客户端资源，避免预览重复加载、
+	// 丢失玩家实体包配置，或逐出地图后遗留实体纹理。
+	class CMapPreviewImages : public CMapImages
+	{
+		std::vector<IGraphics::CTextureHandle> m_vTextures;
+		CMapImages &m_Shared;
+
+	public:
+		explicit CMapPreviewImages(CMapImages &Shared) : m_Shared(Shared) {}
+		IGraphics::CTextureHandle Get(int Index) const override { return m_vTextures[Index]; }
+		int Num() const override { return m_vTextures.size(); }
+		void Resize(int Count) { m_vTextures.resize(Count); }
+		void Upload(int Index, const CImageInfo &Image, int Usage)
+		{
+			if(Image.m_pData == nullptr)
+				return;
+			const int ArrayFlag = Graphics()->Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE;
+			const int Flags = ((Usage & 1) ? ArrayFlag : 0) | ((Usage & 2) ? 0 : (Graphics()->HasTextureArraysSupport() ? IGraphics::TEXLOAD_NO_2D_TEXTURE : 0));
+			m_vTextures[Index] = Graphics()->LoadTextureRaw(Image, Flags, "browser-map-preview");
+		}
+		void UnloadPreview()
+		{
+			for(auto &Texture : m_vTextures)
+				Graphics()->UnloadTexture(&Texture);
+			m_vTextures.clear();
+		}
+		IGraphics::CTextureHandle GetEntities(EMapImageEntityLayerType Type) override { return m_Shared.GetEntities(Type); }
+		IGraphics::CTextureHandle GetSpeedupArrow() override { return m_Shared.GetSpeedupArrow(); }
+		IGraphics::CTextureHandle GetTuneColors() override { return m_Shared.GetTuneColors(); }
+		IGraphics::CTextureHandle GetOverlayBottom() override { return m_Shared.GetOverlayBottom(); }
+		IGraphics::CTextureHandle GetOverlayTop() override { return m_Shared.GetOverlayTop(); }
+		IGraphics::CTextureHandle GetOverlayCenter() override { return m_Shared.GetOverlayCenter(); }
+	};
+
+	// 离线渲染器（OnlineOnly=false）：菜单内直接 RenderCustomWithCamera，
+	// 图层 GPU 资源由 OnMapLoad 开始分帧初始化，面板首帧渲染前推进完毕。
+	// SetEntityOnly：100 = 只渲染实体层（关贴图），0 = 正常完整渲染。
+	class CMapPreviewLayers : public CMapLayers
+	{
+	public:
+		CMapPreviewLayers() :
+			CMapLayers(ERenderType::RENDERTYPE_FULL_DESIGN, false) {}
+		void SetSources(CLayers *pLayers, CMapImages *pImages)
+		{
+			m_pLayers = pLayers;
+			m_pImages = pImages;
+		}
+		void SetEntityOnly(bool EntityOnly)
+		{
+			m_EntityOverlayValOverride = EntityOnly ? 100 : 0;
+		}
+	};
+
+	struct SQmMapPreviewEntry
+	{
+		char m_aMapName[MAX_MAP_LENGTH] = {0};
+		std::unique_ptr<CMap> m_pMap;
+		std::unique_ptr<CLayers> m_pLayers;
+		std::unique_ptr<CMapPreviewImages> m_pImages;
+		std::shared_ptr<CQmBrowserMapPreviewLoadJob> m_pLoadJob;
+		int m_UploadIndex = 0;
+		std::unique_ptr<CMapPreviewLayers> m_pRenderer;
+		IGraphics::CRenderTargetHandle m_RenderTarget;
+		bool m_NeedsRender = true;
+		vec2 m_RenderedCenter{};
+		float m_RenderedZoom = 0.0f;
+		bool m_RenderedEntities = false;
+		unsigned m_RenderedBackgroundColor = 0;
+		char m_aRenderedBackground[IO_MAX_PATH_LENGTH] = {};
+		int m_TargetHeight = 0;
+		int m_TargetWidth = 0;
+		std::optional<vec2> m_Start;
+		uint32_t m_GraphicsResetVersion = 0;
+		vec2 m_WorldSize = vec2(32.0f * 64, 32.0f * 64);
+		// 本地没有对应 .map 或解析失败；占位提示不区分这两种情况。
+		bool m_LoadFailed = false;
+		float m_LastUseTime = 0.0f;
+		float m_RetryAfterTime = 0.0f;
+	};
+
+}
+
+// 预览地图加载缓存（LRU）。作为 CMenus 成员析构，保证 GPU 资源在图形
+// 接口存活期间释放；图形重建后旧句柄仅失效、不再提交销毁命令。
+class CMenus::CMapPreviewCache
+{
+public:
+	explicit CMapPreviewCache(IGraphics *pGraphics) :
+		m_pGraphics(pGraphics) {}
+	~CMapPreviewCache() { Clear(); }
+
+	void Clear()
+	{
+		const uint32_t CurrentVersion = m_pGraphics->GraphicsResourcesResetVersion();
+		for(auto &pEntry : m_vEntries)
+			ReleaseEntry(*pEntry, CurrentVersion);
+		m_vEntries.clear();
+	}
+
+	// 返回命中的缓存项；本地没有对应 .map 时返回带 m_LoadFailed 的空项，
+	// 缓存满且全部条目仍被当前会话使用时返回 nullptr（本帧按加载中处理）。
+	SQmMapPreviewEntry *Acquire(const char *pMapName, float NowTime, IStorage *pStorage, CGameClient *pGameClient)
+	{
+		for(auto It = m_vEntries.begin(); It != m_vEntries.end(); ++It)
+		{
+			if(str_comp((*It)->m_aMapName, pMapName) == 0)
+			{
+				(*It)->m_LastUseTime = NowTime;
+				if((*It)->m_GraphicsResetVersion != m_pGraphics->GraphicsResourcesResetVersion())
+				{
+					ReleaseEntry(**It, m_pGraphics->GraphicsResourcesResetVersion());
+					**It = SQmMapPreviewEntry{};
+					str_copy((*It)->m_aMapName, pMapName);
+					(*It)->m_LastUseTime = NowTime;
+					(*It)->m_GraphicsResetVersion = m_pGraphics->GraphicsResourcesResetVersion();
+					LoadEntry(**It, pStorage, pGameClient);
+				}
+				// 失败条目间隔重查：下载完成前打开过弹窗的图，下载完成后应直接出预览。
+				if((*It)->m_LoadFailed && NowTime >= (*It)->m_RetryAfterTime)
+				{
+					(*It)->m_RetryAfterTime = NowTime + MAP_PREVIEW_FAILED_RETRY_DELAY;
+					(*It)->m_LoadFailed = false;
+					LoadEntry(**It, pStorage, pGameClient);
+					// 重试期间可能发生过图形重建，按当前版本重新盖戳。
+					(*It)->m_GraphicsResetVersion = m_pGraphics->GraphicsResourcesResetVersion();
+				}
+				auto pEntry = std::move(*It);
+				m_vEntries.erase(It);
+				m_vEntries.insert(m_vEntries.begin(), std::move(pEntry));
+				return m_vEntries.front().get();
+			}
+		}
+
+		if(m_vEntries.size() >= MAP_PREVIEW_CACHE_CAPACITY)
+		{
+			auto ItLru = std::min_element(m_vEntries.begin(), m_vEntries.end(), [](const auto &A, const auto &B) {
+				return A->m_LastUseTime < B->m_LastUseTime;
+			});
+			if(ItLru == m_vEntries.end() || NowTime - (*ItLru)->m_LastUseTime < MAP_PREVIEW_LRU_MIN_AGE)
+				return nullptr;
+			ReleaseEntry(**ItLru, m_pGraphics->GraphicsResourcesResetVersion());
+			m_vEntries.erase(ItLru);
+		}
+
+		auto pEntry = std::make_unique<SQmMapPreviewEntry>();
+		str_copy(pEntry->m_aMapName, pMapName, sizeof(pEntry->m_aMapName));
+		pEntry->m_LastUseTime = NowTime;
+		LoadEntry(*pEntry, pStorage, pGameClient);
+		if(pEntry->m_LoadFailed)
+			pEntry->m_RetryAfterTime = NowTime + MAP_PREVIEW_FAILED_RETRY_DELAY;
+		// 图像纹理在当前图形版本下加载；此后发生图形重建时句柄随之失效，
+		// 释放路径据此决定销毁还是仅失效。
+		pEntry->m_GraphicsResetVersion = m_pGraphics->GraphicsResourcesResetVersion();
+		m_vEntries.insert(m_vEntries.begin(), std::move(pEntry));
+		return m_vEntries.front().get();
+	}
+
+private:
+	void ReleaseEntry(SQmMapPreviewEntry &Entry, uint32_t CurrentResetVersion)
+	{
+		// 图形重建后前端句柄已失效，不能再提交销毁/卸载命令（仓库既定约定，
+		// 见 CHud 对 dummy mini view 渲染目标的处理）。
+		const bool HandleAlive = Entry.m_GraphicsResetVersion == CurrentResetVersion;
+		if(Entry.m_RenderTarget.IsValid())
+		{
+			if(HandleAlive)
+				m_pGraphics->DestroyRenderTarget(&Entry.m_RenderTarget);
+			else
+				Entry.m_RenderTarget.Invalidate();
+		}
+		if(Entry.m_pLoadJob)
+			Entry.m_pLoadJob->m_Cancelled.store(true);
+		if(HandleAlive)
+		{
+			if(Entry.m_pRenderer != nullptr)
+				Entry.m_pRenderer->UnloadMap();
+			if(Entry.m_pImages != nullptr)
+				Entry.m_pImages->UnloadPreview();
+			if(Entry.m_pMap != nullptr)
+				Entry.m_pMap->Unload();
+		}
+	}
+
+	static void LoadEntry(SQmMapPreviewEntry &Entry, IStorage *pStorage, CGameClient *pGameClient)
+	{
+		Entry.m_pLoadJob = std::make_shared<CQmBrowserMapPreviewLoadJob>(pStorage, Entry.m_aMapName, str_comp(pGameClient->Client()->GetCurrentMap(), Entry.m_aMapName) == 0 ? pGameClient->Client()->GetCurrentMapPath() : "", pGameClient->Client()->IsSixup());
+		pGameClient->Engine()->AddJob(Entry.m_pLoadJob);
+		Entry.m_UploadIndex = 0;
+	}
+
+public:
+	static bool AdvanceEntry(SQmMapPreviewEntry &Entry, CGameClient *pGameClient, float Now)
+	{
+		if(!Entry.m_pLoadJob)
+			return Entry.m_pRenderer != nullptr;
+		auto &Job = *Entry.m_pLoadJob;
+		if(Job.State() != IJob::STATE_DONE)
+			return false;
+		if(!Job.m_Success)
+		{
+			Entry.m_LoadFailed = true;
+			Entry.m_RetryAfterTime = Now + MAP_PREVIEW_FAILED_RETRY_DELAY;
+			Entry.m_pLoadJob.reset();
+			return false;
+		}
+		if(!Entry.m_pImages)
+		{
+			Entry.m_pImages = std::make_unique<CMapPreviewImages>(pGameClient->m_MapImages);
+			Entry.m_pImages->OnInterfacesInit(pGameClient);
+			Entry.m_pImages->Resize(Job.m_vImages.size());
+		}
+		// 一帧最多上传一张贴图，不让高分辨率纹理集中复制并挤满图形命令缓冲。
+		if(Entry.m_UploadIndex < static_cast<int>(Job.m_vImages.size()))
+		{
+			const CPerfTimer Timer(QmPerfEnabled());
+			const int Index = Entry.m_UploadIndex++;
+			Entry.m_pImages->Upload(Index, Job.m_vImages[Index], Job.m_vUsage[Index]);
+			Job.m_vImages[Index].Free();
+			QmPerfLogStage("perf/map_preview", "upload", Timer.ElapsedMs(), false, pGameClient->Client());
+			return false;
+		}
+		Entry.m_pMap = std::move(Job.m_pMap);
+		Entry.m_Start = Job.m_Start;
+		Entry.m_pLayers = std::move(Job.m_pLayers);
+		auto pRenderer = std::make_unique<CMapPreviewLayers>();
+		pRenderer->OnInterfacesInit(pGameClient);
+		pRenderer->SetSources(Entry.m_pLayers.get(), Entry.m_pImages.get());
+		Entry.m_pRenderer = std::move(pRenderer);
+		Entry.m_pRenderer->OnMapLoad();
+
+		// 整图范围以游戏层瓦片数为准；缺游戏层的地图退回 64x64 默认值。
+		if(Entry.m_pLayers->GameLayer() != nullptr)
+			Entry.m_WorldSize = vec2(Entry.m_pLayers->GameLayer()->m_Width * 32.0f, Entry.m_pLayers->GameLayer()->m_Height * 32.0f);
+		Entry.m_NeedsRender = true;
+		Entry.m_pLoadJob.reset();
+		return false;
+	}
+
+private:
+	IGraphics *m_pGraphics;
+	std::vector<std::unique_ptr<SQmMapPreviewEntry>> m_vEntries;
+};
+
+// 预览缓存与注入回调的释放统一在 CMenus::OnShutdown（menus.cpp）：
+// 关闭路径上 CKernel 先销毁图形接口，组件析构函数晚于它执行——在析构里
+// 触达 m_pGraphics/ServerBrowser() 会访问违例（2026-10-14 关闭崩溃根因）。
+void CMenus::ClearMapPreviewCache()
+{
+	// 删除操作留在完整类型所在编译单元，确保实际调用缓存析构函数。
+	delete m_pMapPreviewCache;
+	m_pMapPreviewCache = nullptr;
+}
+
+CUi::EPopupMenuFunctionResult CMenus::PopupMapPreview(void *pContext, CUIRect View, bool Active)
+{
+	auto *pPopupContext = static_cast<CMapPreviewPopupContext *>(pContext);
+	CMenus *pMenus = pPopupContext->m_pMenus;
+	if(pMenus == nullptr || pPopupContext->m_aMapName[0] == '\0')
+		return CUi::POPUP_CLOSE_CURRENT;
+
+	CUi *pUi = pMenus->Ui();
+	const float Now = pMenus->Client()->GlobalTime();
+
+	// 字体商店同款二级面板骨架：标题行（地图名 + 关闭 X）+ 分隔线。
+	IUiContext PanelCtx;
+	PanelCtx.m_pUi = pUi;
+	static ui_widget::SSecondaryPanelLabel s_Title;
+	static ui_widget::SSecondaryPanelLabel s_Caption;
+	static ui_widget::SSecondaryPanelLabel s_EntitiesLabel;
+	static CButtonContainer s_CloseButton;
+	ui_widget::CSecondaryPanel Panel(PanelCtx, View, Active, ui_widget::ResolveSecondaryPanelMetrics(pUi->Screen()->w), {});
+	const CQmMapDifficultyCatalog::SEntry *pDifficulty = pMenus->m_MapDifficultyCatalog.Find(pPopupContext->m_aMapName);
+	const char *pStars = pDifficulty != nullptr ? MapDifficultyStars(pDifficulty->m_Stars) : "";
+	char aMeta[192];
+	if(pStars[0] != '\0')
+		str_format(aMeta, sizeof(aMeta), "%s · %s · %d/%d", pStars, pPopupContext->m_aGameType, pPopupContext->m_NumPlayers, pPopupContext->m_MaxPlayers);
+	else
+		str_format(aMeta, sizeof(aMeta), "%s · %d/%d", pPopupContext->m_aGameType, pPopupContext->m_NumPlayers, pPopupContext->m_MaxPlayers);
+	if(Panel.Header(s_Title, s_CloseButton, pPopupContext->m_aMapName, &s_Caption, aMeta))
+		return CUi::POPUP_CLOSE_CURRENT;
+	// 工具行与提示在画布外，始终留在二级面板内部。
+	Panel.ToggleRow(s_EntitiesLabel, Localize("Show entities only (hide textures)"), pPopupContext->m_EntityOnly);
+	CUIRect Preview = Panel.ContentRect();
+	const auto Metrics = ui_widget::ResolveSecondaryPanelMetrics(pUi->Screen()->w);
+	Preview.HSplitTop(Metrics.m_Spacing, nullptr, &Preview);
+	CUIRect Hint;
+	Preview.HSplitBottom(Metrics.m_RowHeight, &Preview, &Hint);
+	Preview.HSplitBottom(Metrics.m_Spacing, &Preview, nullptr);
+	SLabelProperties HintProps;
+	HintProps.m_MaxWidth = Hint.w;
+	HintProps.m_EllipsisAtEnd = true;
+	pUi->DoLabel(&Hint, Localize("Drag to pan, scroll to zoom"), Metrics.m_FontSize, TEXTALIGN_ML, HintProps);
+	if(Preview.w <= 2.0f || Preview.h <= 2.0f)
+		return CUi::POPUP_KEEP_OPEN;
+
+	// 预览框背板。
+	CUiScopedGaussianBlurSuppression PreviewBlurSuppression(pUi);
+	Preview.Draw(ColorRGBA(0.055f, 0.065f, 0.085f, 1.0f), IGraphics::CORNER_ALL, 6.0f);
+	Preview.Margin(1.0f, &Preview);
+
+	if(pMenus->m_pMapPreviewCache == nullptr)
+		pMenus->m_pMapPreviewCache = new CMenus::CMapPreviewCache(pMenus->Graphics());
+	SQmMapPreviewEntry *pEntry = pMenus->m_pMapPreviewCache->Acquire(pPopupContext->m_aMapName, Now, pMenus->Storage(), pMenus->GameClient());
+	if(pEntry == nullptr || pEntry->m_LoadFailed)
+	{
+		// 骨架占位：未缓存不联网，进入服务器下载后才能预览。
+		pMenus->TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+		pMenus->TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+		pMenus->TextRender()->TextColor(ColorRGBA(0.55f, 0.58f, 0.62f, 1.0f));
+		pMenus->Ui()->DoLabel_QmIcon(&Preview, EQmIcon::MAP, FontIcons::FONT_ICON_MAP, 26.0f, TEXTALIGN_MC);
+		pMenus->TextRender()->SetRenderFlags(0);
+		pMenus->TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		pMenus->TextRender()->TextColor(pMenus->TextRender()->DefaultTextColor());
+		CUIRect Hint;
+		Preview.HSplitTop(Preview.h * 0.5f + 8.0f, nullptr, &Hint);
+		pMenus->Ui()->DoLabel(&Hint, Localize("Map not downloaded yet — join the server to preview it"), 9.5f, TEXTALIGN_MC);
+		return CUi::POPUP_KEEP_OPEN;
+	}
+
+	const CPerfTimer PrepareTimer(QmPerfEnabled());
+	const bool Ready = CMapPreviewCache::AdvanceEntry(*pEntry, pMenus->GameClient(), Now) && pEntry->m_pRenderer->AdvanceMapLoad(1);
+	QmPerfLogStage("perf/map_preview", "prepare", PrepareTimer.ElapsedMs(), false, pMenus->Client());
+	if(!Ready)
+	{
+		// 图层 GPU 资源分帧初始化中；小图预计几十毫秒内完成。
+		pMenus->Ui()->DoLabel(&Preview, Localize("Initializing map layers"), 10.0f, TEXTALIGN_MC);
+		return CUi::POPUP_KEEP_OPEN;
+	}
+
+	// 使用引擎同一投影宽高比，画布内居中留边，避免拉伸。
+	const float Aspect = pMenus->Graphics()->GameScreenAspect();
+	// 使用画布对应的物理像素，避免高分屏把固定 1024 纹理再次放大。
+	const float CanvasWidth = std::min(Preview.w, Preview.h * Aspect);
+	const int TargetWidth = std::clamp((int)std::ceil(CanvasWidth * pMenus->Graphics()->ScreenWidth() / pUi->Screen()->w), 128, 4096);
+	const int TargetHeight = maximum(32, (int)std::round(TargetWidth / Aspect));
+	const uint32_t ResetVersion = pMenus->Graphics()->GraphicsResourcesResetVersion();
+	const bool Reset = pEntry->m_GraphicsResetVersion != ResetVersion;
+	if(Reset)
+		pEntry->m_RenderTarget.Invalidate();
+	if(!pEntry->m_RenderTarget.IsValid() || pEntry->m_TargetWidth != TargetWidth || pEntry->m_TargetHeight != TargetHeight)
+	{
+		if(pEntry->m_RenderTarget.IsValid())
+			pMenus->Graphics()->DestroyRenderTarget(&pEntry->m_RenderTarget);
+		pEntry->m_RenderTarget = pMenus->Graphics()->CreateRenderTarget(TargetWidth, TargetHeight);
+		pEntry->m_TargetHeight = TargetHeight;
+		pEntry->m_TargetWidth = TargetWidth;
+		pEntry->m_NeedsRender = true;
+		pEntry->m_GraphicsResetVersion = ResetVersion;
+	}
+	if(!pEntry->m_RenderTarget.IsValid())
+	{
+		pUi->DoLabel(&Preview, Localize("Map preview rendering unavailable"), 10.0f, TEXTALIGN_MC);
+		return CUi::POPUP_KEEP_OPEN;
+	}
+
+	float DrawW = Preview.w;
+	float DrawH = DrawW / Aspect;
+	if(DrawH > Preview.h)
+	{
+		DrawH = Preview.h;
+		DrawW = DrawH * Aspect;
+	}
+	const CUIRect DrawRect(Preview.x + (Preview.w - DrawW) * 0.5f, Preview.y + (Preview.h - DrawH) * 0.5f, DrawW, DrawH);
+	float BaseW, BaseH;
+	pMenus->Graphics()->CalcScreenParams(Aspect, 1.0f, &BaseW, &BaseH);
+	auto &Camera = pPopupContext->m_View;
+	Camera.Configure(pEntry->m_WorldSize, vec2(BaseW, BaseH));
+	if(!pPopupContext->m_InitialViewSet)
+	{
+		if(pEntry->m_Start)
+			Camera.FocusStart(*pEntry->m_Start);
+		pPopupContext->m_InitialViewSet = true;
+	}
+	QmBrowserMapPreviewInput(*pUi, Camera, DrawRect, Active);
+	const bool EntityOnly = pPopupContext->m_EntityOnly != 0;
+	const bool DynamicBackground = EntityOnly && !IsDefaultBackgroundEntitiesValue(g_Config.m_ClBackgroundEntities) && !IsBackgroundImageExtension(g_Config.m_ClBackgroundEntities);
+	const bool ViewChanged = Camera.Center() != pEntry->m_RenderedCenter || Camera.Zoom() != pEntry->m_RenderedZoom || EntityOnly != pEntry->m_RenderedEntities ||
+				 (EntityOnly && (pEntry->m_RenderedBackgroundColor != g_Config.m_ClBackgroundEntitiesColor || str_comp(pEntry->m_aRenderedBackground, g_Config.m_ClBackgroundEntities) != 0)) || DynamicBackground;
+	if(pEntry->m_NeedsRender || ViewChanged)
+	{
+		// UI 批次必须先落到原目标；地图渲染的投影和裁剪不得泄漏到菜单。
+		pUi->FlushQuadBatch();
+		pUi->ClipEnable(pUi->Screen());
+		pEntry->m_pRenderer->SetEntityOnly(EntityOnly);
+		if(pMenus->Graphics()->BeginRenderTarget(pEntry->m_RenderTarget, ColorRGBA(0.055f, 0.065f, 0.085f, 1.0f)))
+		{
+			if(EntityOnly)
+				pMenus->GameClient()->m_Background.RenderPreview(Camera.Center(), Camera.Zoom(), *pEntry->m_pRenderer);
+			// FULL_DESIGN 明确跳过实体；实体模式使用包含完整实体层的前景策略。
+			pEntry->m_pRenderer->RenderCustomWithCamera(Camera.Center(), Camera.Zoom(), EntityOnly ? ERenderType::RENDERTYPE_FOREGROUND : ERenderType::RENDERTYPE_FULL_DESIGN);
+			pMenus->Graphics()->EndRenderTarget();
+			pEntry->m_RenderedCenter = Camera.Center();
+			pEntry->m_RenderedZoom = Camera.Zoom();
+			pEntry->m_RenderedEntities = EntityOnly;
+			pEntry->m_RenderedBackgroundColor = g_Config.m_ClBackgroundEntitiesColor;
+			str_copy(pEntry->m_aRenderedBackground, g_Config.m_ClBackgroundEntities);
+			pEntry->m_NeedsRender = false;
+		}
+		pUi->MapScreen();
+		pUi->ClipDisable();
+	}
+	if(pEntry->m_NeedsRender)
+	{
+		pUi->DoLabel(&Preview, Localize("Initializing map layers"), 10.0f, TEXTALIGN_MC);
+		return CUi::POPUP_KEEP_OPEN;
+	}
+
+	int BackendMajor = 0, BackendMinor = 0, BackendPatch = 0;
+	const char *pBackendName = "";
+	const auto Backend = pMenus->Graphics()->GetDetectedContextVersion(BackendMajor, BackendMinor, BackendPatch, pBackendName) ? QmDummyMiniViewLayout::ResolveBackend(pBackendName) : QmDummyMiniViewLayout::EBackend::UNKNOWN;
+	IGraphics::SRenderTargetDrawParams DrawParams;
+	DrawParams.m_X = DrawRect.x;
+	DrawParams.m_Y = DrawRect.y;
+	DrawParams.m_W = DrawRect.w;
+	DrawParams.m_H = DrawRect.h;
+	DrawParams.m_Alpha = pUi->ControlAlphaScale();
+	DrawParams.m_Corners = IGraphics::CORNER_ALL;
+	DrawParams.m_Rounding = ui_token::radius::BASE;
+	if(Backend == QmDummyMiniViewLayout::EBackend::VULKAN)
+	{
+		DrawParams.m_V0 = 0.0f;
+		DrawParams.m_V1 = 1.0f;
+	}
+	pUi->FlushQuadBatch();
+	pUi->ClipEnable(&Preview);
+	pMenus->Graphics()->DrawRenderTarget(pEntry->m_RenderTarget, DrawParams);
+	pUi->ClipDisable();
+	return CUi::POPUP_KEEP_OPEN;
+}
+
+void CMenus::OpenMapPreviewPopup(const CServerInfo *pItem)
+{
+	m_MapPreviewPopupContext = CMapPreviewPopupContext{};
+	m_MapPreviewPopupContext.m_pMenus = this;
+	str_copy(m_MapPreviewPopupContext.m_aAddress, pItem->m_aAddress, sizeof(m_MapPreviewPopupContext.m_aAddress));
+	str_copy(m_MapPreviewPopupContext.m_aMapName, pItem->m_aMap, sizeof(m_MapPreviewPopupContext.m_aMapName));
+	str_copy(m_MapPreviewPopupContext.m_aServerName, pItem->m_aName, sizeof(m_MapPreviewPopupContext.m_aServerName));
+	str_copy(m_MapPreviewPopupContext.m_aGameType, pItem->m_aGameType, sizeof(m_MapPreviewPopupContext.m_aGameType));
+	m_MapPreviewPopupContext.m_NumPlayers = pItem->m_NumFilteredPlayers;
+	m_MapPreviewPopupContext.m_MaxPlayers = ServerBrowser()->Max(*pItem);
+
+	// 字体商店同款大面板：统一二级面板矩形（居中）+ 面板主题 + 入场动画；
+	// 外部点击关闭由 IgnoreOpeningClick 保证打开的那次图标点击不会立即关闭。
+	SPopupMenuProperties Props = ui_widget::SecondaryPanelProperties();
+	Props.m_OnClosed = [this]() { m_MapPreviewPopupContext.m_View.EndDrag(); };
+	const CUIRect PanelRect = ResolveSettingsSecondaryPanelRect(*Ui()->Screen());
+	Ui()->DoPopupMenu(&m_MapPreviewPopupContext, PanelRect.x, PanelRect.y, PanelRect.w, PanelRect.h, &m_MapPreviewPopupContext, PopupMapPreview, Props);
+}
+
 void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemActivated)
 {
 	static CListBox s_ListBox;
 	// 上次保存的服务器地址只用于高亮，启动后保持顶部；用户选择和键盘导航再显式定位。
 	s_ListBox.SuppressInitialSelectionScroll();
+	static int s_LastRestartSeq = -1;
+	if(s_LastRestartSeq != m_BrowserListEntryRestartSeq)
+	{
+		s_ListBox.RestartEntryAnimation();
+		s_LastRestartSeq = m_BrowserListEntryRestartSeq;
+	}
+
+	// 难度排序依赖客户端注入的星级目录（引擎侧没有目录数据）。首次渲染列表时
+	// 注入一次，并补偿启动期已持久化的难度排序——注入前的 Sort 只能拿到 -1。
+	static bool s_DifficultyStarsHookInstalled = false;
+	if(!s_DifficultyStarsHookInstalled)
+	{
+		s_DifficultyStarsHookInstalled = true;
+		auto *pServerBrowserImpl = dynamic_cast<CServerBrowser *>(ServerBrowser());
+		if(pServerBrowserImpl != nullptr)
+		{
+			pServerBrowserImpl->m_MapDifficultyStarsFunction = [this](const CServerInfo *pInfo) {
+				const CQmMapDifficultyCatalog::SEntry *pEntry = pInfo != nullptr ? m_MapDifficultyCatalog.FindForServer(*pInfo, MapCategoryHintFromServer(pInfo)) : nullptr;
+				return pEntry != nullptr ? pEntry->m_Stars : -1;
+			};
+			if(g_Config.m_BrSort == IServerBrowser::SORT_DIFFICULTY)
+				pServerBrowserImpl->RequestResort();
+		}
+	}
 
 	CUIRect Headers;
 	View.HSplitTop(ms_ListheaderHeight, &Headers, &View);
@@ -346,13 +847,14 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		if(Ui()->DoButton_QmIcon(&s_ResetColsButton, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ResetBtn, BUTTONFLAG_LEFT))
 		{
 			g_Config.m_BrColWidthName = 120;
-			g_Config.m_BrColNameSplit = 600;
 			g_Config.m_BrColWidthGametype = 68;
 			g_Config.m_BrColWidthMap = 120;
+			g_Config.m_BrColWidthDifficulty = 80;
 			g_Config.m_BrColWidthFriends = 14;
 			g_Config.m_BrColWidthPlayers = 40;
 			g_Config.m_BrColWidthQmClients = 24;
 			g_Config.m_BrColWidthPing = 30;
+			g_Config.m_BrColOrder[0] = '\0';
 			ConfigManager()->Save();
 		}
 		if(Ui()->HotItem() == &s_ResetColsButton)
@@ -375,6 +877,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		COL_FLAG_FAV,
 		COL_COMMUNITY,
 		COL_NAME,
+		COL_DIFFICULTY,
 		COL_GAMETYPE,
 		COL_MAP,
 		COL_FRIENDS,
@@ -390,12 +893,13 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		UI_ELEM_NAME_1,
 		UI_ELEM_NAME_2,
 		UI_ELEM_NAME_3,
-		UI_ELEM_NAME_DIFFICULTY,
+		UI_ELEM_DIFFICULTY,
 		UI_ELEM_GAMETYPE,
 		UI_ELEM_MAP_1,
 		UI_ELEM_MAP_2,
 		UI_ELEM_MAP_3,
 		UI_ELEM_FINISH_ICON,
+		UI_ELEM_MAP_PREVIEW_ICON,
 		UI_ELEM_PLAYERS,
 		UI_ELEM_FRIEND_ICON,
 		UI_ELEM_QM_CLIENTS,
@@ -406,32 +910,115 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 
 	constexpr float ClickableIconSpace = 20.0f;
 
-	static SColumn s_aCols[] = {
-		{-1, -1, "", -1, 2.0f, {0}},
-		{COL_FLAG_LOCK, -1, "", -1, 14.0f, {0}},
-		{COL_FLAG_FAV, IServerBrowser::SORT_FAVORITES, "", -1, ClickableIconSpace, {0}},
-		{COL_COMMUNITY, -1, "", -1, 28.0f, {0}},
+	// 钉住列（锁/收藏图标）+ 内容列。内容列的**数组序 = 默认视觉序**；
+	// 实际每帧按 br_col_order 重排进 s_aCols（地址稳定，供 hot item 使用）。
+	// 名称列是弹性列，吸收剩余宽度（自身无宽度柄），其余内容列全部绝对宽度。
+	static const SColumn s_aBaseCols[] = {
+		{COL_FLAG_LOCK, -1, "", 0, 14.0f, {0}},
+		{COL_FLAG_FAV, IServerBrowser::SORT_FAVORITES, "", 0, ClickableIconSpace, {0}},
+		{COL_COMMUNITY, -1, "", 0, 28.0f, {0}},
 		{COL_NAME, IServerBrowser::SORT_NAME, Localizable("Name"), 0, 50.0f, {0}},
-		{COL_GAMETYPE, IServerBrowser::SORT_GAMETYPE, Localizable("Type"), 1, 50.0f, {0}},
-		{COL_MAP, IServerBrowser::SORT_MAP, Localizable("Map"), 0, 90.0f, {0}},
-		{COL_FRIENDS, IServerBrowser::SORT_NUMFRIENDS, "", 1, ClickableIconSpace, {0}},
-		{COL_PLAYERS, IServerBrowser::SORT_NUMPLAYERS, Localizable("Players"), 1, 60.0f, {0}},
-		{-1, -1, "", 1, 4.0f, {0}},
-		{COL_QM_CLIENTS, IServerBrowser::SORT_QM_CLIENTS, "梦", 1, 24.0f, {0}},
-		{COL_PING, IServerBrowser::SORT_PING, Localizable("Ping"), 1, 30.0f, {0}},
+		{COL_MAP, IServerBrowser::SORT_MAP, Localizable("Map"), 0, 120.0f, {0}},
+		{COL_DIFFICULTY, IServerBrowser::SORT_DIFFICULTY, Localizable("Difficulty"), 0, 80.0f, {0}},
+		{COL_GAMETYPE, IServerBrowser::SORT_GAMETYPE, Localizable("Type"), 0, 68.0f, {0}},
+		{COL_FRIENDS, IServerBrowser::SORT_NUMFRIENDS, "", 0, ClickableIconSpace, {0}},
+		{COL_PLAYERS, IServerBrowser::SORT_NUMPLAYERS, Localizable("Players"), 0, 60.0f, {0}},
+		{COL_QM_CLIENTS, IServerBrowser::SORT_QM_CLIENTS, "梦", 0, 24.0f, {0}},
+		{COL_PING, IServerBrowser::SORT_PING, Localizable("Ping"), 0, 30.0f, {0}},
 	};
 
 	auto ClampConfigWidth = [](int Value, int MinWidth, int MaxWidth) {
 		return std::clamp(Value, MinWidth, MaxWidth);
 	};
 
-	s_aCols[5].m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthGametype, 62, 300);
-	s_aCols[7].m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthFriends, 12, 120);
-	s_aCols[8].m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthPlayers, 34, 240);
-	s_aCols[10].m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthQmClients, 20, 120);
-	s_aCols[11].m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthPing, 26, 180);
+	// 每帧按配置顺序重排（地址稳定的静态工作数组，热项/激活项指针不悬空）。
+	static SColumn s_aCols[std::size(s_aBaseCols)];
+	static bool s_ColsInitialized = false;
+	if(!s_ColsInitialized)
+	{
+		s_ColsInitialized = true;
+		for(size_t i = 0; i < std::size(s_aBaseCols); i++)
+			s_aCols[i] = s_aBaseCols[i];
+	}
+
+	constexpr int NumPinnedCols = 2; // 锁 / 收藏
+	constexpr int NumContentCols = (int)std::size(s_aBaseCols) - NumPinnedCols;
+	// 键名与 s_aBaseCols 内容列一一对应（base[NumPinnedCols + k]）。
+	static constexpr const char *s_apContentColKeys[NumContentCols] = {"community", "name", "map", "difficulty", "gametype", "friends", "players", "qm", "ping"};
+	// 内容列顺序：存 base 内容位（0..NumContentCols-1），每帧从 br_col_order
+	// 解析（9 项开销可忽略）——重置按钮清空配置后自然回默认序，无需脏标记。
+	static int s_aContentOrder[NumContentCols];
+	auto ParseContentOrder = [&]() {
+		int aOrder[NumContentCols];
+		int Used = 0;
+		bool aSeen[NumContentCols] = {};
+		const char *pCursor = g_Config.m_BrColOrder;
+		while(pCursor != nullptr && pCursor[0] != '\0' && Used < NumContentCols)
+		{
+			const char *pEnd = str_find(pCursor, ",");
+			const int Len = pEnd != nullptr ? (int)(pEnd - pCursor) : str_length(pCursor);
+			if(Len > 0)
+			{
+				for(int k = 0; k < NumContentCols; k++)
+				{
+					if(!aSeen[k] && str_length(s_apContentColKeys[k]) == Len && str_comp_nocase_num(pCursor, s_apContentColKeys[k], Len) == 0)
+					{
+						aSeen[k] = true;
+						aOrder[Used++] = k;
+						break;
+					}
+				}
+			}
+			pCursor = pEnd != nullptr ? pEnd + 1 : nullptr;
+		}
+		// 缺失/非法键按默认序补齐（空串/旧档位 = 完整默认序）。
+		for(int k = 0; k < NumContentCols && Used < NumContentCols; k++)
+			if(!aSeen[k])
+				aOrder[Used++] = k;
+		for(int i = 0; i < NumContentCols; i++)
+			s_aContentOrder[i] = aOrder[i];
+	};
+	ParseContentOrder();
+
+	auto SerializeContentOrder = [&]() {
+		char aOrder[128];
+		aOrder[0] = '\0';
+		for(int i = 0; i < NumContentCols; i++)
+		{
+			if(i != 0)
+				str_append(aOrder, ",", sizeof(aOrder));
+			str_append(aOrder, s_apContentColKeys[s_aContentOrder[i]], sizeof(aOrder));
+		}
+		str_copy(g_Config.m_BrColOrder, aOrder, sizeof(g_Config.m_BrColOrder));
+		ConfigManager()->Save();
+	};
+
+	{
+		SColumn aOrdered[std::size(s_aBaseCols)];
+		for(int i = 0; i < NumPinnedCols; i++)
+			aOrdered[i] = s_aBaseCols[i];
+		for(int i = 0; i < NumContentCols; i++)
+			aOrdered[NumPinnedCols + i] = s_aBaseCols[NumPinnedCols + s_aContentOrder[i]];
+		for(size_t i = 0; i < std::size(s_aBaseCols); i++)
+			s_aCols[i] = aOrdered[i];
+	}
+
+	// 可配置宽列按存档取宽（拖拽柄直接改写这些配置）。
+	for(auto &Col : s_aCols)
+	{
+		switch(Col.m_Id)
+		{
+		case COL_GAMETYPE: Col.m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthGametype, 62, 300); break;
+		case COL_MAP: Col.m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthMap, 90, 800); break;
+		case COL_DIFFICULTY: Col.m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthDifficulty, 44, 300); break;
+		case COL_FRIENDS: Col.m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthFriends, 12, 120); break;
+		case COL_PLAYERS: Col.m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthPlayers, 34, 240); break;
+		case COL_QM_CLIENTS: Col.m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthQmClients, 20, 120); break;
+		case COL_PING: Col.m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthPing, 26, 180); break;
+		default: break;
+		}
+	}
 	const float MinNameWidth = (float)ClampConfigWidth(g_Config.m_BrColWidthName, 60, 1000);
-	constexpr float MinMapWidth = 90.0f;
 
 	const int NumCols = std::size(s_aCols);
 
@@ -439,7 +1026,8 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		switch(ColId)
 		{
 		case COL_GAMETYPE: return &g_Config.m_BrColWidthGametype;
-		case COL_MAP: return nullptr;
+		case COL_MAP: return &g_Config.m_BrColWidthMap;
+		case COL_DIFFICULTY: return &g_Config.m_BrColWidthDifficulty;
 		case COL_FRIENDS: return &g_Config.m_BrColWidthFriends;
 		case COL_PLAYERS: return &g_Config.m_BrColWidthPlayers;
 		case COL_QM_CLIENTS: return &g_Config.m_BrColWidthQmClients;
@@ -453,6 +1041,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		{
 		case COL_GAMETYPE: return 62.0f;
 		case COL_MAP: return 90.0f;
+		case COL_DIFFICULTY: return 44.0f;
 		case COL_FRIENDS: return 12.0f;
 		case COL_PLAYERS: return 34.0f;
 		case COL_QM_CLIENTS: return 20.0f;
@@ -466,6 +1055,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		{
 		case COL_GAMETYPE: return 300.0f;
 		case COL_MAP: return 800.0f;
+		case COL_DIFFICULTY: return 300.0f;
 		case COL_FRIENDS: return 120.0f;
 		case COL_PLAYERS: return 240.0f;
 		case COL_QM_CLIENTS: return 120.0f;
@@ -490,82 +1080,135 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	static std::vector<SResizeHandle> s_vResizeHandles;
 	s_vResizeHandles.clear();
 
-	// 先给名称/地图预留空间；窄窗口按比例收缩固定列，避免右侧列把名称挤成负宽。
-	const float LeftWidth = s_aCols[0].m_Width + s_aCols[1].m_Width + s_aCols[2].m_Width + s_aCols[3].m_Width + 4.0f * 2.0f;
-	const float LeftScale = LeftWidth > 0.0f ? std::clamp(Headers.w / LeftWidth, 0.0f, 1.0f) : 1.0f;
-	const float LeftGap = 2.0f * LeftScale;
-	// do layout - left columns
-	for(int i = 0; i < NumCols; i++)
+	// 布局（2026-10-14 重构）：钉住列 + 内容列按 br_col_order 从左到右排布，
+	// 全部绝对宽度；名称列为弹性列吸收剩余空间。没有组缩放——拖某列宽度柄
+	// 只影响该列与名称列；配置列宽与名称最小宽之和超出可用宽度时整体等比收缩。
+	constexpr float ColGap = 2.0f;
+	const float TotalGaps = ColGap * (NumCols - 1);
 	{
-		if(s_aCols[i].m_Direction == -1)
+		float FixedSum = 0.0f;
+		for(int i = 0; i < NumCols; i++)
+			if(s_aCols[i].m_Id != COL_NAME)
+				FixedSum += s_aCols[i].m_Width;
+		const SQmBrowserColumnLayout ColLayout = QmBrowserColumnLayout(Headers.w - TotalGaps, FixedSum, MinNameWidth);
+		float X = Headers.x;
+		for(int i = 0; i < NumCols; i++)
 		{
-			Headers.VSplitLeft(s_aCols[i].m_Width * LeftScale, &s_aCols[i].m_Rect, &Headers);
-
-			if(i + 1 < NumCols)
-			{
-				CUIRect Gap;
-				Headers.VSplitLeft(LeftGap, &Gap, &Headers);
-				int *pConfig = GetColWidthConfig(s_aCols[i].m_Id);
-				if(pConfig)
-				{
-					Gap.x -= 2.0f;
-					Gap.w = 6.0f;
-					s_vResizeHandles.push_back({Gap, i, pConfig, GetColMinWidth(s_aCols[i].m_Id), GetColMaxWidth(s_aCols[i].m_Id)});
-				}
-			}
+			SColumn &Col = s_aCols[i];
+			const float Width = Col.m_Id == COL_NAME ?
+						    ColLayout.m_NameWidth :
+						    QmBrowserColumnSqueezedWidth(Col.m_Width, ColLayout.m_Scale);
+			Col.m_Rect = CUIRect{X, Headers.y, std::max(0.0f, Width), Headers.h};
+			X += Col.m_Rect.w + ColGap;
 		}
 	}
 
-	float RightWidth = 0.0f;
-	for(const auto &Col : s_aCols)
-		if(Col.m_Direction == 1)
-			RightWidth += Col.m_Width + 2.0f;
-	const SQmBrowserNameMapLayout NameMapLayout = QmBrowserNameMapLayout(Headers.w, RightWidth, MinNameWidth, MinMapWidth, (float)g_Config.m_BrColNameSplit / 1000.0f);
-	const float RightScale = NameMapLayout.m_RightScale;
-	const float RightGap = 2.0f * RightScale;
-	for(int i = NumCols - 1; i >= 0; i--)
+	// 每个可调宽列的右缘一条独立宽度柄（名称列弹性、社区列图标固定，皆无柄）。
+	for(int i = NumPinnedCols; i < NumCols; i++)
 	{
-		if(s_aCols[i].m_Direction == 1)
+		const SColumn &Col = s_aCols[i];
+		int *pConfig = GetColWidthConfig(Col.m_Id);
+		if(pConfig == nullptr)
+			continue;
+		CUIRect Gap{Col.m_Rect.x + Col.m_Rect.w - 2.0f, Col.m_Rect.y, 6.0f, Col.m_Rect.h};
+		s_vResizeHandles.push_back({Gap, i, pConfig, GetColMinWidth(Col.m_Id), GetColMaxWidth(Col.m_Id)});
+	}
+
+	static int s_ResizeDragColIndex = -1;
+	static float s_ResizeDragStartMouseX = 0.0f;
+	static float s_ResizeDragStartWidth = 0.0f;
+
+	int HoveredHandle = -1;
+	float HoverDistance = std::numeric_limits<float>::max();
+	for(int Index = 0; Index < (int)s_vResizeHandles.size(); ++Index)
+	{
+		const SResizeHandle &Handle = s_vResizeHandles[Index];
+		const SColumn &Col = s_aCols[Handle.m_ColIndex];
+		if(Col.m_Rect.w < 6.0f || !Ui()->MouseHovered(&Handle.m_Rect))
+			continue;
+		const float Distance = std::abs(Ui()->MouseX() - (Handle.m_Rect.x + Handle.m_Rect.w * 0.5f));
+		if(Distance < HoverDistance)
 		{
-			Headers.VSplitRight(s_aCols[i].m_Width * RightScale, &Headers, &s_aCols[i].m_Rect);
-			CUIRect Gap;
-			Headers.VSplitRight(RightGap, &Headers, &Gap);
-			int *pConfig = GetColWidthConfig(s_aCols[i].m_Id);
-			if(pConfig)
-			{
-				Gap.x -= 2.0f;
-				Gap.w = 6.0f;
-				s_vResizeHandles.push_back({Gap, i, pConfig, GetColMinWidth(s_aCols[i].m_Id), GetColMaxWidth(s_aCols[i].m_Id)});
-			}
+			HoverDistance = Distance;
+			HoveredHandle = Index;
 		}
 	}
 
-	// 固定列落位后，再把实际剩余宽度按配置比例分给名称与地图。
-	const float NameMapWidth = NameMapLayout.m_NameWidth + NameMapLayout.m_MapWidth;
-	const float FreeNameMapWidth = std::max(0.0f, NameMapWidth - MinNameWidth - MinMapWidth);
-	const float SplitNameWidth = NameMapLayout.m_NameWidth;
-	const float SplitMapWidth = NameMapWidth - SplitNameWidth;
-	for(auto &Col : s_aCols)
+	static CQmBrowserHeaderGesture s_HeaderGesture;
+	if(Ui()->MouseButtonClicked(0))
 	{
-		if(Col.m_Id == COL_NAME)
-		{
-			Col.m_Width = SplitNameWidth;
-			Headers.VSplitLeft(SplitNameWidth, &Col.m_Rect, nullptr);
-		}
-		else if(Col.m_Id == COL_MAP)
-		{
-			Col.m_Width = SplitMapWidth;
-			Headers.VSplitRight(SplitMapWidth, nullptr, &Col.m_Rect);
-		}
+		int HeaderColumn = -1;
+		for(int Index = NumPinnedCols; Index < NumCols; ++Index)
+			if(Ui()->MouseHovered(&s_aCols[Index].m_Rect))
+				HeaderColumn = Index;
+		s_HeaderGesture.Begin(HeaderColumn, HoveredHandle >= 0 ? s_vResizeHandles[HoveredHandle].m_ColIndex : -1);
 	}
-	CUIRect NameSplitHandle{s_aCols[4].m_Rect.x + SplitNameWidth - 3.0f, Headers.y, 6.0f, Headers.h};
-	s_vResizeHandles.push_back({NameSplitHandle, 4, &g_Config.m_BrColNameSplit, MinNameWidth, NameMapWidth - MinMapWidth});
 
 	const bool PlayersOrPing = (g_Config.m_BrSort == IServerBrowser::SORT_NUMPLAYERS || g_Config.m_BrSort == IServerBrowser::SORT_PING);
 
+	// 表头拖拽换列：按住内容列表头横移超过阈值进入换列（竖线指示落点），
+	// 松开提交并持久化 br_col_order；未超过阈值的按压仍走普通的点击排序。
+	static int s_ReorderColIndex = -1; // 拖拽中的 s_aCols 索引
+	static int s_ReorderInsertSlot = -1; // 落点槽位（不含被拖列计数）
+	static float s_ReorderPressX = 0.0f;
+	constexpr float ReorderActivateDistance = 6.0f;
+
+	auto ContentSlotFromMouseX = [&](float MouseXPos) {
+		int Slot = 0;
+		for(int i = NumPinnedCols; i < NumCols; i++)
+		{
+			if(i == s_ReorderColIndex)
+				continue;
+			if(MouseXPos > s_aCols[i].m_Rect.x + s_aCols[i].m_Rect.w * 0.5f)
+				Slot++;
+		}
+		return Slot;
+	};
+	if(s_ReorderColIndex >= 0)
+	{
+		if(Ui()->MouseButton(0))
+		{
+			s_ReorderInsertSlot = ContentSlotFromMouseX(Ui()->MouseX());
+			if(std::abs(Ui()->MouseX() - s_ReorderPressX) > ReorderActivateDistance)
+				s_HeaderGesture.MarkReorderDrag();
+		}
+		else
+		{
+			if(s_HeaderGesture.ReorderDragged())
+			{
+				// 从当前顺序中摘除被拖列，插入落点槽位并持久化。
+				const int Pos = s_ReorderColIndex - NumPinnedCols;
+				int aNew[NumContentCols];
+				int Out = 0;
+				for(int i = 0; i < NumContentCols; i++)
+					if(i != Pos)
+						aNew[Out++] = s_aContentOrder[i];
+				const int Slot = std::clamp(s_ReorderInsertSlot, 0, NumContentCols - 1);
+				for(int i = NumContentCols - 1; i > Slot; i--)
+					aNew[i] = aNew[i - 1];
+				aNew[Slot] = s_aContentOrder[Pos];
+				for(int i = 0; i < NumContentCols; i++)
+					s_aContentOrder[i] = aNew[i];
+				SerializeContentOrder();
+			}
+			s_ReorderColIndex = -1;
+			s_ReorderInsertSlot = -1;
+		}
+	}
+
 	// do headers
+	int HeaderIndex = 0;
 	for(const auto &Col : s_aCols)
 	{
+		// 拖拽换列的按压起点：内容列 + 无其他拖拽进行中。点击（未超阈值）
+		// 不受影响，DoButton_GridHeader 正常返回；真正拖过的按压在下面抑制排序。
+		if(s_ReorderColIndex < 0 && s_HeaderGesture.ReorderColumn() == HeaderIndex && Ui()->MouseButtonClicked(0))
+		{
+			s_ReorderColIndex = HeaderIndex;
+			s_ReorderPressX = Ui()->MouseX();
+			s_ReorderInsertSlot = ContentSlotFromMouseX(Ui()->MouseX());
+		}
+
 		int Checked = g_Config.m_BrSort == Col.m_Sort;
 		if(PlayersOrPing && g_Config.m_BrSortOrder == 2 && (Col.m_Sort == IServerBrowser::SORT_NUMPLAYERS || Col.m_Sort == IServerBrowser::SORT_PING))
 			Checked = 2;
@@ -573,7 +1216,8 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		const char *pCaption = Col.m_Id == COL_QM_CLIENTS ? Col.m_pCaption : Localize(Col.m_pCaption);
 		if(DoButton_GridHeader(&Col.m_Id, pCaption, Checked, &Col.m_Rect))
 		{
-			if(Col.m_Sort != -1)
+			// 这次按压演变成了拖拽换列：吞掉点击，不触发排序。
+			if(Col.m_Sort != -1 && s_HeaderGesture.AllowsSort())
 			{
 				if(g_Config.m_BrSort == Col.m_Sort)
 					g_Config.m_BrSortOrder = (g_Config.m_BrSortOrder + 1) % (PlayersOrPing ? 3 : 2);
@@ -582,6 +1226,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 				g_Config.m_BrSort = Col.m_Sort;
 			}
 		}
+		HeaderIndex++;
 
 		if(Col.m_Id == COL_FRIENDS)
 		{
@@ -607,27 +1252,38 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		}
 	}
 
-	static int s_ResizeDragColIndex = -1;
-	static float s_ResizeDragStartMouseX = 0.0f;
-	static float s_ResizeDragStartWidth = 0.0f;
-	static float s_ResizeDragStartFlexWidth = 0.0f;
-	static float s_ResizeDragCurrentWidth = 0.0f;
-
-	int HoveredHandle = -1;
-	float HoverDistance = std::numeric_limits<float>::max();
-	for(int Index = 0; Index < (int)s_vResizeHandles.size(); ++Index)
+	// 换列落点指示：亮色竖线标出松开后的插入边界；虚影标题跟随鼠标，
+	// 明示正在拖的是哪一列。
+	if(s_ReorderColIndex >= 0 && s_HeaderGesture.ReorderDragged())
 	{
-		const SResizeHandle &Handle = s_vResizeHandles[Index];
-		const SColumn &Col = s_aCols[Handle.m_ColIndex];
-		if((Col.m_Id == COL_NAME && FreeNameMapWidth <= 0.0f) ||
-			(Col.m_Direction == 1 && Col.m_Rect.w < 6.0f) || !Ui()->MouseHovered(&Handle.m_Rect))
-			continue;
-		const float Distance = std::abs(Ui()->MouseX() - (Handle.m_Rect.x + Handle.m_Rect.w * 0.5f));
-		if(Distance < HoverDistance)
+		float LineX = s_aCols[NumCols - 1].m_Rect.x + s_aCols[NumCols - 1].m_Rect.w + 1.0f;
+		int Seen = 0;
+		for(int i = NumPinnedCols; i < NumCols; i++)
 		{
-			HoverDistance = Distance;
-			HoveredHandle = Index;
+			if(i == s_ReorderColIndex)
+				continue;
+			if(Seen == s_ReorderInsertSlot)
+			{
+				LineX = s_aCols[i].m_Rect.x - 1.0f;
+				break;
+			}
+			Seen++;
 		}
+		CUIRect Indicator{LineX - 1.0f, Headers.y, 3.0f, Headers.h};
+		Indicator.Draw(BrowserOpacityColor(ColorRGBA(1.0f, 0.85f, 0.35f, 0.9f)), IGraphics::CORNER_NONE, 0.0f);
+
+		const SColumn &DragCol = s_aCols[s_ReorderColIndex];
+		const char *pDragCaption = DragCol.m_Id == COL_QM_CLIENTS ? DragCol.m_pCaption : Localize(DragCol.m_pCaption);
+		const float GhostFontSize = Headers.h * CUi::ms_FontmodHeight;
+		const float GhostTextWidth = TextRender()->TextWidth(GhostFontSize, pDragCaption, -1, -1.0f);
+		const float ScreenW = Ui()->Screen()->w;
+		const float GhostX = std::clamp(Ui()->MouseX() + 12.0f, 4.0f, std::max(4.0f, ScreenW - GhostTextWidth - 34.0f));
+		CUIRect Ghost{GhostX, Ui()->MouseY() - Headers.h * 0.5f - 3.0f, GhostTextWidth + 22.0f, Headers.h + 6.0f};
+		Ghost.Draw(BrowserOpacityColor(ColorRGBA(0.09f, 0.11f, 0.15f, 0.94f)), IGraphics::CORNER_ALL, 5.0f);
+		Ghost.VMargin(11.0f, &Ghost);
+		TextRender()->TextColor(BrowserOpacityColor(ColorRGBA(0.95f, 0.96f, 0.98f, 1.0f)));
+		Ui()->DoLabel(&Ghost, pDragCaption, GhostFontSize, TEXTALIGN_ML);
+		TextRender()->TextColor(TextRender()->DefaultTextColor());
 	}
 
 	for(int HandleIndex = 0; HandleIndex < (int)s_vResizeHandles.size(); ++HandleIndex)
@@ -635,64 +1291,47 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		const SResizeHandle &Handle = s_vResizeHandles[HandleIndex];
 		const void *pHandleId = &s_aCols[Handle.m_ColIndex].m_Width;
 		const int ColIdx = Handle.m_ColIndex;
-		const bool IsRightCol = s_aCols[ColIdx].m_Direction == 1;
-		const bool IsNameSplit = s_aCols[ColIdx].m_Id == COL_NAME;
 
 		if(s_ResizeDragColIndex == ColIdx)
 		{
 			if(!Ui()->MouseButton(0))
 			{
-				if(!IsNameSplit)
-					SetColWidthConfig(Handle.m_pWidthConfig, s_ResizeDragCurrentWidth, Handle.m_MinWidth, Handle.m_MaxWidth);
 				s_ResizeDragColIndex = -1;
 				Ui()->SetActiveItem(nullptr);
 				ConfigManager()->Save();
 			}
 			else
 			{
-				float DeltaX = Ui()->MouseX() - s_ResizeDragStartMouseX;
-				float NewWidth = s_ResizeDragStartWidth + (IsRightCol ? -DeltaX : DeltaX);
-				if(IsNameSplit)
-				{
-					if(FreeNameMapWidth > 0.0f)
-					{
-						NewWidth = std::clamp(NewWidth, MinNameWidth + FreeNameMapWidth * 0.35f, MinNameWidth + FreeNameMapWidth * 0.75f);
-						g_Config.m_BrColNameSplit = std::clamp((int)((NewWidth - MinNameWidth) / FreeNameMapWidth * 1000.0f + 0.5f), 350, 750);
-					}
-				}
-				else
-				{
-					NewWidth = std::clamp(NewWidth, Handle.m_MinWidth, Handle.m_MaxWidth);
-					if(IsRightCol)
-						NewWidth = std::clamp(NewWidth, Handle.m_MinWidth, std::max(Handle.m_MinWidth, s_ResizeDragStartWidth + s_ResizeDragStartFlexWidth - MinNameWidth - MinMapWidth));
-					s_ResizeDragCurrentWidth = NewWidth;
-					SetColWidthConfig(Handle.m_pWidthConfig, NewWidth, Handle.m_MinWidth, Handle.m_MaxWidth);
-				}
+				// 绝对宽度直调：该列变宽/变窄，名称列（弹性）吸收差额，
+				// 其他列纹丝不动——这正是移除组缩放后想要的独立行为。
+				const float NewWidth = std::clamp(s_ResizeDragStartWidth + Ui()->MouseX() - s_ResizeDragStartMouseX, Handle.m_MinWidth, Handle.m_MaxWidth);
+				SetColWidthConfig(Handle.m_pWidthConfig, NewWidth, Handle.m_MinWidth, Handle.m_MaxWidth);
 			}
 		}
-		else if(HandleIndex == HoveredHandle)
+		else if(HandleIndex == HoveredHandle && s_HeaderGesture.ReorderColumn() < 0)
 		{
 			Ui()->SetHotItem(pHandleId);
-			if(Ui()->MouseButtonClicked(0))
+			if(Ui()->MouseButtonClicked(0) && s_HeaderGesture.ResizeColumn() == ColIdx)
 			{
 				s_ResizeDragColIndex = ColIdx;
 				s_ResizeDragStartMouseX = Ui()->MouseX();
 				s_ResizeDragStartWidth = s_aCols[ColIdx].m_Width;
-				s_ResizeDragStartFlexWidth = NameMapWidth;
-				s_ResizeDragCurrentWidth = s_ResizeDragStartWidth;
 				Ui()->SetActiveItem(pHandleId);
 			}
 		}
 	}
 
+	if(!Ui()->MouseButton(0))
+		// 所有表头已消费松开帧，拖动的排序抑制不能泄漏到下一次固定列表头点击。
+		s_HeaderGesture.End();
+
 	for(const auto &Handle : s_vResizeHandles)
 	{
 		const int ColIdx = Handle.m_ColIndex;
-		const bool IsRightCol = s_aCols[ColIdx].m_Direction == 1;
 		bool Hovered = Ui()->HotItem() == &s_aCols[ColIdx].m_Width;
 		bool Dragging = s_ResizeDragColIndex == ColIdx;
 
-		float LineX = IsRightCol ? s_aCols[ColIdx].m_Rect.x - 1.0f : s_aCols[ColIdx].m_Rect.x + s_aCols[ColIdx].m_Rect.w + 1.0f;
+		float LineX = s_aCols[ColIdx].m_Rect.x + s_aCols[ColIdx].m_Rect.w - 1.0f;
 
 		float Alpha = 0.15f;
 		float LineW = 1.0f;
@@ -907,6 +1546,33 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 
 		const float FontSize = SERVER_LIST_TEXT_SIZE;
 		char aTemp[64];
+		// 短名仅对国服生效（用户校准：默认开、只对国服）。命中判定：社区 id 含
+		// "chn"（覆盖 chn/ddnet-cn 等命名）**或名称含 "CHN"**——DDNet CHN 系
+		// 国服挂在 DDraceNetwork 社区（id="ddnet"）下，纯 id 门控会全部漏掉。
+		const bool ShortNameAllowed = (pCommunity != nullptr && str_find_nocase(pCommunity->Id(), "chn") != nullptr) ||
+					      str_find_nocase(pItem->m_aName, "CHN") != nullptr;
+		char aDisplayServerName[sizeof(pItem->m_aName)];
+		char aParsedShortName[sizeof(pItem->m_aName)];
+		const char *pDisplayServerName = pItem->m_aName;
+		if(g_Config.m_QmShortServerNames && ShortNameAllowed)
+		{
+			CMenus::GetServerbrowserDisplayName(pItem, aParsedShortName, sizeof(aParsedShortName));
+			// 名称列只显示区段（「简单 - CHN5 上海」→「CHN5 上海」）；类别由难度列恒定承担。
+			pDisplayServerName = BrowserSegmentDisplayName(aParsedShortName, aDisplayServerName, sizeof(aDisplayServerName));
+			// 解析结果剥前缀后为空白（名称全空白或仅含空白段）时回退原始名称，
+			// 避免名称列渲染出空文本容器。
+			bool SegmentBlank = true;
+			for(const char *p = pDisplayServerName; *p != '\0'; ++p)
+			{
+				if(*p != ' ' && *p != '\t')
+				{
+					SegmentBlank = false;
+					break;
+				}
+			}
+			if(SegmentBlank)
+				pDisplayServerName = pItem->m_aName;
+		}
 		for(const auto &Col : s_aCols)
 		{
 			CUIRect Button;
@@ -943,7 +1609,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 					{
 						CUIRect CommunityIcon;
 						Button.Margin(2.0f, &CommunityIcon);
-						m_CommunityIcons.Render(pIcon, CommunityIcon, true);
+						m_CommunityIcons.Render(pIcon, CommunityIcon, true, Ui()->ControlAlphaScale());
 						Ui()->DoButtonLogic(&pItem->m_aCommunityId, 0, &CommunityIcon, BUTTONFLAG_NONE);
 						GameClient()->m_Tooltips.DoToolTip(&pItem->m_aCommunityId, &CommunityIcon, pCommunity->Name());
 					}
@@ -951,38 +1617,50 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_NAME)
 			{
-				char aDisplayServerName[sizeof(pItem->m_aName)];
-				const char *pDisplayServerName = g_Config.m_QmShortServerNames ? CMenus::GetServerbrowserDisplayName(pItem, aDisplayServerName, sizeof(aDisplayServerName)) : pItem->m_aName;
-
-				const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.FindForServer(*pItem, MapCategoryHintFromServer(pItem));
-				char aDifficulty[64];
-				FormatMapDifficultySuffix(pDisplayServerName, pDifficulty, aDifficulty, sizeof(aDifficulty));
-
 				SLabelProperties Props;
 				Props.m_MaxWidth = Button.w;
 				Props.m_StopAtEnd = true;
 				Props.m_EnableWidthCheck = false;
-				// 名称先让出难度后缀的宽度，长名截断后星级仍完整可见。
-				SLabelProperties NameProps = Props;
-				if(aDifficulty[0] != '\0')
-					NameProps.m_MaxWidth = std::max(Button.w * 0.4f, Button.w - TextRender()->TextWidth(FontSize, aDifficulty) - 2.0f);
 
 				bool Printed = false;
-				CUIElement::SUIElementRect *pNameEndRect = pUiElement->Rect(UI_ELEM_NAME_1);
 				if(g_Config.m_BrFilterString[0] && (g_Config.m_QmShortServerNames || (pItem->m_QuickSearchHit & IServerBrowser::QUICK_SERVERNAME)))
 					Printed = PrintHighlighted(pDisplayServerName, [&](const char *pFilteredStr, const int FilterLen) {
-						Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_NAME_1), &Button, pDisplayServerName, FontSize, TEXTALIGN_ML, NameProps, (int)(pFilteredStr - pDisplayServerName));
+						Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_NAME_1), &Button, pDisplayServerName, FontSize, TEXTALIGN_ML, Props, (int)(pFilteredStr - pDisplayServerName));
 						TextRender()->TextColor(gs_HighlightedTextColor);
-						Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_NAME_2), &Button, pFilteredStr, FontSize, TEXTALIGN_ML, NameProps, FilterLen, &pUiElement->Rect(UI_ELEM_NAME_1)->m_Cursor);
+						Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_NAME_2), &Button, pFilteredStr, FontSize, TEXTALIGN_ML, Props, FilterLen, &pUiElement->Rect(UI_ELEM_NAME_1)->m_Cursor);
 						TextRender()->TextColor(TextRender()->DefaultTextColor());
-						Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_NAME_3), &Button, pFilteredStr + FilterLen, FontSize, TEXTALIGN_ML, NameProps, -1, &pUiElement->Rect(UI_ELEM_NAME_2)->m_Cursor);
-						pNameEndRect = pUiElement->Rect(UI_ELEM_NAME_3);
+						Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_NAME_3), &Button, pFilteredStr + FilterLen, FontSize, TEXTALIGN_ML, Props, -1, &pUiElement->Rect(UI_ELEM_NAME_2)->m_Cursor);
 					});
 				if(!Printed)
-					Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_NAME_1), &Button, pDisplayServerName, FontSize, TEXTALIGN_ML, NameProps);
-
-				// 星级续在可见名称之后（名称被截断时从截断处开始）；无难度时空串会清掉该行旧文本。
-				Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_NAME_DIFFICULTY), &Button, aDifficulty, FontSize, TEXTALIGN_ML, Props, -1, pDisplayServerName[0] != '\0' ? &pNameEndRect->m_Cursor : nullptr);
+					Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_NAME_1), &Button, pDisplayServerName, FontSize, TEXTALIGN_ML, Props);
+			}
+			else if(Id == COL_DIFFICULTY)
+			{
+				// 独立难度列：恒定「类别词 + 星级」；无目录条目显示占位。
+				const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.FindForServer(*pItem, MapCategoryHintFromServer(pItem));
+				char aDifficulty[64];
+				FormatMapDifficultyText(pDifficulty, aDifficulty, sizeof(aDifficulty));
+				if(aDifficulty[0] != '\0')
+				{
+					SLabelProperties Props;
+					Props.m_MaxWidth = Button.w;
+					Props.m_StopAtEnd = true;
+					Props.m_EllipsisAtEnd = true;
+					Props.m_EnableWidthCheck = false;
+					Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_DIFFICULTY), &Button, aDifficulty, FontSize, TEXTALIGN_ML, Props);
+				}
+				else
+				{
+					// 未收录地图：灰色占位与有难度的行明确区分。
+					TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
+					TextRender()->TextColor(TextRender()->DefaultTextColor().WithAlpha(0.45f));
+					SLabelProperties Props;
+					Props.m_MaxWidth = Button.w;
+					Props.m_StopAtEnd = true;
+					Props.m_EnableWidthCheck = false;
+					Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_DIFFICULTY), &Button, "--", FontSize, TEXTALIGN_ML, Props);
+					TextRender()->TextColor(TextRender()->DefaultTextColor());
+				}
 			}
 			else if(Id == COL_GAMETYPE)
 			{
@@ -1002,6 +1680,28 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 				{
 					CUIRect Icon;
 					Button.VMargin(std::min(4.0f, std::max(0.0f, Button.w) * 0.5f), &Button);
+					// 地图预览入口：地图名前的可点击小图标（点击开 / 再点关，
+					// 点击型面板无悬停触发）。按钮 id 取行内未占用字段地址。
+					Button.VSplitLeft(std::min(std::max(0.0f, Button.w), std::max(0.0f, Button.h)), &Icon, &Button);
+					if(Icon.w > 4.0f)
+					{
+						CUIRect PreviewIcon = Icon;
+						PreviewIcon.Margin(2.0f, &PreviewIcon);
+						const bool SamePreviewTarget = Ui()->IsPopupOpen(&m_MapPreviewPopupContext) &&
+									       str_comp(m_MapPreviewPopupContext.m_aAddress, pItem->m_aAddress) == 0 &&
+									       str_comp(m_MapPreviewPopupContext.m_aMapName, pItem->m_aMap) == 0;
+						if(Ui()->DoButtonLogic(&pItem->m_RequiresLogin, 0, &PreviewIcon, BUTTONFLAG_LEFT))
+						{
+							if(!SamePreviewTarget)
+								OpenMapPreviewPopup(pItem);
+						}
+						const bool IconHot = SamePreviewTarget || Ui()->HotItem() == &pItem->m_RequiresLogin;
+						RenderBrowserIcons(*pUiElement->Rect(UI_ELEM_MAP_PREVIEW_ICON), &PreviewIcon,
+							IconHot ? TextRender()->DefaultTextColor() : TextRender()->DefaultTextColor().WithAlpha(0.75f),
+							TextRender()->DefaultTextOutlineColor(), EQmIcon::MAP, FONT_ICON_MAP, TEXTALIGN_MC);
+						GameClient()->m_Tooltips.DoToolTip(&pItem->m_RequiresLogin, &PreviewIcon, Localize("Toggle map preview"));
+					}
+					// 完赛旗槽位紧随预览图标之后（条件显示，无旗时留白一行宽）。
 					Button.VSplitLeft(std::min(std::max(0.0f, Button.w), std::max(0.0f, Button.h)), &Icon, &Button);
 					if(Icon.w > 4.0f && g_Config.m_BrIndicateFinished && pItem->m_HasRank == CServerInfo::RANK_RANKED)
 					{
@@ -1624,6 +2324,21 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 
 	CUIRect Row;
 	int ColumnIndex = 0;
+	// 依次淡入 + 上浮：与服务器列表同一套入场语言。三个过滤列表（社区/国家/
+	// 类型）共享本函数的静态生命周期，同帧顺序驱动等效于一条时间线；页面
+	// 切换时由重启序号统一重播。
+	static CQmListEntryAnimation s_EntryAnimation;
+	static int s_LastRestartSeq = -1;
+	if(s_LastRestartSeq != m_BrowserListEntryRestartSeq)
+	{
+		s_EntryAnimation.Reset();
+		s_LastRestartSeq = m_BrowserListEntryRestartSeq;
+	}
+	const int64_t EntryNow = time_get();
+	const int64_t EntryFreq = maximum<int64_t>(1, time_freq());
+	const bool EntryEnabled = g_Config.m_QmUiListEntryAnimations != 0 && g_Config.m_QmUiMotionLevel > 0;
+	const float EntryElapsed = s_EntryAnimation.Resolve(EntryNow, EntryFreq, EntryEnabled, g_Config.m_QmUiMotionLevel,
+		Ui()->MeasurementOnly() ? EQmListEntryRenderPass::MEASUREMENT : EQmListEntryRenderPass::INTERACTIVE);
 	for(int ItemIndex = 0; ItemIndex < MaxItems; ++ItemIndex)
 	{
 		CUIRect Item;
@@ -1633,6 +2348,12 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 		ColumnIndex = (ColumnIndex + 1) % ItemsPerRow;
 		if(!ScrollRegion.AddRect(Item))
 			continue;
+
+		const SQmListEntryVisual EntryVisual = QmListEntryVisual(EntryElapsed, ItemIndex / maximum(1, ItemsPerRow), g_Config.m_QmUiMotionLevel);
+		std::optional<CUiScopedControlAlphaScale> EntryFade;
+		if(EntryVisual.m_Fade < 0.999f)
+			EntryFade.emplace(Ui(), EntryVisual.m_Fade);
+		Item.y += EntryVisual.m_OffsetY;
 
 		const void *pItemId = &vItemIds[ItemIndex];
 		const char *pName = GetItemName(ItemIndex);
@@ -1757,7 +2478,7 @@ void CMenus::RenderServerbrowserCommunitiesFilter(CUIRect View)
 	};
 	const auto &&RenderItem = [&](int ItemIndex, CUIRect Item, const void *pItemId, bool Active) {
 		const auto &Community = ServerBrowser()->Communities()[ItemIndex];
-		const float Alpha = (Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f);
+		const float Alpha = ((Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f)) * Ui()->ControlAlphaScale();
 
 		CUIRect Icon, NameLabel, PlayerCountIcon, PlayerCountLabel, FavoriteButton;
 		Item.VSplitRight(Item.h, &Item, &FavoriteButton);
@@ -1773,7 +2494,7 @@ void CMenus::RenderServerbrowserCommunitiesFilter(CUIRect View)
 		const CCommunityIcon *pIcon = m_CommunityIcons.Find(pItemName);
 		if(pIcon != nullptr)
 		{
-			m_CommunityIcons.Render(pIcon, Icon, Active);
+			m_CommunityIcons.Render(pIcon, Icon, Active, Ui()->ControlAlphaScale());
 		}
 
 		TextRender()->TextColor(1.0f, 1.0f, 1.0f, Alpha);
@@ -1825,7 +2546,7 @@ void CMenus::RenderServerbrowserCountriesFilter(CUIRect View)
 		const float OldWidth = Item.w;
 		Item.w = Item.h * 2.0f;
 		Item.x += (OldWidth - Item.w) / 2.0f;
-		GameClient()->m_CountryFlags.Render(ServerBrowser()->CommunityCache().SelectableCountries()[ItemIndex]->FlagId(), ColorRGBA(1.0f, 1.0f, 1.0f, (Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f)), Item.x, Item.y, Item.w, Item.h);
+		GameClient()->m_CountryFlags.Render(ServerBrowser()->CommunityCache().SelectableCountries()[ItemIndex]->FlagId(), ColorRGBA(1.0f, 1.0f, 1.0f, ((Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f)) * Ui()->ControlAlphaScale()), Item.x, Item.y, Item.w, Item.h);
 	};
 
 	RenderServerbrowserDDNetFilter(View, ServerBrowser()->CountriesFilter(), ItemHeight + 2.0f * Spacing, MaxEntries, EntriesPerRow, s_ScrollRegion, s_vItemIds, false, GetItemName, RenderItem);
@@ -1847,7 +2568,7 @@ void CMenus::RenderServerbrowserTypesFilter(CUIRect View)
 	};
 	const auto &&RenderItem = [&](int ItemIndex, CUIRect Item, const void *pItemId, bool Active) {
 		Item.Margin(Spacing, &Item);
-		TextRender()->TextColor(1.0f, 1.0f, 1.0f, (Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f));
+		TextRender()->TextColor(1.0f, 1.0f, 1.0f, ((Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f)) * Ui()->ControlAlphaScale());
 		Ui()->DoLabel(&Item, GetItemName(ItemIndex), Item.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 	};
@@ -1955,7 +2676,8 @@ CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIR
 
 		if(IsSelected)
 		{
-			DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::BORDER_FOCUS, ui_token::radius::BASE, 1.0f);
+			// 选中描边与资产卡/列表选中态同源（白 0.7），不用 BORDER_FOCUS 强调蓝。
+			DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::NEUTRAL_WHITE.WithAlpha(ui_token::feedback::ICON_BORDER_ALPHA), ui_token::radius::BASE, 1.0f);
 		}
 		else if(pUi->MouseInside(&Item.m_Rect))
 		{

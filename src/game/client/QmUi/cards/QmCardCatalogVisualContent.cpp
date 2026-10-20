@@ -341,7 +341,7 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 	if(Flow.Control("s_ChatBubbleTextColorId", LineHeight, s_ChatBubbleTextColorIdRow))
 	{
 		CUIRect ColorRow = s_ChatBubbleTextColorIdRow;
-		DoLine_ColorPicker(&s_ChatBubbleTextColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Text color"), &g_Config.m_QmChatBubbleTextColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false);
+		DoLine_ColorPicker(&s_ChatBubbleTextColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Text color"), &g_Config.m_QmChatBubbleTextColor, ui_token::color::NEUTRAL_WHITE, false);
 	}
 	Flow.Space(LineSpacing);
 }

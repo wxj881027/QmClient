@@ -94,3 +94,9 @@ QM_ICON_ENTRY(CHECK, "check", 0xE182)
 QM_ICON_ENTRY(ARROW_LEFT, "arrow-left", 0xE058)
 QM_ICON_ENTRY(ARROW_RIGHT, "arrow-right", 0xE06C)
 QM_ICON_ENTRY(MICROPHONE, "microphone", 0xE326)
+// 连接质量分档（灵动岛连接状态事件）：Phosphor web v2.1.1 官方码位，
+// 嵌入的 Phosphor-Fill 全量字体已覆盖。
+QM_ICON_ENTRY(CELL_SIGNAL_HIGH, "cell-signal-high", 0xE144)
+QM_ICON_ENTRY(CELL_SIGNAL_MEDIUM, "cell-signal-medium", 0xE148)
+QM_ICON_ENTRY(CELL_SIGNAL_LOW, "cell-signal-low", 0xE146)
+QM_ICON_ENTRY(CELL_SIGNAL_NONE, "cell-signal-none", 0xE14A)

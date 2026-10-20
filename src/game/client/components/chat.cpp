@@ -19,6 +19,7 @@
 #include <generated/protocol.h>
 #include <generated/protocol7.h>
 
+#include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
 #include <game/client/components/censor.h>
@@ -27,6 +28,7 @@
 #include <game/client/components/qmclient/chat_command_preview.h>
 #include <game/client/components/qmclient/chat_gradient.h>
 #include <game/client/components/qmclient/chat_input_layout.h>
+#include <game/client/components/qmclient/chat_message_filter.h>
 #include <game/client/components/qmclient/chat_scrollbar.h>
 #include <game/client/components/qmclient/colored_parts.h>
 #include <game/client/components/qmclient/demo_display.h>
@@ -1663,19 +1665,7 @@ void CChat::OnMessage(int MsgType, void *pRawMsg, int SourceConnection)
 
 bool CChat::LineShouldHighlight(const char *pLine, const char *pName)
 {
-	const char *pHit = str_utf8_find_nocase(pLine, pName);
-
-	while(pHit)
-	{
-		int Length = str_length(pName);
-
-		if(Length > 0 && (pLine == pHit || pHit[-1] == ' ') && (pHit[Length] == 0 || pHit[Length] == ' ' || pHit[Length] == '.' || pHit[Length] == '!' || pHit[Length] == ',' || pHit[Length] == '?' || pHit[Length] == ':'))
-			return true;
-
-		pHit = str_utf8_find_nocase(pHit + 1, pName);
-	}
-
-	return false;
+	return QmChatMessageFilter::MentionsName(pLine, pName, g_Config.m_QmChatRelatedOnly != 0);
 }
 
 static constexpr const char *SAVES_HEADER[] = {
@@ -2078,14 +2068,42 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 	const int LocalConnection = ClientId >= 0 && ClientId == GameClient()->m_aLocalIds[0] ? 0 : ClientId >= 0 && ClientId == GameClient()->m_aLocalIds[1] ? 1 :
 																				-1;
 	const std::string LocalOriginal = LocalConnection >= 0 ? m_OutgoingAnnotations.Consume(LocalConnection, ClientId, Team, pLine, time()) : std::string();
-	if(*pLine == 0 ||
-		(ClientId == SERVER_MSG && !g_Config.m_ClShowChatSystem) ||
-		(ClientId >= 0 && (GameClient()->m_aClients[ClientId].m_aName[0] == '\0' || // unknown client
-					  GameClient()->m_aClients[ClientId].m_ChatIgnore ||
-					  (GameClient()->m_Snap.m_LocalClientId != ClientId && g_Config.m_QmWarListBlockEnemyChat && GameClient()->m_WarList.IsEnemy(ClientId)) ||
-					  (GameClient()->m_Snap.m_LocalClientId != ClientId && g_Config.m_ClShowChatFriends && !GameClient()->m_aClients[ClientId].m_Friend) ||
-					  (GameClient()->m_Snap.m_LocalClientId != ClientId && g_Config.m_ClShowChatTeamMembersOnly && GameClient()->IsOtherTeam(ClientId) && GameClient()->m_Teams.Team(GameClient()->m_Snap.m_LocalClientId) != TEAM_FLOCK) ||
-					  (GameClient()->m_Snap.m_LocalClientId != ClientId && GameClient()->m_aClients[ClientId].m_Foe))))
+	if(*pLine == 0 || (ClientId == SERVER_MSG && !g_Config.m_ClShowChatSystem))
+		return;
+
+	const QmChatMessageFilter::SSettings FilterSettings{g_Config.m_QmChatRelatedOnly != 0, g_Config.m_ClShowChatFriends != 0, g_Config.m_ClShowChatTeamMembersOnly != 0};
+	QmChatMessageFilter::SMessage Message;
+	Message.m_ClientId = ClientId;
+	Message.m_Team = Team;
+	if(ClientId >= 0)
+	{
+		const auto &Author = GameClient()->m_aClients[ClientId];
+		const bool DemoPlayback = Client()->State() == IClient::STATE_DEMOPLAYBACK;
+		Message.m_CurrentLocal = ClientId == GameClient()->m_Snap.m_LocalClientId;
+		Message.m_Local = DemoPlayback ? Message.m_CurrentLocal : GameClient()->IsLocalClientId(ClientId);
+		Message.m_Blocked = Author.m_aName[0] == '\0' || Author.m_ChatIgnore ||
+				    GameClient()->ShouldBlockWarListPlayer(ClientId) ||
+				    (!Message.m_CurrentLocal && (Author.m_Foe || (g_Config.m_QmWarListBlockEnemyChat && GameClient()->m_WarList.IsEnemy(ClientId))));
+		Message.m_Friend = Author.m_Friend;
+		Message.m_OtherTeam = !Message.m_Blocked && !FilterSettings.m_RelatedOnly && !Message.m_CurrentLocal &&
+			(!FilterSettings.m_FriendsOnly || Message.m_Friend) && FilterSettings.m_TeamOnly &&
+			GameClient()->IsOtherTeam(ClientId) && GameClient()->m_Teams.Team(GameClient()->m_Snap.m_LocalClientId) != TEAM_FLOCK;
+		if(FilterSettings.m_RelatedOnly && !Message.m_Blocked && !Message.m_Local && Team != TEAM_WHISPER_SEND && Team != TEAM_WHISPER_RECV)
+		{
+			// 先按原文判断提及，避免后续显示遮蔽把自己的名字替换掉。
+			if(DemoPlayback)
+			{
+				const int LocalId = GameClient()->m_Snap.m_LocalClientId;
+				Message.m_Mentioned = LocalId >= 0 && LineShouldHighlight(pLine, GameClient()->m_aClients[LocalId].m_aName);
+			}
+			else
+			{
+				for(int LocalId : GameClient()->m_aLocalIds)
+					Message.m_Mentioned |= LocalId >= 0 && LineShouldHighlight(pLine, GameClient()->m_aClients[LocalId].m_aName);
+			}
+		}
+	}
+	if(!QmChatMessageFilter::ShouldShow(FilterSettings, Message))
 		return;
 
 	// 其它消息出现时先给上一段 echo 重复计数收口，避免统计被后面的消息挤掉。
@@ -4130,8 +4148,8 @@ void CChat::OpenChatLineMenu(const CLine &Line, vec2 UiMousePos)
 		str_copy(m_ChatLinePopupContext.m_aName, Line.m_aName);
 	}
 
-	constexpr float MenuWidth = 188.0f;
-	constexpr float MenuHeight = 266.0f;
+	constexpr float MenuWidth = 200.0f;
+	constexpr float MenuHeight = 235.0f;
 	Ui()->DoPopupMenu(&m_ChatLinePopupContext, UiMousePos.x, UiMousePos.y, MenuWidth, MenuHeight, &m_ChatLinePopupContext, PopupChatLineMenu);
 }
 
@@ -4212,18 +4230,22 @@ CUi::EPopupMenuFunctionResult CChat::PopupChatLineMenu(void *pContext, CUIRect V
 	CChatLinePopupContext *pPopupContext = static_cast<CChatLinePopupContext *>(pContext);
 	CChat *pChat = pPopupContext->m_pChat;
 	CUi *pUi = pChat->Ui();
+	// 外壳已由 DoPopupMenu 的裸样式统一接入主题；内容区沿用同一主题的
+	// 表面/悬停/边框色，不再叠加第二套硬编码配色。
+	const SUiTheme Theme = ResolveConfiguredDropdownListTheme();
 
 	View.Margin(5.0f, &View);
 
 	CUIRect Header, Divider;
-	View.HSplitTop(40.0f, &Header, &View);
+	View.HSplitTop(34.0f, &Header, &View);
 	View.HSplitTop(4.0f, &Divider, &View);
 
-	Header.Draw(ColorRGBA(0.08f, 0.11f, 0.14f, 0.82f), IGraphics::CORNER_ALL, 5.0f);
-	Header.Margin(5.0f, &Header);
+	Header.Draw(Theme.m_SurfaceHovered, IGraphics::CORNER_ALL, 5.0f);
+	Header.Margin(6.0f, &Header);
 
 	CUIRect NameRow, PreviewRow;
-	Header.HSplitTop(14.0f, &NameRow, &PreviewRow);
+	Header.HSplitTop(13.0f, &NameRow, &PreviewRow);
+	PreviewRow.HSplitTop(2.0f, nullptr, &PreviewRow);
 	char aName[96];
 	if(pPopupContext->m_aName[0] != '\0')
 		str_copy(aName, pPopupContext->m_aName);
@@ -4233,22 +4255,22 @@ CUi::EPopupMenuFunctionResult CChat::PopupChatLineMenu(void *pContext, CUIRect V
 	SLabelProperties LabelProps;
 	LabelProps.m_MaxWidth = NameRow.w;
 	LabelProps.m_EllipsisAtEnd = true;
-	LabelProps.SetColor(ColorRGBA(0.92f, 0.98f, 1.0f, 0.95f));
-	pUi->DoLabel(&NameRow, aName, 8.0f, TEXTALIGN_ML, LabelProps);
+	LabelProps.SetColor(ColorRGBA(1.0f, 1.0f, 1.0f, 0.95f));
+	pUi->DoLabel(&NameRow, aName, 11.0f, TEXTALIGN_ML, LabelProps);
 
 	LabelProps.m_MaxWidth = PreviewRow.w;
-	LabelProps.SetColor(ColorRGBA(0.72f, 0.82f, 0.88f, 0.78f));
-	pUi->DoLabel(&PreviewRow, pPopupContext->m_aText, 7.0f, TEXTALIGN_ML, LabelProps);
+	LabelProps.SetColor(ColorRGBA(1.0f, 1.0f, 1.0f, 0.60f));
+	pUi->DoLabel(&PreviewRow, pPopupContext->m_aText, 9.5f, TEXTALIGN_ML, LabelProps);
 
 	Divider.HMargin(1.5f, &Divider);
-	Divider.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.13f), IGraphics::CORNER_ALL, 1.0f);
+	Divider.Draw(Theme.m_Border, IGraphics::CORNER_NONE, 1.0f);
 	View.HSplitTop(4.0f, nullptr, &View);
 
-	constexpr float ButtonHeight = 24.0f;
-	constexpr float ButtonSpacing = 3.5f;
-	constexpr float FontSize = 9.5f;
-	constexpr float IconSize = 9.5f;
-	constexpr float IconWidth = 21.0f;
+	constexpr float ButtonHeight = 23.0f;
+	constexpr float ButtonSpacing = 3.0f;
+	constexpr float FontSize = 10.5f;
+	constexpr float IconSize = 10.5f;
+	constexpr float IconWidth = 22.0f;
 
 	auto DoEntry = [&](CButtonContainer *pButton, EQmIcon Icon, const char *pIcon, const char *pText, bool Enabled, ColorRGBA AccentColor) {
 		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
@@ -4259,16 +4281,16 @@ CUi::EPopupMenuFunctionResult CChat::PopupChatLineMenu(void *pContext, CUIRect V
 
 		const bool Hovered = Active && Enabled && pUi->MouseHovered(&Button);
 		const ColorRGBA BackgroundColor = Enabled ?
-							  (Hovered ? ColorRGBA(0.18f, 0.25f, 0.30f, 0.96f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.07f)) :
-							  ColorRGBA(0.0f, 0.0f, 0.0f, 0.18f);
+							  (Hovered ? Theme.m_SurfaceFocused : ColorRGBA(1.0f, 1.0f, 1.0f, 0.05f)) :
+							  ColorRGBA(0.0f, 0.0f, 0.0f, 0.14f);
 		Button.Draw(BackgroundColor, IGraphics::CORNER_ALL, 5.0f);
 
-		Button.VMargin(6.0f, &Button);
+		Button.VMargin(7.0f, &Button);
 		Button.VSplitLeft(IconWidth, &IconRect, &LabelRect);
 
-		pChat->TextRender()->TextColor(Enabled ? AccentColor : ColorRGBA(0.55f, 0.60f, 0.64f, 0.45f));
+		pChat->TextRender()->TextColor(Enabled ? AccentColor : ColorRGBA(0.62f, 0.67f, 0.70f, 0.45f));
 		pUi->DoLabel_QmIcon(&IconRect, Icon, pIcon, IconSize, TEXTALIGN_MC);
-		pChat->TextRender()->TextColor(Enabled ? ColorRGBA(0.93f, 0.96f, 0.98f, 0.96f) : ColorRGBA(0.62f, 0.67f, 0.70f, 0.45f));
+		pChat->TextRender()->TextColor(Enabled ? ColorRGBA(1.0f, 1.0f, 1.0f, 0.95f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.40f));
 		pUi->DoLabel(&LabelRect, pText, FontSize, TEXTALIGN_ML);
 		pChat->TextRender()->TextColor(pChat->TextRender()->DefaultTextColor());
 
@@ -4298,7 +4320,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupChatLineMenu(void *pContext, CUIRect V
 
 	View.HSplitTop(2.0f, &Divider, &View);
 	Divider.HMargin(0.75f, &Divider);
-	Divider.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.09f), IGraphics::CORNER_ALL, 1.0f);
+	Divider.Draw(Theme.m_Border, IGraphics::CORNER_NONE, 1.0f);
 	View.HSplitTop(3.0f, nullptr, &View);
 
 	if(DoEntry(&pPopupContext->m_MutePlayerButton, EQmIcon::BAN, FontIcons::FONT_ICON_BAN, Localize("Mute player"), pPopupContext->m_PlayerLine && !pPopupContext->m_LocalPlayer, ColorRGBA(1.0f, 0.50f, 0.52f, 1.0f)))

@@ -339,6 +339,73 @@ TEST(QmAxiomScoresComponent, FailedPrefetchBacksOffAndRecovers)
 	EXPECT_EQ(Scores.GetResult("wolf_test")->m_SearchStatus, EQmAxiomScoreStatus::READY);
 }
 
+TEST(QmAxiomScoresComponent, RepeatedPrefetchFailuresBackOffExponentially)
+{
+	// 回归：固定 30 秒退避会在服务端长时间不可用时持续重打（实测 17 天 19 次 Axiom 失败）。
+	// 连续失败应拉长窗口：30 秒 → 60 秒 → 120 秒，封顶 5 分钟。
+	CFakeAxiomHttp Http;
+	CTestAxiomScores Scores(&Http);
+	Scores.SetMode(EQmAxiomMode::GORES);
+
+	// 第 1 次失败后的窗口是 30 秒。
+	Scores.EnsureQueried("wolf_test");
+	ASSERT_EQ(Http.m_vRequests.size(), 1u);
+	Http.Request(0).m_pRequest->Fail();
+	Scores.OnUpdate();
+
+	// 29 秒内不重试。
+	Scores.AdvanceMs(29 * 1000);
+	Scores.EnsureQueried("wolf_test");
+	EXPECT_EQ(Http.m_vRequests.size(), 1u);
+
+	// 30 秒后允许重试，产生第 2 次请求。
+	Scores.AdvanceMs(2 * 1000);
+	Scores.EnsureQueried("wolf_test");
+	ASSERT_EQ(Http.m_vRequests.size(), 2u);
+	Http.Request(1).m_pRequest->Fail();
+	Scores.OnUpdate();
+
+	// 第 2 次失败后窗口翻倍到 60 秒：30 秒内不再重试。
+	Scores.AdvanceMs(31 * 1000);
+	Scores.EnsureQueried("wolf_test");
+	EXPECT_EQ(Http.m_vRequests.size(), 2u);
+
+	// 跨过 60 秒后恢复重试。
+	Scores.AdvanceMs(31 * 1000);
+	Scores.EnsureQueried("wolf_test");
+	ASSERT_EQ(Http.m_vRequests.size(), 3u);
+	Http.Request(2).m_pRequest->Fail();
+	Scores.OnUpdate();
+
+	// 第 3 次失败后窗口 120 秒：只等 61 秒不足以重试。
+	Scores.AdvanceMs(61 * 1000);
+	Scores.EnsureQueried("wolf_test");
+	EXPECT_EQ(Http.m_vRequests.size(), 3u);
+
+	// 成功后窗口复位，下一次失败仍按 30 秒起算。
+	Scores.AdvanceMs(61 * 1000);
+	Scores.EnsureQueried("wolf_test");
+	ASSERT_EQ(Http.m_vRequests.size(), 4u);
+	Http.Request(3).m_pRequest->Complete(SearchResponse("wolf_test"));
+	Scores.OnUpdate();
+	ASSERT_NE(Scores.GetResult("wolf_test"), nullptr);
+	EXPECT_EQ(Scores.GetResult("wolf_test")->m_SearchStatus, EQmAxiomScoreStatus::READY);
+
+	// 成功后再次失效（模拟重新入服），失败窗口回到 30 秒。
+	const size_t BeforeRejoin = Http.m_vRequests.size();
+	Scores.OnStateChange(IClient::STATE_OFFLINE, IClient::STATE_ONLINE);
+	Scores.OnStateChange(IClient::STATE_ONLINE, IClient::STATE_OFFLINE);
+	Scores.EnsureQueried("wolf_test");
+	// 重新入服清空成功时间戳，必须重新发起一次搜索。
+	ASSERT_EQ(Http.m_vRequests.size(), BeforeRejoin + 1);
+	Http.LastRequest()->Fail();
+	Scores.OnUpdate();
+	// 只等 31 秒即可重试，说明失败窗口已从 120 秒复位回 30 秒。
+	Scores.AdvanceMs(31 * 1000);
+	Scores.EnsureQueried("wolf_test");
+	ASSERT_EQ(Http.m_vRequests.size(), BeforeRejoin + 2);
+}
+
 TEST(QmAxiomScoresComponent, NewServerRefreshesFreshScoreboardCacheWithoutHidingPoints)
 {
 	CScopedAxiomPlayerName PlayerName;
@@ -507,7 +574,7 @@ TEST(QmDdnetPlayerStatsState, PendingRefreshStartsImmediatelyAfterCompletedParse
 	EXPECT_TRUE(State.RefreshPending());
 
 	bool StartRefresh = false;
-	EXPECT_TRUE(State.CompleteParse("DYL", true, 200, 1700000000, 30, StartRefresh));
+	EXPECT_TRUE(State.CompleteParse("DYL", true, 200, 1700000000, 30, 0, StartRefresh));
 	EXPECT_TRUE(StartRefresh);
 	EXPECT_EQ(State.Phase(), EQmDdnetPlayerStatsPhase::IDLE);
 	EXPECT_EQ(State.LastSync(), 0);
@@ -544,7 +611,7 @@ TEST(QmDdnetPlayerStatsState, FailedParseSchedulesRetry)
 	State.CompleteHttp(true, 100, 0);
 
 	bool StartRefresh = true;
-	EXPECT_TRUE(State.CompleteParse("DYL", false, 200, 1700000000, 30, StartRefresh));
+	EXPECT_TRUE(State.CompleteParse("DYL", false, 200, 1700000000, 30, 0, StartRefresh));
 	EXPECT_FALSE(StartRefresh);
 	EXPECT_EQ(State.Phase(), EQmDdnetPlayerStatsPhase::IDLE);
 	EXPECT_EQ(State.LastSync(), 0);
@@ -562,13 +629,13 @@ TEST(QmDdnetPlayerStatsState, KeepsLastSuccessfulTimestampAfterFailedRefresh)
 	State.CompleteHttp(true, 100, 0);
 
 	bool StartRefresh = false;
-	EXPECT_TRUE(State.CompleteParse("DYL", true, 200, 1700000000, 30, StartRefresh));
+	EXPECT_TRUE(State.CompleteParse("DYL", true, 200, 1700000000, 30, 0, StartRefresh));
 	EXPECT_EQ(State.LastSuccessfulSyncTimestamp(), 1700000000);
 
 	EXPECT_EQ(State.RequestRefresh(), EQmDdnetPlayerStatsRefreshAction::START_REQUEST);
 	State.BeginHttp("DYL");
 	State.CompleteHttp(true, 300, 0);
-	EXPECT_TRUE(State.CompleteParse("DYL", false, 400, 1700000100, 30, StartRefresh));
+	EXPECT_TRUE(State.CompleteParse("DYL", false, 400, 1700000100, 30, 0, StartRefresh));
 	EXPECT_EQ(State.LastSuccessfulSyncTimestamp(), 1700000000);
 
 	State.SetPlayer("other_player");
@@ -605,6 +672,149 @@ TEST(QmDdnetPlayerStatsState, PlayerSwitchDuringHttpInvalidatesRequest)
 	EXPECT_TRUE(State.ShouldFetch(100, 60));
 }
 
+TEST(QmDdnetPlayerStatsState, ConsecutiveFailuresBackOffExponentiallyUpToCap)
+{
+	// 回归：网络长时间不通时不能每 10 秒重打一次。实测日志中 83% 的失败间隔
+	// 落在 15-30 秒（10 秒退避叠加请求耗时），16.9 天累计 242 次失败。
+	CQmDdnetPlayerStatsState State;
+	State.SetPlayer("DYL");
+
+	constexpr int64_t Base = 10;
+	constexpr int64_t Cap = 120;
+
+	// 第 1 次失败：仍按 Base 重试，不改变原有手感。
+	State.BeginHttp("DYL");
+	State.CompleteHttp(false, 1000, Base, Cap);
+	EXPECT_EQ(State.ConsecutiveFailures(), 1);
+	EXPECT_EQ(State.NextRetry(), 1000 + 10);
+
+	// 第 2 次失败：20 秒。
+	State.BeginHttp("DYL");
+	State.CompleteHttp(false, 2000, Base, Cap);
+	EXPECT_EQ(State.ConsecutiveFailures(), 2);
+	EXPECT_EQ(State.NextRetry(), 2000 + 20);
+
+	// 第 3 次失败：40 秒。
+	State.BeginHttp("DYL");
+	State.CompleteHttp(false, 3000, Base, Cap);
+	EXPECT_EQ(State.NextRetry(), 3000 + 40);
+
+	// 第 4 次失败：80 秒。
+	State.BeginHttp("DYL");
+	State.CompleteHttp(false, 4000, Base, Cap);
+	EXPECT_EQ(State.NextRetry(), 4000 + 80);
+
+	// 第 5 次失败：本应 160 秒，被 120 秒上限截断。
+	State.BeginHttp("DYL");
+	State.CompleteHttp(false, 5000, Base, Cap);
+	EXPECT_EQ(State.NextRetry(), 5000 + 120);
+
+	// 继续失败不再超过上限。
+	State.BeginHttp("DYL");
+	State.CompleteHttp(false, 6000, Base, Cap);
+	EXPECT_EQ(State.NextRetry(), 6000 + 120);
+	EXPECT_GE(State.ConsecutiveFailures(), 6);
+}
+
+TEST(QmDdnetPlayerStatsState, SuccessfulSyncResetsFailureBackoff)
+{
+	// 恢复后必须回到正常 120 秒同步节奏，不能保留长退避。
+	CQmDdnetPlayerStatsState State;
+	State.SetPlayer("DYL");
+	for(int Attempt = 0; Attempt < 5; ++Attempt)
+	{
+		State.BeginHttp("DYL");
+		State.CompleteHttp(false, 1000 * (Attempt + 1), 10, 120);
+	}
+	ASSERT_EQ(State.ConsecutiveFailures(), 5);
+
+	State.BeginHttp("DYL");
+	State.CompleteHttp(true, 9000, 0, 0);
+	bool StartRefresh = false;
+	EXPECT_TRUE(State.CompleteParse("DYL", true, 9100, 1700000000, 10, 120, StartRefresh));
+	EXPECT_EQ(State.ConsecutiveFailures(), 0);
+	EXPECT_EQ(State.NextRetry(), 0);
+	EXPECT_FALSE(State.LastRequestFailed());
+
+	// 成功后再失败一轮，应重新从 Base 起算而不是沿用旧的高位。
+	State.BeginHttp("DYL");
+	State.CompleteHttp(false, 9200, 10, 120);
+	EXPECT_EQ(State.ConsecutiveFailures(), 1);
+	EXPECT_EQ(State.NextRetry(), 9200 + 10);
+}
+
+TEST(QmDdnetPlayerStatsState, ManualRefreshBypassesFailureBackoff)
+{
+	// 用户主动点「同步远程统计」不能被冷却窗口挡住。
+	CQmDdnetPlayerStatsState State;
+	State.SetPlayer("DYL");
+	for(int Attempt = 0; Attempt < 6; ++Attempt)
+	{
+		State.BeginHttp("DYL");
+		State.CompleteHttp(false, 1000 * (Attempt + 1), 10, 120);
+	}
+	ASSERT_GE(State.ConsecutiveFailures(), 6);
+	// 第 6 次失败发生在 6000，退避已封顶 120 秒，冷却到 6120 才允许自动重试。
+	EXPECT_EQ(State.NextRetry(), 6120);
+	EXPECT_FALSE(State.ShouldFetch(6100, 120));
+
+	EXPECT_EQ(State.RequestRefresh(), EQmDdnetPlayerStatsRefreshAction::START_REQUEST);
+	EXPECT_EQ(State.ConsecutiveFailures(), 0);
+	EXPECT_EQ(State.NextRetry(), 0);
+	EXPECT_FALSE(State.LastRequestFailed());
+	EXPECT_TRUE(State.ShouldFetch(6100, 120));
+}
+
+TEST(QmDdnetPlayerStatsState, FailedParseAlsoBacksOff)
+{
+	// 解析失败与传输失败共用同一退避序列。
+	CQmDdnetPlayerStatsState State;
+	State.SetPlayer("DYL");
+	bool StartRefresh = false;
+
+	State.BeginHttp("DYL");
+	State.CompleteHttp(true, 1000, 0, 0);
+	EXPECT_TRUE(State.CompleteParse("DYL", false, 1100, 0, 10, 120, StartRefresh));
+	EXPECT_EQ(State.ConsecutiveFailures(), 1);
+	EXPECT_EQ(State.NextRetry(), 1100 + 10);
+
+	State.BeginHttp("DYL");
+	State.CompleteHttp(true, 2000, 0, 0);
+	EXPECT_TRUE(State.CompleteParse("DYL", false, 2100, 0, 10, 120, StartRefresh));
+	EXPECT_EQ(State.ConsecutiveFailures(), 2);
+	EXPECT_EQ(State.NextRetry(), 2100 + 20);
+}
+
+TEST(QmDdnetPlayerStatsState, PlayerSwitchClearsFailureBackoff)
+{
+	CQmDdnetPlayerStatsState State;
+	State.SetPlayer("DYL");
+	for(int Attempt = 0; Attempt < 4; ++Attempt)
+	{
+		State.BeginHttp("DYL");
+		State.CompleteHttp(false, 1000, 10, 120);
+	}
+	ASSERT_EQ(State.ConsecutiveFailures(), 4);
+
+	State.SetPlayer("other_player");
+	EXPECT_EQ(State.ConsecutiveFailures(), 0);
+	EXPECT_EQ(State.NextRetry(), 0);
+	EXPECT_TRUE(State.ShouldFetch(1000, 120));
+}
+
+TEST(QmDdnetPlayerStatsState, BackoffWithoutCapKeepsBaseDelay)
+{
+	// 上限传 0 表示不启用退避，保留旧的单次失败行为（测试与调用方可显式选择）。
+	CQmDdnetPlayerStatsState State;
+	State.SetPlayer("DYL");
+	for(int Attempt = 0; Attempt < 3; ++Attempt)
+	{
+		State.BeginHttp("DYL");
+		State.CompleteHttp(false, 1000, 10, 0);
+	}
+	EXPECT_EQ(State.NextRetry(), 1000 + 10);
+}
+
 TEST(QmDdnetPlayerStatsState, CompletesOldPlayerParseWithoutSelectingIt)
 {
 	CQmDdnetPlayerStatsState State;
@@ -614,7 +824,7 @@ TEST(QmDdnetPlayerStatsState, CompletesOldPlayerParseWithoutSelectingIt)
 	State.SetPlayer("new_player");
 
 	bool StartRefresh = true;
-	EXPECT_TRUE(State.CompleteParse("old_player", true, 200, 1700000000, 30, StartRefresh));
+	EXPECT_TRUE(State.CompleteParse("old_player", true, 200, 1700000000, 30, 0, StartRefresh));
 	EXPECT_FALSE(StartRefresh);
 	EXPECT_EQ(State.PlayerName(), "new_player");
 	EXPECT_EQ(State.Phase(), EQmDdnetPlayerStatsPhase::IDLE);

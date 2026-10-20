@@ -3,6 +3,7 @@
 
 #include <game/client/ui_scrollregion.h>
 
+#include <test/support/qm_anim_test_helpers.h>
 #include <test/support/qm_real_ui_fixture.h>
 #include <test/support/qm_ui_test_client.h>
 #include <test/support/qm_ui_test_input.h>
@@ -363,6 +364,9 @@ TEST_F(QmConsoleSettingsScrollIntegration, BackgroundValidOffsetPreservesPending
 
 TEST_F(QmConsoleSettingsScrollIntegration, BackgroundValidOffsetPreservesPausedScrollAnimation)
 {
+	// 本测试验证滚动机械的暂停/保速语义，与动效分级无关；滚动平滑时长现已
+	// 统一走 qm_ui_motion_level（0 档即时），故此处钉住完整动效等级。
+	CScopedQmFullMotion FullMotion;
 	const CUIRect View{40, 40, 240, 240};
 	DrawResizingRegion(900.0f, View);
 	m_ParentScroll.SetScrollOffsetY(-100.0f);

@@ -6,6 +6,8 @@
 
 #include <engine/shared/protocol.h>
 
+#include <game/client/QmUi/UiTokens.h>
+
 #include <cstdint>
 #include <string_view>
 #include <unordered_map>
@@ -26,11 +28,11 @@ class CWarType
 public:
 	// Intentionally named redundantly because it was confusing otherwise
 	char m_aWarName[MAX_WARLIST_TYPE_LENGTH] = "";
-	ColorRGBA m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+	ColorRGBA m_Color = ui_token::color::NEUTRAL_WHITE;
 	bool m_Removable = true;
 	bool m_Imported = false;
 	int m_Index = 0;
-	CWarType(const char *pName, ColorRGBA Color = ColorRGBA(1, 1, 1, 1), bool Removable = true, bool IsImport = false)
+	CWarType(const char *pName, ColorRGBA Color = ui_token::color::NEUTRAL_WHITE, bool Removable = true, bool IsImport = false)
 	{
 		str_copy(m_aWarName, pName);
 		m_Color = Color;
@@ -91,7 +93,7 @@ public:
 
 	// duplicate war types are NOT allowed
 	std::vector<CWarType *> m_WarTypes = {
-		new CWarType("none", ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false),
+		new CWarType("none", ui_token::color::NEUTRAL_WHITE, false),
 		new CWarType("enemy", ColorRGBA(1.0f, 0.2f, 0.2f, 1.0f), false),
 		new CWarType("team", ColorRGBA(0.0f, 0.9f, 0.2f, 1.0f), false),
 	};
@@ -102,9 +104,9 @@ public:
 	// Duplicate war entries ARE allowed
 	std::vector<CWarEntry> m_vWarEntries;
 	using TWarEntryLookup = std::unordered_map<std::string_view, std::vector<const CWarEntry *>>;
-	TWarEntryLookup m_WarEntriesByName;
-	TWarEntryLookup m_WarEntriesByClan;
-	bool m_WarEntryLookupDirty = true;
+	mutable TWarEntryLookup m_WarEntriesByName;
+	mutable TWarEntryLookup m_WarEntriesByClan;
+	mutable bool m_WarEntryLookupDirty = true;
 	bool m_WarTypeIndicesDirty = true;
 
 	uint64_t Revision() const { return m_Revision; }
@@ -121,7 +123,8 @@ public:
 	void MarkWarEntriesDirty();
 	void MarkWarTypesDirty();
 	void RefreshWarTypeIndices();
-	void RebuildWarEntryLookup();
+	void RebuildWarEntryLookup() const;
+	bool MatchesEnemy(const char *pName, const char *pClan) const;
 };
 
 #endif

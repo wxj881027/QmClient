@@ -30,7 +30,7 @@ class CCommunityIcons : public CComponentInterfaces
 {
 public:
 	const CCommunityIcon *Find(const char *pCommunityId);
-	void Render(const CCommunityIcon *pIcon, CUIRect Rect, bool Active);
+	void Render(const CCommunityIcon *pIcon, CUIRect Rect, bool Active, float AlphaMul = 1.0f);
 	void Load();
 	void Update();
 	void Shutdown();

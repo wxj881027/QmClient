@@ -64,8 +64,17 @@ TEST(QmTooltips, OversizedBubbleRemainsInsideSmallViewport)
 
 TEST(QmTooltips, BounceSettlesQuicklyAndDisabledMotionIsImmediate)
 {
-	EXPECT_LT(QmTooltipScale(0.0f, true), 1.0f);
-	EXPECT_GT(QmTooltipScale(0.12f, true), 1.0f);
+	// 入场缩放单调收口（0.88 → 1.0）：全程不得超过 1.0（无过冲回弹——
+	// 气泡锚在弹层边缘，回弹会被读作弹层本身在弹）。
+	EXPECT_FLOAT_EQ(QmTooltipScale(0.0f, true), 0.88f);
+	float Previous = 0.0f;
+	for(float Elapsed = 0.0f; Elapsed <= 0.18f; Elapsed += 0.01f)
+	{
+		const float Scale = QmTooltipScale(Elapsed, true);
+		EXPECT_GE(Scale, Previous - 0.0001f) << "scale regressed at " << Elapsed;
+		EXPECT_LE(Scale, 1.0f) << "overshoot at " << Elapsed;
+		Previous = Scale;
+	}
 	EXPECT_FLOAT_EQ(QmTooltipScale(0.18f, true), 1.0f);
 	EXPECT_FLOAT_EQ(QmTooltipScale(1.0f, true), 1.0f);
 	EXPECT_FLOAT_EQ(QmTooltipScale(0.0f, false), 1.0f);
@@ -184,6 +193,47 @@ TEST(QmConfigHintText, UsesCurrentCardOverviewUntilOptionDescriptionIsAvailable)
 	EXPECT_STREQ(Hint.Text(), "Automatically add a watermark\nqm_screenshot_watermark");
 }
 
+TEST(QmConfigHintText, HidingCommandsPreservesSpecificHelp)
+{
+	CUiConfigHintText Hint;
+	Hint.SetCommands("qm_show_tune_zone_colors");
+	Hint.SetFallbackDescription("Toolbox");
+	Hint.SetDescription("Color map tune zones by their tune zone number");
+	EXPECT_STREQ(Hint.Text(false), "Color map tune zones by their tune zone number");
+}
+
+TEST(QmConfigHintText, HidingCommandsPreservesCurrentFallbackHelp)
+{
+	CUiConfigHintText Hint;
+	Hint.SetCommands("qm_show_tune_zone_colors");
+	Hint.SetFallbackDescription("Toolbox");
+	EXPECT_STREQ(Hint.Text(false), "Toolbox");
+	Hint.SetFallbackDescription("百宝箱");
+	EXPECT_STREQ(Hint.Text(false), "百宝箱");
+}
+
+TEST(QmConfigHintText, CommandOnlyHintsAreEmptyWhenCommandsAreHidden)
+{
+	CUiConfigHintText Hint;
+	Hint.SetCommands("qm_show_tune_zone_colors");
+	EXPECT_STREQ(Hint.Text(false), "");
+	EXPECT_STREQ(Hint.Text(true), "qm_show_tune_zone_colors");
+	EXPECT_STREQ(Hint.Text(false), "");
+}
+
+TEST(QmConfigHintText, SwitchingCommandVisibilityKeepsBothBindingsAndCurrentHelp)
+{
+	CUiConfigHintText Hint;
+	Hint.SetCommands("qm_ui_color", "qm_ui_opacity");
+	Hint.SetDescription("Button background");
+	EXPECT_STREQ(Hint.Text(false), "Button background");
+	EXPECT_STREQ(Hint.Text(true), "Button background\nqm_ui_color\nqm_ui_opacity");
+	EXPECT_STREQ(Hint.Text(false), "Button background");
+	Hint.SetDescription("按钮背景");
+	EXPECT_STREQ(Hint.Text(true), "按钮背景\nqm_ui_color\nqm_ui_opacity");
+	EXPECT_STREQ(Hint.Text(false), "按钮背景");
+}
+
 TEST(QmTooltips, SettingsHintsHaveNoHoverDelayOrBounce)
 {
 	CTooltip Tooltip;
@@ -275,17 +325,19 @@ TEST(QmTooltips, TextPreparationIgnoresTransparentCallerColorAndIconFontThenRest
 	EXPECT_EQ(Render.GetRenderFlags(), Before.GetRenderFlags());
 }
 
-TEST(QmTooltips, PopupMotionKeepsTheSameCenterThroughOvershoot)
+TEST(QmTooltips, PopupMotionKeepsTheSameCenterThroughScaleIn)
 {
 	const CUIRect Screen{0, 0, 600, 400};
 	const CUIRect Fixed = QmTooltipRect({200, 180, 100, 20}, Screen, vec2(120, 40), 5);
 	const auto Entering = QmTooltipAnimatedRect(Fixed, Screen, QmTooltipScale(0.0f, true));
-	const auto Overshoot = QmTooltipAnimatedRect(Fixed, Screen, QmTooltipScale(0.12f, true));
+	const auto MidScale = QmTooltipAnimatedRect(Fixed, Screen, QmTooltipScale(0.12f, true));
 	EXPECT_FLOAT_EQ(Entering.Center().x, Fixed.Center().x);
 	EXPECT_FLOAT_EQ(Entering.Center().y, Fixed.Center().y);
-	EXPECT_FLOAT_EQ(Overshoot.Center().x, Fixed.Center().x);
-	EXPECT_FLOAT_EQ(Overshoot.Center().y, Fixed.Center().y);
-	EXPECT_GT(Overshoot.w, Fixed.w);
+	EXPECT_FLOAT_EQ(MidScale.Center().x, Fixed.Center().x);
+	EXPECT_FLOAT_EQ(MidScale.Center().y, Fixed.Center().y);
+	// 单调缩放入场：气泡全程不超过终态尺寸（无过冲回弹）。
+	EXPECT_LT(MidScale.w, Fixed.w);
+	EXPECT_LT(Entering.w, MidScale.w);
 }
 
 TEST(QmTooltips, OvershootAtViewportEdgeKeepsCenterAndFitsScreen)
@@ -568,6 +620,8 @@ TEST(QmTooltips, TargetChangeAfterLongFrameDoesNotReuseExpiredVisibility)
 
 TEST(QmTooltips, MotionStartsAtCurrentPositionAndSettlesOnTheNextTarget)
 {
+	// 位移轨道已迁引擎 tween：行为断言需在启用动效的等级下运行。
+	g_Config.m_QmUiMotionLevel = 2;
 	CQmTooltipMotionState Motion;
 	const CUIRect First{10, 20, 100, 30}, Next{110, 120, 200, 50};
 	EXPECT_FLOAT_EQ(Motion.Update(First, 0, true).x, First.x);
@@ -585,6 +639,7 @@ TEST(QmTooltips, MotionStartsAtCurrentPositionAndSettlesOnTheNextTarget)
 
 TEST(QmTooltips, RapidRetargetingContinuesFromTheVisibleRectangle)
 {
+	g_Config.m_QmUiMotionLevel = 2;
 	CQmTooltipMotionState Motion;
 	const CUIRect First{0, 0, 100, 30}, Second{100, 50, 100, 30}, Third{200, 150, 100, 30};
 	Motion.Update(First, 0, true);
@@ -593,11 +648,15 @@ TEST(QmTooltips, RapidRetargetingContinuesFromTheVisibleRectangle)
 	const auto After = Motion.Update(Third, 1.08, true);
 	EXPECT_FLOAT_EQ(After.x, Before.x);
 	EXPECT_FLOAT_EQ(After.y, Before.y);
-	EXPECT_FLOAT_EQ(Motion.Update(Third, 1.3, true).x, Third.x);
+	// 引擎打断语义为「转弹簧接管并继承速度」：收敛是渐近的，0.22s 时残差
+	// <0.1px（视觉到位）。旧手写实现按曲线精确重放才可能精确等于目标。
+	EXPECT_NEAR(Motion.Update(Third, 1.3, true).x, Third.x, 0.5f);
 }
 
 TEST(QmTooltips, DisabledMotionAndPageResetPlaceTheBubbleImmediately)
 {
+	// 禁用/重置的即时落点不依赖动效等级，等级归零保持断言语义不变。
+	g_Config.m_QmUiMotionLevel = 0;
 	CQmTooltipMotionState Motion;
 	Motion.Update({0, 0, 100, 30}, 0, true);
 	EXPECT_FLOAT_EQ(Motion.Update({100, 100, 100, 30}, 1, false).x, 100);
@@ -808,7 +867,12 @@ TEST(QmTooltips, MissingRegistrationKeepsOnlyBoundedGraceWithoutGuessingSourceLi
 	QmTooltipRecordSource(Tooltip, 41, {0, 0, 80, 0}, nullptr, vec2(10, 10));
 	// 旧帧无效证据不能推断本帧来源已卸载；仍保留远程跨间隙用途。
 	EXPECT_TRUE(Hover.Retain(11.05, &Tooltip, 42));
+	EXPECT_FLOAT_EQ(Hover.RetainAlpha(11.05, true), 1.0f);
 	EXPECT_TRUE(Hover.Retain(11.2, nullptr, 42));
+	EXPECT_LT(Hover.RetainAlpha(11.2, true), 1.0f);
+	EXPECT_GT(Hover.RetainAlpha(11.2, true), 0.0f);
+	EXPECT_FLOAT_EQ(Hover.RetainAlpha(11.2, false), 1.0f);
 	EXPECT_FALSE(Hover.Retain(11.3, &Tooltip, 42));
+	EXPECT_FLOAT_EQ(Hover.RetainAlpha(11.3, true), 0.0f);
 	EXPECT_LT(Hover.Update(Tooltip, 11.31), 0);
 }

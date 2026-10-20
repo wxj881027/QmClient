@@ -4,19 +4,28 @@
 
 #include <engine/client.h>
 
+#include <game/client/QmUi/QmAnimationBackend.h>
+
 #include <stdexcept>
 
 namespace qm_ui_test
 {
 	class CTestUiClient final : public IClient
 	{
+		// 可选挂载的 UI 动画运行时：生产环境由 CGameClient::OnRender 每帧驱动
+		// 轨道时钟，测试里随 AdvanceFrame 同步推进，保持双时钟一致。
+		CUiV2AnimationRuntime *m_pAnimRuntime = nullptr;
+
 	public:
+		void AttachAnimRuntime(CUiV2AnimationRuntime *pRuntime) { m_pAnimRuntime = pRuntime; }
 		void AdvanceFrame()
 		{
 			++m_PerfFrame;
 			m_RenderFrameTime = 1.0f / 60.0f;
 			m_LocalTime += m_RenderFrameTime;
 			m_GlobalTime += m_RenderFrameTime;
+			if(m_pAnimRuntime != nullptr)
+				m_pAnimRuntime->Advance(m_RenderFrameTime);
 		}
 
 		void Connect(const char *pAddress, const char *pPassword = nullptr) override { throw std::logic_error("unexpected UI client boundary call"); }

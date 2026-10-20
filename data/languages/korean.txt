@@ -464,6 +464,9 @@ Add current cut to the export list
 Add debug dummy to server (Debug build only)
 == 서버에 디버그 더미 추가 (디버그 빌드 전용)
 
+Add default presets
+== 기본 프리셋 추가
+
 Add demo timeline marker
 == 데모 타임라인 마커 추가
 
@@ -502,6 +505,9 @@ Add team name:
 
 Add to %s
 == %s 에 추가
+
+Add to bind wheel
+== 바인드 휠에 추가
 
 Add to blocked words
 == 차단 단어에 추가
@@ -749,6 +755,9 @@ Angle
 Angle:
 == 각도:
 
+Angry
+== 화남
+
 Angular gradient
 == 각도 그라데이션
 
@@ -875,6 +884,9 @@ Apply squishy Tee deformation to other players
 Apply this preset
 == 이 프리셋 적용
 
+Apply to
+== 적용 대상
+
 Apply to dummy
 == 더미에 적용
 
@@ -953,6 +965,9 @@ Are you sure you want to delete this asset?
 Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == 정말로 스킨을 저장하시겠습니까? 동일한 이름의 스킨이 이미 존재하면 덮어쓰여집니다.
 
+Arrow
+== 방향키 이미지
+
 Arrow assets
 == 화살표 에셋
 
@@ -964,6 +979,9 @@ Aspect ratio preset
 
 Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)
 == 화면 종횡비 프리셋 (0=끄기, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=사용자 정의)
+
+Asset preset
+== 리소스 프리셋
 
 Asset with this name already exists.
 == 같은 이름의 에셋이 이미 존재합니다.
@@ -1571,6 +1589,9 @@ Blend mode
 Blend strength
 == 혼합 강도
 
+Blink
+== 눈 깜빡임
+
 Blink the active local tee
 == 활성 로컬 캐릭터를 깜박이게 합니다
 
@@ -1660,9 +1681,6 @@ Browse and activate custom audio packs
 
 Browse font store…
 == 글꼴 상점 둘러보기…
-
-Browse profiles saved on this device
-== Browse profiles saved on this device
 
 Browser
 == 찾아보기
@@ -1958,6 +1976,9 @@ Chat message style
 Chat messages to send when entering freeze, comma-separated (empty=none)
 == 프리즈 진입 시 전송할 채팅 메시지, 쉼표로 구분 (비우기=없음)
 
+Chat phrase
+== 채팅 문구
+
 Chat score increases per message and decreases by 1 per tick
 == 채팅 점수는 메시지당 증가하고 틱당 1씩 감소
 
@@ -1999,6 +2020,9 @@ Check input device, system default mic, and mic permission first
 
 Check output device, confirm headphones/speakers are still online
 == 먼저 출력 장치를 확인하고 헤드폰/스피커가 여전히 온라인 상태인지 확인
+
+Check the preset fields, label, and wheel capacity (64 entries).
+== 프리셋 내용, 표시 이름, 휠 용량(최대 64개)을 확인하세요.
 
 Checking for existing player with your name
 == 사용자 이름과 일치하는 기존 플레이어 확인 중
@@ -2612,6 +2636,12 @@ Connection disconnected
 Connection elevated
 == 연결 약간 비정상
 
+Connection icon color
+== 연결 아이콘 색상
+
+Connection icon custom color
+== 연결 아이콘 사용자 지정 색상
+
 Connection normal
 == 연결 정상
 
@@ -2864,6 +2894,9 @@ Count players only
 Countries
 == 국가
 
+Country code
+== 국가/지역 코드
+
 Country flag for grouping this community (ISO 3166-1 numeric)
 == 이 커뮤니티를 그룹화하기 위한 국가 플래그 (ISO 3166-1 숫자)
 
@@ -2881,6 +2914,9 @@ Create a random skin
 
 Create category
 == 카테고리 생성
+
+Create wheel presets here. Existing wheel entries are kept.
+== 여기서 휠 프리셋을 편집하세요. 기존 항목은 유지됩니다.
 
 Created
 == 생성됨
@@ -3028,6 +3064,9 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == Customize the position jump hint
+
+Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
+== 휠 한 눈금당 이동 거리를 설정합니다. Alt를 누르고 스크롤하면 간격이 3배가 됩니다
 
 Customize translate button and menu colors
 == 번역 버튼 및 메뉴 색상 사용자 정의
@@ -3695,6 +3734,9 @@ Drag HUD modules with the left mouse button
 Drag to another category to move this friend.
 == 이 친구를 다른 카테고리로 드래그하여 이동합니다.
 
+Drag to pan, scroll to zoom
+== 드래그하여 이동, 휠로 확대/축소
+
 Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
 == 드래그하여 순서를 바꾸고 클릭하여 펼치거나 접습니다. 마우스 오른쪽 버튼을 클릭하거나 톱니바퀴를 사용하여 카테고리를 관리합니다
 
@@ -3935,6 +3977,12 @@ Dynamic Island background alpha
 Dynamic Island background color
 == 다이나믹 아일랜드 배경 색상
 
+Dynamic island connection icon color: 1=Quality tier, 2=Follow global icon color, 3=Custom
+== 다이내믹 아일랜드 연결 아이콘 색상: 1=품질 단계, 2=UI 아이콘 색상 따르기, 3=사용자 지정
+
+Dynamic island connection icon custom color
+== 다이내믹 아일랜드 연결 아이콘 사용자 지정 색상
+
 Ease in out quad
 == 이즈 인 아웃 쿼드
 
@@ -3985,6 +4033,9 @@ Edit player and dummy identity information
 
 Edit skin texture
 == 스킨 텍스처 편집
+
+Edit this custom command on the Bind Wheel page.
+== 이 사용자 지정 명령은 바인드 휠 페이지에서 편집하세요.
 
 Edit touch controls
 == 터치 컨트롤 편집
@@ -4967,6 +5018,9 @@ Follow server
 Follow Tee
 == Tee 따라가기
 
+Follow UI icon color
+== UI 아이콘 색상 따르기
+
 Following
 == 현재
 
@@ -5200,6 +5254,9 @@ Full: each enabled animation category uses its complete transition
 
 Fullscreen
 == 전체 화면
+
+Fully block enemy players
+== 적대 플레이어 완전히 차단
 
 Fun
 == 재미
@@ -5528,6 +5585,9 @@ Ground jump
 Group name
 == 그룹 이름
 
+GUI cursor
+== UI 커서
+
 GUI cursor assets
 == GUI 커서 에셋
 
@@ -5560,6 +5620,9 @@ Hammer: %s
 
 Handwriting
 == 손글씨
+
+Happy
+== 행복
 
 Has people playing
 == 플레이 중인 사람 있음
@@ -5614,6 +5677,9 @@ Hide Echo messages
 
 Hide Echo messages in Zen mode
 == 선 모드에서 Echo 메시지 숨기기
+
+Hide enemy chat, replace enemy names with client IDs and use default skins; keep local players visible
+== 적대 플레이어의 채팅을 숨기고 이름을 클라이언트 ID로 바꾸며 기본 스킨을 사용합니다. 내 캐릭터와 더미는 정상 표시합니다
 
 Hide explosion effects
 == 폭발 효과 숨기기
@@ -5975,6 +6041,9 @@ Icon symbols:
 Icons
 == 아이콘
 
+Identity preset
+== 프로필 프리셋
+
 If 1, auto record only once on connect; if 0, auto record restarts after game end
 == 1이면 연결 시 한 번만 자동 녹화하고, 0이면 게임 종료 후 자동 녹화가 다시 시작됩니다.
 
@@ -6175,6 +6244,9 @@ Initializing components
 
 Initializing layers
 == 레이어 초기화 중
+
+Initializing map layers
+== 맵 레이어 초기화 중
 
 Initializing map logic
 == 맵 로직 초기화 중
@@ -6896,9 +6968,6 @@ Load the official rank replay of a map as a ghost (default: current map, rank 1)
 Load with code r. /load to check your existing saves
 == 코드 r로 불러오기; /load를 사용하여 기존 저장 데이터를 확인할 수 있습니다
 
-Load, save, overwrite, or delete profiles
-== Load, save, overwrite, or delete profiles
-
 Loaded %d items
 == %d개 항목 불러옴
 
@@ -7064,6 +7133,12 @@ Main Asset
 Main menu
 == 메인 메뉴
 
+Main Tee
+== 본체
+
+Main Tee and dummy
+== 본체와 더미
+
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
 == 얼은 플레이어를 배구공처럼 보이게 만들기 (0=비활성화, 1=배구 맵만, 2=항상)
 
@@ -7111,6 +7186,9 @@ Manage hostile-list chat shortcuts
 
 Manage kaomoji chat shortcuts
 == Manage kaomoji chat shortcuts
+
+Manage profiles and bind wheel presets
+== 프로필과 바인드 휠 프리셋 관리
 
 Manage the skin rotation queue
 == 스킨 순환 큐 관리
@@ -7166,8 +7244,14 @@ Map folders
 Map name
 == 맵 이름
 
+Map not downloaded yet — join the server to preview it
+== 아직 다운로드하지 않은 맵입니다. 서버에 접속하면 미리 볼 수 있습니다
+
 Map play history
 == 맵 플레이 기록
+
+Map preview rendering unavailable
+== 맵 미리보기를 렌더링할 수 없습니다
 
 Map Preview TODO
 == 맵 미리보기 할 일
@@ -7970,6 +8054,9 @@ New name
 New name:
 == 새 이름:
 
+New preset
+== 새 프리셋
+
 New preset name
 == 새 프리셋 이름
 
@@ -8423,6 +8510,12 @@ Only save improvements
 Only show after joining a team
 == 팀에 가입한 후에만 표시
 
+Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players
+== 친구 및 팀 필터와 관계없이 나를 언급한 메시지, 귓속말, 내가 보낸 메시지만 표시하며 시스템 메시지와 차단 설정은 유지
+
+Only show messages related to me
+== 나와 관련된 메시지만 표시
+
 Only show outlines in the entities layer
 == 엔티티 레이어에서만 외곽선 표시
 
@@ -8567,6 +8660,9 @@ Original message language
 Original options
 == 원본 투표 항목
 
+Original scroll feel
+== 기존 스크롤 감각
+
 Other
 == 기타
 
@@ -8671,6 +8767,9 @@ p = Ping latency
 
 Pack name
 == 팩 이름
+
+Pain
+== 아픔
 
 Panel opacity
 == 패널 불투명도
@@ -9335,6 +9434,9 @@ Preset %d
 Preset bar
 == 프리셋 바
 
+Preset type
+== 프리셋 유형
+
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == libx264로 비디오 인코딩 시 사전 설정, 기본값 5 (medium), 0은 ultrafast, 9는 placebo (가장 느림, 권장하지 않음)
 
@@ -9460,9 +9562,6 @@ Process UDP RX (est.)
 
 Process UDP TX (est.)
 == 프로세스 UDP 전송(추정)
-
-Profile Options
-== 프로필 옵션
 
 Profiles
 == 프로필
@@ -9622,6 +9721,9 @@ QQ Music hook helper path (empty=beside QmClient)
 
 Quads are used for background decoration
 == 배경 장식에 사용되는 쿼드 표시
+
+Quality tier
+== 네트워크 품질 따르기
 
 Query current map info
 == 현재 맵 정보 조회
@@ -10517,6 +10619,12 @@ Restore Kugou files
 Restore old single-segment hook collision line behavior
 == 이전 단일 세그먼트 갈고리 충돌선 동작 복원
 
+Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
+== 기존 휠 스크롤 복원: 매 눈금마다 속도를 이어받지 않고 부드러운 스크롤을 다시 시작
+
+Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
+== 기존 휠 스크롤 복원: 매 눈금마다 속도를 이어받지 않고 부드러운 스크롤을 다시 시작
+
 Restoring save %d: main '%s', dummy '%s'.
 == 저장 데이터 %d 복원 중: 본체 '%s', 더미 '%s'.
 
@@ -10793,8 +10901,8 @@ Save/Load Name
 Save/Load Skin
 == 스킨 저장/불러오기
 
-Saved Profiles
-== 저장된 프로필
+Saved to the bind wheel.
+== 바인드 휠에 저장했습니다.
 
 Saved with your title and shared with other QmClient players.
 == 칭호와 함께 저장되며 다른 QmClient 플레이어에게 공유됩니다.
@@ -10931,6 +11039,9 @@ Scroll mode: Off
 Scroll mode: On
 == 스크롤 모드: 켜기
 
+Scroll step
+== 스크롤 간격
+
 Search
 == 검색
 
@@ -11032,9 +11143,6 @@ Select map
 
 Select the country flag for each player
 == Select the country flag for each player
-
-Select which player fields a profile stores
-== Select which player fields a profile stores
 
 Selected %d
 == %d개 선택됨
@@ -11146,6 +11254,9 @@ Server alert
 
 Server best:
 == 서버 최고 기록:
+
+Server browser content column order (comma separated ids: community,name,map,difficulty,gametype,friends,players,qm,ping; empty = default)
+== 서버 브라우저 열 순서 (쉼표로 구분한 ID: community,name,map,difficulty,gametype,friends,players,qm,ping; 비우면 기본값)
 
 Server browser exclude string
 == 서버 브라우저 제외 문자열
@@ -11614,6 +11725,9 @@ Show enemy reason
 
 Show entities
 == 엔티티 표시
+
+Show entities only (hide textures)
+== 엔티티만 표시 (텍스처 숨김)
 
 Show existing saves
 == 저장된 팀 목록 보기
@@ -12128,8 +12242,8 @@ Show server settings
 Show settings card borders
 == 설정 카드 테두리 표시
 
-Show short server names in browser
-== 서버 브라우저에 짧은 서버 이름 표시
+Show short server names in browser (applies to China community servers)
+== 서버 브라우저에 짧은 서버 이름 표시 (중국 커뮤니티 서버에 적용)
 
 Show skin date and author
 == 스킨 날짜와 제작자 표시
@@ -13037,6 +13151,9 @@ Stroke fade time
 Stroke retention time (0=Never disappear)
 == 선 유지 시간 (0=절대 사라지지 않음)
 
+Strong / Weak
+== 강약 표시 이미지
+
 Strong hook
 == 강력 갈고리
 
@@ -13075,6 +13192,9 @@ Super
 
 Support ♥
 == 후원 ♥
+
+Surprise
+== 놀람
 
 Swap
 == 교체
@@ -13562,6 +13682,9 @@ Thank you for your company and trust. This is what gives me the courage to keep 
 Thanks for supporting QmClient
 == QmClient를 지원해 주셔서 감사합니다
 
+Thanks!
+== 고마워요!
+
 The audio device couldn't be initialised.
 == 오디오 장치를 초기화할 수 없습니다.
 
@@ -13618,6 +13741,9 @@ The server rejected the map upload.
 
 The watermarked screenshot was saved next to the original
 == 워터마크가 적용된 스크린샷을 원본 옆에 저장했습니다
+
+The wheel changed. Your draft can be added as a new preset.
+== 휠 항목이 변경되었습니다. 초안을 새 프리셋으로 추가할 수 있습니다.
 
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == 텍스처 %s의 너비가 %d로 나누어 떨어지지 않거나 높이가 %d로 나누어 떨어지지 않아 시각적 버그가 발생할 수 있습니다.
@@ -13942,6 +14068,9 @@ Toggle keyboard shortcuts
 
 Toggle local console
 == 로컬 콘솔 전환
+
+Toggle map preview
+== 맵 미리보기
 
 Toggle microphone mute
 == 마이크 음소거 전환
@@ -14609,6 +14738,9 @@ Use current map as background
 Use current name
 == 현재 이름 사용
 
+Use current settings
+== 현재 설정 가져오기
+
 Use custom skins instead of the ninja tee
 == 닌자 티 대신 사용자 정의 스킨 사용
 
@@ -14644,6 +14776,9 @@ Use enemy list to drive player indicators
 
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 == 높은 대역폭 모드 사용 (서버 대역폭 두 배, LAN 전용)
+
+Use installed asset names. Empty fields keep the current asset.
+== 설치된 리소스 이름을 입력하세요. 빈 항목은 현재 리소스를 유지합니다.
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == K 키를 사용하여 죽기(재시작), Q 키를 사용하여 일시 중지 및 다른 플레이어 관전. 다른 키 바인딩은 설정에서 확인하세요.
@@ -15161,6 +15296,12 @@ Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 == DDRace 바인딩이 설정된 레벨 (자동이며 사용할 필요 없음)
 
+Wheel label
+== 휠 표시 이름
+
+Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
+== 휠 한 눈금당 UI 픽셀 이동량. 설정 카드 페이지는 매 눈금마다 이 값의 12배만큼 이동
+
 When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient 무지개 Tee가 켜져 있으면 이 기능은 적용되지 않습니다.
 
@@ -15268,6 +15409,9 @@ Width
 
 Width and height are required to be within the range from %d to %d.
 == 너비와 높이는 %d에서 %d 사이여야 합니다.
+
+Width of difficulty column in server browser
+== 서버 브라우저의 난이도 열 너비
 
 Width of friends column in server browser
 == 서버 브라우저에서 친구 열 너비

@@ -1698,3 +1698,20 @@ bool CBackground::RenderCustom(const vec2 &Center, float Zoom)
 	CMapLayers::RenderCustom(Center, Zoom);
 	return true;
 }
+
+void CBackground::RenderPreview(const vec2 &Center, float Zoom, CMapLayers &PreviewLayers)
+{
+	RenderBackgroundColor();
+	if(IsCurrentMapBackgroundEntitiesValue(g_Config.m_ClBackgroundEntities))
+	{
+		// “当前地图”在此指被预览的地图，不能误用玩家当前连接的地图。
+		PreviewLayers.RenderCustomWithCamera(Center, Zoom, ERenderType::RENDERTYPE_BACKGROUND_FORCE);
+		return;
+	}
+	if(!m_Loaded || IsDefaultBackgroundEntitiesValue(g_Config.m_ClBackgroundEntities))
+		return;
+	if(RenderBackgroundTexture())
+		return;
+	if(AdvanceMapLoad())
+		RenderWithCamera(Center, Zoom);
+}

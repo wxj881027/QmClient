@@ -12,11 +12,13 @@
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/QmAnimationBackend.h>
 #include <game/client/lineinput.h>
 #include <game/client/ui.h>
 
 #include <gtest/gtest.h>
 #include <test/support/icon_benchmark_graphics.h>
+#include <test/support/qm_ui_test_client.h>
 #include <test/test.h>
 
 #include <memory>
@@ -55,6 +57,12 @@ namespace qm_ui_test
 		}
 		// 普通分隔线也属于 GPU 提交边界，不替换控件布局或输入。
 		void DrawRect(float X, float Y, float W, float H, ColorRGBA, int, float) override
+		{
+			++m_Draws;
+			m_vRectSubmissions.push_back({X, Y, W, H});
+		}
+		// 取色器渐变只记录 GPU 提交，颜色解析与输入回写仍执行生产实现。
+		void DrawRect4(float X, float Y, float W, float H, ColorRGBA, ColorRGBA, ColorRGBA, ColorRGBA, int, float) override
 		{
 			++m_Draws;
 			m_vRectSubmissions.push_back({X, Y, W, H});
@@ -175,6 +183,11 @@ namespace qm_ui_test
 
 	protected:
 		CUi m_Ui;
+		// 真实 UI 环境默认挂动画运行时（生产 gameclient 恒挂）；动效等级
+		// 默认 0 时资格门仍禁动画，需要动画的测试显式开 FullMotion 并用
+		// AdvanceAnimFrame 同步驱动轨道时钟。
+		CUiV2AnimationRuntime m_AnimRuntime;
+		void AdvanceAnimFrame(float Dt = 1.0f / 60.0f) { m_AnimRuntime.Advance(Dt); }
 		virtual IInput *UiInput() { return nullptr; }
 		virtual IClient *UiClient() { return nullptr; }
 
@@ -202,6 +215,9 @@ namespace qm_ui_test
 			ASSERT_TRUE(m_pText->LoadFonts());
 			m_pUiKernel = std::make_unique<CRealUiTestKernel>(&m_Graphics, m_pText.get(), UiInput(), UiClient());
 			m_Ui.Init(m_pUiKernel.get());
+			m_Ui.SetQmAnimationRuntime(&m_AnimRuntime);
+			if(auto *pTestClient = dynamic_cast<qm_ui_test::CTestUiClient *>(UiClient()))
+				pTestClient->AttachAnimRuntime(&m_AnimRuntime);
 			m_UiInitialized = true;
 		}
 
@@ -212,6 +228,7 @@ namespace qm_ui_test
 				if(CLineInput::GetActiveInput() != nullptr)
 					m_Ui.ReleaseActiveTextInput(CLineInput::GetActiveInput());
 				m_Ui.ClosePopupMenus();
+				m_Ui.SetQmAnimationRuntime(nullptr);
 				m_Ui.OnShutdown();
 				// 独立 UI 测试进程没有外部 owner，每个 fixture 恢复到未绑定设备状态。
 				CUIRect::Init(nullptr, nullptr);

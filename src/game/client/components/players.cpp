@@ -1909,7 +1909,7 @@ void CPlayers::RenderPlayerGhost(
 		return;
 }
 
-inline bool CPlayers::IsPlayerInfoAvailable(int ClientId) const
+bool CPlayers::IsPlayerInfoAvailable(int ClientId) const
 {
 	return GameClient()->m_Snap.m_aCharacters[ClientId].m_Active &&
 	       GameClient()->m_Snap.m_apPrevPlayerInfos[ClientId] != nullptr &&

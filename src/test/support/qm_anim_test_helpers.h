@@ -7,6 +7,24 @@
 
 #include <game/client/QmUi/QmAnim.h>
 
+// 临时把动效等级提到 Full，作用域结束恢复基座值（CRealUiFixture 默认为 0）。
+// 用于显式测动画语义的用例：真实客户端由 qm_ui_motion_level 全局裁决，
+// 测试想观察动画就必须显式提升，与生产门控语义一致。
+class CScopedQmFullMotion
+{
+	int m_Saved;
+
+public:
+	CScopedQmFullMotion() :
+		m_Saved(g_Config.m_QmUiMotionLevel)
+	{
+		g_Config.m_QmUiMotionLevel = 2;
+	}
+	~CScopedQmFullMotion() { g_Config.m_QmUiMotionLevel = m_Saved; }
+	CScopedQmFullMotion(const CScopedQmFullMotion &) = delete;
+	CScopedQmFullMotion &operator=(const CScopedQmFullMotion &) = delete;
+};
+
 inline void AdvanceQmAnimFor(CUiV2AnimationRuntime &Runtime, float Seconds)
 {
 	g_Config.m_QmUiMotionLevel = 2;

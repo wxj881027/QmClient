@@ -373,6 +373,8 @@ class CNamePlateData
 public:
 	bool m_Local; // TClient
 	bool m_InGame;
+	bool m_HideIdentity = false;
+	bool m_HideSkin = false;
 	float m_BakeDensity = 0.0f;
 	uint64_t m_DensityRevision = 0;
 	ColorRGBA m_Color;
@@ -416,10 +418,11 @@ public:
 
 static void SetNameplateTitle(CGameClient &This, CNamePlateData &Data, int ClientId)
 {
-	str_copy(Data.m_aQmTitle, Data.m_ShowName && This.m_QmClient.ShouldShowPlayerTitle(ClientId) ? This.m_QmClient.PlayerTitle(ClientId) : "");
-	str_copy(Data.m_aQmTitleStyle, Data.m_aQmTitle[0] != '\0' ? This.m_QmClient.PlayerTitleStyle(ClientId) : "");
+	// 先测量完整头衔，绘制时再按隐私状态隐藏并保留占位。
+	str_copy(Data.m_aQmTitle, Data.m_ShowName && This.m_QmClient.ShouldShowPlayerTitle(ClientId) ? This.m_QmClient.PlayerTitle(ClientId, true) : "");
+	str_copy(Data.m_aQmTitleStyle, Data.m_aQmTitle[0] != '\0' ? This.m_QmClient.PlayerTitleStyle(ClientId, true) : "");
 	Data.m_DeveloperRainbow = Data.m_aQmTitle[0] != '\0' && This.IsQmDeveloperRainbow(ClientId);
-	Data.m_DeveloperBadge = Data.m_aQmTitle[0] != '\0' && This.m_QmClient.PlayerHasDeveloperBadge(ClientId) && This.m_QmClient.DeveloperBadge().Available();
+	Data.m_DeveloperBadge = Data.m_aQmTitle[0] != '\0' && This.m_QmClient.PlayerHasDeveloperBadge(ClientId, true) && This.m_QmClient.DeveloperBadge().Available();
 }
 
 static ColorRGBA NameplateTextColor(const CGameClient &This, int ClientId)
@@ -453,28 +456,19 @@ static int s_NameplateTextRebuildBudget = NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAM
 // 一个相机档位的有限采样余量，实际停点作为密度锚点，支持中途反向缩放。
 static const float QM_NAMEPLATE_BAKE_DENSITY_LOG_GRID = std::log(1.0f / CCamera::ZOOM_STEP);
 
-class CNamePlatePart
+class CNamePlatePart : public CQmNameplatePartLayout
 {
 protected:
-	vec2 m_Size = vec2(0.0f, 0.0f);
-	vec2 m_Padding = vec2(DEFAULT_PADDING, DEFAULT_PADDING);
 	bool m_NewLine = false; // Whether this part is a new line (doesn't do anything else)
-	bool m_Visible = true; // Whether this part is visible
-	bool m_ShiftOnInvis = false; // Whether when not visible will still take up space
-	bool m_ReserveLineHeight = false; // Whether an invisible part keeps only vertical row space
-	CNamePlatePart(CGameClient &This) {}
+	CNamePlatePart(CGameClient &This) :
+		CQmNameplatePartLayout(vec2(DEFAULT_PADDING, DEFAULT_PADDING)) {}
 
 public:
 	virtual void Update(CGameClient &This, const CNamePlateData &Data) {}
 	virtual void Reset(CGameClient &This) {}
 	virtual int TextRebuildCost() const { return 0; }
 	virtual void Render(CGameClient &This, vec2 Pos) const {}
-	vec2 Size() const { return m_Size; }
-	vec2 Padding() const { return m_Padding; }
 	bool NewLine() const { return m_NewLine; }
-	bool Visible() const { return m_Visible; }
-	bool ShiftOnInvis() const { return m_ShiftOnInvis; }
-	bool ReserveLineHeight() const { return m_ReserveLineHeight; }
 	CNamePlatePart() = delete;
 	virtual ~CNamePlatePart() = default;
 };
@@ -751,6 +745,7 @@ protected:
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
 	{
 		m_Visible = Data.m_ShowClientId && (Data.m_ClientIdSeparateLine == m_ClientIdSeparateLine);
+		m_HiddenForPrivacy = Data.m_HideIdentity;
 		if(!m_Visible)
 			return false;
 		m_Color = Data.m_Color;
@@ -824,6 +819,7 @@ public:
 	{
 		m_Visible = Data.m_DeveloperBadge && g_Config.m_QmShowNameplateTitle != 0 &&
 			    m_AboveName == (g_Config.m_QmNameplateTitleAboveName != 0);
+		m_HiddenForPrivacy = Data.m_HideIdentity;
 		m_Size = QmDeveloperBadgeSize(Data.m_FontSize * 0.8f);
 		m_Alpha = Data.m_Color.a;
 	}
@@ -861,6 +857,7 @@ protected:
 		m_Visible = !Data.m_DeveloperBadge && g_Config.m_QmShowNameplateTitle != 0 &&
 			    Data.m_aQmTitle[0] != '\0' &&
 			    (m_AboveName == AboveMode);
+		m_HiddenForPrivacy = Data.m_HideIdentity;
 		m_Alpha = Data.m_Color.a;
 		if(!m_Visible)
 		{
@@ -881,7 +878,7 @@ protected:
 				     m_TitleRenderStyle.m_PhasePerPxOverride != RenderStyle.m_PhasePerPxOverride ||
 				     m_ShimmerSpeed != g_Config.m_QmTitleShimmerSpeed;
 		m_ReuseTextContainer = m_TextContainerIndex.Valid() && m_TitleAnimated && !Changed;
-		return Changed || m_TitleAnimated;
+		return Changed || (m_TitleAnimated && !m_HiddenForPrivacy);
 	}
 
 	float ExtraVerticalPadding() const override
@@ -1117,6 +1114,7 @@ protected:
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
 	{
 		m_Visible = Data.m_ShowClan;
+		m_HiddenForPrivacy = Data.m_HideIdentity;
 		if(!m_Visible)
 			return false;
 		m_Color = Data.m_Color;
@@ -1349,8 +1347,7 @@ protected:
 	{
 		const CNetObj_PlayerInfo *pInfo = Data.m_InGame ? This.m_Snap.m_apPlayerInfos[Data.m_ClientId] : nullptr;
 		m_Visible = Data.m_InGame ? (pInfo && g_Config.m_QmNameplateSkins > (pInfo->m_Local ? 1 : 0)) : g_Config.m_QmNameplateSkins > 0;
-		if(Data.m_InGame && This.ShouldHideStreamerSkin(Data.m_ClientId))
-			m_Visible = false;
+		m_HiddenForPrivacy = Data.m_HideSkin;
 		if(!m_Visible)
 			return false;
 		m_Color = Data.m_Color;
@@ -1547,16 +1544,12 @@ private:
 				}
 				LineSize = vec2(0.0f, 0.0f);
 			}
-			else if(Part.Visible() || Part.ShiftOnInvis())
+			else if(Part.HasLayout())
 			{
 				Empty = false;
-				LineSize.x += Part.Size().x + Part.Padding().x;
-				LineSize.y = std::max(LineSize.y, Part.Size().y + Part.Padding().y);
-			}
-			else if(Part.ReserveLineHeight())
-			{
-				Empty = false;
-				LineSize.y = std::max(LineSize.y, Part.Size().y + Part.Padding().y);
+				const vec2 PartSize = Part.LayoutSize();
+				LineSize.x += PartSize.x;
+				LineSize.y = std::max(LineSize.y, PartSize.y);
 			}
 		}
 		WidthMax = std::max(WidthMax, LineSize.x);
@@ -1603,16 +1596,12 @@ private:
 				}
 				LineSize = vec2(0.0f, 0.0f);
 			}
-			else if(Part.Visible() || Part.ShiftOnInvis())
+			else if(Part.HasLayout())
 			{
 				Empty = false;
-				LineSize.x += Part.Size().x + Part.Padding().x;
-				LineSize.y = std::max(LineSize.y, Part.Size().y + Part.Padding().y);
-			}
-			else if(Part.ReserveLineHeight())
-			{
-				Empty = false;
-				LineSize.y = std::max(LineSize.y, Part.Size().y + Part.Padding().y);
+				const vec2 PartSize = Part.LayoutSize();
+				LineSize.x += PartSize.x;
+				LineSize.y = std::max(LineSize.y, PartSize.y);
 			}
 		}
 		return std::min(Top, Position.y - LineSize.y / 2.0f);
@@ -1636,16 +1625,12 @@ private:
 				Start = std::next(PartIt);
 				LineSize = vec2(0.0f, 0.0f);
 			}
-			else if(Part.Visible() || Part.ShiftOnInvis())
+			else if(Part.HasLayout())
 			{
 				Empty = false;
-				LineSize.x += Part.Size().x + Part.Padding().x;
-				LineSize.y = std::max(LineSize.y, Part.Size().y + Part.Padding().y);
-			}
-			else if(Part.ReserveLineHeight())
-			{
-				Empty = false;
-				LineSize.y = std::max(LineSize.y, Part.Size().y + Part.Padding().y);
+				const vec2 PartSize = Part.LayoutSize();
+				LineSize.x += PartSize.x;
+				LineSize.y = std::max(LineSize.y, PartSize.y);
 			}
 		}
 		RenderLine(This, Position, LineSize, Start, m_vpParts.begin() + EndIndex);
@@ -2120,6 +2105,8 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	Data.m_InGame = true;
 
 	const bool HideIdentity = GameClient()->ShouldHideStreamerIdentity(ClientId);
+	Data.m_HideIdentity = HideIdentity;
+	Data.m_HideSkin = GameClient()->ShouldHideStreamerSkin(ClientId);
 
 	// 昵称显示范围取代旧的 cl_nameplates / cl_nameplates_own 两开关：六档互斥，
 	// 按「当前操控角色 / 本机分身 / 其他玩家」三类玩家决定。仍走 NameplateRenderValue，
@@ -2143,15 +2130,18 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 		SpectateTarget,
 		ClientId);
 	Data.m_ShowFriendMark = Data.m_ShowName && g_Config.m_ClNamePlatesFriendMark && GameClient()->m_aClients[ClientId].m_Friend;
-	Data.m_ShowClientId = Data.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds) && !HideIdentity;
+	Data.m_ShowClientId = Data.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds);
 	Data.m_FontSize = 18.0f + 20.0f * g_Config.m_ClNamePlatesSize / 100.0f;
 
 	Data.m_ClientId = ClientId;
 	Data.m_ClientIdSeparateLine = g_Config.m_ClNamePlatesIdsSeparateLine;
 	Data.m_FontSizeClientId = Data.m_ClientIdSeparateLine ? (18.0f + 20.0f * g_Config.m_ClNamePlatesIdsSize / 100.0f) : Data.m_FontSize;
 
-	Data.m_ShowClan = Data.m_ShowName && g_Config.m_ClNamePlatesClan && !HideIdentity;
-	GameClient()->FormatStreamerClan(ClientId, Data.m_aClan, sizeof(Data.m_aClan));
+	Data.m_ShowClan = Data.m_ShowName && g_Config.m_ClNamePlatesClan;
+	if(HideIdentity)
+		str_copy(Data.m_aClan, GameClient()->m_aClients[ClientId].m_aClan);
+	else
+		GameClient()->FormatStreamerClan(ClientId, Data.m_aClan, sizeof(Data.m_aClan));
 	Data.m_FontSizeClan = 18.0f + 20.0f * g_Config.m_ClNamePlatesClanSize / 100.0f;
 
 	Data.m_CoordXAlignHint = g_Config.m_QmNameplateCoordXAlignHint != 0;
@@ -2289,7 +2279,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	}
 
 	// TClient
-	if(Data.m_ShowName && !HideIdentity && g_Config.m_QmWarList && g_Config.m_QmWarListShowClan && GameClient()->m_WarList.GetWarData(ClientId).m_WarClan)
+	if(Data.m_ShowName && g_Config.m_QmWarList && g_Config.m_QmWarListShowClan && GameClient()->m_WarList.GetWarData(ClientId).m_WarClan)
 		Data.m_ShowClan = true;
 	Data.m_Local = pPlayerInfo->m_Local;
 
@@ -2302,13 +2292,13 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 		FrameData.m_ShowName = true;
 		FrameData.m_ShowFriendMark = FrameData.m_ShowName && g_Config.m_ClNamePlatesFriendMark && GameClient()->m_aClients[ClientId].m_Friend;
 		SetNameplateTitle(*GameClient(), FrameData, ClientId);
-		FrameData.m_ShowClientId = FrameData.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds) && !HideIdentity;
-		FrameData.m_ShowClan = FrameData.m_ShowName && g_Config.m_ClNamePlatesClan && !HideIdentity;
+		FrameData.m_ShowClientId = FrameData.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds);
+		FrameData.m_ShowClan = FrameData.m_ShowName && g_Config.m_ClNamePlatesClan;
 		const bool FrameShowLocalAlignedCoordX = CoordModuleAllowsCoords && CoordXAlignHintEnabled && LocalCoordXAligned;
 		FrameData.m_ShowCoordX = (CoordModuleAllowsCoords && g_Config.m_QmNameplateCoordX != 0) || FrameShowLocalAlignedCoordX;
 		FrameData.m_ShowCoordY = CoordModuleAllowsCoords && g_Config.m_QmNameplateCoordY != 0;
 		FrameData.m_ShowCoords = CoordModuleAllowsCoords || FrameShowLocalAlignedCoordX;
-		if(FrameData.m_ShowName && !HideIdentity && g_Config.m_QmWarList && g_Config.m_QmWarListShowClan && GameClient()->m_WarList.GetWarData(ClientId).m_WarClan)
+		if(FrameData.m_ShowName && g_Config.m_QmWarList && g_Config.m_QmWarListShowClan && GameClient()->m_WarList.GetWarData(ClientId).m_WarClan)
 			FrameData.m_ShowClan = true;
 
 		CNamePlate &FrameNamePlate = m_pData->m_aNamePlateFrameReferences[ClientId];

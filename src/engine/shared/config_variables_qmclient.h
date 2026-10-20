@@ -52,6 +52,8 @@ MACRO_CONFIG_INT(QmUiListEntryAnimations, qm_ui_list_entry_animations, 1, 0, 1, 
 MACRO_CONFIG_INT(QmUiCardHeightAnimations, qm_ui_card_height_animations, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Animate settings card expand and collapse height changes")
 MACRO_CONFIG_INT(QmUiCardReflowAnimations, qm_ui_card_reflow_animations, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Animate settings card reorder and layout reflow")
 MACRO_CONFIG_INT(QmExtraAnimations, qm_extra_animations, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Animate chat box, emote selector, scoreboard, and spectate selection")
+MACRO_CONFIG_INT(QmUiScrollLegacyWheel, qm_ui_scroll_legacy_wheel, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity")
+MACRO_CONFIG_INT(QmUiScrollStep, qm_ui_scroll_step, 10, 2, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick")
 MACRO_CONFIG_INT(QmCountryFlagAnim, qm_country_flag_anim, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable bounce-in entrance animation when country flags finish loading")
 MACRO_CONFIG_INT(QmUiCardRainbowTitles, qm_ui_card_rainbow_titles, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings card titles use rainbow colors")
 MACRO_CONFIG_INT(QmUiCardBorders, qm_ui_card_borders, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show settings card borders")
@@ -66,6 +68,8 @@ MACRO_CONFIG_COL(QmUiFavoriteIconColor, qm_ui_favorite_icon_color, 0x21FFA6, CFG
 MACRO_CONFIG_INT(QmUiFriendIconFilled, qm_ui_friend_icon_filled, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Draw the friend heart icon with the filled icon font style")
 MACRO_CONFIG_INT(QmUiFavoriteIconFilled, qm_ui_favorite_icon_filled, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Draw the favorite star icon with the filled icon font style")
 MACRO_CONFIG_INT(QmUiIconWeight, qm_ui_icon_weight, 1, 0, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Qm UI icon style: 0=Regular, 1=Bold, 2=Light (legacy), 3=Fill, 4=Light, 5=Bold (legacy)")
+MACRO_CONFIG_INT(QmHudIslandSignalColorMode, qm_hud_island_signal_color_mode, 1, 1, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dynamic island connection icon color: 1=Quality tier, 2=Follow global icon color, 3=Custom")
+MACRO_CONFIG_COL(QmHudIslandSignalColor, qm_hud_island_signal_color, 0x00D1AB, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dynamic island connection icon custom color")
 MACRO_CONFIG_INT(QmUiColorInterpolation, qm_ui_color_interpolation, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform")
 MACRO_CONFIG_INT(QmRectCornerSegments, qm_rect_corner_segments, 16, 8, 48, CFGFLAG_CLIENT | CFGFLAG_SAVE, "UI rounded corner segments (even numbers recommended)")
 MACRO_CONFIG_STR(QmGlobalCardOrder, qm_global_card_order, 8000, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Global card ordering (format: stableId|tab|col|order; semicolon-separated)")
@@ -152,7 +156,7 @@ MACRO_CONFIG_INT(QmImeSelectedGradientCenterY, qm_ime_selected_gradient_center_y
 MACRO_CONFIG_INT(QmImeSelectedGradientRange, qm_ime_selected_gradient_range, 100, 10, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "IME gradient range percentage")
 MACRO_CONFIG_INT(QmImeSelectedGradientReverse, qm_ime_selected_gradient_reverse, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Reverse IME gradient colors")
 MACRO_CONFIG_INT(QmAutoSaveHistoryCount, qm_auto_save_history_count, 100, 0, 1000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-save history count (0=disable)")
-MACRO_CONFIG_INT(QmShortServerNames, qm_short_server_names, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show short server names in browser")
+MACRO_CONFIG_INT(QmShortServerNames, qm_short_server_names, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show short server names in browser (applies to China community servers)")
 MACRO_CONFIG_INT(QmPingCacheMaxAgeHours, qm_ping_cache_max_age_hours, 72, 0, 8760, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Discard cached server pings older than this many hours (0 = never expire)")
 MACRO_CONFIG_INT(QmSkinSortMode, qm_skin_sort_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Skin list sort mode (0=Name, 1=Release date)")
 MACRO_CONFIG_INT(QmSkinShowMetadata, qm_skin_show_metadata, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show skin release date and author")
@@ -526,6 +530,7 @@ MACRO_CONFIG_STR(QmFriendEnterGreetText, qm_friend_enter_greet_text, 128, "Hi!",
 // Block Words / 屏蔽词
 MACRO_CONFIG_INT(QmBlockWordsEnabled, qm_block_words_enabled, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable word filter list")
 MACRO_CONFIG_INT(QmWarListBlockEnemyChat, qm_warlist_block_enemy_chat, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hide chat messages from players marked as enemies")
+MACRO_CONFIG_INT(QmWarListBlockEnemies, qm_warlist_block_enemies, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hide enemy chat, replace enemy names with client IDs and use default skins; keep local players visible")
 MACRO_CONFIG_INT(QmBlockWordsShowConsole, qm_block_words_show_console, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show filtered words in console")
 MACRO_CONFIG_COL(QmBlockWordsConsoleColor, qm_block_words_console_color, 0xFFFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Filtered word console color")
 MACRO_CONFIG_INT(QmBlockWordsMultiReplace, qm_block_words_multi_replace, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Replace censored words with length-based chars")
@@ -721,6 +726,7 @@ MACRO_CONFIG_INT(QmSettingsPrewarm, qm_settings_prewarm, 0, 0, 1, CFGFLAG_CLIENT
 
 // Chat Bubble Settings - 聊天气泡
 MACRO_CONFIG_INT(QmChatScrollbarRight, qm_chat_scrollbar_right, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show the chat scrollbar on the right")
+MACRO_CONFIG_INT(QmChatRelatedOnly, qm_chat_related_only, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players")
 MACRO_CONFIG_INT(QmChatSaveDraft, qm_chat_save_draft, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Keep unsent message on chat close")
 MACRO_CONFIG_INT(QmChatCommandCompletion, qm_chat_command_completion, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show command completion in chat")
 MACRO_CONFIG_INT(QmChatEmojiCompletion, qm_chat_emoji_completion, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show emoji completion in chat")

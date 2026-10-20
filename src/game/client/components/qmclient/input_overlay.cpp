@@ -13,6 +13,7 @@
 #include <engine/shared/json.h>
 #include <engine/storage.h>
 
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/gameclient.h>
 #include <game/client/ui.h>
 
@@ -674,7 +675,7 @@ bool CInputOverlay::ParseConfiguration(const void *pFileData, unsigned FileLengt
 	}
 
 	const json_value &Root = *pJson;
-	ColorRGBA ObsColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+	ColorRGBA ObsColor = ui_token::color::NEUTRAL_WHITE;
 	ColorRGBA ObsActiveColor = ColorRGBA(1.0f, 0.9f, 0.2f, 1.0f);
 	float ObsInactiveAlpha = 0.65f;
 	if(auto Parsed = ParseColor(Root["obs_color"]); Parsed.has_value())

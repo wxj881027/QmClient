@@ -40,6 +40,7 @@
 #include <game/client/components/menu_background.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/chat_gradient.h>
+#include <game/client/components/qmclient/chat_message_filter.h>
 #include <game/client/components/qmclient/chat_scrollbar.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
@@ -333,6 +334,15 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 		else if(AppearanceTab == APPEARANCE_TAB_CHAT)
 		{
 			CChat *pChat = &GameClient()->m_Chat;
+			const auto ShowChatPreview = [](bool Friend, bool OtherTeam, bool Mentioned = false) {
+				const QmChatMessageFilter::SSettings Settings{g_Config.m_QmChatRelatedOnly != 0, g_Config.m_ClShowChatFriends != 0, g_Config.m_ClShowChatTeamMembersOnly != 0};
+				QmChatMessageFilter::SMessage Message;
+				Message.m_ClientId = 0;
+				Message.m_Friend = Friend;
+				Message.m_OtherTeam = OtherTeam;
+				Message.m_Mentioned = Mentioned;
+				return QmChatMessageFilter::ShouldShow(Settings, Message);
+			};
 			static int s_AppearanceAlwaysShowChat = 0;
 			// ***** Chat ***** //
 			SSettingsCardDefinition ChatSettingsDefinition;
@@ -365,6 +375,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 						{&g_Config.m_ClChatTeamColors, "appearance-chat-team-colors", Localize("Show names in chat in team colors")},
 						{&g_Config.m_ClShowChatFriends, "appearance-chat-friends-only", Localize("Show only chat messages from friends")},
 						{&g_Config.m_ClShowChatTeamMembersOnly, "appearance-chat-team-members-only", Localize("Show only chat messages from team members")},
+						{&g_Config.m_QmChatRelatedOnly, "appearance-chat-related-only", Localize("Only show messages related to me")},
 						{&g_Config.m_QmChatScrollbarRight, "appearance-chat-scrollbar-right", Localize("Show the chat scrollbar on the right")},
 					},
 					AppearanceMetrics, !RenderOnly);
@@ -471,7 +482,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				}
 				RenderQmChatGradientSettings(RightView, *pChat, AppearanceMetrics);
 			});
-			const auto MeasureChatPreview = [this, pChat, MarginSmall](float ContentWidth) {
+			const auto MeasureChatPreview = [this, pChat, MarginSmall, ShowChatPreview](float ContentWidth) {
 				const float RealFontSize = pChat->FontSize() * 2.0f;
 				const float RealMsgPaddingX = (!g_Config.m_ClChatOld ? pChat->MessagePaddingX() : 0.0f) * 2.0f;
 				const float RealMsgPaddingY = (!g_Config.m_ClChatOld ? pChat->MessagePaddingY() : 0.0f) * 2.0f;
@@ -493,19 +504,17 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 					str_format(aSystemText, sizeof(aSystemText), "'%s' entered and joined the game", aPlayerName);
 					AddPreviewLine(CChat::SystemMessageNamePrefix(g_Config.m_QmChatHideSystemPrefix != 0), aSystemText, false);
 				}
-				if(!g_Config.m_ClShowChatFriends)
+				if(ShowChatPreview(false, true, true))
 				{
-					if(!g_Config.m_ClShowChatTeamMembersOnly)
-					{
-						char aHighlightText[128];
-						str_format(aHighlightText, sizeof(aHighlightText), "Hey, how are you %s?", aPlayerName);
-						AddPreviewLine("Random Tee", aHighlightText);
-					}
-					AddPreviewLine("Your Teammate", "Let's speedrun this!");
+					char aHighlightText[128];
+					str_format(aHighlightText, sizeof(aHighlightText), "Hey, how are you %s?", aPlayerName);
+					AddPreviewLine("Random Tee", aHighlightText);
 				}
-				if(!g_Config.m_ClShowChatTeamMembersOnly)
+				if(ShowChatPreview(false, false))
+					AddPreviewLine("Your Teammate", "Let's speedrun this!");
+				if(ShowChatPreview(true, true))
 					AddPreviewLine("Friend", "Hello there");
-				if(!g_Config.m_ClShowChatFriends && !g_Config.m_ClShowChatTeamMembersOnly)
+				if(ShowChatPreview(false, true))
 					AddPreviewLine("Spammer", "Hey fools, I'm spamming here!");
 				if(g_Config.m_QmShowChatClient)
 					AddPreviewLine(CChat::ClientMessageNamePrefix(g_Config.m_QmChatHideSystemPrefix != 0), "Echo command executed", false);
@@ -757,17 +766,15 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 					TempY += RenderMessageBackground(PREVIEW_SYS);
 				}
 
-				if(!g_Config.m_ClShowChatFriends)
-				{
-					if(!g_Config.m_ClShowChatTeamMembersOnly)
-						TempY += RenderMessageBackground(PREVIEW_HIGHLIGHT);
+				if(ShowChatPreview(false, true, true))
+					TempY += RenderMessageBackground(PREVIEW_HIGHLIGHT);
+				if(ShowChatPreview(false, false))
 					TempY += RenderMessageBackground(PREVIEW_TEAM);
-				}
 
-				if(!g_Config.m_ClShowChatTeamMembersOnly)
+				if(ShowChatPreview(true, true))
 					TempY += RenderMessageBackground(PREVIEW_FRIEND);
 
-				if(!g_Config.m_ClShowChatFriends && !g_Config.m_ClShowChatTeamMembersOnly)
+				if(ShowChatPreview(false, true))
 				{
 					TempY += RenderMessageBackground(PREVIEW_SPAMMER);
 				}
@@ -785,14 +792,16 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				Y += RenderPreview(PREVIEW_SYS, X, Y).y;
 			}
 
-			if(!g_Config.m_ClShowChatFriends)
+			if(ShowChatPreview(false, true, true))
 			{
 				// Highlighted
-				if(!g_Config.m_ClChatOld && !g_Config.m_ClShowChatTeamMembersOnly)
+				if(!g_Config.m_ClChatOld)
 					RenderTools()->RenderTee(pIdleState, &s_vLines[PREVIEW_HIGHLIGHT].m_RenderInfo, EMOTE_NORMAL, vec2(1, 0.1f), vec2(X + RealTeeSizeHalved, Y + OffsetTeeY + FullHeightMinusTee / 2.0f + TWSkinUnreliableOffset));
-				if(!g_Config.m_ClShowChatTeamMembersOnly)
-					Y += RenderPreview(PREVIEW_HIGHLIGHT, X, Y).y;
+				Y += RenderPreview(PREVIEW_HIGHLIGHT, X, Y).y;
+			}
 
+			if(ShowChatPreview(false, false))
+			{
 				// Team
 				if(!g_Config.m_ClChatOld)
 					RenderTools()->RenderTee(pIdleState, &s_vLines[PREVIEW_TEAM].m_RenderInfo, EMOTE_NORMAL, vec2(1, 0.1f), vec2(X + RealTeeSizeHalved, Y + OffsetTeeY + FullHeightMinusTee / 2.0f + TWSkinUnreliableOffset));
@@ -800,13 +809,13 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 			}
 
 			// Friend
-			if(!g_Config.m_ClChatOld && !g_Config.m_ClShowChatTeamMembersOnly)
+			if(!g_Config.m_ClChatOld && ShowChatPreview(true, true))
 				RenderTools()->RenderTee(pIdleState, &s_vLines[PREVIEW_FRIEND].m_RenderInfo, EMOTE_NORMAL, vec2(1, 0.1f), vec2(X + RealTeeSizeHalved, Y + OffsetTeeY + FullHeightMinusTee / 2.0f + TWSkinUnreliableOffset));
-			if(!g_Config.m_ClShowChatTeamMembersOnly)
+			if(ShowChatPreview(true, true))
 				Y += RenderPreview(PREVIEW_FRIEND, X, Y).y;
 
 			// Normal
-			if(!g_Config.m_ClShowChatFriends && !g_Config.m_ClShowChatTeamMembersOnly)
+			if(ShowChatPreview(false, true))
 			{
 				if(!g_Config.m_ClChatOld)
 					RenderTools()->RenderTee(pIdleState, &s_vLines[PREVIEW_SPAMMER].m_RenderInfo, EMOTE_NORMAL, vec2(1, 0.1f), vec2(X + RealTeeSizeHalved, Y + OffsetTeeY + FullHeightMinusTee / 2.0f + TWSkinUnreliableOffset));
@@ -1065,7 +1074,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 						Graphics()->TextureClear();
 						Graphics()->TextureSet(GameClient()->m_MapImages.GetEntities(MAP_IMAGE_ENTITY_LAYER_TYPE_ALL_EXCEPT_SWITCH));
 						Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-						RenderMap()->RenderTile(Rect.x, Rect.y, TileIndex, TileScale, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+						RenderMap()->RenderTile(Rect.x, Rect.y, TileIndex, TileScale, ui_token::color::NEUTRAL_WHITE);
 					}
 				};
 
@@ -1084,7 +1093,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				PrepareHookPreviewRow(PreviewNoColl);
 				RightView.HSplitTop(4 * MarginSmall, nullptr, &RightView);
 				TeeRenderPos = vec2(PreviewNoColl.x + LeftMargin, PreviewNoColl.y + PreviewNoColl.h / 2.0f);
-				DoHookCollision(TeeRenderPos, PreviewNoColl.w - LineLength, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl)), ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), s_HookCollPressed);
+				DoHookCollision(TeeRenderPos, PreviewNoColl.w - LineLength, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl)), ui_token::color::COLOR_TRANSPARENT, s_HookCollPressed);
 				RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, 0, vec2(1.0f, 0.0f), TeeRenderPos);
 
 				CUIRect NoHookTileRect;
@@ -1100,7 +1109,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				PrepareHookPreviewRow(PreviewColl);
 				RightView.HSplitTop(4 * MarginSmall, nullptr, &RightView);
 				TeeRenderPos = vec2(PreviewColl.x + LeftMargin, PreviewColl.y + PreviewColl.h / 2.0f);
-				DoHookCollision(TeeRenderPos, PreviewColl.w - LineLength, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl)), ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), s_HookCollPressed);
+				DoHookCollision(TeeRenderPos, PreviewColl.w - LineLength, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl)), ui_token::color::COLOR_TRANSPARENT, s_HookCollPressed);
 				RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, 0, vec2(1.0f, 0.0f), TeeRenderPos);
 
 				CUIRect HookTileRect;
@@ -1117,7 +1126,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				RightView.HSplitTop(4 * MarginSmall, nullptr, &RightView);
 				TeeRenderPos = vec2(PreviewColl.x + LeftMargin, PreviewColl.y + PreviewColl.h / 2.0f);
 				DummyRenderPos = vec2(PreviewColl.x + PreviewColl.w - LineLength - 5.f + LeftMargin, PreviewColl.y + PreviewColl.h / 2.0f);
-				DoHookCollision(TeeRenderPos, PreviewColl.w - LineLength - 15.f, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)), ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), s_HookCollPressed);
+				DoHookCollision(TeeRenderPos, PreviewColl.w - LineLength - 15.f, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)), ui_token::color::COLOR_TRANSPARENT, s_HookCollPressed);
 				RenderTools()->RenderTee(CAnimState::GetIdle(), &DummySkinInfo, 0, vec2(1.0f, 0.0f), DummyRenderPos);
 				RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, 0, vec2(1.0f, 0.0f), TeeRenderPos);
 
@@ -1127,7 +1136,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				RightView.HSplitTop(4 * MarginSmall, nullptr, &RightView);
 				TeeRenderPos = vec2(PreviewColl.x + LeftMargin, PreviewColl.y + PreviewColl.h / 2.0f);
 				DummyRenderPos = vec2(PreviewColl.x + PreviewColl.w - LineLength - 5.f + LeftMargin, PreviewColl.y + PreviewColl.h / 2.0f);
-				DoHookCollision(TeeRenderPos, PreviewColl.w - LineLength - 15.f, g_Config.m_ClHookCollSizeOther, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)), ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), false);
+				DoHookCollision(TeeRenderPos, PreviewColl.w - LineLength - 15.f, g_Config.m_ClHookCollSizeOther, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)), ui_token::color::COLOR_TRANSPARENT, false);
 				RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, 0, vec2(1.0f, 0.0f), DummyRenderPos);
 				RenderTools()->RenderTee(CAnimState::GetIdle(), &DummySkinInfo, 0, vec2(1.0f, 0.0f), TeeRenderPos);
 
@@ -1398,6 +1407,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(g_Config.m_ClChatOld != 0);
 	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(g_Config.m_ClShowChatSystem != 0);
 	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(g_Config.m_ClShowChatFriends != 0);
+	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(g_Config.m_QmChatRelatedOnly != 0);
 	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(g_Config.m_ClShowChatTeamMembersOnly != 0);
 	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(g_Config.m_QmShowChatClient != 0);
 	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(std::clamp(g_Config.m_ClChatFontSize, 0, 255));

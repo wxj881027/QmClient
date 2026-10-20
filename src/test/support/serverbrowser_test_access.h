@@ -49,6 +49,10 @@ public:
 	{
 		Browser.SetLatency(Address, Latency);
 	}
+	static void SetDifficultyStarsFunction(CServerBrowser &Browser, std::function<int(const CServerInfo *)> Function)
+	{
+		Browser.m_MapDifficultyStarsFunction = std::move(Function);
+	}
 	static uint64_t HttpRevision(const CServerBrowser &Browser) { return Browser.m_HttpRevision; }
 	static bool RefreshPending(const CServerBrowser &Browser) { return Browser.m_RefreshingHttp; }
 	static int NumRequests(const CServerBrowser &Browser) { return Browser.m_NumRequests; }

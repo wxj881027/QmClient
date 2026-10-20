@@ -49,6 +49,23 @@ TEST(SettingsResourceBudget, PostListRecoveryClampsStaleIdleHeavyBudget)
 	EXPECT_EQ(SettingsResourceClampSharedHeavyBudget(PreListHeavyBudget, PostListRecovery, 4, 1), 1);
 }
 
+TEST(SettingsResourceBudget, ScrollPressureKeepsHeavyTrickleForDrains)
+{
+	const SSettingsResourceFrameContext ScrollActive = SettingsBuildFrameContext(true, false, 0);
+	const SSettingsResourceFrameContext JumpScroll = SettingsBuildFrameContext(false, false, true, 0);
+	const SSettingsResourceFrameContext Idle = SettingsBuildFrameContext(false, false, 0);
+
+	// 滚动期 heavy 池整池清零时，涓流保底让每条排空链路仍能推进
+	EXPECT_EQ(SettingsResourceClampSharedHeavyBudgetWithScrollTrickle(4, ScrollActive, 4, 1, 2), 2);
+	EXPECT_EQ(SettingsResourceClampSharedHeavyBudgetWithScrollTrickle(0, ScrollActive, 4, 1, 2), 2);
+	EXPECT_EQ(SettingsResourceClampSharedHeavyBudgetWithScrollTrickle(4, JumpScroll, 4, 1, 2), 2);
+	// 壳帧涓流为 0，保持全停
+	EXPECT_EQ(SettingsResourceClampSharedHeavyBudgetWithScrollTrickle(4, ScrollActive, 4, 1, 0), 0);
+	// 非滚动帧回到常规夹持，不受保底影响
+	EXPECT_EQ(SettingsResourceClampSharedHeavyBudgetWithScrollTrickle(4, Idle, 4, 1, 2), 4);
+	EXPECT_EQ(SettingsResourceClampSharedHeavyBudgetWithScrollTrickle(7, Idle, 4, 1, 2), 4);
+}
+
 TEST(SettingsResourceBudget, MergeAndUploadStopAtLocalLimits)
 {
 	SSettingsResourceMergeBudget Budget;

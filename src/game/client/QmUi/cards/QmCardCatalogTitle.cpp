@@ -37,7 +37,7 @@
 struct SQmTitleStylePreviewContext
 {
 	// 预览文字用风格自身采样出的颜色，基底色必须够亮，否则暗色风格会变成一坨黑。
-	ColorRGBA m_TextColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+	ColorRGBA m_TextColor = ui_token::color::NEUTRAL_WHITE;
 	ColorRGBA m_OutlineColor = ColorRGBA(0.0f, 0.0f, 0.0f, 1.0f);
 	float m_OutlineRadius = 1.0f;
 	float m_FontSize = 10.0f;
@@ -206,11 +206,11 @@ static void RenderQmTitleFinishedPreview(ITextRender *pTextRender, CRenderTools 
 	}
 	else if(!DynamicStyle || RenderStyle.m_ColorOverride)
 	{
-		PreviewCursor.m_vColorSplits.emplace_back(0, -1, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+		PreviewCursor.m_vColorSplits.emplace_back(0, -1, ui_token::color::NEUTRAL_WHITE);
 	}
 
 	const ColorRGBA PreviousTextColor = pTextRender->GetTextColor();
-	pTextRender->TextColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+	pTextRender->TextColor(ui_token::color::NEUTRAL_WHITE);
 	STextContainerIndex &PreviewContainer = s_TitleFinishedPreviewContainer;
 	if(PreviewContainer.Valid())
 		pTextRender->RecreateTextContainerSoft(PreviewContainer, &PreviewCursor, aPreviewText);

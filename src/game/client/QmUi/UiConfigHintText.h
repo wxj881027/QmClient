@@ -69,7 +69,13 @@ public:
 			Rebuild();
 		}
 	}
-	const char *Text() const { return m_Text.c_str(); }
+	// 普通页面只取说明；搜索结果可附上命令，切换时保留原有绑定与文案。
+	const char *Text(bool ShowCommands = true) const
+	{
+		if(ShowCommands)
+			return m_Text.c_str();
+		return (m_Description.empty() ? m_FallbackDescription : m_Description).c_str();
+	}
 };
 
 #endif
