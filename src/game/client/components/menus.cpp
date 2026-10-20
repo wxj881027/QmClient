@@ -2883,6 +2883,19 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	Window.VMargin(10.0f, &Window);
 	Window.HMargin(8.0f, &Window);
 
+	// 与收藏地图页共用的工作区页签：贴在内容顶端、离顶部导航和其它页面同一条基线，
+	// 且不随统计内容滚动；统计数据是第 4 个页签，点其它页签直接跳回收藏地图。
+	const QmMapHistoryUi::SWorkspaceMetrics StatisticsWorkspace = QmMapHistoryUi::WorkspaceMetrics(MainView.h);
+	{
+		CUIRect WorkspaceTabs = Window;
+		WorkspaceTabs.VMargin(12.0f, &WorkspaceTabs);
+		WorkspaceTabs.h = StatisticsWorkspace.m_TabHeight;
+		const int PickedWorkspaceTab = DoMapWorkspaceTabs(WorkspaceTabs, StatisticsWorkspace.m_TabHeight * 0.20f, 3);
+		if(PickedWorkspaceTab >= 0 && PickedWorkspaceTab < 3)
+			SetMenuPage(PAGE_FAVORITE_MAPS);
+		Window.HSplitTop(StatisticsWorkspace.m_TabHeight + StatisticsWorkspace.m_SectionGap, nullptr, &Window);
+	}
+
 	static CScrollRegion s_StatisticsScrollRegion;
 	CScrollRegionParams StatisticsScrollParams = QmScrollRegionParamsForSize(EQmScrollSize::MEDIUM);
 	StatisticsScrollParams.m_ScrollUnit = 96.0f;
@@ -2894,16 +2907,6 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	// 页面标题由顶部导航页签承担，这里不再重复大标题，内容直接从卡片行开始。
 	CUIRect Content = Window;
 	Content.Margin(12.0f, &Content);
-	// 与收藏地图页共用的工作区页签：统计数据是其中的第 4 个页签，切回其它页签直接跳回收藏地图。
-	{
-		const QmMapHistoryUi::SWorkspaceMetrics WorkspaceLayout = QmMapHistoryUi::WorkspaceMetrics(MainView.h);
-		CUIRect WorkspaceTabs;
-		Content.HSplitTop(WorkspaceLayout.m_TabHeight, &WorkspaceTabs, &Content);
-		Content.HSplitTop(WorkspaceLayout.m_SectionGap, nullptr, &Content);
-		const int PickedWorkspaceTab = DoMapWorkspaceTabs(WorkspaceTabs, WorkspaceLayout.m_TabHeight * 0.20f, 3);
-		if(PickedWorkspaceTab >= 0 && PickedWorkspaceTab < 3)
-			SetMenuPage(PAGE_FAVORITE_MAPS);
-	}
 	const auto &vLocalModeStats = GameClient()->m_QmClient.QmClientLocalModeStats();
 	std::vector<SQmClientLocalModeStats> vModeStats;
 	std::vector<int64_t> vDominantPlaytimes;
@@ -3142,7 +3145,9 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	const bool DdnetStatsFailed = GameClient()->m_QmClient.QmDdnetStatsLastRequestFailed();
 	const bool StatisticsFetching = GameClient()->m_QmClient.QmStatisticsIsFetching() || AxiomStatsFetching;
 	const bool StatisticsFailed = GameClient()->m_QmClient.QmStatisticsLastRequestFailed() || AxiomStatsFailed;
-	const char *pDdnetStatsUnavailableText = DdnetStatsFailed ? Localize("Unavailable") : Localize("Loading");
+	// 远程统计失败时数值位只留一个破折号：占位词放在数值位上比空着更碍眼，
+	// 失败原因统一到右下角「统计说明」里交代，那里有「不可用（失败）」和上次成功时间。
+	const char *pDdnetStatsUnavailableText = DdnetStatsFailed ? "—" : Localize("Loading");
 	// 时长口径在整页保持一致：顶部总时长和模式圆环/图例共用「按小时显示」开关。
 	static bool s_ShowTotalHours = true;
 	if(HasRemotePlaytime)
@@ -3241,14 +3246,16 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		Card.y += Row * (TopCards.h + CardGap) / TopCardRows;
 		Card.w = CardWidth;
 		Card.h = (TopCards.h - CardGap * (TopCardRows - 1)) / TopCardRows;
+		// 远程统计失败且没有缓存值时，卡片数值位留破折号，下面用一句「失败」说明来源，不让占位词顶在数值位。
+		const char *pDdnetCardHint = DdnetStatsFailed ? Localize("Failed") : nullptr;
 		if(CardIndex == 0)
 			RenderStatCard(Card, Localize("Client uptime"), aClientOpenTime, nullptr);
 		else if(CardIndex == 1)
-			RenderStatCard(Card, Localize("Play time"), aServerPlaytime, nullptr);
+			RenderStatCard(Card, Localize("Play time"), aServerPlaytime, DdnetStatsFailed && !HasRemotePlaytime ? pDdnetCardHint : nullptr);
 		else if(CardIndex == 2)
-			RenderStatCard(Card, Localize("Finished maps"), aFinishedMapsText, nullptr);
+			RenderStatCard(Card, Localize("Finished maps"), aFinishedMapsText, FinishedMaps < 0 ? pDdnetCardHint : nullptr);
 		else
-			RenderStatCard(Card, Localize("Favorite friend"), aFavoriteFriendText, nullptr);
+			RenderStatCard(Card, Localize("Favorite friend"), aFavoriteFriendText, aFavoriteFriendText[0] == 0 || str_comp(aFavoriteFriendText, "—") == 0 ? pDdnetCardHint : nullptr);
 	}
 
 	Content.HSplitTop(6.0f, nullptr, &Content);
