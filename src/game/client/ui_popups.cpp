@@ -326,7 +326,7 @@ void CUi::RenderPopupMenus()
 			return !Menu.m_Closing && MouseInside(&Menu.m_Rect) && (!Menu.m_Props.m_ClipToViewport || MouseInside(&Menu.m_Props.m_Viewport));
 		});
 		const bool OpeningFrame = PopupMenu.m_Props.m_IgnoreOpeningClick && PopupMenu.m_OpenedFrame == PopupSourceFrame();
-		const SQmPopupPointerInput PointerInput{Active, PopupMenu.m_Props.m_BlockUnderlyingPointerInput, Inside, !OpeningFrame && MouseButtonClicked(0) != 0, !OpeningFrame && MouseButton(0) != 0, CheckActiveItem(pId), HotItem() == pId, InsideGroup};
+		const SQmPopupPointerInput PointerInput{Active, PopupMenu.m_Props.m_BlockUnderlyingPointerInput, Inside, !OpeningFrame && MouseButtonClicked(0) != 0, !OpeningFrame && MouseButton(0) != 0, CheckActiveItem(pId), HotItem() == pId, InsideGroup, PopupMenu.m_Props.m_PressInsideGoesToContent};
 		const EQmPopupPointerAction PointerAction = QmResolvePopupPointerAction(PointerInput);
 		const bool CloseBeforeRender = PointerAction == EQmPopupPointerAction::CLOSE || PointerAction == EQmPopupPointerAction::CLOSE_GROUP;
 		if(PointerAction == EQmPopupPointerAction::CAPTURE)

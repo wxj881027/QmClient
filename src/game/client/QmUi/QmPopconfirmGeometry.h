@@ -14,19 +14,19 @@ namespace qm_popconfirm_layout
 	inline constexpr float OFFSET = 6.0f;
 	inline constexpr float SCREEN_MARGIN = 4.0f;
 
-	inline CUIRect ResolveRect(const CUIRect &Anchor, float Width, float Height, const CUIRect &Screen)
+	inline CUIRect ResolveRect(const CUIRect &Anchor, float Width, float Height, const CUIRect &Bounds)
 	{
 		CUIRect Rect;
 		Rect.w = Width;
 		Rect.h = Height;
 		Rect.x = Anchor.x + Anchor.w - Width;
 		Rect.y = Anchor.y + Anchor.h + OFFSET;
-		if(Rect.y + Rect.h > Screen.y + Screen.h - SCREEN_MARGIN)
+		if(Rect.y + Rect.h > Bounds.y + Bounds.h - SCREEN_MARGIN)
 			Rect.y = Anchor.y - Height - OFFSET;
-		const float MinX = Screen.x + SCREEN_MARGIN;
-		const float MaxX = std::max(MinX, Screen.x + Screen.w - Width - SCREEN_MARGIN);
-		const float MinY = Screen.y + SCREEN_MARGIN;
-		const float MaxY = std::max(MinY, Screen.y + Screen.h - Height - SCREEN_MARGIN);
+		const float MinX = Bounds.x + SCREEN_MARGIN;
+		const float MaxX = std::max(MinX, Bounds.x + Bounds.w - Width - SCREEN_MARGIN);
+		const float MinY = Bounds.y + SCREEN_MARGIN;
+		const float MaxY = std::max(MinY, Bounds.y + Bounds.h - Height - SCREEN_MARGIN);
 		Rect.x = std::clamp(Rect.x, MinX, MaxX);
 		Rect.y = std::clamp(Rect.y, MinY, MaxY);
 		return Rect;

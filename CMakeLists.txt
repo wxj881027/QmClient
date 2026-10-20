@@ -3186,8 +3186,6 @@ if(CLIENT)
     QmUi/QmUiPerf.h
     QmUi/QmUiLifetime.h
     QmUi/QmAnimCurves.h
-    QmUi/QmCardReflow.cpp
-    QmUi/QmCardReflow.h
     QmUi/QmDropdown.cpp
     QmUi/QmDropdown.h
     QmUi/QmPopconfirm.cpp
@@ -5521,7 +5519,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_popup_blur_scope_test.cpp
       src/test/unit/qmclient/ui/qm_ui_overlay_semantics_test.cpp
       src/game/client/QmUi/QmToast.cpp
-      src/game/client/QmUi/QmCardReflow.cpp
       src/test/unit/qmclient/ui/qm_ui_overlay_semantics_test.cpp
       src/game/client/QmUi/QmToast.cpp
       src/test/integration/qmclient/ui/qm_settings_search_session_test.cpp

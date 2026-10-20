@@ -28,6 +28,7 @@ struct SQmPopconfirmContext : public SPopupMenuId
 // 锚定在触发控件旁的轻确认：无全屏遮罩、不锁页面滚动、不抢焦点，
 // 点外部或 Esc 即取消。用于单条、可恢复、代价低的动作（下载、单条删除）。
 // 不可逆或跨范围的操作仍应使用 CUi::ShowPopupConfirm。
-void QmShowPopconfirm(CUi *pUi, SQmPopconfirmContext *pContext, const CUIRect &Anchor);
+// pBounds：可见容器（列表裁剪区）。气泡只在容器内摆放，不会飞出到导航栏。
+void QmShowPopconfirm(CUi *pUi, SQmPopconfirmContext *pContext, const CUIRect &Anchor, const CUIRect *pBounds = nullptr);
 
 #endif // GAME_CLIENT_QMUI_QMPOPCONFIRM_H

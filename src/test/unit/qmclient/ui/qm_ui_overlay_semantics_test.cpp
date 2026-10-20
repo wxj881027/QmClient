@@ -1,8 +1,7 @@
-// 弹窗/轻提示/卡片重排的语义契约：队列上限、锚定几何、FLIP 偏移收敛。
+// 弹窗/轻提示的语义契约：队列上限、锚定几何（含父容器夹紧）。
 // 这些行为不依赖渲染上下文，按纯函数与队列状态断言，避免源码字符串合同。
 #include <gtest/gtest.h>
 
-#include <game/client/QmUi/QmCardReflow.h>
 #include <game/client/QmUi/QmPopconfirmGeometry.h>
 #include <game/client/QmUi/QmToast.h>
 
@@ -100,49 +99,16 @@ TEST(QmPopconfirmLayout, ClampsInsideViewport)
 	EXPECT_LE(Rect.x + Rect.w, Screen.w);
 }
 
-TEST(QmCardReflow, NewCardStartsWithoutOffset)
+TEST(QmPopconfirmLayout, StaysInsideParentBounds)
 {
-	CQmCardReflow Reflow;
-	Reflow.BeginFrame(1.0f / 60.0f, false);
-	EXPECT_FLOAT_EQ(Reflow.Track("A", MakeRect(0.0f, 100.0f, 80.0f, 80.0f)).y, 0.0f);
-}
-
-TEST(QmCardReflow, LayoutMoveIsInvertedThenSettles)
-{
-	CQmCardReflow Reflow;
-	Reflow.BeginFrame(1.0f / 60.0f, false);
-	Reflow.Track("A", MakeRect(0.0f, 100.0f, 80.0f, 80.0f));
-	// 布局瞬移到 y=180：视觉上仍停在 100，偏移 = -80。
-	Reflow.BeginFrame(1.0f / 60.0f, false);
-	const float FirstOffset = Reflow.Track("A", MakeRect(0.0f, 180.0f, 80.0f, 80.0f)).y;
-	EXPECT_NEAR(FirstOffset, -80.0f, 0.01f);
-	// 1 秒后应收敛回布局位置。
-	float Offset = FirstOffset;
-	for(int Frame = 0; Frame < 60; ++Frame)
-	{
-		Reflow.BeginFrame(1.0f / 60.0f, false);
-		Offset = Reflow.Track("A", MakeRect(0.0f, 180.0f, 80.0f, 80.0f)).y;
-	}
-	EXPECT_LT(std::abs(Offset), 0.5f);
-}
-
-TEST(QmCardReflow, SnapClearsPendingOffset)
-{
-	CQmCardReflow Reflow;
-	Reflow.BeginFrame(1.0f / 60.0f, false);
-	Reflow.Track("A", MakeRect(0.0f, 100.0f, 80.0f, 80.0f));
-	Reflow.BeginFrame(1.0f / 60.0f, false);
-	EXPECT_LT(Reflow.Track("A", MakeRect(0.0f, 180.0f, 80.0f, 80.0f)).y, 0.0f);
-	// 滚动中直接对齐：偏移归零，不做追随。
-	Reflow.BeginFrame(1.0f / 60.0f, true);
-	EXPECT_FLOAT_EQ(Reflow.Track("A", MakeRect(0.0f, 180.0f, 80.0f, 80.0f)).y, 0.0f);
-}
-
-TEST(QmCardReflow, SeedPlacesNewCardAtSourcePosition)
-{
-	CQmCardReflow Reflow;
-	Reflow.BeginFrame(1.0f / 60.0f, false);
-	const CUIRect Seed = MakeRect(0.0f, 400.0f, 24.0f, 24.0f);
-	const vec2 Offset = Reflow.Track("Fresh", MakeRect(0.0f, 100.0f, 80.0f, 80.0f), &Seed);
-	EXPECT_NEAR(Offset.y, 300.0f, 0.01f);
+	// 列表裁剪区比窗口小得多：气泡只能在列表里摆放，不能飞进顶部导航。
+	const CUIRect Anchor = MakeRect(500.0f, 450.0f, 40.0f, 20.0f);
+	const CUIRect Bounds = MakeRect(100.0f, 120.0f, 600.0f, 360.0f);
+	const CUIRect Rect = qm_popconfirm_layout::ResolveRect(Anchor, 200.0f, 60.0f, Bounds);
+	EXPECT_GE(Rect.y, Bounds.y);
+	EXPECT_LE(Rect.y + Rect.h, Bounds.y + Bounds.h + 0.01f);
+	EXPECT_GE(Rect.x, Bounds.x);
+	EXPECT_LE(Rect.x + Rect.w, Bounds.x + Bounds.w + 0.01f);
+	// 下方放不下就翻到锚点上方，而不是飞出容器。
+	EXPECT_LT(Rect.y, Anchor.y);
 }

@@ -62,7 +62,7 @@ void SQmPopconfirmContext::DefaultButtons()
 	str_copy(m_aCancel, Localize("Cancel"));
 }
 
-void QmShowPopconfirm(CUi *pUi, SQmPopconfirmContext *pContext, const CUIRect &Anchor)
+void QmShowPopconfirm(CUi *pUi, SQmPopconfirmContext *pContext, const CUIRect &Anchor, const CUIRect *pBounds)
 {
 	if(pUi == nullptr || pContext == nullptr)
 		return;
@@ -75,7 +75,8 @@ void QmShowPopconfirm(CUi *pUi, SQmPopconfirmContext *pContext, const CUIRect &A
 
 	const float Width = TextWidth + 2.0f * POPCONFIRM_PADDING;
 	const float Height = TextHeight + POPCONFIRM_LABEL_GAP + POPCONFIRM_BUTTON_HEIGHT + 2.0f * POPCONFIRM_PADDING;
-	const CUIRect Rect = qm_popconfirm_layout::ResolveRect(Anchor, Width, Height, *pUi->Screen());
+	const CUIRect &Bounds = pBounds != nullptr ? *pBounds : *pUi->Screen();
+	const CUIRect Rect = qm_popconfirm_layout::ResolveRect(Anchor, Width, Height, Bounds);
 
 	pContext->m_pUI = pUi;
 
@@ -87,6 +88,8 @@ void QmShowPopconfirm(CUi *pUi, SQmPopconfirmContext *pContext, const CUIRect &A
 	Props.m_Animate = true;
 	Props.m_AutoReposition = false;
 	Props.m_IgnoreOpeningClick = true;
+	// 带按钮的气泡：内部按下直接给按钮，避免第一次点击被外层吞掉。
+	Props.m_PressInsideGoesToContent = true;
 	const SUiTheme Theme = ResolveConfiguredDropdownListTheme();
 	Props.m_BackgroundColor = Theme.m_Surface;
 	Props.m_BorderColor = Theme.m_Border;

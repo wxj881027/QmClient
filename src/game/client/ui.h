@@ -527,6 +527,9 @@ struct SPopupMenuProperties
 	// 二级面板关闭后仅在来源控件重新参与渲染时恢复焦点。
 	bool m_ReturnFocus = false;
 	bool m_IgnoreOpeningClick = false;
+	// 非阻断弹层内部按下不抢 capture：气泡确认这类带按钮的弹层需要，
+	// 否则第一次点击会被外层吞掉，表现为「按钮要点两下」。
+	bool m_PressInsideGoesToContent = false;
 	float m_ContentInset = -1.0f;
 	std::function<void()> m_OnClosed;
 	// 使用 CUi::PopupSourceFrame()，主循环 PerfFrame 不代表实际 UI 更新次数。

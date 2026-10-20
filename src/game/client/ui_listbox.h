@@ -258,6 +258,8 @@ public:
 	float RowHeight() const { return m_ListBoxRowHeight; }
 	float ScrollOffsetY() const { return -m_ScrollRegion.ContentScrollOffsetY(); }
 	float ViewHeight() const { return m_ScrollRegion.ClipRect()->h; }
+	// 可见裁剪区：弹层要贴着父容器摆放时用它当边界，避免飞进导航栏。
+	const CUIRect &ClipRect() const { return *m_ScrollRegion.ClipRect(); }
 	void ScrollToSelected() { m_ListBoxUpdateScroll = true; }
 	// 已保存的选中项不一定是本次浏览目标；调用方可取消初始自动定位，显式定位仍有效。
 	void SuppressInitialSelectionScroll() { m_InitialScrollPending = false; }
