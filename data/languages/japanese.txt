@@ -1655,9 +1655,6 @@ Bound functions
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 括弧内の称号の色：0 = サーバーに従う、1 = 単色、2 = 虹色
 
-Bracketed title opacity (0-100)
-== 括弧内の称号の不透明度 (0-100)
-
 Bracketed title single color
 == 括弧内の称号の単色
 
@@ -6398,6 +6395,9 @@ Invalid spectator id used
 Invalid sponsor code
 == 無効な認証コード
 
+Invalid title appearance
+== 称号の外観設定が無効です
+
 Invalid translation backend
 == 無効な翻訳バックエンド
 
@@ -7685,6 +7685,9 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 Monospace
 == 等幅
 
+Moon
+== 月
+
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Tee の安定方向に沿ったより楽観的な予測、安定までの遅延を削減
 
@@ -8716,6 +8719,9 @@ Output switch
 
 Output voice debug log
 == 音声デバッグログを出力
+
+Overall sponsor title badge color
+== 支援者称号全体の色
 
 Overlay entities
 == エンティティのオーバーレイ
@@ -12956,6 +12962,12 @@ Sponsor support
 Sponsor title
 == 支援者の称号
 
+Sponsor title badge opacity (0-100)
+== 支援者称号全体の不透明度（0-100）
+
+Sponsor title badge: 0 = moon, 1 = sun
+== 支援者称号のスタイル：0 = 月、1 = 太陽
+
 Sponsors:
 == スポンサー：
 
@@ -13186,6 +13198,9 @@ Sudden Death
 
 Suicides
 == 自殺数
+
+Sun
+== 太陽
 
 Super
 == スーパー
@@ -13993,6 +14008,9 @@ Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visibl
 
 Title preview
 == タイトルの仕上がりプレビュー
+
+Title server does not support badge appearance yet
+== 称号サーバーはまだバッジの外観に対応していません
 
 Title server does not support chat styles yet
 == 称号サーバーはまだチャットスタイルに対応していません

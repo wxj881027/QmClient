@@ -1655,9 +1655,6 @@ Bound functions
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 方括號頭銜顏色：0 = 跟隨伺服器，1 = 單色，2 = 彩虹
 
-Bracketed title opacity (0-100)
-== 方括號頭銜不透明度（0-100）
-
 Bracketed title single color
 == 方括號頭銜單色
 
@@ -6398,6 +6395,9 @@ Invalid spectator id used
 Invalid sponsor code
 == 認證碼無效
 
+Invalid title appearance
+== 頭銜外觀參數無效
+
 Invalid translation backend
 == 無效的翻譯後端
 
@@ -7685,6 +7685,9 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 Monospace
 == 等寬體
 
+Moon
+== 月亮
+
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == 沿 Tee 的穩定方向進行更樂觀的預測，減少穩定下來所需的延遲
 
@@ -8716,6 +8719,9 @@ Output switch
 
 Output voice debug log
 == 輸出語音調試日誌
+
+Overall sponsor title badge color
+== 贊助頭銜整體顏色
 
 Overlay entities
 == 顯示實體層
@@ -12956,6 +12962,12 @@ Sponsor support
 Sponsor title
 == 贊助頭銜
 
+Sponsor title badge opacity (0-100)
+== 贊助頭銜整體不透明度（0-100）
+
+Sponsor title badge: 0 = moon, 1 = sun
+== 贊助頭銜樣式：0 = 月亮，1 = 太陽
+
 Sponsors:
 == 贊助者：
 
@@ -13186,6 +13198,9 @@ Sudden Death
 
 Suicides
 == 自殺數
+
+Sun
+== 太陽
 
 Super
 == 無敵
@@ -13993,6 +14008,9 @@ Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visibl
 
 Title preview
 == 頭銜成品預覽
+
+Title server does not support badge appearance yet
+== 頭銜伺服器暫不支援日月頭銜外觀
 
 Title server does not support chat styles yet
 == 頭銜伺服器尚不支援發言樣式

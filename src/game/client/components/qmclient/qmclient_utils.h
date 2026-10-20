@@ -2,6 +2,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_QMCLIENT_UTILS_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_QMCLIENT_UTILS_H
 
+#include "qm_title_appearance.h"
 #include "sponsor_chat_style.h"
 
 #include <base/color.h>
@@ -26,10 +27,13 @@ struct SQmTitlePresence
 	std::string m_Style;
 	int64_t m_RemainingSeconds = 0;
 	EQmSponsorChatStyle m_ChatStyle = EQmSponsorChatStyle::NONE;
+	SQmTitleAppearance m_Appearance;
 };
 
 std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, const char *pServerAddress, int64_t *pServerTime = nullptr);
 bool IsValidQmTitle(const char *pTitle);
+// 缺字段兼容旧服务；不完整或非法的新外观整体回退，避免半份资料。
+bool ParseQmTitleAppearance(const json_value *pValue, SQmTitleAppearance &Out);
 
 // 后端使用该标记表示包含多服分布的全局 USERS 快照。
 inline constexpr const char *QMCLIENT_REALTIME_USERS_GLOBAL = "users";

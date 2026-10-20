@@ -1655,9 +1655,6 @@ Bound functions
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 方括号头衔颜色：0 = 跟随服务器，1 = 单色，2 = 彩虹
 
-Bracketed title opacity (0-100)
-== 方括号头衔不透明度（0-100）
-
 Bracketed title single color
 == 方括号头衔单色
 
@@ -6401,6 +6398,9 @@ Invalid spectator id used
 Invalid sponsor code
 == 认证码无效
 
+Invalid title appearance
+== 头衔外观参数无效
+
 Invalid translation backend
 == 无效的翻译后端
 
@@ -7688,6 +7688,9 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 Monospace
 == 等宽体
 
+Moon
+== 月亮
+
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == 沿 Tee 的稳定方向进行更乐观的预测，减少稳定下来所需的延迟
 
@@ -8719,6 +8722,9 @@ Output switch
 
 Output voice debug log
 == 输出语音调试日志
+
+Overall sponsor title badge color
+== 赞助头衔整体颜色
 
 Overlay entities
 == 显示实体层
@@ -12959,6 +12965,12 @@ Sponsor support
 Sponsor title
 == 赞助头衔
 
+Sponsor title badge opacity (0-100)
+== 赞助头衔整体不透明度（0-100）
+
+Sponsor title badge: 0 = moon, 1 = sun
+== 赞助头衔样式：0 = 月亮，1 = 太阳
+
 Sponsors:
 == 赞助者：
 
@@ -13189,6 +13201,9 @@ Sudden Death
 
 Suicides
 == 自杀数
+
+Sun
+== 太阳
 
 Super
 == 无敌
@@ -13996,6 +14011,9 @@ Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visibl
 
 Title preview
 == 头衔成品预览
+
+Title server does not support badge appearance yet
+== 头衔服务器暂不支持日月头衔外观
 
 Title server does not support chat styles yet
 == 头衔服务器尚不支持发言样式

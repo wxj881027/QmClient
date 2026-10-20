@@ -1655,9 +1655,6 @@ Bound functions
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Farbe des Titels in Klammern: 0 = Server folgen, 1 = einfarbig, 2 = Regenbogen
 
-Bracketed title opacity (0-100)
-== Deckkraft des Titels in Klammern (0-100)
-
 Bracketed title single color
 == Einfarbig für Titel in Klammern
 
@@ -6398,6 +6395,9 @@ Invalid spectator id used
 Invalid sponsor code
 == Ungültiger Unterstützercode
 
+Invalid title appearance
+== Ungültiges Aussehen des Titels
+
 Invalid translation backend
 == Ungültiges Übersetzungs-Backend
 
@@ -7685,6 +7685,9 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 Monospace
 == Monospace-Schrift
 
+Moon
+== Mond
+
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Optimistischere Vorhersage entlang der stabilen Richtung des Tees, reduziert Verzögerung zur Stabilisierung
 
@@ -8716,6 +8719,9 @@ Output switch
 
 Output voice debug log
 == Sprach-Debug-Logs ausgeben
+
+Overall sponsor title badge color
+== Gesamtfarbe des Sponsortitel-Abzeichens
 
 Overlay entities
 == Entitäten überlagern
@@ -12956,6 +12962,12 @@ Sponsor support
 Sponsor title
 == Unterstützertitel
 
+Sponsor title badge opacity (0-100)
+== Deckkraft des Sponsortitel-Abzeichens (0-100)
+
+Sponsor title badge: 0 = moon, 1 = sun
+== Abzeichen des Sponsortitels: 0 = Mond, 1 = Sonne
+
 Sponsors:
 == Sponsoren:
 
@@ -13186,6 +13198,9 @@ Sudden Death
 
 Suicides
 == Selbstmorde
+
+Sun
+== Sonne
 
 Super
 == Super
@@ -13993,6 +14008,9 @@ Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visibl
 
 Title preview
 == Titelvorschau
+
+Title server does not support badge appearance yet
+== Der Titelserver unterstützt das Aussehen von Abzeichen noch nicht
 
 Title server does not support chat styles yet
 == Der Titelserver unterstützt Chatstile noch nicht

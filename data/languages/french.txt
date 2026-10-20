@@ -1655,9 +1655,6 @@ Bound functions
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Couleur du titre entre crochets : 0 = suivre le serveur, 1 = couleur unique, 2 = arc-en-ciel
 
-Bracketed title opacity (0-100)
-== Opacité du titre entre crochets (0-100)
-
 Bracketed title single color
 == Couleur unique du titre entre crochets
 
@@ -6398,6 +6395,9 @@ Invalid spectator id used
 Invalid sponsor code
 == Code de soutien invalide
 
+Invalid title appearance
+== Apparence du titre non valide
+
 Invalid translation backend
 == Moteur de traduction invalide
 
@@ -7685,6 +7685,9 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 Monospace
 == Chasse fixe
 
+Moon
+== Lune
+
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Prédiction plus optimiste le long de la direction stable du Tee, réduit le délai de stabilisation
 
@@ -8716,6 +8719,9 @@ Output switch
 
 Output voice debug log
 == Afficher les journaux de débogage vocal
+
+Overall sponsor title badge color
+== Couleur générale du badge du titre de soutien
 
 Overlay entities
 == Superposer les entités
@@ -12956,6 +12962,12 @@ Sponsor support
 Sponsor title
 == Titre de soutien
 
+Sponsor title badge opacity (0-100)
+== Opacité du badge du titre de soutien (0-100)
+
+Sponsor title badge: 0 = moon, 1 = sun
+== Badge du titre de soutien : 0 = lune, 1 = soleil
+
 Sponsors:
 == Sponsors :
 
@@ -13186,6 +13198,9 @@ Sudden Death
 
 Suicides
 == Suicides | Référence chinois simplifié : 自杀数
+
+Sun
+== Soleil
 
 Super
 == Super | Référence chinois simplifié : 无敌
@@ -13993,6 +14008,9 @@ Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visibl
 
 Title preview
 == Aperçu du titre
+
+Title server does not support badge appearance yet
+== Le serveur de titres ne prend pas encore en charge l’apparence des badges
 
 Title server does not support chat styles yet
 == Le serveur de titres ne gère pas encore les styles de chat

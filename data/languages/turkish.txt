@@ -1655,9 +1655,6 @@ Bound functions
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Köşeli parantezli unvan rengi: 0 = sunucuyu takip et, 1 = tek renk, 2 = gökkuşağı
 
-Bracketed title opacity (0-100)
-== Köşeli parantezli unvan opaklığı (0-100)
-
 Bracketed title single color
 == Köşeli parantezli unvan tek renk
 
@@ -6398,6 +6395,9 @@ Invalid spectator id used
 Invalid sponsor code
 == Geçersiz destekçi kodu
 
+Invalid title appearance
+== Geçersiz unvan görünümü
+
 Invalid translation backend
 == Geçersiz çeviri arka ucu
 
@@ -7685,6 +7685,9 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 Monospace
 == Eşaralıklı
 
+Moon
+== Ay
+
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Tee'nin sabit yönü boyunca daha iyimser tahmin, stabilize olma gecikmesini azaltır
 
@@ -8716,6 +8719,9 @@ Output switch
 
 Output voice debug log
 == Ses Hata Ayıklama Günlüğünü Çıktıla
+
+Overall sponsor title badge color
+== Destekçi unvanı rozetinin genel rengi
 
 Overlay entities
 == Varlıkları göster
@@ -12956,6 +12962,12 @@ Sponsor support
 Sponsor title
 == Destekçi unvanı
 
+Sponsor title badge opacity (0-100)
+== Destekçi unvanı rozetinin opaklığı (0-100)
+
+Sponsor title badge: 0 = moon, 1 = sun
+== Destekçi unvanı rozeti: 0 = ay, 1 = güneş
+
 Sponsors:
 == Sponsorlar:
 
@@ -13186,6 +13198,9 @@ Sudden Death
 
 Suicides
 == İntiharlar
+
+Sun
+== Güneş
 
 Super
 == Süper
@@ -13993,6 +14008,9 @@ Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visibl
 
 Title preview
 == Unvan önizlemesi
+
+Title server does not support badge appearance yet
+== Unvan sunucusu henüz rozet görünümünü desteklemiyor
 
 Title server does not support chat styles yet
 == Unvan sunucusu henüz sohbet stillerini desteklemiyor
