@@ -3943,6 +3943,7 @@ if(CLIENT)
     mapitems/layer_tiles.h
     mapitems/layer_tune.cpp
     mapitems/layer_tune.h
+    mapitems/load_resources.h
     mapitems/map.cpp
     mapitems/map.h
     mapitems/map_io.cpp
@@ -4814,6 +4815,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/map_load_test.cpp
     src/test/unit/engine/map_render_items_test.cpp
     src/test/integration/client/map_render_items_test.cpp
+    src/test/integration/client/editor_map_resources_test.cpp
     src/test/integration/engine/map_group_load_test.cpp
     src/test/unit/engine/linereader_test.cpp
     src/test/unit/base/mapbugs_test.cpp

@@ -1,4 +1,5 @@
 #include "image.h"
+#include "load_resources.h"
 #include "sound.h"
 
 #include <base/log.h>
@@ -640,6 +641,13 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 		return false;
 	}
 
+	const auto Resources = EditorMapLoad::ReadResourceItems(*pMap);
+	if(!Resources)
+	{
+		ErrorHandler(Localize("Error: Failed to open map file. See local console for details.", "Editor"));
+		return false;
+	}
+
 	Clean();
 
 	// load map info
@@ -694,11 +702,9 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 
 	// load images
 	{
-		int Start, Num;
-		pMap->GetType(MAPITEMTYPE_IMAGE, &Start, &Num);
-		for(int i = 0; i < Num; i++)
+		for(int i = 0; i < static_cast<int>(Resources->m_vImages.size()); i++)
 		{
-			CMapItemImage_v2 *pItem = (CMapItemImage_v2 *)pMap->GetItem(Start + i);
+			const CMapItemImage_v2 *pItem = &Resources->m_vImages[i];
 
 			// copy base info
 			std::shared_ptr<CEditorImage> pImg = std::make_shared<CEditorImage>(this);
@@ -1108,11 +1114,10 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 
 					if(pQuadsItem->m_NumQuads > 0)
 					{
-						const void *pData = pMap->GetDataSwapped(pQuadsItem->m_Data);
-						if(pData != nullptr && (size_t)pMap->GetDataSize(pQuadsItem->m_Data) >= sizeof(CQuad) * (size_t)pQuadsItem->m_NumQuads)
+						const auto Quads = MapRenderItems::QuadData(*pMap, *pQuadsItem);
+						if(!Quads.empty())
 						{
-							pQuads->m_vQuads.resize(pQuadsItem->m_NumQuads);
-							mem_copy(pQuads->m_vQuads.data(), pData, sizeof(CQuad) * pQuadsItem->m_NumQuads);
+							pQuads->m_vQuads.assign(Quads.begin(), Quads.end());
 						}
 						else
 						{
