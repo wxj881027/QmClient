@@ -2270,9 +2270,6 @@ Client
 Client CPU usage is high
 == 客户端 CPU 占用偏高
 
-Client data overview
-== 客户端数据概览
-
 Client frame time is abnormal
 == 客户端帧时间异常
 
@@ -13258,6 +13255,9 @@ Start the export paused
 
 Statboard
 == 统计板
+
+Statistics
+== 统计数据
 
 Stats
 == 统计

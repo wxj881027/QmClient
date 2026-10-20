@@ -21127,6 +21127,22 @@ turkish = "Uzak istatistikler senkronize ediliyor"
 polish = "Synchronizowanie statystyk zdalnych"
 
 [[message]]
+key = "Statistics"
+[message.translations]
+simplified_chinese = "统计数据"
+traditional_chinese = "統計數據"
+japanese = "統計データ"
+korean = "통계 데이터"
+russian = "Статистика"
+german = "Statistiken"
+spanish = "Estadísticas"
+french = "Statistiques"
+brazilian_portuguese = "Estatísticas"
+portuguese = "Estatísticas"
+turkish = "İstatistikler"
+polish = "Statystyki"
+
+[[message]]
 key = "Retry remote stats"
 [message.translations]
 simplified_chinese = "重试远程统计"

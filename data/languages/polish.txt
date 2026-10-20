@@ -2270,9 +2270,6 @@ Client
 Client CPU usage is high
 == Użycie CPU klienta jest wysokie
 
-Client data overview
-== Przegląd danych klienta
-
 Client frame time is abnormal
 == Czas ramki klienta jest nieprawidłowy
 
@@ -13255,6 +13252,9 @@ Start the export paused
 
 Statboard
 == Tablica statystyk
+
+Statistics
+== Statystyki
 
 Stats
 == Statystyki

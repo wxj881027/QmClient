@@ -2270,9 +2270,6 @@ Client
 Client CPU usage is high
 == クライアントの CPU 使用率が高い
 
-Client data overview
-== クライアントデータ概要
-
 Client frame time is abnormal
 == クライアントのフレーム時間が異常
 
@@ -13255,6 +13252,9 @@ Start the export paused
 
 Statboard
 == 統計ボード
+
+Statistics
+== 統計データ
 
 Stats
 == 統計

@@ -2270,9 +2270,6 @@ Client
 Client CPU usage is high
 == El uso de CPU del cliente es alto
 
-Client data overview
-== Resumen de datos del cliente
-
 Client frame time is abnormal
 == El tiempo de fotograma del cliente es anormal
 
@@ -13255,6 +13252,9 @@ Start the export paused
 
 Statboard
 == Tabla de estadísticas
+
+Statistics
+== Estadísticas
 
 Stats
 == Estadísticas

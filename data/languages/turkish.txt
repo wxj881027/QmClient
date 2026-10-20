@@ -2270,9 +2270,6 @@ Client
 Client CPU usage is high
 == İstemci CPU kullanımı yüksek
 
-Client data overview
-== İstemci veri özeti
-
 Client frame time is abnormal
 == İstemci kare süresi anormal
 
@@ -13255,6 +13252,9 @@ Start the export paused
 
 Statboard
 == İstatistik Tablosu
+
+Statistics
+== İstatistikler
 
 Stats
 == İstatistikler

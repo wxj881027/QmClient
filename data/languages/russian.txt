@@ -2270,9 +2270,6 @@ Client
 Client CPU usage is high
 == Высокая загрузка CPU клиента
 
-Client data overview
-== Обзор данных клиента
-
 Client frame time is abnormal
 == Аномальное время кадра клиента
 
@@ -13254,6 +13251,9 @@ Start the export paused
 == Начать экспорт на паузе
 
 Statboard
+== Статистика
+
+Statistics
 == Статистика
 
 Stats

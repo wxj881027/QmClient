@@ -755,7 +755,6 @@ Click to select server. Double click to join your friend.
 Click to set color
 Client
 Client CPU usage is high
-Client data overview
 Client frame time is abnormal
 Client ID size on nameplate
 Client IDs size
@@ -4418,6 +4417,7 @@ Start recording a video
 Start skin queue from a random position when entering a map
 Start the export paused
 Statboard
+Statistics
 Stats
 Stats notes
 Status

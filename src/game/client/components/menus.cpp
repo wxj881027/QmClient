@@ -2452,7 +2452,7 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 
 		// 胶囊 Tabbar：页签槽位（含收藏社区页签的展开宽度）先全部算完，再画容器与滑块，
 		// 最后画图标 —— 滑块必须压在图标之下，布局与绘制不能混在同一遍里做。
-		static CButtonContainer s_aStartTabButtons[10];
+		static CButtonContainer s_aStartTabButtons[11];
 		struct SStartTab
 		{
 			int m_Page;
@@ -2461,13 +2461,14 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 			const CCommunityIcon *m_pCommunityIcon;
 			const char *m_pTooltip;
 			float m_AppearStrength;
+			const char *m_pLabel; // 非空时按文字页签绘制（统计数据），空则按图标页签绘制
 		};
 		SStartTab aStartTabs[std::size(s_aStartTabButtons)];
 		CUIRect aStartTabSlots[std::size(s_aStartTabButtons)];
 		int NumStartTabs = 0;
 		int ActiveStartTab = -1;
-		auto AddStartTab = [&](const int Page, const EQmIcon Icon, const char *pIcon, const CCommunityIcon *pCommunityIcon, const char *pTooltip, const float AppearStrength, const CUIRect &Slot) {
-			aStartTabs[NumStartTabs] = {Page, Icon, pIcon, pCommunityIcon, pTooltip, AppearStrength};
+		auto AddStartTab = [&](const int Page, const EQmIcon Icon, const char *pIcon, const CCommunityIcon *pCommunityIcon, const char *pTooltip, const float AppearStrength, const CUIRect &Slot, const char *pLabel) {
+			aStartTabs[NumStartTabs] = {Page, Icon, pIcon, pCommunityIcon, pTooltip, AppearStrength, pLabel};
 			aStartTabSlots[NumStartTabs] = Slot;
 			if(ActivePage == Page)
 				ActiveStartTab = NumStartTabs;
@@ -2482,15 +2483,25 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 			// 主菜单入口并入左侧滑块导航：作为第一个槽位，点击回到主菜单。
 			CUIRect HomeTabSlot;
 			TabsRemainder.VSplitLeft(BrowserButtonWidth, &HomeTabSlot, &TabsRemainder);
-			AddStartTab(-1, EQmIcon::HOUSE, FONT_ICON_HOUSE, nullptr, Localize("Main menu"), 1.0f, HomeTabSlot);
+			AddStartTab(-1, EQmIcon::HOUSE, FONT_ICON_HOUSE, nullptr, Localize("Main menu"), 1.0f, HomeTabSlot, nullptr);
 			for(size_t Fixed = 0; Fixed < std::size(aFixedPages); ++Fixed)
 			{
 				if(NumStartTabs > 0)
 					TabsRemainder.VSplitLeft(MenubarItemGap, nullptr, &TabsRemainder);
 				CUIRect Slot;
 				TabsRemainder.VSplitLeft(BrowserButtonWidth, &Slot, &TabsRemainder);
-				AddStartTab(aFixedPages[Fixed], aFixedIcons[Fixed], apFixedIcons[Fixed], nullptr, apFixedTooltips[Fixed], 1.0f, Slot);
+				AddStartTab(aFixedPages[Fixed], aFixedIcons[Fixed], apFixedIcons[Fixed], nullptr, apFixedTooltips[Fixed], 1.0f, Slot, nullptr);
 			}
+
+			// 「统计数据」文字页签：和图标页签共用同一条胶囊轨与滑块，槽宽按文字实测宽度给，
+			// 放在收藏地图之后、社区页签之前。
+			const char *pStatsTabLabel = Localize("Statistics");
+			const float StatsTabLabelSize = ui_token::settings::TAB_FONT_SIZE * MENU_MENUBAR_CONTENT_SCALE_NEW;
+			const float StatsTabWidth = maximum(BrowserButtonWidth, TextRender()->TextWidth(StatsTabLabelSize, pStatsTabLabel) + 26.0f * MENU_MENUBAR_CONTENT_SCALE_NEW);
+			TabsRemainder.VSplitLeft(MenubarItemGap, nullptr, &TabsRemainder);
+			CUIRect StatsTabSlot;
+			TabsRemainder.VSplitLeft(StatsTabWidth, &StatsTabSlot, &TabsRemainder);
+			AddStartTab(PAGE_STATS, EQmIcon::COUNT, nullptr, nullptr, nullptr, 1.0f, StatsTabSlot, pStatsTabLabel);
 
 			static const uint64_t s_FavoriteCommunityAppearScopeHash = static_cast<uint64_t>(str_quickhash("menu_favorite_community_tab_appear"));
 			CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
@@ -2498,9 +2509,9 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 			SUiAnimTransition AppearTransition;
 			AppearTransition.m_DurationSec = 0.18f;
 			AppearTransition.m_Easing = EEasing::EASE_OUT;
-			static_assert(std::size(s_aStartTabButtons) == 1 + 4 + (size_t)PAGE_FAVORITE_COMMUNITY_5 - PAGE_FAVORITE_COMMUNITY_1 + 1);
-			static_assert(std::size(s_aStartTabButtons) - 5 == (size_t)BIT_TAB_FAVORITE_COMMUNITY_5 - BIT_TAB_FAVORITE_COMMUNITY_1 + 1);
-			static_assert(std::size(s_aStartTabButtons) - 5 == (size_t)IServerBrowser::TYPE_FAVORITE_COMMUNITY_5 - IServerBrowser::TYPE_FAVORITE_COMMUNITY_1 + 1);
+			static_assert(std::size(s_aStartTabButtons) == 2 + 4 + (size_t)PAGE_FAVORITE_COMMUNITY_5 - PAGE_FAVORITE_COMMUNITY_1 + 1);
+			static_assert(std::size(s_aStartTabButtons) - 6 == (size_t)BIT_TAB_FAVORITE_COMMUNITY_5 - BIT_TAB_FAVORITE_COMMUNITY_1 + 1);
+			static_assert(std::size(s_aStartTabButtons) - 6 == (size_t)IServerBrowser::TYPE_FAVORITE_COMMUNITY_5 - IServerBrowser::TYPE_FAVORITE_COMMUNITY_1 + 1);
 			for(const CCommunity *pCommunity : ServerBrowser()->FavoriteCommunities())
 			{
 				if((size_t)NumStartTabs >= std::size(s_aStartTabButtons))
@@ -2519,8 +2530,8 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 				Slot.x += (Slot.w - RevealWidth) * 0.5f;
 				Slot.w = RevealWidth;
 
-				const int Page = PAGE_FAVORITE_COMMUNITY_1 + (NumStartTabs - 5);
-				AddStartTab(Page, EQmIcon::ELLIPSIS, FONT_ICON_ELLIPSIS, m_CommunityIcons.Find(pCommunity->Id()), pCommunity->Name(), AppearStrength, Slot);
+				const int Page = PAGE_FAVORITE_COMMUNITY_1 + (NumStartTabs - 6);
+				AddStartTab(Page, EQmIcon::ELLIPSIS, FONT_ICON_ELLIPSIS, m_CommunityIcons.Find(pCommunity->Id()), pCommunity->Name(), AppearStrength, Slot, nullptr);
 			}
 			// 右侧图标簇紧接着页签右边排，中间不留额外空白。
 			Box = TabsRemainder;
@@ -2594,6 +2605,11 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 				ColorRGBA HomeHover = MenuCapsuleTabIndicatorColor().WithAlpha(0.18f);
 				HomeHover.a *= Tab.m_AppearStrength;
 				DoMenuTabV2_QmIcon(&s_aStartTabButtons[TabIndex], Tab.m_Icon, Tab.m_pIcon, false, &aStartTabSlots[TabIndex], IGraphics::CORNER_ALL, &InactiveColor, &ActiveColor, &HomeHover, Tab.m_pCommunityIcon, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true);
+			}
+			else if(Tab.m_pLabel != nullptr)
+			{
+				// 文字页签（统计数据）：图标位留空，直接画标题，hover/激活配色与图标页签同源。
+				DoMenuTabV2(&s_aStartTabButtons[TabIndex], Tab.m_pLabel, TabActive, &aStartTabSlots[TabIndex], IGraphics::CORNER_ALL, &InactiveColor, &ActiveColor, &HoverColor, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true);
 			}
 			else
 				DoMenuTabV2_QmIcon(&s_aStartTabButtons[TabIndex], Tab.m_Icon, Tab.m_pIcon, TabActive, &aStartTabSlots[TabIndex], IGraphics::CORNER_ALL, &InactiveColor, &ActiveColor, &HoverColor, Tab.m_pCommunityIcon, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true);
@@ -2890,14 +2906,8 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	s_StatisticsScrollRegion.Begin(&Window, &StatisticsScrollOffset, &StatisticsScrollParams);
 	Window.y += StatisticsScrollOffset.y;
 
-	CUIRect Header, Content;
-	Window.HSplitTop(50.0f, &Header, &Content);
-	Header.VMargin(14.0f, &Header);
-	CUIRect HeaderTitle, HeaderSubTitle;
-	Header.HSplitTop(24.0f, &HeaderTitle, &HeaderSubTitle);
-	Ui()->DoLabel(&HeaderTitle, Localize("Stats"), 24.0f, TEXTALIGN_ML);
-	Ui()->DoLabel(&HeaderSubTitle, Localize("Client data overview"), 12.0f, TEXTALIGN_ML);
-
+	// 页面标题由顶部导航页签承担，这里不再重复大标题，内容直接从卡片行开始。
+	CUIRect Content = Window;
 	Content.Margin(12.0f, &Content);
 	const auto &vLocalModeStats = GameClient()->m_QmClient.QmClientLocalModeStats();
 	std::vector<SQmClientLocalModeStats> vModeStats;
@@ -3282,35 +3292,17 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	ActionTop.h = ActionMiddle.h = ActionBottom.h = ActionButtonHeight;
 	ActionMiddle.y = ActionColumn.y + (ActionColumn.h - ActionButtonHeight) * 0.5f;
 	ActionBottom.y = ActionColumn.y + ActionColumn.h - ActionButtonHeight;
-	// 三枚操作按钮共用一套克制的胶囊样式：选中态只叠一层圆环同源的紫色，不套用菜单按钮的高饱和选中色，
-	// 深色卡片上才不会抢掉圆环和图例的视觉重心。
-	auto DrawStatsActionButton = [&](CButtonContainer *pButton, const char *pLabel, bool Active, const CUIRect &Rect) {
-		const ColorRGBA Accent(0.545f, 0.486f, 0.965f, 0.9f);
-		if(Active)
-		{
-			Rect.Draw(Accent, IGraphics::CORNER_ALL, ui_token::radius::BASE);
-			CUIRect Inner = Rect;
-			Inner.Margin(1.0f, &Inner);
-			Inner.Draw(ColorRGBA(0.545f, 0.486f, 0.965f, 0.20f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
-		}
-		else
-			Rect.Draw(Ui()->HotItem() == pButton ? ui_token::color::LIST_ITEM_HOVER : ColorRGBA(1.0f, 1.0f, 1.0f, 0.06f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
-		const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
-		TextRender()->TextColor(ColorRGBA(1.0f, 1.0f, 1.0f, Active ? 0.98f : 0.78f));
-		CUIRect Label = Rect;
-		Ui()->DoLabel(&Label, pLabel, ui_token::font::BODY, TEXTALIGN_MC);
-		TextRender()->TextColor(PreviousTextColor);
-		return Ui()->DoButtonLogic(pButton, Active ? 1 : 0, &Rect, BUTTONFLAG_LEFT) != 0;
-	};
+	// 三枚操作按钮直接走菜单通用按钮面（DoButton_Menu + BASE 圆角），
+	// 和页面底部链接按钮、设置页 Reset 同一套底色/描边/选中态，不再自绘胶囊。
 	const char *pRefreshStatsLabel = StatisticsFetching ? Localize("Syncing remote stats") : (StatisticsFailed ? Localize("Retry remote stats") : Localize("Sync remote stats"));
 	static CButtonContainer s_StatisticsRefreshButton;
-	if(DrawStatsActionButton(&s_StatisticsRefreshButton, pRefreshStatsLabel, false, ActionTop))
+	if(DoButton_Menu(&s_StatisticsRefreshButton, pRefreshStatsLabel, 0, &ActionTop, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
 		GameClient()->m_QmClient.RefreshQmClientStatistics();
 	static CButtonContainer s_StatisticsUseCurrentNameButton;
-	if(DrawStatsActionButton(&s_StatisticsUseCurrentNameButton, Localize("Use current name"), false, ActionMiddle))
+	if(DoButton_Menu(&s_StatisticsUseCurrentNameButton, Localize("Use current name"), 0, &ActionMiddle, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
 		GameClient()->m_QmClient.UseCurrentQmDdnetPlayerName();
 	static CButtonContainer s_TotalHoursButton;
-	if(DrawStatsActionButton(&s_TotalHoursButton, Localize("Total hours"), s_ShowTotalHours, ActionBottom))
+	if(DoButton_Menu(&s_TotalHoursButton, Localize("Total hours"), s_ShowTotalHours ? 1 : 0, &ActionBottom, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
 		s_ShowTotalHours = !s_ShowTotalHours;
 
 	const float ChartRadius = std::clamp(minimum(BodyMain.h * 0.40f, BodyMain.w * 0.24f), 44.0f, 92.0f);
@@ -3416,6 +3408,18 @@ void CMenus::RenderStatistics(CUIRect MainView)
 			str_format(pBuf, BufSize, "%s: %s\n%s: %d\n%s: %s", Localize("Game mode"), pModeName, Localize("Maps finished"), Stats.m_Maps, Localize("Total play time"), pDuration);
 	};
 	static char s_aModeTooltipText[5][512] = {};
+	// 图例行悬浮要在画圆环之前算出来：命中某行时，对应圆弧也要抬起并描边。
+	CUIRect Legend;
+	BodyMain.VSplitLeft(ChartRadius * 2.0f + 28.0f, nullptr, &Legend);
+	int HoveredLegendRow = -1;
+	for(size_t Index = 0; Index < vDisplayModeStats.size(); ++Index)
+	{
+		CUIRect Row = Legend;
+		Row.y += StatsTableHeaderHeight + Index * StatsTableRowHeight;
+		Row.h = StatsTableRowHeight;
+		if(Ui()->MouseInside(&Row))
+			HoveredLegendRow = (int)Index;
+	}
 	int HoveredMode = -1;
 	if(TotalChartWeight > 0)
 	{
@@ -3429,13 +3433,19 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		const bool UseProceduralRing = Graphics()->HasProceduralRing();
 		const float RingThickness = ChartRadius - ChartInnerRadius;
 		const float MidRadius = (ChartRadius + ChartInnerRadius) * 0.5f;
+		const float CapRadius = RingThickness * 0.5f;
 		// 段间细缝按环宽换算成角度：参考图的圆环是一整圈分色，段与段之间只有一道窄槽。
 		// 占比极小的段最多让出 35% 的弧长，避免小分段被缝隙吃光。
 		const float MaxGapAngle = std::clamp(RingThickness * 0.08f, 1.5f, 3.0f) / maximum(MidRadius, 1.0f);
+		// 圆角端帽：端帽圆心比分段边界再向内收一个 CapAngle，圆弧补到边界正好对齐。
+		const float CapAngle = std::asin(std::clamp(CapRadius / maximum(MidRadius, 1.0f), 0.0f, 1.0f));
 		struct SStatsArc
 		{
 			float m_Start;
 			float m_End;
+			float m_NominalStart;
+			float m_NominalEnd;
+			bool m_Rounded;
 			ColorRGBA m_Color;
 		};
 		SStatsArc aArcs[8];
@@ -3448,13 +3458,104 @@ void CMenus::RenderStatistics(CUIRect MainView)
 			if(Sweep <= 0.0f)
 				continue;
 			const float GapAngle = vDisplayModeStats.size() > 1 ? minimum(Sweep * 0.35f, MaxGapAngle) : 0.0f;
-			aArcs[ArcCount].m_Start = StartAngle + GapAngle * 0.5f;
-			aArcs[ArcCount].m_End = StartAngle + Sweep - GapAngle * 0.5f;
+			const float ArcStart = StartAngle + GapAngle * 0.5f;
+			const float ArcEnd = StartAngle + Sweep - GapAngle * 0.5f;
+			// 太短的段放不下两枚端帽，保持平头，避免端帽盖到相邻分段。
+			const bool Rounded = ArcEnd - ArcStart > CapAngle * 2.2f;
+			aArcs[ArcCount].m_Start = Rounded ? ArcStart + CapAngle : ArcStart;
+			aArcs[ArcCount].m_End = Rounded ? ArcEnd - CapAngle : ArcEnd;
+			aArcs[ArcCount].m_NominalStart = ArcStart;
+			aArcs[ArcCount].m_NominalEnd = ArcEnd;
+			aArcs[ArcCount].m_Rounded = Rounded;
 			aArcs[ArcCount].m_Color = aModeColors[Index % std::size(aModeColors)];
 			ArcCount++;
 			if(MouseDistance >= ChartInnerRadius && MouseDistance <= ChartRadius && MouseAngle >= StartAngle && MouseAngle <= StartAngle + Sweep)
 				HoveredMode = (int)Index;
 			StartAngle += Sweep;
+		}
+		// 极坐标转直角坐标，端帽和悬停装饰环共用。
+		auto StatsPolar = [&](float Radius, float Angle) {
+			return vec2(ChartCenter.x + std::cos(Angle) * Radius, ChartCenter.y + std::sin(Angle) * Radius);
+		};
+		auto DrawStatsArcEnd = [&](float Radius, float Angle, const ColorRGBA &Color) {
+			const vec2 Center = StatsPolar(MidRadius, Angle);
+			if(UseProceduralRing)
+			{
+				IGraphics::SProceduralRingParams Params;
+				Params.m_Rect = vec4(Center.x - Radius, Center.y - Radius, Radius * 2.0f, Radius * 2.0f);
+				Params.m_Color = Color;
+				Params.m_RingInnerRadius = 0.0f;
+				Params.m_RingOuterRadius = 0.5f;
+				Params.m_RingStartAngle = 0.0f;
+				Params.m_RingEndAngle = 2.0f * pi;
+				Params.m_Rotation = 0.0f;
+				Graphics()->RenderProceduralRing(Params);
+			}
+			else
+			{
+				Graphics()->TextureClear();
+				Graphics()->QuadsBegin();
+				Graphics()->SetColor(Color);
+				IGraphics::CFreeformItem aSectors[48];
+				const int Segments = (int)std::size(aSectors);
+				for(int Segment = 0; Segment < Segments; ++Segment)
+					aSectors[Segment] = QmStatisticsRingSegment(Center, Radius, 0.0f, 2.0f * pi * Segment / Segments, 2.0f * pi * (Segment + 1) / Segments);
+				Graphics()->QuadsDrawFreeform(aSectors, Segments);
+				Graphics()->QuadsEnd();
+			}
+		};
+		// 任意内外半径、任意角度的圆弧，悬停描边靠它把分段整体放大一圈。
+		auto DrawStatsArcBand = [&](float InnerRadius, float OuterRadius, float StartAngleValue, float EndAngleValue, const ColorRGBA &Color) {
+			if(UseProceduralRing)
+			{
+				IGraphics::SProceduralRingParams Params;
+				Params.m_Rect = vec4(ChartCenter.x - OuterRadius, ChartCenter.y - OuterRadius, OuterRadius * 2.0f, OuterRadius * 2.0f);
+				Params.m_Color = Color;
+				Params.m_RingInnerRadius = maximum(0.0f, InnerRadius) / (OuterRadius * 2.0f);
+				Params.m_RingOuterRadius = 0.5f;
+				Params.m_RingStartAngle = StartAngleValue;
+				Params.m_RingEndAngle = EndAngleValue;
+				Params.m_Rotation = 0.0f;
+				Graphics()->RenderProceduralRing(Params);
+			}
+			else
+			{
+				Graphics()->TextureClear();
+				Graphics()->QuadsBegin();
+				Graphics()->SetColor(Color);
+				IGraphics::CFreeformItem aSectors[128];
+				const float ArcSweep = EndAngleValue - StartAngleValue;
+				const int Segments = std::clamp((int)std::ceil(ArcSweep * 20.0f), 1, (int)std::size(aSectors));
+				const float Overlap = ArcSweep / Segments * 0.5f;
+				for(int Segment = 0; Segment < Segments; ++Segment)
+				{
+					const float A0 = StartAngleValue + ArcSweep * Segment / Segments - (Segment > 0 ? Overlap : 0.0f);
+					const float A1 = StartAngleValue + ArcSweep * (Segment + 1) / Segments + (Segment + 1 < Segments ? Overlap : 0.0f);
+					aSectors[Segment] = QmStatisticsRingSegment(ChartCenter, OuterRadius, maximum(0.0f, InnerRadius), A0, A1);
+				}
+				Graphics()->QuadsDrawFreeform(aSectors, Segments);
+				Graphics()->QuadsEnd();
+			}
+		};
+		// 悬浮联动：圆环命中或对应图例行命中时，把这一段整体放大 2px 并描一圈白边，
+		// 视觉上从环里抬起来；先画放大版，正常尺寸的分段随后压在上面留出外沿。
+		const int HighlightedMode = HoveredMode >= 0 ? HoveredMode : HoveredLegendRow;
+		if(HighlightedMode >= 0 && HighlightedMode < ArcCount)
+		{
+			const SStatsArc &Arc = aArcs[HighlightedMode];
+			const ColorRGBA Outline = ui_token::color::NEUTRAL_WHITE.WithMultipliedAlpha(0.55f);
+			DrawStatsArcBand(ChartInnerRadius - 3.0f, ChartRadius + 3.0f, Arc.m_NominalStart, Arc.m_NominalEnd, Outline);
+			if(Arc.m_Rounded)
+			{
+				DrawStatsArcEnd(CapRadius + 2.5f, Arc.m_Start, Outline);
+				DrawStatsArcEnd(CapRadius + 2.5f, Arc.m_End, Outline);
+			}
+			DrawStatsArcBand(ChartInnerRadius - 2.0f, ChartRadius + 2.0f, Arc.m_NominalStart, Arc.m_NominalEnd, Arc.m_Color);
+			if(Arc.m_Rounded)
+			{
+				DrawStatsArcEnd(CapRadius + 1.5f, Arc.m_Start, Arc.m_Color);
+				DrawStatsArcEnd(CapRadius + 1.5f, Arc.m_End, Arc.m_Color);
+			}
 		}
 		if(!UseProceduralRing)
 		{
@@ -3466,10 +3567,13 @@ void CMenus::RenderStatistics(CUIRect MainView)
 				IGraphics::CFreeformItem aSectors[128];
 				const float ArcSweep = aArcs[ArcIndex].m_End - aArcs[ArcIndex].m_Start;
 				const int Segments = std::clamp((int)std::ceil(ArcSweep * 20.0f), 1, (int)std::size(aSectors));
+				// 每片向两侧各多盖半片：相邻三角形共享的水平边会按填充规则漏出 1px 缝，
+				// 圆环在正左/正右的水平轴上正好踩到这个缝，看起来就像被横着切了一刀。
+				const float Overlap = ArcSweep / Segments * 0.5f;
 				for(int Segment = 0; Segment < Segments; ++Segment)
 				{
-					const float A0 = aArcs[ArcIndex].m_Start + ArcSweep * Segment / Segments;
-					const float A1 = aArcs[ArcIndex].m_Start + ArcSweep * (Segment + 1) / Segments;
+					const float A0 = aArcs[ArcIndex].m_Start + ArcSweep * Segment / Segments - (Segment > 0 ? Overlap : 0.0f);
+					const float A1 = aArcs[ArcIndex].m_Start + ArcSweep * (Segment + 1) / Segments + (Segment + 1 < Segments ? Overlap : 0.0f);
 					aSectors[Segment] = QmStatisticsRingSegment(ChartCenter, ChartRadius, ChartInnerRadius, A0, A1);
 				}
 				Graphics()->QuadsDrawFreeform(aSectors, Segments);
@@ -3490,6 +3594,13 @@ void CMenus::RenderStatistics(CUIRect MainView)
 				Params.m_Rotation = 0.0f;
 				Graphics()->RenderProceduralRing(Params);
 			}
+		}
+		for(int ArcIndex = 0; ArcIndex < ArcCount; ++ArcIndex)
+		{
+			if(!aArcs[ArcIndex].m_Rounded)
+				continue;
+			DrawStatsArcEnd(CapRadius, aArcs[ArcIndex].m_Start, aArcs[ArcIndex].m_Color);
+			DrawStatsArcEnd(CapRadius, aArcs[ArcIndex].m_End, aArcs[ArcIndex].m_Color);
 		}
 	}
 	// 环心显示总量，与图例口径一致：仅地图口径时显示完成地图数，否则显示总游玩时长。
@@ -3530,8 +3641,6 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		static int s_ModeTooltipIds[5] = {};
 		GameClient()->m_Tooltips.DoToolTip(&s_ModeTooltipIds[HoveredMode], &ModeBody, s_aModeTooltipText[HoveredMode]);
 	}
-	CUIRect Legend;
-	BodyMain.VSplitLeft(ChartRadius * 2.0f + 28.0f, nullptr, &Legend);
 	// 图例照参考图的分组用量表：一行表头 + 分隔线区分的单列行（色点、名称、右对齐数值列），
 	// 悬浮显示完整统计。名称列按最宽条目定宽，数值组紧随其后，不留下大片空白。
 	char aScoreTexts[8][128] = {};
@@ -3587,17 +3696,21 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	HeaderRow.h = StatsTableHeaderHeight;
 	CUIRect HeaderDot, HeaderName, HeaderMaps, HeaderDuration, HeaderScore = CUIRect();
 	LayoutLegendColumns(HeaderRow, &HeaderDot, &HeaderName, &HeaderMaps, &HeaderDuration, &HeaderScore);
+	// 表头文字按列居中，和右侧右对齐的数值区分开层次。
 	TextRender()->TextColor(LegendForeground.WithMultipliedAlpha(0.55f));
-	Ui()->DoLabel(&HeaderName, Localize("Game mode"), ui_token::font::SMALL, TEXTALIGN_ML);
-	Ui()->DoLabel(&HeaderMaps, Localize("Maps"), ui_token::font::SMALL, TEXTALIGN_MR);
-	Ui()->DoLabel(&HeaderDuration, Localize("Play time"), ui_token::font::SMALL, TEXTALIGN_MR);
+	Ui()->DoLabel(&HeaderName, Localize("Game mode"), ui_token::font::SMALL, TEXTALIGN_MC);
+	Ui()->DoLabel(&HeaderMaps, Localize("Maps"), ui_token::font::SMALL, TEXTALIGN_MC);
+	Ui()->DoLabel(&HeaderDuration, Localize("Play time"), ui_token::font::SMALL, TEXTALIGN_MC);
 	if(ShowScoreColumn)
-		Ui()->DoLabel(&HeaderScore, Localize("Points"), ui_token::font::SMALL, TEXTALIGN_MR);
+		Ui()->DoLabel(&HeaderScore, Localize("Points"), ui_token::font::SMALL, TEXTALIGN_MC);
 	TextRender()->TextColor(LegendForeground);
+	// 分隔线只画到最后一个数据列，右边没有内容的地方不再拖一条空线。
+	const float TableContentRight = ShowScoreColumn ? HeaderScore.x + HeaderScore.w : HeaderDuration.x + HeaderDuration.w;
 	// 表头下的第一条分隔线把标题行和第一条数据分开，数据行之间再各画一条。
 	CUIRect HeaderLine = HeaderRow;
 	HeaderLine.y += HeaderRow.h - 1.0f;
 	HeaderLine.h = 1.0f;
+	HeaderLine.w = maximum(0.0f, TableContentRight - HeaderLine.x);
 	HeaderLine.Draw(ui_token::color::BORDER_SUBTLE, IGraphics::CORNER_NONE, 0.0f);
 	Legend.HSplitTop(StatsTableHeaderHeight, nullptr, &Legend);
 	for(size_t Index = 0; Index < vDisplayModeStats.size(); ++Index)
@@ -3609,8 +3722,17 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		Row.y += Index * StatsTableRowHeight;
 		Row.h = StatsTableRowHeight;
 		const bool RowHovered = Ui()->MouseInside(&Row);
-		if(RowHovered)
-			Row.Draw(ui_token::color::LIST_ITEM_HOVER, IGraphics::CORNER_ALL, ui_token::radius::BASE);
+		// 圆环悬浮时联动高亮对应行；底色只铺到表格内容宽度，左右各留 8 的边距，
+		// 色点、文字和右侧数值都不贴边。
+		if(RowHovered || (int)Index == HoveredMode)
+		{
+			CUIRect Highlight = Row;
+			Highlight.x -= 8.0f;
+			Highlight.w = maximum(0.0f, TableContentRight + 8.0f - Highlight.x);
+			Highlight.y += 1.0f;
+			Highlight.h -= 2.0f;
+			Highlight.Draw(ui_token::color::LIST_ITEM_HOVER, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU);
+		}
 		const ColorRGBA Color = aModeColors[Index % std::size(aModeColors)];
 		CUIRect Dot, Name, Maps, Duration, Score = CUIRect();
 		LayoutLegendColumns(Row, &Dot, &Name, &Maps, &Duration, &Score);
@@ -3641,6 +3763,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 			CUIRect RowLine = Row;
 			RowLine.y += Row.h - 1.0f;
 			RowLine.h = 1.0f;
+			RowLine.w = maximum(0.0f, TableContentRight - RowLine.x);
 			RowLine.Draw(ui_token::color::BORDER_SUBTLE, IGraphics::CORNER_NONE, 0.0f);
 		}
 		if(RowHovered && Index < std::size(s_aModeTooltipText))

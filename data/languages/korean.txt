@@ -2270,9 +2270,6 @@ Client
 Client CPU usage is high
 == 클라이언트 CPU 사용량이 높습니다
 
-Client data overview
-== 클라이언트 데이터 개요
-
 Client frame time is abnormal
 == 클라이언트 프레임 시간이 비정상입니다
 
@@ -13255,6 +13252,9 @@ Start the export paused
 
 Statboard
 == 통계판
+
+Statistics
+== 통계 데이터
 
 Stats
 == 통계
