@@ -4221,6 +4221,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	// 按槽位序号算差值（不是屏幕矩形），切页换列直接对齐。
 	static CQmSlotReflow s_LocalCardReflow;
 	static double s_LocalReflowLastSec = -1.0;
+	// 资源商店页（本地 + 商店合并在同一个列表里）用的是另一套网格，单独一条轨道。
+	static CQmSlotReflow s_CombinedCardReflow;
+	static double s_CombinedReflowLastSec = -1.0;
 
 	if(m_AssetsEditorState.m_Open)
 	{
@@ -4705,6 +4708,39 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			DoSettingsMenuLabel(SETTINGS_ASSETS, s_CurCustomTab, s_CurCustomTab, "assets-loading-list", &LoadingTextRect, Localize("Loading assets..."), ContentMetrics.m_BodySize, TEXTALIGN_MC);
 		}
 	}
+
+	// 资源列表重建会替换搜索索引与卡片条目，必须在「下一帧开始」时执行：
+	// 之前是下载完成当帧就清空重建并 return，用户看到的就是右侧面板闪一下。
+	// 0 = 无事；1 = 整表重载；2 = 实体层层级同步（保贴图，见 RefreshEntityBgHierarchyView）。
+	static std::array<int, NUMBER_OF_ASSETS_TABS> s_aPendingLocalListRefresh{};
+	auto QueueLocalListRefresh = [](int Tab, int Kind) {
+		s_aPendingLocalListRefresh[Tab] = maximum(s_aPendingLocalListRefresh[Tab], Kind);
+	};
+	auto FlushPendingLocalListRefresh = [&](int Tab) {
+		const int Kind = s_aPendingLocalListRefresh[Tab];
+		if(Kind == 0)
+			return;
+		s_aPendingLocalListRefresh[Tab] = 0;
+		if(Kind == 2 && Tab == ASSETS_TAB_ENTITY_BG)
+		{
+			if(const SWorkshopHudState *pWorkshopState = WorkshopStateByTab(Tab))
+			{
+				for(const SWorkshopHudAsset &Asset : pWorkshopState->m_vAssets)
+				{
+					if(!Asset.m_Installed || Asset.m_LocalName.empty())
+						continue;
+					if(std::none_of(m_vEntityBgSourceNames.begin(), m_vEntityBgSourceNames.end(), [&Asset](const std::string &Name) { return Name == Asset.m_LocalName; }))
+						m_vEntityBgSourceNames.push_back(Asset.m_LocalName);
+					if(!m_vEntityBgSourceKinds.contains(Asset.m_LocalName))
+						m_vEntityBgSourceKinds.emplace(Asset.m_LocalName, EEntityBgHierarchyEntrySource::WORKSHOP);
+				}
+			}
+			RefreshEntityBgHierarchyView();
+			return;
+		}
+		ClearCustomItems(Tab);
+	};
+	FlushPendingLocalListRefresh(s_CurCustomTab);
 
 	if(gs_aInitCustomList[s_CurCustomTab])
 	{
@@ -5598,39 +5634,6 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		LabelRect.Margin(6.0f, &LabelRect);
 		Ui()->DoLabel(&LabelRect, Localize("Video Background"), 10.5f, TEXTALIGN_MC);
 	};
-
-	// 资源列表重建会替换搜索索引与卡片条目，必须在「下一帧开始」时执行：
-	// 之前是下载完成当帧就清空重建并 return，用户看到的就是右侧面板闪一下。
-	// 0 = 无事；1 = 整表重载；2 = 实体层层级同步（保贴图，见 RefreshEntityBgHierarchyView）。
-	static std::array<int, NUMBER_OF_ASSETS_TABS> s_aPendingLocalListRefresh{};
-	auto QueueLocalListRefresh = [](int Tab, int Kind) {
-		s_aPendingLocalListRefresh[Tab] = maximum(s_aPendingLocalListRefresh[Tab], Kind);
-	};
-	auto FlushPendingLocalListRefresh = [&](int Tab) {
-		const int Kind = s_aPendingLocalListRefresh[Tab];
-		if(Kind == 0)
-			return;
-		s_aPendingLocalListRefresh[Tab] = 0;
-		if(Kind == 2 && Tab == ASSETS_TAB_ENTITY_BG)
-		{
-			if(const SWorkshopHudState *pWorkshopState = WorkshopStateByTab(Tab))
-			{
-				for(const SWorkshopHudAsset &Asset : pWorkshopState->m_vAssets)
-				{
-					if(!Asset.m_Installed || Asset.m_LocalName.empty())
-						continue;
-					if(std::none_of(m_vEntityBgSourceNames.begin(), m_vEntityBgSourceNames.end(), [&Asset](const std::string &Name) { return Name == Asset.m_LocalName; }))
-						m_vEntityBgSourceNames.push_back(Asset.m_LocalName);
-					if(!m_vEntityBgSourceKinds.contains(Asset.m_LocalName))
-						m_vEntityBgSourceKinds.emplace(Asset.m_LocalName, EEntityBgHierarchyEntrySource::WORKSHOP);
-				}
-			}
-			RefreshEntityBgHierarchyView();
-			return;
-		}
-		ClearCustomItems(Tab);
-	};
-	FlushPendingLocalListRefresh(s_CurCustomTab);
 
 	if(s_CurCustomTab == ASSETS_TAB_ENTITIES)
 	{
@@ -7122,6 +7125,12 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				s_AssetsResetListScrollOnTabSwitch = false;
 			}
 			s_WorkshopAssetsListBox.DoStart(WorkshopRowHeight, CombinedCount, Columns, 1, OldCombinedSelected, &WorkshopListArea, false, IGraphics::CORNER_ALL);
+			{
+				const double ReflowNow = time_get();
+				const float ReflowDt = s_CombinedReflowLastSec > 0.0 ? (float)(ReflowNow - s_CombinedReflowLastSec) : 0.0f;
+				s_CombinedReflowLastSec = ReflowNow;
+				s_CombinedCardReflow.BeginFrame(ReflowDt, Columns, g_Config.m_QmUiMotionLevel == 0 || AssetsTabSwitchCooldownActive);
+			}
 
 			static std::vector<CButtonContainer> s_vWorkshopLocalDeleteButtons;
 			s_vWorkshopLocalDeleteButtons.resize(LocalAssetTotalCount);
@@ -7391,6 +7400,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					ItemRect.Margin(Margin / 2, &ItemRect);
 					if(!Item.m_Visible)
 						continue;
+					// 槽位变了就滑过去：新下载的卡片插进来、删除后整列让位。
+					const vec2 SlotReflowOffset = s_CombinedCardReflow.Track(pItem->m_aName, (int)ListIndex, Margin + TextureWidth, WorkshopRowHeight);
+					ItemRect.x += SlotReflowOffset.x;
+					ItemRect.y += SlotReflowOffset.y;
 					auto GaussianBlurSuppression = Item.SuppressGaussianBlur();
 					if(FirstVisibleLocalIndex < 0)
 						FirstVisibleLocalIndex = (int)LocalIndex;
@@ -7532,6 +7545,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					ItemRect.Margin(Margin / 2, &ItemRect);
 					if(!Item.m_Visible)
 						continue;
+					// 商店卡片同样按槽位让位：本地列表多一张，整排往下滑一格。
+					const vec2 SlotReflowOffset = s_CombinedCardReflow.Track(Asset.m_Id.empty() ? Asset.m_Name.c_str() : Asset.m_Id.c_str(), (int)ListIndex, Margin + TextureWidth, WorkshopRowHeight);
+					ItemRect.x += SlotReflowOffset.x;
+					ItemRect.y += SlotReflowOffset.y;
 					auto GaussianBlurSuppression = Item.SuppressGaussianBlur();
 
 					const int VisibleDownloadableIndex = static_cast<int>(DownloadableIndex);
