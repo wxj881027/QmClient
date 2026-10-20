@@ -59,7 +59,7 @@ TEST(QmWarListPlayerPrivacy, LocalPlayersRemainVisibleWithEveryPrivacyOptionEnab
 TEST(QmWarListPlayerPrivacy, InvalidClientIdsDoNotProducePrivacyDecisions)
 {
 	const SSettings Settings{true, true, true};
-	for(int ClientId : {-1, MAX_CLIENTS})
+	for(int ClientId : {-1, static_cast<int>(MAX_CLIENTS)})
 	{
 		const auto Decisions = Resolve(Settings, {ClientId, false, false, true});
 		EXPECT_FALSE(Decisions.m_HideIdentity);
