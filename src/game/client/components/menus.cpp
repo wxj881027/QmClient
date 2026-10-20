@@ -3539,22 +3539,15 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		if(HighlightedMode >= 0 && HighlightedMode < ArcCount)
 		{
 			const SStatsArc &Arc = aArcs[HighlightedMode];
-			const ColorRGBA Outline = ui_token::color::NEUTRAL_WHITE.WithMultipliedAlpha(0.55f);
-			// 圆头分段按收口后的角度画，端帽半径同步放大：整段等比放大而不是换个方头，
-			// 看起来就是这一段从环里抬起来。没有圆头的细分段仍按真实角度画。
+			// 圆头分段按收口后的角度画，端帽半径同步放大：整段等比放大而不是换个方头。
+			// 只放大、不描边，避免在圆环上多出一圈不属于数据的白线。没有圆头的细分段仍按真实角度画。
 			const float BandStart = Arc.m_Rounded ? Arc.m_Start : Arc.m_NominalStart;
 			const float BandEnd = Arc.m_Rounded ? Arc.m_End : Arc.m_NominalEnd;
-			DrawStatsArcBand(ChartInnerRadius - 3.0f, ChartRadius + 3.0f, BandStart, BandEnd, Outline);
+			DrawStatsArcBand(ChartInnerRadius - 2.5f, ChartRadius + 2.5f, BandStart, BandEnd, Arc.m_Color);
 			if(Arc.m_Rounded)
 			{
-				DrawStatsArcEnd(CapRadius + 2.5f, Arc.m_Start, Outline);
-				DrawStatsArcEnd(CapRadius + 2.5f, Arc.m_End, Outline);
-			}
-			DrawStatsArcBand(ChartInnerRadius - 2.0f, ChartRadius + 2.0f, BandStart, BandEnd, Arc.m_Color);
-			if(Arc.m_Rounded)
-			{
-				DrawStatsArcEnd(CapRadius + 1.5f, Arc.m_Start, Arc.m_Color);
-				DrawStatsArcEnd(CapRadius + 1.5f, Arc.m_End, Arc.m_Color);
+				DrawStatsArcEnd(CapRadius + 2.0f, Arc.m_Start, Arc.m_Color);
+				DrawStatsArcEnd(CapRadius + 2.0f, Arc.m_End, Arc.m_Color);
 			}
 		}
 		if(!UseProceduralRing)
@@ -3666,16 +3659,45 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		LegendNameWidth = maximum(LegendNameWidth, TextRender()->TextWidth(ui_token::font::BODY, aLegendNames[Index]));
 	}
 	LegendNameWidth = std::clamp(LegendNameWidth, 80.0f, maximum(80.0f, Legend.w * 0.55f));
-	const float LegendCellGap = 14.0f;
-	const float MapsColumnWidth = 56.0f;
-	const float DurationColumnWidth = 108.0f;
-	const float ScoreColumnWidth = 92.0f;
-	// 窄面板时数值组等比压缩，保住名称列可读。
-	const float ValueGroupWidth = MapsColumnWidth + DurationColumnWidth + (ShowScoreColumn ? ScoreColumnWidth : 0.0f) + LegendCellGap * (ShowScoreColumn ? 3.0f : 2.0f);
-	const float ColumnScale = std::clamp((Legend.w - 20.0f - LegendNameWidth - LegendCellGap) / ValueGroupWidth, 0.55f, 1.0f);
-	const float MapsWidth = MapsColumnWidth * ColumnScale;
-	const float DurationWidth = DurationColumnWidth * ColumnScale;
-	const float ScoreWidth = ScoreColumnWidth * ColumnScale;
+	// 数值列按实测文字宽度定宽：表头与所有数值取最大者再加左右留白，
+	// 列宽贴着内容，居中之后的表头正好压在数字上，也不会在窄列里把表头挤到数字左边。
+	char aMapsTexts[8][32] = {};
+	char aDurationTexts[8][96] = {};
+	float MapsTextWidth = TextRender()->TextWidth(ui_token::font::SMALL, Localize("Maps"));
+	float DurationTextWidth = TextRender()->TextWidth(ui_token::font::SMALL, Localize("Play time"));
+	float ScoreTextWidth = TextRender()->TextWidth(ui_token::font::SMALL, Localize("Points"));
+	for(size_t Index = 0; Index < vDisplayModeStats.size() && Index < std::size(aMapsTexts); ++Index)
+	{
+		const SQmClientLocalModeStats &Stats = vDisplayModeStats[Index];
+		str_format(aMapsTexts[Index], sizeof(aMapsTexts[Index]), "%d", Stats.m_Maps);
+		char aDuration[64];
+		FormatStatsPlaytime(Stats.m_PlaytimeSeconds, s_ShowTotalHours, aDuration, sizeof(aDuration));
+		const int64_t ChartWeight = QmStatisticsChartWeight(Stats.m_Maps, Stats.m_PlaytimeSeconds, ChartUsesMaps);
+		const double ChartPercent = TotalChartWeight > 0 ? 100.0 * ChartWeight / TotalChartWeight : 0.0;
+		str_format(aDurationTexts[Index], sizeof(aDurationTexts[Index]), "%.1f%% · %s", ChartPercent, aDuration);
+		MapsTextWidth = maximum(MapsTextWidth, TextRender()->TextWidth(ui_token::font::BODY, aMapsTexts[Index]));
+		DurationTextWidth = maximum(DurationTextWidth, TextRender()->TextWidth(ui_token::font::BODY, aDurationTexts[Index]));
+		if(aScoreTexts[Index][0])
+			ScoreTextWidth = maximum(ScoreTextWidth, TextRender()->TextWidth(ui_token::font::BODY, aScoreTexts[Index]));
+	}
+	const float ColumnPadding = 12.0f;
+	float MapsWidth = MapsTextWidth + ColumnPadding * 2.0f;
+	float DurationWidth = DurationTextWidth + ColumnPadding * 2.0f;
+	float ScoreWidth = ScoreTextWidth + ColumnPadding * 2.0f;
+	// 列间距吃掉剩余宽度（上限 3 倍基准），窄面板时先按比例压数值列，保住名称列可读。
+	const float LegendCellGapBase = 14.0f;
+	const float LegendCellGapMax = 42.0f;
+	const float GapCount = ShowScoreColumn ? 3.0f : 2.0f;
+	float ColumnScale = 1.0f;
+	const float ValueGroupWidth = MapsWidth + DurationWidth + (ShowScoreColumn ? ScoreWidth : 0.0f);
+	const float AvailableForValues = Legend.w - 20.0f - LegendNameWidth - LegendCellGapBase * GapCount;
+	if(ValueGroupWidth > AvailableForValues && ValueGroupWidth > 0.0f)
+		ColumnScale = std::clamp(AvailableForValues / ValueGroupWidth, 0.55f, 1.0f);
+	MapsWidth *= ColumnScale;
+	DurationWidth *= ColumnScale;
+	ScoreWidth *= ColumnScale;
+	const float UsedWidth = 20.0f + LegendNameWidth + MapsWidth + DurationWidth + (ShowScoreColumn ? ScoreWidth : 0.0f);
+	const float LegendCellGap = ColumnScale < 1.0f ? LegendCellGapBase : std::clamp(LegendCellGapBase + (Legend.w - UsedWidth - LegendCellGapBase * GapCount) / GapCount, LegendCellGapBase, LegendCellGapMax);
 	const ColorRGBA LegendForeground = TextRender()->GetTextColor();
 	// 表头与行共用同一列布局，保证列对齐：色点、名称、地图、时长、积分依次紧随。
 	auto LayoutLegendColumns = [&](const CUIRect &Row, CUIRect *pDot, CUIRect *pName, CUIRect *pMaps, CUIRect *pDuration, CUIRect *pScore) {
@@ -3742,21 +3764,16 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		Dot.Draw(Color, IGraphics::CORNER_ALL, ui_token::radius::PILL);
 		char aDuration[64];
 		FormatStatsPlaytime(Stats.m_PlaytimeSeconds, s_ShowTotalHours, aDuration, sizeof(aDuration));
-		const int64_t ChartWeight = QmStatisticsChartWeight(Stats.m_Maps, Stats.m_PlaytimeSeconds, ChartUsesMaps);
-		const double ChartPercent = TotalChartWeight > 0 ? 100.0 * ChartWeight / TotalChartWeight : 0.0;
 		const char *pNameText = Index < LegendNameCount ? aLegendNames[Index] : pModeName;
 		SLabelProperties NameProps;
 		NameProps.m_MaxWidth = static_cast<int>(Name.w);
 		NameProps.m_EllipsisAtEnd = true;
 		Ui()->DoLabel(&Name, pNameText, ui_token::font::BODY, TEXTALIGN_ML, NameProps);
-		char aMapsText[32];
-		str_format(aMapsText, sizeof(aMapsText), "%d", Stats.m_Maps);
-		char aDurationText[96];
-		str_format(aDurationText, sizeof(aDurationText), "%.1f%% · %s", ChartPercent, aDuration);
-		Ui()->DoLabel(&Maps, aMapsText, ui_token::font::BODY, TEXTALIGN_MR);
-		Ui()->DoLabel(&Duration, aDurationText, ui_token::font::BODY, TEXTALIGN_MR);
+		// 数值与表头在同一列内同轴居中：表头居中而数值右对齐时，短列会出现表头挂在数字左侧的错位感。
+		Ui()->DoLabel(&Maps, aMapsTexts[Index], ui_token::font::BODY, TEXTALIGN_MC);
+		Ui()->DoLabel(&Duration, aDurationTexts[Index], ui_token::font::BODY, TEXTALIGN_MC);
 		if(ShowScoreColumn && Index < std::size(aScoreTexts) && aScoreTexts[Index][0])
-			Ui()->DoLabel(&Score, aScoreTexts[Index], ui_token::font::BODY, TEXTALIGN_MR);
+			Ui()->DoLabel(&Score, aScoreTexts[Index], ui_token::font::BODY, TEXTALIGN_MC);
 		// 行间分隔线：参考图每行底部一条 1px 细线，最后一行不画，避免和卡片底边叠成双线。
 		if(Index + 1 < vDisplayModeStats.size())
 		{
