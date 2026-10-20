@@ -3055,6 +3055,7 @@ if(CLIENT)
     backend/graphics_command_execution.h
     backend/metal/metal_frame_state.cpp
     backend/metal/metal_frame_state.h
+    backend/metal/metal_gpu_completion.h
     backend/metal/metal_render_target_state.cpp
     backend/metal/metal_render_target_state.h
     backend/metal/metal_types.h
@@ -4753,6 +4754,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/graphics_vulkan_scheduler_test.cpp
     src/test/integration/client/graphics_fatal_error_test.cpp
     src/test/integration/client/graphics_command_exception_test.cpp
+    src/test/integration/client/metal_gpu_completion_test.cpp
     src/test/integration/client/graphics_diagnostic_failure_test.cpp
     src/test/integration/client/graphics_thread_startup_test.cpp
     src/test/integration/client/graphics_thread_shutdown_test.cpp

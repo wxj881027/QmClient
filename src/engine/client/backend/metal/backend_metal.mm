@@ -1,5 +1,6 @@
 #include "backend_metal.h"
 #include "metal_frame_state.h"
+#include "metal_gpu_completion.h"
 #include "metal_render_target_state.h"
 #include "metal_types.h"
 
@@ -181,13 +182,8 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 	uint32_t m_LastPresentedReadbackWidth = 0;
 	uint32_t m_LastPresentedReadbackHeight = 0;
 	size_t m_LastPresentedReadbackRowBytes = 0;
-	std::atomic_bool m_GpuFailure = false;
-	std::atomic<uint64_t> m_GpuFailureFrameId = 0;
-	std::atomic<int> m_GpuFailureCommandId = -1;
-	std::atomic<int> m_GpuFailureStatus = 0;
+	CMetalGpuCompletion m_GpuCompletion;
 	std::atomic<int> m_LastCommandId = -1;
-	std::mutex m_GpuFailureMutex;
-	std::string m_GpuFailureDescription;
 	SBackendCapabilities *m_pCapabilities = nullptr;
 	IStorage *m_pStorage = nullptr;
 	bool m_CommandBufferCommitted = false;
@@ -775,51 +771,15 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		m_FrameState.DrainFrames();
 	}
 
-	void RecordGpuFailure(id<MTLCommandBuffer> Buffer, uint64_t FrameId)
+	bool SetGpuFailureError() noexcept
 	{
-		std::string Description = "Metal command buffer failed";
-		NSError *pError = Buffer.error;
-		if(pError != nil)
-		{
-			const char *pDomain = pError.domain.UTF8String;
-			const char *pLocalizedDescription = pError.localizedDescription.UTF8String;
-			Description += " (domain=";
-			Description += pDomain != nullptr ? pDomain : "unknown";
-			Description += ", code=" + std::to_string(static_cast<long long>(pError.code));
-			if(pLocalizedDescription != nullptr)
-			{
-				Description += ", description=";
-				Description += pLocalizedDescription;
-			}
-			Description += ")";
-		}
-		{
-			std::lock_guard<std::mutex> Lock(m_GpuFailureMutex);
-			m_GpuFailureDescription = std::move(Description);
-		}
-		m_GpuFailureFrameId.store(FrameId, std::memory_order_relaxed);
-		m_GpuFailureCommandId.store(m_LastCommandId.load(std::memory_order_relaxed), std::memory_order_relaxed);
-		m_GpuFailureStatus.store(static_cast<int>(Buffer.status), std::memory_order_relaxed);
-		m_GpuFailure.store(true, std::memory_order_release);
-	}
-
-	bool SetGpuFailureError()
-	{
-		if(!m_GpuFailure.load(std::memory_order_acquire))
-			return false;
-		const uint64_t FrameId = m_GpuFailureFrameId.load(std::memory_order_relaxed);
-		const int CommandId = m_GpuFailureCommandId.load(std::memory_order_relaxed);
-		const int Status = m_GpuFailureStatus.load(std::memory_order_relaxed);
-		std::string Description;
-		{
-			std::lock_guard<std::mutex> Lock(m_GpuFailureMutex);
-			Description = m_GpuFailureDescription;
-		}
-		m_Error.m_ErrorType = GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED;
-		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{
-			false,
-			"Metal GPU command buffer failure (stage=completion, frame_id=" + std::to_string(FrameId) + ", command_id=" + std::to_string(CommandId) + ", status=" + std::to_string(Status) + "): " + Description});
-		return true;
+		return m_GpuCompletion.Publish(m_Error, [](SGfxErrorContainer &Error, const CMetalGpuCompletion::SFailure &Failure) {
+			char aMessage[1280];
+			str_format(aMessage, sizeof(aMessage), "Metal GPU command buffer failure (stage=completion, frame_id=%llu, command_id=%d, status=%d): %s",
+				static_cast<unsigned long long>(Failure.m_FrameId), Failure.m_CommandId, Failure.m_Status,
+				Failure.m_aDescription[0] != '\0' ? Failure.m_aDescription : "Metal command buffer failed");
+			Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{false, aMessage});
+		});
 	}
 
 	void AddTextureMemory(size_t Bytes)
@@ -2450,15 +2410,8 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		m_FrameState.DrainFrames();
 		m_CurrentFrameSlot = 0;
 		m_FrameId = 0;
-		m_GpuFailure.store(false, std::memory_order_relaxed);
-		m_GpuFailureFrameId.store(0, std::memory_order_relaxed);
-		m_GpuFailureCommandId.store(-1, std::memory_order_relaxed);
-		m_GpuFailureStatus.store(0, std::memory_order_relaxed);
+		m_GpuCompletion.Reset();
 		m_LastCommandId.store(-1, std::memory_order_relaxed);
-		{
-			std::lock_guard<std::mutex> Lock(m_GpuFailureMutex);
-			m_GpuFailureDescription.clear();
-		}
 		m_State = EMetalBackendState::INITIALIZED;
 		if(m_pCapabilities != nullptr)
 		{
@@ -2505,15 +2458,8 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		DestroyAllBuffers();
 		ReleaseGpuObjects();
 		m_FrameState.DrainFrames();
-		m_GpuFailure.store(false, std::memory_order_relaxed);
-		m_GpuFailureFrameId.store(0, std::memory_order_relaxed);
-		m_GpuFailureCommandId.store(-1, std::memory_order_relaxed);
-		m_GpuFailureStatus.store(0, std::memory_order_relaxed);
+		m_GpuCompletion.Reset();
 		m_LastCommandId.store(-1, std::memory_order_relaxed);
-		{
-			std::lock_guard<std::mutex> Lock(m_GpuFailureMutex);
-			m_GpuFailureDescription.clear();
-		}
 		if(m_MetalView != nullptr)
 			SDL_Metal_DestroyView(m_MetalView);
 		m_MetalView = nullptr;
@@ -4297,9 +4243,20 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			if(RecordGpuTiming)
 				RecordMetalGpuExecutionTiming(Buffer, GpuTimingGeneration);
 			const bool Success = Buffer.status == MTLCommandBufferStatusCompleted;
-			if(!Success)
-				RecordGpuFailure(Buffer, Capture.m_FrameId);
-			m_FrameState.CompleteFrame(Capture, Success);
+			m_GpuCompletion.CompleteFrame(m_FrameState, Capture, Success, m_LastCommandId.load(std::memory_order_relaxed), static_cast<int>(Buffer.status),
+				[Buffer](char *pDescription, size_t DescriptionSize) {
+					NSError *pError = Buffer.error;
+					if(pError == nil)
+					{
+						str_copy(pDescription, "Metal command buffer failed", DescriptionSize);
+						return;
+					}
+					const char *pDomain = pError.domain.UTF8String;
+					const char *pLocalizedDescription = pError.localizedDescription.UTF8String;
+					str_format(pDescription, DescriptionSize, "Metal command buffer failed (domain=%s, code=%lld, description=%s)",
+						pDomain != nullptr ? pDomain : "unknown", static_cast<long long>(pError.code),
+						pLocalizedDescription != nullptr ? pLocalizedDescription : "unknown");
+				});
 		}];
 	}
 
