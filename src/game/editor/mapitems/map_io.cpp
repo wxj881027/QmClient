@@ -1,4 +1,5 @@
 #include "image.h"
+#include "load_info.h"
 #include "load_resources.h"
 #include "sound.h"
 
@@ -21,6 +22,7 @@
 #include <game/mapitems_ex.h>
 
 #include <limits>
+#include <utility>
 
 // compatibility with old sound layers
 class CSoundSourceDeprecated
@@ -641,6 +643,12 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 		return false;
 	}
 
+	auto InfoItems = EditorMapLoad::ReadInfoItems(*pMap);
+	if(!InfoItems)
+	{
+		ErrorHandler(Localize("Error: Failed to open map file. See local console for details.", "Editor"));
+		return false;
+	}
 	const auto Resources = EditorMapLoad::ReadResourceItems(*pMap);
 	if(!Resources)
 	{
@@ -651,54 +659,30 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 	Clean();
 
 	// load map info
+	if(InfoItems->m_Info)
 	{
-		int Start, Num;
-		pMap->GetType(MAPITEMTYPE_INFO, &Start, &Num);
-		for(int i = Start; i < Start + Num; i++)
-		{
-			int ItemSize = pMap->GetItemSize(i);
-			int ItemId;
-			CMapItemInfoSettings *pItem = (CMapItemInfoSettings *)pMap->GetItem(i, nullptr, &ItemId);
-			if(!pItem || ItemId != 0)
-				continue;
-
-			const auto &&ReadStringInfo = [&](int Index, char *pBuffer, size_t BufferSize, const char *pErrorContext) {
-				const char *pStr = pMap->GetDataString(Index);
-				if(pStr == nullptr)
-				{
-					char aBuf[128];
-					str_format(aBuf, sizeof(aBuf), Localize("Error: Failed to read %s from map info.", "Editor"), pErrorContext);
-					ErrorHandler(aBuf);
-					pBuffer[0] = '\0';
-				}
-				else
-				{
-					str_copy(pBuffer, pStr, BufferSize);
-				}
-			};
-
-			ReadStringInfo(pItem->m_Author, m_MapInfo.m_aAuthor, sizeof(m_MapInfo.m_aAuthor), Localize("author", "Editor"));
-			ReadStringInfo(pItem->m_MapVersion, m_MapInfo.m_aVersion, sizeof(m_MapInfo.m_aVersion), Localize("version", "Editor"));
-			ReadStringInfo(pItem->m_Credits, m_MapInfo.m_aCredits, sizeof(m_MapInfo.m_aCredits), Localize("credits", "Editor"));
-			ReadStringInfo(pItem->m_License, m_MapInfo.m_aLicense, sizeof(m_MapInfo.m_aLicense), Localize("license", "Editor"));
-
-			if(pItem->m_Version != 1 || ItemSize < (int)sizeof(CMapItemInfoSettings))
-				break;
-
-			if(!(pItem->m_Settings > -1))
-				break;
-
-			const unsigned Size = pMap->GetDataSize(pItem->m_Settings);
-			char *pSettings = (char *)pMap->GetData(pItem->m_Settings);
-			char *pNext = pSettings;
-			while(pNext < pSettings + Size)
+		const CMapItemInfo *pItem = &*InfoItems->m_Info;
+		const auto &&ReadStringInfo = [&](int Index, char *pBuffer, size_t BufferSize, const char *pErrorContext) {
+			const char *pStr = pMap->GetDataString(Index);
+			if(pStr == nullptr)
 			{
-				int StrSize = str_length(pNext) + 1;
-				m_vSettings.emplace_back(pNext);
-				pNext += StrSize;
+				char aBuf[128];
+				str_format(aBuf, sizeof(aBuf), Localize("Error: Failed to read %s from map info.", "Editor"), pErrorContext);
+				ErrorHandler(aBuf);
+				pBuffer[0] = '\0';
 			}
-		}
+			else
+			{
+				str_copy(pBuffer, pStr, BufferSize);
+			}
+		};
+
+		ReadStringInfo(pItem->m_Author, m_MapInfo.m_aAuthor, sizeof(m_MapInfo.m_aAuthor), Localize("author", "Editor"));
+		ReadStringInfo(pItem->m_MapVersion, m_MapInfo.m_aVersion, sizeof(m_MapInfo.m_aVersion), Localize("version", "Editor"));
+		ReadStringInfo(pItem->m_Credits, m_MapInfo.m_aCredits, sizeof(m_MapInfo.m_aCredits), Localize("credits", "Editor"));
+		ReadStringInfo(pItem->m_License, m_MapInfo.m_aLicense, sizeof(m_MapInfo.m_aLicense), Localize("license", "Editor"));
 	}
+	m_vSettings = std::move(InfoItems->m_vSettings);
 
 	// load images
 	{

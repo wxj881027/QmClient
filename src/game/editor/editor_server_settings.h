@@ -4,6 +4,7 @@
 #include "component.h"
 #include "editor_server_settings_completion.h"
 #include "editor_ui.h"
+#include "mapitems/map_setting.h"
 
 #include <game/client/lineinput.h>
 #include <game/client/ui_listbox.h>
@@ -17,16 +18,6 @@ struct SMapSettingInt;
 struct SMapSettingCommand;
 struct IMapSetting;
 class CLineInput;
-
-struct CEditorMapSetting
-{
-	char m_aCommand[256];
-
-	CEditorMapSetting(const char *pCommand)
-	{
-		str_copy(m_aCommand, pCommand);
-	}
-};
 
 // A parsed map setting argument, storing the name and the type
 // Used for validation and to display arguments names
