@@ -19,6 +19,7 @@
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/chat_gradient.h>
+#include <game/client/components/qmclient/qm_title_badge.h>
 #include <game/client/components/qmclient/sponsor_chat_render.h>
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
@@ -46,10 +47,9 @@ static SQmTitleAppearance QmTitleDraftAppearance()
 		color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTitleBadgeColor)).Pack(false), g_Config.m_QmTitleOpacity};
 }
 
-static void RenderQmTitleFinishedPreview(CMenus *pMenus, const CUIRect &Area, const char *pTitle, float FontSize)
+static void RenderQmTitleFinishedPreview(IGraphics *pGraphics, ITextRender *pTextRender, const CQmTitleBadge &TitleBadge, const CUIRect &Area, const char *pTitle, float FontSize)
 {
 	const std::string Text = QmTitleBadgeText(pTitle[0] ? pTitle : Localize("Sponsor title"));
-	ITextRender *pTextRender = pMenus->TextRender();
 	const vec2 DesiredSize = QmTitleBadgeSize(pTextRender->TextWidth(FontSize, Text.c_str()), FontSize);
 	if(DesiredSize.x <= 0.0f || Area.w <= 0.0f || Area.h <= 0.0f)
 		return;
@@ -68,7 +68,7 @@ static void RenderQmTitleFinishedPreview(CMenus *pMenus, const CUIRect &Area, co
 	const vec2 Size = QmTitleBadgeSize(Bounds.m_W, FontSize);
 	const CUIRect Rect{Area.x + (Area.w - Size.x) * 0.5f, Area.y + (Area.h - Size.y) * 0.5f, Size.x, Size.y};
 	const SQmTitleAppearance Appearance = QmTitleDraftAppearance();
-	pMenus->GameClient()->m_QmClient.TitleBadge().RenderSurface(pMenus->Graphics(), Rect, Appearance, 1.0f);
+	TitleBadge.RenderSurface(pGraphics, Rect, Appearance, 1.0f);
 	pTextRender->RenderTextContainer(s_TitleFinishedPreviewContainer, QmTitleBadgePalette(Appearance).m_Text,
 		ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), Rect.x + 30.0f * Size.y / 24.0f - Bounds.m_X, Rect.y + (Rect.h - Bounds.m_H) * 0.5f - Bounds.m_Y);
 }
@@ -363,7 +363,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 						{TitlePreviewArea.x + (TitlePreviewArea.w - Size.x) * 0.5f, TitlePreviewArea.y + (TitlePreviewArea.h - Size.y) * 0.5f, Size.x, Size.y}, 1.0f);
 				}
 				else
-					RenderQmTitleFinishedPreview(pMenus, TitlePreviewArea, Draft.m_Title.GetString(), BodySize * 1.4f);
+					RenderQmTitleFinishedPreview(pMenus->Graphics(), pMenus->TextRender(), pMenus->GameClient()->m_QmClient.TitleBadge(), TitlePreviewArea, Draft.m_Title.GetString(), BodySize * 1.4f);
 				pMenus->Ui()->ClipDisable();
 			}
 		}
