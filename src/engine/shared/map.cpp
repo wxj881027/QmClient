@@ -112,6 +112,18 @@ bool CMap::Load(const char *pMapName, int StorageType)
 			return false;
 		}
 		const CMapItemGroup *pGroup = static_cast<CMapItemGroup *>(NewDataFile.GetItem(GroupsStart + GroupIndex));
+		// 声明了新版字段就必须包含完整尾部，不能让图层初始化越过条目写入裁剪字段。
+		size_t RequiredGroupSize = sizeof(CMapItemGroup_v1);
+		if(pGroup->m_Version >= 3)
+			RequiredGroupSize = sizeof(CMapItemGroup);
+		else if(pGroup->m_Version >= 2)
+			RequiredGroupSize = sizeof(CMapItemGroup) - sizeof(pGroup->m_aName);
+		if(GroupItemSize < RequiredGroupSize)
+		{
+			log_error("map/load", "Group %d is truncated (version %d, size %" PRIzu ", expected at least %" PRIzu ").",
+				GroupIndex, pGroup->m_Version, GroupItemSize, RequiredGroupSize);
+			return false;
+		}
 		if(pGroup->m_StartLayer < 0 || pGroup->m_NumLayers < 0 ||
 			(int64_t)pGroup->m_StartLayer + pGroup->m_NumLayers > LayersNum)
 		{

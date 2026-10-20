@@ -4814,6 +4814,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/map_load_test.cpp
     src/test/unit/engine/map_render_items_test.cpp
     src/test/integration/client/map_render_items_test.cpp
+    src/test/integration/engine/map_group_load_test.cpp
     src/test/unit/engine/linereader_test.cpp
     src/test/unit/base/mapbugs_test.cpp
     src/test/unit/base/mapitems_test.cpp
