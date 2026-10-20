@@ -2467,10 +2467,13 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		CUIRect aStartTabSlots[std::size(s_aStartTabButtons)];
 		int NumStartTabs = 0;
 		int ActiveStartTab = -1;
+		// 统计数据是收藏地图工作区里的第 4 个页签，顶部滑块和图标高亮仍停在「收藏地图」那一格，
+		// 否则进统计页时顶部会变成没有任何选中项、滑块凭空消失。
+		const int NavigationPage = ActivePage == PAGE_STATS ? PAGE_FAVORITE_MAPS : ActivePage;
 		auto AddStartTab = [&](const int Page, const EQmIcon Icon, const char *pIcon, const CCommunityIcon *pCommunityIcon, const char *pTooltip, const float AppearStrength, const CUIRect &Slot) {
 			aStartTabs[NumStartTabs] = {Page, Icon, pIcon, pCommunityIcon, pTooltip, AppearStrength};
 			aStartTabSlots[NumStartTabs] = Slot;
-			if(ActivePage == Page)
+			if(NavigationPage == Page)
 				ActiveStartTab = NumStartTabs;
 			++NumStartTabs;
 		};
@@ -2539,7 +2542,7 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		{
 			int Current = -1;
 			for(int Index = 1; Index < NumStartTabs; ++Index)
-				if(aStartTabs[Index].m_Page == ActivePage)
+				if(aStartTabs[Index].m_Page == NavigationPage)
 					Current = Index;
 			if(Current >= 1)
 			{
@@ -2551,7 +2554,7 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		}
 		ActiveStartTab = -1;
 		for(int Index = 0; Index < NumStartTabs; ++Index)
-			if(aStartTabs[Index].m_Page == (NewPage >= 0 ? NewPage : ActivePage))
+			if(aStartTabs[Index].m_Page == (NewPage >= 0 ? NewPage : NavigationPage))
 				ActiveStartTab = Index;
 
 		// 胶囊 Tab 槽位自定义底色：未读新闻/更新时主菜单入口（第一个槽位）用绿色
@@ -2580,7 +2583,7 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		for(int TabIndex = 0; TabIndex < NumStartTabs; ++TabIndex)
 		{
 			const SStartTab &Tab = aStartTabs[TabIndex];
-			const bool TabActive = (NewPage >= 0 ? NewPage : ActivePage) == Tab.m_Page;
+			const bool TabActive = (NewPage >= 0 ? NewPage : NavigationPage) == Tab.m_Page;
 			ColorRGBA InactiveColor = MenuTabDefaultColor();
 			ColorRGBA ActiveColor = MenuTabActiveColor();
 			ColorRGBA HoverColor = MenuMenubarHoverColor();

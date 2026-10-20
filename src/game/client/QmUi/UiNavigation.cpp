@@ -15,7 +15,9 @@
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
+#include <limits>
 #include <unordered_map>
 #include <vector>
 
@@ -121,22 +123,66 @@ namespace ui_widget
 			DrawRoundedSurface(Ctx, TintRect, Tints.m_pColors[i], ColorRGBA(), ui_token::radius::PILL);
 		}
 
-		if(pActiveSlot == nullptr)
-			return;
-		CUIRect Target;
-		pActiveSlot->Margin(Style.m_IndicatorInset, &Target);
-		if(Target.w <= 0.0f || Target.h <= 0.0f)
-			return;
-
-		CUIRect Indicator = Target;
-		if(Ctx.m_pAnim != nullptr && !Ctx.m_pUi->AnimationsBlocked())
+		// 选中块从无到有、从有到无都走淡入淡出：没有选中槽位时按上一次记录的
+		// 位置与尺寸停在原地淡出，重新选中时再淡回来，滑块不再瞬间闪现。
+		const bool Animating = Ctx.m_pAnim != nullptr && !Ctx.m_pUi->AnimationsBlocked() && g_Config.m_QmUiMotionLevel != 0;
+		const uint64_t NodeKey = BuildUiAnimNodeKey(GroupId, 0);
+		const uint64_t FadeKey = BuildUiAnimNodeKey(GroupId, 2);
+		CUIRect Indicator = {0.0f, 0.0f, 0.0f, 0.0f};
+		bool HasIndicator = false;
+		if(pActiveSlot != nullptr)
 		{
-			// 胶囊与嵌套分段共用导航弹簧，切换时保留当前速度；选中块固定在同一条竖向轨道。
-			const uint64_t NodeKey = BuildUiAnimNodeKey(GroupId, 0);
-			Indicator.x = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::POS_X, Target.x, ui_token::motion::NAVIGATION_SPRING, 2);
-			Indicator.w = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::WIDTH, Target.w, ui_token::motion::NAVIGATION_SPRING, 2);
+			CUIRect Target;
+			pActiveSlot->Margin(Style.m_IndicatorInset, &Target);
+			if(Target.w > 0.0f && Target.h > 0.0f)
+			{
+				Indicator = Target;
+				HasIndicator = true;
+				if(Animating)
+				{
+					// 胶囊与嵌套分段共用导航弹簧，切换时保留当前速度；选中块固定在同一条竖向轨道。
+					Indicator.x = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::POS_X, Target.x, ui_token::motion::NAVIGATION_SPRING, 2);
+					Indicator.w = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::WIDTH, Target.w, ui_token::motion::NAVIGATION_SPRING, 2);
+					// 竖向位置与高度不参与弹簧，但要记到节点上，淡出时才能停在原地。
+					Ctx.m_pAnim->SetValue(NodeKey, EUiAnimProperty::POS_Y, Target.y);
+					Ctx.m_pAnim->SetValue(NodeKey, EUiAnimProperty::HEIGHT, Target.h);
+				}
+			}
 		}
-		DrawRoundedSurface(Ctx, Indicator, Style.m_IndicatorColor, ColorRGBA(), ui_token::radius::PILL);
+
+		const float TargetAlpha = HasIndicator ? 1.0f : 0.0f;
+		float Alpha = TargetAlpha;
+		if(Animating)
+		{
+			const float Stored = Ctx.m_pAnim->GetValue(FadeKey, EUiAnimProperty::ALPHA, std::numeric_limits<float>::quiet_NaN());
+			if(std::isnan(Stored))
+			{
+				// 首次出现直接就位：页面刚打开时不该补一段淡入。
+				Ctx.m_pAnim->SetValue(FadeKey, EUiAnimProperty::ALPHA, TargetAlpha);
+			}
+			else if(std::abs(Stored - TargetAlpha) > 1e-4f || Ctx.m_pAnim->HasActiveAnimation(FadeKey, EUiAnimProperty::ALPHA))
+			{
+				// 只有状态真的翻转才起一条过渡轨道，静止时不留动画轨道。
+				Alpha = std::clamp(ResolveUiAnimValue(*Ctx.m_pAnim, FadeKey, EUiAnimProperty::ALPHA, TargetAlpha, ui_token::motion::HOVER_FADE.m_DurationSec, ui_token::motion::HOVER_FADE.m_Easing), 0.0f, 1.0f);
+			}
+		}
+		if(!HasIndicator)
+		{
+			if(Alpha <= 0.004f || !Animating)
+				return;
+			// 淡出阶段沿用最后一次记录的几何继续画。
+			const float X = Ctx.m_pAnim->GetValue(NodeKey, EUiAnimProperty::POS_X, std::numeric_limits<float>::quiet_NaN());
+			const float Y = Ctx.m_pAnim->GetValue(NodeKey, EUiAnimProperty::POS_Y, std::numeric_limits<float>::quiet_NaN());
+			const float W = Ctx.m_pAnim->GetValue(NodeKey, EUiAnimProperty::WIDTH, std::numeric_limits<float>::quiet_NaN());
+			const float H = Ctx.m_pAnim->GetValue(NodeKey, EUiAnimProperty::HEIGHT, std::numeric_limits<float>::quiet_NaN());
+			if(std::isnan(X) || std::isnan(Y) || std::isnan(W) || std::isnan(H) || W <= 0.0f || H <= 0.0f)
+				return;
+			Indicator = {X, Y, W, H};
+		}
+
+		ColorRGBA IndicatorColor = Style.m_IndicatorColor;
+		IndicatorColor.a *= Alpha;
+		DrawRoundedSurface(Ctx, Indicator, IndicatorColor, ColorRGBA(), ui_token::radius::PILL);
 	}
 
 	void NestedSegmentChrome(const IUiContext &Ctx, const uint64_t GroupId, const CUIRect &ContainerRect, const CUIRect *pMainSlot, const CUIRect *pSubSlot, const SNestedSegmentStyle &Style)
