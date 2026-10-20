@@ -7970,6 +7970,9 @@ Nameplate text glow range
 Nameplate text gradient color
 == Цвет градиента текста на табличке
 
+Nameplate title size
+== Размер титула над игроком
+
 Nameplate weak hook icon color
 == Цвет иконки слабого крюка на табличке
 

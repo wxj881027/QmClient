@@ -7970,6 +7970,9 @@ Nameplate text glow range
 Nameplate text gradient color
 == İsim levhası metin gradyan rengi
 
+Nameplate title size
+== İsim etiketindeki unvan boyutu
+
 Nameplate weak hook icon color
 == İsim levhası zayıf kanca simgesi rengi
 

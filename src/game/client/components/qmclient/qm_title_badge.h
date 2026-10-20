@@ -54,6 +54,36 @@ struct SQmTitleBadgePlacement
 {
 	CUIRect m_Rect;
 	SQmTitleAppearance m_Appearance;
+	STextContainerIndex m_TextContainerIndex;
+	CUIRect m_TextVisualBounds{};
+
+	// 用实际生成的独立容器取得边界，聊天正文的基线和像素取整不再改变胶囊内的对齐。
+	void PrepareText(ITextRender *pTextRender, const char *pText)
+	{
+		CTextCursor Cursor;
+		Cursor.m_FontSize = QmTitleBadgeLabelFontSize(m_Rect.h);
+		Cursor.m_CalculateVisualBoundingBox = true;
+		const unsigned PreviousFlags = pTextRender->GetRenderFlags();
+		const ColorRGBA PreviousColor = pTextRender->GetTextColor();
+		pTextRender->SetRenderFlags((PreviousFlags | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT) & ~TEXT_RENDER_FLAG_NO_AUTOMATIC_QUAD_UPLOAD);
+		pTextRender->TextColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+		pTextRender->RecreateTextContainerSoft(m_TextContainerIndex, &Cursor, pText);
+		m_TextVisualBounds = QmTitleBadgeVisualBounds(Cursor);
+		pTextRender->TextColor(PreviousColor);
+		pTextRender->SetRenderFlags(PreviousFlags);
+	}
+
+	void RenderText(ITextRender *pTextRender, float Alpha, vec2 Offset) const
+	{
+		const vec2 Position = QmTitleBadgeTextPosition(m_Rect, m_TextVisualBounds) + Offset;
+		pTextRender->RenderTextContainer(m_TextContainerIndex, QmTitleBadgePalette(m_Appearance, Alpha).m_Text,
+			ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), Position.x, Position.y);
+	}
+
+	void DeleteText(ITextRender *pTextRender)
+	{
+		pTextRender->DeleteTextContainer(m_TextContainerIndex);
+	}
 };
 
 class CQmTitleBadge

@@ -817,7 +817,7 @@ public:
 		m_Visible = Data.m_DeveloperBadge && g_Config.m_QmShowNameplateTitle != 0 &&
 			    m_AboveName == (g_Config.m_QmNameplateTitleAboveName != 0);
 		m_HiddenForPrivacy = Data.m_HideIdentity;
-		m_Size = QmDeveloperBadgeSize(Data.m_FontSize * 0.8f);
+		m_Size = QmDeveloperBadgeSize(QmNameplateTitleHeight(Data.m_FontSize, g_Config.m_QmNameplateTitleScale));
 		m_Alpha = Data.m_Color.a;
 	}
 
@@ -830,7 +830,6 @@ public:
 
 class CNamePlatePartTitle : public CNamePlatePartText
 {
-	static constexpr float ms_LabelFontSizeScale = 0.8f * QM_TITLE_BADGE_LABEL_FONT_SIZE / QM_TITLE_BADGE_HEIGHT;
 	char m_aText[64] = "";
 	CUIRect m_TextVisualBounds{};
 	float m_FontSize = -INFINITY;
@@ -846,12 +845,12 @@ protected:
 		m_HiddenForPrivacy = Data.m_HideIdentity;
 		m_Alpha = Data.m_Color.a;
 		m_Appearance = Data.m_TitleAppearance;
-		return m_Visible && (m_FontSize != Data.m_FontSize * ms_LabelFontSizeScale || str_comp(m_aText, Data.m_aQmTitle) != 0);
+		return m_Visible && (m_FontSize != QmTitleBadgeLabelFontSize(QmNameplateTitleHeight(Data.m_FontSize, g_Config.m_QmNameplateTitleScale)) || str_comp(m_aText, Data.m_aQmTitle) != 0);
 	}
 	void UpdateText(CGameClient &This, const CNamePlateData &Data) override
 	{
 		str_copy(m_aText, Data.m_aQmTitle);
-		m_FontSize = Data.m_FontSize * ms_LabelFontSizeScale;
+		m_FontSize = QmTitleBadgeLabelFontSize(QmNameplateTitleHeight(Data.m_FontSize, g_Config.m_QmNameplateTitleScale));
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
 		Cursor.m_CalculateVisualBoundingBox = true;

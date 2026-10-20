@@ -37,6 +37,18 @@ namespace qm_ui_test
 	public:
 		std::vector<IGraphics::SRoundedRectSdfParams> m_vRoundedSubmissions;
 		std::vector<CUIRect> m_vRectSubmissions;
+		struct STextSubmission
+		{
+			CUIRect m_Screen;
+			ColorRGBA m_TextColor;
+			ColorRGBA m_OutlineColor;
+		};
+		std::vector<STextSubmission> m_vTextSubmissions;
+		void RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle TextTexture, CTextureHandle TextOutlineTexture, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) override
+		{
+			CIconBenchmarkGraphics::RenderText(BufferContainerIndex, TextQuadNum, TextureSize, TextTexture, TextOutlineTexture, TextColor, TextOutlineColor);
+			m_vTextSubmissions.push_back({m_MapRect, TextColor, TextOutlineColor});
+		}
 		// 测试只改变 framebuffer 设备尺寸，真实字号量化与布局仍由文字引擎执行。
 		void SetFramebufferSize(int Width, int Height)
 		{

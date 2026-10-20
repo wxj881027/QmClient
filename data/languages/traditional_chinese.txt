@@ -7970,6 +7970,9 @@ Nameplate text glow range
 Nameplate text gradient color
 == 銘牌文本漸變顏色
 
+Nameplate title size
+== 名牌頭銜大小
+
 Nameplate weak hook icon color
 == 銘牌弱鉤圖標顏色
 

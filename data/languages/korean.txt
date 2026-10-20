@@ -7970,6 +7970,9 @@ Nameplate text glow range
 Nameplate text gradient color
 == 이름표 텍스트 그라데이션 색상
 
+Nameplate title size
+== 이름표 칭호 크기
+
 Nameplate weak hook icon color
 == 이름표 약한 갈고리 아이콘 색상
 

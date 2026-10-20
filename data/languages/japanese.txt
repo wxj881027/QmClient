@@ -7970,6 +7970,9 @@ Nameplate text glow range
 Nameplate text gradient color
 == ネームプレートテキストグラデーション色
 
+Nameplate title size
+== ネームプレートの称号サイズ
+
 Nameplate weak hook icon color
 == ネームプレート弱フックアイコン色
 

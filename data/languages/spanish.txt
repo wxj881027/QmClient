@@ -7970,6 +7970,9 @@ Nameplate text glow range
 Nameplate text gradient color
 == Color degradado del texto del nombre
 
+Nameplate title size
+== Tamaño del título en la placa de nombre
+
 Nameplate weak hook icon color
 == Color del icono de gancho débil del nombre
 

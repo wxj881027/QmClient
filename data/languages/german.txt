@@ -7970,6 +7970,9 @@ Nameplate text glow range
 Nameplate text gradient color
 == Namensschild-Text-Verlaufsfarbe
 
+Nameplate title size
+== Titelgröße am Namensschild
+
 Nameplate weak hook icon color
 == Namensschild-Schwacher-Haken-Symbol-Farbe
 

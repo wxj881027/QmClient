@@ -2656,6 +2656,7 @@ Nameplate text effects spectate scope (0=Off 1=Spectated player 2=Others 3=Frien
 Nameplate text glow color
 Nameplate text glow range
 Nameplate text gradient color
+Nameplate title size
 Nameplate weak hook icon color
 Nameplate X alignment hint duration window (ms)
 Nameplate X alignment hint highlight color

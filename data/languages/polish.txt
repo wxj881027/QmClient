@@ -7970,6 +7970,9 @@ Nameplate text glow range
 Nameplate text gradient color
 == Kolor gradientu tekstu na tabliczce
 
+Nameplate title size
+== Rozmiar tytułu na plakietce gracza
+
 Nameplate weak hook icon color
 == Kolor ikony słabego haka na tabliczce
 

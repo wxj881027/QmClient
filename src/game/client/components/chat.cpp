@@ -388,6 +388,8 @@ void CChat::CLine::DeleteTextContainers(ITextRender *pTextRender)
 {
 	pTextRender->DeleteTextContainer(m_TextContainerIndex);
 	pTextRender->DeleteTextContainer(m_BodyTextContainerIndex);
+	for(auto &Badge : m_vTitleBadges)
+		Badge.DeleteText(pTextRender);
 	m_vDeveloperBadgeRects.clear();
 	m_vTitleBadges.clear();
 }
@@ -2874,7 +2876,7 @@ bool CChat::OnPrepareLines(float y)
 		else
 			NameColor = PlayerNameColor(Line.m_ClientId, Line.m_NameColor, Line.m_Team);
 
-		const auto AppendQmTitle = [&](const char *pTitle, const ColorRGBA &FallbackColor, int AuthorId, bool DeveloperBadge, const SQmTitleAppearance &Appearance) {
+		const auto AppendQmTitle = [&](const char *pTitle, int AuthorId, bool DeveloperBadge, const SQmTitleAppearance &Appearance) {
 			pTitle = VisibleTitle(pTitle, AuthorId);
 			if(!pTitle[0])
 				return;
@@ -2884,30 +2886,12 @@ bool CChat::OnPrepareLines(float y)
 				return;
 			}
 			const std::string Text = QmTitleBadgeText(pTitle);
-			const auto MeasureLabel = [&](float FontSize) {
-				CTextCursor Cursor;
-				Cursor.m_FontSize = FontSize;
-				Cursor.m_Flags = 0;
-				Cursor.m_CalculateVisualBoundingBox = true;
-				TextRender()->TextEx(&Cursor, Text.c_str());
-				return Cursor;
-			};
-			CTextCursor LabelMetrics = MeasureLabel(QmTitleBadgeLabelFontSize(LineCursor.m_FontSize));
-			const CUIRect Rect = QmLayoutTitleBadge(LineCursor, LabelMetrics.m_LongestLineWidth);
-			const float LabelFontSize = QmTitleBadgeLabelFontSize(Rect.h);
-			if(LabelMetrics.m_FontSize != LabelFontSize)
-				LabelMetrics = MeasureLabel(LabelFontSize);
-			Line.m_vTitleBadges.push_back({Rect, Appearance});
-			CTextCursor TitleCursor;
-			TitleCursor.SetPosition(QmTitleBadgeTextPosition(Rect, QmTitleBadgeVisualBounds(LabelMetrics)));
-			TitleCursor.m_FontSize = LabelFontSize;
-			TitleCursor.m_CharCount = LineCursor.m_CharCount;
-			TitleCursor.m_GlyphCount = LineCursor.m_GlyphCount;
-			TextRender()->TextColor(QmTitleBadgePalette(Appearance).m_Text);
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &TitleCursor, Text.c_str());
-			LineCursor.m_CharCount = TitleCursor.m_CharCount;
-			LineCursor.m_GlyphCount = TitleCursor.m_GlyphCount;
-			TextRender()->TextColor(FallbackColor);
+			const float LabelWidth = TextRender()->TextWidth(QmTitleBadgeLabelFontSize(LineCursor.m_FontSize), Text.c_str());
+			const CUIRect Rect = QmLayoutTitleBadge(LineCursor, LabelWidth);
+			auto &Badge = Line.m_vTitleBadges.emplace_back();
+			Badge.m_Rect = Rect;
+			Badge.m_Appearance = Appearance;
+			Badge.PrepareText(TextRender(), Text.c_str());
 		};
 
 		if(MergedPlayerMessages)
@@ -2919,7 +2903,7 @@ bool CChat::OnPrepareLines(float y)
 				TextRender()->TextColor(Line.m_vMergedAuthors[i].m_NameColor);
 				if(i > 0)
 					TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, ",");
-				AppendQmTitle(Line.m_vMergedAuthors[i].m_aQmTitle, Line.m_vMergedAuthors[i].m_NameColor, Line.m_vMergedAuthors[i].m_ClientId, Line.m_vMergedAuthors[i].m_DeveloperBadge, Line.m_vMergedAuthors[i].m_TitleAppearance);
+				AppendQmTitle(Line.m_vMergedAuthors[i].m_aQmTitle, Line.m_vMergedAuthors[i].m_ClientId, Line.m_vMergedAuthors[i].m_DeveloperBadge, Line.m_vMergedAuthors[i].m_TitleAppearance);
 				TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, Line.m_vMergedAuthors[i].m_aName);
 			}
 			NameColor = Line.m_vMergedAuthors.back().m_NameColor;
@@ -2928,7 +2912,7 @@ bool CChat::OnPrepareLines(float y)
 		{
 			TextRender()->TextColor(NameColor);
 			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, aClientId);
-			AppendQmTitle(Line.m_aQmTitle, NameColor, Line.m_ClientId, Line.m_DeveloperBadge, Line.m_TitleAppearance);
+			AppendQmTitle(Line.m_aQmTitle, Line.m_ClientId, Line.m_DeveloperBadge, Line.m_TitleAppearance);
 			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, Line.m_aName);
 		}
 
@@ -3661,8 +3645,11 @@ void CChat::OnRender()
 			}
 
 			for(const auto &Badge : Line.m_vTitleBadges)
+			{
 				GameClient()->m_QmClient.TitleBadge().RenderSurface(Graphics(),
 					{Badge.m_Rect.x + AnimOffsetX, Badge.m_Rect.y + AnimOffsetY, Badge.m_Rect.w, Badge.m_Rect.h}, Badge.m_Appearance, AnimAlpha * DefaultTextColor.a);
+				Badge.RenderText(TextRender(), AnimAlpha * DefaultTextColor.a, vec2(AnimOffsetX, AnimOffsetY));
+			}
 
 			for(const CUIRect &Rect : Line.m_vDeveloperBadgeRects)
 				GameClient()->m_QmClient.DeveloperBadge().Render(Graphics(),
