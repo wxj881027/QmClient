@@ -180,6 +180,9 @@ public:
 	int DoSegmentedChoice(CButtonContainer *pButtons, const char *const *ppLabels, int Count, int Current, const CUIRect &Segments, float Rounding = 5.0f, const ui_widget::SCapsuleTabBarStyle *pCapsuleStyle = nullptr, float FontSize = -1.0f, const void *pConfigValue = nullptr, const void *pSecondConfigValue = nullptr);
 	// 页面导航按下时先更新选择；复用多选一布局和窄窗口下拉退路。
 	int DoNavigationTabs(CButtonContainer *pButtons, const char *const *ppLabels, int Count, int Current, const CUIRect &Segments, float Rounding = 5.0f, const ui_widget::SCapsuleTabBarStyle *pCapsuleStyle = nullptr, float FontSize = -1.0f);
+	// 收藏地图页与统计数据页共用的工作区页签：收藏地图 / 地图游玩历史 / 本地存档 / 统计数据。
+	int DoMapWorkspaceTabs(const CUIRect &Segments, float Rounding, int CurrentTab);
+	int MapWorkspaceTab();
 	ColorRGBA MenuPanelColor(float AlphaScale = 1.0f) const;
 	ColorRGBA MenuPanelElevatedColor(float AlphaScale = 1.0f) const;
 	ColorRGBA BrowserPanelColor(float AlphaScale = 1.0f) const;

@@ -57,6 +57,7 @@
 #include <game/client/components/menu_background.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/demo_ui.h>
+#include <game/client/components/qmclient/map_history_ui.h>
 #include <game/client/components/qmclient/media_paths.h>
 #if defined(CONF_VIDEORECORDER)
 #include <engine/client/video_encoder.h>
@@ -2452,7 +2453,7 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 
 		// 胶囊 Tabbar：页签槽位（含收藏社区页签的展开宽度）先全部算完，再画容器与滑块，
 		// 最后画图标 —— 滑块必须压在图标之下，布局与绘制不能混在同一遍里做。
-		static CButtonContainer s_aStartTabButtons[11];
+		static CButtonContainer s_aStartTabButtons[10];
 		struct SStartTab
 		{
 			int m_Page;
@@ -2461,14 +2462,13 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 			const CCommunityIcon *m_pCommunityIcon;
 			const char *m_pTooltip;
 			float m_AppearStrength;
-			const char *m_pLabel; // 非空时按文字页签绘制（统计数据），空则按图标页签绘制
 		};
 		SStartTab aStartTabs[std::size(s_aStartTabButtons)];
 		CUIRect aStartTabSlots[std::size(s_aStartTabButtons)];
 		int NumStartTabs = 0;
 		int ActiveStartTab = -1;
-		auto AddStartTab = [&](const int Page, const EQmIcon Icon, const char *pIcon, const CCommunityIcon *pCommunityIcon, const char *pTooltip, const float AppearStrength, const CUIRect &Slot, const char *pLabel) {
-			aStartTabs[NumStartTabs] = {Page, Icon, pIcon, pCommunityIcon, pTooltip, AppearStrength, pLabel};
+		auto AddStartTab = [&](const int Page, const EQmIcon Icon, const char *pIcon, const CCommunityIcon *pCommunityIcon, const char *pTooltip, const float AppearStrength, const CUIRect &Slot) {
+			aStartTabs[NumStartTabs] = {Page, Icon, pIcon, pCommunityIcon, pTooltip, AppearStrength};
 			aStartTabSlots[NumStartTabs] = Slot;
 			if(ActivePage == Page)
 				ActiveStartTab = NumStartTabs;
@@ -2483,25 +2483,15 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 			// 主菜单入口并入左侧滑块导航：作为第一个槽位，点击回到主菜单。
 			CUIRect HomeTabSlot;
 			TabsRemainder.VSplitLeft(BrowserButtonWidth, &HomeTabSlot, &TabsRemainder);
-			AddStartTab(-1, EQmIcon::HOUSE, FONT_ICON_HOUSE, nullptr, Localize("Main menu"), 1.0f, HomeTabSlot, nullptr);
+			AddStartTab(-1, EQmIcon::HOUSE, FONT_ICON_HOUSE, nullptr, Localize("Main menu"), 1.0f, HomeTabSlot);
 			for(size_t Fixed = 0; Fixed < std::size(aFixedPages); ++Fixed)
 			{
 				if(NumStartTabs > 0)
 					TabsRemainder.VSplitLeft(MenubarItemGap, nullptr, &TabsRemainder);
 				CUIRect Slot;
 				TabsRemainder.VSplitLeft(BrowserButtonWidth, &Slot, &TabsRemainder);
-				AddStartTab(aFixedPages[Fixed], aFixedIcons[Fixed], apFixedIcons[Fixed], nullptr, apFixedTooltips[Fixed], 1.0f, Slot, nullptr);
+				AddStartTab(aFixedPages[Fixed], aFixedIcons[Fixed], apFixedIcons[Fixed], nullptr, apFixedTooltips[Fixed], 1.0f, Slot);
 			}
-
-			// 「统计数据」文字页签：和图标页签共用同一条胶囊轨与滑块，槽宽按文字实测宽度给，
-			// 放在收藏地图之后、社区页签之前。
-			const char *pStatsTabLabel = Localize("Statistics");
-			const float StatsTabLabelSize = ui_token::settings::TAB_FONT_SIZE * MENU_MENUBAR_CONTENT_SCALE_NEW;
-			const float StatsTabWidth = maximum(BrowserButtonWidth, TextRender()->TextWidth(StatsTabLabelSize, pStatsTabLabel) + 26.0f * MENU_MENUBAR_CONTENT_SCALE_NEW);
-			TabsRemainder.VSplitLeft(MenubarItemGap, nullptr, &TabsRemainder);
-			CUIRect StatsTabSlot;
-			TabsRemainder.VSplitLeft(StatsTabWidth, &StatsTabSlot, &TabsRemainder);
-			AddStartTab(PAGE_STATS, EQmIcon::COUNT, nullptr, nullptr, nullptr, 1.0f, StatsTabSlot, pStatsTabLabel);
 
 			static const uint64_t s_FavoriteCommunityAppearScopeHash = static_cast<uint64_t>(str_quickhash("menu_favorite_community_tab_appear"));
 			CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
@@ -2509,9 +2499,9 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 			SUiAnimTransition AppearTransition;
 			AppearTransition.m_DurationSec = 0.18f;
 			AppearTransition.m_Easing = EEasing::EASE_OUT;
-			static_assert(std::size(s_aStartTabButtons) == 2 + 4 + (size_t)PAGE_FAVORITE_COMMUNITY_5 - PAGE_FAVORITE_COMMUNITY_1 + 1);
-			static_assert(std::size(s_aStartTabButtons) - 6 == (size_t)BIT_TAB_FAVORITE_COMMUNITY_5 - BIT_TAB_FAVORITE_COMMUNITY_1 + 1);
-			static_assert(std::size(s_aStartTabButtons) - 6 == (size_t)IServerBrowser::TYPE_FAVORITE_COMMUNITY_5 - IServerBrowser::TYPE_FAVORITE_COMMUNITY_1 + 1);
+			static_assert(std::size(s_aStartTabButtons) == 1 + 4 + (size_t)PAGE_FAVORITE_COMMUNITY_5 - PAGE_FAVORITE_COMMUNITY_1 + 1);
+			static_assert(std::size(s_aStartTabButtons) - 5 == (size_t)BIT_TAB_FAVORITE_COMMUNITY_5 - BIT_TAB_FAVORITE_COMMUNITY_1 + 1);
+			static_assert(std::size(s_aStartTabButtons) - 5 == (size_t)IServerBrowser::TYPE_FAVORITE_COMMUNITY_5 - IServerBrowser::TYPE_FAVORITE_COMMUNITY_1 + 1);
 			for(const CCommunity *pCommunity : ServerBrowser()->FavoriteCommunities())
 			{
 				if((size_t)NumStartTabs >= std::size(s_aStartTabButtons))
@@ -2530,8 +2520,8 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 				Slot.x += (Slot.w - RevealWidth) * 0.5f;
 				Slot.w = RevealWidth;
 
-				const int Page = PAGE_FAVORITE_COMMUNITY_1 + (NumStartTabs - 6);
-				AddStartTab(Page, EQmIcon::ELLIPSIS, FONT_ICON_ELLIPSIS, m_CommunityIcons.Find(pCommunity->Id()), pCommunity->Name(), AppearStrength, Slot, nullptr);
+				const int Page = PAGE_FAVORITE_COMMUNITY_1 + (NumStartTabs - 5);
+				AddStartTab(Page, EQmIcon::ELLIPSIS, FONT_ICON_ELLIPSIS, m_CommunityIcons.Find(pCommunity->Id()), pCommunity->Name(), AppearStrength, Slot);
 			}
 			// 右侧图标簇紧接着页签右边排，中间不留额外空白。
 			Box = TabsRemainder;
@@ -2605,11 +2595,6 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 				ColorRGBA HomeHover = MenuCapsuleTabIndicatorColor().WithAlpha(0.18f);
 				HomeHover.a *= Tab.m_AppearStrength;
 				DoMenuTabV2_QmIcon(&s_aStartTabButtons[TabIndex], Tab.m_Icon, Tab.m_pIcon, false, &aStartTabSlots[TabIndex], IGraphics::CORNER_ALL, &InactiveColor, &ActiveColor, &HomeHover, Tab.m_pCommunityIcon, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true);
-			}
-			else if(Tab.m_pLabel != nullptr)
-			{
-				// 文字页签（统计数据）：图标位留空，直接画标题，hover/激活配色与图标页签同源。
-				DoMenuTabV2(&s_aStartTabButtons[TabIndex], Tab.m_pLabel, TabActive, &aStartTabSlots[TabIndex], IGraphics::CORNER_ALL, &InactiveColor, &ActiveColor, &HoverColor, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true);
 			}
 			else
 				DoMenuTabV2_QmIcon(&s_aStartTabButtons[TabIndex], Tab.m_Icon, Tab.m_pIcon, TabActive, &aStartTabSlots[TabIndex], IGraphics::CORNER_ALL, &InactiveColor, &ActiveColor, &HoverColor, Tab.m_pCommunityIcon, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true);
@@ -2909,6 +2894,16 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	// 页面标题由顶部导航页签承担，这里不再重复大标题，内容直接从卡片行开始。
 	CUIRect Content = Window;
 	Content.Margin(12.0f, &Content);
+	// 与收藏地图页共用的工作区页签：统计数据是其中的第 4 个页签，切回其它页签直接跳回收藏地图。
+	{
+		const QmMapHistoryUi::SWorkspaceMetrics WorkspaceLayout = QmMapHistoryUi::WorkspaceMetrics(MainView.h);
+		CUIRect WorkspaceTabs;
+		Content.HSplitTop(WorkspaceLayout.m_TabHeight, &WorkspaceTabs, &Content);
+		Content.HSplitTop(WorkspaceLayout.m_SectionGap, nullptr, &Content);
+		const int PickedWorkspaceTab = DoMapWorkspaceTabs(WorkspaceTabs, WorkspaceLayout.m_TabHeight * 0.20f, 3);
+		if(PickedWorkspaceTab >= 0 && PickedWorkspaceTab < 3)
+			SetMenuPage(PAGE_FAVORITE_MAPS);
+	}
 	const auto &vLocalModeStats = GameClient()->m_QmClient.QmClientLocalModeStats();
 	std::vector<SQmClientLocalModeStats> vModeStats;
 	std::vector<int64_t> vDominantPlaytimes;
@@ -3233,7 +3228,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	CUIRect TopCards;
 	const int TopCardColumns = Content.w >= 700.0f ? 4 : 2;
 	const int TopCardRows = (4 + TopCardColumns - 1) / TopCardColumns;
-	const float TopCardsHeight = TopCardRows == 1 ? 78.0f : 162.0f;
+	const float TopCardsHeight = TopCardRows == 1 ? 74.0f : 158.0f;
 	Content.HSplitTop(TopCardsHeight, &TopCards, &Content);
 	const float CardGap = 8.0f;
 	const float CardWidth = (TopCards.w - CardGap * (TopCardColumns - 1)) / TopCardColumns;
@@ -3256,7 +3251,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 			RenderStatCard(Card, Localize("Favorite friend"), aFavoriteFriendText, nullptr);
 	}
 
-	Content.HSplitTop(10.0f, nullptr, &Content);
+	Content.HSplitTop(6.0f, nullptr, &Content);
 
 	CUIRect ModePanel, ModeRest;
 	// 统计卡按参考图改成「圆环 + 分组用量表 + 右侧纵向操作列」三段式：
@@ -3266,7 +3261,8 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	const float StatsPanelPadding = 14.0f;
 	const float StatsPanelHeaderHeight = 28.0f;
 	const float StatsTableHeight = StatsTableHeaderHeight + StatsTableRowHeight * static_cast<float>(vDisplayModeStats.size());
-	const float ModePanelHeight = std::clamp(StatsTableHeight + StatsPanelPadding * 2.0f + StatsPanelHeaderHeight + 16.0f, 260.0f, 470.0f);
+	// 下限按表头 + 5 行 + 内边距的实际需要给，页签行占用的高度从这里让出来，避免底部卡片被推出可视区。
+	const float ModePanelHeight = std::clamp(StatsTableHeight + StatsPanelPadding * 2.0f + StatsPanelHeaderHeight + 16.0f, 246.0f, 470.0f);
 	Content.HSplitTop(ModePanelHeight, &ModePanel, &ModeRest);
 	// 先铺 1px 描边再画内层填充：深色页面里纯半透明卡片会和背景糊成一片，加一圈细边才分得开。
 	ModePanel.Draw(ui_token::color::BORDER_SUBTLE, IGraphics::CORNER_ALL, ui_token::radius::CARD);
@@ -3544,13 +3540,17 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		{
 			const SStatsArc &Arc = aArcs[HighlightedMode];
 			const ColorRGBA Outline = ui_token::color::NEUTRAL_WHITE.WithMultipliedAlpha(0.55f);
-			DrawStatsArcBand(ChartInnerRadius - 3.0f, ChartRadius + 3.0f, Arc.m_NominalStart, Arc.m_NominalEnd, Outline);
+			// 圆头分段按收口后的角度画，端帽半径同步放大：整段等比放大而不是换个方头，
+			// 看起来就是这一段从环里抬起来。没有圆头的细分段仍按真实角度画。
+			const float BandStart = Arc.m_Rounded ? Arc.m_Start : Arc.m_NominalStart;
+			const float BandEnd = Arc.m_Rounded ? Arc.m_End : Arc.m_NominalEnd;
+			DrawStatsArcBand(ChartInnerRadius - 3.0f, ChartRadius + 3.0f, BandStart, BandEnd, Outline);
 			if(Arc.m_Rounded)
 			{
 				DrawStatsArcEnd(CapRadius + 2.5f, Arc.m_Start, Outline);
 				DrawStatsArcEnd(CapRadius + 2.5f, Arc.m_End, Outline);
 			}
-			DrawStatsArcBand(ChartInnerRadius - 2.0f, ChartRadius + 2.0f, Arc.m_NominalStart, Arc.m_NominalEnd, Arc.m_Color);
+			DrawStatsArcBand(ChartInnerRadius - 2.0f, ChartRadius + 2.0f, BandStart, BandEnd, Arc.m_Color);
 			if(Arc.m_Rounded)
 			{
 				DrawStatsArcEnd(CapRadius + 1.5f, Arc.m_Start, Arc.m_Color);
@@ -3775,10 +3775,10 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	}
 
 	Content = ModeRest;
-	Content.HSplitTop(10.0f, nullptr, &Content);
+	Content.HSplitTop(6.0f, nullptr, &Content);
 
 	CUIRect BottomSection, ContentRest;
-	const float BottomSectionHeight = Content.w >= 620.0f ? 164.0f : 332.0f;
+	const float BottomSectionHeight = Content.w >= 620.0f ? 156.0f : 324.0f;
 	Content.HSplitTop(BottomSectionHeight, &BottomSection, &ContentRest);
 	CUIRect BottomLeft, BottomRight;
 	if(BottomSection.w >= 620.0f)
@@ -3787,7 +3787,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	}
 	else
 	{
-		BottomSection.HSplitTop(164.0f, &BottomLeft, &BottomRight);
+		BottomSection.HSplitTop(156.0f, &BottomLeft, &BottomRight);
 		BottomRight.HSplitTop(8.0f, nullptr, &BottomRight);
 	}
 	BottomLeft.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.23f), IGraphics::CORNER_ALL, ui_token::radius::CARD);

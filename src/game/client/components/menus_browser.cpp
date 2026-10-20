@@ -4608,6 +4608,43 @@ void CMenus::PopupCancelRemoveFriend()
 	m_RemoveFriendState = IFriends::FRIEND_NO;
 }
 
+namespace
+{
+	// 收藏地图页与统计数据页共用同一条工作区页签；选中项放在文件级，
+	// 从统计数据切回收藏地图时仍停在上次看的工作区。
+	int s_FavoriteMapsWorkspaceTab = 0;
+	CButtonContainer s_aFavoriteMapsWorkspaceTabButtons[4];
+}
+
+int CMenus::DoMapWorkspaceTabs(const CUIRect &Segments, float Rounding, int CurrentTab)
+{
+	// 本地存档列表的计数与收藏地图页共用同一份缓存，这里沿用同样的节流刷新。
+	char aSavesPath[IO_MAX_PATH_LENGTH];
+	Storage()->GetCompletePath(IStorage::TYPE_SAVE, SAVES_FILE, aSavesPath, sizeof(aSavesPath));
+	if(auto pJob = m_LocalSaveDisplay.Refresh(aSavesPath, time_get(), time_freq() * 2))
+		Engine()->AddJob(std::move(pJob));
+
+	char aaTabLabels[4][128];
+	str_format(aaTabLabels[0], sizeof(aaTabLabels[0]), "%s (%d)", Localize("Favorite map"), (int)GameClient()->m_TClient.GetFavoriteMaps().size());
+	str_format(aaTabLabels[1], sizeof(aaTabLabels[1]), "%s (%d)", Localize("Map play history"), (int)GameClient()->m_TClient.GetMapHistory().Entries().size());
+	str_format(aaTabLabels[2], sizeof(aaTabLabels[2]), "%s (%d)", Localize("Local saves"), (int)m_LocalSaveDisplay.Entries().size());
+	str_format(aaTabLabels[3], sizeof(aaTabLabels[3]), "%s", Localize("Statistics"));
+	const char *apTabLabels[4] = {aaTabLabels[0], aaTabLabels[1], aaTabLabels[2], aaTabLabels[3]};
+	// 胶囊滑块配色按浏览器面板表面自适应，两个页面都用同一档面板色。
+	const ui_widget::SCapsuleTabBarStyle TabStyle = CapsuleTabBarStyleFor(BrowserPanelColor(0.68f));
+	const int NewTab = DoNavigationTabs(s_aFavoriteMapsWorkspaceTabButtons, apTabLabels, 4, CurrentTab, Segments, Rounding, &TabStyle);
+	if(NewTab == 3)
+		SetMenuPage(PAGE_STATS);
+	else if(NewTab != CurrentTab)
+		s_FavoriteMapsWorkspaceTab = NewTab;
+	return NewTab;
+}
+
+int CMenus::MapWorkspaceTab()
+{
+	return s_FavoriteMapsWorkspaceTab;
+}
+
 void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 {
 	const QmMapHistoryUi::SWorkspaceMetrics Layout = QmMapHistoryUi::WorkspaceMetrics(View.h);
@@ -4621,23 +4658,11 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 	const bool SaveFileExists = m_LocalSaveDisplay.FileExists();
 	const std::set<std::string> &FavoriteMaps = GameClient()->m_TClient.GetFavoriteMaps();
 	const std::vector<QmMapHistory::SMapHistoryRecord> &HistoryEntries = GameClient()->m_TClient.GetMapHistory().Entries();
-
-	static int s_FavoriteMapsWorkspaceTab = 0;
-	static CButtonContainer s_aFavoriteMapsWorkspaceTabButtons[3];
-	char aaWorkspaceTabLabels[3][128];
-	str_format(aaWorkspaceTabLabels[0], sizeof(aaWorkspaceTabLabels[0]), "%s (%d)", Localize("Favorite map"), (int)FavoriteMaps.size());
-	str_format(aaWorkspaceTabLabels[1], sizeof(aaWorkspaceTabLabels[1]), "%s (%d)", Localize("Map play history"), (int)HistoryEntries.size());
-	str_format(aaWorkspaceTabLabels[2], sizeof(aaWorkspaceTabLabels[2]), "%s (%d)", Localize("Local saves"), (int)vSaveEntries.size());
+	const ColorRGBA TabInactiveColor = BrowserPanelColor(0.68f);
 
 	CUIRect WorkspaceTabs;
 	View.HSplitTop(Layout.m_TabHeight, &WorkspaceTabs, &View);
-	const ColorRGBA TabInactiveColor = BrowserPanelColor(0.68f);
-	const char *apWorkspaceTabLabelPtrs[3] = {aaWorkspaceTabLabels[0], aaWorkspaceTabLabels[1], aaWorkspaceTabLabels[2]};
-	// 胶囊滑块配色按浏览器面板表面自适应。
-	const ui_widget::SCapsuleTabBarStyle WorkspaceTabStyle = CapsuleTabBarStyleFor(TabInactiveColor);
-	const int NewWorkspaceTab = DoNavigationTabs(s_aFavoriteMapsWorkspaceTabButtons, apWorkspaceTabLabelPtrs, 3, s_FavoriteMapsWorkspaceTab, WorkspaceTabs, Layout.m_TabHeight * 0.20f, &WorkspaceTabStyle);
-	if(NewWorkspaceTab != s_FavoriteMapsWorkspaceTab)
-		s_FavoriteMapsWorkspaceTab = NewWorkspaceTab;
+	DoMapWorkspaceTabs(WorkspaceTabs, Layout.m_TabHeight * 0.20f, s_FavoriteMapsWorkspaceTab);
 	View.HSplitTop(Layout.m_SectionGap, nullptr, &View);
 
 	View.Draw(BrowserPanelColor(0.82f), IGraphics::CORNER_ALL, Layout.m_PanelMargin);
