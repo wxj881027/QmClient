@@ -3191,13 +3191,8 @@ if(CLIENT)
     QmUi/QmPopconfirm.cpp
     QmUi/QmPopconfirm.h
     QmUi/QmPopconfirmGeometry.h
-    QmUi/QmToast.cpp
-    QmUi/QmToast.h
-    QmUi/QmToastRender.cpp
-    QmUi/QmDialogLogic.h
-    QmUi/QmPopconfirm.cpp
-    QmUi/QmPopconfirm.h
-    QmUi/QmPopconfirmGeometry.h
+    QmUi/QmSlotReflow.cpp
+    QmUi/QmSlotReflow.h
     QmUi/QmToast.cpp
     QmUi/QmToast.h
     QmUi/QmToastRender.cpp
@@ -5518,9 +5513,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/client/qm_text_device_recovery_test.cpp
       src/test/integration/qmclient/ui/qm_popup_blur_scope_test.cpp
       src/test/unit/qmclient/ui/qm_ui_overlay_semantics_test.cpp
+      src/test/unit/qmclient/ui/qm_slot_reflow_test.cpp
       src/game/client/QmUi/QmToast.cpp
-      src/test/unit/qmclient/ui/qm_ui_overlay_semantics_test.cpp
-      src/game/client/QmUi/QmToast.cpp
+      src/game/client/QmUi/QmSlotReflow.cpp
       src/test/integration/qmclient/ui/qm_settings_search_session_test.cpp
       src/test/integration/qmclient/ui/qm_settings_paragraph_test.cpp
       src/test/integration/qmclient/ui/qm_console_settings_scroll_test.cpp

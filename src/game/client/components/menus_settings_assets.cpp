@@ -23,6 +23,7 @@
 #include <generated/client_data.h>
 
 #include <game/client/QmUi/QmPopconfirm.h>
+#include <game/client/QmUi/QmSlotReflow.h>
 #include <game/client/QmUi/QmToast.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
@@ -3621,6 +3622,32 @@ void CMenus::RefreshEntityBgHierarchyView()
 	m_aaCustomPreviewReadyQueue[ASSETS_TAB_ENTITY_BG].clear();
 	m_aaCustomPreviewReadyQueued[ASSETS_TAB_ENTITY_BG].clear();
 
+	// 重建只应更新「有哪些条目」，不该让用户看见贴图消失再淡入
+	// （下载完成 / 删除后的那一帧闪烁就来自这里）。先把已加载的贴图按名字
+	// 取出来接管所有权，重建后再按名字还给对应条目。
+	struct SCarriedEntityBgTexture
+	{
+		std::string m_Name;
+		IGraphics::CTextureHandle m_Texture;
+		size_t m_ResidentBytes;
+		int m_RequestedTextureSize;
+	};
+	std::vector<SCarriedEntityBgTexture> vCarriedTextures;
+	vCarriedTextures.reserve(m_vEntityBgList.size());
+	for(SCustomEntityBg &Item : m_vEntityBgList)
+	{
+		if(!Item.m_RenderTexture.IsValid())
+			continue;
+		SCarriedEntityBgTexture Carried;
+		Carried.m_Name = Item.m_aName;
+		Carried.m_Texture = Item.m_RenderTexture;
+		Carried.m_ResidentBytes = Item.m_PreviewResidentBytes;
+		Carried.m_RequestedTextureSize = Item.m_PreviewRequestedTextureSize;
+		// 移交所有权：不清空条目里的句柄，下面的 ClearAssetList 会把它当垃圾卸载。
+		Item.m_RenderTexture = IGraphics::CTextureHandle();
+		vCarriedTextures.push_back(std::move(Carried));
+	}
+
 	ClearAssetList(m_vEntityBgList, Graphics());
 	gs_vpSearchEntityBgList.clear();
 
@@ -3686,6 +3713,30 @@ void CMenus::RefreshEntityBgHierarchyView()
 
 	dbg_assert(s_CurCustomTab == ASSETS_TAB_ENTITY_BG, "entity bg hierarchy refresh is only valid for entity bg tab");
 	gs_aInitCustomList[s_CurCustomTab] = true;
+
+	for(SCustomEntityBg &Item : m_vEntityBgList)
+	{
+		if(Item.m_RenderTexture.IsValid())
+			continue;
+		for(SCarriedEntityBgTexture &Carried : vCarriedTextures)
+		{
+			if(Carried.m_Name != Item.m_aName || !Carried.m_Texture.IsValid())
+				continue;
+			Item.m_RenderTexture = Carried.m_Texture;
+			Item.m_PreviewResidentBytes = Carried.m_ResidentBytes;
+			Item.m_PreviewRequestedTextureSize = Carried.m_RequestedTextureSize;
+			Item.m_PreviewState = SCustomItem::PREVIEW_STATE_READY;
+			// 移交给条目；留在 carry 表里的句柄无效化，避免下面重复卸载。
+			Carried.m_Texture.Invalidate();
+			break;
+		}
+	}
+	// 对应资源已被删除的贴图没人认领，这里才是它们的归宿。
+	for(SCarriedEntityBgTexture &Carried : vCarriedTextures)
+	{
+		if(Carried.m_Texture.IsValid())
+			Graphics()->UnloadTexture(&Carried.m_Texture);
+	}
 }
 
 void CMenus::ClearCustomItems(int CurTab)
@@ -4187,6 +4238,11 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 {
 	const SSettingsContentMetrics ContentMetrics = ResolveSettingsContentMetrics(MainView.w);
 	s_CurCustomTab = std::clamp(s_CurCustomTab, (int)ASSETS_TAB_ENTITIES, NUMBER_OF_ASSETS_TABS - 1);
+
+	// 卡片换位追随：下载完成/删除后整列让位时滑过去，而不是瞬移。
+	// 按槽位序号算差值（不是屏幕矩形），切页换列直接对齐。
+	static CQmSlotReflow s_LocalCardReflow;
+	static double s_LocalReflowLastSec = -1.0;
 
 	if(m_AssetsEditorState.m_Open)
 	{
@@ -5565,6 +5621,39 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		Ui()->DoLabel(&LabelRect, Localize("Video Background"), 10.5f, TEXTALIGN_MC);
 	};
 
+	// 资源列表重建会替换搜索索引与卡片条目，必须在「下一帧开始」时执行：
+	// 之前是下载完成当帧就清空重建并 return，用户看到的就是右侧面板闪一下。
+	// 0 = 无事；1 = 整表重载；2 = 实体层层级同步（保贴图，见 RefreshEntityBgHierarchyView）。
+	static std::array<int, NUMBER_OF_ASSETS_TABS> s_aPendingLocalListRefresh{};
+	auto QueueLocalListRefresh = [](int Tab, int Kind) {
+		s_aPendingLocalListRefresh[Tab] = maximum(s_aPendingLocalListRefresh[Tab], Kind);
+	};
+	auto FlushPendingLocalListRefresh = [&](int Tab) {
+		const int Kind = s_aPendingLocalListRefresh[Tab];
+		if(Kind == 0)
+			return;
+		s_aPendingLocalListRefresh[Tab] = 0;
+		if(Kind == 2 && Tab == ASSETS_TAB_ENTITY_BG)
+		{
+			if(const SWorkshopHudState *pWorkshopState = WorkshopStateByTab(Tab))
+			{
+				for(const SWorkshopHudAsset &Asset : pWorkshopState->m_vAssets)
+				{
+					if(!Asset.m_Installed || Asset.m_LocalName.empty())
+						continue;
+					if(std::none_of(m_vEntityBgSourceNames.begin(), m_vEntityBgSourceNames.end(), [&Asset](const std::string &Name) { return Name == Asset.m_LocalName; }))
+						m_vEntityBgSourceNames.push_back(Asset.m_LocalName);
+					if(!m_vEntityBgSourceKinds.contains(Asset.m_LocalName))
+						m_vEntityBgSourceKinds.emplace(Asset.m_LocalName, EEntityBgHierarchyEntrySource::WORKSHOP);
+				}
+			}
+			RefreshEntityBgHierarchyView();
+			return;
+		}
+		ClearCustomItems(Tab);
+	};
+	FlushPendingLocalListRefresh(s_CurCustomTab);
+
 	if(s_CurCustomTab == ASSETS_TAB_ENTITIES)
 	{
 		SearchListSize = gs_vpSearchEntitiesList.size();
@@ -5948,6 +6037,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		int FirstVisibleIndex = -1;
 		int LastVisibleIndex = -1;
 		const float LocalRowHeight = TextureHeight + AssetCardTextReserve + AssetCardFooterSpacing + Margin;
+		// 换位追随的时间基准：切页/冷却/关动效时直接对齐，不做插值。
+		{
+			const double ReflowNow = time_get();
+			const float ReflowDt = s_LocalReflowLastSec > 0.0 ? (float)(ReflowNow - s_LocalReflowLastSec) : 0.0f;
+			s_LocalReflowLastSec = ReflowNow;
+			s_LocalCardReflow.BeginFrame(ReflowDt, LocalColumns, g_Config.m_QmUiMotionLevel == 0 || AssetsTabSwitchCooldownActive);
+		}
 		const SSettingsSkinListVisibleRange LocalVisibleRange = SettingsSkinListVisibleRangeForScroll(
 			s_ListBox.ScrollOffsetY(), s_ListBox.ViewHeight(), LocalRowHeight, LocalColumns, (int)SearchListSize, 1);
 		SResourcePreviewTelemetry LocalResourcePreviewTelemetry;
@@ -6004,6 +6100,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			ItemRect.Margin(Margin / 2, &ItemRect);
 			if(!Item.m_Visible)
 				continue;
+			// 槽位变了就滑过去：删除后后面整列上移，下载完成后新卡插进来其余让位。
+			const vec2 SlotReflowOffset = s_LocalCardReflow.Track(pItem->m_aName, (int)i, Margin + TextureWidth, LocalRowHeight);
+			ItemRect.x += SlotReflowOffset.x;
+			ItemRect.y += SlotReflowOffset.y;
 			auto GaussianBlurSuppression = Item.SuppressGaussianBlur();
 			if(FirstVisibleIndex < 0)
 				FirstVisibleIndex = (int)i;
@@ -6045,6 +6145,23 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				const SResourcePreviewState *pPipelineState = gs_SettingsAssetsResourcePreviewCache.Find(PreviewKey);
 				if(pPipelineState != nullptr && pPipelineState->m_Texture.IsValid())
 					PreviewState.m_Texture = pPipelineState->m_Texture;
+			}
+			// 刚下载装好的资源：商店缩略图早就在显存里，先借来顶住本地预览
+			// 解码的那几帧，等管线出图后自然替换——不再出现「灰块闪一下」。
+			if(!PreviewState.m_Texture.IsValid())
+			{
+				const SWorkshopHudState *pLocalWorkshopState = WorkshopStateByTab(s_CurCustomTab);
+				if(pLocalWorkshopState != nullptr)
+				{
+					for(const SWorkshopHudAsset &Asset : pLocalWorkshopState->m_vAssets)
+					{
+						if(Asset.m_LocalName == pItem->m_aName && Asset.m_ThumbTexture.IsValid())
+						{
+							PreviewState.m_Texture = Asset.m_ThumbTexture;
+							break;
+						}
+					}
+				}
 			}
 			const ESettingsResourcePreviewDrawResult PipelineDrawResult = SettingsResourcePreviewDrawResult(ResourcePreviewState);
 			const bool PreviewReady = PipelineDrawResult == ESettingsResourcePreviewDrawResult::READY_TEXTURE || PreviewState.m_Texture.IsValid();
@@ -6219,7 +6336,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				str_format(aToastText, sizeof(aToastText), Localize("Deleted \"%s\""), s_aPendingDeleteName);
 				qm_ui::Toast(EQmToastKind::SUCCESS, aToastText);
 				ResetSelectedAssetToDefault(s_aPendingDeleteName);
-				ClearCustomItems(s_CurCustomTab);
+				// 同样延到下一帧：删除后本帧仍画旧卡片，下一帧才少一张。
+				QueueLocalListRefresh(s_CurCustomTab, 1);
 			}
 			else
 			{
@@ -6582,6 +6700,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 		bool RefreshLocalList = false;
 
+
 		constexpr int MaxWorkshopThumbDecodeFinalizesPerFrame = 16;
 		// 解码落盘是纯 CPU 操作，滚动期保留小流量让 ready 队列不断供，
 		// 否则涓流上传恢复时也无图可传。
@@ -6894,25 +7013,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		}
 		if(RefreshLocalList)
 		{
-			if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
-			{
-				for(const SWorkshopHudAsset &Asset : WorkshopState.m_vAssets)
-				{
-					if(!Asset.m_Installed || Asset.m_LocalName.empty())
-						continue;
-					if(std::none_of(m_vEntityBgSourceNames.begin(), m_vEntityBgSourceNames.end(), [&Asset](const std::string &Name) { return Name == Asset.m_LocalName; }))
-						m_vEntityBgSourceNames.push_back(Asset.m_LocalName);
-					if(!m_vEntityBgSourceKinds.contains(Asset.m_LocalName))
-						m_vEntityBgSourceKinds.emplace(Asset.m_LocalName, EEntityBgHierarchyEntrySource::WORKSHOP);
-				}
-				RefreshEntityBgHierarchyView();
-			}
-			else
-			{
-				ClearCustomItems(s_CurCustomTab);
-			}
-			// Local list refresh invalidates SearchListSize and search pointer arrays for this frame.
-			return;
+			// 排队到下一帧开头执行：本帧照常把旧列表画完，用户看不到「空一帧」。
+			// 实体层走层级同步（贴图会被带走复用），其它页走整表重载。
+			QueueLocalListRefresh(s_CurCustomTab, s_CurCustomTab == ASSETS_TAB_ENTITY_BG ? 2 : 1);
 		}
 
 		DrawRoundedSurface(Ui(), WorkshopHudView, ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f), ColorRGBA(), 8.0f);

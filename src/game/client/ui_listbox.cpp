@@ -35,6 +35,7 @@ void CListBox::Reset()
 	m_Active = true;
 	m_HideScrollbar = false;
 	m_ScrollbarAlwaysReserved = false;
+	m_AnimateScrollbarReserve = true;
 	m_InitialScrollPending = true;
 	m_EntryAnimationElapsedSec = -1.0f;
 	m_EntryAnimation.Reset();
@@ -152,6 +153,7 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 	ScrollParams.m_WheelOwnerPriority = m_WheelOwnerPriority;
 	ScrollParams.m_HideScrollbar = m_HideScrollbar;
 	ScrollParams.m_ScrollbarAlwaysReserved = m_ScrollbarAlwaysReserved;
+	ScrollParams.m_AnimateScrollbarReserve = m_AnimateScrollbarReserve;
 	m_ScrollbarWidth = QmListBoxScrollbarMetric(ScrollParams.m_ScrollbarThickness, m_ScrollbarWidth, m_ScrollbarWidthOverridden);
 	m_ScrollbarMargin = QmListBoxScrollbarMetric(ScrollParams.m_ScrollbarMargin, m_ScrollbarMargin, m_ScrollbarMarginOverridden);
 	ScrollParams.m_ScrollbarThickness = m_ScrollbarWidth;

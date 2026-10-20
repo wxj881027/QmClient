@@ -427,6 +427,9 @@ void CScrollRegion::DoSlider()
 		return;
 	}
 
+	// 滑块与占位宽度走同一拍：轨道还在展开时滑块淡入，不会「硬切」冒出来。
+	const float RevealAlpha = m_Params.m_ScrollbarThickness > 0.0f ?
+		std::clamp(m_ScrollbarReserveWidth / m_Params.m_ScrollbarThickness, 0.0f, 1.0f) : 1.0f;
 	const float ClipSize = m_Params.m_ScrollHorizontal ? m_ClipRect.w : m_ClipRect.h;
 	const float RailSize = m_Params.m_ScrollHorizontal ? m_RailRect.w : m_RailRect.h;
 	const bool CanScroll = ContentOverflows() && ScrollMax > 0.0f && RailSize > 0.0f;
@@ -452,7 +455,7 @@ void CScrollRegion::DoSlider()
 		const float Rounding = m_Params.m_ScrollHorizontal ? Slider.h / 2.0f : Slider.w / 2.0f;
 		if(Ui()->QmAnimationRuntime() != nullptr)
 		{
-			CUiScopedControlAlphaScale SliderAlpha(Ui(), m_Params.m_SliderAlpha);
+			CUiScopedControlAlphaScale SliderAlpha(Ui(), m_Params.m_SliderAlpha * RevealAlpha);
 			ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(Ui()), pId, Slider, m_Params.m_Interactive, nullptr, m_Params.m_pSliderThemeColor);
 		}
 		else
@@ -483,7 +486,7 @@ void CScrollRegion::DoSlider()
 	const float Rounding = m_Params.m_ScrollHorizontal ? Slider.h / 2.0f : Slider.w / 2.0f;
 	if(Ui()->QmAnimationRuntime() != nullptr)
 	{
-		CUiScopedControlAlphaScale SliderAlpha(Ui(), m_Params.m_SliderAlpha);
+		CUiScopedControlAlphaScale SliderAlpha(Ui(), m_Params.m_SliderAlpha * RevealAlpha);
 		ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(Ui()), pId, Slider, m_Params.m_Interactive, nullptr, m_Params.m_pSliderThemeColor);
 	}
 	else

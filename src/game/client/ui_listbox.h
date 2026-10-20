@@ -211,6 +211,9 @@ private:
 	bool m_Active;
 	bool m_HideScrollbar;
 	bool m_ScrollbarAlwaysReserved;
+	// 滚动条出现/消失时占位宽度平滑过渡：卡片宽度连续变化，内容不再瞬移。
+	// 默认开启，只有明确需要「跳动式」布局的列表才关掉。
+	bool m_AnimateScrollbarReserve;
 	bool m_InitialScrollPending;
 	float m_EntryAnimationElapsedSec;
 	CQmListEntryAnimation m_EntryAnimation;
@@ -281,6 +284,7 @@ public:
 	void SetScrollProfile(EQmScrollProfile Profile) { m_ScrollProfile = Profile; }
 	void SetHideScrollbar(bool HideScrollbar) { m_HideScrollbar = HideScrollbar; }
 	void SetScrollbarAlwaysReserved(bool AlwaysReserved) { m_ScrollbarAlwaysReserved = AlwaysReserved; }
+	void SetAnimateScrollbarReserve(bool Animate) { m_AnimateScrollbarReserve = Animate; }
 	void SetItemColors(ColorRGBA SelectedActive, ColorRGBA SelectedInactive, ColorRGBA Hovered)
 	{
 		m_SelectedItemActiveColor = SelectedActive;
