@@ -3138,8 +3138,10 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	const bool StatisticsFetching = GameClient()->m_QmClient.QmStatisticsIsFetching() || AxiomStatsFetching;
 	const bool StatisticsFailed = GameClient()->m_QmClient.QmStatisticsLastRequestFailed() || AxiomStatsFailed;
 	const char *pDdnetStatsUnavailableText = DdnetStatsFailed ? Localize("Unavailable") : Localize("Loading");
+	// 时长口径在整页保持一致：顶部总时长和模式圆环/图例共用「按小时显示」开关。
+	static bool s_ShowTotalHours = true;
 	if(HasRemotePlaytime)
-		FormatStatsPlaytime(ServerPlaytimeSeconds, false, aServerPlaytime, sizeof(aServerPlaytime));
+		FormatStatsPlaytime(ServerPlaytimeSeconds, s_ShowTotalHours, aServerPlaytime, sizeof(aServerPlaytime));
 	else
 		str_copy(aServerPlaytime, pDdnetStatsUnavailableText, sizeof(aServerPlaytime));
 
@@ -3247,56 +3249,82 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	Content.HSplitTop(10.0f, nullptr, &Content);
 
 	CUIRect ModePanel, ModeRest;
-	// 图例改为单列表格后，面板高度随模式数量伸缩，不再按两列网格预算。
-	const float ModePanelHeight = std::clamp(120.0f + 26.0f * static_cast<float>(vDisplayModeStats.size()), 240.0f, 420.0f);
+	// 统计卡按参考图改成「圆环 + 分组用量表 + 右侧纵向操作列」三段式：
+	// 表头和行高固定，面板高度只随模式数量伸缩，圆环、表格和三枚按钮始终共用一条中线。
+	const float StatsTableHeaderHeight = 22.0f;
+	const float StatsTableRowHeight = 30.0f;
+	const float StatsPanelPadding = 14.0f;
+	const float StatsPanelHeaderHeight = 28.0f;
+	const float StatsTableHeight = StatsTableHeaderHeight + StatsTableRowHeight * static_cast<float>(vDisplayModeStats.size());
+	const float ModePanelHeight = std::clamp(StatsTableHeight + StatsPanelPadding * 2.0f + StatsPanelHeaderHeight + 16.0f, 260.0f, 470.0f);
 	Content.HSplitTop(ModePanelHeight, &ModePanel, &ModeRest);
-	ModePanel.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.23f), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+	// 先铺 1px 描边再画内层填充：深色页面里纯半透明卡片会和背景糊成一片，加一圈细边才分得开。
+	ModePanel.Draw(ui_token::color::BORDER_SUBTLE, IGraphics::CORNER_ALL, ui_token::radius::CARD);
+	CUIRect ModePanelFill = ModePanel;
+	ModePanelFill.Margin(1.0f, &ModePanelFill);
+	ModePanelFill.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.23f), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+	ModePanel.Margin(StatsPanelPadding, &ModePanel);
 	CUIRect ModeTitle, ModeBody;
-	ModePanel.Margin(10.0f, &ModePanel);
-	ModePanel.HSplitTop(44.0f, &ModeTitle, &ModeBody);
-	static bool s_ShowTotalHours = false;
-	CUIRect TitleRow;
-	ModeTitle.HSplitTop(22.0f, &TitleRow, nullptr);
-	// 操作按钮收进标题行右侧：宽度与设置页操作组同规则（按文本自适应），字号统一体系标准，不再挤占图例排版宽度。
-	CUIRect RefreshButton, UseCurrentNameButton, ModeTitleButton;
-	{
-		CUIRect TitleActions = TitleRow;
-		TitleActions.VSplitRight(minimum(460.0f, TitleRow.w * 0.6f), &TitleRow, &TitleActions);
-		Ui()->DoLabel(&TitleRow, Localize("Local game mode statistics"), ui_token::font::HEADLINE, TEXTALIGN_ML);
-		const char *pRefreshStatsLabel = StatisticsFetching ? Localize("Syncing remote stats") : (StatisticsFailed ? Localize("Retry remote stats") : Localize("Sync remote stats"));
-		const char *apActionLabels[] = {pRefreshStatsLabel, Localize("Use current name"), Localize("Total hours")};
-		static ui_widget::SSettingsActionGroupState s_StatisticsActionWidths;
-		const auto Actions = ui_widget::PrepareSettingsActionGroup(*Ui(), s_StatisticsActionWidths, TitleActions, apActionLabels, 3, ResolveSettingsContentMetrics(TitleActions.w), ESettingsActionGroupWidth::CONTENT);
-		const float GroupWidth = Actions.m_aButtons[2].x + Actions.m_aButtons[2].w - Actions.m_aButtons[0].x;
-		const float RightAlign = maximum(0.0f, TitleActions.w - GroupWidth);
-		RefreshButton = Actions.m_aButtons[0];
-		UseCurrentNameButton = Actions.m_aButtons[1];
-		ModeTitleButton = Actions.m_aButtons[2];
-		RefreshButton.x += RightAlign;
-		UseCurrentNameButton.x += RightAlign;
-		ModeTitleButton.x += RightAlign;
-		static CButtonContainer s_StatisticsRefreshButton;
-		if(DoButton_Menu(&s_StatisticsRefreshButton, pRefreshStatsLabel, 0, &RefreshButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, ui_token::font::BODY))
-			GameClient()->m_QmClient.RefreshQmClientStatistics();
-		static CButtonContainer s_StatisticsUseCurrentNameButton;
-		if(DoButton_Menu(&s_StatisticsUseCurrentNameButton, Localize("Use current name"), 0, &UseCurrentNameButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, ui_token::font::BODY))
-			GameClient()->m_QmClient.UseCurrentQmDdnetPlayerName();
-		static CButtonContainer s_TotalHoursButton;
-		if(DoButton_Menu(&s_TotalHoursButton, Localize("Total hours"), s_ShowTotalHours, &ModeTitleButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, ui_token::font::BODY))
-			s_ShowTotalHours = !s_ShowTotalHours;
-	}
-	ModeBody.HSplitTop(6.0f, nullptr, &ModeBody);
-	const float ChartRadius = minimum(ModeBody.h * 0.37f, 82.0f);
-	const float ChartInnerRadius = ChartRadius * 0.48f;
-	const vec2 ChartCenter(ModeBody.x + ChartRadius + 8.0f, ModeBody.y + ModeBody.h * 0.5f);
-	// 分类色板与饼菜单动作语义色同风格：高饱和、彼此高区分度，按模式顺序固定分配。
+	ModePanel.HSplitTop(StatsPanelHeaderHeight, &ModeTitle, &ModeBody);
+	ModeBody.HSplitTop(10.0f, nullptr, &ModeBody);
+	Ui()->DoLabel(&ModeTitle, Localize("Local game mode statistics"), ui_token::font::TITLE, TEXTALIGN_ML);
+
+	// 操作按钮放卡片右侧：纵向首尾贴边、中间居中，间距按 space-between 均分，
+	// 不再和图例抢标题行的宽度。
+	const float ActionColumnWidth = std::clamp(ModeBody.w * 0.2f, 128.0f, 168.0f);
+	CUIRect BodyMain, ActionColumn;
+	ModeBody.VSplitRight(ActionColumnWidth, &BodyMain, &ActionColumn);
+	BodyMain.VSplitRight(16.0f, &BodyMain, nullptr);
+	const float ActionButtonHeight = std::clamp(ActionColumn.h / 6.0f, 26.0f, 34.0f);
+	CUIRect ActionTop = ActionColumn;
+	CUIRect ActionMiddle = ActionColumn;
+	CUIRect ActionBottom = ActionColumn;
+	ActionTop.h = ActionMiddle.h = ActionBottom.h = ActionButtonHeight;
+	ActionMiddle.y = ActionColumn.y + (ActionColumn.h - ActionButtonHeight) * 0.5f;
+	ActionBottom.y = ActionColumn.y + ActionColumn.h - ActionButtonHeight;
+	// 三枚操作按钮共用一套克制的胶囊样式：选中态只叠一层圆环同源的紫色，不套用菜单按钮的高饱和选中色，
+	// 深色卡片上才不会抢掉圆环和图例的视觉重心。
+	auto DrawStatsActionButton = [&](CButtonContainer *pButton, const char *pLabel, bool Active, const CUIRect &Rect) {
+		const ColorRGBA Accent(0.545f, 0.486f, 0.965f, 0.9f);
+		if(Active)
+		{
+			Rect.Draw(Accent, IGraphics::CORNER_ALL, ui_token::radius::BASE);
+			CUIRect Inner = Rect;
+			Inner.Margin(1.0f, &Inner);
+			Inner.Draw(ColorRGBA(0.545f, 0.486f, 0.965f, 0.20f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
+		}
+		else
+			Rect.Draw(Ui()->HotItem() == pButton ? ui_token::color::LIST_ITEM_HOVER : ColorRGBA(1.0f, 1.0f, 1.0f, 0.06f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
+		const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
+		TextRender()->TextColor(ColorRGBA(1.0f, 1.0f, 1.0f, Active ? 0.98f : 0.78f));
+		CUIRect Label = Rect;
+		Ui()->DoLabel(&Label, pLabel, ui_token::font::BODY, TEXTALIGN_MC);
+		TextRender()->TextColor(PreviousTextColor);
+		return Ui()->DoButtonLogic(pButton, Active ? 1 : 0, &Rect, BUTTONFLAG_LEFT) != 0;
+	};
+	const char *pRefreshStatsLabel = StatisticsFetching ? Localize("Syncing remote stats") : (StatisticsFailed ? Localize("Retry remote stats") : Localize("Sync remote stats"));
+	static CButtonContainer s_StatisticsRefreshButton;
+	if(DrawStatsActionButton(&s_StatisticsRefreshButton, pRefreshStatsLabel, false, ActionTop))
+		GameClient()->m_QmClient.RefreshQmClientStatistics();
+	static CButtonContainer s_StatisticsUseCurrentNameButton;
+	if(DrawStatsActionButton(&s_StatisticsUseCurrentNameButton, Localize("Use current name"), false, ActionMiddle))
+		GameClient()->m_QmClient.UseCurrentQmDdnetPlayerName();
+	static CButtonContainer s_TotalHoursButton;
+	if(DrawStatsActionButton(&s_TotalHoursButton, Localize("Total hours"), s_ShowTotalHours, ActionBottom))
+		s_ShowTotalHours = !s_ShowTotalHours;
+
+	const float ChartRadius = std::clamp(minimum(BodyMain.h * 0.40f, BodyMain.w * 0.24f), 44.0f, 92.0f);
+	// 环厚对齐参考图：内径约为外径的 0.62，环本身才是画面主体，而不是一条细描边。
+	const float ChartInnerRadius = ChartRadius * 0.62f;
+	const vec2 ChartCenter(BodyMain.x + ChartRadius + 4.0f, BodyMain.y + BodyMain.h * 0.5f);
+	// 分类色板对齐参考图的高饱和紫 / 蓝 / 青绿 / 红 / 靛 / 天蓝，顺序固定，图例与圆环同源。
 	const ColorRGBA aModeColors[] = {
-		ColorRGBA(0.25f, 0.55f, 0.80f, 1.0f), // 蓝
-		ColorRGBA(0.90f, 0.30f, 0.40f, 1.0f), // 红
-		ColorRGBA(0.30f, 0.75f, 0.50f, 1.0f), // 绿
-		ColorRGBA(0.85f, 0.50f, 0.20f, 1.0f), // 橙
-		ColorRGBA(0.55f, 0.40f, 0.90f, 1.0f), // 紫
-		ColorRGBA(0.40f, 0.78f, 0.78f, 1.0f), // 青
+		ColorRGBA(0.545f, 0.486f, 0.965f, 1.0f), // 紫
+		ColorRGBA(0.357f, 0.616f, 0.976f, 1.0f), // 蓝
+		ColorRGBA(0.184f, 0.749f, 0.623f, 1.0f), // 青绿
+		ColorRGBA(0.941f, 0.416f, 0.416f, 1.0f), // 红
+		ColorRGBA(0.424f, 0.424f, 0.941f, 1.0f), // 靛
+		ColorRGBA(0.290f, 0.749f, 0.929f, 1.0f), // 天蓝
 	};
 	int64_t TotalMaps = 0;
 	int64_t TotalModePlaytime = 0;
@@ -3317,7 +3345,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 			return "DDStats";
 		return "";
 	};
-	auto FormatModeScore = [&](const SQmClientLocalModeStats &Stats, char *pBuf, size_t BufSize) {
+	auto FormatModeScore = [&](const SQmClientLocalModeStats &Stats, char *pBuf, size_t BufSize, bool Compact = false) {
 		if(IsStatsGoresMode(Stats.m_GameMode))
 		{
 			if(!AxiomGoresMode)
@@ -3328,8 +3356,11 @@ void CMenus::RenderStatistics(CUIRect MainView)
 			if(pAxiomGoresResult && pAxiomGoresResult->m_HasData && pAxiomGoresResult->m_Status == EQmAxiomScoreStatus::READY)
 			{
 				// Axiom 的 points 是总积分；performance_points 是单独的表现分。
-				// 显式带标签，避免统计页只显示两个无法区分的数字。
-				str_format(pBuf, BufSize, "%s: %" PRId64 " · %s: %" PRId64, Localize("Points"), pAxiomGoresResult->m_Score.m_Points, Localize("Performance points"), pAxiomGoresResult->m_Score.m_PerformancePoints);
+				// 表格列只放两个数字，完整标签留给悬浮提示，避免长文本挤占列宽。
+				if(Compact)
+					str_format(pBuf, BufSize, "%" PRId64 " · %" PRId64, pAxiomGoresResult->m_Score.m_Points, pAxiomGoresResult->m_Score.m_PerformancePoints);
+				else
+					str_format(pBuf, BufSize, "%s: %" PRId64 " · %s: %" PRId64, Localize("Points"), pAxiomGoresResult->m_Score.m_Points, Localize("Performance points"), pAxiomGoresResult->m_Score.m_PerformancePoints);
 			}
 			else
 			{
@@ -3396,61 +3427,70 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		if(MouseAngle < -pi / 2.0f)
 			MouseAngle += 2.0f * pi;
 		const bool UseProceduralRing = Graphics()->HasProceduralRing();
-		if(!UseProceduralRing)
+		const float RingThickness = ChartRadius - ChartInnerRadius;
+		const float MidRadius = (ChartRadius + ChartInnerRadius) * 0.5f;
+		// 段间细缝按环宽换算成角度：参考图的圆环是一整圈分色，段与段之间只有一道窄槽。
+		// 占比极小的段最多让出 35% 的弧长，避免小分段被缝隙吃光。
+		const float MaxGapAngle = std::clamp(RingThickness * 0.08f, 1.5f, 3.0f) / maximum(MidRadius, 1.0f);
+		struct SStatsArc
 		{
-			Graphics()->TextureClear();
-			Graphics()->QuadsBegin();
-			Graphics()->SetColor(ColorRGBA(0.96f, 0.96f, 1.0f, 1.0f));
-			IGraphics::CFreeformItem aBaseRing[128];
-			constexpr int BaseRingSegments = 128;
-			for(int Segment = 0; Segment < BaseRingSegments; ++Segment)
-			{
-				const float A0 = -pi / 2.0f + 2.0f * pi * Segment / BaseRingSegments;
-				const float A1 = -pi / 2.0f + 2.0f * pi * (Segment + 1) / BaseRingSegments;
-				aBaseRing[Segment] = QmStatisticsRingSegment(ChartCenter, ChartRadius, ChartInnerRadius, A0, A1);
-			}
-			Graphics()->QuadsDrawFreeform(aBaseRing, BaseRingSegments);
-		}
-		for(size_t Index = 0; Index < vDisplayModeStats.size(); ++Index)
+			float m_Start;
+			float m_End;
+			ColorRGBA m_Color;
+		};
+		SStatsArc aArcs[8];
+		int ArcCount = 0;
+		for(size_t Index = 0; Index < vDisplayModeStats.size() && ArcCount < (int)std::size(aArcs); ++Index)
 		{
 			const auto &Stats = vDisplayModeStats[Index];
 			const int64_t ChartWeight = QmStatisticsChartWeight(Stats.m_Maps, Stats.m_PlaytimeSeconds, ChartUsesMaps);
 			const float Sweep = 2.0f * pi * ChartWeight / (float)TotalChartWeight;
 			if(Sweep <= 0.0f)
 				continue;
-			if(UseProceduralRing)
-			{
-				IGraphics::SProceduralRingParams Params;
-				Params.m_Rect = vec4(ChartCenter.x - ChartRadius, ChartCenter.y - ChartRadius, ChartRadius * 2.0f, ChartRadius * 2.0f);
-				Params.m_Color = aModeColors[Index % std::size(aModeColors)];
-				Params.m_RingInnerRadius = ChartInnerRadius / (ChartRadius * 2.0f);
-				Params.m_RingOuterRadius = 0.5f;
-				// 角度边缘至少覆盖一个像素的导数范围，避免相邻扇区之间出现
-				// 黑色径向缝隙；覆盖只发生在后绘制的扇区上，不改变总比例。
-				const float AngularOverlap = maximum(0.012f, 4.0f / ChartRadius);
-				Params.m_RingStartAngle = StartAngle - AngularOverlap;
-				Params.m_RingEndAngle = StartAngle + Sweep + AngularOverlap;
-				Graphics()->RenderProceduralRing(Params);
-			}
-			else
-			{
-				IGraphics::CFreeformItem aSectors[128];
-				const int Segments = std::clamp((int)std::ceil(Sweep * 20.0f), 1, (int)std::size(aSectors));
-				for(int Segment = 0; Segment < Segments; ++Segment)
-				{
-					const float A0 = StartAngle + Sweep * Segment / Segments;
-					const float A1 = StartAngle + Sweep * (Segment + 1) / Segments;
-					aSectors[Segment] = QmStatisticsRingSegment(ChartCenter, ChartRadius, ChartInnerRadius, A0, A1);
-				}
-				Graphics()->SetColor(aModeColors[Index % std::size(aModeColors)]);
-				Graphics()->QuadsDrawFreeform(aSectors, Segments);
-			}
+			const float GapAngle = vDisplayModeStats.size() > 1 ? minimum(Sweep * 0.35f, MaxGapAngle) : 0.0f;
+			aArcs[ArcCount].m_Start = StartAngle + GapAngle * 0.5f;
+			aArcs[ArcCount].m_End = StartAngle + Sweep - GapAngle * 0.5f;
+			aArcs[ArcCount].m_Color = aModeColors[Index % std::size(aModeColors)];
+			ArcCount++;
 			if(MouseDistance >= ChartInnerRadius && MouseDistance <= ChartRadius && MouseAngle >= StartAngle && MouseAngle <= StartAngle + Sweep)
 				HoveredMode = (int)Index;
 			StartAngle += Sweep;
 		}
 		if(!UseProceduralRing)
+		{
+			Graphics()->TextureClear();
+			Graphics()->QuadsBegin();
+			for(int ArcIndex = 0; ArcIndex < ArcCount; ++ArcIndex)
+			{
+				Graphics()->SetColor(aArcs[ArcIndex].m_Color);
+				IGraphics::CFreeformItem aSectors[128];
+				const float ArcSweep = aArcs[ArcIndex].m_End - aArcs[ArcIndex].m_Start;
+				const int Segments = std::clamp((int)std::ceil(ArcSweep * 20.0f), 1, (int)std::size(aSectors));
+				for(int Segment = 0; Segment < Segments; ++Segment)
+				{
+					const float A0 = aArcs[ArcIndex].m_Start + ArcSweep * Segment / Segments;
+					const float A1 = aArcs[ArcIndex].m_Start + ArcSweep * (Segment + 1) / Segments;
+					aSectors[Segment] = QmStatisticsRingSegment(ChartCenter, ChartRadius, ChartInnerRadius, A0, A1);
+				}
+				Graphics()->QuadsDrawFreeform(aSectors, Segments);
+			}
 			Graphics()->QuadsEnd();
+		}
+		else
+		{
+			for(int ArcIndex = 0; ArcIndex < ArcCount; ++ArcIndex)
+			{
+				IGraphics::SProceduralRingParams Params;
+				Params.m_Rect = vec4(ChartCenter.x - ChartRadius, ChartCenter.y - ChartRadius, ChartRadius * 2.0f, ChartRadius * 2.0f);
+				Params.m_Color = aArcs[ArcIndex].m_Color;
+				Params.m_RingInnerRadius = ChartInnerRadius / (ChartRadius * 2.0f);
+				Params.m_RingOuterRadius = 0.5f;
+				Params.m_RingStartAngle = aArcs[ArcIndex].m_Start;
+				Params.m_RingEndAngle = aArcs[ArcIndex].m_End;
+				Params.m_Rotation = 0.0f;
+				Graphics()->RenderProceduralRing(Params);
+			}
+		}
 	}
 	// 环心显示总量，与图例口径一致：仅地图口径时显示完成地图数，否则显示总游玩时长。
 	if(TotalChartWeight > 0)
@@ -3467,13 +3507,16 @@ void CMenus::RenderStatistics(CUIRect MainView)
 			FormatStatsPlaytime(TotalModePlaytime, s_ShowTotalHours, aTotalText, sizeof(aTotalText));
 			pTotalLabel = Localize("Total play time");
 		}
-		const float CenterTextSize = maximum(10.0f, ChartInnerRadius * 0.42f);
-		CUIRect CenterValue{ChartCenter.x - ChartInnerRadius, ChartCenter.y - CenterTextSize * 1.15f, ChartInnerRadius * 2.0f, CenterTextSize * 1.4f};
-		CUIRect CenterLabel{ChartCenter.x - ChartInnerRadius, CenterValue.y + CenterValue.h, ChartInnerRadius * 2.0f, CenterTextSize};
+		// 中心主数字按内径收缩，小时制文本比天数制长，保持整行落在内圈里。
+		float CenterTextSize = std::clamp(ChartInnerRadius * 0.52f, 13.0f, 28.0f);
+		while(CenterTextSize > 11.0f && TextRender()->TextWidth(CenterTextSize, aTotalText) > ChartInnerRadius * 1.75f)
+			CenterTextSize -= 1.0f;
 		const ColorRGBA StatsForeground = TextRender()->GetTextColor();
+		CUIRect CenterLabel{ChartCenter.x - ChartInnerRadius, ChartCenter.y + CenterTextSize * 0.30f, ChartInnerRadius * 2.0f, CenterTextSize * 0.8f};
+		CUIRect CenterValue{ChartCenter.x - ChartInnerRadius, ChartCenter.y - CenterTextSize * 1.0f, ChartInnerRadius * 2.0f, CenterTextSize * 1.25f};
 		Ui()->DoLabel(&CenterValue, aTotalText, CenterTextSize, TEXTALIGN_MC);
 		TextRender()->TextColor(StatsForeground.WithMultipliedAlpha(0.6f));
-		Ui()->DoLabel(&CenterLabel, pTotalLabel, CenterTextSize * 0.58f, TEXTALIGN_MC);
+		Ui()->DoLabel(&CenterLabel, pTotalLabel, std::clamp(CenterTextSize * 0.46f, 8.0f, 12.0f), TEXTALIGN_MC);
 		TextRender()->TextColor(StatsForeground);
 	}
 	if(HoveredMode >= 0)
@@ -3488,19 +3531,17 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		GameClient()->m_Tooltips.DoToolTip(&s_ModeTooltipIds[HoveredMode], &ModeBody, s_aModeTooltipText[HoveredMode]);
 	}
 	CUIRect Legend;
-	ModeBody.VSplitLeft(ChartRadius * 2.0f + 28.0f, nullptr, &Legend);
-	// 图例仿分组用量表：表头 + 单列行（色点、模式名、右对齐的地图/时长/积分），悬浮显示完整统计。
-	Legend.HSplitTop(8.0f, nullptr, &Legend);
-	// 图例仿分组用量表：表头 + 单列行（色点、模式名、地图/时长/积分列），悬浮显示完整统计。
+	BodyMain.VSplitLeft(ChartRadius * 2.0f + 28.0f, nullptr, &Legend);
+	// 图例照参考图的分组用量表：一行表头 + 分隔线区分的单列行（色点、名称、右对齐数值列），
+	// 悬浮显示完整统计。名称列按最宽条目定宽，数值组紧随其后，不留下大片空白。
 	char aScoreTexts[8][128] = {};
 	bool HasScoreText = false;
 	for(size_t Index = 0; Index < vDisplayModeStats.size() && Index < std::size(aScoreTexts); ++Index)
 	{
-		FormatModeScore(vDisplayModeStats[Index], aScoreTexts[Index], sizeof(aScoreTexts[Index]));
+		FormatModeScore(vDisplayModeStats[Index], aScoreTexts[Index], sizeof(aScoreTexts[Index]), true);
 		HasScoreText = HasScoreText || aScoreTexts[Index][0] != '\0';
 	}
 	const bool ShowScoreColumn = HasScoreText && Legend.w >= 380.0f;
-	// 模式名按最宽条目实测定宽，数值组紧随其后，避免名称与数值之间出现大片空白。
 	char aLegendNames[8][256];
 	size_t LegendNameCount = minimum<size_t>(vDisplayModeStats.size(), std::size(aLegendNames));
 	float LegendNameWidth = 0.0f;
@@ -3516,24 +3557,21 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		LegendNameWidth = maximum(LegendNameWidth, TextRender()->TextWidth(ui_token::font::BODY, aLegendNames[Index]));
 	}
 	LegendNameWidth = std::clamp(LegendNameWidth, 80.0f, maximum(80.0f, Legend.w * 0.55f));
-	const float LegendCellGap = 12.0f;
-	const float MapsColumnWidth = 52.0f;
-	const float DurationColumnWidth = 110.0f;
+	const float LegendCellGap = 14.0f;
+	const float MapsColumnWidth = 56.0f;
+	const float DurationColumnWidth = 108.0f;
 	const float ScoreColumnWidth = 92.0f;
 	// 窄面板时数值组等比压缩，保住名称列可读。
 	const float ValueGroupWidth = MapsColumnWidth + DurationColumnWidth + (ShowScoreColumn ? ScoreColumnWidth : 0.0f) + LegendCellGap * (ShowScoreColumn ? 3.0f : 2.0f);
-	const float ColumnScale = std::clamp((Legend.w - 18.0f - LegendNameWidth - LegendCellGap) / ValueGroupWidth, 0.55f, 1.0f);
+	const float ColumnScale = std::clamp((Legend.w - 20.0f - LegendNameWidth - LegendCellGap) / ValueGroupWidth, 0.55f, 1.0f);
 	const float MapsWidth = MapsColumnWidth * ColumnScale;
 	const float DurationWidth = DurationColumnWidth * ColumnScale;
 	const float ScoreWidth = ScoreColumnWidth * ColumnScale;
-	const float LegendHeaderHeight = 14.0f;
-	const float LegendRowHeight = 22.0f;
-	const float LegendRowGap = 5.0f;
 	const ColorRGBA LegendForeground = TextRender()->GetTextColor();
 	// 表头与行共用同一列布局，保证列对齐：色点、名称、地图、时长、积分依次紧随。
 	auto LayoutLegendColumns = [&](const CUIRect &Row, CUIRect *pDot, CUIRect *pName, CUIRect *pMaps, CUIRect *pDuration, CUIRect *pScore) {
 		CUIRect Cursor = Row;
-		Cursor.VSplitLeft(18.0f, pDot, &Cursor);
+		Cursor.VSplitLeft(20.0f, pDot, &Cursor);
 		Cursor.VSplitLeft(LegendNameWidth, pName, &Cursor);
 		Cursor.VSplitLeft(LegendCellGap, nullptr, &Cursor);
 		Cursor.VSplitLeft(MapsWidth, pMaps, &Cursor);
@@ -3546,7 +3584,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		}
 	};
 	CUIRect HeaderRow = Legend;
-	HeaderRow.h = LegendHeaderHeight;
+	HeaderRow.h = StatsTableHeaderHeight;
 	CUIRect HeaderDot, HeaderName, HeaderMaps, HeaderDuration, HeaderScore = CUIRect();
 	LayoutLegendColumns(HeaderRow, &HeaderDot, &HeaderName, &HeaderMaps, &HeaderDuration, &HeaderScore);
 	TextRender()->TextColor(LegendForeground.WithMultipliedAlpha(0.55f));
@@ -3556,22 +3594,30 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	if(ShowScoreColumn)
 		Ui()->DoLabel(&HeaderScore, Localize("Points"), ui_token::font::SMALL, TEXTALIGN_MR);
 	TextRender()->TextColor(LegendForeground);
-	Legend.HSplitTop(LegendHeaderHeight + 6.0f, nullptr, &Legend);
+	// 表头下的第一条分隔线把标题行和第一条数据分开，数据行之间再各画一条。
+	CUIRect HeaderLine = HeaderRow;
+	HeaderLine.y += HeaderRow.h - 1.0f;
+	HeaderLine.h = 1.0f;
+	HeaderLine.Draw(ui_token::color::BORDER_SUBTLE, IGraphics::CORNER_NONE, 0.0f);
+	Legend.HSplitTop(StatsTableHeaderHeight, nullptr, &Legend);
 	for(size_t Index = 0; Index < vDisplayModeStats.size(); ++Index)
 	{
 		const auto &Stats = vDisplayModeStats[Index];
 		const char *pModeName = Stats.m_GameMode == "__other__" ? Localize("Other modes") : Stats.m_GameMode.c_str();
 		const char *pModeSource = ModeSourceText(Stats);
 		CUIRect Row = Legend;
-		Row.y += Index * (LegendRowHeight + LegendRowGap);
-		Row.h = LegendRowHeight;
+		Row.y += Index * StatsTableRowHeight;
+		Row.h = StatsTableRowHeight;
+		const bool RowHovered = Ui()->MouseInside(&Row);
+		if(RowHovered)
+			Row.Draw(ui_token::color::LIST_ITEM_HOVER, IGraphics::CORNER_ALL, ui_token::radius::BASE);
 		const ColorRGBA Color = aModeColors[Index % std::size(aModeColors)];
 		CUIRect Dot, Name, Maps, Duration, Score = CUIRect();
 		LayoutLegendColumns(Row, &Dot, &Name, &Maps, &Duration, &Score);
 		Dot.VSplitLeft(8.0f, &Dot, nullptr);
 		Dot.h = 8.0f;
 		Dot.y = Row.y + (Row.h - Dot.h) * 0.5f;
-		Dot.Draw(Color, IGraphics::CORNER_ALL, 4.0f);
+		Dot.Draw(Color, IGraphics::CORNER_ALL, ui_token::radius::PILL);
 		char aDuration[64];
 		FormatStatsPlaytime(Stats.m_PlaytimeSeconds, s_ShowTotalHours, aDuration, sizeof(aDuration));
 		const int64_t ChartWeight = QmStatisticsChartWeight(Stats.m_Maps, Stats.m_PlaytimeSeconds, ChartUsesMaps);
@@ -3585,17 +3631,26 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		str_format(aMapsText, sizeof(aMapsText), "%d", Stats.m_Maps);
 		char aDurationText[96];
 		str_format(aDurationText, sizeof(aDurationText), "%.1f%% · %s", ChartPercent, aDuration);
-		Ui()->DoLabel(&Maps, aMapsText, ui_token::font::SMALL, TEXTALIGN_MR);
-		Ui()->DoLabel(&Duration, aDurationText, ui_token::font::SMALL, TEXTALIGN_MR);
+		Ui()->DoLabel(&Maps, aMapsText, ui_token::font::BODY, TEXTALIGN_MR);
+		Ui()->DoLabel(&Duration, aDurationText, ui_token::font::BODY, TEXTALIGN_MR);
 		if(ShowScoreColumn && Index < std::size(aScoreTexts) && aScoreTexts[Index][0])
-			Ui()->DoLabel(&Score, aScoreTexts[Index], ui_token::font::SMALL, TEXTALIGN_MR);
-		if(Ui()->MouseInside(&Row) && Index < std::size(s_aModeTooltipText))
+			Ui()->DoLabel(&Score, aScoreTexts[Index], ui_token::font::BODY, TEXTALIGN_MR);
+		// 行间分隔线：参考图每行底部一条 1px 细线，最后一行不画，避免和卡片底边叠成双线。
+		if(Index + 1 < vDisplayModeStats.size())
+		{
+			CUIRect RowLine = Row;
+			RowLine.y += Row.h - 1.0f;
+			RowLine.h = 1.0f;
+			RowLine.Draw(ui_token::color::BORDER_SUBTLE, IGraphics::CORNER_NONE, 0.0f);
+		}
+		if(RowHovered && Index < std::size(s_aModeTooltipText))
 		{
 			FormatModeTooltip(Stats, pModeName, pModeSource, aDuration, s_aModeTooltipText[Index], sizeof(s_aModeTooltipText[Index]));
 			static int s_ModeTooltipIds[5] = {};
 			GameClient()->m_Tooltips.DoToolTip(&s_ModeTooltipIds[Index], &Row, s_aModeTooltipText[Index]);
 		}
 	}
+
 	Content = ModeRest;
 	Content.HSplitTop(10.0f, nullptr, &Content);
 
