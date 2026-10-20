@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cstddef>
 #include <cstdlib>
 #include <memory>
 #include <optional>
@@ -58,7 +59,7 @@ inline int ProbeDownloadedMap(const CFsFileInfo *pInfo, int IsDir, int DirType, 
 	// 严格 <前缀>_<哈希>.map：前缀后必须紧跟 '_'，防止 "Sunny" 误配 "SunnyLand_…"。
 	if(NameLen < PrefixLen + 2 || str_startswith(pInfo->m_pName, pProbe->m_pPrefix) == nullptr || pInfo->m_pName[PrefixLen] != '_')
 		return 0;
-	if(str_comp(pInfo->m_pName + NameLen - 4, ".map") != 0)
+	if(str_endswith(pInfo->m_pName, ".map") == nullptr)
 		return 0;
 	pProbe->m_BestTime = pInfo->m_TimeModified;
 	str_format(pProbe->m_aBest, sizeof(pProbe->m_aBest), "downloadedmaps/%s", pInfo->m_pName);
@@ -138,6 +139,8 @@ public:
 		Count = std::clamp<int>(Count, 0, MAX_MAPIMAGES);
 		m_vImages.resize(Count);
 		m_vUsage.resize(Count);
+		int LayersStart, LayersCount;
+		m_pMap->GetType(MAPITEMTYPE_LAYER, &LayersStart, &LayersCount);
 		for(int Group = 0; Group < m_pLayers->NumGroups(); ++Group)
 		{
 			const auto *pGroup = m_pLayers->GetGroup(Group);
@@ -152,6 +155,9 @@ public:
 				}
 				else if(pLayer->m_Type == LAYERTYPE_QUADS)
 				{
+					// 旧版没有名称字段；读取图像与数据索引前只要求固定头完整。
+					if(m_pMap->GetItemSize(LayersStart + pGroup->m_StartLayer + Layer) < static_cast<int>(offsetof(CMapItemLayerQuads, m_aName)))
+						return;
 					const auto *pQuads = reinterpret_cast<const CMapItemLayerQuads *>(pLayer);
 					Image = pQuads->m_Image;
 					Usage = 2;
@@ -166,9 +172,17 @@ public:
 		{
 			if(m_vUsage[Index] == 0)
 				continue;
+			const int ItemSize = m_pMap->GetItemSize(Start + Index);
+			if(ItemSize < static_cast<int>(sizeof(CMapItemImage_v1)))
+				return;
 			const auto *pImage = static_cast<const CMapItemImage_v2 *>(m_pMap->GetItem(Start + Index));
-			if(pImage->m_Version > 1 && pImage->m_MustBe1 != 1)
-				continue;
+			if(pImage->m_Version > 1)
+			{
+				if(ItemSize < static_cast<int>(sizeof(CMapItemImage_v2)))
+					return;
+				if(pImage->m_MustBe1 != 1)
+					continue;
+			}
 			const char *pName = m_pMap->GetDataString(pImage->m_ImageName);
 			if(pImage->m_External)
 			{
