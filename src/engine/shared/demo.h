@@ -27,7 +27,7 @@ namespace demo_output
 class CDemoRecorder : public IDemoRecorder
 {
 public:
-	// 文件句柄仍由记录器管理；可替换的操作边界用于观察真实文件的读写失败。
+	// 文件句柄由调用方管理；可替换的操作边界用于观察真实文件的读写失败。
 	class CFileOperations
 	{
 	public:
@@ -233,7 +233,8 @@ public:
 
 	int Load(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, int StorageType, bool ResetSliceMarkers = true);
 	unsigned char *GetMapData(class IStorage *pStorage);
-	bool ExtractMap(class IStorage *pStorage);
+	// 操作对象为本次提取借用；默认使用原文件 I/O 和同目录提交。
+	bool ExtractMap(class IStorage *pStorage, demo_output::COperations *pOutputOperations = nullptr, CDemoRecorder::CFileOperations *pFileOperations = nullptr) noexcept;
 	void Play();
 	void Pause() override;
 	void Unpause() override;

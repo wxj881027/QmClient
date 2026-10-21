@@ -1056,46 +1056,44 @@ unsigned char *CDemoPlayer::GetMapData(class IStorage *pStorage)
 	return ReadComplete ? pMapData.release() : nullptr;
 }
 
-bool CDemoPlayer::ExtractMap(class IStorage *pStorage)
+bool CDemoPlayer::ExtractMap(class IStorage *pStorage, demo_output::COperations *pOutputOperations, CDemoRecorder::CFileOperations *pFileOperations) noexcept
 {
-	unsigned char *pMapData = GetMapData(pStorage);
-	if(!pMapData)
+	try
 	{
-		return false;
-	}
+		std::unique_ptr<unsigned char, decltype(&std::free)> pMapData(GetMapData(pStorage), &std::free);
+		if(!pMapData)
+			return false;
 
-	// handle sha256
-	std::optional<SHA256_DIGEST> Sha256;
-	if(m_Info.m_Header.m_Version >= gs_Sha256Version)
-	{
-		Sha256 = m_MapInfo.m_Sha256;
-		dbg_assert(Sha256.has_value(), "SHA256 missing for version %d demo", m_Info.m_Header.m_Version);
-	}
-	else
-	{
-		Sha256 = sha256(pMapData, m_MapInfo.m_Size);
+		// 旧版和已被读取器接受的无扩展录像都从内嵌地图计算缺失摘要。
+		const SHA256_DIGEST Sha256 = m_MapInfo.m_Sha256.has_value() ? m_MapInfo.m_Sha256.value() : sha256(pMapData.get(), m_MapInfo.m_Size);
+
+		char aSha[SHA256_MAXSTRSIZE], aMapFilename[IO_MAX_PATH_LENGTH];
+		sha256_str(Sha256, aSha, sizeof(aSha));
+		str_format(aMapFilename, sizeof(aMapFilename), "downloadedmaps/%s_%s.map", m_Info.m_Header.m_aMapName, aSha);
+
+		demo_output::CTransaction Output(pOutputOperations);
+		if(!Output.Prepare(*pStorage, aMapFilename))
+			return false;
+		IOHANDLE MapFile = pStorage->OpenFile(Output.Filename(), IOFLAG_WRITE, IStorage::TYPE_ABSOLUTE);
+		if(!MapFile)
+			return false;
+
+		CDemoRecorder::CFileOperations DefaultOperations;
+		CDemoRecorder::CFileOperations &Operations = pFileOperations ? *pFileOperations : DefaultOperations;
+		// 从打开到关闭只调用 noexcept 文件操作，失败也必须关闭且只能关闭一次。
+		const bool Written = Operations.Write(MapFile, pMapData.get(), m_MapInfo.m_Size) == m_MapInfo.m_Size;
+		const bool Flushed = Operations.Flush(MapFile) == 0;
+		const bool Clean = Operations.Error(MapFile) == 0;
+		const bool Closed = Operations.Close(MapFile) == 0;
+		if(!Written || !Flushed || !Clean || !Closed || !Output.Publish())
+			return false;
 		m_MapInfo.m_Sha256 = Sha256;
+		return true;
 	}
-
-	// construct name
-	char aSha[SHA256_MAXSTRSIZE], aMapFilename[IO_MAX_PATH_LENGTH];
-	sha256_str(Sha256.value(), aSha, sizeof(aSha));
-	str_format(aMapFilename, sizeof(aMapFilename), "downloadedmaps/%s_%s.map", m_Info.m_Header.m_aMapName, aSha);
-
-	// save map
-	IOHANDLE MapFile = pStorage->OpenFile(aMapFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!MapFile)
+	catch(...)
 	{
-		free(pMapData);
 		return false;
 	}
-
-	io_write(MapFile, pMapData, m_MapInfo.m_Size);
-	io_close(MapFile);
-
-	// free data
-	free(pMapData);
-	return true;
 }
 
 int64_t CDemoPlayer::SystemTime() const
@@ -1647,7 +1645,7 @@ bool CDemoEditor::SliceImpl(const char *pDemo, const char *pDst, const std::vect
 	const CDemoPlayer::CPlaybackInfo *pInfo = DemoPlayer.Info();
 
 	std::optional<SHA256_DIGEST> Sha256 = pMapInfo->m_Sha256;
-	if(pInfo->m_Header.m_Version < gs_Sha256Version)
+	if(!Sha256.has_value())
 	{
 		if(DemoPlayer.ExtractMap(m_pStorage))
 		{
