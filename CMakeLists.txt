@@ -4686,8 +4686,10 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_friend_online_tracker_test.cpp
     src/test/unit/qmclient/client/qm_friends_category_drag_test.cpp
     src/test/unit/engine/friends_revision_test.cpp
+    src/test/unit/engine/friends_identity_test.cpp
     src/test/unit/engine/friends_pin_test.cpp
     src/test/integration/engine/friends_pin_persistence_test.cpp
+    src/test/integration/engine/friends_note_persistence_test.cpp
     src/test/integration/qmclient/client/qm_browser_friend_pin_test.cpp
     src/test/unit/qmclient/monitoring/qm_perf_diagnostics_test.cpp
     src/test/unit/qmclient/monitoring/qm_perf_json_test.cpp
