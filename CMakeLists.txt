@@ -3138,6 +3138,7 @@ if(CLIENT)
     render_target_pool.h
     input.cpp
     input.h
+    input_ime.h
     input_sdl3.h
     audio_sdl3.h
     sound_buffer.h
@@ -4936,6 +4937,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_hud_notifications_legacy_contract_test.cpp
     src/test/contract/qmclient/client/qm_hud_editor_contract_test.cpp
     src/test/unit/qmclient/client/country_flag_anim_start_time_test.cpp
+    src/test/unit/qmclient/client/qm_ime_candidate_failure_test.cpp
     src/test/unit/qmclient/client/qm_ime_platform_test.cpp
     src/test/unit/qmclient/client/qm_serverlist_cache_test.cpp
     src/test/unit/qmclient/client/qm_input_overlay_count_test.cpp
@@ -5424,6 +5426,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
   if(CLIENT)
     list(APPEND TESTS
       src/test/unit/engine/input_clipboard_test.cpp
+      src/test/unit/engine/input_ime_test.cpp
       src/test/unit/engine/input_sdl3_test.cpp
       src/test/integration/engine/audio_sdl3_test.cpp
       src/test/unit/engine/sound_voice_handle_test.cpp
