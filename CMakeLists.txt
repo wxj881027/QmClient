@@ -2754,6 +2754,7 @@ set_src(BASE GLOB_RECURSE src/base
   vmath.h
   windows.cpp
   windows.h
+  windows_io.h
 )
 set_src(ENGINE_INTERFACE GLOB src/engine
   antibot.h
@@ -5223,6 +5224,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_quad_rotation_cache_test.cpp
     src/test/unit/base/windows_test.cpp
     src/test/integration/base/windows_com_lifecycle_test.cpp
+    src/test/integration/base/windows_io_handle_test.cpp
     src/test/unit/engine/netobj_secure_unpack_test.cpp
     src/test/unit/engine/snapshot_test.cpp
     src/test/contract/base/steam_presence_contract_test.cpp

@@ -9,6 +9,7 @@
 #include "sphore.h"
 #include "thread.h"
 #include "windows.h"
+#include "windows_io.h"
 
 #include <sys/types.h>
 
@@ -134,6 +135,50 @@ struct NETQOS_INTERNAL
 };
 
 #if defined(CONF_FAMILY_WINDOWS)
+int CWindowsFileOperations::OpenDescriptor(intptr_t Handle) noexcept
+{
+	return _open_osfhandle(Handle, 0);
+}
+
+FILE *CWindowsFileOperations::OpenStream(int Descriptor, const char *pMode) noexcept
+{
+	return _fdopen(Descriptor, pMode);
+}
+
+void CWindowsFileOperations::CloseNativeHandle(intptr_t Handle) noexcept
+{
+	CloseHandle(reinterpret_cast<HANDLE>(Handle));
+}
+
+void CWindowsFileOperations::CloseDescriptor(int Descriptor) noexcept
+{
+	_close(Descriptor);
+}
+
+IOHANDLE windows_io_from_handle(intptr_t Handle, const char *pMode, CWindowsFileOperations *pOperations) noexcept
+{
+	CWindowsFileOperations DefaultOperations;
+	CWindowsFileOperations &Operations = pOperations ? *pOperations : DefaultOperations;
+	const int Descriptor = Operations.OpenDescriptor(Handle);
+	if(Descriptor == -1)
+	{
+		const int Error = errno;
+		Operations.CloseNativeHandle(Handle);
+		errno = Error;
+		return nullptr;
+	}
+
+	FILE *pStream = Operations.OpenStream(Descriptor, pMode);
+	if(!pStream)
+	{
+		const int Error = errno;
+		// 句柄已交给 CRT，关闭描述符会同时关闭原生句柄，不能再次 CloseHandle。
+		Operations.CloseDescriptor(Descriptor);
+		errno = Error;
+	}
+	return pStream;
+}
+
 struct SQwaveApi
 {
 	HMODULE m_pModule = nullptr;
@@ -204,11 +249,7 @@ IOHANDLE io_open(const char *filename, int flags)
 	HANDLE handle = CreateFileW(wide_filename.c_str(), desired_access, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, creation_disposition, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if(handle == INVALID_HANDLE_VALUE)
 		return nullptr;
-	const int file_descriptor = _open_osfhandle((intptr_t)handle, 0);
-	dbg_assert(file_descriptor != -1, "_open_osfhandle failure");
-	FILE *file_stream = _fdopen(file_descriptor, open_mode);
-	dbg_assert(file_stream != nullptr, "_fdopen failure");
-	return file_stream;
+	return windows_io_from_handle(reinterpret_cast<intptr_t>(handle), open_mode);
 #else
 	const char *open_mode;
 	if((flags & IOFLAG_READ) != 0)
