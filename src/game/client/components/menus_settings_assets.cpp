@@ -3946,8 +3946,10 @@ static void DropMissingLocalAssetEntriesTyped(std::vector<TItem> &vList, IGraphi
 	};
 	for(auto It = vList.begin(); It != vList.end();)
 	{
-		if(Keep(It->m_aName))
+		if(Keep(It->m_aName) || IsProtectedAssetName(It->m_aName))
 		{
+			// 「default / 空白材质」是合成的内置条目，不在磁盘扫描结果里，
+			// 摘掉它们等于把贴图删了再重建——这正是「贴图弄不见」的来源。
 			++It;
 			continue;
 		}
