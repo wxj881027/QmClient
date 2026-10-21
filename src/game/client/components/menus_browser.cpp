@@ -2973,7 +2973,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	FriendlistOnUpdate();
 	const int NumCategories = maximum(1, GameClient()->Friends()->NumCategories());
 
-	m_BrowserFriendList.Update(*GameClient()->Friends(), *ServerBrowser(), g_Config.m_ClFriendsIgnoreClan != 0);
+	if(!m_BrowserFriendList.Update(*GameClient()->Friends(), *ServerBrowser(), g_Config.m_ClFriendsIgnoreClan != 0))
+		return;
 	const auto &vvFriends = m_BrowserFriendList.Groups();
 
 	bool OpenRemovePopup = false;
