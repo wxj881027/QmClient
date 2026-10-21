@@ -4784,6 +4784,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/demo_slice_segments_test.cpp
     src/test/integration/engine/demo_seek_test.cpp
     src/test/integration/engine/demo_startup_test.cpp
+    src/test/integration/engine/demo_load_allocation_test.cpp
     src/test/integration/engine/demo_output_transaction_test.cpp
     src/test/integration/engine/demoedit_job_test.cpp
     src/test/integration/engine/replay_save_submission_test.cpp

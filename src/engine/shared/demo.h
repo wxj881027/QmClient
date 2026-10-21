@@ -11,7 +11,12 @@
 #include <engine/demo.h>
 #include <engine/shared/protocol.h>
 
+#include <cstddef>
 #include <functional>
+#include <limits>
+#include <memory>
+#include <new>
+#include <type_traits>
 #include <vector>
 
 typedef std::function<void()> TUpdateIntraTimesFunc;
@@ -117,6 +122,16 @@ public:
 		virtual int Error(IOHANDLE File) noexcept;
 	};
 
+	// 分配策略为借用，须覆盖播放器生命周期；返回缓冲由索引容器拥有并由同一策略 Free。
+	// 分配结果须满足普通 new 的对齐要求。
+	class CKeyFrameMemory
+	{
+	public:
+		virtual ~CKeyFrameMemory() = default;
+		virtual void *Allocate(size_t Bytes);
+		virtual void Free(void *pMemory, size_t Bytes) noexcept;
+	};
+
 	class IListener
 	{
 	public:
@@ -172,12 +187,67 @@ private:
 		}
 	};
 
+	template<typename T>
+	class CKeyFrameAllocator
+	{
+	public:
+		using value_type = T;
+		CKeyFrameMemory *m_pMemory;
+		explicit CKeyFrameAllocator(CKeyFrameMemory *pMemory = nullptr) noexcept :
+			m_pMemory(pMemory) {}
+		template<typename U>
+		CKeyFrameAllocator(const CKeyFrameAllocator<U> &Other) noexcept :
+			m_pMemory(Other.m_pMemory)
+		{
+		}
+		T *allocate(size_t Count)
+		{
+			// 只替换索引条目缓冲，标准库调试代理等辅助对象保留原分配器。
+			if constexpr(std::is_same_v<T, CKeyFrame>)
+			{
+				static_assert(alignof(T) <= alignof(std::max_align_t));
+				if(m_pMemory)
+				{
+					if(Count > std::numeric_limits<size_t>::max() / sizeof(T))
+						throw std::bad_array_new_length();
+					void *pMemory = m_pMemory->Allocate(Count * sizeof(T));
+					if(!pMemory)
+						throw std::bad_alloc();
+					return static_cast<T *>(pMemory);
+				}
+			}
+			return std::allocator<T>{}.allocate(Count);
+		}
+		void deallocate(T *pMemory, size_t Count) noexcept
+		{
+			if constexpr(std::is_same_v<T, CKeyFrame>)
+			{
+				if(m_pMemory)
+				{
+					m_pMemory->Free(pMemory, Count * sizeof(T));
+					return;
+				}
+			}
+			std::allocator<T>{}.deallocate(pMemory, Count);
+		}
+		template<typename U>
+		bool operator==(const CKeyFrameAllocator<U> &Other) const noexcept
+		{
+			return m_pMemory == Other.m_pMemory;
+		}
+		template<typename U>
+		bool operator!=(const CKeyFrameAllocator<U> &Other) const noexcept
+		{
+			return !(*this == Other);
+		}
+	};
+
 	class IConsole *m_pConsole;
 	IOHANDLE m_File;
 	int64_t m_MapOffset;
 	char m_aFilename[IO_MAX_PATH_LENGTH];
 	char m_aErrorMessage[256];
-	std::vector<CKeyFrame> m_vKeyFrames;
+	std::vector<CKeyFrame, CKeyFrameAllocator<CKeyFrame>> m_vKeyFrames;
 	CMapInfo m_MapInfo;
 	int m_SpeedIndex;
 
@@ -216,6 +286,7 @@ private:
 		ERROR_UNRECOVERABLE,
 	};
 	EScanFileResult ScanFile();
+	void FailLoad(const char *pErrorMessage) noexcept;
 	void UpdateTimes();
 
 	int64_t Time();
@@ -225,13 +296,13 @@ private:
 	void Construct(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo);
 
 public:
-	CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, CMapDataOperations *pMapDataOperations = nullptr, ETimeMode TimeMode = ETimeMode::CACHED_FRAME);
+	CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, CMapDataOperations *pMapDataOperations = nullptr, ETimeMode TimeMode = ETimeMode::CACHED_FRAME, CKeyFrameMemory *pKeyFrameMemory = nullptr);
 	CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, TUpdateIntraTimesFunc &&UpdateIntraTimesFunc);
 	~CDemoPlayer() override;
 
 	void SetListener(IListener *pListener);
 
-	int Load(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, int StorageType, bool ResetSliceMarkers = true);
+	int Load(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, int StorageType, bool ResetSliceMarkers = true) noexcept;
 	unsigned char *GetMapData(class IStorage *pStorage);
 	// 操作对象为本次提取借用；默认使用原文件 I/O 和同目录提交。
 	bool ExtractMap(class IStorage *pStorage, demo_output::COperations *pOutputOperations = nullptr, CDemoRecorder::CFileOperations *pFileOperations = nullptr) noexcept;

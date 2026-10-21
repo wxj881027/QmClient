@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <memory>
+#include <stdexcept>
 #include <utility>
 
 const CUuid SHA256_EXTENSION =
@@ -627,8 +628,11 @@ CDemoPlayer::CMapDataOperations &CDemoPlayer::MapDataOperations()
 	return m_pMapDataOperations ? *m_pMapDataOperations : s_Operations;
 }
 
-CDemoPlayer::CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, CMapDataOperations *pMapDataOperations, ETimeMode TimeMode) :
-	m_pMapDataOperations(pMapDataOperations), m_TimeMode(TimeMode)
+void *CDemoPlayer::CKeyFrameMemory::Allocate(size_t Bytes) { return ::operator new(Bytes); }
+void CDemoPlayer::CKeyFrameMemory::Free(void *pMemory, size_t) noexcept { ::operator delete(pMemory); }
+
+CDemoPlayer::CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, CMapDataOperations *pMapDataOperations, ETimeMode TimeMode, CKeyFrameMemory *pKeyFrameMemory) :
+	m_pMapDataOperations(pMapDataOperations), m_TimeMode(TimeMode), m_vKeyFrames(CKeyFrameAllocator<CKeyFrame>(pKeyFrameMemory))
 {
 	Construct(pSnapshotDelta, pSnapshotDeltaSixup, UseVideo);
 }
@@ -636,6 +640,33 @@ CDemoPlayer::CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapsh
 CDemoPlayer::~CDemoPlayer()
 {
 	dbg_assert(m_File == 0, "Demo player not stopped");
+}
+
+void CDemoPlayer::FailLoad(const char *pErrorMessage) noexcept
+{
+	const IOHANDLE File = std::exchange(m_File, nullptr);
+	if(File)
+		io_close(File);
+	{
+		// 分配失败后释放已准备的索引容量，不能继续占住导致失败的内存。
+		decltype(m_vKeyFrames) Empty(m_vKeyFrames.get_allocator());
+		m_vKeyFrames.swap(Empty);
+	}
+	str_copy(m_aFilename, "");
+	str_copy(m_aErrorMessage, pErrorMessage);
+#if defined(CONF_VIDEORECORDER)
+	m_WasRecording = false;
+	if(m_UseVideo && IVideo::Current())
+	{
+		try
+		{
+			IVideo::Current()->Stop();
+		}
+		catch(...)
+		{
+		}
+	}
+#endif
 }
 
 void CDemoPlayer::SetListener(IListener *pListener)
@@ -765,7 +796,25 @@ CDemoPlayer::EScanFileResult CDemoPlayer::ScanFile()
 		{
 			if(ChunkType & CHUNKTICKFLAG_KEYFRAME)
 			{
-				m_vKeyFrames.emplace_back(CurrentPos, ChunkTick);
+				try
+				{
+					m_vKeyFrames.emplace_back(CurrentPos, ChunkTick);
+				}
+				catch(const std::bad_alloc &)
+				{
+					FailLoad("Not enough memory to load demo");
+					return EScanFileResult::ERROR_UNRECOVERABLE;
+				}
+				catch(const std::length_error &)
+				{
+					FailLoad("Demo keyframe index is too large");
+					return EScanFileResult::ERROR_UNRECOVERABLE;
+				}
+				catch(...)
+				{
+					FailLoad("Error loading demo");
+					return EScanFileResult::ERROR_UNRECOVERABLE;
+				}
 			}
 			if(m_Info.m_Info.m_FirstTick == -1)
 			{
@@ -954,80 +1003,96 @@ void CDemoPlayer::Unpause()
 #endif
 }
 
-int CDemoPlayer::Load(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, int StorageType, bool ResetSliceMarkers)
+int CDemoPlayer::Load(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, int StorageType, bool ResetSliceMarkers) noexcept
 {
 	dbg_assert(m_File == 0, "Demo player already playing");
 
-	m_pConsole = pConsole;
-	str_copy(m_aFilename, pFilename);
-	str_copy(m_aErrorMessage, "");
-
-	if(m_pConsole)
+	try
 	{
-		char aBuf[32 + IO_MAX_PATH_LENGTH];
-		str_format(aBuf, sizeof(aBuf), "Loading demo '%s'", pFilename);
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo_player", aBuf);
-	}
+		m_pConsole = pConsole;
+		str_copy(m_aFilename, pFilename);
+		str_copy(m_aErrorMessage, "");
 
-	// clear the playback info
-	mem_zero(&m_Info, sizeof(m_Info));
-	m_Info.m_Info.m_FirstTick = -1;
-	m_Info.m_Info.m_LastTick = -1;
-	m_Info.m_NextTick = -1;
-	m_Info.m_Info.m_CurrentTick = -1;
-	m_Info.m_PreviousTick = -1;
-	m_Info.m_Info.m_Speed = 1;
-	m_SpeedIndex = DEMO_SPEED_INDEX_DEFAULT;
-	m_LastSnapshotDataSize = -1;
-
-	if(!GetDemoInfo(pStorage, m_pConsole, pFilename, StorageType, &m_Info.m_Header, &m_Info.m_TimelineMarkers, &m_MapInfo, &m_File, m_aErrorMessage, sizeof(m_aErrorMessage)))
-	{
-		str_copy(m_aFilename, "");
-		return -1;
-	}
-	m_Sixup = str_startswith(m_Info.m_Header.m_aNetversion, "0.7");
-
-	// save byte offset of map for later use
-	m_MapOffset = io_tell(m_File);
-	if(m_MapOffset < 0 || io_skip(m_File, m_MapInfo.m_Size) != 0)
-	{
-		Stop("Error skipping map data");
-		return -1;
-	}
-
-	// Scan the file for interesting points
-	if(ScanFile() == EScanFileResult::ERROR_UNRECOVERABLE)
-	{
-		Stop("Error scanning demo file");
-		return -1;
-	}
-	m_Info.m_LiveStateUpdating = true;
-
-	if(m_Info.m_Header.m_Version > gs_OldVersion)
-	{
-		// get timeline markers
-		int Num = bytes_be_to_uint(m_Info.m_TimelineMarkers.m_aNumTimelineMarkers);
-		m_Info.m_Info.m_NumTimelineMarkers = std::clamp<int>(Num, 0, MAX_TIMELINE_MARKERS);
-		for(int i = 0; i < m_Info.m_Info.m_NumTimelineMarkers; i++)
+		if(m_pConsole)
 		{
-			m_Info.m_Info.m_aTimelineMarkers[i] = bytes_be_to_uint(m_Info.m_TimelineMarkers.m_aTimelineMarkers[i]);
-			if(!in_range(m_Info.m_Info.m_aTimelineMarkers[i], m_Info.m_Info.m_FirstTick, m_Info.m_Info.m_LastTick))
+			char aBuf[32 + IO_MAX_PATH_LENGTH];
+			str_format(aBuf, sizeof(aBuf), "Loading demo '%s'", pFilename);
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo_player", aBuf);
+		}
+
+		// clear the playback info
+		mem_zero(&m_Info, sizeof(m_Info));
+		m_Info.m_Info.m_FirstTick = -1;
+		m_Info.m_Info.m_LastTick = -1;
+		m_Info.m_NextTick = -1;
+		m_Info.m_Info.m_CurrentTick = -1;
+		m_Info.m_PreviousTick = -1;
+		m_Info.m_Info.m_Speed = 1;
+		m_SpeedIndex = DEMO_SPEED_INDEX_DEFAULT;
+		m_LastSnapshotDataSize = -1;
+
+		if(!GetDemoInfo(pStorage, m_pConsole, pFilename, StorageType, &m_Info.m_Header, &m_Info.m_TimelineMarkers, &m_MapInfo, &m_File, m_aErrorMessage, sizeof(m_aErrorMessage)))
+		{
+			str_copy(m_aFilename, "");
+			return -1;
+		}
+		m_Sixup = str_startswith(m_Info.m_Header.m_aNetversion, "0.7");
+
+		// save byte offset of map for later use
+		m_MapOffset = io_tell(m_File);
+		if(m_MapOffset < 0 || io_skip(m_File, m_MapInfo.m_Size) != 0)
+		{
+			Stop("Error skipping map data");
+			return -1;
+		}
+
+		// Scan the file for interesting points
+		if(ScanFile() == EScanFileResult::ERROR_UNRECOVERABLE)
+		{
+			Stop("Error scanning demo file");
+			return -1;
+		}
+		m_Info.m_LiveStateUpdating = true;
+
+		if(m_Info.m_Header.m_Version > gs_OldVersion)
+		{
+			// get timeline markers
+			int Num = bytes_be_to_uint(m_Info.m_TimelineMarkers.m_aNumTimelineMarkers);
+			m_Info.m_Info.m_NumTimelineMarkers = std::clamp<int>(Num, 0, MAX_TIMELINE_MARKERS);
+			for(int i = 0; i < m_Info.m_Info.m_NumTimelineMarkers; i++)
 			{
-				Stop("Invalid demo timeline marker");
-				return -1;
+				m_Info.m_Info.m_aTimelineMarkers[i] = bytes_be_to_uint(m_Info.m_TimelineMarkers.m_aTimelineMarkers[i]);
+				if(!in_range(m_Info.m_Info.m_aTimelineMarkers[i], m_Info.m_Info.m_FirstTick, m_Info.m_Info.m_LastTick))
+				{
+					Stop("Invalid demo timeline marker");
+					return -1;
+				}
 			}
 		}
-	}
 
-	// reset slice markers
-	if(ResetSliceMarkers)
+		// reset slice markers
+		if(ResetSliceMarkers)
+		{
+			g_Config.m_ClDemoSliceBegin = -1;
+			g_Config.m_ClDemoSliceEnd = -1;
+		}
+
+		// ready for playback
+		return 0;
+	}
+	catch(const std::bad_alloc &)
 	{
-		g_Config.m_ClDemoSliceBegin = -1;
-		g_Config.m_ClDemoSliceEnd = -1;
+		FailLoad("Not enough memory to load demo");
 	}
-
-	// ready for playback
-	return 0;
+	catch(const std::length_error &)
+	{
+		FailLoad("Demo keyframe index is too large");
+	}
+	catch(...)
+	{
+		FailLoad("Error loading demo");
+	}
+	return -1;
 }
 
 unsigned char *CDemoPlayer::GetMapData(class IStorage *pStorage)
@@ -1454,7 +1519,8 @@ bool CDemoPlayer::GetDemoInfo(IStorage *pStorage, IConsole *pConsole, const char
 	pMapInfo->m_Crc = 0;
 	pMapInfo->m_Size = 0;
 
-	IOHANDLE File = pStorage->OpenFile(pFilename, IOFLAG_READ, StorageType);
+	std::unique_ptr<void, decltype(&io_close)> pOwnedFile(pStorage->OpenFile(pFilename, IOFLAG_READ, StorageType), &io_close);
+	const IOHANDLE File = pOwnedFile.get();
 	if(!File)
 	{
 		if(pErrorMessage != nullptr)
@@ -1467,7 +1533,6 @@ bool CDemoPlayer::GetDemoInfo(IStorage *pStorage, IConsole *pConsole, const char
 		if(pErrorMessage != nullptr)
 			str_copy(pErrorMessage, "Error reading demo header", ErrorMessageSize);
 		mem_zero(pDemoHeader, sizeof(CDemoHeader));
-		io_close(File);
 		return false;
 	}
 
@@ -1476,7 +1541,6 @@ bool CDemoPlayer::GetDemoInfo(IStorage *pStorage, IConsole *pConsole, const char
 		if(pErrorMessage != nullptr)
 			str_format(pErrorMessage, ErrorMessageSize, "Demo version '%d' is not supported", pDemoHeader->m_Version);
 		mem_zero(pDemoHeader, sizeof(CDemoHeader));
-		io_close(File);
 		return false;
 	}
 	else if(pDemoHeader->m_Version > gs_OldVersion)
@@ -1486,7 +1550,6 @@ bool CDemoPlayer::GetDemoInfo(IStorage *pStorage, IConsole *pConsole, const char
 			if(pErrorMessage != nullptr)
 				str_copy(pErrorMessage, "Error reading timeline markers", ErrorMessageSize);
 			mem_zero(pDemoHeader, sizeof(CDemoHeader));
-			io_close(File);
 			return false;
 		}
 	}
@@ -1505,7 +1568,6 @@ bool CDemoPlayer::GetDemoInfo(IStorage *pStorage, IConsole *pConsole, const char
 					str_copy(pErrorMessage, "Error reading SHA256", ErrorMessageSize);
 				mem_zero(pDemoHeader, sizeof(CDemoHeader));
 				mem_zero(pTimelineMarkers, sizeof(CTimelineMarkers));
-				io_close(File);
 				return false;
 			}
 			Sha256 = ReadSha256;
@@ -1523,7 +1585,6 @@ bool CDemoPlayer::GetDemoInfo(IStorage *pStorage, IConsole *pConsole, const char
 					str_copy(pErrorMessage, "Error rewinding SHA256 extension UUID", ErrorMessageSize);
 				mem_zero(pDemoHeader, sizeof(CDemoHeader));
 				mem_zero(pTimelineMarkers, sizeof(CTimelineMarkers));
-				io_close(File);
 				return false;
 			}
 		}
@@ -1534,10 +1595,8 @@ bool CDemoPlayer::GetDemoInfo(IStorage *pStorage, IConsole *pConsole, const char
 	pMapInfo->m_Crc = bytes_be_to_uint(pDemoHeader->m_aMapCrc);
 	pMapInfo->m_Size = bytes_be_to_uint(pDemoHeader->m_aMapSize);
 
-	if(pFile == nullptr)
-		io_close(File);
-	else
-		*pFile = File;
+	if(pFile != nullptr)
+		*pFile = pOwnedFile.release();
 
 	return true;
 }
