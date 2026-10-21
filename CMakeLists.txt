@@ -5246,6 +5246,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/base/thread_test.cpp
     src/test/unit/base/thread_startup_test.cpp
     src/test/integration/base/qm_test_terminate_diagnostics_test.cpp
+    src/test/integration/base/qm_mac_exception_recovery_test.cpp
     src/test/unit/base/time_test.cpp
     src/test/unit/base/timestamp_test.cpp
     src/test/integration/qmclient/translate/translate_backend_test.cpp
