@@ -104,7 +104,7 @@ TEST_F(ServerBrowserInfoDownload, MetadataPreparationFailureDiscardsTheCandidate
 {
 	ASSERT_NO_FATAL_FAILURE(LoadInitial());
 	const auto *pOldInfo = CServerBrowserTestAccess::Info(m_Browser);
-	m_Browser.m_CustomCommunitiesFunction = [](std::vector<json_value *> &) { throw std::bad_alloc(); };
+	CServerBrowserTestAccess::SetCustomSource(m_Browser, [](std::vector<json_value *> &) { throw std::bad_alloc(); });
 	auto pRejected = Request();
 	ASSERT_NO_FATAL_FAILURE(pRejected->Finish(Info("new")));
 	EXPECT_EQ(m_Browser.LoadDDNetInfo(pRejected.get()), nullptr);
@@ -112,7 +112,7 @@ TEST_F(ServerBrowserInfoDownload, MetadataPreparationFailureDiscardsTheCandidate
 	EXPECT_EQ(CServerBrowserTestAccess::Info(m_Browser), pOldInfo);
 	EXPECT_EQ(pRejected->State(), EHttpState::ERROR);
 	EXPECT_FALSE(fs_is_file(pRejected->TemporaryPath()));
-	m_Browser.m_CustomCommunitiesFunction = {};
+	CServerBrowserTestAccess::SetCustomSource(m_Browser, nullptr);
 	auto pRetry = Request();
 	ASSERT_NO_FATAL_FAILURE(pRetry->Finish(Info("new")));
 	ASSERT_NE(m_Browser.LoadDDNetInfo(pRetry.get()), nullptr);
