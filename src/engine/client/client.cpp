@@ -4637,8 +4637,7 @@ void CClient::Run()
 					const int64_t FrameEnd = time_get();
 					const double FrameMs = m_QmPerfLastFrameEnd != 0 ? (FrameEnd - m_QmPerfLastFrameEnd) * 1000.0 / time_freq() : 0.0;
 					m_QmPerfLastFrameEnd = FrameEnd;
-					if(m_QmPerfFrameBatch.Record(PerfFrame(), FrameMs))
-						QmPerfLogFields("perf/frame", m_QmPerfFrameBatch.TakeFields(), this);
+					m_QmPerfFrameBatch.RecordAndLog(PerfFrame(), FrameMs, this);
 				}
 				// 只在连接/加载阶段记录，避免菜单和游戏内每帧刷屏
 				if(g_Config.m_QmGraphicsTrace >= 3 &&
@@ -7705,13 +7704,7 @@ void CClient::UpdateQmPerfFileLogger()
 		catch(...)
 		{
 		}
-		try
-		{
-			m_QmPerfConfigSnapshot.Start(ConfigManager(), this);
-		}
-		catch(...)
-		{
-		}
+		m_QmPerfConfigSnapshot.Start(ConfigManager(), this);
 		m_QmPerfLastConfigCheck = time_get();
 		log_info("client", "writing performance log to '%s'", aPerfLogCompletePath);
 	}
@@ -7729,8 +7722,7 @@ void CClient::FinishQmPerfSession(bool Shutdown)
 {
 	try
 	{
-		if(m_QmPerfFrameBatch.Count() != 0)
-			QmPerfLogFields("perf/frame", m_QmPerfFrameBatch.TakeFields(), this);
+		m_QmPerfFrameBatch.Flush(this);
 		m_QmPerfConfigSnapshot.Update(this);
 		QmPerfFlushDropped(this);
 		QmPerfLogFields("perf/session", std::string("\"event\":\"session_end\",\"reason\":") + QmPerfJsonString(Shutdown ? "shutdown" : "disabled"), this);

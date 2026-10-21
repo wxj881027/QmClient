@@ -4704,6 +4704,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_browser_friend_pin_test.cpp
     src/test/integration/qmclient/client/qm_browser_friend_snapshot_test.cpp
     src/test/unit/qmclient/monitoring/qm_perf_diagnostics_test.cpp
+    src/test/unit/qmclient/monitoring/qm_perf_config_snapshot_test.cpp
+    src/test/unit/qmclient/monitoring/qm_perf_frame_batch_failure_test.cpp
     src/test/unit/qmclient/monitoring/qm_perf_json_test.cpp
     src/test/unit/qmclient/monitoring/qm_device_sampler_lifecycle_test.cpp
     src/test/unit/client/player_points_parse_test.cpp
@@ -5124,6 +5126,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/contract/qmclient/monitoring/qmclient_monitoring_card_order_contract_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_graphics_contract_test.cpp
     src/test/integration/qmclient/monitoring/qm_menu_ui_perf_logging_test.cpp
+    src/test/integration/qmclient/monitoring/qm_perf_diagnostics_logging_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_misc_contract_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_persistence_contract_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_settings_structure_contract_test.cpp
