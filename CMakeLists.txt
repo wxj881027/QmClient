@@ -5604,6 +5604,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/client/qm_text_bitmap_test.cpp
       src/test/integration/qmclient/client/qm_text_initialization_test.cpp
       src/test/integration/qmclient/client/qm_text_device_recovery_test.cpp
+      src/test/integration/client/graph_rendering_test.cpp
       src/test/integration/qmclient/ui/qm_popup_blur_scope_test.cpp
       src/test/integration/qmclient/ui/qm_settings_search_session_test.cpp
       src/test/integration/qmclient/ui/qm_settings_paragraph_test.cpp
@@ -5628,6 +5629,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_theme_selection_test.cpp
       src/test/integration/qmclient/ui/qm_ui_element_lifetime_test.cpp
       src/engine/client/text.cpp
+      src/engine/client/graph.cpp
       src/game/client/ui.cpp
       src/game/client/ui_popups.cpp
       src/game/client/ui_rect.cpp

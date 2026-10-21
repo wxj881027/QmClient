@@ -8,7 +8,23 @@
 
 #include <game/localization.h>
 
+#include <cmath>
 #include <limits>
+
+namespace
+{
+	bool RoundGraphCoordinate(float Value, int &Result)
+	{
+		if(!std::isfinite(Value))
+			return false;
+		// 按原浮点舍入检查转换范围，避免 NaN、无穷及越界值转为 int。
+		const double Rounded = Value > 0 ? Value + 0.5f : Value - 0.5f;
+		if(Rounded < std::numeric_limits<int>::min() || Rounded > std::numeric_limits<int>::max())
+			return false;
+		Result = round_to_int(Value);
+		return true;
+	}
+}
 
 int CGraph::BufferSize(int MaxEntries)
 {
@@ -179,50 +195,68 @@ bool CGraph::InsertAt(int64_t Time, float Value, ColorRGBA Color)
 
 void CGraph::RenderDataLines(IGraphics *pGraphics, float x, float y, float w, float h)
 {
-	if(m_pFirstScaled == nullptr)
+	if(m_pFirstScaled == nullptr || m_RenderedTotalTime <= 0 || !std::isfinite(m_MinAxis) || !std::isfinite(m_MaxAxis))
 	{
 		return;
 	}
+	const float AxisRange = m_MaxAxis - m_MinAxis;
+	if(AxisRange <= 0.0f || !std::isfinite(AxisRange))
+		return;
 
 	IGraphics::CLineItemBatch LineItemBatch;
 	pGraphics->LinesBatchBegin(&LineItemBatch);
 
 	const int64_t StartTime = m_pFirstScaled->m_Time;
+	const auto Project = [&](const CEntry *pEntry, int &X, int &Y) {
+		return RoundGraphCoordinate((pEntry->m_Time - StartTime) * w / m_RenderedTotalTime, X) &&
+		       RoundGraphCoordinate((pEntry->m_Value - m_MinAxis) * h / AxisRange, Y);
+	};
 
 	CEntry *pEntry0 = m_pFirstScaled;
-	int a0 = round_to_int((pEntry0->m_Time - StartTime) * w / m_RenderedTotalTime);
-	int v0 = round_to_int((pEntry0->m_Value - m_MinAxis) * h / (m_MaxAxis - m_MinAxis));
+	int a0 = 0;
+	int v0 = 0;
+	bool PreviousValid = Project(pEntry0, a0, v0);
+	bool ApplyColor = true;
 	while(pEntry0 != nullptr)
 	{
 		CEntry *pEntry1 = m_Entries.Next(pEntry0);
 		if(pEntry1 == nullptr)
 			break;
 
-		const int a1 = round_to_int((pEntry1->m_Time - StartTime) * w / m_RenderedTotalTime);
-		const int v1 = round_to_int((pEntry1->m_Value - m_MinAxis) * h / (m_MaxAxis - m_MinAxis));
+		int a1 = 0;
+		int v1 = 0;
+		const bool CurrentValid = Project(pEntry1, a1, v1);
 
-		if(pEntry1->m_ApplyColor)
+		if(PreviousValid && CurrentValid)
 		{
-			pGraphics->LinesBatchEnd(&LineItemBatch);
-			pGraphics->LinesBatchBegin(&LineItemBatch);
-			// 与远程一致：改用逐角点提交。语义与 SetColor2(entry0, entry1) 相同
-			// （槽 0 = entry0、槽 1 = entry1），只是不再依赖 SetColor2 的 LINES 专用断言。
-			const IGraphics::CColorVertex aColorVertices[] = {
-				IGraphics::CColorVertex(0, pEntry0->m_Color),
-				IGraphics::CColorVertex(1, pEntry1->m_Color),
-			};
-			pGraphics->SetColorVertex(aColorVertices, std::size(aColorVertices));
+			if(ApplyColor || pEntry1->m_ApplyColor)
+			{
+				pGraphics->LinesBatchEnd(&LineItemBatch);
+				pGraphics->LinesBatchBegin(&LineItemBatch);
+				const IGraphics::CColorVertex aColorVertices[] = {
+					IGraphics::CColorVertex(0, pEntry0->m_Color),
+					IGraphics::CColorVertex(1, pEntry1->m_Color),
+				};
+				pGraphics->SetColorVertex(aColorVertices, std::size(aColorVertices));
+			}
+			const IGraphics::CLineItem Item = IGraphics::CLineItem(
+				x + a0,
+				y + h - v0,
+				x + a1,
+				y + h - v1);
+			pGraphics->LinesBatchDraw(&LineItemBatch, &Item, 1);
+			ApplyColor = false;
 		}
-		const IGraphics::CLineItem Item = IGraphics::CLineItem(
-			x + a0,
-			y + h - v0,
-			x + a1,
-			y + h - v1);
-		pGraphics->LinesBatchDraw(&LineItemBatch, &Item, 1);
+		else
+		{
+			// 不跨越无效样本连接曲线，恢复后的首段重新提交颜色。
+			ApplyColor = true;
+		}
 
 		pEntry0 = pEntry1;
 		a0 = a1;
 		v0 = v1;
+		PreviousValid = CurrentValid;
 	}
 	pGraphics->LinesBatchEnd(&LineItemBatch);
 }
