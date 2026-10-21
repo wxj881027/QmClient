@@ -3911,10 +3911,49 @@ static void PublishSettingsAssetMergeEntriesTyped(std::vector<TItem> &vList, int
 	vList.reserve(vList.size() + vEntries.size());
 	for(const CMenus::SSettingsAssetMergeEntry &Entry : vEntries)
 	{
+		// 软重扫（下载/删除后的刷新）不清空列表，靠这里按名字去重：
+		// 已存在的条目原样保留（贴图、预览状态都不动），只追加新出现的。
+		bool Exists = false;
+		for(const TItem &Item : vList)
+		{
+			if(str_comp(Item.m_aName, Entry.m_aName) == 0)
+			{
+				Exists = true;
+				break;
+			}
+		}
+		if(Exists)
+			continue;
 		TItem Item;
 		str_copy(Item.m_aName, Entry.m_aName);
 		PopulateLocalAssetAuthor(Item, Tab, pStorage);
 		vList.push_back(Item);
+	}
+}
+
+// 软重扫收尾：扫描结果里已经不存在的条目（被删除的）从这里摘掉，
+// 顺带卸载它们的贴图。其余条目原样保留。
+template<typename TItem, typename TUnloadExtra>
+static void DropMissingLocalAssetEntriesTyped(std::vector<TItem> &vList, IGraphics *pGraphics, const std::vector<CMenus::SSettingsAssetMergeEntry> &vEntries, TUnloadExtra &&UnloadExtra)
+{
+	auto Keep = [&vEntries](const char *pName) {
+		for(const CMenus::SSettingsAssetMergeEntry &Entry : vEntries)
+		{
+			if(str_comp(Entry.m_aName, pName) == 0)
+				return true;
+		}
+		return false;
+	};
+	for(auto It = vList.begin(); It != vList.end();)
+	{
+		if(Keep(It->m_aName))
+		{
+			++It;
+			continue;
+		}
+		UnloadExtra(*It);
+		pGraphics->UnloadTexture(&It->m_RenderTexture);
+		It = vList.erase(It);
 	}
 }
 
@@ -3952,6 +3991,8 @@ void CMenus::PublishSettingsAssetMergeEntries(int Tab, const std::vector<SSettin
 		m_vEntityBgSourceNames.reserve(m_vEntityBgSourceNames.size() + vEntries.size());
 		for(const SSettingsAssetMergeEntry &Entry : vEntries)
 		{
+			if(std::find(m_vEntityBgSourceNames.begin(), m_vEntityBgSourceNames.end(), std::string(Entry.m_aName)) != m_vEntityBgSourceNames.end())
+				continue;
 			m_vEntityBgSourceNames.emplace_back(Entry.m_aName);
 			const auto ExistingIt = m_vEntityBgSourceKinds.find(Entry.m_aName);
 			if(ExistingIt == m_vEntityBgSourceKinds.end())
@@ -4460,6 +4501,46 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		}
 		else
 		{
+			// 软重扫收尾：整份扫描结果都在 PendingMerge.m_vEntries 里，
+			// 据此摘掉已经不存在的条目（被删除的资源）。
+			if(s_CurCustomTab != ASSETS_TAB_ENTITY_BG)
+			{
+				switch(s_CurCustomTab)
+				{
+				case ASSETS_TAB_ENTITIES:
+					DropMissingLocalAssetEntriesTyped(m_vEntitiesList, Graphics(), PendingMerge.m_vEntries, [this](SCustomEntities &Item) {
+						for(auto &Image : Item.m_aImages)
+							Graphics()->UnloadTexture(&Image.m_Texture);
+					});
+					break;
+				case ASSETS_TAB_GAME:
+					DropMissingLocalAssetEntriesTyped(m_vGameList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					break;
+				case ASSETS_TAB_EMOTICONS:
+					DropMissingLocalAssetEntriesTyped(m_vEmoticonList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					break;
+				case ASSETS_TAB_PARTICLES:
+					DropMissingLocalAssetEntriesTyped(m_vParticlesList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					break;
+				case ASSETS_TAB_HUD:
+					DropMissingLocalAssetEntriesTyped(m_vHudList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					break;
+				case ASSETS_TAB_GUI_CURSOR:
+					DropMissingLocalAssetEntriesTyped(m_vGuiCursorList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					break;
+				case ASSETS_TAB_ARROW:
+					DropMissingLocalAssetEntriesTyped(m_vArrowList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					break;
+				case ASSETS_TAB_STRONG_WEAK:
+					DropMissingLocalAssetEntriesTyped(m_vStrongWeakList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					break;
+				case ASSETS_TAB_EXTRAS:
+					DropMissingLocalAssetEntriesTyped(m_vExtrasList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					break;
+				default:
+					break;
+				}
+			}
 			const SAssetResourceCategory *pCurrentCategory = AssetResourceCategoryByTab(s_CurCustomTab);
 			switch(s_CurCustomTab)
 			{
@@ -4738,7 +4819,12 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			RefreshEntityBgHierarchyView();
 			return;
 		}
-		ClearCustomItems(Tab);
+		// 软重扫：不清列表、不卸贴图，只把加载状态复位，让后台重扫一遍目录。
+		// 合并时按名字去重（已有的条目原样保留），扫完再摘掉已经不存在的条目。
+		// 用户只会看到「多一张 / 少一张」，不会看到整页闪。
+		m_aAssetLoadStates[Tab] = ASSET_LOAD_STATE_UNLOADED;
+		gs_aAssetWarmupReady[Tab] = false;
+		gs_NextAssetWarmupTab = Tab;
 	};
 	FlushPendingLocalListRefresh(s_CurCustomTab);
 
@@ -6082,7 +6168,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			if(!Item.m_Visible)
 				continue;
 			// 槽位变了就滑过去：删除后后面整列上移，下载完成后新卡插进来其余让位。
-			const vec2 SlotReflowOffset = s_LocalCardReflow.Track(pItem->m_aName, (int)i, Margin + TextureWidth, LocalRowHeight);
+			const vec2 SlotReflowOffset = s_LocalCardReflow.Track(pItem->m_aName, (int)i, StableCustomList.w / (float)LocalColumns, LocalRowHeight);
 			ItemRect.x += SlotReflowOffset.x;
 			ItemRect.y += SlotReflowOffset.y;
 			auto GaussianBlurSuppression = Item.SuppressGaussianBlur();
@@ -7401,7 +7487,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					if(!Item.m_Visible)
 						continue;
 					// 槽位变了就滑过去：新下载的卡片插进来、删除后整列让位。
-					const vec2 SlotReflowOffset = s_CombinedCardReflow.Track(pItem->m_aName, (int)ListIndex, Margin + TextureWidth, WorkshopRowHeight);
+					const vec2 SlotReflowOffset = s_CombinedCardReflow.Track(pItem->m_aName, (int)ListIndex, StableWorkshopListArea.w / (float)Columns, WorkshopRowHeight);
 					ItemRect.x += SlotReflowOffset.x;
 					ItemRect.y += SlotReflowOffset.y;
 					auto GaussianBlurSuppression = Item.SuppressGaussianBlur();
@@ -7546,7 +7632,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					if(!Item.m_Visible)
 						continue;
 					// 商店卡片同样按槽位让位：本地列表多一张，整排往下滑一格。
-					const vec2 SlotReflowOffset = s_CombinedCardReflow.Track(Asset.m_Id.empty() ? Asset.m_Name.c_str() : Asset.m_Id.c_str(), (int)ListIndex, Margin + TextureWidth, WorkshopRowHeight);
+					const vec2 SlotReflowOffset = s_CombinedCardReflow.Track(Asset.m_Id.empty() ? Asset.m_Name.c_str() : Asset.m_Id.c_str(), (int)ListIndex, StableWorkshopListArea.w / (float)Columns, WorkshopRowHeight);
 					ItemRect.x += SlotReflowOffset.x;
 					ItemRect.y += SlotReflowOffset.y;
 					auto GaussianBlurSuppression = Item.SuppressGaussianBlur();
@@ -7762,7 +7848,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					}
 					else
 					{
-						ClearCustomItems(s_CurCustomTab);
+						QueueLocalListRefresh(s_CurCustomTab, 1);
 					}
 				}
 				else
