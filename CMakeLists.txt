@@ -5114,6 +5114,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/contract/qmclient/monitoring/qmclient_monitoring_motd_contract_test.cpp
     src/test/unit/qmclient/monitoring/qmclient_monitoring_runtime_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_font_store_contract_test.cpp
+    src/test/unit/client/race_demo_filename_test.cpp
     src/test/unit/client/race_test.cpp
     src/test/unit/server/score_test.cpp
     src/test/unit/engine/image_decode_budget_test.cpp

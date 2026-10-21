@@ -12,7 +12,6 @@
 #include <game/client/race.h>
 #include <game/localization.h>
 
-#include <cctype>
 #include <chrono>
 
 using namespace std::chrono_literals;
@@ -22,7 +21,7 @@ const char *CRaceDemo::ms_pRaceDemoDir = "demos/auto/race";
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 struct CDemoItem
 {
-	char m_aName[128];
+	char m_aFilename[IO_MAX_PATH_LENGTH];
 	int m_Time;
 };
 
@@ -265,35 +264,28 @@ int CRaceDemo::RaceDemolistFetchCallback(const CFsFileInfo *pInfo, int IsDir, in
 {
 	auto *pRealUser = (SRaceDemoFetchUser *)pUser;
 	auto *pParam = pRealUser->m_pParam;
-	int MapLen = str_length(pParam->m_pMap);
-	if(IsDir || !str_endswith(pInfo->m_pName, ".demo") || !str_startswith(pInfo->m_pName, pParam->m_pMap) || pInfo->m_pName[MapLen] != '_')
+	if(IsDir)
 		return 0;
 
-	CDemoItem Item;
-	str_truncate(Item.m_aName, sizeof(Item.m_aName), pInfo->m_pName, str_length(pInfo->m_pName) - 5);
-
-	const char *pTime = Item.m_aName + MapLen + 1;
-	const char *pTEnd = pTime;
-	while(isdigit(*pTEnd) || *pTEnd == ' ' || *pTEnd == '.' || *pTEnd == ',')
-		pTEnd++;
-
+	char aPlayerName[MAX_NAME_LENGTH];
+	const char *pPlayerName = nullptr;
 	if(g_Config.m_ClDemoName)
 	{
-		char aPlayerName[MAX_NAME_LENGTH];
 		str_copy(aPlayerName, pParam->m_pThis->Client()->PlayerName());
 		str_sanitize_filename(aPlayerName);
-
-		if(pTEnd[0] != '_' || str_comp(pTEnd + 1, aPlayerName) != 0)
-			return 0;
+		pPlayerName = aPlayerName;
 	}
-	else if(pTEnd[0])
-	{
+	const int Time = CRaceHelper::TimeFromDemoFilename(pInfo->m_pName, pParam->m_pMap, pPlayerName);
+	if(Time < 0 || str_length(pInfo->m_pName) >= static_cast<int>(sizeof(CDemoItem::m_aFilename)))
 		return 0;
-	}
 
-	Item.m_Time = CRaceHelper::TimeFromSecondsStr(pTime);
-	if(Item.m_Time > 0)
+	if(Time > 0)
+	{
+		CDemoItem Item;
+		str_copy(Item.m_aFilename, pInfo->m_pName);
+		Item.m_Time = Time;
 		pParam->m_pvDemos->push_back(Item);
+	}
 
 	if(time_get_nanoseconds() - pRealUser->m_pThis->m_RaceDemosLoadStartTime > 500ms)
 	{
@@ -323,7 +315,7 @@ bool CRaceDemo::CheckDemo(int Time)
 			return false;
 
 		// delete old demo
-		const std::string Path = qmclient::media_paths::Join(aDirectory, std::string(Demo.m_aName) + ".demo");
+		const std::string Path = qmclient::media_paths::Join(aDirectory, Demo.m_aFilename);
 		if(!Path.empty())
 			Storage()->RemoveFile(Path.c_str(), qmclient::media_paths::StorageType(aDirectory));
 	}
