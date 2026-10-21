@@ -4751,8 +4751,10 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/base/aio_buffer_test.cpp
     src/test/unit/base/future_logger_test.cpp
     src/test/unit/base/log_dispatch_test.cpp
+    src/test/unit/base/logger_prepare_test.cpp
     src/test/integration/base/aio_test.cpp
     src/test/integration/base/async_logger_test.cpp
+    src/test/integration/base/logger_file_creation_test.cpp
     src/test/unit/client/assets_editor_layout_test.cpp
     src/test/unit/client/assets_preview_scale_test.cpp
     src/test/contract/qmclient/settings/assets_preview_scale_contract_test.cpp
@@ -4846,6 +4848,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/jsonwriter_test.cpp
     src/test/unit/client/keyword_reply_rules_test.cpp
     src/test/unit/engine/logger_test.cpp
+    src/test/unit/engine/perf_file_switch_test.cpp
     src/test/unit/client/map_difficulty_catalog_test.cpp
     src/test/unit/qmclient/ui/vote_map_library_test.cpp
     src/test/unit/qmclient/ui/server_vote_list_test.cpp

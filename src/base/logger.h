@@ -7,6 +7,7 @@
 #include <atomic>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 typedef void *IOHANDLE;
@@ -71,6 +72,8 @@ protected:
 
 public:
 	virtual ~ILogger() = default;
+	// 查询后端初始化是否完成，不代表后续 I/O 必然成功。
+	virtual bool IsAvailable() const noexcept { return true; }
 
 	/**
 	 * Set a new filter. It's up to the logger implementation to actually
@@ -109,6 +112,25 @@ public:
 	 */
 	virtual void OnFilterChange() {}
 };
+
+// 完整准备后端及共享所有权；失败保留原目标，发布由调用方负责。
+template<typename F>
+bool log_prepare_backend(std::shared_ptr<ILogger> &pTarget, F &&Create) noexcept
+{
+	try
+	{
+		std::unique_ptr<ILogger> pCandidate = std::forward<F>(Create)();
+		if(!pCandidate || !pCandidate->IsAvailable())
+			return false;
+		std::shared_ptr<ILogger> pPrepared(std::move(pCandidate));
+		pTarget.swap(pPrepared);
+		return true;
+	}
+	catch(...)
+	{
+		return false;
+	}
+}
 
 /**
  * @ingroup Log
@@ -201,6 +223,7 @@ std::unique_ptr<ILogger> log_logger_prefix_router(std::shared_ptr<ILogger> prefi
  *
  * @param file File to write to, must be opened for writing.
  */
+// 从入口接管文件；创建异常沿用抛出约定，文件先由工厂回收。
 std::unique_ptr<ILogger> log_logger_file(IOHANDLE file);
 
 /**
@@ -212,6 +235,8 @@ std::unique_ptr<ILogger> log_logger_file(IOHANDLE file);
  * @param system_prefix System name prefix to include.
  */
 std::unique_ptr<ILogger> log_logger_prefix_file(IOHANDLE file, const char *system_prefix);
+// 包装已拥有的后端；构造失败仍由参数所有者回收，空后端保持为空。
+std::unique_ptr<ILogger> log_logger_prefix(std::unique_ptr<ILogger> pLogger, const char *pSystemPrefix);
 
 /**
  * @ingroup Log

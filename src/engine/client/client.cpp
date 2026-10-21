@@ -7043,26 +7043,22 @@ int main(int argc, const char **argv)
 		pSteam->ClearConnectAddress();
 	}
 
+	std::shared_ptr<ILogger> pConfiguredFileLogger(log_logger_noop());
 	if(g_Config.m_Logfile[0])
 	{
-		const int Mode = g_Config.m_Logappend ? IOFLAG_APPEND : IOFLAG_WRITE;
-		IOHANDLE Logfile = pStorage->OpenFile(g_Config.m_Logfile, Mode, IStorage::TYPE_SAVE_OR_ABSOLUTE);
-		if(Logfile)
-		{
+		const bool Prepared = log_prepare_backend(pConfiguredFileLogger, [&]() -> std::unique_ptr<ILogger> {
+			const int Mode = g_Config.m_Logappend ? IOFLAG_APPEND : IOFLAG_WRITE;
+			const IOHANDLE Logfile = pStorage->OpenFile(g_Config.m_Logfile, Mode, IStorage::TYPE_SAVE_OR_ABSOLUTE);
+			if(!Logfile)
+				return nullptr;
 			auto pFileLogger = log_logger_file(Logfile);
 			pFileLogger->SetFilter(CLogFilter{IConsole::ToLogLevelFilter(g_Config.m_Loglevel)});
-			pFutureFileLogger->Set(std::move(pFileLogger));
-		}
-		else
-		{
+			return pFileLogger;
+		});
+		if(!Prepared)
 			log_error("client", "failed to open '%s' for logging", g_Config.m_Logfile);
-			pFutureFileLogger->Set(log_logger_noop());
-		}
 	}
-	else
-	{
-		pFutureFileLogger->Set(log_logger_noop());
-	}
+	pFutureFileLogger->Set(std::move(pConfiguredFileLogger));
 
 	// 性能日志文件：CFutureLogger 只能 Set 一次，启动时固定到可切换包装；
 	// 游戏内 qm_perf_debug / qm_perf_logfile / qm_perf_stutter_diagnostics 任一
@@ -7644,56 +7640,80 @@ void CClient::UpdateQmPerfFileLogger()
 
 	if(Wanted)
 	{
-		m_pStorage->CreateFolder("dumps", IStorage::TYPE_SAVE);
-		m_pStorage->CreateFolder("dumps/QmClient_Perf", IStorage::TYPE_SAVE);
-		char aDate[64];
-		str_timestamp(aDate, sizeof(aDate));
-		char aPerfLogPath[128];
-		// 每次开启都新建文件、绝不覆盖旧日志：首次用干净时间戳名，
-		// 之后（同一进程内）追加递增序号。
-		++m_QmPerfLogReopenCounter;
-		if(m_QmPerfLogReopenCounter == 1)
-			str_format(aPerfLogPath, sizeof(aPerfLogPath), "dumps/QmClient_Perf/qm_perf_%s.log", aDate);
-		else
-			str_format(aPerfLogPath, sizeof(aPerfLogPath), "dumps/QmClient_Perf/qm_perf_%s_%d.log", aDate, m_QmPerfLogReopenCounter);
+		char aPerfLogCompletePath[IO_MAX_PATH_LENGTH] = {};
+		std::shared_ptr<ILogger> pPrepared;
+		const bool Prepared = log_prepare_backend(pPrepared, [&]() -> std::unique_ptr<ILogger> {
+			m_pStorage->CreateFolder("dumps", IStorage::TYPE_SAVE);
+			m_pStorage->CreateFolder("dumps/QmClient_Perf", IStorage::TYPE_SAVE);
+			char aDate[64];
+			str_timestamp(aDate, sizeof(aDate));
+			char aPerfLogPath[128];
+			// 每次开启都新建文件、绝不覆盖旧日志：首次用干净时间戳名，
+			// 之后（同一进程内）追加递增序号。
+			++m_QmPerfLogReopenCounter;
+			if(m_QmPerfLogReopenCounter == 1)
+				str_format(aPerfLogPath, sizeof(aPerfLogPath), "dumps/QmClient_Perf/qm_perf_%s.log", aDate);
+			else
+				str_format(aPerfLogPath, sizeof(aPerfLogPath), "dumps/QmClient_Perf/qm_perf_%s_%d.log", aDate, m_QmPerfLogReopenCounter);
 
-		char aPerfLogCompletePath[IO_MAX_PATH_LENGTH];
-		m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, aPerfLogPath, aPerfLogCompletePath, sizeof(aPerfLogCompletePath));
-		IOHANDLE PerfLogfile = m_pStorage->OpenFile(aPerfLogPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-		if(!PerfLogfile)
-		{
-			fs_makedir_rec_for(aPerfLogCompletePath);
-			PerfLogfile = io_open(aPerfLogCompletePath, IOFLAG_WRITE);
-		}
-		if(!PerfLogfile)
-		{
-			char aWorkingDir[IO_MAX_PATH_LENGTH];
-			if(fs_getcwd(aWorkingDir, sizeof(aWorkingDir)))
+			m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, aPerfLogPath, aPerfLogCompletePath, sizeof(aPerfLogCompletePath));
+			IOHANDLE PerfLogfile = m_pStorage->OpenFile(aPerfLogPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+			if(!PerfLogfile)
 			{
-				str_format(aPerfLogCompletePath, sizeof(aPerfLogCompletePath), "%s/%s", aWorkingDir, aPerfLogPath);
 				fs_makedir_rec_for(aPerfLogCompletePath);
 				PerfLogfile = io_open(aPerfLogCompletePath, IOFLAG_WRITE);
 			}
-		}
-		if(PerfLogfile)
+			if(!PerfLogfile)
+			{
+				char aWorkingDir[IO_MAX_PATH_LENGTH];
+				if(fs_getcwd(aWorkingDir, sizeof(aWorkingDir)))
+				{
+					str_format(aPerfLogCompletePath, sizeof(aPerfLogCompletePath), "%s/%s", aWorkingDir, aPerfLogPath);
+					fs_makedir_rec_for(aPerfLogCompletePath);
+					PerfLogfile = io_open(aPerfLogCompletePath, IOFLAG_WRITE);
+				}
+			}
+			if(!PerfLogfile)
+				return nullptr;
+			return log_logger_prefix_file(PerfLogfile, "perf/");
+		});
+		bool Published = false;
+		if(Prepared)
 		{
-			m_QmPerfFileLoggerActive = true;
-			QmPerfBeginSession();
-			m_QmPerfLastFrameEnd = 0;
-			m_QmPerfFrameBatch = CQmPerfFrameBatch();
-			m_pQmPerfFileSwitch->Set(log_logger_prefix_file(PerfLogfile, "perf/"));
-			QmPerfLogFields("perf/session", "\"event\":\"session_start\",\"schema\":2,\"sampling\":\"automatic\",\"frame_samples\":\"all\",\"target_fps\":300,\"version\":" + QmPerfJsonString(CLIENT_RELEASE_VERSION), this);
-			// QmClient：日志文件就绪后先写一次完整配置快照（敏感项脱敏），
-			// 之后由主循环按秒写增量；见 perf_diagnostics.h。
-			m_QmPerfConfigSnapshot.Start(ConfigManager(), this);
-			m_QmPerfLastConfigCheck = time_get();
-			log_info("client", "writing performance log to '%s'", aPerfLogCompletePath);
+			try
+			{
+				m_pQmPerfFileSwitch->Set(std::move(pPrepared));
+				Published = true;
+			}
+			catch(...)
+			{
+			}
 		}
-		else
+		if(!Published)
 		{
-			// 打开失败不重试（避免每帧刷屏），等下次配置变化再尝试。
 			log_error("client", "failed to open '%s' for performance logging", aPerfLogCompletePath);
+			return;
 		}
+		m_QmPerfFileLoggerActive = true;
+		QmPerfBeginSession();
+		m_QmPerfLastFrameEnd = 0;
+		m_QmPerfFrameBatch = CQmPerfFrameBatch();
+		try
+		{
+			QmPerfLogFields("perf/session", "\"event\":\"session_start\",\"schema\":2,\"sampling\":\"automatic\",\"frame_samples\":\"all\",\"target_fps\":300,\"version\":" + QmPerfJsonString(CLIENT_RELEASE_VERSION), this);
+		}
+		catch(...)
+		{
+		}
+		try
+		{
+			m_QmPerfConfigSnapshot.Start(ConfigManager(), this);
+		}
+		catch(...)
+		{
+		}
+		m_QmPerfLastConfigCheck = time_get();
+		log_info("client", "writing performance log to '%s'", aPerfLogCompletePath);
 	}
 	else
 	{
@@ -7704,18 +7724,38 @@ void CClient::UpdateQmPerfFileLogger()
 }
 
 // 关闭采集前的收尾：补齐帧批次、配置增量、被限流丢弃的明细与会话结束标记，
-// 再把文件 logger 换回 noop（退出用同步，运行中切走用作业线程）。
+// 再断开文件后端（退出用同步，运行中切走用预先准备的关闭任务）。
 void CClient::FinishQmPerfSession(bool Shutdown)
 {
-	if(m_QmPerfFrameBatch.Count() != 0)
-		QmPerfLogFields("perf/frame", m_QmPerfFrameBatch.TakeFields(), this);
-	m_QmPerfConfigSnapshot.Update(this);
-	QmPerfFlushDropped(this);
-	QmPerfLogFields("perf/session", std::string("\"event\":\"session_end\",\"reason\":") + QmPerfJsonString(Shutdown ? "shutdown" : "disabled"), this);
+	try
+	{
+		if(m_QmPerfFrameBatch.Count() != 0)
+			QmPerfLogFields("perf/frame", m_QmPerfFrameBatch.TakeFields(), this);
+		m_QmPerfConfigSnapshot.Update(this);
+		QmPerfFlushDropped(this);
+		QmPerfLogFields("perf/session", std::string("\"event\":\"session_end\",\"reason\":") + QmPerfJsonString(Shutdown ? "shutdown" : "disabled"), this);
+	}
+	catch(...)
+	{
+		// 诊断文本失败仍须关闭文件并停止采集。
+	}
 	if(Shutdown)
-		m_pQmPerfFileSwitch->Set(log_logger_noop());
+		m_pQmPerfFileSwitch->Set(nullptr);
 	else
-		Engine()->AddJob(m_pQmPerfFileSwitch->SetAsync(log_logger_noop()));
+	{
+		auto pClose = m_pQmPerfFileSwitch->SetAsync(nullptr);
+		if(pClose)
+		{
+			try
+			{
+				// 拒绝或异常时 Switch 仍持有关闭任务，退出收尾可继续接管。
+				Engine()->TryAddJob(std::move(pClose));
+			}
+			catch(...)
+			{
+			}
+		}
+	}
 	m_QmPerfFileLoggerActive = false;
 	m_QmPerfLastFrameEnd = 0;
 }

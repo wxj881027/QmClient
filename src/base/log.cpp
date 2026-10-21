@@ -326,7 +326,7 @@ void CLoggerAsync::GlobalFinish()
 
 std::unique_ptr<ILogger> log_logger_file(IOHANDLE logfile)
 {
-	return std::make_unique<CLoggerAsync>(logfile, false, true);
+	return CLoggerAsync::CreateOwned(logfile, [](IOHANDLE File) { return std::make_unique<CLoggerAsync>(File, false, true); });
 }
 
 class CPrefixLogger : public ILogger
@@ -340,6 +340,7 @@ public:
 	{
 		str_copy(m_aSystemPrefix, pSystemPrefix);
 	}
+	bool IsAvailable() const noexcept override { return m_pLogger->IsAvailable(); }
 	void Log(const CLogMessage *pMessage) override
 	{
 		if(m_Filter.Filters(pMessage) || !str_startswith(pMessage->m_aSystem, m_aSystemPrefix))
@@ -358,7 +359,14 @@ public:
 
 std::unique_ptr<ILogger> log_logger_prefix_file(IOHANDLE logfile, const char *pSystemPrefix)
 {
-	return std::make_unique<CPrefixLogger>(log_logger_file(logfile), pSystemPrefix);
+	return log_logger_prefix(log_logger_file(logfile), pSystemPrefix);
+}
+
+std::unique_ptr<ILogger> log_logger_prefix(std::unique_ptr<ILogger> pLogger, const char *pSystemPrefix)
+{
+	if(!pLogger)
+		return nullptr;
+	return std::make_unique<CPrefixLogger>(std::move(pLogger), pSystemPrefix);
 }
 
 #if defined(CONF_FAMILY_WINDOWS)
@@ -489,14 +497,11 @@ static std::unique_ptr<ILogger> WindowsAsyncLogger(intptr_t Handle, int OpenFlag
 		const intptr_t Copy = Operations.DuplicateOutput(Handle);
 		if(Copy == 0 || Copy == -1)
 			return nullptr;
-		std::unique_ptr<void, decltype(&io_close)> File(windows_io_from_handle(Copy, "w", &Operations, OpenFlags), &io_close);
+		const IOHANDLE File = windows_io_from_handle(Copy, "w", &Operations, OpenFlags);
 		if(!File)
 			return nullptr;
-		auto pLogger = Operations.CreateAsyncLogger(File.get(), Colors);
-		if(!pLogger)
-			return nullptr;
-		File.release();
-		if(!pLogger->IsAvailable())
+		auto pLogger = CLoggerAsync::CreateOwned(File, [&](IOHANDLE Owned) { return Operations.CreateAsyncLogger(Owned, Colors); });
+		if(!pLogger || !pLogger->IsAvailable())
 			return nullptr;
 		return pLogger;
 	}
