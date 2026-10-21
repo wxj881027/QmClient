@@ -5435,7 +5435,12 @@ const char *CClient::DemoPlayer_Play(const char *pFilename, int StorageType)
 		m_aapSnapshots[0][SnapshotType]->m_Tick = -1;
 	}
 
-	m_DemoPlayer.Play();
+	if(!m_DemoPlayer.Play())
+	{
+		const char *pError = m_DemoPlayer.ErrorMessage()[0] != '\0' ? m_DemoPlayer.ErrorMessage() : Localize("Error playing demo");
+		DisconnectWithReason(pError);
+		return pError;
+	}
 	GameClient()->OnEnterGame();
 
 	return nullptr;

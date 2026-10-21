@@ -38,7 +38,7 @@ namespace
 		}
 		void ExpectOutput(int First, int Last, const std::vector<int> &vMarkers = {})
 		{
-			CDemoPlayer Player(&*m_State.m_pDelta, &*m_State.m_pDeltaSixup, false);
+			CDemoPlayer Player(&*m_State.m_pDelta, &*m_State.m_pDeltaSixup, false, nullptr, CDemoPlayer::ETimeMode::UNCACHED);
 			const int Loaded = Player.Load(m_State.m_pStorage.get(), nullptr, "target.demo", IStorage::TYPE_SAVE, false);
 			EXPECT_EQ(Loaded, 0);
 			if(Loaded == 0)
@@ -49,6 +49,7 @@ namespace
 				EXPECT_EQ(Info.m_NumTimelineMarkers, static_cast<int>(vMarkers.size()));
 				for(int i = 0; i < std::min(Info.m_NumTimelineMarkers, static_cast<int>(vMarkers.size())); ++i)
 					EXPECT_EQ(Info.m_aTimelineMarkers[i], vMarkers[i]);
+				EXPECT_TRUE(Player.Play());
 			}
 			Player.Stop();
 		}
@@ -107,9 +108,9 @@ TEST_F(DemoSliceSegmentsIntegration, MarkerBetweenRecordedSnapshotsRemainsAtItsO
 
 TEST_F(DemoSliceSegmentsIntegration, MarkerBeforeTheFirstSparseOutputTickIsOmitted)
 {
-	ASSERT_NO_FATAL_FAILURE(m_State.CreateTimeline({100, 200}, {170}));
-	ASSERT_TRUE(Slice({{150, 200}}));
-	ExpectOutput(200, 200);
+	ASSERT_NO_FATAL_FAILURE(m_State.CreateTimeline({100, 200, 300}, {170}));
+	ASSERT_TRUE(Slice({{150, 300}}));
+	ExpectOutput(200, 300);
 }
 
 TEST_F(DemoSliceSegmentsIntegration, MarkerAfterTheLastSparseOutputTickIsOmitted)
@@ -146,6 +147,32 @@ TEST_F(DemoSliceSegmentsIntegration, ARangeWithoutAnySnapshotDoesNotReplaceTheTa
 	m_State.Write("target.demo", "previous");
 	EXPECT_FALSE(Slice({{140, 160}}));
 	EXPECT_EQ(m_State.Read("target.demo"), "previous");
+}
+
+TEST_F(DemoSliceSegmentsIntegration, ARangeWithOnlyOneRecordedTickDoesNotReplaceTheTarget)
+{
+	ASSERT_NO_FATAL_FAILURE(m_State.CreateTimeline({100, 200}, {170}));
+	m_State.Write("target.demo", "previous");
+	EXPECT_FALSE(Slice({{150, 200}}));
+	EXPECT_EQ(m_State.Read("target.demo"), "previous");
+	EXPECT_TRUE(m_State.Exists("source.demo"));
+}
+
+TEST_F(DemoSliceSegmentsIntegration, TwoRangesWithOneTickEachCanCompletePlaybackWarmup)
+{
+	ASSERT_NO_FATAL_FAILURE(m_State.CreateTimeline({100, 200, 300, 400}, {170, 370}));
+	ASSERT_TRUE(Slice({{150, 250}, {350, 450}}));
+	ExpectOutput(200, 301, {271});
+}
+
+TEST_F(DemoSliceSegmentsIntegration, RejectedSingleTickCutCanBeRetriedWithAWiderRange)
+{
+	ASSERT_NO_FATAL_FAILURE(m_State.CreateTimeline({100, 200, 300}, {170}));
+	m_State.Write("target.demo", "previous");
+	EXPECT_FALSE(Slice({{150, 200}}));
+	EXPECT_EQ(m_State.Read("target.demo"), "previous");
+	ASSERT_TRUE(Slice({{150, 300}}));
+	ExpectOutput(200, 300);
 }
 
 TEST_F(DemoSliceSegmentsIntegration, AWholeLegalSpanCanEndAtTheLastRepresentableTick)

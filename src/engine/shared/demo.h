@@ -235,7 +235,8 @@ public:
 	unsigned char *GetMapData(class IStorage *pStorage);
 	// 操作对象为本次提取借用；默认使用原文件 I/O 和同目录提交。
 	bool ExtractMap(class IStorage *pStorage, demo_output::COperations *pOutputOperations = nullptr, CDemoRecorder::CFileOperations *pFileOperations = nullptr) noexcept;
-	void Play();
+	// 返回预热是否完成；失败后可读取 ErrorMessage。
+	bool Play();
 	void Pause() override;
 	void Unpause() override;
 	void Stop(const char *pErrorMessage = "");

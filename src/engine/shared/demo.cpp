@@ -1128,8 +1128,10 @@ int64_t CDemoPlayer::Time()
 #endif
 }
 
-void CDemoPlayer::Play()
+bool CDemoPlayer::Play()
 {
+	if(!IsPlaying())
+		return false;
 	// Fill in previous and next tick
 	while(m_Info.m_PreviousTick == -1)
 	{
@@ -1137,7 +1139,7 @@ void CDemoPlayer::Play()
 		if(!IsPlaying())
 		{
 			// Empty demo or error playing tick
-			return;
+			return false;
 		}
 	}
 
@@ -1154,6 +1156,7 @@ void CDemoPlayer::Play()
 	{
 		m_Info.m_LastScan = m_Info.m_LastUpdate;
 	}
+	return true;
 }
 
 bool CDemoPlayer::SeekPercent(float Percent)
@@ -1219,8 +1222,7 @@ bool CDemoPlayer::SetPos(int WantedTick)
 	{
 		// This does handle looping correctly
 		DoTick();
-		Play();
-		return true;
+		return Play();
 	}
 
 	const int KeyFrameWantedTick = WantedTick - 5; // -5 because we have to have a current tick and previous tick when we do the playback
@@ -1259,9 +1261,7 @@ bool CDemoPlayer::SetPos(int WantedTick)
 		}
 	}
 
-	Play();
-
-	return true;
+	return Play();
 }
 
 void CDemoPlayer::SetSpeed(float Speed)
@@ -1556,7 +1556,18 @@ namespace
 		int64_t m_TickOffset;
 		int m_FirstRecordedTick;
 		int m_LastRecordedTick;
+		int m_RecordedTicks = 0;
 		bool m_NeedsKeyframe;
+
+		void TrackRecordedTick(int Tick)
+		{
+			// 只需判断是否有播放预热所需的两条 tick，避免长期计数溢出。
+			if(m_RecordedTicks < 2)
+				++m_RecordedTicks;
+			if(m_FirstRecordedTick == -1)
+				m_FirstRecordedTick = Tick;
+			m_LastRecordedTick = Tick;
+		}
 
 		void OnDemoPlayerSnapshot(void *pData, int Size) override
 		{
@@ -1570,9 +1581,7 @@ namespace
 			{
 				const int OutputTick = static_cast<int>(pInfo->m_Info.m_CurrentTick + m_TickOffset);
 				m_pDemoRecorder->RecordSnapshot(OutputTick, pData, Size, m_NeedsKeyframe);
-				if(m_FirstRecordedTick == -1)
-					m_FirstRecordedTick = OutputTick;
-				m_LastRecordedTick = OutputTick;
+				TrackRecordedTick(OutputTick);
 				m_NeedsKeyframe = false;
 			}
 		}
@@ -1591,9 +1600,7 @@ namespace
 				if(OutputTick != m_LastRecordedTick)
 				{
 					m_pDemoRecorder->RecordTickMarker(OutputTick);
-					if(m_FirstRecordedTick == -1)
-						m_FirstRecordedTick = OutputTick;
-					m_LastRecordedTick = OutputTick;
+					TrackRecordedTick(OutputTick);
 				}
 				m_pDemoRecorder->RecordMessage(pData, Size);
 			}
@@ -1726,9 +1733,9 @@ bool CDemoEditor::SliceImpl(const char *pDemo, const char *pDst, const std::vect
 	NextOutputTick = vNormalizedSegments[0].m_StartTick;
 	int FirstOutputTick = -1;
 	int LastOutputTick = -1;
+	int RecordedTicks = 0;
 	bool RecordedData = false;
-	DemoPlayer.Play();
-	if(!DemoPlayer.IsPlaying())
+	if(!DemoPlayer.Play())
 		return false;
 	for(const auto &Segment : vNormalizedSegments)
 	{
@@ -1757,6 +1764,7 @@ bool CDemoEditor::SliceImpl(const char *pDemo, const char *pDst, const std::vect
 
 		NextOutputTick += static_cast<int64_t>(Segment.m_EndTick) - Segment.m_StartTick + 1;
 		RecordedData |= !Listener.m_NeedsKeyframe;
+		RecordedTicks = std::min(2, RecordedTicks + Listener.m_RecordedTicks);
 		if(Listener.m_FirstRecordedTick != -1)
 		{
 			if(FirstOutputTick == -1)
@@ -1765,7 +1773,7 @@ bool CDemoEditor::SliceImpl(const char *pDemo, const char *pDst, const std::vect
 		}
 	}
 	DemoPlayer.SetListener(nullptr);
-	if(!RecordedData || FirstOutputTick > LastOutputTick || DemoRecorder.HasWriteError() || DemoPlayer.ErrorMessage()[0] != '\0')
+	if(!RecordedData || RecordedTicks < 2 || FirstOutputTick > LastOutputTick || DemoRecorder.HasWriteError() || DemoPlayer.ErrorMessage()[0] != '\0')
 		return false;
 
 	// 只保留实际输出首尾之间的标记，稀疏快照可能让请求范围比输出更宽。
