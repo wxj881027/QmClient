@@ -14,15 +14,19 @@ QmClient 配置变量使用检查工具。
   python qmclient_scripts/check_config_variables.py --qm
 """
 
+import ast
+import json
 import os
 import re
 import sys
+from pathlib import Path
 
 CONFIG_FILES = {
     "ddnet": "src/engine/shared/config_variables.h",
     "tclient": "src/engine/shared/config_variables_tclient.h",
     "qmclient": "src/engine/shared/config_variables_qmclient.h",
 }
+COMPATIBILITY_FILE = Path(__file__).resolve().with_name("config_compatibility.json")
 
 
 def read_all_lines(filename):
@@ -38,6 +42,112 @@ def parse_config_variables(lines):
         if match:
             matches[match.group(1)] = match.group(2)
     return matches
+
+
+def load_compatibility_rules(filepath=COMPATIBILITY_FILE):
+    """保存兼容项独立声明，不作为活动引用计数。"""
+    data = json.loads(Path(filepath).read_text(encoding="utf-8-sig"))
+    if not isinstance(data, dict) or data.get("schema_version") != 1:
+        raise ValueError("保存兼容声明的 schema_version 必须为 1")
+    groups = data.get("saved_client_configs")
+    if not isinstance(groups, dict):
+        raise ValueError("保存兼容声明缺少 saved_client_configs")
+    for name, rules in groups.items():
+        if name not in CONFIG_FILES or not isinstance(rules, dict):
+            raise ValueError(f"保存兼容声明的配置分组无效：{name}")
+        for variable_code, rule in rules.items():
+            if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", variable_code):
+                raise ValueError(f"保存兼容成员名无效：{variable_code}")
+            if not isinstance(rule, dict) or set(rule) != {"script_name", "kind", "reason"}:
+                raise ValueError(f"保存兼容声明字段无效：{variable_code}")
+            if not isinstance(rule["script_name"], str) or not re.fullmatch(r"[a-z_][a-z0-9_]*", rule["script_name"]):
+                raise ValueError(f"保存兼容命令名无效：{variable_code}")
+            if rule["kind"] not in ("INT", "COL", "STR"):
+                raise ValueError(f"保存兼容类型无效：{variable_code}")
+            if not isinstance(rule["reason"], str) or not rule["reason"].strip():
+                raise ValueError(f"保存兼容声明必须说明保留原因：{variable_code}")
+    return groups
+
+
+def parse_config_declarations(lines):
+    """提取类型与标志，保留带逗号、括号或转义引号的宏参数边界。"""
+    declarations = {}
+    for line in lines:
+        match = re.match(r"^MACRO_CONFIG_([A-Z]+)\(", line)
+        if not match:
+            continue
+        arguments = []
+        start = match.end()
+        depth = 0
+        quote = None
+        escaped = False
+        for index in range(start, len(line)):
+            character = line[index]
+            if quote is not None:
+                if escaped:
+                    escaped = False
+                elif character == "\\":
+                    escaped = True
+                elif character == quote:
+                    quote = None
+            elif character in ("\"", "'"):
+                quote = character
+            elif character == ")" and depth == 0:
+                arguments.append(line[start:index].strip())
+                kind = match.group(1)
+                flag_index = {"INT": 5, "COL": 3, "STR": 4}.get(kind)
+                if flag_index is not None and len(arguments) > flag_index:
+                    declarations[arguments[0]] = (kind, arguments[flag_index])
+                break
+            elif character in "([{":
+                depth += 1
+            elif character in ")]}":
+                depth -= 1
+            elif character == "," and depth == 0:
+                arguments.append(line[start:index].strip())
+                start = index + 1
+    return declarations
+
+
+def config_flag_names(expression):
+    def names(node):
+        if isinstance(node, ast.Name) and re.fullmatch(r"CFGFLAG_[A-Z0-9_]+", node.id):
+            return {node.id}
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
+            return names(node.left) | names(node.right)
+        if isinstance(node, ast.Constant) and node.value == 0:
+            return set()
+        raise ValueError("保存兼容标志必须是明确的 CFGFLAG 按位或表达式")
+
+    return names(ast.parse(expression, mode="eval").body)
+
+
+def classify_config_variables(variables, unused, declarations, compatibility):
+    """兼容项必须维持原声明并且没有活动消费者，失配仍阻断检查。"""
+    compatible = set()
+    errors = []
+    for variable_code, rule in compatibility.items():
+        problem = None
+        if variable_code not in variables:
+            problem = "对应声明已不存在"
+        elif variables[variable_code] != rule["script_name"]:
+            problem = "命令名与兼容声明不匹配"
+        elif variable_code not in declarations or declarations[variable_code][0] != rule["kind"]:
+            problem = "配置类型与兼容声明不匹配"
+        else:
+            try:
+                flags = config_flag_names(declarations[variable_code][1])
+                if not {"CFGFLAG_CLIENT", "CFGFLAG_SAVE"}.issubset(flags):
+                    problem = "必须保留 CFGFLAG_CLIENT 和 CFGFLAG_SAVE"
+            except (SyntaxError, ValueError):
+                problem = "无法确认保存兼容标志"
+        if problem is None and variable_code not in unused:
+            problem = "重新出现静态值引用，需要移出仅保存兼容分类"
+        if problem is not None:
+            errors.append(f"{variable_code}: {problem}")
+        else:
+            compatible.add(variable_code)
+    return set(unused) - set(compatibility), compatible, errors
 
 
 def generate_regex(variable_code, script_name):
@@ -79,23 +189,32 @@ def find_config_variables(config_variables, source_root="src"):
     return variables_not_found
 
 
-def check_config_file(name, filepath):
+def check_config_file(name, filepath, compatibility=None, source_root="src"):
+    compatibility = compatibility or {}
     if not os.path.exists(filepath):
         print(f"警告：未找到配置文件 {filepath}")
-        return 0
+        return len(compatibility)
     lines = read_all_lines(filepath)
     config_variables = parse_config_variables(lines)
     if not config_variables:
         print(f"提示：{filepath} 中未解析到配置变量")
-        return 0
-    config_variables_not_found = find_config_variables(config_variables)
-    for variable_code in config_variables_not_found:
+    unused = find_config_variables(config_variables, source_root=source_root)
+    config_variables_not_found, compatible, errors = classify_config_variables(
+        config_variables, unused,
+        parse_config_declarations(lines) if compatibility else {}, compatibility
+    )
+    for variable_code in sorted(config_variables_not_found):
         print(
             f"  [{name}] 未使用配置项：'{config_variables[variable_code]}' (m_{variable_code})"
         )
-    if config_variables_not_found:
-        return len(config_variables_not_found)
-    print(f"  [{name}] 通过：未发现未使用配置项（共 {len(config_variables)} 个）")
+    for variable_code in sorted(compatible):
+        rule = compatibility[variable_code]
+        print(f"  [{name}] 仅保存兼容：'{rule['script_name']}' (m_{variable_code})；{rule['reason']}")
+    for error in errors:
+        print(f"  [{name}] 保存兼容声明失效：{error}")
+    if config_variables_not_found or errors:
+        return len(config_variables_not_found) + len(errors)
+    print(f"  [{name}] 通过：活动配置 {len(config_variables) - len(compatible)} 个，保存兼容配置 {len(compatible)} 个")
     return 0
 
 
@@ -104,7 +223,7 @@ def main():
 
     os.chdir(os.path.dirname(__file__) + "/..")
 
-    parser = argparse.ArgumentParser(description="检查 QmClient 配置变量是否被实际使用")
+    parser = argparse.ArgumentParser(description="检查配置的静态引用及仅保存兼容声明")
     parser.add_argument(
         "--ddnet", action="store_true", help="只检查 DDNet 上游配置文件"
     )
@@ -112,6 +231,12 @@ def main():
         "--qm", action="store_true", help="只检查 QmClient / TClient / 栖梦自有配置文件"
     )
     args = parser.parse_args()
+
+    try:
+        compatibility = load_compatibility_rules()
+    except (OSError, ValueError) as error:
+        print(f"保存兼容声明读取失败：{error}")
+        return 1
 
     total_unused = 0
 
@@ -127,12 +252,12 @@ def main():
 
     for name, filepath in files_to_check.items():
         print(f"\n检查 {filepath} ...")
-        total_unused += check_config_file(name, filepath)
+        total_unused += check_config_file(name, filepath, compatibility.get(name, {}))
 
     if total_unused:
-        print(f"\n失败：共发现 {total_unused} 个未使用配置项。")
+        print(f"\n失败：共发现 {total_unused} 个配置使用或保存兼容问题。")
         return 1
-    print("\n通过：所有配置项均已被使用。")
+    print("\n通过：活动配置均找到引用，保存兼容配置符合声明。")
     return 0
 
 

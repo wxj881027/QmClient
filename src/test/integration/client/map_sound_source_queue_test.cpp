@@ -14,6 +14,7 @@
 #include <memory>
 #include <new>
 #include <optional>
+#include <type_traits>
 #include <vector>
 
 namespace
@@ -40,20 +41,28 @@ namespace
 		}
 		T *allocate(size_t Count)
 		{
-			if(m_pState->m_Fail || Count > m_pState->m_MaxAllocation)
-				throw std::bad_alloc();
+			// 仅注入来源条目缓冲；容器通过 rebind 申请的辅助存储不计入。
+			if constexpr(std::is_same_v<T, SMapSoundSource>)
+			{
+				if(m_pState->m_Fail || Count > m_pState->m_MaxAllocation)
+					throw std::bad_alloc();
+			}
 			T *pResult = std::allocator<T>{}.allocate(Count);
-			m_pState->m_Live += Count;
+			if constexpr(std::is_same_v<T, SMapSoundSource>)
+				m_pState->m_Live += Count;
 			return pResult;
 		}
 		void deallocate(T *pData, size_t Count)
 		{
-			m_pState->m_Live -= Count;
+			if constexpr(std::is_same_v<T, SMapSoundSource>)
+				m_pState->m_Live -= Count;
 			std::allocator<T>{}.deallocate(pData, Count);
 		}
 		size_t max_size() const noexcept
 		{
-			return std::min(m_pState->m_MaxSize, std::numeric_limits<size_t>::max() / sizeof(T));
+			if constexpr(std::is_same_v<T, SMapSoundSource>)
+				return std::min(m_pState->m_MaxSize, std::numeric_limits<size_t>::max() / sizeof(T));
+			return std::numeric_limits<size_t>::max() / sizeof(T);
 		}
 		template<typename U>
 		bool operator==(const CFailingAllocator<U> &Other) const
