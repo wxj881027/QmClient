@@ -257,12 +257,17 @@ void CJobPool::Shutdown()
 
 void CJobPool::Add(std::shared_ptr<IJob> pJob)
 {
+	(void)TryAdd(std::move(pJob));
+}
+
+bool CJobPool::TryAdd(std::shared_ptr<IJob> pJob)
+{
 	// 与关闭同步检查和发信号，避免向已销毁的信号量提交作业。
 	const CLockScope LockScope(m_Lock);
 	if(m_Shutdown)
 	{
 		pJob->Abort();
-		return;
+		return false;
 	}
 	if(m_pLastJob)
 		m_pLastJob->m_pNext = pJob;
@@ -270,4 +275,5 @@ void CJobPool::Add(std::shared_ptr<IJob> pJob)
 	if(!m_pFirstJob)
 		m_pFirstJob = m_pLastJob;
 	sphore_signal(&m_Semaphore);
+	return true;
 }

@@ -177,5 +177,6 @@ public:
 	 * will be enqueue anymore. Abortable jobs will immediately be aborted.
 	 */
 	void Add(std::shared_ptr<IJob> pJob) REQUIRES(!m_Lock);
+	bool TryAdd(std::shared_ptr<IJob> pJob) REQUIRES(!m_Lock);
 };
 #endif

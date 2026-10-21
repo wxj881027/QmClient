@@ -14,6 +14,7 @@
 
 #include "compression.h"
 #include "demo.h"
+#include "demo_output.h"
 #include "network.h"
 #include "snapshot.h"
 
@@ -626,8 +627,8 @@ CDemoPlayer::CMapDataOperations &CDemoPlayer::MapDataOperations()
 	return m_pMapDataOperations ? *m_pMapDataOperations : s_Operations;
 }
 
-CDemoPlayer::CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, CMapDataOperations *pMapDataOperations) :
-	m_pMapDataOperations(pMapDataOperations)
+CDemoPlayer::CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, CMapDataOperations *pMapDataOperations, ETimeMode TimeMode) :
+	m_pMapDataOperations(pMapDataOperations), m_TimeMode(TimeMode)
 {
 	Construct(pSnapshotDelta, pSnapshotDeltaSixup, UseVideo);
 }
@@ -953,7 +954,7 @@ void CDemoPlayer::Unpause()
 #endif
 }
 
-int CDemoPlayer::Load(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, int StorageType)
+int CDemoPlayer::Load(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, int StorageType, bool ResetSliceMarkers)
 {
 	dbg_assert(m_File == 0, "Demo player already playing");
 
@@ -1019,8 +1020,11 @@ int CDemoPlayer::Load(class IStorage *pStorage, class IConsole *pConsole, const 
 	}
 
 	// reset slice markers
-	g_Config.m_ClDemoSliceBegin = -1;
-	g_Config.m_ClDemoSliceEnd = -1;
+	if(ResetSliceMarkers)
+	{
+		g_Config.m_ClDemoSliceBegin = -1;
+		g_Config.m_ClDemoSliceEnd = -1;
+	}
 
 	// ready for playback
 	return 0;
@@ -1094,6 +1098,11 @@ bool CDemoPlayer::ExtractMap(class IStorage *pStorage)
 	return true;
 }
 
+int64_t CDemoPlayer::SystemTime() const
+{
+	return m_TimeMode == ETimeMode::CACHED_FRAME ? time_get() : time_get_impl();
+}
+
 int64_t CDemoPlayer::Time()
 {
 #if defined(CONF_VIDEORECORDER)
@@ -1108,7 +1117,7 @@ int64_t CDemoPlayer::Time()
 	}
 	else
 	{
-		const int64_t Now = time_get();
+		const int64_t Now = SystemTime();
 		if(m_WasRecording)
 		{
 			m_WasRecording = false;
@@ -1117,7 +1126,7 @@ int64_t CDemoPlayer::Time()
 		return Now;
 	}
 #else
-	return time_get();
+	return SystemTime();
 #endif
 }
 
@@ -1139,7 +1148,8 @@ void CDemoPlayer::Play()
 	// the value that `Time` returns when called in the `Update` function can be
 	// very large depending on the time required to load the demo, which causes
 	// demo playback to start later. This ensures it always starts at 00:00.
-	set_new_tick();
+	if(m_TimeMode == ETimeMode::CACHED_FRAME)
+		set_new_tick();
 	m_Info.m_CurrentTime = m_Info.m_PreviousTick * time_freq() / SERVER_TICK_SPEED;
 	m_Info.m_LastUpdate = Time();
 	if(m_Info.m_LiveStateUpdating && m_Info.m_LastScan <= 0)
@@ -1587,24 +1597,50 @@ namespace
 
 } // namespace
 
-void CDemoEditor::Init(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, class IConsole *pConsole, class IStorage *pStorage, CDemoPlayer::CMapDataOperations *pMapDataOperations)
+void CDemoEditor::Init(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, class IConsole *pConsole, class IStorage *pStorage, CDemoPlayer::CMapDataOperations *pMapDataOperations, demo_output::COperations *pOutputOperations, CDemoRecorder::CFileOperations *pRecordOperations)
 {
 	m_pSnapshotDelta = pSnapshotDelta;
 	m_pSnapshotDeltaSixup = pSnapshotDeltaSixup;
 	m_pConsole = pConsole;
 	m_pStorage = pStorage;
 	m_pMapDataOperations = pMapDataOperations;
+	m_pOutputOperations = pOutputOperations;
+	m_pRecordOperations = pRecordOperations;
 }
 
-bool CDemoEditor::Slice(const char *pDemo, const char *pDst, int StartTick, int EndTick, DEMOFUNC_FILTER pfnFilter, void *pUser)
+bool CDemoEditor::Slice(const char *pDemo, const char *pDst, int StartTick, int EndTick, DEMOFUNC_FILTER pfnFilter, void *pUser) noexcept
 {
-	return Slice(pDemo, pDst, std::vector<SDemoSliceSegment>{{StartTick, EndTick}}, pfnFilter, pUser);
+	try
+	{
+		return SliceImpl(pDemo, pDst, std::vector<SDemoSliceSegment>{{StartTick, EndTick}}, pfnFilter, pUser);
+	}
+	catch(...)
+	{
+		return false;
+	}
 }
 
-bool CDemoEditor::Slice(const char *pDemo, const char *pDst, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pfnFilter, void *pUser)
+bool CDemoEditor::Slice(const char *pDemo, const char *pDst, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pfnFilter, void *pUser) noexcept
 {
-	CDemoPlayer DemoPlayer(m_pSnapshotDelta, m_pSnapshotDeltaSixup, false, m_pMapDataOperations);
-	if(DemoPlayer.Load(m_pStorage, m_pConsole, pDemo, IStorage::TYPE_ALL_OR_ABSOLUTE) == -1)
+	try
+	{
+		return SliceImpl(pDemo, pDst, vSegments, pfnFilter, pUser);
+	}
+	catch(...)
+	{
+		return false;
+	}
+}
+
+bool CDemoEditor::SliceImpl(const char *pDemo, const char *pDst, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pfnFilter, void *pUser)
+{
+	CDemoPlayer DemoPlayer(m_pSnapshotDelta, m_pSnapshotDeltaSixup, false, m_pMapDataOperations, CDemoPlayer::ETimeMode::UNCACHED);
+	struct CPlayerGuard
+	{
+		CDemoPlayer &m_Player;
+		~CPlayerGuard() { m_Player.Stop(); }
+	} PlayerGuard{DemoPlayer};
+	if(DemoPlayer.Load(m_pStorage, m_pConsole, pDemo, IStorage::TYPE_ALL_OR_ABSOLUTE, false) == -1)
 		return false;
 
 	const CMapInfo *pMapInfo = DemoPlayer.GetMapInfo();
@@ -1625,15 +1661,27 @@ bool CDemoEditor::Slice(const char *pDemo, const char *pDst, const std::vector<S
 		return false;
 	}
 
-	CDemoRecorder DemoRecorder(m_pSnapshotDelta);
-	unsigned char *pMapData = DemoPlayer.GetMapData(m_pStorage);
+	demo_output::CTransaction Output(m_pOutputOperations);
+	CDemoRecorder DemoRecorder(m_pSnapshotDelta, false, m_pRecordOperations);
+	struct CRecorderGuard
+	{
+		CDemoRecorder &m_Recorder;
+		~CRecorderGuard()
+		{
+			if(m_Recorder.IsRecording())
+				m_Recorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE);
+		}
+	} RecorderGuard{DemoRecorder};
+	std::unique_ptr<unsigned char, decltype(&std::free)> pMapData(DemoPlayer.GetMapData(m_pStorage), &std::free);
 	if(pMapInfo->m_Size != 0 && !pMapData)
 	{
 		DemoPlayer.Stop();
 		return false;
 	}
-	const int Result = DemoRecorder.Start(m_pStorage, m_pConsole, pDst, pInfo->m_Header.m_aNetversion, pMapInfo->m_aName, Sha256.value(), pMapInfo->m_Crc, pInfo->m_Header.m_aType, pMapInfo->m_Size, pMapData, nullptr, pfnFilter, pUser) == -1;
-	free(pMapData);
+	if(!Output.Prepare(*m_pStorage, pDst))
+		return false;
+	const int Result = DemoRecorder.Start(m_pStorage, m_pConsole, Output.Filename(), pInfo->m_Header.m_aNetversion, pMapInfo->m_aName, Sha256.value(), pMapInfo->m_Crc, pInfo->m_Header.m_aType, pMapInfo->m_Size, pMapData.get(), nullptr, pfnFilter, pUser) == -1;
+	pMapData.reset();
 	if(Result != 0)
 	{
 		DemoPlayer.Stop();
@@ -1659,7 +1707,10 @@ bool CDemoEditor::Slice(const char *pDemo, const char *pDst, const std::vector<S
 	});
 
 	int NextOutputTick = vNormalizedSegments[0].m_StartTick;
+	bool RecordedData = false;
 	DemoPlayer.Play();
+	if(!DemoPlayer.IsPlaying())
+		return false;
 	for(const auto &Segment : vNormalizedSegments)
 	{
 		CDemoRecordingListener Listener;
@@ -1684,8 +1735,11 @@ bool CDemoEditor::Slice(const char *pDemo, const char *pDst, const std::vector<S
 		}
 
 		NextOutputTick += Segment.m_EndTick - Segment.m_StartTick + 1;
+		RecordedData |= !Listener.m_NeedsKeyframe;
 	}
 	DemoPlayer.SetListener(nullptr);
+	if(!RecordedData || DemoPlayer.ErrorMessage()[0] != '\0')
+		return false;
 
 	// Copy timeline markers to sliced demo
 	int MarkerOutputTick = vNormalizedSegments[0].m_StartTick;
@@ -1702,5 +1756,5 @@ bool CDemoEditor::Slice(const char *pDemo, const char *pDst, const std::vector<S
 	}
 
 	DemoPlayer.Stop();
-	return DemoRecorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE) == 0;
+	return DemoRecorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE) == 0 && Output.Publish();
 }

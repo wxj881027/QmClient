@@ -8,6 +8,7 @@
 #include "perf_file_logger.h"
 #include "qm_graphics_diagnostics.h"
 #include "qm_storage_mode.h"
+#include "replay_save.h"
 #include "serverbrowser.h"
 
 #include <base/crashdump.h>
@@ -44,6 +45,7 @@
 #include <engine/shared/compression.h>
 #include <engine/shared/config.h>
 #include <engine/shared/demo.h>
+#include <engine/shared/demo_output.h>
 #include <engine/shared/fifo.h>
 #include <engine/shared/filecollection.h>
 #include <engine/shared/masterserver.h>
@@ -4056,29 +4058,23 @@ void CClient::Update()
 
 	if(State() == IClient::STATE_ONLINE)
 	{
-		if(!m_EditJobs.empty())
-		{
-			std::shared_ptr<CDemoEdit> pJob = m_EditJobs.front();
-			if(pJob->State() == IJob::STATE_DONE)
+		replay_save::ConsumeCompleted(m_EditJobs, [this](const std::shared_ptr<CDemoEdit> &pJob) {
+			char aBuf[IO_MAX_PATH_LENGTH + 64];
+			if(pJob->Success())
 			{
-				char aBuf[IO_MAX_PATH_LENGTH + 64];
-				if(pJob->Success())
-				{
-					str_format(aBuf, sizeof(aBuf), "Successfully saved the replay to '%s'!", pJob->Destination());
-					m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", aBuf);
+				str_format(aBuf, sizeof(aBuf), "Successfully saved the replay to '%s'!", pJob->Destination());
+				m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", aBuf);
 
-					GameClient()->Echo(Localize("Successfully saved the replay!"));
-				}
-				else
-				{
-					str_format(aBuf, sizeof(aBuf), "Failed saving the replay to '%s'...", pJob->Destination());
-					m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", aBuf);
-
-					GameClient()->Echo(Localize("Failed saving the replay!"));
-				}
-				m_EditJobs.pop_front();
+				GameClient()->Echo(Localize("Successfully saved the replay!"));
 			}
-		}
+			else
+			{
+				str_format(aBuf, sizeof(aBuf), "Failed saving the replay to '%s'...", pJob->Destination());
+				m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", aBuf);
+
+				GameClient()->Echo(Localize("Failed saving the replay!"));
+			}
+		});
 	}
 
 	// update the server browser
@@ -5288,71 +5284,69 @@ void CClient::Con_SaveReplay(IConsole::IResult *pResult, void *pUserData)
 
 void CClient::SaveReplay(const int Length, const char *pFilename)
 {
-	if(!g_Config.m_ClReplays)
-	{
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "Feature is disabled. Please enable it via configuration.");
-		GameClient()->Echo(Localize("Replay feature is disabled!"));
-		return;
-	}
-
-	if(!DemoRecorder(RECORDER_REPLAYS)->IsRecording())
-	{
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "ERROR: demorecorder isn't recording. Try to rejoin to fix that.");
-	}
-	else if(DemoRecorder(RECORDER_REPLAYS)->Length() < 1)
-	{
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "ERROR: demorecorder isn't recording for at least 1 second.");
-	}
-	else
-	{
-		char aFilename[IO_MAX_PATH_LENGTH];
-		if(pFilename[0] == '\0')
+	const auto ReportFailure = [this]() noexcept {
+		try
 		{
-			char aTimestamp[20];
-			str_timestamp(aTimestamp, sizeof(aTimestamp));
-			str_format(aFilename, sizeof(aFilename), "demos/highlight/高光-%s.demo", aTimestamp);
+			GameClient()->Echo(Localize("Failed to save demo"));
+		}
+		catch(...)
+		{
+		}
+	};
+	try
+	{
+		if(!g_Config.m_ClReplays)
+		{
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "Feature is disabled. Please enable it via configuration.");
+			GameClient()->Echo(Localize("Replay feature is disabled!"));
+			return;
+		}
+
+		IDemoRecorder *pRecorder = DemoRecorder(RECORDER_REPLAYS);
+		if(!pRecorder->IsRecording())
+		{
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "ERROR: demorecorder isn't recording. Try to rejoin to fix that.");
+		}
+		else if(pRecorder->Length() < 1)
+		{
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "ERROR: demorecorder isn't recording for at least 1 second.");
 		}
 		else
 		{
-			str_format(aFilename, sizeof(aFilename), "demos/replays/%s.demo", pFilename);
-		}
-		const std::string Path = qmclient::media_paths::Resolve(Storage(), g_Config, aFilename);
-		if(!qmclient::media_paths::PrepareWrite(Storage(), Path))
-		{
-			GameClient()->Echo(Localize("Failed to save demo"));
-			return;
-		}
-		str_copy(aFilename, Path.c_str());
-		if(pFilename[0] != '\0')
-		{
-			IOHANDLE Handle = m_pStorage->OpenFile(aFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE);
-			if(!Handle)
+			char aFilename[IO_MAX_PATH_LENGTH];
+			if(pFilename[0] == '\0')
 			{
-				m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "ERROR: invalid filename. Try a different one!");
-				GameClient()->Echo(Localize("Failed to save demo"));
+				char aTimestamp[20];
+				str_timestamp(aTimestamp, sizeof(aTimestamp));
+				str_format(aFilename, sizeof(aFilename), "demos/highlight/高光-%s.demo", aTimestamp);
+			}
+			else
+			{
+				str_format(aFilename, sizeof(aFilename), "demos/replays/%s.demo", pFilename);
+			}
+			const std::string Path = qmclient::media_paths::Resolve(Storage(), g_Config, aFilename);
+			if(!demo_output::ValidDestination(*Storage(), Path.c_str()) || !qmclient::media_paths::PrepareWrite(Storage(), Path))
+			{
+				ReportFailure();
 				return;
 			}
-			io_close(Handle);
-			m_pStorage->RemoveFile(aFilename, qmclient::media_paths::StorageType(aFilename));
+			str_copy(aFilename, Path.c_str());
+			const int EndTick = GameTick(g_Config.m_ClDummy);
+			const int StartTick = replay_save::StartTick(EndTick, Length, GameTickSpeed());
+			const auto Result = replay_save::Submit(*pRecorder, m_EditJobs, [&]() { return std::make_shared<CDemoEdit>(GameClient()->NetVersion(), &*m_pSnapshotDelta, &*m_pSnapshotDeltaSixup, m_pStorage, pRecorder->CurrentFilename(), aFilename, StartTick, EndTick); }, [this](const std::shared_ptr<CDemoEdit> &pJob) { return Engine()->TryAddJob(pJob); }, [this]() {
+				DemoRecorder_UpdateReplayRecorder();
+				return !g_Config.m_ClReplays || DemoRecorder(RECORDER_REPLAYS)->IsRecording(); });
+			if(Result.m_Outcome == replay_save::EOutcome::SUBMITTED)
+				m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "Saving replay...");
+			else
+				ReportFailure();
+			if(Result.m_RestartFailed)
+				log_warn("replay", "Replay recording could not be restarted");
 		}
-
-		// Stop the recorder to correctly slice the demo after
-		DemoRecorder(RECORDER_REPLAYS)->Stop(IDemoRecorder::EStopMode::KEEP_FILE);
-
-		// Slice the demo to get only the last cl_replay_length seconds
-		const char *pSrc = DemoRecorder(RECORDER_REPLAYS)->CurrentFilename();
-		const int EndTick = GameTick(g_Config.m_ClDummy);
-		const int StartTick = EndTick - Length * GameTickSpeed();
-
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "Saving replay...");
-
-		// Create a job to do this slicing in background because it can be a bit long depending on the file size
-		std::shared_ptr<CDemoEdit> pDemoEditTask = std::make_shared<CDemoEdit>(GameClient()->NetVersion(), &*m_pSnapshotDelta, &*m_pSnapshotDeltaSixup, m_pStorage, pSrc, aFilename, StartTick, EndTick);
-		Engine()->AddJob(pDemoEditTask);
-		m_EditJobs.push_back(pDemoEditTask);
-
-		// And we restart the recorder
-		DemoRecorder_UpdateReplayRecorder();
+	}
+	catch(...)
+	{
+		ReportFailure();
 	}
 }
 

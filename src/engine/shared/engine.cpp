@@ -109,6 +109,11 @@ namespace
 			m_JobPool.Add(std::move(pJob));
 		}
 
+		bool TryAddJob(std::shared_ptr<IJob> pJob) override
+		{
+			return m_JobPool.TryAdd(std::move(pJob));
+		}
+
 		void ShutdownJobs() override
 		{
 			m_JobPool.Shutdown();

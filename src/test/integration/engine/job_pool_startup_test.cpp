@@ -104,3 +104,81 @@ TEST(JobPoolStartup, EngineFactoryDoesNotPublishAnUnstartedPool)
 	EXPECT_FALSE(pResult->m_First);
 	EXPECT_EQ(pResult->m_CompletedAtFailure, 1);
 }
+
+TEST(JobPoolAcceptance, UninitializedPoolReportsRejection)
+{
+	CJobPool Pool;
+	std::atomic<int> Count{0};
+	auto pJob = std::make_shared<CCountJob>(Count);
+	EXPECT_FALSE(Pool.TryAdd(pJob));
+	EXPECT_EQ(Count.load(), 0);
+}
+
+TEST(JobPoolAcceptance, LivePoolReportsAcceptanceAndCompletesBeforeShutdown)
+{
+	struct CResult
+	{
+		std::atomic<int> m_Count{0};
+		bool m_Started = false;
+		bool m_Accepted = false;
+	};
+	auto pResult = std::make_shared<CResult>();
+	ASSERT_TRUE(WaitForAsyncIo([pResult] {
+		CJobPool Pool;
+		pResult->m_Started = Pool.TryInit(1);
+		if(!pResult->m_Started)
+			return;
+		pResult->m_Accepted = Pool.TryAdd(std::make_shared<CCountJob>(pResult->m_Count));
+		Pool.Shutdown();
+	}));
+	EXPECT_TRUE(pResult->m_Started);
+	EXPECT_TRUE(pResult->m_Accepted);
+	EXPECT_EQ(pResult->m_Count.load(), 1);
+}
+
+TEST(JobPoolAcceptance, ShutDownPoolReportsRejection)
+{
+	struct CResult
+	{
+		std::atomic<int> m_Count{0};
+		bool m_Started = false;
+		bool m_Accepted = true;
+	};
+	auto pResult = std::make_shared<CResult>();
+	ASSERT_TRUE(WaitForAsyncIo([pResult] {
+		CJobPool Pool;
+		pResult->m_Started = Pool.TryInit(1);
+		if(!pResult->m_Started)
+			return;
+		Pool.Shutdown();
+		pResult->m_Accepted = Pool.TryAdd(std::make_shared<CCountJob>(pResult->m_Count));
+	}));
+	EXPECT_TRUE(pResult->m_Started);
+	EXPECT_FALSE(pResult->m_Accepted);
+	EXPECT_EQ(pResult->m_Count.load(), 0);
+}
+
+TEST(JobPoolAcceptance, EngineFacadeReportsItsPoolAcceptanceAndRejection)
+{
+	struct CResult
+	{
+		std::atomic<int> m_Count{0};
+		bool m_Started = false;
+		bool m_Accepted = false;
+		bool m_Rejected = false;
+	};
+	auto pResult = std::make_shared<CResult>();
+	ASSERT_TRUE(WaitForAsyncIo([pResult] {
+		std::unique_ptr<IEngine> pEngine(CreateTestEngine("replay-acceptance"));
+		if(!pEngine)
+			return;
+		pResult->m_Started = true;
+		pResult->m_Accepted = pEngine->TryAddJob(std::make_shared<CCountJob>(pResult->m_Count));
+		pEngine->ShutdownJobs();
+		pResult->m_Rejected = !pEngine->TryAddJob(std::make_shared<CCountJob>(pResult->m_Count));
+	}));
+	EXPECT_TRUE(pResult->m_Started);
+	EXPECT_TRUE(pResult->m_Accepted);
+	EXPECT_TRUE(pResult->m_Rejected);
+	EXPECT_EQ(pResult->m_Count.load(), 1);
+}

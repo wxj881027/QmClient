@@ -2818,6 +2818,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   datafile.h
   demo.cpp
   demo.h
+  demo_output.h
   econ.cpp
   econ.h
   engine.cpp
@@ -3118,6 +3119,7 @@ if(CLIENT)
     qm_storage_mode.h
     demoedit.cpp
     demoedit.h
+    replay_save.h
     discord.cpp
     enums.h
     favorites.cpp
@@ -4778,6 +4780,10 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/demo_player_test.cpp
     src/test/integration/engine/demo_recorder_io_test.cpp
     src/test/integration/engine/demo_map_read_test.cpp
+    src/test/integration/engine/demo_output_transaction_test.cpp
+    src/test/integration/engine/demoedit_job_test.cpp
+    src/test/integration/engine/replay_save_submission_test.cpp
+    src/test/unit/engine/replay_save_test.cpp
     src/test/unit/engine/video_frame_capture_test.cpp
     src/test/unit/engine/editor_test.cpp
     src/test/unit/client/editor_collab_camera_test.cpp
@@ -5282,6 +5288,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/voice_spatial_utils_test.cpp
   )
   set(TESTS_EXTRA
+    src/engine/client/demoedit.cpp
     src/game/editor/collab_camera.cpp
     src/game/editor/mapitems/envelope.cpp
     src/game/map/envelope_eval.cpp

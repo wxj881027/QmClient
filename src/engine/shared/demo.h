@@ -19,6 +19,10 @@ typedef std::function<void()> TUpdateIntraTimesFunc;
 struct CSnapshotDelta;
 class IConsole;
 class IStorage;
+namespace demo_output
+{
+	class COperations;
+}
 
 class CDemoRecorder : public IDemoRecorder
 {
@@ -94,6 +98,12 @@ public:
 class CDemoPlayer : public IDemoPlayer
 {
 public:
+	// 内部文件处理不读写主线程的帧时间缓存。
+	enum class ETimeMode
+	{
+		CACHED_FRAME,
+		UNCACHED,
+	};
 	// 借用操作对象；成功返回的地图缓冲须与 free 兼容，所有权交给调用方。
 	class CMapDataOperations
 	{
@@ -144,6 +154,8 @@ private:
 	// 操作对象须覆盖播放器或同步裁剪的使用期；nullptr 使用默认实现。
 	CMapDataOperations *m_pMapDataOperations = nullptr;
 	CMapDataOperations &MapDataOperations();
+	ETimeMode m_TimeMode = ETimeMode::CACHED_FRAME;
+	int64_t SystemTime() const;
 
 	TUpdateIntraTimesFunc m_UpdateIntraTimesFunc;
 
@@ -213,13 +225,13 @@ private:
 	void Construct(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo);
 
 public:
-	CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, CMapDataOperations *pMapDataOperations = nullptr);
+	CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, CMapDataOperations *pMapDataOperations = nullptr, ETimeMode TimeMode = ETimeMode::CACHED_FRAME);
 	CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, TUpdateIntraTimesFunc &&UpdateIntraTimesFunc);
 	~CDemoPlayer() override;
 
 	void SetListener(IListener *pListener);
 
-	int Load(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, int StorageType);
+	int Load(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, int StorageType, bool ResetSliceMarkers = true);
 	unsigned char *GetMapData(class IStorage *pStorage);
 	bool ExtractMap(class IStorage *pStorage);
 	void Play();
@@ -254,11 +266,14 @@ class CDemoEditor : public IDemoEditor
 	CSnapshotDelta *m_pSnapshotDelta;
 	CSnapshotDelta *m_pSnapshotDeltaSixup;
 	CDemoPlayer::CMapDataOperations *m_pMapDataOperations = nullptr;
+	demo_output::COperations *m_pOutputOperations = nullptr;
+	CDemoRecorder::CFileOperations *m_pRecordOperations = nullptr;
+	bool SliceImpl(const char *pDemo, const char *pDst, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pfnFilter, void *pUser);
 
 public:
-	virtual void Init(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, class IConsole *pConsole, class IStorage *pStorage, CDemoPlayer::CMapDataOperations *pMapDataOperations = nullptr);
-	bool Slice(const char *pDemo, const char *pDst, int StartTick, int EndTick, DEMOFUNC_FILTER pfnFilter, void *pUser) override;
-	bool Slice(const char *pDemo, const char *pDst, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pfnFilter, void *pUser) override;
+	virtual void Init(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, class IConsole *pConsole, class IStorage *pStorage, CDemoPlayer::CMapDataOperations *pMapDataOperations = nullptr, demo_output::COperations *pOutputOperations = nullptr, CDemoRecorder::CFileOperations *pRecordOperations = nullptr);
+	bool Slice(const char *pDemo, const char *pDst, int StartTick, int EndTick, DEMOFUNC_FILTER pfnFilter, void *pUser) noexcept override;
+	bool Slice(const char *pDemo, const char *pDst, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pfnFilter, void *pUser) noexcept override;
 };
 
 #endif
