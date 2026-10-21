@@ -4781,6 +4781,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/demo_recorder_io_test.cpp
     src/test/integration/engine/demo_map_read_test.cpp
     src/test/integration/engine/demo_map_extract_test.cpp
+    src/test/integration/engine/demo_slice_segments_test.cpp
+    src/test/integration/engine/demo_seek_test.cpp
     src/test/integration/engine/demo_output_transaction_test.cpp
     src/test/integration/engine/demoedit_job_test.cpp
     src/test/integration/engine/replay_save_submission_test.cpp

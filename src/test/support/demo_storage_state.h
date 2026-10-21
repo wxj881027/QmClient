@@ -9,6 +9,7 @@
 #include <test/test.h>
 
 #include <cstdlib>
+#include <initializer_list>
 #include <memory>
 #include <string>
 
@@ -78,6 +79,19 @@ struct CDemoStorageState
 	void Create(const char *pPath = "source.demo", bool Snapshots = true)
 	{
 		Begin(pPath, Snapshots);
+		ASSERT_EQ(m_Recorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE), 0);
+	}
+
+	void CreateTimeline(std::initializer_list<int> Ticks, std::initializer_list<int> Markers = {})
+	{
+		unsigned char aMap[] = {'m', 'a', 'p', 'b', 'y', 't', 'e', 's'};
+		ASSERT_EQ(m_Recorder.Start(m_pStorage.get(), nullptr, "source.demo", "test", "map", SHA256_DIGEST{}, 0, "client", sizeof(aMap), aMap, nullptr, nullptr, nullptr), 0);
+		const CSnapshot *pSnapshot = CSnapshot::EmptySnapshot();
+		const int Size = static_cast<int>(pSnapshot->AsSlice().size() * sizeof(int32_t));
+		for(int Tick : Ticks)
+			m_Recorder.RecordSnapshot(Tick, pSnapshot, Size, true);
+		for(int Tick : Markers)
+			ASSERT_TRUE(m_Recorder.AddDemoMarker(Tick));
 		ASSERT_EQ(m_Recorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE), 0);
 	}
 
