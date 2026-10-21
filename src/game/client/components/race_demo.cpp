@@ -2,6 +2,7 @@
 
 #include "race_demo.h"
 
+#include <base/log.h>
 #include <base/system.h>
 
 #include <engine/shared/config.h>
@@ -18,56 +19,51 @@ using namespace std::chrono_literals;
 
 const char *CRaceDemo::ms_pRaceDemoDir = "demos/auto/race";
 
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-struct CDemoItem
-{
-	char m_aFilename[IO_MAX_PATH_LENGTH];
-	int m_Time;
-};
-
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-struct CDemoListParam
-{
-	const CRaceDemo *m_pThis;
-	std::vector<CDemoItem> *m_pvDemos;
-	const char *m_pMap;
-};
-
 CRaceDemo::CRaceDemo() :
 	m_RaceState(RACE_NONE), m_RaceStartTick(-1), m_RecordStopTick(-1), m_Time(0)
 {
 	m_aTmpFilename[0] = '\0';
 }
 
-void CRaceDemo::GetPath(char *pBuf, int Size, int Time) const
+void CRaceDemo::GetPath(char *pBuf, int Size) const
 {
 	const char *pMap = Client()->GetCurrentMap();
-	char aDirectory[IO_MAX_PATH_LENGTH];
-	if(Time < 0)
-	{
-		const std::string Directory = qmclient::media_paths::Resolve(Storage(), g_Config, ms_pRaceDemoDir);
-		str_copy(aDirectory, Directory.c_str());
-	}
-	else
-	{
-		// 完成当前录像时沿用开始录制的目录，不跟随中途修改的设置。
-		str_copy(aDirectory, m_aTmpFilename);
-		fs_parent_dir(aDirectory);
-	}
-
-	char aPlayerName[MAX_NAME_LENGTH];
-	str_copy(aPlayerName, Client()->PlayerName());
-	str_sanitize_filename(aPlayerName);
-
+	const std::string Directory = qmclient::media_paths::Resolve(Storage(), g_Config, ms_pRaceDemoDir);
 	char aName[IO_MAX_PATH_LENGTH];
-	if(Time < 0)
-		str_format(aName, sizeof(aName), "%s_tmp_%d.demo", pMap, pid());
-	else if(g_Config.m_ClDemoName)
-		str_format(aName, sizeof(aName), "%s_%d.%03d_%s.demo", pMap, Time / 1000, Time % 1000, aPlayerName);
-	else
-		str_format(aName, sizeof(aName), "%s_%d.%03d.demo", pMap, Time / 1000, Time % 1000);
-	const std::string Path = qmclient::media_paths::Join(aDirectory, aName);
+	str_format(aName, sizeof(aName), "%s_tmp_%d.demo", pMap, pid());
+	const std::string Path = qmclient::media_paths::Join(Directory, aName);
 	str_copy(pBuf, Path.size() < static_cast<size_t>(Size) ? Path.c_str() : "", Size);
+}
+
+bool CRaceDemo::StartRecord() noexcept
+{
+	try
+	{
+		char aFilename[IO_MAX_PATH_LENGTH];
+		GetPath(aFilename, sizeof(aFilename));
+		qm_race_demo::CStorageOperations Operations(*Storage());
+		if(aFilename[0] == '\0' ||
+			!Operations.DestinationAvailable(aFilename, qmclient::media_paths::StorageType(aFilename)) ||
+			!qmclient::media_paths::PrepareWrite(Storage(), aFilename))
+		{
+			ReportSaveFailure(false);
+			return false;
+		}
+		str_copy(m_aTmpFilename, aFilename);
+		Client()->RaceRecord_Start(m_aTmpFilename);
+		if(!Client()->RaceRecord_IsRecording())
+		{
+			StopRecord(0);
+			return false;
+		}
+		return true;
+	}
+	catch(...)
+	{
+		StopRecord(0);
+		ReportSaveFailure(false);
+		return false;
+	}
 }
 
 void CRaceDemo::OnStateChange(int NewState, int OldState)
@@ -78,6 +74,8 @@ void CRaceDemo::OnStateChange(int NewState, int OldState)
 
 void CRaceDemo::OnNewSnapshot()
 {
+	if(!m_Finalizer.CanStartCapture())
+		return;
 	if(!GameClient()->m_GameInfo.m_Race || !g_Config.m_ClAutoRaceRecord || Client()->State() != IClient::STATE_ONLINE)
 		return;
 
@@ -102,23 +100,14 @@ void CRaceDemo::OnNewSnapshot()
 		{
 			if(m_RaceState == RACE_STARTED)
 			{
-				Client()->RaceRecord_Stop();
-				Storage()->RemoveFile(m_aTmpFilename, qmclient::media_paths::StorageType(m_aTmpFilename));
+				StopRecord(0);
+				if(!m_Finalizer.CanStartCapture())
+					return;
 			}
 			if(m_RaceState != RACE_PREPARE) // start recording again
 			{
-				GetPath(m_aTmpFilename, sizeof(m_aTmpFilename));
-				if(!qmclient::media_paths::PrepareWrite(Storage(), m_aTmpFilename))
+				if(!StartRecord())
 				{
-					GameClient()->Echo(Localize("Failed to save demo"));
-					m_aTmpFilename[0] = '\0';
-					m_RaceState = RACE_IDLE;
-					return;
-				}
-				Client()->RaceRecord_Start(m_aTmpFilename);
-				if(!Client()->RaceRecord_IsRecording())
-				{
-					m_aTmpFilename[0] = '\0';
 					m_RaceState = RACE_IDLE;
 					return;
 				}
@@ -131,18 +120,8 @@ void CRaceDemo::OnNewSnapshot()
 	// start recording before the player passes the start line, so we can see some preparation steps
 	if(m_RaceState == RACE_NONE)
 	{
-		GetPath(m_aTmpFilename, sizeof(m_aTmpFilename));
-		if(!qmclient::media_paths::PrepareWrite(Storage(), m_aTmpFilename))
+		if(!StartRecord())
 		{
-			GameClient()->Echo(Localize("Failed to save demo"));
-			m_aTmpFilename[0] = '\0';
-			m_RaceState = RACE_IDLE;
-			return;
-		}
-		Client()->RaceRecord_Start(m_aTmpFilename);
-		if(!Client()->RaceRecord_IsRecording())
-		{
-			m_aTmpFilename[0] = '\0';
 			m_RaceState = RACE_IDLE;
 			return;
 		}
@@ -171,7 +150,12 @@ void CRaceDemo::OnReset()
 
 void CRaceDemo::OnShutdown()
 {
-	StopRecord();
+	StopRecord(-1, true);
+}
+
+void CRaceDemo::OnUpdate()
+{
+	FinishPending();
 }
 
 void CRaceDemo::OnMessage(int MsgType, void *pRawMsg)
@@ -224,101 +208,75 @@ void CRaceDemo::OnMapLoad()
 	m_AllowRestart = false;
 }
 
-void CRaceDemo::StopRecord(int Time)
+void CRaceDemo::ResetRaceState() noexcept
 {
-	GameClient()->StopRaceRecordIfRecording();
-
-	if(m_aTmpFilename[0] != '\0')
-	{
-		char aNewFilename[IO_MAX_PATH_LENGTH];
-		GetPath(aNewFilename, sizeof(aNewFilename), Time);
-		if(Time > 0 && aNewFilename[0] == '\0')
-			GameClient()->Echo(Localize("Failed to save demo"));
-		else if(Time > 0 && CheckDemo(Time))
-		{
-			if(!Storage()->RenameFile(m_aTmpFilename, aNewFilename, qmclient::media_paths::StorageType(m_aTmpFilename)))
-				GameClient()->Echo(Localize("Failed to save demo"));
-		}
-		else
-		{ // no new record
-			Storage()->RemoveFile(m_aTmpFilename, qmclient::media_paths::StorageType(m_aTmpFilename));
-		}
-
-		m_aTmpFilename[0] = '\0';
-	}
-
 	m_Time = 0;
 	m_RaceState = RACE_NONE;
 	m_RaceStartTick = -1;
 	m_RecordStopTick = -1;
 }
 
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-struct SRaceDemoFetchUser
+void CRaceDemo::ReportSaveFailure(bool AfterCommit) noexcept
 {
-	CRaceDemo *m_pThis;
-	CDemoListParam *m_pParam;
-};
-
-int CRaceDemo::RaceDemolistFetchCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser)
-{
-	auto *pRealUser = (SRaceDemoFetchUser *)pUser;
-	auto *pParam = pRealUser->m_pParam;
-	if(IsDir)
-		return 0;
-
-	char aPlayerName[MAX_NAME_LENGTH];
-	const char *pPlayerName = nullptr;
-	if(g_Config.m_ClDemoName)
+	try
 	{
-		str_copy(aPlayerName, pParam->m_pThis->Client()->PlayerName());
-		str_sanitize_filename(aPlayerName);
-		pPlayerName = aPlayerName;
+		if(AfterCommit)
+			log_warn("race_demo", "Could not remove an obsolete race demo");
+		else
+			GameClient()->Echo(Localize("Failed to save demo"));
 	}
-	const int Time = CRaceHelper::TimeFromDemoFilename(pInfo->m_pName, pParam->m_pMap, pPlayerName);
-	if(Time < 0 || str_length(pInfo->m_pName) >= static_cast<int>(sizeof(CDemoItem::m_aFilename)))
-		return 0;
-
-	if(Time > 0)
+	catch(...)
 	{
-		CDemoItem Item;
-		str_copy(Item.m_aFilename, pInfo->m_pName);
-		Item.m_Time = Time;
-		pParam->m_pvDemos->push_back(Item);
 	}
-
-	if(time_get_nanoseconds() - pRealUser->m_pThis->m_RaceDemosLoadStartTime > 500ms)
-	{
-		pRealUser->m_pThis->GameClient()->m_Menus.RenderLoading(Localize("Loading race demo files"), "", 0);
-	}
-
-	return 0;
 }
 
-bool CRaceDemo::CheckDemo(int Time)
+void CRaceDemo::FinishPending(bool Force) noexcept
 {
-	std::vector<CDemoItem> vDemos;
-	CDemoListParam Param = {this, &vDemos, Client()->GetCurrentMap()};
-	m_RaceDemosLoadStartTime = time_get_nanoseconds();
-	SRaceDemoFetchUser User;
-	User.m_pParam = &Param;
-	User.m_pThis = this;
-	char aDirectory[IO_MAX_PATH_LENGTH];
-	str_copy(aDirectory, m_aTmpFilename);
-	fs_parent_dir(aDirectory);
-	Storage()->ListDirectoryInfo(qmclient::media_paths::StorageType(aDirectory), aDirectory, RaceDemolistFetchCallback, &User);
+	if(!m_Finalizer.Pending())
+		return;
+	const auto StartedAt = time_get_nanoseconds();
+	qm_race_demo::CStorageOperations Operations(*Storage());
+	const auto Stop = [this]() {
+		GameClient()->StopRaceRecordIfRecording();
+		return !Client()->RaceRecord_IsRecording();
+	};
+	const auto Progress = [this, StartedAt]() {
+		if(time_get_nanoseconds() - StartedAt > 500ms)
+			GameClient()->m_Menus.RenderLoading(Localize("Loading race demo files"), "", 0);
+	};
+	const auto Notify = [this](bool AfterCommit) { ReportSaveFailure(AfterCommit); };
+	m_Finalizer.Try(StartedAt, Operations, Stop, Progress, Notify, Force);
+}
 
-	// loop through demo files
-	for(auto &Demo : vDemos)
+void CRaceDemo::StopRecord(int Time, bool Force) noexcept
+{
+	try
 	{
-		if(Time >= Demo.m_Time) // found a better demo
-			return false;
-
-		// delete old demo
-		const std::string Path = qmclient::media_paths::Join(aDirectory, Demo.m_aFilename);
-		if(!Path.empty())
-			Storage()->RemoveFile(Path.c_str(), qmclient::media_paths::StorageType(aDirectory));
+		if(m_aTmpFilename[0] != '\0')
+		{
+			char aPlayerName[MAX_NAME_LENGTH] = "";
+			const char *pMap = "";
+			if(Time > 0)
+			{
+				pMap = Client()->GetCurrentMap();
+				str_copy(aPlayerName, Client()->PlayerName());
+				str_sanitize_filename(aPlayerName);
+			}
+			if(!m_Finalizer.Queue(m_aTmpFilename, pMap, aPlayerName, g_Config.m_ClDemoName != 0, Time))
+			{
+				ReportSaveFailure(false);
+				return;
+			}
+			m_aTmpFilename[0] = '\0';
+		}
+		ResetRaceState();
+		if(m_Finalizer.Pending())
+			FinishPending(Force);
+		else
+			GameClient()->StopRaceRecordIfRecording();
 	}
-
-	return true;
+	catch(...)
+	{
+		ReportSaveFailure(false);
+	}
 }

@@ -3652,6 +3652,7 @@ if(CLIENT)
     components/qmclient/skin_source_job.cpp
     components/qmclient/skin_source_job.h
     components/qmclient/media_paths.h
+    components/qmclient/race_demo_storage.h
     components/qmclient/mobile_spectator.cpp
     components/qmclient/mobile_spectator.h
     components/qmclient/mobile_spectator_controls.h
@@ -4961,6 +4962,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_storage_path_test.cpp
     src/test/unit/qmclient/client/qm_media_paths_test.cpp
     src/test/integration/qmclient/client/qm_media_paths_storage_test.cpp
+    src/test/integration/qmclient/client/qm_race_demo_storage_test.cpp
     src/test/unit/qmclient/client/qm_demo_camera_path_test.cpp
     src/test/unit/qmclient/client/qm_demo_camera_file_test.cpp
     src/test/integration/qmclient/client/qm_demo_camera_storage_test.cpp
