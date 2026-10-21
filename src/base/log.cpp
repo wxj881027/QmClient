@@ -6,6 +6,7 @@
 #include "system.h"
 #include "time.h"
 #include "windows.h"
+#include "windows_logger.h"
 
 #include <atomic>
 #include <cstdio>
@@ -454,13 +455,128 @@ public:
 	}
 };
 
-static IOHANDLE ConvertWindowsHandle(HANDLE pHandle, int OpenFlags)
+intptr_t CWindowsStdoutOperations::OutputHandle() noexcept { return reinterpret_cast<intptr_t>(GetStdHandle(STD_OUTPUT_HANDLE)); }
+unsigned long CWindowsStdoutOperations::OutputType(intptr_t Handle) noexcept { return GetFileType(reinterpret_cast<HANDLE>(Handle)); }
+void CWindowsStdoutOperations::AttachParentConsole() noexcept { AttachConsole(ATTACH_PARENT_PROCESS); }
+bool CWindowsStdoutOperations::ReadConsoleMode(intptr_t Handle, unsigned long *pMode) noexcept { return GetConsoleMode(reinterpret_cast<HANDLE>(Handle), pMode) != 0; }
+bool CWindowsStdoutOperations::WriteConsoleMode(intptr_t Handle, unsigned long Mode) noexcept { return SetConsoleMode(reinterpret_cast<HANDLE>(Handle), Mode) != 0; }
+unsigned int CWindowsStdoutOperations::OutputCodePage() noexcept { return GetConsoleOutputCP(); }
+bool CWindowsStdoutOperations::SetOutputCodePage(unsigned int CodePage) noexcept { return SetConsoleOutputCP(CodePage) != 0; }
+bool CWindowsStdoutOperations::ColorsEnabled() noexcept { return _wgetenv(L"NO_COLOR") == nullptr; }
+
+intptr_t CWindowsStdoutOperations::DuplicateOutput(intptr_t Handle) noexcept
 {
-	int FileDescriptor = _open_osfhandle(reinterpret_cast<intptr_t>(pHandle), OpenFlags);
-	dbg_assert(FileDescriptor != -1, "_open_osfhandle failure");
-	IOHANDLE FileStream = _wfdopen(FileDescriptor, L"w");
-	dbg_assert(FileStream != nullptr, "_wfdopen failure");
-	return FileStream;
+	HANDLE Copy = nullptr;
+	if(!DuplicateHandle(GetCurrentProcess(), reinterpret_cast<HANDLE>(Handle), GetCurrentProcess(), &Copy, 0, FALSE, DUPLICATE_SAME_ACCESS))
+		return 0;
+	return reinterpret_cast<intptr_t>(Copy);
+}
+
+std::unique_ptr<CLoggerAsync> CWindowsStdoutOperations::CreateAsyncLogger(IOHANDLE File, bool Colors)
+{
+	return std::make_unique<CLoggerAsync>(File, Colors, true);
+}
+
+std::unique_ptr<ILogger> CWindowsStdoutOperations::CreateConsoleLogger(intptr_t Handle, bool Colors)
+{
+	return std::make_unique<CWindowsConsoleLogger>(reinterpret_cast<HANDLE>(Handle), Colors);
+}
+
+static std::unique_ptr<ILogger> WindowsAsyncLogger(intptr_t Handle, int OpenFlags, bool Colors, CWindowsStdoutOperations &Operations) noexcept
+{
+	try
+	{
+		const intptr_t Copy = Operations.DuplicateOutput(Handle);
+		if(Copy == 0 || Copy == -1)
+			return nullptr;
+		std::unique_ptr<void, decltype(&io_close)> File(windows_io_from_handle(Copy, "w", &Operations, OpenFlags), &io_close);
+		if(!File)
+			return nullptr;
+		auto pLogger = Operations.CreateAsyncLogger(File.get(), Colors);
+		if(!pLogger)
+			return nullptr;
+		File.release();
+		if(!pLogger->IsAvailable())
+			return nullptr;
+		return pLogger;
+	}
+	catch(...)
+	{
+		return nullptr;
+	}
+}
+
+class CWindowsConsoleSetup
+{
+	CWindowsStdoutOperations &m_Operations;
+	intptr_t m_Handle;
+	unsigned long m_OldMode;
+	unsigned int m_OldCodePage = 0;
+	bool m_ModeChanged = false;
+	bool m_Committed = false;
+
+public:
+	CWindowsConsoleSetup(CWindowsStdoutOperations &Operations, intptr_t Handle, unsigned long OldMode) :
+		m_Operations(Operations), m_Handle(Handle), m_OldMode(OldMode) {}
+	CWindowsConsoleSetup(const CWindowsConsoleSetup &) = delete;
+	CWindowsConsoleSetup &operator=(const CWindowsConsoleSetup &) = delete;
+	~CWindowsConsoleSetup()
+	{
+		if(!m_Committed)
+		{
+			if(m_OldCodePage)
+				m_Operations.SetOutputCodePage(m_OldCodePage);
+			if(m_ModeChanged)
+				m_Operations.WriteConsoleMode(m_Handle, m_OldMode);
+		}
+	}
+	void ModeChanged() { m_ModeChanged = true; }
+	void CodePageChanged(unsigned int OldCodePage) { m_OldCodePage = OldCodePage; }
+	void Commit() { m_Committed = true; }
+};
+
+std::unique_ptr<ILogger> log_logger_windows_stdout(CWindowsStdoutOperations *pOperations) noexcept
+{
+	CWindowsStdoutOperations DefaultOperations;
+	CWindowsStdoutOperations &Operations = pOperations ? *pOperations : DefaultOperations;
+	try
+	{
+		const intptr_t Initial = Operations.OutputHandle();
+		if(Initial == 0 || Initial == -1 || Operations.OutputType(Initial) == FILE_TYPE_UNKNOWN)
+			Operations.AttachParentConsole();
+		const intptr_t Output = Operations.OutputHandle();
+		if(Output == 0 || Output == -1)
+			return nullptr;
+		const unsigned long Type = Operations.OutputType(Output);
+		if(Type == FILE_TYPE_CHAR)
+		{
+			unsigned long OldMode = 0;
+			if(!Operations.ReadConsoleMode(Output, &OldMode))
+				return nullptr;
+			const bool Colors = Operations.ColorsEnabled();
+			CWindowsConsoleSetup Setup(Operations, Output, OldMode);
+			if(!Operations.WriteConsoleMode(Output, OldMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN) &&
+				!Operations.WriteConsoleMode(Output, OldMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+				return Operations.CreateConsoleLogger(Output, Colors);
+			Setup.ModeChanged();
+			const unsigned int OldCodePage = Operations.OutputCodePage();
+			if(!OldCodePage || !Operations.SetOutputCodePage(CP_UTF8))
+				return Operations.CreateConsoleLogger(Output, Colors);
+			Setup.CodePageChanged(OldCodePage);
+			auto pLogger = WindowsAsyncLogger(Output, _O_TEXT, Colors, Operations);
+			if(!pLogger)
+				return Operations.CreateConsoleLogger(Output, Colors);
+			Setup.Commit();
+			return pLogger;
+		}
+		if(Type == FILE_TYPE_DISK || Type == FILE_TYPE_PIPE)
+			return WindowsAsyncLogger(Output, _O_APPEND, false, Operations);
+		return nullptr;
+	}
+	catch(...)
+	{
+		return nullptr;
+	}
 }
 #endif
 
@@ -472,68 +588,7 @@ std::unique_ptr<ILogger> log_logger_stdout()
 	const bool Colors = getenv("NO_COLOR") == nullptr && isatty(STDOUT_FILENO);
 	return std::make_unique<CLoggerAsync>(io_stdout(), Colors, false);
 #else
-	// If we currently have no stdout (console, file, pipe),
-	// try to attach to the console of the parent process.
-	if(GetFileType(GetStdHandle(STD_OUTPUT_HANDLE)) == FILE_TYPE_UNKNOWN)
-	{
-		AttachConsole(ATTACH_PARENT_PROCESS);
-	}
-
-	HANDLE pOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-	if(pOutput == nullptr)
-	{
-		// There is no console, file or pipe that we can output to.
-		return nullptr;
-	}
-	dbg_assert(pOutput != INVALID_HANDLE_VALUE, "GetStdHandle failure");
-
-	const DWORD OutputType = GetFileType(pOutput);
-	if(OutputType == FILE_TYPE_CHAR)
-	{
-		DWORD OldConsoleMode = 0;
-		if(!GetConsoleMode(pOutput, &OldConsoleMode))
-		{
-			// GetConsoleMode can fail with ERROR_INVALID_HANDLE when redirecting output to "nul",
-			// which is considered a character file but cannot be used as a console.
-			dbg_assert(GetLastError() == ERROR_INVALID_HANDLE, "GetConsoleMode failure");
-			return nullptr;
-		}
-
-		const bool Colors = _wgetenv(L"NO_COLOR") == nullptr;
-
-		// Try to enable virtual terminal processing in the Windows console.
-		// See https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
-		if(!SetConsoleMode(pOutput, OldConsoleMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN))
-		{
-			// Try to downgrade mode gracefully when failing to set both.
-			if(!SetConsoleMode(pOutput, OldConsoleMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
-			{
-				// Fallback to old, slower Windows logging API, when failing to enable virtual terminal processing.
-				return std::make_unique<CWindowsConsoleLogger>(pOutput, Colors);
-			}
-		}
-
-		// Virtual terminal processing was enabled successfully. We can
-		// use the async logger with ANSI escape codes for colors now.
-		// We need to set the output encoding to UTF-8 manually and
-		// convert the HANDLE to an IOHANDLE to use the async logger.
-		// We assume UTF-8 is available when virtual terminal processing is.
-		dbg_assert(SetConsoleOutputCP(CP_UTF8) != 0, "SetConsoleOutputCP failure");
-		return std::make_unique<CLoggerAsync>(ConvertWindowsHandle(pOutput, _O_TEXT), Colors, false);
-	}
-	else if(OutputType == FILE_TYPE_DISK || OutputType == FILE_TYPE_PIPE)
-	{
-		// Writing to a pipe works the same as writing to a file.
-		// We can use the async logger to write to files and pipes
-		// by converting the HANDLE to an IOHANDLE.
-		// For pipes there does not seem to be any way to determine
-		// whether the console supports ANSI escape codes.
-		return std::make_unique<CLoggerAsync>(ConvertWindowsHandle(pOutput, _O_APPEND), false, false);
-	}
-	else
-	{
-		dbg_assert_failed("GetFileType failure");
-	}
+	return log_logger_windows_stdout();
 #endif
 }
 

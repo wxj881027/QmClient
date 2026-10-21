@@ -17,6 +17,7 @@ class CLoggerAsync : public ILogger
 public:
 	CLoggerAsync(IOHANDLE File, bool AnsiTruecolor, bool Close, ASYNCIO *(*Create)(IOHANDLE) = nullptr);
 	~CLoggerAsync() override;
+	bool IsAvailable() const noexcept { return m_pAio != nullptr; }
 	void Log(const CLogMessage *pMessage) override;
 	void GlobalFinish() override;
 };

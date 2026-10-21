@@ -41,7 +41,7 @@ namespace
 		int m_DescriptorCloseResult = -1;
 		bool m_NativeCloseSucceeded = false;
 
-		int OpenDescriptor(intptr_t Handle) noexcept override
+		int OpenDescriptor(intptr_t Handle, int OpenFlags) noexcept override
 		{
 			++m_DescriptorCalls;
 			if(m_FailDescriptor)
@@ -49,7 +49,7 @@ namespace
 				errno = EMFILE;
 				return -1;
 			}
-			return CWindowsFileOperations::OpenDescriptor(Handle);
+			return CWindowsFileOperations::OpenDescriptor(Handle, OpenFlags);
 		}
 
 		FILE *OpenStream(int Descriptor, const char *pMode) noexcept override

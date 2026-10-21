@@ -13,15 +13,15 @@ class CWindowsFileOperations
 {
 public:
 	virtual ~CWindowsFileOperations() = default;
-	virtual int OpenDescriptor(intptr_t Handle) noexcept;
+	virtual int OpenDescriptor(intptr_t Handle, int OpenFlags) noexcept;
 	virtual FILE *OpenStream(int Descriptor, const char *pMode) noexcept;
 	virtual void CloseNativeHandle(intptr_t Handle) noexcept;
 	virtual void CloseDescriptor(int Descriptor) noexcept;
 };
 
 // 接管有效的 Win32 文件句柄。成功由返回的流负责关闭，失败按已完成的转交阶段释放。
-// pMode 沿用 io_open 的 rb/wb/ab；返回空值时保留引发失败的 errno。
-IOHANDLE windows_io_from_handle(intptr_t Handle, const char *pMode, CWindowsFileOperations *pOperations = nullptr) noexcept;
+// pMode 和 OpenFlags 分别交给流与描述符，普通文件使用 rb/wb/ab 与默认 0；失败保留 errno。
+IOHANDLE windows_io_from_handle(intptr_t Handle, const char *pMode, CWindowsFileOperations *pOperations = nullptr, int OpenFlags = 0) noexcept;
 #endif
 
 #endif // BASE_WINDOWS_IO_H

@@ -135,9 +135,9 @@ struct NETQOS_INTERNAL
 };
 
 #if defined(CONF_FAMILY_WINDOWS)
-int CWindowsFileOperations::OpenDescriptor(intptr_t Handle) noexcept
+int CWindowsFileOperations::OpenDescriptor(intptr_t Handle, int OpenFlags) noexcept
 {
-	return _open_osfhandle(Handle, 0);
+	return _open_osfhandle(Handle, OpenFlags);
 }
 
 FILE *CWindowsFileOperations::OpenStream(int Descriptor, const char *pMode) noexcept
@@ -155,11 +155,11 @@ void CWindowsFileOperations::CloseDescriptor(int Descriptor) noexcept
 	_close(Descriptor);
 }
 
-IOHANDLE windows_io_from_handle(intptr_t Handle, const char *pMode, CWindowsFileOperations *pOperations) noexcept
+IOHANDLE windows_io_from_handle(intptr_t Handle, const char *pMode, CWindowsFileOperations *pOperations, int OpenFlags) noexcept
 {
 	CWindowsFileOperations DefaultOperations;
 	CWindowsFileOperations &Operations = pOperations ? *pOperations : DefaultOperations;
-	const int Descriptor = Operations.OpenDescriptor(Handle);
+	const int Descriptor = Operations.OpenDescriptor(Handle, OpenFlags);
 	if(Descriptor == -1)
 	{
 		const int Error = errno;
