@@ -16,7 +16,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/component.h>
-#include <game/client/components/qmclient/friend_enter_tracker.h>
+#include <game/client/components/qmclient/friend_enter_notify.h>
 #include <game/client/components/qmclient/friend_online_notify.h>
 #include <game/client/components/qmclient/friend_online_scan.h>
 #include <game/client/components/qmclient/gores_drown_tracker.h>
@@ -435,14 +435,11 @@ class CTClient : public CComponent
 	int m_FriendAutoRefreshPrevSeconds = -1;
 	void CheckFriendOnline();
 	// 本服进服通知和自动问候共享同一份出入状态。
-	qm_friend_notify::CEnterTracker m_FriendEnterTracker;
+	qm_friend_notify::CEnterNotifier m_FriendEnterNotifier;
 	int m_FriendEnterPrevEnabled = -1;
 	int m_FriendEnterPrevIgnoreClan = -1;
 	int m_FriendEnterPrevDummy = -1;
 	uint64_t m_FriendEnterPrevRevision = 0;
-	float m_FriendEnterNextCheck = 0.0f;
-	std::string m_FriendEnterPendingNames;
-	float m_FriendEnterPendingSendAt = 0.0f;
 	void ResetFriendEnter();
 	void CheckFriendEnterGreet();
 

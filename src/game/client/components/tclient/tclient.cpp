@@ -2659,10 +2659,7 @@ void CTClient::CheckFriendOnline()
 
 void CTClient::ResetFriendEnter()
 {
-	m_FriendEnterTracker.Reset();
-	m_FriendEnterPendingNames.clear();
-	m_FriendEnterPendingSendAt = 0.0f;
-	m_FriendEnterNextCheck = 0.0f;
+	m_FriendEnterNotifier.Reset();
 }
 
 void CTClient::CheckFriendEnterGreet()
@@ -2693,87 +2690,35 @@ void CTClient::CheckFriendEnterGreet()
 		ResetFriendEnter();
 		return;
 	}
-	if(!AutoGreetEnabled)
-	{
-		m_FriendEnterPendingNames.clear();
-		m_FriendEnterPendingSendAt = 0.0f;
-	}
-
-	static constexpr float FriendEnterGreetDelaySeconds = 3.0f;
 	const float Now = LocalTime();
-	if(AutoGreetEnabled && !m_FriendEnterPendingNames.empty() && Now >= m_FriendEnterPendingSendAt)
-	{
-		// 空配置表示关闭问候；非空则按当前语言 Localize 后再发送
-		if(g_Config.m_QmFriendEnterGreetText[0] != '\0')
-		{
+	const qm_friend_notify::CEnterNotifier::CSettings Settings{
+		AutoGreetEnabled, g_Config.m_QmFriendEnterGreetText[0] != '\0', BroadcastEnabled, IgnoreClanSetting != 0};
+	m_FriendEnterNotifier.Update(Now, Settings, [&]() {
+			std::vector<qm_friend_notify::CEnterTracker::CClient> vCurrentClients;
+			vCurrentClients.reserve(MAX_CLIENTS);
+			const int LocalMain = GameClient()->m_aLocalIds[0];
+			const int LocalDummy = GameClient()->m_aLocalIds[1];
+			const bool HasDummy = Client()->DummyConnected();
+			for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
+			{
+				const auto &Client = GameClient()->m_aClients[ClientId];
+				if(!Client.m_Active)
+					continue;
+				vCurrentClients.push_back({ClientId, Client.m_aName, Client.m_aClan,
+					GameClient()->Friends()->IsFriend(Client.m_aName, Client.m_aClan, true),
+					ClientId == LocalMain || (HasDummy && ClientId == LocalDummy)});
+			}
+			return vCurrentClients; }, [&](const std::string &NewNames) { return BuildFriendEnterBroadcastText(
+													  ResolveFriendEnterLocalizeText(g_Config.m_QmFriendEnterBroadcastText, s_pFriendEnterBroadcastDefaultText), NewNames); }, [&](const std::string &BroadcastText) { GameClient()->m_Broadcast.DoBroadcast(BroadcastText.c_str()); }, [&](const std::string &Names) {
 			char aMsg[256];
 			aMsg[0] = '\0';
-			str_append(aMsg, m_FriendEnterPendingNames.c_str(), sizeof(aMsg));
+			str_append(aMsg, Names.c_str(), sizeof(aMsg));
 			if(aMsg[0] != '\0')
 				str_append(aMsg, ": ", sizeof(aMsg));
 			str_append(aMsg, ResolveFriendEnterLocalizeText(g_Config.m_QmFriendEnterGreetText, s_pFriendEnterGreetDefaultText), sizeof(aMsg));
 
 			if(aMsg[0] != '\0')
-				GameClient()->m_Chat.SendChat(0, aMsg);
-		}
-		m_FriendEnterPendingNames.clear();
-		m_FriendEnterPendingSendAt = 0.0f;
-	}
-
-	if(Now < m_FriendEnterNextCheck)
-		return;
-	m_FriendEnterNextCheck = Now + 0.2f;
-
-	std::vector<qm_friend_notify::CEnterTracker::CClient> vCurrentClients;
-	vCurrentClients.reserve(MAX_CLIENTS);
-	const int LocalMain = GameClient()->m_aLocalIds[0];
-	const int LocalDummy = GameClient()->m_aLocalIds[1];
-	const bool HasDummy = Client()->DummyConnected();
-
-	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
-	{
-		const auto &Client = GameClient()->m_aClients[ClientId];
-		if(!Client.m_Active)
-			continue;
-		vCurrentClients.push_back({ClientId, Client.m_aName, Client.m_aClan,
-			GameClient()->Friends()->IsFriend(Client.m_aName, Client.m_aClan, true),
-			ClientId == LocalMain || (HasDummy && ClientId == LocalDummy)});
-	}
-	const auto NewFriends = m_FriendEnterTracker.Update(vCurrentClients, Now, IgnoreClanSetting != 0);
-
-	if(NewFriends.empty())
-		return;
-
-	std::string NewNames;
-	NewNames.reserve(64);
-	for(size_t i = 0; i < NewFriends.size(); ++i)
-	{
-		if(i > 0)
-			NewNames.push_back(' ');
-		NewNames.append(NewFriends[i]);
-	}
-
-	if(NewNames.empty())
-		return;
-
-	if(BroadcastEnabled)
-	{
-		// 配置默认是英文 source；Localize 后替换 %s 好友名
-		const std::string BroadcastText = BuildFriendEnterBroadcastText(
-			ResolveFriendEnterLocalizeText(g_Config.m_QmFriendEnterBroadcastText, s_pFriendEnterBroadcastDefaultText),
-			NewNames);
-		if(!BroadcastText.empty())
-			GameClient()->m_Broadcast.DoBroadcast(BroadcastText.c_str());
-	}
-
-	if(!AutoGreetEnabled || g_Config.m_QmFriendEnterGreetText[0] == '\0')
-		return;
-
-	if(!m_FriendEnterPendingNames.empty())
-		m_FriendEnterPendingNames.push_back(' ');
-	m_FriendEnterPendingNames.append(NewNames);
-	if(m_FriendEnterPendingSendAt <= 0.0f)
-		m_FriendEnterPendingSendAt = Now + FriendEnterGreetDelaySeconds;
+				GameClient()->m_Chat.SendChat(0, aMsg); });
 }
 
 void CTClient::QueueAspectApply()
