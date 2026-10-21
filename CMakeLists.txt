@@ -5423,6 +5423,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
 
   if(CLIENT)
     list(APPEND TESTS
+      src/test/unit/engine/input_clipboard_test.cpp
       src/test/unit/engine/input_sdl3_test.cpp
       src/test/integration/engine/audio_sdl3_test.cpp
       src/test/unit/engine/sound_voice_handle_test.cpp

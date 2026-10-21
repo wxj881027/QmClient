@@ -9,7 +9,26 @@
 #include <SDL3/SDL_scancode.h>
 
 #include <cstdint>
+#include <memory>
+#include <string>
 #include <vector>
+
+// 接管 SDL 剪贴板缓冲；复制失败时仍释放原缓冲，沿用空串失败结果。
+template<typename TRelease, typename TCopy>
+std::string TakeSdlClipboardText(char *pText, TRelease Release, TCopy Copy) noexcept
+{
+	std::unique_ptr<char, TRelease> pOwnedText(pText, Release);
+	if(!pOwnedText)
+		return {};
+	try
+	{
+		return Copy(pOwnedText.get());
+	}
+	catch(...)
+	{
+		return {};
+	}
+}
 
 // SDL3 不再替应用拆分长文本，保留现有事件容量并按完整 UTF-8 字符分块。
 inline void AppendSdlTextEvents(std::vector<IInput::CEvent> &vEvents, const char *pText, uint32_t InputCount)

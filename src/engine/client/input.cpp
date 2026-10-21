@@ -382,10 +382,8 @@ void CInput::ClearTouchDeltas()
 
 std::string CInput::GetClipboardText()
 {
-	char *pClipboardText = SDL_GetClipboardText();
-	std::string ClipboardText = pClipboardText;
-	SDL_free(pClipboardText);
-	return ClipboardText;
+	return TakeSdlClipboardText(SDL_GetClipboardText(), SDL_free,
+		[](const char *pText) { return std::string(pText); });
 }
 
 void CInput::SetClipboardText(const char *pText)
