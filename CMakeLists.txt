@@ -4749,6 +4749,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/binds_test.cpp
     src/test/unit/engine/blocklist_driver_test.cpp
     src/test/unit/engine/game_ping_test.cpp
+    src/test/unit/engine/ringbuffer_test.cpp
+    src/test/integration/client/graph_allocation_test.cpp
     src/test/unit/base/bytes_be_test.cpp
     src/test/unit/engine/chunk_header_test.cpp
     src/test/unit/engine/checksum_test.cpp
@@ -5381,6 +5383,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/game/client/frame_scheduler.cpp
     src/engine/client/blocklist_driver.cpp
     src/engine/client/blocklist_driver.h
+    src/engine/client/graph.cpp
     src/engine/client/qm_hang_diagnostics.cpp
     src/engine/client/favorites.cpp
     src/engine/client/friends.cpp

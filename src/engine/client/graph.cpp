@@ -10,8 +10,18 @@
 
 #include <limits>
 
-CGraph::CGraph(int MaxEntries, int Precision, bool SummaryStats) :
-	m_Entries(MaxEntries * (sizeof(CEntry) + 2 * CRingBufferBase::ITEM_SIZE), CRingBufferBase::FLAG_RECYCLE),
+int CGraph::BufferSize(int MaxEntries)
+{
+	constexpr size_t EntrySize = sizeof(CEntry) + 2 * CRingBufferBase::ITEM_SIZE;
+	if(MaxEntries <= 0 || static_cast<size_t>(MaxEntries) > std::numeric_limits<int>::max() / EntrySize)
+		return 0;
+	return static_cast<int>(MaxEntries * EntrySize);
+}
+
+CGraph::CGraph(int MaxEntries, int Precision, bool SummaryStats, FAllocate pAllocate) :
+	m_EntryBufferSize(BufferSize(MaxEntries)),
+	m_pAllocate(pAllocate),
+	m_Entries(m_EntryBufferSize, CRingBufferBase::FLAG_RECYCLE, m_pAllocate),
 	m_Precision(Precision),
 	m_SummaryStats(SummaryStats)
 {
@@ -19,6 +29,8 @@ CGraph::CGraph(int MaxEntries, int Precision, bool SummaryStats) :
 
 void CGraph::Init(float Min, float Max)
 {
+	if(!m_Entries.IsInitialized())
+		m_Entries.Init(m_EntryBufferSize, CRingBufferBase::FLAG_RECYCLE, m_pAllocate);
 	m_Entries.Clear();
 	m_pFirstScaled = nullptr;
 	m_RenderedTotalTime = 0;
@@ -129,14 +141,16 @@ void CGraph::Scale(int64_t WantedTotalTime)
 	}
 }
 
-void CGraph::Add(float Value, ColorRGBA Color)
+bool CGraph::Add(float Value, ColorRGBA Color)
 {
-	InsertAt(time_get(), Value, Color);
+	return InsertAt(time_get(), Value, Color);
 }
 
-void CGraph::InsertAt(int64_t Time, float Value, ColorRGBA Color)
+bool CGraph::InsertAt(int64_t Time, float Value, ColorRGBA Color)
 {
 	CEntry *pEntry = m_Entries.Allocate(sizeof(CEntry));
+	if(pEntry == nullptr)
+		return false;
 	pEntry->m_Time = Time;
 	pEntry->m_Value = Value;
 	pEntry->m_Color = Color;
@@ -160,6 +174,7 @@ void CGraph::InsertAt(int64_t Time, float Value, ColorRGBA Color)
 			pEntry->m_ApplyColor = Color != pPrev->m_Color || pPrev->m_Color != pPrevPrev->m_Color;
 		}
 	}
+	return true;
 }
 
 void CGraph::RenderDataLines(IGraphics *pGraphics, float x, float y, float w, float h)

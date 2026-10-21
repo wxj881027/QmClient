@@ -52,24 +52,24 @@ void CRingBufferBase::Init(void *pMemory, int Size, int Flags)
 
 void CRingBufferBase::Clear()
 {
-	m_pFirst = m_pBuffer;
+	m_pFirst = m_pLast = m_pProduce = m_pConsume = m_pBuffer;
+	if(m_pFirst == nullptr)
+		return;
 	m_pFirst->m_pPrev = nullptr;
 	m_pFirst->m_pNext = nullptr;
 	m_pFirst->m_Free = 1;
 	m_pFirst->m_Size = m_Size;
-	m_pLast = m_pFirst;
-	m_pProduce = m_pFirst;
-	m_pConsume = m_pFirst;
 }
 
 void *CRingBufferBase::Allocate(int Size)
 {
-	int WantedSize = (Size + sizeof(CItem) + sizeof(CItem) - 1) / sizeof(CItem) * sizeof(CItem);
-	CItem *pBlock = nullptr;
-
-	// check if we even can fit this block
-	if(WantedSize > m_Size)
+	if(m_pBuffer == nullptr || Size < 0)
 		return nullptr;
+	const size_t RequiredSize = (static_cast<size_t>(Size) + 2 * sizeof(CItem) - 1) / sizeof(CItem) * sizeof(CItem);
+	if(RequiredSize > static_cast<size_t>(m_Size))
+		return nullptr;
+	const int WantedSize = static_cast<int>(RequiredSize);
+	CItem *pBlock = nullptr;
 
 	while(true)
 	{
@@ -110,7 +110,7 @@ void *CRingBufferBase::Allocate(int Size)
 	// okey, we have our block
 
 	// split the block if needed
-	if(pBlock->m_Size > WantedSize + (int)sizeof(CItem))
+	if(pBlock->m_Size - WantedSize > (int)sizeof(CItem))
 	{
 		CItem *pNewItem = (CItem *)((char *)pBlock + WantedSize);
 		pNewItem->m_pPrev = pBlock;
@@ -142,7 +142,7 @@ void CRingBufferBase::SetPopCallback(std::function<void(void *pCurrent)> PopCall
 
 int CRingBufferBase::PopFirst()
 {
-	if(m_pConsume->m_Free)
+	if(m_pConsume == nullptr || m_pConsume->m_Free)
 		return 0;
 
 	if(m_PopCallback)
@@ -172,6 +172,8 @@ int CRingBufferBase::PopFirst()
 
 void *CRingBufferBase::Prev(void *pCurrent)
 {
+	if(m_pBuffer == nullptr || pCurrent == nullptr)
+		return nullptr;
 	CItem *pItem = ((CItem *)pCurrent) - 1;
 
 	while(true)
@@ -186,6 +188,8 @@ void *CRingBufferBase::Prev(void *pCurrent)
 
 void *CRingBufferBase::Next(void *pCurrent)
 {
+	if(m_pBuffer == nullptr || pCurrent == nullptr)
+		return nullptr;
 	CItem *pItem = ((CItem *)pCurrent) - 1;
 
 	while(true)
@@ -200,12 +204,14 @@ void *CRingBufferBase::Next(void *pCurrent)
 
 void *CRingBufferBase::First()
 {
-	if(m_pConsume->m_Free)
+	if(m_pConsume == nullptr || m_pConsume->m_Free)
 		return nullptr;
 	return (void *)(m_pConsume + 1);
 }
 
 void *CRingBufferBase::Last()
 {
+	if(m_pProduce == nullptr)
+		return nullptr;
 	return Prev(m_pProduce + 1);
 }
