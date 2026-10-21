@@ -4685,6 +4685,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_friend_enter_tracker_test.cpp
     src/test/unit/qmclient/client/qm_friend_online_tracker_test.cpp
     src/test/unit/qmclient/client/qm_friends_category_drag_test.cpp
+    src/test/unit/qmclient/client/qm_browser_friend_ui_id_test.cpp
+    src/test/unit/qmclient/client/qm_browser_selection_test.cpp
     src/test/unit/engine/friends_revision_test.cpp
     src/test/unit/engine/friends_identity_test.cpp
     src/test/unit/engine/friends_pin_test.cpp

@@ -31,8 +31,10 @@
 #include <game/client/components/chat.h>
 #include <game/client/components/countryflags.h>
 #include <game/client/components/qmclient/browser_column_layout.h>
+#include <game/client/components/qmclient/browser_friend_ui_id.h>
 #include <game/client/components/qmclient/browser_map_preview_loader.h>
 #include <game/client/components/qmclient/browser_score.h>
+#include <game/client/components/qmclient/browser_selection.h>
 #include <game/client/components/qmclient/browser_status_layout.h>
 #include <game/client/components/qmclient/dummy_mini_view_layout.h>
 #include <game/client/components/qmclient/friends_category_drag.h>
@@ -1858,6 +1860,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		}
 	}
 
+	m_SelectedServerIndex = QmBrowserSelectedSortedIndex(vVisibleServerIndices, NewSelected);
 	WasListboxItemActivated = s_ListBox.WasItemActivated();
 }
 
@@ -2729,7 +2732,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIR
 
 void CMenus::RenderServerbrowserInfo(CUIRect View)
 {
-	const CServerInfo *pSelectedServer = ServerBrowser()->SortedGet(m_SelectedIndex);
+	const CServerInfo *pSelectedServer = ServerBrowser()->SortedGet(m_SelectedServerIndex);
 
 	const float RowHeight = 18.0f;
 	const float FontSize = (RowHeight - 4.0f) * CUi::ms_FontmodHeight; // based on DoButton_CheckBox
@@ -3007,6 +3010,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		Connect(g_Config.m_UiServerAddress, EConnectIntent::AutoFollow);
 	}
 
+	const CServerInfo *pSelectedServer = ServerBrowser()->SortedGet(m_SelectedServerIndex);
 	int TotalFriendItems = 0;
 	for(const auto &vFriends : vvFriends)
 		TotalFriendItems += (int)vFriends.size();
@@ -3223,10 +3227,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				const unsigned NameHash = str_quickhash(Friend.Name());
 				const unsigned ClanHash = str_quickhash(Friend.Clan());
 				const unsigned AddrHash = Friend.ServerInfo() != nullptr ? str_quickhash(Friend.ServerInfo()->m_aAddress) : 0;
-				uintptr_t FriendUiIdBase = ((uintptr_t)NameHash << 32) ^ (uintptr_t)ClanHash ^ ((uintptr_t)AddrHash << 1) ^ (uintptr_t)(Friend.FriendState() << 2);
-				if(FriendUiIdBase == 0)
-					FriendUiIdBase = 1;
-				FriendUiIdBase <<= 4;
+				const uintptr_t FriendUiIdBase = QmBrowserFriendUiIdBase(NameHash, ClanHash, AddrHash, Friend.FriendState());
 				const void *pListItemId = reinterpret_cast<const void *>(FriendUiIdBase | 0x1);
 				const void *pRemoveButtonId = reinterpret_cast<const void *>(FriendUiIdBase | 0x3);
 				const void *pCopyButtonId = reinterpret_cast<const void *>(FriendUiIdBase | 0x9);
@@ -3278,7 +3279,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				const bool IsOffline = Friend.ServerInfo() == nullptr;
 				const bool FollowingThisFriend = GameClient()->m_PieMenu.IsFollowingPlayer(Friend.Name(), Friend.Clan()) ||
 								 (m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Friend.Name()) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Friend.Clan()) == 0);
-				const bool InSelectedServer = m_SelectedIndex >= 0 && Friend.ServerInfo() && Friend.ServerInfo()->m_ServerIndex == ServerBrowser()->SortedGet(m_SelectedIndex)->m_ServerIndex;
+				const bool InSelectedServer = pSelectedServer != nullptr && Friend.ServerInfo() && Friend.ServerInfo()->m_ServerIndex == pSelectedServer->m_ServerIndex;
 				const ColorRGBA Color = PlayerBackgroundColor(Friend.FriendState() == IFriends::FRIEND_PLAYER, Friend.FriendState() == IFriends::FRIEND_CLAN, IsOffline ? true : Friend.IsAfk(), InSelectedServer, Inside);
 				DrawRoundedSurface(Ui(), Rect, Color, ColorRGBA(), 5.0f);
 				Rect.Margin(2.0f, &Rect);
@@ -4817,6 +4818,7 @@ void CMenus::RenderServerbrowserToolBox(CUIRect ToolBox)
 
 void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 {
+	m_SelectedServerIndex = -1;
 	// 面板颜色自行处理透明度，不再整体缩放独立配置的按钮和输入框。
 	// 首次打开菜单时先复用现有 community 选择结果。缓存哈希、过滤器重建
 	// 和列表刷新放到下一帧，避免 ESC 首帧同步执行后台元数据整理。

@@ -2342,6 +2342,7 @@ protected:
 
 	// found in menus_browser.cpp
 	int m_SelectedIndex;
+	int m_SelectedServerIndex = -1;
 	bool m_ServerBrowserShouldRevealSelection;
 	std::vector<CUIElement *> m_avpServerBrowserUiElements[IServerBrowser::NUM_TYPES];
 	void RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemActivated);
