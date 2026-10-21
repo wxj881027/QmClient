@@ -115,6 +115,7 @@ namespace
 		int m_StopCalls = 0;
 		int m_ProgressCalls = 0;
 		bool m_StopCompletes = true;
+		bool m_RecordingValid = true;
 		bool m_StopThrows = false;
 		bool m_NotifyThrows = false;
 		std::vector<bool> m_Notifications;
@@ -172,15 +173,15 @@ namespace
 
 		CFinalizer::EOutcome Attempt(std::chrono::nanoseconds Now = 0ns, bool Force = false)
 		{
-			return m_Finalizer.Try(Now, *m_Operations, [this]() {
+			return m_Finalizer.Try(Now, *m_Operations, [this]() -> CFinalizer::CStopResult {
 					++m_StopCalls;
 					if(m_StopThrows)
 						throw std::bad_alloc();
 					if(!m_StopCompletes)
-						return false;
+						return {false, m_RecordingValid};
 					if(m_Recorder.IsRecording())
 						EXPECT_EQ(m_Recorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE), 0);
-					return !m_Recorder.IsRecording(); }, [this]() {
+					return {!m_Recorder.IsRecording(), m_RecordingValid && !m_Recorder.HasWriteError()}; }, [this]() {
 					++m_ProgressCalls;
 					if(m_OnProgress)
 						m_OnProgress(); }, [this](bool AfterCommit) {
@@ -220,6 +221,72 @@ TEST_F(QmRaceDemoStorageIntegration, NewBestIsPublishedBeforeAnyOldRecordIsRemov
 	EXPECT_FALSE(Exists(OLD));
 	EXPECT_FALSE(Exists("race/map_30.000.demo"));
 	EXPECT_TRUE(m_Finalizer.CanStartCapture());
+}
+
+TEST_F(QmRaceDemoStorageIntegration, ClosedInvalidRecordingKeepsCaptureAndPreviousBest)
+{
+	Prepare();
+	m_RecordingValid = false;
+	EXPECT_EQ(Attempt(), CFinalizer::EOutcome::RETRY);
+	EXPECT_EQ(Read(SOURCE), "new10");
+	EXPECT_EQ(Read(OLD), "old20");
+	EXPECT_FALSE(Exists(DESTINATION));
+	EXPECT_EQ(m_Operations->m_Scans, 0);
+	EXPECT_EQ(m_Operations->m_Renames, 0);
+	EXPECT_EQ(m_Operations->m_Removes, 0);
+	EXPECT_TRUE(m_Finalizer.Pending());
+}
+
+TEST_F(QmRaceDemoStorageIntegration, LaterHealthyStopCannotClearThisCapturesFailure)
+{
+	Prepare();
+	m_RecordingValid = false;
+	EXPECT_EQ(Attempt(), CFinalizer::EOutcome::RETRY);
+	m_RecordingValid = true;
+	EXPECT_EQ(Attempt(1s), CFinalizer::EOutcome::RETRY);
+	EXPECT_EQ(Attempt(2s, true), CFinalizer::EOutcome::RETRY);
+	EXPECT_EQ(Read(SOURCE), "new10");
+	EXPECT_EQ(Read(OLD), "old20");
+	EXPECT_EQ(m_Operations->m_Scans, 0);
+	EXPECT_EQ(m_Notifications, std::vector<bool>{false});
+}
+
+TEST_F(QmRaceDemoStorageIntegration, InvalidStateBeforeStopCompletionRemainsLatched)
+{
+	Prepare();
+	m_StopCompletes = false;
+	m_RecordingValid = false;
+	EXPECT_EQ(Attempt(), CFinalizer::EOutcome::RETRY);
+	m_StopCompletes = true;
+	m_RecordingValid = true;
+	EXPECT_EQ(Attempt(1s), CFinalizer::EOutcome::RETRY);
+	EXPECT_TRUE(Exists(SOURCE));
+	EXPECT_TRUE(Exists(OLD));
+	EXPECT_EQ(m_Operations->m_Scans, 0);
+}
+
+TEST_F(QmRaceDemoStorageIntegration, UnfinishedInvalidCaptureCanStillBeDiscarded)
+{
+	Write(SOURCE, "broken");
+	Write(OLD, "keep");
+	ASSERT_TRUE(m_Finalizer.Queue(SOURCE, "map", "", false, 0));
+	m_RecordingValid = false;
+	EXPECT_EQ(Attempt(), CFinalizer::EOutcome::DISCARDED);
+	EXPECT_FALSE(Exists(SOURCE));
+	EXPECT_EQ(Read(OLD), "keep");
+	EXPECT_TRUE(m_Finalizer.CanStartCapture());
+}
+
+TEST_F(QmRaceDemoStorageIntegration, NewRequestDoesNotInheritDiscardedCapturesFailure)
+{
+	Write(SOURCE, "broken");
+	ASSERT_TRUE(m_Finalizer.Queue(SOURCE, "map", "", false, 0));
+	m_RecordingValid = false;
+	ASSERT_EQ(Attempt(), CFinalizer::EOutcome::DISCARDED);
+	Prepare();
+	m_RecordingValid = true;
+	EXPECT_EQ(Attempt(), CFinalizer::EOutcome::SAVED);
+	EXPECT_EQ(Read(DESTINATION), "new10");
 }
 
 TEST_F(QmRaceDemoStorageIntegration, BetterExistingRecordKeepsItsContentsAndDiscardsCapture)

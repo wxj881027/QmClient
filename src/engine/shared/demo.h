@@ -6,6 +6,7 @@
 #include "snapshot.h"
 
 #include <base/hash.h>
+#include <base/system.h>
 
 #include <engine/demo.h>
 #include <engine/shared/protocol.h>
@@ -21,31 +22,54 @@ class IStorage;
 
 class CDemoRecorder : public IDemoRecorder
 {
-	class IConsole *m_pConsole;
-	class IStorage *m_pStorage;
+public:
+	// 文件句柄仍由记录器管理；可替换的操作边界用于观察真实文件的读写失败。
+	class CFileOperations
+	{
+	public:
+		virtual ~CFileOperations() = default;
+		virtual unsigned Read(IOHANDLE File, void *pData, unsigned Size) noexcept;
+		virtual unsigned Write(IOHANDLE File, const void *pData, unsigned Size) noexcept;
+		virtual int Seek(IOHANDLE File, int64_t Offset, ESeekOrigin Origin) noexcept;
+		virtual int64_t Length(IOHANDLE File) noexcept;
+		virtual int Flush(IOHANDLE File) noexcept;
+		virtual int Error(IOHANDLE File) noexcept;
+		virtual int Close(IOHANDLE File) noexcept;
+	};
 
-	IOHANDLE m_File;
-	char m_aCurrentFilename[IO_MAX_PATH_LENGTH];
-	int m_LastTickMarker;
-	int m_LastKeyFrame;
-	int m_FirstTick;
+private:
+	class IConsole *m_pConsole = nullptr;
+	class IStorage *m_pStorage = nullptr;
+	// 借用操作对象，须覆盖记录器的使用期；nullptr 使用进程内默认操作。
+	CFileOperations *m_pFileOperations = nullptr;
+	bool m_WriteError = false;
+
+	IOHANDLE m_File = nullptr;
+	char m_aCurrentFilename[IO_MAX_PATH_LENGTH] = "";
+	int m_LastTickMarker = -1;
+	int m_LastKeyFrame = -1;
+	int m_FirstTick = -1;
 
 	CSnapshotBuffer m_LastSnapshotData;
-	CSnapshotDelta *m_pSnapshotDelta;
+	CSnapshotDelta *m_pSnapshotDelta = nullptr;
 
-	int m_NumTimelineMarkers;
+	int m_NumTimelineMarkers = 0;
 	int m_aTimelineMarkers[MAX_TIMELINE_MARKERS];
 
-	bool m_NoMapData;
+	bool m_NoMapData = false;
 
-	DEMOFUNC_FILTER m_pfnFilter;
-	void *m_pUser;
+	DEMOFUNC_FILTER m_pfnFilter = nullptr;
+	void *m_pUser = nullptr;
 
-	void WriteTickMarker(int Tick, bool Keyframe);
+	CFileOperations &FileOperations();
+	void MarkWriteError() noexcept;
+	bool WriteRaw(IOHANDLE File, const void *pData, unsigned Size);
+	bool SeekRaw(IOHANDLE File, int64_t Offset);
+	bool WriteTickMarker(int Tick, bool Keyframe);
 	bool Write(int Type, const void *pData, int Size);
 
 public:
-	CDemoRecorder(CSnapshotDelta *pSnapshotDelta, bool NoMapData = false);
+	CDemoRecorder(CSnapshotDelta *pSnapshotDelta, bool NoMapData = false, CFileOperations *pFileOperations = nullptr);
 	CDemoRecorder() = default;
 	~CDemoRecorder() override;
 
@@ -61,6 +85,7 @@ public:
 	void RecordMessage(const void *pData, int Size);
 
 	bool IsRecording() const override { return m_File != nullptr; }
+	bool HasWriteError() const override { return m_WriteError; }
 	const char *CurrentFilename() const override { return m_aCurrentFilename; }
 
 	int Length() const override { return (m_LastTickMarker - m_FirstTick) / SERVER_TICK_SPEED; }

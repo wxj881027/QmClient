@@ -18,6 +18,8 @@
 #include "snapshot.h"
 
 #include <algorithm>
+#include <memory>
+#include <utility>
 
 const CUuid SHA256_EXTENSION =
 	{{0x6b, 0xe6, 0xda, 0x4a, 0xce, 0xbd, 0x38, 0x0c,
@@ -42,15 +44,55 @@ bool CDemoHeader::Valid() const
 	       mem_has_null(m_aTimestamp, sizeof(m_aTimestamp)) && str_utf8_check(m_aTimestamp);
 }
 
-CDemoRecorder::CDemoRecorder(CSnapshotDelta *pSnapshotDelta, bool NoMapData)
+unsigned CDemoRecorder::CFileOperations::Read(IOHANDLE File, void *pData, unsigned Size) noexcept { return io_read(File, pData, Size); }
+unsigned CDemoRecorder::CFileOperations::Write(IOHANDLE File, const void *pData, unsigned Size) noexcept { return io_write(File, pData, Size); }
+int CDemoRecorder::CFileOperations::Seek(IOHANDLE File, int64_t Offset, ESeekOrigin Origin) noexcept { return io_seek(File, Offset, Origin); }
+int64_t CDemoRecorder::CFileOperations::Length(IOHANDLE File) noexcept { return io_length(File); }
+int CDemoRecorder::CFileOperations::Flush(IOHANDLE File) noexcept { return io_flush(File); }
+int CDemoRecorder::CFileOperations::Error(IOHANDLE File) noexcept { return io_error(File); }
+int CDemoRecorder::CFileOperations::Close(IOHANDLE File) noexcept { return io_close(File); }
+
+CDemoRecorder::CFileOperations &CDemoRecorder::FileOperations()
 {
-	m_File = nullptr;
-	m_aCurrentFilename[0] = '\0';
-	m_pfnFilter = nullptr;
-	m_pUser = nullptr;
-	m_LastTickMarker = -1;
-	m_pSnapshotDelta = pSnapshotDelta;
-	m_NoMapData = NoMapData;
+	static CFileOperations s_Operations;
+	return m_pFileOperations ? *m_pFileOperations : s_Operations;
+}
+
+CDemoRecorder::CDemoRecorder(CSnapshotDelta *pSnapshotDelta, bool NoMapData, CFileOperations *pFileOperations) :
+	m_pFileOperations(pFileOperations), m_pSnapshotDelta(pSnapshotDelta), m_NoMapData(NoMapData)
+{
+}
+
+void CDemoRecorder::MarkWriteError() noexcept
+{
+	if(m_WriteError)
+		return;
+	m_WriteError = true;
+	try
+	{
+		log_error("demo_recorder", "Demo file I/O failed; the recording cannot be saved as complete");
+	}
+	catch(...)
+	{
+	}
+}
+
+bool CDemoRecorder::WriteRaw(IOHANDLE File, const void *pData, unsigned Size)
+{
+	if(!File || m_WriteError)
+		return false;
+	if(FileOperations().Write(File, pData, Size) != Size || FileOperations().Error(File) != 0)
+		MarkWriteError();
+	return !m_WriteError;
+}
+
+bool CDemoRecorder::SeekRaw(IOHANDLE File, int64_t Offset)
+{
+	if(m_WriteError)
+		return false;
+	if(FileOperations().Seek(File, Offset, IOSEEK_START) != 0 || FileOperations().Error(File) != 0)
+		MarkWriteError();
+	return !m_WriteError;
 }
 
 CDemoRecorder::~CDemoRecorder()
@@ -65,6 +107,7 @@ int CDemoRecorder::Start(class IStorage *pStorage, class IConsole *pConsole, con
 
 	m_pConsole = pConsole;
 	m_pStorage = pStorage;
+	m_WriteError = false;
 
 	if(!str_valid_filename(fs_filename(pFilename)))
 	{
@@ -84,10 +127,20 @@ int CDemoRecorder::Start(class IStorage *pStorage, class IConsole *pConsole, con
 		return -1;
 	}
 
+	const auto CloseOutput = [this](void *pFile) noexcept {
+		if(FileOperations().Close(pFile) != 0)
+			MarkWriteError();
+	};
+	std::unique_ptr<void, decltype(CloseOutput)> DemoGuard(DemoFile, CloseOutput);
 	bool CloseMapFile = false;
+	const auto ReleaseMap = [this, &CloseMapFile](void *pFile) noexcept {
+		if(CloseMapFile ? FileOperations().Close(pFile) != 0 : FileOperations().Seek(pFile, 0, IOSEEK_START) != 0)
+			MarkWriteError();
+	};
+	std::unique_ptr<void, decltype(ReleaseMap)> MapGuard(MapFile, ReleaseMap);
 
-	if(MapFile)
-		io_seek(MapFile, 0, IOSEEK_START);
+	if(MapFile && !SeekRaw(MapFile, 0))
+		return -1;
 
 	char aSha256[SHA256_MAXSTRSIZE];
 	sha256_str(Sha256, aSha256, sizeof(aSha256));
@@ -125,6 +178,7 @@ int CDemoRecorder::Start(class IStorage *pStorage, class IConsole *pConsole, con
 		}
 
 		CloseMapFile = true;
+		MapGuard.reset(MapFile);
 	}
 
 	if(m_NoMapData)
@@ -133,13 +187,14 @@ int CDemoRecorder::Start(class IStorage *pStorage, class IConsole *pConsole, con
 	}
 	else if(MapFile)
 	{
-		const int64_t MapFileSize = io_length(MapFile);
+		const int64_t MapFileSize = FileOperations().Length(MapFile);
+		if(MapFileSize < 0)
+		{
+			MarkWriteError();
+			return -1;
+		}
 		if(MapFileSize > (int64_t)std::numeric_limits<unsigned>::max())
 		{
-			if(CloseMapFile)
-			{
-				io_close(MapFile);
-			}
 			MapSize = 0;
 			if(m_pConsole)
 			{
@@ -166,39 +221,41 @@ int CDemoRecorder::Start(class IStorage *pStorage, class IConsole *pConsole, con
 	str_copy(Header.m_aType, pType);
 	// Header.m_Length - add this on stop
 	str_timestamp(Header.m_aTimestamp, sizeof(Header.m_aTimestamp));
-	io_write(DemoFile, &Header, sizeof(Header));
+	if(!WriteRaw(DemoFile, &Header, sizeof(Header)))
+		return -1;
 
 	CTimelineMarkers TimelineMarkers;
 	mem_zero(&TimelineMarkers, sizeof(TimelineMarkers));
-	io_write(DemoFile, &TimelineMarkers, sizeof(TimelineMarkers)); // fill this on stop
+	if(!WriteRaw(DemoFile, &TimelineMarkers, sizeof(TimelineMarkers)) || // 停止时填入标记。
+		!WriteRaw(DemoFile, SHA256_EXTENSION.m_aData, sizeof(SHA256_EXTENSION.m_aData)) ||
+		!WriteRaw(DemoFile, &Sha256, sizeof(SHA256_DIGEST)))
+		return -1;
 
-	// Write Sha256
-	io_write(DemoFile, SHA256_EXTENSION.m_aData, sizeof(SHA256_EXTENSION.m_aData));
-	io_write(DemoFile, &Sha256, sizeof(SHA256_DIGEST));
-
-	if(MapSize == 0)
+	if(MapSize != 0 && pMapData)
 	{
+		if(!WriteRaw(DemoFile, pMapData, MapSize))
+			return -1;
 	}
-	else if(pMapData)
+	else if(MapSize != 0)
 	{
-		io_write(DemoFile, pMapData, MapSize);
-	}
-	else
-	{
-		// write map data
-		while(true)
+		unsigned Remaining = MapSize;
+		while(Remaining > 0)
 		{
 			unsigned char aChunk[1024 * 64];
-			int Bytes = io_read(MapFile, &aChunk, sizeof(aChunk));
-			if(Bytes <= 0)
-				break;
-			io_write(DemoFile, &aChunk, Bytes);
+			const unsigned Size = std::min<unsigned>(Remaining, sizeof(aChunk));
+			if(FileOperations().Read(MapFile, aChunk, Size) != Size || FileOperations().Error(MapFile) != 0)
+			{
+				MarkWriteError();
+				return -1;
+			}
+			if(!WriteRaw(DemoFile, aChunk, Size))
+				return -1;
+			Remaining -= Size;
 		}
-		if(CloseMapFile)
-			io_close(MapFile);
-		else
-			io_seek(MapFile, 0, IOSEEK_START);
 	}
+	MapGuard.reset();
+	if(m_WriteError)
+		return -1;
 
 	m_LastKeyFrame = -1;
 	m_LastTickMarker = -1;
@@ -215,7 +272,7 @@ int CDemoRecorder::Start(class IStorage *pStorage, class IConsole *pConsole, con
 	m_pfnFilter = pfnFilter;
 	m_pUser = pUser;
 
-	m_File = DemoFile;
+	m_File = DemoGuard.release();
 	str_copy(m_aCurrentFilename, pFilename);
 
 	return 0;
@@ -249,8 +306,10 @@ enum
 	CHUNKTYPE_DELTA = 3,
 };
 
-void CDemoRecorder::WriteTickMarker(int Tick, bool Keyframe)
+bool CDemoRecorder::WriteTickMarker(int Tick, bool Keyframe)
 {
+	if(!m_File || m_WriteError)
+		return false;
 	if(m_LastTickMarker == -1 || Tick - m_LastTickMarker > CHUNKMASK_TICK || Keyframe)
 	{
 		unsigned char aChunk[sizeof(int32_t) + 1];
@@ -260,23 +319,26 @@ void CDemoRecorder::WriteTickMarker(int Tick, bool Keyframe)
 		if(Keyframe)
 			aChunk[0] |= CHUNKTICKFLAG_KEYFRAME;
 
-		io_write(m_File, aChunk, sizeof(aChunk));
+		if(!WriteRaw(m_File, aChunk, sizeof(aChunk)))
+			return false;
 	}
 	else
 	{
 		unsigned char aChunk[1];
 		aChunk[0] = CHUNKTYPEFLAG_TICKMARKER | CHUNKTICKFLAG_TICK_COMPRESSED | (Tick - m_LastTickMarker);
-		io_write(m_File, aChunk, sizeof(aChunk));
+		if(!WriteRaw(m_File, aChunk, sizeof(aChunk)))
+			return false;
 	}
 
 	m_LastTickMarker = Tick;
 	if(m_FirstTick < 0)
 		m_FirstTick = Tick;
+	return true;
 }
 
 bool CDemoRecorder::Write(int Type, const void *pData, int Size)
 {
-	if(!m_File)
+	if(!m_File || m_WriteError)
 		return false;
 
 	// 官方 be3e5e6a3：负长度是上游 create delta 的失败返回值，必须在这里拒绝，
@@ -313,7 +375,8 @@ bool CDemoRecorder::Write(int Type, const void *pData, int Size)
 	if(Size < 30)
 	{
 		aChunk[0] |= Size;
-		io_write(m_File, aChunk, 1);
+		if(!WriteRaw(m_File, aChunk, 1))
+			return false;
 	}
 	else
 	{
@@ -321,19 +384,20 @@ bool CDemoRecorder::Write(int Type, const void *pData, int Size)
 		{
 			aChunk[0] |= 30;
 			aChunk[1] = Size & 0xff;
-			io_write(m_File, aChunk, 2);
+			if(!WriteRaw(m_File, aChunk, 2))
+				return false;
 		}
 		else
 		{
 			aChunk[0] |= 31;
 			aChunk[1] = Size & 0xff;
 			aChunk[2] = Size >> 8;
-			io_write(m_File, aChunk, 3);
+			if(!WriteRaw(m_File, aChunk, 3))
+				return false;
 		}
 	}
 
-	io_write(m_File, aBuffer2, Size);
-	return true;
+	return WriteRaw(m_File, aBuffer2, Size);
 }
 
 void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size)
@@ -346,7 +410,8 @@ void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size, bool K
 	if(Keyframe || m_LastKeyFrame == -1 || (Tick - m_LastKeyFrame) > SERVER_TICK_SPEED * 5)
 	{
 		// write full tickmarker
-		WriteTickMarker(Tick, true);
+		if(!WriteTickMarker(Tick, true))
+			return;
 
 		// write snapshot。官方 be3e5e6a3：只有 chunk 真正写进文件才推进 delta 基准，
 		// 否则回放会用没写进去的快照去解后续 delta。
@@ -359,7 +424,8 @@ void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size, bool K
 	else
 	{
 		// write tickmarker
-		WriteTickMarker(Tick, false);
+		if(!WriteTickMarker(Tick, false))
+			return;
 
 		// create delta
 		CSnapshotDeltaBuffer DeltaData;
@@ -399,29 +465,34 @@ int CDemoRecorder::Stop(IDemoRecorder::EStopMode Mode, const char *pTargetFilena
 	if(!m_File)
 		return -1;
 
-	if(Mode == IDemoRecorder::EStopMode::KEEP_FILE)
+	if(Mode == IDemoRecorder::EStopMode::KEEP_FILE && !m_WriteError)
 	{
 		// add the demo length to the header
-		io_seek(m_File, offsetof(CDemoHeader, m_aLength), IOSEEK_START);
 		unsigned char aLength[sizeof(int32_t)];
 		uint_to_bytes_be(aLength, Length());
-		io_write(m_File, aLength, sizeof(aLength));
+		if(SeekRaw(m_File, offsetof(CDemoHeader, m_aLength)))
+			WriteRaw(m_File, aLength, sizeof(aLength));
 
 		// add the timeline markers to the header
-		io_seek(m_File, sizeof(CDemoHeader) + offsetof(CTimelineMarkers, m_aNumTimelineMarkers), IOSEEK_START);
 		unsigned char aNumMarkers[sizeof(int32_t)];
 		uint_to_bytes_be(aNumMarkers, m_NumTimelineMarkers);
-		io_write(m_File, aNumMarkers, sizeof(aNumMarkers));
-		for(int i = 0; i < m_NumTimelineMarkers; i++)
+		if(SeekRaw(m_File, sizeof(CDemoHeader) + offsetof(CTimelineMarkers, m_aNumTimelineMarkers)))
+			WriteRaw(m_File, aNumMarkers, sizeof(aNumMarkers));
+		for(int i = 0; i < m_NumTimelineMarkers && !m_WriteError; i++)
 		{
 			unsigned char aMarker[sizeof(int32_t)];
 			uint_to_bytes_be(aMarker, m_aTimelineMarkers[i]);
-			io_write(m_File, aMarker, sizeof(aMarker));
+			WriteRaw(m_File, aMarker, sizeof(aMarker));
 		}
 	}
 
-	io_close(m_File);
-	m_File = nullptr;
+	const IOHANDLE File = std::exchange(m_File, nullptr);
+	if(FileOperations().Flush(File) != 0)
+		MarkWriteError();
+	if(FileOperations().Error(File) != 0)
+		MarkWriteError();
+	if(FileOperations().Close(File) != 0)
+		MarkWriteError();
 
 	if(Mode == IDemoRecorder::EStopMode::REMOVE_FILE)
 	{
@@ -435,6 +506,11 @@ int CDemoRecorder::Stop(IDemoRecorder::EStopMode Mode, const char *pTargetFilena
 			}
 			return -1;
 		}
+	}
+	else if(m_WriteError)
+	{
+		// 关闭并不代表写入完整；损坏的源文件不能移动到成功录像的位置。
+		return -1;
 	}
 	else if(pTargetFilename[0] != '\0')
 	{
@@ -450,6 +526,8 @@ int CDemoRecorder::Stop(IDemoRecorder::EStopMode Mode, const char *pTargetFilena
 		}
 	}
 
+	if(m_WriteError)
+		return -1;
 	if(m_pConsole)
 	{
 		char aBuf[64 + IO_MAX_PATH_LENGTH];
@@ -1594,6 +1672,5 @@ bool CDemoEditor::Slice(const char *pDemo, const char *pDst, const std::vector<S
 	}
 
 	DemoPlayer.Stop();
-	DemoRecorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE);
-	return true;
+	return DemoRecorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE) == 0;
 }

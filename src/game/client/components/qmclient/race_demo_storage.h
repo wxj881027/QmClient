@@ -110,6 +110,7 @@ namespace qm_race_demo
 		bool m_Pending = false;
 		bool m_Busy = false;
 		bool m_ReportedFailure = false;
+		bool m_InvalidRecording = false;
 		std::chrono::nanoseconds m_NextAttempt{0};
 
 		template<typename TNotify>
@@ -128,6 +129,12 @@ namespace qm_race_demo
 		}
 
 	public:
+		struct CStopResult
+		{
+			bool m_Stopped;
+			bool m_ValidRecording;
+		};
+
 		enum class EOutcome
 		{
 			IDLE,
@@ -156,6 +163,7 @@ namespace qm_race_demo
 			m_Request.m_Time = Time;
 			m_NextAttempt = std::chrono::nanoseconds(0);
 			m_ReportedFailure = false;
+			m_InvalidRecording = false;
 			m_Pending = true;
 			return true;
 		}
@@ -178,7 +186,9 @@ namespace qm_race_demo
 			const CRequest Request = m_Request;
 			try
 			{
-				if(!Stop())
+				const CStopResult StopResult = Stop();
+				m_InvalidRecording |= !StopResult.m_ValidRecording;
+				if(!StopResult.m_Stopped)
 				{
 					ReportOnce(Notify, false);
 					return EOutcome::RETRY;
@@ -193,6 +203,12 @@ namespace qm_race_demo
 					}
 					m_Pending = false;
 					return EOutcome::DISCARDED;
+				}
+				// 失败状态属于这份录像，后续回调或新连接不能把它恢复为可发布状态。
+				if(m_InvalidRecording)
+				{
+					ReportOnce(Notify, false);
+					return EOutcome::RETRY;
 				}
 
 				char aDirectory[IO_MAX_PATH_LENGTH];

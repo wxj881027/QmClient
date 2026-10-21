@@ -5,6 +5,7 @@
 #include <base/log.h>
 #include <base/system.h>
 
+#include <engine/demo.h>
 #include <engine/shared/config.h>
 #include <engine/storage.h>
 
@@ -50,8 +51,10 @@ bool CRaceDemo::StartRecord() noexcept
 			return false;
 		}
 		str_copy(m_aTmpFilename, aFilename);
+		str_copy(m_aCaptureMap, Client()->GetCurrentMap());
+		m_pRecorder = Client()->DemoRecorder(RECORDER_RACE);
 		Client()->RaceRecord_Start(m_aTmpFilename);
-		if(!Client()->RaceRecord_IsRecording())
+		if(!m_pRecorder->IsRecording())
 		{
 			StopRecord(0);
 			return false;
@@ -164,7 +167,7 @@ void CRaceDemo::OnMessage(int MsgType, void *pRawMsg)
 	if(MsgType == NETMSGTYPE_SV_KILLMSG)
 	{
 		CNetMsg_Sv_KillMsg *pMsg = (CNetMsg_Sv_KillMsg *)pRawMsg;
-		if(pMsg->m_Victim == GameClient()->m_Snap.m_LocalClientId && Client()->RaceRecord_IsRecording())
+		if(pMsg->m_Victim == GameClient()->m_Snap.m_LocalClientId && m_pRecorder && m_pRecorder->IsRecording())
 			StopRecord(m_Time);
 	}
 	else if(MsgType == NETMSGTYPE_SV_KILLMSGTEAM)
@@ -172,7 +175,7 @@ void CRaceDemo::OnMessage(int MsgType, void *pRawMsg)
 		CNetMsg_Sv_KillMsgTeam *pMsg = (CNetMsg_Sv_KillMsgTeam *)pRawMsg;
 		for(int i = 0; i < MAX_CLIENTS; i++)
 		{
-			if(GameClient()->m_Teams.Team(i) == pMsg->m_Team && i == GameClient()->m_Snap.m_LocalClientId && Client()->RaceRecord_IsRecording())
+			if(GameClient()->m_Teams.Team(i) == pMsg->m_Team && i == GameClient()->m_Snap.m_LocalClientId && m_pRecorder && m_pRecorder->IsRecording())
 				StopRecord(m_Time);
 		}
 	}
@@ -237,8 +240,11 @@ void CRaceDemo::FinishPending(bool Force) noexcept
 	const auto StartedAt = time_get_nanoseconds();
 	qm_race_demo::CStorageOperations Operations(*Storage());
 	const auto Stop = [this]() {
-		GameClient()->StopRaceRecordIfRecording();
-		return !Client()->RaceRecord_IsRecording();
+		if(!m_pRecorder)
+			return qm_race_demo::CFinalizer::CStopResult{true, false};
+		if(m_pRecorder->IsRecording())
+			m_pRecorder->Stop(IDemoRecorder::EStopMode::KEEP_FILE);
+		return qm_race_demo::CFinalizer::CStopResult{!m_pRecorder->IsRecording(), !m_pRecorder->HasWriteError()};
 	};
 	const auto Progress = [this, StartedAt]() {
 		if(time_get_nanoseconds() - StartedAt > 500ms)
@@ -246,6 +252,8 @@ void CRaceDemo::FinishPending(bool Force) noexcept
 	};
 	const auto Notify = [this](bool AfterCommit) { ReportSaveFailure(AfterCommit); };
 	m_Finalizer.Try(StartedAt, Operations, Stop, Progress, Notify, Force);
+	if(!m_Finalizer.Pending())
+		m_pRecorder = nullptr;
 }
 
 void CRaceDemo::StopRecord(int Time, bool Force) noexcept
@@ -258,7 +266,7 @@ void CRaceDemo::StopRecord(int Time, bool Force) noexcept
 			const char *pMap = "";
 			if(Time > 0)
 			{
-				pMap = Client()->GetCurrentMap();
+				pMap = m_aCaptureMap;
 				str_copy(aPlayerName, Client()->PlayerName());
 				str_sanitize_filename(aPlayerName);
 			}

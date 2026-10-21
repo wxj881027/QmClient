@@ -6,6 +6,8 @@
 #include <game/client/component.h>
 #include <game/client/components/qmclient/race_demo_storage.h>
 
+class IDemoRecorder;
+
 class CRaceDemo : public CComponent
 {
 	enum
@@ -20,6 +22,8 @@ class CRaceDemo : public CComponent
 	static const char *ms_pRaceDemoDir;
 
 	char m_aTmpFilename[IO_MAX_PATH_LENGTH];
+	char m_aCaptureMap[IO_MAX_PATH_LENGTH] = "";
+	IDemoRecorder *m_pRecorder = nullptr;
 
 	int m_RaceState;
 	int m_RaceStartTick;
