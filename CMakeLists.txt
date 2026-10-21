@@ -5230,10 +5230,12 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_chat_export_test.cpp
     src/test/unit/qmclient/client/qm_chat_log_jobs_test.cpp
     src/test/test.cpp
+    src/test/support/qm_test_terminate_diagnostics.cpp
     src/test/test.h
     src/test/unit/client/theme_scan_test.cpp
     src/test/unit/base/thread_test.cpp
     src/test/unit/base/thread_startup_test.cpp
+    src/test/integration/base/qm_test_terminate_diagnostics_test.cpp
     src/test/unit/base/time_test.cpp
     src/test/unit/base/timestamp_test.cpp
     src/test/integration/qmclient/translate/translate_backend_test.cpp
@@ -5588,6 +5590,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/QmUi/UiDiscreteSlider.cpp
       src/game/client/QmUi/UiDiscreteSliderLogic.cpp
       src/test/test.cpp
+      src/test/support/qm_test_terminate_diagnostics.cpp
       src/test/support/qm_open_link_probe.cpp
       src/test/support/qm_popup_tooltip_boundary.cpp
       src/test/support/qm_exit_process_probe.cpp
