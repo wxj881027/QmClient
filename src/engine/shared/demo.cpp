@@ -18,6 +18,7 @@
 #include "snapshot.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <memory>
 #include <utility>
 
@@ -612,7 +613,21 @@ CDemoPlayer::CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapsh
 	m_UpdateIntraTimesFunc = UpdateIntraTimesFunc;
 }
 
-CDemoPlayer::CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo)
+unsigned char *CDemoPlayer::CMapDataOperations::Allocate(unsigned Size) noexcept { return static_cast<unsigned char *>(std::malloc(Size)); }
+void CDemoPlayer::CMapDataOperations::Free(unsigned char *pData) noexcept { std::free(pData); }
+int64_t CDemoPlayer::CMapDataOperations::Tell(IOHANDLE File) noexcept { return io_tell(File); }
+int CDemoPlayer::CMapDataOperations::Seek(IOHANDLE File, int64_t Offset) noexcept { return io_seek(File, Offset, IOSEEK_START); }
+unsigned CDemoPlayer::CMapDataOperations::Read(IOHANDLE File, void *pData, unsigned Size) noexcept { return io_read(File, pData, Size); }
+int CDemoPlayer::CMapDataOperations::Error(IOHANDLE File) noexcept { return io_error(File); }
+
+CDemoPlayer::CMapDataOperations &CDemoPlayer::MapDataOperations()
+{
+	static CMapDataOperations s_Operations;
+	return m_pMapDataOperations ? *m_pMapDataOperations : s_Operations;
+}
+
+CDemoPlayer::CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, CMapDataOperations *pMapDataOperations) :
+	m_pMapDataOperations(pMapDataOperations)
 {
 	Construct(pSnapshotDelta, pSnapshotDeltaSixup, UseVideo);
 }
@@ -1013,20 +1028,28 @@ int CDemoPlayer::Load(class IStorage *pStorage, class IConsole *pConsole, const 
 
 unsigned char *CDemoPlayer::GetMapData(class IStorage *pStorage)
 {
-	if(!m_MapInfo.m_Size)
+	if(!m_File || !m_MapInfo.m_Size)
 		return nullptr;
 
-	const int64_t CurSeek = io_tell(m_File);
-	if(CurSeek < 0 || io_seek(m_File, m_MapOffset, IOSEEK_START) != 0)
+	CMapDataOperations &Operations = MapDataOperations();
+	const int64_t CurSeek = Operations.Tell(m_File);
+	if(CurSeek < 0)
 		return nullptr;
-	unsigned char *pMapData = (unsigned char *)malloc(m_MapInfo.m_Size);
-	if(io_read(m_File, pMapData, m_MapInfo.m_Size) != m_MapInfo.m_Size ||
-		io_seek(m_File, CurSeek, IOSEEK_START) != 0)
+	const auto FreeMap = [&Operations](unsigned char *pData) noexcept { Operations.Free(pData); };
+	std::unique_ptr<unsigned char, decltype(FreeMap)> pMapData(Operations.Allocate(m_MapInfo.m_Size), FreeMap);
+	// 分配失败时尚未移动借用游标，也不能把空缓冲交给 io_read。
+	if(!pMapData)
+		return nullptr;
+	bool ReadComplete = false;
+	if(Operations.Seek(m_File, m_MapOffset) == 0)
+		ReadComplete = Operations.Read(m_File, pMapData.get(), m_MapInfo.m_Size) == m_MapInfo.m_Size && Operations.Error(m_File) == 0;
+	// 短读和初次定位失败同样必须尝试恢复，不能让 || 短路跳过恢复。
+	if(Operations.Seek(m_File, CurSeek) != 0)
 	{
-		free(pMapData);
+		Stop("Error restoring demo position after reading map data");
 		return nullptr;
 	}
-	return pMapData;
+	return ReadComplete ? pMapData.release() : nullptr;
 }
 
 bool CDemoPlayer::ExtractMap(class IStorage *pStorage)
@@ -1564,12 +1587,13 @@ namespace
 
 } // namespace
 
-void CDemoEditor::Init(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, class IConsole *pConsole, class IStorage *pStorage)
+void CDemoEditor::Init(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, class IConsole *pConsole, class IStorage *pStorage, CDemoPlayer::CMapDataOperations *pMapDataOperations)
 {
 	m_pSnapshotDelta = pSnapshotDelta;
 	m_pSnapshotDeltaSixup = pSnapshotDeltaSixup;
 	m_pConsole = pConsole;
 	m_pStorage = pStorage;
+	m_pMapDataOperations = pMapDataOperations;
 }
 
 bool CDemoEditor::Slice(const char *pDemo, const char *pDst, int StartTick, int EndTick, DEMOFUNC_FILTER pfnFilter, void *pUser)
@@ -1579,7 +1603,7 @@ bool CDemoEditor::Slice(const char *pDemo, const char *pDst, int StartTick, int 
 
 bool CDemoEditor::Slice(const char *pDemo, const char *pDst, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pfnFilter, void *pUser)
 {
-	CDemoPlayer DemoPlayer(m_pSnapshotDelta, m_pSnapshotDeltaSixup, false);
+	CDemoPlayer DemoPlayer(m_pSnapshotDelta, m_pSnapshotDeltaSixup, false, m_pMapDataOperations);
 	if(DemoPlayer.Load(m_pStorage, m_pConsole, pDemo, IStorage::TYPE_ALL_OR_ABSOLUTE) == -1)
 		return false;
 
@@ -1596,12 +1620,18 @@ bool CDemoEditor::Slice(const char *pDemo, const char *pDst, const std::vector<S
 	}
 	if(!Sha256.has_value())
 	{
+		DemoPlayer.Stop();
 		log_error_color(DEMO_PRINT_COLOR, "demo/slice", "Failed to start demo slicing because map SHA256 could not be determined.");
 		return false;
 	}
 
 	CDemoRecorder DemoRecorder(m_pSnapshotDelta);
 	unsigned char *pMapData = DemoPlayer.GetMapData(m_pStorage);
+	if(pMapInfo->m_Size != 0 && !pMapData)
+	{
+		DemoPlayer.Stop();
+		return false;
+	}
 	const int Result = DemoRecorder.Start(m_pStorage, m_pConsole, pDst, pInfo->m_Header.m_aNetversion, pMapInfo->m_aName, Sha256.value(), pMapInfo->m_Crc, pInfo->m_Header.m_aType, pMapInfo->m_Size, pMapData, nullptr, pfnFilter, pUser) == -1;
 	free(pMapData);
 	if(Result != 0)

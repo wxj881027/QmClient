@@ -4777,6 +4777,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/contract/base/ddnet_19_9_sync_contract_test.cpp
     src/test/unit/engine/demo_player_test.cpp
     src/test/integration/engine/demo_recorder_io_test.cpp
+    src/test/integration/engine/demo_map_read_test.cpp
     src/test/unit/engine/video_frame_capture_test.cpp
     src/test/unit/engine/editor_test.cpp
     src/test/unit/client/editor_collab_camera_test.cpp

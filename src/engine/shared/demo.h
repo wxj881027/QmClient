@@ -94,6 +94,19 @@ public:
 class CDemoPlayer : public IDemoPlayer
 {
 public:
+	// 借用操作对象；成功返回的地图缓冲须与 free 兼容，所有权交给调用方。
+	class CMapDataOperations
+	{
+	public:
+		virtual ~CMapDataOperations() = default;
+		virtual unsigned char *Allocate(unsigned Size) noexcept;
+		virtual void Free(unsigned char *pData) noexcept;
+		virtual int64_t Tell(IOHANDLE File) noexcept;
+		virtual int Seek(IOHANDLE File, int64_t Offset) noexcept;
+		virtual unsigned Read(IOHANDLE File, void *pData, unsigned Size) noexcept;
+		virtual int Error(IOHANDLE File) noexcept;
+	};
+
 	class IListener
 	{
 	public:
@@ -128,6 +141,9 @@ public:
 
 private:
 	IListener *m_pListener;
+	// 操作对象须覆盖播放器或同步裁剪的使用期；nullptr 使用默认实现。
+	CMapDataOperations *m_pMapDataOperations = nullptr;
+	CMapDataOperations &MapDataOperations();
 
 	TUpdateIntraTimesFunc m_UpdateIntraTimesFunc;
 
@@ -197,7 +213,7 @@ private:
 	void Construct(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo);
 
 public:
-	CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo);
+	CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, CMapDataOperations *pMapDataOperations = nullptr);
 	CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, TUpdateIntraTimesFunc &&UpdateIntraTimesFunc);
 	~CDemoPlayer() override;
 
@@ -237,9 +253,10 @@ class CDemoEditor : public IDemoEditor
 	IStorage *m_pStorage;
 	CSnapshotDelta *m_pSnapshotDelta;
 	CSnapshotDelta *m_pSnapshotDeltaSixup;
+	CDemoPlayer::CMapDataOperations *m_pMapDataOperations = nullptr;
 
 public:
-	virtual void Init(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, class IConsole *pConsole, class IStorage *pStorage);
+	virtual void Init(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, class IConsole *pConsole, class IStorage *pStorage, CDemoPlayer::CMapDataOperations *pMapDataOperations = nullptr);
 	bool Slice(const char *pDemo, const char *pDst, int StartTick, int EndTick, DEMOFUNC_FILTER pfnFilter, void *pUser) override;
 	bool Slice(const char *pDemo, const char *pDst, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pfnFilter, void *pUser) override;
 };
