@@ -1249,8 +1249,7 @@ void CRClientVoice::ResetTransmitState(bool ClearQueuedCapture) NO_THREAD_SAFETY
 	UpdateMicLevel(0.0f);
 	// Reset transmit-side DSP state. Mirrored in Shutdown() for full cleanup.
 	m_AgcGain = 1.0f;
-	m_VadActive = false;
-	m_VadReleaseDeadline = 0;
+	m_Vad.Reset();
 	m_PttReleaseDeadline.store(0);
 	m_TxWasActive = false;
 	if(ClearQueuedCapture && m_pCaptureStream)
@@ -1378,11 +1377,7 @@ void CRClientVoice::ProcessCapture() NO_THREAD_SAFETY_ANALYSIS
 
 	const int64_t Now = time_get();
 	const bool UseVad = Config.m_QmVoiceVadEnable != 0;
-	if(!UseVad)
-	{
-		m_VadActive = false;
-		m_VadReleaseDeadline = 0;
-	}
+	m_Vad.PrepareUpdate(UseVad, Now);
 	int64_t ReleaseDeadline = 0;
 	bool PttHeld = false;
 	if(!UseVad)
@@ -1392,14 +1387,9 @@ void CRClientVoice::ProcessCapture() NO_THREAD_SAFETY_ANALYSIS
 		if(TestLocal)
 			PttHeld = true;
 	}
-	else if(m_VadActive && m_VadReleaseDeadline != 0 && Now >= m_VadReleaseDeadline)
-	{
-		m_VadActive = false;
-		m_VadReleaseDeadline = 0;
-	}
 	const bool TokenChanged = Config.m_QmVoiceTokenHash != m_LastTokenHashSent;
 	const bool NeedKeepalive = m_LastKeepalive == 0 || Now - m_LastKeepalive > time_freq() * 2;
-	const bool TxActiveSnapshot = UseVad ? m_VadActive.load() : PttHeld;
+	const bool TxActiveSnapshot = UseVad ? m_Vad.IsActive() : PttHeld;
 	const uint8_t ProtocolVersion = VoiceProtocolVersion(Config);
 	uint8_t TxFlags = UseVad ? VOICE_FLAG_VAD : 0;
 	if(TestMode == 2)
@@ -1515,27 +1505,12 @@ void CRClientVoice::ProcessCapture() NO_THREAD_SAFETY_ANALYSIS
 
 		if(UseVad)
 		{
-			const bool Trigger = VadThreshold <= 0.0f || Peak >= VadThreshold;
+			const bool Trigger = CVoiceVadState::ShouldActivate(Peak, VadThreshold);
 			const int64_t FrameNow = time_get();
-			if(Trigger)
-			{
-				m_VadActive = true;
-				if(VadReleaseTicks > 0)
-					m_VadReleaseDeadline = FrameNow + VadReleaseTicks;
-				else
-					m_VadReleaseDeadline = 0;
-			}
-			else if(m_VadActive)
-			{
-				if(m_VadReleaseDeadline == 0 || FrameNow >= m_VadReleaseDeadline)
-				{
-					m_VadActive = false;
-					m_VadReleaseDeadline = 0;
-				}
-			}
+			m_Vad.UpdateFrame(Trigger, FrameNow, VadReleaseTicks);
 		}
 
-		const bool TxActive = UseVad ? m_VadActive.load() : PttHeld;
+		const bool TxActive = UseVad ? m_Vad.IsActive() : PttHeld;
 		if(!TxActive)
 		{
 			m_TxWasActive = false;

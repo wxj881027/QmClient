@@ -4,6 +4,7 @@
 
 #include "voice_audio_retry.h"
 #include "voice_utils.h"
+#include "voice_vad_state.h"
 #include "voice_worker.h"
 
 #include <base/lock.h>
@@ -231,8 +232,7 @@ class CRClientVoice
 
 	std::atomic<bool> m_PttActive = false;
 	std::atomic<int64_t> m_PttReleaseDeadline = 0;
-	std::atomic<bool> m_VadActive = false;
-	std::atomic<int64_t> m_VadReleaseDeadline = 0;
+	CVoiceVadState m_Vad;
 	std::atomic<bool> m_TxWasActive = false;
 	std::atomic<uint16_t> m_Sequence = 0;
 	std::atomic<uint32_t> m_ContextHash = 0;
