@@ -261,3 +261,102 @@ TEST(RingBufferAllocation, StaticBufferRetainsResetAndReuseBehavior)
 	pRecord->m_Value = 101;
 	EXPECT_EQ(Buffer.First()->m_Value, 101);
 }
+
+TEST(RingBufferIteration, SingleFullBlockIsBothFirstAndLast)
+{
+	CBuffer Buffer(2 * CRingBufferBase::ITEM_SIZE);
+	SRecord *pRecord = Buffer.Allocate(sizeof(SRecord));
+	ASSERT_NE(pRecord, nullptr);
+	pRecord->m_Value = 17;
+	EXPECT_EQ(Buffer.First(), pRecord);
+	EXPECT_EQ(Buffer.Last(), pRecord);
+	EXPECT_EQ(Buffer.Next(pRecord), nullptr);
+	EXPECT_EQ(Buffer.Prev(pRecord), nullptr);
+	EXPECT_EQ(Buffer.PopFirst(), 1);
+	EXPECT_EQ(Buffer.First(), nullptr);
+	EXPECT_EQ(Buffer.Last(), nullptr);
+}
+
+TEST(RingBufferIteration, FullBufferReverseIterationIncludesOldestRecord)
+{
+	CBuffer Buffer(6 * CRingBufferBase::ITEM_SIZE);
+	for(const int Value : {1, 2, 3})
+	{
+		SRecord *pRecord = Buffer.Allocate(sizeof(SRecord));
+		ASSERT_NE(pRecord, nullptr);
+		pRecord->m_Value = Value;
+	}
+	EXPECT_EQ(Buffer.Allocate(sizeof(SRecord)), nullptr);
+	std::vector<int> vValues;
+	for(SRecord *pRecord = Buffer.Last(); pRecord != nullptr; pRecord = Buffer.Prev(pRecord))
+	{
+		ASSERT_LT(vValues.size(), 3U);
+		vValues.push_back(pRecord->m_Value);
+	}
+	EXPECT_EQ(vValues, (std::vector<int>{3, 2, 1}));
+}
+
+TEST(RingBufferIteration, SingleBlockRecyclingKeepsTheLatestRecordVisible)
+{
+	CBuffer Buffer(2 * CRingBufferBase::ITEM_SIZE, CRingBufferBase::FLAG_RECYCLE);
+	std::vector<int> vRetired;
+	Buffer.SetPopCallback([&](SRecord *pRecord) { vRetired.push_back(pRecord->m_Value); });
+	for(int Value = 1; Value <= 8; ++Value)
+	{
+		SCOPED_TRACE(Value);
+		SRecord *pRecord = Buffer.Allocate(sizeof(SRecord));
+		ASSERT_NE(pRecord, nullptr);
+		pRecord->m_Value = Value;
+		EXPECT_EQ(Buffer.First(), pRecord);
+		EXPECT_EQ(Buffer.Last(), pRecord);
+		EXPECT_EQ(Buffer.Prev(pRecord), nullptr);
+		EXPECT_EQ(Buffer.Next(pRecord), nullptr);
+	}
+	EXPECT_EQ(vRetired, (std::vector<int>{1, 2, 3, 4, 5, 6, 7}));
+}
+
+TEST(RingBufferIteration, ReverseIterationAfterPopKeepsRemainingRecords)
+{
+	CBuffer Buffer(6 * CRingBufferBase::ITEM_SIZE);
+	for(const int Value : {1, 2, 3})
+	{
+		SRecord *pRecord = Buffer.Allocate(sizeof(SRecord));
+		ASSERT_NE(pRecord, nullptr);
+		pRecord->m_Value = Value;
+	}
+	ASSERT_EQ(Buffer.PopFirst(), 1);
+	std::vector<int> vValues;
+	for(SRecord *pRecord = Buffer.Last(); pRecord != nullptr; pRecord = Buffer.Prev(pRecord))
+	{
+		ASSERT_LT(vValues.size(), 2U);
+		vValues.push_back(pRecord->m_Value);
+	}
+	EXPECT_EQ(vValues, (std::vector<int>{3, 2}));
+	ASSERT_NE(Buffer.First(), nullptr);
+	EXPECT_EQ(Buffer.First()->m_Value, 2);
+}
+
+TEST(RingBufferIteration, RecycledFullBufferTraversesBothDirectionsAfterWrap)
+{
+	CBuffer Buffer(6 * CRingBufferBase::ITEM_SIZE, CRingBufferBase::FLAG_RECYCLE);
+	for(const int Value : {1, 2, 3, 4, 5})
+	{
+		SRecord *pRecord = Buffer.Allocate(sizeof(SRecord));
+		ASSERT_NE(pRecord, nullptr);
+		pRecord->m_Value = Value;
+	}
+	std::vector<int> vForward;
+	for(SRecord *pRecord = Buffer.First(); pRecord != nullptr; pRecord = Buffer.Next(pRecord))
+	{
+		ASSERT_LT(vForward.size(), 3U);
+		vForward.push_back(pRecord->m_Value);
+	}
+	EXPECT_EQ(vForward, (std::vector<int>{3, 4, 5}));
+	std::vector<int> vReverse;
+	for(SRecord *pRecord = Buffer.Last(); pRecord != nullptr; pRecord = Buffer.Prev(pRecord))
+	{
+		ASSERT_LT(vReverse.size(), 3U);
+		vReverse.push_back(pRecord->m_Value);
+	}
+	EXPECT_EQ(vReverse, (std::vector<int>{5, 4, 3}));
+}

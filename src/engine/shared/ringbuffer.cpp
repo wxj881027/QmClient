@@ -175,15 +175,16 @@ void *CRingBufferBase::Prev(void *pCurrent)
 	if(m_pBuffer == nullptr || pCurrent == nullptr)
 		return nullptr;
 	CItem *pItem = ((CItem *)pCurrent) - 1;
+	if(pItem == m_pConsume)
+		return nullptr;
 
-	while(true)
+	do
 	{
 		pItem = PrevBlock(pItem);
-		if(pItem == m_pProduce)
-			return nullptr;
 		if(!pItem->m_Free)
 			return pItem + 1;
-	}
+	} while(pItem != m_pConsume);
+	return nullptr;
 }
 
 void *CRingBufferBase::Next(void *pCurrent)
@@ -211,7 +212,15 @@ void *CRingBufferBase::First()
 
 void *CRingBufferBase::Last()
 {
-	if(m_pProduce == nullptr)
+	if(m_pConsume == nullptr || m_pConsume->m_Free)
 		return nullptr;
-	return Prev(m_pProduce + 1);
+	// 满缓冲的生产游标可能仍指向有效记录，不能将其当作反向遍历的终点。
+	CItem *pItem = m_pProduce;
+	do
+	{
+		pItem = PrevBlock(pItem);
+		if(!pItem->m_Free)
+			return pItem + 1;
+	} while(pItem != m_pProduce);
+	return nullptr;
 }
