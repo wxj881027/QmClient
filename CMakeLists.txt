@@ -4750,6 +4750,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/blocklist_driver_test.cpp
     src/test/unit/engine/game_ping_test.cpp
     src/test/unit/engine/ringbuffer_test.cpp
+    src/test/unit/engine/favorites_group_test.cpp
     src/test/integration/client/graph_allocation_test.cpp
     src/test/unit/base/bytes_be_test.cpp
     src/test/unit/engine/chunk_header_test.cpp
