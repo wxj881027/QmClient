@@ -92,4 +92,26 @@ TEST(MacTestTerminateDeathTest, WorkerExceptionProducesTheTerminatingThreadStack
 		},
 		::testing::KilledBySignal(SIGABRT), "QmClient test terminate stack:(.|\n)*std::bad_alloc");
 }
+
+TEST(MacTestTerminateDeathTest, LoadedRuntimeMetadataStillDelegatesToThePreviousHandler)
+{
+	ASSERT_EXIT(
+		{
+			alarm(5);
+			std::set_terminate([] { std::_Exit(73); });
+			QmInstallMacTestTerminateDiagnostics();
+			std::terminate();
+		},
+		::testing::ExitedWithCode(73), "QmClient test unwind provider: __cxa_throw(.|\n)*QmClient test unwind frame: 0(.|\n)*encoding=0x[0-9a-f]+ lsda=0x[0-9a-f]+");
+}
+
+TEST(MacTestTerminateDeathTest, ThrowingThreadReportsUnwindMetadataBeforeTheOriginalException)
+{
+	ASSERT_EXIT(
+		{
+			alarm(5);
+			FailInsideNoexceptBoundary();
+		},
+		::testing::KilledBySignal(SIGABRT), "QmClient test unwind frame:(.|\n)*handler=0x[0-9a-f]+(.|\n)*std::bad_alloc");
+}
 #endif
