@@ -6450,7 +6450,19 @@ int main(int argc, const char **argv)
 	}
 	gs_AndroidStarted = true;
 #elif defined(CONF_FAMILY_WINDOWS)
-	CWindowsComLifecycle WindowsComLifecycle(true);
+	CWindowsComLifecycle WindowsComLifecycle(true, CWindowsComLifecycle::EInitMode::CHECKED);
+	if(!WindowsComLifecycle.IsInitialized())
+	{
+		try
+		{
+			log_error("client", "Failed to initialize Windows COM.");
+		}
+		catch(...)
+		{
+			// 诊断失败不影响失败退出。
+		}
+		return -1;
+	}
 #endif
 	CCmdlineFix CmdlineFix(&argc, &argv);
 

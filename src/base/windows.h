@@ -86,10 +86,20 @@ std::optional<std::string> windows_wide_to_utf8_bounded(const wchar_t *wide_str,
  */
 class CWindowsComLifecycle
 {
+	bool m_Initialized;
+
 public:
-	CWindowsComLifecycle(bool HasWindow);
+	enum class EInitMode
+	{
+		REQUIRED,
+		CHECKED,
+	};
+	// CHECKED 由调用方处理失败；S_FALSE 同样持有一次需要释放的初始化引用。
+	CWindowsComLifecycle(bool HasWindow, EInitMode InitMode = EInitMode::REQUIRED);
 	~CWindowsComLifecycle();
 	CWindowsComLifecycle(const CWindowsComLifecycle &) = delete;
+	CWindowsComLifecycle &operator=(const CWindowsComLifecycle &) = delete;
+	[[nodiscard]] bool IsInitialized() const noexcept { return m_Initialized; }
 };
 
 /**

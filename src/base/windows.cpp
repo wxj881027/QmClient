@@ -117,15 +117,17 @@ std::optional<std::string> windows_wide_to_utf8_bounded(const wchar_t *wide_str,
 	return String;
 }
 // See https://learn.microsoft.com/en-us/windows/win32/learnwin32/initializing-the-com-library
-CWindowsComLifecycle::CWindowsComLifecycle(bool HasWindow)
+CWindowsComLifecycle::CWindowsComLifecycle(bool HasWindow, EInitMode InitMode)
 {
-	HRESULT result = CoInitializeEx(nullptr, (HasWindow ? COINIT_APARTMENTTHREADED : COINIT_MULTITHREADED) | COINIT_DISABLE_OLE1DDE);
-	dbg_assert(result != S_FALSE, "COM library already initialized on this thread");
-	dbg_assert(result == S_OK, "COM library initialization failed");
+	const HRESULT Result = CoInitializeEx(nullptr, (HasWindow ? COINIT_APARTMENTTHREADED : COINIT_MULTITHREADED) | COINIT_DISABLE_OLE1DDE);
+	m_Initialized = SUCCEEDED(Result);
+	if(InitMode == EInitMode::REQUIRED)
+		dbg_assert(m_Initialized, "COM library initialization failed");
 }
 CWindowsComLifecycle::~CWindowsComLifecycle()
 {
-	CoUninitialize();
+	if(m_Initialized)
+		CoUninitialize();
 }
 
 static void windows_print_error(const char *system, const char *prefix, HRESULT error)

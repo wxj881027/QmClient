@@ -2741,6 +2741,7 @@ set_src(BASE GLOB_RECURSE src/base
   system.h
   thread.cpp
   thread.h
+  thread_startup.h
   time.cpp
   time.h
   types.h
@@ -5188,6 +5189,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/dummy_miniview_render_test.cpp
     src/test/unit/qmclient/client/qm_quad_rotation_cache_test.cpp
     src/test/unit/base/windows_test.cpp
+    src/test/integration/base/windows_com_lifecycle_test.cpp
     src/test/unit/engine/netobj_secure_unpack_test.cpp
     src/test/unit/engine/snapshot_test.cpp
     src/test/contract/base/steam_presence_contract_test.cpp
@@ -5224,6 +5226,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/test.h
     src/test/unit/client/theme_scan_test.cpp
     src/test/unit/base/thread_test.cpp
+    src/test/unit/base/thread_startup_test.cpp
     src/test/unit/base/time_test.cpp
     src/test/unit/base/timestamp_test.cpp
     src/test/integration/qmclient/translate/translate_backend_test.cpp
