@@ -114,46 +114,26 @@ void CMapSounds::OnMapLoad()
 		}
 		ShowWarning = ShowWarning || m_aSounds[i] == -1;
 	}
+	if(!PrepareMapSoundSourceQueue(*Layers(), std::span<const int>(m_aSounds, m_Count), m_vSourceQueue))
+	{
+		ShowWarning = true;
+		// 分配失败后的诊断也可能分配，不能再次中断地图加载。
+		try
+		{
+			log_error("mapsounds", "Failed to prepare map sound sources.");
+		}
+		catch(...)
+		{
+		}
+	}
 	if(ShowWarning)
 	{
-		Client()->AddWarning(SWarning(Localize("Some map sounds could not be loaded. Check the local console for details.")));
-	}
-
-	// enqueue sound sources
-	IMap *pLayerMap = Layers()->Map();
-	int LayersStart, LayersNum;
-	pLayerMap->GetType(MAPITEMTYPE_LAYER, &LayersStart, &LayersNum);
-	for(int GroupIndex = 0; GroupIndex < Layers()->NumGroups(); GroupIndex++)
-	{
-		const CMapItemGroup *pGroup = Layers()->GetGroup(GroupIndex);
-		if(!pGroup)
-			continue;
-
-		for(int LayerIndex = 0; LayerIndex < pGroup->m_NumLayers; LayerIndex++)
+		try
 		{
-			const CMapItemLayer *pLayer = Layers()->GetLayer(pGroup->m_StartLayer + LayerIndex);
-			if(!pLayer)
-				continue;
-			if(pLayer->m_Type != LAYERTYPE_SOUNDS)
-				continue;
-
-			const auto SoundLayer = MapRenderItems::ReadSoundLayer(*pLayerMap, LayersStart + pGroup->m_StartLayer + LayerIndex);
-			if(!SoundLayer || SoundLayer->m_Version < 1 || SoundLayer->m_Version > 2)
-				continue;
-			if(SoundLayer->m_Sound < 0 || SoundLayer->m_Sound >= m_Count || m_aSounds[SoundLayer->m_Sound] == -1)
-				continue;
-
-			const auto Sources = MapRenderItems::ReadDataItems<CSoundSource>(*pLayerMap, SoundLayer->m_Data,
-				SoundLayer->m_NumSources, MapRenderItems::EDataCountPolicy::ALLOW_PARTIAL);
-			for(size_t SourceIndex = 0; SourceIndex < Sources.size(); SourceIndex++)
-			{
-				CSourceQueueEntry Source;
-				Source.m_Sound = SoundLayer->m_Sound;
-				Source.m_HighDetail = pLayer->m_Flags & LAYERFLAG_DETAIL;
-				Source.m_pGroup = pGroup;
-				Source.m_pSource = &Sources[SourceIndex];
-				m_vSourceQueue.push_back(Source);
-			}
+			Client()->AddWarning(SWarning(Localize("Some map sounds could not be loaded. Check the local console for details.")));
+		}
+		catch(...)
+		{
 		}
 	}
 }

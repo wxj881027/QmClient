@@ -3437,6 +3437,7 @@ if(CLIENT)
     components/maplayers.h
     components/mapsounds.cpp
     components/mapsounds.h
+    components/map_sound_source_queue.h
     components/menu_background.cpp
     components/menu_background.h
     components/menus.cpp
@@ -4832,6 +4833,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/editor_map_automapper_test.cpp
     src/test/integration/client/editor_map_tile_data_test.cpp
     src/test/integration/client/editor_map_sounds_test.cpp
+    src/test/integration/client/map_sound_source_queue_test.cpp
     src/test/integration/client/map_envelope_items_test.cpp
     src/test/integration/client/editor_map_info_test.cpp
     src/test/integration/engine/datafile_string_processor_test.cpp
