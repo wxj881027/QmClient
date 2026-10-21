@@ -49,8 +49,7 @@ unsigned CSound::AdvanceVoice(CVoice &Voice, unsigned Frames)
 		}
 		else
 		{
-			Voice.m_pSample = nullptr;
-			Voice.m_Age++;
+			Voice.Release();
 		}
 	}
 
@@ -77,17 +76,16 @@ void CSound::Mix(short *pFinalOut, unsigned Frames)
 
 		const CSample *pSample = Voice.m_pSample;
 		const int Step = pSample->m_Channels; // setup input sources
-		short *pInL = &pSample->m_pData[Voice.m_Tick * Step];
-		short *pInR = &pSample->m_pData[Voice.m_Tick * Step + 1];
-
+		const int StartTick = Voice.m_Tick;
 		const unsigned End = AdvanceVoice(Voice, Frames);
+		if(End == 0)
+			continue;
+
+		const short *pInL = &pSample->m_pData[StartTick * Step];
+		const short *pInR = Step == 1 ? pInL : pInL + 1;
 
 		int VolumeR = round_truncate(Voice.m_pChannel->m_Vol * (Voice.m_Vol / 255.0f));
 		int VolumeL = VolumeR;
-
-		// check if we have a mono sound
-		if(pSample->m_Channels == 1)
-			pInR = pInL;
 
 		// volume calculation
 		if(Voice.m_Flags & ISound::FLAG_POS && Voice.m_pChannel->m_Pan)
@@ -164,10 +162,8 @@ void CSound::Mix(short *pFinalOut, unsigned Frames)
 		// process all frames
 		for(unsigned s = 0; s < End; s++)
 		{
-			*pOut++ += (*pInL) * VolumeL;
-			*pOut++ += (*pInR) * VolumeR;
-			pInL += Step;
-			pInR += Step;
+			*pOut++ += pInL[s * Step] * VolumeL;
+			*pOut++ += pInR[s * Step] * VolumeR;
 		}
 	}
 
@@ -854,7 +850,7 @@ void CSound::UnloadSample(int SampleId)
 		{
 			if(Voice.m_pSample == &Sample)
 			{
-				Voice.m_pSample = nullptr;
+				Voice.Release();
 			}
 		}
 
@@ -1132,7 +1128,7 @@ void CSound::Pause(int SampleId)
 		if(Voice.m_pSample == pSample)
 		{
 			Voice.m_pSample->m_PausedAt = Voice.m_Tick;
-			Voice.m_pSample = nullptr;
+			Voice.Release();
 		}
 	}
 }
@@ -1153,7 +1149,7 @@ void CSound::Stop(int SampleId)
 				Voice.m_pSample->m_PausedAt = Voice.m_Tick;
 			else
 				Voice.m_pSample->m_PausedAt = 0;
-			Voice.m_pSample = nullptr;
+			Voice.Release();
 		}
 	}
 }
@@ -1170,8 +1166,8 @@ void CSound::StopAll()
 				Voice.m_pSample->m_PausedAt = Voice.m_Tick;
 			else
 				Voice.m_pSample->m_PausedAt = 0;
+			Voice.Release();
 		}
-		Voice.m_pSample = nullptr;
 	}
 }
 
@@ -1186,8 +1182,7 @@ void CSound::StopVoice(CVoiceHandle Voice)
 	if(m_aVoices[VoiceId].m_Age != Voice.Age())
 		return;
 
-	m_aVoices[VoiceId].m_pSample = nullptr;
-	m_aVoices[VoiceId].m_Age++;
+	m_aVoices[VoiceId].Release();
 }
 
 bool CSound::IsPlaying(int SampleId)

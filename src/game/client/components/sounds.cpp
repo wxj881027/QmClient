@@ -116,8 +116,8 @@ void CSoundLoading::Run()
 {
 	for(int s = 0; s < g_pData->m_NumSounds; s++)
 	{
-		const char *pLoadingCaption = Localize("Loading DDNet Client");
-		const char *pLoadingContent = Localize("Loading sound files");
+		const char *pLoadingCaption = m_Render ? Localize("Loading DDNet Client") : nullptr;
+		const char *pLoadingContent = m_Render ? Localize("Loading sound files") : nullptr;
 
 		for(int i = 0; i < g_pData->m_aSounds[s].m_NumSounds; i++)
 		{
@@ -228,6 +228,7 @@ bool CSounds::Reload()
 	}
 
 	Sound()->StopAll();
+	GameClient()->m_MapSounds.StopAll();
 	ClearQueue();
 
 	for(int s = 0; s < g_pData->m_NumSounds; s++)
@@ -264,6 +265,7 @@ void CSounds::OnReset()
 	if(GameClient()->ClientStateAtLeastOnline())
 	{
 		Sound()->StopAll();
+		GameClient()->m_MapSounds.StopAll();
 		ClearQueue();
 	}
 }

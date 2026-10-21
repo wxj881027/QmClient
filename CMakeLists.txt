@@ -5424,7 +5424,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     list(APPEND TESTS
       src/test/unit/engine/input_sdl3_test.cpp
       src/test/integration/engine/audio_sdl3_test.cpp
+      src/test/unit/engine/sound_voice_handle_test.cpp
     )
+    list(APPEND TESTS_EXTRA src/engine/client/sound.cpp)
     if(VIDEORECORDER)
       list(APPEND TESTS
         src/test/integration/engine/audio_recording_routing_test.cpp
@@ -5458,7 +5460,19 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     target_include_directories(${TARGET_TESTRUNNER} SYSTEM PRIVATE ${FREETYPE_INCLUDE_DIRS})
   endif()
   if(CLIENT)
-    target_link_libraries(${TARGET_TESTRUNNER} ${SDL3_LIBRARIES})
+    target_link_libraries(${TARGET_TESTRUNNER}
+      ${SDL3_LIBRARIES}
+      ${WAVPACK_LIBRARIES}
+      ${OPUSFILE_LIBRARIES}
+      ${OPUS_LIBRARIES}
+      ${OGG_LIBRARIES}
+    )
+    target_include_directories(${TARGET_TESTRUNNER} SYSTEM PRIVATE
+      ${WAVPACK_INCLUDE_DIRS}
+      ${OPUSFILE_INCLUDE_DIRS}
+      ${OPUS_INCLUDE_DIRS}
+      ${OGG_INCLUDE_DIRS}
+    )
   endif()
   if(TARGET_OS STREQUAL "windows")
     target_link_libraries(${TARGET_TESTRUNNER} bcrypt winhttp ws2_32)
