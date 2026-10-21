@@ -4723,6 +4723,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/contract/qmclient/ui/qm_ui_presentation_contract_test.cpp
     src/test/unit/qmclient/ui/QmUiTokensTest.cpp
     src/test/unit/qmclient/ui/qm_ime_candidate_layout_test.cpp
+    src/test/unit/qmclient/ui/qm_ime_popup_snapshot_test.cpp
     src/test/unit/qmclient/ui/qm_input_motion_test.cpp
     src/test/unit/qmclient/ui/qm_color_gradient_test.cpp
     src/test/unit/qmclient/client/qm_chat_gradient_test.cpp
@@ -5605,6 +5606,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_background_controls_test.cpp
       src/test/integration/qmclient/ui/qm_navigation_selection_test.cpp
       src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp
+      src/test/integration/qmclient/ui/qm_ime_popup_snapshot_test.cpp
       src/test/integration/qmclient/ui/qm_tooltip_text_layout_test.cpp
       src/test/integration/qmclient/ui/qm_card_summary_layout_test.cpp
       src/test/integration/qmclient/ui/qm_secondary_panel_actions_test.cpp

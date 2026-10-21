@@ -267,7 +267,7 @@ namespace
 
 void CQmImeCandidatePopup::Reset()
 {
-	m_LastState = {};
+	m_Snapshot.Reset();
 	m_Presentation = {};
 	m_CandidateStart = 0;
 	m_WasVisible = false;
@@ -276,18 +276,19 @@ void CQmImeCandidatePopup::Reset()
 		m_PresenceGeneration = 1;
 }
 
-void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupState &State)
+void CQmImeCandidatePopup::Render(CGameClient *pGameClient, std::optional<SQmImePopupState> &&State)
 {
 	if(pGameClient == nullptr || pGameClient->Graphics() == nullptr || pGameClient->TextRender() == nullptr)
 		return;
 
-	const bool TargetVisible = HasPopupContent(State);
-	if(TargetVisible)
-		m_LastState = State;
+	const auto SnapshotResult = m_Snapshot.Update(std::move(State));
+	if(SnapshotResult == CQmImePopupSnapshot::EUpdateResult::UNAVAILABLE)
+		return;
+	const bool TargetVisible = SnapshotResult == CQmImePopupSnapshot::EUpdateResult::VISIBLE;
 	if(!TargetVisible && !m_WasVisible)
 		return;
 
-	const SQmImePopupState &DrawState = TargetVisible ? State : m_LastState;
+	const SQmImePopupState &DrawState = m_Snapshot.State();
 	if(!HasPopupContent(DrawState))
 		return;
 
