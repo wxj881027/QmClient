@@ -1015,10 +1015,11 @@ void CSound::SetVoiceTimeOffset(CVoiceHandle Voice, float TimeOffset)
 
 	// at least 200msec off, else depend on buffer size
 	float Threshold = std::max(0.2f * m_aVoices[VoiceId].m_pSample->m_Rate, (float)m_MaxFrames);
-	if(absolute(m_aVoices[VoiceId].m_Tick - Tick) > Threshold)
+	const int TickDistance = absolute(m_aVoices[VoiceId].m_Tick - Tick);
+	if(TickDistance > Threshold)
 	{
-		// take care of looping (modulo!)
-		if(!(IsLooping && (std::min(m_aVoices[VoiceId].m_Tick, Tick) + m_aVoices[VoiceId].m_pSample->m_NumFrames - std::max(m_aVoices[VoiceId].m_Tick, Tick)) <= Threshold))
+		// 先求合法帧位置的距离，避免先将当前位置与总帧数相加溢出。
+		if(!(IsLooping && (m_aVoices[VoiceId].m_pSample->m_NumFrames - TickDistance) <= Threshold))
 		{
 			m_aVoices[VoiceId].m_Tick = Tick;
 		}

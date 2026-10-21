@@ -44,6 +44,16 @@ public:
 		std::free(Sound.m_pMixBuffer);
 		Sound.m_pMixBuffer = nullptr;
 	}
+
+	static void PrepareTiming(CSound &Sound, int SampleId, ISound::CVoiceHandle Voice, int Frames, int Tick, int LoopStart)
+	{
+		const CLockScope LockScope(Sound.m_SoundLock);
+		// 时间同步只读元数据；这些用例不混音，不申请与逻辑帧数同规模的 PCM。
+		Sound.m_aSamples[SampleId].m_NumFrames = Frames;
+		Sound.m_aSamples[SampleId].m_Channels = 1;
+		Sound.m_aSamples[SampleId].m_LoopStart = LoopStart;
+		Sound.m_aVoices[Voice.Id()].m_Tick = Tick;
+	}
 };
 
 namespace
@@ -105,6 +115,13 @@ namespace
 		{
 			for(short Sample : Mix())
 				EXPECT_GT(Sample, 0);
+		}
+
+		void PrepareTiming(int Frames, int Tick, int Flags = ISound::FLAG_LOOP, int LoopStart = 0)
+		{
+			m_Old = m_Sound.Play(0, m_SampleId, Flags, 1.0f);
+			ASSERT_TRUE(m_Old.IsValid());
+			CSoundVoiceTestAccess::PrepareTiming(m_Sound, m_SampleId, m_Old, Frames, Tick, LoopStart);
 		}
 	};
 }
@@ -294,4 +311,71 @@ TEST_F(SoundVoiceHandle, LoopingSeekToEndResumesOnTheFollowingMix)
 	EXPECT_EQ(Mix(), (std::array<short, 8>{}));
 	EXPECT_TRUE(m_Sound.IsPlaying(m_SampleId));
 	ExpectAudible();
+}
+
+TEST_F(SoundVoiceHandle, TimeOffsetWithinThresholdKeepsTheCurrentTick)
+{
+	ASSERT_NO_FATAL_FAILURE(PrepareTiming(48000, 10000));
+	m_Sound.SetVoiceTimeOffset(m_Old, 0.25f);
+	EXPECT_FLOAT_EQ(m_Sound.GetSampleCurrentTime(m_SampleId), 10000.0f / 48000.0f);
+}
+
+TEST_F(SoundVoiceHandle, TimeOffsetExactlyAtThresholdKeepsTheCurrentTick)
+{
+	ASSERT_NO_FATAL_FAILURE(PrepareTiming(96000, 26400));
+	m_Sound.SetVoiceTimeOffset(m_Old, 0.75f);
+	EXPECT_FLOAT_EQ(m_Sound.GetSampleCurrentTime(m_SampleId), 26400.0f / 48000.0f);
+}
+
+TEST_F(SoundVoiceHandle, TimeOffsetBeyondThresholdMovesToTheRequestedTick)
+{
+	ASSERT_NO_FATAL_FAILURE(PrepareTiming(96000, 1000));
+	m_Sound.SetVoiceTimeOffset(m_Old, 1.0f);
+	EXPECT_FLOAT_EQ(m_Sound.GetSampleCurrentTime(m_SampleId), 1.0f);
+}
+
+TEST_F(SoundVoiceHandle, LoopingTimeOffsetNearWrapKeepsTheCurrentTick)
+{
+	ASSERT_NO_FATAL_FAILURE(PrepareTiming(48000, 47000));
+	m_Sound.SetVoiceTimeOffset(m_Old, 0.015625f);
+	EXPECT_FLOAT_EQ(m_Sound.GetSampleCurrentTime(m_SampleId), 47000.0f / 48000.0f);
+}
+
+TEST_F(SoundVoiceHandle, NonLoopingTimeOffsetNearWrapMovesToTheRequestedTick)
+{
+	ASSERT_NO_FATAL_FAILURE(PrepareTiming(48000, 47000, 0));
+	m_Sound.SetVoiceTimeOffset(m_Old, 0.015625f);
+	EXPECT_FLOAT_EQ(m_Sound.GetSampleCurrentTime(m_SampleId), 0.015625f);
+}
+
+TEST_F(SoundVoiceHandle, TimeOffsetAfterFirstPassWrapsInsideTheLoopSection)
+{
+	ASSERT_NO_FATAL_FAILURE(PrepareTiming(48000, 0, ISound::FLAG_LOOP, 12000));
+	m_Sound.SetVoiceTimeOffset(m_Old, 1.5f);
+	EXPECT_FLOAT_EQ(m_Sound.GetSampleCurrentTime(m_SampleId), 0.75f);
+}
+
+TEST_F(SoundVoiceHandle, LargeMonoFrameCountsSynchronizeWithoutSignedIntermediateOverflow)
+{
+	struct SCase
+	{
+		int m_Current;
+		float m_Offset;
+		int m_Expected;
+	};
+	for(const SCase &Case : {SCase{1500000000, 32768.0f, 1572864000}, SCase{1572864000, 31250.0f, 1500000000}})
+	{
+		SCOPED_TRACE(Case.m_Current);
+		ASSERT_NO_FATAL_FAILURE(PrepareTiming(1800000000, Case.m_Current));
+		m_Sound.SetVoiceTimeOffset(m_Old, Case.m_Offset);
+		EXPECT_FLOAT_EQ(m_Sound.GetSampleCurrentTime(m_SampleId), Case.m_Expected / 48000.0f);
+		m_Sound.StopVoice(m_Old);
+	}
+}
+
+TEST_F(SoundVoiceHandle, NonLoopingTimeOffsetAfterTheSampleClampsToTheEnd)
+{
+	ASSERT_NO_FATAL_FAILURE(PrepareTiming(48000, 0, 0));
+	m_Sound.SetVoiceTimeOffset(m_Old, 2.0f);
+	EXPECT_FLOAT_EQ(m_Sound.GetSampleCurrentTime(m_SampleId), 1.0f);
 }
