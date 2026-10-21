@@ -193,7 +193,7 @@ private:
 	public:
 		using value_type = T;
 		CKeyFrameMemory *m_pMemory;
-		explicit CKeyFrameAllocator(CKeyFrameMemory *pMemory = nullptr) noexcept :
+		explicit CKeyFrameAllocator(CKeyFrameMemory *pMemory) noexcept :
 			m_pMemory(pMemory) {}
 		template<typename U>
 		CKeyFrameAllocator(const CKeyFrameAllocator<U> &Other) noexcept :

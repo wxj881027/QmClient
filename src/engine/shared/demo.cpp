@@ -608,10 +608,9 @@ void CDemoPlayer::Construct(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSna
 	m_aErrorMessage[0] = '\0';
 }
 
-CDemoPlayer::CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, TUpdateIntraTimesFunc &&UpdateIntraTimesFunc)
+CDemoPlayer::CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, TUpdateIntraTimesFunc &&UpdateIntraTimesFunc) :
+	CDemoPlayer(pSnapshotDelta, pSnapshotDeltaSixup, UseVideo)
 {
-	Construct(pSnapshotDelta, pSnapshotDeltaSixup, UseVideo);
-
 	m_UpdateIntraTimesFunc = UpdateIntraTimesFunc;
 }
 
