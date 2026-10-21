@@ -2573,19 +2573,6 @@ void CTClient::CheckWaterFall()
 	}
 }
 
-static void BuildFriendNotifyKey(const char *pName, const char *pClan, bool IgnoreClan, std::string &OutKey)
-{
-	OutKey.clear();
-	if(pName)
-		OutKey.append(pName);
-	if(!IgnoreClan)
-	{
-		OutKey.push_back('\t');
-		if(pClan)
-			OutKey.append(pClan);
-	}
-}
-
 void CTClient::CheckFriendOnline()
 {
 	const int Enabled = g_Config.m_QmFriendOnlineNotify;
@@ -2599,11 +2586,7 @@ void CTClient::CheckFriendOnline()
 		m_FriendNotifyNextCheck = 0.0f;
 		m_FriendOnline.clear();
 		m_FriendOnlineTracker.Reset();
-		m_vFriendOnlineScan.clear();
-		m_FriendOnlineAvailableServers.clear();
-		m_FriendOnlineNames.clear();
-		m_FriendNotifyScanRunning = false;
-		m_FriendNotifyScanIndex = 0;
+		m_FriendOnlineScanner.Reset();
 		m_FriendAutoRefreshNext = 0.0f;
 	}
 
@@ -2643,11 +2626,7 @@ void CTClient::CheckFriendOnline()
 	{
 		m_FriendOnline.clear();
 		m_FriendOnlineTracker.Reset();
-		m_vFriendOnlineScan.clear();
-		m_FriendOnlineAvailableServers.clear();
-		m_FriendOnlineNames.clear();
-		m_FriendNotifyScanRunning = false;
-		m_FriendNotifyScanIndex = 0;
+		m_FriendOnlineScanner.Reset();
 		return;
 	}
 
@@ -2666,91 +2645,35 @@ void CTClient::CheckFriendOnline()
 	const bool IgnoreClan = IgnoreClanSetting != 0;
 	if(pServerBrowser->IsGettingServerlist() || pServerBrowser->IsServerlistError())
 	{
-		m_FriendNotifyScanRunning = false;
-		m_FriendNotifyScanIndex = 0;
-		m_vFriendOnlineScan.clear();
-		m_FriendOnlineAvailableServers.clear();
+		m_FriendOnlineScanner.Reset();
 		return;
 	}
-	if(!m_FriendNotifyScanRunning)
+	if(!m_FriendOnlineScanner.Running() && Now < m_FriendNotifyNextCheck)
+		return;
+
+	const auto *pSnapshot = m_FriendOnlineScanner.Step(*GameClient()->Friends(), *pServerBrowser, IgnoreClan);
+	if(pSnapshot == nullptr)
 	{
-		if(Now < m_FriendNotifyNextCheck)
-			return;
-
-		m_FriendNotifyScanRunning = true;
-		m_FriendNotifyScanIndex = 0;
-		m_vFriendOnlineScan.clear();
-		m_FriendOnlineAvailableServers.clear();
-		m_FriendOnlineNames.clear();
-		for(int Index = 0; Index < GameClient()->Friends()->NumFriends(); ++Index)
-		{
-			const CFriendInfo *pFriend = GameClient()->Friends()->GetFriend(Index);
-			if(pFriend->m_aName[0] != '\0')
-				m_FriendOnlineNames.insert(pFriend->m_aName);
-		}
-	}
-
-	const int NumServers = pServerBrowser->NumHttpServers();
-	if(NumServers <= 0)
-	{
-		m_FriendNotifyScanRunning = false;
-		m_FriendNotifyScanIndex = 0;
-		m_vFriendOnlineScan.clear();
-		m_FriendOnlineAvailableServers.clear();
-		m_FriendNotifyNextCheck = Now + 1.0f;
-	}
-	else
-	{
-		constexpr int ServersPerFrame = 32;
-		int ProcessedServers = 0;
-		std::string Key;
-		Key.reserve(MAX_NAME_LENGTH + MAX_CLAN_LENGTH + 1);
-		while(m_FriendNotifyScanIndex < NumServers && ProcessedServers < ServersPerFrame)
-		{
-			const CServerInfo *pEntry = pServerBrowser->HttpGet(m_FriendNotifyScanIndex);
-			++m_FriendNotifyScanIndex;
-			++ProcessedServers;
-			if(!pEntry || pEntry->m_NumAddresses <= 0)
-				continue;
-			char aAddress[NETADDR_MAXSTRSIZE];
-			net_addr_str(&pEntry->m_aAddresses[0], aAddress, sizeof(aAddress), true);
-			if(pEntry->m_NumClients >= 0 && pEntry->m_vClients.size() >= (size_t)pEntry->m_NumClients)
-				m_FriendOnlineAvailableServers.insert(aAddress);
-
-			for(const CServerInfo::CClient &Client : pEntry->m_vClients)
-			{
-				if(Client.m_aName[0] == '\0' || m_FriendOnlineNames.find(Client.m_aName) == m_FriendOnlineNames.end())
-					continue;
-
-				BuildFriendNotifyKey(Client.m_aName, Client.m_aClan, IgnoreClan, Key);
-				m_vFriendOnlineScan.push_back({Key, Client.m_aName, pEntry->m_aMap, aAddress,
-					GameClient()->Friends()->IsFriend(Client.m_aName, Client.m_aClan, true)});
-			}
-		}
-
-		if(m_FriendNotifyScanIndex >= NumServers)
-		{
-			// 仅在整轮扫描后提交快照，首次看到某服务器时只建立静默基线。
-			const auto vNotifications = m_FriendOnlineTracker.Update(m_vFriendOnlineScan, m_FriendOnlineAvailableServers);
-			for(const auto &Friend : vNotifications)
-			{
-				if(m_FriendOnline.find(Friend.m_Key) != m_FriendOnline.end())
-					continue;
-				char aBuf[256];
-				const char *pMap = Friend.m_Map.empty() ? Localize("Unknown") : Friend.m_Map.c_str();
-				str_format(aBuf, sizeof(aBuf), Localize("Your friend %s is online and currently on map %s!"), Friend.m_Name.c_str(), pMap);
-				GameClient()->m_Chat.Echo(aBuf);
-			}
-			for(const auto &Friend : m_vFriendOnlineScan)
-				if(Friend.m_IsFriend)
-					m_FriendOnline[Friend.m_Key].m_LastSeen = Now;
-			m_vFriendOnlineScan.clear();
-			m_FriendOnlineAvailableServers.clear();
-			m_FriendNotifyScanRunning = false;
-			m_FriendNotifyScanIndex = 0;
+		if(!m_FriendOnlineScanner.Running())
 			m_FriendNotifyNextCheck = Now + 1.0f;
-		}
+		return;
 	}
+	// 仅在同一来源的整轮扫描后提交快照，首次看到某服务器时只建立静默基线。
+	const auto vNotifications = m_FriendOnlineTracker.Update(pSnapshot->m_vFriends, pSnapshot->m_AvailableServers);
+	for(const auto &Friend : vNotifications)
+	{
+		if(m_FriendOnline.find(Friend.m_Key) != m_FriendOnline.end())
+			continue;
+		char aBuf[256];
+		const char *pMap = Friend.m_Map.empty() ? Localize("Unknown") : Friend.m_Map.c_str();
+		str_format(aBuf, sizeof(aBuf), Localize("Your friend %s is online and currently on map %s!"), Friend.m_Name.c_str(), pMap);
+		GameClient()->m_Chat.Echo(aBuf);
+	}
+	for(const auto &Friend : pSnapshot->m_vFriends)
+		if(Friend.m_IsFriend)
+			m_FriendOnline[Friend.m_Key].m_LastSeen = Now;
+	m_FriendOnlineScanner.Reset();
+	m_FriendNotifyNextCheck = Now + 1.0f;
 }
 
 void CTClient::ResetFriendEnter()
@@ -2968,11 +2891,7 @@ void CTClient::OnStateChange(int NewState, int OldState)
 		InvalidateGoresDistanceField();
 		m_FriendOnline.clear();
 		m_FriendOnlineTracker.Reset();
-		m_vFriendOnlineScan.clear();
-		m_FriendOnlineAvailableServers.clear();
-		m_FriendOnlineNames.clear();
-		m_FriendNotifyScanRunning = false;
-		m_FriendNotifyScanIndex = 0;
+		m_FriendOnlineScanner.Reset();
 		m_FriendNotifyNextCheck = 0.0f;
 		ResetFriendEnter();
 		m_aLastLocalSaveHintMap[0] = '\0';

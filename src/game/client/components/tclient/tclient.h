@@ -17,6 +17,7 @@
 
 #include <game/client/component.h>
 #include <game/client/components/qmclient/friend_enter_tracker.h>
+#include <game/client/components/qmclient/friend_online_scan.h>
 #include <game/client/components/qmclient/friend_online_tracker.h>
 #include <game/client/components/qmclient/gores_drown_tracker.h>
 #include <game/client/components/qmclient/hammer_hit_detection.h>
@@ -429,15 +430,11 @@ class CTClient : public CComponent
 	};
 	std::unordered_map<std::string, SFriendOnlineState> m_FriendOnline;
 	qm_friend_notify::COnlineTracker m_FriendOnlineTracker;
-	std::vector<qm_friend_notify::CFriend> m_vFriendOnlineScan;
-	std::unordered_set<std::string> m_FriendOnlineAvailableServers;
-	std::unordered_set<std::string> m_FriendOnlineNames;
+	qm_friend_notify::COnlineScanner m_FriendOnlineScanner;
 	float m_FriendNotifyNextCheck = 0.0f;
 	int m_FriendNotifyPrevEnabled = -1;
 	int m_FriendNotifyPrevIgnoreClan = -1;
 	uint64_t m_FriendNotifyPrevRevision = 0;
-	bool m_FriendNotifyScanRunning = false;
-	int m_FriendNotifyScanIndex = 0;
 	float m_FriendAutoRefreshNext = 0.0f;
 	int m_FriendAutoRefreshPrevEnabled = -1;
 	int m_FriendAutoRefreshPrevSeconds = -1;

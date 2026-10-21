@@ -538,6 +538,11 @@ const CServerInfo *CServerBrowser::Get(int Index) const
 	return &m_vpServerlist[Index]->m_Info;
 }
 
+uint64_t CServerBrowser::HttpListRevision() const
+{
+	return m_pHttp != nullptr ? m_pHttp->Revision() : 0;
+}
+
 int CServerBrowser::NumHttpServers() const
 {
 	return m_pHttp != nullptr ? m_pHttp->NumServers() : 0;

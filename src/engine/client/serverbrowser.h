@@ -317,6 +317,7 @@ public:
 	const CServerInfo *Get(int Index) const override;
 	int NumHttpServers() const override;
 	const CServerInfo *HttpGet(int Index) const override;
+	uint64_t HttpListRevision() const override;
 	int Players(const CServerInfo &Item) const override;
 	int Max(const CServerInfo &Item) const override;
 	int NumSortedServers() const override { return m_vSortedServerlist.size(); }

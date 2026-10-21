@@ -377,6 +377,8 @@ public:
 	virtual const CServerInfo *Get(int Index) const = 0;
 	virtual int NumHttpServers() const = 0;
 	virtual const CServerInfo *HttpGet(int Index) const = 0;
+	// 原始 HTTP 列表的代次，不受可见列表排序或延迟变化影响。
+	virtual uint64_t HttpListRevision() const = 0;
 
 	virtual int Players(const CServerInfo &Item) const = 0;
 	virtual int Max(const CServerInfo &Item) const = 0;
