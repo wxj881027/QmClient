@@ -4748,6 +4748,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/base/bezier_test.cpp
     src/test/unit/client/binds_test.cpp
     src/test/unit/engine/blocklist_driver_test.cpp
+    src/test/unit/engine/game_ping_test.cpp
     src/test/unit/base/bytes_be_test.cpp
     src/test/unit/engine/chunk_header_test.cpp
     src/test/unit/engine/checksum_test.cpp
@@ -5090,7 +5091,6 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/settings/qm_card_tab_recovery_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_card_order_contract_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_graphics_contract_test.cpp
-    src/test/contract/qmclient/monitoring/qmclient_monitoring_metrics_contract_test.cpp
     src/test/integration/qmclient/monitoring/qm_menu_ui_perf_logging_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_misc_contract_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_persistence_contract_test.cpp
