@@ -1,9 +1,11 @@
 #include <engine/client/friends.h>
 #include <engine/shared/config.h>
 
+#include <game/client/components/qmclient/friend_online_notify.h>
 #include <game/client/components/qmclient/friend_online_scan.h>
 
 #include <gtest/gtest.h>
+#include <test/support/friend_online_tracker_test_support.h>
 #include <test/support/serverbrowser_fixture.h>
 
 #include <memory>
@@ -162,7 +164,7 @@ TEST_F(QmFriendOnlineScan, ReplacingPartialScanPreservesCompletedNotificationBas
 	Publish(Servers(1));
 	const auto *pBaseline = Step();
 	ASSERT_NE(pBaseline, nullptr);
-	EXPECT_TRUE(Tracker.Update(pBaseline->m_vFriends, pBaseline->m_AvailableServers).empty());
+	EXPECT_TRUE(QmFriendTests::UpdateOnline(Tracker, pBaseline->m_vFriends, pBaseline->m_AvailableServers).empty());
 	auto vOld = Servers(33);
 	AddClient(vOld[0], "Alice");
 	Publish(std::move(vOld));
@@ -172,13 +174,13 @@ TEST_F(QmFriendOnlineScan, ReplacingPartialScanPreservesCompletedNotificationBas
 	Publish(std::move(vNew));
 	const auto *pSnapshot = Step();
 	ASSERT_NE(pSnapshot, nullptr);
-	const auto vNotifications = Tracker.Update(pSnapshot->m_vFriends, pSnapshot->m_AvailableServers);
+	const auto vNotifications = QmFriendTests::UpdateOnline(Tracker, pSnapshot->m_vFriends, pSnapshot->m_AvailableServers);
 	ASSERT_EQ(vNotifications.size(), 1U);
 	EXPECT_EQ(vNotifications[0].m_Name, "Bob");
 	m_Scanner.Reset();
 	pSnapshot = Step();
 	ASSERT_NE(pSnapshot, nullptr);
-	EXPECT_TRUE(Tracker.Update(pSnapshot->m_vFriends, pSnapshot->m_AvailableServers).empty());
+	EXPECT_TRUE(QmFriendTests::UpdateOnline(Tracker, pSnapshot->m_vFriends, pSnapshot->m_AvailableServers).empty());
 }
 
 TEST_F(QmFriendOnlineScan, FriendRevisionRebuildsNamedFilterBeforeContinuing)
@@ -248,7 +250,7 @@ TEST_F(QmFriendOnlineScan, EmptySourceProducesNoObservationOrOfflineEvidence)
 	Publish(vServers);
 	const auto *pSnapshot = Step();
 	ASSERT_NE(pSnapshot, nullptr);
-	EXPECT_TRUE(Tracker.Update(pSnapshot->m_vFriends, pSnapshot->m_AvailableServers).empty());
+	EXPECT_TRUE(QmFriendTests::UpdateOnline(Tracker, pSnapshot->m_vFriends, pSnapshot->m_AvailableServers).empty());
 	Publish({});
 	EXPECT_EQ(Step(), nullptr);
 	EXPECT_FALSE(m_Scanner.Running());
@@ -256,7 +258,7 @@ TEST_F(QmFriendOnlineScan, EmptySourceProducesNoObservationOrOfflineEvidence)
 	Publish(std::move(vServers));
 	pSnapshot = Step();
 	ASSERT_NE(pSnapshot, nullptr);
-	EXPECT_TRUE(Tracker.Update(pSnapshot->m_vFriends, pSnapshot->m_AvailableServers).empty());
+	EXPECT_TRUE(QmFriendTests::UpdateOnline(Tracker, pSnapshot->m_vFriends, pSnapshot->m_AvailableServers).empty());
 }
 
 TEST_F(QmFriendOnlineScan, ReadAllocationFailureDiscardsPartialAndSameRevisionCanRetry)
@@ -358,4 +360,33 @@ TEST_F(QmFriendOnlineScan, DisplayListRevisionDoesNotRestartRawHttpScan)
 	EXPECT_EQ(m_pHttp->m_vReads, (std::vector<int>{32}));
 	ASSERT_EQ(pSnapshot->m_vFriends.size(), 1U);
 	EXPECT_EQ(pSnapshot->m_vFriends[0].m_Name, "Alice");
+}
+
+TEST_F(QmFriendOnlineScan, CompleteSnapshotCanRetryNotificationPreparationWithoutSourceChange)
+{
+	qm_friend_notify::COnlineNotifier Notifier;
+	std::vector<std::string> vNames;
+	const auto Notify = [&](const auto &Friend) { vNames.push_back(Friend.m_Name); };
+	m_pFriends->AddFriend("Alice", "Clan");
+	m_pFriends->AddFriend("Bob", "Clan");
+	Publish(Servers(1));
+	const auto *pSnapshot = Step();
+	ASSERT_NE(pSnapshot, nullptr);
+	ASSERT_TRUE(Notifier.Update(pSnapshot->m_vFriends, pSnapshot->m_AvailableServers, 0.0f, Notify));
+	auto vServers = Servers(1);
+	AddClient(vServers[0], "Alice");
+	AddClient(vServers[0], "Bob");
+	Publish(std::move(vServers));
+	pSnapshot = Step();
+	ASSERT_NE(pSnapshot, nullptr);
+	QmFriendTests::CFailingFriendCopy Copy{2};
+	EXPECT_FALSE(Notifier.Update(pSnapshot->m_vFriends, pSnapshot->m_AvailableServers, 1.0f, Notify, Copy));
+	EXPECT_TRUE(vNames.empty());
+	const uint64_t Revision = m_Browser.HttpListRevision();
+	m_Scanner.Reset();
+	pSnapshot = Step();
+	ASSERT_NE(pSnapshot, nullptr);
+	EXPECT_EQ(m_Browser.HttpListRevision(), Revision);
+	ASSERT_TRUE(Notifier.Update(pSnapshot->m_vFriends, pSnapshot->m_AvailableServers, 2.0f, Notify));
+	EXPECT_EQ(vNames, (std::vector<std::string>{"Alice", "Bob"}));
 }

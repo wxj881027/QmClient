@@ -2584,8 +2584,7 @@ void CTClient::CheckFriendOnline()
 		m_FriendNotifyPrevIgnoreClan = IgnoreClanSetting;
 		m_FriendNotifyPrevRevision = FriendRevision;
 		m_FriendNotifyNextCheck = 0.0f;
-		m_FriendOnline.clear();
-		m_FriendOnlineTracker.Reset();
+		m_FriendOnlineNotifier.Reset();
 		m_FriendOnlineScanner.Reset();
 		m_FriendAutoRefreshNext = 0.0f;
 	}
@@ -2624,23 +2623,12 @@ void CTClient::CheckFriendOnline()
 
 	if(GameClient()->Friends()->NumFriends() <= 0)
 	{
-		m_FriendOnline.clear();
-		m_FriendOnlineTracker.Reset();
+		m_FriendOnlineNotifier.Reset();
 		m_FriendOnlineScanner.Reset();
 		return;
 	}
 
-	constexpr float FriendOfflineTimeout = 10.0f;
-	auto PruneFriendOffline = [&]() {
-		for(auto It = m_FriendOnline.begin(); It != m_FriendOnline.end();)
-		{
-			if(Now - It->second.m_LastSeen > FriendOfflineTimeout)
-				It = m_FriendOnline.erase(It);
-			else
-				++It;
-		}
-	};
-	PruneFriendOffline();
+	m_FriendOnlineNotifier.Prune(Now);
 
 	const bool IgnoreClan = IgnoreClanSetting != 0;
 	if(pServerBrowser->IsGettingServerlist() || pServerBrowser->IsServerlistError())
@@ -2659,19 +2647,12 @@ void CTClient::CheckFriendOnline()
 		return;
 	}
 	// 仅在同一来源的整轮扫描后提交快照，首次看到某服务器时只建立静默基线。
-	const auto vNotifications = m_FriendOnlineTracker.Update(pSnapshot->m_vFriends, pSnapshot->m_AvailableServers);
-	for(const auto &Friend : vNotifications)
-	{
-		if(m_FriendOnline.find(Friend.m_Key) != m_FriendOnline.end())
-			continue;
+	m_FriendOnlineNotifier.Update(pSnapshot->m_vFriends, pSnapshot->m_AvailableServers, Now, [&](const qm_friend_notify::CFriend &Friend) {
 		char aBuf[256];
 		const char *pMap = Friend.m_Map.empty() ? Localize("Unknown") : Friend.m_Map.c_str();
 		str_format(aBuf, sizeof(aBuf), Localize("Your friend %s is online and currently on map %s!"), Friend.m_Name.c_str(), pMap);
 		GameClient()->m_Chat.Echo(aBuf);
-	}
-	for(const auto &Friend : pSnapshot->m_vFriends)
-		if(Friend.m_IsFriend)
-			m_FriendOnline[Friend.m_Key].m_LastSeen = Now;
+	});
 	m_FriendOnlineScanner.Reset();
 	m_FriendNotifyNextCheck = Now + 1.0f;
 }
@@ -2889,8 +2870,7 @@ void CTClient::OnStateChange(int NewState, int OldState)
 		}
 		ResetComboState();
 		InvalidateGoresDistanceField();
-		m_FriendOnline.clear();
-		m_FriendOnlineTracker.Reset();
+		m_FriendOnlineNotifier.Reset();
 		m_FriendOnlineScanner.Reset();
 		m_FriendNotifyNextCheck = 0.0f;
 		ResetFriendEnter();

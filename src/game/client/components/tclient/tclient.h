@@ -17,8 +17,8 @@
 
 #include <game/client/component.h>
 #include <game/client/components/qmclient/friend_enter_tracker.h>
+#include <game/client/components/qmclient/friend_online_notify.h>
 #include <game/client/components/qmclient/friend_online_scan.h>
-#include <game/client/components/qmclient/friend_online_tracker.h>
 #include <game/client/components/qmclient/gores_drown_tracker.h>
 #include <game/client/components/qmclient/hammer_hit_detection.h>
 #include <game/client/components/qmclient/local_saves.h>
@@ -424,12 +424,7 @@ class CTClient : public CComponent
 	void ClearSwapCountdown(int Dummy = -1);
 
 	// 好友上线提醒
-	struct SFriendOnlineState
-	{
-		float m_LastSeen = 0.0f;
-	};
-	std::unordered_map<std::string, SFriendOnlineState> m_FriendOnline;
-	qm_friend_notify::COnlineTracker m_FriendOnlineTracker;
+	qm_friend_notify::COnlineNotifier m_FriendOnlineNotifier;
 	qm_friend_notify::COnlineScanner m_FriendOnlineScanner;
 	float m_FriendNotifyNextCheck = 0.0f;
 	int m_FriendNotifyPrevEnabled = -1;
