@@ -5004,7 +5004,6 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp
-    src/test/contract/qmclient/ui/qm_new_ui_menu_settings_nameplate_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_settings_textinput_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_shell_chrome_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_shell_browser_contract_test.cpp

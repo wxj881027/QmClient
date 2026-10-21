@@ -140,12 +140,13 @@ namespace
 			CMapItemLayerTilemap Game{};
 			Game.m_Layer.m_Type = LAYERTYPE_TILES;
 			Game.m_Version = 4;
-			Game.m_Width = Game.m_Height = 1;
+			Game.m_Width = Game.m_Height = 2;
 			Game.m_Flags = TILESLAYERFLAG_GAME;
 			Game.m_Color = CColor(255, 255, 255, 255);
 			Game.m_ColorEnv = Game.m_Image = -1;
-			const CTile Tile{};
-			Game.m_Data = Writer.AddData(sizeof(Tile), &Tile);
+			StrToInts(Game.m_aName, std::size(Game.m_aName), "Game");
+			const std::array<CTile, 4> aTiles{};
+			Game.m_Data = Writer.AddData(sizeof(aTiles), aTiles.data());
 			Game.m_Tele = Game.m_Speedup = Game.m_Front = Game.m_Switch = Game.m_Tune = -1;
 			Writer.AddItem(MAPITEMTYPE_LAYER, static_cast<int>(vLayers.size()), sizeof(Game), &Game);
 			const int Groups = SeparateGroups ? static_cast<int>(vLayers.size()) : 1;

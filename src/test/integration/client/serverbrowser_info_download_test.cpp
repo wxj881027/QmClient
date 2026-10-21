@@ -28,13 +28,14 @@ namespace
 		}
 		std::string Info(const char *pId)
 		{
-			return std::string(R"({"communities":[{"id":")") + pId +
-			       R"(","name":"Community","icon":{"sha256":"0000000000000000000000000000000000000000000000000000000000000000","url":"https://community.test/icon"},"servers":[{"name":"Country","flagId":1,"servers":{"Race":["127.0.0.1:8301"]}}]}]})";
+			return std::string(R"({"location":"eu","communities":[{"id":")") + pId +
+			       R"(","name":"Community","has_finishes":false,"icon":{"sha256":"0000000000000000000000000000000000000000000000000000000000000000","url":"https://community.test/icon"},"servers":[{"name":"Country","flagId":1,"servers":{"Race":["127.0.0.1:8301"]}}]}]})";
 		}
 		void LoadInitial()
 		{
 			ASSERT_NO_FATAL_FAILURE(WriteInfoDownloadCache(m_pStorage.get(), DDNET_INFO_FILE, Info("old")));
 			ASSERT_NE(m_Browser.LoadDDNetInfo(), nullptr);
+			ASSERT_NE(m_Browser.Community("old"), nullptr);
 		}
 		std::shared_ptr<CInfoDownloadTestRequest> Request()
 		{

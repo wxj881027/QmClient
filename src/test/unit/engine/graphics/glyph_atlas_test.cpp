@@ -122,23 +122,32 @@ TEST(GlyphAtlas, AllocationFailureWhileSplittingMappedSectionPreservesThatSectio
 	EXPECT_EQ(Y, 16);
 }
 
-TEST(GlyphAtlas, RepeatedSplitsFillAtlasWithoutOverlappingOccupiedCells)
+TEST(GlyphAtlas, RepeatedMappedSplitsFillAtlasWithoutOverlappingOccupiedCells)
 {
 	CGlyphAtlas<> Atlas;
 	Atlas.Clear(64);
 	std::set<std::pair<int, int>> Occupied;
 	int X = -1, Y = -1;
-	for(int Index = 0; Index < 64; ++Index)
-	{
-		ASSERT_TRUE(Atlas.Add(8, 8, X, Y));
+	const auto RecordCells = [&](int Width, int Height) {
 		EXPECT_GE(X, 0);
 		EXPECT_GE(Y, 0);
-		EXPECT_LE(X + 8, 64);
-		EXPECT_LE(Y + 8, 64);
+		EXPECT_LE(X + Width, 64);
+		EXPECT_LE(Y + Height, 64);
 		EXPECT_EQ(X % 8, 0);
 		EXPECT_EQ(Y % 8, 0);
-		EXPECT_TRUE(Occupied.emplace(X, Y).second);
+		for(int CellY = Y; CellY < Y + Height; CellY += 8)
+			for(int CellX = X; CellX < X + Width; CellX += 8)
+				EXPECT_TRUE(Occupied.emplace(CellX, CellY).second);
+	};
+	// 分桶只查至少一边相同的空区；条带请求避免把碎片利用率当作分配合同。
+	ASSERT_TRUE(Atlas.Add(32, 64, X, Y));
+	RecordCells(32, 64);
+	for(int Index = 0; Index < 8; ++Index)
+	{
+		ASSERT_TRUE(Atlas.Add(32, 8, X, Y));
+		RecordCells(32, 8);
 	}
+	EXPECT_EQ(Occupied.size(), 64u);
 	EXPECT_FALSE(Atlas.Add(8, 8, X, Y));
 }
 

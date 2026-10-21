@@ -1521,11 +1521,6 @@ struct STextContainer
 	}
 };
 
-float CTextCursor::Height() const
-{
-	return m_LineCount * (m_AlignedFontSize + m_AlignedLineSpacing);
-}
-
 STextBoundingBox CTextCursor::BoundingBox() const
 {
 	return {m_StartX, m_StartY, m_LongestLineWidth, Height(), m_MaxCharacterHeight, m_LineCount};
