@@ -28,7 +28,7 @@ namespace
 		}
 	};
 
-	class QmFriendOnlineScan : public ::testing::Test
+	class QmFriendOnlineScanIntegration : public ::testing::Test
 	{
 	protected:
 		int m_SavedIgnoreClan = g_Config.m_ClFriendsIgnoreClan;
@@ -86,7 +86,7 @@ namespace
 	};
 }
 
-TEST_F(QmFriendOnlineScan, PublishesOnlyAfterAllServersWithThirtyTwoReadsPerStep)
+TEST_F(QmFriendOnlineScanIntegration, PublishesOnlyAfterAllServersWithThirtyTwoReadsPerStep)
 {
 	m_pFriends->AddFriend("Alice", "Clan");
 	m_pFriends->AddFriend("Bob", "Clan");
@@ -112,7 +112,7 @@ TEST_F(QmFriendOnlineScan, PublishesOnlyAfterAllServersWithThirtyTwoReadsPerStep
 	EXPECT_EQ(pSnapshot->m_AvailableServers.size(), 33U);
 }
 
-TEST_F(QmFriendOnlineScan, SameSizeReplacementDiscardsOldPrefixAndRestartsAtZero)
+TEST_F(QmFriendOnlineScanIntegration, SameSizeReplacementDiscardsOldPrefixAndRestartsAtZero)
 {
 	m_pFriends->AddFriend("Alice", "Clan");
 	m_pFriends->AddFriend("Bob", "Clan");
@@ -137,7 +137,7 @@ TEST_F(QmFriendOnlineScan, SameSizeReplacementDiscardsOldPrefixAndRestartsAtZero
 	EXPECT_EQ(pSnapshot->m_vFriends[1].m_Name, "Carol");
 }
 
-TEST_F(QmFriendOnlineScan, ShorterReplacementCompletesWithoutKeepingOldCandidate)
+TEST_F(QmFriendOnlineScanIntegration, ShorterReplacementCompletesWithoutKeepingOldCandidate)
 {
 	m_pFriends->AddFriend("Alice", "Clan");
 	m_pFriends->AddFriend("Bob", "Clan");
@@ -156,7 +156,7 @@ TEST_F(QmFriendOnlineScan, ShorterReplacementCompletesWithoutKeepingOldCandidate
 	EXPECT_EQ(pSnapshot->m_AvailableServers.size(), 1U);
 }
 
-TEST_F(QmFriendOnlineScan, ReplacingPartialScanPreservesCompletedNotificationBaseline)
+TEST_F(QmFriendOnlineScanIntegration, ReplacingPartialScanPreservesCompletedNotificationBaseline)
 {
 	qm_friend_notify::COnlineTracker Tracker;
 	m_pFriends->AddFriend("Alice", "Clan");
@@ -183,7 +183,7 @@ TEST_F(QmFriendOnlineScan, ReplacingPartialScanPreservesCompletedNotificationBas
 	EXPECT_TRUE(QmFriendTests::UpdateOnline(Tracker, pSnapshot->m_vFriends, pSnapshot->m_AvailableServers).empty());
 }
 
-TEST_F(QmFriendOnlineScan, FriendRevisionRebuildsNamedFilterBeforeContinuing)
+TEST_F(QmFriendOnlineScanIntegration, FriendRevisionRebuildsNamedFilterBeforeContinuing)
 {
 	m_pFriends->AddFriend("Alice", "Clan");
 	auto vServers = Servers(33);
@@ -204,7 +204,7 @@ TEST_F(QmFriendOnlineScan, FriendRevisionRebuildsNamedFilterBeforeContinuing)
 	EXPECT_TRUE(pSnapshot->m_vFriends[1].m_IsFriend);
 }
 
-TEST_F(QmFriendOnlineScan, IgnoreClanChangeRestartsAndRebuildsIdentityKeys)
+TEST_F(QmFriendOnlineScanIntegration, IgnoreClanChangeRestartsAndRebuildsIdentityKeys)
 {
 	m_pFriends->AddFriend("Alice", "Clan");
 	auto vServers = Servers(33);
@@ -223,7 +223,7 @@ TEST_F(QmFriendOnlineScan, IgnoreClanChangeRestartsAndRebuildsIdentityKeys)
 	EXPECT_TRUE(pSnapshot->m_vFriends[0].m_IsFriend);
 }
 
-TEST_F(QmFriendOnlineScan, ResetCancelsIncompleteCandidateAndNextScanStartsOver)
+TEST_F(QmFriendOnlineScanIntegration, ResetCancelsIncompleteCandidateAndNextScanStartsOver)
 {
 	m_pFriends->AddFriend("Alice", "Clan");
 	auto vServers = Servers(33);
@@ -241,7 +241,7 @@ TEST_F(QmFriendOnlineScan, ResetCancelsIncompleteCandidateAndNextScanStartsOver)
 	EXPECT_EQ(pSnapshot->m_vFriends.size(), 1U);
 }
 
-TEST_F(QmFriendOnlineScan, EmptySourceProducesNoObservationOrOfflineEvidence)
+TEST_F(QmFriendOnlineScanIntegration, EmptySourceProducesNoObservationOrOfflineEvidence)
 {
 	qm_friend_notify::COnlineTracker Tracker;
 	m_pFriends->AddFriend("Alice", "Clan");
@@ -261,7 +261,7 @@ TEST_F(QmFriendOnlineScan, EmptySourceProducesNoObservationOrOfflineEvidence)
 	EXPECT_TRUE(QmFriendTests::UpdateOnline(Tracker, pSnapshot->m_vFriends, pSnapshot->m_AvailableServers).empty());
 }
 
-TEST_F(QmFriendOnlineScan, ReadAllocationFailureDiscardsPartialAndSameRevisionCanRetry)
+TEST_F(QmFriendOnlineScanIntegration, ReadAllocationFailureDiscardsPartialAndSameRevisionCanRetry)
 {
 	m_pFriends->AddFriend("Alice", "Clan");
 	m_pFriends->AddFriend("Bob", "Clan");
@@ -287,7 +287,7 @@ TEST_F(QmFriendOnlineScan, ReadAllocationFailureDiscardsPartialAndSameRevisionCa
 	EXPECT_EQ(pSnapshot->m_vFriends[1].m_Name, "Bob");
 }
 
-TEST_F(QmFriendOnlineScan, UnknownReadFailurePublishesNothingAndAllowsRetry)
+TEST_F(QmFriendOnlineScanIntegration, UnknownReadFailurePublishesNothingAndAllowsRetry)
 {
 	m_pFriends->AddFriend("Alice", "Clan");
 	auto vServers = Servers(1);
@@ -304,7 +304,7 @@ TEST_F(QmFriendOnlineScan, UnknownReadFailurePublishesNothingAndAllowsRetry)
 	EXPECT_EQ(pSnapshot->m_vFriends[0].m_Name, "Alice");
 }
 
-TEST_F(QmFriendOnlineScan, PreservesIncompletePresenceAndExcludesClanOnlyMatches)
+TEST_F(QmFriendOnlineScanIntegration, PreservesIncompletePresenceAndExcludesClanOnlyMatches)
 {
 	m_pFriends->AddFriend("Alice", "Clan");
 	m_pFriends->AddFriend("", "Clan");
@@ -326,7 +326,7 @@ TEST_F(QmFriendOnlineScan, PreservesIncompletePresenceAndExcludesClanOnlyMatches
 	EXPECT_EQ(pSnapshot->m_AvailableServers.count("127.0.0.1:8303"), 1U);
 }
 
-TEST_F(QmFriendOnlineScan, CompletedSnapshotOwnsTextAfterRawSourceReplacement)
+TEST_F(QmFriendOnlineScanIntegration, CompletedSnapshotOwnsTextAfterRawSourceReplacement)
 {
 	m_pFriends->AddFriend("Alice", "Clan");
 	auto vServers = Servers(1);
@@ -342,7 +342,7 @@ TEST_F(QmFriendOnlineScan, CompletedSnapshotOwnsTextAfterRawSourceReplacement)
 	EXPECT_EQ(pSnapshot->m_vFriends[0].m_Server, "127.0.0.1:8300");
 }
 
-TEST_F(QmFriendOnlineScan, DisplayListRevisionDoesNotRestartRawHttpScan)
+TEST_F(QmFriendOnlineScanIntegration, DisplayListRevisionDoesNotRestartRawHttpScan)
 {
 	m_pFriends->AddFriend("Alice", "Clan");
 	auto vServers = Servers(33);
@@ -362,7 +362,7 @@ TEST_F(QmFriendOnlineScan, DisplayListRevisionDoesNotRestartRawHttpScan)
 	EXPECT_EQ(pSnapshot->m_vFriends[0].m_Name, "Alice");
 }
 
-TEST_F(QmFriendOnlineScan, CompleteSnapshotCanRetryNotificationPreparationWithoutSourceChange)
+TEST_F(QmFriendOnlineScanIntegration, CompleteSnapshotCanRetryNotificationPreparationWithoutSourceChange)
 {
 	qm_friend_notify::COnlineNotifier Notifier;
 	std::vector<std::string> vNames;

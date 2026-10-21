@@ -41,8 +41,9 @@ namespace
 		Dl_info Image{};
 		if(pSymbol != nullptr)
 			(void)dladdr(pSymbol, &Image);
-		char aLine[256];
-		WriteDiagnosticLine(aLine, std::snprintf(aLine, sizeof(aLine), "QmClient test unwind provider: %s image=%.80s address=%p\n", pName, ImageName(Image), pSymbol));
+		char aLine[512];
+		WriteDiagnosticLine(aLine, std::snprintf(aLine, sizeof(aLine), "QmClient test unwind provider: %s image=%.80s path=%.240s address=%p base=%p\n",
+						   pName, ImageName(Image), Image.dli_fname != nullptr ? Image.dli_fname : "unknown", pSymbol, Image.dli_fbase));
 	}
 
 	void TraceTestUnwindInfo() noexcept
@@ -64,6 +65,10 @@ namespace
 		TraceRuntimeSymbol("_Unwind_RaiseException");
 		TraceRuntimeSymbol("__gxx_personality_v0");
 		TraceRuntimeSymbol("__cxa_throw");
+		// 同名库可能来自不同目录；同时记录取上下文和步进等接口的实际提供者。
+		constexpr const char *apNativeSymbols[] = {"unw_getcontext", "unw_init_local", "unw_get_reg", "unw_get_proc_info", "unw_step"};
+		for(const char *pName : apNativeSymbols)
+			TraceRuntimeSymbol(pName);
 		unw_context_t Context;
 		unw_cursor_t Cursor;
 		const int ContextResult = pGetContext(&Context);
