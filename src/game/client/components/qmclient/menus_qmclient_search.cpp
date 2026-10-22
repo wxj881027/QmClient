@@ -359,7 +359,9 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 			RenderSettingsCardCollapseButton(SearchCtx, Frame.m_HandleRect, s_GlobalSearchInputCollapsed, 1.0f, &s_GlobalSearchInputCollapseButton);
 		};
 		// 搜索输入卡只有折叠按钮、没有宽度切换：ⓘ 直接占宽度按钮的位置，紧贴折叠按钮。
-		SSettingsCardDeckVisualOptions InputVisualOptions;
+		// 视觉选项必须从卡片配置构造：手搓空对象会丢掉卡片背景色、透明度、边框与彩虹标题，
+		// 退回主题面板色，卡片看起来和同一页的其它卡片不是一套配色。
+		SSettingsCardDeckVisualOptions InputVisualOptions = SettingsCardDeckVisualOptions();
 		InputVisualOptions.m_HasWidthButton = false;
 		SettingsCard(SearchCtx, InputSlot, InputSpec, InputVisualState, InputVisualOptions, [InputContentHeight](float) { return InputContentHeight; }, RenderInputContent, InputHeaderAction);
 	}
