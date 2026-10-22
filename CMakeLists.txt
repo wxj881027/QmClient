@@ -5070,6 +5070,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/music/netease_lyric_state_test.cpp
     src/test/unit/qmclient/music/netease_shared_memory_test.cpp
     src/test/unit/qmclient/music/qm_netease_hook_protocol_test.cpp
+    src/test/unit/qmclient/music/qm_netease_hook_numeric_validation_test.cpp
     src/test/unit/qmclient/music/qm_music_app_watcher_test.cpp
     src/test/unit/qmclient/music/qm_qqmusic_protocol_test.cpp
     src/test/unit/qmclient/music/qm_music_transport_test.cpp
@@ -5580,6 +5581,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/music/netease_lyric_timeline_test.cpp
       src/test/unit/qmclient/music/netease_shared_memory_test.cpp
       src/test/unit/qmclient/music/qm_netease_hook_protocol_test.cpp
+      src/test/unit/qmclient/music/qm_netease_hook_numeric_validation_test.cpp
       src/test/unit/qmclient/music/qm_spotify_crypto_test.cpp
       src/test/unit/qmclient/music/qm_spotify_token_test.cpp
       src/test/unit/qmclient/music/qm_spotify_parser_test.cpp
