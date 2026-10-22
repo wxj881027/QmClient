@@ -384,7 +384,7 @@ A manual source file takes priority over the selected candidate. Only this varia
 == Ręcznie wybrany plik źródłowy ma priorytet nad wybranym kandydatem. Zastępowany jest tylko ten wariant.
 
 A pack missing files falls back to the default sounds.
-== A pack missing files falls back to the default sounds.
+== Paczka z brakującymi plikami wraca do domyślnych dźwięków.
 
 a player
 == gracz
@@ -705,10 +705,10 @@ Adjust mouse sensitivity and cursor limits
 == Adjust mouse sensitivity and cursor limits
 
 Adjust nameplate options and compare the preview.
-== Adjust nameplate options and compare the preview.
+== Dostosuj opcje tabliczek i porównaj z podglądem.
 
 Adjust one value at a time; corners and segments are drawn per frame, so large segment counts cost GPU time.
-== Adjust one value at a time; corners and segments are drawn per frame, so large segment counts cost GPU time.
+== Zmieniaj wartości pojedynczo; rogi i segmenty są rysowane co klatkę, więc duża liczba segmentów obciąża GPU.
 
 Adjust opacity of entity layers
 == Dostosuj przezroczystość warstw encji
@@ -738,7 +738,7 @@ Adjust verbosity in external console (-3 = none, -2 = errors only, -1 = warnings
 == Dostosuj szczegółowość w zewnętrznej konsoli (-3 = brak, -2 = tylko błędy, -1 = ostrzeżenia, 0 = informacje, 1 = debugowanie, 2 = śledzenie).
 
 Adjusts DDRace-specific HUD parts such as team state, freeze bars and race time.
-== Adjusts DDRace-specific HUD parts such as team state, freeze bars and race time.
+== Dostosowuje elementy HUD specyficzne dla DDRace, takie jak stan drużyny, paski zamrożenia i czas wyścigu.
 
 Adjusts helpers that hide latency, such as removing anti-ping and predicting margins inside freeze.
 == Dostosowuje ułatwienia ukrywające opóźnienie, np. wyłączenie antiping i margines przewidywania podczas zamrożenia.
@@ -1902,7 +1902,7 @@ Bracketed title single color
 == Jeden kolor tytułu w nawiasach
 
 Bright backgrounds reduce text contrast; keep the overlay dark enough.
-== Bright backgrounds reduce text contrast; keep the overlay dark enough.
+== Jasne tła zmniejszają kontrast tekstu; utrzymuj nakładkę dostatecznie ciemną.
 
 Brightness shift
 == Przesunięcie jasności
@@ -2109,13 +2109,13 @@ Change "Update Rate" in Hz, tick "Skip the main menu", and use "Settings file" o
 == Zmień Częstotliwość odświeżania w Hz, zaznacz Pomiń menu główne i otwieraj te miejsca przez Plik ustawień lub Katalog motywów.
 
 Change colors and style options, then compare the preview.
-== Change colors and style options, then compare the preview.
+== Zmień kolory i opcje stylu, a potem porównaj z podglądem.
 
 Change indicator offset based on distance to other tees
 == Zmień przesunięcie wskaźnika w zależności od odległości do innych tee
 
 Change laser options and compare the preview.
-== Change laser options and compare the preview.
+== Zmień opcje lasera i porównaj z podglądem.
 
 Change map
 == Zmień mapę
@@ -2127,7 +2127,7 @@ Change the skip duration
 == Zmień czas pomijania
 
 Change values in the chat cards and watch this preview update.
-== Change values in the chat cards and watch this preview update.
+== Zmieniaj wartości na kartach czatu i obserwuj aktualizację tego podglądu.
 
 Change values in the settings card and watch this preview update.
 == Zmień wartości na karcie ustawień, a podgląd zaktualizuje się na bieżąco.
@@ -2337,7 +2337,7 @@ Choose "Show players' key presses" as "Own", "Others" or "All", then adjust "Siz
 == W Pokaż naciśnięcia klawiszy graczy wybierz Własne, Inni lub Wszyscy, a potem dostosuj Rozmiar ikon naciśnięć klawiszy.
 
 Choose a position, then adjust width and size; the preview card shows the result.
-== Choose a position, then adjust width and size; the preview card shows the result.
+== Wybierz pozycję, a potem dostosuj szerokość i rozmiar; karta podglądu pokazuje wynik.
 
 Choose a preset, or Custom to enter width and height. Follow window uses the current render size.
 == Wybierz preset lub „Niestandardowy”, aby wprowadzić szerokość i wysokość. „Dopasuj do okna” używa bieżącej rozdzielczości renderowania.
@@ -2346,7 +2346,7 @@ Choose a screen position and font size, then check the preview card for wrapping
 == Wybierz położenie na ekranie i rozmiar czcionki, a potem sprawdź na karcie podglądu, czy tekst się zawija.
 
 Choose a target, then set its color; entity lasers can follow team colors.
-== Choose a target, then set its color; entity lasers can follow team colors.
+== Wybierz cel, a potem ustaw jego kolor; lasery obiektów mogą używać kolorów drużyny.
 
 Choose colors for weapons and entity lasers
 == Choose colors for weapons and entity lasers
@@ -2361,7 +2361,7 @@ Choose export name first.
 == Najpierw wybierz nazwę eksportu.
 
 Choose off, simple or full; the individual switches below only apply to full.
-== Choose off, simple or full; the individual switches below only apply to full.
+== Wybierz wyłączony, prosty lub pełny; pojedyncze przełączniki poniżej działają tylko w trybie pełnym.
 
 Choose the language used by the client
 == Choose the language used by the client
@@ -2376,7 +2376,7 @@ Choose the menu map and background colors
 == Choose the menu map and background colors
 
 Choose when recording starts and how demos are named; playback speed and camera follow are separate.
-== Choose when recording starts and how demos are named; playback speed and camera follow are separate.
+== Wybierz, kiedy zaczyna się nagrywanie i jak nazywane są dema; prędkość odtwarzania i podążanie kamery ustawia się osobno.
 
 Choose which parts get the rainbow; adjust speed and saturation to taste.
 == Wybierz, które części mają tęczę; prędkość i nasycenie dopasuj do upodobań.
@@ -2388,13 +2388,13 @@ Chooses the language used by every menu, setting and message in the client.
 == Wybiera język wszystkich menu, ustawień i komunikatów klienta.
 
 Chooses the menu background map and the colors drawn behind the UI.
-== Chooses the menu background map and the colors drawn behind the UI.
+== Wybiera mapę tła menu i kolory rysowane za interfejsem.
 
 Chooses which name plates are drawn and adds clan, team color, friend icon, coordinates and client IDs to them.
 == Wybiera, które tabliczki z nazwami są rysowane, i dodaje do nich klan, kolor drużyny, ikonę znajomego, współrzędne i ID klienta.
 
 Chooses windowed or fullscreen mode, the monitor and the resolution; switching recreates the swap chain, so the screen may flash briefly.
-== Chooses windowed or fullscreen mode, the monitor and the resolution; switching recreates the swap chain, so the screen may flash briefly.
+== Wybiera tryb okienkowy lub pełnoekranowy, monitor i rozdzielczość; przełączenie odtwarza łańcuch wymiany, więc ekran może na chwilę mignąć.
 
 Chroma sampling
 == Próbkowanie koloru
@@ -2664,7 +2664,7 @@ Collapse console
 == Zwiń konsolę
 
 Collects the remaining DDNet client preferences that do not belong to other cards.
-== Collects the remaining DDNet client preferences that do not belong to other cards.
+== Zbiera pozostałe ustawienia klienta DDNet, które nie należą do innych kart.
 
 Collision hitbox
 == Hitbox kolizji
@@ -2733,7 +2733,7 @@ Colors of the translate button in the chat input and of the language menu that b
 == Kolory przycisku tłumaczenia w polu czatu i menu języków, które ten przycisk otwiera.
 
 Colors too close to the map background are hard to read while moving.
-== Colors too close to the map background are hard to read while moving.
+== Kolory zbyt bliskie tłu mapy są trudne do odczytania w ruchu.
 
 Combo
 == Kombinacja
@@ -2982,10 +2982,10 @@ Configure UI icon appearance
 == Skonfiguruj wygląd ikon interfejsu
 
 Configures the hook range and collision guide lines drawn around your Tee.
-== Configures the hook range and collision guide lines drawn around your Tee.
+== Konfiguruje zasięg haka i linie kolizji rysowane wokół twojego Tee.
 
 Configures the main HUD: health, ammo, timer, race progress and their positions.
-== Configures the main HUD: health, ammo, timer, race progress and their positions.
+== Konfiguruje główny HUD: zdrowie, amunicję, timer, postęp wyścigu i ich pozycje.
 
 Confirm
 == Confirm
@@ -3177,13 +3177,13 @@ Controls
 == Sterowanie
 
 Controls demo recording and playback behavior.
-== Controls demo recording and playback behavior.
+== Steruje nagrywaniem i odtwarzaniem dem.
 
 Controls how UI surfaces are drawn: card surface opacity, border width, corner rounding, segment count and the rainbow title effect.
-== Controls how UI surfaces are drawn: card surface opacity, border width, corner rounding, segment count and the rainbow title effect.
+== Steruje rysowaniem powierzchni interfejsu: kryciem powierzchni karty, grubością obramowania, zaokrągleniem rogów, liczbą segmentów i efektem tęczowego tytułu.
 
 Controls laser shape, glow and animation.
-== Controls laser shape, glow and animation.
+== Steruje kształtem, poświatą i animacją lasera.
 
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
 == Określa, co wyświetla się obok nazw innych graczy, np. tagi klanów, oznaczenia znajomych i identyfikatory klienta.
@@ -3363,7 +3363,7 @@ Credits
 == Autorzy
 
 Credits are read-only.
-== Credits are read-only.
+== Podziękowania są tylko do odczytu.
 
 Crescent
 == Półksiężyc
@@ -3450,7 +3450,7 @@ Custom colors
 == Niestandardowe kolory
 
 Custom colors too close to the surface make icons disappear; keep contrast.
-== Custom colors too close to the surface make icons disappear; keep contrast.
+== Własne kolory zbyt bliskie powierzchni sprawiają, że ikony znikają; zadbaj o kontrast.
 
 Custom command
 == Własne polecenie
@@ -3648,7 +3648,7 @@ DDRace HUD
 == HUD DDRace
 
 DDRace HUD is driven by server messages, so it stays empty on servers without DDRace.
-== DDRace HUD is driven by server messages, so it stays empty on servers without DDRace.
+== HUD DDRace działa na komunikatach serwera, więc na serwerach bez DDRace pozostaje pusty.
 
 DDRace HUD Pro
 == DDRace HUD Pro（status dummy）
@@ -3915,7 +3915,7 @@ Demos directory
 == Katalog dem
 
 Demos store raw network data, so long sessions produce large files.
-== Demos store raw network data, so long sessions produce large files.
+== Dema zapisują surowe dane sieciowe, więc długie sesje dają duże pliki.
 
 Depending on the number of supplied arguments, teleport yourself to; (0.) where you are spectating or aiming; (1.) the specified player name
 == W zależności od liczby podanych argumentów, teleportuj się do; (0.) miejsca, które obserwujesz lub na które celujesz; (1.) określonej nazwy gracza
@@ -4011,7 +4011,7 @@ Disabled
 == Wyłączone
 
 Disabling system messages also hides server warnings.
-== Disabling system messages also hides server warnings.
+== Wyłączenie wiadomości systemowych ukrywa też ostrzeżenia serwera.
 
 Disagree
 == Nie zgadzam się
@@ -4239,7 +4239,7 @@ Drag HUD modules with the left mouse button
 == Przeciągaj moduły HUD lewym przyciskiem myszy
 
 Drag the three sliders; master scales the other two.
-== Drag the three sliders; master scales the other two.
+== Przeciągnij trzy suwaki; głośność główna skaluje pozostałe dwa.
 
 Drag to another category to move this friend.
 == Przeciągnij tego znajomego do innej kategorii, aby go przenieść.
@@ -4578,7 +4578,7 @@ Edit skin texture
 == Edytuj teksturę skina
 
 Edit the name and clan fields; the dummy keeps its own values.
-== Edit the name and clan fields; the dummy keeps its own values.
+== Edytuj pola nazwy i klanu; dummy zachowuje własne wartości.
 
 Edit this custom command on the Bind Wheel page.
 == Edytuj to własne polecenie na stronie koła poleceń.
@@ -4593,7 +4593,7 @@ Editor
 == Edytor
 
 Edits individual Tee 7 skin parts and previews the result.
-== Edits individual Tee 7 skin parts and previews the result.
+== Edytuje poszczególne części skina Tee 7 i pokazuje podgląd wyniku.
 
 Effects are heavy on crowded servers, so keep "Automatic effect LOD when crowded" enabled.
 == Na zatłoczonych serwerach efekty są ciężkie, więc zostaw włączony automatyczny LOD efektów przy tłoku.
@@ -4605,7 +4605,7 @@ Elastic back
 == Elastyczny z odbiciem
 
 Elements too close to the edges overlap on ultrawide screens.
-== Elements too close to the edges overlap on ultrawide screens.
+== Elementy zbyt blisko krawędzi nachodzą na siebie na ekranach ultrapanoramicznych.
 
 Elevated
 == Podwyższone
@@ -4773,7 +4773,7 @@ Enable dynamic FOV, wider view at higher speed
 == Włącz dynamiczne pole widzenia – im szybciej się poruszasz, tym szersze pole widzenia
 
 Enable each element, then set its position and size; the HUD draws on top of the game world.
-== Enable each element, then set its position and size; the HUD draws on top of the game world.
+== Włącz każdy element, a potem ustaw jego pozycję i rozmiar; HUD jest rysowany nad światem gry.
 
 Enable emote eyes? 1=enabled, 0=disabled, -1=disabled.
 == Włącz emotki oczu? 1=włączone, 0=wyłączone, -1=wyłączone.
@@ -5025,7 +5025,7 @@ Enable the badges you want; tune the nameplate size where it overlaps the game v
 == Włącz wybrane odznaki; jeśli nachodzą na widok gry, dostosuj rozmiar tabliczki z nazwą.
 
 Enable the DDRace elements you use and set their scale.
-== Enable the DDRace elements you use and set their scale.
+== Włącz używane elementy DDRace i ustaw ich skalę.
 
 Enable the effects you like; turn tiny Tees off if distant players become hard to see.
 == Włącz efekty, które lubisz; wyłącz maleńkie Tee, jeśli odlegli gracze stają się słabo widoczni.
@@ -5037,16 +5037,16 @@ Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then s
 == Włącz HUD zamrożonych Tee, wybierz, czy liczyć aktywnych czy zamrożonych Tee, a następnie ustaw rozmiar ikony i maksymalną liczbę wierszy.
 
 Enable the guide line, then set its length, style and colors.
-== Enable the guide line, then set its length, style and colors.
+== Włącz linię kolizji, a potem ustaw jej długość, styl i kolory.
 
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == Włącz wskaźnik, wybierz tryb odległości oraz czy gracze z war-list mają dostawać inny kolor.
 
 Enable the indicators you need; each one draws on your own screen only.
-== Enable the indicators you need; each one draws on your own screen only.
+== Włącz potrzebne wskaźniki; każdy rysuje tylko na twoim ekranie.
 
 Enable the message types you want and choose their colors.
-== Enable the message types you want and choose their colors.
+== Włącz wybrane typy wiadomości i wybierz ich kolory.
 
 Enable the outlines, choose color and thickness, then test on a map with many different tiles.
 == Włącz obrysy, wybierz kolor i grubość, a potem sprawdź je na mapie z wieloma rodzajami kafelków.
@@ -5118,7 +5118,7 @@ Enable/disable test commands (aka cheats) (setting only effective in initial con
 == Włącz/wyłącz komendy testowe (znane jako cheaty) (ustawienie działa tylko w początkowej konfiguracji)
 
 Enables audio output and selects the playback device.
-== Enables audio output and selects the playback device.
+== Włącza wyjście dźwięku i wybiera urządzenie odtwarzające.
 
 Enables/disables active moderator mode for the player
 == Włącza/wyłącza aktywny tryb moderatora dla gracza
@@ -5388,10 +5388,10 @@ External console password. Must be set to enable economy.
 == Hasło zewnętrznej konsoli. Musi być ustawione, aby włączyć ekonomię.
 
 External links open in the browser.
-== External links open in the browser.
+== Zewnętrzne linki otwierają się w przeglądarce.
 
 External sites are not controlled by the client.
-== External sites are not controlled by the client.
+== Klient nie kontroluje zewnętrznych stron.
 
 Extra vertical spacing between chat lines in pixels (0 = default)
 == Extra vertical spacing between chat lines in pixels (0 = default)
@@ -5727,7 +5727,7 @@ Flag returned
 == Flaga zwrócona
 
 Flags are cosmetic and can be hidden by other clients.
-== Flags are cosmetic and can be hidden by other clients.
+== Flagi są wyłącznie ozdobne i inne klienty mogą je ukrywać.
 
 Flip:
 == Odwróć:
@@ -6354,7 +6354,7 @@ Guide line color
 == Kolor linii prowadzącej
 
 Guide lines are computed locally and do not guarantee that a hook will connect.
-== Guide lines are computed locally and do not guarantee that a hook will connect.
+== Linie kolizji są liczone lokalnie i nie gwarantują, że hak się zaczepi.
 
 Gun fire
 == Strzał z pistoletu
@@ -6405,7 +6405,7 @@ Heart
 == Serce
 
 Heavy glow costs fill rate; disable it if frame time rises in big fights.
-== Heavy glow costs fill rate; disable it if frame time rises in big fights.
+== Mocna poświata obciąża wypełnianie pikseli; wyłącz ją, jeśli w dużych walkach rośnie czas klatki.
 
 Height
 == Wysokość
@@ -6864,13 +6864,13 @@ If 1, current driver is in blocking error state.
 == Jeśli 1, bieżący sterownik jest w stanie błędu blokującego.
 
 If a device disappears after unplugging headphones, reselect it or restart the client.
-== If a device disappears after unplugging headphones, reselect it or restart the client.
+== Jeśli po odłączeniu słuchawek urządzenie zniknie, wybierz je ponownie lub uruchom klienta od nowa.
 
 If chat score exceeds this value, the player is muted for sv_spam_mute_duration seconds
 == Jeśli wynik czatu przekroczy tę wartość, gracz zostanie wyciszony na sv_spam_mute_duration sekund
 
 If exclusive fullscreen fails, switch back to windowed or borderless first.
-== If exclusive fullscreen fails, switch back to windowed or borderless first.
+== Jeśli ekskluzywny tryb pełnoekranowy nie działa, najpierw wróć do trybu okienkowego lub bez ramek.
 
 If lasers can hit you when shot and pull you to bounce origin (0 for all new maps), or lasers cannot hit you and pull others to shooter.
 == Jeśli lasery mogą cię trafić po strzale i przyciągnąć do źródła odbicia (0 dla wszystkich nowych map), lub lasery nie mogą cię trafić i przyciągają innych do strzelca.
@@ -7056,7 +7056,7 @@ Indicator transparency
 == Przezroczystość wskaźnika
 
 Indicators that read game state can lag behind the server; do not rely on them for frame-perfect input.
-== Indicators that read game state can lag behind the server; do not rely on them for frame-perfect input.
+== Wskaźniki odczytujące stan gry mogą odstawać od serwera; nie opieraj na nich wejścia co do klatki.
 
 Infinite hook for super players on/off.
 == Nieskończony hak dla super graczy włączony/wyłączony.
@@ -7797,13 +7797,13 @@ Lines %d - %d (%s)
 == Linie %d - %d (%s)
 
 Links open in the system browser.
-== Links open in the system browser.
+== Linki otwierają się w przeglądarce systemowej.
 
 Links the music playing on your system with the system media controls, and can show its title in the top-left HUD.
 == Łączy muzykę odtwarzaną w systemie z systemowymi kontrolkami multimediów i może pokazywać tytuł w HUD w lewym górnym rogu.
 
 Links to related project and community websites.
-== Links to related project and community websites.
+== Linki do powiązanych stron projektu i społeczności.
 
 List all commands that are available in practice mode
 == Wymień wszystkie polecenia dostępne w trybie treningowym
@@ -7857,25 +7857,25 @@ Listen from camera center when spectating
 == Słuchaj z centrum kamery podczas obserwowania
 
 Lists and activates custom audio packs that replace game sounds.
-== Lists and activates custom audio packs that replace game sounds.
+== Wyświetla i aktywuje własne paczki dźwięków zastępujące dźwięki gry.
 
 Lists cards matching the current search and jumps to them.
-== Lists cards matching the current search and jumps to them.
+== Wyświetla karty pasujące do bieżącego wyszukiwania i przechodzi do nich.
 
 Lists DDNet contributors and staff credits.
-== Lists DDNet contributors and staff credits.
+== Wyświetla współtwórców i podziękowania dla zespołu DDNet.
 
 Lists every bound key, grouped by purpose such as Movement, Weapon, Chat or Dummy.
 == Wyświetla wszystkie przypisane klawisze, pogrupowane według celu, np. ruch, broń, czat czy dummy.
 
 Lists QmClient community groups and project links.
-== Lists QmClient community groups and project links.
+== Wyświetla grupy społeczności QmClient i linki do projektu.
 
 Lists TClient developers, contributors and project links.
-== Lists TClient developers, contributors and project links.
+== Wyświetla twórców i współtwórców TClient oraz linki do projektu.
 
 Lists the display modes the graphics backend reports for the selected monitor.
-== Lists the display modes the graphics backend reports for the selected monitor.
+== Pokazuje tryby wyświetlania zgłaszane przez backend grafiki dla wybranego monitora.
 
 Literal
 == Dosłowny
@@ -8070,7 +8070,7 @@ Low
 == Niska
 
 Low contrast between name and message text makes chat hard to scan in fights.
-== Low contrast between name and message text makes chat hard to scan in fights.
+== Niski kontrast między nazwą a tekstem wiadomości utrudnia czytanie czatu w walce.
 
 Lower means better quality and larger files; 18 is recommended
 == Niższa wartość oznacza lepszą jakość i większe pliki; zalecane 18
@@ -8745,7 +8745,7 @@ Music
 == Muzyka
 
 Music and game volume are multiplied by master, so raising master alone can clip.
-== Music and game volume are multiplied by master, so raising master alone can clip.
+== Głośność muzyki i gry jest mnożona przez główną, więc samo podniesienie głównej może przesterować dźwięk.
 
 Music player volume
 == Głośność odtwarzacza muzyki
@@ -8985,7 +8985,7 @@ Nameplates
 == Tabliczki z nazwami
 
 Names are sent to the server and shown to other players.
-== Names are sent to the server and shown to other players.
+== Nazwy są wysyłane na serwer i widoczne dla innych graczy.
 
 Native scale (1.0)
 == Natywna skala (1.0)
@@ -9576,13 +9576,13 @@ Opacity of freeze bars inside freeze
 == Nieprzezroczystość pasków odmrażania w zamrożeniu
 
 Open a link to join the community.
-== Open a link to join the community.
+== Otwórz link, aby dołączyć do społeczności.
 
 Open a link to reach the project.
-== Open a link to reach the project.
+== Otwórz link, aby przejść do projektu.
 
 Open a link to visit the site.
-== Open a link to visit the site.
+== Otwórz link, aby odwiedzić stronę.
 
 Open a matching settings card directly
 == Open a matching settings card directly
@@ -9708,7 +9708,7 @@ Optional start and end time in seconds. Leave both empty to export the whole dem
 == Opcjonalny czas początku i końca w sekundach. Pozostaw oba puste, aby wyeksportować całe demo.
 
 Options here affect networking or identity; test on a server before using them in matches.
-== Options here affect networking or identity; test on a server before using them in matches.
+== Opcje tutaj wpływają na sieć lub tożsamość; przetestuj je na serwerze, zanim użyjesz ich w meczach.
 
 Options only exist within "Detection distance"; turn off the ones you never use to keep the wheel short.
 == Opcje działają tylko w zasięgu wykrywania; wyłącz nieużywane, aby menu pozostało krótkie.
@@ -9909,7 +9909,7 @@ Particles
 == Cząsteczki
 
 Parts are stored in the skin file; unsaved changes are lost when leaving the page.
-== Parts are stored in the skin file; unsaved changes are lost when leaving the page.
+== Części są zapisywane w pliku skina; niezapisane zmiany przepadają po opuszczeniu strony.
 
 Password
 == Hasło
@@ -10011,10 +10011,10 @@ Pick "Tooltip background color" and "Tooltip text color", drag "Tooltip font siz
 == Wybierz kolor tła i tekstu dymka, przeciągnij rozmiar czcionki, a dla lekkiego podskoku zostaw włączoną animację sprężystości.
 
 Pick a color preset or a custom color, then choose regular or bold weight.
-== Pick a color preset or a custom color, then choose regular or bold weight.
+== Wybierz preset kolorów lub własny kolor, a następnie grubość zwykłą albo pogrubioną.
 
 Pick a country for each player.
-== Pick a country for each player.
+== Wybierz kraj dla każdego gracza.
 
 Pick a family; if it offers several weights, choose one that stays readable at small sizes.
 == Wybierz rodzinę; jeśli oferuje kilka grubości, weź taką, która pozostaje czytelna przy małych rozmiarach.
@@ -10023,19 +10023,19 @@ Pick a font family and weight here; use the cursor scale to make the pointer eas
 == Wybierz tutaj rodzinę i grubość czcionki; użyj skali kursora, aby wskaźnik był lepiej widoczny na dużych ekranach.
 
 Pick a map or a solid color, then adjust brightness and blur.
-== Pick a map or a solid color, then adjust brightness and blur.
+== Wybierz mapę lub jednolity kolor, a potem dostosuj jasność i rozmycie.
 
 Pick a mode from the list; unsupported modes are not offered.
-== Pick a mode from the list; unsupported modes are not offered.
+== Wybierz tryb z listy; nieobsługiwane tryby nie są oferowane.
 
 Pick a pack to activate it; samples are reloaded when the selection changes.
-== Pick a pack to activate it; samples are reloaded when the selection changes.
+== Wybierz paczkę, aby ją aktywować; próbki są przeładowywane po zmianie wyboru.
 
 Pick a scope under "Show name plates", then set "Name plates size" and "Name plates offset"; clan and client ID lines have their own switches.
 == Wybierz zakres w Pokaż tabliczki z nazwami, ustaw rozmiar i odstęp tabliczek; wiersze klanu i ID klienta mają własne przełączniki.
 
 Pick a shape, then tune glow and animation speed.
-== Pick a shape, then tune glow and animation speed.
+== Wybierz kształt, a potem dostrój poświatę i prędkość animacji.
 
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
 == Wybierz pole, wpisz polecenie i jego etykietę, a potem przytrzymaj w grze klawisz koła, aby przetestować.
@@ -10044,10 +10044,10 @@ Pick result: %s
 == Wynik losowania: %s
 
 Pick the mode first, then the monitor and resolution; the refresh rate follows the monitor's current mode.
-== Pick the mode first, then the monitor and resolution; the refresh rate follows the monitor's current mode.
+== Najpierw wybierz tryb, potem monitor i rozdzielczość; częstotliwość odświeżania zależy od bieżącego trybu monitora.
 
 Pick the parts to colorize, then choose a gradient mode and colors.
-== Pick the parts to colorize, then choose a gradient mode and colors.
+== Wybierz elementy do pokolorowania, a potem tryb gradientu i kolory.
 
 Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
 == Wybierz źródło zgodne z twoją aplikacją muzyczną i pozostaw ją włączoną; tekst podąży automatycznie.
@@ -10680,7 +10680,7 @@ Preview selected file
 == Odtwórz podgląd wybranego pliku
 
 Preview spacing does not match every map; check in game before a match.
-== Preview spacing does not match every map; check in game before a match.
+== Odstępy w podglądzie nie odpowiadają każdej mapie; sprawdź w grze przed meczem.
 
 Preview the bind wheel layout and selection
 == Preview the bind wheel layout and selection
@@ -10701,13 +10701,13 @@ Preview visibilities
 == Podgląd widoczności
 
 Previews hook collision colors and line styles.
-== Previews hook collision colors and line styles.
+== Pokazuje podgląd kolorów kolizji haka i stylów linii.
 
 Previews laser bodies, outlines and impacts.
-== Previews laser bodies, outlines and impacts.
+== Pokazuje podgląd lasera: korpusy, obrysy i trafienia.
 
 Previews player and dummy nameplates with the current settings.
-== Previews player and dummy nameplates with the current settings.
+== Pokazuje podgląd tabliczek z nazwami gracza i dummy z bieżącymi ustawieniami.
 
 Previews the composed status bar output with your current settings.
 == Podgląda gotowy pasek statusu z bieżącymi ustawieniami.
@@ -11607,7 +11607,7 @@ Rendering reads back 8-bit frames, so 10-bit formats add nothing by themselves; 
 == Renderowanie zwraca klatki 8-bitowe, więc formaty 10-bitowe same w sobie nic nie dodają; zysk daje gęstość chrominancji. Jeśli koder nie obsługuje 4:4:4, eksport kończy się błędem zamiast po cichu obniżać jakość.
 
 Renders a live preview of the current chat appearance.
-== Renders a live preview of the current chat appearance.
+== Renderuje podgląd na żywo bieżącego wyglądu czatu.
 
 Renders the demo that is currently playing into a video file. It runs as fast as the encoder allows instead of in real time, so a five-minute demo usually finishes in tens of seconds.
 == Renderuje odtwarzane demo do pliku wideo. Eksport nie działa w czasie rzeczywistym, tylko tak szybko, jak pozwala koder, więc pięciominutowe demo zwykle gotowe jest w kilkadziesiąt sekund.
@@ -11880,7 +11880,7 @@ Restoring save %d: main '%s', dummy '%s'.
 == Przywracanie zapisu %d: główny '%s', dummy '%s'.
 
 Results include cards on other pages; the tab switches automatically.
-== Results include cards on other pages; the tab switches automatically.
+== Wyniki obejmują karty na innych stronach; zakładka przełącza się automatycznie.
 
 Retry
 == Ponów
@@ -11913,7 +11913,7 @@ Review and reset changed configuration values
 == Review and reset changed configuration values
 
 Review the entries and change only what you understand; defaults are tuned for normal play.
-== Review the entries and change only what you understand; defaults are tuned for normal play.
+== Przejrzyj pozycje i zmieniaj tylko to, co rozumiesz; wartości domyślne są dobrane do normalnej gry.
 
 Reviews configuration values that differ from their defaults and resets them.
 == Przegląda wartości konfiguracji różne od domyślnych i przywraca je.
@@ -12318,10 +12318,10 @@ Scroll step
 == Krok przewijania
 
 Scroll the list to see sponsors and support options.
-== Scroll the list to see sponsors and support options.
+== Przewiń listę, aby zobaczyć sponsorów i opcje wsparcia.
 
 Scroll to browse the credits.
-== Scroll to browse the credits.
+== Przewiń, aby przejrzeć podziękowania.
 
 Search
 == Szukaj
@@ -12348,7 +12348,7 @@ Search maps or mappers
 == Szukaj map lub autorów
 
 Search matches config names too, so qm_ queries find raw options.
-== Search matches config names too, so qm_ queries find raw options.
+== Wyszukiwanie obejmuje też nazwy konfiguracji, więc zapytania qm_ znajdują surowe opcje.
 
 Search online fonts…
 == Szukaj czcionek online…
@@ -12369,7 +12369,7 @@ Searches every skin the client knows and keeps favorite and recently used ones i
 == Przeszukuje wszystkie znane klientowi skórki i trzyma ulubione oraz ostatnie na osobnych kartach.
 
 Searches settings by card title, feature name or keyword.
-== Searches settings by card title, feature name or keyword.
+== Szuka ustawień po tytule karty, nazwie funkcji lub słowie kluczowym.
 
 Searching
 == Szukanie
@@ -12408,7 +12408,7 @@ See you at the next checkpoint.
 == Do zobaczenia przy następnym punkcie kontrolnym.
 
 Select a body part, change its sprite or color, then save the skin.
-== Select a body part, change its sprite or color, then save the skin.
+== Wybierz część ciała, zmień jej sprite lub kolor, a potem zapisz skin.
 
 Select a configuration package to preview its contents.
 == Wybierz pakiet konfiguracji, aby wyświetlić jego zawartość.
@@ -12423,7 +12423,7 @@ Select a preset, then apply it to player or dummy
 == Wybierz preset, a następnie zastosuj do gracza lub dummy
 
 Select a result to open its card.
-== Select a result to open its card.
+== Wybierz wynik, aby otworzyć jego kartę.
 
 Select a saved .map file (client limit: 64 MiB).
 == Wybierz zapisany plik .map (limit klienta: 64 MiB).
@@ -12477,7 +12477,7 @@ Selection background color
 == Kolor tła zaznaczenia
 
 Selects the country flag shown for you and for the dummy.
-== Selects the country flag shown for you and for the dummy.
+== Wybiera flagę kraju wyświetlaną przy tobie i przy dummy.
 
 Self
 == Ja
@@ -12738,25 +12738,25 @@ Set your checkpoints based on another player
 == Ustaw swoje punkty kontrolne na podstawie innego gracza
 
 Sets chat position, width, font size and visibility.
-== Sets chat position, width, font size and visibility.
+== Ustawia pozycję, szerokość, rozmiar czcionki i widoczność czatu.
 
 Sets encoder, container and quality in one step: Daily is H.264 + MP4, High quality is HEVC + MP4 at a smaller size, Editing is all-intra H.264 + MP4 with instant seeking, and Exchange is ProRes 422 HQ + MOV for other editors.
 == Ustawia koder, kontener i jakość w jednym kroku: Codzienny to H.264 + MP4, Wysoka jakość to HEVC + MP4 w mniejszym rozmiarze, Montaż to wewnątrzklatkowy H.264 + MP4 z natychmiastowym przewijaniem, a Wymiana to ProRes 422 HQ + MOV dla innych edytorów.
 
 Sets how much motion the interface plays: transitions, card entrance, reorder animations and scroll feel.
-== Sets how much motion the interface plays: transitions, card entrance, reorder animations and scroll feel.
+== Ustawia intensywność ruchu interfejsu: przejścia, wejście kart, animacje zmiany kolejności i płynność przewijania.
 
 Sets laser colors for weapons and entities.
-== Sets laser colors for weapons and entities.
+== Ustawia kolory laserów dla broni i obiektów.
 
 Sets master, music and game volume separately.
-== Sets master, music and game volume separately.
+== Ustawia osobno głośność główną, muzyki i gry.
 
 Sets one of the two rescue modes (auto or manual). Prints current mode if no arguments provided
 == Ustaw jeden z dwóch trybów ratunku (auto lub manualny). Wyświetla bieżący tryb, jeśli nie podano argumentów
 
 Sets player and dummy name, clan and identity information.
-== Sets player and dummy name, clan and identity information.
+== Ustawia nazwę gracza i dummy, klan oraz dane tożsamości.
 
 Sets the client update rate, whether the main menu is skipped, and opens the folders for settings, saves and themes.
 == Ustawia częstotliwość odświeżania klienta, pomijanie menu głównego i otwiera foldery ustawień, zapisów oraz motywów.
@@ -12771,7 +12771,7 @@ Sets the size of the finished video; "Follow window" uses the current render res
 == Ustawia rozmiar gotowego wideo; opcja „Jak okno" bierze bieżącą rozdzielczość renderowania.
 
 Sets UI icon color and weight for the icon font shared by menus and cards.
-== Sets UI icon color and weight for the icon font shared by menus and cards.
+== Ustawia kolor i grubość ikon interfejsu w czcionce ikon wspólnej dla menu i kart.
 
 Sets your tee's eye emote
 == Ustaw emotkę oczu swojego tee
@@ -13899,7 +13899,7 @@ Shows the global points of a player beginning with name r (your rank by default)
 == Pokazuje globalne punkty gracza zaczynającego się od nazwy r (domyślnie twój ranking)
 
 Shows the people supporting QmClient development.
-== Shows the people supporting QmClient development.
+== Pokazuje osoby wspierające rozwój QmClient.
 
 Shows the rank of player with name r (your rank by default)
 == Pokazuje ranking gracza o nazwie r (domyślnie twój ranking)
@@ -14628,10 +14628,10 @@ Style kill, finish, and system messages
 == Style kill, finish, and system messages
 
 Styles chat names and message colors, including gradients.
-== Styles chat names and message colors, including gradients.
+== Stylizuje kolory nazw i wiadomości czatu, łącznie z gradientami.
 
 Styles kill, finish and system messages in the chat area.
-== Styles kill, finish and system messages in the chat area.
+== Stylizuje wiadomości o śmierci, ukończeniu oraz systemowe na czacie.
 
 Sub-Tick aiming
 == Celowanie Sub-Tick
@@ -14655,7 +14655,7 @@ Super
 == Super
 
 Support is optional; nothing here changes client behavior.
-== Support is optional; nothing here changes client behavior.
+== Wsparcie jest opcjonalne; nic tutaj nie zmienia działania klienta.
 
 Support ♥
 == Wsparcie ♥
@@ -14937,7 +14937,7 @@ Team when leaving solo split
 == Drużyna przy wyjściu z podziału solo
 
 Team-colored lasers are easier to read in matches.
-== Team-colored lasers are easier to read in matches.
+== Lasery w kolorach drużyny łatwiej odczytać w meczach.
 
 Teammate
 == Towarzysz z drużyny
@@ -15219,10 +15219,10 @@ The player you were whispering to hasn't reconnected yet or left. Please wait or
 == Gracz, do którego szeptałeś, nie połączył się ponownie lub wyszedł. Poczekaj albo szepnij do kogoś innego
 
 The preview does not show every weapon; check in game.
-== The preview does not show every weapon; check in game.
+== Podgląd nie pokazuje każdej broni; sprawdź w grze.
 
 The preview uses your own name and colors; other players may look different.
-== The preview uses your own name and colors; other players may look different.
+== Podgląd używa twojej nazwy i kolorów; u innych graczy może wyglądać inaczej.
 
 The preview uses your own Tee; other players may look different.
 == Podgląd używa twojego Tee; u innych graczy może wyglądać inaczej.
@@ -15711,7 +15711,7 @@ Toggles collision
 == Przełącz kolizję
 
 Toggles DDNet gameplay indicators and assists such as race time, team markers and hints.
-== Toggles DDNet gameplay indicators and assists such as race time, team markers and hints.
+== Włącza wskaźniki i asysty rozgrywki DDNet, takie jak czas wyścigu, znaczniki drużyny i podpowiedzi.
 
 Toggles hit others
 == Przełącz trafianie innych
@@ -15975,7 +15975,7 @@ Tune variable to value or show current value
 == Dostrój zmienną do wartości lub pokaż bieżącą wartość
 
 Turn motion off on weaker machines; cards then open and scroll immediately.
-== Turn motion off on weaker machines; cards then open and scroll immediately.
+== Na słabszych komputerach wyłącz ruch; karty otwierają się i przewijają wtedy od razu.
 
 Turn on "Auto chat in water", type the "Chat message" you want, and optionally enable "Send emoticon in water" with its ID.
 == Włącz „Automatyczny czat w wodzie", wpisz wybraną „Wiadomość na czacie", a w razie potrzeby włącz „Wysyłaj emotikonę w wodzie" wraz z jej ID.
@@ -16059,7 +16059,7 @@ Turn on one option at a time: switching tee or closing chat can throw away a mes
 == Włączaj po jednej opcji: zmiana Tee albo zamknięcie czatu może wyrzucić wiadomość, którą jeszcze piszesz.
 
 Turn sound on, then pick a device; the list comes from the audio backend at startup.
-== Turn sound on, then pick a device; the list comes from the audio backend at startup.
+== Włącz dźwięk i wybierz urządzenie; lista pochodzi z backendu audio przy starcie.
 
 Turning this off only changes your display.
 == Wyłączenie zmienia tylko wyświetlanie u ciebie.
@@ -16098,7 +16098,7 @@ Type a map name or pick one below
 == Wpisz nazwę mapy lub wybierz ją poniżej
 
 Type a word; results filter as you type across cards and config names.
-== Type a word; results filter as you type across cards and config names.
+== Wpisz słowo; wyniki filtrują się na bieżąco po kartach i nazwach konfiguracji.
 
 Type in the search field or switch between "All", "Favorites" and "Recent", then click a skin to apply it and use the plus icon to queue it.
 == Wpisz tekst w wyszukiwaniu lub przełączaj Wszystkie, Ulubione i Ostatnie, kliknij skórkę, by ją zastosować, a ikoną plusa dodaj ją do kolejki.
@@ -16368,7 +16368,7 @@ Untick "Use original style" to reach "Background color", the countdown options a
 == Odznacz używaj oryginalnego stylu, aby przejść do koloru tła, opcji odliczania i zawsze pokazuj tytuł oraz wykonawcę; pokazuj drużynę działa w obu stylach.
 
 Unusual refresh rates can cause tearing; prefer the monitor's native rate.
-== Unusual refresh rates can cause tearing; prefer the monitor's native rate.
+== Nietypowe częstotliwości odświeżania mogą powodować rozrywanie obrazu; wybierz natywną częstotliwość monitora.
 
 Up to 6 Chinese or 12 ASCII characters
 == Do 6 znaków chińskich lub 12 ASCII
@@ -16674,7 +16674,7 @@ Very long kaomoji are split by the chat length limit.
 == Bardzo długie kaomoji są dzielone przez limit długości czatu.
 
 Very thick borders or high segment counts make text look blurry; keep them near the defaults.
-== Very thick borders or high segment counts make text look blurry; keep them near the defaults.
+== Bardzo grube obramowania lub duża liczba segmentów rozmywają tekst; trzymaj je blisko wartości domyślnych.
 
 Video Background
 == Tło wideo
@@ -17199,7 +17199,7 @@ Why will some players not open a 4:4:4 file? H.264 4:4:4 uses the High 4:4:4 Pre
 == Dlaczego niektóre odtwarzacze nie otwierają pliku 4:4:4? H.264 4:4:4 używa profilu High 4:4:4 Predictive, którego część dekoderów sprzętowych i telefonów nie obsługuje. Dla szerokiej zgodności użyj 4:2:0.
 
 Wide chat lines cover the game; keep the width to what you actually read.
-== Wide chat lines cover the game; keep the width to what you actually read.
+== Szerokie wiersze czatu zasłaniają grę; ustaw szerokość pod to, co naprawdę czytasz.
 
 Width
 == Szerokość

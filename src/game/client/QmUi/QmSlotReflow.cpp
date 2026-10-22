@@ -109,8 +109,6 @@ vec2 CQmSlotReflow::Track(const char *pKey, int Slot, float StepX, float StepY)
 			const vec2 Delta = SlotDeltaOffset(State.m_Slot, Slot, m_Columns, StepX, StepY);
 			State.m_OffsetX += Delta.x;
 			State.m_OffsetY += Delta.y;
-			// 换位日志：实机排查「看不到动画」时直接看这一行（每张卡每次换位一条）。
-			dbg_msg("assets_reflow", "slot %d -> %d offset=(%.1f,%.1f) key=%s", State.m_Slot, Slot, Delta.x, Delta.y, pKey);
 		}
 		State.m_Slot = Slot;
 	}

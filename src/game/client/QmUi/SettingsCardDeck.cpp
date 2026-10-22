@@ -2,7 +2,6 @@
 
 #include "QmAnimResolve.h"
 #include "QmCardRegistry.h"
-#include "QmCardWikiPanel.h"
 #include "SettingsCardCollapseState.h"
 #include "SettingsCardContentBridge.h"
 #include "SettingsCardInfo.h"
@@ -450,14 +449,6 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			// ActiveItem 可能在前一张卡片的释放阶段被清除。逐卡读取，避免
 			// 已经完成的点击继续驱动后续被裁剪卡片的预布局回调。
 			const bool HasActiveHeaderContinuation = SettingsCardDeckHasActiveItemContinuation(HasPointerInput, Ctx.m_pUi != nullptr && Ctx.m_pUi->ActiveItem() != nullptr);
-			// ⓘ 的按下必须在预布局阶段登记：正式绘制阶段 PreLayoutInput() 为假，
-			// 按钮逻辑收不到新的按下，表现就是「点了没反应」。折叠状态下头部仍在，同样可点。
-			if((ControllerVisible || HasActiveHeaderContinuation) && Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly() && !m_Drag.Active() && HasSettingsCardInfo(Card.m_pDefinition->m_Spec))
-			{
-				const CUIRect InfoButton = ResolveSettingsCardInfoRect(PreLayoutFrame);
-				if(InfoButton.w > 0.0f && InfoButton.h > 0.0f && Ctx.m_pUi->DoButtonLogic(&Runtime.m_InfoButtonId, 0, &InfoButton, BUTTONFLAG_LEFT))
-					OpenCardWikiPopup(Ctx, Card.m_pDefinition->m_Spec.m_pStableId, Card.m_pDefinition->m_Spec.m_pTitle);
-			}
 			if((ControllerVisible || HasActiveHeaderContinuation) && Card.m_pDefinition->m_PreLayoutHeaderInput)
 			{
 				m_FrameRuntime.CountPreLayoutInput();

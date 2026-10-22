@@ -631,6 +631,17 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 			const size_t NewCursorOffset = str_utf8_offset_chars_to_bytes(pDisplayStr, Cursor.m_CursorCharacter);
 			SetCursorOffset(OffsetFromDisplayToActual(NewCursorOffset));
 		}
+		else if(Cursor.m_CursorMode == TEXT_CURSOR_CURSOR_MODE_CALCULATE && LineWidth >= 0.0f)
+		{
+			// 多行输入里点在文字右侧或最后一行下方时，渲染器的逐字形命中不会命中任何字符，
+			// 光标会停在点击前的旧位置——表现就是「在末尾输入，字符却插到别处」。
+			// 这里按「点在末行带内或更下方」补算到全文末尾（仅在渲染器没给出位置时生效）。
+			const vec2 Press = m_MouseSelection.m_Selecting ? m_MouseSelection.m_PressMouse : m_MouseSelection.m_ReleaseMouse;
+			const float TextBottom = CursorPos.y + BoundingBox.m_H;
+			const float LastLineTop = TextBottom - std::max(BoundingBox.m_MaxCharacterHeight, FontSize * 0.5f);
+			if(Press.y >= LastLineTop)
+				SetCursorOffset(m_Len);
+		}
 		if(Cursor.m_CalculateSelectionMode == TEXT_CURSOR_SELECTION_MODE_CALCULATE && Cursor.m_SelectionStart >= 0 && Cursor.m_SelectionEnd >= 0)
 		{
 			const size_t NewSelectionStart = str_utf8_offset_chars_to_bytes(pDisplayStr, Cursor.m_SelectionStart);

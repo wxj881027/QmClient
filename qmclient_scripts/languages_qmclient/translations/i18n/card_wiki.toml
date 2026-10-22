@@ -3782,6 +3782,7 @@ polish = "Zobacz szczegóły"
 [[message]]
 key = "Assigns commands and labels to the slots of the radial bind wheel."
 [message.translations]
+simplified_chinese = "为环形绑定轮盘的各个槽位指定指令和标签。"
 traditional_chinese = "為環形 Bind 輪盤的各槽位指派指令與標籤。"
 japanese = "円形バインドホイールの各スロットにコマンドとラベルを割り当てます。"
 korean = "원형 바인드 휠의 각 슬롯에 명령과 라벨을 지정합니다."
@@ -3797,6 +3798,7 @@ polish = "Przypisuje polecenia i etykiety do pól koła poleceń."
 [[message]]
 key = "Pick a slot, type the command and its label, then hold the wheel key in game to test."
 [message.translations]
+simplified_chinese = "选一个槽位，输入指令和对应标签，再在游戏中按住轮盘键测试。"
 traditional_chinese = "選一個槽位，輸入指令和對應標籤，再到遊戲裡按住輪盤鍵測試。"
 japanese = "スロットを選んでコマンドとラベルを入力し、ゲーム内でホイールキーを押し続けて試します。"
 korean = "슬롯을 고르고 명령과 라벨을 입력한 뒤, 게임에서 휠 키를 눌러 테스트하세요."
@@ -3812,6 +3814,7 @@ polish = "Wybierz pole, wpisz polecenie i jego etykietę, a potem przytrzymaj w 
 [[message]]
 key = "Empty slots still take space, so clear the ones you no longer use."
 [message.translations]
+simplified_chinese = "空槽位同样占位置，不再使用的槽位请及时清空。"
 traditional_chinese = "空槽位同樣佔位，用不到的記得清空。"
 japanese = "空のスロットも場所を取るので、使わないものは消してください。"
 korean = "빈 슬롯도 자리를 차지하니, 더 쓰지 않는 슬롯은 비워 두세요."
@@ -3827,6 +3830,7 @@ polish = "Puste pola nadal zajmują miejsce, więc czyść te, których już nie
 [[message]]
 key = "Shows the bind wheel layout and which slot is currently selected."
 [message.translations]
+simplified_chinese = "显示绑定轮盘的布局，以及当前选中的槽位。"
 traditional_chinese = "顯示 Bind 輪盤的佈局和目前選取的槽位。"
 japanese = "バインドホイールの配置と、現在選択中のスロットを表示します。"
 korean = "바인드 휠 배치와 현재 선택된 슬롯을 보여 줍니다."
@@ -3842,6 +3846,7 @@ polish = "Pokazuje układ koła poleceń i aktualnie wybrane pole."
 [[message]]
 key = "Hold the wheel key to see the selection move; release it to run the highlighted slot."
 [message.translations]
+simplified_chinese = "按住轮盘键可以看到选中项移动，松开即执行高亮的槽位。"
 traditional_chinese = "按住輪盤鍵可以看到選取移動，放開就執行高亮槽位的指令。"
 japanese = "ホイールキーを押し続けると選択が動き、離すと強調表示されたスロットが実行されます。"
 korean = "휠 키를 누르고 있으면 선택이 움직이고, 놓으면 강조된 슬롯이 실행됩니다."
@@ -3857,6 +3862,7 @@ polish = "Przytrzymaj klawisz koła, aby przesuwać zaznaczenie, a puść, aby u
 [[message]]
 key = "If the wheel feels crowded, remove unused slots in the editor card."
 [message.translations]
+simplified_chinese = "如果轮盘显得拥挤，就在编辑卡片里删掉不用的槽位。"
 traditional_chinese = "覺得輪盤太擠的話，到編輯器卡片裡移除用不到的槽位。"
 japanese = "ホイールが混み合って見えるなら、エディターカードで使っていないスロットを削除してください。"
 korean = "휠이 너무 빽빽하면 편집기 카드에서 쓰지 않는 슬롯을 지우세요."
@@ -3872,6 +3878,7 @@ polish = "Jeśli koło wydaje się przepełnione, usuń nieużywane pola na karc
 [[message]]
 key = "Manages the kaomoji shortcuts used by chat binds."
 [message.translations]
+simplified_chinese = "管理聊天绑定使用的颜文字快捷方式。"
 traditional_chinese = "管理聊天綁定使用的表情符號捷徑。"
 japanese = "チャットバインドで使う顔文字のショートカットを管理します。"
 korean = "채팅 바인드에 쓰이는 카오모지 바로가기를 관리합니다."
@@ -3887,6 +3894,7 @@ polish = "Zarządza skrótami kaomoji używanymi przez wiązania czatu."
 [[message]]
 key = "Add or edit entries, then use the bind in chat to send the text."
 [message.translations]
+simplified_chinese = "添加或编辑条目，然后在聊天中使用对应绑定发送文字。"
 traditional_chinese = "新增或編輯項目，再到聊天中用綁定送出文字。"
 japanese = "項目を追加または編集し、チャットでバインドを使って送信します。"
 korean = "항목을 추가하거나 편집한 뒤 채팅에서 바인드를 써서 전송하세요."
@@ -3902,6 +3910,7 @@ polish = "Dodaj lub edytuj wpisy, a potem użyj wiązania na czacie, aby wysła�
 [[message]]
 key = "Very long kaomoji are split by the chat length limit."
 [message.translations]
+simplified_chinese = "过长的颜文字会因聊天长度上限被拆分发送。"
 traditional_chinese = "過長的表情符號會因聊天長度上限而被拆分。"
 japanese = "長すぎる顔文字はチャットの文字数制限で分割されます。"
 korean = "너무 긴 카오모지는 채팅 길이 제한에 따라 나뉩니다."
@@ -3917,6 +3926,7 @@ polish = "Bardzo długie kaomoji są dzielone przez limit długości czatu."
 [[message]]
 key = "Manages additional custom chat shortcuts that do not belong to the other groups."
 [message.translations]
+simplified_chinese = "管理不属于其他分组的额外自定义聊天快捷方式。"
 traditional_chinese = "管理不屬於其他分類的額外自訂聊天捷徑。"
 japanese = "他のグループに属さない追加のカスタムチャットショートカットを管理します。"
 korean = "다른 그룹에 속하지 않는 추가 사용자 지정 채팅 바로가기를 관리합니다."
@@ -3932,6 +3942,7 @@ polish = "Zarządza dodatkowymi własnymi skrótami czatu spoza innych grup."
 [[message]]
 key = "Add a shortcut, then use it in chat to send the text."
 [message.translations]
+simplified_chinese = "添加快捷方式，然后在聊天中使用它发送文字。"
 traditional_chinese = "新增捷徑，然後在聊天中使用它送出文字。"
 japanese = "ショートカットを追加し、チャットでそれを使って送信します。"
 korean = "바로가기를 추가한 뒤 채팅에서 사용해 전송하세요."
@@ -3947,6 +3958,7 @@ polish = "Dodaj skrót, a potem użyj go na czacie, aby wysłać tekst."
 [[message]]
 key = "Remove shortcuts you no longer use to keep the list readable."
 [message.translations]
+simplified_chinese = "删掉不再使用的快捷方式，让列表保持清爽。"
 traditional_chinese = "移除不再使用的捷徑，讓清單保持清爽。"
 japanese = "使わなくなったショートカットを削除して、リストを見やすく保ちます。"
 korean = "더 이상 쓰지 않는 바로가기를 지워 목록을 보기 좋게 유지하세요."
@@ -3962,6 +3974,7 @@ polish = "Usuwaj nieużywane skróty, aby lista pozostała czytelna."
 [[message]]
 key = "Manages chat shortcuts aimed at players on your war list."
 [message.translations]
+simplified_chinese = "管理针对敌对列表玩家的聊天快捷方式。"
 traditional_chinese = "管理面向敵對列表中玩家的聊天快速發言。"
 japanese = "敵対リストのプレイヤー向けのクイックチャットを管理します。"
 korean = "전쟁 목록에 있는 플레이어를 대상으로 하는 빠른 채팅을 관리합니다."
@@ -3977,6 +3990,7 @@ polish = "Zarządza szybkimi wiadomościami kierowanymi do graczy z listy wojenn
 [[message]]
 key = "Add one shortcut per message; it is used when the target is on the list."
 [message.translations]
+simplified_chinese = "每条消息添加一个快捷方式，只有目标在列表上时才会使用。"
 traditional_chinese = "每則訊息單獨加一條快速發言，目標在敵對列表裡時才會用到。"
 japanese = "メッセージごとにクイックチャットを 1 つ追加し、相手がリストにいるときに使います。"
 korean = "메시지마다 빠른 채팅을 하나씩 추가하며, 대상이 목록에 있을 때 사용됩니다."
@@ -3992,6 +4006,7 @@ polish = "Dodaj osobny skrót dla każdej wiadomości; używa się go, gdy cel j
 [[message]]
 key = "Keep messages short so they fit in one chat line."
 [message.translations]
+simplified_chinese = "消息尽量简短，确保能放进一行聊天。"
 traditional_chinese = "訊息盡量短，確保一行聊天就能完整顯示。"
 japanese = "チャット 1 行に収まるよう、メッセージは短く保ちましょう。"
 korean = "채팅 한 줄에 들어가도록 메시지를 짧게 유지하세요."
@@ -4007,6 +4022,7 @@ polish = "Trzymaj wiadomości krótkie, aby mieściły się w jednej linii czatu
 [[message]]
 key = "Reviews configuration values that differ from their defaults and resets them."
 [message.translations]
+simplified_chinese = "检查与默认值不同的配置项，并把它们重置。"
 traditional_chinese = "檢查與預設值不同的設定項，並可將其重設。"
 japanese = "既定値と異なる設定値を確認し、リセットできます。"
 korean = "기본값과 다른 설정 값을 검토하고 초기화합니다."
@@ -4022,6 +4038,7 @@ polish = "Przegląda wartości konfiguracji różne od domyślnych i przywraca j
 [[message]]
 key = "Filter the list by name, select the values to change back, then confirm before resetting."
 [message.translations]
+simplified_chinese = "按名称筛选列表，勾选要改回的项，确认后再重置。"
 traditional_chinese = "依名稱篩選列表，勾選要還原的項目，確認後再重設。"
 japanese = "名前で一覧を絞り込み、戻す値を選んでから、確認してリセットします。"
 korean = "이름으로 목록을 걸러 낸 뒤 되돌릴 값을 선택하고, 확인한 다음 초기화하세요."
@@ -4037,6 +4054,7 @@ polish = "Filtruj listę po nazwie, zaznacz wartości do przywrócenia i potwier
 [[message]]
 key = "Resetting restores defaults immediately, so note down values you want to keep."
 [message.translations]
+simplified_chinese = "重置会立刻恢复默认值，想保留的值请先记下来。"
 traditional_chinese = "重設會立即恢復預設值，想保留的數值先記下來。"
 japanese = "リセットするとすぐ既定値に戻るので、残したい値は先に控えておきましょう。"
 korean = "초기화하면 곧바로 기본값으로 돌아가니, 유지할 값은 미리 적어 두세요."
@@ -4052,6 +4070,7 @@ polish = "Reset natychmiast przywraca wartości domyślne, więc najpierw zapisz
 [[message]]
 key = "Saves and loads complete client profiles, including name, chat settings and bind wheel presets."
 [message.translations]
+simplified_chinese = "保存和加载完整的客户端配置档，包括名称、聊天设置和绑定轮盘预设。"
 traditional_chinese = "儲存與載入完整的客戶端配置文件，包含暱稱、聊天設定和綁定輪盤預設。"
 japanese = "名前、チャット設定、バインドホイールのプリセットを含むクライアントプロファイルを丸ごと保存・読み込みします。"
 korean = "이름, 채팅 설정, 바인드 휠 프리셋을 포함한 클라이언트 프로필 전체를 저장하고 불러옵니다."
@@ -4067,6 +4086,7 @@ polish = "Zapisuje i wczytuje pełne profile klienta, w tym nazwę, ustawienia c
 [[message]]
 key = "Create a profile, edit it, then switch profiles before playing on a different server."
 [message.translations]
+simplified_chinese = "先创建配置档并编辑，换服务器游玩前再切换配置档。"
 traditional_chinese = "建立配置文件並編輯，換到別的伺服器玩之前先切換配置文件。"
 japanese = "プロファイルを作成して編集し、別のサーバーで遊ぶ前にプロファイルを切り替えます。"
 korean = "프로필을 만들고 편집한 뒤, 다른 서버에서 플레이하기 전에 프로필을 전환하세요."
@@ -4082,6 +4102,7 @@ polish = "Utwórz profil, edytuj go i przełącz profil przed grą na innym serw
 [[message]]
 key = "Loading a profile overwrites current settings, so save first if unsure."
 [message.translations]
+simplified_chinese = "加载配置档会覆盖当前设置，不确定时请先保存。"
 traditional_chinese = "載入配置文件會覆蓋目前設定，不確定就先儲存。"
 japanese = "プロファイルを読み込むと現在の設定が上書きされるので、不安なら先に保存しましょう。"
 korean = "프로필을 불러오면 현재 설정이 덮어써지니, 확실하지 않다면 먼저 저장하세요."
@@ -4097,6 +4118,7 @@ polish = "Wczytanie profilu nadpisuje bieżące ustawienia, więc w razie wątpl
 [[message]]
 key = "Previews the composed status bar output with your current settings."
 [message.translations]
+simplified_chinese = "用当前设置预览组合出的状态栏效果。"
 traditional_chinese = "以目前設定預覽組合後的狀態欄輸出。"
 japanese = "現在の設定で組み上がったステータスバーの表示をプレビューします。"
 korean = "현재 설정으로 구성된 상태 표시줄 출력을 미리 보여 줍니다."
@@ -4112,6 +4134,7 @@ polish = "Podgląda gotowy pasek statusu z bieżącymi ustawieniami."
 [[message]]
 key = "Change values in the settings card and watch this preview update."
 [message.translations]
+simplified_chinese = "在设置卡片里改动数值，这里的预览会同步更新。"
 traditional_chinese = "在設定卡片中修改數值，預覽就會即時更新。"
 japanese = "設定カードの値を変えると、このプレビューがすぐに更新されます。"
 korean = "설정 카드에서 값을 바꾸면 이 미리 보기가 곧바로 갱신됩니다."
@@ -4127,6 +4150,7 @@ polish = "Zmień wartości na karcie ustawień, a podgląd zaktualizuje się na 
 [[message]]
 key = "The preview uses your own Tee; other players may look different."
 [message.translations]
+simplified_chinese = "预览用的是你自己的 Tee，其他玩家看起来可能不一样。"
 traditional_chinese = "預覽使用的是你自己的 Tee，其他玩家的顯示可能不同。"
 japanese = "プレビューは自分の Tee で表示されるため、他のプレイヤーでは見え方が異なります。"
 korean = "미리 보기는 자신의 Tee로 표시되므로 다른 플레이어에게는 다르게 보일 수 있습니다."
@@ -4142,6 +4166,7 @@ polish = "Podgląd używa twojego Tee; u innych graczy może wyglądać inaczej.
 [[message]]
 key = "Sets the position, size and text style of the status bar."
 [message.translations]
+simplified_chinese = "设置状态栏的位置、大小和文字样式。"
 traditional_chinese = "設定狀態欄的位置、大小和文字樣式。"
 japanese = "ステータスバーの位置、サイズ、文字スタイルを設定します。"
 korean = "상태 표시줄의 위치, 크기, 글자 스타일을 설정합니다."
@@ -4157,6 +4182,7 @@ polish = "Ustawia położenie, rozmiar i styl tekstu paska statusu."
 [[message]]
 key = "Choose a screen position and font size, then check the preview card for wrapping."
 [message.translations]
+simplified_chinese = "选择屏幕位置和字号，再在预览卡片里检查是否换行。"
 traditional_chinese = "選擇螢幕位置和字型大小，再確認預覽卡中的換行情況。"
 japanese = "画面上の位置と文字サイズを選び、プレビューカードで折り返しを確認します。"
 korean = "화면 위치와 글꼴 크기를 고른 뒤 미리 보기 카드에서 줄바꿈을 확인하세요."
@@ -4172,6 +4198,7 @@ polish = "Wybierz położenie na ekranie i rozmiar czcionki, a potem sprawdź na
 [[message]]
 key = "A bar too close to the edge is cut on unusual aspect ratios."
 [message.translations]
+simplified_chinese = "状态栏离边缘太近时，在特殊宽高比下会被裁掉。"
 traditional_chinese = "狀態欄太靠近邊緣時，在特殊長寬比下會被裁切。"
 japanese = "端に寄せすぎたバーは、特殊なアスペクト比で切れてしまいます。"
 korean = "가장자리에 너무 가까운 상태 표시줄은 특이한 화면 비율에서 잘립니다."
@@ -4187,6 +4214,7 @@ polish = "Pasek zbyt blisko krawędzi jest przycinany przy nietypowych proporcja
 [[message]]
 key = "Maintains the list of hostile players and groups plus the rules used to display them."
 [message.translations]
+simplified_chinese = "维护敌对玩家和分组列表，以及显示它们所用的规则。"
 traditional_chinese = "維護敵對玩家與群組的清單，以及顯示它們所用的規則。"
 japanese = "敵対プレイヤーとグループのリスト、および表示に使うルールを管理します。"
 korean = "적대 플레이어와 그룹 목록, 그리고 표시에 쓰이는 규칙을 관리합니다."
@@ -4202,6 +4230,7 @@ polish = "Zarządza listą wrogich graczy i grup oraz regułami ich wyświetlani
 [[message]]
 key = "Add players or groups, then choose which markers and chat highlights apply to them."
 [message.translations]
+simplified_chinese = "添加玩家或分组，再选择对它们生效的标记和聊天高亮。"
 traditional_chinese = "新增玩家或群組，再選擇要套用到它們的標記與聊天醒目提示。"
 japanese = "プレイヤーやグループを追加し、適用するマーカーやチャットの強調表示を選びます。"
 korean = "플레이어나 그룹을 추가한 뒤 적용할 표시와 채팅 강조를 고릅니다."
@@ -4217,6 +4246,7 @@ polish = "Dodaj graczy lub grupy, a następnie wybierz, jakie znaczniki i wyró�
 [[message]]
 key = "The list only affects your client and is not shared with other players."
 [message.translations]
+simplified_chinese = "该列表只影响你的客户端，不会共享给其他玩家。"
 traditional_chinese = "這份清單只影響你的客戶端，不會與其他玩家共享。"
 japanese = "このリストは自分のクライアントにだけ反映され、他のプレイヤーとは共有されません。"
 korean = "이 목록은 내 클라이언트에만 적용되며 다른 플레이어와 공유되지 않습니다."
@@ -4232,6 +4262,7 @@ polish = "Lista działa tylko w twoim kliencie i nie jest udostępniana innym gr
 [[message]]
 key = "Adjusts helpers that hide latency, such as removing anti-ping and predicting margins inside freeze."
 [message.translations]
+simplified_chinese = "调整掩盖延迟的辅助功能，例如取消抗延迟、在冻结时使用预测边距。"
 traditional_chinese = "調整用來掩蓋延遲的輔助功能，例如關閉 antiping、預測凍結時的餘量。"
 japanese = "遅延を隠す補助機能を調整します。アンチピングを切る、フリーズ中の予測マージンなどです。"
 korean = "지연을 가리는 보조 기능을 조정합니다. 안티핑 해제나 얼어붙었을 때의 예측 여백 등입니다."
@@ -4247,6 +4278,7 @@ polish = "Dostosowuje ułatwienia ukrywające opóźnienie, np. wyłączenie ant
 [[message]]
 key = "Keep the defaults unless you play with high ping; then try one option at a time and compare."
 [message.translations]
+simplified_chinese = "除非你在高 Ping 下游戏，否则保持默认值；需要时一次只改一项再对比。"
 traditional_chinese = "除非你經常在高延遲下遊戲，否則保持預設；要調整時，一次只試一個選項再比較。"
 japanese = "高 ping で遊ぶ場合を除いて既定のままにし、変えるときは一度にひとつだけ試して比べます。"
 korean = "핑이 높지 않다면 기본값을 그대로 두고, 바꿀 때는 한 번에 하나씩 시험해 비교하세요."
@@ -4262,6 +4294,7 @@ polish = "Zostaw domyślne ustawienia, chyba że grasz z wysokim pingiem; wtedy 
 [[message]]
 key = "These options only change prediction on your client; what other players see is not affected."
 [message.translations]
+simplified_chinese = "这些选项只改变你客户端的预测，不影响其他玩家看到的画面。"
 traditional_chinese = "這些選項只改變你客戶端的預測，不影響其他玩家看到的畫面。"
 japanese = "これらのオプションは自分のクライアントの予測だけを変え、他のプレイヤーに見えるものには影響しません。"
 korean = "이 옵션은 내 클라이언트의 예측만 바꾸며, 다른 플레이어가 보는 화면에는 영향이 없습니다."
@@ -4277,6 +4310,7 @@ polish = "Te opcje zmieniają tylko przewidywanie w twoim kliencie; to, co widz�
 [[message]]
 key = "Sends an automatic chat reply when someone whispers you while you are muted or away."
 [message.translations]
+simplified_chinese = "当你屏蔽了对方或已经切屏时，有人私聊你会自动回复一条聊天消息。"
 traditional_chinese = "當你被禁言或暫離時，若有人對你私聊，會自動送出聊天回覆。"
 japanese = "ミュート中や離席中に誰かがささやいてきたとき、自動でチャット返信を送ります。"
 korean = "음소거 중이거나 자리를 비웠을 때 누군가 귓속말을 보내면 자동으로 채팅 답장을 보냅니다."
@@ -4292,6 +4326,7 @@ polish = "Wysyła automatyczną odpowiedź na czacie, gdy ktoś szepcze do ciebi
 [[message]]
 key = "Write the reply text; choose whether it triggers for muted players and whether the panel starts minimized."
 [message.translations]
+simplified_chinese = "填写回复文字，选择是否对已屏蔽发言的玩家触发，以及面板是否默认最小化。"
 traditional_chinese = "填寫回覆文字；可選擇是否對被禁言的玩家觸發，以及面板是否以最小化狀態開啟。"
 japanese = "返信内容を入力し、ミュート中のプレイヤーにも反応するか、パネルを最小化状態で開くかを選びます。"
 korean = "답장 내용을 입력하고, 음소거된 플레이어에게도 반응할지와 패널을 최소화한 상태로 열지 선택합니다."
@@ -4307,6 +4342,7 @@ polish = "Wpisz treść odpowiedzi; wybierz, czy ma działać dla wyciszonych gr
 [[message]]
 key = "Do not use it to spam: servers may punish repeated automatic messages."
 [message.translations]
+simplified_chinese = "不要用它刷屏，服务器可能会处罚重复的自动消息。"
 traditional_chinese = "不要用來刷頻：伺服器可能會懲罰重複的自動訊息。"
 japanese = "スパムには使わないでください。繰り返しの自動メッセージはサーバー側で罰せられる場合があります。"
 korean = "도배에 사용하지 마세요. 반복되는 자동 메시지는 서버에서 처벌될 수 있습니다."
@@ -4319,12 +4355,10 @@ portuguese = "Não utilize para spam: os servidores podem punir mensagens autom�
 turkish = "Spam için kullanmayın: sunucular tekrarlanan otomatik mesajları cezalandırabilir."
 polish = "Nie używaj tego do spamu: serwery mogą karać za powtarzane automatyczne wiadomości."
 
-
-
-
 [[message]]
 key = "Sets the scale of the in-game cursor."
 [message.translations]
+simplified_chinese = "设置游戏内光标的缩放大小。"
 traditional_chinese = "設定遊戲內光標的縮放比例。"
 japanese = "ゲーム内カーソルの拡大率を設定します。"
 korean = "게임 내 커서의 크기를 설정합니다."
@@ -4340,6 +4374,7 @@ polish = "Ustawia skalę kursora w grze."
 [[message]]
 key = "Increase the scale if the pointer is hard to see; decrease it for a cleaner look."
 [message.translations]
+simplified_chinese = "看不清指针时调大缩放，想要画面更干净时调小。"
 traditional_chinese = "如果光標不容易看清，就調高比例；想要更簡潔的外觀，就調低。"
 japanese = "ポインタが見づらいときは拡大率を上げ、すっきり見せたいときは下げます。"
 korean = "포인터가 잘 보이지 않으면 크기를 키우고, 더 깔끔하게 보이게 하려면 줄이세요."
@@ -4355,6 +4390,7 @@ polish = "Zwiększ skalę, jeśli wskaźnik jest słabo widoczny; zmniejsz ją d
 [[message]]
 key = "A very large cursor can hide small UI elements underneath it."
 [message.translations]
+simplified_chinese = "光标放得太大时会挡住它下面的小界面元素。"
 traditional_chinese = "過大的光標可能會遮住下方的小型介面元素。"
 japanese = "カーソルが大きすぎると、下にある小さな UI 要素が隠れることがあります。"
 korean = "커서가 너무 크면 그 아래의 작은 UI 요소를 가릴 수 있습니다."
@@ -4367,15 +4403,10 @@ portuguese = "Um cursor muito grande pode esconder elementos pequenos da interfa
 turkish = "Çok büyük bir imleç altındaki küçük arayüz öğelerini gizleyebilir."
 polish = "Bardzo duży kursor może zasłaniać małe elementy interfejsu pod nim."
 
-
-
-
-
-
-
 [[message]]
 key = "Chooses the font family and weight used by the menus."
 [message.translations]
+simplified_chinese = "选择菜单使用的字体和字重。"
 traditional_chinese = "選擇選單使用的字型家族與字重。"
 japanese = "メニューで使用するフォントファミリーとウェイトを選択します。"
 korean = "메뉴에서 사용할 글꼴 패밀리와 굵기를 선택합니다."
@@ -4391,6 +4422,7 @@ polish = "Wybiera rodzinę i grubość czcionki używanej w menu."
 [[message]]
 key = "Pick a family; if it offers several weights, choose one that stays readable at small sizes."
 [message.translations]
+simplified_chinese = "先选字体，若有多个字重，挑一个小字号下依然清晰的。"
 traditional_chinese = "選一個字型家族；如果它提供多種字重，選一個在小字號下仍清楚可讀的。"
 japanese = "ファミリーを選んでください。複数のウェイトがある場合は、小さいサイズでも読みやすいものを選びましょう。"
 korean = "패밀리를 고르세요. 굵기가 여러 개라면 작은 크기에서도 잘 읽히는 것을 선택하세요."
@@ -4406,6 +4438,7 @@ polish = "Wybierz rodzinę; jeśli oferuje kilka grubości, weź taką, która p
 [[message]]
 key = "Fonts without CJK glyphs show fallback squares for Chinese text."
 [message.translations]
+simplified_chinese = "不含中日韩字形的字体在显示中文时会变成方块。"
 traditional_chinese = "缺少中日韓字元的字型，顯示中文時會出現替代方塊。"
 japanese = "CJK 字形を持たないフォントでは、中国語のテキストが代替の四角で表示されます。"
 korean = "CJK 글리프가 없는 글꼴은 중국어 텍스트가 대체 사각형으로 표시됩니다."
@@ -4418,12 +4451,10 @@ portuguese = "Tipos de letra sem glifos CJK mostram quadrados de substituição 
 turkish = "CJK glifleri olmayan yazı tipleri, Çince metinde yedek kareler gösterir."
 polish = "Czcionki bez glifów CJK pokazują dla chińskiego tekstu zastępcze kwadraty."
 
-
-
-
 [[message]]
 key = "Adjusts TClient-specific HUD elements that are not part of the standard DDNet HUD."
 [message.translations]
+simplified_chinese = "调整不属于标准 DDNet HUD 的 TClient 专属 HUD 元素。"
 traditional_chinese = "調整不屬於標準 DDNet HUD 的 TClient 專屬 HUD 元素。"
 japanese = "標準の DDNet HUD にはない TClient 固有の HUD 要素を調整します。"
 korean = "표준 DDNet HUD에 없는 TClient 전용 HUD 요소를 조정합니다."
@@ -4439,6 +4470,7 @@ polish = "Dostraja elementy HUD charakterystyczne dla TClient, których nie ma w
 [[message]]
 key = "Open the card and enable only the elements you want; each option explains what it draws."
 [message.translations]
+simplified_chinese = "打开卡片，只启用需要的元素；每个选项都说明了它画什么。"
 traditional_chinese = "展開卡片，只啟用需要的元素；每個選項都說明它會繪製什麼。"
 japanese = "カードを開いて必要な要素だけを有効にしてください。各オプションには描画内容の説明があります。"
 korean = "카드를 열어 필요한 요소만 켜세요. 각 옵션에는 무엇을 그리는지 설명이 있습니다."
@@ -4454,6 +4486,7 @@ polish = "Otwórz kartę i włącz tylko potrzebne elementy; każda opcja opisuj
 [[message]]
 key = "A crowded HUD hides the game, so start with one element and add more if needed."
 [message.translations]
+simplified_chinese = "HUD 太满会挡住游戏画面，先从一项开始，需要时再加。"
 traditional_chinese = "HUD 太擁擠會遮住遊戲畫面，先開一個元素，有需要再加。"
 japanese = "HUD が混み合うとゲームが見えなくなるので、まず 1 つだけ有効にして、必要なら追加しましょう。"
 korean = "HUD가 복잡하면 게임이 가려지니, 하나부터 켜고 필요하면 더 추가하세요."
@@ -4469,6 +4502,7 @@ polish = "Zatłoczony HUD zasłania grę, więc zacznij od jednego elementu i do
 [[message]]
 key = "Fine-tunes the improved anti-ping prediction that smooths other players' movement."
 [message.translations]
+simplified_chinese = "微调改进的抗延迟预测，让其他玩家的移动更平滑。"
 traditional_chinese = "微調改良後的 anti-ping 預測，讓其他玩家的移動更順暢。"
 japanese = "他のプレイヤーの動きを滑らかにする改良版 anti-ping 予測を微調整します。"
 korean = "다른 플레이어의 움직임을 부드럽게 만드는 개선된 anti-ping 예측을 미세 조정합니다."
@@ -4484,6 +4518,7 @@ polish = "Dostraja ulepszone przewidywanie anti-ping, które wygładza ruch inny
 [[message]]
 key = "Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them."
 [message.translations]
+simplified_chinese = "先保持默认值；其他玩家看起来跳动就稍微调高，感觉自己落后于他们就调低。"
 traditional_chinese = "從預設值開始；其他玩家看起來一跳一跳時稍微調高，覺得自己比他們慢半拍時調低。"
 japanese = "デフォルト値から始め、他のプレイヤーの動きが飛んで見えるなら少し上げ、自分が遅れて見えるなら下げます。"
 korean = "기본값에서 시작하세요. 다른 플레이어가 튀어 보이면 조금 올리고, 내가 뒤처져 보이면 낮추세요."
@@ -4499,6 +4534,7 @@ polish = "Zacznij od wartości domyślnej: nieco ją zwiększ, jeśli inni gracz
 [[message]]
 key = "Extreme values make movement feel wrong, so change one step at a time."
 [message.translations]
+simplified_chinese = "极端值会让移动手感变怪，每次只改一档。"
 traditional_chinese = "極端數值會讓移動手感變得不對，請一次只調一格。"
 japanese = "極端な値は動きの感触を不自然にするので、一度に一段階ずつ変えてください。"
 korean = "극단적인 값은 움직임이 어색하게 느껴지게 하니 한 번에 한 단계씩 바꾸세요."
@@ -4514,6 +4550,7 @@ polish = "Skrajne wartości psują odczucie ruchu, więc zmieniaj je po jednym k
 [[message]]
 key = "Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior."
 [message.translations]
+simplified_chinese = "归集输入辅助功能：快速输入、自动边距、亚 tick 瞄准和光标行为。"
 traditional_chinese = "將輸入輔助集中分組：快速輸入、自動邊距、子 tick 瞄準與游標行為。"
 japanese = "入力支援をまとめた項目です。高速入力、自動マージン、サブティック照準、カーソルの挙動を含みます。"
 korean = "입력 보조 기능을 묶은 항목입니다. 빠른 입력, 자동 여백, 서브 틱 조준, 커서 동작을 포함합니다."
@@ -4529,6 +4566,7 @@ polish = "Grupuje ułatwienia sterowania: szybkie wejście, automatyczny margine
 [[message]]
 key = "Enable fast input if your key presses feel late; turn on auto margin to stop the cursor sticking to screen edges."
 [message.translations]
+simplified_chinese = "按键感觉延迟就启用快速输入；光标卡在屏幕边缘时打开自动边距。"
 traditional_chinese = "按鍵感覺延遲時開啟快速輸入；開啟自動邊距可讓游標不再卡在畫面邊緣。"
 japanese = "キー入力が遅れて感じるなら高速入力を有効に、カーソルが画面端に張り付くなら自動マージンをオンにします。"
 korean = "키 입력이 늦게 느껴지면 빠른 입력을 켜고, 커서가 화면 가장자리에 붙는 것이 싫으면 자동 여백을 켜세요."
@@ -4544,6 +4582,7 @@ polish = "Włącz szybkie wejście, jeśli naciśnięcia klawiszy wydają się s
 [[message]]
 key = "Fast input changes how inputs are timed, so disable it if a server reports unusual behavior."
 [message.translations]
+simplified_chinese = "快速输入会改变输入发送的时机，服务器报告异常时请关掉。"
 traditional_chinese = "快速輸入會改變輸入的計時方式，若伺服器回報異常行為請關閉。"
 japanese = "高速入力は入力のタイミングを変えるため、サーバーで異常が報告される場合は無効にしてください。"
 korean = "빠른 입력은 입력 타이밍을 바꾸므로 서버에서 이상 동작이 보고되면 끄세요."
@@ -4559,6 +4598,7 @@ polish = "Szybkie wejście zmienia taktowanie wejść, więc wyłącz je, jeśli
 [[message]]
 key = "Shows a small companion that follows your Tee and reacts to what you do."
 [message.translations]
+simplified_chinese = "显示一只跟随你的 Tee、并对你的动作作出反应的小宠物。"
 traditional_chinese = "顯示一隻小夥伴，跟著你的 Tee 並對你的動作做出反應。"
 japanese = "Tee についてくる小さな相棒を表示し、あなたの行動に反応します。"
 korean = "Tee를 따라다니며 내 행동에 반응하는 작은 친구를 표시합니다."
@@ -4574,6 +4614,7 @@ polish = "Pokazuje małego towarzysza, który podąża za twoim Tee i reaguje na
 [[message]]
 key = "Enable the pet, pick its skin and size, then move around to watch how it follows."
 [message.translations]
+simplified_chinese = "启用宠物，选好皮肤和大小，再跑动看看它怎么跟随。"
 traditional_chinese = "啟用寵物，選好皮膚與大小，再走動看看牠跟隨的樣子。"
 japanese = "ペットを有効にし、スキンとサイズを選んでから動き回り、追従の様子を確認します。"
 korean = "펫을 켜고 스킨과 크기를 고른 뒤 움직이며 따라오는 모습을 확인하세요."
@@ -4589,6 +4630,7 @@ polish = "Włącz zwierzaka, wybierz jego skin i rozmiar, a potem poruszaj się 
 [[message]]
 key = "Pets are purely cosmetic; turn them off if the extra drawing hurts performance."
 [message.translations]
+simplified_chinese = "宠物只是装饰，额外绘制影响性能时请关掉。"
 traditional_chinese = "寵物純屬裝飾；如果額外繪製影響效能，就把它們關掉。"
 japanese = "ペットは見た目だけの要素です。描画の負荷で動作が重い場合は無効にしてください。"
 korean = "펫은 순전히 꾸미기용입니다. 추가 렌더링으로 성능이 떨어지면 끄세요."
@@ -4604,6 +4646,7 @@ polish = "Zwierzaki są wyłącznie ozdobne; wyłącz je, jeśli dodatkowe rysow
 [[message]]
 key = "Draws a marker on selected players so you can find them in the world."
 [message.translations]
+simplified_chinese = "在选定的玩家身上绘制标记，方便在地图里找到他们。"
 traditional_chinese = "在選定的玩家身上繪製標記，方便在世界中找到他們。"
 japanese = "選択したプレイヤーにマーカーを描き、ワールド内で見つけやすくします。"
 korean = "선택한 플레이어 위에 표시를 그려 월드에서 쉽게 찾을 수 있게 합니다."
@@ -4619,6 +4662,7 @@ polish = "Rysuje znacznik na wybranych graczach, aby łatwiej ich znaleźć na m
 [[message]]
 key = "Enable the indicator; choose its distance mode and whether war-list players get a different color."
 [message.translations]
+simplified_chinese = "启用指示器，选择距离模式，并决定敌对列表玩家是否使用不同颜色。"
 traditional_chinese = "啟用指示器；選擇它的距離模式，並設定 war-list 玩家是否使用不同顏色。"
 japanese = "インジケーターを有効にし、距離モードと、war-list のプレイヤーを別の色で表示するかを選びます。"
 korean = "표시기를 켜고 거리 모드와 war-list 플레이어에게 다른 색을 적용할지 선택하세요."
@@ -4634,6 +4678,7 @@ polish = "Włącz wskaźnik, wybierz tryb odległości oraz czy gracze z war-lis
 [[message]]
 key = "Markers are drawn on your screen only and never change the game itself."
 [message.translations]
+simplified_chinese = "标记只画在你自己的屏幕上，不会改变游戏本身。"
 traditional_chinese = "標記只繪製在你的畫面上，永遠不會改變遊戲本身。"
 japanese = "マーカーは自分の画面にだけ描かれ、ゲーム自体には影響しません。"
 korean = "표시는 내 화면에만 그려지며 게임 자체는 바뀌지 않습니다."
@@ -4649,6 +4694,7 @@ polish = "Znaczniki są rysowane tylko na twoim ekranie i nigdy nie zmieniają s
 [[message]]
 key = "Applies an animated rainbow color to selected elements such as nameplates or the hook."
 [message.translations]
+simplified_chinese = "为名牌、钩索等选定元素加上流动的彩虹色。"
 traditional_chinese = "為名牌或鉤子等選定元素套用動畫彩虹色彩。"
 japanese = "ネームプレートやフックなどの選択した要素に、アニメーションする虹色を適用します。"
 korean = "이름표나 훅 같은 선택한 요소에 움직이는 무지개 색을 적용합니다."
@@ -4664,6 +4710,7 @@ polish = "Stosuje animowany kolor tęczy do wybranych elementów, takich jak nic
 [[message]]
 key = "Choose which parts get the rainbow; adjust speed and saturation to taste."
 [message.translations]
+simplified_chinese = "选择哪些部分使用彩虹色，再按喜好调整速度和饱和度。"
 traditional_chinese = "選擇哪些部分套用彩虹效果；依喜好調整速度與飽和度。"
 japanese = "虹色を適用する部分を選び、速度と彩度を好みに合わせて調整します。"
 korean = "무지개 효과를 적용할 부분을 선택하고 속도와 채도를 원하는 대로 조정하세요."
@@ -4679,6 +4726,7 @@ polish = "Wybierz, które części mają tęczę; prędkość i nasycenie dopasu
 [[message]]
 key = "Fast flashing colors are hard to read, so keep the speed moderate."
 [message.translations]
+simplified_chinese = "颜色闪得太快会难以辨认，速度保持适中。"
 traditional_chinese = "快速閃爍的顏色難以辨識，請把速度保持在適中範圍。"
 japanese = "速く点滅する色は読みにくいので、速度は控えめにしてください。"
 korean = "빠르게 깜빡이는 색은 읽기 어려우니 속도를 적당히 유지하세요."
@@ -4691,12 +4739,10 @@ portuguese = "Cores a piscar depressa são difíceis de ler, por isso mantenha a
 turkish = "Hızlı yanıp sönen renkler zor okunur, bu yüzden hızı ölçülü tutun."
 polish = "Szybko migające kolory są trudne do odczytania, więc utrzymuj umiarkowaną prędkość."
 
-
-
-
 [[message]]
 key = "Shows a trail behind Tees so their recent movement stays visible."
 [message.translations]
+simplified_chinese = "在 Tee 身后显示拖尾，让它们最近的移动保持可见。"
 traditional_chinese = "在 Tee 身後顯示拖尾，讓最近的移動軌跡保持可見。"
 japanese = "Tee の後ろに軌跡を表示し、最近の動きを見えるようにします。"
 korean = "Tee 뒤에 잔상을 표시해 최근 움직임을 눈에 띄게 합니다."
@@ -4712,6 +4758,7 @@ polish = "Pokazuje smugę za Tee, dzięki czemu ostatnie ruchy pozostają widocz
 [[message]]
 key = "Enable trails, choose length and fade, then turn off other players' trails if the screen gets crowded."
 [message.translations]
+simplified_chinese = "启用拖尾，选好长度和淡化，画面挤时再关掉其他玩家的拖尾。"
 traditional_chinese = "啟用拖尾並選擇長度與淡出效果；畫面太雜亂時可關閉其他玩家的拖尾。"
 japanese = "軌跡を有効にして長さとフェードを選び、画面がごちゃつくなら他プレイヤーの軌跡はオフにします。"
 korean = "잔상을 켜고 길이와 사라짐을 정한 뒤, 화면이 복잡하면 다른 플레이어의 잔상을 끄세요."
@@ -4727,6 +4774,7 @@ polish = "Włącz smugi, ustaw długość i zanikanie, a gdy ekran robi się tł
 [[message]]
 key = "Trails add drawing work, so lower the length on low-end machines."
 [message.translations]
+simplified_chinese = "拖尾会增加绘制负担，低配机器上把长度调小。"
 traditional_chinese = "拖尾會增加繪製負擔，在低階電腦上請縮短長度。"
 japanese = "軌跡は描画負荷が増えるため、低スペック環境では長さを短くしてください。"
 korean = "잔상은 그리기 부담이 늘어나므로 저사양 컴퓨터에서는 길이를 줄이세요."
@@ -4742,6 +4790,7 @@ polish = "Smugi zwiększają obciążenie rysowania, więc na słabszych kompute
 [[message]]
 key = "Draws outlines around map tiles so block edges are easier to see."
 [message.translations]
+simplified_chinese = "在地图图块周围绘制轮廓，让方块边缘更容易看清。"
 traditional_chinese = "在地圖圖塊周圍繪製描邊，讓方塊邊緣更容易辨識。"
 japanese = "マップタイルの周囲に輪郭を描き、ブロックの境界を見やすくします。"
 korean = "맵 타일 주위에 윤곽선을 그려 블록 경계를 쉽게 볼 수 있게 합니다."
@@ -4757,6 +4806,7 @@ polish = "Rysuje obrysy wokół kafelków mapy, aby krawędzie bloków były lep
 [[message]]
 key = "Enable the outlines, choose color and thickness, then test on a map with many different tiles."
 [message.translations]
+simplified_chinese = "启用轮廓，选好颜色和粗细，再到图块种类多的地图上测试。"
 traditional_chinese = "啟用描邊並選擇顏色與粗細，再到圖塊種類豐富的地圖上測試。"
 japanese = "輪郭を有効にして色と太さを選び、タイルの多いマップで試してください。"
 korean = "윤곽선을 켜고 색과 두께를 고른 뒤, 타일이 다양한 맵에서 시험해 보세요."
@@ -4772,6 +4822,7 @@ polish = "Włącz obrysy, wybierz kolor i grubość, a potem sprawdź je na mapi
 [[message]]
 key = "Outlines can be distracting in fast maps; lower the opacity instead of disabling them."
 [message.translations]
+simplified_chinese = "快节奏地图里轮廓容易分散注意，可以调低不透明度而不是关掉。"
 traditional_chinese = "在快速節奏的地圖中描邊可能干擾視線；建議降低不透明度，而不是直接關閉。"
 japanese = "速いマップでは輪郭が邪魔になることがあるので、切らずに不透明度を下げてください。"
 korean = "빠른 맵에서는 윤곽선이 방해될 수 있으니 끄지 말고 불투명도를 낮추세요."
@@ -4787,6 +4838,7 @@ polish = "Na szybkich mapach obrysy mogą rozpraszać; zmniejsz krycie zamiast j
 [[message]]
 key = "Turns on extra visual effects such as tiny Tees and the jelly-like Tee animation."
 [message.translations]
+simplified_chinese = "开启迷你 Tee、Q 弹 Tee 动画等额外视效。"
 traditional_chinese = "開啟額外視覺效果，例如迷你 Tee 與果凍般的 Tee 動畫。"
 japanese = "ミニ Tee やゼリーのような Tee アニメーションなどの追加視覚効果を有効にします。"
 korean = "작은 Tee와 젤리 같은 Tee 애니메이션 등 추가 시각 효과를 켭니다."
@@ -4802,6 +4854,7 @@ polish = "Włącza dodatkowe efekty wizualne, takie jak maleńkie Tee i galareto
 [[message]]
 key = "Enable the effects you like; turn tiny Tees off if distant players become hard to see."
 [message.translations]
+simplified_chinese = "启用喜欢的特效；远处玩家看不清时就关掉迷你 Tee。"
 traditional_chinese = "啟用你喜歡的效果；若遠處玩家不易辨識，可關閉迷你 Tee。"
 japanese = "好みの効果を有効にしてください。遠くのプレイヤーが見えにくい場合はミニ Tee をオフにします。"
 korean = "원하는 효과를 켜세요. 멀리 있는 플레이어가 잘 안 보이면 작은 Tee를 끄면 됩니다."
@@ -4817,6 +4870,7 @@ polish = "Włącz efekty, które lubisz; wyłącz maleńkie Tee, jeśli odlegli 
 [[message]]
 key = "These effects are cosmetic and can cost a little performance on weaker GPUs."
 [message.translations]
+simplified_chinese = "这些特效只是观感，较弱显卡上会多占一点性能。"
 traditional_chinese = "這些效果僅為外觀，在較弱的 GPU 上可能稍微影響效能。"
 japanese = "これらの効果は見た目だけのもので、非力な GPU では少し性能を消費します。"
 korean = "이 효과들은 겉모습만을 위한 것이며, 성능이 낮은 GPU에서는 약간의 성능을 사용합니다."
@@ -4832,6 +4886,7 @@ polish = "Te efekty są tylko wizualne i mogą trochę obciążać słabsze GPU.
 [[message]]
 key = "Changes the font used by the menus and how large the in-game cursor is drawn."
 [message.translations]
+simplified_chinese = "更改菜单使用的字体，以及游戏内光标的绘制大小。"
 traditional_chinese = "變更選單使用的字型，以及遊戲內游標的繪製大小。"
 japanese = "メニューで使うフォントと、ゲーム内カーソルの描画サイズを変更します。"
 korean = "메뉴에 사용되는 글꼴과 게임 내 커서의 크기를 변경합니다."
@@ -4847,6 +4902,7 @@ polish = "Zmienia czcionkę używaną w menu oraz rozmiar kursora rysowanego w g
 [[message]]
 key = "Pick a font family and weight here; use the cursor scale to make the pointer easier to see on large screens."
 [message.translations]
+simplified_chinese = "在这里选择字体和字重；大屏幕上用光标缩放让指针更容易看清。"
 traditional_chinese = "在此選擇字型家族與字重；使用游標縮放讓指針在大螢幕上更易看見。"
 japanese = "ここでフォントファミリーとウェイトを選びます。大きな画面でポインターを見やすくするにはカーソル倍率を使ってください。"
 korean = "여기서 글꼴 패밀리와 굵기를 고르세요. 큰 화면에서 포인터를 더 쉽게 보려면 커서 배율을 사용하세요."
@@ -4862,6 +4918,7 @@ polish = "Wybierz tutaj rodzinę i grubość czcionki; użyj skali kursora, aby 
 [[message]]
 key = "Custom fonts only cover the characters they include, so pick a font with CJK support if Chinese text looks different."
 [message.translations]
+simplified_chinese = "自定义字体只包含它自带的字形，中文显示异常时请选支持中日韩字符的字体。"
 traditional_chinese = "自訂字型僅涵蓋其包含的字元；若中文顯示不符預期，請選擇支援 CJK 的字型。"
 japanese = "カスタムフォントは含まれる文字しか表示できないため、中国語の表示がおかしい場合は CJK 対応フォントを選んでください。"
 korean = "사용자 지정 글꼴은 포함된 문자만 표시하므로, 중국어 텍스트가 다르게 보이면 CJK를 지원하는 글꼴을 선택하세요."
@@ -4877,6 +4934,7 @@ polish = "Własne czcionki obejmują tylko zawarte w nich znaki, więc jeśli te
 [[message]]
 key = "Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers."
 [message.translations]
+simplified_chinese = "控制其他玩家名字旁显示的内容，例如战队标签、好友标记和客户端标识。"
 traditional_chinese = "控制其他玩家名稱旁顯示的內容，例如戰隊標籤、好友標記與客戶端識別碼。"
 japanese = "他のプレイヤーの名前の横に表示するもの（クランタグ、フレンドマーク、クライアント識別子など）を制御します。"
 korean = "다른 플레이어 이름 옆에 표시할 항목(클랜 태그, 친구 표시, 클라이언트 식별자 등)을 제어합니다."
@@ -4892,6 +4950,7 @@ polish = "Określa, co wyświetla się obok nazw innych graczy, np. tagi klanów
 [[message]]
 key = "Enable the badges you want; tune the nameplate size where it overlaps the game view."
 [message.translations]
+simplified_chinese = "启用需要的标记；名牌挡住游戏画面时再调整名牌大小。"
 traditional_chinese = "啟用你想要的名牌標記；若與遊戲畫面重疊，調整名牌大小。"
 japanese = "必要なバッジを有効にします。ゲーム画面と重なる場合はネームプレートのサイズを調整してください。"
 korean = "원하는 배지를 켜세요. 게임 화면과 겹치면 이름표 크기를 조정하세요."
@@ -4907,6 +4966,7 @@ polish = "Włącz wybrane odznaki; jeśli nachodzą na widok gry, dostosuj rozmi
 [[message]]
 key = "Too many badges make busy servers hard to read, so keep only the ones you actually use."
 [message.translations]
+simplified_chinese = "标记太多会让拥挤的服务器难以看清，只留实际会用到的。"
 traditional_chinese = "標記過多會讓熱鬧的伺服器難以辨識，只保留實際用到的項目即可。"
 japanese = "バッジが多すぎると混雑したサーバーが見づらくなるため、実際に使うものだけを残してください。"
 korean = "배지가 너무 많으면 붐비는 서버에서 알아보기 어려우니 실제로 쓰는 것만 남기세요."
@@ -4922,6 +4982,7 @@ polish = "Zbyt wiele odznak utrudnia odczyt na zatłoczonych serwerach, więc zo
 [[message]]
 key = "Changes how the vote menu looks and how you interact with running votes."
 [message.translations]
+simplified_chinese = "更改投票菜单的外观，以及你参与进行中投票的方式。"
 traditional_chinese = "變更投票選單的外觀，以及你與進行中投票的互動方式。"
 japanese = "投票メニューの見た目と、進行中の投票への操作方法を変更します。"
 korean = "투표 메뉴의 모양과 진행 중인 투표를 다루는 방식을 변경합니다."
@@ -4937,6 +4998,7 @@ polish = "Zmienia wygląd menu głosowania i sposób obsługi trwających głoso
 [[message]]
 key = "Adjust the display options; open a vote to check the layout before joining a busy server."
 [message.translations]
+simplified_chinese = "调整显示选项，进拥挤的服务器前先开一个投票查看布局。"
 traditional_chinese = "調整顯示選項；在加入熱鬧的伺服器前，先開啟一項投票確認版面。"
 japanese = "表示オプションを調整します。混雑したサーバーに入る前に、投票を開いてレイアウトを確認してください。"
 korean = "표시 옵션을 조정하세요. 붐비는 서버에 접속하기 전에 투표를 열어 배치를 확인하세요."
@@ -4952,6 +5014,7 @@ polish = "Dostosuj opcje wyświetlania; przed dołączeniem do zatłoczonego ser
 [[message]]
 key = "This only affects your own screen; votes still follow the server rules."
 [message.translations]
+simplified_chinese = "这只影响你自己的屏幕，投票仍按服务器规则进行。"
 traditional_chinese = "這僅影響你自己的畫面；投票仍遵循伺服器規則。"
 japanese = "これは自分の画面だけに影響します。投票はサーバーのルールに従います。"
 korean = "이 설정은 본인 화면에만 영향을 줍니다. 투표는 여전히 서버 규칙을 따릅니다."
@@ -4967,6 +5030,7 @@ polish = "To wpływa tylko na twój ekran; głosowania nadal podlegają regułom
 [[message]]
 key = "Draws temporary strokes on your own screen background while a bound key is held and the mouse moves."
 [message.translations]
+simplified_chinese = "按住绑定键并移动鼠标时，在你自己的屏幕背景上绘制临时笔画。"
 traditional_chinese = "按住綁定的按鍵並移動滑鼠時，在你自己的螢幕背景畫上暫時的筆跡。"
 japanese = "割り当てたキーを押しながらマウスを動かすと、自分の画面の背景に一時的な線を描きます。"
 korean = "지정한 키를 누른 채 마우스를 움직이면 내 화면 배경에 임시 획을 그립니다."
@@ -4982,6 +5046,7 @@ polish = "Rysuje tymczasowe pociągnięcia na tle własnego ekranu, gdy przytrzy
 [[message]]
 key = "Bind a key to \"Draw at mouse position\", hold it in game and move the mouse to draw, then set color, width and how long strokes stay visible."
 [message.translations]
+simplified_chinese = "给“绘制鼠标所在位置”绑定一个按键，在游戏中按住并移动鼠标即可绘制，再设置颜色、宽度和笔画的显示时长。"
 traditional_chinese = "把按鍵綁定到「在滑鼠位置繪製」，在遊戲中按住它並移動滑鼠來畫，然後設定顏色、粗細以及筆跡停留多久。"
 japanese = "「マウス位置に描画」にキーを割り当て、ゲーム内で押したままマウスを動かして描き、色、太さ、線が残る時間を設定します。"
 korean = "\"마우스 위치에 그리기\"에 키를 지정하고, 게임에서 누른 채 마우스를 움직여 그린 뒤 색상과 두께, 획이 남는 시간을 설정하세요."
@@ -4997,6 +5062,7 @@ polish = "Przypisz klawisz do „Rysuj w pozycji myszy\", przytrzymaj go w grze 
 [[message]]
 key = "Strokes are local only and vanish when you leave the map; set the fade time to 0 to keep them until you draw again."
 [message.translations]
+simplified_chinese = "笔画只在本地显示，离开地图就会消失；把消失时间设为 0 可保留到下次绘制。"
 traditional_chinese = "筆跡只在本機顯示，離開地圖就會消失；把淡出時間設為 0，就能保留到你下次再畫。"
 japanese = "線はローカルにだけ描かれ、マップを離れると消えます。フェード時間を 0 にすると、次に描くまで残ります。"
 korean = "획은 로컬에만 남고 맵을 나가면 사라집니다. 사라지는 시간을 0으로 두면 다시 그릴 때까지 유지됩니다."
@@ -5012,6 +5078,7 @@ polish = "Pociągnięcia są tylko lokalne i znikają po opuszczeniu mapy; ustaw
 [[message]]
 key = "Renames your Tee automatically when you get close to the finish, so the finish is recorded under the name you prepared."
 [message.translations]
+simplified_chinese = "靠近终点时自动给你的 Tee 改名，让通关记录使用你预先准备的名字。"
 traditional_chinese = "靠近終點時自動幫你的 Tee 改名，讓這次終點成績記在你事先準備好的名字下。"
 japanese = "ゴールに近づくと Tee の名前を自動で変更し、準備しておいた名前でゴールが記録されます。"
 korean = "결승점에 가까워지면 Tee 이름을 자동으로 바꿔서, 준비해 둔 이름으로 결승 기록이 남습니다."
@@ -5027,6 +5094,7 @@ polish = "Automatycznie zmienia nazwę twojego Tee, gdy zbliżasz się do mety, 
 [[message]]
 key = "Enable \"Try to rename before finishing\", then fill in the finishing name and run to the finish to test it."
 [message.translations]
+simplified_chinese = "启用“过终点前尝试改名”，填好终点名称，再跑到终点测试。"
 traditional_chinese = "先打開「完賽前嘗試改名」，填好完賽名字，再跑到終點測試。"
 japanese = "「ゴール前に名前を変えてみる」をオンにして、ゴール時の名前を入力し、ゴールまで走って試してください。"
 korean = "\"결승 전 이름 변경 시도\"를 켜고 결승 때 쓸 이름을 입력한 다음 결승점까지 달려서 확인하세요."
@@ -5042,6 +5110,7 @@ polish = "Włącz „Próbuj zmienić nazwę przed metą\", wpisz nazwę na met�
 [[message]]
 key = "It only changes your name, not your skin or clan; names that are too long are cut off."
 [message.translations]
+simplified_chinese = "它只改名字，不改皮肤和战队；名字过长会被截断。"
 traditional_chinese = "它只改名，不改皮膚和戰隊；名字太長會被截斷。"
 japanese = "変わるのは名前だけで、スキンやクランは変わりません。長すぎる名前は切り捨てられます。"
 korean = "이름만 바뀌고 스킨이나 클랜은 그대로입니다. 너무 긴 이름은 잘려 나갑니다."
@@ -5057,6 +5126,7 @@ polish = "Zmienia tylko nazwę, a nie skórkę czy klan; zbyt długie nazwy są 
 [[message]]
 key = "Shows the real position of other players as a translucent ghost next to the position the client predicts."
 [message.translations]
+simplified_chinese = "把其他玩家的真实位置以半透明影子显示在客户端预测的位置旁边。"
 traditional_chinese = "把其他玩家的真實位置畫成半透明的影子，放在客戶端預測的位置旁邊。"
 japanese = "他のプレイヤーの実際の位置を、クライアントが予測した位置の隣に半透明のゴーストとして表示します。"
 korean = "다른 플레이어의 실제 위치를 클라이언트가 예측한 위치 옆에 반투명 고스트로 표시합니다."
@@ -5072,6 +5142,7 @@ polish = "Pokazuje rzeczywistą pozycję innych graczy jako półprzezroczystego
 [[message]]
 key = "Enable \"Show unpredicted ghosts of other players\", then tune the predicted and unpredicted ghost opacity."
 [message.translations]
+simplified_chinese = "启用“显示其他玩家未预测的影子”，再调整预测影子和未预测影子的不透明度。"
 traditional_chinese = "打開「顯示其他玩家未預測的影子」，再調整預測影子和未預測影子的不透明度。"
 japanese = "「他のプレイヤーの未予測ゴーストを表示」をオンにし、予測ゴーストと未予測ゴーストの不透明度を調整します。"
 korean = "\"다른 플레이어의 예측되지 않은 고스트 표시\"를 켠 뒤 예측 고스트와 예측되지 않은 고스트의 불투명도를 조정하세요."
@@ -5087,6 +5158,7 @@ polish = "Włącz „Pokaż nieprzewidziane duchy innych graczy\", a potem ustaw
 [[message]]
 key = "Ghosts only affect your own view; bind the toggle key or lower the opacity when the screen gets crowded."
 [message.translations]
+simplified_chinese = "影子只影响你自己的视角；画面挤时绑一个切换键或调低不透明度。"
 traditional_chinese = "影子只影響你自己的畫面；畫面太擁擠時，綁定切換鍵或調低不透明度。"
 japanese = "ゴーストは自分の表示にだけ影響します。画面が混み合ってきたら切り替えキーを割り当てるか、不透明度を下げてください。"
 korean = "고스트는 내 화면에만 영향을 줍니다. 화면이 복잡해지면 전환 키를 지정하거나 불투명도를 낮추세요."
@@ -5102,6 +5174,7 @@ polish = "Duchy wpływają tylko na twój widok; gdy ekran staje się zatłoczon
 [[message]]
 key = "Runs commands automatically when you connect to a server, split into a connect part and a join part."
 [message.translations]
+simplified_chinese = "连接服务器时自动执行指令，分为连接段和加入段。"
 traditional_chinese = "連線到伺服器時自動執行指令，分成連線階段和加入階段。"
 japanese = "サーバーに接続したときにコマンドを自動で実行します。接続時と参加時の二段階に分かれています。"
 korean = "서버에 연결하면 명령어를 자동으로 실행하며, 연결 단계와 참가 단계로 나뉩니다."
@@ -5117,6 +5190,7 @@ polish = "Automatycznie wykonuje polecenia po połączeniu z serwerem, podzielon
 [[message]]
 key = "Fill in the connect and join command fields, separate several commands with semicolons, and raise the delay if the server is not ready yet."
 [message.translations]
+simplified_chinese = "填写连接段和加入段的指令栏，多条指令用分号隔开；服务器还没准备好就调高延迟。"
 traditional_chinese = "填好連線指令和加入指令欄位，多條指令用分號隔開；伺服器還沒準備好時，把延遲調大。"
 japanese = "接続コマンドと参加コマンドの欄を入力し、複数のコマンドはセミコロンで区切ります。サーバーの準備ができていないときは遅延を増やしてください。"
 korean = "연결 명령어와 참가 명령어 입력란을 채우고, 여러 명령어는 세미콜론으로 구분하세요. 서버가 아직 준비되지 않았다면 지연을 늘리세요."
@@ -5132,6 +5206,7 @@ polish = "Wypełnij pola poleceń połączenia i dołączania, oddziel kilka pol
 [[message]]
 key = "Commands run once per connection, not on every map change; remove the parts that print errors."
 [message.translations]
+simplified_chinese = "指令每次连接只执行一次，不会在每次换图时执行；把会报错的部分去掉。"
 traditional_chinese = "指令每次連線只執行一次，不是每次更換地圖都執行；會報錯的部分請刪掉。"
 japanese = "コマンドは接続ごとに一度だけ実行され、マップが変わるたびには実行されません。エラーを出す部分は削除してください。"
 korean = "명령어는 연결마다 한 번만 실행되며 맵이 바뀔 때마다 실행되지 않습니다. 오류를 출력하는 부분은 지우세요."
@@ -5147,6 +5222,7 @@ polish = "Polecenia działają raz na połączenie, a nie przy każdej zmianie m
 [[message]]
 key = "Shows how many Tees in your team are frozen and how many are still active, as a row of Tee icons."
 [message.translations]
+simplified_chinese = "用一排 Tee 图标显示你队伍里有多少 Tee 被冻结、多少仍在活动。"
 traditional_chinese = "以一排 Tee 圖示顯示隊伍中有多少 Tee 被凍結、還有多少仍在活動。"
 japanese = "チーム内でフリーズしている Tee と、まだアクティブな Tee の数を、Tee アイコンの列で表示します。"
 korean = "팀에서 얼어붙은 Tee와 아직 활성 상태인 Tee의 수를 Tee 아이콘 행으로 표시합니다."
@@ -5162,6 +5238,7 @@ polish = "Pokazuje w postaci rzędu ikon Tee, ile Tee w twojej drużynie jest za
 [[message]]
 key = "Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then set the icon size and the maximum number of rows."
 [message.translations]
+simplified_chinese = "启用冻结 Tee HUD，选择统计活动中的还是被冻结的 Tee，再设置图标大小和最大行数。"
 traditional_chinese = "先啟用凍結 Tee HUD，選擇要計算活動中的 Tee 還是凍結的 Tee，再設定圖示大小與最大列數。"
 japanese = "フリーズ Tee HUD を有効にし、アクティブな Tee とフリーズした Tee のどちらを数えるかを選んでから、アイコンサイズと最大行数を設定します。"
 korean = "얼어붙은 Tee HUD를 켜고, 활성 Tee와 얼어붙은 Tee 중 무엇을 셀지 고른 다음 아이콘 크기와 최대 행 수를 설정하세요."
@@ -5177,6 +5254,7 @@ polish = "Włącz HUD zamrożonych Tee, wybierz, czy liczyć aktywnych czy zamro
 [[message]]
 key = "It only counts your own team and only appears on your screen; lower the icon size when it covers the crosshair."
 [message.translations]
+simplified_chinese = "它只统计你自己的队伍，也只显示在你的屏幕上；挡住准星时把图标调小。"
 traditional_chinese = "它只計算你自己的隊伍，也只顯示在你的畫面上；當它遮住準星時，把圖示大小調小。"
 japanese = "数えるのは自分のチームだけで、表示も自分の画面だけです。クロスヘアに重なる場合は、アイコンサイズを小さくしてください。"
 korean = "자기 팀만 세고 본인 화면에만 표시됩니다. 조준점을 가릴 때는 아이콘 크기를 줄이세요."
@@ -5196,6 +5274,14 @@ simplified_chinese = "选择窗口化模式或全屏模式，以及显示器和�
 traditional_chinese = "選擇視窗化模式或全螢幕模式，以及顯示器與解析度；切換時會重建交換鏈，畫面可能短暫閃爍。"
 japanese = "ウィンドウモードかフルスクリーンモードか、使用するモニターと解像度を選びます。切り替えるとスワップチェーンが再作成されるため、画面が一瞬ちらつくことがあります。"
 korean = "창 모드 또는 전체 화면 모드와 모니터, 해상도를 선택합니다. 전환하면 스왑 체인이 다시 생성되어 화면이 잠깐 깜빡일 수 있습니다."
+russian = "Выбирает оконный или полноэкранный режим, монитор и разрешение; при переключении цепочка буферов пересоздаётся, поэтому экран может коротко мигнуть."
+german = "Legt Fenster- oder Vollbildmodus, Monitor und Auflösung fest; ein Wechsel baut die Swapchain neu auf, der Bildschirm kann kurz flackern."
+spanish = "Elige el modo ventana o pantalla completa, el monitor y la resolución; al cambiar se recrea la cadena de intercambio, así que la pantalla puede parpadear un instante."
+french = "Choisit le mode fenêtré ou plein écran, l'écran et la résolution ; en changer recrée la chaîne de swap et l'écran peut clignoter un instant."
+brazilian_portuguese = "Escolhe entre janela e tela cheia, além do monitor e da resolução; a troca recria a swap chain, então a tela pode piscar por um instante."
+portuguese = "Escolhe o modo janelado ou ecrã completo, o monitor e a resolução; ao mudar, a cadeia de troca é recriada e o ecrã pode piscar por um instante."
+turkish = "Pencereli veya tam ekran modunu, monitörü ve çözünürlüğü seçer; değiştirmek takas zincirini yeniden oluşturur, bu yüzden ekran kısa süreliğine yanıp sönebilir."
+polish = "Wybiera tryb okienkowy lub pełnoekranowy, monitor i rozdzielczość; przełączenie odtwarza łańcuch wymiany, więc ekran może na chwilę mignąć."
 
 [[message]]
 key = "Pick the mode first, then the monitor and resolution; the refresh rate follows the monitor's current mode."
@@ -5204,6 +5290,14 @@ simplified_chinese = "先选择模式，再选择显示器和分辨率；刷新�
 traditional_chinese = "先選擇模式，再選擇顯示器與解析度；刷新率由顯示器目前的模式決定。"
 japanese = "まずモードを選び、次にモニターと解像度を選びます。リフレッシュレートはモニターの現在のモードによって決まります。"
 korean = "먼저 모드를 고른 다음 모니터와 해상도를 선택하세요. 재생률은 모니터의 현재 모드에 따라 결정됩니다."
+russian = "Сначала выберите режим, затем монитор и разрешение; частота обновления следует текущему режиму монитора."
+german = "Wähle zuerst den Modus, dann Monitor und Auflösung; die Bildwiederholfrequenz folgt dem aktuellen Modus des Monitors."
+spanish = "Elige primero el modo y luego el monitor y la resolución; la frecuencia de actualización sigue al modo actual del monitor."
+french = "Choisis d'abord le mode, puis l'écran et la résolution ; la fréquence de rafraîchissement suit le mode actuel de l'écran."
+brazilian_portuguese = "Escolha primeiro o modo, depois o monitor e a resolução; a taxa de atualização segue o modo atual do monitor."
+portuguese = "Escolhe primeiro o modo, depois o monitor e a resolução; a taxa de atualização segue o modo atual do monitor."
+turkish = "Önce modu, ardından monitörü ve çözünürlüğü seçin; yenileme hızı monitörün geçerli modunu izler."
+polish = "Najpierw wybierz tryb, potem monitor i rozdzielczość; częstotliwość odświeżania zależy od bieżącego trybu monitora."
 
 [[message]]
 key = "If exclusive fullscreen fails, switch back to windowed or borderless first."
@@ -5212,6 +5306,14 @@ simplified_chinese = "如果独占全屏模式无法启动，请先切回窗口�
 traditional_chinese = "如果獨佔全螢幕模式無法啟動，請先切回視窗化或無邊框模式。"
 japanese = "排他フルスクリーンに失敗する場合は、まずウィンドウモードかボーダーレスに戻してください。"
 korean = "독점 전체 화면 모드가 실패하면 먼저 창 모드나 테두리 없는 모드로 돌아가세요."
+russian = "Если эксклюзивный полноэкранный режим не запускается, сначала вернитесь в оконный режим или в режим без рамки."
+german = "Scheitert das exklusive Vollbild, wechsle zuerst zurück auf Fenstermodus oder randlos."
+spanish = "Si falla la pantalla completa exclusiva, vuelve primero al modo ventana o sin bordes."
+french = "Si le plein écran exclusif échoue, repasse d'abord en fenêtré ou en sans bordure."
+brazilian_portuguese = "Se a tela cheia exclusiva falhar, volte primeiro para janela ou janela sem bordas."
+portuguese = "Se o modo de ecrã completo exclusivo não funcionar, volta primeiro ao modo janelado ou sem bordas."
+turkish = "Özel tam ekran başarısız olursa önce pencereli veya kenarlıksız moda dönün."
+polish = "Jeśli ekskluzywny tryb pełnoekranowy nie działa, najpierw wróć do trybu okienkowego lub bez ramek."
 
 [[message]]
 key = "Controls how UI surfaces are drawn: card surface opacity, border width, corner rounding, segment count and the rainbow title effect."
@@ -5220,6 +5322,14 @@ simplified_chinese = "控制界面表面的绘制方式：卡片表面不透明�
 traditional_chinese = "控制介面表面的繪製方式：卡片表面不透明度、邊框寬度、圓角、分段數與彩虹標題效果。"
 japanese = "UI の表面をどう描画するかを設定します。カード表面の不透明度、枠線の幅、角丸、セグメント数、カードタイトルの虹色効果です。"
 korean = "UI 표면을 그리는 방식을 설정합니다. 카드 표면 불투명도, 테두리 너비, 모서리 둥글림, 세그먼트 수, 카드 제목 무지개 효과입니다."
+russian = "Управляет отрисовкой поверхностей интерфейса: прозрачность поверхности карточки, толщина рамки, скругление углов, число сегментов и радужный эффект заголовка."
+german = "Steuert, wie UI-Oberflächen gezeichnet werden: Deckkraft der Kartenoberfläche, Randbreite, Eckenrundung, Segmentanzahl und der Regenbogen-Titeleffekt."
+spanish = "Controla cómo se dibujan las superficies de la interfaz: opacidad de la superficie de las tarjetas, ancho del borde, redondeo de las esquinas, número de segmentos y el efecto arcoíris del título."
+french = "Contrôle le rendu des surfaces de l'interface : opacité de la surface des cartes, épaisseur des bordures, arrondi des coins, nombre de segments et effet arc-en-ciel du titre."
+brazilian_portuguese = "Controla como as superfícies da interface são desenhadas: opacidade da superfície do cartão, largura da borda, arredondamento dos cantos, número de segmentos e o efeito arco-íris do título."
+portuguese = "Controla o desenho das superfícies da UI: opacidade da superfície dos cartões, largura das bordas, arredondamento dos cantos, número de segmentos e efeito arco-íris do título."
+turkish = "Arayüz yüzeylerinin nasıl çizileceğini denetler: kart yüzeyi opaklığı, kenarlık genişliği, köşe yuvarlaması, dilim sayısı ve gökkuşağı başlık efekti."
+polish = "Steruje rysowaniem powierzchni interfejsu: kryciem powierzchni karty, grubością obramowania, zaokrągleniem rogów, liczbą segmentów i efektem tęczowego tytułu."
 
 [[message]]
 key = "Adjust one value at a time; corners and segments are drawn per frame, so large segment counts cost GPU time."
@@ -5228,6 +5338,14 @@ simplified_chinese = "一次只调整一个值；圆角和分段每帧都会绘�
 traditional_chinese = "一次只調整一個值；圓角與分段每幀都會繪製，分段數過高會佔用 GPU 時間。"
 japanese = "値を一つずつ調整してください。角丸とセグメントは毎フレーム描画されるため、セグメント数が多いと GPU 時間を消費します。"
 korean = "한 번에 값 하나씩 조정하세요. 모서리 둥글림과 세그먼트는 매 프레임 그려지므로 세그먼트 수가 많으면 GPU 시간을 사용합니다."
+russian = "Меняйте по одному значению; скругления и сегменты рисуются каждый кадр, поэтому большое число сегментов нагружает GPU."
+german = "Ändere jeweils nur einen Wert; Ecken und Segmente werden pro Frame gezeichnet, hohe Segmentzahlen kosten GPU-Zeit."
+spanish = "Ajusta un valor cada vez; las esquinas y los segmentos se dibujan por fotograma, así que un número alto de segmentos consume tiempo de GPU."
+french = "Règle une valeur à la fois ; les coins et les segments sont redessinés à chaque image, donc un grand nombre de segments coûte du temps GPU."
+brazilian_portuguese = "Ajuste um valor por vez; cantos e segmentos são desenhados a cada quadro, então muitos segmentos custam tempo de GPU."
+portuguese = "Ajusta um valor de cada vez; cantos e segmentos são desenhados a cada frame, por isso muitos segmentos custam tempo de GPU."
+turkish = "Her seferinde tek bir değeri değiştirin; köşeler ve dilimler her karede çizilir, bu yüzden yüksek dilim sayıları GPU süresini artırır."
+polish = "Zmieniaj wartości pojedynczo; rogi i segmenty są rysowane co klatkę, więc duża liczba segmentów obciąża GPU."
 
 [[message]]
 key = "Very thick borders or high segment counts make text look blurry; keep them near the defaults."
@@ -5236,6 +5354,14 @@ simplified_chinese = "边框过粗或分段数过高会让文字显得模糊；�
 traditional_chinese = "邊框太粗或分段數過高會讓文字顯得模糊；請盡量讓這些值接近預設值。"
 japanese = "枠線を太くしすぎたり、セグメント数を増やしすぎたりすると、文字がぼやけて見えます。既定値に近い値に保ってください。"
 korean = "테두리가 너무 두껍거나 세그먼트 수가 너무 많으면 글자가 흐릿하게 보입니다. 기본값에 가깝게 유지하세요."
+russian = "Слишком толстые рамки или большое число сегментов делают текст размытым; держите значения близко к стандартным."
+german = "Sehr dicke Ränder oder viele Segmente lassen Text unscharf wirken; bleib nahe an den Standardwerten."
+spanish = "Los bordes muy gruesos o un número alto de segmentos hacen que el texto se vea borroso; mantén los valores cerca de los predeterminados."
+french = "Des bordures très épaisses ou un nombre de segments élevé rendent le texte flou ; reste proche des valeurs par défaut."
+brazilian_portuguese = "Bordas muito grossas ou muitos segmentos deixam o texto borrado; mantenha perto dos padrões."
+portuguese = "Bordas muito espessas ou muitos segmentos deixam o texto desfocado; mantém os valores perto dos predefinidos."
+turkish = "Çok kalın kenarlıklar veya yüksek dilim sayıları metni bulanık gösterir; varsayılan değerlere yakın tutun."
+polish = "Bardzo grube obramowania lub duża liczba segmentów rozmywają tekst; trzymaj je blisko wartości domyślnych."
 
 [[message]]
 key = "Sets UI icon color and weight for the icon font shared by menus and cards."
@@ -5244,6 +5370,14 @@ simplified_chinese = "为菜单和卡片共用的图标字体设置界面图标�
 traditional_chinese = "為選單與卡片共用的圖示字型設定介面圖示的顏色與字重。"
 japanese = "メニューとカードが共通で使うアイコンフォントについて、UI アイコンの色とウェイトを設定します。"
 korean = "메뉴와 카드가 함께 쓰는 아이콘 글꼴의 UI 아이콘 색상과 굵기를 설정합니다."
+russian = "Задаёт цвет и начертание значков интерфейса для шрифта значков, общего для меню и карточек."
+german = "Legt Symbolfarbe und -stärke der Symbolschrift fest, die Menüs und Karten gemeinsam nutzen."
+spanish = "Define el color y el grosor de los iconos de la interfaz en la fuente de iconos que comparten los menús y las tarjetas."
+french = "Définit la couleur et la graisse des icônes de l'interface, dans la police d'icônes commune aux menus et aux cartes."
+brazilian_portuguese = "Define a cor e o peso dos ícones da interface na fonte de ícones usada por menus e cartões."
+portuguese = "Define a cor e o peso dos ícones da UI para a fonte de ícones partilhada por menus e cartões."
+turkish = "Menülerde ve kartlarda kullanılan simge yazı tipinin rengini ve ağırlığını ayarlar."
+polish = "Ustawia kolor i grubość ikon interfejsu w czcionce ikon wspólnej dla menu i kart."
 
 [[message]]
 key = "Pick a color preset or a custom color, then choose regular or bold weight."
@@ -5252,6 +5386,14 @@ simplified_chinese = "选择预设颜色或自定义颜色，再选择常规或�
 traditional_chinese = "選擇預設顏色或自訂顏色，再選擇標準或粗體。"
 japanese = "プリセット色かカスタム色を選び、次にウェイトを標準か太字から選びます。"
 korean = "프리셋 색상이나 사용자 지정 색상을 고른 다음 보통 또는 굵게를 선택하세요."
+russian = "Выберите пресет цвета или свой цвет, затем обычное или жирное начертание."
+german = "Wähle eine Farbvoreinstellung oder eine eigene Farbe und dann die Stärke Normal oder Fett."
+spanish = "Elige un preajuste de color o un color personalizado y después el grosor normal o negrita."
+french = "Choisis un préréglage de couleur ou une couleur personnalisée, puis une graisse normale ou grasse."
+brazilian_portuguese = "Escolha uma predefinição de cor ou uma cor personalizada e depois o peso normal ou negrito."
+portuguese = "Escolhe uma predefinição de cor ou uma cor personalizada e depois o peso regular ou negrito."
+turkish = "Bir renk ön ayarı veya özel bir renk seçin, ardından normal veya kalın yazı ağırlığını seçin."
+polish = "Wybierz preset kolorów lub własny kolor, a następnie grubość zwykłą albo pogrubioną."
 
 [[message]]
 key = "Custom colors too close to the surface make icons disappear; keep contrast."
@@ -5260,6 +5402,14 @@ simplified_chinese = "自定义颜色与界面表面太接近时，图标会看�
 traditional_chinese = "自訂顏色與介面表面太接近時，圖示會看不見；請保持對比度。"
 japanese = "カスタム色が表面の色に近すぎると、アイコンが見えなくなります。コントラストを確保してください。"
 korean = "사용자 지정 색상이 표면 색과 너무 비슷하면 아이콘이 보이지 않습니다. 대비를 유지하세요."
+russian = "Свои цвета, слишком близкие к фону поверхности, делают значки незаметными; следите за контрастом."
+german = "Eigene Farben, die der Oberfläche zu ähnlich sind, lassen Symbole verschwinden; achte auf genug Kontrast."
+spanish = "Los colores personalizados demasiado parecidos a la superficie hacen que los iconos desaparezcan; mantén el contraste."
+french = "Une couleur personnalisée trop proche du fond fait disparaître les icônes ; garde du contraste."
+brazilian_portuguese = "Cores personalizadas muito próximas da superfície fazem os ícones sumirem; mantenha o contraste."
+portuguese = "Cores personalizadas demasiado próximas da superfície fazem os ícones desaparecer; mantém o contraste."
+turkish = "Yüzeye çok yakın özel renkler simgeleri görünmez yapar; kontrastı koruyun."
+polish = "Własne kolory zbyt bliskie powierzchni sprawiają, że ikony znikają; zadbaj o kontrast."
 
 [[message]]
 key = "Lists the display modes the graphics backend reports for the selected monitor."
@@ -5268,6 +5418,14 @@ simplified_chinese = "列出图形后端针对所选显示器报告的显示模�
 traditional_chinese = "列出圖形後端針對所選顯示器回報的顯示模式。"
 japanese = "選択したモニターについて、グラフィックスバックエンドが報告する表示モードを一覧表示します。"
 korean = "그래픽 백엔드가 선택한 모니터에 대해 보고하는 표시 모드를 나열합니다."
+russian = "Перечисляет режимы отображения, которые графический бэкенд сообщает для выбранного монитора."
+german = "Listet die Anzeigemodi auf, die das Grafik-Backend für den gewählten Monitor meldet."
+spanish = "Enumera los modos de pantalla que indica el backend gráfico para el monitor seleccionado."
+french = "Liste les modes d'affichage signalés par le backend graphique pour l'écran sélectionné."
+brazilian_portuguese = "Lista os modos de exibição que o backend gráfico informa para o monitor selecionado."
+portuguese = "Lista os modos de apresentação que o backend gráfico reporta para o monitor selecionado."
+turkish = "Grafik arka ucunun seçili monitör için bildirdiği ekran modlarını listeler."
+polish = "Pokazuje tryby wyświetlania zgłaszane przez backend grafiki dla wybranego monitora."
 
 [[message]]
 key = "Pick a mode from the list; unsupported modes are not offered."
@@ -5276,6 +5434,14 @@ simplified_chinese = "从列表中选择模式；不支持的模式不会显示�
 traditional_chinese = "從清單中選擇模式；不受支援的模式不會顯示。"
 japanese = "一覧からモードを選びます。サポートされていないモードは表示されません。"
 korean = "목록에서 모드를 선택하세요. 지원하지 않는 모드는 나타나지 않습니다."
+russian = "Выберите режим из списка; неподдерживаемые режимы не предлагаются."
+german = "Wähle einen Modus aus der Liste; nicht unterstützte Modi werden nicht angeboten."
+spanish = "Elige un modo de la lista; los modos no compatibles no se ofrecen."
+french = "Choisis un mode dans la liste ; les modes non pris en charge ne sont pas proposés."
+brazilian_portuguese = "Escolha um modo da lista; modos sem suporte não são oferecidos."
+portuguese = "Escolhe um modo da lista; os modos não suportados não são apresentados."
+turkish = "Listeden bir mod seçin; desteklenmeyen modlar sunulmaz."
+polish = "Wybierz tryb z listy; nieobsługiwane tryby nie są oferowane."
 
 [[message]]
 key = "Unusual refresh rates can cause tearing; prefer the monitor's native rate."
@@ -5284,6 +5450,14 @@ simplified_chinese = "不常见的刷新率可能导致画面撕裂；建议优�
 traditional_chinese = "不常見的刷新率可能造成畫面撕裂；建議優先使用顯示器的原生刷新率。"
 japanese = "特殊なリフレッシュレートはティアリングの原因になります。モニターのネイティブなリフレッシュレートをおすすめします。"
 korean = "일반적이지 않은 재생률은 티어링을 일으킬 수 있으니 모니터의 기본 재생률을 사용하는 것이 좋습니다."
+russian = "Необычные частоты обновления могут вызывать разрывы изображения; предпочитайте родную частоту монитора."
+german = "Ungewöhnliche Bildwiederholfrequenzen können Tearing verursachen; nutze lieber die native Frequenz des Monitors."
+spanish = "Las frecuencias de actualización poco habituales pueden causar desgarro de imagen; prefiere la frecuencia nativa del monitor."
+french = "Des fréquences de rafraîchissement inhabituelles peuvent provoquer du tearing ; privilégie la fréquence native de l'écran."
+brazilian_portuguese = "Taxas de atualização incomuns podem causar rasgos na imagem; prefira a taxa nativa do monitor."
+portuguese = "Taxas de atualização invulgares podem causar rasgamento; dá preferência à taxa nativa do monitor."
+turkish = "Sıra dışı yenileme hızları yırtılmaya yol açabilir; monitörün doğal hızını tercih edin."
+polish = "Nietypowe częstotliwości odświeżania mogą powodować rozrywanie obrazu; wybierz natywną częstotliwość monitora."
 
 [[message]]
 key = "Sets how much motion the interface plays: transitions, card entrance, reorder animations and scroll feel."
@@ -5292,6 +5466,14 @@ simplified_chinese = "设置界面的动效强度：过渡、卡片进入、重�
 traditional_chinese = "設定介面的動效強度：轉場、卡片進場、重新排序動畫與捲動手感。"
 japanese = "インターフェースの動きの量を設定します。トランジション、カードの登場、並べ替えアニメーション、スクロールの感触が対象です。"
 korean = "인터페이스에서 재생되는 움직임의 정도를 설정합니다. 전환, 카드 등장, 순서 변경 애니메이션, 스크롤 느낌이 포함됩니다."
+russian = "Задаёт, сколько анимации будет в интерфейсе: переходы, появление карточек, анимации перестановки и поведение прокрутки."
+german = "Legt fest, wie viel Bewegung die Oberfläche zeigt: Übergänge, Karten-Einblendung, Sortieranimationen und Scrollverhalten."
+spanish = "Define cuánto movimiento reproduce la interfaz: transiciones, entrada de las tarjetas, animaciones al reordenar y sensación de desplazamiento."
+french = "Définit l'ampleur des animations de l'interface : transitions, apparition des cartes, réorganisation et ressenti du défilement."
+brazilian_portuguese = "Define quanta animação a interface executa: transições, entrada dos cartões, animações de reordenação e a sensação de rolagem."
+portuguese = "Define a quantidade de movimento da interface: transições, entrada dos cartões, animações de reordenação e sensação de deslocamento."
+turkish = "Arayüzün ne kadar hareket oynatacağını ayarlar: geçişler, kart girişi, sıralama animasyonları ve kaydırma hissi."
+polish = "Ustawia intensywność ruchu interfejsu: przejścia, wejście kart, animacje zmiany kolejności i płynność przewijania."
 
 [[message]]
 key = "Choose off, simple or full; the individual switches below only apply to full."
@@ -5300,6 +5482,14 @@ simplified_chinese = "可选择关闭、精简或完整；下方各个开关只�
 traditional_chinese = "可選擇關閉、精簡或完整；下方各個開關只在「完整」下生效。"
 japanese = "オフ・簡易・フルから選びます。下の個別スイッチはフルのときだけ適用されます。"
 korean = "끄기, 간단, 전체 중에서 선택하세요. 아래의 개별 스위치는 전체일 때만 적용됩니다."
+russian = "Выберите «Выкл», «Простой» или «Полный»; отдельные переключатели ниже действуют только в полном режиме."
+german = "Wähle Aus, Einfach oder Voll; die einzelnen Schalter darunter wirken nur bei Voll."
+spanish = "Elige desactivado, simple o completo; los interruptores de abajo solo se aplican a completo."
+french = "Choisis entre désactivé, simple et complet ; les interrupteurs ci-dessous ne s'appliquent qu'au mode complet."
+brazilian_portuguese = "Escolha desligado, simples ou completo; os controles individuais abaixo só valem no modo completo."
+portuguese = "Escolhe desligado, simples ou completo; os interruptores individuais abaixo só se aplicam ao modo completo."
+turkish = "Kapalı, basit veya tam seçin; aşağıdaki ayrı anahtarlar yalnızca tam seçeneğinde geçerlidir."
+polish = "Wybierz wyłączony, prosty lub pełny; pojedyncze przełączniki poniżej działają tylko w trybie pełnym."
 
 [[message]]
 key = "Turn motion off on weaker machines; cards then open and scroll immediately."
@@ -5308,6 +5498,14 @@ simplified_chinese = "配置较低的机器请关闭动效；卡片便会立即�
 traditional_chinese = "效能較弱的機器請關閉動效；卡片便會立即開啟和捲動。"
 japanese = "性能の低い環境では動きをオフにしてください。カードがすぐに開き、スクロールもすぐに反応します。"
 korean = "성능이 낮은 환경에서는 움직임을 끄세요. 그러면 카드가 즉시 열리고 스크롤도 바로 됩니다."
+russian = "На слабых машинах отключите анимацию: карточки будут открываться и прокручиваться мгновенно."
+german = "Schalte die Bewegung auf schwächeren Rechnern ab; Karten öffnen und scrollen dann sofort."
+spanish = "Desactiva el movimiento en equipos modestos; así las tarjetas se abren y se desplazan al instante."
+french = "Désactive les animations sur une machine modeste ; les cartes s'ouvrent alors et défilent instantanément."
+brazilian_portuguese = "Desligue a animação em máquinas mais fracas; assim os cartões abrem e rolam na hora."
+portuguese = "Desliga o movimento em máquinas mais fracas; os cartões abrem e deslocam-se de imediato."
+turkish = "Zayıf makinelerde hareketi kapatın; kartlar o zaman hemen açılır ve kaydırılır."
+polish = "Na słabszych komputerach wyłącz ruch; karty otwierają się i przewijają wtedy od razu."
 
 [[message]]
 key = "Enables audio output and selects the playback device."
@@ -5316,6 +5514,14 @@ simplified_chinese = "启用音频输出并选择播放设备。"
 traditional_chinese = "啟用音訊輸出並選擇播放裝置。"
 japanese = "音声出力を有効にし、再生デバイスを選択します。"
 korean = "오디오 출력을 활성화하고 재생 장치를 선택합니다."
+russian = "Включает вывод звука и выбирает устройство воспроизведения."
+german = "Aktiviert die Audioausgabe und wählt das Wiedergabegerät."
+spanish = "Activa la salida de audio y selecciona el dispositivo de reproducción."
+french = "Active la sortie audio et sélectionne le périphérique de lecture."
+brazilian_portuguese = "Ativa a saída de áudio e seleciona o dispositivo de reprodução."
+portuguese = "Ativa a saída de áudio e escolhe o dispositivo de reprodução."
+turkish = "Ses çıkışını etkinleştirir ve oynatma cihazını seçer."
+polish = "Włącza wyjście dźwięku i wybiera urządzenie odtwarzające."
 
 [[message]]
 key = "Turn sound on, then pick a device; the list comes from the audio backend at startup."
@@ -5324,6 +5530,14 @@ simplified_chinese = "先开启声音，再选择设备；设备列表由音频�
 traditional_chinese = "先開啟音效，再選擇裝置；裝置清單由音訊後端在啟動時提供。"
 japanese = "サウンドをオンにしてからデバイスを選びます。一覧は起動時にオーディオバックエンドから取得されます。"
 korean = "소리를 켠 다음 장치를 선택하세요. 목록은 시작할 때 오디오 백엔드에서 가져옵니다."
+russian = "Включите звук, затем выберите устройство; список берётся из аудиобэкенда при запуске."
+german = "Schalte den Ton ein und wähle ein Gerät; die Liste stammt beim Start vom Audio-Backend."
+spanish = "Activa el sonido y elige un dispositivo; la lista la genera el backend de audio al iniciar."
+french = "Active le son, puis choisis un périphérique ; la liste vient du backend audio au démarrage."
+brazilian_portuguese = "Ligue o som e escolha um dispositivo; a lista vem do backend de áudio na inicialização."
+portuguese = "Liga o som e escolhe um dispositivo; a lista vem do backend de áudio no arranque."
+turkish = "Sesi açın, ardından bir cihaz seçin; liste açılışta ses arka ucundan alınır."
+polish = "Włącz dźwięk i wybierz urządzenie; lista pochodzi z backendu audio przy starcie."
 
 [[message]]
 key = "If a device disappears after unplugging headphones, reselect it or restart the client."
@@ -5332,6 +5546,14 @@ simplified_chinese = "如果拔掉耳机后设备消失，请重新选择该设�
 traditional_chinese = "如果拔掉耳機後裝置消失，請重新選擇該裝置或重新啟動客戶端。"
 japanese = "ヘッドホンを外した後にデバイスが消えた場合は、もう一度選択するかクライアントを再起動してください。"
 korean = "헤드폰을 뽑은 뒤 장치가 사라지면 다시 선택하거나 클라이언트를 재시작하세요."
+russian = "Если после отключения наушников устройство пропало, выберите его заново или перезапустите клиент."
+german = "Verschwindet ein Gerät nach dem Abziehen der Kopfhörer, wähle es neu oder starte den Client neu."
+spanish = "Si un dispositivo desaparece tras desconectar los auriculares, vuelve a seleccionarlo o reinicia el cliente."
+french = "Si un périphérique disparaît après avoir débranché un casque, resélectionne-le ou redémarre le client."
+brazilian_portuguese = "Se um dispositivo sumir depois de desconectar o fone, selecione-o de novo ou reinicie o cliente."
+portuguese = "Se um dispositivo desaparecer ao desligar os auscultadores, volta a selecioná-lo ou reinicia o cliente."
+turkish = "Kulaklığı çıkardıktan sonra bir cihaz kaybolursa yeniden seçin veya istemciyi yeniden başlatın."
+polish = "Jeśli po odłączeniu słuchawek urządzenie zniknie, wybierz je ponownie lub uruchom klienta od nowa."
 
 [[message]]
 key = "Sets master, music and game volume separately."
@@ -5340,6 +5562,14 @@ simplified_chinese = "分别设置主音量、音乐音量和游戏音量。"
 traditional_chinese = "分別設定主音量、音樂音量與遊戲音量。"
 japanese = "マスター音量、音楽音量、ゲーム音量を個別に設定します。"
 korean = "마스터 볼륨, 음악 볼륨, 게임 볼륨을 각각 설정합니다."
+russian = "Задаёт общую громкость, громкость музыки и звуков игры по отдельности."
+german = "Legt Gesamt-, Musik- und Spiellautstärke getrennt fest."
+spanish = "Define por separado el volumen general, el de la música y el del juego."
+french = "Règle séparément le volume principal, celui de la musique et celui du jeu."
+brazilian_portuguese = "Define separadamente o volume geral, o da música e o do jogo."
+portuguese = "Define separadamente o volume principal, o da música e o do jogo."
+turkish = "Ana, müzik ve oyun ses düzeyini ayrı ayrı ayarlar."
+polish = "Ustawia osobno głośność główną, muzyki i gry."
 
 [[message]]
 key = "Drag the three sliders; master scales the other two."
@@ -5348,6 +5578,14 @@ simplified_chinese = "拖动三个滑块；主音量会按比例调整另外两�
 traditional_chinese = "拖動三個滑桿；主音量會按比例調整另外兩個音量。"
 japanese = "3 つのスライダーをドラッグします。マスターは残り 2 つの音量をまとめて増減させます。"
 korean = "슬라이더 세 개를 드래그하세요. 마스터는 나머지 두 볼륨을 비례하여 조절합니다."
+russian = "Двигайте три ползунка; общая громкость масштабирует две остальные."
+german = "Ziehe die drei Regler; die Gesamtlautstärke skaliert die anderen beiden."
+spanish = "Arrastra los tres deslizadores; el general escala los otros dos."
+french = "Fais glisser les trois curseurs ; le volume principal module les deux autres."
+brazilian_portuguese = "Arraste os três controles; o volume geral escala os outros dois."
+portuguese = "Arrasta as três barras deslizantes; o volume principal escala os outros dois."
+turkish = "Üç kaydırıcıyı sürükleyin; ana ses diğer ikisini ölçekler."
+polish = "Przeciągnij trzy suwaki; głośność główna skaluje pozostałe dwa."
 
 [[message]]
 key = "Music and game volume are multiplied by master, so raising master alone can clip."
@@ -5356,6 +5594,14 @@ simplified_chinese = "音乐音量和游戏音量都会与主音量相乘，因�
 traditional_chinese = "音樂音量與遊戲音量都會與主音量相乘，因此只調高主音量可能造成破音。"
 japanese = "音楽とゲームの音量はマスターと掛け合わされるため、マスターだけを上げると音が割れることがあります。"
 korean = "음악과 게임 볼륨은 마스터 볼륨과 곱해지므로 마스터만 올리면 소리가 깨질 수 있습니다."
+russian = "Громкость музыки и игры умножается на общую, поэтому если поднять только общую, звук начнёт искажаться."
+german = "Musik- und Spiellautstärke werden mit der Gesamtlautstärke multipliziert; nur diese zu erhöhen kann den Ton übersteuern."
+spanish = "El volumen de música y de juego se multiplica por el general, así que subir solo el general puede saturar el sonido."
+french = "Les volumes musique et jeu sont multipliés par le volume principal : monter ce dernier seul peut provoquer de la saturation."
+brazilian_portuguese = "Os volumes de música e de jogo são multiplicados pelo volume geral, então subir só o geral pode distorcer o áudio."
+portuguese = "O volume da música e o do jogo são multiplicados pelo principal, por isso subir apenas o principal pode saturar."
+turkish = "Müzik ve oyun sesi ana sesle çarpılır, bu yüzden yalnızca ana sesi yükseltmek kırpılmaya yol açabilir."
+polish = "Głośność muzyki i gry jest mnożona przez główną, więc samo podniesienie głównej może przesterować dźwięk."
 
 [[message]]
 key = "Lists and activates custom audio packs that replace game sounds."
@@ -5364,6 +5610,14 @@ simplified_chinese = "列出并启用用于替换游戏音效的自定义音频�
 traditional_chinese = "列出並啟用可替換遊戲音效的自訂音效包。"
 japanese = "ゲーム内の効果音を置き換えるカスタムオーディオパックを一覧表示し、有効化します。"
 korean = "게임 소리를 대체하는 사용자 지정 오디오 팩을 목록으로 보여 주고 활성화합니다."
+russian = "Перечисляет пользовательские аудиопакеты, заменяющие звуки игры, и включает их."
+german = "Listet eigene Audio-Pakete auf und aktiviert sie; sie ersetzen die Spielgeräusche."
+spanish = "Enumera y activa paquetes de audio personalizados que sustituyen los sonidos del juego."
+french = "Liste et active les packs audio personnalisés qui remplacent les sons du jeu."
+brazilian_portuguese = "Lista e ativa pacotes de áudio personalizados que substituem os sons do jogo."
+portuguese = "Lista e ativa pacotes de áudio personalizados que substituem os sons do jogo."
+turkish = "Oyun seslerinin yerini alan özel ses paketlerini listeler ve etkinleştirir."
+polish = "Wyświetla i aktywuje własne paczki dźwięków zastępujące dźwięki gry."
 
 [[message]]
 key = "Pick a pack to activate it; samples are reloaded when the selection changes."
@@ -5372,6 +5626,14 @@ simplified_chinese = "选中音频包即启用；切换音频包时会重新加�
 traditional_chinese = "選擇一個音效包即可啟用；切換選擇時會重新載入音訊樣本。"
 japanese = "パックを選ぶと有効になります。選択を変えるとサンプルが読み込み直されます。"
 korean = "팩을 고르면 활성화되며, 선택을 바꾸면 샘플이 다시 로드됩니다."
+russian = "Выберите пакет, чтобы включить его; при смене выбора сэмплы загружаются заново."
+german = "Wähle ein Paket, um es zu aktivieren; bei geänderter Auswahl werden die Samples neu geladen."
+spanish = "Elige un paquete para activarlo; las muestras se recargan al cambiar la selección."
+french = "Choisis un pack pour l'activer ; les sons sont rechargés quand la sélection change."
+brazilian_portuguese = "Escolha um pacote para ativá-lo; as amostras recarregam quando a seleção muda."
+portuguese = "Escolhe um pacote para o ativar; as amostras são recarregadas quando a seleção muda."
+turkish = "Etkinleştirmek için bir paket seçin; seçim değiştiğinde örnekler yeniden yüklenir."
+polish = "Wybierz paczkę, aby ją aktywować; próbki są przeładowywane po zmianie wyboru."
 
 [[message]]
 key = "A pack missing files falls back to the default sounds."
@@ -5380,6 +5642,14 @@ simplified_chinese = "音频包缺少文件时会回退到默认音效。"
 traditional_chinese = "音效包缺少檔案時，會退回預設音效。"
 japanese = "ファイルが足りないパックでは、既定の効果音が使われます。"
 korean = "파일이 빠진 팩은 기본 소리로 대체됩니다."
+russian = "Если в пакете не хватает файлов, используются звуки по умолчанию."
+german = "Fehlen einem Paket Dateien, greifen die Standardklänge."
+spanish = "Si a un paquete le faltan archivos, se usan los sonidos predeterminados."
+french = "Un pack auquel il manque des fichiers revient aux sons par défaut."
+brazilian_portuguese = "Um pacote com arquivos faltando recorre aos sons padrão."
+portuguese = "Um pacote com ficheiros em falta recorre aos sons predefinidos."
+turkish = "Dosyaları eksik bir paket varsayılan seslere geri döner."
+polish = "Paczka z brakującymi plikami wraca do domyślnych dźwięków."
 
 [[message]]
 key = "Controls demo recording and playback behavior."
@@ -5388,6 +5658,14 @@ simplified_chinese = "控制 demo 的录制与回放行为。"
 traditional_chinese = "控制回放錄製與播放的行為。"
 japanese = "デモの録画と再生の動作を制御します。"
 korean = "데모 녹화와 재생 동작을 제어합니다."
+russian = "Управляет записью и воспроизведением демо."
+german = "Steuert Aufnahme und Wiedergabe von Demos."
+spanish = "Controla el comportamiento de grabación y reproducción de las demos."
+french = "Contrôle l'enregistrement et la lecture des démos."
+brazilian_portuguese = "Controla o comportamento de gravação e reprodução de demos."
+portuguese = "Controla o comportamento de gravação e reprodução de demos."
+turkish = "Demo kaydı ve oynatma davranışını denetler."
+polish = "Steruje nagrywaniem i odtwarzaniem dem."
 
 [[message]]
 key = "Choose when recording starts and how demos are named; playback speed and camera follow are separate."
@@ -5396,6 +5674,14 @@ simplified_chinese = "设置录制何时开始以及 demo 的命名方式；回�
 traditional_chinese = "選擇錄製何時開始以及回放的命名方式；播放速度與鏡頭跟隨是另外的設定。"
 japanese = "録画を始めるタイミングとデモの命名方法を選びます。再生速度とカメラ追従は別項目です。"
 korean = "녹화 시작 시점과 데모 이름을 붙이는 방식을 고릅니다. 재생 속도와 카메라 추적은 따로 설정합니다."
+russian = "Выберите, когда начинается запись и как называются демо; скорость воспроизведения и слежение камеры настраиваются отдельно."
+german = "Lege fest, wann die Aufnahme startet und wie Demos benannt werden; Wiedergabegeschwindigkeit und Kameraverfolgung sind separat."
+spanish = "Elige cuándo empieza la grabación y cómo se nombran las demos; la velocidad de reproducción y el seguimiento de cámara van aparte."
+french = "Choisis quand l'enregistrement démarre et le nom des démos ; la vitesse de lecture et le suivi de caméra sont réglés ailleurs."
+brazilian_portuguese = "Escolha quando a gravação começa e como as demos são nomeadas; velocidade de reprodução e câmera automática são opções à parte."
+portuguese = "Escolhe quando a gravação começa e como as demos são nomeadas; a velocidade de reprodução e o seguimento da câmara são opções à parte."
+turkish = "Kaydın ne zaman başlayacağını ve demoların nasıl adlandırılacağını seçin; oynatma hızı ve kamera takibi ayrıdır."
+polish = "Wybierz, kiedy zaczyna się nagrywanie i jak nazywane są dema; prędkość odtwarzania i podążanie kamery ustawia się osobno."
 
 [[message]]
 key = "Demos store raw network data, so long sessions produce large files."
@@ -5404,6 +5690,14 @@ simplified_chinese = "demo 保存的是原始网络数据，因此长时间的�
 traditional_chinese = "回放會儲存原始網路資料，因此長時間的遊戲過程會產生很大的檔案。"
 japanese = "デモは生のネットワークデータを保存するため、長時間のプレイではファイルが大きくなります。"
 korean = "데모는 원시 네트워크 데이터를 저장하므로 오래 플레이하면 파일이 커집니다."
+russian = "Демо хранят необработанные сетевые данные, поэтому долгие сессии дают большие файлы."
+german = "Demos speichern Rohdaten des Netzwerks, lange Sitzungen ergeben daher große Dateien."
+spanish = "Las demos guardan datos de red sin procesar, así que las sesiones largas generan archivos grandes."
+french = "Les démos stockent les données réseau brutes : une longue session produit des fichiers volumineux."
+brazilian_portuguese = "As demos guardam os dados brutos da rede, então sessões longas geram arquivos grandes."
+portuguese = "As demos guardam dados de rede em bruto, por isso sessões longas geram ficheiros grandes."
+turkish = "Demolar ham ağ verisi saklar, bu yüzden uzun oturumlar büyük dosyalar üretir."
+polish = "Dema zapisują surowe dane sieciowe, więc długie sesje dają duże pliki."
 
 [[message]]
 key = "Toggles DDNet gameplay indicators and assists such as race time, team markers and hints."
@@ -5412,6 +5706,14 @@ simplified_chinese = "开关 DDNet 的玩法指示与辅助功能，例如竞速
 traditional_chinese = "開關 DDNet 的遊戲指示與輔助，例如跑圖計時、隊友標記與操作提示。"
 japanese = "レースタイム、チームマーカー、ヒントなど、DDNet のゲーム内表示と補助を切り替えます。"
 korean = "레이스 시간, 팀 표시, 힌트 같은 DDNet 게임 표시와 보조 기능을 켜고 끕니다."
+russian = "Включает и выключает игровые индикаторы и помощники DDNet: время гонки, метки команды и подсказки."
+german = "Schaltet DDNet-Spielanzeigen und Hilfen wie Rennzeit, Team-Markierungen und Hinweise ein oder aus."
+spanish = "Activa o desactiva indicadores y ayudas de DDNet, como el tiempo de carrera, las marcas de equipo y las pistas."
+french = "Active les indicateurs et aides de jeu DDNet comme le temps de course, les marqueurs d'équipe et les astuces."
+brazilian_portuguese = "Liga e desliga indicadores e auxílios de jogo do DDNet, como tempo de corrida, marcadores de equipe e dicas."
+portuguese = "Ativa ou desativa indicadores e auxílios de jogo do DDNet, como tempo de corrida, marcadores de equipa e dicas."
+turkish = "Yarış süresi, takım işaretleri ve ipuçları gibi DDNet oyun göstergelerini ve yardımcılarını açar ya da kapatır."
+polish = "Włącza wskaźniki i asysty rozgrywki DDNet, takie jak czas wyścigu, znaczniki drużyny i podpowiedzi."
 
 [[message]]
 key = "Enable the indicators you need; each one draws on your own screen only."
@@ -5420,6 +5722,14 @@ simplified_chinese = "启用你需要的指示；每一项只绘制在你自己�
 traditional_chinese = "只啟用你需要的指示；每一個都只畫在你自己的畫面上。"
 japanese = "必要な表示だけを有効にしてください。どれも自分の画面にしか描画されません。"
 korean = "필요한 표시만 켜세요. 각 표시는 본인 화면에만 그려집니다."
+russian = "Включите нужные индикаторы; каждый из них рисуется только на вашем экране."
+german = "Aktiviere nur die Anzeigen, die du brauchst; jede erscheint nur auf deinem Bildschirm."
+spanish = "Activa los indicadores que necesites; cada uno se dibuja solo en tu pantalla."
+french = "Active les indicateurs dont tu as besoin ; chacun ne s'affiche que pour toi."
+brazilian_portuguese = "Ative os indicadores que você precisa; cada um é desenhado só na sua tela."
+portuguese = "Ativa os indicadores de que precisas; cada um é desenhado apenas no teu ecrã."
+turkish = "İhtiyacınız olan göstergeleri etkinleştirin; her biri yalnızca kendi ekranınızda çizilir."
+polish = "Włącz potrzebne wskaźniki; każdy rysuje tylko na twoim ekranie."
 
 [[message]]
 key = "Indicators that read game state can lag behind the server; do not rely on them for frame-perfect input."
@@ -5428,6 +5738,14 @@ simplified_chinese = "读取游戏状态的指示可能比服务器滞后；不�
 traditional_chinese = "讀取遊戲狀態的指示可能落後於伺服器；需要精確到幀的輸入時，別依賴它們。"
 japanese = "ゲームの状態を読む表示はサーバーより遅れることがあります。フレーム単位の精密な入力には頼らないでください。"
 korean = "게임 상태를 읽는 표시는 서버보다 늦을 수 있으니, 프레임 단위의 정확한 입력을 이것에 기대지 마세요."
+russian = "Индикаторы, читающие состояние игры, могут отставать от сервера; не полагайтесь на них для ввода с точностью до кадра."
+german = "Anzeigen, die den Spielzustand auslesen, können dem Server hinterherhinken; verlass dich bei framegenauner Eingabe nicht darauf."
+spanish = "Los indicadores que leen el estado del juego pueden ir por detrás del servidor; no confíes en ellos para entradas al fotograma exacto."
+french = "Les indicateurs qui lisent l'état du jeu peuvent accuser un retard sur le serveur ; ne t'appuie pas dessus pour une entrée à l'image près."
+brazilian_portuguese = "Indicadores que leem o estado do jogo podem atrasar em relação ao servidor; não confie neles para entradas que exigem precisão de quadro."
+portuguese = "Os indicadores que leem o estado do jogo podem atrasar-se em relação ao servidor; não confies neles para entradas com precisão de frame."
+turkish = "Oyun durumunu okuyan göstergeler sunucunun gerisinde kalabilir; kare hassasiyetli girdi için bunlara güvenmeyin."
+polish = "Wskaźniki odczytujące stan gry mogą odstawać od serwera; nie opieraj na nich wejścia co do klatki."
 
 [[message]]
 key = "Chooses the menu background map and the colors drawn behind the UI."
@@ -5436,6 +5754,14 @@ simplified_chinese = "选择菜单背景地图，以及绘制在界面后方的�
 traditional_chinese = "選擇選單背景地圖，以及繪製在介面後方的顏色。"
 japanese = "メニューの背景マップと、UI の背後に描画する色を選びます。"
 korean = "메뉴 배경 맵과 UI 뒤에 그려지는 색을 고릅니다."
+russian = "Выбирает карту фона меню и цвета, которые рисуются за интерфейсом."
+german = "Wählt die Hintergrundkarte des Menüs und die Farben hinter der UI."
+spanish = "Elige el mapa de fondo del menú y los colores que se dibujan tras la interfaz."
+french = "Choisit la carte de fond du menu et les couleurs dessinées derrière l'interface."
+brazilian_portuguese = "Escolhe o mapa de fundo do menu e as cores desenhadas atrás da interface."
+portuguese = "Escolhe o mapa de fundo do menu e as cores desenhadas atrás da UI."
+turkish = "Menü arka plan haritasını ve arayüzün arkasına çizilen renkleri seçer."
+polish = "Wybiera mapę tła menu i kolory rysowane za interfejsem."
 
 [[message]]
 key = "Pick a map or a solid color, then adjust brightness and blur."
@@ -5444,6 +5770,14 @@ simplified_chinese = "选择一张地图或一种纯色，再调整亮度和模�
 traditional_chinese = "選擇地圖或單一顏色，然後調整亮度與模糊。"
 japanese = "マップか単色を選び、明るさとぼかしを調整します。"
 korean = "맵이나 단색을 고른 뒤 밝기와 흐림을 조절합니다."
+russian = "Выберите карту или сплошной цвет, затем настройте яркость и размытие."
+german = "Wähle eine Karte oder eine Volltonfarbe und stelle dann Helligkeit und Weichzeichnen ein."
+spanish = "Elige un mapa o un color sólido y luego ajusta el brillo y el desenfoque."
+french = "Choisis une carte ou une couleur unie, puis règle la luminosité et le flou."
+brazilian_portuguese = "Escolha um mapa ou uma cor sólida e depois ajuste o brilho e o desfoque."
+portuguese = "Escolhe um mapa ou uma cor sólida e ajusta a luminosidade e o desfoque."
+turkish = "Bir harita veya düz bir renk seçin, ardından parlaklığı ve bulanıklığı ayarlayın."
+polish = "Wybierz mapę lub jednolity kolor, a potem dostosuj jasność i rozmycie."
 
 [[message]]
 key = "Bright backgrounds reduce text contrast; keep the overlay dark enough."
@@ -5452,6 +5786,14 @@ simplified_chinese = "背景过亮会降低文字对比度；请让遮罩保持�
 traditional_chinese = "過亮的背景會降低文字對比度；請讓遮罩保持足夠暗。"
 japanese = "明るい背景は文字のコントラストを下げます。オーバーレイは十分に暗く保ってください。"
 korean = "밝은 배경은 글자 대비를 떨어뜨리니, 오버레이는 충분히 어둡게 유지하세요."
+russian = "Светлый фон снижает контраст текста; держите затемнение достаточно тёмным."
+german = "Helle Hintergründe mindern den Textkontrast; halte die Überlagerung dunkel genug."
+spanish = "Los fondos claros reducen el contraste del texto; mantén la capa lo bastante oscura."
+french = "Un fond clair réduit le contraste du texte ; garde l'overlay assez sombre."
+brazilian_portuguese = "Fundos claros reduzem o contraste do texto; mantenha a sobreposição escura o suficiente."
+portuguese = "Fundos claros reduzem o contraste do texto; mantém a sobreposição suficientemente escura."
+turkish = "Parlak arka planlar metin kontrastını düşürür; katmanı yeterince koyu tutun."
+polish = "Jasne tła zmniejszają kontrast tekstu; utrzymuj nakładkę dostatecznie ciemną."
 
 [[message]]
 key = "Collects the remaining DDNet client preferences that do not belong to other cards."
@@ -5460,6 +5802,14 @@ simplified_chinese = "汇总剩下的、不属于其他卡片的 DDNet 客户端
 traditional_chinese = "收納其餘不屬於其他卡片的 DDNet 用戶端偏好設定。"
 japanese = "ほかのカードに属さない DDNet クライアントの設定をまとめています。"
 korean = "다른 카드에 속하지 않는 나머지 DDNet 클라이언트 설정을 모아 둡니다."
+russian = "Собирает оставшиеся настройки клиента DDNet, не относящиеся к другим карточкам."
+german = "Sammelt die übrigen DDNet-Client-Einstellungen, die zu keiner anderen Karte gehören."
+spanish = "Reúne las preferencias del cliente DDNet que no encajan en otras tarjetas."
+french = "Regroupe les autres préférences du client DDNet qui ne relèvent d'aucune autre carte."
+brazilian_portuguese = "Reúne as demais preferências do cliente DDNet que não pertencem a outros cartões."
+portuguese = "Reúne as restantes preferências do cliente DDNet que não pertencem a outros cartões."
+turkish = "Diğer kartlara ait olmayan kalan DDNet istemci tercihlerini toplar."
+polish = "Zbiera pozostałe ustawienia klienta DDNet, które nie należą do innych kart."
 
 [[message]]
 key = "Review the entries and change only what you understand; defaults are tuned for normal play."
@@ -5468,6 +5818,14 @@ simplified_chinese = "先浏览各项，只修改你理解的内容；默认值�
 traditional_chinese = "先看清楚每一項，只改你理解的部分；預設值已針對正常遊玩調校過。"
 japanese = "各項目を確認し、理解できたものだけを変更してください。既定値は通常のプレイ向けに調整されています。"
 korean = "항목을 살펴보고 이해한 것만 바꾸세요. 기본값은 일반적인 플레이에 맞춰져 있습니다."
+russian = "Проверьте записи и меняйте только то, что понимаете; значения по умолчанию рассчитаны на обычную игру."
+german = "Sieh dir die Einträge an und ändere nur, was du verstehst; die Standardwerte sind auf normales Spiel abgestimmt."
+spanish = "Revisa las entradas y cambia solo lo que entiendas; los valores predeterminados están pensados para el juego normal."
+french = "Parcours les entrées et ne change que ce que tu comprends ; les valeurs par défaut sont réglées pour un jeu normal."
+brazilian_portuguese = "Revise as opções e mude só o que você entende; os padrões são ajustados para o jogo normal."
+portuguese = "Revê as entradas e muda apenas o que compreendes; os valores predefinidos estão afinados para jogo normal."
+turkish = "Girdileri gözden geçirin ve yalnızca anladığınızı değiştirin; varsayılanlar normal oyun için ayarlanmıştır."
+polish = "Przejrzyj pozycje i zmieniaj tylko to, co rozumiesz; wartości domyślne są dobrane do normalnej gry."
 
 [[message]]
 key = "Options here affect networking or identity; test on a server before using them in matches."
@@ -5476,6 +5834,14 @@ simplified_chinese = "这里的选项会影响网络或身份；在对局中使�
 traditional_chinese = "這裡的選項會影響網路或身分識別；在比賽中使用前，先到伺服器上測試。"
 japanese = "ここでの設定は通信や識別情報に影響します。試合で使う前にサーバーで試してください。"
 korean = "여기 설정은 네트워크나 신원에 영향을 줍니다. 경기에서 쓰기 전에 서버에서 시험해 보세요."
+russian = "Настройки здесь влияют на сеть или идентичность; проверьте их на сервере, прежде чем использовать в матчах."
+german = "Die Optionen hier betreffen Netzwerk oder Identität; teste sie auf einem Server, bevor du sie im Match nutzt."
+spanish = "Las opciones de aquí afectan a la red o a la identidad; pruébalas en un servidor antes de usarlas en partidas."
+french = "Ces options touchent au réseau ou à ton identité ; teste-les sur un serveur avant de les utiliser en match."
+brazilian_portuguese = "As opções aqui afetam rede ou identidade; teste em um servidor antes de usar em partidas."
+portuguese = "Estas opções afetam a rede ou a identidade; testa num servidor antes de as usares em partidas."
+turkish = "Buradaki seçenekler ağı veya kimliği etkiler; maçlarda kullanmadan önce bir sunucuda test edin."
+polish = "Opcje tutaj wpływają na sieć lub tożsamość; przetestuj je na serwerze, zanim użyjesz ich w meczach."
 
 [[message]]
 key = "Configures the main HUD: health, ammo, timer, race progress and their positions."
@@ -5484,6 +5850,14 @@ simplified_chinese = "配置主 HUD：生命值、弹药、计时器、竞速进
 traditional_chinese = "設定主 HUD：生命值、彈藥、計時器、跑圖進度及其位置。"
 japanese = "メイン HUD を設定します。体力、弾薬、タイマー、レースの進行状況とそれぞれの位置です。"
 korean = "기본 HUD를 설정합니다. 체력, 탄약, 타이머, 레이스 진행 상황과 각 요소의 위치입니다."
+russian = "Настраивает основной HUD: здоровье, патроны, таймер, прогресс гонки и их положение."
+german = "Konfiguriert das Haupt-HUD: Leben, Munition, Timer, Rennfortschritt und deren Positionen."
+spanish = "Configura el HUD principal: salud, munición, temporizador, progreso de carrera y sus posiciones."
+french = "Configure le HUD principal : vie, munitions, chronomètre, progression de course et leurs positions."
+brazilian_portuguese = "Configura o HUD principal: vida, munição, cronômetro, progresso da corrida e suas posições."
+portuguese = "Configura o HUD principal: vida, munições, temporizador, progresso da corrida e as respetivas posições."
+turkish = "Ana HUD'u yapılandırır: can, mermi, süre, yarış ilerlemesi ve bunların konumları."
+polish = "Konfiguruje główny HUD: zdrowie, amunicję, timer, postęp wyścigu i ich pozycje."
 
 [[message]]
 key = "Enable each element, then set its position and size; the HUD draws on top of the game world."
@@ -5492,6 +5866,14 @@ simplified_chinese = "逐个启用元素，再设置它们的位置和大小；H
 traditional_chinese = "逐一啟用元素，再設定它的位置與大小；HUD 會畫在遊戲世界之上。"
 japanese = "各要素を有効にしてから位置と大きさを設定します。HUD はゲームの世界の上に描画されます。"
 korean = "각 요소를 켠 다음 위치와 크기를 정하세요. HUD는 게임 화면 위에 그려집니다."
+russian = "Включите каждый нужный элемент, затем задайте его положение и размер; HUD рисуется поверх игрового мира."
+german = "Aktiviere jedes Element und lege Position und Größe fest; das HUD liegt über der Spielwelt."
+spanish = "Activa cada elemento y ajusta su posición y tamaño; el HUD se dibuja sobre el mundo del juego."
+french = "Active chaque élément, puis règle sa position et sa taille ; le HUD s'affiche par-dessus le monde du jeu."
+brazilian_portuguese = "Ative cada elemento e defina posição e tamanho; o HUD é desenhado sobre o mundo do jogo."
+portuguese = "Ativa cada elemento e define a sua posição e tamanho; o HUD é desenhado por cima do mundo do jogo."
+turkish = "Her öğeyi etkinleştirin, ardından konumunu ve boyutunu ayarlayın; HUD oyun dünyasının üstüne çizilir."
+polish = "Włącz każdy element, a potem ustaw jego pozycję i rozmiar; HUD jest rysowany nad światem gry."
 
 [[message]]
 key = "Elements too close to the edges overlap on ultrawide screens."
@@ -5500,6 +5882,14 @@ simplified_chinese = "在超宽屏上，太靠近屏幕边缘的元素会互相�
 traditional_chinese = "在超寬螢幕上，太靠近邊緣的元素會互相重疊。"
 japanese = "ウルトラワイド画面では、端に寄りすぎた要素が重なります。"
 korean = "울트라와이드 화면에서는 가장자리에 너무 가까운 요소가 겹칩니다."
+russian = "Элементы, стоящие слишком близко к краям, на ультрашироких экранах перекрываются."
+german = "Elemente zu nah am Rand überlappen sich auf Ultrawide-Bildschirmen."
+spanish = "Los elementos demasiado cerca de los bordes se solapan en pantallas ultrapanorámicas."
+french = "Des éléments trop près des bords se chevauchent sur les écrans ultra-larges."
+brazilian_portuguese = "Elementos muito perto das bordas se sobrepõem em telas ultrawide."
+portuguese = "Em ecrãs ultrawide, elementos demasiado próximos das margens sobrepõem-se."
+turkish = "Kenarlara çok yakın öğeler ultra geniş ekranlarda üst üste biner."
+polish = "Elementy zbyt blisko krawędzi nachodzą na siebie na ekranach ultrapanoramicznych."
 
 [[message]]
 key = "Adjusts DDRace-specific HUD parts such as team state, freeze bars and race time."
@@ -5508,6 +5898,14 @@ simplified_chinese = "调整 DDRace 专用的 HUD 部分，例如队伍状态、
 traditional_chinese = "調整 DDRace 專屬的 HUD 部分，例如隊伍狀態、凍結條與跑圖計時。"
 japanese = "チーム状態、フリーズバー、レースタイムなど、DDRace 固有の HUD 部分を調整します。"
 korean = "팀 상태, 프리즈 바, 레이스 시간처럼 DDRace 전용 HUD 부분을 조절합니다."
+russian = "Настраивает специфичные для DDRace части HUD: состояние команды, полосы заморозки и время гонки."
+german = "Passt DDRace-spezifische HUD-Teile an, etwa Teamstatus, Freeze-Balken und Rennzeit."
+spanish = "Ajusta partes del HUD propias de DDRace, como el estado del equipo, las barras de congelación y el tiempo de carrera."
+french = "Ajuste les parties du HUD propres à DDRace : état d'équipe, barres de freeze et temps de course."
+brazilian_portuguese = "Ajusta partes do HUD específicas do DDRace, como estado da equipe, barras de congelamento e tempo de corrida."
+portuguese = "Ajusta partes do HUD específicas do DDRace, como estado da equipa, barras de congelamento e tempo de corrida."
+turkish = "Takım durumu, donma çubukları ve yarış süresi gibi DDRace'e özgü HUD parçalarını ayarlar."
+polish = "Dostosowuje elementy HUD specyficzne dla DDRace, takie jak stan drużyny, paski zamrożenia i czas wyścigu."
 
 [[message]]
 key = "Enable the DDRace elements you use and set their scale."
@@ -5516,6 +5914,14 @@ simplified_chinese = "启用你用到的 DDRace 元素，并设置它们的缩�
 traditional_chinese = "啟用你會用到的 DDRace 元素，並設定它們的縮放比例。"
 japanese = "使う DDRace 要素を有効にし、その拡大率を設定します。"
 korean = "사용하는 DDRace 요소를 켜고 크기 배율을 설정합니다."
+russian = "Включите нужные элементы DDRace и задайте их масштаб."
+german = "Aktiviere die DDRace-Elemente, die du nutzt, und stelle ihre Skalierung ein."
+spanish = "Activa los elementos de DDRace que uses y ajusta su escala."
+french = "Active les éléments DDRace que tu utilises et règle leur échelle."
+brazilian_portuguese = "Ative os elementos de DDRace que você usa e defina a escala deles."
+portuguese = "Ativa os elementos DDRace que usas e define a respetiva escala."
+turkish = "Kullandığınız DDRace öğelerini etkinleştirin ve ölçeklerini ayarlayın."
+polish = "Włącz używane elementy DDRace i ustaw ich skalę."
 
 [[message]]
 key = "DDRace HUD is driven by server messages, so it stays empty on servers without DDRace."
@@ -5524,6 +5930,14 @@ simplified_chinese = "DDRace HUD 由服务器消息驱动，因此在没有 DDRa
 traditional_chinese = "DDRace HUD 由伺服器訊息驅動，所以在沒有 DDRace 的伺服器上會一直空白。"
 japanese = "DDRace HUD はサーバーのメッセージで動くため、DDRace のないサーバーでは空のままです。"
 korean = "DDRace HUD는 서버 메시지로 동작하므로 DDRace가 없는 서버에서는 비어 있습니다."
+russian = "HUD DDRace управляется сообщениями сервера, поэтому на серверах без DDRace он остаётся пустым."
+german = "Das DDRace-HUD wird von Servermeldungen gesteuert und bleibt auf Servern ohne DDRace leer."
+spanish = "El HUD de DDRace depende de los mensajes del servidor, así que queda vacío en servidores sin DDRace."
+french = "Le HUD DDRace dépend des messages du serveur : il reste vide sur les serveurs sans DDRace."
+brazilian_portuguese = "O HUD de DDRace é guiado por mensagens do servidor, então fica vazio em servidores sem DDRace."
+portuguese = "O HUD do DDRace é alimentado por mensagens do servidor, por isso fica vazio em servidores sem DDRace."
+turkish = "DDRace HUD'u sunucu mesajlarıyla çalışır, bu yüzden DDRace olmayan sunucularda boş kalır."
+polish = "HUD DDRace działa na komunikatach serwera, więc na serwerach bez DDRace pozostaje pusty."
 
 [[message]]
 key = "Sets chat position, width, font size and visibility."
@@ -5532,6 +5946,14 @@ simplified_chinese = "设置聊天的位置、宽度、字号和显示状态。"
 traditional_chinese = "設定聊天的位置、寬度、字型大小與顯示狀態。"
 japanese = "チャットの位置、幅、文字サイズ、表示/非表示を設定します。"
 korean = "채팅의 위치, 너비, 글꼴 크기, 표시 여부를 설정합니다."
+russian = "Задаёт положение чата, ширину, размер шрифта и видимость."
+german = "Legt Position, Breite, Schriftgröße und Sichtbarkeit des Chats fest."
+spanish = "Define la posición, el ancho, el tamaño de fuente y la visibilidad del chat."
+french = "Définit la position, la largeur, la taille de police et la visibilité du chat."
+brazilian_portuguese = "Define posição, largura, tamanho da fonte e visibilidade do chat."
+portuguese = "Define a posição, a largura, o tamanho da fonte e a visibilidade do chat."
+turkish = "Sohbet konumunu, genişliğini, yazı tipi boyutunu ve görünürlüğünü ayarlar."
+polish = "Ustawia pozycję, szerokość, rozmiar czcionki i widoczność czatu."
 
 [[message]]
 key = "Choose a position, then adjust width and size; the preview card shows the result."
@@ -5540,6 +5962,14 @@ simplified_chinese = "先选择位置，再调整宽度和尺寸；预览卡片�
 traditional_chinese = "先選一個位置，再調整寬度與大小；預覽卡片會顯示結果。"
 japanese = "位置を選んでから幅とサイズを調整します。プレビューカードに結果が表示されます。"
 korean = "위치를 고른 뒤 너비와 크기를 조정하세요. 미리보기 카드에 결과가 표시됩니다."
+russian = "Выберите положение, затем настройте ширину и размер; карточка предпросмотра покажет результат."
+german = "Wähle eine Position und stelle Breite und Größe ein; die Vorschaukarte zeigt das Ergebnis."
+spanish = "Elige una posición y ajusta el ancho y el tamaño; la tarjeta de vista previa muestra el resultado."
+french = "Choisis une position, puis règle la largeur et la taille ; la carte d'aperçu montre le résultat."
+brazilian_portuguese = "Escolha uma posição e ajuste largura e tamanho; o cartão de prévia mostra o resultado."
+portuguese = "Escolhe uma posição e ajusta a largura e o tamanho; o cartão de pré-visualização mostra o resultado."
+turkish = "Bir konum seçin, ardından genişliği ve boyutu ayarlayın; önizleme kartı sonucu gösterir."
+polish = "Wybierz pozycję, a potem dostosuj szerokość i rozmiar; karta podglądu pokazuje wynik."
 
 [[message]]
 key = "Wide chat lines cover the game; keep the width to what you actually read."
@@ -5548,6 +5978,14 @@ simplified_chinese = "聊天行过宽会遮挡游戏画面；宽度以实际阅�
 traditional_chinese = "聊天行太寬會遮住遊戲畫面；寬度保持在實際會閱讀的範圍即可。"
 japanese = "チャット行が広いとゲーム画面を覆うので、実際に読む幅にとどめてください。"
 korean = "채팅 줄이 넓으면 게임 화면을 가리므로 실제로 읽는 폭만 유지하세요."
+russian = "Широкие строки чата закрывают игру; держите ширину в пределах того, что реально читаете."
+german = "Breite Chatzeilen verdecken das Spiel; begrenze die Breite auf das, was du wirklich liest."
+spanish = "Las líneas de chat anchas tapan el juego; limita el ancho a lo que realmente leas."
+french = "Des lignes de chat larges couvrent le jeu ; garde une largeur adaptée à ce que tu lis vraiment."
+brazilian_portuguese = "Linhas de chat muito largas cobrem o jogo; ajuste a largura ao que você realmente lê."
+portuguese = "Linhas de chat largas tapam o jogo; limita a largura ao que lês de facto."
+turkish = "Geniş sohbet satırları oyunu kaplar; genişliği gerçekten okuduğunuz düzeyde tutun."
+polish = "Szerokie wiersze czatu zasłaniają grę; ustaw szerokość pod to, co naprawdę czytasz."
 
 [[message]]
 key = "Styles chat names and message colors, including gradients."
@@ -5556,6 +5994,14 @@ simplified_chinese = "设置聊天中的名字和消息颜色样式，支持渐�
 traditional_chinese = "設定聊天名稱與訊息顏色，包含漸層。"
 japanese = "チャットの名前とメッセージの色を、グラデーションも含めて設定します。"
 korean = "그라데이션을 포함해 채팅 이름과 메시지 색상을 꾸밉니다."
+russian = "Задаёт стиль имён в чате и цвета сообщений, включая градиенты."
+german = "Gestaltet Chatnamen und Nachrichtenfarben, auch als Verlauf."
+spanish = "Personaliza los nombres del chat y los colores de los mensajes, incluidos los degradados."
+french = "Style les noms et les couleurs des messages du chat, dégradés compris."
+brazilian_portuguese = "Define o estilo dos nomes e as cores das mensagens do chat, incluindo degradês."
+portuguese = "Define o estilo dos nomes e as cores das mensagens do chat, incluindo gradientes."
+turkish = "Sohbet adlarını ve mesaj renklerini, renk geçişleri dahil, biçimlendirir."
+polish = "Stylizuje kolory nazw i wiadomości czatu, łącznie z gradientami."
 
 [[message]]
 key = "Pick the parts to colorize, then choose a gradient mode and colors."
@@ -5564,6 +6010,14 @@ simplified_chinese = "勾选需要上色的部分，再选择渐变模式和颜�
 traditional_chinese = "先選要上色的部分，再設定漸層模式與顏色。"
 japanese = "色を付ける部分を選び、グラデーションモードと色を選びます。"
 korean = "색을 입힐 부분을 고른 뒤 그라데이션 모드와 색상을 선택하세요."
+russian = "Выберите части для раскраски, затем режим градиента и цвета."
+german = "Wähle die Teile zum Einfärben und dann Verlaufsmodus und Farben."
+spanish = "Elige qué partes colorear y luego un modo de degradado y sus colores."
+french = "Choisis les parties à colorer, puis un mode de dégradé et les couleurs."
+brazilian_portuguese = "Escolha quais partes colorir e depois o modo de degradê e as cores."
+portuguese = "Escolhe as partes a colorir e depois o modo de gradiente e as cores."
+turkish = "Renklendirilecek kısımları seçin, ardından bir renk geçişi modu ve renkleri seçin."
+polish = "Wybierz elementy do pokolorowania, a potem tryb gradientu i kolory."
 
 [[message]]
 key = "Low contrast between name and message text makes chat hard to scan in fights."
@@ -5572,6 +6026,14 @@ simplified_chinese = "名字与消息文本对比度过低时，对局中很难�
 traditional_chinese = "名稱與訊息文字對比太低時，混戰中很難快速看清聊天內容。"
 japanese = "名前とメッセージの文字のコントラストが低いと、乱戦中にチャットを読み取るのが難しくなります。"
 korean = "이름과 메시지 텍스트의 대비가 낮으면 난전 중에 채팅을 빠르게 훑기 어렵습니다."
+russian = "Низкий контраст между именем и текстом сообщения мешает читать чат в бою."
+german = "Geringer Kontrast zwischen Name und Nachrichtentext macht den Chat im Gefecht schwer lesbar."
+spanish = "Un contraste bajo entre el nombre y el texto del mensaje hace que cueste leer el chat en pleno combate."
+french = "Un faible contraste entre le nom et le message rend le chat difficile à lire en pleine action."
+brazilian_portuguese = "Pouco contraste entre nome e texto da mensagem deixa o chat difícil de ler em meio à luta."
+portuguese = "Um contraste baixo entre o nome e o texto da mensagem torna o chat difícil de ler em combate."
+turkish = "Ad ile mesaj metni arasındaki düşük kontrast, sohbeti çatışmalarda okumayı zorlaştırır."
+polish = "Niski kontrast między nazwą a tekstem wiadomości utrudnia czytanie czatu w walce."
 
 [[message]]
 key = "Renders a live preview of the current chat appearance."
@@ -5580,6 +6042,14 @@ simplified_chinese = "实时预览当前聊天的外观效果。"
 traditional_chinese = "即時預覽目前的聊天外觀。"
 japanese = "現在のチャットの見た目をリアルタイムでプレビューします。"
 korean = "현재 채팅 모양을 실시간으로 미리 보여 줍니다."
+russian = "Показывает живой предпросмотр текущего вида чата."
+german = "Zeigt eine Live-Vorschau des aktuellen Chat-Aussehens."
+spanish = "Muestra una vista previa en vivo del aspecto actual del chat."
+french = "Affiche un aperçu en direct de l'apparence actuelle du chat."
+brazilian_portuguese = "Exibe uma prévia ao vivo da aparência atual do chat."
+portuguese = "Mostra uma pré-visualização em direto do aspeto atual do chat."
+turkish = "Geçerli sohbet görünümünün canlı önizlemesini çizer."
+polish = "Renderuje podgląd na żywo bieżącego wyglądu czatu."
 
 [[message]]
 key = "Change values in the chat cards and watch this preview update."
@@ -5588,6 +6058,14 @@ simplified_chinese = "在聊天设置卡片中修改数值，此处的预览会�
 traditional_chinese = "在聊天卡片中變更數值，觀察這個預覽隨之更新。"
 japanese = "チャットのカードで値を変えると、このプレビューが更新されます。"
 korean = "채팅 카드에서 값을 바꾸면 이 미리보기가 갱신됩니다."
+russian = "Измените значения в карточках чата — предпросмотр обновится сразу."
+german = "Ändere Werte in den Chat-Karten und beobachte, wie sich diese Vorschau aktualisiert."
+spanish = "Cambia valores en las tarjetas de chat y observa cómo se actualiza esta vista previa."
+french = "Modifie les valeurs dans les cartes du chat et regarde l'aperçu se mettre à jour."
+brazilian_portuguese = "Mude os valores nos cartões do chat e veja a prévia se atualizar."
+portuguese = "Muda valores nos cartões do chat e vê esta pré-visualização a atualizar-se."
+turkish = "Sohbet kartlarındaki değerleri değiştirin ve bu önizlemenin güncellenmesini izleyin."
+polish = "Zmieniaj wartości na kartach czatu i obserwuj aktualizację tego podglądu."
 
 [[message]]
 key = "The preview uses your own name and colors; other players may look different."
@@ -5596,6 +6074,14 @@ simplified_chinese = "预览使用你自己的名字和配色，其他玩家的�
 traditional_chinese = "預覽使用你自己的名稱與顏色；其他玩家的顯示可能不同。"
 japanese = "プレビューは自分の名前と色を使うため、他のプレイヤーは違って見える場合があります。"
 korean = "미리보기는 내 이름과 색상을 사용하므로 다른 플레이어는 다르게 보일 수 있습니다."
+russian = "В предпросмотре используются ваши имя и цвета; у других игроков вид может отличаться."
+german = "Die Vorschau nutzt deinen Namen und deine Farben; bei anderen Spielern kann es anders aussehen."
+spanish = "La vista previa usa tu propio nombre y tus colores; otros jugadores pueden verse distintos."
+french = "L'aperçu utilise ton nom et tes couleurs ; chez les autres joueurs, le rendu peut différer."
+brazilian_portuguese = "A prévia usa o seu nome e as suas cores; os outros jogadores podem parecer diferentes."
+portuguese = "A pré-visualização usa o teu nome e as tuas cores; os outros jogadores podem parecer diferentes."
+turkish = "Önizleme kendi adınızı ve renklerinizi kullanır; diğer oyuncular farklı görünebilir."
+polish = "Podgląd używa twojej nazwy i kolorów; u innych graczy może wyglądać inaczej."
 
 [[message]]
 key = "Previews player and dummy nameplates with the current settings."
@@ -5604,6 +6090,14 @@ simplified_chinese = "按当前设置预览玩家和分身的名字牌。"
 traditional_chinese = "以目前設定預覽玩家與 dummy 的名牌。"
 japanese = "現在の設定でプレイヤーとダミーのネームプレートをプレビューします。"
 korean = "현재 설정으로 플레이어와 더미의 이름표를 미리 보여 줍니다."
+russian = "Показывает таблички с именами игрока и дамми при текущих настройках."
+german = "Zeigt Namensschilder von Spieler und Dummy mit den aktuellen Einstellungen als Vorschau."
+spanish = "Muestra una vista previa de las placas de nombre del jugador y del dummy con los ajustes actuales."
+french = "Prévisualise les plaques de nom du joueur et du dummy avec les réglages actuels."
+brazilian_portuguese = "Mostra uma prévia das placas de nome do jogador e do dummy com os ajustes atuais."
+portuguese = "Pré-visualiza as placas de nome do jogador e do dummy com as definições atuais."
+turkish = "Oyuncu ve dummy isim etiketlerini geçerli ayarlarla önizler."
+polish = "Pokazuje podgląd tabliczek z nazwami gracza i dummy z bieżącymi ustawieniami."
 
 [[message]]
 key = "Adjust nameplate options and compare the preview."
@@ -5612,6 +6106,14 @@ simplified_chinese = "调整名字牌选项后与预览对比。"
 traditional_chinese = "調整名牌選項並與預覽比較。"
 japanese = "ネームプレートのオプションを調整して、プレビューと見比べます。"
 korean = "이름표 옵션을 조정하고 미리보기와 비교하세요."
+russian = "Настройте параметры табличек и сравните с предпросмотром."
+german = "Passe die Namensschild-Optionen an und vergleiche mit der Vorschau."
+spanish = "Ajusta las opciones de las placas de nombre y compara con la vista previa."
+french = "Ajuste les options des plaques de nom et compare avec l'aperçu."
+brazilian_portuguese = "Ajuste as opções das placas de nome e compare com a prévia."
+portuguese = "Ajusta as opções das placas de nome e compara com a pré-visualização."
+turkish = "İsim etiketi seçeneklerini ayarlayın ve önizlemeyle karşılaştırın."
+polish = "Dostosuj opcje tabliczek i porównaj z podglądem."
 
 [[message]]
 key = "Preview spacing does not match every map; check in game before a match."
@@ -5620,6 +6122,14 @@ simplified_chinese = "预览中的间距并不适用于所有地图，比赛前�
 traditional_chinese = "預覽的間距不一定符合所有地圖；比賽前請先在遊戲中確認。"
 japanese = "プレビューの間隔はすべてのマップと一致しないため、試合前にゲーム内で確認してください。"
 korean = "미리보기의 간격이 모든 맵과 일치하지 않으니 경기 전에 게임에서 확인하세요."
+russian = "Отступы в предпросмотре совпадают не со всеми картами; проверьте в игре перед матчем."
+german = "Die Vorschau-Abstände passen nicht zu jeder Karte; prüfe es vor einem Match im Spiel."
+spanish = "El espaciado de la vista previa no coincide con todos los mapas; compruébalo en el juego antes de una partida."
+french = "L'espacement de l'aperçu ne correspond pas à toutes les cartes ; vérifie en jeu avant un match."
+brazilian_portuguese = "O espaçamento da prévia não corresponde a todos os mapas; confira no jogo antes de uma partida."
+portuguese = "O espaçamento da pré-visualização não corresponde a todos os mapas; confirma no jogo antes de uma partida."
+turkish = "Önizleme aralıkları her haritayla eşleşmez; maçtan önce oyun içinde kontrol edin."
+polish = "Odstępy w podglądzie nie odpowiadają każdej mapie; sprawdź w grze przed meczem."
 
 [[message]]
 key = "Configures the hook range and collision guide lines drawn around your Tee."
@@ -5628,6 +6138,14 @@ simplified_chinese = "设置钩子范围，以及围绕你的 Tee 绘制的碰�
 traditional_chinese = "設定鉤索範圍，以及圍繞你 Tee 繪製的碰撞輔助線。"
 japanese = "フックの範囲と、自分の Tee の周囲に描かれる当たり判定ガイド線を設定します。"
 korean = "훅 범위와 내 Tee 주변에 그려지는 충돌 안내선을 설정합니다."
+russian = "Настраивает дальность крюка и линии столкновения вокруг вашего Tee."
+german = "Konfiguriert Hakenreichweite und Kollisions-Hilfslinien um deinen Tee."
+spanish = "Configura el alcance del gancho y las líneas guía de colisión que se dibujan alrededor de tu Tee."
+french = "Configure la portée du grappin et les lignes guides de collision autour de ton Tee."
+brazilian_portuguese = "Configura o alcance do gancho e as linhas-guia de colisão desenhadas ao redor do seu Tee."
+portuguese = "Configura o alcance do gancho e as linhas guia de colisão desenhadas à volta do teu Tee."
+turkish = "Kanca menzilini ve Tee'nizin çevresine çizilen çarpışma kılavuz çizgilerini yapılandırır."
+polish = "Konfiguruje zasięg haka i linie kolizji rysowane wokół twojego Tee."
 
 [[message]]
 key = "Enable the guide line, then set its length, style and colors."
@@ -5636,6 +6154,14 @@ simplified_chinese = "启用辅助线后，设置它的长度、样式和颜色�
 traditional_chinese = "啟用輔助線，然後設定長度、樣式與顏色。"
 japanese = "ガイド線を有効にしてから、長さ、スタイル、色を設定します。"
 korean = "안내선을 켠 다음 길이, 스타일, 색상을 설정하세요."
+russian = "Включите линию столкновения, затем задайте её длину, стиль и цвета."
+german = "Aktiviere die Hilfslinie und lege dann Länge, Stil und Farben fest."
+spanish = "Activa la línea guía y ajusta su longitud, estilo y colores."
+french = "Active la ligne guide, puis règle sa longueur, son style et ses couleurs."
+brazilian_portuguese = "Ative a linha-guia e depois defina comprimento, estilo e cores."
+portuguese = "Ativa a linha guia e define o seu comprimento, estilo e cores."
+turkish = "Kılavuz çizgiyi etkinleştirin, ardından uzunluğunu, stilini ve renklerini ayarlayın."
+polish = "Włącz linię kolizji, a potem ustaw jej długość, styl i kolory."
 
 [[message]]
 key = "Guide lines are computed locally and do not guarantee that a hook will connect."
@@ -5644,6 +6170,14 @@ simplified_chinese = "辅助线仅在本地计算，不能保证钩子一定成�
 traditional_chinese = "輔助線只在本機計算，並不保證鉤索一定能勾中。"
 japanese = "ガイド線はローカルで計算されるだけで、フックが当たることを保証するものではありません。"
 korean = "안내선은 로컬에서 계산될 뿐, 훅이 붙는다는 것을 보장하지 않습니다."
+russian = "Линии столкновения рассчитываются локально и не гарантируют, что крюк зацепится."
+german = "Hilfslinien werden lokal berechnet und garantieren nicht, dass der Haken trifft."
+spanish = "Las líneas guía se calculan en local y no garantizan que el gancho vaya a enganchar."
+french = "Les lignes guides sont calculées localement et ne garantissent pas que le grappin accroche."
+brazilian_portuguese = "As linhas-guia são calculadas localmente e não garantem que o gancho vá conectar."
+portuguese = "As linhas guia são calculadas localmente e não garantem que o gancho acerte."
+turkish = "Kılavuz çizgiler yerel olarak hesaplanır ve kancanın tutacağını garanti etmez."
+polish = "Linie kolizji są liczone lokalnie i nie gwarantują, że hak się zaczepi."
 
 [[message]]
 key = "Previews hook collision colors and line styles."
@@ -5652,6 +6186,14 @@ simplified_chinese = "预览钩子碰撞的颜色和线条样式。"
 traditional_chinese = "預覽鉤索碰撞顏色與線條樣式。"
 japanese = "フックの当たり判定の色と線のスタイルをプレビューします。"
 korean = "훅 충돌 색상과 선 스타일을 미리 보여 줍니다."
+russian = "Показывает цвета столкновения крюка и стили линий."
+german = "Zeigt Haken-Kollisionsfarben und Linienstile als Vorschau."
+spanish = "Muestra una vista previa de los colores de colisión del gancho y los estilos de línea."
+french = "Prévisualise les couleurs de collision du grappin et les styles de ligne."
+brazilian_portuguese = "Mostra uma prévia das cores de colisão do gancho e dos estilos de linha."
+portuguese = "Pré-visualiza as cores de colisão do gancho e os estilos de linha."
+turkish = "Kanca çarpışma renklerini ve çizgi stillerini önizler."
+polish = "Pokazuje podgląd kolorów kolizji haka i stylów linii."
 
 [[message]]
 key = "Change colors and style options, then compare the preview."
@@ -5660,6 +6202,14 @@ simplified_chinese = "修改颜色和样式选项后与预览对比。"
 traditional_chinese = "變更顏色與樣式選項，再與預覽比較。"
 japanese = "色とスタイルのオプションを変えて、プレビューと見比べます。"
 korean = "색상과 스타일 옵션을 바꾼 뒤 미리보기와 비교하세요."
+russian = "Измените цвета и параметры стиля, затем сравните с предпросмотром."
+german = "Ändere Farben und Stiloptionen und vergleiche mit der Vorschau."
+spanish = "Cambia los colores y las opciones de estilo y compara con la vista previa."
+french = "Change les couleurs et les options de style, puis compare avec l'aperçu."
+brazilian_portuguese = "Mude as cores e as opções de estilo e compare com a prévia."
+portuguese = "Muda as cores e as opções de estilo e compara com a pré-visualização."
+turkish = "Renkleri ve stil seçeneklerini değiştirin, ardından önizlemeyle karşılaştırın."
+polish = "Zmień kolory i opcje stylu, a potem porównaj z podglądem."
 
 [[message]]
 key = "Colors too close to the map background are hard to read while moving."
@@ -5668,6 +6218,14 @@ simplified_chinese = "颜色与地图背景过于接近时，移动中很难看�
 traditional_chinese = "顏色若太接近地圖背景，移動時會很難看清。"
 japanese = "マップの背景に近すぎる色は、動いているときに見分けにくくなります。"
 korean = "맵 배경과 너무 비슷한 색은 움직이는 동안 보기 어렵습니다."
+russian = "Цвета, близкие к фону карты, плохо видны в движении."
+german = "Farben zu nah am Kartenhintergrund sind in Bewegung schwer zu erkennen."
+spanish = "Los colores demasiado parecidos al fondo del mapa son difíciles de leer en movimiento."
+french = "Des couleurs trop proches du fond de la carte sont illisibles en mouvement."
+brazilian_portuguese = "Cores muito próximas do fundo do mapa são difíceis de ler em movimento."
+portuguese = "Cores demasiado próximas do fundo do mapa são difíceis de ler em movimento."
+turkish = "Harita arka planına çok yakın renkler hareket halindeyken zor okunur."
+polish = "Kolory zbyt bliskie tłu mapy są trudne do odczytania w ruchu."
 
 [[message]]
 key = "Styles kill, finish and system messages in the chat area."
@@ -5676,6 +6234,14 @@ simplified_chinese = "设置聊天区域的击杀、通关和系统消息样式�
 traditional_chinese = "設定聊天區域中擊殺、完成與系統訊息的樣式。"
 japanese = "チャット欄のキル、ゴール、システムメッセージを装飾します。"
 korean = "채팅 영역의 킬, 완료, 시스템 메시지를 꾸밉니다."
+russian = "Задаёт оформление сообщений об убийствах и финише, а также системных сообщений в чате."
+german = "Gestaltet Todes-, Finish- und Systemmeldungen im Chatbereich."
+spanish = "Personaliza los mensajes de muerte, de meta y del sistema en la zona de chat."
+french = "Style les messages de mort, d'arrivée et système dans la zone de chat."
+brazilian_portuguese = "Define o estilo das mensagens de morte, de finish e do sistema na área do chat."
+portuguese = "Define o estilo das mensagens de morte, de fim e de sistema na área do chat."
+turkish = "Sohbet alanındaki öldürme, bitiş ve sistem mesajlarını biçimlendirir."
+polish = "Stylizuje wiadomości o śmierci, ukończeniu oraz systemowe na czacie."
 
 [[message]]
 key = "Enable the message types you want and choose their colors."
@@ -5684,6 +6250,14 @@ simplified_chinese = "启用需要的消息类型，并为其选择颜色。"
 traditional_chinese = "啟用你想要的訊息類型並選擇顏色。"
 japanese = "使いたいメッセージの種類を有効にし、色を選びます。"
 korean = "원하는 메시지 종류를 켜고 색상을 선택하세요."
+russian = "Включите нужные типы сообщений и выберите их цвета."
+german = "Aktiviere die gewünschten Meldungstypen und wähle ihre Farben."
+spanish = "Activa los tipos de mensaje que quieras y elige sus colores."
+french = "Active les types de messages voulus et choisis leurs couleurs."
+brazilian_portuguese = "Ative os tipos de mensagem que quiser e escolha as cores deles."
+portuguese = "Ativa os tipos de mensagem que queres e escolhe as respetivas cores."
+turkish = "İstediğiniz mesaj türlerini etkinleştirin ve renklerini seçin."
+polish = "Włącz wybrane typy wiadomości i wybierz ich kolory."
 
 [[message]]
 key = "Disabling system messages also hides server warnings."
@@ -5692,6 +6266,14 @@ simplified_chinese = "关闭系统消息后，服务器警告也会一并隐藏�
 traditional_chinese = "停用系統訊息也會一併隱藏伺服器警告。"
 japanese = "システムメッセージを無効にすると、サーバーの警告も非表示になります。"
 korean = "시스템 메시지를 끄면 서버 경고도 함께 숨겨집니다."
+russian = "Отключение системных сообщений скрывает и предупреждения сервера."
+german = "Schaltest du Systemmeldungen ab, verschwinden auch Serverwarnungen."
+spanish = "Si desactivas los mensajes del sistema, también se ocultan los avisos del servidor."
+french = "Désactiver les messages système masque aussi les avertissements du serveur."
+brazilian_portuguese = "Desativar as mensagens do sistema também esconde avisos do servidor."
+portuguese = "Desativar as mensagens de sistema também oculta os avisos do servidor."
+turkish = "Sistem mesajlarını kapatmak sunucu uyarılarını da gizler."
+polish = "Wyłączenie wiadomości systemowych ukrywa też ostrzeżenia serwera."
 
 [[message]]
 key = "Controls laser shape, glow and animation."
@@ -5700,6 +6282,14 @@ simplified_chinese = "控制激光的形状、辉光与动画。"
 traditional_chinese = "控制雷射的形狀、光暈與動畫。"
 japanese = "レーザーの形状、発光、アニメーションを設定します。"
 korean = "레이저의 형태, 발광, 애니메이션을 설정합니다."
+russian = "Управляет формой лазера, свечением и анимацией."
+german = "Steuert Form, Leuchten und Animation des Lasers."
+spanish = "Controla la forma, el brillo y la animación del láser."
+french = "Contrôle la forme, l'éclat et l'animation du laser."
+brazilian_portuguese = "Controla o formato, o brilho e a animação do laser."
+portuguese = "Controla a forma, o brilho e a animação dos lasers."
+turkish = "Lazer şeklini, parlamasını ve animasyonunu denetler."
+polish = "Steruje kształtem, poświatą i animacją lasera."
 
 [[message]]
 key = "Pick a shape, then tune glow and animation speed."
@@ -5708,6 +6298,14 @@ simplified_chinese = "先选一种形状，再调整辉光与动画速度。"
 traditional_chinese = "先選一種形狀，再調整光暈與動畫速度。"
 japanese = "形状を選び、次に発光とアニメーションの速さを調整します。"
 korean = "형태를 고른 뒤 발광과 애니메이션 속도를 조정하세요."
+russian = "Выберите форму, затем настройте свечение и скорость анимации."
+german = "Wähle eine Form und stell dann Leuchten und Animationsgeschwindigkeit ein."
+spanish = "Elige una forma y ajusta el brillo y la velocidad de la animación."
+french = "Choisis une forme, puis règle l'éclat et la vitesse de l'animation."
+brazilian_portuguese = "Escolha um formato e ajuste o brilho e a velocidade da animação."
+portuguese = "Escolhe uma forma e afina o brilho e a velocidade da animação."
+turkish = "Bir şekil seçin, ardından parlamayı ve animasyon hızını ayarlayın."
+polish = "Wybierz kształt, a potem dostrój poświatę i prędkość animacji."
 
 [[message]]
 key = "Heavy glow costs fill rate; disable it if frame time rises in big fights."
@@ -5716,6 +6314,14 @@ simplified_chinese = "高辉光会消耗填充率；大规模团战时如果帧�
 traditional_chinese = "高光暈會佔用填充率；大規模團戰時如果影格時間上升，就把它關掉。"
 japanese = "強い発光はフィルレートを消費します。大人数の戦闘でフレーム時間が増える場合は無効にしてください。"
 korean = "강한 발광은 필레이트를 소모합니다. 대규모 교전에서 프레임 시간이 늘어나면 꺼 두세요."
+russian = "Сильное свечение нагружает заливку; отключите его, если в массовых боях растёт время кадра."
+german = "Starkes Leuchten kostet Füllrate; schalte es ab, wenn die Frame-Zeit in großen Gefechten steigt."
+spanish = "Un brillo intenso consume tasa de relleno; desactívalo si el tiempo de fotograma sube en peleas grandes."
+french = "Un fort éclat coûte du fill rate ; désactive-le si le temps par image augmente dans les grosses bagarres."
+brazilian_portuguese = "Brilho forte consome taxa de preenchimento; desligue se o tempo de quadro subir em lutas grandes."
+portuguese = "Muito brilho consome taxa de preenchimento; desliga-o se o tempo de frame subir em combates grandes."
+turkish = "Yoğun parlama dolgu hızını tüketir; büyük çatışmalarda kare süresi artarsa kapatın."
+polish = "Mocna poświata obciąża wypełnianie pikseli; wyłącz ją, jeśli w dużych walkach rośnie czas klatki."
 
 [[message]]
 key = "Sets laser colors for weapons and entities."
@@ -5724,6 +6330,14 @@ simplified_chinese = "设置武器与实体的激光颜色。"
 traditional_chinese = "設定武器與實體的雷射顏色。"
 japanese = "武器とエンティティのレーザーの色を設定します。"
 korean = "무기와 엔티티의 레이저 색상을 설정합니다."
+russian = "Задаёт цвета лазеров оружия и объектов."
+german = "Legt Laserfarben für Waffen und Entities fest."
+spanish = "Define los colores del láser para armas y entidades."
+french = "Définit les couleurs des lasers des armes et des entités."
+brazilian_portuguese = "Define as cores do laser para armas e entidades."
+portuguese = "Define as cores dos lasers das armas e das entidades."
+turkish = "Silahlar ve varlıklar için lazer renklerini ayarlar."
+polish = "Ustawia kolory laserów dla broni i obiektów."
 
 [[message]]
 key = "Choose a target, then set its color; entity lasers can follow team colors."
@@ -5732,6 +6346,14 @@ simplified_chinese = "先选一个目标，再设置它的颜色；实体的激�
 traditional_chinese = "先選一個目標，再設定它的顏色；實體的雷射可以跟隨隊伍顏色。"
 japanese = "対象を選んで色を設定します。エンティティのレーザーはチームカラーに合わせられます。"
 korean = "대상을 고르고 색상을 지정하세요. 엔티티 레이저는 팀 색상을 따르게 할 수 있습니다."
+russian = "Выберите цель и задайте её цвет; лазеры объектов могут следовать цветам команды."
+german = "Wähle ein Ziel und bestimme seine Farbe; Entity-Laser können den Teamfarben folgen."
+spanish = "Elige un objetivo y define su color; los láseres de entidades pueden seguir los colores de equipo."
+french = "Choisis une cible, puis sa couleur ; les lasers d'entités peuvent suivre les couleurs d'équipe."
+brazilian_portuguese = "Escolha um alvo e defina a cor; os lasers de entidades podem seguir as cores da equipe."
+portuguese = "Escolhe um alvo e define a sua cor; os lasers das entidades podem seguir as cores da equipa."
+turkish = "Bir hedef seçin, ardından rengini ayarlayın; varlık lazerleri takım renklerini izleyebilir."
+polish = "Wybierz cel, a potem ustaw jego kolor; lasery obiektów mogą używać kolorów drużyny."
 
 [[message]]
 key = "Team-colored lasers are easier to read in matches."
@@ -5740,6 +6362,14 @@ simplified_chinese = "队伍配色的激光在对局中更容易辨认。"
 traditional_chinese = "隊伍配色的雷射在對戰中更容易辨識。"
 japanese = "チームカラーのレーザーは試合中に判別しやすくなります。"
 korean = "팀 색상 레이저는 경기 중에 구분하기 쉽습니다."
+russian = "Лазеры в цветах команды легче различать в матчах."
+german = "Teamfarbene Laser sind im Match leichter zu erkennen."
+spanish = "Los láseres con color de equipo son más fáciles de leer en partidas."
+french = "Des lasers aux couleurs d'équipe se lisent mieux en match."
+brazilian_portuguese = "Lasers na cor da equipe são mais fáceis de ler nas partidas."
+portuguese = "Lasers com a cor da equipa leem-se melhor em partidas."
+turkish = "Takım renkli lazerler maçlarda daha kolay okunur."
+polish = "Lasery w kolorach drużyny łatwiej odczytać w meczach."
 
 [[message]]
 key = "Previews laser bodies, outlines and impacts."
@@ -5748,6 +6378,14 @@ simplified_chinese = "预览激光的主体、外框与命中效果。"
 traditional_chinese = "預覽雷射的主體、外框與命中效果。"
 japanese = "レーザーの本体、輪郭、着弾をプレビューします。"
 korean = "레이저 몸체, 외곽선, 명중 지점을 미리 보여 줍니다."
+russian = "Показывает тела лазеров, обводки и попадания."
+german = "Zeigt Laserkörper, Umrisse und Einschläge als Vorschau."
+spanish = "Muestra una vista previa del cuerpo, el contorno y los impactos de los láseres."
+french = "Prévisualise le corps, les contours et l'impact des lasers."
+brazilian_portuguese = "Mostra uma prévia do corpo, do contorno e do impacto dos lasers."
+portuguese = "Pré-visualiza o corpo, o contorno e o impacto dos lasers."
+turkish = "Lazer gövdelerini, dış çizgilerini ve isabetlerini önizler."
+polish = "Pokazuje podgląd lasera: korpusy, obrysy i trafienia."
 
 [[message]]
 key = "Change laser options and compare the preview."
@@ -5756,6 +6394,14 @@ simplified_chinese = "改动激光选项，再对照预览效果。"
 traditional_chinese = "調整雷射選項，再對照預覽效果。"
 japanese = "レーザーの設定を変えて、プレビューと見比べてください。"
 korean = "레이저 옵션을 바꾸고 미리보기와 비교하세요."
+russian = "Измените параметры лазера и сравните с предпросмотром."
+german = "Ändere die Laseroptionen und vergleiche mit der Vorschau."
+spanish = "Cambia las opciones del láser y compara con la vista previa."
+french = "Change les options du laser et compare avec l'aperçu."
+brazilian_portuguese = "Mude as opções do laser e compare com a prévia."
+portuguese = "Muda as opções dos lasers e compara com a pré-visualização."
+turkish = "Lazer seçeneklerini değiştirin ve önizlemeyle karşılaştırın."
+polish = "Zmień opcje lasera i porównaj z podglądem."
 
 [[message]]
 key = "The preview does not show every weapon; check in game."
@@ -5764,6 +6410,14 @@ simplified_chinese = "预览不会显示所有武器；请到游戏中确认。"
 traditional_chinese = "預覽不會顯示所有武器；請到遊戲中確認。"
 japanese = "プレビューにはすべての武器が表示されません。ゲーム内で確認してください。"
 korean = "미리보기에는 모든 무기가 나오지 않으니 게임에서 확인하세요."
+russian = "Предпросмотр показывает не всё оружие; проверьте в игре."
+german = "Die Vorschau zeigt nicht jede Waffe; prüfe es im Spiel."
+spanish = "La vista previa no muestra todas las armas; compruébalo en el juego."
+french = "L'aperçu ne montre pas toutes les armes ; vérifie en jeu."
+brazilian_portuguese = "A prévia não mostra todas as armas; confira no jogo."
+portuguese = "A pré-visualização não mostra todas as armas; confirma no jogo."
+turkish = "Önizleme her silahı göstermez; oyun içinde kontrol edin."
+polish = "Podgląd nie pokazuje każdej broni; sprawdź w grze."
 
 [[message]]
 key = "Edits individual Tee 7 skin parts and previews the result."
@@ -5772,6 +6426,14 @@ simplified_chinese = "编辑 Tee 7 皮肤的各个部件，并预览结果。"
 traditional_chinese = "編輯 Tee 7 皮膚的各個部件，並預覽結果。"
 japanese = "Tee 7 スキンのパーツを個別に編集し、結果をプレビューします。"
 korean = "Tee 7 스킨의 각 부위를 개별로 편집하고 결과를 미리 보여 줍니다."
+russian = "Редактирует отдельные части скина Tee 7 и показывает результат."
+german = "Bearbeitet einzelne Skin-Teile von Tee 7 und zeigt das Ergebnis als Vorschau."
+spanish = "Edita piezas individuales de la skin Tee 7 y muestra una vista previa del resultado."
+french = "Modifie chaque partie du skin de Tee 7 et prévisualise le résultat."
+brazilian_portuguese = "Edita partes individuais da skin Tee 7 e mostra o resultado."
+portuguese = "Edita partes individuais do skin Tee 7 e pré-visualiza o resultado."
+turkish = "Tek tek Tee 7 skin parçalarını düzenler ve sonucu önizler."
+polish = "Edytuje poszczególne części skina Tee 7 i pokazuje podgląd wyniku."
 
 [[message]]
 key = "Select a body part, change its sprite or color, then save the skin."
@@ -5780,6 +6442,14 @@ simplified_chinese = "选一个身体部位，改它的贴图或颜色，然后�
 traditional_chinese = "選一個身體部位，改它的貼圖或顏色，然後儲存皮膚。"
 japanese = "体の部位を選び、スプライトや色を変えてからスキンを保存します。"
 korean = "신체 부위를 고르고 스프라이트나 색상을 바꾼 뒤 스킨을 저장하세요."
+russian = "Выберите часть тела, измените её спрайт или цвет, затем сохраните скин."
+german = "Wähle einen Körperteil, ändere Sprite oder Farbe und speichere dann den Skin."
+spanish = "Selecciona una parte del cuerpo, cambia su sprite o su color y guarda la skin."
+french = "Sélectionne une partie du corps, change son sprite ou sa couleur, puis enregistre le skin."
+brazilian_portuguese = "Selecione uma parte do corpo, mude o sprite ou a cor e salve a skin."
+portuguese = "Seleciona uma parte do corpo, muda o sprite ou a cor e guarda a skin."
+turkish = "Bir vücut parçası seçin, sprite'ını veya rengini değiştirin, ardından skini kaydedin."
+polish = "Wybierz część ciała, zmień jej sprite lub kolor, a potem zapisz skin."
 
 [[message]]
 key = "Parts are stored in the skin file; unsaved changes are lost when leaving the page."
@@ -5788,6 +6458,14 @@ simplified_chinese = "各部件保存在皮肤文件里；离开页面时没保�
 traditional_chinese = "各部件儲存在皮膚檔案裡；離開頁面時未儲存的變更會遺失。"
 japanese = "パーツはスキンファイルに保存されます。未保存の変更はページを離れると失われます。"
 korean = "부위는 스킨 파일에 저장됩니다. 저장하지 않은 변경은 페이지를 떠나면 사라집니다."
+russian = "Части хранятся в файле скина; несохранённые изменения теряются при уходе со страницы."
+german = "Die Teile stehen in der Skin-Datei; ungespeicherte Änderungen gehen beim Verlassen der Seite verloren."
+spanish = "Las piezas se almacenan en el archivo de la skin; los cambios sin guardar se pierden al salir de la página."
+french = "Les parties sont enregistrées dans le fichier de skin ; les modifications non sauvegardées sont perdues en quittant la page."
+brazilian_portuguese = "As partes ficam no arquivo da skin; alterações não salvas são perdidas ao sair da página."
+portuguese = "As partes ficam guardadas no ficheiro da skin; alterações não guardadas perdem-se ao sair da página."
+turkish = "Parçalar skin dosyasında saklanır; kaydedilmemiş değişiklikler sayfadan ayrılınca kaybolur."
+polish = "Części są zapisywane w pliku skina; niezapisane zmiany przepadają po opuszczeniu strony."
 
 [[message]]
 key = "Sets player and dummy name, clan and identity information."
@@ -5796,6 +6474,14 @@ simplified_chinese = "设置玩家和分身的名称、战队与身份信息。"
 traditional_chinese = "設定玩家與分身的名稱、戰隊及身分資訊。"
 japanese = "プレイヤーとダミーの名前、クラン、プロフィール情報を設定します。"
 korean = "플레이어와 더미의 이름, 클랜, 신원 정보를 설정합니다."
+russian = "Задаёт имя игрока и дамми, клан и сведения об идентичности."
+german = "Legt Name, Clan und Identität von Spieler und Dummy fest."
+spanish = "Define el nombre, el clan y los datos de identidad del jugador y del dummy."
+french = "Définit le nom, le clan et les informations d'identité du joueur et du dummy."
+brazilian_portuguese = "Define nome, clã e informações de identidade do jogador e do dummy."
+portuguese = "Define o nome, o clã e os dados de identidade do jogador e do dummy."
+turkish = "Oyuncu ve dummy adını, klan ve kimlik bilgilerini ayarlar."
+polish = "Ustawia nazwę gracza i dummy, klan oraz dane tożsamości."
 
 [[message]]
 key = "Edit the name and clan fields; the dummy keeps its own values."
@@ -5804,6 +6490,14 @@ simplified_chinese = "编辑名称和战队字段；分身保留它自己的值�
 traditional_chinese = "編輯名稱與戰隊欄位；分身保留自己的設定值。"
 japanese = "名前とクランの欄を編集します。ダミーは独自の値を持ちます。"
 korean = "이름과 클랜 항목을 편집하세요. 더미는 자기 값을 그대로 유지합니다."
+russian = "Отредактируйте поля имени и клана; у дамми свои значения."
+german = "Bearbeite die Felder Name und Clan; der Dummy behält seine eigenen Werte."
+spanish = "Edita los campos de nombre y clan; el dummy conserva sus propios valores."
+french = "Modifie les champs nom et clan ; le dummy garde ses propres valeurs."
+brazilian_portuguese = "Edite os campos de nome e clã; o dummy mantém os próprios valores."
+portuguese = "Edita os campos de nome e clã; o dummy mantém os seus próprios valores."
+turkish = "Ad ve klan alanlarını düzenleyin; dummy kendi değerlerini korur."
+polish = "Edytuj pola nazwy i klanu; dummy zachowuje własne wartości."
 
 [[message]]
 key = "Names are sent to the server and shown to other players."
@@ -5812,6 +6506,14 @@ simplified_chinese = "名称会发送到服务器，并显示给其他玩家。"
 traditional_chinese = "名稱會傳送到伺服器，並顯示給其他玩家。"
 japanese = "名前はサーバーに送信され、他のプレイヤーにも表示されます。"
 korean = "이름은 서버로 전송되어 다른 플레이어에게 표시됩니다."
+russian = "Имена отправляются на сервер и видны другим игрокам."
+german = "Namen werden an den Server gesendet und anderen Spielern angezeigt."
+spanish = "Los nombres se envían al servidor y los ven los demás jugadores."
+french = "Les noms sont envoyés au serveur et visibles par les autres joueurs."
+brazilian_portuguese = "Os nomes são enviados ao servidor e mostrados aos outros jogadores."
+portuguese = "Os nomes são enviados ao servidor e mostrados a outros jogadores."
+turkish = "Adlar sunucuya gönderilir ve diğer oyunculara gösterilir."
+polish = "Nazwy są wysyłane na serwer i widoczne dla innych graczy."
 
 [[message]]
 key = "Selects the country flag shown for you and for the dummy."
@@ -5820,6 +6522,14 @@ simplified_chinese = "选择为你和分身显示的国旗。"
 traditional_chinese = "選擇為你和分身顯示的國旗。"
 japanese = "自分とダミーに表示する国旗を選びます。"
 korean = "자신과 더미에게 표시할 국기를 선택합니다."
+russian = "Выбирает флаг страны для вас и для дамми."
+german = "Wählt die Länderflagge, die für dich und den Dummy angezeigt wird."
+spanish = "Selecciona la bandera del país que se muestra para ti y para el dummy."
+french = "Sélectionne le drapeau de pays affiché pour toi et pour le dummy."
+brazilian_portuguese = "Seleciona a bandeira do país mostrada para você e para o dummy."
+portuguese = "Escolhe a bandeira do país mostrada para ti e para o dummy."
+turkish = "Sizin ve dummy için gösterilen ülke bayrağını seçer."
+polish = "Wybiera flagę kraju wyświetlaną przy tobie i przy dummy."
 
 [[message]]
 key = "Pick a country for each player."
@@ -5828,6 +6538,14 @@ simplified_chinese = "为每个玩家各选一个国家。"
 traditional_chinese = "為每個玩家各選一個國家。"
 japanese = "プレイヤーごとに国を選びます。"
 korean = "플레이어마다 국가를 하나씩 고르세요."
+russian = "Выберите страну для каждого игрока."
+german = "Wähle für jeden Spieler ein Land."
+spanish = "Elige un país para cada jugador."
+french = "Choisis un pays pour chaque joueur."
+brazilian_portuguese = "Escolha um país para cada jogador."
+portuguese = "Escolhe um país para cada jogador."
+turkish = "Her oyuncu için bir ülke seçin."
+polish = "Wybierz kraj dla każdego gracza."
 
 [[message]]
 key = "Flags are cosmetic and can be hidden by other clients."
@@ -5836,6 +6554,14 @@ simplified_chinese = "国旗只是装饰，其他客户端也可以隐藏它。"
 traditional_chinese = "國旗只是裝飾，其他客戶端也可以隱藏它。"
 japanese = "国旗は見た目だけの要素で、他のクライアントでは非表示にできます。"
 korean = "국기는 겉모습일 뿐이며 다른 클라이언트에서 숨길 수 있습니다."
+russian = "Флаги косметические, и другие клиенты могут их скрывать."
+german = "Flaggen sind rein optisch und können von anderen Clients ausgeblendet werden."
+spanish = "Las banderas son solo cosméticas y otros clientes pueden ocultarlas."
+french = "Les drapeaux sont purement visuels et peuvent être masqués par d'autres clients."
+brazilian_portuguese = "As bandeiras são apenas cosméticas e podem ser ocultadas por outros clientes."
+portuguese = "As bandeiras são cosméticas e podem ser ocultadas por outros clientes."
+turkish = "Bayraklar görseldir ve diğer istemciler tarafından gizlenebilir."
+polish = "Flagi są wyłącznie ozdobne i inne klienty mogą je ukrywać."
 
 [[message]]
 key = "Lists QmClient community groups and project links."
@@ -5844,6 +6570,14 @@ simplified_chinese = "列出 QmClient 的社区群组与项目链接。"
 traditional_chinese = "列出 QmClient 的社群群組與專案連結。"
 japanese = "QmClient のコミュニティグループとプロジェクトへのリンクを一覧表示します。"
 korean = "QmClient 커뮤니티 그룹과 프로젝트 링크를 나열합니다."
+russian = "Перечисляет сообщества QmClient и ссылки на проект."
+german = "Listet QmClient-Community-Gruppen und Projektlinks auf."
+spanish = "Enumera los grupos de la comunidad de QmClient y los enlaces del proyecto."
+french = "Liste les groupes de la communauté QmClient et les liens du projet."
+brazilian_portuguese = "Lista os grupos da comunidade QmClient e os links do projeto."
+portuguese = "Lista os grupos da comunidade QmClient e as ligações ao projeto."
+turkish = "QmClient topluluk gruplarını ve proje bağlantılarını listeler."
+polish = "Wyświetla grupy społeczności QmClient i linki do projektu."
 
 [[message]]
 key = "Open a link to join the community."
@@ -5852,6 +6586,14 @@ simplified_chinese = "打开链接即可加入社区。"
 traditional_chinese = "開啟連結即可加入社群。"
 japanese = "リンクを開いてコミュニティに参加できます。"
 korean = "링크를 열면 커뮤니티에 참여할 수 있습니다."
+russian = "Откройте ссылку, чтобы присоединиться к сообществу."
+german = "Öffne einen Link, um der Community beizutreten."
+spanish = "Abre un enlace para unirte a la comunidad."
+french = "Ouvre un lien pour rejoindre la communauté."
+brazilian_portuguese = "Abra um link para entrar na comunidade."
+portuguese = "Abre uma ligação para entrar na comunidade."
+turkish = "Topluluğa katılmak için bir bağlantı açın."
+polish = "Otwórz link, aby dołączyć do społeczności."
 
 [[message]]
 key = "Links open in the system browser."
@@ -5860,6 +6602,14 @@ simplified_chinese = "链接会在系统浏览器中打开。"
 traditional_chinese = "連結會在系統瀏覽器中開啟。"
 japanese = "リンクはシステムのブラウザーで開きます。"
 korean = "링크는 시스템 브라우저에서 열립니다."
+russian = "Ссылки открываются в системном браузере."
+german = "Links öffnen sich im Systembrowser."
+spanish = "Los enlaces se abren en el navegador del sistema."
+french = "Les liens s'ouvrent dans le navigateur du système."
+brazilian_portuguese = "Os links abrem no navegador do sistema."
+portuguese = "As ligações abrem no navegador do sistema."
+turkish = "Bağlantılar sistem tarayıcısında açılır."
+polish = "Linki otwierają się w przeglądarce systemowej."
 
 [[message]]
 key = "Shows the people supporting QmClient development."
@@ -5868,6 +6618,14 @@ simplified_chinese = "显示支持 QmClient 开发的人员。"
 traditional_chinese = "顯示支持 QmClient 開發的人員。"
 japanese = "QmClient の開発を支援している人々を表示します。"
 korean = "QmClient 개발을 지원하는 사람들을 표시합니다."
+russian = "Показывает людей, поддерживающих разработку QmClient."
+german = "Zeigt die Menschen, die die QmClient-Entwicklung unterstützen."
+spanish = "Muestra a las personas que apoyan el desarrollo de QmClient."
+french = "Présente les personnes qui soutiennent le développement de QmClient."
+brazilian_portuguese = "Mostra as pessoas que apoiam o desenvolvimento do QmClient."
+portuguese = "Mostra as pessoas que apoiam o desenvolvimento do QmClient."
+turkish = "QmClient geliştirmesini destekleyen kişileri gösterir."
+polish = "Pokazuje osoby wspierające rozwój QmClient."
 
 [[message]]
 key = "Scroll the list to see sponsors and support options."
@@ -5876,6 +6634,14 @@ simplified_chinese = "滚动列表可查看赞助者与支持方式。"
 traditional_chinese = "捲動清單可查看贊助者與支持方式。"
 japanese = "リストをスクロールすると、スポンサーと支援方法が表示されます。"
 korean = "목록을 스크롤하면 스폰서와 지원 방법을 볼 수 있습니다."
+russian = "Прокрутите список, чтобы увидеть спонсоров и варианты поддержки."
+german = "Scrolle durch die Liste, um Sponsoren und Unterstützungsmöglichkeiten zu sehen."
+spanish = "Desplaza la lista para ver a los patrocinadores y las opciones de apoyo."
+french = "Fais défiler la liste pour voir les sponsors et les options de soutien."
+brazilian_portuguese = "Role a lista para ver apoiadores e opções de apoio."
+portuguese = "Desloca a lista para ver os patrocinadores e as opções de apoio."
+turkish = "Sponsorları ve destek seçeneklerini görmek için listeyi kaydırın."
+polish = "Przewiń listę, aby zobaczyć sponsorów i opcje wsparcia."
 
 [[message]]
 key = "Support is optional; nothing here changes client behavior."
@@ -5884,6 +6650,14 @@ simplified_chinese = "支持完全自愿；此处内容不会改变客户端行�
 traditional_chinese = "支持完全出於自願；此處內容不會改變用戶端行為。"
 japanese = "支援は任意です。ここの内容がクライアントの動作を変えることはありません。"
 korean = "지원은 선택 사항이며, 이곳의 내용은 클라이언트 동작을 바꾸지 않습니다."
+russian = "Поддержка необязательна, и ничто из этого не меняет поведение клиента."
+german = "Unterstützung ist freiwillig; hier ändert sich nichts am Verhalten des Clients."
+spanish = "El apoyo es opcional; nada de lo que hay aquí cambia el comportamiento del cliente."
+french = "Le soutien est facultatif ; rien ici ne change le comportement du client."
+brazilian_portuguese = "O apoio é opcional; nada aqui muda o comportamento do cliente."
+portuguese = "O apoio é opcional; nada aqui altera o comportamento do cliente."
+turkish = "Destek isteğe bağlıdır; buradaki hiçbir şey istemci davranışını değiştirmez."
+polish = "Wsparcie jest opcjonalne; nic tutaj nie zmienia działania klienta."
 
 [[message]]
 key = "Links to related project and community websites."
@@ -5892,6 +6666,14 @@ simplified_chinese = "指向相关项目与社区网站的链接。"
 traditional_chinese = "連往相關專案與社群網站的連結。"
 japanese = "関連プロジェクトやコミュニティサイトへのリンクです。"
 korean = "관련 프로젝트와 커뮤니티 사이트로 가는 링크입니다."
+russian = "Ссылки на сайты проекта и сообщества."
+german = "Verlinkt verwandte Projekt- und Community-Websites."
+spanish = "Enlaces a sitios web del proyecto y de la comunidad."
+french = "Liens vers les sites du projet et de la communauté."
+brazilian_portuguese = "Links para sites relacionados ao projeto e à comunidade."
+portuguese = "Ligações para sites relacionados do projeto e da comunidade."
+turkish = "İlgili proje ve topluluk sitelerine bağlantı verir."
+polish = "Linki do powiązanych stron projektu i społeczności."
 
 [[message]]
 key = "Open a link to visit the site."
@@ -5900,6 +6682,14 @@ simplified_chinese = "打开链接即可访问网站。"
 traditional_chinese = "開啟連結即可造訪網站。"
 japanese = "リンクを開くとサイトを閲覧できます。"
 korean = "링크를 열면 사이트를 방문할 수 있습니다."
+russian = "Откройте ссылку, чтобы перейти на сайт."
+german = "Öffne einen Link, um die Seite zu besuchen."
+spanish = "Abre un enlace para visitar el sitio."
+french = "Ouvre un lien pour visiter le site."
+brazilian_portuguese = "Abra um link para visitar o site."
+portuguese = "Abre uma ligação para visitar o site."
+turkish = "Siteyi ziyaret etmek için bir bağlantı açın."
+polish = "Otwórz link, aby odwiedzić stronę."
 
 [[message]]
 key = "External sites are not controlled by the client."
@@ -5908,6 +6698,14 @@ simplified_chinese = "外部网站不受客户端控制。"
 traditional_chinese = "外部網站不受用戶端控制。"
 japanese = "外部サイトはクライアントの管理下にはありません。"
 korean = "외부 사이트는 클라이언트가 관리하지 않습니다."
+russian = "Внешние сайты не контролируются клиентом."
+german = "Externe Seiten stehen nicht unter der Kontrolle des Clients."
+spanish = "El cliente no controla los sitios externos."
+french = "Les sites externes ne sont pas contrôlés par le client."
+brazilian_portuguese = "Os sites externos não são controlados pelo cliente."
+portuguese = "Os sites externos não são controlados pelo cliente."
+turkish = "Dış siteler istemcinin denetiminde değildir."
+polish = "Klient nie kontroluje zewnętrznych stron."
 
 [[message]]
 key = "Lists DDNet contributors and staff credits."
@@ -5916,6 +6714,14 @@ simplified_chinese = "列出 DDNet 贡献者与工作人员名单。"
 traditional_chinese = "列出 DDNet 貢獻者與工作人員名單。"
 japanese = "DDNet のコントリビューターとスタッフのクレジットを一覧表示します。"
 korean = "DDNet 기여자와 스태프 크레딧을 표시합니다."
+russian = "Перечисляет авторов и команду DDNet."
+german = "Listet DDNet-Mitwirkende und Credits des Teams auf."
+spanish = "Enumera los créditos de los contribuidores y del equipo de DDNet."
+french = "Liste les contributeurs DDNet et les crédits de l'équipe."
+brazilian_portuguese = "Lista os créditos dos contribuidores e da equipe do DDNet."
+portuguese = "Lista os contribuidores e os créditos da equipa do DDNet."
+turkish = "DDNet'e katkıda bulunanları ve ekip künyesini listeler."
+polish = "Wyświetla współtwórców i podziękowania dla zespołu DDNet."
 
 [[message]]
 key = "Scroll to browse the credits."
@@ -5924,6 +6730,14 @@ simplified_chinese = "滚动即可浏览鸣谢名单。"
 traditional_chinese = "捲動即可瀏覽工作人員名單。"
 japanese = "スクロールしてクレジットをご覧ください。"
 korean = "스크롤하여 크레딧을 둘러보세요."
+russian = "Прокрутите, чтобы просмотреть авторов."
+german = "Scrolle, um die Credits zu durchsuchen."
+spanish = "Desplázate para recorrer los créditos."
+french = "Fais défiler pour parcourir les crédits."
+brazilian_portuguese = "Role para navegar pelos créditos."
+portuguese = "Desloca a lista para percorrer os créditos."
+turkish = "Künyeye göz atmak için kaydırın."
+polish = "Przewiń, aby przejrzeć podziękowania."
 
 [[message]]
 key = "Credits are read-only."
@@ -5932,6 +6746,14 @@ simplified_chinese = "名单仅供查看。"
 traditional_chinese = "名單僅供檢視。"
 japanese = "クレジットは閲覧専用です。"
 korean = "크레딧은 읽기 전용입니다."
+russian = "Список авторов доступен только для чтения."
+german = "Die Credits sind schreibgeschützt."
+spanish = "Los créditos son de solo lectura."
+french = "Les crédits ne sont pas modifiables."
+brazilian_portuguese = "Os créditos são somente leitura."
+portuguese = "Os créditos são apenas de leitura."
+turkish = "Künye salt okunurdur."
+polish = "Podziękowania są tylko do odczytu."
 
 [[message]]
 key = "Lists TClient developers, contributors and project links."
@@ -5940,6 +6762,14 @@ simplified_chinese = "列出 TClient 开发者、贡献者与项目链接。"
 traditional_chinese = "列出 TClient 開發者、貢獻者與專案連結。"
 japanese = "TClient の開発者、コントリビューター、プロジェクトのリンクを一覧表示します。"
 korean = "TClient 개발자, 기여자, 프로젝트 링크를 표시합니다."
+russian = "Перечисляет разработчиков, авторов и ссылки проекта TClient."
+german = "Listet TClient-Entwickler, Mitwirkende und Projektlinks auf."
+spanish = "Enumera a los desarrolladores y contribuidores de TClient y los enlaces del proyecto."
+french = "Liste les développeurs, les contributeurs et les liens du projet TClient."
+brazilian_portuguese = "Lista desenvolvedores, contribuidores e links do projeto TClient."
+portuguese = "Lista os programadores, contribuidores e ligações ao projeto do TClient."
+turkish = "TClient geliştiricilerini, katkıda bulunanları ve proje bağlantılarını listeler."
+polish = "Wyświetla twórców i współtwórców TClient oraz linki do projektu."
 
 [[message]]
 key = "Open a link to reach the project."
@@ -5948,6 +6778,14 @@ simplified_chinese = "打开链接即可前往项目。"
 traditional_chinese = "開啟連結即可前往專案。"
 japanese = "リンクを開くとプロジェクトに移動できます。"
 korean = "링크를 열면 프로젝트로 이동할 수 있습니다."
+russian = "Откройте ссылку, чтобы перейти к проекту."
+german = "Öffne einen Link, um zum Projekt zu gelangen."
+spanish = "Abre un enlace para llegar al proyecto."
+french = "Ouvre un lien pour accéder au projet."
+brazilian_portuguese = "Abra um link para chegar ao projeto."
+portuguese = "Abre uma ligação para aceder ao projeto."
+turkish = "Projeye ulaşmak için bir bağlantı açın."
+polish = "Otwórz link, aby przejść do projektu."
 
 [[message]]
 key = "External links open in the browser."
@@ -5956,6 +6794,14 @@ simplified_chinese = "外部链接会在浏览器中打开。"
 traditional_chinese = "外部連結會用瀏覽器開啟。"
 japanese = "外部リンクはブラウザで開きます。"
 korean = "외부 링크는 브라우저에서 열립니다."
+russian = "Внешние ссылки открываются в браузере."
+german = "Externe Links öffnen sich im Browser."
+spanish = "Los enlaces externos se abren en el navegador."
+french = "Les liens externes s'ouvrent dans le navigateur."
+brazilian_portuguese = "Links externos abrem no navegador."
+portuguese = "As ligações externas abrem no navegador."
+turkish = "Dış bağlantılar tarayıcıda açılır."
+polish = "Zewnętrzne linki otwierają się w przeglądarce."
 
 [[message]]
 key = "Searches settings by card title, feature name or keyword."
@@ -5964,6 +6810,14 @@ simplified_chinese = "按卡片标题、功能名称或关键词搜索设置。"
 traditional_chinese = "依卡片標題、功能名稱或關鍵字搜尋設定。"
 japanese = "カードのタイトル、機能名、キーワードで設定を検索します。"
 korean = "카드 제목, 기능 이름 또는 키워드로 설정을 검색합니다."
+russian = "Ищет настройки по названию карточки, функции или ключевому слову."
+german = "Durchsucht die Einstellungen nach Kartentitel, Funktionsname oder Stichwort."
+spanish = "Busca ajustes por el título de la tarjeta, el nombre de la función o una palabra clave."
+french = "Recherche les réglages par titre de carte, nom de fonctionnalité ou mot-clé."
+brazilian_portuguese = "Pesquisa nos ajustes por título do cartão, nome do recurso ou palavra-chave."
+portuguese = "Pesquisa definições pelo título do cartão, nome da funcionalidade ou palavra-chave."
+turkish = "Ayarları kart başlığına, özellik adına veya anahtar kelimeye göre arar."
+polish = "Szuka ustawień po tytule karty, nazwie funkcji lub słowie kluczowym."
 
 [[message]]
 key = "Type a word; results filter as you type across cards and config names."
@@ -5972,6 +6826,14 @@ simplified_chinese = "输入词语后，结果会随输入实时筛选卡片与�
 traditional_chinese = "輸入詞語後，結果會隨著輸入即時篩選卡片與設定名稱。"
 japanese = "単語を入力すると、カードと設定名を対象に入力に合わせて結果が絞り込まれます。"
 korean = "단어를 입력하면 카드와 설정 이름을 대상으로 입력하는 대로 결과가 걸러집니다."
+russian = "Введите слово — результаты фильтруются по мере ввода, охватывая карточки и названия конфигов."
+german = "Tippe ein Wort ein; die Ergebnisse werden beim Tippen nach Karten und Konfigurationsnamen gefiltert."
+spanish = "Escribe una palabra; los resultados se filtran al escribir entre tarjetas y nombres de configuración."
+french = "Tape un mot ; les résultats se filtrent au fil de la frappe, parmi les cartes et les noms de configuration."
+brazilian_portuguese = "Digite uma palavra; os resultados são filtrados conforme você digita, tanto em cartões quanto em nomes de config."
+portuguese = "Escreve uma palavra; os resultados filtram-se à medida que escreves, nos cartões e nos nomes de configuração."
+turkish = "Bir sözcük yazın; yazdıkça sonuçlar kartlar ve yapılandırma adları arasında filtrelenir."
+polish = "Wpisz słowo; wyniki filtrują się na bieżąco po kartach i nazwach konfiguracji."
 
 [[message]]
 key = "Search matches config names too, so qm_ queries find raw options."
@@ -5980,6 +6842,14 @@ simplified_chinese = "搜索也会匹配配置名称，因此 qm_ 查询能找�
 traditional_chinese = "搜尋也會比對設定名稱，因此 qm_ 查詢能找到原始選項。"
 japanese = "検索は設定名にも一致するため、qm_ で検索すると元のオプションが見つかります。"
 korean = "검색은 설정 이름도 일치하므로 qm_ 검색으로 원시 옵션을 찾을 수 있습니다."
+russian = "Поиск находит и названия конфигов, поэтому запросы вида qm_ находят сами параметры."
+german = "Die Suche erfasst auch Konfigurationsnamen; mit qm_ findest du also die Rohoptionen."
+spanish = "La búsqueda también coincide con los nombres de configuración, así que las consultas con qm_ encuentran las opciones en bruto."
+french = "La recherche vise aussi les noms de configuration : une requête qm_ trouve les options brutes."
+brazilian_portuguese = "A busca também considera nomes de config, então termos como qm_ encontram as opções brutas."
+portuguese = "A pesquisa também compara nomes de configuração, por isso consultas com qm_ encontram opções em bruto."
+turkish = "Arama yapılandırma adlarıyla da eşleşir, bu yüzden qm_ sorguları ham seçenekleri bulur."
+polish = "Wyszukiwanie obejmuje też nazwy konfiguracji, więc zapytania qm_ znajdują surowe opcje."
 
 [[message]]
 key = "Lists cards matching the current search and jumps to them."
@@ -5988,6 +6858,14 @@ simplified_chinese = "列出与当前搜索匹配的卡片，并可跳转到对�
 traditional_chinese = "列出與目前搜尋相符的卡片，並可跳至對應卡片。"
 japanese = "現在の検索に一致するカードを一覧表示し、そのカードへ移動します。"
 korean = "현재 검색과 일치하는 카드를 나열하고 해당 카드로 이동합니다."
+russian = "Перечисляет карточки по текущему поиску и переходит к ним."
+german = "Listet Karten, die zur aktuellen Suche passen, und springt direkt dorthin."
+spanish = "Enumera las tarjetas que coinciden con la búsqueda actual y salta a ellas."
+french = "Liste les cartes correspondant à la recherche actuelle et permet de s'y rendre."
+brazilian_portuguese = "Lista os cartões que correspondem à busca atual e leva até eles."
+portuguese = "Lista os cartões que correspondem à pesquisa atual e salta para eles."
+turkish = "Geçerli aramayla eşleşen kartları listeler ve bunlara atlar."
+polish = "Wyświetla karty pasujące do bieżącego wyszukiwania i przechodzi do nich."
 
 [[message]]
 key = "Select a result to open its card."
@@ -5996,6 +6874,14 @@ simplified_chinese = "选择一项结果即可打开对应卡片。"
 traditional_chinese = "選擇一項結果即可開啟對應卡片。"
 japanese = "結果を選ぶと、そのカードが開きます。"
 korean = "결과를 선택하면 해당 카드가 열립니다."
+russian = "Выберите результат, чтобы открыть его карточку."
+german = "Wähle ein Ergebnis, um seine Karte zu öffnen."
+spanish = "Selecciona un resultado para abrir su tarjeta."
+french = "Sélectionne un résultat pour ouvrir sa carte."
+brazilian_portuguese = "Selecione um resultado para abrir o cartão dele."
+portuguese = "Seleciona um resultado para abrir o respetivo cartão."
+turkish = "Kartını açmak için bir sonuç seçin."
+polish = "Wybierz wynik, aby otworzyć jego kartę."
 
 [[message]]
 key = "Results include cards on other pages; the tab switches automatically."
@@ -6004,3 +6890,11 @@ simplified_chinese = "结果也包含其他页面上的卡片；标签页会自�
 traditional_chinese = "結果也包含其他頁面上的卡片；分頁會自動切換。"
 japanese = "結果には他のページのカードも含まれ、タブは自動的に切り替わります。"
 korean = "결과에는 다른 페이지의 카드도 포함되며, 탭이 자동으로 전환됩니다."
+russian = "В результатах есть карточки с других страниц; вкладка переключается автоматически."
+german = "Ergebnisse umfassen auch Karten auf anderen Seiten; der Tab wechselt automatisch."
+spanish = "Los resultados incluyen tarjetas de otras páginas; la pestaña cambia automáticamente."
+french = "Les résultats incluent les cartes des autres pages ; l'onglet bascule automatiquement."
+brazilian_portuguese = "Os resultados incluem cartões de outras páginas; a aba muda automaticamente."
+portuguese = "Os resultados incluem cartões de outras páginas; o separador muda automaticamente."
+turkish = "Sonuçlar diğer sayfalardaki kartları da içerir; sekme otomatik olarak değişir."
+polish = "Wyniki obejmują karty na innych stronach; zakładka przełącza się automatycznie."

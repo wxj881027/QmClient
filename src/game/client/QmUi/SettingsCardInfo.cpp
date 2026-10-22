@@ -5,6 +5,7 @@
 
 #include "QmAnimResolve.h"
 #include "QmCardWiki.h"
+#include "QmCardWikiPanel.h"
 #include "SettingsCard.h"
 #include "UiContext.h"
 
@@ -20,7 +21,11 @@ void RenderSettingsCardInfo(const IUiContext &Ctx, const SSettingsCardSpec &Spec
 	const uint64_t Key = BuildUiAnimNodeKey(Ctx.m_ScopeHash, str_quickhash(Spec.m_pStableId));
 	const void *pId = reinterpret_cast<const void *>(static_cast<uintptr_t>(Key));
 	RenderSettingsCardHeaderIcon(Ctx, Button, EQmIcon::INFO, FontIcons::FONT_ICON_INFO, DrawAlpha, pId);
-	// 点击由 Deck 的预布局阶段登记（正式绘制阶段收不到新的按下），这里只画图标与悬浮提示。
+	// 点击直接在这里登记：带「当前命中」标志的按钮逻辑在绘制阶段也能接收新的按下，
+	// 而且命中矩形就是刚画出来的图标，不会再出现「点在图标上没反应」。
+	if(HasCardWikiCopy(Spec.m_pStableId) &&
+		Ctx.m_pUi->DoButtonLogic(pId, 0, &Button, BUTTONFLAG_LEFT | BUTTONFLAG_CURRENT_HIT) != 0)
+		OpenCardWikiPopup(Ctx, Spec.m_pStableId, Spec.m_pTitle);
 	// 提示刻意只留一句话：完整说明在面板里，长文本挂在卡片上会盖住标题，看起来像闪动。
 	if(Ctx.m_pTooltips != nullptr)
 	{

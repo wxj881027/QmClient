@@ -354,7 +354,7 @@ a = View angle
 == a = 视角角度
 
 A bar too close to the edge is cut on unusual aspect ratios.
-== A bar too close to the edge is cut on unusual aspect ratios.
+== 状态栏离边缘太近时，在特殊宽高比下会被裁掉。
 
 A big "Team tee glow halo size" can wash out outlines and map detail, so start low and raise it slowly.
 == 光晕太大会把描边和地图细节冲淡，先调小再慢慢加大。
@@ -363,7 +363,7 @@ A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, s
 == 一个安静游玩的模式：按你的选择隐藏 HUD、名字、特效、聊天和声音，屏幕上只留下游戏本身。
 
 A crowded HUD hides the game, so start with one element and add more if needed.
-== A crowded HUD hides the game, so start with one element and add more if needed.
+== HUD 太满会挡住游戏画面，先从一项开始，需要时再加。
 
 A demo with this name already exists
 == 已有同名回放
@@ -411,7 +411,7 @@ A Tee
 == 其他玩家
 
 A very large cursor can hide small UI elements underneath it.
-== A very large cursor can hide small UI elements underneath it.
+== 光标放得太大时会挡住它下面的小界面元素。
 
 A vote is currently active.
 == 已有投票正在进行。
@@ -528,7 +528,7 @@ Add a server as a favorite
 == 将服务器添加为收藏夹
 
 Add a shortcut, then use it in chat to send the text.
-== Add a shortcut, then use it in chat to send the text.
+== 添加快捷方式，然后在聊天中使用它发送文字。
 
 Add a skin as a favorite
 == 将皮肤添加为收藏夹
@@ -606,13 +606,13 @@ Add one
 == 加一
 
 Add one shortcut per message; it is used when the target is on the list.
-== Add one shortcut per message; it is used when the target is on the list.
+== 每条消息添加一个快捷方式，只有目标在列表上时才会使用。
 
 Add or edit entries, then use the bind in chat to send the text.
-== Add or edit entries, then use the bind in chat to send the text.
+== 添加或编辑条目，然后在聊天中使用对应绑定发送文字。
 
 Add players or groups, then choose which markers and chat highlights apply to them.
-== Add players or groups, then choose which markers and chat highlights apply to them.
+== 添加玩家或分组，再选择对它们生效的标记和聊天高亮。
 
 Add rules in "Rule list", fill the answer in "Reply content", then under "Trigger limits" turn on "Enable keyword reply" and set "Auto reply cooldown".
 == 在规则列表里添加规则，在回复内容里填好答案，然后在触发限制里启用关键词回复并设置自动回复冷却。
@@ -726,7 +726,7 @@ Adjust TClient heads-up display elements
 == 调整 TClient 抬头显示元素
 
 Adjust the display options; open a vote to check the layout before joining a busy server.
-== Adjust the display options; open a vote to check the layout before joining a busy server.
+== 调整显示选项，进拥挤的服务器前先开一个投票查看布局。
 
 Adjust the opacity of entities belonging to other teams, such as tees and name plates
 == 调整其他队伍实体（如 Tee 和名牌）的不透明度
@@ -741,10 +741,10 @@ Adjusts DDRace-specific HUD parts such as team state, freeze bars and race time.
 == 调整 DDRace 专用的 HUD 部分，例如队伍状态、冻结条和竞速时间。
 
 Adjusts helpers that hide latency, such as removing anti-ping and predicting margins inside freeze.
-== Adjusts helpers that hide latency, such as removing anti-ping and predicting margins inside freeze.
+== 调整掩盖延迟的辅助功能，例如取消抗延迟、在冻结时使用预测边距。
 
 Adjusts TClient-specific HUD elements that are not part of the standard DDNet HUD.
-== Adjusts TClient-specific HUD elements that are not part of the standard DDNet HUD.
+== 调整不属于标准 DDNet HUD 的 TClient 专属 HUD 元素。
 
 Advanced
 == 高阶
@@ -1032,7 +1032,7 @@ Applied to %d same-family part(s).
 == 已应用到 %d 个同族部件。
 
 Applies an animated rainbow color to selected elements such as nameplates or the hook.
-== Applies an animated rainbow color to selected elements such as nameplates or the hook.
+== 为名牌、钩索等选定元素加上流动的彩虹色。
 
 Applies to single-color and rainbow overrides.
 == 用于单色和彩虹配色。
@@ -1191,7 +1191,7 @@ Assign commands and labels to wheel slots
 == 为转盘槽位分配命令和标签
 
 Assigns commands and labels to the slots of the radial bind wheel.
-== Assigns commands and labels to the slots of the radial bind wheel.
+== 为环形绑定轮盘的各个槽位指定指令和标签。
 
 Attempt to change your name when near finish
 == 过终点前尝试改名
@@ -1761,7 +1761,7 @@ Bind "Zen mode key" before you need it: while Zen mode is on, hidden HUD, chat a
 == 最好提前绑好禅模式按键：禅模式开启时，被隐藏的 HUD、聊天和计分板会一直隐藏。
 
 Bind a key to "Draw at mouse position", hold it in game and move the mouse to draw, then set color, width and how long strokes stay visible.
-== Bind a key to "Draw at mouse position", hold it in game and move the mouse to draw, then set color, width and how long strokes stay visible.
+== 给“绘制鼠标所在位置”绑定一个按键，在游戏中按住并移动鼠标即可绘制，再设置颜色、宽度和笔画的显示时长。
 
 Bind address for client/server
 == 绑定客户端/服务器的地址
@@ -2130,7 +2130,7 @@ Change values in the chat cards and watch this preview update.
 == 在聊天设置卡片中修改数值，此处的预览会同步更新。
 
 Change values in the settings card and watch this preview update.
-== Change values in the settings card and watch this preview update.
+== 在设置卡片里改动数值，这里的预览会同步更新。
 
 Change zoom
 == 更改缩放比例
@@ -2139,10 +2139,10 @@ Changes apply at once, so check "Title preview" to compare styles; press "Save" 
 == 改动会立即生效，可以用头衔成品预览对比风格；想让别人也看到，就到赞助头衔卡里点保存。
 
 Changes how the vote menu looks and how you interact with running votes.
-== Changes how the vote menu looks and how you interact with running votes.
+== 更改投票菜单的外观，以及你参与进行中投票的方式。
 
 Changes the font used by the menus and how large the in-game cursor is drawn.
-== Changes the font used by the menus and how large the in-game cursor is drawn.
+== 更改菜单使用的字体，以及游戏内光标的绘制大小。
 
 Changes: %d
 == 更改数：%d
@@ -2343,7 +2343,7 @@ Choose a preset, or Custom to enter width and height. Follow window uses the cur
 == 选择常用档位，或选“自定义”手动输入宽和高；跟随窗口使用当前渲染分辨率。
 
 Choose a screen position and font size, then check the preview card for wrapping.
-== Choose a screen position and font size, then check the preview card for wrapping.
+== 选择屏幕位置和字号，再在预览卡片里检查是否换行。
 
 Choose a target, then set its color; entity lasers can follow team colors.
 == 先选一个目标，再设置它的颜色；实体的激光可以跟随队伍颜色。
@@ -2379,10 +2379,10 @@ Choose when recording starts and how demos are named; playback speed and camera 
 == 设置录制何时开始以及 demo 的命名方式；回放速度和镜头跟随另行设置。
 
 Choose which parts get the rainbow; adjust speed and saturation to taste.
-== Choose which parts get the rainbow; adjust speed and saturation to taste.
+== 选择哪些部分使用彩虹色，再按喜好调整速度和饱和度。
 
 Chooses the font family and weight used by the menus.
-== Chooses the font family and weight used by the menus.
+== 选择菜单使用的字体和字重。
 
 Chooses the language used by every menu, setting and message in the client.
 == 选择客户端所有菜单、设置项和提示文本使用的语言。
@@ -2769,7 +2769,7 @@ Commands run in the console
 == 在控制台中执行的命令
 
 Commands run once per connection, not on every map change; remove the parts that print errors.
-== Commands run once per connection, not on every map change; remove the parts that print errors.
+== 指令每次连接只执行一次，不会在每次换图时执行；把会报错的部分去掉。
 
 Common filters
 == 常用筛选
@@ -3186,7 +3186,7 @@ Controls laser shape, glow and animation.
 == 控制激光的形状、辉光与动画。
 
 Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
-== Controls what appears next to other players' names, such as clan tags, friend marks and client identifiers.
+== 控制其他玩家名字旁显示的内容，例如战队标签、好友标记和客户端标识。
 
 Converse
 == 继续私聊
@@ -3345,7 +3345,7 @@ Crazy shotgun bullet sound on/off
 == 疯狂霰弹枪子弹声音开/关
 
 Create a profile, edit it, then switch profiles before playing on a different server.
-== Create a profile, edit it, then switch profiles before playing on a different server.
+== 先创建配置档并编辑，换服务器游玩前再切换配置档。
 
 Create a random skin
 == 随机创造皮肤
@@ -3471,7 +3471,7 @@ Custom font for Latin text (family, or family + style)
 == 拉丁文本的自定义字体（字族，或字族 + 样式）
 
 Custom fonts only cover the characters they include, so pick a font with CJK support if Chinese text looks different.
-== Custom fonts only cover the characters they include, so pick a font with CJK support if Chinese text looks different.
+== 自定义字体只包含它自带的字形，中文显示异常时请选支持中日韩字符的字体。
 
 Custom pressed hook line colors
 == 自定义按下后颜色
@@ -4143,7 +4143,7 @@ Do not translate server messages
 == 不翻译服务器消息
 
 Do not use it to spam: servers may punish repeated automatic messages.
-== Do not use it to spam: servers may punish repeated automatic messages.
+== 不要用它刷屏，服务器可能会处罚重复的自动消息。
 
 Done
 == Done
@@ -4296,7 +4296,7 @@ Draws a keyboard and mouse on screen that light up with your presses, so viewers
 == 在屏幕上绘制键盘和鼠标，按键时会亮起，方便观众跟上你的操作。
 
 Draws a marker on selected players so you can find them in the world.
-== Draws a marker on selected players so you can find them in the world.
+== 在选定的玩家身上绘制标记，方便在地图里找到他们。
 
 Draws a small second view of your other tee in the HUD, so you can watch both tees at the same time.
 == 在 HUD 上画出另一个分身的第二视角小窗，让你能同时盯住两个 Tee。
@@ -4308,10 +4308,10 @@ Draws drifting 3D shapes such as cubes, hearts or rings in the background, with 
 == 在背景中绘制漂浮的 3D 形状，如立方体、爱心或圆环，可调大小、速度、颜色和辉光。
 
 Draws outlines around map tiles so block edges are easier to see.
-== Draws outlines around map tiles so block edges are easier to see.
+== 在地图图块周围绘制轮廓，让方块边缘更容易看清。
 
 Draws temporary strokes on your own screen background while a bound key is held and the mouse moves.
-== Draws temporary strokes on your own screen background while a bound key is held and the mouse moves.
+== 按住绑定键并移动鼠标时，在你自己的屏幕背景上绘制临时笔画。
 
 Draws the keys each tee is pressing beside their name, so you can read their movement.
 == 在名字旁画出每个 Tee 正在按的键，方便看出对方的移动。
@@ -4644,7 +4644,7 @@ Emoticons
 == 表情
 
 Empty slots still take space, so clear the ones you no longer use.
-== Empty slots still take space, so clear the ones you no longer use.
+== 空槽位同样占位置，不再使用的槽位请及时清空。
 
 enable
 == 开启
@@ -4656,10 +4656,10 @@ Enable "Show player stats HUD"; tick "Map progress bar", then pick "Use embedded
 == 启用显示玩家统计 HUD；勾选地图进度条，然后选择使用内嵌 HUD 进度条，或用滑块自行摆放进度条。
 
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
-== Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
+== 启用“显示其他玩家未预测的影子”，再调整预测影子和未预测影子的不透明度。
 
 Enable "Try to rename before finishing", then fill in the finishing name and run to the finish to test it.
-== Enable "Try to rename before finishing", then fill in the finishing name and run to the finish to test it.
+== 启用“过终点前尝试改名”，填好终点名称，再跑到终点测试。
 
 Enable /swap
 == 启用/交换
@@ -4791,7 +4791,7 @@ Enable fast input for other players in Gores mode
 == Gores 模式下对其他玩家也启用快速输入
 
 Enable fast input if your key presses feel late; turn on auto margin to stop the cursor sticking to screen edges.
-== Enable fast input if your key presses feel late; turn on auto margin to stop the cursor sticking to screen edges.
+== 按键感觉延迟就启用快速输入；光标卡在屏幕边缘时打开自动边距。
 
 Enable fast input in Gores mode
 == Gores 模式下启用快速输入
@@ -5022,25 +5022,25 @@ Enable tee trails
 == 启用 Tee 拖尾
 
 Enable the badges you want; tune the nameplate size where it overlaps the game view.
-== Enable the badges you want; tune the nameplate size where it overlaps the game view.
+== 启用需要的标记；名牌挡住游戏画面时再调整名牌大小。
 
 Enable the DDRace elements you use and set their scale.
 == 启用你用到的 DDRace 元素，并设置它们的缩放比例。
 
 Enable the effects you like; turn tiny Tees off if distant players become hard to see.
-== Enable the effects you like; turn tiny Tees off if distant players become hard to see.
+== 启用喜欢的特效；远处玩家看不清时就关掉迷你 Tee。
 
 Enable the finished indicator and wait for player data
 == 启用完成状态指示，并等待玩家数据加载
 
 Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then set the icon size and the maximum number of rows.
-== Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then set the icon size and the maximum number of rows.
+== 启用冻结 Tee HUD，选择统计活动中的还是被冻结的 Tee，再设置图标大小和最大行数。
 
 Enable the guide line, then set its length, style and colors.
 == 启用辅助线后，设置它的长度、样式和颜色。
 
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
-== Enable the indicator; choose its distance mode and whether war-list players get a different color.
+== 启用指示器，选择距离模式，并决定敌对列表玩家是否使用不同颜色。
 
 Enable the indicators you need; each one draws on your own screen only.
 == 启用你需要的指示；每一项只绘制在你自己的屏幕上。
@@ -5049,10 +5049,10 @@ Enable the message types you want and choose their colors.
 == 启用需要的消息类型，并为其选择颜色。
 
 Enable the outlines, choose color and thickness, then test on a map with many different tiles.
-== Enable the outlines, choose color and thickness, then test on a map with many different tiles.
+== 启用轮廓，选好颜色和粗细，再到图块种类多的地图上测试。
 
 Enable the pet, pick its skin and size, then move around to watch how it follows.
-== Enable the pet, pick its skin and size, then move around to watch how it follows.
+== 启用宠物，选好皮肤和大小，再跑动看看它怎么跟随。
 
 Enable thinking mode
 == 启用思考模式
@@ -5064,7 +5064,7 @@ Enable tile outlines
 == 启用图块轮廓
 
 Enable trails, choose length and fade, then turn off other players' trails if the screen gets crowded.
-== Enable trails, choose length and fade, then turn off other players' trails if the screen gets crowded.
+== 启用拖尾，选好长度和淡化，画面挤时再关掉其他玩家的拖尾。
 
 Enable UDP KCP transport negotiation (old clients keep legacy UDP, hot-switch fallback)
 == 启用 UDP KCP 传输协商（旧客户端保持传统 UDP，支持热切换回退）
@@ -5400,7 +5400,7 @@ Extras
 == 其他
 
 Extreme values make movement feel wrong, so change one step at a time.
-== Extreme values make movement feel wrong, so change one step at a time.
+== 极端值会让移动手感变怪，每次只改一档。
 
 Extremely slow, for testing only
 == 极慢，仅测试用
@@ -5514,7 +5514,7 @@ Fast encode
 == 编码快
 
 Fast flashing colors are hard to read, so keep the speed moderate.
-== Fast flashing colors are hard to read, so keep the speed moderate.
+== 颜色闪得太快会难以辨认，速度保持适中。
 
 Fast input
 == 快速输入
@@ -5523,7 +5523,7 @@ Fast input (reduce visual latency)
 == 快速输入（降低视觉延迟）
 
 Fast input changes how inputs are timed, so disable it if a server reports unusual behavior.
-== Fast input changes how inputs are timed, so disable it if a server reports unusual behavior.
+== 快速输入会改变输入发送的时机，服务器报告异常时请关掉。
 
 Fast input others
 == 快速输入其他玩家
@@ -5619,7 +5619,7 @@ Fill
 == 填充
 
 Fill in the connect and join command fields, separate several commands with semicolons, and raise the delay if the server is not ready yet.
-== Fill in the connect and join command fields, separate several commands with semicolons, and raise the delay if the server is not ready yet.
+== 填写连接段和加入段的指令栏，多条指令用分号隔开；服务器还没准备好就调高延迟。
 
 Filter chat messages by regular expression
 == 按正则表达式过滤聊天消息
@@ -5655,7 +5655,7 @@ Filter sensitive words
 == 过滤内置敏感词
 
 Filter the list by name, select the values to change back, then confirm before resetting.
-== Filter the list by name, select the values to change back, then confirm before resetting.
+== 按名称筛选列表，勾选要改回的项，确认后再重置。
 
 Filtered word console color
 == 被屏蔽词控制台颜色
@@ -5676,7 +5676,7 @@ Fine-tune improved anti-ping prediction
 == 微调改进的抗延迟预测
 
 Fine-tunes the improved anti-ping prediction that smooths other players' movement.
-== Fine-tunes the improved anti-ping prediction that smooths other players' movement.
+== 微调改进的抗延迟预测，让其他玩家的移动更平滑。
 
 Finish data source
 == 完成图来源
@@ -5790,7 +5790,7 @@ Font weight:
 == 字体字重：
 
 Fonts without CJK glyphs show fallback squares for Chinese text.
-== Fonts without CJK glyphs show fallback squares for Chinese text.
+== 不含中日韩字形的字体在显示中文时会变成方块。
 
 For Gores
 == 用于 Gores
@@ -6123,7 +6123,7 @@ Ghosts directory
 == 影子目录
 
 Ghosts only affect your own view; bind the toggle key or lower the opacity when the screen gets crowded.
-== Ghosts only affect your own view; bind the toggle key or lower the opacity when the screen gets crowded.
+== 影子只影响你自己的视角；画面挤时绑一个切换键或调低不透明度。
 
 Github
 == Github
@@ -6345,7 +6345,7 @@ Group name
 == 分组名称
 
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
-== Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
+== 归集输入辅助功能：快速输入、自动边距、亚 tick 瞄准和光标行为。
 
 GUI cursor
 == 界面光标
@@ -6675,7 +6675,7 @@ Hold left click for free camera
 == 按住左键自由镜头
 
 Hold the wheel key to see the selection move; release it to run the highlighted slot.
-== Hold the wheel key to see the selection move; release it to run the highlighted slot.
+== 按住轮盘键可以看到选中项移动，松开即执行高亮的槽位。
 
 Hook
 == 钩索
@@ -6882,7 +6882,7 @@ If the bar covers your chat, lower "Opacity" or "IME font size" first; "Reset IM
 == 候选栏挡住聊天时，先调低不透明度或 IME 字体大小；重置 IME 外观可恢复默认。
 
 If the wheel feels crowded, remove unused slots in the editor card.
-== If the wheel feels crowded, remove unused slots in the editor card.
+== 如果轮盘显得拥挤，就在编辑卡片里删掉不用的槽位。
 
 Ignore clan tag when searching friends
 == 搜索好友时忽略战队标签
@@ -7014,7 +7014,7 @@ Incoming language
 == 接收语言
 
 Increase the scale if the pointer is hard to see; decrease it for a cleaner look.
-== Increase the scale if the pointer is hard to see; decrease it for a cleaner look.
+== 看不清指针时调大缩放，想要画面更干净时调小。
 
 Indicate map finish
 == 标记已完成
@@ -7287,10 +7287,10 @@ It only changes what you see: your own name, chat and skin are still sent to the
 == 它只改你看到的画面：你自己的名字、聊天和皮肤仍会发到服务器，别人照样看得见。
 
 It only changes your name, not your skin or clan; names that are too long are cut off.
-== It only changes your name, not your skin or clan; names that are too long are cut off.
+== 它只改名字，不改皮肤和战队；名字过长会被截断。
 
 It only counts your own team and only appears on your screen; lower the icon size when it covers the crosshair.
-== It only counts your own team and only appears on your screen; lower the icon size when it covers the crosshair.
+== 它只统计你自己的队伍，也只显示在你的屏幕上；挡住准星时把图标调小。
 
 It stays on for every match, so switch it off before real races to keep the screen and your aim clean.
 == 它对每场比赛都生效，正式比赛前记得关掉，让画面和准星保持干净。
@@ -7413,10 +7413,10 @@ Keep it small and near an edge: the hint draws over the map and can cover the ti
 == 保持小字号并放在边缘附近：提示会盖在地图上，可能挡住你要瞄的块。
 
 Keep messages short so they fit in one chat line.
-== Keep messages short so they fit in one chat line.
+== 消息尽量简短，确保能放进一行聊天。
 
 Keep the defaults unless you play with high ping; then try one option at a time and compare.
-== Keep the defaults unless you play with high ping; then try one option at a time and compare.
+== 除非你在高 Ping 下游戏，否则保持默认值；需要时一次只改一项再对比。
 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 == 深色背景配浅色文字最好读；想恢复推荐样式就点重置提示外观。
@@ -7932,7 +7932,7 @@ Loading
 == 加载中
 
 Loading a profile overwrites current settings, so save first if unsure.
-== Loading a profile overwrites current settings, so save first if unsure.
+== 加载配置档会覆盖当前设置，不确定时请先保存。
 
 Loading assets...
 == 正在加载资源……
@@ -8106,7 +8106,7 @@ Main Tee and dummy
 == 本体和分身
 
 Maintains the list of hostile players and groups plus the rules used to display them.
-== Maintains the list of hostile players and groups plus the rules used to display them.
+== 维护敌对玩家和分组列表，以及显示它们所用的规则。
 
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
 == 让排球模式中的冻结玩家看起来更像排球（0=禁用，1=仅排球地图，2=始终）
@@ -8163,13 +8163,13 @@ Manage the skin rotation queue
 == 管理皮肤轮换队列
 
 Manages additional custom chat shortcuts that do not belong to the other groups.
-== Manages additional custom chat shortcuts that do not belong to the other groups.
+== 管理不属于其他分组的额外自定义聊天快捷方式。
 
 Manages chat shortcuts aimed at players on your war list.
-== Manages chat shortcuts aimed at players on your war list.
+== 管理针对敌对列表玩家的聊天快捷方式。
 
 Manages the kaomoji shortcuts used by chat binds.
-== Manages the kaomoji shortcuts used by chat binds.
+== 管理聊天绑定使用的颜文字快捷方式。
 
 Manga: Ink Slash
 == 漫画风：墨斩
@@ -8334,7 +8334,7 @@ Markers
 == 标记
 
 Markers are drawn on your screen only and never change the game itself.
-== Markers are drawn on your screen only and never change the game itself.
+== 标记只画在你自己的屏幕上，不会改变游戏本身。
 
 Marks teammates who hold hammer while stuck in death or freeze areas, so you can see who is hammering them.
 == 标记卡在死亡或冻结区域里仍握着锤子的队友，方便你看清是谁在锤他们。
@@ -9627,7 +9627,7 @@ Open TClient configuration file locations
 == 打开 TClient 配置文件位置
 
 Open the card and enable only the elements you want; each option explains what it draws.
-== Open the card and enable only the elements you want; each option explains what it draws.
+== 打开卡片，只启用需要的元素；每个选项都说明了它画什么。
 
 Open the directory that contains the configuration and user files
 == 打开存有配置文件与用户文件的文件夹路径
@@ -9768,7 +9768,7 @@ Outline opacity
 == 描边不透明度
 
 Outlines can be distracting in fast maps; lower the opacity instead of disabling them.
-== Outlines can be distracting in fast maps; lower the opacity instead of disabling them.
+== 快节奏地图里轮廓容易分散注意，可以调低不透明度而不是关掉。
 
 Output device
 == 输出设备
@@ -10008,7 +10008,7 @@ Pet Skin:
 == 宠物皮肤：
 
 Pets are purely cosmetic; turn them off if the extra drawing hurts performance.
-== Pets are purely cosmetic; turn them off if the extra drawing hurts performance.
+== 宠物只是装饰，额外绘制影响性能时请关掉。
 
 Pick "Tooltip background color" and "Tooltip text color", drag "Tooltip font size", and keep "Tooltip bounce animation" on for a small pop.
 == 分别选提示背景色和提示文字色，拖动提示字号滑条，想要弹出时的小回弹就保持提示回弹动画开启。
@@ -10020,10 +10020,10 @@ Pick a country for each player.
 == 为每个玩家各选一个国家。
 
 Pick a family; if it offers several weights, choose one that stays readable at small sizes.
-== Pick a family; if it offers several weights, choose one that stays readable at small sizes.
+== 先选字体，若有多个字重，挑一个小字号下依然清晰的。
 
 Pick a font family and weight here; use the cursor scale to make the pointer easier to see on large screens.
-== Pick a font family and weight here; use the cursor scale to make the pointer easier to see on large screens.
+== 在这里选择字体和字重；大屏幕上用光标缩放让指针更容易看清。
 
 Pick a map or a solid color, then adjust brightness and blur.
 == 选择一张地图或一种纯色，再调整亮度和模糊。
@@ -10041,7 +10041,7 @@ Pick a shape, then tune glow and animation speed.
 == 先选一种形状，再调整辉光与动画速度。
 
 Pick a slot, type the command and its label, then hold the wheel key in game to test.
-== Pick a slot, type the command and its label, then hold the wheel key in game to test.
+== 选一个槽位，输入指令和对应标签，再在游戏中按住轮盘键测试。
 
 Pick result: %s
 == 抽取结果：%s
@@ -10713,7 +10713,7 @@ Previews player and dummy nameplates with the current settings.
 == 按当前设置预览玩家和分身的名字牌。
 
 Previews the composed status bar output with your current settings.
-== Previews the composed status bar output with your current settings.
+== 用当前设置预览组合出的状态栏效果。
 
 Previous
 == 上一个
@@ -11460,7 +11460,7 @@ Remove right to vote from player with IP address
 == 删除具有 IP 地址的玩家的投票权
 
 Remove shortcuts you no longer use to keep the list readable.
-== Remove shortcuts you no longer use to keep the list readable.
+== 删掉不再使用的快捷方式，让列表保持清爽。
 
 Remove team clan:
 == 删除友好战队：
@@ -11538,7 +11538,7 @@ Rename: %s
 == 改名：%s
 
 Renames your Tee automatically when you get close to the finish, so the finish is recorded under the name you prepared.
-== Renames your Tee automatically when you get close to the finish, so the finish is recorded under the name you prepared.
+== 靠近终点时自动给你的 Tee 改名，让通关记录使用你预先准备的名字。
 
 Render
 == 渲染
@@ -11829,7 +11829,7 @@ Reset zone tuning in zone x or in all zones
 == 重置区域 x（或全部区域）的调参配置
 
 Resetting restores defaults immediately, so note down values you want to keep.
-== Resetting restores defaults immediately, so note down values you want to keep.
+== 重置会立刻恢复默认值，想保留的值请先记下来。
 
 Resolution:
 == Resolution:
@@ -11919,7 +11919,7 @@ Review the entries and change only what you understand; defaults are tuned for n
 == 先浏览各项，只修改你理解的内容；默认值已按正常游玩调校。
 
 Reviews configuration values that differ from their defaults and resets them.
-== Reviews configuration values that differ from their defaults and resets them.
+== 检查与默认值不同的配置项，并把它们重置。
 
 Rifle Laser Inner Color
 == 激光枪弹道实心颜色
@@ -12045,7 +12045,7 @@ Run server
 == 运行服务器
 
 Runs commands automatically when you connect to a server, split into a connect part and a join part.
-== Runs commands automatically when you connect to a server, split into a connect part and a join part.
+== 连接服务器时自动执行指令，分为连接段和加入段。
 
 SA
 == 南美
@@ -12186,7 +12186,7 @@ Saved with your title and shared with other QmClient players.
 == 随头衔一起保存，并同步给其他 QmClient 玩家。
 
 Saves and loads complete client profiles, including name, chat settings and bind wheel presets.
-== Saves and loads complete client profiles, including name, chat settings and bind wheel presets.
+== 保存和加载完整的客户端配置档，包括名称、聊天设置和绑定轮盘预设。
 
 Saves file
 == 存档密码文件
@@ -12552,7 +12552,7 @@ Sends a saved .map file from your client to the public test server and reports p
 == 把客户端里已保存的 .map 文件发送到公用测图服，并显示进度和错误。
 
 Sends an automatic chat reply when someone whispers you while you are muted or away.
-== Sends an automatic chat reply when someone whispers you while you are muted or away.
+== 当你屏蔽了对方或已经切屏时，有人私聊你会自动回复一条聊天消息。
 
 Separate with commas
 == 用 , 分隔
@@ -12765,10 +12765,10 @@ Sets the client update rate, whether the main menu is skipped, and opens the fol
 == 设置客户端刷新率、是否跳过主菜单，并打开设置、存档和主题所在目录。
 
 Sets the position, size and text style of the status bar.
-== Sets the position, size and text style of the status bar.
+== 设置状态栏的位置、大小和文字样式。
 
 Sets the scale of the in-game cursor.
-== Sets the scale of the in-game cursor.
+== 设置游戏内光标的缩放大小。
 
 Sets the size of the finished video; "Follow window" uses the current render resolution.
 == 决定成片尺寸；选「跟随窗口」就用当前渲染分辨率。
@@ -13857,10 +13857,10 @@ Shows a small board counting drown deaths for players on your team on Gores maps
 == 在 Gores 地图上显示一个小面板，统计你队伍里玩家的溺水死亡次数。
 
 Shows a small companion that follows your Tee and reacts to what you do.
-== Shows a small companion that follows your Tee and reacts to what you do.
+== 显示一只跟随你的 Tee、并对你的动作作出反应的小宠物。
 
 Shows a trail behind Tees so their recent movement stays visible.
-== Shows a trail behind Tees so their recent movement stays visible.
+== 在 Tee 身后显示拖尾，让它们最近的移动保持可见。
 
 Shows a translated copy of received chat lines and can translate your own messages before they are sent.
 == 为收到的聊天显示译文，也可以在发送前翻译你自己写的内容。
@@ -13884,13 +13884,13 @@ Shows help to command r, general help if left blank
 == 显示命令 r 的帮助，如果留空则显示一般帮助
 
 Shows how many Tees in your team are frozen and how many are still active, as a row of Tee icons.
-== Shows how many Tees in your team are frozen and how many are still active, as a row of Tee icons.
+== 用一排 Tee 图标显示你队伍里有多少 Tee 被冻结、多少仍在活动。
 
 Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
 == 从网易云音乐、汽水音乐、酷狗、QQ 音乐获取歌词，并显示在灵动岛上。
 
 Shows the bind wheel layout and which slot is currently selected.
-== Shows the bind wheel layout and which slot is currently selected.
+== 显示绑定轮盘的布局，以及当前选中的槽位。
 
 Shows the credits of the DDNet mod
 == 显示 DDNet mod 的制作人员
@@ -13908,7 +13908,7 @@ Shows the rank of player with name r (your rank by default)
 == 显示名称为 r 的玩家排名（默认你的排名）
 
 Shows the real position of other players as a translucent ghost next to the position the client predicts.
-== Shows the real position of other players as a translucent ghost next to the position the client predicts.
+== 把其他玩家的真实位置以半透明影子显示在客户端预测的位置旁边。
 
 Shows the team rank of player with name r (your team rank by default)
 == 显示名称为 r 的玩家队伍排名（默认你的队伍排名）
@@ -14430,7 +14430,7 @@ Start from a random queue position on every map join (also on dummy connect or r
 == 每次进图（分身连接、重新启用队列时同样生效）从队列随机位置开始轮换；将切换间隔设为 0 则不做时间轮换，仅进图随机换肤
 
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
-== Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
+== 先保持默认值；其他玩家看起来跳动就稍微调高，感觉自己落后于他们就调低。
 
 Start here to quickly diagnose if the issue is with device, server, or room
 == 先看这里，可以快速判断卡在设备、服务器还是房间
@@ -14610,7 +14610,7 @@ Stroke retention time (0=Never disappear)
 == 描边保留时间（0=永不消失）
 
 Strokes are local only and vanish when you leave the map; set the fade time to 0 to keep them until you draw again.
-== Strokes are local only and vanish when you leave the map; set the fade time to 0 to keep them until you draw again.
+== 笔画只在本地显示，离开地图就会消失；把消失时间设为 0 可保留到下次绘制。
 
 Strong / Weak
 == 强弱提示贴图
@@ -15201,7 +15201,7 @@ The launcher key only switches launch mode, so you still choose the emote with y
 == 发射键只负责切换发射模式，具体表情仍要用平时的表情键来选择。
 
 The list only affects your client and is not shared with other players.
-== The list only affects your client and is not shared with other players.
+== 该列表只影响你的客户端，不会共享给其他玩家。
 
 The look and behavior of the IME candidate bar that appears when you type Chinese, Japanese or Korean in chat.
 == 在聊天里输入中日韩文字时出现的 IME 候选栏的外观与行为。
@@ -15228,7 +15228,7 @@ The preview uses your own name and colors; other players may look different.
 == 预览使用你自己的名字和配色，其他玩家的显示可能不同。
 
 The preview uses your own Tee; other players may look different.
-== The preview uses your own Tee; other players may look different.
+== 预览用的是你自己的 Tee，其他玩家看起来可能不一样。
 
 The rank 1 demo is already downloaded
 == Rank 1 演示已下载过
@@ -15312,10 +15312,10 @@ There's an unsaved map in the editor, you might want to save it.
 == 编辑器中有尚未保存的地图，建议先保存。
 
 These effects are cosmetic and can cost a little performance on weaker GPUs.
-== These effects are cosmetic and can cost a little performance on weaker GPUs.
+== 这些特效只是观感，较弱显卡上会多占一点性能。
 
 These options only change prediction on your client; what other players see is not affected.
-== These options only change prediction on your client; what other players see is not affected.
+== 这些选项只改变你客户端的预测，不影响其他玩家看到的画面。
 
 Thinking controls depend on the model server. Server defaults do not guarantee that thinking is disabled.
 == 思考控制取决于模型服务。使用服务默认值不代表已关闭思考。
@@ -15348,7 +15348,7 @@ This name cannot be used for files and folders
 == 此名称不能用于文件和文件夹
 
 This only affects your own screen; votes still follow the server rules.
-== This only affects your own screen; votes still follow the server rules.
+== 这只影响你自己的屏幕，投票仍按服务器规则进行。
 
 This person has disabled receiving whispers
 == 该玩家已关闭接收私聊
@@ -15747,7 +15747,7 @@ Token to register this server to a specific community
 == 用于将此服务器注册到特定社区的令牌
 
 Too many badges make busy servers hard to read, so keep only the ones you actually use.
-== Too many badges make busy servers hard to read, so keep only the ones you actually use.
+== 标记太多会让拥挤的服务器难以看清，只留实际会用到的。
 
 Too many configuration files.
 == 配置文件过多。
@@ -15819,7 +15819,7 @@ Trail width
 == 拖尾宽度
 
 Trails add drawing work, so lower the length on low-end machines.
-== Trails add drawing work, so lower the length on low-end machines.
+== 拖尾会增加绘制负担，低配机器上把长度调小。
 
 Translate
 == 翻译
@@ -16074,7 +16074,7 @@ Turns important server prompts and Echo messages into short popups instead of pl
 == 把重要的服务器提示和 Echo 消息做成短提示卡，而不是聊天框里的普通一行。
 
 Turns on extra visual effects such as tiny Tees and the jelly-like Tee animation.
-== Turns on extra visual effects such as tiny Tees and the jelly-like Tee animation.
+== 开启迷你 Tee、Q 弹 Tee 动画等额外视效。
 
 Turns on voice chat and sets your microphone, playback volume, voice activation and audio devices.
 == 开启语音聊天，并设置麦克风、播放音量、语音激活和音频设备。
@@ -16674,7 +16674,7 @@ Very high quality, very slow
 == 质量很高，速度非常慢
 
 Very long kaomoji are split by the chat length limit.
-== Very long kaomoji are split by the chat length limit.
+== 过长的颜文字会因聊天长度上限被拆分发送。
 
 Very thick borders or high segment counts make text look blurry; keep them near the defaults.
 == 边框过粗或分段数过高会让文字显得模糊；请尽量让这些值接近默认值。
@@ -17286,7 +17286,7 @@ Write the guide here
 == 在这里写说明
 
 Write the reply text; choose whether it triggers for muted players and whether the panel starts minimized.
-== Write the reply text; choose whether it triggers for muted players and whether the panel starts minimized.
+== 填写回复文字，选择是否对已屏蔽发言的玩家触发，以及面板是否默认最小化。
 
 Writes a chat message, and optionally sends an emoticon, whenever your tee dies in water.
 == 你的 Tee 掉水死亡时自动发一条聊天消息，也可以顺便发一个表情。
