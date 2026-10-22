@@ -3700,6 +3700,9 @@ if(CLIENT)
     components/qmclient/water_hammer_indicator.h
     components/qmclient/weapon_trajectory.cpp
     components/qmclient/weapon_trajectory.h
+    components/qmclient/checkpoint_guide.cpp
+    components/qmclient/checkpoint_guide.h
+    components/qmclient/checkpoint_guide_logic.h
     components/qmclient/friend_heart_icon.h
     components/race_demo.cpp
     components/race_demo.h
@@ -4950,6 +4953,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/music/qm_spotify_parser_test.cpp
     src/test/unit/qmclient/client/qm_modes_test.cpp
     src/test/unit/qmclient/client/qm_map_progress_test.cpp
+    src/test/unit/qmclient/client/qm_checkpoint_guide_test.cpp
     src/test/unit/qmclient/client/qm_config_save_value_override_test.cpp
     src/test/integration/qmclient/client/qm_removed_ui_config_test.cpp
     src/test/integration/qmclient/client/qm_legacy_config_load_test.cpp

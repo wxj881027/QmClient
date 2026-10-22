@@ -2279,6 +2279,9 @@ Close window after changing settings
 Collapse console
 == コンソールを縮小
 
+Collect CP %d before teleporting
+== テレポートする前に CP %d に触れてください
+
 Collision hitbox
 == 衝突ヒットボックス
 
@@ -2897,8 +2900,14 @@ Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
 == このコミュニティをグループ化するための国フラグ（ISO 3166-1 数値）
 
+CP %d
+== チェックポイント %d
+
 CP border overlay alpha (0-100)
 == CP 点境界のオーバーレイエンティティのアルファ（0-100）
+
+CP guide
+== CP ガイド
 
 CP opacity
 == CP 不透明度
@@ -5590,6 +5599,9 @@ GUI cursor assets
 
 Guide line color
 == ガイドラインの色
+
+Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters
+== 近くの未取得のテレポートチェックポイントへ案内し、チェックポイントへの帰還入口付近で警告する
 
 Gun fire
 == ピストル発射

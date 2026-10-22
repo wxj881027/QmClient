@@ -758,6 +758,7 @@ Close
 Close the demo player
 Close window after changing settings
 Collapse console
+Collect CP %d before teleporting
 Collision hitbox
 Collision Line Opacity
 Color
@@ -964,7 +965,9 @@ Count players only
 Countries
 Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
+CP %d
 CP border overlay alpha (0-100)
+CP guide
 CP opacity
 Crazy shotgun bullet sound on/off
 Create a random skin
@@ -1863,6 +1866,7 @@ Group name
 GUI cursor
 GUI cursor assets
 Guide line color
+Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters
 Gun fire
 Hammer
 Hammer hit
