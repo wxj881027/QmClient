@@ -5658,46 +5658,27 @@ void CClient::BenchmarkQuit(int Seconds, const char *pFilename)
 
 void CClient::StartHangWatchdog()
 {
-	if(m_HangWatchdogThread.joinable())
+	if(m_HangWatchdog.Started())
 		return;
-
-	m_HangWatchdogStop.store(false, std::memory_order_release);
-	m_HangInfo.StartWatchdog();
-	if(m_aHangDumpDir[0] == '\0' && Storage() != nullptr)
-		Storage()->GetCompletePath(IStorage::TYPE_SAVE, gs_pQmCrashDumpDir, m_aHangDumpDir, sizeof(m_aHangDumpDir));
-	UpdateHangHeartbeat();
-
-	m_HangWatchdogThread = std::thread([this]() {
-		// 必须使用单调时钟（time_get_nanoseconds）而不是 time_get()：后者只在主循环
-		// set_new_tick() 后刷新一次，主线程卡住时全进程时钟冻结，看门狗将永远无法
-		// 感知心跳停滞。看门狗线程恰恰需要在主线程阻塞时继续计时。
+	try
+	{
+		if(m_aHangDumpDir[0] == '\0' && Storage() != nullptr)
+			Storage()->GetCompletePath(IStorage::TYPE_SAVE, gs_pQmCrashDumpDir, m_aHangDumpDir, sizeof(m_aHangDumpDir));
+		UpdateHangHeartbeat();
 		const int64_t TimeoutNanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(gs_HangTimeoutSeconds)).count();
-		while(!m_HangWatchdogStop.load(std::memory_order_acquire))
-		{
-			std::this_thread::sleep_for(1s);
-			if(m_HangWatchdogStop.load(std::memory_order_acquire))
-				break;
-			const int64_t LastHeartbeat = m_HangInfo.LastHeartbeat();
-			if(LastHeartbeat == 0)
-				continue;
-			const int64_t Now = time_get_nanoseconds().count();
-			if(Now - LastHeartbeat >= TimeoutNanoseconds)
-			{
-				const auto Snapshot = m_HangInfo.TryClaimReport(Now, TimeoutNanoseconds);
-				if(Snapshot.has_value())
-					WriteHangReportAndDump(Now, *Snapshot);
-			}
-		}
-	});
+		if(!m_HangWatchdog.Start(m_HangInfo.Read(), TimeoutNanoseconds, [](void *pUser, int64_t Now, const QmHangDiagnostics::SSnapshot &Snapshot) { static_cast<CClient *>(pUser)->WriteHangReportAndDump(Now, Snapshot); }, this))
+			log_warn("hang", "failed to start hang watchdog");
+	}
+	catch(...)
+	{
+		// 路径或心跳准备失败不影响客户端运行，活动状态仍须回收。
+		m_HangWatchdog.Stop();
+	}
 }
 
 void CClient::StopHangWatchdog()
 {
-	// 停止状态和报告领取同步，防止休眠中的看门狗醒来后领取新报告。
-	m_HangInfo.StopWatchdog();
-	m_HangWatchdogStop.store(true, std::memory_order_release);
-	if(m_HangWatchdogThread.joinable())
-		m_HangWatchdogThread.join();
+	m_HangWatchdog.Stop();
 }
 
 void CClient::UpdateHangHeartbeat()
@@ -5740,6 +5721,7 @@ void CClient::WriteHangReportAndDump(int64_t Now, const QmHangDiagnostics::SSnap
 	IOHANDLE File = io_open(aReportPath, IOFLAG_WRITE);
 	if(File)
 	{
+		std::unique_ptr<void, decltype(&io_close)> FileOwner(File, &io_close);
 		const int64_t LastHeartbeat = Snapshot.m_LastHeartbeat;
 		const float SecondsSinceHeartbeat = (Now - LastHeartbeat) / 1e9f;
 		char aOsVersion[128];
@@ -5787,7 +5769,6 @@ void CClient::WriteHangReportAndDump(int64_t Now, const QmHangDiagnostics::SSnap
 		io_write(File, aBuf, str_length(aBuf));
 
 		io_sync(File);
-		io_close(File);
 	}
 
 #if defined(CONF_FAMILY_WINDOWS)
@@ -5800,8 +5781,17 @@ void CClient::WriteHangReportAndDump(int64_t Now, const QmHangDiagnostics::SSnap
 	fs_makedir_rec_for(aDumpPath);
 	const auto DumpResult = QmHangDiagnostics::WriteDump(aDumpPath);
 	if(!DumpResult.Written())
-		log_warn("hang", "failed to write minidump '%s': stage=%s error=%lu (%s)", aDumpPath,
-			QmHangDiagnostics::DumpStageName(DumpResult.m_Stage), DumpResult.m_Error, windows_format_system_message(DumpResult.m_Error).c_str());
+	{
+		try
+		{
+			log_warn("hang", "failed to write minidump '%s': stage=%s error=%lu (%s)", aDumpPath,
+				QmHangDiagnostics::DumpStageName(DumpResult.m_Stage), DumpResult.m_Error, windows_format_system_message(DumpResult.m_Error).c_str());
+		}
+		catch(...)
+		{
+			// 附加错误说明分配失败后，仍继续追加原始结果和尝试报告器。
+		}
+	}
 	if(!QmHangDiagnostics::AppendDumpResult(aReportPath, aDumpPath, DumpResult))
 		log_warn("hang", "failed to append minidump result to '%s': status=%s stage=%s error=%lu dump='%s'", aReportPath,
 			DumpResult.Written() ? "written" : "failed", QmHangDiagnostics::DumpStageName(DumpResult.m_Stage), DumpResult.m_Error, aDumpPath);

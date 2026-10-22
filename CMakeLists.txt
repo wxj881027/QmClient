@@ -5158,6 +5158,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/serverbrowser_metadata_recovery_test.cpp
     src/test/integration/client/serverbrowser_info_download_test.cpp
     src/test/unit/client/qm_hang_snapshot_test.cpp
+    src/test/unit/client/qm_hang_watchdog_start_test.cpp
+    src/test/integration/client/qm_hang_watchdog_lifecycle_test.cpp
     src/test/integration/client/qm_hang_dump_report_test.cpp
     src/test/unit/engine/serverinfo_test.cpp
     src/test/unit/qmclient/settings/settings_card_collapse_state_test.cpp

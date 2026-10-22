@@ -3,6 +3,11 @@
 #include <base/system.h>
 #include <base/windows.h>
 
+#include <memory>
+#include <new>
+#include <type_traits>
+#include <utility>
+
 #if defined(CONF_FAMILY_WINDOWS)
 #include <windows.h>
 
@@ -55,6 +60,77 @@ namespace QmHangDiagnostics
 		return m_Snapshot;
 	}
 
+	CWatchdog::~CWatchdog()
+	{
+		Stop();
+	}
+
+	bool CWatchdog::Start(const SSnapshot &Initial, int64_t TimeoutNanoseconds, FReport pfnReport, void *pUser, std::chrono::milliseconds PollInterval, FCreateThread pfnCreate) noexcept
+	{
+		if(Started())
+			return true;
+		if(pfnReport == nullptr || TimeoutNanoseconds <= 0 || PollInterval.count() <= 0)
+			return false;
+		try
+		{
+			m_Stop.store(false, std::memory_order_release);
+			m_Store.StartWatchdog();
+			m_Store.Publish(Initial);
+			std::function<void()> Entry = [this, TimeoutNanoseconds, pfnReport, pUser, PollInterval] {
+				Run(TimeoutNanoseconds, pfnReport, pUser, PollInterval);
+			};
+			m_Thread = pfnCreate ? pfnCreate(std::move(Entry)) : std::thread(std::move(Entry));
+			if(Started())
+				return true;
+		}
+		catch(...)
+		{
+		}
+		// std::function/线程申请失败或创建器返回空线程时，不留下活动报告状态。
+		m_Stop.store(true, std::memory_order_release);
+		m_Store.StopWatchdog();
+		return false;
+	}
+
+	void CWatchdog::Run(int64_t TimeoutNanoseconds, FReport pfnReport, void *pUser, std::chrono::milliseconds PollInterval) noexcept
+	{
+		try
+		{
+			while(!m_Stop.load(std::memory_order_acquire))
+			{
+				std::this_thread::sleep_for(PollInterval);
+				if(m_Stop.load(std::memory_order_acquire))
+					break;
+				// 单调时钟不依赖主循环 set_new_tick，主线程阻塞时仍能识别超时。
+				const int64_t Now = time_get_nanoseconds().count();
+				const auto Snapshot = m_Store.TryClaimReport(Now, TimeoutNanoseconds);
+				if(!Snapshot.has_value())
+					continue;
+				try
+				{
+					pfnReport(pUser, Now, *Snapshot);
+				}
+				catch(...)
+				{
+					// 报告是尽力采集；失败也保留单次领取，不能从后台终止客户端。
+				}
+			}
+		}
+		catch(...)
+		{
+			m_Stop.store(true, std::memory_order_release);
+			m_Store.StopWatchdog();
+		}
+	}
+
+	void CWatchdog::Stop()
+	{
+		m_Store.StopWatchdog();
+		m_Stop.store(true, std::memory_order_release);
+		if(m_Thread.joinable())
+			m_Thread.join();
+	}
+
 	const char *DumpStageName(EDumpStage Stage)
 	{
 		switch(Stage)
@@ -89,39 +165,41 @@ namespace QmHangDiagnostics
 	}
 
 #if defined(CONF_FAMILY_WINDOWS)
-	SDumpResult WriteDump(const char *pFilename)
+	SDumpResult WriteDump(const char *pFilename, FEncodeFilename pfnEncode) noexcept
 	{
 		using MiniDumpWriteDumpFunc = BOOL(WINAPI *)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE,
 			const MINIDUMP_EXCEPTION_INFORMATION *, const MINIDUMP_USER_STREAM_INFORMATION *, const MINIDUMP_CALLBACK_INFORMATION *);
-
-		HMODULE pDbgHelp = LoadLibraryA("dbghelp.dll");
-		if(pDbgHelp == nullptr)
-			return {EDumpStage::LOAD_LIBRARY, GetLastError()};
-
-		auto pMiniDumpWriteDump = (MiniDumpWriteDumpFunc)GetProcAddress(pDbgHelp, "MiniDumpWriteDump");
-		if(pMiniDumpWriteDump == nullptr)
+		EDumpStage Stage = EDumpStage::LOAD_LIBRARY;
+		try
 		{
-			const DWORD Error = GetLastError();
-			FreeLibrary(pDbgHelp);
-			return {EDumpStage::FIND_WRITER, Error};
+			std::unique_ptr<std::remove_pointer_t<HMODULE>, decltype(&FreeLibrary)> Module(LoadLibraryA("dbghelp.dll"), &FreeLibrary);
+			if(!Module)
+				return {Stage, GetLastError()};
+			Stage = EDumpStage::FIND_WRITER;
+			auto pMiniDumpWriteDump = (MiniDumpWriteDumpFunc)GetProcAddress(Module.get(), "MiniDumpWriteDump");
+			if(pMiniDumpWriteDump == nullptr)
+				return {Stage, GetLastError()};
+			Stage = EDumpStage::OPEN_FILE;
+			const std::wstring Filename = pfnEncode ? pfnEncode(pFilename) : windows_utf8_to_wide(pFilename);
+			HANDLE FileHandle = CreateFileW(Filename.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+			if(FileHandle == INVALID_HANDLE_VALUE)
+				return {Stage, GetLastError()};
+			std::unique_ptr<void, decltype(&CloseHandle)> File(FileHandle, &CloseHandle);
+			Stage = EDumpStage::WRITE_DUMP;
+			const MINIDUMP_TYPE DumpType = MINIDUMP_TYPE(MiniDumpWithDataSegs | MiniDumpWithHandleData | MiniDumpWithIndirectlyReferencedMemory); // NOLINT(clang-analyzer-optin.core.EnumCastOutOfRange)
+			const BOOL Result = pMiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), File.get(), DumpType, nullptr, nullptr, nullptr);
+			// 在局部 owner 回收文件和 DLL 前保存原始错误码。
+			const DWORD Error = Result ? ERROR_SUCCESS : GetLastError();
+			return {Result ? EDumpStage::COMPLETE : Stage, Error};
 		}
-
-		const std::wstring Filename = windows_utf8_to_wide(pFilename);
-		HANDLE FileHandle = CreateFileW(Filename.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-		if(FileHandle == INVALID_HANDLE_VALUE)
+		catch(const std::bad_alloc &)
 		{
-			const DWORD Error = GetLastError();
-			FreeLibrary(pDbgHelp);
-			return {EDumpStage::OPEN_FILE, Error};
+			return {Stage, ERROR_NOT_ENOUGH_MEMORY};
 		}
-
-		const MINIDUMP_TYPE DumpType = MINIDUMP_TYPE(MiniDumpWithDataSegs | MiniDumpWithHandleData | MiniDumpWithIndirectlyReferencedMemory); // NOLINT(clang-analyzer-optin.core.EnumCastOutOfRange)
-		const BOOL Result = pMiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), FileHandle, DumpType, nullptr, nullptr, nullptr);
-		// 必须在关闭句柄和卸载 DLL 前保存原始错误码。
-		const DWORD Error = Result ? ERROR_SUCCESS : GetLastError();
-		CloseHandle(FileHandle);
-		FreeLibrary(pDbgHelp);
-		return {Result ? EDumpStage::COMPLETE : EDumpStage::WRITE_DUMP, Error};
+		catch(...)
+		{
+			return {Stage, ERROR_GEN_FAILURE};
+		}
 	}
 #endif
 }
