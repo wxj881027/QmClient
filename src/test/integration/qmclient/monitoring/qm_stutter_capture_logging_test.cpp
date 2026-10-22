@@ -1,4 +1,5 @@
 #include <base/logger.h>
+#include <base/str.h>
 
 #include <engine/shared/config.h>
 #include <engine/shared/json.h>
