@@ -99,7 +99,7 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 	CUIRect InfoButton{};
 	if(HasSettingsCardInfo(Spec))
 	{
-		InfoButton = ResolveSettingsCardInfoRect(DrawFrame);
+		InfoButton = ResolveSettingsCardInfoRect(DrawFrame, VisualOptions.m_HasWidthButton);
 		DrawFrame.m_TitleRect.w = std::min(DrawFrame.m_TitleRect.w, std::max(0.0f, InfoButton.x - DrawFrame.m_TitleRect.x - ui_token::spacing::XS));
 	}
 	DrawState.m_PointerInside = Ctx.m_pUi != nullptr && Ctx.m_pUi->MouseHovered(&DrawFrame.m_Rect);

@@ -358,7 +358,10 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 				s_GlobalSearchInputCollapsed = !s_GlobalSearchInputCollapsed;
 			RenderSettingsCardCollapseButton(SearchCtx, Frame.m_HandleRect, s_GlobalSearchInputCollapsed, 1.0f, &s_GlobalSearchInputCollapseButton);
 		};
-		SettingsCard(SearchCtx, InputSlot, InputSpec, InputVisualState, SettingsCardDeckVisualOptions(), [InputContentHeight](float) { return InputContentHeight; }, RenderInputContent, InputHeaderAction);
+		// 搜索输入卡只有折叠按钮、没有宽度切换：ⓘ 直接占宽度按钮的位置，紧贴折叠按钮。
+		SSettingsCardDeckVisualOptions InputVisualOptions;
+		InputVisualOptions.m_HasWidthButton = false;
+		SettingsCard(SearchCtx, InputSlot, InputSpec, InputVisualState, InputVisualOptions, [InputContentHeight](float) { return InputContentHeight; }, RenderInputContent, InputHeaderAction);
 	}
 
 	// 结果卡组从输入卡片底部（含动画中的位置）开始，让位动画期间跟随卡片一起上移。
