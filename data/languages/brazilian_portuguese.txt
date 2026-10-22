@@ -2279,6 +2279,9 @@ Close window after changing settings
 Collapse console
 == Recolher console
 
+Collect CP %d before teleporting
+== Ative o CP %d antes de se teletransportar
+
 Collision hitbox
 == Hitbox de colisão
 
@@ -2897,8 +2900,14 @@ Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
 == Bandeira do país para agrupar esta comunidade (ISO 3166-1 numérico)
 
+CP %d
+== Ponto de controle %d
+
 CP border overlay alpha (0-100)
 == Alpha da entidade de sobreposição do limite do ponto de CP (0-100)
+
+CP guide
+== Guia de CP
 
 CP opacity
 == Opacidade do CP
@@ -5590,6 +5599,9 @@ GUI cursor assets
 
 Guide line color
 == Cor da linha guia
+
+Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters
+== Guiar até pontos de controle de teletransporte próximos não ativados e avisar perto das entradas de retorno
 
 Gun fire
 == Disparo de pistola

@@ -2681,6 +2681,8 @@ namespace qm_card_catalog
 		};
 
 		static constexpr SCardSettingSearch s_aqm_mini_features[] = {
+			{Localizable("CP guide"), "qm_checkpoint_guide", "CP 引导 吃CP 检查点 传送 寻路 checkpoint guide"},
+			{Localizable("Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters"), nullptr, "引导补吃附近遗漏的传送检查点，接近检查点回传入口时提醒"},
 			{Localizable("Automatic updates"), nullptr, "自动更新"},
 			{Localizable("Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)"), nullptr, "自定义资源的贴图全透明时自动回退到默认资源；关闭后空白贴图保持不可见（可用于屏蔽特效）"},
 			{Localizable("Blank asset auto fallback"), nullptr, "空白资源自动回退"},

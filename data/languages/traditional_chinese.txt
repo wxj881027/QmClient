@@ -2279,6 +2279,9 @@ Close window after changing settings
 Collapse console
 == 收起控制台
 
+Collect CP %d before teleporting
+== 請先吃 CP %d，再進入回傳入口
+
 Collision hitbox
 == 碰撞判定框
 
@@ -2897,8 +2900,14 @@ Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
 == 將此社區分組的國家/地區標誌（ISO 3166-1 數字）
 
+CP %d
+== 檢查點 %d
+
 CP border overlay alpha (0-100)
 == CP 點邊界的覆蓋實體 alpha（0-100）
+
+CP guide
+== CP 引導
 
 CP opacity
 == CP 點不透明度
@@ -5590,6 +5599,9 @@ GUI cursor assets
 
 Guide line color
 == 輔助線顏色
+
+Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters
+== 引導補吃附近遺漏的傳送檢查點，接近檢查點回傳入口時提醒
 
 Gun fire
 == 手槍射擊

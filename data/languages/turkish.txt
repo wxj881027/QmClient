@@ -2279,6 +2279,9 @@ Close window after changing settings
 Collapse console
 == Konsolu daralt
 
+Collect CP %d before teleporting
+== Işınlanmadan önce CP %d noktasını etkinleştir
+
 Collision hitbox
 == Çarpışma hitbox'ı
 
@@ -2897,8 +2900,14 @@ Country code
 Country flag for grouping this community (ISO 3166-1 numeric)
 == Bu topluluğu gruplandırmak için ülke bayrağı (ISO 3166-1 sayısal)
 
+CP %d
+== Kontrol noktası %d
+
 CP border overlay alpha (0-100)
 == CP noktası sınırının kaplama varlık alfası (0-100)
+
+CP guide
+== CP rehberi
 
 CP opacity
 == CP opaklığı
@@ -5590,6 +5599,9 @@ GUI cursor assets
 
 Guide line color
 == Kılavuz çizgisi rengi
+
+Guide to nearby uncollected teleport checkpoints and warn near checkpoint teleporters
+== Yakındaki etkinleştirilmemiş ışınlanma kontrol noktalarına yol göster ve kontrol noktasına dönüş girişlerinde uyar
 
 Gun fire
 == Tabanca ateşi
