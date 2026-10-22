@@ -657,10 +657,19 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 		const bool Collapsed = SettingsCardDeckResolveCollapsed(HasCustomCollapsedState, HasCustomCollapsedState && Card.m_pDefinition->m_IsCollapsed(), Runtime.m_DefaultCollapsed);
 		if(Ctx.m_pUi != nullptr)
 		{
-			if(Collapsed)
+			// 折叠只在「刚折叠」那一帧关掉该卡的旧交互（内容里的下拉框等）；之后每帧仍要续期来源，
+			// 否则 ⓘ 打开的说明面板也挂在同一来源上，会在下一帧被孤儿清扫收掉（折叠卡点了没反应）。
+			if(Collapsed && !Runtime.m_CollapsedInteractionClosed)
+			{
 				Ctx.m_pUi->CloseInteractionSource(this, pStableId);
+				Runtime.m_CollapsedInteractionClosed = true;
+			}
 			else
+			{
+				if(!Collapsed)
+					Runtime.m_CollapsedInteractionClosed = false;
 				Ctx.m_pUi->RefreshInteractionSource(this, pStableId);
+			}
 		}
 		SSettingsCardVisualState State;
 		State.m_DrawOffsetY = DeckEntryOffsetY;
