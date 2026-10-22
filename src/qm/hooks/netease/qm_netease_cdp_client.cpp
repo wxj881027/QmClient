@@ -135,22 +135,28 @@ namespace QmNeteaseCdp
 
 		std::string Sha1Base64(std::string_view Text)
 		{
-			BCRYPT_ALG_HANDLE hAlgorithm = nullptr;
-			BCRYPT_HASH_HANDLE hHash = nullptr;
+			struct CCngScope
+			{
+				BCRYPT_ALG_HANDLE m_hAlgorithm = nullptr;
+				BCRYPT_HASH_HANDLE m_hHash = nullptr;
+				~CCngScope()
+				{
+					if(m_hHash)
+						BCryptDestroyHash(m_hHash);
+					if(m_hAlgorithm)
+						BCryptCloseAlgorithmProvider(m_hAlgorithm, 0);
+				}
+			} Resources;
 			std::array<uint8_t, 20> Digest{};
 			DWORD HashLength = 0;
 			DWORD ResultLength = 0;
 			std::string Result;
-			if(BCryptOpenAlgorithmProvider(&hAlgorithm, BCRYPT_SHA1_ALGORITHM, nullptr, 0) == 0 &&
-				BCryptGetProperty(hAlgorithm, BCRYPT_HASH_LENGTH, reinterpret_cast<PUCHAR>(&HashLength), sizeof(HashLength), &ResultLength, 0) == 0 &&
-				HashLength == Digest.size() && BCryptCreateHash(hAlgorithm, &hHash, nullptr, 0, nullptr, 0, 0) == 0 &&
-				BCryptHashData(hHash, (PUCHAR)Text.data(), (ULONG)Text.size(), 0) == 0 &&
-				BCryptFinishHash(hHash, Digest.data(), (ULONG)Digest.size(), 0) == 0)
+			if(BCryptOpenAlgorithmProvider(&Resources.m_hAlgorithm, BCRYPT_SHA1_ALGORITHM, nullptr, 0) == 0 &&
+				BCryptGetProperty(Resources.m_hAlgorithm, BCRYPT_HASH_LENGTH, reinterpret_cast<PUCHAR>(&HashLength), sizeof(HashLength), &ResultLength, 0) == 0 &&
+				HashLength == Digest.size() && BCryptCreateHash(Resources.m_hAlgorithm, &Resources.m_hHash, nullptr, 0, nullptr, 0, 0) == 0 &&
+				BCryptHashData(Resources.m_hHash, (PUCHAR)Text.data(), (ULONG)Text.size(), 0) == 0 &&
+				BCryptFinishHash(Resources.m_hHash, Digest.data(), (ULONG)Digest.size(), 0) == 0)
 				Result = Base64(Digest.data(), Digest.size());
-			if(hHash != nullptr)
-				BCryptDestroyHash(hHash);
-			if(hAlgorithm != nullptr)
-				BCryptCloseAlgorithmProvider(hAlgorithm, 0);
 			return Result;
 		}
 
@@ -495,11 +501,14 @@ namespace QmNeteaseCdp
 				return false;
 			pBody->clear();
 			HINTERNET hSession = WinHttpOpen(L"QmClient-Netease/5", WINHTTP_ACCESS_TYPE_NO_PROXY, nullptr, nullptr, 0);
+			const std::unique_ptr<void, decltype(&WinHttpCloseHandle)> Session(hSession, WinHttpCloseHandle);
 			if(hSession == nullptr)
 				return false;
 			WinHttpSetTimeouts(hSession, 250, 250, 500, 500);
 			HINTERNET hConnect = WinHttpConnect(hSession, L"127.0.0.1", Port, 0);
+			const std::unique_ptr<void, decltype(&WinHttpCloseHandle)> Connect(hConnect, WinHttpCloseHandle);
 			HINTERNET hRequest = hConnect != nullptr ? WinHttpOpenRequest(hConnect, L"GET", L"/json", nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0) : nullptr;
+			const std::unique_ptr<void, decltype(&WinHttpCloseHandle)> Request(hRequest, WinHttpCloseHandle);
 			bool Success = false;
 			DWORD RedirectPolicy = WINHTTP_OPTION_REDIRECT_POLICY_NEVER;
 			const bool RedirectDisabled = hRequest != nullptr && WinHttpSetOption(hRequest, WINHTTP_OPTION_REDIRECT_POLICY, &RedirectPolicy, sizeof(RedirectPolicy));
@@ -526,11 +535,6 @@ namespace QmNeteaseCdp
 					Success = !pBody->empty();
 				}
 			}
-			if(hRequest != nullptr)
-				WinHttpCloseHandle(hRequest);
-			if(hConnect != nullptr)
-				WinHttpCloseHandle(hConnect);
-			WinHttpCloseHandle(hSession);
 			return Success;
 		}
 

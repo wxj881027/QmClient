@@ -246,6 +246,8 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64" AND CMAKE_C_COMPIL
     src/qm/music/qm_kugou_protocol.h
     src/qm/music/qm_qqmusic_protocol.h
     src/qm/hooks/netease/qm_netease_frontend_bridge.cpp
+    src/qm/hooks/netease/qm_netease_remote_injection.h
+    src/qm/hooks/netease/qm_netease_helper_input.h
     src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
     src/game/client/components/qmclient/netease/netease_lyric_state.cpp
     src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp
@@ -5072,6 +5074,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/music/qm_netease_hook_protocol_test.cpp
     src/test/unit/qmclient/music/qm_netease_hook_numeric_validation_test.cpp
     src/test/unit/qmclient/music/qm_netease_bridge_startup_test.cpp
+    src/test/unit/qmclient/music/qm_netease_remote_injection_test.cpp
+    src/test/unit/qmclient/music/qm_netease_helper_input_test.cpp
     src/test/integration/qmclient/music/qm_netease_bridge_lifecycle_test.cpp
     src/test/unit/qmclient/music/qm_music_app_watcher_test.cpp
     src/test/unit/qmclient/music/qm_qqmusic_protocol_test.cpp
@@ -5588,6 +5592,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/music/qm_netease_hook_protocol_test.cpp
       src/test/unit/qmclient/music/qm_netease_hook_numeric_validation_test.cpp
       src/test/unit/qmclient/music/qm_netease_bridge_startup_test.cpp
+      src/test/unit/qmclient/music/qm_netease_remote_injection_test.cpp
+      src/test/unit/qmclient/music/qm_netease_helper_input_test.cpp
       src/test/integration/qmclient/music/qm_netease_bridge_lifecycle_test.cpp
       src/test/unit/qmclient/music/qm_spotify_crypto_test.cpp
       src/test/unit/qmclient/music/qm_spotify_token_test.cpp
