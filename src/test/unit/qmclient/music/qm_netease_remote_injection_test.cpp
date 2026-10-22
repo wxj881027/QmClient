@@ -189,7 +189,7 @@ TEST(QmNeteaseRemoteInjection, TimeoutPreservesPathAndRejectsDuplicateWorkUntilC
 TEST(QmNeteaseRemoteInjection, WaitFailureDoesNotProveThatTheThreadStopped)
 {
 	COperations Operations;
-	Operations.m_Wait = CRemoteInjection::EWait::ERROR;
+	Operations.m_Wait = CRemoteInjection::EWait::FAILED;
 	{
 		CRemoteInjection Injection(Operations);
 		ASSERT_TRUE(Injection.Start(42, L"hook.dll"));

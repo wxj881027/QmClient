@@ -26,6 +26,8 @@ namespace QmNeteaseCdp
 		bool Connect(std::string_view WebSocketUrl);
 		void Close();
 		bool IsConnected() const;
+		// 仅在会话操作之间设置；标记须存活到解绑或会话销毁，值可跨线程更新。
+		void SetStopFlag(const std::atomic_bool *pStop) noexcept;
 		void SetNotificationCallback(TNotificationCallback Callback);
 		bool Command(std::string_view Method, std::string_view ParametersJson, std::string *pResultJson, int TimeoutMs = 1500);
 		bool Evaluate(std::string_view Expression, std::string *pValueJson, int TimeoutMs = 1500);

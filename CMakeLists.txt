@@ -242,6 +242,7 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64" AND CMAKE_C_COMPIL
     src/qm/hooks/netease/qm_netease_bootstrap.cpp
     src/qm/hooks/netease/qm_netease_cdp.cpp
     src/qm/hooks/netease/qm_netease_cdp_client.cpp
+    src/qm/hooks/netease/qm_netease_cdp_io.h
     src/qm/music/qm_music_source.h
     src/qm/music/qm_kugou_protocol.h
     src/qm/music/qm_qqmusic_protocol.h
@@ -277,6 +278,7 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64" AND CMAKE_C_COMPIL
     src/qm/hooks/soda/qm_soda_writer.cpp
     src/qm/hooks/soda/qm_soda_writer.h
     src/qm/hooks/netease/qm_netease_cdp_client.cpp
+    src/qm/hooks/netease/qm_netease_cdp_io.h
     src/qm/hooks/netease/qm_netease_cdp.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_krc.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_qrc.cpp
@@ -313,6 +315,7 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64" AND CMAKE_C_COMPIL
     src/qm/hooks/soda/qm_soda_protocol.cpp
     src/qm/hooks/soda/qm_soda_writer.cpp
     src/qm/hooks/netease/qm_netease_cdp_client.cpp
+    src/qm/hooks/netease/qm_netease_cdp_io.h
     src/qm/hooks/netease/qm_netease_cdp.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_krc.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_qrc.cpp
@@ -5076,6 +5079,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/music/qm_netease_bridge_startup_test.cpp
     src/test/unit/qmclient/music/qm_netease_remote_injection_test.cpp
     src/test/unit/qmclient/music/qm_netease_helper_input_test.cpp
+    src/test/unit/qmclient/music/qm_netease_cdp_io_test.cpp
+    src/test/unit/qmclient/music/qm_netease_cdp_http_body_test.cpp
     src/test/integration/qmclient/music/qm_netease_bridge_lifecycle_test.cpp
     src/test/unit/qmclient/music/qm_music_app_watcher_test.cpp
     src/test/unit/qmclient/music/qm_qqmusic_protocol_test.cpp
@@ -5464,11 +5469,15 @@ if(QM_GTEST_LIBRARIES AND SERVER)
   )
   # Windows 专用：bootstrap 无跨平台实现（winsock2/CreateFileW），仅 Windows 编入 testrunner
   if(TARGET_OS STREQUAL "windows")
-    list(APPEND TESTS src/test/unit/qmclient/music/qm_netease_cdp_test.cpp)
+    list(APPEND TESTS
+      src/test/unit/qmclient/music/qm_netease_cdp_test.cpp
+      src/test/integration/qmclient/music/qm_netease_cdp_socket_test.cpp
+    )
     list(APPEND TESTS_EXTRA
       src/qm/hooks/netease/qm_netease_bootstrap.cpp
       src/qm/hooks/netease/qm_netease_cdp.cpp
       src/qm/hooks/netease/qm_netease_cdp_client.cpp
+      src/qm/hooks/netease/qm_netease_cdp_io.h
       src/game/client/components/qmclient/netease_hook/qm_netease_hook_v5_writer.cpp
     )
   endif()
@@ -5594,6 +5603,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/music/qm_netease_bridge_startup_test.cpp
       src/test/unit/qmclient/music/qm_netease_remote_injection_test.cpp
       src/test/unit/qmclient/music/qm_netease_helper_input_test.cpp
+      src/test/unit/qmclient/music/qm_netease_cdp_io_test.cpp
+      src/test/unit/qmclient/music/qm_netease_cdp_http_body_test.cpp
       src/test/integration/qmclient/music/qm_netease_bridge_lifecycle_test.cpp
       src/test/unit/qmclient/music/qm_spotify_crypto_test.cpp
       src/test/unit/qmclient/music/qm_spotify_token_test.cpp
@@ -5639,6 +5650,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
         src/test/unit/qmclient/music/qm_netease_cdp_test.cpp
         src/qm/hooks/netease/qm_netease_bootstrap.cpp
         src/qm/hooks/netease/qm_netease_cdp_client.cpp
+        src/qm/hooks/netease/qm_netease_cdp_io.h
         src/game/client/components/qmclient/netease_hook/qm_netease_hook_v5_writer.cpp
       )
       target_compile_definitions(qm-nmt-tests PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)

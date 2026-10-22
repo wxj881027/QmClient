@@ -399,7 +399,7 @@ namespace
 		{
 			using EWait = QmNeteaseHelper::CRemoteInjection::EWait;
 			const DWORD Result = WaitForSingleObject(pThread, TimeoutMs);
-			return Result == WAIT_OBJECT_0 ? EWait::COMPLETE : (Result == WAIT_TIMEOUT ? EWait::PENDING : EWait::ERROR);
+			return Result == WAIT_OBJECT_0 ? EWait::COMPLETE : (Result == WAIT_TIMEOUT ? EWait::PENDING : EWait::FAILED);
 		}
 		void FreePath(void *pProcess, void *pRemote) noexcept override { VirtualFreeEx(pProcess, pRemote, 0, MEM_RELEASE); }
 		void Close(void *pHandle) noexcept override { CloseHandle(pHandle); }

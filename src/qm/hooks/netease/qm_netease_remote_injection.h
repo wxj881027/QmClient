@@ -17,7 +17,7 @@ namespace QmNeteaseHelper
 		{
 			COMPLETE,
 			PENDING,
-			ERROR
+			FAILED
 		};
 		class COperations
 		{
