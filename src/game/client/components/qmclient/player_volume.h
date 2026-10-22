@@ -20,6 +20,7 @@ public:
 		uint64_t m_Generation = 0;
 	};
 	CQmPlayerVolume();
+	explicit CQmPlayerVolume(uint64_t InitialGeneration);
 	~CQmPlayerVolume();
 	SSnapshot Refresh(const std::string &SourceAppId);
 	bool SetVolume(uint64_t Generation, float Level);

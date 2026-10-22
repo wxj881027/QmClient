@@ -108,7 +108,12 @@ struct CQmPlayerVolume::SImpl
 };
 
 CQmPlayerVolume::CQmPlayerVolume() :
-	m_pImpl(std::make_unique<SImpl>()) {}
+	CQmPlayerVolume(1) {}
+CQmPlayerVolume::CQmPlayerVolume(uint64_t InitialGeneration) :
+	m_pImpl(std::make_unique<SImpl>())
+{
+	m_pImpl->m_Generation = InitialGeneration;
+}
 CQmPlayerVolume::~CQmPlayerVolume() = default;
 
 void CQmPlayerVolume::Reset()
@@ -173,6 +178,7 @@ struct CQmPlayerVolume::SImpl
 {
 };
 CQmPlayerVolume::CQmPlayerVolume() = default;
+CQmPlayerVolume::CQmPlayerVolume(uint64_t) {}
 CQmPlayerVolume::~CQmPlayerVolume() = default;
 CQmPlayerVolume::SSnapshot CQmPlayerVolume::Refresh(const std::string &) { return {}; }
 bool CQmPlayerVolume::SetVolume(uint64_t, float) { return false; }
