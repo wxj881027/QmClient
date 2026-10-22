@@ -1,6 +1,7 @@
 #ifndef ENGINE_CLIENT_PERF_FILE_LOGGER_H
 #define ENGINE_CLIENT_PERF_FILE_LOGGER_H
 
+#include <base/dbg.h>
 #include <base/lock.h>
 #include <base/logger.h>
 
