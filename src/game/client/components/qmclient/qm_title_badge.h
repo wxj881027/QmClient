@@ -5,6 +5,7 @@
 
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/ui_rect.h>
 
 // 聊天测量和绘制共用整块胶囊的推进，保持与普通行相同的高度。
@@ -66,7 +67,7 @@ struct SQmTitleBadgePlacement
 		const unsigned PreviousFlags = pTextRender->GetRenderFlags();
 		const ColorRGBA PreviousColor = pTextRender->GetTextColor();
 		pTextRender->SetRenderFlags((PreviousFlags | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT) & ~TEXT_RENDER_FLAG_NO_AUTOMATIC_QUAD_UPLOAD);
-		pTextRender->TextColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+		pTextRender->TextColor(ui_token::color::NEUTRAL_WHITE);
 		pTextRender->RecreateTextContainerSoft(m_TextContainerIndex, &Cursor, pText);
 		m_TextVisualBounds = QmTitleBadgeVisualBounds(Cursor);
 		pTextRender->TextColor(PreviousColor);
@@ -77,7 +78,7 @@ struct SQmTitleBadgePlacement
 	{
 		const vec2 Position = QmTitleBadgeTextPosition(m_Rect, m_TextVisualBounds) + Offset;
 		pTextRender->RenderTextContainer(m_TextContainerIndex, QmTitleBadgePalette(m_Appearance, Alpha).m_Text,
-			ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), Position.x, Position.y);
+			ui_token::color::COLOR_TRANSPARENT, Position.x, Position.y);
 	}
 
 	void DeleteText(ITextRender *pTextRender)
