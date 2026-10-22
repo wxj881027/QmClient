@@ -2088,8 +2088,8 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 				    (!Message.m_CurrentLocal && (Author.m_Foe || (g_Config.m_QmWarListBlockEnemyChat && GameClient()->m_WarList.IsEnemy(ClientId))));
 		Message.m_Friend = Author.m_Friend;
 		Message.m_OtherTeam = !Message.m_Blocked && !FilterSettings.m_RelatedOnly && !Message.m_CurrentLocal &&
-			(!FilterSettings.m_FriendsOnly || Message.m_Friend) && FilterSettings.m_TeamOnly &&
-			GameClient()->IsOtherTeam(ClientId) && GameClient()->m_Teams.Team(GameClient()->m_Snap.m_LocalClientId) != TEAM_FLOCK;
+				      (!FilterSettings.m_FriendsOnly || Message.m_Friend) && FilterSettings.m_TeamOnly &&
+				      GameClient()->IsOtherTeam(ClientId) && GameClient()->m_Teams.Team(GameClient()->m_Snap.m_LocalClientId) != TEAM_FLOCK;
 		if(FilterSettings.m_RelatedOnly && !Message.m_Blocked && !Message.m_Local && Team != TEAM_WHISPER_SEND && Team != TEAM_WHISPER_RECV)
 		{
 			// 先按原文判断提及，避免后续显示遮蔽把自己的名字替换掉。
@@ -3653,7 +3653,7 @@ void CChat::OnRender()
 
 			for(const CUIRect &Rect : Line.m_vDeveloperBadgeRects)
 				GameClient()->m_QmClient.DeveloperBadge().Render(Graphics(),
-					{Rect.x + AnimOffsetX, Rect.y + AnimOffsetY, Rect.w, Rect.h}, AnimAlpha * DefaultTextColor.a);
+					{Rect.x + AnimOffsetX, Rect.y + AnimOffsetY, Rect.w, Rect.h}, AnimAlpha * DefaultTextColor.a, GameClient()->m_QmClient.TitleAnimationTime());
 
 			if(Line.m_BodyTextContainerIndex.Valid())
 			{

@@ -824,7 +824,7 @@ public:
 	void Render(CGameClient &This, vec2 Pos) const override
 	{
 		This.m_QmClient.DeveloperBadge().Render(This.Graphics(),
-			{Pos.x - m_Size.x * 0.5f, Pos.y - m_Size.y * 0.5f, m_Size.x, m_Size.y}, m_Alpha);
+			{Pos.x - m_Size.x * 0.5f, Pos.y - m_Size.y * 0.5f, m_Size.x, m_Size.y}, m_Alpha, This.m_QmClient.TitleAnimationTime());
 	}
 };
 
