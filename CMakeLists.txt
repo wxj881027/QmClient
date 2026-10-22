@@ -3673,6 +3673,8 @@ if(CLIENT)
     components/qmclient/spectator_selector_layout.h
     components/qmclient/shortcut_held_bind.h
     components/qmclient/spectator_tele_search.h
+    components/qmclient/stutter_capture.cpp
+    components/qmclient/stutter_capture.h
     components/qmclient/stutter_diagnostics.h
     components/qmclient/tee_hue_cycle.cpp
     components/qmclient/tee_hue_cycle.h
@@ -4710,6 +4712,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/monitoring/qm_device_sampler_lifecycle_test.cpp
     src/test/unit/qmclient/monitoring/qm_device_sampler_failure_test.cpp
     src/test/integration/qmclient/monitoring/qm_device_sampler_recovery_test.cpp
+    src/test/integration/qmclient/monitoring/qm_stutter_capture_logging_test.cpp
     src/test/unit/client/player_points_parse_test.cpp
     src/test/unit/qmclient/client/qm_player_points_cache_test.cpp
     src/test/unit/qmclient/client/qm_gores_drown_tracker_test.cpp
@@ -4735,6 +4738,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_route_render_cache_test.cpp
     src/test/integration/qmclient/client/qm_map_route_cache_test.cpp
     src/test/unit/qmclient/monitoring/qm_stutter_sample_series_test.cpp
+    src/test/unit/qmclient/monitoring/qm_stutter_capture_test.cpp
+    src/test/unit/qmclient/monitoring/qm_stutter_episode_test.cpp
     src/test/unit/qmclient/client/qm_map_upload_multipart_test.cpp
     src/test/unit/qmclient/client/qm_map_upload_response_test.cpp
     src/test/unit/qmclient/music/qm_music_hook_protocol_test.cpp
@@ -5378,6 +5383,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/game/client/components/qmclient/word_filter_list.cpp
     src/test/support/ui_test_stubs.cpp
     src/game/client/components/qmclient/monitoring/monitoring_device_perf.cpp
+    src/game/client/components/qmclient/stutter_capture.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_krc.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_qrc.cpp
     src/game/client/components/qmclient/music_lyrics/qm_soda_lyric_file.cpp
