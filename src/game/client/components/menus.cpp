@@ -714,6 +714,7 @@ IUiContext CMenus::SettingsUiContext(const char *pScope, const float UiScale)
 	Context.m_pMenus = this;
 	Context.m_pTooltips = &GameClient()->m_Tooltips;
 	Context.m_pTextRender = TextRender();
+	Context.m_pStorage = Storage();
 	Context.m_pTheme = &m_SettingsUiTheme;
 	Context.m_ScopeHash = MakeUiScopeHash(pScope);
 	Context.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();

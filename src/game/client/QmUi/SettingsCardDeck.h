@@ -138,6 +138,7 @@ private:
 		bool m_DefaultCollapsed = false;
 		char m_DefaultCollapseButtonId = 0;
 		char m_WidthButtonId = 0;
+		char m_InfoButtonId = 0;
 		int m_RestoreColumn = -1;
 		int m_RestoreOrder = -1;
 		bool m_PointerInsideLastFrame = false;

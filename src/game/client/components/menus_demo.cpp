@@ -30,7 +30,9 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/QmCardWikiPanel.h>
 #include <game/client/QmUi/QmToast.h>
+#include <game/client/QmUi/QmWikiDocs.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
@@ -354,7 +356,16 @@ void CMenus::RenderDemoExportSettings(CUIRect View)
 	CUIRect Row, Label, Control;
 
 	View.HSplitTop(qm_demo_ui::RENDER_SECTION_TITLE_HEIGHT, &Row, &View);
-	Ui()->DoLabel(&Row, Localize("Video export"), 11.0f, TEXTALIGN_ML);
+	// 标题右侧的 ⓘ 打开完整导出说明；和设置卡一致，面板只是解释，不承载操作。
+	CUIRect TitleRow = Row, InfoButton;
+	Row.VSplitRight(qm_demo_ui::RENDER_SECTION_TITLE_HEIGHT, &TitleRow, &InfoButton);
+	const float InfoSize = std::min(InfoButton.w, InfoButton.h);
+	InfoButton = {InfoButton.x + (InfoButton.w - InfoSize) * 0.5f, InfoButton.y + (InfoButton.h - InfoSize) * 0.5f, InfoSize, InfoSize};
+	Ui()->DoLabel(&TitleRow, Localize("Video export"), 11.0f, TEXTALIGN_ML);
+	static CButtonContainer s_VideoExportGuideButton;
+	if(Ui()->DoButton_QmIcon(&s_VideoExportGuideButton, EQmIcon::INFO, FontIcons::FONT_ICON_INFO, 0, &InfoButton, BUTTONFLAG_LEFT))
+		OpenWikiDocumentPopup(SettingsUiContext("qm_demo_export_wiki"), qm_wiki_docs::VideoExport());
+	GameClient()->m_Tooltips.DoToolTip(&s_VideoExportGuideButton, &InfoButton, Localize("Open the guide"));
 	View.HSplitTop(qm_demo_ui::RENDER_SECTION_TITLE_GAP, nullptr, &View);
 
 	// 分辨率：固定档位下拉；自定义时左侧两个等宽输入框，中间乘号，右侧下拉框。

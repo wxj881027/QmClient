@@ -1,5 +1,6 @@
 #ifndef GAME_CLIENT_QMUI_SETTINGSCARDINFO_H
 #define GAME_CLIENT_QMUI_SETTINGSCARDINFO_H
+#include "QmCardWiki.h"
 #include "SettingsCardGeometry.h"
 #include "SettingsCardWidth.h"
 #include "UiTokens.h"
@@ -18,6 +19,14 @@ inline std::string SettingsCardTooltipText(const SSettingsCardSpec &Spec)
 		Text += Spec.m_pInfo;
 	}
 	return Text;
+}
+
+// 说明入口的可见性：卡片自带说明文案，或 Wiki 表里有该卡条目。
+inline bool HasSettingsCardInfo(const SSettingsCardSpec &Spec)
+{
+	if(Spec.m_pStableId == nullptr || Spec.m_pStableId[0] == '\0')
+		return false;
+	return (Spec.m_pInfo != nullptr && Spec.m_pInfo[0] != '\0') || HasCardWikiCopy(Spec.m_pStableId);
 }
 
 // 说明入口与右侧宽度、折叠操作使用同一行和同一尺寸，窄卡片时不侵入标题区外。

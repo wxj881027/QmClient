@@ -2,6 +2,7 @@
 
 #include "QmAnimResolve.h"
 #include "QmCardRegistry.h"
+#include "QmCardWikiPanel.h"
 #include "SettingsCardCollapseState.h"
 #include "SettingsCardContentBridge.h"
 #include "SettingsCardInfo.h"
@@ -373,7 +374,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			const float ContentHeight = std::max(0.0f, Runtime.m_AnimatedContentHeight);
 			SSettingsCardFrame Frame = ResolveSettingsCardHeaderActions(
 				BuildSettingsCardFrame(Slot, pDefinition->m_Spec, ContentHeight, Ctx.m_UiScale),
-				pDefinition->m_LeadingHeaderActionWidth, pDefinition->m_Spec.m_pInfo != nullptr && pDefinition->m_Spec.m_pInfo[0] != '\0');
+				pDefinition->m_LeadingHeaderActionWidth, HasSettingsCardInfo(pDefinition->m_Spec));
 			const SSettingsCardColumnFrame Placement = DrawLayout.m_TwoColumns ? m_PackingPlan.Append(Column, Frame.m_Rect.h, LeadingFullWidth) : SingleColumnPlan.Append(Frame.m_Rect.h);
 			Frame = ResolveSettingsCardDrawFrame(Frame, 0.0f, Placement.m_Y - Frame.m_Rect.y);
 			m_vPreparedCards.push_back({pDefinition, StateIndex, Column, Frame, TargetContentHeight, HeightInitializedThisFrame, Runtime.m_ContentHeightWasActive, m_vContentLayouts[StateIndex]});
@@ -449,6 +450,14 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			// ActiveItem 可能在前一张卡片的释放阶段被清除。逐卡读取，避免
 			// 已经完成的点击继续驱动后续被裁剪卡片的预布局回调。
 			const bool HasActiveHeaderContinuation = SettingsCardDeckHasActiveItemContinuation(HasPointerInput, Ctx.m_pUi != nullptr && Ctx.m_pUi->ActiveItem() != nullptr);
+			// ⓘ 的按下必须在预布局阶段登记：正式绘制阶段 PreLayoutInput() 为假，
+			// 按钮逻辑收不到新的按下，表现就是「点了没反应」。折叠状态下头部仍在，同样可点。
+			if((ControllerVisible || HasActiveHeaderContinuation) && Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly() && !m_Drag.Active() && HasSettingsCardInfo(Card.m_pDefinition->m_Spec))
+			{
+				const CUIRect InfoButton = ResolveSettingsCardInfoRect(PreLayoutFrame);
+				if(InfoButton.w > 0.0f && InfoButton.h > 0.0f && Ctx.m_pUi->DoButtonLogic(&Runtime.m_InfoButtonId, 0, &InfoButton, BUTTONFLAG_LEFT))
+					OpenCardWikiPopup(Ctx, Card.m_pDefinition->m_Spec.m_pStableId, Card.m_pDefinition->m_Spec.m_pTitle);
+			}
 			if((ControllerVisible || HasActiveHeaderContinuation) && Card.m_pDefinition->m_PreLayoutHeaderInput)
 			{
 				m_FrameRuntime.CountPreLayoutInput();
@@ -573,7 +582,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			const bool InHeader = PointInRect(Card.m_Frame.m_HeaderRect, Input.m_MouseX, Input.m_MouseY);
 			const bool InHeaderAction = PointInRect(Card.m_Frame.m_HandleRect, Input.m_MouseX, Input.m_MouseY) || PointInRect(SettingsCardWidthButtonRect(Card.m_Frame), Input.m_MouseX, Input.m_MouseY) ||
 						    (Card.m_Frame.m_LeadingHeaderActionRect.w > 0.0f && PointInRect(Card.m_Frame.m_LeadingHeaderActionRect, Input.m_MouseX, Input.m_MouseY)) ||
-						    (Card.m_pDefinition->m_Spec.m_pInfo != nullptr && Card.m_pDefinition->m_Spec.m_pInfo[0] != '\0' && PointInRect(ResolveSettingsCardInfoRect(Card.m_Frame), Input.m_MouseX, Input.m_MouseY));
+						    (HasSettingsCardInfo(Card.m_pDefinition->m_Spec) && PointInRect(ResolveSettingsCardInfoRect(Card.m_Frame), Input.m_MouseX, Input.m_MouseY));
 			if(InHeader && !InHeaderAction)
 			{
 				m_Drag.m_StateIndex = Card.m_StateIndex;

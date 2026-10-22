@@ -3281,6 +3281,20 @@ if(CLIENT)
     QmUi/QmCardOrderModel.h
     QmUi/QmCardRegistry.cpp
     QmUi/QmCardRegistry.h
+    QmUi/QmCardWiki.cpp
+    QmUi/QmCardWiki.h
+    QmUi/QmCardWikiPanel.cpp
+    QmUi/QmCardWikiPanel.h
+    QmUi/QmWikiDocs.cpp
+    QmUi/QmWikiDocs.h
+    QmUi/QmWikiMarkdown.cpp
+    QmUi/QmWikiMarkdown.h
+    QmUi/QmWikiMarkdownRender.cpp
+    QmUi/QmWikiMarkdownRender.h
+    QmUi/QmWikiMedia.cpp
+    QmUi/QmWikiMedia.h
+    QmUi/QmWikiStore.cpp
+    QmUi/QmWikiStore.h
     QmUi/cards/QmCardCatalog.cpp
     QmUi/cards/QmCardCatalog.h
     QmUi/cards/QmCardCatalogIds.cpp
@@ -4626,6 +4640,8 @@ add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src/generated/checksum.cpp
 if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   # 测试显式注册；目录递归发现和遗漏清单由 test_inventory.py 核对。
   set(TESTS
+    src/test/unit/qmclient/settings/qm_card_wiki_test.cpp
+    src/test/unit/qmclient/settings/qm_wiki_markdown_test.cpp
     src/test/unit/qmclient/ui/settings_card_info_test.cpp
     src/test/unit/qmclient/ui/qm_list_entry_animation_test.cpp
     src/test/unit/engine/steam_client_path_test.cpp
@@ -5228,6 +5244,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/QmUi/QmScroll.cpp
     src/game/client/QmUi/QmTree.cpp
     src/game/client/QmUi/QmCardRegistry.cpp
+    src/game/client/QmUi/QmCardWiki.cpp
+    src/game/client/QmUi/QmWikiDocs.cpp
+    src/game/client/QmUi/QmWikiMarkdown.cpp
     src/game/client/QmUi/cards/QmCardCatalogIds.cpp
     src/game/client/QmUi/cards/QmCardCatalogSearch.cpp
     src/game/client/QmUi/SettingsCardDeckLogic.cpp

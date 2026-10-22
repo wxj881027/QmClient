@@ -97,7 +97,7 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 	SSettingsCardVisualState DrawState = State;
 	SSettingsCardFrame DrawFrame = ResolveSettingsCardDrawFrame(Frame, State.m_DrawOffsetX, State.m_DrawOffsetY);
 	CUIRect InfoButton{};
-	if(Spec.m_pInfo != nullptr && Spec.m_pInfo[0] != '\0')
+	if(HasSettingsCardInfo(Spec))
 	{
 		InfoButton = ResolveSettingsCardInfoRect(DrawFrame);
 		DrawFrame.m_TitleRect.w = std::min(DrawFrame.m_TitleRect.w, std::max(0.0f, InfoButton.x - DrawFrame.m_TitleRect.x - ui_token::spacing::XS));
