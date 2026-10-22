@@ -2170,9 +2170,40 @@ bool CUi::DoEditBoxMultiLine(CLineInput *pLineInput, const CUIRect *pRect, float
 
 	if(RenderOptions.m_DrawBackground)
 		DrawRoundedSurface(this, *pRect, ResolveConfiguredInputSurface(), ColorRGBA(), ui_token::radius::TIGHT);
+	// 可视带保持排版区本身，滚动只移动带内的文字，不移动带的边界。
+	// 纵向偏移由 CLineInput::Render 自己应用（它决定文字排版起点），这里不能再平移一次。
+	const CUIRect VisibleBand = Textbox;
+	float ScrollOffsetY = pLineInput->GetScrollOffsetY();
+	float ScrollOffsetYChange = pLineInput->GetScrollOffsetYChange();
 	ClipEnable(pRect);
-	pLineInput->Render(&Textbox, FontSize, TextAlign, Changed || CursorChanged, LineWidth, LineSpacing, {}, PreLayoutInput() ? CLineInput::ERenderMode::GEOMETRY : CLineInput::ERenderMode::DRAW);
+	const STextBoundingBox BoundingBox = pLineInput->Render(&Textbox, FontSize, TextAlign, Changed || CursorChanged, LineWidth, LineSpacing, {}, PreLayoutInput() ? CLineInput::ERenderMode::GEOMETRY : CLineInput::ERenderMode::DRAW);
 	ClipDisable();
+
+	// 滚动到光标：沿用单行输入「本帧定位、平滑逼近」的做法。只有光标真的离开
+	// 可视带才追加位移，否则每敲一个字都会把整段文本顶到最上面。
+	if(Active && !JustGotActive && (Changed || CursorChanged || Input()->HasComposition()))
+	{
+		const float CaretBand = std::max(FontSize, LineSpacing);
+		const float CaretTop = pLineInput->GetCaretPosition().y;
+		const float CaretBottom = CaretTop + CaretBand;
+		if(CaretTop < VisibleBand.y)
+			ScrollOffsetYChange += CaretTop - VisibleBand.y;
+		else if(CaretBottom > VisibleBand.y + VisibleBand.h)
+			ScrollOffsetYChange += CaretBottom - (VisibleBand.y + VisibleBand.h);
+	}
+	// 滚轮：固定高度的多行输入框没有外层滚动区可借，滚轮必须自己消费，
+	// 否则回顾上文只能靠光标跟随被动移动，往上翻根本没人接手。
+	if(!MeasurementOnly() && Active)
+	{
+		const bool ContentOverflows = BoundingBox.m_H > VisibleBand.h;
+		RegisterWheelOwner(pLineInput, EUiWheelOwnerPriority::POPUP, VisibleBand, ContentOverflows);
+		float WheelDelta = 0.0f;
+		if(ContentOverflows && TryConsumeWheel(pLineInput, &WheelDelta))
+			ScrollOffsetYChange += WheelDelta * FontSize * 1.5f;
+	}
+	DoSmoothScrollLogic(&ScrollOffsetY, &ScrollOffsetYChange, VisibleBand.h, BoundingBox.m_H, true);
+	pLineInput->SetScrollOffsetY(ScrollOffsetY);
+	pLineInput->SetScrollOffsetYChange(ScrollOffsetYChange);
 
 	pLineInput->SetScrollOffset(0.0f);
 	pLineInput->SetScrollOffsetChange(0.0f);

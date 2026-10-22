@@ -3287,6 +3287,8 @@ if(CLIENT)
     QmUi/QmCardWikiPanel.h
     QmUi/QmWikiDocs.cpp
     QmUi/QmWikiDocs.h
+    QmUi/QmWikiEditor.cpp
+    QmUi/QmWikiEditor.h
     QmUi/QmWikiMarkdown.cpp
     QmUi/QmWikiMarkdown.h
     QmUi/QmWikiMarkdownRender.cpp
@@ -4642,6 +4644,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   set(TESTS
     src/test/unit/qmclient/settings/qm_card_wiki_test.cpp
     src/test/unit/qmclient/settings/qm_wiki_markdown_test.cpp
+    src/test/integration/qmclient/settings/qm_wiki_editor_test.cpp
     src/test/unit/qmclient/ui/settings_card_info_test.cpp
     src/test/unit/qmclient/ui/qm_list_entry_animation_test.cpp
     src/test/unit/engine/steam_client_path_test.cpp
@@ -5246,7 +5249,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/QmUi/QmCardRegistry.cpp
     src/game/client/QmUi/QmCardWiki.cpp
     src/game/client/QmUi/QmWikiDocs.cpp
+    src/game/client/QmUi/QmWikiEditor.cpp
     src/game/client/QmUi/QmWikiMarkdown.cpp
+    src/game/client/QmUi/QmWikiStore.cpp
     src/game/client/QmUi/cards/QmCardCatalogIds.cpp
     src/game/client/QmUi/cards/QmCardCatalogSearch.cpp
     src/game/client/QmUi/SettingsCardDeckLogic.cpp
@@ -5544,6 +5549,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_navigation_selection_test.cpp
       src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp
       src/test/unit/qmclient/ui/qm_line_input_multiline_test.cpp
+      src/test/integration/qmclient/ui/qm_multiline_edit_scroll_test.cpp
       src/test/integration/qmclient/ui/qm_tooltip_text_layout_test.cpp
       src/test/integration/qmclient/ui/qm_card_summary_layout_test.cpp
       src/test/integration/qmclient/ui/qm_secondary_panel_actions_test.cpp

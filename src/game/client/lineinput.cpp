@@ -96,6 +96,18 @@ namespace
 		}
 		return Glyph;
 	}
+
+	// 多行布局溢出输入框时从上往下排：按垂直居中排会让首行落到框外、末行也落到框外，
+	// 光标怎么滚都在看不见的地方。单行（LineWidth < 0）保持既有的居中观感。
+	// ScrollOffsetY 是可见带的上移量，0 表示内容顶部贴着输入框顶部。
+	void QmApplyMultilineScrollY(const float LineWidth, const CUIRect *pRect, const STextBoundingBox &BoundingBox, const float ScrollOffsetY, vec2 &CursorPos)
+	{
+		if(LineWidth < 0.0f || pRect == nullptr)
+			return;
+		if(BoundingBox.m_H > pRect->h)
+			CursorPos.y = pRect->y;
+		CursorPos.y -= ScrollOffsetY;
+	}
 } // namespace
 
 void CLineInput::SetBuffer(char *pStr, size_t MaxSize, size_t MaxChars)
@@ -113,6 +125,7 @@ void CLineInput::SetBuffer(char *pStr, size_t MaxSize, size_t MaxChars)
 	{
 		m_CursorPos = m_SelectionStart = m_SelectionEnd = m_LastCompositionCursorPos = 0;
 		m_ScrollOffset = m_ScrollOffsetChange = 0.0f;
+		m_ScrollOffsetY = m_ScrollOffsetYChange = 0.0f;
 		m_CaretPosition = vec2(0.0f, 0.0f);
 		m_CaretBlinkStartTime = std::chrono::nanoseconds::zero();
 		m_MouseSelection.m_Selecting = false;
@@ -571,7 +584,8 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 		// 整行框含字体上伸/下伸空白，直接按框居中会让数字等无下伸字形看起来偏上。
 		// 多行或无字形数据（空文本/IME 组合中）时退回整行框居中。
 		const float *pBiggestCharHeight = BoundingBox.m_LineCount == 1 && BoundingBox.m_MaxCharacterHeight > 0.0f ? &BoundingBox.m_MaxCharacterHeight : nullptr;
-		const vec2 CursorPos = CUi::CalcAlignedCursorPos(pRect, BoundingBox.Size(), Align, pBiggestCharHeight);
+		vec2 CursorPos = CUi::CalcAlignedCursorPos(pRect, BoundingBox.Size(), Align, pBiggestCharHeight);
+		QmApplyMultilineScrollY(LineWidth, pRect, BoundingBox, m_ScrollOffsetY, CursorPos);
 
 		Cursor.SetPosition(CursorPos);
 		Cursor.m_FontSize = FontSize;
@@ -696,7 +710,9 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 		const STextBoundingBox BoundingBox = TextRender()->TextBoundingBox(FontSize, pDisplayStr, -1, LineWidth, LineSpacing);
 		// 与激活态一致：单行按可见字形高度视觉居中，多行/无字形数据退回整行框居中。
 		const float *pBiggestCharHeight = BoundingBox.m_LineCount == 1 && BoundingBox.m_MaxCharacterHeight > 0.0f ? &BoundingBox.m_MaxCharacterHeight : nullptr;
-		Cursor.SetPosition(CUi::CalcAlignedCursorPos(pRect, BoundingBox.Size(), Align, pBiggestCharHeight));
+		vec2 CursorPos = CUi::CalcAlignedCursorPos(pRect, BoundingBox.Size(), Align, pBiggestCharHeight);
+		QmApplyMultilineScrollY(LineWidth, pRect, BoundingBox, m_ScrollOffsetY, CursorPos);
+		Cursor.SetPosition(CursorPos);
 		Cursor.m_FontSize = FontSize;
 		Cursor.m_LineWidth = LineWidth;
 		Cursor.m_LineSpacing = LineSpacing;
