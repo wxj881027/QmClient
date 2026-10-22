@@ -22,6 +22,8 @@ namespace
 	IStorage *s_pStorage = nullptr;
 	IGraphics *s_pGraphics = nullptr;
 	std::unordered_map<std::string, SWikiMedia> s_Media;
+	// -1 = 不限额；>=0 = 本帧还能解码的数量。
+	int s_FrameLoadBudget = -1;
 
 	// Wiki 图片都是说明用的短动图，给解码结果设硬上限：单张静态图、动图逐帧副本、拼好的图集
 	// 各自不超过上限，超了直接当缺图处理，避免一张大图在绘制帧内吃掉上 GB 内存。
@@ -440,9 +442,42 @@ const SWikiMedia *qm_wiki_media::Get(const char *pPath)
 	return Inserted.first->second.m_Valid ? &Inserted.first->second : nullptr;
 }
 
-bool qm_wiki_media::Exists(const char *pPath)
+const SWikiMedia *qm_wiki_media::Peek(const char *pPath)
 {
-	return Get(pPath) != nullptr;
+	if(pPath == nullptr || pPath[0] == '\0')
+		return nullptr;
+	auto It = s_Media.find(pPath);
+	return It != s_Media.end() && It->second.m_Valid ? &It->second : nullptr;
+}
+
+bool qm_wiki_media::IsKnownMissing(const char *pPath)
+{
+	if(pPath == nullptr || pPath[0] == '\0')
+		return true;
+	auto It = s_Media.find(pPath);
+	return It != s_Media.end() && !It->second.m_Valid;
+}
+
+const SWikiMedia *qm_wiki_media::TryLoad(const char *pPath)
+{
+	if(pPath == nullptr || pPath[0] == '\0' || s_pStorage == nullptr || s_pGraphics == nullptr)
+		return nullptr;
+	auto It = s_Media.find(pPath);
+	if(It != s_Media.end())
+		return It->second.m_Valid ? &It->second : nullptr;
+	if(s_FrameLoadBudget == 0)
+		return nullptr;
+	if(s_FrameLoadBudget > 0)
+		--s_FrameLoadBudget;
+	SWikiMedia Media;
+	LoadMedia(pPath, &Media);
+	auto Inserted = s_Media.emplace(pPath, Media);
+	return Inserted.first->second.m_Valid ? &Inserted.first->second : nullptr;
+}
+
+void qm_wiki_media::ResetFrameBudget(int Loads)
+{
+	s_FrameLoadBudget = Loads;
 }
 
 float qm_wiki_media::Aspect(const SWikiMedia &Media)

@@ -58,6 +58,44 @@ namespace
 		str_sanitize(Normalized.data());
 		Text = Normalized;
 	}
+
+	// 文本渲染器的 m_GlyphCount / m_CursorCharacter 按「实际渲染出来的字形」计数，换行不是字形；
+	// 而 str_utf8_offset_* 按字符计数，换行会占一个。多行文本直接用后者换算，偏移会少算
+	// 「光标之前的换行数」个字符——表现就是「在末尾输入，字符却插到前面几行」。
+	size_t QmGlyphToByteOffset(const char *pText, int GlyphCount)
+	{
+		if(pText == nullptr || GlyphCount <= 0)
+			return 0;
+		const char *pCursor = pText;
+		int Glyph = 0;
+		while(*pCursor != '\0')
+		{
+			const int Codepoint = str_utf8_decode(&pCursor);
+			if(Codepoint == '\n' || Codepoint == '\r')
+				continue;
+			if(++Glyph == GlyphCount)
+				return static_cast<size_t>(pCursor - pText);
+		}
+		return static_cast<size_t>(pCursor - pText);
+	}
+
+	int QmByteOffsetToGlyph(const char *pText, size_t ByteOffset)
+	{
+		if(pText == nullptr)
+			return 0;
+		const size_t Length = str_length(pText);
+		ByteOffset = std::min(ByteOffset, Length);
+		int Glyph = 0;
+		const char *pCursor = pText;
+		while(*pCursor != '\0' && static_cast<size_t>(pCursor - pText) < ByteOffset)
+		{
+			const int Codepoint = str_utf8_decode(&pCursor);
+			if(Codepoint == '\n' || Codepoint == '\r')
+				continue;
+			++Glyph;
+		}
+		return Glyph;
+	}
 } // namespace
 
 void CLineInput::SetBuffer(char *pStr, size_t MaxSize, size_t MaxChars)
@@ -568,13 +606,13 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 
 				if(SelectionCursor.m_CursorMode == TEXT_CURSOR_CURSOR_MODE_CALCULATE && SelectionCursor.m_CursorCharacter >= 0)
 				{
-					const size_t NewCursorOffset = str_utf8_offset_chars_to_bytes(pDisplayStr, SelectionCursor.m_CursorCharacter);
+					const size_t NewCursorOffset = QmGlyphToByteOffset(pDisplayStr, SelectionCursor.m_CursorCharacter);
 					SetCursorOffset(OffsetFromDisplayToActual(NewCursorOffset));
 				}
 				if(SelectionCursor.m_CalculateSelectionMode == TEXT_CURSOR_SELECTION_MODE_CALCULATE && SelectionCursor.m_SelectionStart >= 0 && SelectionCursor.m_SelectionEnd >= 0)
 				{
-					const size_t NewSelectionStart = str_utf8_offset_chars_to_bytes(pDisplayStr, SelectionCursor.m_SelectionStart);
-					const size_t NewSelectionEnd = str_utf8_offset_chars_to_bytes(pDisplayStr, SelectionCursor.m_SelectionEnd);
+					const size_t NewSelectionStart = QmGlyphToByteOffset(pDisplayStr, SelectionCursor.m_SelectionStart);
+					const size_t NewSelectionEnd = QmGlyphToByteOffset(pDisplayStr, SelectionCursor.m_SelectionEnd);
 					SetSelection(OffsetFromDisplayToActual(NewSelectionStart), OffsetFromDisplayToActual(NewSelectionEnd));
 				}
 
@@ -598,11 +636,11 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 			m_LastCompositionCursorPos = CaretOffset;
 			const size_t DisplayCompositionEnd = DisplayCursorOffset + Input()->GetCompositionLength();
 			Cursor.m_CursorMode = TEXT_CURSOR_CURSOR_MODE_SET;
-			Cursor.m_CursorCharacter = str_utf8_offset_bytes_to_chars(pDisplayStr, CaretOffset);
+			Cursor.m_CursorCharacter = QmByteOffsetToGlyph(pDisplayStr, CaretOffset);
 			Cursor.m_CalculateSelectionMode = TEXT_CURSOR_SELECTION_MODE_SET;
 			Cursor.m_SelectionHeightFactor = 0.1f;
-			Cursor.m_SelectionStart = str_utf8_offset_bytes_to_chars(pDisplayStr, DisplayCursorOffset);
-			Cursor.m_SelectionEnd = str_utf8_offset_bytes_to_chars(pDisplayStr, DisplayCompositionEnd);
+			Cursor.m_SelectionStart = QmByteOffsetToGlyph(pDisplayStr, DisplayCursorOffset);
+			Cursor.m_SelectionEnd = QmByteOffsetToGlyph(pDisplayStr, DisplayCompositionEnd);
 			TextRender()->TextSelectionColor(qm_theme::IME.m_CompositionSelection);
 			RenderTextWithSelectionUnderlay();
 			TextRender()->TextSelectionColor(PreviousTextSelectionColor);
@@ -612,40 +650,29 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 			const size_t Start = OffsetFromActualToDisplay(GetSelectionStart());
 			const size_t End = OffsetFromActualToDisplay(GetSelectionEnd());
 			Cursor.m_CursorMode = m_MouseSelection.m_Selecting ? TEXT_CURSOR_CURSOR_MODE_CALCULATE : TEXT_CURSOR_CURSOR_MODE_SET;
-			Cursor.m_CursorCharacter = str_utf8_offset_bytes_to_chars(pDisplayStr, CaretOffset);
+			Cursor.m_CursorCharacter = QmByteOffsetToGlyph(pDisplayStr, CaretOffset);
 			Cursor.m_CalculateSelectionMode = m_MouseSelection.m_Selecting ? TEXT_CURSOR_SELECTION_MODE_CALCULATE : TEXT_CURSOR_SELECTION_MODE_SET;
-			Cursor.m_SelectionStart = str_utf8_offset_bytes_to_chars(pDisplayStr, Start);
-			Cursor.m_SelectionEnd = str_utf8_offset_bytes_to_chars(pDisplayStr, End);
+			Cursor.m_SelectionStart = QmByteOffsetToGlyph(pDisplayStr, Start);
+			Cursor.m_SelectionEnd = QmByteOffsetToGlyph(pDisplayStr, End);
 			RenderTextWithSelectionUnderlay();
 		}
 		else
 		{
 			Cursor.m_CursorMode = m_MouseSelection.m_Selecting ? TEXT_CURSOR_CURSOR_MODE_CALCULATE : TEXT_CURSOR_CURSOR_MODE_SET;
-			Cursor.m_CursorCharacter = str_utf8_offset_bytes_to_chars(pDisplayStr, CaretOffset);
+			Cursor.m_CursorCharacter = QmByteOffsetToGlyph(pDisplayStr, CaretOffset);
 			Cursor.m_CalculateSelectionMode = m_MouseSelection.m_Selecting ? TEXT_CURSOR_SELECTION_MODE_CALCULATE : TEXT_CURSOR_SELECTION_MODE_NONE;
 			RenderTextWithSelectionUnderlay();
 		}
 
 		if(Cursor.m_CursorMode == TEXT_CURSOR_CURSOR_MODE_CALCULATE && Cursor.m_CursorCharacter >= 0)
 		{
-			const size_t NewCursorOffset = str_utf8_offset_chars_to_bytes(pDisplayStr, Cursor.m_CursorCharacter);
+			const size_t NewCursorOffset = QmGlyphToByteOffset(pDisplayStr, Cursor.m_CursorCharacter);
 			SetCursorOffset(OffsetFromDisplayToActual(NewCursorOffset));
-		}
-		else if(Cursor.m_CursorMode == TEXT_CURSOR_CURSOR_MODE_CALCULATE && LineWidth >= 0.0f)
-		{
-			// 多行输入里点在文字右侧或最后一行下方时，渲染器的逐字形命中不会命中任何字符，
-			// 光标会停在点击前的旧位置——表现就是「在末尾输入，字符却插到别处」。
-			// 这里按「点在末行带内或更下方」补算到全文末尾（仅在渲染器没给出位置时生效）。
-			const vec2 Press = m_MouseSelection.m_Selecting ? m_MouseSelection.m_PressMouse : m_MouseSelection.m_ReleaseMouse;
-			const float TextBottom = CursorPos.y + BoundingBox.m_H;
-			const float LastLineTop = TextBottom - std::max(BoundingBox.m_MaxCharacterHeight, FontSize * 0.5f);
-			if(Press.y >= LastLineTop)
-				SetCursorOffset(m_Len);
 		}
 		if(Cursor.m_CalculateSelectionMode == TEXT_CURSOR_SELECTION_MODE_CALCULATE && Cursor.m_SelectionStart >= 0 && Cursor.m_SelectionEnd >= 0)
 		{
-			const size_t NewSelectionStart = str_utf8_offset_chars_to_bytes(pDisplayStr, Cursor.m_SelectionStart);
-			const size_t NewSelectionEnd = str_utf8_offset_chars_to_bytes(pDisplayStr, Cursor.m_SelectionEnd);
+			const size_t NewSelectionStart = QmGlyphToByteOffset(pDisplayStr, Cursor.m_SelectionStart);
+			const size_t NewSelectionEnd = QmGlyphToByteOffset(pDisplayStr, Cursor.m_SelectionEnd);
 			SetSelection(OffsetFromDisplayToActual(NewSelectionStart), OffsetFromDisplayToActual(NewSelectionEnd));
 		}
 

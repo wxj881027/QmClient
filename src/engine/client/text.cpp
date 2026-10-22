@@ -3956,6 +3956,9 @@ public:
 				if(pPrevBatchEnd == pBatchEnd)
 					break;
 				pPrevBatchEnd = pBatchEnd;
+				// 软折行（自动换行）也要有一次行尾判定：否则点在折行右侧的空白上命中不了任何字形，
+				// 光标会停在点击前的旧位置。硬换行在 '\n' 分支里已经调用过。
+				CheckCalculatedLineEnd();
 				if(!StartNewLine())
 					break;
 				GotNewLineLast = true;

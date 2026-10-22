@@ -93,6 +93,8 @@ namespace
 		std::vector<std::vector<SLine>> m_vCells;
 		// 图片
 		bool m_HasMedia = false;
+		// 图片还没解码：布局先占位，可见绘制时再按每帧额度解码。
+		bool m_MediaPending = false;
 		float m_MediaHeight = 0.0f;
 		float m_MediaWidth = 0.0f;
 		std::string m_MediaPath;
@@ -559,11 +561,23 @@ namespace
 		}
 		case EWikiBlockType::IMAGE:
 		{
-			const SWikiMedia *pMedia = qm_wiki_media::Get(Block.m_MediaPath.c_str());
+			// 布局阶段只查缓存：真正解码留到这一块可见时的绘制阶段（每帧最多一张），
+			// 否则打开带多张图的文档会在一帧里同步解好几张，直接卡一下。
+			const SWikiMedia *pMedia = qm_wiki_media::Peek(Block.m_MediaPath.c_str());
 			if(pMedia != nullptr)
 			{
 				const float Aspect = std::max(0.05f, qm_wiki_media::Aspect(*pMedia));
 				Layout.m_HasMedia = true;
+				Layout.m_MediaHeight = std::min(Width / Aspect, BodySize * 26.0f);
+				Layout.m_MediaWidth = Layout.m_MediaHeight * Aspect;
+				Layout.m_Height = Layout.m_MediaHeight + BodySize * 0.35f;
+			}
+			else if(!qm_wiki_media::IsKnownMissing(Block.m_MediaPath.c_str()))
+			{
+				// 还没轮到解码：按 16:9 占位，加载后下一帧按真实比例重排。
+				Layout.m_HasMedia = false;
+				Layout.m_MediaPending = true;
+				const float Aspect = 16.0f / 9.0f;
 				Layout.m_MediaHeight = std::min(Width / Aspect, BodySize * 26.0f);
 				Layout.m_MediaWidth = Layout.m_MediaHeight * Aspect;
 				Layout.m_Height = Layout.m_MediaHeight + BodySize * 0.35f;
@@ -685,12 +699,17 @@ namespace
 		}
 		case EWikiBlockType::IMAGE:
 		{
-			const SWikiMedia *pMedia = qm_wiki_media::Get(Block.m_MediaPath.c_str());
-			if(pMedia != nullptr && Layout.m_HasMedia)
+			// 只有走到这里的块才可见，解码留在这里（每帧一张），布局阶段不会同步解码。
+			const SWikiMedia *pMedia = qm_wiki_media::Peek(Block.m_MediaPath.c_str());
+			if(pMedia == nullptr && Layout.m_MediaPending)
+				pMedia = qm_wiki_media::TryLoad(Block.m_MediaPath.c_str());
+			if(pMedia != nullptr)
 			{
 				CUIRect Media;
-				Media.w = Layout.m_MediaWidth;
-				Media.h = Layout.m_MediaHeight;
+				const float Aspect = std::max(0.05f, qm_wiki_media::Aspect(*pMedia));
+				// 刚解码到的图按真实比例画进占位框，下一帧布局会按真实比例修正高度。
+				Media.h = Layout.m_MediaPending ? std::min(std::max(1.0f, Area.w) / Aspect, Style.m_BodySize * 26.0f) : Layout.m_MediaHeight;
+				Media.w = Media.h * Aspect;
 				Media.x = Area.x + (Area.w - Media.w) * 0.5f;
 				Media.y = Area.y;
 				qm_wiki_media::Draw(*pMedia, Media, ui_token::color::NEUTRAL_WHITE);
@@ -700,11 +719,14 @@ namespace
 				CUIRect Box = Area;
 				Box.h = Layout.m_Height;
 				Box.Draw(Style.m_CodeSurface, IGraphics::CORNER_ALL, ui_token::radius::TIGHT * Style.m_UiScale);
-				// 提示行已在布局阶段排好，按实际行高垂直居中（最小内边距保证单行不贴边）。
-				const float Pad = Layout.m_CellPad > 0.0f ? Layout.m_CellPad : BodySize * 0.6f;
-				const float TextHeight = Layout.m_Lines.size() * Layout.m_LineHeight;
-				const float TextY = Area.y + std::max(Pad, (Layout.m_Height - TextHeight) * 0.5f);
-				DrawLines(Ctx, Layout.m_Lines, Area.x + BodySize, TextY, Layout.m_LineHeight, BodySize, Style, Style.m_Muted, pLinks);
+				// 缺图时画提示行（布局阶段已排好并计入高度）；只是还没轮到解码时是空框。
+				if(!Layout.m_Lines.empty())
+				{
+					const float Pad = Layout.m_CellPad > 0.0f ? Layout.m_CellPad : BodySize * 0.6f;
+					const float TextHeight = Layout.m_Lines.size() * Layout.m_LineHeight;
+					const float TextY = Area.y + std::max(Pad, (Layout.m_Height - TextHeight) * 0.5f);
+					DrawLines(Ctx, Layout.m_Lines, Area.x + BodySize, TextY, Layout.m_LineHeight, BodySize, Style, Style.m_Muted, pLinks);
+				}
 			}
 			break;
 		}

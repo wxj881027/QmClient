@@ -69,7 +69,7 @@ namespace
 		bool m_Editing = false;
 		// 有未保存草稿时不再用磁盘内容覆盖输入框（Esc / Done 退出编辑后草稿仍可继续）。
 		bool m_EditDirty = false;
-		CLineInputBuffered<24576> m_EditInput;
+		CLineInputBuffered<65536> m_EditInput;
 		char m_aStatus[256] = "";
 		bool m_StatusIsError = false;
 		bool m_ResetEditScroll = true;
@@ -150,6 +150,9 @@ namespace
 		auto *pPopup = static_cast<SWikiPopupContext *>(pContext);
 		if(pPopup == nullptr || pPopup->m_pUi == nullptr || pPopup->m_pTextRender == nullptr)
 			return CUi::POPUP_CLOSE_CURRENT;
+
+		// 图片解码按帧限额：布局只查缓存，可见的图每帧最多真正解码一张。
+		qm_wiki_media::ResetFrameBudget(1);
 
 		// 每帧刷新来源帧：菜单失活后本回调不再运行，弹层栈会把面板当作孤儿收掉，
 		// 否则它会留在栈上继续屏蔽全局鼠标输入（幽灵模态）。

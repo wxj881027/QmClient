@@ -36,7 +36,14 @@ namespace qm_wiki_media
 	void Clear();
 	// pPath 相对 wiki/media/；未找到或解码失败返回 nullptr。
 	const SWikiMedia *Get(const char *pPath);
-	bool Exists(const char *pPath);
+	// 只查缓存，不触发解码：布局阶段用，避免打开文档时在绘制帧里同步解多张大图。
+	const SWikiMedia *Peek(const char *pPath);
+	// 已尝试加载且失败（负缓存）：界面据此区分「缺图」与「还没轮到加载」。
+	bool IsKnownMissing(const char *pPath);
+	// 按每帧额度加载：额度用尽返回 nullptr 且不缓存，下一帧再试；可见绘制阶段用。
+	const SWikiMedia *TryLoad(const char *pPath);
+	// 每帧可解码的数量；负数表示不限额（默认）。
+	void ResetFrameBudget(int Loads);
 	// 动图按全局时间循环播放，静态图固定在首帧。
 	void Draw(const SWikiMedia &Media, const CUIRect &Rect, ColorRGBA Color);
 	float Aspect(const SWikiMedia &Media);
