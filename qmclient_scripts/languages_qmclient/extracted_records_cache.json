@@ -8660,6 +8660,13 @@
       "line": 209
     },
     {
+      "key": "Cannot remove the wiki file",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/QmCardWikiPanel.cpp",
+      "context": "",
+      "line": 269
+    },
+    {
       "key": "Cannot swap: the other player is not in your team",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/pie_menu_actions.cpp",
@@ -8727,7 +8734,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmCardWikiPanel.cpp",
       "context": "",
-      "line": 178
+      "line": 186
     },
     {
       "key": "Card height animation",
@@ -13145,6 +13152,13 @@
       "source": "src/game/client/components/menus_demo.cpp",
       "context": "",
       "line": 578
+    },
+    {
+      "key": "Contents",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/QmCardWikiPanel.cpp",
+      "context": "",
+      "line": 344
     },
     {
       "key": "Continue anyway?",
@@ -17799,7 +17813,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmCardWikiPanel.cpp",
       "context": "",
-      "line": 250
+      "line": 271
     },
     {
       "key": "Done",
@@ -19472,7 +19486,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmCardWikiPanel.cpp",
       "context": "",
-      "line": 213
+      "line": 226
     },
     {
       "key": "Edit",
@@ -27214,14 +27228,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmCardWikiPanel.cpp",
       "context": "",
-      "line": 116
+      "line": 118
     },
     {
       "key": "Good to know",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmCardWikiPanel.cpp",
       "context": "",
-      "line": 418
+      "line": 502
     },
     {
       "key": "Gores",
@@ -29468,14 +29482,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmCardWikiPanel.cpp",
       "context": "",
-      "line": 116
+      "line": 118
     },
     {
       "key": "How to use it",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmCardWikiPanel.cpp",
       "context": "",
-      "line": 418
+      "line": 502
     },
     {
       "key": "HTTP is not available",
@@ -29958,14 +29972,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmWikiMarkdownRender.cpp",
       "context": "",
-      "line": 666
+      "line": 574
     },
     {
       "key": "Image not found",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmWikiMarkdownRender.cpp",
       "context": "",
-      "line": 668
+      "line": 576
     },
     {
       "key": "Image pixelsize",
@@ -39324,7 +39338,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmCardWikiPanel.cpp",
       "context": "",
-      "line": 320
+      "line": 395
     },
     {
       "key": "No controller found. Plug in a controller.",
@@ -50937,7 +50951,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmCardWikiPanel.cpp",
       "context": "",
-      "line": 242
+      "line": 258
     },
     {
       "key": "Reset",
@@ -51539,7 +51553,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmCardWikiPanel.cpp",
       "context": "",
-      "line": 248
+      "line": 267
     },
     {
       "key": "Restoring save %d: main '%s', dummy '%s'.",
@@ -52281,7 +52295,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmCardWikiPanel.cpp",
       "context": "",
-      "line": 227
+      "line": 240
     },
     {
       "key": "Save",
@@ -52925,7 +52939,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmCardWikiPanel.cpp",
       "context": "",
-      "line": 234
+      "line": 250
     },
     {
       "key": "Saved to the bind wheel.",
@@ -53716,7 +53730,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/ui.cpp",
       "context": "",
-      "line": 2254
+      "line": 2258
     },
     {
       "key": "Search",
@@ -72917,14 +72931,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmCardWikiPanel.cpp",
       "context": "",
-      "line": 116
+      "line": 118
     },
     {
       "key": "What this controls",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmCardWikiPanel.cpp",
       "context": "",
-      "line": 418
+      "line": 502
     },
     {
       "key": "Wheel label",
@@ -73631,7 +73645,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmCardWikiPanel.cpp",
       "context": "",
-      "line": 354
+      "line": 429
     },
     {
       "key": "Write the reply text; choose whether it triggers for muted players and whether the panel starts minimized.",

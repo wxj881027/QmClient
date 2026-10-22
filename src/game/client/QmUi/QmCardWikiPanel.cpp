@@ -67,6 +67,8 @@ namespace
 		char m_aPendingLink[128] = "";
 
 		bool m_Editing = false;
+		// 有未保存草稿时不再用磁盘内容覆盖输入框（Esc / Done 退出编辑后草稿仍可继续）。
+		bool m_EditDirty = false;
 		CLineInputBuffered<24576> m_EditInput;
 		char m_aStatus[256] = "";
 		bool m_StatusIsError = false;
@@ -132,7 +134,9 @@ namespace
 		pPopup->m_ResetEditScroll = true;
 		pPopup->m_aStatus[0] = '\0';
 		pPopup->m_StatusIsError = false;
-		pPopup->m_EditInput.Set(pPopup->m_Content.m_Markdown.c_str());
+		// 上次退出编辑时有未保存草稿就接着改，否则从当前内容开始。
+		if(!pPopup->m_EditDirty)
+			pPopup->m_EditInput.Set(pPopup->m_Content.m_Markdown.c_str());
 	}
 
 	void SetStatus(SWikiPopupContext *pPopup, const char *pText, bool Error)
@@ -146,6 +150,10 @@ namespace
 		auto *pPopup = static_cast<SWikiPopupContext *>(pContext);
 		if(pPopup == nullptr || pPopup->m_pUi == nullptr || pPopup->m_pTextRender == nullptr)
 			return CUi::POPUP_CLOSE_CURRENT;
+
+		// 每帧刷新来源帧：菜单失活后本回调不再运行，弹层栈会把面板当作孤儿收掉，
+		// 否则它会留在栈上继续屏蔽全局鼠标输入（幽灵模态）。
+		pPopup->m_pUi->RefreshPopupMenuSource(&gs_WikiPopupId, true, pPopup->m_pUi->PopupSourceFrame());
 
 		// 上一帧请求的跳转在这里落地：此时没有正在迭代的正文，可以安全换内容。
 		if(pPopup->m_aPendingLink[0] != '\0')
@@ -182,6 +190,11 @@ namespace
 		CUIRect Content = Panel.ContentRect();
 		if(Content.w <= 0.0f || Content.h <= 0.0f)
 			return CUi::POPUP_KEEP_OPEN;
+
+		// 编辑态的 Esc 只退出编辑（草稿留在输入框里，再点「编辑」继续），不整块关面板。
+		// 弹层栈在回调之后才处理 Esc，这里先消费掉就能拦住关闭。
+		if(pPopup->m_Editing && Ctx.m_pUi->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
+			pPopup->m_Editing = false;
 
 		CUiScopedSurfaceText SurfaceText(pPopup->m_pTextRender, Theme.m_Surface);
 		const ColorRGBA Foreground = ResolveConfiguredTextColor(Theme.m_Surface);
@@ -230,6 +243,9 @@ namespace
 				if(qm_wiki_store::SaveOverride(pPopup->m_Content.m_RelativePath.c_str(), pPopup->m_EditInput.GetString(), &Error))
 				{
 					ReloadContent(pPopup);
+					// 磁盘内容已是刚保存的文本，输入框同步回来并清掉草稿标记。
+					pPopup->m_EditDirty = false;
+					pPopup->m_EditInput.Set(pPopup->m_Content.m_Markdown.c_str());
 					char aStatus[256];
 					str_format(aStatus, sizeof(aStatus), "%s: wiki/%s/%s.md", Localize("Saved"), qm_wiki_store::LanguageDir(), pPopup->m_Content.m_RelativePath.c_str());
 					SetStatus(pPopup, aStatus, false);
@@ -241,11 +257,16 @@ namespace
 			}
 			if(ui_widget::SecondaryButton(Ctx, &s_RevertButton, Localize("Reset"), RevertRect))
 			{
-				qm_wiki_store::DeleteOverride(pPopup->m_Content.m_RelativePath.c_str());
+				const bool Removed = qm_wiki_store::DeleteOverride(pPopup->m_Content.m_RelativePath.c_str());
 				ReloadContent(pPopup);
+				pPopup->m_EditDirty = false;
 				pPopup->m_EditInput.Set(pPopup->m_Content.m_Markdown.c_str());
 				pPopup->m_ResetEditScroll = true;
-				SetStatus(pPopup, Localize("Restored the built-in content"), false);
+				// 重载后的覆盖状态才是真实结果：没有覆盖时 DeleteOverride 也返回 false，不能算失败。
+				if(Removed || !pPopup->m_Content.m_HasUserOverride)
+					SetStatus(pPopup, Localize("Restored the built-in content"), false);
+				else
+					SetStatus(pPopup, Localize("Cannot remove the wiki file"), true);
 			}
 			if(ui_widget::SecondaryButton(Ctx, &s_CancelButton, Localize("Done"), CancelRect))
 			{
@@ -310,6 +331,60 @@ namespace
 			Style.m_CodeSurface = Foreground.WithMultipliedAlpha(0.07f);
 			Style.m_Line = Foreground.WithMultipliedAlpha(0.14f);
 
+			// 目录：文档有 2 个以上标题时列在正文最前面，点击把该小节顶到可视区顶部。
+			if(pPopup->m_vTocBlocks.size() >= 2)
+			{
+				const std::vector<SWikiBlock> &vBlocks = pPopup->m_Markdown.Blocks();
+				const float TocTop = Body.y;
+				const float TocLineHeight = TipSize * 1.9f;
+				CUIRect TocTitle;
+				Body.HSplitTop(TocLineHeight, &TocTitle, &Body);
+				SLabelProperties TocTitleProps;
+				TocTitleProps.SetColor(Muted);
+				Ctx.m_pUi->DoLabel(&TocTitle, Localize("Contents"), TipSize, TEXTALIGN_ML, TocTitleProps);
+				// 每个条目的按钮 ID 用标题块下标，内容换文档时 ID 随之变化不会串。
+				static int s_aTocIds[64];
+				for(size_t TocIndex = 0; TocIndex < pPopup->m_vTocBlocks.size() && TocIndex < 64; ++TocIndex)
+				{
+					const int BlockIndex = pPopup->m_vTocBlocks[TocIndex];
+					if(BlockIndex < 0 || BlockIndex >= static_cast<int>(vBlocks.size()))
+						continue;
+					const SWikiBlock &Heading = vBlocks[BlockIndex];
+					CUIRect Row;
+					Body.HSplitTop(TocLineHeight, &Row, &Body);
+					const float Indent = static_cast<float>(std::max(0, Heading.m_Level - 1)) * TipSize * 1.1f;
+					CUIRect Text = Row;
+					Text.x += Indent;
+					Text.w = std::max(1.0f, Text.w - Indent);
+					std::string Label;
+					for(const SWikiSpan &Span : Heading.m_Spans)
+						Label += Span.m_Text;
+					const bool Hovered = Ctx.m_pUi->MouseHovered(&Row);
+					s_aTocIds[TocIndex] = BlockIndex;
+					if(Ctx.m_pUi->DoButtonLogic(&s_aTocIds[TocIndex], 0, &Row, BUTTONFLAG_LEFT))
+						pPopup->m_TocTarget = BlockIndex;
+					SLabelProperties LabelProps;
+					LabelProps.m_MaxWidth = Text.w;
+					LabelProps.m_EllipsisAtEnd = true;
+					LabelProps.SetColor(Hovered ? Theme.m_Accent : Muted);
+					Ctx.m_pUi->DoLabel(&Text, Label.c_str(), TipSize, TEXTALIGN_ML, LabelProps);
+					if(Hovered)
+					{
+						CUIRect Underline = Text;
+						Underline.h = std::max(1.0f, UiScale);
+						Underline.y = Text.y + Text.h - Underline.h;
+						Underline.w = std::min(Text.w, Ctx.m_pTextRender->TextWidth(TipSize, Label.c_str()));
+						Underline.Draw(Theme.m_Accent.WithMultipliedAlpha(0.55f), IGraphics::CORNER_NONE, 0.0f);
+					}
+				}
+				Body.HSplitTop(Gap * 0.5f, nullptr, &Body);
+				// 目录本身也要进滚动区的内容高度，否则滚到顶时目录会被裁掉。
+				CUIRect TocArea = Content;
+				TocArea.y = TocTop;
+				TocArea.h = std::max(0.0f, Body.y - TocTop);
+				s_Scroll.AddRect(TocArea, false);
+			}
+
 			if(pPopup->m_Markdown.Blocks().empty())
 			{
 				CUIRect Empty;
@@ -322,7 +397,6 @@ namespace
 			else
 			{
 				static SWikiLinkContext s_Links;
-				s_Links.m_Index = 0;
 				const std::function<void(const char *)> OnLink = [pPopup](const char *pTarget) {
 					str_copy(pPopup->m_aPendingLink, pTarget != nullptr ? pTarget : "", sizeof(pPopup->m_aPendingLink));
 				};
@@ -369,7 +443,8 @@ namespace
 		// 看起来像新字符插到了光标前面。这里只在本次绘制内关闭动效。
 		const int SavedMotionLevel = g_Config.m_QmUiMotionLevel;
 		g_Config.m_QmUiMotionLevel = 0;
-		pPopup->m_pUi->DoEditBoxMultiLine(&pPopup->m_EditInput, &EditRect, BodySize, LineSpacing, TEXTALIGN_TL, EditOptions);
+		if(pPopup->m_pUi->DoEditBoxMultiLine(&pPopup->m_EditInput, &EditRect, BodySize, LineSpacing, TEXTALIGN_TL, EditOptions))
+			pPopup->m_EditDirty = true;
 		g_Config.m_QmUiMotionLevel = SavedMotionLevel;
 		s_EditScroll.End();
 		return CUi::POPUP_KEEP_OPEN;
@@ -388,6 +463,9 @@ namespace
 		gs_WikiPopupContext.m_IsCard = IsCard;
 		gs_WikiPopupContext.m_Fallback = Fallback;
 		gs_WikiPopupContext.m_Editing = false;
+		// 换文档时丢掉上一份草稿，避免把 A 卡的文字带进 B 卡。
+		gs_WikiPopupContext.m_EditInput.Clear();
+		gs_WikiPopupContext.m_EditDirty = false;
 		gs_WikiPopupContext.m_aStatus[0] = '\0';
 		gs_WikiPopupContext.m_StatusIsError = false;
 		gs_WikiPopupContext.m_ResetScroll = true;
@@ -401,7 +479,12 @@ namespace
 		ReloadContent(&gs_WikiPopupContext);
 
 		const CUIRect PanelRect = ResolveSettingsSecondaryPanelRect(*Ctx.m_pUi->Screen(), Kind, gs_WikiPopupContext.m_UiScale);
-		Ctx.m_pUi->DoPopupMenu(&gs_WikiPopupId, PanelRect.x, PanelRect.y, PanelRect.w, PanelRect.h, &gs_WikiPopupContext, RenderWikiPopup, ui_widget::SecondaryPanelProperties());
+		// 要求来源每帧刷新（回调里刷新）：菜单失活后回调不再运行，弹层栈会把面板当孤儿收掉，
+		// 不会留下看不见却继续屏蔽全局鼠标输入的面板。
+		SPopupMenuProperties Props = ui_widget::SecondaryPanelProperties();
+		Props.m_RequireSourceRefresh = true;
+		Props.m_SourceFrame = Ctx.m_pUi->PopupSourceFrame();
+		Ctx.m_pUi->DoPopupMenu(&gs_WikiPopupId, PanelRect.x, PanelRect.y, PanelRect.w, PanelRect.h, &gs_WikiPopupContext, RenderWikiPopup, Props);
 	}
 } // namespace
 

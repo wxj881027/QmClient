@@ -684,6 +684,7 @@ Candidate files
 Cannot join the target player's team
 Cannot open word list file. Previous words remain active.
 Cannot read complete word list file. Previous words remain active.
+Cannot remove the wiki file
 Cannot swap: the other player is not in your team
 Cannot write the wiki file
 Capture the flag
@@ -1041,6 +1042,7 @@ Contacting title server
 Container
 Container format: MP4 is the most compatible, MOV suits editing, MKV suits lossless archives.
 Container:
+Contents
 Continue anyway?
 Contributors
 Control custom background drawing

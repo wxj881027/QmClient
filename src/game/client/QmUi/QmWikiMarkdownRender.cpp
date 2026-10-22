@@ -215,6 +215,36 @@ namespace
 			pLines->push_back(std::move(Line));
 	}
 
+	// 代码块与未预渲染的公式按物理行排版：换行必须自己切，整段交给文本渲染器会按它自己的
+	// 行距画在片段起点、并与相邻块混排（块高只按行数算，第二行就压到下一个块上）。
+	void BuildCodeLines(const std::string &Text, float MaxWidth, float FontSize, ITextRender *pTextRender, std::vector<SLine> *pLines)
+	{
+		pLines->clear();
+		size_t Begin = 0;
+		while(true)
+		{
+			const size_t End = Text.find('\n', Begin);
+			std::string Line = End == std::string::npos ? Text.substr(Begin) : Text.substr(Begin, End - Begin);
+			// CRLF 文件里带进来的 \r 会让宽度算错，这里去掉。
+			if(!Line.empty() && Line.back() == '\r')
+				Line.pop_back();
+			std::vector<SWikiSpan> vSpans;
+			SWikiSpan Span;
+			Span.m_Text = Line;
+			Span.m_Style = WIKI_INLINE_CODE;
+			vSpans.push_back(std::move(Span));
+			std::vector<SLine> vWrapped;
+			BuildLines(vSpans, MaxWidth, FontSize, pTextRender, &vWrapped);
+			for(SLine &WrappedLine : vWrapped)
+				pLines->push_back(std::move(WrappedLine));
+			if(End == std::string::npos)
+				break;
+			Begin = End + 1;
+		}
+		if(pLines->empty())
+			pLines->emplace_back();
+	}
+
 	float SingleLineWidth(const std::vector<SWikiSpan> &vSpans, float Size, ITextRender *pTextRender)
 	{
 		float Width = 0.0f;
@@ -286,9 +316,12 @@ namespace
 						Underline.h = std::max(1.0f, Style.m_UiScale);
 						Underline.Draw(Color, IGraphics::CORNER_ALL, 0.0f);
 					}
-					if(pLinks->m_pOnClick != nullptr && pLinks->m_Index < 512 && Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly())
+					if(pLinks->m_pOnClick != nullptr && Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly())
 					{
-						int *pId = &pLinks->m_aIds[pLinks->m_Index++];
+						// 按钮 ID 不能按「本帧第几个可见链接」分配：按住时滚动会把同一个槽位换成别的
+						// 链接，松手就跳到错误位置。改成按目标与文字的稳定哈希取槽。
+						const int Slot = static_cast<int>(str_quickhash(Piece.m_Target.c_str()) ^ str_quickhash(Piece.m_Text.c_str())) & 511;
+						int *pId = &pLinks->m_aIds[Slot];
 						if(Ctx.m_pUi->DoButtonLogic(pId, 0, &HitRect, BUTTONFLAG_LEFT))
 							(*pLinks->m_pOnClick)(Piece.m_Target.c_str());
 					}
@@ -450,7 +483,8 @@ namespace
 				if(Row == 0)
 					vSpans = WithBold(vSpans);
 				SBlockLayout CellLayout;
-				LayoutLines(vSpans, std::max(1.0f, vWidths[Col] - Pad * 2.0f), Style.m_BodySize, pTextRender, &CellLayout);
+				// 列被压得很窄时至少按一个字宽排版，避免 1px 逐字换行压到相邻列上。
+				LayoutLines(vSpans, std::max(Style.m_BodySize, vWidths[Col] - Pad * 2.0f), Style.m_BodySize, pTextRender, &CellLayout);
 				RowHeight = std::max(RowHeight, CellLayout.m_Height);
 				pLayout->m_vCells[Row * Columns + Col] = std::move(CellLayout.m_Lines);
 			}
@@ -498,7 +532,6 @@ namespace
 			Layout.m_FontSize = FontSize;
 			Layout.m_LineHeight = FontSize * LINE_SPACING;
 			Layout.m_CellPad = Pad;
-			std::vector<SWikiSpan> vSpans;
 			if(Block.m_Type == EWikiBlockType::MATH)
 			{
 				std::string Path;
@@ -514,12 +547,8 @@ namespace
 					break;
 				}
 			}
-			// 代码与未预渲染的公式都按等宽段落绘制，公式额外居中。
-			SWikiSpan Span;
-			Span.m_Text = Block.m_Text;
-			Span.m_Style = WIKI_INLINE_CODE;
-			vSpans.push_back(std::move(Span));
-			BuildLines(vSpans, std::max(1.0f, Width - Pad * 2.0f), FontSize, pTextRender, &Layout.m_Lines);
+			// 代码与未预渲染的公式都按等宽段落绘制，公式额外居中；多行内容按物理行拆开。
+			BuildCodeLines(Block.m_Text, std::max(1.0f, Width - Pad * 2.0f), FontSize, pTextRender, &Layout.m_Lines);
 			Layout.m_Height = Layout.m_Lines.size() * Layout.m_LineHeight + Pad * 2.0f;
 			break;
 		}
@@ -541,9 +570,19 @@ namespace
 			}
 			else
 			{
-				// 缺图时保留占位框，作者能一眼看出路径写错。
-				Layout.m_Height = BodySize * 5.5f;
-				LayoutLines(Block.m_Spans, Width, BodySize, pTextRender, &Layout);
+				// 缺图占位：提示文案在布局阶段排好并算进块高。原先先给 5.5 行、再被
+				// LayoutLines 无条件改写成 1 行，提示会被画到框外并压住上一块。
+				char aText[512];
+				if(!Block.m_AltText.empty())
+					str_format(aText, sizeof(aText), "%s: %s (%s)", Localize("Image not found"), Block.m_MediaPath.c_str(), Block.m_AltText.c_str());
+				else
+					str_format(aText, sizeof(aText), "%s: %s", Localize("Image not found"), Block.m_MediaPath.c_str());
+				std::vector<SWikiSpan> vSpans;
+				CWikiMarkdown::ParseInline(aText, &vSpans);
+				const float Pad = BodySize * 0.6f;
+				Layout.m_CellPad = Pad;
+				LayoutLines(vSpans, std::max(BodySize, Width - BodySize * 2.0f), BodySize, pTextRender, &Layout);
+				Layout.m_Height = std::max(BodySize * 5.5f, Layout.m_Lines.size() * Layout.m_LineHeight + Pad * 2.0f);
 			}
 			break;
 		}
@@ -661,17 +700,11 @@ namespace
 				CUIRect Box = Area;
 				Box.h = Layout.m_Height;
 				Box.Draw(Style.m_CodeSurface, IGraphics::CORNER_ALL, ui_token::radius::TIGHT * Style.m_UiScale);
-				char aText[512];
-				if(!Block.m_AltText.empty())
-					str_format(aText, sizeof(aText), "%s (%s)", Localize("Image not found"), Block.m_MediaPath.c_str());
-				else
-					str_format(aText, sizeof(aText), "%s: %s", Localize("Image not found"), Block.m_MediaPath.c_str());
-				std::vector<SWikiSpan> vSpans;
-				CWikiMarkdown::ParseInline(aText, &vSpans);
-				std::vector<SLine> vLines;
-				BuildLines(vSpans, std::max(1.0f, Area.w - BodySize * 2.0f), BodySize, pTextRender, &vLines);
-				const float TextY = Area.y + (Layout.m_Height - vLines.size() * BodySize * LINE_SPACING) * 0.5f;
-				DrawLines(Ctx, vLines, Area.x + BodySize, TextY, BodySize * LINE_SPACING, BodySize, Style, Style.m_Muted, pLinks);
+				// 提示行已在布局阶段排好，按实际行高垂直居中（最小内边距保证单行不贴边）。
+				const float Pad = Layout.m_CellPad > 0.0f ? Layout.m_CellPad : BodySize * 0.6f;
+				const float TextHeight = Layout.m_Lines.size() * Layout.m_LineHeight;
+				const float TextY = Area.y + std::max(Pad, (Layout.m_Height - TextHeight) * 0.5f);
+				DrawLines(Ctx, Layout.m_Lines, Area.x + BodySize, TextY, Layout.m_LineHeight, BodySize, Style, Style.m_Muted, pLinks);
 			}
 			break;
 		}

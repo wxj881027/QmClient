@@ -5543,6 +5543,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_background_controls_test.cpp
       src/test/integration/qmclient/ui/qm_navigation_selection_test.cpp
       src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp
+      src/test/unit/qmclient/ui/qm_line_input_multiline_test.cpp
       src/test/integration/qmclient/ui/qm_tooltip_text_layout_test.cpp
       src/test/integration/qmclient/ui/qm_card_summary_layout_test.cpp
       src/test/integration/qmclient/ui/qm_secondary_panel_actions_test.cpp

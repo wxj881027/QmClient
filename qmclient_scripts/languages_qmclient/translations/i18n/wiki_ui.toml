@@ -147,6 +147,22 @@ turkish = "Wiki dosyası yazılamıyor"
 polish = "Nie można zapisać pliku Wiki"
 
 [[message]]
+key = "Cannot remove the wiki file"
+[message.translations]
+simplified_chinese = "无法删除 Wiki 文件"
+traditional_chinese = "無法刪除 Wiki 檔案"
+japanese = "Wiki ファイルを削除できません"
+korean = "Wiki 파일을 삭제할 수 없습니다"
+russian = "Не удалось удалить файл Wiki"
+german = "Wiki-Datei kann nicht entfernt werden"
+spanish = "No se pudo eliminar el archivo del Wiki"
+french = "Impossible de supprimer le fichier du wiki"
+brazilian_portuguese = "Não foi possível remover o arquivo do Wiki"
+portuguese = "Não foi possível remover o ficheiro do Wiki"
+turkish = "Wiki dosyası kaldırılamadı"
+polish = "Nie można usunąć pliku Wiki"
+
+[[message]]
 key = "Contents"
 [message.translations]
 simplified_chinese = "目录"

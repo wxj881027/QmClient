@@ -2057,6 +2057,9 @@ Cannot open word list file. Previous words remain active.
 Cannot read complete word list file. Previous words remain active.
 == Kelime listesi dosyası tamamen okunamıyor. Önceki kelimeler etkin kalır.
 
+Cannot remove the wiki file
+== Wiki dosyası kaldırılamadı
+
 Cannot swap: the other player is not in your team
 == Takas yapılamıyor: diğer oyuncu takımında değil
 
@@ -3127,6 +3130,9 @@ Container format: MP4 is the most compatible, MOV suits editing, MKV suits lossl
 
 Container:
 == Kapsayıcı:
+
+Contents
+== İçindekiler
 
 Continue anyway?
 == Yine de devam edilsin mi?

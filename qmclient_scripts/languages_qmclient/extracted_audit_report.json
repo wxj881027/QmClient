@@ -1,8 +1,8 @@
 {
   "summary": {
-    "must_i18n": 10752,
-    "business_data": 14260,
-    "test_only": 5973,
+    "must_i18n": 10754,
+    "business_data": 14266,
+    "test_only": 5974,
     "needs_review": 2517,
     "violation": 0
   },
@@ -17964,105 +17964,119 @@
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 116,
+      "line": 118,
       "text": "Good to know",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 116,
+      "line": 118,
       "text": "How to use it",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 116,
+      "line": 118,
       "text": "What this controls",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 178,
+      "line": 186,
       "text": "Card guide",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 213,
+      "line": 226,
       "text": "Edit",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 227,
+      "line": 240,
       "text": "Save",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 234,
+      "line": 250,
       "text": "Saved",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 242,
+      "line": 258,
       "text": "Reset",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 248,
+      "line": 267,
       "text": "Restored the built-in content",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 250,
+      "line": 269,
+      "text": "Cannot remove the wiki file",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
+      "line": 271,
       "text": "Done",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 320,
+      "line": 344,
+      "text": "Contents",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
+      "line": 395,
       "text": "No content yet",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 354,
+      "line": 429,
       "text": "Write the guide here",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 418,
+      "line": 502,
       "text": "Good to know",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 418,
+      "line": 502,
       "text": "How to use it",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 418,
+      "line": 502,
       "text": "What this controls",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -19077,14 +19091,14 @@
     },
     {
       "file": "src/game/client/QmUi/QmWikiMarkdownRender.cpp",
-      "line": 666,
+      "line": 574,
       "text": "Image not found",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmWikiMarkdownRender.cpp",
-      "line": 668,
+      "line": 576,
       "text": "Image not found",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -64843,7 +64857,7 @@
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 2254,
+      "line": 2258,
       "text": "Search",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -79881,70 +79895,70 @@
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 71,
+      "line": 73,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 102,
+      "line": 104,
       "text": "deck:",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 102,
+      "line": 104,
       "text": "qm:",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 102,
+      "line": 104,
       "text": "tclient:",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 140,
+      "line": 144,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 167,
+      "line": 175,
       "text": "qm_wiki_document",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 234,
+      "line": 250,
       "text": "%s: wiki/%s/%s.md",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 327,
+      "line": 402,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 395,
+      "line": 474,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/QmCardWikiPanel.cpp",
-      "line": 396,
+      "line": 475,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -80693,105 +80707,147 @@
     },
     {
       "file": "src/game/client/QmUi/QmWikiMarkdownRender.cpp",
-      "line": 369,
+      "line": 399,
       "text": ".webp",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/QmUi/QmWikiMarkdownRender.cpp",
-      "line": 369,
+      "line": 399,
       "text": "math/",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/QmWikiMarkdownRender.cpp",
-      "line": 383,
+      "line": 413,
       "text": ".png",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/QmUi/QmWikiMarkdownRender.cpp",
-      "line": 594,
-      "text": "%d.",
+      "line": 574,
+      "text": "%s: %s (%s)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/QmUi/QmWikiMarkdownRender.cpp",
-      "line": 666,
-      "text": "%s (%s)",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/QmUi/QmWikiMarkdownRender.cpp",
-      "line": 668,
+      "line": 576,
       "text": "%s: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
+      "file": "src/game/client/QmUi/QmWikiMarkdownRender.cpp",
+      "line": 630,
+      "text": "%d.",
+      "category": "business_data",
+      "reason": "display formatting template"
+    },
+    {
       "file": "src/game/client/QmUi/QmWikiMedia.cpp",
-      "line": 39,
+      "line": 50,
+      "text": "..",
+      "category": "business_data",
+      "reason": "HTML or CSS template fragment"
+    },
+    {
+      "file": "src/game/client/QmUi/QmWikiMedia.cpp",
+      "line": 50,
+      "text": "\\",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/QmUi/QmWikiMedia.cpp",
+      "line": 52,
       "text": "wiki/media/%s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/QmUi/QmWikiMedia.cpp",
-      "line": 60,
+      "line": 74,
       "text": ".webp",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/QmUi/QmWikiMedia.cpp",
-      "line": 114,
+      "line": 129,
       "text": "%s.sheet.png",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/QmUi/QmWikiMedia.cpp",
-      "line": 115,
+      "line": 130,
       "text": "%s.sheet.txt",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/QmUi/QmWikiMedia.cpp",
-      "line": 360,
+      "line": 260,
+      "text": "animated webp rejected: %dx%d, %d frames",
+      "category": "business_data",
+      "reason": "display formatting template"
+    },
+    {
+      "file": "src/game/client/QmUi/QmWikiMedia.cpp",
+      "line": 260,
+      "text": "wiki/media",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/QmWikiMedia.cpp",
+      "line": 332,
+      "text": "animated webp atlas rejected: %dx%d",
+      "category": "business_data",
+      "reason": "display formatting template"
+    },
+    {
+      "file": "src/game/client/QmUi/QmWikiMedia.cpp",
+      "line": 332,
+      "text": "wiki/media",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/QmWikiMedia.cpp",
+      "line": 387,
       "text": ".webp",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/QmUi/QmWikiMedia.cpp",
-      "line": 367,
+      "line": 394,
       "text": ".png",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/QmUi/QmWikiMedia.cpp",
-      "line": 367,
+      "line": 394,
       "text": ".webp",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/QmUi/QmWikiMedia.cpp",
-      "line": 370,
+      "line": 397,
       "text": ".sheet.png",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/QmUi/QmWikiMedia.cpp",
-      "line": 373,
+      "line": 400,
       "text": ".sheet.png",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
@@ -165722,98 +165778,98 @@
     },
     {
       "file": "src/game/client/lineinput.cpp",
-      "line": 183,
+      "line": 213,
       "text": "Selection and cursor offset got desynchronized",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/lineinput.cpp",
-      "line": 244,
+      "line": 280,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/lineinput.cpp",
-      "line": 255,
+      "line": 291,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/lineinput.cpp",
-      "line": 265,
+      "line": 301,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/lineinput.cpp",
-      "line": 276,
+      "line": 312,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/lineinput.cpp",
-      "line": 422,
+      "line": 459,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/lineinput.cpp",
-      "line": 774,
+      "line": 811,
       "text": "%d.",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/lineinput.cpp",
-      "line": 845,
+      "line": 882,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/lineinput.cpp",
-      "line": 848,
+      "line": 885,
       "text": "%0*X",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/lineinput.cpp",
-      "line": 851,
+      "line": 888,
       "text": "Base %d unsupported",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/lineinput.cpp",
-      "line": 874,
+      "line": 911,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/lineinput.cpp",
-      "line": 877,
+      "line": 914,
       "text": "%0*",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/lineinput.cpp",
-      "line": 880,
+      "line": 917,
       "text": "Base %d unsupported",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/lineinput.cpp",
-      "line": 900,
+      "line": 937,
       "text": "%.3f",
       "category": "business_data",
       "reason": "numeric display format template"
@@ -166968,77 +167024,77 @@
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 2536,
+      "line": 2540,
       "text": "%s %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 2543,
+      "line": 2547,
       "text": "%s #%0*",
       "category": "business_data",
       "reason": "command, diagnostic, or payload format template"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 2545,
+      "line": 2549,
       "text": "%s %",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 2548,
+      "line": 2552,
       "text": "#%0*",
       "category": "business_data",
       "reason": "command, diagnostic, or payload format template"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 2550,
+      "line": 2554,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 2666,
+      "line": 2670,
       "text": "m_ActiveValueSelectorState.m_Button invalid",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 2959,
+      "line": 2963,
       "text": "%s: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 2961,
+      "line": 2965,
       "text": "%s: %i%s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 2965,
+      "line": 2969,
       "text": "%s: ∞",
       "category": "business_data",
       "reason": "command, diagnostic, or payload format template"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 3103,
+      "line": 3107,
       "text": "%02d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/ui.cpp",
-      "line": 3105,
+      "line": 3109,
       "text": "%03d",
       "category": "business_data",
       "reason": "numeric display format template"
@@ -215003,6 +215059,13 @@
       "reason": "test fixture or assertion text"
     },
     {
+      "file": "src/test/unit/qmclient/ui/qm_line_input_multiline_test.cpp",
+      "line": 78,
+      "text": "a b",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
       "file": "src/test/unit/qmclient/ui/qm_profile_card_test.cpp",
       "line": 24,
       "text": "语录",
@@ -216938,7 +217001,7 @@
     },
     {
       "file": "src/game/client/QmUi/QmWikiMedia.cpp",
-      "line": 210,
+      "line": 225,
       "text": "VP8 ",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"

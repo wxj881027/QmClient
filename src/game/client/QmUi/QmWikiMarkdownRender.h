@@ -26,13 +26,13 @@ struct SWikiRenderStyle
 	ColorRGBA m_Line;
 };
 
-// 链接交互：点击回调 + 逐帧的按钮 ID 存储。
-// 用固定数组而不是 vector，保证同一文档内 ID 地址跨帧稳定。
+// 链接交互：点击回调 + 按钮 ID 存储。
+// 用固定数组而不是 vector，保证同一文档内 ID 地址跨帧稳定；槽位按「目标 + 文字」的
+// 哈希选取，因此内容滚动不会把按下状态串到别的链接上。
 struct SWikiLinkContext
 {
 	const std::function<void(const char *)> *m_pOnClick = nullptr;
 	int m_aIds[512] = {};
-	int m_Index = 0;
 };
 
 namespace qm_wiki_markdown

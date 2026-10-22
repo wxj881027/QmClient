@@ -2057,6 +2057,9 @@ Cannot open word list file. Previous words remain active.
 Cannot read complete word list file. Previous words remain active.
 == Nie można odczytać całego pliku. Poprzednie słowa pozostają aktywne.
 
+Cannot remove the wiki file
+== Nie można usunąć pliku Wiki
+
 Cannot swap: the other player is not in your team
 == Nie można zamienić: drugi gracz nie jest w twojej drużynie
 
@@ -3127,6 +3130,9 @@ Container format: MP4 is the most compatible, MOV suits editing, MKV suits lossl
 
 Container:
 == Kontener:
+
+Contents
+== Spis treści
 
 Continue anyway?
 == Mimo to kontynuować?

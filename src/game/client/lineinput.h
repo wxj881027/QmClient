@@ -141,6 +141,8 @@ private:
 	bool m_WasChanged;
 	bool m_WasCursorChanged;
 	bool m_WasRendered;
+	// 多行输入：回车产生换行、粘贴保留换行；单行输入保持既有语义。
+	bool m_Multiline = false;
 
 	char m_ClearButtonId;
 
@@ -240,6 +242,9 @@ public:
 	void SetEmptyText(const char *pText) { m_pEmptyText = pText; }
 
 	void SetClipboardLineCallback(const FClipboardLineCallback &pfnClipboardLineCallback) { m_pfnClipboardLineCallback = pfnClipboardLineCallback; }
+	// 多行输入由 DoEditBoxMultiLine 打开：回车写入换行，粘贴保留换行。
+	void SetMultiline(bool Multiline) { m_Multiline = Multiline; }
+	bool Multiline() const { return m_Multiline; }
 	void SetDisplayTextCallback(const FDisplayTextCallback &pfnDisplayTextCallback) { m_pfnDisplayTextCallback = pfnDisplayTextCallback; }
 	void SetCalculateOffsetCallback(const FCalculateOffsetCallback &pfnCalculateOffsetCallback) { m_pfnCalculateOffsetCallback = pfnCalculateOffsetCallback; }
 

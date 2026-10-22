@@ -1938,6 +1938,8 @@ bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 
 bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners, const std::vector<STextColorSplit> &vColorSplits, int Align, const SEditBoxRenderOptions &RenderOptions)
 {
+	// 单行输入：回车不进入缓冲区（同一控件复用时关掉多行标记）。
+	pLineInput->SetMultiline(false);
 	DoConfigTooltip(pLineInput, RenderOptions.m_pHitRect != nullptr ? RenderOptions.m_pHitRect : pRect, pLineInput->GetString());
 	CUiScopedSurfaceText SurfaceText(TextRender(), ResolveConfiguredInputSurface(), RenderOptions.m_DrawBackground);
 	const float VSpacing = 2.0f;
@@ -2076,6 +2078,8 @@ bool CUi::DoEditBoxMultiLine(CLineInput *pLineInput, const CUIRect *pRect, float
 {
 	if(pLineInput == nullptr || pRect == nullptr)
 		return false;
+	// 多行输入：回车换行、粘贴保留换行（见 CLineInput::SetMultiline）。
+	pLineInput->SetMultiline(true);
 	DoConfigTooltip(pLineInput, RenderOptions.m_pHitRect != nullptr ? RenderOptions.m_pHitRect : pRect, pLineInput->GetString());
 	CUiScopedSurfaceText SurfaceText(TextRender(), ResolveConfiguredInputSurface(), RenderOptions.m_DrawBackground);
 

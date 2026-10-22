@@ -30,6 +30,36 @@ float CLineInput::ms_CompositionLineHeight = 0.0f;
 
 char CLineInput::ms_aStars[128] = "";
 
+namespace
+{
+	// 粘贴文本清洗：单行输入把控制字符压成空格（既有语义）；
+	// 多行输入保留换行，并把 CRLF / 单独 CR 统一成 LF，方便 Markdown 等长文本编辑。
+	void SanitizePastedText(std::string &Text, bool Multiline)
+	{
+		if(!Multiline)
+		{
+			str_sanitize_cc(Text.data());
+			return;
+		}
+		std::string Normalized;
+		Normalized.reserve(Text.size());
+		for(size_t Index = 0; Index < Text.size(); ++Index)
+		{
+			if(Text[Index] == '\r')
+			{
+				Normalized += '\n';
+				if(Index + 1 < Text.size() && Text[Index + 1] == '\n')
+					++Index;
+				continue;
+			}
+			Normalized += Text[Index];
+		}
+		// str_sanitize 保留 \r \n \t，这里已经没有 \r，效果等于「只保留换行与制表符」。
+		str_sanitize(Normalized.data());
+		Text = Normalized;
+	}
+} // namespace
+
 void CLineInput::SetBuffer(char *pStr, size_t MaxSize, size_t MaxChars)
 {
 	if(m_pStr && m_pStr == pStr)
@@ -237,7 +267,13 @@ bool CLineInput::ProcessInput(const IInput::CEvent &Event)
 		const bool MoveWord = ModPressed && !AltPressed;
 #endif
 
-		if(Event.m_Key == KEY_BACKSPACE)
+		if(m_Multiline && (Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER))
+		{
+			// 多行输入：回车在光标处写入换行。单行输入不进入缓冲区，保持原有行为。
+			SetRange("\n", m_SelectionStart, m_SelectionEnd);
+			KeyHandled = true;
+		}
+		else if(Event.m_Key == KEY_BACKSPACE)
 		{
 			if(SelectionLength)
 			{
@@ -366,7 +402,8 @@ bool CLineInput::ProcessInput(const IInput::CEvent &Event)
 			std::string ClipboardText = Input()->GetClipboardText();
 			if(!ClipboardText.empty())
 			{
-				if(m_pfnClipboardLineCallback)
+				// 多行输入整段插入：走按行回调会把换行拆没。
+				if(m_pfnClipboardLineCallback != nullptr && !m_Multiline)
 				{
 					// Split clipboard text into multiple lines. Send all complete lines to callback.
 					// The lineinput is set to the last clipboard line.
@@ -405,7 +442,7 @@ bool CLineInput::ProcessInput(const IInput::CEvent &Event)
 				}
 				else
 				{
-					str_sanitize_cc(ClipboardText.data());
+					SanitizePastedText(ClipboardText, m_Multiline);
 					SetRange(ClipboardText.c_str(), m_SelectionStart, m_SelectionEnd);
 				}
 			}

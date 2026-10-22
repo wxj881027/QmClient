@@ -23,6 +23,14 @@ namespace
 	IGraphics *s_pGraphics = nullptr;
 	std::unordered_map<std::string, SWikiMedia> s_Media;
 
+	// Wiki 图片都是说明用的短动图，给解码结果设硬上限：单张静态图、动图逐帧副本、拼好的图集
+	// 各自不超过上限，超了直接当缺图处理，避免一张大图在绘制帧内吃掉上 GB 内存。
+	constexpr size_t WIKI_MEDIA_MAX_STATIC_BYTES = 64u * 1024u * 1024u;
+	constexpr size_t WIKI_MEDIA_MAX_FRAME_BYTES = 64u * 1024u * 1024u;
+	constexpr size_t WIKI_MEDIA_MAX_ATLAS_BYTES = 96u * 1024u * 1024u;
+	constexpr int WIKI_MEDIA_MAX_CANVAS = 2048;
+	constexpr int WIKI_MEDIA_MAX_FRAMES = 48;
+
 	bool EndsWithNoCase(const char *pText, const char *pSuffix)
 	{
 		const size_t TextLength = str_length(pText);
@@ -35,6 +43,11 @@ namespace
 	bool BuildPath(const char *pRelative, char *pBuffer, int BufferSize)
 	{
 		if(pRelative == nullptr || pRelative[0] == '\0')
+			return false;
+		// 只允许 media 目录内的相对路径：拒绝绝对路径、盘符、反斜杠和 ..（导入的 Markdown 可能带这些写法）。
+		const size_t Length = str_length(pRelative);
+		if(pRelative[0] == '/' || pRelative[0] == '\\' || (Length > 1 && pRelative[1] == ':') ||
+			str_find(pRelative, "..") != nullptr || str_find(pRelative, "\\") != nullptr)
 			return false;
 		str_format(pBuffer, BufferSize, "wiki/media/%s", pRelative);
 		return true;
@@ -57,10 +70,11 @@ namespace
 
 		CImageInfo Image;
 		bool Decoded = false;
+		// 显式传解码上限：默认是 SIZE_MAX，一张畸形大图会尝试几 GB 分配。
 		if(EndsWithNoCase(pRelative, ".webp"))
-			Decoded = CImageLoader::LoadWebP(pData, DataSize, pRelative, Image);
+			Decoded = CImageLoader::LoadWebP(pData, DataSize, pRelative, Image, WIKI_MEDIA_MAX_STATIC_BYTES);
 		else
-			Decoded = CImageLoader::LoadPng(pData, DataSize, pRelative, Image);
+			Decoded = CImageLoader::LoadPng(pData, DataSize, pRelative, Image, WIKI_MEDIA_MAX_STATIC_BYTES);
 		free(pData);
 		if(!Decoded)
 			return false;
@@ -91,14 +105,15 @@ namespace
 			{
 				const std::string Key = Token.substr(0, Equals);
 				const std::string Value = Token.substr(Equals + 1);
+				// 手写/损坏的元数据也要夹在合理范围，否则行×列会溢出、帧号取模会出错。
 				if(Key == "cols")
-					pMedia->m_Cols = std::max(1, std::atoi(Value.c_str()));
+					pMedia->m_Cols = std::clamp(std::atoi(Value.c_str()), 1, 64);
 				else if(Key == "rows")
-					pMedia->m_Rows = std::max(1, std::atoi(Value.c_str()));
+					pMedia->m_Rows = std::clamp(std::atoi(Value.c_str()), 1, 64);
 				else if(Key == "frames")
-					pMedia->m_Frames = std::max(1, std::atoi(Value.c_str()));
+					pMedia->m_Frames = std::clamp(std::atoi(Value.c_str()), 1, 64 * 64);
 				else if(Key == "fps")
-					pMedia->m_Fps = static_cast<float>(std::atof(Value.c_str()));
+					pMedia->m_Fps = std::clamp(static_cast<float>(std::atof(Value.c_str())), 0.0f, 60.0f);
 			}
 			pCursor = pTokenEnd;
 		}
@@ -234,12 +249,19 @@ namespace
 		int CanvasHeight = 0;
 		if(!ParseAnimatedWebP(pData, Size, &CanvasWidth, &CanvasHeight, &vFrames))
 			return false;
-		if(vFrames.size() < 2 || vFrames.size() > 48)
+		if(vFrames.size() < 2 || vFrames.size() > static_cast<size_t>(WIKI_MEDIA_MAX_FRAMES))
 			return false;
-		if(CanvasWidth > 2048 || CanvasHeight > 2048)
+		if(CanvasWidth <= 0 || CanvasHeight <= 0 || CanvasWidth > WIKI_MEDIA_MAX_CANVAS || CanvasHeight > WIKI_MEDIA_MAX_CANVAS)
 			return false;
+		// 逐帧副本 + 图集都要分配，先按画布尺寸算出峰值，超预算就当缺图。
+		const size_t CanvasBytes = static_cast<size_t>(CanvasWidth) * CanvasHeight * 4;
+		if(CanvasBytes * vFrames.size() > WIKI_MEDIA_MAX_FRAME_BYTES)
+		{
+			dbg_msg("wiki/media", "animated webp rejected: %dx%d, %d frames", CanvasWidth, CanvasHeight, static_cast<int>(vFrames.size()));
+			return false;
+		}
 
-		std::vector<uint8_t> Canvas(static_cast<size_t>(CanvasWidth) * CanvasHeight * 4, 0);
+		std::vector<uint8_t> Canvas(CanvasBytes, 0);
 		std::vector<std::vector<uint8_t>> vFramePixels;
 		vFramePixels.reserve(vFrames.size());
 		int TotalMs = 0;
@@ -305,6 +327,11 @@ namespace
 		const int AtlasWidth = Cols * CanvasWidth;
 		const int AtlasHeight = Rows * CanvasHeight;
 		const size_t AtlasBytes = static_cast<size_t>(AtlasWidth) * AtlasHeight * 4;
+		if(AtlasBytes > WIKI_MEDIA_MAX_ATLAS_BYTES)
+		{
+			dbg_msg("wiki/media", "animated webp atlas rejected: %dx%d", AtlasWidth, AtlasHeight);
+			return false;
+		}
 		uint8_t *pAtlas = static_cast<uint8_t *>(malloc(AtlasBytes));
 		if(pAtlas == nullptr)
 			return false;
@@ -435,9 +462,10 @@ void qm_wiki_media::Draw(const SWikiMedia &Media, const CUIRect &Rect, ColorRGBA
 	if(Media.m_Fps > 0.0f && Media.m_Frames > 1)
 	{
 		const double Seconds = static_cast<double>(time_get_nanoseconds().count()) / 1.0e9;
-		Frame = static_cast<int>(Seconds * Media.m_Fps) % Media.m_Frames;
-		if(Frame < 0)
-			Frame = 0;
+		// 先对帧数取模再转 int：运行时间乘以 fps 会立刻超出 int 范围（转换是未定义行为）。
+		const double Frames = static_cast<double>(Media.m_Frames);
+		const double Position = std::fmod(Seconds * static_cast<double>(Media.m_Fps), Frames);
+		Frame = static_cast<int>(std::max(0.0, Position)) % Media.m_Frames;
 	}
 	const int Col = Frame % Media.m_Cols;
 	const int Row = Frame / Media.m_Cols;

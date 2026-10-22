@@ -2057,6 +2057,9 @@ Cannot open word list file. Previous words remain active.
 Cannot read complete word list file. Previous words remain active.
 == 無法完整讀取詞表檔案，繼續使用上次成功載入的詞條。
 
+Cannot remove the wiki file
+== 無法刪除 Wiki 檔案
+
 Cannot swap: the other player is not in your team
 == 無法交換：對方不在你的隊伍中
 
@@ -3127,6 +3130,9 @@ Container format: MP4 is the most compatible, MOV suits editing, MKV suits lossl
 
 Container:
 == 封裝格式:
+
+Contents
+== 目錄
 
 Continue anyway?
 == 仍要退出？

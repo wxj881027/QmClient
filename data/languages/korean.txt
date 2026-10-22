@@ -2057,6 +2057,9 @@ Cannot open word list file. Previous words remain active.
 Cannot read complete word list file. Previous words remain active.
 == 단어 목록 파일을 완전히 읽을 수 없습니다. 이전 단어 목록을 유지합니다.
 
+Cannot remove the wiki file
+== Wiki 파일을 삭제할 수 없습니다
+
 Cannot swap: the other player is not in your team
 == 스왑할 수 없음: 상대방이 당신의 팀에 없습니다
 
@@ -3127,6 +3130,9 @@ Container format: MP4 is the most compatible, MOV suits editing, MKV suits lossl
 
 Container:
 == 컨테이너:
+
+Contents
+== 목차
 
 Continue anyway?
 == 그래도 계속하시겠습니까?
