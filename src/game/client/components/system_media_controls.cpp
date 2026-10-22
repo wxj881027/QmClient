@@ -34,7 +34,6 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
-#include <deque>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -56,7 +55,6 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
-#include <deque>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -89,27 +87,15 @@ struct SPlainState
 	double m_PlaybackRate = 1.0;
 };
 
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-enum class ECommand
-{
-	Prev,
-	PlayPause,
-	Next,
-};
-
-struct SMediaCommand
-{
-	ECommand m_Type;
-	std::string m_SourceAppId;
-	uint64_t m_Generation = 0;
-};
+using ECommand = CQmMediaCommandQueue::ECommand;
+using SMediaCommand = CQmMediaCommandQueue::SCommand;
 
 struct CSystemMediaControls::SShared
 {
 	std::mutex m_Mutex;
 	SPlainState m_State{};
 	bool m_HasMedia = false;
-	std::deque<SMediaCommand> m_Commands;
+	CQmMediaCommandQueue m_Commands;
 	QmMediaVolume::CPendingVolume m_PendingVolume;
 	std::unique_ptr<CQmPreparedMediaArt> m_pAlbumArt;
 	int m_AlbumArtWidth = 0;
@@ -270,7 +256,7 @@ static void ResetSharedState(CSystemMediaControls::SShared *pShared, SPlainState
 	pShared->m_State = State;
 	pShared->m_HasMedia = false;
 	pShared->m_PendingVolume.Reset();
-	pShared->m_Commands.clear();
+	pShared->m_Commands.Clear();
 }
 
 static void ApplyRoundedMask(std::vector<uint8_t> &Pixels, int Width, int Height, float Radius);
@@ -823,10 +809,10 @@ void CSystemMediaControls::ThreadMain()
 					m_pShared->m_HasMedia = HasMedia;
 				}
 
-				std::deque<SMediaCommand> Commands;
+				CQmMediaCommandQueue::TBatch Commands;
 				{
 					std::scoped_lock Lock(m_pShared->m_Mutex);
-					Commands.swap(m_pShared->m_Commands);
+					m_pShared->m_Commands.Take(Commands);
 				}
 				if(Session)
 				{
@@ -1191,7 +1177,7 @@ static void ResetMprisSharedState(CSystemMediaControls::SShared *pShared)
 	pShared->m_State = SPlainState{};
 	pShared->m_HasMedia = false;
 	pShared->m_PendingVolume.Reset();
-	pShared->m_Commands.clear();
+	pShared->m_Commands.Clear();
 }
 
 void CSystemMediaControls::ThreadMain()
@@ -1445,10 +1431,10 @@ void CSystemMediaControls::ThreadMain()
 				m_pShared->m_HasMedia = true;
 			}
 
-			std::deque<SMediaCommand> Commands;
+			CQmMediaCommandQueue::TBatch Commands;
 			{
 				std::scoped_lock Lock(m_pShared->m_Mutex);
-				Commands.swap(m_pShared->m_Commands);
+				m_pShared->m_Commands.Take(Commands);
 			}
 			for(const SMediaCommand &Command : Commands)
 			{
@@ -1712,37 +1698,39 @@ bool CSystemMediaControls::GetNeteaseSnapshot(QmNeteaseHook::SSnapshotV5 &Snapsh
 	return true;
 }
 
-void CSystemMediaControls::Previous()
+void CSystemMediaControls::SubmitCommand(CQmMediaCommandQueue::ECommand Command) noexcept
 {
 #if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
-	const SState *pMainState = ActiveState();
-	if(pMainState == nullptr)
-		return;
-	std::scoped_lock Lock(m_pShared->m_Mutex);
-	m_pShared->m_Commands.push_back({ECommand::Prev, pMainState->m_aSourceAppId, pMainState->m_VolumeGeneration});
+	try
+	{
+		const SState *pMainState = ActiveState();
+		if(pMainState == nullptr)
+			return;
+		std::scoped_lock Lock(m_pShared->m_Mutex);
+		m_pShared->m_Commands.TryEnqueue(Command, pMainState->m_aSourceAppId, pMainState->m_VolumeGeneration);
+	}
+	catch(...)
+	{
+		// 后端不可用或提交失败只影响此命令，不让按钮回调中断主循环。
+	}
+#else
+	(void)Command;
 #endif
 }
 
-void CSystemMediaControls::PlayPause()
+void CSystemMediaControls::Previous() noexcept
 {
-#if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
-	const SState *pMainState = ActiveState();
-	if(pMainState == nullptr)
-		return;
-	std::scoped_lock Lock(m_pShared->m_Mutex);
-	m_pShared->m_Commands.push_back({ECommand::PlayPause, pMainState->m_aSourceAppId, pMainState->m_VolumeGeneration});
-#endif
+	SubmitCommand(CQmMediaCommandQueue::ECommand::Prev);
 }
 
-void CSystemMediaControls::Next()
+void CSystemMediaControls::PlayPause() noexcept
 {
-#if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
-	const SState *pMainState = ActiveState();
-	if(pMainState == nullptr)
-		return;
-	std::scoped_lock Lock(m_pShared->m_Mutex);
-	m_pShared->m_Commands.push_back({ECommand::Next, pMainState->m_aSourceAppId, pMainState->m_VolumeGeneration});
-#endif
+	SubmitCommand(CQmMediaCommandQueue::ECommand::PlayPause);
+}
+
+void CSystemMediaControls::Next() noexcept
+{
+	SubmitCommand(CQmMediaCommandQueue::ECommand::Next);
 }
 
 void CSystemMediaControls::SetVolume(uint64_t Generation, float Volume)

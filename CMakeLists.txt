@@ -3551,6 +3551,7 @@ if(CLIENT)
     components/qmclient/markdown_cache_writer.h
     components/qmclient/statistics_save_job.h
     components/qmclient/media_volume_logic.h
+    components/qmclient/media_command_queue.h
     components/qmclient/player_volume.cpp
     components/qmclient/player_volume.h
     components/qmclient/scoreboard_media_controls.cpp
@@ -4960,6 +4961,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_media_island_motion_test.cpp
     src/test/unit/qmclient/client/qm_media_island_track_state_test.cpp
     src/test/unit/qmclient/client/qm_media_volume_test.cpp
+    src/test/unit/qmclient/client/qm_media_command_queue_test.cpp
+    src/test/integration/qmclient/client/qm_media_command_handoff_test.cpp
     src/test/unit/qmclient/client/qm_mpris_policy_test.cpp
     src/test/unit/qmclient/client/qm_media_island_layout_test.cpp
     src/test/unit/qmclient/client/qm_legacy_media_hud_test.cpp

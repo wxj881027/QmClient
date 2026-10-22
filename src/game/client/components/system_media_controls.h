@@ -5,6 +5,7 @@
 #include <engine/graphics.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/media_command_queue.h>
 #include <game/client/components/qmclient/netease_hook/qm_netease_hook_provider.h>
 
 #include <algorithm>
@@ -167,12 +168,13 @@ public:
 	bool GetStateSnapshot(SState &State) const;
 	// 读取网易云私有 v5 快照；不会把其字段合并到标准 SMTC 状态。
 	bool GetNeteaseSnapshot(QmNeteaseHook::SSnapshotV5 &Snapshot) const;
-	void Previous();
-	void PlayPause();
-	void Next();
+	void Previous() noexcept;
+	void PlayPause() noexcept;
+	void Next() noexcept;
 	void SetVolume(uint64_t Generation, float Volume);
 
 private:
+	void SubmitCommand(CQmMediaCommandQueue::ECommand Command) noexcept;
 	void SyncNeteaseHookConfiguration();
 
 	std::unique_ptr<CQmNeteaseHookProvider> m_pNeteaseHook;
