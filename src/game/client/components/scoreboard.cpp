@@ -1079,7 +1079,7 @@ void CScoreboard::BuildPlayerRowPlan(int Team, CScoreboardPlayerRowPlan &Plan)
 			Row.m_Dead = IsDead;
 		}
 	}
-	CacheAndRestoreQmScoreboardTeamModes(Plan.m_aTeamModes, Plan.m_aTeamHasPlayer, m_aCachedTeamModes);
+	RestoreQmScoreboardTeamModes(Plan.m_aTeamModes, Plan.m_aTeamHasPlayer, m_aCachedTeamModes);
 }
 
 void CScoreboard::RenderTeamModeIcons(float x, float y, float IconSize, const SQmScoreboardTeamModeState &State, float Alpha)

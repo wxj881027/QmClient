@@ -4861,6 +4861,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/map_difficulty_catalog_test.cpp
     src/test/unit/qmclient/ui/vote_map_library_test.cpp
     src/test/unit/qmclient/ui/server_vote_list_test.cpp
+    src/test/unit/qmclient/ui/qm_scoreboard_team_mode_lifecycle_test.cpp
     src/test/unit/qmclient/ui/vote_menu_mode_test.cpp
     src/test/unit/qmclient/ui/players_menu_test.cpp
     src/test/unit/qmclient/ui/vote_player_targets_test.cpp
