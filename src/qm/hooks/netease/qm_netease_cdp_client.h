@@ -54,6 +54,7 @@ namespace QmNeteaseCdp
 
 		bool Start(uint32_t CloudMusicPid, std::wstring CommandLine, TReportCallback Callback);
 		void Stop();
+		bool IsRunning() const noexcept;
 		bool IsConnected() const;
 
 	private:

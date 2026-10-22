@@ -456,7 +456,7 @@ namespace
 			{
 				if(!IsAlreadyInjected(Candidate->m_Pid, HookPath))
 					Inject(Candidate->m_Pid, HookPath);
-				if(ActiveCloudMusicPid != Candidate->m_Pid)
+				if(ActiveCloudMusicPid != Candidate->m_Pid || !FrontendBridge.IsRunning())
 				{
 					FrontendBridge.Stop();
 					if(FrontendBridge.Start(Candidate->m_Pid, Candidate->m_CommandLine))

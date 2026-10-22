@@ -629,7 +629,8 @@ namespace QmNeteaseCdp
 			std::string Message;
 			if(!m_pImpl->m_WebSocket.ReceiveText(&Message, (int)std::min<int64_t>(Remaining, 500)))
 				return FailConnection();
-			json_value *pRoot = json_parse(Message.data(), Message.size());
+			const std::unique_ptr<json_value, decltype(&json_value_free)> Root(json_parse(Message.data(), Message.size()), json_value_free);
+			json_value *pRoot = Root.get();
 			if(pRoot == nullptr)
 				continue;
 			const json_value *pMethod = ObjectField(pRoot, "method");
@@ -637,7 +638,6 @@ namespace QmNeteaseCdp
 			{
 				if(m_pImpl->m_NotificationCallback)
 					m_pImpl->m_NotificationCallback(Message);
-				json_value_free(pRoot);
 				continue;
 			}
 			const json_value *pId = ObjectField(pRoot, "id");
@@ -649,10 +649,8 @@ namespace QmNeteaseCdp
 				if(pResultJson != nullptr)
 					*pResultJson = pError == nullptr && pResult != nullptr ? Message : "";
 				const bool Success = pError == nullptr;
-				json_value_free(pRoot);
 				return Success;
 			}
-			json_value_free(pRoot);
 		}
 #else
 		(void)Method;
@@ -681,14 +679,14 @@ namespace QmNeteaseCdp
 			return false;
 		if(pValueJson == nullptr)
 			return true;
-		json_value *pRoot = json_parse(Result.data(), Result.size());
+		const std::unique_ptr<json_value, decltype(&json_value_free)> Root(json_parse(Result.data(), Result.size()), json_value_free);
+		json_value *pRoot = Root.get();
 		if(pRoot == nullptr)
 			return false;
 		const json_value *pOuter = ObjectField(pRoot, "result");
 		const json_value *pValue = ObjectField(pOuter, "result");
 		if(pValue == nullptr || pValue->type != json_object)
 		{
-			json_value_free(pRoot);
 			return false;
 		}
 		const json_value *pValueField = ObjectField(pValue, "value");
@@ -696,7 +694,6 @@ namespace QmNeteaseCdp
 			*pValueJson = std::string(pValueField->u.string.ptr, pValueField->u.string.length);
 		else
 			pValueJson->clear();
-		json_value_free(pRoot);
 		return pValueField != nullptr;
 	}
 
@@ -711,12 +708,12 @@ namespace QmNeteaseCdp
 			m_pImpl->m_WebSocket.Close();
 			return false;
 		}
-		json_value *pRoot = json_parse(Message.data(), Message.size());
+		const std::unique_ptr<json_value, decltype(&json_value_free)> Root(json_parse(Message.data(), Message.size()), json_value_free);
+		json_value *pRoot = Root.get();
 		if(pRoot != nullptr)
 		{
 			if(ObjectField(pRoot, "method") != nullptr && m_pImpl->m_NotificationCallback)
 				m_pImpl->m_NotificationCallback(Message);
-			json_value_free(pRoot);
 		}
 		return true;
 #else
@@ -729,6 +726,7 @@ namespace QmNeteaseCdp
 	{
 		std::atomic_bool m_Stop{false};
 		std::atomic_bool m_Connected{false};
+		std::atomic_bool m_Finished{true};
 		uint32_t m_CloudMusicPid = 0;
 		std::wstring m_CommandLine;
 		TReportCallback m_Callback;
@@ -749,8 +747,29 @@ namespace QmNeteaseCdp
 		m_pImpl->m_CloudMusicPid = CloudMusicPid;
 		m_pImpl->m_CommandLine = std::move(CommandLine);
 		m_pImpl->m_Callback = std::move(Callback);
-		m_pImpl->m_Thread = std::thread(&CFrontendBridgeWorker::Run, this);
-		return true;
+		m_pImpl->m_Finished.store(false, std::memory_order_relaxed);
+		try
+		{
+			m_pImpl->m_Thread = std::thread([this] {
+				try
+				{
+					Run();
+				}
+				catch(...)
+				{
+					// 会话局部资源先展开，再通知所属 owner 重开。
+				}
+				m_pImpl->m_Connected.store(false, std::memory_order_release);
+				m_pImpl->m_Finished.store(true, std::memory_order_release);
+			});
+			return true;
+		}
+		catch(...)
+		{
+			m_pImpl->m_Stop.store(true, std::memory_order_release);
+			m_pImpl->m_Finished.store(true, std::memory_order_release);
+			return false;
+		}
 	}
 
 	void CFrontendBridgeWorker::Stop()
@@ -761,6 +780,13 @@ namespace QmNeteaseCdp
 		if(m_pImpl->m_Thread.joinable())
 			m_pImpl->m_Thread.join();
 		m_pImpl->m_Connected = false;
+		m_pImpl->m_Finished.store(true, std::memory_order_release);
+		m_pImpl->m_Callback = {};
+	}
+
+	bool CFrontendBridgeWorker::IsRunning() const noexcept
+	{
+		return m_pImpl && !m_pImpl->m_Finished.load(std::memory_order_acquire);
 	}
 
 	bool CFrontendBridgeWorker::IsConnected() const
@@ -1102,7 +1128,8 @@ return "installed";
 					Session.SetNotificationCallback([this](std::string_view Message) {
 						if(!m_pImpl->m_Callback)
 							return;
-						json_value *pRoot = json_parse(Message.data(), Message.size());
+						const std::unique_ptr<json_value, decltype(&json_value_free)> Root(json_parse(Message.data(), Message.size()), json_value_free);
+						json_value *pRoot = Root.get();
 						if(pRoot == nullptr)
 							return;
 						const json_value *pMethod = ObjectField(pRoot, "method");
@@ -1116,7 +1143,6 @@ return "installed";
 						{
 							m_pImpl->m_Callback(std::string_view(pPayload->u.string.ptr, pPayload->u.string.length));
 						}
-						json_value_free(pRoot);
 					});
 					std::string Ignored;
 					const std::string HookScript = BuildInstallHookScript();

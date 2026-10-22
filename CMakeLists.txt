@@ -5071,6 +5071,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/music/netease_shared_memory_test.cpp
     src/test/unit/qmclient/music/qm_netease_hook_protocol_test.cpp
     src/test/unit/qmclient/music/qm_netease_hook_numeric_validation_test.cpp
+    src/test/unit/qmclient/music/qm_netease_bridge_startup_test.cpp
+    src/test/integration/qmclient/music/qm_netease_bridge_lifecycle_test.cpp
     src/test/unit/qmclient/music/qm_music_app_watcher_test.cpp
     src/test/unit/qmclient/music/qm_qqmusic_protocol_test.cpp
     src/test/unit/qmclient/music/qm_music_transport_test.cpp
@@ -5404,6 +5406,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/game/client/components/qmclient/music_lyrics/qm_spotify_parser.cpp
     src/qm/music/qm_music_publication.cpp
     src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
+    src/qm/hooks/netease/qm_netease_frontend_bridge.cpp
+    src/test/support/qm_netease_bridge_operations.h
     src/game/client/components/qmclient/netease/netease_lyric_state.cpp
     src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp
     src/game/client/components/qmclient/netease/netease_shared_memory.cpp
@@ -5461,6 +5465,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/qm/hooks/netease/qm_netease_bootstrap.cpp
       src/qm/hooks/netease/qm_netease_cdp.cpp
       src/qm/hooks/netease/qm_netease_cdp_client.cpp
+      src/game/client/components/qmclient/netease_hook/qm_netease_hook_v5_writer.cpp
     )
   endif()
 
@@ -5582,6 +5587,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/music/netease_shared_memory_test.cpp
       src/test/unit/qmclient/music/qm_netease_hook_protocol_test.cpp
       src/test/unit/qmclient/music/qm_netease_hook_numeric_validation_test.cpp
+      src/test/unit/qmclient/music/qm_netease_bridge_startup_test.cpp
+      src/test/integration/qmclient/music/qm_netease_bridge_lifecycle_test.cpp
       src/test/unit/qmclient/music/qm_spotify_crypto_test.cpp
       src/test/unit/qmclient/music/qm_spotify_token_test.cpp
       src/test/unit/qmclient/music/qm_spotify_parser_test.cpp
@@ -5603,6 +5610,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/qm/music/qm_qqmusic_protocol.cpp
       src/test/support/music_config_test_support.cpp
       src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
+      src/qm/hooks/netease/qm_netease_frontend_bridge.cpp
+      src/test/support/qm_netease_bridge_operations.h
       src/game/client/components/qmclient/netease/netease_lyric_state.cpp
       src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp
       src/game/client/components/qmclient/netease/netease_shared_memory.cpp
@@ -5624,6 +5633,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
         src/test/unit/qmclient/music/qm_netease_cdp_test.cpp
         src/qm/hooks/netease/qm_netease_bootstrap.cpp
         src/qm/hooks/netease/qm_netease_cdp_client.cpp
+        src/game/client/components/qmclient/netease_hook/qm_netease_hook_v5_writer.cpp
       )
       target_compile_definitions(qm-nmt-tests PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
       target_link_libraries(qm-nmt-tests bcrypt winhttp ws2_32)

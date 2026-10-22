@@ -1,5 +1,7 @@
 #include "qm_netease_frontend_bridge.h"
 
+#include "qm_netease_cdp_client.h"
+
 #include <engine/external/json-parser/json.h>
 
 #include <algorithm>
@@ -228,17 +230,15 @@ namespace QmNeteaseBridge
 			*pRaw = {};
 			if(Report.empty() || Report.size() > 4 * 1024 * 1024)
 				return false;
-			json_value *pRoot = json_parse(Report.data(), Report.size());
+			const std::unique_ptr<json_value, decltype(&json_value_free)> Root(json_parse(Report.data(), Report.size()), json_value_free);
+			json_value *pRoot = Root.get();
 			if(pRoot == nullptr || (pRoot->type != json_object && pRoot->type != json_array))
 			{
-				if(pRoot != nullptr)
-					json_value_free(pRoot);
 				return false;
 			}
 			const json_value *pKindValue = Field(pRoot, "kind");
 			if(pKindValue != nullptr && pKindValue->type != json_string)
 			{
-				json_value_free(pRoot);
 				return false;
 			}
 			*pKind = pKindValue != nullptr ? StringValue(pKindValue) : "lyrics";
@@ -272,7 +272,6 @@ namespace QmNeteaseBridge
 			}
 			if(*pKind == "lyrics" && pRaw->m_Lrc.empty() && pRaw->m_Yrc.empty())
 				ExtractRaw(pRoot, pRaw);
-			json_value_free(pRoot);
 			return *pKind == "lyrics" || *pKind == "progress";
 		}
 
@@ -297,70 +296,153 @@ namespace QmNeteaseBridge
 		}
 	}
 
+#if defined(_WIN32)
+	namespace
+	{
+		class CNativeBridgeOperations : public CFrontendLyricBridge::COperations
+		{
+			QmNeteaseCdp::CFrontendBridgeWorker m_Worker;
+			QmNeteaseHook::CV5Writer m_Writer;
+
+		public:
+			bool OpenWriter() override { return m_Writer.Open(true); }
+			void CloseWriter() noexcept override { m_Writer.Close(); }
+			bool ReadSnapshot(QmNeteaseHook::SSnapshotV5 &Snapshot) override { return m_Writer.Read(&Snapshot); }
+			bool PublishSnapshot(QmNeteaseHook::SSnapshotV5 Snapshot) override { return m_Writer.Publish(Snapshot); }
+			bool StartReports(uint32_t Pid, const std::wstring &CommandLine, TReportCallback Callback) override { return m_Worker.Start(Pid, CommandLine, std::move(Callback)); }
+			void StopReports() noexcept override { m_Worker.Stop(); }
+			bool ReportsRunning() const noexcept override { return m_Worker.IsRunning(); }
+			bool IsConnected() const noexcept override { return m_Worker.IsConnected(); }
+		};
+	}
+#endif
+
+	uint64_t CFrontendLyricBridge::COperations::NowTick() const { return QmNeteaseBridge::NowTick(); }
+	std::thread CFrontendLyricBridge::COperations::CreateTickThread(std::function<void()> Run) { return std::thread(std::move(Run)); }
+	void CFrontendLyricBridge::COperations::WaitForTick(const std::atomic_bool &) { std::this_thread::sleep_for(std::chrono::milliseconds(100)); }
+
 	CFrontendLyricBridge::CFrontendLyricBridge() = default;
+	CFrontendLyricBridge::CFrontendLyricBridge(COperations &Operations) :
+		m_pOperations(&Operations) {}
 	CFrontendLyricBridge::~CFrontendLyricBridge() { Stop(); }
 
-	bool CFrontendLyricBridge::Start(uint32_t CloudMusicPid, std::wstring CommandLine)
+	bool CFrontendLyricBridge::Start(uint32_t CloudMusicPid, const std::wstring &CommandLine) noexcept
 	{
 		Stop();
-		if(CloudMusicPid == 0 || !m_Writer.Open(true))
+		if(CloudMusicPid == 0)
 			return false;
-		uint64_t PreviousGeneration = 0;
-		QmNeteaseHook::SSnapshotV5 PreviousSnapshot{};
-		if(m_Writer.Read(&PreviousSnapshot))
-			PreviousGeneration = PreviousSnapshot.m_Generation;
+		try
 		{
-			std::scoped_lock Lock(m_Mutex);
-			m_CloudMusicPid = CloudMusicPid;
-			m_SongId = 0;
-			// 保留共享 mapping 中的 generation，并在每次 helper instance
-			// 启动时推进一次，避免同一歌曲的重连被误认成旧进程。
-			m_Generation = PreviousGeneration == std::numeric_limits<uint64_t>::max() ? 1 : PreviousGeneration + 1;
-			m_HasSong = false;
-			m_PositionValid = false;
-			m_PlayingHint = false;
-			m_PlayingHintKnown = false;
-			m_PositionMs = 0;
-			m_Anchor.Reset();
-			m_Timeline.Clear();
-			m_Source = QmNeteaseHook::ENeteaseLyricSource::None;
-			m_CurrentLyric.clear();
-			m_LineStartMs = -1;
-			m_LineEndMs = -1;
-			m_LastReportTick = 0;
-			m_LastProgressTick = 0;
-			m_PendingLyricsSongId = 0;
-			m_PendingTimeline.Clear();
-		}
-		m_Stop = false;
-		if(!m_Worker.Start(CloudMusicPid, std::move(CommandLine), [this](std::string_view Report) { OnFrontendReport(Report); }))
-		{
-			m_Writer.Close();
-			return false;
-		}
-		Publish(true);
-		m_TickThread = std::thread([this] {
-			while(!m_Stop.load(std::memory_order_acquire))
+			if(!m_pOperations)
 			{
-				Tick();
-				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+#if defined(_WIN32)
+				m_pOwnedOperations = std::make_unique<CNativeBridgeOperations>();
+				m_pOperations = m_pOwnedOperations.get();
+#else
+				return false;
+#endif
 			}
-		});
-		return true;
+			if(!m_pOperations->OpenWriter())
+			{
+				Stop();
+				return false;
+			}
+			uint64_t PreviousGeneration = 0;
+			QmNeteaseHook::SSnapshotV5 PreviousSnapshot{};
+			if(m_pOperations->ReadSnapshot(PreviousSnapshot))
+				PreviousGeneration = PreviousSnapshot.m_Generation;
+			{
+				std::scoped_lock Lock(m_Mutex);
+				m_CloudMusicPid = CloudMusicPid;
+				m_SongId = 0;
+				// 保留共享 mapping 中的 generation，并在每次 helper instance
+				// 启动时推进一次，避免同一歌曲的重连被误认成旧进程。
+				m_Generation = PreviousGeneration == std::numeric_limits<uint64_t>::max() ? 1 : PreviousGeneration + 1;
+				m_HasSong = false;
+				m_PositionValid = false;
+				m_PlayingHint = false;
+				m_PlayingHintKnown = false;
+				m_PositionMs = 0;
+				m_Anchor.Reset();
+				m_Timeline.Clear();
+				m_Source = QmNeteaseHook::ENeteaseLyricSource::None;
+				m_CurrentLyric.clear();
+				m_LineStartMs = -1;
+				m_LineEndMs = -1;
+				m_LastReportTick = 0;
+				m_LastProgressTick = 0;
+				m_PendingLyricsSongId = 0;
+				m_PendingTimeline.Clear();
+			}
+			m_Stop.store(false, std::memory_order_release);
+			if(!m_pOperations->StartReports(CloudMusicPid, CommandLine, [this](std::string_view Report) { OnFrontendReport(Report); }))
+			{
+				Stop();
+				return false;
+			}
+			Publish(true);
+			m_TickFinished.store(false, std::memory_order_relaxed);
+			auto Thread = m_pOperations->CreateTickThread([this] { RunTick(); });
+			if(!Thread.joinable())
+			{
+				Stop();
+				return false;
+			}
+			m_TickThread = std::move(Thread);
+			return true;
+		}
+		catch(...)
+		{
+			Stop();
+			return false;
+		}
 	}
 
-	void CFrontendLyricBridge::Stop()
+	void CFrontendLyricBridge::Stop() noexcept
 	{
-		m_Stop = true;
-		m_Worker.Stop();
+		m_Stop.store(true, std::memory_order_release);
+		if(m_pOperations)
+			m_pOperations->StopReports();
 		if(m_TickThread.joinable())
 			m_TickThread.join();
-		m_Writer.Close();
+		m_TickFinished.store(true, std::memory_order_release);
+		if(m_pOperations)
+			m_pOperations->CloseWriter();
+	}
+
+	bool CFrontendLyricBridge::IsRunning() const noexcept
+	{
+		return m_pOperations && !m_Stop.load(std::memory_order_acquire) && !m_TickFinished.load(std::memory_order_acquire) && m_pOperations->ReportsRunning();
 	}
 
 	bool CFrontendLyricBridge::IsConnected() const
 	{
-		return m_Worker.IsConnected();
+		return IsRunning() && m_pOperations->IsConnected();
+	}
+
+	void CFrontendLyricBridge::RunTick() noexcept
+	{
+		try
+		{
+			while(!m_Stop.load(std::memory_order_acquire))
+			{
+				try
+				{
+					Tick();
+				}
+				catch(...)
+				{
+					// 本轮准备或发布失败，保留完整状态供下一周期重试。
+				}
+				m_pOperations->WaitForTick(m_Stop);
+			}
+		}
+		catch(...)
+		{
+			// 等待设施异常时结束线程，由外层 helper 的原轮询检测并重开。
+			m_Stop.store(true, std::memory_order_release);
+		}
+		m_TickFinished.store(true, std::memory_order_release);
 	}
 
 	void CFrontendLyricBridge::ClearLyricsLocked()
@@ -401,7 +483,21 @@ namespace QmNeteaseBridge
 		return true;
 	}
 
-	void CFrontendLyricBridge::OnFrontendReport(std::string_view Report)
+	void CFrontendLyricBridge::OnFrontendReport(std::string_view Report) noexcept
+	{
+		if(m_Stop.load(std::memory_order_acquire))
+			return;
+		try
+		{
+			ApplyFrontendReport(Report);
+		}
+		catch(...)
+		{
+			// 解析候选自动回收；后续报告和 Tick 仍可继续。
+		}
+	}
+
+	void CFrontendLyricBridge::ApplyFrontendReport(std::string_view Report)
 	{
 		std::string Kind;
 		uint64_t SongId = 0;
@@ -423,12 +519,14 @@ namespace QmNeteaseBridge
 		// progress 的 songId 立即清理，合法歌词报告只负责安装新时间轴。
 		if(Kind == "lyrics" && !ParsedLyrics)
 			return;
-		const uint64_t ReportTick = NowTick();
+		const uint64_t ReportTick = m_pOperations->NowTick();
 		bool NeedPublish = false;
 		bool ForcePublish = false;
 		bool PositionAnchored = false;
 		{
 			std::scoped_lock Lock(m_Mutex);
+			if(m_Stop.load(std::memory_order_acquire))
+				return;
 			if(Kind == "progress")
 			{
 				if(SongId != 0 && SwitchSongLocked(SongId))
@@ -494,12 +592,12 @@ namespace QmNeteaseBridge
 
 	void CFrontendLyricBridge::Tick()
 	{
-		const bool WorkerConnected = m_Worker.IsConnected();
+		const bool WorkerConnected = m_pOperations->IsConnected();
 		{
 			std::scoped_lock Lock(m_Mutex);
 			if(!m_HasSong)
 				return;
-			const uint64_t Now = NowTick();
+			const uint64_t Now = m_pOperations->NowTick();
 			const uint64_t ReportTimeout = WorkerConnected ? FRONTEND_REPORT_STALE_MS : 1000;
 			if(m_LastReportTick != 0 && Now - m_LastReportTick > ReportTimeout)
 			{
@@ -518,8 +616,16 @@ namespace QmNeteaseBridge
 			}
 			if(m_PositionValid)
 			{
-				m_PositionMs = m_Anchor.Estimate();
-				const NeteaseLyrics::SSelectedLine Selected = NeteaseLyrics::SelectCurrentLine(m_Timeline, m_PositionMs);
+				const int64_t Position = m_Anchor.Estimate();
+				const NeteaseLyrics::SSelectedLine Selected = NeteaseLyrics::SelectCurrentLine(m_Timeline, Position);
+				// 当前句改变时先准备文本；重复 Tick 不为相同歌词另建缓冲。
+				const bool Changed = Selected.m_pLine ? m_CurrentLyric != Selected.m_pLine->m_Text : !m_CurrentLyric.empty();
+				std::string CurrentLyric;
+				if(Changed && Selected.m_pLine)
+					CurrentLyric = Selected.m_pLine->m_Text;
+				m_PositionMs = Position;
+				if(Changed)
+					m_CurrentLyric.swap(CurrentLyric);
 				if(Selected.m_pLine == nullptr)
 				{
 					m_CurrentLyric.clear();
@@ -528,7 +634,6 @@ namespace QmNeteaseBridge
 				}
 				else
 				{
-					m_CurrentLyric = Selected.m_pLine->m_Text;
 					m_LineStartMs = Selected.m_pLine->m_StartMs;
 					m_LineEndMs = Selected.m_pLine->m_EndMs;
 				}
@@ -546,7 +651,7 @@ namespace QmNeteaseBridge
 			Snapshot.m_CloudMusicPid = m_CloudMusicPid;
 			Snapshot.m_Generation = m_Generation;
 			Snapshot.m_SongId = m_SongId;
-			Snapshot.m_UpdatedAtTick = NowTick();
+			Snapshot.m_UpdatedAtTick = m_pOperations->NowTick();
 			Snapshot.m_PositionMs = std::max<int64_t>(0, m_PositionMs);
 			Snapshot.m_Flags = 0;
 			if(m_HasSong && m_SongId != 0)
@@ -575,9 +680,9 @@ namespace QmNeteaseBridge
 		if(!Force && !HighPriorityTimelineActive)
 		{
 			QmNeteaseHook::SSnapshotV5 Existing{};
-			if(m_Writer.Read(&Existing) && QmNeteaseHook::ShouldPreserveDesktopFallbackV5(Existing, Snapshot, Snapshot.m_UpdatedAtTick, FALLBACK_SNAPSHOT_STALE_MS))
+			if(m_pOperations->ReadSnapshot(Existing) && QmNeteaseHook::ShouldPreserveDesktopFallbackV5(Existing, Snapshot, Snapshot.m_UpdatedAtTick, FALLBACK_SNAPSHOT_STALE_MS))
 				return;
 		}
-		m_Writer.Publish(Snapshot);
+		m_pOperations->PublishSnapshot(Snapshot);
 	}
 }
