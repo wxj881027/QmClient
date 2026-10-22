@@ -73,3 +73,32 @@ TEST_F(DemoSeekIntegration, SeekingNearTheMaximumTickKeepsAValidKeyframe)
 	EXPECT_TRUE(m_Player.IsPlaying());
 	EXPECT_EQ(m_Player.Info()->m_Info.m_CurrentTick, MAX_TICK - 1);
 }
+
+TEST_F(DemoSeekIntegration, SeekingWhileManuallyPausedDoesNotResumePlayback)
+{
+	ASSERT_NO_FATAL_FAILURE(Load({100, 200, 300, 400}));
+	ASSERT_TRUE(m_Player.Play());
+	m_Player.Pause();
+	ASSERT_TRUE(m_Player.SetPos(301));
+	EXPECT_TRUE(m_Player.Info()->m_Info.m_Paused);
+	const int PausedTick = m_Player.Info()->m_Info.m_CurrentTick;
+	m_Player.Update(false);
+	EXPECT_EQ(m_Player.Info()->m_Info.m_CurrentTick, PausedTick);
+	m_Player.Unpause();
+	m_Player.Update(false);
+	EXPECT_EQ(m_Player.Info()->m_Info.m_CurrentTick, 400);
+}
+
+TEST_F(DemoSeekIntegration, SeekingAfterEndKeepsThePauseUntilExplicitlyResumed)
+{
+	ASSERT_NO_FATAL_FAILURE(Load({100, 200, 300, 400}));
+	ASSERT_TRUE(m_Player.Play());
+	m_Player.Update(false);
+	ASSERT_TRUE(m_Player.Info()->m_Info.m_Paused);
+	ASSERT_TRUE(m_Player.SetPos(201));
+	EXPECT_TRUE(m_Player.Info()->m_Info.m_Paused);
+	EXPECT_EQ(m_Player.Info()->m_Info.m_CurrentTick, 200);
+	m_Player.Unpause();
+	m_Player.Update(false);
+	EXPECT_EQ(m_Player.Info()->m_Info.m_CurrentTick, 400);
+}

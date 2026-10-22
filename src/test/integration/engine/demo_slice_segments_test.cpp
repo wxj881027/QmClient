@@ -1,5 +1,7 @@
 #include <engine/shared/demo_output.h>
 
+#include <generated/protocol.h>
+
 #include <gtest/gtest.h>
 #include <test/support/demo_storage_state.h>
 
@@ -20,6 +22,22 @@ namespace
 		}
 	};
 
+	class CSliceSnapshots : public CDemoPlayer::IListener
+	{
+	public:
+		CDemoPlayer *m_pPlayer = nullptr;
+		std::vector<int> m_vTicks;
+		std::vector<int> m_vValues;
+		void OnDemoPlayerSnapshot(void *pData, int) override
+		{
+			const auto *pFlag = static_cast<const CNetObj_Flag *>(static_cast<const CSnapshot *>(pData)->FindItem(NETOBJTYPE_FLAG, 0));
+			ASSERT_NE(pFlag, nullptr);
+			m_vTicks.push_back(m_pPlayer->Info()->m_Info.m_CurrentTick);
+			m_vValues.push_back(pFlag->m_X);
+		}
+		void OnDemoPlayerMessage(void *, int) override {}
+	};
+
 	class DemoSliceSegmentsIntegration : public ::testing::Test
 	{
 	protected:
@@ -36,8 +54,29 @@ namespace
 		{
 			return m_Editor.Slice("source.demo", "target.demo", vSegments, nullptr, nullptr);
 		}
-		void ExpectOutput(int First, int Last, const std::vector<int> &vMarkers = {})
+		void CreateChangingTimeline(std::initializer_list<int> Ticks, std::initializer_list<int> Markers)
 		{
+			unsigned char aMap[] = {'m', 'a', 'p', 'b', 'y', 't', 'e', 's'};
+			ASSERT_EQ(m_State.m_Recorder.Start(m_State.m_pStorage.get(), nullptr, "source.demo", "test", "map", SHA256_DIGEST{}, 0, "client", sizeof(aMap), aMap, nullptr, nullptr, nullptr), 0);
+			auto pBuilder = CSnapshotBuilder::New();
+			auto pBuffer = CSnapshotBuffer::New();
+			for(int Tick : Ticks)
+			{
+				pBuilder->Init(false);
+				CNetObj_Flag Flag{};
+				Flag.m_X = Tick;
+				ASSERT_TRUE(pBuilder->NewItem(NETOBJTYPE_FLAG, 0, Flag.AsSlice()));
+				const int Size = pBuilder->Finish(*pBuffer);
+				ASSERT_GT(Size, 0);
+				m_State.m_Recorder.RecordSnapshot(Tick, pBuffer->AsSnapshot(), Size, true);
+			}
+			for(int Tick : Markers)
+				ASSERT_TRUE(m_State.m_Recorder.AddDemoMarker(Tick));
+			ASSERT_EQ(m_State.m_Recorder.Stop(IDemoRecorder::EStopMode::KEEP_FILE), 0);
+		}
+		void ExpectOutput(int First, int Last, const std::vector<int> &vMarkers = {}, const std::vector<int> &vSnapshots = {}, const std::vector<int> &vValues = {})
+		{
+			CSliceSnapshots Snapshots;
 			CDemoPlayer Player(&*m_State.m_pDelta, &*m_State.m_pDeltaSixup, false, nullptr, CDemoPlayer::ETimeMode::UNCACHED);
 			const int Loaded = Player.Load(m_State.m_pStorage.get(), nullptr, "target.demo", IStorage::TYPE_SAVE, false);
 			EXPECT_EQ(Loaded, 0);
@@ -49,7 +88,19 @@ namespace
 				EXPECT_EQ(Info.m_NumTimelineMarkers, static_cast<int>(vMarkers.size()));
 				for(int i = 0; i < std::min(Info.m_NumTimelineMarkers, static_cast<int>(vMarkers.size())); ++i)
 					EXPECT_EQ(Info.m_aTimelineMarkers[i], vMarkers[i]);
-				EXPECT_TRUE(Player.Play());
+				if(!vSnapshots.empty())
+				{
+					Snapshots.m_pPlayer = &Player;
+					Player.SetListener(&Snapshots);
+				}
+				const bool Playing = Player.Play();
+				EXPECT_TRUE(Playing);
+				if(Playing && !vSnapshots.empty())
+				{
+					Player.Update(false);
+					EXPECT_EQ(Snapshots.m_vTicks, vSnapshots);
+					EXPECT_EQ(Snapshots.m_vValues, vValues);
+				}
 			}
 			Player.Stop();
 		}
@@ -88,8 +139,45 @@ TEST_F(DemoSliceSegmentsIntegration, ReversedEntryIsIgnoredWhenAnotherRangeIsUsa
 TEST_F(DemoSliceSegmentsIntegration, UnsortedRangesKeepTheExistingChronologicalJoin)
 {
 	ASSERT_NO_FATAL_FAILURE(m_State.CreateTimeline({100, 200, 300, 400}, {150, 350}));
+	const std::string Source = m_State.Read("source.demo");
 	ASSERT_TRUE(Slice({{300, 400}, {100, 200}}));
 	ExpectOutput(100, 301, {150, 251});
+	EXPECT_EQ(m_State.Read("source.demo"), Source);
+}
+
+TEST_F(DemoSliceSegmentsIntegration, SortedRangesResumeAfterThePreviousReadReachedSourceEnd)
+{
+	ASSERT_NO_FATAL_FAILURE(CreateChangingTimeline({100, 200, 300, 400, 500}, {150, 350, 500}));
+	ASSERT_TRUE(Slice({{100, 200}, {300, 400}}));
+	ExpectOutput(100, 301, {150, 251}, {100, 200, 201, 301}, {100, 200, 300, 400});
+}
+
+TEST_F(DemoSliceSegmentsIntegration, ThreeSeparatedRangesEachResumeBeyondSeekWarmup)
+{
+	ASSERT_NO_FATAL_FAILURE(CreateChangingTimeline({100, 200, 300, 400, 500, 600}, {150, 350, 550}));
+	ASSERT_TRUE(Slice({{100, 200}, {300, 400}, {500, 600}}));
+	ExpectOutput(100, 402, {150, 251, 352}, {100, 200, 201, 301, 302, 402}, {100, 200, 300, 400, 500, 600});
+}
+
+TEST_F(DemoSliceSegmentsIntegration, AdjacentRangesKeepAllRecordedSnapshots)
+{
+	ASSERT_NO_FATAL_FAILURE(CreateChangingTimeline({100, 200, 300, 400}, {150, 350}));
+	ASSERT_TRUE(Slice({{100, 200}, {201, 400}}));
+	ExpectOutput(100, 400, {150, 350}, {100, 200, 300, 400}, {100, 200, 300, 400});
+}
+
+TEST_F(DemoSliceSegmentsIntegration, OverlappingRangesResumeWithTheirOriginalOutputOffsets)
+{
+	ASSERT_NO_FATAL_FAILURE(CreateChangingTimeline({100, 200, 300, 400}, {250, 350}));
+	ASSERT_TRUE(Slice({{100, 300}, {200, 400}}));
+	ExpectOutput(100, 501, {250, 351, 451}, {100, 200, 300, 301, 401, 501}, {100, 200, 300, 200, 300, 400});
+}
+
+TEST_F(DemoSliceSegmentsIntegration, RepeatedWideRangeKeepsSnapshotsBeyondSeekWarmup)
+{
+	ASSERT_NO_FATAL_FAILURE(CreateChangingTimeline({100, 200, 300, 400}, {150, 350}));
+	ASSERT_TRUE(Slice({{100, 400}, {100, 400}}));
+	ExpectOutput(100, 701, {150, 350, 451, 651}, {100, 200, 300, 400, 401, 501, 601, 701}, {100, 200, 300, 400, 100, 200, 300, 400});
 }
 
 TEST_F(DemoSliceSegmentsIntegration, RepeatedRangeRetainsBothCopiesAndRelocatesMarkers)

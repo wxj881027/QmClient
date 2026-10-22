@@ -1809,6 +1809,8 @@ bool CDemoEditor::SliceImpl(const char *pDemo, const char *pDst, const std::vect
 		Listener.m_NeedsKeyframe = true;
 		DemoPlayer.SetListener(&Listener);
 
+		// 离线更新会读到源文件末尾并暂停；开始下一片段时恢复裁剪播放器。
+		DemoPlayer.Unpause();
 		if(!DemoPlayer.SetPos(Segment.m_StartTick + 1))
 			return false;
 
