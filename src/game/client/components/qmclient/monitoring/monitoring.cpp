@@ -646,7 +646,9 @@ void CQmMonitoring::UpdatePerformanceMetrics(SQmPerformanceMetrics &Perf)
 	Perf.m_FrameTimeUs = Client()->FrameTimeAverage() * 1000000.0f;
 	Perf.m_Fps = Perf.m_FrameTimeMs > 0.0f ? 1000.0f / Perf.m_FrameTimeMs : 0.0f;
 	Perf.m_PredictionTimeMs = (float)Client()->GetPredictionTime();
-	const SQmDevicePerfSample ProcessSample = ProcessPerfSamplerState().Snapshot().m_Sample;
+	auto &ProcessSampler = ProcessPerfSamplerState();
+	QmUpdateDevicePerfSamplerState(ProcessSampler, true);
+	const SQmDevicePerfSample ProcessSample = ProcessSampler.Snapshot().m_Sample;
 	Perf.m_CpuUsagePct = ProcessSample.m_CpuUsagePct;
 	Perf.m_TotalCpuUsagePct = ProcessSample.m_TotalCpuUsagePct;
 	Perf.m_MemoryUsageMb = ProcessSample.m_MemoryUsageMb;
