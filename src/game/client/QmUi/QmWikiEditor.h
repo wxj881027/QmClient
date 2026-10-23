@@ -44,7 +44,9 @@ struct SWikiEditorState
 	// 用已记录的 id 重新解析（保存、还原之后调用）。
 	void Reload();
 	// 进入编辑：没有未保存草稿才把当前内容变成草稿。
-	void BeginEditing();
+	// MaxDraftBytes 是编辑框缓冲的实际容量：放不下的文档返回 false 并给出错误状态，
+	// 不能让人在客户端里改一份被截断的副本——那样保存会直接覆盖掉后半篇正文。
+	bool BeginEditing(size_t MaxDraftBytes);
 	// 退出编辑：草稿保留，再次进入编辑可以接着改。
 	void LeaveEditing();
 	// 编辑框内容变化时调用。

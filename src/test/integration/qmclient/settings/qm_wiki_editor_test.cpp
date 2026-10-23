@@ -21,6 +21,9 @@ namespace
 	const char *const s_apSecondParagraphs[] = {"Second built-in paragraph."};
 	const SWikiSection s_aSecondSections[] = {{"Second built-in heading", s_apSecondParagraphs, 1}};
 
+	// 生产里由编辑框缓冲大小决定；除超出上限的用例外不关心具体容量。
+	constexpr size_t kEditorByteLimit = 1u << 20;
+
 	// 语言目录只影响落盘位置；固定成中文目录，避免测试依赖运行环境的 cl_languagefile。
 	class CScopedLanguageFile
 	{
@@ -103,7 +106,7 @@ TEST_F(CQmWikiEditorTest, SavedOverrideIsPickedUpByTheNextOpen)
 	{
 		SWikiEditorState First;
 		First.Load("qm:wiki-editor-test", m_Fallback, true);
-		First.BeginEditing();
+		First.BeginEditing(kEditorByteLimit);
 		First.SetDraft("## Draft\n\nDraft body.\n");
 		ASSERT_TRUE(First.Save());
 	}
@@ -120,7 +123,7 @@ TEST_F(CQmWikiEditorTest, SavingWritesUnderLanguageDirectoryAndClearsDraft)
 {
 	SWikiEditorState State;
 	State.Load("qm:wiki-editor-test", m_Fallback, true);
-	State.BeginEditing();
+	State.BeginEditing(kEditorByteLimit);
 	const std::string Draft = "## Saved heading\n\nSaved body.\n";
 	State.SetDraft(Draft);
 
@@ -140,7 +143,7 @@ TEST_F(CQmWikiEditorTest, ResetToBuiltInRemovesOverrideFile)
 {
 	SWikiEditorState State;
 	State.Load("qm:wiki-editor-test", m_Fallback, true);
-	State.BeginEditing();
+	State.BeginEditing(kEditorByteLimit);
 	State.SetDraft("## Draft\n\nDraft body.\n");
 	ASSERT_TRUE(State.Save());
 	ASSERT_TRUE(OverrideExists("qm/wiki-editor-test"));
@@ -160,7 +163,7 @@ TEST_F(CQmWikiEditorTest, LeavingEditingKeepsDraftForTheNextRound)
 {
 	SWikiEditorState State;
 	State.Load("qm:wiki-editor-test", m_Fallback, true);
-	State.BeginEditing();
+	State.BeginEditing(kEditorByteLimit);
 	const char *pDraft = "Unsaved draft that must survive Esc.";
 	State.SetDraft(pDraft);
 	State.m_EditDirty = true;
@@ -170,7 +173,7 @@ TEST_F(CQmWikiEditorTest, LeavingEditingKeepsDraftForTheNextRound)
 	EXPECT_EQ(State.m_Draft, pDraft);
 
 	// 再次进入编辑：草稿优先，不能被磁盘内容覆盖。
-	State.BeginEditing();
+	State.BeginEditing(kEditorByteLimit);
 	EXPECT_TRUE(State.m_Editing);
 	EXPECT_EQ(State.m_Draft, pDraft);
 	EXPECT_TRUE(State.m_EditDirty);
@@ -180,7 +183,7 @@ TEST_F(CQmWikiEditorTest, LoadingAnotherDocumentDropsPreviousDraft)
 {
 	SWikiEditorState State;
 	State.Load("qm:wiki-editor-test", m_Fallback, true);
-	State.BeginEditing();
+	State.BeginEditing(kEditorByteLimit);
 	State.SetDraft("Leaked draft from the first card.");
 	State.m_EditDirty = true;
 
@@ -197,25 +200,46 @@ TEST_F(CQmWikiEditorTest, TableOfContentsIsBuiltFromTopThreeHeadingLevelsOnly)
 {
 	SWikiEditorState Single;
 	Single.Load("qm:wiki-editor-test", m_Fallback, true);
-	Single.BeginEditing();
+	Single.BeginEditing(kEditorByteLimit);
 	Single.SetDraft("## Only heading\n\nBody.\n");
 	ASSERT_TRUE(Single.Save());
 	EXPECT_TRUE(Single.m_vTocBlocks.empty());
 
 	SWikiEditorState Multi;
 	Multi.Load("qm:wiki-editor-test", m_Fallback, true);
-	Multi.BeginEditing();
+	Multi.BeginEditing(kEditorByteLimit);
 	// 四个标题里只有前三个（级别 <= 3）进目录。
 	Multi.SetDraft("## First\n\nBody.\n\n### Second\n\nBody.\n\n#### Too deep\n\nBody.\n\n## Third\n\nBody.\n");
 	ASSERT_TRUE(Multi.Save());
 	EXPECT_EQ(Multi.m_vTocBlocks.size(), 3u);
 }
 
+TEST_F(CQmWikiEditorTest, BeginEditingRefusesDocumentsLongerThanTheBuffer)
+{
+	SWikiEditorState State;
+	State.Load("qm:wiki-editor-test", m_Fallback, true);
+	ASSERT_GT(State.m_Content.m_Markdown.size(), 8u);
+
+	// 缓冲放不下时宁可不进入编辑：截断的副本一旦保存，后半篇正文就没了。
+	EXPECT_FALSE(State.BeginEditing(8));
+	EXPECT_FALSE(State.m_Editing);
+	EXPECT_TRUE(State.m_StatusIsError);
+	EXPECT_TRUE(State.m_Draft.empty());
+	EXPECT_NE(std::string(State.m_aStatus).find("8"), std::string::npos);
+
+	// 容量够时正常进入编辑，草稿是完整正文。
+	EXPECT_TRUE(State.BeginEditing(State.m_Content.m_Markdown.size()));
+	EXPECT_TRUE(State.m_Editing);
+	EXPECT_FALSE(State.m_StatusIsError);
+	EXPECT_STREQ(State.m_aStatus, "");
+	EXPECT_EQ(State.m_Draft, State.m_Content.m_Markdown);
+}
+
 TEST_F(CQmWikiEditorTest, SavingWithoutStorageReportsErrorAndKeepsDraft)
 {
 	SWikiEditorState State;
 	State.Load("qm:wiki-editor-test", m_Fallback, true);
-	State.BeginEditing();
+	State.BeginEditing(kEditorByteLimit);
 	State.SetDraft("Draft that cannot be saved.");
 	State.m_EditDirty = true;
 

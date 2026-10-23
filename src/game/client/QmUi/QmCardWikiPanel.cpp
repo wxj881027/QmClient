@@ -60,7 +60,9 @@ namespace
 		// 内容、目录、草稿与保存/还原全部由编辑状态机维护，面板只负责绘制。
 		SWikiEditorState m_Editor;
 		// 编辑框是 UI 组件：内容由状态机提供，输入变化回写给状态机。
-		CLineInputBuffered<65536> m_EditInput;
+		// 缓冲要能装下整页文档：超过这个长度的正文由状态机拒绝进入编辑并报错，
+		// 不再出现「改到一半保存，文件被截短」。
+		CLineInputBuffered<262144> m_EditInput;
 		bool m_ResetScroll = true;
 		// 点击目录后让滚动区把目标块顶到顶部。
 		int m_TocTarget = -1;
@@ -185,8 +187,8 @@ namespace
 				Buttons.VSplitRight(ButtonWidth, &Buttons, &EditRect);
 				if(ui_widget::SecondaryButton(Ctx, &s_EditButton, Localize("Edit"), EditRect))
 				{
-					pPopup->m_Editor.BeginEditing();
-					pPopup->m_EditInput.Set(pPopup->m_Editor.m_Draft.c_str());
+					if(pPopup->m_Editor.BeginEditing(pPopup->m_EditInput.GetMaxSize() - 1))
+						pPopup->m_EditInput.Set(pPopup->m_Editor.m_Draft.c_str());
 				}
 				StatusRect.w = std::max(0.0f, StatusRect.w - EditRect.w - Gap);
 			}

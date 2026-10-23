@@ -36,15 +36,30 @@ void SWikiEditorState::Reload()
 		m_vTocBlocks.clear();
 }
 
-void SWikiEditorState::BeginEditing()
+bool SWikiEditorState::BeginEditing(const size_t MaxDraftBytes)
 {
-	m_Editing = true;
-	m_ResetEditScroll = true;
 	m_aStatus[0] = '\0';
 	m_StatusIsError = false;
-	// 上次退出编辑时有未保存草稿就接着改，否则从当前内容开始。
-	if(!m_EditDirty)
-		m_Draft = m_Content.m_Markdown;
+	// 上次退出编辑时有未保存草稿就接着改；草稿本来就来自编辑框，一定放得下。
+	if(m_EditDirty)
+	{
+		m_Editing = true;
+		m_ResetEditScroll = true;
+		return true;
+	}
+	// 文档比编辑框缓冲还长：拒绝进入编辑并说明原因，而不是截断后再让保存把文件截短。
+	if(m_Content.m_Markdown.size() > MaxDraftBytes)
+	{
+		char aStatus[256];
+		str_format(aStatus, sizeof(aStatus), Localize("Document too large for the editor (%d of %d bytes)"),
+			static_cast<int>(m_Content.m_Markdown.size()), static_cast<int>(MaxDraftBytes));
+		SetStatus(aStatus, true);
+		return false;
+	}
+	m_Editing = true;
+	m_ResetEditScroll = true;
+	m_Draft = m_Content.m_Markdown;
+	return true;
 }
 
 void SWikiEditorState::LeaveEditing()

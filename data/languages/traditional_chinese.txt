@@ -4145,6 +4145,9 @@ Do not translate server messages
 Do not use it to spam: servers may punish repeated automatic messages.
 == 不要用來刷頻：伺服器可能會懲罰重複的自動訊息。
 
+Document too large for the editor (%d of %d bytes)
+== 文件過大，無法在客戶端編輯器內修改（%d / %d 位元組）
+
 Done
 == Done
 

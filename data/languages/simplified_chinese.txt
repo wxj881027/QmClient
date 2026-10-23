@@ -4145,6 +4145,9 @@ Do not translate server messages
 Do not use it to spam: servers may punish repeated automatic messages.
 == 不要用它刷屏，服务器可能会处罚重复的自动消息。
 
+Document too large for the editor (%d of %d bytes)
+== 文档过大，无法在客户端编辑器内修改（%d / %d 字节）
+
 Done
 == Done
 

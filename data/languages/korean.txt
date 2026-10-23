@@ -4145,6 +4145,9 @@ Do not translate server messages
 Do not use it to spam: servers may punish repeated automatic messages.
 == 도배에 사용하지 마세요. 반복되는 자동 메시지는 서버에서 처벌될 수 있습니다.
 
+Document too large for the editor (%d of %d bytes)
+== 문서가 너무 커서 클라이언트 편집기에서 수정할 수 없습니다(%d / %d바이트)
+
 Done
 == Done
 

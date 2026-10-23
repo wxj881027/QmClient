@@ -4145,6 +4145,9 @@ Do not translate server messages
 Do not use it to spam: servers may punish repeated automatic messages.
 == Nie używaj tego do spamu: serwery mogą karać za powtarzane automatyczne wiadomości.
 
+Document too large for the editor (%d of %d bytes)
+== Dokument jest za duży dla edytora (%d z %d bajtów)
+
 Done
 == Done
 

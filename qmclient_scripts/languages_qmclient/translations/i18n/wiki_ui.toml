@@ -177,3 +177,20 @@ brazilian_portuguese = "Sumário"
 portuguese = "Índice"
 turkish = "İçindekiler"
 polish = "Spis treści"
+
+[[message]]
+key = "Document too large for the editor (%d of %d bytes)"
+[message.translations]
+simplified_chinese = "文档过大，无法在客户端编辑器内修改（%d / %d 字节）"
+traditional_chinese = "文件過大，無法在客戶端編輯器內修改（%d / %d 位元組）"
+japanese = "ドキュメントが大きすぎてクライアントのエディターで編集できません（%d / %d バイト）"
+korean = "문서가 너무 커서 클라이언트 편집기에서 수정할 수 없습니다(%d / %d바이트)"
+russian = "Документ слишком большой для редактора клиента (%d из %d байт)"
+german = "Dokument zu groß für den Editor (%d von %d Bytes)"
+spanish = "Documento demasiado grande para el editor (%d de %d bytes)"
+french = "Document trop volumineux pour l’éditeur (%d sur %d octets)"
+brazilian_portuguese = "Documento grande demais para o editor (%d de %d bytes)"
+portuguese = "Documento demasiado grande para o editor (%d de %d bytes)"
+turkish = "Belge istemci düzenleyicisi için çok büyük (%d / %d bayt)"
+polish = "Dokument jest za duży dla edytora (%d z %d bajtów)"
+
