@@ -80,6 +80,16 @@ namespace qm_tclient_cards
 	float TClientDeclaredRegion(const char *pId, float Width, const std::function<void(CUIRect &)> &Render, CUIRect *pRect);
 }
 
+namespace
+{
+	// 删除战争分组的确认：新确认窗是居中的，不会停掉卡片渲染，而列表渲染
+	// 每帧开头会清空 m_pRemoveWarType。所以触发时先把名字存下来，
+	// 确认后再按名字删，不依赖那只活一帧的指针。
+	CUi::SConfirmPopupContext s_RemoveWarTypeConfirm;
+	bool s_RemoveWarTypePending = false;
+	char s_aRemoveWarTypeName[MAX_WARLIST_TYPE_LENGTH];
+}
+
 qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass)
 {
 	CUIRect MainView = Ctx.m_Page.m_ContentViewport;
@@ -492,11 +502,29 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			{
 				if(m_pRemoveWarType == pSelectedType)
 					pSelectedType = DefaultWarType();
-				char aMessage[256];
-				str_format(aMessage, sizeof(aMessage),
-					Localize("Are you sure that you want to remove '%s' from your war groups?"),
-					m_pRemoveWarType->m_aWarName);
-				PopupConfirm(Localize("Remove War Group"), aMessage, Localize("Yes"), Localize("No"), &CMenus::PopupConfirmRemoveWarType);
+				str_copy(s_aRemoveWarTypeName, m_pRemoveWarType->m_aWarName, sizeof(s_aRemoveWarTypeName));
+				m_pRemoveWarType = nullptr;
+				// 删分组是破坏性操作且会改到已有战争条目：Cancel/OK + 危险色。
+				s_RemoveWarTypeConfirm.Reset();
+				s_RemoveWarTypeConfirm.DefaultButtons();
+				s_RemoveWarTypeConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+				str_format(s_RemoveWarTypeConfirm.m_aMessage, sizeof(s_RemoveWarTypeConfirm.m_aMessage),
+					Localize("Are you sure that you want to remove '%s' from your war groups?"), s_aRemoveWarTypeName);
+				Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_RemoveWarTypeConfirm);
+				s_RemoveWarTypePending = true;
+			}
+		}
+		// 结果下一帧轮询：确认后才按记下的名字删；取消或被切页收掉时只清状态。
+		if(s_RemoveWarTypePending)
+		{
+			if(s_RemoveWarTypeConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+			{
+				s_RemoveWarTypePending = false;
+				PopupConfirmRemoveWarType();
+			}
+			else if(s_RemoveWarTypeConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED || !Ui()->IsPopupOpen(&s_RemoveWarTypeConfirm))
+			{
+				s_RemoveWarTypePending = false;
 			}
 		}
 		if(Flow.Control("tclient-warlist-group-name", LineSize, Button, MarginSmall))
@@ -711,8 +739,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 
 void CMenus::PopupConfirmRemoveWarType()
 {
-	const auto &vpTypes = GameClient()->m_WarList.m_WarTypes;
-	if(std::find(vpTypes.begin(), vpTypes.end(), m_pRemoveWarType) != vpTypes.end())
-		GameClient()->m_WarList.RemoveWarType(m_pRemoveWarType->m_aWarName);
+	// 按名字删：确认窗显示期间列表会继续渲染，指针早已被清空。
+	GameClient()->m_WarList.RemoveWarType(s_aRemoveWarTypeName);
+	s_aRemoveWarTypeName[0] = '\0';
 	m_pRemoveWarType = nullptr;
 }

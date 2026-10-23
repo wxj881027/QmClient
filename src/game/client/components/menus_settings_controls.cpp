@@ -143,10 +143,30 @@ void CMenusSettingsControls::Render(CUIRect MainView)
 	}
 
 	// Reset to default button
+	static CUi::SConfirmPopupContext s_ResetControlsConfirm;
+	static bool s_ResetControlsPending = false;
 	if(GameClient()->m_Menus.DoSettingsButton_Menu(CMenus::SETTINGS_CONTROLS, -1, -1, &m_ResetToDefaultButton, "controls-reset-to-defaults", Localize("Reset to defaults"), 0, &ResetToDefault))
 	{
-		GameClient()->m_Menus.PopupConfirm(Localize("Reset controls"), Localize("Are you sure that you want to reset the controls to their defaults?"),
-			Localize("Reset"), Localize("Cancel"), &CMenus::ResetSettingsControls);
+		// 重置会丢掉现有绑定：Cancel/OK + 危险色，正文说明后果。
+		s_ResetControlsConfirm.Reset();
+		s_ResetControlsConfirm.DefaultButtons();
+		s_ResetControlsConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+		str_copy(s_ResetControlsConfirm.m_aMessage, Localize("Are you sure that you want to reset the controls to their defaults?"), sizeof(s_ResetControlsConfirm.m_aMessage));
+		GameClient()->m_Menus.Ui()->ShowPopupConfirm(GameClient()->m_Menus.Ui()->MouseX(), GameClient()->m_Menus.Ui()->MouseY(), &s_ResetControlsConfirm);
+		s_ResetControlsPending = true;
+	}
+	// 结果下一帧轮询：确认后才重置，取消或被页面切换收掉时不动作。
+	if(s_ResetControlsPending)
+	{
+		if(s_ResetControlsConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+		{
+			s_ResetControlsPending = false;
+			GameClient()->m_Menus.ResetSettingsControls();
+		}
+		else if(s_ResetControlsConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED || !GameClient()->m_Menus.Ui()->IsPopupOpen(&s_ResetControlsConfirm))
+		{
+			s_ResetControlsPending = false;
+		}
 	}
 	LogControlsPerfStage(GameClient()->Client(), "controls_interactive_layer", InteractiveTimer.ElapsedMs(), false, "page=controls section=interactive");
 	LogControlsPerfStage(GameClient()->Client(), "controls_text_cache", ShellTimer.ElapsedMs(), false, "page=controls section=text_cache");

@@ -1005,7 +1005,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 					}
 					static int s_HookCollPressedCustomToolTip;
 					Ui()->RegisterPassiveHotItem(&s_HookCollPressedCustomToolTip, &Button);
-					GameClient()->m_Tooltips.DoToolTip(&s_HookCollPressedCustomToolTip, &Button, Localize("Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted"));
+					GameClient()->m_Tooltips.DoToolTip(&s_HookCollPressedCustomToolTip, &Button, Localize("Use the custom colors below while the hook key is held"));
 					Flow.Space(MarginSmall);
 				}
 				// 按下后四行取色器仅在"自定义按下后颜色"开启时渲染；关闭时不占用布局，

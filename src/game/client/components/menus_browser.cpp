@@ -59,6 +59,18 @@
 
 using namespace FontIcons;
 
+namespace
+{
+	// 切换服务器的二次确认：Connect() 只负责弹一次，结果由服务器浏览器页每帧轮询。
+	// 状态放在文件级，是因为弹窗来自 Connect()，轮询点在 RenderServerbrowser()。
+	CUi::SConfirmPopupContext s_SwitchServerConfirm;
+	bool s_SwitchServerPending = false;
+
+	// 删除好友的二次确认：触发点只记一次，结果同样由浏览器页轮询。
+	CUi::SConfirmPopupContext s_RemoveFriendConfirm;
+	bool s_RemoveFriendPending = false;
+} // namespace
+
 static constexpr ColorRGBA gs_HighlightedTextColor = ColorRGBA(0.4f, 0.4f, 1.0f, 1.0f);
 static constexpr ColorRGBA gs_QmClientCountColor = ColorRGBA(0.75f, 0.55f, 1.0f, 1.0f);
 static constexpr float SERVER_LIST_TEXT_SIZE = 11.0f;
@@ -2403,7 +2415,13 @@ void CMenus::Connect(const char *pAddress, EConnectIntent Intent)
 	if(Client()->State() == IClient::STATE_ONLINE && GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmDisconnectTime && g_Config.m_ClConfirmDisconnectTime >= 0)
 	{
 		str_copy(m_aNextServer, pAddress);
-		PopupConfirm(Localize("Disconnect"), Localize("Are you sure that you want to disconnect and switch to a different server?"), Localize("Yes"), Localize("No"), &CMenus::PopupConfirmSwitchServer);
+		// 连别的服务器会断开当前对局：Cancel/OK + 危险色；确认后由浏览器页轮询去连。
+		s_SwitchServerConfirm.Reset();
+		s_SwitchServerConfirm.DefaultButtons();
+		s_SwitchServerConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+		str_copy(s_SwitchServerConfirm.m_aMessage, Localize("Are you sure that you want to disconnect and switch to a different server?"), sizeof(s_SwitchServerConfirm.m_aMessage));
+		Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_SwitchServerConfirm);
+		s_SwitchServerPending = true;
 	}
 	else
 	{
@@ -3488,7 +3506,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			OpenCategoryManagePopup();
 		}
 		GameClient()->m_Tooltips.DoToolTip(&m_vFriendsCategoryManageButtons[CategoryIndex], &ManageButton, Localize("Manage categories"));
-		GameClient()->m_Tooltips.DoToolTip(&m_vFriendsCategoryExpanded[CategoryIndex], &HeaderAction, Localize("Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories"));
+		GameClient()->m_Tooltips.DoToolTip(&m_vFriendsCategoryExpanded[CategoryIndex], &HeaderAction, Localize("Drag to reorder; right-click or use the gear to manage"));
 
 		const int HeaderResult = Ui()->DoButtonLogic(&m_vFriendsCategoryExpanded[CategoryIndex], 0, &HeaderAction, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
 		if(!DraggingAnyHeader && !DraggingFriend && Ui()->MouseButtonClicked(0) && HeaderInside && !Ui()->IsPopupOpen() && Ui()->IsActiveItem(&m_vFriendsCategoryExpanded[CategoryIndex]))
@@ -4193,7 +4211,27 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		str_format(aMessage, sizeof(aMessage),
 			m_RemoveFriendState == IFriends::FRIEND_PLAYER ? Localize("Are you sure that you want to remove the player '%s' from your friends list?") : Localize("Are you sure that you want to remove the clan '%s' from your friends list?"),
 			m_RemoveFriendState == IFriends::FRIEND_PLAYER ? m_aRemoveFriendName : m_aRemoveFriendClan);
-		PopupConfirm(Localize("Remove friend"), aMessage, Localize("Yes"), Localize("No"), &CMenus::PopupConfirmRemoveFriend, POPUP_NONE, &CMenus::PopupCancelRemoveFriend, POPUP_NONE);
+		// 删除好友是破坏性操作：Cancel/OK + 危险色，正文带具体名字。
+		s_RemoveFriendConfirm.Reset();
+		s_RemoveFriendConfirm.DefaultButtons();
+		s_RemoveFriendConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+		str_copy(s_RemoveFriendConfirm.m_aMessage, aMessage, sizeof(s_RemoveFriendConfirm.m_aMessage));
+		Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_RemoveFriendConfirm);
+		s_RemoveFriendPending = true;
+	}
+	// 结果下一帧轮询：确认后才删；取消或被页面切换收掉时走原来的取消回调清状态。
+	if(s_RemoveFriendPending)
+	{
+		if(s_RemoveFriendConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+		{
+			s_RemoveFriendPending = false;
+			PopupConfirmRemoveFriend();
+		}
+		else if(s_RemoveFriendConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED || !Ui()->IsPopupOpen(&s_RemoveFriendConfirm))
+		{
+			s_RemoveFriendPending = false;
+			PopupCancelRemoveFriend();
+		}
 	}
 
 	// add friend
@@ -5229,6 +5267,21 @@ void CMenus::RenderServerbrowserToolBox(CUIRect ToolBox)
 
 void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 {
+	// 切换服务器确认的结果：确认后按 Connect() 记下的地址连过去；
+	// 取消、或被页面切换收掉时只清状态，不动当前连接。
+	if(s_SwitchServerPending)
+	{
+		if(s_SwitchServerConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+		{
+			s_SwitchServerPending = false;
+			Client()->Connect(m_aNextServer);
+		}
+		else if(s_SwitchServerConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED || !Ui()->IsPopupOpen(&s_SwitchServerConfirm))
+		{
+			s_SwitchServerPending = false;
+		}
+	}
+
 	// 面板颜色自行处理透明度，不再整体缩放独立配置的按钮和输入框。
 	// 首次打开菜单时先复用现有 community 选择结果。缓存哈希、过滤器重建
 	// 和列表刷新放到下一帧，避免 ESC 首帧同步执行后台元数据整理。

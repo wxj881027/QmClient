@@ -2101,21 +2101,10 @@ turkish = "Kayıt FPS"
 polish = "FPS nagrywania"
 
 [[message]]
-key = "Frame rate of the recorded video; higher means smoother playback and larger files"
+key = "Recorded frame rate; higher is smoother and larger"
 [message.translations]
-simplified_chinese = "录像的帧率，越高越流畅、文件越大"
-traditional_chinese = "錄製影片的幀率，越高越流暢、檔案越大"
-japanese = "録画動画のフレームレート。高いほど滑らかに再生されますが、ファイルは大きくなります"
-korean = "녹화된 영상의 프레임 레이트입니다. 높을수록 재생이 부드럽지만 파일이 커집니다"
-russian = "Частота кадров записываемого видео; выше — плавнее воспроизведение, но больше файл"
-german = "Framerate des aufgezeichneten Videos; höher bedeutet flüssigere Wiedergabe und größere Dateien"
-spanish = "Frecuencia de fotogramas del vídeo grabado; más alta significa una reproducción más fluida y archivos más grandes"
-french = "Fréquence d'images de la vidéo enregistrée ; plus élevée signifie une lecture plus fluide et des fichiers plus volumineux"
-brazilian_portuguese = "Taxa de quadros do vídeo gravado; mais alta significa reprodução mais suave e arquivos maiores"
-portuguese = "Taxa de fotogramas do vídeo gravado; mais alta significa reprodução mais suave e ficheiros maiores"
-turkish = "Kaydedilen videonun kare hızı; yüksek olması daha akıcı oynatma ve daha büyük dosyalar anlamına gelir"
-polish = "Liczba klatek nagrywanego wideo; wyższa oznacza płynniejsze odtwarzanie i większe pliki"
-
+simplified_chinese = "录制帧率；越高越流畅、文件越大"
+traditional_chinese = "錄製幀率；越高越流暢、檔案越大"
 [[message]]
 key = "Lower means better quality and larger files; 18 is recommended"
 [message.translations]

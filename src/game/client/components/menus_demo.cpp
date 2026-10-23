@@ -61,6 +61,44 @@ namespace
 {
 	const ColorRGBA DEMO_ACCENT(0.04f, 0.48f, 1.0f, 0.95f);
 
+	// 演示浏览器里的确认窗：播放回放、删除选中项共用一条上下文 + 动作枚举，
+	// 结果在 RenderDemoBrowserButtons 帧首轮询（取消时什么都不做）。
+	enum class EDemoConfirm
+	{
+		NONE = 0,
+		PLAY_DEMO,
+		DELETE_SELECTED,
+	};
+	EDemoConfirm gs_DemoConfirmAction = EDemoConfirm::NONE;
+	CUi::SConfirmPopupContext gs_DemoConfirm;
+
+	// 需要读原因的错误统一走居中 Alert（不用 Toast：一行放不下、用户要读）。
+	void ShowDemoError(CUi *pUi, const char *pMessage)
+	{
+		if(pUi == nullptr || pMessage == nullptr || pMessage[0] == '\0')
+			return;
+		static CUi::SMessagePopupContext s_Context;
+		if(pUi->IsPopupOpen(&s_Context))
+			return;
+		str_copy(s_Context.m_aMessage, pMessage, sizeof(s_Context.m_aMessage));
+		s_Context.ErrorColor();
+		pUi->ShowPopupMessage(0.0f, 0.0f, &s_Context);
+	}
+
+	void ShowDemoConfirm(CUi *pUi, EDemoConfirm Action, const char *pMessage)
+	{
+		if(pUi == nullptr || pMessage == nullptr || pMessage[0] == '\0')
+			return;
+		if(gs_DemoConfirmAction != EDemoConfirm::NONE || pUi->IsPopupOpen(&gs_DemoConfirm))
+			return;
+		gs_DemoConfirm.Reset();
+		gs_DemoConfirm.DefaultButtons();
+		gs_DemoConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+		str_copy(gs_DemoConfirm.m_aMessage, pMessage, sizeof(gs_DemoConfirm.m_aMessage));
+		pUi->ShowPopupConfirm(pUi->MouseX(), pUi->MouseY(), &gs_DemoConfirm);
+		gs_DemoConfirmAction = Action;
+	}
+
 	constexpr const char *RANK_DEMO_MANIFEST_URL = "https://ddnet.org/watch/watchable.jsonl";
 	constexpr const char *RANK_DEMO_URL_PREFIX = "https://ddnet.org/watch/demos";
 	constexpr size_t RANK_DEMO_MAX_MANIFEST_BYTES = 16 * 1024 * 1024;
@@ -908,7 +946,7 @@ void CMenus::RenderDemoEncodeSettings(CUIRect View)
 	const int NewFps = CUi::ms_LinearScrollbarScale.ToAbsolute(Ui()->DoScrollbarH(&g_Config.m_ClVideoRecorderFPS, &Control, CUi::ms_LinearScrollbarScale.ToRelative(SliderFps, qm_video_encode::FPS_SLIDER_MIN, qm_video_encode::FPS_SLIDER_MAX)), qm_video_encode::FPS_SLIDER_MIN, qm_video_encode::FPS_SLIDER_MAX);
 	if(NewFps != SliderFps)
 		g_Config.m_ClVideoRecorderFPS = NewFps;
-	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClVideoRecorderFPS, &Row, Localize("Frame rate of the recorded video; higher means smoother playback and larger files"));
+	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClVideoRecorderFPS, &Row, Localize("Recorded frame rate; higher is smoother and larger"));
 	Ui()->DoLabel(&RangeHint, "1-1000", FontSize, TEXTALIGN_MR, {.m_MaxWidth = RangeHint.w - 2.0f});
 	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
 }
@@ -2281,7 +2319,10 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 			if(Storage()->FileExists(aPath, IStorage::TYPE_SAVE_OR_ABSOLUTE))
 			{
 				s_ConfirmPopupContext.Reset();
-				s_ConfirmPopupContext.YesNoButtons();
+				// 覆盖已存在的 demo 文件是破坏性动作：按钮用 Cancel/OK（不用指代不明的 Yes/No），
+				// 确认键走危险色。
+				s_ConfirmPopupContext.DefaultButtons();
+				s_ConfirmPopupContext.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
 				str_copy(s_ConfirmPopupContext.m_aMessage, Localize("File already exists, do you want to overwrite it?"));
 				Ui()->ShowPopupConfirm(Ui()->MouseX(), OkButton.y + OkButton.h + 5.0f, &s_ConfirmPopupContext);
 			}
@@ -3174,7 +3215,7 @@ void CMenus::FinishRankDemoDownload(bool Success, const char *pMessage)
 	}
 	else
 	{
-		PopupMessage(Localize("Rank 1 demo"), pMessage, Localize("Ok"));
+		ShowDemoError(Ui(), pMessage);
 	}
 }
 
@@ -3184,7 +3225,7 @@ void CMenus::StartRankDemoDownload(const char *pMapName)
 		return;
 	if(Http() == nullptr)
 	{
-		PopupMessage(Localize("Rank 1 demo"), Localize("HTTP is not available"), Localize("Ok"));
+		qm_ui::Toast(EQmToastKind::FAILED, Localize("HTTP is not available"));
 		return;
 	}
 
@@ -3905,6 +3946,24 @@ void CMenus::RenderDemoBrowserDetails(CUIRect DetailsView)
 
 void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemActivated)
 {
+	// 确认窗结果：确认就调原来的动作，取消/被切页收掉时只清状态。
+	if(gs_DemoConfirmAction != EDemoConfirm::NONE)
+	{
+		const CUi::SConfirmPopupContext::EConfirmationResult Result = gs_DemoConfirm.m_Result;
+		if(Result != CUi::SConfirmPopupContext::UNSET || !Ui()->IsPopupOpen(&gs_DemoConfirm))
+		{
+			const EDemoConfirm Action = gs_DemoConfirmAction;
+			gs_DemoConfirmAction = EDemoConfirm::NONE;
+			if(Result == CUi::SConfirmPopupContext::CONFIRMED)
+			{
+				if(Action == EDemoConfirm::PLAY_DEMO)
+					PopupConfirmPlayDemo();
+				else if(Action == EDemoConfirm::DELETE_SELECTED)
+					PopupConfirmDeleteSelectedDemos();
+			}
+		}
+	}
+
 	const bool BrowsingScreenshots = DemoBrowserBrowsingScreenshots();
 	const char *pBaseFolder = DemoBrowserBaseFolder();
 	const IUiContext DemoBrowserSearchCtx = SettingsUiContext("demo_browser_search");
@@ -4137,7 +4196,7 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 				}
 				else if(GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmDisconnectTime && g_Config.m_ClConfirmDisconnectTime >= 0)
 				{
-					PopupConfirm(Localize("Disconnect"), Localize("Are you sure that you want to disconnect and play this demo?"), Localize("Yes"), Localize("No"), &CMenus::PopupConfirmPlayDemo);
+					ShowDemoConfirm(Ui(), EDemoConfirm::PLAY_DEMO, Localize("Are you sure that you want to disconnect and play this demo?"));
 				}
 				else
 				{
@@ -4160,7 +4219,7 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		if(DoDemoScreenshotWatermarkButton(WatermarkButton))
 		{
 			if(!ApplyDemoScreenshotWatermark(*pSelectedItem))
-				PopupMessage(Localize("Screenshot error"), Localize("Unable to save the watermarked screenshot"), Localize("Ok"));
+				qm_ui::Toast(EQmToastKind::FAILED, Localize("Unable to save the watermarked screenshot"));
 		}
 	}
 
@@ -4244,13 +4303,13 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 				{
 					char aBuf[128 + IO_MAX_PATH_LENGTH];
 					str_format(aBuf, sizeof(aBuf), m_vDemoDeleteTargets[0].m_IsDir ? Localize("Are you sure that you want to delete the folder '%s'?") : (BrowsingScreenshots ? Localize("Are you sure that you want to delete the screenshot '%s'?") : Localize("Are you sure that you want to delete the demo '%s'?")), m_vDemoDeleteTargets[0].m_Selection.m_aFilename);
-					PopupConfirm(m_vDemoDeleteTargets[0].m_IsDir ? Localize("Delete folder") : (BrowsingScreenshots ? Localize("Delete screenshot") : Localize("Delete demo")), aBuf, Localize("Yes"), Localize("No"), &CMenus::PopupConfirmDeleteSelectedDemos);
+					ShowDemoConfirm(Ui(), EDemoConfirm::DELETE_SELECTED, aBuf);
 				}
 				else
 				{
 					char aBuf[128];
 					str_format(aBuf, sizeof(aBuf), Localize("Are you sure that you want to delete %d selected items?"), (int)m_vDemoDeleteTargets.size());
-					PopupConfirm(Localize("Delete selected items"), aBuf, Localize("Yes"), Localize("No"), &CMenus::PopupConfirmDeleteSelectedDemos);
+					ShowDemoConfirm(Ui(), EDemoConfirm::DELETE_SELECTED, aBuf);
 				}
 				return;
 			}
@@ -4294,7 +4353,7 @@ void CMenus::PopupConfirmPlayDemo()
 	CDemoItem *pSelectedDemo = GetSelectedDemo();
 	if(pSelectedDemo == nullptr)
 	{
-		PopupMessage(Localize("Error loading demo"), Localize("No demo selected"), Localize("Ok"));
+		qm_ui::Toast(EQmToastKind::FAILED, Localize("No demo selected"));
 		return;
 	}
 	char aBuf[IO_MAX_PATH_LENGTH];
@@ -4309,7 +4368,7 @@ void CMenus::PopupConfirmPlayDemo()
 	m_LastSpeedChange = -1.0f;
 	if(pError)
 	{
-		PopupMessage(Localize("Error loading demo"), pError, Localize("Ok"));
+		ShowDemoError(Ui(), pError);
 	}
 	else
 	{
@@ -4375,7 +4434,7 @@ void CMenus::PopupConfirmDeleteSelectedDemos()
 	{
 		str_format(aError, sizeof(aError), Localize("%d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'."), NumDeleted, NumFailed, aFirstFailedName);
 	}
-	PopupMessage(Localize("Error"), aError, Localize("Ok"));
+	ShowDemoError(Ui(), aError);
 }
 
 void CMenus::DemolistSelectNeighbor()

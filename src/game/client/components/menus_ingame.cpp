@@ -56,6 +56,16 @@ using namespace std::chrono_literals;
 
 namespace
 {
+	// 游戏内菜单的确认窗：触发点只弹一次，结果在 RenderGame() / RenderRankDemo() 的帧首轮询。
+	CUi::SConfirmPopupContext s_DisconnectConfirm;
+	bool s_DisconnectPending = false;
+	CUi::SConfirmPopupContext s_DisconnectDummyConfirm;
+	bool s_DisconnectDummyPending = false;
+	CUi::SConfirmPopupContext s_TurnOffEditorConfirm;
+	bool s_TurnOffEditorPending = false;
+	CUi::SConfirmPopupContext s_RankDemoPlayConfirm;
+	bool s_RankDemoPlayPending = false;
+
 	void LogIngamePerfStage(IClient *pClient, const char *pStage, const double DurationMs, const bool Force = false, const char *pExtra = nullptr)
 	{
 		QmPerfLogStage("perf/menu", pStage, DurationMs, Force, pClient, nullptr, nullptr, pExtra);
@@ -216,6 +226,39 @@ namespace
 
 void CMenus::RenderGame(CUIRect MainView)
 {
+	// 三处确认窗（断开、断开分身、关闭触摸控件编辑器）的结果在这里轮询：
+	// 确认就调原来的回调，取消或弹窗被切页收掉时只清等待状态。
+	if(s_DisconnectPending)
+	{
+		if(s_DisconnectConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+		{
+			s_DisconnectPending = false;
+			PopupConfirmDisconnect();
+		}
+		else if(s_DisconnectConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED || !Ui()->IsPopupOpen(&s_DisconnectConfirm))
+			s_DisconnectPending = false;
+	}
+	if(s_DisconnectDummyPending)
+	{
+		if(s_DisconnectDummyConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+		{
+			s_DisconnectDummyPending = false;
+			PopupConfirmDisconnectDummy();
+		}
+		else if(s_DisconnectDummyConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED || !Ui()->IsPopupOpen(&s_DisconnectDummyConfirm))
+			s_DisconnectDummyPending = false;
+	}
+	if(s_TurnOffEditorPending)
+	{
+		if(s_TurnOffEditorConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+		{
+			s_TurnOffEditorPending = false;
+			PopupConfirmTurnOffEditor();
+		}
+		else if(s_TurnOffEditorConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED || !Ui()->IsPopupOpen(&s_TurnOffEditorConfirm))
+			s_TurnOffEditorPending = false;
+	}
+
 	CUIRect Button, ButtonBars, ButtonBar, ButtonBar2;
 	constexpr float MenuButtonHeight = 25.0f;
 	constexpr float PrimaryButtonSpacing = 5.0f;
@@ -449,7 +492,13 @@ void CMenus::RenderGame(CUIRect MainView)
 				}
 				str_append(aBuf, Localize("There are unsaved changes in the touch controls editor. Saving first is recommended."));
 			}
-			PopupConfirm(Localize("Disconnect"), aBuf, Localize("Yes"), Localize("No"), &CMenus::PopupConfirmDisconnect);
+			// 断开当前服务器：Cancel/OK + 危险色；正文可能还带触摸控件未保存提示。
+			s_DisconnectConfirm.Reset();
+			s_DisconnectConfirm.DefaultButtons();
+			s_DisconnectConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+			str_copy(s_DisconnectConfirm.m_aMessage, aBuf, sizeof(s_DisconnectConfirm.m_aMessage));
+			Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_DisconnectConfirm);
+			s_DisconnectPending = true;
 		}
 		else
 		{
@@ -491,7 +540,13 @@ void CMenus::RenderGame(CUIRect MainView)
 			{
 				if(GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmDisconnectTime && g_Config.m_ClConfirmDisconnectTime >= 0)
 				{
-					PopupConfirm(Localize("Disconnect dummy"), Localize("Are you sure that you want to disconnect your dummy?"), Localize("Yes"), Localize("No"), &CMenus::PopupConfirmDisconnectDummy);
+					// 断开分身同样是断线操作：Cancel/OK + 危险色。
+					s_DisconnectDummyConfirm.Reset();
+					s_DisconnectDummyConfirm.DefaultButtons();
+					s_DisconnectDummyConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+					str_copy(s_DisconnectDummyConfirm.m_aMessage, Localize("Are you sure that you want to disconnect your dummy?"), sizeof(s_DisconnectDummyConfirm.m_aMessage));
+					Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_DisconnectDummyConfirm);
+					s_DisconnectDummyPending = true;
 				}
 				else
 				{
@@ -696,7 +751,13 @@ void CMenus::RenderGame(CUIRect MainView)
 			{
 				m_MenusIngameTouchControls.m_pOldSelectedButton = GameClient()->m_TouchControls.SelectedButton();
 				m_MenusIngameTouchControls.m_pNewSelectedButton = nullptr;
-				PopupConfirm(Localize("Unsaved changes"), Localize("Save all changes before turning off the editor?"), Localize("Save"), Localize("Cancel"), &CMenus::PopupConfirmTurnOffEditor);
+				// 这里不是破坏性操作但会丢未保存的编辑：保留 Save / Cancel 两个动词。
+				s_TurnOffEditorConfirm.Reset();
+				str_copy(s_TurnOffEditorConfirm.m_aPositiveButtonLabel, Localize("Save"), sizeof(s_TurnOffEditorConfirm.m_aPositiveButtonLabel));
+				str_copy(s_TurnOffEditorConfirm.m_aNegativeButtonLabel, Localize("Cancel"), sizeof(s_TurnOffEditorConfirm.m_aNegativeButtonLabel));
+				str_copy(s_TurnOffEditorConfirm.m_aMessage, Localize("Save all changes before turning off the editor?"), sizeof(s_TurnOffEditorConfirm.m_aMessage));
+				Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_TurnOffEditorConfirm);
+				s_TurnOffEditorPending = true;
 			}
 			else
 			{
@@ -746,6 +807,9 @@ void CMenus::RenderGame(CUIRect MainView)
 	LogButtonColumnPerf();
 	if(GameClient()->m_TouchControls.IsEditingActive())
 	{
+		// 先处理上一帧确认窗的结果：DoPopupType 每帧都会重复请求同一个弹窗，
+		// 结果必须在这里落地，否则编辑器状态机永远停在同一个请求上。
+		m_MenusIngameTouchControls.PollConfirm();
 		// Resolve issues if needed before rendering, so the elements could have a correct value on this frame.
 		// Issues need to be resolved before popup. So CheckCachedSettings could not be bad.
 		m_MenusIngameTouchControls.ResolveIssues();
@@ -2538,6 +2602,18 @@ static void FormatRankTimeHms(float Seconds, char *pBuf, size_t BufSize)
 // 每条可下载回放、一键转影子对照跑图，或在确认断线后播放回放。
 void CMenus::RenderRankDemo(CUIRect MainView)
 {
+	// 播放回放确认的结果：确认后按记下的 demo 路径播放。
+	if(s_RankDemoPlayPending)
+	{
+		if(s_RankDemoPlayConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+		{
+			s_RankDemoPlayPending = false;
+			PopupConfirmRankDemoPlay();
+		}
+		else if(s_RankDemoPlayConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED || !Ui()->IsPopupOpen(&s_RankDemoPlayConfirm))
+			s_RankDemoPlayPending = false;
+	}
+
 	MainView.Draw(ms_ColorTabbarActive, MenuShellCorners(), 10.0f);
 
 	MainView.HSplitTop(10.0f, nullptr, &MainView);
@@ -2799,7 +2875,13 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 			// 播放回放必然断开服务器：除显式禁用确认（负值）外一律弹窗，防止误触退服
 			if(g_Config.m_ClConfirmDisconnectTime >= 0)
 			{
-				PopupConfirm(Localize("Disconnect"), Localize("Are you sure that you want to disconnect and play this demo?"), Localize("Yes"), Localize("No"), &CMenus::PopupConfirmRankDemoPlay);
+				// 播放回放必然断开服务器：Cancel/OK + 危险色。
+				s_RankDemoPlayConfirm.Reset();
+				s_RankDemoPlayConfirm.DefaultButtons();
+				s_RankDemoPlayConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+				str_copy(s_RankDemoPlayConfirm.m_aMessage, Localize("Are you sure that you want to disconnect and play this demo?"), sizeof(s_RankDemoPlayConfirm.m_aMessage));
+				Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_RankDemoPlayConfirm);
+				s_RankDemoPlayPending = true;
 			}
 			else
 			{
@@ -2846,7 +2928,13 @@ void CMenus::PopupConfirmRankDemoPlay()
 	const char *pError = Client()->DemoPlayer_Play(m_aPendingRankDemoPlayPath, IStorage::TYPE_SAVE);
 	m_aPendingRankDemoPlayPath[0] = '\0';
 	if(pError)
-		PopupMessage(Localize("Error loading demo"), pError, Localize("Ok"));
+	{
+		// 错误文本可能较长且需要读清楚：居中单按钮 Alert，不降级为 Toast。
+		static CUi::SMessagePopupContext s_RankDemoError;
+		str_copy(s_RankDemoError.m_aMessage, pError, sizeof(s_RankDemoError.m_aMessage));
+		s_RankDemoError.ErrorColor();
+		Ui()->ShowPopupMessage(0.0f, 0.0f, &s_RankDemoError);
+	}
 }
 
 void CMenus::RenderIngameHint()

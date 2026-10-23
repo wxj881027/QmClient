@@ -772,7 +772,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
 			RenderLabel("qmclient-translate-send-source-language", &LabelCol, Localize("Original message language"), BodySize);
 			if(!PrewarmOnly && !Ui()->RenderOnly())
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmTranslateSource, &Row, Localize("Original language for both received and outgoing messages. Use Auto to detect each message."));
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmTranslateSource, &Row, Localize("Original language for incoming and outgoing text"));
 
 			// 下拉框 + 输入框组合
 			{

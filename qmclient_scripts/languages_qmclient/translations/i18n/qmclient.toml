@@ -19375,21 +19375,10 @@ turkish = "İsteğe bağlı ses WebSocket uç noktası (boşsa UDP taşıması k
 polish = "Opcjonalny punkt końcowy WebSocket dla głosu (puste zachowuje transport UDP)"
 
 [[message]]
-key = "Original language for both received and outgoing messages. Use Auto to detect each message."
+key = "Original language for incoming and outgoing text"
 [message.translations]
-simplified_chinese = "告诉翻译服务原文是什么语言，接收和发送翻译共用。建议选“自动”，按每条消息识别。"
-traditional_chinese = "告訴翻譯服務原文是什麼語言，接收和傳送翻譯共用。建議選「自動」，逐條訊息識別。"
-japanese = "受信・送信の両方で使う原文の言語です。「自動」で各メッセージの言語を判定します。"
-korean = "수신 및 발신 메시지에 공통으로 사용하는 원문 언어입니다. 자동을 선택하면 각 메시지의 언어를 감지합니다。"
-russian = "Язык оригинала для входящих и исходящих сообщений. Выберите «Авто», чтобы определять язык каждого сообщения."
-german = "Originalsprache für empfangene und ausgehende Nachrichten. Mit Auto wird jede Nachricht einzeln erkannt."
-spanish = "Idioma original de mensajes recibidos y salientes. Usa Auto para detectar el idioma de cada mensaje."
-french = "Langue originale des messages reçus et envoyés. Choisissez Auto pour détecter chaque message."
-brazilian_portuguese = "Idioma original das mensagens recebidas e enviadas. Use Auto para detectar cada mensagem."
-portuguese = "Idioma original das mensagens recebidas e enviadas. Use Auto para detetar cada mensagem."
-turkish = "Alınan ve gönderilen mesajların orijinal dili. Her mesajın dilini algılamak için Otomatik seçin."
-polish = "Język oryginalny odebranych i wysyłanych wiadomości. Użyj Auto, aby wykrywać język każdej wiadomości."
-
+simplified_chinese = "收到与发出文本的原始语言"
+traditional_chinese = "收到與發出文本的原始語言"
 [[message]]
 key = "Original message language"
 [message.translations]
@@ -38296,21 +38285,10 @@ turkish = "Özgün tekerlek kaydırmasını geri getir: her kademe hızı devral
 polish = "Przywróć oryginalne przewijanie kółkiem: każdy skok uruchamia płynne przewijanie od nowa bez zachowania prędkości"
 
 [[message]]
-key = "Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity"
+key = "Restart smooth scrolling on every wheel tick"
 [message.translations]
-simplified_chinese = "恢复原版滚轮手感：每格重新开始平滑滚动，不继承速度"
-traditional_chinese = "恢復原版滾輪手感：每格重新開始平滑捲動，不繼承速度"
-japanese = "従来のホイール操作に戻す：各刻みで速度を引き継がず、滑らかなスクロールを再開"
-korean = "기존 휠 스크롤 복원: 매 눈금마다 속도를 이어받지 않고 부드러운 스크롤을 다시 시작"
-russian = "Вернуть прежнюю прокрутку колёсиком: каждый шаг заново запускает плавную прокрутку без сохранения скорости"
-german = "Ursprüngliches Mausradverhalten wiederherstellen: Jede Raste startet das sanfte Scrollen ohne Übernahme der Geschwindigkeit neu"
-spanish = "Restaurar el desplazamiento original: cada paso de la rueda reinicia el desplazamiento suave sin heredar la velocidad"
-french = "Rétablir le défilement d’origine : chaque cran relance le défilement fluide sans conserver la vitesse"
-brazilian_portuguese = "Restaurar a rolagem original: cada passo da roda reinicia a rolagem suave sem manter a velocidade"
-portuguese = "Restaurar o deslocamento original: cada passo da roda reinicia o deslocamento suave sem manter a velocidade"
-turkish = "Özgün tekerlek kaydırmasını geri getir: her kademe hızı devralmadan yumuşak kaydırmayı yeniden başlatır"
-polish = "Przywróć oryginalne przewijanie kółkiem: każdy skok uruchamia płynne przewijanie od nowa bez zachowania prędkości"
-
+simplified_chinese = "每次滚轮都从静止重新开始平滑滚动"
+traditional_chinese = "每次滾輪都從靜止重新開始平滑捲動"
 [[message]]
 key = "Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick"
 [message.translations]

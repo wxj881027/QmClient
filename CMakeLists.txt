@@ -5550,6 +5550,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp
       src/test/unit/qmclient/ui/qm_line_input_multiline_test.cpp
       src/test/integration/qmclient/ui/qm_multiline_edit_scroll_test.cpp
+      src/test/integration/qmclient/ui/qm_wiki_panel_test.cpp
+      src/test/integration/qmclient/ui/qm_confirm_popup_result_test.cpp
       src/test/integration/qmclient/ui/qm_tooltip_text_layout_test.cpp
       src/test/integration/qmclient/ui/qm_card_summary_layout_test.cpp
       src/test/integration/qmclient/ui/qm_secondary_panel_actions_test.cpp
@@ -5580,6 +5582,17 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/game/client/QmUi/QmAnim.cpp
       src/game/client/QmUi/QmAnimationBackend.cpp
       src/game/client/QmUi/QmAnimResolve.cpp
+      src/game/client/QmUi/QmCardOrderModel.cpp
+      src/game/client/QmUi/QmCardRegistry.cpp
+      src/game/client/QmUi/QmCardWiki.cpp
+      src/game/client/QmUi/cards/QmCardCatalogSearch.cpp
+      src/game/client/QmUi/QmCardWikiPanel.cpp
+      src/game/client/QmUi/QmWikiDocs.cpp
+      src/game/client/QmUi/QmWikiEditor.cpp
+      src/game/client/QmUi/QmWikiMarkdown.cpp
+      src/game/client/QmUi/QmWikiMarkdownRender.cpp
+      src/game/client/QmUi/QmWikiMedia.cpp
+      src/game/client/QmUi/QmWikiStore.cpp
       src/game/client/QmUi/QmDropdown.cpp
       src/game/client/QmUi/QmScroll.cpp
       src/game/client/QmUi/QmTree.cpp
@@ -5592,7 +5605,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     )
     add_dependencies(qm-ui-popup-tests generate_protocol)
     target_link_libraries(qm-ui-popup-tests ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${GTEST_LIBRARIES} ${LIBS_SERVER} ${FREETYPE_LIBRARIES})
-    target_include_directories(qm-ui-popup-tests SYSTEM PRIVATE ${GTEST_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS})
+    target_include_directories(qm-ui-popup-tests SYSTEM PRIVATE ${GTEST_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS} ${WebP_INCLUDE_DIRS})
     target_compile_definitions(qm-ui-popup-tests PRIVATE DDNET_TEST_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
     if(MSVC)
       target_compile_options(qm-ui-popup-tests PRIVATE /bigobj /utf-8)

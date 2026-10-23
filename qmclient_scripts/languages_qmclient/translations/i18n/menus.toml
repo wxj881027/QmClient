@@ -367,21 +367,10 @@ turkish = "Sistem konsolu ayrıntı düzeyini ayarla (-3=Yok, -2=Yalnızca Hatal
 polish = "Dostosuj szczegółowość konsoli systemowej (-3=Brak, -2=Tylko błędy, -1=Ostrzeżenia, 0=Informacje, 1=Debugowanie, 2=Śledzenie)"
 
 [[message]]
-key = "Adjust the opacity of entities belonging to other teams, such as tees and name plates"
+key = "Opacity of other teams' tees and name plates"
 [message.translations]
-simplified_chinese = "调整其他队伍实体（如 Tee 和名牌）的不透明度"
-traditional_chinese = "調整其他隊伍實體（如 Tee 和名牌）的不透明度"
-japanese = "他のチームのエンティティ（Tee やネームプレートなど）の不透明度を調整"
-korean = "다른 팀의 엔티티(티, 이름표 등)의 불투명도를 조절합니다."
-russian = "Настроить прозрачность объектов других команд, таких как ти и таблички с именами"
-german = "Deckkraft von Entitäten anderer Teams anpassen, z. B. Tees und Namensschilder"
-spanish = "Ajustar la opacidad de entidades de otros equipos, como tees y placas de nombre"
-french = "Ajuster l'opacité des entités des autres équipes, comme les tees et les plaques de nom"
-brazilian_portuguese = "Ajustar a opacidade de entidades de outras equipes, como tees e placas de nome"
-portuguese = "Ajustar a opacidade de entidades de outras equipas, como tees e placas de nome"
-turkish = "Diğer takımlara ait varlıkların (tee'ler ve isim plakaları gibi) opaklığını ayarlayın"
-polish = "Dostosuj przezroczystość elementów należących do innych drużyn, takich jak gracze i tabliczki z nazwami"
-
+simplified_chinese = "其他队伍玩家与名牌的透明度"
+traditional_chinese = "其他隊伍玩家與名牌的透明度"
 [[message]]
 key = "Adjust verbosity in external console (-3 = none, -2 = errors only, -1 = warnings, 0 = info, 1 = debug, 2 = trace)."
 [message.translations]
@@ -7765,21 +7754,10 @@ turkish = "Basınca: Kancalanabilir bir şey"
 polish = "Po wciśnięciu: Coś do zahaczenia"
 
 [[message]]
-key = "Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted"
+key = "Use the custom colors below while the hook key is held"
 [message.translations]
-simplified_chinese = "按住显示钩索碰撞线时使用下方的自定义颜色；关闭=自动反色"
-traditional_chinese = "按住顯示鉤索碰撞線時使用下方的自訂顏色；關閉=自動反色"
-japanese = "フックキー押下中にフック衝突ラインを表示する際、下のカスタム色を使用します。無効の場合は非押下時の色を自動反転します"
-korean = "훅 키를 누르는 동안 훅 충돌선이 표시될 때 아래의 사용자 지정 색상을 사용합니다. 비활성화하면 누르지 않은 색이 자동으로 반전됩니다"
-russian = "Использовать указанные ниже цвета линии крюка при нажатой клавише крюка; если отключено, цвета автоматически инвертируются"
-german = "Verwendet die folgenden eigenen Farben, wenn die Kollisionslinie bei gedrückter Haken-Taste angezeigt wird; bei Deaktivierung werden die ungedrückten Farben automatisch invertiert"
-spanish = "Usa los colores personalizados de abajo cuando la línea de colisión se muestra al pulsar la tecla de gancho; si se desactiva, los colores sin pulsar se invierten automáticamente"
-french = "Utilise les couleurs personnalisées ci-dessous lorsque la ligne de collision est affichée pendant l'appui sur la touche de crochet ; si désactivé, les couleurs non pressées sont automatiquement inversées"
-brazilian_portuguese = "Usa as cores personalizadas abaixo quando a linha de colisão é exibida ao pressionar a tecla do gancho; se desativado, as cores não pressionadas são invertidas automaticamente"
-portuguese = "Usa as cores personalizadas abaixo quando a linha de colisão é apresentada ao premir a tecla de gancho; se desativado, as cores não premidas são invertidas automaticamente"
-turkish = "Kanca tuşuna basılırken kanca çarpışma çizgisi gösterildiğinde aşağıdaki özel renkleri kullanır; devre dışı bırakıldığında basılmamış renkler otomatik olarak ters çevrilir"
-polish = "Używa poniższych niestandardowych kolorów, gdy linia kolizji jest wyświetlana przy wciśniętym klawiszu haka; po wyłączeniu kolory niewciśnięte są automatycznie odwracane"
-
+simplified_chinese = "按住钩索键时使用下方的自定义颜色"
+traditional_chinese = "按住鉤索鍵時使用下方的自訂顏色"
 [[message]]
 key = "Hook Strength"
 [message.translations]
@@ -19358,21 +19336,10 @@ turkish = "DDRace bağlamasının hangi seviyeye ayarlandığı (otomatiktir, ku
 polish = "Poziom ustawienia wiązania DDRace (automatyczny, nie musisz go używać)"
 
 [[message]]
-key = "When you cross the start line, show a ghost tee replicating the movements of your best time"
+key = "Show a ghost of your best time after crossing the start line"
 [message.translations]
-simplified_chinese = "越过起跑线时，显示复现最佳成绩的影子 Tee"
-traditional_chinese = "越過起跑線時，顯示復現最佳成績的影子 Tee"
-japanese = "スタートラインを越えると、自分のベストタイムの動きを再現するゴーストティーを表示します"
-korean = "출발선을 넘으면 최고 기록의 움직임을 재현하는 고스트 티를 표시합니다"
-russian = "Когда пересекаешь стартовую линию, показывать призрачного ти, повторяющего движения твоего лучшего времени"
-german = "Wenn du die Startlinie überquerst, wird ein Geist-Tee angezeigt, der die Bewegungen deiner Bestzeit wiederholt"
-spanish = "Al cruzar la línea de salida, muestra un fantasma que replica los movimientos de tu mejor tiempo"
-french = "Lorsque tu franchis la ligne de départ, affiche un fantôme reproduisant les mouvements de ton meilleur temps"
-brazilian_portuguese = "Quando você cruza a linha de largada, mostre um fantasma replicando os movimentos do seu melhor tempo"
-portuguese = "Quando cruzares a linha de partida, mostra um fantasma a replicar os movimentos do teu melhor tempo"
-turkish = "Başlangıç çizgisini geçtiğinde, en iyi zamanının hareketlerini gösteren bir hayalet oyuncu belirir"
-polish = "Gdy przekroczysz linię startu, pokaż ducha odtwarzającego ruchy twojego najlepszego czasu"
-
+simplified_chinese = "越过起跑线后显示最佳成绩的残影"
+traditional_chinese = "越過起跑線後顯示最佳成績的殘影"
 [[message]]
 key = "Whether dummy copies your movement"
 [message.translations]
@@ -21783,21 +21750,10 @@ turkish = "Kuyruktan rastgele bir kaplama uygula"
 polish = "Zastosuj losową skórkę z kolejki"
 
 [[message]]
-key = "Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join."
+key = "Start at a random queue position on every map join"
 [message.translations]
-simplified_chinese = "每次进图（分身连接、重新启用队列时同样生效）从队列随机位置开始轮换；将切换间隔设为 0 则不做时间轮换，仅进图随机换肤"
-traditional_chinese = "每次進圖（分身連接、重新啟用佇列時同樣生效）從皮膚佇列隨機位置開始輪換；將切換間隔設為 0 則不做時間輪換，僅進圖隨機換膚"
-japanese = "マップに参加するたび（ダミー接続・キュー再有効化時も）キューのランダムな位置からローテーションを開始します。切替間隔を 0 にすると時間ローテーションが無効になり、マップ参加時のみ切り替わります"
-korean = "맵에 들어갈 때마다(더미 연결, 큐 재활성화 시에도) 큐의 무작위 위치부터 순환을 시작합니다. 전환 간격을 0으로 하면 시간 순환이 비활성화되고 맵 입장 때만 전환됩니다"
-russian = "Каждый вход на карту (а также подключение Дами или повторное включение очереди) начинает ротацию со случайной позиции очереди. При интервале 0 ротация по времени отключается — скин меняется только при входе на карту"
-german = "Startet bei jedem Kartenbeitritt (auch bei Dummy-Verbindung oder Reaktivierung der Warteschlange) von einer zufälligen Position in der Warteschlange. Bei einem Wechselintervall von 0 ist die zeitgesteuerte Rotation deaktiviert und Skins wechseln nur beim Kartenbeitritt"
-spanish = "Comienza desde una posición aleatoria de la cola en cada entrada al mapa (también al conectar el dummy o reactivar la cola). Con intervalo 0 se desactiva la rotación temporizada y las skins solo cambian al entrar al mapa"
-french = "Démarre depuis une position aléatoire de la file à chaque entrée sur une carte (également à la connexion du dummy ou à la réactivation de la file). Avec un intervalle de 0, la rotation temporisée est désactivée et les skins ne changent qu'en entrant sur une carte"
-brazilian_portuguese = "Começa de uma posição aleatória da fila a cada entrada no mapa (também ao conectar o dummy ou reativar a fila). Com intervalo 0, a rotação temporizada é desativada e as skins só trocam ao entrar no mapa"
-portuguese = "Começa numa posição aleatória da fila sempre que entra no mapa (também ao ligar o dummy ou reativar a fila). Com intervalo 0, a rotação temporizada é desativada e as skins só mudam ao entrar no mapa"
-turkish = "Her haritaya girişte (dummy bağlantısı ve kuyruğun yeniden etkinleştirilmesinde de) kuyruğun rastgele bir konumundan başlar. Geçiş aralığı 0 olduğunda zamanlanmış döndürme devre dışı kalır ve skinler yalnızca haritaya girişte değişir"
-polish = "Każde wejście na mapę (a także połączenie dummy lub ponowne włączenie kolejki) rozpoczyna rotację od losowej pozycji kolejki. Przy interwale 0 rotacja czasowa jest wyłączona, a skórki zmieniają się tylko po wejściu na mapę"
-
+simplified_chinese = "每次进图从随机队列位置开始"
+traditional_chinese = "每次進圖從隨機佇列位置開始"
 [[message]]
 key = "0 disables timed rotation; skins only switch on random start events"
 [message.translations]
@@ -22947,21 +22903,10 @@ turkish = "Kaydırma adımı"
 polish = "Krok przewijania"
 
 [[message]]
-key = "Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step"
+key = "Wheel distance per tick; hold Alt for 3x"
 [message.translations]
-simplified_chinese = "自定义滚轮每格的滚动距离。按住 Alt 滚动时使用 3 倍步长"
-traditional_chinese = "自訂滾輪每格的捲動距離。按住 Alt 捲動時使用 3 倍步長"
-japanese = "ホイール1刻みの移動距離を設定。Alt を押しながらスクロールすると3倍の幅"
-korean = "휠 한 눈금당 이동 거리를 설정합니다. Alt를 누르고 스크롤하면 간격이 3배가 됩니다"
-russian = "Расстояние прокрутки за шаг колёсика. Удерживайте Alt для увеличения шага в 3 раза"
-german = "Scrollstrecke pro Mausradraste anpassen. Mit gedrückter Alt-Taste ist der Schritt 3-mal so groß"
-spanish = "Personaliza la distancia por paso de la rueda. Mantén Alt al desplazar para un paso 3 veces mayor"
-french = "Personnaliser la distance par cran de molette. Maintenir Alt pour un pas 3 fois plus grand"
-brazilian_portuguese = "Personalize a distância por passo da roda. Segure Alt ao rolar para um passo 3 vezes maior"
-portuguese = "Personalize a distância por passo da roda. Mantenha Alt premido para um passo 3 vezes maior"
-turkish = "Tekerlek kademesi başına kaydırma mesafesini ayarlayın. Alt basılıyken adım 3 katına çıkar"
-polish = "Dostosuj odległość na skok kółka. Przytrzymaj Alt, aby zwiększyć krok 3 razy"
-
+simplified_chinese = "每格滚轮距离；按住 Alt 为三倍"
+traditional_chinese = "每格滾輪距離；按住 Alt 為三倍"
 [[message]]
 key = "Width of difficulty column in server browser"
 [message.translations]

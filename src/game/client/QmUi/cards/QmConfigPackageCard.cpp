@@ -301,9 +301,30 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 				});
 				Text("config-restore-help", Localize("Complete restore replaces the listed files. A backup is saved before importing. The client will restart."), 2);
 				RowAction("config-restore-action", 1, [&](CUIRect Rect) {
+					static CUi::SConfirmPopupContext s_RestoreConfirm;
+					static bool s_RestorePending = false;
 					if(Button(7, "config-package-restore", Localize("Import and restart"), Rect))
 					{
-						pMenus->PopupConfirm(Localize("Restore configuration package"), Localize("Replace settings, binds and the listed cfg files, then restart? The current configuration will be backed up first."), Localize("Import and restart"), Localize("Cancel"), &CMenus::PopupConfirmRestoreConfigPackage);
+						// 恢复会覆盖设置与 cfg 并可重启：Cancel/OK + 危险色，正文说明备份。
+						s_RestoreConfirm.Reset();
+						s_RestoreConfirm.DefaultButtons();
+						s_RestoreConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+						str_copy(s_RestoreConfirm.m_aMessage, Localize("Replace settings, binds and the listed cfg files, then restart? The current configuration will be backed up first."), sizeof(s_RestoreConfirm.m_aMessage));
+						pMenus->Ui()->ShowPopupConfirm(pMenus->Ui()->MouseX(), pMenus->Ui()->MouseY(), &s_RestoreConfirm);
+						s_RestorePending = true;
+					}
+					// 结果下一帧轮询：确认后才执行恢复，取消只清等待状态。
+					if(s_RestorePending)
+					{
+						if(s_RestoreConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+						{
+							s_RestorePending = false;
+							pMenus->PopupConfirmRestoreConfigPackage();
+						}
+						else if(s_RestoreConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED)
+						{
+							s_RestorePending = false;
+						}
 					}
 				});
 			}
@@ -358,5 +379,12 @@ void CMenus::PopupConfirmRestoreConfigPackage()
 	}
 	State.m_Status = Error;
 	State.m_ResultPath = Files.Exists(BackupPath) ? BackupPath : "";
-	PopupMessage(Localize("Restore configuration package"), PackageStatus(Error), Localize("Ok"));
+	// 结果要读原因和备份路径，属于必须知会：居中单按钮 Alert，不用结果 Toast。
+	static CUi::SMessagePopupContext s_RestoreResult;
+	str_copy(s_RestoreResult.m_aMessage, PackageStatus(Error), sizeof(s_RestoreResult.m_aMessage));
+	if(Error.empty())
+		s_RestoreResult.DefaultColor(Ui()->TextRender());
+	else
+		s_RestoreResult.ErrorColor();
+	Ui()->ShowPopupMessage(0.0f, 0.0f, &s_RestoreResult);
 }

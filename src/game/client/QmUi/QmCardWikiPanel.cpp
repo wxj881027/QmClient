@@ -3,11 +3,12 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "QmCardWikiPanel.h"
 
+#include "QmAnimResolve.h"
 #include "QmCardRegistry.h"
 #include "QmCardWiki.h"
+#include "QmWikiEditor.h"
 #include "QmWikiMarkdown.h"
 #include "QmWikiMarkdownRender.h"
-#include "QmWikiEditor.h"
 #include "QmWikiMedia.h"
 #include "QmWikiStore.h"
 #include "SecondaryPanel.h"
@@ -66,12 +67,22 @@ namespace
 		bool m_ResetScroll = true;
 		// 点击目录后让滚动区把目标块顶到顶部。
 		int m_TocTarget = -1;
+		// 最近一次目录点击命中的块（-1 表示还没点过）：测试据此区分
+		// 「没点中」和「点了但目标本来就在可视区、不需要滚动」。
+		int m_LastTocClick = -1;
+		// 目录行的绘制矩形（按目录下标）：命中判断与集成测试都用这份数据。
+		CUIRect m_aTocRows[64]{};
+		// 本帧鼠标是否真的在目录行上（由 MouseHovered 给出，含裁剪与弹层输入屏蔽）。
+		bool m_aTocRowHovered[64]{};
+		int m_TocRowCount = 0;
 		// 正文跳转先记下来，等本次绘制结束后再换内容，避免布局中途失效。
 		char m_aPendingLink[128] = "";
 	};
 
 	SWikiPopupContext gs_WikiPopupContext;
 	SPopupMenuId gs_WikiPopupId;
+	// 阅读态滚动区：滚动位置跨帧保留；编辑态不绘制它。
+	CScrollRegion gs_WikiScroll;
 
 	// 卡片之间可以互相跳转；外部地址交给系统浏览器。
 	void NavigateTo(SWikiPopupContext *pPopup, const char *pTarget)
@@ -239,17 +250,16 @@ namespace
 
 		if(!pPopup->m_Editor.m_Editing)
 		{
-			static CScrollRegion s_Scroll;
 			if(pPopup->m_ResetScroll)
 			{
-				s_Scroll.Reset();
+				gs_WikiScroll.Reset();
 				pPopup->m_ResetScroll = false;
 			}
 			CScrollRegionParams ScrollParams = QmScrollRegionParamsForSize(EQmScrollSize::MEDIUM, UiScale);
 			ScrollParams.m_WheelOwnerPriority = EUiWheelOwnerPriority::POPUP;
 			ScrollParams.m_pSliderThemeColor = &Theme.m_Accent;
 			vec2 ScrollOffset;
-			s_Scroll.Begin(&Content, &ScrollOffset, &ScrollParams);
+			gs_WikiScroll.Begin(&Content, &ScrollOffset, &ScrollParams);
 			CUIRect Body = Content;
 			Body.x += ScrollOffset.x;
 			Body.y += ScrollOffset.y;
@@ -273,6 +283,7 @@ namespace
 			Style.m_Line = Foreground.WithMultipliedAlpha(0.14f);
 
 			// 目录：文档有 2 个以上标题时列在正文最前面，点击把该小节顶到可视区顶部。
+			pPopup->m_TocRowCount = 0;
 			if(pPopup->m_Editor.m_vTocBlocks.size() >= 2)
 			{
 				const std::vector<SWikiBlock> &vBlocks = pPopup->m_Editor.m_Markdown.Blocks();
@@ -301,9 +312,14 @@ namespace
 					for(const SWikiSpan &Span : Heading.m_Spans)
 						Label += Span.m_Text;
 					const bool Hovered = Ctx.m_pUi->MouseHovered(&Row);
+					pPopup->m_aTocRows[TocIndex] = Row;
+					pPopup->m_aTocRowHovered[TocIndex] = Hovered;
 					s_aTocIds[TocIndex] = BlockIndex;
 					if(Ctx.m_pUi->DoButtonLogic(&s_aTocIds[TocIndex], 0, &Row, BUTTONFLAG_LEFT))
+					{
 						pPopup->m_TocTarget = BlockIndex;
+						pPopup->m_LastTocClick = BlockIndex;
+					}
 					SLabelProperties LabelProps;
 					LabelProps.m_MaxWidth = Text.w;
 					LabelProps.m_EllipsisAtEnd = true;
@@ -318,12 +334,13 @@ namespace
 						Underline.Draw(Theme.m_Accent.WithMultipliedAlpha(0.55f), IGraphics::CORNER_NONE, 0.0f);
 					}
 				}
+				pPopup->m_TocRowCount = static_cast<int>(std::min<size_t>(pPopup->m_Editor.m_vTocBlocks.size(), 64));
 				Body.HSplitTop(Gap * 0.5f, nullptr, &Body);
 				// 目录本身也要进滚动区的内容高度，否则滚到顶时目录会被裁掉。
 				CUIRect TocArea = Content;
 				TocArea.y = TocTop;
 				TocArea.h = std::max(0.0f, Body.y - TocTop);
-				s_Scroll.AddRect(TocArea, false);
+				gs_WikiScroll.AddRect(TocArea, false);
 			}
 
 			if(pPopup->m_Editor.m_Markdown.Blocks().empty())
@@ -342,11 +359,11 @@ namespace
 					str_copy(pPopup->m_aPendingLink, pTarget != nullptr ? pTarget : "", sizeof(pPopup->m_aPendingLink));
 				};
 				s_Links.m_pOnClick = &OnLink;
-				qm_wiki_markdown::RenderBlocks(Ctx, pPopup->m_Editor.m_Markdown.Blocks(), Body, Style, &s_Scroll, &s_Links, pPopup->m_TocTarget);
+				qm_wiki_markdown::RenderBlocks(Ctx, pPopup->m_Editor.m_Markdown.Blocks(), Body, Style, &gs_WikiScroll, &s_Links, pPopup->m_TocTarget);
 				if(!Ctx.m_pUi->RenderOnly())
 					pPopup->m_TocTarget = -1;
 			}
-			s_Scroll.End();
+			gs_WikiScroll.End();
 			return CUi::POPUP_KEEP_OPEN;
 		}
 
@@ -438,3 +455,87 @@ void OpenWikiDocumentPopup(const IUiContext &Ctx, const SWikiDocument &Document)
 	// 长文档用公告面板的整屏高度，滚动更长但一屏能看更多。
 	StartWikiPopup(Ctx, Document, Document.m_pId, nullptr, ESettingsSecondaryPanelKind::NEWS, false);
 }
+
+bool DoCardWikiInfoButton(const IUiContext &Ctx, const char *pStableId, const char *pTitle, const CUIRect &Button)
+{
+	if(Ctx.m_pUi == nullptr || pStableId == nullptr || pStableId[0] == '\0')
+		return false;
+	if(Button.w <= 0.0f || Button.h <= 0.0f)
+		return false;
+	// 没有 Wiki 条目的卡片不该有 ⓘ；这里再挡一次，避免调用方漏判后点出空面板。
+	if(FindCardWikiCopy(pStableId) == nullptr)
+		return false;
+	// 按钮身份与图标绘制用同一个 key：命中区域就是画出来的图标，
+	// 按下与释放都落在同一控件上，不会出现「点了没反应」。
+	const uint64_t Key = BuildUiAnimNodeKey(Ctx.m_ScopeHash, str_quickhash(pStableId));
+	const void *pId = reinterpret_cast<const void *>(static_cast<uintptr_t>(Key));
+	if(Ctx.m_pUi->DoButtonLogic(pId, 0, &Button, BUTTONFLAG_LEFT | BUTTONFLAG_CURRENT_HIT) == 0)
+		return false;
+	OpenCardWikiPopup(Ctx, pStableId, pTitle);
+	return true;
+}
+
+#if defined(DDNET_TEST_SOURCE_DIR)
+namespace qm_wiki_panel_test
+{
+	bool IsOpen()
+	{
+		return gs_WikiPopupContext.m_pUi != nullptr && gs_WikiPopupContext.m_pUi->IsPopupOpen(&gs_WikiPopupId);
+	}
+
+	bool IsEditing()
+	{
+		return gs_WikiPopupContext.m_Editor.m_Editing;
+	}
+
+	float ScrollOffsetY()
+	{
+		return gs_WikiScroll.ContentScrollOffsetY();
+	}
+
+	int TocRowCount()
+	{
+		return gs_WikiPopupContext.m_TocRowCount;
+	}
+
+	int LastTocClick()
+	{
+		return gs_WikiPopupContext.m_LastTocClick;
+	}
+
+	bool TocRowHovered(int Index)
+	{
+		if(Index < 0 || Index >= gs_WikiPopupContext.m_TocRowCount || Index >= 64)
+			return false;
+		return gs_WikiPopupContext.m_aTocRowHovered[Index];
+	}
+
+	CUIRect TocRowRect(int Index)
+	{
+		if(Index < 0 || Index >= gs_WikiPopupContext.m_TocRowCount || Index >= 64)
+			return CUIRect{0.0f, 0.0f, 0.0f, 0.0f};
+		return gs_WikiPopupContext.m_aTocRows[Index];
+	}
+
+	void ResetState()
+	{
+		// 面板状态是文件级静态量：进程内 CUi 常驻时没有生命周期问题，
+		// 但测试每个用例都会新建 CUi，不清掉旧指针下次 IsOpen 就会读到已释放的实例。
+		gs_WikiPopupContext = SWikiPopupContext{};
+		gs_WikiScroll.Reset();
+	}
+
+	bool BeginEditing()
+	{
+		if(!IsOpen())
+			return false;
+		SWikiEditorState &Editor = gs_WikiPopupContext.m_Editor;
+		if(Editor.m_Editing)
+			return true;
+		if(!Editor.BeginEditing(gs_WikiPopupContext.m_EditInput.GetMaxSize() - 1))
+			return false;
+		gs_WikiPopupContext.m_EditInput.Set(Editor.m_Draft.c_str());
+		return true;
+	}
+}
+#endif

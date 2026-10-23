@@ -86,6 +86,11 @@ extern bool gs_SettingsAssetsEntityGamePreview;
 
 namespace
 {
+	// 覆盖视频文件的二次确认：渲染弹窗在点「Ok」时已经把 m_Popup 置空，
+	// 这里先把弹窗恢复成渲染页，再弹居中确认，取消后用户还能改名字。
+	CUi::SConfirmPopupContext gs_ReplaceVideoConfirm;
+	bool gs_ReplaceVideoPending = false;
+
 	// 胶囊行高与内容缩放常量已提升到 menus.h（menus_ingame.cpp 的服务器导航栏也用）。
 	constexpr float MENU_MENUBAR_GAP_NEW = 8.0f; // 导航→内容间隙（统一边距基准）
 	constexpr float MENU_MENUBAR_HEIGHT_NEW = MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW + MENU_MENUBAR_GAP_NEW;
@@ -4147,36 +4152,6 @@ void CMenus::UpdateMusicState()
 		GameClient()->m_MapSounds.StopAll();
 }
 
-void CMenus::PopupMessage(const char *pTitle, const char *pMessage, const char *pButtonLabel, int NextPopup, FPopupButtonCallback pfnButtonCallback)
-{
-	// reset active item
-	Ui()->SetActiveItem(nullptr);
-
-	str_copy(m_aPopupTitle, pTitle);
-	str_copy(m_aPopupMessage, pMessage);
-	str_copy(m_aPopupButtons[BUTTON_CONFIRM].m_aLabel, pButtonLabel);
-	m_aPopupButtons[BUTTON_CONFIRM].m_NextPopup = NextPopup;
-	m_aPopupButtons[BUTTON_CONFIRM].m_pfnCallback = pfnButtonCallback;
-	m_Popup = POPUP_MESSAGE;
-}
-
-void CMenus::PopupConfirm(const char *pTitle, const char *pMessage, const char *pConfirmButtonLabel, const char *pCancelButtonLabel,
-	FPopupButtonCallback pfnConfirmButtonCallback, int ConfirmNextPopup, FPopupButtonCallback pfnCancelButtonCallback, int CancelNextPopup)
-{
-	// reset active item
-	Ui()->SetActiveItem(nullptr);
-
-	str_copy(m_aPopupTitle, pTitle);
-	str_copy(m_aPopupMessage, pMessage);
-	str_copy(m_aPopupButtons[BUTTON_CONFIRM].m_aLabel, pConfirmButtonLabel);
-	m_aPopupButtons[BUTTON_CONFIRM].m_NextPopup = ConfirmNextPopup;
-	m_aPopupButtons[BUTTON_CONFIRM].m_pfnCallback = pfnConfirmButtonCallback;
-	str_copy(m_aPopupButtons[BUTTON_CANCEL].m_aLabel, pCancelButtonLabel);
-	m_aPopupButtons[BUTTON_CANCEL].m_NextPopup = CancelNextPopup;
-	m_aPopupButtons[BUTTON_CANCEL].m_pfnCallback = pfnCancelButtonCallback;
-	m_Popup = POPUP_CONFIRM;
-}
-
 void CMenus::PopupWarning(const char *pTopic, const char *pBody, const char *pButton, std::chrono::nanoseconds Duration)
 {
 	// no multiline support for console
@@ -4760,13 +4735,7 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 	bool TopAlign = false;
 
 	ColorRGBA BgColor = ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f);
-	if(m_Popup == POPUP_MESSAGE || m_Popup == POPUP_CONFIRM)
-	{
-		pTitle = m_aPopupTitle;
-		pExtraText = m_aPopupMessage;
-		TopAlign = true;
-	}
-	else if(m_Popup == POPUP_DISCONNECTED)
+	if(m_Popup == POPUP_DISCONNECTED)
 	{
 		pTitle = Localize("Disconnected");
 		pExtraText = Client()->ErrorString();
@@ -4903,43 +4872,7 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		}
 	}
 
-	if(m_Popup == POPUP_MESSAGE || m_Popup == POPUP_CONFIRM)
-	{
-		CUIRect ButtonBar;
-		Box.HSplitBottom(20.0f, &Box, nullptr);
-		Box.HSplitBottom(24.0f, &Box, &ButtonBar);
-		ButtonBar.VMargin(100.0f, &ButtonBar);
-
-		if(m_Popup == POPUP_MESSAGE)
-		{
-			static CButtonContainer s_ButtonConfirm;
-			if(DoButton_Menu(&s_ButtonConfirm, m_aPopupButtons[BUTTON_CONFIRM].m_aLabel, 0, &ButtonBar) || Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE) || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER))
-			{
-				m_Popup = m_aPopupButtons[BUTTON_CONFIRM].m_NextPopup;
-				(this->*m_aPopupButtons[BUTTON_CONFIRM].m_pfnCallback)();
-			}
-		}
-		else if(m_Popup == POPUP_CONFIRM)
-		{
-			CUIRect CancelButton, ConfirmButton;
-			ButtonBar.VSplitMid(&CancelButton, &ConfirmButton, 40.0f);
-
-			static CButtonContainer s_ButtonCancel;
-			if(DoButton_Menu(&s_ButtonCancel, m_aPopupButtons[BUTTON_CANCEL].m_aLabel, 0, &CancelButton) || Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
-			{
-				m_Popup = m_aPopupButtons[BUTTON_CANCEL].m_NextPopup;
-				(this->*m_aPopupButtons[BUTTON_CANCEL].m_pfnCallback)();
-			}
-
-			static CButtonContainer s_ButtonConfirm;
-			if(DoButton_Menu(&s_ButtonConfirm, m_aPopupButtons[BUTTON_CONFIRM].m_aLabel, 0, &ConfirmButton) || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER))
-			{
-				m_Popup = m_aPopupButtons[BUTTON_CONFIRM].m_NextPopup;
-				(this->*m_aPopupButtons[BUTTON_CONFIRM].m_pfnCallback)();
-			}
-		}
-	}
-	else if(m_Popup == POPUP_QUIT || m_Popup == POPUP_RESTART)
+	if(m_Popup == POPUP_QUIT || m_Popup == POPUP_RESTART)
 	{
 		CUIRect Yes, No;
 		Box.HSplitBottom(20.f, &Box, &Part);
@@ -5110,16 +5043,11 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			const bool BrowsingScreenshots = DemoBrowserBrowsingScreenshots();
 			char aBufOld[IO_MAX_PATH_LENGTH];
 			str_format(aBufOld, sizeof(aBufOld), "%s/%s", m_aCurrentDemoFolder, pSelectedDemoItem->m_aFilename);
+			// 目录按输入名改；文件由 RenameTargetName 保证带扩展名（旧实现会漏掉 ".demo"，
+			// 文件随后被浏览器的扩展名过滤挡掉，看起来就像重命名后消失了）。
+			const std::string TargetName = pSelectedDemoItem->m_IsDir ? std::string(m_DemoRenameInput.GetString()) : qmclient::media_paths::RenameTargetName(m_DemoRenameInput.GetString(), pSelectedDemoItem->m_aFilename, BrowsingScreenshots);
 			char aBufNew[IO_MAX_PATH_LENGTH];
-			str_format(aBufNew, sizeof(aBufNew), "%s/%s", m_aCurrentDemoFolder, m_DemoRenameInput.GetString());
-			if(!pSelectedDemoItem->m_IsDir)
-			{
-				char aNameWithoutExt[IO_MAX_PATH_LENGTH];
-				char aExtension[IO_MAX_PATH_LENGTH];
-				fs_split_file_extension(pSelectedDemoItem->m_aFilename, aNameWithoutExt, sizeof(aNameWithoutExt), aExtension, sizeof(aExtension));
-				if(aExtension[0] != '\0' && str_endswith_nocase(aBufNew, aExtension) == nullptr)
-					str_append(aBufNew, aExtension);
-			}
+			str_format(aBufNew, sizeof(aBufNew), "%s/%s", m_aCurrentDemoFolder, TargetName.c_str());
 
 			if(str_comp(aBufOld, aBufNew) == 0)
 			{
@@ -5127,28 +5055,30 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			}
 			else if(!str_valid_filename(m_DemoRenameInput.GetString()))
 			{
-				PopupMessage(Localize("Error"), Localize("This name cannot be used for files and folders"), Localize("Ok"), POPUP_RENAME_DEMO);
+				qm_ui::Toast(EQmToastKind::FAILED, Localize("This name cannot be used for files and folders"));
 			}
 			else if(str_utf8_comp_nocase(aBufOld, aBufNew) != 0 && // Allow renaming if it only changes capitalization to support case-insensitive filesystems
 				Storage()->FileExists(aBufNew, pSelectedDemoItem->m_StorageType))
 			{
-				PopupMessage(Localize("Error"), BrowsingScreenshots ? Localize("A screenshot with this name already exists") : Localize("A demo with this name already exists"), Localize("Ok"), POPUP_RENAME_DEMO);
+				qm_ui::Toast(EQmToastKind::FAILED, BrowsingScreenshots ? Localize("A screenshot with this name already exists") : Localize("A demo with this name already exists"));
 			}
 			else if(Storage()->FolderExists(aBufNew, pSelectedDemoItem->m_StorageType))
 			{
-				PopupMessage(Localize("Error"), Localize("A folder with this name already exists"), Localize("Ok"), POPUP_RENAME_DEMO);
+				qm_ui::Toast(EQmToastKind::FAILED, Localize("A folder with this name already exists"));
 			}
 			else if(Storage()->RenameFile(aBufOld, aBufNew, pSelectedDemoItem->m_StorageType))
 			{
-				str_copy(m_aCurrentDemoSelectionName, m_DemoRenameInput.GetString());
-				if(!pSelectedDemoItem->m_IsDir)
-					fs_split_file_extension(m_DemoRenameInput.GetString(), m_aCurrentDemoSelectionName, sizeof(m_aCurrentDemoSelectionName));
+				// 用最终文件名（含扩展名）回填选择名，否则 DemolistOnUpdate 按 m_aName 找不到它，
+				// 列表会失去选中项。目录的 m_aName 带结尾斜杠。
+				str_copy(m_aCurrentDemoSelectionName, fs_filename(aBufNew));
+				if(pSelectedDemoItem->m_IsDir)
+					str_append(m_aCurrentDemoSelectionName, "/", sizeof(m_aCurrentDemoSelectionName));
 				DemolistPopulate();
 				DemolistOnUpdate(false);
 			}
 			else
 			{
-				PopupMessage(Localize("Error"), pSelectedDemoItem->m_IsDir ? Localize("Unable to rename the folder") : (BrowsingScreenshots ? Localize("Unable to rename the screenshot") : Localize("Unable to rename the demo")), Localize("Ok"), POPUP_RENAME_DEMO);
+				qm_ui::Toast(EQmToastKind::FAILED, pSelectedDemoItem->m_IsDir ? Localize("Unable to rename the folder") : (BrowsingScreenshots ? Localize("Unable to rename the screenshot") : Localize("Unable to rename the demo")));
 			}
 		}
 
@@ -5168,6 +5098,21 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 #if defined(CONF_VIDEORECORDER)
 	else if(m_Popup == POPUP_RENDER_DEMO)
 	{
+		// 覆盖确认的结果：确认才启动渲染，取消/被切页收掉时留在渲染页。
+		if(gs_ReplaceVideoPending)
+		{
+			const CUi::SConfirmPopupContext::EConfirmationResult Result = gs_ReplaceVideoConfirm.m_Result;
+			if(Result != CUi::SConfirmPopupContext::UNSET || !Ui()->IsPopupOpen(&gs_ReplaceVideoConfirm))
+			{
+				gs_ReplaceVideoPending = false;
+				if(Result == CUi::SConfirmPopupContext::CONFIRMED)
+				{
+					m_Popup = POPUP_NONE;
+					PopupConfirmDemoReplaceVideo();
+				}
+			}
+		}
+
 		CUIRect Row, Ok, Abort;
 
 		Box.HSplitBottom(26.0f, &Box, &Row);
@@ -5205,21 +5150,31 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 
 			if(!str_valid_filename(m_DemoRenderInput.GetString()))
 			{
-				PopupMessage(Localize("Error"), Localize("This name cannot be used for files and folders"), Localize("Ok"), POPUP_RENDER_DEMO);
+				// 点 Ok 时已经关掉了渲染页，这里把它恢复回来，方便直接改名字。
+				m_Popup = POPUP_RENDER_DEMO;
+				qm_ui::Toast(EQmToastKind::FAILED, Localize("This name cannot be used for files and folders"));
 			}
 			else if(!qmclient::media_paths::PrepareWrite(Storage(), VideoPath))
 			{
-				PopupMessage(Localize("Error"), Localize("Failed to save video"), Localize("Ok"), POPUP_RENDER_DEMO);
+				m_Popup = POPUP_RENDER_DEMO;
+				qm_ui::Toast(EQmToastKind::FAILED, Localize("Failed to save video"));
 			}
 			else if(Storage()->FolderExists(aVideoPath, IStorage::TYPE_SAVE_OR_ABSOLUTE))
 			{
-				PopupMessage(Localize("Error"), Localize("A folder with this name already exists"), Localize("Ok"), POPUP_RENDER_DEMO);
+				m_Popup = POPUP_RENDER_DEMO;
+				qm_ui::Toast(EQmToastKind::FAILED, Localize("A folder with this name already exists"));
 			}
 			else if(Storage()->FileExists(aVideoPath, IStorage::TYPE_SAVE_OR_ABSOLUTE))
 			{
 				char aMessage[128 + IO_MAX_PATH_LENGTH];
 				str_format(aMessage, sizeof(aMessage), Localize("File '%s' already exists, do you want to overwrite it?"), m_DemoRenderInput.GetString());
-				PopupConfirm(Localize("Replace video"), aMessage, Localize("Yes"), Localize("No"), &CMenus::PopupConfirmDemoReplaceVideo, POPUP_NONE, &CMenus::DefaultButtonCallback, POPUP_RENDER_DEMO);
+				gs_ReplaceVideoConfirm.Reset();
+				gs_ReplaceVideoConfirm.DefaultButtons();
+				gs_ReplaceVideoConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+				str_copy(gs_ReplaceVideoConfirm.m_aMessage, aMessage, sizeof(gs_ReplaceVideoConfirm.m_aMessage));
+				m_Popup = POPUP_RENDER_DEMO;
+				Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &gs_ReplaceVideoConfirm);
+				gs_ReplaceVideoPending = true;
 			}
 			else
 			{
@@ -5478,7 +5433,8 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		}
 
 		const auto &&ShowFinalErrorMessage = [&]() {
-			PopupMessage(Localize("Error joining Tutorial server"), Localize("Could not find a Tutorial server. Check your internet connection."), Localize("Ok"));
+			// 找不到教程服务器：短句 + 下一步建议，非阻断提示即可，不需要模态。
+			qm_ui::Toast(EQmToastKind::FAILED, Localize("Could not find a Tutorial server. Check your internet connection."));
 		};
 		const auto &&RunServer = [&]() {
 			char aMotd[256];
@@ -5606,7 +5562,7 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			}
 			if(Client()->InfoState() == IClient::EInfoState::ERROR)
 			{
-				PopupMessage(Localize("Error checking player name"), Localize("Could not check for existing player with your name. Check your internet connection."), Localize("Ok"));
+				qm_ui::Toast(EQmToastKind::FAILED, Localize("Could not check for existing player with your name. Check your internet connection."));
 			}
 		}
 	}
@@ -5645,15 +5601,15 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		{
 			if(!str_valid_filename(m_SkinNameInput.GetString()))
 			{
-				PopupMessage(Localize("Error"), Localize("This name cannot be used for files and folders"), Localize("Ok"), POPUP_SAVE_SKIN);
+				qm_ui::Toast(EQmToastKind::FAILED, Localize("This name cannot be used for files and folders"));
 			}
 			else if(CSkins7::IsSpecialSkin(m_SkinNameInput.GetString()))
 			{
-				PopupMessage(Localize("Error"), Localize("Unable to save the skin with a reserved name"), Localize("Ok"), POPUP_SAVE_SKIN);
+				qm_ui::Toast(EQmToastKind::FAILED, Localize("Unable to save the skin with a reserved name"));
 			}
 			else if(!GameClient()->m_Skins7.SaveSkinfile(m_SkinNameInput.GetString(), m_Dummy))
 			{
-				PopupMessage(Localize("Error"), Localize("Unable to save the skin"), Localize("Ok"), POPUP_SAVE_SKIN);
+				qm_ui::Toast(EQmToastKind::FAILED, Localize("Unable to save the skin"));
 			}
 			else
 			{
@@ -5920,7 +5876,7 @@ void CMenus::PopupConfirmDemoReplaceVideo()
 {
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK && GameClient()->m_DemoCamera.Dirty() && !GameClient()->m_DemoCamera.Save())
 	{
-		PopupMessage(Localize("Error"), Localize("Failed to save camera path"), Localize("Ok"));
+		qm_ui::Toast(EQmToastKind::FAILED, Localize("Failed to save camera path"));
 		return;
 	}
 	char aBuf[IO_MAX_PATH_LENGTH];
@@ -6001,7 +5957,11 @@ void CMenus::PopupConfirmDemoReplaceVideo()
 	if(pError)
 	{
 		m_DemoRenderInput.Clear();
-		PopupMessage(Localize("Error loading demo"), pError, Localize("Ok"));
+		// demo 载入失败要读具体原因：居中 Alert，不用结果 Toast。
+		static CUi::SMessagePopupContext s_DemoLoadError;
+		str_copy(s_DemoLoadError.m_aMessage, pError, sizeof(s_DemoLoadError.m_aMessage));
+		s_DemoLoadError.ErrorColor();
+		Ui()->ShowPopupMessage(0.0f, 0.0f, &s_DemoLoadError);
 	}
 }
 #endif
@@ -8316,7 +8276,8 @@ void CMenus::OnRender()
 	{
 		Client()->Disconnect();
 		SetActive(true);
-		PopupMessage(Localize("Disconnected"), Localize("The server is running a non-standard tuning on a pure game type."), Localize("Ok"));
+		// 被动断开要说明原因，但不该再挡一层模态：用警告提示。
+		qm_ui::Toast(EQmToastKind::WARNING, Localize("The server is running a non-standard tuning on a pure game type."));
 	}
 
 	if(!IsActive())

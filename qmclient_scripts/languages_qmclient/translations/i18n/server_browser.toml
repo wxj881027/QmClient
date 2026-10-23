@@ -2230,21 +2230,10 @@ turkish = "Bu arkadaşı taşımak için başka bir kategoriye sürükleyin."
 polish = "Przeciągnij tego znajomego do innej kategorii, aby go przenieść."
 
 [[message]]
-key = "Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories"
+key = "Drag to reorder; right-click or use the gear to manage"
 [message.translations]
-simplified_chinese = "拖动调整顺序，点击展开或收起。右键或使用齿轮管理分类"
-traditional_chinese = "拖曳調整順序，點擊展開或收起。右鍵或使用齒輪管理分類"
-japanese = "ドラッグで並べ替え、クリックで展開・折りたたみ。右クリックまたは歯車アイコンでカテゴリを管理"
-korean = "드래그하여 순서를 바꾸고 클릭하여 펼치거나 접습니다. 마우스 오른쪽 버튼을 클릭하거나 톱니바퀴를 사용하여 카테고리를 관리합니다"
-russian = "Перетащите, чтобы изменить порядок; нажмите, чтобы развернуть или свернуть. Щелкните правой кнопкой мыши или используйте шестеренку для управления категориями"
-german = "Zum Umsortieren ziehen; zum Auf- oder Zuklappen klicken. Rechtsklick oder Zahnrad zum Verwalten von Kategorien"
-spanish = "Arrastra para reordenar; haz clic para expandir o contraer. Haz clic derecho o usa el engranaje para gestionar categorías"
-french = "Faites glisser pour réorganiser ; cliquez pour développer ou réduire. Faites un clic droit ou utilisez l'engrenage pour gérer les catégories"
-brazilian_portuguese = "Arraste para reordenar; clique para expandir ou recolher. Clique com o botão direito ou use a engrenagem para gerenciar categorias"
-portuguese = "Arraste para reordenar; clique para expandir ou recolher. Clique com o botão direito ou use a engrenagem para gerir categorias"
-turkish = "Sıralamayı değiştirmek için sürükleyin; genişletmek veya daraltmak için tıklayın. Kategorileri yönetmek için sağ tıklayın veya dişli simgesini kullanın"
-polish = "Przeciągnij, aby zmienić kolejność; kliknij, aby rozwinąć lub zwinąć. Kliknij prawym przyciskiem lub użyj koła zębatego, aby zarządzać kategoriami"
-
+simplified_chinese = "拖动排序；右键或齿轮可管理分类"
+traditional_chinese = "拖曳排序；右鍵或齒輪可管理分類"
 [[message]]
 key = "Server list is more than five minutes old"
 [message.translations]
