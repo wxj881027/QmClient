@@ -735,8 +735,10 @@ void CUi::RestorePopupFocus(const void *pId, CLineInput *pLineInput)
 				m_pInteractionCardId != nullptr))
 		return;
 	const bool RestoreText = pLineInput != nullptr && m_PendingPopupFocus.m_pTextInput == pLineInput;
+	const bool FromKeyboard = m_PendingPopupFocus.m_FromKeyboard;
 	m_PendingPopupFocus = {};
 	SetKeyboardFocus(pId);
+	m_KeyboardFocus.m_FromKeyboard = FromKeyboard;
 	if(RestoreText)
 	{
 		// 只在真实控件确认存活后解引用，保留其光标与选择，不模拟鼠标按下。
@@ -776,6 +778,7 @@ int CUi::DoButtonGroupKeyboard(const void *const *ppIds, const bool *pEnabled, i
 			}
 		}
 		SetKeyboardFocus(Focused >= 0 ? ppIds[Focused] : nullptr);
+		m_KeyboardFocus.m_FromKeyboard = Focused >= 0;
 	}
 	if(Focused >= 0)
 	{

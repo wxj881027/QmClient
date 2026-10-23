@@ -190,23 +190,34 @@ namespace ui_widget
 		const void *apIds[] = {pLeft, pRight};
 		const bool aEnabled[] = {!LeftDisabled, !RightDisabled};
 		const int KeyboardAction = Ctx.m_pUi->DoButtonGroupKeyboard(apIds, aEnabled, 2);
-		// 两半裁剪同一完整按钮表面，外框与普通按钮一致，中心没有重复描边。
+		// 两半只提交状态底色；外框在最后按整条按钮的合并状态统一提交一圈，
+		// 悬浮/按下时不会只有被悬停的半边发亮、中缝断开。
 		Ctx.m_pUi->ClipEnable(&Left);
-		const bool LeftClicked = DoStyledButton(Ctx, pLeft, pLeftText, Left, LeftDisabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, true, Geometry, &Rect);
+		const bool LeftClicked = DoStyledButton(Ctx, pLeft, pLeftText, Left, LeftDisabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, false, Geometry, &Rect);
 		Ctx.m_pUi->ClipDisable();
 		Ctx.m_pUi->ClipEnable(&Right);
-		const bool RightClicked = DoStyledButton(Ctx, pRight, pRightText, Right, RightDisabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, true, Geometry, &Rect);
+		const bool RightClicked = DoStyledButton(Ctx, pRight, pRightText, Right, RightDisabled, EUiButtonRole::SECONDARY, IGraphics::CORNER_ALL, false, Geometry, &Rect);
 		Ctx.m_pUi->ClipDisable();
+		SUiButtonState BorderState;
+		BorderState.m_Enabled = !(LeftDisabled && RightDisabled);
+		BorderState.m_Hovered = (!LeftDisabled && Ctx.m_pUi->VisualMouseHovered(&Left)) || (!RightDisabled && Ctx.m_pUi->VisualMouseHovered(&Right));
+		BorderState.m_Pressed = BorderState.m_Hovered && (Ctx.m_pUi->CheckActiveItem(pLeft) || Ctx.m_pUi->CheckActiveItem(pRight)) && (Ctx.m_pUi->MouseButton(0) || Ctx.m_pUi->MouseButton(1) || Ctx.m_pUi->MouseButton(2));
 		const float Inset = std::min(ui_token::spacing::XS, Rect.h * 0.25f);
 		const CUIRect Divider{Right.x - 0.5f, Rect.y + Inset, 1.0f, std::max(0.0f, Rect.h - 2.0f * Inset)};
 		if(!Ctx.m_pUi->DrawingSuppressed())
+		{
 			Divider.Draw(Ctx.m_pUi->ScaleBackgroundAlpha(ui_token::color::BORDER_SUBTLE), IGraphics::CORNER_NONE, 0.0f);
+			const SUiTheme &Theme = Ctx.m_pTheme != nullptr ? *Ctx.m_pTheme : Ctx.m_pUi->QmControlTheme();
+			const auto BorderStyle = ResolveUiButtonStyle(EUiButtonRole::SECONDARY, ResolveConfiguredControlSurface(), CUiScopedSurfaceText::CurrentSurface(), Theme, BorderState);
+			DrawRoundedSurface(Ctx, Rect, ColorRGBA(), Ctx.m_pUi->ScaleControlAlpha(BorderStyle.m_Border), ResolveUiTextButtonRadius(Geometry), ui_token::feedback::ICON_BORDER_WIDTH);
+		}
 		Ctx.m_pUi->DoButtonTooltip(pLeft, &Left, pLeftTooltip);
 		Ctx.m_pUi->DoButtonTooltip(pRight, &Right, pRightTooltip);
 		if(!Ctx.m_pUi->DrawingSuppressed())
 		{
 			const void *pFocus = Ctx.m_pUi->KeyboardFocusItem();
-			if((pFocus == pLeft && !LeftDisabled) || (pFocus == pRight && !RightDisabled))
+			// 焦点环只服务键盘导航；鼠标点击或弹层关闭恢复的焦点不再留下强调色框。
+			if(Ctx.m_pUi->KeyboardFocusFromKeyboard() && ((pFocus == pLeft && !LeftDisabled) || (pFocus == pRight && !RightDisabled)))
 			{
 				CUIRect FocusRect = pFocus == pLeft ? Left : Right;
 				FocusRect.Margin(std::min(2.0f, std::min(FocusRect.w, FocusRect.h) * 0.25f), &FocusRect);

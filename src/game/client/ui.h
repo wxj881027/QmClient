@@ -773,6 +773,8 @@ private:
 		const SPopupMenuId *m_pPopupId = nullptr;
 		CQmUiInteractionSource m_Source;
 		uint64_t m_Frame = 0;
+		// 只有 Tab/方向键导航设置的焦点才画焦点环；鼠标点击与弹层关闭的焦点恢复不画。
+		bool m_FromKeyboard = false;
 	};
 	SPopupFocus m_KeyboardFocus;
 	SPopupFocus m_PendingPopupFocus;
@@ -1070,6 +1072,7 @@ public:
 	void DoButtonTooltip(const void *pId, const CUIRect *pRect, const char *pText);
 	void SetKeyboardFocus(const void *pId);
 	const void *KeyboardFocusItem() const { return m_KeyboardFocus.m_pItem; }
+	bool KeyboardFocusFromKeyboard() const { return m_KeyboardFocus.m_FromKeyboard; }
 	int DoButtonGroupKeyboard(const void *const *ppIds, const bool *pEnabled, int Count);
 	void DoTooltip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint = -1.0f);
 	void DoSmallTooltip(const void *pId, const CUIRect *pNearRect, const char *pText, float FontSize = 12.0f, float WidthHint = -1.0f);
