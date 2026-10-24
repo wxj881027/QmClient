@@ -124,7 +124,7 @@ void CQmDemoCamera::Changed()
 {
 	m_Sessions.Changed();
 	m_EditFailed = false;
-	Save();
+	m_Sessions.SaveCurrent([this](const std::string &Path, const qm_demo_camera::SProject &Project) { return SaveProject(Path, Project); });
 	GameClient()->m_TClient.SetForcedAspect();
 }
 

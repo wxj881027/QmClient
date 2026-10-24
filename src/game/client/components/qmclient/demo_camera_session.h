@@ -125,6 +125,12 @@ namespace qm_demo_camera
 		}
 
 		template<typename FSave>
+		bool SaveCurrent(FSave &&Save) noexcept
+		{
+			return SaveOne(m_Current, Save);
+		}
+
+		template<typename FSave>
 		bool Save(FSave &&Save) noexcept
 		{
 			bool Success = SaveOne(m_Current, Save);

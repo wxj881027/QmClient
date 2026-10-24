@@ -247,6 +247,23 @@ TEST(QmDemoCameraSession, SaveRetryWritesAllPendingProjectsAndReleasesRetainedSt
 	EXPECT_FLOAT_EQ(B->m_Center.x, 2.0f);
 }
 
+TEST(QmDemoCameraSession, EditingCurrentProjectDoesNotRetryAllRetainedWrites)
+{
+	CSessionStore Store;
+	CBackend Io;
+	Io.m_FailedWrites.insert("root/a");
+	ASSERT_TRUE(Io.Open(Store, "a", "root/a"));
+	ASSERT_NO_FATAL_FAILURE(Edit(Store, 1.0f));
+	ASSERT_TRUE(Io.Open(Store, "b", "root/b"));
+	ASSERT_NO_FATAL_FAILURE(Edit(Store, 2.0f));
+	const int Saves = Io.m_Saves;
+	EXPECT_TRUE(Store.SaveCurrent([&](const std::string &Path, const SProject &Project) { return Io.Save(Path, Project); }));
+	EXPECT_EQ(Io.m_Saves, Saves + 1);
+	EXPECT_EQ(Store.RetainedCount(), 1u);
+	EXPECT_TRUE(Store.Dirty());
+	EXPECT_TRUE(Io.m_Files.count("root/b"));
+}
+
 TEST(QmDemoCameraSession, FailedCloseKeepsCurrentEditsForReopening)
 {
 	CSessionStore Store;
