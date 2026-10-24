@@ -8,7 +8,7 @@
 
 class CUi;
 class IGraphics;
-struct CUIRect;
+class CUIRect;
 
 class CQmSeasonalSidebar
 {
