@@ -29,6 +29,7 @@
 #include <game/client/QmUi/SettingsChoice.h>
 #include <game/client/QmUi/SettingsColorPicker.h>
 #include <game/client/QmUi/SettingsTextPlanUnits.h>
+#include <game/client/QmUi/SettingsTextPrewarm.h>
 #include <game/client/QmUi/SettingsToggleGrid.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
@@ -2880,7 +2881,7 @@ public:
 	void BuildVisibleSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);
 	void PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOverride);
 	void CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollectionUnit &Unit, CUIRect Screen, CUIRect SettingsMainView);
-	bool AdvanceSettingsMenuTextPlanCollection(int Budget, const char *pOperationOverride);
+	bool AdvanceSettingsMenuTextPlanCollection(int Budget, const char *pOperationOverride, int64_t Deadline);
 	bool PrebuildSettingsTextPlanItem(const SMenuTextPlanItem &Item, int &RemainingBudget);
 	int CountMissingSettingsMenuTextPlanItems() const;
 	bool SettingsMenuTextPrebuildReady(const char *pOperationOverride) const;
@@ -3130,10 +3131,8 @@ private:
 	std::unordered_set<std::string> m_SettingsMenuTextPlannedKeys;
 	size_t m_SettingsMenuTextPlanCursor = 0;
 	size_t m_SettingsMenuTextPlanCollectionCursor = 0;
-	// 字形预热：构建文本容器前，先把当前 plan item 的字符分帧预热（每帧限量）
-	std::vector<std::pair<int, int>> m_vMenuTextGlyphPrewarmQueue;
-	size_t m_MenuTextGlyphPrewarmCursor = 0;
-	size_t m_MenuTextGlyphPrewarmPlanCursor = static_cast<size_t>(-1);
+	// 字形预热：每轮共用数量和时间预算，构建容器前完成当前条目的预热。
+	CSettingsTextPrewarm m_MenuTextGlyphPrewarm;
 	uint64_t m_SettingsMenuTextPlanGeneration = 0;
 	uint64_t m_SettingsMenuTextPlanCollectionGeneration = 0;
 	std::string m_SettingsMenuTextPlanCollectionOperation;

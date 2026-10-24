@@ -6,6 +6,37 @@
 #include <string>
 #include <vector>
 
+TEST(QmPerfDiagnostics, WireMessageKeepsTheSystemBitAndMessageId)
+{
+	CPacker Packet;
+	Packet.Reset();
+	Packet.AddInt((4 << 1) | 1);
+	const auto System = QmPerfWireMessage(Packet.Data(), Packet.Size());
+	EXPECT_EQ(System.m_Id, 4);
+	EXPECT_EQ(System.m_System, 1);
+
+	Packet.Reset();
+	Packet.AddInt(128 << 1);
+	const auto Game = QmPerfWireMessage(Packet.Data(), Packet.Size());
+	EXPECT_EQ(Game.m_Id, 128);
+	EXPECT_EQ(Game.m_System, 0);
+}
+
+TEST(QmPerfDiagnostics, InvalidWireHeaderDoesNotInventAMessageId)
+{
+	const unsigned char aTruncated[] = {0x80};
+	const auto Truncated = QmPerfWireMessage(aTruncated, sizeof(aTruncated));
+	EXPECT_EQ(Truncated.m_Id, -1);
+	EXPECT_EQ(Truncated.m_System, -1);
+	EXPECT_EQ(QmPerfWireMessage(nullptr, 0).m_Id, -1);
+	EXPECT_EQ(QmPerfWireMessage(aTruncated, 0).m_Id, -1);
+
+	CPacker Packet;
+	Packet.Reset();
+	Packet.AddInt(-1);
+	EXPECT_EQ(QmPerfWireMessage(Packet.Data(), Packet.Size()).m_Id, -1);
+}
+
 TEST(QmPerfDiagnostics, SensitiveConfigIsDetectedByAnyKeywordPart)
 {
 	// 名单是子串匹配：密码/密钥类配置无论前缀如何都应命中。
