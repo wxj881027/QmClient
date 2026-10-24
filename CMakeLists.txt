@@ -3418,6 +3418,7 @@ if(CLIENT)
     components/controls.h
     components/countryflags.cpp
     components/countryflags.h
+    components/countryflags_load_job.cpp
     components/damageind.cpp
     components/damageind.h
     components/debughud.cpp
@@ -4793,6 +4794,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/base/bezier_test.cpp
     src/test/unit/client/binds_test.cpp
     src/test/unit/client/binds_active_test.cpp
+    src/test/unit/client/countryflags_load_test.cpp
+    src/test/integration/client/countryflags_load_job_test.cpp
     src/test/integration/client/bind_command_lifetime_test.cpp
     src/test/unit/engine/blocklist_driver_test.cpp
     src/test/unit/engine/game_ping_test.cpp
@@ -5372,6 +5375,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/voice_spatial_utils_test.cpp
   )
   set(TESTS_EXTRA
+    src/game/client/components/countryflags_load_job.cpp
     src/engine/client/demoedit.cpp
     src/engine/client/ghost.cpp
     src/game/editor/collab_camera.cpp
