@@ -3039,11 +3039,19 @@ public:
 			return;
 		}
 
-		const unsigned OldRenderFlags = m_RenderFlags;
-		m_RenderFlags |= TEXT_RENDER_FLAG_ONE_TIME_USE;
 		STextContainerIndex TextCont;
-		CreateTextContainer(TextCont, pCursor, pText, Length);
-		m_RenderFlags = OldRenderFlags;
+		{
+			// 只恢复标量标志，不在析构中调用可能再次失败的 GPU 清理。
+			struct SRestoreFlags
+			{
+				unsigned &m_Target;
+				unsigned m_Previous;
+				~SRestoreFlags() { m_Target = m_Previous; }
+			};
+			const SRestoreFlags Restore{m_RenderFlags, m_RenderFlags};
+			m_RenderFlags |= TEXT_RENDER_FLAG_ONE_TIME_USE;
+			CreateTextContainer(TextCont, pCursor, pText, Length);
+		}
 		if(TextCont.Valid())
 		{
 			if((pCursor->m_Flags & TEXTFLAG_RENDER) != 0)
@@ -3874,7 +3882,19 @@ public:
 
 		STextContainer &TextContainer = GetTextContainer(TextContainerIndex);
 		if(Graphics()->IsTextBufferingEnabled())
-			Graphics()->DeleteBufferContainer(TextContainer.m_StringInfo.m_QuadBufferContainerIndex, true);
+		{
+			if(TextContainer.m_StringInfo.m_QuadBufferContainerIndex != -1)
+			{
+				Graphics()->DeleteBufferContainer(TextContainer.m_StringInfo.m_QuadBufferContainerIndex, true);
+				TextContainer.m_StringInfo.m_QuadBufferObjectIndex = -1;
+			}
+			else if(TextContainer.m_StringInfo.m_QuadBufferObjectIndex != -1)
+			{
+				// 缓冲容器创建失败时，已创建的缓冲对象仍归本条文字所有。
+				Graphics()->DeleteBufferObject(TextContainer.m_StringInfo.m_QuadBufferObjectIndex);
+				TextContainer.m_StringInfo.m_QuadBufferObjectIndex = -1;
+			}
+		}
 		Graphics()->DeleteQuadContainer(TextContainer.m_StringInfo.m_SelectionQuadContainerIndex);
 		FreeTextContainer(TextContainerIndex);
 	}
