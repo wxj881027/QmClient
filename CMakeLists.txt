@@ -4993,6 +4993,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_hud_notifications_formatting_test.cpp
     src/test/unit/qmclient/client/qm_hud_notifications_state_test.cpp
     src/test/unit/qmclient/client/qm_hud_notification_queue_test.cpp
+    src/test/unit/qmclient/client/qm_colored_parts_test.cpp
     src/test/unit/qmclient/client/qm_hud_notifications_presentation_test.cpp
     src/test/unit/qmclient/client/qm_hud_notifications_geometry_test.cpp
     src/test/unit/qmclient/client/qm_hud_editor_geometry_test.cpp

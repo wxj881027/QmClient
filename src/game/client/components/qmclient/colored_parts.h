@@ -8,6 +8,8 @@
 #include <engine/shared/console.h>
 #include <engine/textrender.h>
 
+#include <memory>
+#include <utility>
 #include <vector>
 
 class CColoredParts
@@ -24,7 +26,7 @@ public:
 	};
 
 private:
-	char *m_pBuffer = nullptr; // Owned buffer if allocated
+	std::unique_ptr<char[]> m_pBuffer; // 构造中途失败时也要回收已申请的缓冲。
 	const char *m_pText = nullptr; // Points to valid string (owned or original)
 	std::vector<CColoredPart> m_vColors;
 
@@ -32,29 +34,23 @@ public:
 	const char *Text() const { return m_pText; }
 	const std::vector<CColoredPart> &Colors() const { return m_vColors; }
 
-	~CColoredParts()
-	{
-		delete[] m_pBuffer;
-	}
+	~CColoredParts() = default;
 	CColoredParts(const CColoredParts &) = delete;
 	CColoredParts &operator=(const CColoredParts &) = delete;
 	CColoredParts(CColoredParts &&Other) noexcept :
-		m_pBuffer(Other.m_pBuffer),
+		m_pBuffer(std::move(Other.m_pBuffer)),
 		m_pText(Other.m_pText),
 		m_vColors(std::move(Other.m_vColors))
 	{
-		Other.m_pBuffer = nullptr;
 		Other.m_pText = nullptr;
 	}
 	CColoredParts &operator=(CColoredParts &&Other) noexcept
 	{
 		if(this != &Other)
 		{
-			delete[] m_pBuffer;
-			m_pBuffer = Other.m_pBuffer;
+			m_pBuffer = std::move(Other.m_pBuffer);
 			m_pText = Other.m_pText;
 			m_vColors = std::move(Other.m_vColors);
-			Other.m_pBuffer = nullptr;
 			Other.m_pText = nullptr;
 		}
 		return *this;
@@ -69,10 +65,10 @@ public:
 
 		// Allocate a writable buffer
 		const int Length = str_length(pInput);
-		m_pBuffer = new char[Length + 1];
-		m_pText = m_pBuffer;
+		m_pBuffer.reset(new char[static_cast<size_t>(Length) + 1]);
+		m_pText = m_pBuffer.get();
 
-		char *pWrite = m_pBuffer;
+		char *pWrite = m_pBuffer.get();
 		const char *pRead = pInput;
 		while(*pRead)
 		{
@@ -102,7 +98,7 @@ public:
 			str_copy(aBuf, pMarkerStart + 2, std::min<int>(sizeof(aBuf), pMarkerEnd - pMarkerStart - 2 + 1));
 			const auto Color = CConsole::ColorParse(aBuf, 0.0f);
 			if(Color.has_value())
-				m_vColors.emplace_back(static_cast<int>(pWrite - m_pBuffer), color_cast<ColorRGBA>(*Color));
+				m_vColors.emplace_back(static_cast<int>(pWrite - m_pBuffer.get()), color_cast<ColorRGBA>(*Color));
 
 			// Skip over marker
 			pRead = pMarkerEnd + 2;
