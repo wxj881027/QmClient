@@ -1,6 +1,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_QM_DEVELOPER_BADGE_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_QM_DEVELOPER_BADGE_H
 
+#include "qm_developer_badge_motion.h"
+
 #include <engine/textrender.h>
 
 #include <game/client/ui_rect.h>
@@ -10,7 +12,7 @@
 inline vec2 QmDeveloperBadgeSize(float FontSize)
 {
 	const float Height = std::max(FontSize, 0.0f);
-	return vec2(Height * (240.0f / 70.0f), Height);
+	return vec2(Height * (QM_DEVELOPER_BADGE_WIDTH / QM_DEVELOPER_BADGE_HEIGHT), Height);
 }
 
 inline float QmDeveloperBadgeAdvance(float FontSize)
@@ -51,12 +53,15 @@ inline CUIRect QmLayoutDeveloperBadge(CTextCursor &Cursor)
 class CQmDeveloperBadge
 {
 	IGraphics::CTextureHandle m_Texture;
+	IGraphics::CTextureHandle m_ParticleTexture;
+	mutable double m_MotionTime = -1.0;
+	mutable SQmDeveloperBadgeMotion m_Motion{};
 
 public:
 	void Init(IGraphics *pGraphics);
 	void Shutdown(IGraphics *pGraphics);
 	bool Available() const { return m_Texture.IsValid(); }
-	void Render(IGraphics *pGraphics, const CUIRect &Rect, float Alpha) const;
+	void Render(IGraphics *pGraphics, const CUIRect &Rect, float Alpha, double TimeSec) const;
 };
 
 #endif

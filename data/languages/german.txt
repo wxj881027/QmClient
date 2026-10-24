@@ -1907,9 +1907,6 @@ Bounded capture frame queue depth for demo export (higher values use more memory
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Farbe des Titels in Klammern: 0 = Server folgen, 1 = einfarbig, 2 = Regenbogen
 
-Bracketed title opacity (0-100)
-== Deckkraft des Titels in Klammern (0-100)
-
 Bracketed title single color
 == Einfarbig für Titel in Klammern
 
@@ -2068,6 +2065,9 @@ Cannot open word list file. Previous words remain active.
 
 Cannot read complete word list file. Previous words remain active.
 == Die Wortlistendatei kann nicht vollständig gelesen werden. Bisherige Wörter bleiben aktiv.
+
+Cannot remove the wiki file
+== Wiki-Datei kann nicht entfernt werden
 
 Cannot swap: the other player is not in your team
 == Tausch nicht möglich: der andere Spieler ist nicht in deinem Team
@@ -2494,9 +2494,6 @@ Classic pro
 
 Classic title glow
 == Klassisches Titelglühen
-
-Classic title glow: 0 = off, 1 = subtle (6 draws), 2 = full Calamity (16 draws)
-== Klassisches Titelglühen: 0 = aus, 1 = dezent (6 Ebenen), 2 = volles Calamity (16 Ebenen)
 
 Clear
 == Leeren
@@ -4147,6 +4144,9 @@ Do not translate server messages
 
 Do not use it to spam: servers may punish repeated automatic messages.
 == Nicht zum Spammen nutzen: Server können wiederholte automatische Nachrichten bestrafen.
+
+Document too large for the editor (%d of %d bytes)
+== Dokument zu groß für den Editor (%d von %d Bytes)
 
 Done
 == Done
@@ -6002,6 +6002,9 @@ Full: each enabled animation category uses its complete transition
 Fullscreen
 == Vollbild
 
+Fully block enemy players
+== Feindliche Spieler vollständig blockieren
+
 Fun
 == Spaß
 
@@ -6445,6 +6448,9 @@ Hide Echo messages
 
 Hide Echo messages in Zen mode
 == Echo-Nachrichten im Zen-Modus ausblenden
+
+Hide enemy chat, replace enemy names with client IDs and use default skins; keep local players visible
+== Gegnerischen Chat ausblenden, Namen durch Client-IDs ersetzen und Standard-Skins verwenden; eigenen Spieler und Dummy normal anzeigen
 
 Hide explosion effects
 == Explosionseffekte ausblenden
@@ -7240,6 +7246,9 @@ Invalid spectator id used
 
 Invalid sponsor code
 == Ungültiger Unterstützercode
+
+Invalid title appearance
+== Ungültiges Aussehen des Titels
 
 Invalid translation backend
 == Ungültiges Übersetzungs-Backend
@@ -8672,6 +8681,9 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 Monospace
 == Monospace-Schrift
 
+Moon
+== Mond
+
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Optimistischere Vorhersage entlang der stabilen Richtung des Tees, reduziert Verzögerung zur Stabilisierung
 
@@ -8962,6 +8974,9 @@ Nameplate text glow range
 
 Nameplate text gradient color
 == Namensschild-Text-Verlaufsfarbe
+
+Nameplate title size
+== Titelgröße am Namensschild
 
 Nameplate weak hook icon color
 == Namensschild-Schwacher-Haken-Symbol-Farbe
@@ -9545,6 +9560,12 @@ Only save improvements
 Only show after joining a team
 == Nur nach Beitritt zu einem Team anzeigen
 
+Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players
+== Unabhängig von Freundes- und Teamfiltern nur Erwähnungen, Flüsternachrichten und eigene Nachrichten anzeigen; Systemnachrichten und Stummschaltungen beibehalten
+
+Only show messages related to me
+== Nur Nachrichten mit Bezug zu mir anzeigen
+
 Only show outlines in the entities layer
 == Nur Umrisse in der Entity-Ebene anzeigen
 
@@ -9796,6 +9817,9 @@ Output voice debug log
 
 Output:
 == Ausgabe:
+
+Overall sponsor title badge color
+== Gesamtfarbe des Sponsortitel-Abzeichens
 
 Overlay entities
 == Entitäten überlagern
@@ -11879,6 +11903,9 @@ Restore recommended
 Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
 == Ursprüngliches Mausradverhalten wiederherstellen: Jede Raste startet das sanfte Scrollen ohne Übernahme der Geschwindigkeit neu
 
+Restored the built-in content
+== Mitgelieferter Inhalt wiederhergestellt
+
 Restoring save %d: main '%s', dummy '%s'.
 == Spielstand %d wird wiederhergestellt: Hauptspieler '%s', Dummy '%s'.
 
@@ -12175,6 +12202,9 @@ Save/Load Name
 
 Save/Load Skin
 == Skin speichern/laden
+
+Saved
+== Gespeichert
 
 Saved to the bind wheel.
 == Im Befehlsrad gespeichert.
@@ -12865,9 +12895,6 @@ Show advanced nameplate settings without changing effect values
 
 Show advanced options
 == Erweiterte Optionen anzeigen
-
-Show advanced title settings (collapsing keeps configured effects)
-== Erweiterte Titeleinstellungen anzeigen (Zuklappen behält die Effekte bei)
 
 Show advanced translation options
 == Erweiterte Übersetzungsoptionen anzeigen
@@ -14390,6 +14417,12 @@ Sponsor support
 Sponsor title
 == Unterstützertitel
 
+Sponsor title badge opacity (0-100)
+== Deckkraft des Sponsortitel-Abzeichens (0-100)
+
+Sponsor title badge: 0 = moon, 1 = sun
+== Abzeichen des Sponsortitels: 0 = Mond, 1 = Sonne
+
 Sponsors:
 == Sponsoren:
 
@@ -14650,6 +14683,9 @@ Sudden Death
 
 Suicides
 == Selbstmorde
+
+Sun
+== Sonne
 
 Super
 == Super
@@ -15574,6 +15610,9 @@ Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visibl
 
 Title preview
 == Titelvorschau
+
+Title server does not support badge appearance yet
+== Der Titelserver unterstützt das Aussehen von Abzeichen noch nicht
 
 Title server does not support chat styles yet
 == Der Titelserver unterstützt Chatstile noch nicht

@@ -28,6 +28,7 @@
 #include <game/client/components/qmclient/chat_command_preview.h>
 #include <game/client/components/qmclient/chat_gradient.h>
 #include <game/client/components/qmclient/chat_input_layout.h>
+#include <game/client/components/qmclient/chat_message_filter.h>
 #include <game/client/components/qmclient/chat_scrollbar.h>
 #include <game/client/components/qmclient/colored_parts.h>
 #include <game/client/components/qmclient/demo_display.h>
@@ -36,6 +37,7 @@
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/qm_chat_avatar.h>
 #include <game/client/components/qmclient/qm_title_color.h>
+#include <game/client/components/qmclient/qm_title_render.h>
 #include <game/client/components/qmclient/qm_title_style.h>
 #include <game/client/components/qmclient/streamer_word_filter.h>
 #include <game/client/components/scoreboard.h>
@@ -389,7 +391,10 @@ void CChat::CLine::DeleteTextContainers(ITextRender *pTextRender)
 {
 	pTextRender->DeleteTextContainer(m_TextContainerIndex);
 	pTextRender->DeleteTextContainer(m_BodyTextContainerIndex);
+	for(auto &Badge : m_vTitleBadges)
+		Badge.DeleteText(pTextRender);
 	m_vDeveloperBadgeRects.clear();
+	m_vTitleBadges.clear();
 }
 
 void CChat::CLine::Reset(CChat &This)
@@ -403,6 +408,7 @@ void CChat::CLine::Reset(CChat &This)
 	m_aName[0] = '\0';
 	m_aQmTitle[0] = '\0';
 	m_DeveloperBadge = false;
+	m_TitleAppearance = {};
 	m_ChatEmoji = EQmChatEmoji::NONE;
 	m_ChatEmojiImageLayout = false;
 	m_ChatEmojiRect = {};
@@ -410,7 +416,6 @@ void CChat::CLine::Reset(CChat &This)
 	m_RenderSponsorChatStyle = EQmSponsorChatStyle::NONE;
 	m_SponsorTextBounds = {};
 	m_QmTitleBobPadding = 0.0f;
-	m_vTitleTextMetrics.clear();
 	m_aYOffset[0] = -1.0f;
 	m_aYOffset[1] = -1.0f;
 	m_TextYOffset = 0.0f;
@@ -1664,19 +1669,7 @@ void CChat::OnMessage(int MsgType, void *pRawMsg, int SourceConnection)
 
 bool CChat::LineShouldHighlight(const char *pLine, const char *pName)
 {
-	const char *pHit = str_utf8_find_nocase(pLine, pName);
-
-	while(pHit)
-	{
-		int Length = str_length(pName);
-
-		if(Length > 0 && (pLine == pHit || pHit[-1] == ' ') && (pHit[Length] == 0 || pHit[Length] == ' ' || pHit[Length] == '.' || pHit[Length] == '!' || pHit[Length] == ',' || pHit[Length] == '?' || pHit[Length] == ':'))
-			return true;
-
-		pHit = str_utf8_find_nocase(pHit + 1, pName);
-	}
-
-	return false;
+	return QmChatMessageFilter::MentionsName(pLine, pName, g_Config.m_QmChatRelatedOnly != 0);
 }
 
 static constexpr const char *SAVES_HEADER[] = {
@@ -1924,6 +1917,7 @@ void CChat::AddMergedAuthor(CLine &Line, int ClientId)
 	str_copy(Author.m_aPlayerName, GameClient()->m_aClients[ClientId].m_aName);
 	str_copy(Author.m_aQmTitle, GameClient()->m_QmClient.PlayerTitle(ClientId));
 	Author.m_DeveloperBadge = GameClient()->m_QmClient.PlayerHasDeveloperBadge(ClientId);
+	Author.m_TitleAppearance = GameClient()->m_QmClient.PlayerTitleAppearance(ClientId);
 
 	int NameColor = -2;
 	const CGameClient::CClientData &LineAuthor = GameClient()->m_aClients[ClientId];
@@ -2079,14 +2073,42 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 	const int LocalConnection = ClientId >= 0 && ClientId == GameClient()->m_aLocalIds[0] ? 0 : ClientId >= 0 && ClientId == GameClient()->m_aLocalIds[1] ? 1 :
 																				-1;
 	const std::string LocalOriginal = LocalConnection >= 0 ? m_OutgoingAnnotations.Consume(LocalConnection, ClientId, Team, pLine, time()) : std::string();
-	if(*pLine == 0 ||
-		(ClientId == SERVER_MSG && !g_Config.m_ClShowChatSystem) ||
-		(ClientId >= 0 && (GameClient()->m_aClients[ClientId].m_aName[0] == '\0' || // unknown client
-					  GameClient()->m_aClients[ClientId].m_ChatIgnore ||
-					  (GameClient()->m_Snap.m_LocalClientId != ClientId && g_Config.m_QmWarListBlockEnemyChat && GameClient()->m_WarList.IsEnemy(ClientId)) ||
-					  (GameClient()->m_Snap.m_LocalClientId != ClientId && g_Config.m_ClShowChatFriends && !GameClient()->m_aClients[ClientId].m_Friend) ||
-					  (GameClient()->m_Snap.m_LocalClientId != ClientId && g_Config.m_ClShowChatTeamMembersOnly && GameClient()->IsOtherTeam(ClientId) && GameClient()->m_Teams.Team(GameClient()->m_Snap.m_LocalClientId) != TEAM_FLOCK) ||
-					  (GameClient()->m_Snap.m_LocalClientId != ClientId && GameClient()->m_aClients[ClientId].m_Foe))))
+	if(*pLine == 0 || (ClientId == SERVER_MSG && !g_Config.m_ClShowChatSystem))
+		return;
+
+	const QmChatMessageFilter::SSettings FilterSettings{g_Config.m_QmChatRelatedOnly != 0, g_Config.m_ClShowChatFriends != 0, g_Config.m_ClShowChatTeamMembersOnly != 0};
+	QmChatMessageFilter::SMessage Message;
+	Message.m_ClientId = ClientId;
+	Message.m_Team = Team;
+	if(ClientId >= 0)
+	{
+		const auto &Author = GameClient()->m_aClients[ClientId];
+		const bool DemoPlayback = Client()->State() == IClient::STATE_DEMOPLAYBACK;
+		Message.m_CurrentLocal = ClientId == GameClient()->m_Snap.m_LocalClientId;
+		Message.m_Local = DemoPlayback ? Message.m_CurrentLocal : GameClient()->IsLocalClientId(ClientId);
+		Message.m_Blocked = Author.m_aName[0] == '\0' || Author.m_ChatIgnore ||
+				    GameClient()->ShouldBlockWarListPlayer(ClientId) ||
+				    (!Message.m_CurrentLocal && (Author.m_Foe || (g_Config.m_QmWarListBlockEnemyChat && GameClient()->m_WarList.IsEnemy(ClientId))));
+		Message.m_Friend = Author.m_Friend;
+		Message.m_OtherTeam = !Message.m_Blocked && !FilterSettings.m_RelatedOnly && !Message.m_CurrentLocal &&
+				      (!FilterSettings.m_FriendsOnly || Message.m_Friend) && FilterSettings.m_TeamOnly &&
+				      GameClient()->IsOtherTeam(ClientId) && GameClient()->m_Teams.Team(GameClient()->m_Snap.m_LocalClientId) != TEAM_FLOCK;
+		if(FilterSettings.m_RelatedOnly && !Message.m_Blocked && !Message.m_Local && Team != TEAM_WHISPER_SEND && Team != TEAM_WHISPER_RECV)
+		{
+			// 先按原文判断提及，避免后续显示遮蔽把自己的名字替换掉。
+			if(DemoPlayback)
+			{
+				const int LocalId = GameClient()->m_Snap.m_LocalClientId;
+				Message.m_Mentioned = LocalId >= 0 && LineShouldHighlight(pLine, GameClient()->m_aClients[LocalId].m_aName);
+			}
+			else
+			{
+				for(int LocalId : GameClient()->m_aLocalIds)
+					Message.m_Mentioned |= LocalId >= 0 && LineShouldHighlight(pLine, GameClient()->m_aClients[LocalId].m_aName);
+			}
+		}
+	}
+	if(!QmChatMessageFilter::ShouldShow(FilterSettings, Message))
 		return;
 
 	// 其它消息出现时先给上一段 echo 重复计数收口，避免统计被后面的消息挤掉。
@@ -2311,6 +2333,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 		const auto &LineAuthor = GameClient()->m_aClients[CurrentLine.m_ClientId];
 		str_copy(CurrentLine.m_aQmTitle, GameClient()->m_QmClient.PlayerTitle(CurrentLine.m_ClientId));
 		CurrentLine.m_DeveloperBadge = GameClient()->m_QmClient.PlayerHasDeveloperBadge(CurrentLine.m_ClientId);
+		CurrentLine.m_TitleAppearance = GameClient()->m_QmClient.PlayerTitleAppearance(CurrentLine.m_ClientId);
 		char aDisplayName[MAX_NAME_LENGTH];
 		GameClient()->FormatStreamerName(CurrentLine.m_ClientId, aDisplayName, sizeof(aDisplayName));
 
@@ -2573,26 +2596,7 @@ bool CChat::OnPrepareLines(float y)
 			}
 		}
 		const bool MergedPlayerMessages = Line.m_TimesRepeated > 0 && !Line.m_vMergedAuthors.empty();
-		bool LineHasDynamicTitle = false;
-		float TitleBobPadding = 0.0f;
-		const auto IncludeTitleLayout = [&](const char *pTitle, int AuthorId, bool DeveloperBadge) {
-			pTitle = VisibleTitle(pTitle, AuthorId);
-			if(pTitle[0] == '\0' || (DeveloperBadge && DeveloperBadgeAvailable))
-				return;
-			const SQmTitleRenderStyle Style = QmTitleResolveRenderStyle(GameClient()->m_QmClient.PlayerTitleStyle(AuthorId));
-			if(Style.m_pStyle != nullptr)
-			{
-				LineHasDynamicTitle = true;
-				TitleBobPadding = maximum(TitleBobPadding, QmTitleStyleBobPadding(Style.m_Bob, PixelSize, FontSize));
-			}
-		};
-		if(MergedPlayerMessages)
-		{
-			for(const auto &Author : Line.m_vMergedAuthors)
-				IncludeTitleLayout(Author.m_aQmTitle, Author.m_ClientId, Author.m_DeveloperBadge);
-		}
-		else
-			IncludeTitleLayout(Line.m_aQmTitle, Line.m_ClientId, Line.m_DeveloperBadge);
+		const float TitleBobPadding = 0.0f;
 		if(LineEmojiLayoutChanged || TitleHidden || TitleBobPadding != Line.m_QmTitleBobPadding)
 		{
 			Line.DeleteTextContainers(TextRender());
@@ -2601,7 +2605,7 @@ bool CChat::OnPrepareLines(float y)
 			Line.m_aYOffset[1] = -1.0f;
 			Line.m_QmTitleBobPadding = TitleBobPadding;
 		}
-		const bool LinePrepared = (RenderChatEmoji ? Line.m_ChatEmojiRect.w > 0.0f : Line.m_TextContainerIndex.Valid() && Line.m_ChatEmojiRect.w <= 0.0f) && !LineHasDynamicTitle;
+		const bool LinePrepared = (RenderChatEmoji ? Line.m_ChatEmojiRect.w > 0.0f : Line.m_TextContainerIndex.Valid() && Line.m_ChatEmojiRect.w <= 0.0f);
 		if(LinePrepared && !ForceRecreate)
 		{
 			// 已有容器也必须消耗相同的垂直预算，
@@ -2616,15 +2620,10 @@ bool CChat::OnPrepareLines(float y)
 			continue;
 		}
 
-		if(ForceRecreate || !LineHasDynamicTitle)
-			Line.DeleteTextContainers(TextRender());
-		if(!Line.m_TextContainerIndex.Valid())
-		{
-			for(auto &Metrics : Line.m_vTitleTextMetrics)
-				Metrics.Reset();
-		}
+		Line.DeleteTextContainers(TextRender());
 		Line.m_ChatEmojiRect = {};
 		Line.m_vDeveloperBadgeRects.clear();
+		Line.m_vTitleBadges.clear();
 		const bool MultipleAuthors = Line.m_vMergedAuthors.size() > 1;
 		// 多人合并的续行只保留第一个人的前缀占位。
 		const bool IndentMessage = MultipleAuthors || (!IsScoreBoardOpen && !g_Config.m_ClChatOld);
@@ -2635,7 +2634,7 @@ bool CChat::OnPrepareLines(float y)
 			const char *pTitle = VisibleTitle(FirstAuthor.m_aQmTitle, FirstAuthor.m_ClientId);
 			const float TitleWidth = pTitle[0] != '\0' && FirstAuthor.m_DeveloperBadge && DeveloperBadgeAvailable ?
 							 QmDeveloperBadgeAdvance(FontSize) :
-							 TextRender()->TextWidth(FontSize, pTitle);
+							 (pTitle[0] != '\0' ? QmTitleBadgeSize(TextRender()->TextWidth(QmTitleBadgeLabelFontSize(FontSize), QmTitleBadgeText(pTitle).c_str()), QmTitleBadgeLabelFontSize(FontSize)).x + FontSize * 0.15f : 0.0f);
 			FirstAuthorPrefixWidth = TitleWidth +
 						 TextRender()->TextWidth(FontSize, FirstAuthor.m_aName) + TextRender()->TextWidth(FontSize, ": ");
 		}
@@ -2758,8 +2757,8 @@ bool CChat::OnPrepareLines(float y)
 				pTitle = VisibleTitle(pTitle, AuthorId);
 				if(pTitle[0] != '\0' && DeveloperBadge && DeveloperBadgeAvailable)
 					QmLayoutDeveloperBadge(MeasureCursor);
-				else
-					TextRender()->TextEx(&MeasureCursor, pTitle);
+				else if(pTitle[0])
+					QmLayoutTitleBadge(MeasureCursor, TextRender()->TextWidth(QmTitleBadgeLabelFontSize(FontSize), QmTitleBadgeText(pTitle).c_str()));
 			};
 			TextRender()->TextEx(&MeasureCursor, aClientId);
 			if(MergedPlayerMessages)
@@ -2862,13 +2861,6 @@ bool CChat::OnPrepareLines(float y)
 			CTextCursor ClearCursor = LineCursor;
 			TextRender()->RecreateTextContainerSoft(Line.m_TextContainerIndex, &ClearCursor, "");
 		}
-		Line.m_vTitleTextMetrics.resize(maximum(size_t(1), Line.m_vMergedAuthors.size()));
-		size_t TitleMetricsIndex = 0;
-		CQmTitleTextMetrics::SContext TitleMetricsContext;
-		TitleMetricsContext.m_FontSize = FontSize;
-		TitleMetricsContext.m_ScreenScale = vec2(Graphics()->ScreenWidth() / (ScreenX1 - ScreenX0), Graphics()->ScreenHeight() / (ScreenY1 - ScreenY0));
-		TitleMetricsContext.m_RenderFlags = TextRender()->GetRenderFlags();
-		TitleMetricsContext.m_FontPreset = (int)TextRender()->GetFontPreset();
 
 		// Message is from valid player
 		if(!MultipleAuthors && Line.m_ClientId >= 0 && Line.m_aName[0] != '\0')
@@ -2896,46 +2888,22 @@ bool CChat::OnPrepareLines(float y)
 		else
 			NameColor = PlayerNameColor(Line.m_ClientId, Line.m_NameColor, Line.m_Team);
 
-		const auto AppendQmTitle = [&](const char *pTitle, const ColorRGBA &FallbackColor, int AuthorId, bool DeveloperBadge) {
+		const auto AppendQmTitle = [&](const char *pTitle, int AuthorId, bool DeveloperBadge, const SQmTitleAppearance &Appearance) {
 			pTitle = VisibleTitle(pTitle, AuthorId);
-			CQmTitleTextMetrics &Metrics = Line.m_vTitleTextMetrics[TitleMetricsIndex++];
-			if(pTitle[0] != '\0' && DeveloperBadge && DeveloperBadgeAvailable)
+			if(!pTitle[0])
+				return;
+			if(DeveloperBadge && DeveloperBadgeAvailable)
 			{
 				Line.m_vDeveloperBadgeRects.push_back(QmLayoutDeveloperBadge(LineCursor));
 				return;
 			}
-			const bool CustomColor = pTitle[0] != '\0' && TitleColorStyle.m_Mode != EQmTitleColorMode::FOLLOW_SERVER;
-			const SQmTitleRenderStyle Style = QmTitleResolveRenderStyle(GameClient()->m_QmClient.PlayerTitleStyle(AuthorId));
-			if(pTitle[0] != '\0' && Style.m_pStyle != nullptr)
-			{
-				Metrics.Update(pTitle, TitleMetricsContext, [&](const char *pPrefix) { return TextRender()->TextWidth(FontSize, pPrefix); });
-				if(Style.m_ColorOverride)
-					QmTitleRenderFillMotionOffsets(TextRender(), LineCursor, pTitle, LineCursor.m_FontSize, Style, TitleAnimationTime, TitleShimmer, &Metrics);
-				else
-					QmTitleRenderFillCursor(TextRender(), LineCursor, pTitle, LineCursor.m_FontSize, Style, TitleAnimationTime, 1.0f, TitleShimmer, &Metrics);
-				if(CustomColor && TitleColorStyle.m_Rainbow)
-					QmAddTitleRainbowSplits(LineCursor, pTitle, TitleColorStyle.m_Alpha);
-				else if(CustomColor)
-					TextRender()->TextColor(TitleColorStyle.m_Color);
-				TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, pTitle);
-				LineCursor.m_vColorSplits.clear();
-				LineCursor.m_vCharOffsets.clear();
-				if(CustomColor)
-					TextRender()->TextColor(FallbackColor);
-				return;
-			}
-			if(!CustomColor)
-			{
-				TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, pTitle);
-				return;
-			}
-			if(TitleColorStyle.m_Rainbow)
-				QmAddTitleRainbowSplits(LineCursor, pTitle, TitleColorStyle.m_Alpha);
-			else
-				TextRender()->TextColor(TitleColorStyle.m_Color);
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, pTitle);
-			LineCursor.m_vColorSplits.clear();
-			TextRender()->TextColor(FallbackColor);
+			const std::string Text = QmTitleBadgeText(pTitle);
+			const float LabelWidth = TextRender()->TextWidth(QmTitleBadgeLabelFontSize(LineCursor.m_FontSize), Text.c_str());
+			const CUIRect Rect = QmLayoutTitleBadge(LineCursor, LabelWidth);
+			auto &Badge = Line.m_vTitleBadges.emplace_back();
+			Badge.m_Rect = Rect;
+			Badge.m_Appearance = Appearance;
+			Badge.PrepareText(TextRender(), Text.c_str());
 		};
 
 		if(MergedPlayerMessages)
@@ -2947,7 +2915,7 @@ bool CChat::OnPrepareLines(float y)
 				TextRender()->TextColor(Line.m_vMergedAuthors[i].m_NameColor);
 				if(i > 0)
 					TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, ",");
-				AppendQmTitle(Line.m_vMergedAuthors[i].m_aQmTitle, Line.m_vMergedAuthors[i].m_NameColor, Line.m_vMergedAuthors[i].m_ClientId, Line.m_vMergedAuthors[i].m_DeveloperBadge);
+				AppendQmTitle(Line.m_vMergedAuthors[i].m_aQmTitle, Line.m_vMergedAuthors[i].m_ClientId, Line.m_vMergedAuthors[i].m_DeveloperBadge, Line.m_vMergedAuthors[i].m_TitleAppearance);
 				TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, Line.m_vMergedAuthors[i].m_aName);
 			}
 			NameColor = Line.m_vMergedAuthors.back().m_NameColor;
@@ -2956,7 +2924,7 @@ bool CChat::OnPrepareLines(float y)
 		{
 			TextRender()->TextColor(NameColor);
 			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, aClientId);
-			AppendQmTitle(Line.m_aQmTitle, NameColor, Line.m_ClientId, Line.m_DeveloperBadge);
+			AppendQmTitle(Line.m_aQmTitle, Line.m_ClientId, Line.m_DeveloperBadge, Line.m_TitleAppearance);
 			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, Line.m_aName);
 		}
 
@@ -3704,9 +3672,16 @@ void CChat::OnRender()
 					AnimAlpha);
 			}
 
+			for(const auto &Badge : Line.m_vTitleBadges)
+			{
+				GameClient()->m_QmClient.TitleBadge().RenderSurface(Graphics(),
+					{Badge.m_Rect.x + AnimOffsetX, Badge.m_Rect.y + AnimOffsetY, Badge.m_Rect.w, Badge.m_Rect.h}, Badge.m_Appearance, AnimAlpha * DefaultTextColor.a);
+				Badge.RenderText(TextRender(), AnimAlpha * DefaultTextColor.a, vec2(AnimOffsetX, AnimOffsetY));
+			}
+
 			for(const CUIRect &Rect : Line.m_vDeveloperBadgeRects)
 				GameClient()->m_QmClient.DeveloperBadge().Render(Graphics(),
-					{Rect.x + AnimOffsetX, Rect.y + AnimOffsetY, Rect.w, Rect.h}, AnimAlpha * DefaultTextColor.a);
+					{Rect.x + AnimOffsetX, Rect.y + AnimOffsetY, Rect.w, Rect.h}, AnimAlpha * DefaultTextColor.a, GameClient()->m_QmClient.TitleAnimationTime());
 
 			if(Line.m_BodyTextContainerIndex.Valid())
 			{

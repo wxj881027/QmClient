@@ -10,7 +10,7 @@
 
 void CQmWaterHammerIndicator::OnReset()
 {
-	std::fill(m_aInputs.begin(), m_aInputs.end(), SInputState{});
+	std::fill(m_aInputs.begin(), m_aInputs.end(), SQmWaterHammerInputState{});
 }
 
 void CQmWaterHammerIndicator::OnNewSnapshot()
@@ -18,7 +18,7 @@ void CQmWaterHammerIndicator::OnNewSnapshot()
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
 	{
 		if(!GameClient()->m_aClients[ClientId].m_Active)
-			m_aInputs[ClientId] = SInputState{};
+			m_aInputs[ClientId] = SQmWaterHammerInputState{};
 	}
 }
 
@@ -27,7 +27,7 @@ void CQmWaterHammerIndicator::OnPreInput(const CNetMsg_Sv_PreInput &Message)
 	if(Message.m_Owner < 0 || Message.m_Owner >= MAX_CLIENTS)
 		return;
 
-	SInputState &Input = m_aInputs[Message.m_Owner];
+	SQmWaterHammerInputState &Input = m_aInputs[Message.m_Owner];
 	Input.m_Received = true;
 	Input.m_WantedWeapon = Message.m_WantedWeapon;
 	Input.m_Fire = Message.m_Fire;
@@ -68,14 +68,15 @@ bool CQmWaterHammerIndicator::IsMarked(const int ClientId) const
 	if(LocalClientId < 0 || LocalClientId >= MAX_CLIENTS || ClientId == LocalClientId)
 		return false;
 
-	const CGameClient::CClientData &Client = GameClient()->m_aClients[ClientId];
-	if(!Client.m_Active || Client.m_Spec || !GameClient()->m_Snap.m_aCharacters[ClientId].m_Active)
+	const CGameClient::CClientData &ClientData = GameClient()->m_aClients[ClientId];
+	if(!ClientData.m_Active || ClientData.m_Spec || !GameClient()->m_Snap.m_aCharacters[ClientId].m_Active)
 		return false;
 	if(GameClient()->m_Teams.Team(ClientId) != GameClient()->m_Teams.Team(LocalClientId))
 		return false;
 
-	const SInputState &Input = m_aInputs[ClientId];
-	const bool HammerRequested = Input.m_WantedWeapon == WEAPON_HAMMER + 1 || Client.m_RenderCur.m_Weapon == WEAPON_HAMMER;
-	const bool FireHeld = (Input.m_Fire & 1) != 0;
-	return Input.m_Received && QmShouldMarkWaterHammer(Client.m_FreezeEnd, Client.m_LiveFrozen, HammerRequested, FireHeld);
+	const CNetObj_PlayerInput *pLocalInput = nullptr;
+	if(Client()->DummyConnected() && ClientId == GameClient()->m_aLocalIds[!g_Config.m_ClDummy])
+		pLocalInput = g_Config.m_ClDummyHammer ? &GameClient()->m_HammerInput : &GameClient()->m_DummyInput;
+
+	return QmShouldMarkWaterHammer(ClientData.m_FreezeEnd, ClientData.m_LiveFrozen, ClientData.m_RenderCur.m_Weapon, m_aInputs[ClientId], pLocalInput);
 }

@@ -456,6 +456,7 @@ public:
 	int m_PopupEventActivated;
 	int m_PopupEventWasActivated;
 	size_t m_PopupCloseMapIndex = 0;
+	CEditorMap *m_pCloseMapAfterSave = nullptr;
 	bool m_LargeLayerWasWarned;
 	bool m_PreventUnusedTilesWasWarned;
 

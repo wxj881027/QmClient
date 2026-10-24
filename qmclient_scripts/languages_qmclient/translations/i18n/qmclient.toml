@@ -19379,6 +19379,7 @@ key = "Original language for incoming and outgoing text"
 [message.translations]
 simplified_chinese = "收到与发出文本的原始语言"
 traditional_chinese = "收到與發出文字的原始語言"
+
 [[message]]
 key = "Original message language"
 [message.translations]
@@ -38269,6 +38270,22 @@ turkish = "Yalıtılmış sunucu listesi tüketicisini yenile"
 polish = "Odśwież izolowanego odbiorcę listy serwerów"
 
 [[message]]
+key = "Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players"
+[message.translations]
+simplified_chinese = "仅显示提及自己、私聊和自己发送的聊天消息，不受好友与队伍过滤限制；系统消息和屏蔽设置保持生效"
+traditional_chinese = "僅顯示提及自己、私聊和自己傳送的聊天訊息，不受好友與隊伍篩選限制；系統訊息和封鎖設定保持生效"
+japanese = "フレンドやチームのフィルターに関係なく、自分への呼びかけ、ささやき、自分の発言のみ表示。システムメッセージとミュート設定は維持"
+korean = "친구 및 팀 필터와 관계없이 나를 언급한 메시지, 귓속말, 내가 보낸 메시지만 표시하며 시스템 메시지와 차단 설정은 유지"
+russian = "Показывать только упоминания, личные и собственные сообщения независимо от фильтров друзей и команды; сохранять системные сообщения и блокировку игроков"
+german = "Unabhängig von Freundes- und Teamfiltern nur Erwähnungen, Flüsternachrichten und eigene Nachrichten anzeigen; Systemnachrichten und Stummschaltungen beibehalten"
+spanish = "Mostrar solo menciones, mensajes privados y propios sin aplicar filtros de amigos o equipo; conservar los mensajes del sistema y respetar los jugadores silenciados"
+french = "Afficher uniquement les mentions, messages privés et personnels sans tenir compte des filtres d'amis ou d'équipe ; conserver les messages système et respecter les joueurs masqués"
+brazilian_portuguese = "Mostrar apenas menções, mensagens privadas e próprias, independentemente dos filtros de amigos ou equipe; manter mensagens do sistema e respeitar jogadores silenciados"
+portuguese = "Mostrar apenas menções, mensagens privadas e próprias, independentemente dos filtros de amigos ou equipa; manter mensagens do sistema e respeitar jogadores silenciados"
+turkish = "Arkadaş ve takım filtrelerinden bağımsız olarak yalnızca bahsetmeleri, özel mesajları ve kendi mesajlarını göster; sistem mesajlarını ve susturma ayarlarını koru"
+polish = "Pokazuj tylko wzmianki, wiadomości prywatne i własne niezależnie od filtrów znajomych i drużyny; zachowaj wiadomości systemowe i wyciszenie graczy"
+
+[[message]]
 key = "Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity"
 [message.translations]
 simplified_chinese = "恢复原版滚轮手感：每格重新开始平滑滚动，不继承速度"
@@ -38289,6 +38306,7 @@ key = "Restart smooth scrolling on every wheel tick"
 [message.translations]
 simplified_chinese = "每次滚轮都从静止重新开始平滑滚动"
 traditional_chinese = "每次滾輪都從靜止重新開始平滑捲動"
+
 [[message]]
 key = "Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick"
 [message.translations]
@@ -38544,3 +38562,147 @@ brazilian_portuguese = "Cor de aviso da contagem regressiva do gancho"
 portuguese = "Cor de aviso da contagem decrescente do gancho"
 turkish = "Kanca geri sayımı uyarı rengi"
 polish = "Kolor ostrzeżenia odliczania haka"
+
+[[message]]
+key = "Hide enemy chat, replace enemy names with client IDs and use default skins; keep local players visible"
+[message.translations]
+simplified_chinese = "隐藏敌对玩家聊天，将其昵称替换为数字 ID 并使用默认皮肤；主角色和分身保持正常显示"
+traditional_chinese = "隱藏敵對玩家聊天，將其暱稱替換為數字 ID 並使用預設外觀；主角色和分身維持正常顯示"
+japanese = "敵対プレイヤーのチャットを非表示にし、名前をクライアントIDに置き換えて標準スキンを使用する。自分とダミーは通常どおり表示"
+korean = "적대 플레이어의 채팅을 숨기고 이름을 클라이언트 ID로 바꾸며 기본 스킨을 사용합니다. 내 캐릭터와 더미는 정상 표시합니다"
+russian = "Скрывать чат врагов, заменять их имена ID клиента и использовать стандартные скины; своего персонажа и дамми показывать как обычно"
+german = "Gegnerischen Chat ausblenden, Namen durch Client-IDs ersetzen und Standard-Skins verwenden; eigenen Spieler und Dummy normal anzeigen"
+spanish = "Ocultar el chat enemigo, sustituir sus nombres por ID de cliente y usar aspectos predeterminados; mostrar tu personaje y dummy con normalidad"
+french = "Masquer le chat des ennemis, remplacer leurs noms par leur ID client et utiliser les apparences par défaut ; afficher normalement votre personnage et le dummy"
+brazilian_portuguese = "Ocultar o chat de inimigos, substituir seus nomes por IDs de cliente e usar skins padrão; manter seu personagem e dummy visíveis normalmente"
+portuguese = "Ocultar o chat de inimigos, substituir os seus nomes por IDs de cliente e usar skins predefinidas; manter a personagem e o dummy visíveis normalmente"
+turkish = "Düşman sohbetini gizle, adlarını istemci kimlikleriyle değiştir ve varsayılan görünümleri kullan; kendi oyuncunu ve dummy karakterini normal göster"
+polish = "Ukryj czat wrogów, zastąp ich nazwy identyfikatorami klienta i używaj domyślnych skórek; własną postać i dummy wyświetlaj normalnie"
+
+[[message]]
+key = "Moon"
+[message.translations]
+simplified_chinese = "月亮"
+traditional_chinese = "月亮"
+japanese = "月"
+korean = "달"
+russian = "Луна"
+german = "Mond"
+spanish = "Luna"
+french = "Lune"
+brazilian_portuguese = "Lua"
+portuguese = "Lua"
+turkish = "Ay"
+polish = "Księżyc"
+
+[[message]]
+key = "Sun"
+[message.translations]
+simplified_chinese = "太阳"
+traditional_chinese = "太陽"
+japanese = "太陽"
+korean = "태양"
+russian = "Солнце"
+german = "Sonne"
+spanish = "Sol"
+french = "Soleil"
+brazilian_portuguese = "Sol"
+portuguese = "Sol"
+turkish = "Güneş"
+polish = "Słońce"
+
+[[message]]
+key = "Sponsor title badge: 0 = moon, 1 = sun"
+[message.translations]
+simplified_chinese = "赞助头衔样式：0 = 月亮，1 = 太阳"
+traditional_chinese = "贊助頭銜樣式：0 = 月亮，1 = 太陽"
+japanese = "支援者称号のスタイル：0 = 月、1 = 太陽"
+korean = "후원자 칭호 스타일: 0 = 달, 1 = 태양"
+russian = "Стиль титула спонсора: 0 = луна, 1 = солнце"
+german = "Abzeichen des Sponsortitels: 0 = Mond, 1 = Sonne"
+spanish = "Insignia del título de patrocinador: 0 = luna, 1 = sol"
+french = "Badge du titre de soutien : 0 = lune, 1 = soleil"
+brazilian_portuguese = "Emblema do título de apoiador: 0 = lua, 1 = sol"
+portuguese = "Emblema do título de apoiante: 0 = lua, 1 = sol"
+turkish = "Destekçi unvanı rozeti: 0 = ay, 1 = güneş"
+polish = "Odznaka tytułu sponsora: 0 = księżyc, 1 = słońce"
+
+[[message]]
+key = "Overall sponsor title badge color"
+[message.translations]
+simplified_chinese = "赞助头衔整体颜色"
+traditional_chinese = "贊助頭銜整體顏色"
+japanese = "支援者称号全体の色"
+korean = "후원자 칭호 전체 색상"
+russian = "Общий цвет титула спонсора"
+german = "Gesamtfarbe des Sponsortitel-Abzeichens"
+spanish = "Color general de la insignia del título de patrocinador"
+french = "Couleur générale du badge du titre de soutien"
+brazilian_portuguese = "Cor geral do emblema do título de apoiador"
+portuguese = "Cor geral do emblema do título de apoiante"
+turkish = "Destekçi unvanı rozetinin genel rengi"
+polish = "Ogólny kolor odznaki tytułu sponsora"
+
+[[message]]
+key = "Sponsor title badge opacity (0-100)"
+[message.translations]
+simplified_chinese = "赞助头衔整体不透明度（0-100）"
+traditional_chinese = "贊助頭銜整體不透明度（0-100）"
+japanese = "支援者称号全体の不透明度（0-100）"
+korean = "후원자 칭호 전체 불투명도 (0-100)"
+russian = "Непрозрачность титула спонсора (0-100)"
+german = "Deckkraft des Sponsortitel-Abzeichens (0-100)"
+spanish = "Opacidad de la insignia del título de patrocinador (0-100)"
+french = "Opacité du badge du titre de soutien (0-100)"
+brazilian_portuguese = "Opacidade do emblema do título de apoiador (0-100)"
+portuguese = "Opacidade do emblema do título de apoiante (0-100)"
+turkish = "Destekçi unvanı rozetinin opaklığı (0-100)"
+polish = "Nieprzezroczystość odznaki tytułu sponsora (0-100)"
+
+[[message]]
+key = "Title server does not support badge appearance yet"
+[message.translations]
+simplified_chinese = "头衔服务器暂不支持日月头衔外观"
+traditional_chinese = "頭銜伺服器暫不支援日月頭銜外觀"
+japanese = "称号サーバーはまだバッジの外観に対応していません"
+korean = "칭호 서버가 아직 배지 외형을 지원하지 않습니다"
+russian = "Сервер титулов пока не поддерживает внешний вид значков"
+german = "Der Titelserver unterstützt das Aussehen von Abzeichen noch nicht"
+spanish = "El servidor de títulos aún no admite la apariencia de insignias"
+french = "Le serveur de titres ne prend pas encore en charge l’apparence des badges"
+brazilian_portuguese = "O servidor de títulos ainda não oferece suporte à aparência dos emblemas"
+portuguese = "O servidor de títulos ainda não suporta a aparência dos emblemas"
+turkish = "Unvan sunucusu henüz rozet görünümünü desteklemiyor"
+polish = "Serwer tytułów nie obsługuje jeszcze wyglądu odznak"
+
+[[message]]
+key = "Invalid title appearance"
+[message.translations]
+simplified_chinese = "头衔外观参数无效"
+traditional_chinese = "頭銜外觀參數無效"
+japanese = "称号の外観設定が無効です"
+korean = "칭호 외형 설정이 올바르지 않습니다"
+russian = "Недопустимые параметры внешнего вида титула"
+german = "Ungültiges Aussehen des Titels"
+spanish = "Apariencia del título no válida"
+french = "Apparence du titre non valide"
+brazilian_portuguese = "Aparência do título inválida"
+portuguese = "Aspeto do título inválido"
+turkish = "Geçersiz unvan görünümü"
+polish = "Nieprawidłowy wygląd tytułu"
+
+[[message]]
+key = "Nameplate title size"
+[message.translations]
+simplified_chinese = "名牌头衔大小"
+traditional_chinese = "名牌頭銜大小"
+japanese = "ネームプレートの称号サイズ"
+korean = "이름표 칭호 크기"
+russian = "Размер титула над игроком"
+german = "Titelgröße am Namensschild"
+spanish = "Tamaño del título en la placa de nombre"
+french = "Taille du titre sur la plaque de nom"
+brazilian_portuguese = "Tamanho do título na placa de nome"
+portuguese = "Tamanho do título na placa de nome"
+turkish = "İsim etiketindeki unvan boyutu"
+polish = "Rozmiar tytułu na plakietce gracza"

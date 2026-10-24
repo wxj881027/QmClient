@@ -22,8 +22,7 @@
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/nameplate_layout.h>
 #include <game/client/components/qmclient/nameplate_text_cache.h>
-#include <game/client/components/qmclient/qm_title_render.h>
-#include <game/client/components/qmclient/qm_title_style.h>
+#include <game/client/components/qmclient/qm_title_badge.h>
 #include <game/client/components/qmclient/qmclient_utils.h>
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
@@ -373,6 +372,8 @@ class CNamePlateData
 public:
 	bool m_Local; // TClient
 	bool m_InGame;
+	bool m_HideIdentity = false;
+	bool m_HideSkin = false;
 	float m_BakeDensity = 0.0f;
 	uint64_t m_DensityRevision = 0;
 	ColorRGBA m_Color;
@@ -381,8 +382,7 @@ public:
 	char m_aName[std::max<size_t>(MAX_NAME_LENGTH, protocol7::MAX_NAME_ARRAY_SIZE)];
 	bool m_ShowFriendMark;
 	char m_aQmTitle[64] = "";
-	char m_aQmTitleStyle[48] = "";
-	bool m_DeveloperRainbow;
+	SQmTitleAppearance m_TitleAppearance;
 	bool m_DeveloperBadge = false;
 	bool m_ShowClientId;
 	int m_ClientId;
@@ -416,10 +416,10 @@ public:
 
 static void SetNameplateTitle(CGameClient &This, CNamePlateData &Data, int ClientId)
 {
-	str_copy(Data.m_aQmTitle, Data.m_ShowName && This.m_QmClient.ShouldShowPlayerTitle(ClientId) ? This.m_QmClient.PlayerTitle(ClientId) : "");
-	str_copy(Data.m_aQmTitleStyle, Data.m_aQmTitle[0] != '\0' ? This.m_QmClient.PlayerTitleStyle(ClientId) : "");
-	Data.m_DeveloperRainbow = Data.m_aQmTitle[0] != '\0' && This.IsQmDeveloperRainbow(ClientId);
-	Data.m_DeveloperBadge = Data.m_aQmTitle[0] != '\0' && This.m_QmClient.PlayerHasDeveloperBadge(ClientId) && This.m_QmClient.DeveloperBadge().Available();
+	// 先测量完整头衔，绘制时再按隐私状态隐藏并保留占位。
+	str_copy(Data.m_aQmTitle, Data.m_ShowName && This.m_QmClient.ShouldShowPlayerTitle(ClientId) ? This.m_QmClient.PlayerTitle(ClientId, true) : "");
+	Data.m_TitleAppearance = This.m_QmClient.PlayerTitleAppearance(ClientId, true);
+	Data.m_DeveloperBadge = Data.m_aQmTitle[0] != '\0' && This.m_QmClient.PlayerHasDeveloperBadge(ClientId, true) && This.m_QmClient.DeveloperBadge().Available();
 }
 
 static ColorRGBA NameplateTextColor(const CGameClient &This, int ClientId)
@@ -453,28 +453,19 @@ static int s_NameplateTextRebuildBudget = NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAM
 // 一个相机档位的有限采样余量，实际停点作为密度锚点，支持中途反向缩放。
 static const float QM_NAMEPLATE_BAKE_DENSITY_LOG_GRID = std::log(1.0f / CCamera::ZOOM_STEP);
 
-class CNamePlatePart
+class CNamePlatePart : public CQmNameplatePartLayout
 {
 protected:
-	vec2 m_Size = vec2(0.0f, 0.0f);
-	vec2 m_Padding = vec2(DEFAULT_PADDING, DEFAULT_PADDING);
 	bool m_NewLine = false; // Whether this part is a new line (doesn't do anything else)
-	bool m_Visible = true; // Whether this part is visible
-	bool m_ShiftOnInvis = false; // Whether when not visible will still take up space
-	bool m_ReserveLineHeight = false; // Whether an invisible part keeps only vertical row space
-	CNamePlatePart(CGameClient &This) {}
+	CNamePlatePart(CGameClient &This) :
+		CQmNameplatePartLayout(vec2(DEFAULT_PADDING, DEFAULT_PADDING)) {}
 
 public:
 	virtual void Update(CGameClient &This, const CNamePlateData &Data) {}
 	virtual void Reset(CGameClient &This) {}
 	virtual int TextRebuildCost() const { return 0; }
 	virtual void Render(CGameClient &This, vec2 Pos) const {}
-	vec2 Size() const { return m_Size; }
-	vec2 Padding() const { return m_Padding; }
 	bool NewLine() const { return m_NewLine; }
-	bool Visible() const { return m_Visible; }
-	bool ShiftOnInvis() const { return m_ShiftOnInvis; }
-	bool ReserveLineHeight() const { return m_ReserveLineHeight; }
 	CNamePlatePart() = delete;
 	virtual ~CNamePlatePart() = default;
 };
@@ -751,6 +742,7 @@ protected:
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
 	{
 		m_Visible = Data.m_ShowClientId && (Data.m_ClientIdSeparateLine == m_ClientIdSeparateLine);
+		m_HiddenForPrivacy = Data.m_HideIdentity;
 		if(!m_Visible)
 			return false;
 		m_Color = Data.m_Color;
@@ -824,198 +816,71 @@ public:
 	{
 		m_Visible = Data.m_DeveloperBadge && g_Config.m_QmShowNameplateTitle != 0 &&
 			    m_AboveName == (g_Config.m_QmNameplateTitleAboveName != 0);
-		m_Size = QmDeveloperBadgeSize(Data.m_FontSize * 0.8f);
+		m_HiddenForPrivacy = Data.m_HideIdentity;
+		m_Size = QmDeveloperBadgeSize(QmNameplateTitleHeight(Data.m_FontSize, g_Config.m_QmNameplateTitleScale));
 		m_Alpha = Data.m_Color.a;
 	}
 
 	void Render(CGameClient &This, vec2 Pos) const override
 	{
 		This.m_QmClient.DeveloperBadge().Render(This.Graphics(),
-			{Pos.x - m_Size.x * 0.5f, Pos.y - m_Size.y * 0.5f, m_Size.x, m_Size.y}, m_Alpha);
+			{Pos.x - m_Size.x * 0.5f, Pos.y - m_Size.y * 0.5f, m_Size.x, m_Size.y}, m_Alpha, This.m_QmClient.TitleAnimationTime());
 	}
 };
 
 class CNamePlatePartTitle : public CNamePlatePartText
 {
-private:
 	char m_aText[64] = "";
-	static constexpr float ms_FontSizeScale = 0.8f;
+	CUIRect m_TextVisualBounds{};
 	float m_FontSize = -INFINITY;
 	float m_Alpha = 1.0f;
-	SQmTitleColorStyle m_TitleColorStyle;
-	SQmTitleRenderStyle m_TitleRenderStyle;
-	CQmTitleTextMetrics m_TitleTextMetrics;
-	int m_ShimmerSpeed = -1;
-	char m_aStyle[48] = "";
-	// 上一帧的内容是否随时间变化。由称号渲染器自己的判定回填，而不是在这里镜像它的条件：
-	// 逐字符浮动、掠光与本地配色档都会让顶点逐帧变化，漏判会让浮动/掠光停在第一帧。
-	bool m_TitleAnimated = false;
-	// true = 名字上方独立行；false = 名字行内联（默认）。
-	bool m_AboveName = false;
+	bool m_AboveName;
+	SQmTitleAppearance m_Appearance;
 
 protected:
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
 	{
-		// 头衔全局开关；位置互斥：AboveName 实例仅在 above 模式下可见，内联实例反之。
-		const bool AboveMode = g_Config.m_QmNameplateTitleAboveName != 0;
 		m_Visible = !Data.m_DeveloperBadge && g_Config.m_QmShowNameplateTitle != 0 &&
-			    Data.m_aQmTitle[0] != '\0' &&
-			    (m_AboveName == AboveMode);
+			    Data.m_aQmTitle[0] != '\0' && m_AboveName == (g_Config.m_QmNameplateTitleAboveName != 0);
+		m_HiddenForPrivacy = Data.m_HideIdentity;
 		m_Alpha = Data.m_Color.a;
-		if(!m_Visible)
-		{
-			m_ReuseTextContainer = false;
-			return false;
-		}
-		const float FontSize = Data.m_FontSize * ms_FontSizeScale;
-		const char *pStyle = Data.m_aQmTitleStyle;
-		const SQmTitleColorStyle ColorStyle = ResolveQmTitleColorStyle(g_Config.m_QmTitleColorMode, g_Config.m_QmTitleColor, g_Config.m_QmTitleOpacity, Data.m_DeveloperRainbow);
-		const SQmTitleRenderStyle RenderStyle = QmTitleResolveRenderStyle(pStyle);
-		const bool Changed = m_FontSize != FontSize || m_TitleColorStyle != ColorStyle || str_comp(m_aText, Data.m_aQmTitle) != 0 ||
-				     str_comp(m_aStyle, pStyle) != 0 || m_TitleRenderStyle.m_pStyle != RenderStyle.m_pStyle ||
-				     m_TitleRenderStyle.m_Bob.m_Mode != RenderStyle.m_Bob.m_Mode ||
-				     m_TitleRenderStyle.m_Bob.m_Amplitude != RenderStyle.m_Bob.m_Amplitude ||
-				     m_TitleRenderStyle.m_Bob.m_WaveLength != RenderStyle.m_Bob.m_WaveLength ||
-				     m_TitleRenderStyle.m_Bob.m_Speed != RenderStyle.m_Bob.m_Speed ||
-				     m_TitleRenderStyle.m_Bob.m_QuantizeStep != RenderStyle.m_Bob.m_QuantizeStep ||
-				     m_TitleRenderStyle.m_PhasePerPxOverride != RenderStyle.m_PhasePerPxOverride ||
-				     m_ShimmerSpeed != g_Config.m_QmTitleShimmerSpeed;
-		m_ReuseTextContainer = m_TextContainerIndex.Valid() && m_TitleAnimated && !Changed;
-		return Changed || m_TitleAnimated;
+		m_Appearance = Data.m_TitleAppearance;
+		return m_Visible && (m_FontSize != QmTitleBadgeLabelFontSize(QmNameplateTitleHeight(Data.m_FontSize, g_Config.m_QmNameplateTitleScale)) || str_comp(m_aText, Data.m_aQmTitle) != 0);
 	}
-
-	float ExtraVerticalPadding() const override
-	{
-		float Padding = QmTitleStyleBobPadding(m_TitleRenderStyle.m_Bob, 0.0f, m_FontSize);
-		if(g_Config.m_QmTitleEffect == QM_TITLE_EFFECT_POLISHED)
-			Padding += 3.5f;
-		else if(g_Config.m_QmTitleEffect == QM_TITLE_EFFECT_CLASSIC && m_TitleRenderStyle.m_pStyle != nullptr && g_Config.m_QmTitleBloom > 0)
-			Padding += 4.0f + 16.0f * 0.28f;
-		return Padding;
-	}
-
 	void UpdateText(CGameClient &This, const CNamePlateData &Data) override
 	{
-		m_FontSize = Data.m_FontSize * ms_FontSizeScale;
-		str_copy(m_aStyle, Data.m_aQmTitleStyle);
 		str_copy(m_aText, Data.m_aQmTitle);
-		// 称号渲染统一走 qm_title_render：解析出的风格同时决定逐字符色段、字符内渐变与浮动偏移。
-		// 配色被本地档位接管时（单色/彩虹）风格只保留浮动与掠光，颜色由下面两个分支给出。
-		m_TitleRenderStyle = QmTitleResolveRenderStyle(m_aStyle);
-		const SQmTitleRenderStyle &TitleStyle = m_TitleRenderStyle;
-		const SQmTitleShimmer TitleShimmer = QmTitleShimmerFromConfig();
-		m_ShimmerSpeed = g_Config.m_QmTitleShimmerSpeed;
-		m_TitleColorStyle = ResolveQmTitleColorStyle(g_Config.m_QmTitleColorMode, g_Config.m_QmTitleColor, g_Config.m_QmTitleOpacity, Data.m_DeveloperRainbow);
-		const SQmTitleColorStyle &ColorStyle = m_TitleColorStyle;
-		// 逐字符浮动需要逐字符位移顶点。
-		const bool TitleHasBob = TitleStyle.m_Bob.m_Amplitude != 0.0f && TitleStyle.m_Bob.m_WaveLength > 0.0f;
-		if(!m_TextContainerIndex.Valid())
-			m_TitleTextMetrics.Reset();
+		m_FontSize = QmTitleBadgeLabelFontSize(QmNameplateTitleHeight(Data.m_FontSize, g_Config.m_QmNameplateTitleScale));
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
-		const float TitleTimeSec = (float)This.m_QmClient.TitleAnimationTime();
-		if(TitleStyle.m_pStyle != nullptr)
-		{
-			float X0, Y0, X1, Y1;
-			This.Graphics()->GetScreen(&X0, &Y0, &X1, &Y1);
-			CQmTitleTextMetrics::SContext Context;
-			Context.m_FontSize = m_FontSize;
-			Context.m_ScreenScale = vec2(This.Graphics()->ScreenWidth() / (X1 - X0), This.Graphics()->ScreenHeight() / (Y1 - Y0));
-			Context.m_RenderFlags = This.TextRender()->GetRenderFlags();
-			Context.m_FontPreset = (int)This.TextRender()->GetFontPreset();
-			m_TitleTextMetrics.Update(m_aText, Context, [&](const char *pPrefix) { return This.TextRender()->TextWidth(m_FontSize, pPrefix); });
-		}
-		if(ColorStyle.m_Rainbow)
-		{
-			// 彩虹档（开发者彩虹或本地彩虹配色）：逐字符上色，字符内不渐变（左右同色）。
-			const int NumChars = QmTitleShimmerUtf8CharCount(m_aText);
-			Cursor.m_vColorSplits.reserve(NumChars);
-			const char *pCurrent = m_aText;
-			for(int CharIndex = 0; CharIndex < NumChars; ++CharIndex)
-			{
-				const char *pNext = pCurrent;
-				if(str_utf8_decode(&pNext) <= 0)
-					break;
-				const ColorRGBA Color = QmTitleRainbowColor(CharIndex, NumChars, 1.0f);
-				Cursor.m_vColorSplits.emplace_back((int)(pCurrent - m_aText), (int)(pNext - pCurrent), Color);
-				pCurrent = pNext;
-			}
-			QmTitleRenderFillMotionOffsets(This.TextRender(), Cursor, m_aText, m_FontSize, TitleStyle, TitleTimeSec, TitleShimmer, &m_TitleTextMetrics);
-			// 彩虹档的逐字符颜色是静态的，只有浮动与掠光会让顶点逐帧变化。
-			m_TitleAnimated = TitleShimmer.m_Enabled || TitleHasBob;
-		}
-		else if(TitleStyle.m_pStyle != nullptr)
-		{
-			// 单色档把本地颜色与透明度交给渲染器；跟随服务器档不覆盖颜色（渲染器自己采样风格），
-			// 此时 Alpha 固定 1.0，名牌淡入淡出仍由 Render 的 m_Alpha 负责。
-			const bool ColorOverride = ColorStyle.m_Mode == EQmTitleColorMode::SINGLE;
-			m_TitleAnimated = QmTitleRenderFillCursor(This.TextRender(), Cursor, m_aText, m_FontSize, TitleStyle, TitleTimeSec, 1.0f, TitleShimmer, &m_TitleTextMetrics, ColorStyle.m_Color);
-		}
-		else
-		{
-			Cursor.m_vColorSplits.emplace_back(0, -1, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
-			m_TitleAnimated = false;
-		}
-		if(m_ReuseTextContainer)
-			This.TextRender()->RecreateTextContainerSoft(m_TextContainerIndex, &Cursor, m_aText);
-		else
-			This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, m_aText);
+		Cursor.m_CalculateVisualBoundingBox = true;
+		const ColorRGBA PreviousColor = This.TextRender()->GetTextColor();
+		This.TextRender()->TextColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, QmTitleBadgeText(m_aText).c_str());
+		This.TextRender()->TextColor(PreviousColor);
+		m_TextVisualBounds = QmTitleBadgeVisualBounds(Cursor);
 	}
 
+public:
+	explicit CNamePlatePartTitle(CGameClient &This, bool AboveName = false) :
+		CNamePlatePartText(This), m_AboveName(AboveName) {}
+
+	void Update(CGameClient &This, const CNamePlateData &Data) override
+	{
+		CNamePlatePartText::Update(This, Data);
+		if(m_Visible)
+			m_Size = QmTitleBadgeSize(m_RenderSize.x, m_FontSize);
+	}
 	void Render(CGameClient &This, vec2 Pos) const override
 	{
 		if(!m_TextContainerIndex.Valid())
 			return;
-		const bool DynamicStyle = m_TitleRenderStyle.m_pStyle != nullptr;
-		const bool VertexColored = DynamicStyle || m_TitleColorStyle.m_Rainbow;
-		const float Alpha = m_Alpha * (m_TitleColorStyle.m_Mode == EQmTitleColorMode::FOLLOW_SERVER ? 1.0f : m_TitleColorStyle.m_Alpha);
-		const ColorRGBA Color = VertexColored ? ColorRGBA(1.0f, 1.0f, 1.0f, Alpha) :
-					m_TitleColorStyle.m_Mode == EQmTitleColorMode::SINGLE ?
-							m_TitleColorStyle.m_Color.WithMultipliedAlpha(m_Alpha) :
-							ColorRGBA(0.0f, 0.0f, 0.0f, m_Alpha);
-		const ColorRGBA OutlineColor = VertexColored || m_TitleColorStyle.m_Mode == EQmTitleColorMode::SINGLE ?
-						       s_OutlineColor.WithMultipliedAlpha(m_Alpha) :
-						       ColorRGBA(0.85f, 0.85f, 0.85f, m_Alpha);
-		const float X = Pos.x - m_RenderSize.x / 2.0f;
-		const float Y = Pos.y - m_RenderSize.y / 2.0f;
-		const int Effect = std::clamp(g_Config.m_QmTitleEffect, 0, 3);
-		if(Effect == QM_TITLE_EFFECT_POLISHED || Effect == QM_TITLE_EFFECT_SOLID)
-		{
-			SQmTitlePolishStyle Style;
-			Style.m_TextColor = Color;
-			Style.m_TextAlpha = Color.a;
-			if(VertexColored || Effect == QM_TITLE_EFFECT_SOLID)
-			{
-				Style.m_GlowAlpha = 0.0f;
-				Style.m_HighlightAlpha = 0.0f;
-			}
-			This.RenderTools()->RenderTitleContainerWithPolishedEffects(m_TextContainerIndex, Style, X, Y);
-		}
-		else if(DynamicStyle && Effect == QM_TITLE_EFFECT_CLASSIC)
-		{
-			SQmTitleEffectStyle Style;
-			Style.m_TextColor = Color;
-			Style.m_OutlineColor = OutlineColor;
-			Style.m_OutlineRadius = 2.0f;
-			if(g_Config.m_QmTitleBloom > 0)
-			{
-				const float Time = (float)This.m_QmClient.TitleAnimationTime();
-				Style.m_BloomRadius = 4.0f;
-				Style.m_BloomPulse = 16.0f * std::pow(std::sin(Time * 2.0f / pi) * 0.65f, 5.0f);
-				Style.m_BloomRotation = Time * 1.7f;
-				Style.m_BloomAlpha = g_Config.m_QmTitleBloom >= 2 ? 0.28f : 0.18f;
-				Style.m_BloomDraws = g_Config.m_QmTitleBloom >= 2 ? 16 : 6;
-			}
-			This.RenderTools()->RenderTitleContainerWithCalamityEffects(m_TextContainerIndex, Style, X, Y);
-		}
-		else
-			This.TextRender()->RenderTextContainer(m_TextContainerIndex, Color, OutlineColor, X, Y);
+		const CUIRect Rect{Pos.x - m_Size.x * 0.5f, Pos.y - m_Size.y * 0.5f, m_Size.x, m_Size.y};
+		This.m_QmClient.TitleBadge().RenderSurface(This.Graphics(), Rect, m_Appearance, m_Alpha);
+		const vec2 TextPosition = QmTitleBadgeTextPosition(Rect, m_TextVisualBounds);
+		This.TextRender()->RenderTextContainer(m_TextContainerIndex, QmTitleBadgePalette(m_Appearance, m_Alpha).m_Text,
+			ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), TextPosition.x, TextPosition.y);
 	}
-
-public:
-	// aboveName=true: 独立行渲染于名字上方；false: 内联于名字行左侧（默认）。
-	explicit CNamePlatePartTitle(CGameClient &This, bool aboveName = false) :
-		CNamePlatePartText(This), m_AboveName(aboveName) {}
 };
 
 class CNamePlatePartName : public CNamePlatePartText
@@ -1117,6 +982,7 @@ protected:
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
 	{
 		m_Visible = Data.m_ShowClan;
+		m_HiddenForPrivacy = Data.m_HideIdentity;
 		if(!m_Visible)
 			return false;
 		m_Color = Data.m_Color;
@@ -1349,8 +1215,7 @@ protected:
 	{
 		const CNetObj_PlayerInfo *pInfo = Data.m_InGame ? This.m_Snap.m_apPlayerInfos[Data.m_ClientId] : nullptr;
 		m_Visible = Data.m_InGame ? (pInfo && g_Config.m_QmNameplateSkins > (pInfo->m_Local ? 1 : 0)) : g_Config.m_QmNameplateSkins > 0;
-		if(Data.m_InGame && This.ShouldHideStreamerSkin(Data.m_ClientId))
-			m_Visible = false;
+		m_HiddenForPrivacy = Data.m_HideSkin;
 		if(!m_Visible)
 			return false;
 		m_Color = Data.m_Color;
@@ -1547,16 +1412,12 @@ private:
 				}
 				LineSize = vec2(0.0f, 0.0f);
 			}
-			else if(Part.Visible() || Part.ShiftOnInvis())
+			else if(Part.HasLayout())
 			{
 				Empty = false;
-				LineSize.x += Part.Size().x + Part.Padding().x;
-				LineSize.y = std::max(LineSize.y, Part.Size().y + Part.Padding().y);
-			}
-			else if(Part.ReserveLineHeight())
-			{
-				Empty = false;
-				LineSize.y = std::max(LineSize.y, Part.Size().y + Part.Padding().y);
+				const vec2 PartSize = Part.LayoutSize();
+				LineSize.x += PartSize.x;
+				LineSize.y = std::max(LineSize.y, PartSize.y);
 			}
 		}
 		WidthMax = std::max(WidthMax, LineSize.x);
@@ -1603,16 +1464,12 @@ private:
 				}
 				LineSize = vec2(0.0f, 0.0f);
 			}
-			else if(Part.Visible() || Part.ShiftOnInvis())
+			else if(Part.HasLayout())
 			{
 				Empty = false;
-				LineSize.x += Part.Size().x + Part.Padding().x;
-				LineSize.y = std::max(LineSize.y, Part.Size().y + Part.Padding().y);
-			}
-			else if(Part.ReserveLineHeight())
-			{
-				Empty = false;
-				LineSize.y = std::max(LineSize.y, Part.Size().y + Part.Padding().y);
+				const vec2 PartSize = Part.LayoutSize();
+				LineSize.x += PartSize.x;
+				LineSize.y = std::max(LineSize.y, PartSize.y);
 			}
 		}
 		return std::min(Top, Position.y - LineSize.y / 2.0f);
@@ -1636,16 +1493,12 @@ private:
 				Start = std::next(PartIt);
 				LineSize = vec2(0.0f, 0.0f);
 			}
-			else if(Part.Visible() || Part.ShiftOnInvis())
+			else if(Part.HasLayout())
 			{
 				Empty = false;
-				LineSize.x += Part.Size().x + Part.Padding().x;
-				LineSize.y = std::max(LineSize.y, Part.Size().y + Part.Padding().y);
-			}
-			else if(Part.ReserveLineHeight())
-			{
-				Empty = false;
-				LineSize.y = std::max(LineSize.y, Part.Size().y + Part.Padding().y);
+				const vec2 PartSize = Part.LayoutSize();
+				LineSize.x += PartSize.x;
+				LineSize.y = std::max(LineSize.y, PartSize.y);
 			}
 		}
 		RenderLine(This, Position, LineSize, Start, m_vpParts.begin() + EndIndex);
@@ -2120,6 +1973,8 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	Data.m_InGame = true;
 
 	const bool HideIdentity = GameClient()->ShouldHideStreamerIdentity(ClientId);
+	Data.m_HideIdentity = HideIdentity;
+	Data.m_HideSkin = GameClient()->ShouldHideStreamerSkin(ClientId);
 
 	// 昵称显示范围取代旧的 cl_nameplates / cl_nameplates_own 两开关：六档互斥，
 	// 按「当前操控角色 / 本机分身 / 其他玩家」三类玩家决定。仍走 NameplateRenderValue，
@@ -2143,15 +1998,18 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 		SpectateTarget,
 		ClientId);
 	Data.m_ShowFriendMark = Data.m_ShowName && g_Config.m_ClNamePlatesFriendMark && GameClient()->m_aClients[ClientId].m_Friend;
-	Data.m_ShowClientId = Data.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds) && !HideIdentity;
+	Data.m_ShowClientId = Data.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds);
 	Data.m_FontSize = 18.0f + 20.0f * g_Config.m_ClNamePlatesSize / 100.0f;
 
 	Data.m_ClientId = ClientId;
 	Data.m_ClientIdSeparateLine = g_Config.m_ClNamePlatesIdsSeparateLine;
 	Data.m_FontSizeClientId = Data.m_ClientIdSeparateLine ? (18.0f + 20.0f * g_Config.m_ClNamePlatesIdsSize / 100.0f) : Data.m_FontSize;
 
-	Data.m_ShowClan = Data.m_ShowName && g_Config.m_ClNamePlatesClan && !HideIdentity;
-	GameClient()->FormatStreamerClan(ClientId, Data.m_aClan, sizeof(Data.m_aClan));
+	Data.m_ShowClan = Data.m_ShowName && g_Config.m_ClNamePlatesClan;
+	if(HideIdentity)
+		str_copy(Data.m_aClan, GameClient()->m_aClients[ClientId].m_aClan);
+	else
+		GameClient()->FormatStreamerClan(ClientId, Data.m_aClan, sizeof(Data.m_aClan));
 	Data.m_FontSizeClan = 18.0f + 20.0f * g_Config.m_ClNamePlatesClanSize / 100.0f;
 
 	Data.m_CoordXAlignHint = g_Config.m_QmNameplateCoordXAlignHint != 0;
@@ -2289,7 +2147,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	}
 
 	// TClient
-	if(Data.m_ShowName && !HideIdentity && g_Config.m_QmWarList && g_Config.m_QmWarListShowClan && GameClient()->m_WarList.GetWarData(ClientId).m_WarClan)
+	if(Data.m_ShowName && g_Config.m_QmWarList && g_Config.m_QmWarListShowClan && GameClient()->m_WarList.GetWarData(ClientId).m_WarClan)
 		Data.m_ShowClan = true;
 	Data.m_Local = pPlayerInfo->m_Local;
 
@@ -2302,13 +2160,13 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 		FrameData.m_ShowName = true;
 		FrameData.m_ShowFriendMark = FrameData.m_ShowName && g_Config.m_ClNamePlatesFriendMark && GameClient()->m_aClients[ClientId].m_Friend;
 		SetNameplateTitle(*GameClient(), FrameData, ClientId);
-		FrameData.m_ShowClientId = FrameData.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds) && !HideIdentity;
-		FrameData.m_ShowClan = FrameData.m_ShowName && g_Config.m_ClNamePlatesClan && !HideIdentity;
+		FrameData.m_ShowClientId = FrameData.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds);
+		FrameData.m_ShowClan = FrameData.m_ShowName && g_Config.m_ClNamePlatesClan;
 		const bool FrameShowLocalAlignedCoordX = CoordModuleAllowsCoords && CoordXAlignHintEnabled && LocalCoordXAligned;
 		FrameData.m_ShowCoordX = (CoordModuleAllowsCoords && g_Config.m_QmNameplateCoordX != 0) || FrameShowLocalAlignedCoordX;
 		FrameData.m_ShowCoordY = CoordModuleAllowsCoords && g_Config.m_QmNameplateCoordY != 0;
 		FrameData.m_ShowCoords = CoordModuleAllowsCoords || FrameShowLocalAlignedCoordX;
-		if(FrameData.m_ShowName && !HideIdentity && g_Config.m_QmWarList && g_Config.m_QmWarListShowClan && GameClient()->m_WarList.GetWarData(ClientId).m_WarClan)
+		if(FrameData.m_ShowName && g_Config.m_QmWarList && g_Config.m_QmWarListShowClan && GameClient()->m_WarList.GetWarData(ClientId).m_WarClan)
 			FrameData.m_ShowClan = true;
 
 		CNamePlate &FrameNamePlate = m_pData->m_aNamePlateFrameReferences[ClientId];
@@ -2364,7 +2222,7 @@ static void BuildNamePlatePreviewData(CGameClient &This, int DummyIdx, CNamePlat
 	{
 		// 离线时使用已保存的称号资料；在线时只展示游戏内已经收到的称号。
 		str_copy(Data.m_aQmTitle, This.m_QmClient.TitleText());
-		str_copy(Data.m_aQmTitleStyle, This.m_QmClient.TitleProfileStyle());
+		Data.m_TitleAppearance = This.m_QmClient.TitleProfileAppearance();
 	}
 	Data.m_ShowFriendMark = Data.m_ShowName && g_Config.m_ClNamePlatesFriendMark && HasLocalClient && This.m_aClients[LocalClientId].m_Friend;
 

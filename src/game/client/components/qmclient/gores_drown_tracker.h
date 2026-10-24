@@ -18,6 +18,7 @@ class CQmGoresDrownTracker
 		int m_Count = 0;
 		bool m_HasObservedCharacter = false;
 		bool m_SeenCharacter = false;
+		bool m_OnStart = false;
 		bool m_Frozen = false;
 		bool m_Hooking = false;
 		bool m_Armed = false;
@@ -51,7 +52,7 @@ public:
 		return ClientId >= 0 && ClientId < MAX_CLIENTS ? m_aPlayers[ClientId].m_Count : 0;
 	}
 
-	void Observe(int ClientId, bool Active, std::string_view Name, std::string_view Clan, int Team, bool HasCharacter, bool Frozen, bool Hooking, bool IncludeTeamZero)
+	void Observe(int ClientId, bool Active, std::string_view Name, std::string_view Clan, int Team, bool HasCharacter, bool Frozen, bool Hooking, bool OnStart, bool IncludeTeamZero)
 	{
 		if(ClientId < 0 || ClientId >= MAX_CLIENTS)
 			return;
@@ -73,11 +74,20 @@ public:
 		{
 			// 角色暂时不在 snapshot 中时保留次数，不推断冻结或出钩事件。
 			Player.m_SeenCharacter = false;
+			Player.m_OnStart = false;
 			Player.m_Frozen = false;
 			Player.m_Hooking = false;
 			Player.m_Armed = false;
 			return;
 		}
+		if(Player.m_SeenCharacter && Player.m_OnStart && !OnStart)
+		{
+			// 离开起点时只清零该玩家，新一轮落水从当前冻结和出钩状态重新建立基线。
+			Player.m_Count = 0;
+			Player.m_HasObservedCharacter = false;
+			Player.m_SeenCharacter = false;
+		}
+		Player.m_OnStart = OnStart;
 		if(!Player.m_SeenCharacter)
 		{
 			Player.m_SeenCharacter = true;

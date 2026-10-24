@@ -3501,6 +3501,7 @@ if(CLIENT)
     components/qmclient/browser_map_preview_loader.h
     components/qmclient/chat_command_preview.h
     components/qmclient/chat_input_layout.h
+    components/qmclient/chat_message_filter.h
     components/qmclient/pending_chat_messages.h
     components/qmclient/chat_translation_notes.h
     components/qmclient/chat_scrollbar.h
@@ -3633,6 +3634,10 @@ if(CLIENT)
     components/qmclient/qm_map_upload.cpp
     components/qmclient/qm_developer_badge.cpp
     components/qmclient/qm_developer_badge.h
+    components/qmclient/qm_developer_badge_motion.h
+    components/qmclient/qm_title_badge.cpp
+    components/qmclient/qm_title_badge.h
+    components/qmclient/qm_title_appearance.h
     components/qmclient/qm_title_style.cpp
     components/qmclient/qm_title_render.cpp
     components/qmclient/sponsor_chat_render.cpp
@@ -3719,6 +3724,7 @@ if(CLIENT)
     components/qmclient/pose_file.h
     components/qmclient/pose_scene.cpp
     components/qmclient/pose_scene.h
+    components/qmclient/player_display_privacy.h
     components/qmclient/update_version.h
     components/qmclient/update_manifest.cpp
     components/qmclient/update_manifest.h
@@ -4715,6 +4721,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/client/qm_screenshot_image_job_test.cpp
     src/test/integration/qmclient/client/qm_pose_capture_save_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_cache_test.cpp
+    src/test/unit/qmclient/client/qm_nameplate_layout_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_effects_test.cpp
     src/test/unit/qmclient/client/qm_route_visited_test.cpp
     src/test/unit/qmclient/client/qm_route_render_cache_test.cpp
@@ -4833,6 +4840,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/client/qm_axiom_scores_contract_test.cpp
     src/test/unit/qmclient/client/qm_chat_emoji_test.cpp
     src/test/unit/qmclient/client/qm_chat_interactions_test.cpp
+    src/test/unit/qmclient/client/qm_chat_message_filter_test.cpp
     src/test/unit/qmclient/client/qm_chat_command_policy_test.cpp
     src/test/unit/qmclient/client/qm_chat_command_hud_test.cpp
     src/test/unit/qmclient/client/qm_chat_presentation_test.cpp
@@ -5023,6 +5031,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/websocket_client_test.cpp
     src/test/unit/qmclient/client/qm_map_upload_test.cpp
     src/test/unit/qmclient/client/qm_developer_badge_test.cpp
+    src/test/unit/qmclient/client/qm_title_badge_test.cpp
     src/test/unit/qmclient/client/qm_title_style_test.cpp
     src/test/unit/qmclient/client/qm_sponsor_chat_style_test.cpp
     src/test/unit/qmclient/client/qm_skin_outline_test.cpp
@@ -5547,8 +5556,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_discrete_slider_spring_test.cpp
       src/test/integration/qmclient/ui/qm_numeric_field_enter_test.cpp
       src/test/integration/qmclient/ui/qm_font_combobox_test.cpp
+      src/test/integration/qmclient/ui/qm_color_picker_text_input_test.cpp
       src/test/integration/qmclient/client/qm_font_loading_test.cpp
       src/test/integration/qmclient/client/qm_text_measurement_test.cpp
+      src/test/integration/qmclient/client/qm_title_badge_text_test.cpp
       src/test/integration/qmclient/client/qm_text_bitmap_test.cpp
       src/test/integration/qmclient/client/qm_text_initialization_test.cpp
       src/test/integration/qmclient/client/qm_text_device_recovery_test.cpp

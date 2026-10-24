@@ -1907,9 +1907,6 @@ Bounded capture frame queue depth for demo export (higher values use more memory
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 대괄호 칭호 색상: 0 = 서버 설정 따르기, 1 = 단색, 2 = 무지개
 
-Bracketed title opacity (0-100)
-== 대괄호 칭호 불투명도 (0-100)
-
 Bracketed title single color
 == 대괄호 칭호 단색
 
@@ -2068,6 +2065,9 @@ Cannot open word list file. Previous words remain active.
 
 Cannot read complete word list file. Previous words remain active.
 == 단어 목록 파일을 완전히 읽을 수 없습니다. 이전 단어 목록을 유지합니다.
+
+Cannot remove the wiki file
+== Wiki 파일을 삭제할 수 없습니다
 
 Cannot swap: the other player is not in your team
 == 스왑할 수 없음: 상대방이 당신의 팀에 없습니다
@@ -2494,9 +2494,6 @@ Classic pro
 
 Classic title glow
 == 클래식 칭호 광채
-
-Classic title glow: 0 = off, 1 = subtle (6 draws), 2 = full Calamity (16 draws)
-== 클래식 칭호 광채: 0 = 끔, 1 = 은은함 (6겹), 2 = 전체 Calamity (16겹)
 
 Clear
 == 지우기
@@ -4147,6 +4144,9 @@ Do not translate server messages
 
 Do not use it to spam: servers may punish repeated automatic messages.
 == 도배에 사용하지 마세요. 반복되는 자동 메시지는 서버에서 처벌될 수 있습니다.
+
+Document too large for the editor (%d of %d bytes)
+== 문서가 너무 커서 클라이언트 편집기에서 수정할 수 없습니다(%d / %d바이트)
 
 Done
 == Done
@@ -6002,6 +6002,9 @@ Full: each enabled animation category uses its complete transition
 Fullscreen
 == 전체 화면
 
+Fully block enemy players
+== 적대 플레이어 완전히 차단
+
 Fun
 == 재미
 
@@ -6445,6 +6448,9 @@ Hide Echo messages
 
 Hide Echo messages in Zen mode
 == 선 모드에서 Echo 메시지 숨기기
+
+Hide enemy chat, replace enemy names with client IDs and use default skins; keep local players visible
+== 적대 플레이어의 채팅을 숨기고 이름을 클라이언트 ID로 바꾸며 기본 스킨을 사용합니다. 내 캐릭터와 더미는 정상 표시합니다
 
 Hide explosion effects
 == 폭발 효과 숨기기
@@ -7240,6 +7246,9 @@ Invalid spectator id used
 
 Invalid sponsor code
 == 유효하지 않은 인증 코드
+
+Invalid title appearance
+== 칭호 외형 설정이 올바르지 않습니다
 
 Invalid translation backend
 == 잘못된 번역 백엔드
@@ -8672,6 +8681,9 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 Monospace
 == 고정폭
 
+Moon
+== 달
+
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Tee의 안정적인 방향을 따라 더 낙관적인 예측, 안정화 지연 감소
 
@@ -8962,6 +8974,9 @@ Nameplate text glow range
 
 Nameplate text gradient color
 == 이름표 텍스트 그라데이션 색상
+
+Nameplate title size
+== 이름표 칭호 크기
 
 Nameplate weak hook icon color
 == 이름표 약한 갈고리 아이콘 색상
@@ -9545,6 +9560,12 @@ Only save improvements
 Only show after joining a team
 == 팀에 가입한 후에만 표시
 
+Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players
+== 친구 및 팀 필터와 관계없이 나를 언급한 메시지, 귓속말, 내가 보낸 메시지만 표시하며 시스템 메시지와 차단 설정은 유지
+
+Only show messages related to me
+== 나와 관련된 메시지만 표시
+
 Only show outlines in the entities layer
 == 엔티티 레이어에서만 외곽선 표시
 
@@ -9796,6 +9817,9 @@ Output voice debug log
 
 Output:
 == 출력:
+
+Overall sponsor title badge color
+== 후원자 칭호 전체 색상
 
 Overlay entities
 == 엔티티 오버레이
@@ -11879,6 +11903,9 @@ Restore recommended
 Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
 == 기존 휠 스크롤 복원: 매 눈금마다 속도를 이어받지 않고 부드러운 스크롤을 다시 시작
 
+Restored the built-in content
+== 내장 콘텐츠로 되돌렸습니다
+
 Restoring save %d: main '%s', dummy '%s'.
 == 저장 데이터 %d 복원 중: 본체 '%s', 더미 '%s'.
 
@@ -12175,6 +12202,9 @@ Save/Load Name
 
 Save/Load Skin
 == 스킨 저장/불러오기
+
+Saved
+== 저장했습니다
 
 Saved to the bind wheel.
 == 바인드 휠에 저장했습니다.
@@ -12865,9 +12895,6 @@ Show advanced nameplate settings without changing effect values
 
 Show advanced options
 == 고급 옵션 표시
-
-Show advanced title settings (collapsing keeps configured effects)
-== 고급 칭호 설정 표시 (접어도 설정한 효과 유지)
 
 Show advanced translation options
 == 고급 번역 옵션 표시
@@ -14390,6 +14417,12 @@ Sponsor support
 Sponsor title
 == 후원자 칭호
 
+Sponsor title badge opacity (0-100)
+== 후원자 칭호 전체 불투명도 (0-100)
+
+Sponsor title badge: 0 = moon, 1 = sun
+== 후원자 칭호 스타일: 0 = 달, 1 = 태양
+
 Sponsors:
 == 스폰서:
 
@@ -14650,6 +14683,9 @@ Sudden Death
 
 Suicides
 == 자살 횟수
+
+Sun
+== 태양
 
 Super
 == 슈퍼
@@ -15574,6 +15610,9 @@ Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visibl
 
 Title preview
 == 칭호 완성 미리보기
+
+Title server does not support badge appearance yet
+== 칭호 서버가 아직 배지 외형을 지원하지 않습니다
 
 Title server does not support chat styles yet
 == 칭호 서버가 아직 채팅 스타일을 지원하지 않습니다

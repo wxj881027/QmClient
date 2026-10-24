@@ -2105,8 +2105,7 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 			ValueRenderOptions.m_DrawBackground = false;
 			// 命中区仍是整块底板：文本内缩只为排版留白，不该让边缘点击落空。
 			ValueRenderOptions.m_pHitRect = &ValueRect;
-			pUI->DoEditBox(&Input, &ValueTextRect, 7.0f, IGraphics::CORNER_ALL, {}, TEXTALIGN_MC, ValueRenderOptions);
-			if(Input.WasChanged())
+			if(pUI->DoEditBox(&Input, &ValueTextRect, 7.0f, IGraphics::CORNER_ALL, {}, TEXTALIGN_MC, ValueRenderOptions))
 			{
 				const char *pText = pColorPicker->m_aacChannelBuffers[ChannelIndex];
 				char *pEnd = nullptr;
@@ -2259,9 +2258,9 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 			CUi::SEditBoxRenderOptions HexRenderOptions;
 			HexRenderOptions.m_DrawBackground = false;
 			HexRenderOptions.m_pHitRect = &HexBox;
-			pUI->DoEditBox(&pColorPicker->m_HexInput, &HexTextRect, 7.0f, IGraphics::CORNER_ALL, {}, TEXTALIGN_ML, HexRenderOptions);
+			const bool HexChanged = pUI->DoEditBox(&pColorPicker->m_HexInput, &HexTextRect, 7.0f, IGraphics::CORNER_ALL, {}, TEXTALIGN_ML, HexRenderOptions);
 			pUI->DoSmallTooltip(&pColorPicker->m_HexInput, &HexBox, "支持 3/4/6/8 位十六进制颜色（例如 #F00、#FF0000）");
-			if(pColorPicker->m_HexInput.WasChanged())
+			if(HexChanged)
 			{
 				ColorRGBA ParsedColor;
 				if(qm_picker_palette::ParseHexColor(pColorPicker->m_aHexBuffer, ParsedColor))

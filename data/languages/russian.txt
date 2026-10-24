@@ -1907,9 +1907,6 @@ Bounded capture frame queue depth for demo export (higher values use more memory
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Цвет титула в скобках: 0 = как на сервере, 1 = один цвет, 2 = радуга
 
-Bracketed title opacity (0-100)
-== Прозрачность титула в скобках (0-100)
-
 Bracketed title single color
 == Один цвет для титула в скобках
 
@@ -2068,6 +2065,9 @@ Cannot open word list file. Previous words remain active.
 
 Cannot read complete word list file. Previous words remain active.
 == Не удалось прочитать весь файл. Прежний список слов остаётся активным.
+
+Cannot remove the wiki file
+== Не удалось удалить файл Wiki
 
 Cannot swap: the other player is not in your team
 == Невозможно обменяться: другой игрок не в вашей команде
@@ -2494,9 +2494,6 @@ Classic pro
 
 Classic title glow
 == Классическое свечение
-
-Classic title glow: 0 = off, 1 = subtle (6 draws), 2 = full Calamity (16 draws)
-== Классическое свечение титула: 0 = выкл., 1 = мягкое (6 слоёв), 2 = полное Calamity (16 слоёв)
 
 Clear
 == Очистить
@@ -4147,6 +4144,9 @@ Do not translate server messages
 
 Do not use it to spam: servers may punish repeated automatic messages.
 == Не используйте для спама: серверы могут наказать за повторяющиеся автоматические сообщения.
+
+Document too large for the editor (%d of %d bytes)
+== Документ слишком большой для редактора клиента (%d из %d байт)
 
 Done
 == Done
@@ -6002,6 +6002,9 @@ Full: each enabled animation category uses its complete transition
 Fullscreen
 == Полноэкранный режим
 
+Fully block enemy players
+== Полностью блокировать враждебных игроков
+
 Fun
 == Развлечение
 
@@ -6445,6 +6448,9 @@ Hide Echo messages
 
 Hide Echo messages in Zen mode
 == Скрывать сообщения Echo в режиме дзен
+
+Hide enemy chat, replace enemy names with client IDs and use default skins; keep local players visible
+== Скрывать чат врагов, заменять их имена ID клиента и использовать стандартные скины; своего персонажа и дамми показывать как обычно
 
 Hide explosion effects
 == Скрыть эффекты взрывов
@@ -7240,6 +7246,9 @@ Invalid spectator id used
 
 Invalid sponsor code
 == Неверный код спонсора
+
+Invalid title appearance
+== Недопустимые параметры внешнего вида титула
 
 Invalid translation backend
 == Неверный бэкенд перевода
@@ -8672,6 +8681,9 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 Monospace
 == Моноширинный
 
+Moon
+== Луна
+
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Более оптимистичное предсказание вдоль стабильного направления Tee, уменьшает задержку стабилизации
 
@@ -8962,6 +8974,9 @@ Nameplate text glow range
 
 Nameplate text gradient color
 == Цвет градиента текста на табличке
+
+Nameplate title size
+== Размер титула над игроком
 
 Nameplate weak hook icon color
 == Цвет иконки слабого крюка на табличке
@@ -9545,6 +9560,12 @@ Only save improvements
 Only show after joining a team
 == Показывать только после присоединения к команде
 
+Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players
+== Показывать только упоминания, личные и собственные сообщения независимо от фильтров друзей и команды; сохранять системные сообщения и блокировку игроков
+
+Only show messages related to me
+== Показывать только сообщения, связанные со мной
+
 Only show outlines in the entities layer
 == Показывать только контуры в слое объектов
 
@@ -9796,6 +9817,9 @@ Output voice debug log
 
 Output:
 == Вывод:
+
+Overall sponsor title badge color
+== Общий цвет титула спонсора
 
 Overlay entities
 == Наложение сущностей
@@ -11879,6 +11903,9 @@ Restore recommended
 Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
 == Вернуть прежнюю прокрутку колёсиком: каждый шаг заново запускает плавную прокрутку без сохранения скорости
 
+Restored the built-in content
+== Встроенный текст восстановлен
+
 Restoring save %d: main '%s', dummy '%s'.
 == Восстановление сохранения %d: основной '%s', дамми '%s'.
 
@@ -12175,6 +12202,9 @@ Save/Load Name
 
 Save/Load Skin
 == Сохранить/Загрузить скин
+
+Saved
+== Сохранено
 
 Saved to the bind wheel.
 == Сохранено в колесо команд.
@@ -12865,9 +12895,6 @@ Show advanced nameplate settings without changing effect values
 
 Show advanced options
 == Показать дополнительные параметры
-
-Show advanced title settings (collapsing keeps configured effects)
-== Показать расширенные настройки титула (при сворачивании эффекты сохраняются)
 
 Show advanced translation options
 == Показывать расширенные параметры перевода
@@ -14390,6 +14417,12 @@ Sponsor support
 Sponsor title
 == Титул спонсора
 
+Sponsor title badge opacity (0-100)
+== Непрозрачность титула спонсора (0-100)
+
+Sponsor title badge: 0 = moon, 1 = sun
+== Стиль титула спонсора: 0 = луна, 1 = солнце
+
 Sponsors:
 == Спонсоры:
 
@@ -14650,6 +14683,9 @@ Sudden Death
 
 Suicides
 == Самоубийства
+
+Sun
+== Солнце
 
 Super
 == Супер
@@ -15574,6 +15610,9 @@ Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visibl
 
 Title preview
 == Предпросмотр титула
+
+Title server does not support badge appearance yet
+== Сервер титулов пока не поддерживает внешний вид значков
 
 Title server does not support chat styles yet
 == Сервер титулов пока не поддерживает стили чата

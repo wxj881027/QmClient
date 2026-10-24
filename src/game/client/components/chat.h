@@ -21,7 +21,7 @@
 #include <game/client/components/qmclient/qm_chat_export_metadata.h>
 #include <game/client/components/qmclient/qm_chat_log_jobs.h>
 #include <game/client/components/qmclient/qm_chat_text_layout.h>
-#include <game/client/components/qmclient/qm_title_render.h>
+#include <game/client/components/qmclient/qm_title_badge.h>
 #include <game/client/components/qmclient/sponsor_chat_render.h>
 #include <game/client/components/qmclient/translate/translate_jobs.h>
 #include <game/client/components/qmclient/translate/translate_ui_popup.h>
@@ -160,6 +160,7 @@ private:
 		char m_aPlayerName[MAX_NAME_LENGTH] = "";
 		char m_aQmTitle[64] = "";
 		bool m_DeveloperBadge = false;
+		SQmTitleAppearance m_TitleAppearance;
 		ColorRGBA m_NameColor;
 	};
 
@@ -183,6 +184,7 @@ private:
 		char m_aName[MAX_CLIENTS * (MAX_NAME_LENGTH + 1)];
 		char m_aQmTitle[64] = "";
 		bool m_DeveloperBadge = false;
+		SQmTitleAppearance m_TitleAppearance;
 		char m_aText[MAX_LINE_LENGTH];
 		// 合并比较保留内置显示过滤前的文本，避免不同原文都变成星号后合并。
 		char m_aMergeText[MAX_LINE_LENGTH] = "";
@@ -205,7 +207,7 @@ private:
 		int m_QuadContainerIndex;
 		CUIRect m_BackgroundRect = {};
 		float m_BackgroundRounding = 0.0f;
-		std::vector<CQmTitleTextMetrics> m_vTitleTextMetrics;
+		std::vector<SQmTitleBadgePlacement> m_vTitleBadges;
 		std::vector<CUIRect> m_vDeveloperBadgeRects;
 
 		std::shared_ptr<CManagedTeeRenderInfo> m_pManagedTeeRenderInfo;

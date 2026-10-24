@@ -386,6 +386,22 @@ bool IsValidQmTitle(const char *pTitle)
 	return true;
 }
 
+bool ParseQmTitleAppearance(const json_value *pValue, SQmTitleAppearance &Out)
+{
+	Out = {};
+	const json_value *pStyle = JsonObjectField(pValue, "style");
+	int64_t Color, Opacity;
+	if(pStyle->type != json_string ||
+		(str_comp(pStyle->u.string.ptr, "moon") != 0 && str_comp(pStyle->u.string.ptr, "sun") != 0) ||
+		!JsonReadInteger(JsonObjectField(pValue, "color"), Color) || Color < 0 || Color > 0xffffff ||
+		!JsonReadInteger(JsonObjectField(pValue, "opacity"), Opacity) || Opacity < 0 || Opacity > 100)
+		return false;
+	Out.m_Style = str_comp(pStyle->u.string.ptr, "sun") == 0 ? EQmTitleBadgeStyle::SUN : EQmTitleBadgeStyle::MOON;
+	Out.m_Color = static_cast<unsigned>(Color);
+	Out.m_Opacity = static_cast<int>(Opacity);
+	return true;
+}
+
 std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, const char *pServerAddress, int64_t *pServerTime)
 {
 	std::vector<SQmTitlePresence> Result;
@@ -417,7 +433,8 @@ std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, con
 			!JsonReadInteger(JsonObjectField(pEntry, "expires_at"), Expires) || Expires <= Now)
 			continue;
 		Result.push_back({(int)Id, pName->u.string.ptr, pTitle->u.string.ptr, pStyle && pStyle->type == json_string ? pStyle->u.string.ptr : "", std::min<int64_t>(Expires - Now, 15),
-			QmSponsorChatStyleFromId(pChatStyle->type == json_string ? pChatStyle->u.string.ptr : "")});
+			QmSponsorChatStyleFromId(pChatStyle->type == json_string ? pChatStyle->u.string.ptr : ""), {}});
+		ParseQmTitleAppearance(JsonObjectField(pEntry, "appearance"), Result.back().m_Appearance);
 	}
 	return Result;
 }

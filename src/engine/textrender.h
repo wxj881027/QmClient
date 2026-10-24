@@ -445,7 +445,11 @@ public:
 	// 否则游标推进方式（顺序消费）会与字符错位。
 	std::vector<STextCharOffset> m_vCharOffsets;
 
-	float Height() const;
+	// 内联定义：测试目标不链 text.cpp，但 qm_title_badge.h 等内联路径会引用本方法。
+	float Height() const
+	{
+		return m_LineCount * (m_AlignedFontSize + m_AlignedLineSpacing);
+	}
 	STextBoundingBox BoundingBox() const;
 	void SetPosition(vec2 Position)
 	{

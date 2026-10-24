@@ -6,7 +6,7 @@ TEST(QmDeveloperBadge, ScalingPreservesDesignAspectRatio)
 {
 	const vec2 Small = QmDeveloperBadgeSize(7.0f);
 	const vec2 Large = QmDeveloperBadgeSize(21.0f);
-	EXPECT_FLOAT_EQ(Small.x, 24.0f);
+	EXPECT_FLOAT_EQ(Small.x, 7.0f * (91.0f / 24.0f));
 	EXPECT_FLOAT_EQ(Small.y, 7.0f);
 	EXPECT_FLOAT_EQ(Large.x, Small.x * 3.0f);
 	EXPECT_FLOAT_EQ(Large.y, Small.y * 3.0f);
@@ -41,7 +41,7 @@ TEST(QmDeveloperBadge, InsufficientRemainingWidthMovesWholeBadgeToNextLine)
 	EXPECT_FLOAT_EQ(Cursor.m_Y, 30.0f);
 	EXPECT_FLOAT_EQ(Rect.x, 10.0f);
 	EXPECT_FLOAT_EQ(Rect.y, 30.5f);
-	EXPECT_FLOAT_EQ(Rect.w, 24.0f);
+	EXPECT_FLOAT_EQ(Rect.w, 7.0f * (91.0f / 24.0f));
 	EXPECT_FLOAT_EQ(Cursor.m_LongestLineWidth, 85.0f);
 }
 
@@ -68,7 +68,7 @@ TEST(QmDeveloperBadge, NarrowLineFitsBadgeWithoutChangingAspectRatio)
 	EXPECT_FLOAT_EQ(Cursor.m_X, 20.0f);
 	EXPECT_GT(Rect.h, 0.0f);
 	EXPECT_LT(Rect.h, 14.0f);
-	EXPECT_NEAR(Rect.w / Rect.h, 24.0f / 7.0f, 0.0001f);
+	EXPECT_NEAR(Rect.w / Rect.h, 91.0f / 24.0f, 0.0001f);
 	EXPECT_EQ(Cursor.m_LineCount, 1);
 }
 
@@ -126,4 +126,61 @@ TEST(QmDeveloperBadge, NonpositiveFontSizeDoesNotMoveCursor)
 		EXPECT_FLOAT_EQ(Cursor.m_Y, 20.0f);
 		EXPECT_EQ(Cursor.m_LineCount, 1);
 	}
+}
+
+TEST(QmDeveloperBadgeMotion, SixSecondLoopPreservesEveryLightPosition)
+{
+	for(const double Time : {0.0, 0.37, 1.5, 3.0, 5.999})
+	{
+		SCOPED_TRACE(Time);
+		const auto First = QmSampleDeveloperBadgeMotion(Time);
+		const auto Repeated = QmSampleDeveloperBadgeMotion(Time + 6.0);
+		for(size_t i = 0; i < First.m_aOrbit.size(); ++i)
+			EXPECT_NEAR(distance(First.m_aOrbit[i], Repeated.m_aOrbit[i]), 0.0f, 0.0001f);
+		for(size_t i = 0; i < First.m_aCircuit.size(); ++i)
+			EXPECT_NEAR(distance(First.m_aCircuit[i], Repeated.m_aCircuit[i]), 0.0f, 0.0001f);
+	}
+}
+
+TEST(QmDeveloperBadgeMotion, OrbitTraversesBothEdgesAndRoundedEnds)
+{
+	const auto Start = QmSampleDeveloperBadgeMotion(0.0).m_aOrbit[0];
+	EXPECT_NEAR(Start.x, 30.75f, 0.0001f);
+	EXPECT_NEAR(Start.y, 0.5f, 0.0001f);
+	const auto Bottom = QmSampleDeveloperBadgeMotion(3.0).m_aOrbit[0];
+	EXPECT_NEAR(Bottom.x, 60.25f, 0.0001f);
+	EXPECT_NEAR(Bottom.y, 23.5f, 0.0001f);
+	const auto Right = QmSampleDeveloperBadgeMotion(2.0).m_aOrbit[0];
+	EXPECT_GT(Right.x, 89.0f);
+	EXPECT_GT(Right.y, 10.0f);
+	EXPECT_LT(Right.y, 17.0f);
+	const auto Left = QmSampleDeveloperBadgeMotion(5.0).m_aOrbit[0];
+	EXPECT_LT(Left.x, 2.0f);
+	EXPECT_GT(Left.y, 7.0f);
+	EXPECT_LT(Left.y, 14.0f);
+}
+
+TEST(QmDeveloperBadgeMotion, CircuitLightsMoveInOppositeDirections)
+{
+	const auto Start = QmSampleDeveloperBadgeMotion(0.0);
+	const auto Moving = QmSampleDeveloperBadgeMotion(1.0);
+	EXPECT_GT(Moving.m_aCircuit[0].x, Start.m_aCircuit[0].x);
+	EXPECT_LT(Moving.m_aCircuit[1].x, Start.m_aCircuit[1].x);
+	EXPECT_FLOAT_EQ(Moving.m_aCircuit[0].y, 5.0f);
+	EXPECT_FLOAT_EQ(Moving.m_aCircuit[1].y, 19.0f);
+	const auto Returning = QmSampleDeveloperBadgeMotion(4.0);
+	EXPECT_LT(Returning.m_aCircuit[0].x, Moving.m_aCircuit[0].x);
+	EXPECT_GT(Returning.m_aCircuit[1].x, Moving.m_aCircuit[1].x);
+}
+
+TEST(QmDeveloperBadgeMotion, LongRunningClockAndLoopBoundaryRemainContinuous)
+{
+	const auto Local = QmSampleDeveloperBadgeMotion(0.5);
+	const auto Later = QmSampleDeveloperBadgeMotion(3600000.5);
+	EXPECT_NEAR(distance(Local.m_aOrbit[0], Later.m_aOrbit[0]), 0.0f, 0.0001f);
+	EXPECT_NEAR(distance(Local.m_aCircuit[0], Later.m_aCircuit[0]), 0.0f, 0.0001f);
+	const auto Before = QmSampleDeveloperBadgeMotion(-0.0001);
+	const auto After = QmSampleDeveloperBadgeMotion(0.0001);
+	for(size_t i = 0; i < Before.m_aOrbit.size(); ++i)
+		EXPECT_LT(distance(Before.m_aOrbit[i], After.m_aOrbit[i]), 0.01f);
 }

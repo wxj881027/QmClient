@@ -2105,6 +2105,7 @@ key = "Recorded frame rate; higher is smoother and larger"
 [message.translations]
 simplified_chinese = "录制帧率；越高越流畅、文件越大"
 traditional_chinese = "錄製幀率；越高越流暢、檔案越大"
+
 [[message]]
 key = "Lower means better quality and larger files; 18 is recommended"
 [message.translations]
@@ -3565,6 +3566,7 @@ brazilian_portuguese = "Sair da prévia"
 portuguese = "Sair da pré-visualização"
 turkish = "Önizlemeden çık"
 polish = "Wyjdź z podglądu"
+
 [[message]]
 key = "Show entity layer"
 [message.translations]

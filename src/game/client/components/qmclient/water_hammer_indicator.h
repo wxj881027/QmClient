@@ -13,17 +13,10 @@
 
 #include <array>
 
-// 接收 sv_preinput，并为渲染层提供「同队可见玩家在冻结状态下卡锤」状态。
+// 结合本地分身输入与 sv_preinput，提供「同队可见玩家在冻结状态下卡锤」状态。
 class CQmWaterHammerIndicator : public CComponent
 {
-	struct SInputState
-	{
-		bool m_Received = false;
-		int m_WantedWeapon = 0;
-		int m_Fire = 0;
-	};
-
-	std::array<SInputState, MAX_CLIENTS> m_aInputs;
+	std::array<SQmWaterHammerInputState, MAX_CLIENTS> m_aInputs;
 
 public:
 	int Sizeof() const override { return sizeof(*this); }

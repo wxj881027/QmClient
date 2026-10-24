@@ -634,7 +634,6 @@ Bounce
 Bound functions
 Bounded capture frame queue depth for demo export (higher values use more memory)
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
-Bracketed title opacity (0-100)
 Bracketed title single color
 Bright backgrounds reduce text contrast; keep the overlay dark enough.
 Brightness shift
@@ -688,6 +687,7 @@ Candidate files
 Cannot join the target player's team
 Cannot open word list file. Previous words remain active.
 Cannot read complete word list file. Previous words remain active.
+Cannot remove the wiki file
 Cannot swap: the other player is not in your team
 Cannot write the wiki file
 Capture the flag
@@ -830,7 +830,6 @@ Classic PowerShell
 Classic Pro
 Classic pro
 Classic title glow
-Classic title glow: 0 = off, 1 = subtle (6 draws), 2 = full Calamity (16 draws)
 Clear
 Clear all favorite maps
 Clear all history
@@ -1381,6 +1380,7 @@ Do not set, used to mark official tutorial server
 Do not show Tees visible on screen
 Do not translate server messages
 Do not use it to spam: servers may punish repeated automatic messages.
+Document too large for the editor (%d of %d bytes)
 Done
 Donor (drag parts from left)
 Donor Asset
@@ -2000,6 +2000,7 @@ Full quality nameplate count
 Full width
 Full: each enabled animation category uses its complete transition
 Fullscreen
+Fully block enemy players
 Fun
 Functions
 Game
@@ -2148,6 +2149,7 @@ Hide direction in Zen mode
 Hide direction indicators
 Hide Echo messages
 Hide Echo messages in Zen mode
+Hide enemy chat, replace enemy names with client IDs and use default skins; keep local players visible
 Hide explosion effects
 Hide freeze effects
 Hide freeze effects in Zen Mode
@@ -2413,6 +2415,7 @@ Invalid quoted word. Use one word per line.
 Invalid save number. Use a number from the save list.
 Invalid spectator id used
 Invalid sponsor code
+Invalid title appearance
 Invalid translation backend
 Invalid X coordinate.
 Invalid Y coordinate.
@@ -2890,6 +2893,7 @@ Modern terminal
 Modified
 Modules snap to screen edges, center lines and other HUD modules while dragging
 Monospace
+Moon
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 More teammates...
 MOTD
@@ -2987,6 +2991,7 @@ Nameplate text effects spectate scope (0=Off 1=Spectated player 2=Others 3=Frien
 Nameplate text glow color
 Nameplate text glow range
 Nameplate text gradient color
+Nameplate title size
 Nameplate weak hook icon color
 Nameplate X alignment hint duration window (ms)
 Nameplate X alignment hint highlight color
@@ -3181,6 +3186,8 @@ Only kills sent by your own client are blocked and server commands still work, s
 Only save ghost if better than previous record
 Only save improvements
 Only show after joining a team
+Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players
+Only show messages related to me
 Only show outlines in the entities layer
 Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
@@ -3265,6 +3272,7 @@ Output resolution
 Output switch
 Output voice debug log
 Output:
+Overall sponsor title badge color
 Overlay entities
 Overlay game tiles with opacity percentage
 Override
@@ -3959,6 +3967,7 @@ Restore Kugou files
 Restore old single-segment hook collision line behavior
 Restore recommended
 Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
+Restored the built-in content
 Restoring save %d: main '%s', dummy '%s'.
 Results include cards on other pages; the tab switches automatically.
 Retry
@@ -4058,6 +4067,7 @@ Save/Load Emote
 Save/Load Flag
 Save/Load Name
 Save/Load Skin
+Saved
 Saved to the bind wheel.
 Saved with your title and shared with other QmClient players.
 Saves and loads complete client profiles, including name, chat settings and bind wheel presets.
@@ -4288,7 +4298,6 @@ Show a MomentCap .poses file in game (no export)
 Show a small view of the dummy
 Show advanced nameplate settings without changing effect values
 Show advanced options
-Show advanced title settings (collapsing keeps configured effects)
 Show advanced translation options
 Show air jump indicator
 Show all
@@ -4796,6 +4805,8 @@ Sponsor code already claimed
 Sponsor reminder
 Sponsor support
 Sponsor title
+Sponsor title badge opacity (0-100)
+Sponsor title badge: 0 = moon, 1 = sun
 Sponsors:
 Spotify sp_dc cookie (from browser DevTools, long-lived)
 Spree
@@ -4883,6 +4894,7 @@ Success
 Successfully saved the replay!
 Sudden Death
 Suicides
+Sun
 Super
 Support is optional; nothing here changes client behavior.
 Support ♥
@@ -5191,6 +5203,7 @@ Title motion: 0 = vertical wave, 1 = pop wave
 Title opacity
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
 Title preview
+Title server does not support badge appearance yet
 Title server does not support chat styles yet
 Title server unavailable; retry
 Title spatial effect: 0 = polished, 1 = solid, 2 = classic Calamity, 3 = off

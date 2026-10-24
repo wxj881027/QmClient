@@ -1907,9 +1907,6 @@ Bounded capture frame queue depth for demo export (higher values use more memory
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 方括號頭銜顏色：0 = 跟隨伺服器，1 = 單色，2 = 彩虹
 
-Bracketed title opacity (0-100)
-== 方括號頭銜不透明度（0-100）
-
 Bracketed title single color
 == 方括號頭銜單色
 
@@ -2068,6 +2065,9 @@ Cannot open word list file. Previous words remain active.
 
 Cannot read complete word list file. Previous words remain active.
 == 無法完整讀取詞表檔案，繼續使用上次成功載入的詞條。
+
+Cannot remove the wiki file
+== 無法刪除 Wiki 檔案
 
 Cannot swap: the other player is not in your team
 == 無法交換：對方不在你的隊伍中
@@ -2494,9 +2494,6 @@ Classic pro
 
 Classic title glow
 == 經典效果光暈
-
-Classic title glow: 0 = off, 1 = subtle (6 draws), 2 = full Calamity (16 draws)
-== 經典頭銜光暈：0 = 關閉，1 = 柔和（6 層），2 = 完整 Calamity（16 層）
 
 Clear
 == 清空
@@ -4147,6 +4144,9 @@ Do not translate server messages
 
 Do not use it to spam: servers may punish repeated automatic messages.
 == 不要用來刷頻：伺服器可能會懲罰重複的自動訊息。
+
+Document too large for the editor (%d of %d bytes)
+== 文件過大，無法在客戶端編輯器內修改（%d / %d 位元組）
 
 Done
 == Done
@@ -6002,6 +6002,9 @@ Full: each enabled animation category uses its complete transition
 Fullscreen
 == 獨佔全屏
 
+Fully block enemy players
+== 完全封鎖敵對玩家
+
 Fun
 == 娛樂
 
@@ -6445,6 +6448,9 @@ Hide Echo messages
 
 Hide Echo messages in Zen mode
 == 禪模式下隱藏 Echo 消息
+
+Hide enemy chat, replace enemy names with client IDs and use default skins; keep local players visible
+== 隱藏敵對玩家聊天，將其暱稱替換為數字 ID 並使用預設外觀；主角色和分身維持正常顯示
 
 Hide explosion effects
 == 隱藏炮擊特效
@@ -7240,6 +7246,9 @@ Invalid spectator id used
 
 Invalid sponsor code
 == 認證碼無效
+
+Invalid title appearance
+== 頭銜外觀參數無效
 
 Invalid translation backend
 == 無效的翻譯後端
@@ -8672,6 +8681,9 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 Monospace
 == 等寬體
 
+Moon
+== 月亮
+
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == 沿 Tee 的穩定方向進行更樂觀的預測，減少穩定下來所需的延遲
 
@@ -8962,6 +8974,9 @@ Nameplate text glow range
 
 Nameplate text gradient color
 == 銘牌文本漸變顏色
+
+Nameplate title size
+== 名牌頭銜大小
 
 Nameplate weak hook icon color
 == 銘牌弱鉤圖標顏色
@@ -9545,6 +9560,12 @@ Only save improvements
 Only show after joining a team
 == 僅在加入隊伍後顯示
 
+Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players
+== 僅顯示提及自己、私聊和自己傳送的聊天訊息，不受好友與隊伍篩選限制；系統訊息和封鎖設定保持生效
+
+Only show messages related to me
+== 只顯示與我相關的訊息
+
 Only show outlines in the entities layer
 == 僅在實體層中顯示輪廓
 
@@ -9796,6 +9817,9 @@ Output voice debug log
 
 Output:
 == 輸出：
+
+Overall sponsor title badge color
+== 贊助頭銜整體顏色
 
 Overlay entities
 == 顯示實體層
@@ -11879,6 +11903,9 @@ Restore recommended
 Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
 == 恢復原版滾輪手感：每格重新開始平滑捲動，不繼承速度
 
+Restored the built-in content
+== 已還原內建內容
+
 Restoring save %d: main '%s', dummy '%s'.
 == 正在恢復存檔 %d：本體「%s」，分身「%s」。
 
@@ -12175,6 +12202,9 @@ Save/Load Name
 
 Save/Load Skin
 == 保存/加載皮膚
+
+Saved
+== 已儲存
 
 Saved to the bind wheel.
 == 已儲存至 Bind 輪盤。
@@ -12865,9 +12895,6 @@ Show advanced nameplate settings without changing effect values
 
 Show advanced options
 == 顯示進階選項
-
-Show advanced title settings (collapsing keeps configured effects)
-== 顯示頭銜進階設定（收起後保留已設定效果）
 
 Show advanced translation options
 == 顯示進階翻譯選項
@@ -14390,6 +14417,12 @@ Sponsor support
 Sponsor title
 == 贊助頭銜
 
+Sponsor title badge opacity (0-100)
+== 贊助頭銜整體不透明度（0-100）
+
+Sponsor title badge: 0 = moon, 1 = sun
+== 贊助頭銜樣式：0 = 月亮，1 = 太陽
+
 Sponsors:
 == 贊助者：
 
@@ -14650,6 +14683,9 @@ Sudden Death
 
 Suicides
 == 自殺數
+
+Sun
+== 太陽
 
 Super
 == 無敵
@@ -15574,6 +15610,9 @@ Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visibl
 
 Title preview
 == 頭銜成品預覽
+
+Title server does not support badge appearance yet
+== 頭銜伺服器暫不支援日月頭銜外觀
 
 Title server does not support chat styles yet
 == 頭銜伺服器尚不支援發言樣式

@@ -2234,6 +2234,7 @@ key = "Drag to reorder; right-click or use the gear to manage"
 [message.translations]
 simplified_chinese = "拖动排序；右键或齿轮可管理分类"
 traditional_chinese = "拖曳排序；右鍵或齒輪可管理分類"
+
 [[message]]
 key = "Server list is more than five minutes old"
 [message.translations]

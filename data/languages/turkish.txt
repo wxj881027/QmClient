@@ -1907,9 +1907,6 @@ Bounded capture frame queue depth for demo export (higher values use more memory
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Köşeli parantezli unvan rengi: 0 = sunucuyu takip et, 1 = tek renk, 2 = gökkuşağı
 
-Bracketed title opacity (0-100)
-== Köşeli parantezli unvan opaklığı (0-100)
-
 Bracketed title single color
 == Köşeli parantezli unvan tek renk
 
@@ -2068,6 +2065,9 @@ Cannot open word list file. Previous words remain active.
 
 Cannot read complete word list file. Previous words remain active.
 == Kelime listesi dosyası tamamen okunamıyor. Önceki kelimeler etkin kalır.
+
+Cannot remove the wiki file
+== Wiki dosyası kaldırılamadı
 
 Cannot swap: the other player is not in your team
 == Takas yapılamıyor: diğer oyuncu takımında değil
@@ -2494,9 +2494,6 @@ Classic pro
 
 Classic title glow
 == Klasik unvan parıltısı
-
-Classic title glow: 0 = off, 1 = subtle (6 draws), 2 = full Calamity (16 draws)
-== Klasik unvan parıltısı: 0 = kapalı, 1 = hafif (6 katman), 2 = tam Calamity (16 katman)
 
 Clear
 == Temizle
@@ -4147,6 +4144,9 @@ Do not translate server messages
 
 Do not use it to spam: servers may punish repeated automatic messages.
 == Spam için kullanmayın: sunucular tekrarlanan otomatik mesajları cezalandırabilir.
+
+Document too large for the editor (%d of %d bytes)
+== Belge istemci düzenleyicisi için çok büyük (%d / %d bayt)
 
 Done
 == Done
@@ -6002,6 +6002,9 @@ Full: each enabled animation category uses its complete transition
 Fullscreen
 == Tam ekran
 
+Fully block enemy players
+== Düşman oyuncuları tamamen engelle
+
 Fun
 == Eğlence
 
@@ -6445,6 +6448,9 @@ Hide Echo messages
 
 Hide Echo messages in Zen mode
 == Zen modunda Echo mesajlarını gizle
+
+Hide enemy chat, replace enemy names with client IDs and use default skins; keep local players visible
+== Düşman sohbetini gizle, adlarını istemci kimlikleriyle değiştir ve varsayılan görünümleri kullan; kendi oyuncunu ve dummy karakterini normal göster
 
 Hide explosion effects
 == Patlama efektlerini gizle
@@ -7240,6 +7246,9 @@ Invalid spectator id used
 
 Invalid sponsor code
 == Geçersiz destekçi kodu
+
+Invalid title appearance
+== Geçersiz unvan görünümü
 
 Invalid translation backend
 == Geçersiz çeviri arka ucu
@@ -8672,6 +8681,9 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 Monospace
 == Eşaralıklı
 
+Moon
+== Ay
+
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Tee'nin sabit yönü boyunca daha iyimser tahmin, stabilize olma gecikmesini azaltır
 
@@ -8962,6 +8974,9 @@ Nameplate text glow range
 
 Nameplate text gradient color
 == İsim levhası metin gradyan rengi
+
+Nameplate title size
+== İsim etiketindeki unvan boyutu
 
 Nameplate weak hook icon color
 == İsim levhası zayıf kanca simgesi rengi
@@ -9545,6 +9560,12 @@ Only save improvements
 Only show after joining a team
 == Yalnızca bir takıma katıldıktan sonra göster
 
+Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players
+== Arkadaş ve takım filtrelerinden bağımsız olarak yalnızca bahsetmeleri, özel mesajları ve kendi mesajlarını göster; sistem mesajlarını ve susturma ayarlarını koru
+
+Only show messages related to me
+== Yalnızca benimle ilgili mesajları göster
+
 Only show outlines in the entities layer
 == Yalnızca varlık katmanında ana hatları göster
 
@@ -9796,6 +9817,9 @@ Output voice debug log
 
 Output:
 == Çıktı:
+
+Overall sponsor title badge color
+== Destekçi unvanı rozetinin genel rengi
 
 Overlay entities
 == Varlıkları göster
@@ -11879,6 +11903,9 @@ Restore recommended
 Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
 == Özgün tekerlek kaydırmasını geri getir: her kademe hızı devralmadan yumuşak kaydırmayı yeniden başlatır
 
+Restored the built-in content
+== Paket içeriği geri yüklendi
+
 Restoring save %d: main '%s', dummy '%s'.
 == %d numaralı kayıt geri yükleniyor: ana oyuncu '%s', kukla '%s'.
 
@@ -12175,6 +12202,9 @@ Save/Load Name
 
 Save/Load Skin
 == Görünümü Kaydet/Yükle
+
+Saved
+== Kaydedildi
 
 Saved to the bind wheel.
 == Komut çarkına kaydedildi.
@@ -12865,9 +12895,6 @@ Show advanced nameplate settings without changing effect values
 
 Show advanced options
 == Gelişmiş seçenekleri göster
-
-Show advanced title settings (collapsing keeps configured effects)
-== Gelişmiş unvan ayarlarını göster (daraltmak ayarlanan efektleri korur)
 
 Show advanced translation options
 == Gelişmiş çeviri seçeneklerini göster
@@ -14390,6 +14417,12 @@ Sponsor support
 Sponsor title
 == Destekçi unvanı
 
+Sponsor title badge opacity (0-100)
+== Destekçi unvanı rozetinin opaklığı (0-100)
+
+Sponsor title badge: 0 = moon, 1 = sun
+== Destekçi unvanı rozeti: 0 = ay, 1 = güneş
+
 Sponsors:
 == Sponsorlar:
 
@@ -14650,6 +14683,9 @@ Sudden Death
 
 Suicides
 == İntiharlar
+
+Sun
+== Güneş
 
 Super
 == Süper
@@ -15574,6 +15610,9 @@ Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visibl
 
 Title preview
 == Unvan önizlemesi
+
+Title server does not support badge appearance yet
+== Unvan sunucusu henüz rozet görünümünü desteklemiyor
 
 Title server does not support chat styles yet
 == Unvan sunucusu henüz sohbet stillerini desteklemiyor

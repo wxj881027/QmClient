@@ -1098,6 +1098,7 @@ public:
 	void FormatClientId(int ClientId, char (&aClientId)[16], EClientIdFormat Format) const;
 	bool IsLocalClientId(int ClientId) const;
 	bool ShouldRunSkinChangeTransition(int ClientId) const;
+	bool ShouldBlockWarListPlayer(int ClientId) const;
 	bool ShouldHideStreamerIdentity(int ClientId) const;
 	bool ShouldHideStreamerSkin(int ClientId) const;
 	void FormatStreamerName(int ClientId, char *pBuf, int BufSize) const;
@@ -1389,6 +1390,8 @@ private:
 	int m_aLastProcessedEventTick[NUM_DUMMIES] = {-1, -1};
 	bool m_RequestPredictionRefreshAfterConfigChange = false;
 	int m_LastStreamerHideSkins = -1;
+	int m_LastWarListBlockEnemies = -1;
+	uint64_t m_LastWarListPrivacyRevision = std::numeric_limits<uint64_t>::max();
 	int m_LastStreamerFriendsIgnoreClan = -1;
 	int m_aLastStreamerLocalIds[NUM_DUMMIES] = {-2, -2};
 	uint64_t m_LastStreamerFriendsRevision = std::numeric_limits<uint64_t>::max();

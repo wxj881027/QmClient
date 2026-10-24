@@ -143,6 +143,7 @@ class CEmoticon : public CComponent
 	void UpdateSelection();
 	void SetActive(bool Active);
 	void RenderProjectiles();
+	float ProjectileOwnerAlpha(int OwnerClientId) const;
 	void SpawnProjectile(vec2 Position, vec2 Direction, int Emoticon, bool Super, int OwnerClientId);
 	// 本机自己的头顶大表情；远端玩家的按 ClientId 各存一份（-1 表示没有）。
 	int m_LocalSuperHeadEmoticon = -1;

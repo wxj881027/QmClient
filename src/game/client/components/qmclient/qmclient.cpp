@@ -790,6 +790,7 @@ void CQmClient::OnInit()
 	if(!m_QmStatisticsFileExists)
 		SaveQmClientStatistics();
 	m_DeveloperBadge.Init(Graphics());
+	m_TitleBadge.Init(Graphics());
 	InitQmDeveloperAuthentication();
 	InitTitleAuthentication();
 }
@@ -1314,6 +1315,7 @@ void CQmClient::EndQmClientLocalModePlaytime()
 void CQmClient::OnShutdown()
 {
 	m_DeveloperBadge.Shutdown(Graphics());
+	m_TitleBadge.Shutdown(Graphics());
 	if(!m_QmClientShutdownReported)
 	{
 		m_QmClientShutdownReported = true;
@@ -1445,14 +1447,19 @@ void CQmClient::ApplyQmRealtimeServiceData(const SQmRealtimeMessage &Message)
 		const char *pStyle = TitleJsonString(pPayload, "style");
 		const EQmSponsorChatStyle ChatStyle = QmSponsorChatStyleFromId(TitleJsonString(pPayload, "chat_style"));
 		const bool ChatStyleSupported = JsonObjectField(pPayload, "chat_style")->type == json_string;
+		SQmTitleAppearance Appearance;
+		const bool AppearanceSupported = ParseQmTitleAppearance(JsonObjectField(pPayload, "appearance"), Appearance);
 		const json_value *pStatus = JsonObjectField(pPayload, "status");
 		const bool Authenticated = pStatus->type == json_integer && pStatus->u.integer == 200 && IsValidQmTitle(pTitle);
 		const bool Changed = m_TitleAuthenticated != Authenticated ||
 				     str_comp(m_aTitleText, pTitle) || str_comp(m_aTitleBoundName, pName) || str_comp(m_aTitleProfileStyle, pStyle) ||
-				     m_TitleProfileChatStyle != ChatStyle || m_TitleChatStyleSupported != ChatStyleSupported;
+				     m_TitleProfileChatStyle != ChatStyle || m_TitleChatStyleSupported != ChatStyleSupported ||
+				     m_TitleAppearance != Appearance || m_TitleAppearanceSupported != AppearanceSupported;
 		m_TitleAuthenticated = Authenticated;
 		m_TitleProfileChatStyle = Authenticated ? ChatStyle : EQmSponsorChatStyle::NONE;
 		m_TitleChatStyleSupported = Authenticated && ChatStyleSupported;
+		m_TitleAppearance = Appearance;
+		m_TitleAppearanceSupported = Authenticated && AppearanceSupported;
 		str_copy(m_aTitleText, pTitle);
 		str_copy(m_aTitleBoundName, pName);
 		str_copy(m_aTitleProfileStyle, pStyle);
@@ -1594,6 +1601,7 @@ void CQmClient::ApplyQmRealtimeTitles(const SQmRealtimeMessage &Message)
 		str_format(m_aaPlayerTitles[Presence.m_PlayerId], sizeof(m_aaPlayerTitles[Presence.m_PlayerId]), "[%s]", Presence.m_Title.c_str());
 		str_copy(m_aaPlayerTitleStyles[Presence.m_PlayerId], Presence.m_Style.c_str());
 		m_aPlayerChatStyles[Presence.m_PlayerId] = Presence.m_ChatStyle;
+		m_aPlayerTitleAppearances[Presence.m_PlayerId] = Presence.m_Appearance;
 		m_aTitleExpires[Presence.m_PlayerId] = time_get() + Presence.m_RemainingSeconds * time_freq();
 	}
 	const double Measured = static_cast<double>(ServerTime) - Client()->GlobalTime();
@@ -3124,13 +3132,18 @@ void CQmClient::RefreshTitleProfile()
 	m_pTitleStatus = Localizable("Contacting title server");
 }
 
-void CQmClient::SaveTitleProfile(const char *pTitle, const char *pBoundName, const char *pStyle, EQmSponsorChatStyle ChatStyle)
+void CQmClient::SaveTitleProfile(const char *pTitle, const char *pBoundName, const char *pStyle, EQmSponsorChatStyle ChatStyle, const SQmTitleAppearance &Appearance)
 {
 	if(TitleBusy() || !m_TitleAuthenticated)
 		return;
 	if(!IsValidQmTitle(pTitle))
 	{
 		m_pTitleStatus = Localizable("Title too long or contains unsupported characters");
+		return;
+	}
+	if(!m_TitleAppearanceSupported)
+	{
+		m_pTitleStatus = Localizable("Title server does not support badge appearance yet");
 		return;
 	}
 	const char *pStyleId = pStyle != nullptr ? pStyle : "";
@@ -3154,6 +3167,15 @@ void CQmClient::SaveTitleProfile(const char *pTitle, const char *pBoundName, con
 	Writer.WriteStrValue(pStyleId);
 	Writer.WriteAttribute("chat_style");
 	Writer.WriteStrValue(QmSponsorChatStyleId(ChatStyle));
+	Writer.WriteAttribute("appearance");
+	Writer.BeginObject();
+	Writer.WriteAttribute("style");
+	Writer.WriteStrValue(QmTitleBadgeStyleId(Appearance.m_Style));
+	Writer.WriteAttribute("color");
+	Writer.WriteIntValue(Appearance.m_Color & 0xffffff);
+	Writer.WriteAttribute("opacity");
+	Writer.WriteIntValue(std::clamp(Appearance.m_Opacity, 0, 100));
+	Writer.EndObject();
 	Writer.EndObject();
 	StartTitleRequest("profile", Writer.GetOutputString().c_str(), m_pTitleOperation);
 	m_pTitleStatus = Localizable("Contacting title server");
@@ -3164,16 +3186,16 @@ void CQmClient::ResetTitlePresences()
 	mem_zero(m_aTitleExpires, sizeof(m_aTitleExpires));
 }
 
-bool CQmClient::PlayerHasDeveloperBadge(int ClientId) const
+bool CQmClient::PlayerHasDeveloperBadge(int ClientId, bool ForNameplateLayout) const
 {
-	return GameClient()->IsQmDeveloperAuthenticated(ClientId) && !GameClient()->ShouldHideStreamerIdentity(ClientId);
+	return GameClient()->IsQmDeveloperAuthenticated(ClientId) && (ForNameplateLayout || !GameClient()->ShouldHideStreamerIdentity(ClientId));
 }
 
-const char *CQmClient::PlayerTitle(int ClientId) const
+const char *CQmClient::PlayerTitle(int ClientId, bool ForNameplateLayout) const
 {
-	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !GameClient()->m_aClients[ClientId].m_Active || GameClient()->ShouldHideStreamerIdentity(ClientId))
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !GameClient()->m_aClients[ClientId].m_Active || (!ForNameplateLayout && GameClient()->ShouldHideStreamerIdentity(ClientId)))
 		return "";
-	if(PlayerHasDeveloperBadge(ClientId))
+	if(PlayerHasDeveloperBadge(ClientId, ForNameplateLayout))
 		return "[开发者]";
 	if(m_aTitleExpires[ClientId] > time_get() && str_comp(m_aaTitleNames[ClientId], GameClient()->m_aClients[ClientId].m_aName) == 0)
 		return m_aaPlayerTitles[ClientId];
@@ -3187,11 +3209,19 @@ bool CQmClient::ShouldShowPlayerTitle(int ClientId) const
 		g_Config.m_QmShowMainTitle != 0, g_Config.m_QmShowDummyTitle != 0);
 }
 
-const char *CQmClient::PlayerTitleStyle(int ClientId) const
+const char *CQmClient::PlayerTitleStyle(int ClientId, bool ForNameplateLayout) const
 {
-	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !GameClient()->m_aClients[ClientId].m_Active || GameClient()->ShouldHideStreamerIdentity(ClientId))
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !GameClient()->m_aClients[ClientId].m_Active || (!ForNameplateLayout && GameClient()->ShouldHideStreamerIdentity(ClientId)))
 		return "";
 	return m_aaPlayerTitleStyles[ClientId];
+}
+
+SQmTitleAppearance CQmClient::PlayerTitleAppearance(int ClientId, bool ForNameplateLayout) const
+{
+	// 与头衔文字共用昵称、租约和隐私检查，不让过期槽位的外观泄漏给新玩家。
+	if(PlayerTitle(ClientId, ForNameplateLayout)[0] == '\0')
+		return {};
+	return m_aPlayerTitleAppearances[ClientId];
 }
 
 EQmSponsorChatStyle CQmClient::PlayerChatStyle(int ClientId) const
@@ -3231,6 +3261,7 @@ void CQmClient::UpdateTitleAuthentication()
 			str_copy(m_aTitleProfileStyle, TitleJsonString(pRoot, "style"));
 			m_TitleProfileChatStyle = QmSponsorChatStyleFromId(TitleJsonString(pRoot, "chat_style"));
 			m_TitleChatStyleSupported = JsonObjectField(pRoot, "chat_style")->type == json_string;
+			m_TitleAppearanceSupported = ParseQmTitleAppearance(JsonObjectField(pRoot, "appearance"), m_TitleAppearance);
 			++m_TitleRevision;
 			m_pTitleStatus = Localizable("Permanent sponsor verified");
 			ResetTitlePresences();
@@ -3249,6 +3280,8 @@ void CQmClient::UpdateTitleAuthentication()
 				m_pTitleStatus = Localizable("Invalid bound name");
 			else if(str_comp(pError, "invalid_chat_style") == 0)
 				m_pTitleStatus = Localizable("Unknown sponsor chat style");
+			else if(str_comp(pError, "invalid_appearance") == 0)
+				m_pTitleStatus = Localizable("Invalid title appearance");
 			else if(m_pTitleOperation->StatusCode() == 401)
 			{
 				m_TitleAuthenticated = false;

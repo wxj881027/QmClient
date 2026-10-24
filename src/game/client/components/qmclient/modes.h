@@ -6,7 +6,6 @@
 #include <limits>
 
 struct CConfig;
-struct CNetObj_PlayerInput;
 
 struct SQmStatisticsModeDisplay
 {
@@ -157,9 +156,9 @@ bool ShouldTriggerQmGoresHammerWakeup(bool GoresCycleActive, bool HammerRequeste
 int QmGoresHammerWakeupFireState(int CurrentFire);
 bool ShouldReleaseQmGoresHammerWakeupFire(bool PendingRelease, int CurrentFire);
 int QmGoresHammerWakeupReleaseFireState(int CurrentFire);
-bool ShouldEnableQmGoresWeaponCycle(bool GoresEnabled, bool AutoWeaponSwitch, bool HasExtraWeapon, bool DisableIfWeapons);
-void ApplyQmGoresWeaponPickupInput(CNetObj_PlayerInput &Input, int Weapon, bool AutoSwitchOnPickup, bool KeepCurrentWeapon);
-void ApplyQmGoresWeaponCycleInput(CNetObj_PlayerInput &Input, int PreviousFire, bool CycleActive, int CurrentWeapon, bool InFreeze, bool ExternalHammerWakeup, bool &PendingRelease);
+int GoresRestoreWeaponAfterHammer(int PreHammerWeapon, bool HasPreHammerWeapon);
+bool ShouldPulseGoresHammerOnFire(bool GoresCycleActive, bool FireJustPressed, bool CurrentWeaponIsHammer, bool FreezeWakeupActive);
+bool ShouldRestoreGoresWeaponAfterHammer(bool CurrentWeaponIsHammer, bool HasPreHammerWeapon);
 bool ShouldShowQmHookStrongWeakScope(int Scope, bool Self, bool Strong, bool Weak);
 bool ShouldShowQmNameplateName(int Scope, bool IsCurrentChar, bool IsLocalClient);
 // 旧 cl_nameplates / cl_nameplates_own 两开关 -> 六档显示范围。远程直接换档且不迁移，

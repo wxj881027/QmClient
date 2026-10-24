@@ -1132,7 +1132,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		else if(g_Config.m_UiSettingsPage == SETTINGS_TCLIENT)
 		{
 			if(!CollectingMenuTextPlan)
-				GameClient()->m_MenuBackground.ChangePosition(13);
+				GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_RESERVED0);
 			RenderSettingsTClient(ContentView, CollectingMenuTextPlan);
 			if(!CollectingMenuTextPlan)
 				m_SettingsRuntimeMetadata.m_LastTClientTab = m_TClientSettingsTab;
@@ -1140,7 +1140,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		else if(g_Config.m_UiSettingsPage == SETTINGS_QMCLIENT)
 		{
 			if(!CollectingMenuTextPlan)
-				GameClient()->m_MenuBackground.ChangePosition(15);
+				GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_RESERVED0);
 			RenderSettingsQmClient(ContentView, CollectingMenuTextPlan);
 			if(!CollectingMenuTextPlan)
 				m_SettingsRuntimeMetadata.m_LastQmTab = m_QmClientSettingsTab;
@@ -1148,19 +1148,19 @@ void CMenus::RenderSettings(CUIRect MainView)
 		else if(g_Config.m_UiSettingsPage == SETTINGS_SEARCH)
 		{
 			if(!CollectingMenuTextPlan)
-				GameClient()->m_MenuBackground.ChangePosition(15);
+				GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_RESERVED0);
 			RenderSettingsGlobalSearch(ContentView, CollectingMenuTextPlan);
 		}
 		else if(g_Config.m_UiSettingsPage == SETTINGS_CONTRIBUTORS)
 		{
 			if(!CollectingMenuTextPlan)
-				GameClient()->m_MenuBackground.ChangePosition(15);
+				GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_RESERVED1);
 			RenderSettingsContributors(ContentView, CollectingMenuTextPlan);
 		}
 		else if(g_Config.m_UiSettingsPage == SETTINGS_PROFILES)
 		{
 			if(!CollectingMenuTextPlan)
-				GameClient()->m_MenuBackground.ChangePosition(14);
+				GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_RESERVED1);
 			RenderSettingsTClientProfiles(ContentView);
 		}
 		else

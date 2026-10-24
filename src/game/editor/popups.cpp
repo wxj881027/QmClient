@@ -2406,7 +2406,7 @@ CUi::EPopupMenuFunctionResult CEditor::PopupEvent(void *pContext, CUIRect View, 
 		}
 		else if(pEditor->m_PopupEventType == POPEVENT_CLOSE_MAP)
 		{
-			pEditor->Map()->m_CloseOnSave = true;
+			pEditor->m_pCloseMapAfterSave = pEditor->Map();
 			if(pEditor->Map()->m_aFilename[0] != '\0' && pEditor->Map()->m_ValidSaveFilename)
 			{
 				CallbackSaveMap(pEditor->Map()->m_aFilename, IStorage::TYPE_SAVE, pEditor);

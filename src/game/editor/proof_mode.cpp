@@ -236,6 +236,7 @@ void CProofMode::SetModeIngame()
 void CProofMode::SetModeMenu()
 {
 	Map()->m_ProofModeState.m_ProofBorders = EProofBorder::MENU;
+	ResetMenuBackgroundPositions();
 }
 
 int CProofMode::CurrentMenuProofIndex() const

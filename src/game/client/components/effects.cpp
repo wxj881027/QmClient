@@ -198,6 +198,8 @@ void CEffects::BulletTrail(vec2 Pos, float Alpha, float TimePassed)
 	p.m_StartSize = 8.0f;
 	p.m_EndSize = 0.0f;
 	p.m_Friction = 0.7f;
+	// 尾迹保持原地缩小，无需查询地图碰撞。
+	p.m_Collides = false;
 	p.m_Color.a *= Alpha;
 	p.m_StartAlpha = Alpha;
 	GameClient()->m_Particles.Add(CParticles::GROUP_PROJECTILE_TRAIL, &p, TimePassed);

@@ -39,6 +39,18 @@ namespace qm_ui_test
 		std::vector<CUIRect> m_vRectSubmissions;
 		// 纹理圆角是设备能力；fixture 默认按 CPU 预烘焙回退，保持既有断言不变。
 		bool m_HasSdfTexture = false;
+		struct STextSubmission
+		{
+			CUIRect m_Screen;
+			ColorRGBA m_TextColor;
+			ColorRGBA m_OutlineColor;
+		};
+		std::vector<STextSubmission> m_vTextSubmissions;
+		void RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle TextTexture, CTextureHandle TextOutlineTexture, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) override
+		{
+			CIconBenchmarkGraphics::RenderText(BufferContainerIndex, TextQuadNum, TextureSize, TextTexture, TextOutlineTexture, TextColor, TextOutlineColor);
+			m_vTextSubmissions.push_back({m_MapRect, TextColor, TextOutlineColor});
+		}
 		// 测试只改变 framebuffer 设备尺寸，真实字号量化与布局仍由文字引擎执行。
 		void SetFramebufferSize(int Width, int Height)
 		{
@@ -59,6 +71,12 @@ namespace qm_ui_test
 		}
 		// 普通分隔线也属于 GPU 提交边界，不替换控件布局或输入。
 		void DrawRect(float X, float Y, float W, float H, ColorRGBA, int, float) override
+		{
+			++m_Draws;
+			m_vRectSubmissions.push_back({X, Y, W, H});
+		}
+		// 取色器渐变只记录 GPU 提交，颜色解析与输入回写仍执行生产实现。
+		void DrawRect4(float X, float Y, float W, float H, ColorRGBA, ColorRGBA, ColorRGBA, ColorRGBA, int, float) override
 		{
 			++m_Draws;
 			m_vRectSubmissions.push_back({X, Y, W, H});

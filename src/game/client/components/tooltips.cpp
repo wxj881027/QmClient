@@ -219,7 +219,8 @@ void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char 
 			Hint->second.SetFallbackDescription(pText);
 		else
 			Hint->second.SetDescription(pText);
-		pText = Hint->second.Text();
+		const bool ShowCommands = GameClient()->m_Menus.IsSettingsPageActive() && g_Config.m_UiSettingsPage == CMenus::SETTINGS_SEARCH;
+		pText = Hint->second.Text(ShowCommands);
 	}
 	if(pText == nullptr || pText[0] == '\0')
 	{

@@ -1907,9 +1907,6 @@ Bounded capture frame queue depth for demo export (higher values use more memory
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 括弧内の称号の色：0 = サーバーに従う、1 = 単色、2 = 虹色
 
-Bracketed title opacity (0-100)
-== 括弧内の称号の不透明度 (0-100)
-
 Bracketed title single color
 == 括弧内の称号の単色
 
@@ -2068,6 +2065,9 @@ Cannot open word list file. Previous words remain active.
 
 Cannot read complete word list file. Previous words remain active.
 == 単語リストファイルを完全に読み込めません。以前の単語を引き続き使用します。
+
+Cannot remove the wiki file
+== Wiki ファイルを削除できません
 
 Cannot swap: the other player is not in your team
 == 交換できません：相手があなたのチームにいません
@@ -2494,9 +2494,6 @@ Classic pro
 
 Classic title glow
 == クラシックの光彩
-
-Classic title glow: 0 = off, 1 = subtle (6 draws), 2 = full Calamity (16 draws)
-== クラシックの光彩：0 = 無効、1 = 控えめ（6 層）、2 = 完全な Calamity（16 層）
 
 Clear
 == クリア
@@ -4147,6 +4144,9 @@ Do not translate server messages
 
 Do not use it to spam: servers may punish repeated automatic messages.
 == スパムには使わないでください。繰り返しの自動メッセージはサーバー側で罰せられる場合があります。
+
+Document too large for the editor (%d of %d bytes)
+== ドキュメントが大きすぎてクライアントのエディターで編集できません（%d / %d バイト）
 
 Done
 == Done
@@ -6002,6 +6002,9 @@ Full: each enabled animation category uses its complete transition
 Fullscreen
 == フルスクリーン
 
+Fully block enemy players
+== 敵対プレイヤーを完全にブロック
+
 Fun
 == ファン
 
@@ -6445,6 +6448,9 @@ Hide Echo messages
 
 Hide Echo messages in Zen mode
 == 禅モードで Echo メッセージを非表示
+
+Hide enemy chat, replace enemy names with client IDs and use default skins; keep local players visible
+== 敵対プレイヤーのチャットを非表示にし、名前をクライアントIDに置き換えて標準スキンを使用する。自分とダミーは通常どおり表示
 
 Hide explosion effects
 == 爆発エフェクトを非表示
@@ -7240,6 +7246,9 @@ Invalid spectator id used
 
 Invalid sponsor code
 == 無効な認証コード
+
+Invalid title appearance
+== 称号の外観設定が無効です
 
 Invalid translation backend
 == 無効な翻訳バックエンド
@@ -8672,6 +8681,9 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 Monospace
 == 等幅
 
+Moon
+== 月
+
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Tee の安定方向に沿ったより楽観的な予測、安定までの遅延を削減
 
@@ -8962,6 +8974,9 @@ Nameplate text glow range
 
 Nameplate text gradient color
 == ネームプレートテキストグラデーション色
+
+Nameplate title size
+== ネームプレートの称号サイズ
 
 Nameplate weak hook icon color
 == ネームプレート弱フックアイコン色
@@ -9545,6 +9560,12 @@ Only save improvements
 Only show after joining a team
 == チーム参加後にのみ表示
 
+Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players
+== フレンドやチームのフィルターに関係なく、自分への呼びかけ、ささやき、自分の発言のみ表示。システムメッセージとミュート設定は維持
+
+Only show messages related to me
+== 自分に関係するメッセージのみ表示
+
 Only show outlines in the entities layer
 == エンティティレイヤーでのみ輪郭を表示
 
@@ -9796,6 +9817,9 @@ Output voice debug log
 
 Output:
 == 出力:
+
+Overall sponsor title badge color
+== 支援者称号全体の色
 
 Overlay entities
 == エンティティのオーバーレイ
@@ -11879,6 +11903,9 @@ Restore recommended
 Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
 == 従来のホイール操作に戻す：各刻みで速度を引き継がず、滑らかなスクロールを再開
 
+Restored the built-in content
+== 内蔵コンテンツに戻しました
+
 Restoring save %d: main '%s', dummy '%s'.
 == セーブ %d を復元中：メイン「%s」、ダミー「%s」。
 
@@ -12175,6 +12202,9 @@ Save/Load Name
 
 Save/Load Skin
 == スキンを保存/読み込み
+
+Saved
+== 保存しました
 
 Saved to the bind wheel.
 == バインドホイールに保存しました。
@@ -12865,9 +12895,6 @@ Show advanced nameplate settings without changing effect values
 
 Show advanced options
 == 詳細オプションを表示
-
-Show advanced title settings (collapsing keeps configured effects)
-== タイトルの詳細設定を表示（閉じても設定した効果を維持）
 
 Show advanced translation options
 == 高度な翻訳オプションを表示
@@ -14390,6 +14417,12 @@ Sponsor support
 Sponsor title
 == 支援者の称号
 
+Sponsor title badge opacity (0-100)
+== 支援者称号全体の不透明度（0-100）
+
+Sponsor title badge: 0 = moon, 1 = sun
+== 支援者称号のスタイル：0 = 月、1 = 太陽
+
 Sponsors:
 == スポンサー：
 
@@ -14650,6 +14683,9 @@ Sudden Death
 
 Suicides
 == 自殺数
+
+Sun
+== 太陽
 
 Super
 == スーパー
@@ -15574,6 +15610,9 @@ Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visibl
 
 Title preview
 == タイトルの仕上がりプレビュー
+
+Title server does not support badge appearance yet
+== 称号サーバーはまだバッジの外観に対応していません
 
 Title server does not support chat styles yet
 == 称号サーバーはまだチャットスタイルに対応していません

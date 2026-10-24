@@ -104,9 +104,9 @@ public:
 	// Duplicate war entries ARE allowed
 	std::vector<CWarEntry> m_vWarEntries;
 	using TWarEntryLookup = std::unordered_map<std::string_view, std::vector<const CWarEntry *>>;
-	TWarEntryLookup m_WarEntriesByName;
-	TWarEntryLookup m_WarEntriesByClan;
-	bool m_WarEntryLookupDirty = true;
+	mutable TWarEntryLookup m_WarEntriesByName;
+	mutable TWarEntryLookup m_WarEntriesByClan;
+	mutable bool m_WarEntryLookupDirty = true;
 	bool m_WarTypeIndicesDirty = true;
 
 	uint64_t Revision() const { return m_Revision; }
@@ -123,7 +123,8 @@ public:
 	void MarkWarEntriesDirty();
 	void MarkWarTypesDirty();
 	void RefreshWarTypeIndices();
-	void RebuildWarEntryLookup();
+	void RebuildWarEntryLookup() const;
+	bool MatchesEnemy(const char *pName, const char *pClan) const;
 };
 
 #endif

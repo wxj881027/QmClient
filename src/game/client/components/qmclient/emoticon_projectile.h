@@ -16,6 +16,12 @@
 
 namespace QmEmoticon
 {
+	inline float ProjectileOwnerAlpha(bool ClientActive, bool HasPlayerRenderInfo, float TeeAlpha)
+	{
+		// 在线玩家可能被队伍规则排除出角色快照，透明度不足以判断其可见性。
+		return ClientActive && HasPlayerRenderInfo ? TeeAlpha : 0.0f;
+	}
+
 	struct SPlayerBox
 	{
 		int m_ClientId = -1;
