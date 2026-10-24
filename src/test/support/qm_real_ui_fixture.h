@@ -42,9 +42,30 @@ namespace qm_ui_test
 		// 只在设备调用前注入一次失败，文字创建/删除仍由真实引擎执行。
 		bool m_FailBufferObjectCreate = false;
 		bool m_FailBufferContainerCreate = false;
-		bool m_FailBufferObjectDelete = false;
+		enum class EDeleteFailure
+		{
+			NONE,
+			ALLOCATION,
+			LENGTH,
+			OTHER,
+		};
+		EDeleteFailure m_BufferObjectDeleteFailure = EDeleteFailure::NONE;
 		bool m_FailQuadContainerDelete = false;
+		bool m_FailTextDraw = false;
 		int m_DirectBufferObjectDeleteCalls = 0;
+		size_t QuadContainerCount() const { return m_QuadCounts.size(); }
+		void ResetDeviceBuffers()
+		{
+			m_QuadCounts.clear();
+			m_Buffers.clear();
+			m_Containers.clear();
+		}
+		void RenderText(int Container, int Quads, int TextureSize, CTextureHandle Texture, CTextureHandle Outline, const ColorRGBA &Color, const ColorRGBA &OutlineColor) override
+		{
+			if(std::exchange(m_FailTextDraw, false))
+				throw std::bad_alloc();
+			CIconBenchmarkGraphics::RenderText(Container, Quads, TextureSize, Texture, Outline, Color, OutlineColor);
+		}
 		int CreateBufferObject(size_t Size, void *pData, int Flags, bool Moved = false) override
 		{
 			if(std::exchange(m_FailBufferObjectCreate, false))
@@ -60,8 +81,13 @@ namespace qm_ui_test
 		void DeleteBufferObject(int Index) override
 		{
 			++m_DirectBufferObjectDeleteCalls;
-			if(std::exchange(m_FailBufferObjectDelete, false))
+			const EDeleteFailure Failure = std::exchange(m_BufferObjectDeleteFailure, EDeleteFailure::NONE);
+			if(Failure == EDeleteFailure::ALLOCATION)
 				throw std::bad_alloc();
+			if(Failure == EDeleteFailure::LENGTH)
+				throw std::length_error("controlled device deletion limit");
+			if(Failure == EDeleteFailure::OTHER)
+				throw std::logic_error("unrelated device deletion failure");
 			CIconBenchmarkGraphics::DeleteBufferObject(Index);
 		}
 		// 测试只改变 framebuffer 设备尺寸，真实字号量化与布局仍由文字引擎执行。

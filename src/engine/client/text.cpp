@@ -1493,6 +1493,8 @@ struct STextContainer
 	char m_aDebugText[32];
 
 	std::shared_ptr<STextContainerUsages> m_pContainerUseCount;
+	// -2 表示未登记待删除，-1 表示链表终点；槽位归还前先解除链接。
+	int m_NextPendingDeletion;
 
 	void Reset()
 	{
@@ -1519,6 +1521,7 @@ struct STextContainer
 		m_aDebugText[0] = '\0';
 
 		m_pContainerUseCount.reset();
+		m_NextPendingDeletion = -2;
 	}
 };
 
@@ -1565,6 +1568,7 @@ class CTextRender : public IEngineTextRender
 	FT_Library m_FTLibrary;
 
 	CTextContainerPool<STextContainer> m_TextContainers;
+	int m_FirstPendingTextContainer = -1;
 
 	SBufferContainerInfo m_DefaultTextContainerInfo;
 	std::vector<STextCharQuad> m_vTextSweepQuads;
@@ -1719,6 +1723,7 @@ class CTextRender : public IEngineTextRender
 	{
 		if(m_pGlyphMap == nullptr)
 			return;
+		RetryPendingTextContainerDeletions();
 
 		// 失败时至多每秒重试一次，避免每个标签或高帧率循环反复复制整张图集。
 		if(!m_pGlyphMap->TexturesReady() && time_get_nanoseconds() >= m_NextGraphicsRestoreAttempt)
@@ -1856,18 +1861,83 @@ class CTextRender : public IEngineTextRender
 		io_close(File);
 	}
 
-	void FreeTextContainerIndex(STextContainerIndex &Index)
+	void DetachPendingTextContainer(int Index) noexcept
 	{
-		m_TextContainers.Release(Index.m_Index);
-		Index.Reset();
+		STextContainer &Container = m_TextContainers.Get(Index);
+		if(Container.m_NextPendingDeletion == -2)
+			return;
+		// 临时句柄不会交给外部 owner，待清理槽位只从链首领取。
+		dbg_assert(m_FirstPendingTextContainer == Index, "Pending text container was released out of order.");
+		m_FirstPendingTextContainer = Container.m_NextPendingDeletion;
+		Container.m_NextPendingDeletion = -2;
+	}
+
+	void FreeTextContainerSlot(int Index)
+	{
+		// 副本句柄也随释放失效，不能因槽位复用重新指向另一段文字。
+		STextContainer &Container = m_TextContainers.Get(Index);
+		Container.m_pContainerUseCount->Invalidate();
+		DetachPendingTextContainer(Index);
+		Container.Reset();
+		m_TextContainers.Release(Index);
 	}
 
 	void FreeTextContainer(STextContainerIndex &Index)
 	{
-		// 副本句柄也随释放失效，不能因槽位复用重新指向另一段文字。
-		Index.m_UseCount->Invalidate();
-		m_TextContainers.Get(Index.m_Index).Reset();
-		FreeTextContainerIndex(Index);
+		FreeTextContainerSlot(Index.m_Index);
+		Index.Reset();
+	}
+
+	void DeleteTextContainerResources(STextContainer &Container)
+	{
+		if(Graphics()->IsTextBufferingEnabled())
+		{
+			if(Container.m_StringInfo.m_QuadBufferContainerIndex != -1)
+			{
+				Graphics()->DeleteBufferContainer(Container.m_StringInfo.m_QuadBufferContainerIndex, true);
+				Container.m_StringInfo.m_QuadBufferObjectIndex = -1;
+			}
+			else if(Container.m_StringInfo.m_QuadBufferObjectIndex != -1)
+			{
+				// 缓冲容器创建失败时，已创建的缓冲对象仍归本条文字所有。
+				Graphics()->DeleteBufferObject(Container.m_StringInfo.m_QuadBufferObjectIndex);
+				Container.m_StringInfo.m_QuadBufferObjectIndex = -1;
+			}
+		}
+		Graphics()->DeleteQuadContainer(Container.m_StringInfo.m_SelectionQuadContainerIndex);
+	}
+
+	void QueueTextContainerDeletion(const STextContainerIndex &Index) noexcept
+	{
+		if(!m_TextContainers.IsAllocated(Index.m_Index) || !Index.m_UseCount)
+			return;
+		STextContainer &Container = m_TextContainers.Get(Index.m_Index);
+		if(Container.m_pContainerUseCount.get() != Index.m_UseCount.get() || Container.m_NextPendingDeletion != -2)
+			return;
+		// 直接借用现有槽位串联，不在异常展开时申请内存或执行 GPU 删除。
+		Container.m_NextPendingDeletion = m_FirstPendingTextContainer;
+		m_FirstPendingTextContainer = Index.m_Index;
+	}
+
+	void RetryPendingTextContainerDeletions()
+	{
+		while(m_FirstPendingTextContainer != -1)
+		{
+			const int Index = m_FirstPendingTextContainer;
+			try
+			{
+				DeleteTextContainerResources(m_TextContainers.Get(Index));
+			}
+			catch(const std::bad_alloc &)
+			{
+				return;
+			}
+			catch(const std::length_error &)
+			{
+				return;
+			}
+			FreeTextContainerSlot(Index);
+		}
 	}
 
 	STextContainer &GetTextContainer(const STextContainerIndex &Index)
@@ -1885,6 +1955,7 @@ class CTextRender : public IEngineTextRender
 	// 设备重建或引擎关闭时清理 CPU 容器；GPU 生命周期由对应的重建或关闭流程处理。
 	void InvalidateTextContainers()
 	{
+		m_FirstPendingTextContainer = -1;
 		for(size_t Index = 0; Index < m_TextContainers.Size(); ++Index)
 		{
 			auto *pTextCont = &m_TextContainers.Get(Index);
@@ -2103,6 +2174,7 @@ public:
 		// 主循环已 ShutdownJobs，未接收的文件字节在此释放。
 		m_pQmSystemFontScan.reset();
 		m_QmFontRestore.Reset();
+		RetryPendingTextContainerDeletions();
 		ClearTextSweepBuffers();
 		InvalidateTextContainers();
 
@@ -3040,28 +3112,36 @@ public:
 		}
 
 		STextContainerIndex TextCont;
+		try
 		{
-			// 只恢复标量标志，不在析构中调用可能再次失败的 GPU 清理。
-			struct SRestoreFlags
 			{
-				unsigned &m_Target;
-				unsigned m_Previous;
-				~SRestoreFlags() { m_Target = m_Previous; }
-			};
-			const SRestoreFlags Restore{m_RenderFlags, m_RenderFlags};
-			m_RenderFlags |= TEXT_RENDER_FLAG_ONE_TIME_USE;
-			CreateTextContainer(TextCont, pCursor, pText, Length);
-		}
-		if(TextCont.Valid())
-		{
-			if((pCursor->m_Flags & TEXTFLAG_RENDER) != 0)
-			{
-				ColorRGBA TextColor = DefaultTextColor();
-				ColorRGBA TextColorOutline = DefaultTextOutlineColor();
-				RenderTextContainer(TextCont, TextColor, TextColorOutline);
+				// 只恢复标量标志，不在析构中调用可能再次失败的 GPU 清理。
+				struct SRestoreFlags
+				{
+					unsigned &m_Target;
+					unsigned m_Previous;
+					~SRestoreFlags() { m_Target = m_Previous; }
+				};
+				const SRestoreFlags Restore{m_RenderFlags, m_RenderFlags};
+				m_RenderFlags |= TEXT_RENDER_FLAG_ONE_TIME_USE;
+				CreateTextContainer(TextCont, pCursor, pText, Length);
 			}
+			if(TextCont.Valid())
+			{
+				if((pCursor->m_Flags & TEXTFLAG_RENDER) != 0)
+				{
+					ColorRGBA TextColor = DefaultTextColor();
+					ColorRGBA TextColorOutline = DefaultTextOutlineColor();
+					RenderTextContainer(TextCont, TextColor, TextColorOutline);
+				}
+			}
+			DeleteTextContainer(TextCont);
 		}
-		DeleteTextContainer(TextCont);
+		catch(...)
+		{
+			QueueTextContainerDeletion(TextCont);
+			throw;
+		}
 	}
 
 	bool CreateTextContainer(STextContainerIndex &TextContainerIndex, CTextCursor *pCursor, const char *pText, int Length = -1) override
@@ -3881,21 +3961,7 @@ public:
 		}
 
 		STextContainer &TextContainer = GetTextContainer(TextContainerIndex);
-		if(Graphics()->IsTextBufferingEnabled())
-		{
-			if(TextContainer.m_StringInfo.m_QuadBufferContainerIndex != -1)
-			{
-				Graphics()->DeleteBufferContainer(TextContainer.m_StringInfo.m_QuadBufferContainerIndex, true);
-				TextContainer.m_StringInfo.m_QuadBufferObjectIndex = -1;
-			}
-			else if(TextContainer.m_StringInfo.m_QuadBufferObjectIndex != -1)
-			{
-				// 缓冲容器创建失败时，已创建的缓冲对象仍归本条文字所有。
-				Graphics()->DeleteBufferObject(TextContainer.m_StringInfo.m_QuadBufferObjectIndex);
-				TextContainer.m_StringInfo.m_QuadBufferObjectIndex = -1;
-			}
-		}
-		Graphics()->DeleteQuadContainer(TextContainer.m_StringInfo.m_SelectionQuadContainerIndex);
+		DeleteTextContainerResources(TextContainer);
 		FreeTextContainer(TextContainerIndex);
 	}
 
@@ -4291,11 +4357,12 @@ public:
 
 	void OnPreWindowResize() override
 	{
+		RetryPendingTextContainerDeletions();
 		ClearTextSweepBuffers();
 		for(size_t Index = 0; Index < m_TextContainers.Size(); ++Index)
 		{
 			auto *pTextContainer = &m_TextContainers.Get(Index);
-			if(pTextContainer->m_pContainerUseCount != nullptr && pTextContainer->m_pContainerUseCount.use_count() <= 1)
+			if(pTextContainer->m_NextPendingDeletion == -2 && pTextContainer->m_pContainerUseCount != nullptr && pTextContainer->m_pContainerUseCount.use_count() <= 1)
 			{
 				log_error("textrender", "Found non empty text container with index %d with %" PRIzu " quads '%s'", pTextContainer->m_StringInfo.m_QuadBufferContainerIndex, pTextContainer->m_StringInfo.m_vCharacterQuads.size(), pTextContainer->m_aDebugText);
 				dbg_assert_failed("Text container was forgotten by the implementation (the index was overwritten).");
@@ -4340,6 +4407,8 @@ public:
 		for(size_t Index = 0; Index < m_TextContainers.Size(); ++Index)
 		{
 			auto *pTextContainer = &m_TextContainers.Get(Index);
+			if(pTextContainer->m_NextPendingDeletion != -2)
+				continue;
 			if(pTextContainer->m_StringInfo.m_QuadBufferContainerIndex != -1)
 			{
 				log_error("textrender", "Found non empty text container with index %d with %" PRIzu " quads '%s'", pTextContainer->m_StringInfo.m_QuadBufferContainerIndex, pTextContainer->m_StringInfo.m_vCharacterQuads.size(), pTextContainer->m_aDebugText);
@@ -4359,7 +4428,7 @@ public:
 		for(size_t Index = 0; Index < m_TextContainers.Size(); ++Index)
 		{
 			auto *pTextContainer = &m_TextContainers.Get(Index);
-			if(pTextContainer->m_pContainerUseCount == nullptr || pTextContainer->m_pContainerUseCount.use_count() > 1)
+			if(pTextContainer->m_NextPendingDeletion != -2 || pTextContainer->m_pContainerUseCount == nullptr || pTextContainer->m_pContainerUseCount.use_count() > 1)
 				continue;
 
 			// 用槽位下标构造索引，保证归还的是同一个文本容器。
@@ -4367,9 +4436,7 @@ public:
 			OrphanIndex.m_Index = static_cast<int>(Index);
 			OrphanIndex.m_UseCount = pTextContainer->m_pContainerUseCount;
 			STextContainer &Orphan = GetTextContainer(OrphanIndex);
-			if(Graphics()->IsTextBufferingEnabled())
-				Graphics()->DeleteBufferContainer(Orphan.m_StringInfo.m_QuadBufferContainerIndex, true);
-			Graphics()->DeleteQuadContainer(Orphan.m_StringInfo.m_SelectionQuadContainerIndex);
+			DeleteTextContainerResources(Orphan);
 			log_error("textrender", "Reclaimed forgotten text container '%s'", pTextContainer->m_aDebugText);
 			FreeTextContainer(OrphanIndex);
 		}
