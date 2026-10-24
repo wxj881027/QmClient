@@ -36,12 +36,12 @@ TEST(ActiveBinds, PressPublishesRecordOnlyAfterCallbackReturns)
 	}));
 }
 
-TEST(ActiveBinds, ResetDuringPressPreventsStalePublication)
+TEST(ActiveBinds, ResetDuringPressPreservesCompletedPressReleaseTracking)
 {
 	CActiveBindStorage Binds;
 	ASSERT_TRUE(Binds.Press(KEY_Y, KeyModifier::NONE, []() {}));
-	EXPECT_FALSE(Binds.Press(KEY_X, KeyModifier::NONE, [&]() { Binds.Clear(); }));
-	EXPECT_TRUE(Keys(Binds).empty());
+	EXPECT_TRUE(Binds.Press(KEY_X, KeyModifier::NONE, [&]() { Binds.Clear(); }));
+	EXPECT_EQ(Keys(Binds), (std::vector<int>{KEY_X}));
 }
 
 TEST(ActiveBinds, NestedPressKeepsBothRecordsInPublicationOrder)
@@ -62,14 +62,14 @@ TEST(ActiveBinds, ThrowingPressLeavesNoRecordAndLaterPressCanPublish)
 	EXPECT_EQ(Keys(Binds), (std::vector<int>{KEY_X}));
 }
 
-TEST(ActiveBinds, ResetInsideNestedPressCancelsOuterAdmission)
+TEST(ActiveBinds, ResetInsideNestedPressKeepsCompletedAdmissions)
 {
 	CActiveBindStorage Binds;
-	EXPECT_FALSE(Binds.Press(KEY_X, KeyModifier::NONE, [&]() {
-		EXPECT_FALSE(Binds.Press(KEY_Y, KeyModifier::NONE, [&]() { Binds.Clear(); }));
+	EXPECT_TRUE(Binds.Press(KEY_X, KeyModifier::NONE, [&]() {
+		EXPECT_TRUE(Binds.Press(KEY_Y, KeyModifier::NONE, [&]() { Binds.Clear(); }));
 		ASSERT_TRUE(Binds.Press(KEY_Z, KeyModifier::NONE, []() {}));
 	}));
-	EXPECT_EQ(Keys(Binds), (std::vector<int>{KEY_Z}));
+	EXPECT_EQ(Keys(Binds), (std::vector<int>{KEY_Y, KEY_Z, KEY_X}));
 }
 
 TEST(ActiveBinds, RetainedShortcutStateIsCommittedAfterCallback)

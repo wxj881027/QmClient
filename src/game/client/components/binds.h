@@ -134,7 +134,6 @@ public:
 private:
 	std::vector<std::shared_ptr<CActiveBind>> m_vBinds;
 	CId m_LastId = 0;
-	uint64_t m_ResetSerial = 0;
 	size_t m_PendingAdmissions = 0;
 
 	auto FindId(CId Id)
@@ -150,7 +149,6 @@ public:
 	void Clear() noexcept
 	{
 		m_vBinds.clear();
-		++m_ResetSerial;
 	}
 
 	template<typename F>
@@ -185,7 +183,6 @@ public:
 		}
 		const CId Id = ++m_LastId;
 		auto pBind = std::make_shared<CActiveBind>(Key, ModifierMask, Id);
-		const uint64_t ResetSerial = m_ResetSerial;
 		++m_PendingAdmissions;
 		try
 		{
@@ -197,8 +194,6 @@ public:
 			throw;
 		}
 		--m_PendingAdmissions;
-		if(ResetSerial != m_ResetSerial)
-			return false;
 		m_vBinds.push_back(std::move(pBind));
 		return true;
 	}
