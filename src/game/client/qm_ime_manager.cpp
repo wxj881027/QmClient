@@ -11,7 +11,7 @@
 #include <engine/shared/config.h>
 #include <engine/shared/qm_ime_policy.h>
 
-#include <algorithm>
+#include <utility>
 
 bool CQmImeBlocker::HasTextFocus(CGameClient *pGameClient) const
 {
@@ -98,47 +98,11 @@ void CQmImeManager::OnFrame()
 	}
 }
 
-SQmImePopupState CQmImeManager::BuildPopupState() const
+std::optional<SQmImePopupState> CQmImeManager::BuildPopupState() const noexcept
 {
-	SQmImePopupState State;
-	if(m_pGameClient == nullptr || m_pGameClient->Input() == nullptr)
-	{
-		State.m_Disabled = true;
-		return State;
-	}
-
-	IInput *pInput = m_pGameClient->Input();
-	const bool WantsTextInput = g_Config.m_QmImeAutoManage != 0 ? m_Blocker.WantsTextInput(m_pGameClient) : CLineInput::GetActiveInput() != nullptr;
-	State.m_Disabled = !WantsTextInput;
-	if(State.m_Disabled)
-		return State;
-
-	const int CandidateCount = pInput->GetCandidateCount();
-	// 候选列表驱动可见性：组合串可能被 IME 短暂清空，单独要求会导致弹窗闪烁
-	State.m_Visible = QmImePopupShouldBeVisible(CandidateCount);
-	if(!State.m_Visible)
-		return State;
-
-	State.m_Composition = pInput->GetComposition();
-
-	const int CopyCount = std::max(CandidateCount, 0);
-	State.m_vCandidates.reserve(CopyCount);
-	for(int i = 0; i < CopyCount; ++i)
-		State.m_vCandidates.emplace_back(pInput->GetCandidate(i));
-	State.m_SelectedIndex = qm_ime_overlay::NormalizeSelectedCandidateIndex(pInput->GetCandidateSelectedIndex(), CopyCount);
-
-	const int PageSize = pInput->GetCandidatePageSize();
-	const int PageStart = pInput->GetCandidatePageStart();
-	const int TotalCount = pInput->GetCandidateTotalCount();
-	if(PageSize > 0 && TotalCount > PageSize)
-	{
-		State.m_PageCount = (TotalCount + PageSize - 1) / PageSize;
-		State.m_PageIndex = std::clamp(PageStart / PageSize, 0, State.m_PageCount - 1);
-	}
-
-	State.m_AnchorScreen = CLineInput::GetCompositionWindowPosition();
-	State.m_LineHeightScreen = CLineInput::GetCompositionLineHeight();
-	return State;
+	const IInput *pInput = m_pGameClient != nullptr ? m_pGameClient->Input() : nullptr;
+	const bool Wanted = pInput != nullptr && (g_Config.m_QmImeAutoManage != 0 ? m_Blocker.WantsTextInput(m_pGameClient) : CLineInput::GetActiveInput() != nullptr);
+	return QmImeBuildPopupState(pInput, Wanted, CLineInput::GetCompositionWindowPosition(), CLineInput::GetCompositionLineHeight());
 }
 
 void CQmImeManager::RenderCandidatePopup()
@@ -163,10 +127,13 @@ void CQmImeManager::RenderCandidatePopup()
 	}
 
 	const bool ActiveInputRendered = CLineInput::ValidateActiveInputRenderedThisFrame();
-	SQmImePopupState State;
+	std::optional<SQmImePopupState> State;
 	if(ActiveInputRendered)
 		State = BuildPopupState();
 	else
-		State.m_Disabled = true;
-	m_CandidatePopup.Render(m_pGameClient, State);
+	{
+		State.emplace();
+		State->m_Disabled = true;
+	}
+	m_CandidatePopup.Render(m_pGameClient, std::move(State));
 }

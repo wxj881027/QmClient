@@ -98,6 +98,25 @@ bool CMetalFrameState::CompleteFrame(const SFrameCapture &Capture, bool Success)
 	return true;
 }
 
+bool CMetalFrameState::DiscardCurrentFrame()
+{
+	std::lock_guard<std::mutex> Lock(m_Mutex);
+	if(m_CurrentFrameId == 0 || m_vSlots[m_CurrentSlot].m_FrameId != m_CurrentFrameId || m_vSlots[m_CurrentSlot].m_State != ESlotState::IN_FLIGHT)
+		return false;
+	// 只由后端在确认当前命令缓冲尚未提交后调用，不影响其他在途帧。
+	m_vSlots[m_CurrentSlot].m_State = ESlotState::FAILED;
+	m_CurrentFrameFailed = true;
+	m_CurrentFrameFinalized = true;
+	if(m_LastPresentedFrameId == m_CurrentFrameId)
+	{
+		m_LastPresentedFrameId = 0;
+		m_LastPresentedSlot = 0;
+		m_CaptureRetained = false;
+		m_ReadbackPresented = false;
+	}
+	return true;
+}
+
 size_t CMetalFrameState::DrainFrames()
 {
 	std::lock_guard<std::mutex> Lock(m_Mutex);

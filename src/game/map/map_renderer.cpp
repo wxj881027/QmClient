@@ -3,6 +3,7 @@
 #include <base/log.h>
 
 #include <game/map/envelope_manager.h>
+#include <game/map/map_render_items.h>
 
 #include <algorithm>
 
@@ -68,8 +69,15 @@ void CMapRenderer::LoadStep(int MaxLayers)
 {
 	if(m_LoadFinished || m_pLoadLayers == nullptr)
 		return;
+	if(m_pLoadLayers->Map() == nullptr)
+	{
+		m_LoadFinished = true;
+		return;
+	}
 
 	MaxLayers = maximum(MaxLayers, 1);
+	int LayersStart, LayersCount;
+	m_pLoadLayers->Map()->GetType(MAPITEMTYPE_LAYER, &LayersStart, &LayersCount);
 	int ProcessedLayers = 0;
 	while(ProcessedLayers < MaxLayers && m_LoadGroupId < m_pLoadLayers->NumGroups())
 	{
@@ -145,7 +153,9 @@ void CMapRenderer::LoadStep(int MaxLayers)
 		}
 		else if(pLayer->m_Type == LAYERTYPE_QUADS)
 		{
-			pRenderLayer = std::make_unique<CRenderLayerQuads>(m_LoadGroupId, m_LoadLayerId, pLayer->m_Flags, (CMapItemLayerQuads *)pLayer);
+			auto *pQuadLayer = MapRenderItems::QuadLayer(*m_pLoadLayers->Map(), LayersStart + pGroup->m_StartLayer + m_LoadLayerId);
+			if(pQuadLayer != nullptr)
+				pRenderLayer = std::make_unique<CRenderLayerQuads>(m_LoadGroupId, m_LoadLayerId, pLayer->m_Flags, pQuadLayer);
 		}
 		if(pRenderLayer)
 		{

@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <stdexcept>
 #include <vector>
 
 inline constexpr double QM_STUTTER_TARGET_FPS = 300.0;
@@ -183,6 +184,20 @@ private:
 class CQmStutterSampleSeries
 {
 public:
+	// 在提交整帧前准备容量，避免多个序列中途分配留下半帧。
+	void PrepareRecord(double Value)
+	{
+		if(!std::isfinite(Value) || Value < 0.0 || m_vSamples.size() < m_vSamples.capacity())
+			return;
+		const size_t Capacity = m_vSamples.capacity();
+		const size_t Maximum = m_vSamples.max_size();
+		if(m_vSamples.size() == Maximum)
+			throw std::length_error("stutter sample series");
+		const size_t Next = Capacity == 0 ? 1 : Capacity > Maximum - Capacity ? Maximum :
+											Capacity * 2;
+		m_vSamples.reserve(Next);
+	}
+
 	void Record(double Value, uint64_t FrameId)
 	{
 		if(!std::isfinite(Value) || Value < 0.0)
@@ -198,7 +213,7 @@ public:
 
 	double Percentile(double Percent)
 	{
-		if(m_vSamples.empty())
+		if(m_vSamples.empty() || std::isnan(Percent))
 			return 0.0;
 		const size_t Rank = (size_t)std::ceil(std::clamp(Percent, 0.0, 100.0) / 100.0 * m_vSamples.size());
 		const size_t Index = std::min(m_vSamples.size() - 1, Rank > 0 ? Rank - 1 : (size_t)0);

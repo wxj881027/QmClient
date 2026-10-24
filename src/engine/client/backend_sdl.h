@@ -2,6 +2,7 @@
 #define ENGINE_CLIENT_BACKEND_SDL_H
 
 #include <base/detect.h>
+#include <base/thread.h>
 
 #include <engine/client/backend/backend_base.h>
 #include <engine/client/graphics_threaded.h>
@@ -55,6 +56,7 @@ class CGraphicsBackend_Threaded : public IGraphicsBackend
 private:
 	TTranslateFunc m_TranslateFunc;
 	std::string m_FatalError;
+	bool m_FatalErrorTextUnavailable = false;
 	SGfxWarningContainer m_Warning;
 	std::atomic_bool m_SubmissionStopped = false;
 
@@ -83,10 +85,10 @@ public:
 	bool IsIdle() const override;
 	void WaitForIdle() override;
 
-	void ProcessError(const SGfxErrorContainer &Error);
+	void ProcessError(const SGfxErrorContainer &Error) noexcept;
 
 protected:
-	void StartProcessor(ICommandProcessor *pProcessor);
+	bool StartProcessor(ICommandProcessor *pProcessor, THREAD_CREATE pfnCreate = thread_try_init);
 	void StopProcessor();
 	void ResetSubmissionStopForCleanup()
 	{
@@ -107,7 +109,7 @@ private:
 	CCommandBuffer *m_pBuffer;
 	bool m_Started = false;
 	std::atomic_bool m_BufferInProcess;
-	void *m_pThread;
+	void *m_pThread = nullptr;
 	static void ThreadFunc(void *pUser);
 #endif
 
@@ -116,6 +118,7 @@ public:
 	// 非破坏性查询：图形后端是否已记录致命错误。运行时错误会停止后续提交，
 	// 由主循环消费并进入恢复流程；初始化错误仍由 ProcessError 直接报告。
 	bool HasFatalError() const override;
+	// 主线程非阻塞轮询；命令仍在执行时返回 false，完成后再消费故障。
 	// 保存诊断并停止提交后清除待消费标记；GetFatalError 保留第一份故障。
 	// 返回 true 表示刚刚消费掉一个致命错误。
 	// 收尾流程仍可能向后端提交清理命令，停止标志保证这些提交不会再次执行。
@@ -254,7 +257,7 @@ class CCommandProcessor_SDL_GL : public CGraphicsBackend_Threaded::ICommandProce
 public:
 	CCommandProcessor_SDL_GL(EBackendType BackendType, int GLMajor, int GLMinor, int GLPatch);
 	~CCommandProcessor_SDL_GL() override;
-	void RunBuffer(CCommandBuffer *pBuffer) override;
+	void RunBuffer(CCommandBuffer *pBuffer) noexcept override;
 
 	const SGfxErrorContainer &GetError() const override;
 	void ClearError() override { m_Error = {}; }
@@ -265,8 +268,8 @@ public:
 
 	const SGfxWarningContainer &GetWarning() const override;
 
-	void HandleError();
-	void HandleWarning();
+	void HandleError() noexcept;
+	void HandleWarning() noexcept;
 };
 
 static constexpr size_t gs_GpuInfoStringSize = 256;

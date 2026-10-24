@@ -5,9 +5,9 @@
 
 #include <base/lock.h>
 #include <base/sphore.h>
+#include <base/thread.h>
 
 #include <atomic>
-#include <deque>
 #include <memory>
 #include <vector>
 
@@ -139,7 +139,7 @@ class CJobPool
 	std::shared_ptr<IJob> m_pLastJob GUARDED_BY(m_Lock);
 
 	CLock m_LockRunning;
-	std::deque<std::shared_ptr<IJob>> m_RunningJobs GUARDED_BY(m_LockRunning);
+	std::vector<std::shared_ptr<IJob>> m_RunningJobs GUARDED_BY(m_LockRunning);
 
 	static void WorkerThread(void *pUser) NO_THREAD_SAFETY_ANALYSIS;
 	void RunLoop() NO_THREAD_SAFETY_ANALYSIS;
@@ -155,7 +155,10 @@ public:
 	 *
 	 * @remark Must be called on the main thread.
 	 */
-	void Init(int NumThreads) REQUIRES(!m_Lock);
+	void Init(int NumThreads) REQUIRES(!m_Lock) REQUIRES(!m_LockRunning);
+
+	// 失败时回收已启动线程并恢复关闭状态；可在主线程重新尝试。
+	bool TryInit(int NumThreads, THREAD_CREATE pfnCreate = thread_try_init) REQUIRES(!m_Lock) REQUIRES(!m_LockRunning);
 
 	/**
 	 * Shuts down the job pool. Aborts all abortable jobs. Then waits for all
@@ -174,5 +177,6 @@ public:
 	 * will be enqueue anymore. Abortable jobs will immediately be aborted.
 	 */
 	void Add(std::shared_ptr<IJob> pJob) REQUIRES(!m_Lock);
+	bool TryAdd(std::shared_ptr<IJob> pJob) REQUIRES(!m_Lock);
 };
 #endif

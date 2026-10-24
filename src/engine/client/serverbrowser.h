@@ -12,6 +12,7 @@
 #include <deque>
 #include <functional>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 
@@ -26,6 +27,7 @@ class IServerBrowserHttp;
 class IServerBrowserPingCache;
 class IStorage;
 class IHttp;
+class IHttpRequest;
 
 class CCommunityId
 {
@@ -151,6 +153,7 @@ public:
 	bool Filtered(const char *pCommunityId) const override;
 	bool Empty() const override;
 	void Clean(const std::vector<CCommunity> &vAllowedCommunities);
+	void Swap(CFavoriteCommunityFilterList &Other) noexcept { m_vEntries.swap(Other.m_vEntries); }
 	void Save(IConfigManager *pConfigManager) const;
 	const std::vector<CCommunityId> &Entries() const;
 
@@ -167,6 +170,7 @@ public:
 	bool Filtered(const char *pCommunityId) const override;
 	bool Empty() const override;
 	void Clean(const std::vector<CCommunity> &vAllowedCommunities);
+	void Swap(CExcludedCommunityFilterList &Other) noexcept { m_Entries.swap(Other.m_Entries); }
 	void Save(IConfigManager *pConfigManager) const;
 
 private:
@@ -194,21 +198,26 @@ public:
 	void RemoveAllowed(const char *pCountryName);
 	void RemoveAllowed(const char *pCommunityId, const char *pCountryName);
 	// 把可选国家里既不在排除名单、也不在保留基线里的国家补进排除名单。
-	// @return 排除名单是否发生变化（调用方需要据此重新过滤服务器列表）
-	bool AutoExcludeNewCountries();
+	// 失败时保留原名单并返回 false，后续刷新可重试；仅发布变化时才需要重新过滤。
+	bool AutoExcludeNewCountries() noexcept;
 	void Clear() override;
 	bool Filtered(const char *pCountryName) const override;
 	bool Empty() const override;
 	void Clean(const std::vector<CCommunity> &vAllowedCommunities);
 	// Clean 的实现主体：以"当前存在的社区"为输入，便于单测覆盖。
 	void CleanCountries(const std::set<CCommunityId> &vExistingCommunityIds);
+	void Swap(CExcludedCommunityCountryFilterList &Other) noexcept
+	{
+		m_Entries.swap(Other.m_Entries);
+		m_AllowedCountries.swap(Other.m_AllowedCountries);
+	}
 	void Save(IConfigManager *pConfigManager) const;
 
 private:
 	// 确保当前 key 存在保留基线：缺失时按"当前可见的可选国家"（可选国家减去排除名单）建立。
 	// 供 AutoExcludeNewCountries 与"用户让某国可见"使用，避免基线只包含刚点的那一个国家，
 	// 从而在其他国家出现时把它们误当成新国家排除掉。
-	void EnsureAllowedBaseline();
+	void EnsureAllowedBaseline(const CCommunityId &Key);
 
 	const ICommunityCache *m_pCommunityCache;
 	std::map<CCommunityId, std::set<CCommunityCountryName>> m_Entries;
@@ -231,6 +240,7 @@ public:
 	bool Filtered(const char *pTypeName) const override;
 	bool Empty() const override;
 	void Clean(const std::vector<CCommunity> &vAllowedCommunities);
+	void Swap(CExcludedCommunityTypeFilterList &Other) noexcept { m_Entries.swap(Other.m_Entries); }
 	void Save(IConfigManager *pConfigManager) const;
 
 private:
@@ -240,44 +250,54 @@ private:
 
 class CCommunityCache : public ICommunityCache
 {
+	friend class CServerBrowser;
 	IServerBrowser *m_pServerBrowser;
 	std::optional<SHA256_DIGEST> m_InfoSha256;
 	int m_LastType = IServerBrowser::NUM_TYPES; // initial value does not appear normally, marking uninitialized cache
 	unsigned m_SelectedCommunitiesHash = 0;
+	bool m_UpdateFailed = false;
 	std::vector<const CCommunity *> m_vpSelectedCommunities;
 	std::vector<const CCommunityCountry *> m_vpSelectableCountries;
 	std::vector<const CCommunityType *> m_vpSelectableTypes;
 	bool m_AnyRanksAvailable = false;
 	bool m_CountryTypesFilterAvailable = false;
-	const char *m_pCountryTypeFilterKey = IServerBrowser::COMMUNITY_ALL;
+	// 社区按人数重排会交换 ID 所在的槽位，筛选键由缓存自己保存。
+	char m_aCountryTypeFilterKey[CServerInfo::MAX_COMMUNITY_ID_LENGTH];
+	void Prepare(std::vector<const CCommunity *> vpSelected, std::optional<SHA256_DIGEST> InfoSha256, int Type, unsigned CommunitiesHash);
+	void Swap(CCommunityCache &Other) noexcept;
 
 public:
 	CCommunityCache(IServerBrowser *pServerBrowser) :
 		m_pServerBrowser(pServerBrowser)
 	{
+		str_copy(m_aCountryTypeFilterKey, IServerBrowser::COMMUNITY_ALL);
 	}
 
 	void Update(bool Force) override;
-	// 社区数据（m_vCommunities 及其内部容器）被整体重建后必须调用：缓存持有的是指向这些容器的
-	// 裸指针，而 Update 只在 DDNet info 摘要/社区 ID 哈希/页面类型变化时才重建，重建后容器地址
-	// 变化时旧指针会指向已释放内存。复位标记以强制下一次 Update 重新构建。
-	void Invalidate()
+	// 作废时立即清除借用指针；下次重建即使失败，也不能再向 UI 返回旧容器中的元素。
+	void Invalidate() noexcept
 	{
 		m_InfoSha256.reset();
 		m_LastType = IServerBrowser::NUM_TYPES;
+		m_vpSelectedCommunities.clear();
+		m_vpSelectableCountries.clear();
+		m_vpSelectableTypes.clear();
+		m_AnyRanksAvailable = false;
+		m_CountryTypesFilterAvailable = false;
 	}
 	const std::vector<const CCommunity *> &SelectedCommunities() const override { return m_vpSelectedCommunities; }
 	const std::vector<const CCommunityCountry *> &SelectableCountries() const override { return m_vpSelectableCountries; }
 	const std::vector<const CCommunityType *> &SelectableTypes() const override { return m_vpSelectableTypes; }
 	bool AnyRanksAvailable() const override { return m_AnyRanksAvailable; }
 	bool CountriesTypesFilterAvailable() const override { return m_CountryTypesFilterAvailable; }
-	const char *CountryTypeFilterKey() const override { return m_pCountryTypeFilterKey; }
+	const char *CountryTypeFilterKey() const override { return m_aCountryTypeFilterKey; }
 };
 
 class CServerBrowser : public IServerBrowser
 {
 public:
-	CServerBrowser();
+	// 注入时钟使用 time_get 的单调刻度；空回调使用生产时钟。
+	explicit CServerBrowser(std::function<int64_t()> UpdateClock = {});
 	~CServerBrowser() override;
 
 	// interface functions
@@ -297,6 +317,7 @@ public:
 	const CServerInfo *Get(int Index) const override;
 	int NumHttpServers() const override;
 	const CServerInfo *HttpGet(int Index) const override;
+	uint64_t HttpListRevision() const override;
 	int Players(const CServerInfo &Item) const override;
 	int Max(const CServerInfo &Item) const override;
 	int NumSortedServers() const override { return m_vSortedServerlist.size(); }
@@ -304,10 +325,8 @@ public:
 	const CServerInfo *SortedGet(int Index) const override;
 	void SetQmClientServerCounts(const std::unordered_map<std::string, int> &Counts) override;
 
-	const json_value *LoadDDNetInfo();
-	void LoadDDNetInfoJson();
-	void LoadDDNetLocation();
-	void LoadDDNetServers();
+	const json_value *LoadDDNetInfo(IHttpRequest *pResponse = nullptr);
+	bool LoadDDNetServers();
 	void UpdateServerFilteredPlayers(CServerInfo *pInfo) const;
 	void UpdateServerFriends(CServerInfo *pInfo) const;
 	void UpdateServerCommunity(CServerInfo *pInfo) const;
@@ -357,6 +376,10 @@ public:
 
 private:
 	friend class CServerBrowserTestAccess;
+	class CServerListUpdate;
+	struct CSortBackup;
+	class CSortUpdate;
+	class CCommunityUpdate;
 
 	CNetClient *m_pNetClient = nullptr;
 	IConfigManager *m_pConfigManager = nullptr;
@@ -369,6 +392,9 @@ private:
 	char m_aNetVersion[128];
 
 	bool m_RefreshingHttp = false;
+	bool m_HttpUpdateFailed = false;
+	int64_t m_HttpUpdateRetryAt = 0;
+	std::function<int64_t()> m_UpdateClock;
 	uint64_t m_HttpRevision = 0;
 	IServerBrowserHttp *m_pHttp = nullptr;
 	IServerBrowserPingCache *m_pPingCache = nullptr;
@@ -395,12 +421,17 @@ private:
 
 	json_value *m_pDDNetInfo = nullptr;
 	std::optional<SHA256_DIGEST> m_DDNetInfoSha256;
+	bool m_CommunityUpdateFailed = false;
+	int64_t m_CommunityUpdateRetryAt = 0;
 
 	CServerEntry *m_pFirstReqServer; // request list
 	CServerEntry *m_pLastReqServer;
 	int m_NumRequests;
 
 	bool m_NeedResort;
+	bool m_SortUpdateFailed = false;
+	int64_t m_SortUpdateRetryAt = 0;
+	std::unique_ptr<CSortBackup> m_pSortBackup;
 	uint64_t m_FriendListRevision = 0;
 	int m_Sorthash;
 
@@ -435,11 +466,15 @@ private:
 	//
 	void Filter();
 	void Sort();
+	bool TrySort();
+	void SortCommunities();
 	int SortHash() const;
 
 	void CleanUp();
 
 	void UpdateFromHttp();
+	bool TryUpdateFromHttp();
+	int64_t UpdateNow() const;
 	CServerEntry *Add(const NETADDR *pAddrs, int NumAddrs);
 	CServerEntry *ReplaceEntry(CServerEntry *pEntry, const NETADDR *pAddrs, int NumAddrs);
 

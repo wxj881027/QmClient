@@ -122,6 +122,7 @@ public:
 	};
 
 	virtual bool IsRecording() const = 0;
+	virtual bool HasWriteError() const = 0;
 	virtual int Stop(IDemoRecorder::EStopMode Mode, const char *pTargetFilename = "") = 0;
 	virtual int Length() const = 0;
 	virtual const char *CurrentFilename() const = 0;

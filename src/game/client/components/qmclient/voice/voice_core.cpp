@@ -182,6 +182,11 @@ void SDLCALL CRClientVoice::SDLAudioCallback(void *pUserData, SDL_AudioStream *p
 		[pThis, Channels](int16_t *pBuffer, int Frames) { pThis->MixAudio(pBuffer, Frames, Channels); });
 }
 
+CRClientVoice::~CRClientVoice()
+{
+	Shutdown();
+}
+
 void CRClientVoice::Init(CGameClient *pGameClient, IClient *pClient, IConsole *pConsole)
 {
 	SetInterfaces(pGameClient, pClient, pConsole);
@@ -201,8 +206,6 @@ bool CRClientVoice::Init()
 	if(!m_pGameClient || !m_pClient || !m_pConsole)
 		return false;
 
-	m_pPeers = std::make_unique<std::array<SVoicePeer, MAX_CLIENTS>>();
-	m_MixBuffer.resize(VOICE_FRAME_SAMPLES * 2);
 	m_ShutdownDone = false;
 	m_LastConfigSnapshotUpdate = 0;
 	m_LastClientSnapshotUpdate = 0;
@@ -337,24 +340,28 @@ bool CRClientVoice::SendVoicePacket(const uint8_t *pData, size_t Size) NO_THREAD
 
 bool CRClientVoice::EnsureAudioSubsystem()
 {
-	if(m_AudioSubsystemInitializedByVoice)
+	if(m_AudioSubsystem.IsInitialized())
 		return true;
-	if(SDL_WasInit(SDL_INIT_AUDIO) == 0)
-		SDL_SetHint(SDL_HINT_AUDIO_DRIVER, g_Config.m_QmVoiceAudioBackend[0] != '\0' ? g_Config.m_QmVoiceAudioBackend : nullptr);
-	if(!SDL_InitSubSystem(SDL_INIT_AUDIO))
-	{
-		char aError[256];
-		str_format(aError, sizeof(aError), "Failed to initialize voice audio: %s", SDL_GetError());
-		LogDiagnosticErrorOnce(m_aAudioErrorLog, sizeof(m_aAudioErrorLog), aError);
-		return false;
-	}
-	if(!SDL_AddEventWatch(AudioDeviceEvent, this))
-	{
-		SDL_QuitSubSystem(SDL_INIT_AUDIO);
-		return false;
-	}
-	m_AudioSubsystemInitializedByVoice = true;
 	m_ShutdownDone = false;
+	const bool Initialized = m_AudioSubsystem.Ensure(g_Config.m_QmVoiceAudioBackend, time_freq(), time_get, [this] {
+		if(SDL_WasInit(SDL_INIT_AUDIO) == 0)
+			SDL_SetHint(SDL_HINT_AUDIO_DRIVER, g_Config.m_QmVoiceAudioBackend[0] != '\0' ? g_Config.m_QmVoiceAudioBackend : nullptr);
+		if(!SDL_InitSubSystem(SDL_INIT_AUDIO))
+		{
+			char aError[256];
+			str_format(aError, sizeof(aError), "Failed to initialize voice audio: %s", SDL_GetError());
+			LogDiagnosticErrorOnce(m_aAudioErrorLog, sizeof(m_aAudioErrorLog), aError);
+			return false;
+		}
+		if(!SDL_AddEventWatch(AudioDeviceEvent, this))
+		{
+			SDL_QuitSubSystem(SDL_INIT_AUDIO);
+			return false;
+		}
+		return true;
+	});
+	if(!Initialized)
+		return false;
 	log_info("voice", "audio initialized using backend '%s'", SDL_GetCurrentAudioDriver());
 	return true;
 }
@@ -439,11 +446,10 @@ bool CRClientVoice::EnsureAudio()
 		m_LogDeviceChange = true;
 		m_CaptureUnavailable = false;
 		m_OutputUnavailable = false;
-		m_LastAudioRetryAttempt = 0;
 	}
 
 	const char *pRequestedBackend = RequestedAudioConfig.m_aBackend[0] ? RequestedAudioConfig.m_aBackend : nullptr;
-	if(!m_AudioSubsystemInitializedByVoice)
+	if(!m_AudioSubsystem.IsInitialized())
 		return false;
 	if(m_CaptureRemoved.exchange(false))
 		CloseCaptureStream();
@@ -489,7 +495,6 @@ bool CRClientVoice::EnsureAudio()
 		}
 		m_LogDeviceChange = true;
 		m_CaptureUnavailable = false;
-		m_LastAudioRetryAttempt = 0;
 	}
 
 	if(str_comp(m_aOutputDeviceName, RequestedAudioConfig.m_aOutputDevice) != 0)
@@ -506,7 +511,6 @@ bool CRClientVoice::EnsureAudio()
 		}
 		m_LogDeviceChange = true;
 		m_OutputUnavailable = false;
-		m_LastAudioRetryAttempt = 0;
 	}
 
 	if(m_OutputStereo != WantStereo)
@@ -523,7 +527,6 @@ bool CRClientVoice::EnsureAudio()
 		}
 		m_LogDeviceChange = true;
 		m_OutputUnavailable = false;
-		m_LastAudioRetryAttempt = 0;
 	}
 
 	if(HadCapture && HadOutput && HadEncoder && m_pCaptureStream && m_pOutputStream && m_pEncoder)
@@ -558,7 +561,9 @@ bool CRClientVoice::EnsureAudio()
 		}
 		m_EncoderReady.store(true);
 		ClearDiagnosticLogMessage(m_aEncoderErrorLog);
-		VoiceUtils::ComputeVoiceEncoderTargetsWithComplexity(0, 0.0f, g_Config.m_QmVoiceBitrateProfile, &m_EncBitrate, &m_EncLossPerc, &m_EncFec, &m_EncComplexity);
+		SRClientVoiceConfigSnapshot Config;
+		GetConfigSnapshot(Config);
+		VoiceUtils::ComputeVoiceEncoderTargetsWithComplexity(0, 0.0f, Config.m_QmVoiceBitrateProfile, &m_EncBitrate, &m_EncLossPerc, &m_EncFec, &m_EncComplexity);
 		m_LastEncUpdate = 0;
 		opus_encoder_ctl(m_pEncoder, OPUS_SET_BITRATE(m_EncBitrate));
 		opus_encoder_ctl(m_pEncoder, OPUS_SET_PACKET_LOSS_PERC(m_EncLossPerc));
@@ -571,9 +576,6 @@ bool CRClientVoice::EnsureAudio()
 		}
 		opus_encoder_ctl(m_pEncoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
 	}
-
-	if(!m_pPeers)
-		m_pPeers = std::make_unique<std::array<SVoicePeer, MAX_CLIENTS>>();
 
 	if(!m_pOutputStream)
 	{
@@ -742,15 +744,8 @@ bool CRClientVoice::EnsureAudio()
 		m_LogDeviceChange = false;
 	}
 
-	if(m_CaptureUnavailable.load() || m_OutputUnavailable.load())
-	{
-		m_LastAudioRetryAttempt = time_get();
-	}
-	else
-	{
-		m_LastAudioRetryAttempt = 0;
+	if(!m_CaptureUnavailable.load() && !m_OutputUnavailable.load())
 		ClearDiagnosticLogMessage(m_aAudioErrorLog);
-	}
 	ClearDiagnosticLogMessage(m_aEncoderErrorLog);
 	return true;
 }
@@ -1111,7 +1106,7 @@ void CRClientVoice::Shutdown()
 	m_AndroidRecordPermissionKnown = false;
 	m_AndroidRecordPermissionGranted = false;
 #endif
-	m_LastAudioRetryAttempt = 0;
+	m_AudioRetry.Reset();
 	m_AudioRefreshRequested.store(true);
 	if(m_pEncoder)
 	{
@@ -1160,12 +1155,10 @@ void CRClientVoice::Shutdown()
 	ClearDiagnosticLogMessage(m_aEncoderErrorLog);
 	ClearDiagnosticLogMessage(m_aServerAddrErrorLog);
 	ClearDiagnosticLogMessage(m_aDecoderErrorLog);
-	if(m_AudioSubsystemInitializedByVoice)
-	{
+	m_AudioSubsystem.Shutdown([this] {
 		SDL_RemoveEventWatch(AudioDeviceEvent, this);
 		SDL_QuitSubSystem(SDL_INIT_AUDIO);
-		m_AudioSubsystemInitializedByVoice = false;
-	}
+	});
 	m_MicLevel.store(0.0f);
 	m_LastConfigSnapshotUpdate = 0;
 	m_LastClientSnapshotUpdate = 0;
@@ -1256,8 +1249,7 @@ void CRClientVoice::ResetTransmitState(bool ClearQueuedCapture) NO_THREAD_SAFETY
 	UpdateMicLevel(0.0f);
 	// Reset transmit-side DSP state. Mirrored in Shutdown() for full cleanup.
 	m_AgcGain = 1.0f;
-	m_VadActive = false;
-	m_VadReleaseDeadline = 0;
+	m_Vad.Reset();
 	m_PttReleaseDeadline.store(0);
 	m_TxWasActive = false;
 	if(ClearQueuedCapture && m_pCaptureStream)
@@ -1385,11 +1377,7 @@ void CRClientVoice::ProcessCapture() NO_THREAD_SAFETY_ANALYSIS
 
 	const int64_t Now = time_get();
 	const bool UseVad = Config.m_QmVoiceVadEnable != 0;
-	if(!UseVad)
-	{
-		m_VadActive = false;
-		m_VadReleaseDeadline = 0;
-	}
+	m_Vad.PrepareUpdate(UseVad, Now);
 	int64_t ReleaseDeadline = 0;
 	bool PttHeld = false;
 	if(!UseVad)
@@ -1399,14 +1387,9 @@ void CRClientVoice::ProcessCapture() NO_THREAD_SAFETY_ANALYSIS
 		if(TestLocal)
 			PttHeld = true;
 	}
-	else if(m_VadActive && m_VadReleaseDeadline != 0 && Now >= m_VadReleaseDeadline)
-	{
-		m_VadActive = false;
-		m_VadReleaseDeadline = 0;
-	}
 	const bool TokenChanged = Config.m_QmVoiceTokenHash != m_LastTokenHashSent;
 	const bool NeedKeepalive = m_LastKeepalive == 0 || Now - m_LastKeepalive > time_freq() * 2;
-	const bool TxActiveSnapshot = UseVad ? m_VadActive.load() : PttHeld;
+	const bool TxActiveSnapshot = UseVad ? m_Vad.IsActive() : PttHeld;
 	const uint8_t ProtocolVersion = VoiceProtocolVersion(Config);
 	uint8_t TxFlags = UseVad ? VOICE_FLAG_VAD : 0;
 	if(TestMode == 2)
@@ -1522,27 +1505,12 @@ void CRClientVoice::ProcessCapture() NO_THREAD_SAFETY_ANALYSIS
 
 		if(UseVad)
 		{
-			const bool Trigger = VadThreshold <= 0.0f || Peak >= VadThreshold;
+			const bool Trigger = CVoiceVadState::ShouldActivate(Peak, VadThreshold);
 			const int64_t FrameNow = time_get();
-			if(Trigger)
-			{
-				m_VadActive = true;
-				if(VadReleaseTicks > 0)
-					m_VadReleaseDeadline = FrameNow + VadReleaseTicks;
-				else
-					m_VadReleaseDeadline = 0;
-			}
-			else if(m_VadActive)
-			{
-				if(m_VadReleaseDeadline == 0 || FrameNow >= m_VadReleaseDeadline)
-				{
-					m_VadActive = false;
-					m_VadReleaseDeadline = 0;
-				}
-			}
+			m_Vad.UpdateFrame(Trigger, FrameNow, VadReleaseTicks);
 		}
 
-		const bool TxActive = UseVad ? m_VadActive.load() : PttHeld;
+		const bool TxActive = UseVad ? m_Vad.IsActive() : PttHeld;
 		if(!TxActive)
 		{
 			m_TxWasActive = false;
@@ -1637,10 +1605,11 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 	const bool TestServer = TestMode == 2;
 	const uint8_t ProtocolVersion = VoiceProtocolVersion(Config);
 
-	while(true)
+	// 持续来包时也检查停止请求，避免主线程 join 一直等待队列清空。
+	while(!m_Worker.StopRequested())
 	{
 		SQmWebSocketMessage WebSocketMessage;
-		if(!m_pVoiceTransport->PollPacket(WebSocketMessage))
+		if(!m_pVoiceTransport->PollPacket(WebSocketMessage, [](const void *pWorker) { return static_cast<const CVoiceWorker *>(pWorker)->StopRequested(); }, &m_Worker))
 			break;
 		auto *pData = reinterpret_cast<unsigned char *>(WebSocketMessage.m_Data.data());
 		const int Bytes = static_cast<int>(WebSocketMessage.m_Data.size());
@@ -2159,52 +2128,45 @@ void CRClientVoice::DecodeJitter()
 	}
 }
 
+bool CRClientVoice::HandleWorkerFailure()
+{
+	return m_Worker.HandleFailure(time_get(), time_freq(), [this](CVoiceWorker::EFailure Failure, const char *pMessage) {
+		Shutdown();
+		char aError[256];
+		str_format(aError, sizeof(aError), "Voice worker %s failed: %s", Failure == CVoiceWorker::EFailure::START ? "startup" : "execution", pMessage);
+		LogDiagnosticErrorOnce(m_aAudioErrorLog, sizeof(m_aAudioErrorLog), aError);
+	});
+}
+
 void CRClientVoice::StartWorker()
 {
-	if(m_Worker.joinable())
-		return;
-	m_WorkerStop.store(false);
-	m_WorkerEnabled.store(true);
-	m_Worker = std::thread(&CRClientVoice::WorkerLoop, this);
+	m_Worker.Start(time_get(), [this] { WorkerLoop(); });
+	HandleWorkerFailure();
 }
 
 void CRClientVoice::StopWorker()
 {
-	m_WorkerEnabled.store(false);
-	if(m_Worker.joinable())
-	{
-		m_WorkerStop.store(true);
-		m_Worker.join();
-	}
-	m_WorkerStop.store(false);
+	m_Worker.Stop();
 }
 
 void CRClientVoice::WorkerLoop() NO_THREAD_SAFETY_ANALYSIS
 {
-	using namespace std::chrono_literals;
-	while(!m_WorkerStop.load())
-	{
-		if(!m_WorkerEnabled.load())
-		{
-			std::this_thread::sleep_for(10ms);
-			continue;
-		}
+	// 在受保护的线程入口准备资源，分配失败不会离开客户端初始化入口。
+	// 首次打开输出流前完成混音缓冲分配；正常暂停后重开保留已有资源。
+	if(!m_pPeers)
+		m_pPeers = std::make_unique<std::array<SVoicePeer, MAX_CLIENTS>>();
+	if(m_MixBuffer.size() < VOICE_FRAME_SAMPLES * 2)
+		m_MixBuffer.resize(VOICE_FRAME_SAMPLES * 2);
 
-		bool ShouldEnsureAudio = m_AudioRefreshRequested.exchange(false);
+	using namespace std::chrono_literals;
+	while(!m_Worker.StopRequested())
+	{
 		bool CaptureNeedsRetry = m_CaptureUnavailable.load();
 #if defined(CONF_PLATFORM_ANDROID)
 		if(m_AndroidRecordPermissionKnown && !m_AndroidRecordPermissionGranted)
 			CaptureNeedsRetry = false;
 #endif
-		if(!ShouldEnsureAudio && (CaptureNeedsRetry || m_OutputUnavailable.load()))
-		{
-			const int64_t RetryInterval = time_freq();
-			const int64_t Now = time_get();
-			if(m_LastAudioRetryAttempt == 0 || Now - m_LastAudioRetryAttempt >= RetryInterval)
-				ShouldEnsureAudio = true;
-		}
-		if(ShouldEnsureAudio)
-			EnsureAudio();
+		m_AudioRetry.Update(m_AudioRefreshRequested.exchange(false), CaptureNeedsRetry || m_OutputUnavailable.load(), time_get(), time_freq(), [this] { return EnsureAudio(); });
 
 		UpdateVoiceTransport();
 		ProcessIncoming();
@@ -2230,6 +2192,9 @@ void CRClientVoice::WorkerLoop() NO_THREAD_SAFETY_ANALYSIS
 				int QueuedFrames = 0;
 				if(m_pPeers)
 				{
+					// 播放回调也会更新帧计数，诊断读取沿用同一音频流锁。
+					if(m_pOutputStream)
+						SDL_LockAudioStream(m_pOutputStream);
 					for(const auto &Peer : *m_pPeers)
 					{
 						if(Peer.m_QueuedPackets > 0 || Peer.m_FrameCount > 0)
@@ -2237,6 +2202,8 @@ void CRClientVoice::WorkerLoop() NO_THREAD_SAFETY_ANALYSIS
 						QueuedPackets += Peer.m_QueuedPackets;
 						QueuedFrames += Peer.m_FrameCount;
 					}
+					if(m_pOutputStream)
+						SDL_UnlockAudioStream(m_pOutputStream);
 				}
 
 				SRClientVoiceConfigSnapshot StateConfig;
@@ -2298,6 +2265,8 @@ void CRClientVoice::OnRender() NO_THREAD_SAFETY_ANALYSIS
 		Shutdown();
 		return;
 	}
+	if(HandleWorkerFailure() || !m_Worker.CanStart(time_get()))
+		return;
 	m_ShutdownDone = false;
 
 #if defined(CONF_PLATFORM_EMSCRIPTEN)
@@ -2389,6 +2358,7 @@ void CRClientVoice::OnRender() NO_THREAD_SAFETY_ANALYSIS
 	GetRequestedAudioDeviceConfig(AppliedRequestedAudioConfig);
 	const int DesiredChannels = VoiceUtils::VoiceDesiredOutputChannels(RequestedAudioConfig);
 	VoiceUtils::SVoiceAudioRefreshState RefreshState;
+	RefreshState.m_WorkerRunning = m_Worker.HasThread();
 	RefreshState.m_BackendChanged = str_comp(AppliedRequestedAudioConfig.m_aBackend, RequestedAudioConfig.m_aBackend) != 0;
 	RefreshState.m_InputDeviceChanged = str_comp(AppliedRequestedAudioConfig.m_aInputDevice, RequestedAudioConfig.m_aInputDevice) != 0;
 	RefreshState.m_OutputDeviceChanged = str_comp(AppliedRequestedAudioConfig.m_aOutputDevice, RequestedAudioConfig.m_aOutputDevice) != 0;
@@ -2426,7 +2396,7 @@ void CRClientVoice::OnRender() NO_THREAD_SAFETY_ANALYSIS
 			StopWorker();
 		m_AudioRefreshRequested.store(true);
 	}
-	if(!m_Worker.joinable())
+	if(!m_Worker.HasThread())
 		m_AudioRefreshRequested.store(true);
 
 	StartWorker();

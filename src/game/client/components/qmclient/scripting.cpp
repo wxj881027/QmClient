@@ -18,7 +18,6 @@
 class CScriptRunner : CComponentInterfaces
 {
 private:
-	CScriptingCtx m_ScriptingCtx;
 	const CServerInfo *GetServerInfo()
 	{
 		if(Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK)
@@ -225,20 +224,21 @@ public:
 	CScriptRunner(CGameClient *pClient)
 	{
 		OnInterfacesInit(pClient);
-		m_ScriptingCtx.AddFunction("exec", [this](const std::string &Str) {
-			log_info(SCRIPTING_IMPL "/exec", "%s", Str.c_str());
-			Console()->ExecuteLine(Str.c_str());
-		});
-		m_ScriptingCtx.AddFunction("echo", [this](const std::string &Str) {
-			GameClient()->Echo(Str.c_str());
-		});
-		m_ScriptingCtx.AddFunction("state", [this](const std::string &Str, const CScriptingCtx::Any &Arg) {
-			return State(Str, Arg);
-		});
 	}
 	void Run(const char *pFilename, const char *pArgs)
 	{
-		m_ScriptingCtx.Run(Storage(), pFilename, pArgs);
+		CScriptingCtx::Execute(Storage(), pFilename, pArgs, [this](CScriptingCtx &Context) {
+			Context.AddFunction("exec", [this](const std::string &Str) {
+				log_info(SCRIPTING_IMPL "/exec", "%s", Str.c_str());
+				Console()->ExecuteLine(Str.c_str());
+			});
+			Context.AddFunction("echo", [this](const std::string &Str) {
+				GameClient()->Echo(Str.c_str());
+			});
+			Context.AddFunction("state", [this](const std::string &Str, const CScriptingCtx::Any &Arg) {
+				return State(Str, Arg);
+			});
+		});
 	}
 };
 

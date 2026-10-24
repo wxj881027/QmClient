@@ -8,6 +8,7 @@
 #include "perf_file_logger.h"
 #include "qm_graphics_diagnostics.h"
 #include "qm_storage_mode.h"
+#include "replay_save.h"
 #include "serverbrowser.h"
 
 #include <base/crashdump.h>
@@ -33,6 +34,7 @@
 #include <engine/favorites.h>
 #include <engine/graphics.h>
 #include <engine/http.h>
+#include <engine/http_response_validation.h>
 #include <engine/input.h>
 #include <engine/keys.h>
 #include <engine/map.h>
@@ -43,6 +45,7 @@
 #include <engine/shared/compression.h>
 #include <engine/shared/config.h>
 #include <engine/shared/demo.h>
+#include <engine/shared/demo_output.h>
 #include <engine/shared/fifo.h>
 #include <engine/shared/filecollection.h>
 #include <engine/shared/masterserver.h>
@@ -3363,9 +3366,9 @@ static TVersion ToVersion(char *pStr)
 	return std::make_tuple(aVersion[0], aVersion[1], aVersion[2]);
 }
 
-void CClient::LoadDDNetInfo()
+void CClient::LoadDDNetInfo(IHttpRequest *pResponse)
 {
-	const json_value *pDDNetInfo = m_ServerBrowser.LoadDDNetInfo();
+	const json_value *pDDNetInfo = m_ServerBrowser.LoadDDNetInfo(pResponse);
 
 	if(!pDDNetInfo)
 	{
@@ -4035,12 +4038,13 @@ void CClient::Update()
 			if(m_ServerBrowser.DDNetInfoSha256() == m_pDDNetInfoTask->ResultSha256())
 			{
 				log_debug("client/info", "DDNet info already up-to-date");
-				m_InfoState = EInfoState::SUCCESS;
+				CHttpResponseValidation Validation(*m_pDDNetInfoTask);
+				m_InfoState = Validation.Commit() ? EInfoState::SUCCESS : EInfoState::ERROR;
 			}
 			else
 			{
 				log_debug("client/info", "Loading new DDNet info");
-				LoadDDNetInfo();
+				LoadDDNetInfo(m_pDDNetInfoTask.get());
 			}
 
 			ResetDDNetInfoTask();
@@ -4054,29 +4058,23 @@ void CClient::Update()
 
 	if(State() == IClient::STATE_ONLINE)
 	{
-		if(!m_EditJobs.empty())
-		{
-			std::shared_ptr<CDemoEdit> pJob = m_EditJobs.front();
-			if(pJob->State() == IJob::STATE_DONE)
+		replay_save::ConsumeCompleted(m_EditJobs, [this](const std::shared_ptr<CDemoEdit> &pJob) {
+			char aBuf[IO_MAX_PATH_LENGTH + 64];
+			if(pJob->Success())
 			{
-				char aBuf[IO_MAX_PATH_LENGTH + 64];
-				if(pJob->Success())
-				{
-					str_format(aBuf, sizeof(aBuf), "Successfully saved the replay to '%s'!", pJob->Destination());
-					m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", aBuf);
+				str_format(aBuf, sizeof(aBuf), "Successfully saved the replay to '%s'!", pJob->Destination());
+				m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", aBuf);
 
-					GameClient()->Echo(Localize("Successfully saved the replay!"));
-				}
-				else
-				{
-					str_format(aBuf, sizeof(aBuf), "Failed saving the replay to '%s'...", pJob->Destination());
-					m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", aBuf);
-
-					GameClient()->Echo(Localize("Failed saving the replay!"));
-				}
-				m_EditJobs.pop_front();
+				GameClient()->Echo(Localize("Successfully saved the replay!"));
 			}
-		}
+			else
+			{
+				str_format(aBuf, sizeof(aBuf), "Failed saving the replay to '%s'...", pJob->Destination());
+				m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", aBuf);
+
+				GameClient()->Echo(Localize("Failed saving the replay!"));
+			}
+		});
 	}
 
 	// update the server browser
@@ -4639,8 +4637,7 @@ void CClient::Run()
 					const int64_t FrameEnd = time_get();
 					const double FrameMs = m_QmPerfLastFrameEnd != 0 ? (FrameEnd - m_QmPerfLastFrameEnd) * 1000.0 / time_freq() : 0.0;
 					m_QmPerfLastFrameEnd = FrameEnd;
-					if(m_QmPerfFrameBatch.Record(PerfFrame(), FrameMs))
-						QmPerfLogFields("perf/frame", m_QmPerfFrameBatch.TakeFields(), this);
+					m_QmPerfFrameBatch.RecordAndLog(PerfFrame(), FrameMs, this);
 				}
 				// 只在连接/加载阶段记录，避免菜单和游戏内每帧刷屏
 				if(g_Config.m_QmGraphicsTrace >= 3 &&
@@ -5103,14 +5100,10 @@ void CClient::StartVideo(const char *pFilename, bool WithTimestamp)
 
 	// wait for idle, so there is no data race
 	Graphics()->WaitForIdle();
-	// pause the sound device while creating the video instance
-	Sound()->PauseAudioDevice();
-	new CVideo(Graphics(), Sound(), Storage(), Graphics()->ScreenWidth(), Graphics()->ScreenHeight(), aFilename);
-	Sound()->UnpauseAudioDevice();
-	if(!IVideo::Current()->Start())
+	if(!StartVideoRecorder(*Sound(), [&] {
+		   return new CVideo(Graphics(), Sound(), Storage(), Graphics()->ScreenWidth(), Graphics()->ScreenHeight(), aFilename);
+	   }))
 	{
-		// Release partially initialized recorder state (threads/ffmpeg resources).
-		IVideo::Current()->Stop();
 		log_error("videorecorder", "Failed to start recording to '%s'", aFilename);
 		m_DemoPlayer.Stop("Failed to start video recording. See local console for details.");
 		return;
@@ -5290,71 +5283,69 @@ void CClient::Con_SaveReplay(IConsole::IResult *pResult, void *pUserData)
 
 void CClient::SaveReplay(const int Length, const char *pFilename)
 {
-	if(!g_Config.m_ClReplays)
-	{
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "Feature is disabled. Please enable it via configuration.");
-		GameClient()->Echo(Localize("Replay feature is disabled!"));
-		return;
-	}
-
-	if(!DemoRecorder(RECORDER_REPLAYS)->IsRecording())
-	{
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "ERROR: demorecorder isn't recording. Try to rejoin to fix that.");
-	}
-	else if(DemoRecorder(RECORDER_REPLAYS)->Length() < 1)
-	{
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "ERROR: demorecorder isn't recording for at least 1 second.");
-	}
-	else
-	{
-		char aFilename[IO_MAX_PATH_LENGTH];
-		if(pFilename[0] == '\0')
+	const auto ReportFailure = [this]() noexcept {
+		try
 		{
-			char aTimestamp[20];
-			str_timestamp(aTimestamp, sizeof(aTimestamp));
-			str_format(aFilename, sizeof(aFilename), "demos/highlight/高光-%s.demo", aTimestamp);
+			GameClient()->Echo(Localize("Failed to save demo"));
+		}
+		catch(...)
+		{
+		}
+	};
+	try
+	{
+		if(!g_Config.m_ClReplays)
+		{
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "Feature is disabled. Please enable it via configuration.");
+			GameClient()->Echo(Localize("Replay feature is disabled!"));
+			return;
+		}
+
+		IDemoRecorder *pRecorder = DemoRecorder(RECORDER_REPLAYS);
+		if(!pRecorder->IsRecording())
+		{
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "ERROR: demorecorder isn't recording. Try to rejoin to fix that.");
+		}
+		else if(pRecorder->Length() < 1)
+		{
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "ERROR: demorecorder isn't recording for at least 1 second.");
 		}
 		else
 		{
-			str_format(aFilename, sizeof(aFilename), "demos/replays/%s.demo", pFilename);
-		}
-		const std::string Path = qmclient::media_paths::Resolve(Storage(), g_Config, aFilename);
-		if(!qmclient::media_paths::PrepareWrite(Storage(), Path))
-		{
-			GameClient()->Echo(Localize("Failed to save demo"));
-			return;
-		}
-		str_copy(aFilename, Path.c_str());
-		if(pFilename[0] != '\0')
-		{
-			IOHANDLE Handle = m_pStorage->OpenFile(aFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE);
-			if(!Handle)
+			char aFilename[IO_MAX_PATH_LENGTH];
+			if(pFilename[0] == '\0')
 			{
-				m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "ERROR: invalid filename. Try a different one!");
-				GameClient()->Echo(Localize("Failed to save demo"));
+				char aTimestamp[20];
+				str_timestamp(aTimestamp, sizeof(aTimestamp));
+				str_format(aFilename, sizeof(aFilename), "demos/highlight/高光-%s.demo", aTimestamp);
+			}
+			else
+			{
+				str_format(aFilename, sizeof(aFilename), "demos/replays/%s.demo", pFilename);
+			}
+			const std::string Path = qmclient::media_paths::Resolve(Storage(), g_Config, aFilename);
+			if(!demo_output::ValidDestination(*Storage(), Path.c_str()) || !qmclient::media_paths::PrepareWrite(Storage(), Path))
+			{
+				ReportFailure();
 				return;
 			}
-			io_close(Handle);
-			m_pStorage->RemoveFile(aFilename, qmclient::media_paths::StorageType(aFilename));
+			str_copy(aFilename, Path.c_str());
+			const int EndTick = GameTick(g_Config.m_ClDummy);
+			const int StartTick = replay_save::StartTick(EndTick, Length, GameTickSpeed());
+			const auto Result = replay_save::Submit(*pRecorder, m_EditJobs, [&]() { return std::make_shared<CDemoEdit>(GameClient()->NetVersion(), &*m_pSnapshotDelta, &*m_pSnapshotDeltaSixup, m_pStorage, pRecorder->CurrentFilename(), aFilename, StartTick, EndTick); }, [this](const std::shared_ptr<CDemoEdit> &pJob) { return Engine()->TryAddJob(pJob); }, [this]() {
+				DemoRecorder_UpdateReplayRecorder();
+				return !g_Config.m_ClReplays || DemoRecorder(RECORDER_REPLAYS)->IsRecording(); });
+			if(Result.m_Outcome == replay_save::EOutcome::SUBMITTED)
+				m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "Saving replay...");
+			else
+				ReportFailure();
+			if(Result.m_RestartFailed)
+				log_warn("replay", "Replay recording could not be restarted");
 		}
-
-		// Stop the recorder to correctly slice the demo after
-		DemoRecorder(RECORDER_REPLAYS)->Stop(IDemoRecorder::EStopMode::KEEP_FILE);
-
-		// Slice the demo to get only the last cl_replay_length seconds
-		const char *pSrc = DemoRecorder(RECORDER_REPLAYS)->CurrentFilename();
-		const int EndTick = GameTick(g_Config.m_ClDummy);
-		const int StartTick = EndTick - Length * GameTickSpeed();
-
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "Saving replay...");
-
-		// Create a job to do this slicing in background because it can be a bit long depending on the file size
-		std::shared_ptr<CDemoEdit> pDemoEditTask = std::make_shared<CDemoEdit>(GameClient()->NetVersion(), &*m_pSnapshotDelta, &*m_pSnapshotDeltaSixup, m_pStorage, pSrc, aFilename, StartTick, EndTick);
-		Engine()->AddJob(pDemoEditTask);
-		m_EditJobs.push_back(pDemoEditTask);
-
-		// And we restart the recorder
-		DemoRecorder_UpdateReplayRecorder();
+	}
+	catch(...)
+	{
+		ReportFailure();
 	}
 }
 
@@ -5443,7 +5434,12 @@ const char *CClient::DemoPlayer_Play(const char *pFilename, int StorageType)
 		m_aapSnapshots[0][SnapshotType]->m_Tick = -1;
 	}
 
-	m_DemoPlayer.Play();
+	if(!m_DemoPlayer.Play())
+	{
+		const char *pError = m_DemoPlayer.ErrorMessage()[0] != '\0' ? m_DemoPlayer.ErrorMessage() : Localize("Error playing demo");
+		DisconnectWithReason(pError);
+		return pError;
+	}
 	GameClient()->OnEnterGame();
 
 	return nullptr;
@@ -5662,46 +5658,27 @@ void CClient::BenchmarkQuit(int Seconds, const char *pFilename)
 
 void CClient::StartHangWatchdog()
 {
-	if(m_HangWatchdogThread.joinable())
+	if(m_HangWatchdog.Started())
 		return;
-
-	m_HangWatchdogStop.store(false, std::memory_order_release);
-	m_HangInfo.StartWatchdog();
-	if(m_aHangDumpDir[0] == '\0' && Storage() != nullptr)
-		Storage()->GetCompletePath(IStorage::TYPE_SAVE, gs_pQmCrashDumpDir, m_aHangDumpDir, sizeof(m_aHangDumpDir));
-	UpdateHangHeartbeat();
-
-	m_HangWatchdogThread = std::thread([this]() {
-		// 必须使用单调时钟（time_get_nanoseconds）而不是 time_get()：后者只在主循环
-		// set_new_tick() 后刷新一次，主线程卡住时全进程时钟冻结，看门狗将永远无法
-		// 感知心跳停滞。看门狗线程恰恰需要在主线程阻塞时继续计时。
+	try
+	{
+		if(m_aHangDumpDir[0] == '\0' && Storage() != nullptr)
+			Storage()->GetCompletePath(IStorage::TYPE_SAVE, gs_pQmCrashDumpDir, m_aHangDumpDir, sizeof(m_aHangDumpDir));
+		UpdateHangHeartbeat();
 		const int64_t TimeoutNanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(gs_HangTimeoutSeconds)).count();
-		while(!m_HangWatchdogStop.load(std::memory_order_acquire))
-		{
-			std::this_thread::sleep_for(1s);
-			if(m_HangWatchdogStop.load(std::memory_order_acquire))
-				break;
-			const int64_t LastHeartbeat = m_HangInfo.LastHeartbeat();
-			if(LastHeartbeat == 0)
-				continue;
-			const int64_t Now = time_get_nanoseconds().count();
-			if(Now - LastHeartbeat >= TimeoutNanoseconds)
-			{
-				const auto Snapshot = m_HangInfo.TryClaimReport(Now, TimeoutNanoseconds);
-				if(Snapshot.has_value())
-					WriteHangReportAndDump(Now, *Snapshot);
-			}
-		}
-	});
+		if(!m_HangWatchdog.Start(m_HangInfo.Read(), TimeoutNanoseconds, [](void *pUser, int64_t Now, const QmHangDiagnostics::SSnapshot &Snapshot) { static_cast<CClient *>(pUser)->WriteHangReportAndDump(Now, Snapshot); }, this))
+			log_warn("hang", "failed to start hang watchdog");
+	}
+	catch(...)
+	{
+		// 路径或心跳准备失败不影响客户端运行，活动状态仍须回收。
+		m_HangWatchdog.Stop();
+	}
 }
 
 void CClient::StopHangWatchdog()
 {
-	// 停止状态和报告领取同步，防止休眠中的看门狗醒来后领取新报告。
-	m_HangInfo.StopWatchdog();
-	m_HangWatchdogStop.store(true, std::memory_order_release);
-	if(m_HangWatchdogThread.joinable())
-		m_HangWatchdogThread.join();
+	m_HangWatchdog.Stop();
 }
 
 void CClient::UpdateHangHeartbeat()
@@ -5744,6 +5721,7 @@ void CClient::WriteHangReportAndDump(int64_t Now, const QmHangDiagnostics::SSnap
 	IOHANDLE File = io_open(aReportPath, IOFLAG_WRITE);
 	if(File)
 	{
+		std::unique_ptr<void, decltype(&io_close)> FileOwner(File, &io_close);
 		const int64_t LastHeartbeat = Snapshot.m_LastHeartbeat;
 		const float SecondsSinceHeartbeat = (Now - LastHeartbeat) / 1e9f;
 		char aOsVersion[128];
@@ -5791,7 +5769,6 @@ void CClient::WriteHangReportAndDump(int64_t Now, const QmHangDiagnostics::SSnap
 		io_write(File, aBuf, str_length(aBuf));
 
 		io_sync(File);
-		io_close(File);
 	}
 
 #if defined(CONF_FAMILY_WINDOWS)
@@ -5804,8 +5781,17 @@ void CClient::WriteHangReportAndDump(int64_t Now, const QmHangDiagnostics::SSnap
 	fs_makedir_rec_for(aDumpPath);
 	const auto DumpResult = QmHangDiagnostics::WriteDump(aDumpPath);
 	if(!DumpResult.Written())
-		log_warn("hang", "failed to write minidump '%s': stage=%s error=%lu (%s)", aDumpPath,
-			QmHangDiagnostics::DumpStageName(DumpResult.m_Stage), DumpResult.m_Error, windows_format_system_message(DumpResult.m_Error).c_str());
+	{
+		try
+		{
+			log_warn("hang", "failed to write minidump '%s': stage=%s error=%lu (%s)", aDumpPath,
+				QmHangDiagnostics::DumpStageName(DumpResult.m_Stage), DumpResult.m_Error, windows_format_system_message(DumpResult.m_Error).c_str());
+		}
+		catch(...)
+		{
+			// 附加错误说明分配失败后，仍继续追加原始结果和尝试报告器。
+		}
+	}
 	if(!QmHangDiagnostics::AppendDumpResult(aReportPath, aDumpPath, DumpResult))
 		log_warn("hang", "failed to append minidump result to '%s': status=%s stage=%s error=%lu dump='%s'", aReportPath,
 			DumpResult.Written() ? "written" : "failed", QmHangDiagnostics::DumpStageName(DumpResult.m_Stage), DumpResult.m_Error, aDumpPath);
@@ -6452,7 +6438,19 @@ int main(int argc, const char **argv)
 	}
 	gs_AndroidStarted = true;
 #elif defined(CONF_FAMILY_WINDOWS)
-	CWindowsComLifecycle WindowsComLifecycle(true);
+	CWindowsComLifecycle WindowsComLifecycle(true, CWindowsComLifecycle::EInitMode::CHECKED);
+	if(!WindowsComLifecycle.IsInitialized())
+	{
+		try
+		{
+			log_error("client", "Failed to initialize Windows COM.");
+		}
+		catch(...)
+		{
+			// 诊断失败不影响失败退出。
+		}
+		return -1;
+	}
 #endif
 	CCmdlineFix CmdlineFix(&argc, &argv);
 
@@ -6806,6 +6804,13 @@ int main(int argc, const char **argv)
 
 	// create the components
 	IEngine *pEngine = CreateEngine(GAME_NAME, pFutureConsoleLogger);
+	if(!pEngine)
+	{
+		log_error("client", "Failed to initialize worker threads");
+		pClient->ShowMessageBox({.m_pTitle = "Initialization Error", .m_pMessage = "Failed to initialize worker threads. Close other applications and try again."});
+		PerformAllCleanup();
+		return -1;
+	}
 	pKernel->RegisterInterface(pEngine, false);
 	CleanerFunctions.emplace([pEngine]() {
 		// Engine has to be destroyed before the graphics so that skin download thread can finish
@@ -7027,26 +7032,22 @@ int main(int argc, const char **argv)
 		pSteam->ClearConnectAddress();
 	}
 
+	std::shared_ptr<ILogger> pConfiguredFileLogger(log_logger_noop());
 	if(g_Config.m_Logfile[0])
 	{
-		const int Mode = g_Config.m_Logappend ? IOFLAG_APPEND : IOFLAG_WRITE;
-		IOHANDLE Logfile = pStorage->OpenFile(g_Config.m_Logfile, Mode, IStorage::TYPE_SAVE_OR_ABSOLUTE);
-		if(Logfile)
-		{
+		const bool Prepared = log_prepare_backend(pConfiguredFileLogger, [&]() -> std::unique_ptr<ILogger> {
+			const int Mode = g_Config.m_Logappend ? IOFLAG_APPEND : IOFLAG_WRITE;
+			const IOHANDLE Logfile = pStorage->OpenFile(g_Config.m_Logfile, Mode, IStorage::TYPE_SAVE_OR_ABSOLUTE);
+			if(!Logfile)
+				return nullptr;
 			auto pFileLogger = log_logger_file(Logfile);
 			pFileLogger->SetFilter(CLogFilter{IConsole::ToLogLevelFilter(g_Config.m_Loglevel)});
-			pFutureFileLogger->Set(std::move(pFileLogger));
-		}
-		else
-		{
+			return pFileLogger;
+		});
+		if(!Prepared)
 			log_error("client", "failed to open '%s' for logging", g_Config.m_Logfile);
-			pFutureFileLogger->Set(log_logger_noop());
-		}
 	}
-	else
-	{
-		pFutureFileLogger->Set(log_logger_noop());
-	}
+	pFutureFileLogger->Set(std::move(pConfiguredFileLogger));
 
 	// 性能日志文件：CFutureLogger 只能 Set 一次，启动时固定到可切换包装；
 	// 游戏内 qm_perf_debug / qm_perf_logfile / qm_perf_stutter_diagnostics 任一
@@ -7222,7 +7223,8 @@ void CClient::RequestDDNetInfo()
 		str_append(aUrl, aEscaped);
 	}
 
-	m_pDDNetInfoTask = HttpGetFile(aUrl, Storage(), DDNET_INFO_FILE, IStorage::TYPE_SAVE);
+	m_pDDNetInfoTask = HttpGetBoth(aUrl, Storage(), DDNET_INFO_FILE, IStorage::TYPE_SAVE);
+	m_pDDNetInfoTask->ValidateBeforeOverwrite(true);
 	m_pDDNetInfoTask->Timeout(CTimeout{10000, 0, 500, 10});
 	m_pDDNetInfoTask->SkipByFileTime(false); // Always re-download.
 	// Use ipv4 so we can know the ingame ip addresses of players before they join game servers
@@ -7627,56 +7629,74 @@ void CClient::UpdateQmPerfFileLogger()
 
 	if(Wanted)
 	{
-		m_pStorage->CreateFolder("dumps", IStorage::TYPE_SAVE);
-		m_pStorage->CreateFolder("dumps/QmClient_Perf", IStorage::TYPE_SAVE);
-		char aDate[64];
-		str_timestamp(aDate, sizeof(aDate));
-		char aPerfLogPath[128];
-		// 每次开启都新建文件、绝不覆盖旧日志：首次用干净时间戳名，
-		// 之后（同一进程内）追加递增序号。
-		++m_QmPerfLogReopenCounter;
-		if(m_QmPerfLogReopenCounter == 1)
-			str_format(aPerfLogPath, sizeof(aPerfLogPath), "dumps/QmClient_Perf/qm_perf_%s.log", aDate);
-		else
-			str_format(aPerfLogPath, sizeof(aPerfLogPath), "dumps/QmClient_Perf/qm_perf_%s_%d.log", aDate, m_QmPerfLogReopenCounter);
+		char aPerfLogCompletePath[IO_MAX_PATH_LENGTH] = {};
+		std::shared_ptr<ILogger> pPrepared;
+		const bool Prepared = log_prepare_backend(pPrepared, [&]() -> std::unique_ptr<ILogger> {
+			m_pStorage->CreateFolder("dumps", IStorage::TYPE_SAVE);
+			m_pStorage->CreateFolder("dumps/QmClient_Perf", IStorage::TYPE_SAVE);
+			char aDate[64];
+			str_timestamp(aDate, sizeof(aDate));
+			char aPerfLogPath[128];
+			// 每次开启都新建文件、绝不覆盖旧日志：首次用干净时间戳名，
+			// 之后（同一进程内）追加递增序号。
+			++m_QmPerfLogReopenCounter;
+			if(m_QmPerfLogReopenCounter == 1)
+				str_format(aPerfLogPath, sizeof(aPerfLogPath), "dumps/QmClient_Perf/qm_perf_%s.log", aDate);
+			else
+				str_format(aPerfLogPath, sizeof(aPerfLogPath), "dumps/QmClient_Perf/qm_perf_%s_%d.log", aDate, m_QmPerfLogReopenCounter);
 
-		char aPerfLogCompletePath[IO_MAX_PATH_LENGTH];
-		m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, aPerfLogPath, aPerfLogCompletePath, sizeof(aPerfLogCompletePath));
-		IOHANDLE PerfLogfile = m_pStorage->OpenFile(aPerfLogPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-		if(!PerfLogfile)
-		{
-			fs_makedir_rec_for(aPerfLogCompletePath);
-			PerfLogfile = io_open(aPerfLogCompletePath, IOFLAG_WRITE);
-		}
-		if(!PerfLogfile)
-		{
-			char aWorkingDir[IO_MAX_PATH_LENGTH];
-			if(fs_getcwd(aWorkingDir, sizeof(aWorkingDir)))
+			m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, aPerfLogPath, aPerfLogCompletePath, sizeof(aPerfLogCompletePath));
+			IOHANDLE PerfLogfile = m_pStorage->OpenFile(aPerfLogPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+			if(!PerfLogfile)
 			{
-				str_format(aPerfLogCompletePath, sizeof(aPerfLogCompletePath), "%s/%s", aWorkingDir, aPerfLogPath);
 				fs_makedir_rec_for(aPerfLogCompletePath);
 				PerfLogfile = io_open(aPerfLogCompletePath, IOFLAG_WRITE);
 			}
-		}
-		if(PerfLogfile)
+			if(!PerfLogfile)
+			{
+				char aWorkingDir[IO_MAX_PATH_LENGTH];
+				if(fs_getcwd(aWorkingDir, sizeof(aWorkingDir)))
+				{
+					str_format(aPerfLogCompletePath, sizeof(aPerfLogCompletePath), "%s/%s", aWorkingDir, aPerfLogPath);
+					fs_makedir_rec_for(aPerfLogCompletePath);
+					PerfLogfile = io_open(aPerfLogCompletePath, IOFLAG_WRITE);
+				}
+			}
+			if(!PerfLogfile)
+				return nullptr;
+			return log_logger_prefix_file(PerfLogfile, "perf/");
+		});
+		bool Published = false;
+		if(Prepared)
 		{
-			m_QmPerfFileLoggerActive = true;
-			QmPerfBeginSession();
-			m_QmPerfLastFrameEnd = 0;
-			m_QmPerfFrameBatch = CQmPerfFrameBatch();
-			m_pQmPerfFileSwitch->Set(log_logger_prefix_file(PerfLogfile, "perf/"));
-			QmPerfLogFields("perf/session", "\"event\":\"session_start\",\"schema\":2,\"sampling\":\"automatic\",\"frame_samples\":\"all\",\"target_fps\":300,\"version\":" + QmPerfJsonString(CLIENT_RELEASE_VERSION), this);
-			// QmClient：日志文件就绪后先写一次完整配置快照（敏感项脱敏），
-			// 之后由主循环按秒写增量；见 perf_diagnostics.h。
-			m_QmPerfConfigSnapshot.Start(ConfigManager(), this);
-			m_QmPerfLastConfigCheck = time_get();
-			log_info("client", "writing performance log to '%s'", aPerfLogCompletePath);
+			try
+			{
+				m_pQmPerfFileSwitch->Set(std::move(pPrepared));
+				Published = true;
+			}
+			catch(...)
+			{
+			}
 		}
-		else
+		if(!Published)
 		{
-			// 打开失败不重试（避免每帧刷屏），等下次配置变化再尝试。
 			log_error("client", "failed to open '%s' for performance logging", aPerfLogCompletePath);
+			return;
 		}
+		m_QmPerfFileLoggerActive = true;
+		QmPerfBeginSession();
+		m_QmPerfLastFrameEnd = 0;
+		m_QmPerfFrameBatch = CQmPerfFrameBatch();
+		try
+		{
+			QmPerfLogFields("perf/session", "\"event\":\"session_start\",\"schema\":2,\"sampling\":\"automatic\",\"frame_samples\":\"all\",\"target_fps\":300,\"version\":" + QmPerfJsonString(CLIENT_RELEASE_VERSION), this);
+		}
+		catch(...)
+		{
+		}
+		m_QmPerfConfigSnapshot.Start(ConfigManager(), this);
+		m_QmPerfLastConfigCheck = time_get();
+		log_info("client", "writing performance log to '%s'", aPerfLogCompletePath);
 	}
 	else
 	{
@@ -7687,18 +7707,37 @@ void CClient::UpdateQmPerfFileLogger()
 }
 
 // 关闭采集前的收尾：补齐帧批次、配置增量、被限流丢弃的明细与会话结束标记，
-// 再把文件 logger 换回 noop（退出用同步，运行中切走用作业线程）。
+// 再断开文件后端（退出用同步，运行中切走用预先准备的关闭任务）。
 void CClient::FinishQmPerfSession(bool Shutdown)
 {
-	if(m_QmPerfFrameBatch.Count() != 0)
-		QmPerfLogFields("perf/frame", m_QmPerfFrameBatch.TakeFields(), this);
-	m_QmPerfConfigSnapshot.Update(this);
-	QmPerfFlushDropped(this);
-	QmPerfLogFields("perf/session", std::string("\"event\":\"session_end\",\"reason\":") + QmPerfJsonString(Shutdown ? "shutdown" : "disabled"), this);
+	try
+	{
+		m_QmPerfFrameBatch.Flush(this);
+		m_QmPerfConfigSnapshot.Update(this);
+		QmPerfFlushDropped(this);
+		QmPerfLogFields("perf/session", std::string("\"event\":\"session_end\",\"reason\":") + QmPerfJsonString(Shutdown ? "shutdown" : "disabled"), this);
+	}
+	catch(...)
+	{
+		// 诊断文本失败仍须关闭文件并停止采集。
+	}
 	if(Shutdown)
-		m_pQmPerfFileSwitch->Set(log_logger_noop());
+		m_pQmPerfFileSwitch->Set(nullptr);
 	else
-		Engine()->AddJob(m_pQmPerfFileSwitch->SetAsync(log_logger_noop()));
+	{
+		auto pClose = m_pQmPerfFileSwitch->SetAsync(nullptr);
+		if(pClose)
+		{
+			try
+			{
+				// 拒绝或异常时 Switch 仍持有关闭任务，退出收尾可继续接管。
+				Engine()->TryAddJob(std::move(pClose));
+			}
+			catch(...)
+			{
+			}
+		}
+	}
 	m_QmPerfFileLoggerActive = false;
 	m_QmPerfLastFrameEnd = 0;
 }

@@ -152,7 +152,13 @@ public:
 		}
 	}
 
-	void UpdateFromSdl(const char *const *ppCandidates, int Count, int SelectedIndex, bool WindowsNumberedCandidates, std::optional<SQmImeCandidateList> NativeCandidates = std::nullopt)
+	void UpdateFromSdl(const char *const *ppCandidates, int Count, int SelectedIndex, bool WindowsNumberedCandidates, std::optional<SQmImeCandidateList> NativeCandidates = std::nullopt) noexcept
+	{
+		UpdateFromSdl(ppCandidates, Count, SelectedIndex, WindowsNumberedCandidates, std::move(NativeCandidates), [](const char *pText) { return std::string(pText); });
+	}
+
+	template<typename TCopy>
+	void UpdateFromSdl(const char *const *ppCandidates, int Count, int SelectedIndex, bool WindowsNumberedCandidates, std::optional<SQmImeCandidateList> NativeCandidates, TCopy &&Copy) noexcept
 	{
 		if(Count <= 0 || ppCandidates == nullptr)
 		{
@@ -168,18 +174,26 @@ public:
 			return;
 		}
 
-		Clear();
-		m_Candidates.m_vCandidates.reserve(Count);
-		for(int i = 0; i < Count; ++i)
+		try
 		{
-			const char *pCandidate = ppCandidates[i] != nullptr ? ppCandidates[i] : "";
-			// SDL 的 Windows 后端已加上一位数字和空格，候选窗会自行绘制序号。
-			if(WindowsNumberedCandidates && pCandidate[0] >= '0' && pCandidate[0] <= '9' && pCandidate[1] == ' ')
-				pCandidate += 2;
-			m_Candidates.m_vCandidates.emplace_back(pCandidate);
+			SQmImeCandidateList LoadedCandidates;
+			LoadedCandidates.m_vCandidates.reserve(Count);
+			for(int i = 0; i < Count; ++i)
+			{
+				const char *pCandidate = ppCandidates[i] != nullptr ? ppCandidates[i] : "";
+				// SDL 的 Windows 后端已加上一位数字和空格，候选窗会自行绘制序号。
+				if(WindowsNumberedCandidates && pCandidate[0] >= '0' && pCandidate[0] <= '9' && pCandidate[1] == ' ')
+					pCandidate += 2;
+				LoadedCandidates.m_vCandidates.push_back(Copy(pCandidate));
+			}
+			LoadedCandidates.m_SelectedIndex = SelectedIndex >= 0 && SelectedIndex < Count ? SelectedIndex : -1;
+			LoadedCandidates.m_PageSize = LoadedCandidates.m_TotalCount = Count;
+			m_Candidates = std::move(LoadedCandidates);
 		}
-		m_Candidates.m_SelectedIndex = SelectedIndex >= 0 && SelectedIndex < Count ? SelectedIndex : -1;
-		m_Candidates.m_PageSize = m_Candidates.m_TotalCount = Count;
+		catch(...)
+		{
+			// 保留上一份完整快照，后续候选事件仍可重试。
+		}
 	}
 
 private:

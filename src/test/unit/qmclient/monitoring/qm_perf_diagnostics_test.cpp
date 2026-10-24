@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -176,4 +177,17 @@ TEST(QmPerfDiagnostics, ConfigValueSerializationKeepsNumericTypesAndRedactsSecre
 	SStringConfigVariable StringVar(nullptr, "qm_test_token", SConfigVariable::VAR_STRING, CFGFLAG_CLIENT, "", "", aString, "default-secret", sizeof(aString), aOldString);
 	EXPECT_TRUE(QmPerfReadConfigValue(StringVar).m_Redacted);
 	EXPECT_EQ(QmPerfReadConfigValue(StringVar).m_Value, "<redacted>");
+}
+
+TEST(QmPerfDiagnostics, JsonEscapeBufferAcceptsLargestIntRepresentableLength)
+{
+	const size_t MaximumLength = (static_cast<size_t>(std::numeric_limits<int>::max()) - 1) / 6;
+	EXPECT_LE(QmPerfJsonBufferSize(MaximumLength), static_cast<size_t>(std::numeric_limits<int>::max()));
+	EXPECT_THROW(QmPerfJsonBufferSize(MaximumLength + 1), std::length_error);
+}
+
+TEST(QmPerfDiagnostics, JsonEscapeBufferRejectsSizeOverflowBeforeAllocating)
+{
+	EXPECT_EQ(QmPerfJsonBufferSize(0), 1u);
+	EXPECT_THROW(QmPerfJsonBufferSize(std::numeric_limits<size_t>::max()), std::length_error);
 }

@@ -98,6 +98,21 @@ TEST(QmTitleBadge, VisualBoundsAreRelativeToTheBakedTextOrigin)
 	EXPECT_FLOAT_EQ(Bounds.h, 14.0f);
 }
 
+TEST(QmTitleBadge, MissingVisualBoundsUsesTheMeasuredCursorHeight)
+{
+	CTextCursor Cursor;
+	Cursor.SetPosition(vec2(10.0f, 20.0f));
+	Cursor.m_LongestLineWidth = 55.0f;
+	Cursor.m_LineCount = 3;
+	Cursor.m_AlignedFontSize = 14.0f;
+	Cursor.m_AlignedLineSpacing = 2.0f;
+	const CUIRect Bounds = QmTitleBadgeVisualBounds(Cursor);
+	EXPECT_FLOAT_EQ(Bounds.x, 0.0f);
+	EXPECT_FLOAT_EQ(Bounds.y, 0.0f);
+	EXPECT_FLOAT_EQ(Bounds.w, 55.0f);
+	EXPECT_FLOAT_EQ(Bounds.h, 48.0f);
+}
+
 TEST(QmTitleBadge, DefaultMoonPaletteMatchesDarkFigmaVariant)
 {
 	const auto Palette = QmTitleBadgePalette({});

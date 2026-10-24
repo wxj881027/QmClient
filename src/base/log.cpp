@@ -1,10 +1,12 @@
 #include "color.h"
 #include "dbg.h"
 #include "logger.h"
+#include "logger_async.h"
 #include "str.h"
 #include "system.h"
 #include "time.h"
 #include "windows.h"
+#include "windows_logger.h"
 
 #include <atomic>
 #include <cstdio>
@@ -116,7 +118,15 @@ void log_set_scope_logger(ILogger *logger)
 	int MessageSize = sizeof(Msg.m_aLine) - Msg.m_LineMessageOffset;
 	str_format_v(pMessage, MessageSize, fmt, args);
 	Msg.m_LineLength = str_length(Msg.m_aLine);
-	scope_logger->Log(&Msg);
+	try
+	{
+		scope_logger->Log(&Msg);
+	}
+	catch(...)
+	{
+		// 后端分配或写入异常不能打断业务；这里不能再递归记录失败。
+		// 仍恢复递归标记，让下一条日志可以再次访问后端。
+	}
 	in_logger = false;
 }
 
@@ -259,68 +269,64 @@ std::unique_ptr<ILogger> log_logger_prefix_router(std::shared_ptr<ILogger> pPref
 	return std::make_unique<CPrefixRouterLogger>(std::move(pPrefixLogger), std::move(pFallbackLogger), pSystemPrefix);
 }
 
-class CLoggerAsync : public ILogger
+CLoggerAsync::CLoggerAsync(IOHANDLE File, bool AnsiTruecolor, bool Close, ASYNCIO *(*Create)(IOHANDLE)) :
+	m_pAio((Create ? Create : aio_new)(File)),
+	m_AnsiTruecolor(AnsiTruecolor),
+	m_Close(Close)
 {
-	ASYNCIO *m_pAio;
-	bool m_AnsiTruecolor;
-	bool m_Close;
+	// AIO 创建失败时尚未接管文件；标准输出等借用句柄仍由调用方持有。
+	if(!m_pAio && m_Close)
+		io_close(File);
+}
 
-public:
-	CLoggerAsync(IOHANDLE File, bool AnsiTruecolor, bool Close) :
-		m_pAio(aio_new(File)),
-		m_AnsiTruecolor(AnsiTruecolor),
-		m_Close(Close)
+void CLoggerAsync::Log(const CLogMessage *pMessage)
+{
+	if(!m_pAio || m_Filter.Filters(pMessage))
+		return;
+	aio_lock(m_pAio);
+	if(m_AnsiTruecolor && pMessage->m_HaveColor)
 	{
+		// https://en.wikipedia.org/w/index.php?title=ANSI_escape_code&oldid=1077146479#24-bit
+		char aAnsi[32];
+		str_format(aAnsi, sizeof(aAnsi),
+			"\x1b[38;2;%d;%d;%dm",
+			pMessage->m_Color.r,
+			pMessage->m_Color.g,
+			pMessage->m_Color.b);
+		aio_write_unlocked(m_pAio, aAnsi, str_length(aAnsi));
 	}
-	void Log(const CLogMessage *pMessage) override
+	aio_write_unlocked(m_pAio, pMessage->m_aLine, pMessage->m_LineLength);
+	if(m_AnsiTruecolor && pMessage->m_HaveColor)
 	{
-		if(m_Filter.Filters(pMessage))
-		{
-			return;
-		}
-		aio_lock(m_pAio);
-		if(m_AnsiTruecolor && pMessage->m_HaveColor)
-		{
-			// https://en.wikipedia.org/w/index.php?title=ANSI_escape_code&oldid=1077146479#24-bit
-			char aAnsi[32];
-			str_format(aAnsi, sizeof(aAnsi),
-				"\x1b[38;2;%d;%d;%dm",
-				pMessage->m_Color.r,
-				pMessage->m_Color.g,
-				pMessage->m_Color.b);
-			aio_write_unlocked(m_pAio, aAnsi, str_length(aAnsi));
-		}
-		aio_write_unlocked(m_pAio, pMessage->m_aLine, pMessage->m_LineLength);
-		if(m_AnsiTruecolor && pMessage->m_HaveColor)
-		{
-			const char aResetColor[] = "\x1b[0m";
-			aio_write_unlocked(m_pAio, aResetColor, str_length(aResetColor)); // reset
-		}
-		aio_write_newline_unlocked(m_pAio);
-		aio_unlock(m_pAio);
+		const char aResetColor[] = "\x1b[0m";
+		aio_write_unlocked(m_pAio, aResetColor, str_length(aResetColor)); // reset
 	}
-	~CLoggerAsync() override
-	{
-		if(m_Close)
-		{
-			aio_close(m_pAio);
-		}
-		aio_wait(m_pAio);
+	aio_write_newline_unlocked(m_pAio);
+	aio_unlock(m_pAio);
+}
+
+CLoggerAsync::~CLoggerAsync()
+{
+	GlobalFinish();
+	if(m_pAio)
 		aio_free(m_pAio);
-	}
-	void GlobalFinish() override
-	{
+}
+
+void CLoggerAsync::GlobalFinish()
+{
+	if(!m_pAio)
+		return;
+	// 共享日志路由可能多次结束同一个后端；并发调用也等待同一次刷盘完成。
+	std::call_once(m_FinishOnce, [this] {
 		if(m_Close)
-		{
 			aio_close(m_pAio);
-		}
 		aio_wait(m_pAio);
-	}
-};
+	});
+}
 
 std::unique_ptr<ILogger> log_logger_file(IOHANDLE logfile)
 {
-	return std::make_unique<CLoggerAsync>(logfile, false, true);
+	return CLoggerAsync::CreateOwned(logfile, [](IOHANDLE File) { return std::make_unique<CLoggerAsync>(File, false, true); });
 }
 
 class CPrefixLogger : public ILogger
@@ -334,6 +340,7 @@ public:
 	{
 		str_copy(m_aSystemPrefix, pSystemPrefix);
 	}
+	bool IsAvailable() const noexcept override { return m_pLogger->IsAvailable(); }
 	void Log(const CLogMessage *pMessage) override
 	{
 		if(m_Filter.Filters(pMessage) || !str_startswith(pMessage->m_aSystem, m_aSystemPrefix))
@@ -352,7 +359,14 @@ public:
 
 std::unique_ptr<ILogger> log_logger_prefix_file(IOHANDLE logfile, const char *pSystemPrefix)
 {
-	return std::make_unique<CPrefixLogger>(log_logger_file(logfile), pSystemPrefix);
+	return log_logger_prefix(log_logger_file(logfile), pSystemPrefix);
+}
+
+std::unique_ptr<ILogger> log_logger_prefix(std::unique_ptr<ILogger> pLogger, const char *pSystemPrefix)
+{
+	if(!pLogger)
+		return nullptr;
+	return std::make_unique<CPrefixLogger>(std::move(pLogger), pSystemPrefix);
 }
 
 #if defined(CONF_FAMILY_WINDOWS)
@@ -449,13 +463,125 @@ public:
 	}
 };
 
-static IOHANDLE ConvertWindowsHandle(HANDLE pHandle, int OpenFlags)
+intptr_t CWindowsStdoutOperations::OutputHandle() noexcept { return reinterpret_cast<intptr_t>(GetStdHandle(STD_OUTPUT_HANDLE)); }
+unsigned long CWindowsStdoutOperations::OutputType(intptr_t Handle) noexcept { return GetFileType(reinterpret_cast<HANDLE>(Handle)); }
+void CWindowsStdoutOperations::AttachParentConsole() noexcept { AttachConsole(ATTACH_PARENT_PROCESS); }
+bool CWindowsStdoutOperations::ReadConsoleMode(intptr_t Handle, unsigned long *pMode) noexcept { return GetConsoleMode(reinterpret_cast<HANDLE>(Handle), pMode) != 0; }
+bool CWindowsStdoutOperations::WriteConsoleMode(intptr_t Handle, unsigned long Mode) noexcept { return SetConsoleMode(reinterpret_cast<HANDLE>(Handle), Mode) != 0; }
+unsigned int CWindowsStdoutOperations::OutputCodePage() noexcept { return GetConsoleOutputCP(); }
+bool CWindowsStdoutOperations::SetOutputCodePage(unsigned int CodePage) noexcept { return SetConsoleOutputCP(CodePage) != 0; }
+bool CWindowsStdoutOperations::ColorsEnabled() noexcept { return _wgetenv(L"NO_COLOR") == nullptr; }
+
+intptr_t CWindowsStdoutOperations::DuplicateOutput(intptr_t Handle) noexcept
 {
-	int FileDescriptor = _open_osfhandle(reinterpret_cast<intptr_t>(pHandle), OpenFlags);
-	dbg_assert(FileDescriptor != -1, "_open_osfhandle failure");
-	IOHANDLE FileStream = _wfdopen(FileDescriptor, L"w");
-	dbg_assert(FileStream != nullptr, "_wfdopen failure");
-	return FileStream;
+	HANDLE Copy = nullptr;
+	if(!DuplicateHandle(GetCurrentProcess(), reinterpret_cast<HANDLE>(Handle), GetCurrentProcess(), &Copy, 0, FALSE, DUPLICATE_SAME_ACCESS))
+		return 0;
+	return reinterpret_cast<intptr_t>(Copy);
+}
+
+std::unique_ptr<CLoggerAsync> CWindowsStdoutOperations::CreateAsyncLogger(IOHANDLE File, bool Colors)
+{
+	return std::make_unique<CLoggerAsync>(File, Colors, true);
+}
+
+std::unique_ptr<ILogger> CWindowsStdoutOperations::CreateConsoleLogger(intptr_t Handle, bool Colors)
+{
+	return std::make_unique<CWindowsConsoleLogger>(reinterpret_cast<HANDLE>(Handle), Colors);
+}
+
+static std::unique_ptr<ILogger> WindowsAsyncLogger(intptr_t Handle, int OpenFlags, bool Colors, CWindowsStdoutOperations &Operations) noexcept
+{
+	try
+	{
+		const intptr_t Copy = Operations.DuplicateOutput(Handle);
+		if(Copy == 0 || Copy == -1)
+			return nullptr;
+		const IOHANDLE File = windows_io_from_handle(Copy, "w", &Operations, OpenFlags);
+		if(!File)
+			return nullptr;
+		auto pLogger = CLoggerAsync::CreateOwned(File, [&](IOHANDLE Owned) { return Operations.CreateAsyncLogger(Owned, Colors); });
+		if(!pLogger || !pLogger->IsAvailable())
+			return nullptr;
+		return pLogger;
+	}
+	catch(...)
+	{
+		return nullptr;
+	}
+}
+
+class CWindowsConsoleSetup
+{
+	CWindowsStdoutOperations &m_Operations;
+	intptr_t m_Handle;
+	unsigned long m_OldMode;
+	unsigned int m_OldCodePage = 0;
+	bool m_ModeChanged = false;
+	bool m_Committed = false;
+
+public:
+	CWindowsConsoleSetup(CWindowsStdoutOperations &Operations, intptr_t Handle, unsigned long OldMode) :
+		m_Operations(Operations), m_Handle(Handle), m_OldMode(OldMode) {}
+	CWindowsConsoleSetup(const CWindowsConsoleSetup &) = delete;
+	CWindowsConsoleSetup &operator=(const CWindowsConsoleSetup &) = delete;
+	~CWindowsConsoleSetup()
+	{
+		if(!m_Committed)
+		{
+			if(m_OldCodePage)
+				m_Operations.SetOutputCodePage(m_OldCodePage);
+			if(m_ModeChanged)
+				m_Operations.WriteConsoleMode(m_Handle, m_OldMode);
+		}
+	}
+	void ModeChanged() { m_ModeChanged = true; }
+	void CodePageChanged(unsigned int OldCodePage) { m_OldCodePage = OldCodePage; }
+	void Commit() { m_Committed = true; }
+};
+
+std::unique_ptr<ILogger> log_logger_windows_stdout(CWindowsStdoutOperations *pOperations) noexcept
+{
+	CWindowsStdoutOperations DefaultOperations;
+	CWindowsStdoutOperations &Operations = pOperations ? *pOperations : DefaultOperations;
+	try
+	{
+		const intptr_t Initial = Operations.OutputHandle();
+		if(Initial == 0 || Initial == -1 || Operations.OutputType(Initial) == FILE_TYPE_UNKNOWN)
+			Operations.AttachParentConsole();
+		const intptr_t Output = Operations.OutputHandle();
+		if(Output == 0 || Output == -1)
+			return nullptr;
+		const unsigned long Type = Operations.OutputType(Output);
+		if(Type == FILE_TYPE_CHAR)
+		{
+			unsigned long OldMode = 0;
+			if(!Operations.ReadConsoleMode(Output, &OldMode))
+				return nullptr;
+			const bool Colors = Operations.ColorsEnabled();
+			CWindowsConsoleSetup Setup(Operations, Output, OldMode);
+			if(!Operations.WriteConsoleMode(Output, OldMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN) &&
+				!Operations.WriteConsoleMode(Output, OldMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+				return Operations.CreateConsoleLogger(Output, Colors);
+			Setup.ModeChanged();
+			const unsigned int OldCodePage = Operations.OutputCodePage();
+			if(!OldCodePage || !Operations.SetOutputCodePage(CP_UTF8))
+				return Operations.CreateConsoleLogger(Output, Colors);
+			Setup.CodePageChanged(OldCodePage);
+			auto pLogger = WindowsAsyncLogger(Output, _O_TEXT, Colors, Operations);
+			if(!pLogger)
+				return Operations.CreateConsoleLogger(Output, Colors);
+			Setup.Commit();
+			return pLogger;
+		}
+		if(Type == FILE_TYPE_DISK || Type == FILE_TYPE_PIPE)
+			return WindowsAsyncLogger(Output, _O_APPEND, false, Operations);
+		return nullptr;
+	}
+	catch(...)
+	{
+		return nullptr;
+	}
 }
 #endif
 
@@ -467,68 +593,7 @@ std::unique_ptr<ILogger> log_logger_stdout()
 	const bool Colors = getenv("NO_COLOR") == nullptr && isatty(STDOUT_FILENO);
 	return std::make_unique<CLoggerAsync>(io_stdout(), Colors, false);
 #else
-	// If we currently have no stdout (console, file, pipe),
-	// try to attach to the console of the parent process.
-	if(GetFileType(GetStdHandle(STD_OUTPUT_HANDLE)) == FILE_TYPE_UNKNOWN)
-	{
-		AttachConsole(ATTACH_PARENT_PROCESS);
-	}
-
-	HANDLE pOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-	if(pOutput == nullptr)
-	{
-		// There is no console, file or pipe that we can output to.
-		return nullptr;
-	}
-	dbg_assert(pOutput != INVALID_HANDLE_VALUE, "GetStdHandle failure");
-
-	const DWORD OutputType = GetFileType(pOutput);
-	if(OutputType == FILE_TYPE_CHAR)
-	{
-		DWORD OldConsoleMode = 0;
-		if(!GetConsoleMode(pOutput, &OldConsoleMode))
-		{
-			// GetConsoleMode can fail with ERROR_INVALID_HANDLE when redirecting output to "nul",
-			// which is considered a character file but cannot be used as a console.
-			dbg_assert(GetLastError() == ERROR_INVALID_HANDLE, "GetConsoleMode failure");
-			return nullptr;
-		}
-
-		const bool Colors = _wgetenv(L"NO_COLOR") == nullptr;
-
-		// Try to enable virtual terminal processing in the Windows console.
-		// See https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
-		if(!SetConsoleMode(pOutput, OldConsoleMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN))
-		{
-			// Try to downgrade mode gracefully when failing to set both.
-			if(!SetConsoleMode(pOutput, OldConsoleMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
-			{
-				// Fallback to old, slower Windows logging API, when failing to enable virtual terminal processing.
-				return std::make_unique<CWindowsConsoleLogger>(pOutput, Colors);
-			}
-		}
-
-		// Virtual terminal processing was enabled successfully. We can
-		// use the async logger with ANSI escape codes for colors now.
-		// We need to set the output encoding to UTF-8 manually and
-		// convert the HANDLE to an IOHANDLE to use the async logger.
-		// We assume UTF-8 is available when virtual terminal processing is.
-		dbg_assert(SetConsoleOutputCP(CP_UTF8) != 0, "SetConsoleOutputCP failure");
-		return std::make_unique<CLoggerAsync>(ConvertWindowsHandle(pOutput, _O_TEXT), Colors, false);
-	}
-	else if(OutputType == FILE_TYPE_DISK || OutputType == FILE_TYPE_PIPE)
-	{
-		// Writing to a pipe works the same as writing to a file.
-		// We can use the async logger to write to files and pipes
-		// by converting the HANDLE to an IOHANDLE.
-		// For pipes there does not seem to be any way to determine
-		// whether the console supports ANSI escape codes.
-		return std::make_unique<CLoggerAsync>(ConvertWindowsHandle(pOutput, _O_APPEND), false, false);
-	}
-	else
-	{
-		dbg_assert_failed("GetFileType failure");
-	}
+	return log_logger_windows_stdout();
 #endif
 }
 
@@ -580,15 +645,14 @@ void CFutureLogger::Set(std::shared_ptr<ILogger> pLogger)
 {
 	const CLockScope LockScope(m_PendingLock);
 	std::shared_ptr<ILogger> pNullLogger;
-	if(!std::atomic_compare_exchange_strong_explicit(&m_pLogger, &pNullLogger, pLogger, std::memory_order_acq_rel, std::memory_order_acq_rel))
+	if(!std::atomic_compare_exchange_strong_explicit(&m_pLogger, &pNullLogger, pLogger, std::memory_order_acq_rel, std::memory_order_acquire))
 	{
 		dbg_assert_failed("future logger has already been set and can only be set once");
 	}
-	m_pLogger = std::move(pLogger);
-
+	// 发布后的共享指针只能原子访问；积压转交使用本次调用持有的引用。
 	for(const auto &Pending : m_vPending)
 	{
-		m_pLogger->Log(&Pending);
+		pLogger->Log(&Pending);
 	}
 	m_vPending.clear();
 	m_vPending.shrink_to_fit();

@@ -122,8 +122,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 
 	QmHangDiagnostics::CSnapshotStore m_HangInfo;
 	int64_t m_QmGraphicsLastPumpNetworkNs = 0;
-	std::atomic<bool> m_HangWatchdogStop{false};
-	std::thread m_HangWatchdogThread;
+	QmHangDiagnostics::CWatchdog m_HangWatchdog{m_HangInfo};
 	char m_aHangDumpDir[IO_MAX_PATH_LENGTH] = "";
 	int m_NetworkPumpFirstConn = 0;
 
@@ -500,7 +499,7 @@ public:
 	EInfoState InfoState() const override { return m_InfoState; }
 	void RequestDDNetInfo() override;
 	void ResetDDNetInfoTask();
-	void LoadDDNetInfo();
+	void LoadDDNetInfo(IHttpRequest *pResponse = nullptr);
 
 	bool IsSixup() const override { return m_Sixup; }
 

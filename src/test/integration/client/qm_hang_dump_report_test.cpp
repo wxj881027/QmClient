@@ -7,6 +7,8 @@
 #include <test/test.h>
 
 #include <memory>
+#include <new>
+#include <stdexcept>
 #include <string>
 
 #if defined(CONF_FAMILY_WINDOWS)
@@ -88,4 +90,34 @@ TEST_F(CQmHangDumpReportTest, MissingDumpDirectoryReportsTheWindowsOpenError)
 	const std::string Expected = std::string("Report type: hang\nClient state: offline (0)\nMinidump status: failed\nMinidump path: ") + aMissingDump + "\nMinidump stage: open_file\nMinidump error: 3\n";
 	EXPECT_EQ(ReadReport(), Expected);
 }
+TEST_F(CQmHangDumpReportTest, FilenameAllocationFailureReturnsTheFailedStage)
+{
+	const auto Result = QmHangDiagnostics::WriteDump(m_aDumpPath, [](const char *) -> std::wstring { throw std::bad_alloc(); });
+	EXPECT_FALSE(Result.Written());
+	EXPECT_EQ(Result.m_Stage, QmHangDiagnostics::EDumpStage::OPEN_FILE);
+	EXPECT_EQ(Result.m_Error, ERROR_NOT_ENOUGH_MEMORY);
+	EXPECT_FALSE(fs_is_file(m_aDumpPath));
+	ASSERT_TRUE(QmHangDiagnostics::AppendDumpResult(m_aReportPath, m_aDumpPath, Result));
+	EXPECT_NE(ReadReport().find("Minidump error: 8\n"), std::string::npos);
+}
+
+TEST_F(CQmHangDumpReportTest, UnexpectedFilenameFailureReturnsGenericWindowsError)
+{
+	const auto Result = QmHangDiagnostics::WriteDump(m_aDumpPath, [](const char *) -> std::wstring { throw std::runtime_error("encoding failed"); });
+	EXPECT_FALSE(Result.Written());
+	EXPECT_EQ(Result.m_Stage, QmHangDiagnostics::EDumpStage::OPEN_FILE);
+	EXPECT_EQ(Result.m_Error, ERROR_GEN_FAILURE);
+	EXPECT_FALSE(fs_is_file(m_aDumpPath));
+}
+
+TEST_F(CQmHangDumpReportTest, EncodingFailureAllowsALaterNativeOpenAttempt)
+{
+	EXPECT_FALSE(QmHangDiagnostics::WriteDump(m_aDumpPath, [](const char *) -> std::wstring { throw std::bad_alloc(); }).Written());
+	char aMissingDump[IO_MAX_PATH_LENGTH];
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "missing/hang_dump.dmp", aMissingDump, sizeof(aMissingDump));
+	const auto Result = QmHangDiagnostics::WriteDump(aMissingDump);
+	EXPECT_EQ(Result.m_Stage, QmHangDiagnostics::EDumpStage::OPEN_FILE);
+	EXPECT_EQ(Result.m_Error, ERROR_PATH_NOT_FOUND);
+}
+
 #endif

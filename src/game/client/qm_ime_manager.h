@@ -7,6 +7,11 @@
 #include "lineinput.h"
 #include "qm_ime_candidate_popup.h"
 
+#include <engine/shared/qm_ime_policy.h>
+
+#include <algorithm>
+#include <optional>
+
 class CGameClient;
 
 // 输入框残留的活动标记不能替代所属界面的存活状态。
@@ -83,6 +88,52 @@ private:
 	bool m_TextInputWanted = false;
 };
 
+// 只发布完整的展示快照；复制失败不改变输入设备或上次的淡出缓存。
+template<typename TCopy>
+std::optional<SQmImePopupState> QmImeBuildPopupState(const IInput *pInput, bool Enabled, vec2 AnchorScreen, float LineHeightScreen, TCopy &&Copy) noexcept
+{
+	try
+	{
+		SQmImePopupState State;
+		if(pInput == nullptr || !Enabled)
+		{
+			State.m_Disabled = true;
+			return State;
+		}
+		const int CandidateCount = pInput->GetCandidateCount();
+		// 组合串可能在翻页时短暂清空，可见性仍以候选为准。
+		State.m_Visible = QmImePopupShouldBeVisible(CandidateCount);
+		if(!State.m_Visible)
+			return State;
+		State.m_Composition = Copy(pInput->GetComposition());
+		State.m_vCandidates.reserve(CandidateCount);
+		for(int i = 0; i < CandidateCount; ++i)
+			State.m_vCandidates.push_back(Copy(pInput->GetCandidate(i)));
+		State.m_SelectedIndex = qm_ime_overlay::NormalizeSelectedCandidateIndex(pInput->GetCandidateSelectedIndex(), CandidateCount);
+
+		const int PageSize = pInput->GetCandidatePageSize();
+		const int PageStart = pInput->GetCandidatePageStart();
+		const int TotalCount = pInput->GetCandidateTotalCount();
+		if(PageSize > 0 && TotalCount > PageSize)
+		{
+			State.m_PageCount = (TotalCount - 1) / PageSize + 1;
+			State.m_PageIndex = std::clamp(PageStart / PageSize, 0, State.m_PageCount - 1);
+		}
+		State.m_AnchorScreen = AnchorScreen;
+		State.m_LineHeightScreen = LineHeightScreen;
+		return State;
+	}
+	catch(...)
+	{
+		return std::nullopt;
+	}
+}
+
+inline std::optional<SQmImePopupState> QmImeBuildPopupState(const IInput *pInput, bool Enabled, vec2 AnchorScreen, float LineHeightScreen) noexcept
+{
+	return QmImeBuildPopupState(pInput, Enabled, AnchorScreen, LineHeightScreen, [](const char *pText) { return std::string(pText); });
+}
+
 class CQmImeManager
 {
 public:
@@ -93,7 +144,7 @@ public:
 	void Reset();
 
 private:
-	SQmImePopupState BuildPopupState() const;
+	std::optional<SQmImePopupState> BuildPopupState() const noexcept;
 
 	CGameClient *m_pGameClient = nullptr;
 	CQmImeBlocker m_Blocker;

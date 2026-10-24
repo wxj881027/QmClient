@@ -13,8 +13,10 @@
 #include <base/system.h>
 
 #include <engine/client/backend/backend_base.h>
+#include <engine/client/backend/opengl/buffer_data.h>
 #include <engine/client/backend_sdl.h>
 #include <engine/client/graphics_defines.h>
+#include <engine/client/graphics_upload_data.h>
 
 #include <limits>
 
@@ -53,7 +55,7 @@ protected:
 		float m_ResizeHeight;
 	};
 	std::vector<CTexture> m_vTextures;
-	std::atomic<uint64_t> *m_pTextureMemoryUsage;
+	std::atomic<uint64_t> *m_pTextureMemoryUsage = nullptr;
 	// OpenGL viewport 原点在 drawable 左下角，记录转换后的实际原点。
 	int m_ViewportX = 0;
 	int m_ViewportY = 0;
@@ -128,8 +130,8 @@ protected:
 		return true;
 	}
 
-	void TextureUpdate(int Slot, int X, int Y, int Width, int Height, int GLFormat, uint8_t *pTexData);
-	void TextureCreate(int Slot, int Width, int Height, int GLFormat, int GLStoreFormat, int Flags, uint8_t *pTexData);
+	void TextureUpdate(int Slot, int X, int Y, int Width, int Height, int GLFormat, CGraphicsUploadData<uint8_t> pTexData);
+	void TextureCreate(int Slot, int Width, int Height, int GLFormat, int GLStoreFormat, int Flags, CGraphicsUploadData<uint8_t> pTexData);
 
 	virtual bool Cmd_Init(const SCommand_Init *pCommand);
 	virtual void Cmd_Shutdown(const SCommand_Shutdown *pCommand) {}
@@ -197,15 +199,8 @@ class CCommandProcessorFragment_OpenGL2 : public CCommandProcessorFragment_OpenG
 
 	struct SBufferObject
 	{
-		SBufferObject(TWGLuint BufferObjectId) :
-			m_BufferObjectId(BufferObjectId)
-		{
-			m_pData = NULL;
-			m_DataSize = 0;
-		}
-		TWGLuint m_BufferObjectId;
-		uint8_t *m_pData;
-		size_t m_DataSize;
+		TWGLuint m_BufferObjectId = 0;
+		COpenGLBufferData m_Data;
 	};
 
 	std::vector<SBufferObject> m_vBufferObjectIndices;
@@ -213,6 +208,8 @@ class CCommandProcessorFragment_OpenGL2 : public CCommandProcessorFragment_OpenG
 #ifndef BACKEND_GL_MODERN_API
 	bool DoAnalyzeStep(size_t CheckCount, size_t VerticesCount, uint8_t aFakeTexture[], size_t SingleImageSize);
 	bool IsTileMapAnalysisSucceeded();
+	void BufferObjectError(const char *pReason);
+	void DeleteBufferObject(int Index);
 #endif
 
 	void UseProgram(CGLSLTWProgram *pProgram);
@@ -242,12 +239,12 @@ protected:
 	void Cmd_RenderBorderTile(const CCommandBuffer::SCommand_RenderBorderTile *pCommand) override;
 #endif
 
-	CGLSLTileProgram *m_pTileProgram;
-	CGLSLTileProgram *m_pTileProgramTextured;
-	CGLSLTileProgram *m_pBorderTileProgram;
-	CGLSLTileProgram *m_pBorderTileProgramTextured;
-	CGLSLPrimitiveProgram *m_pPrimitive3DProgram;
-	CGLSLPrimitiveProgram *m_pPrimitive3DProgramTextured;
+	CGLSLTileProgram *m_pTileProgram = nullptr;
+	CGLSLTileProgram *m_pTileProgramTextured = nullptr;
+	CGLSLTileProgram *m_pBorderTileProgram = nullptr;
+	CGLSLTileProgram *m_pBorderTileProgramTextured = nullptr;
+	CGLSLPrimitiveProgram *m_pPrimitive3DProgram = nullptr;
+	CGLSLPrimitiveProgram *m_pPrimitive3DProgramTextured = nullptr;
 };
 
 class CCommandProcessorFragment_OpenGL3 : public CCommandProcessorFragment_OpenGL2

@@ -1,5 +1,7 @@
 #include "qm_netease_cdp_client.h"
 
+#include "qm_netease_cdp_io.h"
+
 #include <engine/external/json-parser/json.h>
 
 #include <game/client/components/qmclient/netease/netease_lyric_parser.h>
@@ -100,19 +102,45 @@ namespace QmNeteaseCdp
 			bool m_Valid = false;
 		};
 
-		bool SendAll(SOCKET Socket, const void *pData, size_t Size)
+		class CSocketIo : public ISocketIo
 		{
-			const char *pBytes = static_cast<const char *>(pData);
-			while(Size > 0)
+			SOCKET m_Socket;
+
+		public:
+			explicit CSocketIo(SOCKET Socket) :
+				m_Socket(Socket) {}
+			uint64_t NowMs() const noexcept override { return GetTickCount64(); }
+			EIoReady Wait(EIoDirection Direction, int SliceMs) noexcept override
 			{
-				const int Sent = send(Socket, pBytes, (int)std::min<size_t>(Size, INT_MAX), 0);
-				if(Sent <= 0)
-					return false;
-				pBytes += Sent;
-				Size -= (size_t)Sent;
+				fd_set Ready, Errors;
+				FD_ZERO(&Ready);
+				FD_ZERO(&Errors);
+				FD_SET(m_Socket, &Ready);
+				FD_SET(m_Socket, &Errors);
+				timeval Timeout{SliceMs / 1000, (SliceMs % 1000) * 1000};
+				const int Result = select(0, Direction == EIoDirection::READ ? &Ready : nullptr,
+					Direction == EIoDirection::WRITE ? &Ready : nullptr, &Errors, &Timeout);
+				if(Result == SOCKET_ERROR || FD_ISSET(m_Socket, &Errors))
+					return EIoReady::FAILED;
+				return Result == 0 ? EIoReady::TIMEOUT : EIoReady::READY;
 			}
-			return true;
-		}
+			SIoChunk Read(void *pData, size_t Capacity) noexcept override
+			{
+				const int Read = recv(m_Socket, static_cast<char *>(pData), static_cast<int>(std::min<size_t>(Capacity, INT_MAX)), 0);
+				if(Read > 0)
+					return {EChunkStatus::DATA, static_cast<size_t>(Read)};
+				if(Read == 0)
+					return {EChunkStatus::END, 0};
+				return {WSAGetLastError() == WSAEWOULDBLOCK ? EChunkStatus::RETRY : EChunkStatus::FAILED, 0};
+			}
+			SIoChunk Write(const void *pData, size_t Size) noexcept override
+			{
+				const int Written = send(m_Socket, static_cast<const char *>(pData), static_cast<int>(std::min<size_t>(Size, INT_MAX)), 0);
+				if(Written > 0)
+					return {EChunkStatus::DATA, static_cast<size_t>(Written)};
+				return {Written == SOCKET_ERROR && WSAGetLastError() == WSAEWOULDBLOCK ? EChunkStatus::RETRY : EChunkStatus::FAILED, 0};
+			}
+		};
 
 		std::string Base64(const uint8_t *pData, size_t Size)
 		{
@@ -135,22 +163,28 @@ namespace QmNeteaseCdp
 
 		std::string Sha1Base64(std::string_view Text)
 		{
-			BCRYPT_ALG_HANDLE hAlgorithm = nullptr;
-			BCRYPT_HASH_HANDLE hHash = nullptr;
+			struct CCngScope
+			{
+				BCRYPT_ALG_HANDLE m_hAlgorithm = nullptr;
+				BCRYPT_HASH_HANDLE m_hHash = nullptr;
+				~CCngScope()
+				{
+					if(m_hHash)
+						BCryptDestroyHash(m_hHash);
+					if(m_hAlgorithm)
+						BCryptCloseAlgorithmProvider(m_hAlgorithm, 0);
+				}
+			} Resources;
 			std::array<uint8_t, 20> Digest{};
 			DWORD HashLength = 0;
 			DWORD ResultLength = 0;
 			std::string Result;
-			if(BCryptOpenAlgorithmProvider(&hAlgorithm, BCRYPT_SHA1_ALGORITHM, nullptr, 0) == 0 &&
-				BCryptGetProperty(hAlgorithm, BCRYPT_HASH_LENGTH, reinterpret_cast<PUCHAR>(&HashLength), sizeof(HashLength), &ResultLength, 0) == 0 &&
-				HashLength == Digest.size() && BCryptCreateHash(hAlgorithm, &hHash, nullptr, 0, nullptr, 0, 0) == 0 &&
-				BCryptHashData(hHash, (PUCHAR)Text.data(), (ULONG)Text.size(), 0) == 0 &&
-				BCryptFinishHash(hHash, Digest.data(), (ULONG)Digest.size(), 0) == 0)
+			if(BCryptOpenAlgorithmProvider(&Resources.m_hAlgorithm, BCRYPT_SHA1_ALGORITHM, nullptr, 0) == 0 &&
+				BCryptGetProperty(Resources.m_hAlgorithm, BCRYPT_HASH_LENGTH, reinterpret_cast<PUCHAR>(&HashLength), sizeof(HashLength), &ResultLength, 0) == 0 &&
+				HashLength == Digest.size() && BCryptCreateHash(Resources.m_hAlgorithm, &Resources.m_hHash, nullptr, 0, nullptr, 0, 0) == 0 &&
+				BCryptHashData(Resources.m_hHash, (PUCHAR)Text.data(), (ULONG)Text.size(), 0) == 0 &&
+				BCryptFinishHash(Resources.m_hHash, Digest.data(), (ULONG)Digest.size(), 0) == 0)
 				Result = Base64(Digest.data(), Digest.size());
-			if(hHash != nullptr)
-				BCryptDestroyHash(hHash);
-			if(hAlgorithm != nullptr)
-				BCryptCloseAlgorithmProvider(hAlgorithm, 0);
 			return Result;
 		}
 
@@ -192,6 +226,7 @@ namespace QmNeteaseCdp
 		{
 		public:
 			~CWebSocket() { Close(); }
+			void SetStopFlag(const std::atomic_bool *pStop) noexcept { m_pStop = pStop; }
 			bool Connect(std::string_view Url)
 			{
 				Close();
@@ -204,31 +239,34 @@ namespace QmNeteaseCdp
 				static CWinsockRuntime Runtime;
 				if(!Runtime.m_Valid)
 					return false;
-				addrinfo Hints{};
-				Hints.ai_family = AF_INET;
-				Hints.ai_socktype = SOCK_STREAM;
-				Hints.ai_protocol = IPPROTO_TCP;
-				addrinfo *pInfo = nullptr;
-				const std::string PortText = std::to_string(m_Port);
-				if(getaddrinfo("127.0.0.1", PortText.c_str(), &Hints, &pInfo) != 0 || pInfo == nullptr)
+				const CIoBudget Budget(GetTickCount64(), 700, m_pStop);
+				if(Budget.Remaining(GetTickCount64()) == 0)
 					return false;
-				m_Socket = socket(pInfo->ai_family, pInfo->ai_socktype, pInfo->ai_protocol);
-				if(m_Socket == INVALID_SOCKET || connect(m_Socket, pInfo->ai_addr, (int)pInfo->ai_addrlen) != 0)
+				m_Socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+				if(m_Socket == INVALID_SOCKET)
+					return false;
+				auto FailConnection = [this] { Close(); return false; };
+				u_long Nonblocking = 1;
+				if(ioctlsocket(m_Socket, FIONBIO, &Nonblocking) != 0)
+					return FailConnection();
+				sockaddr_in Address{};
+				Address.sin_family = AF_INET;
+				Address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+				Address.sin_port = htons(m_Port);
+				const int Connected = connect(m_Socket, reinterpret_cast<const sockaddr *>(&Address), sizeof(Address));
+				if(Connected == SOCKET_ERROR)
 				{
-					if(m_Socket != INVALID_SOCKET)
-						closesocket(m_Socket);
-					m_Socket = INVALID_SOCKET;
-					freeaddrinfo(pInfo);
-					return false;
+					const int Error = WSAGetLastError();
+					if(Error != WSAEWOULDBLOCK && Error != WSAEINPROGRESS && Error != WSAEALREADY)
+						return FailConnection();
 				}
-				freeaddrinfo(pInfo);
-				auto FailConnection = [this] {
-					Close();
-					return false;
-				};
-				const DWORD Timeout = 700;
-				setsockopt(m_Socket, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char *>(&Timeout), sizeof(Timeout));
-				setsockopt(m_Socket, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<const char *>(&Timeout), sizeof(Timeout));
+				CSocketIo Io(m_Socket);
+				if(!WaitCdpSocket(Io, Budget, EIoDirection::WRITE))
+					return FailConnection();
+				int ConnectError = 0;
+				int ErrorLength = sizeof(ConnectError);
+				if(getsockopt(m_Socket, SOL_SOCKET, SO_ERROR, reinterpret_cast<char *>(&ConnectError), &ErrorLength) != 0 || ConnectError != 0)
+					return FailConnection();
 				std::array<uint8_t, 16> Nonce{};
 				if(BCryptGenRandom(nullptr, Nonce.data(), (ULONG)Nonce.size(), BCRYPT_USE_SYSTEM_PREFERRED_RNG) != 0)
 					return FailConnection();
@@ -236,16 +274,20 @@ namespace QmNeteaseCdp
 				const std::string Request = "GET " + Path + " HTTP/1.1\r\nHost: 127.0.0.1:" + std::to_string(m_Port) +
 							    "\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: " + Key +
 							    "\r\nSec-WebSocket-Version: 13\r\n\r\n";
-				if(!SendAll(m_Socket, Request.data(), Request.size()))
+				if(!WriteCdpAll(Io, Request.data(), Request.size(), Budget))
 					return FailConnection();
 				std::string Response;
 				std::array<char, 1024> Buffer{};
 				while(Response.find("\r\n\r\n") == std::string::npos && Response.size() < 16 * 1024)
 				{
-					const int Received = recv(m_Socket, Buffer.data(), (int)Buffer.size(), 0);
-					if(Received <= 0)
+					if(!WaitCdpSocket(Io, Budget, EIoDirection::READ))
 						return FailConnection();
-					Response.append(Buffer.data(), (size_t)Received);
+					const SIoChunk Chunk = Io.Read(Buffer.data(), Buffer.size());
+					if(Chunk.m_Status == EChunkStatus::RETRY)
+						continue;
+					if(Chunk.m_Status != EChunkStatus::DATA || Budget.Remaining(Io.NowMs()) == 0)
+						return FailConnection();
+					Response.append(Buffer.data(), Chunk.m_Size);
 				}
 				const size_t HeaderEnd = Response.find("\r\n\r\n");
 				if(HeaderEnd == std::string::npos || Response.rfind("HTTP/1.1 101", 0) != 0)
@@ -275,9 +317,9 @@ namespace QmNeteaseCdp
 
 			bool IsConnected() const { return m_Connected; }
 
-			bool SendText(std::string_view Text)
+			bool SendText(std::string_view Text, const CIoBudget &Budget)
 			{
-				if(!m_Connected || Text.size() > 16 * 1024 * 1024)
+				if(!m_Connected || Budget.Remaining(GetTickCount64()) == 0 || Text.size() > 16 * 1024 * 1024)
 					return false;
 				std::vector<uint8_t> Frame;
 				Frame.reserve(Text.size() + 16);
@@ -303,35 +345,26 @@ namespace QmNeteaseCdp
 				Frame.insert(Frame.end(), Mask.begin(), Mask.end());
 				for(size_t Index = 0; Index < Text.size(); ++Index)
 					Frame.push_back((uint8_t)Text[Index] ^ Mask[Index % Mask.size()]);
-				return SendAll(m_Socket, Frame.data(), Frame.size());
+				CSocketIo Io(m_Socket);
+				return WriteCdpAll(Io, Frame.data(), Frame.size(), Budget);
 			}
 
-			bool ReceiveText(std::string *pText, int TimeoutMs)
+			bool ReceiveText(std::string *pText, const CIoBudget &Budget)
 			{
 				if(pText == nullptr || !m_Connected)
 					return false;
 				pText->clear();
 				for(;;)
 				{
-					// 握手可能已经把完整首帧放进缓冲；有数据可消费时不能
-					// 先 select，否则 socket 暂时无新数据会把首帧拖到命令超时。
-					if(m_ReceiveBuffer.empty() && TimeoutMs >= 0)
-					{
-						fd_set ReadSet;
-						FD_ZERO(&ReadSet);
-						FD_SET(m_Socket, &ReadSet);
-						timeval Wait{TimeoutMs / 1000, (TimeoutMs % 1000) * 1000};
-						const int Ready = select(0, &ReadSet, nullptr, nullptr, &Wait);
-						if(Ready == 0)
-						{
-							pText->clear();
-							return true;
-						}
-						if(Ready < 0)
-							return false;
-					}
+					if(Budget.Cancelled())
+						return false;
+					if(Budget.Remaining(GetTickCount64()) == 0)
+						return true;
 					uint8_t Header[2];
-					if(!ReceiveBytes(Header, sizeof(Header)))
+					const ETransferResult HeaderRead = ReadBuffered(Header, sizeof(Header), Budget, true);
+					if(HeaderRead == ETransferResult::IDLE)
+						return true;
+					if(HeaderRead != ETransferResult::COMPLETE)
 						return false;
 					const bool Fin = (Header[0] & 0x80) != 0;
 					// 未协商任何扩展；本地端点设置 RSV 位时直接视为协议错误。
@@ -350,7 +383,7 @@ namespace QmNeteaseCdp
 					if(InitialLength == 126)
 					{
 						uint8_t Bytes[2];
-						if(!ReceiveBytes(Bytes, sizeof(Bytes)))
+						if(!ReceiveBytes(Bytes, sizeof(Bytes), Budget))
 							return false;
 						Length = ((uint64_t)Bytes[0] << 8) | Bytes[1];
 						// 拒绝非最短长度编码。
@@ -360,7 +393,7 @@ namespace QmNeteaseCdp
 					else if(InitialLength == 127)
 					{
 						uint8_t Bytes[8];
-						if(!ReceiveBytes(Bytes, sizeof(Bytes)) || (Bytes[0] & 0x80) != 0)
+						if(!ReceiveBytes(Bytes, sizeof(Bytes), Budget) || (Bytes[0] & 0x80) != 0)
 							return false;
 						Length = 0;
 						for(const uint8_t Byte : Bytes)
@@ -371,11 +404,11 @@ namespace QmNeteaseCdp
 					if(Length > 16 * 1024 * 1024 || (Control && (!Fin || Length > 125)))
 						return false;
 					std::string Payload((size_t)Length, '\0');
-					if(Length > 0 && !ReceiveBytes(Payload.data(), (size_t)Length))
+					if(Length > 0 && !ReceiveBytes(Payload.data(), (size_t)Length, Budget))
 						return false;
 					if(Opcode == 0x9)
 					{
-						if(!SendControl(0xA, Payload))
+						if(!SendControl(0xA, Payload, Budget))
 							return false;
 						continue;
 					}
@@ -385,7 +418,7 @@ namespace QmNeteaseCdp
 						// 让 Chromium 完成关闭握手。
 						if(Length == 1)
 							return false;
-						SendControl(0x8, Payload);
+						SendControl(0x8, Payload, Budget);
 						Close();
 						return false;
 					}
@@ -440,32 +473,27 @@ namespace QmNeteaseCdp
 			}
 
 		private:
-			bool ReceiveBytes(void *pData, size_t Size)
+			ETransferResult ReadBuffered(void *pData, size_t Size, const CIoBudget &Budget, bool AllowIdle)
 			{
-				if(pData == nullptr)
-					return false;
-				char *pBytes = static_cast<char *>(pData);
-				while(Size > 0)
+				if((!pData && Size != 0) || Budget.Cancelled())
+					return ETransferResult::FAILED;
+				const size_t Buffered = std::min(Size, m_ReceiveBuffer.size());
+				if(Buffered != 0)
 				{
-					if(!m_ReceiveBuffer.empty())
-					{
-						const size_t Count = std::min(Size, m_ReceiveBuffer.size());
-						std::memcpy(pBytes, m_ReceiveBuffer.data(), Count);
-						m_ReceiveBuffer.erase(0, Count);
-						pBytes += Count;
-						Size -= Count;
-						continue;
-					}
-					const int Received = recv(m_Socket, pBytes, (int)std::min<size_t>(Size, INT_MAX), 0);
-					if(Received <= 0)
-						return false;
-					pBytes += Received;
-					Size -= (size_t)Received;
+					std::memcpy(pData, m_ReceiveBuffer.data(), Buffered);
+					m_ReceiveBuffer.erase(0, Buffered);
 				}
-				return true;
+				if(Buffered == Size)
+					return Budget.Remaining(GetTickCount64()) > 0 ? ETransferResult::COMPLETE : ETransferResult::FAILED;
+				CSocketIo Io(m_Socket);
+				return ReadCdpExact(Io, static_cast<char *>(pData) + Buffered, Size - Buffered, Budget, AllowIdle && Buffered == 0);
+			}
+			bool ReceiveBytes(void *pData, size_t Size, const CIoBudget &Budget)
+			{
+				return ReadBuffered(pData, Size, Budget, false) == ETransferResult::COMPLETE;
 			}
 
-			bool SendControl(uint8_t Opcode, std::string_view Payload)
+			bool SendControl(uint8_t Opcode, std::string_view Payload, const CIoBudget &Budget)
 			{
 				if((Opcode & 0x08) == 0 || Opcode > 0x0A || Payload.size() > 125)
 					return false;
@@ -479,8 +507,10 @@ namespace QmNeteaseCdp
 				Frame.insert(Frame.end(), Mask.begin(), Mask.end());
 				for(size_t Index = 0; Index < Payload.size(); ++Index)
 					Frame.push_back((uint8_t)Payload[Index] ^ Mask[Index % Mask.size()]);
-				return SendAll(m_Socket, Frame.data(), Frame.size());
+				CSocketIo Io(m_Socket);
+				return WriteCdpAll(Io, Frame.data(), Frame.size(), Budget);
 			}
+			const std::atomic_bool *m_pStop = nullptr;
 			SOCKET m_Socket = INVALID_SOCKET;
 			uint16_t m_Port = 0;
 			bool m_Connected = false;
@@ -489,49 +519,42 @@ namespace QmNeteaseCdp
 			std::string m_ReceiveBuffer;
 		};
 
-		bool HttpGetJson(uint16_t Port, std::string *pBody)
+		bool HttpGetJson(uint16_t Port, std::string *pBody, const std::atomic_bool *pStop)
 		{
-			if(pBody == nullptr || Port == 0)
+			if(!pBody || Port == 0)
 				return false;
 			pBody->clear();
-			HINTERNET hSession = WinHttpOpen(L"QmClient-Netease/5", WINHTTP_ACCESS_TYPE_NO_PROXY, nullptr, nullptr, 0);
-			if(hSession == nullptr)
+			const CIoBudget Budget(GetTickCount64(), 1500, pStop);
+			auto Allowed = [&] { return Budget.Remaining(GetTickCount64()) > 0; };
+			if(!Allowed())
 				return false;
-			WinHttpSetTimeouts(hSession, 250, 250, 500, 500);
-			HINTERNET hConnect = WinHttpConnect(hSession, L"127.0.0.1", Port, 0);
-			HINTERNET hRequest = hConnect != nullptr ? WinHttpOpenRequest(hConnect, L"GET", L"/json", nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0) : nullptr;
-			bool Success = false;
+			const std::unique_ptr<void, decltype(&WinHttpCloseHandle)> Session(WinHttpOpen(L"QmClient-Netease/5", WINHTTP_ACCESS_TYPE_NO_PROXY, nullptr, nullptr, 0), WinHttpCloseHandle);
+			if(!Session || !WinHttpSetTimeouts(Session.get(), 250, 250, 500, 500))
+				return false;
+			const std::unique_ptr<void, decltype(&WinHttpCloseHandle)> Connect(WinHttpConnect(Session.get(), L"127.0.0.1", Port, 0), WinHttpCloseHandle);
+			const std::unique_ptr<void, decltype(&WinHttpCloseHandle)> Request(Connect ? WinHttpOpenRequest(Connect.get(), L"GET", L"/json", nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0) : nullptr, WinHttpCloseHandle);
+			if(!Request)
+				return false;
+			auto PrepareWait = [&] {
+				const int Remaining = Budget.Remaining(GetTickCount64());
+				return Remaining > 0 && WinHttpSetTimeouts(Request.get(), std::min(250, Remaining), std::min(250, Remaining), std::min(500, Remaining), std::min(500, Remaining));
+			};
 			DWORD RedirectPolicy = WINHTTP_OPTION_REDIRECT_POLICY_NEVER;
-			const bool RedirectDisabled = hRequest != nullptr && WinHttpSetOption(hRequest, WINHTTP_OPTION_REDIRECT_POLICY, &RedirectPolicy, sizeof(RedirectPolicy));
-			if(RedirectDisabled && WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0) && WinHttpReceiveResponse(hRequest, nullptr))
-			{
-				DWORD Status = 0;
-				DWORD StatusSize = sizeof(Status);
-				if(WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_HEADER_NAME_BY_INDEX, &Status, &StatusSize, WINHTTP_NO_HEADER_INDEX) && Status == 200)
-				{
-					std::array<char, 8192> Buffer{};
-					for(;;)
-					{
-						DWORD Available = 0;
-						if(!WinHttpQueryDataAvailable(hRequest, &Available) || Available == 0)
-							break;
-						if(pBody->size() + Available > MAX_TARGET_JSON_BYTES)
-							break;
-						DWORD Read = 0;
-						const DWORD Chunk = std::min<DWORD>(Available, (DWORD)Buffer.size());
-						if(!WinHttpReadData(hRequest, Buffer.data(), Chunk, &Read) || Read == 0)
-							break;
-						pBody->append(Buffer.data(), Read);
-					}
-					Success = !pBody->empty();
-				}
-			}
-			if(hRequest != nullptr)
-				WinHttpCloseHandle(hRequest);
-			if(hConnect != nullptr)
-				WinHttpCloseHandle(hConnect);
-			WinHttpCloseHandle(hSession);
-			return Success;
+			if(!WinHttpSetOption(Request.get(), WINHTTP_OPTION_REDIRECT_POLICY, &RedirectPolicy, sizeof(RedirectPolicy)) ||
+				!PrepareWait() || !WinHttpSendRequest(Request.get(), WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0) ||
+				!PrepareWait() || !WinHttpReceiveResponse(Request.get(), nullptr))
+				return false;
+			DWORD Status = 0, StatusSize = sizeof(Status);
+			if(!Allowed() || !WinHttpQueryHeaders(Request.get(), WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_HEADER_NAME_BY_INDEX, &Status, &StatusSize, WINHTTP_NO_HEADER_INDEX) || Status != 200)
+				return false;
+			return ReadCdpHttpBody(*pBody, MAX_TARGET_JSON_BYTES, Allowed, [&](void *pOutput, size_t Capacity) -> SIoChunk {
+				if(!PrepareWait())
+					return {EChunkStatus::FAILED, 0};
+				DWORD Read = 0;
+				if(!WinHttpReadData(Request.get(), pOutput, static_cast<DWORD>(Capacity), &Read))
+					return {EChunkStatus::FAILED, 0};
+				return {Read == 0 ? EChunkStatus::END : EChunkStatus::DATA, Read};
+			});
 		}
 
 		uint32_t LoopbackListenerProcessId(uint16_t Port)
@@ -564,6 +587,7 @@ namespace QmNeteaseCdp
 #if defined(_WIN32)
 		CWebSocket m_WebSocket;
 #endif
+		const std::atomic_bool *m_pStop = nullptr;
 		uint64_t m_NextId = 1;
 		TNotificationCallback m_NotificationCallback;
 	};
@@ -599,6 +623,16 @@ namespace QmNeteaseCdp
 #endif
 	}
 
+	void CCdpSession::SetStopFlag(const std::atomic_bool *pStop) noexcept
+	{
+		if(!m_pImpl)
+			return;
+		m_pImpl->m_pStop = pStop;
+#if defined(_WIN32)
+		m_pImpl->m_WebSocket.SetStopFlag(pStop);
+#endif
+	}
+
 	void CCdpSession::SetNotificationCallback(TNotificationCallback Callback)
 	{
 		if(m_pImpl)
@@ -615,21 +649,22 @@ namespace QmNeteaseCdp
 				m_pImpl->m_WebSocket.Close();
 			return false;
 		};
+		const CIoBudget Budget(GetTickCount64(), std::max(1, TimeoutMs), m_pImpl->m_pStop);
 		const uint64_t Id = m_pImpl->m_NextId++;
 		const std::string Parameters = ParametersJson.empty() ? "{}" : std::string(ParametersJson);
 		const std::string Request = "{\"id\":" + std::to_string(Id) + ",\"method\":\"" + JsonEscape(Method) + "\",\"params\":" + Parameters + "}";
-		if(!m_pImpl->m_WebSocket.SendText(Request))
+		if(!m_pImpl->m_WebSocket.SendText(Request, Budget))
 			return FailConnection();
-		const auto Deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(std::max(1, TimeoutMs));
 		for(;;)
 		{
-			const auto Remaining = std::chrono::duration_cast<std::chrono::milliseconds>(Deadline - std::chrono::steady_clock::now()).count();
+			const int Remaining = Budget.Remaining(GetTickCount64());
 			if(Remaining <= 0)
 				return FailConnection();
 			std::string Message;
-			if(!m_pImpl->m_WebSocket.ReceiveText(&Message, (int)std::min<int64_t>(Remaining, 500)))
+			if(!m_pImpl->m_WebSocket.ReceiveText(&Message, Budget))
 				return FailConnection();
-			json_value *pRoot = json_parse(Message.data(), Message.size());
+			const std::unique_ptr<json_value, decltype(&json_value_free)> Root(json_parse(Message.data(), Message.size()), json_value_free);
+			json_value *pRoot = Root.get();
 			if(pRoot == nullptr)
 				continue;
 			const json_value *pMethod = ObjectField(pRoot, "method");
@@ -637,7 +672,6 @@ namespace QmNeteaseCdp
 			{
 				if(m_pImpl->m_NotificationCallback)
 					m_pImpl->m_NotificationCallback(Message);
-				json_value_free(pRoot);
 				continue;
 			}
 			const json_value *pId = ObjectField(pRoot, "id");
@@ -649,10 +683,8 @@ namespace QmNeteaseCdp
 				if(pResultJson != nullptr)
 					*pResultJson = pError == nullptr && pResult != nullptr ? Message : "";
 				const bool Success = pError == nullptr;
-				json_value_free(pRoot);
 				return Success;
 			}
-			json_value_free(pRoot);
 		}
 #else
 		(void)Method;
@@ -681,14 +713,14 @@ namespace QmNeteaseCdp
 			return false;
 		if(pValueJson == nullptr)
 			return true;
-		json_value *pRoot = json_parse(Result.data(), Result.size());
+		const std::unique_ptr<json_value, decltype(&json_value_free)> Root(json_parse(Result.data(), Result.size()), json_value_free);
+		json_value *pRoot = Root.get();
 		if(pRoot == nullptr)
 			return false;
 		const json_value *pOuter = ObjectField(pRoot, "result");
 		const json_value *pValue = ObjectField(pOuter, "result");
 		if(pValue == nullptr || pValue->type != json_object)
 		{
-			json_value_free(pRoot);
 			return false;
 		}
 		const json_value *pValueField = ObjectField(pValue, "value");
@@ -696,7 +728,6 @@ namespace QmNeteaseCdp
 			*pValueJson = std::string(pValueField->u.string.ptr, pValueField->u.string.length);
 		else
 			pValueJson->clear();
-		json_value_free(pRoot);
 		return pValueField != nullptr;
 	}
 
@@ -705,18 +736,19 @@ namespace QmNeteaseCdp
 #if defined(_WIN32)
 		if(!m_pImpl || !IsConnected())
 			return false;
+		const CIoBudget Budget(GetTickCount64(), TimeoutMs < 0 ? 700 : std::max(1, TimeoutMs), m_pImpl->m_pStop);
 		std::string Message;
-		if(!m_pImpl->m_WebSocket.ReceiveText(&Message, TimeoutMs))
+		if(!m_pImpl->m_WebSocket.ReceiveText(&Message, Budget))
 		{
 			m_pImpl->m_WebSocket.Close();
 			return false;
 		}
-		json_value *pRoot = json_parse(Message.data(), Message.size());
+		const std::unique_ptr<json_value, decltype(&json_value_free)> Root(json_parse(Message.data(), Message.size()), json_value_free);
+		json_value *pRoot = Root.get();
 		if(pRoot != nullptr)
 		{
 			if(ObjectField(pRoot, "method") != nullptr && m_pImpl->m_NotificationCallback)
 				m_pImpl->m_NotificationCallback(Message);
-			json_value_free(pRoot);
 		}
 		return true;
 #else
@@ -729,6 +761,7 @@ namespace QmNeteaseCdp
 	{
 		std::atomic_bool m_Stop{false};
 		std::atomic_bool m_Connected{false};
+		std::atomic_bool m_Finished{true};
 		uint32_t m_CloudMusicPid = 0;
 		std::wstring m_CommandLine;
 		TReportCallback m_Callback;
@@ -749,8 +782,29 @@ namespace QmNeteaseCdp
 		m_pImpl->m_CloudMusicPid = CloudMusicPid;
 		m_pImpl->m_CommandLine = std::move(CommandLine);
 		m_pImpl->m_Callback = std::move(Callback);
-		m_pImpl->m_Thread = std::thread(&CFrontendBridgeWorker::Run, this);
-		return true;
+		m_pImpl->m_Finished.store(false, std::memory_order_relaxed);
+		try
+		{
+			m_pImpl->m_Thread = std::thread([this] {
+				try
+				{
+					Run();
+				}
+				catch(...)
+				{
+					// 会话局部资源先展开，再通知所属 owner 重开。
+				}
+				m_pImpl->m_Connected.store(false, std::memory_order_release);
+				m_pImpl->m_Finished.store(true, std::memory_order_release);
+			});
+			return true;
+		}
+		catch(...)
+		{
+			m_pImpl->m_Stop.store(true, std::memory_order_release);
+			m_pImpl->m_Finished.store(true, std::memory_order_release);
+			return false;
+		}
 	}
 
 	void CFrontendBridgeWorker::Stop()
@@ -761,6 +815,13 @@ namespace QmNeteaseCdp
 		if(m_pImpl->m_Thread.joinable())
 			m_pImpl->m_Thread.join();
 		m_pImpl->m_Connected = false;
+		m_pImpl->m_Finished.store(true, std::memory_order_release);
+		m_pImpl->m_Callback = {};
+	}
+
+	bool CFrontendBridgeWorker::IsRunning() const noexcept
+	{
+		return m_pImpl && !m_pImpl->m_Finished.load(std::memory_order_acquire);
 	}
 
 	bool CFrontendBridgeWorker::IsConnected() const
@@ -1081,28 +1142,34 @@ return "installed";
 			bool Connected = false;
 			for(const uint16_t Port : Ports)
 			{
+				if(m_pImpl->m_Stop.load(std::memory_order_acquire))
+					break;
 				const uint32_t ListenerProcessId = LoopbackListenerProcessId(Port);
 				if(ListenerProcessId != m_pImpl->m_CloudMusicPid)
 					continue;
 				std::string Body;
-				if(!HttpGetJson(Port, &Body))
+				if(!HttpGetJson(Port, &Body, &m_pImpl->m_Stop))
 					continue;
 				std::vector<SCdpTarget> Targets;
 				if(!ParseTargetList(Body, &Targets))
 					continue;
 				for(const SCdpTarget &Target : Targets)
 				{
+					if(m_pImpl->m_Stop.load(std::memory_order_acquire))
+						break;
 					// 在建立高权限 CDP 会话前再次核对 owner，缩小端口被替换的竞态窗口。
 					const uint32_t CurrentListenerProcessId = LoopbackListenerProcessId(Port);
 					if(!IsTrustedTargetForProcess(Target, Port, CurrentListenerProcessId, m_pImpl->m_CloudMusicPid))
 						continue;
 					CCdpSession Session;
+					Session.SetStopFlag(&m_pImpl->m_Stop);
 					if(!Session.Connect(Target.m_WebSocketDebuggerUrl))
 						continue;
 					Session.SetNotificationCallback([this](std::string_view Message) {
 						if(!m_pImpl->m_Callback)
 							return;
-						json_value *pRoot = json_parse(Message.data(), Message.size());
+						const std::unique_ptr<json_value, decltype(&json_value_free)> Root(json_parse(Message.data(), Message.size()), json_value_free);
+						json_value *pRoot = Root.get();
 						if(pRoot == nullptr)
 							return;
 						const json_value *pMethod = ObjectField(pRoot, "method");
@@ -1116,7 +1183,6 @@ return "installed";
 						{
 							m_pImpl->m_Callback(std::string_view(pPayload->u.string.ptr, pPayload->u.string.length));
 						}
-						json_value_free(pRoot);
 					});
 					std::string Ignored;
 					const std::string HookScript = BuildInstallHookScript();

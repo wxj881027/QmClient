@@ -1,5 +1,6 @@
 #include "backend_metal.h"
 #include "metal_frame_state.h"
+#include "metal_gpu_completion.h"
 #include "metal_render_target_state.h"
 #include "metal_types.h"
 
@@ -181,13 +182,8 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 	uint32_t m_LastPresentedReadbackWidth = 0;
 	uint32_t m_LastPresentedReadbackHeight = 0;
 	size_t m_LastPresentedReadbackRowBytes = 0;
-	std::atomic_bool m_GpuFailure = false;
-	std::atomic<uint64_t> m_GpuFailureFrameId = 0;
-	std::atomic<int> m_GpuFailureCommandId = -1;
-	std::atomic<int> m_GpuFailureStatus = 0;
+	CMetalGpuCompletion m_GpuCompletion;
 	std::atomic<int> m_LastCommandId = -1;
-	std::mutex m_GpuFailureMutex;
-	std::string m_GpuFailureDescription;
 	SBackendCapabilities *m_pCapabilities = nullptr;
 	IStorage *m_pStorage = nullptr;
 	bool m_CommandBufferCommitted = false;
@@ -775,51 +771,15 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		m_FrameState.DrainFrames();
 	}
 
-	void RecordGpuFailure(id<MTLCommandBuffer> Buffer, uint64_t FrameId)
+	bool SetGpuFailureError() noexcept
 	{
-		std::string Description = "Metal command buffer failed";
-		NSError *pError = Buffer.error;
-		if(pError != nil)
-		{
-			const char *pDomain = pError.domain.UTF8String;
-			const char *pLocalizedDescription = pError.localizedDescription.UTF8String;
-			Description += " (domain=";
-			Description += pDomain != nullptr ? pDomain : "unknown";
-			Description += ", code=" + std::to_string(static_cast<long long>(pError.code));
-			if(pLocalizedDescription != nullptr)
-			{
-				Description += ", description=";
-				Description += pLocalizedDescription;
-			}
-			Description += ")";
-		}
-		{
-			std::lock_guard<std::mutex> Lock(m_GpuFailureMutex);
-			m_GpuFailureDescription = std::move(Description);
-		}
-		m_GpuFailureFrameId.store(FrameId, std::memory_order_relaxed);
-		m_GpuFailureCommandId.store(m_LastCommandId.load(std::memory_order_relaxed), std::memory_order_relaxed);
-		m_GpuFailureStatus.store(static_cast<int>(Buffer.status), std::memory_order_relaxed);
-		m_GpuFailure.store(true, std::memory_order_release);
-	}
-
-	bool SetGpuFailureError()
-	{
-		if(!m_GpuFailure.load(std::memory_order_acquire))
-			return false;
-		const uint64_t FrameId = m_GpuFailureFrameId.load(std::memory_order_relaxed);
-		const int CommandId = m_GpuFailureCommandId.load(std::memory_order_relaxed);
-		const int Status = m_GpuFailureStatus.load(std::memory_order_relaxed);
-		std::string Description;
-		{
-			std::lock_guard<std::mutex> Lock(m_GpuFailureMutex);
-			Description = m_GpuFailureDescription;
-		}
-		m_Error.m_ErrorType = GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED;
-		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{
-			false,
-			"Metal GPU command buffer failure (stage=completion, frame_id=" + std::to_string(FrameId) + ", command_id=" + std::to_string(CommandId) + ", status=" + std::to_string(Status) + "): " + Description});
-		return true;
+		return m_GpuCompletion.Publish(m_Error, [](SGfxErrorContainer &Error, const CMetalGpuCompletion::SFailure &Failure) {
+			char aMessage[1280];
+			str_format(aMessage, sizeof(aMessage), "Metal GPU command buffer failure (stage=completion, frame_id=%llu, command_id=%d, status=%d): %s",
+				static_cast<unsigned long long>(Failure.m_FrameId), Failure.m_CommandId, Failure.m_Status,
+				Failure.m_aDescription[0] != '\0' ? Failure.m_aDescription : "Metal command buffer failed");
+			Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{false, aMessage});
+		});
 	}
 
 	void AddTextureMemory(size_t Bytes)
@@ -2014,11 +1974,11 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		if(Uploaded && pTextureArray != nil && pData != nullptr)
 		{
 			const uint8_t *pArraySourceData = pData;
-			uint8_t *pResizedArrayData = nullptr;
+			CGraphicsUploadData<uint8_t> pResizedArrayData;
 			if(ArraySourceWidth != Width || ArraySourceHeight != Height)
 			{
-				pResizedArrayData = ResizeImage(pData, static_cast<int>(Width), static_cast<int>(Height), static_cast<int>(ArraySourceWidth), static_cast<int>(ArraySourceHeight), static_cast<int>(MetalTextureBytesPerPixel(Format)));
-				pArraySourceData = pResizedArrayData;
+				pResizedArrayData.reset(ResizeImage(pData, static_cast<int>(Width), static_cast<int>(Height), static_cast<int>(ArraySourceWidth), static_cast<int>(ArraySourceHeight), static_cast<int>(MetalTextureBytesPerPixel(Format))));
+				pArraySourceData = pResizedArrayData.get();
 			}
 			size_t SourceBytes = 0;
 			if(pArraySourceData == nullptr || !MetalCheckedMul(ArraySourceWidth, ArraySourceHeight, SourceBytes) || !MetalCheckedMul(SourceBytes, MetalTextureBytesPerPixel(Format), SourceBytes))
@@ -2031,7 +1991,6 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 				Texture2DTo3D(const_cast<uint8_t *>(pArraySourceData), static_cast<int>(ArraySourceWidth), static_cast<int>(ArraySourceHeight), MetalTextureBytesPerPixel(Format), 16, 16, vArrayData.data(), ConvertedWidth, ConvertedHeight);
 				Uploaded = ConvertedWidth == static_cast<int>(ArrayWidth) && ConvertedHeight == static_cast<int>(ArrayHeight) && UploadTextureArray(Texture, vArrayData.data(), ArrayWidth, ArrayHeight, 0, METAL_TEXTURE_ARRAY_LAYERS);
 			}
-			free(pResizedArrayData);
 		}
 		if(!Uploaded)
 		{
@@ -2063,16 +2022,15 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		if(Uploaded && Texture.m_Is2DArray)
 		{
 			const uint8_t *pArraySourceData = pData;
-			uint8_t *pResizedArrayData = nullptr;
+			CGraphicsUploadData<uint8_t> pResizedArrayData;
 			if(Texture.m_ArraySourceWidth != Texture.m_Width || Texture.m_ArraySourceHeight != Texture.m_Height)
 			{
-				pResizedArrayData = ResizeImage(pData, static_cast<int>(Texture.m_Width), static_cast<int>(Texture.m_Height), static_cast<int>(Texture.m_ArraySourceWidth), static_cast<int>(Texture.m_ArraySourceHeight), static_cast<int>(MetalTextureBytesPerPixel(Format)));
-				pArraySourceData = pResizedArrayData;
+				pResizedArrayData.reset(ResizeImage(pData, static_cast<int>(Texture.m_Width), static_cast<int>(Texture.m_Height), static_cast<int>(Texture.m_ArraySourceWidth), static_cast<int>(Texture.m_ArraySourceHeight), static_cast<int>(MetalTextureBytesPerPixel(Format))));
+				pArraySourceData = pResizedArrayData.get();
 			}
 			size_t SourceBytes = 0;
 			if(pArraySourceData == nullptr || !MetalCheckedMul(Texture.m_ArraySourceWidth, Texture.m_ArraySourceHeight, SourceBytes) || !MetalCheckedMul(SourceBytes, MetalTextureBytesPerPixel(Format), SourceBytes) || Texture.m_ArraySourceWidth > static_cast<size_t>(std::numeric_limits<int>::max()) || Texture.m_ArraySourceHeight > static_cast<size_t>(std::numeric_limits<int>::max()))
 			{
-				free(pResizedArrayData);
 				return false;
 			}
 			std::vector<uint8_t> vArrayData(SourceBytes);
@@ -2080,7 +2038,6 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			int ConvertedHeight = 0;
 			Texture2DTo3D(const_cast<uint8_t *>(pArraySourceData), static_cast<int>(Texture.m_ArraySourceWidth), static_cast<int>(Texture.m_ArraySourceHeight), MetalTextureBytesPerPixel(Format), 16, 16, vArrayData.data(), ConvertedWidth, ConvertedHeight);
 			Uploaded = ConvertedWidth == static_cast<int>(Texture.m_ArrayWidth) && ConvertedHeight == static_cast<int>(Texture.m_ArrayHeight) && UploadTextureArray(Texture, vArrayData.data(), Texture.m_ArrayWidth, Texture.m_ArrayHeight, 0, METAL_TEXTURE_ARRAY_LAYERS);
-			free(pResizedArrayData);
 		}
 		if(Uploaded && m_CurrentBlitEncoder != nil)
 		{
@@ -2453,15 +2410,8 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		m_FrameState.DrainFrames();
 		m_CurrentFrameSlot = 0;
 		m_FrameId = 0;
-		m_GpuFailure.store(false, std::memory_order_relaxed);
-		m_GpuFailureFrameId.store(0, std::memory_order_relaxed);
-		m_GpuFailureCommandId.store(-1, std::memory_order_relaxed);
-		m_GpuFailureStatus.store(0, std::memory_order_relaxed);
+		m_GpuCompletion.Reset();
 		m_LastCommandId.store(-1, std::memory_order_relaxed);
-		{
-			std::lock_guard<std::mutex> Lock(m_GpuFailureMutex);
-			m_GpuFailureDescription.clear();
-		}
 		m_State = EMetalBackendState::INITIALIZED;
 		if(m_pCapabilities != nullptr)
 		{
@@ -2508,15 +2458,8 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		DestroyAllBuffers();
 		ReleaseGpuObjects();
 		m_FrameState.DrainFrames();
-		m_GpuFailure.store(false, std::memory_order_relaxed);
-		m_GpuFailureFrameId.store(0, std::memory_order_relaxed);
-		m_GpuFailureCommandId.store(-1, std::memory_order_relaxed);
-		m_GpuFailureStatus.store(0, std::memory_order_relaxed);
+		m_GpuCompletion.Reset();
 		m_LastCommandId.store(-1, std::memory_order_relaxed);
-		{
-			std::lock_guard<std::mutex> Lock(m_GpuFailureMutex);
-			m_GpuFailureDescription.clear();
-		}
 		if(m_MetalView != nullptr)
 			SDL_Metal_DestroyView(m_MetalView);
 		m_MetalView = nullptr;
@@ -4300,10 +4243,43 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			if(RecordGpuTiming)
 				RecordMetalGpuExecutionTiming(Buffer, GpuTimingGeneration);
 			const bool Success = Buffer.status == MTLCommandBufferStatusCompleted;
-			if(!Success)
-				RecordGpuFailure(Buffer, Capture.m_FrameId);
-			m_FrameState.CompleteFrame(Capture, Success);
+			m_GpuCompletion.CompleteFrame(m_FrameState, Capture, Success, m_LastCommandId.load(std::memory_order_relaxed), static_cast<int>(Buffer.status),
+				[Buffer](char *pDescription, size_t DescriptionSize) {
+					NSError *pError = Buffer.error;
+					if(pError == nil)
+					{
+						str_copy(pDescription, "Metal command buffer failed", DescriptionSize);
+						return;
+					}
+					const char *pDomain = pError.domain.UTF8String;
+					const char *pLocalizedDescription = pError.localizedDescription.UTF8String;
+					str_format(pDescription, DescriptionSize, "Metal command buffer failed (domain=%s, code=%lld, description=%s)",
+						pDomain != nullptr ? pDomain : "unknown", static_cast<long long>(pError.code),
+						pLocalizedDescription != nullptr ? pLocalizedDescription : "unknown");
+				});
 		}];
+	}
+
+	void AbortCommands(bool Initialization) noexcept override
+	{
+		(void)Initialization;
+		// 后续 POST_SHUTDOWN 不再通过 StartCommands 创建新帧。
+		m_State = EMetalBackendState::SHUTDOWN;
+		EndActiveEncoders();
+		if(!m_CommandBufferCommitted)
+		{
+			// 释放未提交的录制，避免 WaitForGpuIdle 再提交残缺帧或等待它完成。
+			m_FrameState.DiscardCurrentFrame();
+			SFrameSlot &Frame = m_aFrameSlots[m_CurrentFrameSlot];
+			ReleaseMetalObject(Frame.m_CommandBuffer);
+			Frame.m_CommandBuffer = nil;
+			Frame.m_BackbufferHasContents = false;
+			m_CurrentCommandBuffer = nil;
+		}
+		m_BackbufferContinuationPending = false;
+		ReleaseMetalObject(m_CurrentDrawable);
+		m_CurrentDrawable = nil;
+		m_SkipCurrentFrame = true;
 	}
 
 	void EndCommands() override
@@ -4422,9 +4398,9 @@ public:
 			case CCommandBuffer::CMD_CREATE_BUFFER_OBJECT:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_CreateBufferObject *>(pBaseCommand);
-				const bool Success = CreateBuffer(pCommand->m_BufferIndex, pCommand->m_DataSize, pCommand->m_pUploadData, pCommand->m_Flags);
-				if(pCommand->m_DeletePointer && pCommand->m_pUploadData != nullptr)
-					free(pCommand->m_pUploadData);
+				void *pUploadData = pCommand->m_pUploadData;
+				auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
+				const bool Success = CreateBuffer(pCommand->m_BufferIndex, pCommand->m_DataSize, pUploadData, pCommand->m_Flags);
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
@@ -4432,9 +4408,9 @@ public:
 			case CCommandBuffer::CMD_RECREATE_BUFFER_OBJECT:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_RecreateBufferObject *>(pBaseCommand);
-				const bool Success = RecreateBuffer(pCommand->m_BufferIndex, pCommand->m_DataSize, pCommand->m_pUploadData, pCommand->m_Flags);
-				if(pCommand->m_DeletePointer && pCommand->m_pUploadData != nullptr)
-					free(pCommand->m_pUploadData);
+				void *pUploadData = pCommand->m_pUploadData;
+				auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
+				const bool Success = RecreateBuffer(pCommand->m_BufferIndex, pCommand->m_DataSize, pUploadData, pCommand->m_Flags);
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
@@ -4442,10 +4418,10 @@ public:
 			case CCommandBuffer::CMD_UPDATE_BUFFER_OBJECT:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_UpdateBufferObject *>(pBaseCommand);
+				void *pUploadData = pCommand->m_pUploadData;
+				auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
 				const size_t Offset = reinterpret_cast<uintptr_t>(pCommand->m_pOffset);
-				const bool Success = UpdateBuffer(pCommand->m_BufferIndex, Offset, pCommand->m_DataSize, pCommand->m_pUploadData);
-				if(pCommand->m_DeletePointer && pCommand->m_pUploadData != nullptr)
-					free(pCommand->m_pUploadData);
+				const bool Success = UpdateBuffer(pCommand->m_BufferIndex, Offset, pCommand->m_DataSize, pUploadData);
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
@@ -4497,9 +4473,8 @@ public:
 			case CCommandBuffer::CMD_TEXTURE_CREATE:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_Texture_Create *>(pBaseCommand);
-				const bool Success = CreateTexture(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::RGBA8, pCommand->m_Flags, pCommand->m_pData);
-				if(pCommand->m_pData != nullptr)
-					free(pCommand->m_pData);
+				auto pData = TakeGraphicsUpload(pCommand->m_pData);
+				const bool Success = CreateTexture(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::RGBA8, pCommand->m_Flags, pData.get());
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
@@ -4507,9 +4482,8 @@ public:
 			case CCommandBuffer::CMD_TEXTURE_UPDATE:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_Texture_Update *>(pBaseCommand);
-				const bool Success = UpdateTexture(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::RGBA8, pCommand->m_pData);
-				if(pCommand->m_pData != nullptr)
-					free(pCommand->m_pData);
+				auto pData = TakeGraphicsUpload(pCommand->m_pData);
+				const bool Success = UpdateTexture(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::RGBA8, pData.get());
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
@@ -4520,8 +4494,10 @@ public:
 			case CCommandBuffer::CMD_TEXT_TEXTURES_CREATE:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_TextTextures_Create *>(pBaseCommand);
-				const bool TextSuccess = CreateTexture(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::R8, TextureFlag::NO_MIPMAPS, pCommand->m_pTextData);
-				const bool OutlineSuccess = CreateTexture(pCommand->m_SlotOutline, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::R8, TextureFlag::NO_MIPMAPS, pCommand->m_pTextOutlineData);
+				auto pTextData = TakeGraphicsUpload(pCommand->m_pTextData);
+				auto pOutlineData = TakeGraphicsUpload(pCommand->m_pTextOutlineData);
+				const bool TextSuccess = CreateTexture(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::R8, TextureFlag::NO_MIPMAPS, pTextData.get());
+				const bool OutlineSuccess = CreateTexture(pCommand->m_SlotOutline, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::R8, TextureFlag::NO_MIPMAPS, pOutlineData.get());
 				const bool Success = TextSuccess && OutlineSuccess;
 				if(!Success)
 				{
@@ -4530,10 +4506,6 @@ public:
 					if(OutlineSuccess)
 						DestroyTexture(pCommand->m_SlotOutline);
 				}
-				if(pCommand->m_pTextData != nullptr)
-					free(pCommand->m_pTextData);
-				if(pCommand->m_pTextOutlineData != nullptr)
-					free(pCommand->m_pTextOutlineData);
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
@@ -4541,9 +4513,8 @@ public:
 			case CCommandBuffer::CMD_TEXT_TEXTURE_UPDATE:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_TextTexture_Update *>(pBaseCommand);
-				const bool Success = UpdateTexture(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::R8, pCommand->m_pData);
-				if(pCommand->m_pData != nullptr)
-					free(pCommand->m_pData);
+				auto pData = TakeGraphicsUpload(pCommand->m_pData);
+				const bool Success = UpdateTexture(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::R8, pData.get());
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;

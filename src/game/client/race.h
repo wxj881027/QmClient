@@ -16,6 +16,8 @@ public:
 
 	// these functions return the time in milliseconds, time -1 is invalid
 	static int TimeFromSecondsStr(const char *pStr); // x.xxx
+	// 保留完整文件名匹配；pPlayerName 为空时读取不带玩家后缀的录像。
+	static int TimeFromDemoFilename(const char *pFilename, const char *pMap, const char *pPlayerName);
 	static int TimeFromStr(const char *pStr); // x minute(s) x.xxx second(s) / x 分钟 x.xxx 秒
 	static int TimeFromFinishMessage(const char *pStr, char *pNameBuf, int NameBufSize); // xxx finished in: ... / xxx 完成了地图，用时：...
 

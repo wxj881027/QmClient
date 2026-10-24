@@ -5,6 +5,7 @@
 #include <base/sphore.h>
 #include <base/system.h>
 
+#include <engine/client/graphics_upload_data.h>
 #include <engine/client/quad_rotation_cache.h>
 #include <engine/client/render_target_pool.h>
 #include <engine/client/render_target_readback_queue.h>
@@ -215,6 +216,13 @@ public:
 		SCommand *m_pNext;
 	};
 
+	struct SCommand_Upload : public SCommand
+	{
+		SCommand_Upload(unsigned Cmd) :
+			SCommand(Cmd) {}
+		SCommand_Upload *m_pNextUpload = nullptr;
+	};
+
 	struct SState
 	{
 		EBlendMode m_BlendMode;
@@ -375,44 +383,44 @@ public:
 		CImageInfo *m_pImage = nullptr;
 	};
 
-	struct SCommand_CreateBufferObject : public SCommand
+	struct SCommand_CreateBufferObject : public SCommand_Upload
 	{
 		SCommand_CreateBufferObject() :
-			SCommand(CMD_CREATE_BUFFER_OBJECT) {}
+			SCommand_Upload(CMD_CREATE_BUFFER_OBJECT) {}
 
 		int m_BufferIndex;
 
-		bool m_DeletePointer;
-		void *m_pUploadData;
+		bool m_DeletePointer = false;
+		mutable void *m_pUploadData = nullptr;
 		size_t m_DataSize;
 
 		int m_Flags; // @see EBufferObjectCreateFlags
 	};
 
-	struct SCommand_RecreateBufferObject : public SCommand
+	struct SCommand_RecreateBufferObject : public SCommand_Upload
 	{
 		SCommand_RecreateBufferObject() :
-			SCommand(CMD_RECREATE_BUFFER_OBJECT) {}
+			SCommand_Upload(CMD_RECREATE_BUFFER_OBJECT) {}
 
 		int m_BufferIndex;
 
-		bool m_DeletePointer;
-		void *m_pUploadData;
+		bool m_DeletePointer = false;
+		mutable void *m_pUploadData = nullptr;
 		size_t m_DataSize;
 
 		int m_Flags; // @see EBufferObjectCreateFlags
 	};
 
-	struct SCommand_UpdateBufferObject : public SCommand
+	struct SCommand_UpdateBufferObject : public SCommand_Upload
 	{
 		SCommand_UpdateBufferObject() :
-			SCommand(CMD_UPDATE_BUFFER_OBJECT) {}
+			SCommand_Upload(CMD_UPDATE_BUFFER_OBJECT) {}
 
 		int m_BufferIndex;
 
-		bool m_DeletePointer;
+		bool m_DeletePointer = false;
 		void *m_pOffset;
-		void *m_pUploadData;
+		mutable void *m_pUploadData = nullptr;
 		size_t m_DataSize;
 	};
 
@@ -645,10 +653,10 @@ public:
 		bool m_ByResize = false; // resized by an resize event.. a hint to make clear that the viewport update can be deferred if wanted
 	};
 
-	struct SCommand_Texture_Create : public SCommand
+	struct SCommand_Texture_Create : public SCommand_Upload
 	{
 		SCommand_Texture_Create() :
-			SCommand(CMD_TEXTURE_CREATE) {}
+			SCommand_Upload(CMD_TEXTURE_CREATE) {}
 
 		// texture information
 		int m_Slot;
@@ -657,7 +665,7 @@ public:
 		size_t m_Height;
 		int m_Flags;
 		// data must be in RGBA format
-		uint8_t *m_pData; // will be freed by the command processor
+		mutable uint8_t *m_pData = nullptr;
 	};
 
 	struct SCommand_Texture_Destroy : public SCommand
@@ -669,10 +677,10 @@ public:
 		int m_Slot;
 	};
 
-	struct SCommand_Texture_Update : public SCommand
+	struct SCommand_Texture_Update : public SCommand_Upload
 	{
 		SCommand_Texture_Update() :
-			SCommand(CMD_TEXTURE_UPDATE) {}
+			SCommand_Upload(CMD_TEXTURE_UPDATE) {}
 
 		// texture information
 		int m_Slot;
@@ -681,13 +689,13 @@ public:
 		int m_Y;
 		size_t m_Width;
 		size_t m_Height;
-		uint8_t *m_pData; // will be freed by the command processor
+		mutable uint8_t *m_pData = nullptr;
 	};
 
-	struct SCommand_TextTextures_Create : public SCommand
+	struct SCommand_TextTextures_Create : public SCommand_Upload
 	{
 		SCommand_TextTextures_Create() :
-			SCommand(CMD_TEXT_TEXTURES_CREATE) {}
+			SCommand_Upload(CMD_TEXT_TEXTURES_CREATE) {}
 
 		// texture information
 		int m_Slot;
@@ -696,8 +704,8 @@ public:
 		size_t m_Width;
 		size_t m_Height;
 
-		uint8_t *m_pTextData; // will be freed by the command processor
-		uint8_t *m_pTextOutlineData; // will be freed by the command processor
+		mutable uint8_t *m_pTextData = nullptr;
+		mutable uint8_t *m_pTextOutlineData = nullptr;
 	};
 
 	struct SCommand_TextTextures_Destroy : public SCommand
@@ -710,10 +718,10 @@ public:
 		int m_SlotOutline;
 	};
 
-	struct SCommand_TextTexture_Update : public SCommand
+	struct SCommand_TextTexture_Update : public SCommand_Upload
 	{
 		SCommand_TextTexture_Update() :
-			SCommand(CMD_TEXT_TEXTURE_UPDATE) {}
+			SCommand_Upload(CMD_TEXT_TEXTURE_UPDATE) {}
 
 		// texture information
 		int m_Slot;
@@ -722,7 +730,7 @@ public:
 		int m_Y;
 		size_t m_Width;
 		size_t m_Height;
-		uint8_t *m_pData; // will be freed by the command processor
+		mutable uint8_t *m_pData = nullptr;
 	};
 
 	struct SCommand_WindowCreateNtf : public CCommandBuffer::SCommand
@@ -744,9 +752,11 @@ public:
 
 	//
 	CCommandBuffer(unsigned CmdBufferSize, unsigned DataBufferSize) :
-		m_CmdBuffer(CmdBufferSize), m_DataBuffer(DataBufferSize), m_pCmdBufferHead(nullptr), m_pCmdBufferTail(nullptr)
+		m_CmdBuffer(CmdBufferSize), m_DataBuffer(DataBufferSize), m_pCmdBufferHead(nullptr), m_pCmdBufferTail(nullptr), m_pUploadHead(nullptr)
 	{
 	}
+
+	~CCommandBuffer() { DiscardUploads(); }
 
 	void *AllocData(size_t WantedSize)
 	{
@@ -765,6 +775,12 @@ public:
 			return false;
 		*pCmd = Command;
 		pCmd->m_pNext = nullptr;
+
+		if constexpr(std::is_base_of_v<SCommand_Upload, T>)
+		{
+			pCmd->m_pNextUpload = m_pUploadHead;
+			m_pUploadHead = pCmd;
+		}
 
 		if(m_pCmdBufferTail)
 			m_pCmdBufferTail->m_pNext = pCmd;
@@ -819,8 +835,75 @@ public:
 		return true;
 	}
 
+	// 仅在该缓冲已经完成执行或尚未提交时回收；链表只包含上传命令，不遍历绘制命令。
+	template<typename TRelease = CGraphicsUploadDeleter>
+	void DiscardUploads(TRelease &&Release = TRelease{}) noexcept
+	{
+		static_assert(std::is_nothrow_invocable_v<TRelease &, void *>);
+		auto ReleaseData = [&](auto *&pData) noexcept {
+			if(pData != nullptr)
+				Release(std::exchange(pData, nullptr));
+		};
+		while(m_pUploadHead != nullptr)
+		{
+			const SCommand_Upload *pCommand = m_pUploadHead;
+			m_pUploadHead = m_pUploadHead->m_pNextUpload;
+			switch(pCommand->m_Cmd)
+			{
+			case CMD_TEXTURE_CREATE:
+			{
+				const auto *pUpload = static_cast<const SCommand_Texture_Create *>(pCommand);
+				ReleaseData(pUpload->m_pData);
+				break;
+			}
+			case CMD_TEXTURE_UPDATE:
+			{
+				const auto *pUpload = static_cast<const SCommand_Texture_Update *>(pCommand);
+				ReleaseData(pUpload->m_pData);
+				break;
+			}
+			case CMD_TEXT_TEXTURES_CREATE:
+			{
+				const auto *pUpload = static_cast<const SCommand_TextTextures_Create *>(pCommand);
+				ReleaseData(pUpload->m_pTextData);
+				ReleaseData(pUpload->m_pTextOutlineData);
+				break;
+			}
+			case CMD_TEXT_TEXTURE_UPDATE:
+			{
+				const auto *pUpload = static_cast<const SCommand_TextTexture_Update *>(pCommand);
+				ReleaseData(pUpload->m_pData);
+				break;
+			}
+			case CMD_CREATE_BUFFER_OBJECT:
+			{
+				const auto *pUpload = static_cast<const SCommand_CreateBufferObject *>(pCommand);
+				if(pUpload->m_DeletePointer)
+					ReleaseData(pUpload->m_pUploadData);
+				break;
+			}
+			case CMD_RECREATE_BUFFER_OBJECT:
+			{
+				const auto *pUpload = static_cast<const SCommand_RecreateBufferObject *>(pCommand);
+				if(pUpload->m_DeletePointer)
+					ReleaseData(pUpload->m_pUploadData);
+				break;
+			}
+			case CMD_UPDATE_BUFFER_OBJECT:
+			{
+				const auto *pUpload = static_cast<const SCommand_UpdateBufferObject *>(pCommand);
+				if(pUpload->m_DeletePointer)
+					ReleaseData(pUpload->m_pUploadData);
+				break;
+			}
+			default: break;
+			}
+		}
+	}
+
 	void Reset()
 	{
+		DiscardUploads();
 		m_pCmdBufferHead = m_pCmdBufferTail = nullptr;
 		m_CmdBuffer.Reset();
 		m_DataBuffer.Reset();
@@ -837,6 +920,7 @@ public:
 private:
 	SCommand *m_pCmdBufferHead;
 	SCommand *m_pCmdBufferTail;
+	SCommand_Upload *m_pUploadHead;
 };
 
 enum EGraphicsBackendErrorCodes
@@ -851,6 +935,7 @@ enum EGraphicsBackendErrorCodes
 	GRAPHICS_BACKEND_ERROR_CODE_SDL_SCREEN_RESOLUTION_REQUEST_FAILED,
 	GRAPHICS_BACKEND_ERROR_CODE_SDL_WINDOW_CREATE_FAILED,
 	GRAPHICS_BACKEND_ERROR_CODE_METAL_INIT_FAILED,
+	GRAPHICS_BACKEND_ERROR_CODE_THREAD_CREATE_FAILED,
 };
 
 constexpr bool IsGraphicsBackendOpenGLRetryableError(int ErrorCode)

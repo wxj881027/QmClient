@@ -238,6 +238,37 @@ namespace
 		EXPECT_TRUE(m_Ui.ConsumeHotkey(CUi::HOTKEY_ENTER));
 	}
 
+	TEST_F(QmEditorTextInput, EmptyClipboardKeepsTheSelectedTextAndCursor)
+	{
+		m_First.Set("abcd");
+		Focus(m_First);
+		m_First.SetCursorOffset(3);
+		m_First.SetSelection(1, 3);
+		ASSERT_TRUE(Paste(m_First, ""));
+		EXPECT_STREQ(m_First.GetString(), "abcd");
+		EXPECT_EQ(m_First.GetCursorOffset(), 3u);
+		EXPECT_EQ(m_First.GetSelectionStart(), 1u);
+		EXPECT_EQ(m_First.GetSelectionEnd(), 3u);
+		EXPECT_TRUE(m_First.IsActive());
+	}
+
+	TEST_F(QmEditorTextInput, EmptyClipboardDoesNotCallLineCallbacksAndNextPasteWorks)
+	{
+		m_First.Set("abcd");
+		Focus(m_First);
+		m_First.SetCursorOffset(3);
+		m_First.SetSelection(1, 3);
+		RecordClipboardLines(m_First);
+		ASSERT_TRUE(Paste(m_First, ""));
+		EXPECT_TRUE(m_vClipboardLines.empty());
+		EXPECT_STREQ(m_First.GetString(), "abcd");
+		ASSERT_TRUE(Paste(m_First, "X\nnext"));
+		EXPECT_EQ(m_vClipboardLines, (std::vector<std::string>{"aXd"}));
+		EXPECT_STREQ(m_First.GetString(), "next");
+		EXPECT_FALSE(m_First.HasSelection());
+		EXPECT_TRUE(m_First.IsActive());
+	}
+
 	TEST_F(QmEditorTextInput, MultilinePasteLimitsEveryCallbackAndKeepsLastLine)
 	{
 		Focus(m_Small);

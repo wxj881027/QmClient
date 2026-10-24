@@ -2,12 +2,14 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "system.h"
 
+#include "aio_buffer.h"
 #include "io_read_all.h"
 #include "lock.h"
 #include "logger.h"
 #include "sphore.h"
 #include "thread.h"
 #include "windows.h"
+#include "windows_io.h"
 
 #include <sys/types.h>
 
@@ -17,6 +19,7 @@
 #include <cstring>
 #include <iterator> // std::size
 #include <mutex>
+#include <new>
 #include <string_view>
 
 #if defined(CONF_WEBSOCKETS)
@@ -132,6 +135,50 @@ struct NETQOS_INTERNAL
 };
 
 #if defined(CONF_FAMILY_WINDOWS)
+int CWindowsFileOperations::OpenDescriptor(intptr_t Handle, int OpenFlags) noexcept
+{
+	return _open_osfhandle(Handle, OpenFlags);
+}
+
+FILE *CWindowsFileOperations::OpenStream(int Descriptor, const char *pMode) noexcept
+{
+	return _fdopen(Descriptor, pMode);
+}
+
+void CWindowsFileOperations::CloseNativeHandle(intptr_t Handle) noexcept
+{
+	CloseHandle(reinterpret_cast<HANDLE>(Handle));
+}
+
+void CWindowsFileOperations::CloseDescriptor(int Descriptor) noexcept
+{
+	_close(Descriptor);
+}
+
+IOHANDLE windows_io_from_handle(intptr_t Handle, const char *pMode, CWindowsFileOperations *pOperations, int OpenFlags) noexcept
+{
+	CWindowsFileOperations DefaultOperations;
+	CWindowsFileOperations &Operations = pOperations ? *pOperations : DefaultOperations;
+	const int Descriptor = Operations.OpenDescriptor(Handle, OpenFlags);
+	if(Descriptor == -1)
+	{
+		const int Error = errno;
+		Operations.CloseNativeHandle(Handle);
+		errno = Error;
+		return nullptr;
+	}
+
+	FILE *pStream = Operations.OpenStream(Descriptor, pMode);
+	if(!pStream)
+	{
+		const int Error = errno;
+		// 句柄已交给 CRT，关闭描述符会同时关闭原生句柄，不能再次 CloseHandle。
+		Operations.CloseDescriptor(Descriptor);
+		errno = Error;
+	}
+	return pStream;
+}
+
 struct SQwaveApi
 {
 	HMODULE m_pModule = nullptr;
@@ -202,11 +249,7 @@ IOHANDLE io_open(const char *filename, int flags)
 	HANDLE handle = CreateFileW(wide_filename.c_str(), desired_access, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, creation_disposition, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if(handle == INVALID_HANDLE_VALUE)
 		return nullptr;
-	const int file_descriptor = _open_osfhandle((intptr_t)handle, 0);
-	dbg_assert(file_descriptor != -1, "_open_osfhandle failure");
-	FILE *file_stream = _fdopen(file_descriptor, open_mode);
-	dbg_assert(file_stream != nullptr, "_fdopen failure");
-	return file_stream;
+	return windows_io_from_handle(reinterpret_cast<intptr_t>(handle), open_mode);
 #else
 	const char *open_mode;
 	if((flags & IOFLAG_READ) != 0)
@@ -449,7 +492,6 @@ IOHANDLE io_current_exe()
 	return io_open(path, IOFLAG_READ);
 }
 
-#define ASYNC_BUFSIZE (8 * 1024)
 #define ASYNC_LOCAL_BUFSIZE (64 * 1024)
 
 struct ASYNCIO
@@ -459,10 +501,7 @@ struct ASYNCIO
 	SEMAPHORE sphore;
 	void *thread;
 
-	unsigned char *buffer;
-	unsigned int buffer_size;
-	unsigned int read_pos;
-	unsigned int write_pos;
+	CAsyncIOBuffer buffer;
 
 	int error;
 	unsigned char finish;
@@ -476,31 +515,6 @@ enum
 	ASYNCIO_EXIT,
 };
 
-struct BUFFERS
-{
-	unsigned char *buf1;
-	unsigned int len1;
-	unsigned char *buf2;
-	unsigned int len2;
-};
-
-static void buffer_ptrs(ASYNCIO *aio, struct BUFFERS *buffers)
-{
-	mem_zero(buffers, sizeof(*buffers));
-	if(aio->read_pos < aio->write_pos)
-	{
-		buffers->buf1 = aio->buffer + aio->read_pos;
-		buffers->len1 = aio->write_pos - aio->read_pos;
-	}
-	else if(aio->read_pos > aio->write_pos)
-	{
-		buffers->buf1 = aio->buffer + aio->read_pos;
-		buffers->len1 = aio->buffer_size - aio->read_pos;
-		buffers->buf2 = aio->buffer;
-		buffers->len2 = aio->write_pos;
-	}
-}
-
 static void aio_handle_free_and_unlock(ASYNCIO *aio) RELEASE(aio->lock)
 {
 	int do_free;
@@ -510,7 +524,6 @@ static void aio_handle_free_and_unlock(ASYNCIO *aio) RELEASE(aio->lock)
 	aio->lock.unlock();
 	if(do_free)
 	{
-		free(aio->buffer);
 		sphore_destroy(&aio->sphore);
 		delete aio;
 	}
@@ -523,12 +536,10 @@ static void aio_thread(void *user)
 	aio->lock.lock();
 	while(true)
 	{
-		struct BUFFERS buffers;
 		int result_io_error;
 		unsigned char local_buffer[ASYNC_LOCAL_BUFSIZE];
-		unsigned int local_buffer_len = 0;
 
-		if(aio->read_pos == aio->write_pos)
+		if(aio->buffer.Empty())
 		{
 			if(aio->finish != ASYNCIO_RUNNING)
 			{
@@ -545,26 +556,7 @@ static void aio_thread(void *user)
 			continue;
 		}
 
-		buffer_ptrs(aio, &buffers);
-		if(buffers.buf1)
-		{
-			if(buffers.len1 > sizeof(local_buffer) - local_buffer_len)
-			{
-				buffers.len1 = sizeof(local_buffer) - local_buffer_len;
-			}
-			mem_copy(local_buffer + local_buffer_len, buffers.buf1, buffers.len1);
-			local_buffer_len += buffers.len1;
-			if(buffers.buf2)
-			{
-				if(buffers.len2 > sizeof(local_buffer) - local_buffer_len)
-				{
-					buffers.len2 = sizeof(local_buffer) - local_buffer_len;
-				}
-				mem_copy(local_buffer + local_buffer_len, buffers.buf2, buffers.len2);
-				local_buffer_len += buffers.len2;
-			}
-		}
-		aio->read_pos = (aio->read_pos + buffers.len1 + buffers.len2) % aio->buffer_size;
+		const unsigned int local_buffer_len = aio->buffer.Read(local_buffer, sizeof(local_buffer));
 		aio->lock.unlock();
 
 		io_write(aio->io, local_buffer, local_buffer_len);
@@ -572,65 +564,39 @@ static void aio_thread(void *user)
 		result_io_error = io_error(aio->io);
 
 		aio->lock.lock();
-		aio->error = result_io_error;
+		if(aio->error == 0)
+			aio->error = result_io_error;
 	}
 }
 
 ASYNCIO *aio_new(IOHANDLE io)
 {
-	ASYNCIO *aio = new ASYNCIO;
-	if(!aio)
+	ASYNCIO *aio = new(std::nothrow) ASYNCIO;
+	if(!aio || !aio->buffer.IsValid())
 	{
-		return nullptr;
-	}
-	aio->io = io;
-	sphore_init(&aio->sphore);
-	aio->thread = nullptr;
-
-	aio->buffer = (unsigned char *)malloc(ASYNC_BUFSIZE);
-	if(!aio->buffer)
-	{
-		sphore_destroy(&aio->sphore);
 		delete aio;
 		return nullptr;
 	}
-	aio->buffer_size = ASYNC_BUFSIZE;
-	aio->read_pos = 0;
-	aio->write_pos = 0;
+	aio->io = io;
+	if(!sphore_try_init(&aio->sphore))
+	{
+		delete aio;
+		return nullptr;
+	}
+	aio->thread = nullptr;
+
 	aio->error = 0;
 	aio->finish = ASYNCIO_RUNNING;
 	aio->refcount = 2;
 
-	aio->thread = thread_init(aio_thread, aio, "aio");
+	aio->thread = thread_try_init(aio_thread, aio, "aio");
 	if(!aio->thread)
 	{
-		free(aio->buffer);
 		sphore_destroy(&aio->sphore);
 		delete aio;
 		return nullptr;
 	}
 	return aio;
-}
-
-static unsigned int buffer_len(ASYNCIO *aio)
-{
-	if(aio->write_pos >= aio->read_pos)
-	{
-		return aio->write_pos - aio->read_pos;
-	}
-	else
-	{
-		return aio->buffer_size + aio->write_pos - aio->read_pos;
-	}
-}
-
-static unsigned int next_buffer_size(unsigned int cur_size, unsigned int need_size)
-{
-	while(cur_size < need_size)
-	{
-		cur_size *= 2;
-	}
-	return cur_size;
 }
 
 void aio_lock(ASYNCIO *aio) ACQUIRE(aio->lock)
@@ -646,52 +612,11 @@ void aio_unlock(ASYNCIO *aio) RELEASE(aio->lock)
 
 void aio_write_unlocked(ASYNCIO *aio, const void *buffer, unsigned size)
 {
-	unsigned int remaining;
-	remaining = aio->buffer_size - buffer_len(aio);
-
-	// Don't allow full queue to distinguish between empty and full queue.
-	if(size < remaining)
-	{
-		unsigned int remaining_contiguous = aio->buffer_size - aio->write_pos;
-		if(size > remaining_contiguous)
-		{
-			mem_copy(aio->buffer + aio->write_pos, buffer, remaining_contiguous);
-			size -= remaining_contiguous;
-			buffer = ((unsigned char *)buffer) + remaining_contiguous;
-			aio->write_pos = 0;
-		}
-		mem_copy(aio->buffer + aio->write_pos, buffer, size);
-		aio->write_pos = (aio->write_pos + size) % aio->buffer_size;
-	}
-	else
-	{
-		// Add 1 so the new buffer isn't completely filled.
-		unsigned int new_written = buffer_len(aio) + size + 1;
-		unsigned int next_size = next_buffer_size(aio->buffer_size, new_written);
-		unsigned int next_len = 0;
-		unsigned char *next_buffer = (unsigned char *)malloc(next_size);
-
-		struct BUFFERS buffers;
-		buffer_ptrs(aio, &buffers);
-		if(buffers.buf1)
-		{
-			mem_copy(next_buffer + next_len, buffers.buf1, buffers.len1);
-			next_len += buffers.len1;
-			if(buffers.buf2)
-			{
-				mem_copy(next_buffer + next_len, buffers.buf2, buffers.len2);
-				next_len += buffers.len2;
-			}
-		}
-		mem_copy(next_buffer + next_len, buffer, size);
-		next_len += size;
-
-		free(aio->buffer);
-		aio->buffer = next_buffer;
-		aio->buffer_size = next_size;
-		aio->read_pos = 0;
-		aio->write_pos = next_len;
-	}
+	if(aio->finish != ASYNCIO_RUNNING)
+		return;
+	// 后续成功的写入或刷盘不能抹去已发生的数据丢失。
+	if(!aio->buffer.Append(buffer, size) && aio->error == 0)
+		aio->error = -1;
 }
 
 void aio_write(ASYNCIO *aio, const void *buffer, unsigned size)

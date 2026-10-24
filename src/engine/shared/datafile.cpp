@@ -796,14 +796,15 @@ const char *CDataFileReader::GetDataString(int Index)
 		return "";
 	}
 
-	const int DataSize = GetDataSize(Index);
-	if(!DataSize)
+	const char *pData = static_cast<const char *>(GetData(Index));
+	if(pData == nullptr)
 	{
 		return nullptr;
 	}
 
-	const char *pData = static_cast<const char *>(GetData(Index));
-	if(pData == nullptr || mem_has_null(pData, DataSize - 1) || pData[DataSize - 1] != '\0' || !str_utf8_check(pData))
+	// 数据处理器可替换缓冲和长度，字符串检查必须使用读取后的实际尺寸。
+	const int DataSize = GetDataSize(Index);
+	if(DataSize <= 0 || mem_has_null(pData, DataSize - 1) || pData[DataSize - 1] != '\0' || !str_utf8_check(pData))
 	{
 		return nullptr;
 	}

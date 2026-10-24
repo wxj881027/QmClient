@@ -19,7 +19,6 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
-#include <deque>
 #include <fstream>
 #include <limits>
 #include <memory>
@@ -34,85 +33,6 @@ TEST(VoiceUtils, VoiceWebSocketUrlMigratesOnlyOfficialUdpDefault)
 	EXPECT_STREQ(VoiceUtils::EffectiveVoiceWebSocketUrl("42.194.185.210:9987"), "wss://qmclient.icu/ws/voice");
 	EXPECT_STREQ(VoiceUtils::EffectiveVoiceWebSocketUrl("custom.example:9987"), "custom.example:9987");
 	EXPECT_STREQ(VoiceUtils::EffectiveVoiceWebSocketUrl("wss://voice.example/ws"), "wss://voice.example/ws");
-}
-
-namespace
-{
-	class CVoiceTransportTestClient final : public IQmWebSocketClient
-	{
-	public:
-		STuning m_Tuning;
-		EQmWebSocketState m_State = EQmWebSocketState::IDLE;
-		bool m_Desired = false;
-		bool m_SendAccepted = true;
-		int64_t m_ConnectedTick = 0;
-		std::deque<SQmWebSocketMessage> m_Incoming;
-
-		bool Available() const override { return true; }
-		const char *UnavailableReason() const override { return ""; }
-		bool Connect(const SQmWebSocketConnectConfig &, std::string &) override
-		{
-			m_Desired = true;
-			m_State = EQmWebSocketState::CONNECTING;
-			return true;
-		}
-		void Disconnect() override
-		{
-			m_Desired = false;
-			m_State = EQmWebSocketState::IDLE;
-			m_Incoming.clear();
-		}
-		bool Desired() const override { return m_Desired; }
-		EQmWebSocketState State() const override { return m_State; }
-		const char *StateName() const override { return "test"; }
-		bool SendText(const char *, size_t) override { return false; }
-		bool SendBinary(const char *, size_t) override { return m_SendAccepted; }
-		void SetTuning(const STuning &Tuning) override { m_Tuning = Tuning; }
-		bool PollMessage(SQmWebSocketMessage &Out) override
-		{
-			if(m_Incoming.empty())
-				return false;
-			Out = std::move(m_Incoming.front());
-			m_Incoming.pop_front();
-			return true;
-		}
-		size_t PendingMessages() const override { return m_Incoming.size(); }
-		int64_t LastConnectedTick() const override { return m_ConnectedTick; }
-		int64_t LastMessageTick() const override { return 0; }
-		int64_t SendCount() const override { return 0; }
-		int64_t RecvCount() const override { return 0; }
-		int64_t DroppedIncomingCount() const override { return 0; }
-		int64_t DroppedOutgoingCount() const override { return 0; }
-		int64_t ReconnectCount() const override { return 0; }
-		int LastPingRttMs() const override { return -1; }
-		const char *LastError() const override { return ""; }
-	};
-}
-
-TEST(VoiceUtils, WebSocketVoiceBoundsOutgoingQueueAndResetsAfterReconnect)
-{
-	auto pClient = std::make_unique<CVoiceTransportTestClient>();
-	auto *pMock = pClient.get();
-	CVoiceWebSocketTransport Transport(std::move(pClient));
-	EXPECT_EQ(pMock->m_Tuning.m_OutgoingQueueCapacity, 8u);
-	EXPECT_TRUE(Transport.Update("wss://voice.example/ws", true, 10, 20, VOICE_VERSION));
-	EXPECT_TRUE(Transport.Connecting());
-	pMock->m_State = EQmWebSocketState::CONNECTED;
-	++pMock->m_ConnectedTick;
-	EXPECT_TRUE(Transport.Update("wss://voice.example/ws", true, 10, 20, VOICE_VERSION));
-	uint8_t aPacket[VOICE_PACKET_HEADER_SIZE] = {};
-	EXPECT_TRUE(Transport.SendPacket(aPacket, sizeof(aPacket)));
-	pMock->m_SendAccepted = false;
-	EXPECT_FALSE(Transport.SendPacket(aPacket, sizeof(aPacket)));
-	pMock->m_State = EQmWebSocketState::RECONNECTING;
-	EXPECT_TRUE(Transport.Update("wss://voice.example/ws", true, 10, 20, VOICE_VERSION));
-	EXPECT_FALSE(Transport.SendPacket(aPacket, sizeof(aPacket)));
-	pMock->m_State = EQmWebSocketState::CONNECTED;
-	++pMock->m_ConnectedTick;
-	EXPECT_FALSE(Transport.SendPacket(aPacket, sizeof(aPacket)));
-	EXPECT_TRUE(Transport.Update("wss://voice.example/ws", true, 10, 20, VOICE_VERSION));
-	pMock->m_SendAccepted = true;
-	EXPECT_TRUE(Transport.SendPacket(aPacket, sizeof(aPacket)));
 }
 
 TEST(VoiceCore, ClampJitterTargetLow)
@@ -254,7 +174,6 @@ TEST(VoiceCore, VoiceProcessTraceCallbackRecordsStagesInOrder)
 
 TEST(VoiceCore, CaptureProcessKeepsOnlyMicGain)
 {
-	CRClientVoice Voice;
 	SRClientVoiceConfigSnapshot Config;
 	Config.m_QmVoiceAgcEnable = 1;
 	Config.m_QmVoiceMicVolume = 100;
@@ -424,15 +343,6 @@ static bool ParseVoicePacketPayloadSize(const uint8_t *pData, int Bytes, uint16_
 	return true;
 }
 
-static bool ShouldProcessPayload(uint16_t PayloadSize, size_t Offset, int Bytes)
-{
-	if(PayloadSize == 0)
-		return false;
-	if(Offset + PayloadSize > (size_t)Bytes)
-		return false;
-	return true;
-}
-
 static EVoiceIncomingPacketDecision ClassifyTestPacket(uint8_t Version, uint8_t Type, uint16_t PayloadSize,
 	uint32_t ContextHash, uint32_t TokenHash, uint16_t SenderId, size_t PacketSize)
 {
@@ -476,7 +386,7 @@ TEST(VoiceCore, ProcessIncomingZeroPayload)
 	ASSERT_TRUE(ParseVoicePacketPayloadSize(aPacket, (int)PacketSize, PayloadSize));
 	EXPECT_EQ(PayloadSize, 0);
 
-	EXPECT_FALSE(ShouldProcessPayload(PayloadSize, VOICE_PACKET_HEADER_SIZE, (int)PacketSize));
+	EXPECT_EQ(ClassifyBuiltVoicePacket(aPacket, PacketSize, 0x12345678u, 0u), EVoiceIncomingPacketDecision::DROP_PAYLOAD);
 }
 
 TEST(VoiceCore, ProcessIncomingNormalPayload)
@@ -493,7 +403,7 @@ TEST(VoiceCore, ProcessIncomingNormalPayload)
 	ASSERT_TRUE(ParseVoicePacketPayloadSize(aPacket, (int)PacketSize, PayloadSize));
 	EXPECT_EQ(PayloadSize, 64);
 
-	EXPECT_TRUE(ShouldProcessPayload(PayloadSize, VOICE_PACKET_HEADER_SIZE, (int)PacketSize));
+	EXPECT_EQ(ClassifyBuiltVoicePacket(aPacket, PacketSize, 0x12345678u, 0u), EVoiceIncomingPacketDecision::HANDLE_AUDIO);
 }
 
 TEST(VoiceCore, ProcessIncomingTruncatedPayload)
@@ -656,119 +566,6 @@ TEST(VoiceCore, ProcessIncomingPingRttRequiresMatchingOutstandingPing)
 	EXPECT_TRUE(VoiceShouldUpdatePingRtt(15, 15, 1234));
 	EXPECT_FALSE(VoiceShouldUpdatePingRtt(14, 15, 1234));
 	EXPECT_FALSE(VoiceShouldUpdatePingRtt(15, 15, 0));
-}
-
-// ---------------------------------------------------------------------------
-// VAD state machine test
-// ---------------------------------------------------------------------------
-
-struct SVadState
-{
-	bool m_Active = false;
-	int64_t m_ReleaseDeadline = 0;
-};
-
-static void VadUpdate(SVadState &State, bool Trigger, int64_t FrameNow, int64_t ReleaseTicks)
-{
-	if(Trigger)
-	{
-		State.m_Active = true;
-		if(ReleaseTicks > 0)
-			State.m_ReleaseDeadline = FrameNow + ReleaseTicks;
-		else
-			State.m_ReleaseDeadline = 0;
-	}
-	else if(State.m_Active)
-	{
-		if(State.m_ReleaseDeadline == 0 || FrameNow >= State.m_ReleaseDeadline)
-		{
-			State.m_Active = false;
-			State.m_ReleaseDeadline = 0;
-		}
-	}
-}
-
-TEST(VoiceCore, VadTriggerActivates)
-{
-	SVadState State;
-	EXPECT_FALSE(State.m_Active);
-
-	VadUpdate(State, true, 1000, 500);
-	EXPECT_TRUE(State.m_Active);
-	EXPECT_EQ(State.m_ReleaseDeadline, 1500);
-}
-
-TEST(VoiceCore, VadTriggerWhileActiveExtendsDeadline)
-{
-	SVadState State;
-	VadUpdate(State, true, 1000, 500);
-	EXPECT_EQ(State.m_ReleaseDeadline, 1500);
-
-	VadUpdate(State, true, 2000, 500);
-	EXPECT_TRUE(State.m_Active);
-	EXPECT_EQ(State.m_ReleaseDeadline, 2500);
-}
-
-TEST(VoiceCore, VadNoTriggerStaysInactive)
-{
-	SVadState State;
-	VadUpdate(State, false, 1000, 500);
-	EXPECT_FALSE(State.m_Active);
-}
-
-TEST(VoiceCore, VadReleaseDelayKeepsActive)
-{
-	SVadState State;
-	VadUpdate(State, true, 1000, 500);
-	EXPECT_TRUE(State.m_Active);
-
-	VadUpdate(State, false, 1200, 500);
-	EXPECT_TRUE(State.m_Active);
-}
-
-TEST(VoiceCore, VadReleaseDelayExpires)
-{
-	SVadState State;
-	VadUpdate(State, true, 1000, 500);
-	EXPECT_TRUE(State.m_Active);
-
-	VadUpdate(State, false, 1499, 500);
-	EXPECT_TRUE(State.m_Active);
-
-	VadUpdate(State, false, 1500, 500);
-	EXPECT_FALSE(State.m_Active);
-	EXPECT_EQ(State.m_ReleaseDeadline, 0);
-}
-
-TEST(VoiceCore, VadZeroReleaseDelayDeactivatesImmediately)
-{
-	SVadState State;
-	VadUpdate(State, true, 1000, 0);
-	EXPECT_TRUE(State.m_Active);
-	EXPECT_EQ(State.m_ReleaseDeadline, 0);
-
-	VadUpdate(State, false, 1001, 0);
-	EXPECT_FALSE(State.m_Active);
-}
-
-TEST(VoiceCore, VadReactivatesAfterRelease)
-{
-	SVadState State;
-	VadUpdate(State, true, 1000, 500);
-	VadUpdate(State, false, 1500, 500);
-	EXPECT_FALSE(State.m_Active);
-
-	VadUpdate(State, true, 2000, 500);
-	EXPECT_TRUE(State.m_Active);
-	EXPECT_EQ(State.m_ReleaseDeadline, 2500);
-}
-
-TEST(VoiceCore, VadTriggerWithZeroThreshold)
-{
-	SVadState State;
-	const bool Trigger = true;
-	VadUpdate(State, Trigger, 1000, 500);
-	EXPECT_TRUE(State.m_Active);
 }
 
 // 意图：服务器头衔有严格的长度上限，并且只接受当前服务器的有效声明。

@@ -2,7 +2,10 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_VOICE_VOICE_CORE_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_VOICE_VOICE_CORE_H
 
+#include "voice_audio_retry.h"
 #include "voice_utils.h"
+#include "voice_vad_state.h"
+#include "voice_worker.h"
 
 #include <base/lock.h>
 #include <base/system.h>
@@ -19,7 +22,6 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
-#include <thread>
 #include <vector>
 
 class CGameClient;
@@ -172,7 +174,7 @@ class CRClientVoice
 	char m_aEncoderErrorLog[256] = {0};
 	char m_aServerAddrErrorLog[256] = {0};
 	char m_aDecoderErrorLog[256] = {0};
-	bool m_AudioSubsystemInitializedByVoice = false;
+	CVoiceAudioSubsystem m_AudioSubsystem;
 #if defined(CONF_PLATFORM_EMSCRIPTEN)
 	bool m_UnsupportedPlatformLogged = false;
 #endif
@@ -180,7 +182,7 @@ class CRClientVoice
 	char m_aOutputDeviceName[128] = {0};
 	char m_aResolvedInputDeviceName[128] = {0};
 	char m_aResolvedOutputDeviceName[128] = {0};
-	int64_t m_LastAudioRetryAttempt = 0;
+	CVoiceAudioRetry m_AudioRetry;
 	bool m_OutputStereo = true;
 	bool m_AudioPausedForInactive = false;
 	bool m_LogDeviceChange = false;
@@ -216,8 +218,8 @@ class CRClientVoice
 	std::atomic<bool> m_TransportReady = false;
 	std::atomic<bool> m_TransportConnecting = false;
 	// Connection runtime state: last successful transport activity and keepalive.
-	int64_t m_LastPingSentTime = 0;
-	uint16_t m_LastPingSeq = 0;
+	std::atomic<int64_t> m_LastPingSentTime = 0;
+	std::atomic<uint16_t> m_LastPingSeq = 0;
 	std::unique_ptr<std::array<SVoicePeer, MAX_CLIENTS>> m_pPeers;
 	std::vector<int32_t> m_MixBuffer;
 	std::array<std::atomic<int64_t>, MAX_CLIENTS> m_aLastHeard = {};
@@ -230,13 +232,12 @@ class CRClientVoice
 
 	std::atomic<bool> m_PttActive = false;
 	std::atomic<int64_t> m_PttReleaseDeadline = 0;
-	std::atomic<bool> m_VadActive = false;
-	std::atomic<int64_t> m_VadReleaseDeadline = 0;
+	CVoiceVadState m_Vad;
 	std::atomic<bool> m_TxWasActive = false;
 	std::atomic<uint16_t> m_Sequence = 0;
 	std::atomic<uint32_t> m_ContextHash = 0;
 	int64_t m_LastKeepalive = 0;
-	uint32_t m_LastTokenHashSent = 0;
+	std::atomic<uint32_t> m_LastTokenHashSent = 0;
 
 	// Debug counters (worker thread only)
 	int64_t m_TxLastLog = 0;
@@ -253,9 +254,7 @@ class CRClientVoice
 	int m_RxDropRadius = 0;
 	int64_t m_DebugStateLastLog = 0;
 
-	std::thread m_Worker;
-	std::atomic<bool> m_WorkerStop = false;
-	std::atomic<bool> m_WorkerEnabled = false;
+	CVoiceWorker m_Worker;
 	std::atomic<bool> m_AudioRefreshRequested = true;
 	std::atomic<bool> m_ShutdownDone = true;
 	int64_t m_LastConfigSnapshotUpdate = 0;
@@ -319,11 +318,13 @@ class CRClientVoice
 	bool FindMinLiveQueuedSeq(const SVoicePeer &Peer, uint16_t &OutSeq) const;
 	bool SeedPeerNextSeq(SVoicePeer &Peer);
 	static void SDLCALL SDLAudioCallback(void *pUserData, SDL_AudioStream *pStream, int AdditionalBytes, int TotalBytes);
+	bool HandleWorkerFailure();
 	void StartWorker();
 	void StopWorker();
 	void WorkerLoop() NO_THREAD_SAFETY_ANALYSIS;
 
 public:
+	~CRClientVoice();
 	void SetInterfaces(CGameClient *pGameClient, IClient *pClient, IConsole *pConsole);
 	bool Init();
 	void Init(CGameClient *pGameClient, IClient *pClient, IConsole *pConsole);

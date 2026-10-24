@@ -224,18 +224,20 @@ namespace qmclient::rank_demo
 	{
 		if(Name.empty())
 			return;
-		if(!Names.empty())
+		if(Names == Name)
+			return;
+		for(size_t Start = 0; Start < Names.size();)
 		{
-			if(Names == Name)
+			const size_t End = Names.find(", ", Start);
+			const size_t Length = End == std::string::npos ? Names.size() - Start : End - Start;
+			if(Names.compare(Start, Length, Name) == 0)
 				return;
-			// 已作为整项或列表中间项出现时跳过
-			if(Names.size() >= Name.size() &&
-				(Names.compare(0, Name.size(), Name) == 0 ||
-					Names.compare(Names.size() - Name.size(), Name.size(), Name) == 0 ||
-					Names.find(", " + Name + ", ") != std::string::npos))
-				return;
-			Names += ", ";
+			if(End == std::string::npos)
+				break;
+			Start = End + 2;
 		}
+		if(!Names.empty())
+			Names += ", ";
 		Names += Name;
 	}
 

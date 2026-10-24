@@ -5,10 +5,16 @@
 #include <base/system.h>
 
 #include <engine/client/backend/backend_base.h>
+#include <engine/client/backend/readback_image.h>
 #include <engine/client/backend/render_target_geometry.h>
+#include <engine/client/backend/screenshot_image.h>
 #include <engine/client/backend/vulkan/backend_vulkan.h>
 #include <engine/client/backend/vulkan/backend_vulkan_qm_ext.h>
+#include <engine/client/backend/vulkan/vulkan_diagnostics.h>
+#include <engine/client/backend/vulkan/vulkan_recording_batch.h>
+#include <engine/client/backend/vulkan/vulkan_render_workers.h>
 #include <engine/client/backend/vulkan/vulkan_rendering_lifecycle.h>
+#include <engine/client/backend/vulkan/vulkan_result.h>
 #include <engine/client/backend_sdl.h>
 #include <engine/client/graphics_threaded.h>
 #include <engine/gfx/image_manipulation.h>
@@ -1003,6 +1009,7 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 	uint8_t *m_pGetPresentedImgDataHelperMappedMemory = nullptr;
 	VkDeviceSize m_GetPresentedImgDataHelperMappedLayoutOffset = 0;
 	VkDeviceSize m_GetPresentedImgDataHelperMappedLayoutPitch = 0;
+	VkDeviceSize m_GetPresentedImgDataHelperMappedLayoutSize = 0;
 	uint32_t m_GetPresentedImgDataHelperWidth = 0;
 	uint32_t m_GetPresentedImgDataHelperHeight = 0;
 	VkFence m_GetPresentedImgDataHelperFence = VK_NULL_HANDLE;
@@ -1202,16 +1209,7 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 	size_t m_RenderCallsInPipe = 0;
 	CQmVulkanRenderScheduler m_RenderScheduler;
 
-	struct SRenderThread
-	{
-		bool m_IsRendering = false;
-		std::thread m_Thread;
-		std::mutex m_Mutex;
-		std::condition_variable m_Cond;
-		bool m_Finished = false;
-		bool m_Started = false;
-	};
-	std::vector<std::unique_ptr<SRenderThread>> m_vpRenderThreads;
+	CVulkanRenderWorkers m_RenderWorkers;
 
 private:
 	std::vector<VkImageView> m_vSwapChainImageViewList;
@@ -1415,56 +1413,64 @@ protected:
 	 * After an error occurred, the rendering stop as soon as possible
 	 * Always stop the current code execution after a call to this function (e.g. return false)
 	 */
-	void SetError(EGfxErrorType ErrType, const char *pErr, const char *pErrStrExtra = nullptr)
+	void SetError(EGfxErrorType ErrType, const char *pErr, const char *pErrStrExtra = nullptr) noexcept
 	{
 		std::unique_lock<std::mutex> Lock(m_ErrWarnMutex);
-		SGfxErrorContainer::SError Err = {false, pErr};
-		if(std::find(m_Error.m_vErrors.begin(), m_Error.m_vErrors.end(), Err) == m_Error.m_vErrors.end())
-			m_Error.m_vErrors.emplace_back(Err);
-		if(pErrStrExtra != nullptr)
-		{
-			SGfxErrorContainer::SError ErrExtra = {false, pErrStrExtra};
-			if(std::find(m_Error.m_vErrors.begin(), m_Error.m_vErrors.end(), ErrExtra) == m_Error.m_vErrors.end())
-				m_Error.m_vErrors.emplace_back(ErrExtra);
-		}
-		if(m_CanAssert)
-		{
+		vulkan_diagnostics::PublishError(m_Error, m_Warning, m_HasError, m_CanAssert, ErrType, [&](bool FirstError) {
+			SGfxErrorContainer::SError Err = {false, pErr};
+			if(std::find(m_Error.m_vErrors.begin(), m_Error.m_vErrors.end(), Err) == m_Error.m_vErrors.end())
+				m_Error.m_vErrors.emplace_back(Err);
 			if(pErrStrExtra != nullptr)
-				dbg_msg("vulkan", "vulkan error: %s: %s", pErr, pErrStrExtra);
-			else
-				dbg_msg("vulkan", "vulkan error: %s", pErr);
-			if(!m_HasError)
 			{
-				m_Error.m_ErrorType = ErrType;
-				char aContext[192];
-				str_format(aContext, sizeof(aContext), "Vulkan frame context: image=%u/%u recording_threads=%zu", m_CurImageIndex, m_SwapChainImageCount, m_ThreadCount);
-				m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{false, aContext});
+				SGfxErrorContainer::SError ErrExtra = {false, pErrStrExtra};
+				if(std::find(m_Error.m_vErrors.begin(), m_Error.m_vErrors.end(), ErrExtra) == m_Error.m_vErrors.end())
+					m_Error.m_vErrors.emplace_back(ErrExtra);
 			}
-			m_HasError = true;
-		}
-		else
+			if(m_CanAssert)
+			{
+				if(pErrStrExtra != nullptr)
+					dbg_msg("vulkan", "vulkan error: %s: %s", pErr, pErrStrExtra);
+				else
+					dbg_msg("vulkan", "vulkan error: %s", pErr);
+				if(FirstError)
+				{
+					char aContext[192];
+					str_format(aContext, sizeof(aContext), "Vulkan frame context: image=%u/%u recording_threads=%zu", m_CurImageIndex, m_SwapChainImageCount, m_ThreadCount);
+					m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{false, aContext});
+				}
+			}
+			else
+			{
+				// 初始化失败仍作为警告交给后端回退，当前诊断锁下直接收集文本。
+				dbg_msg("vulkan", "vulkan warning: %s", pErr);
+				if(std::find(m_Warning.m_vWarnings.begin(), m_Warning.m_vWarnings.end(), pErr) == m_Warning.m_vWarnings.end())
+					m_Warning.m_vWarnings.emplace_back(pErr);
+			}
+		});
+	}
+
+	void SetWarningPreMsg(const char *pWarningPre) noexcept
+	{
+		std::unique_lock<std::mutex> Lock(m_ErrWarnMutex);
+		try
 		{
-			Lock.unlock();
-			// during initialization vulkan should not throw any errors but warnings instead
-			// since most code in the swapchain is shared with runtime code, add this extra code path
-			SetWarning(EGfxWarningType::GFX_WARNING_TYPE_INIT_FAILED, pErr);
+			if(std::find(m_Warning.m_vWarnings.begin(), m_Warning.m_vWarnings.end(), pWarningPre) == m_Warning.m_vWarnings.end())
+				m_Warning.m_vWarnings.emplace(m_Warning.m_vWarnings.begin(), pWarningPre);
+		}
+		catch(...)
+		{
+			// 前缀分配失败不影响已经发布的初始化警告。
 		}
 	}
 
-	void SetWarningPreMsg(const char *pWarningPre)
+	void SetWarning(EGfxWarningType WarningType, const char *pWarning) noexcept
 	{
 		std::unique_lock<std::mutex> Lock(m_ErrWarnMutex);
-		if(std::find(m_Warning.m_vWarnings.begin(), m_Warning.m_vWarnings.end(), pWarningPre) == m_Warning.m_vWarnings.end())
-			m_Warning.m_vWarnings.emplace(m_Warning.m_vWarnings.begin(), pWarningPre);
-	}
-
-	void SetWarning(EGfxWarningType WarningType, const char *pWarning)
-	{
-		std::unique_lock<std::mutex> Lock(m_ErrWarnMutex);
-		dbg_msg("vulkan", "vulkan warning: %s", pWarning);
-		if(std::find(m_Warning.m_vWarnings.begin(), m_Warning.m_vWarnings.end(), pWarning) == m_Warning.m_vWarnings.end())
-			m_Warning.m_vWarnings.emplace_back(pWarning);
-		m_Warning.m_WarningType = WarningType;
+		vulkan_diagnostics::PublishWarning(m_Warning, WarningType, [&] {
+			dbg_msg("vulkan", "vulkan warning: %s", pWarning);
+			if(std::find(m_Warning.m_vWarnings.begin(), m_Warning.m_vWarnings.end(), pWarning) == m_Warning.m_vWarnings.end())
+				m_Warning.m_vWarnings.emplace_back(pWarning);
+		});
 	}
 
 	void ResetInitializationDiagnostics()
@@ -1532,81 +1538,15 @@ protected:
 	}
 #endif
 
-	const char *CheckVulkanCriticalError(VkResult CallResult)
+	const char *CheckVulkanCriticalError(VkResult CallResult) noexcept
 	{
-		// 多个录制线程可能同时失败；返回的诊断字符串不能共用可变缓冲。
-		static thread_local std::string s_ErrorHelper;
-		const char *pCriticalError = nullptr;
-		switch(CallResult)
-		{
-		case VK_ERROR_OUT_OF_HOST_MEMORY:
-			pCriticalError = "host ran out of memory";
-			dbg_msg("vulkan", "%s", pCriticalError);
-			break;
-		case VK_ERROR_OUT_OF_DEVICE_MEMORY:
-			pCriticalError = "device ran out of memory";
-			dbg_msg("vulkan", "%s", pCriticalError);
-			break;
-		case VK_ERROR_DEVICE_LOST:
-			pCriticalError = "device lost";
-			dbg_msg("vulkan", "%s", pCriticalError);
+		return vulkan_diagnostics::DescribeResult(CallResult, IsVerbose(), m_RecreateSwapChain, [this](const char *pWarning) { SetWarning(EGfxWarningType::GFX_WARNING_MISSING_EXTENSION, pWarning); }, [this] {
 #ifdef VK_EXT_device_fault
 			LogDeviceFaultInfo();
 #else
 			log_error("gfx/vulkan", "无法获取详细故障信息：编译时缺少 VK_EXT_device_fault 支持（Vulkan 头文件过旧）。");
 #endif
-			break;
-		case VK_ERROR_OUT_OF_DATE_KHR:
-		{
-			if(IsVerbose())
-			{
-				dbg_msg("vulkan", "queueing swap chain recreation because the current is out of date");
-			}
-			m_RecreateSwapChain = true;
-			break;
-		}
-		case VK_ERROR_SURFACE_LOST_KHR:
-			dbg_msg("vulkan", "surface lost");
-			break;
-		/*case VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT:
-			dbg_msg("vulkan", "fullscreen exclusive mode lost");
-			break;*/
-		case VK_ERROR_INCOMPATIBLE_DRIVER:
-			pCriticalError = "no compatible driver found. Vulkan 1.1 is required.";
-			dbg_msg("vulkan", "%s", pCriticalError);
-			break;
-		case VK_ERROR_INITIALIZATION_FAILED:
-			pCriticalError = "initialization failed for unknown reason.";
-			dbg_msg("vulkan", "%s", pCriticalError);
-			break;
-		case VK_ERROR_LAYER_NOT_PRESENT:
-			SetWarning(EGfxWarningType::GFX_WARNING_MISSING_EXTENSION, "One Vulkan layer was not present. (try to disable them)");
-			break;
-		case VK_ERROR_EXTENSION_NOT_PRESENT:
-			SetWarning(EGfxWarningType::GFX_WARNING_MISSING_EXTENSION, "One Vulkan extension was not present. (try to disable them)");
-			break;
-		case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR:
-			dbg_msg("vulkan", "native window in use");
-			break;
-		case VK_SUCCESS:
-			break;
-		case VK_SUBOPTIMAL_KHR:
-			if(IsVerbose())
-			{
-				dbg_msg("vulkan", "queueing swap chain recreation because the current is sub optimal");
-			}
-			m_RecreateSwapChain = true;
-			break;
-		default:
-			pCriticalError = "unknown error";
-			break;
-		}
-
-		if(pCriticalError == nullptr)
-			return nullptr;
-		s_ErrorHelper = pCriticalError;
-		s_ErrorHelper.append(" (VkResult ").append(std::to_string(CallResult)).append(")");
-		return s_ErrorHelper.c_str();
+		});
 	}
 
 	[[nodiscard]] bool CheckVulkanResult(VkResult Result, EGfxErrorType ErrorType, const char *pOperation)
@@ -1855,6 +1795,15 @@ protected:
 			VkSubresourceLayout SubResourceLayout;
 			vkGetImageSubresourceLayout(m_VKDevice, m_GetPresentedImgDataHelperImage, &SubResource, &SubResourceLayout);
 
+			readback_image::SRgbaLayout Layout;
+			if(SubResourceLayout.offset > MemRequirements.size || SubResourceLayout.size > MemRequirements.size - SubResourceLayout.offset ||
+				!readback_image::GetRgbaLayout(Width, Height, SubResourceLayout.rowPitch, SubResourceLayout.size, Layout) ||
+				SubResourceLayout.offset > static_cast<uint64_t>(std::numeric_limits<ptrdiff_t>::max()) - Layout.m_SourceBytes)
+			{
+				DeletePresentedImageDataImage();
+				return false;
+			}
+
 			if(!CheckVulkanResult(vkMapMemory(m_VKDevice, m_GetPresentedImgDataHelperMem.m_Mem, 0, VK_WHOLE_SIZE, 0, (void **)&m_pGetPresentedImgDataHelperMappedMemory), GFX_ERROR_TYPE_RENDER_CMD_FAILED, "Mapping readback memory failed."))
 			{
 				DeletePresentedImageDataImage();
@@ -1862,6 +1811,7 @@ protected:
 			}
 			m_GetPresentedImgDataHelperMappedLayoutOffset = SubResourceLayout.offset;
 			m_GetPresentedImgDataHelperMappedLayoutPitch = SubResourceLayout.rowPitch;
+			m_GetPresentedImgDataHelperMappedLayoutSize = SubResourceLayout.size;
 			m_pGetPresentedImgDataHelperMappedMemory += m_GetPresentedImgDataHelperMappedLayoutOffset;
 
 			VkFenceCreateInfo FenceInfo{};
@@ -1894,6 +1844,9 @@ protected:
 			m_GetPresentedImgDataHelperImage = VK_NULL_HANDLE;
 			m_GetPresentedImgDataHelperMem = {};
 			m_pGetPresentedImgDataHelperMappedMemory = nullptr;
+			m_GetPresentedImgDataHelperMappedLayoutOffset = 0;
+			m_GetPresentedImgDataHelperMappedLayoutPitch = 0;
+			m_GetPresentedImgDataHelperMappedLayoutSize = 0;
 
 			m_GetPresentedImgDataHelperWidth = 0;
 			m_GetPresentedImgDataHelperHeight = 0;
@@ -1925,7 +1878,9 @@ protected:
 			SrcOffset.z = 0;
 			Format = CImageInfo::FORMAT_RGBA;
 
-			const size_t ImageTotalSize = (size_t)Width * Height * CImageInfo::PixelSize(Format);
+			readback_image::SRgbaLayout PackedLayout;
+			if(!readback_image::GetRgbaLayout(Width, Height, static_cast<uint64_t>(Width) * 4, std::numeric_limits<uint64_t>::max(), PackedLayout))
+				return false;
 
 			if(!BeginReadbackCommandBuffer())
 				return false;
@@ -2051,45 +2006,10 @@ protected:
 				return false;
 			}
 
-			size_t RealFullImageSize = maximum(ImageTotalSize, (size_t)(Height * m_GetPresentedImgDataHelperMappedLayoutPitch));
 			m_FrameProfileStats.m_ReadbackRequests++;
-			m_FrameProfileStats.m_ReadbackBytes += RealFullImageSize;
-			size_t ExtraRowSize = Width * 4;
-			if(vDstData.size() < RealFullImageSize + ExtraRowSize)
-				vDstData.resize(RealFullImageSize + ExtraRowSize);
-
-			mem_copy(vDstData.data(), pResImageData, RealFullImageSize);
-
-			// pack image data together without any offset that the driver might require
-			if(Width * 4 < m_GetPresentedImgDataHelperMappedLayoutPitch)
-			{
-				for(uint32_t Y = 0; Y < Height; ++Y)
-				{
-					size_t OffsetImagePacked = (Y * Width * 4);
-					size_t OffsetImageUnpacked = (Y * m_GetPresentedImgDataHelperMappedLayoutPitch);
-					mem_copy(vDstData.data() + RealFullImageSize, vDstData.data() + OffsetImageUnpacked, Width * 4);
-					mem_copy(vDstData.data() + OffsetImagePacked, vDstData.data() + RealFullImageSize, Width * 4);
-				}
-			}
-
-			if(IsB8G8R8A8 || ResetAlpha)
-			{
-				// swizzle
-				for(uint32_t Y = 0; Y < Height; ++Y)
-				{
-					for(uint32_t X = 0; X < Width; ++X)
-					{
-						size_t ImgOff = (Y * Width * 4) + (X * 4);
-						if(IsB8G8R8A8)
-						{
-							std::swap(vDstData[ImgOff], vDstData[ImgOff + 2]);
-						}
-						vDstData[ImgOff + 3] = 255;
-					}
-				}
-			}
-
-			return true;
+			m_FrameProfileStats.m_ReadbackBytes += static_cast<uint64_t>(Height) * m_GetPresentedImgDataHelperMappedLayoutPitch;
+			return readback_image::PackRgba(vDstData, pResImageData, Width, Height,
+				m_GetPresentedImgDataHelperMappedLayoutPitch, m_GetPresentedImgDataHelperMappedLayoutSize, IsB8G8R8A8, ResetAlpha);
 		}
 		else
 		{
@@ -2741,7 +2661,7 @@ protected:
 		if(!List.empty())
 		{
 			m_vThreadHelperHadCommands[ThreadIndex] = true;
-			auto *pThread = m_vpRenderThreads[ThreadIndex].get();
+			auto *pThread = &m_RenderWorkers[ThreadIndex];
 			std::unique_lock<std::mutex> Lock(pThread->m_Mutex);
 			pThread->m_IsRendering = true;
 			pThread->m_Cond.notify_one();
@@ -2769,7 +2689,7 @@ protected:
 			{
 				if(m_vThreadHelperHadCommands[ThreadIndex])
 				{
-					auto &pRenderThread = m_vpRenderThreads[ThreadIndex];
+					auto *pRenderThread = &m_RenderWorkers[ThreadIndex];
 					m_vThreadHelperHadCommands[ThreadIndex] = false;
 					std::unique_lock<std::mutex> Lock(pRenderThread->m_Mutex);
 					pRenderThread->m_Cond.wait(Lock, [&pRenderThread] { return !pRenderThread->m_IsRendering; });
@@ -3246,7 +3166,7 @@ protected:
 		return true;
 	}
 
-	[[nodiscard]] bool UpdateTexture(size_t TextureSlot, VkFormat Format, uint8_t *&pData, int64_t XOff, int64_t YOff, size_t Width, size_t Height)
+	[[nodiscard]] bool UpdateTexture(size_t TextureSlot, VkFormat Format, CGraphicsUploadData<uint8_t> &pData, int64_t XOff, int64_t YOff, size_t Width, size_t Height)
 	{
 		size_t ImageSize = 0;
 		if(!TextureDataSize(Width, Height, 1, VulkanFormatToPixelSize(Format), ImageSize))
@@ -3269,15 +3189,13 @@ protected:
 				YOff /= 2;
 			}
 
-			uint8_t *pTmpData = ResizeImage(pData, OldWidth, OldHeight, Width, Height, VulkanFormatToPixelSize(Format));
-			free(pData);
-			pData = pTmpData;
+			pData.reset(ResizeImage(pData.get(), OldWidth, OldHeight, Width, Height, VulkanFormatToPixelSize(Format)));
 			if(pData == nullptr)
 				return false;
 		}
 
 		if(!TextureDataSize(Width, Height, 1, VulkanFormatToPixelSize(Format), ImageSize) ||
-			!GetStagingBufferImage(StagingBuffer, pData, ImageSize))
+			!GetStagingBufferImage(StagingBuffer, pData.get(), ImageSize))
 			return false;
 		StagingBufferInitialized = true;
 
@@ -3305,7 +3223,7 @@ protected:
 		VkFormat Format,
 		VkFormat StoreFormat,
 		int Flags,
-		uint8_t *&pData)
+		CGraphicsUploadData<uint8_t> &pData)
 	{
 		size_t ImageIndex = (size_t)Slot;
 		const size_t PixelSize = VulkanFormatToPixelSize(Format);
@@ -3328,9 +3246,7 @@ protected:
 				++RescaleCount;
 			} while((size_t)Width > m_MaxTextureSize || (size_t)Height > m_MaxTextureSize);
 
-			uint8_t *pTmpData = ResizeImage(pData, OldWidth, OldHeight, Width, Height, PixelSize);
-			free(pData);
-			pData = pTmpData;
+			pData.reset(ResizeImage(pData.get(), OldWidth, OldHeight, Width, Height, PixelSize));
 			if(pData == nullptr)
 				return false;
 		}
@@ -3356,7 +3272,7 @@ protected:
 
 		if(Requires2DTexture)
 		{
-			if(!CreateTextureImage(ImageIndex, Texture.m_Img, Texture.m_ImgMem, pData, Format, Width, Height, 1, PixelSize, MipMapLevelCount))
+			if(!CreateTextureImage(ImageIndex, Texture.m_Img, Texture.m_ImgMem, pData.get(), Format, Width, Height, 1, PixelSize, MipMapLevelCount))
 				return false;
 			VkFormat ImgFormat = Format;
 			VkImageView ImgView = CreateTextureImageView(Texture.m_Img, ImgFormat, VK_IMAGE_VIEW_TYPE_2D, 1, MipMapLevelCount);
@@ -3382,22 +3298,21 @@ protected:
 				dbg_msg("vulkan", "3D/2D array texture was resized");
 				int NewWidth = maximum<int>(HighestBit(ConvertWidth), 16);
 				int NewHeight = maximum<int>(HighestBit(ConvertHeight), 16);
-				uint8_t *pNewTexData = ResizeImage(pData, ConvertWidth, ConvertHeight, NewWidth, NewHeight, PixelSize);
+				CGraphicsUploadData<uint8_t> pNewTexData(ResizeImage(pData.get(), ConvertWidth, ConvertHeight, NewWidth, NewHeight, PixelSize));
 
 				ConvertWidth = NewWidth;
 				ConvertHeight = NewHeight;
 
-				free(pData);
-				pData = pNewTexData;
+				pData = std::move(pNewTexData);
 				if(pData == nullptr)
 					return false;
 			}
 
 			int Image3DWidth, Image3DHeight;
-			uint8_t *pTexData3D = static_cast<uint8_t *>(malloc((size_t)PixelSize * ConvertWidth * ConvertHeight));
+			CGraphicsUploadData<uint8_t> pTexData3D(static_cast<uint8_t *>(malloc((size_t)PixelSize * ConvertWidth * ConvertHeight)));
 			if(pTexData3D == nullptr)
 				return false;
-			Texture2DTo3D(pData, ConvertWidth, ConvertHeight, PixelSize, 16, 16, pTexData3D, Image3DWidth, Image3DHeight);
+			Texture2DTo3D(pData.get(), ConvertWidth, ConvertHeight, PixelSize, 16, 16, pTexData3D.get(), Image3DWidth, Image3DHeight);
 
 			const size_t ImageDepth2DArray = (size_t)16 * 16;
 			VkExtent3D ImgSize{(uint32_t)Image3DWidth, (uint32_t)Image3DHeight, 1};
@@ -3408,9 +3323,8 @@ protected:
 					MipMapLevelCount = 1;
 			}
 
-			if(!CreateTextureImage(ImageIndex, Texture.m_Img3D, Texture.m_Img3DMem, pTexData3D, Format, Image3DWidth, Image3DHeight, ImageDepth2DArray, PixelSize, MipMapLevelCount))
+			if(!CreateTextureImage(ImageIndex, Texture.m_Img3D, Texture.m_Img3DMem, pTexData3D.get(), Format, Image3DWidth, Image3DHeight, ImageDepth2DArray, PixelSize, MipMapLevelCount))
 			{
-				free(pTexData3D);
 				return false;
 			}
 			VkFormat ImgFormat = Format;
@@ -3421,11 +3335,8 @@ protected:
 
 			if(!CreateNew3DTexturedStandardDescriptorSets(ImageIndex))
 			{
-				free(pTexData3D);
 				return false;
 			}
-
-			free(pTexData3D);
 		}
 		return true;
 	}
@@ -4390,6 +4301,12 @@ public:
 	CCommandProcessorFragment_Vulkan()
 	{
 		m_vTextures.reserve(CCommandBuffer::MAX_TEXTURES);
+	}
+
+	~CCommandProcessorFragment_Vulkan() override
+	{
+		// 工作线程借用后端的队列与 GPU 状态，必须在这些成员析构前结束。
+		m_RenderWorkers.Stop();
 	}
 
 	/************************
@@ -7948,7 +7865,7 @@ public:
 		return m_FrameProfileStats;
 	}
 
-	void ResetDrawCommandState(size_t RenderThreadIndex)
+	void ResetDrawCommandState(size_t RenderThreadIndex) noexcept
 	{
 		if(RenderThreadIndex < m_vDrawCommandStates.size())
 			m_vDrawCommandStates[RenderThreadIndex] = {};
@@ -8604,33 +8521,17 @@ public:
 		int Width = pCommand->m_Width;
 		int Height = pCommand->m_Height;
 		int Flags = pCommand->m_Flags;
-		uint8_t *pData = pCommand->m_pData;
+		auto pData = TakeGraphicsUpload(pCommand->m_pData);
 
-		if(!CreateTextureCMD(Slot, Width, Height, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, Flags, pData))
-		{
-			free(pData);
-			return false;
-		}
-
-		free(pData);
-
-		return true;
+		return CreateTextureCMD(Slot, Width, Height, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, Flags, pData);
 	}
 
 	[[nodiscard]] bool Cmd_Texture_Update(const CCommandBuffer::SCommand_Texture_Update *pCommand)
 	{
 		size_t IndexTex = pCommand->m_Slot;
-		uint8_t *pData = pCommand->m_pData;
+		auto pData = TakeGraphicsUpload(pCommand->m_pData);
 
-		if(!UpdateTexture(IndexTex, VK_FORMAT_R8G8B8A8_UNORM, pData, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height))
-		{
-			free(pData);
-			return false;
-		}
-
-		free(pData);
-
-		return true;
+		return UpdateTexture(IndexTex, VK_FORMAT_R8G8B8A8_UNORM, pData, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height);
 	}
 
 	[[nodiscard]] bool Cmd_RenderTarget_Create(const CCommandBuffer::SCommand_RenderTarget_Create *pCommand);
@@ -8656,31 +8557,22 @@ public:
 		int Width = pCommand->m_Width;
 		int Height = pCommand->m_Height;
 
-		uint8_t *pTmpData = pCommand->m_pTextData;
-		uint8_t *pTmpData2 = pCommand->m_pTextOutlineData;
+		auto pTmpData = TakeGraphicsUpload(pCommand->m_pTextData);
+		auto pTmpData2 = TakeGraphicsUpload(pCommand->m_pTextOutlineData);
 
 		if(!CreateTextureCMD(Slot, Width, Height, VK_FORMAT_R8_UNORM, VK_FORMAT_R8_UNORM, TextureFlag::NO_MIPMAPS, pTmpData))
 		{
-			free(pTmpData);
-			free(pTmpData2);
 			return false;
 		}
 		if(!CreateTextureCMD(SlotOutline, Width, Height, VK_FORMAT_R8_UNORM, VK_FORMAT_R8_UNORM, TextureFlag::NO_MIPMAPS, pTmpData2))
 		{
-			free(pTmpData);
-			free(pTmpData2);
 			return false;
 		}
 
 		if(!CreateNewTextDescriptorSets(Slot, SlotOutline))
 		{
-			free(pTmpData);
-			free(pTmpData2);
 			return false;
 		}
-
-		free(pTmpData);
-		free(pTmpData2);
 
 		return true;
 	}
@@ -8703,17 +8595,9 @@ public:
 	[[nodiscard]] bool Cmd_TextTexture_Update(const CCommandBuffer::SCommand_TextTexture_Update *pCommand)
 	{
 		size_t IndexTex = pCommand->m_Slot;
-		uint8_t *pData = pCommand->m_pData;
+		auto pData = TakeGraphicsUpload(pCommand->m_pData);
 
-		if(!UpdateTexture(IndexTex, VK_FORMAT_R8_UNORM, pData, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height))
-		{
-			free(pData);
-			return false;
-		}
-
-		free(pData);
-
-		return true;
+		return UpdateTexture(IndexTex, VK_FORMAT_R8_UNORM, pData, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height);
 	}
 
 	void Cmd_Clear_FillExecuteBuffer(SRenderCommandExecuteBuffer &ExecBuffer, const CCommandBuffer::SCommand_Clear *pCommand)
@@ -8813,6 +8697,7 @@ public:
 
 	[[nodiscard]] bool Cmd_Screenshot(const CCommandBuffer::SCommand_TrySwapAndScreenshot *pCommand)
 	{
+		pCommand->m_pImage->Free();
 		if(!*pCommand->m_pSwapped)
 		{
 			m_PresentedSnapshotRequested = true;
@@ -8821,22 +8706,19 @@ public:
 		}
 		*pCommand->m_pSwapped = true;
 
-		uint32_t Width;
-		uint32_t Height;
-		CImageInfo::EImageFormat Format;
-		if(GetPresentedImageDataImpl(Width, Height, Format, m_vScreenshotHelper, true, {}))
+		uint32_t Width = 0;
+		uint32_t Height = 0;
+		CImageInfo::EImageFormat Format = CImageInfo::FORMAT_UNDEFINED;
+		if(GetPresentedImageDataImpl(Width, Height, Format, m_vScreenshotHelper, false, {}) && Format == CImageInfo::FORMAT_RGBA)
 		{
-			const size_t ImgSize = (size_t)Width * (size_t)Height * CImageInfo::PixelSize(Format);
-			pCommand->m_pImage->m_pData = static_cast<uint8_t *>(malloc(ImgSize));
-			mem_copy(pCommand->m_pImage->m_pData, m_vScreenshotHelper.data(), ImgSize);
+			screenshot_image::CaptureRgba(*pCommand->m_pImage, Width, Height, screenshot_image::ERowOrder::TOP_DOWN,
+				[&](uint8_t *pData, size_t DataBytes) {
+					if(m_vScreenshotHelper.size() < DataBytes)
+						return false;
+					mem_copy(pData, m_vScreenshotHelper.data(), DataBytes);
+					return true;
+				});
 		}
-		else
-		{
-			pCommand->m_pImage->m_pData = nullptr;
-		}
-		pCommand->m_pImage->m_Width = (int)Width;
-		pCommand->m_pImage->m_Height = (int)Height;
-		pCommand->m_pImage->m_Format = Format;
 
 		return true;
 	}
@@ -8941,21 +8823,20 @@ public:
 
 	[[nodiscard]] bool Cmd_CreateBufferObject(const CCommandBuffer::SCommand_CreateBufferObject *pCommand)
 	{
+		void *pUploadData = pCommand->m_pUploadData;
+		auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
 		bool IsOneFrameBuffer = (pCommand->m_Flags & IGraphics::EBufferObjectCreateFlags::BUFFER_OBJECT_CREATE_FLAGS_ONE_TIME_USE_BIT) != 0;
-		if(!CreateBufferObject((size_t)pCommand->m_BufferIndex, pCommand->m_pUploadData, (VkDeviceSize)pCommand->m_DataSize, IsOneFrameBuffer))
+		if(!CreateBufferObject((size_t)pCommand->m_BufferIndex, pUploadData, (VkDeviceSize)pCommand->m_DataSize, IsOneFrameBuffer))
 			return false;
-		if(pCommand->m_DeletePointer)
-			free(pCommand->m_pUploadData);
-
 		return true;
 	}
 
 	[[nodiscard]] bool Cmd_UpdateBufferObject(const CCommandBuffer::SCommand_UpdateBufferObject *pCommand)
 	{
 		size_t BufferIndex = (size_t)pCommand->m_BufferIndex;
-		bool DeletePointer = pCommand->m_DeletePointer;
 		VkDeviceSize Offset = (VkDeviceSize)((intptr_t)pCommand->m_pOffset);
 		void *pUploadData = pCommand->m_pUploadData;
+		auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
 		VkDeviceSize DataSize = (VkDeviceSize)pCommand->m_DataSize;
 
 		SMemoryBlock<STAGING_BUFFER_CACHE_ID> StagingBuffer;
@@ -8973,17 +8854,16 @@ public:
 
 		UploadAndFreeStagingMemBlock(StagingBuffer);
 
-		if(DeletePointer)
-			free(pUploadData);
-
 		return true;
 	}
 
 	[[nodiscard]] bool Cmd_RecreateBufferObject(const CCommandBuffer::SCommand_RecreateBufferObject *pCommand)
 	{
+		void *pUploadData = pCommand->m_pUploadData;
+		auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
 		DeleteBufferObject((size_t)pCommand->m_BufferIndex);
 		bool IsOneFrameBuffer = (pCommand->m_Flags & IGraphics::EBufferObjectCreateFlags::BUFFER_OBJECT_CREATE_FLAGS_ONE_TIME_USE_BIT) != 0;
-		return CreateBufferObject((size_t)pCommand->m_BufferIndex, pCommand->m_pUploadData, (VkDeviceSize)pCommand->m_DataSize, IsOneFrameBuffer);
+		return CreateBufferObject((size_t)pCommand->m_BufferIndex, pUploadData, (VkDeviceSize)pCommand->m_DataSize, IsOneFrameBuffer);
 	}
 
 	[[nodiscard]] bool Cmd_CopyBufferObject(const CCommandBuffer::SCommand_CopyBufferObject *pCommand)
@@ -9589,6 +9469,8 @@ public:
 
 	[[nodiscard]] bool Cmd_PreInit(const CCommandProcessorFragment_GLBase::SCommand_PreInit *pCommand)
 	{
+		// PRE_INIT 的警告本身不会阻止 SDL 外层继续 CMD_INIT，必须同步失败码。
+		*pCommand->m_pInitError = -2;
 		m_pGpuList = pCommand->m_pGpuList;
 		// 后端重建时丢弃旧的 OpenGL 信息列表，恢复 Vulkan 的实际可选设备清单。
 		*m_pGpuList = {};
@@ -9598,67 +9480,63 @@ public:
 			return false;
 		}
 
-		RegisterCommands();
+		try
+		{
+			RegisterCommands();
 
-		m_ThreadCount = g_Config.m_GfxRenderThreadCount;
-		if(m_ThreadCount <= 1)
-			m_ThreadCount = 1;
-		else
-		{
-			m_ThreadCount = std::clamp<decltype(m_ThreadCount)>(m_ThreadCount, 3, std::max<decltype(m_ThreadCount)>(3, std::thread::hardware_concurrency()));
-		}
-		if(pCommand->m_pVendorString != nullptr && str_find_nocase(pCommand->m_pVendorString, "AMD") != nullptr && m_ThreadCount > 1)
-		{
-			dbg_msg("vulkan", "forcing single-threaded rendering on AMD to avoid driver crashes with dynamic viewport usage");
-			m_ThreadCount = 1;
-		}
-		if(pCommand->m_pVendorString != nullptr && str_find_nocase(pCommand->m_pVendorString, "Apple") != nullptr && m_ThreadCount > 1)
-		{
-			// MoltenVK/Metal 对 secondary command buffer 的编码开销较高，
-			// 界面命令量大的场景下三线程录制反而更容易造成帧时间抖动。
-			dbg_msg("vulkan", "forcing single-threaded rendering on Apple/MoltenVK to avoid secondary command buffer overhead");
-			m_ThreadCount = 1;
-		}
-
-		// start threads
-		dbg_assert(m_ThreadCount != 2, "Either use 1 main thread or at least 2 extra rendering threads.");
-		if(m_ThreadCount > 1)
-		{
-			m_vvThreadCommandLists.resize(m_ThreadCount - 1);
-			m_vThreadHelperHadCommands.resize(m_ThreadCount - 1, false);
-			for(auto &ThreadCommandList : m_vvThreadCommandLists)
+			m_ThreadCount = g_Config.m_GfxRenderThreadCount;
+			if(m_ThreadCount <= 1)
+				m_ThreadCount = 1;
+			else
 			{
-				ThreadCommandList.reserve(256);
+				m_ThreadCount = std::clamp<decltype(m_ThreadCount)>(m_ThreadCount, 3, std::max<decltype(m_ThreadCount)>(3, std::thread::hardware_concurrency()));
+			}
+			if(pCommand->m_pVendorString != nullptr && str_find_nocase(pCommand->m_pVendorString, "AMD") != nullptr && m_ThreadCount > 1)
+			{
+				dbg_msg("vulkan", "forcing single-threaded rendering on AMD to avoid driver crashes with dynamic viewport usage");
+				m_ThreadCount = 1;
+			}
+			if(pCommand->m_pVendorString != nullptr && str_find_nocase(pCommand->m_pVendorString, "Apple") != nullptr && m_ThreadCount > 1)
+			{
+				// MoltenVK/Metal 对 secondary command buffer 的编码开销较高，
+				// 界面命令量大的场景下三线程录制反而更容易造成帧时间抖动。
+				dbg_msg("vulkan", "forcing single-threaded rendering on Apple/MoltenVK to avoid secondary command buffer overhead");
+				m_ThreadCount = 1;
 			}
 
-			m_vpRenderThreads.reserve(m_ThreadCount - 1);
-			for(size_t i = 0; i < m_ThreadCount - 1; ++i)
+			// start threads
+			dbg_assert(m_ThreadCount != 2, "Either use 1 main thread or at least 2 extra rendering threads.");
+			if(m_ThreadCount > 1)
 			{
-				auto *pRenderThread = new SRenderThread();
-				std::unique_lock<std::mutex> Lock(pRenderThread->m_Mutex);
-				m_vpRenderThreads.emplace_back(pRenderThread);
-				pRenderThread->m_Thread = std::thread([this, i]() { RunThread(i); });
-				// wait until thread started
-				pRenderThread->m_Cond.wait(Lock, [pRenderThread]() -> bool { return pRenderThread->m_Started; });
+				m_vvThreadCommandLists.resize(m_ThreadCount - 1);
+				m_vThreadHelperHadCommands.resize(m_ThreadCount - 1, false);
+				for(auto &ThreadCommandList : m_vvThreadCommandLists)
+				{
+					ThreadCommandList.reserve(256);
+				}
+			}
+
+			if(m_ThreadCount == 1 || m_RenderWorkers.Start(m_ThreadCount - 1, [this](size_t Index) { RunThread(Index); }))
+			{
+				*pCommand->m_pInitError = 0;
+				return true;
 			}
 		}
-
-		return true;
+		catch(...)
+		{
+			// 命令回调、队列或工作线程状态分配失败，统一交给初始化回退。
+		}
+		m_RenderWorkers.Stop();
+		m_vvThreadCommandLists.clear();
+		m_vThreadHelperHadCommands.clear();
+		m_ThreadCount = 1;
+		SetWarning(GFX_WARNING_TYPE_INIT_FAILED, "Failed to initialize Vulkan render workers.");
+		return false;
 	}
 
 	[[nodiscard]] bool Cmd_PostShutdown(const CCommandProcessorFragment_GLBase::SCommand_PostShutdown *pCommand)
 	{
-		for(size_t i = 0; i < m_ThreadCount - 1; ++i)
-		{
-			auto *pThread = m_vpRenderThreads[i].get();
-			{
-				std::unique_lock<std::mutex> Lock(pThread->m_Mutex);
-				pThread->m_Finished = true;
-				pThread->m_Cond.notify_one();
-			}
-			pThread->m_Thread.join();
-		}
-		m_vpRenderThreads.clear();
+		m_RenderWorkers.Stop();
 		m_vvThreadCommandLists.clear();
 		m_vThreadHelperHadCommands.clear();
 
@@ -9670,6 +9548,23 @@ public:
 		CleanupVulkanSDL();
 
 		return true;
+	}
+
+	void AbortCommands(bool Initialization) noexcept override
+	{
+		// 在诊断锁下保留第一份故障，再阻止录制继续；未启动的队列不会被补执行。
+		if(!Initialization)
+			SetError(GFX_ERROR_TYPE_RENDER_CMD_FAILED, "Unexpected exception while executing Vulkan commands.");
+		m_HasError.store(true, std::memory_order_release);
+		m_RenderWorkers.Stop();
+		m_vvThreadCommandLists.clear();
+		m_vThreadHelperHadCommands.clear();
+		m_ThreadCount = 1;
+		m_CommandsInPipe = 0;
+		m_RenderCallsInPipe = 0;
+		// CMD_INIT 的收尾异常也必须由 POST_SHUTDOWN 清理初始化资源。
+		if(Initialization)
+			m_CanAssert = false;
 	}
 
 	void StartCommands(size_t CommandCount, size_t EstimatedRenderCallCount) override
@@ -9696,15 +9591,12 @@ public:
 	void RunThread(size_t ThreadIndex)
 	{
 		s_ThreadIsRenderWorker = true;
-		auto *pThread = m_vpRenderThreads[ThreadIndex].get();
+		auto *pThread = &m_RenderWorkers[ThreadIndex];
 		std::unique_lock<std::mutex> Lock(pThread->m_Mutex);
-		pThread->m_Started = true;
-		pThread->m_Cond.notify_one();
 
 		while(!pThread->m_Finished)
 		{
 			pThread->m_Cond.wait(Lock, [pThread]() -> bool { return pThread->m_IsRendering || pThread->m_Finished; });
-			pThread->m_Cond.notify_one();
 
 			// set this to true, if you want to benchmark the render thread times
 			static constexpr bool s_BenchmarkRenderThreads = false;
@@ -9716,18 +9608,10 @@ public:
 
 			if(!pThread->m_Finished)
 			{
-				bool HasErrorFromCmd = false;
-				for(auto &NextCmd : m_vvThreadCommandLists[ThreadIndex])
-				{
-					if(m_HasError)
-					{
-						HasErrorFromCmd = true;
-						break;
-					}
-					const auto RecordStartTime = m_FrameProfilingActive ? time_get_nanoseconds() : 0ns;
-					if(!m_aCommandCallbacks[CommandBufferCMDOff(NextCmd.m_Command)].m_CommandCB(NextCmd.m_pRawCommand, NextCmd))
-					{
-						if(!m_HasError)
+				RunVulkanRecordingBatch(m_vvThreadCommandLists[ThreadIndex], m_HasError, pThread->m_IsRendering, pThread->m_Cond, [&](SRenderCommandExecuteBuffer &NextCmd) {
+						const auto RecordStartTime = m_FrameProfilingActive ? time_get_nanoseconds() : 0ns;
+						const bool Success = m_aCommandCallbacks[CommandBufferCMDOff(NextCmd.m_Command)].m_CommandCB(NextCmd.m_pRawCommand, NextCmd);
+						if(!Success && !m_HasError)
 						{
 							char aError[128];
 							str_format(aError, sizeof(aError), "Vulkan command %d failed without API details (recording thread %zu).", (int)NextCmd.m_Command, ThreadIndex + 1);
@@ -9736,31 +9620,25 @@ public:
 						if(m_FrameProfilingActive)
 							m_vThreadFrameProfileStats[ThreadIndex + 1].m_CPUThreadCommandRecordTime += time_get_nanoseconds() - RecordStartTime;
 						m_vThreadFrameProfileStats[ThreadIndex + 1].m_ThreadCommandRecords++;
-						// an error occurred, the thread will not continue execution
-						HasErrorFromCmd = true;
-						break;
-					}
-					if(m_FrameProfilingActive)
-						m_vThreadFrameProfileStats[ThreadIndex + 1].m_CPUThreadCommandRecordTime += time_get_nanoseconds() - RecordStartTime;
-					m_vThreadFrameProfileStats[ThreadIndex + 1].m_ThreadCommandRecords++;
-				}
-				m_vvThreadCommandLists[ThreadIndex].clear();
-
-				if(!HasErrorFromCmd && m_vvUsedThreadDrawCommandBuffer[ThreadIndex + 1][m_CurImageIndex])
-				{
-					auto &GraphicThreadCommandBuffer = m_vvThreadDrawCommandBuffers[ThreadIndex + 1][m_CurImageIndex];
-					VkResult EndThreadCommandBufferResult = vkEndCommandBuffer(GraphicThreadCommandBuffer);
-					if(EndThreadCommandBufferResult != VK_SUCCESS)
-					{
-						const char *pCritErrorMsg = CheckVulkanCriticalError(EndThreadCommandBufferResult);
-						if(pCritErrorMsg != nullptr)
-							SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_RECORDING, "Thread draw command buffer cannot be ended anymore.", pCritErrorMsg);
-						else
-							SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_RECORDING, "Thread draw command buffer cannot be ended anymore.");
+						return Success; }, [&] {
+						if(m_vvUsedThreadDrawCommandBuffer[ThreadIndex + 1][m_CurImageIndex])
+						{
+							auto &GraphicThreadCommandBuffer = m_vvThreadDrawCommandBuffers[ThreadIndex + 1][m_CurImageIndex];
+							VkResult EndThreadCommandBufferResult = vkEndCommandBuffer(GraphicThreadCommandBuffer);
+							if(EndThreadCommandBufferResult != VK_SUCCESS)
+							{
+								const char *pCritErrorMsg = CheckVulkanCriticalError(EndThreadCommandBufferResult);
+								SetError(GFX_ERROR_TYPE_RENDER_RECORDING, "Thread draw command buffer cannot be ended anymore.", pCritErrorMsg);
+								return false;
+							}
+							ResetDrawCommandState(ThreadIndex + 1);
+						}
+						return true; }, [&](bool Exception) noexcept {
+						if(Exception)
+							SetError(GFX_ERROR_TYPE_RENDER_RECORDING, "Unexpected exception while recording Vulkan worker commands.");
+						// 不提交未完成的 secondary buffer，也不重放借用的绘制命令。
 						m_vvUsedThreadDrawCommandBuffer[ThreadIndex + 1][m_CurImageIndex] = false;
-					}
-					ResetDrawCommandState(ThreadIndex + 1);
-				}
+						ResetDrawCommandState(ThreadIndex + 1); });
 			}
 
 			if(IsVerbose() && s_BenchmarkRenderThreads)
@@ -9768,7 +9646,11 @@ public:
 				dbg_msg("vulkan", "render thread %" PRIzu " took %d ns to finish", ThreadIndex, (int)(time_get_nanoseconds() - ThreadRenderTime).count());
 			}
 
-			pThread->m_IsRendering = false;
+			if(pThread->m_Finished)
+			{
+				pThread->m_IsRendering = false;
+				pThread->m_Cond.notify_all();
+			}
 		}
 	}
 };

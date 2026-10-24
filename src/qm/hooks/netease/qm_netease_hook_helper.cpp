@@ -4,6 +4,8 @@
 #endif
 #include "qm_netease_bootstrap.h"
 #include "qm_netease_frontend_bridge.h"
+#include "qm_netease_helper_input.h"
+#include "qm_netease_remote_injection.h"
 
 #include <windows.h>
 
@@ -16,9 +18,11 @@
 #include <cstdio>
 #include <cwctype>
 #include <filesystem>
+#include <memory>
 #include <optional>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 namespace
@@ -28,6 +32,16 @@ namespace
 	constexpr wchar_t HELPER_MUTEX_NAME[] = L"Local\\QmClient.NeteaseHook.Helper.v5";
 	constexpr wchar_t APP_PATHS_KEY[] = L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\cloudmusic.exe";
 	constexpr wchar_t NETEASE_KEY[] = L"SOFTWARE\\NetEase\\CloudMusic";
+
+	struct CHandleCloser
+	{
+		void operator()(void *pHandle) const noexcept
+		{
+			if(pHandle && pHandle != INVALID_HANDLE_VALUE)
+				CloseHandle(pHandle);
+		}
+	};
+	using CWindowsHandle = std::unique_ptr<void, CHandleCloser>;
 
 	std::wstring Lower(std::wstring Value)
 	{
@@ -104,7 +118,8 @@ namespace
 			return {};
 		SProcessParametersPrefix Parameters;
 		if(!ReadProcessMemory(hProcess, Peb.m_ProcessParameters, &Parameters, sizeof(Parameters), &Read) || Read != sizeof(Parameters) ||
-			Parameters.m_CommandLine.m_Buffer == nullptr || Parameters.m_CommandLine.m_Length == 0)
+			Parameters.m_CommandLine.m_Buffer == nullptr || Parameters.m_CommandLine.m_Length == 0 ||
+			!QmNeteaseHelper::ValidWideByteCount(Parameters.m_CommandLine.m_Length, Parameters.m_CommandLine.m_MaximumLength))
 			return {};
 		const size_t CharCount = Parameters.m_CommandLine.m_Length / sizeof(wchar_t);
 		std::wstring Result(CharCount, L'\0');
@@ -123,7 +138,8 @@ namespace
 	std::vector<SCandidate> FindCandidates()
 	{
 		std::vector<SCandidate> Result;
-		HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+		const CWindowsHandle Snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
+		const HANDLE hSnapshot = Snapshot.get();
 		if(hSnapshot == INVALID_HANDLE_VALUE)
 			return Result;
 		PROCESSENTRY32W Entry{};
@@ -134,11 +150,10 @@ namespace
 			{
 				if(Lower(Entry.szExeFile) != TARGET_EXE)
 					continue;
-				HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ, FALSE, Entry.th32ProcessID);
+				const CWindowsHandle Process(OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ, FALSE, Entry.th32ProcessID));
+				const HANDLE hProcess = Process.get();
 				if(hProcess == nullptr || !IsTargetArchitecture(hProcess))
 				{
-					if(hProcess != nullptr)
-						CloseHandle(hProcess);
 					continue;
 				}
 				std::wstring Path;
@@ -157,10 +172,8 @@ namespace
 				}
 				if(!Path.empty())
 					Result.push_back({Entry.th32ProcessID, Entry.th32ParentProcessID, std::move(Path), QueryCommandLine(hProcess)});
-				CloseHandle(hProcess);
 			} while(Process32NextW(hSnapshot, &Entry));
 		}
-		CloseHandle(hSnapshot);
 		return Result;
 	}
 
@@ -209,46 +222,36 @@ namespace
 		}
 	}
 
-	std::wstring QuoteWindowsPathArgument(std::wstring Value)
-	{
-		// 结尾反斜杠会转义命令行参数的闭合引号，目录参数先去掉多余分隔符。
-		while(Value.size() > 1 && (Value.back() == L'\\' || Value.back() == L'/'))
-		{
-			if(Value.size() == 3 && Value[1] == L':')
-				break;
-			Value.pop_back();
-		}
-		return L"\"" + Value + L"\"";
-	}
-
 	std::wstring QueryRegistryString(HKEY hRoot, const wchar_t *pSubKey, const wchar_t *pValueName, REGSAM View)
 	{
 		HKEY hKey = nullptr;
 		if(RegOpenKeyExW(hRoot, pSubKey, 0, KEY_QUERY_VALUE | View, &hKey) != ERROR_SUCCESS)
 			return {};
+		std::unique_ptr<std::remove_pointer_t<HKEY>, decltype(&RegCloseKey)> Key(hKey, RegCloseKey);
 		DWORD Type = 0;
 		DWORD ByteSize = 0;
 		LONG Result = RegQueryValueExW(hKey, pValueName, nullptr, &Type, nullptr, &ByteSize);
-		if(Result != ERROR_SUCCESS || (Type != REG_SZ && Type != REG_EXPAND_SZ) || ByteSize < sizeof(wchar_t) || ByteSize > 32768 * sizeof(wchar_t))
+		if(Result != ERROR_SUCCESS || (Type != REG_SZ && Type != REG_EXPAND_SZ) || ByteSize < sizeof(wchar_t) || ByteSize > 32768 * sizeof(wchar_t) || !QmNeteaseHelper::ValidWideByteCount(ByteSize, 32768 * sizeof(wchar_t)))
 		{
-			RegCloseKey(hKey);
 			return {};
 		}
 		std::vector<wchar_t> Buffer(ByteSize / sizeof(wchar_t) + 1, L'\0');
 		Result = RegQueryValueExW(hKey, pValueName, nullptr, &Type, reinterpret_cast<BYTE *>(Buffer.data()), &ByteSize);
-		RegCloseKey(hKey);
-		if(Result != ERROR_SUCCESS)
+		Key.reset();
+		if(Result != ERROR_SUCCESS || (Type != REG_SZ && Type != REG_EXPAND_SZ) ||
+			!QmNeteaseHelper::ValidWideByteCount(ByteSize, (Buffer.size() - 1) * sizeof(wchar_t)))
 			return {};
-		std::wstring Value(Buffer.data());
+		std::wstring Value = QmNeteaseHelper::CopyWideBytes(Buffer.data(), ByteSize, Buffer.size());
 		if(Type == REG_EXPAND_SZ)
 		{
 			const DWORD Required = ExpandEnvironmentStringsW(Value.c_str(), nullptr, 0);
 			if(Required == 0 || Required > 32768)
 				return {};
 			std::vector<wchar_t> Expanded(Required);
-			if(ExpandEnvironmentStringsW(Value.c_str(), Expanded.data(), Required) == 0)
+			const DWORD Written = ExpandEnvironmentStringsW(Value.c_str(), Expanded.data(), Required);
+			if(Written == 0 || Written > Expanded.size())
 				return {};
-			Value.assign(Expanded.data());
+			Value = QmNeteaseHelper::CopyWideBytes(Expanded.data(), Written * sizeof(wchar_t), Expanded.size());
 		}
 		while(!Value.empty() && iswspace(Value.front()))
 			Value.erase(Value.begin());
@@ -303,7 +306,7 @@ namespace
 		if(Executable.empty())
 			return false;
 		const std::wstring WorkingDirectory = ModuleDirectory();
-		const std::wstring Parameters = L"--install-bootstrap " + QuoteWindowsPathArgument(CloudMusicDirectory);
+		const std::wstring Parameters = L"--install-bootstrap " + QmNeteaseHelper::QuoteDirectoryArgument(CloudMusicDirectory);
 		SHELLEXECUTEINFOW Execute{};
 		Execute.cbSize = sizeof(Execute);
 		Execute.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC;
@@ -352,7 +355,8 @@ namespace
 	bool IsAlreadyInjected(DWORD Pid, const std::wstring &DllPath)
 	{
 		const std::wstring FileName = Lower(std::filesystem::path(DllPath).filename().wstring());
-		HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, Pid);
+		const CWindowsHandle Snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, Pid));
+		const HANDLE hSnapshot = Snapshot.get();
 		if(hSnapshot == INVALID_HANDLE_VALUE)
 			return false;
 		MODULEENTRY32W Entry{};
@@ -369,42 +373,37 @@ namespace
 				}
 			} while(Module32NextW(hSnapshot, &Entry));
 		}
-		CloseHandle(hSnapshot);
 		return Found;
 	}
 
-	bool Inject(DWORD Pid, const std::wstring &DllPath)
+	class CInjectionOperations : public QmNeteaseHelper::CRemoteInjection::COperations
 	{
-		HANDLE hProcess = OpenProcess(PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ, FALSE, Pid);
-		if(hProcess == nullptr || !IsTargetArchitecture(hProcess))
+	public:
+		void *OpenProcess(uint32_t Pid) override
 		{
-			if(hProcess != nullptr)
-				CloseHandle(hProcess);
-			return false;
+			CWindowsHandle Process(::OpenProcess(PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ, FALSE, Pid));
+			return Process && IsTargetArchitecture(Process.get()) ? Process.release() : nullptr;
 		}
-		const size_t Bytes = (DllPath.size() + 1) * sizeof(wchar_t);
-		void *pRemotePath = VirtualAllocEx(hProcess, nullptr, Bytes, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-		if(pRemotePath == nullptr)
+		void *AllocatePath(void *pProcess, size_t Bytes) override { return VirtualAllocEx(pProcess, nullptr, Bytes, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE); }
+		bool WritePath(void *pProcess, void *pRemote, const wchar_t *pPath, size_t Bytes) override
 		{
-			CloseHandle(hProcess);
-			return false;
+			SIZE_T Written = 0;
+			return WriteProcessMemory(pProcess, pRemote, pPath, Bytes, &Written) && Written == Bytes;
 		}
-		const bool Written = WriteProcessMemory(hProcess, pRemotePath, DllPath.c_str(), Bytes, nullptr) != FALSE;
-		HANDLE hThread = Written ? CreateRemoteThread(hProcess, nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "LoadLibraryW")), pRemotePath, 0, nullptr) : nullptr;
-		bool Success = false;
-		if(hThread != nullptr)
+		void *CreateThread(void *pProcess, void *pRemote) override
 		{
-			if(WaitForSingleObject(hThread, 10000) == WAIT_OBJECT_0)
-			{
-				DWORD ExitCode = 0;
-				Success = GetExitCodeThread(hThread, &ExitCode) && ExitCode != 0;
-			}
-			CloseHandle(hThread);
+			const auto pLoadLibrary = reinterpret_cast<LPTHREAD_START_ROUTINE>(GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "LoadLibraryW"));
+			return pLoadLibrary ? CreateRemoteThread(pProcess, nullptr, 0, pLoadLibrary, pRemote, 0, nullptr) : nullptr;
 		}
-		VirtualFreeEx(hProcess, pRemotePath, 0, MEM_RELEASE);
-		CloseHandle(hProcess);
-		return Success && IsAlreadyInjected(Pid, DllPath);
-	}
+		QmNeteaseHelper::CRemoteInjection::EWait Wait(void *pThread, uint32_t TimeoutMs) noexcept override
+		{
+			using EWait = QmNeteaseHelper::CRemoteInjection::EWait;
+			const DWORD Result = WaitForSingleObject(pThread, TimeoutMs);
+			return Result == WAIT_OBJECT_0 ? EWait::COMPLETE : (Result == WAIT_TIMEOUT ? EWait::PENDING : EWait::FAILED);
+		}
+		void FreePath(void *pProcess, void *pRemote) noexcept override { VirtualFreeEx(pProcess, pRemote, 0, MEM_RELEASE); }
+		void Close(void *pHandle) noexcept override { CloseHandle(pHandle); }
+	};
 
 	int Watch(const std::wstring &HookOverride, DWORD ParentPid)
 	{
@@ -420,7 +419,10 @@ namespace
 			if(hParent == nullptr)
 				return 4;
 		}
+		const CWindowsHandle Parent(hParent);
 		int Result = 0;
+		CInjectionOperations InjectionOperations;
+		QmNeteaseHelper::CRemoteInjection Injection(InjectionOperations);
 		QmNeteaseBridge::CFrontendLyricBridge FrontendBridge;
 		DWORD ActiveCloudMusicPid = 0;
 		std::wstring BootstrapConflictDirectory;
@@ -430,65 +432,75 @@ namespace
 		{
 			if(hParent != nullptr && WaitForSingleObject(hParent, 0) == WAIT_OBJECT_0)
 				break;
-			const std::optional<SCandidate> Candidate = FindMainProcess();
-			const uint64_t Now = GetTickCount64();
-			if(Now >= NextBootstrapCheck)
+			Injection.Poll();
+			try
 			{
-				NextBootstrapCheck = Now + 10000;
-				const std::wstring InstallDirectory = Candidate.has_value() ? std::filesystem::path(Candidate->m_Path).parent_path().wstring() : FindInstalledCloudMusicDirectory();
-				if(!InstallDirectory.empty() && InstallDirectory != BootstrapConflictDirectory)
+				const std::optional<SCandidate> Candidate = FindMainProcess();
+				const uint64_t Now = GetTickCount64();
+				if(Now >= NextBootstrapCheck)
 				{
-					QmNeteaseBootstrap::EInstallResult InstallResult = QmNeteaseBootstrap::EnsureInstalled(InstallDirectory, BootstrapSourcePath);
-					if(InstallResult == QmNeteaseBootstrap::EInstallResult::AccessDenied && InstallDirectory != BootstrapElevationAttemptDirectory)
+					NextBootstrapCheck = Now + 10000;
+					const std::wstring InstallDirectory = Candidate.has_value() ? std::filesystem::path(Candidate->m_Path).parent_path().wstring() : FindInstalledCloudMusicDirectory();
+					if(!InstallDirectory.empty() && InstallDirectory != BootstrapConflictDirectory)
 					{
-						BootstrapElevationAttemptDirectory = InstallDirectory;
-						if(RunElevatedBootstrapInstall(InstallDirectory))
-							InstallResult = QmNeteaseBootstrap::EnsureInstalled(InstallDirectory, BootstrapSourcePath);
-					}
-					if(InstallResult == QmNeteaseBootstrap::EInstallResult::Conflict)
-					{
-						BootstrapConflictDirectory = InstallDirectory;
-						OutputDebugStringW(L"NCM/Bootstrap: BootstrapConflict，拒绝覆盖未知 version.dll\n");
+						QmNeteaseBootstrap::EInstallResult InstallResult = QmNeteaseBootstrap::EnsureInstalled(InstallDirectory, BootstrapSourcePath);
+						if(InstallResult == QmNeteaseBootstrap::EInstallResult::AccessDenied && InstallDirectory != BootstrapElevationAttemptDirectory)
+						{
+							std::wstring AttemptDirectory = InstallDirectory;
+							const bool Elevated = RunElevatedBootstrapInstall(InstallDirectory);
+							BootstrapElevationAttemptDirectory.swap(AttemptDirectory);
+							if(Elevated)
+								InstallResult = QmNeteaseBootstrap::EnsureInstalled(InstallDirectory, BootstrapSourcePath);
+						}
+						if(InstallResult == QmNeteaseBootstrap::EInstallResult::Conflict)
+						{
+							BootstrapConflictDirectory = InstallDirectory;
+							OutputDebugStringW(L"NCM/Bootstrap: BootstrapConflict，拒绝覆盖未知 version.dll\n");
+						}
 					}
 				}
-			}
-			if(Candidate.has_value())
-			{
-				if(!IsAlreadyInjected(Candidate->m_Pid, HookPath))
-					Inject(Candidate->m_Pid, HookPath);
-				if(ActiveCloudMusicPid != Candidate->m_Pid)
+				if(Candidate.has_value())
+				{
+					if(!IsAlreadyInjected(Candidate->m_Pid, HookPath))
+						Injection.Start(Candidate->m_Pid, HookPath);
+					if(ActiveCloudMusicPid != Candidate->m_Pid || !FrontendBridge.IsRunning())
+					{
+						FrontendBridge.Stop();
+						if(FrontendBridge.Start(Candidate->m_Pid, Candidate->m_CommandLine))
+							ActiveCloudMusicPid = Candidate->m_Pid;
+					}
+				}
+				else if(ActiveCloudMusicPid != 0)
 				{
 					FrontendBridge.Stop();
-					if(FrontendBridge.Start(Candidate->m_Pid, Candidate->m_CommandLine))
-						ActiveCloudMusicPid = Candidate->m_Pid;
+					ActiveCloudMusicPid = 0;
 				}
 			}
-			else if(ActiveCloudMusicPid != 0)
+			catch(...)
 			{
-				FrontendBridge.Stop();
-				ActiveCloudMusicPid = 0;
+				// 本轮准备失败不消费缺席状态；保留既有bridge，下一轮继续。
 			}
+
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		}
 		FrontendBridge.Stop();
-		if(hParent != nullptr)
-			CloseHandle(hParent);
 		return Result;
 	}
 }
 
-int wmain(int argc, wchar_t **argv)
+static int RunHelper(int argc, wchar_t **argv)
 {
 	if(argc == 3 && std::wstring(argv[1]) == L"--install-bootstrap")
 		return InstallBootstrap(argv[2]);
 	if(argc < 2 || std::wstring(argv[1]) != L"--watch")
 		return 1;
 	HANDLE hMutex = CreateMutexW(nullptr, TRUE, HELPER_MUTEX_NAME);
+	const DWORD MutexError = GetLastError();
+	const CWindowsHandle Mutex(hMutex);
 	if(hMutex == nullptr)
 		return 2;
-	if(GetLastError() == ERROR_ALREADY_EXISTS)
+	if(MutexError == ERROR_ALREADY_EXISTS)
 	{
-		CloseHandle(hMutex);
 		return 0;
 	}
 	std::wstring HookOverride;
@@ -501,6 +513,18 @@ int wmain(int argc, wchar_t **argv)
 			ParentPid = (DWORD)_wtoi(argv[++i]);
 	}
 	const int Result = Watch(HookOverride, ParentPid);
-	CloseHandle(hMutex);
 	return Result;
+}
+
+int wmain(int argc, wchar_t **argv)
+{
+	try
+	{
+		return RunHelper(argc, argv);
+	}
+	catch(...)
+	{
+		// 原生句柄由各自owner回收，入口准备失败以普通错误码结束。
+		return 12;
+	}
 }

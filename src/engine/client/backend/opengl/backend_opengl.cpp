@@ -4,10 +4,13 @@
 #include <base/log.h>
 #include <base/system.h>
 
+#include <utility>
+
 #ifndef BACKEND_NO_SDL
 #include <engine/client/backend_sdl.h>
 #endif
 #include <engine/client/backend/render_target_geometry.h>
+#include <engine/client/backend/screenshot_image.h>
 #include <engine/client/qm_graphics_adapters.h>
 #include <engine/graphics.h>
 
@@ -697,7 +700,7 @@ bool CCommandProcessorFragment_OpenGL::Cmd_Init(const SCommand_Init *pCommand)
 	return true;
 }
 
-void CCommandProcessorFragment_OpenGL::TextureUpdate(int Slot, int X, int Y, int Width, int Height, int GLFormat, uint8_t *pTexData)
+void CCommandProcessorFragment_OpenGL::TextureUpdate(int Slot, int X, int Y, int Width, int Height, int GLFormat, CGraphicsUploadData<uint8_t> pTexData)
 {
 	glBindTexture(GL_TEXTURE_2D, m_vTextures[Slot].m_Tex);
 
@@ -710,9 +713,7 @@ void CCommandProcessorFragment_OpenGL::TextureUpdate(int Slot, int X, int Y, int
 			int ResizedW = (int)(Width * ResizeW);
 			int ResizedH = (int)(Height * ResizeH);
 
-			uint8_t *pTmpData = ResizeImage(pTexData, Width, Height, ResizedW, ResizedH, GLFormatToPixelSize(GLFormat));
-			free(pTexData);
-			pTexData = pTmpData;
+			pTexData.reset(ResizeImage(pTexData.get(), Width, Height, ResizedW, ResizedH, GLFormatToPixelSize(GLFormat)));
 			if(pTexData == nullptr)
 				return;
 
@@ -734,20 +735,20 @@ void CCommandProcessorFragment_OpenGL::TextureUpdate(int Slot, int X, int Y, int
 			Y /= 2;
 		}
 
-		uint8_t *pTmpData = ResizeImage(pTexData, OldWidth, OldHeight, Width, Height, GLFormatToPixelSize(GLFormat));
-		free(pTexData);
-		pTexData = pTmpData;
+		pTexData.reset(ResizeImage(pTexData.get(), OldWidth, OldHeight, Width, Height, GLFormatToPixelSize(GLFormat)));
 		if(pTexData == nullptr)
 			return;
 	}
 
-	glTexSubImage2D(GL_TEXTURE_2D, 0, X, Y, Width, Height, GLFormat, GL_UNSIGNED_BYTE, pTexData);
-	free(pTexData);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, X, Y, Width, Height, GLFormat, GL_UNSIGNED_BYTE, pTexData.get());
 }
 
 void CCommandProcessorFragment_OpenGL::DestroyTexture(int Slot)
 {
-	m_pTextureMemoryUsage->store(m_pTextureMemoryUsage->load(std::memory_order_relaxed) - m_vTextures[Slot].m_MemSize, std::memory_order_relaxed);
+	// 能力探测异常时还未绑定计数器；无纹理的部分初始化也允许关闭。
+	if(m_pTextureMemoryUsage != nullptr)
+		m_pTextureMemoryUsage->store(m_pTextureMemoryUsage->load(std::memory_order_relaxed) - m_vTextures[Slot].m_MemSize, std::memory_order_relaxed);
+	m_vTextures[Slot].m_MemSize = 0;
 
 	if(m_vTextures[Slot].m_Tex != 0)
 	{
@@ -783,7 +784,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Destroy(const CCommandBuffer:
 	DestroyTexture(pCommand->m_Slot);
 }
 
-void CCommandProcessorFragment_OpenGL::TextureCreate(int Slot, int Width, int Height, int GLFormat, int GLStoreFormat, int Flags, uint8_t *pTexData)
+void CCommandProcessorFragment_OpenGL::TextureCreate(int Slot, int Width, int Height, int GLFormat, int GLStoreFormat, int Flags, CGraphicsUploadData<uint8_t> pTexData)
 {
 #ifndef BACKEND_GL_MODERN_API
 
@@ -806,9 +807,7 @@ void CCommandProcessorFragment_OpenGL::TextureCreate(int Slot, int Width, int He
 		int PowerOfTwoHeight = HighestBit(Height);
 		if(Width != PowerOfTwoWidth || Height != PowerOfTwoHeight)
 		{
-			uint8_t *pTmpData = ResizeImage(pTexData, Width, Height, PowerOfTwoWidth, PowerOfTwoHeight, GLFormatToPixelSize(GLFormat));
-			free(pTexData);
-			pTexData = pTmpData;
+			pTexData.reset(ResizeImage(pTexData.get(), Width, Height, PowerOfTwoWidth, PowerOfTwoHeight, GLFormatToPixelSize(GLFormat)));
 			if(pTexData == nullptr)
 				return;
 
@@ -840,9 +839,7 @@ void CCommandProcessorFragment_OpenGL::TextureCreate(int Slot, int Width, int He
 
 		if(NeedsResize)
 		{
-			uint8_t *pTmpData = ResizeImage(pTexData, OldWidth, OldHeight, Width, Height, GLFormatToPixelSize(GLFormat));
-			free(pTexData);
-			pTexData = pTmpData;
+			pTexData.reset(ResizeImage(pTexData.get(), OldWidth, OldHeight, Width, Height, GLFormatToPixelSize(GLFormat)));
 			if(pTexData == nullptr)
 				return;
 		}
@@ -865,7 +862,7 @@ void CCommandProcessorFragment_OpenGL::TextureCreate(int Slot, int Width, int He
 		{
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexImage2D(GL_TEXTURE_2D, 0, GLStoreFormat, Width, Height, 0, GLFormat, GL_UNSIGNED_BYTE, pTexData);
+			glTexImage2D(GL_TEXTURE_2D, 0, GLStoreFormat, Width, Height, 0, GLFormat, GL_UNSIGNED_BYTE, pTexData.get());
 		}
 	}
 	else
@@ -881,7 +878,7 @@ void CCommandProcessorFragment_OpenGL::TextureCreate(int Slot, int Width, int He
 				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS, ((GLfloat)m_OpenGLTextureLodBIAS / 1000.0f));
 #endif
 
-			glTexImage2D(GL_TEXTURE_2D, 0, GLStoreFormat, Width, Height, 0, GLFormat, GL_UNSIGNED_BYTE, pTexData);
+			glTexImage2D(GL_TEXTURE_2D, 0, GLStoreFormat, Width, Height, 0, GLFormat, GL_UNSIGNED_BYTE, pTexData.get());
 		}
 
 		int Flag2DArrayTexture = TextureFlag::TO_2D_ARRAY_TEXTURE;
@@ -956,14 +953,13 @@ void CCommandProcessorFragment_OpenGL::TextureCreate(int Slot, int Width, int He
 			{
 				int NewWidth = maximum<int>(HighestBit(ConvertWidth), 16);
 				int NewHeight = maximum<int>(HighestBit(ConvertHeight), 16);
-				uint8_t *pNewTexData = ResizeImage(pTexData, ConvertWidth, ConvertHeight, NewWidth, NewHeight, GLFormatToPixelSize(GLFormat));
+				CGraphicsUploadData<uint8_t> pNewTexData(ResizeImage(pTexData.get(), ConvertWidth, ConvertHeight, NewWidth, NewHeight, GLFormatToPixelSize(GLFormat)));
 				log_debug("gfx/opengl", "3D/2D array texture was resized. Slot=%d Size=(%d, %d) Resized=(%d, %d)", Slot, ConvertWidth, ConvertHeight, NewWidth, NewHeight);
 
 				ConvertWidth = NewWidth;
 				ConvertHeight = NewHeight;
 
-				free(pTexData);
-				pTexData = pNewTexData;
+				pTexData = std::move(pNewTexData);
 				if(pTexData == nullptr)
 				{
 					return;
@@ -973,21 +969,18 @@ void CCommandProcessorFragment_OpenGL::TextureCreate(int Slot, int Width, int He
 			size_t Image3DDataSize = 0;
 			if(!TextureBufferSize(ConvertWidth, ConvertHeight, PixelSize, Image3DDataSize))
 			{
-				free(pTexData);
 				return;
 			}
-			uint8_t *pImageData3D = static_cast<uint8_t *>(malloc(Image3DDataSize));
+			CGraphicsUploadData<uint8_t> pImageData3D(static_cast<uint8_t *>(malloc(Image3DDataSize)));
 			if(!pImageData3D)
 			{
-				free(pTexData);
 				return;
 			}
 
 			int Image3DWidth, Image3DHeight;
 
-			Texture2DTo3D(pTexData, ConvertWidth, ConvertHeight, PixelSize, 16, 16, pImageData3D, Image3DWidth, Image3DHeight);
-			glTexImage3D(Target, 0, GLStoreFormat, Image3DWidth, Image3DHeight, 256, 0, GLFormat, GL_UNSIGNED_BYTE, pImageData3D);
-			free(pImageData3D);
+			Texture2DTo3D(pTexData.get(), ConvertWidth, ConvertHeight, PixelSize, 16, 16, pImageData3D.get(), Image3DWidth, Image3DHeight);
+			glTexImage3D(Target, 0, GLStoreFormat, Image3DWidth, Image3DHeight, 256, 0, GLFormat, GL_UNSIGNED_BYTE, pImageData3D.get());
 		}
 	}
 
@@ -1003,24 +996,22 @@ void CCommandProcessorFragment_OpenGL::TextureCreate(int Slot, int Width, int He
 		m_vTextures[Slot].m_MemSize += (size_t)Width * Height * PixelSize;
 	}
 	m_pTextureMemoryUsage->store(m_pTextureMemoryUsage->load(std::memory_order_relaxed) + m_vTextures[Slot].m_MemSize, std::memory_order_relaxed);
-
-	free(pTexData);
 #endif
 }
 
 void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::SCommand_Texture_Create *pCommand)
 {
-	TextureCreate(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, GL_RGBA, GL_RGBA, pCommand->m_Flags, pCommand->m_pData);
+	TextureCreate(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, GL_RGBA, GL_RGBA, pCommand->m_Flags, TakeGraphicsUpload(pCommand->m_pData));
 }
 
 void CCommandProcessorFragment_OpenGL::Cmd_Texture_Update(const CCommandBuffer::SCommand_Texture_Update *pCommand)
 {
-	TextureUpdate(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, GL_RGBA, pCommand->m_pData);
+	TextureUpdate(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, GL_RGBA, TakeGraphicsUpload(pCommand->m_pData));
 }
 
 void CCommandProcessorFragment_OpenGL::Cmd_TextTexture_Update(const CCommandBuffer::SCommand_TextTexture_Update *pCommand)
 {
-	TextureUpdate(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, GL_ALPHA, pCommand->m_pData);
+	TextureUpdate(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, GL_ALPHA, TakeGraphicsUpload(pCommand->m_pData));
 }
 
 void CCommandProcessorFragment_OpenGL::Cmd_TextTextures_Destroy(const CCommandBuffer::SCommand_TextTextures_Destroy *pCommand)
@@ -1031,8 +1022,10 @@ void CCommandProcessorFragment_OpenGL::Cmd_TextTextures_Destroy(const CCommandBu
 
 void CCommandProcessorFragment_OpenGL::Cmd_TextTextures_Create(const CCommandBuffer::SCommand_TextTextures_Create *pCommand)
 {
-	TextureCreate(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, GL_ALPHA, GL_ALPHA, TextureFlag::NO_MIPMAPS, pCommand->m_pTextData);
-	TextureCreate(pCommand->m_SlotOutline, pCommand->m_Width, pCommand->m_Height, GL_ALPHA, GL_ALPHA, TextureFlag::NO_MIPMAPS, pCommand->m_pTextOutlineData);
+	auto pTextData = TakeGraphicsUpload(pCommand->m_pTextData);
+	auto pOutlineData = TakeGraphicsUpload(pCommand->m_pTextOutlineData);
+	TextureCreate(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, GL_ALPHA, GL_ALPHA, TextureFlag::NO_MIPMAPS, std::move(pTextData));
+	TextureCreate(pCommand->m_SlotOutline, pCommand->m_Width, pCommand->m_Height, GL_ALPHA, GL_ALPHA, TextureFlag::NO_MIPMAPS, std::move(pOutlineData));
 }
 
 void CCommandProcessorFragment_OpenGL::Cmd_Clear(const CCommandBuffer::SCommand_Clear *pCommand)
@@ -1121,44 +1114,23 @@ void CCommandProcessorFragment_OpenGL::Cmd_ReadPixel(const CCommandBuffer::SComm
 
 void CCommandProcessorFragment_OpenGL::Cmd_Screenshot(const CCommandBuffer::SCommand_TrySwapAndScreenshot *pCommand)
 {
-	// fetch image data
+	pCommand->m_pImage->Free();
 	GLint aViewport[4] = {0, 0, 0, 0};
 	glGetIntegerv(GL_VIEWPORT, aViewport);
+	const int Width = aViewport[2];
+	const int Height = aViewport[3];
+	if(Width <= 0 || Height <= 0)
+		return;
 
-	const int ViewportX = aViewport[0];
-	const int ViewportY = aViewport[1];
-	int w = aViewport[2];
-	int h = aViewport[3];
-
-	// we allocate one more row to use when we are flipping the texture
-	unsigned char *pPixelData = (unsigned char *)malloc((size_t)w * (h + 1) * 4);
-	unsigned char *pTempRow = pPixelData + w * h * 4;
-
-	// fetch the pixels
-	GLint Alignment;
-	glGetIntegerv(GL_PACK_ALIGNMENT, &Alignment);
-	glPixelStorei(GL_PACK_ALIGNMENT, 1);
-	glReadPixels(ViewportX, ViewportY, w, h, GL_RGBA, GL_UNSIGNED_BYTE, pPixelData);
-	glPixelStorei(GL_PACK_ALIGNMENT, Alignment);
-
-	// flip the pixel because opengl works from bottom left corner
-	for(int y = 0; y < h / 2; y++)
-	{
-		mem_copy(pTempRow, pPixelData + y * w * 4, w * 4);
-		mem_copy(pPixelData + y * w * 4, pPixelData + (h - y - 1) * w * 4, w * 4);
-		mem_copy(pPixelData + (h - y - 1) * w * 4, pTempRow, w * 4);
-		for(int x = 0; x < w; x++)
-		{
-			pPixelData[y * w * 4 + x * 4 + 3] = 255;
-			pPixelData[(h - y - 1) * w * 4 + x * 4 + 3] = 255;
-		}
-	}
-
-	// fill in the information
-	pCommand->m_pImage->m_Width = w;
-	pCommand->m_pImage->m_Height = h;
-	pCommand->m_pImage->m_Format = CImageInfo::FORMAT_RGBA;
-	pCommand->m_pImage->m_pData = pPixelData;
+	screenshot_image::CaptureRgba(*pCommand->m_pImage, static_cast<size_t>(Width), static_cast<size_t>(Height),
+		screenshot_image::ERowOrder::BOTTOM_UP, [&](uint8_t *pData, size_t) {
+			GLint Alignment;
+			glGetIntegerv(GL_PACK_ALIGNMENT, &Alignment);
+			glPixelStorei(GL_PACK_ALIGNMENT, 1);
+			glReadPixels(aViewport[0], aViewport[1], Width, Height, GL_RGBA, GL_UNSIGNED_BYTE, pData);
+			glPixelStorei(GL_PACK_ALIGNMENT, Alignment);
+			return true;
+		});
 }
 
 CCommandProcessorFragment_OpenGL::CCommandProcessorFragment_OpenGL()
@@ -1269,7 +1241,7 @@ ERunCommandReturnTypes CCommandProcessorFragment_OpenGL::RunCommand(const CComma
 	default: return ERunCommandReturnTypes::RUN_COMMAND_COMMAND_UNHANDLED;
 	}
 
-	return ERunCommandReturnTypes::RUN_COMMAND_COMMAND_HANDLED;
+	return m_Error.m_ErrorType == GFX_ERROR_TYPE_NONE ? ERunCommandReturnTypes::RUN_COMMAND_COMMAND_HANDLED : ERunCommandReturnTypes::RUN_COMMAND_COMMAND_ERROR;
 }
 
 // ------------ CCommandProcessorFragment_OpenGL2
@@ -1933,35 +1905,26 @@ bool CCommandProcessorFragment_OpenGL2::Cmd_Init(const SCommand_Init *pCommand)
 
 void CCommandProcessorFragment_OpenGL2::Cmd_Shutdown(const SCommand_Shutdown *pCommand)
 {
-	if(m_HasShaders)
-	{
+	// 初始化可能只创建了部分 program；析构负责删除其实际 GL 句柄。
+	if(m_pTileProgram != nullptr || m_pTileProgramTextured != nullptr || m_pBorderTileProgram != nullptr || m_pBorderTileProgramTextured != nullptr || m_pPrimitive3DProgram != nullptr || m_pPrimitive3DProgramTextured != nullptr)
 		glUseProgram(0);
 
-		m_pTileProgram->DeleteProgram();
-		m_pTileProgramTextured->DeleteProgram();
-		m_pBorderTileProgram->DeleteProgram();
-		m_pBorderTileProgramTextured->DeleteProgram();
-		m_pPrimitive3DProgram->DeleteProgram();
-		m_pPrimitive3DProgramTextured->DeleteProgram();
-	}
-
-	delete m_pTileProgram;
-	delete m_pTileProgramTextured;
-	delete m_pBorderTileProgram;
-	delete m_pBorderTileProgramTextured;
-	delete m_pPrimitive3DProgram;
-	delete m_pPrimitive3DProgramTextured;
+	delete std::exchange(m_pTileProgram, nullptr);
+	delete std::exchange(m_pTileProgramTextured, nullptr);
+	delete std::exchange(m_pBorderTileProgram, nullptr);
+	delete std::exchange(m_pBorderTileProgramTextured, nullptr);
+	delete std::exchange(m_pPrimitive3DProgram, nullptr);
+	delete std::exchange(m_pPrimitive3DProgramTextured, nullptr);
 
 	for(int i = 0; i < (int)m_vTextures.size(); ++i)
 	{
 		DestroyTexture(i);
 	}
 
-	for(auto &BufferObject : m_vBufferObjectIndices)
-	{
-		glDeleteBuffers(1, &BufferObject.m_BufferObjectId);
-		free(BufferObject.m_pData);
-	}
+	for(size_t Index = 0; Index < m_vBufferObjectIndices.size(); ++Index)
+		DeleteBufferObject(static_cast<int>(Index));
+	m_vBufferObjectIndices.clear();
+	m_vBufferContainers.clear();
 }
 
 void CCommandProcessorFragment_OpenGL2::Cmd_RenderTex3D(const CCommandBuffer::SCommand_RenderTex3D *pCommand)
@@ -2020,92 +1983,142 @@ void CCommandProcessorFragment_OpenGL2::Cmd_RenderTex3D(const CCommandBuffer::SC
 void CCommandProcessorFragment_OpenGL2::Cmd_CreateBufferObject(const CCommandBuffer::SCommand_CreateBufferObject *pCommand)
 {
 	void *pUploadData = pCommand->m_pUploadData;
+	auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
 	const int Index = pCommand->m_BufferIndex;
-	// create necessary space
-	if((size_t)Index >= m_vBufferObjectIndices.size())
+	COpenGLBufferData Data;
+	if(Index < 0 || !Data.Assign(pCommand->m_DataSize, pUploadData))
 	{
-		m_vBufferObjectIndices.resize(Index + 1, 0);
+		BufferObjectError("Failed to prepare CPU buffer storage.");
+		return;
+	}
+	try
+	{
+		if(static_cast<size_t>(Index) >= m_vBufferObjectIndices.size())
+			m_vBufferObjectIndices.resize(static_cast<size_t>(Index) + 1);
+	}
+	catch(...)
+	{
+		BufferObjectError("Failed to allocate buffer object slots.");
+		return;
 	}
 
+	// CPU 副本与槽位就绪后才创建 GPU 对象，失败不覆盖已发布的缓冲。
 	GLuint VertBufferId = 0;
-
 	glGenBuffers(1, &VertBufferId);
+	if(VertBufferId == 0)
+	{
+		BufferObjectError("Failed to create an OpenGL buffer object.");
+		return;
+	}
 	glBindBuffer(GL_ARRAY_BUFFER, VertBufferId);
 	glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(pCommand->m_DataSize), pUploadData, GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	SBufferObject &BufferObject = m_vBufferObjectIndices[Index];
+	if(BufferObject.m_BufferObjectId != 0)
+		glDeleteBuffers(1, &BufferObject.m_BufferObjectId);
 	BufferObject.m_BufferObjectId = VertBufferId;
-	BufferObject.m_DataSize = pCommand->m_DataSize;
-	BufferObject.m_pData = static_cast<uint8_t *>(malloc(pCommand->m_DataSize));
-	if(pUploadData)
-		mem_copy(BufferObject.m_pData, pUploadData, pCommand->m_DataSize);
-
-	if(pCommand->m_DeletePointer)
-		free(pUploadData);
+	BufferObject.m_Data = std::move(Data);
 }
 
 void CCommandProcessorFragment_OpenGL2::Cmd_RecreateBufferObject(const CCommandBuffer::SCommand_RecreateBufferObject *pCommand)
 {
 	void *pUploadData = pCommand->m_pUploadData;
-	int Index = pCommand->m_BufferIndex;
+	auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
+	const int Index = pCommand->m_BufferIndex;
+	if(static_cast<size_t>(Index) >= m_vBufferObjectIndices.size() || m_vBufferObjectIndices[Index].m_BufferObjectId == 0)
+	{
+		BufferObjectError("Cannot recreate an unavailable buffer object.");
+		return;
+	}
+	COpenGLBufferData Data;
+	if(!Data.Assign(pCommand->m_DataSize, pUploadData))
+	{
+		BufferObjectError("Failed to prepare replacement CPU buffer storage.");
+		return;
+	}
 	SBufferObject &BufferObject = m_vBufferObjectIndices[Index];
 
 	glBindBuffer(GL_ARRAY_BUFFER, BufferObject.m_BufferObjectId);
 	glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(pCommand->m_DataSize), pUploadData, GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	BufferObject.m_DataSize = pCommand->m_DataSize;
-	free(BufferObject.m_pData);
-	BufferObject.m_pData = static_cast<uint8_t *>(malloc(pCommand->m_DataSize));
-	if(pUploadData)
-		mem_copy(BufferObject.m_pData, pUploadData, pCommand->m_DataSize);
-
-	if(pCommand->m_DeletePointer)
-		free(pUploadData);
+	BufferObject.m_Data = std::move(Data);
 }
 
 void CCommandProcessorFragment_OpenGL2::Cmd_UpdateBufferObject(const CCommandBuffer::SCommand_UpdateBufferObject *pCommand)
 {
 	void *pUploadData = pCommand->m_pUploadData;
-	int Index = pCommand->m_BufferIndex;
+	auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
+	const int Index = pCommand->m_BufferIndex;
+	const size_t Offset = reinterpret_cast<uintptr_t>(pCommand->m_pOffset);
+	if(static_cast<size_t>(Index) >= m_vBufferObjectIndices.size() || m_vBufferObjectIndices[Index].m_BufferObjectId == 0 ||
+		!m_vBufferObjectIndices[Index].m_Data.Write(Offset, pCommand->m_DataSize, pUploadData))
+	{
+		BufferObjectError("Invalid buffer object update range or storage.");
+		return;
+	}
+	if(pCommand->m_DataSize == 0)
+		return;
 	SBufferObject &BufferObject = m_vBufferObjectIndices[Index];
 
 	glBindBuffer(GL_ARRAY_BUFFER, BufferObject.m_BufferObjectId);
-	glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)(pCommand->m_pOffset), (GLsizeiptr)(pCommand->m_DataSize), pUploadData);
+	glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)Offset, (GLsizeiptr)(pCommand->m_DataSize), BufferObject.m_Data.Data() + Offset);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	if(pUploadData)
-		mem_copy(BufferObject.m_pData + (ptrdiff_t)pCommand->m_pOffset, pUploadData, pCommand->m_DataSize);
-
-	if(pCommand->m_DeletePointer)
-		free(pUploadData);
 }
 
 void CCommandProcessorFragment_OpenGL2::Cmd_CopyBufferObject(const CCommandBuffer::SCommand_CopyBufferObject *pCommand)
 {
-	int WriteIndex = pCommand->m_WriteBufferIndex;
-	int ReadIndex = pCommand->m_ReadBufferIndex;
+	const int WriteIndex = pCommand->m_WriteBufferIndex;
+	const int ReadIndex = pCommand->m_ReadBufferIndex;
+	const size_t WriteOffset = pCommand->m_WriteOffset;
+	const size_t ReadOffset = pCommand->m_ReadOffset;
+	if(static_cast<size_t>(WriteIndex) >= m_vBufferObjectIndices.size() || static_cast<size_t>(ReadIndex) >= m_vBufferObjectIndices.size() ||
+		m_vBufferObjectIndices[WriteIndex].m_BufferObjectId == 0 || m_vBufferObjectIndices[ReadIndex].m_BufferObjectId == 0)
+	{
+		BufferObjectError("Cannot copy an unavailable buffer object.");
+		return;
+	}
 
 	SBufferObject &ReadBufferObject = m_vBufferObjectIndices[ReadIndex];
 	SBufferObject &WriteBufferObject = m_vBufferObjectIndices[WriteIndex];
 
-	mem_copy(WriteBufferObject.m_pData + (ptrdiff_t)pCommand->m_WriteOffset, ReadBufferObject.m_pData + (ptrdiff_t)pCommand->m_ReadOffset, pCommand->m_CopySize);
+	if(!WriteBufferObject.m_Data.CopyFrom(ReadBufferObject.m_Data, ReadOffset, WriteOffset, pCommand->m_CopySize))
+	{
+		BufferObjectError("Invalid buffer object copy range.");
+		return;
+	}
+	if(pCommand->m_CopySize == 0)
+		return;
 
 	glBindBuffer(GL_ARRAY_BUFFER, WriteBufferObject.m_BufferObjectId);
-	glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)(pCommand->m_WriteOffset), (GLsizeiptr)(pCommand->m_CopySize), WriteBufferObject.m_pData + (ptrdiff_t)pCommand->m_WriteOffset);
+	glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)WriteOffset, (GLsizeiptr)(pCommand->m_CopySize), WriteBufferObject.m_Data.Data() + WriteOffset);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void CCommandProcessorFragment_OpenGL2::Cmd_DeleteBufferObject(const CCommandBuffer::SCommand_DeleteBufferObject *pCommand)
 {
-	int Index = pCommand->m_BufferIndex;
+	DeleteBufferObject(pCommand->m_BufferIndex);
+}
+
+void CCommandProcessorFragment_OpenGL2::BufferObjectError(const char *pReason)
+{
+	if(m_Error.m_ErrorType == GFX_ERROR_TYPE_NONE)
+	{
+		// 此处可能已经无法分配内存，只记录错误类型并沿现有图形失败路径上报。
+		m_Error.m_ErrorType = GFX_ERROR_TYPE_UNKNOWN;
+		log_error("gfx/opengl", "%s", pReason);
+	}
+}
+
+void CCommandProcessorFragment_OpenGL2::DeleteBufferObject(int Index)
+{
+	if(static_cast<size_t>(Index) >= m_vBufferObjectIndices.size())
+		return;
 	SBufferObject &BufferObject = m_vBufferObjectIndices[Index];
-
-	glDeleteBuffers(1, &BufferObject.m_BufferObjectId);
-
-	free(BufferObject.m_pData);
-	BufferObject.m_pData = NULL;
+	if(BufferObject.m_BufferObjectId != 0)
+		glDeleteBuffers(1, &BufferObject.m_BufferObjectId);
+	BufferObject.m_BufferObjectId = 0;
+	BufferObject.m_Data.Reset();
 }
 
 void CCommandProcessorFragment_OpenGL2::Cmd_CreateBufferContainer(const CCommandBuffer::SCommand_CreateBufferContainer *pCommand)
@@ -2148,21 +2161,15 @@ void CCommandProcessorFragment_OpenGL2::Cmd_UpdateBufferContainer(const CCommand
 
 void CCommandProcessorFragment_OpenGL2::Cmd_DeleteBufferContainer(const CCommandBuffer::SCommand_DeleteBufferContainer *pCommand)
 {
+	if(static_cast<size_t>(pCommand->m_BufferContainerIndex) >= m_vBufferContainers.size())
+		return;
 	SBufferContainer &BufferContainer = m_vBufferContainers[pCommand->m_BufferContainerIndex];
 
 	if(pCommand->m_DestroyAllBO)
-	{
-		int VertBufferId = BufferContainer.m_ContainerInfo.m_VertBufferBindingIndex;
-		if(VertBufferId != -1)
-		{
-			glDeleteBuffers(1, &m_vBufferObjectIndices[VertBufferId].m_BufferObjectId);
-
-			free(m_vBufferObjectIndices[VertBufferId].m_pData);
-			m_vBufferObjectIndices[VertBufferId].m_pData = NULL;
-		}
-	}
+		DeleteBufferObject(BufferContainer.m_ContainerInfo.m_VertBufferBindingIndex);
 
 	BufferContainer.m_ContainerInfo.m_vAttributes.clear();
+	BufferContainer.m_ContainerInfo.m_VertBufferBindingIndex = -1;
 }
 
 void CCommandProcessorFragment_OpenGL2::Cmd_IndicesRequiredNumNotify(const CCommandBuffer::SCommand_IndicesRequiredNumNotify *pCommand)
@@ -2177,6 +2184,11 @@ void CCommandProcessorFragment_OpenGL2::Cmd_RenderBorderTile(const CCommandBuffe
 		return;
 
 	SBufferContainer &BufferContainer = m_vBufferContainers[Index];
+	const int BufferIndex = BufferContainer.m_ContainerInfo.m_VertBufferBindingIndex;
+	if(static_cast<size_t>(BufferIndex) >= m_vBufferObjectIndices.size() ||
+		m_vBufferObjectIndices[BufferIndex].m_BufferObjectId == 0 || BufferContainer.m_ContainerInfo.m_vAttributes.empty())
+		return;
+	SBufferObject &BufferObject = m_vBufferObjectIndices[BufferIndex];
 
 	CGLSLTileProgram *pProgram = NULL;
 	if(IsTexturedState(pCommand->m_State))
@@ -2192,8 +2204,6 @@ void CCommandProcessorFragment_OpenGL2::Cmd_RenderBorderTile(const CCommandBuffe
 	pProgram->SetUniformVec2(pProgram->m_LocScale, 1, (float *)&pCommand->m_Scale);
 
 	bool IsTextured = BufferContainer.m_ContainerInfo.m_vAttributes.size() == 2;
-
-	SBufferObject &BufferObject = m_vBufferObjectIndices[(size_t)BufferContainer.m_ContainerInfo.m_VertBufferBindingIndex];
 
 	glBindBuffer(GL_ARRAY_BUFFER, BufferObject.m_BufferObjectId);
 
@@ -2224,6 +2234,11 @@ void CCommandProcessorFragment_OpenGL2::Cmd_RenderTileLayer(const CCommandBuffer
 		return;
 
 	SBufferContainer &BufferContainer = m_vBufferContainers[Index];
+	const int BufferIndex = BufferContainer.m_ContainerInfo.m_VertBufferBindingIndex;
+	if(static_cast<size_t>(BufferIndex) >= m_vBufferObjectIndices.size() ||
+		m_vBufferObjectIndices[BufferIndex].m_BufferObjectId == 0 || BufferContainer.m_ContainerInfo.m_vAttributes.empty())
+		return;
+	SBufferObject &BufferObject = m_vBufferObjectIndices[BufferIndex];
 
 	if(pCommand->m_IndicesDrawNum == 0)
 	{
@@ -2246,8 +2261,6 @@ void CCommandProcessorFragment_OpenGL2::Cmd_RenderTileLayer(const CCommandBuffer
 	pProgram->SetUniformVec4(pProgram->m_LocColor, 1, (float *)&pCommand->m_Color);
 
 	bool IsTextured = BufferContainer.m_ContainerInfo.m_vAttributes.size() == 2;
-
-	SBufferObject &BufferObject = m_vBufferObjectIndices[(size_t)BufferContainer.m_ContainerInfo.m_VertBufferBindingIndex];
 
 	glBindBuffer(GL_ARRAY_BUFFER, BufferObject.m_BufferObjectId);
 

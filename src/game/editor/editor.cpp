@@ -4223,7 +4223,7 @@ bool CEditor::LoadCollabSnapshot(const char *pFilename, int StorageType, bool Fo
 
 	const bool Result = ReloadEditorCollabSnapshotKeepingCamera(Map()->m_MapViewState, [&]() {
 		Reset(false);
-		Map()->Clean();
+		// Load 在新地图通过基础校验后清理旧内容，加载失败时保留原地图与撤销记录。
 		const bool Loaded = Map()->Load(pFilename, StorageType, std::move(ErrorHandler));
 		if(Loaded)
 		{

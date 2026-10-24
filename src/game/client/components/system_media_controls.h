@@ -5,6 +5,8 @@
 #include <engine/graphics.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/media_command_queue.h>
+#include <game/client/components/qmclient/media_worker.h>
 #include <game/client/components/qmclient/netease_hook/qm_netease_hook_provider.h>
 
 #include <algorithm>
@@ -155,6 +157,7 @@ public:
 
 #if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
 	struct SShared;
+	struct SRuntime;
 #endif
 
 	CSystemMediaControls();
@@ -167,13 +170,16 @@ public:
 	bool GetStateSnapshot(SState &State) const;
 	// 读取网易云私有 v5 快照；不会把其字段合并到标准 SMTC 状态。
 	bool GetNeteaseSnapshot(QmNeteaseHook::SSnapshotV5 &Snapshot) const;
-	void Previous();
-	void PlayPause();
-	void Next();
+	void Previous() noexcept;
+	void PlayPause() noexcept;
+	void Next() noexcept;
 	void SetVolume(uint64_t Generation, float Volume);
 
 private:
-	void SyncNeteaseHookConfiguration();
+	void SubmitCommand(CQmMediaCommandQueue::ECommand Command) noexcept;
+	bool SyncNeteaseHookConfiguration() noexcept;
+	bool m_Initialized = false;
+	CQmMediaRetryClock m_HookRetry;
 
 	std::unique_ptr<CQmNeteaseHookProvider> m_pNeteaseHook;
 	bool m_NeteaseHookConfigInitialized = false;
@@ -183,18 +189,12 @@ private:
 	bool m_HasNeteaseSnapshot = false;
 	uint64_t m_LastNeteaseHookReadFrame = 0;
 	bool m_NeteaseHookReadFrameInitialized = false;
-#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
-	std::unique_ptr<SWinrt> m_pWinrt;
-#endif
-#if SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED
-	std::unique_ptr<SMpris> m_pMpris;
-#endif
 #if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
-	std::unique_ptr<SShared> m_pShared;
-	std::thread m_Thread;
-	std::atomic_bool m_StopThread{false};
+	CQmMediaWorker m_Worker;
 
-	void ThreadMain();
+	void EnsureBackendStarted() noexcept;
+	SRuntime *Runtime() const;
+	void ThreadMain(SRuntime &Runtime, const std::atomic_bool &Stop);
 
 	// 主线程持有的后端状态；同一时间只有一个后端存在，因此这里无需再加后端分支。
 	SState *MainState();

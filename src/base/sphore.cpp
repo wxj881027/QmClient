@@ -23,10 +23,10 @@
 #endif
 
 #if defined(CONF_FAMILY_WINDOWS)
-void sphore_init(SEMAPHORE *sem)
+bool sphore_try_init(SEMAPHORE *sem)
 {
 	*sem = CreateSemaphoreW(nullptr, 0, std::numeric_limits<LONG>::max(), nullptr);
-	dbg_assert(*sem != nullptr, "CreateSemaphoreW failure");
+	return *sem != nullptr;
 }
 void sphore_wait(SEMAPHORE *sem)
 {
@@ -41,15 +41,22 @@ void sphore_destroy(SEMAPHORE *sem)
 	dbg_assert(CloseHandle((HANDLE)*sem), "CloseHandle failure");
 }
 #elif defined(CONF_PLATFORM_MACOS) || defined(CONF_PLATFORM_IOS)
-void sphore_init(SEMAPHORE *sem)
+bool sphore_try_init(SEMAPHORE *sem)
 {
 	unsigned Random;
 	secure_random_fill(&Random, sizeof(Random));
 	char aBuf[32];
 	str_format(aBuf, sizeof(aBuf), "/%d.%08x", pid(), Random);
 	*sem = sem_open(aBuf, O_CREAT | O_EXCL, S_IRWXU | S_IRWXG, 0);
-	dbg_assert(*sem != SEM_FAILED, "sem_open failure, errno=%d, name='%s'", errno, aBuf);
-	dbg_assert(sem_unlink(aBuf) == 0, "sem_unlink failure, errno=%d, name='%s'", errno, aBuf);
+	if(*sem == SEM_FAILED)
+		return false;
+	if(sem_unlink(aBuf) != 0)
+	{
+		sem_close(*sem);
+		*sem = SEM_FAILED;
+		return false;
+	}
+	return true;
 }
 void sphore_wait(SEMAPHORE *sem)
 {
@@ -69,9 +76,9 @@ void sphore_destroy(SEMAPHORE *sem)
 	dbg_assert(sem_close(*sem) == 0, "sem_close failure");
 }
 #elif defined(CONF_FAMILY_UNIX)
-void sphore_init(SEMAPHORE *sem)
+bool sphore_try_init(SEMAPHORE *sem)
 {
-	dbg_assert(sem_init(sem, 0, 0) == 0, "sem_init failure");
+	return sem_init(sem, 0, 0) == 0;
 }
 void sphore_wait(SEMAPHORE *sem)
 {
@@ -91,3 +98,8 @@ void sphore_destroy(SEMAPHORE *sem)
 	dbg_assert(sem_destroy(sem) == 0, "sem_destroy failure");
 }
 #endif
+
+void sphore_init(SEMAPHORE *sem)
+{
+	dbg_assert(sphore_try_init(sem), "semaphore creation failure");
+}

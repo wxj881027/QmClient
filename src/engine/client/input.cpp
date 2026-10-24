@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "input.h"
 
+#include "input_ime.h"
 #include "input_sdl3.h"
 #include "keynames.h"
 
@@ -23,6 +24,8 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdlib>
+#include <memory>
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <windows.h>
@@ -382,10 +385,8 @@ void CInput::ClearTouchDeltas()
 
 std::string CInput::GetClipboardText()
 {
-	char *pClipboardText = SDL_GetClipboardText();
-	std::string ClipboardText = pClipboardText;
-	SDL_free(pClipboardText);
-	return ClipboardText;
+	return TakeSdlClipboardText(SDL_GetClipboardText(), SDL_free,
+		[](const char *pText) { return std::string(pText); });
 }
 
 void CInput::SetClipboardText(const char *pText)
@@ -1101,12 +1102,12 @@ bool SDLCALL CInput::WindowsMessageHook(void *pUser, MSG *pMsg)
 	SDL_Window *pWindow = pInput->Window();
 	if(pWindow == nullptr || pMsg->hwnd != SDL_GetPointerProperty(SDL_GetWindowProperties(pWindow), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr))
 		return true;
-	pInput->m_QueuedWindowsMessages.push_back({pMsg->hwnd, pMsg->message, pMsg->wParam, pMsg->lParam});
-	SDL_Event Event{};
-	Event.type = pInput->m_WindowsMessageEvent;
-	Event.user.data1 = pInput;
-	if(!SDL_PushEvent(&Event))
-		pInput->m_QueuedWindowsMessages.pop_back();
+	QueueNativeImeMessage(pInput->m_QueuedWindowsMessages, {pMsg->hwnd, pMsg->message, pMsg->wParam, pMsg->lParam}, [&] {
+		SDL_Event Event{};
+		Event.type = pInput->m_WindowsMessageEvent;
+		Event.user.data1 = pInput;
+		return SDL_PushEvent(&Event);
+	});
 	return true;
 }
 
@@ -1117,124 +1118,130 @@ std::optional<SQmImeCandidateList> CInput::ReadWindowsImeCandidates(void *pWindo
 	HWND WindowHandle = static_cast<HWND>(pWindow);
 	const bool TrackPerf = QmPerfEnabled();
 	const int64_t GetContextStartNs = TrackPerf ? time_get_nanoseconds().count() : 0;
-	HIMC ImeContext = ImmGetContext(WindowHandle);
-	if(TrackPerf)
-	{
-		const double GetContextDurationMs = (time_get_nanoseconds().count() - GetContextStartNs) / 1000000.0;
-		if(QmPerfShouldLogDuration(GetContextDurationMs))
+	const auto ReleaseContext = [&](HIMC ImeContext) noexcept {
+		const int64_t ReleaseContextStartNs = TrackPerf ? time_get_nanoseconds().count() : 0;
+		const BOOL ReleaseContextResult = ImmReleaseContext(WindowHandle, ImeContext);
+		try
 		{
-			char aExtra[192];
-			str_format(aExtra, sizeof(aExtra), "has_context=%d", ImeContext != nullptr ? 1 : 0);
-			LogPerfStage(m_pClient, "ime_get_context", GetContextDurationMs, false, aExtra);
-		}
-	}
-	if(ImeContext == nullptr)
-		return std::nullopt;
-
-	LPCANDIDATELIST pCandidateList = nullptr;
-	DWORD Size = 0;
-	const auto LoadCandidateList = [&](DWORD CandidateListIndex) {
-		const int64_t SizeQueryStartNs = TrackPerf ? time_get_nanoseconds().count() : 0;
-		DWORD CandidateListSize = ImmGetCandidateListW(ImeContext, CandidateListIndex, nullptr, 0);
-		if(TrackPerf)
-		{
-			const double SizeQueryDurationMs = (time_get_nanoseconds().count() - SizeQueryStartNs) / 1000000.0;
-			if(QmPerfShouldLogDuration(SizeQueryDurationMs))
+			if(TrackPerf)
 			{
-				char aExtra[256];
-				str_format(aExtra, sizeof(aExtra), "candidate_flags=%u candidate_index=%u returned_size=%u", (unsigned)CandidateListFlags, (unsigned)CandidateListIndex, (unsigned)CandidateListSize);
-				LogPerfStage(m_pClient, "ime_candidate_size_query", SizeQueryDurationMs, false, aExtra);
+				const double ReleaseContextDurationMs = (time_get_nanoseconds().count() - ReleaseContextStartNs) / 1000000.0;
+				if(QmPerfShouldLogDuration(ReleaseContextDurationMs))
+				{
+					char aExtra[192];
+					str_format(aExtra, sizeof(aExtra), "result=%d", ReleaseContextResult != FALSE ? 1 : 0);
+					LogPerfStage(m_pClient, "ime_release_context", ReleaseContextDurationMs, false, aExtra);
+				}
 			}
 		}
-		if(CandidateListSize == 0)
-			return false;
-
-		LPCANDIDATELIST pLoadedCandidateList = (LPCANDIDATELIST)malloc(CandidateListSize);
-		if(pLoadedCandidateList == nullptr)
-			return false;
-
-		const DWORD RequestedSize = CandidateListSize;
-		const int64_t DataQueryStartNs = TrackPerf ? time_get_nanoseconds().count() : 0;
-		CandidateListSize = ImmGetCandidateListW(ImeContext, CandidateListIndex, pLoadedCandidateList, RequestedSize);
-		if(TrackPerf)
+		catch(...)
 		{
-			const double DataQueryDurationMs = (time_get_nanoseconds().count() - DataQueryStartNs) / 1000000.0;
-			if(QmPerfShouldLogDuration(DataQueryDurationMs))
-			{
-				char aExtra[256];
-				str_format(aExtra, sizeof(aExtra), "candidate_flags=%u candidate_index=%u requested_size=%u returned_size=%u", (unsigned)CandidateListFlags, (unsigned)CandidateListIndex, (unsigned)RequestedSize, (unsigned)CandidateListSize);
-				LogPerfStage(m_pClient, "ime_candidate_data_query", DataQueryDurationMs, false, aExtra);
-			}
+			// 诊断失败不能中断上下文释放或覆盖读取结果。
 		}
-		if(CandidateListSize == 0 || CandidateListSize > RequestedSize)
-		{
-			free(pLoadedCandidateList);
-			return false;
-		}
-
-		free(pCandidateList);
-		pCandidateList = pLoadedCandidateList;
-		Size = CandidateListSize;
-		return true;
 	};
-	for(DWORD CandidateListIndex = 0; CandidateListIndex < 32; ++CandidateListIndex)
-	{
-		if(!QmImeNotifyFlagsIncludeCandidateList(CandidateListFlags, CandidateListIndex))
-			continue;
-		if(LoadCandidateList(CandidateListIndex))
-			break;
-	}
-	if(pCandidateList == nullptr && CandidateListFlags != 0 && !QmImeNotifyFlagsIncludeCandidateList(CandidateListFlags, 0))
-		LoadCandidateList(0);
-
-	SQmImeCandidateList LoadedCandidates;
-	bool LoadSucceeded = false;
-	if(pCandidateList && Size >= offsetof(CANDIDATELIST, dwOffset))
-	{
-		const size_t BufferSize = Size;
-		const size_t HeaderSize = offsetof(CANDIDATELIST, dwOffset);
-		const size_t AvailableOffsets = QmImeCandidateOffsetCapacity(BufferSize, HeaderSize);
-		const DWORD CandidateCount = std::min<DWORD>(pCandidateList->dwCount, (DWORD)AvailableOffsets);
-		const DWORD PageStart = std::min(pCandidateList->dwPageStart, CandidateCount);
-		const DWORD PageSize = (DWORD)QmImeCandidatePageSizeOrCount(pCandidateList->dwPageSize, CandidateCount);
-		const DWORD PageEnd = PageStart + std::min(PageSize, CandidateCount - PageStart);
-		const auto *pBufferBegin = reinterpret_cast<const unsigned char *>(pCandidateList);
-		LoadedCandidates.m_PageStart = (int)PageStart;
-		LoadedCandidates.m_PageSize = (int)PageSize;
-		LoadedCandidates.m_TotalCount = (int)CandidateCount;
-		LoadedCandidates.m_vCandidates.reserve(PageEnd - PageStart);
-		for(DWORD i = PageStart; i < PageEnd; i++)
+	return ReadNativeImeCandidates(ImmGetContext(WindowHandle), ReleaseContext, [&](HIMC ImeContext) -> std::optional<SQmImeCandidateList> {
+		if(TrackPerf)
 		{
-			const size_t Offset = pCandidateList->dwOffset[i];
-			const std::optional<size_t> CandidateLength = QmImeBoundedUtf16Length(pBufferBegin, BufferSize, Offset);
-			if(!CandidateLength.has_value())
+			const double GetContextDurationMs = (time_get_nanoseconds().count() - GetContextStartNs) / 1000000.0;
+			if(QmPerfShouldLogDuration(GetContextDurationMs))
+			{
+				char aExtra[192];
+				str_format(aExtra, sizeof(aExtra), "has_context=%d", ImeContext != nullptr ? 1 : 0);
+				LogPerfStage(m_pClient, "ime_get_context", GetContextDurationMs, false, aExtra);
+			}
+		}
+		if(ImeContext == nullptr)
+			return std::nullopt;
+
+		using TCandidateList = std::unique_ptr<CANDIDATELIST, decltype(&std::free)>;
+		TCandidateList pCandidateList(nullptr, std::free);
+		DWORD Size = 0;
+		const auto LoadCandidateList = [&](DWORD CandidateListIndex) {
+			const int64_t SizeQueryStartNs = TrackPerf ? time_get_nanoseconds().count() : 0;
+			DWORD CandidateListSize = ImmGetCandidateListW(ImeContext, CandidateListIndex, nullptr, 0);
+			if(TrackPerf)
+			{
+				const double SizeQueryDurationMs = (time_get_nanoseconds().count() - SizeQueryStartNs) / 1000000.0;
+				if(QmPerfShouldLogDuration(SizeQueryDurationMs))
+				{
+					char aExtra[256];
+					str_format(aExtra, sizeof(aExtra), "candidate_flags=%u candidate_index=%u returned_size=%u", (unsigned)CandidateListFlags, (unsigned)CandidateListIndex, (unsigned)CandidateListSize);
+					LogPerfStage(m_pClient, "ime_candidate_size_query", SizeQueryDurationMs, false, aExtra);
+				}
+			}
+			if(CandidateListSize == 0)
+				return false;
+
+			TCandidateList pLoadedCandidateList(static_cast<LPCANDIDATELIST>(std::malloc(CandidateListSize)), std::free);
+			if(pLoadedCandidateList == nullptr)
+				return false;
+
+			const DWORD RequestedSize = CandidateListSize;
+			const int64_t DataQueryStartNs = TrackPerf ? time_get_nanoseconds().count() : 0;
+			CandidateListSize = ImmGetCandidateListW(ImeContext, CandidateListIndex, pLoadedCandidateList.get(), RequestedSize);
+			if(TrackPerf)
+			{
+				const double DataQueryDurationMs = (time_get_nanoseconds().count() - DataQueryStartNs) / 1000000.0;
+				if(QmPerfShouldLogDuration(DataQueryDurationMs))
+				{
+					char aExtra[256];
+					str_format(aExtra, sizeof(aExtra), "candidate_flags=%u candidate_index=%u requested_size=%u returned_size=%u", (unsigned)CandidateListFlags, (unsigned)CandidateListIndex, (unsigned)RequestedSize, (unsigned)CandidateListSize);
+					LogPerfStage(m_pClient, "ime_candidate_data_query", DataQueryDurationMs, false, aExtra);
+				}
+			}
+			if(CandidateListSize == 0 || CandidateListSize > RequestedSize)
+				return false;
+
+			pCandidateList = std::move(pLoadedCandidateList);
+			Size = CandidateListSize;
+			return true;
+		};
+		for(DWORD CandidateListIndex = 0; CandidateListIndex < 32; ++CandidateListIndex)
+		{
+			if(!QmImeNotifyFlagsIncludeCandidateList(CandidateListFlags, CandidateListIndex))
 				continue;
-			const auto *pCandidate = reinterpret_cast<const wchar_t *>(pBufferBegin + Offset);
-			const auto Candidate = windows_wide_to_utf8_bounded(pCandidate, pCandidate + *CandidateLength + 1);
-			if(Candidate.has_value())
-				LoadedCandidates.m_vCandidates.push_back(*Candidate);
+			if(LoadCandidateList(CandidateListIndex))
+				break;
 		}
-		if(pCandidateList->dwSelection >= PageStart && pCandidateList->dwSelection < PageEnd)
-			LoadedCandidates.m_SelectedIndex = (int)pCandidateList->dwSelection - (int)PageStart;
-		LoadSucceeded = true;
-	}
+		if(pCandidateList == nullptr && CandidateListFlags != 0 && !QmImeNotifyFlagsIncludeCandidateList(CandidateListFlags, 0))
+			LoadCandidateList(0);
 
-	free(pCandidateList);
-	const int64_t ReleaseContextStartNs = TrackPerf ? time_get_nanoseconds().count() : 0;
-	const BOOL ReleaseContextResult = ImmReleaseContext(WindowHandle, ImeContext);
-	if(TrackPerf)
-	{
-		const double ReleaseContextDurationMs = (time_get_nanoseconds().count() - ReleaseContextStartNs) / 1000000.0;
-		if(QmPerfShouldLogDuration(ReleaseContextDurationMs))
+		SQmImeCandidateList LoadedCandidates;
+		bool LoadSucceeded = false;
+		if(pCandidateList && Size >= offsetof(CANDIDATELIST, dwOffset))
 		{
-			char aExtra[192];
-			str_format(aExtra, sizeof(aExtra), "result=%d", ReleaseContextResult != FALSE ? 1 : 0);
-			LogPerfStage(m_pClient, "ime_release_context", ReleaseContextDurationMs, false, aExtra);
+			const size_t BufferSize = Size;
+			const size_t HeaderSize = offsetof(CANDIDATELIST, dwOffset);
+			const size_t AvailableOffsets = QmImeCandidateOffsetCapacity(BufferSize, HeaderSize);
+			const DWORD CandidateCount = std::min<DWORD>(pCandidateList->dwCount, (DWORD)AvailableOffsets);
+			const DWORD PageStart = std::min(pCandidateList->dwPageStart, CandidateCount);
+			const DWORD PageSize = (DWORD)QmImeCandidatePageSizeOrCount(pCandidateList->dwPageSize, CandidateCount);
+			const DWORD PageEnd = PageStart + std::min(PageSize, CandidateCount - PageStart);
+			const auto *pBufferBegin = reinterpret_cast<const unsigned char *>(pCandidateList.get());
+			LoadedCandidates.m_PageStart = (int)PageStart;
+			LoadedCandidates.m_PageSize = (int)PageSize;
+			LoadedCandidates.m_TotalCount = (int)CandidateCount;
+			LoadedCandidates.m_vCandidates.reserve(PageEnd - PageStart);
+			for(DWORD i = PageStart; i < PageEnd; i++)
+			{
+				const size_t Offset = pCandidateList->dwOffset[i];
+				const std::optional<size_t> CandidateLength = QmImeBoundedUtf16Length(pBufferBegin, BufferSize, Offset);
+				if(!CandidateLength.has_value())
+					continue;
+				const auto *pCandidate = reinterpret_cast<const wchar_t *>(pBufferBegin + Offset);
+				const auto Candidate = windows_wide_to_utf8_bounded(pCandidate, pCandidate + *CandidateLength + 1);
+				if(Candidate.has_value())
+					LoadedCandidates.m_vCandidates.push_back(*Candidate);
+			}
+			if(pCandidateList->dwSelection >= PageStart && pCandidateList->dwSelection < PageEnd)
+				LoadedCandidates.m_SelectedIndex = (int)pCandidateList->dwSelection - (int)PageStart;
+			LoadSucceeded = true;
 		}
-	}
-	if(LoadSucceeded)
-		return LoadedCandidates;
-	return std::nullopt;
+
+		if(LoadSucceeded)
+			return LoadedCandidates;
+		return std::nullopt;
+	});
 }
 
 void CInput::ProcessSystemMessage(MSG *pMsg)

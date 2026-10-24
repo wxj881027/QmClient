@@ -7,9 +7,13 @@
 #include <engine/client.h>
 
 #include <atomic>
+#include <chrono>
 #include <cstdint>
+#include <functional>
 #include <mutex>
 #include <optional>
+#include <string>
+#include <thread>
 
 namespace QmHangDiagnostics
 {
@@ -41,6 +45,33 @@ namespace QmHangDiagnostics
 		std::optional<SSnapshot> TryClaimReport(int64_t Now, int64_t TimeoutNanoseconds);
 	};
 
+	// 生命周期操作由调用方串行管理；Stop 等待报告回调结束，回调不借用更短命的对象。
+	class CWatchdog
+	{
+	public:
+		using FReport = void (*)(void *, int64_t, const SSnapshot &);
+		using FCreateThread = std::thread (*)(std::function<void()>);
+
+	private:
+		CSnapshotStore &m_Store;
+		std::atomic<bool> m_Stop{true};
+		std::thread m_Thread;
+
+		void Run(int64_t TimeoutNanoseconds, FReport pfnReport, void *pUser, std::chrono::milliseconds PollInterval) noexcept;
+
+	public:
+		explicit CWatchdog(CSnapshotStore &Store) noexcept :
+			m_Store(Store) {}
+		~CWatchdog();
+		CWatchdog(const CWatchdog &) = delete;
+		CWatchdog &operator=(const CWatchdog &) = delete;
+
+		bool Started() const noexcept { return m_Thread.joinable(); }
+		bool Start(const SSnapshot &Initial, int64_t TimeoutNanoseconds, FReport pfnReport, void *pUser,
+			std::chrono::milliseconds PollInterval = std::chrono::seconds(1), FCreateThread pfnCreate = nullptr) noexcept;
+		void Stop();
+	};
+
 	enum class EDumpStage
 	{
 		LOAD_LIBRARY,
@@ -62,7 +93,8 @@ namespace QmHangDiagnostics
 	bool AppendDumpResult(const char *pReportPath, const char *pDumpPath, const SDumpResult &Result);
 
 #if defined(CONF_FAMILY_WINDOWS)
-	SDumpResult WriteDump(const char *pFilename);
+	using FEncodeFilename = std::wstring (*)(const char *);
+	SDumpResult WriteDump(const char *pFilename, FEncodeFilename pfnEncode = nullptr) noexcept;
 #endif
 }
 

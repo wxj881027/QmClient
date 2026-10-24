@@ -6,7 +6,7 @@
 
 namespace qm_ui_test
 {
-	class CTestInput final : public IInput
+	class CTestInput : public IInput
 	{
 		std::vector<CTouchFingerState> m_vTouch;
 

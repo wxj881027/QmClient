@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace qm_friend_notify
@@ -36,10 +37,16 @@ namespace qm_friend_notify
 		}
 
 	public:
-		void Reset()
+		void Reset() noexcept
 		{
 			m_vClients.clear();
 			m_Initialized = false;
+		}
+
+		void Swap(CEnterTracker &Other) noexcept
+		{
+			m_vClients.swap(Other.m_vClients);
+			std::swap(m_Initialized, Other.m_Initialized);
 		}
 
 		// 调用方只传入完整有效的玩家列表；切换连接或好友配置后先重置基线。

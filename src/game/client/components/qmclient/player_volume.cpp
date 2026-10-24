@@ -8,14 +8,16 @@
 #pragma push_macro("NOGDI")
 #undef NOGDI
 #include <windows.h>
-#include <wingdi.h>
+
 #include <appmodel.h>
 #include <audiopolicy.h>
 #include <mmdeviceapi.h>
+#include <wingdi.h>
 #include <winrt/base.h>
 #pragma pop_macro("NOGDI")
 
 #include <chrono>
+#include <memory>
 #include <vector>
 
 struct CQmPlayerVolume::SImpl
@@ -89,8 +91,9 @@ struct CQmPlayerVolume::SImpl
 						LPWSTR pId = nullptr;
 						if(pVolume && SUCCEEDED(pControl2->GetSessionInstanceIdentifier(&pId)))
 						{
-							vSessions.push_back({pId, std::move(pVolume)});
-							CoTaskMemFree(pId);
+							// 先接管原生字符串，后面的字符串或容器分配失败也会释放。
+							const std::unique_ptr<wchar_t, decltype(&CoTaskMemFree)> pIdentifier(pId, CoTaskMemFree);
+							vSessions.push_back({pIdentifier.get(), std::move(pVolume)});
 						}
 					}
 				}
@@ -104,7 +107,13 @@ struct CQmPlayerVolume::SImpl
 	}
 };
 
-CQmPlayerVolume::CQmPlayerVolume() : m_pImpl(std::make_unique<SImpl>()) {}
+CQmPlayerVolume::CQmPlayerVolume() :
+	CQmPlayerVolume(1) {}
+CQmPlayerVolume::CQmPlayerVolume(uint64_t InitialGeneration) :
+	m_pImpl(std::make_unique<SImpl>())
+{
+	m_pImpl->m_Generation = InitialGeneration;
+}
 CQmPlayerVolume::~CQmPlayerVolume() = default;
 
 void CQmPlayerVolume::Reset()
@@ -165,8 +174,11 @@ bool CQmPlayerVolume::SetVolume(uint64_t Generation, float Level)
 	return true;
 }
 #else
-struct CQmPlayerVolume::SImpl {};
+struct CQmPlayerVolume::SImpl
+{
+};
 CQmPlayerVolume::CQmPlayerVolume() = default;
+CQmPlayerVolume::CQmPlayerVolume(uint64_t) {}
 CQmPlayerVolume::~CQmPlayerVolume() = default;
 CQmPlayerVolume::SSnapshot CQmPlayerVolume::Refresh(const std::string &) { return {}; }
 bool CQmPlayerVolume::SetVolume(uint64_t, float) { return false; }

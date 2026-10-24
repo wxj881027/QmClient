@@ -440,7 +440,10 @@ public:
 	// 否则游标推进方式（顺序消费）会与字符错位。
 	std::vector<STextCharOffset> m_vCharOffsets;
 
-	float Height() const;
+	float Height() const
+	{
+		return m_LineCount * (m_AlignedFontSize + m_AlignedLineSpacing);
+	}
 	STextBoundingBox BoundingBox() const;
 	void SetPosition(vec2 Position)
 	{

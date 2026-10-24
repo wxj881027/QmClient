@@ -29,6 +29,7 @@
 #endif
 
 #include "backend/graphics_backend_contract.h"
+#include "backend/graphics_command_execution.h"
 #include "backend_sdl.h"
 
 #if defined(CONF_HEADLESS_CLIENT)
@@ -161,118 +162,96 @@ bool CCommandProcessorFragment_SDL::RunCommand(const CCommandBuffer::SCommand *p
 
 // ------------ CCommandProcessor_SDL_GL
 
-void CCommandProcessor_SDL_GL::HandleError()
+void CCommandProcessor_SDL_GL::HandleError() noexcept
 {
-	switch(m_Error.m_ErrorType)
+	m_Error = m_pGLBackend->TakeError();
+	try
 	{
-	case GFX_ERROR_TYPE_INIT:
-		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.", "Graphics error")});
-		break;
-	case GFX_ERROR_TYPE_OUT_OF_MEMORY_IMAGE:
-		[[fallthrough]];
-	case GFX_ERROR_TYPE_OUT_OF_MEMORY_BUFFER:
-		[[fallthrough]];
-	case GFX_ERROR_TYPE_OUT_OF_MEMORY_STAGING:
-		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Out of VRAM. Try setting 'cl_skins_loaded_max' to a lower value or remove custom assets (skins, entities, etc.), especially those with high resolution.", "Graphics error")});
-		break;
-	case GFX_ERROR_TYPE_RENDER_RECORDING:
-		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("An error during command recording occurred. Try to update your GPU drivers.", "Graphics error")});
-		break;
-	case GFX_ERROR_TYPE_RENDER_CMD_FAILED:
-		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("A render command failed. Try to update your GPU drivers.", "Graphics error")});
-		break;
-	case GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED:
-		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Submitting the render commands failed. Try to update your GPU drivers.", "Graphics error")});
-		break;
-	case GFX_ERROR_TYPE_SWAP_FAILED:
-		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Failed to swap framebuffers. Try to update your GPU drivers.", "Graphics error")});
-		break;
-	case GFX_ERROR_TYPE_UNKNOWN:
-		[[fallthrough]];
-	default:
-		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.", "Graphics error")});
-		break;
+		switch(m_Error.m_ErrorType)
+		{
+		case GFX_ERROR_TYPE_INIT:
+			m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.", "Graphics error")});
+			break;
+		case GFX_ERROR_TYPE_OUT_OF_MEMORY_IMAGE:
+			[[fallthrough]];
+		case GFX_ERROR_TYPE_OUT_OF_MEMORY_BUFFER:
+			[[fallthrough]];
+		case GFX_ERROR_TYPE_OUT_OF_MEMORY_STAGING:
+			m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Out of VRAM. Try setting 'cl_skins_loaded_max' to a lower value or remove custom assets (skins, entities, etc.), especially those with high resolution.", "Graphics error")});
+			break;
+		case GFX_ERROR_TYPE_RENDER_RECORDING:
+			m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("An error during command recording occurred. Try to update your GPU drivers.", "Graphics error")});
+			break;
+		case GFX_ERROR_TYPE_RENDER_CMD_FAILED:
+			m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("A render command failed. Try to update your GPU drivers.", "Graphics error")});
+			break;
+		case GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED:
+			m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Submitting the render commands failed. Try to update your GPU drivers.", "Graphics error")});
+			break;
+		case GFX_ERROR_TYPE_SWAP_FAILED:
+			m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Failed to swap framebuffers. Try to update your GPU drivers.", "Graphics error")});
+			break;
+		case GFX_ERROR_TYPE_UNKNOWN:
+			[[fallthrough]];
+		default:
+			m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.", "Graphics error")});
+			break;
+		}
+	}
+	catch(...)
+	{
+		// 附加建议失败不丢弃已转移的后端类型与原始诊断。
+		log_error("gfx", "Failed to append graphics error advice.");
 	}
 }
 
-void CCommandProcessor_SDL_GL::HandleWarning()
+void CCommandProcessor_SDL_GL::HandleWarning() noexcept
 {
-	switch(m_Warning.m_WarningType)
+	m_Warning = m_pGLBackend->TakeWarning();
+	try
 	{
-	case GFX_WARNING_TYPE_INIT_FAILED:
-		m_Warning.m_vWarnings.emplace_back(Localizable("Could not initialize the given graphics backend, reverting to the default backend now.", "Graphics error"));
-		break;
-	case GFX_WARNING_TYPE_INIT_FAILED_MISSING_INTEGRATED_GPU_DRIVER:
-		m_Warning.m_vWarnings.emplace_back(Localizable("Could not initialize the given graphics backend, this is probably because you didn't install the driver of the integrated graphics card.", "Graphics error"));
-		break;
-	case GFX_WARNING_MISSING_EXTENSION:
-		// ignore this warning for now
-		return;
-	case GFX_WARNING_LOW_ON_MEMORY:
-		// ignore this warning for now
-		return;
-	case GFX_WARNING_TYPE_INIT_FAILED_NO_DEVICE_WITH_REQUIRED_VERSION:
-	{
-		// Ignore this warning for now completely.
-		// A console message was already printed by the backend
-		m_Warning.m_WarningType = GFX_WARNING_TYPE_NONE;
-		m_Warning.m_vWarnings.clear();
-		return;
+		switch(m_Warning.m_WarningType)
+		{
+		case GFX_WARNING_TYPE_INIT_FAILED:
+			m_Warning.m_vWarnings.emplace_back(Localizable("Could not initialize the given graphics backend, reverting to the default backend now.", "Graphics error"));
+			break;
+		case GFX_WARNING_TYPE_INIT_FAILED_MISSING_INTEGRATED_GPU_DRIVER:
+			m_Warning.m_vWarnings.emplace_back(Localizable("Could not initialize the given graphics backend, this is probably because you didn't install the driver of the integrated graphics card.", "Graphics error"));
+			break;
+		case GFX_WARNING_MISSING_EXTENSION:
+			// ignore this warning for now
+			return;
+		case GFX_WARNING_LOW_ON_MEMORY:
+			// ignore this warning for now
+			return;
+		case GFX_WARNING_TYPE_INIT_FAILED_NO_DEVICE_WITH_REQUIRED_VERSION:
+		{
+			// Ignore this warning for now completely.
+			// A console message was already printed by the backend
+			m_Warning.m_WarningType = GFX_WARNING_TYPE_NONE;
+			m_Warning.m_vWarnings.clear();
+			return;
+		}
+		default:
+			dbg_assert_failed("Unhandled graphics warning type %d", (int)m_Warning.m_WarningType);
+		}
 	}
-	default:
-		dbg_assert_failed("Unhandled graphics warning type %d", (int)m_Warning.m_WarningType);
+	catch(...)
+	{
+		// 附加建议失败不丢弃已转移的后端类型与原始诊断。
+		log_error("gfx", "Failed to append graphics warning advice.");
 	}
 }
 
-void CCommandProcessor_SDL_GL::RunBuffer(CCommandBuffer *pBuffer)
+void CCommandProcessor_SDL_GL::RunBuffer(CCommandBuffer *pBuffer) noexcept
 {
-	m_pGLBackend->StartCommands(pBuffer->m_CommandCount, pBuffer->m_RenderCallCount);
-
-	for(const CCommandBuffer::SCommand *pCommand = pBuffer->Head(); pCommand; pCommand = pCommand->m_pNext)
-	{
-		auto Res = m_pGLBackend->RunCommand(pCommand);
-		if(Res == ERunCommandReturnTypes::RUN_COMMAND_COMMAND_HANDLED)
-		{
-			continue;
-		}
-		else if(Res == ERunCommandReturnTypes::RUN_COMMAND_COMMAND_ERROR)
-		{
-			// 错误返回时也要收拢录制线程，再读取它们写入的诊断。
-			m_pGLBackend->EndCommands();
-			m_Error = m_pGLBackend->GetError();
-			HandleError();
-			return;
-		}
-		else if(Res == ERunCommandReturnTypes::RUN_COMMAND_COMMAND_WARNING)
-		{
-			m_pGLBackend->EndCommands();
-			if(m_pGLBackend->GetError().m_ErrorType != GFX_ERROR_TYPE_NONE)
-			{
-				m_Error = m_pGLBackend->GetError();
-				HandleError();
-				return;
-			}
-			m_Warning = m_pGLBackend->GetWarning();
-			HandleWarning();
-			return;
-		}
-
-		if(m_SDL.RunCommand(pCommand))
-			continue;
-
-		if(m_General.RunCommand(pCommand))
-			continue;
-
-		dbg_assert_failed("Unknown graphics command %d", pCommand->m_Cmd);
-	}
-
-	m_pGLBackend->EndCommands();
-	// 工作线程可能在最后一次 RunCommand 之后才失败。
-	if(m_pGLBackend->GetError().m_ErrorType != GFX_ERROR_TYPE_NONE)
-	{
-		m_Error = m_pGLBackend->GetError();
+	const auto Result = RunGraphicsCommandBuffer(*m_pGLBackend, *pBuffer, [this](const CCommandBuffer::SCommand *pCommand) {
+		return m_SDL.RunCommand(pCommand) || m_General.RunCommand(pCommand);
+	});
+	if(Result == RUN_COMMAND_COMMAND_ERROR)
 		HandleError();
-	}
+	else if(Result == RUN_COMMAND_COMMAND_WARNING)
+		HandleWarning();
 }
 
 CCommandProcessor_SDL_GL::CCommandProcessor_SDL_GL(EBackendType BackendType, int GLMajor, int GLMinor, int GLPatch)
@@ -1393,7 +1372,18 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	// start the command processor
 	dbg_assert(m_pProcessor == nullptr, "Processor was not cleaned up properly.");
 	m_pProcessor = new CCommandProcessor_SDL_GL(m_BackendType, EffectiveGLMajor, EffectiveGLMinor, EffectiveGLPatch);
-	StartProcessor(m_pProcessor);
+	if(!StartProcessor(m_pProcessor))
+	{
+		delete m_pProcessor;
+		m_pProcessor = nullptr;
+		if(m_GLContext)
+			SDL_GL_DestroyContext(m_GLContext);
+		m_GLContext = nullptr;
+		SDL_DestroyWindow(m_pWindow);
+		m_pWindow = nullptr;
+		log_error("gfx", "Failed to create graphics thread");
+		return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_THREAD_CREATE_FAILED;
+	}
 
 	// issue init commands for OpenGL and SDL
 	CCommandBuffer CmdBuffer(1024, 512);
@@ -1421,6 +1411,12 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	RunBuffer(&CmdBuffer);
 	WaitForIdle();
 	CmdBuffer.Reset();
+
+	if(HasFatalError())
+	{
+		InitError = -1;
+		pErrorStr = "Unexpected graphics failure during initialization.";
+	}
 
 	if(InitError == 0)
 	{

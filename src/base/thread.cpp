@@ -6,11 +6,11 @@
 #include "dbg.h"
 #include "windows.h"
 
+#include <cstdlib>
+
 #if defined(CONF_FAMILY_UNIX)
 #include <pthread.h>
 #include <sched.h>
-
-#include <cstdlib>
 
 #if defined(CONF_PLATFORM_MACOS)
 #if defined(__MAC_10_10) && __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_10_10
@@ -31,7 +31,11 @@
 #endif
 
 #elif defined(CONF_FAMILY_WINDOWS)
+#include "thread_startup.h"
+
 #include <windows.h>
+
+#include <memory>
 #else
 #error NOT IMPLEMENTED
 #endif
@@ -40,6 +44,9 @@ struct THREAD_RUN
 {
 	void (*threadfunc)(void *);
 	void *u;
+#if defined(CONF_FAMILY_WINDOWS)
+	CThreadStartup m_Startup;
+#endif
 };
 
 #if defined(CONF_FAMILY_UNIX)
@@ -51,8 +58,17 @@ static unsigned long __stdcall thread_run(void *user)
 #endif
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	CWindowsComLifecycle WindowsComLifecycle(false);
-#endif
+	std::unique_ptr<THREAD_RUN> pRun(static_cast<THREAD_RUN *>(user));
+	try
+	{
+		CWindowsComLifecycle WindowsComLifecycle(false, CWindowsComLifecycle::EInitMode::CHECKED);
+		pRun->m_Startup.Run(WindowsComLifecycle.IsInitialized(), [&] { pRun->threadfunc(pRun->u); });
+	}
+	catch(...)
+	{
+		// 未发布结果即退出时，promise 的析构会让创建方得到启动失败。
+	}
+#else
 	struct THREAD_RUN *data = (THREAD_RUN *)user;
 	void (*threadfunc)(void *) = data->threadfunc;
 	void *u = data->u;
@@ -68,23 +84,56 @@ static unsigned long __stdcall thread_run(void *user)
 	catch(...)
 	{
 	}
+#endif
 	return 0;
 }
 
-void *thread_init(void (*threadfunc)(void *), void *u, const char *name)
+void *thread_try_init(void (*threadfunc)(void *), void *u, const char *name) noexcept
 {
+#if defined(CONF_FAMILY_WINDOWS)
+	std::unique_ptr<THREAD_RUN> pRun;
+	std::future<bool> StartupResult;
+	try
+	{
+		pRun = std::make_unique<THREAD_RUN>();
+		StartupResult = pRun->m_Startup.GetResult();
+	}
+	catch(...)
+	{
+		return nullptr;
+	}
+	THREAD_RUN *data = pRun.get();
+#else
 	struct THREAD_RUN *data = (THREAD_RUN *)malloc(sizeof(*data));
+	if(!data)
+		return nullptr;
+#endif
 	data->threadfunc = threadfunc;
 	data->u = u;
 #if defined(CONF_FAMILY_UNIX)
 	{
 		pthread_attr_t attr;
-		dbg_assert(pthread_attr_init(&attr) == 0, "pthread_attr_init failure");
+		if(pthread_attr_init(&attr) != 0)
+		{
+			free(data);
+			return nullptr;
+		}
 #if defined(CONF_PLATFORM_MACOS) && defined(__MAC_10_10) && __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_10_10
-		dbg_assert(pthread_attr_set_qos_class_np(&attr, QOS_CLASS_USER_INTERACTIVE, 0) == 0, "pthread_attr_set_qos_class_np failure");
+		if(pthread_attr_set_qos_class_np(&attr, QOS_CLASS_USER_INTERACTIVE, 0) != 0)
+		{
+			pthread_attr_destroy(&attr);
+			free(data);
+			return nullptr;
+		}
 #endif
 		pthread_t id;
-		dbg_assert(pthread_create(&id, &attr, thread_run, data) == 0, "pthread_create failure");
+		const int result = pthread_create(&id, &attr, thread_run, data);
+		pthread_attr_destroy(&attr);
+		if(result != 0)
+		{
+			free(data);
+			return nullptr;
+		}
 #if defined(CONF_PLATFORM_EMSCRIPTEN)
 		// Return control to the browser's main thread to allow the pthread to be started,
 		// otherwise we deadlock when waiting for a thread immediately after starting it.
@@ -93,8 +142,20 @@ void *thread_init(void (*threadfunc)(void *), void *u, const char *name)
 		return (void *)id;
 	}
 #elif defined(CONF_FAMILY_WINDOWS)
+	// 入口可能在 CreateThread 返回前结束，创建方不能继续持有参数的智能指针所有权。
+	pRun.release();
 	HANDLE thread = CreateThread(nullptr, 0, thread_run, data, 0, nullptr);
-	dbg_assert(thread != nullptr, "CreateThread failure");
+	if(thread == nullptr)
+	{
+		delete data;
+		return nullptr;
+	}
+	// COM 准备失败时不调用业务入口，先回收线程再交还 user。
+	if(!CThreadStartup::Wait(StartupResult))
+	{
+		thread_wait(thread);
+		return nullptr;
+	}
 	HMODULE kernel_base_handle;
 	if(GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN, L"KernelBase.dll", &kernel_base_handle))
 	{
@@ -108,12 +169,28 @@ void *thread_init(void (*threadfunc)(void *), void *u, const char *name)
 #pragma GCC diagnostic pop
 #endif
 		if(set_thread_description_function)
-			set_thread_description_function(thread, windows_utf8_to_wide(name).c_str());
+		{
+			try
+			{
+				set_thread_description_function(thread, windows_utf8_to_wide(name).c_str());
+			}
+			catch(...)
+			{
+				// 线程已经运行，命名失败不能丢失调用方必须回收的句柄。
+			}
+		}
 	}
 	return thread;
 #else
 #error not implemented
 #endif
+}
+
+void *thread_init(void (*threadfunc)(void *), void *u, const char *name)
+{
+	void *thread = thread_try_init(threadfunc, u, name);
+	dbg_assert(thread != nullptr, "thread creation failure");
+	return thread;
 }
 
 void thread_wait(void *thread)

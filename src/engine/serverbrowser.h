@@ -230,6 +230,7 @@ class CCommunity // NOLINT(bugprone-exception-escape)
 	int m_NumPlayers = 0;
 	bool m_HasFinishes = false;
 	std::unordered_set<CCommunityMap, CCommunityMap::SHash> m_FinishedMaps;
+	void Swap(CCommunity &Other) noexcept;
 
 public:
 	CCommunity(const char *pId, const char *pName, std::optional<SHA256_DIGEST> IconSha256, const char *pIconUrl) :
@@ -376,6 +377,8 @@ public:
 	virtual const CServerInfo *Get(int Index) const = 0;
 	virtual int NumHttpServers() const = 0;
 	virtual const CServerInfo *HttpGet(int Index) const = 0;
+	// 原始 HTTP 列表的代次，不受可见列表排序或延迟变化影响。
+	virtual uint64_t HttpListRevision() const = 0;
 
 	virtual int Players(const CServerInfo &Item) const = 0;
 	virtual int Max(const CServerInfo &Item) const = 0;

@@ -326,6 +326,7 @@ typedef struct ASYNCIO ASYNCIO;
  * @param io Handle to the file.
  *
  * @return The handle for asynchronous writing.
+ * @remark AIO 对象或初始缓冲区分配失败时返回空指针，文件仍由调用方持有。
  */
 ASYNCIO *aio_new(IOHANDLE io);
 
@@ -351,6 +352,8 @@ void aio_unlock(ASYNCIO *aio);
 
 /**
  * Queues a chunk of data for writing.
+ * 长度无法表示或缓冲分配失败时保留原队列，并由 aio_error 报告错误。
+ * 调用 aio_close 或 aio_wait 开始收尾后不再接受新数据。
  *
  * @ingroup File-IO
  *
@@ -372,6 +375,7 @@ void aio_write_newline(ASYNCIO *aio);
 /**
  * Queues a chunk of data for writing. The `ASYNCIO` struct must be
  * locked using @link aio_lock @endlink first.
+ * 失败与收尾行为同 aio_write。
  *
  * @ingroup File-IO
  *
@@ -403,6 +407,7 @@ void aio_write_newline_unlocked(ASYNCIO *aio);
  * @param aio Handle to the file.
  *
  * @return `0` on success, or non-`0` on error.
+ * @remark 已发生的排队或文件写入错误不会被后续成功写入清除。
  */
 int aio_error(ASYNCIO *aio);
 

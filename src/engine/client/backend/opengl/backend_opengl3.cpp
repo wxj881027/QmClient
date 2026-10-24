@@ -3,6 +3,8 @@
 #include <base/detect.h>
 #include <base/log.h>
 
+#include <utility>
+
 #if defined(BACKEND_AS_OPENGL_ES) || !defined(CONF_BACKEND_OPENGL_ES)
 
 #ifndef BACKEND_AS_OPENGL_ES
@@ -460,45 +462,25 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_Shutdown(const SCommand_Shutdown *
 	glUseProgram(0);
 	DestroyBackbufferCaptureResolveTarget();
 
-	m_pPrimitiveProgram->DeleteProgram();
-	m_pPrimitiveProgramTextured->DeleteProgram();
-	m_pBorderTileProgram->DeleteProgram();
-	m_pBorderTileProgramTextured->DeleteProgram();
-	m_pQuadProgram->DeleteProgram();
-	m_pQuadProgramTextured->DeleteProgram();
-	m_pQuadProgramGrouped->DeleteProgram();
-	m_pQuadProgramTexturedGrouped->DeleteProgram();
-	m_pTileProgram->DeleteProgram();
-	m_pTileProgramTextured->DeleteProgram();
-	m_pPrimitive3DProgram->DeleteProgram();
-	m_pPrimitive3DProgramTextured->DeleteProgram();
-	m_pTextProgram->DeleteProgram();
-	m_pPrimitiveExProgram->DeleteProgram();
-	m_pPrimitiveExProgramTextured->DeleteProgram();
-	m_pPrimitiveExProgramRotationless->DeleteProgram();
-	m_pPrimitiveExProgramTexturedRotationless->DeleteProgram();
-	m_pSpriteProgramMultiple->DeleteProgram();
-	UnloadQmPrograms();
-
-	// clean up everything
-	delete m_pPrimitiveProgram;
-	delete m_pPrimitiveProgramTextured;
-	delete m_pBorderTileProgram;
-	delete m_pBorderTileProgramTextured;
-	delete m_pQuadProgram;
-	delete m_pQuadProgramTextured;
-	delete m_pQuadProgramGrouped;
-	delete m_pQuadProgramTexturedGrouped;
-	delete m_pTileProgram;
-	delete m_pTileProgramTextured;
-	delete m_pPrimitive3DProgram;
-	delete m_pPrimitive3DProgramTextured;
-	delete m_pTextProgram;
-	delete m_pPrimitiveExProgram;
-	delete m_pPrimitiveExProgramTextured;
-	delete m_pPrimitiveExProgramRotationless;
-	delete m_pPrimitiveExProgramTexturedRotationless;
-	delete m_pSpriteProgramMultiple;
+	// 部分初始化仅释放已创建对象；program 析构负责其 GL 句柄。
+	delete std::exchange(m_pPrimitiveProgram, nullptr);
+	delete std::exchange(m_pPrimitiveProgramTextured, nullptr);
+	delete std::exchange(m_pBorderTileProgram, nullptr);
+	delete std::exchange(m_pBorderTileProgramTextured, nullptr);
+	delete std::exchange(m_pQuadProgram, nullptr);
+	delete std::exchange(m_pQuadProgramTextured, nullptr);
+	delete std::exchange(m_pQuadProgramGrouped, nullptr);
+	delete std::exchange(m_pQuadProgramTexturedGrouped, nullptr);
+	delete std::exchange(m_pTileProgram, nullptr);
+	delete std::exchange(m_pTileProgramTextured, nullptr);
+	delete std::exchange(m_pPrimitive3DProgram, nullptr);
+	delete std::exchange(m_pPrimitive3DProgramTextured, nullptr);
+	delete std::exchange(m_pTextProgram, nullptr);
+	delete std::exchange(m_pPrimitiveExProgram, nullptr);
+	delete std::exchange(m_pPrimitiveExProgramTextured, nullptr);
+	delete std::exchange(m_pPrimitiveExProgramRotationless, nullptr);
+	delete std::exchange(m_pPrimitiveExProgramTexturedRotationless, nullptr);
+	delete std::exchange(m_pSpriteProgramMultiple, nullptr);
 	FreeQmPrograms();
 
 	glBindVertexArray(0);
@@ -521,7 +503,7 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_Shutdown(const SCommand_Shutdown *
 	m_vBufferContainers.clear();
 }
 
-void CCommandProcessorFragment_OpenGL3_3::TextureUpdate(int Slot, int X, int Y, int Width, int Height, int GLFormat, uint8_t *pTexData)
+void CCommandProcessorFragment_OpenGL3_3::TextureUpdate(int Slot, int X, int Y, int Width, int Height, int GLFormat, CGraphicsUploadData<uint8_t> pTexData)
 {
 	glBindTexture(GL_TEXTURE_2D, m_vTextures[Slot].m_Tex);
 
@@ -538,15 +520,12 @@ void CCommandProcessorFragment_OpenGL3_3::TextureUpdate(int Slot, int X, int Y, 
 			Y /= 2;
 		}
 
-		uint8_t *pTmpData = ResizeImage(pTexData, OldWidth, OldHeight, Width, Height, GLFormatToPixelSize(GLFormat));
-		free(pTexData);
-		pTexData = pTmpData;
+		pTexData.reset(ResizeImage(pTexData.get(), OldWidth, OldHeight, Width, Height, GLFormatToPixelSize(GLFormat)));
 		if(pTexData == nullptr)
 			return;
 	}
 
-	glTexSubImage2D(GL_TEXTURE_2D, 0, X, Y, Width, Height, GLFormat, GL_UNSIGNED_BYTE, pTexData);
-	free(pTexData);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, X, Y, Width, Height, GLFormat, GL_UNSIGNED_BYTE, pTexData.get());
 }
 
 void CCommandProcessorFragment_OpenGL3_3::Cmd_Texture_Destroy(const CCommandBuffer::SCommand_Texture_Destroy *pCommand)
@@ -557,7 +536,7 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_Texture_Destroy(const CCommandBuff
 	DestroyTexture(pCommand->m_Slot);
 }
 
-void CCommandProcessorFragment_OpenGL3_3::TextureCreate(int Slot, int Width, int Height, int GLFormat, int GLStoreFormat, int Flags, uint8_t *pTexData)
+void CCommandProcessorFragment_OpenGL3_3::TextureCreate(int Slot, int Width, int Height, int GLFormat, int GLStoreFormat, int Flags, CGraphicsUploadData<uint8_t> pTexData)
 {
 	while(Slot >= (int)m_vTextures.size())
 		m_vTextures.resize(m_vTextures.size() * 2);
@@ -577,9 +556,7 @@ void CCommandProcessorFragment_OpenGL3_3::TextureCreate(int Slot, int Width, int
 				++RescaleCount;
 			} while(Width > m_MaxTexSize || Height > m_MaxTexSize);
 
-			uint8_t *pTmpData = ResizeImage(pTexData, OldWidth, OldHeight, Width, Height, GLFormatToPixelSize(GLFormat));
-			free(pTexData);
-			pTexData = pTmpData;
+			pTexData.reset(ResizeImage(pTexData.get(), OldWidth, OldHeight, Width, Height, GLFormatToPixelSize(GLFormat)));
 			if(pTexData == nullptr)
 				return;
 		}
@@ -611,7 +588,7 @@ void CCommandProcessorFragment_OpenGL3_3::TextureCreate(int Slot, int Width, int
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glSamplerParameteri(m_vTextures[Slot].m_Sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glSamplerParameteri(m_vTextures[Slot].m_Sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexImage2D(GL_TEXTURE_2D, 0, GLStoreFormat, Width, Height, 0, GLFormat, GL_UNSIGNED_BYTE, pTexData);
+			glTexImage2D(GL_TEXTURE_2D, 0, GLStoreFormat, Width, Height, 0, GLFormat, GL_UNSIGNED_BYTE, pTexData.get());
 		}
 	}
 	else
@@ -632,7 +609,7 @@ void CCommandProcessorFragment_OpenGL3_3::TextureCreate(int Slot, int Width, int
 				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 5.f);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 5);
 			}
-			glTexImage2D(GL_TEXTURE_2D, 0, GLStoreFormat, Width, Height, 0, GLFormat, GL_UNSIGNED_BYTE, pTexData);
+			glTexImage2D(GL_TEXTURE_2D, 0, GLStoreFormat, Width, Height, 0, GLFormat, GL_UNSIGNED_BYTE, pTexData.get());
 			glGenerateMipmap(GL_TEXTURE_2D);
 		}
 
@@ -661,14 +638,13 @@ void CCommandProcessorFragment_OpenGL3_3::TextureCreate(int Slot, int Width, int
 			{
 				int NewWidth = maximum<int>(HighestBit(ConvertWidth), 16);
 				int NewHeight = maximum<int>(HighestBit(ConvertHeight), 16);
-				uint8_t *pNewTexData = ResizeImage(pTexData, ConvertWidth, ConvertHeight, NewWidth, NewHeight, GLFormatToPixelSize(GLFormat));
+				CGraphicsUploadData<uint8_t> pNewTexData(ResizeImage(pTexData.get(), ConvertWidth, ConvertHeight, NewWidth, NewHeight, GLFormatToPixelSize(GLFormat)));
 				log_debug("gfx/opengl", "3D/2D array texture was resized. Slot=%d Size=(%d, %d) Resized=(%d, %d)", Slot, ConvertWidth, ConvertHeight, NewWidth, NewHeight);
 
 				ConvertWidth = NewWidth;
 				ConvertHeight = NewHeight;
 
-				free(pTexData);
-				pTexData = pNewTexData;
+				pTexData = std::move(pNewTexData);
 				if(pTexData == nullptr)
 				{
 					return;
@@ -678,22 +654,19 @@ void CCommandProcessorFragment_OpenGL3_3::TextureCreate(int Slot, int Width, int
 			size_t Image3DDataSize = 0;
 			if(!TextureBufferSize(ConvertWidth, ConvertHeight, PixelSize, Image3DDataSize))
 			{
-				free(pTexData);
 				return;
 			}
-			uint8_t *pImageData3D = static_cast<uint8_t *>(malloc(Image3DDataSize));
+			CGraphicsUploadData<uint8_t> pImageData3D(static_cast<uint8_t *>(malloc(Image3DDataSize)));
 			if(!pImageData3D)
 			{
-				free(pTexData);
 				return;
 			}
 
 			int Image3DWidth, Image3DHeight;
 
-			Texture2DTo3D(pTexData, ConvertWidth, ConvertHeight, PixelSize, 16, 16, pImageData3D, Image3DWidth, Image3DHeight);
-			glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GLStoreFormat, Image3DWidth, Image3DHeight, 256, 0, GLFormat, GL_UNSIGNED_BYTE, pImageData3D);
+			Texture2DTo3D(pTexData.get(), ConvertWidth, ConvertHeight, PixelSize, 16, 16, pImageData3D.get(), Image3DWidth, Image3DHeight);
+			glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GLStoreFormat, Image3DWidth, Image3DHeight, 256, 0, GLFormat, GL_UNSIGNED_BYTE, pImageData3D.get());
 			glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
-			free(pImageData3D);
 		}
 	}
 
@@ -709,23 +682,21 @@ void CCommandProcessorFragment_OpenGL3_3::TextureCreate(int Slot, int Width, int
 		m_vTextures[Slot].m_MemSize += (size_t)Width * Height * PixelSize;
 	}
 	m_pTextureMemoryUsage->store(m_pTextureMemoryUsage->load(std::memory_order_relaxed) + m_vTextures[Slot].m_MemSize, std::memory_order_relaxed);
-
-	free(pTexData);
 }
 
 void CCommandProcessorFragment_OpenGL3_3::Cmd_Texture_Create(const CCommandBuffer::SCommand_Texture_Create *pCommand)
 {
-	TextureCreate(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, GL_RGBA, GL_RGBA, pCommand->m_Flags, pCommand->m_pData);
+	TextureCreate(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, GL_RGBA, GL_RGBA, pCommand->m_Flags, TakeGraphicsUpload(pCommand->m_pData));
 }
 
 void CCommandProcessorFragment_OpenGL3_3::Cmd_Texture_Update(const CCommandBuffer::SCommand_Texture_Update *pCommand)
 {
-	TextureUpdate(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, GL_RGBA, pCommand->m_pData);
+	TextureUpdate(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, GL_RGBA, TakeGraphicsUpload(pCommand->m_pData));
 }
 
 void CCommandProcessorFragment_OpenGL3_3::Cmd_TextTexture_Update(const CCommandBuffer::SCommand_TextTexture_Update *pCommand)
 {
-	TextureUpdate(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, GL_RED, pCommand->m_pData);
+	TextureUpdate(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, GL_RED, TakeGraphicsUpload(pCommand->m_pData));
 }
 
 void CCommandProcessorFragment_OpenGL3_3::Cmd_TextTextures_Destroy(const CCommandBuffer::SCommand_TextTextures_Destroy *pCommand)
@@ -736,8 +707,10 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_TextTextures_Destroy(const CComman
 
 void CCommandProcessorFragment_OpenGL3_3::Cmd_TextTextures_Create(const CCommandBuffer::SCommand_TextTextures_Create *pCommand)
 {
-	TextureCreate(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, GL_RED, GL_RED, TextureFlag::NO_MIPMAPS, pCommand->m_pTextData);
-	TextureCreate(pCommand->m_SlotOutline, pCommand->m_Width, pCommand->m_Height, GL_RED, GL_RED, TextureFlag::NO_MIPMAPS, pCommand->m_pTextOutlineData);
+	auto pTextData = TakeGraphicsUpload(pCommand->m_pTextData);
+	auto pOutlineData = TakeGraphicsUpload(pCommand->m_pTextOutlineData);
+	TextureCreate(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, GL_RED, GL_RED, TextureFlag::NO_MIPMAPS, std::move(pTextData));
+	TextureCreate(pCommand->m_SlotOutline, pCommand->m_Width, pCommand->m_Height, GL_RED, GL_RED, TextureFlag::NO_MIPMAPS, std::move(pOutlineData));
 }
 
 void CCommandProcessorFragment_OpenGL3_3::Cmd_Clear(const CCommandBuffer::SCommand_Clear *pCommand)
@@ -926,6 +899,7 @@ void CCommandProcessorFragment_OpenGL3_3::AppendIndices(unsigned int NewIndicesC
 void CCommandProcessorFragment_OpenGL3_3::Cmd_CreateBufferObject(const CCommandBuffer::SCommand_CreateBufferObject *pCommand)
 {
 	void *pUploadData = pCommand->m_pUploadData;
+	auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
 	const int Index = pCommand->m_BufferIndex;
 	// create necessary space
 	if((size_t)Index >= m_vBufferObjectIndices.size())
@@ -940,33 +914,26 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_CreateBufferObject(const CCommandB
 	glBufferData(BUFFER_INIT_VERTEX_TARGET, (GLsizeiptr)(pCommand->m_DataSize), pUploadData, GL_STATIC_DRAW);
 
 	m_vBufferObjectIndices[Index] = VertBufferId;
-
-	if(pCommand->m_DeletePointer)
-		free(pUploadData);
 }
 
 void CCommandProcessorFragment_OpenGL3_3::Cmd_RecreateBufferObject(const CCommandBuffer::SCommand_RecreateBufferObject *pCommand)
 {
 	void *pUploadData = pCommand->m_pUploadData;
+	auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
 	int Index = pCommand->m_BufferIndex;
 
 	glBindBuffer(BUFFER_INIT_VERTEX_TARGET, m_vBufferObjectIndices[Index]);
 	glBufferData(BUFFER_INIT_VERTEX_TARGET, (GLsizeiptr)(pCommand->m_DataSize), pUploadData, GL_STATIC_DRAW);
-
-	if(pCommand->m_DeletePointer)
-		free(pUploadData);
 }
 
 void CCommandProcessorFragment_OpenGL3_3::Cmd_UpdateBufferObject(const CCommandBuffer::SCommand_UpdateBufferObject *pCommand)
 {
 	void *pUploadData = pCommand->m_pUploadData;
+	auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
 	int Index = pCommand->m_BufferIndex;
 
 	glBindBuffer(BUFFER_INIT_VERTEX_TARGET, m_vBufferObjectIndices[Index]);
 	glBufferSubData(BUFFER_INIT_VERTEX_TARGET, (GLintptr)(pCommand->m_pOffset), (GLsizeiptr)(pCommand->m_DataSize), pUploadData);
-
-	if(pCommand->m_DeletePointer)
-		free(pUploadData);
 }
 
 void CCommandProcessorFragment_OpenGL3_3::Cmd_CopyBufferObject(const CCommandBuffer::SCommand_CopyBufferObject *pCommand)

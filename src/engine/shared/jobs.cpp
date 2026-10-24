@@ -151,22 +151,47 @@ void CJobPool::RunLoop()
 
 void CJobPool::Init(int NumThreads)
 {
+	dbg_assert(TryInit(NumThreads), "Job pool initialization failed");
+}
+
+bool CJobPool::TryInit(int NumThreads, THREAD_CREATE pfnCreate)
+{
 	dbg_assert(m_Shutdown, "Job pool already running");
-	m_Shutdown = false;
-
-	const CLockScope LockScope(m_Lock);
-	sphore_init(&m_Semaphore);
-	m_pFirstJob = nullptr;
-	m_pLastJob = nullptr;
-
-	// start worker threads
-	char aName[16]; // unix kernel length limit
-	m_vpThreads.reserve(NumThreads);
-	for(int i = 0; i < NumThreads; i++)
+	if(NumThreads <= 0)
+		return false;
+	try
 	{
-		str_format(aName, sizeof(aName), "CJobPool W%d", i);
-		m_vpThreads.push_back(thread_init(WorkerThread, this, aName));
+		m_vpThreads.reserve(NumThreads);
+		// 每个线程最多登记一个运行作业，在线程启动前准备完整容量。
+		const CLockScope RunningLockScope(m_LockRunning);
+		m_RunningJobs.reserve(NumThreads);
 	}
+	catch(...)
+	{
+		return false;
+	}
+	{
+		const CLockScope LockScope(m_Lock);
+		if(!sphore_try_init(&m_Semaphore))
+			return false;
+		m_pFirstJob = nullptr;
+		m_pLastJob = nullptr;
+		m_Shutdown = false;
+		char aName[16];
+		for(int i = 0; i < NumThreads; i++)
+		{
+			str_format(aName, sizeof(aName), "CJobPool W%d", i);
+			void *pThread = pfnCreate(WorkerThread, this, aName);
+			if(!pThread)
+				break;
+			m_vpThreads.push_back(pThread);
+		}
+	}
+	if(m_vpThreads.size() == static_cast<size_t>(NumThreads))
+		return true;
+	// 先释放队列锁，再唤醒并等待部分启动的线程，避免启动回收互相等待。
+	Shutdown();
+	return false;
 }
 
 void CJobPool::Shutdown()
@@ -232,12 +257,17 @@ void CJobPool::Shutdown()
 
 void CJobPool::Add(std::shared_ptr<IJob> pJob)
 {
+	(void)TryAdd(std::move(pJob));
+}
+
+bool CJobPool::TryAdd(std::shared_ptr<IJob> pJob)
+{
 	// 与关闭同步检查和发信号，避免向已销毁的信号量提交作业。
 	const CLockScope LockScope(m_Lock);
 	if(m_Shutdown)
 	{
 		pJob->Abort();
-		return;
+		return false;
 	}
 	if(m_pLastJob)
 		m_pLastJob->m_pNext = pJob;
@@ -245,4 +275,5 @@ void CJobPool::Add(std::shared_ptr<IJob> pJob)
 	if(!m_pFirstJob)
 		m_pFirstJob = m_pLastJob;
 	sphore_signal(&m_Semaphore);
+	return true;
 }

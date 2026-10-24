@@ -2,26 +2,78 @@
 
 #include <base/system.h>
 
-#include <cctype>
 #include <iterator>
+#include <limits>
+#include <string_view>
+
+namespace
+{
+	bool IsTimeDigit(char Character)
+	{
+		return Character >= '0' && Character <= '9';
+	}
+
+	bool ReadTimeNumber(const char *&pStr, int Limit, int &Number)
+	{
+		if(!IsTimeDigit(*pStr))
+			return false;
+		Number = 0;
+		do
+		{
+			const int Digit = *pStr - '0';
+			if(Number > Limit / 10 || (Number == Limit / 10 && Digit > Limit % 10))
+				return false;
+			Number = Number * 10 + Digit;
+			++pStr;
+		} while(IsTimeDigit(*pStr));
+		return true;
+	}
+}
 
 int CRaceHelper::TimeFromSecondsStr(const char *pStr)
 {
 	while(*pStr == ' ') // skip leading spaces
 		pStr++;
-	if(!isdigit(*pStr))
+	int Seconds;
+	if(!ReadTimeNumber(pStr, std::numeric_limits<int>::max() / 1000, Seconds))
 		return -1;
-	int Time = str_toint(pStr) * 1000;
-	while(isdigit(*pStr))
-		pStr++;
+	int Time = Seconds * 1000;
 	if(*pStr == '.' || *pStr == ',')
 	{
 		pStr++;
 		static const int s_aMult[3] = {100, 10, 1};
-		for(size_t i = 0; i < std::size(s_aMult) && isdigit(pStr[i]); i++)
-			Time += (pStr[i] - '0') * s_aMult[i];
+		for(size_t i = 0; i < std::size(s_aMult) && IsTimeDigit(pStr[i]); i++)
+		{
+			const int Milliseconds = (pStr[i] - '0') * s_aMult[i];
+			if(Time > std::numeric_limits<int>::max() - Milliseconds)
+				return -1;
+			Time += Milliseconds;
+		}
 	}
 	return Time;
+}
+
+int CRaceHelper::TimeFromDemoFilename(const char *pFilename, const char *pMap, const char *pPlayerName)
+{
+	const char *pExtension = str_endswith(pFilename, ".demo");
+	const char *pAfterMap = str_startswith(pFilename, pMap);
+	if(!pExtension || !pAfterMap || pAfterMap >= pExtension || *pAfterMap != '_')
+		return -1;
+
+	const char *pTime = pAfterMap + 1;
+	const char *pTimeEnd = pTime;
+	while(pTimeEnd < pExtension && (IsTimeDigit(*pTimeEnd) || *pTimeEnd == ' ' || *pTimeEnd == '.' || *pTimeEnd == ','))
+		++pTimeEnd;
+	if(pPlayerName)
+	{
+		if(pTimeEnd >= pExtension || *pTimeEnd != '_' ||
+			std::string_view(pTimeEnd + 1, pExtension - pTimeEnd - 1) != pPlayerName)
+			return -1;
+	}
+	else if(pTimeEnd != pExtension)
+		return -1;
+
+	return TimeFromSecondsStr(pTime);
 }
 
 int CRaceHelper::TimeFromStr(const char *pStr)
@@ -45,9 +97,12 @@ int CRaceHelper::TimeFromStr(const char *pStr)
 			pStr++;
 		const char *pMinutesSeparator = Chinese ? MINUTES_STR_ZH : MINUTES_STR;
 		int SecondsTime = TimeFromSecondsStr(pMinutes + str_length(pMinutesSeparator));
-		if(SecondsTime == -1 || !isdigit(*pStr))
+		int Minutes;
+		if(SecondsTime == -1 || !ReadTimeNumber(pStr, std::numeric_limits<int>::max() / 60000, Minutes))
 			return -1;
-		return str_toint(pStr) * 60 * 1000 + SecondsTime;
+		if(Minutes > (std::numeric_limits<int>::max() - SecondsTime) / 60000)
+			return -1;
+		return Minutes * 60000 + SecondsTime;
 	}
 	else
 	{
