@@ -1282,8 +1282,7 @@ public:
 	bool BumpTextureHandleEpochAndResetSlots();
 	bool IsTextureHandleAllocated(IGraphics::CTextureHandle TextureId) const override;
 	void FreeTextureIndex(CTextureHandle *pIndex);
-	// 显卡设备重建会清空 m_vQuadContainers，旧索引随之失效；
-	// 所有按索引取用容器的入口都必须先过这一层校验。
+	// 检查范围与当前领取状态；整数编号复用后不区分旧别名。
 	bool IsQuadContainerIndexValid(int ContainerIndex) const;
 	void UnloadTexture(IGraphics::CTextureHandle *pIndex) override;
 	void LoadTextureAddWarning(size_t Width, size_t Height, int Flags, const char *pTexName);

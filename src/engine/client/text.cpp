@@ -6,6 +6,7 @@
 #include "glyph_lookup_cache.h"
 #include "glyph_outline.h"
 #include "glyph_render_retry.h"
+#include "graphics_buffer_pair.h"
 #include "qm_font_category.h"
 #include "qm_font_collection.h"
 #include "qm_font_face_registry.h"
@@ -1578,11 +1579,7 @@ class CTextRender : public IEngineTextRender
 
 	void ClearTextSweepBuffers()
 	{
-		if(m_TextSweepBufferContainer != -1)
-			Graphics()->DeleteBufferContainer(m_TextSweepBufferContainer, true);
-		else if(m_TextSweepBufferObject != -1)
-			Graphics()->DeleteBufferObject(m_TextSweepBufferObject);
-		m_TextSweepBufferObject = m_TextSweepBufferContainer = -1;
+		DeleteGraphicsBufferPair(Graphics(), m_TextSweepBufferContainer, m_TextSweepBufferObject);
 		m_vTextSweepQuads.clear();
 	}
 
@@ -1891,19 +1888,7 @@ class CTextRender : public IEngineTextRender
 	void DeleteTextContainerResources(STextContainer &Container)
 	{
 		if(Graphics()->IsTextBufferingEnabled())
-		{
-			if(Container.m_StringInfo.m_QuadBufferContainerIndex != -1)
-			{
-				Graphics()->DeleteBufferContainer(Container.m_StringInfo.m_QuadBufferContainerIndex, true);
-				Container.m_StringInfo.m_QuadBufferObjectIndex = -1;
-			}
-			else if(Container.m_StringInfo.m_QuadBufferObjectIndex != -1)
-			{
-				// 缓冲容器创建失败时，已创建的缓冲对象仍归本条文字所有。
-				Graphics()->DeleteBufferObject(Container.m_StringInfo.m_QuadBufferObjectIndex);
-				Container.m_StringInfo.m_QuadBufferObjectIndex = -1;
-			}
-		}
+			DeleteGraphicsBufferPair(Graphics(), Container.m_StringInfo.m_QuadBufferContainerIndex, Container.m_StringInfo.m_QuadBufferObjectIndex);
 		Graphics()->DeleteQuadContainer(Container.m_StringInfo.m_SelectionQuadContainerIndex);
 	}
 

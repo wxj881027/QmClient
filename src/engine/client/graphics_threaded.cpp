@@ -8,6 +8,7 @@
 
 #include <engine/client/backend/graphics_backend_contract.h>
 #include <engine/client/backend/vulkan/backend_vulkan.h>
+#include <engine/client/graphics_buffer_pair.h>
 #include <engine/client/plausible_sizes.h>
 #include <engine/client/rounded_rect_geometry.h>
 #include <engine/engine.h>
@@ -2808,7 +2809,8 @@ void CGraphics_Threaded::RenderProceduralRing(const IGraphics::SProceduralRingPa
 
 bool CGraphics_Threaded::IsQuadContainerIndexValid(int ContainerIndex) const
 {
-	return ContainerIndex >= 0 && (size_t)ContainerIndex < m_vQuadContainers.size();
+	return ContainerIndex >= 0 && (size_t)ContainerIndex < m_vQuadContainers.size() &&
+	       m_vQuadContainers[ContainerIndex].m_FreeIndex == ContainerIndex;
 }
 
 int CGraphics_Threaded::CreateQuadContainer(bool AutomaticUpload)
@@ -2816,15 +2818,18 @@ int CGraphics_Threaded::CreateQuadContainer(bool AutomaticUpload)
 	int Index = -1;
 	if(m_FirstFreeQuadContainer == -1)
 	{
-		Index = m_vQuadContainers.size();
+		if(m_vQuadContainers.size() >= static_cast<size_t>(std::numeric_limits<int>::max()))
+			throw std::length_error("Quad container index capacity exceeded");
+		Index = static_cast<int>(m_vQuadContainers.size());
 		m_vQuadContainers.emplace_back(AutomaticUpload);
 	}
 	else
 	{
 		Index = m_FirstFreeQuadContainer;
 		m_FirstFreeQuadContainer = m_vQuadContainers[Index].m_FreeIndex;
-		m_vQuadContainers[Index].m_FreeIndex = Index;
 	}
+	m_vQuadContainers[Index].m_FreeIndex = Index;
+	m_vQuadContainers[Index].m_AutomaticUpload = AutomaticUpload;
 
 	return Index;
 }
@@ -3000,7 +3005,7 @@ void CGraphics_Threaded::QuadContainerReset(int ContainerIndex)
 
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 	if(IsQuadContainerBufferingEnabled())
-		DeleteBufferContainer(Container.m_QuadBufferContainerIndex, true);
+		DeleteGraphicsBufferPair(this, Container.m_QuadBufferContainerIndex, Container.m_QuadBufferObjectIndex);
 	Container.m_vQuads.clear();
 	Container.m_QuadBufferObjectIndex = -1;
 }
@@ -3010,7 +3015,7 @@ void CGraphics_Threaded::DeleteQuadContainer(int &ContainerIndex)
 	if(ContainerIndex == -1)
 		return;
 
-	// 设备重建后旧索引会失效，不能把越界索引塞进空闲链表。
+	// 未领取或已经归还的槽位不能重复接入空闲链。
 	if(!IsQuadContainerIndexValid(ContainerIndex))
 	{
 		ContainerIndex = -1;
@@ -3032,8 +3037,7 @@ void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadDrawNum
 
 void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadOffset, int QuadDrawNum, bool ChangeWrapMode)
 {
-	// 设备重建后旧索引会失效：容器已被清空时不能再按索引取用。
-	if(ContainerIndex < 0 || (size_t)ContainerIndex >= m_vQuadContainers.size())
+	if(!IsQuadContainerIndexValid(ContainerIndex))
 		return;
 
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
