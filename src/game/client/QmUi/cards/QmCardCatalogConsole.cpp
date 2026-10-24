@@ -105,12 +105,14 @@ void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetr
 		Cursor.m_LineWidth = Row.w;
 		Cursor.m_MaxLines = 2;
 		const char *pPreview = "> echo \"QmClient\"; player_color 42\nhttps://ddnet.org";
-		std::vector<STextColorSplit> vColors;
-		if(g_Config.m_QmConsoleHighlightCommands)
-			QmConsoleSyntax::AppendColors(pPreview + 2, Palette, vColors, 2);
-		const char *pLink = str_find(pPreview, "https://");
-		vColors.emplace_back(static_cast<int>(pLink - pPreview), str_length(pLink), Palette.m_aColors[QmConsoleAppearance::LINK]);
-		QmConsoleText::ComposeColorSplits(pPreview, vColors, Cursor.m_vColorSplits);
+		QmConsoleText::CColorPreparation Colors;
+		Colors.Prepare(pPreview, Cursor.m_vColorSplits, [&](auto &vColors, const auto &vLinks) {
+			if(g_Config.m_QmConsoleHighlightCommands)
+				QmConsoleSyntax::AppendColors(pPreview + 2, Palette, vColors, 2);
+			for(const auto &Link : vLinks)
+				vColors.emplace_back(Link.m_StartByte, Link.m_EndByte - Link.m_StartByte, Palette.m_aColors[QmConsoleAppearance::LINK]);
+			return true;
+		});
 		TextRender()->TextEx(&Cursor, pPreview);
 		TextRender()->TextColor(Previous);
 	}

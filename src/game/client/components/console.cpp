@@ -2369,8 +2369,8 @@ void CGameConsole::OnRender()
 		CInstance::CBacklogEntry *pEntry = pConsole->m_Backlog.Last();
 		float OffsetY = pConsole->m_FilterContentMotion.Offset();
 
-		std::vector<QmConsoleText::SRange> vLinkRanges;
-		std::vector<STextColorSplit> vColorLayers;
+		QmConsoleText::CColorPreparation ColorPreparation;
+		std::vector<STextColorSplit> vPreparedColors;
 
 		pConsole->m_BacklogLastActiveLine = pConsole->m_BacklogCurLine;
 
@@ -2465,17 +2465,40 @@ void CGameConsole::OnRender()
 			}
 			const char *pText = ColoredParts.Text();
 			const int TextLength = str_length(pText);
-			vColorLayers.clear();
-			vColorLayers.emplace_back(0, TextLength, PrintColor);
-			if(LocalConsole && pEntry->m_CommandEcho && g_Config.m_QmConsoleHighlightCommands)
-				QmConsoleSyntax::AppendColors(pText + 2, Palette, vColorLayers, 2);
-			vColorLayers.insert(vColorLayers.end(), EntryCursor.m_vColorSplits.begin(), EntryCursor.m_vColorSplits.end());
-			const auto StoredColorSpans = pConsole->m_ColorSpansByExportId.find(pEntry->m_ExportId);
-			if(StoredColorSpans != pConsole->m_ColorSpansByExportId.end())
-			{
-				for(const SColorSpan &Span : StoredColorSpans->second)
-					vColorLayers.push_back(QmConsoleText::ColorSplitForCharacters(pText, Span.m_CharIndex, Span.m_Length, Span.m_Color));
-			}
+			ColorPreparation.Prepare(pText, vPreparedColors, [&](auto &vColorLayers, const auto &vLinkRanges) {
+				if(!ColorSplitsReady || ColoredParts.ParseFailed())
+					return false;
+				vColorLayers.emplace_back(0, TextLength, PrintColor);
+				if(LocalConsole && pEntry->m_CommandEcho && g_Config.m_QmConsoleHighlightCommands)
+					QmConsoleSyntax::AppendColors(pText + 2, Palette, vColorLayers, 2);
+				vColorLayers.insert(vColorLayers.end(), EntryCursor.m_vColorSplits.begin(), EntryCursor.m_vColorSplits.end());
+				const auto StoredColorSpans = pConsole->m_ColorSpansByExportId.find(pEntry->m_ExportId);
+				if(StoredColorSpans != pConsole->m_ColorSpansByExportId.end())
+				{
+					for(const SColorSpan &Span : StoredColorSpans->second)
+						vColorLayers.push_back(QmConsoleText::ColorSplitForCharacters(pText, Span.m_CharIndex, Span.m_Length, Span.m_Color));
+				}
+				for(const auto &Range : vLinkRanges)
+					vColorLayers.emplace_back(Range.m_StartByte, Range.m_EndByte - Range.m_StartByte, LocalConsole ? Palette.m_aColors[QmConsoleAppearance::LINK] : LINK_TEXT_COLOR);
+				// 搜索最后合入颜色层，链接仍保留下划线，但不会盖住搜索命中颜色。
+				if(pConsole->m_SearchInput.IsSearching() && pConsole->m_SearchResults.Ready() && pConsole->m_SearchResults.CurrentIndex() >= 0)
+				{
+					const auto &Selected = pConsole->m_SearchResults.Matches()[pConsole->m_SearchResults.CurrentIndex()];
+					for(const auto &Match : pConsole->m_SearchResults.Matches())
+					{
+						if(Match.m_EntryLine != LineNum + 1 - pEntry->m_LineCount)
+							continue;
+						const bool IsSelected = Selected.m_EntryLine == Match.m_EntryLine && Selected.m_Pos == Match.m_Pos;
+						vColorLayers.emplace_back(Match.m_Pos, Match.m_Length, LocalConsole ? Palette.m_aColors[IsSelected ? QmConsoleAppearance::SEARCH_SELECTED : QmConsoleAppearance::SEARCH] : (IsSelected ? ms_SearchSelectedColor : ms_SearchHighlightColor));
+					}
+				}
+				for(auto &Layer : vColorLayers)
+				{
+					Layer.m_Color.a *= ContentAlpha;
+					Layer.m_ColorEnd.a *= ContentAlpha;
+				}
+				return true;
+			});
 			const bool HasSelectionOrCaret = pConsole->m_Selection.ContainsEntry(pEntry->m_ExportId) ||
 							 (CanSelectLog && pConsole->m_Selection.HasCursorForEntry(pEntry->m_ExportId));
 			const int Characters = HasSelectionOrCaret ? static_cast<int>(str_utf8_offset_bytes_to_chars(pText, TextLength)) : 0;
@@ -2510,10 +2533,8 @@ void CGameConsole::OnRender()
 						Background.Draw(TextRender()->GetTextSelectionColor().WithAlpha(TextRender()->GetTextSelectionColor().a * ContentAlpha), IGraphics::CORNER_ALL, std::min(2.0f, FontSize * 0.12f));
 				}
 			}
-			QmConsoleText::CollectLinks(pText, vLinkRanges);
-			for(const auto &Range : vLinkRanges)
+			for(const auto &Range : ColorPreparation.Links())
 			{
-				vColorLayers.emplace_back(Range.m_StartByte, Range.m_EndByte - Range.m_StartByte, LocalConsole ? Palette.m_aColors[QmConsoleAppearance::LINK] : LINK_TEXT_COLOR);
 				CTextCursor LinkCursor;
 				LinkCursor.SetPosition(vec2(EntryTextX, EntryTop));
 				LinkCursor.m_FontSize = FontSize;
@@ -2531,13 +2552,16 @@ void CGameConsole::OnRender()
 					QmConsoleText::ContainsPoint(LinkCursor.m_vSelectionQuads, LinkClickPos))
 				{
 					HandleLinkClick = false;
-					const std::string Url = QmConsoleText::LinkUrl(pText, Range);
-					bool Opened;
+					std::string Url;
+					bool Opened = false;
+					if(QmConsoleText::TryLinkUrl(pText, Range, Url))
+					{
 #if defined(CONF_PLATFORM_ANDROID)
-					Opened = Client()->ViewLink(Url.c_str());
+						Opened = Client()->ViewLink(Url.c_str());
 #else
-					Opened = str_startswith(Url.c_str(), "http://") ? open_link(Url.c_str()) != 0 : Client()->ViewLink(Url.c_str());
+						Opened = str_startswith(Url.c_str(), "http://") ? open_link(Url.c_str()) != 0 : Client()->ViewLink(Url.c_str());
 #endif
+					}
 					if(Opened)
 						pConsole->m_Selection.Clear();
 				}
@@ -2549,25 +2573,9 @@ void CGameConsole::OnRender()
 					QmConsoleUi::DrawPanel(Ui(), Underline, UnderlineColor.WithAlpha(UnderlineColor.a * ContentAlpha));
 				}
 			}
-			// 搜索最后合入颜色层，链接仍保留下划线，但不会盖住搜索命中颜色。
-			if(pConsole->m_SearchInput.IsSearching() && pConsole->m_SearchResults.Ready() && pConsole->m_SearchResults.CurrentIndex() >= 0)
-			{
-				const auto &Selected = pConsole->m_SearchResults.Matches()[pConsole->m_SearchResults.CurrentIndex()];
-				for(const auto &Match : pConsole->m_SearchResults.Matches())
-				{
-					if(Match.m_EntryLine != LineNum + 1 - pEntry->m_LineCount)
-						continue;
-					const bool IsSelected = Selected.m_EntryLine == Match.m_EntryLine && Selected.m_Pos == Match.m_Pos;
-					vColorLayers.emplace_back(Match.m_Pos, Match.m_Length, LocalConsole ? Palette.m_aColors[IsSelected ? QmConsoleAppearance::SEARCH_SELECTED : QmConsoleAppearance::SEARCH] : (IsSelected ? ms_SearchSelectedColor : ms_SearchHighlightColor));
-				}
-			}
-			for(auto &Layer : vColorLayers)
-			{
-				Layer.m_Color.a *= ContentAlpha;
-				Layer.m_ColorEnd.a *= ContentAlpha;
-			}
+
 			TextRender()->TextColor(PrintColor.WithAlpha(PrintColor.a * ContentAlpha));
-			QmConsoleText::ComposeColorSplits(pText, vColorLayers, EntryCursor.m_vColorSplits);
+			EntryCursor.m_vColorSplits.swap(vPreparedColors);
 			TextRender()->TextEx(&EntryCursor, pText);
 			if(CaretCharacter && SelectionCursor.m_HasCursorRenderedPosition)
 			{
