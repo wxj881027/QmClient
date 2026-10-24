@@ -4220,24 +4220,17 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 	const float TabWidth = TabBar.w / (float)NUMBER_OF_ASSETS_TABS;
 	static CButtonContainer s_aPageTabs[NUMBER_OF_ASSETS_TABS] = {};
-	static const char *s_apAssetsTabNames[NUMBER_OF_ASSETS_TABS] = {};
-	static char s_aAssetsLanguageFile[IO_MAX_PATH_LENGTH] = {};
-	static bool s_AssetsTabNamesInitialized = false;
-	if(!s_AssetsTabNamesInitialized || str_comp(s_aAssetsLanguageFile, g_Config.m_ClLanguagefile) != 0)
-	{
-		s_AssetsTabNamesInitialized = true;
-		str_copy(s_aAssetsLanguageFile, g_Config.m_ClLanguagefile, sizeof(s_aAssetsLanguageFile));
-		s_apAssetsTabNames[ASSETS_TAB_ENTITIES] = Localize("Entities");
-		s_apAssetsTabNames[ASSETS_TAB_GAME] = Localize("Game");
-		s_apAssetsTabNames[ASSETS_TAB_EMOTICONS] = Localize("Emoticons");
-		s_apAssetsTabNames[ASSETS_TAB_PARTICLES] = Localize("Particles");
-		s_apAssetsTabNames[ASSETS_TAB_HUD] = Localize("HUD");
-		s_apAssetsTabNames[ASSETS_TAB_GUI_CURSOR] = Localize("Mouse");
-		s_apAssetsTabNames[ASSETS_TAB_ARROW] = Localize("Direction Keys");
-		s_apAssetsTabNames[ASSETS_TAB_STRONG_WEAK] = Localize("Strong Weak Hook");
-		s_apAssetsTabNames[ASSETS_TAB_ENTITY_BG] = Localize("Entity Background Image");
-		s_apAssetsTabNames[ASSETS_TAB_EXTRAS] = Localize("Other");
-	}
+	const char *apAssetsTabNames[NUMBER_OF_ASSETS_TABS] = {};
+	apAssetsTabNames[ASSETS_TAB_ENTITIES] = Localize("Entities");
+	apAssetsTabNames[ASSETS_TAB_GAME] = Localize("Game");
+	apAssetsTabNames[ASSETS_TAB_EMOTICONS] = Localize("Emoticons");
+	apAssetsTabNames[ASSETS_TAB_PARTICLES] = Localize("Particles");
+	apAssetsTabNames[ASSETS_TAB_HUD] = Localize("HUD");
+	apAssetsTabNames[ASSETS_TAB_GUI_CURSOR] = Localize("Mouse");
+	apAssetsTabNames[ASSETS_TAB_ARROW] = Localize("Direction Keys");
+	apAssetsTabNames[ASSETS_TAB_STRONG_WEAK] = Localize("Strong Weak Hook");
+	apAssetsTabNames[ASSETS_TAB_ENTITY_BG] = Localize("Entity Background Image");
+	apAssetsTabNames[ASSETS_TAB_EXTRAS] = Localize("Other");
 
 	// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签文字 —— 滑块压在文字之下。
 	CUIRect aAssetsTabSlots[NUMBER_OF_ASSETS_TABS];
@@ -4252,7 +4245,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 	for(int Tab = ASSETS_TAB_ENTITIES; Tab < NUMBER_OF_ASSETS_TABS; ++Tab)
 	{
-		DoButton_MenuTab(&s_aPageTabs[Tab], s_apAssetsTabNames[Tab], s_CurCustomTab == Tab, &aAssetsTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
+		DoButton_MenuTab(&s_aPageTabs[Tab], apAssetsTabNames[Tab], s_CurCustomTab == Tab, &aAssetsTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
 	}
 
 	if(!s_AssetsTransitionInitialized)

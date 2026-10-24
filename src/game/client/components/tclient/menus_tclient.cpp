@@ -36,23 +36,13 @@ void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)
 	MainView = TClientSettingsContentView(MainView, &TabBar);
 	const float TabWidth = TabBar.w / NUMBER_OF_TCLIENT_TABS;
 	static CButtonContainer s_aPageTabs[NUMBER_OF_TCLIENT_TABS] = {};
-	static const char *s_apTClientTabNames[NUMBER_OF_TCLIENT_TABS] = {};
-	static char s_aTClientLanguageFile[IO_MAX_PATH_LENGTH] = {};
-	static bool s_TClientTabNamesInitialized = false;
-	if(!s_TClientTabNamesInitialized || str_comp(s_aTClientLanguageFile, g_Config.m_ClLanguagefile) != 0)
-	{
-		s_TClientTabNamesInitialized = true;
-		str_copy(s_aTClientLanguageFile, g_Config.m_ClLanguagefile, sizeof(s_aTClientLanguageFile));
-		if(!ReadOnly)
-		{
-			InvalidateTClientSettingsRuntimeCacheSections(ESettingsCacheDirtyReason::LANGUAGE);
-		}
-		s_apTClientTabNames[TCLIENT_TAB_SETTINGS] = Localize("Settings");
-		s_apTClientTabNames[TCLIENT_TAB_BINDWHEEL] = Localize("Bind Wheel");
-		s_apTClientTabNames[TCLIENT_TAB_WARLIST] = Localize("War List");
-		s_apTClientTabNames[TCLIENT_TAB_BINDCHAT] = Localize("Chat Binds");
-		s_apTClientTabNames[TCLIENT_TAB_STATUSBAR] = Localize("Status Bar");
-	}
+	// 译文只在本次绘制使用；同文件重载也会释放语言库的旧字符串。
+	const char *apTClientTabNames[NUMBER_OF_TCLIENT_TABS] = {};
+	apTClientTabNames[TCLIENT_TAB_SETTINGS] = Localize("Settings");
+	apTClientTabNames[TCLIENT_TAB_BINDWHEEL] = Localize("Bind Wheel");
+	apTClientTabNames[TCLIENT_TAB_WARLIST] = Localize("War List");
+	apTClientTabNames[TCLIENT_TAB_BINDCHAT] = Localize("Chat Binds");
+	apTClientTabNames[TCLIENT_TAB_STATUSBAR] = Localize("Status Bar");
 
 	// 胶囊 Tabbar：可见页签槽位先算完，再画容器与滑块，最后画页签文字。
 	CUIRect aTClientTabSlots[NUMBER_OF_TCLIENT_TABS];
@@ -82,7 +72,7 @@ void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)
 		for(int TabIndex = 0; TabIndex < NumTClientTabs; ++TabIndex)
 		{
 			const int Tab = aTClientTabPages[TabIndex];
-			DoButton_MenuTab(&s_aPageTabs[Tab], s_apTClientTabNames[Tab], ActiveTab == Tab, &aTClientTabSlots[TabIndex], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
+			DoButton_MenuTab(&s_aPageTabs[Tab], apTClientTabNames[Tab], ActiveTab == Tab, &aTClientTabSlots[TabIndex], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
 		}
 	}
 
