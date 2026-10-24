@@ -1357,12 +1357,21 @@ public:
 
 	void QuadsDraw(CQuadItem *pArray, int Num) override;
 
+private:
 	template<typename TName>
-	void QuadsDrawTLImpl(TName *pVertices, const CQuadItem *pArray, int Num)
+	void QuadsDrawTLBatch(TName *pVertices, const CQuadItem *pArray, int Num)
 	{
 		CCommandBuffer::SPoint Center;
 
 		dbg_assert(m_Drawing == EDrawing::QUADS, "called Graphics()->QuadsDrawTL without begin");
+
+		if constexpr(std::is_same_v<TName, CCommandBuffer::SVertexTex3DStream>)
+		{
+			const int VerticesPerItem = g_Config.m_GfxQuadAsTriangle && !m_GLUseTrianglesAsQuad ? 6 : 4;
+			const float CurIndex = Uses2DTextureArrays() ? m_CurIndex : (m_CurIndex + 0.5f) / 256.0f;
+			for(int i = 0; i < Num * VerticesPerItem; ++i)
+				pVertices[m_NumVertices + i].m_Tex.w = CurIndex;
+		}
 
 		if(g_Config.m_GfxQuadAsTriangle && !m_GLUseTrianglesAsQuad)
 		{
@@ -1446,6 +1455,25 @@ public:
 
 			AddVertices(4 * Num, pVertices);
 		}
+	}
+
+public:
+	template<typename TName>
+	void QuadsDrawTLImpl(TName *pVertices, const CQuadItem *pArray, int Num)
+	{
+		if(Num <= 0 || pArray == nullptr)
+			return;
+		const int VerticesPerItem = g_Config.m_GfxQuadAsTriangle && !m_GLUseTrianglesAsQuad ? 6 : 4;
+		const auto Write = [&](size_t Offset, int Batch) {
+			QuadsDrawTLBatch(pVertices, pArray + Offset, Batch);
+		};
+		const auto Flush = [&] {
+			if constexpr(std::is_same_v<TName, CCommandBuffer::SVertexTex3DStream>)
+				FlushVerticesTex3D();
+			else
+				FlushVertices();
+		};
+		WriteGraphicsVertexBatches(static_cast<size_t>(Num), VerticesPerItem, m_NumVertices, Write, Flush);
 	}
 
 	void QuadsDrawTL(const CQuadItem *pArray, int Num) override;

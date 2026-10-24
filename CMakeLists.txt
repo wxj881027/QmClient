@@ -4862,6 +4862,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/graphics_buffer_pair_test.cpp
     src/test/unit/engine/graphics/quad_container_render_test.cpp
     src/test/unit/engine/graphics/graphics_vertex_budget_test.cpp
+    src/test/unit/engine/graphics/graphics_vertex_batches_test.cpp
+    src/test/integration/client/graphics_vertex_command_stream_test.cpp
     src/test/integration/qmclient/client/qm_text_unbuffered_passes_test.cpp
     src/test/integration/client/quad_container_command_stream_test.cpp
     src/test/integration/client/graphics_buffer_container_creation_test.cpp

@@ -198,9 +198,7 @@ void CGraphics_Threaded::FlushVerticesTex3D()
 
 void CGraphics_Threaded::AddVertices(int Count)
 {
-	m_NumVertices += Count;
-	if((m_NumVertices + Count) >= CCommandBuffer::MAX_VERTICES)
-		FlushVertices();
+	CommitGraphicsVertices(Count, m_NumVertices, [&] { FlushVertices(); });
 }
 
 void CGraphics_Threaded::AddVertices(int Count, CCommandBuffer::SVertex *pVertices)
@@ -210,9 +208,7 @@ void CGraphics_Threaded::AddVertices(int Count, CCommandBuffer::SVertex *pVertic
 
 void CGraphics_Threaded::AddVertices(int Count, CCommandBuffer::SVertexTex3DStream *pVertices)
 {
-	m_NumVertices += Count;
-	if((m_NumVertices + Count) >= CCommandBuffer::MAX_VERTICES)
-		FlushVerticesTex3D();
+	CommitGraphicsVertices(Count, m_NumVertices, [&] { FlushVerticesTex3D(); });
 }
 
 CGraphics_Threaded::CGraphics_Threaded()
@@ -370,23 +366,29 @@ void CGraphics_Threaded::LinesDraw(const CLineItem *pArray, size_t Num)
 {
 	dbg_assert(m_Drawing == EDrawing::LINES, "called Graphics()->LinesDraw without begin");
 
-	size_t VertexIndex = m_NumVertices;
-	for(size_t i = 0; i < Num; ++i)
-	{
-		m_aVertices[VertexIndex].m_Pos.x = pArray[i].m_X0;
-		m_aVertices[VertexIndex].m_Pos.y = pArray[i].m_Y0;
-		m_aVertices[VertexIndex].m_Tex = m_aTexture[0];
-		m_aVertices[VertexIndex].m_Color = m_aColor[0];
-		++VertexIndex;
+	if(Num == 0 || pArray == nullptr)
+		return;
+	const auto Write = [&](size_t Offset, int Batch) {
+		const CLineItem *pItems = pArray + Offset;
+		size_t VertexIndex = m_NumVertices;
+		for(int i = 0; i < Batch; ++i)
+		{
+			m_aVertices[VertexIndex].m_Pos.x = pItems[i].m_X0;
+			m_aVertices[VertexIndex].m_Pos.y = pItems[i].m_Y0;
+			m_aVertices[VertexIndex].m_Tex = m_aTexture[0];
+			m_aVertices[VertexIndex].m_Color = m_aColor[0];
+			++VertexIndex;
 
-		m_aVertices[VertexIndex].m_Pos.x = pArray[i].m_X1;
-		m_aVertices[VertexIndex].m_Pos.y = pArray[i].m_Y1;
-		m_aVertices[VertexIndex].m_Tex = m_aTexture[1];
-		m_aVertices[VertexIndex].m_Color = m_aColor[1];
-		++VertexIndex;
-	}
+			m_aVertices[VertexIndex].m_Pos.x = pItems[i].m_X1;
+			m_aVertices[VertexIndex].m_Pos.y = pItems[i].m_Y1;
+			m_aVertices[VertexIndex].m_Tex = m_aTexture[1];
+			m_aVertices[VertexIndex].m_Color = m_aColor[1];
+			++VertexIndex;
+		}
 
-	AddVertices(2 * Num);
+		AddVertices(2 * Batch);
+	};
+	WriteGraphicsVertexBatches(Num, 2, m_NumVertices, Write, [&] { FlushVertices(); });
 }
 
 void CGraphics_Threaded::LinesBatchBegin(CLineItemBatch *pBatch)
@@ -407,7 +409,9 @@ void CGraphics_Threaded::LinesBatchEnd(CLineItemBatch *pBatch)
 
 void CGraphics_Threaded::LinesBatchDraw(CLineItemBatch *pBatch, const CLineItem *pArray, size_t Num)
 {
-	if(pBatch->m_NumItems + Num >= std::size(pBatch->m_aItems))
+	if(Num == 0 || pArray == nullptr || pBatch == nullptr || pBatch->m_NumItems > std::size(pBatch->m_aItems))
+		return;
+	if(Num >= std::size(pBatch->m_aItems) - pBatch->m_NumItems)
 	{
 		LinesDraw(pBatch->m_aItems, pBatch->m_NumItems);
 		pBatch->m_NumItems = 0;
@@ -1785,6 +1789,8 @@ void CGraphics_Threaded::QuadsSetSubsetFree(
 
 void CGraphics_Threaded::QuadsDraw(CQuadItem *pArray, int Num)
 {
+	if(Num <= 0 || pArray == nullptr)
+		return;
 	for(int i = 0; i < Num; ++i)
 	{
 		pArray[i].m_X -= pArray[i].m_Width / 2;
@@ -1801,17 +1807,6 @@ void CGraphics_Threaded::QuadsDrawTL(const CQuadItem *pArray, int Num)
 
 void CGraphics_Threaded::QuadsTex3DDrawTL(const CQuadItem *pArray, int Num)
 {
-	const int VertNum = g_Config.m_GfxQuadAsTriangle && !m_GLUseTrianglesAsQuad ? 6 : 4;
-	const float CurIndex = Uses2DTextureArrays() ? m_CurIndex : (m_CurIndex + 0.5f) / 256.0f;
-
-	for(int i = 0; i < Num; ++i)
-	{
-		for(int n = 0; n < VertNum; ++n)
-		{
-			m_aVerticesTex3D[m_NumVertices + VertNum * i + n].m_Tex.w = CurIndex;
-		}
-	}
-
 	QuadsDrawTLImpl(m_aVerticesTex3D, pArray, Num);
 }
 
@@ -1819,70 +1814,77 @@ void CGraphics_Threaded::QuadsDrawFreeform(const CFreeformItem *pArray, int Num)
 {
 	dbg_assert(m_Drawing == EDrawing::QUADS || m_Drawing == EDrawing::TRIANGLES, "called Graphics()->QuadsDrawFreeform without begin");
 
-	if((g_Config.m_GfxQuadAsTriangle && !m_GLUseTrianglesAsQuad) || m_Drawing == EDrawing::TRIANGLES)
-	{
-		for(int i = 0; i < Num; ++i)
+	if(Num <= 0 || pArray == nullptr)
+		return;
+	const int VerticesPerItem = ((g_Config.m_GfxQuadAsTriangle && !m_GLUseTrianglesAsQuad) || m_Drawing == EDrawing::TRIANGLES) ? 6 : 4;
+	const auto Write = [&](size_t Offset, int Batch) {
+		const CFreeformItem *pItems = pArray + Offset;
+		if((g_Config.m_GfxQuadAsTriangle && !m_GLUseTrianglesAsQuad) || m_Drawing == EDrawing::TRIANGLES)
 		{
-			m_aVertices[m_NumVertices + 6 * i].m_Pos.x = pArray[i].m_X0;
-			m_aVertices[m_NumVertices + 6 * i].m_Pos.y = pArray[i].m_Y0;
-			m_aVertices[m_NumVertices + 6 * i].m_Tex = m_aTexture[0];
-			m_aVertices[m_NumVertices + 6 * i].m_Color = m_aColor[0];
+			for(int i = 0; i < Batch; ++i)
+			{
+				m_aVertices[m_NumVertices + 6 * i].m_Pos.x = pItems[i].m_X0;
+				m_aVertices[m_NumVertices + 6 * i].m_Pos.y = pItems[i].m_Y0;
+				m_aVertices[m_NumVertices + 6 * i].m_Tex = m_aTexture[0];
+				m_aVertices[m_NumVertices + 6 * i].m_Color = m_aColor[0];
 
-			m_aVertices[m_NumVertices + 6 * i + 1].m_Pos.x = pArray[i].m_X1;
-			m_aVertices[m_NumVertices + 6 * i + 1].m_Pos.y = pArray[i].m_Y1;
-			m_aVertices[m_NumVertices + 6 * i + 1].m_Tex = m_aTexture[1];
-			m_aVertices[m_NumVertices + 6 * i + 1].m_Color = m_aColor[1];
+				m_aVertices[m_NumVertices + 6 * i + 1].m_Pos.x = pItems[i].m_X1;
+				m_aVertices[m_NumVertices + 6 * i + 1].m_Pos.y = pItems[i].m_Y1;
+				m_aVertices[m_NumVertices + 6 * i + 1].m_Tex = m_aTexture[1];
+				m_aVertices[m_NumVertices + 6 * i + 1].m_Color = m_aColor[1];
 
-			m_aVertices[m_NumVertices + 6 * i + 2].m_Pos.x = pArray[i].m_X3;
-			m_aVertices[m_NumVertices + 6 * i + 2].m_Pos.y = pArray[i].m_Y3;
-			m_aVertices[m_NumVertices + 6 * i + 2].m_Tex = m_aTexture[3];
-			m_aVertices[m_NumVertices + 6 * i + 2].m_Color = m_aColor[3];
+				m_aVertices[m_NumVertices + 6 * i + 2].m_Pos.x = pItems[i].m_X3;
+				m_aVertices[m_NumVertices + 6 * i + 2].m_Pos.y = pItems[i].m_Y3;
+				m_aVertices[m_NumVertices + 6 * i + 2].m_Tex = m_aTexture[3];
+				m_aVertices[m_NumVertices + 6 * i + 2].m_Color = m_aColor[3];
 
-			m_aVertices[m_NumVertices + 6 * i + 3].m_Pos.x = pArray[i].m_X0;
-			m_aVertices[m_NumVertices + 6 * i + 3].m_Pos.y = pArray[i].m_Y0;
-			m_aVertices[m_NumVertices + 6 * i + 3].m_Tex = m_aTexture[0];
-			m_aVertices[m_NumVertices + 6 * i + 3].m_Color = m_aColor[0];
+				m_aVertices[m_NumVertices + 6 * i + 3].m_Pos.x = pItems[i].m_X0;
+				m_aVertices[m_NumVertices + 6 * i + 3].m_Pos.y = pItems[i].m_Y0;
+				m_aVertices[m_NumVertices + 6 * i + 3].m_Tex = m_aTexture[0];
+				m_aVertices[m_NumVertices + 6 * i + 3].m_Color = m_aColor[0];
 
-			m_aVertices[m_NumVertices + 6 * i + 4].m_Pos.x = pArray[i].m_X3;
-			m_aVertices[m_NumVertices + 6 * i + 4].m_Pos.y = pArray[i].m_Y3;
-			m_aVertices[m_NumVertices + 6 * i + 4].m_Tex = m_aTexture[3];
-			m_aVertices[m_NumVertices + 6 * i + 4].m_Color = m_aColor[3];
+				m_aVertices[m_NumVertices + 6 * i + 4].m_Pos.x = pItems[i].m_X3;
+				m_aVertices[m_NumVertices + 6 * i + 4].m_Pos.y = pItems[i].m_Y3;
+				m_aVertices[m_NumVertices + 6 * i + 4].m_Tex = m_aTexture[3];
+				m_aVertices[m_NumVertices + 6 * i + 4].m_Color = m_aColor[3];
 
-			m_aVertices[m_NumVertices + 6 * i + 5].m_Pos.x = pArray[i].m_X2;
-			m_aVertices[m_NumVertices + 6 * i + 5].m_Pos.y = pArray[i].m_Y2;
-			m_aVertices[m_NumVertices + 6 * i + 5].m_Tex = m_aTexture[2];
-			m_aVertices[m_NumVertices + 6 * i + 5].m_Color = m_aColor[2];
+				m_aVertices[m_NumVertices + 6 * i + 5].m_Pos.x = pItems[i].m_X2;
+				m_aVertices[m_NumVertices + 6 * i + 5].m_Pos.y = pItems[i].m_Y2;
+				m_aVertices[m_NumVertices + 6 * i + 5].m_Tex = m_aTexture[2];
+				m_aVertices[m_NumVertices + 6 * i + 5].m_Color = m_aColor[2];
+			}
+
+			AddVertices(3 * 2 * Batch);
 		}
-
-		AddVertices(3 * 2 * Num);
-	}
-	else
-	{
-		for(int i = 0; i < Num; ++i)
+		else
 		{
-			m_aVertices[m_NumVertices + 4 * i].m_Pos.x = pArray[i].m_X0;
-			m_aVertices[m_NumVertices + 4 * i].m_Pos.y = pArray[i].m_Y0;
-			m_aVertices[m_NumVertices + 4 * i].m_Tex = m_aTexture[0];
-			m_aVertices[m_NumVertices + 4 * i].m_Color = m_aColor[0];
+			for(int i = 0; i < Batch; ++i)
+			{
+				m_aVertices[m_NumVertices + 4 * i].m_Pos.x = pItems[i].m_X0;
+				m_aVertices[m_NumVertices + 4 * i].m_Pos.y = pItems[i].m_Y0;
+				m_aVertices[m_NumVertices + 4 * i].m_Tex = m_aTexture[0];
+				m_aVertices[m_NumVertices + 4 * i].m_Color = m_aColor[0];
 
-			m_aVertices[m_NumVertices + 4 * i + 1].m_Pos.x = pArray[i].m_X1;
-			m_aVertices[m_NumVertices + 4 * i + 1].m_Pos.y = pArray[i].m_Y1;
-			m_aVertices[m_NumVertices + 4 * i + 1].m_Tex = m_aTexture[1];
-			m_aVertices[m_NumVertices + 4 * i + 1].m_Color = m_aColor[1];
+				m_aVertices[m_NumVertices + 4 * i + 1].m_Pos.x = pItems[i].m_X1;
+				m_aVertices[m_NumVertices + 4 * i + 1].m_Pos.y = pItems[i].m_Y1;
+				m_aVertices[m_NumVertices + 4 * i + 1].m_Tex = m_aTexture[1];
+				m_aVertices[m_NumVertices + 4 * i + 1].m_Color = m_aColor[1];
 
-			m_aVertices[m_NumVertices + 4 * i + 2].m_Pos.x = pArray[i].m_X3;
-			m_aVertices[m_NumVertices + 4 * i + 2].m_Pos.y = pArray[i].m_Y3;
-			m_aVertices[m_NumVertices + 4 * i + 2].m_Tex = m_aTexture[3];
-			m_aVertices[m_NumVertices + 4 * i + 2].m_Color = m_aColor[3];
+				m_aVertices[m_NumVertices + 4 * i + 2].m_Pos.x = pItems[i].m_X3;
+				m_aVertices[m_NumVertices + 4 * i + 2].m_Pos.y = pItems[i].m_Y3;
+				m_aVertices[m_NumVertices + 4 * i + 2].m_Tex = m_aTexture[3];
+				m_aVertices[m_NumVertices + 4 * i + 2].m_Color = m_aColor[3];
 
-			m_aVertices[m_NumVertices + 4 * i + 3].m_Pos.x = pArray[i].m_X2;
-			m_aVertices[m_NumVertices + 4 * i + 3].m_Pos.y = pArray[i].m_Y2;
-			m_aVertices[m_NumVertices + 4 * i + 3].m_Tex = m_aTexture[2];
-			m_aVertices[m_NumVertices + 4 * i + 3].m_Color = m_aColor[2];
+				m_aVertices[m_NumVertices + 4 * i + 3].m_Pos.x = pItems[i].m_X2;
+				m_aVertices[m_NumVertices + 4 * i + 3].m_Pos.y = pItems[i].m_Y2;
+				m_aVertices[m_NumVertices + 4 * i + 3].m_Tex = m_aTexture[2];
+				m_aVertices[m_NumVertices + 4 * i + 3].m_Color = m_aColor[2];
+			}
+
+			AddVertices(4 * Batch);
 		}
-
-		AddVertices(4 * Num);
-	}
+	};
+	WriteGraphicsVertexBatches(static_cast<size_t>(Num), VerticesPerItem, m_NumVertices, Write, [&] { FlushVertices(); });
 }
 
 void CGraphics_Threaded::QuadsText(float x, float y, float Size, const char *pText)
