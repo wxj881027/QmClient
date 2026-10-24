@@ -16,6 +16,7 @@
 #include "qm_font_restore.h"
 #include "qm_font_scan_job.h"
 #include "qm_system_fonts.h"
+#include "text_container_pool.h"
 #include "text_gradient.h"
 #include "text_layout_string.h"
 #include "text_sweep.h"
@@ -1563,9 +1564,7 @@ class CTextRender : public IEngineTextRender
 
 	FT_Library m_FTLibrary;
 
-	std::vector<STextContainer *> m_vpTextContainers;
-	std::vector<int> m_vTextContainerIndices;
-	int m_FirstFreeTextContainerIndex;
+	CTextContainerPool<STextContainer> m_TextContainers;
 
 	SBufferContainerInfo m_DefaultTextContainerInfo;
 	std::vector<STextCharQuad> m_vTextSweepQuads;
@@ -1857,27 +1856,9 @@ class CTextRender : public IEngineTextRender
 		io_close(File);
 	}
 
-	int GetFreeTextContainerIndex()
-	{
-		if(m_FirstFreeTextContainerIndex == -1)
-		{
-			const int Index = (int)m_vTextContainerIndices.size();
-			m_vTextContainerIndices.push_back(Index);
-			return Index;
-		}
-		else
-		{
-			const int Index = m_FirstFreeTextContainerIndex;
-			m_FirstFreeTextContainerIndex = m_vTextContainerIndices[Index];
-			m_vTextContainerIndices[Index] = Index;
-			return Index;
-		}
-	}
-
 	void FreeTextContainerIndex(STextContainerIndex &Index)
 	{
-		m_vTextContainerIndices[Index.m_Index] = m_FirstFreeTextContainerIndex;
-		m_FirstFreeTextContainerIndex = Index.m_Index;
+		m_TextContainers.Release(Index.m_Index);
 		Index.Reset();
 	}
 
@@ -1885,39 +1866,32 @@ class CTextRender : public IEngineTextRender
 	{
 		// 副本句柄也随释放失效，不能因槽位复用重新指向另一段文字。
 		Index.m_UseCount->Invalidate();
-		m_vpTextContainers[Index.m_Index]->Reset();
+		m_TextContainers.Get(Index.m_Index).Reset();
 		FreeTextContainerIndex(Index);
 	}
 
 	STextContainer &GetTextContainer(const STextContainerIndex &Index)
 	{
 		// 图集失效的容器仍需通过原槽位归还 CPU/GPU 资源。
-		dbg_assert(Index.m_Index >= 0, "Text container index was invalid.");
-		if(Index.m_Index >= (int)m_vpTextContainers.size())
+		dbg_assert(m_TextContainers.IsAllocated(Index.m_Index), "Text container index was invalid.");
+		STextContainer &TextContainer = m_TextContainers.Get(Index.m_Index);
+		if(TextContainer.m_pContainerUseCount.get() != Index.m_UseCount.get())
 		{
-			for(int i = 0; i < Index.m_Index + 1 - (int)m_vpTextContainers.size(); ++i)
-				m_vpTextContainers.push_back(new STextContainer());
+			TextContainer.m_pContainerUseCount = Index.m_UseCount;
 		}
-
-		if(m_vpTextContainers[Index.m_Index]->m_pContainerUseCount.get() != Index.m_UseCount.get())
-		{
-			m_vpTextContainers[Index.m_Index]->m_pContainerUseCount = Index.m_UseCount;
-		}
-		return *m_vpTextContainers[Index.m_Index];
+		return TextContainer;
 	}
 
 	// 设备重建或引擎关闭时清理 CPU 容器；GPU 生命周期由对应的重建或关闭流程处理。
 	void InvalidateTextContainers()
 	{
-		for(auto *pTextCont : m_vpTextContainers)
+		for(size_t Index = 0; Index < m_TextContainers.Size(); ++Index)
 		{
+			auto *pTextCont = &m_TextContainers.Get(Index);
 			if(pTextCont->m_pContainerUseCount != nullptr)
 				pTextCont->m_pContainerUseCount->Invalidate();
-			delete pTextCont;
 		}
-		m_vpTextContainers.clear();
-		m_vTextContainerIndices.clear();
-		m_FirstFreeTextContainerIndex = -1;
+		m_TextContainers.Clear();
 	}
 
 	int WordLength(const char *pText) const
@@ -2086,8 +2060,6 @@ public:
 				FT_Library_Version(m_FTLibrary, &LMajor, &LMinor, &LPatch);
 				log_info("textrender", "Freetype version %d.%d.%d (compiled = %d.%d.%d)", LMajor, LMinor, LPatch, FREETYPE_MAJOR, FREETYPE_MINOR, FREETYPE_PATCH);
 			}
-
-			m_FirstFreeTextContainerIndex = -1;
 
 			m_DefaultTextContainerInfo.m_Stride = sizeof(STextCharQuadVertex);
 			m_DefaultTextContainerInfo.m_VertBufferBindingIndex = -1;
@@ -3100,7 +3072,9 @@ public:
 		++m_QmFrameContainerCreates;
 
 		TextContainerIndex.Reset();
-		TextContainerIndex.m_Index = GetFreeTextContainerIndex();
+		TextContainerIndex.m_Index = m_TextContainers.Allocate();
+		if(TextContainerIndex.m_Index < 0)
+			return false;
 
 		STextContainer &TextContainer = GetTextContainer(TextContainerIndex);
 		InitTextContainer(TextContainer, pCursor);
@@ -4298,8 +4272,9 @@ public:
 	void OnPreWindowResize() override
 	{
 		ClearTextSweepBuffers();
-		for(auto *pTextContainer : m_vpTextContainers)
+		for(size_t Index = 0; Index < m_TextContainers.Size(); ++Index)
 		{
+			auto *pTextContainer = &m_TextContainers.Get(Index);
 			if(pTextContainer->m_pContainerUseCount != nullptr && pTextContainer->m_pContainerUseCount.use_count() <= 1)
 			{
 				log_error("textrender", "Found non empty text container with index %d with %" PRIzu " quads '%s'", pTextContainer->m_StringInfo.m_QuadBufferContainerIndex, pTextContainer->m_StringInfo.m_vCharacterQuads.size(), pTextContainer->m_aDebugText);
@@ -4342,8 +4317,9 @@ public:
 	void OnWindowResize() override
 	{
 		bool HasNonEmptyTextContainer = false;
-		for(auto *pTextContainer : m_vpTextContainers)
+		for(size_t Index = 0; Index < m_TextContainers.Size(); ++Index)
 		{
+			auto *pTextContainer = &m_TextContainers.Get(Index);
 			if(pTextContainer->m_StringInfo.m_QuadBufferContainerIndex != -1)
 			{
 				log_error("textrender", "Found non empty text container with index %d with %" PRIzu " quads '%s'", pTextContainer->m_StringInfo.m_QuadBufferContainerIndex, pTextContainer->m_StringInfo.m_vCharacterQuads.size(), pTextContainer->m_aDebugText);
@@ -4360,26 +4336,15 @@ public:
 		// 遗留 quad 会被重绘成幽灵文本，而且每次窗口尺寸或 UI 缩放变化都会再次触发
 		// text.cpp 的“container was forgotten”断言。回收只针对已无所有者的槽位，
 		// 不会影响仍有所有者的容器。
-		for(auto *pTextContainer : m_vpTextContainers)
+		for(size_t Index = 0; Index < m_TextContainers.Size(); ++Index)
 		{
+			auto *pTextContainer = &m_TextContainers.Get(Index);
 			if(pTextContainer->m_pContainerUseCount == nullptr || pTextContainer->m_pContainerUseCount.use_count() > 1)
 				continue;
 
 			// 用槽位下标构造索引，保证归还的是同一个文本容器。
-			int ContainerIndex = -1;
-			for(size_t i = 0; i < m_vpTextContainers.size(); ++i)
-			{
-				if(m_vpTextContainers[i] == pTextContainer)
-				{
-					ContainerIndex = (int)i;
-					break;
-				}
-			}
-			if(ContainerIndex < 0)
-				continue;
-
 			STextContainerIndex OrphanIndex;
-			OrphanIndex.m_Index = ContainerIndex;
+			OrphanIndex.m_Index = static_cast<int>(Index);
 			OrphanIndex.m_UseCount = pTextContainer->m_pContainerUseCount;
 			STextContainer &Orphan = GetTextContainer(OrphanIndex);
 			if(Graphics()->IsTextBufferingEnabled())

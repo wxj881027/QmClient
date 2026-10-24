@@ -3186,6 +3186,7 @@ if(CLIENT)
     qm_font_scan_job.h
     qm_system_fonts.h
     qm_font_name_match.h
+    text_container_pool.h
     text_sweep.h
     text_utf8_cursor.h
     texture_slot_pool.h
@@ -5298,6 +5299,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/server/teehistorian_test.cpp
     src/test/unit/engine/graphics/text_char_transform_test.cpp
     src/test/unit/engine/graphics/text_container_lifetime_test.cpp
+    src/test/unit/engine/graphics/text_container_pool_test.cpp
     src/test/unit/engine/graphics/text_layout_string_test.cpp
     src/test/unit/engine/graphics/text_utf8_cursor_test.cpp
     src/test/unit/engine/graphics/texture_slot_pool_test.cpp
