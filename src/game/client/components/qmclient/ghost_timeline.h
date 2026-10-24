@@ -3,6 +3,7 @@
 
 #include "ghost_path.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <limits>
 
@@ -12,6 +13,32 @@ namespace qm_ghost_timeline
 	{
 		return Value >= std::numeric_limits<int>::min() && Value <= std::numeric_limits<int>::max();
 	}
+
+	// 查看面板使用源录像的绝对tick，幽灵时钟使用相对tick；只发布可表示的完整区间。
+	class CViewRange
+	{
+		int m_First = 0;
+		int m_Duration = 0;
+
+	public:
+		bool Prepare(int First, int Duration) noexcept
+		{
+			First = std::max(0, First);
+			if(Duration <= 0 || !FitsInt(static_cast<int64_t>(First) + Duration))
+				return false;
+			m_First = First;
+			m_Duration = Duration;
+			return true;
+		}
+		int First() const noexcept { return m_First; }
+		int Last() const noexcept { return m_First + m_Duration; }
+		int Duration() const noexcept { return m_Duration; }
+		int ToRelative(int Tick) const noexcept
+		{
+			return static_cast<int>(std::clamp<int64_t>(static_cast<int64_t>(Tick) - m_First, 0, m_Duration));
+		}
+		int ToAbsolute(int Tick) const noexcept { return m_First + std::clamp(Tick, 0, m_Duration); }
+	};
 
 	// 先验证全部候选时间，再提交旧格式重建；失败保留原记录和起点。
 	template<typename T>

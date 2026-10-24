@@ -38,8 +38,12 @@
 #include <cstring>
 #include <limits>
 #include <map>
+#include <new>
 #include <set>
+#include <stdexcept>
 #include <string>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace
@@ -2114,8 +2118,10 @@ IDemoPlayer::CInfo CRankGhost::PlaybackInfo() const
 	const CGhost &Ghost = GameClient()->m_Ghost;
 	Info.m_Paused = !Ghost.ManualPlaying();
 	Info.m_Speed = Ghost.ManualSpeed();
-	Info.m_LastTick = Info.m_FirstTick + maximum(0, Ghost.ManualEndTick());
-	Info.m_CurrentTick = Info.m_FirstTick + std::clamp(Ghost.ManualPlaybackTick(), 0, maximum(0, Ghost.ManualEndTick()));
+	const auto &Range = Ghost.ManualTimeline();
+	Info.m_FirstTick = Range.First();
+	Info.m_LastTick = Range.Last();
+	Info.m_CurrentTick = Range.ToAbsolute(Ghost.ManualPlaybackTick());
 	return Info;
 }
 
@@ -2124,12 +2130,13 @@ IDemoPlayer *CRankGhost::PlaybackMetadataReader() const { return DemoPlayer(); }
 void CRankGhost::PlaybackSeek(int Tick)
 {
 	if(IsViewModeActive())
-		GameClient()->m_Ghost.ManualSeek(Tick - m_ViewPlaybackMetadata.m_FirstTick);
+		GameClient()->m_Ghost.ManualSeek(GameClient()->m_Ghost.ManualTimeline().ToRelative(Tick));
 }
 int CRankGhost::PlaybackAdjacentTick(int Tick, IDemoPlayer::ETickOffset Offset) const
 {
-	const int First = m_ViewPlaybackMetadata.m_FirstTick;
-	return First + GameClient()->m_Ghost.ManualAdjacentTick(Tick - First, Offset);
+	const CGhost &Ghost = GameClient()->m_Ghost;
+	const auto &Range = Ghost.ManualTimeline();
+	return Range.ToAbsolute(Ghost.ManualAdjacentTick(Range.ToRelative(Tick), Offset));
 }
 
 void CRankGhost::PlaybackSetPlaying(bool Playing)
@@ -2174,33 +2181,63 @@ void CRankGhost::EnterViewMode()
 {
 	if(m_vLoadedSlots.empty())
 		return;
-	GameClient()->m_Ghost.StartRenderManual(m_vLoadedSlots);
-	if(!GameClient()->m_Ghost.ManualModeActive())
-		return;
-	m_ViewPlaybackMetadata = {};
-	str_copy(m_aViewPlaybackFilename, m_aLoadedReplayFilename);
+	IDemoPlayer::CInfo Info{};
+	bool HaveMetadata = false;
 	// 只扫描源文件的 tick 与标记；不播放快照，不改变在线服务器状态。
 	CDemoPlayer Metadata(nullptr, nullptr, false);
-	if(Metadata.Load(Storage(), nullptr, m_aViewPlaybackFilename, IStorage::TYPE_SAVE) != -1)
+	if(Metadata.Load(Storage(), nullptr, m_aLoadedReplayFilename, IStorage::TYPE_SAVE, false) != -1)
 	{
-		m_ViewPlaybackMetadata = *Metadata.BaseInfo();
-		if(m_ViewPlaybackMetadata.m_NumTimelineMarkers >= 2)
-			m_ViewPlaybackMetadata.m_FirstTick = m_ViewPlaybackMetadata.m_aTimelineMarkers[0];
+		Info = *Metadata.BaseInfo();
+		if(Info.m_NumTimelineMarkers >= 2)
+			Info.m_FirstTick = Info.m_aTimelineMarkers[0];
+		HaveMetadata = true;
 		Metadata.Stop();
 	}
-	m_ViewPlaybackMetadata.m_FirstTick = maximum(0, m_ViewPlaybackMetadata.m_FirstTick);
-	m_ViewPlaybackMetadata.m_LastTick = m_ViewPlaybackMetadata.m_FirstTick + GameClient()->m_Ghost.ManualEndTick();
-	int Markers = 0;
-	for(int i = 0; i < m_ViewPlaybackMetadata.m_NumTimelineMarkers; ++i)
+	COnlineReplayMembers Members;
+	try
 	{
-		const int Tick = m_ViewPlaybackMetadata.m_aTimelineMarkers[i];
-		if(Tick >= m_ViewPlaybackMetadata.m_FirstTick && Tick <= m_ViewPlaybackMetadata.m_LastTick)
-			m_ViewPlaybackMetadata.m_aTimelineMarkers[Markers++] = Tick;
+		Members.Reset(m_vLoadedSlots.size());
 	}
-	m_ViewPlaybackMetadata.m_NumTimelineMarkers = Markers;
-	m_ViewPlaybackMetadata.m_LiveDemo = false;
-	m_ViewPlaybackMetadata.m_LivePlayback = false;
-	m_ViewMembers.Reset(m_vLoadedSlots.size());
+	catch(const std::bad_alloc &)
+	{
+		log_warn("rank_ghost", "not enough memory to prepare ghost view members");
+		return;
+	}
+	catch(const std::length_error &)
+	{
+		log_warn("rank_ghost", "ghost view member count is not representable");
+		return;
+	}
+	CGhost &Ghost = GameClient()->m_Ghost;
+	if(!Ghost.StartRenderManual(m_vLoadedSlots, Info.m_FirstTick))
+	{
+		log_warn("rank_ghost", "could not prepare ghost view samples or timeline range");
+		return;
+	}
+	const auto &Range = Ghost.ManualTimeline();
+	Info.m_FirstTick = Range.First();
+	Info.m_LastTick = Range.Last();
+	Info.m_CurrentTick = Range.First();
+	int Markers = 0;
+	for(int i = 0; i < Info.m_NumTimelineMarkers; ++i)
+	{
+		const int Tick = Info.m_aTimelineMarkers[i];
+		if(Tick >= Range.First() && Tick <= Range.Last())
+			Info.m_aTimelineMarkers[Markers++] = Tick;
+	}
+	Info.m_NumTimelineMarkers = Markers;
+	Info.m_LiveDemo = false;
+	Info.m_LivePlayback = false;
+	static_assert(std::is_nothrow_move_assignable_v<COnlineReplayMembers>);
+	m_ViewMembers = std::move(Members);
+	m_ViewPlaybackMetadata = Info;
+	str_copy(m_aViewPlaybackFilename, m_aLoadedReplayFilename);
+	// 仅在成功提交查看模式后，沿原元数据成功路径重置剪辑标记。
+	if(HaveMetadata)
+	{
+		g_Config.m_ClDemoSliceBegin = -1;
+		g_Config.m_ClDemoSliceEnd = -1;
+	}
 	++m_ViewGeneration;
 	m_ViewMode = true;
 	GameClient()->m_Spectator.OnReset();

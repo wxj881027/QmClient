@@ -3396,6 +3396,7 @@ if(CLIENT)
     components/qmclient/demo_camera_session.h
     components/qmclient/ghost_path.h
     components/qmclient/ghost_timeline.h
+    components/qmclient/ghost_manual.h
     components/qmclient/ghost_render.h
     components/camera.cpp
     components/camera.h
@@ -5014,6 +5015,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_demo_camera_session_test.cpp
     src/test/unit/qmclient/client/qm_ghost_path_test.cpp
     src/test/unit/qmclient/client/qm_ghost_timeline_test.cpp
+    src/test/unit/qmclient/client/qm_ghost_manual_test.cpp
+    src/test/integration/qmclient/client/qm_ghost_manual_path_test.cpp
     src/test/unit/qmclient/client/qm_ghost_render_test.cpp
     src/test/integration/qmclient/client/qm_demo_camera_storage_test.cpp
     src/test/unit/qmclient/client/qm_camera_effects_test.cpp

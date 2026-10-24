@@ -278,9 +278,9 @@ void CGhost::OnRender()
 	{
 		// 查看模式：独立时间线，播到尽头自动停在最后一帧
 		PlaybackTick = ManualPlaybackTick();
-		if(m_ManualClock.Playing() && m_ManualEndTick > 0 && PlaybackTick >= m_ManualEndTick)
+		if(m_ManualClock.Playing() && ManualEndTick() > 0 && PlaybackTick >= ManualEndTick())
 		{
-			ManualSeek(m_ManualEndTick);
+			ManualSeek(ManualEndTick());
 			PlaybackTick = ManualPlaybackTick();
 		}
 	}
@@ -306,7 +306,7 @@ void CGhost::OnRender()
 	for(int Slot = 0; Slot < MAX_ACTIVE_GHOSTS; ++Slot)
 	{
 		CGhostItem &Ghost = m_aActiveGhosts[Slot];
-		if(Ghost.Empty() || (m_ManualMode && !m_aManualSlots[Slot]))
+		if(Ghost.Empty() || (m_ManualMode && !m_ManualPlan.m_aSlots[Slot]))
 			continue;
 
 		int64_t GhostTick = qm_ghost_timeline::OffsetTick(Ghost.m_StartTick, PlaybackTick, PlaybackOrigin);
@@ -461,7 +461,7 @@ void CGhost::OnRender()
 
 		// 查看模式使用共用 demo 的方向显示配置，主选手作为回放的自身成员。
 		const int Direction = qm_demo_display::Resolve(g_Config, true, false).m_Direction;
-		const bool Own = Draw.m_Slot == m_ManualPrimarySlot;
+		const bool Own = Draw.m_Slot == m_ManualPlan.m_PrimarySlot;
 		if(!g_Config.m_QmRankGhostShowDirection || Direction == 0 || (Direction == 1 && Own) || (Direction == 3 && !Own))
 			continue;
 		const float DirSize = 18.0f + 20.0f * g_Config.m_ClNamePlatesSize / 100.0f;
@@ -598,46 +598,24 @@ void CGhost::ManualSetSpeed(float Speed)
 		m_ManualClock.SetSpeed(Speed, Client()->LocalTime());
 }
 
-void CGhost::StartRenderManual(const std::vector<int> &vSlots)
+bool CGhost::StartRenderManual(const std::vector<int> &vSlots, int FirstTick)
 {
+	qm_ghost_manual::CPlan<MAX_ACTIVE_GHOSTS> Candidate;
+	if(!Candidate.Prepare(vSlots, [this](int Slot) { return &m_aActiveGhosts[Slot]; }, FirstTick))
+		return false;
+	// 所有分配和时间映射检查完成后，才替换播放状态。
+	static_assert(std::is_nothrow_move_assignable_v<decltype(m_ManualPlan)>);
 	StopRender();
-	m_ManualPrimarySlot = vSlots.empty() ? -1 : vSlots.front();
-	m_vManualSampleTicks.clear();
-	std::fill(std::begin(m_aManualSlots), std::end(m_aManualSlots), false);
-	for(int Slot : vSlots)
-		if(Slot >= 0 && Slot < MAX_ACTIVE_GHOSTS)
-			m_aManualSlots[Slot] = true;
-	bool HaveGhost = false;
-	m_ManualEndTick = 0;
-	for(int Slot : vSlots)
-	{
-		if(Slot < 0 || Slot >= MAX_ACTIVE_GHOSTS)
-			continue;
-		CGhostItem &Ghost = m_aActiveGhosts[Slot];
-		if(Ghost.Empty())
-			continue;
-		HaveGhost = true;
-		if(Slot == m_ManualPrimarySlot)
-		{
-			m_vManualSampleTicks.reserve(Ghost.m_Path.Size());
-			for(int Index = 0; Index < Ghost.m_Path.Size(); ++Index)
-				m_vManualSampleTicks.push_back(Ghost.m_Path.Get(Index)->m_Tick - Ghost.m_StartTick);
-		}
-		// 总时长取所有激活影子中最长的一条轨迹（相对 tick）：团队/接力回放里先
-		// 完成、中途加入或提前离开的玩家轨迹更短，取最短会把整组截断在最早那下；
-		// 短轨迹播到自己的末帧后停在原处（查看模式按各自轨迹范围钳制）
-		const int EndTick = Ghost.m_Path.Get(Ghost.m_Path.Size() - 1)->m_Tick - Ghost.m_StartTick;
-		if(EndTick > m_ManualEndTick)
-			m_ManualEndTick = EndTick;
-		Ghost.m_PlaybackPos = 0;
-	}
-	if(!HaveGhost || m_ManualEndTick <= 0)
-		return;
+	m_ManualPlan = std::move(Candidate);
+	for(size_t Slot = 0; Slot < m_ManualPlan.m_aSlots.size(); ++Slot)
+		if(m_ManualPlan.m_aSlots[Slot] && !m_aActiveGhosts[Slot].Empty())
+			m_aActiveGhosts[Slot].m_PlaybackPos = 0;
 	m_ManualMode = true;
 	m_Rendering = true;
 	m_RenderingStartedByServer = false;
-	m_ManualClock.Start(Client()->LocalTime(), m_ManualEndTick, Client()->GameTickSpeed());
+	m_ManualClock.Start(Client()->LocalTime(), ManualEndTick(), Client()->GameTickSpeed());
 	std::fill(std::begin(m_aManualRenderPosValid), std::end(m_aManualRenderPosValid), false);
+	return true;
 }
 
 int CGhost::ManualPlaybackTick() const
@@ -801,7 +779,7 @@ int CGhost::Load(const char *pFilename)
 
 void CGhost::Unload(int Slot)
 {
-	m_aManualSlots[Slot] = false;
+	m_ManualPlan.m_aSlots[Slot] = false;
 	m_aManualRenderPosValid[Slot] = false;
 	m_aActiveGhosts[Slot].Reset();
 }

@@ -34,6 +34,101 @@ namespace
 	};
 }
 
+TEST(QmGhostViewRange, OrdinaryRangeKeepsSourceTickCoordinates)
+{
+	qm_ghost_timeline::CViewRange Range;
+	ASSERT_TRUE(Range.Prepare(100, 200));
+	EXPECT_EQ(Range.First(), 100);
+	EXPECT_EQ(Range.Last(), 300);
+	EXPECT_EQ(Range.ToAbsolute(50), 150);
+	EXPECT_EQ(Range.ToRelative(150), 50);
+}
+
+TEST(QmGhostViewRange, NegativeSourceOriginKeepsExistingZeroFallback)
+{
+	qm_ghost_timeline::CViewRange Range;
+	ASSERT_TRUE(Range.Prepare(-100, 20));
+	EXPECT_EQ(Range.First(), 0);
+	EXPECT_EQ(Range.Last(), 20);
+}
+
+TEST(QmGhostViewRange, ExactPositiveLimitIsAccepted)
+{
+	qm_ghost_timeline::CViewRange Range;
+	ASSERT_TRUE(Range.Prepare(100, std::numeric_limits<int>::max() - 100));
+	EXPECT_EQ(Range.Last(), std::numeric_limits<int>::max());
+	EXPECT_EQ(Range.ToAbsolute(std::numeric_limits<int>::max()), Range.Last());
+}
+
+TEST(QmGhostViewRange, AbsoluteOverflowRetainsThePublishedRange)
+{
+	qm_ghost_timeline::CViewRange Range;
+	ASSERT_TRUE(Range.Prepare(10, 20));
+	EXPECT_FALSE(Range.Prepare(1, std::numeric_limits<int>::max()));
+	EXPECT_EQ(Range.First(), 10);
+	EXPECT_EQ(Range.Last(), 30);
+}
+
+TEST(QmGhostViewRange, ZeroDurationDoesNotReplaceThePublishedRange)
+{
+	qm_ghost_timeline::CViewRange Range;
+	ASSERT_TRUE(Range.Prepare(10, 20));
+	EXPECT_FALSE(Range.Prepare(0, 0));
+	EXPECT_EQ(Range.Duration(), 20);
+}
+
+TEST(QmGhostViewRange, NegativeDurationIsRejected)
+{
+	qm_ghost_timeline::CViewRange Range;
+	EXPECT_FALSE(Range.Prepare(0, -1));
+	EXPECT_EQ(Range.First(), 0);
+	EXPECT_EQ(Range.Last(), 0);
+}
+
+TEST(QmGhostViewRange, MinimumExternalTickClampsBeforeNarrowing)
+{
+	qm_ghost_timeline::CViewRange Range;
+	ASSERT_TRUE(Range.Prepare(std::numeric_limits<int>::max() - 10, 10));
+	EXPECT_EQ(Range.ToRelative(std::numeric_limits<int>::min()), 0);
+}
+
+TEST(QmGhostViewRange, MaximumExternalTickClampsToTheEnd)
+{
+	qm_ghost_timeline::CViewRange Range;
+	ASSERT_TRUE(Range.Prepare(100, 20));
+	EXPECT_EQ(Range.ToRelative(std::numeric_limits<int>::max()), 20);
+}
+
+TEST(QmGhostViewRange, NegativeRelativeTickMapsToTheFirstTick)
+{
+	qm_ghost_timeline::CViewRange Range;
+	ASSERT_TRUE(Range.Prepare(100, 20));
+	EXPECT_EQ(Range.ToAbsolute(std::numeric_limits<int>::min()), 100);
+}
+
+TEST(QmGhostViewRange, RelativeTickBeyondTheEndMapsToTheLastTick)
+{
+	qm_ghost_timeline::CViewRange Range;
+	ASSERT_TRUE(Range.Prepare(100, 20));
+	EXPECT_EQ(Range.ToAbsolute(std::numeric_limits<int>::max()), 120);
+}
+
+TEST(QmGhostViewRange, RepeatedPreparationCanReplaceAnEarlierOrigin)
+{
+	qm_ghost_timeline::CViewRange Range;
+	ASSERT_TRUE(Range.Prepare(100, 20));
+	ASSERT_TRUE(Range.Prepare(200, 30));
+	EXPECT_EQ(Range.ToAbsolute(15), 215);
+	EXPECT_EQ(Range.ToRelative(215), 15);
+}
+
+TEST(QmGhostViewRange, DefaultInactiveRangeMapsAllInputsToZero)
+{
+	qm_ghost_timeline::CViewRange Range;
+	EXPECT_EQ(Range.ToAbsolute(std::numeric_limits<int>::max()), 0);
+	EXPECT_EQ(Range.ToRelative(std::numeric_limits<int>::min()), 0);
+}
+
 TEST_F(QmGhostTimeline, ExplicitTicksResolveTheMissingOriginAndPreserveDuplicates)
 {
 	ASSERT_NO_FATAL_FAILURE(Fill({{1000, 0}, {1000, 0}, {1010, 0}}));
