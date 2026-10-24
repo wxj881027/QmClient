@@ -11,7 +11,7 @@ namespace QmSponsorAuthors
 }
 
 class CUi;
-struct CUIRect;
+class CUIRect;
 
 // 只持有夏日名字使用的小尺寸工作纹理，图形接口仍存活时由菜单释放。
 class CQmAuthorName

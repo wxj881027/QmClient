@@ -7,7 +7,7 @@
 #include <cstddef>
 #include <vector>
 
-struct CUIRect;
+class CUIRect;
 
 enum class EQmBadgeGeometry
 {
