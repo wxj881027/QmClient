@@ -4804,6 +4804,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/demo_map_extract_test.cpp
     src/test/integration/engine/demo_slice_segments_test.cpp
     src/test/integration/engine/demo_seek_test.cpp
+    src/test/integration/engine/ghost_loader_test.cpp
     src/test/integration/engine/demo_startup_test.cpp
     src/test/integration/engine/demo_load_allocation_test.cpp
     src/test/integration/engine/demo_output_transaction_test.cpp
@@ -5335,6 +5336,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
   )
   set(TESTS_EXTRA
     src/engine/client/demoedit.cpp
+    src/engine/client/ghost.cpp
     src/game/editor/collab_camera.cpp
     src/game/editor/mapitems/envelope.cpp
     src/game/map/envelope_eval.cpp

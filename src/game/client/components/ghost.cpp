@@ -157,12 +157,13 @@ void CGhost::AddInfos(const CNetObj_Character *pChar, const CNetObj_DDNetCharact
 	if(g_Config.m_ClRaceSaveGhost && !GhostRecorder()->IsRecording() && NumTicks > 0)
 	{
 		GetPath(m_aTmpFilename, sizeof(m_aTmpFilename), m_CurGhost.m_aPlayer);
-		GhostRecorder()->Start(m_aTmpFilename, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), m_CurGhost.m_aPlayer);
-
-		GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &m_CurGhost.m_StartTick, sizeof(int));
-		GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &m_CurGhost.m_Skin, sizeof(CGhostSkin));
-		for(int i = 0; i < NumTicks; i++)
-			GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, m_CurGhost.m_Path.Get(i), sizeof(CGhostCharacter));
+		if(GhostRecorder()->Start(m_aTmpFilename, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), m_CurGhost.m_aPlayer) == 0)
+		{
+			GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &m_CurGhost.m_StartTick, sizeof(int));
+			GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &m_CurGhost.m_Skin, sizeof(CGhostSkin));
+			for(int i = 0; i < NumTicks; i++)
+				GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, m_CurGhost.m_Path.Get(i), sizeof(CGhostCharacter));
+		}
 	}
 
 	CGhostCharacter GhostChar;
@@ -859,8 +860,10 @@ void CGhost::SaveGhost(CMenus::CGhostItem *pItem)
 	CGhostItem *pGhost = &m_aActiveGhosts[Slot];
 
 	int NumTicks = pGhost->m_Path.Size();
-	GetPath(pItem->m_aFilename, sizeof(pItem->m_aFilename), pItem->m_aPlayer, pItem->m_Time);
-	GhostRecorder()->Start(pItem->m_aFilename, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), pItem->m_aPlayer);
+	char aFilename[IO_MAX_PATH_LENGTH];
+	GetPath(aFilename, sizeof(aFilename), pItem->m_aPlayer, pItem->m_Time);
+	if(GhostRecorder()->Start(aFilename, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), pItem->m_aPlayer) != 0)
+		return;
 
 	GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &pGhost->m_StartTick, sizeof(int));
 	GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &pGhost->m_Skin, sizeof(CGhostSkin));
@@ -868,6 +871,7 @@ void CGhost::SaveGhost(CMenus::CGhostItem *pItem)
 		GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, pGhost->m_Path.Get(i), sizeof(CGhostCharacter));
 
 	GhostRecorder()->Stop(NumTicks, pItem->m_Time);
+	str_copy(pItem->m_aFilename, aFilename);
 }
 
 void CGhost::ConGPlay(IConsole::IResult *pResult, void *pUserData)

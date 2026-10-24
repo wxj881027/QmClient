@@ -95,7 +95,8 @@ static void DiffItem(const uint32_t *pPast, const uint32_t *pCurrent, uint32_t *
 
 void CGhostRecorder::WriteData(int Type, const void *pData, size_t Size)
 {
-	dbg_assert((bool)m_File, "File not open");
+	if(!m_File)
+		return;
 	dbg_assert(Type >= 0 && Type <= (int)std::numeric_limits<unsigned char>::max(), "Type invalid");
 	dbg_assert(Size > 0 && Size <= MAX_ITEM_SIZE && Size % sizeof(uint32_t) == 0, "Size invalid");
 
@@ -476,8 +477,12 @@ bool CGhostLoader::ReadData(int Type, void *pData, size_t Size)
 	Data.m_Type = Type;
 	if(m_LastItem.has_value())
 	{
-		dbg_assert(m_LastItem.value().m_Type == Data.m_Type, "Type mismatch between current and last item");
-		dbg_assert(m_LastItem.value().m_Size == Data.m_Size, "Size mismatch between current and last item");
+		// 旧格式跨块保留差分基准，损坏文件中的类型或尺寸不匹配应返回读取失败。
+		if(m_LastItem.value().m_Type != Data.m_Type || m_LastItem.value().m_Size != Data.m_Size)
+		{
+			log_error_color(LOG_COLOR_GHOST, "ghost_loader", "Failed to read ghost file '%s': incompatible delta base", m_aFilename);
+			return false;
+		}
 		UndiffItem((const uint32_t *)m_LastItem.value().m_aData, (const uint32_t *)m_pBufferPos, (uint32_t *)Data.m_aData, Data.m_Size / sizeof(uint32_t));
 	}
 	else
