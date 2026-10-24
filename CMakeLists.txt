@@ -3522,6 +3522,7 @@ if(CLIENT)
     components/qmclient/colored_parts.h
     components/qmclient/console_selection.h
     components/qmclient/console_search_input.h
+    components/qmclient/console_search_results.h
     components/qmclient/console_appearance.h
     components/qmclient/console_syntax.h
     components/qmclient/console_text.h
@@ -4933,6 +4934,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_console_log_filter_test.cpp
     src/test/unit/qmclient/client/qm_console_selection_test.cpp
     src/test/unit/qmclient/client/qm_console_search_input_test.cpp
+    src/test/unit/qmclient/client/qm_console_search_results_test.cpp
+    src/test/integration/qmclient/client/qm_console_search_pipeline_test.cpp
     src/test/unit/qmclient/client/qm_console_appearance_test.cpp
     src/test/unit/qmclient/client/qm_console_syntax_test.cpp
     src/test/unit/qmclient/client/qm_console_text_test.cpp

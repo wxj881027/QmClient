@@ -12,6 +12,7 @@
 #include <game/client/component.h>
 #include <game/client/components/qm_console_log_filter.h>
 #include <game/client/components/qmclient/console_search_input.h>
+#include <game/client/components/qmclient/console_search_results.h>
 #include <game/client/components/qmclient/console_selection.h>
 #include <game/client/components/qmclient/qm_chat_export_metadata.h>
 #include <game/client/lineinput.h>
@@ -137,21 +138,7 @@ private:
 		std::vector<const char *> m_vpArgumentSuggestions;
 
 		CQmConsoleSearchInput m_SearchInput;
-		struct SSearchMatch
-		{
-			int m_Pos;
-			int m_Length;
-			int m_StartLine;
-			int m_EndLine;
-			int m_EntryLine;
-
-			SSearchMatch(int Pos, int Length, int StartLine, int EndLine, int EntryLine) :
-				m_Pos(Pos), m_Length(Length), m_StartLine(StartLine), m_EndLine(EndLine), m_EntryLine(EntryLine) {}
-		};
-		int m_CurrentMatchIndex;
-		char m_aCurrentSearchString[IConsole::CMDLINE_LENGTH];
-		std::vector<SSearchMatch> m_vSearchMatches;
-		bool m_SearchColorPreparationPending = false;
+		mutable QmConsoleSearch::CResults<IConsole::CMDLINE_LENGTH> m_SearchResults;
 
 		CInstance(int t);
 		void Init(CGameConsole *pGameConsole);
