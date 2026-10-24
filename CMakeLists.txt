@@ -3542,6 +3542,7 @@ if(CLIENT)
     components/qmclient/hud_notifications/hud_notification_static_rules.h
     components/qmclient/hud_notifications/hud_notifications.cpp
     components/qmclient/hud_notifications/hud_notifications.h
+    components/qmclient/hud_notifications/hud_notification_queue.h
     components/qmclient/input_overlay.cpp
     components/qmclient/input_overlay.h
     components/qmclient/jelly_tee.cpp
@@ -4991,6 +4992,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_hud_notifications_catalog_test.cpp
     src/test/unit/qmclient/client/qm_hud_notifications_formatting_test.cpp
     src/test/unit/qmclient/client/qm_hud_notifications_state_test.cpp
+    src/test/unit/qmclient/client/qm_hud_notification_queue_test.cpp
     src/test/unit/qmclient/client/qm_hud_notifications_presentation_test.cpp
     src/test/unit/qmclient/client/qm_hud_notifications_geometry_test.cpp
     src/test/unit/qmclient/client/qm_hud_editor_geometry_test.cpp

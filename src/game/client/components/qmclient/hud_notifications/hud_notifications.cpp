@@ -252,11 +252,10 @@ bool CQmHudNotifications::QueueEcho(const char *pMessage, unsigned EchoColor)
 		return false;
 
 	// 队列里只保存已经解析好的文本和颜色，渲染阶段不再依赖后续配置状态。
-	const QmHudNotifications::SEchoNotificationPayload Payload = QmHudNotifications::BuildEchoNotificationPayload(pMessage, EchoColor);
-	if(Payload.m_aText[0] == '\0')
-		return false;
-	Queue(EKind::Echo, Payload.m_aText, Payload.m_Color, true);
-	return true;
+	return QmHudNotifications::TryDelivery([&] {
+		const QmHudNotifications::SEchoNotificationPayload Payload = QmHudNotifications::BuildEchoNotificationPayload(pMessage, EchoColor);
+		return Queue(EKind::Echo, Payload.m_aText, Payload.m_Color, true);
+	});
 }
 
 bool CQmHudNotifications::ShouldSuppressServerChat(const char *pMessage)
