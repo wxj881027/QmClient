@@ -132,11 +132,10 @@ void CInput::InitJoysticks()
 	}
 	m_JoystickInitialized = true;
 	int NumJoysticks = 0;
-	SDL_JoystickID *pIds = SDL_GetJoysticks(&NumJoysticks);
+	std::unique_ptr<SDL_JoystickID, decltype(&SDL_free)> pIds(SDL_GetJoysticks(&NumJoysticks), SDL_free);
 	dbg_msg("joystick", "%d joystick(s) found", NumJoysticks);
 	for(int i = 0; pIds != nullptr && i < NumJoysticks; ++i)
-		OpenJoystick(pIds[i]);
-	SDL_free(pIds);
+		OpenJoystick(pIds.get()[i]);
 	UpdateActiveJoystick();
 
 	Console()->Chain("inp_controller_guid", ConchainJoystickGuidChanged, this);
@@ -150,13 +149,16 @@ bool CInput::OpenJoystick(int JoystickIndex)
 		dbg_msg("joystick", "Could not open joystick %d: '%s'", JoystickIndex, SDL_GetError());
 		return false;
 	}
-	if(std::find_if(m_vJoysticks.begin(), m_vJoysticks.end(), [pJoystick](const CJoystick &Joystick) -> bool { return Joystick.m_pDelegate == pJoystick; }) != m_vJoysticks.end())
-	{
-		// 重复打开也取得一个引用，需要立即归还。
-		SDL_CloseJoystick(pJoystick);
+	const bool Added = AttachSdlJoystick(pJoystick, SDL_CloseJoystick, [&](SDL_Joystick *pOpened) {
+		if(std::find_if(m_vJoysticks.begin(), m_vJoysticks.end(), [pOpened](const CJoystick &Joystick) { return Joystick.m_pDelegate == pOpened; }) != m_vJoysticks.end())
+			return false;
+		m_vJoysticks.emplace_back(this, m_vJoysticks.size(), pOpened);
+		return true;
+	});
+	if(!Added)
 		return false;
-	}
-	m_vJoysticks.emplace_back(this, m_vJoysticks.size(), pJoystick);
+	// vector扩容后先恢复借用指针，再执行可能失败的诊断。
+	UpdateActiveJoystick();
 	const CJoystick &Joystick = m_vJoysticks[m_vJoysticks.size() - 1];
 	dbg_msg("joystick", "Opened joystick %d '%s' (%d axes, %d buttons, %d balls, %d hats)", JoystickIndex, Joystick.GetName(),
 		Joystick.GetNumAxes(), Joystick.GetNumButtons(), Joystick.GetNumBalls(), Joystick.GetNumHats());
@@ -204,7 +206,8 @@ CInput::CJoystick::CJoystick(CInput *pInput, int Index, SDL_Joystick *pDelegate)
 	m_NumButtons = SDL_GetNumJoystickButtons(pDelegate);
 	m_NumBalls = SDL_GetNumJoystickBalls(pDelegate);
 	m_NumHats = SDL_GetNumJoystickHats(pDelegate);
-	str_copy(m_aName, SDL_GetJoystickName(pDelegate));
+	const char *pName = SDL_GetJoystickName(pDelegate);
+	str_copy(m_aName, pName != nullptr ? pName : "");
 	SDL_GUIDToString(SDL_GetJoystickGUID(pDelegate), m_aGUID, sizeof(m_aGUID));
 	m_InstanceId = SDL_GetJoystickID(pDelegate);
 }
@@ -327,8 +330,8 @@ vec2 CInput::NativeMousePos() const
 
 bool CInput::NativeMousePressed(int Index) const
 {
-	int i = SDL_GetMouseState(nullptr, nullptr);
-	return (i & SDL_BUTTON_MASK(Index)) != 0;
+	const uint32_t Buttons = SDL_GetMouseState(nullptr, nullptr);
+	return SdlMouseButtonPressed(Buttons, Index);
 }
 
 bool CInput::GamepadButtonIsPressed(int Button) const
@@ -359,7 +362,7 @@ bool CInput::GlobalMousePressed(int Index) const
 {
 #if SDL_VERSION_ATLEAST(2, 0, 4)
 	const Uint32 Buttons = SDL_GetGlobalMouseState(nullptr, nullptr);
-	return Index > 0 && (Buttons & SDL_BUTTON_MASK(Index)) != 0;
+	return SdlMouseButtonPressed(Buttons, Index);
 #else
 	return NativeMousePressed(Index);
 #endif
@@ -443,14 +446,7 @@ void CInput::EnsureScreenKeyboardShown()
 
 void CInput::ConsumeEvents(std::function<void(const CEvent &Event)> Consumer) const
 {
-	for(const CEvent &Event : m_vInputEvents)
-	{
-		// Only propagate valid input events
-		if(Event.m_InputCount == m_InputCounter)
-		{
-			Consumer(Event);
-		}
-	}
+	ConsumeSdlInputEvents(m_vInputEvents, m_InputCounter, Consumer);
 }
 
 void CInput::Clear()
@@ -597,10 +593,7 @@ void CInput::HandleJoystickHatMotionEvent(const SDL_JoyHatEvent &Event)
 
 void CInput::HandleJoystickAddedEvent(const SDL_JoyDeviceEvent &Event)
 {
-	if(OpenJoystick(Event.which))
-	{
-		UpdateActiveJoystick();
-	}
+	OpenJoystick(Event.which);
 }
 
 void CInput::HandleJoystickRemovedEvent(const SDL_JoyDeviceEvent &Event)
@@ -670,11 +663,7 @@ void CInput::HandleTextEditingEvent(const char *pText, int Start, int Length)
 	if(pText[0] != '\0')
 	{
 		m_CompositionString = pText;
-		m_CompositionCursor = 0;
-		for(int i = 0; i < Start; i++)
-		{
-			m_CompositionCursor = str_utf8_forward(m_CompositionString.c_str(), m_CompositionCursor);
-		}
+		m_CompositionCursor = SdlCompositionCursor(m_CompositionString.c_str(), Start);
 		// Length is currently unused on Windows and will always be 0, so we don't support selecting composition text
 		m_ImeCandidates.ResumeComposition();
 		AddTextEvent("");

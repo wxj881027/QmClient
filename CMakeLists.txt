@@ -5548,6 +5548,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/engine/input_clipboard_test.cpp
       src/test/unit/engine/input_ime_test.cpp
       src/test/unit/engine/input_sdl3_test.cpp
+      src/test/unit/engine/input_events_lifetime_test.cpp
+      src/test/unit/engine/input_joystick_lifetime_test.cpp
+      src/test/unit/engine/input_sdl3_boundaries_test.cpp
       src/test/integration/engine/audio_sdl3_test.cpp
       src/test/unit/engine/sound_voice_handle_test.cpp
     )
