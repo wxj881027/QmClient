@@ -1,6 +1,9 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include "player_points.h"
 
+#include "qmclient/update_proxy.h"
+
+#include <base/detect.h>
 #include <base/log.h>
 #include <base/system.h>
 
@@ -129,8 +132,7 @@ void CPlayerPoints::CancelRequests(bool NewServer)
 {
 	for(auto &[Name, Slot] : m_ActiveRequests)
 	{
-		if(Slot.m_pRequest)
-			Slot.m_pRequest->Abort();
+		Slot.m_Request.Cancel(*Http());
 	}
 	m_ActiveRequests.clear();
 	// 后台任务只拥有响应体；移除槽位后，旧解析结果不会再发布到缓存。
@@ -207,8 +209,18 @@ void CPlayerPoints::StartRequest(const char *pPlayerName)
 	const CQmPlayerPointsCache::SRequestToken Token = m_Cache.BeginRequest(Name);
 
 	// 记录入服代际和请求序号，迟到结果不能覆盖后续入服的新缓存。
-	m_ActiveRequests[Name] = {pRequest, Token};
-	Http()->Run(pRequest);
+	const double Now = time_get() / static_cast<double>(time_freq());
+	std::shared_ptr<qm_update::CSystemProxyJob> pProxyJob;
+#if defined(CONF_FAMILY_WINDOWS)
+	// 显式环境代理继续由 curl 处理；否则复用系统代理、PAC 和绕过规则。
+	if(!qm_update::HasEnvironmentProxy())
+		pProxyJob = std::make_shared<qm_update::CSystemProxyJob>(aUrl);
+#endif
+	auto &Slot = m_ActiveRequests.emplace(Name, SRequestSlot{CQmPlayerPointsRequest(pRequest, Now), Token, pProxyJob}).first->second;
+	if(pProxyJob)
+		Engine()->AddJob(pProxyJob);
+	else
+		Slot.m_Request.Poll(*Http(), Now, true, nullptr);
 }
 
 void CPlayerPoints::ProcessCompletedRequests()
@@ -217,8 +229,22 @@ void CPlayerPoints::ProcessCompletedRequests()
 	while(Iter != m_ActiveRequests.end())
 	{
 		const std::string &Name = Iter->first;
-		std::shared_ptr<IHttpRequest> pRequest = Iter->second.m_pRequest;
-		const CQmPlayerPointsCache::SRequestToken Token = Iter->second.m_Token;
+		SRequestSlot &Slot = Iter->second;
+		std::shared_ptr<IHttpRequest> pRequest = Slot.m_Request.Request();
+		const CQmPlayerPointsCache::SRequestToken Token = Slot.m_Token;
+
+		if(!Slot.m_Request.Submitted())
+		{
+			const bool ProxyReady = !Slot.m_pProxyJob || Slot.m_pProxyJob->State() == IJob::STATE_DONE;
+			const char *pProxy = ProxyReady && Slot.m_pProxyJob && Slot.m_pProxyJob->HasDecision() ? Slot.m_pProxyJob->Proxy().c_str() : nullptr;
+			if(!Slot.m_Request.Poll(*Http(), time_get() / static_cast<double>(time_freq()), ProxyReady, pProxy))
+			{
+				++Iter;
+				continue;
+			}
+			// 超时或取消后丢弃作业槽位，迟到的代理结果不能再次发起请求。
+			Slot.m_pProxyJob.reset();
+		}
 
 		if(!pRequest->Done())
 		{

@@ -10,11 +10,17 @@
 
 #include <game/client/component.h>
 #include <game/client/components/qmclient/ddnet_activity.h>
+#include <game/client/components/qmclient/player_points_request.h>
 #include <game/client/components/qmclient/player_points_state.h>
 
 #include <map>
 #include <memory>
 #include <string>
+
+namespace qm_update
+{
+	class CSystemProxyJob;
+}
 
 struct SPlayerPointsParseResult
 {
@@ -48,8 +54,9 @@ private:
 
 	struct SRequestSlot
 	{
-		std::shared_ptr<IHttpRequest> m_pRequest;
+		CQmPlayerPointsRequest m_Request;
 		CQmPlayerPointsCache::SRequestToken m_Token;
+		std::shared_ptr<qm_update::CSystemProxyJob> m_pProxyJob;
 	};
 	std::map<std::string, SRequestSlot> m_ActiveRequests;
 	// 已完成的 HTTP 响应每个玩家最多交给一个后台任务解析。
