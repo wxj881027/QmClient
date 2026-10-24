@@ -12,6 +12,10 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <limits>
+#include <new>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 class IConfigManager;
@@ -64,7 +68,8 @@ public:
 		dbg_assert(Modifiers >= KeyModifier::NONE && Modifiers < KeyModifier::COMBINATION_COUNT, "Modifiers invalid");
 		return m_aapKeyBindings[Modifiers][Key] ? m_aapKeyBindings[Modifiers][Key] : "";
 	}
-	bool Bind(int Key, const char *pCommand, bool FreeOnly = false, int Modifiers = KeyModifier::NONE)
+	// 分配器返回的非空缓冲必须能够由 free 释放。
+	bool Bind(int Key, const char *pCommand, bool FreeOnly = false, int Modifiers = KeyModifier::NONE, void *(*pAllocate)(size_t) = std::malloc)
 	{
 		if(FreeOnly && Get(Key, Modifiers)[0])
 			return false;
@@ -73,11 +78,25 @@ public:
 		char *pCopy = nullptr;
 		if(pCommand[0])
 		{
-			const std::string Migrated = QmLegacyConfig::MigrateBindCommand(pCommand);
-			const int Size = static_cast<int>(Migrated.size()) + 1;
-			pCopy = static_cast<char *>(malloc(Size));
-			dbg_assert(pCopy != nullptr, "bind allocation failed");
-			str_copy(pCopy, Migrated.c_str(), Size);
+			try
+			{
+				const std::string Migrated = QmLegacyConfig::MigrateBindCommand(pCommand);
+				if(Migrated.size() >= static_cast<size_t>(std::numeric_limits<int>::max()))
+					return false;
+				const int Size = static_cast<int>(Migrated.size()) + 1;
+				pCopy = static_cast<char *>(pAllocate(static_cast<size_t>(Size)));
+				if(pCopy == nullptr)
+					return false;
+				str_copy(pCopy, Migrated.c_str(), Size);
+			}
+			catch(const std::bad_alloc &)
+			{
+				return false;
+			}
+			catch(const std::length_error &)
+			{
+				return false;
+			}
 		}
 		free(m_aapKeyBindings[Modifiers][Key]);
 		m_aapKeyBindings[Modifiers][Key] = pCopy;
@@ -165,6 +184,26 @@ public:
 	static const char *GetModifierName(int Modifier);
 	void GetKeyBindName(int Key, int ModifierMask, char *pBuf, size_t BufSize) const;
 	void RefreshActiveBinds();
+	static void ExecuteCommand(IConsole *pConsole, const char *pBind, bool AppendGoresPrevWeapon, int Stroke, int ClientId)
+	{
+		if(pBind == nullptr)
+			return;
+		// 命令回调可能重绑或清空原槽位，控制台解析后续分号时必须继续持有副本。
+		std::string Command(pBind);
+		if(AppendGoresPrevWeapon && str_find(Command.c_str(), "+fire") != nullptr && str_find(Command.c_str(), "+prevweapon") == nullptr)
+			Command += ";+prevweapon";
+		pConsole->ExecuteLineStroked(Stroke, Command.c_str(), ClientId);
+	}
+	static void RefreshCommand(IConsole *pConsole, const char *pBind, int ClientId)
+	{
+		if(pBind == nullptr || pBind[0] == '\0')
+			return;
+		const std::string Command(pBind);
+		ForEachTopLevelBindCommand(Command.c_str(), [&](const char *pCommand) {
+			if(pCommand[0] == '+')
+				pConsole->ExecuteLineStroked(1, pCommand, ClientId);
+		});
+	}
 
 	void OnConsoleInit() override;
 	void OnRender() override;
@@ -181,7 +220,8 @@ private:
 	struct CActiveBind : CBindSlot
 	{
 		CQmShortcutHeldBind m_ShortcutState;
-		CActiveBind(int Key, int ModifierMask) : CBindSlot(Key, ModifierMask) {}
+		CActiveBind(int Key, int ModifierMask) noexcept :
+			CBindSlot(Key, ModifierMask) {}
 	};
 	std::vector<CActiveBind> m_vActiveBinds;
 };

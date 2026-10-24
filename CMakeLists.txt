@@ -4792,6 +4792,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/audio_pack_editor_test.cpp
     src/test/unit/base/bezier_test.cpp
     src/test/unit/client/binds_test.cpp
+    src/test/integration/client/bind_command_lifetime_test.cpp
     src/test/unit/engine/blocklist_driver_test.cpp
     src/test/unit/engine/game_ping_test.cpp
     src/test/unit/engine/ringbuffer_test.cpp

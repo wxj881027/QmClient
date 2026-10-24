@@ -16,6 +16,8 @@
 #include <game/client/components/console.h>
 #include <game/client/gameclient.h>
 
+#include <algorithm>
+#include <stdexcept>
 #include <string>
 
 static constexpr LOG_COLOR BIND_PRINT_COLOR{255, 255, 204};
@@ -50,17 +52,7 @@ static bool IsExactDebugGraphToggleCommand(const char *pCommand)
 
 static void ExecuteBindCommand(IConsole *pConsole, const char *pBind, const CGameClient *pGameClient, int Stroke, int ClientId)
 {
-	if(!pBind)
-		return;
-	if(!ShouldAppendGoresPrevWeapon(pGameClient) || str_find(pBind, "+fire") == nullptr || str_find(pBind, "+prevweapon") != nullptr)
-	{
-		pConsole->ExecuteLineStroked(Stroke, pBind, ClientId);
-		return;
-	}
-
-	std::string Command(pBind);
-	Command += ";+prevweapon";
-	pConsole->ExecuteLineStroked(Stroke, Command.c_str(), ClientId);
+	CBinds::ExecuteCommand(pConsole, pBind, ShouldAppendGoresPrevWeapon(pGameClient), Stroke, ClientId);
 }
 
 bool CBinds::CBindsSpecial::OnInput(const IInput::CEvent &Event)
@@ -197,6 +189,16 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 		if(ActiveBind == m_vActiveBinds.end())
 		{
 			const auto &&OnKeyPress = [&](int Mask) {
+				// 命令生效后不能再因活动记录扩容失败而丢失对应的松键跟踪。
+				if(m_vActiveBinds.size() == m_vActiveBinds.capacity())
+				{
+					const size_t Capacity = m_vActiveBinds.capacity();
+					const size_t Limit = m_vActiveBinds.max_size();
+					if(Capacity == Limit)
+						throw std::length_error("active bind capacity exceeded");
+					const size_t Growth = std::min(std::max(Capacity / 2, size_t{1}), Limit - Capacity);
+					m_vActiveBinds.reserve(Capacity + Growth);
+				}
 				const char *pBind = m_Storage.m_aapKeyBindings[Mask][Event.m_Key];
 				if(g_Config.m_ClSubTickAiming)
 				{
@@ -321,13 +323,7 @@ void CBinds::RefreshActiveBinds()
 		if(Bind.m_ShortcutState.WaitingForFocusReturn())
 			continue;
 		const char *pBind = Bind.m_ShortcutState.Command(Get(Bind));
-		if(pBind[0] == '\0')
-			continue;
-
-		ForEachTopLevelBindCommand(pBind, [&](const char *pCommand) {
-			if(pCommand[0] == '+')
-				Console()->ExecuteLineStroked(1, pCommand, IConsole::CLIENT_ID_UNSPECIFIED);
-		});
+		RefreshCommand(Console(), pBind, IConsole::CLIENT_ID_UNSPECIFIED);
 	}
 }
 
