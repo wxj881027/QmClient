@@ -3484,6 +3484,7 @@ if(CLIENT)
     components/player_points.cpp
     components/player_points.h
     components/qmclient/ddnet_activity.h
+    components/qmclient/player_points_request.h
     components/qmclient/player_points_state.h
     components/qmclient/gores_drown_tracker.h
     components/players.cpp
@@ -4714,6 +4715,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/monitoring/qm_device_sampler_lifecycle_test.cpp
     src/test/unit/client/player_points_parse_test.cpp
     src/test/unit/qmclient/client/qm_player_points_cache_test.cpp
+    src/test/unit/qmclient/client/qm_player_points_request_test.cpp
     src/test/unit/qmclient/client/qm_gores_drown_tracker_test.cpp
     src/test/unit/qmclient/client/qm_trail_geometry_test.cpp
     src/test/integration/qmclient/client/qm_map_upload_lifecycle_test.cpp
