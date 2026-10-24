@@ -525,7 +525,8 @@ MACRO_CONFIG_INT(QmStreamerHideNames, qm_streamer_hide_names, 0, 0, 1, CFGFLAG_C
 MACRO_CONFIG_INT(QmStreamerHideSkins, qm_streamer_hide_skins, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Non-friends use default skin")
 MACRO_CONFIG_INT(QmStreamerScoreboardDefaultFlags, qm_streamer_scoreboard_default_flags, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show default flag in scoreboard")
 
-// 好友上线 / 进服提醒（默认文案为英文 source key，运行时 Localize）
+// 好友状态 / 上线 / 进服提醒（默认文案为英文 source key，运行时 Localize）
+MACRO_CONFIG_INT(QmFriendLastSeen, qm_friend_last_seen, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show last seen dates for offline friends using DDStats (updated daily, matched by player name)")
 MACRO_CONFIG_INT(QmFriendOnlineNotify, qm_friend_online_notify, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Friend online notification")
 MACRO_CONFIG_INT(QmFriendOnlineAutoRefresh, qm_friend_online_auto_refresh, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-refresh server list for friend notifications")
 MACRO_CONFIG_INT(QmFriendOnlineRefreshSeconds, qm_friend_online_refresh_seconds, 30, 5, 300, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Friend notification refresh interval (sec)")

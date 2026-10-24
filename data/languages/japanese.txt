@@ -3194,6 +3194,9 @@ DDraceNetwork is a cooperative online game where the goal is for you and your gr
 DDRaceNetwork · DDNet
 == DDRaceNetwork · DDNet
 
+DDStats shows UTC dates, updates daily and matches players by name only.
+== DDStats の日付は UTC 基準で毎日更新され、プレイヤー名のみで照合されます。
+
 ddstats.tw ID stats
 == ddstats.tw ID統計
 
@@ -6734,6 +6737,9 @@ Last entered
 Last page in console
 == コンソールの最終ページ
 
+Last seen (DDStats): %s
+== 最終オンライン（DDStats）：%s
+
 Last successful sync: %s
 == 前回の同期成功: %s
 
@@ -8282,6 +8288,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 No recently used skins
 == 最近使ったスキンはありません
 
+No record
+== 記録なし
+
 No release notes provided
 == このバージョンのリリースノートはありません
 
@@ -9775,6 +9784,9 @@ Querying points for %s...
 
 Querying points...
 == ポイントを取得中...
+
+Querying...
+== 照会中…
 
 Queue is empty
 == キューが空です
@@ -11798,6 +11810,9 @@ Show friend tag (♥) on nametag
 Show friends only
 == フレンドのみ表示
 
+Show friends' last seen dates (DDStats)
+== フレンドの最終オンライン日を表示（DDStats）
+
 Show frozen Tee HUD
 == フリーズ Tee HUD を表示
 
@@ -11992,6 +12007,9 @@ Show kill messages
 
 Show labels on status bar items
 == ステータスバー項目にラベルを表示
+
+Show last seen dates for offline friends using DDStats (updated daily, matched by player name)
+== DDStats でオフラインのフレンドの最終オンライン日を表示（毎日更新、プレイヤー名で照合）
 
 Show list of mutes (page 1 by default, 20 entries per page)
 == ミュート一覧を表示（既定はページ1、1ページ20件）

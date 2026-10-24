@@ -3457,6 +3457,10 @@ if(CLIENT)
     components/qmclient/axiom_scores_data.cpp
     components/qmclient/axiom_scores_data.h
     components/qmclient/axiom_scores_parse_job.h
+    components/qmclient/friend_last_seen.cpp
+    components/qmclient/friend_last_seen.h
+    components/qmclient/friend_last_seen_data.cpp
+    components/qmclient/friend_last_seen_data.h
     components/qmclient/bind_editor.cpp
     components/qmclient/bind_editor.h
     components/qmclient/bind_settings.cpp
@@ -4647,6 +4651,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_mobile_spectator_test.cpp
     src/test/unit/qmclient/client/qm_friend_enter_tracker_test.cpp
     src/test/unit/qmclient/client/qm_friend_online_tracker_test.cpp
+    src/test/unit/qmclient/client/qm_friend_last_seen_test.cpp
     src/test/unit/qmclient/client/qm_friends_category_drag_test.cpp
     src/test/unit/engine/friends_revision_test.cpp
     src/test/unit/engine/friends_pin_test.cpp
@@ -5233,6 +5238,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/hammer_hit_detection.cpp
     src/game/client/components/qmclient/axiom_scores.cpp
     src/game/client/components/qmclient/axiom_scores_data.cpp
+    src/game/client/components/qmclient/friend_last_seen_data.cpp
     src/game/client/components/qmclient/streamer_word_filter.cpp
     src/game/client/components/qmclient/word_filter_list.cpp
     src/test/support/ui_test_stubs.cpp

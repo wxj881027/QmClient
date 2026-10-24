@@ -3194,6 +3194,9 @@ DDraceNetwork is a cooperative online game where the goal is for you and your gr
 DDRaceNetwork · DDNet
 == DDRaceNetwork · DDNet
 
+DDStats shows UTC dates, updates daily and matches players by name only.
+== DDStats UTC tarihlerini gösterir, günlük güncellenir ve oyuncuları yalnızca adlarına göre eşleştirir.
+
 ddstats.tw ID stats
 == ddstats.tw ID istatistikleri
 
@@ -6734,6 +6737,9 @@ Last entered
 Last page in console
 == Konsolda son sayfa
 
+Last seen (DDStats): %s
+== Son görülme (DDStats): %s
+
 Last successful sync: %s
 == Son başarılı eşitleme: %s
 
@@ -8282,6 +8288,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 No recently used skins
 == Son kullanılan görünüm yok
 
+No record
+== Kayıt yok
+
 No release notes provided
 == Bu sürüm için not sağlanmadı
 
@@ -9775,6 +9784,9 @@ Querying points for %s...
 
 Querying points...
 == Puanlar sorgulanıyor...
+
+Querying...
+== Sorgulanıyor…
 
 Queue is empty
 == Sıra boş
@@ -11798,6 +11810,9 @@ Show friend tag (♥) on nametag
 Show friends only
 == Sadece arkadaşları göster
 
+Show friends' last seen dates (DDStats)
+== Arkadaşların son görülme tarihlerini göster (DDStats)
+
 Show frozen Tee HUD
 == Donmuş Tee HUD'unu göster
 
@@ -11992,6 +12007,9 @@ Show kill messages
 
 Show labels on status bar items
 == Durum çubuğu öğelerinde etiketleri göster
+
+Show last seen dates for offline friends using DDStats (updated daily, matched by player name)
+== Çevrimdışı arkadaşların son görülme tarihlerini DDStats ile göster (günlük güncelleme, oyuncu adına göre eşleştirme)
 
 Show list of mutes (page 1 by default, 20 entries per page)
 == Sessize alınanlar listesini göster (varsayılan sayfa 1, sayfa başına 20 giriş)

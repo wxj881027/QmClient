@@ -2763,6 +2763,8 @@ namespace qm_card_catalog
 			{Localizable("Notify when friends come online"), nullptr, "好友上线提醒"},
 			{Localizable("Please use %s as friend name"), nullptr, "请使用 %s 作为好友名称"},
 			{Localizable("Refresh interval"), nullptr, "刷新间隔"},
+			{Localizable("Show friends' last seen dates (DDStats)"), nullptr, "好友最近在线日期 DDStats 最后上号"},
+			{nullptr, "qm_friend_last_seen", nullptr},
 			{nullptr, "qm_friend_auto_follow_delay", nullptr},
 			{nullptr, "qm_friend_enter_auto_greet", nullptr},
 			{nullptr, "qm_friend_enter_broadcast", nullptr},

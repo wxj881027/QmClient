@@ -644,6 +644,7 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_QmClient, "qmclient");
 	AddComponent(&m_QmAxiomAutoLogin, "axiom_auto_login");
 	AddComponent(&m_QmAxiomScores, "axiom_scores");
+	AddComponent(&m_QmFriendLastSeen, "friend_last_seen");
 	AddComponent(&m_QmChatEmoji, "chat_emoji");
 	AddComponent(&m_QmMonitoring, "monitoring");
 	AddComponent(&m_QmWaterHammerIndicator, "water_hammer_indicator");

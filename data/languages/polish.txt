@@ -3194,6 +3194,9 @@ DDraceNetwork is a cooperative online game where the goal is for you and your gr
 DDRaceNetwork · DDNet
 == DDRaceNetwork · DDNet
 
+DDStats shows UTC dates, updates daily and matches players by name only.
+== DDStats pokazuje daty UTC, aktualizuje je codziennie i rozpoznaje graczy wyłącznie po nazwie.
+
 ddstats.tw ID stats
 == Statystyki ID ddstats.tw
 
@@ -6734,6 +6737,9 @@ Last entered
 Last page in console
 == Ostatnia strona w konsoli
 
+Last seen (DDStats): %s
+== Ostatnio online (DDStats): %s
+
 Last successful sync: %s
 == Ostatnia udana synchronizacja: %s
 
@@ -8282,6 +8288,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 No recently used skins
 == Brak ostatnio używanych skórek
 
+No record
+== Brak danych
+
 No release notes provided
 == Nie podano informacji o tym wydaniu
 
@@ -9775,6 +9784,9 @@ Querying points for %s...
 
 Querying points...
 == Sprawdzanie punktów...
+
+Querying...
+== Pobieranie…
 
 Queue is empty
 == Kolejka jest pusta
@@ -11798,6 +11810,9 @@ Show friend tag (♥) on nametag
 Show friends only
 == Pokaż tylko znajomych
 
+Show friends' last seen dates (DDStats)
+== Pokazuj daty ostatniej aktywności znajomych (DDStats)
+
 Show frozen Tee HUD
 == Pokaż HUD zamrożonego Tee
 
@@ -11992,6 +12007,9 @@ Show kill messages
 
 Show labels on status bar items
 == Pokaż etykiety na elementach paska statusu
+
+Show last seen dates for offline friends using DDStats (updated daily, matched by player name)
+== Pokazuj przez DDStats daty ostatniej aktywności znajomych offline (codzienna aktualizacja, dopasowanie po nazwie)
 
 Show list of mutes (page 1 by default, 20 entries per page)
 == Pokaż listę wyciszeń (domyślnie strona 1, 20 wpisów na stronę)
