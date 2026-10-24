@@ -915,6 +915,8 @@ void CMenus::RenderSettings(CUIRect MainView)
 	if(!CollectingMenuTextPlan)
 	{
 		TabBar.Draw(SettingsTabbarColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+		const auto *pAnimation = Ui()->QmAnimationRuntime();
+		m_QmSeasonalSidebar.Render(Ui(), Graphics(), TabBar, pAnimation != nullptr ? pAnimation->TimeSec() : 0.0);
 		Shell.m_ContentPanelRect.Draw(MenuPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 	}
 	const float PreviousDropDownFontSize = Ui()->DropDownFontSize();

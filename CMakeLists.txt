@@ -2291,6 +2291,7 @@ set(EXPECTED_DATA
   shader/vulkan/tile_border.frag
   shader/vulkan/tile_border.vert
   skins/PaladiN.png
+  skins/Vaporeon.png
   skins/antiantey.png
   skins/beast.png
   skins/blacktee.png
@@ -3183,6 +3184,13 @@ if(CLIENT)
     QmUi/QmDemoCameraPanel.cpp
     QmUi/QmAnimationBackend.cpp
     QmUi/QmAnimationBackend.h
+    QmUi/QmSeasonalSidebar.cpp
+    QmUi/QmSeasonalSidebar.h
+    QmUi/QmBadgeGeometry.cpp
+    QmUi/QmBadgeGeometry.h
+    QmUi/QmBadgeGeometryData.h
+    QmUi/QmAuthorName.cpp
+    QmUi/QmAuthorName.h
     QmUi/QmAnim.cpp
     QmUi/QmAnim.h
     QmUi/QmUiPerf.cpp
@@ -3628,6 +3636,9 @@ if(CLIENT)
     components/qmclient/netease_hook/qm_netease_hook_provider.cpp
     components/qmclient/netease_hook/qm_netease_hook_provider.h
     components/qmclient/qm_music_hook_registry.h
+    components/qmclient/qm_sidebar_holiday.cpp
+    components/qmclient/qm_sidebar_holiday.h
+    components/qmclient/qm_sidebar_calendar_data.h
     components/qmclient/qm_sponsor_authors.cpp
     components/qmclient/qm_sponsor_authors.h
     components/qmclient/qm_markdown.cpp
@@ -5034,6 +5045,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_predicted_event_queue_test.cpp
     src/test/unit/qmclient/client/qm_tee_hue_cycle_test.cpp
     src/test/unit/qmclient/client/qm_tee_trail_test.cpp
+    src/test/unit/qmclient/client/qm_sidebar_holiday_test.cpp
+    src/test/unit/qmclient/ui/qm_badge_geometry_test.cpp
+    src/test/integration/qmclient/client/qm_badge_geometry_render_test.cpp
     src/test/unit/qmclient/client/qm_sponsor_authors_test.cpp
     src/test/unit/qmclient/client/qm_sponsors_test.cpp
     src/test/unit/qmclient/client/qm_solo_split_test.cpp
@@ -5338,6 +5352,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/wheel_presets.cpp
     src/game/client/components/qmclient/settings_resource_preview.cpp
     src/game/client/components/qmclient/tee_hue_cycle.cpp
+    src/game/client/components/qmclient/qm_developer_badge.cpp
+    src/game/client/components/qmclient/qm_title_badge.cpp
+    src/game/client/QmUi/QmBadgeGeometry.cpp
+    src/game/client/components/qmclient/qm_sidebar_holiday.cpp
     src/game/client/components/qmclient/qm_sponsor_authors.cpp
     src/game/client/components/qmclient/qm_markdown.cpp
     src/game/client/components/qmclient/qm_markdown_broadcast.cpp

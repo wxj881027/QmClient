@@ -6622,6 +6622,7 @@ void CMenus::OnShutdown()
 		LogSettingsPerfWindowSummary(Summary);
 	}
 	SaveSettingsRuntimeCacheMetadata();
+	m_QmAuthorName.Reset(Graphics());
 	ClearQmTitlePreviewContainers();
 	InvalidateSettingsTextPool();
 	ClearSettingsAssetsCardMetadataCache();

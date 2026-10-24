@@ -5,6 +5,7 @@
 
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/QmBadgeGeometry.h>
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
@@ -52,15 +53,14 @@ inline CUIRect QmLayoutDeveloperBadge(CTextCursor &Cursor)
 
 class CQmDeveloperBadge
 {
-	IGraphics::CTextureHandle m_Texture;
-	IGraphics::CTextureHandle m_ParticleTexture;
+	CQmBadgeGeometry m_Surface{EQmBadgeGeometry::DEVELOPER};
 	mutable double m_MotionTime = -1.0;
 	mutable SQmDeveloperBadgeMotion m_Motion{};
 
 public:
 	void Init(IGraphics *pGraphics);
 	void Shutdown(IGraphics *pGraphics);
-	bool Available() const { return m_Texture.IsValid(); }
+	bool Available() const { return m_Surface.Available(); }
 	void Render(IGraphics *pGraphics, const CUIRect &Rect, float Alpha, double TimeSec) const;
 };
 
