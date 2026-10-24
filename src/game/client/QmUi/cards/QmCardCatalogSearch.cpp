@@ -61,6 +61,10 @@ namespace qm_card_catalog
 		};
 
 		static constexpr SCardSettingSearch s_aqm_gores[] = {
+			{Localizable("Moving block and freeze prediction (experimental)"), nullptr, "移动方块预测 移动水预测 延迟补偿"},
+			{Localizable("Show moving tiles in entities"), nullptr, "在实体层显示移动方块 移动水"},
+			{nullptr, "qm_axiom_quad_prediction", nullptr},
+			{nullptr, "qm_moving_tiles_entities", nullptr},
 			{Localizable("Auto enable in Gores mode"), nullptr, "Gores 模式自动启用"},
 			{Localizable("Auto login Axiom server"), nullptr, "自动登录 Axiom 服务器账号"},
 			{Localizable("Auto weapon switch"), nullptr, "自动切锤"},
@@ -2109,7 +2113,6 @@ namespace qm_card_catalog
 			{Localizable("None"), nullptr, "无"},
 			{Localizable("Red"), nullptr, "红色"},
 			{Localizable("Self"), nullptr, "自身"},
-			{Localizable("Show moving tiles in entities"), nullptr, "在实体层显示移动方块"},
 			{Localizable("Smaller tees"), nullptr, "小尺寸 Tee"},
 			{Localizable("Tiny Tee Size"), nullptr, "迷你 Tee 大小"},
 			{Localizable("Visual: Effects"), nullptr, "视觉：特效"},
@@ -2119,7 +2122,6 @@ namespace qm_card_catalog
 			{nullptr, "qm_jelly_tee_duration", nullptr},
 			{nullptr, "qm_jelly_tee_others", nullptr},
 			{nullptr, "qm_jelly_tee_strength", nullptr},
-			{nullptr, "qm_moving_tiles_entities", nullptr},
 			{nullptr, "qm_tiny_tees", nullptr},
 			{nullptr, "qm_tiny_tees_others", nullptr},
 		};

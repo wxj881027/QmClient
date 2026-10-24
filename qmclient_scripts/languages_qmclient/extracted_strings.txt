@@ -2582,6 +2582,7 @@ Move to category
 Movement
 Moves to the point with x/y-coordinates ii
 Moves to the tile with x/y-number ii
+Moving block and freeze prediction (experimental)
 Multi-resolution blur with a stronger result and balanced GPU cost.
 Multi-View
 Multiple exact Axiom players found
@@ -3131,6 +3132,7 @@ Predict events (sounds, particles)
 Predict fire and show predicted weapon physics (requires cl_antiping_grenade 1 and cl_antiping_weapons 1)
 Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when frozen))
 Predict grenade trajectory (only with cl_antiping 1)
+Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)
 Predict ninja path
 Predict other player's movement (only enabled if cl_antiping is set to 1) (1 = always on, 2 = interaction only, 3 = 2 and frozen tees always)
 Predict weapon projectiles (only with cl_antiping 1)

@@ -157,6 +157,8 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 		Flow.Space(LineSpacing);
 	};
 	RenderCheckbox(&g_Config.m_QmGores, "qmclient-gores-enable", "Enable Gores mode", &g_Config.m_QmGores);
+	RenderCheckbox(&g_Config.m_QmAxiomQuadPrediction, "qmclient-gores-axiom-quad-prediction", "Moving block and freeze prediction (experimental)", &g_Config.m_QmAxiomQuadPrediction);
+	RenderCheckbox(&g_Config.m_QmMovingTilesEntities, "qmclient-gores-moving-tiles-entities", "Show moving tiles in entities", &g_Config.m_QmMovingTilesEntities);
 	RenderCheckbox(&g_Config.m_QmAxiomAutoLogin, "qmclient-gores-axiom-auto-login", "Auto login Axiom server", &g_Config.m_QmAxiomAutoLogin);
 	const char *pAxiomHelp = Localize("Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.");
 	if(!Flow.Declaring())

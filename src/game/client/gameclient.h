@@ -333,6 +333,8 @@ public:
 	CMovingTiles m_MovingTilesForeground = CMovingTiles{true};
 
 private:
+	void UpdateQmAxiomPrediction();
+
 	struct SQmStutterComponentWindowSamples
 	{
 		CQmStutterSampleSeries m_Update;

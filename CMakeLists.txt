@@ -2931,6 +2931,8 @@ set_src(GAME_SHARED GLOB src/game
   mapitems_ex_types.h
   prng.cpp
   prng.h
+  qm_axiom_quad_collision.cpp
+  qm_axiom_quad_collision.h
   race_state.h
   team_state.h
   teamscore.cpp
@@ -3449,6 +3451,7 @@ if(CLIENT)
     components/qm_console_log_filter.h
     components/qmclient/axiom_auto_login.cpp
     components/qmclient/axiom_auto_login.h
+    components/qmclient/axiom_prediction.cpp
     components/qmclient/axiom_scores.cpp
     components/qmclient/axiom_scores.h
     components/qmclient/axiom_scores_data.cpp
@@ -4787,6 +4790,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_bind_editor_test.cpp
     src/test/unit/qmclient/client/qm_background_particles_test.cpp
     src/test/unit/qmclient/client/qm_axiom_scores_test.cpp
+    src/test/integration/qmclient/client/qm_axiom_quad_collision_test.cpp
     src/test/contract/qmclient/client/qm_axiom_scores_contract_test.cpp
     src/test/unit/qmclient/client/qm_chat_emoji_test.cpp
     src/test/unit/qmclient/client/qm_chat_interactions_test.cpp
