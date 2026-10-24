@@ -156,7 +156,7 @@ TEST_F(GhostLoaderIntegration, NewerVersionsResetTheBaseWhenChangingChunkType)
 
 TEST_F(GhostLoaderIntegration, FailedRecordingStartIgnoresWritesAndAllowsAValidRetry)
 {
-	ASSERT_TRUE(m_pStorage->CreateFolder("blocked.gho", IStorage::TYPE_SAVE));
+	ASSERT_TRUE(m_pStorage->CreateFolder("blocked.gho.tmp", IStorage::TYPE_SAVE));
 	ASSERT_EQ(m_Recorder.Start("blocked.gho", "test-map", m_MapHash, "test"), -1);
 	const uint32_t Value = 11;
 	m_Recorder.WriteData(3, &Value, sizeof(Value));

@@ -1,10 +1,14 @@
 #ifndef ENGINE_CLIENT_GHOST_H
 #define ENGINE_CLIENT_GHOST_H
 
+#include <base/system.h>
+
 #include <engine/ghost.h>
 
 #include <cstdint>
 #include <optional>
+
+class IStorage;
 
 enum
 {
@@ -41,9 +45,29 @@ public:
 
 class CGhostRecorder : public IGhostRecorder
 {
+public:
+	// 文件操作覆盖只替换外部I/O，回调不得重入且必须不抛异常。
+	class CFileOperations
+	{
+	public:
+		virtual ~CFileOperations() = default;
+		virtual IOHANDLE Open(class IStorage *pStorage, const char *pFilename) noexcept;
+		virtual unsigned Write(IOHANDLE File, const void *pData, unsigned Size) noexcept { return io_write(File, pData, Size); }
+		virtual int Seek(IOHANDLE File, int64_t Offset, ESeekOrigin Origin) noexcept { return io_seek(File, Offset, Origin); }
+		virtual int Error(IOHANDLE File) noexcept { return io_error(File); }
+		virtual int Close(IOHANDLE File) noexcept { return io_close(File); }
+		virtual bool Rename(class IStorage *pStorage, const char *pSource, const char *pDestination) noexcept;
+		virtual bool Remove(class IStorage *pStorage, const char *pFilename) noexcept;
+	};
+
+private:
 	IOHANDLE m_File;
 	char m_aFilename[IO_MAX_PATH_LENGTH];
+	char m_aTemporary[IO_MAX_PATH_LENGTH];
 	class IStorage *m_pStorage;
+	CFileOperations m_DefaultOperations;
+	CFileOperations *m_pOperations;
+	bool m_WriteError = false;
 
 	alignas(uint32_t) char m_aBuffer[MAX_CHUNK_SIZE];
 	alignas(uint32_t) char m_aBufferTemp[MAX_CHUNK_SIZE];
@@ -53,17 +77,24 @@ class CGhostRecorder : public IGhostRecorder
 	std::optional<CGhostItem> m_LastItem;
 
 	void ResetBuffer();
-	void FlushChunk();
+	bool FlushChunk();
+	bool Write(const void *pData, unsigned Size);
+	void Fail(const char *pMessage) noexcept;
+	void Log(const char *pMessage, const char *pFilename = nullptr) const noexcept;
 
 public:
-	CGhostRecorder();
+	// 覆盖的操作对象须存活至记录器析构。
+	explicit CGhostRecorder(CFileOperations *pOperations = nullptr);
+	~CGhostRecorder() override;
+	CGhostRecorder(const CGhostRecorder &) = delete;
+	CGhostRecorder &operator=(const CGhostRecorder &) = delete;
 
 	void Init();
 
 	int Start(const char *pFilename, const char *pMap, const SHA256_DIGEST &MapSha256, const char *pName) override;
-	void Stop(int Ticks, int Time) override;
+	bool Stop(int Ticks, int Time, const char *pFilename = nullptr) override;
 
-	void WriteData(int Type, const void *pData, size_t Size) override;
+	bool WriteData(int Type, const void *pData, size_t Size) override;
 	bool IsRecording() const override { return m_File != nullptr; }
 };
 

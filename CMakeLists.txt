@@ -4806,6 +4806,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/demo_slice_segments_test.cpp
     src/test/integration/engine/demo_seek_test.cpp
     src/test/integration/engine/ghost_loader_test.cpp
+    src/test/integration/engine/ghost_recorder_io_test.cpp
     src/test/integration/engine/demo_startup_test.cpp
     src/test/integration/engine/demo_load_allocation_test.cpp
     src/test/integration/engine/demo_output_transaction_test.cpp

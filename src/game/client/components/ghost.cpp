@@ -102,10 +102,13 @@ void CGhost::AddInfos(const CNetObj_Character *pChar, const CNetObj_DDNetCharact
 		GetPath(m_aTmpFilename, sizeof(m_aTmpFilename), m_CurGhost.m_aPlayer);
 		if(GhostRecorder()->Start(m_aTmpFilename, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), m_CurGhost.m_aPlayer) == 0)
 		{
-			GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &m_CurGhost.m_StartTick, sizeof(int));
-			GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &m_CurGhost.m_Skin, sizeof(CGhostSkin));
-			for(int i = 0; i < NumTicks; i++)
-				GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, m_CurGhost.m_Path.Get(i), sizeof(CGhostCharacter));
+			if(GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &m_CurGhost.m_StartTick, sizeof(int)) &&
+				GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &m_CurGhost.m_Skin, sizeof(CGhostSkin)))
+			{
+				for(int i = 0; i < NumTicks; i++)
+					if(!GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, m_CurGhost.m_Path.Get(i), sizeof(CGhostCharacter)))
+						break;
+			}
 		}
 	}
 
@@ -519,8 +522,10 @@ void CGhost::StopRecord(int Time)
 		pOwnGhost = GameClient()->m_Menus.GetOwnGhost();
 	const bool StoreGhost = Time > 0 && !m_CurGhost.Empty() && (!pOwnGhost || Time < pOwnGhost->m_Time || !g_Config.m_ClRaceGhostSaveBest);
 
-	if(RecordingToFile)
-		GhostRecorder()->Stop(m_CurGhost.m_Path.Size(), StoreGhost ? Time : -1);
+	char aFilename[IO_MAX_PATH_LENGTH] = "";
+	if(RecordingToFile && StoreGhost)
+		GetPath(aFilename, sizeof(aFilename), m_CurGhost.m_aPlayer, Time);
+	const bool SavedToFile = RecordingToFile && GhostRecorder()->Stop(m_CurGhost.m_Path.Size(), StoreGhost ? Time : -1, aFilename[0] ? aFilename : nullptr);
 
 	if(StoreGhost)
 	{
@@ -534,15 +539,11 @@ void CGhost::StopRecord(int Time)
 
 		// create ghost item
 		CMenus::CGhostItem Item;
-		if(RecordingToFile)
-			GetPath(Item.m_aFilename, sizeof(Item.m_aFilename), m_CurGhost.m_aPlayer, Time);
+		if(SavedToFile)
+			str_copy(Item.m_aFilename, aFilename);
 		str_copy(Item.m_aPlayer, m_CurGhost.m_aPlayer);
 		Item.m_Time = Time;
 		Item.m_Slot = Slot;
-
-		// save new ghost file
-		if(Item.HasFile())
-			Storage()->RenameFile(m_aTmpFilename, Item.m_aFilename, IStorage::TYPE_SAVE);
 
 		// add item to menu list
 		GameClient()->m_Menus.UpdateOwnGhost(Item);
@@ -810,13 +811,13 @@ void CGhost::SaveGhost(CMenus::CGhostItem *pItem)
 	if(GhostRecorder()->Start(aFilename, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), pItem->m_aPlayer) != 0)
 		return;
 
-	GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &pGhost->m_StartTick, sizeof(int));
-	GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &pGhost->m_Skin, sizeof(CGhostSkin));
-	for(int i = 0; i < NumTicks; i++)
-		GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, pGhost->m_Path.Get(i), sizeof(CGhostCharacter));
+	bool Writing = GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &pGhost->m_StartTick, sizeof(int)) &&
+		       GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &pGhost->m_Skin, sizeof(CGhostSkin));
+	for(int i = 0; Writing && i < NumTicks; i++)
+		Writing = GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, pGhost->m_Path.Get(i), sizeof(CGhostCharacter));
 
-	GhostRecorder()->Stop(NumTicks, pItem->m_Time);
-	str_copy(pItem->m_aFilename, aFilename);
+	if(GhostRecorder()->Stop(NumTicks, pItem->m_Time))
+		str_copy(pItem->m_aFilename, aFilename);
 }
 
 void CGhost::ConGPlay(IConsole::IResult *pResult, void *pUserData)

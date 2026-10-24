@@ -13,6 +13,14 @@ static const unsigned char gs_CurVersion = 6;
 
 static const LOG_COLOR LOG_COLOR_GHOST{165, 153, 153};
 
+static bool GhostPathFits(IStorage *pStorage, const char *pFilename)
+{
+	// 存储前缀也占固定缓冲；截断可能使临时路径与正式路径重合。
+	char aRoot[IO_MAX_PATH_LENGTH];
+	pStorage->GetCompletePath(IStorage::TYPE_SAVE, "", aRoot, sizeof(aRoot));
+	return static_cast<size_t>(str_length(aRoot)) + static_cast<size_t>(str_length(pFilename)) < IO_MAX_PATH_LENGTH;
+}
+
 int CGhostHeader::GetTicks() const
 {
 	return bytes_be_to_uint(m_aNumTicks);
@@ -33,11 +41,61 @@ CGhostInfo CGhostHeader::ToGhostInfo() const
 	return Result;
 }
 
-CGhostRecorder::CGhostRecorder()
+IOHANDLE CGhostRecorder::CFileOperations::Open(IStorage *pStorage, const char *pFilename) noexcept
 {
-	m_File = nullptr;
+	try
+	{
+		if(!GhostPathFits(pStorage, pFilename))
+			return nullptr;
+		return pStorage->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	}
+	catch(...)
+	{
+		return nullptr;
+	}
+}
+
+bool CGhostRecorder::CFileOperations::Rename(IStorage *pStorage, const char *pSource, const char *pDestination) noexcept
+{
+	try
+	{
+		if(!GhostPathFits(pStorage, pSource) || !GhostPathFits(pStorage, pDestination))
+			return false;
+		return pStorage->RenameFile(pSource, pDestination, IStorage::TYPE_SAVE, false);
+	}
+	catch(...)
+	{
+		return false;
+	}
+}
+
+bool CGhostRecorder::CFileOperations::Remove(IStorage *pStorage, const char *pFilename) noexcept
+{
+	try
+	{
+		if(!GhostPathFits(pStorage, pFilename))
+			return false;
+		return pStorage->RemoveFile(pFilename, IStorage::TYPE_SAVE);
+	}
+	catch(...)
+	{
+		return false;
+	}
+}
+
+CGhostRecorder::CGhostRecorder(CFileOperations *pOperations) :
+	m_File(nullptr), m_pStorage(nullptr), m_pOperations(pOperations ? pOperations : &m_DefaultOperations)
+{
 	m_aFilename[0] = '\0';
+	m_aTemporary[0] = '\0';
 	ResetBuffer();
+}
+
+CGhostRecorder::~CGhostRecorder()
+{
+	// 常规退出由Stop收尾；析构只关闭句柄，不依赖存储接口仍然存活。
+	if(m_File)
+		m_pOperations->Close(m_File);
 }
 
 void CGhostRecorder::Init()
@@ -45,39 +103,74 @@ void CGhostRecorder::Init()
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
 }
 
+void CGhostRecorder::Log(const char *pMessage, const char *pFilename) const noexcept
+{
+	try
+	{
+		log_info_color(LOG_COLOR_GHOST, "ghost_recorder", "%s '%s'", pMessage, pFilename ? pFilename : m_aFilename);
+	}
+	catch(...)
+	{
+	}
+}
+
+void CGhostRecorder::Fail(const char *pMessage) noexcept
+{
+	m_WriteError = true;
+	m_LastItem = std::nullopt;
+	ResetBuffer();
+	Log(pMessage);
+}
+
+bool CGhostRecorder::Write(const void *pData, unsigned Size)
+{
+	if(!m_File || m_WriteError)
+		return false;
+	if(m_pOperations->Write(m_File, pData, Size) != Size || m_pOperations->Error(m_File) != 0)
+	{
+		Fail("Failed to write recording to");
+		return false;
+	}
+	return true;
+}
+
 int CGhostRecorder::Start(const char *pFilename, const char *pMap, const SHA256_DIGEST &MapSha256, const char *pName)
 {
-	dbg_assert(!m_File, "File already open");
-
-	m_File = m_pStorage->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(m_File || !m_pStorage || !pFilename || !pFilename[0] || str_length(pFilename) >= static_cast<int>(sizeof(m_aTemporary)) - 4)
+		return -1;
+	m_WriteError = false;
+	m_LastItem = std::nullopt;
+	ResetBuffer();
+	str_copy(m_aFilename, pFilename);
+	str_format(m_aTemporary, sizeof(m_aTemporary), "%s.tmp", pFilename);
+	m_File = m_pOperations->Open(m_pStorage, m_aTemporary);
 	if(!m_File)
 	{
-		log_info_color(LOG_COLOR_GHOST, "ghost_recorder", "Unable to open '%s' for recording", pFilename);
+		m_WriteError = true;
+		Log("Unable to open recording for");
+		m_aTemporary[0] = '\0';
 		return -1;
 	}
-	str_copy(m_aFilename, pFilename);
 
-	// write header
-	CGhostHeader Header;
-	mem_zero(&Header, sizeof(Header));
+	CGhostHeader Header{};
 	mem_copy(Header.m_aMarker, gs_aHeaderMarker, sizeof(Header.m_aMarker));
 	Header.m_Version = gs_CurVersion;
 	str_copy(Header.m_aOwner, pName);
 	str_copy(Header.m_aMap, pMap);
 	Header.m_MapSha256 = MapSha256;
-	io_write(m_File, &Header, sizeof(Header));
-
-	m_LastItem = std::nullopt;
-	ResetBuffer();
-
-	log_info_color(LOG_COLOR_GHOST, "ghost_recorder", "Recording to '%s'", pFilename);
+	if(!Write(&Header, sizeof(Header)))
+	{
+		Stop(0, -1);
+		return -1;
+	}
+	Log("Recording to");
 	return 0;
 }
 
 void CGhostRecorder::ResetBuffer()
 {
 	m_pBufferPos = m_aBuffer;
-	m_pBufferEnd = m_aBuffer;
+	m_pBufferEnd = m_aBuffer + sizeof(m_aBuffer);
 	m_BufferNumItems = 0;
 }
 
@@ -93,120 +186,112 @@ static void DiffItem(const uint32_t *pPast, const uint32_t *pCurrent, uint32_t *
 	}
 }
 
-void CGhostRecorder::WriteData(int Type, const void *pData, size_t Size)
+bool CGhostRecorder::WriteData(int Type, const void *pData, size_t Size)
 {
-	if(!m_File)
-		return;
+	if(!m_File || m_WriteError)
+		return false;
 	dbg_assert(Type >= 0 && Type <= (int)std::numeric_limits<unsigned char>::max(), "Type invalid");
 	dbg_assert(Size > 0 && Size <= MAX_ITEM_SIZE && Size % sizeof(uint32_t) == 0, "Size invalid");
-
-	if((size_t)(m_pBufferEnd - m_pBufferPos) < Size)
-	{
-		FlushChunk();
-	}
-
+	if(static_cast<size_t>(m_pBufferEnd - m_pBufferPos) < Size && !FlushChunk())
+		return false;
 	CGhostItem Data;
 	mem_copy(Data.m_aData, pData, Size);
 	Data.m_Size = Size;
 	Data.m_Type = Type;
-	if(m_LastItem.has_value() && m_LastItem.value().m_Type == Data.m_Type)
+	if(m_LastItem.has_value() && m_LastItem->m_Type == Type)
 	{
-		dbg_assert(m_LastItem.value().m_Size == Data.m_Size, "Size mismatch between current and last item");
-		DiffItem((const uint32_t *)m_LastItem.value().m_aData, (const uint32_t *)Data.m_aData, (uint32_t *)m_pBufferPos, Data.m_Size / sizeof(uint32_t));
+		dbg_assert(m_LastItem->m_Size == Size, "Size mismatch between current and last item");
+		DiffItem((const uint32_t *)m_LastItem->m_aData, (const uint32_t *)Data.m_aData, (uint32_t *)m_pBufferPos, Size / sizeof(uint32_t));
 	}
 	else
 	{
-		FlushChunk();
-		mem_copy(m_pBufferPos, Data.m_aData, Data.m_Size);
+		if(!FlushChunk())
+			return false;
+		mem_copy(m_pBufferPos, Data.m_aData, Size);
 	}
-
 	m_LastItem = Data;
-	m_pBufferPos += Data.m_Size;
-	m_BufferNumItems++;
-	if(m_BufferNumItems >= NUM_ITEMS_PER_CHUNK)
-	{
-		FlushChunk();
-	}
+	m_pBufferPos += Size;
+	++m_BufferNumItems;
+	return m_BufferNumItems < NUM_ITEMS_PER_CHUNK || FlushChunk();
 }
 
-void CGhostRecorder::FlushChunk()
+bool CGhostRecorder::FlushChunk()
 {
-	dbg_assert((bool)m_File, "File not open");
-
+	if(!m_File || m_WriteError)
+		return false;
 	int Size = m_pBufferPos - m_aBuffer;
 	if(Size == 0 || m_BufferNumItems == 0)
-	{
-		return;
-	}
+		return true;
 	dbg_assert(Size % sizeof(uint32_t) == 0, "Chunk size invalid");
 	dbg_assert(m_LastItem.has_value(), "Tried to flush chunk without last item");
-
 	Size = CVariableInt::Compress(m_aBuffer, Size, m_aBufferTemp, sizeof(m_aBufferTemp));
-	if(Size < 0)
+	if(Size <= 0)
 	{
-		log_info_color(LOG_COLOR_GHOST, "ghost_recorder", "Failed to write chunk to '%s': error during intpack compression", m_aFilename);
-		m_LastItem = std::nullopt;
-		ResetBuffer();
-		return;
+		Fail("Failed intpack compression for");
+		return false;
 	}
-
 	Size = CNetBase::Compress(m_aBufferTemp, Size, m_aBuffer, sizeof(m_aBuffer));
-	if(Size < 0)
+	if(Size <= 0)
 	{
-		log_info_color(LOG_COLOR_GHOST, "ghost_recorder", "Failed to write chunk to '%s': error during network compression", m_aFilename);
-		m_LastItem = std::nullopt;
-		ResetBuffer();
-		return;
+		Fail("Failed network compression for");
+		return false;
 	}
-
 	unsigned char aChunkHeader[4];
-	aChunkHeader[0] = m_LastItem.value().m_Type & 0xff;
+	aChunkHeader[0] = m_LastItem->m_Type & 0xff;
 	aChunkHeader[1] = m_BufferNumItems & 0xff;
 	aChunkHeader[2] = (Size >> 8) & 0xff;
 	aChunkHeader[3] = Size & 0xff;
-
-	io_write(m_File, aChunkHeader, sizeof(aChunkHeader));
-	io_write(m_File, m_aBuffer, Size);
-
+	if(!Write(aChunkHeader, sizeof(aChunkHeader)) || !Write(m_aBuffer, Size))
+		return false;
 	m_LastItem = std::nullopt;
 	ResetBuffer();
+	return true;
 }
 
-void CGhostRecorder::Stop(int Ticks, int Time)
+bool CGhostRecorder::Stop(int Ticks, int Time, const char *pFilename)
 {
 	if(!m_File)
+		return false;
+	const char *pDestination = pFilename ? pFilename : m_aFilename;
+	const bool Keep = Ticks > 0 && Time > 0;
+	if(Keep && !m_WriteError)
 	{
-		return;
+		if(!pDestination[0] || str_length(pDestination) >= IO_MAX_PATH_LENGTH)
+			Fail("Invalid recording destination for");
+		else if(FlushChunk())
+		{
+			if(m_pOperations->Seek(m_File, offsetof(CGhostHeader, m_aNumTicks), IOSEEK_START) != 0)
+				Fail("Failed to seek recording header for");
+			else
+			{
+				unsigned char aNumTicks[sizeof(int32_t)], aTime[sizeof(int32_t)];
+				uint_to_bytes_be(aNumTicks, Ticks);
+				uint_to_bytes_be(aTime, Time);
+				if(Write(aNumTicks, sizeof(aNumTicks)))
+					Write(aTime, sizeof(aTime));
+			}
+		}
 	}
-
-	const bool DiscardFile = Ticks <= 0 || Time <= 0;
-
-	if(!DiscardFile)
-	{
-		FlushChunk();
-
-		// write number of ticks and time
-		io_seek(m_File, offsetof(CGhostHeader, m_aNumTicks), IOSEEK_START);
-
-		unsigned char aNumTicks[sizeof(int32_t)];
-		uint_to_bytes_be(aNumTicks, Ticks);
-		io_write(m_File, aNumTicks, sizeof(aNumTicks));
-
-		unsigned char aTime[sizeof(int32_t)];
-		uint_to_bytes_be(aTime, Time);
-		io_write(m_File, aTime, sizeof(aTime));
-	}
-
-	io_close(m_File);
+	if(m_pOperations->Error(m_File) != 0)
+		m_WriteError = true;
+	IOHANDLE File = m_File;
 	m_File = nullptr;
-
-	if(DiscardFile)
+	if(m_pOperations->Close(File) != 0)
+		Fail("Failed to close recording for");
+	bool Saved = Keep && !m_WriteError;
+	if(Saved && !m_pOperations->Rename(m_pStorage, m_aTemporary, pDestination))
 	{
-		m_pStorage->RemoveFile(m_aFilename, IStorage::TYPE_SAVE);
+		Fail("Failed to publish recording for");
+		Saved = false;
 	}
-
-	log_info_color(LOG_COLOR_GHOST, "ghost_recorder", "Stopped recording to '%s'", m_aFilename);
+	if(!Saved)
+		m_pOperations->Remove(m_pStorage, m_aTemporary);
+	Log(Saved ? "Saved recording to" : "Recording was not saved to", pDestination);
 	m_aFilename[0] = '\0';
+	m_aTemporary[0] = '\0';
+	m_LastItem = std::nullopt;
+	ResetBuffer();
+	return Saved;
 }
 
 CGhostLoader::CGhostLoader()
