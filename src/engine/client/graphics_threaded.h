@@ -5,6 +5,7 @@
 #include <base/sphore.h>
 #include <base/system.h>
 
+#include <engine/client/buffer_container_pool.h>
 #include <engine/client/graphics_upload_data.h>
 #include <engine/client/quad_rotation_cache.h>
 #include <engine/client/render_target_pool.h>
@@ -1154,17 +1155,7 @@ class CGraphics_Threaded : public IEngineGraphics
 	// forced viewport, so that it justifies our UI ratio needs
 	bool m_IsForcedViewport = false;
 
-	struct SVertexArrayInfo
-	{
-		SVertexArrayInfo() :
-			m_FreeIndex(-1) {}
-		// keep a reference to it, so we can free the ID
-		int m_AssociatedBufferObjectIndex;
-
-		int m_FreeIndex;
-	};
-	std::vector<SVertexArrayInfo> m_vVertexArrayInfo;
-	int m_FirstFreeVertexArrayInfo;
+	CBufferContainerPool<> m_BufferContainers;
 
 	std::vector<int> m_vBufferObjectIndices;
 	int m_FirstFreeBufferObjectIndex;

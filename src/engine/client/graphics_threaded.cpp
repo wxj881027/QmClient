@@ -3465,36 +3465,21 @@ void CGraphics_Threaded::DeleteBufferObject(int BufferIndex)
 
 int CGraphics_Threaded::CreateBufferContainer(SBufferContainerInfo *pContainerInfo)
 {
-	int Index = -1;
-	if(m_FirstFreeVertexArrayInfo == -1)
-	{
-		Index = m_vVertexArrayInfo.size();
-		m_vVertexArrayInfo.emplace_back();
-	}
-	else
-	{
-		Index = m_FirstFreeVertexArrayInfo;
-		m_FirstFreeVertexArrayInfo = m_vVertexArrayInfo[Index].m_FreeIndex;
-		m_vVertexArrayInfo[Index].m_FreeIndex = Index;
-	}
+	return m_BufferContainers.Create(pContainerInfo->m_VertBufferBindingIndex, [&](int Index) {
+		CCommandBuffer::SCommand_CreateBufferContainer Cmd;
+		Cmd.m_BufferContainerIndex = Index;
+		Cmd.m_AttrCount = pContainerInfo->m_vAttributes.size();
+		Cmd.m_Stride = pContainerInfo->m_Stride;
+		Cmd.m_VertBufferBindingIndex = pContainerInfo->m_VertBufferBindingIndex;
+		Cmd.m_pAttributes = (SBufferContainerInfo::SAttribute *)AllocCommandBufferData(Cmd.m_AttrCount * sizeof(SBufferContainerInfo::SAttribute));
 
-	CCommandBuffer::SCommand_CreateBufferContainer Cmd;
-	Cmd.m_BufferContainerIndex = Index;
-	Cmd.m_AttrCount = pContainerInfo->m_vAttributes.size();
-	Cmd.m_Stride = pContainerInfo->m_Stride;
-	Cmd.m_VertBufferBindingIndex = pContainerInfo->m_VertBufferBindingIndex;
-	Cmd.m_pAttributes = (SBufferContainerInfo::SAttribute *)AllocCommandBufferData(Cmd.m_AttrCount * sizeof(SBufferContainerInfo::SAttribute));
+		AddCmd(Cmd, [&] {
+			Cmd.m_pAttributes = (SBufferContainerInfo::SAttribute *)m_pCommandBuffer->AllocData(Cmd.m_AttrCount * sizeof(SBufferContainerInfo::SAttribute));
+			return Cmd.m_pAttributes != nullptr;
+		});
 
-	AddCmd(Cmd, [&] {
-		Cmd.m_pAttributes = (SBufferContainerInfo::SAttribute *)m_pCommandBuffer->AllocData(Cmd.m_AttrCount * sizeof(SBufferContainerInfo::SAttribute));
-		return Cmd.m_pAttributes != nullptr;
+		mem_copy(Cmd.m_pAttributes, pContainerInfo->m_vAttributes.data(), Cmd.m_AttrCount * sizeof(SBufferContainerInfo::SAttribute));
 	});
-
-	mem_copy(Cmd.m_pAttributes, pContainerInfo->m_vAttributes.data(), Cmd.m_AttrCount * sizeof(SBufferContainerInfo::SAttribute));
-
-	m_vVertexArrayInfo[Index].m_AssociatedBufferObjectIndex = pContainerInfo->m_VertBufferBindingIndex;
-
-	return Index;
 }
 
 void CGraphics_Threaded::DeleteBufferContainer(int &ContainerIndex, bool DestroyAllBO)
@@ -3502,8 +3487,8 @@ void CGraphics_Threaded::DeleteBufferContainer(int &ContainerIndex, bool Destroy
 	if(ContainerIndex == -1)
 		return;
 
-	// 设备重建后旧索引会失效：这里的容器可能已被清空，越界索引必须直接丢弃。
-	if(ContainerIndex < 0 || (size_t)ContainerIndex >= m_vVertexArrayInfo.size())
+	// 尚未分配或已归还的容器不能再次接入空闲链。
+	if(!m_BufferContainers.IsAllocated(ContainerIndex))
 	{
 		log_error("graphics/buffer", "Ignoring stale buffer container index %d during delete.", ContainerIndex);
 		ContainerIndex = -1;
@@ -3518,7 +3503,7 @@ void CGraphics_Threaded::DeleteBufferContainer(int &ContainerIndex, bool Destroy
 	if(DestroyAllBO)
 	{
 		// delete all associated references
-		int BufferObjectIndex = m_vVertexArrayInfo[ContainerIndex].m_AssociatedBufferObjectIndex;
+		int BufferObjectIndex = m_BufferContainers.AssociatedBufferObject(ContainerIndex);
 		if(BufferObjectIndex != -1)
 		{
 			// clear the buffer object index
@@ -3526,18 +3511,15 @@ void CGraphics_Threaded::DeleteBufferContainer(int &ContainerIndex, bool Destroy
 			m_FirstFreeBufferObjectIndex = BufferObjectIndex;
 		}
 	}
-	m_vVertexArrayInfo[ContainerIndex].m_AssociatedBufferObjectIndex = -1;
-
 	// also clear the buffer object index
-	m_vVertexArrayInfo[ContainerIndex].m_FreeIndex = m_FirstFreeVertexArrayInfo;
-	m_FirstFreeVertexArrayInfo = ContainerIndex;
+	m_BufferContainers.Release(ContainerIndex);
 	ContainerIndex = -1;
 }
 
 void CGraphics_Threaded::UpdateBufferContainerInternal(int ContainerIndex, SBufferContainerInfo *pContainerInfo)
 {
-	// 设备重建后旧索引会失效，越界索引必须直接丢弃。
-	if(ContainerIndex < 0 || (size_t)ContainerIndex >= m_vVertexArrayInfo.size())
+	// 未分配的容器不能再修改关联对象。
+	if(!m_BufferContainers.IsAllocated(ContainerIndex))
 	{
 		log_error("graphics/buffer", "Ignoring stale buffer container index %d during update.", ContainerIndex);
 		return;
@@ -3557,7 +3539,7 @@ void CGraphics_Threaded::UpdateBufferContainerInternal(int ContainerIndex, SBuff
 
 	mem_copy(Cmd.m_pAttributes, pContainerInfo->m_vAttributes.data(), Cmd.m_AttrCount * sizeof(SBufferContainerInfo::SAttribute));
 
-	m_vVertexArrayInfo[ContainerIndex].m_AssociatedBufferObjectIndex = pContainerInfo->m_VertBufferBindingIndex;
+	m_BufferContainers.Bind(ContainerIndex, pContainerInfo->m_VertBufferBindingIndex);
 }
 
 void CGraphics_Threaded::IndicesNumRequiredNotify(unsigned int RequiredIndicesCount)
@@ -3976,8 +3958,7 @@ int CGraphics_Threaded::Init()
 	m_FirstFreeQuadContainer = -1;
 	m_vBufferObjectIndices.clear();
 	m_FirstFreeBufferObjectIndex = -1;
-	m_vVertexArrayInfo.clear();
-	m_FirstFreeVertexArrayInfo = -1;
+	m_BufferContainers.Clear();
 
 	m_pBackend = CreateGraphicsBackend(Localize);
 	if(InitWindow() != 0)
