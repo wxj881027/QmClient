@@ -26,6 +26,7 @@ namespace qm_demo_camera
 	inline std::string Encode(const SProject &Project)
 	{
 		std::ostringstream Stream;
+		Stream.exceptions(std::ios::badbit | std::ios::failbit);
 		Stream.imbue(std::locale::classic());
 		Stream << std::setprecision(std::numeric_limits<double>::max_digits10);
 		Stream << "{\"version\":1,\"enabled\":" << (Project.m_Enabled ? "true" : "false")
@@ -126,40 +127,75 @@ namespace qm_demo_camera
 		MISSING,
 		LOADED,
 		FAILED,
+		UNAVAILABLE,
 	};
 
-	inline ELoadResult Load(IStorage *pStorage, const std::string &Path, SProject &Project)
+	// 外部文本I/O边界；缓冲准备可能抛异常，Close必须不抛异常。
+	class CFileOperations
 	{
-		if(Path.empty())
-			return ELoadResult::FAILED;
-		IOHANDLE File = pStorage->OpenFile(Path.c_str(), IOFLAG_READ, IStorage::TYPE_ALL_OR_ABSOLUTE);
-		if(File == nullptr)
-			return pStorage->FileExists(Path.c_str(), IStorage::TYPE_ALL_OR_ABSOLUTE) ? ELoadResult::FAILED : ELoadResult::MISSING;
-		const int64_t Length = io_length(File);
-		if(Length < 0 || Length > 512 * 1024)
+	public:
+		virtual ~CFileOperations() = default;
+		virtual bool ReadText(IOHANDLE File, size_t Length, std::string &Json)
 		{
-			io_close(File);
-			return ELoadResult::FAILED;
+			Json.assign(Length, '\0');
+			return io_read(File, Json.data(), static_cast<unsigned>(Length)) == Length && io_error(File) == 0;
 		}
-		std::string Json(static_cast<size_t>(Length), '\0');
-		const bool Read = io_read(File, Json.data(), static_cast<unsigned>(Json.size())) == Json.size();
-		io_close(File);
-		return Read && Decode(Json, Project) ? ELoadResult::LOADED : ELoadResult::FAILED;
+		virtual int Close(IOHANDLE File) noexcept { return io_close(File); }
+	};
+	struct CFileCloser
+	{
+		CFileOperations *m_pOperations;
+		void operator()(void *pFile) const noexcept { m_pOperations->Close(pFile); }
+	};
+
+	inline ELoadResult Load(IStorage *pStorage, const std::string &Path, SProject &Project, CFileOperations *pOperations = nullptr) noexcept
+	{
+		try
+		{
+			if(!pStorage || Path.empty())
+				return ELoadResult::FAILED;
+			CFileOperations Default;
+			auto &Operations = pOperations ? *pOperations : Default;
+			std::unique_ptr<void, CFileCloser> File(pStorage->OpenFile(Path.c_str(), IOFLAG_READ, IStorage::TYPE_ALL_OR_ABSOLUTE), {&Operations});
+			if(!File)
+				return pStorage->FileExists(Path.c_str(), IStorage::TYPE_ALL_OR_ABSOLUTE) ? ELoadResult::FAILED : ELoadResult::MISSING;
+			const int64_t Length = io_length(File.get());
+			if(Length < 0 || Length > 512 * 1024)
+				return ELoadResult::FAILED;
+			std::string Json;
+			const bool Read = Operations.ReadText(File.get(), static_cast<size_t>(Length), Json);
+			const bool Closed = Operations.Close(File.release()) == 0;
+			return Read && Closed && Decode(Json, Project) ? ELoadResult::LOADED : ELoadResult::FAILED;
+		}
+		catch(...)
+		{
+			return ELoadResult::UNAVAILABLE;
+		}
 	}
 
-	inline bool Save(IStorage *pStorage, const std::string &Path, const SProject &Project)
+	inline bool Save(IStorage *pStorage, const std::string &Path, const SProject &Project, CFileOperations *pOperations = nullptr) noexcept
 	{
-		if(Path.empty() || Path.size() + 4 >= IO_MAX_PATH_LENGTH)
+		try
+		{
+			if(!pStorage || Path.empty() || Path.size() + 4 >= IO_MAX_PATH_LENGTH)
+				return false;
+			const std::string Temporary = Path + ".tmp";
+			const std::string Json = Encode(Project);
+			CFileOperations Default;
+			auto &Operations = pOperations ? *pOperations : Default;
+			std::unique_ptr<void, CFileCloser> File(pStorage->OpenFile(Temporary.c_str(), IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE), {&Operations});
+			if(!File)
+				return false;
+			const bool Written = io_write(File.get(), Json.data(), static_cast<unsigned>(Json.size())) == Json.size();
+			const bool Clean = io_error(File.get()) == 0;
+			const bool Closed = Operations.Close(File.release()) == 0;
+			// 完整关闭后才替换，异常或关闭失败都保留已有镜头文件。
+			return Written && Clean && Closed && pStorage->RenameFile(Temporary.c_str(), Path.c_str(), fs_is_relative_path(Path.c_str()) ? IStorage::TYPE_SAVE : IStorage::TYPE_ABSOLUTE, false);
+		}
+		catch(...)
+		{
 			return false;
-		const std::string Temporary = Path + ".tmp";
-		const std::string Json = Encode(Project);
-		IOHANDLE File = pStorage->OpenFile(Temporary.c_str(), IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE);
-		if(File == nullptr)
-			return false;
-		const bool Written = io_write(File, Json.data(), static_cast<unsigned>(Json.size())) == Json.size();
-		const bool Closed = io_close(File) == 0;
-		// 先完整写入再替换；替换失败保留已有镜头文件，允许用户重试。
-		return Written && Closed && pStorage->RenameFile(Temporary.c_str(), Path.c_str(), fs_is_relative_path(Path.c_str()) ? IStorage::TYPE_SAVE : IStorage::TYPE_ABSOLUTE, false);
+		}
 	}
 
 } // namespace qm_demo_camera

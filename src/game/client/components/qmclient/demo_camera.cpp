@@ -8,32 +8,59 @@
 
 #include <game/client/gameclient.h>
 
-void CQmDemoCamera::EnsureSession()
+bool CQmDemoCamera::IsCurrentSession() const
+{
+	return m_SessionReady && Client()->State() == IClient::STATE_DEMOPLAYBACK && m_Sessions.Matches(DemoPlayer()->Filename());
+}
+
+const qm_demo_camera::CTrack &CQmDemoCamera::Track() const
+{
+	static const qm_demo_camera::CTrack s_Empty;
+	return IsCurrentSession() ? m_Sessions.Project().m_Track : s_Empty;
+}
+
+bool CQmDemoCamera::SaveProject(const std::string &Path, const qm_demo_camera::SProject &Project) noexcept
+{
+	const bool Saved = qm_demo_camera::Save(Storage(), Path, Project);
+	if(!Saved)
+	{
+		try
+		{
+			log_error("demo/camera", "Failed to save camera path: %s", Path.c_str());
+		}
+		catch(...)
+		{
+		}
+	}
+	return Saved;
+}
+
+bool CQmDemoCamera::EnsureSession()
 {
 	if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
-		return;
+		return false;
+	if(IsCurrentSession())
+		return true;
+	m_SessionReady = false;
 	const char *pFilename = DemoPlayer()->Filename();
-	if(pFilename[0] == '\0' || m_Filename == pFilename)
-		return;
-	if(m_Dirty)
-		Save();
-	m_Filename = pFilename;
-	m_Project = {};
-	m_Sidecar.clear();
+	const auto Resolve = [&] {
+		// 保留浏览器选中的存储根；路径准备失败时也能以相同身份重试。
+		const int Type = str_comp(m_aPendingFilename, pFilename) == 0 ? m_PendingStorageType : IStorage::TYPE_ALL_OR_ABSOLUTE;
+		return qm_demo_camera::ResolveSidecar(Storage(), pFilename, Type);
+	};
+	const auto Load = [this](const std::string &Path, qm_demo_camera::SProject &Project) { return qm_demo_camera::Load(Storage(), Path, Project); };
+	const auto Save = [this](const std::string &Path, const qm_demo_camera::SProject &Project) { return SaveProject(Path, Project); };
+	if(!m_Sessions.Open(pFilename, Resolve, Load, Save))
+		return false;
+	m_SessionReady = true;
 	m_Editing = false;
-	m_Dirty = false;
-	m_SaveFailed = false;
 	m_EditFailed = false;
 	m_PanelOpen = false;
 	m_Selected = -1;
-	// 浏览器可能明确选中了某个存储根，不能重新按 TYPE_ALL 找到同名的另一份 demo。
-	m_Sidecar = m_PendingFilename == pFilename ? m_PendingSidecar : qm_demo_camera::ResolveSidecar(Storage(), pFilename, IStorage::TYPE_ALL_OR_ABSOLUTE);
-	m_PendingFilename.clear();
-	m_PendingSidecar.clear();
-	m_LoadFailed = qm_demo_camera::Load(Storage(), m_Sidecar, m_Project) == qm_demo_camera::ELoadResult::FAILED;
-	if(!Track().Empty())
-		m_Selected = 0;
+	m_aPendingFilename[0] = '\0';
 	GameClient()->m_TClient.SetForcedAspect();
+	Select(m_Selected);
+	return true;
 }
 
 void CQmDemoCamera::OnStateChange(int NewState, int OldState)
@@ -42,11 +69,8 @@ void CQmDemoCamera::OnStateChange(int NewState, int OldState)
 		EnsureSession();
 	else if(OldState == IClient::STATE_DEMOPLAYBACK)
 	{
-		if(m_Dirty)
-			Save();
-		m_Filename.clear();
-		m_Sidecar.clear();
-		m_Project = {};
+		m_SessionReady = false;
+		m_Sessions.Close([this](const std::string &Path, const qm_demo_camera::SProject &Project) { return SaveProject(Path, Project); });
 		m_Editing = false;
 		m_PanelOpen = false;
 		m_Selected = -1;
@@ -56,7 +80,7 @@ void CQmDemoCamera::OnStateChange(int NewState, int OldState)
 
 void CQmDemoCamera::OnShutdown()
 {
-	if(m_Dirty)
+	if(Dirty())
 		Save();
 }
 
@@ -72,8 +96,7 @@ float CQmDemoCamera::AspectOverride() const
 
 std::optional<qm_demo_camera::SView> CQmDemoCamera::PlaybackView()
 {
-	EnsureSession();
-	if(Client()->State() != IClient::STATE_DEMOPLAYBACK || !Enabled() || m_Editing)
+	if(!EnsureSession() || !Enabled() || m_Editing)
 		return std::nullopt;
 	return Track().Sample(CurrentTick());
 }
@@ -85,8 +108,9 @@ void CQmDemoCamera::Select(int Index)
 
 void CQmDemoCamera::PrepareSource(const char *pFilename, int StorageType)
 {
-	m_PendingFilename = pFilename;
-	m_PendingSidecar = qm_demo_camera::ResolveSidecar(Storage(), pFilename, StorageType);
+	str_copy(m_aPendingFilename, pFilename);
+	m_PendingStorageType = StorageType;
+	m_SessionReady = false;
 }
 
 void CQmDemoCamera::SetPanelOpen(bool Open)
@@ -98,8 +122,7 @@ void CQmDemoCamera::SetPanelOpen(bool Open)
 
 void CQmDemoCamera::Changed()
 {
-	m_Dirty = true;
-	m_LoadFailed = false;
+	m_Sessions.Changed();
 	m_EditFailed = false;
 	Save();
 	GameClient()->m_TClient.SetForcedAspect();
@@ -107,22 +130,16 @@ void CQmDemoCamera::Changed()
 
 bool CQmDemoCamera::Save()
 {
-	if(!m_Dirty)
-		return !m_SaveFailed;
-	m_SaveFailed = !qm_demo_camera::Save(Storage(), m_Sidecar, m_Project);
-	if(!m_SaveFailed)
-		m_Dirty = false;
-	else
-		log_error("demo/camera", "Failed to save camera path: %s", m_Sidecar.c_str());
-	return !m_SaveFailed;
+	return m_Sessions.Save([this](const std::string &Path, const qm_demo_camera::SProject &Project) { return SaveProject(Path, Project); });
 }
 
 void CQmDemoCamera::SetEnabled(bool Enabled)
 {
-	EnsureSession();
-	if(m_Project.m_Enabled == Enabled)
+	if(!EnsureSession())
 		return;
-	m_Project.m_Enabled = Enabled;
+	if(m_Sessions.Project().m_Enabled == Enabled)
+		return;
+	m_Sessions.Project().m_Enabled = Enabled;
 	if(Enabled)
 		m_Editing = false;
 	Changed();
@@ -130,8 +147,7 @@ void CQmDemoCamera::SetEnabled(bool Enabled)
 
 void CQmDemoCamera::BeginEditing()
 {
-	EnsureSession();
-	if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	if(!EnsureSession())
 		return;
 	const qm_demo_camera::SView View{GameClient()->m_Camera.m_Center, GameClient()->m_Camera.m_Zoom};
 	m_Editing = true;
@@ -143,10 +159,20 @@ void CQmDemoCamera::BeginEditing()
 
 bool CQmDemoCamera::AddKeyframe()
 {
-	EnsureSession();
+	if(!EnsureSession())
+		return false;
 	const bool WasEmpty = Track().Empty();
 	const qm_demo_camera::SKeyframe Frame{CurrentTick(), {GameClient()->m_Camera.m_Center, GameClient()->m_Camera.m_Zoom}};
-	const int Index = m_Project.m_Track.Insert(Frame);
+	int Index;
+	try
+	{
+		Index = m_Sessions.Project().m_Track.Insert(Frame);
+	}
+	catch(...)
+	{
+		m_EditFailed = true;
+		return false;
+	}
 	if(Index < 0)
 	{
 		m_EditFailed = true;
@@ -154,8 +180,8 @@ bool CQmDemoCamera::AddKeyframe()
 	}
 	if(WasEmpty)
 	{
-		m_Project.m_Track.SetAspect(Graphics()->GameScreenAspect());
-		m_Project.m_Enabled = true;
+		m_Sessions.Project().m_Track.SetAspect(Graphics()->GameScreenAspect());
+		m_Sessions.Project().m_Enabled = true;
 	}
 	m_Selected = Index;
 	Changed();
@@ -164,11 +190,13 @@ bool CQmDemoCamera::AddKeyframe()
 
 bool CQmDemoCamera::UpdateKeyframe()
 {
+	if(!EnsureSession())
+		return false;
 	if(m_Selected < 0 || m_Selected >= static_cast<int>(Track().Frames().size()))
 		return false;
 	auto Frame = Track().Frames()[m_Selected];
 	Frame.m_View = {GameClient()->m_Camera.m_Center, GameClient()->m_Camera.m_Zoom};
-	if(m_Project.m_Track.Insert(Frame) < 0)
+	if(m_Sessions.Project().m_Track.Insert(Frame) < 0)
 	{
 		m_EditFailed = true;
 		return false;
@@ -179,28 +207,34 @@ bool CQmDemoCamera::UpdateKeyframe()
 
 void CQmDemoCamera::RemoveKeyframe()
 {
-	if(!m_Project.m_Track.Erase(m_Selected))
+	if(!EnsureSession())
+		return;
+	if(!m_Sessions.Project().m_Track.Erase(m_Selected))
 		return;
 	Select(m_Selected);
 	if(Track().Empty())
-		m_Project.m_Enabled = false;
+		m_Sessions.Project().m_Enabled = false;
 	Changed();
 }
 
 void CQmDemoCamera::CycleTransition()
 {
+	if(!EnsureSession())
+		return;
 	if(m_Selected < 0 || m_Selected >= static_cast<int>(Track().Frames().size()))
 		return;
 	auto Frame = Track().Frames()[m_Selected];
 	Frame.m_Transition = static_cast<qm_demo_camera::ETransition>((static_cast<int>(Frame.m_Transition) + 1) % 3);
 	Frame.m_EaseFrom = 0.0;
 	Frame.m_EaseTo = 1.0;
-	m_Project.m_Track.Insert(Frame);
+	m_Sessions.Project().m_Track.Insert(Frame);
 	Changed();
 }
 
 bool CQmDemoCamera::GoToKeyframe()
 {
+	if(!EnsureSession())
+		return false;
 	if(m_Selected < 0 || m_Selected >= static_cast<int>(Track().Frames().size()))
 		return false;
 	const auto Frame = Track().Frames()[m_Selected];
@@ -215,10 +249,12 @@ bool CQmDemoCamera::GoToKeyframe()
 
 bool CQmDemoCamera::Preview()
 {
+	if(!EnsureSession())
+		return false;
 	if(Track().Empty())
 		return false;
 	m_Editing = false;
-	m_Project.m_Enabled = true;
+	m_Sessions.Project().m_Enabled = true;
 	Changed();
 	if(!GameClient()->m_Menus.DemoSeekToTick(std::min(static_cast<int>(Track().Frames().front().m_Tick), std::numeric_limits<int>::max() - 1)))
 		return false;
@@ -228,18 +264,29 @@ bool CQmDemoCamera::Preview()
 
 bool CQmDemoCamera::ExportCut(const char *pDemoPath, const std::vector<SDemoSliceSegment> &vSegments)
 {
-	if(Track().Empty())
+	if(!EnsureSession())
+		return false;
+	try
 	{
-		// 覆盖已有剪辑时也清空旧镜头，避免给新文件套上上次导出的轨迹。
-		qm_demo_camera::SProject Existing;
-		const std::string Path = qm_demo_camera::SidecarPath(pDemoPath);
-		return qm_demo_camera::Load(Storage(), Path, Existing) == qm_demo_camera::ELoadResult::MISSING || qm_demo_camera::Save(Storage(), Path, {});
+		if(Track().Empty())
+		{
+			// 覆盖已有剪辑时也清空旧镜头，避免给新文件套上上次导出的轨迹。
+			qm_demo_camera::SProject Existing;
+			const std::string Path = qm_demo_camera::SidecarPath(pDemoPath);
+			const auto Loaded = qm_demo_camera::Load(Storage(), Path, Existing);
+			return Loaded == qm_demo_camera::ELoadResult::MISSING ||
+			       (Loaded != qm_demo_camera::ELoadResult::UNAVAILABLE && qm_demo_camera::Save(Storage(), Path, {}));
+		}
+		std::vector<qm_demo_camera::SRange> vRanges;
+		for(const auto &Segment : vSegments)
+			vRanges.push_back({Segment.m_StartTick, Segment.m_EndTick});
+		const auto Cut = Track().Cut(std::move(vRanges));
+		return Cut.has_value() && qm_demo_camera::Save(Storage(), qm_demo_camera::SidecarPath(pDemoPath), {*Cut, Enabled()});
 	}
-	std::vector<qm_demo_camera::SRange> vRanges;
-	for(const auto &Segment : vSegments)
-		vRanges.push_back({Segment.m_StartTick, Segment.m_EndTick});
-	const auto Cut = Track().Cut(std::move(vRanges));
-	return Cut.has_value() && qm_demo_camera::Save(Storage(), qm_demo_camera::SidecarPath(pDemoPath), {*Cut, Enabled()});
+	catch(...)
+	{
+		return false;
+	}
 }
 
 void CQmDemoCamera::OnRender()

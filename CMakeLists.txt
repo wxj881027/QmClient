@@ -3393,6 +3393,7 @@ if(CLIENT)
     components/qmclient/demo_camera.h
     components/qmclient/demo_camera_path.h
     components/qmclient/demo_camera_file.h
+    components/qmclient/demo_camera_session.h
     components/camera.cpp
     components/camera.h
     components/censor.cpp
@@ -5005,6 +5006,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_race_demo_storage_test.cpp
     src/test/unit/qmclient/client/qm_demo_camera_path_test.cpp
     src/test/unit/qmclient/client/qm_demo_camera_file_test.cpp
+    src/test/unit/qmclient/client/qm_demo_camera_session_test.cpp
     src/test/integration/qmclient/client/qm_demo_camera_storage_test.cpp
     src/test/unit/qmclient/client/qm_camera_effects_test.cpp
     src/test/contract/qmclient/ui/qm_capsule_tab_wiring_contract_test.cpp
