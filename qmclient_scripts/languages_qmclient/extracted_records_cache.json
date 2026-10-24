@@ -1720,7 +1720,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2847
+      "line": 2849
     },
     {
       "key": "Active disconnect",
@@ -1804,14 +1804,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2848
+      "line": 2850
     },
     {
       "key": "Add",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4045
+      "line": 4072
     },
     {
       "key": "Add",
@@ -1832,7 +1832,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3090
+      "line": 3092
     },
     {
       "key": "Add [group] [clan] [reason]:",
@@ -1846,7 +1846,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3091
+      "line": 3093
     },
     {
       "key": "Add [group] [name] [reason]:",
@@ -2098,14 +2098,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3993
+      "line": 4020
     },
     {
       "key": "Add clan",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3945
+      "line": 3972
     },
     {
       "key": "Add command",
@@ -2189,7 +2189,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3551
+      "line": 3578
     },
     {
       "key": "Add front layer",
@@ -2217,7 +2217,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2849
+      "line": 2851
     },
     {
       "key": "Add Group",
@@ -2385,7 +2385,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3092
+      "line": 3094
     },
     {
       "key": "Add team clan:",
@@ -2399,7 +2399,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3093
+      "line": 3095
     },
     {
       "key": "Add team name:",
@@ -2441,7 +2441,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3947
+      "line": 3974
     },
     {
       "key": "Add to bind wheel",
@@ -2476,7 +2476,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3879
+      "line": 3906
     },
     {
       "key": "Add to queue",
@@ -2504,7 +2504,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3094
+      "line": 3096
     },
     {
       "key": "Add war clan:",
@@ -2518,7 +2518,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3095
+      "line": 3097
     },
     {
       "key": "Add war name:",
@@ -2721,14 +2721,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2911
+      "line": 2913
     },
     {
       "key": "Advanced mode",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2996
+      "line": 2998
     },
     {
       "key": "Advanced options",
@@ -2819,7 +2819,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2798
+      "line": 2800
     },
     {
       "key": "Afterimage pop",
@@ -3190,7 +3190,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2799
+      "line": 2801
     },
     {
       "key": "All players",
@@ -3302,7 +3302,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 814
+      "line": 815
     },
     {
       "key": "Allow insecure HTTP protocol in addition to secure HTTPS. Primarily for testing.",
@@ -3505,7 +3505,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 653
+      "line": 654
     },
     {
       "key": "Always show song title and artist",
@@ -3736,7 +3736,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2800
+      "line": 2802
     },
     {
       "key": "Animation range",
@@ -3862,7 +3862,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 869
+      "line": 870
     },
     {
       "key": "API key",
@@ -3897,7 +3897,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 868
+      "line": 869
     },
     {
       "key": "APP ID",
@@ -4002,14 +4002,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2912
+      "line": 2914
     },
     {
       "key": "Applies to single-color and rainbow overrides.",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2997
+      "line": 2999
     },
     {
       "key": "Apply",
@@ -4149,7 +4149,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 682
+      "line": 683
     },
     {
       "key": "Apply the changes.",
@@ -4366,14 +4366,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3848
+      "line": 3875
     },
     {
       "key": "Are you sure that you want to remove the player '%s' from your friends list?",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3848
+      "line": 3875
     },
     {
       "key": "Are you sure that you want to reset the controls to their defaults?",
@@ -4464,7 +4464,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 677
+      "line": 678
     },
     {
       "key": "Asset preset",
@@ -4702,7 +4702,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 841
+      "line": 842
     },
     {
       "key": "Authentication",
@@ -4968,21 +4968,21 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 532
+      "line": 533
     },
     {
       "key": "Auto greet friend text",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 535
+      "line": 536
     },
     {
       "key": "Auto greet friends entering map",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 462
+      "line": 463
     },
     {
       "key": "Auto greet friends entering map",
@@ -5066,7 +5066,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 454
+      "line": 455
     },
     {
       "key": "Auto refresh server list",
@@ -5185,7 +5185,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2777
+      "line": 2779
     },
     {
       "key": "Auto switch weapon on ammo depletion",
@@ -5227,7 +5227,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2778
+      "line": 2780
     },
     {
       "key": "Auto translate received messages",
@@ -5297,7 +5297,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2780
+      "line": 2782
     },
     {
       "key": "Auto unspec on unfreeze",
@@ -5311,7 +5311,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2779
+      "line": 2781
     },
     {
       "key": "Auto vote on map change after min duration (0=Off, 1=Oppose, 2=Agree)",
@@ -5374,21 +5374,21 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 726
+      "line": 727
     },
     {
       "key": "Auto-fetch all players' skins for rotation queue",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 720
+      "line": 721
     },
     {
       "key": "Auto-follow delay",
       "category": "indirect",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 457
+      "line": 458
     },
     {
       "key": "Auto-follow delay",
@@ -5402,7 +5402,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 892
+      "line": 893
     },
     {
       "key": "Auto-lock after joining lockable team",
@@ -5423,7 +5423,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 602
+      "line": 603
     },
     {
       "key": "Auto-record replay when player sets a new personal best time.",
@@ -5437,7 +5437,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 530
+      "line": 531
     },
     {
       "key": "Auto-reply to muted players",
@@ -5535,7 +5535,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 809
+      "line": 810
     },
     {
       "key": "Auto-translate incoming messages",
@@ -5549,7 +5549,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 851
+      "line": 852
     },
     {
       "key": "Auto-translate outgoing messages",
@@ -5563,7 +5563,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 854
+      "line": 855
     },
     {
       "key": "Auto-unspec when unfrozen",
@@ -5661,7 +5661,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 515
+      "line": 516
     },
     {
       "key": "Automatic updates",
@@ -5731,7 +5731,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2781
+      "line": 2783
     },
     {
       "key": "Automatically create statboard csv",
@@ -5752,21 +5752,21 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 596
+      "line": 597
     },
     {
       "key": "Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 713
+      "line": 714
     },
     {
       "key": "Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 525
+      "line": 526
     },
     {
       "key": "Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)",
@@ -5857,7 +5857,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 594
+      "line": 595
     },
     {
       "key": "Automatically take game over screenshot",
@@ -6137,140 +6137,140 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 688
+      "line": 689
     },
     {
       "key": "Background 3D particle collision",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 696
+      "line": 697
     },
     {
       "key": "Background 3D particle color mode: 1=Custom, 2=Random",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 699
+      "line": 700
     },
     {
       "key": "Background 3D particle count",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 687
+      "line": 688
     },
     {
       "key": "Background 3D particle custom color",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 700
+      "line": 701
     },
     {
       "key": "Background 3D particle depth range",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 691
+      "line": 692
     },
     {
       "key": "Background 3D particle fade-in time",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 694
+      "line": 695
     },
     {
       "key": "Background 3D particle fade-out time",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 695
+      "line": 696
     },
     {
       "key": "Background 3D particle flicker intensity",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 711
+      "line": 712
     },
     {
       "key": "Background 3D particle glow offset",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 703
+      "line": 704
     },
     {
       "key": "Background 3D particle glow opacity",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 702
+      "line": 703
     },
     {
       "key": "Background 3D particle margin outside view",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 692
+      "line": 693
     },
     {
       "key": "Background 3D particle maximum size",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 690
+      "line": 691
     },
     {
       "key": "Background 3D particle minimum size",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 689
+      "line": 690
     },
     {
       "key": "Background 3D particle opacity",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 693
+      "line": 694
     },
     {
       "key": "Background 3D particle pulse intensity",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 708
+      "line": 709
     },
     {
       "key": "Background 3D particle pulse speed",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 709
+      "line": 710
     },
     {
       "key": "Background 3D particle trail length",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 705
+      "line": 706
     },
     {
       "key": "Background 3D particle trail opacity",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 706
+      "line": 707
     },
     {
       "key": "Background 3D particle type: 1=Cube, 2=Heart, 3=Mix, 4=Sphere, 5=Pyramid, 6=Diamond, 7=Torus, 8=Star, 9=Crescent",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 686
+      "line": 687
     },
     {
       "key": "Background color",
@@ -6641,7 +6641,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2850
+      "line": 2852
     },
     {
       "key": "Bind",
@@ -6844,7 +6844,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 525
+      "line": 526
     },
     {
       "key": "Blank asset auto fallback",
@@ -7215,7 +7215,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2801
+      "line": 2803
     },
     {
       "key": "Brightness shift",
@@ -7537,14 +7537,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 667
+      "line": 668
     },
     {
       "key": "Camera drift smoothness (0=instant, 100=smoothest)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 668
+      "line": 669
     },
     {
       "key": "Camera follow cursor dead zone",
@@ -7803,14 +7803,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4041
+      "line": 4068
     },
     {
       "key": "Cancel",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4100
+      "line": 4127
     },
     {
       "key": "Cancel",
@@ -8104,28 +8104,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4441
+      "line": 4468
     },
     {
       "key": "Category name",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4028
+      "line": 4055
     },
     {
       "key": "Censor replacement character",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 546
+      "line": 547
     },
     {
       "key": "Censor word list (comma-separated)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 548
+      "line": 549
     },
     {
       "key": "Center line color (requires qm_show_center)",
@@ -8188,7 +8188,7 @@
       "category": "register_help",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 748
+      "line": 749
     },
     {
       "key": "Change sound source shape.",
@@ -8307,7 +8307,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2851
+      "line": 2853
     },
     {
       "key": "Chat",
@@ -8426,42 +8426,42 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 758
+      "line": 759
     },
     {
       "key": "Chat bubble disappear animation (0=Fade, 1=Shrink, 2=Slide up)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 760
+      "line": 761
     },
     {
       "key": "Chat bubble display duration (seconds)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 755
+      "line": 756
     },
     {
       "key": "Chat bubble font size",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 757
+      "line": 758
     },
     {
       "key": "Chat bubble text color",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 759
+      "line": 760
     },
     {
       "key": "Chat bubble transparency (0-100)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 756
+      "line": 757
     },
     {
       "key": "Chat command",
@@ -8503,42 +8503,42 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 741
+      "line": 742
     },
     {
       "key": "Chat completion background opacity",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 742
+      "line": 743
     },
     {
       "key": "Chat completion selected text color",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 744
+      "line": 745
     },
     {
       "key": "Chat completion selection background color",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 745
+      "line": 746
     },
     {
       "key": "Chat completion text color",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 743
+      "line": 744
     },
     {
       "key": "Chat emoji completion",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 504
+      "line": 505
     },
     {
       "key": "Chat export cancelled",
@@ -8566,7 +8566,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 752
+      "line": 753
     },
     {
       "key": "Chat font size",
@@ -8846,14 +8846,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2913
+      "line": 2915
     },
     {
       "key": "Chat message preview",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2998
+      "line": 3000
     },
     {
       "key": "Chat message preview",
@@ -8867,14 +8867,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2914
+      "line": 2916
     },
     {
       "key": "Chat message style",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2999
+      "line": 3001
     },
     {
       "key": "Chat message style",
@@ -8965,7 +8965,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 549
+      "line": 550
     },
     {
       "key": "Cheats are disabled on this server",
@@ -9301,7 +9301,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 674
+      "line": 675
     },
     {
       "key": "Cinematic smoothness",
@@ -9441,7 +9441,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3871
+      "line": 3898
     },
     {
       "key": "Clan",
@@ -9553,14 +9553,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2915
+      "line": 2917
     },
     {
       "key": "Classic",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3000
+      "line": 3002
     },
     {
       "key": "Classic Easy",
@@ -9686,14 +9686,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2916
+      "line": 2918
     },
     {
       "key": "Classic title glow",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3001
+      "line": 3003
     },
     {
       "key": "Classic title glow: 0 = off, 1 = subtle (6 draws), 2 = full Calamity (16 draws)",
@@ -9735,7 +9735,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4556
+      "line": 4583
     },
     {
       "key": "Clear Changes",
@@ -9791,7 +9791,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4543
+      "line": 4570
     },
     {
       "key": "Clear friend note",
@@ -9819,7 +9819,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3510
+      "line": 3537
     },
     {
       "key": "Clear recent skins",
@@ -9910,21 +9910,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3451
+      "line": 3478
     },
     {
       "key": "Click to copy this player's name to clipboard",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3451
+      "line": 3478
     },
     {
       "key": "Click to remove this clan from your friends list.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3477
+      "line": 3504
     },
     {
       "key": "Click to remove this community from favorites",
@@ -9938,21 +9938,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3477
+      "line": 3504
     },
     {
       "key": "Click to select server. Double click to join your friend.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3283
+      "line": 3285
     },
     {
       "key": "Click to select server. Double click to join your friend.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3291
+      "line": 3293
     },
     {
       "key": "Click to set color",
@@ -10407,14 +10407,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 712
+      "line": 713
     },
     {
       "key": "Color map tune zones by their tune zone number",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 524
+      "line": 525
     },
     {
       "key": "Color map tune zones by their tune zone number",
@@ -10589,7 +10589,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 543
+      "line": 544
     },
     {
       "key": "Combo",
@@ -10631,14 +10631,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2852
+      "line": 2854
     },
     {
       "key": "Command",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3114
+      "line": 3116
     },
     {
       "key": "Command",
@@ -11394,14 +11394,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4556
+      "line": 4583
     },
     {
       "key": "Confirm clear finished",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4543
+      "line": 4570
     },
     {
       "key": "Confirm delete",
@@ -11534,14 +11534,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 943
+      "line": 944
     },
     {
       "key": "Connected",
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 1691
+      "line": 1692
     },
     {
       "key": "Connected, no one is speaking",
@@ -11688,7 +11688,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2853
+      "line": 2855
     },
     {
       "key": "Console",
@@ -12199,7 +12199,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2854
+      "line": 2856
     },
     {
       "key": "Converse",
@@ -12899,7 +12899,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3937
+      "line": 3964
     },
     {
       "key": "Create new folder",
@@ -13368,7 +13368,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3115
+      "line": 3117
     },
     {
       "key": "Custom",
@@ -13445,7 +13445,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 678
+      "line": 679
     },
     {
       "key": "Custom color",
@@ -13515,7 +13515,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2855
+      "line": 2857
     },
     {
       "key": "Custom command",
@@ -13578,21 +13578,21 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 837
+      "line": 838
     },
     {
       "key": "Custom Provider endpoint",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 831
+      "line": 832
     },
     {
       "key": "Custom Provider model name",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 825
+      "line": 826
     },
     {
       "key": "Custom text color",
@@ -13620,14 +13620,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2917
+      "line": 2919
     },
     {
       "key": "Custom title",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3002
+      "line": 3004
     },
     {
       "key": "Custom title",
@@ -13648,7 +13648,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 845
+      "line": 846
     },
     {
       "key": "Custom watermark text",
@@ -13844,7 +13844,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3081
+      "line": 3083
     },
     {
       "key": "Cute:",
@@ -14124,14 +14124,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4694
+      "line": 4721
     },
     {
       "key": "ddnet-saves.txt not found",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4689
+      "line": 4716
     },
     {
       "key": "DDNet.org map stats",
@@ -14188,6 +14188,13 @@
       "source": "src/game/client/components/menus.cpp",
       "context": "",
       "line": 3721
+    },
+    {
+      "key": "DDStats shows UTC dates, updates daily and matches players by name only.",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/menus_browser.cpp",
+      "context": "",
+      "line": 3311
     },
     {
       "key": "ddstats.tw ID stats",
@@ -14285,7 +14292,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4667
+      "line": 4694
     },
     {
       "key": "Deaths",
@@ -14572,7 +14579,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 872
+      "line": 873
     },
     {
       "key": "DeepL API quota depends on your subscription. Get an API key at deepl.com.",
@@ -14607,7 +14614,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 835
+      "line": 836
     },
     {
       "key": "DeepSeek API key",
@@ -14628,14 +14635,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 829
+      "line": 830
     },
     {
       "key": "DeepSeek model name",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 823
+      "line": 824
     },
     {
       "key": "Default",
@@ -14915,7 +14922,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2856
+      "line": 2858
     },
     {
       "key": "Default zoom",
@@ -15132,7 +15139,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4015
+      "line": 4042
     },
     {
       "key": "Delete command",
@@ -15461,21 +15468,21 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 581
+      "line": 582
     },
     {
       "key": "Demo hook strength scope (0=Own 1=Others 2=Strong 3=Weak 4=All)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 582
+      "line": 583
     },
     {
       "key": "Demo key presses (0=Off 1=Others 2=All 3=Own)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 580
+      "line": 581
     },
     {
       "key": "Demo marker added",
@@ -15846,7 +15853,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4442
+      "line": 4469
     },
     {
       "key": "Direct touch input while ingame",
@@ -15916,7 +15923,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 595
+      "line": 596
     },
     {
       "key": "Disabled",
@@ -16777,7 +16784,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3303
+      "line": 3305
     },
     {
       "key": "Drag to pan, scroll to zoom",
@@ -17316,7 +17323,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2857
+      "line": 2859
     },
     {
       "key": "Dummy Control",
@@ -17351,7 +17358,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2858
+      "line": 2860
     },
     {
       "key": "Dummy copy",
@@ -17435,7 +17442,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2859
+      "line": 2861
     },
     {
       "key": "Dummy fire",
@@ -17498,7 +17505,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2860
+      "line": 2862
     },
     {
       "key": "Dummy hook",
@@ -17540,7 +17547,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2861
+      "line": 2863
     },
     {
       "key": "Dummy jump",
@@ -17596,14 +17603,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 767
+      "line": 768
     },
     {
       "key": "Dummy mini view zoom (percent)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 768
+      "line": 769
     },
     {
       "key": "Dummy name",
@@ -17652,21 +17659,21 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 725
+      "line": 726
     },
     {
       "key": "Dummy skin queue max length",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 724
+      "line": 725
     },
     {
       "key": "Dummy skin queue switch interval (ms, 0=no timed rotation, random start only)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 723
+      "line": 724
     },
     {
       "key": "Dummy window size",
@@ -17827,7 +17834,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 671
+      "line": 672
     },
     {
       "key": "Dynamic FOV smoothness",
@@ -17848,7 +17855,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 672
+      "line": 673
     },
     {
       "key": "Dynamic island",
@@ -17862,14 +17869,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 655
+      "line": 656
     },
     {
       "key": "Dynamic Island background color",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 654
+      "line": 655
     },
     {
       "key": "Dynamic island connection icon color: 1=Quality tier, 2=Follow global icon color, 3=Custom",
@@ -17897,7 +17904,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2802
+      "line": 2804
     },
     {
       "key": "Ease in out quad",
@@ -17925,7 +17932,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2803
+      "line": 2805
     },
     {
       "key": "Ease out cubic",
@@ -18149,7 +18156,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3506
+      "line": 3533
     },
     {
       "key": "Edit player and dummy identity information",
@@ -18352,7 +18359,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2804
+      "line": 2806
     },
     {
       "key": "Elastic",
@@ -18373,7 +18380,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2805
+      "line": 2807
     },
     {
       "key": "Elastic back",
@@ -18513,7 +18520,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2862
+      "line": 2864
     },
     {
       "key": "Emoticon",
@@ -18737,28 +18744,28 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 710
+      "line": 711
     },
     {
       "key": "Enable background 3D particle glow",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 701
+      "line": 702
     },
     {
       "key": "Enable background 3D particle pulse scaling",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 707
+      "line": 708
     },
     {
       "key": "Enable background 3D particle trail",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 704
+      "line": 705
     },
     {
       "key": "Enable bounce-in entrance animation when country flags finish loading",
@@ -18793,7 +18800,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 666
+      "line": 667
     },
     {
       "key": "Enable camera path",
@@ -18933,7 +18940,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 722
+      "line": 723
     },
     {
       "key": "Enable dummy window",
@@ -18975,7 +18982,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 670
+      "line": 671
     },
     {
       "key": "Enable emote eyes? 1=enabled, 0=disabled, -1=disabled.",
@@ -19010,14 +19017,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 598
+      "line": 599
     },
     {
       "key": "Enable fast input in Gores mode",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 597
+      "line": 598
     },
     {
       "key": "Enable fast map download",
@@ -19129,7 +19136,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 593
+      "line": 594
     },
     {
       "key": "Enable gun sound",
@@ -19164,7 +19171,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 648
+      "line": 649
     },
     {
       "key": "Enable hook countdown",
@@ -19262,7 +19269,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 793
+      "line": 794
     },
     {
       "key": "Enable Kugou Music lyrics",
@@ -19276,14 +19283,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 751
+      "line": 752
     },
     {
       "key": "Enable LLM thinking mode (may increase response time)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 844
+      "line": 845
     },
     {
       "key": "Enable lyrics",
@@ -19332,7 +19339,7 @@
       "category": "register_help",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 755
+      "line": 756
     },
     {
       "key": "Enable map compatibility mode using the specified bug (example: grenade-doubleexplosion@ddnet.tw)",
@@ -19360,7 +19367,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 779
+      "line": 780
     },
     {
       "key": "Enable Netease music Hook",
@@ -19374,7 +19381,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 774
+      "line": 775
     },
     {
       "key": "Enable new IME candidate bar",
@@ -19423,7 +19430,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 632
+      "line": 633
     },
     {
       "key": "Enable practice commands by default. Requires sv_test_cmds 1",
@@ -19444,14 +19451,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 685
+      "line": 686
     },
     {
       "key": "Enable QQ Music hook integration",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 796
+      "line": 797
     },
     {
       "key": "Enable QQ Music lyrics",
@@ -19514,7 +19521,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 536
+      "line": 537
     },
     {
       "key": "Enable repeat",
@@ -19619,7 +19626,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 716
+      "line": 717
     },
     {
       "key": "Enable skin queue rotation",
@@ -19661,7 +19668,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 784
+      "line": 785
     },
     {
       "key": "Enable sound",
@@ -19689,7 +19696,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 802
+      "line": 803
     },
     {
       "key": "Enable Spotify lyrics",
@@ -19703,7 +19710,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 681
+      "line": 682
     },
     {
       "key": "Enable status bar",
@@ -19731,7 +19738,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 644
+      "line": 645
     },
     {
       "key": "Enable switch countdown",
@@ -19766,7 +19773,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 771
+      "line": 772
     },
     {
       "key": "Enable team chat message sound",
@@ -19948,7 +19955,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 538
+      "line": 539
     },
     {
       "key": "Enable word filter list",
@@ -19969,7 +19976,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 608
+      "line": 609
     },
     {
       "key": "Enable Zen mode",
@@ -20991,14 +20998,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2918
+      "line": 2920
     },
     {
       "key": "Exact bound nickname",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3003
+      "line": 3005
     },
     {
       "key": "Exact bound nickname",
@@ -21607,7 +21614,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2782
+      "line": 2784
     },
     {
       "key": "Fade trail alpha",
@@ -22335,14 +22342,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4282
+      "line": 4309
     },
     {
       "key": "Favorite map",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4301
+      "line": 4328
     },
     {
       "key": "Favorite map",
@@ -22748,7 +22755,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 542
+      "line": 543
     },
     {
       "key": "Find / Next",
@@ -22853,14 +22860,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4527
+      "line": 4554
     },
     {
       "key": "Finished",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4649
+      "line": 4676
     },
     {
       "key": "Finished maps",
@@ -22881,7 +22888,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2863
+      "line": 2865
     },
     {
       "key": "Fire",
@@ -23042,7 +23049,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3082
+      "line": 3084
     },
     {
       "key": "Flip:",
@@ -23077,7 +23084,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3318
+      "line": 3326
     },
     {
       "key": "Follow",
@@ -23161,14 +23168,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "Friend auto follow",
-      "line": 3467
+      "line": 3494
     },
     {
       "key": "Follow this friend across servers",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "Friend auto follow",
-      "line": 3517
+      "line": 3544
     },
     {
       "key": "Follow UI icon color",
@@ -23938,14 +23945,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4087
+      "line": 4114
     },
     {
       "key": "Friend notification refresh interval (sec)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 531
+      "line": 532
     },
     {
       "key": "Friend notify",
@@ -23966,7 +23973,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 529
+      "line": 530
     },
     {
       "key": "Friend option color",
@@ -24001,7 +24008,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4796
+      "line": 4823
     },
     {
       "key": "Friends",
@@ -24120,14 +24127,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2919
+      "line": 2921
     },
     {
       "key": "Full",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3004
+      "line": 3006
     },
     {
       "key": "Full map listen in same room",
@@ -24960,7 +24967,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2806
+      "line": 2808
     },
     {
       "key": "Glitch",
@@ -25289,7 +25296,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 662
+      "line": 663
     },
     {
       "key": "Gores · Axiom",
@@ -25527,7 +25534,7 @@
       "category": "indirect",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 474
+      "line": 475
     },
     {
       "key": "Greeting text",
@@ -25548,7 +25555,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2864
+      "line": 2866
     },
     {
       "key": "Grenade",
@@ -25702,7 +25709,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2865
+      "line": 2867
     },
     {
       "key": "Hammer",
@@ -25765,7 +25772,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2807
+      "line": 2809
     },
     {
       "key": "Hammer skin steal",
@@ -25828,7 +25835,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4444
+      "line": 4471
     },
     {
       "key": "Has unread news",
@@ -25989,14 +25996,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 622
+      "line": 623
     },
     {
       "key": "Hide chat messages from players marked as enemies",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 539
+      "line": 540
     },
     {
       "key": "Hide death/respawn effects",
@@ -26017,14 +26024,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 612
+      "line": 613
     },
     {
       "key": "Hide direction in Zen mode",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 628
+      "line": 629
     },
     {
       "key": "Hide direction indicators",
@@ -26059,14 +26066,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 624
+      "line": 625
     },
     {
       "key": "Hide enemy chat, replace enemy names with client IDs and use default skins; keep local players visible",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 540
+      "line": 541
     },
     {
       "key": "Hide explosion effects",
@@ -26101,7 +26108,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 614
+      "line": 615
     },
     {
       "key": "Hide ghosts of frozen players",
@@ -26164,21 +26171,21 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 615
+      "line": 616
     },
     {
       "key": "Hide helper lines in Gores mode",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 599
+      "line": 600
     },
     {
       "key": "Hide helper lines in Zen mode",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 629
+      "line": 630
     },
     {
       "key": "Hide HUD",
@@ -26199,7 +26206,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 620
+      "line": 621
     },
     {
       "key": "Hide indicator for tees on your screen",
@@ -26220,7 +26227,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 544
+      "line": 545
     },
     {
       "key": "Hide input emoticon",
@@ -26269,14 +26276,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 611
+      "line": 612
     },
     {
       "key": "Hide kill and finish messages in Zen mode",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 626
+      "line": 627
     },
     {
       "key": "Hide kill/finish messages",
@@ -26311,7 +26318,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 625
+      "line": 626
     },
     {
       "key": "Hide nameplates",
@@ -26360,7 +26367,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 753
+      "line": 754
     },
     {
       "key": "Hide player messages",
@@ -26395,28 +26402,28 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 621
+      "line": 622
     },
     {
       "key": "Hide player name plates in Zen Mode",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 610
+      "line": 611
     },
     {
       "key": "Hide player names in Zen Mode",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 609
+      "line": 610
     },
     {
       "key": "Hide projectile effects in Zen Mode",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 613
+      "line": 614
     },
     {
       "key": "Hide scoreboard",
@@ -26437,7 +26444,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 627
+      "line": 628
     },
     {
       "key": "Hide sensitive info like /save password",
@@ -26451,7 +26458,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 523
+      "line": 524
     },
     {
       "key": "Hide server information on join",
@@ -26486,7 +26493,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 623
+      "line": 624
     },
     {
       "key": "Hide sponsor QR code",
@@ -26514,7 +26521,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 750
+      "line": 751
     },
     {
       "key": "Hide toast",
@@ -26542,7 +26549,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 616
+      "line": 617
     },
     {
       "key": "Hide weapon muzzle flashes",
@@ -26584,14 +26591,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2920
+      "line": 2922
     },
     {
       "key": "Higher values make the wave move faster. Zero stops the movement.",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3005
+      "line": 3007
     },
     {
       "key": "Highlight Color",
@@ -26640,14 +26647,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2921
+      "line": 2923
     },
     {
       "key": "Highlight movement in Polished mode. Zero turns it off.",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3006
+      "line": 3008
     },
     {
       "key": "Highlight ping value",
@@ -26668,7 +26675,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2842
+      "line": 2844
     },
     {
       "key": "Highlight teammates hammering in death or freeze areas",
@@ -26857,7 +26864,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2866
+      "line": 2868
     },
     {
       "key": "Hook",
@@ -26962,7 +26969,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2867
+      "line": 2869
     },
     {
       "key": "Hook Collisions",
@@ -27480,7 +27487,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 656
+      "line": 657
     },
     {
       "key": "HUD editor preview",
@@ -27725,7 +27732,7 @@
       "category": "register_help",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 743
+      "line": 744
     },
     {
       "key": "Image",
@@ -28250,7 +28257,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 660
+      "line": 661
     },
     {
       "key": "Included",
@@ -28264,7 +28271,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 811
+      "line": 812
     },
     {
       "key": "Incoming language",
@@ -28614,14 +28621,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 1066
+      "line": 1067
     },
     {
       "key": "Initializing components",
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 1018
+      "line": 1019
     },
     {
       "key": "Initializing layers",
@@ -28656,7 +28663,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 1692
+      "line": 1693
     },
     {
       "key": "Input",
@@ -28908,14 +28915,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2922
+      "line": 2924
     },
     {
       "key": "Instant compact hints",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3007
+      "line": 3009
     },
     {
       "key": "Instant zoom reverse",
@@ -29132,7 +29139,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2868
+      "line": 2870
     },
     {
       "key": "Invalid configuration package metadata.",
@@ -29314,7 +29321,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 669
+      "line": 670
     },
     {
       "key": "Invite %s to the locked team",
@@ -29692,7 +29699,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2869
+      "line": 2871
     },
     {
       "key": "Jump",
@@ -29727,28 +29734,28 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 886
+      "line": 887
     },
     {
       "key": "Jump hint defaults migration completed flag",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 884
+      "line": 885
     },
     {
       "key": "Jump hint font size",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 889
+      "line": 890
     },
     {
       "key": "Jump hint horizontal position (% of screen width)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 887
+      "line": 888
     },
     {
       "key": "Jump hint text",
@@ -29762,14 +29769,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 885
+      "line": 886
     },
     {
       "key": "Jump hint vertical position (% of screen height)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 888
+      "line": 889
     },
     {
       "key": "Jump to beginning of animation.",
@@ -29804,7 +29811,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3083
+      "line": 3085
     },
     {
       "key": "Kaomoji",
@@ -29846,7 +29853,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 738
+      "line": 739
     },
     {
       "key": "Keep vote window open after voting",
@@ -29860,7 +29867,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3116
+      "line": 3118
     },
     {
       "key": "Key binds",
@@ -30091,7 +30098,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2870
+      "line": 2872
     },
     {
       "key": "Kill",
@@ -30161,7 +30168,7 @@
       "category": "register_help",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 747
+      "line": 748
     },
     {
       "key": "Kill yourself when kill-protected during a long game (use f1, kill for regular kill)",
@@ -30210,14 +30217,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 794
+      "line": 795
     },
     {
       "key": "Kugou hook helper path (empty=beside QmClient)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 795
+      "line": 796
     },
     {
       "key": "L",
@@ -30364,7 +30371,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 463
+      "line": 464
     },
     {
       "key": "Large text announcement for friend joining",
@@ -30378,7 +30385,7 @@
       "category": "indirect",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 469
+      "line": 470
     },
     {
       "key": "Large text content",
@@ -30392,7 +30399,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 534
+      "line": 535
     },
     {
       "key": "Laser",
@@ -30413,7 +30420,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2871
+      "line": 2873
     },
     {
       "key": "Laser",
@@ -30658,7 +30665,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4668
+      "line": 4695
     },
     {
       "key": "Last page in console",
@@ -30666,6 +30673,13 @@
       "source": "src/game/client/components/console.cpp",
       "context": "",
       "line": 3018
+    },
+    {
+      "key": "Last seen (DDStats): %s",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/menus_browser.cpp",
+      "context": "",
+      "line": 3446
     },
     {
       "key": "Last successful sync: %s",
@@ -30770,7 +30784,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 495
+      "line": 496
     },
     {
       "key": "Launch emote key",
@@ -30854,7 +30868,7 @@
       "category": "indirect",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 474
+      "line": 475
     },
     {
       "key": "Leave empty to disable",
@@ -31155,7 +31169,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3084
+      "line": 3086
     },
     {
       "key": "Lenny:",
@@ -31197,14 +31211,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 865
+      "line": 866
     },
     {
       "key": "LibreTranslate endpoint",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 864
+      "line": 865
     },
     {
       "key": "license",
@@ -31239,14 +31253,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2923
+      "line": 2925
     },
     {
       "key": "Light band",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3008
+      "line": 3010
     },
     {
       "key": "Lighten",
@@ -31267,14 +31281,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2924
+      "line": 2926
     },
     {
       "key": "Limit the title to the exact nickname below.",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3009
+      "line": 3011
     },
     {
       "key": "Limit the title to the exact nickname below.",
@@ -31351,7 +31365,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2808
+      "line": 2810
     },
     {
       "key": "Linear",
@@ -31638,21 +31652,21 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 819
+      "line": 820
     },
     {
       "key": "LLM translation concurrency (0=auto)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 839
+      "line": 840
     },
     {
       "key": "LLM translation default concurrency (smart adjustment)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 840
+      "line": 841
     },
     {
       "key": "Load",
@@ -31869,14 +31883,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4469
+      "line": 4496
     },
     {
       "key": "Loading",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4684
+      "line": 4711
     },
     {
       "key": "Loading",
@@ -31939,7 +31953,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 1017
+      "line": 1018
     },
     {
       "key": "Loading Demo",
@@ -31960,7 +31974,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 953
+      "line": 954
     },
     {
       "key": "Loading demo files",
@@ -32002,7 +32016,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 950
+      "line": 951
     },
     {
       "key": "Loading maps…",
@@ -32037,7 +32051,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 8560
+      "line": 8561
     },
     {
       "key": "Loading sound files",
@@ -32107,7 +32121,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2809
+      "line": 2811
     },
     {
       "key": "Local",
@@ -32177,7 +32191,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 508
+      "line": 509
     },
     {
       "key": "Local particle effects",
@@ -32191,21 +32205,21 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 730
+      "line": 731
     },
     {
       "key": "Local saves",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4284
+      "line": 4311
     },
     {
       "key": "Local saves",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4303
+      "line": 4330
     },
     {
       "key": "Local server is restarting. Please wait…",
@@ -32345,7 +32359,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2783
+      "line": 2785
     },
     {
       "key": "Lock team",
@@ -32863,7 +32877,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4440
+      "line": 4467
     },
     {
       "key": "Map",
@@ -33017,14 +33031,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4283
+      "line": 4310
     },
     {
       "key": "Map play history",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4302
+      "line": 4329
     },
     {
       "key": "Map preview rendering unavailable",
@@ -33066,42 +33080,42 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 635
+      "line": 636
     },
     {
       "key": "Map progress bar height",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 637
+      "line": 638
     },
     {
       "key": "Map progress bar horizontal position (center, % of screen width)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 638
+      "line": 639
     },
     {
       "key": "Map progress bar style (0=bottom bar, 1=HUD overlay)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 634
+      "line": 635
     },
     {
       "key": "Map progress bar vertical position (top edge, % of screen height)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 639
+      "line": 640
     },
     {
       "key": "Map progress bar width (percentage of screen width)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 636
+      "line": 637
     },
     {
       "key": "Map Progress: %.1f%%",
@@ -33787,7 +33801,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 661
+      "line": 662
     },
     {
       "key": "Maximum reduction",
@@ -34039,14 +34053,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 749
+      "line": 750
     },
     {
       "key": "Merge consecutive identical player messages within 2 seconds",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 746
+      "line": 747
     },
     {
       "key": "Merges chat messages repeated within a short time into a single line.",
@@ -34074,7 +34088,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 530
+      "line": 531
     },
     {
       "key": "Message merging",
@@ -34284,7 +34298,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 812
+      "line": 813
     },
     {
       "key": "Minimum cursor distance",
@@ -34718,7 +34732,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2872
+      "line": 2874
     },
     {
       "key": "Move left",
@@ -34760,7 +34774,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2873
+      "line": 2875
     },
     {
       "key": "Move right",
@@ -34816,21 +34830,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3500
+      "line": 3527
     },
     {
       "key": "Move to category",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3704
+      "line": 3731
     },
     {
       "key": "Move to category",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3751
+      "line": 3778
     },
     {
       "key": "Moved ingame",
@@ -34970,7 +34984,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 618
+      "line": 619
     },
     {
       "key": "Mute death/respawn sounds",
@@ -35012,7 +35026,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 619
+      "line": 620
     },
     {
       "key": "Mute hammer sounds",
@@ -35040,7 +35054,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 617
+      "line": 618
     },
     {
       "key": "Mute jump sounds",
@@ -35180,7 +35194,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3106
+      "line": 3108
     },
     {
       "key": "Mute:",
@@ -35418,7 +35432,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3860
+      "line": 3887
     },
     {
       "key": "Name",
@@ -35467,91 +35481,91 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 587
+      "line": 588
     },
     {
       "key": "Name plate clan line Y offset",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 588
+      "line": 589
     },
     {
       "key": "Name plate coord line X offset",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 559
+      "line": 560
     },
     {
       "key": "Name plate coord line Y offset",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 560
+      "line": 561
     },
     {
       "key": "Name plate elements allow free X movement",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 555
+      "line": 556
     },
     {
       "key": "Name plate elements allow free Y movement",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 556
+      "line": 557
     },
     {
       "key": "Name plate elements freely movable within bounds",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 554
+      "line": 555
     },
     {
       "key": "Name plate key line X offset",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 557
+      "line": 558
     },
     {
       "key": "Name plate key line Y offset",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 558
+      "line": 559
     },
     {
       "key": "Name plate name line X offset",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 589
+      "line": 590
     },
     {
       "key": "Name plate name line Y offset",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 590
+      "line": 591
     },
     {
       "key": "Name plate strength line X offset",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 561
+      "line": 562
     },
     {
       "key": "Name plate strength line Y offset",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 562
+      "line": 563
     },
     {
       "key": "Name plates offset",
@@ -35663,28 +35677,28 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 576
+      "line": 577
     },
     {
       "key": "Nameplate hook strength icon scope (0=Own 1=Others 2=Strong hook 3=Weak hook 4=All players)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 563
+      "line": 564
     },
     {
       "key": "Nameplate nickname scope (0=None 1=Current character 2=Own characters 3=Other players 4=Other players and own non-current characters 5=All)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 564
+      "line": 565
     },
     {
       "key": "Nameplate nickname scope migration completed flag",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 565
+      "line": 566
     },
     {
       "key": "Nameplate position X",
@@ -35712,7 +35726,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 566
+      "line": 567
     },
     {
       "key": "Nameplate text",
@@ -35740,77 +35754,77 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 570
+      "line": 571
     },
     {
       "key": "Nameplate text border range",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 571
+      "line": 572
     },
     {
       "key": "Nameplate text effect auto LOD (0=Off 1=On: trim outer effect layers when crowded)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 575
+      "line": 576
     },
     {
       "key": "Nameplate text effects (1=Border 2=Gradient 4=Rainbow 8=Glow)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 569
+      "line": 570
     },
     {
       "key": "Nameplate text effects demo manual target client ID (-1=None)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 586
+      "line": 587
     },
     {
       "key": "Nameplate text effects demo mode (0=Off 1=Smart 2=Manual target 3=Manual scope)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 585
+      "line": 586
     },
     {
       "key": "Nameplate text effects playing scope (0=Off 1=Own 2=Others 3=Friends 4=Own and friends 5=All players)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 577
+      "line": 578
     },
     {
       "key": "Nameplate text effects spectate scope (0=Off 1=Spectated player 2=Others 3=Friends 4=Spectated player and friends 5=All players)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 578
+      "line": 579
     },
     {
       "key": "Nameplate text glow color",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 573
+      "line": 574
     },
     {
       "key": "Nameplate text glow range",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 574
+      "line": 575
     },
     {
       "key": "Nameplate text gradient color",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 572
+      "line": 573
     },
     {
       "key": "Nameplate title size",
@@ -35831,7 +35845,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 567
+      "line": 568
     },
     {
       "key": "Nameplate X alignment hint duration window (ms)",
@@ -35922,14 +35936,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 775
+      "line": 776
     },
     {
       "key": "Netease hook helper path (empty=beside QmClient)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 776
+      "line": 777
     },
     {
       "key": "Netlimit: exponential moving average alpha",
@@ -36013,7 +36027,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4028
+      "line": 4055
     },
     {
       "key": "New features",
@@ -36272,7 +36286,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2874
+      "line": 2876
     },
     {
       "key": "Next weapon",
@@ -36412,14 +36426,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3850
+      "line": 3877
     },
     {
       "key": "No",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4469
+      "line": 4496
     },
     {
       "key": "No",
@@ -36846,7 +36860,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4430
+      "line": 4457
     },
     {
       "key": "No filter",
@@ -36909,7 +36923,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4581
+      "line": 4608
     },
     {
       "key": "No map selected",
@@ -37136,6 +37150,13 @@
       "line": 1937
     },
     {
+      "key": "No record",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/menus_browser.cpp",
+      "context": "",
+      "line": 3436
+    },
+    {
       "key": "No release notes provided",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/menus_qmclient_popups.cpp",
@@ -37161,7 +37182,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2875
+      "line": 2877
     },
     {
       "key": "No results",
@@ -37175,7 +37196,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4581
+      "line": 4608
     },
     {
       "key": "No results",
@@ -37462,7 +37483,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4476
+      "line": 4503
     },
     {
       "key": "None",
@@ -37567,14 +37588,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2925
+      "line": 2927
     },
     {
       "key": "Normal",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3010
+      "line": 3012
     },
     {
       "key": "Normal",
@@ -37854,7 +37875,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4443
+      "line": 4470
     },
     {
       "key": "Note",
@@ -37875,14 +37896,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3285
+      "line": 3287
     },
     {
       "key": "Note:",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3295
+      "line": 3297
     },
     {
       "key": "Nothing hookable",
@@ -38043,7 +38064,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 453
+      "line": 454
     },
     {
       "key": "Notify when friends come online",
@@ -38253,14 +38274,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2926
+      "line": 2928
     },
     {
       "key": "Off",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3011
+      "line": 3013
     },
     {
       "key": "Off",
@@ -38708,7 +38729,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 2066
+      "line": 2067
     },
     {
       "key": "Old chat style: no tee icons, no background",
@@ -38897,7 +38918,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 737
+      "line": 738
     },
     {
       "key": "Only show messages related to me",
@@ -38953,14 +38974,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2927
+      "line": 2929
     },
     {
       "key": "Only show with this nickname",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3012
+      "line": 3014
     },
     {
       "key": "Only show with this nickname",
@@ -39401,7 +39422,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 836
+      "line": 837
     },
     {
       "key": "OpenAI API key",
@@ -39422,14 +39443,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 830
+      "line": 831
     },
     {
       "key": "OpenAI model name",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 824
+      "line": 825
     },
     {
       "key": "Opened",
@@ -39541,7 +39562,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2876
+      "line": 2878
     },
     {
       "key": "Optional authentication key for the DNSBL provider",
@@ -39674,7 +39695,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3107
+      "line": 3109
     },
     {
       "key": "Other",
@@ -39863,7 +39884,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 855
+      "line": 856
     },
     {
       "key": "Outline",
@@ -40556,14 +40577,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 605
+      "line": 606
     },
     {
       "key": "Password for Axiom main account auto-login",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 604
+      "line": 605
     },
     {
       "key": "Password incorrect",
@@ -40633,7 +40654,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2877
+      "line": 2879
     },
     {
       "key": "Pause",
@@ -40752,14 +40773,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2928
+      "line": 2930
     },
     {
       "key": "Permanent access; up to 4 online IP addresses",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3013
+      "line": 3015
     },
     {
       "key": "Permanent access; up to 4 online IP addresses",
@@ -40948,7 +40969,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2878
+      "line": 2880
     },
     {
       "key": "Pie menu",
@@ -41018,7 +41039,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3436
+      "line": 3463
     },
     {
       "key": "Ping",
@@ -41081,7 +41102,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2879
+      "line": 2881
     },
     {
       "key": "Pistol",
@@ -41207,14 +41228,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2929
+      "line": 2931
     },
     {
       "key": "Platinum highlight",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3014
+      "line": 3016
     },
     {
       "key": "Platinum highlight",
@@ -41914,14 +41935,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 697
+      "line": 698
     },
     {
       "key": "Player push strength for background 3D particles",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 698
+      "line": 699
     },
     {
       "key": "Player range",
@@ -42320,7 +42341,7 @@
       "category": "indirect",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 469
+      "line": 470
     },
     {
       "key": "Please use %s as friend name",
@@ -42404,14 +42425,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2930
+      "line": 2932
     },
     {
       "key": "Polished",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3015
+      "line": 3017
     },
     {
       "key": "Polyline",
@@ -42425,14 +42446,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2964
+      "line": 2966
     },
     {
       "key": "Pop wave",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3049
+      "line": 3051
     },
     {
       "key": "Popup animation",
@@ -42761,7 +42782,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 733
+      "line": 734
     },
     {
       "key": "Predefined",
@@ -42838,7 +42859,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 603
+      "line": 604
     },
     {
       "key": "Predict ninja path",
@@ -42999,14 +43020,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 939
+      "line": 940
     },
     {
       "key": "Preparing demo playback",
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 1691
+      "line": 1692
     },
     {
       "key": "Presentation animations",
@@ -43118,7 +43139,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2880
+      "line": 2882
     },
     {
       "key": "Prev. weapon",
@@ -43377,7 +43398,7 @@
       "category": "register_help",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 750
+      "line": 751
     },
     {
       "key": "Preview unavailable",
@@ -44147,14 +44168,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 551
+      "line": 552
     },
     {
       "key": "QmClient sidebar module order",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 550
+      "line": 551
     },
     {
       "key": "QmClient Website",
@@ -44189,14 +44210,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 797
+      "line": 798
     },
     {
       "key": "QQ Music hook helper path (empty=beside QmClient)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 798
+      "line": 799
     },
     {
       "key": "Quad pixelsize",
@@ -44339,6 +44360,13 @@
       "line": 97
     },
     {
+      "key": "Querying...",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/menus_browser.cpp",
+      "context": "",
+      "line": 3442
+    },
+    {
       "key": "Queue is empty",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
@@ -44441,7 +44469,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 3367
+      "line": 3368
     },
     {
       "key": "R",
@@ -44616,14 +44644,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2931
+      "line": 2933
     },
     {
       "key": "Rainbow",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3016
+      "line": 3018
     },
     {
       "key": "Rainbow",
@@ -44798,7 +44826,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 537
+      "line": 538
     },
     {
       "key": "Random emoticon",
@@ -45190,7 +45218,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 813
+      "line": 814
     },
     {
       "key": "Rcon Authed",
@@ -45414,7 +45442,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4528
+      "line": 4555
     },
     {
       "key": "Reconnect in %d sec",
@@ -45554,14 +45582,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2932
+      "line": 2934
     },
     {
       "key": "Redeem",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3017
+      "line": 3019
     },
     {
       "key": "Redeem",
@@ -45596,14 +45624,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2933
+      "line": 2935
     },
     {
       "key": "Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3018
+      "line": 3020
     },
     {
       "key": "Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.",
@@ -45736,14 +45764,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2934
+      "line": 2936
     },
     {
       "key": "Refresh",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3019
+      "line": 3021
     },
     {
       "key": "Refresh",
@@ -45834,7 +45862,7 @@
       "category": "indirect",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 459
+      "line": 460
     },
     {
       "key": "Refresh interval",
@@ -46240,7 +46268,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 509
+      "line": 510
     },
     {
       "key": "Remote particle effects",
@@ -46282,7 +46310,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3096
+      "line": 3098
     },
     {
       "key": "Remove [group] [clan]:",
@@ -46296,7 +46324,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3097
+      "line": 3099
     },
     {
       "key": "Remove [group] [name]:",
@@ -46499,14 +46527,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3521
+      "line": 3548
     },
     {
       "key": "Remove friend",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3850
+      "line": 3877
     },
     {
       "key": "Remove friend",
@@ -46534,7 +46562,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4673
+      "line": 4700
     },
     {
       "key": "Remove from queue",
@@ -46618,7 +46646,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3098
+      "line": 3100
     },
     {
       "key": "Remove team clan:",
@@ -46632,7 +46660,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3099
+      "line": 3101
     },
     {
       "key": "Remove team name:",
@@ -46674,7 +46702,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3100
+      "line": 3102
     },
     {
       "key": "Remove war clan:",
@@ -46702,7 +46730,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3101
+      "line": 3103
     },
     {
       "key": "Remove war name:",
@@ -46898,14 +46926,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4005
+      "line": 4032
     },
     {
       "key": "Rename",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4045
+      "line": 4072
     },
     {
       "key": "Rename",
@@ -47164,7 +47192,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2881
+      "line": 2883
     },
     {
       "key": "Repeat message",
@@ -47220,7 +47248,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 543
+      "line": 544
     },
     {
       "key": "Replace image",
@@ -47248,7 +47276,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 545
+      "line": 546
     },
     {
       "key": "Replace non-friend names with ID",
@@ -47983,7 +48011,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 641
+      "line": 642
     },
     {
       "key": "Reset stats when joining a server",
@@ -48060,7 +48088,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2829
+      "line": 2831
     },
     {
       "key": "Reset tooltip appearance",
@@ -48179,7 +48207,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 3369
+      "line": 3370
     },
     {
       "key": "Restore a recently used Tee skin",
@@ -48389,7 +48417,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 675
+      "line": 676
     },
     {
       "key": "Review and edit custom key bindings",
@@ -48970,14 +48998,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2935
+      "line": 2937
     },
     {
       "key": "Save",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3020
+      "line": 3022
     },
     {
       "key": "Save",
@@ -49033,7 +49061,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4104
+      "line": 4131
     },
     {
       "key": "Save",
@@ -49243,7 +49271,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 9316
+      "line": 9317
     },
     {
       "key": "Save file with the specified name.",
@@ -49600,14 +49628,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2936
+      "line": 2938
     },
     {
       "key": "Saved with your title and shared with other QmClient players.",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3021
+      "line": 3023
     },
     {
       "key": "Saved with your title and shared with other QmClient players.",
@@ -49845,7 +49873,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2882
+      "line": 2884
     },
     {
       "key": "Scoreboard",
@@ -50069,7 +50097,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2883
+      "line": 2885
     },
     {
       "key": "Screenshot",
@@ -50272,7 +50300,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2884
+      "line": 2886
     },
     {
       "key": "Search",
@@ -50559,14 +50587,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2937
+      "line": 2939
     },
     {
       "key": "See you at the next checkpoint.",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3022
+      "line": 3024
     },
     {
       "key": "See you at the next checkpoint.",
@@ -50979,7 +51007,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2810
+      "line": 2812
     },
     {
       "key": "Self only",
@@ -51084,7 +51112,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 843
+      "line": 844
     },
     {
       "key": "Send sampling and token limit parameters",
@@ -51364,7 +51392,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4788
+      "line": 4815
     },
     {
       "key": "Server hostname (0.7 only)",
@@ -51385,7 +51413,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4792
+      "line": 4819
     },
     {
       "key": "Server info",
@@ -51546,14 +51574,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2938
+      "line": 2940
     },
     {
       "key": "Server-assigned style",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3023
+      "line": 3025
     },
     {
       "key": "Server-dependent",
@@ -52190,14 +52218,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2939
+      "line": 2941
     },
     {
       "key": "Shimmer speed",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3024
+      "line": 3026
     },
     {
       "key": "Short pain voice",
@@ -52211,7 +52239,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 531
+      "line": 532
     },
     {
       "key": "Short server names",
@@ -52239,7 +52267,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2885
+      "line": 2887
     },
     {
       "key": "Shotgun",
@@ -52372,7 +52400,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 568
+      "line": 569
     },
     {
       "key": "Show advanced options",
@@ -52400,7 +52428,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 807
+      "line": 808
     },
     {
       "key": "Show air jump indicator",
@@ -52421,7 +52449,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2887
+      "line": 2889
     },
     {
       "key": "Show all",
@@ -52603,7 +52631,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2888
+      "line": 2890
     },
     {
       "key": "Show chat",
@@ -52652,7 +52680,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 754
+      "line": 755
     },
     {
       "key": "Show chat bubbles above players",
@@ -52673,7 +52701,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 584
+      "line": 585
     },
     {
       "key": "Show chat messages above players",
@@ -52841,21 +52869,21 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 762
+      "line": 763
     },
     {
       "key": "Show command completion in chat",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 739
+      "line": 740
     },
     {
       "key": "Show command completion in chat",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 503
+      "line": 504
     },
     {
       "key": "Show compact vote HUD",
@@ -52925,7 +52953,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 780
+      "line": 781
     },
     {
       "key": "Show daily message to client",
@@ -52995,7 +53023,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 772
+      "line": 773
     },
     {
       "key": "Show Directory",
@@ -53100,14 +53128,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 766
+      "line": 767
     },
     {
       "key": "Show dummy mini view window",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 765
+      "line": 766
     },
     {
       "key": "Show dummy position in movement info HUD",
@@ -53128,14 +53156,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2940
+      "line": 2942
     },
     {
       "key": "Show dummy title locally",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3025
+      "line": 3027
     },
     {
       "key": "Show dummy title locally",
@@ -53156,7 +53184,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 740
+      "line": 741
     },
     {
       "key": "Show enemy color in chat",
@@ -53205,7 +53233,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2889
+      "line": 2891
     },
     {
       "key": "Show entities",
@@ -53261,7 +53289,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 541
+      "line": 542
     },
     {
       "key": "Show finish messages",
@@ -53352,7 +53380,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 533
+      "line": 534
     },
     {
       "key": "Show friend option",
@@ -53374,6 +53402,20 @@
       "source": "src/game/client/QmUi/ServerBrowserFilterForm.cpp",
       "context": "",
       "line": 57
+    },
+    {
+      "key": "Show friends' last seen dates (DDStats)",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
+      "context": "",
+      "line": 453
+    },
+    {
+      "key": "Show friends' last seen dates (DDStats)",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "context": "",
+      "line": 2766
     },
     {
       "key": "Show frozen Tee HUD",
@@ -53604,7 +53646,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2886
+      "line": 2888
     },
     {
       "key": "Show HUD",
@@ -53800,7 +53842,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 583
+      "line": 584
     },
     {
       "key": "Show in-game HUD when rendering video",
@@ -53947,7 +53989,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 883
+      "line": 884
     },
     {
       "key": "Show jumps indicator",
@@ -54076,6 +54118,13 @@
       "line": 205
     },
     {
+      "key": "Show last seen dates for offline friends using DDStats (updated daily, matched by player name)",
+      "category": "indirect",
+      "source": "src/engine/shared/config_variables_qmclient.h",
+      "context": "",
+      "line": 529
+    },
+    {
       "key": "Show list of mutes (page 1 by default, 20 entries per page)",
       "category": "register_help",
       "source": "src/game/server/gamecontext.cpp",
@@ -54143,14 +54192,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2941
+      "line": 2943
     },
     {
       "key": "Show main tee title locally",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3026
+      "line": 3028
     },
     {
       "key": "Show main tee title locally",
@@ -54178,14 +54227,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 633
+      "line": 634
     },
     {
       "key": "Show map progress test point route",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 640
+      "line": 641
     },
     {
       "key": "Show mention option",
@@ -54465,7 +54514,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 488
+      "line": 489
     },
     {
       "key": "Show other players' large emoticons",
@@ -54486,7 +54535,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 491
+      "line": 492
     },
     {
       "key": "Show other players' launched emoticons",
@@ -54556,7 +54605,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2890
+      "line": 2892
     },
     {
       "key": "Show others",
@@ -54605,7 +54654,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 516
+      "line": 517
     },
     {
       "key": "Show outdated version warning",
@@ -54703,7 +54752,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 676
+      "line": 677
     },
     {
       "key": "Show performance graphs.",
@@ -54913,7 +54962,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 510
+      "line": 511
     },
     {
       "key": "Show Qm badge",
@@ -55193,14 +55242,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2942
+      "line": 2944
     },
     {
       "key": "Show sponsor chat effects locally",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3027
+      "line": 3029
     },
     {
       "key": "Show sponsor chat effects locally",
@@ -55291,7 +55340,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 773
+      "line": 774
     },
     {
       "key": "Show TClient config variables",
@@ -55333,7 +55382,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 652
+      "line": 653
     },
     {
       "key": "Show Tee Collision in Hitbox Mode",
@@ -55375,7 +55424,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 663
+      "line": 664
     },
     {
       "key": "Show teleporter tile outlines",
@@ -55403,7 +55452,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 736
+      "line": 737
     },
     {
       "key": "Show the chat scrollbar on the right",
@@ -55438,7 +55487,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 659
+      "line": 660
     },
     {
       "key": "Show the number of frozen tees",
@@ -55480,7 +55529,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 853
+      "line": 854
     },
     {
       "key": "Show the pet",
@@ -55543,14 +55592,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2943
+      "line": 2945
     },
     {
       "key": "Show titles above player names",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3028
+      "line": 3030
     },
     {
       "key": "Show titles above player names",
@@ -55564,14 +55613,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2944
+      "line": 2946
     },
     {
       "key": "Show titles on nameplates",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3029
+      "line": 3031
     },
     {
       "key": "Show titles on nameplates",
@@ -55592,7 +55641,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 524
+      "line": 525
     },
     {
       "key": "Show tune zone colors",
@@ -55704,7 +55753,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2784
+      "line": 2786
     },
     {
       "key": "Show Weapon Interactions in Hitbox Mode",
@@ -56047,7 +56096,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3085
+      "line": 3087
     },
     {
       "key": "Shrug:",
@@ -56124,28 +56173,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2945
+      "line": 2947
     },
     {
       "key": "Single color",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3030
+      "line": 3032
     },
     {
       "key": "Single color and Rainbow override the color of animated styles; the style keeps its motion",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2946
+      "line": 2948
     },
     {
       "key": "Single color and Rainbow override the color of animated styles; the style keeps its motion",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3031
+      "line": 3033
     },
     {
       "key": "Size",
@@ -56502,21 +56551,21 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 719
+      "line": 720
     },
     {
       "key": "Skin queue max length",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 718
+      "line": 719
     },
     {
       "key": "Skin queue switch interval (ms, 0=no timed rotation, random start only)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 717
+      "line": 718
     },
     {
       "key": "Skin search",
@@ -56593,7 +56642,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2811
+      "line": 2813
     },
     {
       "key": "Skin transition animation",
@@ -56607,7 +56656,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2812
+      "line": 2814
     },
     {
       "key": "Skin transition duration",
@@ -56621,7 +56670,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2813
+      "line": 2815
     },
     {
       "key": "Skin transition easing",
@@ -56635,7 +56684,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2814
+      "line": 2816
     },
     {
       "key": "Skin transition intensity",
@@ -56649,7 +56698,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2815
+      "line": 2817
     },
     {
       "key": "Skin transition type",
@@ -56747,7 +56796,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 601
+      "line": 602
     },
     {
       "key": "Skip Tutorial",
@@ -56775,7 +56824,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2816
+      "line": 2818
     },
     {
       "key": "Slide left",
@@ -56901,7 +56950,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2817
+      "line": 2819
     },
     {
       "key": "Smooth fade",
@@ -56957,7 +57006,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 673
+      "line": 674
     },
     {
       "key": "Smooth zoom animation time in editor (in ms, 0=off)",
@@ -56985,14 +57034,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2947
+      "line": 2949
     },
     {
       "key": "Snap wave to pixels",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3032
+      "line": 3034
     },
     {
       "key": "Snapshot Age",
@@ -57076,28 +57125,28 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 785
+      "line": 786
     },
     {
       "key": "SodaMusic hook helper path (empty=beside QmClient)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 786
+      "line": 787
     },
     {
       "key": "Soft glow",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2948
+      "line": 2950
     },
     {
       "key": "Soft glow",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3033
+      "line": 3035
     },
     {
       "key": "Soft glow",
@@ -57139,14 +57188,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2949
+      "line": 2951
     },
     {
       "key": "Solid",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3034
+      "line": 3036
     },
     {
       "key": "Solid",
@@ -57328,7 +57377,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 1010
+      "line": 1011
     },
     {
       "key": "Some map images could not be loaded. Check the local console for details.",
@@ -57601,7 +57650,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 848
+      "line": 849
     },
     {
       "key": "Space",
@@ -57811,7 +57860,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2891
+      "line": 2893
     },
     {
       "key": "Spectate mode",
@@ -57846,7 +57895,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2892
+      "line": 2894
     },
     {
       "key": "Spectate next",
@@ -57881,7 +57930,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2893
+      "line": 2895
     },
     {
       "key": "Spectate previous",
@@ -57972,7 +58021,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2785
+      "line": 2787
     },
     {
       "key": "Spectator opacity (percent)",
@@ -58112,7 +58161,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2818
+      "line": 2820
     },
     {
       "key": "Spin pop",
@@ -58182,14 +58231,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2950
+      "line": 2952
     },
     {
       "key": "Sponsor code",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3035
+      "line": 3037
     },
     {
       "key": "Sponsor code",
@@ -58210,7 +58259,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
       "context": "",
-      "line": 551
+      "line": 552
     },
     {
       "key": "Sponsor reminder",
@@ -58252,14 +58301,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2951
+      "line": 2953
     },
     {
       "key": "Sponsor title",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3036
+      "line": 3038
     },
     {
       "key": "Sponsor title",
@@ -58308,7 +58357,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 803
+      "line": 804
     },
     {
       "key": "Spree",
@@ -58343,14 +58392,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 684
+      "line": 685
     },
     {
       "key": "Squishy Tee deformation intensity",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 683
+      "line": 684
     },
     {
       "key": "Star",
@@ -58385,7 +58434,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 727
+      "line": 728
     },
     {
       "key": "Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.",
@@ -58469,7 +58518,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 721
+      "line": 722
     },
     {
       "key": "Start% ",
@@ -58497,7 +58546,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2894
+      "line": 2896
     },
     {
       "key": "Statboard",
@@ -58854,14 +58903,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "Friend auto follow",
-      "line": 3467
+      "line": 3494
     },
     {
       "key": "Stop following this friend",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "Friend auto follow",
-      "line": 3517
+      "line": 3544
     },
     {
       "key": "Stop key input on switch (0=off, 1=dummy, 2=player)",
@@ -58994,14 +59043,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2961
+      "line": 2963
     },
     {
       "key": "Strength of the vertical or pop wave. Zero keeps the title still.",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3046
+      "line": 3048
     },
     {
       "key": "Stress system (debug builds only).",
@@ -59169,14 +59218,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2952
+      "line": 2954
     },
     {
       "key": "Subtle",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3037
+      "line": 3039
     },
     {
       "key": "Success",
@@ -59365,7 +59414,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 645
+      "line": 646
     },
     {
       "key": "Switch curve type (N = step, L = linear, S = slow, F = fast, M = smooth, B = bezier).",
@@ -59456,7 +59505,7 @@
       "category": "register_help",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 746
+      "line": 747
     },
     {
       "key": "Switch tile overlay alpha (0-100)",
@@ -60009,7 +60058,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 808
+      "line": 809
     },
     {
       "key": "Target language ratio",
@@ -60261,7 +60310,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2895
+      "line": 2897
     },
     {
       "key": "Team chat",
@@ -60443,7 +60492,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 9264
+      "line": 9265
     },
     {
       "key": "Team save in progress. You'll be able to load with '/load %s' if save is successful or with '/load %s' if it fails",
@@ -60464,7 +60513,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 9270
+      "line": 9271
     },
     {
       "key": "Team successfully saved by %s. The database connection failed, using generated save code instead to avoid collisions. Use '/load %s' on %s to continue",
@@ -60485,7 +60534,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 9307
+      "line": 9308
     },
     {
       "key": "Team successfully saved by %s. The database connection failed, using generated save code instead to avoid collisions. Use '/load %s' to continue",
@@ -60506,7 +60555,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 9300
+      "line": 9301
     },
     {
       "key": "Team tee glow",
@@ -61255,7 +61304,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 600
+      "line": 601
     },
     {
       "key": "Temporarily set a config value while pressed",
@@ -61325,28 +61374,28 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 858
+      "line": 859
     },
     {
       "key": "Tencent Cloud Translation region",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 861
+      "line": 862
     },
     {
       "key": "Tencent Cloud Translation SecretId",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 859
+      "line": 860
     },
     {
       "key": "Tencent Cloud Translation SecretKey",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 860
+      "line": 861
     },
     {
       "key": "Test map locally",
@@ -61507,14 +61556,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2953
+      "line": 2955
     },
     {
       "key": "Text effect",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3038
+      "line": 3040
     },
     {
       "key": "Text input focus ring color",
@@ -61619,7 +61668,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2896
+      "line": 2898
     },
     {
       "key": "The downloaded file is not a valid demo",
@@ -62081,7 +62130,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 842
+      "line": 843
     },
     {
       "key": "Thinking parameters",
@@ -62487,7 +62536,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4666
+      "line": 4693
     },
     {
       "key": "Time",
@@ -62809,14 +62858,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2954
+      "line": 2956
     },
     {
       "key": "Title color",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3039
+      "line": 3041
     },
     {
       "key": "Title color",
@@ -62858,14 +62907,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2962
+      "line": 2964
     },
     {
       "key": "Title motion",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3047
+      "line": 3049
     },
     {
       "key": "Title motion: 0 = vertical wave, 1 = pop wave",
@@ -62879,14 +62928,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2955
+      "line": 2957
     },
     {
       "key": "Title opacity",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3040
+      "line": 3042
     },
     {
       "key": "Title opacity",
@@ -62907,14 +62956,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2956
+      "line": 2958
     },
     {
       "key": "Title preview",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3041
+      "line": 3043
     },
     {
       "key": "Title preview",
@@ -62963,14 +63012,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2957
+      "line": 2959
     },
     {
       "key": "Title style",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3042
+      "line": 3044
     },
     {
       "key": "Title style",
@@ -63096,7 +63145,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2897
+      "line": 2899
     },
     {
       "key": "Toggle dummy",
@@ -63124,7 +63173,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2898
+      "line": 2900
     },
     {
       "key": "Toggle dyncam",
@@ -63166,7 +63215,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2899
+      "line": 2901
     },
     {
       "key": "Toggle ghost",
@@ -63600,7 +63649,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2830
+      "line": 2832
     },
     {
       "key": "Tooltip background color",
@@ -63621,7 +63670,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2831
+      "line": 2833
     },
     {
       "key": "Tooltip bounce animation",
@@ -63642,7 +63691,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2832
+      "line": 2834
     },
     {
       "key": "Tooltip font size",
@@ -63656,7 +63705,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2833
+      "line": 2835
     },
     {
       "key": "Tooltip preview",
@@ -63677,7 +63726,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2834
+      "line": 2836
     },
     {
       "key": "Tooltip text color",
@@ -63908,7 +63957,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3108
+      "line": 3110
     },
     {
       "key": "Translate ID:",
@@ -64006,7 +64055,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3109
+      "line": 3111
     },
     {
       "key": "Translate:",
@@ -64020,7 +64069,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 810
+      "line": 811
     },
     {
       "key": "Translated message could not be queued; original was not sent",
@@ -64062,14 +64111,14 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 877
+      "line": 878
     },
     {
       "key": "Translation button cancel color",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 876
+      "line": 877
     },
     {
       "key": "Translation canceled because the sender changed",
@@ -64083,7 +64132,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 875
+      "line": 876
     },
     {
       "key": "Translation diagnostics",
@@ -64111,21 +64160,21 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 878
+      "line": 879
     },
     {
       "key": "Translation menu normal color",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 880
+      "line": 881
     },
     {
       "key": "Translation menu selected color",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 879
+      "line": 880
     },
     {
       "key": "Translation model was not found. Check the model name.",
@@ -64139,7 +64188,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 806
+      "line": 807
     },
     {
       "key": "Translation service",
@@ -64419,7 +64468,7 @@
       "category": "register_help",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 754
+      "line": 755
     },
     {
       "key": "Tune in zone a variable to value",
@@ -64447,7 +64496,7 @@
       "category": "register_help",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 753
+      "line": 754
     },
     {
       "key": "Tune variable to value or show current value",
@@ -64482,14 +64531,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2958
+      "line": 2960
     },
     {
       "key": "Turning this off only changes your display.",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3043
+      "line": 3045
     },
     {
       "key": "Turning this off only changes your display.",
@@ -64947,6 +64996,13 @@
       "line": 3671
     },
     {
+      "key": "Unavailable",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/menus_browser.cpp",
+      "context": "",
+      "line": 3444
+    },
+    {
       "key": "Unavailable for this player",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/camera.cpp",
@@ -65056,14 +65112,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4526
+      "line": 4553
     },
     {
       "key": "Unfinished",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4649
+      "line": 4676
     },
     {
       "key": "Unfinished map",
@@ -65112,14 +65168,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4307
+      "line": 4334
     },
     {
       "key": "Unflip:",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3086
+      "line": 3088
     },
     {
       "key": "Unflip:",
@@ -65329,28 +65385,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4378
+      "line": 4405
     },
     {
       "key": "Unknown",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4385
+      "line": 4412
     },
     {
       "key": "Unknown",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4393
+      "line": 4420
     },
     {
       "key": "Unknown",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4620
+      "line": 4647
     },
     {
       "key": "Unknown",
@@ -65560,7 +65616,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3110
+      "line": 3112
     },
     {
       "key": "Unmute:",
@@ -65581,7 +65637,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3436
+      "line": 3463
     },
     {
       "key": "Unpredictable ghost opacity (0-100)",
@@ -65686,14 +65742,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2959
+      "line": 2961
     },
     {
       "key": "Up to 6 Chinese or 12 ASCII characters",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3044
+      "line": 3046
     },
     {
       "key": "Up to 6 Chinese or 12 ASCII characters",
@@ -66351,7 +66407,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 651
+      "line": 652
     },
     {
       "key": "Use pre-input to predict other players for more accurate input prediction",
@@ -66442,14 +66498,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "Title color mode",
-      "line": 2960
+      "line": 2962
     },
     {
       "key": "Use style colors",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "Title color mode",
-      "line": 3045
+      "line": 3047
     },
     {
       "key": "Use style colors",
@@ -66799,14 +66855,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2963
+      "line": 2965
     },
     {
       "key": "Vertical wave",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3048
+      "line": 3050
     },
     {
       "key": "Video Background",
@@ -67233,7 +67289,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2900
+      "line": 2902
     },
     {
       "key": "Voice chat",
@@ -67450,7 +67506,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2901
+      "line": 2903
     },
     {
       "key": "Vote no",
@@ -67513,7 +67569,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2902
+      "line": 2904
     },
     {
       "key": "Vote yes",
@@ -67772,7 +67828,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3102
+      "line": 3104
     },
     {
       "key": "Warlist",
@@ -67814,7 +67870,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 2066
+      "line": 2067
     },
     {
       "key": "Water hammer highlight",
@@ -67835,42 +67891,42 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2965
+      "line": 2967
     },
     {
       "key": "Wave amount",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3050
-    },
-    {
-      "key": "Wave spacing",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "context": "",
-      "line": 2966
-    },
-    {
-      "key": "Wave spacing",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "context": "",
-      "line": 3051
-    },
-    {
-      "key": "Wave speed",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "context": "",
-      "line": 2967
-    },
-    {
-      "key": "Wave speed",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "context": "",
       "line": 3052
+    },
+    {
+      "key": "Wave spacing",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "context": "",
+      "line": 2968
+    },
+    {
+      "key": "Wave spacing",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "context": "",
+      "line": 3053
+    },
+    {
+      "key": "Wave speed",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "context": "",
+      "line": 2969
+    },
+    {
+      "key": "Wave speed",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "context": "",
+      "line": 3054
     },
     {
       "key": "Weak hook",
@@ -68577,7 +68633,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/gameclient.cpp",
       "context": "",
-      "line": 1019
+      "line": 1020
     },
     {
       "key": "Width",
@@ -68822,7 +68878,7 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 544
+      "line": 545
     },
     {
       "key": "Word list entries cannot contain control characters.",
@@ -69081,14 +69137,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 3850
+      "line": 3877
     },
     {
       "key": "Yes",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4469
+      "line": 4496
     },
     {
       "key": "Yes",
@@ -70362,7 +70418,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus_browser.cpp",
       "context": "",
-      "line": 4306
+      "line": 4333
     },
     {
       "key": "Your friend %s is online and currently on map %s!",
@@ -70586,14 +70642,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2968
+      "line": 2970
     },
     {
       "key": "Zero uses the style default. Higher values make color bands narrower.",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 3053
+      "line": 3055
     },
     {
       "key": "Zhipu AI",
@@ -70642,21 +70698,21 @@
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 834
+      "line": 835
     },
     {
       "key": "ZhipuAI endpoint (leave empty for default)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 828
+      "line": 829
     },
     {
       "key": "ZhipuAI model name",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
-      "line": 822
+      "line": 823
     },
     {
       "key": "Zone",
@@ -70705,7 +70761,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2903
+      "line": 2905
     },
     {
       "key": "Zoom in",
@@ -70754,7 +70810,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
-      "line": 2904
+      "line": 2906
     },
     {
       "key": "Zoom out",

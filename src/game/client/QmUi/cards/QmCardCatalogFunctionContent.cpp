@@ -450,6 +450,7 @@ void CMenus::RenderQmFunctionFriendNotifyContent(CUIRect &Content, float LineHei
 	static int s_QmFriendOnlineRefreshSecondsInputId;
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
 		{
+			{&g_Config.m_QmFriendLastSeen, "Show friends' last seen dates (DDStats)", Localize("Show friends' last seen dates (DDStats)")},
 			{&g_Config.m_QmFriendOnlineNotify, "Notify when friends come online", Localize("Notify when friends come online")},
 			{&g_Config.m_QmFriendOnlineAutoRefresh, "Auto refresh server list", Localize("Auto refresh server list")},
 		},

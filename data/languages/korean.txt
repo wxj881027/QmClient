@@ -3194,6 +3194,9 @@ DDraceNetwork is a cooperative online game where the goal is for you and your gr
 DDRaceNetwork · DDNet
 == DDRaceNetwork · DDNet
 
+DDStats shows UTC dates, updates daily and matches players by name only.
+== DDStats의 날짜는 UTC 기준으로 매일 갱신되며 플레이어 이름만으로 일치 여부를 확인합니다.
+
 ddstats.tw ID stats
 == ddstats.tw ID 통계
 
@@ -6734,6 +6737,9 @@ Last entered
 Last page in console
 == 콘솔의 마지막 페이지
 
+Last seen (DDStats): %s
+== 최근 접속(DDStats): %s
+
 Last successful sync: %s
 == 마지막 동기화 성공: %s
 
@@ -8282,6 +8288,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 No recently used skins
 == 최근 사용한 스킨 없음
 
+No record
+== 기록 없음
+
 No release notes provided
 == 이 버전의 업데이트 내용이 없습니다
 
@@ -9775,6 +9784,9 @@ Querying points for %s...
 
 Querying points...
 == 포인트 조회 중...
+
+Querying...
+== 조회 중…
 
 Queue is empty
 == 대기열이 비어 있습니다
@@ -11798,6 +11810,9 @@ Show friend tag (♥) on nametag
 Show friends only
 == 친구만 표시
 
+Show friends' last seen dates (DDStats)
+== 친구의 최근 접속 날짜 표시(DDStats)
+
 Show frozen Tee HUD
 == 얼어붙은 Tee HUD 표시
 
@@ -11992,6 +12007,9 @@ Show kill messages
 
 Show labels on status bar items
 == 상태 표시줄 항목에 레이블 표시
+
+Show last seen dates for offline friends using DDStats (updated daily, matched by player name)
+== DDStats로 오프라인 친구의 최근 접속 날짜 표시(매일 갱신, 플레이어 이름으로 일치 여부 확인)
 
 Show list of mutes (page 1 by default, 20 entries per page)
 == 음소거 목록 표시 (기본값 1페이지, 페이지당 20개 항목)

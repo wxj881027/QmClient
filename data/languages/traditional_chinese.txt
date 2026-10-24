@@ -3194,6 +3194,9 @@ DDraceNetwork is a cooperative online game where the goal is for you and your gr
 DDRaceNetwork · DDNet
 == DDRaceNetwork · DDNet
 
+DDStats shows UTC dates, updates daily and matches players by name only.
+== DDStats 的日期使用 UTC，每天更新，且僅按玩家名稱比對。
+
 ddstats.tw ID stats
 == ddstats.tw ID 統計
 
@@ -6734,6 +6737,9 @@ Last entered
 Last page in console
 == 控制台最後一頁
 
+Last seen (DDStats): %s
+== 最近上線（DDStats）：%s
+
 Last successful sync: %s
 == 上次成功同步：%s
 
@@ -8282,6 +8288,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 No recently used skins
 == 暫無最近使用的皮膚
 
+No record
+== 暫無記錄
+
 No release notes provided
 == 此版本未提供更新說明
 
@@ -9775,6 +9784,9 @@ Querying points for %s...
 
 Querying points...
 == 正在查詢積分...
+
+Querying...
+== 查詢中…
 
 Queue is empty
 == 隊列為空
@@ -11798,6 +11810,9 @@ Show friend tag (♥) on nametag
 Show friends only
 == 僅好友
 
+Show friends' last seen dates (DDStats)
+== 顯示好友最近上線日期（DDStats）
+
 Show frozen Tee HUD
 == 顯示凍結 Tee HUD
 
@@ -11992,6 +12007,9 @@ Show kill messages
 
 Show labels on status bar items
 == 在狀態欄上顯示條目標籤
+
+Show last seen dates for offline friends using DDStats (updated daily, matched by player name)
+== 使用 DDStats 顯示離線好友最近上線日期（每天更新，僅按玩家名稱比對）
 
 Show list of mutes (page 1 by default, 20 entries per page)
 == 顯示靜音列表（默認第 1 頁，每頁 20 條）

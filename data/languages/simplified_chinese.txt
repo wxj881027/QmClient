@@ -3194,6 +3194,9 @@ DDraceNetwork is a cooperative online game where the goal is for you and your gr
 DDRaceNetwork · DDNet
 == DDRaceNetwork · DDNet
 
+DDStats shows UTC dates, updates daily and matches players by name only.
+== DDStats 的日期使用 UTC，每天更新，且仅按玩家名字匹配。
+
 ddstats.tw ID stats
 == ddstats.tw ID 统计
 
@@ -6737,6 +6740,9 @@ Last entered
 Last page in console
 == 控制台最后一页
 
+Last seen (DDStats): %s
+== 最近在线（DDStats）：%s
+
 Last successful sync: %s
 == 上次成功同步：%s
 
@@ -8285,6 +8291,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 No recently used skins
 == 暂无最近使用的皮肤
 
+No record
+== 暂无记录
+
 No release notes provided
 == 此版本未提供更新说明
 
@@ -9778,6 +9787,9 @@ Querying points for %s...
 
 Querying points...
 == 正在查询积分……
+
+Querying...
+== 查询中…
 
 Queue is empty
 == 队列为空
@@ -11801,6 +11813,9 @@ Show friend tag (♥) on nametag
 Show friends only
 == 仅好友
 
+Show friends' last seen dates (DDStats)
+== 显示好友最近在线日期（DDStats）
+
 Show frozen Tee HUD
 == 显示冻结 Tee HUD
 
@@ -11995,6 +12010,9 @@ Show kill messages
 
 Show labels on status bar items
 == 在状态栏上显示条目标签
+
+Show last seen dates for offline friends using DDStats (updated daily, matched by player name)
+== 使用 DDStats 显示离线好友最近在线日期（每天更新，仅按玩家名字匹配）
 
 Show list of mutes (page 1 by default, 20 entries per page)
 == 显示静音列表（默认第 1 页，每页 20 条）
