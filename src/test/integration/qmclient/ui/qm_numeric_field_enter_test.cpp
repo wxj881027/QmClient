@@ -45,6 +45,7 @@ namespace
 		void DrawCircle(float, float, float, int) override {}
 		void DrawRoundedRectAntialias(float, float, float, float, float, int, const ColorRGBA &) override {}
 		bool HasRoundedRectSdf() override { return true; }
+		bool HasRoundedRectSdfTexture() override { return false; }
 		void RenderRoundedRectSdf(const SRoundedRectSdfParams &) override {}
 		void ClipEnable(int, int, int, int) override {}
 		void ClipDisable() override {}

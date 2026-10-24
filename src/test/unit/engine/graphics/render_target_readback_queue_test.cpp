@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdlib>
+#include <thread>
 
 namespace
 {
@@ -121,4 +122,44 @@ TEST(RenderTargetReadbackQueue, OutOfOrderCompletionOnlyPublishesFinishedRequest
 	EXPECT_EQ(Queue.Poll(-1, First.m_Generation), EState::INVALID);
 	EXPECT_EQ(Queue.Poll(999, First.m_Generation), EState::INVALID);
 	EXPECT_EQ(Queue.Poll(First.m_Index, 0), EState::INVALID);
+}
+
+TEST(RenderTargetReadbackQueue, BlockingResolveWaitsForLateCompletionSignal)
+{
+	CRenderTargetReadbackQueue Queue;
+	const auto Request = Queue.Allocate();
+	// 信号可能在结算之后才点亮（渲染线程落后）：阻塞结算必须等到它而不是返回 PENDING。
+	std::thread Signaler([&Request]() {
+		Complete(Request, 21);
+	});
+	CImageInfo Image;
+	ASSERT_TRUE(Queue.ResolveBlocking(Request.m_Index, Request.m_Generation, Image));
+	EXPECT_EQ(Image.m_pData[0], 21);
+	EXPECT_EQ(Queue.Poll(Request.m_Index, Request.m_Generation), EState::INVALID);
+	Image.Free();
+	Signaler.join();
+}
+
+TEST(RenderTargetReadbackQueue, BlockingResolveConsumesPresignaledRequest)
+{
+	CRenderTargetReadbackQueue Queue;
+	const auto Request = Queue.Allocate();
+	Complete(Request, 5);
+	CImageInfo Image;
+	ASSERT_TRUE(Queue.ResolveBlocking(Request.m_Index, Request.m_Generation, Image));
+	EXPECT_EQ(Image.m_pData[0], 5);
+	Image.Free();
+}
+
+TEST(RenderTargetReadbackQueue, BlockingResolveReportsFailureAndKeepsCallerImage)
+{
+	CRenderTargetReadbackQueue Queue;
+	const auto Failed = Queue.Allocate();
+	Failed.m_pCompletion->Signal(); // 点亮但没有像素 = 读回失败
+	CImageInfo Image;
+	Image.m_Width = 9;
+	EXPECT_FALSE(Queue.ResolveBlocking(Failed.m_Index, Failed.m_Generation, Image));
+	EXPECT_EQ(Image.m_Width, 9u);
+	EXPECT_EQ(Queue.Poll(Failed.m_Index, Failed.m_Generation), EState::INVALID);
+	EXPECT_EQ(Queue.Allocate().m_Index, Failed.m_Index); // 槽位已回收复用
 }

@@ -1,4 +1,5 @@
 # 请抬头享受阳光｜日子很好 我很我---------致咩子
+
 [[message]]
 key = "%d/%d KiB (%.1f KiB/s)"
 [message.translations]
@@ -2942,3 +2943,35 @@ brazilian_portuguese = "A margem de borda legada da Ilha Dinâmica é ignorada"
 portuguese = "A margem de borda legada da Ilha Dinâmica é ignorada"
 turkish = "Eski Dinamik Ada kenar boşluğu yok sayıldı"
 polish = "Zignorowano starszy margines krawędzi Dynamic Island"
+
+[[message]]
+key = "Disable client-initiated self-kill (K key / kill command)"
+[message.translations]
+simplified_chinese = "禁用客户端发起的自杀（K 键 / kill 命令）"
+traditional_chinese = "停用用戶端發起的自殺（K 鍵 / kill 指令）"
+japanese = "クライアント発の自殺を無効化（Kキー / killコマンド）"
+korean = "클라이언트 발 자살 비활성화 (K키 / kill 명령)"
+russian = "Отключить самоубийство со стороны клиента (клавиша K / команда kill)"
+german = "Clientseitige Selbsttötung deaktivieren (Taste K / Befehl kill)"
+spanish = "Desactiva el suicidio iniciado por el cliente (tecla K / comando kill)"
+french = "désactive le suicide initié par le client (touche K / commande kill)"
+brazilian_portuguese = "Desativa a morte própria iniciada pelo cliente (tecla K / comando kill)"
+portuguese = "Desativa a morte própria iniciada pelo cliente (tecla K / comando kill)"
+turkish = "İstemci kaynaklı intiharı devre dışı bırak (K tuşu / kill komutu)"
+polish = "Wyłącz samobójstwo inicjowane przez klienta (klawisz K / polecenie kill)"
+
+[[message]]
+key = "Enable client-initiated self-kill (K key / kill command)"
+[message.translations]
+simplified_chinese = "启用客户端发起的自杀（K 键 / kill 命令）"
+traditional_chinese = "啟用用戶端發起的自殺（K 鍵 / kill 指令）"
+japanese = "クライアント発の自殺を有効化（Kキー / killコマンド）"
+korean = "클라이언트 발 자살 활성화 (K키 / kill 명령)"
+russian = "Включить самоубийство со стороны клиента (клавиша K / команда kill)"
+german = "Clientseitige Selbsttötung aktivieren (Taste K / Befehl kill)"
+spanish = "Activa el suicidio iniciado por el cliente (tecla K / comando kill)"
+french = "active le suicide initié par le client (touche K / commande kill)"
+brazilian_portuguese = "Ativa a morte própria iniciada pelo cliente (tecla K / comando kill)"
+portuguese = "Ativa a morte própria iniciada pelo cliente (tecla K / comando kill)"
+turkish = "İstemci kaynaklı intiharı etkinleştir (K tuşu / kill komutu)"
+polish = "Włącz samobójstwo inicjowane przez klienta (klawisz K / polecenie kill)"

@@ -1,4 +1,4 @@
-# 配置项 UI 入口排查
+﻿# 配置项 UI 入口排查
 
 状态：2026-10-02 静态排查记录，包含本次头衔卡片拆分后的结果。
 
@@ -78,10 +78,9 @@
 | Ping 缓存有效期 | `qm_ping_cache_max_age_hours` | `serverbrowser_ping_cache.cpp` 使用 |
 | 资源预览内存预算 | `qm_assets_preview_budget_mb_override`、`qm_assets_preview_budget_percent` | `menus_settings_assets.cpp` 只读取预算，没有控件 |
 | 设置预热 | `qm_settings_prewarm` | 菜单、Tee 卡和启动逻辑只读取，没有开关入口 |
-| Vulkan 增强管线 | `qm_enhanced_rendering`、`qm_enhanced_sdf`、`qm_enhanced_blur`、`qm_enhanced_msdf` | Vulkan 后端专用；不同于已有 UI 的 `qm_graphics_backend` 和 `qm_vulkan_api_version` |
+| Vulkan SDF / 增强管线 | `qm_enhanced_procedural_ring` | `qm_enhanced_rendering`、`qm_enhanced_sdf` 已移除；圆角与 Media Island SDF 常驻，旧配置名在加载时清洗 |
 | 语音协议与设备后端 | `qm_voice_protocol_version`、`qm_voice_audio_backend` | 语音握手版本和 SDL 驱动选择 |
 | 实时服务连接 | `qm_websocket_url`、`qm_websocket_protocol`、`qm_websocket_heartbeat`、`qm_websocket_backoff_base_ms`、`qm_websocket_backoff_max_ms` | 连接、心跳和重连参数 |
-| 举报服务配置 | `qm_report_endpoint`、`qm_report_app_id`、`qm_report_secret` | 举报 UI 读取这些服务参数，不提供编辑；此处只记录配置名 |
 | 地图上传地址 | `qm_map_upload_endpoint` | `QmUi/cards/QmMapUpload.cpp` 仅显示目标服务器，没有地址输入框；旧注释所说“界面上可填”与实现不符 |
 | 网易云辅助程序 | `qm_netease_hook_timeout_ms`、`qm_netease_hook_helper_path` | 心跳超时和辅助程序路径 |
 | 汽水音乐辅助程序 | `qm_soda_hook_timeout_ms`、`qm_soda_hook_helper_path` | 同上 |

@@ -55,9 +55,11 @@ class CQmScreenshotImageJob : public IJob
 	void Run() override;
 
 public:
-	static bool LoadImageFromDisk(IStorage *pStorage, const std::string &Path, int StorageType, int MaxEdge, CImageInfo &Image);
+	// 超采样静帧（4K×4 ≈ 530 MB RGBA）比缩略图预算大得多：调用方可以显式给更大的解码预算，
+	// 不给就沿用列表页的 128 MiB（那里有 4 个并发解码任务，不能抬）。
+	static bool LoadImageFromDisk(IStorage *pStorage, const std::string &Path, int StorageType, int MaxEdge, CImageInfo &Image, size_t MaxDecodedBytes = QM_SCREENSHOT_IMAGE_MAX_DECODED_BYTES);
 	// 查看器加载完整 RGBA 图片，失败时不保留旧像素。
-	static bool LoadRgbaImageFromDisk(IStorage *pStorage, const std::string &Path, int StorageType, CImageInfo &Image);
+	static bool LoadRgbaImageFromDisk(IStorage *pStorage, const std::string &Path, int StorageType, CImageInfo &Image, size_t MaxDecodedBytes = QM_SCREENSHOT_IMAGE_MAX_DECODED_BYTES);
 
 	CQmScreenshotImageJob(IStorage *pStorage, std::string Path, int StorageType, int MaxEdge);
 	~CQmScreenshotImageJob() override;

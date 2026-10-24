@@ -109,6 +109,43 @@ MACRO_CONFIG_INT(QmMapBrowserStarMask, qm_map_browser_star_mask, 0, 0, 62, CFGFL
 MACRO_CONFIG_STR(QmDemoDirectory, qm_demo_directory, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Demo directory")
 MACRO_CONFIG_STR(QmVideoDirectory, qm_video_directory, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Video directory")
 MACRO_CONFIG_STR(QmScreenshotDirectory, qm_screenshot_directory, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Screenshot directory")
+// Demo 导出转换管线：固定转换线程数 + 有界帧队列（反压不丢帧），替代按 CPU 核数分配线程与全尺寸缓冲。
+MACRO_CONFIG_INT(QmVideoConvertThreads, qm_video_convert_threads, 3, 1, 8, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Number of video pixel-format conversion threads for demo export (2-4 recommended)")
+MACRO_CONFIG_INT(QmVideoQueueFrames, qm_video_queue_frames, 8, 2, 32, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Bounded capture frame queue depth for demo export (higher values use more memory)")
+// 分段渲染（M3）：0 = 整段导出；>0 时按该秒数切片，每段独立封装并记录进度，中断后可跳过已完成片段续渲。
+MACRO_CONFIG_INT(QmVideoSegmentSeconds, qm_video_segment_seconds, 300, 0, 3600, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Demo export segment length in seconds (0 = single file, 300 = 5 minutes)")
+MACRO_CONFIG_INT(QmVideoSegmentWarmup, qm_video_segment_warmup, 100, 0, 500, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)")
+// 编码器选择（M4）：空 = 默认软件编码器（libx264）；否则为 FFmpeg 编码器名（如 h264_nvenc），必须经运行时探测可用。
+MACRO_CONFIG_STR(QmVideoEncoder, qm_video_encoder, 64, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)")
+// 统一质量值（M4）：0-51（CRF/CQ/QP 同刻度，越大质量越低）；-1 = 沿用 cl_video_crf。按所选编码器家族映射到原生参数。
+MACRO_CONFIG_INT(QmVideoQuality, qm_video_quality, -1, -1, 51, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter")
+// 导出预设（M6）：0=自定义，1=日常分享(libx264/mp4)，2=高效分享(hevc/mp4，优先硬件)，
+// 3=剪辑(全帧内 H.264/mp4)，4=交换格式(ProRes/mov)，5=最高画质(全帧内 H.264 4:4:4/mp4)，
+// 6=最快速度(硬件优先 H.264/mp4)。
+// 剪辑预设用全帧内 H.264：实测同画质下体积约为 ProRes 422 HQ 的 1/17，随机定位等价（两者都全内帧）。
+// 最高画质在剪辑之上把质量压到 14（肉眼无损档）；最快速度用 h264 家族别名（无硬件时回落软件）+ 更高 CQ。
+// DNxHR 与 FFV1 已移除（用户明确不需要归档格式）。项目尚未发布，不做旧索引迁移。
+MACRO_CONFIG_INT(QmVideoPreset, qm_video_preset, 0, 0, 6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)")
+// 色度/位深偏好（M6.5）：0=自动（按编码器家族），1=4:2:0，2=4:2:2，3=4:4:4。
+// 渲染读回是 8bit RGBA，提升位深不产生新信息；4:4:4 提高的是色度采样密度（细线、彩色小字、描边）。
+MACRO_CONFIG_INT(QmVideoPixelFormat, qm_video_pixfmt, 0, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)")
+// ProRes profile：0=Proxy 1=LT 2=422 3=HQ 4=4444 5=4444XQ；-1=按像素格式自动（444 用 4444，其余 HQ）。
+MACRO_CONFIG_INT(QmVideoProresProfile, qm_video_prores_profile, -1, -1, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ")
+// 输出容器（M6）：自定义预设使用，mp4/mov/mkv；后缀与 libavformat 容器按文件名匹配。
+MACRO_CONFIG_STR(QmVideoContainer, qm_video_container, 8, "mp4", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Custom export container: mp4, mov or mkv")
+// 关键帧间隔（M4）：编码器 GOP；0 = 用编码器默认，1 = 全帧内（每帧都是关键帧，剪辑任意切点）。
+// 分段渲染每段独立编码器实例，段首帧恒为 IDR，不受此值影响。
+// NVENC 拒绝 gop_size=1，会被降到 2（隔帧关键帧）；需要真正全帧内时请选软件编码器。
+MACRO_CONFIG_INT(QmVideoGop, qm_video_gop, 60, 0, 600, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Keyframe interval (GOP) in frames for demo export (0 = encoder default, 1 = all-intra, 60 = recommended)")
+// 输出分辨率（M7 超采样）：0 = 跟随窗口渲染分辨率。小于渲染分辨率时以渲染分辨率绘制再经
+// swscale LANCZOS 下采样（例如 2560x1440 窗口导出 1280x720 = 2x 超采样，改善 2D 边缘锯齿）；
+// 大于窗口时按输出尺寸离屏渲染（真分辨率导出，输出宽高比即为画面宽高比）。
+MACRO_CONFIG_INT(QmVideoWidth, qm_video_width, 0, 0, 7680, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)")
+MACRO_CONFIG_INT(QmVideoHeight, qm_video_height, 0, 0, 4320, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)")
+// 导出抗锯齿（与全局 gfx_fsaa_samples 分家）：-1 = 跟随全局（读窗口帧缓冲，窗口开 AA 导出就带 AA）；
+// 0 = 关（即使窗口开了 FSAA，导出也强制单采样）；2/4/8 = 显式档位，整段录制画进离屏 MSAA 目标，
+// 后端不支持或像素预算超限时自动降档。输出大于窗口时必然离屏渲染，跟随全局则按全局档位采样。
+MACRO_CONFIG_INT(QmVideoFsaa, qm_video_fsaa, -1, -1, 8, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering")
 
 MACRO_CONFIG_INT(QmScreenshotWatermark, qm_screenshot_watermark, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically add a watermark to screenshots")
 MACRO_CONFIG_INT(QmScreenshotWatermarkTimestamp, qm_screenshot_watermark_timestamp, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Screenshot watermark: include timestamp")
@@ -158,6 +195,7 @@ MACRO_CONFIG_INT(QmImeSelectedGradientReverse, qm_ime_selected_gradient_reverse,
 MACRO_CONFIG_INT(QmAutoSaveHistoryCount, qm_auto_save_history_count, 100, 0, 1000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-save history count (0=disable)")
 MACRO_CONFIG_INT(QmShortServerNames, qm_short_server_names, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show short server names in browser (applies to China community servers)")
 MACRO_CONFIG_INT(QmPingCacheMaxAgeHours, qm_ping_cache_max_age_hours, 72, 0, 8760, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Discard cached server pings older than this many hours (0 = never expire)")
+MACRO_CONFIG_INT(QmSavesAutoRemoveUsed, qm_saves_auto_remove_used, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)")
 MACRO_CONFIG_INT(QmSkinSortMode, qm_skin_sort_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Skin list sort mode (0=Name, 1=Release date)")
 MACRO_CONFIG_INT(QmSkinShowMetadata, qm_skin_show_metadata, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show skin release date and author")
 MACRO_CONFIG_INT(QmSkinOutlineLocal, qm_skin_outline_local, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show generated skin outline for local tees")
@@ -167,15 +205,8 @@ MACRO_CONFIG_INT(QmSkinOutlineWidth, qm_skin_outline_width, 2, 1, 6, CFGFLAG_CLI
 MACRO_CONFIG_INT(QmSkinOutlineAlpha, qm_skin_outline_alpha, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Generated skin outline opacity")
 MACRO_CONFIG_INT(QmWaterHammerHighlight, qm_water_hammer_highlight, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Highlight teammates holding hammer in death or freeze areas")
 
-// QmVulkan 扩展总开关：0=关（纯净 Vulkan + 几何/CPU 兜底），1=自动（失败/设备丢失回退），2=强制开
-MACRO_CONFIG_INT(QmEnhancedRendering, qm_enhanced_rendering, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on")
-MACRO_CONFIG_INT(QmEnhancedSdf, qm_enhanced_sdf, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active")
-MACRO_CONFIG_INT(QmEnhancedProceduralRing, qm_enhanced_procedural_ring, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use procedural ring pipeline when enhanced rendering is active")
-
-// Report / 举报
-MACRO_CONFIG_STR(QmReportEndpoint, qm_report_endpoint, 128, "http://124.222.146.111:8790", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Report service URL")
-MACRO_CONFIG_STR(QmReportAppId, qm_report_app_id, 128, "desktop", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Report service App ID")
-MACRO_CONFIG_STR(QmReportSecret, qm_report_secret, 128, "SsF-7wLdC9dO-RCb5sGieLII9gVW0v5lPpiK6zitUNo", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Report service signing key")
+// QmVulkan 扩展：SDF 常驻，不再提供关闭 SDF/增强管线的配置。
+MACRO_CONFIG_INT(QmEnhancedProceduralRing, qm_enhanced_procedural_ring, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use procedural ring pipeline")
 
 // UI / 界面
 MACRO_CONFIG_INT(QmGaussianBlur, qm_gaussian_blur, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable backdrop blur for translucent interface and selected HUD backgrounds")
@@ -295,7 +326,6 @@ MACRO_CONFIG_INT(QmEntityOverlayTeleCheckpointAlpha, qm_entity_overlay_tele_chec
 MACRO_CONFIG_INT(QmEntityOverlaySwitchAlpha, qm_entity_overlay_switch_alpha, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Switch tile overlay alpha (0-100)")
 
 // Q1menG Client Recognition / Q1menG客户端识别
-MACRO_CONFIG_INT(QmClientMarkTrail, qm_client_mark_trail, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Remote particles: sync and render other players via central server (requires both local+remote enabled)")
 MACRO_CONFIG_INT(QmClientShowBadge, qm_client_show_badge, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show Qm badge: identify via central server and mark QmClient users on nameplate/scoreboard")
 
 // Fast Input / 快速输入
@@ -365,7 +395,6 @@ MACRO_CONFIG_INT(QmShowOtherSuperEmotes, qm_show_other_super_emotes, 1, 0, 1, CF
 MACRO_CONFIG_INT(QmShowOtherLaunchEmotes, qm_show_other_launch_emotes, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show other players' launched emoticons")
 MACRO_CONFIG_INT(QmTitleBadgeStyle, qm_title_badge_style, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Sponsor title badge: 0 = moon, 1 = sun")
 MACRO_CONFIG_COL(QmTitleBadgeColor, qm_title_badge_color, 0xC3638E, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Overall sponsor title badge color")
-MACRO_CONFIG_INT(QmTitleAdvanced, qm_title_advanced, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show advanced title settings (collapsing keeps configured effects)")
 MACRO_CONFIG_INT(QmTitleInstantHints, qm_title_instant_hints, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show title setting hints immediately in small text")
 MACRO_CONFIG_INT(QmTitleColorMode, qm_title_color_mode, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow")
 MACRO_CONFIG_COL(QmTitleColor, qm_title_color, 0xFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Bracketed title single color")
@@ -377,7 +406,6 @@ MACRO_CONFIG_INT(QmSponsorChatEffects, qm_sponsor_chat_effects, 1, 0, 1, CFGFLAG
 MACRO_CONFIG_INT(QmTitleMotionMode, qm_title_motion_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Title motion: 0 = vertical wave, 1 = pop wave")
 MACRO_CONFIG_INT(QmTitleBobAmplitude, qm_title_bob_amplitude, 1, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Title wave strength (0-3, 0 = off)")
 MACRO_CONFIG_INT(QmTitlePhase, qm_title_phase, 20, 0, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)")
-MACRO_CONFIG_INT(QmTitleBloom, qm_title_bloom, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Classic title glow: 0 = off, 1 = subtle (6 draws), 2 = full Calamity (16 draws)")
 MACRO_CONFIG_INT(QmTitleEffect, qm_title_effect, 0, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Title spatial effect: 0 = polished, 1 = solid, 2 = classic Calamity, 3 = off")
 MACRO_CONFIG_INT(QmTitleShimmerSpeed, qm_title_shimmer_speed, 60, 0, 400, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Title light sweep speed in 1/100 row per second (0 = off)")
 MACRO_CONFIG_INT(QmTitleBobWavelength, qm_title_bob_wavelength, 320, 16, 1024, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Title bob wavelength in pixels")
@@ -578,6 +606,8 @@ MACRO_CONFIG_INT(QmDemoShowStrongWeak, qm_demo_show_strong_weak, 0, 0, 2, CFGFLA
 MACRO_CONFIG_INT(QmDemoStrongWeakScope, qm_demo_strong_weak_scope, 4, 0, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Demo hook strength scope (0=Own 1=Others 2=Strong 3=Weak 4=All)")
 MACRO_CONFIG_INT(QmDemoShowHud, qm_demo_show_hud, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show in-game HUD in demo preview and video")
 MACRO_CONFIG_INT(QmDemoShowChat, qm_demo_show_chat, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show chat in demo preview and video")
+// 仅渲染 demo：导出时隐藏 HUD、聊天、旁观信息与键鼠/钩索提示，但仍允许切视角和调整速度。
+MACRO_CONFIG_INT(QmVideoRenderDemoOnly, qm_video_render_demo_only, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Render demo content only during video export (hide HUD, chat and spectator overlays)")
 MACRO_CONFIG_INT(QmNameplateTextDemoMode, qm_nameplate_text_demo_mode, 1, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Nameplate text effects demo mode (0=Off 1=Smart 2=Manual target 3=Manual scope)")
 MACRO_CONFIG_INT(QmNameplateTextDemoTarget, qm_nameplate_text_demo_target, -1, -1, 63, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Nameplate text effects demo manual target client ID (-1=None)")
 MACRO_CONFIG_INT(QmNameplateClanOffsetX, qm_nameplate_clan_offset_x, 0, -300, 300, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Name plate clan line X offset")
@@ -641,6 +671,24 @@ MACRO_CONFIG_INT(QmSwitchCountdownMode, qm_switch_countdown_mode, 1, 0, 2, CFGFL
 
 // Hook Countdown - 钩链中点的普通钩倒计时与无限钩标记
 MACRO_CONFIG_INT(QmHookCountdown, qm_hook_countdown, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable hook countdown")
+MACRO_CONFIG_INT(QmHookCountdownSize, qm_hook_countdown_size, 100, 50, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hook countdown size percentage")
+MACRO_CONFIG_INT(QmHookCountdownEndlessStyle, qm_hook_countdown_endless_style, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Endless hook indicator style (0=infinity symbol, 1=rainbow ring)")
+MACRO_CONFIG_COL(QmHookCountdownColor, qm_hook_countdown_color, 0x0092FF99, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hook countdown ring color")
+MACRO_CONFIG_COL(QmHookCountdownWarningColor, qm_hook_countdown_warning_color, 0x001BFF93, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hook countdown warning color")
+MACRO_CONFIG_COL(QmHookCountdownUrgentColor, qm_hook_countdown_urgent_color, 0x0000FF9F, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hook countdown urgent color")
+
+// Hook Collision Pressed Colors - 钩索辅助线按下后颜色（开关 + 四类自定义；开=四色始终生效，无回退）
+// 默认按下色 = 对应原色配置默认值做 HSL 提亮（L + 0.25，H/S 不变，alpha 置 FF）得到的高亮变体。
+// 数值推导：
+//   qm_hook_coll_pressed_no_coll   : cl_hook_coll_color_no_coll      0x0000FF7F (H=00 S=FF L=7F 红) → L=BF → 0xFF00FFBF
+//   qm_hook_coll_pressed_hookable  : cl_hook_coll_color_hookable_coll 0x0061AFB5 (H=61 S=AF L=B5 绿) → L=F5 → 0xFF61AFF5
+//   qm_hook_coll_pressed_tee       : cl_hook_coll_color_tee_coll     0x002AFF7F (H=2A S=FF L=7F 黄) → L=BF → 0xFF2AFFBF
+//   qm_hook_coll_pressed_tip       : cl_hook_coll_tip_color          0x002BFF80 (H=2B S=FF L=80)    → L=C0 → 0xFF2BFFC0
+MACRO_CONFIG_INT(QmHookCollPressedCustom, qm_hook_coll_pressed_custom, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use custom colors for the pressed hook collision line (0 = always invert)")
+MACRO_CONFIG_COL(QmHookCollPressedNoColl, qm_hook_coll_pressed_no_coll, 0xFF00FFBF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Pressed hook collision line color when not aiming at anything hookable")
+MACRO_CONFIG_COL(QmHookCollPressedHookable, qm_hook_coll_pressed_hookable, 0xFF61AFF5, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Pressed hook collision line color when hitting something hookable")
+MACRO_CONFIG_COL(QmHookCollPressedTee, qm_hook_coll_pressed_tee, 0xFF2AFFBF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Pressed hook collision line color when hitting a tee")
+MACRO_CONFIG_COL(QmHookCollPressedTip, qm_hook_coll_pressed_tip, 0xFF2BFFC0, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Pressed hook line tip color")
 
 // HUD Dynamic Island - 灵动岛/HUD 编辑器
 MACRO_CONFIG_INT(QmHudIslandUseOriginalStyle, qm_hud_island_use_original_style, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use original style for Dynamic Island")
@@ -721,9 +769,6 @@ MACRO_CONFIG_INT(QmDummySkinQueueIndex, qm_dummy_skin_queue_index, 0, 0, 1024, C
 MACRO_CONFIG_INT(QmDummySkinQueueRotateMap, qm_dummy_skin_queue_rotate_map, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-fetch all players' skins for dummy rotation queue")
 MACRO_CONFIG_INT(QmDummySkinQueueRandomJoin, qm_dummy_skin_queue_random_join, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Start dummy skin queue from a random position when entering a map")
 
-// Foot Particles - 粒子效果
-MACRO_CONFIG_INT(QmFootParticles, qm_foot_particles, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Local particles: show particles behind own Tee (e.g. freeze snow)")
-
 // Settings performance - 性能
 MACRO_CONFIG_INT(QmSettingsPrewarm, qm_settings_prewarm, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pre-warm settings page on startup and menu idle")
 
@@ -743,6 +788,7 @@ MACRO_CONFIG_INT(QmMessageMerge, qm_message_merge, 1, 0, 1, CFGFLAG_CLIENT | CFG
 // 该行为始终生效，不受 qm_message_merge 影响；设为 0 关闭合并。
 MACRO_CONFIG_INT(QmEchoMergeWindowMs, qm_echo_merge_window_ms, 2000, 0, 60000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)")
 MACRO_CONFIG_INT(QmChatHideSystemPrefix, qm_chat_hide_system_prefix, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hide the *** prefix before server chat messages")
+MACRO_CONFIG_INT(QmChatLineSpacing, qm_chat_line_spacing, 0, 0, 32, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Extra vertical spacing between chat lines in pixels (0 = default)")
 MACRO_CONFIG_INT(QmChatAnimSlideOut, qm_chat_anim_slide_out, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable left swipe offset on chat fade")
 MACRO_CONFIG_INT(QmChatAnimFadeDurationMs, qm_chat_anim_fade_duration_ms, 300, 0, 2000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat fade smooth time (milliseconds)")
 MACRO_CONFIG_INT(QmHideChatBubbles, qm_hide_chat_bubbles, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hide own chat bubble (only when authenticated in remote console)")
@@ -885,3 +931,22 @@ MACRO_CONFIG_INT(QmJumpHintSize, qm_jump_hint_size, 10, 0, 50, CFGFLAG_CLIENT | 
 
 // Friends - 好友
 MACRO_CONFIG_INT(QmFriendAutoFollowDelay, qm_friend_auto_follow_delay, 3, 0, 30, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-follow friend server switch delay (seconds)")
+
+// 合影渲染界面的选项记住上次选择：这三个值原本只存在内存里，重启就回到默认，
+// 玩家每次都要重选。0=png 1=webp / 1-4 倍 / 实体层开关。
+MACRO_CONFIG_INT(QmPoseOutput, qm_pose_output, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pose render output format (0 = png, 1 = webp)")
+MACRO_CONFIG_INT(QmPoseCaptureScale, qm_pose_capture_scale, 1, 1, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pose render supersampling scale (1-4)")
+MACRO_CONFIG_INT(QmPoseEntityLayer, qm_pose_entity_layer, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pose render fills the background with the entity layer")
+MACRO_CONFIG_INT(QmPoseSharpen, qm_pose_sharpen, 0, 0, 60, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pose render unsharp mask strength (0 = off)")
+
+// 合影超采样的像素预算（百万像素）。0 = 不限制。
+// 默认 40 MP：必须容得下 4K 窗口的 2 倍（3840x2160x2 = 33.2 MP）——
+// 早期写死 33 MP（3300 万，比 3318 万略小）会把 4K 用户的所有倍数都压成 1 倍，
+// 表现为「选 1 倍还是 4 倍都一样模糊」。
+// 4 倍 4K 是 133 MP（颜色+深度+读回各 530 MB，PNG 编码几十秒，实测会触发
+// 「客户端卡死」看门狗），需要显式调高，不给默认。
+MACRO_CONFIG_INT(QmPoseCaptureMaxMegapixels, qm_pose_capture_max_megapixels, 40, 0, 300, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pose capture pixel budget in megapixels (0 = unlimited)")
+
+// Self-kill protection / 自杀保护 - 仅拦截客户端主动自杀（K 键 / kill 命令），服务端命令不受影响。
+// 开/关通过可绑定命令 qm_self_kill_off / qm_self_kill_on 切换。
+MACRO_CONFIG_INT(QmSelfKillEnabled, qm_self_kill_enabled, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Allow the client to send kill requests (0 = ignore client-initiated kills)")

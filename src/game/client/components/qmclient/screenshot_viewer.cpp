@@ -8,6 +8,8 @@
 #include <engine/client.h>
 #include <engine/storage.h>
 
+#include <game/client/QmUi/QmImageView.h>
+
 #define SDL_MAIN_HANDLED
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -69,6 +71,35 @@ bool OpenQmScreenshotViewer(IClient *pClient, const char *pPath, const char *pEr
 #endif
 }
 
+namespace
+{
+	void MaskRoundedCorners(SDL_Renderer *pRenderer, const SDL_FRect &Rect, float Radius, int OutputWidth, int OutputHeight)
+	{
+		if(pRenderer == nullptr || Radius <= 0.5f || Rect.w <= 0.0f || Rect.h <= 0.0f)
+			return;
+		// 半径不能超过窄边的一半，否则四个角会互相吃掉整块矩形。
+		const float R = std::min(Radius, std::min(Rect.w, Rect.h) * 0.5f);
+		const int Rows = (int)std::ceil(R);
+		SDL_SetRenderDrawColor(pRenderer, 24, 24, 24, 255);
+		for(int Edge = 0; Edge < 2; ++Edge)
+		{
+			for(int Row = 0; Row < Rows; ++Row)
+			{
+				const float Inset = qm_screenshot_viewer::RoundedCornerInset(R, (float)Row);
+				if(Inset <= 0.0f)
+					continue;
+				const float Y = Edge == 0 ? Rect.y + (float)Row : Rect.y + Rect.h - 1.0f - (float)Row;
+				if(Y < 0.0f || Y >= (float)OutputHeight)
+					continue;
+				const SDL_FRect Left{Rect.x, Y, Inset, 1.0f};
+				const SDL_FRect Right{Rect.x + Rect.w - Inset, Y, Inset, 1.0f};
+				SDL_RenderFillRect(pRenderer, &Left);
+				SDL_RenderFillRect(pRenderer, &Right);
+			}
+		}
+	}
+} // namespace
+
 int RunQmScreenshotViewer(const char *pPath, const char *pErrorTitle, const char *pErrorMessage)
 {
 	SDL_SetMainReady();
@@ -93,6 +124,7 @@ int RunQmScreenshotViewer(const char *pPath, const char *pErrorTitle, const char
 		~SImageLifetime() { m_Image.Free(); }
 	} ImageLifetime;
 	CImageInfo &Image = ImageLifetime.m_Image;
+
 	const auto Fail = [&]() {
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, pErrorTitle, pErrorMessage, nullptr);
 		return 1;
@@ -101,7 +133,10 @@ int RunQmScreenshotViewer(const char *pPath, const char *pErrorTitle, const char
 	try
 	{
 		auto pStorage = CreateLocalStorage();
-		if(!CQmScreenshotImageJob::LoadRgbaImageFromDisk(pStorage.get(), pPath, IStorage::TYPE_ABSOLUTE, Image))
+		// 超采样静帧可以到 4 倍（约 530 MB RGBA，文件也可能超过 64 MiB）：
+		// 看图窗口要用更大的预算，否则「查看截图」只会得到「无法打开截图文件」。
+		constexpr size_t VIEWER_MAX_DECODED_BYTES = 768 * 1024 * 1024;
+		if(!CQmScreenshotImageJob::LoadRgbaImageFromDisk(pStorage.get(), pPath, IStorage::TYPE_ABSOLUTE, Image, VIEWER_MAX_DECODED_BYTES))
 			return Fail();
 	}
 	catch(const std::exception &)
@@ -132,33 +167,70 @@ int RunQmScreenshotViewer(const char *pPath, const char *pErrorTitle, const char
 	SDL_SetTextureBlendMode(pTexture.get(), SDL_BLENDMODE_BLEND);
 	SDL_SetWindowMinimumSize(pWindow.get(), 320, 240);
 
-	CQmScreenshotViewerViewport Viewport;
-	Viewport.SetImageSize((int)Image.m_Width, (int)Image.m_Height);
+	const int ImageWidth = (int)Image.m_Width;
+	const int ImageHeight = (int)Image.m_Height;
+	CQmImageView Viewport;
+	Viewport.SetImageSize(ImageWidth, ImageHeight);
 	Image.Free();
 	bool Dragging = false;
 	bool Running = true;
 	bool Dirty = true;
+	// 默认平滑缩放；按住 Ctrl 切到最近邻，逐像素检查截图内容。
+	bool PixelMode = false;
+	bool LastPixelMode = false;
 	while(Running)
 	{
+		const bool CurrentPixelMode = (SDL_GetModState() & SDL_KMOD_CTRL) != 0;
+		if(CurrentPixelMode != LastPixelMode)
+		{
+			LastPixelMode = CurrentPixelMode;
+			Dirty = true;
+		}
+		PixelMode = CurrentPixelMode;
+		Viewport.SetPixelMode(CurrentPixelMode);
 		int WindowWidth, WindowHeight;
 		SDL_GetWindowSize(pWindow.get(), &WindowWidth, &WindowHeight);
 		int OutputWidth, OutputHeight;
 		if(!SDL_GetCurrentRenderOutputSize(pRenderer.get(), &OutputWidth, &OutputHeight))
 			return Fail();
-		Viewport.Resize(OutputWidth, OutputHeight);
+		Viewport.SetViewportSize(OutputWidth, OutputHeight);
 		const float MouseScaleX = WindowWidth > 0 ? (float)OutputWidth / WindowWidth : 1.0f;
 		const float MouseScaleY = WindowHeight > 0 ? (float)OutputHeight / WindowHeight : 1.0f;
 		if(Dirty && OutputWidth > 0 && OutputHeight > 0)
 		{
 			SDL_SetRenderDrawColor(pRenderer.get(), 24, 24, 24, 255);
 			SDL_RenderClear(pRenderer.get());
+			// 采样策略由共享视口决定：1:1 附近用最近邻，大幅缩小时平滑；Ctrl 强制最近邻。
+			const bool UseNearest = Viewport.Sampling() == CQmImageView::ESampling::PIXEL;
+			SDL_SetTextureScaleMode(pTexture.get(), UseNearest ? SDL_SCALEMODE_NEAREST : SDL_SCALEMODE_LINEAR);
 			const auto Rect = Viewport.ImageRect();
-			const SDL_FRect Destination{Rect.m_X, Rect.m_Y, std::max(1.0f, Rect.m_Width), std::max(1.0f, Rect.m_Height)};
-			if(!SDL_RenderTexture(pRenderer.get(), pTexture.get(), nullptr, &Destination))
-				return Fail();
+			const float Scale = Viewport.Scale();
+			// 只换算窗口里真正看得见的那一块：放大 6 倍时整幅目标矩形有两万多像素宽，
+			// 软件渲染器会老老实实算完整块，于是每滚一格要卡好几秒。
+			const float VisibleLeft = std::max(Rect.m_X, 0.0f);
+			const float VisibleTop = std::max(Rect.m_Y, 0.0f);
+			const float VisibleRight = std::min(Rect.m_X + Rect.m_Width, (float)OutputWidth);
+			const float VisibleBottom = std::min(Rect.m_Y + Rect.m_Height, (float)OutputHeight);
+			if(VisibleRight > VisibleLeft && VisibleBottom > VisibleTop && Scale > 0.0f)
+			{
+				int SrcX = (int)std::floor((VisibleLeft - Rect.m_X) / Scale);
+				int SrcY = (int)std::floor((VisibleTop - Rect.m_Y) / Scale);
+				int SrcW = (int)std::ceil((VisibleRight - VisibleLeft) / Scale) + 1;
+				int SrcH = (int)std::ceil((VisibleBottom - VisibleTop) / Scale) + 1;
+				SrcX = std::clamp(SrcX, 0, ImageWidth - 1);
+				SrcY = std::clamp(SrcY, 0, ImageHeight - 1);
+				SrcW = std::clamp(SrcW, 1, ImageWidth - SrcX);
+				SrcH = std::clamp(SrcH, 1, ImageHeight - SrcY);
+				const SDL_FRect Source{(float)SrcX, (float)SrcY, (float)SrcW, (float)SrcH};
+				const SDL_FRect Destination{VisibleLeft, VisibleTop, VisibleRight - VisibleLeft, VisibleBottom - VisibleTop};
+				if(!SDL_RenderTexture(pRenderer.get(), pTexture.get(), &Source, &Destination))
+					return Fail();
+			}
+			// 图片按原样贴出，圆角由外层容器裁剪：只在角上补背景色，不动像素。
+			MaskRoundedCorners(pRenderer.get(), SDL_FRect{Rect.m_X, Rect.m_Y, Rect.m_Width, Rect.m_Height}, 14.0f * (float)OutputWidth / 1600.0f, OutputWidth, OutputHeight);
 			SDL_RenderPresent(pRenderer.get());
 			char aTitle[IO_MAX_PATH_LENGTH + 64];
-			str_format(aTitle, sizeof(aTitle), "%s | %.0f%% | QmClient", fs_filename(pPath), Viewport.Scale() * 100.0f);
+			str_format(aTitle, sizeof(aTitle), "%s | %.0f%%%s | QmClient", fs_filename(pPath), Viewport.Scale() * 100.0f, PixelMode ? " | pixel (Ctrl)" : "");
 			SDL_SetWindowTitle(pWindow.get(), aTitle);
 			Dirty = false;
 		}

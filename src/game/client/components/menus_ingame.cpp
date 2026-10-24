@@ -56,103 +56,19 @@ using namespace std::chrono_literals;
 
 namespace
 {
-	constexpr const char *REPORT_SCAN_PATH = "/v1/scan";
-	constexpr const char *REPORT_CONTENT_TYPE = "application/json; charset=utf-8";
+	// 游戏内菜单的确认窗：触发点只弹一次，结果在 RenderGame() / RenderRankDemo() 的帧首轮询。
+	CUi::SConfirmPopupContext s_DisconnectConfirm;
+	bool s_DisconnectPending = false;
+	CUi::SConfirmPopupContext s_DisconnectDummyConfirm;
+	bool s_DisconnectDummyPending = false;
+	CUi::SConfirmPopupContext s_TurnOffEditorConfirm;
+	bool s_TurnOffEditorPending = false;
+	CUi::SConfirmPopupContext s_RankDemoPlayConfirm;
+	bool s_RankDemoPlayPending = false;
 
 	void LogIngamePerfStage(IClient *pClient, const char *pStage, const double DurationMs, const bool Force = false, const char *pExtra = nullptr)
 	{
 		QmPerfLogStage("perf/menu", pStage, DurationMs, Force, pClient, nullptr, nullptr, pExtra);
-	}
-
-	void HmacSha256Hex(const char *pSecret, const char *pMessage, char *pBuffer, int BufferSize)
-	{
-		const unsigned char *pSecretBytes = reinterpret_cast<const unsigned char *>(pSecret);
-		size_t SecretLength = str_length(pSecret);
-		unsigned char aKeyBlock[64] = {0};
-
-		if(SecretLength > sizeof(aKeyBlock))
-		{
-			const SHA256_DIGEST SecretDigest = sha256(pSecretBytes, SecretLength);
-			mem_copy(aKeyBlock, SecretDigest.data, sizeof(SecretDigest.data));
-		}
-		else
-		{
-			mem_copy(aKeyBlock, pSecretBytes, SecretLength);
-		}
-
-		unsigned char aOuterPad[64];
-		unsigned char aInnerPad[64];
-		for(size_t KeyIndex = 0; KeyIndex < sizeof(aKeyBlock); ++KeyIndex)
-		{
-			aOuterPad[KeyIndex] = aKeyBlock[KeyIndex] ^ 0x5c;
-			aInnerPad[KeyIndex] = aKeyBlock[KeyIndex] ^ 0x36;
-		}
-
-		SHA256_CTX InnerContext;
-		sha256_init(&InnerContext);
-		sha256_update(&InnerContext, aInnerPad, sizeof(aInnerPad));
-		sha256_update(&InnerContext, pMessage, str_length(pMessage));
-		const SHA256_DIGEST InnerDigest = sha256_finish(&InnerContext);
-
-		SHA256_CTX OuterContext;
-		sha256_init(&OuterContext);
-		sha256_update(&OuterContext, aOuterPad, sizeof(aOuterPad));
-		sha256_update(&OuterContext, InnerDigest.data, sizeof(InnerDigest.data));
-		const SHA256_DIGEST Digest = sha256_finish(&OuterContext);
-		sha256_str(Digest, pBuffer, BufferSize);
-	}
-
-	void BuildReportUrl(const char *pPath, char *pBuffer, int BufferSize)
-	{
-		str_copy(pBuffer, g_Config.m_QmReportEndpoint, BufferSize);
-		while(pBuffer[0] != '\0' && pBuffer[str_length(pBuffer) - 1] == '/')
-			pBuffer[str_length(pBuffer) - 1] = '\0';
-		str_append(pBuffer, pPath, BufferSize);
-	}
-
-	bool AddReportHeaders(IHttpRequest *pRequest, const char *pPath, const char *pBody)
-	{
-		if(g_Config.m_QmReportAppId[0] == '\0' || g_Config.m_QmReportSecret[0] == '\0')
-			return false;
-
-		char aTimestamp[32];
-		str_format(aTimestamp, sizeof(aTimestamp), "%" PRId64, time_timestamp());
-
-		char aNonce[33];
-		secure_random_password(aNonce, sizeof(aNonce), 32);
-
-		const SHA256_DIGEST BodyDigest = sha256(pBody, str_length(pBody));
-		char aBodySha256[SHA256_MAXSTRSIZE];
-		sha256_str(BodyDigest, aBodySha256, sizeof(aBodySha256));
-
-		char aMessage[1024];
-		str_format(aMessage, sizeof(aMessage), "POST\n%s\n%s\n%s\n%s", pPath, aTimestamp, aNonce, aBodySha256);
-
-		char aSignature[SHA256_MAXSTRSIZE];
-		HmacSha256Hex(g_Config.m_QmReportSecret, aMessage, aSignature, sizeof(aSignature));
-
-		pRequest->HeaderString("Content-Type", REPORT_CONTENT_TYPE);
-		pRequest->HeaderString("X-Adrastia-App-Id", g_Config.m_QmReportAppId);
-		pRequest->HeaderString("X-Adrastia-Timestamp", aTimestamp);
-		pRequest->HeaderString("X-Adrastia-Nonce", aNonce);
-		pRequest->HeaderString("X-Adrastia-Signature", aSignature);
-		return true;
-	}
-
-	std::shared_ptr<IHttpRequest> CreateReportRequest(const char *pPath, const char *pBody)
-	{
-		char aUrl[256];
-		BuildReportUrl(pPath, aUrl, sizeof(aUrl));
-
-		std::shared_ptr<IHttpRequest> pRequest = HttpGet(aUrl);
-		pRequest->AllowInsecureProtocol();
-		pRequest->LogProgress(HTTPLOG::FAILURE);
-		pRequest->FailOnErrorStatus(false);
-		pRequest->Timeout(CTimeout{10000, 30000, 100, 10});
-		if(!AddReportHeaders(pRequest.get(), pPath, pBody))
-			return nullptr;
-		pRequest->Post(reinterpret_cast<const unsigned char *>(pBody), str_length(pBody));
-		return pRequest;
 	}
 
 	struct SUnfinishedMapsQuery
@@ -308,96 +224,41 @@ namespace
 
 } // namespace
 
-void CMenus::ResetReportScan()
-{
-	if(m_pReportScanRequest)
-		m_pReportScanRequest->Abort();
-	m_pReportScanRequest.reset();
-	m_ReportScanState = EReportScanState::IDLE;
-	m_aReportScanAddress[0] = '\0';
-}
-
-void CMenus::StartReportScan()
-{
-	if(m_ReportScanState != EReportScanState::IDLE)
-	{
-		GameClient()->Echo(Localize("Report request is already in progress"));
-		return;
-	}
-	if(Client()->State() != IClient::STATE_ONLINE)
-	{
-		GameClient()->Echo(Localize("Connect to a server first"));
-		return;
-	}
-	if(GameClient()->m_QmAxiomAutoLogin.IsAxiomCommunity())
-	{
-		GameClient()->Echo(Localize("Reports are not available on Axiom servers"));
-		return;
-	}
-	if(g_Config.m_QmReportAppId[0] == '\0' || g_Config.m_QmReportSecret[0] == '\0')
-	{
-		GameClient()->Echo(Localize("Configure qm_report_app_id and qm_report_secret first"));
-		return;
-	}
-
-	const NETADDR *pServerAddr = Client()->ServerAddress();
-	if(pServerAddr)
-		net_addr_str(pServerAddr, m_aReportScanAddress, sizeof(m_aReportScanAddress), true);
-	if(m_aReportScanAddress[0] == '\0')
-	{
-		GameClient()->Echo(Localize("Could not get current server address"));
-		return;
-	}
-
-	char aEscapedAddress[NETADDR_MAXSTRSIZE * 2];
-	EscapeJson(aEscapedAddress, sizeof(aEscapedAddress), m_aReportScanAddress);
-
-	char aBody[256];
-	str_format(aBody, sizeof(aBody), "{\"address\":\"%s\"}", aEscapedAddress);
-
-	m_pReportScanRequest = CreateReportRequest(REPORT_SCAN_PATH, aBody);
-	if(!m_pReportScanRequest)
-	{
-		ResetReportScan();
-		GameClient()->Echo(Localize("Could not create report scan request"));
-		return;
-	}
-
-	m_ReportScanState = EReportScanState::SCANNING;
-	Http()->Run(m_pReportScanRequest);
-	GameClient()->Echo(Localize("Scanning current server..."));
-}
-
-void CMenus::UpdateReportScan()
-{
-	if(m_ReportScanState == EReportScanState::IDLE || !m_pReportScanRequest || !m_pReportScanRequest->Done())
-		return;
-
-	const EHttpState RequestState = m_pReportScanRequest->State();
-	if(RequestState != EHttpState::DONE)
-	{
-		ResetReportScan();
-		GameClient()->Echo(RequestState == EHttpState::ABORTED ? Localize("Report request canceled") : Localize("Report request failed due to network error"));
-		return;
-	}
-
-	const int StatusCode = m_pReportScanRequest->StatusCode();
-	if(StatusCode < 200 || StatusCode >= 300)
-	{
-		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), Localize("Report request failed with HTTP status: %d"), StatusCode);
-		ResetReportScan();
-		GameClient()->Echo(aBuf);
-		return;
-	}
-
-	ResetReportScan();
-	GameClient()->Echo(Localize("Report scan request submitted"));
-}
-
 void CMenus::RenderGame(CUIRect MainView)
 {
-	UpdateReportScan();
+	// 三处确认窗（断开、断开分身、关闭触摸控件编辑器）的结果在这里轮询：
+	// 确认就调原来的回调，取消或弹窗被切页收掉时只清等待状态。
+	if(s_DisconnectPending)
+	{
+		if(s_DisconnectConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+		{
+			s_DisconnectPending = false;
+			PopupConfirmDisconnect();
+		}
+		else if(s_DisconnectConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED || !Ui()->IsPopupOpen(&s_DisconnectConfirm))
+			s_DisconnectPending = false;
+	}
+	if(s_DisconnectDummyPending)
+	{
+		if(s_DisconnectDummyConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+		{
+			s_DisconnectDummyPending = false;
+			PopupConfirmDisconnectDummy();
+		}
+		else if(s_DisconnectDummyConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED || !Ui()->IsPopupOpen(&s_DisconnectDummyConfirm))
+			s_DisconnectDummyPending = false;
+	}
+	if(s_TurnOffEditorPending)
+	{
+		if(s_TurnOffEditorConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+		{
+			s_TurnOffEditorPending = false;
+			PopupConfirmTurnOffEditor();
+		}
+		else if(s_TurnOffEditorConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED || !Ui()->IsPopupOpen(&s_TurnOffEditorConfirm))
+			s_TurnOffEditorPending = false;
+	}
+
 	CUIRect Button, ButtonBars, ButtonBar, ButtonBar2;
 	constexpr float MenuButtonHeight = 25.0f;
 	constexpr float PrimaryButtonSpacing = 5.0f;
@@ -431,7 +292,6 @@ void CMenus::RenderGame(CUIRect MainView)
 	const int LocalTeam = HasLocalInfo ? GameClient()->m_Snap.m_pLocalInfo->m_Team : TEAM_SPECTATORS;
 	const bool Recording = DemoRecorder(RECORDER_MANUAL)->IsRecording();
 	const bool FastPracticeEnabled = GameClient()->m_FastPractice.Enabled();
-	const bool ReportDisabledOnAxiom = GameClient()->m_QmAxiomAutoLogin.IsAxiomCommunity();
 
 	const char *pDisconnectButtonLabel = Localize("Disconnect");
 	const char *pDummyButtonLabel = Localize("Connect dummy");
@@ -452,7 +312,6 @@ void CMenus::RenderGame(CUIRect MainView)
 	char aSaveReplayButtonLabel[64];
 	str_format(aSaveReplayButtonLabel, sizeof(aSaveReplayButtonLabel), Localize("Save last %d min"), g_Config.m_ClEscReplayLengthMinutes);
 	const char *pDemoMarkerButtonLabel = Localize("Mark demo");
-	const char *pReportButtonLabel = Localize("Report");
 	const char *pSpectateButtonLabel = Localize("Spectate");
 	const char *pJoinRedButtonLabel = Localize("Join red");
 	const char *pJoinBlueButtonLabel = Localize("Join blue");
@@ -483,8 +342,6 @@ void CMenus::RenderGame(CUIRect MainView)
 	const float SaveReplayButtonWidthCompact = CalcMenuButtonWidth(aSaveReplayButtonLabel, MenuButtonPaddingCompact, DynamicButtonMinWidth);
 	const float DemoMarkerButtonWidthNormal = CalcMenuButtonWidth(pDemoMarkerButtonLabel, MenuButtonPaddingNormal, DynamicButtonMinWidth);
 	const float DemoMarkerButtonWidthCompact = CalcMenuButtonWidth(pDemoMarkerButtonLabel, MenuButtonPaddingCompact, DynamicButtonMinWidth);
-	const float ReportButtonWidthNormal = CalcMenuButtonWidth(pReportButtonLabel, MenuButtonPaddingNormal, DynamicButtonMinWidth);
-	const float ReportButtonWidthCompact = CalcMenuButtonWidth(pReportButtonLabel, MenuButtonPaddingCompact, DynamicButtonMinWidth);
 
 	const bool ShowGameplayButtons = !SpectatorOnly && HasLocalInfo && HasGameInfo && !Paused && !Spec;
 	const bool ShowSpectateButton = ShowGameplayButtons && LocalTeam != TEAM_SPECTATORS && !FastPracticeEnabled;
@@ -499,9 +356,9 @@ void CMenus::RenderGame(CUIRect MainView)
 	const bool ShowSaveReplayButton = g_Config.m_ClReplays != 0;
 
 	const float UtilityButtonWidthNormal =
-		DisconnectButtonWidthNormal + DummyButtonWidthNormal + EditHudButtonWidthNormal + DemoButtonWidthNormal + (ShowSaveReplayButton ? SaveReplayButtonWidthNormal : 0.0f) + DemoMarkerButtonWidthNormal + ReportButtonWidthNormal + UtilityButtonSpacingNormal * ((ShowSaveReplayButton ? 6.0f : 5.0f) - (SpectatorOnly ? 1.0f : 0.0f));
+		DisconnectButtonWidthNormal + DummyButtonWidthNormal + EditHudButtonWidthNormal + DemoButtonWidthNormal + (ShowSaveReplayButton ? SaveReplayButtonWidthNormal : 0.0f) + DemoMarkerButtonWidthNormal + UtilityButtonSpacingNormal * ((ShowSaveReplayButton ? 5.0f : 4.0f) - (SpectatorOnly ? 1.0f : 0.0f));
 	const float UtilityButtonWidthCompact =
-		DisconnectButtonWidthCompact + DummyButtonWidthCompact + EditHudButtonWidthCompact + DemoButtonWidthCompact + (ShowSaveReplayButton ? SaveReplayButtonWidthCompact : 0.0f) + DemoMarkerButtonWidthCompact + ReportButtonWidthCompact + UtilityButtonSpacingCompact * ((ShowSaveReplayButton ? 6.0f : 5.0f) - (SpectatorOnly ? 1.0f : 0.0f));
+		DisconnectButtonWidthCompact + DummyButtonWidthCompact + EditHudButtonWidthCompact + DemoButtonWidthCompact + (ShowSaveReplayButton ? SaveReplayButtonWidthCompact : 0.0f) + DemoMarkerButtonWidthCompact + UtilityButtonSpacingCompact * ((ShowSaveReplayButton ? 5.0f : 4.0f) - (SpectatorOnly ? 1.0f : 0.0f));
 	const float PrimaryButtonBarWidth = maximum(0.0f, MainView.w - 20.0f);
 
 	auto CalcPrimaryButtonsWidth = [&](bool IncludeTeamplayDDRaceButtons) {
@@ -610,7 +467,6 @@ void CMenus::RenderGame(CUIRect MainView)
 	const float DemoButtonWidth = UseCompactUtilityButtons ? DemoButtonWidthCompact : DemoButtonWidthNormal;
 	const float SaveReplayButtonWidth = UseCompactUtilityButtons ? SaveReplayButtonWidthCompact : SaveReplayButtonWidthNormal;
 	const float DemoMarkerButtonWidth = UseCompactUtilityButtons ? DemoMarkerButtonWidthCompact : DemoMarkerButtonWidthNormal;
-	const float ReportButtonWidth = UseCompactUtilityButtons ? ReportButtonWidthCompact : ReportButtonWidthNormal;
 
 	// QmClient: 分段计时，定位首次打开 ESC 时按钮列 17ms 尖峰的来源
 	CPerfTimer UtilityButtonsTimer;
@@ -636,7 +492,13 @@ void CMenus::RenderGame(CUIRect MainView)
 				}
 				str_append(aBuf, Localize("There are unsaved changes in the touch controls editor. Saving first is recommended."));
 			}
-			PopupConfirm(Localize("Disconnect"), aBuf, Localize("Yes"), Localize("No"), &CMenus::PopupConfirmDisconnect);
+			// 断开当前服务器：Cancel/OK + 危险色；正文可能还带触摸控件未保存提示。
+			s_DisconnectConfirm.Reset();
+			s_DisconnectConfirm.DefaultButtons();
+			s_DisconnectConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+			str_copy(s_DisconnectConfirm.m_aMessage, aBuf, sizeof(s_DisconnectConfirm.m_aMessage));
+			Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_DisconnectConfirm);
+			s_DisconnectPending = true;
 		}
 		else
 		{
@@ -678,7 +540,13 @@ void CMenus::RenderGame(CUIRect MainView)
 			{
 				if(GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmDisconnectTime && g_Config.m_ClConfirmDisconnectTime >= 0)
 				{
-					PopupConfirm(Localize("Disconnect dummy"), Localize("Are you sure that you want to disconnect your dummy?"), Localize("Yes"), Localize("No"), &CMenus::PopupConfirmDisconnectDummy);
+					// 断开分身同样是断线操作：Cancel/OK + 危险色。
+					s_DisconnectDummyConfirm.Reset();
+					s_DisconnectDummyConfirm.DefaultButtons();
+					s_DisconnectDummyConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+					str_copy(s_DisconnectDummyConfirm.m_aMessage, Localize("Are you sure that you want to disconnect your dummy?"), sizeof(s_DisconnectDummyConfirm.m_aMessage));
+					Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_DisconnectDummyConfirm);
+					s_DisconnectDummyPending = true;
 				}
 				else
 				{
@@ -731,24 +599,6 @@ void CMenus::RenderGame(CUIRect MainView)
 			GameClient()->Echo(Localize("Demo marker added"));
 		else
 			GameClient()->Echo(Localize("No demo is being recorded"));
-	}
-
-	UtilityButtonBar.VSplitRight(UtilityButtonSpacing, &UtilityButtonBar, nullptr);
-	UtilityButtonBar.VSplitRight(ReportButtonWidth, &UtilityButtonBar, &Button);
-	static CButtonContainer s_ReportButton;
-	if(m_ReportScanState != EReportScanState::IDLE)
-	{
-		DoIngameMenuButton(PAGE_GAME, "ingame-game-report", &s_ReportButton, pReportButtonLabel, 1, &Button);
-		GameClient()->m_Tooltips.DoToolTip(&s_ReportButton, &Button, Localize("Scanning current server"));
-	}
-	else if(ReportDisabledOnAxiom)
-	{
-		DoIngameMenuButton(PAGE_GAME, "ingame-game-report", &s_ReportButton, pReportButtonLabel, 1, &Button);
-		GameClient()->m_Tooltips.DoToolTip(&s_ReportButton, &Button, Localize("Reports are not available on Axiom servers"));
-	}
-	else if(DoIngameMenuButton(PAGE_GAME, "ingame-game-report", &s_ReportButton, pReportButtonLabel, 0, &Button))
-	{
-		StartReportScan();
 	}
 
 	LogIngamePerfStage(Client(), "ingame_esc_buttons_utility", UtilityButtonsTimer.ElapsedMs(), false, aButtonColumnPerfExtra);
@@ -901,7 +751,13 @@ void CMenus::RenderGame(CUIRect MainView)
 			{
 				m_MenusIngameTouchControls.m_pOldSelectedButton = GameClient()->m_TouchControls.SelectedButton();
 				m_MenusIngameTouchControls.m_pNewSelectedButton = nullptr;
-				PopupConfirm(Localize("Unsaved changes"), Localize("Save all changes before turning off the editor?"), Localize("Save"), Localize("Cancel"), &CMenus::PopupConfirmTurnOffEditor);
+				// 这里不是破坏性操作但会丢未保存的编辑：保留 Save / Cancel 两个动词。
+				s_TurnOffEditorConfirm.Reset();
+				str_copy(s_TurnOffEditorConfirm.m_aPositiveButtonLabel, Localize("Save"), sizeof(s_TurnOffEditorConfirm.m_aPositiveButtonLabel));
+				str_copy(s_TurnOffEditorConfirm.m_aNegativeButtonLabel, Localize("Cancel"), sizeof(s_TurnOffEditorConfirm.m_aNegativeButtonLabel));
+				str_copy(s_TurnOffEditorConfirm.m_aMessage, Localize("Save all changes before turning off the editor?"), sizeof(s_TurnOffEditorConfirm.m_aMessage));
+				Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_TurnOffEditorConfirm);
+				s_TurnOffEditorPending = true;
 			}
 			else
 			{
@@ -951,6 +807,9 @@ void CMenus::RenderGame(CUIRect MainView)
 	LogButtonColumnPerf();
 	if(GameClient()->m_TouchControls.IsEditingActive())
 	{
+		// 先处理上一帧确认窗的结果：DoPopupType 每帧都会重复请求同一个弹窗，
+		// 结果必须在这里落地，否则编辑器状态机永远停在同一个请求上。
+		m_MenusIngameTouchControls.PollConfirm();
 		// Resolve issues if needed before rendering, so the elements could have a correct value on this frame.
 		// Issues need to be resolved before popup. So CheckCachedSettings could not be bad.
 		m_MenusIngameTouchControls.ResolveIssues();
@@ -2743,6 +2602,18 @@ static void FormatRankTimeHms(float Seconds, char *pBuf, size_t BufSize)
 // 每条可下载回放、一键转影子对照跑图，或在确认断线后播放回放。
 void CMenus::RenderRankDemo(CUIRect MainView)
 {
+	// 播放回放确认的结果：确认后按记下的 demo 路径播放。
+	if(s_RankDemoPlayPending)
+	{
+		if(s_RankDemoPlayConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+		{
+			s_RankDemoPlayPending = false;
+			PopupConfirmRankDemoPlay();
+		}
+		else if(s_RankDemoPlayConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED || !Ui()->IsPopupOpen(&s_RankDemoPlayConfirm))
+			s_RankDemoPlayPending = false;
+	}
+
 	MainView.Draw(ms_ColorTabbarActive, MenuShellCorners(), 10.0f);
 
 	MainView.HSplitTop(10.0f, nullptr, &MainView);
@@ -3004,7 +2875,13 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 			// 播放回放必然断开服务器：除显式禁用确认（负值）外一律弹窗，防止误触退服
 			if(g_Config.m_ClConfirmDisconnectTime >= 0)
 			{
-				PopupConfirm(Localize("Disconnect"), Localize("Are you sure that you want to disconnect and play this demo?"), Localize("Yes"), Localize("No"), &CMenus::PopupConfirmRankDemoPlay);
+				// 播放回放必然断开服务器：Cancel/OK + 危险色。
+				s_RankDemoPlayConfirm.Reset();
+				s_RankDemoPlayConfirm.DefaultButtons();
+				s_RankDemoPlayConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+				str_copy(s_RankDemoPlayConfirm.m_aMessage, Localize("Are you sure that you want to disconnect and play this demo?"), sizeof(s_RankDemoPlayConfirm.m_aMessage));
+				Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_RankDemoPlayConfirm);
+				s_RankDemoPlayPending = true;
 			}
 			else
 			{
@@ -3051,7 +2928,13 @@ void CMenus::PopupConfirmRankDemoPlay()
 	const char *pError = Client()->DemoPlayer_Play(m_aPendingRankDemoPlayPath, IStorage::TYPE_SAVE);
 	m_aPendingRankDemoPlayPath[0] = '\0';
 	if(pError)
-		PopupMessage(Localize("Error loading demo"), pError, Localize("Ok"));
+	{
+		// 错误文本可能较长且需要读清楚：居中单按钮 Alert，不降级为 Toast。
+		static CUi::SMessagePopupContext s_RankDemoError;
+		str_copy(s_RankDemoError.m_aMessage, pError, sizeof(s_RankDemoError.m_aMessage));
+		s_RankDemoError.ErrorColor();
+		Ui()->ShowPopupMessage(0.0f, 0.0f, &s_RankDemoError);
+	}
 }
 
 void CMenus::RenderIngameHint()

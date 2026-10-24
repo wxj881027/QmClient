@@ -112,31 +112,104 @@ float RoundedRectCoverage(float DistanceValue, float PixelSize)
 	return 1.0 - smoothstep(-Feather * 0.5, Feather * 0.5, DistanceValue);
 }
 
+// 渐变语义与 CPU 端 SQmColorGradient::Position/Sample 保持一致。
+float RoundedRectGradientAmount(float2 UV, float4 Params0, float4 Params1)
+{
+	const float2 Offset = UV - Params0.yz;
+	const float Along = dot(Offset, Params1.xy);
+	const float Across = dot(Offset, float2(-Params1.y, Params1.x));
+	const float Extent = abs(Params1.x) + abs(Params1.y);
+	const float Range = max(Params0.w, 0.0001);
+	float Amount = 0.0;
+	const int Type = int(Params0.x + 0.5);
+	if(Type == 0)
+		Amount = 0.5 + Along / max(Range * Extent, 0.0001);
+	else if(Type == 1)
+		Amount = length(Offset) * 2.0 / Range;
+	else if(Type == 2)
+	{
+		if(length(Offset) > 0.00001)
+		{
+			Amount = atan2(Across, Along) / (2.0 * 3.14159265359);
+			Amount -= floor(Amount);
+			Amount /= Range;
+		}
+	}
+	else if(Type == 3)
+		Amount = abs(Along) * 2.0 / max(Range * Extent, 0.0001);
+	else
+		Amount = (abs(Along) + abs(Across)) * 2.0 / Range;
+	Amount = clamp(Amount, 0.0, 1.0);
+	return Params1.z > 0.5 ? 1.0 - Amount : Amount;
+}
+
+float4 RoundedRectGradientColor(float2 UV, float4 SolidColor, constant float4 *Params)
+{
+	if(Params[14].x < 0.5)
+		return SolidColor;
+	const int Count = clamp(int(Params[13].w + 0.5), 1, 7);
+	if(Count <= 1)
+		return Params[5];
+	const float Amount = RoundedRectGradientAmount(UV, Params[12], Params[13]);
+	const float Scaled = Amount * float(Count - 1);
+	const int Index = min(int(floor(Scaled)), Count - 2);
+	const float T = Scaled - float(Index);
+	return mix(Params[5 + Index], Params[5 + Index + 1], T);
+}
+
 fragment float4 qmclient_rounded_rect_sdf_fragment(SMetalVertexOut Input [[stage_in]], constant float4 *Params [[buffer(1)]])
 {
 	const float4 Rect = Params[0];
-	const float4 FillColor = Params[1];
+	float4 FillColor = Params[1];
 	const float4 BorderColor = Params[2];
 	const float4 CornerRadii = Params[3];
 	const float4 RenderParams = Params[4];
 	const float2 HalfSize = Rect.zw * 0.5;
 	const float2 Point = (Input.m_TexCoord - float2(0.5)) * (Rect.zw + float2(RenderParams.z * 2.0));
+	const float BorderWidth = clamp(RenderParams.x, 0.0, min(HalfSize.x, HalfSize.y));
+	// 渐变坐标必须和几何回退一致：都以边框内缩后的矩形为 0..1 范围。
+	const float2 InnerHalfSize = HalfSize - float2(BorderWidth);
+	const float2 GradientExtent = max(InnerHalfSize, float2(0.0));
+	const float2 GradientUV = clamp((Point + GradientExtent) / max(GradientExtent * 2.0, float2(0.0001)), float2(0.0), float2(1.0));
+	FillColor = RoundedRectGradientColor(GradientUV, FillColor, Params);
 	const float Radius = clamp(RoundedRectCornerRadius(Point, CornerRadii), 0.0, min(HalfSize.x, HalfSize.y));
 	const float OuterDistance = RoundedRectDistance(Point, HalfSize, Radius);
 	const float OuterCoverage = RoundedRectCoverage(OuterDistance, RenderParams.y);
-	const float BorderWidth = clamp(RenderParams.x, 0.0, min(HalfSize.x, HalfSize.y));
-	const float2 InnerHalfSize = HalfSize - float2(BorderWidth);
 	const float4 InnerCornerRadii = max(CornerRadii - float4(BorderWidth), float4(0.0));
 	const float InnerRadius = clamp(RoundedRectCornerRadius(Point, InnerCornerRadii), 0.0, min(InnerHalfSize.x, InnerHalfSize.y));
 	const float InnerDistance = RoundedRectDistance(Point, InnerHalfSize, InnerRadius);
 	const float InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? RoundedRectCoverage(InnerDistance, RenderParams.y) : 0.0;
 	if(BorderWidth <= 0.0)
 		return float4(FillColor.rgb, FillColor.a * OuterCoverage) * Input.m_Color;
-	const float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);
-	const float BorderAlpha = BorderColor.a * BorderCoverage;
-	const float FillAlpha = FillColor.a * InnerCoverage;
+	float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);
+	// GradientParams2.z > 0 时按带宽指数羽化，边框从内缘向外缘淡出成光晕。
+	const float BorderFalloff = Params[14].z;
+	if(BorderFalloff > 0.0 && BorderWidth > 0.0)
+	{
+		const float BandT = clamp(InnerDistance / max(BorderWidth, 0.0001), 0.0, 1.0);
+		BorderCoverage *= pow(max(1.0 - BandT, 0.0), BorderFalloff);
+	}
+	// GradientParams2.y 是"只描边"开关：渐变只服务于边框，填充整体丢弃。
+	const bool BorderOnly = Params[14].y > 0.5;
+	if(BorderOnly)
+		InnerCoverage = 0.0;
+	const float FillAlphaMask = BorderOnly ? 0.0 : 1.0;
+	// RenderParams.w 是"边框取渐变"开关（默认 0 保持既有单色边框行为）。
+	float4 BorderTint = BorderColor;
+	if(RenderParams.w > 0.5)
+	{
+		// 渐变只提供色相，描边强弱仍由调用方给的 BorderColor.a 决定。
+		// 角度渐变用相对几何中心的 Point（等比例逻辑单位），避免归一化 UV
+		// 把长条卡片的角度压扁成横向色带。
+		const float2 PolarUV = float2(Point.x / max(Rect.z, 0.0001) + 0.5, Point.y / max(Rect.z, 0.0001) + 0.5);
+		float4 GradientBorder = RoundedRectGradientColor(PolarUV, BorderColor, Params);
+		GradientBorder.a = BorderColor.a;
+		BorderTint = GradientBorder;
+	}
+	const float BorderAlpha = BorderTint.a * BorderCoverage;
+	const float FillAlpha = FillColor.a * InnerCoverage * FillAlphaMask;
 	const float OutputAlpha = FillAlpha + BorderAlpha;
-	const float3 Premultiplied = FillColor.rgb * FillAlpha + BorderColor.rgb * BorderAlpha;
+	const float3 Premultiplied = FillColor.rgb * FillAlpha + BorderTint.rgb * BorderAlpha;
 	return (OutputAlpha > 0.0 ? float4(Premultiplied / OutputAlpha, OutputAlpha) : float4(0.0)) * Input.m_Color;
 }
 

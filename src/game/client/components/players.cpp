@@ -453,6 +453,11 @@ void CPlayers::RenderHookCollLine(
 	vec2 SegmentStartPos = LineStartPos;
 
 	ColorRGBA HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl));
+	// 按下态取色候选：记录当前辅助线类型对应的"按下后"配置色，与 HookCollColor 在同一批分支处更新。
+	// 默认 = 未瞄准可钩物体；碰到其他玩家/可钩物体时在下方分支更新；
+	// "结果不确定"分支（多 tele 出口/计算超时直线）与"碰到其他玩家"分支同源（同样反制 TeeColl 原色），
+	// 因此套用其他玩家的按下色。开关关闭时整条自动反色，不使用按下色。
+	unsigned HookCollPressedColor = g_Config.m_QmHookCollPressedNoColl;
 	m_HookCollLineScratch.Reset();
 	auto &vLineSegments = m_HookCollLineScratch.m_vLineSegments;
 
@@ -460,6 +465,7 @@ void CPlayers::RenderHookCollLine(
 
 	auto AddHookPlayerSegment = [&](const vec2 &StartPos, const vec2 &EndPos, const vec2 &HookablePlayerPosition, const vec2 &HitPos) {
 		HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl));
+		HookCollPressedColor = g_Config.m_QmHookCollPressedTee;
 
 		// stop hookline at player circle so it looks better
 		vec2 aIntersections[2];
@@ -558,7 +564,10 @@ void CPlayers::RenderHookCollLine(
 		if(Hit != TILE_TELEINHOOK)
 		{
 			if(Hit != TILE_NOHOOK)
+			{
 				HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl));
+				HookCollPressedColor = g_Config.m_QmHookCollPressedHookable;
+			}
 			vLineSegments.emplace_back(LineStartPos, HitPos);
 			break;
 		}
@@ -573,12 +582,14 @@ void CPlayers::RenderHookCollLine(
 		{
 			// the hook gets stuck, this is a feature or a bug
 			HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl));
+			HookCollPressedColor = g_Config.m_QmHookCollPressedHookable;
 			break;
 		}
 		else if(vTeleOuts.size() > 1)
 		{
 			// we don't know which teleout the hook takes, just invert the color
 			HookCollColor = color_invert(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)));
+			HookCollPressedColor = g_Config.m_QmHookCollPressedTee; // "结果不确定"：与"碰到其他玩家"同源，套用其按下色
 			break;
 		}
 
@@ -602,20 +613,33 @@ void CPlayers::RenderHookCollLine(
 	{
 		// we simply don't know if we hit anything or not
 		HookCollColor = color_invert(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)));
+		HookCollPressedColor = g_Config.m_QmHookCollPressedTee; // "结果不确定"：与"碰到其他玩家"同源，套用其按下色
 		vLineSegments.emplace_back(LineStartPos, BasePos + QuantizedDirection * HookLength);
 	}
 
 	// add a line from the player to the start position to prevent a visual gap
 	vLineSegments.emplace_back(Position, Position + StartOffset);
 
-	if(AlwaysRenderHookColl && RenderHookCollPlayer)
+	const bool PressedHookColl = AlwaysRenderHookColl && RenderHookCollPlayer;
+	if(PressedHookColl)
 	{
-		// invert the hook coll colors when using cl_show_hook_coll_always and +showhookcoll is pressed
-		HookCollColor = color_invert(HookCollColor);
+		// 按下 +showhookcoll 时的辅助线颜色：
+		// - 开关关闭：整条自动反色（与旧行为一致）；
+		// - 开关开启：按上方分支记录的线类型取对应"按下后"颜色，始终生效（默认值即高亮变体，无回退）。
+		if(g_Config.m_QmHookCollPressedCustom)
+			HookCollColor = color_cast<ColorRGBA>(ColorHSLA(HookCollPressedColor, true));
+		else
+			HookCollColor = color_invert(HookCollColor);
 	}
 
 	// Render hook coll line
 	ColorRGBA HookCollTipColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollTipColor, true));
+	// 按下态辅助线提示段：开关开启时取"按下后"颜色（始终生效）；开关关闭保持原色。
+	// 原提示段为全透明（不会渲染）时不套用按下态颜色，避免用户未开启提示段时意外画出来。
+	if(PressedHookColl && g_Config.m_QmHookCollPressedCustom && HookCollTipColor.a > 0.0f)
+	{
+		HookCollTipColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmHookCollPressedTip, true));
+	}
 
 	Graphics()->TextureClear();
 	if(HookCollSize > 0)

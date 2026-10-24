@@ -12,6 +12,7 @@
 
 class CUi;
 class CMenus;
+class IStorage;
 class CUiV2Tree;
 class CTooltips;
 class ITextRender;
@@ -29,6 +30,8 @@ struct IUiContext
 	CUiV2Tree *m_pTree = nullptr;
 	CMenus *m_pMenus = nullptr;
 	CTooltips *m_pTooltips = nullptr;
+	// Wiki 内容读写需要存储层；来源页没有存储时保持空指针，只显示内置内容。
+	IStorage *m_pStorage = nullptr;
 	ITextRender *m_pTextRender = nullptr;
 	const SUiTheme *m_pTheme = nullptr;
 	uint64_t m_ScopeHash = 0;

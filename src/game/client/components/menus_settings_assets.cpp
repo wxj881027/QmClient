@@ -22,6 +22,9 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/QmPopconfirm.h>
+#include <game/client/QmUi/QmSlotReflow.h>
+#include <game/client/QmUi/QmToast.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiForms.h>
@@ -1813,6 +1816,7 @@ namespace
 		std::shared_ptr<IHttpRequest> m_pListTask;
 		std::shared_ptr<IHttpRequest> m_pEntityBgPreviewTask;
 		bool m_Requested = false;
+		bool m_RefreshRequested = false;
 		bool m_EntityBgPreviewRequested = false;
 		bool m_LoadFailed = false;
 		std::string m_EntityBgPreviewBaseUrl;
@@ -3246,6 +3250,7 @@ namespace
 		ClearWorkshopDecodeThumbQueue(WorkshopState);
 		ClearWorkshopReadyThumbQueue(WorkshopState);
 		WorkshopState.m_Requested = false;
+		WorkshopState.m_RefreshRequested = false;
 		WorkshopState.m_EntityBgPreviewRequested = false;
 		WorkshopState.m_LoadFailed = false;
 		// Keep m_CacheTime and m_LastRefreshTime for cache reuse
@@ -3397,7 +3402,7 @@ namespace
 		}
 	}
 
-	bool DeleteLocalAssetByTab(IStorage *pStorage, int CurTab, const char *pAssetName)
+	bool DeleteLocalAssetByTab(IStorage *pStorage, int CurTab, const char *pAssetName, const char *pInstallPath = nullptr)
 	{
 		if(IsProtectedAssetName(pAssetName))
 			return false;
@@ -3427,7 +3432,10 @@ namespace
 		}
 
 		char aSingleFilePath[IO_MAX_PATH_LENGTH];
-		str_format(aSingleFilePath, sizeof(aSingleFilePath), "assets/%s/%s.png", pSubFolder, pAssetName);
+		if(pInstallPath != nullptr && pInstallPath[0] != '\0')
+			str_copy(aSingleFilePath, pInstallPath, sizeof(aSingleFilePath));
+		else
+			str_format(aSingleFilePath, sizeof(aSingleFilePath), "assets/%s/%s.png", pSubFolder, pAssetName);
 		bool Removed = pStorage->RemoveFile(aSingleFilePath, IStorage::TYPE_SAVE);
 
 		char aFolderPath[IO_MAX_PATH_LENGTH];
@@ -3563,6 +3571,26 @@ static void ResetCustomItemPreviewState(CMenus::SCustomItem &Item)
 	Item.m_PreviewHighPriority = false;
 }
 
+// 列表重建/合并会把预览队列整个清空、epoch 前进，正在解码的句柄随之作废。
+// 但条目本身还在：它们的 m_PreviewState 停在 LOADING，解码任务却已经没有队列
+// 认领，于是再也不会被重新调度——卡片永远停在灰占位上（实测的「贴图缺失」）。
+// 这里把没有贴图、还挂着 LOADING 的条目退回 UNLOADED，下一帧按正常流程重来。
+static void RestartOrphanedCustomPreviewDecodes(int Tab)
+{
+	const size_t Count = GetCustomItemCount(Tab);
+	for(size_t Index = 0; Index < Count; ++Index)
+	{
+		CMenus::SCustomItem *pItem = GetCustomItemMutable(Tab, Index);
+		if(pItem == nullptr || pItem->m_PreviewState != CMenus::SCustomItem::PREVIEW_STATE_LOADING)
+			continue;
+		// 已经有贴图的条目保持原样：它宁可留在 LOADING 也不该退回重解码。
+		if(pItem->m_RenderTexture.IsValid())
+			continue;
+		// 贴图还没上传，只清预览状态；纹理句柄本来就不是有效的，不额外卸载。
+		ResetCustomItemPreviewState(*pItem);
+	}
+}
+
 template<typename TName>
 static void ClearAssetList(std::vector<TName> &vList, IGraphics *pGraphics)
 {
@@ -3619,7 +3647,13 @@ void CMenus::RefreshEntityBgHierarchyView()
 	m_aaCustomPreviewReadyQueue[ASSETS_TAB_ENTITY_BG].clear();
 	m_aaCustomPreviewReadyQueued[ASSETS_TAB_ENTITY_BG].clear();
 
-	ClearAssetList(m_vEntityBgList, Graphics());
+	// 重建只应更新「有哪些条目、什么顺序」，不该让用户看见贴图消失再淡入。
+	// 旧实现是 ClearAssetList + 全新建对象：所有卡片的贴图会被卸载、预览状态
+	// 清零，重建后的那几帧就整片闪。这里改为把旧对象先摘出来，重建时按名字
+	// 搬回贴图与预览状态，只有真正消失的条目才卸载。
+	std::vector<SCustomEntityBg> vPreviousItems;
+	vPreviousItems.swap(m_vEntityBgList);
+	m_vEntityBgList.clear();
 	gs_vpSearchEntityBgList.clear();
 
 	::EnsureDefaultAssetVisible(m_vEntityBgSourceNames);
@@ -3679,11 +3713,33 @@ void CMenus::RefreshEntityBgHierarchyView()
 		Item.m_IsDirectory = Entry.m_IsDirectory;
 		if(!Item.m_IsDirectory)
 			PopulateLocalAssetAuthor(Item, ASSETS_TAB_ENTITY_BG, Storage());
+		for(SCustomEntityBg &Previous : vPreviousItems)
+		{
+			if(str_comp(Previous.m_aName, Item.m_aName) != 0)
+				continue;
+			// 同名条目：搬走贴图与预览状态，并把旧句柄作废（所有权移交）。
+			Item.m_RenderTexture = Previous.m_RenderTexture;
+			Item.m_PreviewState = Previous.m_PreviewState;
+			Item.m_PreviewBytes = Previous.m_PreviewBytes;
+			Item.m_PreviewRequestedTextureSize = Previous.m_PreviewRequestedTextureSize;
+			Item.m_PreviewResidentBytes = Previous.m_PreviewResidentBytes;
+			Item.m_PreviewResized = Previous.m_PreviewResized;
+			Item.m_PreviewHighPriority = Previous.m_PreviewHighPriority;
+			Previous.m_RenderTexture = IGraphics::CTextureHandle();
+			break;
+		}
 		m_vEntityBgList.push_back(Item);
 	}
 
 	dbg_assert(s_CurCustomTab == ASSETS_TAB_ENTITY_BG, "entity bg hierarchy refresh is only valid for entity bg tab");
 	gs_aInitCustomList[s_CurCustomTab] = true;
+
+	// 已经不在列表里的条目（被删除 / 被筛掉）才卸载贴图。
+	for(SCustomEntityBg &Previous : vPreviousItems)
+	{
+		if(Previous.m_RenderTexture.IsValid())
+			Graphics()->UnloadTexture(&Previous.m_RenderTexture);
+	}
 }
 
 void CMenus::ClearCustomItems(int CurTab)
@@ -3877,13 +3933,105 @@ void CMenus::InvalidateSettingsAssetResourcePlan()
 template<typename TItem>
 static void PublishSettingsAssetMergeEntriesTyped(std::vector<TItem> &vList, int Tab, const std::vector<CMenus::SSettingsAssetMergeEntry> &vEntries, IStorage *pStorage)
 {
-	vList.reserve(vList.size() + vEntries.size());
+	const size_t InsertStart = vList.size();
+	std::vector<TItem> vNewItems;
+	vNewItems.reserve(vEntries.size());
 	for(const CMenus::SSettingsAssetMergeEntry &Entry : vEntries)
 	{
+		// 软重扫（下载/删除后的刷新）不清空列表，靠这里按名字去重：
+		// 已存在的条目原样保留（贴图、预览状态都不动），只追加新出现的。
+		bool Exists = false;
+		for(const TItem &Item : vList)
+		{
+			if(str_comp(Item.m_aName, Entry.m_aName) == 0)
+			{
+				Exists = true;
+				break;
+			}
+		}
+		if(!Exists)
+		{
+			for(const TItem &Item : vNewItems)
+			{
+				if(str_comp(Item.m_aName, Entry.m_aName) == 0)
+				{
+					Exists = true;
+					break;
+				}
+			}
+		}
+		if(Exists)
+			continue;
 		TItem Item;
 		str_copy(Item.m_aName, Entry.m_aName);
 		PopulateLocalAssetAuthor(Item, Tab, pStorage);
-		vList.push_back(Item);
+		vNewItems.push_back(std::move(Item));
+	}
+
+	if(vNewItems.empty())
+		return;
+	vList.reserve(vList.size() + vNewItems.size());
+	for(TItem &Item : vNewItems)
+		vList.push_back(std::move(Item));
+
+	// 新条目要落在它自己的位置上，不能一律追加到末尾：追加的话，收尾时
+	// EnsureDefaultAssetVisible 的整表排序会把所有卡片重新编号，用户看到的是
+	// 「新卡先铺到最底部、下一帧再集体跳回正确位置」，换位动画还会按巨大的
+	// 槽位差再走一遍。
+	// 既有前缀已经有序（上次收尾排过）。新追加的这批来自扫描结果、按 str_comp
+	// 有序，但这里的规范顺序是 AssetResourceNameLess（default / blank 置顶），
+	// 两者对 protected 名字的排序不同，所以先按规范顺序把这批排一次。
+	// 只排新条目：它们刚建出来、还没有贴图，排序代价可以忽略。
+	std::stable_sort(vList.begin() + InsertStart, vList.end(), [](const TItem &Left, const TItem &Right) {
+		return AssetResourceNameLess(Left.m_aName, Right.m_aName);
+	});
+
+	// 归并而不是就地插入：这些条目只带拷贝赋值（预览图是深拷贝），逐条移位
+	// 会把图像反复深拷贝一遍。
+	std::vector<TItem> vMerged;
+	vMerged.reserve(vList.size());
+	size_t OldIndex = 0;
+	size_t NewIndex = InsertStart;
+	while(OldIndex < InsertStart && NewIndex < vList.size())
+	{
+		// 同名时保留既有条目在前：它身上带着已经加载好的贴图。
+		if(AssetResourceNameLess(vList[NewIndex].m_aName, vList[OldIndex].m_aName))
+			vMerged.push_back(std::move(vList[NewIndex++]));
+		else
+			vMerged.push_back(std::move(vList[OldIndex++]));
+	}
+	while(OldIndex < InsertStart)
+		vMerged.push_back(std::move(vList[OldIndex++]));
+	while(NewIndex < vList.size())
+		vMerged.push_back(std::move(vList[NewIndex++]));
+	vList.swap(vMerged);
+}
+
+// 软重扫收尾：扫描结果里已经不存在的条目（被删除的）从这里摘掉，
+// 顺带卸载它们的贴图。其余条目原样保留。
+template<typename TItem, typename TUnloadExtra>
+static void DropMissingLocalAssetEntriesTyped(std::vector<TItem> &vList, IGraphics *pGraphics, const std::vector<CMenus::SSettingsAssetMergeEntry> &vEntries, TUnloadExtra &&UnloadExtra)
+{
+	auto Keep = [&vEntries](const char *pName) {
+		for(const CMenus::SSettingsAssetMergeEntry &Entry : vEntries)
+		{
+			if(str_comp(Entry.m_aName, pName) == 0)
+				return true;
+		}
+		return false;
+	};
+	for(auto It = vList.begin(); It != vList.end();)
+	{
+		if(Keep(It->m_aName) || IsProtectedAssetName(It->m_aName))
+		{
+			// 「default / 空白材质」是合成的内置条目，不在磁盘扫描结果里，
+			// 摘掉它们等于把贴图删了再重建——这正是「贴图弄不见」的来源。
+			++It;
+			continue;
+		}
+		UnloadExtra(*It);
+		pGraphics->UnloadTexture(&It->m_RenderTexture);
+		It = vList.erase(It);
 	}
 }
 
@@ -3921,6 +4069,8 @@ void CMenus::PublishSettingsAssetMergeEntries(int Tab, const std::vector<SSettin
 		m_vEntityBgSourceNames.reserve(m_vEntityBgSourceNames.size() + vEntries.size());
 		for(const SSettingsAssetMergeEntry &Entry : vEntries)
 		{
+			if(std::find(m_vEntityBgSourceNames.begin(), m_vEntityBgSourceNames.end(), std::string(Entry.m_aName)) != m_vEntityBgSourceNames.end())
+				continue;
 			m_vEntityBgSourceNames.emplace_back(Entry.m_aName);
 			const auto ExistingIt = m_vEntityBgSourceKinds.find(Entry.m_aName);
 			if(ExistingIt == m_vEntityBgSourceKinds.end())
@@ -4024,6 +4174,10 @@ bool CMenus::PrewarmSettingsAssetResources()
 				return false;
 			}
 			std::vector<CAssetListLoadJob::SAssetEntry> vEntries = pJob->TakeEntries();
+			// 只有当前 tab 在绘制时才会真正发起解码，别的 tab 队列本来就是空的；
+			// 而且 gs_vpSearch* 只对当前 tab 重建，拿别的 tab 去遍历会读到过期指针。
+			if(Tab == s_CurCustomTab)
+				RestartOrphanedCustomPreviewDecodes(Tab);
 			++m_aCustomPreviewEpoch[Tab];
 			m_aaCustomPreviewDecodeQueue[Tab].clear();
 			m_aaCustomPreviewReadyQueue[Tab].clear();
@@ -4185,6 +4339,14 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 {
 	const SSettingsContentMetrics ContentMetrics = ResolveSettingsContentMetrics(MainView.w);
 	s_CurCustomTab = std::clamp(s_CurCustomTab, (int)ASSETS_TAB_ENTITIES, NUMBER_OF_ASSETS_TABS - 1);
+
+	// 卡片换位追随：下载完成/删除后整列让位时滑过去，而不是瞬移。
+	// 按槽位序号算差值（不是屏幕矩形），切页换列直接对齐。
+	static CQmSlotReflow s_LocalCardReflow;
+	static double s_LocalReflowLastSec = -1.0;
+	// 资源商店页（本地 + 商店合并在同一个列表里）用的是另一套网格，单独一条轨道。
+	static CQmSlotReflow s_CombinedCardReflow;
+	static double s_CombinedReflowLastSec = -1.0;
 
 	if(m_AssetsEditorState.m_Open)
 	{
@@ -4375,6 +4537,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 		// The list merge below can reallocate backing storage. Drop queued preview pointers
 		// for the current tab before mutating the vectors.
+		// 队列清空后，还挂着 LOADING 却没贴图的条目不会再有队列来认领，先把它们
+		// 退回 UNLOADED，合并落地后会按新列表重新调度，不会停在灰占位上。
+		RestartOrphanedCustomPreviewDecodes(s_CurCustomTab);
 		++m_aCustomPreviewEpoch[s_CurCustomTab];
 		m_aaCustomPreviewDecodeQueue[s_CurCustomTab].clear();
 		m_aaCustomPreviewReadyQueue[s_CurCustomTab].clear();
@@ -4421,6 +4586,46 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		}
 		else
 		{
+			// 软重扫收尾：整份扫描结果都在 PendingMerge.m_vEntries 里，
+			// 据此摘掉已经不存在的条目（被删除的资源）。
+			if(s_CurCustomTab != ASSETS_TAB_ENTITY_BG)
+			{
+				switch(s_CurCustomTab)
+				{
+				case ASSETS_TAB_ENTITIES:
+					DropMissingLocalAssetEntriesTyped(m_vEntitiesList, Graphics(), PendingMerge.m_vEntries, [this](SCustomEntities &Item) {
+						for(auto &Image : Item.m_aImages)
+							Graphics()->UnloadTexture(&Image.m_Texture);
+					});
+					break;
+				case ASSETS_TAB_GAME:
+					DropMissingLocalAssetEntriesTyped(m_vGameList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					break;
+				case ASSETS_TAB_EMOTICONS:
+					DropMissingLocalAssetEntriesTyped(m_vEmoticonList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					break;
+				case ASSETS_TAB_PARTICLES:
+					DropMissingLocalAssetEntriesTyped(m_vParticlesList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					break;
+				case ASSETS_TAB_HUD:
+					DropMissingLocalAssetEntriesTyped(m_vHudList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					break;
+				case ASSETS_TAB_GUI_CURSOR:
+					DropMissingLocalAssetEntriesTyped(m_vGuiCursorList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					break;
+				case ASSETS_TAB_ARROW:
+					DropMissingLocalAssetEntriesTyped(m_vArrowList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					break;
+				case ASSETS_TAB_STRONG_WEAK:
+					DropMissingLocalAssetEntriesTyped(m_vStrongWeakList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					break;
+				case ASSETS_TAB_EXTRAS:
+					DropMissingLocalAssetEntriesTyped(m_vExtrasList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					break;
+				default:
+					break;
+				}
+			}
 			const SAssetResourceCategory *pCurrentCategory = AssetResourceCategoryByTab(s_CurCustomTab);
 			switch(s_CurCustomTab)
 			{
@@ -4669,6 +4874,46 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			DoSettingsMenuLabel(SETTINGS_ASSETS, s_CurCustomTab, s_CurCustomTab, "assets-loading-list", &LoadingTextRect, Localize("Loading assets..."), ContentMetrics.m_BodySize, TEXTALIGN_MC);
 		}
 	}
+
+	// 资源列表重建会替换搜索索引与卡片条目，必须在「下一帧开始」时执行：
+	// 之前是下载完成当帧就清空重建并 return，用户看到的就是右侧面板闪一下。
+	// 0 = 无事；1 = 整表重载；2 = 实体层层级同步（保贴图，见 RefreshEntityBgHierarchyView）。
+	static std::array<int, NUMBER_OF_ASSETS_TABS> s_aPendingLocalListRefresh{};
+	auto QueueLocalListRefresh = [](int Tab, int Kind) {
+		if(s_aPendingLocalListRefresh[Tab] == 0)
+			++s_AssetsListEntryRestartSeq;
+		s_aPendingLocalListRefresh[Tab] = maximum(s_aPendingLocalListRefresh[Tab], Kind);
+	};
+	auto FlushPendingLocalListRefresh = [&](int Tab) {
+		const int Kind = s_aPendingLocalListRefresh[Tab];
+		if(Kind == 0)
+			return;
+		s_aPendingLocalListRefresh[Tab] = 0;
+		if(Kind == 2 && Tab == ASSETS_TAB_ENTITY_BG)
+		{
+			if(const SWorkshopHudState *pWorkshopState = WorkshopStateByTab(Tab))
+			{
+				for(const SWorkshopHudAsset &Asset : pWorkshopState->m_vAssets)
+				{
+					if(!Asset.m_Installed || Asset.m_LocalName.empty())
+						continue;
+					if(std::none_of(m_vEntityBgSourceNames.begin(), m_vEntityBgSourceNames.end(), [&Asset](const std::string &Name) { return Name == Asset.m_LocalName; }))
+						m_vEntityBgSourceNames.push_back(Asset.m_LocalName);
+					if(!m_vEntityBgSourceKinds.contains(Asset.m_LocalName))
+						m_vEntityBgSourceKinds.emplace(Asset.m_LocalName, EEntityBgHierarchyEntrySource::WORKSHOP);
+				}
+			}
+			RefreshEntityBgHierarchyView();
+			return;
+		}
+		// 软重扫：不清列表、不卸贴图，只把加载状态复位，让后台重扫一遍目录。
+		// 合并时按名字去重（已有的条目原样保留），扫完再摘掉已经不存在的条目。
+		// 用户只会看到「多一张 / 少一张」，不会看到整页闪。
+		m_aAssetLoadStates[Tab] = ASSET_LOAD_STATE_UNLOADED;
+		gs_aAssetWarmupReady[Tab] = false;
+		gs_NextAssetWarmupTab = Tab;
+	};
+	FlushPendingLocalListRefresh(s_CurCustomTab);
 
 	if(gs_aInitCustomList[s_CurCustomTab])
 	{
@@ -4945,10 +5190,25 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	};
 
 	auto FindCustomItemByPreviewHandle = [](const SSettingsAssetPreviewHandle &Handle) -> SCustomItem * {
-		if(Handle.m_Tab < ASSETS_TAB_ENTITIES || Handle.m_Tab >= NUMBER_OF_ASSETS_TABS || Handle.m_Index >= GetCustomItemCount(Handle.m_Tab))
+		if(Handle.m_Tab < ASSETS_TAB_ENTITIES || Handle.m_Tab >= NUMBER_OF_ASSETS_TABS)
 			return nullptr;
-		SCustomItem *pItem = GetCustomItemMutable(Handle.m_Tab, Handle.m_Index);
-		return pItem != nullptr && SettingsAssetPreviewHandleMatches(Handle, Handle.m_Tab, Handle.m_Epoch, Handle.m_Index, pItem->m_aName) ? pItem : nullptr;
+		// 先按句柄里的下标取，对不上再按名字扫一遍：软重扫合并会重排列表，
+		// 句柄里的下标可能已经指向别的卡。只认下标等于把这张卡正在解码的预览
+		// 整个丢掉——用户看到「加载完又变回灰块」，或者干脆一直停在占位上。
+		const size_t Items = GetCustomItemCount(Handle.m_Tab);
+		if(Handle.m_Index < Items)
+		{
+			SCustomItem *pItem = GetCustomItemMutable(Handle.m_Tab, Handle.m_Index);
+			if(pItem != nullptr && pItem->m_PreviewEpoch == Handle.m_Epoch && SettingsAssetPreviewHandleReferencesAsset(Handle, pItem->m_aName))
+				return pItem;
+		}
+		for(size_t Index = 0; Index < Items; ++Index)
+		{
+			SCustomItem *pItem = GetCustomItemMutable(Handle.m_Tab, Index);
+			if(pItem != nullptr && pItem->m_PreviewEpoch == Handle.m_Epoch && SettingsAssetPreviewHandleReferencesAsset(Handle, pItem->m_aName))
+				return pItem;
+		}
+		return nullptr;
 	};
 
 	auto QueueReadyPreview = [&](SCustomItem *pItem) {
@@ -5640,7 +5900,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			SCustomItem *pItem = FindCustomItemByPreviewHandle(Handle);
 			if(pItem == nullptr)
 				continue;
-			if(pItem->m_PreviewEpoch != Handle.m_Epoch || !SettingsAssetPreviewHandleMatches(Handle, s_CurCustomTab, PreviewEpoch, pItem->m_PreviewListIndex, pItem->m_aName))
+			// 按名字认领：软重扫合并会重排列表，句柄里的下标可能已经过期，
+			// 但那不代表这张卡的解码结果作废——按旧下标比对会把刚解码好的
+			// 贴图整个丢掉，用户看到的就是「加载完又变回灰块」。
+			if(pItem->m_PreviewEpoch != Handle.m_Epoch || !SettingsAssetPreviewHandleReferencesAsset(Handle, pItem->m_aName))
 			{
 				++DroppedStale;
 				char aDropExtra[128];
@@ -5795,7 +6058,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			SCustomItem *pItem = FindCustomItemByPreviewHandle(Handle);
 			if(pItem == nullptr)
 				continue;
-			if(pItem->m_PreviewEpoch != Handle.m_Epoch || !SettingsAssetPreviewHandleMatches(Handle, s_CurCustomTab, PreviewEpoch, pItem->m_PreviewListIndex, pItem->m_aName) ||
+			if(pItem->m_PreviewEpoch != Handle.m_Epoch || !SettingsAssetPreviewHandleReferencesAsset(Handle, pItem->m_aName) ||
 				pItem->m_PreviewState != SCustomItem::PREVIEW_STATE_READY || !pItem->m_PreviewImage.m_pData)
 			{
 				if(pItem->m_PreviewEpoch == Handle.m_Epoch)
@@ -5838,7 +6101,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			CPerfTimer UploadBatchTimer;
 			const bool PreviewWasResized = pItem->m_PreviewResized;
 			const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(pItem->m_aName, s_CurCustomTab, false, Graphics()->ScreenHiDPIScale(), TextureWidth);
-			gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey).m_UploadPending = true;
+			SResourcePreviewState &PreviewCacheState = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
+			PreviewCacheState.m_UploadPending = true;
+			PreviewCacheState.m_AppearStart = 0;
 			// 空白材质的缩略图应当是「什么都没有」，而不是将被屏蔽掉的默认贴图；
 			// 解码仍走内置默认图（只为拿到尺寸与格式），上传前把像素清空即可。
 			if(IsBlankAssetName(pItem->m_aName) && pItem->m_PreviewImage.m_pData != nullptr)
@@ -5936,12 +6201,23 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		static std::vector<CButtonContainer> s_vLocalDeleteButtons;
 		s_vLocalDeleteButtons.resize(SearchListSize);
 		static char s_aPendingDeleteName[IO_MAX_PATH_LENGTH] = "";
-		static CUi::SConfirmPopupContext s_DeleteConfirmPopup;
+		static SQmPopconfirmContext s_DeleteConfirmPopup;
+		static CUIRect s_DeleteConfirmAnchor;
+		// 目标行本帧是否仍在列表里：滚出视口就自动取消确认。
+		static bool s_DeleteConfirmAnchorVisible = false;
+		s_DeleteConfirmAnchorVisible = false;
 		bool DeleteLocalRequested = false;
 		char aDeleteLocalName[IO_MAX_PATH_LENGTH] = "";
 		int FirstVisibleIndex = -1;
 		int LastVisibleIndex = -1;
 		const float LocalRowHeight = TextureHeight + AssetCardTextReserve + AssetCardFooterSpacing + Margin;
+		// 换位追随的时间基准：切页/冷却/关动效时直接对齐，不做插值。
+		{
+			const double ReflowNow = time_get();
+			const float ReflowDt = s_LocalReflowLastSec > 0.0 ? (float)((ReflowNow - s_LocalReflowLastSec) / time_freq()) : 0.0f;
+			s_LocalReflowLastSec = ReflowNow;
+			s_LocalCardReflow.BeginFrame(ReflowDt, LocalColumns, g_Config.m_QmUiMotionLevel == 0 || AssetsTabSwitchCooldownActive);
+		}
 		const SSettingsSkinListVisibleRange LocalVisibleRange = SettingsSkinListVisibleRangeForScroll(
 			s_ListBox.ScrollOffsetY(), s_ListBox.ViewHeight(), LocalRowHeight, LocalColumns, (int)SearchListSize, 1);
 		SResourcePreviewTelemetry LocalResourcePreviewTelemetry;
@@ -5998,6 +6274,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			ItemRect.Margin(Margin / 2, &ItemRect);
 			if(!Item.m_Visible)
 				continue;
+			// 槽位变了就滑过去：删除后后面整列上移，下载完成后新卡插进来其余让位。
+			const vec2 SlotReflowOffset = s_LocalCardReflow.Track(pItem->m_aName, (int)i, StableCustomList.w / (float)LocalColumns, LocalRowHeight);
+			ItemRect.x += SlotReflowOffset.x;
+			ItemRect.y += SlotReflowOffset.y;
 			auto GaussianBlurSuppression = Item.SuppressGaussianBlur();
 			if(FirstVisibleIndex < 0)
 				FirstVisibleIndex = (int)i;
@@ -6040,6 +6320,23 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				if(pPipelineState != nullptr && pPipelineState->m_Texture.IsValid())
 					PreviewState.m_Texture = pPipelineState->m_Texture;
 			}
+			// 刚下载装好的资源：商店缩略图早就在显存里，先借来顶住本地预览
+			// 解码的那几帧，等管线出图后自然替换——不再出现「灰块闪一下」。
+			if(!PreviewState.m_Texture.IsValid())
+			{
+				const SWorkshopHudState *pLocalWorkshopState = WorkshopStateByTab(s_CurCustomTab);
+				if(pLocalWorkshopState != nullptr)
+				{
+					for(const SWorkshopHudAsset &Asset : pLocalWorkshopState->m_vAssets)
+					{
+						if(Asset.m_LocalName == pItem->m_aName && Asset.m_ThumbTexture.IsValid())
+						{
+							PreviewState.m_Texture = Asset.m_ThumbTexture;
+							break;
+						}
+					}
+				}
+			}
 			const ESettingsResourcePreviewDrawResult PipelineDrawResult = SettingsResourcePreviewDrawResult(ResourcePreviewState);
 			const bool PreviewReady = PipelineDrawResult == ESettingsResourcePreviewDrawResult::READY_TEXTURE || PreviewState.m_Texture.IsValid();
 			ResourcePreviewState.m_TextureReady = PreviewReady;
@@ -6063,10 +6360,18 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 			if(HasDeleteButton)
 			{
+				if(s_aPendingDeleteName[0] != '\0' && str_comp(pItem->m_aName, s_aPendingDeleteName) == 0)
+				{
+					s_DeleteConfirmAnchor = Shell.m_ActionButtonRect;
+					s_DeleteConfirmAnchorVisible = true;
+				}
+				GameClient()->m_Tooltips.DoToolTip(&s_vLocalDeleteButtons[i], &Shell.m_ActionButtonRect, Localize("Delete"));
 				if(Ui()->DoButton_QmIcon(&s_vLocalDeleteButtons[i], EQmIcon::TRASH, FONT_ICON_TRASH, 0, &Shell.m_ActionButtonRect, IGraphics::CORNER_ALL, IGraphics::CORNER_ALL, true, std::nullopt, false, true))
 				{
 					DeleteLocalRequested = true;
 					str_copy(aDeleteLocalName, pItem->m_aName, sizeof(aDeleteLocalName));
+					// 记下按钮矩形：删除确认要贴在这一行上，而不是跳到屏幕中央。
+					s_DeleteConfirmAnchor = Shell.m_ActionButtonRect;
 				}
 			}
 		}
@@ -6180,32 +6485,93 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		{
 			str_copy(s_aPendingDeleteName, aDeleteLocalName, sizeof(s_aPendingDeleteName));
 			s_DeleteConfirmPopup.Reset();
-			s_DeleteConfirmPopup.YesNoButtons();
-			str_copy(s_DeleteConfirmPopup.m_aMessage, Localize("Are you sure you want to delete this asset?"));
-			Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_DeleteConfirmPopup);
+			s_DeleteConfirmPopup.DefaultButtons();
+			str_format(s_DeleteConfirmPopup.m_aMessage, sizeof(s_DeleteConfirmPopup.m_aMessage), Localize("Delete \"%s\"?"), s_aPendingDeleteName);
+			s_DeleteConfirmPopup.m_ToneDanger = true;
+			s_DeleteConfirmAnchorVisible = true;
 		}
 
-		if(s_DeleteConfirmPopup.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+		// 每帧按目标行的当前矩形重放一次：列表滚动时气泡跟着按钮走；
+		// 目标滚出视口（本帧没渲染到）则直接关闭并判定为取消。
+		// 已经出结果就不要再重开（确认后的下一帧结果还没被消费）。
+		if(s_aPendingDeleteName[0] != '\0' && !s_DeleteConfirmPopup.m_Confirmed && !s_DeleteConfirmPopup.m_Canceled)
 		{
-			if(DeleteLocalAssetByTab(Storage(), s_CurCustomTab, s_aPendingDeleteName))
+			if(s_DeleteConfirmAnchorVisible)
+				QmShowPopconfirm(Ui(), &s_DeleteConfirmPopup, s_DeleteConfirmAnchor, &s_ListBox.ClipRect());
+			else if(Ui()->IsPopupVisible(&s_DeleteConfirmPopup))
+				Ui()->ClosePopupMenu(&s_DeleteConfirmPopup);
+		}
+
+		if(s_DeleteConfirmPopup.m_Confirmed)
+		{
+			const SWorkshopHudAsset *pWorkshopAsset = FindWorkshopAssetByLocalName(WorkshopStateByTab(s_CurCustomTab), s_aPendingDeleteName);
+			if(DeleteLocalAssetByTab(Storage(), s_CurCustomTab, s_aPendingDeleteName, pWorkshopAsset != nullptr ? pWorkshopAsset->m_InstallPath.c_str() : nullptr))
 			{
+				char aToastText[IO_MAX_PATH_LENGTH + 64];
+				str_format(aToastText, sizeof(aToastText), Localize("Deleted \"%s\""), s_aPendingDeleteName);
+				qm_ui::Toast(EQmToastKind::SUCCESS, aToastText);
 				ResetSelectedAssetToDefault(s_aPendingDeleteName);
-				ClearCustomItems(s_CurCustomTab);
+				// 本地 PNG 删除后，商店条目必须回到可下载区；缩略图 webp
+				// 属于商店缓存，保留在 qmclient/workshop/thumbs 下供回迁后的卡片继续预览。
+				if(SWorkshopHudState *pWorkshopState = WorkshopStateByTab(s_CurCustomTab))
+				{
+					for(SWorkshopHudAsset &Asset : pWorkshopState->m_vAssets)
+					{
+						if(str_comp(Asset.m_LocalName.c_str(), s_aPendingDeleteName) == 0)
+						{
+							Asset.m_Installed = false;
+							const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(Asset.m_Id.empty() ? Asset.m_Name.c_str() : Asset.m_Id.c_str(), s_CurCustomTab, true, Graphics()->ScreenHiDPIScale(), 128.0f);
+							gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey).m_AppearStart = 0;
+							break;
+						}
+					}
+				}
+				if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
+				{
+					// 实体层只摘掉这一条：整表重载会把「商店资源」文件夹一起清掉，
+					// 用户会以为商店里的资源也被删了。
+					const auto EntryIt = std::find(m_vEntityBgSourceNames.begin(), m_vEntityBgSourceNames.end(), std::string(s_aPendingDeleteName));
+					if(EntryIt != m_vEntityBgSourceNames.end())
+						m_vEntityBgSourceNames.erase(EntryIt);
+					const auto SourceIt = m_vEntityBgSourceKinds.find(s_aPendingDeleteName);
+					if(SourceIt != m_vEntityBgSourceKinds.end() && SourceIt->second == EEntityBgHierarchyEntrySource::WORKSHOP)
+						m_vEntityBgSourceKinds.erase(SourceIt);
+					if(SWorkshopHudState *pEntityBgWorkshopState = WorkshopStateByTab(ASSETS_TAB_ENTITY_BG))
+					{
+						for(SWorkshopHudAsset &Asset : pEntityBgWorkshopState->m_vAssets)
+						{
+							if(str_comp(Asset.m_LocalName.c_str(), s_aPendingDeleteName) == 0)
+							{
+								Asset.m_Installed = false;
+								break;
+							}
+						}
+					}
+					QueueLocalListRefresh(s_CurCustomTab, 2);
+				}
+				else
+				{
+					// 同样延到下一帧：删除后本帧仍画旧卡片，下一帧才少一张。
+					QueueLocalListRefresh(s_CurCustomTab, 1);
+				}
 			}
 			else
 			{
+				char aToastText[IO_MAX_PATH_LENGTH + 64];
+				str_format(aToastText, sizeof(aToastText), Localize("Could not delete \"%s\""), s_aPendingDeleteName);
+				qm_ui::Toast(EQmToastKind::FAILED, aToastText);
 				dbg_msg("assets", "failed to delete local asset '%s' in tab %d", s_aPendingDeleteName, s_CurCustomTab);
 			}
 			s_DeleteConfirmPopup.Reset();
 			s_aPendingDeleteName[0] = '\0';
 		}
-		else if(s_DeleteConfirmPopup.m_Result == CUi::SConfirmPopupContext::CANCELED)
+		else if(s_DeleteConfirmPopup.m_Canceled)
 		{
 			s_DeleteConfirmPopup.Reset();
 			s_aPendingDeleteName[0] = '\0';
 		}
 
-		if(!DeleteLocalRequested && s_DeleteConfirmPopup.m_Result == CUi::SConfirmPopupContext::UNSET && s_ListBox.WasItemSelected() && NewSelected >= 0 && OldSelected != NewSelected)
+		if(!DeleteLocalRequested && !s_DeleteConfirmPopup.m_Confirmed && !s_DeleteConfirmPopup.m_Canceled && s_ListBox.WasItemSelected() && NewSelected >= 0 && OldSelected != NewSelected)
 		{
 			const SCustomItem *pSelectedItem = GetCustomItem(s_CurCustomTab, NewSelected);
 			if(pSelectedItem->m_aName[0] != '\0')
@@ -6360,6 +6726,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			pTask->LogProgress(HTTPLOG::FAILURE);
 			pTask->FailOnErrorStatus(false);
 			WorkshopState.m_pListTask = std::move(pTask);
+			WorkshopState.m_RefreshRequested = false;
 			WorkshopState.m_LoadFailed = false;
 			str_copy(WorkshopState.m_aError, "");
 			Http()->Run(WorkshopState.m_pListTask);
@@ -6395,7 +6762,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		}
 
 		// Only start HTTP request if no cache exists (first time or after refresh)
-		if(pCategory->m_WorkshopEnabled && !WorkshopState.m_Requested && !WorkshopState.m_pListTask && WorkshopState.m_vAssets.empty())
+		if(pCategory->m_WorkshopEnabled && !WorkshopState.m_Requested && !WorkshopState.m_pListTask && (WorkshopState.m_vAssets.empty() || WorkshopState.m_RefreshRequested))
 		{
 			StartWorkshopListTask();
 		}
@@ -6600,12 +6967,20 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				const bool DownloadOk = Asset.m_pDownloadTask->State() == EHttpState::DONE && Asset.m_pDownloadTask->StatusCode() == 200;
 				Asset.m_pDownloadTask.reset();
 				Asset.m_DownloadFailed = !DownloadOk;
+				char aToastText[512];
 				if(DownloadOk)
 				{
 					Asset.m_Installed = true;
 					PersistLocalAssetAuthorForWorkshopAsset(s_CurCustomTab, Asset, Storage());
 					FlushPersistedLocalAssetAuthorsIfDirty(Storage(), s_CurCustomTab);
 					RefreshLocalList = true;
+					str_format(aToastText, sizeof(aToastText), Localize("Downloaded \"%s\""), Asset.m_Name.c_str());
+					qm_ui::Toast(EQmToastKind::SUCCESS, aToastText);
+				}
+				else
+				{
+					str_format(aToastText, sizeof(aToastText), Localize("Could not download \"%s\""), Asset.m_Name.c_str());
+					qm_ui::Toast(EQmToastKind::FAILED, aToastText);
 				}
 			}
 		}
@@ -6776,7 +7151,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				const int UploadTab = pAsset->m_ThumbQueuedTab;
 				const int UploadTextureSize = pAsset->m_ThumbRequestedTextureSize;
 				const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(pAsset->m_Id.empty() ? pAsset->m_Name.c_str() : pAsset->m_Id.c_str(), s_CurCustomTab, true, Graphics()->ScreenHiDPIScale(), TextureWidth);
-				gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey).m_UploadPending = true;
+				SResourcePreviewState &PreviewCacheState = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
+				PreviewCacheState.m_UploadPending = true;
+				PreviewCacheState.m_AppearStart = 0;
 				gs_SettingsAssetsResourcePreviewUploadScheduler.EnqueueUploadToTarget(
 					PreviewKey,
 					std::move(pAsset->m_ThumbImage),
@@ -6854,25 +7231,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		}
 		if(RefreshLocalList)
 		{
-			if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
-			{
-				for(const SWorkshopHudAsset &Asset : WorkshopState.m_vAssets)
-				{
-					if(!Asset.m_Installed || Asset.m_LocalName.empty())
-						continue;
-					if(std::none_of(m_vEntityBgSourceNames.begin(), m_vEntityBgSourceNames.end(), [&Asset](const std::string &Name) { return Name == Asset.m_LocalName; }))
-						m_vEntityBgSourceNames.push_back(Asset.m_LocalName);
-					if(!m_vEntityBgSourceKinds.contains(Asset.m_LocalName))
-						m_vEntityBgSourceKinds.emplace(Asset.m_LocalName, EEntityBgHierarchyEntrySource::WORKSHOP);
-				}
-				RefreshEntityBgHierarchyView();
-			}
-			else
-			{
-				ClearCustomItems(s_CurCustomTab);
-			}
-			// Local list refresh invalidates SearchListSize and search pointer arrays for this frame.
-			return;
+			// 排队到下一帧开头执行：本帧照常把旧列表画完，用户看不到「空一帧」。
+			// 实体层走层级同步（贴图会被带走复用），其它页走整表重载。
+			QueueLocalListRefresh(s_CurCustomTab, s_CurCustomTab == ASSETS_TAB_ENTITY_BG ? 2 : 1);
 		}
 
 		DrawRoundedSurface(Ui(), WorkshopHudView, ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f), ColorRGBA(), 8.0f);
@@ -6975,21 +7336,31 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				s_AssetsResetListScrollOnTabSwitch = false;
 			}
 			s_WorkshopAssetsListBox.DoStart(WorkshopRowHeight, CombinedCount, Columns, 1, OldCombinedSelected, &WorkshopListArea, false, IGraphics::CORNER_ALL);
+			{
+				const double ReflowNow = time_get();
+				const float ReflowDt = s_CombinedReflowLastSec > 0.0 ? (float)((ReflowNow - s_CombinedReflowLastSec) / time_freq()) : 0.0f;
+				s_CombinedReflowLastSec = ReflowNow;
+				s_CombinedCardReflow.BeginFrame(ReflowDt, Columns, g_Config.m_QmUiMotionLevel == 0 || AssetsTabSwitchCooldownActive);
+			}
 
 			static std::vector<CButtonContainer> s_vWorkshopLocalDeleteButtons;
 			s_vWorkshopLocalDeleteButtons.resize(LocalAssetTotalCount);
 
 			static char s_aWorkshopPendingDeleteName[IO_MAX_PATH_LENGTH] = "";
-			static CUi::SConfirmPopupContext s_WorkshopDeleteConfirmPopup;
+			static SQmPopconfirmContext s_WorkshopDeleteConfirmPopup;
+			static CUIRect s_WorkshopDeleteConfirmAnchor;
 			static size_t s_PendingDownloadAssetIndex = SIZE_MAX;
-			static CUi::SConfirmPopupContext s_WorkshopDownloadConfirmPopup;
+			static SQmPopconfirmContext s_WorkshopDownloadConfirmPopup;
+			static CUIRect s_WorkshopDownloadConfirmAnchor;
+			static bool s_WorkshopDeleteAnchorVisible = false;
+			static bool s_WorkshopDownloadAnchorVisible = false;
+			s_WorkshopDeleteAnchorVisible = false;
+			s_WorkshopDownloadAnchorVisible = false;
 
 			bool DeleteLocalRequested = false;
 			char aDeleteLocalName[IO_MAX_PATH_LENGTH] = "";
 			bool DownloadRequested = false;
 			size_t RequestedDownloadAssetIndex = SIZE_MAX;
-			float RequestedDownloadPopupX = 0.0f;
-			float RequestedDownloadPopupY = 0.0f;
 			bool WorkshopActionTriggered = false;
 			CPerfTimer WorkshopCardsTimer;
 			int FirstVisibleLocalIndex = -1;
@@ -7240,6 +7611,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					ItemRect.Margin(Margin / 2, &ItemRect);
 					if(!Item.m_Visible)
 						continue;
+					// 槽位变了就滑过去：新下载的卡片插进来、删除后整列让位。
+					const vec2 SlotReflowOffset = s_CombinedCardReflow.Track(pItem->m_aName, (int)ListIndex, StableWorkshopListArea.w / (float)Columns, WorkshopRowHeight);
+					ItemRect.x += SlotReflowOffset.x;
+					ItemRect.y += SlotReflowOffset.y;
 					auto GaussianBlurSuppression = Item.SuppressGaussianBlur();
 					if(FirstVisibleLocalIndex < 0)
 						FirstVisibleLocalIndex = (int)LocalIndex;
@@ -7356,10 +7731,17 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 					if(HasDeleteButton)
 					{
+						if(s_aWorkshopPendingDeleteName[0] != '\0' && str_comp(pItem->m_aName, s_aWorkshopPendingDeleteName) == 0)
+						{
+							s_WorkshopDeleteConfirmAnchor = Shell.m_ActionButtonRect;
+							s_WorkshopDeleteAnchorVisible = true;
+						}
+						GameClient()->m_Tooltips.DoToolTip(&s_vWorkshopLocalDeleteButtons[LocalIndex], &Shell.m_ActionButtonRect, Localize("Delete"));
 						if(Ui()->DoButton_QmIcon(&s_vWorkshopLocalDeleteButtons[LocalIndex], EQmIcon::TRASH, FONT_ICON_TRASH, 0, &Shell.m_ActionButtonRect, IGraphics::CORNER_ALL, IGraphics::CORNER_ALL, true, std::nullopt, false, true))
 						{
 							DeleteLocalRequested = true;
 							str_copy(aDeleteLocalName, pItem->m_aName, sizeof(aDeleteLocalName));
+							s_WorkshopDeleteConfirmAnchor = Shell.m_ActionButtonRect;
 						}
 					}
 				}
@@ -7374,6 +7756,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					ItemRect.Margin(Margin / 2, &ItemRect);
 					if(!Item.m_Visible)
 						continue;
+					// 商店卡片同样按槽位让位：本地列表多一张，整排往下滑一格。
+					const vec2 SlotReflowOffset = s_CombinedCardReflow.Track(Asset.m_Id.empty() ? Asset.m_Name.c_str() : Asset.m_Id.c_str(), (int)ListIndex, StableWorkshopListArea.w / (float)Columns, WorkshopRowHeight);
+					ItemRect.x += SlotReflowOffset.x;
+					ItemRect.y += SlotReflowOffset.y;
 					auto GaussianBlurSuppression = Item.SuppressGaussianBlur();
 
 					const int VisibleDownloadableIndex = static_cast<int>(DownloadableIndex);
@@ -7439,14 +7825,21 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					RenderAssetsCardPreview(Shell, PreviewState, true, CardHydrationScheduler.CanRenderPreview(CombinedVisible, PreviewReady));
 					WorkshopCardPreviewDrawMs += CardPreviewDrawTimer.ElapsedMs();
 
-					const EQmIcon ActionIconEnum = Downloading ? EQmIcon::ARROW_ROTATE_RIGHT : EQmIcon::CIRCLE_CHEVRON_DOWN;
-					const char *pActionIcon = Downloading ? FONT_ICON_ARROW_ROTATE_RIGHT : FONT_ICON_CIRCLE_CHEVRON_DOWN;
+					if(s_PendingDownloadAssetIndex == AssetIndex)
+					{
+						s_WorkshopDownloadConfirmAnchor = Shell.m_ActionButtonRect;
+						s_WorkshopDownloadAnchorVisible = true;
+					}
+
+					const EQmIcon ActionIconEnum = Downloading ? EQmIcon::ARROW_ROTATE_RIGHT : EQmIcon::DOWNLOAD_SIMPLE;
+					const char *pActionIcon = Downloading ? FONT_ICON_ARROW_ROTATE_RIGHT : FONT_ICON_DOWNLOAD_SIMPLE;
+					GameClient()->m_Tooltips.DoToolTip(&vWorkshopActionButtons[AssetIndex], &Shell.m_ActionButtonRect, Downloading ? Localize("Downloading…") : Localize("Download"));
 					if(Ui()->DoButton_QmIcon(&vWorkshopActionButtons[AssetIndex], ActionIconEnum, pActionIcon, 0, &Shell.m_ActionButtonRect, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, !Downloading, std::nullopt, false, true))
 					{
 						DownloadRequested = true;
 						RequestedDownloadAssetIndex = AssetIndex;
-						RequestedDownloadPopupX = Shell.m_ActionButtonRect.x + Shell.m_ActionButtonRect.w;
-						RequestedDownloadPopupY = Shell.m_ActionButtonRect.y + Shell.m_ActionButtonRect.h + 4.0f;
+						// 确认气泡贴在下载按钮下方，归属感来自锚点而不是屏幕中央。
+						s_WorkshopDownloadConfirmAnchor = Shell.m_ActionButtonRect;
 						WorkshopActionTriggered = true;
 					}
 				}
@@ -7521,23 +7914,44 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			{
 				str_copy(s_aWorkshopPendingDeleteName, aDeleteLocalName, sizeof(s_aWorkshopPendingDeleteName));
 				s_WorkshopDeleteConfirmPopup.Reset();
-				s_WorkshopDeleteConfirmPopup.YesNoButtons();
-				str_copy(s_WorkshopDeleteConfirmPopup.m_aMessage, Localize("Are you sure you want to delete this asset?"));
-				Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_WorkshopDeleteConfirmPopup);
+				s_WorkshopDeleteConfirmPopup.DefaultButtons();
+				str_format(s_WorkshopDeleteConfirmPopup.m_aMessage, sizeof(s_WorkshopDeleteConfirmPopup.m_aMessage), Localize("Delete \"%s\"?"), s_aWorkshopPendingDeleteName);
+				s_WorkshopDeleteConfirmPopup.m_ToneDanger = true;
+				s_WorkshopDeleteAnchorVisible = true;
 			}
 			if(DownloadRequested && RequestedDownloadAssetIndex < WorkshopState.m_vAssets.size())
 			{
 				s_PendingDownloadAssetIndex = RequestedDownloadAssetIndex;
 				s_WorkshopDownloadConfirmPopup.Reset();
-				s_WorkshopDownloadConfirmPopup.YesNoButtons();
-				str_copy(s_WorkshopDownloadConfirmPopup.m_aMessage, Localize("Download this asset?"));
-				Ui()->ShowPopupConfirm(RequestedDownloadPopupX, RequestedDownloadPopupY, &s_WorkshopDownloadConfirmPopup, false);
+				s_WorkshopDownloadConfirmPopup.DefaultButtons();
+				str_format(s_WorkshopDownloadConfirmPopup.m_aMessage, sizeof(s_WorkshopDownloadConfirmPopup.m_aMessage), Localize("Download \"%s\"?"), WorkshopState.m_vAssets[RequestedDownloadAssetIndex].m_Name.c_str());
+				s_WorkshopDownloadAnchorVisible = true;
 			}
 
-			if(s_WorkshopDeleteConfirmPopup.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+			// 与本地删除同规则：跟着按钮走，目标滚出视口就关闭并取消。
+			if(s_aWorkshopPendingDeleteName[0] != '\0' && !s_WorkshopDeleteConfirmPopup.m_Confirmed && !s_WorkshopDeleteConfirmPopup.m_Canceled)
 			{
-				if(DeleteLocalAssetByTab(Storage(), s_CurCustomTab, s_aWorkshopPendingDeleteName))
+				if(s_WorkshopDeleteAnchorVisible)
+					QmShowPopconfirm(Ui(), &s_WorkshopDeleteConfirmPopup, s_WorkshopDeleteConfirmAnchor, &s_WorkshopAssetsListBox.ClipRect());
+				else if(Ui()->IsPopupVisible(&s_WorkshopDeleteConfirmPopup))
+					Ui()->ClosePopupMenu(&s_WorkshopDeleteConfirmPopup);
+			}
+			if(s_PendingDownloadAssetIndex != SIZE_MAX && !s_WorkshopDownloadConfirmPopup.m_Confirmed && !s_WorkshopDownloadConfirmPopup.m_Canceled)
+			{
+				if(s_WorkshopDownloadAnchorVisible)
+					QmShowPopconfirm(Ui(), &s_WorkshopDownloadConfirmPopup, s_WorkshopDownloadConfirmAnchor, &s_WorkshopAssetsListBox.ClipRect());
+				else if(Ui()->IsPopupVisible(&s_WorkshopDownloadConfirmPopup))
+					Ui()->ClosePopupMenu(&s_WorkshopDownloadConfirmPopup);
+			}
+
+			if(s_WorkshopDeleteConfirmPopup.m_Confirmed)
+			{
+				const SWorkshopHudAsset *pWorkshopAsset = FindWorkshopAssetByLocalName(&WorkshopState, s_aWorkshopPendingDeleteName);
+				if(DeleteLocalAssetByTab(Storage(), s_CurCustomTab, s_aWorkshopPendingDeleteName, pWorkshopAsset != nullptr ? pWorkshopAsset->m_InstallPath.c_str() : nullptr))
 				{
+					char aToastText[IO_MAX_PATH_LENGTH + 64];
+					str_format(aToastText, sizeof(aToastText), Localize("Deleted \"%s\""), s_aWorkshopPendingDeleteName);
+					qm_ui::Toast(EQmToastKind::SUCCESS, aToastText);
 					if(IsLocalAssetSelected(s_aWorkshopPendingDeleteName))
 						ApplyLocalAssetSelection("default");
 					for(SWorkshopHudAsset &Asset : WorkshopState.m_vAssets)
@@ -7545,6 +7959,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						if(str_comp(Asset.m_LocalName.c_str(), s_aWorkshopPendingDeleteName) == 0)
 						{
 							Asset.m_Installed = false;
+							const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(Asset.m_Id.empty() ? Asset.m_Name.c_str() : Asset.m_Id.c_str(), s_CurCustomTab, true, Graphics()->ScreenHiDPIScale(), 128.0f);
+							gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey).m_AppearStart = 0;
 							break;
 						}
 					}
@@ -7560,23 +7976,26 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					}
 					else
 					{
-						ClearCustomItems(s_CurCustomTab);
+						QueueLocalListRefresh(s_CurCustomTab, 1);
 					}
 				}
 				else
 				{
+					char aToastText[IO_MAX_PATH_LENGTH + 64];
+					str_format(aToastText, sizeof(aToastText), Localize("Could not delete \"%s\""), s_aWorkshopPendingDeleteName);
+					qm_ui::Toast(EQmToastKind::FAILED, aToastText);
 					dbg_msg("assets", "failed to delete local asset '%s' in tab %d", s_aWorkshopPendingDeleteName, s_CurCustomTab);
 				}
 				s_WorkshopDeleteConfirmPopup.Reset();
 				s_aWorkshopPendingDeleteName[0] = '\0';
 			}
-			else if(s_WorkshopDeleteConfirmPopup.m_Result == CUi::SConfirmPopupContext::CANCELED)
+			else if(s_WorkshopDeleteConfirmPopup.m_Canceled)
 			{
 				s_WorkshopDeleteConfirmPopup.Reset();
 				s_aWorkshopPendingDeleteName[0] = '\0';
 			}
 
-			if(s_WorkshopDownloadConfirmPopup.m_Result == CUi::SConfirmPopupContext::CONFIRMED && s_PendingDownloadAssetIndex < WorkshopState.m_vAssets.size())
+			if(s_WorkshopDownloadConfirmPopup.m_Confirmed && s_PendingDownloadAssetIndex < WorkshopState.m_vAssets.size())
 			{
 				SWorkshopHudAsset &Asset = WorkshopState.m_vAssets[s_PendingDownloadAssetIndex];
 				Storage()->CreateFolder("assets", IStorage::TYPE_SAVE);
@@ -7594,13 +8013,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				s_WorkshopDownloadConfirmPopup.Reset();
 				s_PendingDownloadAssetIndex = SIZE_MAX;
 			}
-			else if(s_WorkshopDownloadConfirmPopup.m_Result == CUi::SConfirmPopupContext::CANCELED)
+			else if(s_WorkshopDownloadConfirmPopup.m_Canceled)
 			{
 				s_WorkshopDownloadConfirmPopup.Reset();
 				s_PendingDownloadAssetIndex = SIZE_MAX;
 			}
 
-			if(!DeleteLocalRequested && s_WorkshopDeleteConfirmPopup.m_Result == CUi::SConfirmPopupContext::UNSET && s_WorkshopDownloadConfirmPopup.m_Result == CUi::SConfirmPopupContext::UNSET && !WorkshopActionTriggered && s_WorkshopAssetsListBox.WasItemSelected() && NewCombinedSelected >= 0 && NewCombinedSelected != OldCombinedSelected && static_cast<size_t>(NewCombinedSelected) < LocalAssetCount)
+			if(!DeleteLocalRequested && !s_WorkshopDeleteConfirmPopup.m_Confirmed && !s_WorkshopDeleteConfirmPopup.m_Canceled && !s_WorkshopDownloadConfirmPopup.m_Confirmed && !s_WorkshopDownloadConfirmPopup.m_Canceled && !WorkshopActionTriggered && s_WorkshopAssetsListBox.WasItemSelected() && NewCombinedSelected >= 0 && NewCombinedSelected != OldCombinedSelected && static_cast<size_t>(NewCombinedSelected) < LocalAssetCount)
 			{
 				const size_t LocalIndex = vVisibleLocalAssetIndices[static_cast<size_t>(NewCombinedSelected)];
 				const SCustomItem *pNewItem = GetCustomItem(s_CurCustomTab, LocalIndex);
@@ -7792,10 +8211,17 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	if(DoButton_Menu_QmIcon(&s_AssetsReloadBtnId, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ReloadButton) || Input()->KeyPress(KEY_F5) || (Input()->KeyPress(KEY_R) && Input()->ModifierIsPressed()))
 	{
 		FlushPersistedLocalAssetAuthorsIfDirty(Storage(), s_CurCustomTab);
-		ClearCustomItems(s_CurCustomTab);
+		// 刷新只重新扫描和同步，保留当前卡片、预览贴图和滚动几何；
+		// 清空列表会触发骨架屏闪烁，并把已有贴图全部变成重新加载。
+		QueueLocalListRefresh(s_CurCustomTab, 1);
 		if(SWorkshopHudState *pWorkshopState = WorkshopStateByTab(s_CurCustomTab))
-			ResetWorkshopState(*pWorkshopState, Graphics(), true);
-		InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::RESOURCE_DIRECTORY_CHANGED);
+		{
+			if(pWorkshopState->m_pListTask)
+				pWorkshopState->m_pListTask->Abort();
+			pWorkshopState->m_pListTask.reset();
+			pWorkshopState->m_RefreshRequested = true;
+			pWorkshopState->m_Requested = false;
+		}
 	}
 	TextRender()->SetRenderFlags(0);
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);

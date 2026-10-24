@@ -3154,11 +3154,22 @@ if(CLIENT)
     texture_slot_pool.h
     updater.cpp
     updater.h
-    video.cpp
-    video.h
     video_frame_capture.h
     warning.cpp
   )
+
+  # 视频录制与导出模块依赖 FFmpeg：无 FFmpeg 目标（iOS/Android 及未来移动端）整体裁掉，
+  # 保证 CLIENT 在 FFMPEG_FOUND=OFF 时仍可编译（视频功能经 CONF_VIDEORECORDER 优雅降级）。
+  if(VIDEORECORDER AND FFMPEG_FOUND)
+    list(APPEND ENGINE_CLIENT
+      src/engine/client/video.cpp
+      src/engine/client/video.h
+      src/engine/client/video_encoder.cpp
+      src/engine/client/video_encoder.h
+      src/engine/client/video_export.cpp
+      src/engine/client/video_export.h
+    )
+  endif()
 
   if((TARGET_OS STREQUAL "mac" OR TARGET_OS STREQUAL "ios") AND METAL)
     list(APPEND ENGINE_CLIENT
@@ -3177,6 +3188,14 @@ if(CLIENT)
     QmUi/QmAnimCurves.h
     QmUi/QmDropdown.cpp
     QmUi/QmDropdown.h
+    QmUi/QmPopconfirm.cpp
+    QmUi/QmPopconfirm.h
+    QmUi/QmPopconfirmGeometry.h
+    QmUi/QmSlotReflow.cpp
+    QmUi/QmSlotReflow.h
+    QmUi/QmToast.cpp
+    QmUi/QmToast.h
+    QmUi/QmToastRender.cpp
     QmUi/QmConsoleUi.h
     QmUi/QmVoteMenu.cpp
     QmUi/QmVoteMenu.h
@@ -3191,7 +3210,10 @@ if(CLIENT)
     QmUi/QmLegacyMediaHud.cpp
     QmUi/QmLegacyMediaHud.h
     QmUi/QmColorGradient.h
+    QmUi/QmNeonRainbow.h
     QmUi/QmGradientGeometry.h
+    QmUi/QmImageView.cpp
+    QmUi/QmImageView.h
     QmUi/QmImeAppearance.h
     QmUi/QmChatCompletionAppearance.h
     QmUi/QmImeCandidateLayout.h
@@ -3261,12 +3283,29 @@ if(CLIENT)
     QmUi/QmCardOrderModel.h
     QmUi/QmCardRegistry.cpp
     QmUi/QmCardRegistry.h
+    QmUi/QmCardWiki.cpp
+    QmUi/QmCardWiki.h
+    QmUi/QmCardWikiPanel.cpp
+    QmUi/QmCardWikiPanel.h
+    QmUi/QmWikiDocs.cpp
+    QmUi/QmWikiDocs.h
+    QmUi/QmWikiEditor.cpp
+    QmUi/QmWikiEditor.h
+    QmUi/QmWikiMarkdown.cpp
+    QmUi/QmWikiMarkdown.h
+    QmUi/QmWikiMarkdownRender.cpp
+    QmUi/QmWikiMarkdownRender.h
+    QmUi/QmWikiMedia.cpp
+    QmUi/QmWikiMedia.h
+    QmUi/QmWikiStore.cpp
+    QmUi/QmWikiStore.h
     QmUi/cards/QmCardCatalog.cpp
     QmUi/cards/QmCardCatalog.h
     QmUi/cards/QmCardCatalogIds.cpp
     QmUi/cards/QmCardCatalogSearch.cpp
     QmUi/cards/QmCardCatalogSearch.h
     QmUi/cards/QmCardCatalogBind.cpp
+    QmUi/cards/QmCardCatalogSelfKillProtection.cpp
     QmUi/cards/QmCardCatalogFunction.cpp
     QmUi/cards/QmWordFilterFileCard.cpp
     QmUi/cards/QmCardCatalogGeneral.cpp
@@ -3455,6 +3494,7 @@ if(CLIENT)
     components/qmclient/axiom_scores_parse_job.h
     components/qmclient/bind_editor.cpp
     components/qmclient/bind_editor.h
+    components/qmclient/bind_overview.h
     components/qmclient/bind_settings.cpp
     components/qmclient/browser_status_layout.h
     components/qmclient/browser_map_preview.h
@@ -3521,6 +3561,7 @@ if(CLIENT)
     components/qmclient/scoreboard_media_controls.cpp
     components/qmclient/scoreboard_media_controls.h
     components/qmclient/voting_hud.h
+    components/qmclient/video_preset_labels.h
     components/qmclient/menus_qmclient.cpp
     components/qmclient/menus_qmclient_internal.h
     components/qmclient/menus_qmclient_popups.cpp
@@ -3626,6 +3667,8 @@ if(CLIENT)
     components/qmclient/mobile_spectator.h
     components/qmclient/mobile_spectator_controls.h
     components/qmclient/screenshot_manager.cpp
+    components/qmclient/ime_gradient_probe.cpp
+    components/qmclient/ime_gradient_probe.h
     components/qmclient/config_package.cpp
     components/qmclient/config_package.h
     components/qmclient/screenshot_manager.h
@@ -3677,6 +3720,10 @@ if(CLIENT)
     components/qmclient/statusbar_items.h
     components/qmclient/warlist_model.cpp
     components/qmclient/warlist_model.h
+    components/qmclient/pose_file.cpp
+    components/qmclient/pose_file.h
+    components/qmclient/pose_scene.cpp
+    components/qmclient/pose_scene.h
     components/qmclient/player_display_privacy.h
     components/qmclient/update_version.h
     components/qmclient/update_manifest.cpp
@@ -4607,6 +4654,9 @@ add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src/generated/checksum.cpp
 if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   # 测试显式注册；目录递归发现和遗漏清单由 test_inventory.py 核对。
   set(TESTS
+    src/test/unit/qmclient/settings/qm_card_wiki_test.cpp
+    src/test/unit/qmclient/settings/qm_wiki_markdown_test.cpp
+    src/test/integration/qmclient/settings/qm_wiki_editor_test.cpp
     src/test/unit/qmclient/ui/settings_card_info_test.cpp
     src/test/unit/qmclient/ui/qm_list_entry_animation_test.cpp
     src/test/unit/engine/steam_client_path_test.cpp
@@ -4621,6 +4671,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/QmDiscreteSliderTest.cpp
     src/test/unit/client/map_browser_filter_slider_test.cpp
     src/test/unit/qmclient/ui/QmAnimScrollTest.cpp
+    src/test/unit/qmclient/ui/QmListRowFeedbackTest.cpp
     src/test/unit/qmclient/ui/QmAnimTreeTest.cpp
     src/test/unit/qmclient/ui/qm_icon_policy_test.cpp
     src/test/unit/qmclient/ui/qm_icon_diagnostics_test.cpp
@@ -4668,6 +4719,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/client/rank_view_timeline_test.cpp
     src/test/integration/qmclient/music/netease_shared_memory_readonly_test.cpp
     src/test/integration/qmclient/client/qm_screenshot_image_job_test.cpp
+    src/test/integration/qmclient/client/qm_pose_capture_save_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_cache_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_layout_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_effects_test.cpp
@@ -4782,6 +4834,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/base/prng_test.cpp
     src/test/unit/qmclient/client/qm_bind_editor_console_test.cpp
     src/test/unit/qmclient/client/qm_bind_editor_test.cpp
+    src/test/unit/qmclient/client/qm_bind_overview_test.cpp
     src/test/unit/qmclient/client/qm_background_particles_test.cpp
     src/test/unit/qmclient/client/qm_axiom_scores_test.cpp
     src/test/contract/qmclient/client/qm_axiom_scores_contract_test.cpp
@@ -4791,6 +4844,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_chat_command_policy_test.cpp
     src/test/unit/qmclient/client/qm_chat_command_hud_test.cpp
     src/test/unit/qmclient/client/qm_chat_presentation_test.cpp
+    src/test/unit/qmclient/client/qm_chat_spacing_test.cpp
     src/test/unit/qmclient/client/qm_pending_chat_messages_test.cpp
     src/test/unit/qmclient/client/qm_outgoing_chat_annotations_test.cpp
     src/test/unit/qmclient/client/qm_chat_text_layout_test.cpp
@@ -4823,6 +4877,11 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_water_hammer_indicator_test.cpp
     src/test/unit/qmclient/client/qm_demo_display_test.cpp
     src/test/unit/qmclient/client/qm_demo_ui_test.cpp
+    src/test/unit/qmclient/client/qm_pose_file_test.cpp
+    src/test/unit/qmclient/client/qm_pose_scene_test.cpp
+    src/test/unit/qmclient/client/qm_pose_map_test.cpp
+    src/test/unit/qmclient/client/qm_pose_capture_test.cpp
+    src/test/unit/qmclient/client/qm_video_preset_labels_test.cpp
     src/test/unit/client/online_replay_player_test.cpp
     src/test/unit/qmclient/client/qm_jump_hint_utils_test.cpp
     src/test/unit/qmclient/client/qm_dummy_mini_view_layout_test.cpp
@@ -4907,6 +4966,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/client/qm_demo_cut_contract_test.cpp
     src/test/unit/qmclient/client/qm_demo_cut_test.cpp
     src/test/unit/qmclient/client/qm_local_saves_test.cpp
+    src/test/unit/qmclient/client/qm_save_usage_test.cpp
     src/test/contract/qmclient/client/qm_storage_path_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_cards_surface_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_cards_deck_contract_test.cpp
@@ -5048,6 +5108,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/client/qm_config_package_storage_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_image_policy_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_viewer_viewport_test.cpp
+    src/test/unit/qmclient/client/qm_image_view_test.cpp
     src/test/unit/qmclient/client/qm_friend_menu_policy_test.cpp
     src/test/unit/qmclient/ui/qm_rounded_surface_geometry_test.cpp
     src/test/unit/qmclient/ui/qm_rounded_surface_render_test.cpp
@@ -5179,6 +5240,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/tclient/map_history.cpp
     src/game/client/components/tclient/bg_draw_file.cpp
     src/game/client/components/qmclient/warlist_model.cpp
+    src/game/client/components/qmclient/pose_file.cpp
+    src/game/client/components/qmclient/pose_scene.cpp
     src/game/client/components/tclient/swap_countdown_message.cpp
     src/game/client/components/tclient/qm_tee_trail.cpp
     src/game/client/components/qmclient/tee_trail_styles.cpp
@@ -5206,8 +5269,14 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/QmUi/QmCardOrderModel.cpp
     src/game/client/QmUi/QmDropdown.cpp
     src/game/client/QmUi/QmScroll.cpp
+    src/game/client/QmUi/QmImageView.cpp
     src/game/client/QmUi/QmTree.cpp
     src/game/client/QmUi/QmCardRegistry.cpp
+    src/game/client/QmUi/QmCardWiki.cpp
+    src/game/client/QmUi/QmWikiDocs.cpp
+    src/game/client/QmUi/QmWikiEditor.cpp
+    src/game/client/QmUi/QmWikiMarkdown.cpp
+    src/game/client/QmUi/QmWikiStore.cpp
     src/game/client/QmUi/cards/QmCardCatalogIds.cpp
     src/game/client/QmUi/cards/QmCardCatalogSearch.cpp
     src/game/client/QmUi/SettingsCardDeckLogic.cpp
@@ -5297,6 +5366,22 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/qm/hooks/netease/qm_netease_bootstrap.cpp
       src/qm/hooks/netease/qm_netease_cdp.cpp
       src/qm/hooks/netease/qm_netease_cdp_client.cpp
+    )
+  endif()
+
+  # 视频导出测试依赖 FFmpeg（video_export.cpp/video_encoder.cpp 实现），无 FFmpeg 时随模块一起裁掉
+  if(VIDEORECORDER AND FFMPEG_FOUND)
+    list(APPEND TESTS
+      src/test/unit/engine/video_audio_timeline_test.cpp
+      src/test/unit/engine/video_export_test.cpp
+      src/test/unit/engine/video_offscreen_plan_test.cpp
+      src/test/integration/engine/video_export_storage_test.cpp
+      src/test/integration/engine/video_audio_test.cpp
+      src/test/unit/engine/video_encoder_test.cpp
+    )
+    list(APPEND TESTS_EXTRA
+      src/engine/client/video_encoder.cpp
+      src/engine/client/video_export.cpp
     )
   endif()
 
@@ -5480,13 +5565,22 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/client/qm_text_initialization_test.cpp
       src/test/integration/qmclient/client/qm_text_device_recovery_test.cpp
       src/test/integration/qmclient/ui/qm_popup_blur_scope_test.cpp
+      src/test/unit/qmclient/ui/qm_ui_overlay_semantics_test.cpp
+      src/test/unit/qmclient/ui/qm_slot_reflow_test.cpp
+      src/game/client/QmUi/QmToast.cpp
+      src/game/client/QmUi/QmSlotReflow.cpp
       src/test/integration/qmclient/ui/qm_settings_search_session_test.cpp
       src/test/integration/qmclient/ui/qm_settings_paragraph_test.cpp
       src/test/integration/qmclient/ui/qm_console_settings_scroll_test.cpp
       src/test/integration/qmclient/ui/qm_scrollbar_color_submission_test.cpp
+      src/test/integration/qmclient/ui/qm_scrollbar_reserve_transition_test.cpp
       src/test/integration/qmclient/ui/qm_background_controls_test.cpp
       src/test/integration/qmclient/ui/qm_navigation_selection_test.cpp
       src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp
+      src/test/unit/qmclient/ui/qm_line_input_multiline_test.cpp
+      src/test/integration/qmclient/ui/qm_multiline_edit_scroll_test.cpp
+      src/test/integration/qmclient/ui/qm_wiki_panel_test.cpp
+      src/test/integration/qmclient/ui/qm_confirm_popup_result_test.cpp
       src/test/integration/qmclient/ui/qm_tooltip_text_layout_test.cpp
       src/test/integration/qmclient/ui/qm_card_summary_layout_test.cpp
       src/test/integration/qmclient/ui/qm_secondary_panel_actions_test.cpp
@@ -5517,6 +5611,17 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/game/client/QmUi/QmAnim.cpp
       src/game/client/QmUi/QmAnimationBackend.cpp
       src/game/client/QmUi/QmAnimResolve.cpp
+      src/game/client/QmUi/QmCardOrderModel.cpp
+      src/game/client/QmUi/QmCardRegistry.cpp
+      src/game/client/QmUi/QmCardWiki.cpp
+      src/game/client/QmUi/cards/QmCardCatalogSearch.cpp
+      src/game/client/QmUi/QmCardWikiPanel.cpp
+      src/game/client/QmUi/QmWikiDocs.cpp
+      src/game/client/QmUi/QmWikiEditor.cpp
+      src/game/client/QmUi/QmWikiMarkdown.cpp
+      src/game/client/QmUi/QmWikiMarkdownRender.cpp
+      src/game/client/QmUi/QmWikiMedia.cpp
+      src/game/client/QmUi/QmWikiStore.cpp
       src/game/client/QmUi/QmDropdown.cpp
       src/game/client/QmUi/QmScroll.cpp
       src/game/client/QmUi/QmTree.cpp
@@ -5529,7 +5634,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     )
     add_dependencies(qm-ui-popup-tests generate_protocol)
     target_link_libraries(qm-ui-popup-tests ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${GTEST_LIBRARIES} ${LIBS_SERVER} ${FREETYPE_LIBRARIES})
-    target_include_directories(qm-ui-popup-tests SYSTEM PRIVATE ${GTEST_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS})
+    target_include_directories(qm-ui-popup-tests SYSTEM PRIVATE ${GTEST_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS} ${WebP_INCLUDE_DIRS})
     target_compile_definitions(qm-ui-popup-tests PRIVATE DDNET_TEST_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
     if(MSVC)
       target_compile_options(qm-ui-popup-tests PRIVATE /bigobj /utf-8)
@@ -6506,7 +6611,8 @@ foreach(target ${TARGETS_OWN})
     target_compile_definitions(${target} PRIVATE CONF_UPNP)
     target_include_directories(${target} SYSTEM PRIVATE ${MINIUPNPC_INCLUDE_DIRS})
   endif()
-  if(VIDEORECORDER)
+  # 宏与真实能力一致：仅在 FFmpeg 实际找到时定义（否则 video.h 的 FFmpeg 头引用会编译失败）
+  if(VIDEORECORDER AND FFMPEG_FOUND)
     target_compile_definitions(${target} PRIVATE CONF_VIDEORECORDER)
   endif()
   if(ANTIBOT)

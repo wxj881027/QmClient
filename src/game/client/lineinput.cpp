@@ -30,6 +30,86 @@ float CLineInput::ms_CompositionLineHeight = 0.0f;
 
 char CLineInput::ms_aStars[128] = "";
 
+namespace
+{
+	// 粘贴文本清洗：单行输入把控制字符压成空格（既有语义）；
+	// 多行输入保留换行，并把 CRLF / 单独 CR 统一成 LF，方便 Markdown 等长文本编辑。
+	void SanitizePastedText(std::string &Text, bool Multiline)
+	{
+		if(!Multiline)
+		{
+			str_sanitize_cc(Text.data());
+			return;
+		}
+		std::string Normalized;
+		Normalized.reserve(Text.size());
+		for(size_t Index = 0; Index < Text.size(); ++Index)
+		{
+			if(Text[Index] == '\r')
+			{
+				Normalized += '\n';
+				if(Index + 1 < Text.size() && Text[Index + 1] == '\n')
+					++Index;
+				continue;
+			}
+			Normalized += Text[Index];
+		}
+		// str_sanitize 保留 \r \n \t，这里已经没有 \r，效果等于「只保留换行与制表符」。
+		str_sanitize(Normalized.data());
+		Text = Normalized;
+	}
+
+	// 文本渲染器的 m_GlyphCount / m_CursorCharacter 按「实际渲染出来的字形」计数，换行不是字形；
+	// 而 str_utf8_offset_* 按字符计数，换行会占一个。多行文本直接用后者换算，偏移会少算
+	// 「光标之前的换行数」个字符——表现就是「在末尾输入，字符却插到前面几行」。
+	size_t QmGlyphToByteOffset(const char *pText, int GlyphCount)
+	{
+		if(pText == nullptr || GlyphCount <= 0)
+			return 0;
+		const char *pCursor = pText;
+		int Glyph = 0;
+		while(*pCursor != '\0')
+		{
+			const int Codepoint = str_utf8_decode(&pCursor);
+			if(Codepoint == '\n' || Codepoint == '\r')
+				continue;
+			if(++Glyph == GlyphCount)
+				return static_cast<size_t>(pCursor - pText);
+		}
+		return static_cast<size_t>(pCursor - pText);
+	}
+
+	int QmByteOffsetToGlyph(const char *pText, size_t ByteOffset)
+	{
+		if(pText == nullptr)
+			return 0;
+		const size_t Length = str_length(pText);
+		ByteOffset = std::min(ByteOffset, Length);
+		int Glyph = 0;
+		const char *pCursor = pText;
+		while(*pCursor != '\0' && static_cast<size_t>(pCursor - pText) < ByteOffset)
+		{
+			const int Codepoint = str_utf8_decode(&pCursor);
+			if(Codepoint == '\n' || Codepoint == '\r')
+				continue;
+			++Glyph;
+		}
+		return Glyph;
+	}
+
+	// 多行布局溢出输入框时从上往下排：按垂直居中排会让首行落到框外、末行也落到框外，
+	// 光标怎么滚都在看不见的地方。单行（LineWidth < 0）保持既有的居中观感。
+	// ScrollOffsetY 是可见带的上移量，0 表示内容顶部贴着输入框顶部。
+	void QmApplyMultilineScrollY(const float LineWidth, const CUIRect *pRect, const STextBoundingBox &BoundingBox, const float ScrollOffsetY, vec2 &CursorPos)
+	{
+		if(LineWidth < 0.0f || pRect == nullptr)
+			return;
+		if(BoundingBox.m_H > pRect->h)
+			CursorPos.y = pRect->y;
+		CursorPos.y -= ScrollOffsetY;
+	}
+} // namespace
+
 void CLineInput::SetBuffer(char *pStr, size_t MaxSize, size_t MaxChars)
 {
 	if(m_pStr && m_pStr == pStr)
@@ -45,6 +125,7 @@ void CLineInput::SetBuffer(char *pStr, size_t MaxSize, size_t MaxChars)
 	{
 		m_CursorPos = m_SelectionStart = m_SelectionEnd = m_LastCompositionCursorPos = 0;
 		m_ScrollOffset = m_ScrollOffsetChange = 0.0f;
+		m_ScrollOffsetY = m_ScrollOffsetYChange = 0.0f;
 		m_CaretPosition = vec2(0.0f, 0.0f);
 		m_CaretBlinkStartTime = std::chrono::nanoseconds::zero();
 		m_MouseSelection.m_Selecting = false;
@@ -237,7 +318,13 @@ bool CLineInput::ProcessInput(const IInput::CEvent &Event)
 		const bool MoveWord = ModPressed && !AltPressed;
 #endif
 
-		if(Event.m_Key == KEY_BACKSPACE)
+		if(m_Multiline && (Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER))
+		{
+			// 多行输入：回车在光标处写入换行。单行输入不进入缓冲区，保持原有行为。
+			SetRange("\n", m_SelectionStart, m_SelectionEnd);
+			KeyHandled = true;
+		}
+		else if(Event.m_Key == KEY_BACKSPACE)
 		{
 			if(SelectionLength)
 			{
@@ -366,7 +453,8 @@ bool CLineInput::ProcessInput(const IInput::CEvent &Event)
 			std::string ClipboardText = Input()->GetClipboardText();
 			if(!ClipboardText.empty())
 			{
-				if(m_pfnClipboardLineCallback)
+				// 多行输入整段插入：走按行回调会把换行拆没。
+				if(m_pfnClipboardLineCallback != nullptr && !m_Multiline)
 				{
 					// Split clipboard text into multiple lines. Send all complete lines to callback.
 					// The lineinput is set to the last clipboard line.
@@ -405,7 +493,7 @@ bool CLineInput::ProcessInput(const IInput::CEvent &Event)
 				}
 				else
 				{
-					str_sanitize_cc(ClipboardText.data());
+					SanitizePastedText(ClipboardText, m_Multiline);
 					SetRange(ClipboardText.c_str(), m_SelectionStart, m_SelectionEnd);
 				}
 			}
@@ -496,7 +584,8 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 		// 整行框含字体上伸/下伸空白，直接按框居中会让数字等无下伸字形看起来偏上。
 		// 多行或无字形数据（空文本/IME 组合中）时退回整行框居中。
 		const float *pBiggestCharHeight = BoundingBox.m_LineCount == 1 && BoundingBox.m_MaxCharacterHeight > 0.0f ? &BoundingBox.m_MaxCharacterHeight : nullptr;
-		const vec2 CursorPos = CUi::CalcAlignedCursorPos(pRect, BoundingBox.Size(), Align, pBiggestCharHeight);
+		vec2 CursorPos = CUi::CalcAlignedCursorPos(pRect, BoundingBox.Size(), Align, pBiggestCharHeight);
+		QmApplyMultilineScrollY(LineWidth, pRect, BoundingBox, m_ScrollOffsetY, CursorPos);
 
 		Cursor.SetPosition(CursorPos);
 		Cursor.m_FontSize = FontSize;
@@ -531,13 +620,13 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 
 				if(SelectionCursor.m_CursorMode == TEXT_CURSOR_CURSOR_MODE_CALCULATE && SelectionCursor.m_CursorCharacter >= 0)
 				{
-					const size_t NewCursorOffset = str_utf8_offset_chars_to_bytes(pDisplayStr, SelectionCursor.m_CursorCharacter);
+					const size_t NewCursorOffset = QmGlyphToByteOffset(pDisplayStr, SelectionCursor.m_CursorCharacter);
 					SetCursorOffset(OffsetFromDisplayToActual(NewCursorOffset));
 				}
 				if(SelectionCursor.m_CalculateSelectionMode == TEXT_CURSOR_SELECTION_MODE_CALCULATE && SelectionCursor.m_SelectionStart >= 0 && SelectionCursor.m_SelectionEnd >= 0)
 				{
-					const size_t NewSelectionStart = str_utf8_offset_chars_to_bytes(pDisplayStr, SelectionCursor.m_SelectionStart);
-					const size_t NewSelectionEnd = str_utf8_offset_chars_to_bytes(pDisplayStr, SelectionCursor.m_SelectionEnd);
+					const size_t NewSelectionStart = QmGlyphToByteOffset(pDisplayStr, SelectionCursor.m_SelectionStart);
+					const size_t NewSelectionEnd = QmGlyphToByteOffset(pDisplayStr, SelectionCursor.m_SelectionEnd);
 					SetSelection(OffsetFromDisplayToActual(NewSelectionStart), OffsetFromDisplayToActual(NewSelectionEnd));
 				}
 
@@ -561,11 +650,11 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 			m_LastCompositionCursorPos = CaretOffset;
 			const size_t DisplayCompositionEnd = DisplayCursorOffset + Input()->GetCompositionLength();
 			Cursor.m_CursorMode = TEXT_CURSOR_CURSOR_MODE_SET;
-			Cursor.m_CursorCharacter = str_utf8_offset_bytes_to_chars(pDisplayStr, CaretOffset);
+			Cursor.m_CursorCharacter = QmByteOffsetToGlyph(pDisplayStr, CaretOffset);
 			Cursor.m_CalculateSelectionMode = TEXT_CURSOR_SELECTION_MODE_SET;
 			Cursor.m_SelectionHeightFactor = 0.1f;
-			Cursor.m_SelectionStart = str_utf8_offset_bytes_to_chars(pDisplayStr, DisplayCursorOffset);
-			Cursor.m_SelectionEnd = str_utf8_offset_bytes_to_chars(pDisplayStr, DisplayCompositionEnd);
+			Cursor.m_SelectionStart = QmByteOffsetToGlyph(pDisplayStr, DisplayCursorOffset);
+			Cursor.m_SelectionEnd = QmByteOffsetToGlyph(pDisplayStr, DisplayCompositionEnd);
 			TextRender()->TextSelectionColor(qm_theme::IME.m_CompositionSelection);
 			RenderTextWithSelectionUnderlay();
 			TextRender()->TextSelectionColor(PreviousTextSelectionColor);
@@ -575,29 +664,29 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 			const size_t Start = OffsetFromActualToDisplay(GetSelectionStart());
 			const size_t End = OffsetFromActualToDisplay(GetSelectionEnd());
 			Cursor.m_CursorMode = m_MouseSelection.m_Selecting ? TEXT_CURSOR_CURSOR_MODE_CALCULATE : TEXT_CURSOR_CURSOR_MODE_SET;
-			Cursor.m_CursorCharacter = str_utf8_offset_bytes_to_chars(pDisplayStr, CaretOffset);
+			Cursor.m_CursorCharacter = QmByteOffsetToGlyph(pDisplayStr, CaretOffset);
 			Cursor.m_CalculateSelectionMode = m_MouseSelection.m_Selecting ? TEXT_CURSOR_SELECTION_MODE_CALCULATE : TEXT_CURSOR_SELECTION_MODE_SET;
-			Cursor.m_SelectionStart = str_utf8_offset_bytes_to_chars(pDisplayStr, Start);
-			Cursor.m_SelectionEnd = str_utf8_offset_bytes_to_chars(pDisplayStr, End);
+			Cursor.m_SelectionStart = QmByteOffsetToGlyph(pDisplayStr, Start);
+			Cursor.m_SelectionEnd = QmByteOffsetToGlyph(pDisplayStr, End);
 			RenderTextWithSelectionUnderlay();
 		}
 		else
 		{
 			Cursor.m_CursorMode = m_MouseSelection.m_Selecting ? TEXT_CURSOR_CURSOR_MODE_CALCULATE : TEXT_CURSOR_CURSOR_MODE_SET;
-			Cursor.m_CursorCharacter = str_utf8_offset_bytes_to_chars(pDisplayStr, CaretOffset);
+			Cursor.m_CursorCharacter = QmByteOffsetToGlyph(pDisplayStr, CaretOffset);
 			Cursor.m_CalculateSelectionMode = m_MouseSelection.m_Selecting ? TEXT_CURSOR_SELECTION_MODE_CALCULATE : TEXT_CURSOR_SELECTION_MODE_NONE;
 			RenderTextWithSelectionUnderlay();
 		}
 
 		if(Cursor.m_CursorMode == TEXT_CURSOR_CURSOR_MODE_CALCULATE && Cursor.m_CursorCharacter >= 0)
 		{
-			const size_t NewCursorOffset = str_utf8_offset_chars_to_bytes(pDisplayStr, Cursor.m_CursorCharacter);
+			const size_t NewCursorOffset = QmGlyphToByteOffset(pDisplayStr, Cursor.m_CursorCharacter);
 			SetCursorOffset(OffsetFromDisplayToActual(NewCursorOffset));
 		}
 		if(Cursor.m_CalculateSelectionMode == TEXT_CURSOR_SELECTION_MODE_CALCULATE && Cursor.m_SelectionStart >= 0 && Cursor.m_SelectionEnd >= 0)
 		{
-			const size_t NewSelectionStart = str_utf8_offset_chars_to_bytes(pDisplayStr, Cursor.m_SelectionStart);
-			const size_t NewSelectionEnd = str_utf8_offset_chars_to_bytes(pDisplayStr, Cursor.m_SelectionEnd);
+			const size_t NewSelectionStart = QmGlyphToByteOffset(pDisplayStr, Cursor.m_SelectionStart);
+			const size_t NewSelectionEnd = QmGlyphToByteOffset(pDisplayStr, Cursor.m_SelectionEnd);
 			SetSelection(OffsetFromDisplayToActual(NewSelectionStart), OffsetFromDisplayToActual(NewSelectionEnd));
 		}
 
@@ -621,7 +710,9 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 		const STextBoundingBox BoundingBox = TextRender()->TextBoundingBox(FontSize, pDisplayStr, -1, LineWidth, LineSpacing);
 		// 与激活态一致：单行按可见字形高度视觉居中，多行/无字形数据退回整行框居中。
 		const float *pBiggestCharHeight = BoundingBox.m_LineCount == 1 && BoundingBox.m_MaxCharacterHeight > 0.0f ? &BoundingBox.m_MaxCharacterHeight : nullptr;
-		Cursor.SetPosition(CUi::CalcAlignedCursorPos(pRect, BoundingBox.Size(), Align, pBiggestCharHeight));
+		vec2 CursorPos = CUi::CalcAlignedCursorPos(pRect, BoundingBox.Size(), Align, pBiggestCharHeight);
+		QmApplyMultilineScrollY(LineWidth, pRect, BoundingBox, m_ScrollOffsetY, CursorPos);
+		Cursor.SetPosition(CursorPos);
 		Cursor.m_FontSize = FontSize;
 		Cursor.m_LineWidth = LineWidth;
 		Cursor.m_LineSpacing = LineSpacing;

@@ -472,6 +472,9 @@ private:
 	static void ConTuneZone(IConsole::IResult *pResult, void *pUserData);
 	static void ConMapbug(IConsole::IResult *pResult, void *pUserData);
 	static void ConQmSponsorNudgePreview(IConsole::IResult *pResult, void *pUserData);
+	// 仅由测试环境变量 QMCLIENT_TEST_IME_GRADIENT_PROBE 开启，不提供控制台命令：
+	// 这个探针会在屏幕上画出彩色胶囊，不能成为玩家可触发的正式功能。
+	bool m_QmImeGradientProbeEnabled = false;
 
 	static void ConchainMenuMap(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
@@ -924,8 +927,10 @@ public:
 	void OnRender() override;
 	void OnUpdate() override;
 	int RenderThrottleRefreshRate() const override;
-	void OnScreenshotTaken(class CImageInfo &&Image) override;
+	void OnScreenshotTaken(class CImageInfo &&Image, const char *pPath) override;
 	IGraphics::FScreenshotProcessor ScreenshotProcessor() override;
+	void SetPoseCamera(vec2 Center, float Zoom) override;
+	bool PoseSkinsReady() override;
 	void OnDummyDisconnect() override;
 	void OnDummyManualDisconnect() override;
 	virtual void OnRelease();
@@ -1007,6 +1012,10 @@ public:
 	void SendKill();
 	void SendKill() const;
 	void SendReadyChange7();
+	static void ConQmSelfKillOff(IConsole::IResult *pResult, void *pUserData);
+	static void ConQmSelfKillOn(IConsole::IResult *pResult, void *pUserData);
+	// 自杀保护提示限流时间戳（每秒最多一次），避免按住 K 键刷屏。
+	int64_t m_QmSelfKillHintLastTime = 0;
 
 	void ApplyPreInputs(int Tick, bool Direct, CGameWorld &GameWorld);
 	bool GetDummyFastInput(CNetObj_PlayerInput &DummyFastInput, const CNetObj_PlayerInput *pDummyInputData, const class CCharacter *pDummyChar, int LocalTee, int DummyTee) const;

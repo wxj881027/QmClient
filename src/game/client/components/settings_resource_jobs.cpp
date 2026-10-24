@@ -1378,6 +1378,11 @@ bool SettingsAssetPreviewHandleMatches(const SSettingsAssetPreviewHandle &Handle
 	       Handle.m_Name == pName;
 }
 
+bool SettingsAssetPreviewHandleReferencesAsset(const SSettingsAssetPreviewHandle &Handle, const char *pName)
+{
+	return pName != nullptr && Handle.m_Name == pName;
+}
+
 const char *SettingsWarmupBudgetStopMissReasonName(ESettingsWarmupStopReason StopReason)
 {
 	switch(StopReason)

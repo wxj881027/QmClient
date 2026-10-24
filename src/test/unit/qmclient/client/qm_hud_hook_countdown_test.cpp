@@ -1,4 +1,5 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
+#include <game/client/QmUi/QmHookCountdownRender.h>
 #include <game/client/components/hud_media_island_logic.h>
 #include <game/client/components/qmclient/hook_countdown.h>
 
@@ -231,22 +232,34 @@ TEST(QmHudHookCountdown, EndlessBreathingLoopsIndependentlyOfRainbowFlow)
 	EXPECT_LT(QmHookCountdownBreath(Ring.Visual().m_BreathPhase), 0.01f);
 }
 
-TEST(QmHueToRgb, MapsPrimaryHuesAndCyclesAroundTheWheel)
+// 彩虹调色板与好友跟随光环共用：色相按 1.0 循环、主色方位正确，且亮度有下限，
+// 细描边在暗背景上才不会掉成一条暗色轮廓。
+TEST(QmNeonRainbow, CyclesHueAndLiftsBrightnessForThinStrokes)
 {
-	const auto At = [](float Hue) {
-		const ColorRGBA Color = QmHueToRgb(Hue);
-		return std::tuple{Color.r, Color.g, Color.b};
+	const auto At = [](float Hue, float Wave = 0.0f) {
+		const ColorRGBA Color = QmNeonRainbowColor(Hue, Wave, 1.0f);
+		return std::tuple{Color.r, Color.g, Color.b, Color.a};
 	};
-	// 三个主色方位 + 1.0 循环回红。
-	EXPECT_EQ(At(0.0f), (std::tuple{1.0f, 0.0f, 0.0f}));
-	EXPECT_EQ(At(1.0f / 3.0f), (std::tuple{0.0f, 1.0f, 0.0f}));
-	EXPECT_EQ(At(2.0f / 3.0f), (std::tuple{0.0f, 0.0f, 1.0f}));
+	// 三个主色方位各自主导，1.0 与 0.0 是同一圈。
+	const auto [RedR, RedG, RedB, RedA] = At(0.0f);
+	EXPECT_GT(RedR, RedG);
+	EXPECT_GT(RedR, RedB);
+	EXPECT_FLOAT_EQ(RedA, 1.0f);
+	const auto [GreenR, GreenG, GreenB, GreenA] = At(1.0f / 3.0f);
+	EXPECT_GT(GreenG, GreenR);
+	EXPECT_GT(GreenG, GreenB);
+	const auto [BlueR, BlueG, BlueB, BlueA] = At(2.0f / 3.0f);
+	EXPECT_GT(BlueB, BlueR);
+	EXPECT_GT(BlueB, BlueG);
 	EXPECT_EQ(At(1.25f), At(0.25f));
-	// 过渡色单调：1/6 处红绿混合成黄，无越界分量。
-	const auto [Hue, Sat, Val] = At(1.0f / 6.0f);
-	EXPECT_NEAR(Hue, 1.0f, 0.0001f);
-	EXPECT_NEAR(Sat, 1.0f, 0.0001f);
-	EXPECT_NEAR(Val, 0.0f, 0.0001f);
+	// 混入白色后没有接近纯黑的分量，最暗的通道也保留一段亮度。
+	EXPECT_GE(RedB, 0.15f);
+	// 高光（Wave=1）只提亮不换色相：三个通道一起变亮。
+	const auto [DimR, DimG, DimB, DimA] = At(0.4f, 0.0f);
+	const auto [BrightR, BrightG, BrightB, BrightA] = At(0.4f, 1.0f);
+	EXPECT_GT(BrightR, DimR);
+	EXPECT_GT(BrightG, DimG);
+	EXPECT_GT(BrightB, DimB);
 }
 
 TEST(QmHudHookCountdown, ReleaseKeepsFlowingUntilTheRingFadesOut)
@@ -262,15 +275,38 @@ TEST(QmHudHookCountdown, ReleaseKeepsFlowingUntilTheRingFadesOut)
 	EXPECT_GT(Ring.Visual().m_Alpha, 0.0f);
 }
 
-TEST(QmHudHookCountdown, WarningColorTurnsWarmAsTheRealProgressRunsOut)
+// 环色按剩余时间走三段（普通 / 警告 / 紧急），三段都由配置给出：
+// 取色卡里的三个色块必须真的决定环在对应阶段的颜色。
+TEST(QmHudHookCountdown, RingWalksTheConfiguredStageColorsAsTimeRunsOut)
 {
-	const ColorRGBA Normal = QmHookCountdownColor(0.75f);
-	const ColorRGBA Warning = QmHookCountdownColor(0.20f);
-	const ColorRGBA Urgent = QmHookCountdownColor(0.0f);
-	EXPECT_GT(Normal.b, Normal.r);
-	EXPECT_GT(Warning.r, Warning.b);
-	EXPECT_GT(Urgent.r, Urgent.g);
-	EXPECT_LT(Urgent.g, Warning.g);
+	const int SavedNormal = g_Config.m_QmHookCountdownColor;
+	const int SavedWarning = g_Config.m_QmHookCountdownWarningColor;
+	const int SavedUrgent = g_Config.m_QmHookCountdownUrgentColor;
+	const ColorRGBA Normal(0.20f, 0.65f, 1.0f, 1.0f);
+	const ColorRGBA Warning(1.0f, 0.70f, 0.15f, 1.0f);
+	const ColorRGBA Urgent(1.0f, 0.25f, 0.25f, 1.0f);
+	g_Config.m_QmHookCountdownColor = color_cast<ColorHSLA>(Normal).Pack(true);
+	g_Config.m_QmHookCountdownWarningColor = color_cast<ColorHSLA>(Warning).Pack(true);
+	g_Config.m_QmHookCountdownUrgentColor = color_cast<ColorHSLA>(Urgent).Pack(true);
+	const auto ExpectColor = [](const ColorRGBA &Actual, const ColorRGBA &Expected) {
+		EXPECT_NEAR(Actual.r, Expected.r, 0.01f);
+		EXPECT_NEAR(Actual.g, Expected.g, 0.01f);
+		EXPECT_NEAR(Actual.b, Expected.b, 0.01f);
+	};
+	ExpectColor(QmHookCountdownColor(1.0f), Normal);
+	ExpectColor(QmHookCountdownColor(0.45f), Normal);
+	ExpectColor(QmHookCountdownColor(0.20f), Warning);
+	ExpectColor(QmHookCountdownColor(0.0f), Urgent);
+	// 段与段之间连续过渡：中间值必须落在两端之间，不能直接跳色。
+	const ColorRGBA Blend = QmHookCountdownColor(0.325f);
+	EXPECT_GT(Blend.r, Normal.r);
+	EXPECT_LT(Blend.r, Warning.r);
+	// 换掉普通段配置，环的起步颜色就跟着换。
+	g_Config.m_QmHookCountdownColor = color_cast<ColorHSLA>(ColorRGBA(0.30f, 0.90f, 0.40f, 1.0f)).Pack(true);
+	EXPECT_GT(QmHookCountdownColor(0.90f).g, 0.85f);
+	g_Config.m_QmHookCountdownColor = SavedNormal;
+	g_Config.m_QmHookCountdownWarningColor = SavedWarning;
+	g_Config.m_QmHookCountdownUrgentColor = SavedUrgent;
 }
 
 TEST(QmHudHookCountdown, SwitchingConnectionDropsThePreviousRing)
@@ -363,6 +399,33 @@ TEST(QmHudHookCountdown, AnimationMatchesAcrossDifferentFrameSteps)
 	EXPECT_NEAR(FastFrames.Visual().m_Scale, SlowFrames.Visual().m_Scale, 0.00001f);
 }
 
+// 尺寸百分比按 100% 为基准换算；非法/零值回退到默认，避免半径塌成 0。
+TEST(QmHudHookCountdown, CountdownSizeScaleMapsPercentToMultiplier)
+{
+	g_Config.m_QmHookCountdownSize = 100;
+	EXPECT_FLOAT_EQ(qm_hook_countdown_ui::CountdownSizeScale(), 1.0f);
+	g_Config.m_QmHookCountdownSize = 50;
+	EXPECT_FLOAT_EQ(qm_hook_countdown_ui::CountdownSizeScale(), 0.5f);
+	g_Config.m_QmHookCountdownSize = 200;
+	EXPECT_FLOAT_EQ(qm_hook_countdown_ui::CountdownSizeScale(), 2.0f);
+	// 0 在配置范围外，仍要给出可用的默认值而不是零半径。
+	g_Config.m_QmHookCountdownSize = 0;
+	EXPECT_FLOAT_EQ(qm_hook_countdown_ui::CountdownSizeScale(), 1.0f);
+	g_Config.m_QmHookCountdownSize = 100;
+}
+
+// 无限钩样式只有两档：0 为 ∞ 符号，1 为圆环；越界值不应落到圆环。
+TEST(QmHudHookCountdown, EndlessStyleSelectsRingOnlyForExplicitRingValue)
+{
+	g_Config.m_QmHookCountdownEndlessStyle = 0;
+	EXPECT_FALSE(qm_hook_countdown_ui::EndlessHookUsesRing());
+	g_Config.m_QmHookCountdownEndlessStyle = 1;
+	EXPECT_TRUE(qm_hook_countdown_ui::EndlessHookUsesRing());
+	g_Config.m_QmHookCountdownEndlessStyle = 2;
+	EXPECT_FALSE(qm_hook_countdown_ui::EndlessHookUsesRing());
+	g_Config.m_QmHookCountdownEndlessStyle = 0;
+}
+
 // SDF 羽化宽度用的像素比例：开关环与钩子环共用，取 x/y 里较大的方向。
 TEST(QmHudHookCountdown, ScreenPixelSizeUsesTheWiderAxisAndGuardsZeroSize)
 {
@@ -421,8 +484,12 @@ TEST(QmHudHookCountdown, RainbowTravelsAlongThePathAndClosesWithoutAColorSeam)
 	};
 	EXPECT_NE(At(0.0f, 0.0f), At(0.25f, 0.0f));
 	EXPECT_NE(At(0.0f, 0.0f), At(0.0f, 0.25f));
-	// 同一颜色在时间前进后到达更远的位置，走完整圈后无跳变。
-	EXPECT_EQ(At(0.0f, 0.0f), At(0.25f, 0.25f));
+	// 色相在时间前进后到达更远的位置。亮度另有自己的高光节奏，所以这里只比较色相。
+	const auto HueAt = [](float Phase, float PathPosition) {
+		return color_cast<ColorHSLA>(QmHookCountdownFlowColor(Phase, PathPosition)).h;
+	};
+	EXPECT_NEAR(HueAt(0.0f, 0.0f), HueAt(0.25f, 0.25f), 0.002f);
+	// 走完整圈后首尾同色，环与 ∞ 的接缝处不会跳色；相位绕满一圈也回到同一帧。
 	EXPECT_EQ(At(0.25f, 0.0f), At(0.25f, 1.0f));
 	EXPECT_EQ(At(0.0f, 0.0f), At(1.0f, 0.0f));
 }
@@ -454,6 +521,102 @@ TEST(QmHudHookInfinity, PathCrossesTheCenterBetweenSymmetricLobes)
 	EXPECT_NEAR(length(aPath[Quarter].m_Position), 0.0f, 0.0001f);
 	EXPECT_NEAR(length(aPath[Quarter * 3].m_Position), 0.0f, 0.0001f);
 	EXPECT_NEAR(aPath.front().m_Position.x, -aPath[Quarter * 2].m_Position.x, 0.0001f);
+}
+
+// 圆环的逐顶点采样是"彩虹真的绕环"的来源：闭合、单位法线、半圈色差明显，
+// 相位前进后同一点换色（流动）。任何一项退化成单色平涂都会让光环失去渐变。
+TEST(QmHookCountdownRingSamples, ClosesTheLoopAndCarriesTheRainbowAroundTheRing)
+{
+	const auto aSamples = qm_hook_countdown_ui::QmHookCountdownRingSamples(0.0f);
+	ASSERT_EQ(aSamples.size(), static_cast<size_t>(qm_hook_countdown_ui::RING_SEGMENTS) + 1);
+	const auto &First = aSamples.front();
+	const auto &Last = aSamples.back();
+	EXPECT_NEAR(First.m_Color.r, Last.m_Color.r, 0.0001f);
+	EXPECT_NEAR(First.m_Color.g, Last.m_Color.g, 0.0001f);
+	EXPECT_NEAR(First.m_Color.b, Last.m_Color.b, 0.0001f);
+	EXPECT_NEAR(First.m_Outward.x, Last.m_Outward.x, 0.0001f);
+	EXPECT_NEAR(First.m_Outward.y, Last.m_Outward.y, 0.0001f);
+	for(const auto &Sample : aSamples)
+		EXPECT_NEAR(length(Sample.m_Outward), 1.0f, 0.0001f);
+	const auto &Half = aSamples[qm_hook_countdown_ui::RING_SEGMENTS / 2];
+	const float HalfDistance = std::abs(First.m_Color.r - Half.m_Color.r) +
+				   std::abs(First.m_Color.g - Half.m_Color.g) +
+				   std::abs(First.m_Color.b - Half.m_Color.b);
+	EXPECT_GT(HalfDistance, 0.4f);
+	// 相位推进后环上同一点的颜色必须变化，否则看到的是一圈静态彩虹。
+	const auto aFlowed = qm_hook_countdown_ui::QmHookCountdownRingSamples(0.3f);
+	EXPECT_GT(std::abs(aSamples[0].m_Color.r - aFlowed[0].m_Color.r) +
+			  std::abs(aSamples[0].m_Color.g - aFlowed[0].m_Color.g) +
+			  std::abs(aSamples[0].m_Color.b - aFlowed[0].m_Color.b),
+		0.05f);
+}
+
+// 光晕必须是"外宽内淡、内窄外浓"的连续衰减：三层顺序写反会变成三道同宽的硬环，
+// 呼吸只改强度不改层次，吸气时更强也更散。
+TEST(QmHookCountdownGlowLayers, StacksWideAndFaintOutsideNarrowAndBrightInside)
+{
+	for(const float Breath : {0.0f, 0.5f, 1.0f})
+	{
+		SCOPED_TRACE(Breath);
+		const auto aLayers = qm_hook_countdown_ui::QmHookCountdownGlowLayers(Breath);
+		for(size_t i = 0; i < aLayers.size(); ++i)
+		{
+			EXPECT_GT(aLayers[i].m_Alpha, 0.0f);
+			EXPECT_LE(aLayers[i].m_Spread, qm_hook_countdown_ui::GLOW_EXTENT);
+			if(i > 0)
+			{
+				EXPECT_LT(aLayers[i].m_Spread, aLayers[i - 1].m_Spread);
+				EXPECT_GT(aLayers[i].m_Alpha, aLayers[i - 1].m_Alpha);
+			}
+		}
+	}
+	const auto aRest = qm_hook_countdown_ui::QmHookCountdownGlowLayers(0.0f);
+	const auto aPeak = qm_hook_countdown_ui::QmHookCountdownGlowLayers(1.0f);
+	for(size_t i = 0; i < aRest.size(); ++i)
+	{
+		EXPECT_GT(aPeak[i].m_Alpha, aRest[i].m_Alpha);
+		EXPECT_GT(aPeak[i].m_Spread, aRest[i].m_Spread);
+	}
+}
+
+// 圆头端帽的"脱开"过渡：缺口没超过两枚端帽时，环看起来仍是闭合的；
+// 之后缺口随进度单调张开，不会一出现就切出一道方口。
+TEST(QmHookCountdownRender, RoundCapsKeepTheRingClosedUntilTheGapOpens)
+{
+	EXPECT_FLOAT_EQ(qm_hook_countdown_ui::CountdownVisibleGap(1.0f), 0.0f);
+	EXPECT_FLOAT_EQ(qm_hook_countdown_ui::CountdownVisibleGap(0.99f), 0.0f);
+	EXPECT_GT(qm_hook_countdown_ui::CountdownVisibleGap(0.5f), 0.0f);
+	float Previous = 0.0f;
+	for(int Percent = 100; Percent >= 0; --Percent)
+	{
+		const float Gap = qm_hook_countdown_ui::CountdownVisibleGap(static_cast<float>(Percent) / 100.0f);
+		EXPECT_GE(Gap, Previous);
+		Previous = Gap;
+	}
+	// 端帽角度只由内外径之比决定，尺寸档位放大时两端不会张开得更早。
+	EXPECT_NEAR(qm_hook_countdown_ui::CountdownCapAngle(), (qm_hook_countdown_ui::OUTER_RADIUS - qm_hook_countdown_ui::INNER_RADIUS) * 0.5f / ((qm_hook_countdown_ui::INNER_RADIUS + qm_hook_countdown_ui::OUTER_RADIUS) * 0.5f), 1e-6f);
+}
+
+// HUD 用它决定屏幕外裁剪；必须比实体更大（覆盖光晕）并随尺寸一起放大，
+// 否则把尺寸调到 200% 后光晕外圈会被提前裁成一条硬边。
+TEST(QmHookCountdownRender, ClipRadiusCoversTheGlowAndFollowsTheSizePercent)
+{
+	SQmHookCountdownVisual Visual;
+	Visual.m_Scale = 1.0f;
+	Visual.m_EndlessHook = false;
+	const int SavedSize = g_Config.m_QmHookCountdownSize;
+	g_Config.m_QmHookCountdownSize = 100;
+	const float NormalRing = qm_hook_countdown_ui::RenderClipRadius(Visual);
+	EXPECT_GT(NormalRing, qm_hook_countdown_ui::OUTER_RADIUS);
+	EXPECT_GE(NormalRing, qm_hook_countdown_ui::OUTER_RADIUS + qm_hook_countdown_ui::GLOW_EXTENT);
+	g_Config.m_QmHookCountdownSize = 200;
+	EXPECT_NEAR(qm_hook_countdown_ui::RenderClipRadius(Visual), NormalRing * 2.0f, 0.0001f);
+	g_Config.m_QmHookCountdownSize = 100;
+	// ∞ 的横向半宽更大，裁剪半径必须跟着用 ∞ 的包络。
+	Visual.m_EndlessHook = true;
+	const float InfinityRadius = qm_hook_countdown_ui::RenderClipRadius(Visual);
+	EXPECT_GE(InfinityRadius, QM_HOOK_COUNTDOWN_INFINITY_HALF_WIDTH + qm_hook_countdown_ui::GLOW_EXTENT);
+	g_Config.m_QmHookCountdownSize = SavedSize;
 }
 
 TEST(QmHudHookCountdown, ReleaseKeepsBreathingUntilBothPhasesAreCleared)

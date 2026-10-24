@@ -198,6 +198,27 @@ void CCamera::ResetAutoSpecCamera()
 
 void CCamera::UpdateCamera()
 {
+	// 合影预览：取景由合影会话持有（预览 HUD 的缩放/平移直接改它）。
+	// 必须在常规跟随/动态视野之前覆写并返回，否则合成快照没有「玩家」可跟，
+	// 镜头每帧都会被拉向鼠标位置，取景在预览里慢慢漂走。
+	{
+		vec2 PoseCenter;
+		float PoseZoom;
+		if(Client()->PoseSessionActive() && Client()->PoseCameraView(&PoseCenter, &PoseZoom))
+		{
+			// 抓帧那一帧不再改镜头：快门按下的画面就是成片画面。
+			if(Client()->PoseCaptureActive())
+				return;
+			// 自由旁观（与游戏内/demo 同一条语义：SpectatorId == SPEC_FREEVIEW 表示
+			// 相机脱离角色）。只有玩家在旁观 HUD 里选了自由视角，镜头才跟随光标；
+			// 其余情况保持会话取景，鼠标不会偷偷把镜头推走。
+			const bool FreeView = GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == SPEC_FREEVIEW;
+			if(FreeView)
+				PoseCenter = GameClient()->m_Controls.m_aMousePos[g_Config.m_ClDummy];
+			SetDemoView(PoseCenter, PoseZoom);
+			return;
+		}
+	}
 	if(const auto View = GameClient()->m_DemoCamera.PlaybackView())
 	{
 		SetDemoView(View->m_Center, View->m_Zoom);
@@ -435,6 +456,11 @@ void CCamera::UpdateCamera()
 
 void CCamera::OnRender()
 {
+	// 合影预览是单帧画面：世界不推进，镜头只由 UpdateCamera 的会话取景/自由视角决定。
+	// 这里绝不能再用 demo 镜头轨迹或自由视角平滑插值覆写——那两套都在渲染前重新
+	// 计算 m_Center，预览就会一直停在同一个取景上，玩家看到的就是"画面根本不动"。
+	if(Client()->PoseSessionActive())
+		return;
 	if(const auto View = GameClient()->m_DemoCamera.PlaybackView())
 	{
 		SetDemoView(View->m_Center, View->m_Zoom);

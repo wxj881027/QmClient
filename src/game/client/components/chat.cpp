@@ -36,6 +36,9 @@
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/qm_chat_avatar.h>
+#include <game/client/components/qmclient/qm_title_color.h>
+#include <game/client/components/qmclient/qm_title_render.h>
+#include <game/client/components/qmclient/qm_title_style.h>
 #include <game/client/components/qmclient/streamer_word_filter.h>
 #include <game/client/components/scoreboard.h>
 #include <game/client/components/skins.h>
@@ -2530,6 +2533,14 @@ bool CChat::OnPrepareLines(float y)
 	float Begin = x;
 	float TextBegin = Begin + RealMsgPaddingX / 2.0f;
 	int OffsetType = IsScoreBoardOpen ? 1 : 0;
+	const SQmTitleColorStyle TitleColorStyle = ResolveQmTitleColorStyle(g_Config.m_QmTitleColorMode, g_Config.m_QmTitleColor, g_Config.m_QmTitleOpacity, false);
+	const float TitleAnimationTime = (float)GameClient()->m_QmClient.TitleAnimationTime();
+	const SQmTitleShimmer TitleShimmer = QmTitleShimmerFromConfig();
+	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+	const float PixelSize = (ScreenY1 - ScreenY0) / Graphics()->ScreenHeight();
+	// 行间隔按配置像素换算到聊天虚拟坐标，0 保持默认行距。
+	const float ExtraLineSpacing = (float)g_Config.m_QmChatLineSpacing * PixelSize;
 
 	for(int i = m_BacklogCurLine; i < MAX_LINES; i++)
 	{
@@ -2601,7 +2612,7 @@ bool CChat::OnPrepareLines(float y)
 			// 否则只有“首次创建”时受高度限制，后续帧又会溢出。
 			if(Line.m_aYOffset[OffsetType] >= 0.0f)
 			{
-				y -= Line.m_aYOffset[OffsetType] * ClampPresentationProgress(Line.m_Presentation.m_LayoutVisibility);
+				y = AdvanceChatLineStack(y, Line.m_aYOffset[OffsetType], ExtraLineSpacing, ClampPresentationProgress(Line.m_Presentation.m_LayoutVisibility));
 
 				if(y < HeightLimit)
 					break;
@@ -2823,11 +2834,12 @@ bool CChat::OnPrepareLines(float y)
 		const float LineHeight = Line.m_aYOffset[OffsetType];
 		const float LayoutVisibility = ClampPresentationProgress(Line.m_Presentation.m_LayoutVisibility);
 		const float LayoutBottom = y;
-		y -= LineHeight * LayoutVisibility;
+		y = AdvanceChatLineStack(y, LineHeight, ExtraLineSpacing, LayoutVisibility);
 		// 超出 HUD 的聊天高度预算：停止准备更旧消息。
 		if(y < HeightLimit)
 			break;
-		const float TargetY = LayoutBottom - LineHeight;
+		// 渲染落点必须与上面的堆叠游标同口径减去额外行间隔，否则行距只减少可视行数、不改变行位置。
+		const float TargetY = LayoutBottom - (LineHeight + ExtraLineSpacing);
 
 		const float TextYOffset = TargetY + RealMsgPaddingY / 2.0f;
 		if(Line.m_TextYOffset != TextYOffset)
@@ -3130,6 +3142,13 @@ void CChat::OnRender()
 		m_CommandHud.Hide();
 		return;
 	}
+	// 合影超采样静帧：抓帧那一帧聊天不进成片。开关是 IClient::PoseCaptureActive，
+	// 只在抓帧的几帧为真，观看模式（poses_open）仍照常显示聊天。
+	if(Client()->PoseCaptureActive())
+	{
+		m_CommandHud.Hide();
+		return;
+	}
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
 	const bool FocusHideChat = Focus.m_HidePlayerMessages;
 	const bool FocusHideSystemInfoMessages = Focus.m_HideSystemInfoMessages;
@@ -3385,12 +3404,21 @@ void CChat::OnRender()
 		RealMsgPaddingY = 0;
 	}
 
+	// 行间隔按配置像素换算到聊天虚拟坐标，0 保持默认行距。
+	float ExtraLineSpacing = 0.0f;
+	{
+		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+		const float PixelSize = (ScreenY1 - ScreenY0) / Graphics()->ScreenHeight();
+		ExtraLineSpacing = (float)g_Config.m_QmChatLineSpacing * PixelSize;
+	}
+
 	const float HistoryBottom = y;
 	const vec2 CommandHudMousePos = GetChatMousePos();
 	const bool InsideCommandHud = m_CommandHud.Contains(CommandHudMousePos.x, CommandHudMousePos.y);
 	const float HistoryHeight = maximum(0.0f, HistoryBottom - HeightLimit);
 	const int TotalVisibleLines = CountVisibleLinesFrom(0);
-	const int VisibleLineCapacity = maximum(1, (int)std::floor(HistoryHeight / maximum(RowHeight, 1.0f)));
+	const int VisibleLineCapacity = maximum(1, (int)std::floor(HistoryHeight / maximum(RowHeight + ExtraLineSpacing, 1.0f)));
 	const int MaxScroll = maximum(0, TotalVisibleLines - VisibleLineCapacity);
 	if(!InputActive)
 		m_BacklogCurLine = 0;
@@ -3525,10 +3553,10 @@ void CChat::OnRender()
 		const float LineHeight = LineHeightValid ? Line.m_aYOffset[OffsetType] : FontSize() + RealMsgPaddingY;
 		const float LayoutVisibility = ClampPresentationProgress(Line.m_Presentation.m_LayoutVisibility);
 		const float LayoutBottom = y;
-		y -= LineHeight * LayoutVisibility;
+		y = AdvanceChatLineStack(y, LineHeight, ExtraLineSpacing, LayoutVisibility);
 		if(y < HeightLimit)
 			break;
-		Line.m_Presentation.m_TargetY = LayoutBottom - LineHeight;
+		Line.m_Presentation.m_TargetY = LayoutBottom - (LineHeight + ExtraLineSpacing);
 
 		// Don't abort the full render pass on a single malformed line.
 		if(!LineHeightValid)

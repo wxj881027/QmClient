@@ -32,6 +32,7 @@
 #include "components/nameplates.h"
 #include "components/particles.h"
 #include "components/players.h"
+#include "components/qmclient/ime_gradient_probe.h"
 #include "components/qmclient/jelly_tee.h"
 #include "components/qmclient/modes.h"
 #include "components/qmclient/perf_logging.h"
@@ -745,6 +746,8 @@ void CGameClient::OnConsoleInit()
 	pConsole->Register("qm_hook_countdown_flow_style", "?i[value]", CFGFLAG_CLIENT, ConDiscardLegacyHookCountdownFlowStyle, nullptr, "");
 	pConsole->Register("team", "i[team-id]", CFGFLAG_CLIENT, ConTeam, this, "Switch team");
 	pConsole->Register("kill", "", CFGFLAG_CLIENT, ConKill, this, "Kill yourself to restart");
+	pConsole->Register("qm_self_kill_off", "", CFGFLAG_CLIENT, ConQmSelfKillOff, this, "Disable client-initiated self-kill (K key / kill command)");
+	pConsole->Register("qm_self_kill_on", "", CFGFLAG_CLIENT, ConQmSelfKillOn, this, "Enable client-initiated self-kill (K key / kill command)");
 	pConsole->Register("ready_change", "", CFGFLAG_CLIENT, ConReadyChange7, this, "Change ready state (0.7 only)");
 	// 调试用：不计数、不写盘，直接预览启动赞助提醒浮层。
 	pConsole->Register("qm_sponsor_nudge_preview", "", CFGFLAG_CLIENT, ConQmSponsorNudgePreview, this, "Preview the sponsor reminder without changing the launch count");
@@ -1064,6 +1067,8 @@ void CGameClient::OnInit()
 
 	// setup load amount, load textures
 	const char *pLoadingMessageAssets = Localize("Initializing assets");
+	// 测试专用：IME 渐变圆角 SDF 的像素回归探针。玩家不可触发，避免屏幕上出现测试色块。
+	m_QmImeGradientProbeEnabled = std::getenv("QMCLIENT_TEST_IME_GRADIENT_PROBE") != nullptr;
 	// 测试专用：逐项延迟可复现总加载超过看门狗阈值，以及单项真正停滞的两条路径。
 	const char *pTestAssetDelay = std::getenv("QMCLIENT_TEST_ASSET_LOAD_DELAY_MS");
 	const int TestAssetDelayMs = pTestAssetDelay != nullptr ? std::clamp(str_toint(pTestAssetDelay), 0, 20000) : 0;
@@ -2004,6 +2009,7 @@ void CGameClient::OnRender()
 	}
 
 	const ColorRGBA ClearColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClOverlayEntities ? g_Config.m_ClBackgroundEntitiesColor : g_Config.m_ClBackgroundColor));
+	const bool BackgroundLayerActive = Ui()->BeginBackgroundLayer(ClearColor);
 
 #if defined(CONF_PLATFORM_MACOS)
 	if(g_Config.m_QmMacosGraphicsDiagnostics != 0)
@@ -2026,7 +2032,8 @@ void CGameClient::OnRender()
 		}
 	}
 #endif
-	Graphics()->Clear(ClearColor.r, ClearColor.g, ClearColor.b);
+	if(!BackgroundLayerActive)
+		Graphics()->Clear(ClearColor.r, ClearColor.g, ClearColor.b);
 
 	// check if multi view got activated
 	if(!m_MultiView.m_IsInit && m_MultiViewActivated)
@@ -2087,7 +2094,20 @@ void CGameClient::OnRender()
 
 	// render all systems
 	CPerfTimer ComponentsTimer(PerfEnabled);
+	bool BackgroundBoundaryReached = false;
+	const auto ReachBackgroundBoundary = [&]() {
+		if(BackgroundBoundaryReached)
+			return;
+		BackgroundBoundaryReached = true;
+		// 菜单背景属于背景层；必须在 HUD/文字之前画完并结束离屏层。
+		m_Menus.RenderBackgroundLayer();
+		if(BackgroundLayerActive)
+			Ui()->EndBackgroundLayer();
+		Ui()->BeginBackgroundFrame();
+	};
 	const auto RenderComponent = [&](CComponent *pComponent) {
+		if(pComponent == &m_Hud)
+			ReachBackgroundBoundary();
 		if(pComponent == &m_Menus)
 		{
 			CPerfTimer StageTimer(PerfEnabled);
@@ -2141,6 +2161,11 @@ void CGameClient::OnRender()
 	// 开启后永远不会产生 perf/stutter 报告；这里在渲染帧末尾统一消费。
 	ProcessQmStutterFrame();
 	LogQmIconDiagnostics(Client());
+
+	// 像素回归探针：只在测试进程里、由 QMCLIENT_TEST_IME_GRADIENT_PROBE 开启。
+	// 每帧重绘，这样它之后的任意一次 screenshot 都能拍到。
+	if(m_QmImeGradientProbeEnabled)
+		QmImeGradientProbeDraw(this);
 
 	m_pFrameScheduler->EndFrame();
 	// resend player and dummy info if it was filtered by server
@@ -3257,9 +3282,9 @@ void CGameClient::OnStateChange(int NewState, int OldState)
 		pComponent->OnStateChange(NewState, OldState);
 }
 
-void CGameClient::OnScreenshotTaken(CImageInfo &&Image)
+void CGameClient::OnScreenshotTaken(CImageInfo &&Image, const char *pPath)
 {
-	m_UiEffects.StartScreenshotAnimation(std::move(Image));
+	m_UiEffects.StartScreenshotAnimation(std::move(Image), pPath);
 }
 
 IGraphics::FScreenshotProcessor CGameClient::ScreenshotProcessor()
@@ -3268,6 +3293,44 @@ IGraphics::FScreenshotProcessor CGameClient::ScreenshotProcessor()
 	const int State = Client()->State();
 	const char *pMapName = State == IClient::STATE_ONLINE || State == IClient::STATE_DEMOPLAYBACK ? Client()->GetCurrentMap() : "";
 	return CQmScreenshotManager::CaptureProcessor(Storage(), g_Config.m_QmScreenshotWatermark != 0, Options, pMapName, std::time(nullptr));
+}
+
+void CGameClient::SetPoseCamera(vec2 Center, float Zoom)
+{
+	m_Camera.SetDemoView(Center, Zoom);
+	// 自由视角下相机中心取自 m_aMousePos（和 demo 同一套），所以外部给定的取景
+	// 必须同时写进那里，否则「适配取景」和拖动平移会被下一帧的鼠标位置覆盖。
+	m_Controls.m_aMousePos[g_Config.m_ClDummy] = Center;
+}
+
+bool CGameClient::PoseSkinsReady()
+{
+	// 合影是合成快照，没有 demo 播放，也就没有任何"皮肤已经加载"的前置动作。
+	// 这里按快照里真实用到的皮肤名驱动加载，并回报是否都已经是可绘制状态，
+	// 让引擎在开拍前等它们就绪——否则社区皮肤会以 default 出现在成片里。
+	// 只收集快照里真的存在的客户端：m_aClients 是定长数组，未使用的槽位也带着
+	// 默认名字，把它们算进来会让闸门永远在等一批不存在的皮肤。
+	std::vector<std::string> vNames;
+	vNames.reserve(MAX_CLIENTS);
+	for(int i = 0; i < MAX_CLIENTS; ++i)
+	{
+		if(!m_Snap.m_aCharacters[i].m_Active)
+			continue;
+		const CClientData &ClientData = m_aClients[i];
+		if(ClientData.m_aSkinName[0] == 0)
+			continue;
+		// 与 RefreshSkin 取的是同一个字段：名字一致才可能拿到同一份皮肤。
+		vNames.emplace_back(ClientData.m_aSkinName);
+	}
+	if(vNames.empty())
+		return true;
+	std::string PendingName;
+	if(m_Skins.PoseSkinsReady(vNames, &PendingName))
+		return true;
+	// 等待期间必须主动推进皮肤管线：OnUpdate 有最高 500 ms 的节流，
+	// 只靠常规帧循环等待会变成空等，抓帧永远等不到 LOADED。
+	m_Skins.UpdateForSettingsWarmup();
+	return false;
 }
 
 void CGameClient::OnShutdown()
@@ -6686,6 +6749,26 @@ void CGameClient::SendKill()
 	if(m_FastPractice.ConsumeKillCommand())
 		return;
 
+	// 自杀保护：只拦截客户端主动发起的自杀（K 键 / kill 命令）。
+	// fast practice 直杀与服务端发起的击杀不受影响；demo 回放路径不拦截。
+	// 开关本体是 qm_self_kill_enabled，通过可绑定命令 qm_self_kill_off / qm_self_kill_on 手动切换。
+	if(g_Config.m_QmSelfKillEnabled == 0 && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	{
+		// 提示每秒最多刷一次，避免按住 K 键刷屏。
+		const int64_t Now = time_get();
+		if(m_QmSelfKillHintLastTime == 0 || Now - m_QmSelfKillHintLastTime >= time_freq())
+		{
+			m_QmSelfKillHintLastTime = Now;
+			char aBuf[256];
+			str_copy(aBuf, Localize("Client self-kill is disabled (server commands are not affected)"), sizeof(aBuf));
+			// 优先走通知栏本地回显；回显开关关闭时退回控制台输出，保证提示不丢。
+			// 颜色与聊天客户端消息一致（cl_message_client_color），入队固化避免后续配置变化改写旧通知。
+			if(!m_QmHudNotifications.QueueEcho(aBuf, g_Config.m_ClMessageClientColor))
+				dbg_msg("client", "%s", aBuf);
+		}
+		return;
+	}
+
 	CNetMsg_Cl_Kill Msg;
 	Client()->SendPackMsgActive(&Msg, MSGFLAG_VITAL);
 
@@ -6720,6 +6803,28 @@ void CGameClient::ConTeam(IConsole::IResult *pResult, void *pUserData)
 void CGameClient::ConKill(IConsole::IResult *pResult, void *pUserData)
 {
 	((CGameClient *)pUserData)->SendKill();
+}
+
+void CGameClient::ConQmSelfKillOff(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pSelf = static_cast<CGameClient *>(pUserData);
+	g_Config.m_QmSelfKillEnabled = 0;
+	// 幂等回显：重复设置同值也提示，保证按键操作有确认反馈。
+	char aBuf[256];
+	str_copy(aBuf, Localize("Client self-kill is disabled (K key / kill command will be ignored)"));
+	if(!pSelf->m_QmHudNotifications.QueueEcho(aBuf, g_Config.m_ClMessageClientColor))
+		dbg_msg("client", "%s", aBuf);
+}
+
+void CGameClient::ConQmSelfKillOn(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pSelf = static_cast<CGameClient *>(pUserData);
+	g_Config.m_QmSelfKillEnabled = 1;
+	// 幂等回显：重复设置同值也提示，保证按键操作有确认反馈。
+	char aBuf[256];
+	str_copy(aBuf, Localize("Client self-kill is enabled"));
+	if(!pSelf->m_QmHudNotifications.QueueEcho(aBuf, g_Config.m_ClMessageClientColor))
+		dbg_msg("client", "%s", aBuf);
 }
 
 void CGameClient::ConReadyChange7(IConsole::IResult *pResult, void *pUserData)

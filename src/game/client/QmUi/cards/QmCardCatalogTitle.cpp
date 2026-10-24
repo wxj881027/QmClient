@@ -59,7 +59,7 @@ static void RenderQmTitleFinishedPreview(IGraphics *pGraphics, ITextRender *pTex
 	Cursor.m_CalculateVisualBoundingBox = true;
 	Cursor.SetPosition(vec2(0.0f, 0.0f));
 	const ColorRGBA PreviousColor = pTextRender->GetTextColor();
-	pTextRender->TextColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+	pTextRender->TextColor(ui_token::color::NEUTRAL_WHITE);
 	if(s_TitleFinishedPreviewContainer.Valid())
 		pTextRender->RecreateTextContainerSoft(s_TitleFinishedPreviewContainer, &Cursor, Text.c_str());
 	else

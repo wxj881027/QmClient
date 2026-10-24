@@ -367,22 +367,6 @@ turkish = "Sistem konsolu ayrıntı düzeyini ayarla (-3=Yok, -2=Yalnızca Hatal
 polish = "Dostosuj szczegółowość konsoli systemowej (-3=Brak, -2=Tylko błędy, -1=Ostrzeżenia, 0=Informacje, 1=Debugowanie, 2=Śledzenie)"
 
 [[message]]
-key = "Adjust the opacity of entities belonging to other teams, such as tees and name plates"
-[message.translations]
-simplified_chinese = "调整其他队伍实体（如 Tee 和名牌）的不透明度"
-traditional_chinese = "調整其他隊伍實體（如 Tee 和名牌）的不透明度"
-japanese = "他のチームのエンティティ（Tee やネームプレートなど）の不透明度を調整"
-korean = "다른 팀의 엔티티(티, 이름표 등)의 불투명도를 조절합니다."
-russian = "Настроить прозрачность объектов других команд, таких как ти и таблички с именами"
-german = "Deckkraft von Entitäten anderer Teams anpassen, z. B. Tees und Namensschilder"
-spanish = "Ajustar la opacidad de entidades de otros equipos, como tees y placas de nombre"
-french = "Ajuster l'opacité des entités des autres équipes, comme les tees et les plaques de nom"
-brazilian_portuguese = "Ajustar a opacidade de entidades de outras equipes, como tees e placas de nome"
-portuguese = "Ajustar a opacidade de entidades de outras equipas, como tees e placas de nome"
-turkish = "Diğer takımlara ait varlıkların (tee'ler ve isim plakaları gibi) opaklığını ayarlayın"
-polish = "Dostosuj przezroczystość elementów należących do innych drużyn, takich jak gracze i tabliczki z nazwami"
-
-[[message]]
 key = "Adjust verbosity in external console (-3 = none, -2 = errors only, -1 = warnings, 0 = info, 1 = debug, 2 = trace)."
 [message.translations]
 simplified_chinese = "调整外部控制台中的信息量（-3 = 无、-2 = 仅错误、-1 = 警告、0 = 信息、1 = 调试、2 = 跟踪）"
@@ -7661,6 +7645,102 @@ brazilian_portuguese = "Ponta da linha de gancho"
 portuguese = "Ponta da linha de gancho"
 turkish = "Kanca çizgisi ucu"
 polish = "Wskazówka linii haka"
+
+[[message]]
+key = "Custom pressed hook line colors"
+[message.translations]
+simplified_chinese = "自定义按下后颜色"
+traditional_chinese = "自訂按下後顏色"
+japanese = "押下時のフックラインのカスタム色"
+korean = "누른 후 사용자 지정 갈고리선 색"
+russian = "Свои цвета линии при нажатии"
+german = "Eigene Farben der Hakenlinie beim Drücken"
+spanish = "Colores personalizados de la línea al pulsar"
+french = "Couleurs personnalisées de la ligne lors de l'appui"
+brazilian_portuguese = "Cores personalizadas da linha ao pressionar"
+portuguese = "Cores personalizadas da linha ao premir"
+turkish = "Basınca özel kanca çizgisi renkleri"
+polish = "Niestandardowe kolory linii haka po wciśnięciu"
+
+[[message]]
+key = "Pressed hook line color; always used when custom pressed colors are enabled"
+[message.translations]
+simplified_chinese = "按下后颜色；开启自定义按下后颜色时始终生效"
+traditional_chinese = "按下後顏色；開啟自訂按下後顏色時始終生效"
+japanese = "押下時のフックライン色。カスタム押下色が有効なとき常に使用"
+korean = "누른 후 갈고리선 색. 사용자 지정 누른 후 색이 켜져 있을 때 항상 사용"
+russian = "Цвет линии при нажатии; всегда применяется при включении своих цветов нажатия"
+german = "Farbe der Hakenlinie beim Drücken; wird immer verwendet, wenn eigene Druckfarben aktiviert sind"
+spanish = "Color de la línea al pulsar; se usa siempre cuando los colores personalizados al pulsar están activados"
+french = "Couleur de la ligne lors de l'appui ; toujours utilisée lorsque les couleurs personnalisées d'appui sont activées"
+brazilian_portuguese = "Cor da linha ao pressionar; sempre usada quando cores personalizadas ao pressionar estão ativadas"
+portuguese = "Cor da linha ao premir; sempre usada quando as cores personalizadas ao premir estão ativadas"
+turkish = "Basınca kanca çizgisi rengi; özel basma renkleri etkin olduğunda her zaman kullanılır"
+polish = "Kolor linii haka po wciśnięciu; zawsze używany, gdy włączone są niestandardowe kolory wciśnięcia"
+
+[[message]]
+key = "Pressed: A Tee"
+[message.translations]
+simplified_chinese = "按下后：其他玩家"
+traditional_chinese = "按下後：其他玩家"
+japanese = "押下時：他のプレイヤー"
+korean = "누른 후: 다른 플레이어"
+russian = "При нажатии: Другой игрок"
+german = "Gedrückt: Ein Tee"
+spanish = "Al pulsar: Un Tee"
+french = "Appuyé : Un Tee"
+brazilian_portuguese = "Ao pressionar: Um Tee"
+portuguese = "Ao premir: Um Tee"
+turkish = "Basınca: Bir Tee"
+polish = "Po wciśnięciu: Tee"
+
+[[message]]
+key = "Pressed: Hook line tip"
+[message.translations]
+simplified_chinese = "按下后：辅助线提示"
+traditional_chinese = "按下後：輔助線提示"
+japanese = "押下時：ラインの先端"
+korean = "누른 후: 갈고리선 끝"
+russian = "При нажатии: Кончик линии"
+german = "Gedrückt: Hakenlinien-Spitze"
+spanish = "Al pulsar: Punta de la línea"
+french = "Appuyé : Bout de la ligne"
+brazilian_portuguese = "Ao pressionar: Ponta da linha"
+portuguese = "Ao premir: Ponta da linha"
+turkish = "Basınca: Çizgi ucu"
+polish = "Po wciśnięciu: Koniec linii"
+
+[[message]]
+key = "Pressed: Nothing hookable"
+[message.translations]
+simplified_chinese = "按下后：未瞄准可钩物体"
+traditional_chinese = "按下後：未瞄準可鉤物體"
+japanese = "押下時：フック可能なものはありません"
+korean = "누른 후: 걸 수 있는 대상 없음"
+russian = "При нажатии: Ничего не зацепляется"
+german = "Gedrückt: Nichts einhakbar"
+spanish = "Al pulsar: Nada enganchable"
+french = "Appuyé : Rien d'accrochable"
+brazilian_portuguese = "Ao pressionar: Nada engatável"
+portuguese = "Ao premir: Nada que possa ser agarrado"
+turkish = "Basınca: Kancalanabilir hiçbir şey yok"
+polish = "Po wciśnięciu: Nic do zahaczenia"
+
+[[message]]
+key = "Pressed: Something hookable"
+[message.translations]
+simplified_chinese = "按下后：可钩物体"
+traditional_chinese = "按下後：可鉤物體"
+japanese = "押下時：フック可能なもの"
+korean = "누른 후: 걸 수 있는 대상"
+russian = "При нажатии: Зацепляемое"
+german = "Gedrückt: Einhakbar"
+spanish = "Al pulsar: Algo enganchable"
+french = "Appuyé : Quelque chose d'accrochable"
+brazilian_portuguese = "Ao pressionar: Algo engatável"
+portuguese = "Ao premir: Algo que possa ser agarrado"
+turkish = "Basınca: Kancalanabilir bir şey"
+polish = "Po wciśnięciu: Coś do zahaczenia"
 
 [[message]]
 key = "Hook Strength"
@@ -19256,22 +19336,6 @@ turkish = "DDRace bağlamasının hangi seviyeye ayarlandığı (otomatiktir, ku
 polish = "Poziom ustawienia wiązania DDRace (automatyczny, nie musisz go używać)"
 
 [[message]]
-key = "When you cross the start line, show a ghost tee replicating the movements of your best time"
-[message.translations]
-simplified_chinese = "越过起跑线时，显示复现最佳成绩的影子 Tee"
-traditional_chinese = "越過起跑線時，顯示復現最佳成績的影子 Tee"
-japanese = "スタートラインを越えると、自分のベストタイムの動きを再現するゴーストティーを表示します"
-korean = "출발선을 넘으면 최고 기록의 움직임을 재현하는 고스트 티를 표시합니다"
-russian = "Когда пересекаешь стартовую линию, показывать призрачного ти, повторяющего движения твоего лучшего времени"
-german = "Wenn du die Startlinie überquerst, wird ein Geist-Tee angezeigt, der die Bewegungen deiner Bestzeit wiederholt"
-spanish = "Al cruzar la línea de salida, muestra un fantasma que replica los movimientos de tu mejor tiempo"
-french = "Lorsque tu franchis la ligne de départ, affiche un fantôme reproduisant les mouvements de ton meilleur temps"
-brazilian_portuguese = "Quando você cruza a linha de largada, mostre um fantasma replicando os movimentos do seu melhor tempo"
-portuguese = "Quando cruzares a linha de partida, mostra um fantasma a replicar os movimentos do teu melhor tempo"
-turkish = "Başlangıç çizgisini geçtiğinde, en iyi zamanının hareketlerini gösteren bir hayalet oyuncu belirir"
-polish = "Gdy przekroczysz linię startu, pokaż ducha odtwarzającego ruchy twojego najlepszego czasu"
-
-[[message]]
 key = "Whether dummy copies your movement"
 [message.translations]
 simplified_chinese = "分身是否复制你的移动"
@@ -21025,6 +21089,22 @@ turkish = "Uzak istatistikler senkronize ediliyor"
 polish = "Synchronizowanie statystyk zdalnych"
 
 [[message]]
+key = "Statistics"
+[message.translations]
+simplified_chinese = "统计数据"
+traditional_chinese = "統計數據"
+japanese = "統計データ"
+korean = "통계 데이터"
+russian = "Статистика"
+german = "Statistiken"
+spanish = "Estadísticas"
+french = "Statistiques"
+brazilian_portuguese = "Estatísticas"
+portuguese = "Estatísticas"
+turkish = "İstatistikler"
+polish = "Statystyki"
+
+[[message]]
 key = "Retry remote stats"
 [message.translations]
 simplified_chinese = "重试远程统计"
@@ -21489,150 +21569,6 @@ turkish = "Oy kullanmayan oyuncuların yok sayılması (0) veya 'hayır' oyu say
 polish = "Czy ignorować graczy, którzy nie głosują (0), czy uznawać ich za głosy „nie” (1)"
 
 [[message]]
-key = "Could not create report scan request"
-[message.translations]
-simplified_chinese = "创建举报扫描请求失败"
-traditional_chinese = "創建舉報掃描請求失敗"
-japanese = "レポートスキャンリクエストを作成できませんでした"
-korean = "신고 스캔 요청을 생성할 수 없습니다"
-russian = "Не удалось создать запрос сканирования жалобы"
-german = "Meldungs-Scan-Anfrage konnte nicht erstellt werden"
-spanish = "No se pudo crear la solicitud de escaneo de reporte"
-french = "Impossible de créer la demande de scan de signalement"
-brazilian_portuguese = "Não foi possível criar a solicitação de varredura da denúncia"
-portuguese = "Não foi possível criar o pedido de análise da denúncia"
-turkish = "Rapor tarama isteği oluşturulamadı"
-polish = "Nie można utworzyć żądania skanowania zgłoszenia"
-
-[[message]]
-key = "Configure qm_report_app_id and qm_report_secret first"
-[message.translations]
-simplified_chinese = "请先设置 qm_report_app_id 和 qm_report_secret"
-traditional_chinese = "請先設置 qm_report_app_id 和 qm_report_secret"
-japanese = "最初に qm_report_app_id と qm_report_secret を設定してください"
-korean = "먼저 qm_report_app_id와 qm_report_secret을 설정하세요"
-russian = "Сначала настройте qm_report_app_id и qm_report_secret"
-german = "Konfiguriere zuerst qm_report_app_id und qm_report_secret"
-spanish = "Configura primero qm_report_app_id y qm_report_secret"
-french = "Configure d'abord qm_report_app_id et qm_report_secret"
-brazilian_portuguese = "Configure qm_report_app_id e qm_report_secret primeiro"
-portuguese = "Configura primeiro qm_report_app_id e qm_report_secret"
-turkish = "Önce qm_report_app_id ve qm_report_secret ayarla"
-polish = "Najpierw skonfiguruj qm_report_app_id i qm_report_secret"
-
-[[message]]
-key = "Report"
-[message.translations]
-simplified_chinese = "举报"
-traditional_chinese = "舉報"
-japanese = "報告"
-korean = "신고"
-russian = "Пожаловаться"
-german = "Melden"
-spanish = "Reportar"
-french = "Signaler"
-brazilian_portuguese = "Denunciar"
-portuguese = "Denunciar"
-turkish = "Rapor et"
-polish = "Zgłoś"
-
-[[message]]
-key = "Report request canceled"
-[message.translations]
-simplified_chinese = "举报请求已取消"
-traditional_chinese = "舉報請求已取消"
-japanese = "報告リクエストがキャンセルされました"
-korean = "신고 요청이 취소되었습니다"
-russian = "Запрос жалобы отменен"
-german = "Meldungsanfrage abgebrochen"
-spanish = "Solicitud de reporte cancelada"
-french = "Demande de signalement annulée"
-brazilian_portuguese = "Solicitação de denúncia cancelada"
-portuguese = "Pedido de denúncia cancelado"
-turkish = "Rapor isteği iptal edildi"
-polish = "Zgłoszenie anulowane"
-
-[[message]]
-key = "Report request failed due to network error"
-[message.translations]
-simplified_chinese = "举报请求失败，网络请求异常"
-traditional_chinese = "舉報請求失敗，網絡請求異常"
-japanese = "ネットワークエラーのため報告リクエストが失敗しました"
-korean = "네트워크 오류로 인해 신고 요청이 실패했습니다"
-russian = "Запрос жалобы не удался из-за ошибки сети"
-german = "Meldungsanfrage wegen Netzwerkfehler fehlgeschlagen"
-spanish = "La solicitud de reporte falló por un error de red"
-french = "La demande de signalement a échoué à cause du réseau"
-brazilian_portuguese = "A solicitação de denúncia falhou por erro de rede"
-portuguese = "O pedido de denúncia falhou por erro de rede"
-turkish = "Rapor isteği ağ hatası nedeniyle başarısız oldu"
-polish = "Zgłoszenie nie powiodło się z powodu błędu sieci"
-
-[[message]]
-key = "Report request failed with HTTP status: %d"
-[message.translations]
-simplified_chinese = "举报请求失败，HTTP 状态码：%d"
-traditional_chinese = "舉報請求失敗，HTTP 狀態碼：%d"
-japanese = "報告リクエストが HTTP ステータス %d で失敗しました"
-korean = "HTTP 상태 %d로 인해 신고 요청이 실패했습니다"
-russian = "Запрос жалобы не удался, HTTP-статус: %d"
-german = "Meldungsanfrage fehlgeschlagen, HTTP-Status: %d"
-spanish = "La solicitud de reporte falló con estado HTTP: %d"
-french = "La demande de signalement a échoué avec le statut HTTP : %d"
-brazilian_portuguese = "A solicitação de denúncia falhou com status HTTP: %d"
-portuguese = "O pedido de denúncia falhou com estado HTTP: %d"
-turkish = "Rapor isteği HTTP durumuyla başarısız oldu: %d"
-polish = "Zgłoszenie nie powiodło się, status HTTP: %d"
-
-[[message]]
-key = "Report request is already in progress"
-[message.translations]
-simplified_chinese = "举报请求正在处理中"
-traditional_chinese = "舉報請求正在處理中"
-japanese = "報告リクエストは既に進行中です"
-korean = "신고 요청이 이미 진행 중입니다"
-russian = "Запрос жалобы уже выполняется"
-german = "Meldungsanfrage läuft bereits"
-spanish = "La solicitud de reporte ya está en curso"
-french = "La demande de signalement est déjà en cours"
-brazilian_portuguese = "A solicitação de denúncia já está em andamento"
-portuguese = "O pedido de denúncia já está em curso"
-turkish = "Rapor isteği zaten sürüyor"
-polish = "Zgłoszenie jest już przetwarzane"
-
-[[message]]
-key = "Report scan request submitted"
-[message.translations]
-simplified_chinese = "举报扫描请求已提交"
-traditional_chinese = "舉報掃描請求已提交"
-japanese = "報告スキャンリクエストが送信されました"
-korean = "신고 스캔 요청이 제출되었습니다"
-russian = "Запрос сканирования жалобы отправлен"
-german = "Meldungs-Scan-Anfrage gesendet"
-spanish = "Solicitud de escaneo de reporte enviada"
-french = "Demande de scan de signalement envoyée"
-brazilian_portuguese = "Solicitação de varredura da denúncia enviada"
-portuguese = "Pedido de análise da denúncia enviado"
-turkish = "Rapor tarama isteği gönderildi"
-polish = "Żądanie skanowania zgłoszenia wysłane"
-
-[[message]]
-key = "Reports are not available on Axiom servers"
-[message.translations]
-simplified_chinese = "Axiom 服务器内不可使用举报功能"
-traditional_chinese = "Axiom 伺服器內不可使用舉報功能"
-japanese = "Axiom サーバーではレポート機能は利用できません"
-korean = "Axiom 서버에서는 신고 기능을 사용할 수 없습니다"
-russian = "Жалобы недоступны на серверах Axiom"
-german = "Meldungen sind auf Axiom-Servern nicht verfügbar"
-spanish = "Los reportes no están disponibles en servidores Axiom"
-french = "Les signalements ne sont pas disponibles sur les serveurs Axiom"
-brazilian_portuguese = "Denúncias não estão disponíveis em servidores Axiom"
-portuguese = "As denúncias não estão disponíveis em servidores Axiom"
-turkish = "Axiom sunucularında rapor kullanılamaz"
-polish = "Zgłoszenia nie są dostępne na serwerach Axiom"
-
-[[message]]
 key = "Show dummy control status"
 [message.translations]
 simplified_chinese = "显示分身控制状态"
@@ -21807,22 +21743,6 @@ brazilian_portuguese = "Aplicar uma skin aleatória da fila"
 portuguese = "Aplicar uma skin aleatória da fila"
 turkish = "Kuyruktan rastgele bir kaplama uygula"
 polish = "Zastosuj losową skórkę z kolejki"
-
-[[message]]
-key = "Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join."
-[message.translations]
-simplified_chinese = "每次进图（分身连接、重新启用队列时同样生效）从队列随机位置开始轮换；将切换间隔设为 0 则不做时间轮换，仅进图随机换肤"
-traditional_chinese = "每次進圖（分身連接、重新啟用佇列時同樣生效）從皮膚佇列隨機位置開始輪換；將切換間隔設為 0 則不做時間輪換，僅進圖隨機換膚"
-japanese = "マップに参加するたび（ダミー接続・キュー再有効化時も）キューのランダムな位置からローテーションを開始します。切替間隔を 0 にすると時間ローテーションが無効になり、マップ参加時のみ切り替わります"
-korean = "맵에 들어갈 때마다(더미 연결, 큐 재활성화 시에도) 큐의 무작위 위치부터 순환을 시작합니다. 전환 간격을 0으로 하면 시간 순환이 비활성화되고 맵 입장 때만 전환됩니다"
-russian = "Каждый вход на карту (а также подключение Дами или повторное включение очереди) начинает ротацию со случайной позиции очереди. При интервале 0 ротация по времени отключается — скин меняется только при входе на карту"
-german = "Startet bei jedem Kartenbeitritt (auch bei Dummy-Verbindung oder Reaktivierung der Warteschlange) von einer zufälligen Position in der Warteschlange. Bei einem Wechselintervall von 0 ist die zeitgesteuerte Rotation deaktiviert und Skins wechseln nur beim Kartenbeitritt"
-spanish = "Comienza desde una posición aleatoria de la cola en cada entrada al mapa (también al conectar el dummy o reactivar la cola). Con intervalo 0 se desactiva la rotación temporizada y las skins solo cambian al entrar al mapa"
-french = "Démarre depuis une position aléatoire de la file à chaque entrée sur une carte (également à la connexion du dummy ou à la réactivation de la file). Avec un intervalle de 0, la rotation temporisée est désactivée et les skins ne changent qu'en entrant sur une carte"
-brazilian_portuguese = "Começa de uma posição aleatória da fila a cada entrada no mapa (também ao conectar o dummy ou reativar a fila). Com intervalo 0, a rotação temporizada é desativada e as skins só trocam ao entrar no mapa"
-portuguese = "Começa numa posição aleatória da fila sempre que entra no mapa (também ao ligar o dummy ou reativar a fila). Com intervalo 0, a rotação temporizada é desativada e as skins só mudam ao entrar no mapa"
-turkish = "Her haritaya girişte (dummy bağlantısı ve kuyruğun yeniden etkinleştirilmesinde de) kuyruğun rastgele bir konumundan başlar. Geçiş aralığı 0 olduğunda zamanlanmış döndürme devre dışı kalır ve skinler yalnızca haritaya girişte değişir"
-polish = "Każde wejście na mapę (a także połączenie dummy lub ponowne włączenie kolejki) rozpoczyna rotację od losowej pozycji kolejki. Przy interwale 0 rotacja czasowa jest wyłączona, a skórki zmieniają się tylko po wejściu na mapę"
 
 [[message]]
 key = "0 disables timed rotation; skins only switch on random start events"
@@ -22973,22 +22893,6 @@ turkish = "Kaydırma adımı"
 polish = "Krok przewijania"
 
 [[message]]
-key = "Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step"
-[message.translations]
-simplified_chinese = "自定义滚轮每格的滚动距离。按住 Alt 滚动时使用 3 倍步长"
-traditional_chinese = "自訂滾輪每格的捲動距離。按住 Alt 捲動時使用 3 倍步長"
-japanese = "ホイール1刻みの移動距離を設定。Alt を押しながらスクロールすると3倍の幅"
-korean = "휠 한 눈금당 이동 거리를 설정합니다. Alt를 누르고 스크롤하면 간격이 3배가 됩니다"
-russian = "Расстояние прокрутки за шаг колёсика. Удерживайте Alt для увеличения шага в 3 раза"
-german = "Scrollstrecke pro Mausradraste anpassen. Mit gedrückter Alt-Taste ist der Schritt 3-mal so groß"
-spanish = "Personaliza la distancia por paso de la rueda. Mantén Alt al desplazar para un paso 3 veces mayor"
-french = "Personnaliser la distance par cran de molette. Maintenir Alt pour un pas 3 fois plus grand"
-brazilian_portuguese = "Personalize a distância por passo da roda. Segure Alt ao rolar para um passo 3 vezes maior"
-portuguese = "Personalize a distância por passo da roda. Mantenha Alt premido para um passo 3 vezes maior"
-turkish = "Tekerlek kademesi başına kaydırma mesafesini ayarlayın. Alt basılıyken adım 3 katına çıkar"
-polish = "Dostosuj odległość na skok kółka. Przytrzymaj Alt, aby zwiększyć krok 3 razy"
-
-[[message]]
 key = "Width of difficulty column in server browser"
 [message.translations]
 simplified_chinese = "服务器浏览器中难度列的宽度"
@@ -23035,3 +22939,115 @@ brazilian_portuguese = "Bloquear completamente jogadores inimigos"
 portuguese = "Bloquear completamente jogadores inimigos"
 turkish = "Düşman oyuncuları tamamen engelle"
 polish = "Całkowicie blokuj wrogich graczy"
+
+[[message]]
+key = "Could not delete \"%s\""
+[message.translations]
+simplified_chinese = "无法删除\"%s\""
+traditional_chinese = "無法刪除\"%s\""
+japanese = "「%s」を削除できませんでした"
+korean = "\"%s\"을(를) 삭제할 수 없습니다"
+russian = "Не удалось удалить \"%s\""
+german = "\"%s\" konnte nicht gelöscht werden"
+spanish = "No se pudo eliminar \"%s\""
+french = "Impossible de supprimer \"%s\""
+brazilian_portuguese = "Não foi possível excluir \"%s\""
+portuguese = "Não foi possível eliminar \"%s\""
+turkish = "\"%s\" silinemedi"
+polish = "Nie można usunąć \"%s\""
+
+[[message]]
+key = "Could not download \"%s\""
+[message.translations]
+simplified_chinese = "无法下载\"%s\""
+traditional_chinese = "無法下載\"%s\""
+japanese = "「%s」をダウンロードできませんでした"
+korean = "\"%s\"을(를) 다운로드할 수 없습니다"
+russian = "Не удалось скачать \"%s\""
+german = "\"%s\" konnte nicht heruntergeladen werden"
+spanish = "No se pudo descargar \"%s\""
+french = "Impossible de télécharger \"%s\""
+brazilian_portuguese = "Não foi possível baixar \"%s\""
+portuguese = "Não foi possível transferir \"%s\""
+turkish = "\"%s\" indirilemedi"
+polish = "Nie można pobrać \"%s\""
+
+[[message]]
+key = "Delete \"%s\"?"
+[message.translations]
+simplified_chinese = "删除\"%s\"？"
+traditional_chinese = "刪除\"%s\"？"
+japanese = "「%s」を削除しますか？"
+korean = "\"%s\"을(를) 삭제할까요?"
+russian = "Удалить \"%s\"?"
+german = "\"%s\" löschen?"
+spanish = "¿Eliminar \"%s\"?"
+french = "Supprimer \"%s\" ?"
+brazilian_portuguese = "Excluir \"%s\"?"
+portuguese = "Eliminar \"%s\"?"
+turkish = "\"%s\" silinsin mi?"
+polish = "Usunąć \"%s\"?"
+
+[[message]]
+key = "Deleted \"%s\""
+[message.translations]
+simplified_chinese = "已删除\"%s\""
+traditional_chinese = "已刪除\"%s\""
+japanese = "「%s」を削除しました"
+korean = "\"%s\"을(를) 삭제했습니다"
+russian = "\"%s\" удалено"
+german = "\"%s\" gelöscht"
+spanish = "Se eliminó \"%s\""
+french = "\"%s\" supprimé"
+brazilian_portuguese = "\"%s\" excluído"
+portuguese = "\"%s\" eliminado"
+turkish = "\"%s\" silindi"
+polish = "Usunięto \"%s\""
+
+[[message]]
+key = "Download \"%s\"?"
+[message.translations]
+simplified_chinese = "下载\"%s\"？"
+traditional_chinese = "下載\"%s\"？"
+japanese = "「%s」をダウンロードしますか？"
+korean = "\"%s\"을(를) 다운로드할까요?"
+russian = "Скачать \"%s\"?"
+german = "\"%s\" herunterladen?"
+spanish = "¿Descargar \"%s\"?"
+french = "Télécharger \"%s\" ?"
+brazilian_portuguese = "Baixar \"%s\"?"
+portuguese = "Transferir \"%s\"?"
+turkish = "\"%s\" indirilsin mi?"
+polish = "Pobrać \"%s\"?"
+
+[[message]]
+key = "Downloaded \"%s\""
+[message.translations]
+simplified_chinese = "已下载\"%s\""
+traditional_chinese = "已下載\"%s\""
+japanese = "「%s」をダウンロードしました"
+korean = "\"%s\"을(를) 다운로드했습니다"
+russian = "\"%s\" скачано"
+german = "\"%s\" heruntergeladen"
+spanish = "Se descargó \"%s\""
+french = "\"%s\" téléchargé"
+brazilian_portuguese = "\"%s\" baixado"
+portuguese = "\"%s\" transferido"
+turkish = "\"%s\" indirildi"
+polish = "Pobrano \"%s\""
+
+[[message]]
+key = "Downloading…"
+[message.translations]
+simplified_chinese = "下载中…"
+traditional_chinese = "下載中…"
+japanese = "ダウンロード中…"
+korean = "다운로드 중…"
+russian = "Скачивание…"
+german = "Wird heruntergeladen…"
+spanish = "Descargando…"
+french = "Téléchargement…"
+brazilian_portuguese = "Baixando…"
+portuguese = "A transferir…"
+turkish = "İndiriliyor…"
+polish = "Pobieranie…"

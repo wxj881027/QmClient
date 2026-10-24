@@ -183,9 +183,7 @@ void CUi::RenderPopupMenus()
 	CUiScopedGaussianBlur PopupBlurScope(this);
 	// 禁用弹层模糊时，背景和分隔线的半透明绘制也不能触发自动背板模糊。
 	CUiScopedGaussianBlurSuppression PopupBlurSuppression(this, g_Config.m_QmGaussianBlur == 0);
-	// 页面文字绘制晚于菜单背板捕获；弹层栈需要完整页面的新快照，栈内继续复用。
-	if(!m_vPopupMenus.empty() && g_Config.m_QmGaussianBlur != 0 && GaussianBlurScopeActive())
-		m_GaussianBlurPrepared = false;
+	// 弹层沿用本帧在文字之前冻结的背景层；不能再捕获页面文字作为背板。
 	m_RenderingPopupMenus = true;
 	for(size_t i = 0; i < m_vPopupMenus.size(); ++i)
 	{
@@ -328,7 +326,7 @@ void CUi::RenderPopupMenus()
 			return !Menu.m_Closing && MouseInside(&Menu.m_Rect) && (!Menu.m_Props.m_ClipToViewport || MouseInside(&Menu.m_Props.m_Viewport));
 		});
 		const bool OpeningFrame = PopupMenu.m_Props.m_IgnoreOpeningClick && PopupMenu.m_OpenedFrame == PopupSourceFrame();
-		const SQmPopupPointerInput PointerInput{Active, PopupMenu.m_Props.m_BlockUnderlyingPointerInput, Inside, !OpeningFrame && MouseButtonClicked(0) != 0, !OpeningFrame && MouseButton(0) != 0, CheckActiveItem(pId), HotItem() == pId, InsideGroup};
+		const SQmPopupPointerInput PointerInput{Active, PopupMenu.m_Props.m_BlockUnderlyingPointerInput, Inside, !OpeningFrame && MouseButtonClicked(0) != 0, !OpeningFrame && MouseButton(0) != 0, CheckActiveItem(pId), HotItem() == pId, InsideGroup, PopupMenu.m_Props.m_PressInsideGoesToContent};
 		const EQmPopupPointerAction PointerAction = QmResolvePopupPointerAction(PointerInput);
 		const bool CloseBeforeRender = PointerAction == EQmPopupPointerAction::CLOSE || PointerAction == EQmPopupPointerAction::CLOSE_GROUP;
 		if(PointerAction == EQmPopupPointerAction::CAPTURE)
@@ -782,6 +780,12 @@ void CUi::SConfirmPopupContext::YesNoButtons()
 	str_copy(m_aNegativeButtonLabel, Localize("No"));
 }
 
+void CUi::SConfirmPopupContext::DefaultButtons()
+{
+	str_copy(m_aPositiveButtonLabel, Localize("OK"));
+	str_copy(m_aNegativeButtonLabel, Localize("Cancel"));
+}
+
 void CUi::ShowPopupConfirm(float X, float Y, SConfirmPopupContext *pContext, bool CenterInViewport)
 {
 	const float TextWidth = minimum(std::ceil(TextRender()->TextWidth(SConfirmPopupContext::POPUP_FONT_SIZE, pContext->m_aMessage, -1, -1.0f) + 0.5f), SConfirmPopupContext::POPUP_MAX_WIDTH);
@@ -818,7 +822,9 @@ CUi::EPopupMenuFunctionResult CUi::PopupConfirm(void *pContext, CUIRect View, bo
 		return CUi::POPUP_CLOSE_CURRENT;
 	}
 
-	if(pUI->DoButton_PopupMenu(&pConfirmPopup->m_ConfirmButton, pConfirmPopup->m_aPositiveButtonLabel, &ConfirmButton, SConfirmPopupContext::POPUP_FONT_SIZE, TEXTALIGN_MC) || (Active && pUI->ConsumeHotkey(HOTKEY_ENTER)))
+	const std::optional<ColorRGBA> ConfirmColor =
+		pConfirmPopup->m_Tone == SConfirmPopupContext::ETone::DANGER ? std::optional<ColorRGBA>(ui_token::color::DANGER) : std::nullopt;
+	if(pUI->DoButton_PopupMenu(&pConfirmPopup->m_ConfirmButton, pConfirmPopup->m_aPositiveButtonLabel, &ConfirmButton, SConfirmPopupContext::POPUP_FONT_SIZE, TEXTALIGN_MC, 0.0f, false, true, ConfirmColor))
 	{
 		pConfirmPopup->m_Result = SConfirmPopupContext::CONFIRMED;
 		return CUi::POPUP_CLOSE_CURRENT;

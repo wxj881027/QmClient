@@ -22,6 +22,20 @@ TEST(RenderTargetPool, DeferredDestructionKeepsSlotReservedUntilPassEnds)
 	EXPECT_EQ(Pool.Size(Replacement), ivec2(64, 32));
 }
 
+TEST(RenderTargetPool, SampleCountSurvivesAllocationAndResetsOnReuse)
+{
+	CRenderTargetPool Pool;
+	const int Multisampled = Pool.Allocate(64, 32, 4);
+	ASSERT_TRUE(Pool.IsLive(Multisampled));
+	EXPECT_EQ(Pool.SampleCount(Multisampled), 4);
+	EXPECT_EQ(Pool.Size(Multisampled), ivec2(64, 32));
+	Pool.Release(Multisampled, false, [](int) {});
+	EXPECT_EQ(Pool.SampleCount(Multisampled), 1);
+	const int Reused = Pool.Allocate(16, 16);
+	EXPECT_EQ(Reused, Multisampled);
+	EXPECT_EQ(Pool.SampleCount(Reused), 1);
+}
+
 TEST(RenderTargetPool, DuplicateReleaseCannotQueueTwoDestructions)
 {
 	CRenderTargetPool Pool;
