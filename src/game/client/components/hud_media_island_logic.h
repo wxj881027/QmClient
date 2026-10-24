@@ -488,6 +488,13 @@ inline SHudMediaIslandTimerAnchor QmHudMediaIslandAnchorTimer(float CenterX, flo
 	return {TimerX, TimerX - MainWidth - MainGap};
 }
 
+inline CUIRect QmHudMediaIslandEditorTransformRect(const CUIRect &VisibleRect)
+{
+	// 固定大小的变换框跟随整岛水平中心，媒体显隐和内容宽度变化不改变保存位置的基准。
+	constexpr float AnchorSize = QmHudMediaIslandScaled(QmHudMediaIslandBaseHeight);
+	return {VisibleRect.x + (VisibleRect.w - AnchorSize) * 0.5f, VisibleRect.y, AnchorSize, AnchorSize};
+}
+
 struct SHudMediaIslandTimerRowLayout
 {
 	float m_RaceY = 0.0f;

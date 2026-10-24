@@ -3907,7 +3907,6 @@ void CHud::RenderMediaIsland()
 	const bool ShowLocalTime = ShouldRenderHudLocalTime(*GameClient());
 	const SHudGameTimerInfo TimerInfo = g_Config.m_ClShowhudTimer ? BuildHudGameTimerInfo(*GameClient(), *Client(), TextRender(), m_Width) : SHudGameTimerInfo{};
 	SHudTopTimerCapsuleInfo TimerCapsule = BuildHudTopTimerCapsuleInfo(TimerInfo);
-	const float TimerAnchorWidth = TimerCapsule.m_BoxW;
 	char aRecordingBuf[512];
 	const bool ShowRecordingStatus = TimerCapsule.m_Visible && BuildHudRecordingStatusText(*GameClient(), aRecordingBuf, sizeof(aRecordingBuf));
 	const bool ScoreboardExpanded = GameClient()->m_Scoreboard.IsActive();
@@ -4631,14 +4630,12 @@ void CHud::RenderMediaIsland()
 		SpectatorSatelliteRestGap,
 		SpectatorBlobPose);
 	const float SpectatorVisibleRight = SpectatorLiquidCapsule.m_Rect.x + SpectatorLiquidCapsule.m_Rect.w + QmHudMediaIslandScaled(1.0f);
-	const float EditorX = TimerCapsule.m_Visible ? (m_Width - TimerAnchorWidth) * 0.5f : IslandX;
-	const float EditorWidth = TimerCapsule.m_Visible ? TimerAnchorWidth : UnifiedWidth;
-	const CUIRect EditorTransformRect = {EditorX, IslandY, EditorWidth, TimerCapsule.m_Visible ? BaseIslandHeight : AnimatedIslandHeight};
 	const float EditorVisibleRight = std::max(UnifiedRight, SpectatorVisibleRight);
 	// 屏幕外的副岛不参与整岛平移，避免边界约束把居中的大时间推走。
 	const float VisibleLeft = TimerCapsule.m_Visible ? std::max(0.0f, SatelliteVisibleLeft) : SatelliteVisibleLeft;
 	const float VisibleRight = TimerCapsule.m_Visible ? std::min(m_Width, EditorVisibleRight) : EditorVisibleRight;
 	const CUIRect EditorVisibleRect = {VisibleLeft, IslandY, VisibleRight - VisibleLeft, AnimatedIslandHeight};
+	const CUIRect EditorTransformRect = QmHudMediaIslandEditorTransformRect(EditorVisibleRect);
 	const bool RenderLeftSection = ShowCover || ShowTeam || ShowWaveform;
 	const bool ShowTimerSecondaryLine = SwapRows.m_InlineSwapCount > 0 || Checkpoint > 0;
 	const SHudMediaIslandTimerRowLayout TimerRows = QmHudMediaIslandTimerRows(TimerCapsule.m_BoxY, TimerCapsule.m_BoxH, ShowTimerSecondaryLine);
