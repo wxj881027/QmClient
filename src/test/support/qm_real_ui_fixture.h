@@ -52,6 +52,47 @@ namespace qm_ui_test
 		EDeleteFailure m_BufferObjectDeleteFailure = EDeleteFailure::NONE;
 		bool m_FailQuadContainerDelete = false;
 		bool m_FailTextDraw = false;
+		bool m_TextBuffering = true;
+		bool m_RecordLegacyText = false;
+		int m_FailLegacyDrawAfter = -1;
+		struct SLegacyDraw
+		{
+			CQuadItem m_Item;
+			ColorRGBA m_Color;
+			int m_Texture;
+		};
+		std::vector<SLegacyDraw> m_vLegacyDraws;
+		std::vector<std::pair<size_t, ColorRGBA>> m_vLegacyRecolors;
+		ColorRGBA m_LegacyColor{1, 1, 1, 1};
+		int m_LegacyTexture = -1;
+		int m_LegacyKeepCalls = 0, m_LegacyReplayCalls = 0;
+		bool IsTextBufferingEnabled() override { return m_TextBuffering; }
+		void TextureSet(CTextureHandle Texture) override
+		{
+			if(m_RecordLegacyText)
+				m_LegacyTexture = Texture.Id();
+		}
+		void SetColor(float R, float G, float B, float A) override
+		{
+			if(m_RecordLegacyText)
+				m_LegacyColor = ColorRGBA(R, G, B, A);
+		}
+		void SetColor(ColorRGBA Color) override { SetColor(Color.r, Color.g, Color.b, Color.a); }
+		void QuadsEndKeepVertices() override
+		{
+			if(m_RecordLegacyText)
+				++m_LegacyKeepCalls;
+		}
+		void QuadsDrawCurrentVertices(bool = true) override
+		{
+			if(m_RecordLegacyText)
+				++m_LegacyReplayCalls;
+		}
+		void ChangeColorOfQuadVertices(size_t Offset, unsigned char R, unsigned char G, unsigned char B, unsigned char A) override
+		{
+			if(m_RecordLegacyText)
+				m_vLegacyRecolors.emplace_back(Offset, ColorRGBA(R / 255.0f, G / 255.0f, B / 255.0f, A / 255.0f));
+		}
 		int m_DirectBufferObjectDeleteCalls = 0;
 		size_t QuadContainerCount() const { return m_QuadCounts.size(); }
 		void ResetDeviceBuffers()
@@ -131,8 +172,18 @@ namespace qm_ui_test
 		// 裁剪、光标与选区只提交 GPU 绘制，不替代真实文字布局和输入行为。
 		void ClipEnable(int, int, int, int) override {}
 		void ClipDisable() override {}
-		void QuadsDrawTL(const CQuadItem *, int Num) override
+		void QuadsDrawTL(const CQuadItem *pItems, int Num) override
 		{
+			if(m_RecordLegacyText)
+				for(int i = 0; i < Num; ++i)
+				{
+					if(m_FailLegacyDrawAfter >= 0 && m_vLegacyDraws.size() == static_cast<size_t>(m_FailLegacyDrawAfter))
+					{
+						m_FailLegacyDrawAfter = -1;
+						throw std::bad_alloc();
+					}
+					m_vLegacyDraws.push_back({pItems[i], m_LegacyColor, m_LegacyTexture});
+				}
 			++m_Draws;
 			m_Quads += Num;
 		}

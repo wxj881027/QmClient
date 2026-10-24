@@ -3146,6 +3146,7 @@ if(CLIENT)
     graphics_buffer_pair.h
     quad_container_render.h
     graphics_upload_data.h
+    graphics_vertex_budget.h
     graphics_threaded_sprites.cpp
     render_target_readback_queue.h
     render_target_pool.h
@@ -4860,6 +4861,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/buffer_object_pool_test.cpp
     src/test/unit/engine/graphics/graphics_buffer_pair_test.cpp
     src/test/unit/engine/graphics/quad_container_render_test.cpp
+    src/test/unit/engine/graphics/graphics_vertex_budget_test.cpp
+    src/test/integration/qmclient/client/qm_text_unbuffered_passes_test.cpp
     src/test/integration/client/quad_container_command_stream_test.cpp
     src/test/integration/client/graphics_buffer_container_creation_test.cpp
     src/test/integration/client/graphics_buffer_object_creation_test.cpp

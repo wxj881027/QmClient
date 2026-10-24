@@ -7,6 +7,7 @@
 #include "glyph_outline.h"
 #include "glyph_render_retry.h"
 #include "graphics_buffer_pair.h"
+#include "graphics_vertex_budget.h"
 #include "qm_font_category.h"
 #include "qm_font_collection.h"
 #include "qm_font_face_registry.h"
@@ -4038,43 +4039,53 @@ public:
 			}
 			else
 			{
-				// render tiles
 				const float UVScale = 1.0f / m_pGlyphMap->TextureDimension();
-
+				const bool RetainVertices = GraphicsCanRetainTextQuads(TextContainer.m_StringInfo.m_vCharacterQuads.size());
+				const auto DrawPass = [&](size_t TextureIndex, const ColorRGBA &Tint, bool KeepVertices, bool Fill) {
+					Graphics()->TextureSet(m_pGlyphMap->Texture(TextureIndex));
+					Graphics()->QuadsBegin();
+					for(const STextCharQuad &Quad : TextContainer.m_StringInfo.m_vCharacterQuads)
+					{
+						const auto &Vertex = Quad.m_aVertices[0];
+						if(Fill)
+						{
+							// 重画填充时保留旧重着色路径的字节截断，避免边界颜色跳变。
+							Graphics()->SetColor(static_cast<unsigned char>(Vertex.m_Color.r * Tint.r) / 255.0f,
+								static_cast<unsigned char>(Vertex.m_Color.g * Tint.g) / 255.0f,
+								static_cast<unsigned char>(Vertex.m_Color.b * Tint.b) / 255.0f,
+								static_cast<unsigned char>(Vertex.m_Color.a * Tint.a) / 255.0f);
+						}
+						else
+							Graphics()->SetColor(Vertex.m_Color.r / 255.0f * Tint.r, Vertex.m_Color.g / 255.0f * Tint.g, Vertex.m_Color.b / 255.0f * Tint.b, Vertex.m_Color.a / 255.0f * Tint.a);
+						Graphics()->QuadsSetSubset(Vertex.m_U * UVScale, Vertex.m_V * UVScale, Quad.m_aVertices[2].m_U * UVScale, Quad.m_aVertices[2].m_V * UVScale);
+						IGraphics::CQuadItem Item(Vertex.m_X, Vertex.m_Y, Quad.m_aVertices[1].m_X - Vertex.m_X, Quad.m_aVertices[2].m_Y - Vertex.m_Y);
+						Graphics()->QuadsDrawTL(&Item, 1);
+					}
+					if(KeepVertices)
+						Graphics()->QuadsEndKeepVertices();
+					else
+						Graphics()->QuadsEnd();
+				};
 				Graphics()->FlushVertices();
-				Graphics()->TextureSet(m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_OUTLINE));
-
-				Graphics()->QuadsBegin();
-
-				for(const STextCharQuad &TextCharQuad : TextContainer.m_StringInfo.m_vCharacterQuads)
-				{
-					Graphics()->SetColor(TextCharQuad.m_aVertices[0].m_Color.r / 255.f * TextOutlineColor.r, TextCharQuad.m_aVertices[0].m_Color.g / 255.f * TextOutlineColor.g, TextCharQuad.m_aVertices[0].m_Color.b / 255.f * TextOutlineColor.b, TextCharQuad.m_aVertices[0].m_Color.a / 255.f * TextOutlineColor.a);
-					Graphics()->QuadsSetSubset(TextCharQuad.m_aVertices[0].m_U * UVScale, TextCharQuad.m_aVertices[0].m_V * UVScale, TextCharQuad.m_aVertices[2].m_U * UVScale, TextCharQuad.m_aVertices[2].m_V * UVScale);
-					IGraphics::CQuadItem QuadItem(TextCharQuad.m_aVertices[0].m_X, TextCharQuad.m_aVertices[0].m_Y, TextCharQuad.m_aVertices[1].m_X - TextCharQuad.m_aVertices[0].m_X, TextCharQuad.m_aVertices[2].m_Y - TextCharQuad.m_aVertices[0].m_Y);
-					Graphics()->QuadsDrawTL(&QuadItem, 1);
-				}
-
+				DrawPass(CGlyphMap::FONT_TEXTURE_OUTLINE, TextOutlineColor, RetainVertices && TextColor.a != 0, false);
 				if(TextColor.a != 0)
 				{
-					Graphics()->QuadsEndKeepVertices();
-					Graphics()->TextureSet(m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_FILL));
-
-					int TextCharQuadIndex = 0;
-					for(const STextCharQuad &TextCharQuad : TextContainer.m_StringInfo.m_vCharacterQuads)
+					if(RetainVertices)
 					{
-						unsigned char CR = (unsigned char)((float)(TextCharQuad.m_aVertices[0].m_Color.r) * TextColor.r);
-						unsigned char CG = (unsigned char)((float)(TextCharQuad.m_aVertices[0].m_Color.g) * TextColor.g);
-						unsigned char CB = (unsigned char)((float)(TextCharQuad.m_aVertices[0].m_Color.b) * TextColor.b);
-						unsigned char CA = (unsigned char)((float)(TextCharQuad.m_aVertices[0].m_Color.a) * TextColor.a);
-						Graphics()->ChangeColorOfQuadVertices(TextCharQuadIndex, CR, CG, CB, CA);
-						++TextCharQuadIndex;
+						Graphics()->TextureSet(m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_FILL));
+						size_t TextCharQuadIndex = 0;
+						for(const STextCharQuad &Quad : TextContainer.m_StringInfo.m_vCharacterQuads)
+						{
+							const auto &Color = Quad.m_aVertices[0].m_Color;
+							Graphics()->ChangeColorOfQuadVertices(TextCharQuadIndex++,
+								static_cast<unsigned char>(Color.r * TextColor.r), static_cast<unsigned char>(Color.g * TextColor.g),
+								static_cast<unsigned char>(Color.b * TextColor.b), static_cast<unsigned char>(Color.a * TextColor.a));
+						}
+						Graphics()->QuadsDrawCurrentVertices(false);
 					}
-
-					// render non outlined
-					Graphics()->QuadsDrawCurrentVertices(false);
+					else
+						DrawPass(CGlyphMap::FONT_TEXTURE_FILL, TextColor, false, true);
 				}
-				else
-					Graphics()->QuadsEnd();
 
 				// reset
 				Graphics()->SetColor(1.f, 1.f, 1.f, 1.f);

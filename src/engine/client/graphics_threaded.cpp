@@ -1747,6 +1747,8 @@ void CGraphics_Threaded::ChangeColorOfQuadVertices(size_t QuadOffset, unsigned c
 {
 	const CCommandBuffer::SColor Color(r, g, b, a);
 	const size_t VertNum = g_Config.m_GfxQuadAsTriangle && !m_GLUseTrianglesAsQuad ? 6 : 4;
+	if(!GraphicsCanRecolorQuad(QuadOffset, m_NumVertices, VertNum))
+		return;
 	for(size_t i = 0; i < VertNum; ++i)
 	{
 		m_aVertices[QuadOffset * VertNum + i].m_Color = Color;
@@ -2633,13 +2635,14 @@ void CGraphics_Threaded::RenderText(int BufferContainerIndex, int TextQuadNum, i
 			m_BufferedTextZeroQuadCount++;
 	}
 #endif
-	if(BufferContainerIndex == -1 || !IsTextureHandleAllocated(TextTexture) || !IsTextureHandleAllocated(TextOutlineTexture))
+	if(!m_BufferContainers.IsAllocated(BufferContainerIndex) || TextQuadNum <= 0 || TextureSize <= 0 ||
+		!GraphicsCanAppendQuads(0, TextQuadNum) || !IsTextureHandleAllocated(TextTexture) || !IsTextureHandleAllocated(TextOutlineTexture))
 		return;
 
 	CCommandBuffer::SCommand_RenderText Cmd;
 	Cmd.m_State = m_State;
 	Cmd.m_BufferContainerIndex = BufferContainerIndex;
-	Cmd.m_DrawNum = TextQuadNum * 6;
+	Cmd.m_DrawNum = static_cast<unsigned int>(TextQuadNum) * 6;
 	Cmd.m_TextureSize = TextureSize;
 	Cmd.m_TextTextureIndex = TextTexture.Id();
 	Cmd.m_TextOutlineTextureIndex = TextOutlineTexture.Id();

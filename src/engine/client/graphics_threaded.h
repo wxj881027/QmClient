@@ -8,6 +8,7 @@
 #include <engine/client/buffer_container_pool.h>
 #include <engine/client/buffer_object_pool.h>
 #include <engine/client/graphics_upload_data.h>
+#include <engine/client/graphics_vertex_budget.h>
 #include <engine/client/quad_rotation_cache.h>
 #include <engine/client/render_target_pool.h>
 #include <engine/client/render_target_readback_queue.h>
@@ -119,7 +120,7 @@ public:
 	enum
 	{
 		MAX_TEXTURES = 1024 * 8,
-		MAX_VERTICES = 32 * 1024,
+		MAX_VERTICES = GRAPHICS_VERTEX_CAPACITY,
 	};
 
 	enum
