@@ -1613,20 +1613,6 @@ static void priv_net_udp_send_failed(NETSOCKET sock, const NETADDR *addr)
 }
 #endif
 
-// 只对含游戏数据的已连接 UDP 包复制，不复制控制包和纯确认包。
-int g_NetDupUpstream = 0;
-
-static bool QmNetDupUpstreamWorthDuplicating(const unsigned char *pData, int Size)
-{
-	if(Size < 3)
-		return false;
-	const unsigned char Flags = pData[0] >> 2;
-	if(Flags & ((1u << 2) | (1u << 3)))
-		return false;
-	// 压缩只作用于包体，块数量始终保留在第三个包头字节。
-	return pData[2] > 0;
-}
-
 int net_udp_send(NETSOCKET sock, const NETADDR *addr, const void *data, int size)
 {
 	int d = -1;
@@ -1651,12 +1637,6 @@ int net_udp_send(NETSOCKET sock, const NETADDR *addr, const void *data, int size
 			}
 
 			d = sendto(sock->ipv4sock, (const char *)data, size, 0, (sockaddr *)&sa, sizeof(sa));
-			if(d >= 0 && g_NetDupUpstream > 1 &&
-				QmNetDupUpstreamWorthDuplicating((const unsigned char *)data, size))
-			{
-				for(int i = 1; i < g_NetDupUpstream; i++)
-					sendto(sock->ipv4sock, (const char *)data, size, 0, (sockaddr *)&sa, sizeof(sa));
-			}
 #if defined(CONF_PLATFORM_IOS)
 			if(d < 0)
 			{
@@ -1717,12 +1697,6 @@ int net_udp_send(NETSOCKET sock, const NETADDR *addr, const void *data, int size
 			}
 
 			d = sendto(sock->ipv6sock, (const char *)data, size, 0, (sockaddr *)&sa, sizeof(sa));
-			if(d >= 0 && g_NetDupUpstream > 1 &&
-				QmNetDupUpstreamWorthDuplicating((const unsigned char *)data, size))
-			{
-				for(int i = 1; i < g_NetDupUpstream; i++)
-					sendto(sock->ipv6sock, (const char *)data, size, 0, (sockaddr *)&sa, sizeof(sa));
-			}
 #if defined(CONF_PLATFORM_IOS)
 			if(d < 0)
 			{

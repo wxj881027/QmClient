@@ -355,6 +355,7 @@ private:
 
 	void UpdateNetStatsSnapshot() const;
 	void UpdateGamePing();
+	void UpdateUpstreamRedundancy();
 
 	// Shared by RenderDebug and Qm monitoring.
 	mutable NETSTATS m_NetstatsPrev = {};

@@ -10,8 +10,9 @@
 
 // QmClient specific variables - 栖梦客户端配置项
 
-// 自动复制只看独立探针的未确认率，不把下行统计或可靠重传当成上行丢包。
-MACRO_CONFIG_INT(ClDupUpstream, cl_dup_upstream, 3, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "上行复制上限：0关闭，1单发，2或3按独立探针未确认率自适应")
+// 往返探针无法区分上下行丢包；仅作为默认关闭的灰测功能。
+MACRO_CONFIG_INT(QmUpstreamRedundancy, qm_upstream_redundancy, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.")
+MACRO_CONFIG_INT(QmUpstreamRedundancyMaxCopies, qm_upstream_redundancy_max_copies, 3, 2, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Maximum number of copies per outgoing UDP game packet")
 
 // 地图编辑器
 MACRO_CONFIG_INT(QmEditorCollabFollowPlacement, qm_editor_collab_follow_placement, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Follow remote placements in the collaborative editor")

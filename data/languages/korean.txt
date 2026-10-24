@@ -4679,6 +4679,9 @@ Expanded dropdown background opacity percentage
 Experimental
 == 실험적
 
+Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.
+== 실험 기능: 왕복 탐침에 응답이 없으면 상향 UDP 게임 패킷을 반복 전송합니다. 업로드 트래픽은 최대 세 배가 되며, 하향 패킷 손실이나 늦게 도착한 중복 입력은 여전히 문제를 일으킬 수 있습니다. KCP 사용 시 비활성화됩니다.
+
 Export
 == 내보내기
 
@@ -7445,6 +7448,9 @@ Maximum number of automatic scoreboard screenshots (0 = unlimited)
 Maximum number of clients on server
 == 서버의 최대 클라이언트 수
 
+Maximum number of copies per outgoing UDP game packet
+== 상향 UDP 게임 패킷당 최대 전송 사본 수
+
 Maximum number of packets received in one batch before returning to the main loop (0 = unlimited).
 == 메인 루프로 돌아가기 전에 한 번에 수신할 수 있는 최대 패킷 수(0 = 제한 없음).
 
@@ -7462,6 +7468,9 @@ Maximum number of skins loaded simultaneously
 
 Maximum number of vanilla antispoof handshakes answered per second (0 = unlimited).
 == 초당 응답할 수 있는 바닐라 스푸핑 방지 핸드셰이크의 최대 수(0 = 제한 없음).
+
+Maximum packet copies
+== 최대 패킷 전송 사본 수
 
 Maximum players participating in a vote (0 = unlimited)
 == 투표에 참여할 수 있는 최대 플레이어 수 (0 = 무제한)
@@ -14701,6 +14710,9 @@ Upload a saved map to the public test server
 
 Upload map
 == 맵 업로드
+
+Upstream redundancy (experimental)
+== 상향 패킷 중복 전송 (실험적)
 
 URL for downloading community skins
 == 커뮤니티 스킨 다운로드 URL

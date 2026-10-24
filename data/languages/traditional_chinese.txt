@@ -4679,6 +4679,9 @@ Expanded dropdown background opacity percentage
 Experimental
 == 實驗性
 
+Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.
+== 實驗功能：往返探針未獲回覆時重複傳送上行 UDP 遊戲封包。上行流量最多增至三倍；下行丟包和晚到的重複輸入仍可能造成問題。使用 KCP 時停用。
+
 Export
 == 導出
 
@@ -7445,6 +7448,9 @@ Maximum number of automatic scoreboard screenshots (0 = unlimited)
 Maximum number of clients on server
 == 伺服器上允許的最大客戶端數
 
+Maximum number of copies per outgoing UDP game packet
+== 每個上行 UDP 遊戲封包的傳送份數上限
+
 Maximum number of packets received in one batch before returning to the main loop (0 = unlimited).
 == 返回主迴圈前單批接收的封包最大數量（0 = 不限）。
 
@@ -7462,6 +7468,9 @@ Maximum number of skins loaded simultaneously
 
 Maximum number of vanilla antispoof handshakes answered per second (0 = unlimited).
 == 每秒回應的原版反欺騙交握最大數量（0 = 不限）。
+
+Maximum packet copies
+== 封包份數上限
 
 Maximum players participating in a vote (0 = unlimited)
 == 最多可有多少玩家參與投票（0 = 無限制）
@@ -14701,6 +14710,9 @@ Upload a saved map to the public test server
 
 Upload map
 == 上傳地圖
+
+Upstream redundancy (experimental)
+== 上行冗餘傳送（實驗性）
 
 URL for downloading community skins
 == 用於下載社區皮膚的 URL

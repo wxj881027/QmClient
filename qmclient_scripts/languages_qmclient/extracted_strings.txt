@@ -1558,6 +1558,7 @@ Expand console
 Expanded dropdown background color
 Expanded dropdown background opacity percentage
 Experimental
+Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.
 Export
 Export configuration package
 Export cut as a separate demo
@@ -2481,12 +2482,14 @@ Maximum number of auto-screenshots (0 = unlimited)
 Maximum number of automatic replays (0 = unlimited)
 Maximum number of automatic scoreboard screenshots (0 = unlimited)
 Maximum number of clients on server
+Maximum number of copies per outgoing UDP game packet
 Maximum number of packets received in one batch before returning to the main loop (0 = unlimited).
 Maximum number of pre-inputs per tick and client sent to other clients (0 for no limit)
 Maximum number of resend requests answered per second (0 for no limit)
 Maximum number of server info responses of any size sent per second (0 = unlimited).
 Maximum number of skins loaded simultaneously
 Maximum number of vanilla antispoof handshakes answered per second (0 = unlimited).
+Maximum packet copies
 Maximum players participating in a vote (0 = unlimited)
 Maximum players shown in the Gores team drown board
 Maximum reduction
@@ -4900,6 +4903,7 @@ Update ready to install
 Upload .map files. Server and admin passwords: s.
 Upload a saved map to the public test server
 Upload map
+Upstream redundancy (experimental)
 URL for downloading community skins
 URL for downloading maps (must start with https://)
 URL for downloading skins

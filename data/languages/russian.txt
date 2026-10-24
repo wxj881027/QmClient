@@ -4679,6 +4679,9 @@ Expanded dropdown background opacity percentage
 Experimental
 == экспериментально
 
+Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.
+== Экспериментальная функция: повторно отправляет исходящие игровые UDP-пакеты, если нет ответов на проверочные запросы. Исходящий трафик может утроиться; потеря входящих пакетов и запоздалые копии ввода всё ещё могут вызывать проблемы. При KCP отключена.
+
 Export
 == Экспорт
 
@@ -7445,6 +7448,9 @@ Maximum number of automatic scoreboard screenshots (0 = unlimited)
 Maximum number of clients on server
 == Максимальное количество клиентов на сервере
 
+Maximum number of copies per outgoing UDP game packet
+== Максимальное число копий каждого исходящего игрового UDP-пакета
+
 Maximum number of packets received in one batch before returning to the main loop (0 = unlimited).
 == Максимальное число пакетов, получаемых за одну пачку до возврата в главный цикл (0 = без ограничений).
 
@@ -7462,6 +7468,9 @@ Maximum number of skins loaded simultaneously
 
 Maximum number of vanilla antispoof handshakes answered per second (0 = unlimited).
 == Максимальное число ответов на ванильные рукопожатия защиты от подмены в секунду (0 = без ограничений).
+
+Maximum packet copies
+== Максимальное число копий пакета
 
 Maximum players participating in a vote (0 = unlimited)
 == Максимальное количество игроков, участвующих в голосовании (0 = без ограничений)
@@ -14701,6 +14710,9 @@ Upload a saved map to the public test server
 
 Upload map
 == Загрузить карту
+
+Upstream redundancy (experimental)
+== Дублирование исходящих пакетов (экспериментально)
 
 URL for downloading community skins
 == URL для загрузки скинов сообщества

@@ -4776,7 +4776,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/server/mutes_test.cpp
     src/test/unit/engine/name_ban_test.cpp
     src/test/unit/engine/net_test.cpp
-    src/test/unit/engine/net_dup_upstream_test.cpp
+    src/test/integration/engine/net_dup_upstream_test.cpp
     src/test/contract/base/net_protocol_contract_test.cpp
     src/test/unit/base/netaddr_test.cpp
     src/test/unit/engine/network_test.cpp
