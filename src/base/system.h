@@ -679,6 +679,9 @@ void net_qos_remove_socket(NETQOS qos);
  */
 int net_udp_send(NETSOCKET sock, const NETADDR *addr, const void *data, int size);
 
+// 只对含游戏数据的已连接 UDP 包复制，不复制控制包和纯确认包。
+extern int g_NetDupUpstream;
+
 /**
  * Receives a packet over an UDP socket.
  *

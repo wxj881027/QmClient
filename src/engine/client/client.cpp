@@ -1320,6 +1320,9 @@ void CClient::DisconnectWithReason(const char *pReason)
 	mem_zero(&m_CurrentServerPingUuid, sizeof(m_CurrentServerPingUuid));
 	m_CurrentServerCurrentPingTime = -1;
 	m_CurrentServerNextPingTime = -1;
+	m_LinkProbeTracker.Reset(time_get());
+	m_UpstreamProbeEnabled = false;
+	m_NextUpstreamProbeTime = 0;
 	m_ManualPingProbe.Reset();
 	for(int Conn = 0; Conn < NUM_DUMMIES; ++Conn)
 		m_aGamePingProbes[Conn].Reset();
@@ -2647,6 +2650,8 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 			{
 				return;
 			}
+			if(Conn == CONN_MAIN && m_LinkProbeTracker.Confirm(*pId))
+				return;
 			const int64_t Now = time_get();
 			m_aGamePingProbes[Conn].HandlePong(*pId, Now, time_freq());
 			if(Conn == CONN_MAIN && m_ServerCapabilities.m_PingEx && m_CurrentServerCurrentPingTime >= 0 && *pId == m_CurrentServerPingUuid)
@@ -3707,6 +3712,8 @@ void CClient::UpdateDemoIntraTimers()
 
 void CClient::Update()
 {
+	m_LinkProbeTracker.OnFrame(time_get(), time_freq());
+
 	const bool GraphicsTrace = QmGraphicsTraceEnabled(2);
 	const bool PerfRuntime = QmPerfEnabled();
 	// GraphicsTrace 走原有 perf/graphics 通道；常规性能/卡顿诊断下把 client_update 的子阶段
@@ -3740,6 +3747,71 @@ void CClient::Update()
 	}
 	else
 		PumpNetwork();
+
+	const bool MainOnline = State() == IClient::STATE_ONLINE && m_aNetClient[CONN_MAIN].State() == NETSTATE_ONLINE;
+	const bool ProbeEnabled = MainOnline && g_Config.m_ClDupUpstream >= 2 && m_ServerCapabilities.m_PingEx;
+	const int64_t Now = time_get();
+
+	if(ProbeEnabled != m_UpstreamProbeEnabled)
+	{
+		m_LinkProbeTracker.Reset(Now);
+		m_UpstreamProbeEnabled = ProbeEnabled;
+		m_NextUpstreamProbeTime = ProbeEnabled ? Now : 0;
+	}
+
+	if(ProbeEnabled)
+	{
+		m_LinkProbeTracker.Update(Now, time_freq());
+		if(Now >= m_NextUpstreamProbeTime)
+		{
+			// 先隔离普通数据，再单发独立编号探针；不补发暂停期间错过的探针。
+			m_NextUpstreamProbeTime = Now + time_freq() / 2;
+			m_aNetClient[CONN_MAIN].Flush();
+			const int PreviousDup = g_NetDupUpstream;
+			g_NetDupUpstream = 1;
+			const CUuid Id = RandomUuid();
+			CMsgPacker Probe(NETMSG_PINGEX, true);
+			Probe.AddRaw(&Id, sizeof(Id));
+			if(SendMsg(CONN_MAIN, &Probe, MSGFLAG_FLUSH) == 0 && m_LinkProbeTracker.RecordSent(Id, Now) && g_Config.m_Debug)
+			{
+				char aUuid[UUID_MAXSTRSIZE];
+				FormatUuid(Id, aUuid, sizeof(aUuid));
+				dbg_msg("link-probe", "独立探针已发送 UUID=%s", aUuid);
+			}
+			g_NetDupUpstream = PreviousDup;
+		}
+	}
+
+	g_NetDupUpstream = MainOnline ? m_LinkProbeTracker.Copies(g_Config.m_ClDupUpstream) : 0;
+
+	{
+		static int64_t s_LastDupLogTime = 0;
+		// 仅在 debug 调试开启时输出，避免正常联机时每秒刷控制台。
+		if(g_Config.m_Debug && MainOnline && Now - s_LastDupLogTime >= time_freq())
+		{
+			s_LastDupLogTime = Now;
+			if(g_Config.m_ClDupUpstream >= 2 && !m_ServerCapabilities.m_PingEx)
+			{
+				dbg_msg("dup-upstream", "当前份数=%d 独立探针=服务端不支持，自动复制停用", g_NetDupUpstream);
+			}
+			else if(!ProbeEnabled)
+			{
+				dbg_msg("dup-upstream", "当前份数=%d 独立探针=关闭", g_NetDupUpstream);
+			}
+			else if(!m_LinkProbeTracker.HasEstimate())
+			{
+				dbg_msg("dup-upstream", "当前份数=%d 探针未确认率=采样中 窗口样本=%llu",
+					g_NetDupUpstream, (unsigned long long)m_LinkProbeTracker.WindowSamples());
+			}
+			else
+			{
+				dbg_msg("dup-upstream", "当前份数=%d 探针未确认率=%.1f%% 窗口样本=%llu 累计已判定=%llu 累计未确认=%llu 暂停忽略=%llu",
+					g_NetDupUpstream, m_LinkProbeTracker.UnconfirmedPercent(), (unsigned long long)m_LinkProbeTracker.WindowSamples(),
+					(unsigned long long)m_LinkProbeTracker.TotalSamples(), (unsigned long long)m_LinkProbeTracker.TotalUnconfirmed(),
+					(unsigned long long)m_LinkProbeTracker.TotalIgnored());
+			}
+		}
+	}
 
 	GameClient()->OnConnectionResourceUpdate();
 	// 官方 178da1ead：在采集/发送输入之前先更新 editor/gameclient，

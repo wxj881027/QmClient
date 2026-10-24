@@ -10,6 +10,9 @@
 
 // QmClient specific variables - 栖梦客户端配置项
 
+// 自动复制只看独立探针的未确认率，不把下行统计或可靠重传当成上行丢包。
+MACRO_CONFIG_INT(ClDupUpstream, cl_dup_upstream, 3, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "上行复制上限：0关闭，1单发，2或3按独立探针未确认率自适应")
+
 // 地图编辑器
 MACRO_CONFIG_INT(QmEditorCollabFollowPlacement, qm_editor_collab_follow_placement, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Follow remote placements in the collaborative editor")
 
