@@ -178,6 +178,13 @@ SPlayerPointsResult CPlayerPoints::GetPoints(const char *pPlayerName)
 	return m_Cache.Get(pPlayerName);
 }
 
+SPlayerPlaytimeResult CPlayerPoints::GetPlaytime(const char *pPlayerName) const
+{
+	if(!pPlayerName || pPlayerName[0] == '\0')
+		return {EPointsStatus::NOT_REQUESTED, -1};
+	return m_Cache.GetPlaytime(pPlayerName);
+}
+
 void CPlayerPoints::StartRequest(const char *pPlayerName)
 {
 	// 玩家名先做 URL 编码。
@@ -271,7 +278,7 @@ void CPlayerPoints::ProcessCompletedRequests()
 			}
 			else
 			{
-				if(m_Cache.CompleteSuccess(Name, Token, Result.m_Points, time_get()))
+				if(m_Cache.CompleteSuccess(Name, Token, Result.m_Points, time_get(), Result.m_PlaytimeHours))
 					StoreToDb(Name.c_str(), Result.m_Points);
 				// 成功路径默认不打日志，避免刷屏。
 			}

@@ -10445,6 +10445,9 @@ Plays a short effect when a tee's skin changes, and can copy the skin of the tee
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == 해머로 빼앗은 스킨을 포함해 스킨이 바뀔 때 애니메이션을 재생합니다.
 
+Playtime (h)
+== 플레이 시간(h)
+
 Please add a valid cut first
 == 먼저 유효한 잘라내기 구간을 추가하세요
 
@@ -12287,6 +12290,9 @@ Scoreboard cursor
 Scoreboard filter: only show players whose name or clan contains this text
 == 스코어보드 필터: 이름 또는 클랜에 이 텍스트가 포함된 플레이어만 표시합니다
 
+Scoreboard playtime
+== 스코어보드 플레이 시간
+
 Scoreboard point check
 == 점수판 포인트 확인
 
@@ -13619,6 +13625,12 @@ Show player Tee
 Show players' key presses
 == 플레이어 키 입력 표시
 
+Show playtime
+== 플레이 시간 표시
+
+Show points
+== 포인트 표시
+
 Show position and angle
 == 위치와 각도 표시
 
@@ -13816,6 +13828,9 @@ Show titles on nameplates
 
 Show toast
 == 토스트 메시지 표시
+
+Show total DDNet playtime from activity instead of points in scoreboard
+== 스코어보드에서 포인트 대신 DDNet activity의 총 플레이 시간을 표시
 
 Show tune zone colors
 == tune zone 영역 색상 표시

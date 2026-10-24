@@ -32,6 +32,7 @@
 #include <game/localization.h>
 
 #include <algorithm>
+#include <cinttypes>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -1116,9 +1117,10 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const bool TimeScore = GameClient()->m_GameInfo.m_TimeScore;
 	const int NumPlayers = Scroll ? 16 : CountEnd - CountStart;
 	const bool LowScoreboardWidth = Scoreboard.w < 350.0f;
-	// Axiom 积分服上这一列显示当前模式的 Axiom 分数，取代 DDNet 在线点数。
-	const bool AxiomScoreColumn = HasQmAxiomScoreMode();
-	const bool ShowPoints = AxiomScoreColumn || g_Config.m_QmScoreboardPoints != 0;
+	const bool ShowPlaytime = g_Config.m_QmScoreboardPlaytime != 0;
+	// 积分视图在 Axiom 服显示当前模式分数，游玩时间视图统一使用 DDNet activity。
+	const bool AxiomScoreColumn = !ShowPlaytime && HasQmAxiomScoreMode();
+	const bool ShowStatistics = ShowPlaytime || AxiomScoreColumn || g_Config.m_QmScoreboardPoints != 0;
 	const float ContentAlpha = m_AnimContentAlpha;
 	const ColorRGBA BaseTextColor = TextRender()->DefaultTextColor().WithMultipliedAlpha(ContentAlpha);
 	const ColorRGBA BaseOutlineColor = TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(ContentAlpha);
@@ -1191,10 +1193,11 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const float ClientBrandOffset = Scoreboard.x + 10.0f;
 	const float ScoreOffset = Scoreboard.x + 20.0f + ClientBrandLength;
 	const float ScoreLength = TextRender()->TextWidth(FontSize, TimeScore ? "00:00:00" : "99999");
-	// Points column: placed between Score and Tee (only when enabled)
-	const float PointsLength = ShowPoints ? (LowScoreboardWidth ? TextRender()->TextWidth(FontSize, "99999") : TextRender()->TextWidth(FontSize, "999999")) : 0.0f;
-	const float PointsOffset = ScoreOffset + ScoreLength + 10.0f;
-	const float TeeOffset = ShowPoints ? (PointsOffset + PointsLength + 10.0f) : (ScoreOffset + ScoreLength + 10.0f);
+	// 统计列复用积分位置，并为带单位的表头预留宽度。
+	const char *pStatsLabel = ShowPlaytime ? Localize("Playtime (h)") : (AxiomScoreColumn ? QmAxiomModeName(m_QmAxiomScoreModeFrame) : Localize("Points"));
+	const float StatsLength = ShowStatistics ? maximum(TextRender()->TextWidth(FontSize, LowScoreboardWidth ? "99999" : "999999"), TextRender()->TextWidth(HeadlineFontsize, pStatsLabel)) : 0.0f;
+	const float StatsOffset = ScoreOffset + ScoreLength + 10.0f;
+	const float TeeOffset = ShowStatistics ? (StatsOffset + StatsLength + 10.0f) : (ScoreOffset + ScoreLength + 10.0f);
 	const float TeeLength = 60.0f * TeeSizeMod;
 	const float NameOffset = TeeOffset + TeeLength;
 	const float CountryLength = (LineHeight - Spacing - TeeSizeMod * 5.0f) * 2.0f;
@@ -1211,12 +1214,9 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const float HeadlineY = Headline.y + Headline.h / 2.0f - HeadlineFontsize / 2.0f;
 	const char *pScore = TimeScore ? Localize("Time") : Localize("Score");
 	TextRender()->Text(ScoreOffset + ScoreLength - TextRender()->TextWidth(HeadlineFontsize, pScore), HeadlineY, HeadlineFontsize, pScore);
-	// Points column header: only render when enabled
-	if(ShowPoints)
+	if(ShowStatistics)
 	{
-		// 表头直接写模式名，让玩家知道这一列是哪个模式的分数。
-		const char *pPointsLabel = AxiomScoreColumn ? QmAxiomModeName(m_QmAxiomScoreModeFrame) : Localize("Points");
-		TextRender()->Text(PointsOffset + PointsLength - TextRender()->TextWidth(HeadlineFontsize, pPointsLabel), HeadlineY, HeadlineFontsize, pPointsLabel);
+		TextRender()->Text(StatsOffset + StatsLength - TextRender()->TextWidth(HeadlineFontsize, pStatsLabel), HeadlineY, HeadlineFontsize, pStatsLabel);
 	}
 	TextRender()->Text(NameOffset, HeadlineY, HeadlineFontsize, Localize("Name"));
 	if(RowDetail.m_ShowClan)
@@ -1413,11 +1413,23 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			TextRender()->Text(ClientBrandX, Row.y + (Row.h - FontSize) / 2.0f, FontSize, pClientBrandLabel);
 			TextRender()->TextColor(TextColor);
 		}
-		// Points column: render actual points value, right-aligned (only when enabled)
-		if(ShowPoints)
+		if(ShowStatistics)
 		{
-			char aPointsValue[16];
-			if(AxiomScoreColumn)
+			char aPointsValue[32];
+			if(ShowPlaytime)
+			{
+				if(HideIdentity)
+					aPointsValue[0] = '\0';
+				else
+				{
+					const SPlayerPlaytimeResult Playtime = GameClient()->m_PlayerPoints.GetPlaytime(ClientData.m_aName);
+					if(Playtime.m_Status == EPointsStatus::READY)
+						str_format(aPointsValue, sizeof(aPointsValue), "%" PRId64, Playtime.m_Hours);
+					else
+						str_copy(aPointsValue, Playtime.m_Status == EPointsStatus::FAILED ? "?" : "...");
+				}
+			}
+			else if(AxiomScoreColumn)
 			{
 				// 隐藏主播身份的玩家不暴露 Axiom 分数。
 				const bool PointsVisible = !HideIdentity && !GameClient()->ShouldHideStreamerIdentity(ClientId);
@@ -1440,7 +1452,11 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 				}
 			}
 			if(aPointsValue[0] != '\0')
-				TextRender()->Text(PointsOffset + PointsLength - TextRender()->TextWidth(FontSize, aPointsValue), Row.y + (Row.h - FontSize) / 2.0f, FontSize, aPointsValue);
+			{
+				const float ValueWidth = TextRender()->TextWidth(FontSize, aPointsValue);
+				const float ValueFontSize = ValueWidth > StatsLength ? FontSize * StatsLength / ValueWidth : FontSize;
+				TextRender()->Text(StatsOffset + StatsLength - minimum(ValueWidth, StatsLength), Row.y + (Row.h - ValueFontSize) / 2.0f, ValueFontSize, aPointsValue);
+			}
 		}
 
 		// CTF flag
@@ -1690,10 +1706,10 @@ void CScoreboard::OnRender()
 	if(GetQmFocusModeDecisions().m_HideScoreboard)
 		return;
 
-	// 当记分板可见时（骗你的,不可见也查），为所有活跃玩家触发查询点
+	// 沿用积分预热；切换统计列复用同一份 DDNet 响应。
 	if(HasQmAxiomScoreMode())
 	{
-		// Axiom 积分服：查当前 Axiom 模式的分数，不再请求 DDNet 在线点数。
+		// Axiom 排序继续使用当前模式分数，显示游玩时间不改变排序数据源。
 		GameClient()->m_QmAxiomScores.SetMode(m_QmAxiomScoreModeFrame);
 		// 记分板打开时给足预算铺满一屏，否则只做少量预热；
 		// 真正发请求的速度由组件内每帧搜索上限控制。
@@ -1708,13 +1724,19 @@ void CScoreboard::OnRender()
 			GameClient()->m_QmAxiomScores.EnsureQueried(GameClient()->m_aClients[i].m_aName);
 		}
 	}
-	else if(g_Config.m_QmScoreboardPoints || g_Config.m_QmScoreboardSortMode)
+	else
 	{
 		GameClient()->m_QmAxiomScores.SetMode(EQmAxiomMode::NONE);
+	}
+	const bool NeedDdnetPoints = !HasQmAxiomScoreMode() && (g_Config.m_QmScoreboardPoints || g_Config.m_QmScoreboardSortMode);
+	if(g_Config.m_QmScoreboardPlaytime || NeedDdnetPoints)
+	{
 		for(int i = 0; i < MAX_CLIENTS; i++)
 		{
 			if(GameClient()->m_Snap.m_apPlayerInfos[i] && GameClient()->m_aClients[i].m_Active)
 			{
+				if(!NeedDdnetPoints && GameClient()->ShouldHideStreamerIdentity(i))
+					continue;
 				GameClient()->m_PlayerPoints.EnsureQueried(GameClient()->m_aClients[i].m_aName);
 			}
 		}
@@ -1828,7 +1850,7 @@ void CScoreboard::OnRender()
 	const float MaxScoreboardWidth = HasMedia ? QmScoreboardMediaMaxWidth(Screen.w, true) : maximum(200.0f, Screen.w - ScreenMargin);
 	const int ScoreboardColumns = ScrollMode ? 1 : (Teams ? 2 : (NumPlayers <= 16 ? 1 : (NumPlayers <= 64 ? 2 : 3)));
 	const float ClientBrandExtraWidth = g_Config.m_QmClientShowBadge ? maximum(TextRender()->TextWidth(12.0f, "Qm"), TextRender()->TextWidth(12.0f, "Arg")) + CLIENT_BRAND_LABEL_GAP : 0.0f;
-	const float BaseScoreboardSmallWidth = (g_Config.m_QmScoreboardPoints ? (450.0f + 10.0f) : 450.0f) + ClientBrandExtraWidth;
+	const float BaseScoreboardSmallWidth = ((g_Config.m_QmScoreboardPoints || g_Config.m_QmScoreboardPlaytime) ? (450.0f + 10.0f) : 450.0f) + ClientBrandExtraWidth;
 	const float ScoreboardSmallWidth = minimum(BaseScoreboardSmallWidth, MaxScoreboardWidth);
 	const float BaseScoreboardWidth = ScrollMode || (!Teams && NumPlayers <= 16) ? ScoreboardSmallWidth : 850.0f + ClientBrandExtraWidth * ScoreboardColumns;
 	const float ScoreboardWidth = minimum(BaseScoreboardWidth, MaxScoreboardWidth);
@@ -1862,6 +1884,18 @@ void CScoreboard::OnRender()
 	auto &&DoSortButton = [&](CUIRect Rect) {
 		if(DoHeaderButton(&s_ScoreboardSortButton, pSortLabel, Rect, SortButtonColor))
 			g_Config.m_QmScoreboardSortMode ^= 1;
+	};
+	static CButtonContainer s_ScoreboardStatisticsButton;
+	const char *pStatisticsLabel = g_Config.m_QmScoreboardPlaytime ? Localize("Show points") : Localize("Show playtime");
+	const float StatisticsButtonWidth = maximum(TextRender()->TextWidth(SortButtonFontSize, Localize("Show points")), TextRender()->TextWidth(SortButtonFontSize, Localize("Show playtime"))) + 18.0f;
+	auto &&DoStatisticsButton = [&](CUIRect Rect) {
+		if(DoHeaderButton(&s_ScoreboardStatisticsButton, pStatisticsLabel, Rect, ScoreboardUiColorSurface(1.0f, 0.18f)))
+		{
+			g_Config.m_QmScoreboardPlaytime ^= 1;
+			// 主动切回积分时保证该列可见，默认关闭积分查询的配置仍可直接使用按钮。
+			if(!g_Config.m_QmScoreboardPlaytime)
+				g_Config.m_QmScoreboardPoints = 1;
+		}
 	};
 
 	// 服务器人数：沿用官方 ESC 服务器信息的「当前 / 上限」，仅真实联机且服务端上报上限时显示。
@@ -1997,8 +2031,11 @@ void CScoreboard::OnRender()
 		RedScoreboard.Draw(ScoreboardGlassSurface(BackgroundAlphaFinal), IGraphics::CORNER_B, ui_token::radius::CARD);
 		BlueScoreboard.Draw(ScoreboardGlassSurface(BackgroundAlphaFinal), IGraphics::CORNER_B, ui_token::radius::CARD);
 
+		CUIRect StatisticsButton;
+		RedTitleContent.VSplitRight(StatisticsButtonWidth, &RedTitleContent, &StatisticsButton);
 		RenderTitleBar(RedTitleContent, TEAM_RED, pRedTeamName == nullptr ? Localize("Red team") : pRedTeamName);
 		RenderTitleBar(BlueTitleContent, TEAM_BLUE, pBlueTeamName == nullptr ? Localize("Blue team") : pBlueTeamName);
+		DoStatisticsButton(StatisticsButton);
 		DoServerPlayers(ServerPlayers);
 		DoSortButton(SortButton);
 		RenderScoreboard(RedScoreboardContent, TEAM_RED, 0, NumPlayers, RedPlayerRows, RenderState);
@@ -2024,6 +2061,7 @@ void CScoreboard::OnRender()
 		CUIRect SortButton;
 		CUIRect ServerPlayers;
 		CUIRect ScrollButton;
+		CUIRect StatisticsButton;
 		const bool ShowScrollButton = !Teams && NumPlayers > 16;
 		const char *pScrollLabel = g_Config.m_QmScoreboardScroll ? Localize("Scroll mode: On") : Localize("Scroll mode: Off");
 		const float ScrollButtonWidth = TextRender()->TextWidth(SortButtonFontSize, pScrollLabel) + 18.0f;
@@ -2041,6 +2079,7 @@ void CScoreboard::OnRender()
 			if(ShowScrollButton)
 				++ChildCount;
 			++ChildCount; // 排序按钮
+			++ChildCount; // 统计列切换按钮
 			vTitleChildren.assign(ChildCount, SUiLayoutChild{});
 			int ChildIndex = 0;
 			vTitleChildren[ChildIndex++].m_Style.m_Width = SUiLength::Flex(1.0f);
@@ -2049,6 +2088,8 @@ void CScoreboard::OnRender()
 			const int ScrollButtonIndex = ShowScrollButton ? ChildIndex++ : -1;
 			if(ShowScrollButton)
 				vTitleChildren[ScrollButtonIndex].m_Style.m_Width = SUiLength::Px(ScrollButtonWidth);
+			const int StatisticsButtonIndex = ChildIndex++;
+			vTitleChildren[StatisticsButtonIndex].m_Style.m_Width = SUiLength::Px(StatisticsButtonWidth);
 			const int SortButtonIndex = ChildIndex++;
 			vTitleChildren[SortButtonIndex].m_Style.m_Width = SUiLength::Px(SortButtonWidth);
 			LayoutEngine.ComputeChildren(TitleSplitStyle, CUiV2LegacyAdapter::FromCUIRect(Title), vTitleChildren);
@@ -2057,6 +2098,7 @@ void CScoreboard::OnRender()
 				ServerPlayers = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[1].m_Box);
 			if(ShowScrollButton)
 				ScrollButton = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[ScrollButtonIndex].m_Box);
+			StatisticsButton = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[StatisticsButtonIndex].m_Box);
 			SortButton = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[SortButtonIndex].m_Box);
 		}
 		RenderTitleBar(Title, TEAM_GAME, pTitle);
@@ -2071,6 +2113,7 @@ void CScoreboard::OnRender()
 				m_ScrollRegion.Reset();
 			}
 		}
+		DoStatisticsButton(StatisticsButton);
 		DoSortButton(SortButton);
 
 		if(ScrollMode)

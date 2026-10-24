@@ -2,6 +2,7 @@
 #include "qmclient.h"
 
 #include "bounded_file_reader.h"
+#include "ddnet_activity.h"
 #include "qm_title_style.h"
 #include "statistics_file.h"
 #include "statistics_save_job.h"
@@ -381,35 +382,8 @@ namespace
 						Result.m_TotalFinishes = (int)TotalFinishes;
 					}
 
-					// 官方 json2 直接提供两种口径的游玩小时数：
-					//   activity[] 逐日 hours_played 求和 = 生涯累计；
-					//   hours_played_past_365_days        = 最近一年。
-					// 两者都只作为显示用的可选数据，缺失时不置 m_Parsed，避免影响既有解析成功判定。
-					const json_value *pActivity = JsonObjectField(pRoot, "activity");
-					if(pActivity->type == json_array)
-					{
-						int64_t TotalHours = 0;
-						bool AnyEntry = false;
-						bool Overflow = false;
-						for(unsigned i = 0; i < pActivity->u.array.length; ++i)
-						{
-							const json_value &Entry = (*pActivity)[i];
-							if(Entry.type != json_object)
-								continue;
-							const json_value *pHours = JsonObjectField(&Entry, "hours_played");
-							if(pHours->type != json_integer || pHours->u.integer < 0)
-								continue;
-							AnyEntry = true;
-							if(TotalHours > std::numeric_limits<int64_t>::max() - pHours->u.integer)
-							{
-								Overflow = true;
-								break;
-							}
-							TotalHours += pHours->u.integer;
-						}
-						if(AnyEntry && !Overflow)
-							Result.m_PlaytimeHours = TotalHours;
-					}
+					// 生涯累计与计分板共用 activity 口径；可选小时数不影响既有解析成功判定。
+					Result.m_PlaytimeHours = QmDdnetActivityHours(pRoot);
 					const json_value *pPastYearHours = JsonObjectField(pRoot, "hours_played_past_365_days");
 					if(pPastYearHours->type == json_integer && pPastYearHours->u.integer >= 0)
 						Result.m_PlaytimeHoursPastYear = pPastYearHours->u.integer;

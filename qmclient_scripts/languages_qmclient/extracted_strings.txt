@@ -3481,6 +3481,7 @@ Players weapons has no affect on others
 Playing effects
 Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
+Playtime (h)
 Please add a valid cut first
 Please balance teams!
 Please enable finished indicator first
@@ -4095,6 +4096,7 @@ Score option color
 Scoreboard
 Scoreboard cursor
 Scoreboard filter: only show players whose name or clan contains this text
+Scoreboard playtime
 Scoreboard point check
 Scoreboard score lookup
 Scoreboard sort mode (0=Score, 1=Points)
@@ -4539,6 +4541,8 @@ Show player stats HUD
 Show player target angle
 Show player Tee
 Show players' key presses
+Show playtime
+Show points
 Show position and angle
 Show position and angle (mini debug)
 Show position and angle debug info
@@ -4605,6 +4609,7 @@ Show title setting hints immediately in small text
 Show titles above player names
 Show titles on nameplates
 Show toast
+Show total DDNet playtime from activity instead of points in scoreboard
 Show tune zone colors
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 Show unfreeze/deep unfreeze tile outlines

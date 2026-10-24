@@ -139,12 +139,14 @@ namespace qm_card_catalog
 			{Localizable("Leave empty to show everyone"), nullptr, "留空显示所有玩家"},
 			{Localizable("Scoreboard filter: only show players whose name or clan contains this text"), nullptr, "计分板筛选：匹配名字或战队"},
 			{Localizable("Scoreboard point check"), nullptr, "计分板积分检查"},
+			{Localizable("Scoreboard playtime"), nullptr, "计分板游玩时间 累计小时 activity"},
 			{Localizable("Show scoreboard after death"), nullptr, "死亡后显示计分板"},
 			{Localizable("Use the scoreboard cursor mode to scroll the list"), nullptr, "使用计分板光标模式滚动查看列表"},
 			{nullptr, "qm_better_scoreboard", nullptr},
 			{nullptr, "qm_scoreboard_filter", nullptr},
 			{nullptr, "qm_scoreboard_on_death", nullptr},
 			{nullptr, "qm_scoreboard_points", nullptr},
+			{nullptr, "qm_scoreboard_playtime", nullptr},
 			{nullptr, "qm_scoreboard_scroll", nullptr},
 		};
 

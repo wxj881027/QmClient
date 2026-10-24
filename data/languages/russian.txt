@@ -10445,6 +10445,9 @@ Plays a short effect when a tee's skin changes, and can copy the skin of the tee
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == Проигрывает анимацию при смене скина, в том числе скина, украденного молотом.
 
+Playtime (h)
+== Время игры (ч)
+
 Please add a valid cut first
 == Сначала добавьте действительный отрезок обрезки
 
@@ -12287,6 +12290,9 @@ Scoreboard cursor
 Scoreboard filter: only show players whose name or clan contains this text
 == Фильтр таблицы: показывать только игроков, чьё имя или клан содержит этот текст
 
+Scoreboard playtime
+== Время игры в таблице
+
 Scoreboard point check
 == Проверка очков на табло
 
@@ -13619,6 +13625,12 @@ Show player Tee
 Show players' key presses
 == Показывать нажатия клавиш игроков
 
+Show playtime
+== Показать время
+
+Show points
+== Показать очки
+
 Show position and angle
 == Показывать позицию и угол
 
@@ -13816,6 +13828,9 @@ Show titles on nameplates
 
 Show toast
 == Показать toast
+
+Show total DDNet playtime from activity instead of points in scoreboard
+== Показывать в таблице суммарное время игры из DDNet activity вместо очков
 
 Show tune zone colors
 == Показывать цвета tune-зон
