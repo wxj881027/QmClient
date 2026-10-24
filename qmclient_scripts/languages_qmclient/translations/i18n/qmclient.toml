@@ -2449,7 +2449,7 @@ polish = "Automatycznie sprawdzaj stabilne aktualizacje i instaluj je przy wyjś
 [[message]]
 key = "Automatically close the current chat after waking from freeze"
 [message.translations]
-simplified_chinese = "从冻结状态中醒来自动关闭聊天框"
+simplified_chinese = "解冻自动关闭聊天框"
 traditional_chinese = "從凍結狀態中醒來自動關閉聊天框"
 japanese = "フリーズ解除後に現在のチャットを自動的に閉じる"
 korean = "얼음에서 깨어난 후 현재 채팅 자동 닫기"
@@ -26998,7 +26998,7 @@ polish = "Pokaż stan połączenia głosowego"
 [[message]]
 key = "Show wake-up popup on the other tee"
 [message.translations]
-simplified_chinese = "在另一侧 Tee 显示唤醒提示"
+simplified_chinese = "显示唤醒提示"
 traditional_chinese = "在另一側 Tee 顯示喚醒提示"
 japanese = "もう一方の Tee にウェイクアップポップアップを表示"
 korean = "다른 티에 깨우기 팝업 표시"
@@ -36698,7 +36698,7 @@ polish = "Tłumaczenie anulowane, ponieważ zmienił się nadawca"
 [[message]]
 key = "Auto unspec both tees when either is hammered awake"
 [message.translations]
-simplified_chinese = "任一方被锤醒时两个 Tee 都取消旁观"
+simplified_chinese = "解冻取消本体分身的旁观"
 traditional_chinese = "任一方被錘醒時兩個 Tee 都取消旁觀"
 japanese = "どちらかがハンマーで解凍されたら両方の Tee の観戦を解除"
 korean = "어느 한 Tee가 망치로 해동되면 두 Tee 모두 관전 해제"
