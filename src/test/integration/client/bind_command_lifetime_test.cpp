@@ -13,6 +13,7 @@ namespace
 	struct SExecution
 	{
 		CBindStorage m_Binds;
+		CActiveBindStorage m_ActiveBinds;
 		std::string m_Source;
 		int m_Markers = 0;
 		std::vector<int> m_vStrokes;
@@ -43,6 +44,11 @@ namespace
 	void RecordStroke(IConsole::IResult *pResult, void *pUser)
 	{
 		static_cast<SExecution *>(pUser)->m_vStrokes.push_back(pResult->GetInteger(0));
+	}
+
+	void ClearActiveBinds(IConsole::IResult *, void *pUser)
+	{
+		static_cast<SExecution *>(pUser)->m_ActiveBinds.Clear();
 	}
 }
 
@@ -159,4 +165,23 @@ TEST(BindCommandLifetime, RefreshSurvivesRebindingOwnSlot)
 	CBinds::RefreshCommand(pConsole.get(), State.m_Binds.Get(KEY_X, KeyModifier::NONE), IConsole::CLIENT_ID_UNSPECIFIED);
 	EXPECT_STREQ(State.m_Binds.Get(KEY_X, KeyModifier::NONE), "+hook");
 	EXPECT_EQ(State.m_vStrokes, (std::vector<int>{1}));
+}
+
+TEST(BindCommandLifetime, ReleaseCommandCanResetActiveRecordsWhileTailContinues)
+{
+	auto pConsole = CreateConsole(CFGFLAG_CLIENT);
+	SExecution State;
+	pConsole->Register("+clear_active", "", CFGFLAG_CLIENT, ClearActiveBinds, &State, "");
+	pConsole->Register("+fire", "", CFGFLAG_CLIENT, RecordStroke, &State, "");
+	ASSERT_TRUE(State.m_ActiveBinds.Press(KEY_X, KeyModifier::NONE, []() {}));
+	const auto Id = State.m_ActiveBinds.Find([](const CActiveBindStorage::CActiveBind &Bind) { return Bind.m_Key == KEY_X; });
+	ASSERT_NE(Id, 0u);
+
+	EXPECT_TRUE(State.m_ActiveBinds.Update(Id, [&](CActiveBindStorage::CActiveBind &Bind) {
+		CBinds::ExecuteCommand(pConsole.get(), "+clear_active;+fire", false, 0, IConsole::CLIENT_ID_UNSPECIFIED);
+		EXPECT_EQ(Bind.m_Key, KEY_X);
+		return false;
+	}));
+	EXPECT_EQ(State.m_vStrokes, (std::vector<int>{0}));
+	EXPECT_EQ(State.m_ActiveBinds.Find([](const CActiveBindStorage::CActiveBind &) { return true; }), 0u);
 }

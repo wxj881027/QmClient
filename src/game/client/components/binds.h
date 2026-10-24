@@ -10,12 +10,15 @@
 #include <game/client/component.h>
 #include <game/client/components/qmclient/shortcut_held_bind.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
+#include <memory>
 #include <new>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 class IConfigManager;
@@ -115,6 +118,124 @@ public:
 	}
 };
 
+// 回调可以重置组件；当前调用持有记录所有权，并以单调身份重新定位容器条目。
+class CActiveBindStorage
+{
+public:
+	using CId = uint64_t;
+	struct CActiveBind : CBindSlot
+	{
+		const CId m_Id;
+		CQmShortcutHeldBind m_ShortcutState;
+		CActiveBind(int Key, int ModifierMask, CId Id) noexcept :
+			CBindSlot(Key, ModifierMask), m_Id(Id) {}
+	};
+
+private:
+	std::vector<std::shared_ptr<CActiveBind>> m_vBinds;
+	CId m_LastId = 0;
+	uint64_t m_ResetSerial = 0;
+	size_t m_PendingAdmissions = 0;
+
+	auto FindId(CId Id)
+	{
+		return std::find_if(m_vBinds.begin(), m_vBinds.end(), [&](const auto &pBind) { return pBind->m_Id == Id; });
+	}
+
+public:
+	CActiveBindStorage() = default;
+	CActiveBindStorage(const CActiveBindStorage &) = delete;
+	CActiveBindStorage &operator=(const CActiveBindStorage &) = delete;
+
+	void Clear() noexcept
+	{
+		m_vBinds.clear();
+		++m_ResetSerial;
+	}
+
+	template<typename F>
+	CId Find(F &&Matches) const
+	{
+		const auto It = std::find_if(m_vBinds.begin(), m_vBinds.end(), [&](const auto &pBind) { return Matches(static_cast<const CActiveBind &>(*pBind)); });
+		return It == m_vBinds.end() ? 0 : (*It)->m_Id;
+	}
+
+	bool Erase(CId Id)
+	{
+		const auto It = FindId(Id);
+		if(It == m_vBinds.end())
+			return false;
+		m_vBinds.erase(It);
+		return true;
+	}
+
+	template<typename F>
+	bool Press(int Key, int ModifierMask, F &&Execute)
+	{
+		const size_t Limit = m_vBinds.max_size();
+		if(m_LastId == std::numeric_limits<CId>::max() || m_PendingAdmissions >= Limit - m_vBinds.size())
+			throw std::length_error("active bind capacity exceeded");
+		// 嵌套按键也为外层尚未发布的记录保留空间。
+		const size_t Required = m_vBinds.size() + m_PendingAdmissions + 1;
+		if(Required > m_vBinds.capacity())
+		{
+			const size_t Capacity = m_vBinds.capacity();
+			const size_t Growth = std::min(std::max(Capacity / 2, size_t{1}), Limit - Capacity);
+			m_vBinds.reserve(std::max(Required, Capacity + Growth));
+		}
+		const CId Id = ++m_LastId;
+		auto pBind = std::make_shared<CActiveBind>(Key, ModifierMask, Id);
+		const uint64_t ResetSerial = m_ResetSerial;
+		++m_PendingAdmissions;
+		try
+		{
+			Execute();
+		}
+		catch(...)
+		{
+			--m_PendingAdmissions;
+			throw;
+		}
+		--m_PendingAdmissions;
+		if(ResetSerial != m_ResetSerial)
+			return false;
+		m_vBinds.push_back(std::move(pBind));
+		return true;
+	}
+
+	template<typename F>
+	bool Update(CId Id, F &&Process)
+	{
+		auto It = FindId(Id);
+		if(It == m_vBinds.end())
+			return false;
+		const auto pBind = *It;
+		const bool Keep = Process(*pBind);
+		// Clear、删除和重新按下后，即便键位相同，也不能删除新记录。
+		It = FindId(Id);
+		if(!Keep && It != m_vBinds.end())
+			m_vBinds.erase(It);
+		return true;
+	}
+
+	template<typename F>
+	void Visit(F &&Process)
+	{
+		std::vector<CId> vIds;
+		vIds.reserve(m_vBinds.size());
+		for(const auto &pBind : m_vBinds)
+			vIds.push_back(pBind->m_Id);
+		for(CId Id : vIds)
+		{
+			const auto It = FindId(Id);
+			if(It == m_vBinds.end())
+				continue;
+			const auto pBind = *It;
+			Process(static_cast<const CActiveBind &>(*pBind));
+		}
+	}
+};
+
 class CBinds : public CComponent
 {
 	static void ConBind(IConsole::IResult *pResult, void *pUserData);
@@ -207,8 +328,8 @@ public:
 
 	void OnConsoleInit() override;
 	void OnRender() override;
-	void OnReset() override { m_vActiveBinds.clear(); }
-	void OnRelease() override { m_vActiveBinds.clear(); }
+	void OnReset() override { m_ActiveBinds.Clear(); }
+	void OnRelease() override { m_ActiveBinds.Clear(); }
 	bool OnInput(const IInput::CEvent &Event) override;
 
 	// DDRace
@@ -217,12 +338,7 @@ public:
 
 private:
 	CBindStorage m_Storage;
-	struct CActiveBind : CBindSlot
-	{
-		CQmShortcutHeldBind m_ShortcutState;
-		CActiveBind(int Key, int ModifierMask) noexcept :
-			CBindSlot(Key, ModifierMask) {}
-	};
-	std::vector<CActiveBind> m_vActiveBinds;
+	using CActiveBind = CActiveBindStorage::CActiveBind;
+	CActiveBindStorage m_ActiveBinds;
 };
 #endif
