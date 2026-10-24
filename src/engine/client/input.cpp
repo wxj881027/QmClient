@@ -23,6 +23,7 @@
 #include <SDL3/SDL.h>
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdlib>
 #include <memory>
@@ -43,26 +44,8 @@ namespace
 
 void CInput::AddKeyEvent(int Key, int Flags)
 {
-	dbg_assert(Key >= KEY_FIRST && Key < KEY_LAST, "Key invalid: %d", Key);
-	dbg_assert((Flags & (FLAG_PRESS | FLAG_RELEASE)) != 0 && (Flags & ~(FLAG_PRESS | FLAG_RELEASE | FLAG_REPEAT)) == 0, "Flags invalid (unknown flag): %d", Flags);
-	dbg_assert((Flags & FLAG_REPEAT) == 0 || (Flags & FLAG_PRESS) != 0, "Flags invalid (key repeat implies key press): %d", Flags);
-
-	CEvent Event;
-	Event.m_Key = Key;
-	Event.m_Flags = Flags;
-	Event.m_aText[0] = '\0';
-	Event.m_InputCount = m_InputCounter;
-	m_vInputEvents.emplace_back(Event);
-
-	if(Flags & IInput::FLAG_PRESS)
-	{
-		m_aCurrentKeyStates[Key] = true;
-		m_aFrameKeyStates[Key] = true;
-	}
-	if(Flags & IInput::FLAG_RELEASE)
-	{
-		m_aCurrentKeyStates[Key] = false;
-	}
+	const SSdlKeyEvent Request{Key, Flags};
+	AppendSdlKeyEvents(m_vInputEvents, &Request, 1, m_InputCounter, m_aCurrentKeyStates, m_aFrameKeyStates);
 }
 
 void CInput::AddTextEvent(const char *pText)
@@ -519,24 +502,27 @@ void CInput::HandleJoystickAxisMotionEvent(const SDL_JoyAxisEvent &Event)
 	const int LeftKey = KEY_JOY_AXIS_0_LEFT + 2 * Event.axis;
 	const int RightKey = LeftKey + 1;
 	const float DeadZone = GetJoystickDeadzone();
+	std::array<SSdlKeyEvent, 2> aKeys;
+	size_t NumKeys = 0;
 
 	if(Event.value <= SDL_JOYSTICK_AXIS_MIN * DeadZone && !m_aCurrentKeyStates[LeftKey])
 	{
-		AddKeyEvent(LeftKey, IInput::FLAG_PRESS);
+		aKeys[NumKeys++] = {LeftKey, IInput::FLAG_PRESS};
 	}
 	else if(Event.value > SDL_JOYSTICK_AXIS_MIN * DeadZone && m_aCurrentKeyStates[LeftKey])
 	{
-		AddKeyEvent(LeftKey, IInput::FLAG_RELEASE);
+		aKeys[NumKeys++] = {LeftKey, IInput::FLAG_RELEASE};
 	}
 
 	if(Event.value >= SDL_JOYSTICK_AXIS_MAX * DeadZone && !m_aCurrentKeyStates[RightKey])
 	{
-		AddKeyEvent(RightKey, IInput::FLAG_PRESS);
+		aKeys[NumKeys++] = {RightKey, IInput::FLAG_PRESS};
 	}
 	else if(Event.value < SDL_JOYSTICK_AXIS_MAX * DeadZone && m_aCurrentKeyStates[RightKey])
 	{
-		AddKeyEvent(RightKey, IInput::FLAG_RELEASE);
+		aKeys[NumKeys++] = {RightKey, IInput::FLAG_RELEASE};
 	}
+	AppendSdlKeyEvents(m_vInputEvents, aKeys.data(), NumKeys, m_InputCounter, m_aCurrentKeyStates, m_aFrameKeyStates);
 }
 
 void CInput::HandleJoystickButtonEvent(const SDL_JoyButtonEvent &Event)
@@ -572,13 +558,15 @@ void CInput::HandleJoystickHatMotionEvent(const SDL_JoyHatEvent &Event)
 		return;
 
 	int aHatKeys[2];
+	std::array<SSdlKeyEvent, NUM_JOYSTICK_BUTTONS_PER_HAT> aKeys;
+	size_t NumKeys = 0;
 	CJoystick::GetJoystickHatKeys(Event.hat, Event.value, aHatKeys);
 
 	for(int Key = KEY_JOY_HAT0_UP + Event.hat * NUM_JOYSTICK_BUTTONS_PER_HAT; Key <= KEY_JOY_HAT0_RIGHT + Event.hat * NUM_JOYSTICK_BUTTONS_PER_HAT; Key++)
 	{
 		if(Key != aHatKeys[0] && Key != aHatKeys[1] && m_aCurrentKeyStates[Key])
 		{
-			AddKeyEvent(Key, IInput::FLAG_RELEASE);
+			aKeys[NumKeys++] = {Key, IInput::FLAG_RELEASE};
 		}
 	}
 
@@ -586,9 +574,10 @@ void CInput::HandleJoystickHatMotionEvent(const SDL_JoyHatEvent &Event)
 	{
 		if(CurrentKey != KEY_UNKNOWN && !m_aCurrentKeyStates[CurrentKey])
 		{
-			AddKeyEvent(CurrentKey, IInput::FLAG_PRESS);
+			aKeys[NumKeys++] = {CurrentKey, IInput::FLAG_PRESS};
 		}
 	}
+	AppendSdlKeyEvents(m_vInputEvents, aKeys.data(), NumKeys, m_InputCounter, m_aCurrentKeyStates, m_aFrameKeyStates);
 }
 
 void CInput::HandleJoystickAddedEvent(const SDL_JoyDeviceEvent &Event)
@@ -662,6 +651,7 @@ void CInput::HandleTextEditingEvent(const char *pText, int Start, int Length)
 {
 	if(pText[0] != '\0')
 	{
+		ReserveSdlInputEvents(m_vInputEvents, 1);
 		m_CompositionString = pText;
 		m_CompositionCursor = SdlCompositionCursor(m_CompositionString.c_str(), Start);
 		// Length is currently unused on Windows and will always be 0, so we don't support selecting composition text
@@ -814,10 +804,9 @@ int CInput::Update()
 	const auto &&AddKeyEventChecked = [&](int Key, int Flags) {
 		if(Key != KEY_UNKNOWN && !IgnoreKeys && (!(Flags & IInput::FLAG_PRESS) || !HasComposition()))
 		{
-			AddKeyEvent(Key, Flags);
-			// SDL3 合并了两个静音扫描码，继续接受旧配置中的两种键名。
-			if(Key == KEY_MUTE)
-				AddKeyEvent(KEY_AUDIOMUTE, Flags);
+			// SDL3 合并了两个静音扫描码，两个旧键名必须成组提交。
+			const SSdlKeyEvent aKeys[] = {{Key, Flags}, {KEY_AUDIOMUTE, Flags}};
+			AppendSdlKeyEvents(m_vInputEvents, aKeys, Key == KEY_MUTE ? 2 : 1, m_InputCounter, m_aCurrentKeyStates, m_aFrameKeyStates);
 		}
 	};
 
@@ -895,10 +884,10 @@ int CInput::Update()
 		}
 
 		case SDL_EVENT_TEXT_INPUT:
+			AddTextEvent(Event.text.text);
 			ClearImeState();
 			// 提交后抑制迟到候选，新的组合串或打开通知恢复接收。
 			m_ImeCandidates.EndComposition();
-			AddTextEvent(Event.text.text);
 			break;
 
 		// handle keys
