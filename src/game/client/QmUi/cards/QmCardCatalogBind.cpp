@@ -11,7 +11,9 @@
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiSurfaceText.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/qmclient/bind_editor.h>
+#include <game/client/components/qmclient/bind_overview.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
 #include <game/client/ui_listbox.h>
@@ -433,3 +435,228 @@ void CMenus::RenderQmBindCommandEditor(CUIRect &Content, const CBindSlot Slot, c
 		TextRender()->TextColor(TextRender()->DefaultTextColor()); }, Metrics.m_RowStep * 2.0f);
 	}
 }
+
+namespace
+{
+	struct SBindOverviewEntryUi
+	{
+		std::string m_KeyName;
+		std::string m_Command;
+		EBindOptionGroup m_Group;
+	};
+
+	struct SBindOverviewState
+	{
+		CLineInputBuffered<256> m_Filter;
+		bool m_SortByCommand = false;
+		CButtonContainer m_SortButton;
+		CButtonContainer m_CopyButton;
+		std::vector<SBindOverviewEntryUi> m_vEntries;
+		std::vector<int> m_vFiltered;
+		uint64_t m_BindsRevision = 0;
+		bool m_EntriesValid = false;
+		float m_CopiedTime = -1e9f;
+	};
+
+	SBindOverviewState &BindOverviewState()
+	{
+		static SBindOverviewState s_State;
+		return s_State;
+	}
+
+	const char *BindOverviewGroupTitle(EBindOptionGroup Group)
+	{
+		switch(Group)
+		{
+		case EBindOptionGroup::MOVEMENT: return Localize("Movement");
+		case EBindOptionGroup::WEAPON: return Localize("Weapon");
+		case EBindOptionGroup::VOTING: return Localize("Voting");
+		case EBindOptionGroup::CHAT: return Localize("Chat");
+		case EBindOptionGroup::DUMMY: return Localize("Dummy");
+		case EBindOptionGroup::MISCELLANEOUS: return Localize("Miscellaneous");
+		default: return Localize("Other");
+		}
+	}
+
+	void RebuildBindOverviewEntries(SBindOverviewState &State, const CBinds &Binds)
+	{
+		State.m_vEntries.clear();
+		for(int Modifier = KeyModifier::NONE; Modifier < KeyModifier::COMBINATION_COUNT; ++Modifier)
+		{
+			for(int Key = KEY_FIRST; Key < KEY_LAST; ++Key)
+			{
+				const char *pCommand = Binds.Get(Key, Modifier);
+				if(!pCommand[0])
+					continue;
+				char aKeyName[128];
+				Binds.GetKeyBindName(Key, Modifier, aKeyName, sizeof(aKeyName));
+				State.m_vEntries.push_back({aKeyName, pCommand, qm_bind_overview::GroupForCommand(pCommand)});
+			}
+		}
+		State.m_BindsRevision = Binds.Revision();
+		State.m_EntriesValid = true;
+	}
+
+	void RefreshBindOverviewFilter(SBindOverviewState &State)
+	{
+		State.m_vFiltered.clear();
+		const char *pFilter = State.m_Filter.GetString();
+		for(size_t Index = 0; Index < State.m_vEntries.size(); ++Index)
+		{
+			const SBindOverviewEntryUi &Entry = State.m_vEntries[Index];
+			if(pFilter[0] == '\0' ||
+				str_utf8_find_nocase(Entry.m_KeyName.c_str(), pFilter) != nullptr ||
+				str_utf8_find_nocase(Entry.m_Command.c_str(), pFilter) != nullptr)
+				State.m_vFiltered.push_back((int)Index);
+		}
+		// 排序只改变组内条目顺序：过滤列表本身有序，按组挑取时自然保持该顺序。
+		if(State.m_SortByCommand)
+		{
+			std::sort(State.m_vFiltered.begin(), State.m_vFiltered.end(), [&](int Left, int Right) {
+				return str_utf8_comp_nocase(State.m_vEntries[Left].m_Command.c_str(), State.m_vEntries[Right].m_Command.c_str()) < 0;
+			});
+		}
+		else
+		{
+			std::sort(State.m_vFiltered.begin(), State.m_vFiltered.end(), [&](int Left, int Right) {
+				return str_utf8_comp_nocase(State.m_vEntries[Left].m_KeyName.c_str(), State.m_vEntries[Right].m_KeyName.c_str()) < 0;
+			});
+		}
+	}
+} // namespace
+
+void CMenus::RenderQmBindOverviewContent(CUIRect &Content, const bool ReadOnly)
+{
+	SBindOverviewState &State = BindOverviewState();
+	const CBinds *pBinds = &GameClient()->m_Binds;
+	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(Content.w);
+	const bool Enabled = (!ReadOnly || Ui()->BackgroundRender()) && !Ui()->IsPopupOpen() && !GameClient()->m_KeyBinder.IsActive() && !GameClient()->m_GameConsole.IsActive();
+
+	// 绑定变化时重建条目；过滤与排序每帧重算，绑定数量小，测量与绘制共享结果。
+	if(!State.m_EntriesValid || State.m_BindsRevision != pBinds->Revision())
+		RebuildBindOverviewEntries(State, *pBinds);
+	RefreshBindOverviewFilter(State);
+
+	CSettingsContentLayoutFlow Flow(Content);
+
+	CUIRect Toolbar;
+	if(Flow.Control("bind-overview-toolbar", Metrics.m_ButtonHeight, Toolbar))
+	{
+		const float Scale = Metrics.m_UiScale;
+		CUIRect Filter, Sort, Copy;
+		Toolbar.VSplitRight(96.0f * Scale, &Toolbar, &Copy);
+		Toolbar.VSplitRight(4.0f * Scale, &Toolbar, nullptr);
+		Toolbar.VSplitRight(130.0f * Scale, &Toolbar, &Sort);
+		Toolbar.VSplitRight(4.0f * Scale, &Toolbar, nullptr);
+		Filter = Toolbar;
+		if(DoButton_Menu(&State.m_SortButton, State.m_SortByCommand ? Localize("Sort by command") : Localize("Sort by key"), 0, &Sort) && Enabled)
+			State.m_SortByCommand = !State.m_SortByCommand;
+		if(DoButton_Menu(&State.m_CopyButton, Localize("Copy all"), 0, &Copy) && Enabled)
+		{
+			std::vector<qm_bind_overview::SBindOverviewEntry> vCopyEntries;
+			vCopyEntries.reserve(State.m_vFiltered.size());
+			for(const int Index : State.m_vFiltered)
+			{
+				const SBindOverviewEntryUi &Entry = State.m_vEntries[Index];
+				vCopyEntries.push_back({Entry.m_KeyName.c_str(), Entry.m_Command.c_str()});
+			}
+			const std::string Text = qm_bind_overview::Serialize(vCopyEntries);
+			Input()->SetClipboardText(Text.c_str());
+			State.m_CopiedTime = Client()->LocalTime();
+		}
+		IUiContext InputCtx = SettingsUiContext("qm_bind_overview_filter", Metrics.m_UiScale);
+		ui_widget::SInputFieldOptions FilterOptions;
+		FilterOptions.m_pPlaceholder = Localize("Search");
+		FilterOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
+		FilterOptions.m_Clearable = true;
+		FilterOptions.m_ProcessInput = Enabled;
+		FilterOptions.m_FontSize = Metrics.m_BodySize;
+		(void)ui_widget::InputField(InputCtx, &State.m_Filter, Filter, FilterOptions);
+	}
+	Flow.Space(Metrics.m_LineSpacing);
+
+	if(Client()->LocalTime() - State.m_CopiedTime < 2.0f)
+	{
+		CUIRect StatusRow;
+		if(Flow.Control("bind-overview-copied", Metrics.m_LineHeight, StatusRow))
+		{
+			TextRender()->TextColor(ui_token::color::SUCCESS);
+			Ui()->DoLabel(&StatusRow, Localize("Copied"), Metrics.m_SmallSize, TEXTALIGN_ML);
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+		}
+		Flow.Space(Metrics.m_LineSpacing * 0.5f);
+	}
+
+	int EntryIndex = 0;
+	bool HasAny = false;
+	for(int GroupIndex = 0; GroupIndex < (int)EBindOptionGroup::NUM; ++GroupIndex)
+	{
+		const EBindOptionGroup Group = static_cast<EBindOptionGroup>(GroupIndex);
+		bool GroupStarted = false;
+		for(const int Index : State.m_vFiltered)
+		{
+			const SBindOverviewEntryUi &Entry = State.m_vEntries[Index];
+			if(Entry.m_Group != Group)
+				continue;
+			if(!GroupStarted)
+			{
+				CUIRect Header;
+				char aId[64];
+				str_format(aId, sizeof(aId), "bind-overview-group-%d", GroupIndex);
+				if(Flow.Control(aId, Metrics.m_LineHeight, Header))
+				{
+					TextRender()->TextColor(ui_token::color::TEXT_TIP);
+					Ui()->DoLabel(&Header, BindOverviewGroupTitle(Group), Metrics.m_SmallSize, TEXTALIGN_ML);
+					TextRender()->TextColor(TextRender()->DefaultTextColor());
+				}
+				Flow.Space(Metrics.m_LineSpacing * 0.4f);
+				GroupStarted = true;
+			}
+			CUIRect Row;
+			char aRowId[64];
+			str_format(aRowId, sizeof(aRowId), "bind-overview-entry-%d", EntryIndex++);
+			if(Flow.Control(aRowId, Metrics.m_LineHeight, Row))
+			{
+				CUIRect KeyRect, CommandRect;
+				Row.VSplitLeft(std::min(Row.w * 0.4f, 160.0f * Metrics.m_UiScale), &KeyRect, &CommandRect);
+				Ui()->DoLabel(&KeyRect, Entry.m_KeyName.c_str(), Metrics.m_BodySize, TEXTALIGN_ML);
+				SLabelProperties Props;
+				Props.m_MaxWidth = std::max(1.0f, CommandRect.w);
+				Props.m_EllipsisAtEnd = true;
+				Ui()->DoLabel(&CommandRect, Entry.m_Command.c_str(), Metrics.m_BodySize, TEXTALIGN_ML, Props);
+			}
+			Flow.Space(Metrics.m_LineSpacing * 0.35f);
+			HasAny = true;
+		}
+		if(GroupStarted)
+			Flow.Space(Metrics.m_LineSpacing * 0.6f);
+	}
+	if(!HasAny)
+	{
+		CUIRect EmptyRow;
+		if(Flow.Control("bind-overview-empty", Metrics.m_LineHeight, EmptyRow))
+			Ui()->DoLabel(&EmptyRow, Localize("No results"), Metrics.m_BodySize, TEXTALIGN_ML);
+	}
+}
+
+namespace qm_card_catalog
+{
+	bool BuildBindOverviewCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out)
+	{
+		if(Ctx.m_pMenus == nullptr)
+			return false;
+
+		const bool ReadOnly = Ctx.m_ReadOnly;
+		CMenus *pMenus = Ctx.m_pMenus;
+		const FSettingsCardRenderMeasured Render = [pMenus, ReadOnly](CUIRect &Content) {
+			QmCardRenderHook::RenderQmBindOverviewContent(pMenus, Content, ReadOnly);
+		};
+
+		Out = {};
+		Out.m_Spec = {"qm:bind_overview", Localize("Bind overview"), qm_card_registry::ResolveLocalizedDescription("qm:bind_overview")};
+		Out.m_Render = [Render](CUIRect Content) { Render(Content); };
+		Out.m_RenderMeasured = Render;
+		UseDeclaredModuleContent(Ctx, Out);
+		return true;
+	}
+} // namespace qm_card_catalog

@@ -4,46 +4,46 @@
 #include <base/color.h>
 #include <base/vmath.h>
 
+#include <engine/shared/config.h>
 #include <engine/shared/protocol.h>
+
+#include <game/client/QmUi/QmNeonRainbow.h>
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 
 // 彩虹沿无限符号流动一圈和光晕呼吸一轮的秒数，与游戏钩子计数无关。
-constexpr float QM_HOOK_COUNTDOWN_FLOW_PERIOD_SECONDS = 3.5f;
-constexpr float QM_HOOK_COUNTDOWN_BREATH_PERIOD_SECONDS = 2.5f;
+// 节奏对齐好友跟随光环（3.2 秒呼吸一轮）：两个指示器同时出现时鼓点一致。
+constexpr float QM_HOOK_COUNTDOWN_FLOW_PERIOD_SECONDS = 6.0f;
+constexpr float QM_HOOK_COUNTDOWN_BREATH_PERIOD_SECONDS = 3.2f;
+// 相位每前进一圈时高光波扫过的圈数。必须是整数，相位回到 0 时光波也正好回到原位，
+// 否则每绕完一圈色相都会看到一次高光"回弹"。
+constexpr float QM_HOOK_COUNTDOWN_SHEEN_RATE = 3.0f;
 
-// 彩虹渐变用的色相转 RGB（V=1, S=1 全饱和）；Hue 任意实数，按 1.0 循环。
-inline ColorRGBA QmHueToRgb(float Hue)
+// 沿路径移动的亮度波（0..1）：两轮高光绕一圈，方向与色相流动相反。
+// 色相在动、高光也在动，且两者不同步，看到的是流光而不是整圈同时换色。
+inline float QmHookCountdownSheen(float Phase, float PathPosition)
 {
-	Hue -= std::floor(Hue);
-	const float H = Hue * 6.0f;
-	const int Sector = static_cast<int>(H) % 6;
-	// 标准 HSV(V=1,S=1) 色环：X 为从纯色滑向下一主色的过渡分量，不随小数部分缩放。
-	const float X = 1.0f - std::abs(std::fmod(H, 2.0f) - 1.0f);
-	switch(Sector)
-	{
-	case 0: return ColorRGBA(1.0f, X, 0.0f, 1.0f);
-	case 1: return ColorRGBA(X, 1.0f, 0.0f, 1.0f);
-	case 2: return ColorRGBA(0.0f, 1.0f, X, 1.0f);
-	case 3: return ColorRGBA(0.0f, X, 1.0f, 1.0f);
-	case 4: return ColorRGBA(X, 0.0f, 1.0f, 1.0f);
-	default: return ColorRGBA(1.0f, 0.0f, X, 1.0f);
-	}
+	return 0.5f + 0.5f * std::sin(2.0f * pi * (PathPosition * 2.0f + Phase * QM_HOOK_COUNTDOWN_SHEEN_RATE));
 }
 
-// 色相按沿曲线的距离循环，颜色随相位向前流动；混入浅色减弱饱和色的刺眼感。
+// 彩虹流光色：色相按沿曲线的距离循环并由相位推动，亮度随高光波起伏。
+// 调色板与好友跟随光环共用 QmNeonRainbowColor，两处彩虹才一致。
 inline ColorRGBA QmHookCountdownFlowColor(float Phase, float PathPosition)
 {
-	const ColorRGBA Color = QmHueToRgb(PathPosition - Phase);
-	return ColorRGBA(0.22f + 0.78f * Color.r, 0.22f + 0.78f * Color.g, 0.22f + 0.78f * Color.b, 1.0f);
+	return QmNeonRainbowColor(PathPosition - Phase, QmHookCountdownSheen(Phase, PathPosition), 1.0f);
 }
 
 inline float QmHookCountdownBreath(float Phase)
 {
 	return 0.5f - 0.5f * std::cos(Phase * 2.0f * pi);
 }
+
+// ∞ 曲线（双纽线）的包围尺寸与采样点数：渲染、光晕和 HUD 裁剪半径都从这些值推出来。
+constexpr float QM_HOOK_COUNTDOWN_INFINITY_HALF_WIDTH = 10.5f;
+constexpr float QM_HOOK_COUNTDOWN_INFINITY_HALF_HEIGHT = 5.0f;
+constexpr size_t QM_HOOK_COUNTDOWN_INFINITY_POINTS = 145;
 
 struct SQmHookCountdownInfinityPoint
 {
@@ -53,16 +53,16 @@ struct SQmHookCountdownInfinityPoint
 };
 
 // 只在首次使用时计算曲线和法线；每帧复用几何，按弧长推进颜色，交叉处也不中断。
-inline const std::array<SQmHookCountdownInfinityPoint, 97> &QmHookCountdownInfinityPath()
+inline const std::array<SQmHookCountdownInfinityPoint, QM_HOOK_COUNTDOWN_INFINITY_POINTS> &QmHookCountdownInfinityPath()
 {
 	static const auto s_aPath = [] {
-		std::array<SQmHookCountdownInfinityPoint, 97> aPath{};
+		std::array<SQmHookCountdownInfinityPoint, QM_HOOK_COUNTDOWN_INFINITY_POINTS> aPath{};
 		float TotalLength = 0.0f;
 		for(size_t i = 0; i < aPath.size(); ++i)
 		{
 			const float Angle = static_cast<float>(i) / static_cast<float>(aPath.size() - 1) * 2.0f * pi;
-			aPath[i].m_Position = vec2(10.5f * std::cos(Angle), 5.0f * std::sin(Angle * 2.0f));
-			const vec2 Tangent(-10.5f * std::sin(Angle), 10.0f * std::cos(Angle * 2.0f));
+			aPath[i].m_Position = vec2(QM_HOOK_COUNTDOWN_INFINITY_HALF_WIDTH * std::cos(Angle), QM_HOOK_COUNTDOWN_INFINITY_HALF_HEIGHT * std::sin(Angle * 2.0f));
+			const vec2 Tangent(-QM_HOOK_COUNTDOWN_INFINITY_HALF_WIDTH * std::sin(Angle), 2.0f * QM_HOOK_COUNTDOWN_INFINITY_HALF_HEIGHT * std::cos(Angle * 2.0f));
 			aPath[i].m_Normal = normalize(vec2(-Tangent.y, Tangent.x));
 			if(i != 0)
 				TotalLength += distance(aPath[i - 1].m_Position, aPath[i].m_Position);
@@ -96,19 +96,21 @@ inline float QmHookCountdownInterpolatedTick(int PreviousTick, int CurrentTick, 
 	return mix(static_cast<float>(PreviousTick), static_cast<float>(CurrentTick), std::clamp(Intra, 0.0f, 1.0f));
 }
 
+// 非无限钩的环色分三段：剩余 45% 以上是普通色，20%~45% 过渡到警告色，最后 20%
+// 过渡到紧急色。三段颜色各自可配，默认就是原先固定的蓝/琥珀/红。
 inline ColorRGBA QmHookCountdownColor(float Progress)
 {
-	const ColorRGBA Blue(0.20f, 0.65f, 1.0f, 1.0f);
-	const ColorRGBA Amber(1.0f, 0.70f, 0.15f, 1.0f);
-	const ColorRGBA Red(1.0f, 0.25f, 0.25f, 1.0f);
+	const ColorRGBA Normal = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmHookCountdownColor));
+	const ColorRGBA Warning = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmHookCountdownWarningColor));
+	const ColorRGBA Urgent = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmHookCountdownUrgentColor));
 	const auto MixColor = [](ColorRGBA From, ColorRGBA To, float Amount) {
 		return ColorRGBA(mix(From.r, To.r, Amount), mix(From.g, To.g, Amount), mix(From.b, To.b, Amount), 1.0f);
 	};
 	if(Progress >= 0.45f)
-		return Blue;
+		return Normal;
 	if(Progress >= 0.20f)
-		return MixColor(Blue, Amber, (0.45f - Progress) / 0.25f);
-	return MixColor(Amber, Red, std::clamp((0.20f - Progress) / 0.20f, 0.0f, 1.0f));
+		return MixColor(Normal, Warning, (0.45f - Progress) / 0.25f);
+	return MixColor(Warning, Urgent, std::clamp((0.20f - Progress) / 0.20f, 0.0f, 1.0f));
 }
 
 struct SQmHookCountdownInput

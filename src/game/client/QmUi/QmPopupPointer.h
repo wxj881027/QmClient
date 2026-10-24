@@ -40,6 +40,9 @@ struct SQmPopupPointerInput
 	bool m_Captured = false;
 	bool m_Hot = false;
 	bool m_InsideGroup = true;
+	// 带按钮的非阻断弹层：内部按下直接交给内部控件，不被外层 capture 吞掉，
+	// 否则气泡里的按钮要点两下。
+	bool m_PressInsideGoesToContent = false;
 };
 
 enum class EQmPopupPointerAction
@@ -64,7 +67,11 @@ inline EQmPopupPointerAction QmResolvePopupPointerAction(const SQmPopupPointerIn
 			return Input.m_Inside ? EQmPopupPointerAction::RELEASE : Close;
 	}
 	else if(Input.m_Hot && Input.m_Held)
+	{
+		if(Input.m_PressInsideGoesToContent && !Input.m_BlockUnderlying && Input.m_Inside)
+			return EQmPopupPointerAction::NONE;
 		return EQmPopupPointerAction::CAPTURE;
+	}
 	return EQmPopupPointerAction::NONE;
 }
 

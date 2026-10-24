@@ -312,17 +312,6 @@ class CHud : public CComponent
 		}
 	};
 	mutable SHudMediaIslandFrameCache m_MediaIslandFrameCache;
-	IGraphics::CRenderTargetHandle m_MediaIslandBlurSource;
-	IGraphics::CRenderTargetHandle m_MediaIslandBlurDownsample;
-	IGraphics::CRenderTargetHandle m_MediaIslandBlurDownsampleTemporary;
-	IGraphics::CRenderTargetHandle m_MediaIslandBlurDownsampleTarget;
-	IGraphics::CRenderTargetHandle m_MediaIslandBlurTarget;
-	int m_MediaIslandBlurWidth = 0;
-	int m_MediaIslandBlurHeight = 0;
-	int m_MediaIslandBlurMode = -1;
-	bool m_MediaIslandBlurReady = false;
-	uint64_t m_MediaIslandBlurLastAttemptFrame = 0;
-	bool m_MediaIslandBlurAttemptInitialized = false;
 	IGraphics::CRenderTargetHandle m_DummyMiniViewRenderTarget;
 	int m_DummyMiniViewRenderTargetWidth = 0;
 	int m_DummyMiniViewRenderTargetHeight = 0;
@@ -461,7 +450,6 @@ class CHud : public CComponent
 	void EnsureMediaIslandFrameCache() const;
 	bool HasVisibleMediaIsland() const;
 	float GetTopIslandAvoidanceRight() const;
-	void DestroyMediaIslandBlurTargets();
 	IGraphics::CRenderTargetHandle MediaIslandBlurBackdrop();
 	void RenderMediaIsland();
 

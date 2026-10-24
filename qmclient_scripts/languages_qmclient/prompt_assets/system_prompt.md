@@ -30,7 +30,7 @@
 - 中文语境用全角标点：`：`、`，`、`！`、`？`。
 - 全角中文标点前后不要额外空格。
 - 保留 DDNet、QmClient、Tee、QQ、UI、API、FPS、HTTP、JSON、CPU、GPU、AntiPing、KCP 等专名/缩写。
-- 控制台命令和配置名保持原样，例如 `/kill`、`qm_report_app_id`、`cl_dummy_copy_moves`。
+- 控制台命令和配置名保持原样，例如 `/kill`、`qm_gaussian_blur`、`cl_dummy_copy_moves`。
 
 ## 禁止的机翻味
 - 禁止无信息堆砌：`进行…操作`、`…的的`、同义反复（`启用…启用`）。

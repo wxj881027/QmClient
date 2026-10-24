@@ -72,6 +72,51 @@ bool DrawRoundedSurface(IGraphics *pGraphics, const CUIRect &Rect, const ColorRG
 	return true;
 }
 
+bool DrawRoundedImage(IGraphics *pGraphics, const CUIRect &Rect, const SRoundedImageParams &Image, const ColorRGBA &Border, const SRoundedSurfaceParams &Params)
+{
+	if(pGraphics == nullptr || Rect.w <= 0.0f || Rect.h <= 0.0f || Image.m_Alpha <= 0.0f)
+		return false;
+	// 纹理圆角是设备能力：不支持时由调用方回退到预烘焙圆角的贴图。
+	if(!pGraphics->HasRoundedRectSdf() || !pGraphics->HasRoundedRectSdfTexture() || !Image.m_Texture.IsValid())
+		return false;
+	const SRoundedSurfacePlan Plan = ResolveRoundedSurfacePlan(Rect, Params, true);
+	if(!Plan.m_UseSdf)
+		return false;
+
+	IGraphics::SRoundedRectSdfParams SdfParams;
+	SdfParams.m_Rect = vec4(Plan.m_Rect.x, Plan.m_Rect.y, Plan.m_Rect.w, Plan.m_Rect.h);
+	SdfParams.m_FillColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+	// 没有边框时只留一个 alpha 为 0 的颜色：SDF 的边框项会被覆盖度乘成 0，
+	// 这样既不用写死颜色字面量，也保持边框与填充共用同一份参数。
+	ColorRGBA ResolvedBorder = Border;
+	if(Plan.m_BorderWidth <= 0.0f)
+		ResolvedBorder.a = 0.0f;
+	ResolvedBorder.a *= Image.m_Alpha;
+	SdfParams.m_BorderColor = vec4(ResolvedBorder.r, ResolvedBorder.g, ResolvedBorder.b, ResolvedBorder.a);
+	SdfParams.m_CornerRadii = Plan.m_CornerRadii;
+	SdfParams.m_Params = vec4(Plan.m_BorderWidth, Plan.m_PixelSize, Plan.m_PixelSize * 2.0f, 0.0f);
+	ResolveRoundedImageUV(Plan.m_Rect.w, Plan.m_Rect.h, Image.m_UVScale, Image.m_UVOffset, SdfParams.m_TextureParams0, SdfParams.m_TextureParams1);
+	// 照片整体透明度（卡片淡出）由片元乘在采到的 alpha 上：填充没有别的着色入口。
+	SdfParams.m_TextureParams1.y = std::clamp(Image.m_Alpha, 0.0f, 1.0f);
+	// 图片取样器必须由命令携带：RenderRoundedRectSdf 沿用调用方 TextureSet 的绑定。
+	pGraphics->TextureSet(Image.m_Texture);
+	pGraphics->RenderRoundedRectSdf(SdfParams);
+	pGraphics->TextureClear();
+	return true;
+}
+
+bool DrawRoundedImage(CUi *pUi, const CUIRect &Rect, const SRoundedImageParams &Image, const ColorRGBA &Border, const float Radius, const float BorderWidth)
+{
+	if(pUi == nullptr || pUi->DrawingSuppressed())
+		return false;
+	SRoundedSurfaceParams Params;
+	Params.m_Radius = Radius;
+	Params.m_BorderWidth = BorderWidth;
+	Params.m_PixelSize = pUi->PixelSize();
+	Params.m_Corners = IGraphics::CORNER_ALL;
+	return DrawRoundedImage(pUi->Graphics(), Rect, Image, Border, Params);
+}
+
 bool DrawRoundedSurface(CUi *pUi, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, const float Radius, const float BorderWidth, const int Corners)
 {
 	if(pUi == nullptr || pUi->DrawingSuppressed())
@@ -102,6 +147,32 @@ bool DrawRoundedGradientSurface(IGraphics *pGraphics, const CUIRect &Rect, const
 		return DrawRoundedSurface(pGraphics, Rect, Fill, Border, Params);
 	}
 	const SRoundedSurfacePlan Plan = ResolveRoundedSurfacePlan(Rect, Params, pGraphics->HasRoundedRectSdf());
+	// 渐变填充在 SDF 片元里按同一套语义采样，避免 32x16 网格在圆角处露出多边形边缘。
+	if(Plan.m_UseSdf)
+	{
+		IGraphics::SRoundedRectSdfParams SdfParams;
+		SdfParams.m_Rect = vec4(Plan.m_Rect.x, Plan.m_Rect.y, Plan.m_Rect.w, Plan.m_Rect.h);
+		const ColorRGBA First = Gradient.m_aColors[0];
+		SdfParams.m_FillColor = vec4(First.r, First.g, First.b, First.a * Alpha);
+		const ColorRGBA ResolvedBorder = Plan.m_BorderWidth > 0.0f ? Border : First;
+		SdfParams.m_BorderColor = vec4(ResolvedBorder.r, ResolvedBorder.g, ResolvedBorder.b, ResolvedBorder.a);
+		SdfParams.m_CornerRadii = Plan.m_CornerRadii;
+		// 第四分量是"边框取渐变"开关；默认 0 保持其它调用点的单色边框。
+		SdfParams.m_Params = vec4(Plan.m_BorderWidth, Plan.m_PixelSize, Plan.m_PixelSize * 2.0f, Params.m_BorderUsesGradient ? 1.0f : 0.0f);
+		const int Count = std::clamp(Gradient.m_NumColors, 1, (int)IGraphics::ROUNDED_RECT_SDF_GRADIENT_MAX_COLORS);
+		for(int i = 0; i < Count; ++i)
+		{
+			const ColorRGBA Color = Gradient.m_aColors[i];
+			SdfParams.m_aGradientColors[i] = vec4(Color.r, Color.g, Color.b, Color.a * Alpha);
+		}
+		SdfParams.m_GradientParams0 = vec4((float)Gradient.m_Type, Gradient.m_Center.x, Gradient.m_Center.y, Gradient.m_Range);
+		SdfParams.m_GradientParams1 = vec4(Gradient.m_Direction.x, Gradient.m_Direction.y, Gradient.m_Reverse ? 1.0f : 0.0f, (float)Count);
+		SdfParams.m_GradientParams2.x = 1.0f;
+		SdfParams.m_GradientParams2.y = Params.m_BorderOnly ? 1.0f : 0.0f;
+		SdfParams.m_GradientParams2.z = std::max(0.0f, Params.m_BorderFalloff);
+		pGraphics->RenderRoundedRectSdf(SdfParams);
+		return true;
+	}
 	CUIRect Inner = Plan.m_Rect;
 	if(Plan.m_BorderWidth > 0.0f)
 	{

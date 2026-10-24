@@ -40,6 +40,8 @@ SCAN_SUFFIXES = (".h", ".cpp")
 # 格式：路径 -> 豁免理由（显示在报告里，防止无感漂移）。
 FILE_ALLOWLIST = {
 	"src/game/client/QmUi/UiTokens.h": "ui_token 唯一定义源",
+	"src/game/client/components/qmclient/ime_gradient_probe.cpp": "像素回归探针必须使用固定的已知颜色（纯黑底板、纯红/蓝渐变、纯绿边框），"
+	"才能逐像素断言覆盖率与渐变连续性；这些不是可主题化的 UI 语义色，换成 token 会让断言失去确定基准。",
 	# 例：特效渐变需要连续 HSV 数学，不适用离散语义色（示例条目，实际豁免时填写）。
 }
 

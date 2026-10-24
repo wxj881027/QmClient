@@ -52,8 +52,15 @@ void CGraphicsBackend_Threaded::ThreadFunc(void *pUser)
 			pSelf->m_BufferSwapCond.notify_all();
 
 #if defined(CONF_VIDEORECORDER) && !defined(BACKEND_NO_SDL)
-			if(IVideo::Current())
-				IVideo::Current()->NextVideoFrameThread();
+			// 生命周期不变量：NextVideoFrameThread 必须在持有 m_BufferSwapMutex 时调用。
+			// CVideo::Stop() 先 WaitForIdle()（同一把锁，谓词 m_pBuffer == nullptr，
+			// 只可能在本函数返回、线程回到 wait() 释放锁之后成立），再 delete 录像对象，
+			// 因此这里对对象的访问严格先于删除；唯一提交 RunBuffer 的主线程在 Stop()
+			// 期间不会提交新缓冲，图形线程不会再次进入本回调。若把此调用移出锁外，
+			// 上述排序失效，会产生释放后使用。指针只读一次，避免双重读取全局单例。
+			IVideo *pVideo = IVideo::Current();
+			if(pVideo)
+				pVideo->NextVideoFrameThread();
 #endif
 		}
 	}
@@ -114,8 +121,10 @@ void CGraphicsBackend_Threaded::RunBuffer(CCommandBuffer *pBuffer)
 	{
 		RunBufferSingleThreadedUnsafe(pBuffer);
 #if defined(CONF_VIDEORECORDER) && !defined(BACKEND_NO_SDL)
-		if(IVideo::Current())
-			IVideo::Current()->NextVideoFrameThread();
+		// 单线程路径与 Stop() 无并发；指针只读一次保持与线程路径一致。
+		IVideo *pVideo = IVideo::Current();
+		if(pVideo)
+			pVideo->NextVideoFrameThread();
 #endif
 	}
 #else

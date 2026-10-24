@@ -87,20 +87,31 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 	for(const char *pShaderPath : {"data/shader/rounded_rect_sdf.frag", "data/shader/vulkan/rounded_rect_sdf.frag"})
 	{
 		const std::string Shader = ReadTextFile(pShaderPath);
-		EXPECT_NE(Shader.find("gRoundedRectSdfData[5]"), std::string::npos);
+		EXPECT_NE(Shader.find("gRoundedRectSdfData[17]"), std::string::npos);
 		EXPECT_NE(Shader.find("float CornerRadius(vec2 Point, vec4 CornerRadii)"), std::string::npos);
 		EXPECT_NE(Shader.find("float SdfFeather(float DistanceValue, float PixelSize)"), std::string::npos);
 		EXPECT_NE(Shader.find("return max(PixelSize, length(vec2(dFdx(DistanceValue), dFdy(DistanceValue))));"), std::string::npos);
 		EXPECT_NE(Shader.find("return 1.0 - smoothstep(-Feather * 0.5, Feather * 0.5, DistanceValue);"), std::string::npos);
 		EXPECT_NE(Shader.find("vec4 InnerCornerRadii = max(CornerRadii - vec4(BorderWidth), vec4(0.0));"), std::string::npos);
 		EXPECT_NE(Shader.find("float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);"), std::string::npos);
+		EXPECT_NE(Shader.find("vec4 GradientColor(vec2 UV, vec4 SolidColor)"), std::string::npos);
+		EXPECT_NE(Shader.find("vec4 FillColor = GradientColor(GradientUV, "), std::string::npos);
 		EXPECT_NE(Shader.find("float OuterCoverage = Coverage(OuterDistance, Params.y);"), std::string::npos);
 		EXPECT_NE(Shader.find("InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? Coverage(InnerDistance, Params.y) : 0.0;"), std::string::npos);
 		EXPECT_EQ(Shader.find("* 0.8"), std::string::npos);
 		EXPECT_EQ(Shader.find("* 0.9"), std::string::npos);
 		EXPECT_NE(Shader.find("Rect.zw + vec2(Params.z * 2.0)"), std::string::npos);
 		EXPECT_NE(Shader.find("float OutputAlpha = FillAlpha + BorderAlpha;"), std::string::npos);
-		EXPECT_NE(Shader.find("vec3 Premultiplied = FillColor.rgb * FillAlpha + BorderColor.rgb * BorderAlpha;"), std::string::npos);
+		// 边框颜色经 BorderTint 中转：默认为单色 BorderColor，Params.w 置位时改用渐变。
+		EXPECT_NE(Shader.find("vec4 BorderTint = BorderColor;"), std::string::npos);
+		EXPECT_NE(Shader.find("if(Params.w > 0.5)"), std::string::npos);
+		// 只描边与沿带宽羽化：辉光描边靠这两项才连成渐变，而不是硬边环。
+		// 两份后端的数据块前缀不同（gRoundedRectSdfData / gSdf.gRoundedRectSdfData），
+		// 这里只匹配与后端无关的语义片段。
+		EXPECT_NE(Shader.find("[14].y > 0.5;"), std::string::npos);
+		EXPECT_NE(Shader.find("[14].z;"), std::string::npos);
+		EXPECT_NE(Shader.find("float BandT = clamp(InnerDistance / max(BorderWidth, 0.0001), 0.0, 1.0);"), std::string::npos);
+		EXPECT_NE(Shader.find("vec3 Premultiplied = FillColor.rgb * FillAlpha + BorderTint.rgb * BorderAlpha;"), std::string::npos);
 		EXPECT_EQ(Shader.find("BorderAlpha * (1.0 - FillAlpha)"), std::string::npos);
 		EXPECT_EQ(Shader.find("mix(BorderColor, FillColor, InnerCoverage)"), std::string::npos);
 	}
@@ -115,6 +126,7 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 		const std::string MetalSdfFragment = FunctionBody(MetalShader, "fragment float4 qmclient_rounded_rect_sdf_fragment(");
 		ASSERT_FALSE(MetalSdfFragment.empty());
 		EXPECT_NE(MetalShader.find("fragment float4 qmclient_rounded_rect_sdf_fragment("), std::string::npos);
+		EXPECT_NE(MetalShader.find("float4 RoundedRectGradientColor("), std::string::npos);
 		EXPECT_NE(MetalShader.find("constant float4 *Params [[buffer(1)]]"), std::string::npos);
 		EXPECT_NE(MetalShader.find("float RoundedRectDistance(float2 Point, float2 HalfSize, float Radius)"), std::string::npos);
 		EXPECT_NE(MetalShader.find("float RoundedRectCornerRadius(float2 Point, float4 CornerRadii)"), std::string::npos);
@@ -122,12 +134,17 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 		EXPECT_NE(MetalShader.find("const float Feather = max(PixelSize, length(float2(dfdx(DistanceValue), dfdy(DistanceValue))));"), std::string::npos);
 		EXPECT_NE(MetalShader.find("return 1.0 - smoothstep(-Feather * 0.5, Feather * 0.5, DistanceValue);"), std::string::npos);
 		EXPECT_NE(MetalShader.find("const float4 InnerCornerRadii = max(CornerRadii - float4(BorderWidth), float4(0.0));"), std::string::npos);
-		EXPECT_NE(MetalShader.find("const float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);"), std::string::npos);
+		// BorderCoverage 不再 const：只描边模式要在算完边框环带后清掉 InnerCoverage。
+		EXPECT_NE(MetalShader.find("float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);"), std::string::npos);
+		EXPECT_NE(MetalShader.find("const bool BorderOnly = Params[14].y > 0.5;"), std::string::npos);
 		EXPECT_NE(MetalShader.find("const float OuterCoverage = RoundedRectCoverage(OuterDistance, RenderParams.y);"), std::string::npos);
 		EXPECT_NE(MetalShader.find("const float InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? RoundedRectCoverage(InnerDistance, RenderParams.y) : 0.0;"), std::string::npos);
 		EXPECT_NE(MetalShader.find("Rect.zw + float2(RenderParams.z * 2.0)"), std::string::npos);
 		EXPECT_NE(MetalShader.find("const float OutputAlpha = FillAlpha + BorderAlpha;"), std::string::npos);
-		EXPECT_NE(MetalShader.find("const float3 Premultiplied = FillColor.rgb * FillAlpha + BorderColor.rgb * BorderAlpha;"), std::string::npos);
+		// 与 GLSL 一致：边框颜色经 BorderTint 中转，RenderParams.w 控制是否沿用渐变色。
+		EXPECT_NE(MetalShader.find("float4 BorderTint = BorderColor;"), std::string::npos);
+		EXPECT_NE(MetalShader.find("if(RenderParams.w > 0.5)"), std::string::npos);
+		EXPECT_NE(MetalShader.find("const float3 Premultiplied = FillColor.rgb * FillAlpha + BorderTint.rgb * BorderAlpha;"), std::string::npos);
 		// 与 OpenGL/Vulkan 一致：圆角 SDF 不做 0.8/0.9 暗化，也不做非预乘的 border/fill 插值。
 		EXPECT_EQ(MetalSdfFragment.find("* 0.8"), std::string::npos);
 		EXPECT_EQ(MetalSdfFragment.find("* 0.9"), std::string::npos);
@@ -152,6 +169,16 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 	const std::string OpenGlSdfShader = ReadTextFile("data/shader/rounded_rect_sdf.frag");
 	const std::string VulkanSdfShader = ReadTextFile("data/shader/vulkan/rounded_rect_sdf.frag");
 	EXPECT_EQ(NormalizeSdfCore(OpenGlSdfShader), NormalizeSdfCore(VulkanSdfShader));
+
+	// 纹理变体的 Vulkan 描述符集号是编译期看不出来的接口：图片采样器在 set 0，
+	// 参数块在 set 1，与 C++ 侧「图片绑 set 0、UBO 绑 set 1」必须一致。set 号写错时
+	// 片元读到的是未绑定内存，会把「启用纹理」当作关闭，照片整块透明——只有实机
+	// 才能看出来，所以在这里用静态合同钉住。
+	EXPECT_NE(VulkanSdfShader.find("layout(set = 0, binding = 0) uniform sampler2D gTextureSampler;"), std::string::npos);
+	EXPECT_NE(VulkanSdfShader.find("layout(std140, set = 1, binding = 1)"), std::string::npos);
+	EXPECT_NE(VulkanSdfShader.find("layout(std140, set = 0, binding = 1)"), std::string::npos);
+	const std::string VulkanPipelines = ReadTextFile("src/engine/client/backend/vulkan/backend_vulkan_qm_pipelines_impl.h");
+	EXPECT_NE(VulkanPipelines.find("const uint32_t ParamSet = Textured ? 1u : 0u;"), std::string::npos);
 
 	// 跨后端几何核心必须一致：从 SDF 距离函数体里抽出「返回表达式」，
 	// 把 Metal 的 float2 语法归一化到 GLSL 的 vec2，再逐字符比对。
@@ -202,7 +229,7 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 
 	const std::string GraphicsHeader = ReadTextFile("src/engine/graphics.h");
 	const std::string GraphicsThreaded = ReadTextFile("src/engine/client/graphics_threaded.cpp");
-	EXPECT_NE(GraphicsHeader.find("static_assert(sizeof(SRoundedRectSdfParams) == sizeof(vec4) * 5);"), std::string::npos);
+	EXPECT_NE(GraphicsHeader.find("static_assert(sizeof(SRoundedRectSdfParams) == sizeof(vec4) * 17);"), std::string::npos);
 	const std::string RoundedCommand = FunctionBody(GraphicsThreaded, "void CGraphics_Threaded::RenderRoundedRectSdf");
 	EXPECT_NE(RoundedCommand.find("Params.m_Params.z"), std::string::npos);
 	EXPECT_NE(RoundedCommand.find("if(m_NumVertices > 0)"), std::string::npos);
@@ -220,7 +247,10 @@ TEST(QmNewUiMenuRenderSurfaceContract, OrdinaryUiRoundedSurfacesUseSharedPath)
 	const std::string Effects = ReadTextFile("src/game/client/components/ui_effects.cpp");
 	const std::string HudEditor = ReadTextFile("src/game/client/components/hud_editor.cpp");
 
-	EXPECT_NE(Effects.find("DrawRoundedSurface(Ui(), ShadowRect"), std::string::npos);
+	// 照片卡：照片走共享的圆角贴图路径（四角由圆角覆盖度裁掉），只有能力回退时
+	// 才用一帧四边形 + 单独描边。卡片投影已移除，旧的 ShadowRect 直绘不得回归。
+	EXPECT_NE(Effects.find("DrawRoundedImage(Ui(), CardRect"), std::string::npos);
+	EXPECT_NE(Effects.find("DrawRoundedSurface(Ui(), BorderRect"), std::string::npos);
 	EXPECT_EQ(Effects.find("Graphics()->DrawRect(PreviewX + ShadowOffset"), std::string::npos);
 	EXPECT_NE(HudEditor.find("DrawRoundedSurface(Ui(), HelpRect"), std::string::npos);
 	EXPECT_EQ(HudEditor.find("Graphics()->DrawRect(HelpX, HelpY"), std::string::npos);
@@ -310,8 +340,9 @@ TEST(QmNewUiMenuBranches, NoThemeBackgroundAndFriendRowsUseSharedSdfSurfaces)
 	EXPECT_NE(Background.find("const ColorRGBA CheckerColor = NoMenuTheme"), std::string::npos);
 	EXPECT_NE(Background.find("Graphics()->SetColor(CheckerColor);"), std::string::npos);
 	EXPECT_NE(Browser.find("#include <game/client/QmUi/UiSurface.h>"), std::string::npos);
-	EXPECT_NE(Browser.find("DrawRoundedSurface(Ui(), Header, HeaderColor, ColorRGBA(), 5.0f);"), std::string::npos);
-	EXPECT_NE(Browser.find("DrawRoundedSurface(Ui(), Rect, Color, ColorRGBA(), 5.0f);"), std::string::npos);
+	// 圆角数值已收进 ui_token::radius（SMALL_MENU 即 5.0），断言跟着 token 走。
+	EXPECT_NE(Browser.find("DrawRoundedSurface(Ui(), Header, HeaderColor, ColorRGBA(), ui_token::radius::SMALL_MENU);"), std::string::npos);
+	EXPECT_NE(Browser.find("DrawRoundedSurface(Ui(), Rect, Color, ColorRGBA(), ui_token::radius::SMALL_MENU);"), std::string::npos);
 	EXPECT_EQ(Browser.find("Rect.Draw(Color, IGraphics::CORNER_ALL, 5.0f);"), std::string::npos);
 }
 

@@ -2751,6 +2751,32 @@ void CSkins::PrewarmByNames(const std::vector<std::string> &vNames, bool Immedia
 	}
 }
 
+bool CSkins::PoseSkinsReady(const std::vector<std::string> &vNames, std::string *pOutPendingName)
+{
+	for(const std::string &Name : vNames)
+	{
+		if(Name.empty())
+			continue;
+		// 预热必须每帧重试：一次请求可能在准入队列里被后续帧挤掉。
+		const CSkinContainer *pContainer = FindContainerOrNullptr(Name.c_str(), true);
+		if(pContainer == nullptr)
+		{
+			// 名字非法（例如被过滤的特殊皮肤名）：CPlayers 同样会回退 default，
+			// 这里也按"已确定不可用"处理，否则会永远等下去。
+			continue;
+		}
+		if(pContainer->Skin() != nullptr)
+			continue;
+		// 终态提前放行，让成片至少和预览保持一致，而不是一直等到超时。
+		if(PoseSkinWaitIsFutile(pContainer->State()))
+			continue;
+		if(pOutPendingName != nullptr)
+			*pOutPendingName = Name;
+		return false;
+	}
+	return true;
+}
+
 bool CSkins::PrewarmPlayerPreviewReady(int Dummy, int MaxEntries, bool ProgressiveListReady)
 {
 	CSkinList &List = SkinList(Dummy);

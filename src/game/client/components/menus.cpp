@@ -35,6 +35,7 @@
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmDropdown.h>
 #include <game/client/QmUi/QmModuleLayoutAdapter.h>
+#include <game/client/QmUi/QmToast.h>
 #include <game/client/QmUi/QmTree.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SettingsCard.h>
@@ -57,7 +58,11 @@
 #include <game/client/components/menu_background.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/demo_ui.h>
+#include <game/client/components/qmclient/map_history_ui.h>
 #include <game/client/components/qmclient/media_paths.h>
+#if defined(CONF_VIDEORECORDER)
+#include <engine/client/video_encoder.h>
+#endif
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/statistics_ring_geometry.h>
@@ -81,6 +86,11 @@ extern bool gs_SettingsAssetsEntityGamePreview;
 
 namespace
 {
+	// 覆盖视频文件的二次确认：渲染弹窗在点「Ok」时已经把 m_Popup 置空，
+	// 这里先把弹窗恢复成渲染页，再弹居中确认，取消后用户还能改名字。
+	CUi::SConfirmPopupContext gs_ReplaceVideoConfirm;
+	bool gs_ReplaceVideoPending = false;
+
 	// 胶囊行高与内容缩放常量已提升到 menus.h（menus_ingame.cpp 的服务器导航栏也用）。
 	constexpr float MENU_MENUBAR_GAP_NEW = 8.0f; // 导航→内容间隙（统一边距基准）
 	constexpr float MENU_MENUBAR_HEIGHT_NEW = MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW + MENU_MENUBAR_GAP_NEW;
@@ -709,6 +719,7 @@ IUiContext CMenus::SettingsUiContext(const char *pScope, const float UiScale)
 	Context.m_pMenus = this;
 	Context.m_pTooltips = &GameClient()->m_Tooltips;
 	Context.m_pTextRender = TextRender();
+	Context.m_pStorage = Storage();
 	Context.m_pTheme = &m_SettingsUiTheme;
 	Context.m_ScopeHash = MakeUiScopeHash(pScope);
 	Context.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
@@ -2463,10 +2474,13 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		CUIRect aStartTabSlots[std::size(s_aStartTabButtons)];
 		int NumStartTabs = 0;
 		int ActiveStartTab = -1;
+		// 统计数据是收藏地图工作区里的第 4 个页签，顶部滑块和图标高亮仍停在「收藏地图」那一格，
+		// 否则进统计页时顶部会变成没有任何选中项、滑块凭空消失。
+		const int NavigationPage = ActivePage == PAGE_STATS ? PAGE_FAVORITE_MAPS : ActivePage;
 		auto AddStartTab = [&](const int Page, const EQmIcon Icon, const char *pIcon, const CCommunityIcon *pCommunityIcon, const char *pTooltip, const float AppearStrength, const CUIRect &Slot) {
 			aStartTabs[NumStartTabs] = {Page, Icon, pIcon, pCommunityIcon, pTooltip, AppearStrength};
 			aStartTabSlots[NumStartTabs] = Slot;
-			if(ActivePage == Page)
+			if(NavigationPage == Page)
 				ActiveStartTab = NumStartTabs;
 			++NumStartTabs;
 		};
@@ -2535,7 +2549,7 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		{
 			int Current = -1;
 			for(int Index = 1; Index < NumStartTabs; ++Index)
-				if(aStartTabs[Index].m_Page == ActivePage)
+				if(aStartTabs[Index].m_Page == NavigationPage)
 					Current = Index;
 			if(Current >= 1)
 			{
@@ -2547,7 +2561,7 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		}
 		ActiveStartTab = -1;
 		for(int Index = 0; Index < NumStartTabs; ++Index)
-			if(aStartTabs[Index].m_Page == (NewPage >= 0 ? NewPage : ActivePage))
+			if(aStartTabs[Index].m_Page == (NewPage >= 0 ? NewPage : NavigationPage))
 				ActiveStartTab = Index;
 
 		// 胶囊 Tab 槽位自定义底色：未读新闻/更新时主菜单入口（第一个槽位）用绿色
@@ -2576,7 +2590,7 @@ bool CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		for(int TabIndex = 0; TabIndex < NumStartTabs; ++TabIndex)
 		{
 			const SStartTab &Tab = aStartTabs[TabIndex];
-			const bool TabActive = (NewPage >= 0 ? NewPage : ActivePage) == Tab.m_Page;
+			const bool TabActive = (NewPage >= 0 ? NewPage : NavigationPage) == Tab.m_Page;
 			ColorRGBA InactiveColor = MenuTabDefaultColor();
 			ColorRGBA ActiveColor = MenuTabActiveColor();
 			ColorRGBA HoverColor = MenuMenubarHoverColor();
@@ -2766,6 +2780,8 @@ void CMenus::RenderLoadingDirect(const char *pCaption, const char *pContent, std
 	ms_GuiColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_UiColor, true));
 
 	Ui()->MapScreen();
+	// ClipDisable 需要与 ClipEnable 配对；统一走 ResetClipState 清理帧边界残留。
+	Ui()->ResetClipState();
 
 	if(GameClient()->m_MenuBackground.IsLoading())
 	{
@@ -2785,6 +2801,7 @@ void CMenus::RenderLoadingDirect(const char *pCaption, const char *pContent, std
 			dbg_msg("ui/loading", "frame fallback: menu background unavailable, drawing procedural background");
 		RenderBackground();
 	}
+	Ui()->BeginBackgroundFrame();
 
 	m_LoadingState.m_LastRender = Now;
 
@@ -2869,12 +2886,25 @@ void CMenus::RenderNews(CUIRect MainView)
 
 void CMenus::RenderStatistics(CUIRect MainView)
 {
-	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_NEWS);
+	// 统计数据和收藏地图是同一个工作区：背景停在收藏地图那一站，切页签时运镜不跳。
+	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_BROWSER_FAVORITES);
 
+	// 外间距和页签条直接取收藏地图页那套工作区度量：页签宽度、离顶部导航的距离、
+	// 与下方内容的间距都和其它页签页一致，卡片也铺到同一条内容线上。
+	const QmMapHistoryUi::SWorkspaceMetrics StatisticsWorkspace = QmMapHistoryUi::WorkspaceMetrics(MainView.h);
 	CUIRect Window = MainView;
-	// 内容左右与其他页面的卡片内容线对齐（窗口 10px + 内容 10px = 20px）。
-	Window.VMargin(10.0f, &Window);
-	Window.HMargin(8.0f, &Window);
+	Window.Margin(StatisticsWorkspace.m_OuterMargin, &Window);
+
+	// 与收藏地图页共用的工作区页签：贴在内容顶端、离顶部导航和其它页面同一条基线，
+	// 且不随统计内容滚动；统计数据是第 4 个页签，点其它页签直接跳回收藏地图。
+	{
+		CUIRect WorkspaceTabs = Window;
+		WorkspaceTabs.h = StatisticsWorkspace.m_TabHeight;
+		const int PickedWorkspaceTab = DoMapWorkspaceTabs(WorkspaceTabs, StatisticsWorkspace.m_TabHeight * 0.20f, 3);
+		if(PickedWorkspaceTab >= 0 && PickedWorkspaceTab < 3)
+			SetMenuPage(PAGE_FAVORITE_MAPS);
+		Window.HSplitTop(StatisticsWorkspace.m_TabHeight + StatisticsWorkspace.m_SectionGap, nullptr, &Window);
+	}
 
 	static CScrollRegion s_StatisticsScrollRegion;
 	CScrollRegionParams StatisticsScrollParams = QmScrollRegionParamsForSize(EQmScrollSize::MEDIUM);
@@ -2884,15 +2914,8 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	s_StatisticsScrollRegion.Begin(&Window, &StatisticsScrollOffset, &StatisticsScrollParams);
 	Window.y += StatisticsScrollOffset.y;
 
-	CUIRect Header, Content;
-	Window.HSplitTop(50.0f, &Header, &Content);
-	Header.VMargin(14.0f, &Header);
-	CUIRect HeaderTitle, HeaderSubTitle;
-	Header.HSplitTop(24.0f, &HeaderTitle, &HeaderSubTitle);
-	Ui()->DoLabel(&HeaderTitle, Localize("Stats"), 24.0f, TEXTALIGN_ML);
-	Ui()->DoLabel(&HeaderSubTitle, Localize("Client data overview"), 12.0f, TEXTALIGN_ML);
-
-	Content.Margin(12.0f, &Content);
+	// 页面标题由顶部导航页签承担，这里不再重复大标题，内容直接从卡片行开始。
+	CUIRect Content = Window;
 	const auto &vLocalModeStats = GameClient()->m_QmClient.QmClientLocalModeStats();
 	std::vector<SQmClientLocalModeStats> vModeStats;
 	std::vector<int64_t> vDominantPlaytimes;
@@ -3131,9 +3154,13 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	const bool DdnetStatsFailed = GameClient()->m_QmClient.QmDdnetStatsLastRequestFailed();
 	const bool StatisticsFetching = GameClient()->m_QmClient.QmStatisticsIsFetching() || AxiomStatsFetching;
 	const bool StatisticsFailed = GameClient()->m_QmClient.QmStatisticsLastRequestFailed() || AxiomStatsFailed;
-	const char *pDdnetStatsUnavailableText = DdnetStatsFailed ? Localize("Unavailable") : Localize("Loading");
+	// 远程统计失败时数值位只留一个破折号：占位词放在数值位上比空着更碍眼，
+	// 失败原因统一到右下角「统计说明」里交代，那里有「不可用（失败）」和上次成功时间。
+	const char *pDdnetStatsUnavailableText = DdnetStatsFailed ? "—" : Localize("Loading");
+	// 时长口径在整页保持一致：顶部总时长和模式圆环/图例共用「按小时显示」开关。
+	static bool s_ShowTotalHours = true;
 	if(HasRemotePlaytime)
-		FormatStatsPlaytime(ServerPlaytimeSeconds, false, aServerPlaytime, sizeof(aServerPlaytime));
+		FormatStatsPlaytime(ServerPlaytimeSeconds, s_ShowTotalHours, aServerPlaytime, sizeof(aServerPlaytime));
 	else
 		str_copy(aServerPlaytime, pDdnetStatsUnavailableText, sizeof(aServerPlaytime));
 
@@ -3215,7 +3242,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	CUIRect TopCards;
 	const int TopCardColumns = Content.w >= 700.0f ? 4 : 2;
 	const int TopCardRows = (4 + TopCardColumns - 1) / TopCardColumns;
-	const float TopCardsHeight = TopCardRows == 1 ? 78.0f : 162.0f;
+	const float TopCardsHeight = TopCardRows == 1 ? 74.0f : 158.0f;
 	Content.HSplitTop(TopCardsHeight, &TopCards, &Content);
 	const float CardGap = 8.0f;
 	const float CardWidth = (TopCards.w - CardGap * (TopCardColumns - 1)) / TopCardColumns;
@@ -3228,69 +3255,80 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		Card.y += Row * (TopCards.h + CardGap) / TopCardRows;
 		Card.w = CardWidth;
 		Card.h = (TopCards.h - CardGap * (TopCardRows - 1)) / TopCardRows;
+		// 远程统计失败且没有缓存值时，卡片数值位留破折号，下面用一句「失败」说明来源，不让占位词顶在数值位。
+		const char *pDdnetCardHint = DdnetStatsFailed ? Localize("Failed") : nullptr;
 		if(CardIndex == 0)
 			RenderStatCard(Card, Localize("Client uptime"), aClientOpenTime, nullptr);
 		else if(CardIndex == 1)
-			RenderStatCard(Card, Localize("Play time"), aServerPlaytime, nullptr);
+			RenderStatCard(Card, Localize("Play time"), aServerPlaytime, DdnetStatsFailed && !HasRemotePlaytime ? pDdnetCardHint : nullptr);
 		else if(CardIndex == 2)
-			RenderStatCard(Card, Localize("Finished maps"), aFinishedMapsText, nullptr);
+			RenderStatCard(Card, Localize("Finished maps"), aFinishedMapsText, FinishedMaps < 0 ? pDdnetCardHint : nullptr);
 		else
-			RenderStatCard(Card, Localize("Favorite friend"), aFavoriteFriendText, nullptr);
+			RenderStatCard(Card, Localize("Favorite friend"), aFavoriteFriendText, aFavoriteFriendText[0] == 0 || str_comp(aFavoriteFriendText, "—") == 0 ? pDdnetCardHint : nullptr);
 	}
 
-	Content.HSplitTop(10.0f, nullptr, &Content);
+	Content.HSplitTop(6.0f, nullptr, &Content);
 
 	CUIRect ModePanel, ModeRest;
-	// 图例改为单列表格后，面板高度随模式数量伸缩，不再按两列网格预算。
-	const float ModePanelHeight = std::clamp(120.0f + 26.0f * static_cast<float>(vDisplayModeStats.size()), 240.0f, 420.0f);
+	// 统计卡按参考图改成「圆环 + 分组用量表 + 右侧纵向操作列」三段式：
+	// 表头和行高固定，面板高度只随模式数量伸缩，圆环、表格和三枚按钮始终共用一条中线。
+	const float StatsTableHeaderHeight = 22.0f;
+	const float StatsTableRowHeight = 30.0f;
+	const float StatsPanelPadding = 14.0f;
+	const float StatsPanelHeaderHeight = 28.0f;
+	const float StatsTableHeight = StatsTableHeaderHeight + StatsTableRowHeight * static_cast<float>(vDisplayModeStats.size());
+	// 下限按表头 + 5 行 + 内边距的实际需要给，页签行占用的高度从这里让出来，避免底部卡片被推出可视区。
+	const float ModePanelHeight = std::clamp(StatsTableHeight + StatsPanelPadding * 2.0f + StatsPanelHeaderHeight + 16.0f, 246.0f, 470.0f);
 	Content.HSplitTop(ModePanelHeight, &ModePanel, &ModeRest);
-	ModePanel.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.23f), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+	// 先铺 1px 描边再画内层填充：深色页面里纯半透明卡片会和背景糊成一片，加一圈细边才分得开。
+	ModePanel.Draw(ui_token::color::BORDER_SUBTLE, IGraphics::CORNER_ALL, ui_token::radius::CARD);
+	CUIRect ModePanelFill = ModePanel;
+	ModePanelFill.Margin(1.0f, &ModePanelFill);
+	ModePanelFill.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.23f), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+	ModePanel.Margin(StatsPanelPadding, &ModePanel);
 	CUIRect ModeTitle, ModeBody;
-	ModePanel.Margin(10.0f, &ModePanel);
-	ModePanel.HSplitTop(44.0f, &ModeTitle, &ModeBody);
-	static bool s_ShowTotalHours = false;
-	CUIRect TitleRow;
-	ModeTitle.HSplitTop(22.0f, &TitleRow, nullptr);
-	// 操作按钮收进标题行右侧：宽度与设置页操作组同规则（按文本自适应），字号统一体系标准，不再挤占图例排版宽度。
-	CUIRect RefreshButton, UseCurrentNameButton, ModeTitleButton;
-	{
-		CUIRect TitleActions = TitleRow;
-		TitleActions.VSplitRight(minimum(460.0f, TitleRow.w * 0.6f), &TitleRow, &TitleActions);
-		Ui()->DoLabel(&TitleRow, Localize("Local game mode statistics"), ui_token::font::HEADLINE, TEXTALIGN_ML);
-		const char *pRefreshStatsLabel = StatisticsFetching ? Localize("Syncing remote stats") : (StatisticsFailed ? Localize("Retry remote stats") : Localize("Sync remote stats"));
-		const char *apActionLabels[] = {pRefreshStatsLabel, Localize("Use current name"), Localize("Total hours")};
-		static ui_widget::SSettingsActionGroupState s_StatisticsActionWidths;
-		const auto Actions = ui_widget::PrepareSettingsActionGroup(*Ui(), s_StatisticsActionWidths, TitleActions, apActionLabels, 3, ResolveSettingsContentMetrics(TitleActions.w), ESettingsActionGroupWidth::CONTENT);
-		const float GroupWidth = Actions.m_aButtons[2].x + Actions.m_aButtons[2].w - Actions.m_aButtons[0].x;
-		const float RightAlign = maximum(0.0f, TitleActions.w - GroupWidth);
-		RefreshButton = Actions.m_aButtons[0];
-		UseCurrentNameButton = Actions.m_aButtons[1];
-		ModeTitleButton = Actions.m_aButtons[2];
-		RefreshButton.x += RightAlign;
-		UseCurrentNameButton.x += RightAlign;
-		ModeTitleButton.x += RightAlign;
-		static CButtonContainer s_StatisticsRefreshButton;
-		if(DoButton_Menu(&s_StatisticsRefreshButton, pRefreshStatsLabel, 0, &RefreshButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, ui_token::font::BODY))
-			GameClient()->m_QmClient.RefreshQmClientStatistics();
-		static CButtonContainer s_StatisticsUseCurrentNameButton;
-		if(DoButton_Menu(&s_StatisticsUseCurrentNameButton, Localize("Use current name"), 0, &UseCurrentNameButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, ui_token::font::BODY))
-			GameClient()->m_QmClient.UseCurrentQmDdnetPlayerName();
-		static CButtonContainer s_TotalHoursButton;
-		if(DoButton_Menu(&s_TotalHoursButton, Localize("Total hours"), s_ShowTotalHours, &ModeTitleButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, ui_token::font::BODY))
-			s_ShowTotalHours = !s_ShowTotalHours;
-	}
-	ModeBody.HSplitTop(6.0f, nullptr, &ModeBody);
-	const float ChartRadius = minimum(ModeBody.h * 0.37f, 82.0f);
-	const float ChartInnerRadius = ChartRadius * 0.48f;
-	const vec2 ChartCenter(ModeBody.x + ChartRadius + 8.0f, ModeBody.y + ModeBody.h * 0.5f);
-	// 分类色板与饼菜单动作语义色同风格：高饱和、彼此高区分度，按模式顺序固定分配。
+	ModePanel.HSplitTop(StatsPanelHeaderHeight, &ModeTitle, &ModeBody);
+	ModeBody.HSplitTop(10.0f, nullptr, &ModeBody);
+	Ui()->DoLabel(&ModeTitle, Localize("Local game mode statistics"), ui_token::font::TITLE, TEXTALIGN_ML);
+
+	// 操作按钮放卡片右侧：纵向首尾贴边、中间居中，间距按 space-between 均分，
+	// 不再和图例抢标题行的宽度。
+	const float ActionColumnWidth = std::clamp(ModeBody.w * 0.2f, 128.0f, 168.0f);
+	CUIRect BodyMain, ActionColumn;
+	ModeBody.VSplitRight(ActionColumnWidth, &BodyMain, &ActionColumn);
+	BodyMain.VSplitRight(16.0f, &BodyMain, nullptr);
+	const float ActionButtonHeight = std::clamp(ActionColumn.h / 6.0f, 26.0f, 34.0f);
+	CUIRect ActionTop = ActionColumn;
+	CUIRect ActionMiddle = ActionColumn;
+	CUIRect ActionBottom = ActionColumn;
+	ActionTop.h = ActionMiddle.h = ActionBottom.h = ActionButtonHeight;
+	ActionMiddle.y = ActionColumn.y + (ActionColumn.h - ActionButtonHeight) * 0.5f;
+	ActionBottom.y = ActionColumn.y + ActionColumn.h - ActionButtonHeight;
+	// 三枚操作按钮直接走菜单通用按钮面（DoButton_Menu + BASE 圆角），
+	// 和页面底部链接按钮、设置页 Reset 同一套底色/描边/选中态，不再自绘胶囊。
+	const char *pRefreshStatsLabel = StatisticsFetching ? Localize("Syncing remote stats") : (StatisticsFailed ? Localize("Retry remote stats") : Localize("Sync remote stats"));
+	static CButtonContainer s_StatisticsRefreshButton;
+	if(DoButton_Menu(&s_StatisticsRefreshButton, pRefreshStatsLabel, 0, &ActionTop, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
+		GameClient()->m_QmClient.RefreshQmClientStatistics();
+	static CButtonContainer s_StatisticsUseCurrentNameButton;
+	if(DoButton_Menu(&s_StatisticsUseCurrentNameButton, Localize("Use current name"), 0, &ActionMiddle, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
+		GameClient()->m_QmClient.UseCurrentQmDdnetPlayerName();
+	static CButtonContainer s_TotalHoursButton;
+	if(DoButton_Menu(&s_TotalHoursButton, Localize("Total hours"), s_ShowTotalHours ? 1 : 0, &ActionBottom, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, 12.0f))
+		s_ShowTotalHours = !s_ShowTotalHours;
+
+	const float ChartRadius = std::clamp(minimum(BodyMain.h * 0.40f, BodyMain.w * 0.24f), 44.0f, 92.0f);
+	// 环厚对齐参考图：内径约为外径的 0.62，环本身才是画面主体，而不是一条细描边。
+	const float ChartInnerRadius = ChartRadius * 0.62f;
+	const vec2 ChartCenter(BodyMain.x + ChartRadius + 4.0f, BodyMain.y + BodyMain.h * 0.5f);
+	// 分类色板对齐参考图的高饱和紫 / 蓝 / 青绿 / 红 / 靛 / 天蓝，顺序固定，图例与圆环同源。
 	const ColorRGBA aModeColors[] = {
-		ColorRGBA(0.25f, 0.55f, 0.80f, 1.0f), // 蓝
-		ColorRGBA(0.90f, 0.30f, 0.40f, 1.0f), // 红
-		ColorRGBA(0.30f, 0.75f, 0.50f, 1.0f), // 绿
-		ColorRGBA(0.85f, 0.50f, 0.20f, 1.0f), // 橙
-		ColorRGBA(0.55f, 0.40f, 0.90f, 1.0f), // 紫
-		ColorRGBA(0.40f, 0.78f, 0.78f, 1.0f), // 青
+		ColorRGBA(0.545f, 0.486f, 0.965f, 1.0f), // 紫
+		ColorRGBA(0.357f, 0.616f, 0.976f, 1.0f), // 蓝
+		ColorRGBA(0.184f, 0.749f, 0.623f, 1.0f), // 青绿
+		ColorRGBA(0.941f, 0.416f, 0.416f, 1.0f), // 红
+		ColorRGBA(0.424f, 0.424f, 0.941f, 1.0f), // 靛
+		ColorRGBA(0.290f, 0.749f, 0.929f, 1.0f), // 天蓝
 	};
 	int64_t TotalMaps = 0;
 	int64_t TotalModePlaytime = 0;
@@ -3311,7 +3349,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 			return "DDStats";
 		return "";
 	};
-	auto FormatModeScore = [&](const SQmClientLocalModeStats &Stats, char *pBuf, size_t BufSize) {
+	auto FormatModeScore = [&](const SQmClientLocalModeStats &Stats, char *pBuf, size_t BufSize, bool Compact = false) {
 		if(IsStatsGoresMode(Stats.m_GameMode))
 		{
 			if(!AxiomGoresMode)
@@ -3322,8 +3360,11 @@ void CMenus::RenderStatistics(CUIRect MainView)
 			if(pAxiomGoresResult && pAxiomGoresResult->m_HasData && pAxiomGoresResult->m_Status == EQmAxiomScoreStatus::READY)
 			{
 				// Axiom 的 points 是总积分；performance_points 是单独的表现分。
-				// 显式带标签，避免统计页只显示两个无法区分的数字。
-				str_format(pBuf, BufSize, "%s: %" PRId64 " · %s: %" PRId64, Localize("Points"), pAxiomGoresResult->m_Score.m_Points, Localize("Performance points"), pAxiomGoresResult->m_Score.m_PerformancePoints);
+				// 表格列只放两个数字，完整标签留给悬浮提示，避免长文本挤占列宽。
+				if(Compact)
+					str_format(pBuf, BufSize, "%" PRId64 " · %" PRId64, pAxiomGoresResult->m_Score.m_Points, pAxiomGoresResult->m_Score.m_PerformancePoints);
+				else
+					str_format(pBuf, BufSize, "%s: %" PRId64 " · %s: %" PRId64, Localize("Points"), pAxiomGoresResult->m_Score.m_Points, Localize("Performance points"), pAxiomGoresResult->m_Score.m_PerformancePoints);
 			}
 			else
 			{
@@ -3379,6 +3420,18 @@ void CMenus::RenderStatistics(CUIRect MainView)
 			str_format(pBuf, BufSize, "%s: %s\n%s: %d\n%s: %s", Localize("Game mode"), pModeName, Localize("Maps finished"), Stats.m_Maps, Localize("Total play time"), pDuration);
 	};
 	static char s_aModeTooltipText[5][512] = {};
+	// 图例行悬浮要在画圆环之前算出来：命中某行时，对应圆弧也要抬起并描边。
+	CUIRect Legend;
+	BodyMain.VSplitLeft(ChartRadius * 2.0f + 28.0f, nullptr, &Legend);
+	int HoveredLegendRow = -1;
+	for(size_t Index = 0; Index < vDisplayModeStats.size(); ++Index)
+	{
+		CUIRect Row = Legend;
+		Row.y += StatsTableHeaderHeight + Index * StatsTableRowHeight;
+		Row.h = StatsTableRowHeight;
+		if(Ui()->MouseInside(&Row))
+			HoveredLegendRow = (int)Index;
+	}
 	int HoveredMode = -1;
 	if(TotalChartWeight > 0)
 	{
@@ -3390,61 +3443,174 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		if(MouseAngle < -pi / 2.0f)
 			MouseAngle += 2.0f * pi;
 		const bool UseProceduralRing = Graphics()->HasProceduralRing();
-		if(!UseProceduralRing)
+		const float RingThickness = ChartRadius - ChartInnerRadius;
+		const float MidRadius = (ChartRadius + ChartInnerRadius) * 0.5f;
+		const float CapRadius = RingThickness * 0.5f;
+		// 段间细缝按环宽换算成角度：参考图的圆环是一整圈分色，段与段之间只有一道窄槽。
+		// 占比极小的段最多让出 35% 的弧长，避免小分段被缝隙吃光。
+		const float MaxGapAngle = std::clamp(RingThickness * 0.08f, 1.5f, 3.0f) / maximum(MidRadius, 1.0f);
+		// 圆角端帽：端帽圆心比分段边界再向内收一个 CapAngle，圆弧补到边界正好对齐。
+		const float CapAngle = std::asin(std::clamp(CapRadius / maximum(MidRadius, 1.0f), 0.0f, 1.0f));
+		struct SStatsArc
 		{
-			Graphics()->TextureClear();
-			Graphics()->QuadsBegin();
-			Graphics()->SetColor(ColorRGBA(0.96f, 0.96f, 1.0f, 1.0f));
-			IGraphics::CFreeformItem aBaseRing[128];
-			constexpr int BaseRingSegments = 128;
-			for(int Segment = 0; Segment < BaseRingSegments; ++Segment)
-			{
-				const float A0 = -pi / 2.0f + 2.0f * pi * Segment / BaseRingSegments;
-				const float A1 = -pi / 2.0f + 2.0f * pi * (Segment + 1) / BaseRingSegments;
-				aBaseRing[Segment] = QmStatisticsRingSegment(ChartCenter, ChartRadius, ChartInnerRadius, A0, A1);
-			}
-			Graphics()->QuadsDrawFreeform(aBaseRing, BaseRingSegments);
-		}
-		for(size_t Index = 0; Index < vDisplayModeStats.size(); ++Index)
+			float m_Start;
+			float m_End;
+			float m_NominalStart;
+			float m_NominalEnd;
+			bool m_Rounded;
+			ColorRGBA m_Color;
+		};
+		SStatsArc aArcs[8];
+		int ArcCount = 0;
+		for(size_t Index = 0; Index < vDisplayModeStats.size() && ArcCount < (int)std::size(aArcs); ++Index)
 		{
 			const auto &Stats = vDisplayModeStats[Index];
 			const int64_t ChartWeight = QmStatisticsChartWeight(Stats.m_Maps, Stats.m_PlaytimeSeconds, ChartUsesMaps);
 			const float Sweep = 2.0f * pi * ChartWeight / (float)TotalChartWeight;
 			if(Sweep <= 0.0f)
 				continue;
-			if(UseProceduralRing)
-			{
-				IGraphics::SProceduralRingParams Params;
-				Params.m_Rect = vec4(ChartCenter.x - ChartRadius, ChartCenter.y - ChartRadius, ChartRadius * 2.0f, ChartRadius * 2.0f);
-				Params.m_Color = aModeColors[Index % std::size(aModeColors)];
-				Params.m_RingInnerRadius = ChartInnerRadius / (ChartRadius * 2.0f);
-				Params.m_RingOuterRadius = 0.5f;
-				// 角度边缘至少覆盖一个像素的导数范围，避免相邻扇区之间出现
-				// 黑色径向缝隙；覆盖只发生在后绘制的扇区上，不改变总比例。
-				const float AngularOverlap = maximum(0.012f, 4.0f / ChartRadius);
-				Params.m_RingStartAngle = StartAngle - AngularOverlap;
-				Params.m_RingEndAngle = StartAngle + Sweep + AngularOverlap;
-				Graphics()->RenderProceduralRing(Params);
-			}
-			else
-			{
-				IGraphics::CFreeformItem aSectors[128];
-				const int Segments = std::clamp((int)std::ceil(Sweep * 20.0f), 1, (int)std::size(aSectors));
-				for(int Segment = 0; Segment < Segments; ++Segment)
-				{
-					const float A0 = StartAngle + Sweep * Segment / Segments;
-					const float A1 = StartAngle + Sweep * (Segment + 1) / Segments;
-					aSectors[Segment] = QmStatisticsRingSegment(ChartCenter, ChartRadius, ChartInnerRadius, A0, A1);
-				}
-				Graphics()->SetColor(aModeColors[Index % std::size(aModeColors)]);
-				Graphics()->QuadsDrawFreeform(aSectors, Segments);
-			}
+			const float GapAngle = vDisplayModeStats.size() > 1 ? minimum(Sweep * 0.35f, MaxGapAngle) : 0.0f;
+			const float ArcStart = StartAngle + GapAngle * 0.5f;
+			const float ArcEnd = StartAngle + Sweep - GapAngle * 0.5f;
+			// 太短的段放不下两枚端帽，保持平头，避免端帽盖到相邻分段。
+			const bool Rounded = ArcEnd - ArcStart > CapAngle * 2.2f;
+			aArcs[ArcCount].m_Start = Rounded ? ArcStart + CapAngle : ArcStart;
+			aArcs[ArcCount].m_End = Rounded ? ArcEnd - CapAngle : ArcEnd;
+			aArcs[ArcCount].m_NominalStart = ArcStart;
+			aArcs[ArcCount].m_NominalEnd = ArcEnd;
+			aArcs[ArcCount].m_Rounded = Rounded;
+			aArcs[ArcCount].m_Color = aModeColors[Index % std::size(aModeColors)];
+			ArcCount++;
 			if(MouseDistance >= ChartInnerRadius && MouseDistance <= ChartRadius && MouseAngle >= StartAngle && MouseAngle <= StartAngle + Sweep)
 				HoveredMode = (int)Index;
 			StartAngle += Sweep;
 		}
+		// 极坐标转直角坐标，端帽和悬停装饰环共用。
+		auto StatsPolar = [&](float Radius, float Angle) {
+			return vec2(ChartCenter.x + std::cos(Angle) * Radius, ChartCenter.y + std::sin(Angle) * Radius);
+		};
+		auto DrawStatsArcEnd = [&](float Radius, float Angle, const ColorRGBA &Color) {
+			const vec2 Center = StatsPolar(MidRadius, Angle);
+			if(UseProceduralRing)
+			{
+				IGraphics::SProceduralRingParams Params;
+				Params.m_Rect = vec4(Center.x - Radius, Center.y - Radius, Radius * 2.0f, Radius * 2.0f);
+				Params.m_Color = Color;
+				Params.m_RingInnerRadius = 0.0f;
+				Params.m_RingOuterRadius = 0.5f;
+				Params.m_RingStartAngle = 0.0f;
+				Params.m_RingEndAngle = 2.0f * pi;
+				Params.m_Rotation = 0.0f;
+				Graphics()->RenderProceduralRing(Params);
+			}
+			else
+			{
+				Graphics()->TextureClear();
+				Graphics()->QuadsBegin();
+				Graphics()->SetColor(Color);
+				IGraphics::CFreeformItem aSectors[48];
+				const int Segments = (int)std::size(aSectors);
+				for(int Segment = 0; Segment < Segments; ++Segment)
+					aSectors[Segment] = QmStatisticsRingSegment(Center, Radius, 0.0f, 2.0f * pi * Segment / Segments, 2.0f * pi * (Segment + 1) / Segments);
+				Graphics()->QuadsDrawFreeform(aSectors, Segments);
+				Graphics()->QuadsEnd();
+			}
+		};
+		// 任意内外半径、任意角度的圆弧，悬停描边靠它把分段整体放大一圈。
+		auto DrawStatsArcBand = [&](float InnerRadius, float OuterRadius, float StartAngleValue, float EndAngleValue, const ColorRGBA &Color) {
+			if(UseProceduralRing)
+			{
+				IGraphics::SProceduralRingParams Params;
+				Params.m_Rect = vec4(ChartCenter.x - OuterRadius, ChartCenter.y - OuterRadius, OuterRadius * 2.0f, OuterRadius * 2.0f);
+				Params.m_Color = Color;
+				Params.m_RingInnerRadius = maximum(0.0f, InnerRadius) / (OuterRadius * 2.0f);
+				Params.m_RingOuterRadius = 0.5f;
+				Params.m_RingStartAngle = StartAngleValue;
+				Params.m_RingEndAngle = EndAngleValue;
+				Params.m_Rotation = 0.0f;
+				Graphics()->RenderProceduralRing(Params);
+			}
+			else
+			{
+				Graphics()->TextureClear();
+				Graphics()->QuadsBegin();
+				Graphics()->SetColor(Color);
+				IGraphics::CFreeformItem aSectors[128];
+				const float ArcSweep = EndAngleValue - StartAngleValue;
+				const int Segments = std::clamp((int)std::ceil(ArcSweep * 20.0f), 1, (int)std::size(aSectors));
+				const float Overlap = ArcSweep / Segments * 0.5f;
+				for(int Segment = 0; Segment < Segments; ++Segment)
+				{
+					const float A0 = StartAngleValue + ArcSweep * Segment / Segments - (Segment > 0 ? Overlap : 0.0f);
+					const float A1 = StartAngleValue + ArcSweep * (Segment + 1) / Segments + (Segment + 1 < Segments ? Overlap : 0.0f);
+					aSectors[Segment] = QmStatisticsRingSegment(ChartCenter, OuterRadius, maximum(0.0f, InnerRadius), A0, A1);
+				}
+				Graphics()->QuadsDrawFreeform(aSectors, Segments);
+				Graphics()->QuadsEnd();
+			}
+		};
+		// 悬浮联动：圆环命中或对应图例行命中时，把这一段整体放大 2px 并描一圈白边，
+		// 视觉上从环里抬起来；先画放大版，正常尺寸的分段随后压在上面留出外沿。
+		const int HighlightedMode = HoveredMode >= 0 ? HoveredMode : HoveredLegendRow;
+		if(HighlightedMode >= 0 && HighlightedMode < ArcCount)
+		{
+			const SStatsArc &Arc = aArcs[HighlightedMode];
+			// 圆头分段按收口后的角度画，端帽半径同步放大：整段等比放大而不是换个方头。
+			// 只放大、不描边，避免在圆环上多出一圈不属于数据的白线。没有圆头的细分段仍按真实角度画。
+			const float BandStart = Arc.m_Rounded ? Arc.m_Start : Arc.m_NominalStart;
+			const float BandEnd = Arc.m_Rounded ? Arc.m_End : Arc.m_NominalEnd;
+			DrawStatsArcBand(ChartInnerRadius - 2.5f, ChartRadius + 2.5f, BandStart, BandEnd, Arc.m_Color);
+			if(Arc.m_Rounded)
+			{
+				DrawStatsArcEnd(CapRadius + 2.0f, Arc.m_Start, Arc.m_Color);
+				DrawStatsArcEnd(CapRadius + 2.0f, Arc.m_End, Arc.m_Color);
+			}
+		}
 		if(!UseProceduralRing)
+		{
+			Graphics()->TextureClear();
+			Graphics()->QuadsBegin();
+			for(int ArcIndex = 0; ArcIndex < ArcCount; ++ArcIndex)
+			{
+				Graphics()->SetColor(aArcs[ArcIndex].m_Color);
+				IGraphics::CFreeformItem aSectors[128];
+				const float ArcSweep = aArcs[ArcIndex].m_End - aArcs[ArcIndex].m_Start;
+				const int Segments = std::clamp((int)std::ceil(ArcSweep * 20.0f), 1, (int)std::size(aSectors));
+				// 每片向两侧各多盖半片：相邻三角形共享的水平边会按填充规则漏出 1px 缝，
+				// 圆环在正左/正右的水平轴上正好踩到这个缝，看起来就像被横着切了一刀。
+				const float Overlap = ArcSweep / Segments * 0.5f;
+				for(int Segment = 0; Segment < Segments; ++Segment)
+				{
+					const float A0 = aArcs[ArcIndex].m_Start + ArcSweep * Segment / Segments - (Segment > 0 ? Overlap : 0.0f);
+					const float A1 = aArcs[ArcIndex].m_Start + ArcSweep * (Segment + 1) / Segments + (Segment + 1 < Segments ? Overlap : 0.0f);
+					aSectors[Segment] = QmStatisticsRingSegment(ChartCenter, ChartRadius, ChartInnerRadius, A0, A1);
+				}
+				Graphics()->QuadsDrawFreeform(aSectors, Segments);
+			}
 			Graphics()->QuadsEnd();
+		}
+		else
+		{
+			for(int ArcIndex = 0; ArcIndex < ArcCount; ++ArcIndex)
+			{
+				IGraphics::SProceduralRingParams Params;
+				Params.m_Rect = vec4(ChartCenter.x - ChartRadius, ChartCenter.y - ChartRadius, ChartRadius * 2.0f, ChartRadius * 2.0f);
+				Params.m_Color = aArcs[ArcIndex].m_Color;
+				Params.m_RingInnerRadius = ChartInnerRadius / (ChartRadius * 2.0f);
+				Params.m_RingOuterRadius = 0.5f;
+				Params.m_RingStartAngle = aArcs[ArcIndex].m_Start;
+				Params.m_RingEndAngle = aArcs[ArcIndex].m_End;
+				Params.m_Rotation = 0.0f;
+				Graphics()->RenderProceduralRing(Params);
+			}
+		}
+		for(int ArcIndex = 0; ArcIndex < ArcCount; ++ArcIndex)
+		{
+			if(!aArcs[ArcIndex].m_Rounded)
+				continue;
+			DrawStatsArcEnd(CapRadius, aArcs[ArcIndex].m_Start, aArcs[ArcIndex].m_Color);
+			DrawStatsArcEnd(CapRadius, aArcs[ArcIndex].m_End, aArcs[ArcIndex].m_Color);
+		}
 	}
 	// 环心显示总量，与图例口径一致：仅地图口径时显示完成地图数，否则显示总游玩时长。
 	if(TotalChartWeight > 0)
@@ -3461,13 +3627,16 @@ void CMenus::RenderStatistics(CUIRect MainView)
 			FormatStatsPlaytime(TotalModePlaytime, s_ShowTotalHours, aTotalText, sizeof(aTotalText));
 			pTotalLabel = Localize("Total play time");
 		}
-		const float CenterTextSize = maximum(10.0f, ChartInnerRadius * 0.42f);
-		CUIRect CenterValue{ChartCenter.x - ChartInnerRadius, ChartCenter.y - CenterTextSize * 1.15f, ChartInnerRadius * 2.0f, CenterTextSize * 1.4f};
-		CUIRect CenterLabel{ChartCenter.x - ChartInnerRadius, CenterValue.y + CenterValue.h, ChartInnerRadius * 2.0f, CenterTextSize};
+		// 中心主数字按内径收缩，小时制文本比天数制长，保持整行落在内圈里。
+		float CenterTextSize = std::clamp(ChartInnerRadius * 0.52f, 13.0f, 28.0f);
+		while(CenterTextSize > 11.0f && TextRender()->TextWidth(CenterTextSize, aTotalText) > ChartInnerRadius * 1.75f)
+			CenterTextSize -= 1.0f;
 		const ColorRGBA StatsForeground = TextRender()->GetTextColor();
+		CUIRect CenterLabel{ChartCenter.x - ChartInnerRadius, ChartCenter.y + CenterTextSize * 0.30f, ChartInnerRadius * 2.0f, CenterTextSize * 0.8f};
+		CUIRect CenterValue{ChartCenter.x - ChartInnerRadius, ChartCenter.y - CenterTextSize * 1.0f, ChartInnerRadius * 2.0f, CenterTextSize * 1.25f};
 		Ui()->DoLabel(&CenterValue, aTotalText, CenterTextSize, TEXTALIGN_MC);
 		TextRender()->TextColor(StatsForeground.WithMultipliedAlpha(0.6f));
-		Ui()->DoLabel(&CenterLabel, pTotalLabel, CenterTextSize * 0.58f, TEXTALIGN_MC);
+		Ui()->DoLabel(&CenterLabel, pTotalLabel, std::clamp(CenterTextSize * 0.46f, 8.0f, 12.0f), TEXTALIGN_MC);
 		TextRender()->TextColor(StatsForeground);
 	}
 	if(HoveredMode >= 0)
@@ -3481,20 +3650,16 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		static int s_ModeTooltipIds[5] = {};
 		GameClient()->m_Tooltips.DoToolTip(&s_ModeTooltipIds[HoveredMode], &ModeBody, s_aModeTooltipText[HoveredMode]);
 	}
-	CUIRect Legend;
-	ModeBody.VSplitLeft(ChartRadius * 2.0f + 28.0f, nullptr, &Legend);
-	// 图例仿分组用量表：表头 + 单列行（色点、模式名、右对齐的地图/时长/积分），悬浮显示完整统计。
-	Legend.HSplitTop(8.0f, nullptr, &Legend);
-	// 图例仿分组用量表：表头 + 单列行（色点、模式名、地图/时长/积分列），悬浮显示完整统计。
+	// 图例照参考图的分组用量表：一行表头 + 分隔线区分的单列行（色点、名称、右对齐数值列），
+	// 悬浮显示完整统计。名称列按最宽条目定宽，数值组紧随其后，不留下大片空白。
 	char aScoreTexts[8][128] = {};
 	bool HasScoreText = false;
 	for(size_t Index = 0; Index < vDisplayModeStats.size() && Index < std::size(aScoreTexts); ++Index)
 	{
-		FormatModeScore(vDisplayModeStats[Index], aScoreTexts[Index], sizeof(aScoreTexts[Index]));
+		FormatModeScore(vDisplayModeStats[Index], aScoreTexts[Index], sizeof(aScoreTexts[Index]), true);
 		HasScoreText = HasScoreText || aScoreTexts[Index][0] != '\0';
 	}
 	const bool ShowScoreColumn = HasScoreText && Legend.w >= 380.0f;
-	// 模式名按最宽条目实测定宽，数值组紧随其后，避免名称与数值之间出现大片空白。
 	char aLegendNames[8][256];
 	size_t LegendNameCount = minimum<size_t>(vDisplayModeStats.size(), std::size(aLegendNames));
 	float LegendNameWidth = 0.0f;
@@ -3510,24 +3675,50 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		LegendNameWidth = maximum(LegendNameWidth, TextRender()->TextWidth(ui_token::font::BODY, aLegendNames[Index]));
 	}
 	LegendNameWidth = std::clamp(LegendNameWidth, 80.0f, maximum(80.0f, Legend.w * 0.55f));
-	const float LegendCellGap = 12.0f;
-	const float MapsColumnWidth = 52.0f;
-	const float DurationColumnWidth = 110.0f;
-	const float ScoreColumnWidth = 92.0f;
-	// 窄面板时数值组等比压缩，保住名称列可读。
-	const float ValueGroupWidth = MapsColumnWidth + DurationColumnWidth + (ShowScoreColumn ? ScoreColumnWidth : 0.0f) + LegendCellGap * (ShowScoreColumn ? 3.0f : 2.0f);
-	const float ColumnScale = std::clamp((Legend.w - 18.0f - LegendNameWidth - LegendCellGap) / ValueGroupWidth, 0.55f, 1.0f);
-	const float MapsWidth = MapsColumnWidth * ColumnScale;
-	const float DurationWidth = DurationColumnWidth * ColumnScale;
-	const float ScoreWidth = ScoreColumnWidth * ColumnScale;
-	const float LegendHeaderHeight = 14.0f;
-	const float LegendRowHeight = 22.0f;
-	const float LegendRowGap = 5.0f;
+	// 数值列按实测文字宽度定宽：表头与所有数值取最大者再加左右留白，
+	// 列宽贴着内容，居中之后的表头正好压在数字上，也不会在窄列里把表头挤到数字左边。
+	char aMapsTexts[8][32] = {};
+	char aDurationTexts[8][96] = {};
+	float MapsTextWidth = TextRender()->TextWidth(ui_token::font::SMALL, Localize("Maps"));
+	float DurationTextWidth = TextRender()->TextWidth(ui_token::font::SMALL, Localize("Play time"));
+	float ScoreTextWidth = TextRender()->TextWidth(ui_token::font::SMALL, Localize("Points"));
+	for(size_t Index = 0; Index < vDisplayModeStats.size() && Index < std::size(aMapsTexts); ++Index)
+	{
+		const SQmClientLocalModeStats &Stats = vDisplayModeStats[Index];
+		str_format(aMapsTexts[Index], sizeof(aMapsTexts[Index]), "%d", Stats.m_Maps);
+		char aDuration[64];
+		FormatStatsPlaytime(Stats.m_PlaytimeSeconds, s_ShowTotalHours, aDuration, sizeof(aDuration));
+		const int64_t ChartWeight = QmStatisticsChartWeight(Stats.m_Maps, Stats.m_PlaytimeSeconds, ChartUsesMaps);
+		const double ChartPercent = TotalChartWeight > 0 ? 100.0 * ChartWeight / TotalChartWeight : 0.0;
+		str_format(aDurationTexts[Index], sizeof(aDurationTexts[Index]), "%.1f%% · %s", ChartPercent, aDuration);
+		MapsTextWidth = maximum(MapsTextWidth, TextRender()->TextWidth(ui_token::font::BODY, aMapsTexts[Index]));
+		DurationTextWidth = maximum(DurationTextWidth, TextRender()->TextWidth(ui_token::font::BODY, aDurationTexts[Index]));
+		if(aScoreTexts[Index][0])
+			ScoreTextWidth = maximum(ScoreTextWidth, TextRender()->TextWidth(ui_token::font::BODY, aScoreTexts[Index]));
+	}
+	const float ColumnPadding = 12.0f;
+	float MapsWidth = MapsTextWidth + ColumnPadding * 2.0f;
+	float DurationWidth = DurationTextWidth + ColumnPadding * 2.0f;
+	float ScoreWidth = ScoreTextWidth + ColumnPadding * 2.0f;
+	// 列间距吃掉剩余宽度（上限 3 倍基准），窄面板时先按比例压数值列，保住名称列可读。
+	const float LegendCellGapBase = 14.0f;
+	const float LegendCellGapMax = 42.0f;
+	const float GapCount = ShowScoreColumn ? 3.0f : 2.0f;
+	float ColumnScale = 1.0f;
+	const float ValueGroupWidth = MapsWidth + DurationWidth + (ShowScoreColumn ? ScoreWidth : 0.0f);
+	const float AvailableForValues = Legend.w - 20.0f - LegendNameWidth - LegendCellGapBase * GapCount;
+	if(ValueGroupWidth > AvailableForValues && ValueGroupWidth > 0.0f)
+		ColumnScale = std::clamp(AvailableForValues / ValueGroupWidth, 0.55f, 1.0f);
+	MapsWidth *= ColumnScale;
+	DurationWidth *= ColumnScale;
+	ScoreWidth *= ColumnScale;
+	const float UsedWidth = 20.0f + LegendNameWidth + MapsWidth + DurationWidth + (ShowScoreColumn ? ScoreWidth : 0.0f);
+	const float LegendCellGap = ColumnScale < 1.0f ? LegendCellGapBase : std::clamp(LegendCellGapBase + (Legend.w - UsedWidth - LegendCellGapBase * GapCount) / GapCount, LegendCellGapBase, LegendCellGapMax);
 	const ColorRGBA LegendForeground = TextRender()->GetTextColor();
 	// 表头与行共用同一列布局，保证列对齐：色点、名称、地图、时长、积分依次紧随。
 	auto LayoutLegendColumns = [&](const CUIRect &Row, CUIRect *pDot, CUIRect *pName, CUIRect *pMaps, CUIRect *pDuration, CUIRect *pScore) {
 		CUIRect Cursor = Row;
-		Cursor.VSplitLeft(18.0f, pDot, &Cursor);
+		Cursor.VSplitLeft(20.0f, pDot, &Cursor);
 		Cursor.VSplitLeft(LegendNameWidth, pName, &Cursor);
 		Cursor.VSplitLeft(LegendCellGap, nullptr, &Cursor);
 		Cursor.VSplitLeft(MapsWidth, pMaps, &Cursor);
@@ -3540,61 +3731,87 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		}
 	};
 	CUIRect HeaderRow = Legend;
-	HeaderRow.h = LegendHeaderHeight;
+	HeaderRow.h = StatsTableHeaderHeight;
 	CUIRect HeaderDot, HeaderName, HeaderMaps, HeaderDuration, HeaderScore = CUIRect();
 	LayoutLegendColumns(HeaderRow, &HeaderDot, &HeaderName, &HeaderMaps, &HeaderDuration, &HeaderScore);
+	// 表头文字按列居中，和右侧右对齐的数值区分开层次。
 	TextRender()->TextColor(LegendForeground.WithMultipliedAlpha(0.55f));
-	Ui()->DoLabel(&HeaderName, Localize("Game mode"), ui_token::font::SMALL, TEXTALIGN_ML);
-	Ui()->DoLabel(&HeaderMaps, Localize("Maps"), ui_token::font::SMALL, TEXTALIGN_MR);
-	Ui()->DoLabel(&HeaderDuration, Localize("Play time"), ui_token::font::SMALL, TEXTALIGN_MR);
+	Ui()->DoLabel(&HeaderName, Localize("Game mode"), ui_token::font::SMALL, TEXTALIGN_MC);
+	Ui()->DoLabel(&HeaderMaps, Localize("Maps"), ui_token::font::SMALL, TEXTALIGN_MC);
+	Ui()->DoLabel(&HeaderDuration, Localize("Play time"), ui_token::font::SMALL, TEXTALIGN_MC);
 	if(ShowScoreColumn)
-		Ui()->DoLabel(&HeaderScore, Localize("Points"), ui_token::font::SMALL, TEXTALIGN_MR);
+		Ui()->DoLabel(&HeaderScore, Localize("Points"), ui_token::font::SMALL, TEXTALIGN_MC);
 	TextRender()->TextColor(LegendForeground);
-	Legend.HSplitTop(LegendHeaderHeight + 6.0f, nullptr, &Legend);
+	// 分隔线只画到最后一个数据列，右边没有内容的地方不再拖一条空线。
+	const float TableContentRight = ShowScoreColumn ? HeaderScore.x + HeaderScore.w : HeaderDuration.x + HeaderDuration.w;
+	// 表头下的第一条分隔线把标题行和第一条数据分开，数据行之间再各画一条。
+	CUIRect HeaderLine = HeaderRow;
+	HeaderLine.y += HeaderRow.h - 1.0f;
+	HeaderLine.h = 1.0f;
+	HeaderLine.w = maximum(0.0f, TableContentRight - HeaderLine.x);
+	HeaderLine.Draw(ui_token::color::BORDER_SUBTLE, IGraphics::CORNER_NONE, 0.0f);
+	Legend.HSplitTop(StatsTableHeaderHeight, nullptr, &Legend);
 	for(size_t Index = 0; Index < vDisplayModeStats.size(); ++Index)
 	{
 		const auto &Stats = vDisplayModeStats[Index];
 		const char *pModeName = Stats.m_GameMode == "__other__" ? Localize("Other modes") : Stats.m_GameMode.c_str();
 		const char *pModeSource = ModeSourceText(Stats);
 		CUIRect Row = Legend;
-		Row.y += Index * (LegendRowHeight + LegendRowGap);
-		Row.h = LegendRowHeight;
+		Row.y += Index * StatsTableRowHeight;
+		Row.h = StatsTableRowHeight;
+		const bool RowHovered = Ui()->MouseInside(&Row);
+		// 圆环悬浮时联动高亮对应行；底色只铺到表格内容宽度，左右各留 8 的边距，
+		// 色点、文字和右侧数值都不贴边。
+		if(RowHovered || (int)Index == HoveredMode)
+		{
+			CUIRect Highlight = Row;
+			Highlight.x -= 8.0f;
+			Highlight.w = maximum(0.0f, TableContentRight + 8.0f - Highlight.x);
+			Highlight.y += 1.0f;
+			Highlight.h -= 2.0f;
+			Highlight.Draw(ui_token::color::LIST_ITEM_HOVER, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU);
+		}
 		const ColorRGBA Color = aModeColors[Index % std::size(aModeColors)];
 		CUIRect Dot, Name, Maps, Duration, Score = CUIRect();
 		LayoutLegendColumns(Row, &Dot, &Name, &Maps, &Duration, &Score);
 		Dot.VSplitLeft(8.0f, &Dot, nullptr);
 		Dot.h = 8.0f;
 		Dot.y = Row.y + (Row.h - Dot.h) * 0.5f;
-		Dot.Draw(Color, IGraphics::CORNER_ALL, 4.0f);
+		Dot.Draw(Color, IGraphics::CORNER_ALL, ui_token::radius::PILL);
 		char aDuration[64];
 		FormatStatsPlaytime(Stats.m_PlaytimeSeconds, s_ShowTotalHours, aDuration, sizeof(aDuration));
-		const int64_t ChartWeight = QmStatisticsChartWeight(Stats.m_Maps, Stats.m_PlaytimeSeconds, ChartUsesMaps);
-		const double ChartPercent = TotalChartWeight > 0 ? 100.0 * ChartWeight / TotalChartWeight : 0.0;
 		const char *pNameText = Index < LegendNameCount ? aLegendNames[Index] : pModeName;
 		SLabelProperties NameProps;
 		NameProps.m_MaxWidth = static_cast<int>(Name.w);
 		NameProps.m_EllipsisAtEnd = true;
 		Ui()->DoLabel(&Name, pNameText, ui_token::font::BODY, TEXTALIGN_ML, NameProps);
-		char aMapsText[32];
-		str_format(aMapsText, sizeof(aMapsText), "%d", Stats.m_Maps);
-		char aDurationText[96];
-		str_format(aDurationText, sizeof(aDurationText), "%.1f%% · %s", ChartPercent, aDuration);
-		Ui()->DoLabel(&Maps, aMapsText, ui_token::font::SMALL, TEXTALIGN_MR);
-		Ui()->DoLabel(&Duration, aDurationText, ui_token::font::SMALL, TEXTALIGN_MR);
+		// 数值与表头在同一列内同轴居中：表头居中而数值右对齐时，短列会出现表头挂在数字左侧的错位感。
+		Ui()->DoLabel(&Maps, aMapsTexts[Index], ui_token::font::BODY, TEXTALIGN_MC);
+		Ui()->DoLabel(&Duration, aDurationTexts[Index], ui_token::font::BODY, TEXTALIGN_MC);
 		if(ShowScoreColumn && Index < std::size(aScoreTexts) && aScoreTexts[Index][0])
-			Ui()->DoLabel(&Score, aScoreTexts[Index], ui_token::font::SMALL, TEXTALIGN_MR);
-		if(Ui()->MouseInside(&Row) && Index < std::size(s_aModeTooltipText))
+			Ui()->DoLabel(&Score, aScoreTexts[Index], ui_token::font::BODY, TEXTALIGN_MC);
+		// 行间分隔线：参考图每行底部一条 1px 细线，最后一行不画，避免和卡片底边叠成双线。
+		if(Index + 1 < vDisplayModeStats.size())
+		{
+			CUIRect RowLine = Row;
+			RowLine.y += Row.h - 1.0f;
+			RowLine.h = 1.0f;
+			RowLine.w = maximum(0.0f, TableContentRight - RowLine.x);
+			RowLine.Draw(ui_token::color::BORDER_SUBTLE, IGraphics::CORNER_NONE, 0.0f);
+		}
+		if(RowHovered && Index < std::size(s_aModeTooltipText))
 		{
 			FormatModeTooltip(Stats, pModeName, pModeSource, aDuration, s_aModeTooltipText[Index], sizeof(s_aModeTooltipText[Index]));
 			static int s_ModeTooltipIds[5] = {};
 			GameClient()->m_Tooltips.DoToolTip(&s_ModeTooltipIds[Index], &Row, s_aModeTooltipText[Index]);
 		}
 	}
+
 	Content = ModeRest;
-	Content.HSplitTop(10.0f, nullptr, &Content);
+	Content.HSplitTop(6.0f, nullptr, &Content);
 
 	CUIRect BottomSection, ContentRest;
-	const float BottomSectionHeight = Content.w >= 620.0f ? 164.0f : 332.0f;
+	const float BottomSectionHeight = Content.w >= 620.0f ? 156.0f : 324.0f;
 	Content.HSplitTop(BottomSectionHeight, &BottomSection, &ContentRest);
 	CUIRect BottomLeft, BottomRight;
 	if(BottomSection.w >= 620.0f)
@@ -3603,7 +3820,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	}
 	else
 	{
-		BottomSection.HSplitTop(164.0f, &BottomLeft, &BottomRight);
+		BottomSection.HSplitTop(156.0f, &BottomLeft, &BottomRight);
 		BottomRight.HSplitTop(8.0f, nullptr, &BottomRight);
 	}
 	BottomLeft.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.23f), IGraphics::CORNER_ALL, ui_token::radius::CARD);
@@ -3935,36 +4152,6 @@ void CMenus::UpdateMusicState()
 		GameClient()->m_MapSounds.StopAll();
 }
 
-void CMenus::PopupMessage(const char *pTitle, const char *pMessage, const char *pButtonLabel, int NextPopup, FPopupButtonCallback pfnButtonCallback)
-{
-	// reset active item
-	Ui()->SetActiveItem(nullptr);
-
-	str_copy(m_aPopupTitle, pTitle);
-	str_copy(m_aPopupMessage, pMessage);
-	str_copy(m_aPopupButtons[BUTTON_CONFIRM].m_aLabel, pButtonLabel);
-	m_aPopupButtons[BUTTON_CONFIRM].m_NextPopup = NextPopup;
-	m_aPopupButtons[BUTTON_CONFIRM].m_pfnCallback = pfnButtonCallback;
-	m_Popup = POPUP_MESSAGE;
-}
-
-void CMenus::PopupConfirm(const char *pTitle, const char *pMessage, const char *pConfirmButtonLabel, const char *pCancelButtonLabel,
-	FPopupButtonCallback pfnConfirmButtonCallback, int ConfirmNextPopup, FPopupButtonCallback pfnCancelButtonCallback, int CancelNextPopup)
-{
-	// reset active item
-	Ui()->SetActiveItem(nullptr);
-
-	str_copy(m_aPopupTitle, pTitle);
-	str_copy(m_aPopupMessage, pMessage);
-	str_copy(m_aPopupButtons[BUTTON_CONFIRM].m_aLabel, pConfirmButtonLabel);
-	m_aPopupButtons[BUTTON_CONFIRM].m_NextPopup = ConfirmNextPopup;
-	m_aPopupButtons[BUTTON_CONFIRM].m_pfnCallback = pfnConfirmButtonCallback;
-	str_copy(m_aPopupButtons[BUTTON_CANCEL].m_aLabel, pCancelButtonLabel);
-	m_aPopupButtons[BUTTON_CANCEL].m_NextPopup = CancelNextPopup;
-	m_aPopupButtons[BUTTON_CANCEL].m_pfnCallback = pfnCancelButtonCallback;
-	m_Popup = POPUP_CONFIRM;
-}
-
 void CMenus::PopupWarning(const char *pTopic, const char *pBody, const char *pButton, std::chrono::nanoseconds Duration)
 {
 	// no multiline support for console
@@ -3999,6 +4186,16 @@ void CMenus::Render()
 	m_MenuUiPerfScrollActive = false;
 	Ui()->MapScreen();
 	Ui()->SetMouseSlow(false);
+	// 正常主循环已在 HUD 之前完成背景层；直接调用 Render 的测试/加载路径在此回退。
+	if(!Ui()->BackgroundFrameBegun())
+	{
+		RenderBackgroundLayer();
+		// 背景层只容纳菜单背景；菜单 UI（导航栏、卡片、文字）必须画到交换链上，
+		// 否则整帧 UI 会被背景层合成覆盖，表现为导航栏等元素消失。
+		if(Ui()->BackgroundLayerActive())
+			Ui()->EndBackgroundLayer();
+		Ui()->BeginBackgroundFrame();
+	}
 
 	if(MenuOpenFrame == 0)
 	{
@@ -4055,10 +4252,6 @@ void CMenus::Render()
 	// Determine the client state once before rendering because it can change
 	// while rendering which causes frames with broken user interface.
 	const IClient::EClientState ClientState = Client()->State();
-	const int VisibleMenuPage = ClientState == IClient::STATE_ONLINE || ClientState == IClient::STATE_DEMOPLAYBACK ? m_GamePage : m_MenuPage;
-	if(VisibleMenuPage != PAGE_SETTINGS)
-		m_SettingsCardDeckDisplayState.LeaveSettings();
-
 	if(ClientState == IClient::STATE_ONLINE || ClientState == IClient::STATE_DEMOPLAYBACK)
 	{
 		ms_ColorTabbarInactive = ms_ColorTabbarInactiveIngame;
@@ -4067,14 +4260,13 @@ void CMenus::Render()
 	}
 	else
 	{
-		if(!GameClient()->m_MenuBackground.Render())
-		{
-			RenderBackground();
-		}
 		ms_ColorTabbarInactive = ms_ColorTabbarInactiveOutgame;
 		ms_ColorTabbarActive = ms_ColorTabbarActiveOutgame;
 		ms_ColorTabbarHover = ms_ColorTabbarHoverOutgame;
 	}
+	const int VisibleMenuPage = ClientState == IClient::STATE_ONLINE || ClientState == IClient::STATE_DEMOPLAYBACK ? m_GamePage : m_MenuPage;
+	if(VisibleMenuPage != PAGE_SETTINGS)
+		m_SettingsCardDeckDisplayState.LeaveSettings();
 
 	CUIRect Screen = *Ui()->Screen();
 	if((Client()->State() != IClient::STATE_DEMOPLAYBACK && !(GameClient()->m_RankGhost.IsViewModeActive() && !IsActive())) || m_Popup != POPUP_NONE)
@@ -4476,6 +4668,8 @@ void CMenus::Render()
 		{
 			CPerfTimer StageTimer;
 			RenderDemoPlayer(Screen);
+			// 合影预览自带的 HUD：只在会话里出现，菜单页不铺，因此和回放 HUD 同层。
+			RenderQmPoseHud(Screen);
 			LogPerfStage(Client(), "demo_player", StageTimer.ElapsedMs());
 		}
 		break;
@@ -4497,6 +4691,9 @@ void CMenus::Render()
 			Ui()->RenderPopupMenus();
 		LogPerfStage(Client(), "popup_menus", StageTimer.ElapsedMs());
 	}
+
+	// 轻提示位于所有弹层之上，只是画面，不参与命中测试，也不抢焦点。
+	qm_ui::RenderToasts(Ui());
 
 	// Prevent UI elements from being hovered while a key reader is active
 	if(GameClient()->m_KeyBinder.IsActive())
@@ -4520,9 +4717,12 @@ void CMenus::Render()
 void CMenus::RenderPopupFullscreen(CUIRect Screen)
 {
 	const bool DemoRenderPopup = m_Popup == POPUP_RENDER_DEMO;
+	// 合影地图选择复用渲染回放弹窗的紧凑外壳：同样的 12 内边距、16px 左对齐标题，
+	// 不再走另外那套 24px 居中标题 + 大片留白的通用弹窗。
+	const bool PoseMapPopup = m_Popup == POPUP_QM_POSE_MAP;
+	const bool CompactPopup = DemoRenderPopup || PoseMapPopup;
 #if defined(CONF_VIDEORECORDER)
-	const bool DemoDisplayExpanded = m_DemoExportDisplayExpanded;
-	const float DemoRenderContentHeight = qm_demo_ui::RenderContentHeight(DemoDisplayExpanded, Client()->State() == IClient::STATE_ONLINE);
+	const float DemoRenderContentHeight = qm_demo_ui::RenderContentHeight(Client()->State() == IClient::STATE_ONLINE);
 #endif
 	if(m_Popup == POPUP_QM_UPDATE)
 	{
@@ -4541,13 +4741,7 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 	bool TopAlign = false;
 
 	ColorRGBA BgColor = ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f);
-	if(m_Popup == POPUP_MESSAGE || m_Popup == POPUP_CONFIRM)
-	{
-		pTitle = m_aPopupTitle;
-		pExtraText = m_aPopupMessage;
-		TopAlign = true;
-	}
-	else if(m_Popup == POPUP_DISCONNECTED)
+	if(m_Popup == POPUP_DISCONNECTED)
 	{
 		pTitle = Localize("Disconnected");
 		pExtraText = Client()->ErrorString();
@@ -4606,6 +4800,10 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 	{
 		pTitle = Localize("Joining Tutorial server");
 	}
+	else if(m_Popup == POPUP_QM_POSE_MAP)
+	{
+		pTitle = Localize("Select map for the pose file");
+	}
 	else if(m_Popup == POPUP_POINTS)
 	{
 		pTitle = Localize("Existing Player");
@@ -4644,29 +4842,35 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 	if(DemoRenderPopup)
 		Box = qm_demo_ui::PopupRect(Screen, DemoRenderContentHeight + 86.0f);
 #endif
+	// 合影地图选择：高度跟着可见行数走，不预留空白；渲染时多两行（输出格式 + 分辨率倍数）。
+	if(PoseMapPopup)
+	{
+		const int RenderRows = m_QmPoseMap.m_RenderMode ? qm_demo_ui::POSE_MAP_RENDER_ROWS : 0;
+		Box = qm_demo_ui::PopupRect(Screen, qm_demo_ui::PoseMapContentHeight(QmPoseMapRowCount(), RenderRows) + qm_demo_ui::POPUP_CHROME_HEIGHT);
+	}
 
 	// Background
 	Box.Draw(BgColor, IGraphics::CORNER_ALL, ui_token::radius::CARD);
-	if(DemoRenderPopup)
+	if(CompactPopup)
 		Box.Margin(12.0f, &Box);
 
 	// Title
 	{
 		CUIRect Title;
-		Box.HSplitTop(DemoRenderPopup ? 0.0f : 20.0f, nullptr, &Box);
-		Box.HSplitTop(DemoRenderPopup ? 22.0f : 24.0f, &Title, &Box);
-		Box.HSplitTop(DemoRenderPopup ? 6.0f : 20.0f, nullptr, &Box);
-		Title.VMargin(DemoRenderPopup ? 0.0f : 20.0f, &Title);
+		Box.HSplitTop(CompactPopup ? 0.0f : 20.0f, nullptr, &Box);
+		Box.HSplitTop(CompactPopup ? 22.0f : 24.0f, &Title, &Box);
+		Box.HSplitTop(CompactPopup ? 6.0f : 20.0f, nullptr, &Box);
+		Title.VMargin(CompactPopup ? 0.0f : 20.0f, &Title);
 
-		const float TitleFontSize = DemoRenderPopup ? 16.0f : 24.0f;
+		const float TitleFontSize = CompactPopup ? 16.0f : 24.0f;
 		if(TextRender()->TextWidth(TitleFontSize, pTitle) > Title.w)
 			Ui()->DoLabel(&Title, pTitle, TitleFontSize, TEXTALIGN_ML, {.m_MaxWidth = Title.w});
 		else
-			Ui()->DoLabel(&Title, pTitle, TitleFontSize, DemoRenderPopup ? TEXTALIGN_ML : TEXTALIGN_MC);
+			Ui()->DoLabel(&Title, pTitle, TitleFontSize, CompactPopup ? TEXTALIGN_ML : TEXTALIGN_MC);
 	}
 
 	// Extra text (optional)
-	if(m_Popup != POPUP_JOIN_TUTORIAL && !DemoRenderPopup)
+	if(m_Popup != POPUP_JOIN_TUTORIAL && !CompactPopup)
 	{
 		CUIRect ExtraText;
 		Box.HSplitTop(24.0f, &ExtraText, &Box);
@@ -4684,43 +4888,7 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		}
 	}
 
-	if(m_Popup == POPUP_MESSAGE || m_Popup == POPUP_CONFIRM)
-	{
-		CUIRect ButtonBar;
-		Box.HSplitBottom(20.0f, &Box, nullptr);
-		Box.HSplitBottom(24.0f, &Box, &ButtonBar);
-		ButtonBar.VMargin(100.0f, &ButtonBar);
-
-		if(m_Popup == POPUP_MESSAGE)
-		{
-			static CButtonContainer s_ButtonConfirm;
-			if(DoButton_Menu(&s_ButtonConfirm, m_aPopupButtons[BUTTON_CONFIRM].m_aLabel, 0, &ButtonBar) || Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE) || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER))
-			{
-				m_Popup = m_aPopupButtons[BUTTON_CONFIRM].m_NextPopup;
-				(this->*m_aPopupButtons[BUTTON_CONFIRM].m_pfnCallback)();
-			}
-		}
-		else if(m_Popup == POPUP_CONFIRM)
-		{
-			CUIRect CancelButton, ConfirmButton;
-			ButtonBar.VSplitMid(&CancelButton, &ConfirmButton, 40.0f);
-
-			static CButtonContainer s_ButtonCancel;
-			if(DoButton_Menu(&s_ButtonCancel, m_aPopupButtons[BUTTON_CANCEL].m_aLabel, 0, &CancelButton) || Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
-			{
-				m_Popup = m_aPopupButtons[BUTTON_CANCEL].m_NextPopup;
-				(this->*m_aPopupButtons[BUTTON_CANCEL].m_pfnCallback)();
-			}
-
-			static CButtonContainer s_ButtonConfirm;
-			if(DoButton_Menu(&s_ButtonConfirm, m_aPopupButtons[BUTTON_CONFIRM].m_aLabel, 0, &ConfirmButton) || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER))
-			{
-				m_Popup = m_aPopupButtons[BUTTON_CONFIRM].m_NextPopup;
-				(this->*m_aPopupButtons[BUTTON_CONFIRM].m_pfnCallback)();
-			}
-		}
-	}
-	else if(m_Popup == POPUP_QUIT || m_Popup == POPUP_RESTART)
+	if(m_Popup == POPUP_QUIT || m_Popup == POPUP_RESTART)
 	{
 		CUIRect Yes, No;
 		Box.HSplitBottom(20.f, &Box, &Part);
@@ -4843,6 +5011,10 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			Ui()->DoLabel(&Name, pEntry->m_Info.m_aName, 18.0f, TEXTALIGN_ML);
 		}
 	}
+	else if(m_Popup == POPUP_QM_POSE_MAP)
+	{
+		RenderQmPoseMapPopup(Box);
+	}
 	else if(m_Popup == POPUP_LANGUAGE)
 	{
 		CUIRect Button;
@@ -4891,16 +5063,11 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			const bool BrowsingScreenshots = DemoBrowserBrowsingScreenshots();
 			char aBufOld[IO_MAX_PATH_LENGTH];
 			str_format(aBufOld, sizeof(aBufOld), "%s/%s", m_aCurrentDemoFolder, pSelectedDemoItem->m_aFilename);
+			// 目录按输入名改；文件由 RenameTargetName 保证带扩展名（旧实现会漏掉 ".demo"，
+			// 文件随后被浏览器的扩展名过滤挡掉，看起来就像重命名后消失了）。
+			const std::string TargetName = pSelectedDemoItem->m_IsDir ? std::string(m_DemoRenameInput.GetString()) : qmclient::media_paths::RenameTargetName(m_DemoRenameInput.GetString(), pSelectedDemoItem->m_aFilename, BrowsingScreenshots);
 			char aBufNew[IO_MAX_PATH_LENGTH];
-			str_format(aBufNew, sizeof(aBufNew), "%s/%s", m_aCurrentDemoFolder, m_DemoRenameInput.GetString());
-			if(!pSelectedDemoItem->m_IsDir)
-			{
-				char aNameWithoutExt[IO_MAX_PATH_LENGTH];
-				char aExtension[IO_MAX_PATH_LENGTH];
-				fs_split_file_extension(pSelectedDemoItem->m_aFilename, aNameWithoutExt, sizeof(aNameWithoutExt), aExtension, sizeof(aExtension));
-				if(aExtension[0] != '\0' && str_endswith_nocase(aBufNew, aExtension) == nullptr)
-					str_append(aBufNew, aExtension);
-			}
+			str_format(aBufNew, sizeof(aBufNew), "%s/%s", m_aCurrentDemoFolder, TargetName.c_str());
 
 			if(str_comp(aBufOld, aBufNew) == 0)
 			{
@@ -4908,28 +5075,30 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			}
 			else if(!str_valid_filename(m_DemoRenameInput.GetString()))
 			{
-				PopupMessage(Localize("Error"), Localize("This name cannot be used for files and folders"), Localize("Ok"), POPUP_RENAME_DEMO);
+				qm_ui::Toast(EQmToastKind::FAILED, Localize("This name cannot be used for files and folders"));
 			}
 			else if(str_utf8_comp_nocase(aBufOld, aBufNew) != 0 && // Allow renaming if it only changes capitalization to support case-insensitive filesystems
 				Storage()->FileExists(aBufNew, pSelectedDemoItem->m_StorageType))
 			{
-				PopupMessage(Localize("Error"), BrowsingScreenshots ? Localize("A screenshot with this name already exists") : Localize("A demo with this name already exists"), Localize("Ok"), POPUP_RENAME_DEMO);
+				qm_ui::Toast(EQmToastKind::FAILED, BrowsingScreenshots ? Localize("A screenshot with this name already exists") : Localize("A demo with this name already exists"));
 			}
 			else if(Storage()->FolderExists(aBufNew, pSelectedDemoItem->m_StorageType))
 			{
-				PopupMessage(Localize("Error"), Localize("A folder with this name already exists"), Localize("Ok"), POPUP_RENAME_DEMO);
+				qm_ui::Toast(EQmToastKind::FAILED, Localize("A folder with this name already exists"));
 			}
 			else if(Storage()->RenameFile(aBufOld, aBufNew, pSelectedDemoItem->m_StorageType))
 			{
-				str_copy(m_aCurrentDemoSelectionName, m_DemoRenameInput.GetString());
-				if(!pSelectedDemoItem->m_IsDir)
-					fs_split_file_extension(m_DemoRenameInput.GetString(), m_aCurrentDemoSelectionName, sizeof(m_aCurrentDemoSelectionName));
+				// 用最终文件名（含扩展名）回填选择名，否则 DemolistOnUpdate 按 m_aName 找不到它，
+				// 列表会失去选中项。目录的 m_aName 带结尾斜杠。
+				str_copy(m_aCurrentDemoSelectionName, fs_filename(aBufNew));
+				if(pSelectedDemoItem->m_IsDir)
+					str_append(m_aCurrentDemoSelectionName, "/", sizeof(m_aCurrentDemoSelectionName));
 				DemolistPopulate();
 				DemolistOnUpdate(false);
 			}
 			else
 			{
-				PopupMessage(Localize("Error"), pSelectedDemoItem->m_IsDir ? Localize("Unable to rename the folder") : (BrowsingScreenshots ? Localize("Unable to rename the screenshot") : Localize("Unable to rename the demo")), Localize("Ok"), POPUP_RENAME_DEMO);
+				qm_ui::Toast(EQmToastKind::FAILED, pSelectedDemoItem->m_IsDir ? Localize("Unable to rename the folder") : (BrowsingScreenshots ? Localize("Unable to rename the screenshot") : Localize("Unable to rename the demo")));
 			}
 		}
 
@@ -4949,13 +5118,22 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 #if defined(CONF_VIDEORECORDER)
 	else if(m_Popup == POPUP_RENDER_DEMO)
 	{
+		// 覆盖确认的结果：确认才启动渲染，取消/被切页收掉时留在渲染页。
+		if(gs_ReplaceVideoPending)
+		{
+			const CUi::SConfirmPopupContext::EConfirmationResult Result = gs_ReplaceVideoConfirm.m_Result;
+			if(Result != CUi::SConfirmPopupContext::UNSET || !Ui()->IsPopupOpen(&gs_ReplaceVideoConfirm))
+			{
+				gs_ReplaceVideoPending = false;
+				if(Result == CUi::SConfirmPopupContext::CONFIRMED)
+				{
+					m_Popup = POPUP_NONE;
+					PopupConfirmDemoReplaceVideo();
+				}
+			}
+		}
+
 		CUIRect Row, Ok, Abort;
-		IUiContext DemoRenderTextInputCtx;
-		DemoRenderTextInputCtx.m_pUi = Ui();
-		DemoRenderTextInputCtx.m_pAnim = &GameClient()->UiRuntimeV2()->AnimRuntime();
-		DemoRenderTextInputCtx.m_pTree = &GameClient()->UiRuntimeV2()->Tree();
-		DemoRenderTextInputCtx.m_ScopeHash = MakeUiScopeHash("demo_render_text_input");
-		DemoRenderTextInputCtx.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
 
 		Box.HSplitBottom(26.0f, &Box, &Row);
 		Box.HSplitBottom(8.0f, &Box, nullptr);
@@ -4966,6 +5144,18 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		if(DoButton_Menu(&s_ButtonAbort, Localize("Abort"), 0, &Abort) || Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
 		{
 			m_DemoRenderInput.Clear();
+			m_DemoRenderRangeStart.Clear();
+			m_DemoRenderRangeEnd.Clear();
+			m_DemoRenderEncoder.Clear();
+			m_DemoRenderQuality.Clear();
+			m_DemoRenderContainer.Clear();
+			m_DemoRenderOutputWidth.Clear();
+			m_DemoRenderOutputHeight.Clear();
+			m_DemoRenderGop.Clear();
+			m_DemoRenderPresetSel = -1;
+			m_DemoRenderPixelFormat = -1;
+			m_DemoRenderFsaa = -2;
+			m_DemoRenderResolutionPreset = -1;
 			m_HasPendingDemoRenderSource = false;
 			m_Popup = POPUP_NONE;
 		}
@@ -4976,26 +5166,37 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			m_Popup = POPUP_NONE;
 			// render video
 			char aVideoPath[IO_MAX_PATH_LENGTH];
-			const std::string VideoPath = qmclient::media_paths::Resolve(Storage(), g_Config, (std::string("videos/") + m_DemoRenderInput.GetString() + ".mp4").c_str());
+			const char *pContainer = m_DemoRenderContainer.GetString()[0] != '\0' ? m_DemoRenderContainer.GetString() : "mp4";
+			const std::string VideoPath = qmclient::media_paths::Resolve(Storage(), g_Config, (std::string("videos/") + m_DemoRenderInput.GetString() + "." + pContainer).c_str());
 			str_copy(aVideoPath, VideoPath.c_str());
 
 			if(!str_valid_filename(m_DemoRenderInput.GetString()))
 			{
-				PopupMessage(Localize("Error"), Localize("This name cannot be used for files and folders"), Localize("Ok"), POPUP_RENDER_DEMO);
+				// 点 Ok 时已经关掉了渲染页，这里把它恢复回来，方便直接改名字。
+				m_Popup = POPUP_RENDER_DEMO;
+				qm_ui::Toast(EQmToastKind::FAILED, Localize("This name cannot be used for files and folders"));
 			}
 			else if(!qmclient::media_paths::PrepareWrite(Storage(), VideoPath))
 			{
-				PopupMessage(Localize("Error"), Localize("Failed to save video"), Localize("Ok"), POPUP_RENDER_DEMO);
+				m_Popup = POPUP_RENDER_DEMO;
+				qm_ui::Toast(EQmToastKind::FAILED, Localize("Failed to save video"));
 			}
 			else if(Storage()->FolderExists(aVideoPath, IStorage::TYPE_SAVE_OR_ABSOLUTE))
 			{
-				PopupMessage(Localize("Error"), Localize("A folder with this name already exists"), Localize("Ok"), POPUP_RENDER_DEMO);
+				m_Popup = POPUP_RENDER_DEMO;
+				qm_ui::Toast(EQmToastKind::FAILED, Localize("A folder with this name already exists"));
 			}
 			else if(Storage()->FileExists(aVideoPath, IStorage::TYPE_SAVE_OR_ABSOLUTE))
 			{
 				char aMessage[128 + IO_MAX_PATH_LENGTH];
 				str_format(aMessage, sizeof(aMessage), Localize("File '%s' already exists, do you want to overwrite it?"), m_DemoRenderInput.GetString());
-				PopupConfirm(Localize("Replace video"), aMessage, Localize("Yes"), Localize("No"), &CMenus::PopupConfirmDemoReplaceVideo, POPUP_NONE, &CMenus::DefaultButtonCallback, POPUP_RENDER_DEMO);
+				gs_ReplaceVideoConfirm.Reset();
+				gs_ReplaceVideoConfirm.DefaultButtons();
+				gs_ReplaceVideoConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+				str_copy(gs_ReplaceVideoConfirm.m_aMessage, aMessage, sizeof(gs_ReplaceVideoConfirm.m_aMessage));
+				m_Popup = POPUP_RENDER_DEMO;
+				Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &gs_ReplaceVideoConfirm);
+				gs_ReplaceVideoPending = true;
 			}
 			else
 			{
@@ -5009,82 +5210,35 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		Box.y += ScrollOffset.y;
 		Box.h = DemoRenderContentHeight;
 		s_DemoRenderScroll.AddRect(Box);
-		CUIRect DisplayOptions;
-		Box.HSplitTop(22.0f, &DisplayOptions, &Box);
-		RenderDemoDisplayToggle(DisplayOptions, m_DemoExportDisplayExpanded, m_DemoExportDisplayButton);
-		if(DemoDisplayExpanded)
-		{
-			Box.HSplitTop(4.0f, nullptr, &Box);
-			Box.HSplitTop(qm_demo_ui::DISPLAY_HEIGHT, &DisplayOptions, &Box);
-			RenderDemoDisplaySettings(DisplayOptions, !Ui()->IsPopupOpen());
-		}
-		Box.HSplitTop(8.0f, nullptr, &Box);
 
-		CUIRect ShowChatCheckbox, UseSoundsCheckbox;
-		const auto DisplayBindings = qm_demo_display::ConfigBindings(g_Config);
-		Box.HSplitBottom(20.0f, &Box, &Row);
-		Box.HSplitBottom(10.0f, &Box, nullptr);
-		Row.VSplitMid(&ShowChatCheckbox, &UseSoundsCheckbox, 20.0f);
+		CUIRect Content = Box;
+		Content.HSplitTop(qm_demo_ui::RENDER_TOP_GAP, nullptr, &Content);
+		CUIRect Group;
 
-		if(DoButton_CheckBox(DisplayBindings.m_pChat, Localize("Show chat"), *DisplayBindings.m_pChat, &ShowChatCheckbox))
-			*DisplayBindings.m_pChat ^= 1;
+		// 回放显示直接平铺（无折叠按钮）：显示按键/强弱钩/钩索强度三组段选。
+		Content.HSplitTop(qm_demo_ui::DISPLAY_GROUP_HEIGHT, &Group, &Content);
+		RenderDemoDisplaySettings(Group, !Ui()->IsPopupOpen(), false);
+		Content.HSplitTop(qm_demo_ui::RENDER_SECTION_GAP, nullptr, &Content);
 
-		if(DoButton_CheckBox(&g_Config.m_ClVideoSndEnable, Localize("Use sounds"), g_Config.m_ClVideoSndEnable, &UseSoundsCheckbox))
-			g_Config.m_ClVideoSndEnable ^= 1;
+		// 视频导出：分辨率/编码器/容器/画质/导出预设/GOP/名称/范围。
+		Content.HSplitTop(qm_demo_ui::EXPORT_GROUP_HEIGHT, &Group, &Content);
+		RenderDemoExportSettings(Group);
+		Content.HSplitTop(qm_demo_ui::RENDER_SECTION_GAP, nullptr, &Content);
 
-		CUIRect ShowHudButton;
-		Box.HSplitBottom(20.0f, &Box, &Row);
-		Row.VSplitMid(&Row, &ShowHudButton, 20.0f);
+		// 播放选项：HUD/聊天/声音与导出速度。
+		Content.HSplitTop(qm_demo_ui::PLAYBACK_GROUP_HEIGHT, &Group, &Content);
+		RenderDemoPlaybackSettings(Group);
+		Content.HSplitTop(qm_demo_ui::RENDER_SECTION_GAP, nullptr, &Content);
 
-		if(DoButton_CheckBox(DisplayBindings.m_pHud, Localize("Show ingame HUD"), *DisplayBindings.m_pHud, &ShowHudButton))
-			*DisplayBindings.m_pHud ^= 1;
-
-		// slowdown
-		CUIRect SlowDownButton;
-		Row.VSplitLeft(20.0f, &SlowDownButton, &Row);
-		Row.VSplitLeft(5.0f, nullptr, &Row);
-		static CButtonContainer s_SlowDownButton;
-		if(Ui()->DoButton_QmIcon(&s_SlowDownButton, EQmIcon::BACKWARD, FONT_ICON_BACKWARD, 0, &SlowDownButton, BUTTONFLAG_LEFT))
-			m_Speed = std::clamp(m_Speed - 1, 0, (int)(std::size(DEMO_SPEEDS) - 1));
-
-		// paused
-		CUIRect PausedButton;
-		Row.VSplitLeft(20.0f, &PausedButton, &Row);
-		Row.VSplitLeft(5.0f, nullptr, &Row);
-		static CButtonContainer s_PausedButton;
-		if(Ui()->DoButton_QmIcon(&s_PausedButton, EQmIcon::PAUSE, FONT_ICON_PAUSE, 0, &PausedButton, BUTTONFLAG_LEFT))
-			m_StartPaused ^= 1;
-
-		// fastforward
-		CUIRect FastForwardButton;
-		Row.VSplitLeft(20.0f, &FastForwardButton, &Row);
-		Row.VSplitLeft(8.0f, nullptr, &Row);
-		static CButtonContainer s_FastForwardButton;
-		if(Ui()->DoButton_QmIcon(&s_FastForwardButton, EQmIcon::FORWARD, FONT_ICON_FORWARD, 0, &FastForwardButton, BUTTONFLAG_LEFT))
-			m_Speed = std::clamp(m_Speed + 1, 0, (int)(std::size(DEMO_SPEEDS) - 1));
-
-		// speed meter
-		char aBuffer[128];
-		const char *pPaused = m_StartPaused ? Localize("(paused)") : "";
-		str_format(aBuffer, sizeof(aBuffer), "%s: ×%g %s", Localize("Speed"), DEMO_SPEEDS[m_Speed], pPaused);
-		Ui()->DoLabel(&Row, aBuffer, 12.8f, TEXTALIGN_ML);
-		Box.HSplitBottom(16.0f, &Box, nullptr);
-		Box.HSplitBottom(24.0f, &Box, &Row);
-
-		CUIRect Label, TextBox;
-		Row.VSplitLeft(110.0f, &Label, &TextBox);
-		TextBox.VSplitLeft(10.0f, nullptr, &TextBox);
-		Ui()->DoLabel(&Label, Localize("Video name:"), 12.8f, TEXTALIGN_ML);
-		ui_widget::SInputFieldOptions RenderInputOptions;
-		RenderInputOptions.m_pPlaceholder = Localize("Video name");
-		RenderInputOptions.m_FontSize = 12.8f;
-		ui_widget::InputField(DemoRenderTextInputCtx, &m_DemoRenderInput, TextBox, RenderInputOptions);
+		// 视频编码：CRF/渲染预设/录制帧率，改动即时写 g_Config。
+		Content.HSplitTop(qm_demo_ui::ENCODE_HEIGHT, &Group, &Content);
+		RenderDemoEncodeSettings(Group);
 
 		// Warn about disconnect if online
 		if(Client()->State() == IClient::STATE_ONLINE)
 		{
-			Box.HSplitBottom(10.0f, &Box, nullptr);
-			Box.HSplitBottom(20.0f, &Box, &Row);
+			Content.HSplitTop(10.0f, nullptr, &Content);
+			Content.HSplitTop(20.0f, &Row, &Content);
 			SLabelProperties LabelProperties;
 			LabelProperties.SetColor(ColorRGBA(1.0f, 0.0f, 0.0f));
 			Ui()->DoLabel(&Row, Localize("You will be disconnected from the server."), 12.8f, TEXTALIGN_MC, LabelProperties);
@@ -5121,6 +5275,18 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		{
 			m_Popup = POPUP_NONE;
 			m_DemoRenderInput.Clear();
+			m_DemoRenderRangeStart.Clear();
+			m_DemoRenderRangeEnd.Clear();
+			m_DemoRenderEncoder.Clear();
+			m_DemoRenderQuality.Clear();
+			m_DemoRenderContainer.Clear();
+			m_DemoRenderOutputWidth.Clear();
+			m_DemoRenderOutputHeight.Clear();
+			m_DemoRenderGop.Clear();
+			m_DemoRenderPresetSel = -1;
+			m_DemoRenderPixelFormat = -1;
+			m_DemoRenderFsaa = -2;
+			m_DemoRenderResolutionPreset = -1;
 		}
 
 		Box.HSplitBottom(160.f, &Box, &Part);
@@ -5291,7 +5457,8 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		}
 
 		const auto &&ShowFinalErrorMessage = [&]() {
-			PopupMessage(Localize("Error joining Tutorial server"), Localize("Could not find a Tutorial server. Check your internet connection."), Localize("Ok"));
+			// 找不到教程服务器：短句 + 下一步建议，非阻断提示即可，不需要模态。
+			qm_ui::Toast(EQmToastKind::FAILED, Localize("Could not find a Tutorial server. Check your internet connection."));
 		};
 		const auto &&RunServer = [&]() {
 			char aMotd[256];
@@ -5419,7 +5586,7 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			}
 			if(Client()->InfoState() == IClient::EInfoState::ERROR)
 			{
-				PopupMessage(Localize("Error checking player name"), Localize("Could not check for existing player with your name. Check your internet connection."), Localize("Ok"));
+				qm_ui::Toast(EQmToastKind::FAILED, Localize("Could not check for existing player with your name. Check your internet connection."));
 			}
 		}
 	}
@@ -5458,15 +5625,15 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		{
 			if(!str_valid_filename(m_SkinNameInput.GetString()))
 			{
-				PopupMessage(Localize("Error"), Localize("This name cannot be used for files and folders"), Localize("Ok"), POPUP_SAVE_SKIN);
+				qm_ui::Toast(EQmToastKind::FAILED, Localize("This name cannot be used for files and folders"));
 			}
 			else if(CSkins7::IsSpecialSkin(m_SkinNameInput.GetString()))
 			{
-				PopupMessage(Localize("Error"), Localize("Unable to save the skin with a reserved name"), Localize("Ok"), POPUP_SAVE_SKIN);
+				qm_ui::Toast(EQmToastKind::FAILED, Localize("Unable to save the skin with a reserved name"));
 			}
 			else if(!GameClient()->m_Skins7.SaveSkinfile(m_SkinNameInput.GetString(), m_Dummy))
 			{
-				PopupMessage(Localize("Error"), Localize("Unable to save the skin"), Localize("Ok"), POPUP_SAVE_SKIN);
+				qm_ui::Toast(EQmToastKind::FAILED, Localize("Unable to save the skin"));
 			}
 			else
 			{
@@ -5508,6 +5675,46 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 	if(m_Popup == POPUP_NONE)
 		Ui()->SetActiveItem(nullptr);
 }
+
+#if defined(CONF_VIDEORECORDER)
+void CMenus::InitDemoRenderInputs()
+{
+	// 只在弹窗打开时调用一次：把当前配置回填为输入初值。此后输入框完全由用户
+	// 控制（清空 = Ok 时沿用默认），不每帧回填，否则清空会被旧配置值弹回。
+	if(m_DemoRenderEncoder.IsEmpty())
+		m_DemoRenderEncoder.Set(g_Config.m_QmVideoEncoder);
+	if(m_DemoRenderContainer.IsEmpty())
+		m_DemoRenderContainer.Set("mp4");
+	if(m_DemoRenderQuality.IsEmpty() && g_Config.m_QmVideoQuality >= 0)
+	{
+		char aQuality[8];
+		str_format(aQuality, sizeof(aQuality), "%d", g_Config.m_QmVideoQuality);
+		m_DemoRenderQuality.Set(aQuality);
+	}
+	if(m_DemoRenderOutputWidth.IsEmpty() && g_Config.m_QmVideoWidth > 0)
+	{
+		char aRes[8];
+		str_format(aRes, sizeof(aRes), "%d", g_Config.m_QmVideoWidth);
+		m_DemoRenderOutputWidth.Set(aRes);
+	}
+	if(m_DemoRenderOutputHeight.IsEmpty() && g_Config.m_QmVideoHeight > 0)
+	{
+		char aRes[8];
+		str_format(aRes, sizeof(aRes), "%d", g_Config.m_QmVideoHeight);
+		m_DemoRenderOutputHeight.Set(aRes);
+	}
+	if(m_DemoRenderResolutionPreset < 0)
+		m_DemoRenderResolutionPreset = qm_demo_ui::MatchResolutionPreset(str_toint(m_DemoRenderOutputWidth.GetString()), str_toint(m_DemoRenderOutputHeight.GetString()));
+	if(m_DemoRenderGop.IsEmpty())
+	{
+		char aGop[8];
+		str_format(aGop, sizeof(aGop), "%d", g_Config.m_QmVideoGop > 0 ? g_Config.m_QmVideoGop : 60);
+		m_DemoRenderGop.Set(aGop);
+	}
+	if(m_DemoRenderPixelFormat < 0)
+		m_DemoRenderPixelFormat = std::clamp(g_Config.m_QmVideoPixelFormat, 0, 3);
+}
+#endif
 
 void CMenus::RenderPopupConnecting(CUIRect Screen)
 {
@@ -5695,7 +5902,7 @@ void CMenus::PopupConfirmDemoReplaceVideo()
 {
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK && GameClient()->m_DemoCamera.Dirty() && !GameClient()->m_DemoCamera.Save())
 	{
-		PopupMessage(Localize("Error"), Localize("Failed to save camera path"), Localize("Ok"));
+		qm_ui::Toast(EQmToastKind::FAILED, Localize("Failed to save camera path"));
 		return;
 	}
 	char aBuf[IO_MAX_PATH_LENGTH];
@@ -5709,11 +5916,83 @@ void CMenus::PopupConfirmDemoReplaceVideo()
 	str_format(aBuf, sizeof(aBuf), "%s/%s", pDemoFolder, aDemoFilename);
 	char aVideoName[IO_MAX_PATH_LENGTH];
 	str_copy(aVideoName, m_DemoRenderInput.GetString());
-	const std::string VideoPath = qmclient::media_paths::Resolve(Storage(), g_Config, (std::string("videos/") + aVideoName + ".mp4").c_str());
+
+	// 编码器与质量值（M4/M6）：弹窗选择写入配置，渲染管线按配置选择编码器并映射质量参数。
+	str_copy(g_Config.m_QmVideoEncoder, m_DemoRenderEncoder.GetString());
+	if(m_DemoRenderQuality.GetString()[0] != '\0')
+		g_Config.m_QmVideoQuality = std::clamp(str_toint(m_DemoRenderQuality.GetString()), 0, 51);
+	else
+		g_Config.m_QmVideoQuality = -1;
+	str_copy(g_Config.m_QmVideoContainer, m_DemoRenderContainer.GetString());
+	// 输出分辨率（M7 超采样）：空 = 0（跟随窗口渲染分辨率）；非空 clamp 到支持的边界。
+	// CVideo 构造时会把大于渲染分辨率的值回退到渲染分辨率，此处只做数值合法性。
+	g_Config.m_QmVideoWidth = m_DemoRenderOutputWidth.GetString()[0] != '\0' ? std::clamp(str_toint(m_DemoRenderOutputWidth.GetString()), 16, 7680) : 0;
+	g_Config.m_QmVideoHeight = m_DemoRenderOutputHeight.GetString()[0] != '\0' ? std::clamp(str_toint(m_DemoRenderOutputHeight.GetString()), 16, 4320) : 0;
+	// 关键帧间隔（M9 UI）：非空 clamp 到 0-600（0 = 编码器默认）；空 = 沿用现有配置
+	if(m_DemoRenderGop.GetString()[0] != '\0')
+		g_Config.m_QmVideoGop = std::clamp(str_toint(m_DemoRenderGop.GetString()), 0, 600);
+	// 提交本会话预设选择（仅确认时落盘；手动改过编码器/容器时已自动回到 Custom）
+	if(m_DemoRenderPresetSel >= 0)
+		g_Config.m_QmVideoPreset = m_DemoRenderPresetSel;
+	// 色彩采样同样是会话态：只在确认导出时落盘，取消或只是打开弹窗不会改全局配置。
+	if(m_DemoRenderPixelFormat >= 0)
+		g_Config.m_QmVideoPixelFormat = std::clamp(m_DemoRenderPixelFormat, 0, 3);
+	// 导出抗锯齿同上：-2 = 弹窗里没动过，保持原配置不动。
+	if(m_DemoRenderFsaa != -2)
+		g_Config.m_QmVideoFsaa = std::clamp(m_DemoRenderFsaa, -1, 8);
+	// 预设展开兜底：按预设配置覆盖编码器/容器，保证与选择一致。
+	// GOP、采样格式与质量在弹窗切换预设时已写回（剪辑/最高画质=1 + 4:4:4，其余=60 + 自动），
+	// 这里只在输入为空时补剪辑预设的兜底，不覆盖用户手填值。
+	switch(g_Config.m_QmVideoPreset)
+	{
+	case 1:
+		str_copy(g_Config.m_QmVideoEncoder, "");
+		str_copy(g_Config.m_QmVideoContainer, "mp4");
+		break;
+	case 2:
+		str_copy(g_Config.m_QmVideoEncoder, "hevc");
+		str_copy(g_Config.m_QmVideoContainer, "mp4");
+		break;
+	case qm_demo_ui::EXPORT_PRESET_EDITING:
+		// 剪辑预设：全帧内 H.264。与 ProRes 同样可以任意点切，体积约为其 1/17。
+		str_copy(g_Config.m_QmVideoEncoder, "");
+		str_copy(g_Config.m_QmVideoContainer, "mp4");
+		// GOP 以弹窗输入框为准（选预设时已写回 1，用户可再改）；只有输入框为空时才兜底，
+		// 避免覆盖用户手填的值。
+		if(m_DemoRenderGop.IsEmpty())
+			g_Config.m_QmVideoGop = qm_demo_ui::PRESET_GOP_ALL_INTRA;
+		break;
+	case 4:
+		str_copy(g_Config.m_QmVideoEncoder, "prores_ks");
+		str_copy(g_Config.m_QmVideoContainer, "mov");
+		break;
+	case qm_demo_ui::EXPORT_PRESET_BEST_QUALITY:
+		// 最高画质：剪辑组合（全帧内 + 4:4:4 + 软件 H.264）之上把质量压到 14（肉眼无损档）。
+		str_copy(g_Config.m_QmVideoEncoder, "");
+		str_copy(g_Config.m_QmVideoContainer, "mp4");
+		if(m_DemoRenderGop.IsEmpty())
+			g_Config.m_QmVideoGop = qm_demo_ui::PRESET_GOP_ALL_INTRA;
+		break;
+	case qm_demo_ui::EXPORT_PRESET_FASTEST:
+		// 最快速度：h264 家族别名（NVENC → QSV → AMF → VideoToolbox → 软件回落），
+		// 质量写回 23 换编码速度；没有硬件的机器仍能出片，只是回落到软件速度。
+		str_copy(g_Config.m_QmVideoEncoder, "h264");
+		str_copy(g_Config.m_QmVideoContainer, "mp4");
+		break;
+	default: break;
+	}
+
+	const std::string VideoPath = qmclient::media_paths::Resolve(Storage(), g_Config, (std::string("videos/") + aVideoName + "." + g_Config.m_QmVideoContainer).c_str());
 	const std::string WholePath = qmclient::media_paths::CompletePath(Storage(), VideoPath);
 	str_copy(m_aDemoRenderedVideoPath, WholePath.c_str());
 	GameClient()->m_DemoCamera.PrepareSource(aBuf, DemoStorageType);
-	const char *pError = Client()->DemoPlayer_Render(aBuf, DemoStorageType, aVideoName, m_Speed, m_StartPaused);
+	float RangeStartSec = -1.0f;
+	float RangeEndSec = -1.0f;
+	if(m_DemoRenderRangeStart.GetString()[0] != '\0')
+		RangeStartSec = str_tofloat(m_DemoRenderRangeStart.GetString());
+	if(m_DemoRenderRangeEnd.GetString()[0] != '\0')
+		RangeEndSec = str_tofloat(m_DemoRenderRangeEnd.GetString());
+	const char *pError = Client()->DemoPlayer_Render(aBuf, DemoStorageType, aVideoName, m_Speed, m_StartPaused, RangeStartSec, RangeEndSec);
 	m_HasPendingDemoRenderSource = false;
 	m_vDemoCutSegments.clear();
 	m_DemoCutPreview.Reset();
@@ -5726,7 +6005,11 @@ void CMenus::PopupConfirmDemoReplaceVideo()
 	if(pError)
 	{
 		m_DemoRenderInput.Clear();
-		PopupMessage(Localize("Error loading demo"), pError, Localize("Ok"));
+		// demo 载入失败要读具体原因：居中 Alert，不用结果 Toast。
+		static CUi::SMessagePopupContext s_DemoLoadError;
+		str_copy(s_DemoLoadError.m_aMessage, pError, sizeof(s_DemoLoadError.m_aMessage));
+		s_DemoLoadError.ErrorColor();
+		Ui()->ShowPopupMessage(0.0f, 0.0f, &s_DemoLoadError);
 	}
 }
 #endif
@@ -7855,12 +8138,25 @@ void CMenus::PrewarmVisibleSettingsResources(CUIRect MainView)
 
 bool CMenus::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 {
-	if(!m_MenuActive && !GameClient()->m_Spectator.PlaybackControlsActive())
+	// 合影地图选择弹窗可能开在回放播放态（菜单本身不活跃）：此时仍必须跟踪鼠标，
+	// 否则列表点不到、光标也不会跟着动。预览 HUD 同理。
+	if(!m_MenuActive && !GameClient()->m_Spectator.PlaybackControlsActive() && !QmPoseMapPopupOpen() && !QmPoseHudActive() && !Client()->PoseSessionActive())
 		return false;
 
 	MarkMenuInteraction();
 	Ui()->ConvertMouseMove(&x, &y, CursorType);
 	Ui()->OnCursorMove(x, y);
+
+	if(Client()->PoseSessionActive() && !QmPoseMapPopupOpen())
+	{
+		// 预览 HUD 打开时，光标归面板（按钮、拖拽、滚轮），镜头必须钉住不动——
+		// 一边点按钮一边晃画面没法用。这里返回 true 吃掉增量。
+		if(QmPoseHudActive())
+			return true;
+		// HUD 关掉才是取景状态：增量交给 CControls，和游戏内/demo 自由旁观同一套累加。
+		// 返回 true 会让输入栈停在这一层，CControls 永远收不到增量。
+		return false;
+	}
 
 	return true;
 }
@@ -7870,8 +8166,34 @@ bool CMenus::OnInput(const IInput::CEvent &Event)
 	if(!IsActive() && GameClient()->m_HudEditor.IsActive())
 		return false;
 
+	// 合影预览：Esc 开/关预览 HUD，沿用回放 HUD 的心智——先叫出控制条，再决定
+	// 看哪里、拍哪一张。这里不再「Esc 即回菜单」，也不会顺手把会话收掉。
+	if(Client()->PoseSessionActive() && !IsActive() && !QmPoseMapPopupOpen() && Event.m_Key == KEY_ESCAPE)
+	{
+		if(Event.m_Flags & IInput::FLAG_PRESS)
+		{
+			m_QmPoseHud.m_Open = !m_QmPoseHud.m_Open;
+			m_QmPoseHud.m_DragOperation = 0;
+			if(m_QmPoseHud.m_Open)
+			{
+				MarkMenuInteraction();
+				Ui()->SetActiveItem(nullptr);
+			}
+		}
+		return true;
+	}
+	// HUD 打开时滚轮直接缩放取景：和按钮同一套语义，滚一下就近一点。
+	// 滚轮缩放不再要求先按 Esc 叫出 HUD：预览时直接滚就能拉近/推远，
+	// 和 demo 自由视角一致。
+	if(Client()->PoseSessionActive() && (Event.m_Flags & IInput::FLAG_PRESS) &&
+		(Event.m_Key == KEY_MOUSE_WHEEL_UP || Event.m_Key == KEY_MOUSE_WHEEL_DOWN))
+	{
+		Client()->PoseCameraZoomBy(Event.m_Key == KEY_MOUSE_WHEEL_UP ? 1.15f : 1.0f / 1.15f);
+		return true;
+	}
+
 	// Escape key is always handled to activate/deactivate menu
-	if((Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_ESCAPE) || IsActive())
+	if((Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_ESCAPE) || IsActive() || QmPoseMapPopupOpen() || QmPoseHudActive())
 	{
 		MarkMenuInteraction();
 		Ui()->OnInput(Event);
@@ -7987,6 +8309,20 @@ void CMenus::OnUpdate()
 void CMenus::OnRender()
 {
 	PumpDemoScreenshotWatermark();
+	// 引擎侧（Windows 双击 .poses、poses_open 命令）缺少地图时留下的请求：
+	// 转成地图选择弹窗，玩家选好地图后再走同一条 poses_open。
+	{
+		const char *pPendingPoseMap = Client()->PendingPoseMapPath();
+		if(pPendingPoseMap[0] != '\0')
+		{
+			char aPosesPath[IO_MAX_PATH_LENGTH];
+			str_copy(aPosesPath, pPendingPoseMap, sizeof(aPosesPath));
+			Client()->ClearPendingPoseMapPath();
+			// 已经在选地图时不要重开，否则会把玩家刚输入的内容清掉。
+			if(!m_QmPoseMap.m_Selection.Active())
+				QmRequestPoseMap(aPosesPath, qm_pose_map::EAction::OPEN);
+		}
+	}
 	m_TranslateProbe.AdvanceFrame();
 	if(GameClient()->m_TClient.m_UpdatePopupRequested && m_MenuActive && m_Popup == POPUP_NONE)
 	{
@@ -8003,7 +8339,8 @@ void CMenus::OnRender()
 	{
 		Client()->Disconnect();
 		SetActive(true);
-		PopupMessage(Localize("Disconnected"), Localize("The server is running a non-standard tuning on a pure game type."), Localize("Ok"));
+		// 被动断开要说明原因，但不该再挡一层模态：用警告提示。
+		qm_ui::Toast(EQmToastKind::WARNING, Localize("The server is running a non-standard tuning on a pure game type."));
 	}
 
 	if(!IsActive())
@@ -8105,12 +8442,13 @@ void CMenus::OnRender()
 		LogPerfStage(Client(), "ingame_text_runtime_drain", StageTimer.ElapsedMs());
 	}
 
-	if(IsActive() || GameClient()->m_Spectator.PlaybackControlsActive() || (GameClient()->m_RankGhost.IsViewModeActive() && OnlineReplayPopupActive()))
+	if(IsActive() || GameClient()->m_Spectator.PlaybackControlsActive() || QmPoseMapPopupOpen() || QmPoseHudActive() ||
+		(GameClient()->m_RankGhost.IsViewModeActive() && OnlineReplayPopupActive()))
 	{
 		CPerfTimer StageTimer;
 		if(IsActive())
 			Ui()->RenderBackButton();
-		if(!GameClient()->m_GameConsole.IsActive() && (IsActive() || GameClient()->m_Spectator.PlaybackControlsActive()))
+		if(!GameClient()->m_GameConsole.IsActive() && (IsActive() || GameClient()->m_Spectator.PlaybackControlsActive() || QmPoseMapPopupOpen() || QmPoseHudActive()))
 			RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
 		LogPerfStage(Client(), "cursor_render", StageTimer.ElapsedMs());
 	}
@@ -8150,6 +8488,32 @@ void CMenus::UpdateColors()
 	ms_ColorTabbarInactiveIngame = MenuUiColorSurface(0.45f, 0.16f);
 	ms_ColorTabbarActiveIngame = MenuUiColorSurface(0.70f, 0.16f);
 	ms_ColorTabbarHoverIngame = MenuUiColorSurface(0.62f, 0.20f);
+}
+
+void CMenus::RenderBackgroundLayer()
+{
+	if(Ui()->BackgroundFrameBegun())
+		return;
+	// 菜单背景原先在 Ui()->MapScreen() 之后绘制。现在提前到组件循环边界，
+	// 必须显式恢复 UI 屏幕映射，否则会沿用世界/HUD 留下的投影，背景图会偏移。
+	Ui()->MapScreen();
+	// 上一帧 UI 可能留下未关闭的窄裁剪区；不清除会把菜单背景裁成左侧一条。
+	Ui()->ResetClipState();
+	const IClient::EClientState ClientState = Client()->State();
+	UpdateColors();
+	if(ClientState == IClient::STATE_ONLINE || ClientState == IClient::STATE_DEMOPLAYBACK)
+	{
+		ms_ColorTabbarInactive = ms_ColorTabbarInactiveIngame;
+		ms_ColorTabbarActive = ms_ColorTabbarActiveIngame;
+		ms_ColorTabbarHover = ms_ColorTabbarHoverIngame;
+		return;
+	}
+
+	ms_ColorTabbarInactive = ms_ColorTabbarInactiveOutgame;
+	ms_ColorTabbarActive = ms_ColorTabbarActiveOutgame;
+	ms_ColorTabbarHover = ms_ColorTabbarHoverOutgame;
+	if(!GameClient()->m_MenuBackground.Render())
+		RenderBackground();
 }
 
 void CMenus::RenderBackground()
@@ -8296,6 +8660,12 @@ void CMenus::SetMenuPage(int NewPage)
 	auto IsBrowserPage = [](int Page) {
 		return (Page >= PAGE_INTERNET && Page <= PAGE_FAVORITE_COMMUNITY_5) || Page == PAGE_FAVORITE_MAPS;
 	};
+	// 统计数据是收藏地图工作区里的第 4 个页签，两者共用同一条页签条和同一块面板。
+	// 在这两页之间切换时页面内容原位替换，不做整页位移，也不重放背景运镜。
+	auto IsMapWorkspacePage = [](int Page) {
+		return Page == PAGE_FAVORITE_MAPS || Page == PAGE_STATS;
+	};
+	const bool SameMapWorkspace = IsMapWorkspacePage(OldPage) && IsMapWorkspacePage(NewPage) && OldPage != NewPage;
 	auto BrowserPageVisualOrder = [](int Page) {
 		if(Page == PAGE_INTERNET)
 			return 0;
@@ -8320,7 +8690,7 @@ void CMenus::SetMenuPage(int NewPage)
 	{
 		m_BrowserTabTransitionDirection = 0.0f;
 	}
-	if(OldPage != NewPage && !(OldIsBrowser && NewIsBrowser))
+	if(OldPage != NewPage && !(OldIsBrowser && NewIsBrowser) && !SameMapWorkspace)
 	{
 		m_MenuPageTransitionDirection = ResolveUiSwitchDirection(GameClient()->UiRuntimeV2()->AnimRuntime(), UiAnimNodeKey("menu_page_switch"), m_MenuPageTransitionDirection, NewPage > OldPage ? 1.0f : -1.0f);
 		TriggerUiSwitchAnimation(UiAnimNodeKey("menu_page_switch"), MENU_SWITCH_DURATION);

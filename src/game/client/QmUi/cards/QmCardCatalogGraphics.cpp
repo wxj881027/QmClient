@@ -19,6 +19,7 @@
 
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmCardRegistry.h>
+#include <game/client/QmUi/QmToast.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/SettingsCard.h>
@@ -694,8 +695,10 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 
 					if(DoSettingsButton_Menu(SETTINGS_GRAPHICS, -1, -1, &s_SystemGraphicsSettings, "graphics-system-gpu-settings", Localize("System graphics settings"), 0, &SystemSettingsRow) && !Ui()->RenderOnly())
 					{
+						// 打不开系统设置页只影响这一次点击，不是需要阅读详情的错误：
+						// 用非阻断失败提示，用户再点一次就是重试。
 						if(!open_link("ms-settings:display-advancedgraphics"))
-							PopupMessage(Localize("Error"), Localize("Could not open system graphics settings."), Localize("Ok"));
+							qm_ui::Toast(EQmToastKind::FAILED, Localize("Could not open system graphics settings."));
 					}
 				});
 
@@ -1048,12 +1051,12 @@ static CButtonContainer s_CardBorderColorResetId;
 			RowAction("graphics-ScrollLegacyWheel", GraphicsMetrics.m_LineHeight, [&](CUIRect ScrollLegacyWheel) {
 				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiScrollLegacyWheel, "graphics-scroll-legacy-wheel", Localize("Original scroll feel"), g_Config.m_QmUiScrollLegacyWheel, &ScrollLegacyWheel))
 					g_Config.m_QmUiScrollLegacyWheel ^= 1;
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollLegacyWheel, &ScrollLegacyWheel, Localize("Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity"));
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollLegacyWheel, &ScrollLegacyWheel, Localize("Restart smooth scrolling on every wheel tick"));
 			});
 
 			RowAction("graphics-ScrollStep", GraphicsMetrics.m_LineHeight, [&](CUIRect ScrollStepRow) {
 				DoGraphicsNumericField("graphics-scroll-step", &g_Config.m_QmUiScrollStep, &g_Config.m_QmUiScrollStep, ScrollStepRow, Localize("Scroll step"), 2, 100);
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollStep, &ScrollStepRow, Localize("Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step"));
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollStep, &ScrollStepRow, Localize("Wheel distance per tick; hold Alt for 3x"));
 			});
 		});
 	};

@@ -527,6 +527,9 @@ struct SPopupMenuProperties
 	// 二级面板关闭后仅在来源控件重新参与渲染时恢复焦点。
 	bool m_ReturnFocus = false;
 	bool m_IgnoreOpeningClick = false;
+	// 非阻断弹层内部按下不抢 capture：气泡确认这类带按钮的弹层需要，
+	// 否则第一次点击会被外层吞掉，表现为「按钮要点两下」。
+	bool m_PressInsideGoesToContent = false;
 	float m_ContentInset = -1.0f;
 	std::function<void()> m_OnClosed;
 	// 使用 CUi::PopupSourceFrame()，主循环 PerfFrame 不代表实际 UI 更新次数。
@@ -736,6 +739,15 @@ private:
 	IGraphics::CRenderTargetHandle m_GaussianBlurSource;
 	std::array<IGraphics::CRenderTargetHandle, IGraphics::DUAL_KAWASE_PYRAMID_LEVELS> m_aGaussianBlurTemporary;
 	IGraphics::CRenderTargetHandle m_GaussianBlurTarget;
+	// 世界/菜单背景离屏层：多采样附件在 End 时 resolve，模糊只采样 resolve 图。
+	IGraphics::CRenderTargetHandle m_BackgroundLayerTarget;
+	int m_BackgroundLayerWidth = 0;
+	int m_BackgroundLayerHeight = 0;
+	int m_BackgroundLayerSamples = 0;
+	bool m_BackgroundLayerActive = false;
+	uint64_t m_BackgroundFrame = 0;
+	// 本帧模糊源已尝试准备（成功或失败）；同帧任何弹层重绘都不得再次捕获。
+	uint64_t m_BackgroundBlurFrame = 0;
 	int m_GaussianBlurWidth = 0;
 	int m_GaussianBlurHeight = 0;
 	int m_GaussianBlurMode = -1;
@@ -761,6 +773,8 @@ private:
 		const SPopupMenuId *m_pPopupId = nullptr;
 		CQmUiInteractionSource m_Source;
 		uint64_t m_Frame = 0;
+		// 只有 Tab/方向键导航设置的焦点才画焦点环；鼠标点击与弹层关闭的焦点恢复不画。
+		bool m_FromKeyboard = false;
 	};
 	SPopupFocus m_KeyboardFocus;
 	SPopupFocus m_PendingPopupFocus;
@@ -902,8 +916,19 @@ private:
 	int QuadBatchRectContainer(float Width, float Height, float Rounding, int Corners) const;
 	void RenderQuadContainerBatchable(int QuadContainerIndex, float X, float Y, const ColorRGBA &Color) const;
 	void DestroyGaussianBlurTargets();
+	void DestroyBackgroundLayerTarget();
 
 public:
+	// 背景层：世界/菜单背景单独写入多采样离屏目标并 resolve，供模糊采样。
+	// 必须在任何前景文字之前调用；失败时返回 false，调用方回退到直接渲染交换链。
+	bool BeginBackgroundLayer(ColorRGBA ClearColor);
+	void EndBackgroundLayer();
+	bool BackgroundLayerActive() const { return m_BackgroundLayerActive; }
+	// 标记“背景已结束、前景尚未开始”的帧边界，并准备本帧模糊源。
+	// 同一帧重复调用无副作用；未调用时 PrepareGaussianBlur 不会读取交换链。
+	void BeginBackgroundFrame();
+	bool BackgroundFrameBegun() const;
+
 	static const CLinearScrollbarScale ms_LinearScrollbarScale;
 	static const CLogarithmicScrollbarScale ms_LogarithmicScrollbarScale;
 	static const CDarkButtonColorFunction ms_DarkButtonColorFunction;
@@ -1047,6 +1072,7 @@ public:
 	void DoButtonTooltip(const void *pId, const CUIRect *pRect, const char *pText);
 	void SetKeyboardFocus(const void *pId);
 	const void *KeyboardFocusItem() const { return m_KeyboardFocus.m_pItem; }
+	bool KeyboardFocusFromKeyboard() const { return m_KeyboardFocus.m_FromKeyboard; }
 	int DoButtonGroupKeyboard(const void *const *ppIds, const bool *pEnabled, int Count);
 	void DoTooltip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint = -1.0f);
 	void DoSmallTooltip(const void *pId, const CUIRect *pNearRect, const char *pText, float FontSize = 12.0f, float WidthHint = -1.0f);
@@ -1188,6 +1214,8 @@ public:
 
 	void ClipEnable(const CUIRect *pRect);
 	void ClipDisable();
+	// 清掉帧边界可能残留的 CUi 裁剪栈与后端裁剪状态；不要求当前有裁剪。
+	void ResetClipState();
 	const CUIRect *ClipArea() const;
 	const CUIRect *OutermostClipArea() const;
 	bool IsClipped() const { return !m_vClips.empty(); }
@@ -1389,6 +1417,13 @@ public:
 			CONFIRMED,
 			CANCELED,
 		};
+		// 危险等级：DANGER 只改确认键配色，不改变布局；删除类操作必须显式指定，
+		// 避免「删除」和「保存」长得一模一样。
+		enum class ETone
+		{
+			NEUTRAL = 0,
+			DANGER,
+		};
 		static constexpr float POPUP_MAX_WIDTH = 200.0f;
 		static constexpr float POPUP_FONT_SIZE = 10.0f;
 		static constexpr float POPUP_BUTTON_HEIGHT = 12.0f;
@@ -1399,6 +1434,7 @@ public:
 		char m_aNegativeButtonLabel[128];
 		char m_aMessage[1024];
 		EConfirmationResult m_Result;
+		ETone m_Tone = ETone::NEUTRAL;
 
 		CButtonContainer m_CancelButton;
 		CButtonContainer m_ConfirmButton;
@@ -1406,6 +1442,8 @@ public:
 		SConfirmPopupContext();
 		void Reset();
 		void YesNoButtons();
+		// 语义化按钮：Cancel / OK。新调用点优先用它，避免 Yes/No 在中文语境里指代不明。
+		void DefaultButtons();
 	};
 	void ShowPopupConfirm(float X, float Y, SConfirmPopupContext *pContext, bool CenterInViewport = true);
 

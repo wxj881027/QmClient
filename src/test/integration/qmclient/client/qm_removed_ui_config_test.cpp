@@ -61,6 +61,18 @@ namespace
 TEST_F(CQmRemovedUiConfig, LegacySwitchIsNotRegistered)
 {
 	EXPECT_EQ(m_pConsole->GetCommandInfo("qm_new_ui", CFGFLAG_CLIENT, false), nullptr);
+	EXPECT_EQ(m_pConsole->GetCommandInfo("qm_enhanced_rendering", CFGFLAG_CLIENT, false), nullptr);
+	EXPECT_EQ(m_pConsole->GetCommandInfo("qm_enhanced_sdf", CFGFLAG_CLIENT, false), nullptr);
+}
+
+TEST_F(CQmRemovedUiConfig, RemovedEnhancedSwitchesAreNotSaved)
+{
+	m_pConfigManager->StoreUnknownCommand("qm_enhanced_rendering 2", ConfigDomain::QMCLIENT);
+	m_pConfigManager->StoreUnknownCommand("qm_enhanced_sdf 0", ConfigDomain::QMCLIENT);
+	ASSERT_TRUE(m_pConfigManager->Save());
+	const std::string Saved = ReadSavedConfig();
+	EXPECT_EQ(Saved.find("qm_enhanced_rendering 2"), std::string::npos);
+	EXPECT_EQ(Saved.find("qm_enhanced_sdf 0"), std::string::npos);
 }
 
 TEST_F(CQmRemovedUiConfig, RemovedBlurSwitchesCannotOverrideMasterAndAreNotSaved)

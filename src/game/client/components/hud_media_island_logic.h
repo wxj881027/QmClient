@@ -1044,20 +1044,11 @@ struct SHudMediaIslandSdfCapsule
 	float m_SmoothUnion = 0.0f;
 };
 
-constexpr uint64_t QmHudMediaIslandBlurRefreshIntervalFrames = 1;
-
 // 背景色不透明度低于 100% 时准备模糊底图，0% 时保留纯模糊。
 // 着色器独立合成模糊底图，Background.a 只控制背景染色。
 inline bool QmHudMediaIslandShouldPrepareBackdropBlur(int BackgroundOpacity, bool GaussianBlurEnabled)
 {
 	return GaussianBlurEnabled && BackgroundOpacity < 100;
-}
-
-inline bool QmHudMediaIslandShouldRefreshBackdropBlur(uint64_t CurrentFrame, uint64_t LastAttemptFrame, bool HasAttempt)
-{
-	if(!HasAttempt || CurrentFrame < LastAttemptFrame)
-		return true;
-	return CurrentFrame - LastAttemptFrame >= QmHudMediaIslandBlurRefreshIntervalFrames;
 }
 
 inline vec4 QmHudMediaIslandBackdropUv(const CUIRect &OuterRect, const CUIRect &ScreenRect)

@@ -44,6 +44,96 @@ TEST(QmDemoDisplay, DemoPlaybackReadsTheDemoSpecificOptions)
 	EXPECT_FALSE(Settings.m_Chat);
 }
 
+TEST(QmDemoDisplay, CaptureFreezesTheSameOptionsUsedForRendering)
+{
+	CConfig Config = MakeConfig();
+	const SVideoDisplaySnapshot Snapshot = qm_demo_display::Capture(Config);
+	EXPECT_EQ(Snapshot.m_Direction, Config.m_QmDemoShowDirection);
+	EXPECT_EQ(Snapshot.m_StrongWeak, Config.m_QmDemoShowStrongWeak);
+	EXPECT_EQ(Snapshot.m_StrongWeakScope, Config.m_QmDemoStrongWeakScope);
+	EXPECT_EQ(Snapshot.m_StrongWeakSize, Config.m_ClNamePlatesStrongSize);
+	EXPECT_EQ(Snapshot.m_Hud, Config.m_QmDemoShowHud != 0);
+	EXPECT_EQ(Snapshot.m_Chat, Config.m_QmDemoShowChat != 0);
+	EXPECT_FALSE(Snapshot.m_RenderDemoOnly);
+
+	// 快照捕获后即使实时配置变化，导出渲染仍使用捕获值。
+	Config.m_QmDemoShowHud = 0;
+	Config.m_QmDemoShowChat = 1;
+	Config.m_QmDemoShowDirection = 0;
+	const auto Settings = qm_demo_display::FromSnapshot(Snapshot);
+	EXPECT_EQ(Settings.m_Direction, 2);
+	EXPECT_TRUE(Settings.m_Hud);
+	EXPECT_FALSE(Settings.m_Chat);
+	EXPECT_FLOAT_EQ(Settings.m_StrongWeakRowHeight, qm_demo_display::Resolve(Config, true, false).m_StrongWeakRowHeight);
+}
+
+namespace
+{
+	class CFakeVideo : public IVideo
+	{
+	public:
+		explicit CFakeVideo(const SVideoDisplaySnapshot &Snapshot) :
+			m_Snapshot(Snapshot)
+		{
+			ms_pCurrentVideo = this;
+		}
+		~CFakeVideo() override { ms_pCurrentVideo = nullptr; }
+
+		bool Start() override { return true; }
+		void Stop() override {}
+		void Pause(bool) override {}
+		bool IsRecording() const override { return true; }
+		bool HasError() const override { return false; }
+		void NextVideoFrame() override {}
+		void NextVideoFrameThread() override {}
+		void NextAudioFrame(ISoundMixFunc) override {}
+		void NextAudioFrameTimeline(ISoundMixFunc) override {}
+		const SVideoDisplaySnapshot *DisplaySnapshot() const override { return &m_Snapshot; }
+
+	private:
+		SVideoDisplaySnapshot m_Snapshot;
+	};
+}
+
+TEST(QmDemoDisplay, ActiveVideoSnapshotOverridesLiveConfig)
+{
+	CConfig Config = MakeConfig();
+	SVideoDisplaySnapshot Snapshot{};
+	Snapshot.m_Direction = 3;
+	Snapshot.m_StrongWeak = 2;
+	Snapshot.m_StrongWeakScope = 1;
+	Snapshot.m_StrongWeakSize = 50;
+	Snapshot.m_Hud = false;
+	Snapshot.m_Chat = true;
+	CFakeVideo Video(Snapshot);
+
+	const auto Settings = qm_demo_display::Resolve(Config, true, false);
+	EXPECT_EQ(Settings.m_Direction, 3);
+	EXPECT_EQ(Settings.m_StrongWeak, 2);
+	EXPECT_EQ(Settings.m_StrongWeakScope, 1);
+	EXPECT_FALSE(Settings.m_Hud);
+	EXPECT_TRUE(Settings.m_Chat);
+	EXPECT_FLOAT_EQ(Settings.m_StrongWeakRowHeight, 33.0f);
+}
+
+TEST(QmDemoDisplay, RenderDemoOnlyCaptureClearsOverlaysAndSurvivesSnapshot)
+{
+	CConfig Config = MakeConfig();
+	Config.m_QmVideoRenderDemoOnly = 1;
+	const SVideoDisplaySnapshot Snapshot = qm_demo_display::Capture(Config);
+	EXPECT_TRUE(Snapshot.m_RenderDemoOnly);
+	EXPECT_FALSE(Snapshot.m_Hud);
+	EXPECT_FALSE(Snapshot.m_Chat);
+	EXPECT_EQ(Snapshot.m_Direction, 0);
+	EXPECT_EQ(Snapshot.m_StrongWeak, 0);
+
+	const auto Settings = qm_demo_display::FromSnapshot(Snapshot);
+	EXPECT_TRUE(Settings.m_RenderDemoOnly);
+	EXPECT_FALSE(Settings.m_Hud);
+	EXPECT_FALSE(Settings.m_Chat);
+	EXPECT_FALSE(Settings.StrongWeakEnabled());
+}
+
 TEST(QmDemoDisplay, DemoPlaybackIgnoresVideoRenderingAndKeepsDemoOptions)
 {
 	// 边回放边录视频时仍用回放选项：两处渲染的是同一段回放画面。

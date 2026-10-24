@@ -135,6 +135,8 @@ private:
 		bool m_ContentHeightWasActive = false;
 		bool m_CollapsedInitialized = false;
 		bool m_LastCollapsed = false;
+		// 折叠当帧已经关过该卡的交互来源，避免折叠卡每帧关闭（会把 ⓘ 的面板当帧收掉）。
+		bool m_CollapsedInteractionClosed = false;
 		bool m_DefaultCollapsed = false;
 		char m_DefaultCollapseButtonId = 0;
 		char m_WidthButtonId = 0;

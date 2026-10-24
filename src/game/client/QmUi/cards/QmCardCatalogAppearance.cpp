@@ -420,6 +420,13 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				}
 				Flow.Space(MarginSmall);
 
+				if(Flow.Control("appearance-chat-line-spacing", LineSize, Button))
+				{
+					// 行间隔不改变每行内容高度，无需重建布局缓存。
+					DoAppearanceNumericField(APPEARANCE_TAB_CHAT, "appearance-chat-line-spacing", &g_Config.m_QmChatLineSpacing, &g_Config.m_QmChatLineSpacing, Button, Localize("Chat line spacing"), 0, 32, &CUi::ms_LinearScrollbarScale, 0, " px");
+				}
+				Flow.Space(MarginSmall);
+
 				static CButtonContainer s_BackgroundColor;
 				{
 					CUIRect ColorRow;
@@ -487,6 +494,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				const float RealMsgPaddingX = (!g_Config.m_ClChatOld ? pChat->MessagePaddingX() : 0.0f) * 2.0f;
 				const float RealMsgPaddingY = (!g_Config.m_ClChatOld ? pChat->MessagePaddingY() : 0.0f) * 2.0f;
 				const float RealMsgPaddingTee = (!g_Config.m_ClChatOld ? pChat->MessageTeeSize() + CChat::MESSAGE_TEE_PADDING_RIGHT : 0.0f) * 2.0f;
+				const float RealLineSpacing = g_Config.m_QmChatLineSpacing * 2.0f;
 				const float ConfiguredLineWidth = g_Config.m_ClChatWidth * 2.0f - RealMsgPaddingX * 1.5f - RealMsgPaddingTee;
 				const float CardLineWidth = maximum(RealFontSize, ContentWidth - 2.0f * MarginSmall - QM_CHAT_SCROLLBAR_RESERVE * 2.0f - RealMsgPaddingX * 1.5f - RealMsgPaddingTee);
 				const float LineWidth = maximum(RealFontSize, minimum(ConfiguredLineWidth, CardLineWidth));
@@ -496,7 +504,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				const auto AddPreviewLine = [&](const char *pName, const char *pText, bool AppendNameSeparator = true) {
 					char aLine[384];
 					str_format(aLine, sizeof(aLine), "%s%s%s", pName, AppendNameSeparator && pName[0] != '\0' ? ": " : "", pText);
-					Height += maximum(RealFontSize, TextRender()->TextBoundingBox(RealFontSize, aLine, -1, LineWidth).m_H) + RealMsgPaddingY;
+					Height += maximum(RealFontSize, TextRender()->TextBoundingBox(RealFontSize, aLine, -1, LineWidth).m_H) + RealMsgPaddingY + RealLineSpacing;
 				};
 				if(g_Config.m_ClShowChatSystem)
 				{
@@ -549,6 +557,8 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 			const float RealMsgPaddingY = (!g_Config.m_ClChatOld ? pChat->MessagePaddingY() : 0) * 2;
 			const float RealMsgPaddingTee = (!g_Config.m_ClChatOld ? pChat->MessageTeeSize() + CChat::MESSAGE_TEE_PADDING_RIGHT : 0) * 2;
 			const float RealOffsetY = RealFontSize + RealMsgPaddingY;
+			// 行间隔与游戏内 AdvanceChatLineStack 对齐：按 2 倍缩放换算，堆叠推进时消耗，底色矩形不包含。
+			const float RealLineSpacing = g_Config.m_QmChatLineSpacing * 2.0f;
 
 			const float X = RealMsgPaddingX / 2.0f + PreviewView.x;
 			float Y = PreviewView.y;
@@ -722,7 +732,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				if(Render)
 					TextRender()->TextColor(TextRender()->DefaultTextColor());
 
-				return vec2{LocalCursor.m_LongestLineWidth + AppendCursor.m_LongestLineWidth, AppendCursor.Height() + RealMsgPaddingY};
+				return vec2{LocalCursor.m_LongestLineWidth + AppendCursor.m_LongestLineWidth, AppendCursor.Height() + RealMsgPaddingY + RealLineSpacing};
 			};
 
 			// Set preview lines
@@ -756,7 +766,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 
 				auto &&RenderMessageBackground = [&](int LineIndex) {
 					const auto Size = RenderPreview(LineIndex, 0, 0, false);
-					const CUIRect MessageBackground{PreviewView.x, TempY - RealMsgPaddingY / 2.0f, PreviewView.w, Size.y};
+					const CUIRect MessageBackground{PreviewView.x, TempY - RealMsgPaddingY / 2.0f, PreviewView.w, Size.y - RealLineSpacing};
 					DrawRoundedSurface(Ui(), MessageBackground, BackgroundColor, ColorRGBA(), RealBackgroundRounding);
 					return Size.y;
 				};
@@ -962,7 +972,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				}
 				Flow.Space(MarginSmall);
 
-				static CButtonContainer s_HookCollNoCollResetId, s_HookCollHookableCollResetId, s_HookCollTeeCollResetId, s_HookCollTipColorResetId;
+				static CButtonContainer s_HookCollNoCollResetId, s_HookCollHookableCollResetId, s_HookCollTeeCollResetId, s_HookCollTipColorResetId, s_HookCollPressedNoCollResetId, s_HookCollPressedHookableResetId, s_HookCollPressedTeeResetId, s_HookCollPressedTipResetId;
 				static int s_HookCollToolTip;
 
 				DoAppearanceHeading(LeftView, "appearance-hook-collision-colors-title", Localize("Colors of the hook collision line, in case of a possible collision with:"), HeadlineFontSize, HeadlineHeight);
@@ -993,17 +1003,89 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 						DoLine_ColorPicker(&s_HookCollTipColorResetId, AppearanceMetrics, &ColorRow, Localize("Hook line tip"), &g_Config.m_ClHookCollTipColor, ColorRGBA(1.0f, 1.0f, 0.0f, 0.5f), false, nullptr, true);
 					Flow.Space(AppearanceMetrics.m_LineSpacing);
 				}
+				{
+					// 自定义按下后颜色开关：关闭时按下态沿用自动反色
+					if(Flow.Control("appearance-hook-coll-pressed-custom", LineSize, Button))
+					{
+						if(DoSettingsButton_CheckBox(SETTINGS_APPEARANCE, APPEARANCE_TAB_HOOK_COLLISION, &g_Config.m_QmHookCollPressedCustom, "appearance-hook-coll-pressed-custom", Localize("Custom pressed hook line colors"), g_Config.m_QmHookCollPressedCustom, &Button))
+						{
+							g_Config.m_QmHookCollPressedCustom = g_Config.m_QmHookCollPressedCustom ? 0 : 1;
+						}
+					}
+					static int s_HookCollPressedCustomToolTip;
+					Ui()->RegisterPassiveHotItem(&s_HookCollPressedCustomToolTip, &Button);
+					GameClient()->m_Tooltips.DoToolTip(&s_HookCollPressedCustomToolTip, &Button, Localize("Use the custom colors below while the hook key is held"));
+					Flow.Space(MarginSmall);
+				}
+				// 按下后四行取色器仅在"自定义按下后颜色"开启时渲染；关闭时不占用布局，
+				// 高度过渡由设置卡片外壳按测量变化自动承载。
+				if(g_Config.m_QmHookCollPressedCustom != 0)
+				{
+					{
+						// 按下后颜色（未瞄准可钩物体）：开关开启时始终生效，默认为原色的高亮变体
+						CUIRect ColorRow;
+						if(Flow.Control("appearance-color-QmHookCollPressedNoColl", AppearanceMetrics.m_ButtonHeight, ColorRow))
+							DoLine_ColorPicker(&s_HookCollPressedNoCollResetId, AppearanceMetrics, &ColorRow, Localize("Pressed: Nothing hookable"), &g_Config.m_QmHookCollPressedNoColl, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmHookCollPressedNoColl, true)), false, nullptr, true);
+						static int s_HookCollPressedToolTip;
+						Ui()->RegisterPassiveHotItem(&s_HookCollPressedToolTip, &ColorRow);
+						GameClient()->m_Tooltips.DoToolTip(&s_HookCollPressedToolTip, &ColorRow, Localize("Pressed hook line color; always used when custom pressed colors are enabled"));
+						Flow.Space(AppearanceMetrics.m_LineSpacing);
+					}
+					{
+						// 按下后颜色（可钩物体）
+						CUIRect ColorRow;
+						if(Flow.Control("appearance-color-QmHookCollPressedHookable", AppearanceMetrics.m_ButtonHeight, ColorRow))
+							DoLine_ColorPicker(&s_HookCollPressedHookableResetId, AppearanceMetrics, &ColorRow, Localize("Pressed: Something hookable"), &g_Config.m_QmHookCollPressedHookable, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmHookCollPressedHookable, true)), false, nullptr, true);
+						static int s_HookCollPressedToolTip;
+						Ui()->RegisterPassiveHotItem(&s_HookCollPressedToolTip, &ColorRow);
+						GameClient()->m_Tooltips.DoToolTip(&s_HookCollPressedToolTip, &ColorRow, Localize("Pressed hook line color; always used when custom pressed colors are enabled"));
+						Flow.Space(AppearanceMetrics.m_LineSpacing);
+					}
+					{
+						// 按下后颜色（其他玩家）
+						CUIRect ColorRow;
+						if(Flow.Control("appearance-color-QmHookCollPressedTee", AppearanceMetrics.m_ButtonHeight, ColorRow))
+							DoLine_ColorPicker(&s_HookCollPressedTeeResetId, AppearanceMetrics, &ColorRow, Localize("Pressed: A Tee"), &g_Config.m_QmHookCollPressedTee, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmHookCollPressedTee, true)), false, nullptr, true);
+						static int s_HookCollPressedToolTip;
+						Ui()->RegisterPassiveHotItem(&s_HookCollPressedToolTip, &ColorRow);
+						GameClient()->m_Tooltips.DoToolTip(&s_HookCollPressedToolTip, &ColorRow, Localize("Pressed hook line color; always used when custom pressed colors are enabled"));
+						Flow.Space(AppearanceMetrics.m_LineSpacing);
+					}
+					{
+						// 按下后颜色（辅助线提示）
+						CUIRect ColorRow;
+						if(Flow.Control("appearance-color-QmHookCollPressedTip", AppearanceMetrics.m_ButtonHeight, ColorRow))
+							DoLine_ColorPicker(&s_HookCollPressedTipResetId, AppearanceMetrics, &ColorRow, Localize("Pressed: Hook line tip"), &g_Config.m_QmHookCollPressedTip, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmHookCollPressedTip, true)), false, nullptr, true);
+						static int s_HookCollPressedToolTip;
+						Ui()->RegisterPassiveHotItem(&s_HookCollPressedToolTip, &ColorRow);
+						GameClient()->m_Tooltips.DoToolTip(&s_HookCollPressedToolTip, &ColorRow, Localize("Pressed hook line color; always used when custom pressed colors are enabled"));
+						Flow.Space(AppearanceMetrics.m_LineSpacing);
+					}
+				}
 			});
 			AddCard(8, HookCollisionRightMinCardHeight, [=, this](CUIRect ContentRect) mutable {
 				CUIRect RightView = ContentRect;
 				// ***** Hook collisions preview ***** //
-				auto DoHookCollision = [this](const vec2 &Pos, const float &Length, const int &Size, const ColorRGBA &Color, const ColorRGBA &TipColor, const bool &Invert) {
+				// PressedColor/PressedTipColor：对应分类的"按下后"配置色（开关开启时始终生效），
+				// 与 players.cpp 按下态渲染逻辑保持一致
+				auto DoHookCollision = [this](const vec2 &Pos, const float &Length, const int &Size, const ColorRGBA &Color, const ColorRGBA &TipColor, const bool &Invert, unsigned PressedColor = 0, unsigned PressedTipColor = 0) {
 					ColorRGBA ColorModified = Color;
 					ColorRGBA TipColorModified = TipColor;
 					if(Invert)
-						ColorModified = color_invert(ColorModified);
+					{
+						// 与 players.cpp 按下态渲染一致：开关开启时取对应分类"按下后"颜色（始终生效），开关关闭沿用自动反色
+						if(g_Config.m_QmHookCollPressedCustom)
+							ColorModified = color_cast<ColorRGBA>(ColorHSLA(PressedColor, true));
+						else
+							ColorModified = color_invert(ColorModified);
+						// 提示段：与 players.cpp 一致，原提示色可见时才套用按下态颜色
+						if(g_Config.m_QmHookCollPressedCustom && TipColor.a > 0.0f)
+						{
+							TipColorModified = color_cast<ColorRGBA>(ColorHSLA(PressedTipColor, true));
+						}
+					}
 					ColorModified = ColorModified.WithAlpha((float)g_Config.m_ClHookCollAlpha / 100);
-					TipColorModified = TipColor.WithMultipliedAlpha((float)g_Config.m_ClHookCollAlpha / 100);
+					TipColorModified = TipColorModified.WithMultipliedAlpha((float)g_Config.m_ClHookCollAlpha / 100);
 					Graphics()->TextureClear();
 					if(Size > 0)
 					{
@@ -1093,7 +1175,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				PrepareHookPreviewRow(PreviewNoColl);
 				RightView.HSplitTop(4 * MarginSmall, nullptr, &RightView);
 				TeeRenderPos = vec2(PreviewNoColl.x + LeftMargin, PreviewNoColl.y + PreviewNoColl.h / 2.0f);
-				DoHookCollision(TeeRenderPos, PreviewNoColl.w - LineLength, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl)), ui_token::color::COLOR_TRANSPARENT, s_HookCollPressed);
+				DoHookCollision(TeeRenderPos, PreviewNoColl.w - LineLength, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl)), ui_token::color::COLOR_TRANSPARENT, s_HookCollPressed, g_Config.m_QmHookCollPressedNoColl);
 				RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, 0, vec2(1.0f, 0.0f), TeeRenderPos);
 
 				CUIRect NoHookTileRect;
@@ -1109,7 +1191,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				PrepareHookPreviewRow(PreviewColl);
 				RightView.HSplitTop(4 * MarginSmall, nullptr, &RightView);
 				TeeRenderPos = vec2(PreviewColl.x + LeftMargin, PreviewColl.y + PreviewColl.h / 2.0f);
-				DoHookCollision(TeeRenderPos, PreviewColl.w - LineLength, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl)), ui_token::color::COLOR_TRANSPARENT, s_HookCollPressed);
+				DoHookCollision(TeeRenderPos, PreviewColl.w - LineLength, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl)), ui_token::color::COLOR_TRANSPARENT, s_HookCollPressed, g_Config.m_QmHookCollPressedHookable);
 				RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, 0, vec2(1.0f, 0.0f), TeeRenderPos);
 
 				CUIRect HookTileRect;
@@ -1126,7 +1208,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				RightView.HSplitTop(4 * MarginSmall, nullptr, &RightView);
 				TeeRenderPos = vec2(PreviewColl.x + LeftMargin, PreviewColl.y + PreviewColl.h / 2.0f);
 				DummyRenderPos = vec2(PreviewColl.x + PreviewColl.w - LineLength - 5.f + LeftMargin, PreviewColl.y + PreviewColl.h / 2.0f);
-				DoHookCollision(TeeRenderPos, PreviewColl.w - LineLength - 15.f, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)), ui_token::color::COLOR_TRANSPARENT, s_HookCollPressed);
+				DoHookCollision(TeeRenderPos, PreviewColl.w - LineLength - 15.f, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)), ui_token::color::COLOR_TRANSPARENT, s_HookCollPressed, g_Config.m_QmHookCollPressedTee);
 				RenderTools()->RenderTee(CAnimState::GetIdle(), &DummySkinInfo, 0, vec2(1.0f, 0.0f), DummyRenderPos);
 				RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, 0, vec2(1.0f, 0.0f), TeeRenderPos);
 
@@ -1145,7 +1227,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				PrepareHookPreviewRow(PreviewColl);
 				RightView.HSplitTop(4 * MarginSmall, nullptr, &RightView);
 				TeeRenderPos = vec2(PreviewColl.x + LeftMargin, PreviewColl.y + PreviewColl.h / 2.0f);
-				DoHookCollision(TeeRenderPos, PreviewColl.w - LineLength - 15.f, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl)), color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollTipColor, true)), s_HookCollPressed);
+				DoHookCollision(TeeRenderPos, PreviewColl.w - LineLength - 15.f, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl)), color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollTipColor, true)), s_HookCollPressed, g_Config.m_QmHookCollPressedNoColl, g_Config.m_QmHookCollPressedTip);
 				RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, 0, vec2(1.0f, 0.0f), TeeRenderPos);
 
 				// ***** Preview +hookcoll pressed toggle *****

@@ -474,6 +474,12 @@ namespace qm_card_catalog
 			{Localizable("Max demos"), nullptr, "最大回放数"},
 			{Localizable("Demo directory"), "qm_demo_directory", "回放保存目录 路径 demos"},
 			{Localizable("Video directory"), "qm_video_directory", "视频导出目录 路径 videos"},
+			{Localizable("Video quality CRF"), nullptr, "渲染质量 画质 crf"},
+			{nullptr, "cl_video_crf", nullptr},
+			{Localizable("Recorder FPS"), nullptr, "录制帧率 录像帧率 帧率 fps"},
+			{nullptr, "cl_video_recorder_fps", nullptr},
+			{Localizable("Render preset"), nullptr, "渲染预设 编码预设 preset"},
+			{nullptr, "cl_video_x264_preset", nullptr},
 			{Localizable("Screenshot directory"), "qm_screenshot_directory", "截图保存目录 路径 screenshots"},
 			{nullptr, "cl_auto_csv", nullptr},
 			{nullptr, "cl_auto_csv_max", nullptr},
@@ -1949,6 +1955,12 @@ namespace qm_card_catalog
 			{Localizable("Hook collision line opacity"), nullptr, "钩子辅助线不透明度"},
 			{Localizable("Hook line tip"), nullptr, "辅助线提示"},
 			{Localizable("Nothing hookable"), nullptr, "未瞄准可钩物体"},
+			{Localizable("Pressed hook line color; always used when custom pressed colors are enabled"), nullptr, "按下后颜色；开启自定义按下后颜色时始终生效"},
+			{Localizable("Pressed: A Tee"), nullptr, "按下后：其他玩家"},
+			{Localizable("Pressed: Hook line tip"), nullptr, "按下后：辅助线提示"},
+			{Localizable("Pressed: Nothing hookable"), nullptr, "按下后：未瞄准可钩物体"},
+			{Localizable("Pressed: Something hookable"), nullptr, "按下后：可钩物体"},
+			{Localizable("Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted"), nullptr, "按住显示钩索碰撞线时使用下方的自定义颜色；关闭=自动反色"},
 			{Localizable("Show other players' hook collision lines"), nullptr, "显示其他玩家的钩子辅助线"},
 			{Localizable("Show own player's hook collision line"), nullptr, "显示自己的钩子辅助线"},
 			{Localizable("Something hookable"), nullptr, "可钩物体"},
@@ -1964,6 +1976,11 @@ namespace qm_card_catalog
 			{nullptr, "cl_hook_coll_tip_color", nullptr},
 			{nullptr, "cl_show_hook_coll_other", nullptr},
 			{nullptr, "cl_show_hook_coll_own", nullptr},
+			{nullptr, "qm_hook_coll_pressed_custom", nullptr},
+			{nullptr, "qm_hook_coll_pressed_hookable", nullptr},
+			{nullptr, "qm_hook_coll_pressed_no_coll", nullptr},
+			{nullptr, "qm_hook_coll_pressed_tee", nullptr},
+			{nullptr, "qm_hook_coll_pressed_tip", nullptr},
 		};
 
 		static constexpr SCardSettingSearch s_adeck_appearance_hook_collision_preview[] = {
@@ -2058,6 +2075,7 @@ namespace qm_card_catalog
 			{Localizable("Auto save chat log"), nullptr, "自动保存聊天记录"},
 			{Localizable("Chat background color"), nullptr, "聊天背景色"},
 			{Localizable("Chat font size"), nullptr, "聊天字体大小"},
+			{Localizable("Chat line spacing"), nullptr, "聊天行间隔 聊天间隔"},
 			{Localizable("Chat log retention days"), nullptr, "聊天记录保留天数"},
 			{Localizable("Chat width"), nullptr, "聊天框宽度"},
 			{Localizable("Days"), nullptr, "天"},
@@ -2078,6 +2096,7 @@ namespace qm_card_catalog
 			{nullptr, "cl_show_chat_friends", nullptr},
 			{nullptr, "cl_show_chat_team_members_only", nullptr},
 			{nullptr, "cl_showchat", nullptr},
+			{nullptr, "qm_chat_line_spacing", nullptr},
 			{nullptr, "qm_chat_log_auto_save", nullptr},
 			{nullptr, "qm_chat_log_keep_days", nullptr},
 			{nullptr, "qm_chat_save_draft", nullptr},
@@ -2695,10 +2714,8 @@ namespace qm_card_catalog
 			{Localizable("Enable repeat"), nullptr, "启用复读"},
 			{Localizable("Hide input emoticon"), nullptr, "隐藏输入表情"},
 			{Localizable("Hide server information on join"), nullptr, "进图时隐藏服务器信息"},
-			{Localizable("Local particle effects"), nullptr, "本地粒子效果"},
 			{Localizable("Message merging"), nullptr, "消息合并"},
 			{Localizable("Random emoticon"), nullptr, "随机表情"},
-			{Localizable("Remote particle effects"), nullptr, "远程粒子效果"},
 			{Localizable("Short server names"), nullptr, "短服务器名称"},
 			{Localizable("Show Qm badge"), nullptr, "显示 Qm 标识"},
 			{Localizable("Show outdated version warning"), nullptr, "显示版本过旧提示"},
@@ -2706,10 +2723,8 @@ namespace qm_card_catalog
 			{Localizable("Sponsor reminder"), nullptr, "赞助提醒"},
 			{nullptr, "qm_auto_update", nullptr},
 			{nullptr, "qm_blank_asset_fallback", nullptr},
-			{nullptr, "qm_client_mark_trail", nullptr},
 			{nullptr, "qm_client_show_badge", nullptr},
 			{nullptr, "qm_combo_popup", nullptr},
-			{nullptr, "qm_foot_particles", nullptr},
 			{nullptr, "qm_hide_join_server_info", nullptr},
 			{nullptr, "qm_message_merge", nullptr},
 			{nullptr, "qm_random_emote_on_hit", nullptr},
@@ -2719,6 +2734,15 @@ namespace qm_card_catalog
 			{nullptr, "qm_show_outdated_version_warning", nullptr},
 			{nullptr, "qm_show_tune_zone_colors", nullptr},
 			{nullptr, "qm_sponsor_nudge", nullptr},
+		};
+
+		static constexpr SCardSettingSearch s_aqm_self_kill_protection[] = {
+			{Localizable("Client-side self-kill protection"), nullptr, "客户端侧自杀保护 自杀保护 自杀开关"},
+			{Localizable("Self-kill off"), nullptr, "关闭自杀 禁止自杀 防误触"},
+			{Localizable("Self-kill on"), nullptr, "开启自杀 允许自杀 解除"},
+			{Localizable("To prevent accidental kills while racing, use the two bind rows above to toggle. To self-kill, press the enable key first, then press K. Server commands are not affected"), nullptr, "跑图 防误触 绑定按键 bind 按键开关"},
+			{nullptr, "qm_self_kill_off", nullptr},
+			{nullptr, "qm_self_kill_on", nullptr},
 		};
 
 		static constexpr SCardSettingSearch s_aqm_jump_hint[] = {
@@ -2843,6 +2867,14 @@ namespace qm_card_catalog
 		static constexpr SCardSettingSearch s_aqm_water_hammer[] = {
 			{Localizable("Highlight teammates hammering in death or freeze areas"), nullptr, "高亮在死亡或冻结区域卡锤的队友"},
 			{nullptr, "qm_water_hammer_highlight", nullptr},
+		};
+
+		static constexpr SCardSettingSearch s_aqm_bind_overview[] = {
+			{Localizable("Bind overview"), nullptr, "绑定一览"},
+			{Localizable("Browse all key bindings grouped by function"), nullptr, "按功能分组查看所有键位绑定"},
+			{Localizable("Copy all"), nullptr, "复制全部"},
+			{Localizable("Sort by command"), nullptr, "按命令排序"},
+			{Localizable("Sort by key"), nullptr, "按按键排序"},
 		};
 
 		static constexpr SCardSettingSearch s_aqm_bind_editor[] = {
@@ -2976,8 +3008,6 @@ namespace qm_card_catalog
 			{nullptr, "qm_show_nameplate_title", nullptr},
 			{nullptr, "qm_sponsor_chat_effects", nullptr},
 			{nullptr, "qm_sponsor_chat_style", nullptr},
-			{nullptr, "qm_title_advanced", nullptr},
-			{nullptr, "qm_title_bloom", nullptr},
 			{nullptr, "qm_title_motion_mode", nullptr},
 			{nullptr, "qm_title_bob_amplitude", nullptr},
 			{nullptr, "qm_title_bob_pixel_snap", nullptr},
@@ -3061,8 +3091,6 @@ namespace qm_card_catalog
 			{nullptr, "qm_show_nameplate_title", nullptr},
 			{nullptr, "qm_sponsor_chat_effects", nullptr},
 			{nullptr, "qm_sponsor_chat_style", nullptr},
-			{nullptr, "qm_title_advanced", nullptr},
-			{nullptr, "qm_title_bloom", nullptr},
 			{nullptr, "qm_title_motion_mode", nullptr},
 			{nullptr, "qm_title_bob_amplitude", nullptr},
 			{nullptr, "qm_title_bob_pixel_snap", nullptr},
@@ -3240,6 +3268,7 @@ namespace qm_card_catalog
 			{"deck:controls-miscellaneous", s_adeck_controls_miscellaneous, std::size(s_adeck_controls_miscellaneous)},
 			{"qm:skin_appearance", s_aqm_skin_appearance, std::size(s_aqm_skin_appearance)},
 			{"qm:solo_split", s_aqm_solo_split, std::size(s_aqm_solo_split)},
+			{"qm:self_kill_protection", s_aqm_self_kill_protection, std::size(s_aqm_self_kill_protection)},
 			{"qm:mini_features", s_aqm_mini_features, std::size(s_aqm_mini_features)},
 			{"qm:jump_hint", s_aqm_jump_hint, std::size(s_aqm_jump_hint)},
 			{"qm:weapon_trajectory", s_aqm_weapon_trajectory, std::size(s_aqm_weapon_trajectory)},
@@ -3249,6 +3278,7 @@ namespace qm_card_catalog
 			{"qm:tooltip", s_aqm_tooltip, std::size(s_aqm_tooltip)},
 			{"qm:water_hammer", s_aqm_water_hammer, std::size(s_aqm_water_hammer)},
 			{"qm:bind_editor", s_aqm_bind_editor, std::size(s_aqm_bind_editor)},
+			{"qm:bind_overview", s_aqm_bind_overview, std::size(s_aqm_bind_overview)},
 			{"deck:qmclient-contributors-title", s_adeck_qmclient_contributors_title, std::size(s_adeck_qmclient_contributors_title)},
 			{"deck:qmclient-contributors-title-display", s_adeck_qmclient_contributors_title_display, std::size(s_adeck_qmclient_contributors_title_display)},
 			{"deck:tclient-chat-binds-kaomoji", s_adeck_tclient_chat_binds_kaomoji, std::size(s_adeck_tclient_chat_binds_kaomoji)},

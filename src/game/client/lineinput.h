@@ -127,6 +127,10 @@ private:
 
 	float m_ScrollOffset;
 	float m_ScrollOffsetChange;
+	// 多行输入的纵向滚动：横向偏移由单行输入独占，纵向混用同一字段会在
+	// 失焦、复用或换行密集的文本里互相覆盖，所以分开保存。
+	float m_ScrollOffsetY = 0.0f;
+	float m_ScrollOffsetYChange = 0.0f;
 	vec2 m_CaretPosition;
 	std::chrono::nanoseconds m_CaretBlinkStartTime{};
 	CQmLineInputMotion m_InputMotion;
@@ -141,6 +145,8 @@ private:
 	bool m_WasChanged;
 	bool m_WasCursorChanged;
 	bool m_WasRendered;
+	// 多行输入：回车产生换行、粘贴保留换行；单行输入保持既有语义。
+	bool m_Multiline = false;
 
 	char m_ClearButtonId;
 
@@ -230,6 +236,11 @@ public:
 	void SetScrollOffset(float ScrollOffset) { m_ScrollOffset = ScrollOffset; }
 	float GetScrollOffsetChange() const { return m_ScrollOffsetChange; }
 	void SetScrollOffsetChange(float ScrollOffsetChange) { m_ScrollOffsetChange = ScrollOffsetChange; }
+	// 多行输入的可视带纵向偏移，0 表示内容顶部对齐输入框顶部。
+	float GetScrollOffsetY() const { return m_ScrollOffsetY; }
+	void SetScrollOffsetY(float ScrollOffsetY) { m_ScrollOffsetY = ScrollOffsetY; }
+	float GetScrollOffsetYChange() const { return m_ScrollOffsetYChange; }
+	void SetScrollOffsetYChange(float ScrollOffsetYChange) { m_ScrollOffsetYChange = ScrollOffsetYChange; }
 
 	vec2 GetCaretPosition() const { return m_CaretPosition; } // only updated while the input is active
 
@@ -240,6 +251,9 @@ public:
 	void SetEmptyText(const char *pText) { m_pEmptyText = pText; }
 
 	void SetClipboardLineCallback(const FClipboardLineCallback &pfnClipboardLineCallback) { m_pfnClipboardLineCallback = pfnClipboardLineCallback; }
+	// 多行输入由 DoEditBoxMultiLine 打开：回车写入换行，粘贴保留换行。
+	void SetMultiline(bool Multiline) { m_Multiline = Multiline; }
+	bool Multiline() const { return m_Multiline; }
 	void SetDisplayTextCallback(const FDisplayTextCallback &pfnDisplayTextCallback) { m_pfnDisplayTextCallback = pfnDisplayTextCallback; }
 	void SetCalculateOffsetCallback(const FCalculateOffsetCallback &pfnCalculateOffsetCallback) { m_pfnCalculateOffsetCallback = pfnCalculateOffsetCallback; }
 
