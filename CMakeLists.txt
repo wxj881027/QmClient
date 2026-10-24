@@ -3142,6 +3142,7 @@ if(CLIENT)
     graphics_threaded.cpp
     graphics_threaded.h
     buffer_container_pool.h
+    buffer_object_pool.h
     graphics_upload_data.h
     graphics_threaded_sprites.cpp
     render_target_readback_queue.h
@@ -4854,7 +4855,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/graphics_command_buffer_allocation_test.cpp
     src/test/unit/engine/graphics/graphics_upload_data_test.cpp
     src/test/unit/engine/graphics/buffer_container_pool_test.cpp
+    src/test/unit/engine/graphics/buffer_object_pool_test.cpp
     src/test/integration/client/graphics_buffer_container_creation_test.cpp
+    src/test/integration/client/graphics_buffer_object_creation_test.cpp
     src/test/unit/engine/graphics/glyph_atlas_test.cpp
     src/test/unit/engine/graphics/glyph_atlas_growth_test.cpp
     src/test/unit/engine/graphics/glyph_render_retry_test.cpp

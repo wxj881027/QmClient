@@ -6,6 +6,7 @@
 #include <base/system.h>
 
 #include <engine/client/buffer_container_pool.h>
+#include <engine/client/buffer_object_pool.h>
 #include <engine/client/graphics_upload_data.h>
 #include <engine/client/quad_rotation_cache.h>
 #include <engine/client/render_target_pool.h>
@@ -1157,8 +1158,7 @@ class CGraphics_Threaded : public IEngineGraphics
 
 	CBufferContainerPool<> m_BufferContainers;
 
-	std::vector<int> m_vBufferObjectIndices;
-	int m_FirstFreeBufferObjectIndex;
+	CBufferObjectPool<> m_BufferObjects;
 
 	struct SQuadContainer
 	{
@@ -1234,6 +1234,7 @@ class CGraphics_Threaded : public IEngineGraphics
 	}
 
 	void KickCommandBuffer();
+	void FlushPendingBufferObjectDeletes();
 
 	void AddBackEndWarningIfExists();
 

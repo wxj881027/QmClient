@@ -29,6 +29,8 @@
 
 #include <cinttypes>
 #include <limits>
+#include <new>
+#include <stdexcept>
 #include <thread>
 
 #if defined(CONF_PLATFORM_MACOS)
@@ -3302,69 +3304,68 @@ void *CGraphics_Threaded::AllocCommandBufferData(size_t AllocSize)
 
 int CGraphics_Threaded::CreateBufferObject(size_t UploadDataSize, void *pUploadData, int CreateFlags, bool IsMovedPointer)
 {
-	int Index = -1;
-	if(m_FirstFreeBufferObjectIndex == -1)
-	{
-		Index = m_vBufferObjectIndices.size();
-		m_vBufferObjectIndices.push_back(Index);
-	}
-	else
-	{
-		Index = m_FirstFreeBufferObjectIndex;
-		m_FirstFreeBufferObjectIndex = m_vBufferObjectIndices[Index];
-		m_vBufferObjectIndices[Index] = Index;
-	}
-
+	CGraphicsUploadData<void> OwnedUpload(IsMovedPointer ? pUploadData : nullptr);
 	dbg_assert((CreateFlags & EBufferObjectCreateFlags::BUFFER_OBJECT_CREATE_FLAGS_ONE_TIME_USE_BIT) == 0 || (UploadDataSize <= CCommandBuffer::MAX_VERTICES * maximum(sizeof(CCommandBuffer::SVertexTex3DStream), sizeof(CCommandBuffer::SVertexTex3D))),
 		"If BUFFER_OBJECT_CREATE_FLAGS_ONE_TIME_USE_BIT is used, then the buffer size must not exceed max(sizeof(CCommandBuffer::SVertexTex3DStream), sizeof(CCommandBuffer::SVertexTex3D)) * CCommandBuffer::MAX_VERTICES");
 
-	CCommandBuffer::SCommand_CreateBufferObject Cmd;
-	Cmd.m_BufferIndex = Index;
-	Cmd.m_DataSize = UploadDataSize;
-	Cmd.m_DeletePointer = IsMovedPointer;
-	Cmd.m_Flags = CreateFlags;
+	return m_BufferObjects.Create([&](auto &Creation) {
+		const int Index = Creation.Index();
+		CCommandBuffer::SCommand_CreateBufferObject Cmd;
+		Cmd.m_BufferIndex = Index;
+		Cmd.m_DataSize = UploadDataSize;
+		Cmd.m_DeletePointer = IsMovedPointer;
+		Cmd.m_Flags = CreateFlags;
 
-	if(IsMovedPointer)
-	{
-		Cmd.m_pUploadData = pUploadData;
-		AddCmd(Cmd);
-	}
-	else
-	{
-		if(UploadDataSize <= CMD_BUFFER_DATA_BUFFER_SIZE)
+		if(IsMovedPointer)
 		{
-			Cmd.m_pUploadData = AllocCommandBufferData(UploadDataSize);
-
-			AddCmd(Cmd, [&] {
-				Cmd.m_pUploadData = m_pCommandBuffer->AllocData(UploadDataSize);
-				return Cmd.m_pUploadData != nullptr;
-			});
-			mem_copy(Cmd.m_pUploadData, pUploadData, UploadDataSize);
+			Cmd.m_pUploadData = pUploadData;
+			AddCmd(Cmd);
+			Creation.Accepted();
+			OwnedUpload.release();
 		}
 		else
 		{
-			Cmd.m_pUploadData = nullptr;
-			AddCmd(Cmd);
-
-			// update the buffer instead
-			size_t UploadDataOffset = 0;
-			while(UploadDataSize > 0)
+			if(UploadDataSize <= CMD_BUFFER_DATA_BUFFER_SIZE)
 			{
-				size_t UpdateSize = (UploadDataSize > CMD_BUFFER_DATA_BUFFER_SIZE ? CMD_BUFFER_DATA_BUFFER_SIZE : UploadDataSize);
+				Cmd.m_pUploadData = AllocCommandBufferData(UploadDataSize);
 
-				UpdateBufferObjectInternal(Index, UpdateSize, (((char *)pUploadData) + UploadDataOffset), (void *)UploadDataOffset);
+				AddCmd(Cmd, [&] {
+					Cmd.m_pUploadData = m_pCommandBuffer->AllocData(UploadDataSize);
+					return Cmd.m_pUploadData != nullptr;
+				});
+				Creation.Accepted();
+				mem_copy(Cmd.m_pUploadData, pUploadData, UploadDataSize);
+			}
+			else
+			{
+				Cmd.m_pUploadData = nullptr;
+				AddCmd(Cmd);
+				Creation.Accepted();
 
-				UploadDataOffset += UpdateSize;
-				UploadDataSize -= UpdateSize;
+				// update the buffer instead
+				size_t UploadDataOffset = 0;
+				while(UploadDataSize > 0)
+				{
+					size_t UpdateSize = (UploadDataSize > CMD_BUFFER_DATA_BUFFER_SIZE ? CMD_BUFFER_DATA_BUFFER_SIZE : UploadDataSize);
+
+					UpdateBufferObjectInternal(Index, UpdateSize, (((char *)pUploadData) + UploadDataOffset), (void *)UploadDataOffset);
+
+					UploadDataOffset += UpdateSize;
+					UploadDataSize -= UpdateSize;
+				}
 			}
 		}
-	}
-
-	return Index;
+	});
 }
 
 void CGraphics_Threaded::RecreateBufferObject(int BufferIndex, size_t UploadDataSize, void *pUploadData, int CreateFlags, bool IsMovedPointer)
 {
+	CGraphicsUploadData<void> OwnedUpload(IsMovedPointer ? pUploadData : nullptr);
+	if(!m_BufferObjects.IsLive(BufferIndex))
+	{
+		log_error("graphics/buffer", "Ignoring stale buffer object index %d during recreate.", BufferIndex);
+		return;
+	}
 	CCommandBuffer::SCommand_RecreateBufferObject Cmd;
 	Cmd.m_BufferIndex = BufferIndex;
 	Cmd.m_DataSize = UploadDataSize;
@@ -3378,6 +3379,7 @@ void CGraphics_Threaded::RecreateBufferObject(int BufferIndex, size_t UploadData
 	{
 		Cmd.m_pUploadData = pUploadData;
 		AddCmd(Cmd);
+		OwnedUpload.release();
 	}
 	else
 	{
@@ -3414,6 +3416,12 @@ void CGraphics_Threaded::RecreateBufferObject(int BufferIndex, size_t UploadData
 
 void CGraphics_Threaded::UpdateBufferObjectInternal(int BufferIndex, size_t UploadDataSize, void *pUploadData, void *pOffset, bool IsMovedPointer)
 {
+	CGraphicsUploadData<void> OwnedUpload(IsMovedPointer ? pUploadData : nullptr);
+	if(!m_BufferObjects.IsLive(BufferIndex))
+	{
+		log_error("graphics/buffer", "Ignoring stale buffer object index %d during update.", BufferIndex);
+		return;
+	}
 	CCommandBuffer::SCommand_UpdateBufferObject Cmd;
 	Cmd.m_BufferIndex = BufferIndex;
 	Cmd.m_DataSize = UploadDataSize;
@@ -3424,6 +3432,7 @@ void CGraphics_Threaded::UpdateBufferObjectInternal(int BufferIndex, size_t Uplo
 	{
 		Cmd.m_pUploadData = pUploadData;
 		AddCmd(Cmd);
+		OwnedUpload.release();
 	}
 	else
 	{
@@ -3440,6 +3449,11 @@ void CGraphics_Threaded::UpdateBufferObjectInternal(int BufferIndex, size_t Uplo
 
 void CGraphics_Threaded::CopyBufferObjectInternal(int WriteBufferIndex, int ReadBufferIndex, size_t WriteOffset, size_t ReadOffset, size_t CopyDataSize)
 {
+	if(!m_BufferObjects.IsLive(WriteBufferIndex) || !m_BufferObjects.IsLive(ReadBufferIndex))
+	{
+		log_error("graphics/buffer", "Ignoring stale buffer object during copy.");
+		return;
+	}
 	CCommandBuffer::SCommand_CopyBufferObject Cmd;
 	Cmd.m_WriteBufferIndex = WriteBufferIndex;
 	Cmd.m_ReadBufferIndex = ReadBufferIndex;
@@ -3453,14 +3467,36 @@ void CGraphics_Threaded::DeleteBufferObject(int BufferIndex)
 {
 	if(BufferIndex == -1)
 		return;
+	if(!m_BufferObjects.IsLive(BufferIndex))
+	{
+		log_error("graphics/buffer", "Ignoring stale buffer object index %d during delete.", BufferIndex);
+		return;
+	}
 
 	CCommandBuffer::SCommand_DeleteBufferObject Cmd;
 	Cmd.m_BufferIndex = BufferIndex;
 	AddCmd(Cmd);
 
 	// also clear the buffer object index
-	m_vBufferObjectIndices[BufferIndex] = m_FirstFreeBufferObjectIndex;
-	m_FirstFreeBufferObjectIndex = BufferIndex;
+	m_BufferObjects.Release(BufferIndex);
+}
+
+void CGraphics_Threaded::FlushPendingBufferObjectDeletes()
+{
+	try
+	{
+		m_BufferObjects.FlushPending([&](int Index) {
+			CCommandBuffer::SCommand_DeleteBufferObject Cmd;
+			Cmd.m_BufferIndex = Index;
+			AddCmd(Cmd);
+		});
+	}
+	catch(const std::bad_alloc &)
+	{
+	}
+	catch(const std::length_error &)
+	{
+	}
 }
 
 int CGraphics_Threaded::CreateBufferContainer(SBufferContainerInfo *pContainerInfo)
@@ -3507,8 +3543,7 @@ void CGraphics_Threaded::DeleteBufferContainer(int &ContainerIndex, bool Destroy
 		if(BufferObjectIndex != -1)
 		{
 			// clear the buffer object index
-			m_vBufferObjectIndices[BufferObjectIndex] = m_FirstFreeBufferObjectIndex;
-			m_FirstFreeBufferObjectIndex = BufferObjectIndex;
+			m_BufferObjects.Release(BufferObjectIndex);
 		}
 	}
 	// also clear the buffer object index
@@ -3956,8 +3991,7 @@ int CGraphics_Threaded::Init()
 	// 旧的 GPU 对象已经随设备消失，但索引仍会被当作有效值返回。
 	m_vQuadContainers.clear();
 	m_FirstFreeQuadContainer = -1;
-	m_vBufferObjectIndices.clear();
-	m_FirstFreeBufferObjectIndex = -1;
+	m_BufferObjects.Clear();
 	m_BufferContainers.Clear();
 
 	m_pBackend = CreateGraphicsBackend(Localize);
@@ -3998,6 +4032,8 @@ void CGraphics_Threaded::Shutdown()
 	// 关闭流程可能由错误恢复和正常退出分别触发。backend 已释放后必须成为无操作。
 	if(m_pBackend == nullptr)
 		return;
+	if(m_pCommandBuffer != nullptr)
+		FlushPendingBufferObjectDeletes();
 
 	// 游戏与文本模块在关闭时会追加资源销毁命令。先提交并等候，保证命令在 backend
 	// 仍然存活时执行，不能直接丢弃当前 command buffer。
@@ -4014,6 +4050,8 @@ void CGraphics_Threaded::Shutdown()
 	delete m_pBackend;
 	m_pBackend = nullptr;
 	m_pCommandBuffer = nullptr;
+	m_BufferObjects.Clear();
+	m_BufferContainers.Clear();
 
 	// delete the command buffers
 	for(auto &pCommandBuffer : m_apCommandBuffers)
@@ -4483,6 +4521,7 @@ void CGraphics_Threaded::ReadFramebuffer(CImageInfo &Image)
 
 void CGraphics_Threaded::Swap()
 {
+	FlushPendingBufferObjectDeletes();
 #if defined(CONF_PLATFORM_IOS)
 	int InsetLeft = 0;
 	int InsetRight = 0;
