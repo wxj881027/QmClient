@@ -300,7 +300,7 @@ void CGhost::OnRender()
 	// 顺序（CPlayers::OnRender：先全部 hook，再全部 Tee）一致；否则多轨回放里
 	// 靠后虚影的 hook 会压在前一个虚影的 Tee 上，出现“hook 盖住 Tee”。
 	// 跑图模式仍按上游的逐槽位顺序绘制。
-	m_vGhostDraws.clear();
+	m_GhostDraws.Clear();
 	if(m_ManualMode)
 		std::fill(std::begin(m_aManualRenderPosValid), std::end(m_aManualRenderPosValid), false);
 	for(int Slot = 0; Slot < MAX_ACTIVE_GHOSTS; ++Slot)
@@ -349,6 +349,8 @@ void CGhost::OnRender()
 			   Client()->GameTick(g_Config.m_ClDummy), Client()->PrevGameTick(g_Config.m_ClDummy), AttackTick))
 			continue;
 		Draw.m_Player.m_AttackTick = AttackTick;
+		if(!qm_ghost_render::Position(Draw.m_Prev, Draw.m_Player, Draw.m_IntraTick, Draw.m_Pos))
+			continue;
 
 		// QmClient：转换侧以 WEAPON_NINJA 标记冻结段（幽灵格式无独立冻结字段）。
 		// 冻结表现完全复刻 demo 播放的玩家渲染（players.cpp）：冰冻着色 + 隐藏武器、
@@ -402,14 +404,14 @@ void CGhost::OnRender()
 		}
 
 		// QmClient: 查看模式记录每个槽位虚影的插值位置（镜头跟随用）
-		Draw.m_Pos = mix(vec2(Draw.m_Prev.m_X, Draw.m_Prev.m_Y), vec2(Draw.m_Player.m_X, Draw.m_Player.m_Y), Draw.m_IntraTick);
 		if(m_ManualMode)
 		{
 			m_aManualRenderPos[Slot] = Draw.m_Pos;
 			m_aManualRenderPosValid[Slot] = true;
 		}
 
-		m_vGhostDraws.push_back(Draw);
+		if(!m_GhostDraws.Add(std::move(Draw)))
+			break;
 	}
 
 	// 每帧解析该虚影实际使用的渲染信息（冻结换肤时用本帧副本，否则用共享信息）
@@ -420,8 +422,9 @@ void CGhost::OnRender()
 	if(!m_ManualMode)
 	{
 		// 跑图模式：保持上游逐槽位顺序（每个虚影的 hook 紧跟自己的 Tee）
-		for(const SGhostDrawData &Draw : m_vGhostDraws)
+		for(size_t i = 0; i < m_GhostDraws.Size(); ++i)
 		{
+			const SGhostDrawData &Draw = *m_GhostDraws.Get(i);
 			GameClient()->m_Players.RenderHook(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
 			GameClient()->m_Players.RenderPlayer(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
 		}
@@ -429,15 +432,22 @@ void CGhost::OnRender()
 	}
 
 	// 查看模式：全部 hook -> 全部 Tee -> 名字与方向指示叠加
-	for(const SGhostDrawData &Draw : m_vGhostDraws)
+	for(size_t i = 0; i < m_GhostDraws.Size(); ++i)
+	{
+		const SGhostDrawData &Draw = *m_GhostDraws.Get(i);
 		GameClient()->m_Players.RenderHook(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
-	for(const SGhostDrawData &Draw : m_vGhostDraws)
+	}
+	for(size_t i = 0; i < m_GhostDraws.Size(); ++i)
+	{
+		const SGhostDrawData &Draw = *m_GhostDraws.Get(i);
 		GameClient()->m_Players.RenderPlayer(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
+	}
 
 	// QmClient: 查看模式下为每个虚影标注名字（多轨回放的信息可读性，对齐 demo 播放器）
 	// 名字尺寸跟随客户端名字牌大小设置；方向键指示与名字牌共用 cl_show_direction 数据
-	for(const SGhostDrawData &Draw : m_vGhostDraws)
+	for(size_t i = 0; i < m_GhostDraws.Size(); ++i)
 	{
+		const SGhostDrawData &Draw = *m_GhostDraws.Get(i);
 		const CGhostItem &Ghost = m_aActiveGhosts[Draw.m_Slot];
 		const vec2 TeePos = Draw.m_Pos;
 		if(g_Config.m_ClNamePlates && Ghost.m_aPlayer[0] != '\0')

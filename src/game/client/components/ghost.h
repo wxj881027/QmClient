@@ -8,6 +8,7 @@
 #include <game/client/component.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/ghost_path.h>
+#include <game/client/components/qmclient/ghost_render.h>
 #include <game/client/components/qmclient/online_replay_player.h>
 #include <game/client/render.h>
 
@@ -104,7 +105,7 @@ private:
 		CTeeRenderInfo m_OwnRenderInfo;
 		const CTeeRenderInfo *m_pSharedRenderInfo = nullptr;
 	};
-	std::vector<SGhostDrawData> m_vGhostDraws;
+	qm_ghost_render::CFrameCache<SGhostDrawData, MAX_ACTIVE_GHOSTS> m_GhostDraws;
 
 	char m_aTmpFilename[IO_MAX_PATH_LENGTH] = "";
 
