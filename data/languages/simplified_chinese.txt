@@ -7751,6 +7751,9 @@ Moves to the point with x/y-coordinates ii
 Moves to the tile with x/y-number ii
 == 移动到 x/y 编号 ii 的图块
 
+Moving block and freeze prediction (experimental)
+== 移动方块与移动水预测（实验性）
+
 Multi-resolution blur with a stronger result and balanced GPU cost.
 == 多分辨率模糊，效果更强，并兼顾 GPU 开销。
 
@@ -9397,6 +9400,9 @@ Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when fr
 
 Predict grenade trajectory (only with cl_antiping 1)
 == 预测榴弹轨迹（仅在 cl_antiping 为 1 时）
+
+Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)
+== 在使用 Axiom 四边形规则的服务器中预测移动方块和冻结区域（实验性）
 
 Predict ninja path
 == 预测忍者路径

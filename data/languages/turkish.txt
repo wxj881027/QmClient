@@ -7748,6 +7748,9 @@ Moves to the point with x/y-coordinates ii
 Moves to the tile with x/y-number ii
 == x/y-numarası ii olan karoya gider
 
+Moving block and freeze prediction (experimental)
+== Hareketli blok ve donma alanı tahmini (deneysel)
+
 Multi-resolution blur with a stronger result and balanced GPU cost.
 == Daha güçlü sonuç ve dengeli GPU maliyeti sunan çok çözünürlüklü bulanıklık.
 
@@ -9394,6 +9397,9 @@ Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when fr
 
 Predict grenade trajectory (only with cl_antiping 1)
 == Bomba yörüngesini tahmin et (yalnızca cl_antiping 1 ile)
+
+Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)
+== Axiom dörtgen kurallarını kullanan sunucularda hareketli blokları ve donma alanlarını tahmin et (deneysel)
 
 Predict ninja path
 == Ninja yolunu tahmin et

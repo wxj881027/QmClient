@@ -12,6 +12,7 @@
 #include <game/collision.h>
 #include <game/layers.h>
 #include <game/mapitems.h>
+#include <game/qm_axiom_quad_collision.h>
 
 #include <cmath>
 #include <cstdint>
@@ -201,6 +202,9 @@ void CCollision::Init(class CLayers *pLayers)
 
 void CCollision::Unload()
 {
+	m_pQmAxiomQuads.reset();
+	m_QmAxiomRoundStartTick = 0;
+	m_QmAxiomQuadTime = 0;
 	m_pTiles = nullptr;
 	m_Width = 0;
 	m_Height = 0;
@@ -221,6 +225,74 @@ void CCollision::Unload()
 	m_pTune = nullptr;
 	delete[] m_pDoor;
 	m_pDoor = nullptr;
+}
+
+void CCollision::SetQmAxiomQuadCollision(bool Enabled)
+{
+	if(Enabled == QmAxiomQuadCollisionEnabled())
+		return;
+	if(!Enabled)
+	{
+		m_pQmAxiomQuads.reset();
+		return;
+	}
+	if(m_pLayers)
+	{
+		m_pQmAxiomQuads = std::make_unique<CQmAxiomQuadCollision>();
+		m_pQmAxiomQuads->Init(m_pLayers);
+		m_pQmAxiomQuads->SetTime(m_QmAxiomQuadTime);
+	}
+}
+
+void CCollision::SetQmAxiomQuadTick(int Tick, int TickSpeed)
+{
+	if(m_pQmAxiomQuads && TickSpeed > 0)
+		SetQmAxiomQuadTime((double(Tick) - m_QmAxiomRoundStartTick) / TickSpeed);
+}
+
+void CCollision::SetQmAxiomQuadTime(double Seconds)
+{
+	if(!std::isfinite(Seconds))
+		return;
+	m_QmAxiomQuadTime = Seconds;
+	if(m_pQmAxiomQuads)
+		m_pQmAxiomQuads->SetTime(Seconds);
+}
+
+int CCollision::GetQmAxiomQuadTile(vec2 Pos) const
+{
+	return m_pQmAxiomQuads ? m_pQmAxiomQuads->TileAt(Pos) : 0;
+}
+
+bool CCollision::HasQmAxiomQuadTile(vec2 Pos, int Tile) const
+{
+	return m_pQmAxiomQuads && m_pQmAxiomQuads->HasTile(Pos, Tile);
+}
+
+std::vector<int> CCollision::GetQmAxiomQuadTiles(vec2 Pos) const
+{
+	return m_pQmAxiomQuads ? m_pQmAxiomQuads->TilesAt(Pos) : std::vector<int>{};
+}
+
+int CCollision::GetQmAxiomQuadTuneZone(vec2 Pos) const
+{
+	const int Zone = m_pQmAxiomQuads ? m_pQmAxiomQuads->TuneZoneAt(Pos) : 0;
+	return Zone >= 0 && Zone < TuneZone::NUM ? Zone : 0;
+}
+
+bool CCollision::FindQmAxiomHookAnchor(vec2 Pos, int *pQuadIndex, vec2 *pLocalPos) const
+{
+	return m_pQmAxiomQuads && !IsSolid(round_to_int(Pos.x), round_to_int(Pos.y)) && m_pQmAxiomQuads->FindHookAnchor(Pos, pQuadIndex, pLocalPos);
+}
+
+bool CCollision::GetQmAxiomHookAnchor(int QuadIndex, vec2 LocalPos, vec2 *pWorldPos) const
+{
+	return m_pQmAxiomQuads && m_pQmAxiomQuads->HookAnchor(QuadIndex, LocalPos, pWorldPos);
+}
+
+bool CCollision::CheckQmAxiomQuadPoint(vec2 Pos) const
+{
+	return m_pQmAxiomQuads->TileAt(Pos, true) != 0;
 }
 
 void CCollision::FillAntibot(CAntibotMapData *pMapData) const
@@ -402,20 +474,36 @@ int CCollision::GetTile(int x, int y) const
 }
 
 // TODO: rewrite this smarter!
+static int QuadLineHit(int Tile, vec2 Pos0, vec2 Pos1, float Fraction, vec2 *pOutCollision, vec2 *pOutBeforeCollision)
+{
+	if(pOutCollision)
+		*pOutCollision = mix(Pos0, Pos1, Fraction);
+	if(pOutBeforeCollision)
+	{
+		const float Distance = distance(Pos0, Pos1);
+		*pOutBeforeCollision = mix(Pos0, Pos1, std::max(0.0f, Fraction - (Distance > 0 ? 0.01f / Distance : 0)));
+	}
+	return Tile;
+}
+
 int CCollision::IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision) const
 {
+	float QuadFraction = 2;
+	const int QuadHit = m_pQmAxiomQuads ? m_pQmAxiomQuads->IntersectLine(Pos0, Pos1, &QuadFraction) : 0;
 	float Distance = distance(Pos0, Pos1);
 	int End(Distance + 1);
 	vec2 Last = Pos0;
 	for(int i = 0; i <= End; i++)
 	{
 		float a = i / (float)End;
+		if(QuadHit && a > QuadFraction)
+			return QuadLineHit(QuadHit, Pos0, Pos1, QuadFraction, pOutCollision, pOutBeforeCollision);
 		vec2 Pos = mix(Pos0, Pos1, a);
 		// Temporary position for checking collision
 		int ix = round_to_int(Pos.x);
 		int iy = round_to_int(Pos.y);
 
-		if(CheckPoint(ix, iy))
+		if(IsSolid(ix, iy))
 		{
 			if(pOutCollision)
 				*pOutCollision = Pos;
@@ -426,6 +514,8 @@ int CCollision::IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *p
 
 		Last = Pos;
 	}
+	if(QuadHit)
+		return QuadLineHit(QuadHit, Pos0, Pos1, QuadFraction, pOutCollision, pOutBeforeCollision);
 	if(pOutCollision)
 		*pOutCollision = Pos1;
 	if(pOutBeforeCollision)
@@ -435,6 +525,10 @@ int CCollision::IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *p
 
 int CCollision::IntersectLineTeleHook(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, int *pTeleNr) const
 {
+	float QuadFraction = 2;
+	const int QuadHit = m_pQmAxiomQuads ? m_pQmAxiomQuads->IntersectLine(Pos0, Pos1, &QuadFraction) : 0;
+	if(pTeleNr)
+		*pTeleNr = 0;
 	float Distance = distance(Pos0, Pos1);
 	int End(Distance + 1);
 	vec2 Last = Pos0;
@@ -443,6 +537,8 @@ int CCollision::IntersectLineTeleHook(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision,
 	for(int i = 0; i <= End; i++)
 	{
 		float a = i / (float)End;
+		if(QuadHit && a > QuadFraction)
+			return QuadLineHit(QuadHit, Pos0, Pos1, QuadFraction, pOutCollision, pOutBeforeCollision);
 		vec2 Pos = mix(Pos0, Pos1, a);
 		// Temporary position for checking collision
 		int ix = round_to_int(Pos.x);
@@ -466,7 +562,7 @@ int CCollision::IntersectLineTeleHook(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision,
 		}
 
 		int Hit = 0;
-		if(CheckPoint(ix, iy))
+		if(IsSolid(ix, iy))
 		{
 			if(!IsThrough(ix, iy, dx, dy, Pos0, Pos1))
 				Hit = GetCollisionAt(ix, iy);
@@ -486,6 +582,8 @@ int CCollision::IntersectLineTeleHook(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision,
 
 		Last = Pos;
 	}
+	if(QuadHit)
+		return QuadLineHit(QuadHit, Pos0, Pos1, QuadFraction, pOutCollision, pOutBeforeCollision);
 	if(pOutCollision)
 		*pOutCollision = Pos1;
 	if(pOutBeforeCollision)
@@ -495,12 +593,18 @@ int CCollision::IntersectLineTeleHook(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision,
 
 int CCollision::IntersectLineTeleWeapon(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, int *pTeleNr) const
 {
+	float QuadFraction = 2;
+	const int QuadHit = m_pQmAxiomQuads ? m_pQmAxiomQuads->IntersectLine(Pos0, Pos1, &QuadFraction) : 0;
+	if(pTeleNr)
+		*pTeleNr = 0;
 	float Distance = distance(Pos0, Pos1);
 	int End(Distance + 1);
 	vec2 Last = Pos0;
 	for(int i = 0; i <= End; i++)
 	{
 		float a = i / (float)End;
+		if(QuadHit && a > QuadFraction)
+			return QuadLineHit(QuadHit, Pos0, Pos1, QuadFraction, pOutCollision, pOutBeforeCollision);
 		vec2 Pos = mix(Pos0, Pos1, a);
 		// Temporary position for checking collision
 		int ix = round_to_int(Pos.x);
@@ -523,7 +627,7 @@ int CCollision::IntersectLineTeleWeapon(vec2 Pos0, vec2 Pos1, vec2 *pOutCollisio
 			return TILE_TELEINWEAPON;
 		}
 
-		if(CheckPoint(ix, iy))
+		if(IsSolid(ix, iy))
 		{
 			if(pOutCollision)
 				*pOutCollision = Pos;
@@ -534,6 +638,8 @@ int CCollision::IntersectLineTeleWeapon(vec2 Pos0, vec2 Pos1, vec2 *pOutCollisio
 
 		Last = Pos;
 	}
+	if(QuadHit)
+		return QuadLineHit(QuadHit, Pos0, Pos1, QuadFraction, pOutCollision, pOutBeforeCollision);
 	if(pOutCollision)
 		*pOutCollision = Pos1;
 	if(pOutBeforeCollision)
@@ -549,6 +655,25 @@ void CCollision::MovePoint(vec2 *pInoutPos, vec2 *pInoutVel, float Elasticity, i
 
 	vec2 Pos = *pInoutPos;
 	vec2 Vel = *pInoutVel;
+	if(m_pQmAxiomQuads)
+	{
+		float Fraction;
+		vec2 Normal;
+		if(m_pQmAxiomQuads->IntersectLine(Pos, Pos + Vel, &Fraction, &Normal))
+		{
+			vec2 Hit, Before;
+			IntersectLine(Pos, Pos + Vel, &Hit, &Before);
+			// 静态图块先命中时沿用原有反弹规则。
+			if(distance(Pos, Hit) + 0.001f >= length(Vel) * Fraction)
+			{
+				*pInoutPos = Before;
+				*pInoutVel = Vel - Normal * ((1 + Elasticity) * dot(Vel, Normal));
+				if(pBounces)
+					*pBounces = 1;
+				return;
+			}
+		}
+	}
 	if(CheckPoint(Pos + Vel))
 	{
 		int Affected = 0;
@@ -580,18 +705,23 @@ void CCollision::MovePoint(vec2 *pInoutPos, vec2 *pInoutVel, float Elasticity, i
 	}
 }
 
-bool CCollision::TestBox(vec2 Pos, vec2 Size) const
+bool CCollision::TestTileBox(vec2 Pos, vec2 Size) const
 {
 	Size *= 0.5f;
-	if(CheckPoint(Pos.x - Size.x, Pos.y - Size.y))
+	if(IsSolid(round_to_int(Pos.x - Size.x), round_to_int(Pos.y - Size.y)))
 		return true;
-	if(CheckPoint(Pos.x + Size.x, Pos.y - Size.y))
+	if(IsSolid(round_to_int(Pos.x + Size.x), round_to_int(Pos.y - Size.y)))
 		return true;
-	if(CheckPoint(Pos.x - Size.x, Pos.y + Size.y))
+	if(IsSolid(round_to_int(Pos.x - Size.x), round_to_int(Pos.y + Size.y)))
 		return true;
-	if(CheckPoint(Pos.x + Size.x, Pos.y + Size.y))
+	if(IsSolid(round_to_int(Pos.x + Size.x), round_to_int(Pos.y + Size.y)))
 		return true;
 	return false;
+}
+
+bool CCollision::TestBox(vec2 Pos, vec2 Size) const
+{
+	return TestTileBox(Pos, Size) || (m_pQmAxiomQuads && m_pQmAxiomQuads->TestBox(Pos, Size * 0.5f));
 }
 
 bool CCollision::IsOnGround(vec2 Pos, float Size) const
@@ -604,11 +734,35 @@ bool CCollision::IsOnGround(vec2 Pos, float Size) const
 	return false;
 }
 
+void CCollision::PushBoxOutsideQmAxiomQuads(vec2 *pPos, vec2 *pVel, vec2 Size, vec2 Elasticity, bool *pGrounded) const
+{
+	if(!m_pQmAxiomQuads)
+		return;
+	for(int i = 0; i < 8; ++i)
+	{
+		vec2 Push, Normal;
+		if(!m_pQmAxiomQuads->Pushout(*pPos, Size * 0.5f, &Push, &Normal))
+			break;
+		if(TestTileBox(*pPos + Push, Size))
+			break;
+		*pPos += Push;
+		const float Into = dot(*pVel, Normal);
+		if(Into < 0)
+		{
+			const float Bounce = std::clamp(std::fabs(Normal.x) * Elasticity.x + std::fabs(Normal.y) * Elasticity.y, 0.0f, 1.0f);
+			*pVel -= Normal * ((1 + Bounce) * Into);
+		}
+		if(pGrounded && Normal.y < -0.5f)
+			*pGrounded = true;
+	}
+}
+
 void CCollision::MoveBox(vec2 *pInoutPos, vec2 *pInoutVel, vec2 Size, vec2 Elasticity, bool *pGrounded) const
 {
 	// do the move
 	vec2 Pos = *pInoutPos;
 	vec2 Vel = *pInoutVel;
+	PushBoxOutsideQmAxiomQuads(&Pos, &Vel, Size, Elasticity, pGrounded);
 
 	float Distance = length(Vel);
 	int Max = (int)Distance;
@@ -1280,6 +1434,8 @@ void ThroughOffset(vec2 Pos0, vec2 Pos1, int *pOffsetX, int *pOffsetY)
 
 int CCollision::IntersectNoLaser(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision) const
 {
+	float QuadFraction = 2;
+	const int QuadHit = m_pQmAxiomQuads ? m_pQmAxiomQuads->IntersectLine(Pos0, Pos1, &QuadFraction) : 0;
 	float Distance = distance(Pos0, Pos1);
 	vec2 Last = Pos0;
 
@@ -1287,6 +1443,8 @@ int CCollision::IntersectNoLaser(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2
 	for(int i = 0; i < DistanceRounded; i++)
 	{
 		float a = i / Distance;
+		if(QuadHit && a > QuadFraction)
+			return QuadLineHit(QuadHit, Pos0, Pos1, QuadFraction, pOutCollision, pOutBeforeCollision);
 		vec2 Pos = mix(Pos0, Pos1, a);
 		int Nx = std::clamp(round_to_int(Pos.x) / 32, 0, m_Width - 1);
 		int Ny = std::clamp(round_to_int(Pos.y) / 32, 0, m_Height - 1);
@@ -1303,6 +1461,8 @@ int CCollision::IntersectNoLaser(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2
 		}
 		Last = Pos;
 	}
+	if(QuadHit)
+		return QuadLineHit(QuadHit, Pos0, Pos1, QuadFraction, pOutCollision, pOutBeforeCollision);
 	if(pOutCollision)
 		*pOutCollision = Pos1;
 	if(pOutBeforeCollision)

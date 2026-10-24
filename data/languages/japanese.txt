@@ -7748,6 +7748,9 @@ Moves to the point with x/y-coordinates ii
 Moves to the tile with x/y-number ii
 == x/y 番号 ii のタイルに移動
 
+Moving block and freeze prediction (experimental)
+== 移動ブロックと凍結領域の予測（実験的）
+
 Multi-resolution blur with a stronger result and balanced GPU cost.
 == 強いぼかしとバランスの取れたGPU負荷を両立する多重解像度方式です。
 
@@ -9394,6 +9397,9 @@ Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when fr
 
 Predict grenade trajectory (only with cl_antiping 1)
 == グレネードの軌道を予測（cl_antiping 1 の場合のみ）
+
+Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)
+== Axiom の四角形ルールを使うサーバーで移動ブロックと凍結領域を予測（実験的）
 
 Predict ninja path
 == 忍者の経路を予測

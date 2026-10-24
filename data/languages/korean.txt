@@ -7748,6 +7748,9 @@ Moves to the point with x/y-coordinates ii
 Moves to the tile with x/y-number ii
 == x/y 번호 ii 의 타일로 이동
 
+Moving block and freeze prediction (experimental)
+== 이동 블록 및 동결 영역 예측 (실험적)
+
 Multi-resolution blur with a stronger result and balanced GPU cost.
 == 더 강한 효과와 균형 잡힌 GPU 부하를 제공하는 다중 해상도 블러입니다.
 
@@ -9394,6 +9397,9 @@ Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when fr
 
 Predict grenade trajectory (only with cl_antiping 1)
 == 유탄 궤적 예측 (cl_antiping 1에서만)
+
+Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)
+== Axiom 사각형 규칙을 사용하는 서버에서 이동 블록과 동결 영역 예측 (실험적)
 
 Predict ninja path
 == 닌자 경로 예측

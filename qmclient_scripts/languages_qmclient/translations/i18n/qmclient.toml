@@ -1,4 +1,36 @@
 [[message]]
+key = "Moving block and freeze prediction (experimental)"
+[message.translations]
+simplified_chinese = "移动方块与移动水预测（实验性）"
+traditional_chinese = "移動方塊與移動水預測（實驗性）"
+japanese = "移動ブロックと凍結領域の予測（実験的）"
+korean = "이동 블록 및 동결 영역 예측 (실험적)"
+russian = "Предсказание движущихся блоков и зон заморозки (экспериментально)"
+german = "Vorhersage beweglicher Blöcke und Gefrierzonen (experimentell)"
+spanish = "Predicción de bloques móviles y zonas de congelación (experimental)"
+french = "Prédiction des blocs mobiles et des zones de gel (expérimental)"
+brazilian_portuguese = "Previsão de blocos móveis e áreas de congelamento (experimental)"
+portuguese = "Previsão de blocos móveis e áreas de congelamento (experimental)"
+turkish = "Hareketli blok ve donma alanı tahmini (deneysel)"
+polish = "Przewidywanie ruchomych bloków i stref zamrożenia (eksperymentalne)"
+
+[[message]]
+key = "Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)"
+[message.translations]
+simplified_chinese = "在使用 Axiom 四边形规则的服务器中预测移动方块和冻结区域（实验性）"
+traditional_chinese = "在使用 Axiom 四邊形規則的伺服器中預測移動方塊和凍結區域（實驗性）"
+japanese = "Axiom の四角形ルールを使うサーバーで移動ブロックと凍結領域を予測（実験的）"
+korean = "Axiom 사각형 규칙을 사용하는 서버에서 이동 블록과 동결 영역 예측 (실험적)"
+russian = "Предсказывать движущиеся блоки и зоны заморозки на серверах с правилами четырёхугольников Axiom (экспериментально)"
+german = "Bewegliche Blöcke und Gefrierzonen auf Servern mit Axiom-Quad-Regeln vorhersagen (experimentell)"
+spanish = "Predecir bloques móviles y zonas de congelación en servidores con reglas de cuadriláteros de Axiom (experimental)"
+french = "Prédire les blocs mobiles et les zones de gel sur les serveurs utilisant les règles de quadrilatères Axiom (expérimental)"
+brazilian_portuguese = "Prever blocos móveis e áreas de congelamento em servidores com regras de quadriláteros do Axiom (experimental)"
+portuguese = "Prever blocos móveis e áreas de congelamento em servidores com regras de quadriláteros do Axiom (experimental)"
+turkish = "Axiom dörtgen kurallarını kullanan sunucularda hareketli blokları ve donma alanlarını tahmin et (deneysel)"
+polish = "Przewiduj ruchome bloki i strefy zamrożenia na serwerach z regułami czworokątów Axiom (eksperymentalne)"
+
+[[message]]
 key = "%d points"
 [message.translations]
 simplified_chinese = "%d 分"

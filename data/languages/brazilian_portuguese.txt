@@ -7748,6 +7748,9 @@ Moves to the point with x/y-coordinates ii
 Moves to the tile with x/y-number ii
 == Move para o tile com número x/y ii
 
+Moving block and freeze prediction (experimental)
+== Previsão de blocos móveis e áreas de congelamento (experimental)
+
 Multi-resolution blur with a stronger result and balanced GPU cost.
 == Desfoque em múltiplas resoluções, com efeito mais forte e custo de GPU equilibrado.
 
@@ -9394,6 +9397,9 @@ Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when fr
 
 Predict grenade trajectory (only with cl_antiping 1)
 == Prever trajetória de granada (apenas com cl_antiping 1)
+
+Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)
+== Prever blocos móveis e áreas de congelamento em servidores com regras de quadriláteros do Axiom (experimental)
 
 Predict ninja path
 == Prever a trajetória do ninja

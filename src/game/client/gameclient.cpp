@@ -1977,6 +1977,7 @@ void CGameClient::UpdatePositions()
 
 void CGameClient::OnRender()
 {
+	UpdateQmAxiomPrediction();
 	m_HudEditor.BeginRenderFrame();
 	CQmIconFrameColorClock::BeginFrame(static_cast<double>(time_get()) / static_cast<double>(time_freq()));
 	// qm_blank_asset_fallback 兜底轮询：设置页直改 g_Config、控制台命令等任何来源改值后，
@@ -3855,6 +3856,8 @@ void CGameClient::InvalidateSnapshot()
 
 void CGameClient::OnNewSnapshot(bool DummySwapped)
 {
+	UpdateQmAxiomPrediction();
+	CQmAxiomQuadTimeScope QuadTime(m_Collision, Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed());
 	CPerfTimer SnapshotStageTimer(QmPerfEnabled());
 	// 仅诊断时拆分首次快照的资源与组件耗时，不改变快照处理顺序。
 	const auto LogSnapshotStage = [&](const char *pStage) {
@@ -3863,6 +3866,7 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		SnapshotStageTimer.Reset();
 	};
 	auto &&Evolve = [this](CNetObj_Character *pCharacter, int Tick) {
+		CQmAxiomQuadTimeScope EvolveQuadTime(m_Collision, pCharacter->m_Tick, Client()->GameTickSpeed());
 		CWorldCore TempWorld;
 		CCharacterCore TempCore = CCharacterCore();
 		CTeamsCore TempTeams = CTeamsCore();
@@ -3873,6 +3877,7 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		while(pCharacter->m_Tick < Tick)
 		{
 			pCharacter->m_Tick++;
+			m_Collision.SetQmAxiomQuadTick(pCharacter->m_Tick, Client()->GameTickSpeed());
 			TempCore.Tick(false);
 			TempCore.Move();
 			TempCore.Quantize();
@@ -5133,6 +5138,8 @@ void CGameClient::ApplyPreInputs(int Tick, bool Direct, CGameWorld &GameWorld)
 
 void CGameClient::OnPredict()
 {
+	UpdateQmAxiomPrediction();
+	CQmAxiomQuadTimeScope QuadTime(m_Collision, Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed());
 	// store the previous values so we can detect prediction errors
 	CCharacterCore BeforePrevChar = m_PredictedPrevChar;
 	CCharacterCore BeforeChar = m_PredictedChar;
@@ -5212,6 +5219,7 @@ void CGameClient::OnPredict()
 
 	for(int Tick = Client()->GameTick(g_Config.m_ClDummy) + 1; Tick <= FinalTickSelf; Tick++)
 	{
+		m_Collision.SetQmAxiomQuadTick(Tick, Client()->GameTickSpeed());
 		// fetch the previous characters
 		if(Tick == FinalTickSelf)
 		{
@@ -5503,6 +5511,7 @@ void CGameClient::OnPredict()
 		int PredTime = std::clamp(Client()->GetPredictionTime(), 0, 8000); // Milliseconds for some reason?? TODO: Use more precision
 		const int PredEndTick = FinalTickRegular;
 		const int SmoothTick = PredEndTick;
+		m_Collision.SetQmAxiomQuadTick(SmoothTick, Client()->GameTickSpeed());
 
 		// Nightmare: in order to get 100% accurate comparison to detect mispredictions we must
 		// tick the PREVIOUS predicted world with our CURRENT predicted inputs
@@ -6843,11 +6852,13 @@ void CGameClient::UpdateLocalTuning()
 	// update the tuning at the local position with the latest tunings received before the new snapshot
 	if(m_GameWorld.m_WorldConfig.m_UseTuneZones)
 	{
-		int TuneZone =
-			m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_HasExtendedData &&
-					m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_ExtendedData.m_TuneZoneOverride != TuneZone::OVERRIDE_NONE ?
-				m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_ExtendedData.m_TuneZoneOverride :
-				Collision()->IsTune(Collision()->GetMapIndex(LocalPos));
+		const bool HasTuneZoneOverride = m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_HasExtendedData &&
+						 m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_ExtendedData.m_TuneZoneOverride != TuneZone::OVERRIDE_NONE;
+		int TuneZone = HasTuneZoneOverride ?
+				       m_Snap.m_aCharacters[m_Snap.m_LocalClientId].m_ExtendedData.m_TuneZoneOverride :
+				       Collision()->IsTune(Collision()->GetMapIndex(LocalPos));
+		if(!HasTuneZoneOverride && TuneZone == 0)
+			TuneZone = Collision()->GetQmAxiomQuadTuneZone(LocalPos);
 
 		if(TuneZone != m_aLocalTuneZone[g_Config.m_ClDummy])
 		{
@@ -6907,6 +6918,7 @@ void CGameClient::UpdateLocalTuning()
 
 void CGameClient::UpdatePrediction()
 {
+	CQmAxiomQuadTimeScope QuadTime(m_Collision, Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed());
 	m_GameWorld.m_WorldConfig.m_IsVanilla = m_GameInfo.m_PredictVanilla;
 	m_GameWorld.m_WorldConfig.m_IsDDRace = m_GameInfo.m_PredictDDRace;
 	m_GameWorld.m_WorldConfig.m_IsFNG = m_GameInfo.m_PredictFNG;
@@ -6971,6 +6983,7 @@ void CGameClient::UpdatePrediction()
 	{
 		for(int Tick = m_GameWorld.GameTick() + 1; Tick <= Client()->GameTick(g_Config.m_ClDummy); Tick++)
 		{
+			m_Collision.SetQmAxiomQuadTick(Tick, Client()->GameTickSpeed());
 			CNetObj_PlayerInput *pInput = (CNetObj_PlayerInput *)Client()->GetInput(Tick);
 			CNetObj_PlayerInput *pDummyInput = nullptr;
 			if(pDummyChar)
@@ -7308,6 +7321,7 @@ void CGameClient::HandlePredictedEvents(const int Tick)
 
 void CGameClient::DetectStrongHook()
 {
+	CQmAxiomQuadTimeScope QuadTime(m_Collision, Client()->PrevGameTick(g_Config.m_ClDummy), Client()->GameTickSpeed());
 	// attempt to detect strong/weak between players
 	for(int FromPlayer = 0; FromPlayer < MAX_CLIENTS; FromPlayer++)
 	{
@@ -7348,6 +7362,7 @@ void CGameClient::DetectStrongHook()
 
 			for(int Tick = Client()->PrevGameTick(g_Config.m_ClDummy); Tick < Client()->GameTick(g_Config.m_ClDummy); Tick++)
 			{
+				m_Collision.SetQmAxiomQuadTick(Tick + 1, Client()->GameTickSpeed());
 				if(Direction == 0)
 				{
 					FromChar.Tick(false);

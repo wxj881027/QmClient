@@ -609,10 +609,12 @@ void CCharacter::ResetInput()
 
 void CCharacter::PreTick()
 {
+	UpdateQmAxiomHook();
 	DDRaceTick();
 
 	m_Core.m_Input = m_Input;
 	m_Core.Tick(true, !m_pGameWorld->m_WorldConfig.m_NoWeakHookAndBounce);
+	UpdateQmAxiomHook();
 }
 
 void CCharacter::Tick()
@@ -628,6 +630,7 @@ void CCharacter::Tick()
 
 	// handle Weapons
 	HandleWeapons();
+	HandleQmAxiomQuads();
 
 	DDRacePostCoreTick();
 
@@ -1162,7 +1165,10 @@ bool CCharacter::TryPredictTeleport(int MapIndex)
 void CCharacter::HandleTuneLayer()
 {
 	int CurrentIndex = Collision()->GetMapIndex(m_Pos);
-	SetTuneZone(GameWorld()->m_WorldConfig.m_UseTuneZones ? Collision()->IsTune(CurrentIndex) : 0);
+	int Zone = GameWorld()->m_WorldConfig.m_UseTuneZones ? Collision()->IsTune(CurrentIndex) : 0;
+	if(Zone == 0 && GameWorld()->m_WorldConfig.m_UseTuneZones)
+		Zone = Collision()->GetQmAxiomQuadTuneZone(m_Pos);
+	SetTuneZone(Zone);
 	m_Core.m_Tuning = *GetTuning(GetOverriddenTuneZone());
 }
 
@@ -1213,6 +1219,8 @@ void CCharacter::DDRaceTick()
 			break;
 		}
 	}
+	for(int Tile : Collision()->GetQmAxiomQuadTiles(m_Pos))
+		m_Core.m_IsInFreeze |= Tile == TILE_FREEZE || Tile == TILE_DFREEZE || Tile == TILE_LFREEZE || Tile == TILE_DEATH;
 	if(m_Core.m_IsInFreeze && IsGrounded())
 	{
 		m_FreezeAccumulation = std::min(m_FreezeAccumulation + 1, g_Config.m_QmUnfreezeLagDelayTicks);
@@ -1488,6 +1496,8 @@ void CCharacter::AntiPingInterference(int ClientId, bool DisallowReset, bool Has
 
 void CCharacter::ResetPrediction()
 {
+	m_QmAxiomHookQuad = -1;
+	m_LastQmAxiomRefillJumps = false;
 	SetSolo(false);
 	SetSuper(false);
 	m_Core.m_EndlessHook = false;
@@ -1528,7 +1538,12 @@ void CCharacter::ResetPrediction()
 
 void CCharacter::Read(CNetObj_Character *pChar, CNetObj_DDNetCharacter *pExtended, bool IsLocal)
 {
+	CQmAxiomQuadTimeScope QuadTime(*Collision(), GameWorld()->GameTick(), GameWorld()->GameTickSpeed());
+	// 服务端快照替换钩子位置；世界复制则保留各自的局部锚点。
+	m_QmAxiomHookQuad = -1;
 	m_Core.Read((const CNetObj_CharacterCore *)pChar);
+	if(m_Core.m_HookState == HOOK_GRABBED && m_Core.HookedPlayer() == -1)
+		Collision()->FindQmAxiomHookAnchor(m_Core.m_HookPos, &m_QmAxiomHookQuad, &m_QmAxiomHookLocalPos);
 	m_IsLocal = IsLocal;
 
 	if(pExtended)

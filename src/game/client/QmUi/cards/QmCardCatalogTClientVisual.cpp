@@ -190,10 +190,6 @@ float CMenus::LayoutTClientVisualEffectsCard(const qm_card_catalog::SQmCardBuild
 				g_Config.m_QmFakeCtfFlags = Value;
 		}
 	}
-	if(Flow.Control("moving-tiles", LineSize, Row, MarginSmall))
-	{
-		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmMovingTilesEntities, "tclient-moving-tiles-entities", Localize("Show moving tiles in entities"), &g_Config.m_QmMovingTilesEntities, &Row, LineSize);
-	}
 	if(MeasureScope)
 	{
 		CSettingsContentLayoutCache Cache;
