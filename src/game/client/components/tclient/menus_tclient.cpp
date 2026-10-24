@@ -7,6 +7,7 @@
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 
+#include <game/client/QmUi/QmLocalizedLabels.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/components/menus.h>
 #include <game/client/gameclient.h>
@@ -36,13 +37,21 @@ void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)
 	MainView = TClientSettingsContentView(MainView, &TabBar);
 	const float TabWidth = TabBar.w / NUMBER_OF_TCLIENT_TABS;
 	static CButtonContainer s_aPageTabs[NUMBER_OF_TCLIENT_TABS] = {};
-	// 译文只在本次绘制使用；同文件重载也会释放语言库的旧字符串。
-	const char *apTClientTabNames[NUMBER_OF_TCLIENT_TABS] = {};
-	apTClientTabNames[TCLIENT_TAB_SETTINGS] = Localize("Settings");
-	apTClientTabNames[TCLIENT_TAB_BINDWHEEL] = Localize("Bind Wheel");
-	apTClientTabNames[TCLIENT_TAB_WARLIST] = Localize("War List");
-	apTClientTabNames[TCLIENT_TAB_BINDCHAT] = Localize("Chat Binds");
-	apTClientTabNames[TCLIENT_TAB_STATUSBAR] = Localize("Status Bar");
+	// 页签文字缓存自有副本：语言文件每次加载都会重建字符串堆，A→B→A 快速切换时
+	// 仅比较文件名会留下指向旧堆的指针，表现为页签乱码。
+	static CQmLocalizedLabelCache s_TClientTabNames;
+	const bool TabNamesRefreshed = s_TClientTabNames.Refresh(g_Config.m_ClLanguagefile,
+		{
+			"Settings",
+			"Bind Wheel",
+			"War List",
+			"Chat Binds",
+			"Status Bar",
+		});
+	if(TabNamesRefreshed && !ReadOnly)
+	{
+		InvalidateTClientSettingsRuntimeCacheSections(ESettingsCacheDirtyReason::LANGUAGE);
+	}
 
 	// 胶囊 Tabbar：可见页签槽位先算完，再画容器与滑块，最后画页签文字。
 	CUIRect aTClientTabSlots[NUMBER_OF_TCLIENT_TABS];
@@ -72,7 +81,7 @@ void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)
 		for(int TabIndex = 0; TabIndex < NumTClientTabs; ++TabIndex)
 		{
 			const int Tab = aTClientTabPages[TabIndex];
-			DoButton_MenuTab(&s_aPageTabs[Tab], apTClientTabNames[Tab], ActiveTab == Tab, &aTClientTabSlots[TabIndex], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
+			DoButton_MenuTab(&s_aPageTabs[Tab], s_TClientTabNames.Get(Tab), ActiveTab == Tab, &aTClientTabSlots[TabIndex], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
 		}
 	}
 

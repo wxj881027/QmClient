@@ -4680,6 +4680,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/settings/qm_wiki_editor_test.cpp
     src/test/unit/qmclient/ui/settings_card_info_test.cpp
     src/test/unit/qmclient/ui/qm_list_entry_animation_test.cpp
+    src/test/unit/qmclient/ui/qm_localized_labels_test.cpp
     src/test/unit/engine/steam_client_path_test.cpp
     src/test/unit/qmclient/ui/settings_toggle_grid_test.cpp
     src/test/unit/qmclient/ui/settings_choice_grid_test.cpp

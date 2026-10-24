@@ -22,6 +22,7 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/QmLocalizedLabels.h>
 #include <game/client/QmUi/QmPopconfirm.h>
 #include <game/client/QmUi/QmSlotReflow.h>
 #include <game/client/QmUi/QmToast.h>
@@ -4382,17 +4383,20 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 	const float TabWidth = TabBar.w / (float)NUMBER_OF_ASSETS_TABS;
 	static CButtonContainer s_aPageTabs[NUMBER_OF_ASSETS_TABS] = {};
-	const char *apAssetsTabNames[NUMBER_OF_ASSETS_TABS] = {};
-	apAssetsTabNames[ASSETS_TAB_ENTITIES] = Localize("Entities");
-	apAssetsTabNames[ASSETS_TAB_GAME] = Localize("Game");
-	apAssetsTabNames[ASSETS_TAB_EMOTICONS] = Localize("Emoticons");
-	apAssetsTabNames[ASSETS_TAB_PARTICLES] = Localize("Particles");
-	apAssetsTabNames[ASSETS_TAB_HUD] = Localize("HUD");
-	apAssetsTabNames[ASSETS_TAB_GUI_CURSOR] = Localize("Mouse");
-	apAssetsTabNames[ASSETS_TAB_ARROW] = Localize("Direction Keys");
-	apAssetsTabNames[ASSETS_TAB_STRONG_WEAK] = Localize("Strong Weak Hook");
-	apAssetsTabNames[ASSETS_TAB_ENTITY_BG] = Localize("Entity Background Image");
-	apAssetsTabNames[ASSETS_TAB_EXTRAS] = Localize("Other");
+	static CQmLocalizedLabelCache s_AssetsTabNames;
+	s_AssetsTabNames.Refresh(g_Config.m_ClLanguagefile,
+		{
+			"Entities",
+			"Game",
+			"Emoticons",
+			"Particles",
+			"HUD",
+			"Mouse",
+			"Direction Keys",
+			"Strong Weak Hook",
+			"Entity Background Image",
+			"Other",
+		});
 
 	// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签文字 —— 滑块压在文字之下。
 	CUIRect aAssetsTabSlots[NUMBER_OF_ASSETS_TABS];
@@ -4407,7 +4411,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 	for(int Tab = ASSETS_TAB_ENTITIES; Tab < NUMBER_OF_ASSETS_TABS; ++Tab)
 	{
-		DoButton_MenuTab(&s_aPageTabs[Tab], apAssetsTabNames[Tab], s_CurCustomTab == Tab, &aAssetsTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
+		DoButton_MenuTab(&s_aPageTabs[Tab], s_AssetsTabNames.Get(Tab), s_CurCustomTab == Tab, &aAssetsTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
 	}
 
 	if(!s_AssetsTransitionInitialized)
