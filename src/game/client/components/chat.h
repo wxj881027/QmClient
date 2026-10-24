@@ -195,6 +195,7 @@ private:
 		std::optional<ColorRGBA> m_CustomColor;
 		EQmSponsorChatStyle m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
 		EQmSponsorChatStyle m_RenderSponsorChatStyle = EQmSponsorChatStyle::NONE;
+		bool m_ColorPreparationPending = false;
 
 		STextContainerIndex m_TextContainerIndex;
 		STextContainerIndex m_BodyTextContainerIndex;

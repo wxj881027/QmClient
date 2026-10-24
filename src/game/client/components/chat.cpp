@@ -409,6 +409,7 @@ void CChat::CLine::Reset(CChat &This)
 	m_ChatEmojiRect = {};
 	m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
 	m_RenderSponsorChatStyle = EQmSponsorChatStyle::NONE;
+	m_ColorPreparationPending = false;
 	m_SponsorTextBounds = {};
 	m_QmTitleBobPadding = 0.0f;
 	m_aYOffset[0] = -1.0f;
@@ -2592,7 +2593,12 @@ bool CChat::OnPrepareLines(float y)
 			Line.m_aYOffset[1] = -1.0f;
 			Line.m_QmTitleBobPadding = TitleBobPadding;
 		}
-		const bool LinePrepared = (RenderChatEmoji ? Line.m_ChatEmojiRect.w > 0.0f : Line.m_TextContainerIndex.Valid() && Line.m_ChatEmojiRect.w <= 0.0f);
+		if(Line.m_ColorPreparationPending)
+		{
+			Line.m_aYOffset[0] = -1.0f;
+			Line.m_aYOffset[1] = -1.0f;
+		}
+		const bool LinePrepared = !Line.m_ColorPreparationPending && (RenderChatEmoji ? Line.m_ChatEmojiRect.w > 0.0f : Line.m_TextContainerIndex.Valid() && Line.m_ChatEmojiRect.w <= 0.0f);
 		if(LinePrepared && !ForceRecreate)
 		{
 			// 已有容器也必须消耗相同的垂直预算，
@@ -2655,7 +2661,8 @@ bool CChat::OnPrepareLines(float y)
 			}
 		}
 
-		const CColoredParts ColoredParts(pText, Line.m_ClientId == CLIENT_MSG);
+		const CColoredParts ColoredParts = CColoredParts::ParseOrBorrow(pText, Line.m_ClientId == CLIENT_MSG);
+		Line.m_ColorPreparationPending = ColoredParts.ParseFailed();
 		if(!ColoredParts.Colors().empty() && ColoredParts.Colors()[0].m_Index == 0)
 			Line.m_CustomColor = ColoredParts.Colors()[0].m_Color;
 		pText = ColoredParts.Text();
@@ -3011,8 +3018,8 @@ bool CChat::OnPrepareLines(float y)
 			const bool Platinum = Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM;
 			if(UseGradient && Platinum)
 				QmSponsorChatAddPlatinumSplits(Cursor, pMessage, Color.a);
-			if(UseColoredParts && !FilteredAfterColors)
-				ColoredParts.AddSplitsToCursor(Cursor);
+			if(UseColoredParts && !FilteredAfterColors && !ColoredParts.TryAddSplitsToCursor(Cursor))
+				Line.m_ColorPreparationPending = true;
 			const bool SpatialGradient = UseGradient && !Platinum && Line.m_CustomColor == std::nullopt && ColoredParts.Colors().empty();
 			const auto Gradient = QmChatGradientStyle(g_Config, GradientRole, Color);
 			const CQmChatGradientPaint Paint(TextRender(), Cursor, pMessage, SpatialGradient ? &Gradient : nullptr);

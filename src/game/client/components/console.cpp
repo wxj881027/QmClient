@@ -676,7 +676,7 @@ void CGameConsole::CInstance::PumpBacklogPending()
 					MetadataIt->second = std::move(pMetadata);
 			}
 		}
-		if(pEntry->m_LineCount == -1)
+		if(pEntry->m_LineCount == -1 || pEntry->m_ColorPreparationPending)
 		{
 			UpdateEntryTextAttributes(pEntry);
 			if(MatchesLogFilter(pEntry))
@@ -690,8 +690,9 @@ void CGameConsole::CInstance::PumpBacklogPending()
 	{
 		// 遮蔽会改变字符位置，旧选区与搜索结果必须按显示文本重建。
 		m_Selection.Clear();
-		UpdateSearch();
 	}
+	if(StreamerTextChanged || m_SearchColorPreparationPending)
+		UpdateSearch();
 }
 
 void CGameConsole::CInstance::ClearHistory()
@@ -1155,6 +1156,7 @@ void CGameConsole::CInstance::PrintLine(const char *pLine, int Len, ColorRGBA Pr
 	pEntry->m_ExportId = m_NextExportId++;
 	pEntry->m_ExportSelected = false;
 	pEntry->m_CommandEcho = CommandEcho;
+	pEntry->m_ColorPreparationPending = false;
 	pEntry->m_StreamerWordsRevision = 0;
 	if(NumColorSpans > 0)
 		m_PendingColorSpansByExportId[pEntry->m_ExportId].assign(pColorSpans, pColorSpans + NumColorSpans);
@@ -1323,7 +1325,7 @@ int CGameConsole::CInstance::GetLinesToScroll(int Direction, int LinesToScroll)
 	int LinesToSkip = (Direction == -1 ? m_BacklogCurLine + m_LinesRendered : m_BacklogCurLine - 1);
 	while(Line < LinesToSkip && pEntry)
 	{
-		if(pEntry->m_LineCount == -1)
+		if(pEntry->m_LineCount == -1 || pEntry->m_ColorPreparationPending)
 			UpdateEntryTextAttributes(pEntry);
 		if(MatchesLogFilter(pEntry))
 			Line += pEntry->m_LineCount;
@@ -1333,7 +1335,7 @@ int CGameConsole::CInstance::GetLinesToScroll(int Direction, int LinesToScroll)
 	int Amount = maximum(0, Line - LinesToSkip);
 	while(pEntry && (LinesToScroll > 0 ? Amount < LinesToScroll : true))
 	{
-		if(pEntry->m_LineCount == -1)
+		if(pEntry->m_LineCount == -1 || pEntry->m_ColorPreparationPending)
 			UpdateEntryTextAttributes(pEntry);
 		if(MatchesLogFilter(pEntry))
 			Amount += pEntry->m_LineCount;
@@ -1403,7 +1405,7 @@ CQmConsoleSelection::CPosition CGameConsole::CInstance::SelectionPositionAt(vec2
 		const float EntryTop = EntryBottom - pEntry->m_YOffset;
 		if(Position.y >= EntryTop)
 		{
-			CColoredParts Text(pEntry->m_aText, ParseEntryColors(pEntry));
+			CColoredParts Text = CColoredParts::ParseOrBorrow(pEntry->m_aText, ParseEntryColors(pEntry));
 			CTextCursor Cursor;
 			Cursor.SetPosition(vec2(0.0f, EntryTop));
 			Cursor.m_FontSize = FontSize();
@@ -1429,7 +1431,7 @@ std::string CGameConsole::CInstance::SelectionText()
 	{
 		if(!MatchesLogFilter(pEntry) || !m_Selection.ContainsEntry(pEntry->m_ExportId))
 			continue;
-		CColoredParts Text(pEntry->m_aText, ParseEntryColors(pEntry));
+		CColoredParts Text = CColoredParts::ParseOrBorrow(pEntry->m_aText, ParseEntryColors(pEntry));
 		m_Selection.AppendText(pEntry->m_ExportId, Text.Text(), Result);
 	}
 	return Result;
@@ -1437,16 +1439,19 @@ std::string CGameConsole::CInstance::SelectionText()
 
 void CGameConsole::CInstance::UpdateEntryTextAttributes(CBacklogEntry *pEntry) const
 {
+	if(pEntry->m_ColorPreparationPending)
+		m_TotalBacklogLinesValid = false;
 	CTextCursor Cursor;
 	Cursor.m_FontSize = FontSize();
 	Cursor.m_Flags = 0;
 	Cursor.m_LineWidth = BacklogLineWidth();
 	Cursor.m_MaxLines = 10;
 	Cursor.m_LineSpacing = LINE_SPACING;
-	const CColoredParts Text(pEntry->m_aText, ParseEntryColors(pEntry));
+	const CColoredParts Text = CColoredParts::ParseOrBorrow(pEntry->m_aText, ParseEntryColors(pEntry));
 	m_pGameConsole->TextRender()->TextEx(&Cursor, Text.Text(), -1);
 	pEntry->m_YOffset = Cursor.Height();
 	pEntry->m_LineCount = Cursor.m_LineCount;
+	pEntry->m_ColorPreparationPending = Text.ParseFailed();
 }
 
 bool CGameConsole::CInstance::IsInputHidden() const
@@ -1486,6 +1491,7 @@ void CGameConsole::CInstance::SetSearching(bool Searching)
 
 void CGameConsole::CInstance::ClearSearch()
 {
+	m_SearchColorPreparationPending = false;
 	m_vSearchMatches.clear();
 	m_CurrentMatchIndex = -1;
 	m_Input.Clear();
@@ -1494,6 +1500,7 @@ void CGameConsole::CInstance::ClearSearch()
 
 void CGameConsole::CInstance::UpdateSearch()
 {
+	m_SearchColorPreparationPending = false;
 	if(!m_SearchInput.IsSearching())
 		return;
 
@@ -1524,12 +1531,18 @@ void CGameConsole::CInstance::UpdateSearch()
 
 	for(; pEntry; pEntry = m_Backlog.Prev(pEntry))
 	{
-		if(pEntry->m_LineCount == -1)
+		if(pEntry->m_LineCount == -1 || pEntry->m_ColorPreparationPending)
 			UpdateEntryTextAttributes(pEntry);
 		if(!MatchesLogFilter(pEntry))
 			continue;
 
-		CColoredParts ColoredParts(pEntry->m_aText, ParseEntryColors(pEntry));
+		CColoredParts ColoredParts = CColoredParts::ParseOrBorrow(pEntry->m_aText, ParseEntryColors(pEntry));
+		if(ColoredParts.ParseFailed() || pEntry->m_ColorPreparationPending)
+		{
+			m_SearchColorPreparationPending = true;
+			EntryLine += pEntry->m_LineCount;
+			continue;
+		}
 		const char *pText = ColoredParts.Text();
 		QmConsoleText::CollectSearchMatches(pText, pSearchText, vMatches);
 		int EntryLineCount = pEntry->m_LineCount;
@@ -2429,7 +2442,7 @@ void CGameConsole::OnRender()
 
 		while(pEntry)
 		{
-			if(pEntry->m_LineCount == -1)
+			if(pEntry->m_LineCount == -1 || pEntry->m_ColorPreparationPending)
 				pConsole->UpdateEntryTextAttributes(pEntry);
 
 			if(!pConsole->MatchesLogFilter(pEntry))
@@ -2496,9 +2509,9 @@ void CGameConsole::OnRender()
 			EntryCursor.m_LineSpacing = LINE_SPACING;
 			const bool ParseColors = pConsole->ParseEntryColors(pEntry);
 
-			CColoredParts ColoredParts(pEntry->m_aText, ParseColors);
-			ColoredParts.AddSplitsToCursor(EntryCursor);
-			if(!ColoredParts.Colors().empty() && ColoredParts.Colors()[0].m_Index == str_length("xxxx-xx-xx xx:xx:xx x chat/client: — "))
+			CColoredParts ColoredParts = CColoredParts::ParseOrBorrow(pEntry->m_aText, ParseColors);
+			const bool ColorSplitsReady = ColoredParts.TryAddSplitsToCursor(EntryCursor);
+			if(ColorSplitsReady && !ColoredParts.Colors().empty() && ColoredParts.Colors()[0].m_Index == str_length("xxxx-xx-xx xx:xx:xx x chat/client: — "))
 			{
 				EntryCursor.m_vColorSplits[0].m_CharIndex -= str_length("— ");
 				EntryCursor.m_vColorSplits[0].m_Length += str_length("— ");

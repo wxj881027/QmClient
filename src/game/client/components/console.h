@@ -66,6 +66,7 @@ private:
 			int m_ExportId;
 			bool m_ExportSelected;
 			bool m_CommandEcho;
+			bool m_ColorPreparationPending;
 			uint64_t m_StreamerWordsRevision;
 			char m_aText[1];
 		};
@@ -106,7 +107,7 @@ private:
 		bool m_ScrollbarDragging = false;
 		float m_ScrollbarDragOffset = 0.0f;
 		int m_TotalBacklogLines = 0;
-		bool m_TotalBacklogLinesValid = false;
+		mutable bool m_TotalBacklogLinesValid = false;
 
 		CGameConsole *m_pGameConsole;
 
@@ -150,6 +151,7 @@ private:
 		int m_CurrentMatchIndex;
 		char m_aCurrentSearchString[IConsole::CMDLINE_LENGTH];
 		std::vector<SSearchMatch> m_vSearchMatches;
+		bool m_SearchColorPreparationPending = false;
 
 		CInstance(int t);
 		void Init(CGameConsole *pGameConsole);

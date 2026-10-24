@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <limits>
 #include <utility>
 
 TEST(QmColoredParts, DisabledParsingBorrowsTheUnchangedInput)
@@ -134,4 +135,106 @@ TEST(QmColoredParts, MovedFromObjectCanReceiveAnotherOwnedText)
 	Source = CColoredParts("[[blue]]second", true);
 	EXPECT_STREQ(Source.Text(), "second");
 	EXPECT_STREQ(Target.Text(), "first");
+}
+
+TEST(QmColoredPreparation, SuccessfulDisplayPreparationKeepsParsedTextAndColors)
+{
+	const auto Text = CColoredParts::ParseOrBorrow("ab[[red]]cd", true);
+	EXPECT_FALSE(Text.ParseFailed());
+	EXPECT_STREQ(Text.Text(), "abcd");
+	ASSERT_EQ(Text.Colors().size(), 1u);
+	EXPECT_EQ(Text.Colors()[0].m_Index, 2);
+}
+
+TEST(QmColoredPreparation, DisabledDisplayParsingKeepsTheBorrowedInput)
+{
+	const char aInput[] = "[[red]]literal";
+	const auto Text = CColoredParts::ParseOrBorrow(aInput, false);
+	EXPECT_FALSE(Text.ParseFailed());
+	EXPECT_EQ(Text.Text(), aInput);
+	EXPECT_TRUE(Text.Colors().empty());
+}
+
+TEST(QmColoredPreparation, PlainDisplayTextKeepsTheBorrowedInput)
+{
+	const char aInput[] = "plain";
+	const auto Text = CColoredParts::ParseOrBorrow(aInput, true);
+	EXPECT_EQ(Text.Text(), aInput);
+	EXPECT_FALSE(Text.ParseFailed());
+}
+
+TEST(QmColoredPreparation, AppendingSplitsPreservesExistingLayersAndCursorPosition)
+{
+	const CColoredParts Text("ab[[red]]c[[blue]]d", true);
+	CTextCursor Cursor;
+	Cursor.m_CharCount = 10;
+	Cursor.m_vColorSplits.emplace_back(2, 4, ColorRGBA(0, 1, 0, 1));
+	ASSERT_TRUE(Text.TryAddSplitsToCursor(Cursor));
+	ASSERT_EQ(Cursor.m_vColorSplits.size(), 3u);
+	EXPECT_EQ(Cursor.m_CharCount, 10);
+	EXPECT_EQ(Cursor.m_vColorSplits[0].m_CharIndex, 2);
+	EXPECT_EQ(Cursor.m_vColorSplits[1].m_CharIndex, 12);
+	EXPECT_EQ(Cursor.m_vColorSplits[1].m_Length, 1);
+	EXPECT_EQ(Cursor.m_vColorSplits[2].m_CharIndex, 13);
+	EXPECT_EQ(Cursor.m_vColorSplits[2].m_Length, 9999);
+}
+
+TEST(QmColoredPreparation, UnrepresentableSplitStartDoesNotChangeExistingLayers)
+{
+	const CColoredParts Text("a[[red]]b", true);
+	CTextCursor Cursor;
+	Cursor.m_CharCount = std::numeric_limits<int>::max();
+	Cursor.m_vColorSplits.emplace_back(2, 4, ColorRGBA(0, 1, 0, 1));
+	EXPECT_FALSE(Text.TryAddSplitsToCursor(Cursor));
+	ASSERT_EQ(Cursor.m_vColorSplits.size(), 1u);
+	EXPECT_EQ(Cursor.m_vColorSplits[0].m_CharIndex, 2);
+	EXPECT_EQ(Cursor.m_vColorSplits[0].m_Length, 4);
+	EXPECT_EQ(Cursor.m_CharCount, std::numeric_limits<int>::max());
+}
+
+TEST(QmColoredPreparation, RendererEndOverflowDoesNotPublishTheCandidateSplit)
+{
+	const CColoredParts Text("[[red]]x", true);
+	CTextCursor Cursor;
+	Cursor.m_CharCount = std::numeric_limits<int>::max() - 9998;
+	EXPECT_FALSE(Text.TryAddSplitsToCursor(Cursor));
+	EXPECT_TRUE(Cursor.m_vColorSplits.empty());
+}
+
+TEST(QmColoredPreparation, RendererEndAtTheIntegerLimitRemainsRepresentable)
+{
+	const CColoredParts Text("[[red]]x", true);
+	CTextCursor Cursor;
+	Cursor.m_CharCount = std::numeric_limits<int>::max() - 9999;
+	ASSERT_TRUE(Text.TryAddSplitsToCursor(Cursor));
+	ASSERT_EQ(Cursor.m_vColorSplits.size(), 1u);
+	EXPECT_EQ(Cursor.m_vColorSplits[0].m_CharIndex, std::numeric_limits<int>::max() - 9999);
+	EXPECT_EQ(Cursor.m_vColorSplits[0].m_Length, 9999);
+}
+
+TEST(QmColoredPreparation, EmptyDuplicateSplitCannotUnderflowTheRendererEndMinusOne)
+{
+	const CColoredParts Text("[[red]][[blue]]x", true);
+	CTextCursor Cursor;
+	Cursor.m_CharCount = std::numeric_limits<int>::min();
+	EXPECT_FALSE(Text.TryAddSplitsToCursor(Cursor));
+	EXPECT_TRUE(Cursor.m_vColorSplits.empty());
+}
+
+TEST(QmColoredPreparation, TextWithoutColorsDoesNotRejectAnExtremeCursor)
+{
+	const CColoredParts Text("plain", true);
+	CTextCursor Cursor;
+	Cursor.m_CharCount = std::numeric_limits<int>::max();
+	EXPECT_TRUE(Text.TryAddSplitsToCursor(Cursor));
+	EXPECT_TRUE(Cursor.m_vColorSplits.empty());
+}
+
+TEST(QmColoredPreparation, ThrowingSplitInterfaceRejectsTheWholeInvalidBatch)
+{
+	const CColoredParts Text("[[red]][[blue]]x", true);
+	CTextCursor Cursor;
+	Cursor.m_CharCount = std::numeric_limits<int>::min();
+	EXPECT_THROW(Text.AddSplitsToCursor(Cursor), std::length_error);
+	EXPECT_TRUE(Cursor.m_vColorSplits.empty());
 }
