@@ -10445,6 +10445,9 @@ Plays a short effect when a tee's skin changes, and can copy the skin of the tee
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == Odtwarza animację przy zmianie skina, także tego skradzionego młotkiem.
 
+Playtime (h)
+== Czas gry (h)
+
 Please add a valid cut first
 == Najpierw dodaj prawidłowe przycięcie
 
@@ -12287,6 +12290,9 @@ Scoreboard cursor
 Scoreboard filter: only show players whose name or clan contains this text
 == Filtr tabeli wyników: pokazuj tylko graczy, których nazwa lub klan zawiera ten tekst
 
+Scoreboard playtime
+== Czas gry w tabeli wyników
+
 Scoreboard point check
 == Sprawdzanie punktów na tablicy wyników
 
@@ -13619,6 +13625,12 @@ Show player Tee
 Show players' key presses
 == Pokaż naciśnięcia klawiszy graczy
 
+Show playtime
+== Pokaż czas gry
+
+Show points
+== Pokaż punkty
+
 Show position and angle
 == Pokaż pozycję i kąt
 
@@ -13816,6 +13828,9 @@ Show titles on nameplates
 
 Show toast
 == Pokaż toast
+
+Show total DDNet playtime from activity instead of points in scoreboard
+== Pokazuj w tabeli łączny czas gry z DDNet activity zamiast punktów
 
 Show tune zone colors
 == Pokaż kolory stref tune

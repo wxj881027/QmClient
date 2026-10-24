@@ -10445,6 +10445,9 @@ Plays a short effect when a tee's skin changes, and can copy the skin of the tee
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == ハンマーで奪ったスキンも含め、スキンが変わるときにアニメーションを再生します。
 
+Playtime (h)
+== プレイ時間 (h)
+
 Please add a valid cut first
 == 有効なカットを先に追加してください
 
@@ -12287,6 +12290,9 @@ Scoreboard cursor
 Scoreboard filter: only show players whose name or clan contains this text
 == スコアボードフィルター：名前またはクランにこの文字列を含むプレイヤーのみ表示します
 
+Scoreboard playtime
+== スコアボードのプレイ時間
+
 Scoreboard point check
 == スコアボードポイントチェック
 
@@ -13619,6 +13625,12 @@ Show player Tee
 Show players' key presses
 == プレイヤーのキー入力を表示
 
+Show playtime
+== プレイ時間を表示
+
+Show points
+== ポイントを表示
+
 Show position and angle
 == 位置と角度を表示
 
@@ -13816,6 +13828,9 @@ Show titles on nameplates
 
 Show toast
 == トーストを表示
+
+Show total DDNet playtime from activity instead of points in scoreboard
+== スコアボードのポイントの代わりに、DDNet の activity から合計したプレイ時間を表示
 
 Show tune zone colors
 == tune zone の領域色を表示

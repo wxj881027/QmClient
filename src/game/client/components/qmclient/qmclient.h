@@ -46,7 +46,7 @@ struct SQmClientDdnetPlayerStats
 	int64_t m_Points = -1;
 	int64_t m_PointsTotal = -1;
 	// 官方 json2 的 activity[] 逐日 hours_played 求和，即生涯累计游玩小时数。
-	// -1 表示该玩家数据里没有可用的 activity 记录。
+	// 空 activity 为 0；字段缺失或不可用时为 -1。
 	int64_t m_PlaytimeHours = -1;
 	// 官方 hours_played_past_365_days，最近一年游玩小时数，-1 表示缺失。
 	int64_t m_PlaytimeHoursPastYear = -1;

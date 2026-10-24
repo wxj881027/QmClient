@@ -10445,6 +10445,9 @@ Plays a short effect when a tee's skin changes, and can copy the skin of the tee
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == Çekiçle çalınanlar dahil, skinin değiştiğinde bir animasyon oynatır.
 
+Playtime (h)
+== Oyun süresi (sa.)
+
 Please add a valid cut first
 == Lütfen önce geçerli bir kesim ekleyin
 
@@ -12287,6 +12290,9 @@ Scoreboard cursor
 Scoreboard filter: only show players whose name or clan contains this text
 == Skor tablosu filtresi: adı veya klanı bu metni içeren oyuncuları göster
 
+Scoreboard playtime
+== Skor tablosunda oyun süresi
+
 Scoreboard point check
 == Skor tablosu puan kontrolü
 
@@ -13619,6 +13625,12 @@ Show player Tee
 Show players' key presses
 == Oyuncuların tuş vuruşlarını göster
 
+Show playtime
+== Oyun süresini göster
+
+Show points
+== Puanları göster
+
 Show position and angle
 == Konum ve açıyı göster
 
@@ -13816,6 +13828,9 @@ Show titles on nameplates
 
 Show toast
 == Toast'ı göster
+
+Show total DDNet playtime from activity instead of points in scoreboard
+== Skor tablosunda puanlar yerine DDNet activity toplam oyun süresini göster
 
 Show tune zone colors
 == Tune bölge renklerini göster

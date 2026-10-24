@@ -3483,6 +3483,7 @@ if(CLIENT)
     components/pie_menu_logic.h
     components/player_points.cpp
     components/player_points.h
+    components/qmclient/ddnet_activity.h
     components/qmclient/player_points_state.h
     components/qmclient/gores_drown_tracker.h
     components/players.cpp

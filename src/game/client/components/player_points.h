@@ -9,6 +9,7 @@
 #include <engine/sqlite.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/ddnet_activity.h>
 #include <game/client/components/qmclient/player_points_state.h>
 
 #include <map>
@@ -20,6 +21,7 @@ struct SPlayerPointsParseResult
 	bool m_JsonParsed = false;
 	bool m_PointsFound = false;
 	int m_Points = 0;
+	int64_t m_PlaytimeHours = -1;
 };
 
 inline SPlayerPointsParseResult ExtractPlayerPointsJson(const json_value *pRoot)
@@ -28,6 +30,7 @@ inline SPlayerPointsParseResult ExtractPlayerPointsJson(const json_value *pRoot)
 	if(!pRoot)
 		return Result;
 	Result.m_JsonParsed = true;
+	Result.m_PlaytimeHours = QmDdnetActivityHours(pRoot);
 	const json_value *pPointsObj = json_object_get(pRoot, "points");
 	const json_value *pPointsVal = pPointsObj ? json_object_get(pPointsObj, "points") : nullptr;
 	if(pPointsVal)
@@ -76,6 +79,7 @@ public:
 	// Public interface
 	void EnsureQueried(const char *pPlayerName);
 	SPlayerPointsResult GetPoints(const char *pPlayerName);
+	SPlayerPlaytimeResult GetPlaytime(const char *pPlayerName) const;
 };
 
 #endif

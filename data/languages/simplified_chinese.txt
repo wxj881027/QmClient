@@ -10448,6 +10448,9 @@ Plays a short effect when a tee's skin changes, and can copy the skin of the tee
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == 皮肤变化时播放动画，包括锤子偷来的皮肤。
 
+Playtime (h)
+== 游玩（小时）
+
 Please add a valid cut first
 == 请先添加有效裁剪片段
 
@@ -12290,6 +12293,9 @@ Scoreboard cursor
 Scoreboard filter: only show players whose name or clan contains this text
 == 计分板筛选：匹配名字或战队
 
+Scoreboard playtime
+== 计分板游玩时间
+
 Scoreboard point check
 == 计分板积分检查
 
@@ -13622,6 +13628,12 @@ Show player Tee
 Show players' key presses
 == 显示按键
 
+Show playtime
+== 显示游玩时间
+
+Show points
+== 显示积分
+
 Show position and angle
 == 显示位置和角度
 
@@ -13819,6 +13831,9 @@ Show titles on nameplates
 
 Show toast
 == 显示提示消息
+
+Show total DDNet playtime from activity instead of points in scoreboard
+== 在计分板中累加 DDNet activity 的游玩小时数，替代积分显示
 
 Show tune zone colors
 == 显示 Tune Zone 颜色
