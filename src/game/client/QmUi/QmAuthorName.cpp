@@ -65,11 +65,23 @@ void CQmAuthorName::Render(CUi *pUi, IGraphics *pGraphics, const QmSponsorAuthor
 	pGraphics->GetScreen(&X0, &Y0, &X1, &Y1);
 	const vec2 PixelSize((X1 - X0) / std::max(pGraphics->ScreenWidth(), 1), (Y1 - Y0) / std::max(pGraphics->ScreenHeight(), 1));
 	const float Radius = FontSize * (0.035f + 0.20f * Presentation.m_Blur);
-	const float Padding = Radius * 3.0f + std::max(PixelSize.x, PixelSize.y) * 2.0f;
+	// 固定最大留白并对齐屏幕像素，鼠标距离只改变卷积核，不改变文字纹理的位置。
+	const float Padding = FontSize * (0.035f + 0.20f) * 3.0f + std::max(PixelSize.x, PixelSize.y) * 2.0f;
 	const CUIRect Name = Bounds(Author.m_pName);
-	const CUIRect Area{Name.x - Padding, Label.y - Padding, Name.w + 2.0f * Padding, Label.h + 2.0f * Padding};
+	CUIRect Area{Name.x - Padding, Label.y - Padding, 0.0f, 0.0f};
+	if(PixelSize.x > 0.0f)
+		Area.x = X0 + std::floor((Area.x - X0) / PixelSize.x) * PixelSize.x;
+	if(PixelSize.y > 0.0f)
+		Area.y = Y0 + std::floor((Area.y - Y0) / PixelSize.y) * PixelSize.y;
+	Area.w = Name.x + Name.w + Padding - Area.x;
+	Area.h = Label.y + Label.h + Padding - Area.y;
 	const int Width = PixelSize.x > 0.0f ? static_cast<int>(std::ceil(Area.w / PixelSize.x)) : 0;
 	const int Height = PixelSize.y > 0.0f ? static_cast<int>(std::ceil(Area.h / PixelSize.y)) : 0;
+	// 先按屏幕的字号与像素比例排版；小纹理的投影只用于绘制已有字形。
+	CUIElement::SUIElementRect Text;
+	pUi->DoLabel(Text, &Label, Presentation.m_pText, FontSize, TEXTALIGN_MC, Props);
+	pUi->FlushQuadBatch();
+	bool Rendered = false;
 	if(pGraphics->IsRenderTargetGaussianBlurSupported() && Width > 0 && Height > 0 && Width <= 1024 && Height <= 512)
 	{
 		if(Width > m_Width || Height > m_Height || !m_Source.IsValid() || !m_aTemporary[0].IsValid() || !m_Blurred.IsValid())
@@ -84,11 +96,10 @@ void CQmAuthorName::Render(CUi *pUi, IGraphics *pGraphics, const QmSponsorAuthor
 			m_aTemporary[0] = pGraphics->CreateRenderTarget(m_Width, m_Height);
 			m_Blurred = pGraphics->CreateRenderTarget(m_Width, m_Height);
 		}
-		pUi->FlushQuadBatch();
 		if(m_Source.IsValid() && m_aTemporary[0].IsValid() && m_Blurred.IsValid() && pGraphics->BeginRenderTarget(m_Source, ColorRGBA(0, 0, 0, 0)))
 		{
 			pGraphics->MapScreen(Area.x, Area.y, Area.x + m_Width * PixelSize.x, Area.y + m_Height * PixelSize.y);
-			DrawLabel();
+			pTextRender->RenderTextContainer(Text.m_UITextContainer, Text.m_TextColor, Text.m_TextOutlineColor);
 			pGraphics->EndRenderTarget();
 			pGraphics->MapScreen(X0, Y0, X1, Y1);
 			IGraphics::SGaussianBlurParams Params;
@@ -102,21 +113,20 @@ void CQmAuthorName::Render(CUi *pUi, IGraphics *pGraphics, const QmSponsorAuthor
 				Draw.m_W = m_Width * PixelSize.x;
 				Draw.m_H = m_Height * PixelSize.y;
 				pGraphics->DrawRenderTarget(m_Blurred, Draw);
-				return;
+				Rendered = true;
 			}
 		}
 	}
-	// 不支持离屏模糊的后端用归一化的小卷积核，仍只呈现模糊文字。
-	const ColorRGBA Previous = pTextRender->GetTextColor();
-	const ColorRGBA PreviousOutline = pTextRender->GetTextOutlineColor();
-	pTextRender->TextColor(Previous.WithMultipliedAlpha(1.0f / 9.0f));
-	pTextRender->TextOutlineColor(PreviousOutline.WithMultipliedAlpha(1.0f / 9.0f));
-	for(int Y = -1; Y <= 1; ++Y)
-		for(int X = -1; X <= 1; ++X)
-		{
-			const CUIRect Sample{Label.x + X * Radius, Label.y + Y * Radius, Label.w, Label.h};
-			pUi->DoLabel(&Sample, Presentation.m_pText, FontSize, TEXTALIGN_MC, Props);
-		}
-	pTextRender->TextColor(Previous);
-	pTextRender->TextOutlineColor(PreviousOutline);
+	if(!Rendered)
+	{
+		// 回退也复用同一份排版，避免每个采样点独立像素取整后让名字偏移。
+		for(int Y = -1; Y <= 1; ++Y)
+			for(int X = -1; X <= 1; ++X)
+			{
+				pGraphics->MapScreen(X0 - X * Radius, Y0 - Y * Radius, X1 - X * Radius, Y1 - Y * Radius);
+				pTextRender->RenderTextContainer(Text.m_UITextContainer, Text.m_TextColor.WithMultipliedAlpha(1.0f / 9.0f), Text.m_TextOutlineColor.WithMultipliedAlpha(1.0f / 9.0f));
+			}
+		pGraphics->MapScreen(X0, Y0, X1, Y1);
+	}
+	pTextRender->DeleteTextContainer(Text.m_UITextContainer);
 }
