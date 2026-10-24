@@ -1524,29 +1524,34 @@ void CMenus::InitSettingsTabLabelCache()
 void CMenus::UpdateSettingsTabLabels()
 {
 	const bool Sixup = Client()->IsSixup();
-	if(m_SettingsTabLabelsInit && str_comp(m_aSettingsTabLanguageFile, g_Config.m_ClLanguagefile) == 0 && m_SettingsTabSixup == Sixup)
-		return;
-
-	str_copy(m_aSettingsTabLanguageFile, g_Config.m_ClLanguagefile, sizeof(m_aSettingsTabLanguageFile));
+	const bool SixupChanged = !m_SettingsTabLabelsInit || m_SettingsTabSixup != Sixup;
 	m_SettingsTabSixup = Sixup;
 	m_SettingsTabLabelsInit = true;
 
-	m_apSettingsTabs[SETTINGS_LANGUAGE] = Localize("Language");
-	m_apSettingsTabs[SETTINGS_GENERAL] = Localize("General");
-	m_apSettingsTabs[SETTINGS_PLAYER] = Localize("Player");
-	m_apSettingsTabs[SETTINGS_TEE] = Sixup ? Localize("Tee 0.7") : Localize("Tee");
-	m_apSettingsTabs[SETTINGS_APPEARANCE] = Localize("Appearance");
-	m_apSettingsTabs[SETTINGS_CONTROLS] = Localize("Controls");
-	m_apSettingsTabs[SETTINGS_GRAPHICS] = Localize("Graphics");
-	m_apSettingsTabs[SETTINGS_SOUND] = Localize("Sound");
-	m_apSettingsTabs[SETTINGS_DDNET] = Localize("DDNet");
-	m_apSettingsTabs[SETTINGS_ASSETS] = Localize("Assets");
-	m_apSettingsTabs[SETTINGS_TCLIENT] = Localize("TClient");
-	m_apSettingsTabs[SETTINGS_QMCLIENT] = Localize("QmClient");
-	m_apSettingsTabs[SETTINGS_SEARCH] = Localize("Search");
-	m_apSettingsTabs[SETTINGS_PROFILES] = Localize("Profiles");
-	m_apSettingsTabs[SETTINGS_CONFIGS] = Localize("Configs");
-	m_apSettingsTabs[SETTINGS_CONTRIBUTORS] = Localize("Contributors");
+	// 页签文字缓存自有副本，语言文件重载不会留下指向旧堆的指针；
+	// 六人模式会改变 Tee 页签的取词 key，因此变化时需要强制刷新。
+	const bool Refreshed = m_SettingsTabLabels.Refresh(g_Config.m_ClLanguagefile,
+		{
+			"Language",
+			"General",
+			"Player",
+			Sixup ? "Tee 0.7" : "Tee",
+			"Appearance",
+			"Controls",
+			"Graphics",
+			"Sound",
+			"DDNet",
+			"Assets",
+			"TClient",
+			"QmClient",
+			"Search",
+			"Profiles",
+			"Configs",
+			"Contributors",
+		},
+		SixupChanged);
+	if(!Refreshed)
+		return;
 
 	if(m_SettingsTabLabelElementsInit)
 	{
@@ -1577,7 +1582,7 @@ void CMenus::PrepareSettingsTabLabelCache(float MainViewWidth, float TabBarWidth
 			continue;
 
 		CUIElement::SUIElementRect &RectEl = *m_aSettingsTabLabelElements[i].Rect(0);
-		const char *pText = m_apSettingsTabs[i];
+		const char *pText = m_SettingsTabLabels.Get(i);
 		const bool ColorChanged = RectEl.m_TextColor != TextRender()->GetTextColor() || RectEl.m_TextOutlineColor != TextRender()->GetTextOutlineColor();
 		const bool TextChanged = str_comp(RectEl.m_Text.c_str(), pText) != 0;
 		const bool SizeChanged = RectEl.m_Width != Label.w || RectEl.m_Height != Label.h;

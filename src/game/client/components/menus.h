@@ -22,6 +22,7 @@
 
 #include <game/client/QmUi/QmAuthorName.h>
 #include <game/client/QmUi/QmIslandNotice.h>
+#include <game/client/QmUi/QmLocalizedLabels.h>
 #include <game/client/QmUi/QmPlayersMenu.h>
 #include <game/client/QmUi/QmScroll.h>
 #include <game/client/QmUi/QmSeasonalSidebar.h>
@@ -1653,7 +1654,6 @@ protected:
 	bool m_SettingsTabLabelElementsInit = false;
 	bool m_SettingsTabLabelsInit = false;
 	bool m_SettingsTabSixup = false;
-	char m_aSettingsTabLanguageFile[IO_MAX_PATH_LENGTH] = "";
 	bool m_NeedSendinfo;
 	bool m_NeedSendDummyinfo;
 
@@ -2761,7 +2761,7 @@ public:
 	SUIAnimator m_aAnimatorsSettingsTab[SETTINGS_LENGTH];
 	std::array<CButtonContainer, SETTINGS_LENGTH> m_aSettingsTabButtons;
 	std::array<CUIElement, SETTINGS_LENGTH> m_aSettingsTabLabelElements;
-	std::array<const char *, SETTINGS_LENGTH> m_apSettingsTabs{};
+	CQmLocalizedLabelCache m_SettingsTabLabels;
 	int m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_VISUAL;
 	int m_CreditsSettingsTab = CREDITS_SETTINGS_TAB_QMCLIENT;
 	// 启动赞助提醒（灵动岛）的两段式状态（掉落/展开进度 + 停留倒计时）。
