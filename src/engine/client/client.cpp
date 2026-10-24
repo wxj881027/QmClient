@@ -132,6 +132,10 @@ static bool gs_QmTestMainThreadAssert = false;
 // QmClient: 测试专用注入开关（--qm-test-main-thread-stall），供进程级回归测试在
 // 主循环内模拟一次长时间阻塞，验证看门狗使用单调时钟后能真实报告卡死。
 static bool gs_QmTestMainThreadStall = false;
+#if defined(CONF_FAMILY_WINDOWS)
+// 进程回归注入真实结构化异常，验证本地报告完成后不会阻塞在旧处理器中。
+static bool gs_QmTestMainThreadException = false;
+#endif
 // 进程回归注入最终清理卡死，验证隐藏窗口后的强制退出。
 static bool gs_QmTestShutdownCleanupStall = false;
 static constexpr const char *gs_pQmCrashDumpDir = "dumps/QmClient_Crash";
@@ -4419,6 +4423,14 @@ void CClient::Run()
 	// 此时看门狗时钟仍在推进，可验证弹窗期间不会误报“客户端卡死”。
 	if(gs_QmTestMainThreadAssert)
 		dbg_assert_failed("qm test main thread assertion (--qm-test-main-thread-assert)");
+#if defined(CONF_FAMILY_WINDOWS)
+	if(gs_QmTestMainThreadException)
+	{
+		log_info("test/crashdump", "raising_noncontinuable_access_violation");
+		const ULONG_PTR aParameters[] = {0, 1};
+		RaiseException(EXCEPTION_ACCESS_VIOLATION, EXCEPTION_NONCONTINUABLE, 2, aParameters);
+	}
+#endif
 
 	bool LastD = false;
 	bool LastE = false;
@@ -6534,6 +6546,10 @@ int main(int argc, const char **argv)
 			gs_QmTestMainThreadAssert = true;
 		if(str_comp(argv[i], "--qm-test-main-thread-stall") == 0)
 			gs_QmTestMainThreadStall = true;
+#if defined(CONF_FAMILY_WINDOWS)
+		if(str_comp(argv[i], "--qm-test-main-thread-exception") == 0)
+			gs_QmTestMainThreadException = true;
+#endif
 		if(str_comp(argv[i], "--qm-test-shutdown-cleanup-stall") == 0)
 			gs_QmTestShutdownCleanupStall = true;
 	}
