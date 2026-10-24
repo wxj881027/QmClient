@@ -55,6 +55,7 @@ struct SQmClientDdnetPlayerStats
 class CQmClient : public CComponent
 {
 	std::shared_ptr<IHttpRequest> m_pTitleOperation;
+	int64_t m_TitleProfileRefreshStarted = -1;
 	char m_aTitleToken[65] = "";
 	char m_aTitleText[64] = "";
 	char m_aTitleBoundName[64] = "";
@@ -271,7 +272,7 @@ public:
 	void RedeemTitleCode(const char *pCode);
 	void SaveTitleProfile(const char *pTitle, const char *pBoundName, const char *pStyle, EQmSponsorChatStyle ChatStyle, const SQmTitleAppearance &Appearance);
 	void RefreshTitleProfile();
-	bool TitleBusy() const { return m_pTitleOperation != nullptr; }
+	bool TitleBusy() const { return m_pTitleOperation != nullptr || m_TitleProfileRefreshStarted >= 0; }
 	bool TitleAuthenticated() const { return m_TitleAuthenticated; }
 	const char *TitleStatus() const { return m_pTitleStatus; }
 	const char *TitleText() const { return m_aTitleText; }

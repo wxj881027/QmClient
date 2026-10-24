@@ -14264,9 +14264,6 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == Chemin de l'assistant SodaMusic Hook (vide = à côté de QmClient)
 
-Soft glow
-== Lueur douce
-
 Solid
 == Plein
 
@@ -14447,8 +14444,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == Répartit le personnage principal et le clone dans des équipes différentes pour synchroniser les runs solo
 
-Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
-== Brouillon du style de chat de soutien : 0=Normal, 1=Lueur douce, 2=Éclat de platine
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight
+== Brouillon du style de chat de soutien : 0=Normal, 1=Éclat de platine
 
 Sponsor code
 == Code de soutien

@@ -10,16 +10,15 @@
 
 TEST(QmSponsorChatStyle, StableIdsRoundTripAndUnknownIdsUseNormalText)
 {
-	for(const auto Style : {EQmSponsorChatStyle::NONE, EQmSponsorChatStyle::SOFT_GLOW, EQmSponsorChatStyle::PLATINUM})
+	for(const auto Style : {EQmSponsorChatStyle::NONE, EQmSponsorChatStyle::PLATINUM})
 		EXPECT_EQ(QmSponsorChatStyleFromId(QmSponsorChatStyleId(Style)), Style);
-	for(const char *pId : std::array<const char *, 4>{nullptr, "unknown", "rainbow", "Soft_Glow"})
+	for(const char *pId : std::array<const char *, 5>{nullptr, "unknown", "rainbow", "Soft_Glow", "soft_glow"})
 		EXPECT_EQ(QmSponsorChatStyleFromId(pId), EQmSponsorChatStyle::NONE);
 }
 
 TEST(QmSponsorChatStyle, OrdinaryMessagesKeepTheSelectedStyle)
 {
-	for(const auto Style : {EQmSponsorChatStyle::SOFT_GLOW, EQmSponsorChatStyle::PLATINUM})
-		EXPECT_EQ(QmSponsorChatMessageStyle(Style, false, false, false, false, false), Style);
+	EXPECT_EQ(QmSponsorChatMessageStyle(EQmSponsorChatStyle::PLATINUM, false, false, false, false, false), EQmSponsorChatStyle::PLATINUM);
 }
 
 class CQmSponsorChatSemanticTest : public testing::TestWithParam<int>
@@ -29,31 +28,21 @@ class CQmSponsorChatSemanticTest : public testing::TestWithParam<int>
 TEST_P(CQmSponsorChatSemanticTest, FunctionalMessagePresentationTakesPriority)
 {
 	const int Flag = GetParam();
-	for(const auto Style : {EQmSponsorChatStyle::SOFT_GLOW, EQmSponsorChatStyle::PLATINUM})
-		EXPECT_EQ(QmSponsorChatMessageStyle(Style, Flag == 0, Flag == 1, Flag == 2, Flag == 3, Flag == 4), EQmSponsorChatStyle::NONE);
+	EXPECT_EQ(QmSponsorChatMessageStyle(EQmSponsorChatStyle::PLATINUM, Flag == 0, Flag == 1, Flag == 2, Flag == 3, Flag == 4), EQmSponsorChatStyle::NONE);
 }
 
 INSTANTIATE_TEST_SUITE_P(HighlightTeamWhisperCustomColorEmoji, CQmSponsorChatSemanticTest, testing::Range(0, 5));
 
 TEST(QmSponsorChatStyle, MergingKeepsOnlyAStyleSharedByEveryMessage)
 {
-	const auto Glow = EQmSponsorChatStyle::SOFT_GLOW;
+	const auto Normal = EQmSponsorChatStyle::NONE;
 	const auto Platinum = EQmSponsorChatStyle::PLATINUM;
-	EXPECT_EQ(QmSponsorChatMergedStyle(Glow, Glow), Glow);
+	EXPECT_EQ(QmSponsorChatMergedStyle(Normal, Normal), Normal);
 	EXPECT_EQ(QmSponsorChatMergedStyle(Platinum, Platinum), Platinum);
-	const auto Mixed = QmSponsorChatMergedStyle(Glow, Platinum);
+	const auto Mixed = QmSponsorChatMergedStyle(Normal, Platinum);
 	EXPECT_EQ(Mixed, EQmSponsorChatStyle::NONE);
-	EXPECT_EQ(QmSponsorChatMergedStyle(Mixed, Glow), EQmSponsorChatStyle::NONE);
+	EXPECT_EQ(QmSponsorChatMergedStyle(Mixed, Platinum), EQmSponsorChatStyle::NONE);
 	EXPECT_EQ(QmSponsorChatMergedStyle(Platinum, EQmSponsorChatStyle::NONE), EQmSponsorChatStyle::NONE);
-}
-
-TEST(QmSponsorChatStyle, GlowStaysNarrowAtLargeFontSizesAndRejectsInvalidSizes)
-{
-	EXPECT_GT(QmSponsorChatGlowRadius(20.0f), QmSponsorChatGlowRadius(8.0f));
-	EXPECT_LE(QmSponsorChatGlowRadius(200.0f), 2.5f);
-	EXPECT_GT(QmSponsorChatGlowRadius(1.0f), 0.0f);
-	for(float Size : {0.0f, -1.0f, std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN()})
-		EXPECT_FLOAT_EQ(QmSponsorChatGlowRadius(Size), 0.0f);
 }
 
 TEST(QmSponsorChatStyle, PlatinumHasABrightLowSaturationBandAndPreservesOpacity)
@@ -213,25 +202,26 @@ namespace
 TEST(QmSponsorChatPresence, BodyStyleIsIndependentFromTheTitleStyle)
 {
 	const auto Presences = ReadPresences(R"({"server_time":1000,"presences":[
-		{"server_address":"test:8303","player_id":3,"player_name":"Main","title":"Sponsor","style":"eternity","chat_style":"soft_glow","issued_at":1000,"expires_at":1015},
-		{"server_address":"test:8303","player_id":4,"player_name":"Dummy","title":"Sponsor","style":"eternity","chat_style":"platinum","issued_at":1000,"expires_at":1015}
+		{"server_address":"test:8303","player_id":3,"player_name":"Main","title":"Sponsor","style":"eternity","chat_style":"platinum","issued_at":1000,"expires_at":1015},
+		{"server_address":"test:8303","player_id":4,"player_name":"Dummy","title":"Sponsor","style":"eternity","chat_style":"","issued_at":1000,"expires_at":1015}
 	]})");
 	ASSERT_EQ(Presences.size(), 2u);
-	EXPECT_EQ(Presences[0].m_ChatStyle, EQmSponsorChatStyle::SOFT_GLOW);
-	EXPECT_EQ(Presences[1].m_ChatStyle, EQmSponsorChatStyle::PLATINUM);
+	EXPECT_EQ(Presences[0].m_ChatStyle, EQmSponsorChatStyle::PLATINUM);
+	EXPECT_EQ(Presences[1].m_ChatStyle, EQmSponsorChatStyle::NONE);
 	EXPECT_EQ(Presences[0].m_Style, "eternity");
 	EXPECT_EQ(Presences[1].m_PlayerId, 4);
 	EXPECT_EQ(Presences[1].m_PlayerName, "Dummy");
 }
 
-TEST(QmSponsorChatPresence, MissingUnknownAndWrongTypeStylesKeepNormalTitles)
+TEST(QmSponsorChatPresence, MissingUnknownRetiredAndWrongTypeStylesKeepNormalTitles)
 {
 	const auto Presences = ReadPresences(R"({"server_time":1000,"presences":[
 		{"server_address":"test:8303","player_id":3,"player_name":"A","title":"Sponsor","issued_at":1000,"expires_at":1015},
 		{"server_address":"test:8303","player_id":4,"player_name":"B","title":"Sponsor","chat_style":"future_style","issued_at":1000,"expires_at":1015},
-		{"server_address":"test:8303","player_id":5,"player_name":"C","title":"Sponsor","chat_style":1,"issued_at":1000,"expires_at":1015}
+		{"server_address":"test:8303","player_id":5,"player_name":"C","title":"Sponsor","chat_style":1,"issued_at":1000,"expires_at":1015},
+		{"server_address":"test:8303","player_id":6,"player_name":"D","title":"Sponsor","chat_style":"soft_glow","issued_at":1000,"expires_at":1015}
 	]})");
-	ASSERT_EQ(Presences.size(), 3u);
+	ASSERT_EQ(Presences.size(), 4u);
 	for(const auto &Presence : Presences)
 	{
 		EXPECT_EQ(Presence.m_ChatStyle, EQmSponsorChatStyle::NONE);
@@ -242,7 +232,7 @@ TEST(QmSponsorChatPresence, MissingUnknownAndWrongTypeStylesKeepNormalTitles)
 TEST(QmSponsorChatPresence, StyleDoesNotBypassLeaseOrServerValidation)
 {
 	const auto Presences = ReadPresences(R"({"server_time":1000,"presences":[
-		{"server_address":"other:8303","player_id":3,"player_name":"A","title":"Sponsor","chat_style":"soft_glow","issued_at":1000,"expires_at":1015},
+		{"server_address":"other:8303","player_id":3,"player_name":"A","title":"Sponsor","chat_style":"platinum","issued_at":1000,"expires_at":1015},
 		{"server_address":"test:8303","player_id":4,"player_name":"B","title":"Sponsor","chat_style":"platinum","issued_at":900,"expires_at":1000},
 		{"server_address":"test:8303","player_id":5,"player_name":"C","title":"Sponsor","chat_style":"platinum","issued_at":1001,"expires_at":1015}
 	]})");

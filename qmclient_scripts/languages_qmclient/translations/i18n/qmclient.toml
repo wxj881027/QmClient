@@ -27988,22 +27988,6 @@ turkish = "SodaMusic Hook yardımcı yolu (boş = QmClient'ın yanında)"
 polish = "Ścieżka pomocnika SodaMusic Hook (pusta = obok QmClient)"
 
 [[message]]
-key = "Soft glow"
-[message.translations]
-simplified_chinese = "柔光"
-traditional_chinese = "柔光"
-japanese = "柔らかな光"
-korean = "은은한 빛"
-russian = "Мягкое свечение"
-german = "Sanftes Leuchten"
-spanish = "Resplandor suave"
-french = "Lueur douce"
-brazilian_portuguese = "Brilho suave"
-portuguese = "Brilho suave"
-turkish = "Yumuşak parıltı"
-polish = "Delikatna poświata"
-
-[[message]]
 key = "Solo Split"
 [message.translations]
 simplified_chinese = "单刷模式"
@@ -28340,20 +28324,20 @@ turkish = "Ana/kukla karakteri iki boş takıma böler; takım 0'a dönmek için
 polish = "Dzieli główną postać/dummy na dwie wolne drużyny; ponowne naciśnięcie wraca do drużyny 0"
 
 [[message]]
-key = "Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight"
+key = "Sponsor chat style draft: 0=Normal, 1=Platinum highlight"
 [message.translations]
-simplified_chinese = "赞助者发言样式草稿：0=普通，1=柔光，2=铂金高光"
-traditional_chinese = "贊助者發言樣式草稿：0=普通，1=柔光，2=鉑金高光"
-japanese = "支援者チャットのスタイル下書き：0=通常、1=柔らかな光、2=プラチナの輝き"
-korean = "후원자 채팅 스타일 초안: 0=보통, 1=은은한 빛, 2=백금 하이라이트"
-russian = "Черновик стиля чата спонсора: 0=Обычный, 1=Мягкое свечение, 2=Платиновый блеск"
-german = "Entwurf des Unterstützer-Chatstils: 0=Normal, 1=Sanftes Leuchten, 2=Platin-Glanz"
-spanish = "Borrador del estilo de chat de patrocinador: 0=Normal, 1=Resplandor suave, 2=Brillo de platino"
-french = "Brouillon du style de chat de soutien : 0=Normal, 1=Lueur douce, 2=Éclat de platine"
-brazilian_portuguese = "Rascunho do estilo de chat de apoiador: 0=Normal, 1=Brilho suave, 2=Reflexo de platina"
-portuguese = "Rascunho do estilo de chat de apoiante: 0=Normal, 1=Brilho suave, 2=Reflexo de platina"
-turkish = "Destekçi sohbet stili taslağı: 0=Normal, 1=Yumuşak parıltı, 2=Platin ışıltısı"
-polish = "Szkic stylu czatu wspierającego: 0=Normalny, 1=Delikatna poświata, 2=Platynowy połysk"
+simplified_chinese = "赞助者发言样式草稿：0=普通，1=铂金高光"
+traditional_chinese = "贊助者發言樣式草稿：0=普通，1=鉑金高光"
+japanese = "支援者チャットのスタイル下書き：0=通常、1=プラチナの輝き"
+korean = "후원자 채팅 스타일 초안: 0=보통, 1=백금 하이라이트"
+russian = "Черновик стиля чата спонсора: 0=Обычный, 1=Платиновый блеск"
+german = "Entwurf des Unterstützer-Chatstils: 0=Normal, 1=Platin-Glanz"
+spanish = "Borrador del estilo de chat de patrocinador: 0=Normal, 1=Brillo de platino"
+french = "Brouillon du style de chat de soutien : 0=Normal, 1=Éclat de platine"
+brazilian_portuguese = "Rascunho do estilo de chat de apoiador: 0=Normal, 1=Reflexo de platina"
+portuguese = "Rascunho do estilo de chat de apoiante: 0=Normal, 1=Reflexo de platina"
+turkish = "Destekçi sohbet stili taslağı: 0=Normal, 1=Platin ışıltısı"
+polish = "Szkic stylu czatu wspierającego: 0=Normalny, 1=Platynowy połysk"
 
 [[message]]
 key = "Sponsor code"

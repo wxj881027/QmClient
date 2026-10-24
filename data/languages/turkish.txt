@@ -14264,9 +14264,6 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == SodaMusic Hook yardımcı yolu (boş = QmClient'ın yanında)
 
-Soft glow
-== Yumuşak parıltı
-
 Solid
 == Düz
 
@@ -14447,8 +14444,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == Ana karakter ve kuklayı solo koşu senkronizasyonu için farklı takımlara dağıtır
 
-Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
-== Destekçi sohbet stili taslağı: 0=Normal, 1=Yumuşak parıltı, 2=Platin ışıltısı
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight
+== Destekçi sohbet stili taslağı: 0=Normal, 1=Platin ışıltısı
 
 Sponsor code
 == Destekçi kodu
