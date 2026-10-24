@@ -6,6 +6,8 @@
 #include <engine/shared/network.h>
 #include <engine/storage.h>
 
+#include <game/client/components/qmclient/ghost_path.h>
+
 #include <gtest/gtest.h>
 #include <test/test.h>
 
@@ -170,4 +172,48 @@ TEST_F(GhostLoaderIntegration, FailedRecordingStartIgnoresWritesAndAllowsAValidR
 	uint32_t Restored = 0;
 	ASSERT_TRUE(m_Loader.ReadData(Type, &Restored, sizeof(Restored)));
 	EXPECT_EQ(Restored, Value);
+}
+
+TEST_F(GhostLoaderIntegration, PathAllocationFailureDoesNotPublishTheReadRecordAndTheFileCanReopen)
+{
+	class CHeap : public qm_ghost_path::CAllocation
+	{
+	public:
+		bool m_Fail = true;
+		void *Allocate(size_t Count, size_t Size) override { return m_Fail ? nullptr : CAllocation::Allocate(Count, Size); }
+	} Heap;
+	qm_ghost_path::CChunkedPath<uint32_t> Path(1, &Heap);
+	ASSERT_NO_FATAL_FAILURE(Write(6, {{2, {7}}, {2, {11}}}));
+	ASSERT_NO_FATAL_FAILURE(Open());
+	int Type = -1;
+	ASSERT_TRUE(m_Loader.ReadNextType(&Type));
+	const auto Read = [&](uint32_t &Value) { return m_Loader.ReadData(Type, &Value, sizeof(Value)); };
+	EXPECT_FALSE(Path.ReadAndAdd(Read));
+	EXPECT_EQ(Path.Size(), 0);
+	EXPECT_EQ(Path.Get(0), nullptr);
+	m_Loader.Close();
+	Heap.m_Fail = false;
+	ASSERT_NO_FATAL_FAILURE(Open());
+	ASSERT_TRUE(m_Loader.ReadNextType(&Type));
+	ASSERT_TRUE(Path.ReadAndAdd(Read));
+	ASSERT_NE(Path.Get(0), nullptr);
+	EXPECT_EQ(*Path.Get(0), 7u);
+}
+
+TEST_F(GhostLoaderIntegration, ReadingAnOlderPrefixIntoThePathKeepsTheNewFieldZero)
+{
+	struct SRecord
+	{
+		uint32_t m_Value;
+		uint32_t m_NewField;
+	};
+	qm_ghost_path::CChunkedPath<SRecord> Path;
+	ASSERT_NO_FATAL_FAILURE(Write(4, {{2, {7}}}));
+	ASSERT_NO_FATAL_FAILURE(Open());
+	int Type = -1;
+	ASSERT_TRUE(m_Loader.ReadNextType(&Type));
+	ASSERT_TRUE(Path.ReadAndAdd([&](SRecord &Value) { return m_Loader.ReadData(Type, &Value, sizeof(Value.m_Value)); }));
+	ASSERT_NE(Path.Get(0), nullptr);
+	EXPECT_EQ(Path.Get(0)->m_Value, 7u);
+	EXPECT_EQ(Path.Get(0)->m_NewField, 0u);
 }

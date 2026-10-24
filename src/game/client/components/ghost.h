@@ -7,6 +7,7 @@
 
 #include <game/client/component.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/ghost_path.h>
 #include <game/client/components/qmclient/online_replay_player.h>
 #include <game/client/render.h>
 
@@ -57,29 +58,7 @@ public:
 	};
 
 private:
-	class CGhostPath
-	{
-		int m_ChunkSize;
-		int m_NumItems;
-
-		std::vector<CGhostCharacter *> m_vpChunks;
-
-	public:
-		CGhostPath() { Reset(); }
-		~CGhostPath() { Reset(); }
-		CGhostPath(const CGhostPath &Other) = delete;
-		CGhostPath &operator=(const CGhostPath &Other) = delete;
-
-		CGhostPath(CGhostPath &&Other) noexcept;
-		CGhostPath &operator=(CGhostPath &&Other) noexcept;
-
-		void Reset(int ChunkSize = 25 * 60); // one minute with default snap rate
-		void SetSize(int Items);
-		int Size() const { return m_NumItems; }
-
-		void Add(const CGhostCharacter &Char);
-		CGhostCharacter *Get(int Index);
-	};
+	using CGhostPath = qm_ghost_path::CChunkedPath<CGhostCharacter>;
 
 	class CGhostItem
 	{

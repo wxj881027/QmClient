@@ -72,63 +72,6 @@ void CGhost::GetNetObjCharacter(CNetObj_Character *pChar, const CGhostCharacter 
 	pChar->m_Tick = pGhostChar->m_Tick;
 }
 
-CGhost::CGhostPath::CGhostPath(CGhostPath &&Other) noexcept :
-	m_ChunkSize(Other.m_ChunkSize), m_NumItems(Other.m_NumItems), m_vpChunks(std::move(Other.m_vpChunks))
-{
-	Other.m_NumItems = 0;
-	Other.m_vpChunks.clear();
-}
-
-CGhost::CGhostPath &CGhost::CGhostPath::operator=(CGhostPath &&Other) noexcept
-{
-	Reset(Other.m_ChunkSize);
-	m_NumItems = Other.m_NumItems;
-	m_vpChunks = std::move(Other.m_vpChunks);
-	Other.m_NumItems = 0;
-	Other.m_vpChunks.clear();
-	return *this;
-}
-
-void CGhost::CGhostPath::Reset(int ChunkSize)
-{
-	for(auto &pChunk : m_vpChunks)
-		free(pChunk);
-	m_vpChunks.clear();
-	m_ChunkSize = ChunkSize;
-	m_NumItems = 0;
-}
-
-void CGhost::CGhostPath::SetSize(int Items)
-{
-	int Chunks = m_vpChunks.size();
-	int NeededChunks = (Items + m_ChunkSize - 1) / m_ChunkSize;
-
-	if(NeededChunks > Chunks)
-	{
-		m_vpChunks.resize(NeededChunks);
-		for(int i = Chunks; i < NeededChunks; i++)
-			m_vpChunks[i] = (CGhostCharacter *)calloc(m_ChunkSize, sizeof(CGhostCharacter));
-	}
-
-	m_NumItems = Items;
-}
-
-void CGhost::CGhostPath::Add(const CGhostCharacter &Char)
-{
-	SetSize(m_NumItems + 1);
-	*Get(m_NumItems - 1) = Char;
-}
-
-CGhostCharacter *CGhost::CGhostPath::Get(int Index)
-{
-	if(Index < 0 || Index >= m_NumItems)
-		return nullptr;
-
-	int Chunk = Index / m_ChunkSize;
-	int Pos = Index % m_ChunkSize;
-	return &m_vpChunks[Chunk][Pos];
-}
-
 void CGhost::GetPath(char *pBuf, int Size, const char *pPlayerName, int Time) const
 {
 	const char *pMap = Client()->GetCurrentMap();
@@ -168,7 +111,8 @@ void CGhost::AddInfos(const CNetObj_Character *pChar, const CNetObj_DDNetCharact
 
 	CGhostCharacter GhostChar;
 	GetGhostCharacter(&GhostChar, pChar, pDDnetChar);
-	m_CurGhost.m_Path.Add(GhostChar);
+	if(!m_CurGhost.m_Path.Add(GhostChar))
+		return;
 	if(GhostRecorder()->IsRecording())
 		GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, &GhostChar, sizeof(CGhostCharacter));
 }
@@ -573,7 +517,7 @@ void CGhost::StopRecord(int Time)
 	CMenus::CGhostItem *pOwnGhost = nullptr;
 	if(Time > 0)
 		pOwnGhost = GameClient()->m_Menus.GetOwnGhost();
-	const bool StoreGhost = Time > 0 && (!pOwnGhost || Time < pOwnGhost->m_Time || !g_Config.m_ClRaceGhostSaveBest);
+	const bool StoreGhost = Time > 0 && !m_CurGhost.Empty() && (!pOwnGhost || Time < pOwnGhost->m_Time || !g_Config.m_ClRaceGhostSaveBest);
 
 	if(RecordingToFile)
 		GhostRecorder()->Stop(m_CurGhost.m_Path.Size(), StoreGhost ? Time : -1);
@@ -729,7 +673,6 @@ int CGhost::Load(const char *pFilename)
 	// select ghost
 	CGhostItem *pGhost = &m_aActiveGhosts[Slot];
 	pGhost->Reset();
-	pGhost->m_Path.SetSize(pInfo->m_NumTicks);
 
 	str_copy(pGhost->m_aPlayer, pInfo->m_aOwner);
 
@@ -767,12 +710,13 @@ int CGhost::Load(const char *pFilename)
 				Error = true;
 				break;
 			}
-			else if(!GhostLoader()->ReadData(Type, pGhost->m_Path.Get(Index++), sizeof(CGhostCharacter_NoTick)))
+			else if(!pGhost->m_Path.ReadAndAdd([&](CGhostCharacter &Value) { return GhostLoader()->ReadData(Type, &Value, sizeof(CGhostCharacter_NoTick)); }))
 			{
 				log_error_color(LOG_COLOR_GHOST, "ghost", "Failed to read ghost data: failed to read ghost character (without tick)");
 				Error = true;
 				break;
 			}
+			++Index;
 			FoundCharacterNoTick = true;
 		}
 		else if(Type == GHOSTDATA_TYPE_CHARACTER)
@@ -783,12 +727,13 @@ int CGhost::Load(const char *pFilename)
 				Error = true;
 				break;
 			}
-			else if(!GhostLoader()->ReadData(Type, pGhost->m_Path.Get(Index++), sizeof(CGhostCharacter)))
+			else if(!pGhost->m_Path.ReadAndAdd([&](CGhostCharacter &Value) { return GhostLoader()->ReadData(Type, &Value, sizeof(CGhostCharacter)); }))
 			{
 				log_error_color(LOG_COLOR_GHOST, "ghost", "Failed to read ghost data: failed to read ghost character (with tick)");
 				Error = true;
 				break;
 			}
+			++Index;
 			FoundCharacterTick = true;
 		}
 		else if(Type == GHOSTDATA_TYPE_START_TICK)
