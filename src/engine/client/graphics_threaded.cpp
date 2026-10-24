@@ -10,6 +10,7 @@
 #include <engine/client/backend/vulkan/backend_vulkan.h>
 #include <engine/client/graphics_buffer_pair.h>
 #include <engine/client/plausible_sizes.h>
+#include <engine/client/quad_container_render.h>
 #include <engine/client/rounded_rect_geometry.h>
 #include <engine/engine.h>
 #include <engine/gfx/image_loader.h>
@@ -2905,10 +2906,10 @@ int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CQuadItem *pAr
 
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 
-	if((int)Container.m_vQuads.size() > Num + CCommandBuffer::CCommandBuffer::MAX_VERTICES)
+	if(!GraphicsCanAppendQuads(Container.m_vQuads.size(), Num) || (Num > 0 && pArray == nullptr))
 		return -1;
 
-	int RetOff = (int)Container.m_vQuads.size();
+	const int RetOff = static_cast<int>(Container.m_vQuads.size());
 
 	for(int i = 0; i < Num; ++i)
 	{
@@ -2958,10 +2959,10 @@ int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CFreeformItem 
 
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 
-	if((int)Container.m_vQuads.size() > Num + CCommandBuffer::CCommandBuffer::MAX_VERTICES)
+	if(!GraphicsCanAppendQuads(Container.m_vQuads.size(), Num) || (Num > 0 && pArray == nullptr))
 		return -1;
 
-	int RetOff = (int)Container.m_vQuads.size();
+	const int RetOff = static_cast<int>(Container.m_vQuads.size());
 
 	for(int i = 0; i < Num; ++i)
 	{
@@ -3042,10 +3043,7 @@ void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadOffset,
 
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 
-	if(QuadDrawNum == -1)
-		QuadDrawNum = (int)Container.m_vQuads.size() - QuadOffset;
-
-	if((int)Container.m_vQuads.size() < QuadOffset + QuadDrawNum || QuadDrawNum == 0)
+	if(!GraphicsResolveQuadRange(Container.m_vQuads.size(), QuadOffset, QuadDrawNum))
 		return;
 
 	if(IsQuadContainerBufferingEnabled())
@@ -3053,13 +3051,17 @@ void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadOffset,
 		if(Container.m_QuadBufferContainerIndex == -1)
 			return;
 
+		const unsigned int RequiredIndices = GraphicsQuadIndicesToNotify(static_cast<size_t>(QuadOffset) + QuadDrawNum, CCommandBuffer::MAX_VERTICES / 4);
+		if(RequiredIndices != 0)
+			IndicesNumRequiredNotify(RequiredIndices);
+
 		if(ChangeWrapMode)
 			WrapClamp();
 
 		CCommandBuffer::SCommand_RenderQuadContainer Cmd;
 		Cmd.m_State = m_State;
 		Cmd.m_DrawNum = (unsigned int)QuadDrawNum * 6;
-		Cmd.m_pOffset = (void *)(QuadOffset * 6 * sizeof(unsigned int));
+		Cmd.m_pOffset = reinterpret_cast<void *>(static_cast<size_t>(QuadOffset) * 6 * sizeof(unsigned int));
 		Cmd.m_BufferContainerIndex = Container.m_QuadBufferContainerIndex;
 
 		AddCmd(Cmd);
@@ -3067,30 +3069,16 @@ void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadOffset,
 	}
 	else
 	{
-		if(g_Config.m_GfxQuadAsTriangle)
-		{
-			for(int i = 0; i < QuadDrawNum; ++i)
-			{
-				SQuadContainer::SQuad &Quad = Container.m_vQuads[QuadOffset + i];
-				m_aVertices[i * 6] = Quad.m_aVertices[0];
-				m_aVertices[i * 6 + 1] = Quad.m_aVertices[1];
-				m_aVertices[i * 6 + 2] = Quad.m_aVertices[2];
-				m_aVertices[i * 6 + 3] = Quad.m_aVertices[0];
-				m_aVertices[i * 6 + 4] = Quad.m_aVertices[2];
-				m_aVertices[i * 6 + 5] = Quad.m_aVertices[3];
-				m_NumVertices += 6;
-			}
-		}
-		else
-		{
-			mem_copy(m_aVertices, &Container.m_vQuads[QuadOffset], sizeof(CCommandBuffer::SVertex) * 4 * QuadDrawNum);
-			m_NumVertices += 4 * QuadDrawNum;
-		}
-		m_Drawing = EDrawing::QUADS;
-		if(ChangeWrapMode)
-			WrapClamp();
 		FlushVertices(false);
-		m_Drawing = EDrawing::NONE;
+		const auto Submit = [&](int VertexCount) {
+			m_NumVertices = VertexCount;
+			m_Drawing = EDrawing::QUADS;
+			if(ChangeWrapMode)
+				WrapClamp();
+			FlushVertices(false);
+			m_Drawing = EDrawing::NONE;
+		};
+		StreamGraphicsQuads(Container.m_vQuads, QuadOffset, QuadDrawNum, g_Config.m_GfxQuadAsTriangle, m_aVertices, [](auto *, int) {}, Submit);
 	}
 	WrapNormal();
 }
@@ -3102,16 +3090,17 @@ void CGraphics_Threaded::RenderQuadContainerEx(int ContainerIndex, int QuadOffse
 
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 
-	if((int)Container.m_vQuads.size() < QuadOffset + 1)
+	if(!GraphicsResolveQuadRange(Container.m_vQuads.size(), QuadOffset, QuadDrawNum))
 		return;
-
-	if(QuadDrawNum == -1)
-		QuadDrawNum = (int)Container.m_vQuads.size() - QuadOffset;
 
 	if(IsQuadContainerBufferingEnabled())
 	{
 		if(Container.m_QuadBufferContainerIndex == -1)
 			return;
+
+		const unsigned int RequiredIndices = GraphicsQuadIndicesToNotify(static_cast<size_t>(QuadOffset) + QuadDrawNum, CCommandBuffer::MAX_VERTICES / 4);
+		if(RequiredIndices != 0)
+			IndicesNumRequiredNotify(RequiredIndices);
 
 		SQuadContainer::SQuad &Quad = Container.m_vQuads[QuadOffset];
 		CCommandBuffer::SCommand_RenderQuadContainerEx Cmd;
@@ -3124,8 +3113,8 @@ void CGraphics_Threaded::RenderQuadContainerEx(int ContainerIndex, int QuadOffse
 		Cmd.m_State = m_State;
 		MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 
-		Cmd.m_DrawNum = QuadDrawNum * 6;
-		Cmd.m_pOffset = (void *)(QuadOffset * 6 * sizeof(unsigned int));
+		Cmd.m_DrawNum = static_cast<unsigned int>(QuadDrawNum) * 6;
+		Cmd.m_pOffset = reinterpret_cast<void *>(static_cast<size_t>(QuadOffset) * 6 * sizeof(unsigned int));
 		Cmd.m_BufferContainerIndex = Container.m_QuadBufferContainerIndex;
 
 		Cmd.m_VertexColor.r = (float)m_aColor[0].r / 255.f;
@@ -3144,75 +3133,35 @@ void CGraphics_Threaded::RenderQuadContainerEx(int ContainerIndex, int QuadOffse
 	}
 	else
 	{
-		if(g_Config.m_GfxQuadAsTriangle)
-		{
-			for(int i = 0; i < QuadDrawNum; ++i)
-			{
-				SQuadContainer::SQuad &Quad = Container.m_vQuads[QuadOffset + i];
-				m_aVertices[i * 6 + 0] = Quad.m_aVertices[0];
-				m_aVertices[i * 6 + 1] = Quad.m_aVertices[1];
-				m_aVertices[i * 6 + 2] = Quad.m_aVertices[2];
-				m_aVertices[i * 6 + 3] = Quad.m_aVertices[0];
-				m_aVertices[i * 6 + 4] = Quad.m_aVertices[2];
-				m_aVertices[i * 6 + 5] = Quad.m_aVertices[3];
-
-				for(int n = 0; n < 6; ++n)
-				{
-					m_aVertices[i * 6 + n].m_Pos.x *= ScaleX;
-					m_aVertices[i * 6 + n].m_Pos.y *= ScaleY;
-					m_aVertices[i * 6 + n].m_Color = m_aColor[0];
-				}
-
-				if(m_Rotation != 0)
-				{
-					CCommandBuffer::SPoint Center;
-					Center.x = m_aVertices[i * 6 + 0].m_Pos.x + (m_aVertices[i * 6 + 1].m_Pos.x - m_aVertices[i * 6 + 0].m_Pos.x) / 2.f;
-					Center.y = m_aVertices[i * 6 + 0].m_Pos.y + (m_aVertices[i * 6 + 2].m_Pos.y - m_aVertices[i * 6 + 0].m_Pos.y) / 2.f;
-
-					Rotate(Center, &m_aVertices[i * 6 + 0], 6);
-				}
-
-				for(int n = 0; n < 6; ++n)
-				{
-					m_aVertices[i * 6 + n].m_Pos.x += X;
-					m_aVertices[i * 6 + n].m_Pos.y += Y;
-				}
-				m_NumVertices += 6;
-			}
-		}
-		else
-		{
-			mem_copy(m_aVertices, &Container.m_vQuads[QuadOffset], sizeof(CCommandBuffer::SVertex) * 4 * QuadDrawNum);
-			for(int i = 0; i < QuadDrawNum; ++i)
-			{
-				for(int n = 0; n < 4; ++n)
-				{
-					m_aVertices[i * 4 + n].m_Pos.x *= ScaleX;
-					m_aVertices[i * 4 + n].m_Pos.y *= ScaleY;
-					m_aVertices[i * 4 + n].m_Color = m_aColor[0];
-				}
-
-				if(m_Rotation != 0)
-				{
-					CCommandBuffer::SPoint Center;
-					Center.x = m_aVertices[i * 4 + 0].m_Pos.x + (m_aVertices[i * 4 + 1].m_Pos.x - m_aVertices[i * 4 + 0].m_Pos.x) / 2.f;
-					Center.y = m_aVertices[i * 4 + 0].m_Pos.y + (m_aVertices[i * 4 + 2].m_Pos.y - m_aVertices[i * 4 + 0].m_Pos.y) / 2.f;
-
-					Rotate(Center, &m_aVertices[i * 4 + 0], 4);
-				}
-
-				for(int n = 0; n < 4; ++n)
-				{
-					m_aVertices[i * 4 + n].m_Pos.x += X;
-					m_aVertices[i * 4 + n].m_Pos.y += Y;
-				}
-				m_NumVertices += 4;
-			}
-		}
-		m_Drawing = EDrawing::QUADS;
-		WrapClamp();
 		FlushVertices(false);
-		m_Drawing = EDrawing::NONE;
+		const auto Transform = [&](auto *pVertices, int VertexCount) {
+			for(int n = 0; n < VertexCount; ++n)
+			{
+				pVertices[n].m_Pos.x *= ScaleX;
+				pVertices[n].m_Pos.y *= ScaleY;
+				pVertices[n].m_Color = m_aColor[0];
+			}
+			if(m_Rotation != 0)
+			{
+				CCommandBuffer::SPoint Center;
+				Center.x = pVertices[0].m_Pos.x + (pVertices[1].m_Pos.x - pVertices[0].m_Pos.x) / 2.f;
+				Center.y = pVertices[0].m_Pos.y + (pVertices[2].m_Pos.y - pVertices[0].m_Pos.y) / 2.f;
+				Rotate(Center, pVertices, VertexCount);
+			}
+			for(int n = 0; n < VertexCount; ++n)
+			{
+				pVertices[n].m_Pos.x += X;
+				pVertices[n].m_Pos.y += Y;
+			}
+		};
+		const auto Submit = [&](int VertexCount) {
+			m_NumVertices = VertexCount;
+			m_Drawing = EDrawing::QUADS;
+			WrapClamp();
+			FlushVertices(false);
+			m_Drawing = EDrawing::NONE;
+		};
+		StreamGraphicsQuads(Container.m_vQuads, QuadOffset, QuadDrawNum, g_Config.m_GfxQuadAsTriangle, m_aVertices, Transform, Submit);
 	}
 	WrapNormal();
 }
@@ -3229,13 +3178,20 @@ void CGraphics_Threaded::RenderQuadContainerAsSpriteMultiple(int ContainerIndex,
 
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 
-	if(DrawCount == 0)
+	int QuadCount = 1;
+	if(DrawCount <= 0 || pRenderInfo == nullptr ||
+		static_cast<size_t>(DrawCount) > std::numeric_limits<size_t>::max() / sizeof(SRenderSpriteInfo) ||
+		!GraphicsResolveQuadRange(Container.m_vQuads.size(), QuadOffset, QuadCount))
 		return;
 
 	if(IsQuadContainerBufferingEnabled())
 	{
 		if(Container.m_QuadBufferContainerIndex == -1)
 			return;
+
+		const unsigned int RequiredIndices = GraphicsQuadIndicesToNotify(static_cast<size_t>(QuadOffset) + 1, CCommandBuffer::MAX_VERTICES / 4);
+		if(RequiredIndices != 0)
+			IndicesNumRequiredNotify(RequiredIndices);
 
 		WrapClamp();
 		SQuadContainer::SQuad &Quad = Container.m_vQuads[0];
@@ -3245,7 +3201,7 @@ void CGraphics_Threaded::RenderQuadContainerAsSpriteMultiple(int ContainerIndex,
 
 		Cmd.m_DrawNum = 1 * 6;
 		Cmd.m_DrawCount = DrawCount;
-		Cmd.m_pOffset = (void *)(QuadOffset * 6 * sizeof(unsigned int));
+		Cmd.m_pOffset = reinterpret_cast<void *>(static_cast<size_t>(QuadOffset) * 6 * sizeof(unsigned int));
 		Cmd.m_BufferContainerIndex = Container.m_QuadBufferContainerIndex;
 
 		Cmd.m_VertexColor.r = (float)m_aColor[0].r / 255.f;
