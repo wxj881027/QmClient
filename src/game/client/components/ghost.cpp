@@ -15,6 +15,7 @@
 #include <game/client/components/menus.h>
 #include <game/client/components/players.h>
 #include <game/client/components/qmclient/demo_display.h>
+#include <game/client/components/qmclient/ghost_timeline.h>
 #include <game/client/components/skins.h>
 #include <game/client/gameclient.h>
 #include <game/client/race.h>
@@ -272,6 +273,7 @@ void CGhost::OnRender()
 		return;
 
 	int PlaybackTick;
+	int PlaybackOrigin = 0;
 	if(m_ManualMode)
 	{
 		// 查看模式：独立时间线，播到尽头自动停在最后一帧
@@ -283,7 +285,10 @@ void CGhost::OnRender()
 		}
 	}
 	else
-		PlaybackTick = Client()->PredGameTick(g_Config.m_ClDummy) - m_StartRenderTick;
+	{
+		PlaybackTick = Client()->PredGameTick(g_Config.m_ClDummy);
+		PlaybackOrigin = m_StartRenderTick;
+	}
 
 	CScreenRect ScreenRect = Graphics()->GetScreen();
 
@@ -296,17 +301,19 @@ void CGhost::OnRender()
 	// 靠后虚影的 hook 会压在前一个虚影的 Tee 上，出现“hook 盖住 Tee”。
 	// 跑图模式仍按上游的逐槽位顺序绘制。
 	m_vGhostDraws.clear();
+	if(m_ManualMode)
+		std::fill(std::begin(m_aManualRenderPosValid), std::end(m_aManualRenderPosValid), false);
 	for(int Slot = 0; Slot < MAX_ACTIVE_GHOSTS; ++Slot)
 	{
 		CGhostItem &Ghost = m_aActiveGhosts[Slot];
 		if(Ghost.Empty() || (m_ManualMode && !m_aManualSlots[Slot]))
 			continue;
 
-		int GhostTick = Ghost.m_StartTick + PlaybackTick;
+		int64_t GhostTick = qm_ghost_timeline::OffsetTick(Ghost.m_StartTick, PlaybackTick, PlaybackOrigin);
 		// QmClient：查看模式把播放头钳在轨迹首尾采样内——播到尽头时虚影停在最后一帧，
 		// 而不是让只前进的快照游标越界置 -1 后整只虚影消失（跑图模式保持原语义）
 		if(m_ManualMode)
-			GhostTick = std::clamp(GhostTick, Ghost.m_Path.Get(0)->m_Tick, Ghost.m_Path.Get(Ghost.m_Path.Size() - 1)->m_Tick);
+			GhostTick = std::clamp<int64_t>(GhostTick, Ghost.m_Path.Get(0)->m_Tick, Ghost.m_Path.Get(Ghost.m_Path.Size() - 1)->m_Tick);
 		while(Ghost.m_PlaybackPos >= 0 && Ghost.m_Path.Get(Ghost.m_PlaybackPos)->m_Tick < GhostTick)
 		{
 			if(Ghost.m_PlaybackPos < Ghost.m_Path.Size() - 1)
@@ -328,7 +335,7 @@ void CGhost::OnRender()
 		GetNetObjCharacter(&Draw.m_Player, Ghost.m_Path.Get(CurPos));
 		GetNetObjCharacter(&Draw.m_Prev, Ghost.m_Path.Get(PrevPos));
 
-		int TickDiff = Draw.m_Player.m_Tick - Draw.m_Prev.m_Tick;
+		const int64_t TickDiff = static_cast<int64_t>(Draw.m_Player.m_Tick) - Draw.m_Prev.m_Tick;
 		if(TickDiff > 0)
 		{
 			// QmClient：查看模式使用手动时间线的插值相位；本地预测相位会持续波动，
@@ -337,7 +344,11 @@ void CGhost::OnRender()
 			Draw.m_IntraTick = (GhostTick - Draw.m_Prev.m_Tick - 1 + IntraPhase) / TickDiff;
 		}
 
-		Draw.m_Player.m_AttackTick += Client()->GameTick(g_Config.m_ClDummy) - GhostTick;
+		int AttackTick;
+		if(!qm_ghost_timeline::MapAttack(Draw.m_Player.m_AttackTick, GhostTick,
+			   Client()->GameTick(g_Config.m_ClDummy), Client()->PrevGameTick(g_Config.m_ClDummy), AttackTick))
+			continue;
+		Draw.m_Player.m_AttackTick = AttackTick;
 
 		// QmClient：转换侧以 WEAPON_NINJA 标记冻结段（幽灵格式无独立冻结字段）。
 		// 冻结表现完全复刻 demo 播放的玩家渲染（players.cpp）：冰冻着色 + 隐藏武器、
@@ -647,7 +658,7 @@ void CGhost::ManualSeek(int RelativeTick)
 	{
 		if(Ghost.Empty())
 			continue;
-		const int TargetTick = Ghost.m_StartTick + PlaybackTick;
+		const int64_t TargetTick = qm_ghost_timeline::OffsetTick(Ghost.m_StartTick, PlaybackTick, 0);
 		const int Size = Ghost.m_Path.Size();
 		int Pos = 0;
 		int Last = 0;
@@ -762,18 +773,12 @@ int CGhost::Load(const char *pFilename)
 		return -1;
 	}
 
-	if(FoundCharacterNoTick)
+	if(!qm_ghost_timeline::Prepare(pGhost->m_Path, FoundCharacterTick, pGhost->m_StartTick))
 	{
-		int StartTick = 0;
-		for(int i = 1; i < pInfo->m_NumTicks; i++) // estimate start tick
-			if(pGhost->m_Path.Get(i)->m_AttackTick != pGhost->m_Path.Get(i - 1)->m_AttackTick)
-				StartTick = pGhost->m_Path.Get(i)->m_AttackTick - i;
-		for(int i = 0; i < pInfo->m_NumTicks; i++)
-			pGhost->m_Path.Get(i)->m_Tick = StartTick + i;
+		pGhost->Reset();
+		log_error_color(LOG_COLOR_GHOST, "ghost", "Failed to read ghost data: invalid timeline");
+		return -1;
 	}
-
-	if(pGhost->m_StartTick == -1)
-		pGhost->m_StartTick = pGhost->m_Path.Get(0)->m_Tick;
 
 	if(!FoundSkin)
 	{
