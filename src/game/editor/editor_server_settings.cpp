@@ -1341,7 +1341,7 @@ void CMapSettingsBackend::CContext::UpdateFromString(const char *pStr)
 	while(*pIterator != ' ' && *pIterator != '\0')
 		pIterator++;
 
-	str_copy(m_aCommand, aInputString, (pIterator - aInputString) + 1);
+	str_copy(m_aCommand, aInputString, minimum((int)(pIterator - aInputString) + 1, (int)sizeof(m_aCommand)));
 
 	// Get the command if it is a recognized one
 	for(auto &pSetting : m_pBackend->m_vpMapSettings)

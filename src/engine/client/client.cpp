@@ -3549,6 +3549,9 @@ void CClient::PumpNetwork()
 	double MaxNetworkProcessMs = 0.0;
 	int MaxNetworkProcessConn = -1;
 	int MaxNetworkPacketBytes = 0;
+	int SlowestNetworkPacketBytes = 0;
+	SQmPerfWireMessage SlowestNetworkMessage;
+	int SlowestNetworkSixup = -1;
 	int NetworkChunksProcessed = 0;
 	const int FirstConn = m_NetworkPumpFirstConn;
 	m_NetworkPumpFirstConn = (FirstConn + 1) % NUM_CONNS;
@@ -3590,6 +3593,9 @@ void CClient::PumpNetwork()
 					{
 						MaxNetworkProcessMs = ProcessMs;
 						MaxNetworkProcessConn = Conn;
+						SlowestNetworkPacketBytes = Packet.m_DataSize;
+						SlowestNetworkMessage = {};
+						SlowestNetworkSixup = -1;
 					}
 				}
 				else
@@ -3602,6 +3608,10 @@ void CClient::PumpNetwork()
 			{
 				if(PerfEnabled)
 				{
+					// 包处理可能切换连接状态，在调用前保留标量包头，避免依赖包体的后续生命周期。
+					const SQmPerfWireMessage Message = QmPerfWireMessage(Packet.m_pData, Packet.m_DataSize);
+					const int PacketBytes = Packet.m_DataSize;
+					const int PacketSixup = IsSixup() ? 1 : 0;
 					CPerfTimer ProcessTimer;
 					ProcessServerPacket(&Packet, Conn, g_Config.m_ClDummy ^ Conn);
 					const double ProcessMs = ProcessTimer.ElapsedMs();
@@ -3610,6 +3620,9 @@ void CClient::PumpNetwork()
 					{
 						MaxNetworkProcessMs = ProcessMs;
 						MaxNetworkProcessConn = Conn;
+						SlowestNetworkPacketBytes = PacketBytes;
+						SlowestNetworkMessage = Message;
+						SlowestNetworkSixup = PacketSixup;
 					}
 				}
 				else
@@ -3627,11 +3640,12 @@ void CClient::PumpNetwork()
 		{
 			char aPayload[768];
 			str_format(aPayload, sizeof(aPayload),
-				"event=network_pump_detail state=%d chunks=%d conn0_chunks=%d conn0_recv_ms=%.3f conn0_process_ms=%.3f conn1_chunks=%d conn1_recv_ms=%.3f conn1_process_ms=%.3f max_process_ms=%.3f max_process_conn=%d max_packet_bytes=%d",
+				"event=network_pump_detail state=%d chunks=%d conn0_chunks=%d conn0_recv_ms=%.3f conn0_process_ms=%.3f conn1_chunks=%d conn1_recv_ms=%.3f conn1_process_ms=%.3f max_process_ms=%.3f max_process_conn=%d max_packet_bytes=%d slowest_packet_bytes=%d slowest_wire_msg=%d slowest_wire_sys=%d sixup=%d",
 				State(), NetworkChunksProcessed,
 				aNetworkChunks[0], aNetworkRecvMs[0], aNetworkProcessMs[0],
 				aNetworkChunks[1], aNetworkRecvMs[1], aNetworkProcessMs[1],
-				MaxNetworkProcessMs, MaxNetworkProcessConn, MaxNetworkPacketBytes);
+				MaxNetworkProcessMs, MaxNetworkProcessConn, MaxNetworkPacketBytes,
+				SlowestNetworkPacketBytes, SlowestNetworkMessage.m_Id, SlowestNetworkMessage.m_System, SlowestNetworkSixup);
 			QmPerfLogPayloadForce("perf/main_thread", aPayload, this);
 		}
 	}
@@ -7717,7 +7731,7 @@ void CClient::UpdateQmPerfFileLogger()
 			m_QmPerfLastFrameEnd = 0;
 			m_QmPerfFrameBatch = CQmPerfFrameBatch();
 			m_pQmPerfFileSwitch->Set(log_logger_prefix_file(PerfLogfile, "perf/"));
-			QmPerfLogFields("perf/session", "\"event\":\"session_start\",\"schema\":2,\"sampling\":\"automatic\",\"frame_samples\":\"all\",\"target_fps\":300,\"version\":" + QmPerfJsonString(CLIENT_RELEASE_VERSION), this);
+			QmPerfLogFields("perf/session", "\"event\":\"session_start\",\"schema\":2,\"sampling\":\"automatic\",\"frame_samples\":\"all\",\"target_fps\":300,\"version\":" + QmPerfJsonString(CLIENT_RELEASE_VERSION) + ",\"revision\":" + QmPerfJsonString(GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "unknown"), this);
 			// QmClient：日志文件就绪后先写一次完整配置快照（敏感项脱敏），
 			// 之后由主循环按秒写增量；见 perf_diagnostics.h。
 			m_QmPerfConfigSnapshot.Start(ConfigManager(), this);

@@ -5062,6 +5062,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/settings/settings_resource_jobs_adaptive_budget_test.cpp
     src/test/unit/qmclient/settings/settings_resource_jobs_background_test.cpp
     src/test/unit/qmclient/settings/settings_loading_prewarm_test.cpp
+    src/test/unit/qmclient/settings/settings_text_prewarm_test.cpp
     src/test/unit/qmclient/settings/settings_skin_plan_test.cpp
     src/test/unit/qmclient/settings/settings_skin_preview_test.cpp
     src/test/unit/qmclient/settings/settings_card_order_revision_test.cpp

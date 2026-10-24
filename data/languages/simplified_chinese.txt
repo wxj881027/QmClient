@@ -1158,7 +1158,7 @@ Auto unmute when speaking
 == 自动检测说话时开麦
 
 Auto unspec both tees when either is hammered awake
-== 任一方被锤醒时两个 Tee 都取消旁观
+== 解冻取消本体分身的旁观
 
 Auto unspec on unfreeze
 == 解冻自动取消旁观
@@ -1284,7 +1284,7 @@ Automatically check for stable updates and install them on exit
 == 自动检查稳定版更新并在退出时安装
 
 Automatically close the current chat after waking from freeze
-== 从冻结状态中醒来自动关闭聊天框
+== 解冻自动关闭聊天框
 
 Automatically create statboard csv
 == 自动将统计板导出为 csv 文件
@@ -12429,7 +12429,7 @@ Show votes window after voting
 == 投票后不关闭投票窗口
 
 Show wake-up popup on the other tee
-== 在另一侧 Tee 显示唤醒提示
+== 显示唤醒提示
 
 Show Weapon Interactions in Hitbox Mode
 == 碰撞箱模式显示武器交互

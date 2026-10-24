@@ -1675,20 +1675,36 @@ bool CGameClient::GetDummyFastInput(CNetObj_PlayerInput &DummyFastInput, const C
 
 void CGameClient::OnConnected()
 {
+	const bool PerfEnabled = QmPerfEnabled();
+	CPerfTimer ConnectTimer(PerfEnabled);
+	CPerfTimer StageTimer(PerfEnabled);
+	const auto LogConnectStage = [&](const char *pStage) {
+		if(!PerfEnabled)
+			return;
+		// 冷启动阶段独立保留，避免普通明细限流再次掩盖进服长帧的具体来源。
+		QmPerfLogStage("perf/connect", pStage, StageTimer.ElapsedMs(), true, Client());
+		StageTimer.Reset();
+	};
+
 	m_ConnectionResourcePreparation.Cancel();
 	m_FastPractice.InvalidateBufferedInputState();
 	const char *pConnectCaption = DemoPlayer()->IsPlaying() ? Localize("Preparing demo playback") : Localize("Connected");
 	const char *pLoadMapContent = Localize("Initializing map logic");
 	// render loading before skip is calculated
 	m_Menus.RenderLoading(pConnectCaption, pLoadMapContent, 0);
+	LogConnectStage("loading_screen");
 	m_Layers.Init(Kernel()->RequestInterface<IMap>(), false);
+	LogConnectStage("layers_init");
 	m_Collision.Init(Layers());
+	LogConnectStage("collision_init");
 	m_GameWorld.m_Core.InitSwitchers(m_Collision.m_HighestSwitchNumber);
 	m_GameWorld.m_PredictedEvents.clear();
 	m_RaceHelper.Init(this);
+	LogConnectStage("world_and_race_init");
 
 	// render loading before going through all components
 	m_Menus.RenderLoading(pConnectCaption, pLoadMapContent, 0);
+	LogConnectStage("components_loading_screen");
 	for(size_t ComponentIndex = 0; ComponentIndex < m_vpAll.size(); ++ComponentIndex)
 	{
 		auto *pComponent = m_vpAll[ComponentIndex];
@@ -1703,13 +1719,17 @@ void CGameClient::OnConnected()
 		}
 	}
 
+	LogConnectStage("components_map_load_total");
 	ConfigManager()->ResetGameSettings();
 	LoadMapSettings();
+	LogConnectStage("map_settings");
 
 	if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
 	{
 		m_ConnectionResourcePreparation.Begin();
 	}
+	if(PerfEnabled)
+		QmPerfLogStage("perf/connect", "connected_total", ConnectTimer.ElapsedMs(), true, Client());
 }
 
 void CGameClient::FinishConnectionResourcePreparation()
