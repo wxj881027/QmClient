@@ -7,6 +7,7 @@ import hashlib
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 
 from prepare_setup_source import prepare
 from build_windows_setup import build_setup, find_iscc
@@ -68,8 +69,10 @@ def main() -> int:
 	subprocess.run([wrapper, "--build", str(portable), "--target", "package_7z", "-j", str(args.jobs)], check=True, cwd=REPO_ROOT)
 	normal_package = build / (args.package_name + ".7z")
 	portable_package = portable / (args.portable_package_name + ".7z")
-	verify(normal_package, build / "qmclient-setup-runtime.txt", build / "qmclient-archive-tools.txt", False)
-	verify(portable_package, portable / "qmclient-setup-runtime.txt", portable / "qmclient-archive-tools.txt", True)
+	# 捆绑 FFmpeg 目录按目标平台定位（windows/lib64 等），用于核对归档里的 DLL 版本族。
+	ffmpeg_libdir = REPO_ROOT / "ddnet-libs/ffmpeg" / f"windows/lib{64 if sys.maxsize > 2**32 else 32}"
+	verify(normal_package, build / "qmclient-setup-runtime.txt", build / "qmclient-archive-tools.txt", False, ffmpeg_libdir)
+	verify(portable_package, portable / "qmclient-setup-runtime.txt", portable / "qmclient-archive-tools.txt", True, ffmpeg_libdir)
 	payload = build / "release/setup-source"
 	installer_output = build / "release/windows-installer"
 	installer_output.mkdir(parents=True, exist_ok=True)

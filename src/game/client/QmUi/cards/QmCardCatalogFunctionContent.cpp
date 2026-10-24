@@ -506,8 +506,6 @@ void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHei
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
 		{
-			{&g_Config.m_QmFootParticles, "Local particle effects", Localize("Local particle effects")},
-			{&g_Config.m_QmClientMarkTrail, "Remote particle effects", Localize("Remote particle effects")},
 			{&g_Config.m_QmClientShowBadge, "Show Qm badge", Localize("Show Qm badge")},
 		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);

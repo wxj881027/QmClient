@@ -213,7 +213,9 @@ jobs:
               SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
               ARGS+=(
                 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-                -DPREFER_BUNDLED_LIBS=ON -DVULKAN=OFF -DMETAL=ON
+                # macOS 走 brew 系统库（头库同源）：ddnet-libs 的 mac dylib 无法在非 mac 主机维护，
+                # 旧版本产物与新共享 include 会头/库错位，故不优先 bundled。
+                -DPREFER_BUNDLED_LIBS=OFF -DVULKAN=OFF -DMETAL=ON
                 -DCMAKE_OSX_SYSROOT="${SDKROOT}" -DIPO=OFF
               )
               ;;

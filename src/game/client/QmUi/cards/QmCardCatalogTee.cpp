@@ -2311,7 +2311,7 @@ void CMenus::RenderSettingsTeeSkinQueue(CUIRect Content, const SSettingsContentM
 	{
 		QueueRandomJoin ^= 1;
 	}
-	GameClient()->m_Tooltips.DoToolTip(&QueueRandomJoin, &RandomJoinRow, Localize("Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join."));
+	GameClient()->m_Tooltips.DoToolTip(&QueueRandomJoin, &RandomJoinRow, Localize("Start at a random queue position on every map join"));
 
 	QueueSection.HSplitTop(TeeMetrics.m_LineSpacing, nullptr, &QueueSection);
 	QueueSection.HSplitTop(minimum(QueueSection.h, QueueGeometry.m_QueueListSurfaceHeight), &QueueList, &QueueSection);

@@ -27,6 +27,14 @@ struct SRoundedSurfaceParams
 	float m_BorderWidth = 0.0f;
 	float m_PixelSize = 0.0001f;
 	int m_Corners = IGraphics::CORNER_ALL;
+	// SDF 边框默认取单色 BorderColor；置位后边框改为沿用填充的渐变，
+	// 用于彩虹描边这类需要沿边框逐像素取色的效果。几何回退路径忽略此项。
+	bool m_BorderUsesGradient = false;
+	// 只画边框、丢弃填充：渐变描边（彩虹光环）需要它，否则渐变会把内部整片染色。
+	bool m_BorderOnly = false;
+	// 边框沿带宽的羽化指数：0 为实心边框，越大越向外淡出。
+	// 辉光类描边（彩虹光环）靠它把多层叠成渐变，而不是三道硬边。
+	float m_BorderFalloff = 0.0f;
 };
 
 struct SRoundedSurfacePlan
@@ -109,9 +117,35 @@ inline std::array<IGraphics::CFreeformItem, 36> ResolveRoundedSurfaceBorderMesh(
 	}
 	return aMesh;
 }
+// 圆角图片：图片直接作为圆角 SDF 的填充被采样，四角由圆角覆盖度真实裁掉。
+// 启用缩放/平移时（UV 变换），只在设备支持纹理圆角时才会保留圆角；
+// 否则由调用方自行提供预烘焙圆角的备用贴图（见 CUiEffects 的照片卡）。
+struct SRoundedImageParams
+{
+	IGraphics::CTextureHandle m_Texture{};
+	// 图片在圆角矩形内的 UV 变换：UV = 逻辑点 * m_UVScale + m_UVOffset。
+	// 默认 (1,1)/0 表示图片正好铺满矩形。
+	vec2 m_UVScale{1.0f, 1.0f};
+	vec2 m_UVOffset{0.0f, 0.0f};
+	float m_Alpha = 1.0f;
+};
+
 bool DrawRoundedGradientSurface(IGraphics *pGraphics, const CUIRect &Rect, const SQmColorGradient &Gradient, float Alpha, const ColorRGBA &Border, const SRoundedSurfaceParams &Params);
+// 圆角图片的 UV 变换：把「矩形内局部像素坐标 → 图片 UV」的仿射折算进 SDF 参数。
+// 抽成纯函数，渲染与单元测试共用同一套换算，避免两边各写一份。
+// 语义：UV = 局部像素坐标 * UVScale + UVOffset；着色器里的 Point 以矩形中心为原点，
+// 因此这里补回半宽/半高。TextureParams1.y 是整张图片的透明度，默认 1（不透明），
+// 调用方按淡入淡出需要覆盖（见 DrawRoundedImage 的 Image.m_Alpha）。
+inline void ResolveRoundedImageUV(const float RectWidth, const float RectHeight, const vec2 &UVScale, const vec2 &UVOffset, vec4 &TextureParams0, vec4 &TextureParams1)
+{
+	TextureParams0 = vec4(1.0f, UVScale.x, UVScale.y, UVOffset.x + RectWidth * 0.5f * UVScale.x);
+	TextureParams1 = vec4(UVOffset.y + RectHeight * 0.5f * UVScale.y, 1.0f, 0.0f, 0.0f);
+}
+
+bool DrawRoundedImage(IGraphics *pGraphics, const CUIRect &Rect, const SRoundedImageParams &Image, const ColorRGBA &Border, const SRoundedSurfaceParams &Params);
 bool DrawRoundedSurface(IGraphics *pGraphics, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, const SRoundedSurfaceParams &Params);
 bool DrawRoundedSurface(CUi *pUi, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, float Radius, float BorderWidth = 0.0f, int Corners = IGraphics::CORNER_ALL);
+bool DrawRoundedImage(CUi *pUi, const CUIRect &Rect, const SRoundedImageParams &Image, const ColorRGBA &Border, float Radius, float BorderWidth = 0.0f);
 bool DrawRoundedSurface(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, float Radius, float BorderWidth = 0.0f, int Corners = IGraphics::CORNER_ALL);
 
 #endif

@@ -48,6 +48,12 @@ namespace ui_token::color
 	inline constexpr ColorRGBA SUCCESS{0.42f, 0.85f, 0.52f, 1.0f};
 	inline constexpr ColorRGBA WARNING{0.98f, 0.78f, 0.30f, 1.0f};
 	inline constexpr ColorRGBA DANGER{0.95f, 0.41f, 0.38f, 1.0f};
+	// 角色色：好友与收藏在各列表里反复出现，集中一处避免各页各写一份金色/粉色。
+	// 收藏用的金色同时承担"已标记"的软警告语义，不再单独复制一个 WARNING_SOFT。
+	inline constexpr ColorRGBA FAVORITE{1.0f, 0.85f, 0.0f, 1.0f};
+	inline constexpr ColorRGBA FRIEND{0.95f, 0.45f, 0.62f, 1.0f};
+	// 列表分组标题的底色层，比普通行更弱，只用来区分组与组。
+	inline constexpr ColorRGBA SURFACE_SUBHEADER{0.0f, 0.0f, 0.0f, 0.15f};
 
 	// 中性极值：只表达颜色本身，不承载角色；角色语义（正文/强调/危险）一律
 	// 引用上面的 TEXT_*/ACCENT_*/DANGER token。顶点乘法直通（设白让纹理原色
@@ -289,6 +295,9 @@ namespace ui_token::motion
 	};
 	inline constexpr SUiAnimTransition PAGE_SLIDE{.m_DurationSec = 0.22f, .m_Easing = EEasing::EASE_OUT_QUART};
 	inline constexpr SUiAnimTransition TAB_SWITCH{.m_DurationSec = 0.16f, .m_Easing = EEasing::EASE_OUT_QUART};
+	// 导航滑块出现／消失：比普通悬停反馈长一档，配合由小到大的缩放才读得出「长出来」，
+	// 0.12 秒的纯淡入在整页切换的同一帧里几乎看不见。
+	inline constexpr SUiAnimTransition NAVIGATION_APPEAR{.m_DurationSec = 0.26f, .m_Easing = EEasing::EASE_OUT_QUART};
 	inline constexpr const SUiAnimTransition &INPUT_FOCUS_RING = HOVER_FADE;
 	inline constexpr SUiAnimTransition TOAST_SLIDE{
 		.m_DurationSec = 0.22f,

@@ -12,6 +12,7 @@
 #include <engine/textrender.h>
 
 #include <game/client/QmUi/QmAnimResolve.h>
+#include <game/client/QmUi/QmToast.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/components/touch_controls.h>
@@ -27,6 +28,69 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+
+namespace
+{
+	// 触摸控件编辑器里的说明/错误统一走居中单按钮 Alert：
+	// 内容是用户点「?」或操作失败后要读的，不是结果通知，不降级成 Toast。
+	void ShowTouchControlsMessage(CUi *pUi, const char *pMessage, bool Error = false)
+	{
+		if(pUi == nullptr || pMessage == nullptr || pMessage[0] == '\0')
+			return;
+		static CUi::SMessagePopupContext s_Context;
+		// 弹窗已经开着时再点「?」不叠加，避免堆一摞同样的说明。
+		if(pUi->IsPopupOpen(&s_Context))
+			return;
+		str_copy(s_Context.m_aMessage, pMessage, sizeof(s_Context.m_aMessage));
+		if(Error)
+			s_Context.ErrorColor();
+		else
+			s_Context.DefaultColor(pUi->TextRender());
+		pUi->ShowPopupMessage(0.0f, 0.0f, &s_Context);
+	}
+
+	// 编辑器确认窗：一次只挂一个，动作在确认/取消时分别派发。
+	// 之所以集中成一个枚举，是因为这里每处都要区分「确认做什么」和「取消做什么」，
+	// 散在各处的 static 上下文容易漏掉取消路径。
+	enum class ETouchConfirm
+	{
+		NONE = 0,
+		DELETE_BUTTON,
+		DESELECT,
+		INFO_WIKI,
+		DISCARD,
+		RESET,
+		IMPORT,
+		SWITCH_SELECTED,
+		NOT_VISIBLE,
+	};
+	ETouchConfirm gs_TouchConfirmAction = ETouchConfirm::NONE;
+	CUi::SConfirmPopupContext gs_TouchConfirm;
+
+	void ShowTouchConfirm(CUi *pUi, ETouchConfirm Action, const char *pMessage, const char *pPositive, const char *pNegative, bool Danger)
+	{
+		if(pUi == nullptr || pMessage == nullptr || pMessage[0] == '\0')
+			return;
+		// 弹窗还开着（DoPopupType 每帧都会重复请求）时不重开，否则会把结果重置掉。
+		if(gs_TouchConfirmAction != ETouchConfirm::NONE || pUi->IsPopupOpen(&gs_TouchConfirm))
+			return;
+		gs_TouchConfirm.Reset();
+		if(pPositive != nullptr && pNegative != nullptr)
+		{
+			str_copy(gs_TouchConfirm.m_aPositiveButtonLabel, pPositive, sizeof(gs_TouchConfirm.m_aPositiveButtonLabel));
+			str_copy(gs_TouchConfirm.m_aNegativeButtonLabel, pNegative, sizeof(gs_TouchConfirm.m_aNegativeButtonLabel));
+		}
+		else
+		{
+			gs_TouchConfirm.DefaultButtons();
+		}
+		gs_TouchConfirm.m_Tone = Danger ? CUi::SConfirmPopupContext::ETone::DANGER : CUi::SConfirmPopupContext::ETone::NEUTRAL;
+		str_copy(gs_TouchConfirm.m_aMessage, pMessage, sizeof(gs_TouchConfirm.m_aMessage));
+		pUi->ShowPopupConfirm(pUi->MouseX(), pUi->MouseY(), &gs_TouchConfirm);
+		gs_TouchConfirmAction = Action;
+	}
+
+} // namespace
 
 static const constexpr float MAINMARGIN = 10.0f;
 static const constexpr float SUBMARGIN = 5.0f;
@@ -180,7 +244,7 @@ void CMenusIngameTouchControls::RenderTouchButtonEditor(CUIRect MainView)
 	static CButtonContainer s_RemoveButton;
 	if(GameClient()->m_Menus.DoButton_Menu(&s_RemoveButton, Localize("Delete"), 0, &LeftButton))
 	{
-		GameClient()->m_Menus.PopupConfirm(Localize("Delete button"), Localize("Are you sure that you want to delete this button?"), Localize("Delete"), Localize("Cancel"), &CMenus::PopupConfirmDeleteButton);
+		ShowTouchConfirm(Ui(), ETouchConfirm::DELETE_BUTTON, Localize("Are you sure that you want to delete this button?"), Localize("Delete"), Localize("Cancel"), true);
 	}
 
 	EditBox.VSplitLeft(ButtonWidth, &LeftButton, &EditBox);
@@ -192,7 +256,7 @@ void CMenusIngameTouchControls::RenderTouchButtonEditor(CUIRect MainView)
 	{
 		if(Checked)
 		{
-			GameClient()->m_Menus.PopupMessage(Localize("Unsaved changes"), Localize("Please save your changes before duplicating a button."), Localize("Ok"));
+			qm_ui::Toast(EQmToastKind::WARNING, Localize("Please save your changes before duplicating a button."));
 		}
 		else if(NewButton(GameClient()->m_TouchControls.ShownRect().value(), m_CachedShape))
 		{
@@ -211,7 +275,7 @@ void CMenusIngameTouchControls::RenderTouchButtonEditor(CUIRect MainView)
 		m_pNewSelectedButton = nullptr;
 		if(UnsavedChanges())
 		{
-			GameClient()->m_Menus.PopupConfirm(Localize("Unsaved changes"), Localize("You'll lose unsaved changes after deselecting."), Localize("Deselect"), Localize("Cancel"), &CMenus::PopupCancelDeselectButton);
+			ShowTouchConfirm(Ui(), ETouchConfirm::DESELECT, Localize("You'll lose unsaved changes after deselecting."), Localize("Deselect"), Localize("Cancel"), true);
 		}
 		else
 		{
@@ -352,7 +416,7 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 	if(Ui()->DoButton_QmIcon(&s_OpenBehaviorHelpButton, EQmIcon::QUESTION, FontIcons::FONT_ICON_QUESTION, 0, &RightButton, BUTTONFLAG_LEFT))
 	{
 		const char *pHelpMessage = HelpMessageForBehaviorType(m_EditBehaviorType);
-		GameClient()->m_Menus.PopupMessage(Localize("Info"), pHelpMessage, Localize("Ok"));
+		ShowTouchControlsMessage(GameClient()->m_Menus.Ui(), pHelpMessage);
 	}
 	switch(m_EditBehaviorType)
 	{
@@ -428,7 +492,7 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 		if(Ui()->DoButton_QmIcon(&s_OpenPredefinedBehaviorHelpButton, EQmIcon::QUESTION, FontIcons::FONT_ICON_QUESTION, 0, &RightButton, BUTTONFLAG_LEFT))
 		{
 			const char *pHelpMessage = HelpMessageForPredefinedType(m_PredefinedBehaviorType);
-			GameClient()->m_Menus.PopupMessage(Localize("Info"), pHelpMessage, Localize("Ok"));
+			ShowTouchControlsMessage(GameClient()->m_Menus.Ui(), pHelpMessage);
 		}
 
 		if(m_PredefinedBehaviorType != EPredefinedType::EXTRA_MENU)
@@ -641,7 +705,7 @@ bool CMenusIngameTouchControls::RenderVisibilitySettingBlock(CUIRect Block)
 				const char *pHelpMessage = HelpMessageForVisibilityType((CTouchControls::EButtonVisibility)Current);
 				if(Ui()->DoButton_QmIcon(&s_aHelpButtons[Current], EQmIcon::QUESTION, FontIcons::FONT_ICON_QUESTION, 0, &HelpButton, BUTTONFLAG_LEFT))
 				{
-					GameClient()->m_Menus.PopupMessage(Localize("Info"), pHelpMessage, Localize("Ok"));
+					ShowTouchControlsMessage(GameClient()->m_Menus.Ui(), pHelpMessage);
 				}
 			}
 			if(Current < (unsigned)CTouchControls::EButtonVisibility::EXTRA_MENU_1)
@@ -703,9 +767,7 @@ void CMenusIngameTouchControls::RenderTouchButtonBrowser(CUIRect MainView)
 	static CButtonContainer s_OpenHelpButton;
 	if(Ui()->DoButton_QmIcon(&s_OpenHelpButton, EQmIcon::QUESTION, FontIcons::FONT_ICON_QUESTION, 0, &RightButton, BUTTONFLAG_LEFT))
 	{
-		GameClient()->m_Menus.PopupMessage(Localize("Info"),
-			Localize("You can select buttons directly in the list below, or long press on a touch button on the screen to select it. You can also move and resize buttons by touch."),
-			Localize("Ok"));
+		ShowTouchControlsMessage(GameClient()->m_Menus.Ui(), Localize("You can select buttons directly in the list below, or long press on a touch button on the screen to select it. You can also move and resize buttons by touch."));
 	}
 
 	MainView.HSplitTop(ROWGAP, nullptr, &MainView);
@@ -1013,7 +1075,8 @@ void CMenusIngameTouchControls::RenderPreviewSettings(CUIRect MainView)
 	static CButtonContainer s_OpenHelpButton;
 	if(Ui()->DoButton_QmIcon(&s_OpenHelpButton, EQmIcon::QUESTION, FontIcons::FONT_ICON_QUESTION, 0, &Button, BUTTONFLAG_LEFT))
 	{
-		GameClient()->m_Menus.PopupMessage(Localize("Info"), Localize("Preview button visibility while the editor is active."), Localize("Ok"));
+		// 一句话提示不值得占一个模态：非阻断提示，看一眼继续编辑。
+		qm_ui::Toast(EQmToastKind::INFO, Localize("Preview button visibility while the editor is active."));
 	}
 
 	MainView.HSplitBottom(ROWSIZE, &MainView, &EditBox);
@@ -1077,9 +1140,7 @@ void CMenusIngameTouchControls::RenderTouchControlsEditor(CUIRect MainView)
 	static CButtonContainer s_OpenHelpButton;
 	if(Ui()->DoButton_QmIcon(&s_OpenHelpButton, EQmIcon::QUESTION, FontIcons::FONT_ICON_QUESTION, 0, &Button, BUTTONFLAG_LEFT))
 	{
-		GameClient()->m_Menus.PopupConfirm(Localize("Info"),
-			Localize("You can manage your touch controls settings on this page. Only changes that are saved will be available after restarting the client. You can share your touch controls with others by exporting them to the clipboard.\n\nYou can find more detailed information about the touch controls on the DDNet Wiki."),
-			Localize("Open DDNet Wiki"), Localize("Ok"), &CMenus::PopupConfirmOpenWiki);
+		ShowTouchConfirm(Ui(), ETouchConfirm::INFO_WIKI, Localize("You can manage your touch controls settings on this page. Only changes that are saved will be available after restarting the client. You can share your touch controls with others by exporting them to the clipboard.\n\nYou can find more detailed information about the touch controls on the DDNet Wiki."), Localize("Open DDNet Wiki"), Localize("Ok"), false);
 	}
 
 	MainView.HSplitTop(ROWSIZE, &Row, &MainView);
@@ -1116,20 +1177,14 @@ void CMenusIngameTouchControls::RenderTouchControlsEditor(CUIRect MainView)
 	static CButtonContainer s_DiscardChangesButton;
 	if(GameClient()->m_Menus.DoButton_Menu(&s_DiscardChangesButton, Localize("Discard changes"), GameClient()->m_TouchControls.HasEditingChanges() ? 0 : 1, &Button))
 	{
-		GameClient()->m_Menus.PopupConfirm(Localize("Discard changes"),
-			Localize("Are you sure that you want to discard the current changes to the touch controls?"),
-			Localize("Yes"), Localize("No"),
-			&CMenus::PopupConfirmDiscardTouchControlsChanges);
+		ShowTouchConfirm(Ui(), ETouchConfirm::DISCARD, Localize("Are you sure that you want to discard the current changes to the touch controls?"), nullptr, nullptr, true);
 	}
 
 	Row.VSplitLeft(SUBMARGIN, nullptr, &Button);
 	static CButtonContainer s_ResetButton;
 	if(GameClient()->m_Menus.DoButton_Menu(&s_ResetButton, Localize("Reset to defaults"), 0, &Button))
 	{
-		GameClient()->m_Menus.PopupConfirm(Localize("Reset to defaults"),
-			Localize("Are you sure that you want to reset the touch controls to default?"),
-			Localize("Yes"), Localize("No"),
-			&CMenus::PopupConfirmResetTouchControls);
+		ShowTouchConfirm(Ui(), ETouchConfirm::RESET, Localize("Are you sure that you want to reset the touch controls to default?"), nullptr, nullptr, true);
 	}
 
 	MainView.HSplitTop(ROWSIZE, &Row, &MainView);
@@ -1139,10 +1194,7 @@ void CMenusIngameTouchControls::RenderTouchControlsEditor(CUIRect MainView)
 	static CButtonContainer s_ClipboardImportButton;
 	if(GameClient()->m_Menus.DoButton_Menu(&s_ClipboardImportButton, Localize("Import from clipboard"), 0, &Button))
 	{
-		GameClient()->m_Menus.PopupConfirm(Localize("Import from clipboard"),
-			Localize("Are you sure that you want to import the touch controls from the clipboard? This will overwrite your current touch controls."),
-			Localize("Yes"), Localize("No"),
-			&CMenus::PopupConfirmImportTouchControlsClipboard);
+		ShowTouchConfirm(Ui(), ETouchConfirm::IMPORT, Localize("Are you sure that you want to import the touch controls from the clipboard? This will overwrite your current touch controls."), nullptr, nullptr, true);
 	}
 
 	Row.VSplitLeft(SUBMARGIN, nullptr, &Button);
@@ -1169,23 +1221,82 @@ void CMenusIngameTouchControls::DoPopupType(CTouchControls::CPopupParam PopupPar
 	}
 }
 
+void CMenusIngameTouchControls::PollConfirm()
+{
+	if(gs_TouchConfirmAction == ETouchConfirm::NONE)
+		return;
+	CUi *pUi = GameClient()->m_Menus.Ui();
+	const CUi::SConfirmPopupContext::EConfirmationResult Result = gs_TouchConfirm.m_Result;
+	if(Result == CUi::SConfirmPopupContext::UNSET)
+	{
+		// 弹窗还在等按钮：什么都没发生。已经被 Esc 或切页收掉时按取消处理。
+		if(pUi != nullptr && pUi->IsPopupOpen(&gs_TouchConfirm))
+			return;
+	}
+	const ETouchConfirm Action = gs_TouchConfirmAction;
+	gs_TouchConfirmAction = ETouchConfirm::NONE;
+	const bool Confirmed = Result == CUi::SConfirmPopupContext::CONFIRMED;
+	CMenus &Menus = GameClient()->m_Menus;
+	switch(Action)
+	{
+	case ETouchConfirm::DELETE_BUTTON:
+		if(Confirmed)
+			Menus.PopupConfirmDeleteButton();
+		break;
+	case ETouchConfirm::DESELECT:
+		// 旧实现把「Deselect」接在 PopupCancelDeselectButton 上：退选并丢弃未保存修改。
+		if(Confirmed)
+			Menus.PopupCancelDeselectButton();
+		break;
+	case ETouchConfirm::INFO_WIKI:
+		if(Confirmed)
+			Menus.PopupConfirmOpenWiki();
+		break;
+	case ETouchConfirm::DISCARD:
+		if(Confirmed)
+			Menus.PopupConfirmDiscardTouchControlsChanges();
+		break;
+	case ETouchConfirm::RESET:
+		if(Confirmed)
+			Menus.PopupConfirmResetTouchControls();
+		break;
+	case ETouchConfirm::IMPORT:
+		if(Confirmed)
+			Menus.PopupConfirmImportTouchControlsClipboard();
+		break;
+	case ETouchConfirm::SWITCH_SELECTED:
+		// Save / Discard 两个按钮各有回调：取消不是无动作。
+		if(Confirmed)
+			Menus.PopupConfirmChangeSelectedButton();
+		else
+			Menus.PopupCancelChangeSelectedButton();
+		break;
+	case ETouchConfirm::NOT_VISIBLE:
+		if(Confirmed)
+			Menus.PopupConfirmSelectedNotVisible();
+		break;
+	case ETouchConfirm::NONE:
+		break;
+	}
+}
+
 void CMenusIngameTouchControls::ChangeSelectedButtonWhileHavingUnsavedChanges() const
 {
 	// Both old and new button pointer can be nullptr.
 	// Saving settings to the old selected button(nullptr = create), then switch to new selected button(new = haven't created).
-	GameClient()->m_Menus.PopupConfirm(Localize("Unsaved changes"), Localize("Save all changes before switching selected button?"), Localize("Save"), Localize("Discard"), &CMenus::PopupConfirmChangeSelectedButton, CMenus::POPUP_NONE, &CMenus::PopupCancelChangeSelectedButton);
+	ShowTouchConfirm(GameClient()->m_Menus.Ui(), ETouchConfirm::SWITCH_SELECTED, Localize("Save all changes before switching selected button?"), Localize("Save"), Localize("Discard"), false);
 }
 
 void CMenusIngameTouchControls::NoSpaceForOverlappingButton() const
 {
-	GameClient()->m_Menus.PopupMessage(Localize("No space for button"), Localize("There is not enough space available for the button. Check its visibilities and size."), Localize("Ok"));
+	ShowTouchControlsMessage(GameClient()->m_Menus.Ui(), Localize("There is not enough space available for the button. Check its visibilities and size."), true);
 }
 
 void CMenusIngameTouchControls::SelectedButtonNotVisible()
 {
 	// Cancel shouldn't do anything but open ingame menu, the menu is already opened now.
 	m_CloseMenu = false;
-	GameClient()->m_Menus.PopupConfirm(Localize("Selected button not visible"), Localize("The selected button is not visible. Do you want to deselect it or edit its visibility?"), Localize("Deselect"), Localize("Edit"), &CMenus::PopupConfirmSelectedNotVisible);
+	ShowTouchConfirm(Ui(), ETouchConfirm::NOT_VISIBLE, Localize("The selected button is not visible. Do you want to deselect it or edit its visibility?"), Localize("Deselect"), Localize("Edit"), false);
 }
 
 bool CMenusIngameTouchControls::UnsavedChanges() const
@@ -1227,7 +1338,7 @@ bool CMenusIngameTouchControls::CheckCachedSettings() const
 				str_append(aErrorMessage, "\n");
 			str_append(aErrorMessage, pError);
 		}
-		GameClient()->m_Menus.PopupMessage(Localize("Wrong button settings"), aErrorMessage, Localize("Ok"));
+		ShowTouchControlsMessage(GameClient()->m_Menus.Ui(), aErrorMessage, true);
 		return false;
 	}
 	else
@@ -1413,7 +1524,7 @@ bool CMenusIngameTouchControls::NewButton(CTouchControls::CUnitRect Rect, CTouch
 	auto FreeRect = GameClient()->m_TouchControls.UpdatePosition(Rect, Shape, true);
 	if(!FreeRect.has_value())
 	{
-		GameClient()->m_Menus.PopupMessage(Localize("No space for button"), Localize("There is not enough space available to place another button."), Localize("Ok"));
+		ShowTouchControlsMessage(GameClient()->m_Menus.Ui(), Localize("There is not enough space available to place another button."), true);
 		return false;
 	}
 	m_pNewSelectedButton = GameClient()->m_TouchControls.NewButton();

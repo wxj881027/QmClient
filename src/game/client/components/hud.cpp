@@ -74,12 +74,6 @@ namespace
 		return str_comp_nocase(g_Config.m_GfxBackend, "OpenGL") == 0;
 	}
 
-	// island 背景模糊按 1/4 分辨率准备渲染目标（与 UI 半透明面板的模糊分辨率一致）
-	int MediaIslandBlurTargetDimension(int ScreenDimension)
-	{
-		return ScreenDimension > 0 ? (ScreenDimension + 3) / 4 : 0;
-	}
-
 	struct SHudTextInfoLayout
 	{
 		float m_FpsX = 0.0f;
@@ -1088,8 +1082,6 @@ CHud::CHud()
 	m_LocalTimeV2AnimState.Reset();
 	m_MediaIslandAnimState.Reset();
 	m_MediaIslandFrameCache.Reset();
-	m_MediaIslandBlurLastAttemptFrame = 0;
-	m_MediaIslandBlurAttemptInitialized = false;
 	m_RecordingStatusAnimState.Reset();
 	m_SwitchCountdownAnimState.Reset();
 	ResetSwitchCountdownRings();
@@ -1179,8 +1171,6 @@ void CHud::ResetHudContainers()
 	m_LocalTimeV2AnimState.Reset();
 	m_MediaIslandAnimState.Reset();
 	m_MediaIslandFrameCache.Reset();
-	m_MediaIslandBlurLastAttemptFrame = 0;
-	m_MediaIslandBlurAttemptInitialized = false;
 	m_RecordingStatusAnimState.Reset();
 	m_SwitchCountdownAnimState.Reset();
 	ResetSwitchCountdownRings();
@@ -1246,21 +1236,6 @@ void CHud::OnInit()
 	Graphics()->QuadContainerUpload(m_HudQuadContainerIndex);
 }
 
-void CHud::DestroyMediaIslandBlurTargets()
-{
-	Graphics()->DestroyRenderTarget(&m_MediaIslandBlurSource);
-	Graphics()->DestroyRenderTarget(&m_MediaIslandBlurDownsample);
-	Graphics()->DestroyRenderTarget(&m_MediaIslandBlurDownsampleTemporary);
-	Graphics()->DestroyRenderTarget(&m_MediaIslandBlurDownsampleTarget);
-	Graphics()->DestroyRenderTarget(&m_MediaIslandBlurTarget);
-	m_MediaIslandBlurWidth = 0;
-	m_MediaIslandBlurHeight = 0;
-	m_MediaIslandBlurMode = -1;
-	m_MediaIslandBlurReady = false;
-	m_MediaIslandBlurLastAttemptFrame = 0;
-	m_MediaIslandBlurAttemptInitialized = false;
-}
-
 void CHud::DestroyDummyMiniViewRenderTarget()
 {
 	if(m_DummyMiniViewGraphicsVersion == Graphics()->GraphicsResourcesResetVersion())
@@ -1275,85 +1250,15 @@ IGraphics::CRenderTargetHandle CHud::MediaIslandBlurBackdrop()
 {
 	if(!QmHudMediaIslandShouldPrepareBackdropBlur(g_Config.m_QmHudIslandBgOpacity, g_Config.m_QmGaussianBlur != 0) || !Graphics()->HasMediaIslandSdf())
 		return IGraphics::CRenderTargetHandle();
-	if(!Graphics()->IsBackbufferCaptureSupported() || !Graphics()->IsRenderTargetGaussianBlurSupported())
-	{
-		if(m_MediaIslandBlurSource.IsValid() || m_MediaIslandBlurDownsample.IsValid() || m_MediaIslandBlurDownsampleTemporary.IsValid() || m_MediaIslandBlurDownsampleTarget.IsValid() || m_MediaIslandBlurTarget.IsValid())
-			DestroyMediaIslandBlurTargets();
+	// HUD 不再自行捕获交换链：共享背景层已冻结，按需触发 1/4 降采样/模糊即可。
+	Ui()->PrepareGaussianBlur();
+	if(!Ui()->GaussianBlurTargetReady())
 		return IGraphics::CRenderTargetHandle();
-	}
-
-	const int BlurWidth = MediaIslandBlurTargetDimension(Graphics()->ScreenWidth());
-	const int BlurHeight = MediaIslandBlurTargetDimension(Graphics()->ScreenHeight());
-	const int BlurMode = std::clamp(g_Config.m_QmBlurMode, 0, 2);
-	if(BlurWidth <= 0 || BlurHeight <= 0)
-	{
-		m_MediaIslandBlurReady = false;
-		m_MediaIslandBlurLastAttemptFrame = 0;
-		m_MediaIslandBlurAttemptInitialized = false;
-		return IGraphics::CRenderTargetHandle();
-	}
-
-	const bool SizeChanged = BlurWidth != m_MediaIslandBlurWidth || BlurHeight != m_MediaIslandBlurHeight;
-	const int DualBlurWidth = std::max(1, (BlurWidth + 1) / 2);
-	const int DualBlurHeight = std::max(1, (BlurHeight + 1) / 2);
-	if(SizeChanged || !m_MediaIslandBlurSource.IsValid() || !m_MediaIslandBlurDownsample.IsValid() || !m_MediaIslandBlurDownsampleTemporary.IsValid() || !m_MediaIslandBlurDownsampleTarget.IsValid() || !m_MediaIslandBlurTarget.IsValid())
-	{
-		DestroyMediaIslandBlurTargets();
-		m_MediaIslandBlurSource = Graphics()->CreateRenderTarget(BlurWidth, BlurHeight);
-		m_MediaIslandBlurDownsample = Graphics()->CreateRenderTarget(DualBlurWidth, DualBlurHeight);
-		m_MediaIslandBlurDownsampleTemporary = Graphics()->CreateRenderTarget(DualBlurWidth, DualBlurHeight);
-		m_MediaIslandBlurDownsampleTarget = Graphics()->CreateRenderTarget(DualBlurWidth, DualBlurHeight);
-		m_MediaIslandBlurTarget = Graphics()->CreateRenderTarget(BlurWidth, BlurHeight);
-		if(!m_MediaIslandBlurSource.IsValid() || !m_MediaIslandBlurDownsample.IsValid() || !m_MediaIslandBlurDownsampleTemporary.IsValid() || !m_MediaIslandBlurDownsampleTarget.IsValid() || !m_MediaIslandBlurTarget.IsValid())
-		{
-			DestroyMediaIslandBlurTargets();
-			return IGraphics::CRenderTargetHandle();
-		}
-		m_MediaIslandBlurWidth = BlurWidth;
-		m_MediaIslandBlurHeight = BlurHeight;
-		m_MediaIslandBlurMode = BlurMode;
-	}
-
-	const uint64_t CurrentFrame = Client()->PerfFrame();
-	const bool Refresh = QmHudMediaIslandShouldRefreshBackdropBlur(CurrentFrame, m_MediaIslandBlurLastAttemptFrame, m_MediaIslandBlurAttemptInitialized);
-	if(Refresh)
-	{
-		m_MediaIslandBlurLastAttemptFrame = CurrentFrame;
-		m_MediaIslandBlurAttemptInitialized = true;
-		Ui()->PrepareGaussianBlur();
-	}
-
-	// QmClient：island 背景与 UI 半透明面板参数一致（同为 1/4 分辨率），UI 已准备同一次捕获/模糊
-	// 结果时直接复用，避免重复模糊；UI 句柄销毁重建期间自然回退到下面的独立渲染目标管线。
-	if(Ui()->GaussianBlurTargetReady())
-		return Ui()->GaussianBlurTarget();
-
-	// 独立管线：非刷新帧沿用上一帧结果，避免每帧重复捕获与模糊
-	if(!Refresh)
-		return m_MediaIslandBlurReady ? m_MediaIslandBlurTarget : IGraphics::CRenderTargetHandle();
-
-	if(!Graphics()->CaptureBackbufferToRenderTarget(m_MediaIslandBlurSource))
-	{
-		m_MediaIslandBlurReady = false;
-		return IGraphics::CRenderTargetHandle();
-	}
-
-	IGraphics::SGaussianBlurParams BlurParams;
-	BlurParams.m_Radius = 5;
-	BlurParams.m_Sigma = 2.5f;
-	m_MediaIslandBlurReady = Graphics()->DualBlurRenderTarget(
-		m_MediaIslandBlurSource,
-		m_MediaIslandBlurDownsample,
-		m_MediaIslandBlurDownsampleTemporary,
-		m_MediaIslandBlurDownsampleTarget,
-		m_MediaIslandBlurTarget,
-		BlurParams);
-	return m_MediaIslandBlurReady ? m_MediaIslandBlurTarget : IGraphics::CRenderTargetHandle();
+	return Ui()->GaussianBlurTarget();
 }
 
 void CHud::OnRelease()
 {
-	DestroyMediaIslandBlurTargets();
 	DestroyDummyMiniViewRenderTarget();
 	m_MediaIslandFrameCache.Reset();
 }
@@ -3310,7 +3215,9 @@ void CHud::RenderFollowHookCountdown()
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 	const float ScreenPixelSize = QmHudMediaIslandScreenPixelSize(ScreenX0, ScreenY0, ScreenX1, ScreenY1, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
-	const float Radius = (Visual.m_EndlessHook ? qm_hook_countdown_ui::INFINITY_OUTER_RADIUS : qm_hook_countdown_ui::OUTER_RADIUS) * Visual.m_Scale + ScreenPixelSize * 2.5f;
+	// 裁剪半径必须跟着可调尺寸一起放大，并且带上彩虹光晕的外圈，
+	// 否则调大后光晕边缘会被提前裁成一条硬边。
+	const float Radius = qm_hook_countdown_ui::RenderClipRadius(Visual) + ScreenPixelSize * 2.5f;
 	if(in_range(Visual.m_Position.x, ScreenX0 - Radius, ScreenX1 + Radius) &&
 		in_range(Visual.m_Position.y, ScreenY0 - Radius, ScreenY1 + Radius))
 		qm_hook_countdown_ui::Render(Graphics(), Visual, ScreenPixelSize);
@@ -7014,14 +6921,16 @@ void CHud::OnRender()
 {
 	if(!g_Config.m_QmHudIslandUseOriginalStyle || !g_Config.m_QmSmtcShowHud)
 		m_LegacyMediaLyricState.Reset();
-	if((!QmHudMediaIslandShouldPrepareBackdropBlur(g_Config.m_QmHudIslandBgOpacity, g_Config.m_QmGaussianBlur != 0) || g_Config.m_QmHudIslandUseOriginalStyle || !Graphics()->HasMediaIslandSdf()) &&
-		(m_MediaIslandBlurSource.IsValid() || m_MediaIslandBlurDownsample.IsValid() || m_MediaIslandBlurDownsampleTemporary.IsValid() || m_MediaIslandBlurDownsampleTarget.IsValid() || m_MediaIslandBlurTarget.IsValid()))
-		DestroyMediaIslandBlurTargets();
-
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 
 	if(!GameClient()->m_Snap.m_pGameInfoObj)
+		return;
+
+	// 合影超采样静帧：抓帧那一帧整块 HUD 都不画，成片只留世界与名字牌。
+	// 开关是 IClient::PoseCaptureActive（只在抓帧的几帧为真），状态栏与聊天
+	// 在各自组件的 OnRender 里用同一个开关收掉。
+	if(Client()->PoseCaptureActive())
 		return;
 
 	m_Width = 300.0f * Graphics()->ScreenAspect();
@@ -7045,12 +6954,14 @@ void CHud::OnRender()
 	const bool VideoRendering = false;
 #endif
 	// 回放/导出走独立显示选项；其余情况沿用 cl_showhud / cl_video_showhud。
-	const bool MainHudVisible = qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive(), VideoRendering).m_Hud;
-	const bool FocusSpectatorHudVisible = ShouldRenderFocusSpectatorHud(
-		GameClient()->m_Snap.m_SpecInfo.m_Active,
-		g_Config.m_ClShowhudSpectator != 0,
-		MainHudVisible,
-		GetQmFocusModeDecisions().m_HideHud);
+	const auto DisplaySettings = qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive(), VideoRendering);
+	const bool MainHudVisible = DisplaySettings.m_Hud;
+	const bool RenderDemoOnly = DisplaySettings.m_RenderDemoOnly;
+	const bool FocusSpectatorHudVisible = !RenderDemoOnly && ShouldRenderFocusSpectatorHud(
+									 GameClient()->m_Snap.m_SpecInfo.m_Active,
+									 g_Config.m_ClShowhudSpectator != 0,
+									 MainHudVisible,
+									 GetQmFocusModeDecisions().m_HideHud);
 	const bool LocalCharacterHudVisible = !GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_Snap.m_pLocalCharacter &&
 					      !GameClient()->m_Snap.m_SpecInfo.m_Active &&
 					      !(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER);
@@ -7152,8 +7063,11 @@ void CHud::OnRender()
 	{
 		RenderSpectatorHud();
 	}
-	GameClient()->m_Voice.RenderOverlay();
-	RenderCursor();
+	if(!RenderDemoOnly)
+	{
+		GameClient()->m_Voice.RenderOverlay();
+		RenderCursor();
+	}
 }
 
 void CHud::OnMessage(int MsgType, void *pRawMsg)

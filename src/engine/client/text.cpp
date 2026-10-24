@@ -387,8 +387,12 @@ private:
 
 	/**
 	 * The maximum supported font size.
+	 *
+	 * 字形按「物理像素」光栅化（ActualSize = FontSize × 屏幕缩放），4K 窗口 4 倍
+	 * 超采样时名字牌需要 ~300px 的字形；旧上限 128 会把更大的请求截断，
+	 * 再用放大的字形贴图去画——这正是成片里 ID 马赛克的来源。
 	 */
-	static constexpr int MAX_FONT_SIZE = 128;
+	static constexpr int MAX_FONT_SIZE = 512;
 
 	/**
 	 * White square to indicate missing glyph.
@@ -1582,7 +1586,7 @@ public:
 		m_QmNameplateFrameRasterizeMs = 0.0;
 		if(!QmPerfEnabled() || NewGlyphs == 0 || m_QmNameplateGlyphCount == 0)
 			return;
-		char aSizes[512] = "";
+		char aSizes[2048] = "";
 		for(int Size = MIN_FONT_SIZE; Size <= MAX_FONT_SIZE; ++Size)
 			if(m_QmNameplateGlyphSizes.test(Size))
 			{
@@ -1590,7 +1594,7 @@ public:
 				str_format(aSize, sizeof(aSize), "%s%d", aSizes[0] ? "," : "", Size);
 				str_append(aSizes, aSize);
 			}
-		char aPayload[896];
+		char aPayload[3072];
 		str_format(aPayload, sizeof(aPayload),
 			"event=nameplate_cache_frame nameplate_glyph_new=%d nameplate_glyph_total=%zu nameplate_glyph_rasterize_ms=%.3f nameplate_size_count=%zu nameplate_sizes=%s all_container_creates=%d",
 			NewGlyphs, m_QmNameplateGlyphCount, NameplateRasterizeMs, m_QmNameplateGlyphSizes.count(), aSizes,
@@ -1709,11 +1713,6 @@ struct STextContainer
 		m_pContainerUseCount.reset();
 	}
 };
-
-float CTextCursor::Height() const
-{
-	return m_LineCount * (m_AlignedFontSize + m_AlignedLineSpacing);
-}
 
 STextBoundingBox CTextCursor::BoundingBox() const
 {
@@ -3494,12 +3493,21 @@ public:
 				SelectionUsedRelease = true;
 			}
 		};
+		// 当前行起始处的字形序号：空行的行首就是上一行行尾，点击空行时用它定位。
+		int LineStartGlyph = 0;
 		const auto &&CheckCalculatedLineEnd = [&]() {
 			const float LineEndY = DrawY + pCursor->m_AlignedFontSize;
 			if(pCursor->m_CursorMode == TEXT_CURSOR_CURSOR_MODE_CALCULATE && pCursor->m_CursorCharacter == -1 &&
 				CheckLineEnd(pCursor->m_ReleaseMouse, LastCharX + LastCharWidth / 2.0f, LineEndY))
 			{
 				pCursor->m_CursorCharacter = pCursor->m_GlyphCount;
+			}
+			// 点在空行上，或点在行首左侧（这一行没有任何字形能命中）：落到该行行首，
+			// 否则点击会完全不生效，光标停在上一处，输入就插到了别的地方。
+			if(pCursor->m_CursorMode == TEXT_CURSOR_CURSOR_MODE_CALCULATE && pCursor->m_CursorCharacter == -1 &&
+				CheckLineEnd(pCursor->m_ReleaseMouse, std::numeric_limits<float>::lowest(), LineEndY))
+			{
+				pCursor->m_CursorCharacter = LineStartGlyph;
 			}
 			if(pCursor->m_CalculateSelectionMode == TEXT_CURSOR_SELECTION_MODE_CALCULATE)
 			{
@@ -3538,6 +3546,7 @@ public:
 			LastCharX = DrawX;
 			LastCharWidth = 0;
 			++LineCount;
+			LineStartGlyph = pCursor->m_GlyphCount;
 			return true;
 		};
 
@@ -3956,6 +3965,9 @@ public:
 				if(pPrevBatchEnd == pBatchEnd)
 					break;
 				pPrevBatchEnd = pBatchEnd;
+				// 软折行（自动换行）也要有一次行尾判定：否则点在折行右侧的空白上命中不了任何字形，
+				// 光标会停在点击前的旧位置。硬换行在 '\n' 分支里已经调用过。
+				CheckCalculatedLineEnd();
 				if(!StartNewLine())
 					break;
 				GotNewLineLast = true;
@@ -4001,6 +4013,12 @@ public:
 			if(pCursor->m_CursorMode == TEXT_CURSOR_CURSOR_MODE_CALCULATE && pCursor->m_CursorCharacter == -1 && CheckOutsideChar(true, pCursor->m_ReleaseMouse, std::numeric_limits<float>::max(), 0, DrawY + pCursor->m_AlignedFontSize))
 			{
 				pCursor->m_CursorCharacter = pCursor->m_GlyphCount;
+			}
+			// 最后一行没有结尾换行：点在它的行首左侧时同样落到行首（下方空白仍按上面的全文末尾处理）。
+			if(pCursor->m_CursorMode == TEXT_CURSOR_CURSOR_MODE_CALCULATE && pCursor->m_CursorCharacter == -1 &&
+				CheckLineEnd(pCursor->m_ReleaseMouse, std::numeric_limits<float>::lowest(), DrawY + pCursor->m_AlignedFontSize))
+			{
+				pCursor->m_CursorCharacter = LineStartGlyph;
 			}
 
 			CheckCursorAtCharacter(LastSelX + LastSelWidth, DrawY);

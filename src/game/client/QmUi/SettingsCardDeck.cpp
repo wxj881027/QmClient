@@ -373,7 +373,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			const float ContentHeight = std::max(0.0f, Runtime.m_AnimatedContentHeight);
 			SSettingsCardFrame Frame = ResolveSettingsCardHeaderActions(
 				BuildSettingsCardFrame(Slot, pDefinition->m_Spec, ContentHeight, Ctx.m_UiScale),
-				pDefinition->m_LeadingHeaderActionWidth, pDefinition->m_Spec.m_pInfo != nullptr && pDefinition->m_Spec.m_pInfo[0] != '\0');
+				pDefinition->m_LeadingHeaderActionWidth, HasSettingsCardInfo(pDefinition->m_Spec));
 			const SSettingsCardColumnFrame Placement = DrawLayout.m_TwoColumns ? m_PackingPlan.Append(Column, Frame.m_Rect.h, LeadingFullWidth) : SingleColumnPlan.Append(Frame.m_Rect.h);
 			Frame = ResolveSettingsCardDrawFrame(Frame, 0.0f, Placement.m_Y - Frame.m_Rect.y);
 			m_vPreparedCards.push_back({pDefinition, StateIndex, Column, Frame, TargetContentHeight, HeightInitializedThisFrame, Runtime.m_ContentHeightWasActive, m_vContentLayouts[StateIndex]});
@@ -573,7 +573,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			const bool InHeader = PointInRect(Card.m_Frame.m_HeaderRect, Input.m_MouseX, Input.m_MouseY);
 			const bool InHeaderAction = PointInRect(Card.m_Frame.m_HandleRect, Input.m_MouseX, Input.m_MouseY) || PointInRect(SettingsCardWidthButtonRect(Card.m_Frame), Input.m_MouseX, Input.m_MouseY) ||
 						    (Card.m_Frame.m_LeadingHeaderActionRect.w > 0.0f && PointInRect(Card.m_Frame.m_LeadingHeaderActionRect, Input.m_MouseX, Input.m_MouseY)) ||
-						    (Card.m_pDefinition->m_Spec.m_pInfo != nullptr && Card.m_pDefinition->m_Spec.m_pInfo[0] != '\0' && PointInRect(ResolveSettingsCardInfoRect(Card.m_Frame), Input.m_MouseX, Input.m_MouseY));
+						    (HasSettingsCardInfo(Card.m_pDefinition->m_Spec) && PointInRect(ResolveSettingsCardInfoRect(Card.m_Frame), Input.m_MouseX, Input.m_MouseY));
 			if(InHeader && !InHeaderAction)
 			{
 				m_Drag.m_StateIndex = Card.m_StateIndex;
@@ -657,10 +657,19 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 		const bool Collapsed = SettingsCardDeckResolveCollapsed(HasCustomCollapsedState, HasCustomCollapsedState && Card.m_pDefinition->m_IsCollapsed(), Runtime.m_DefaultCollapsed);
 		if(Ctx.m_pUi != nullptr)
 		{
-			if(Collapsed)
+			// 折叠只在「刚折叠」那一帧关掉该卡的旧交互（内容里的下拉框等）；之后每帧仍要续期来源，
+			// 否则 ⓘ 打开的说明面板也挂在同一来源上，会在下一帧被孤儿清扫收掉（折叠卡点了没反应）。
+			if(Collapsed && !Runtime.m_CollapsedInteractionClosed)
+			{
 				Ctx.m_pUi->CloseInteractionSource(this, pStableId);
+				Runtime.m_CollapsedInteractionClosed = true;
+			}
 			else
+			{
+				if(!Collapsed)
+					Runtime.m_CollapsedInteractionClosed = false;
 				Ctx.m_pUi->RefreshInteractionSource(this, pStableId);
+			}
 		}
 		SSettingsCardVisualState State;
 		State.m_DrawOffsetY = DeckEntryOffsetY;

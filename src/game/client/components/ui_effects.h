@@ -7,6 +7,7 @@
 
 #include <engine/graphics.h>
 
+#include <game/client/QmUi/QmImageView.h>
 #include <game/client/component.h>
 
 // UI Effects component for smooth transitions and animations
@@ -43,6 +44,12 @@ private:
 		int m_ImageWidth = 0;
 		int m_ImageHeight = 0;
 		float m_Time = 0.0f;
+		// <0 表示还没开始收尾：照片会一直留在屏幕上，等玩家关掉它。
+		float m_DismissTime = -1.0f;
+		// 卡片内的看图视口：1x 贴合卡片，滚轮放大到 8 倍，超出部分按卡片裁剪。
+		CQmImageView m_View;
+		// 已落盘的路径：给「查看截图」按钮直接打开看图窗口。
+		char m_aPath[IO_MAX_PATH_LENGTH] = "";
 		bool m_Active = false;
 	};
 	CScreenshotAnimation m_ScreenshotAnimation;
@@ -57,7 +64,7 @@ public:
 	void OnReset() override;
 	void OnShutdown() override;
 
-	void StartScreenshotAnimation(class CImageInfo &&Image);
+	void StartScreenshotAnimation(class CImageInfo &&Image, const char *pPath = "");
 
 	// Smooth value transitions
 	int CreateSmoothValue(float Initial = 0.0f, float Speed = 1.0f, ETransitionType Type = TRANSITION_EASE_OUT);

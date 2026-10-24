@@ -216,6 +216,7 @@ public:
 	bool IsConfigModernAPI() override { throw std::logic_error("unexpected graphics boundary: IsConfigModernAPI"); }
 	bool HasMediaIslandSdf() override { throw std::logic_error("unexpected graphics boundary: HasMediaIslandSdf"); }
 	bool HasRoundedRectSdf() override { throw std::logic_error("unexpected graphics boundary: HasRoundedRectSdf"); }
+	bool HasRoundedRectSdfTexture() override { throw std::logic_error("unexpected graphics boundary: HasRoundedRectSdfTexture"); }
 	bool HasProceduralRing() override { return true; }
 	bool IsTileBufferingEnabled() override { throw std::logic_error("unexpected graphics boundary: IsTileBufferingEnabled"); }
 	bool IsQuadBufferingEnabled() override { throw std::logic_error("unexpected graphics boundary: IsQuadBufferingEnabled"); }

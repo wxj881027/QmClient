@@ -136,6 +136,49 @@ public:
 		return true;
 	}
 
+	// 阻塞结算：等完成信号（渲染线程在读回命令内写完像素后点亮）再取像素。
+	// 只用于保证点亮完成信号的后端（GL 的 PBO 路径与同步回退都会点亮）；
+	// 无信号后端调用会永久等待，必须走 ResolveAfterIdle。
+	bool ResolveBlocking(int Index, uint32_t Generation, CImageInfo &Image)
+	{
+		SRequest *pRequest = Get(Index, Generation);
+		if(pRequest == nullptr)
+			return false;
+		if(pRequest->m_State == EState::PENDING)
+		{
+			pRequest->m_pCompletion->Wait();
+			pRequest->m_State = pRequest->m_Image.m_pData != nullptr ? EState::READY : EState::FAILED;
+		}
+		if(pRequest->m_State != EState::READY)
+		{
+			if(pRequest->m_State == EState::FAILED)
+				Release(Index);
+			return false;
+		}
+		Image = std::move(pRequest->m_Image);
+		Release(Index);
+		return true;
+	}
+
+	// 渲染线程已确认空闲时使用：不再等待完成信号，直接按 Image 是否落地判定结果。
+	// Vulkan 后端的命令表没有 CMD_SIGNAL 回调，完成信号永远不会点亮；此时唯一可靠的
+	// 定序手段是先 WaitForIdle（渲染线程已执行完全部已提交命令），再看图有没有写出来。
+	bool ResolveAfterIdle(int Index, uint32_t Generation, CImageInfo &Image)
+	{
+		SRequest *pRequest = Get(Index, Generation);
+		if(pRequest == nullptr || pRequest->m_State != EState::PENDING)
+			return false;
+		if(pRequest->m_Image.m_pData == nullptr)
+		{
+			// 命令确实执行过却没有像素：读回失败，释放槽位让下一次请求能复用。
+			Release(Index);
+			return false;
+		}
+		Image = std::move(pRequest->m_Image);
+		Release(Index);
+		return true;
+	}
+
 	void Cancel(int Index, uint32_t Generation)
 	{
 		const auto State = Poll(Index, Generation);

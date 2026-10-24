@@ -270,6 +270,8 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 		CUIRect aMenuButtons[MenuButtonCount];
 		CUIRect NewFeaturesButton;
 		ComputeMainButtons(Menu, UseV2Layout, aMenuButtons, NewFeaturesButton);
+		// 更新入口始终允许查看；重开详情保留下载和已准备的安装包。
+		const char *pUpdateLabel = GameClient()->m_TClient.QmClientUpdateStatusText();
 
 		if(UseV2Layout)
 		{
@@ -300,8 +302,14 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 			if(ui_widget::SecondaryButton(Ctx, &s_SettingsButton, Localize("Settings"), aMenuButtons[1]) || CheckHotKey(KEY_S))
 				NewPage = CMenus::PAGE_SETTINGS;
 
-			static CButtonContainer s_QmNewFeaturesButton;
-			if(ui_widget::SecondaryButton(Ctx, &s_QmNewFeaturesButton, GameClient()->m_QmClient.HasUnreadQmNews() ? Localize("New features (unread)") : Localize("New features"), NewFeaturesButton))
+			// 检查更新与「新功能」共用双操作按钮：左半显示更新状态，右半打开新功能弹窗。
+			static CButtonContainer s_QmUpdateButton, s_QmNewFeaturesButton;
+			const int QmAction = ui_widget::SplitActionButton(Ctx, &s_QmUpdateButton, pUpdateLabel, &s_QmNewFeaturesButton, GameClient()->m_QmClient.HasUnreadQmNews() ? Localize("New features (unread)") : Localize("New features"), NewFeaturesButton, false, false, EUiButtonGeometry::CONTROL, Localize("Check for updates"), Localize("New features"));
+			if(QmAction == 0)
+			{
+				GameClient()->m_Menus.ShowQmUpdatePopup();
+			}
+			else if(QmAction == 1)
 				GameClient()->m_Menus.ShowQmNewFeaturesPopup();
 
 			static CButtonContainer s_LocalServerButton;
@@ -421,9 +429,14 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 			if(GameClient()->m_Menus.DoButton_Menu(&s_SettingsButton, Localize("Settings"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "settings" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) || CheckHotKey(KEY_S))
 				NewPage = CMenus::PAGE_SETTINGS;
 
-			// 新功能入口：紧贴「退出」上方，打开内置新功能弹窗。
-			static CButtonContainer s_QmNewFeaturesButton;
-			if(GameClient()->m_Menus.DoButton_Menu(&s_QmNewFeaturesButton, GameClient()->m_QmClient.HasUnreadQmNews() ? Localize("New features (unread)") : Localize("New features"), 0, &NewFeaturesButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+			// 检查更新与新功能共用双操作按钮：左半显示更新状态，右半打开内置新功能弹窗。
+			static CButtonContainer s_QmUpdateButton, s_QmNewFeaturesButton;
+			const int QmAction = ui_widget::SplitActionButton(ui_widget::ControlContext(Ui()), &s_QmUpdateButton, pUpdateLabel, &s_QmNewFeaturesButton, GameClient()->m_QmClient.HasUnreadQmNews() ? Localize("New features (unread)") : Localize("New features"), NewFeaturesButton, false, false, EUiButtonGeometry::START_MENU, Localize("Check for updates"), Localize("New features"));
+			if(QmAction == 0)
+			{
+				GameClient()->m_Menus.ShowQmUpdatePopup();
+			}
+			else if(QmAction == 1)
 				GameClient()->m_Menus.ShowQmNewFeaturesPopup();
 
 			ScaledButton = ScaleButtonRect(aMenuButtons[2], s_aMenuButtonScale[2]);

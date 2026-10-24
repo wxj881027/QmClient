@@ -135,16 +135,17 @@ TEST(GraphicsRenderTargetGaussianBlur, FrontendRejectsNestedRenderTargets)
 	EXPECT_NE(EndBody.find("m_RenderTargetActive = false"), std::string::npos);
 }
 
-TEST(GraphicsRenderTargetDualBlur, MediaIslandUsesHalfResolutionIntermediateTargets)
+TEST(GraphicsRenderTargetBackgroundLayer, MediaIslandReusesSharedBackdropWithoutSwapchainCapture)
 {
+	// HUD 无法在无 GPU 的单元测试里观察真实模糊纹理；这里只锁定迁移终态：
+	// island 必须复用 CUi 已准备的后台层，不能再自行捕获交换链或建第二套模糊管线。
 	const std::string Source = ReadFile("src/game/client/components/hud.cpp");
 	const std::string Body = ExtractFunctionBody(Source, "IGraphics::CRenderTargetHandle CHud::MediaIslandBlurBackdrop()");
 	ASSERT_FALSE(Body.empty());
-	EXPECT_NE(Body.find("(BlurWidth + 1) / 2"), std::string::npos);
-	EXPECT_NE(Body.find("(BlurHeight + 1) / 2"), std::string::npos);
-	EXPECT_NE(Body.find("CreateRenderTarget(DualBlurWidth, DualBlurHeight)"), std::string::npos);
-	EXPECT_NE(Body.find("Graphics()->DualBlurRenderTarget"), std::string::npos);
-	EXPECT_EQ(Body.find("Graphics()->GaussianBlurRenderTarget"), std::string::npos);
+	EXPECT_NE(Body.find("Ui()->GaussianBlurTargetReady()"), std::string::npos);
+	EXPECT_NE(Body.find("Ui()->GaussianBlurTarget()"), std::string::npos);
+	EXPECT_EQ(Body.find("CaptureBackbufferToRenderTarget"), std::string::npos);
+	EXPECT_EQ(Body.find("DualBlurRenderTarget"), std::string::npos);
 }
 
 TEST(GraphicsRenderTargetGaussianBlur, ShadersAccumulateRgbaWithBoundedKernel)

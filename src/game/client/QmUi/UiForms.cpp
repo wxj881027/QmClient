@@ -96,7 +96,7 @@ namespace ui_widget
 			if(Ctx.m_pAnim == nullptr)
 				return;
 			const float TargetAlpha = InputFieldFocusActive(Ctx, pInput, Rect, Multiline) ? 1.0f : 0.0f;
-			const float Alpha = AnimateStateValue(Ctx, pInput, EUiAnimProperty::ALPHA, TargetAlpha, ui_curve::DECELERATE);
+			const float Alpha = AnimateStateValue(Ctx, pInput, EUiAnimProperty::ALPHA, TargetAlpha, ui_token::motion::INPUT_FOCUS_RING);
 			DrawTextFieldFocusBorder(Ctx, Rect, Alpha);
 		}
 
@@ -172,6 +172,8 @@ namespace ui_widget
 		const bool InlineTrailingText = Options.m_InlineTrailingText && Options.m_pTrailingText != nullptr && Options.m_pTrailingText[0] != '\0';
 		const float TrailingWidth = HasTrailingAction ? std::max(Options.m_TrailingWidth, Rect.h) : Options.m_TrailingWidth;
 		const SInputFieldLayout Layout = ResolveInputFieldLayout(Rect, HasIcon, Options.m_Clearable, Ctx.m_UiScale, InlineTrailingText ? 0.0f : TrailingWidth);
+		const bool ShowClear = Options.m_Clearable && QmInputFieldClearVisible(pInput->IsEmpty(), WasActive, WasEmpty);
+		const float ClearAlpha = Options.m_Clearable ? AnimateStateValue(Ctx, pInput->GetClearButtonId(), EUiAnimProperty::ALPHA, ShowClear ? 1.0f : 0.0f, ui_token::motion::HOVER_FADE) : 0.0f;
 		const float FontSize = std::min(Options.m_FontSize, Layout.m_ContentRect.h * CUi::ms_FontmodHeight * 0.8f);
 		CUIRect TextRect = Layout.m_ContentRect;
 		CUIRect TrailingRect = Layout.m_TrailingRect;
@@ -195,7 +197,7 @@ namespace ui_widget
 		if(ProcessInput && Ctx.m_pAnim != nullptr)
 		{
 			const bool FocusActive = InputFieldFocusActive(Ctx, pInput, Layout.m_ShellRect, Options.m_Mode == EInputFieldMode::MULTILINE);
-			FocusAlpha = AnimateStateValue(Ctx, pInput, EUiAnimProperty::ALPHA, FocusActive ? 1.0f : 0.0f, ui_curve::DECELERATE);
+			FocusAlpha = AnimateStateValue(Ctx, pInput, EUiAnimProperty::ALPHA, FocusActive ? 1.0f : 0.0f, ui_token::motion::INPUT_FOCUS_RING);
 		}
 		if(!Ctx.m_pUi->MeasurementOnly() && FocusAlpha > 0.01f)
 		{
@@ -235,7 +237,7 @@ namespace ui_widget
 		RenderOptions.m_DrawBackground = false;
 		RenderOptions.m_ProcessInput = ProcessInput;
 		CUIRect InputHitRect = Layout.m_ShellRect;
-		if(Options.m_Clearable && Layout.m_ClearRect.w > 0.0f)
+		if(Options.m_Clearable && ShowClear && Layout.m_ClearRect.w > 0.0f)
 			InputHitRect.VSplitRight(Layout.m_ClearRect.w, &InputHitRect, nullptr);
 		if(HasTrailingAction && TrailingRect.w > 0.0f)
 			InputHitRect.VSplitRight(TrailingRect.w, &InputHitRect, nullptr);
@@ -265,16 +267,18 @@ namespace ui_widget
 		if(RenderOnly)
 			pInput->SetEmptyText(pPreviousPlaceholder);
 
-		if(Options.m_Clearable && !Ctx.m_pUi->MeasurementOnly())
+		if(Options.m_Clearable && !Ctx.m_pUi->MeasurementOnly() && ClearAlpha > 0.01f)
 		{
 			const CUIRect &ClearRect = Layout.m_ClearRect;
+			// 清除按钮跟随内容出现/消失；槽位始终保留，文字不因 × 出现而重排。
+			CUiScopedControlAlphaScale ClearFade(Ctx.m_pUi, ClearAlpha);
 			SButtonSurfaceOptions ActionOptions;
 			ActionOptions.m_Role = EUiButtonRole::ICON;
 			ActionOptions.m_TransparentInactive = true;
 			ActionOptions.m_Corners = IGraphics::CORNER_R;
 			DrawButtonSurface(Ctx, pInput->GetClearButtonId(), ClearRect, ActionOptions);
-			DrawInputFieldIcon(Ctx, ClearRect, FontIcons::FONT_ICON_XMARK, InputIconColor, static_cast<int>(EQmIcon::CLOSE));
-			if(ProcessInput && Ctx.m_pUi->DoButtonLogic(pInput->GetClearButtonId(), 0, &ClearRect, BUTTONFLAG_LEFT))
+			DrawInputFieldIcon(Ctx, ClearRect, FontIcons::FONT_ICON_XMARK, InputIconColor.WithMultipliedAlpha(ClearAlpha), static_cast<int>(EQmIcon::CLOSE));
+			if(ShowClear && ProcessInput && Ctx.m_pUi->DoButtonLogic(pInput->GetClearButtonId(), 0, &ClearRect, BUTTONFLAG_LEFT))
 			{
 				pInput->Clear();
 				Ctx.m_pUi->SetActiveItem(pInput);

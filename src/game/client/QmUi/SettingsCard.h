@@ -58,6 +58,8 @@ struct SSettingsCardDeckVisualOptions
 	ColorRGBA m_SurfaceColor = ui_token::color::COLOR_TRANSPARENT;
 	bool m_UseSurfaceColor = false;
 	int m_LeadingFullWidthCards = 0;
+	// 头部是否绘制「切换宽度」按钮；没有时 ⓘ 直接占它的位置（例如搜索输入卡）。
+	bool m_HasWidthButton = true;
 };
 
 struct SSettingsCardVisualState

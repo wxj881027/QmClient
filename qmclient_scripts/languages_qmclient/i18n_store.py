@@ -103,6 +103,11 @@ def module_name_for_source(source: Path | None) -> str:
         return "tclient"
     if "/menus_" in normalized or "/menus." in normalized:
         return "menus"
+    # Wiki 文案与面板文案各归自己的模块，避免新条目散落到 misc。
+    if normalized.endswith("src/game/client/QmUi/QmCardWiki.cpp") or normalized.endswith("src/game/client/QmUi/QmCardWikiPanel.cpp"):
+        return "card_wiki"
+    if normalized.endswith("src/game/client/QmUi/QmWikiDocs.cpp"):
+        return "wiki_docs"
     return "misc"
 
 
