@@ -194,6 +194,37 @@ TEST(QmDemoCameraSession, SameDemoNameInDifferentRootsDoesNotReuseAnotherProject
 	EXPECT_FLOAT_EQ(X(Store), 1.0f);
 }
 
+TEST(QmDemoCameraSession, AnotherFilenameForTheSameSidecarKeepsOneUnsavedProject)
+{
+	CSessionStore Store;
+	CBackend Io;
+	Io.m_ThrowSave = true;
+	ASSERT_TRUE(Io.Open(Store, "race.demo", "root/race"));
+	ASSERT_NO_FATAL_FAILURE(Edit(Store, 7.0f));
+	ASSERT_TRUE(Io.Open(Store, "absolute/race.demo", "root/race"));
+	EXPECT_TRUE(Store.Matches("absolute/race.demo"));
+	EXPECT_FLOAT_EQ(X(Store), 7.0f);
+	EXPECT_TRUE(Store.Dirty());
+	EXPECT_EQ(Store.RetainedCount(), 0u);
+	EXPECT_EQ(Io.m_Loads, 1);
+	EXPECT_EQ(Io.m_Saves, 0);
+}
+
+TEST(QmDemoCameraSession, RetainedProjectCanBeRestoredThroughAnotherFilename)
+{
+	CSessionStore Store;
+	CBackend Io;
+	Io.m_ThrowSave = true;
+	ASSERT_TRUE(Io.Open(Store, "race.demo", "root/race"));
+	ASSERT_NO_FATAL_FAILURE(Edit(Store, 7.0f));
+	ASSERT_TRUE(Io.Open(Store, "other.demo", "root/other"));
+	ASSERT_TRUE(Io.Open(Store, "absolute/race.demo", "root/race"));
+	EXPECT_TRUE(Store.Matches("absolute/race.demo"));
+	EXPECT_FLOAT_EQ(X(Store), 7.0f);
+	EXPECT_EQ(Store.RetainedCount(), 0u);
+	EXPECT_EQ(Io.m_Loads, 2);
+}
+
 TEST(QmDemoCameraSession, SaveRetryWritesAllPendingProjectsAndReleasesRetainedState)
 {
 	CSessionStore Store;

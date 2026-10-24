@@ -82,8 +82,10 @@ namespace qm_demo_camera
 					m_PrepareFailed = true;
 					return false;
 				}
-				if(Matches(Filename) && m_Current.m_Sidecar == Candidate.m_Sidecar)
+				if(m_Current.m_Sidecar == Candidate.m_Sidecar)
 				{
+					// 相对路径和绝对路径可指向同一镜头文件，不能另建一份脏项目。
+					m_Current.m_Filename.swap(Candidate.m_Filename);
 					m_PrepareFailed = false;
 					return true;
 				}
@@ -107,6 +109,7 @@ namespace qm_demo_camera
 				if(Retained != m_Retained.end())
 				{
 					m_Current = std::move(Retained->second);
+					m_Current.m_Filename.swap(Candidate.m_Filename);
 					m_Retained.erase(Retained);
 				}
 				else
