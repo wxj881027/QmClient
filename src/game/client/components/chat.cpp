@@ -36,9 +36,6 @@
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/qm_chat_avatar.h>
-#include <game/client/components/qmclient/qm_title_color.h>
-#include <game/client/components/qmclient/qm_title_render.h>
-#include <game/client/components/qmclient/qm_title_style.h>
 #include <game/client/components/qmclient/streamer_word_filter.h>
 #include <game/client/components/scoreboard.h>
 #include <game/client/components/skins.h>
@@ -2533,9 +2530,6 @@ bool CChat::OnPrepareLines(float y)
 	float Begin = x;
 	float TextBegin = Begin + RealMsgPaddingX / 2.0f;
 	int OffsetType = IsScoreBoardOpen ? 1 : 0;
-	const SQmTitleColorStyle TitleColorStyle = ResolveQmTitleColorStyle(g_Config.m_QmTitleColorMode, g_Config.m_QmTitleColor, g_Config.m_QmTitleOpacity, false);
-	const float TitleAnimationTime = (float)GameClient()->m_QmClient.TitleAnimationTime();
-	const SQmTitleShimmer TitleShimmer = QmTitleShimmerFromConfig();
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 	const float PixelSize = (ScreenY1 - ScreenY0) / Graphics()->ScreenHeight();
