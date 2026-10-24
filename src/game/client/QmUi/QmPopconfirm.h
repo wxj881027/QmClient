@@ -1,9 +1,9 @@
 #ifndef GAME_CLIENT_QMUI_QMPOPCONFIRM_H
 #define GAME_CLIENT_QMUI_QMPOPCONFIRM_H
 
-#include <game/client/ui.h>
-
 #include "QmPopconfirmGeometry.h"
+
+#include <game/client/ui.h>
 
 // 气泡确认的上下文。必须比弹层活得久（调用点通常用 static）。
 struct SQmPopconfirmContext : public SPopupMenuId

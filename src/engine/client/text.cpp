@@ -387,8 +387,12 @@ private:
 
 	/**
 	 * The maximum supported font size.
+	 *
+	 * 字形按「物理像素」光栅化（ActualSize = FontSize × 屏幕缩放），4K 窗口 4 倍
+	 * 超采样时名字牌需要 ~300px 的字形；旧上限 128 会把更大的请求截断，
+	 * 再用放大的字形贴图去画——这正是成片里 ID 马赛克的来源。
 	 */
-	static constexpr int MAX_FONT_SIZE = 128;
+	static constexpr int MAX_FONT_SIZE = 512;
 
 	/**
 	 * White square to indicate missing glyph.
@@ -1582,7 +1586,7 @@ public:
 		m_QmNameplateFrameRasterizeMs = 0.0;
 		if(!QmPerfEnabled() || NewGlyphs == 0 || m_QmNameplateGlyphCount == 0)
 			return;
-		char aSizes[512] = "";
+		char aSizes[2048] = "";
 		for(int Size = MIN_FONT_SIZE; Size <= MAX_FONT_SIZE; ++Size)
 			if(m_QmNameplateGlyphSizes.test(Size))
 			{
@@ -1590,7 +1594,7 @@ public:
 				str_format(aSize, sizeof(aSize), "%s%d", aSizes[0] ? "," : "", Size);
 				str_append(aSizes, aSize);
 			}
-		char aPayload[896];
+		char aPayload[3072];
 		str_format(aPayload, sizeof(aPayload),
 			"event=nameplate_cache_frame nameplate_glyph_new=%d nameplate_glyph_total=%zu nameplate_glyph_rasterize_ms=%.3f nameplate_size_count=%zu nameplate_sizes=%s all_container_creates=%d",
 			NewGlyphs, m_QmNameplateGlyphCount, NameplateRasterizeMs, m_QmNameplateGlyphSizes.count(), aSizes,

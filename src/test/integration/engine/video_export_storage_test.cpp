@@ -14,6 +14,7 @@ extern "C" {
 }
 
 #include <cerrno>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -58,7 +59,7 @@ namespace
 	// 合成一段最小但真实的 mkv：用裁剪版 FFmpeg 自带的 libx264 编码 2 帧 64x64 黑帧，
 	// 写入 matroska。这是生产链路（编码器 → 封装器）的真实最小重放，产物天然满足
 	// VerifySegmentFile 的"可打开且含视频流"判定；不复制生产校验逻辑。
-	std::string WriteMinimalVideoFile(const std::filesystem::path &Dir, const char *pName)
+	std::string WriteMinimalVideoFile(const std::filesystem::path &Dir, const char *pName, int FPS = 60)
 	{
 		const std::string Path = (Dir / pName).string();
 		const AVCodec *pCodec = avcodec_find_encoder_by_name("libx264");
@@ -72,10 +73,10 @@ namespace
 			return {};
 		pEnc->width = 64;
 		pEnc->height = 64;
-		pEnc->time_base = {1, 60};
-		pEnc->framerate = {60, 1};
+		pEnc->time_base = {1, FPS};
+		pEnc->framerate = {FPS, 1};
 		pEnc->pix_fmt = AV_PIX_FMT_YUV420P;
-		pEnc->gop_size = 60;
+		pEnc->gop_size = FPS;
 		pEnc->max_b_frames = 0;
 		// 与生产 video.cpp 同构：mkv/封装器需要全局头（extradata 在 header 前可用）
 		pEnc->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
@@ -103,8 +104,8 @@ namespace
 			avcodec_free_context(&pEnc);
 			return {};
 		}
-		pStream->time_base = {1, 60};
-		pStream->avg_frame_rate = {60, 1};
+		pStream->time_base = {1, FPS};
+		pStream->avg_frame_rate = {FPS, 1};
 
 		if(!(pContext->oformat->flags & AVFMT_NOFILE) && avio_open(&pContext->pb, Path.c_str(), AVIO_FLAG_WRITE) < 0)
 		{
@@ -177,6 +178,175 @@ namespace
 		avcodec_free_context(&pEnc);
 		return Encoded ? Path : std::string{};
 	}
+
+	// 合成一段带 AAC 音轨的最小 mkv：视频 40 帧（0.667s），音频比视频长，
+	// 复现真实分段产物里音频包对齐余数造成的"音频长于视频"。
+	// 拼接必须按视频时长裁剪音频预算，否则段间 dts 回退、整次拼接失败。
+	// 编码参数与生产 video.cpp 一致：FLTP、双声道、bit_rate = sample_rate * 2 * 16；
+	// 帧对象复用且用正弦填充——独立探针确认这两点下 AAC 编码器可稳定跑满帧数，
+	// 每次新建 AVFrame 或喂全零帧会触发编码器内部的异常路径。
+	std::string WriteMinimalAvFile(const std::filesystem::path &Dir, const char *pName)
+	{
+		const std::string Path = (Dir / pName).string();
+		const AVCodec *pVideoCodec = avcodec_find_encoder_by_name("libx264");
+		const AVCodec *pAudioCodec = avcodec_find_encoder_by_name("aac");
+		if(!pVideoCodec || !pAudioCodec)
+		{
+			ADD_FAILURE() << "libx264 or aac missing from bundled FFmpeg";
+			return {};
+		}
+		constexpr int FPS = 60;
+		constexpr int FRAMES = 40; // 0.667s
+		constexpr int SAMPLE_RATE = 48000;
+
+		AVCodecContext *pVideo = avcodec_alloc_context3(pVideoCodec);
+		AVCodecContext *pAudio = avcodec_alloc_context3(pAudioCodec);
+		AVFormatContext *pContext = nullptr;
+		if(!pVideo || !pAudio)
+		{
+			avcodec_free_context(&pVideo);
+			avcodec_free_context(&pAudio);
+			return {};
+		}
+		pVideo->width = 64;
+		pVideo->height = 64;
+		pVideo->time_base = {1, FPS};
+		pVideo->framerate = {FPS, 1};
+		pVideo->pix_fmt = AV_PIX_FMT_YUV420P;
+		pVideo->gop_size = FPS;
+		pVideo->max_b_frames = 0;
+		pVideo->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+		av_opt_set(pVideo->priv_data, "preset", "ultrafast", 0);
+		av_opt_set_int(pVideo->priv_data, "crf", 51, 0);
+		pAudio->sample_rate = SAMPLE_RATE;
+		pAudio->time_base = {1, SAMPLE_RATE};
+		pAudio->sample_fmt = AV_SAMPLE_FMT_FLTP;
+		pAudio->bit_rate = SAMPLE_RATE * 2 * 16; // 与生产公式一致
+#if LIBAVUTIL_VERSION_MAJOR >= 57
+		av_channel_layout_default(&pAudio->ch_layout, 2);
+#else
+		pAudio->channel_layout = AV_CH_LAYOUT_STEREO;
+		pAudio->channels = 2;
+#endif
+		pAudio->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+		if(avcodec_open2(pVideo, pVideoCodec, nullptr) < 0 || avcodec_open2(pAudio, pAudioCodec, nullptr) < 0)
+		{
+			ADD_FAILURE() << "avcodec_open2 failed for libx264 or aac";
+			avcodec_free_context(&pVideo);
+			avcodec_free_context(&pAudio);
+			return {};
+		}
+		// 音频包数：视频时长向上取整到整包后再多两包，模拟 AAC priming 与对齐余数。
+		const int AudioSamples = pAudio->frame_size > 0 ? pAudio->frame_size : 1024;
+		const int AudioPackets = (FRAMES * SAMPLE_RATE / FPS + AudioSamples - 1) / AudioSamples + 2;
+
+		if(avformat_alloc_output_context2(&pContext, nullptr, "matroska", Path.c_str()) < 0)
+		{
+			avcodec_free_context(&pVideo);
+			avcodec_free_context(&pAudio);
+			return {};
+		}
+		AVStream *pVideoStream = avformat_new_stream(pContext, nullptr);
+		AVStream *pAudioStream = avformat_new_stream(pContext, nullptr);
+		if(!pVideoStream || !pAudioStream ||
+			avcodec_parameters_from_context(pVideoStream->codecpar, pVideo) < 0 ||
+			avcodec_parameters_from_context(pAudioStream->codecpar, pAudio) < 0)
+		{
+			avformat_free_context(pContext);
+			avcodec_free_context(&pVideo);
+			avcodec_free_context(&pAudio);
+			return {};
+		}
+		pVideoStream->time_base = {1, FPS};
+		pVideoStream->avg_frame_rate = {FPS, 1};
+		pAudioStream->time_base = {1, SAMPLE_RATE};
+
+		bool Encoded = (pContext->oformat->flags & AVFMT_NOFILE) || avio_open(&pContext->pb, Path.c_str(), AVIO_FLAG_WRITE) >= 0;
+		Encoded = Encoded && avformat_write_header(pContext, nullptr) >= 0;
+
+		const auto WritePackets = [&](AVCodecContext *pEncoder, AVStream *pStream) {
+			AVPacket *pPacket = av_packet_alloc();
+			while(Encoded && pPacket && avcodec_receive_packet(pEncoder, pPacket) >= 0)
+			{
+				av_packet_rescale_ts(pPacket, pEncoder->time_base, pStream->time_base);
+				pPacket->stream_index = pStream->index;
+				if(av_interleaved_write_frame(pContext, pPacket) < 0)
+					Encoded = false;
+				av_packet_unref(pPacket);
+			}
+			av_packet_free(&pPacket);
+		};
+
+		AVFrame *pVideoFrame = av_frame_alloc();
+		pVideoFrame->format = AV_PIX_FMT_YUV420P;
+		pVideoFrame->width = 64;
+		pVideoFrame->height = 64;
+		if(av_frame_get_buffer(pVideoFrame, 0) < 0)
+			Encoded = false;
+		for(int i = 0; Encoded && i < FRAMES; ++i)
+		{
+			av_frame_make_writable(pVideoFrame);
+			memset(pVideoFrame->data[0], 16, pVideoFrame->linesize[0] * 64);
+			memset(pVideoFrame->data[1], 128, pVideoFrame->linesize[1] * 32);
+			memset(pVideoFrame->data[2], 128, pVideoFrame->linesize[2] * 32);
+			pVideoFrame->pts = i;
+			if(avcodec_send_frame(pVideo, pVideoFrame) < 0)
+				Encoded = false;
+			WritePackets(pVideo, pVideoStream);
+		}
+		av_frame_free(&pVideoFrame);
+
+		AVFrame *pAudioFrame = av_frame_alloc();
+		pAudioFrame->format = pAudio->sample_fmt;
+		pAudioFrame->sample_rate = SAMPLE_RATE;
+		pAudioFrame->nb_samples = AudioSamples;
+#if LIBAVUTIL_VERSION_MAJOR >= 57
+		av_channel_layout_default(&pAudioFrame->ch_layout, 2);
+#else
+		pAudioFrame->channel_layout = AV_CH_LAYOUT_STEREO;
+		pAudioFrame->channels = 2;
+#endif
+		if(av_frame_get_buffer(pAudioFrame, 0) < 0)
+			Encoded = false;
+		for(int i = 0; Encoded && i < AudioPackets; ++i)
+		{
+			av_frame_make_writable(pAudioFrame);
+			for(int c = 0; c < 2; ++c)
+			{
+				auto *pSamples = reinterpret_cast<float *>(pAudioFrame->data[c]);
+				for(int n = 0; n < AudioSamples; ++n)
+				{
+					const int64_t Sample = (int64_t)i * AudioSamples + n;
+					pSamples[n] = 0.25f * sinf(2.0f * 3.14159265f * 440.0f * (float)Sample / (float)SAMPLE_RATE);
+				}
+			}
+			pAudioFrame->pts = (int64_t)i * AudioSamples;
+			if(avcodec_send_frame(pAudio, pAudioFrame) < 0)
+				Encoded = false;
+			WritePackets(pAudio, pAudioStream);
+		}
+		av_frame_free(&pAudioFrame);
+
+		for(AVCodecContext *pEncoder : {pVideo, pAudio})
+		{
+			if(!Encoded)
+				break;
+			if(avcodec_send_frame(pEncoder, nullptr) >= 0)
+				WritePackets(pEncoder, pEncoder == pVideo ? pVideoStream : pAudioStream);
+		}
+
+		if(Encoded && av_write_trailer(pContext) < 0)
+			Encoded = false;
+		if(!(pContext->oformat->flags & AVFMT_NOFILE))
+			avio_closep(&pContext->pb);
+		avformat_free_context(pContext);
+		avcodec_free_context(&pVideo);
+		avcodec_free_context(&pAudio);
+		if(!Encoded)
+			ADD_FAILURE() << "fixture encoding did not complete";
+		return Encoded ? Path : std::string{};
+	}
+
 } // namespace
 
 TEST(VideoExportTask, ProgressRoundTripPreservesDoneFlags)
@@ -429,6 +599,31 @@ namespace
 		avformat_close_input(&pInput);
 		return Result == AVERROR_EOF ? Count : -1;
 	}
+
+	// 读取输出视频流的平均帧率元数据。matroska 的 DefaultDuration 与 ffprobe 的
+	// avg_frame_rate 都来自这里；缺失时输出会按包时长反推帧率，剪辑软件据此判断 144 FPS 素材会出错。
+	AVRational VideoFrameRate(const std::string &Path)
+	{
+		AVFormatContext *pInput = nullptr;
+		if(avformat_open_input(&pInput, Path.c_str(), nullptr, nullptr) < 0)
+			return {0, 0};
+		if(avformat_find_stream_info(pInput, nullptr) < 0)
+		{
+			avformat_close_input(&pInput);
+			return {0, 0};
+		}
+		AVRational Rate = {0, 0};
+		for(unsigned int i = 0; i < pInput->nb_streams; ++i)
+		{
+			if(pInput->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
+			{
+				Rate = pInput->streams[i]->avg_frame_rate;
+				break;
+			}
+		}
+		avformat_close_input(&pInput);
+		return Rate;
+	}
 }
 
 TEST_F(CVideoExportStorage, ShortWriteKeepsOldCheckpointAndAllowsRetry)
@@ -560,6 +755,73 @@ TEST_F(CVideoExportStorage, ConcatCloseFailureKeepsOldOutputAndAllowsRetry)
 	EXPECT_EQ(VideoPacketCount(Output), 4);
 }
 
+TEST_F(CVideoExportStorage, ConcatPreservesNonIntegerFrameRateMetadata)
+{
+	const std::string Segment = WriteMinimalVideoFile(m_Directory, "fps144_p001.mkv", 144);
+	ASSERT_FALSE(Segment.empty());
+	ASSERT_EQ(VideoFrameRate(Segment).num, 144);
+	const std::string Output = Path("fps144.mkv");
+	ASSERT_TRUE(ConcatVideoFiles({Segment, Segment}, Output.c_str(), "matroska"));
+	// 修复前输出流没有 avg_frame_rate，matroska 只能按包时长反推，144 FPS 被读成 288/1。
+	const AVRational Rate = VideoFrameRate(Output);
+	EXPECT_EQ(Rate.num, 144);
+	EXPECT_EQ(Rate.den, 1);
+	EXPECT_EQ(VideoPacketCount(Output), 4);
+}
+
+TEST_F(CVideoExportStorage, ConcatSegmentsWithAudioKeepsTimelineMonotonic)
+{
+	// 每段音频比视频长（AAC priming + 包对齐余数）。不裁剪预算时第二段会因 dts 回退
+	// 让整次拼接 EINVAL；这里断言两段拼接成功、音画都保留，且音频时间轴不回退。
+	const std::string Segment = WriteMinimalAvFile(m_Directory, "av_p001.mkv");
+	ASSERT_FALSE(Segment.empty());
+	const std::string Output = Path("av_concat.mkv");
+	ASSERT_TRUE(ConcatVideoFiles({Segment, Segment}, Output.c_str(), "matroska"));
+
+	AVFormatContext *pInput = nullptr;
+	ASSERT_GE(avformat_open_input(&pInput, Output.c_str(), nullptr, nullptr), 0);
+	ASSERT_GE(avformat_find_stream_info(pInput, nullptr), 0);
+	int VideoStream = -1;
+	int AudioStream = -1;
+	for(unsigned int i = 0; i < pInput->nb_streams; ++i)
+	{
+		if(pInput->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
+			VideoStream = (int)i;
+		else if(pInput->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO)
+			AudioStream = (int)i;
+	}
+	ASSERT_GE(VideoStream, 0);
+	ASSERT_GE(AudioStream, 0);
+
+	int VideoPackets = 0;
+	int AudioPackets = 0;
+	int64_t LastAudioDts = AV_NOPTS_VALUE;
+	bool Monotonic = true;
+	AVPacket *pPacket = av_packet_alloc();
+	ASSERT_NE(pPacket, nullptr);
+	while(av_read_frame(pInput, pPacket) >= 0)
+	{
+		if(pPacket->stream_index == VideoStream)
+			++VideoPackets;
+		else if(pPacket->stream_index == AudioStream)
+		{
+			++AudioPackets;
+			if(LastAudioDts != AV_NOPTS_VALUE && pPacket->dts != AV_NOPTS_VALUE && pPacket->dts <= LastAudioDts)
+				Monotonic = false;
+			if(pPacket->dts != AV_NOPTS_VALUE)
+				LastAudioDts = pPacket->dts;
+		}
+		av_packet_unref(pPacket);
+	}
+	av_packet_free(&pPacket);
+	avformat_close_input(&pInput);
+
+	EXPECT_TRUE(Monotonic) << "拼接后的音频 dts 必须严格递增";
+	EXPECT_EQ(VideoPackets, 80); // 2 段 × 40 帧
+	// 每段音频包数被预算裁到视频时长对应值；两段合计必须等于 2 × 每段预算。
+	EXPECT_EQ(AudioPackets, 2 * ((40 * 48000 / 60 + 1023) / 1024));
+}
+
 TEST_F(CVideoExportStorage, ConcatMissingLaterSegmentKeepsOldOutput)
 {
 	const std::string Segment = WriteMinimalVideoFile(m_Directory, "input.mkv");
@@ -664,6 +926,22 @@ TEST_F(CVideoExportStorage, DemoDisplayChangesInvalidateCompletedSegments)
 		SVideoDisplaySnapshot Changed = Display;
 		Changed.m_RenderDemoOnly = true;
 		auto pResume = MakeTask("display", 0, 13000, 50, VideoExportConfigParams(Config, Changed).c_str());
+		EXPECT_FALSE(pResume->LoadProgress(Progress.c_str()));
+		EXPECT_FALSE(pResume->Segments()[0].m_Done);
+	}
+	// 采样格式与 ProRes profile 改变编码产物本身：换格式续渲必须重渲旧段，
+	// 否则同一成片里会混入两种色度采样。
+	{
+		CConfig Changed = Config;
+		Changed.m_QmVideoPixelFormat = 3;
+		auto pResume = MakeTask("display", 0, 13000, 50, VideoExportConfigParams(Changed, Display).c_str());
+		EXPECT_FALSE(pResume->LoadProgress(Progress.c_str()));
+		EXPECT_FALSE(pResume->Segments()[0].m_Done);
+	}
+	{
+		CConfig Changed = Config;
+		Changed.m_QmVideoProresProfile = 4;
+		auto pResume = MakeTask("display", 0, 13000, 50, VideoExportConfigParams(Changed, Display).c_str());
 		EXPECT_FALSE(pResume->LoadProgress(Progress.c_str()));
 		EXPECT_FALSE(pResume->Segments()[0].m_Done);
 	}

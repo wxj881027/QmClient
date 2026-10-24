@@ -155,6 +155,7 @@ namespace
 			m_vRectangles.emplace_back(CUIRect{X, Y, W, H}, Color);
 		}
 		bool HasRoundedRectSdf() override { return m_HasSdf; }
+		bool HasRoundedRectSdfTexture() override { return false; }
 		void TextureSet(CTextureHandle) override {}
 		void QuadsBegin() override {}
 		void SetColor(ColorRGBA) override {}

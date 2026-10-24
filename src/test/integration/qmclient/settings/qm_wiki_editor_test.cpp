@@ -2,11 +2,11 @@
 // Wiki 面板的编辑状态机与存储、Markdown 解析的协作：
 // 保存到哪里、还原是否真的删文件、草稿在 Esc 与换文档后如何处理，
 // 这些都不是纯字符串判断能覆盖的，必须走真实 IStorage 与真实解析器。
-#include <game/client/QmUi/QmWikiEditor.h>
-#include <game/client/QmUi/QmWikiStore.h>
-
 #include <engine/shared/config.h>
 #include <engine/storage.h>
+
+#include <game/client/QmUi/QmWikiEditor.h>
+#include <game/client/QmUi/QmWikiStore.h>
 
 #include <gtest/gtest.h>
 #include <test/test.h>
@@ -83,7 +83,6 @@ namespace
 			str_format(aPath, sizeof(aPath), "wiki/simplified_chinese/%s.md", pRelativePath);
 			return m_pStorage->FileExists(aPath, IStorage::TYPE_SAVE);
 		}
-
 	};
 }
 

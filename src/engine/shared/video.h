@@ -3,6 +3,8 @@
 
 #include <base/system.h>
 
+#include <engine/graphics.h>
+
 #include <functional>
 
 typedef std::function<void(short *pFinalOut, unsigned Frames)> ISoundMixFunc;
@@ -36,6 +38,16 @@ public:
 
 	virtual void NextVideoFrame() = 0;
 	virtual void NextVideoFrameThread() = 0;
+
+	// 离屏导出模式：主线程把整幅画面画进离屏渲染目标（可选多采样）后经
+	// SubmitOffscreenFrame 提交像素；此模式下 NextVideoFrameThread 不再读窗口帧缓冲。
+	// 默认实现忽略设置：不支持离屏导出的实现保持读窗口路径。
+	virtual void SetOffscreenCapture(bool Offscreen) { (void)Offscreen; }
+	// 提交一帧已读回的离屏像素（所有权转移；实现不接收时必须释放）。
+	virtual void SubmitOffscreenFrame(CImageInfo &&Image) { Image.Free(); }
+	// 显式置位捕获错误（如离屏目标无法建立且没有降级余地）；
+	// HasError 随之为真，录制按既有错误流程停止。
+	virtual void FailCapture() {}
 
 	virtual void NextAudioFrame(ISoundMixFunc Mix) = 0;
 	virtual void NextAudioFrameTimeline(ISoundMixFunc Mix) = 0;

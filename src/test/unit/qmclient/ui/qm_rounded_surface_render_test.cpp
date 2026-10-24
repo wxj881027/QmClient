@@ -2,6 +2,7 @@
 
 #include <game/client/QmUi/QmColorGradient.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/components/qmclient/screenshot_viewer_viewport.h>
 
 #include <gtest/gtest.h>
 #include <test/support/icon_benchmark_graphics.h>
@@ -37,10 +38,12 @@ namespace
 
 	public:
 		bool m_HasSdf = false;
+		bool m_HasSdfTexture = false;
 		int m_AntialiasDraws = 0;
 		std::vector<SRoundedRectSdfParams> m_vSdf;
 
 		bool HasRoundedRectSdf() override { return m_HasSdf; }
+		bool HasRoundedRectSdfTexture() override { return m_HasSdfTexture; }
 		void RenderRoundedRectSdf(const SRoundedRectSdfParams &Params) override { m_vSdf.push_back(Params); }
 		// 外缘羽化由设备实现；内部颜色探针不模拟 GPU 抗锯齿。
 		void DrawRoundedRectAntialias(float X, float Y, float W, float H, float Radius, int Corners, const ColorRGBA &Color) override { ++m_AntialiasDraws; }
@@ -253,6 +256,55 @@ TEST_F(CQmRoundedSurfaceRender, SdfReceivesIndependentFillAndBorderAlpha)
 	EXPECT_FLOAT_EQ(Sdf.m_Params.x, 1.0f);
 }
 
+// 圆角容器放图：图片作为 SDF 填充被采样，UV 换算必须是「卡片像素 → 图片 UV」，
+// 否则放大/平移后图片会错位，四角仍会露出方角。
+TEST_F(CQmRoundedSurfaceRender, RoundedImageMapsCardPixelsToImageUV)
+{
+	const float CardW = 200.0f;
+	const float CardH = 100.0f;
+	vec4 Params0, Params1;
+	// 图片正好铺满卡片：卡片左上角取样 UV 0，右下角取样 UV 1。
+	const vec2 Scale(1.0f / CardW, 1.0f / CardH);
+	ResolveRoundedImageUV(CardW, CardH, Scale, vec2(0.0f, 0.0f), Params0, Params1);
+	// 着色器 Point 以矩形中心为原点：左上角是 (-CardW/2, -CardH/2)。
+	const auto SampleUV = [&](const vec2 &Point) {
+		return vec2(Point.x * Params0.y + Params0.w, Point.y * Params0.z + Params1.x);
+	};
+	EXPECT_FLOAT_EQ(Params0.x, 1.0f);
+	EXPECT_FLOAT_EQ(SampleUV(vec2(-CardW * 0.5f, -CardH * 0.5f)).x, 0.0f);
+	EXPECT_FLOAT_EQ(SampleUV(vec2(-CardW * 0.5f, -CardH * 0.5f)).y, 0.0f);
+	EXPECT_FLOAT_EQ(SampleUV(vec2(CardW * 0.5f, CardH * 0.5f)).x, 1.0f);
+	EXPECT_FLOAT_EQ(SampleUV(vec2(CardW * 0.5f, CardH * 0.5f)).y, 1.0f);
+
+	// 放大到 2 倍宽度并左移半个图片宽：卡片中心转到图片中心，验证锚点换算。
+	const vec2 ZoomScale(2.0f / CardW, 2.0f / CardH);
+	const vec2 ZoomOffset(-0.5f, -0.5f);
+	ResolveRoundedImageUV(CardW, CardH, ZoomScale, ZoomOffset, Params0, Params1);
+	// 卡片中心 → 图片中心：缩放锚点必须保持在图片中央，否则放大时会"跳"。
+	EXPECT_FLOAT_EQ(SampleUV(vec2(0.0f, 0.0f)).x, 0.5f);
+	EXPECT_FLOAT_EQ(SampleUV(vec2(0.0f, 0.0f)).y, 0.5f);
+	// 放大后卡片四角已经落在图片之外（UV 超出 [0,1]）：着色器据此判为透明，
+	// 配合圆角覆盖度把方角裁掉——这正是修复前后观感的分界。
+	EXPECT_LT(SampleUV(vec2(-CardW * 0.5f, -CardH * 0.5f)).x, 0.0f);
+	EXPECT_GT(SampleUV(vec2(CardW * 0.5f, CardH * 0.5f)).x, 1.0f);
+	// 左右对称：左侧越界量应等于右侧越界量，否则图片会左右偏移。
+	EXPECT_FLOAT_EQ(SampleUV(vec2(-CardW * 0.5f, 0.0f)).x, 1.0f - SampleUV(vec2(CardW * 0.5f, 0.0f)).x);
+}
+
+TEST_F(CQmRoundedSurfaceRender, RoundedImageRequiresTextureCapability)
+{
+	m_Graphics.m_HasSdf = true;
+	m_Graphics.m_HasSdfTexture = false;
+	m_Params.m_BorderWidth = 0.0f;
+	SRoundedImageParams Image;
+	SRoundedSurfaceParams Params;
+	Params.m_Radius = 8.0f;
+	Params.m_PixelSize = 1.0f;
+	// 设备不支持纹理圆角时必须明确返回 false，让调用方回退到普通四边形。
+	EXPECT_FALSE(DrawRoundedImage(&m_Graphics, m_Rect, Image, ColorRGBA(), Params));
+	EXPECT_TRUE(m_Graphics.m_vSdf.empty());
+}
+
 TEST_F(CQmRoundedSurfaceRender, TranslucentGradientDoesNotHaveBorderBehindInterior)
 {
 	for(bool HasSdf : {false, true})
@@ -281,4 +333,34 @@ TEST_F(CQmRoundedSurfaceRender, TranslucentGradientDoesNotHaveBorderBehindInteri
 			ExpectColor(Graphics.Sample(Point), Gradient.Sample((Point - vec2(1, 1)) / vec2(28, 18)).WithMultipliedAlpha(0.5f));
 		}
 	}
+}
+
+// 看图窗口的圆角靠「父容器裁剪子图片」实现：按行补背景色。
+// 内缩量必须是单调递减到 0（否则圆角会出现台阶或缺口），
+// 且首行内缩接近半径本身、末行内缩为 0——这两条错了肉眼会看到缺角。
+TEST(QmScreenshotViewerRoundedCorners, InsetFallsFromRadiusToZeroAcrossTheCorner)
+{
+	constexpr float R = 14.0f;
+	// 第一行几乎要切掉整个半径（圆弧最外侧）。
+	EXPECT_NEAR(qm_screenshot_viewer::RoundedCornerInset(R, 0.0f), R, 0.01f);
+	// 走到半径处圆角结束，不再内缩。
+	EXPECT_FLOAT_EQ(qm_screenshot_viewer::RoundedCornerInset(R, R), 0.0f);
+	EXPECT_FLOAT_EQ(qm_screenshot_viewer::RoundedCornerInset(R, R + 5.0f), 0.0f);
+	// 中间必须单调递减，且始终在 [0, R] 内。
+	float Previous = qm_screenshot_viewer::RoundedCornerInset(R, 0.0f);
+	for(float Row = 0.0f; Row <= R; Row += 0.5f)
+	{
+		const float Inset = qm_screenshot_viewer::RoundedCornerInset(R, Row);
+		EXPECT_LE(Inset, Previous + 0.001f) << "row " << Row;
+		EXPECT_GE(Inset, 0.0f);
+		EXPECT_LE(Inset, R);
+		Previous = Inset;
+	}
+}
+
+TEST(QmScreenshotViewerRoundedCorners, ZeroRadiusNeverCutsAnything)
+{
+	// 半径为 0（或非法）时必须完全不裁剪，否则小窗口会被吃掉一条边。
+	EXPECT_FLOAT_EQ(qm_screenshot_viewer::RoundedCornerInset(0.0f, 0.0f), 0.0f);
+	EXPECT_FLOAT_EQ(qm_screenshot_viewer::RoundedCornerInset(-5.0f, 0.0f), 0.0f);
 }

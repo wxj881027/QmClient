@@ -48,6 +48,7 @@
 #include <game/client/components/qmclient/map_difficulty_catalog.h>
 #include <game/client/components/qmclient/map_vote_difficulty.h>
 #include <game/client/components/qmclient/online_replay_player.h>
+#include <game/client/components/qmclient/pose_map.h>
 #include <game/client/components/qmclient/qm_map_upload.h>
 #include <game/client/components/qmclient/screenshot_manager.h>
 #include <game/client/components/qmclient/settings_perf_windows.h>
@@ -1723,6 +1724,16 @@ protected:
 			return !m_IsDir && str_endswith_nocase(m_aFilename, ".demo") != nullptr;
 		}
 
+		bool IsPoseFile() const
+		{
+			return !m_IsDir && str_endswith_nocase(m_aFilename, ".poses") != nullptr;
+		}
+
+		bool IsReplayFile() const
+		{
+			return IsDemoFile() || IsPoseFile();
+		}
+
 		int NumMarkers() const
 		{
 			return std::clamp<int>(bytes_be_to_uint(m_TimelineMarkers.m_aNumTimelineMarkers), 0, MAX_TIMELINE_MARKERS);
@@ -1828,6 +1839,12 @@ protected:
 	// 预设选择（M6）：本会话（弹窗开→关）内的下拉状态，-1 = 未动过（跟随 qm_video_preset）。
 	// 仅确认导出时落盘；手动改编码器/容器自动回到 0（Custom），避免 Ok 时被预设兜底覆盖用户选择。
 	int m_DemoRenderPresetSel = -1;
+	// 色彩采样会话态：-1 = 未动过（跟随 qm_video_pixfmt）。切换预设会写入这里而不是
+	// 直接改配置，Abort 或只是打开弹窗看一眼不会永久改掉全局配置。
+	int m_DemoRenderPixelFormat = -1;
+	// 导出抗锯齿会话态：-2 = 未动过（跟随 qm_video_fsaa）。取值即配置语义
+	// （-1 跟随全局 / 0 关 / 2/4/8 离屏多采样），只在确认导出时落盘。
+	int m_DemoRenderFsaa = -2;
 	// 弹窗打开时对编码器/质量/容器/分辨率/GOP 做一次性初始化（从当前配置回填）；
 	// 之后不再每帧回填——否则用户清空输入想恢复默认时，下一帧就被旧配置值弹回。
 	void InitDemoRenderInputs();
@@ -1856,6 +1873,75 @@ protected:
 	int m_DemoScreenshotPreviewWidth = 0;
 	int m_DemoScreenshotPreviewHeight = 0;
 	size_t m_DemoHeaderFetchCursor = 0;
+
+	// 合影地图选择：.poses 不带地图字段，打开与渲染共用同一份选择。
+	// 已加载地图时直接沿用；没有地图时弹窗让玩家输入或从列表挑选。
+	// 选择状态只属于当前这次请求，确认或取消后清空，不会带给下一次打开。
+	struct SQmPoseMapState
+	{
+		qm_pose_map::CSelection m_Selection;
+		CLineInputBuffered<IO_MAX_PATH_LENGTH> m_Input;
+		// 复用地图上传卡片已有的索引：逐帧扫一遍 maps/ 与 downloadedmaps/。
+		QmMapUpload::CSearchIndex m_Index;
+		std::vector<QmMapUpload::SMapFile> m_vMatches;
+		std::vector<std::string> m_vKnownPaths;
+		CListBox m_ListBox;
+		// 目录浏览：根列表是 maps/ 与 downloadedmaps/，点文件夹继续下钻。
+		char m_aFolder[IO_MAX_PATH_LENGTH] = "";
+		int m_StorageType = IStorage::TYPE_ALL;
+		std::vector<QmMapUpload::SMapFile> m_vEntries;
+		// 输入框里有玩家自己敲的内容时切到跨目录搜索；点文件夹回到浏览。
+		bool m_SearchMode = false;
+		// 我们写进输入框的值：用来区分「程序回填」和「玩家输入」。
+		char m_aProgrammaticInput[IO_MAX_PATH_LENGTH] = "";
+		// 选中项按路径记住：列表会随扫描和过滤重排，索引号不稳定。
+		char m_aSelectedPath[IO_MAX_PATH_LENGTH] = "";
+		char m_aCachedQuery[IO_MAX_PATH_LENGTH] = "";
+		bool m_IndexStarted = false;
+		// 只有点过确认之后才显示错误，刚打开时不该先报错。
+		bool m_Attempted = false;
+		bool m_FocusInput = false;
+		// 渲染时多两行输出选项（png / webp、分辨率倍数）。
+		bool m_RenderMode = false;
+		// 0=png 1=webp
+		int m_RenderOutput = 0;
+		// 超采样倍数：1 / 2 / 4。输出尺寸 = 窗口渲染尺寸 × 倍数。
+		int m_RenderScale = 1;
+		// 实体层：用实体铺满背景，盖掉地图方块。默认打开。
+		bool m_RenderEntityLayer = true;
+		// 成片锐化强度 0-100。0 = 不处理；过高会在渐变背景上产生等值线。
+		int m_RenderSharpen = 0;
+	} m_QmPoseMap;
+	// 合影预览 HUD：照回放播放 HUD 的样子做一张浮动卡片，但只放合影用得上的东西。
+	// 预览没有时间轴，需要的是取景（缩放/适配）、实体层、拍一张、渲染和退出。
+	struct SQmPoseHudState
+	{
+		bool m_Open = false;
+		// 卡片拖动：一次拖动跨多帧，操作码与起始鼠标位置必须留在成员里。
+		int m_DragOperation = 0;
+		vec2 m_DragInitialMouse = vec2(0.0f, 0.0f);
+		vec2 m_PositionOffset = vec2(0.0f, 0.0f);
+		// 上一帧的卡片矩形：输入处理早于渲染，判断「鼠标在卡片外」只能用上一帧的位置。
+		CUIRect m_CardRect = {0.0f, 0.0f, 0.0f, 0.0f};
+	} m_QmPoseHud;
+	// 弹窗自己吃鼠标和键盘：在回放播放态下也必须有光标，否则玩家点不到列表。
+	bool QmPoseMapPopupOpen() const { return m_Popup == POPUP_QM_POSE_MAP; }
+	// 预览 HUD 开着且会话还在：鼠标、输入和光标按「菜单活跃」对待，但不铺菜单页。
+	bool QmPoseHudActive();
+	// 由界面或引擎（Windows 双击 .poses）发起：没有地图时切到回放列表并弹出选择框。
+	void QmRequestPoseMap(const char *pPosesPath, qm_pose_map::EAction Action, const char *pOutputName = nullptr);
+	// 打开/渲染按钮的统一入口：有地图就立刻执行，没有就先让玩家选。
+	void QmStartPoseAction(const char *pPosesPath, qm_pose_map::EAction Action, const char *pOutputName);
+	// 预览与渲染是同一个弹窗里的两个按钮：动作由按钮传入，不再共用一条会变名的确认键。
+	void QmConfirmPoseMap(qm_pose_map::EAction Action);
+	void QmCancelPoseMap();
+	void PopulateQmPoseMapBrowser();
+	static int QmPoseMapScan(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser);
+	// 列表行数：只有输入框里真的有字才算搜索结果，空输入始终回到目录浏览。
+	int QmPoseMapRowCount();
+	void RenderQmPoseMapPopup(CUIRect View);
+	// 预览 HUD：回放 HUD 的卡片样式 + 合影自己的控件。
+	void RenderQmPoseHud(CUIRect MainView);
 	size_t m_DemoDateFetchCursor = 0;
 	bool m_DemoHeaderFetchComplete = true;
 	bool m_DemoDateFetchComplete = true;
@@ -2763,6 +2849,7 @@ public:
 		POPUP_RENAME_DEMO,
 		POPUP_RENDER_DEMO,
 		POPUP_RENDER_DONE,
+		POPUP_QM_POSE_MAP, // .poses 没有地图：让玩家选择用于打开/渲染的地图
 		POPUP_PASSWORD,
 		POPUP_QUIT,
 		POPUP_RESTART,

@@ -11,7 +11,7 @@
 namespace
 {
 	// 欠阻尼弹簧：ζ = c / (2√k) ≈ 0.66，收尾有一次轻微回弹（果冻感），
-	// 但不会来回晃到让人眼晕。60Hz 下显式积分稳定（Δt·ω ≈ 0.38）。
+	// 但不会来回晃到让人眼晕。Dt 会在调用方以秒传入并限制到 100ms。
 	constexpr float SLOT_REFLOW_STIFFNESS = 380.0f;
 	constexpr float SLOT_REFLOW_DAMPING = 26.0f;
 	constexpr float SLOT_REFLOW_REST_OFFSET = 0.05f;
@@ -35,6 +35,18 @@ namespace
 		{
 			Offset = 0.0f;
 			Velocity = 0.0f;
+		}
+	}
+
+	void StepSpringStable(float &Offset, float &Velocity, float Dt)
+	{
+		// 显式积分在 100ms 的窗口帧上会发散；拆成固定小步，保持同一总时长。
+		constexpr float MaxStep = 1.0f / 60.0f;
+		while(Dt > 0.0f)
+		{
+			const float Step = std::min(Dt, MaxStep);
+			StepSpring(Offset, Velocity, Step);
+			Dt -= Step;
 		}
 	}
 } // namespace
@@ -116,8 +128,8 @@ vec2 CQmSlotReflow::Track(const char *pKey, int Slot, float StepX, float StepY)
 	// 先返回本帧位置再推进弹簧：换位那一帧必须完整停在旧位置，
 	// 否则第一帧就已经挪动了一小段，看起来像「跳了一下才开始滑」。
 	const vec2 Offset(State.m_OffsetX, State.m_OffsetY);
-	StepSpring(State.m_OffsetX, State.m_VelocityX, m_Dt);
-	StepSpring(State.m_OffsetY, State.m_VelocityY, m_Dt);
+	StepSpringStable(State.m_OffsetX, State.m_VelocityX, m_Dt);
+	StepSpringStable(State.m_OffsetY, State.m_VelocityY, m_Dt);
 	return Offset;
 }
 

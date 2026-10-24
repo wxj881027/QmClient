@@ -1,6 +1,7 @@
 #include "video_encoder.h"
 
 #include <base/log.h>
+#include <base/str.h>
 #include <base/system.h>
 
 #include <mutex>
@@ -20,19 +21,9 @@ namespace video_encoder
 			AV_PIX_FMT_NONE,
 		};
 
-		// 剪辑格式：ProRes/DNxHR 的原生位深是 422 10bit。
+		// 剪辑格式：ProRes 的原生位深是 422 10bit。
 		const AVPixelFormat s_aWantedEditingFormats[] = {
 			AV_PIX_FMT_YUV422P10LE,
-			AV_PIX_FMT_YUV422P,
-			AV_PIX_FMT_YUV420P,
-			AV_PIX_FMT_NONE,
-		};
-
-		// FFV1 无损归档：保真优先，444/422 高位深。
-		const AVPixelFormat s_aWantedLosslessFormats[] = {
-			AV_PIX_FMT_YUV444P10LE,
-			AV_PIX_FMT_YUV422P10LE,
-			AV_PIX_FMT_YUV444P,
 			AV_PIX_FMT_YUV422P,
 			AV_PIX_FMT_YUV420P,
 			AV_PIX_FMT_NONE,
@@ -48,9 +39,8 @@ namespace video_encoder
 
 		const SCandidate s_aCandidates[] = {
 			{"libx264", "H.264 / x264 (software)", EQualityKind::CRF_X264},
-			{"prores_ks", "ProRes 422 (editing)", EQualityKind::NONE},
-			{"dnxhd", "DNxHR (editing)", EQualityKind::NONE},
-			{"ffv1", "FFV1 (lossless)", EQualityKind::NONE},
+			{"libsvtav1", "AV1 / SVT (software)", EQualityKind::CRF_SVTAV1},
+			{"prores_ks", "ProRes 422 / 4444 (exchange)", EQualityKind::NONE},
 			{"h264_nvenc", "H.264 / NVENC", EQualityKind::CQ_NVENC},
 			{"hevc_nvenc", "H.265 / NVENC", EQualityKind::CQ_NVENC},
 			{"av1_nvenc", "AV1 / NVENC", EQualityKind::CQ_NVENC},
@@ -81,6 +71,7 @@ namespace video_encoder
 			pContext->framerate = AVRational{60, 1};
 			pContext->gop_size = DEFAULT_GOP;
 			// 按编码器家族选格式：ProRes 只支持 10bit 422/444，8bit 通用表会协商失败。
+			// 探测固定走 AUTO：4:4:4 只在真正导出时按用户偏好协商，避免每个编码器都多开一次 session。
 			pContext->pix_fmt = NegotiatePixelFormat(pCodec, pContext, WantedPixelFormatsFor(pCodec->name));
 			if(pContext->pix_fmt == AV_PIX_FMT_NONE)
 			{
@@ -89,8 +80,8 @@ namespace video_encoder
 				return false;
 			}
 
-			// 探测初始化与真实编码同条件：质量选项里的 profile/coder 等是
-			// dnxhd（需 DNxHR profile 才接受任意分辨率）/ffv1/prores 的 open 前置。
+			// 探测初始化与真实编码同条件：质量选项里的 profile 是 ProRes 的
+			// open 前置（必须在 avcodec_open2 之前设好）。
 			int ProbeQualityKind = 0;
 			if(!ApplyQualityOptions(pContext, pCodec->name, 23, 5, ProbeQualityKind))
 			{
@@ -172,16 +163,97 @@ namespace video_encoder
 		return nullptr;
 	}
 
-	const AVCodec *FindEncoderForRecording(const char *pName)
+	namespace
 	{
-		if(!pName)
+		// 每个家族的候选顺序：硬件优先（同画质下吞吐高一个量级），软件兜底。
+		// 顺序即优先级，返回第一个探测可用的。
+		struct SEncoderFamily
+		{
+			const char *m_pAlias;
+			const char *m_apCandidates[5];
+		};
+
+		const SEncoderFamily s_aEncoderFamilies[] = {
+			{"h264", {"h264_nvenc", "h264_qsv", "h264_amf", "h264_videotoolbox", "libx264"}},
+			{"hevc", {"hevc_nvenc", "hevc_qsv", "hevc_amf", "hevc_videotoolbox", nullptr}},
+			{"av1", {"av1_nvenc", "av1_qsv", "av1_amf", nullptr, "libsvtav1"}},
+		};
+
+		const SEncoderFamily *FindFamily(const char *pName)
+		{
+			if(!pName)
+				return nullptr;
+			for(const SEncoderFamily &Family : s_aEncoderFamilies)
+			{
+				if(str_comp_nocase(Family.m_pAlias, pName) == 0)
+					return &Family;
+			}
 			return nullptr;
+		}
+	} // namespace
+
+	bool IsEncoderAlias(const char *pName)
+	{
+		return FindFamily(pName) != nullptr;
+	}
+
+	const char *PreferredEncoderForFamily(const char *pFamily)
+	{
+		const SEncoderFamily *pFound = FindFamily(pFamily);
+		if(!pFound)
+			return "";
+		for(const char *pCandidate : pFound->m_apCandidates)
+		{
+			if(!pCandidate)
+				break;
+			const SProbeResult *pProbe = FindProbed(pCandidate);
+			if(pProbe && pProbe->m_Available)
+				return pProbe->m_aName;
+		}
+		return "";
+	}
+
+	bool ShouldAutoPickHardware(const char *pConfiguredEncoder, int OutputHeight)
+	{
+		// 显式指定（含别名）时一律尊重用户选择，不偷偷换编码器。
+		if(pConfiguredEncoder && pConfiguredEncoder[0] != '\0')
+			return false;
+		return OutputHeight >= AUTO_HARDWARE_MIN_HEIGHT;
+	}
+
+	bool ResolveEncoderAlias(const char *pName, char *pOut, size_t OutSize)
+	{
+		if(!pName || OutSize == 0)
+			return false;
+
+		const SEncoderFamily *pFamily = FindFamily(pName);
+		if(pFamily)
+		{
+			const char *pPreferred = PreferredEncoderForFamily(pFamily->m_pAlias);
+			if(pPreferred[0] == '\0')
+				return false;
+			str_copy(pOut, pPreferred, OutSize);
+			return true;
+		}
+
+		// 非别名：只在候选表里认名字，避免把拼错的名字当成可用编码器。
 		for(const SCandidate &Candidate : s_aCandidates)
 		{
 			if(str_comp(Candidate.m_pName, pName) == 0)
-				return avcodec_find_encoder_by_name(pName);
+			{
+				str_copy(pOut, pName, OutSize);
+				return true;
+			}
 		}
-		return nullptr;
+		return false;
+	}
+
+	const AVCodec *FindEncoderForRecording(const char *pName)
+	{
+		char aResolved[48];
+		if(!ResolveEncoderAlias(pName, aResolved, sizeof(aResolved)))
+			return nullptr;
+		return avcodec_find_encoder_by_name(aResolved);
 	}
 
 	AVPixelFormat NegotiateDefaultPixelFormat(const AVCodec *pCodec, const AVCodecContext *pContext)
@@ -193,11 +265,40 @@ namespace video_encoder
 	{
 		if(!pEncoderName)
 			return s_aWantedPixelFormats;
-		if(str_find_nocase(pEncoderName, "prores") != nullptr || str_find_nocase(pEncoderName, "dnxhd") != nullptr)
+		if(str_find_nocase(pEncoderName, "prores") != nullptr)
 			return s_aWantedEditingFormats;
-		if(str_find_nocase(pEncoderName, "ffv1") != nullptr)
-			return s_aWantedLosslessFormats;
 		return s_aWantedPixelFormats;
+	}
+
+	const AVPixelFormat *WantedPixelFormatsForPreference(const char *pEncoderName, EPixelFormat Preference, const AVPixelFormat *pAuto)
+	{
+		// AUTO 直接沿用家族默认；显式偏好按「越高越好」列出候选，让协商在编码器不支持时逐级回退。
+		// 4:4:4 只在能真正给到完整色度时才有意义，因此 444 档不列 422/420 之外的退路：
+		// 不支持 444 的编码器协商失败，由调用方报错，而不是静默给一个更差的格式。
+		if(Preference == EPixelFormat::AUTO || !pEncoderName)
+			return pAuto;
+
+		const bool IsProres = str_find_nocase(pEncoderName, "prores") != nullptr;
+		if(Preference == EPixelFormat::YUV444)
+		{
+			static const AVPixelFormat s_a444[] = {AV_PIX_FMT_YUV444P10LE, AV_PIX_FMT_YUV444P, AV_PIX_FMT_NONE};
+			return s_a444;
+		}
+		if(Preference == EPixelFormat::YUV422)
+		{
+			// ProRes 原生就是 422 10bit；软件编码器的 8bit 422 已是无损色度近似。
+			static const AVPixelFormat s_a422[] = {AV_PIX_FMT_YUV422P10LE, AV_PIX_FMT_YUV422P, AV_PIX_FMT_NONE};
+			return s_a422;
+		}
+
+		// YUV420：ProRes 没有 420 profile，降到 422 而不是让导出失败。
+		if(IsProres)
+		{
+			static const AVPixelFormat s_aProres420[] = {AV_PIX_FMT_YUV422P10LE, AV_PIX_FMT_NONE};
+			return s_aProres420;
+		}
+		static const AVPixelFormat s_a420[] = {AV_PIX_FMT_YUV420P, AV_PIX_FMT_YUVJ420P, AV_PIX_FMT_NV12, AV_PIX_FMT_NONE};
+		return s_a420;
 	}
 
 	AVPixelFormat NegotiatePixelFormat(const AVCodec *pCodec, const AVCodecContext *pContext, const AVPixelFormat *pWanted)
@@ -237,7 +338,7 @@ namespace video_encoder
 #endif
 	}
 
-	bool ApplyQualityOptions(AVCodecContext *pContext, const char *pEncoderName, int QualityValue, int PresetIndex, int &QualityKindOut)
+	bool ApplyQualityOptions(AVCodecContext *pContext, const char *pEncoderName, int QualityValue, int PresetIndex, int &QualityKindOut, int ProresProfile)
 	{
 		QualityKindOut = (int)EQualityKind::NONE;
 		if(!pEncoderName || !pContext)
@@ -246,33 +347,20 @@ namespace video_encoder
 		const bool IsAmf = str_find_nocase(pEncoderName, "_amf") != nullptr;
 		const bool IsQsv = str_find_nocase(pEncoderName, "_qsv") != nullptr;
 		const bool IsVt = str_find_nocase(pEncoderName, "videotoolbox") != nullptr;
+		const bool IsSvtAv1 = str_find_nocase(pEncoderName, "libsvtav1") != nullptr;
 		const bool IsProres = str_find_nocase(pEncoderName, "prores") != nullptr;
-		const bool IsDnxhd = str_find_nocase(pEncoderName, "dnxhd") != nullptr;
-		const bool IsFfv1 = str_find_nocase(pEncoderName, "ffv1") != nullptr;
 
-		// 剪辑/归档格式（M6）：质量由 profile 固定（ProRes 422 HQ、DNxHR HQX），FFV1 无损。
+		// 剪辑/交换格式（M6）：质量由 profile 固定。
 		if(IsProres)
 		{
-			// 0=Proxy 1=LT 2=Standard 3=HQ 4=4444 5=4444XQ；质量值低段用 4444，常规 HQ。
-			if(av_opt_set_int(pContext->priv_data, "profile", QualityValue <= 15 ? 4 : 3, 0) < 0)
+			// 0=Proxy 1=LT 2=Standard 3=HQ 4=4444 5=4444XQ。
+			// profile 由调用方按像素格式显式指定：旧实现按「质量值 <= 15 就用 4444」隐式切换，
+			// 而输入仍是 422，实测会被编码器补成 12bit 422（体积 +48%、画质零收益）。
+			const int Profile = ProresProfile >= 0 && ProresProfile <= 5 ? ProresProfile : 3;
+			if(av_opt_set_int(pContext->priv_data, "profile", Profile, 0) < 0)
 				return false;
 			return true;
 		}
-		if(IsDnxhd)
-		{
-			if(av_opt_set(pContext->priv_data, "profile", "dnxhr_hqx", 0) < 0)
-				return false;
-			return true;
-		}
-		if(IsFfv1)
-		{
-			// 无损归档：slice CRC 完整性校验；高位深时编码器自动切 range coder，
-			// 无需手动指定 coder（"crc" 不是 FFV1 的选项名，对应项是 BOOL 型 slicecrc）。
-			if(av_opt_set_int(pContext->priv_data, "slicecrc", 1, 0) < 0)
-				return false;
-			return true;
-		}
-
 		// preset 值索引按 cl_video_preset 的 10 档映射到各家族的原生档位。
 		// x264: ultrafast..placebo；NVENC: p1..p7；AMF: speed/balanced/quality；QSV: veryfast..slow。
 		const int ClampedPreset = std::clamp(PresetIndex, 0, 9);
@@ -281,14 +369,16 @@ namespace video_encoder
 		if(IsNvenc)
 		{
 			// p1 最快 → p7 质量最高；10 档 x264 preset 粗映射到 7 档。
+			// 全帧内预设需要更好的运动估计，最低给 p5。
 			static const char *s_apNvencPresets[10] = {"p1", "p1", "p2", "p3", "p4", "p4", "p5", "p6", "p7", "p7"};
-			str_copy(aPreset, s_apNvencPresets[ClampedPreset]);
+			str_copy(aPreset, pContext->gop_size <= 1 ? "p5" : s_apNvencPresets[ClampedPreset]);
 			if(av_opt_set(pContext->priv_data, "preset", aPreset, 0) < 0)
 				return false;
 			if(av_opt_set(pContext->priv_data, "rc", "vbr", 0) < 0)
 				return false;
-			// CQ 与 CRF 同为 0-51 刻度，直接沿用用户质量值。
-			if(av_opt_set_int(pContext->priv_data, "cq", std::clamp(QualityValue, 0, 51), 0) < 0)
+			// CQ 与 CRF 同为 0-51 刻度但不等价：实测同一素材 CQ23 ≈ CRF18（体积与 VMAF 均差 <1%），
+			// 直接沿用 CRF 值会得到小一档的画质。统一加 5 档偏移，两端钳制。
+			if(av_opt_set_int(pContext->priv_data, "cq", std::clamp(QualityValue + 5, 0, 51), 0) < 0)
 				return false;
 			QualityKindOut = (int)EQualityKind::CQ_NVENC;
 			return true;
@@ -329,6 +419,19 @@ namespace video_encoder
 			if(av_opt_set_int(pContext->priv_data, "video_quality", Quality, 0) < 0)
 				return false;
 			QualityKindOut = (int)EQualityKind::Q_VT;
+			return true;
+		}
+
+		if(IsSvtAv1)
+		{
+			// SVT-AV1：CRF 0-63 与统一刻度 0-51 同向同义，直接沿用（0-51 ⊂ 0-63）。
+			// preset 0-13 数值越大越快（与 x264 相反）：10 档映射到 12..2，medium(5) → 6。
+			if(av_opt_set_int(pContext->priv_data, "crf", std::clamp(QualityValue, 0, 51), 0) < 0)
+				return false;
+			static const int s_aSvtPresets[10] = {12, 11, 10, 9, 8, 6, 5, 4, 3, 2};
+			if(av_opt_set_int(pContext->priv_data, "preset", s_aSvtPresets[ClampedPreset], 0) < 0)
+				return false;
+			QualityKindOut = (int)EQualityKind::CRF_SVTAV1;
 			return true;
 		}
 

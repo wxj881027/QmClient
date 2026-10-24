@@ -49,9 +49,12 @@ bool CVideoExportOutput::Commit()
 std::string VideoExportConfigParams(const CConfig &Config, const SVideoDisplaySnapshot &Display)
 {
 	char aParams[1024];
-	str_format(aParams, sizeof(aParams), "%s|%d|%d|%s|%dx%d|%d|display-v2:%d,%d,%d,%d,%d,%d,%d",
+	// 像素格式与 ProRes profile 都改变产物编码参数，必须计入指纹：否则换采样格式
+	// 续渲时会跳过已完成段，把两种色度采样的段拼进同一个成片。
+	str_format(aParams, sizeof(aParams), "%s|%d|%d|%s|%dx%d|%d|pixfmt:%d|prores:%d|display-v2:%d,%d,%d,%d,%d,%d,%d",
 		Config.m_QmVideoEncoder, Config.m_QmVideoQuality, Config.m_QmVideoGop,
 		Config.m_QmVideoContainer, Config.m_QmVideoWidth, Config.m_QmVideoHeight,
+		Config.m_QmVideoPixelFormat, Config.m_QmVideoProresProfile,
 		Config.m_ClVideoSndEnable, Display.m_Hud, Display.m_Chat,
 		Display.m_Direction, Display.m_StrongWeak, Display.m_StrongWeakScope,
 		Display.m_StrongWeakSize, Display.m_RenderDemoOnly);
@@ -452,8 +455,17 @@ bool ConcatVideoFiles(const std::vector<std::string> &vInputs, const char *pOutp
 					avformat_free_context(pOutContext);
 					return false;
 				}
-				pOutVideo->codecpar->codec_tag = 0;
+				// codec_tag 必须从段继承：清零会让 mov muxer 按族默认重选标签，
+				// ProRes 4444 (ap4h) 被标成 HQ (apch)，剪辑软件按标签识别档位会认错。
+				// 段与成片出自同一 muxer，标签必然有效；mov 族会校验 tag 与 codec_id
+				// 的对应关系，matroska 族本就忽略 codec_tag。
+				pOutVideo->codecpar->codec_tag = pInStream->codecpar->codec_tag;
 				pOutVideo->time_base = pInStream->time_base;
+				// 帧率元数据必须显式带走：matroska muxer 的 DefaultDuration 与 ffprobe 的
+				// r_frame_rate 都看这里。缺省时输出会按包时长反推——144 FPS 段在 1ms 时基下
+				// 实测被读成 288/1、avg 500/3，剪辑软件据此判断帧率会出错。
+				pOutVideo->avg_frame_rate = pInStream->avg_frame_rate;
+				pOutVideo->r_frame_rate = pInStream->r_frame_rate;
 			}
 			else if(pInStream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && !pOutAudio)
 			{
@@ -464,7 +476,7 @@ bool ConcatVideoFiles(const std::vector<std::string> &vInputs, const char *pOutp
 					avformat_free_context(pOutContext);
 					return false;
 				}
-				pOutAudio->codecpar->codec_tag = 0;
+				pOutAudio->codecpar->codec_tag = pInStream->codecpar->codec_tag;
 				pOutAudio->time_base = pInStream->time_base;
 			}
 		}
@@ -592,6 +604,34 @@ bool ConcatVideoFiles(const std::vector<std::string> &vInputs, const char *pOutp
 			const int64_t SegmentSamples = av_rescale_q(pInVideo->duration, pInVideo->time_base, AVRational{1, AudioSampleRate});
 			AudioPacketBudget = (SegmentSamples + AudioSamplesPerPacket - 1) / AudioSamplesPerPacket;
 		}
+		else if(AudioGrid && VideoGrid)
+		{
+			// matroska 不写流时长（duration 为 NOPTS），预算改由视频包数 × 帧步长推算。
+			// 单开一个输入上下文只做计数，避免打断主读循环的 demux 状态；读不到时保持 -1，
+			// 退回原有行为而不是猜一个会截掉真实内容的预算。
+			AVFormatContext *pCountContext = nullptr;
+			if(avformat_open_input(&pCountContext, Input.c_str(), nullptr, nullptr) >= 0)
+			{
+				AVPacket *pCountPacket = av_packet_alloc();
+				int64_t VideoPackets = 0;
+				if(pCountPacket)
+				{
+					while(av_read_frame(pCountContext, pCountPacket) >= 0)
+					{
+						if(pCountPacket->stream_index == pInVideo->index)
+							++VideoPackets;
+						av_packet_unref(pCountPacket);
+					}
+					av_packet_free(&pCountPacket);
+				}
+				avformat_close_input(&pCountContext);
+				if(VideoPackets > 0)
+				{
+					const int64_t SegmentSamples = av_rescale_q(VideoPackets, VideoFrameStep, AVRational{1, AudioSampleRate});
+					AudioPacketBudget = (SegmentSamples + AudioSamplesPerPacket - 1) / AudioSamplesPerPacket;
+				}
+			}
+		}
 		int64_t VideoIndex = 0;
 		int64_t AudioIndex = 0;
 		int64_t BaseVideoDts = AV_NOPTS_VALUE; // 回退路径用
@@ -657,7 +697,17 @@ bool ConcatVideoFiles(const std::vector<std::string> &vInputs, const char *pOutp
 			// 经参数拷贝带入）用重排序窗口从 pts 推导（与 ffmpeg CLI 流复制同机制）；
 			// 自行按包序合成 dts 会与 B 帧真实 pts 冲突（pts < dts → muxer EINVAL）。
 			av_packet_rescale_ts(pPacket, pInStream->time_base, pOutStream->time_base);
-			if(Grid)
+			if(Grid && !IsVideo)
+			{
+				// 音频按包序放到固定网格：每段第 i 包对齐到段起点 + i×frame_size。
+				// 不能沿用输入 pts 平移——AAC priming 让段首 pts 为 0.021s 且末包可能越过段尾，
+				// 段间偏移按视频基准推进后会出现 dts 回退（实测 "1984 >= 1983" 导致整次拼接 EINVAL）。
+				// 包序网格与偏移推进（AudioIndex×frame_size）使用同一基准，天然单调。
+				pPacket->pts = *pOffset + av_rescale_q(*pIndex * AudioSamplesPerPacket, AVRational{1, AudioSampleRate}, pOutStream->time_base);
+				pPacket->dts = pPacket->pts;
+				(*pIndex)++;
+			}
+			else if(Grid)
 			{
 				if(*pFirstPts == AV_NOPTS_VALUE && pPacket->pts != AV_NOPTS_VALUE)
 					*pFirstPts = pPacket->pts;

@@ -1816,6 +1816,7 @@ namespace
 		std::shared_ptr<IHttpRequest> m_pListTask;
 		std::shared_ptr<IHttpRequest> m_pEntityBgPreviewTask;
 		bool m_Requested = false;
+		bool m_RefreshRequested = false;
 		bool m_EntityBgPreviewRequested = false;
 		bool m_LoadFailed = false;
 		std::string m_EntityBgPreviewBaseUrl;
@@ -3249,6 +3250,7 @@ namespace
 		ClearWorkshopDecodeThumbQueue(WorkshopState);
 		ClearWorkshopReadyThumbQueue(WorkshopState);
 		WorkshopState.m_Requested = false;
+		WorkshopState.m_RefreshRequested = false;
 		WorkshopState.m_EntityBgPreviewRequested = false;
 		WorkshopState.m_LoadFailed = false;
 		// Keep m_CacheTime and m_LastRefreshTime for cache reuse
@@ -3400,7 +3402,7 @@ namespace
 		}
 	}
 
-	bool DeleteLocalAssetByTab(IStorage *pStorage, int CurTab, const char *pAssetName)
+	bool DeleteLocalAssetByTab(IStorage *pStorage, int CurTab, const char *pAssetName, const char *pInstallPath = nullptr)
 	{
 		if(IsProtectedAssetName(pAssetName))
 			return false;
@@ -3430,7 +3432,10 @@ namespace
 		}
 
 		char aSingleFilePath[IO_MAX_PATH_LENGTH];
-		str_format(aSingleFilePath, sizeof(aSingleFilePath), "assets/%s/%s.png", pSubFolder, pAssetName);
+		if(pInstallPath != nullptr && pInstallPath[0] != '\0')
+			str_copy(aSingleFilePath, pInstallPath, sizeof(aSingleFilePath));
+		else
+			str_format(aSingleFilePath, sizeof(aSingleFilePath), "assets/%s/%s.png", pSubFolder, pAssetName);
 		bool Removed = pStorage->RemoveFile(aSingleFilePath, IStorage::TYPE_SAVE);
 
 		char aFolderPath[IO_MAX_PATH_LENGTH];
@@ -3564,6 +3569,26 @@ static void ResetCustomItemPreviewState(CMenus::SCustomItem &Item)
 	Item.m_PreviewResidentBytes = 0;
 	Item.m_PreviewResized = false;
 	Item.m_PreviewHighPriority = false;
+}
+
+// 列表重建/合并会把预览队列整个清空、epoch 前进，正在解码的句柄随之作废。
+// 但条目本身还在：它们的 m_PreviewState 停在 LOADING，解码任务却已经没有队列
+// 认领，于是再也不会被重新调度——卡片永远停在灰占位上（实测的「贴图缺失」）。
+// 这里把没有贴图、还挂着 LOADING 的条目退回 UNLOADED，下一帧按正常流程重来。
+static void RestartOrphanedCustomPreviewDecodes(int Tab)
+{
+	const size_t Count = GetCustomItemCount(Tab);
+	for(size_t Index = 0; Index < Count; ++Index)
+	{
+		CMenus::SCustomItem *pItem = GetCustomItemMutable(Tab, Index);
+		if(pItem == nullptr || pItem->m_PreviewState != CMenus::SCustomItem::PREVIEW_STATE_LOADING)
+			continue;
+		// 已经有贴图的条目保持原样：它宁可留在 LOADING 也不该退回重解码。
+		if(pItem->m_RenderTexture.IsValid())
+			continue;
+		// 贴图还没上传，只清预览状态；纹理句柄本来就不是有效的，不额外卸载。
+		ResetCustomItemPreviewState(*pItem);
+	}
 }
 
 template<typename TName>
@@ -3908,7 +3933,9 @@ void CMenus::InvalidateSettingsAssetResourcePlan()
 template<typename TItem>
 static void PublishSettingsAssetMergeEntriesTyped(std::vector<TItem> &vList, int Tab, const std::vector<CMenus::SSettingsAssetMergeEntry> &vEntries, IStorage *pStorage)
 {
-	vList.reserve(vList.size() + vEntries.size());
+	const size_t InsertStart = vList.size();
+	std::vector<TItem> vNewItems;
+	vNewItems.reserve(vEntries.size());
 	for(const CMenus::SSettingsAssetMergeEntry &Entry : vEntries)
 	{
 		// 软重扫（下载/删除后的刷新）不清空列表，靠这里按名字去重：
@@ -3922,13 +3949,62 @@ static void PublishSettingsAssetMergeEntriesTyped(std::vector<TItem> &vList, int
 				break;
 			}
 		}
+		if(!Exists)
+		{
+			for(const TItem &Item : vNewItems)
+			{
+				if(str_comp(Item.m_aName, Entry.m_aName) == 0)
+				{
+					Exists = true;
+					break;
+				}
+			}
+		}
 		if(Exists)
 			continue;
 		TItem Item;
 		str_copy(Item.m_aName, Entry.m_aName);
 		PopulateLocalAssetAuthor(Item, Tab, pStorage);
-		vList.push_back(Item);
+		vNewItems.push_back(std::move(Item));
 	}
+
+	if(vNewItems.empty())
+		return;
+	vList.reserve(vList.size() + vNewItems.size());
+	for(TItem &Item : vNewItems)
+		vList.push_back(std::move(Item));
+
+	// 新条目要落在它自己的位置上，不能一律追加到末尾：追加的话，收尾时
+	// EnsureDefaultAssetVisible 的整表排序会把所有卡片重新编号，用户看到的是
+	// 「新卡先铺到最底部、下一帧再集体跳回正确位置」，换位动画还会按巨大的
+	// 槽位差再走一遍。
+	// 既有前缀已经有序（上次收尾排过）。新追加的这批来自扫描结果、按 str_comp
+	// 有序，但这里的规范顺序是 AssetResourceNameLess（default / blank 置顶），
+	// 两者对 protected 名字的排序不同，所以先按规范顺序把这批排一次。
+	// 只排新条目：它们刚建出来、还没有贴图，排序代价可以忽略。
+	std::stable_sort(vList.begin() + InsertStart, vList.end(), [](const TItem &Left, const TItem &Right) {
+		return AssetResourceNameLess(Left.m_aName, Right.m_aName);
+	});
+
+	// 归并而不是就地插入：这些条目只带拷贝赋值（预览图是深拷贝），逐条移位
+	// 会把图像反复深拷贝一遍。
+	std::vector<TItem> vMerged;
+	vMerged.reserve(vList.size());
+	size_t OldIndex = 0;
+	size_t NewIndex = InsertStart;
+	while(OldIndex < InsertStart && NewIndex < vList.size())
+	{
+		// 同名时保留既有条目在前：它身上带着已经加载好的贴图。
+		if(AssetResourceNameLess(vList[NewIndex].m_aName, vList[OldIndex].m_aName))
+			vMerged.push_back(std::move(vList[NewIndex++]));
+		else
+			vMerged.push_back(std::move(vList[OldIndex++]));
+	}
+	while(OldIndex < InsertStart)
+		vMerged.push_back(std::move(vList[OldIndex++]));
+	while(NewIndex < vList.size())
+		vMerged.push_back(std::move(vList[NewIndex++]));
+	vList.swap(vMerged);
 }
 
 // 软重扫收尾：扫描结果里已经不存在的条目（被删除的）从这里摘掉，
@@ -4098,6 +4174,10 @@ bool CMenus::PrewarmSettingsAssetResources()
 				return false;
 			}
 			std::vector<CAssetListLoadJob::SAssetEntry> vEntries = pJob->TakeEntries();
+			// 只有当前 tab 在绘制时才会真正发起解码，别的 tab 队列本来就是空的；
+			// 而且 gs_vpSearch* 只对当前 tab 重建，拿别的 tab 去遍历会读到过期指针。
+			if(Tab == s_CurCustomTab)
+				RestartOrphanedCustomPreviewDecodes(Tab);
 			++m_aCustomPreviewEpoch[Tab];
 			m_aaCustomPreviewDecodeQueue[Tab].clear();
 			m_aaCustomPreviewReadyQueue[Tab].clear();
@@ -4457,6 +4537,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 		// The list merge below can reallocate backing storage. Drop queued preview pointers
 		// for the current tab before mutating the vectors.
+		// 队列清空后，还挂着 LOADING 却没贴图的条目不会再有队列来认领，先把它们
+		// 退回 UNLOADED，合并落地后会按新列表重新调度，不会停在灰占位上。
+		RestartOrphanedCustomPreviewDecodes(s_CurCustomTab);
 		++m_aCustomPreviewEpoch[s_CurCustomTab];
 		m_aaCustomPreviewDecodeQueue[s_CurCustomTab].clear();
 		m_aaCustomPreviewReadyQueue[s_CurCustomTab].clear();
@@ -4797,6 +4880,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	// 0 = 无事；1 = 整表重载；2 = 实体层层级同步（保贴图，见 RefreshEntityBgHierarchyView）。
 	static std::array<int, NUMBER_OF_ASSETS_TABS> s_aPendingLocalListRefresh{};
 	auto QueueLocalListRefresh = [](int Tab, int Kind) {
+		if(s_aPendingLocalListRefresh[Tab] == 0)
+			++s_AssetsListEntryRestartSeq;
 		s_aPendingLocalListRefresh[Tab] = maximum(s_aPendingLocalListRefresh[Tab], Kind);
 	};
 	auto FlushPendingLocalListRefresh = [&](int Tab) {
@@ -5105,10 +5190,25 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	};
 
 	auto FindCustomItemByPreviewHandle = [](const SSettingsAssetPreviewHandle &Handle) -> SCustomItem * {
-		if(Handle.m_Tab < ASSETS_TAB_ENTITIES || Handle.m_Tab >= NUMBER_OF_ASSETS_TABS || Handle.m_Index >= GetCustomItemCount(Handle.m_Tab))
+		if(Handle.m_Tab < ASSETS_TAB_ENTITIES || Handle.m_Tab >= NUMBER_OF_ASSETS_TABS)
 			return nullptr;
-		SCustomItem *pItem = GetCustomItemMutable(Handle.m_Tab, Handle.m_Index);
-		return pItem != nullptr && SettingsAssetPreviewHandleMatches(Handle, Handle.m_Tab, Handle.m_Epoch, Handle.m_Index, pItem->m_aName) ? pItem : nullptr;
+		// 先按句柄里的下标取，对不上再按名字扫一遍：软重扫合并会重排列表，
+		// 句柄里的下标可能已经指向别的卡。只认下标等于把这张卡正在解码的预览
+		// 整个丢掉——用户看到「加载完又变回灰块」，或者干脆一直停在占位上。
+		const size_t Items = GetCustomItemCount(Handle.m_Tab);
+		if(Handle.m_Index < Items)
+		{
+			SCustomItem *pItem = GetCustomItemMutable(Handle.m_Tab, Handle.m_Index);
+			if(pItem != nullptr && pItem->m_PreviewEpoch == Handle.m_Epoch && SettingsAssetPreviewHandleReferencesAsset(Handle, pItem->m_aName))
+				return pItem;
+		}
+		for(size_t Index = 0; Index < Items; ++Index)
+		{
+			SCustomItem *pItem = GetCustomItemMutable(Handle.m_Tab, Index);
+			if(pItem != nullptr && pItem->m_PreviewEpoch == Handle.m_Epoch && SettingsAssetPreviewHandleReferencesAsset(Handle, pItem->m_aName))
+				return pItem;
+		}
+		return nullptr;
 	};
 
 	auto QueueReadyPreview = [&](SCustomItem *pItem) {
@@ -5800,7 +5900,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			SCustomItem *pItem = FindCustomItemByPreviewHandle(Handle);
 			if(pItem == nullptr)
 				continue;
-			if(pItem->m_PreviewEpoch != Handle.m_Epoch || !SettingsAssetPreviewHandleMatches(Handle, s_CurCustomTab, PreviewEpoch, pItem->m_PreviewListIndex, pItem->m_aName))
+			// 按名字认领：软重扫合并会重排列表，句柄里的下标可能已经过期，
+			// 但那不代表这张卡的解码结果作废——按旧下标比对会把刚解码好的
+			// 贴图整个丢掉，用户看到的就是「加载完又变回灰块」。
+			if(pItem->m_PreviewEpoch != Handle.m_Epoch || !SettingsAssetPreviewHandleReferencesAsset(Handle, pItem->m_aName))
 			{
 				++DroppedStale;
 				char aDropExtra[128];
@@ -5955,7 +6058,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			SCustomItem *pItem = FindCustomItemByPreviewHandle(Handle);
 			if(pItem == nullptr)
 				continue;
-			if(pItem->m_PreviewEpoch != Handle.m_Epoch || !SettingsAssetPreviewHandleMatches(Handle, s_CurCustomTab, PreviewEpoch, pItem->m_PreviewListIndex, pItem->m_aName) ||
+			if(pItem->m_PreviewEpoch != Handle.m_Epoch || !SettingsAssetPreviewHandleReferencesAsset(Handle, pItem->m_aName) ||
 				pItem->m_PreviewState != SCustomItem::PREVIEW_STATE_READY || !pItem->m_PreviewImage.m_pData)
 			{
 				if(pItem->m_PreviewEpoch == Handle.m_Epoch)
@@ -5998,7 +6101,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			CPerfTimer UploadBatchTimer;
 			const bool PreviewWasResized = pItem->m_PreviewResized;
 			const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(pItem->m_aName, s_CurCustomTab, false, Graphics()->ScreenHiDPIScale(), TextureWidth);
-			gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey).m_UploadPending = true;
+			SResourcePreviewState &PreviewCacheState = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
+			PreviewCacheState.m_UploadPending = true;
+			PreviewCacheState.m_AppearStart = 0;
 			// 空白材质的缩略图应当是「什么都没有」，而不是将被屏蔽掉的默认贴图；
 			// 解码仍走内置默认图（只为拿到尺寸与格式），上传前把像素清空即可。
 			if(IsBlankAssetName(pItem->m_aName) && pItem->m_PreviewImage.m_pData != nullptr)
@@ -6109,7 +6214,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		// 换位追随的时间基准：切页/冷却/关动效时直接对齐，不做插值。
 		{
 			const double ReflowNow = time_get();
-			const float ReflowDt = s_LocalReflowLastSec > 0.0 ? (float)(ReflowNow - s_LocalReflowLastSec) : 0.0f;
+			const float ReflowDt = s_LocalReflowLastSec > 0.0 ? (float)((ReflowNow - s_LocalReflowLastSec) / time_freq()) : 0.0f;
 			s_LocalReflowLastSec = ReflowNow;
 			s_LocalCardReflow.BeginFrame(ReflowDt, LocalColumns, g_Config.m_QmUiMotionLevel == 0 || AssetsTabSwitchCooldownActive);
 		}
@@ -6399,12 +6504,28 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 		if(s_DeleteConfirmPopup.m_Confirmed)
 		{
-			if(DeleteLocalAssetByTab(Storage(), s_CurCustomTab, s_aPendingDeleteName))
+			const SWorkshopHudAsset *pWorkshopAsset = FindWorkshopAssetByLocalName(WorkshopStateByTab(s_CurCustomTab), s_aPendingDeleteName);
+			if(DeleteLocalAssetByTab(Storage(), s_CurCustomTab, s_aPendingDeleteName, pWorkshopAsset != nullptr ? pWorkshopAsset->m_InstallPath.c_str() : nullptr))
 			{
 				char aToastText[IO_MAX_PATH_LENGTH + 64];
 				str_format(aToastText, sizeof(aToastText), Localize("Deleted \"%s\""), s_aPendingDeleteName);
 				qm_ui::Toast(EQmToastKind::SUCCESS, aToastText);
 				ResetSelectedAssetToDefault(s_aPendingDeleteName);
+				// 本地 PNG 删除后，商店条目必须回到可下载区；缩略图 webp
+				// 属于商店缓存，保留在 qmclient/workshop/thumbs 下供回迁后的卡片继续预览。
+				if(SWorkshopHudState *pWorkshopState = WorkshopStateByTab(s_CurCustomTab))
+				{
+					for(SWorkshopHudAsset &Asset : pWorkshopState->m_vAssets)
+					{
+						if(str_comp(Asset.m_LocalName.c_str(), s_aPendingDeleteName) == 0)
+						{
+							Asset.m_Installed = false;
+							const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(Asset.m_Id.empty() ? Asset.m_Name.c_str() : Asset.m_Id.c_str(), s_CurCustomTab, true, Graphics()->ScreenHiDPIScale(), 128.0f);
+							gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey).m_AppearStart = 0;
+							break;
+						}
+					}
+				}
 				if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
 				{
 					// 实体层只摘掉这一条：整表重载会把「商店资源」文件夹一起清掉，
@@ -6605,6 +6726,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			pTask->LogProgress(HTTPLOG::FAILURE);
 			pTask->FailOnErrorStatus(false);
 			WorkshopState.m_pListTask = std::move(pTask);
+			WorkshopState.m_RefreshRequested = false;
 			WorkshopState.m_LoadFailed = false;
 			str_copy(WorkshopState.m_aError, "");
 			Http()->Run(WorkshopState.m_pListTask);
@@ -6640,7 +6762,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		}
 
 		// Only start HTTP request if no cache exists (first time or after refresh)
-		if(pCategory->m_WorkshopEnabled && !WorkshopState.m_Requested && !WorkshopState.m_pListTask && WorkshopState.m_vAssets.empty())
+		if(pCategory->m_WorkshopEnabled && !WorkshopState.m_Requested && !WorkshopState.m_pListTask && (WorkshopState.m_vAssets.empty() || WorkshopState.m_RefreshRequested))
 		{
 			StartWorkshopListTask();
 		}
@@ -6794,7 +6916,6 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		}
 
 		bool RefreshLocalList = false;
-
 
 		constexpr int MaxWorkshopThumbDecodeFinalizesPerFrame = 16;
 		// 解码落盘是纯 CPU 操作，滚动期保留小流量让 ready 队列不断供，
@@ -7030,7 +7151,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				const int UploadTab = pAsset->m_ThumbQueuedTab;
 				const int UploadTextureSize = pAsset->m_ThumbRequestedTextureSize;
 				const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(pAsset->m_Id.empty() ? pAsset->m_Name.c_str() : pAsset->m_Id.c_str(), s_CurCustomTab, true, Graphics()->ScreenHiDPIScale(), TextureWidth);
-				gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey).m_UploadPending = true;
+				SResourcePreviewState &PreviewCacheState = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
+				PreviewCacheState.m_UploadPending = true;
+				PreviewCacheState.m_AppearStart = 0;
 				gs_SettingsAssetsResourcePreviewUploadScheduler.EnqueueUploadToTarget(
 					PreviewKey,
 					std::move(pAsset->m_ThumbImage),
@@ -7215,7 +7338,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			s_WorkshopAssetsListBox.DoStart(WorkshopRowHeight, CombinedCount, Columns, 1, OldCombinedSelected, &WorkshopListArea, false, IGraphics::CORNER_ALL);
 			{
 				const double ReflowNow = time_get();
-				const float ReflowDt = s_CombinedReflowLastSec > 0.0 ? (float)(ReflowNow - s_CombinedReflowLastSec) : 0.0f;
+				const float ReflowDt = s_CombinedReflowLastSec > 0.0 ? (float)((ReflowNow - s_CombinedReflowLastSec) / time_freq()) : 0.0f;
 				s_CombinedReflowLastSec = ReflowNow;
 				s_CombinedCardReflow.BeginFrame(ReflowDt, Columns, g_Config.m_QmUiMotionLevel == 0 || AssetsTabSwitchCooldownActive);
 			}
@@ -7823,7 +7946,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 			if(s_WorkshopDeleteConfirmPopup.m_Confirmed)
 			{
-				if(DeleteLocalAssetByTab(Storage(), s_CurCustomTab, s_aWorkshopPendingDeleteName))
+				const SWorkshopHudAsset *pWorkshopAsset = FindWorkshopAssetByLocalName(&WorkshopState, s_aWorkshopPendingDeleteName);
+				if(DeleteLocalAssetByTab(Storage(), s_CurCustomTab, s_aWorkshopPendingDeleteName, pWorkshopAsset != nullptr ? pWorkshopAsset->m_InstallPath.c_str() : nullptr))
 				{
 					char aToastText[IO_MAX_PATH_LENGTH + 64];
 					str_format(aToastText, sizeof(aToastText), Localize("Deleted \"%s\""), s_aWorkshopPendingDeleteName);
@@ -7835,6 +7959,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						if(str_comp(Asset.m_LocalName.c_str(), s_aWorkshopPendingDeleteName) == 0)
 						{
 							Asset.m_Installed = false;
+							const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(Asset.m_Id.empty() ? Asset.m_Name.c_str() : Asset.m_Id.c_str(), s_CurCustomTab, true, Graphics()->ScreenHiDPIScale(), 128.0f);
+							gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey).m_AppearStart = 0;
 							break;
 						}
 					}
@@ -8085,10 +8211,17 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	if(DoButton_Menu_QmIcon(&s_AssetsReloadBtnId, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ReloadButton) || Input()->KeyPress(KEY_F5) || (Input()->KeyPress(KEY_R) && Input()->ModifierIsPressed()))
 	{
 		FlushPersistedLocalAssetAuthorsIfDirty(Storage(), s_CurCustomTab);
-		ClearCustomItems(s_CurCustomTab);
+		// 刷新只重新扫描和同步，保留当前卡片、预览贴图和滚动几何；
+		// 清空列表会触发骨架屏闪烁，并把已有贴图全部变成重新加载。
+		QueueLocalListRefresh(s_CurCustomTab, 1);
 		if(SWorkshopHudState *pWorkshopState = WorkshopStateByTab(s_CurCustomTab))
-			ResetWorkshopState(*pWorkshopState, Graphics(), true);
-		InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::RESOURCE_DIRECTORY_CHANGED);
+		{
+			if(pWorkshopState->m_pListTask)
+				pWorkshopState->m_pListTask->Abort();
+			pWorkshopState->m_pListTask.reset();
+			pWorkshopState->m_RefreshRequested = true;
+			pWorkshopState->m_Requested = false;
+		}
 	}
 	TextRender()->SetRenderFlags(0);
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);

@@ -5,6 +5,7 @@
 #include "UiTokens.h"
 
 #include <base/math.h>
+
 #include <game/localization.h>
 
 #include <algorithm>

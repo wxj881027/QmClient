@@ -927,8 +927,10 @@ public:
 	void OnRender() override;
 	void OnUpdate() override;
 	int RenderThrottleRefreshRate() const override;
-	void OnScreenshotTaken(class CImageInfo &&Image) override;
+	void OnScreenshotTaken(class CImageInfo &&Image, const char *pPath) override;
 	IGraphics::FScreenshotProcessor ScreenshotProcessor() override;
+	void SetPoseCamera(vec2 Center, float Zoom) override;
+	bool PoseSkinsReady() override;
 	void OnDummyDisconnect() override;
 	void OnDummyManualDisconnect() override;
 	virtual void OnRelease();

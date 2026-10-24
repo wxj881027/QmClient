@@ -3174,6 +3174,13 @@ void CChat::OnRender()
 		m_CommandHud.Hide();
 		return;
 	}
+	// 合影超采样静帧：抓帧那一帧聊天不进成片。开关是 IClient::PoseCaptureActive，
+	// 只在抓帧的几帧为真，观看模式（poses_open）仍照常显示聊天。
+	if(Client()->PoseCaptureActive())
+	{
+		m_CommandHud.Hide();
+		return;
+	}
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
 	const bool FocusHideChat = Focus.m_HidePlayerMessages;
 	const bool FocusHideSystemInfoMessages = Focus.m_HideSystemInfoMessages;

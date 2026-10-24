@@ -13,12 +13,65 @@
 
 #include <engine/shared/video.h>
 
+#include <algorithm>
 #include <functional>
 #include <string>
 #include <vector>
 
 struct AVIOContext;
 class CConfig;
+
+// 「导出离屏帧」计划：导出是否改画离屏渲染目标、目标尺寸与多采样数。
+struct SVideoOffscreenPlan
+{
+	// 离屏改画的触发条件（任一成立）：
+	//  - qm_video_fsaa 显式设置（含显式 0：压过全局 FSAA，导出不要窗口的 AA）；
+	//  - 输出大于窗口（真分辨率导出，M7 只支持向下超采样）。
+	bool m_Offscreen = false;
+	// 输出在任一维上大于窗口：离屏不可降级（窗口帧缓冲只有窗口大，
+	// 读回尺寸对不上），离屏失败必须让录制报错终止。
+	bool m_Upscale = false;
+	// 读回（渲染）尺寸：输出不大于窗口时 = 窗口尺寸（沿用 M7 下采样语义），
+	// 任一维超出窗口时 = 输出尺寸（按输出宽高比 1:1 光栅化）。
+	int m_RenderWidth = 0;
+	int m_RenderHeight = 0;
+	// 离屏目标采样数；1 = 单采样。0（显式关）与不支持多采样时都是 1。
+	int m_SampleCount = 1;
+};
+
+// 计算导出离屏参数（纯函数，单测直接覆盖）：
+// - FsaaSetting：qm_video_fsaa（-1 跟随全局，0 关，2/4/8 显式档位）；
+// - GlobalFsaa：gfx_fsaa_samples（跟随全局且需要离屏时按它采样，导出画质不低于游玩）；
+// - MaxRenderTargetSamples：后端报告的离屏目标采样上限（不支持为 1，请求被压回单采样）。
+// 采样预算：目标像素 × 采样数超过 1.28 亿时逐级降档（2/4/8 → 更小），
+// 防止 4K 以上输出叠高倍采样把显存与光栅开销拖爆；降到 1 仍超预算时保持 1。
+inline SVideoOffscreenPlan PlanVideoOffscreenFrame(int ScreenWidth, int ScreenHeight, int OutputWidth, int OutputHeight, int FsaaSetting, int GlobalFsaa, int MaxRenderTargetSamples)
+{
+	SVideoOffscreenPlan Plan;
+	const int OutW = OutputWidth > 0 ? OutputWidth : ScreenWidth;
+	const int OutH = OutputHeight > 0 ? OutputHeight : ScreenHeight;
+	const bool Upscale = OutW > ScreenWidth || OutH > ScreenHeight;
+	Plan.m_Upscale = Upscale;
+	Plan.m_RenderWidth = Upscale ? OutW : ScreenWidth;
+	Plan.m_RenderHeight = Upscale ? OutH : ScreenHeight;
+
+	// -1 跟随全局：窗口路径（不离屏）由窗口帧缓冲自带 AA；因超采样被迫离屏时，
+	// 按全局 FSAA 请求采样，保证「导出画质 ≥ 游玩画质」不被超采样反而稀释。
+	const int Wanted = FsaaSetting == -1 ? GlobalFsaa : FsaaSetting;
+	Plan.m_Offscreen = FsaaSetting != -1 || Upscale;
+	if(!Plan.m_Offscreen)
+		return Plan;
+
+	static constexpr int64_t s_MaxSampledPixels = 128LL * 1000 * 1000;
+	int Samples = Wanted > 1 ? Wanted : 1;
+	const int MaxSupported = std::max(MaxRenderTargetSamples, 1);
+	Samples = std::min(Samples, MaxSupported);
+	const int64_t Pixels = (int64_t)Plan.m_RenderWidth * Plan.m_RenderHeight;
+	while(Samples > 1 && Pixels * Samples > s_MaxSampledPixels)
+		Samples /= 2;
+	Plan.m_SampleCount = Samples;
+	return Plan;
+}
 
 // 进度、拼接和直录共用输出事务；未提交时只清理本次打开的临时文件。
 class CVideoExportOutput

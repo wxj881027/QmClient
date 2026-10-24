@@ -1301,6 +1301,8 @@ private:
 	// 关闭时不创建、不暴露能力；Core 原生管线保持独立可跑。
 	SPipelineContainer m_MediaIslandSdfPipeline;
 	SPipelineContainer m_RoundedRectSdfPipeline;
+	// 圆角容器放图专用变体：片段着色器额外采样一张图片。
+	SPipelineContainer m_RoundedRectSdfTexturePipeline;
 	SPipelineContainer m_ProceduralRingPipeline;
 	bool m_ProceduralRingPipelineValid = false;
 	bool m_ProceduralRingPipelineRequired = false;
@@ -1308,6 +1310,7 @@ private:
 	bool m_GaussianBlurPipelineValid = false;
 	bool m_QmMediaIslandSdfPipelineValid = false;
 	bool m_QmRoundedRectSdfPipelineValid = false;
+	bool m_QmRoundedRectSdfTexturePipelineValid = false;
 	bool m_QmEnhancedSessionDisabled = false;
 	qm_vulkan_ext::EDisableReason m_QmEnhancedDisableReason = qm_vulkan_ext::EDisableReason::NONE;
 
@@ -6439,6 +6442,7 @@ public:
 	[[nodiscard]] bool CreateMediaIslandSdfGraphicsPipeline(const char *pVertName, const char *pFragName);
 
 	[[nodiscard]] bool CreateRoundedRectSdfGraphicsPipeline(const char *pVertName, const char *pFragName);
+	[[nodiscard]] bool CreateRoundedRectSdfTextureGraphicsPipeline(const char *pVertName, const char *pFragName);
 
 	[[nodiscard]] bool CreateProceduralRingGraphicsPipeline(const char *pVertName, const char *pFragName);
 
@@ -7499,7 +7503,12 @@ public:
 		if(HasMultiSampling() && !CreateRenderPass(m_VKRenderTargetMsaaRenderPass, true, false, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, false, m_VKSurfFormat.format, false))
 			return -1;
 		if(m_pBackendCapabilities != nullptr)
+		{
 			m_pBackendCapabilities->m_RenderTargetMSAA = m_VKRenderTargetMsaaRenderPass != VK_NULL_HANDLE;
+			// Vulkan 的离屏 MSAA 通道目前与交换链同采样数（通道只在窗口开 FSAA 时创建），
+			// 因此离屏目标上限 = 当前交换链采样数；窗口不开 FSAA 时离屏多采样不可用。
+			m_pBackendCapabilities->m_RenderTargetMaxSamples = m_VKRenderTargetMsaaRenderPass != VK_NULL_HANDLE ? (int)GetSampleCount() : 1;
+		}
 
 		if(!CreateFramebuffers())
 			return -1;

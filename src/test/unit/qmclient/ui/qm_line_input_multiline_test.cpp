@@ -1,10 +1,10 @@
-#include <test/support/qm_ui_test_input.h>
-
 #include <engine/input.h>
 #include <engine/keys.h>
+
 #include <game/client/lineinput.h>
 
 #include <gtest/gtest.h>
+#include <test/support/qm_ui_test_input.h>
 
 namespace
 {

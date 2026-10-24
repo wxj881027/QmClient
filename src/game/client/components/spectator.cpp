@@ -1188,7 +1188,11 @@ void CSpectator::Spectate(int SpectatorId)
 		m_TeleSearchPending = false;
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
 	{
-		GameClient()->m_DemoSpecId = std::clamp(SpectatorId, (int)SPEC_FOLLOW, MAX_CLIENTS - 1);
+		// 合影预览没有真实的 demo 流，相机脱离角色的唯一入口就是「自由视角」。
+		// 这里如果照旧夹到 SPEC_FOLLOW，玩家点了自由视角也只会跟随某个 Tee，
+		// 鼠标永远推不动镜头。
+		const int MinSpecId = Client()->PoseSessionActive() ? (int)SPEC_FREEVIEW : (int)SPEC_FOLLOW;
+		GameClient()->m_DemoSpecId = std::clamp(SpectatorId, MinSpecId, MAX_CLIENTS - 1);
 		// The tick must be rendered for the spectator mode to be updated, so we do it manually when demo playback is paused
 		// TODO: https://github.com/ddnet/ddnet/issues/11681
 		if(DemoPlayer()->BaseInfo()->m_Paused)

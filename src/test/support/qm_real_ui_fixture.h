@@ -37,6 +37,8 @@ namespace qm_ui_test
 	public:
 		std::vector<IGraphics::SRoundedRectSdfParams> m_vRoundedSubmissions;
 		std::vector<CUIRect> m_vRectSubmissions;
+		// 纹理圆角是设备能力；fixture 默认按 CPU 预烘焙回退，保持既有断言不变。
+		bool m_HasSdfTexture = false;
 		// 测试只改变 framebuffer 设备尺寸，真实字号量化与布局仍由文字引擎执行。
 		void SetFramebufferSize(int Width, int Height)
 		{
@@ -62,6 +64,7 @@ namespace qm_ui_test
 			m_vRectSubmissions.push_back({X, Y, W, H});
 		}
 		bool HasRoundedRectSdf() override { return true; }
+		bool HasRoundedRectSdfTexture() override { return m_HasSdfTexture; }
 		void DestroyRenderTarget(CRenderTargetHandle *pTarget) override
 		{
 			// 设备接口允许销毁空句柄；这个 fixture 不创建离屏目标。

@@ -4630,6 +4630,9 @@ public:
 					SetUnsupportedCommandError(pBaseCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
 			}
+			case CCommandBuffer::CMD_RENDER_TARGET_READBACK_FLUSH:
+				// Metal 的读回在命令内同步完成，没有在途异步读回需要结算。
+				return RUN_COMMAND_COMMAND_HANDLED;
 			case CCommandBuffer::CMD_RENDER_TARGET_CAPTURE_BACKBUFFER:
 			{
 				const bool Success = Cmd_RenderTarget_CaptureBackbuffer(static_cast<const CCommandBuffer::SCommand_RenderTarget_CaptureBackbuffer *>(pBaseCommand));

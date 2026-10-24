@@ -532,6 +532,9 @@ size_t SettingsAssetPreviewResidentBudgetBytes(size_t OverrideMb, int Percent, f
 int SettingsAssetPreviewBudgetedTextureSize(int MaxTextureSize, int MinTextureSize, size_t TextureBudgetBytes, size_t CurrentTextureMemoryBytes, size_t ResidentPreviewBytes);
 std::string SettingsAssetPreviewHandleKey(const SSettingsAssetPreviewHandle &Handle);
 bool SettingsAssetPreviewHandleMatches(const SSettingsAssetPreviewHandle &Handle, int CurrentTab, unsigned CurrentEpoch, size_t CurrentIndex, const char *pName);
+// 只看「这个句柄是不是还在说这张卡」：列表在软重扫合并后会重新排序，条目下标
+// 会变，名字在同一 tab 内唯一且稳定，所以跨帧收尾一律按名字认领。
+bool SettingsAssetPreviewHandleReferencesAsset(const SSettingsAssetPreviewHandle &Handle, const char *pName);
 const char *SettingsWarmupBudgetStopMissReasonName(ESettingsWarmupStopReason StopReason);
 bool SettingsAssetWarmupAllTabsReady(const bool *pReadyTabs, int TabCount);
 int SettingsAssetWarmupNextTab(int CurrentTab, int TabCount);

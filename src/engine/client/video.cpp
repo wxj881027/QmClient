@@ -342,6 +342,21 @@ void CVideo::Stop()
 	// delete 不会与图形线程的录制读回并发。
 	m_pGraphics->WaitForIdle();
 
+	// 离屏导出的读回是异步的：有完成信号的后端稳态两笔在途（上上帧与本帧结算节奏），
+	// 必须在置停止标志并排空转换线程之前按序结算并补交，否则成片缺帧。
+	if(m_OffscreenCapture)
+	{
+		CImageInfo aFinalFrames[2];
+		const int FinalCount = m_pGraphics->FlushVideoFrameReadbacks(aFinalFrames, 2);
+		for(int i = 0; i < FinalCount; ++i)
+		{
+			if(aFinalFrames[i].m_pData != nullptr && IsRecording())
+				SubmitOffscreenFrame(std::move(aFinalFrames[i]));
+			else
+				aFinalFrames[i].Free();
+		}
+	}
+
 	// 视频转换管线：置停止标志并唤醒全部等待者，join 即代表队列已排空且
 	// 所有在途帧按序提交完成（线程退出前完成各自帧的提交）。
 	{
@@ -356,14 +371,22 @@ void CVideo::Stop()
 		pThread->join();
 	m_vpConvertThreads.clear();
 
+	// 先给所有音频线程置停止标志再逐个 join：线程间存在「子线程等父线程清空
+	// m_AudioFrameToFill」的依赖，逐个置位再 join 会让先 join 的线程永远等不到
+	// 尚未收到停止信号的父线程（实测段间切换偶发整段静默无输出）。
 	for(auto &pAudioThread : m_vpAudioThreads)
 	{
+		std::unique_lock<std::mutex> Lock(pAudioThread->m_Mutex);
+		pAudioThread->m_Finished = true;
+		pAudioThread->m_Cond.notify_all();
+	}
+	for(auto &pAudioThread : m_vpAudioThreads)
+	{
+		// 父线程等待在 m_AudioFillMutex 上，只通知 m_Cond 无法唤醒它。
 		{
-			std::unique_lock<std::mutex> Lock(pAudioThread->m_Mutex);
-			pAudioThread->m_Finished = true;
-			pAudioThread->m_Cond.notify_all();
+			std::unique_lock<std::mutex> LockAudio(pAudioThread->m_AudioFillMutex);
+			pAudioThread->m_AudioFillCond.notify_all();
 		}
-
 		pAudioThread->m_Thread.join();
 	}
 	m_vpAudioThreads.clear();
@@ -426,8 +449,41 @@ void CVideo::Stop()
 	pSound->UnpauseAudioDevice();
 }
 
+bool CVideo::AcquireCaptureSlot(size_t &SlotIndex)
+{
+	std::unique_lock<std::mutex> Lock(m_VideoQueueMutex);
+	// 反压：捕获槽耗尽时渲染端等待，离线导出不丢帧、不无界缓冲
+	m_VideoSlotFreeCond.wait(Lock, [this]() -> bool { return !m_vFreeSlots.empty() || m_VideoStop || m_VideoPipelineError; });
+	if(m_VideoStop || m_VideoPipelineError || m_vFreeSlots.empty())
+		return false;
+	SlotIndex = m_vFreeSlots.back();
+	m_vFreeSlots.pop_back();
+	return true;
+}
+
+void CVideo::ReturnCaptureSlot(size_t SlotIndex)
+{
+	std::unique_lock<std::mutex> Lock(m_VideoQueueMutex);
+	m_vFreeSlots.push_back(SlotIndex);
+	m_VideoSlotFreeCond.notify_one();
+}
+
+void CVideo::PublishCaptureSlot(size_t SlotIndex)
+{
+	{
+		std::unique_lock<std::mutex> Lock(m_VideoQueueMutex);
+		m_vVideoSlots[SlotIndex].m_FrameNumber = m_NextVideoFrameToCapture++;
+		m_vPendingSlots.push_back(SlotIndex);
+	}
+	m_VideoSlotReadyCond.notify_one();
+}
+
 void CVideo::NextVideoFrameThread()
 {
+	// 离屏导出模式由主线程经 SubmitOffscreenFrame 提交整帧像素；
+	// 这里再读窗口帧缓冲会一帧双录。
+	if(m_OffscreenCapture)
+		return;
 	if(!IsRecording())
 		return;
 
@@ -436,33 +492,70 @@ void CVideo::NextVideoFrameThread()
 		return;
 
 	size_t SlotIndex;
-	{
-		std::unique_lock<std::mutex> Lock(m_VideoQueueMutex);
-		// 反压：捕获槽耗尽时渲染端等待，离线导出不丢帧、不无界缓冲
-		m_VideoSlotFreeCond.wait(Lock, [this]() -> bool { return !m_vFreeSlots.empty() || m_VideoStop || m_VideoPipelineError; });
-		if(m_VideoStop || m_VideoPipelineError || m_vFreeSlots.empty())
-			return;
-
-		SlotIndex = m_vFreeSlots.back();
-		m_vFreeSlots.pop_back();
-	}
+	if(!AcquireCaptureSlot(SlotIndex))
+		return;
 
 	// GPU 读回的耗时操作在队列锁外执行；槽尚未发布给转换线程，无数据竞争
 	if(!UpdateVideoBufferFromGraphics(SlotIndex))
 	{
 		// 读回失败：归还槽；捕获错误已由 CVideoFrameCapture 置位，后续帧停止录制
-		std::unique_lock<std::mutex> Lock(m_VideoQueueMutex);
-		m_vFreeSlots.push_back(SlotIndex);
-		m_VideoSlotFreeCond.notify_one();
+		ReturnCaptureSlot(SlotIndex);
 		return;
 	}
 
+	PublishCaptureSlot(SlotIndex);
+}
+
+void CVideo::SetOffscreenCapture(bool Offscreen)
+{
+	m_OffscreenCapture = Offscreen;
+}
+
+void CVideo::FailCapture()
+{
+	m_FrameCapture.FailExternal(CVideoFrameCapture::EError::READ_FAILED);
+}
+
+void CVideo::SubmitOffscreenFrame(CImageInfo &&Image)
+{
+	if(!m_OffscreenCapture || !IsRecording())
 	{
-		std::unique_lock<std::mutex> Lock(m_VideoQueueMutex);
-		m_vVideoSlots[SlotIndex].m_FrameNumber = m_NextVideoFrameToCapture++;
-		m_vPendingSlots.push_back(SlotIndex);
+		Image.Free();
+		return;
 	}
-	m_VideoSlotReadyCond.notify_one();
+
+	// 与窗口路径同一跳过节奏（前两帧不录），否则离屏/窗口两条路径的
+	// 帧号与音画对齐会在模式切换时不一致。
+	m_VideoFrameIndex += 1;
+	if(m_VideoFrameIndex < 2)
+	{
+		Image.Free();
+		return;
+	}
+
+	const bool Valid = Image.m_pData != nullptr &&
+			   Image.m_Format == CImageInfo::FORMAT_RGBA &&
+			   Image.m_Width == (size_t)m_Width &&
+			   Image.m_Height == (size_t)m_Height;
+	size_t SlotIndex;
+	if(!Valid || !AcquireCaptureSlot(SlotIndex))
+	{
+		// 像素非法按读回失败处理：复用同一错误通道，录制按既有流程停止。
+		if(!Valid)
+		{
+			log_error("videorecorder", "offscreen frame is %s (expected %d x %d)",
+				Image.m_pData == nullptr ? "empty" : "invalid", m_Width, m_Height);
+			m_FrameCapture.FailExternal(CVideoFrameCapture::EError::READ_FAILED);
+		}
+		Image.Free();
+		return;
+	}
+
+	// 像素所有权从读回的裸缓冲转到捕获槽向量；这里的一次整帧拷贝换来
+	// 两条捕获路径共用同一套槽生命周期与转换线程接口。
+	m_vVideoSlots[SlotIndex].m_vRGBA.assign(Image.m_pData, Image.m_pData + (size_t)m_Width * m_Height * 4);
+	Image.Free();
+	PublishCaptureSlot(SlotIndex);
 }
 
 void CVideo::NextVideoFrame()
@@ -478,12 +571,12 @@ void CVideo::NextAudioFrameTimeline(ISoundMixFunc Mix)
 {
 	if(IsRecording() && m_HasAudio)
 	{
-		double SamplesPerFrame = (double)m_AudioStream.m_pCodecContext->sample_rate / m_FPS;
 		while(IsRecording() && m_AudioStream.m_SamplesFrameCount >= m_AudioStream.m_SamplesCount)
 		{
 			NextAudioFrame(Mix);
 		}
-		m_AudioStream.m_SamplesFrameCount += SamplesPerFrame;
+		AdvanceVideoAudioTimeline(m_AudioStream.m_SamplesFrameCount, m_AudioStream.m_SamplesFrameRemainder,
+			m_AudioStream.m_pCodecContext->sample_rate, m_FPS);
 	}
 }
 
@@ -568,8 +661,11 @@ void CVideo::RunAudioThread(size_t ParentThreadIndex, size_t ThreadIndex)
 				std::unique_lock<std::mutex> LockParent(pParentThreadData->m_AudioFillMutex);
 				if(pParentThreadData->m_AudioFrameToFill != 0 && pThreadData->m_AudioFrameToFill >= pParentThreadData->m_AudioFrameToFill)
 				{
-					// wait for the parent to finish its frame
-					pParentThreadData->m_AudioFillCond.wait(LockParent, [&pParentThreadData]() -> bool { return pParentThreadData->m_AudioFrameToFill == 0; });
+					// wait for the parent to finish its frame。停止路径必须能打断这个等待：
+					// 父线程可能已退出循环、再也不会清空 m_AudioFrameToFill，只等 0 会永久阻塞。
+					pParentThreadData->m_AudioFillCond.wait(LockParent, [&pParentThreadData, &pThreadData]() -> bool {
+						return pParentThreadData->m_AudioFrameToFill == 0 || pParentThreadData->m_Finished || pThreadData->m_Finished;
+					});
 				}
 			}
 			{
@@ -920,15 +1016,51 @@ bool CVideo::OpenAudio()
 bool CVideo::AddStream(COutputStream *pStream, AVFormatContext *pFormatContext, const AVCodec **ppCodec, enum AVCodecID CodecId) const
 {
 	/* find the encoder */
-	if(pStream == &m_VideoStream && g_Config.m_QmVideoEncoder[0] != '\0')
+	if(pStream == &m_VideoStream)
 	{
-		// 只查所选编码器；全清单探测会初始化无关 GPU 驱动并阻塞主线程。
-		// 实际 OpenVideo 按输出参数初始化并报告失败，不静默回退软件编码器。
-		*ppCodec = video_encoder::FindEncoderForRecording(g_Config.m_QmVideoEncoder);
-		if(!*ppCodec)
+		// 编码器选择优先级：显式配置（含 h264/hevc/av1 家族别名）→ 4K 自动硬件 → 封装器默认。
+		// 别名让预设不必写死某个厂商：没有 NVENC 的机器会自动落到 QSV/AMF/软件实现。
+		const char *pConfigured = g_Config.m_QmVideoEncoder;
+		char aEncoder[48];
+		bool HaveEncoder = false;
+		if(pConfigured[0] != '\0')
 		{
-			log_error("videorecorder", "Video encoder '%s' is unknown or not built into FFmpeg; clear qm_video_encoder or pick one from the export settings.", g_Config.m_QmVideoEncoder);
-			return false;
+			// 只查所选编码器；全清单探测会初始化无关 GPU 驱动并阻塞主线程。
+			// 实际 OpenVideo 按输出参数初始化并报告失败，不静默回退软件编码器。
+			if(!video_encoder::ResolveEncoderAlias(pConfigured, aEncoder, sizeof(aEncoder)))
+			{
+				log_error("videorecorder", "Video encoder '%s' is unknown or has no usable implementation on this machine; clear qm_video_encoder or pick one from the export settings.", pConfigured);
+				return false;
+			}
+			HaveEncoder = true;
+		}
+		else if(video_encoder::ShouldAutoPickHardware(pConfigured, m_OutputHeight))
+		{
+			// 4K 下软件 x264 达不到录制帧率（实测 4K60 约 38 fps），默认切硬件；
+			// 机器没有任何可用硬件编码器时静默保持封装器默认，不因自动选择而让导出失败。
+			const char *pPreferred = video_encoder::PreferredEncoderForFamily("hevc");
+			if(pPreferred[0] == '\0')
+				pPreferred = video_encoder::PreferredEncoderForFamily("h264");
+			if(pPreferred[0] != '\0')
+			{
+				str_copy(aEncoder, pPreferred, sizeof(aEncoder));
+				HaveEncoder = true;
+				log_info("videorecorder", "Auto-selected hardware encoder '%s' for %dp output", aEncoder, m_OutputHeight);
+			}
+		}
+
+		if(HaveEncoder)
+		{
+			*ppCodec = video_encoder::FindEncoderForRecording(aEncoder);
+			if(!*ppCodec)
+			{
+				log_error("videorecorder", "Could not initialize encoder '%s'", aEncoder);
+				return false;
+			}
+		}
+		else
+		{
+			*ppCodec = avcodec_find_encoder(CodecId);
 		}
 	}
 	else
@@ -1005,9 +1137,13 @@ bool CVideo::AddStream(COutputStream *pStream, AVFormatContext *pFormatContext, 
 	}
 
 	case AVMEDIA_TYPE_VIDEO:
+	{
 		pContext->codec_id = (*ppCodec)->id;
 
-		pContext->bit_rate = 400000;
+		// 不再设置 legacy 的 bit_rate=400000：当前全部编码器家族都是质量值模式
+		// （CRF/CQ/CQP/ICQ 或 profile 固定），x264/NVENC 会忽略该值，但 libsvtav1
+		// 在 bit_rate 与 crf 同时出现时直接拒绝打开编码器（bad parameter 0x80001005，
+		// CLI 同版本可复现）。未来接入码率驱动编码器时必须显式配置而非沿用此值。
 		/* Resolution must be a multiple of two (chroma-subsampled formats require even dims). */
 		pContext->width = m_OutputWidth % 2 == 0 ? m_OutputWidth : m_OutputWidth - 1;
 		pContext->height = m_OutputHeight % 2 == 0 ? m_OutputHeight : m_OutputHeight - 1;
@@ -1024,20 +1160,46 @@ bool CVideo::AddStream(COutputStream *pStream, AVFormatContext *pFormatContext, 
 		pContext->framerate = AVRational{m_FPS, 1};
 
 		// GOP 可配置（M4）：默认 60（原 12 为 FFmpeg 示例遗留，偏小）。
-		pContext->gop_size = g_Config.m_QmVideoGop > 0 ? g_Config.m_QmVideoGop : video_encoder::DEFAULT_GOP;
+		// 1 = 全帧内：每帧都是关键帧，剪辑任意切点、随机定位与 ProRes 等价，
+		// 体积仍远小于 ProRes（实测同画质约为其 1/17）。
+		const int RequestedGop = g_Config.m_QmVideoGop > 0 ? g_Config.m_QmVideoGop : video_encoder::DEFAULT_GOP;
+		// NVENC 拒绝 gop_size=1（InitializeEncoder: "Gop Length should be greater than
+		// number of B frames + 1"），降到 2 = 隔帧关键帧；否则请求全帧内会直接打不开编码器。
+		const bool IsNvencEncoder = str_find_nocase((*ppCodec)->name, "nvenc") != nullptr;
+		if(RequestedGop <= 1 && IsNvencEncoder)
+		{
+			log_warn("videorecorder", "Encoder '%s' cannot encode all-intra; using a keyframe every 2 frames", (*ppCodec)->name);
+			pContext->gop_size = 2;
+		}
+		else
+		{
+			pContext->gop_size = RequestedGop;
+		}
 		// 分段拼接要求无 B 帧（仅限分段导出；整段导出保留 B 帧压缩收益）：
 		// matroska 段不存储 dts（只有 block timecode），demuxer 对段首 B 帧序列给出
 		// dts=AV_NOPTS_VALUE；拼接时 muxer 需经重排序窗口从 pts 推导 dts，而该窗口
 		// 在段边界携带上一段尾部状态，导致段 2 首包推导出倒退 dts（EINVAL）。
 		// 无 B 帧时 pts==dts==解码序，网格严格单调，拼接天然无重排序。
-		if(g_Config.m_QmVideoSegmentSeconds > 0)
+		// 全帧内导出同样禁用 B 帧：I 帧之间没有参考帧，B 帧没有收益。
+		if(g_Config.m_QmVideoSegmentSeconds > 0 || RequestedGop <= 1)
 			pContext->max_b_frames = 0;
-		// 像素格式协商（M4/M6）：按编码器家族的期望列表协商（剪辑格式 422 10bit、FFV1 444 优先）。
-		pContext->pix_fmt = video_encoder::NegotiatePixelFormat(*ppCodec, pContext, video_encoder::WantedPixelFormatsFor((*ppCodec)->name));
+		// 像素格式协商（M4/M6）：家族默认列表叠加 qm_video_pixfmt 偏好。
+		const video_encoder::EPixelFormat PixFmtPreference = (video_encoder::EPixelFormat)std::clamp(g_Config.m_QmVideoPixelFormat, 0, 3);
+		const AVPixelFormat *pWanted = video_encoder::WantedPixelFormatsForPreference(
+			(*ppCodec)->name, PixFmtPreference, video_encoder::WantedPixelFormatsFor((*ppCodec)->name));
+		pContext->pix_fmt = video_encoder::NegotiatePixelFormat(*ppCodec, pContext, pWanted);
 		if(pContext->pix_fmt == AV_PIX_FMT_NONE)
 		{
-			log_error("videorecorder", "Encoder '%s' does not support any usable pixel format", (*ppCodec)->name);
+			log_error("videorecorder", "Encoder '%s' does not support the requested pixel format (qm_video_pixfmt %d)", (*ppCodec)->name, g_Config.m_QmVideoPixelFormat);
 			return false;
+		}
+		// ProRes profile 必须与像素格式匹配：4444 配 422 输入会让编码器补成 12bit 422
+		// （实测体积 +48%、画质零收益），因此按实际协商出的格式推导，而不是看质量值。
+		int ProresProfile = g_Config.m_QmVideoProresProfile;
+		if(ProresProfile < 0)
+		{
+			const bool Is444 = pContext->pix_fmt == AV_PIX_FMT_YUV444P10LE || pContext->pix_fmt == AV_PIX_FMT_YUV444P12LE || pContext->pix_fmt == AV_PIX_FMT_YUV444P;
+			ProresProfile = Is444 ? 4 : 3;
 		}
 		pContext->colorspace = COLOR_SPACE;
 		// 完整色彩元数据（M6）：剪辑软件（Premiere/Resolve）导入颜色一致所需，
@@ -1063,13 +1225,14 @@ bool CVideo::AddStream(COutputStream *pStream, AVFormatContext *pFormatContext, 
 		{
 			const int QualityValue = g_Config.m_QmVideoQuality >= 0 ? g_Config.m_QmVideoQuality : g_Config.m_ClVideoX264Crf;
 			int QualityKind = (int)video_encoder::EQualityKind::NONE;
-			if(!video_encoder::ApplyQualityOptions(pContext, (*ppCodec)->name, QualityValue, g_Config.m_ClVideoX264Preset, QualityKind))
+			if(!video_encoder::ApplyQualityOptions(pContext, (*ppCodec)->name, QualityValue, g_Config.m_ClVideoX264Preset, QualityKind, ProresProfile))
 			{
 				log_error("videorecorder", "Encoder '%s' rejected the quality options (quality %d, preset %d)", (*ppCodec)->name, QualityValue, g_Config.m_ClVideoX264Preset);
 				return false;
 			}
 		}
 		break;
+	}
 
 	default:
 		break;

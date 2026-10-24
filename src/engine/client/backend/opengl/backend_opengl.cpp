@@ -19,6 +19,7 @@
 #include <engine/client/blocklist_driver.h>
 #include <engine/gfx/image_manipulation.h>
 
+#include <algorithm>
 #include <limits>
 
 #ifndef BACKEND_AS_OPENGL_ES
@@ -612,6 +613,17 @@ bool CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
 	}
 
 	pCommand->m_pCapabilities->m_RenderTargetMSAA = pCommand->m_pCapabilities->m_RenderTargets && pCommand->m_pCapabilities->m_ShaderSupport && MajorV >= 3;
+	// 离屏多采样的上限来自设备（GL_MAX_SAMPLES），与窗口 FSAA 配置无关：
+	// 视频导出要在窗口不开 AA 的机器上按 qm_video_fsaa 请求离屏 MSAA。
+	if(pCommand->m_pCapabilities->m_RenderTargetMSAA)
+	{
+		GLint MaxRenderTargetSamples = 0;
+		glGetIntegerv(GL_MAX_SAMPLES, &MaxRenderTargetSamples);
+		pCommand->m_pCapabilities->m_RenderTargetMaxSamples = std::clamp(MaxRenderTargetSamples, 1, 64);
+	}
+	// GL 的读回命令（PBO 路径与无 PBO 的同步回退）写完像素后都会点亮完成信号，
+	// 视频离屏导出可以此做阻塞结算，让主线程与渲染线程按帧重叠。
+	pCommand->m_pCapabilities->m_ReadbackCompletionSignal = pCommand->m_pCapabilities->m_RenderTargets;
 	pCommand->m_pCapabilities->m_pRenderTargetSupportReason = pCommand->m_pCapabilities->m_RenderTargets ? "supported" : "opengl_context_without_render_target_support";
 
 	if(*pCommand->m_pInitError != -2)
@@ -1237,6 +1249,9 @@ ERunCommandReturnTypes CCommandProcessorFragment_OpenGL::RunCommand(const CComma
 		break;
 	case CCommandBuffer::CMD_RENDER_TARGET_READBACK:
 		Cmd_RenderTarget_Readback(static_cast<const CCommandBuffer::SCommand_RenderTarget_Readback *>(pBaseCommand));
+		break;
+	case CCommandBuffer::CMD_RENDER_TARGET_READBACK_FLUSH:
+		Cmd_RenderTarget_ReadbackFlush(static_cast<const CCommandBuffer::SCommand_RenderTarget_ReadbackFlush *>(pBaseCommand));
 		break;
 	case CCommandBuffer::CMD_TRY_SWAP_AND_READ_PIXEL:
 		Cmd_ReadPixel(static_cast<const CCommandBuffer::SCommand_TrySwapAndReadPixel *>(pBaseCommand));

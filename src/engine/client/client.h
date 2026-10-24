@@ -17,6 +17,7 @@
 #include <engine/client/ghost.h>
 #include <engine/client/serverbrowser.h>
 #include <engine/client/updater.h>
+#include <engine/client/video_export.h>
 #include <engine/editor.h>
 #include <engine/graphics.h>
 #include <engine/http.h>
@@ -169,6 +170,8 @@ class CClient : public IClient, public CDemoPlayer::IListener
 
 	char m_aCurrentMap[IO_MAX_PATH_LENGTH] = "";
 	char m_aCurrentMapPath[IO_MAX_PATH_LENGTH] = "";
+	// 缺少地图的合影：记下路径等界面来取，取走后清空。
+	char m_aPendingPoseMapPath[IO_MAX_PATH_LENGTH] = "";
 
 	char m_aTimeoutCodes[NUM_DUMMIES][32] = {"", ""};
 	bool m_aDidPostConnect[NUM_DUMMIES] = {false, false};
@@ -179,6 +182,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 
 	char m_aCmdConnect[256] = "";
 	char m_aCmdPlayDemo[IO_MAX_PATH_LENGTH] = "";
+	char m_aCmdOpenPoses[IO_MAX_PATH_LENGTH] = "";
 	char m_aCmdEditMap[IO_MAX_PATH_LENGTH] = "";
 
 	// map download
@@ -569,6 +573,21 @@ public:
 	static void Con_Ping(IConsole::IResult *pResult, void *pUserData);
 	static void ConNetReset(IConsole::IResult *pResult, void *pUserData);
 	static void Con_Screenshot(IConsole::IResult *pResult, void *pUserData);
+	// 合影渲染三条入口，共用「读 .poses → 合成快照 → 应用」的同一段准备逻辑：
+	//   poses_open    游戏内观看（与 demo 回放同一路径：相机可自由移动）
+	//   poses_render  导出静态截图
+	//   poses_video   导出视频（走与 demo 导出相同的录制管线）
+	static void Con_RenderPoses(IConsole::IResult *pResult, void *pUserData);
+	static void Con_PosesOpen(IConsole::IResult *pResult, void *pUserData);
+	static void Con_PosesVideo(IConsole::IResult *pResult, void *pUserData);
+	static void Con_PosesClose(IConsole::IResult *pResult, void *pUserData);
+
+	// 读文件 + 解析 + 合成快照 + 应用两次。失败返回 false 并打印原因。
+	// 成功后客户端进入合影会话（m_PoseSessionActive）。
+	bool EnterPoseSession(const char *pPosesPath, int &TeeCountOut, const char *pMapPath = nullptr);
+	bool EnsurePosePlaybackContext(const char *pMapPath);
+	// 退出合影会话：清空合成快照，让普通渲染恢复。
+	void LeavePoseSession();
 
 #if defined(CONF_VIDEORECORDER)
 	void StartVideo(const char *pFilename, bool WithTimestamp);
@@ -649,6 +668,75 @@ public:
 	IDemoRecorder *DemoRecorder(int Recorder) override;
 	CDemoRecorder (&DemoRecorders())[RECORDER_MAX];
 
+	// 合影渲染：把外部合成的快照装成当前快照，让既有渲染管线照常绘制。
+	// 只接受完整快照（不走 delta），并直接替换 SNAP_CURRENT / SNAP_PREV 两个槽。
+	bool ApplySyntheticSnapshot(const void *pData, int Size, int Tick) override;
+	void ClearSyntheticSnapshot() override;
+	bool RequestPoseScreenshot(const char *pFilename, int Scale = 1, bool KeepSession = false) override;
+	// 本帧是否要把整幅画面画进超采样离屏目标（Begin 失败时为 false，退回窗口截图）。
+	bool m_PoseOffscreenActive = false;
+	// 请求的倍数（1 = 直接抓窗口帧缓冲）；越界值在 RequestPoseScreenshot 里归一。
+	int m_PoseScreenshotScale = 1;
+	// 拍摄期间临时覆盖的 cl_overlay_entities；-1 表示没有覆盖。
+	int m_PoseEntityOverlayPrevious = -1;
+	// 开始/结束超采样离屏帧：结束时读回图像并按截图规则落盘，失败则退回窗口截图。
+	bool BeginPoseOffscreenCapture();
+	void FinishPoseOffscreenCapture();
+
+	// 挂起的合影截图：非空时渲染完成后立即抓帧，然后把合成快照撤掉。
+	char m_aPoseScreenshotPath[IO_MAX_PATH_LENGTH] = "";
+	bool m_PoseScreenshotPending = false;
+	// 本帧已提交截图请求，Swap 之后用它触发合成快照复位。
+	bool m_PoseScreenshotHandled = false;
+	// 进入会话的那一帧画的还是菜单/上一份画面：等合影真正画过两帧再抓图。
+	int m_PoseScreenshotWarmupFrames = 0;
+	// 皮肤等待的起始时刻（0 = 没在等）。社区皮肤是异步加载的，等太久必须放行，
+	// 否则断网/下载失败时渲染会永远卡住。
+	int64_t m_PoseSkinWaitStart = 0;
+	// 皮肤闸门一次抓帧只判定一次：判定通过后渲染前/渲染后两次检查都直接放行。
+	// 否则渲染后那次会把等待计时重置，离屏帧刚开画又要等最多 5 秒，这期间客户端
+	// 一直按 N 倍分辨率渲染（Vulkan 上还会带着活动渲染目标 Swap）。
+	bool m_PoseSkinsGatePassed = false;
+
+	// 合影会话是否进行中。进行中时 demo 播放器被暂停，合成快照不会被覆盖。
+	bool m_PoseSessionActive = false;
+	// 合影取景：进入会话时按所有 Tee 的包围盒算一次，之后由预览 HUD 缩放/平移。
+	vec2 m_PoseCameraCenter = vec2(0.0f, 0.0f);
+	float m_PoseCameraZoom = 1.0f;
+	// 自动适配出来的取景原样保留，HUD 的「适配取景」直接回到这一份。
+	vec2 m_PoseFitCenter = vec2(0.0f, 0.0f);
+	float m_PoseFitZoom = 1.0f;
+	// zoom=1 时可见世界宽高：把 HUD 的像素位移换算成世界位移。
+	float m_PoseViewBaseWidth = 0.0f;
+	float m_PoseViewBaseHeight = 0.0f;
+	// 当前会话的 .poses 路径（HUD 拼输出文件名的默认值）。
+	char m_aPoseSource[IO_MAX_PATH_LENGTH] = "";
+	// 拍一张后继续留在预览里（HUD 连拍），渲染则出图即收尾。
+	bool m_PoseCaptureKeepSession = false;
+	// 成片锐化强度（0-100，0 = 不处理）。只作用于超采样离屏成片。
+	int m_PoseSharpenAmount = 0;
+	// 合影会话保持的合成快照（退出时用来恢复，以及视频导出期间反复应用）。
+	CSnapshotBuffer m_PoseSnapshot;
+	int m_PoseSnapshotSize = 0;
+	int m_PoseSnapshotTick = 0;
+	// 合影视频导出：还要录多少秒（<= 0 表示不在录制）。
+	float m_PoseVideoSecondsLeft = 0.0f;
+	// 目标总秒数与已写帧数：用帧数判断结束，避免浮点累减提前/延后一帧。
+	float m_PoseVideoTotalSeconds = 0.0f;
+	int m_PoseVideoFramesWritten = 0;
+	// 录制起步同样要跳过菜单帧，否则成片开头会出现回放列表。
+	int m_PoseVideoWarmupFrames = 0;
+	// 合影视频导出期间主动推进一帧录制；秒数用完就收尾。
+	void AdvancePoseVideo();
+	// 抓帧前的皮肤闸门：就绪或超时才放行，期间负责推进皮肤加载。
+	bool PoseSkinsReadyForCapture();
+
+	// 视频导出离屏帧：导出 FSAA（qm_video_fsaa）或输出大于窗口时，整段录制把
+	// 每帧画面画进跨帧复用的离屏目标（可选多采样），读回后经 SubmitOffscreenFrame
+	// 提交编码；窗口照常回绘预览。Begin 失败时一次性降级回读窗口帧缓冲的旧路径。
+	SVideoOffscreenPlan m_VideoOffscreenPlan;
+	bool m_VideoOffscreenFailed = false;
+
 	void AutoScreenshot_Start() override;
 	void AutoStatScreenshot_Start() override;
 	void AutoScreenshot_Cleanup();
@@ -662,6 +750,7 @@ public:
 	void HandleConnectAddress(const NETADDR *pAddr);
 	void HandleConnectLink(const char *pLink);
 	void HandleDemoPath(const char *pPath);
+	void HandlePosesPath(const char *pPath);
 	void HandleMapPath(const char *pPath);
 
 	virtual void InitChecksum();
@@ -682,6 +771,18 @@ public:
 
 	const char *GetCurrentMap() const override;
 	const char *GetCurrentMapPath() const override;
+	bool PoseSessionActive() const override { return m_PoseSessionActive; }
+	// 抓帧那几帧为真：HUD/状态栏/聊天据此让位，成片只留世界与名字牌。
+	bool PoseCaptureActive() const override { return m_PoseScreenshotPending || m_PoseScreenshotHandled || m_PoseOffscreenActive; }
+	const char *PendingPoseMapPath() const override { return m_aPendingPoseMapPath; }
+	void ClearPendingPoseMapPath() override { m_aPendingPoseMapPath[0] = '\0'; }
+	bool PoseCameraView(vec2 *pCenter, float *pZoom) const override;
+	void PoseCameraZoomBy(float Factor) override;
+	void PoseCameraPanFraction(float FracX, float FracY) override;
+	void PoseCameraFit() override;
+	float PoseCameraZoomLevel() const override;
+	const char *PoseSource() const override { return m_aPoseSource; }
+	bool RequestPoseCapture(const char *pFilename, int Scale, bool KeepSession, int Sharpen = 0, bool EntityLayer = false) override;
 
 	void RaceRecord_Start(const char *pFilename) override;
 	void RaceRecord_Stop() override;

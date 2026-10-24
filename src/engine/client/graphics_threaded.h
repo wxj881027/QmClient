@@ -154,6 +154,7 @@ public:
 		CMD_RENDER_TARGET_CAPTURE_BACKBUFFER,
 		CMD_RENDER_TARGET_GAUSSIAN_BLUR_PASS,
 		CMD_RENDER_TARGET_READBACK,
+		CMD_RENDER_TARGET_READBACK_FLUSH, // 结算在途的 PBO 异步读回（像素拷出并点亮完成信号）
 
 		// opengl 2.0+ commands (some are just emulated and only exist in opengl 3.3+)
 		CMD_CREATE_BUFFER_OBJECT, // create vbo
@@ -374,6 +375,15 @@ public:
 			SCommand(CMD_RENDER_TARGET_READBACK) {}
 		int m_TargetId = -1;
 		CImageInfo *m_pImage = nullptr;
+		// 读回真正结算（像素落地）时点亮的完成信号；空表示调用方不轮询。
+		// PBO 双缓冲下结算发生在后续的读回/Flush 命令里，不能在命令返回时提前点亮。
+		CSemaphore *m_pCompletion = nullptr;
+	};
+
+	struct SCommand_RenderTarget_ReadbackFlush : public SCommand
+	{
+		SCommand_RenderTarget_ReadbackFlush() :
+			SCommand(CMD_RENDER_TARGET_READBACK_FLUSH) {}
 	};
 
 	struct SCommand_CreateBufferObject : public SCommand
@@ -937,6 +947,7 @@ public:
 	virtual bool IsConfigModernAPI() { return false; }
 	virtual bool HasMediaIslandSdf() { return false; }
 	virtual bool HasRoundedRectSdf() { return false; }
+	virtual bool HasRoundedRectSdfTexture() { return false; }
 	virtual bool HasProceduralRing() { return false; }
 	virtual bool UseTrianglesAsQuad() { return false; }
 	virtual bool HasTileBuffering() { return false; }
@@ -947,6 +958,10 @@ public:
 	virtual bool HasRenderTargetGaussianBlur() { return false; }
 	virtual bool HasBackbufferCapture() { return false; }
 	virtual bool HasRenderTargetMSAA() { return false; }
+	virtual int RenderTargetMaxSamples() { return 1; }
+	// 读回命令是否保证点亮完成信号（GL 是；Vulkan/Metal 的命令表没有完成回调，
+	// 只能靠整体空闲定序）。决定视频离屏读回能否用阻塞结算做帧间重叠。
+	virtual bool ReadbackCompletionSignal() const { return false; }
 	virtual bool RenderTargetExternalPassRequiresSingleSample() { return false; }
 	virtual const char *RenderTargetSupportReason() { return HasRenderTargets() ? "supported" : "unsupported_by_backend"; }
 	virtual bool Uses2DTextureArrays() { return false; }
@@ -1003,6 +1018,8 @@ class CGraphics_Threaded : public IEngineGraphics
 	bool m_GLRenderTargetGaussianBlurSupported;
 	bool m_GLBackbufferCaptureSupported;
 	bool m_GLRenderTargetMSAASupported;
+	// 离屏渲染目标的设备最大采样数（GL_MAX_SAMPLES / 交换链采样数），与窗口 FSAA 配置无关。
+	int m_RenderTargetMaxSamples = 1;
 	bool m_GLRenderTargetExternalPassRequiresSingleSample;
 	uint32_t m_MultiSamplingCount;
 	int m_PendingMultiSamplingCount;
@@ -1034,9 +1051,40 @@ class CGraphics_Threaded : public IEngineGraphics
 	CQmRoundedRectDirections m_RoundedRectDirections;
 	EDrawing m_Drawing;
 	bool m_DoScreenshot;
+	// 等待窗口获得输入焦点的帧数。超时后放弃并报错，避免请求永远挂着。
+	int m_ScreenshotWaitFrames = 0;
 	char m_aScreenshotName[IO_MAX_PATH_LENGTH];
 	FScreenshotCallback m_pfnScreenshotCallback;
 	FScreenshotProcessor m_pfnScreenshotProcessor;
+	// 合影超采样静帧的离屏帧状态：目标失效表示当前没有离屏帧在渲染。
+	CRenderTargetHandle m_OffscreenFrameTarget;
+	int m_OffscreenFrameWidth = 0;
+	int m_OffscreenFrameHeight = 0;
+	int m_OffscreenFrameSavedWidth = 0;
+	int m_OffscreenFrameSavedHeight = 0;
+
+	// 视频导出离屏帧状态：目标跨帧复用（整段录制只建一次），尺寸或采样数变化时重建。
+	// 与静帧离屏不同，视频每帧都要回绘窗口保持预览，并从 resolve 后的单采样纹理读回。
+	// m_VideoFrameActive 标记「本帧已 Begin 未 End」，与句柄有效性分家：句柄有效只代表可复用。
+	// 读回在途环形缓冲：有完成信号的后端（GL）稳态两笔在途，EndVideoFrame 结算「上上帧」，
+	// 主线程领先渲染线程一帧，本帧命令录制与渲染执行重叠；无信号后端（Vulkan/Metal）
+	// 稳态一笔，逐帧整体等待后结算。录制收尾由 FlushVideoFrameReadbacks 排空全部在途。
+	CRenderTargetHandle m_VideoFrameTarget;
+	bool m_VideoFrameActive = false;
+	CRenderTargetReadbackHandle m_aVideoFramePendingReadbacks[2];
+	int m_VideoFramePendingReadbackCount = 0;
+	bool m_ReadbackCompletionSignal = false;
+	int m_VideoFrameWidth = 0;
+	int m_VideoFrameHeight = 0;
+	int m_VideoFrameSampleCount = 1;
+	int m_VideoFrameSavedWidth = 0;
+	int m_VideoFrameSavedHeight = 0;
+
+	// 截图命名与目录解析（screenshots/ + 时间戳 + media_paths），
+	// 供 TakeScreenshot 与「从内存图像落盘」共用，保证两条路径落盘规则一致。
+	bool PrepareScreenshotPath(const char *pFilename);
+	// 回调在编码真正写完之后由渲染线程触发：照片卡拿到的路径一定已经落盘。
+	void QueueScreenshotSave(CImageInfo &&Image, FScreenshotProcessor pfnProcessor, FScreenshotCallback pfnCallback = nullptr);
 #if defined(CONF_PLATFORM_MACOS)
 	bool m_MacosGraphicsDiagnosticsEnabled = false;
 	uint32_t m_MacosGraphicsDiagnosticFrameCount = 0;
@@ -1170,6 +1218,15 @@ class CGraphics_Threaded : public IEngineGraphics
 	ColorRGBA *m_pReadPixelColor = nullptr;
 	void ReadPixelDirect(bool *pSwapped);
 	void ScreenshotDirect(bool *pSwapped);
+	bool TakeScreenshotFromImage(CImageInfo &&Image, const char *pFilename, FScreenshotCallback pfnCallback, FScreenshotProcessor pfnProcessor = nullptr) override;
+	bool BeginOffscreenFrame(int Width, int Height) override;
+	bool BeginOffscreenTileFrame(int TileWidth, int TileHeight, int LogicalWidth, int LogicalHeight, int TileOriginX, int TileOriginY) override;
+	bool EndOffscreenFrame(CImageInfo &Image) override;
+	bool BeginVideoFrame(int Width, int Height, int SampleCount) override;
+	void EndVideoFrame(CImageInfo &Image) override;
+	int FlushVideoFrameReadbacks(CImageInfo *pOutImages, int MaxImages) override;
+	void StopVideoFrame() override;
+	bool FlushPendingRenderTargetReadback();
 
 	int IssueInit();
 	int InitWindow();
@@ -1220,6 +1277,7 @@ public:
 	bool IsRenderTargetGaussianBlurSupported() const override;
 	bool IsBackbufferCaptureSupported() const override;
 	bool IsMultisampleRenderTargetSupported() const override;
+	int MaxMultisampleRenderTargetSamples() const override { return m_RenderTargetMaxSamples; }
 	int MultiSamplingCount() const override { return (int)m_MultiSamplingCount; }
 	const char *RenderTargetSupportReason() const override;
 	CRenderTargetHandle CreateRenderTarget(int Width, int Height) override;
@@ -1589,6 +1647,7 @@ public:
 	bool IsConfigModernAPI() override { return m_pBackend->IsConfigModernAPI(); }
 	bool HasMediaIslandSdf() override { return m_pBackend->HasMediaIslandSdf(); }
 	bool HasRoundedRectSdf() override { return m_pBackend->HasRoundedRectSdf(); }
+	bool HasRoundedRectSdfTexture() override { return m_pBackend->HasRoundedRectSdfTexture(); }
 	bool HasProceduralRing() override { return m_pBackend->HasProceduralRing(); }
 	bool IsTileBufferingEnabled() override { return m_GLTileBufferingEnabled; }
 	bool IsQuadBufferingEnabled() override { return m_GLQuadBufferingEnabled; }

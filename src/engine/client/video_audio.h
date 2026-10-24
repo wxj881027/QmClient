@@ -8,6 +8,23 @@ extern "C" {
 #include <libswresample/swresample.h>
 }
 
+// 按有理数帧率推进音频时间轴：每帧先加 sample_rate / FPS 的整数商，
+// 再把除数作为余数分子累计，满一帧补一个样本，避免 48 kHz/144 FPS
+// 这类非整除组合逐帧截断在长录像中累积成音画漂移。
+// 余数是 [0, FPS) 的分子，使用无符号类型以匹配 FPS 的正数约束。
+inline void AdvanceVideoAudioTimeline(int64_t &SamplesFrameCount, uint64_t &SamplesFrameRemainder, int SampleRate, int FPS)
+{
+	if(SampleRate <= 0 || FPS <= 0)
+		return;
+	SamplesFrameCount += SampleRate / FPS;
+	SamplesFrameRemainder += static_cast<uint64_t>(SampleRate % FPS);
+	if(SamplesFrameRemainder >= static_cast<uint64_t>(FPS))
+	{
+		SamplesFrameCount += static_cast<int64_t>(SamplesFrameRemainder / static_cast<uint64_t>(FPS));
+		SamplesFrameRemainder %= static_cast<uint64_t>(FPS);
+	}
+}
+
 // 只替换 FFmpeg 边界以验证转换失败；生产默认直接调用 FFmpeg。
 struct SVideoAudioConversionApi
 {

@@ -1,11 +1,11 @@
 // 弹窗/轻提示的语义契约：队列上限、锚定几何（含父容器夹紧）。
 // 这些行为不依赖渲染上下文，按纯函数与队列状态断言，避免源码字符串合同。
-#include <gtest/gtest.h>
+#include <base/system.h>
 
 #include <game/client/QmUi/QmPopconfirmGeometry.h>
 #include <game/client/QmUi/QmToast.h>
 
-#include <base/system.h>
+#include <gtest/gtest.h>
 
 namespace
 {

@@ -29,6 +29,8 @@ void CCommandProcessorFragment_OpenGL3_3::AllocateQmPrograms()
 	m_MediaIslandSdfProgramValid = false;
 	m_pRoundedRectSdfProgram = new CGLSLRoundedRectSdfProgram;
 	m_RoundedRectSdfProgramValid = false;
+	m_pRoundedRectSdfTexturedProgram = new CGLSLRoundedRectSdfProgram;
+	m_RoundedRectSdfTexturedProgramValid = false;
 	m_pProceduralRingProgram = new CGLSLProceduralRingProgram;
 	m_ProceduralRingProgramValid = false;
 	m_pGaussianBlurProgram = new CGLSLGaussianBlurProgram;
@@ -81,6 +83,35 @@ void CCommandProcessorFragment_OpenGL3_3::LoadQmPrograms(const SCommand_Init *pC
 			m_RoundedRectSdfProgramValid = m_pRoundedRectSdfProgram->m_LocPos >= 0 && m_pRoundedRectSdfProgram->m_LocData >= 0;
 		}
 		pCommand->m_pCapabilities->m_RoundedRectSdf = m_RoundedRectSdfProgramValid;
+	}
+	{
+		// 圆角容器放图的纹理变体：同一份片元源码加 TW_ROUNDED_SDF_TEXTURED，
+		// 与无纹理变体共用圆角数学，只是填充改成采样图片。
+		CGLSL VertexShader;
+		CGLSL FragmentShader;
+		ShaderCompiler.AddDefine("TW_MODERN_GL", "");
+		ShaderCompiler.AddDefine("TW_ROUNDED_SDF_TEXTURED", "");
+		VertexShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/rounded_rect_sdf.vert", GL_VERTEX_SHADER);
+		FragmentShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/rounded_rect_sdf.frag", GL_FRAGMENT_SHADER);
+		ShaderCompiler.ClearDefines();
+
+		m_pRoundedRectSdfTexturedProgram->CreateProgram();
+		const bool VertexAdded = m_pRoundedRectSdfTexturedProgram->AddShader(&VertexShader);
+		const bool FragmentAdded = m_pRoundedRectSdfTexturedProgram->AddShader(&FragmentShader);
+		const bool Linked = VertexAdded && FragmentAdded && m_pRoundedRectSdfTexturedProgram->LinkProgram();
+		if(Linked)
+		{
+			UseProgram(m_pRoundedRectSdfTexturedProgram);
+			m_pRoundedRectSdfTexturedProgram->m_LocPos = m_pRoundedRectSdfTexturedProgram->GetUniformLoc("gPos");
+			m_pRoundedRectSdfTexturedProgram->m_LocData = m_pRoundedRectSdfTexturedProgram->GetUniformLoc("gRoundedRectSdfData[0]");
+			m_pRoundedRectSdfTexturedProgram->m_LocTextureSampler = m_pRoundedRectSdfTexturedProgram->GetUniformLoc("gTextureSampler");
+			m_RoundedRectSdfTexturedProgramValid = m_pRoundedRectSdfTexturedProgram->m_LocPos >= 0 &&
+							       m_pRoundedRectSdfTexturedProgram->m_LocData >= 0 &&
+							       m_pRoundedRectSdfTexturedProgram->m_LocTextureSampler >= 0;
+			if(m_RoundedRectSdfTexturedProgramValid)
+				m_pRoundedRectSdfTexturedProgram->SetUniform(m_pRoundedRectSdfTexturedProgram->m_LocTextureSampler, 0);
+		}
+		pCommand->m_pCapabilities->m_RoundedRectSdfTexture = m_RoundedRectSdfTexturedProgramValid;
 	}
 	{
 		CGLSL VertexShader;
@@ -158,6 +189,7 @@ void CCommandProcessorFragment_OpenGL3_3::UnloadQmPrograms()
 {
 	m_pMediaIslandSdfProgram->DeleteProgram();
 	m_pRoundedRectSdfProgram->DeleteProgram();
+	m_pRoundedRectSdfTexturedProgram->DeleteProgram();
 	m_pProceduralRingProgram->DeleteProgram();
 	m_pGaussianBlurProgram->DeleteProgram();
 }
@@ -170,6 +202,9 @@ void CCommandProcessorFragment_OpenGL3_3::FreeQmPrograms()
 	delete m_pRoundedRectSdfProgram;
 	m_pRoundedRectSdfProgram = nullptr;
 	m_RoundedRectSdfProgramValid = false;
+	delete m_pRoundedRectSdfTexturedProgram;
+	m_pRoundedRectSdfTexturedProgram = nullptr;
+	m_RoundedRectSdfTexturedProgramValid = false;
 	delete m_pProceduralRingProgram;
 	m_pProceduralRingProgram = nullptr;
 	m_ProceduralRingProgramValid = false;
@@ -232,9 +267,20 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderRoundedRectSdf(const CComman
 	if(!m_RoundedRectSdfProgramValid || pCommand->m_pVertices == nullptr || pCommand->m_PrimCount == 0 || m_pRoundedRectSdfProgram == nullptr)
 		return;
 
-	UseProgram(m_pRoundedRectSdfProgram);
-	SetState(pCommand->m_State, m_pRoundedRectSdfProgram);
-	m_pRoundedRectSdfProgram->SetUniformVec4(m_pRoundedRectSdfProgram->m_LocData, (int)(sizeof(pCommand->m_Params) / sizeof(vec4)), (const float *)&pCommand->m_Params);
+	// 带纹理的命令走纹理变体：唯一差别是片元里多采样一张图片。
+	// SetState 按命令自己的 m_Texture 绑图并设置采样器槽位，因此纹理变体自己
+	// 就知道采样器在哪，不需要在这里另设 uniform。
+	const bool Textured = pCommand->m_Params.m_TextureParams0.x > 0.5f && m_RoundedRectSdfTexturedProgramValid &&
+			      m_pRoundedRectSdfTexturedProgram != nullptr && IsTexturedState(pCommand->m_State);
+	if(pCommand->m_Params.m_TextureParams0.x > 0.5f && !Textured)
+		// 纹理变体不可用（老驱动/贴图失效）时宁可不画，也不能画成纯色方块：
+		// 照片卡的四角问题正是"画了方角"造成的。
+		return;
+	CGLSLRoundedRectSdfProgram *pProgram = Textured ? m_pRoundedRectSdfTexturedProgram : m_pRoundedRectSdfProgram;
+
+	UseProgram(pProgram);
+	SetState(pCommand->m_State, pProgram);
+	pProgram->SetUniformVec4(pProgram->m_LocData, (int)(sizeof(pCommand->m_Params) / sizeof(vec4)), (const float *)&pCommand->m_Params);
 	UploadStreamBufferData(pCommand->m_PrimType, pCommand->m_pVertices, sizeof(CCommandBuffer::SVertex), pCommand->m_PrimCount);
 	glBindVertexArray(m_aPrimitiveDrawVertexId[m_LastStreamBuffer]);
 	if(m_aLastIndexBufferBound[m_LastStreamBuffer] != m_QuadDrawIndexBufferId)

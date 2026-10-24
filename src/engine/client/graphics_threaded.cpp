@@ -10,6 +10,7 @@
 #include <engine/client/backend/vulkan/backend_vulkan.h>
 #include <engine/client/plausible_sizes.h>
 #include <engine/client/rounded_rect_geometry.h>
+#include <engine/client/screenshot_save.h>
 #include <engine/engine.h>
 #include <engine/gfx/image_loader.h>
 #include <engine/gfx/image_manipulation.h>
@@ -250,6 +251,8 @@ CGraphics_Threaded::CGraphics_Threaded()
 	m_GLRenderTargetGaussianBlurSupported = false;
 	m_GLBackbufferCaptureSupported = false;
 	m_GLRenderTargetMSAASupported = false;
+	m_RenderTargetMaxSamples = 1;
+	m_ReadbackCompletionSignal = false;
 	m_GLRenderTargetExternalPassRequiresSingleSample = false;
 	m_MultiSamplingCount = 0;
 	m_PendingMultiSamplingCount = -1;
@@ -335,6 +338,11 @@ const TTwGraphicsGpuList &CGraphics_Threaded::GetGpus() const
 
 void CGraphics_Threaded::MapScreen(float TopLeftX, float TopLeftY, float BottomRightX, float BottomRightY)
 {
+	// 注意：分块渲染不能靠这里平移投影。世界几何是「世界坐标 + 相机视图投影」
+	// 直接画进目标的，MapScreen 只作用于屏幕空间（UI/文字），所以在分块帧里改
+	// 这个矩形只会让界面错位，世界仍然按整幅相机视图重绘——四个块会各画一整幅。
+	// 真正的分块必须驱动相机（见 qm_pose::TileView），同时解决文字按整幅逻辑
+	// 尺寸光栅化与物理块目标之间的换算，否则文字会随块缩小。
 	m_State.m_ScreenTL.x = TopLeftX;
 	m_State.m_ScreenTL.y = TopLeftY;
 	m_State.m_ScreenBR.x = BottomRightX;
@@ -756,7 +764,9 @@ bool CGraphics_Threaded::IsBackbufferCaptureSupported() const
 
 bool CGraphics_Threaded::IsMultisampleRenderTargetSupported() const
 {
-	return m_GLRenderTargetsSupported && m_GLRenderTargetMSAASupported && m_MultiSamplingCount > 1;
+	// 上限来自设备能力（GL_MAX_SAMPLES / 交换链采样数），不依赖窗口 FSAA 配置：
+	// 窗口不开 AA 的机器也要能按 qm_video_fsaa 请求离屏多采样。
+	return m_GLRenderTargetsSupported && m_GLRenderTargetMSAASupported && m_RenderTargetMaxSamples > 1;
 }
 
 const char *CGraphics_Threaded::RenderTargetSupportReason() const
@@ -778,7 +788,7 @@ IGraphics::CRenderTargetHandle CGraphics_Threaded::CreateRenderTarget(int Width,
 	if(!IsRenderTargetSupported() || Width <= 0 || Height <= 0)
 		return CRenderTargetHandle();
 
-	const int Samples = std::clamp(SampleCount, 1, (int)m_MultiSamplingCount > 1 ? (int)m_MultiSamplingCount : 1);
+	const int Samples = std::clamp(SampleCount, 1, m_RenderTargetMaxSamples);
 	if(Samples > 1 && !IsMultisampleRenderTargetSupported())
 		return CRenderTargetHandle();
 
@@ -1156,8 +1166,9 @@ IGraphics::CRenderTargetReadbackHandle CGraphics_Threaded::BeginRenderTargetRead
 
 	FlushVertices();
 
-	// Keep the readback and completion signal in the same command buffer so readiness tracks the actual copy.
-	if(!CommandBufferCanFitCommands(*m_pCommandBuffer, sizeof(CCommandBuffer::SCommand_RenderTarget_Readback), sizeof(CCommandBuffer::SCommand_Signal)))
+	// 读回与完成信号由后端在读回真正结算时点亮（PBO 双缓冲下这发生在后续的
+	// 读回/Flush 命令里），不能再把 Signal 捆在同一缓冲提前点亮。
+	if(!CommandBufferCanFitCommands(*m_pCommandBuffer, sizeof(CCommandBuffer::SCommand_RenderTarget_Readback), 0))
 		KickCommandBuffer();
 
 	const auto Allocation = m_RenderTargetReadbacks.Allocate();
@@ -1166,14 +1177,23 @@ IGraphics::CRenderTargetReadbackHandle CGraphics_Threaded::BeginRenderTargetRead
 	CCommandBuffer::SCommand_RenderTarget_Readback Cmd;
 	Cmd.m_TargetId = (int)TargetId;
 	Cmd.m_pImage = Allocation.m_pImage;
+	Cmd.m_pCompletion = Allocation.m_pCompletion;
 	AddCmd(Cmd);
-
-	CCommandBuffer::SCommand_Signal SignalCmd;
-	SignalCmd.m_pSemaphore = Allocation.m_pCompletion;
-	AddCmd(SignalCmd);
 
 	KickCommandBuffer();
 	return Handle;
+}
+
+bool CGraphics_Threaded::FlushPendingRenderTargetReadback()
+{
+	if(!IsRenderTargetSupported())
+		return false;
+	if(!CommandBufferCanFitCommands(*m_pCommandBuffer, sizeof(CCommandBuffer::SCommand_RenderTarget_ReadbackFlush), 0))
+		KickCommandBuffer();
+	CCommandBuffer::SCommand_RenderTarget_ReadbackFlush Cmd;
+	AddCmd(Cmd);
+	KickCommandBuffer();
+	return true;
 }
 
 IGraphics::ERenderTargetReadbackState CGraphics_Threaded::PollRenderTargetReadback(CRenderTargetReadbackHandle Handle)
@@ -1206,18 +1226,290 @@ bool CGraphics_Threaded::ReadRenderTarget(CRenderTargetHandle Target, CImageInfo
 	if(!Readback.IsValid())
 		return false;
 
+	// PBO 双缓冲下排队命令只启动 DMA：等它执行完仍可能没有像素，再补一个
+	// Flush 命令结算（此刻 DMA 已跑完一个提交周期，map 基本不等待）。
 	WaitForIdle();
-	const ERenderTargetReadbackState State = PollRenderTargetReadback(Readback);
-	if(State != ERenderTargetReadbackState::READY)
+	if(PollRenderTargetReadback(Readback) == ERenderTargetReadbackState::PENDING)
 	{
-		CancelRenderTargetReadback(&Readback);
+		if(!FlushPendingRenderTargetReadback())
+		{
+			CancelRenderTargetReadback(&Readback);
+			return false;
+		}
+		WaitForIdle();
+	}
+
+	const ERenderTargetReadbackState State = PollRenderTargetReadback(Readback);
+	if(State == ERenderTargetReadbackState::READY)
+	{
+		const bool Resolved = ResolveRenderTargetReadback(&Readback, Image);
+		if(!Resolved)
+			CancelRenderTargetReadback(&Readback);
+		return Resolved;
+	}
+	// 后端没有完成信号（Vulkan 命令表无 CMD_SIGNAL）：空闲后按像素归属判定。
+	if(State == ERenderTargetReadbackState::PENDING)
+	{
+		const bool Resolved = m_RenderTargetReadbacks.ResolveAfterIdle(Readback.Id(), Readback.Generation(), Image);
+		Readback.Invalidate();
+		return Resolved;
+	}
+	CancelRenderTargetReadback(&Readback);
+	return false;
+}
+
+bool CGraphics_Threaded::BeginOffscreenFrame(int Width, int Height)
+{
+	// 一次画完整幅：逻辑尺寸与物理尺寸相同，没有分块原点。
+	return BeginOffscreenTileFrame(Width, Height, Width, Height, 0, 0);
+}
+
+bool CGraphics_Threaded::BeginOffscreenTileFrame(int TileWidth, int TileHeight, int LogicalWidth, int LogicalHeight, int TileOriginX, int TileOriginY)
+{
+	if(TileWidth <= 0 || TileHeight <= 0 || LogicalWidth <= 0 || LogicalHeight <= 0)
+		return false;
+	// 分块必须完整落在逻辑屏幕内，否则会读出一块越界的空图。
+	if(TileOriginX < 0 || TileOriginY < 0 ||
+		(int64_t)TileOriginX + TileWidth > LogicalWidth ||
+		(int64_t)TileOriginY + TileHeight > LogicalHeight)
+		return false;
+	// 后端同一时间只能有一个活动渲染目标：已经处在离屏帧或别的离屏层里时不再嵌套。
+	if(m_OffscreenFrameTarget.IsValid() || m_RenderTargetActive)
+		return false;
+	if(!IsRenderTargetSupported())
+		return false;
+
+	// 不请求多采样：分块已经把几何边缘与文字按目标像素重新光栅化，
+	// 再叠 MSAA 只会让显存翻倍，对成片没有可见收益。
+	m_OffscreenFrameTarget = CreateRenderTarget(TileWidth, TileHeight);
+	if(!m_OffscreenFrameTarget.IsValid())
+	{
+		log_error("graphics", "could not create the %dx%d offscreen target for supersampling", TileWidth, TileHeight);
+		return false;
+	}
+	if(!BeginRenderTarget(m_OffscreenFrameTarget, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)))
+	{
+		DestroyRenderTarget(&m_OffscreenFrameTarget);
 		return false;
 	}
 
-	const bool Resolved = ResolveRenderTargetReadback(&Readback, Image);
-	if(!Resolved)
-		CancelRenderTargetReadback(&Readback);
-	return Resolved;
+	// 本帧内所有按屏幕尺寸排版与取样的代码都必须看到逻辑尺寸：
+	// 否则世界会画在窗口大小的角落里，文字也不会按目标像素重新光栅化。
+	// 分块时逻辑尺寸是整幅（N 倍），物理目标只是其中一块。
+	m_OffscreenFrameWidth = TileWidth;
+	m_OffscreenFrameHeight = TileHeight;
+	m_OffscreenFrameSavedWidth = m_ScreenWidth;
+	m_OffscreenFrameSavedHeight = m_ScreenHeight;
+	m_ScreenWidth = LogicalWidth;
+	m_ScreenHeight = LogicalHeight;
+	return true;
+}
+
+bool CGraphics_Threaded::EndOffscreenFrame(CImageInfo &Image)
+{
+	if(!m_OffscreenFrameTarget.IsValid())
+		return false;
+
+	// 先结束离屏目标（后端在这里 resolve 并恢复视口）：读回接口要求当前没有活动目标。
+	EndRenderTarget();
+	// 读回分两步：先排队读回命令，再等渲染线程空闲后结算。
+	// PBO 双缓冲下排队命令只启动 DMA，需要补一个 Flush 命令把像素拷出；
+	// Vulkan 的命令表没有 CMD_SIGNAL 回调，完成信号永远不会点亮，此时唯一可靠的
+	// 定序手段是先 WaitForIdle（渲染线程已执行完全部已提交命令），再按像素归属判定。
+	bool Read = false;
+	CRenderTargetReadbackHandle Readback = BeginRenderTargetReadback(m_OffscreenFrameTarget);
+	if(!Readback.IsValid())
+	{
+		log_error("graphics", "offscreen frame readback could not be started (%dx%d)", m_OffscreenFrameWidth, m_OffscreenFrameHeight);
+	}
+	else
+	{
+		WaitForIdle();
+		if(PollRenderTargetReadback(Readback) == ERenderTargetReadbackState::PENDING)
+		{
+			FlushPendingRenderTargetReadback();
+			WaitForIdle();
+		}
+		if(PollRenderTargetReadback(Readback) == ERenderTargetReadbackState::READY)
+			Read = m_RenderTargetReadbacks.Resolve(Readback.Id(), Readback.Generation(), Image);
+		else
+			Read = m_RenderTargetReadbacks.ResolveAfterIdle(Readback.Id(), Readback.Generation(), Image);
+		Readback.Invalidate();
+		if(!Read)
+			log_error("graphics", "offscreen frame readback produced no pixels (%dx%d)", m_OffscreenFrameWidth, m_OffscreenFrameHeight);
+	}
+	DestroyRenderTarget(&m_OffscreenFrameTarget);
+	// 无论读回成功与否都要恢复窗口尺寸，否则下一帧的界面与取景会按错误的屏幕尺寸排版。
+	m_ScreenWidth = m_OffscreenFrameSavedWidth;
+	m_ScreenHeight = m_OffscreenFrameSavedHeight;
+	m_OffscreenFrameSavedWidth = 0;
+	m_OffscreenFrameSavedHeight = 0;
+	m_OffscreenFrameWidth = 0;
+	m_OffscreenFrameHeight = 0;
+	return Read;
+}
+
+bool CGraphics_Threaded::BeginVideoFrame(int Width, int Height, int SampleCount)
+{
+	if(Width <= 0 || Height <= 0 || SampleCount < 1)
+		return false;
+	// 后端同一时间只能有一个活动渲染目标：本帧的视频离屏已开始、静帧离屏或别的
+	// 离屏层进行中时不嵌套。目标句柄有效只代表「可跨帧复用」，不是进行中的标志
+	//（否则第二帧起会被误判为嵌套，每帧都失败）。
+	if(m_VideoFrameActive || m_RenderTargetActive || m_OffscreenFrameTarget.IsValid())
+		return false;
+	if(!IsRenderTargetSupported())
+		return false;
+	if(SampleCount > 1 && !IsMultisampleRenderTargetSupported())
+		SampleCount = 1;
+
+	// 目标跨帧复用：只在尺寸或采样数变化时重建（整段录制通常只建一次）。
+	if(!m_VideoFrameTarget.IsValid() ||
+		m_VideoFrameWidth != Width || m_VideoFrameHeight != Height || m_VideoFrameSampleCount != SampleCount)
+	{
+		if(m_VideoFrameTarget.IsValid())
+			DestroyRenderTarget(&m_VideoFrameTarget);
+		m_VideoFrameTarget = CreateRenderTarget(Width, Height, SampleCount);
+		if(!m_VideoFrameTarget.IsValid())
+		{
+			log_error("graphics", "could not create the %dx%d (%dx) video frame target", Width, Height, SampleCount);
+			return false;
+		}
+		m_VideoFrameWidth = Width;
+		m_VideoFrameHeight = Height;
+		m_VideoFrameSampleCount = SampleCount;
+	}
+
+	if(!BeginRenderTarget(m_VideoFrameTarget, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)))
+		return false;
+	m_VideoFrameActive = true;
+
+	// 帧内所有按屏幕尺寸排版与取样的代码必须看到导出尺寸（与静帧离屏同因），
+	// 否则世界会画在窗口大小的角落里，文字也不会按导出像素重新光栅化。
+	m_VideoFrameSavedWidth = m_ScreenWidth;
+	m_VideoFrameSavedHeight = m_ScreenHeight;
+	m_ScreenWidth = Width;
+	m_ScreenHeight = Height;
+	return true;
+}
+
+void CGraphics_Threaded::EndVideoFrame(CImageInfo &Image)
+{
+	if(!m_VideoFrameTarget.IsValid() || !m_VideoFrameActive)
+		return;
+	m_VideoFrameActive = false;
+	// 先结束渲染目标（后端在这里 resolve 多采样并恢复视口）：读回接口要求当前没有活动目标。
+	EndRenderTarget();
+
+	// 恢复窗口逻辑尺寸，再把成片回绘到窗口：导出期间预览不能冻结。
+	// 宽高比与窗口不同的导出按窗口拉伸显示（只是预览，成片仍按目标尺寸读回）。
+	const int WindowWidth = m_VideoFrameSavedWidth;
+	const int WindowHeight = m_VideoFrameSavedHeight;
+	m_ScreenWidth = WindowWidth;
+	m_ScreenHeight = WindowHeight;
+
+	const CCommandBuffer::SPoint SavedScreenTL = m_State.m_ScreenTL;
+	const CCommandBuffer::SPoint SavedScreenBR = m_State.m_ScreenBR;
+	MapScreen(0.0f, 0.0f, (float)WindowWidth, (float)WindowHeight);
+	SRenderTargetDrawParams PreviewParams;
+	PreviewParams.m_W = (float)WindowWidth;
+	PreviewParams.m_H = (float)WindowHeight;
+	PreviewParams.m_Opaque = true;
+	DrawRenderTarget(m_VideoFrameTarget, PreviewParams);
+	MapScreen(SavedScreenTL.x, SavedScreenTL.y, SavedScreenBR.x, SavedScreenBR.y);
+
+	// 异步读回（PBO 双缓冲）：本帧只把 DMA 排进队列。有完成信号的后端（GL）维持
+	// 两笔在途、阻塞结算「上上帧」——主线程最多领先渲染线程一帧，本帧的命令录制与
+	// 渲染线程执行重叠；无信号后端（Vulkan/Metal）逐帧整体等待后结算「上一帧」
+	//（与旧节奏一致）。在途帧由 FlushVideoFrameReadbacks（CVideo::Stop 调用）结算补交。
+	CRenderTargetReadbackHandle Readback = BeginRenderTargetReadback(m_VideoFrameTarget);
+	if(!Readback.IsValid())
+	{
+		log_error("graphics", "video frame readback could not be started (%dx%d)", m_VideoFrameWidth, m_VideoFrameHeight);
+	}
+	if(m_ReadbackCompletionSignal)
+	{
+		if(m_VideoFramePendingReadbackCount == 2)
+		{
+			CRenderTargetReadbackHandle &Oldest = m_aVideoFramePendingReadbacks[0];
+			m_RenderTargetReadbacks.ResolveBlocking(Oldest.Id(), Oldest.Generation(), Image);
+			m_aVideoFramePendingReadbacks[0] = m_aVideoFramePendingReadbacks[1];
+			m_aVideoFramePendingReadbacks[1] = Readback;
+		}
+		else
+		{
+			m_aVideoFramePendingReadbacks[m_VideoFramePendingReadbackCount++] = Readback;
+		}
+	}
+	else
+	{
+		// 无完成信号：唯一可靠的定序是整体等待；稳态在途一笔（上一帧）。
+		WaitForIdle();
+		for(int i = 0; i < m_VideoFramePendingReadbackCount; ++i)
+		{
+			CRenderTargetReadbackHandle &Pending = m_aVideoFramePendingReadbacks[i];
+			if(i == 0)
+				m_RenderTargetReadbacks.ResolveAfterIdle(Pending.Id(), Pending.Generation(), Image);
+			else
+			{
+				// 防御：正常不会走到第二笔，异常序列下丢弃多余像素。
+				CImageInfo Discard;
+				m_RenderTargetReadbacks.ResolveAfterIdle(Pending.Id(), Pending.Generation(), Discard);
+				Discard.Free();
+			}
+			Pending.Invalidate();
+		}
+		m_VideoFramePendingReadbackCount = 0;
+		m_aVideoFramePendingReadbacks[m_VideoFramePendingReadbackCount++] = Readback;
+	}
+}
+
+int CGraphics_Threaded::FlushVideoFrameReadbacks(CImageInfo *pOutImages, int MaxImages)
+{
+	if(m_VideoFramePendingReadbackCount == 0)
+		return 0;
+	// 最后一笔 DMA 仍在途：FLUSH 命令让渲染线程立即结算它并点亮完成信号；
+	// 随后的整体等待对无信号后端也是定序前提（其读回在命令内同步完成）。
+	FlushPendingRenderTargetReadback();
+	WaitForIdle();
+	int Written = 0;
+	for(int i = 0; i < m_VideoFramePendingReadbackCount && Written < MaxImages; ++i)
+	{
+		CRenderTargetReadbackHandle &Pending = m_aVideoFramePendingReadbacks[i];
+		const bool Resolved = m_ReadbackCompletionSignal ?
+					      m_RenderTargetReadbacks.ResolveBlocking(Pending.Id(), Pending.Generation(), pOutImages[Written]) :
+					      m_RenderTargetReadbacks.ResolveAfterIdle(Pending.Id(), Pending.Generation(), pOutImages[Written]);
+		if(Resolved)
+			++Written;
+		Pending.Invalidate();
+	}
+	m_VideoFramePendingReadbackCount = 0;
+	return Written;
+}
+
+void CGraphics_Threaded::StopVideoFrame()
+{
+	m_VideoFrameActive = false;
+	if(m_VideoFramePendingReadbackCount > 0)
+	{
+		// 正常收尾在 CVideo::Stop 里经 FlushVideoFrameReadbacks 结算过；走到这里说明
+		// 录制以异常顺序结束——补一次结算并丢弃像素，不能带着在途请求销毁目标。
+		CImageInfo aDiscard[2];
+		FlushVideoFrameReadbacks(aDiscard, 2);
+		for(CImageInfo &Discard : aDiscard)
+			Discard.Free();
+	}
+	if(!m_VideoFrameTarget.IsValid())
+		return;
+	// 活动目标属于未收尾的错误状态（EndVideoFrame 未配对调用）；此时不销毁，
+	// 交由设备重建时的清理兜底，这里只复位簿记，避免下次录制复用悬挂句柄。
+	if(!m_RenderTargetActive)
+		DestroyRenderTarget(&m_VideoFrameTarget);
+	m_VideoFrameWidth = 0;
+	m_VideoFrameHeight = 0;
+	m_VideoFrameSampleCount = 1;
+	m_VideoFrameSavedWidth = 0;
+	m_VideoFrameSavedHeight = 0;
 }
 
 bool CGraphics_Threaded::LoadTextTextures(size_t Width, size_t Height, CTextureHandle &TextTexture, CTextureHandle &TextOutlineTexture, uint8_t *pTextData, uint8_t *pTextOutlineData)
@@ -1518,6 +1810,44 @@ void CGraphics_Threaded::KickCommandBuffer()
 
 namespace
 {
+	// 后台编码完成后的交接：照片卡贴图与界面回调都必须在渲染线程执行，
+	// 所以任务只把「图像 + 真实路径」塞进队列，由 Swap 开头统一回放。
+	struct SScreenshotCompletion
+	{
+		CImageInfo m_Image;
+		char m_aPath[IO_MAX_PATH_LENGTH] = "";
+		IGraphics::FScreenshotCallback m_pfnCallback;
+	};
+
+	std::mutex g_ScreenshotCompletionMutex;
+	std::vector<SScreenshotCompletion> g_vScreenshotCompletions;
+
+	void QueueScreenshotCompletion(CImageInfo &&Image, const char *pPath, IGraphics::FScreenshotCallback pfnCallback)
+	{
+		SScreenshotCompletion Completion;
+		Completion.m_Image = std::move(Image);
+		str_copy(Completion.m_aPath, pPath);
+		Completion.m_pfnCallback = std::move(pfnCallback);
+		std::lock_guard<std::mutex> Lock(g_ScreenshotCompletionMutex);
+		g_vScreenshotCompletions.push_back(std::move(Completion));
+	}
+
+	void FlushScreenshotCompletions()
+	{
+		std::vector<SScreenshotCompletion> Completions;
+		{
+			std::lock_guard<std::mutex> Lock(g_ScreenshotCompletionMutex);
+			Completions.swap(g_vScreenshotCompletions);
+		}
+		for(SScreenshotCompletion &Completion : Completions)
+		{
+			if(Completion.m_pfnCallback)
+				Completion.m_pfnCallback(std::move(Completion.m_Image), Completion.m_aPath);
+			else
+				Completion.m_Image.Free();
+		}
+	}
+
 	class CScreenshotSaveJob : public IJob
 	{
 		IStorage *m_pStorage;
@@ -1525,36 +1855,30 @@ namespace
 		char m_aName[IO_MAX_PATH_LENGTH];
 		CImageInfo m_Image;
 		IGraphics::FScreenshotProcessor m_pfnProcessor;
+		// 需要「落盘之后再回调」的调用方（合影超采样静帧）把回调挂在这里。
+		IGraphics::FScreenshotCallback m_pfnCallback;
 
 	protected:
 		void Run() override
 		{
-			static constexpr LOG_COLOR SCREENSHOT_LOG_COLOR = LOG_COLOR{255, 153, 76};
-			std::string Comment;
-			if(m_pfnProcessor && !m_pfnProcessor(m_Image, Comment))
+			// 与离屏静帧的同步保存共用同一套后处理/编码/落盘规则。
+			char aWholePath[IO_MAX_PATH_LENGTH];
+			if(!screenshot_save::Save(m_pStorage, m_aName, m_Image, m_pfnProcessor, aWholePath, sizeof(aWholePath)))
 			{
-				log_error_color(SCREENSHOT_LOG_COLOR, "client", "Failed to process screenshot '%s'", m_aName);
 				m_pfnFailure();
 				return;
 			}
-			char aWholePath[IO_MAX_PATH_LENGTH];
-			if(CImageLoader::SavePng(m_pStorage->OpenFile(m_aName, IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE, aWholePath, sizeof(aWholePath)), m_aName, m_Image, Comment.c_str()))
-			{
-				log_info_color(SCREENSHOT_LOG_COLOR, "client", "Saved screenshot to '%s'", aWholePath);
-			}
-			else
-			{
-				log_error_color(SCREENSHOT_LOG_COLOR, "client", "Failed to save screenshot to '%s'", aWholePath);
-				m_pfnFailure();
-			}
+			if(m_pfnCallback)
+				QueueScreenshotCompletion(std::move(m_Image), aWholePath, std::move(m_pfnCallback));
 		}
 
 	public:
-		CScreenshotSaveJob(IStorage *pStorage, const char *pName, CImageInfo &&Image, IGraphics::FScreenshotProcessor pfnProcessor, std::function<void()> pfnFailure) :
+		CScreenshotSaveJob(IStorage *pStorage, const char *pName, CImageInfo &&Image, IGraphics::FScreenshotProcessor pfnProcessor, std::function<void()> pfnFailure, IGraphics::FScreenshotCallback pfnCallback = nullptr) :
 			m_pStorage(pStorage),
 			m_pfnFailure(std::move(pfnFailure)),
 			m_Image(std::move(Image)),
-			m_pfnProcessor(std::move(pfnProcessor))
+			m_pfnProcessor(std::move(pfnProcessor)),
+			m_pfnCallback(std::move(pfnCallback))
 		{
 			str_copy(m_aName, pName);
 		}
@@ -1566,17 +1890,32 @@ namespace
 	};
 } // namespace
 
+// 等待窗口激活的上限（帧）。60 fps 下约 5 秒；超时说明窗口确实长时间不在前台，
+// 继续挂着只会让请求永远悬空，不如报错让调用方知道这次没出图。
+static constexpr int SCREENSHOT_MAX_WAIT_FRAMES = 300;
+
 void CGraphics_Threaded::ScreenshotDirect(bool *pSwapped)
 {
 	if(!m_DoScreenshot)
 		return;
-	m_DoScreenshot = false;
+	// 窗口没有输入焦点时（后台、最小化、被别的窗口盖住）不能立刻抓帧：
+	// 此时交换链可能没有刚画好的内容。但不能像以前那样静默丢弃——那会让
+	// 「渲染成功却没图」变成一个无日志、无文件的谜（1 倍合影渲染与普通
+	// screenshot 都会中招）。这里保留请求，下一帧交换时再试，超时后才放弃并报错。
 	if(!WindowActive())
 	{
+		m_ScreenshotWaitFrames++;
+		if(m_ScreenshotWaitFrames <= SCREENSHOT_MAX_WAIT_FRAMES)
+			return;
+		log_error("graphics", "dropping the screenshot request after waiting %d frames for the window to become active", m_ScreenshotWaitFrames);
+		m_DoScreenshot = false;
+		m_ScreenshotWaitFrames = 0;
 		m_pfnScreenshotCallback = nullptr;
 		m_pfnScreenshotProcessor = nullptr;
 		return;
 	}
+	m_DoScreenshot = false;
+	m_ScreenshotWaitFrames = 0;
 
 	CImageInfo Image;
 
@@ -1591,11 +1930,8 @@ void CGraphics_Threaded::ScreenshotDirect(bool *pSwapped)
 	if(Image.m_pData)
 	{
 		if(m_pfnScreenshotCallback)
-			m_pfnScreenshotCallback(Image.DeepCopy());
-		SWarning FailureWarning;
-		str_copy(FailureWarning.m_aWarningMsg, Localize("Failed to save screenshot"));
-		// AddWarning 自带互斥保护；本地化在主线程完成，后台任务只发布提示。
-		m_pEngine->AddJob(std::make_shared<CScreenshotSaveJob>(m_pStorage, m_aScreenshotName, std::move(Image), std::move(m_pfnScreenshotProcessor), [this, FailureWarning]() { AddWarning(FailureWarning); }));
+			m_pfnScreenshotCallback(Image.DeepCopy(), m_aScreenshotName);
+		QueueScreenshotSave(std::move(Image), std::move(m_pfnScreenshotProcessor));
 	}
 	else
 	{
@@ -2721,10 +3057,14 @@ void CGraphics_Threaded::RenderRoundedRectSdf(const IGraphics::SRoundedRectSdfPa
 		FlushVertices();
 	}
 
+	const bool Textured = Params.m_TextureParams0.x > 0.5f;
 	CCommandBuffer::SCommand_RenderRoundedRectSdf Cmd;
 	Cmd.m_State = m_State;
 	Cmd.m_State.m_BlendMode = EBlendMode::ALPHA;
-	Cmd.m_State.m_Texture = -1;
+	// 纹理填充沿用调用方 TextureSet 绑定的贴图；未启用纹理时沿用无纹理状态，
+	// 后端因此继续选无采样器管线，纯色圆角不受影响。
+	if(!Textured)
+		Cmd.m_State.m_Texture = -1;
 	Cmd.m_Params = Params;
 
 	const float Padding = maximum(0.0f, Params.m_Params.z);
@@ -3634,6 +3974,8 @@ int CGraphics_Threaded::IssueInit()
 		m_GLRenderTargetGaussianBlurSupported = m_pBackend->HasRenderTargetGaussianBlur();
 		m_GLBackbufferCaptureSupported = m_pBackend->HasBackbufferCapture();
 		m_GLRenderTargetMSAASupported = m_pBackend->HasRenderTargetMSAA();
+		m_RenderTargetMaxSamples = std::max(m_pBackend->RenderTargetMaxSamples(), 1);
+		m_ReadbackCompletionSignal = m_pBackend->ReadbackCompletionSignal();
 		m_GLRenderTargetExternalPassRequiresSingleSample = m_pBackend->RenderTargetExternalPassRequiresSingleSample();
 		m_MultiSamplingCount = (uint32_t)std::max(g_Config.m_GfxFsaaSamples, 0);
 		m_PendingMultiSamplingCount = -1;
@@ -3985,6 +4327,18 @@ int CGraphics_Threaded::Init()
 	m_RenderTargets.Clear();
 	m_RenderTargetActive = false;
 	m_RenderTargetReadbacks.Clear();
+	// 视频离屏目标同样随设备销毁：句柄、簿记与「本帧进行中」一起复位，
+	// 否则重建后第一帧会拿到悬挂句柄（后端槽位已全部回收）。
+	m_VideoFrameTarget = CRenderTargetHandle();
+	m_VideoFrameActive = false;
+	for(CRenderTargetReadbackHandle &Pending : m_aVideoFramePendingReadbacks)
+		Pending.Invalidate();
+	m_VideoFramePendingReadbackCount = 0;
+	m_VideoFrameWidth = 0;
+	m_VideoFrameHeight = 0;
+	m_VideoFrameSampleCount = 1;
+	m_VideoFrameSavedWidth = 0;
+	m_VideoFrameSavedHeight = 0;
 
 	// 这三类资源由 vector 自身保存对象，没有独立的代数校验，因此必须连容器一起清空。
 	// 只把空闲链表头置 -1 会把旧条目留成「看起来仍然已分配」的孤儿：
@@ -4478,24 +4832,66 @@ void CGraphics_Threaded::TakeScreenshot(const char *pFilename)
 	TakeScreenshot(pFilename, nullptr);
 }
 
-void CGraphics_Threaded::TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback, FScreenshotProcessor pfnProcessor)
+bool CGraphics_Threaded::PrepareScreenshotPath(const char *pFilename)
 {
-	// TODO: screenshot support
 	char aDate[20];
 	str_timestamp(aDate, sizeof(aDate));
-	str_format(m_aScreenshotName, sizeof(m_aScreenshotName), "screenshots/%s_%s.png", pFilename ? pFilename : "screenshot", aDate);
+	// 扩展名由调用方决定（png / webp）。名字里带了就沿用，没带按 png。
+	const char *pExtension = ".png";
+	char aBaseName[IO_MAX_PATH_LENGTH];
+	str_copy(aBaseName, pFilename != nullptr && pFilename[0] != '\0' ? pFilename : "screenshot");
+	if(str_endswith_nocase(aBaseName, ".webp") != nullptr)
+	{
+		aBaseName[str_length(aBaseName) - str_length(".webp")] = '\0';
+		pExtension = ".webp";
+	}
+	else if(str_endswith_nocase(aBaseName, ".png") != nullptr)
+	{
+		aBaseName[str_length(aBaseName) - str_length(".png")] = '\0';
+	}
+	str_format(m_aScreenshotName, sizeof(m_aScreenshotName), "screenshots/%s_%s%s", aBaseName, aDate, pExtension);
+	// 目录抽象只有一份：便携包与自定义截图目录都走 media_paths。
 	const std::string Path = qmclient::media_paths::Resolve(m_pStorage, g_Config, m_aScreenshotName);
 	if(!qmclient::media_paths::PrepareWrite(m_pStorage, Path))
 	{
 		SWarning Warning;
 		str_copy(Warning.m_aWarningMsg, Localize("Failed to save screenshot"));
 		AddWarning(Warning);
-		return;
+		return false;
 	}
 	str_copy(m_aScreenshotName, Path.c_str());
+	return true;
+}
+
+void CGraphics_Threaded::QueueScreenshotSave(CImageInfo &&Image, FScreenshotProcessor pfnProcessor, FScreenshotCallback pfnCallback)
+{
+	SWarning FailureWarning;
+	str_copy(FailureWarning.m_aWarningMsg, Localize("Failed to save screenshot"));
+	// AddWarning 自带互斥保护；本地化在主线程完成，后台任务只发布提示。
+	m_pEngine->AddJob(std::make_shared<CScreenshotSaveJob>(m_pStorage, m_aScreenshotName, std::move(Image), std::move(pfnProcessor), [this, FailureWarning]() { AddWarning(FailureWarning); }, std::move(pfnCallback)));
+}
+
+void CGraphics_Threaded::TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback, FScreenshotProcessor pfnProcessor)
+{
+	// TODO: screenshot support
+	if(!PrepareScreenshotPath(pFilename))
+		return;
 	m_pfnScreenshotCallback = std::move(pfnCallback);
 	m_pfnScreenshotProcessor = std::move(pfnProcessor);
 	m_DoScreenshot = true;
+}
+
+bool CGraphics_Threaded::TakeScreenshotFromImage(CImageInfo &&Image, const char *pFilename, FScreenshotCallback pfnCallback, FScreenshotProcessor pfnProcessor)
+{
+	if(Image.m_pData == nullptr || Image.m_Width == 0 || Image.m_Height == 0)
+		return false;
+	if(!PrepareScreenshotPath(pFilename))
+		return false;
+	// 大图（2 倍 4K 约 3300 万像素）的 PNG 编码在主线程要好几秒，4 倍更是几十秒，
+	// 实测会直接触发「客户端卡死」看门狗。这里改成后台编码，写完之后再由渲染线程
+	// 把「图像 + 最终路径」交给回调：照片卡拿到的仍然是已经落盘的文件。
+	QueueScreenshotSave(std::move(Image), std::move(pfnProcessor), std::move(pfnCallback));
+	return true;
 }
 
 void CGraphics_Threaded::TakeCustomScreenshot(const char *pFilename)
@@ -4519,6 +4915,9 @@ void CGraphics_Threaded::ReadFramebuffer(CImageInfo &Image)
 
 void CGraphics_Threaded::Swap()
 {
+	// 后台截图任务编完码后把结果交回这里：贴图上传与界面回调都只能在渲染线程执行。
+	// 放在 Swap 开头，是因为这一帧的世界和界面已经画完，下一帧照片卡就能用上新贴图。
+	FlushScreenshotCompletions();
 #if defined(CONF_PLATFORM_IOS)
 	int InsetLeft = 0;
 	int InsetRight = 0;

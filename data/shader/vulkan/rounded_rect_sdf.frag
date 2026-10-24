@@ -1,9 +1,22 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-layout(std140, set = 0, binding = 1) uniform SRoundedRectSdf
+#ifdef TW_ROUNDED_SDF_TEXTURED
+layout(set = 0, binding = 0) uniform sampler2D gTextureSampler;
+#endif
+
+// 纹理变体的管线布局有两个描述符集：set 0 放图片采样器，参数块跟着落到 set 1；
+// 无纹理变体只有一个 set，参数块就在 set 0。set 号写错时参数块读到的是未绑定
+// 内存（全 0），片元会把「启用纹理」当成关闭，照片整块透明——这正是照片卡只剩
+// 外框的原因。
+#ifdef TW_ROUNDED_SDF_TEXTURED
+layout(std140, set = 1, binding = 1)
+#else
+layout(std140, set = 0, binding = 1)
+#endif
+uniform SRoundedRectSdf
 {
-	vec4 gRoundedRectSdfData[15];
+	vec4 gRoundedRectSdfData[17];
 } gSdf;
 
 layout(location = 0) noperspective in vec2 texCoord;
@@ -104,9 +117,30 @@ void main()
 	float InnerRadius = clamp(CornerRadius(Point, InnerCornerRadii), 0.0, min(InnerHalfSize.x, InnerHalfSize.y));
 	float InnerDistance = RoundedRectSdf(Point, InnerHalfSize, InnerRadius);
 	float InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? Coverage(InnerDistance, Params.y) : 0.0;
+	// 填充覆盖率：有边框时以环带内缘为界，无边框时整块形状都是填充。
+	float FillCoverage = BorderWidth > 0.0 ? InnerCoverage : OuterCoverage;
+#ifdef TW_ROUNDED_SDF_TEXTURED
+	// 圆角容器放图：纹理取代纯色填充，并共用同一个圆角覆盖度，四角因此被真实
+	// 切掉。放大/平移后图片铺满矩形也不再露出方角，因为方角本身已经不画了。
+	// UV 是「逻辑点 → 图片 UV」的仿射，缩放与平移由调用方折算进 Params[15]/[16]；
+	// Params[16].y 是整张照片的透明度（卡片淡出时照片和边框一起消失）。
+	vec4 TexParams0 = gSdf.gRoundedRectSdfData[15];
+	vec4 TexParams1 = gSdf.gRoundedRectSdfData[16];
+	if(TexParams0.x > 0.5)
+	{
+		// 图片矩形之外保持透明：图片没铺满容器时，边缘和普通 quad 一样是硬边。
+		vec2 TexUV = Point * TexParams0.yz + vec2(TexParams0.w, TexParams1.x);
+		vec4 TexColor = vec4(0.0);
+		if(all(greaterThanEqual(TexUV, vec2(0.0))) && all(lessThanEqual(TexUV, vec2(1.0))))
+			TexColor = texture(gTextureSampler, TexUV);
+		TexColor.a *= clamp(TexParams1.y, 0.0, 1.0);
+		FillColor = TexColor;
+		FillCoverage = OuterCoverage;
+	}
+#endif
 	if(BorderWidth <= 0.0)
 	{
-		FragClr = vec4(FillColor.rgb, FillColor.a * OuterCoverage);
+		FragClr = vec4(FillColor.rgb, FillColor.a * FillCoverage);
 		return;
 	}
 	float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);
@@ -141,7 +175,7 @@ void main()
 		BorderTint = GradientBorder;
 	}
 	float BorderAlpha = BorderTint.a * BorderCoverage;
-	float FillAlpha = FillColor.a * InnerCoverage * FillAlphaMask;
+	float FillAlpha = FillColor.a * FillCoverage * FillAlphaMask;
 	float OutputAlpha = FillAlpha + BorderAlpha;
 	vec3 Premultiplied = FillColor.rgb * FillAlpha + BorderTint.rgb * BorderAlpha;
 	FragClr = OutputAlpha > 0.0 ? vec4(Premultiplied / OutputAlpha, OutputAlpha) : vec4(0.0);

@@ -4668,6 +4668,8 @@ void CMenus::Render()
 		{
 			CPerfTimer StageTimer;
 			RenderDemoPlayer(Screen);
+			// 合影预览自带的 HUD：只在会话里出现，菜单页不铺，因此和回放 HUD 同层。
+			RenderQmPoseHud(Screen);
 			LogPerfStage(Client(), "demo_player", StageTimer.ElapsedMs());
 		}
 		break;
@@ -4715,6 +4717,10 @@ void CMenus::Render()
 void CMenus::RenderPopupFullscreen(CUIRect Screen)
 {
 	const bool DemoRenderPopup = m_Popup == POPUP_RENDER_DEMO;
+	// 合影地图选择复用渲染回放弹窗的紧凑外壳：同样的 12 内边距、16px 左对齐标题，
+	// 不再走另外那套 24px 居中标题 + 大片留白的通用弹窗。
+	const bool PoseMapPopup = m_Popup == POPUP_QM_POSE_MAP;
+	const bool CompactPopup = DemoRenderPopup || PoseMapPopup;
 #if defined(CONF_VIDEORECORDER)
 	const float DemoRenderContentHeight = qm_demo_ui::RenderContentHeight(Client()->State() == IClient::STATE_ONLINE);
 #endif
@@ -4794,6 +4800,10 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 	{
 		pTitle = Localize("Joining Tutorial server");
 	}
+	else if(m_Popup == POPUP_QM_POSE_MAP)
+	{
+		pTitle = Localize("Select map for the pose file");
+	}
 	else if(m_Popup == POPUP_POINTS)
 	{
 		pTitle = Localize("Existing Player");
@@ -4832,29 +4842,35 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 	if(DemoRenderPopup)
 		Box = qm_demo_ui::PopupRect(Screen, DemoRenderContentHeight + 86.0f);
 #endif
+	// 合影地图选择：高度跟着可见行数走，不预留空白；渲染时多两行（输出格式 + 分辨率倍数）。
+	if(PoseMapPopup)
+	{
+		const int RenderRows = m_QmPoseMap.m_RenderMode ? qm_demo_ui::POSE_MAP_RENDER_ROWS : 0;
+		Box = qm_demo_ui::PopupRect(Screen, qm_demo_ui::PoseMapContentHeight(QmPoseMapRowCount(), RenderRows) + qm_demo_ui::POPUP_CHROME_HEIGHT);
+	}
 
 	// Background
 	Box.Draw(BgColor, IGraphics::CORNER_ALL, ui_token::radius::CARD);
-	if(DemoRenderPopup)
+	if(CompactPopup)
 		Box.Margin(12.0f, &Box);
 
 	// Title
 	{
 		CUIRect Title;
-		Box.HSplitTop(DemoRenderPopup ? 0.0f : 20.0f, nullptr, &Box);
-		Box.HSplitTop(DemoRenderPopup ? 22.0f : 24.0f, &Title, &Box);
-		Box.HSplitTop(DemoRenderPopup ? 6.0f : 20.0f, nullptr, &Box);
-		Title.VMargin(DemoRenderPopup ? 0.0f : 20.0f, &Title);
+		Box.HSplitTop(CompactPopup ? 0.0f : 20.0f, nullptr, &Box);
+		Box.HSplitTop(CompactPopup ? 22.0f : 24.0f, &Title, &Box);
+		Box.HSplitTop(CompactPopup ? 6.0f : 20.0f, nullptr, &Box);
+		Title.VMargin(CompactPopup ? 0.0f : 20.0f, &Title);
 
-		const float TitleFontSize = DemoRenderPopup ? 16.0f : 24.0f;
+		const float TitleFontSize = CompactPopup ? 16.0f : 24.0f;
 		if(TextRender()->TextWidth(TitleFontSize, pTitle) > Title.w)
 			Ui()->DoLabel(&Title, pTitle, TitleFontSize, TEXTALIGN_ML, {.m_MaxWidth = Title.w});
 		else
-			Ui()->DoLabel(&Title, pTitle, TitleFontSize, DemoRenderPopup ? TEXTALIGN_ML : TEXTALIGN_MC);
+			Ui()->DoLabel(&Title, pTitle, TitleFontSize, CompactPopup ? TEXTALIGN_ML : TEXTALIGN_MC);
 	}
 
 	// Extra text (optional)
-	if(m_Popup != POPUP_JOIN_TUTORIAL && !DemoRenderPopup)
+	if(m_Popup != POPUP_JOIN_TUTORIAL && !CompactPopup)
 	{
 		CUIRect ExtraText;
 		Box.HSplitTop(24.0f, &ExtraText, &Box);
@@ -4995,6 +5011,10 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			Ui()->DoLabel(&Name, pEntry->m_Info.m_aName, 18.0f, TEXTALIGN_ML);
 		}
 	}
+	else if(m_Popup == POPUP_QM_POSE_MAP)
+	{
+		RenderQmPoseMapPopup(Box);
+	}
 	else if(m_Popup == POPUP_LANGUAGE)
 	{
 		CUIRect Button;
@@ -5133,6 +5153,8 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			m_DemoRenderOutputHeight.Clear();
 			m_DemoRenderGop.Clear();
 			m_DemoRenderPresetSel = -1;
+			m_DemoRenderPixelFormat = -1;
+			m_DemoRenderFsaa = -2;
 			m_DemoRenderResolutionPreset = -1;
 			m_HasPendingDemoRenderSource = false;
 			m_Popup = POPUP_NONE;
@@ -5262,6 +5284,8 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			m_DemoRenderOutputHeight.Clear();
 			m_DemoRenderGop.Clear();
 			m_DemoRenderPresetSel = -1;
+			m_DemoRenderPixelFormat = -1;
+			m_DemoRenderFsaa = -2;
 			m_DemoRenderResolutionPreset = -1;
 		}
 
@@ -5687,6 +5711,8 @@ void CMenus::InitDemoRenderInputs()
 		str_format(aGop, sizeof(aGop), "%d", g_Config.m_QmVideoGop > 0 ? g_Config.m_QmVideoGop : 60);
 		m_DemoRenderGop.Set(aGop);
 	}
+	if(m_DemoRenderPixelFormat < 0)
+		m_DemoRenderPixelFormat = std::clamp(g_Config.m_QmVideoPixelFormat, 0, 3);
 }
 #endif
 
@@ -5908,7 +5934,15 @@ void CMenus::PopupConfirmDemoReplaceVideo()
 	// 提交本会话预设选择（仅确认时落盘；手动改过编码器/容器时已自动回到 Custom）
 	if(m_DemoRenderPresetSel >= 0)
 		g_Config.m_QmVideoPreset = m_DemoRenderPresetSel;
+	// 色彩采样同样是会话态：只在确认导出时落盘，取消或只是打开弹窗不会改全局配置。
+	if(m_DemoRenderPixelFormat >= 0)
+		g_Config.m_QmVideoPixelFormat = std::clamp(m_DemoRenderPixelFormat, 0, 3);
+	// 导出抗锯齿同上：-2 = 弹窗里没动过，保持原配置不动。
+	if(m_DemoRenderFsaa != -2)
+		g_Config.m_QmVideoFsaa = std::clamp(m_DemoRenderFsaa, -1, 8);
 	// 预设展开兜底：按预设配置覆盖编码器/容器，保证与选择一致。
+	// GOP、采样格式与质量在弹窗切换预设时已写回（剪辑/最高画质=1 + 4:4:4，其余=60 + 自动），
+	// 这里只在输入为空时补剪辑预设的兜底，不覆盖用户手填值。
 	switch(g_Config.m_QmVideoPreset)
 	{
 	case 1:
@@ -5916,20 +5950,34 @@ void CMenus::PopupConfirmDemoReplaceVideo()
 		str_copy(g_Config.m_QmVideoContainer, "mp4");
 		break;
 	case 2:
-		str_copy(g_Config.m_QmVideoEncoder, "hevc_nvenc");
+		str_copy(g_Config.m_QmVideoEncoder, "hevc");
 		str_copy(g_Config.m_QmVideoContainer, "mp4");
 		break;
-	case 3:
+	case qm_demo_ui::EXPORT_PRESET_EDITING:
+		// 剪辑预设：全帧内 H.264。与 ProRes 同样可以任意点切，体积约为其 1/17。
+		str_copy(g_Config.m_QmVideoEncoder, "");
+		str_copy(g_Config.m_QmVideoContainer, "mp4");
+		// GOP 以弹窗输入框为准（选预设时已写回 1，用户可再改）；只有输入框为空时才兜底，
+		// 避免覆盖用户手填的值。
+		if(m_DemoRenderGop.IsEmpty())
+			g_Config.m_QmVideoGop = qm_demo_ui::PRESET_GOP_ALL_INTRA;
+		break;
+	case 4:
 		str_copy(g_Config.m_QmVideoEncoder, "prores_ks");
 		str_copy(g_Config.m_QmVideoContainer, "mov");
 		break;
-	case 4:
-		str_copy(g_Config.m_QmVideoEncoder, "dnxhd");
-		str_copy(g_Config.m_QmVideoContainer, "mov");
+	case qm_demo_ui::EXPORT_PRESET_BEST_QUALITY:
+		// 最高画质：剪辑组合（全帧内 + 4:4:4 + 软件 H.264）之上把质量压到 14（肉眼无损档）。
+		str_copy(g_Config.m_QmVideoEncoder, "");
+		str_copy(g_Config.m_QmVideoContainer, "mp4");
+		if(m_DemoRenderGop.IsEmpty())
+			g_Config.m_QmVideoGop = qm_demo_ui::PRESET_GOP_ALL_INTRA;
 		break;
-	case 5:
-		str_copy(g_Config.m_QmVideoEncoder, "ffv1");
-		str_copy(g_Config.m_QmVideoContainer, "mkv");
+	case qm_demo_ui::EXPORT_PRESET_FASTEST:
+		// 最快速度：h264 家族别名（NVENC → QSV → AMF → VideoToolbox → 软件回落），
+		// 质量写回 23 换编码速度；没有硬件的机器仍能出片，只是回落到软件速度。
+		str_copy(g_Config.m_QmVideoEncoder, "h264");
+		str_copy(g_Config.m_QmVideoContainer, "mp4");
 		break;
 	default: break;
 	}
@@ -8128,12 +8176,25 @@ void CMenus::PrewarmVisibleSettingsResources(CUIRect MainView)
 
 bool CMenus::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 {
-	if(!m_MenuActive && !GameClient()->m_Spectator.PlaybackControlsActive())
+	// 合影地图选择弹窗可能开在回放播放态（菜单本身不活跃）：此时仍必须跟踪鼠标，
+	// 否则列表点不到、光标也不会跟着动。预览 HUD 同理。
+	if(!m_MenuActive && !GameClient()->m_Spectator.PlaybackControlsActive() && !QmPoseMapPopupOpen() && !QmPoseHudActive() && !Client()->PoseSessionActive())
 		return false;
 
 	MarkMenuInteraction();
 	Ui()->ConvertMouseMove(&x, &y, CursorType);
 	Ui()->OnCursorMove(x, y);
+
+	if(Client()->PoseSessionActive() && !QmPoseMapPopupOpen())
+	{
+		// 预览 HUD 打开时，光标归面板（按钮、拖拽、滚轮），镜头必须钉住不动——
+		// 一边点按钮一边晃画面没法用。这里返回 true 吃掉增量。
+		if(QmPoseHudActive())
+			return true;
+		// HUD 关掉才是取景状态：增量交给 CControls，和游戏内/demo 自由旁观同一套累加。
+		// 返回 true 会让输入栈停在这一层，CControls 永远收不到增量。
+		return false;
+	}
 
 	return true;
 }
@@ -8143,8 +8204,34 @@ bool CMenus::OnInput(const IInput::CEvent &Event)
 	if(!IsActive() && GameClient()->m_HudEditor.IsActive())
 		return false;
 
+	// 合影预览：Esc 开/关预览 HUD，沿用回放 HUD 的心智——先叫出控制条，再决定
+	// 看哪里、拍哪一张。这里不再「Esc 即回菜单」，也不会顺手把会话收掉。
+	if(Client()->PoseSessionActive() && !IsActive() && !QmPoseMapPopupOpen() && Event.m_Key == KEY_ESCAPE)
+	{
+		if(Event.m_Flags & IInput::FLAG_PRESS)
+		{
+			m_QmPoseHud.m_Open = !m_QmPoseHud.m_Open;
+			m_QmPoseHud.m_DragOperation = 0;
+			if(m_QmPoseHud.m_Open)
+			{
+				MarkMenuInteraction();
+				Ui()->SetActiveItem(nullptr);
+			}
+		}
+		return true;
+	}
+	// HUD 打开时滚轮直接缩放取景：和按钮同一套语义，滚一下就近一点。
+	// 滚轮缩放不再要求先按 Esc 叫出 HUD：预览时直接滚就能拉近/推远，
+	// 和 demo 自由视角一致。
+	if(Client()->PoseSessionActive() && (Event.m_Flags & IInput::FLAG_PRESS) &&
+		(Event.m_Key == KEY_MOUSE_WHEEL_UP || Event.m_Key == KEY_MOUSE_WHEEL_DOWN))
+	{
+		Client()->PoseCameraZoomBy(Event.m_Key == KEY_MOUSE_WHEEL_UP ? 1.15f : 1.0f / 1.15f);
+		return true;
+	}
+
 	// Escape key is always handled to activate/deactivate menu
-	if((Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_ESCAPE) || IsActive())
+	if((Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_ESCAPE) || IsActive() || QmPoseMapPopupOpen() || QmPoseHudActive())
 	{
 		MarkMenuInteraction();
 		Ui()->OnInput(Event);
@@ -8260,6 +8347,20 @@ void CMenus::OnUpdate()
 void CMenus::OnRender()
 {
 	PumpDemoScreenshotWatermark();
+	// 引擎侧（Windows 双击 .poses、poses_open 命令）缺少地图时留下的请求：
+	// 转成地图选择弹窗，玩家选好地图后再走同一条 poses_open。
+	{
+		const char *pPendingPoseMap = Client()->PendingPoseMapPath();
+		if(pPendingPoseMap[0] != '\0')
+		{
+			char aPosesPath[IO_MAX_PATH_LENGTH];
+			str_copy(aPosesPath, pPendingPoseMap, sizeof(aPosesPath));
+			Client()->ClearPendingPoseMapPath();
+			// 已经在选地图时不要重开，否则会把玩家刚输入的内容清掉。
+			if(!m_QmPoseMap.m_Selection.Active())
+				QmRequestPoseMap(aPosesPath, qm_pose_map::EAction::OPEN);
+		}
+	}
 	m_TranslateProbe.AdvanceFrame();
 	if(GameClient()->m_TClient.m_UpdatePopupRequested && m_MenuActive && m_Popup == POPUP_NONE)
 	{
@@ -8379,12 +8480,13 @@ void CMenus::OnRender()
 		LogPerfStage(Client(), "ingame_text_runtime_drain", StageTimer.ElapsedMs());
 	}
 
-	if(IsActive() || GameClient()->m_Spectator.PlaybackControlsActive() || (GameClient()->m_RankGhost.IsViewModeActive() && OnlineReplayPopupActive()))
+	if(IsActive() || GameClient()->m_Spectator.PlaybackControlsActive() || QmPoseMapPopupOpen() || QmPoseHudActive() ||
+		(GameClient()->m_RankGhost.IsViewModeActive() && OnlineReplayPopupActive()))
 	{
 		CPerfTimer StageTimer;
 		if(IsActive())
 			Ui()->RenderBackButton();
-		if(!GameClient()->m_GameConsole.IsActive() && (IsActive() || GameClient()->m_Spectator.PlaybackControlsActive()))
+		if(!GameClient()->m_GameConsole.IsActive() && (IsActive() || GameClient()->m_Spectator.PlaybackControlsActive() || QmPoseMapPopupOpen() || QmPoseHudActive()))
 			RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
 		LogPerfStage(Client(), "cursor_render", StageTimer.ElapsedMs());
 	}

@@ -236,6 +236,25 @@ public:
 	virtual void DemoRecorder_HandleAutoStart() = 0;
 	virtual void DemoRecorder_UpdateReplayRecorder() = 0;
 	virtual class IDemoRecorder *DemoRecorder(int Recorder) = 0;
+
+	// 把一份外部合成的快照当作当前快照装进客户端（合影渲染用）。
+	// pData/Size 是完整的 CSnapshot 序列化数据；Tick 用于时间轴。
+	// 默认实现什么都不做，供测试替身与不支持该路径的实现复用。
+	virtual bool ApplySyntheticSnapshot(const void *pData, int Size, int Tick) { return false; }
+	// 退出合成快照：清空快照槽，恢复普通渲染。
+	virtual void ClearSyntheticSnapshot() {}
+	// 合影截图请求：本帧渲染完成后把画面存成 PNG，再退出合成快照模式。
+	// Scale > 1 时整帧渲染到 N 倍离屏目标再读回，输出尺寸 = 窗口渲染尺寸 × N。
+	// 返回 false 表示没有挂起的请求可取消。
+	virtual bool RequestPoseScreenshot(const char *pFilename, int Scale = 1, bool KeepSession = false)
+	{
+		(void)Scale;
+		return false;
+	}
+	// 合影静帧抓帧窗口：为真时渲染的是「成片」，HUD 与聊天必须让位。
+	// 只覆盖真正出图的那几帧（含跳过菜单帧的预热），不改变观看模式。
+	virtual bool PoseCaptureActive() const { return false; }
+
 	virtual void AutoScreenshot_Start() = 0;
 	virtual void AutoStatScreenshot_Start() = 0;
 	virtual void AutoCSV_Start() = 0;
@@ -350,6 +369,46 @@ public:
 	virtual const char *GetCurrentMap() const = 0;
 	virtual const char *GetCurrentMapPath() const = 0;
 
+	// 合影会话：用合成快照占住回放态，和 demo 播放互斥。
+	virtual bool PoseSessionActive() const { return false; }
+
+	// .poses 不含地图字段。引擎在没有可用地图时把这份合影留在这里，
+	// 界面取走后弹出地图选择框再执行同一条 poses_open；默认实现给测试替身用。
+	virtual const char *PendingPoseMapPath() const { return ""; }
+	virtual void ClearPendingPoseMapPath() {}
+
+	// 合影预览的取景归会话持有：预览 HUD 直接改它，相机每帧从这里取。
+	// 这样缩放/平移不必发明控制台命令（玩家记不住），也不会被常规跟随逻辑拉回角色。
+	virtual bool PoseCameraView(vec2 *pCenter, float *pZoom) const { return false; }
+	virtual void PoseCameraZoomBy(float Factor) {}
+	virtual void PoseCameraPanFraction(float FracX, float FracY) {}
+	virtual void PoseCameraFit() {}
+	// 相对适配取景的放大倍数：1.0 = 全部 Tee 在画面内，2.0 = 放大到两倍。
+	virtual float PoseCameraZoomLevel() const { return 1.0f; }
+	// 当前会话的 .poses 路径：HUD 用它拼输出文件名，而不是让玩家再挑一次文件。
+	virtual const char *PoseSource() const { return ""; }
+	// 在当前取景上存一张。KeepSession=true 是 HUD 的「拍一张」（可以连拍、看完再决定），
+	// false 是「渲染」（出图即收尾，和 poses_render 的语义一致）。
+	// Sharpen：成片锐化强度 0-100，0 = 不处理。属于拍摄参数而不是全局配置，
+	// 所以跟着这次请求走，不额外发明一个需要同步的状态。
+	// EntityLayer：这次拍摄是否用实体层铺满背景。必须显式传，
+	// 不能依赖 g_Config 的副作用——预览 HUD 的开关和实际渲染曾经对不上。
+	virtual bool RequestPoseCapture(const char *pFilename, int Scale, bool KeepSession, int Sharpen = 0, bool EntityLayer = false)
+	{
+		(void)pFilename;
+		(void)Scale;
+		(void)KeepSession;
+		(void)Sharpen;
+		(void)EntityLayer;
+		return false;
+	}
+
+	// 合影皮肤准备度：快照里引用的皮肤是否都已可绘制。
+	// 合成快照会让 CPlayers 按名字取皮肤，而皮肤是异步加载的；没等加载完就抓帧，
+	// 社区皮肤还停在 PENDING，CPlayers 会回退 default——成片与预览就对不上了。
+	// 引擎在抓帧前调用它（并顺带驱动加载），返回 false 表示还要再等一帧。
+	virtual bool PoseSkinsReady() { return true; }
+
 	const char *News() const { return m_aNews; }
 	int Points() const { return m_Points; }
 	int64_t ReconnectTime() const { return m_ReconnectTime; }
@@ -451,8 +510,14 @@ public:
 	// Render-only idle throttle requested by the game UI; 0 keeps the configured rate.
 	virtual int RenderThrottleRefreshRate() const = 0;
 	virtual void OnStateChange(int NewState, int OldState) = 0;
-	virtual void OnScreenshotTaken(class CImageInfo &&Image) = 0;
+	virtual void OnScreenshotTaken(class CImageInfo &&Image, const char *pPath) = 0;
 	virtual IGraphics::FScreenshotProcessor ScreenshotProcessor() = 0;
+	// QmClient 合影文件首次打开时设置自动取景；具体相机实现属于游戏客户端层。
+	virtual void SetPoseCamera(vec2 Center, float Zoom) = 0;
+	// 合影皮肤准备度：合成快照里引用的皮肤是否都已可绘制。
+	// 合影没有 demo 播放，皮肤只能按名字异步加载；没等加载完就抓帧，
+	// 社区皮肤会以 default 出现在成片里。返回 false 表示还要再等。
+	virtual bool PoseSkinsReady() { return true; }
 	virtual void OnConnected() = 0;
 	virtual void OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dummy) = 0;
 	virtual void OnClientBrandsMessage(CUnpacker *pUnpacker) = 0;

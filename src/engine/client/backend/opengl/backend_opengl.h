@@ -10,11 +10,13 @@
 #define ENGINE_CLIENT_BACKEND_OPENGL_BACKEND_OPENGL_H_AS_ES
 #endif
 
+#include <base/sphore.h>
 #include <base/system.h>
 
 #include <engine/client/backend/backend_base.h>
 #include <engine/client/backend_sdl.h>
 #include <engine/client/graphics_defines.h>
+#include <engine/graphics.h>
 
 #include <limits>
 
@@ -76,6 +78,18 @@ protected:
 	float m_aRenderTargetPreviousClearColor[4] = {};
 	bool m_RenderTargetActive = false;
 	int m_ActiveRenderTargetId = -1;
+
+	// 渲染目标读回的 PBO 双缓冲：读回命令只把 glReadPixels 排进 PBO（DMA 异步），
+	// 像素在下一次读回或 Flush 命令时才 map 拷出并点亮完成信号——DMA 与下一帧
+	// 渲染重叠，消除每帧的同步读回点。同一时刻至多一笔在途读回（读回由主线程串行协调）。
+	TWGLuint m_aReadbackPbos[2] = {0, 0};
+	size_t m_aReadbackPboSizes[2] = {0, 0};
+	int m_ReadbackPboFlip = 0;
+	bool m_ReadbackPboPending = false;
+	size_t m_ReadbackPboPendingSize = 0;
+	CImageInfo *m_pPendingReadbackImage = nullptr;
+	CSemaphore *m_pPendingReadbackCompletion = nullptr;
+	void FinishPendingReadbackPbo();
 
 	uint32_t m_CanvasWidth = 0;
 	uint32_t m_CanvasHeight = 0;
@@ -158,6 +172,7 @@ protected:
 	virtual void Cmd_RenderTarget_CaptureBackbuffer(const CCommandBuffer::SCommand_RenderTarget_CaptureBackbuffer *pCommand) {}
 	virtual void Cmd_RenderTarget_GaussianBlurPass(const CCommandBuffer::SCommand_RenderTarget_GaussianBlurPass *pCommand) {}
 	virtual void Cmd_RenderTarget_Readback(const CCommandBuffer::SCommand_RenderTarget_Readback *pCommand);
+	virtual void Cmd_RenderTarget_ReadbackFlush(const CCommandBuffer::SCommand_RenderTarget_ReadbackFlush *pCommand);
 	virtual void Cmd_ReadPixel(const CCommandBuffer::SCommand_TrySwapAndReadPixel *pCommand);
 	virtual void Cmd_Screenshot(const CCommandBuffer::SCommand_TrySwapAndScreenshot *pCommand);
 

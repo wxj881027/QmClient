@@ -71,6 +71,9 @@
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/media_paths.h>
 #include <game/client/components/qmclient/perf_logging.h>
+#include <game/client/components/qmclient/pose_capture.h>
+#include <game/client/components/qmclient/pose_file.h>
+#include <game/client/components/qmclient/pose_scene.h>
 #include <game/client/components/qmclient/screenshot_viewer.h>
 #include <game/client/frame_scheduler.h>
 #include <game/localization.h>
@@ -1290,6 +1293,10 @@ void CClient::DisconnectWithReason(const char *pReason)
 {
 	if(pReason != nullptr && pReason[0] == '\0')
 		pReason = nullptr;
+	// 合影会话复用了 demo snapshot 槽位。断开或退出时先撤掉合成快照，
+	// 再卸载地图，避免离线渲染帧继续访问已关闭的 datafile。
+	if(m_PoseSessionActive)
+		LeavePoseSession();
 
 	DummyDisconnect(pReason);
 
@@ -1922,7 +1929,10 @@ const char *CClient::LoadMap(const char *pName, const char *pFilename, const std
 	}
 
 	// Only check CRC if we don't have the secure SHA256.
-	if(!WantedSha256.has_value() && m_pMap->Crc() != WantedCrc)
+	// A local pose fallback has no server-provided CRC. Keep the historical
+	// zero sentinel as "no CRC constraint"; network/demo callers always pass
+	// a non-zero CRC or a SHA-256 digest.
+	if(!WantedSha256.has_value() && WantedCrc != 0 && m_pMap->Crc() != WantedCrc)
 	{
 		str_format(s_aErrorMsg, sizeof(s_aErrorMsg), "map differs from the server. %08x != %08x", m_pMap->Crc(), WantedCrc);
 		m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", s_aErrorMsg);
@@ -3686,6 +3696,194 @@ void CClient::OnDemoPlayerSnapshot(void *pData, int Size)
 	GameClient()->OnNewSnapshot(false);
 }
 
+bool CClient::ApplySyntheticSnapshot(const void *pData, int Size, int Tick)
+{
+	// 合影渲染路径：外部把一份完整快照交进来（由 qm_pose::BuildSnapshot 合成），
+	// 这里只负责「像收到一份演示快照那样」把它装进当前槽，之后所有解析与绘制
+	// 都走既有管线——皮肤、表情、武器、钩子、名字牌全部复用，不另写渲染。
+	if(!pData || Size <= 0 || (size_t)Size > sizeof(CSnapshotBuffer))
+		return false;
+	if(!m_aapSnapshots[0][SNAP_CURRENT] || !m_aapSnapshots[0][SNAP_PREV])
+		return false;
+	if(!((const CSnapshot *)pData)->IsValid((size_t)Size))
+		return false;
+
+	// alt 快照按原样展开：合成快照本身就是完整快照，没有 delta 需要叠加。
+	CSnapshotBuffer AltSnapBuffer;
+	const int AltSnapSize = UnpackAndValidateSnapshot((CSnapshot *)pData, &AltSnapBuffer);
+	if(AltSnapSize < 0)
+		return false;
+
+	m_aCurGameTick[0] = Tick;
+	// 前一 tick 留出间隔：角色需要 SNAP_PREV 里也存在同一 id 才会被标记为 Active，
+	// 由调用方连续应用两次来满足；Prev 用 Tick-1 保证插值不会反向。
+	m_aPrevGameTick[0] = Tick - 1;
+
+	std::swap(m_aapSnapshots[0][SNAP_PREV], m_aapSnapshots[0][SNAP_CURRENT]);
+	mem_copy(m_aapSnapshots[0][SNAP_CURRENT]->m_pSnap, pData, (size_t)Size);
+	mem_copy(m_aapSnapshots[0][SNAP_CURRENT]->m_pAltSnap, &AltSnapBuffer, (size_t)AltSnapSize);
+	m_aapSnapshots[0][SNAP_CURRENT]->m_Tick = Tick;
+	m_aapSnapshots[0][SNAP_PREV]->m_Tick = Tick - 1;
+
+	GameClient()->OnNewSnapshot(false);
+	log_info("poses", "applied synthetic snapshot tick=%d size=%d", Tick, Size);
+	return true;
+}
+
+void CClient::ClearSyntheticSnapshot()
+{
+	// 异常路径：会话在离屏帧中途被收掉（例如渲染期间执行了 poses_close）时，
+	// 也要把离屏目标收口，否则 ScreenWidth 会停在目标尺寸，之后所有界面排版都会错位。
+	if(m_PoseOffscreenActive)
+	{
+		CImageInfo Discarded;
+		m_pGraphics->EndOffscreenFrame(Discarded);
+		Discarded.Free();
+		m_PoseOffscreenActive = false;
+	}
+	// 清空两个槽：之后普通渲染不会再看到合影里的假角色。
+	m_aapSnapshots[0][SNAP_CURRENT] = nullptr;
+	m_aapSnapshots[0][SNAP_PREV] = nullptr;
+	m_aReceivedSnapshots[0] = 0;
+	// GameClient caches pointers into the current snapshot while rendering.
+	// Invalidate those pointers before the map or snapshot storage is reused.
+	GameClient()->InvalidateSnapshot();
+	m_PoseScreenshotPending = false;
+	m_PoseScreenshotHandled = false;
+	m_PoseScreenshotScale = 1;
+	m_PoseOffscreenActive = false;
+	m_PoseSkinsGatePassed = false;
+	m_PoseSkinWaitStart = 0;
+	m_aPoseScreenshotPath[0] = '\0';
+}
+
+bool CClient::RequestPoseScreenshot(const char *pFilename, int Scale, bool KeepSession)
+{
+	if(!pFilename || pFilename[0] == '\0')
+		return false;
+	// 只在合成快照生效时有意义：普通游戏画面截图走既有 screenshot 命令。
+	if(!m_aapSnapshots[0][SNAP_CURRENT])
+		return false;
+	// 截图管线自己会写进 screenshots/ 并补时间戳：调用方带上的前缀要去掉，
+	// 否则会落成 screenshots/screenshots/<名字>.png_<时间>.png。
+	const char *pName = str_startswith_nocase(pFilename, "screenshots/") ? pFilename + str_length("screenshots/") : pFilename;
+	str_copy(m_aPoseScreenshotPath, pName);
+	m_PoseScreenshotScale = qm_pose::NormalizeCaptureScale(Scale);
+	// 上一帧若还挂着离屏帧（异常路径，例如 UI 在渲染中途又发起一次抓帧），
+	// 必须先收口：这个标志被清掉而目标还活动的话，之后每次 Begin 都会失败，
+	// 而且会带着活动渲染目标 Swap——Vulkan 下就是死锁。
+	if(m_PoseOffscreenActive)
+	{
+		CImageInfo Discarded;
+		m_pGraphics->EndOffscreenFrame(Discarded);
+		Discarded.Free();
+		m_PoseOffscreenActive = false;
+	}
+	m_PoseScreenshotPending = true;
+	// 预览 HUD 的「拍一张」看完还要继续看，拍完不撤会话；渲染则出图即收尾。
+	m_PoseCaptureKeepSession = KeepSession;
+	// 命令通常在菜单的渲染过程中执行：本帧画出来的是回放列表，不是合影。
+	// 等合影真正画过两帧再抓，否则拿到的是一张黑图或菜单截图。
+	m_PoseScreenshotWarmupFrames = 2;
+	// 新请求重新武装皮肤闸门：上一次抓帧的判定结果不能沿用。
+	m_PoseSkinsGatePassed = false;
+	m_PoseSkinWaitStart = 0;
+	return true;
+}
+
+// 离屏帧从「开始」到「读回」之间是真正的渲染耗时（含界面按目标像素重排）。
+// 和建目标、读回分开计，才能在变慢时判断是渲染本身慢还是同步等待久。
+static std::chrono::nanoseconds s_PoseOffscreenFrameStart{};
+
+bool CClient::BeginPoseOffscreenCapture()
+{
+	// 输出尺寸 = 窗口渲染尺寸 × N；超出后端上限时 ComputeCaptureSize 会逐级下调，
+	// 下调到 1 倍就不再走离屏（和普通截图完全一致，只少了放大）。
+	// 像素预算跟尺寸上限一起判：4K 窗口 4 倍会顶到 1.5 亿像素，显存与编码都会把主线程拖死。
+	// 像素预算可由 qm_pose_capture_max_megapixels 调整（0 = 不限）：上限取决于显存与
+	// 编码耗时，不同机器差别很大，写死一个值要么浪费高端机、要么拖死低端机。
+	// 按「百万像素」换算：这里用 1000*1000，和配置项的说明一致。
+	const int64_t MaxPixels = g_Config.m_QmPoseCaptureMaxMegapixels > 0 ? (int64_t)g_Config.m_QmPoseCaptureMaxMegapixels * 1000 * 1000 : 0;
+	const qm_pose::SCaptureSize Size = qm_pose::ComputeCaptureSize(
+		m_pGraphics->ScreenWidth(), m_pGraphics->ScreenHeight(), m_PoseScreenshotScale,
+		qm_pose::MAX_CAPTURE_DIMENSION, MaxPixels);
+	// 1 倍必须走窗口截图：让 1 倍也建离屏目标会在 Vulkan 后端触发驱动层访问违例
+	// （实测崩溃在 CCommandProcessorFragment_Vulkan 的渲染命令里），原因未查清，
+	// 因此恢复成「1 倍 = 窗口截图」的原有行为。窗口没焦点时由 ScreenshotDirect
+	// 重试并最终报错，不再静默丢图。
+	if(Size.m_Width <= 0 || Size.m_Height <= 0 || Size.m_Scale <= 1)
+		return false;
+	if(Size.m_Clamped)
+	{
+		char aBuf[192];
+		str_format(aBuf, sizeof(aBuf), "supersampling clamped to %dx from %dx (target %dx%d)", Size.m_Scale, m_PoseScreenshotScale, Size.m_Width, Size.m_Height);
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+	}
+	// 4 倍 4K 是 1.3 亿像素：建目标与读回都可能卡住主线程。这里量出各段耗时，
+	// 卡死时日志能直接指出是哪一段，不必靠猜。
+	// 必须用 CPerfTimer（纳秒时钟）：time_get() 在同一帧内返回缓存值，段内耗时
+	// 永远量成 0.0 ms——之前这两个计时器就是这样失效的，看起来像"不耗时"。
+	CPerfTimer TargetTimer;
+	if(!m_pGraphics->BeginOffscreenFrame(Size.m_Width, Size.m_Height))
+	{
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "the graphics backend could not start an offscreen frame; falling back to the window resolution");
+		return false;
+	}
+	char aBuf[192];
+	str_format(aBuf, sizeof(aBuf), "offscreen target %dx%d ready in %.2f ms", Size.m_Width, Size.m_Height, TargetTimer.ElapsedMs());
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+	str_format(aBuf, sizeof(aBuf), "rendering the pose still at %dx%d (%dx supersampling)", Size.m_Width, Size.m_Height, Size.m_Scale);
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+	s_PoseOffscreenFrameStart = time_get_nanoseconds();
+	return true;
+}
+
+void CClient::FinishPoseOffscreenCapture()
+{
+	CImageInfo Image;
+	// 这一帧离屏画面的实际渲染耗时：从开目标之后算到读回之前。
+	const double FrameMs = s_PoseOffscreenFrameStart.count() != 0 ?
+				       std::chrono::duration<double, std::milli>(time_get_nanoseconds() - s_PoseOffscreenFrameStart).count() :
+				       0.0;
+	s_PoseOffscreenFrameStart = std::chrono::nanoseconds::zero();
+	CPerfTimer ReadTimer;
+	const bool Read = m_pGraphics->EndOffscreenFrame(Image);
+	m_PoseOffscreenActive = false;
+	{
+		char aBuf[192];
+		str_format(aBuf, sizeof(aBuf), "supersampled frame rendered in %.2f ms, offscreen readback finished in %.2f ms (ok=%d)", FrameMs, ReadTimer.ElapsedMs(), Read ? 1 : 0);
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+	}
+	// 锐化在编码之前就地做：此时像素已经读回 CPU，改动不会影响任何渲染状态。
+	if(Read && Image.m_pData != nullptr && m_PoseSharpenAmount > 0)
+	{
+		CPerfTimer SharpenTimer;
+		qm_pose::ApplyUnsharpMask(Image.m_pData, (int)Image.m_Width, (int)Image.m_Height, m_PoseSharpenAmount);
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), "pose sharpen (%.0f%%) took %.2f ms", (double)m_PoseSharpenAmount, SharpenTimer.ElapsedMs());
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+	}
+	// 落盘复用截图管线：同一套 screenshots/ 命名、媒体目录解析、水印与 png/webp 选择。
+	CPerfTimer HandoffTimer;
+	if(Read && m_pGraphics->TakeScreenshotFromImage(std::move(Image), m_aPoseScreenshotPath, [this](CImageInfo &&TakenImage, const char *pPath) { GameClient()->OnScreenshotTaken(std::move(TakenImage), pPath); }, GameClient()->ScreenshotProcessor()))
+	{
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), "screenshot handoff (texture upload + queue) took %.2f ms", HandoffTimer.ElapsedMs());
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+		return;
+	}
+
+	// 读回失败时不能在本帧退回窗口截图：这一帧整幅画面已经画进离屏目标，
+	// 窗口帧缓冲里没有可用内容（会得到一张空白图）。把请求降级成 1 倍并重新排队，
+	// 下一帧照常画进窗口后再抓，至少保证这次渲染有产物。
+	Image.Free();
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "supersampled capture failed; retrying once at the window resolution");
+	m_PoseScreenshotScale = 1;
+	m_PoseScreenshotPending = true;
+	m_PoseScreenshotHandled = false;
+	m_PoseScreenshotWarmupFrames = 1;
+}
+
 void CClient::OnDemoPlayerMessage(void *pData, int Size)
 {
 	CUnpacker Unpacker;
@@ -3814,7 +4012,19 @@ void CClient::Update()
 			m_DemoPlayer.Stop(Localize("Failed to record video. See local console for details."));
 		}
 #endif
-		if(m_DemoPlayer.IsPlaying())
+		// 合影会话没有 demo 时间轴：合成快照就是唯一画面来源，进度由合影自己推进。
+		// 这条分支必须排在 demo 之前——否则 demo 没在播放时会掉进下面的收尾分支，
+		// 进入会话的下一帧就被 DisconnectWithReason 拆掉地图和快照（结果是黑图、被踢回菜单）。
+		if(m_PoseSessionActive)
+		{
+#if defined(CONF_VIDEORECORDER)
+			// 录制时每帧重新应用合成快照并提交一帧给编码器，直到设定的秒数用完；
+			// 只观看时不推进任何时间轴。
+			if(IVideo::Current())
+				AdvancePoseVideo();
+#endif
+		}
+		else if(m_DemoPlayer.IsPlaying())
 		{
 #if defined(CONF_VIDEORECORDER)
 			if(IVideo::Current())
@@ -4459,6 +4669,14 @@ void CClient::Run()
 			m_aCmdPlayDemo[0] = 0;
 		}
 
+		if(m_aCmdOpenPoses[0])
+		{
+			char aCommand[IO_MAX_PATH_LENGTH * 2 + 32];
+			str_format(aCommand, sizeof(aCommand), "poses_open \"%s\"", m_aCmdOpenPoses);
+			m_pConsole->ExecuteLine(aCommand, IConsole::CLIENT_ID_UNSPECIFIED, false);
+			m_aCmdOpenPoses[0] = 0;
+		}
+
 		// handle pending map edits
 		if(m_aCmdEditMap[0])
 		{
@@ -4500,6 +4718,8 @@ void CClient::Run()
 				HandleConnectLink(aFile);
 			else if(str_endswith(aFile, ".demo"))
 				HandleDemoPath(aFile);
+			else if(str_endswith_nocase(aFile, ".poses"))
+				HandlePosesPath(aFile);
 			else if(str_endswith(aFile, ".map"))
 				HandleMapPath(aFile);
 		}
@@ -4650,6 +4870,73 @@ void CClient::Run()
 					NextRenderTime = std::max(NextRenderTime + time_freq() / GfxRefreshRate, Now);
 				m_LastRenderTime = Now;
 
+				// 合影超采样静帧：抓帧那一帧整幅画面改画到 N 倍离屏目标。
+				// 必须在 Render() 之前开始——世界取景只由宽高比与相机缩放决定，
+				// 换目标尺寸不会改变构图，但几何、皮肤与文字会按目标像素重新光栅化。
+				// 皮肤闸门必须在离屏帧开始之前完成：闸门没放行就整帧跳过拍摄，
+				// 等下一帧再试。否则这一帧已经把 default 皮肤画进离屏目标了。
+				// 本帧是否走过「开离屏帧」这一步：闸门可能直到渲染后那次检查才放行，
+				// 那一帧根本没有离屏目标，不能拿窗口帧缓冲冒充超采样成片。
+				bool PoseOffscreenAttempted = false;
+				if(m_PoseScreenshotPending && m_PoseScreenshotWarmupFrames == 0 && !PoseSkinsReadyForCapture())
+				{
+					// 本帧不进入离屏，也不提交截图；继续渲染窗口画面等待加载完成。
+					// 上一帧若留下了活动离屏目标，必须先收口：离屏帧不允许跨帧存在。
+					if(m_PoseOffscreenActive)
+					{
+						CImageInfo Discarded;
+						m_pGraphics->EndOffscreenFrame(Discarded);
+						Discarded.Free();
+						m_PoseOffscreenActive = false;
+					}
+				}
+				else if(m_PoseScreenshotPending && m_PoseScreenshotWarmupFrames == 0)
+				{
+					m_PoseOffscreenActive = BeginPoseOffscreenCapture();
+					PoseOffscreenAttempted = true;
+				}
+#if defined(CONF_VIDEORECORDER)
+				// 视频导出离屏帧：整幅画面画进跨帧复用的离屏目标（可选多采样），窗口照常回绘预览。
+				// 必须在 Render() 之前开始（与静帧离屏同因：几何与文字按导出尺寸光栅化）。
+				// Begin 失败分两种：超采样导出没有降级余地（窗口帧缓冲只有窗口大），直接让录制
+				// 报错终止；纯 FSAA 导出本帧退回读窗口帧缓冲（丢一帧 AA，画面仍正确）。
+				bool VideoOffscreenThisFrame = false;
+				if(IVideo::Current() != nullptr)
+				{
+					if(m_VideoOffscreenPlan.m_Offscreen)
+					{
+						if(Graphics()->BeginVideoFrame(m_VideoOffscreenPlan.m_RenderWidth, m_VideoOffscreenPlan.m_RenderHeight, m_VideoOffscreenPlan.m_SampleCount))
+						{
+							VideoOffscreenThisFrame = true;
+							IVideo::Current()->SetOffscreenCapture(true);
+						}
+						else if(m_VideoOffscreenPlan.m_Upscale)
+						{
+							log_error("videorecorder", "offscreen export target could not be created at %dx%d; stopping the recording",
+								m_VideoOffscreenPlan.m_RenderWidth, m_VideoOffscreenPlan.m_RenderHeight);
+							IVideo::Current()->FailCapture();
+						}
+						else
+						{
+							// 本帧由窗口路径接管（帧计数与队列语义两条路径一致）；
+							// 下一帧继续尝试离屏，瞬时冲突（如静帧离屏）不会永久降级。
+							if(!m_VideoOffscreenFailed)
+							{
+								m_VideoOffscreenFailed = true;
+								log_warn("videorecorder", "offscreen video frame unavailable this pass; capturing from the window framebuffer");
+							}
+							IVideo::Current()->SetOffscreenCapture(false);
+						}
+					}
+				}
+				else
+				{
+					// 录制已结束：销毁复用的离屏目标并复位计划（幂等，未创建时无操作）。
+					Graphics()->StopVideoFrame();
+					m_VideoOffscreenPlan = SVideoOffscreenPlan{};
+					m_VideoOffscreenFailed = false;
+				}
+#endif
 				if(PerfEnabled)
 				{
 					CPerfTimer StageTimer;
@@ -4660,6 +4947,71 @@ void CClient::Run()
 				}
 				else
 					Render();
+#if defined(CONF_VIDEORECORDER)
+				// 离屏帧收尾：结束目标（含 MSAA resolve）、回绘窗口保持预览；读回是
+				// 异步的（一帧延迟），这里拿到的是上一帧的像素——首帧没有在途读回，
+				// 空图像不提交（Submit 会按读回失败终止录制），最后一帧由 CVideo::Stop 结算。
+				if(VideoOffscreenThisFrame && IVideo::Current() != nullptr)
+				{
+					CImageInfo FrameImage;
+					Graphics()->EndVideoFrame(FrameImage);
+					if(FrameImage.m_pData != nullptr)
+						IVideo::Current()->SubmitOffscreenFrame(std::move(FrameImage));
+					else
+						FrameImage.Free();
+				}
+#endif
+				// 合影截图：请求必须在 Swap() 之前提交——ScreenshotDirect 在 Swap 开头
+				// 消费该标志，之后提交就要等下一帧；demo 暂停时根本没有下一帧。
+				if(m_PoseScreenshotPending)
+				{
+					// 皮肤闸门已在渲染之前判定过；这里只需要确认它仍放行。
+					if(m_PoseScreenshotWarmupFrames > 0)
+						m_PoseScreenshotWarmupFrames--;
+					else
+						switch(qm_pose::DecideCaptureSubmit(m_PoseScreenshotScale, PoseOffscreenAttempted, m_PoseOffscreenActive, PoseSkinsReadyForCapture()))
+						{
+						case qm_pose::ECaptureSubmit::WAIT_FOR_SKINS:
+							// 仍未就绪：本帧不提交截图，下一帧重试。
+							// 闸门通过后不会再走这里；万一走到，也不能带着活动离屏目标
+							// Swap——Vulkan 的渲染通道没结束就 Present 会卡死图形线程。
+							if(m_PoseOffscreenActive)
+							{
+								CImageInfo Discarded;
+								m_pGraphics->EndOffscreenFrame(Discarded);
+								Discarded.Free();
+								m_PoseOffscreenActive = false;
+							}
+							break;
+						case qm_pose::ECaptureSubmit::DEFER_TO_NEXT_FRAME:
+							// 闸门直到这次渲染之后才放行：本帧没开离屏帧，下一帧再拍。
+							// 直接走窗口截图会让超采样请求静默降级成 1 倍（实测 4 倍
+							// 在皮肤加载较慢时会掉成 1280x720，且日志里没有任何提示）。
+							break;
+						case qm_pose::ECaptureSubmit::SUBMIT_OFFSCREEN:
+						case qm_pose::ECaptureSubmit::SUBMIT_WINDOW:
+						{
+							const bool Offscreen = m_PoseOffscreenActive;
+							m_PoseScreenshotPending = false;
+							m_PoseScreenshotHandled = true;
+							// 超采样帧已经在离屏目标里画完，这里只负责读回并落盘；
+							// 其余情况沿用原来的窗口帧缓冲截图。
+							if(Offscreen)
+								FinishPoseOffscreenCapture();
+							else
+							{
+								// 1 倍走窗口截图：锐化必须在这里也生效，否则玩家把滑条拉到
+								// 60% 却看不到任何变化（只有 2 倍以上才经过离屏的锐化）。
+								const int SharpenAmount = m_PoseSharpenAmount;
+								m_pGraphics->TakeScreenshot(m_aPoseScreenshotPath, [this, SharpenAmount](CImageInfo &&Image, const char *pPath) {
+								if(SharpenAmount > 0 && Image.m_pData != nullptr)
+									qm_pose::ApplyUnsharpMask(Image.m_pData, (int)Image.m_Width, (int)Image.m_Height, SharpenAmount);
+								GameClient()->OnScreenshotTaken(std::move(Image), pPath); }, GameClient()->ScreenshotProcessor());
+							}
+							break;
+						}
+						}
+				}
 				if(PerfEnabled)
 				{
 					CPerfTimer StageTimer;
@@ -4670,6 +5022,32 @@ void CClient::Run()
 				}
 				else
 					m_pGraphics->Swap();
+				// 合影截图：TakeScreenshot 请求已在 Swap 之前提交，由本帧的 ScreenshotDirect
+				// 消费；这里只负责撤掉合成快照，避免假角色留在之后的正常渲染里。
+				if(m_PoseScreenshotHandled)
+				{
+					m_PoseScreenshotHandled = false;
+					if(m_PoseCaptureKeepSession)
+					{
+						// 预览里的「拍一张」：照片已经在落盘路上，会话和取景都留着，
+						// 玩家可以接着调整构图再拍，或者当场切去渲染。
+						m_PoseCaptureKeepSession = false;
+					}
+					else
+					{
+						// 实体层覆盖只属于这次拍摄，拍完立刻还原玩家的背景设置。
+						if(m_PoseEntityOverlayPrevious >= 0)
+						{
+							g_Config.m_ClOverlayEntities = m_PoseEntityOverlayPrevious;
+							m_PoseEntityOverlayPrevious = -1;
+						}
+						ClearSyntheticSnapshot();
+						// 静帧已经落盘：把合影会话一起收掉，别留下一个没有合影的回放态。
+						// 退出后回放态会被上游收尾逻辑判为结束，玩家回到回放列表，照片残影停在屏幕中间。
+						if(!IVideo::Current())
+							LeavePoseSession();
+					}
+				}
 				// 逐帧阶段日志按「容量或耗时」攒批落盘：帧统计不参与明细限流，
 				// 这里把帧号与帧耗时压成一条 frame_batch 事件，避免逐帧刷屏。
 				if(PerfEnabled && QmPerfEnabled() && m_QmPerfFileLoggerActive)
@@ -5083,10 +5461,413 @@ void CClient::AutoCSV_Cleanup()
 	}
 }
 
+bool CClient::EnterPoseSession(const char *pPosesPath, int &TeeCountOut, const char *pMapPath)
+{
+	// 三条入口共用的准备逻辑：读文件 → 解析 → 合成快照 → 应用两次 → 记住会话状态。
+	// 合影与 demo 同构：先建立「当前画面」的数据源，再由调用方决定是观看还是导出。
+	const std::string WholePath = qmclient::media_paths::CompletePath(Storage(),
+		qmclient::media_paths::Resolve(Storage(), g_Config, pPosesPath));
+	IOHANDLE File = io_open(WholePath.c_str(), IOFLAG_READ);
+	if(!File)
+	{
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "could not open the .poses file");
+		return false;
+	}
+	const int64_t Size = io_length(File);
+	if(Size <= 0 || Size > 64 * 1024 * 1024)
+	{
+		io_close(File);
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "the .poses file is empty or too large");
+		return false;
+	}
+	std::vector<unsigned char> vData((size_t)Size);
+	io_read(File, vData.data(), vData.size());
+	io_close(File);
+
+	std::vector<SPoseTee> vPoses;
+	const qm_pose::ELoadResult Result = qm_pose::Load(vData.data(), vData.size(), vPoses);
+	if(Result != qm_pose::ELoadResult::OK)
+	{
+		char aBuf[160];
+		str_format(aBuf, sizeof(aBuf), "could not parse the .poses file: %s", qm_pose::LoadResultName(Result));
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+		return false;
+	}
+
+	// demo 播放中必须先暂停：播放器每 tick 都会推送新快照，会把合成快照整体覆盖掉。
+	m_DemoPlayer.Pause();
+	if(!EnsurePosePlaybackContext(pMapPath))
+	{
+		// 没有地图时不静默失败，也不退回 dm1：把这份合影交给界面，
+		// 由玩家选好地图后再走同一条 poses_open（Windows 双击 .poses 也在这里）。
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "no map is loaded for this .poses file; waiting for a map selection");
+		str_copy(m_aPendingPoseMapPath, pPosesPath, sizeof(m_aPendingPoseMapPath));
+		return false;
+	}
+
+	qm_pose::SSceneStats Stats{};
+	m_PoseSnapshotSize = qm_pose::BuildSnapshot(vPoses, {}, m_PoseSnapshot.m_aData, sizeof(m_PoseSnapshot.m_aData), &Stats);
+	if(m_PoseSnapshotSize <= 0)
+	{
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "could not build the pose snapshot");
+		return false;
+	}
+	m_PoseSnapshotTick = GameTick(CONN_MAIN);
+
+	// 连续应用两次：客户端要求同一角色在 SNAP_PREV 与 SNAP_CURRENT 都存在才会激活。
+	// 两次用不同 tick，避免被时间轴判定为重复快照而丢弃。
+	for(int Pass = 0; Pass < 2; ++Pass)
+	{
+		// 每次递增 tick：客户端要求 PREV/CURRENT 形成有效的新旧对才会激活角色。
+		if(!ApplySyntheticSnapshot(m_PoseSnapshot.m_aData, m_PoseSnapshotSize, m_PoseSnapshotTick + Pass))
+		{
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "could not apply the pose snapshot (load a map first)");
+			return false;
+		}
+		m_PoseSnapshotTick++;
+	}
+
+	// 合影首次打开时自动取景：把所有 Tee 的包围盒放进当前画面，并保留
+	// 足够的边距给 Tee 的身体、脚和名字。之后用户仍可自由拖动和缩放。
+	float BaseWidth = 0.0f;
+	float BaseHeight = 0.0f;
+	Graphics()->CalcScreenParams(Graphics()->GameScreenAspect(), 1.0f, &BaseWidth, &BaseHeight);
+	const float FitZoom = qm_pose::ComputeFitZoom(vPoses, BaseWidth, BaseHeight);
+	GameClient()->SetPoseCamera(vec2(Stats.m_CenterX, Stats.m_CenterY), FitZoom);
+	// 取景归会话持有：相机每帧从这里取，预览 HUD 改的也是这一份。
+	m_PoseFitCenter = m_PoseCameraCenter = vec2(Stats.m_CenterX, Stats.m_CenterY);
+	m_PoseFitZoom = m_PoseCameraZoom = FitZoom;
+	m_PoseViewBaseWidth = BaseWidth;
+	m_PoseViewBaseHeight = BaseHeight;
+	str_copy(m_aPoseSource, pPosesPath != nullptr ? pPosesPath : "");
+	m_PoseCaptureKeepSession = false;
+
+	m_PoseSessionActive = true;
+	TeeCountOut = Stats.m_Tees;
+
+	char aBuf[192];
+	str_format(aBuf, sizeof(aBuf), "%d poses centered at (%d, %d)", Stats.m_Tees, Stats.m_CenterX, Stats.m_CenterY);
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+	return true;
+}
+
+bool CClient::EnsurePosePlaybackContext(const char *pMapPath)
+{
+	// 已经在 demo/合影上下文中时直接复用地图和 snapshot 槽位。
+	if(m_aapSnapshots[0][SNAP_CURRENT] && m_aapSnapshots[0][SNAP_PREV])
+		return true;
+
+	// .poses 本身没有地图字段。只有显式给出地图路径时才加载地图，
+	// 不猜测 dm1 或其它地图，避免把错误的地图上下文交给渲染器。
+	if((m_aCurrentMap[0] == '\0' || !m_pMap->IsLoaded()) && (!pMapPath || pMapPath[0] == '\0'))
+	{
+		constexpr const char *pMessage = "No map is loaded for this .poses file. Use poses_open <poses> <map> or load the matching demo first.";
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", pMessage);
+		AddWarning(SWarning("Pose file", pMessage));
+		return false;
+	}
+	if(pMapPath && pMapPath[0] != '\0')
+	{
+		const char *pError = LoadMap("poses", pMapPath, std::nullopt, 0);
+		if(pError)
+		{
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", pError);
+			return false;
+		}
+	}
+	if(!m_pMap->IsLoaded())
+	{
+		constexpr const char *pMessage = "The selected map could not be loaded for this .poses file.";
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", pMessage);
+		AddWarning(SWarning("Pose file", pMessage));
+		return false;
+	}
+
+	SetState(IClient::STATE_DEMOPLAYBACK);
+	GameClient()->OnConnected();
+	mem_zero(m_aaDemorecSnapshotData, sizeof(m_aaDemorecSnapshotData));
+	for(int SnapshotType = 0; SnapshotType < NUM_SNAPSHOT_TYPES; SnapshotType++)
+	{
+		m_aapSnapshots[0][SnapshotType] = &m_aDemorecSnapshotHolders[SnapshotType];
+		m_aapSnapshots[0][SnapshotType]->m_pSnap = m_aaDemorecSnapshotData[SnapshotType][0].AsSnapshot();
+		m_aapSnapshots[0][SnapshotType]->m_pAltSnap = m_aaDemorecSnapshotData[SnapshotType][1].AsSnapshot();
+		m_aapSnapshots[0][SnapshotType]->m_SnapSize = 0;
+		m_aapSnapshots[0][SnapshotType]->m_AltSnapSize = 0;
+		m_aapSnapshots[0][SnapshotType]->m_Tick = -1;
+	}
+	GameClient()->OnEnterGame();
+	return true;
+}
+
+void CClient::LeavePoseSession()
+{
+	if(!m_PoseSessionActive)
+		return;
+	m_PoseSessionActive = false;
+	m_PoseSnapshotSize = 0;
+	m_PoseCaptureKeepSession = false;
+	m_aPoseSource[0] = '\0';
+	ClearSyntheticSnapshot();
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "left the pose session");
+}
+
+bool CClient::PoseCameraView(vec2 *pCenter, float *pZoom) const
+{
+	if(!m_PoseSessionActive)
+		return false;
+	if(pCenter != nullptr)
+		*pCenter = m_PoseCameraCenter;
+	if(pZoom != nullptr)
+		*pZoom = m_PoseCameraZoom;
+	return true;
+}
+
+void CClient::PoseCameraZoomBy(float Factor)
+{
+	if(!m_PoseSessionActive || Factor <= 0.0f)
+		return;
+	// Zoom 是「一屏看多少世界单位」，所以放大是除法。上下限按自动适配的倍数给：
+	// 最远退到适配的 1.5 倍（还看得见全部 Tee 周边），最近推到适配的 1/8（看脸）。
+	const float MinZoom = m_PoseFitZoom / 8.0f;
+	const float MaxZoom = m_PoseFitZoom * 1.5f;
+	m_PoseCameraZoom = std::clamp(m_PoseCameraZoom / Factor, MinZoom, MaxZoom);
+}
+
+void CClient::PoseCameraPanFraction(float FracX, float FracY)
+{
+	if(!m_PoseSessionActive)
+		return;
+	// 位移按屏幕比例给：UI 缩放与窗口分辨率都不影响手感，拖多少像素就走多少像素。
+	// 手抓着画面拖的方向与相机相反，所以这里取负号。
+	m_PoseCameraCenter.x -= FracX * m_PoseViewBaseWidth * m_PoseCameraZoom;
+	m_PoseCameraCenter.y -= FracY * m_PoseViewBaseHeight * m_PoseCameraZoom;
+	GameClient()->SetPoseCamera(m_PoseCameraCenter, m_PoseCameraZoom);
+}
+
+float CClient::PoseCameraZoomLevel() const
+{
+	// 1.0 = 自动适配（全部 Tee 在画面内），2.0 = 放大到两倍。
+	return m_PoseCameraZoom > 0.0f ? m_PoseFitZoom / m_PoseCameraZoom : 1.0f;
+}
+
+void CClient::PoseCameraFit()
+{
+	if(!m_PoseSessionActive)
+		return;
+	m_PoseCameraCenter = m_PoseFitCenter;
+	m_PoseCameraZoom = m_PoseFitZoom;
+	GameClient()->SetPoseCamera(m_PoseCameraCenter, m_PoseCameraZoom);
+}
+
+bool CClient::RequestPoseCapture(const char *pFilename, int Scale, bool KeepSession, int Sharpen, bool EntityLayer)
+{
+	// 只服务预览 HUD：会话不在就什么都不做，避免外部在普通游戏里排一张合影静帧。
+	if(!m_PoseSessionActive)
+		return false;
+	// 锐化跟着请求走：HUD 的滑条改这里，控制台的 poses_render 走它自己的参数，
+	// 两边互不残留。
+	m_PoseSharpenAmount = minimum(maximum(Sharpen, 0), 100);
+	// 实体层同样跟着请求走。以前只靠预览开关改 g_Config 的副作用，
+	// 开关状态与实际出图会不一致（玩家关掉实体层，成片仍然带实体）。
+	// 这里按请求强制设定，拍完由收尾逻辑还原成玩家原来的设置。
+	if(m_PoseEntityOverlayPrevious < 0)
+		m_PoseEntityOverlayPrevious = g_Config.m_ClOverlayEntities;
+	g_Config.m_ClOverlayEntities = EntityLayer ? 100 : 0;
+	return RequestPoseScreenshot(pFilename, Scale, KeepSession);
+}
+
+bool CClient::PoseSkinsReadyForCapture()
+{
+	// 合成快照里的皮肤由 CSkins 按名字异步加载，而抓帧只等两帧就会发生。
+	// 不等的话，社区皮肤在成片里会退回 default（预览看得到、成片没有）。
+	// 一次抓帧只判定一次：放行后渲染前/渲染后的两次检查都直接通过。
+	// 之前每次放行都把 m_PoseSkinWaitStart 清零，导致渲染后那次重新开始等 5 秒，
+	// 离屏帧在这 5 秒里跨帧保持活动——Vulkan 下带着活动渲染目标 Swap 会卡死图形线程。
+	if(m_PoseSkinsGatePassed)
+		return true;
+	if(GameClient()->PoseSkinsReady())
+	{
+		m_PoseSkinsGatePassed = true;
+		return true;
+	}
+	const int64_t Now = time_get();
+	if(m_PoseSkinWaitStart == 0)
+	{
+		m_PoseSkinWaitStart = Now;
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "waiting for pose skins to finish loading");
+		return false;
+	}
+	// 硬超时：断网或下载失败的皮肤永远等不到 LOADED，不能让渲染卡死。
+	constexpr int64_t MAX_SKIN_WAIT_SECONDS = 5;
+	if(Now - m_PoseSkinWaitStart < MAX_SKIN_WAIT_SECONDS * time_freq())
+		return false;
+	// 超时同样只放行这一次抓帧；新的请求会重新武装等待。
+	m_PoseSkinWaitStart = 0;
+	m_PoseSkinsGatePassed = true;
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "pose skins did not finish loading in time; capturing anyway");
+	return true;
+}
+
+void CClient::AdvancePoseVideo()
+{
+#if defined(CONF_VIDEORECORDER)
+	if(!IVideo::Current() || m_PoseSnapshotSize <= 0)
+		return;
+
+	// 起步跳过菜单帧：命令是在回放列表里执行的，先写进去的两帧会是菜单。
+	if(m_PoseVideoWarmupFrames > 0)
+	{
+		m_PoseVideoWarmupFrames--;
+		m_PoseSnapshotTick++;
+		ApplySyntheticSnapshot(m_PoseSnapshot.m_aData, m_PoseSnapshotSize, m_PoseSnapshotTick);
+		return;
+	}
+
+	// demo 已暂停，时间轴不会自己走：每帧固定推进 1/fps 秒。
+	const float FrameSeconds = 1.0f / (float)maximum(g_Config.m_ClVideoRecorderFPS, 1);
+	m_PoseVideoSecondsLeft -= FrameSeconds;
+	const int TotalFrames = qm_pose::VideoFrameCount(m_PoseVideoTotalSeconds, maximum(g_Config.m_ClVideoRecorderFPS, 1));
+	m_PoseVideoFramesWritten++;
+
+	// 重新应用合成快照：录制的每一帧都必须基于合影数据。tick 递增让客户端看到
+	// 「新快照」，PREV/CURRENT 才会形成有效的角色对。
+	m_PoseSnapshotTick++;
+	ApplySyntheticSnapshot(m_PoseSnapshot.m_aData, m_PoseSnapshotSize, m_PoseSnapshotTick);
+
+	IVideo::Current()->NextVideoFrame();
+	IVideo::Current()->NextAudioFrameTimeline([this](short *pFinalOut, unsigned Frames) {
+		Sound()->Mix(pFinalOut, Frames);
+	});
+
+	if(m_PoseVideoFramesWritten >= TotalFrames || m_PoseVideoSecondsLeft <= 0.0f)
+	{
+		// 收尾：先撤合影会话再停录，确保成片最后一帧仍是合影画面。
+		m_PoseVideoTotalSeconds = 0.0f;
+		m_PoseVideoFramesWritten = 0;
+		LeavePoseSession();
+		IVideo::Current()->Stop();
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), "pose video finished after %d frames", TotalFrames);
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+	}
+#endif
+}
+
+void CClient::Con_PosesOpen(IConsole::IResult *pResult, void *pUserData)
+{
+	// 游戏内观看：与 demo 回放同一条路径——建立画面数据源后不做任何导出，
+	// 相机可以自由移动、缩放，随时用 poses_close 退出。
+	CClient *pSelf = static_cast<CClient *>(pUserData);
+	int TeeCount = 0;
+	const char *pMapPath = pResult->NumArguments() > 1 ? pResult->GetString(1) : nullptr;
+	if(!pSelf->EnterPoseSession(pResult->GetString(0), TeeCount, pMapPath))
+		return;
+
+	char aBuf[160];
+	str_format(aBuf, sizeof(aBuf), "viewing %d poses; move the camera freely, poses_close to exit", TeeCount);
+	pSelf->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+}
+
+void CClient::Con_PosesClose(IConsole::IResult *pResult, void *pUserData)
+{
+	// 退出合影会话：清空合成快照，恢复正常渲染。
+	static_cast<CClient *>(pUserData)->LeavePoseSession();
+}
+
+void CClient::Con_PosesVideo(IConsole::IResult *pResult, void *pUserData)
+{
+	CClient *pSelf = static_cast<CClient *>(pUserData);
+
+	// 用法：poses_video <poses 文件> <视频名> [秒数]
+	// 与 demo 导出同一条管线：建立合影会话后按真实时间推进指定秒数并录制。
+	// 相机可以在这段时间里自由移动（和录制 demo 时的运镜一致）。
+	const char *pPosesPath = pResult->GetString(0);
+	const char *pVideoName = pResult->GetString(1);
+	const float Seconds = pResult->NumArguments() > 2 ? pResult->GetFloat(2) : 5.0f;
+
+	if(Seconds <= 0.0f || Seconds > 600.0f)
+	{
+		pSelf->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "duration must be between 0 and 600 seconds");
+		return;
+	}
+
+	int TeeCount = 0;
+	const char *pMapPath = pResult->NumArguments() > 3 ? pResult->GetString(3) : nullptr;
+	if(!pSelf->EnterPoseSession(pPosesPath, TeeCount, pMapPath))
+		return;
+
+	// 合影会话本身就处在 demo 回放态（EnsurePosePlaybackContext 负责切入），
+	// 不再要求「先放一个 demo」：没有 demo 时由 AdvancePoseVideo 按帧推进录制。
+	if(pSelf->State() != IClient::STATE_DEMOPLAYBACK)
+		pSelf->SetState(IClient::STATE_DEMOPLAYBACK);
+
+	pSelf->StartVideo(pVideoName, false);
+	if(!IVideo::Current())
+	{
+		pSelf->LeavePoseSession();
+		return;
+	}
+	// demo 播放器在合影会话里是暂停的，StartVideo 会顺手把录制器也暂停；
+	// 合影的时间轴由 AdvancePoseVideo 手动推进，这里必须立刻恢复，否则一帧都写不出来。
+	IVideo::Current()->Pause(false);
+
+	pSelf->m_PoseVideoSecondsLeft = Seconds;
+	pSelf->m_PoseVideoTotalSeconds = Seconds;
+	pSelf->m_PoseVideoFramesWritten = 0;
+	// 菜单帧不进成片（见 AdvancePoseVideo）。
+	pSelf->m_PoseVideoWarmupFrames = 2;
+	char aBuf[192];
+	str_format(aBuf, sizeof(aBuf), "recording %d poses for %.1f seconds (%d frames) to '%s'", TeeCount, Seconds,
+		qm_pose::VideoFrameCount(Seconds, maximum(g_Config.m_ClVideoRecorderFPS, 1)), pVideoName);
+	pSelf->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+}
+
+void CClient::Con_RenderPoses(IConsole::IResult *pResult, void *pUserData)
+{
+	CClient *pSelf = static_cast<CClient *>(pUserData);
+
+	// 用法：poses_render <poses 文件> [<输出 png|webp>] [<地图>] [<分辨率倍数 1-4>]
+	// 地图用当前已加载的地图（合影通常配固定背景图，先手动进入那张图再调用）。
+	// 倍数是可选的第 4 个参数，缺省 1：旧调用不带它，行为与以前完全一致。
+	const char *pPosesPath = pResult->GetString(0);
+	const char *pOutPath = pResult->NumArguments() > 1 ? pResult->GetString(1) : "poses_capture.png";
+	const char *pMapPath = pResult->NumArguments() > 2 ? pResult->GetString(2) : nullptr;
+	const int RequestedScale = pResult->NumArguments() > 3 ? pResult->GetInteger(3) : 1;
+	const int Scale = qm_pose::NormalizeCaptureScale(RequestedScale);
+
+	// 第 5 个参数：实体层。1 = 这次拍摄用实体铺满背景（盖掉地图方块），拍完立即还原。
+	const bool EntityLayer = pResult->NumArguments() > 4 && pResult->GetInteger(4) != 0;
+	// 第 6 个参数：成片锐化强度 0-100，缺省 0（不改动成片）。
+	pSelf->m_PoseSharpenAmount = pResult->NumArguments() > 5 ? minimum(maximum(pResult->GetInteger(5), 0), 100) : 0;
+
+	int TeeCount = 0;
+	if(!pSelf->EnterPoseSession(pPosesPath, TeeCount, pMapPath))
+		return;
+	if(EntityLayer)
+	{
+		if(pSelf->m_PoseEntityOverlayPrevious < 0)
+			pSelf->m_PoseEntityOverlayPrevious = g_Config.m_ClOverlayEntities;
+		g_Config.m_ClOverlayEntities = 100;
+	}
+
+	if(!pSelf->RequestPoseScreenshot(pOutPath, Scale))
+	{
+		pSelf->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "could not queue the screenshot");
+		return;
+	}
+
+	char aBuf[192];
+	if(Scale != RequestedScale)
+		str_format(aBuf, sizeof(aBuf), "supersampling %dx is out of range; using %dx", RequestedScale, Scale);
+	else
+		str_format(aBuf, sizeof(aBuf), "rendering %d poses to '%s' at %dx", TeeCount, pOutPath, Scale);
+	pSelf->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+}
+
 void CClient::Con_Screenshot(IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = (CClient *)pUserData;
-	pSelf->Graphics()->TakeScreenshot(nullptr, [pSelf](CImageInfo &&Image) { pSelf->GameClient()->OnScreenshotTaken(std::move(Image)); }, pSelf->GameClient()->ScreenshotProcessor());
+	pSelf->Graphics()->TakeScreenshot(nullptr, [pSelf](CImageInfo &&Image, const char *pPath) { pSelf->GameClient()->OnScreenshotTaken(std::move(Image), pPath); }, pSelf->GameClient()->ScreenshotProcessor());
 }
 
 #if defined(CONF_VIDEORECORDER)
@@ -5415,6 +6196,16 @@ void CClient::DriveSegmentedExport(int CurrentTick)
 	{
 		char aSegmentName[IO_MAX_PATH_LENGTH];
 		pTask->SegmentFilename(pTask->CurrentSegment(), aSegmentName, sizeof(aSegmentName));
+		// 起点追赶：主循环卡顿（如后端首帧编译）会让一次 Update 越过段起始 tick，
+		// 高 demo_speed 下一次能跳几十 tick；从越过后的位置开录会静默截掉段头
+		//（时长不足、帧网格仍均匀）。预热态里任何「已越过」都是超调，回 seek 到
+		// 起始 tick 再开录，保证录制区间与任务声明一致。
+		const int SegmentStart = pTask->Segments()[pTask->CurrentSegment()].m_StartTick;
+		if(CurrentTick > SegmentStart)
+		{
+			log_info("video_export", "Passed segment start tick %d during a stall (now at %d); seeking back before recording.", SegmentStart, CurrentTick);
+			m_DemoPlayer.SetPos(SegmentStart);
+		}
 		StartVideo(aSegmentName, false);
 		if(IVideo::Current())
 			pTask->OnRecordingStarted();
@@ -5482,10 +6273,20 @@ void CClient::StartVideo(const char *pFilename, bool WithTimestamp)
 	// pause the sound device while creating the video instance
 	Sound()->PauseAudioDevice();
 	// 输出分辨率（M7 超采样）：qm_video_width/height 为 0 时跟随渲染分辨率；
-	// 配置值大于渲染分辨率时 CVideo 构造函数自动回退到渲染分辨率（防上采样伪影）。
 	// 分段导出使用任务启动时冻结的显示配置；整段直录在开始时捕获一份。
 	const SVideoDisplaySnapshot DisplaySnapshot = m_pVideoExportTask ? m_pVideoExportTask->DisplaySnapshot() : qm_demo_display::Capture(g_Config);
-	new CVideo(Graphics(), Sound(), Storage(), Graphics()->ScreenWidth(), Graphics()->ScreenHeight(), aFilename, g_Config.m_QmVideoWidth, g_Config.m_QmVideoHeight, &DisplaySnapshot);
+	// 离屏导出计划（导出 FSAA / 输出大于窗口）：离屏时 CVideo 的读回尺寸按目标尺寸
+	// 建立（输出可大于窗口，M7 的"防上采样回退"由目标尺寸天然满足）；
+	// 降级回窗口路径时按窗口读回，行为与旧实现一致。
+	m_VideoOffscreenPlan = PlanVideoOffscreenFrame(
+		Graphics()->ScreenWidth(), Graphics()->ScreenHeight(),
+		g_Config.m_QmVideoWidth, g_Config.m_QmVideoHeight,
+		g_Config.m_QmVideoFsaa, g_Config.m_GfxFsaaSamples,
+		Graphics()->MaxMultisampleRenderTargetSamples());
+	m_VideoOffscreenFailed = false;
+	const int RenderWidth = m_VideoOffscreenPlan.m_Offscreen ? m_VideoOffscreenPlan.m_RenderWidth : Graphics()->ScreenWidth();
+	const int RenderHeight = m_VideoOffscreenPlan.m_Offscreen ? m_VideoOffscreenPlan.m_RenderHeight : Graphics()->ScreenHeight();
+	new CVideo(Graphics(), Sound(), Storage(), RenderWidth, RenderHeight, aFilename, g_Config.m_QmVideoWidth, g_Config.m_QmVideoHeight, &DisplaySnapshot);
 	Sound()->UnpauseAudioDevice();
 	if(!IVideo::Current()->Start())
 	{
@@ -5494,6 +6295,13 @@ void CClient::StartVideo(const char *pFilename, bool WithTimestamp)
 		log_error("videorecorder", "Failed to start recording to '%s'", aFilename);
 		m_DemoPlayer.Stop("Failed to start video recording. See local console for details.");
 		return;
+	}
+	if(m_VideoOffscreenPlan.m_Offscreen)
+	{
+		IVideo::Current()->SetOffscreenCapture(true);
+		log_info("videorecorder", "Offscreen export: rendering %dx%d (%dx multisampling) into an offscreen target%s",
+			m_VideoOffscreenPlan.m_RenderWidth, m_VideoOffscreenPlan.m_RenderHeight, m_VideoOffscreenPlan.m_SampleCount,
+			m_VideoOffscreenPlan.m_SampleCount < 2 && g_Config.m_QmVideoFsaa > 1 ? "; multisampling unsupported by the backend, using 1x" : "");
 	}
 	if(m_DemoPlayer.Info()->m_Info.m_Paused)
 	{
@@ -6618,6 +7426,17 @@ void CClient::RegisterCommands()
 	m_pConsole->Register("qm_net_qos_status", "", CFGFLAG_CLIENT, Con_QmNetQosStatus, this, "Show outgoing game traffic QoS status");
 	m_pConsole->Register("ping", "", CFGFLAG_CLIENT, Con_Ping, this, "Ping the current server");
 	m_pConsole->Register("screenshot", "", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_Screenshot, this, "Take a screenshot");
+	m_pConsole->Register("poses_render", "s[poses] ?s[output] ?s[map] ?i[scale] ?i[entities] ?i[sharpen]", CFGFLAG_CLIENT, Con_RenderPoses, this, "Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)");
+	// 无下划线别名：部分键盘布局/输入注入方式打不出下划线，留一个同样可用的短名。
+	m_pConsole->Register("posesrender", "s[poses] ?s[output] ?s[map] ?i[scale]", CFGFLAG_CLIENT, Con_RenderPoses, this, "Alias of poses_render");
+	// 与 demo 一致的两条路径：游戏内观看 / 导出。poses_render 是第三种（静态截图）。
+	m_pConsole->Register("poses_open", "s[poses] ?s[map]", CFGFLAG_CLIENT, Con_PosesOpen, this, "Show a MomentCap .poses file in game (no export)");
+	m_pConsole->Register("poses_close", "", CFGFLAG_CLIENT, &CClient::Con_PosesClose, this, "Leave the pose session");
+	m_pConsole->Register("poses_video", "s[poses] s[name] ?f[seconds] ?s[map]", CFGFLAG_CLIENT, Con_PosesVideo, this, "Record a MomentCap .poses scene to a video");
+	// 无下划线别名，与 posesrender 一致。
+	m_pConsole->Register("posesopen", "s[poses] ?s[map]", CFGFLAG_CLIENT, Con_PosesOpen, this, "Alias of poses_open");
+	m_pConsole->Register("posesclose", "", CFGFLAG_CLIENT, &CClient::Con_PosesClose, this, "Alias of poses_close");
+	m_pConsole->Register("posesvideo", "s[poses] s[name] ?f[seconds] ?s[map]", CFGFLAG_CLIENT, Con_PosesVideo, this, "Alias of poses_video");
 	m_pConsole->Register("net_reset", "", CFGFLAG_CLIENT, ConNetReset, this, "Rebinds the client's listening address and port");
 
 #if defined(CONF_VIDEORECORDER)
@@ -6732,6 +7551,11 @@ void CClient::HandleDemoPath(const char *pPath)
 	str_copy(m_aCmdPlayDemo, pPath);
 }
 
+void CClient::HandlePosesPath(const char *pPath)
+{
+	str_copy(m_aCmdOpenPoses, pPath);
+}
+
 void CClient::HandleMapPath(const char *pPath)
 {
 	str_copy(m_aCmdEditMap, pPath);
@@ -6745,9 +7569,14 @@ static bool UnknownArgumentCallback(const char *pCommand, void *pUser)
 		pClient->HandleConnectLink(pCommand);
 		return true;
 	}
-	else if(str_endswith(pCommand, ".demo"))
+	else if(str_endswith_nocase(pCommand, ".demo"))
 	{
 		pClient->HandleDemoPath(pCommand);
+		return true;
+	}
+	else if(str_endswith_nocase(pCommand, ".poses"))
+	{
+		pClient->HandlePosesPath(pCommand);
 		return true;
 	}
 	else if(str_endswith(pCommand, ".map"))
@@ -7882,6 +8711,8 @@ void CClient::ShellRegister()
 		log_error("client", "Failed to register .map file extension");
 	if(!windows_shell_register_extension(".demo", "Demo File", GAME_NAME, aFullPath, &Updated))
 		log_error("client", "Failed to register .demo file extension");
+	if(!windows_shell_register_extension(".poses", "Pose File", GAME_NAME, aFullPath, &Updated))
+		log_error("client", "Failed to register .poses file extension");
 	if(!windows_shell_register_application(GAME_NAME, aFullPath, &Updated))
 		log_error("client", "Failed to register application");
 	if(Updated)
@@ -7905,6 +8736,8 @@ void CClient::ShellUnregister()
 		log_error("client", "Failed to unregister .map file extension");
 	if(!windows_shell_unregister_class(GAME_NAME ".demo", &Updated))
 		log_error("client", "Failed to unregister .demo file extension");
+	if(!windows_shell_unregister_class(GAME_NAME ".poses", &Updated))
+		log_error("client", "Failed to unregister .poses file extension");
 	if(!windows_shell_unregister_application(aFullPath, &Updated))
 		log_error("client", "Failed to unregister application");
 	if(Updated)

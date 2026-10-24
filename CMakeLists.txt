@@ -3212,6 +3212,8 @@ if(CLIENT)
     QmUi/QmColorGradient.h
     QmUi/QmNeonRainbow.h
     QmUi/QmGradientGeometry.h
+    QmUi/QmImageView.cpp
+    QmUi/QmImageView.h
     QmUi/QmImeAppearance.h
     QmUi/QmChatCompletionAppearance.h
     QmUi/QmImeCandidateLayout.h
@@ -3713,6 +3715,10 @@ if(CLIENT)
     components/qmclient/statusbar_items.h
     components/qmclient/warlist_model.cpp
     components/qmclient/warlist_model.h
+    components/qmclient/pose_file.cpp
+    components/qmclient/pose_file.h
+    components/qmclient/pose_scene.cpp
+    components/qmclient/pose_scene.h
     components/qmclient/update_version.h
     components/qmclient/update_manifest.cpp
     components/qmclient/update_manifest.h
@@ -4707,6 +4713,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/client/rank_view_timeline_test.cpp
     src/test/integration/qmclient/music/netease_shared_memory_readonly_test.cpp
     src/test/integration/qmclient/client/qm_screenshot_image_job_test.cpp
+    src/test/integration/qmclient/client/qm_pose_capture_save_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_cache_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_effects_test.cpp
     src/test/unit/qmclient/client/qm_route_visited_test.cpp
@@ -4862,6 +4869,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_water_hammer_indicator_test.cpp
     src/test/unit/qmclient/client/qm_demo_display_test.cpp
     src/test/unit/qmclient/client/qm_demo_ui_test.cpp
+    src/test/unit/qmclient/client/qm_pose_file_test.cpp
+    src/test/unit/qmclient/client/qm_pose_scene_test.cpp
+    src/test/unit/qmclient/client/qm_pose_map_test.cpp
+    src/test/unit/qmclient/client/qm_pose_capture_test.cpp
     src/test/unit/qmclient/client/qm_video_preset_labels_test.cpp
     src/test/unit/client/online_replay_player_test.cpp
     src/test/unit/qmclient/client/qm_jump_hint_utils_test.cpp
@@ -5088,6 +5099,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/client/qm_config_package_storage_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_image_policy_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_viewer_viewport_test.cpp
+    src/test/unit/qmclient/client/qm_image_view_test.cpp
     src/test/unit/qmclient/client/qm_friend_menu_policy_test.cpp
     src/test/unit/qmclient/ui/qm_rounded_surface_geometry_test.cpp
     src/test/unit/qmclient/ui/qm_rounded_surface_render_test.cpp
@@ -5218,6 +5230,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/tclient/map_history.cpp
     src/game/client/components/tclient/bg_draw_file.cpp
     src/game/client/components/qmclient/warlist_model.cpp
+    src/game/client/components/qmclient/pose_file.cpp
+    src/game/client/components/qmclient/pose_scene.cpp
     src/game/client/components/tclient/swap_countdown_message.cpp
     src/game/client/components/tclient/qm_tee_trail.cpp
     src/game/client/components/qmclient/tee_trail_styles.cpp
@@ -5245,6 +5259,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/QmUi/QmCardOrderModel.cpp
     src/game/client/QmUi/QmDropdown.cpp
     src/game/client/QmUi/QmScroll.cpp
+    src/game/client/QmUi/QmImageView.cpp
     src/game/client/QmUi/QmTree.cpp
     src/game/client/QmUi/QmCardRegistry.cpp
     src/game/client/QmUi/QmCardWiki.cpp
@@ -5347,7 +5362,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   # 视频导出测试依赖 FFmpeg（video_export.cpp/video_encoder.cpp 实现），无 FFmpeg 时随模块一起裁掉
   if(VIDEORECORDER AND FFMPEG_FOUND)
     list(APPEND TESTS
+      src/test/unit/engine/video_audio_timeline_test.cpp
       src/test/unit/engine/video_export_test.cpp
+      src/test/unit/engine/video_offscreen_plan_test.cpp
       src/test/integration/engine/video_export_storage_test.cpp
       src/test/integration/engine/video_audio_test.cpp
       src/test/unit/engine/video_encoder_test.cpp

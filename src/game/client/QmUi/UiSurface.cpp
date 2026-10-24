@@ -72,6 +72,51 @@ bool DrawRoundedSurface(IGraphics *pGraphics, const CUIRect &Rect, const ColorRG
 	return true;
 }
 
+bool DrawRoundedImage(IGraphics *pGraphics, const CUIRect &Rect, const SRoundedImageParams &Image, const ColorRGBA &Border, const SRoundedSurfaceParams &Params)
+{
+	if(pGraphics == nullptr || Rect.w <= 0.0f || Rect.h <= 0.0f || Image.m_Alpha <= 0.0f)
+		return false;
+	// 纹理圆角是设备能力：不支持时由调用方回退到预烘焙圆角的贴图。
+	if(!pGraphics->HasRoundedRectSdf() || !pGraphics->HasRoundedRectSdfTexture() || !Image.m_Texture.IsValid())
+		return false;
+	const SRoundedSurfacePlan Plan = ResolveRoundedSurfacePlan(Rect, Params, true);
+	if(!Plan.m_UseSdf)
+		return false;
+
+	IGraphics::SRoundedRectSdfParams SdfParams;
+	SdfParams.m_Rect = vec4(Plan.m_Rect.x, Plan.m_Rect.y, Plan.m_Rect.w, Plan.m_Rect.h);
+	SdfParams.m_FillColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+	// 没有边框时只留一个 alpha 为 0 的颜色：SDF 的边框项会被覆盖度乘成 0，
+	// 这样既不用写死颜色字面量，也保持边框与填充共用同一份参数。
+	ColorRGBA ResolvedBorder = Border;
+	if(Plan.m_BorderWidth <= 0.0f)
+		ResolvedBorder.a = 0.0f;
+	ResolvedBorder.a *= Image.m_Alpha;
+	SdfParams.m_BorderColor = vec4(ResolvedBorder.r, ResolvedBorder.g, ResolvedBorder.b, ResolvedBorder.a);
+	SdfParams.m_CornerRadii = Plan.m_CornerRadii;
+	SdfParams.m_Params = vec4(Plan.m_BorderWidth, Plan.m_PixelSize, Plan.m_PixelSize * 2.0f, 0.0f);
+	ResolveRoundedImageUV(Plan.m_Rect.w, Plan.m_Rect.h, Image.m_UVScale, Image.m_UVOffset, SdfParams.m_TextureParams0, SdfParams.m_TextureParams1);
+	// 照片整体透明度（卡片淡出）由片元乘在采到的 alpha 上：填充没有别的着色入口。
+	SdfParams.m_TextureParams1.y = std::clamp(Image.m_Alpha, 0.0f, 1.0f);
+	// 图片取样器必须由命令携带：RenderRoundedRectSdf 沿用调用方 TextureSet 的绑定。
+	pGraphics->TextureSet(Image.m_Texture);
+	pGraphics->RenderRoundedRectSdf(SdfParams);
+	pGraphics->TextureClear();
+	return true;
+}
+
+bool DrawRoundedImage(CUi *pUi, const CUIRect &Rect, const SRoundedImageParams &Image, const ColorRGBA &Border, const float Radius, const float BorderWidth)
+{
+	if(pUi == nullptr || pUi->DrawingSuppressed())
+		return false;
+	SRoundedSurfaceParams Params;
+	Params.m_Radius = Radius;
+	Params.m_BorderWidth = BorderWidth;
+	Params.m_PixelSize = pUi->PixelSize();
+	Params.m_Corners = IGraphics::CORNER_ALL;
+	return DrawRoundedImage(pUi->Graphics(), Rect, Image, Border, Params);
+}
+
 bool DrawRoundedSurface(CUi *pUi, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, const float Radius, const float BorderWidth, const int Corners)
 {
 	if(pUi == nullptr || pUi->DrawingSuppressed())

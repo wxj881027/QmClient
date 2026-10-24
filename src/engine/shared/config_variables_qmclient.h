@@ -119,17 +119,33 @@ MACRO_CONFIG_INT(QmVideoSegmentWarmup, qm_video_segment_warmup, 100, 0, 500, CFG
 MACRO_CONFIG_STR(QmVideoEncoder, qm_video_encoder, 64, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)")
 // 统一质量值（M4）：0-51（CRF/CQ/QP 同刻度，越大质量越低）；-1 = 沿用 cl_video_crf。按所选编码器家族映射到原生参数。
 MACRO_CONFIG_INT(QmVideoQuality, qm_video_quality, -1, -1, 51, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter")
-// 导出预设（M6）：0=自定义（跟随 qm_video_encoder/quality/container），1=日常分享(libx264/mp4)，2=高效高画质(hevc_nvenc/mp4)，3=专业剪辑(prores_ks/mov)，4=专业剪辑DNxHR(dnxhd/mov)，5=无损归档(ffv1/mkv)。预设展开为编码器+容器+像素格式+质量组合。
-MACRO_CONFIG_INT(QmVideoPreset, qm_video_preset, 0, 0, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc_nvenc/mp4), 3=editing(ProRes/mov), 4=editing(DNxHR/mov), 5=lossless archive(FFV1/mkv)")
+// 导出预设（M6）：0=自定义，1=日常分享(libx264/mp4)，2=高效分享(hevc/mp4，优先硬件)，
+// 3=剪辑(全帧内 H.264/mp4)，4=交换格式(ProRes/mov)，5=最高画质(全帧内 H.264 4:4:4/mp4)，
+// 6=最快速度(硬件优先 H.264/mp4)。
+// 剪辑预设用全帧内 H.264：实测同画质下体积约为 ProRes 422 HQ 的 1/17，随机定位等价（两者都全内帧）。
+// 最高画质在剪辑之上把质量压到 14（肉眼无损档）；最快速度用 h264 家族别名（无硬件时回落软件）+ 更高 CQ。
+// DNxHR 与 FFV1 已移除（用户明确不需要归档格式）。项目尚未发布，不做旧索引迁移。
+MACRO_CONFIG_INT(QmVideoPreset, qm_video_preset, 0, 0, 6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)")
+// 色度/位深偏好（M6.5）：0=自动（按编码器家族），1=4:2:0，2=4:2:2，3=4:4:4。
+// 渲染读回是 8bit RGBA，提升位深不产生新信息；4:4:4 提高的是色度采样密度（细线、彩色小字、描边）。
+MACRO_CONFIG_INT(QmVideoPixelFormat, qm_video_pixfmt, 0, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)")
+// ProRes profile：0=Proxy 1=LT 2=422 3=HQ 4=4444 5=4444XQ；-1=按像素格式自动（444 用 4444，其余 HQ）。
+MACRO_CONFIG_INT(QmVideoProresProfile, qm_video_prores_profile, -1, -1, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ")
 // 输出容器（M6）：自定义预设使用，mp4/mov/mkv；后缀与 libavformat 容器按文件名匹配。
 MACRO_CONFIG_STR(QmVideoContainer, qm_video_container, 8, "mp4", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Custom export container: mp4, mov or mkv")
-// 关键帧间隔（M4）：编码器 GOP；0 = 用编码器默认。分段渲染每段独立编码器实例，段首帧恒为 IDR，不受此值影响。
-MACRO_CONFIG_INT(QmVideoGop, qm_video_gop, 60, 0, 600, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Keyframe interval (GOP) in frames for demo export (0 = encoder default, 60 = recommended)")
+// 关键帧间隔（M4）：编码器 GOP；0 = 用编码器默认，1 = 全帧内（每帧都是关键帧，剪辑任意切点）。
+// 分段渲染每段独立编码器实例，段首帧恒为 IDR，不受此值影响。
+// NVENC 拒绝 gop_size=1，会被降到 2（隔帧关键帧）；需要真正全帧内时请选软件编码器。
+MACRO_CONFIG_INT(QmVideoGop, qm_video_gop, 60, 0, 600, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Keyframe interval (GOP) in frames for demo export (0 = encoder default, 1 = all-intra, 60 = recommended)")
 // 输出分辨率（M7 超采样）：0 = 跟随窗口渲染分辨率。小于渲染分辨率时以渲染分辨率绘制再经
 // swscale LANCZOS 下采样（例如 2560x1440 窗口导出 1280x720 = 2x 超采样，改善 2D 边缘锯齿）；
-// 大于渲染分辨率会被忽略并回退到渲染分辨率。
+// 大于窗口时按输出尺寸离屏渲染（真分辨率导出，输出宽高比即为画面宽高比）。
 MACRO_CONFIG_INT(QmVideoWidth, qm_video_width, 0, 0, 7680, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)")
 MACRO_CONFIG_INT(QmVideoHeight, qm_video_height, 0, 0, 4320, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)")
+// 导出抗锯齿（与全局 gfx_fsaa_samples 分家）：-1 = 跟随全局（读窗口帧缓冲，窗口开 AA 导出就带 AA）；
+// 0 = 关（即使窗口开了 FSAA，导出也强制单采样）；2/4/8 = 显式档位，整段录制画进离屏 MSAA 目标，
+// 后端不支持或像素预算超限时自动降档。输出大于窗口时必然离屏渲染，跟随全局则按全局档位采样。
+MACRO_CONFIG_INT(QmVideoFsaa, qm_video_fsaa, -1, -1, 8, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering")
 
 MACRO_CONFIG_INT(QmScreenshotWatermark, qm_screenshot_watermark, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically add a watermark to screenshots")
 MACRO_CONFIG_INT(QmScreenshotWatermarkTimestamp, qm_screenshot_watermark_timestamp, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Screenshot watermark: include timestamp")
@@ -912,6 +928,21 @@ MACRO_CONFIG_INT(QmJumpHintSize, qm_jump_hint_size, 10, 0, 50, CFGFLAG_CLIENT | 
 
 // Friends - 好友
 MACRO_CONFIG_INT(QmFriendAutoFollowDelay, qm_friend_auto_follow_delay, 3, 0, 30, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-follow friend server switch delay (seconds)")
+
+// 合影渲染界面的选项记住上次选择：这三个值原本只存在内存里，重启就回到默认，
+// 玩家每次都要重选。0=png 1=webp / 1-4 倍 / 实体层开关。
+MACRO_CONFIG_INT(QmPoseOutput, qm_pose_output, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pose render output format (0 = png, 1 = webp)")
+MACRO_CONFIG_INT(QmPoseCaptureScale, qm_pose_capture_scale, 1, 1, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pose render supersampling scale (1-4)")
+MACRO_CONFIG_INT(QmPoseEntityLayer, qm_pose_entity_layer, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pose render fills the background with the entity layer")
+MACRO_CONFIG_INT(QmPoseSharpen, qm_pose_sharpen, 0, 0, 60, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pose render unsharp mask strength (0 = off)")
+
+// 合影超采样的像素预算（百万像素）。0 = 不限制。
+// 默认 40 MP：必须容得下 4K 窗口的 2 倍（3840x2160x2 = 33.2 MP）——
+// 早期写死 33 MP（3300 万，比 3318 万略小）会把 4K 用户的所有倍数都压成 1 倍，
+// 表现为「选 1 倍还是 4 倍都一样模糊」。
+// 4 倍 4K 是 133 MP（颜色+深度+读回各 530 MB，PNG 编码几十秒，实测会触发
+// 「客户端卡死」看门狗），需要显式调高，不给默认。
+MACRO_CONFIG_INT(QmPoseCaptureMaxMegapixels, qm_pose_capture_max_megapixels, 40, 0, 300, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pose capture pixel budget in megapixels (0 = unlimited)")
 
 // Self-kill protection / 自杀保护 - 仅拦截客户端主动自杀（K 键 / kill 命令），服务端命令不受影响。
 // 开/关通过可绑定命令 qm_self_kill_off / qm_self_kill_on 切换。

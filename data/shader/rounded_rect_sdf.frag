@@ -1,4 +1,8 @@
-uniform vec4 gRoundedRectSdfData[15];
+#ifdef TW_ROUNDED_SDF_TEXTURED
+// 只有「圆角容器放图」变体才绑定图片；普通圆角控件保持无纹理管线。
+uniform sampler2D gTextureSampler;
+#endif
+uniform vec4 gRoundedRectSdfData[17];
 
 noperspective in vec2 texCoord;
 
@@ -99,9 +103,30 @@ void main()
 	float InnerRadius = clamp(CornerRadius(Point, InnerCornerRadii), 0.0, min(InnerHalfSize.x, InnerHalfSize.y));
 	float InnerDistance = RoundedRectSdf(Point, InnerHalfSize, InnerRadius);
 	float InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? Coverage(InnerDistance, Params.y) : 0.0;
+	// 填充覆盖率：有边框时以环带内缘为界，无边框时整块形状都是填充。
+	float FillCoverage = BorderWidth > 0.0 ? InnerCoverage : OuterCoverage;
+#ifdef TW_ROUNDED_SDF_TEXTURED
+	// 圆角容器放图：纹理取代纯色填充，并共用同一个圆角覆盖度，四角因此被真实
+	// 切掉。放大/平移后图片铺满矩形也不再露出方角，因为方角本身已经不画了。
+	// UV 是「逻辑点 → 图片 UV」的仿射，缩放与平移由调用方折算进 Params[15]/[16]；
+	// Params[16].y 是整张照片的透明度（卡片淡出时照片和边框一起消失）。
+	vec4 TexParams0 = gRoundedRectSdfData[15];
+	vec4 TexParams1 = gRoundedRectSdfData[16];
+	if(TexParams0.x > 0.5)
+	{
+		// 图片矩形之外保持透明：图片没铺满容器时，边缘和普通 quad 一样是硬边。
+		vec2 TexUV = Point * TexParams0.yz + vec2(TexParams0.w, TexParams1.x);
+		vec4 TexColor = vec4(0.0);
+		if(all(greaterThanEqual(TexUV, vec2(0.0))) && all(lessThanEqual(TexUV, vec2(1.0))))
+			TexColor = texture(gTextureSampler, TexUV);
+		TexColor.a *= clamp(TexParams1.y, 0.0, 1.0);
+		FillColor = TexColor;
+		FillCoverage = OuterCoverage;
+	}
+#endif
 	if(BorderWidth <= 0.0)
 	{
-		FragClr = vec4(FillColor.rgb, FillColor.a * OuterCoverage);
+		FragClr = vec4(FillColor.rgb, FillColor.a * FillCoverage);
 		return;
 	}
 	float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);
@@ -136,7 +161,7 @@ void main()
 		BorderTint = GradientBorder;
 	}
 	float BorderAlpha = BorderTint.a * BorderCoverage;
-	float FillAlpha = FillColor.a * InnerCoverage * FillAlphaMask;
+	float FillAlpha = FillColor.a * FillCoverage * FillAlphaMask;
 	float OutputAlpha = FillAlpha + BorderAlpha;
 	vec3 Premultiplied = FillColor.rgb * FillAlpha + BorderTint.rgb * BorderAlpha;
 	FragClr = OutputAlpha > 0.0 ? vec4(Premultiplied / OutputAlpha, OutputAlpha) : vec4(0.0);

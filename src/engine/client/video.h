@@ -34,6 +34,8 @@ public:
 	/* pts of the next frame that will be generated */
 	int64_t m_SamplesCount = 0;
 	int64_t m_SamplesFrameCount = 0;
+	// 音频时间轴的分数余数分子，取值 [0, FPS)，由 AdvanceVideoAudioTimeline 维护
+	uint64_t m_SamplesFrameRemainder = 0;
 
 	std::vector<AVFrame *> m_vpFrames;
 	std::vector<AVFrame *> m_vpTmpFrames;
@@ -60,6 +62,10 @@ public:
 	void NextVideoFrame() override;
 	void NextVideoFrameThread() override;
 
+	void SetOffscreenCapture(bool Offscreen) override;
+	void SubmitOffscreenFrame(CImageInfo &&Image) override;
+	void FailCapture() override;
+
 	void NextAudioFrame(ISoundMixFunc Mix) override;
 	void NextAudioFrameTimeline(ISoundMixFunc Mix) override;
 
@@ -69,6 +75,12 @@ private:
 	void RunVideoConvertThread(size_t ThreadIndex) REQUIRES(!m_WriteLock);
 	void FillVideoFrame(size_t ThreadIndex, size_t SlotIndex) REQUIRES(!m_WriteLock);
 	bool UpdateVideoBufferFromGraphics(size_t SlotIndex);
+	// 捕获槽的公共收尾：反压等待空闲槽、失败归还、就绪发布。
+	// 窗口路径（NextVideoFrameThread）与离屏路径（SubmitOffscreenFrame）共用，
+	// 保证两条路径的帧号推进与队列语义一致。
+	bool AcquireCaptureSlot(size_t &SlotIndex);
+	void ReturnCaptureSlot(size_t SlotIndex);
+	void PublishCaptureSlot(size_t SlotIndex);
 
 	void RunAudioThread(size_t ParentThreadIndex, size_t ThreadIndex) REQUIRES(!m_WriteLock);
 	bool FillAudioFrame(size_t ThreadIndex);
@@ -115,6 +127,8 @@ private:
 	bool m_Started;
 	bool m_Stopped;
 	std::atomic<bool> m_Recording;
+	// 离屏导出模式：主线程提交整帧像素，NextVideoFrameThread 不再读窗口帧缓冲。
+	bool m_OffscreenCapture = false;
 
 	CLock m_WriteLock;
 	// 视频 PTS 权威计数器：已提交编码的视频帧数，在 m_WriteLock 下递增，

@@ -6927,6 +6927,12 @@ void CHud::OnRender()
 	if(!GameClient()->m_Snap.m_pGameInfoObj)
 		return;
 
+	// 合影超采样静帧：抓帧那一帧整块 HUD 都不画，成片只留世界与名字牌。
+	// 开关是 IClient::PoseCaptureActive（只在抓帧的几帧为真），状态栏与聊天
+	// 在各自组件的 OnRender 里用同一个开关收掉。
+	if(Client()->PoseCaptureActive())
+		return;
+
 	m_Width = 300.0f * Graphics()->ScreenAspect();
 	m_Height = 300.0f;
 	Graphics()->MapScreen(0.0f, 0.0f, m_Width, m_Height);

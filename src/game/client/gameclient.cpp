@@ -3239,9 +3239,9 @@ void CGameClient::OnStateChange(int NewState, int OldState)
 		pComponent->OnStateChange(NewState, OldState);
 }
 
-void CGameClient::OnScreenshotTaken(CImageInfo &&Image)
+void CGameClient::OnScreenshotTaken(CImageInfo &&Image, const char *pPath)
 {
-	m_UiEffects.StartScreenshotAnimation(std::move(Image));
+	m_UiEffects.StartScreenshotAnimation(std::move(Image), pPath);
 }
 
 IGraphics::FScreenshotProcessor CGameClient::ScreenshotProcessor()
@@ -3250,6 +3250,44 @@ IGraphics::FScreenshotProcessor CGameClient::ScreenshotProcessor()
 	const int State = Client()->State();
 	const char *pMapName = State == IClient::STATE_ONLINE || State == IClient::STATE_DEMOPLAYBACK ? Client()->GetCurrentMap() : "";
 	return CQmScreenshotManager::CaptureProcessor(Storage(), g_Config.m_QmScreenshotWatermark != 0, Options, pMapName, std::time(nullptr));
+}
+
+void CGameClient::SetPoseCamera(vec2 Center, float Zoom)
+{
+	m_Camera.SetDemoView(Center, Zoom);
+	// 自由视角下相机中心取自 m_aMousePos（和 demo 同一套），所以外部给定的取景
+	// 必须同时写进那里，否则「适配取景」和拖动平移会被下一帧的鼠标位置覆盖。
+	m_Controls.m_aMousePos[g_Config.m_ClDummy] = Center;
+}
+
+bool CGameClient::PoseSkinsReady()
+{
+	// 合影是合成快照，没有 demo 播放，也就没有任何"皮肤已经加载"的前置动作。
+	// 这里按快照里真实用到的皮肤名驱动加载，并回报是否都已经是可绘制状态，
+	// 让引擎在开拍前等它们就绪——否则社区皮肤会以 default 出现在成片里。
+	// 只收集快照里真的存在的客户端：m_aClients 是定长数组，未使用的槽位也带着
+	// 默认名字，把它们算进来会让闸门永远在等一批不存在的皮肤。
+	std::vector<std::string> vNames;
+	vNames.reserve(MAX_CLIENTS);
+	for(int i = 0; i < MAX_CLIENTS; ++i)
+	{
+		if(!m_Snap.m_aCharacters[i].m_Active)
+			continue;
+		const CClientData &ClientData = m_aClients[i];
+		if(ClientData.m_aSkinName[0] == 0)
+			continue;
+		// 与 RefreshSkin 取的是同一个字段：名字一致才可能拿到同一份皮肤。
+		vNames.emplace_back(ClientData.m_aSkinName);
+	}
+	if(vNames.empty())
+		return true;
+	std::string PendingName;
+	if(m_Skins.PoseSkinsReady(vNames, &PendingName))
+		return true;
+	// 等待期间必须主动推进皮肤管线：OnUpdate 有最高 500 ms 的节流，
+	// 只靠常规帧循环等待会变成空等，抓帧永远等不到 LOADED。
+	m_Skins.UpdateForSettingsWarmup();
+	return false;
 }
 
 void CGameClient::OnShutdown()

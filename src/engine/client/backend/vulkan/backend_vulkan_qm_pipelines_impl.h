@@ -76,6 +76,29 @@ inline bool CCommandProcessorFragment_Vulkan::CreateRoundedRectSdfGraphicsPipeli
 	return true;
 }
 
+inline bool CCommandProcessorFragment_Vulkan::CreateRoundedRectSdfTextureGraphicsPipeline(const char *pVertName, const char *pFragName)
+{
+	std::array<VkVertexInputAttributeDescription, 3> aAttributeDescriptions = {};
+	aAttributeDescriptions[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
+	aAttributeDescriptions[1] = {1, 0, VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 2};
+	aAttributeDescriptions[2] = {2, 0, VK_FORMAT_R8G8B8A8_UNORM, sizeof(float) * (2 + 2)};
+
+	// 与无纹理变体的唯一区别：描述符集多一个图片采样器（set 0 binding 0）。
+	std::array<VkDescriptorSetLayout, 2> aSetLayouts = {m_StandardTexturedDescriptorSetLayout, m_QuadUniformDescriptorSetLayout};
+	std::array<VkPushConstantRange, 1> aPushConstants{};
+	aPushConstants[0] = {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(SUniformGPos)};
+
+	for(size_t i = 0; i < VULKAN_BACKEND_BLEND_MODE_COUNT; ++i)
+	{
+		for(size_t j = 0; j < VULKAN_BACKEND_CLIP_MODE_COUNT; ++j)
+		{
+			if(!CreateGraphicsPipeline<true>(pVertName, pFragName, m_RoundedRectSdfTexturePipeline, sizeof(CCommandBuffer::SVertex), aAttributeDescriptions, aSetLayouts, aPushConstants, VULKAN_BACKEND_TEXTURE_MODE_TEXTURED, EVulkanBackendBlendModes(i), EVulkanBackendClipModes(j), false, VK_NULL_HANDLE, VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM, true, QmEnhancedMode() == qm_vulkan_ext::EEnhancedMode::ON))
+				return false;
+		}
+	}
+	return true;
+}
+
 inline bool CCommandProcessorFragment_Vulkan::CreateProceduralRingGraphicsPipeline(const char *pVertName, const char *pFragName)
 {
 	std::array<VkVertexInputAttributeDescription, 3> aAttributeDescriptions = {};
@@ -130,6 +153,12 @@ inline void CCommandProcessorFragment_Vulkan::Cmd_RenderMediaIslandSdf_FillExecu
 
 inline void CCommandProcessorFragment_Vulkan::Cmd_RenderRoundedRectSdf_FillExecuteBuffer(SRenderCommandExecuteBuffer &ExecBuffer, const CCommandBuffer::SCommand_RenderRoundedRectSdf *pCommand)
 {
+	// 纹理变体需要图片描述符；无纹理变体保持占位，执行阶段不会取用它。
+	if(pCommand->m_Params.m_TextureParams0.x > 0.5f && pCommand->m_State.m_Texture >= 0 && (size_t)pCommand->m_State.m_Texture < m_vTextures.size())
+	{
+		const size_t AddressModeIndex = GetAddressModeIndex(pCommand->m_State);
+		ExecBuffer.m_aDescriptors[0] = m_vTextures[pCommand->m_State.m_Texture].m_aVKStandardTexturedDescrSets[AddressModeIndex];
+	}
 	ExecBuffer.m_IndexBuffer = m_IndexBuffer;
 	ExecBuffer.m_EstimatedRenderCallCount = 1;
 	ExecBufferFillDynamicStates(pCommand->m_State, ExecBuffer);
@@ -198,10 +227,14 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderRoundedRectSdf(const CCo
 	size_t DynamicIndex;
 	size_t AddressModeIndex;
 	GetStateIndices(ExecBuffer, pCommand->m_State, IsTextured, BlendModeIndex, DynamicIndex, AddressModeIndex);
-	(void)IsTextured;
-	(void)AddressModeIndex;
-	auto &PipeLayout = GetPipeLayout(m_RoundedRectSdfPipeline, false, BlendModeIndex, DynamicIndex);
-	auto &PipeLine = GetPipeline(m_RoundedRectSdfPipeline, false, BlendModeIndex, DynamicIndex);
+	// 带纹理的命令走纹理变体：唯一的差别是描述符集里多一张图片。
+	const bool Textured = pCommand->m_Params.m_TextureParams0.x > 0.5f;
+	if(Textured && (!m_QmRoundedRectSdfTexturePipelineValid || !IsTextured))
+		// 纹理变体不可用时不画：退回纯色会把方角画出来，正是要修的问题。
+		return true;
+	auto &Container = Textured ? m_RoundedRectSdfTexturePipeline : m_RoundedRectSdfPipeline;
+	auto &PipeLayout = GetPipeLayout(Container, Textured, BlendModeIndex, DynamicIndex);
+	auto &PipeLine = GetPipeline(Container, Textured, BlendModeIndex, DynamicIndex);
 
 	VkCommandBuffer *pCommandBuffer;
 	if(!GetGraphicCommandBuffer(pCommandBuffer, ExecBuffer.m_ThreadIndex))
@@ -217,10 +250,14 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderRoundedRectSdf(const CCo
 	BindVertexBuffer(ExecBuffer.m_ThreadIndex, CommandBuffer, VKBuffer, (VkDeviceSize)BufferOff);
 	BindIndexBuffer(ExecBuffer.m_ThreadIndex, CommandBuffer, ExecBuffer.m_IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
+	// 纹理变体把图片采样器放在 set 0，参数 UBO 落在 set 1；无纹理变体只有 set 0。
+	const uint32_t ParamSet = Textured ? 1u : 0u;
+	if(Textured)
+		BindDescriptorSet(ExecBuffer.m_ThreadIndex, CommandBuffer, PipeLayout, 0, ExecBuffer.m_aDescriptors[0]);
 	SDeviceDescriptorSet UniDescrSet;
 	if(!GetUniformBufferObject(ExecBuffer.m_ThreadIndex, true, UniDescrSet, 1, &pCommand->m_Params, sizeof(pCommand->m_Params)))
 		return false;
-	BindDescriptorSet(ExecBuffer.m_ThreadIndex, CommandBuffer, PipeLayout, 0, UniDescrSet);
+	BindDescriptorSet(ExecBuffer.m_ThreadIndex, CommandBuffer, PipeLayout, ParamSet, UniDescrSet);
 	vkCmdPushConstants(CommandBuffer, PipeLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(SUniformGPos), m.data());
 	DrawIndexed(ExecBuffer.m_ThreadIndex, CommandBuffer, 6, 1, 0, 0, 0);
 	return true;
@@ -273,6 +310,7 @@ inline int CCommandProcessorFragment_Vulkan::InitQmPipelines()
 	// ==== QmVulkan 扩展管线：增强效果与核心 UI AA 分开创建 ====
 	m_QmMediaIslandSdfPipelineValid = false;
 	m_QmRoundedRectSdfPipelineValid = false;
+	m_QmRoundedRectSdfTexturePipelineValid = false;
 	m_ProceduralRingPipelineValid = false;
 	m_GaussianBlurPipelineValid = false;
 	// 圆角 SDF 是普通 UI 的核心 AA 路径，不能随增强渲染开关一起停用：
@@ -285,6 +323,18 @@ inline int CCommandProcessorFragment_Vulkan::InitQmPipelines()
 		m_RoundedRectSdfPipeline.Destroy(m_VKDevice);
 		SetWarning(EGfxWarningType::GFX_WARNING_TYPE_INIT_FAILED, "Rounded-rect SDF pipeline unavailable, falling back to geometry.");
 	}
+	// 圆角容器放图的纹理变体：失败只影响「圆角里放图」这条能力位，
+	// 普通圆角控件继续走上面那条无纹理管线。
+	if(m_QmRoundedRectSdfPipelineValid)
+	{
+		m_QmRoundedRectSdfTexturePipelineValid = CreateRoundedRectSdfTextureGraphicsPipeline("shader/vulkan/rounded_rect_sdf.vert.spv", "shader/vulkan/rounded_rect_sdf_textured.frag.spv");
+		if(m_HasError || m_LastPipelineCreateResult == VK_ERROR_DEVICE_LOST)
+			return -1;
+		if(!m_QmRoundedRectSdfTexturePipelineValid)
+			m_RoundedRectSdfTexturePipeline.Destroy(m_VKDevice);
+	}
+	if(m_pBackendCapabilities != nullptr)
+		m_pBackendCapabilities->m_RoundedRectSdfTexture.store(m_QmRoundedRectSdfTexturePipelineValid, std::memory_order_release);
 	if(QmEnhancedShouldLoad())
 	{
 		// SDF 常驻：Media Island 与圆角使用同一类自定义管线，失败只回退几何，不关闭 SDF。
@@ -343,6 +393,8 @@ inline void CCommandProcessorFragment_Vulkan::CleanupQmPipelines()
 {
 	m_MediaIslandSdfPipeline.Destroy(m_VKDevice);
 	m_RoundedRectSdfPipeline.Destroy(m_VKDevice);
+	m_RoundedRectSdfTexturePipeline.Destroy(m_VKDevice);
+	m_QmRoundedRectSdfTexturePipelineValid = false;
 	m_ProceduralRingPipeline.Destroy(m_VKDevice);
 	m_ProceduralRingPipelineValid = false;
 	SyncProceduralRingCapability();

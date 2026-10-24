@@ -62,6 +62,8 @@ namespace
 		}
 
 	public:
+		// 默认沿用 CPU 预烘焙圆角回退，只有显式打开纹理圆角的用例才模拟设备支持。
+		bool m_HasSdfTexture = false;
 		bool IsBackbufferCaptureSupported() const override { return false; }
 		bool IsRenderTargetGaussianBlurSupported() const override { return false; }
 		struct SQuadSubmission
@@ -106,6 +108,7 @@ namespace
 			*pY1 = m_MapRect.y + m_MapRect.h;
 		}
 		bool HasRoundedRectSdf() override { return true; }
+		bool HasRoundedRectSdfTexture() override { return m_HasSdfTexture; }
 		void ClipEnable(int X, int Y, int W, int H) override
 		{
 			m_Clipped = true;

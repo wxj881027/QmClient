@@ -87,7 +87,7 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 	for(const char *pShaderPath : {"data/shader/rounded_rect_sdf.frag", "data/shader/vulkan/rounded_rect_sdf.frag"})
 	{
 		const std::string Shader = ReadTextFile(pShaderPath);
-		EXPECT_NE(Shader.find("gRoundedRectSdfData[15]"), std::string::npos);
+		EXPECT_NE(Shader.find("gRoundedRectSdfData[17]"), std::string::npos);
 		EXPECT_NE(Shader.find("float CornerRadius(vec2 Point, vec4 CornerRadii)"), std::string::npos);
 		EXPECT_NE(Shader.find("float SdfFeather(float DistanceValue, float PixelSize)"), std::string::npos);
 		EXPECT_NE(Shader.find("return max(PixelSize, length(vec2(dFdx(DistanceValue), dFdy(DistanceValue))));"), std::string::npos);
@@ -170,6 +170,16 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 	const std::string VulkanSdfShader = ReadTextFile("data/shader/vulkan/rounded_rect_sdf.frag");
 	EXPECT_EQ(NormalizeSdfCore(OpenGlSdfShader), NormalizeSdfCore(VulkanSdfShader));
 
+	// 纹理变体的 Vulkan 描述符集号是编译期看不出来的接口：图片采样器在 set 0，
+	// 参数块在 set 1，与 C++ 侧「图片绑 set 0、UBO 绑 set 1」必须一致。set 号写错时
+	// 片元读到的是未绑定内存，会把「启用纹理」当作关闭，照片整块透明——只有实机
+	// 才能看出来，所以在这里用静态合同钉住。
+	EXPECT_NE(VulkanSdfShader.find("layout(set = 0, binding = 0) uniform sampler2D gTextureSampler;"), std::string::npos);
+	EXPECT_NE(VulkanSdfShader.find("layout(std140, set = 1, binding = 1)"), std::string::npos);
+	EXPECT_NE(VulkanSdfShader.find("layout(std140, set = 0, binding = 1)"), std::string::npos);
+	const std::string VulkanPipelines = ReadTextFile("src/engine/client/backend/vulkan/backend_vulkan_qm_pipelines_impl.h");
+	EXPECT_NE(VulkanPipelines.find("const uint32_t ParamSet = Textured ? 1u : 0u;"), std::string::npos);
+
 	// 跨后端几何核心必须一致：从 SDF 距离函数体里抽出「返回表达式」，
 	// 把 Metal 的 float2 语法归一化到 GLSL 的 vec2，再逐字符比对。
 	// 这能拦住只改一个后端的圆角/边界数学漂移，而不会把后端方言差异当成回归。
@@ -219,7 +229,7 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 
 	const std::string GraphicsHeader = ReadTextFile("src/engine/graphics.h");
 	const std::string GraphicsThreaded = ReadTextFile("src/engine/client/graphics_threaded.cpp");
-	EXPECT_NE(GraphicsHeader.find("static_assert(sizeof(SRoundedRectSdfParams) == sizeof(vec4) * 15);"), std::string::npos);
+	EXPECT_NE(GraphicsHeader.find("static_assert(sizeof(SRoundedRectSdfParams) == sizeof(vec4) * 17);"), std::string::npos);
 	const std::string RoundedCommand = FunctionBody(GraphicsThreaded, "void CGraphics_Threaded::RenderRoundedRectSdf");
 	EXPECT_NE(RoundedCommand.find("Params.m_Params.z"), std::string::npos);
 	EXPECT_NE(RoundedCommand.find("if(m_NumVertices > 0)"), std::string::npos);
@@ -237,7 +247,10 @@ TEST(QmNewUiMenuRenderSurfaceContract, OrdinaryUiRoundedSurfacesUseSharedPath)
 	const std::string Effects = ReadTextFile("src/game/client/components/ui_effects.cpp");
 	const std::string HudEditor = ReadTextFile("src/game/client/components/hud_editor.cpp");
 
-	EXPECT_NE(Effects.find("DrawRoundedSurface(Ui(), ShadowRect"), std::string::npos);
+	// 照片卡：照片走共享的圆角贴图路径（四角由圆角覆盖度裁掉），只有能力回退时
+	// 才用一帧四边形 + 单独描边。卡片投影已移除，旧的 ShadowRect 直绘不得回归。
+	EXPECT_NE(Effects.find("DrawRoundedImage(Ui(), CardRect"), std::string::npos);
+	EXPECT_NE(Effects.find("DrawRoundedSurface(Ui(), BorderRect"), std::string::npos);
 	EXPECT_EQ(Effects.find("Graphics()->DrawRect(PreviewX + ShadowOffset"), std::string::npos);
 	EXPECT_NE(HudEditor.find("DrawRoundedSurface(Ui(), HelpRect"), std::string::npos);
 	EXPECT_EQ(HudEditor.find("Graphics()->DrawRect(HelpX, HelpY"), std::string::npos);

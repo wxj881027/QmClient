@@ -450,10 +450,17 @@ public:
 		vec4 m_GradientParams0{};
 		// x=方向 x, y=方向 y, z=反向, w=颜色数
 		vec4 m_GradientParams1{};
-		// x=是否启用渐变
+		// x=是否启用渐变, y=只描边, z=边框羽化指数
 		vec4 m_GradientParams2{};
+		// 可选纹理采样：为圆角容器放图时，片元按圆角覆盖度裁剪纹理，四角不再露出方角。
+		// x=是否启用纹理（0 关闭，关闭时着色器完全跳过采样）,
+		// y/z=UV 相对矩形本地坐标的缩放, w=UV 偏移 x
+		vec4 m_TextureParams0{};
+		// x=UV 偏移 y，其余保留
+		vec4 m_TextureParams1{};
+		// 纹理由 SState 携带（调用方先 TextureSet），不进入 uniform 块，保证结构体是纯 vec4 数组。
 	};
-	static_assert(sizeof(SRoundedRectSdfParams) == sizeof(vec4) * 15);
+	static_assert(sizeof(SRoundedRectSdfParams) == sizeof(vec4) * 17);
 
 	enum
 	{
@@ -663,6 +670,8 @@ public:
 	// 仅后端能创建与交换链同采样数的离屏目标时返回 true。背景/文字分层依赖它：
 	// 世界先写入多采样离屏目标并 resolve，文字再直接写交换链，模糊只采样已 resolve 的背景。
 	virtual bool IsMultisampleRenderTargetSupported() const { return false; }
+	// 离屏渲染目标的设备最大采样数（与窗口 FSAA 配置无关）；1 表示只支持单采样目标。
+	virtual int MaxMultisampleRenderTargetSamples() const { return 1; }
 	virtual int MultiSamplingCount() const { return 0; }
 	virtual const char *RenderTargetSupportReason() const = 0;
 	virtual CRenderTargetHandle CreateRenderTarget(int Width, int Height) = 0;
@@ -773,6 +782,9 @@ public:
 	virtual bool IsConfigModernAPI() = 0;
 	virtual bool HasMediaIslandSdf() = 0;
 	virtual bool HasRoundedRectSdf() = 0;
+	// 圆角 SDF 能否直接采样纹理：可用时把图放进圆角容器不会再露出方角；
+	// 不可用时调用方回退到 CPU 预烘焙的圆角 alpha（放大后仍会露方角）。
+	virtual bool HasRoundedRectSdfTexture() = 0;
 	virtual bool HasProceduralRing() = 0;
 	virtual bool IsTileBufferingEnabled() = 0;
 	virtual bool IsQuadBufferingEnabled() = 0;
@@ -971,12 +983,99 @@ public:
 	 * The pointer must be valid until the next swap operation.
 	 */
 	virtual void ReadPixel(ivec2 Position, ColorRGBA *pColor) = 0;
-	using FScreenshotCallback = std::function<void(CImageInfo &&)>;
+	// 回调同时给出落盘路径：界面用它显示「查看截图」，不靠猜文件名。
+	using FScreenshotCallback = std::function<void(CImageInfo &&, const char *pPath)>;
 	// 保存任务持有处理器的值快照；处理失败时不保存未按用户选择处理的图片。
 	using FScreenshotProcessor = std::function<bool(CImageInfo &, std::string &)>;
 	virtual void TakeScreenshot(const char *pFilename) = 0;
 	virtual void TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback, FScreenshotProcessor pfnProcessor = nullptr) = 0;
+	// 把内存里的图像按 TakeScreenshot 的命名、目录与水印流程落盘（扩展名决定编码）。
+	// 合影超采样静帧用：图像来自离屏渲染目标，而不是窗口帧缓冲。
+	// 默认实现返回 false，表示后端不支持从外部图像落盘。
+	virtual bool TakeScreenshotFromImage(CImageInfo &&Image, const char *pFilename, FScreenshotCallback pfnCallback, FScreenshotProcessor pfnProcessor = nullptr)
+	{
+		(void)Image;
+		(void)pFilename;
+		(void)pfnCallback;
+		(void)pfnProcessor;
+		return false;
+	}
 	virtual void TakeCustomScreenshot(const char *pFilename) = 0;
+
+	// 合影超采样静帧：把接下来的这一帧整幅画面渲染到 Width×Height 的离屏目标，
+	// 期间 ScreenWidth()/ScreenHeight() 报告该尺寸，于是几何、皮肤与文字都按目标
+	// 尺寸重新光栅化（世界投影只由宽高比与相机缩放决定，取景不变）。
+	// 必须在帧的绘制命令之前调用，并在同一帧的 EndOffscreenFrame 收尾。
+	// 默认实现返回 false：后端不支持离屏帧时调用方退回窗口截图。
+	virtual bool BeginOffscreenFrame(int Width, int Height)
+	{
+		(void)Width;
+		(void)Height;
+		return false;
+	}
+	// 结束离屏帧并把像素读回 Image。无论成功与否都会恢复窗口尺寸与渲染目标状态。
+	virtual bool EndOffscreenFrame(CImageInfo &Image)
+	{
+		(void)Image;
+		return false;
+	}
+	// 分块渲染的一帧：物理目标只有一块（TileWidth×TileHeight），但布局、文字与
+	// 世界投影看到的逻辑屏幕是整幅 LogicalWidth×LogicalHeight（N 倍）。
+	// 逻辑屏幕里 (TileOriginX, TileOriginY) 起的那一块落进这块物理目标，
+	// 因此整幅图要靠 N×N 次这样的帧拼出来。
+	//
+	// 与 BeginOffscreenFrame 的区别只在"逻辑尺寸"与"物理尺寸"分家：
+	// 前者两者相等（一次画完整幅），后者把整幅切块，从而绕开后端纹理上限，
+	// 显存占用也从"整幅 N 倍"降到"一块窗口"。
+	// 收尾同样用 EndOffscreenFrame（读回的是这一块）。
+	//
+	// 尚未完成的部分（调用方必须自己解决，否则四个块会各画一整幅）：
+	//   1. 世界几何是"世界坐标 + 相机视图投影"直接画进目标的，改 MapScreen 只影响
+	//      屏幕空间（UI/文字），所以必须按块驱动相机（qm_pose::TileView）。
+	//   2. 文字按逻辑屏高度光栅化，与"物理块只有窗口大"之间存在换算关系，
+	//      相机分块与文字 N 倍放大目前不能同时成立。
+	// 本接口提供"逻辑/物理分家"这一层，TileOriginX/Y 目前只做边界校验。
+	virtual bool BeginOffscreenTileFrame(int TileWidth, int TileHeight, int LogicalWidth, int LogicalHeight, int TileOriginX, int TileOriginY)
+	{
+		(void)TileWidth;
+		(void)TileHeight;
+		(void)LogicalWidth;
+		(void)LogicalHeight;
+		(void)TileOriginX;
+		(void)TileOriginY;
+		return false;
+	}
+
+	// 视频导出离屏帧：与静帧离屏同一思路，但目标跨帧复用（整段录制只建一次），
+	// 且可选多采样（SampleCount > 1 时按 qm_video_fsaa 请求 MSAA，后端在结束时 resolve）。
+	// 期间 ScreenWidth()/ScreenHeight() 报告目标尺寸，几何与文字按导出分辨率光栅化。
+	// 必须在帧的绘制命令之前调用，同一帧用 EndVideoFrame 收尾；录制结束时调 StopVideoFrame。
+	// 默认实现返回 false：后端不支持时调用方退回读窗口帧缓冲的旧路径。
+	virtual bool BeginVideoFrame(int Width, int Height, int SampleCount)
+	{
+		(void)Width;
+		(void)Height;
+		(void)SampleCount;
+		return false;
+	}
+	// 结束视频离屏帧：结束渲染目标（含 MSAA resolve）、恢复窗口尺寸、把成片按原始
+	// 宽高比回绘到窗口（导出期间预览不冻结）。读回是 PBO 异步的：这里排队本帧 DMA；
+	// 有完成信号的后端维持两笔在途并返回「上上帧」的像素（主线程与渲染线程按帧重叠），
+	// 其余后端逐帧等待并返回「上一帧」。在途帧由 FlushVideoFrameReadbacks 收尾。
+	virtual void EndVideoFrame(CImageInfo &Image)
+	{
+		(void)Image;
+	}
+	// 结算离屏视频的全部在途读回（录制收尾时调用）：按序把成功帧写入 pOutImages
+	// （最多 MaxImages 帧），返回写入数；没有在途请求返回 0。
+	virtual int FlushVideoFrameReadbacks(CImageInfo *pOutImages, int MaxImages)
+	{
+		(void)pOutImages;
+		(void)MaxImages;
+		return 0;
+	}
+	// 销毁复用的视频离屏目标；录制结束（或降级回窗口路径）时调用，可重复调用。
+	virtual void StopVideoFrame() {}
 	virtual int GetVideoModes(CVideoMode *pModes, int MaxModes, int Screen) = 0;
 	virtual bool GetCurrentVideoMode(CVideoMode &CurMode, int Screen) = 0;
 	virtual void Swap() = 0;

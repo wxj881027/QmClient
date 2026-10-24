@@ -422,7 +422,9 @@ void CControls::OnRender()
 
 bool CControls::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 {
-	if(GameClient()->m_Snap.m_pGameInfoObj && (GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_PAUSED))
+	// 合影预览的快照永远带着暂停标志（demo/同步快照都是暂停态），
+	// 但那只是"世界不推进"，自由视角仍然必须能推镜头，不能跟着一起返回。
+	if(!Client()->PoseSessionActive() && GameClient()->m_Snap.m_pGameInfoObj && (GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_PAUSED))
 		return false;
 
 	if(CursorType == IInput::CURSOR_JOYSTICK && g_Config.m_InpControllerAbsolute && GameClient()->m_Snap.m_pGameInfoObj && !GameClient()->m_Snap.m_SpecInfo.m_Active)
@@ -456,8 +458,25 @@ bool CControls::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 		}
 	}
 
-	if(GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId < 0)
+	if(Client()->PoseSessionActive())
+	{
+		// 合影预览：画面 1:1 跟随光标（世界位移 = 光标 / 缩放）。
+		// 乘缩放是瞄准语义，取景一拉远（zoom < 1）光标走一大段画面几乎不动，
+		// 看起来就是"鼠标完全没反应"。
+		// 按住左键时不推镜头：此时光标归界面拖拽。预览 HUD / 地图选择弹窗打开时
+		// 菜单层会先吃掉增量（OnCursorMove 返回 true），根本走不到这里。
+		if(Input()->KeyIsPressed(KEY_MOUSE_1))
+		{
+			ClampMousePos();
+			return true;
+		}
+		const float Sens = CursorType == IInput::CURSOR_JOYSTICK ? g_Config.m_InpControllerSens / 100.0f : g_Config.m_InpMousesens / 100.0f;
+		Factor = Sens / maximum(GameClient()->m_Camera.m_Zoom, 0.05f);
+	}
+	else if(GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId < 0)
+	{
 		Factor *= GameClient()->m_Camera.m_Zoom;
+	}
 
 	m_aMousePos[g_Config.m_ClDummy] += vec2(x, y) * Factor;
 	GameClient()->m_Controls.m_aMouseInputType[g_Config.m_ClDummy] = CControls::EMouseInputType::RELATIVE;
@@ -467,7 +486,10 @@ bool CControls::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 
 void CControls::ClampMousePos()
 {
-	if(GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId < 0)
+	// 合影预览的相机中心也取自 m_aMousePos（世界坐标），必须按自由视角的方式
+	// 夹到地图范围。走下面的玩家分支会把它当成「相对玩家的偏移」重新缩放，
+	// 相机被拽到地图外、出图全黑。
+	if((GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId < 0) || Client()->PoseSessionActive())
 	{
 		m_aMousePos[g_Config.m_ClDummy].x = std::clamp(m_aMousePos[g_Config.m_ClDummy].x, -201.0f * 32, (Collision()->GetWidth() + 201.0f) * 32.0f);
 		m_aMousePos[g_Config.m_ClDummy].y = std::clamp(m_aMousePos[g_Config.m_ClDummy].y, -201.0f * 32, (Collision()->GetHeight() + 201.0f) * 32.0f);
