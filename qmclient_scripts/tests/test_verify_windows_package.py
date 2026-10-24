@@ -26,11 +26,13 @@ class VerifyWindowsPackageTest(unittest.TestCase):
 		self.runtime.write_text("DDNet.exe\nDDNet-Server.exe\nQmClient-Updater.exe\nqm-nmt-helper.exe\nqm-nmt-hook64.dll\n", encoding="utf-8")
 		self.tools.write_text("map_extract.exe\ntwping.exe\n", encoding="utf-8")
 		self.runtime_names = {"DDNet.exe", "DDNet-Server.exe", "QmClient-Updater.exe", "qm-nmt-helper.exe"}
+		# 每个基线包都带一套匹配捆绑版本的 FFmpeg 运行时，否则校验会先因缺 DLL 失败。
+		self.ffmpeg_names = {"avcodec-63.dll", "avformat-63.dll", "avutil-61.dll", "swresample-7.dll", "swscale-10.dll"}
 
 	def write_package(self, extra: tuple[str, ...] = (), missing: str = "", portable: bool = False, steam_appid: bool = True) -> None:
 		names = self.runtime_names | (set() if portable else {"map_extract.exe", "twping.exe"})
 		with zipfile.ZipFile(self.package, "w") as archive:
-			for name in sorted(names - {missing}):
+			for name in sorted((names - {missing}) | self.ffmpeg_names):
 				archive.writestr(f"QmClient/{name}", b"binary")
 			archive.writestr("QmClient/data/fonts/中文字体.ttf", b"font")
 			archive.writestr("QmClient/freetype.dll", b"runtime")
@@ -101,7 +103,7 @@ class VerifyWindowsPackageTest(unittest.TestCase):
 	def test_real_sevenzip_archive_inventory_rejects_unexpected_program(self) -> None:
 		directory = self.root / "QmClient"
 		directory.mkdir()
-		for name in self.runtime_names | {"map_extract.exe", "twping.exe"}:
+		for name in self.runtime_names | {"map_extract.exe", "twping.exe"} | self.ffmpeg_names:
 			(directory / name).write_bytes(b"program")
 		(directory / "steam_appid.txt").write_bytes(b"412220")
 		package = self.root / "package.7z"
@@ -135,6 +137,42 @@ class VerifyWindowsPackageTest(unittest.TestCase):
 		self.assertFalse(themes & {name.casefold() for name in MODULE.REMOVED_BUNDLED_RESOURCES})
 		self.write_package(extra=tuple(f"QmClient/{name}" for name in sorted(themes)))
 		MODULE.verify(self.package, self.runtime, self.tools, False)
+
+	def test_ffmpeg_runtime_requires_one_dll_per_family(self) -> None:
+		self.write_package()
+		MODULE.verify(self.package, self.runtime, self.tools, False)
+		# 旧版残留：同一族出现两份会让客户端加载到不匹配的 ABI。
+		self.write_package(extra=("QmClient/avcodec-61.dll",))
+		with self.assertRaisesRegex(ValueError, "multiple FFmpeg runtime DLLs"):
+			MODULE.verify(self.package, self.runtime, self.tools, False)
+
+	def test_ffmpeg_runtime_requires_every_family(self) -> None:
+		for missing in ("avcodec-63.dll", "swscale-10.dll"):
+			with self.subTest(missing=missing):
+				# 从基线包里删掉指定族，模拟打包遗漏；工具程序也要带上，
+				# 否则会先触发可执行文件清单校验。
+				with zipfile.ZipFile(self.package, "w") as archive:
+					for name in sorted((self.runtime_names | self.ffmpeg_names | {"map_extract.exe", "twping.exe"}) - {missing}):
+						archive.writestr(f"QmClient/{name}", b"binary")
+					archive.writestr("QmClient/steam_appid.txt", b"412220")
+				with self.assertRaisesRegex(ValueError, "missing FFmpeg runtime DLLs"):
+					MODULE.verify(self.package, self.runtime, self.tools, False)
+
+	def test_ffmpeg_runtime_must_match_bundled_library_versions(self) -> None:
+		libdir = self.root / "ffmpeg-lib64"
+		libdir.mkdir()
+		for name in ("avcodec-63.dll", "avformat-63.dll", "avutil-61.dll", "swresample-7.dll", "swscale-10.dll"):
+			(libdir / name).write_bytes(b"dll")
+		# 归档里是 FFmpeg 7 的一套（61/59/5/8），与捆绑的 FFmpeg 9 不匹配。
+		old = ("avcodec-61.dll", "avformat-61.dll", "avutil-59.dll", "swresample-5.dll", "swscale-8.dll")
+		with zipfile.ZipFile(self.package, "w") as archive:
+			for name in sorted(self.runtime_names | {"map_extract.exe", "twping.exe"} | set(old)):
+				archive.writestr(f"QmClient/{name}", b"binary")
+			archive.writestr("QmClient/steam_appid.txt", b"412220")
+		with self.assertRaisesRegex(ValueError, "does not match bundled libraries"):
+			MODULE.verify(self.package, self.runtime, self.tools, False, libdir)
+		self.write_package()
+		MODULE.verify(self.package, self.runtime, self.tools, False, libdir)
 
 	def test_lossy_resource_name_rejects_package(self) -> None:
 		self.write_package(extra=("QmClient/data/fonts/??.ttf",))

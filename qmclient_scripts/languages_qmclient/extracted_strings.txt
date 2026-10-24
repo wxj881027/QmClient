@@ -326,6 +326,9 @@ Announcements sequential or random.
 Anti Latency Tools
 Anti latency tools
 Anti Ping Smoothing
+Anti-aliasing for the exported video only, independent of the graphics setting. Explicit levels render each frame into a multisampled offscreen target, so the game itself can stay at a lower setting for performance. Supersampling (output smaller than the window) already reduces jagged edges, so prefer one or the other.
+Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
+Anti-aliasing:
 Anti-spoof specific rate limit (0 = unlimited).
 AntiPing
 AntiPing (latency compensation)
@@ -579,6 +582,7 @@ Behavior
 Behavior type
 Benchmark frame times for number of seconds to file, then quit
 Best
+Best quality (all-intra 4:4:4 / MP4)
 Better compression, slower
 Better scoreboard
 Big icons can overlap names and nearby tees, so shrink "Size of key press icons" when many players are close.
@@ -684,7 +688,6 @@ Candidate files
 Cannot join the target player's team
 Cannot open word list file. Previous words remain active.
 Cannot read complete word list file. Previous words remain active.
-Cannot remove the wiki file
 Cannot swap: the other player is not in your team
 Cannot write the wiki file
 Capture the flag
@@ -1171,7 +1174,6 @@ Customize interface appearance and previews
 Customize laser shape and effects
 Customize QmClient visuals and effects
 Customize the position jump hint
-Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
 Customize translate button and menu colors
 Customize vote display and interaction
 Custom…
@@ -1277,7 +1279,6 @@ Delay between SQL queries for a single player (in seconds)
 Delay in seconds before loading a saved game or swapping
 Delete
 Delete "%s"?
-Delete button
 Delete category
 Delete command
 Delete demo
@@ -1414,7 +1415,7 @@ Drag HUD modules with the left mouse button
 Drag the three sliders; master scales the other two.
 Drag to another category to move this friend.
 Drag to pan, scroll to zoom
-Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
+Drag to reorder; right-click or use the gear to manage
 Dragger Inner Color
 Dragger laser inner color
 Dragger laser outline color
@@ -1531,6 +1532,7 @@ Editing (all-intra H.264 / MP4)
 Editor
 Edits individual Tee 7 skin parts and previews the result.
 Effects are heavy on crowded servers, so keep "Automatic effect LOD when crowded" enabled.
+Efficient sharing (HEVC / MP4)
 Elastic
 Elastic back
 Elements too close to the edges overlap on ultrawide screens.
@@ -1738,10 +1740,7 @@ Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip an
 Entry: %s
 Erase items on the in game background
 Error
-Error checking player name
-Error joining Tutorial server
 Error loading communities
-Error loading demo
 Error loading touch controls
 Error opening screenshot
 Error playing demo
@@ -1784,7 +1783,7 @@ Export output width in pixels (0 = follow window render size; smaller than windo
 Export playback speed. The value snaps to the nearest available speed.
 Export preset
 Export preset:
-Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov)
+Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
 Export range
 Export range (seconds):
 Export selected
@@ -1846,6 +1845,7 @@ Fast practice
 Fast, lightweight blur with a softer approximation.
 Faster export playback
 Faster presets encode quicker but produce larger files
+Fastest (hardware H.264 / MP4)
 Fastest encode, largest files
 Fat skins (DDFat)
 Favorite
@@ -1912,6 +1912,7 @@ Flip:
 Folder
 Folder Link
 Follow
+Follow graphics setting
 Follow option color
 Follow remote placements in the collaborative editor
 Follow server
@@ -1945,7 +1946,6 @@ FPS
 Fraction of players needed to pass a vote
 Frags
 Frame rate
-Frame rate of the recorded video; higher means smoother playback and larger files
 Frame time
 Frame time p95
 Frame time p99
@@ -2197,7 +2197,6 @@ Hides names, skins, flags and blocked words on screen, so a stream does not show
 High (recommended)
 High Detail
 High particle counts and trails cost frame rate; lower "Particle count" if your FPS drops.
-High quality (HEVC / MP4)
 High quality, slow
 Higher input latency
 Higher values make the wave move faster. Zero stops the movement.
@@ -3107,7 +3106,6 @@ No servers found
 No servers match your filter criteria
 No skins match your filter criteria
 No sounds match this search.
-No space for button
 No status bar items
 No such savegame for this map
 No unfinished maps available
@@ -3191,6 +3189,7 @@ Only the selected tee changes, so switch to "Dummy" before editing the colors yo
 Opacity
 Opacity of entity layers on the map such as death, freeze, unfreeze, teleport, checkpoint and switch tiles.
 Opacity of freeze bars inside freeze
+Opacity of other teams' tees and name plates
 Open a link to join the community.
 Open a link to reach the project.
 Open a link to visit the site.
@@ -3240,6 +3239,7 @@ Options only exist within "Detection distance"; turn off the ones you never use 
 Or visit DDNet.org
 Original
 Original language for both received and outgoing messages. Use Auto to detect each message.
+Original language for incoming and outgoing text
 Original message language
 Original options
 Original scroll feel
@@ -3485,8 +3485,13 @@ Port for dummy connection to server (0=random, >=1024 sets manual port)
 Port for master server registration, useful if behind NAT, otherwise just use sv_port
 Port for server info connection to server (0=random, >=1024 sets manual port)
 Port for the external console.
+Pose capture pixel budget in megapixels (0 = unlimited)
 Pose file
 Pose preview
+Pose render fills the background with the entity layer
+Pose render output format (0 = png, 1 = webp)
+Pose render supersampling scale (1-4)
+Pose render unsharp mask strength (0 = off)
 Poses
 Position
 Position jump hint
@@ -3688,7 +3693,6 @@ Random skin on map join
 Random unfinished map
 Randomize player color (0 = all, 1 = body, 2 = feet, 3 = skin, 4 = flag) example: 0011 = randomize skin and flag [number is position]
 Rank 1
-Rank 1 demo
 Rank 1 demo already cached under 'Rank 1 replays': %s
 Rank 1 demo downloaded to '%s'
 Rank 1 replays
@@ -3744,6 +3748,7 @@ Record a MomentCap .poses scene to a video
 Record chat replays.
 Record demo
 Record to a file
+Recorded frame rate; higher is smoother and larger
 Recorder FPS
 Red
 Red team
@@ -3846,7 +3851,7 @@ Rename screenshot
 Rename: %s
 Renames your Tee automatically when you get close to the finish, so the finish is recorded under the name you prepared.
 Render
-Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling)
+Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
 Render all custom colored feet as white feet skin
 Render all feet as solid white base
 Render complete
@@ -3881,7 +3886,6 @@ Replace non-friend skins with default
 Replace selected variant
 Replace settings, binds and the listed cfg files, then restart? The current configuration will be backed up first.
 Replace skin with one having this prefix (e.g. cats, santa)
-Replace video
 Replacement chars
 Replaces or hides chat lines that match words on your own list before they are shown to you.
 Replay
@@ -3921,7 +3925,6 @@ Reset chat on escape
 Reset colors
 Reset column widths
 Reset console appearance
-Reset controls
 Reset count appearance
 Reset DDRace tuning (sv_hit, sv_endless_drag, sv_old_laser) after each map change
 Reset default
@@ -3947,17 +3950,15 @@ Resource preview VRAM budget override (MB, 0=auto)
 Resource preview VRAM budget percentage (based on device local VRAM budget)
 Restart
 Restart in x seconds (0 = abort)
+Restart smooth scrolling on every wheel tick
 Restart the client
 Restarting. Please wait…
 Restore a recently used Tee skin
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
-Restore configuration package
 Restore Kugou files
 Restore old single-segment hook collision line behavior
 Restore recommended
 Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
-Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
-Restored the built-in content
 Restoring save %d: main '%s', dummy '%s'.
 Results include cards on other pages; the tab switches automatically.
 Retry
@@ -4057,7 +4058,6 @@ Save/Load Emote
 Save/Load Flag
 Save/Load Name
 Save/Load Skin
-Saved
 Saved to the bind wheel.
 Saved with your title and shared with other QmClient players.
 Saves and loads complete client profiles, including name, chat settings and bind wheel presets.
@@ -4093,8 +4093,6 @@ Screen resolution height (only fullscreen)
 Screen resolution width (only fullscreen)
 Screenshot
 Screenshot directory
-Screenshot error
-Screenshot saved
 Screenshot watermark custom text
 Screenshot watermark position: 0=bottom-left, 1=bottom-right, 2=top-left, 3=top-right
 Screenshot watermark: include map name
@@ -4149,7 +4147,6 @@ Select map
 Select map for the pose file
 Select the country flag for each player
 Selected %d
-Selected button not visible
 Selected candidate %d/%d under cursor.
 Selected item color
 Selected part: %d
@@ -4273,6 +4270,7 @@ Settings, binds, profiles, chat binds and the war list are included. Select addi
 Severe
 Shape
 Share of the server browser name/map split given to the name column (per mille)
+Sharpen
 Shimmer speed
 Short pain voice
 Short server names
@@ -4285,6 +4283,7 @@ Shotgun laser inner color
 Shotgun Laser Outline Color
 Shotgun laser outline color
 Show %s group
+Show a ghost of your best time after crossing the start line
 Show a MomentCap .poses file in game (no export)
 Show a small view of the dummy
 Show advanced nameplate settings without changing effect values
@@ -4806,6 +4805,7 @@ Squishy Tee deformation intensity
 Star
 Start (s)
 Start and connect to local server
+Start at a random queue position on every map join
 Start dummy skin queue from a random position when entering a map
 Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
@@ -5527,6 +5527,7 @@ Use style colors
 Use team colors for name plates
 Use Tee icons instead of circles
 Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
+Use the custom colors below while the hook key is held
 Use the mouse wheel on a hovered module to scale it by 5%
 Use the scoreboard cursor mode to scroll the list
 Use the selected tee trail style palette
@@ -5692,6 +5693,7 @@ Website
 Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 What this controls
+Wheel distance per tick; hold Alt for 3x
 Wheel label
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 When TClient rainbow Tee is enabled, this feature has no effect.
@@ -5764,7 +5766,6 @@ Write the reply text; choose whether it triggers for muted players and whether t
 Writes a chat message, and optionally sends an emoticon, whenever your tee dies in water.
 Writing item %d failed
 Written %d items
-Wrong button settings
 x = DDNet CPU% / total CPU%
 X alignment color
 X alignment hint with me

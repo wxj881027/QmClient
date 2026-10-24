@@ -117,6 +117,16 @@ python qmclient_scripts/integration/e2e_qmclient.py <build-dir> [connection_fail
 
 gate 使用 `--run-qm-smoke` 时会在同一进程测试 check 中顺序执行 smoke 与 E2E。
 
+Demo 视频导出的画质/速度基准（手动入口，不计入 gate 与测试库存；阈值来自 2026-10-24 实测基线，见 `docs/规格/2026-10-16-Demo视频导出现代化实施方案.md` 补充 26/27）：
+
+```text
+python qmclient_scripts/integration/perf_video_export.py <build-dir> [speed_hd|quality_codec|quality_aa]
+```
+
+- `speed_hd`：1080p/4K 两档预设的真实客户端导出吞吐（帧/秒，只报告并校验成片帧数）。
+- `quality_codec`：同一批无损帧重编码的确定性画质门（PSNR-Y/VMAF 阈值断言，跨机器稳定）。
+- `quality_aa`：导出 FSAA 生效性门（机制断言：采样数声明 + 无窗口路径回退；像素 Δ 因跨运行特效随机地板 ±1.5dB 仅作参考输出）。
+
 - `source_keys.py`：共享源码 key 提取器，支持全量扫描与 Git diff 增量合并，提取 `Localize` / `Localizable`、`Register` help 和 QmClient 间接 key
 - `extract_strings.py`：默认按 Git diff 增量更新完整 `extracted_strings.txt`、`extracted_records_cache.json` 和 `extracted_audit_report.json`；传 `--full` 时重扫源码并重建缓存；active key 清单继续只承载 i18n 主链 source key，审计报告另外输出 `must_i18n`、`business_data`、`test_only`、`needs_review`、`violation`
 - `translations/i18n/*.toml`：按代码模块拆分的翻译维护源；单条记录可同时维护多语言翻译，不要求全量语言留空

@@ -729,7 +729,7 @@ Adjust the display options; open a vote to check the layout before joining a bus
 == 표시 옵션을 조정하세요. 붐비는 서버에 접속하기 전에 투표를 열어 배치를 확인하세요.
 
 Adjust the opacity of entities belonging to other teams, such as tees and name plates
-== 다른 팀의 엔티티(티, 이름표 등)의 불투명도를 조절합니다.
+== Adjust the opacity of entities belonging to other teams, such as tees and name plates
 
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
@@ -982,6 +982,15 @@ Anti latency tools
 
 Anti Ping Smoothing
 == 핑 스무딩
+
+Anti-aliasing for the exported video only, independent of the graphics setting. Explicit levels render each frame into a multisampled offscreen target, so the game itself can stay at a lower setting for performance. Supersampling (output smaller than the window) already reduces jagged edges, so prefer one or the other.
+== 내보낸 영상에만 적용되는 안티앨리어싱이며 그래픽 설정과 독립적입니다. 명시적 단계를 선택하면 매 프레임을 멀티샘플 오프스크린 대상에 렌더링하므로, 게임 자체는 성능을 위해 낮은 설정을 유지할 수 있습니다. 슈퍼샘플링(출력이 창보다 작은 경우)만으로도 계단 현상이 줄어들므로 둘 중 하나만 사용하세요.
+
+Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
+== Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
+
+Anti-aliasing:
+== 안티앨리어싱:
 
 Anti-spoof specific rate limit (0 = unlimited).
 == 안티스푸프 특정 속도 제한 (0 = 무제한).
@@ -1742,6 +1751,9 @@ Benchmark frame times for number of seconds to file, then quit
 Best
 == 최고
 
+Best quality (all-intra 4:4:4 / MP4)
+== 최고 화질 (전체 프레임 내 4:4:4 / MP4)
+
 Better compression, slower
 == 압축률이 더 좋지만 느림
 
@@ -2056,9 +2068,6 @@ Cannot open word list file. Previous words remain active.
 
 Cannot read complete word list file. Previous words remain active.
 == 단어 목록 파일을 완전히 읽을 수 없습니다. 이전 단어 목록을 유지합니다.
-
-Cannot remove the wiki file
-== Wiki 파일을 삭제할 수 없습니다
 
 Cannot swap: the other player is not in your team
 == 스왑할 수 없음: 상대방이 당신의 팀에 없습니다
@@ -3518,9 +3527,6 @@ Customize QmClient visuals and effects
 Customize the position jump hint
 == Customize the position jump hint
 
-Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
-== 휠 한 눈금당 이동 거리를 설정합니다. Alt를 누르고 스크롤하면 간격이 3배가 됩니다
-
 Customize translate button and menu colors
 == 번역 버튼 및 메뉴 색상 사용자 정의
 
@@ -3836,9 +3842,6 @@ Delete
 Delete "%s"?
 == Delete "%s"?
 
-Delete button
-== 버튼 삭제
-
 Delete category
 == 카테고리 삭제
 
@@ -4145,9 +4148,6 @@ Do not translate server messages
 Do not use it to spam: servers may punish repeated automatic messages.
 == 도배에 사용하지 마세요. 반복되는 자동 메시지는 서버에서 처벌될 수 있습니다.
 
-Document too large for the editor (%d of %d bytes)
-== 문서가 너무 커서 클라이언트 편집기에서 수정할 수 없습니다(%d / %d바이트)
-
 Done
 == Done
 
@@ -4250,8 +4250,8 @@ Drag to another category to move this friend.
 Drag to pan, scroll to zoom
 == 드래그하여 이동, 휠로 확대/축소
 
-Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
-== 드래그하여 순서를 바꾸고 클릭하여 펼치거나 접습니다. 마우스 오른쪽 버튼을 클릭하거나 톱니바퀴를 사용하여 카테고리를 관리합니다
+Drag to reorder; right-click or use the gear to manage
+== Drag to reorder; right-click or use the gear to manage
 
 Dragger Inner Color
 == 드래거 내부 색상
@@ -4600,6 +4600,9 @@ Edits individual Tee 7 skin parts and previews the result.
 
 Effects are heavy on crowded servers, so keep "Automatic effect LOD when crowded" enabled.
 == 사람이 많은 서버에서는 효과가 무거우니 혼잡할 때 자동 LOD를 켜 두세요.
+
+Efficient sharing (HEVC / MP4)
+== 효율 공유 (HEVC / MP4)
 
 Elastic
 == 탄력적
@@ -5222,17 +5225,8 @@ Erase items on the in game background
 Error
 == 오류
 
-Error checking player name
-== 플레이어 이름 확인 오류
-
-Error joining Tutorial server
-== 튜토리얼 서버 연결 오류
-
 Error loading communities
 == 커뮤니티 로딩 오류
-
-Error loading demo
-== 데모 로드 오류
 
 Error loading touch controls
 == 터치 컨트롤 로드 오류
@@ -5360,8 +5354,8 @@ Export preset
 Export preset:
 == 내보내기 프리셋:
 
-Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov)
-== Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov)
+Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
+== Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
 
 Export range
 == 내보내기 범위
@@ -5545,6 +5539,9 @@ Faster export playback
 
 Faster presets encode quicker but produce larger files
 == 빠른 프리셋은 인코딩이 빠르지만 파일이 커집니다
+
+Fastest (hardware H.264 / MP4)
+== 최고 속도 (하드웨어 H.264 / MP4)
 
 Fastest encode, largest files
 == 가장 빠른 인코딩, 가장 큰 파일
@@ -5744,6 +5741,9 @@ Folder Link
 Follow
 == 따라가기
 
+Follow graphics setting
+== 그래픽 설정 따르기
+
 Follow option color
 == 따라가기 색상
 
@@ -5839,9 +5839,6 @@ Frags
 
 Frame rate
 == 프레임 속도
-
-Frame rate of the recorded video; higher means smoother playback and larger files
-== 녹화된 영상의 프레임 레이트입니다. 높을수록 재생이 부드럽지만 파일이 커집니다
 
 Frame time
 == 프레임 시간
@@ -6595,9 +6592,6 @@ High Detail
 
 High particle counts and trails cost frame rate; lower "Particle count" if your FPS drops.
 == 파티클 수가 많고 잔상이 있으면 프레임 속도를 잡아먹습니다. FPS가 떨어지면 파티클 수를 줄이세요.
-
-High quality (HEVC / MP4)
-== 고품질 (HEVC / MP4)
 
 High quality, slow
 == 고품질, 느림
@@ -9326,9 +9320,6 @@ No skins match your filter criteria
 No sounds match this search.
 == 검색과 일치하는 사운드가 없습니다.
 
-No space for button
-== 버튼 공간 부족
-
 No status bar items
 == 상태 표시줄 항목 없음
 
@@ -9578,6 +9569,9 @@ Opacity of entity layers on the map such as death, freeze, unfreeze, teleport, c
 Opacity of freeze bars inside freeze
 == 얼음 안에서의 해동 게이지 불투명도
 
+Opacity of other teams' tees and name plates
+== Opacity of other teams' tees and name plates
+
 Open a link to join the community.
 == 링크를 열면 커뮤니티에 참여할 수 있습니다.
 
@@ -9723,7 +9717,10 @@ Original
 == 기본
 
 Original language for both received and outgoing messages. Use Auto to detect each message.
-== 수신 및 발신 메시지에 공통으로 사용하는 원문 언어입니다. 자동을 선택하면 각 메시지의 언어를 감지합니다。
+== Original language for both received and outgoing messages. Use Auto to detect each message.
+
+Original language for incoming and outgoing text
+== Original language for incoming and outgoing text
 
 Original message language
 == 원문 언어
@@ -10460,11 +10457,26 @@ Port for server info connection to server (0=random, >=1024 sets manual port)
 Port for the external console.
 == 외부 콘솔 포트
 
+Pose capture pixel budget in megapixels (0 = unlimited)
+== Pose capture pixel budget in megapixels (0 = unlimited)
+
 Pose file
 == 포즈 파일
 
 Pose preview
 == 포즈 미리보기
+
+Pose render fills the background with the entity layer
+== Pose render fills the background with the entity layer
+
+Pose render output format (0 = png, 1 = webp)
+== Pose render output format (0 = png, 1 = webp)
+
+Pose render supersampling scale (1-4)
+== Pose render supersampling scale (1-4)
+
+Pose render unsharp mask strength (0 = off)
+== Pose render unsharp mask strength (0 = off)
 
 Poses
 == Poses
@@ -11069,9 +11081,6 @@ Randomize player color (0 = all, 1 = body, 2 = feet, 3 = skin, 4 = flag) example
 Rank 1
 == 랭크 1
 
-Rank 1 demo
-== 랭크 1 데모
-
 Rank 1 demo already cached under 'Rank 1 replays': %s
 == Rank 1 리플레이가 'Rank 1 replays'에 이미 캐시됨: %s
 
@@ -11236,6 +11245,9 @@ Record demo
 
 Record to a file
 == 파일에 기록
+
+Recorded frame rate; higher is smoother and larger
+== Recorded frame rate; higher is smoother and larger
 
 Recorder FPS
 == 녹화 FPS
@@ -11543,8 +11555,8 @@ Renames your Tee automatically when you get close to the finish, so the finish i
 Render
 == 렌더링
 
-Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling)
-== Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling)
+Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
+== Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
 
 Render all custom colored feet as white feet skin
 == 모든 사용자 지정 발 색상을 흰색 발 스킨으로 렌더링
@@ -11647,9 +11659,6 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == 이 접두사가 있는 스킨으로 교체 (예: cats, santa)
-
-Replace video
-== 비디오 교체
 
 Replacement chars
 == 교체 문자
@@ -11768,9 +11777,6 @@ Reset column widths
 Reset console appearance
 == 콘솔 모양 초기화
 
-Reset controls
-== 컨트롤 초기화
-
 Reset count appearance
 == 카운터 외관 초기화
 
@@ -11846,6 +11852,9 @@ Restart
 Restart in x seconds (0 = abort)
 == x초 후 재시작 (0 = 중단)
 
+Restart smooth scrolling on every wheel tick
+== Restart smooth scrolling on every wheel tick
+
 Restart the client
 == 클라이언트 재시작
 
@@ -11858,9 +11867,6 @@ Restore a recently used Tee skin
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == 2인 저장 데이터를 복원할까요? /qm Yes는 최신 데이터, /qm Yes 번호는 다른 데이터 선택, /qm No는 알림 닫기입니다.
 
-Restore configuration package
-== 설정 패키지 복원
-
 Restore Kugou files
 == Kugou 원본 파일 복원
 
@@ -11872,12 +11878,6 @@ Restore recommended
 
 Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
 == 기존 휠 스크롤 복원: 매 눈금마다 속도를 이어받지 않고 부드러운 스크롤을 다시 시작
-
-Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
-== 기존 휠 스크롤 복원: 매 눈금마다 속도를 이어받지 않고 부드러운 스크롤을 다시 시작
-
-Restored the built-in content
-== 내장 콘텐츠로 되돌렸습니다
 
 Restoring save %d: main '%s', dummy '%s'.
 == 저장 데이터 %d 복원 중: 본체 '%s', 더미 '%s'.
@@ -12176,9 +12176,6 @@ Save/Load Name
 Save/Load Skin
 == 스킨 저장/불러오기
 
-Saved
-== 저장했습니다
-
 Saved to the bind wheel.
 == 바인드 휠에 저장했습니다.
 
@@ -12283,12 +12280,6 @@ Screenshot
 
 Screenshot directory
 == 스크린샷 저장 폴더
-
-Screenshot error
-== 스크린샷 처리 실패
-
-Screenshot saved
-== 스크린샷 저장됨
 
 Screenshot watermark custom text
 == 스크린샷 워터마크 사용자 지정 텍스트
@@ -12451,9 +12442,6 @@ Select the country flag for each player
 
 Selected %d
 == %d개 선택됨
-
-Selected button not visible
-== 선택한 버튼이 보이지 않음
 
 Selected candidate %d/%d under cursor.
 == 커서 아래에 선택된 후보 %d/%d.
@@ -12824,6 +12812,9 @@ Shape
 Share of the server browser name/map split given to the name column (per mille)
 == 서버 브라우저 이름/맵 분할에서 이름 열에 할당할 비율(천분율)
 
+Sharpen
+== Sharpen
+
 Shimmer speed
 == 반짝임 속도
 
@@ -12859,6 +12850,9 @@ Shotgun laser outline color
 
 Show %s group
 == %s 그룹 표시
+
+Show a ghost of your best time after crossing the start line
+== Show a ghost of your best time after crossing the start line
 
 Show a MomentCap .poses file in game (no export)
 == Show a MomentCap .poses file in game (no export)
@@ -14423,11 +14417,14 @@ Start (s)
 Start and connect to local server
 == 로컬 서버를 시작하고 연결
 
+Start at a random queue position on every map join
+== Start at a random queue position on every map join
+
 Start dummy skin queue from a random position when entering a map
 == 맵 입장 시 더미 스킨 큐를 무작위 위치에서 시작
 
 Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
-== 맵에 들어갈 때마다(더미 연결, 큐 재활성화 시에도) 큐의 무작위 위치부터 순환을 시작합니다. 전환 간격을 0으로 하면 시간 순환이 비활성화되고 맵 입장 때만 전환됩니다
+== Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
 
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 == 기본값에서 시작하세요. 다른 플레이어가 튀어 보이면 조금 올리고, 내가 뒤처져 보이면 낮추세요.
@@ -16584,7 +16581,10 @@ Use Tee icons instead of circles
 == 원 대신 Tee 아이콘 사용
 
 Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== 훅 키를 누르는 동안 훅 충돌선이 표시될 때 아래의 사용자 지정 색상을 사용합니다. 비활성화하면 누르지 않은 색이 자동으로 반전됩니다
+== Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
+
+Use the custom colors below while the hook key is held
+== Use the custom colors below while the hook key is held
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == 마우스를 모듈 위에 올리고 휠을 굴리면 5% 씩 크기 조정
@@ -17081,6 +17081,9 @@ What level DDRace binding is set to (automatic, you don't need to use it).
 What this controls
 == 무엇인가요
 
+Wheel distance per tick; hold Alt for 3x
+== Wheel distance per tick; hold Alt for 3x
+
 Wheel label
 == 휠 표시 이름
 
@@ -17091,7 +17094,7 @@ When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient 무지개 Tee가 켜져 있으면 이 기능은 적용되지 않습니다.
 
 When you cross the start line, show a ghost tee replicating the movements of your best time
-== 출발선을 넘으면 최고 기록의 움직임을 재현하는 고스트 티를 표시합니다
+== When you cross the start line, show a ghost tee replicating the movements of your best time
 
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 == 칭호가 어디에 나타나고 어떻게 보일지를 정합니다. 이름표, 스타일, 애니메이션, 색상, 발광입니다.
@@ -17296,9 +17299,6 @@ Writing item %d failed
 
 Written %d items
 == %d개 항목 작성됨
-
-Wrong button settings
-== 잘못된 버튼 설정
 
 x = DDNet CPU% / total CPU%
 == x = DDNet CPU% / 전체 CPU%

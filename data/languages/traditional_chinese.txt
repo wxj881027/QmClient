@@ -729,7 +729,7 @@ Adjust the display options; open a vote to check the layout before joining a bus
 == 調整顯示選項；在加入熱鬧的伺服器前，先開啟一項投票確認版面。
 
 Adjust the opacity of entities belonging to other teams, such as tees and name plates
-== 調整其他隊伍實體（如 Tee 和名牌）的不透明度
+== Adjust the opacity of entities belonging to other teams, such as tees and name plates
 
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
@@ -982,6 +982,15 @@ Anti latency tools
 
 Anti Ping Smoothing
 == 平滑預測
+
+Anti-aliasing for the exported video only, independent of the graphics setting. Explicit levels render each frame into a multisampled offscreen target, so the game itself can stay at a lower setting for performance. Supersampling (output smaller than the window) already reduces jagged edges, so prefer one or the other.
+== 只影響匯出成片的抗鋸齒，與全域圖形設定相互獨立。選明確檔位時每一幀會繪製進多取樣離屏目標，遊戲本體可以保持低檔位省效能。超取樣（輸出小於視窗）本身已經能減輕鋸齒，兩者二選一即可。
+
+Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
+== Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
+
+Anti-aliasing:
+== 抗鋸齒:
 
 Anti-spoof specific rate limit (0 = unlimited).
 == 反欺騙特定速率限制（0 表示無限制）
@@ -1742,6 +1751,9 @@ Benchmark frame times for number of seconds to file, then quit
 Best
 == 最高
 
+Best quality (all-intra 4:4:4 / MP4)
+== 最高畫質 (全幀內 4:4:4 / MP4)
+
 Better compression, slower
 == 壓縮更好，速度較慢
 
@@ -2056,9 +2068,6 @@ Cannot open word list file. Previous words remain active.
 
 Cannot read complete word list file. Previous words remain active.
 == 無法完整讀取詞表檔案，繼續使用上次成功載入的詞條。
-
-Cannot remove the wiki file
-== 無法刪除 Wiki 檔案
 
 Cannot swap: the other player is not in your team
 == 無法交換：對方不在你的隊伍中
@@ -3518,9 +3527,6 @@ Customize QmClient visuals and effects
 Customize the position jump hint
 == Customize the position jump hint
 
-Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
-== 自訂滾輪每格的捲動距離。按住 Alt 捲動時使用 3 倍步長
-
 Customize translate button and menu colors
 == 自定義翻譯按鈕和菜單顏色
 
@@ -3836,9 +3842,6 @@ Delete
 Delete "%s"?
 == Delete "%s"?
 
-Delete button
-== 刪除按鍵
-
 Delete category
 == 刪除分類
 
@@ -4145,9 +4148,6 @@ Do not translate server messages
 Do not use it to spam: servers may punish repeated automatic messages.
 == 不要用來刷頻：伺服器可能會懲罰重複的自動訊息。
 
-Document too large for the editor (%d of %d bytes)
-== 文件過大，無法在客戶端編輯器內修改（%d / %d 位元組）
-
 Done
 == Done
 
@@ -4250,8 +4250,8 @@ Drag to another category to move this friend.
 Drag to pan, scroll to zoom
 == 按住拖曳平移，滾輪縮放
 
-Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
-== 拖曳調整順序，點擊展開或收起。右鍵或使用齒輪管理分類
+Drag to reorder; right-click or use the gear to manage
+== 拖曳排序；右鍵或齒輪可管理分類
 
 Dragger Inner Color
 == 光索實心顏色
@@ -4600,6 +4600,9 @@ Edits individual Tee 7 skin parts and previews the result.
 
 Effects are heavy on crowded servers, so keep "Automatic effect LOD when crowded" enabled.
 == 人多時特效很耗效能，建議保持同屏擁擠時自動 LOD 開啟。
+
+Efficient sharing (HEVC / MP4)
+== 高效分享 (HEVC / MP4)
 
 Elastic
 == 彈性
@@ -5222,17 +5225,8 @@ Erase items on the in game background
 Error
 == 錯誤
 
-Error checking player name
-== 檢查玩家名稱時出錯
-
-Error joining Tutorial server
-== 加入教學伺服器時發生錯誤
-
 Error loading communities
 == 加載社區列表失敗
-
-Error loading demo
-== 回放加載錯誤
 
 Error loading touch controls
 == 載入觸控設定錯誤
@@ -5360,8 +5354,8 @@ Export preset
 Export preset:
 == 匯出預設:
 
-Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov)
-== Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov)
+Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
+== Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
 
 Export range
 == 匯出範圍
@@ -5545,6 +5539,9 @@ Faster export playback
 
 Faster presets encode quicker but produce larger files
 == 越快的預設編碼越快，但檔案更大
+
+Fastest (hardware H.264 / MP4)
+== 最快速度 (硬體 H.264 / MP4)
 
 Fastest encode, largest files
 == 編碼最快，檔案最大
@@ -5744,6 +5741,9 @@ Folder Link
 Follow
 == 跟隨
 
+Follow graphics setting
+== 跟隨圖形設定
+
 Follow option color
 == 跟隨顏色
 
@@ -5839,9 +5839,6 @@ Frags
 
 Frame rate
 == 幀率
-
-Frame rate of the recorded video; higher means smoother playback and larger files
-== 錄製影片的幀率，越高越流暢、檔案越大
 
 Frame time
 == 幀耗時
@@ -6595,9 +6592,6 @@ High Detail
 
 High particle counts and trails cost frame rate; lower "Particle count" if your FPS drops.
 == 大量粒子與拖尾會消耗幀率；FPS 下降時降低粒子數量。
-
-High quality (HEVC / MP4)
-== 高畫質 (HEVC / MP4)
 
 High quality, slow
 == 高品質，速度慢
@@ -9326,9 +9320,6 @@ No skins match your filter criteria
 No sounds match this search.
 == 沒有符合目前搜尋的音效。
 
-No space for button
-== 空間不足
-
 No status bar items
 == 暫無狀態欄項目
 
@@ -9578,6 +9569,9 @@ Opacity of entity layers on the map such as death, freeze, unfreeze, teleport, c
 Opacity of freeze bars inside freeze
 == 解凍進度條不透明度
 
+Opacity of other teams' tees and name plates
+== 其他隊伍玩家與名牌的透明度
+
 Open a link to join the community.
 == 開啟連結即可加入社群。
 
@@ -9723,7 +9717,10 @@ Original
 == 原版
 
 Original language for both received and outgoing messages. Use Auto to detect each message.
-== 告訴翻譯服務原文是什麼語言，接收和傳送翻譯共用。建議選「自動」，逐條訊息識別。
+== Original language for both received and outgoing messages. Use Auto to detect each message.
+
+Original language for incoming and outgoing text
+== 收到與發出文字的原始語言
 
 Original message language
 == 原文語言
@@ -10460,11 +10457,26 @@ Port for server info connection to server (0=random, >=1024 sets manual port)
 Port for the external console.
 == 用於外部控制台的端口
 
+Pose capture pixel budget in megapixels (0 = unlimited)
+== Pose capture pixel budget in megapixels (0 = unlimited)
+
 Pose file
 == 合影檔案
 
 Pose preview
 == 合影預覽
+
+Pose render fills the background with the entity layer
+== Pose render fills the background with the entity layer
+
+Pose render output format (0 = png, 1 = webp)
+== Pose render output format (0 = png, 1 = webp)
+
+Pose render supersampling scale (1-4)
+== Pose render supersampling scale (1-4)
+
+Pose render unsharp mask strength (0 = off)
+== Pose render unsharp mask strength (0 = off)
 
 Poses
 == Poses
@@ -11069,9 +11081,6 @@ Randomize player color (0 = all, 1 = body, 2 = feet, 3 = skin, 4 = flag) example
 Rank 1
 == Rank 1
 
-Rank 1 demo
-== Rank 1 示範
-
 Rank 1 demo already cached under 'Rank 1 replays': %s
 == Rank 1 回放已快取（見「Rank 1 replays」）：%s
 
@@ -11236,6 +11245,9 @@ Record demo
 
 Record to a file
 == 記錄到文件
+
+Recorded frame rate; higher is smoother and larger
+== 錄製幀率；越高越流暢、檔案越大
 
 Recorder FPS
 == 錄製幀率
@@ -11543,8 +11555,8 @@ Renames your Tee automatically when you get close to the finish, so the finish i
 Render
 == 渲染
 
-Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling)
-== Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling)
+Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
+== Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
 
 Render all custom colored feet as white feet skin
 == 將所有自定義腳部顏色渲染為白色
@@ -11647,9 +11659,6 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == 將皮膚替換為帶有此前綴的皮膚（例如小貓、聖誕老人）
-
-Replace video
-== 替換視頻
 
 Replacement chars
 == 替換字符
@@ -11768,9 +11777,6 @@ Reset column widths
 Reset console appearance
 == 重設控制台外觀
 
-Reset controls
-== 恢復默認設置
-
 Reset count appearance
 == 還原計數預設外觀
 
@@ -11846,6 +11852,9 @@ Restart
 Restart in x seconds (0 = abort)
 == 在 x 秒後重新啟動（0 = 中止）
 
+Restart smooth scrolling on every wheel tick
+== 每次滾輪都從靜止重新開始平滑捲動
+
 Restart the client
 == 重啟客戶端
 
@@ -11858,9 +11867,6 @@ Restore a recently used Tee skin
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == 是否恢復雙人存檔？/qm Yes 讀取最新一筆，/qm Yes 序號 選擇其他存檔，/qm No 忽略本次提示。
 
-Restore configuration package
-== 還原配置包
-
 Restore Kugou files
 == 還原酷狗原始檔案
 
@@ -11872,12 +11878,6 @@ Restore recommended
 
 Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
 == 恢復原版滾輪手感：每格重新開始平滑捲動，不繼承速度
-
-Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
-== 恢復原版滾輪手感：每格重新開始平滑捲動，不繼承速度
-
-Restored the built-in content
-== 已還原內建內容
 
 Restoring save %d: main '%s', dummy '%s'.
 == 正在恢復存檔 %d：本體「%s」，分身「%s」。
@@ -12176,9 +12176,6 @@ Save/Load Name
 Save/Load Skin
 == 保存/加載皮膚
 
-Saved
-== 已儲存
-
 Saved to the bind wheel.
 == 已儲存至 Bind 輪盤。
 
@@ -12283,12 +12280,6 @@ Screenshot
 
 Screenshot directory
 == 截圖儲存目錄
-
-Screenshot error
-== 螢幕截圖處理失敗
-
-Screenshot saved
-== 螢幕截圖已儲存
 
 Screenshot watermark custom text
 == 螢幕截圖浮水印自訂文字
@@ -12451,9 +12442,6 @@ Select the country flag for each player
 
 Selected %d
 == 已選擇 %d 項
-
-Selected button not visible
-== 選中的按鍵不可見
 
 Selected candidate %d/%d under cursor.
 == 已選中光標下的候選項 %d/%d。
@@ -12824,6 +12812,9 @@ Shape
 Share of the server browser name/map split given to the name column (per mille)
 == 伺服器瀏覽器名稱/地圖分欄中分配給名稱列的千分比
 
+Sharpen
+== Sharpen
+
 Shimmer speed
 == 流光速度
 
@@ -12859,6 +12850,9 @@ Shotgun laser outline color
 
 Show %s group
 == 顯示 %s 分組
+
+Show a ghost of your best time after crossing the start line
+== 越過起跑線後顯示最佳成績的殘影
 
 Show a MomentCap .poses file in game (no export)
 == Show a MomentCap .poses file in game (no export)
@@ -14423,11 +14417,14 @@ Start (s)
 Start and connect to local server
 == 啟動並連接到本地伺服器
 
+Start at a random queue position on every map join
+== 每次進圖從隨機佇列位置開始
+
 Start dummy skin queue from a random position when entering a map
 == 進入地圖時從分身皮膚佇列隨機位置開始
 
 Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
-== 每次進圖（分身連接、重新啟用佇列時同樣生效）從皮膚佇列隨機位置開始輪換；將切換間隔設為 0 則不做時間輪換，僅進圖隨機換膚
+== Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
 
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 == 從預設值開始；其他玩家看起來一跳一跳時稍微調高，覺得自己比他們慢半拍時調低。
@@ -16584,7 +16581,10 @@ Use Tee icons instead of circles
 == 用 Tee 圖標代替圓圈
 
 Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== 按住顯示鉤索碰撞線時使用下方的自訂顏色；關閉=自動反色
+== Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
+
+Use the custom colors below while the hook key is held
+== 按住鉤索鍵時使用下方的自訂顏色
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == 將鼠標懸停在 HUD 模塊上並滾動滾輪可按 5% 縮放
@@ -17081,6 +17081,9 @@ What level DDRace binding is set to (automatic, you don't need to use it).
 What this controls
 == 這是什麼
 
+Wheel distance per tick; hold Alt for 3x
+== 每格滾輪距離；按住 Alt 為三倍
+
 Wheel label
 == 輪盤顯示名稱
 
@@ -17091,7 +17094,7 @@ When TClient rainbow Tee is enabled, this feature has no effect.
 == 已啟用 TClient 彩虹 Tee 時，本功能不會生效。
 
 When you cross the start line, show a ghost tee replicating the movements of your best time
-== 越過起跑線時，顯示復現最佳成績的影子 Tee
+== When you cross the start line, show a ghost tee replicating the movements of your best time
 
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 == 你的頭銜出現在哪裡、長什麼樣：名牌、風格、動畫、顏色和光暈。
@@ -17296,9 +17299,6 @@ Writing item %d failed
 
 Written %d items
 == 已寫入 %d 項
-
-Wrong button settings
-== 錯誤的按鍵設置
 
 x = DDNet CPU% / total CPU%
 == x = DDNet CPU% / 總 CPU%

@@ -19378,7 +19378,7 @@ polish = "Opcjonalny punkt końcowy WebSocket dla głosu (puste zachowuje transp
 key = "Original language for incoming and outgoing text"
 [message.translations]
 simplified_chinese = "收到与发出文本的原始语言"
-traditional_chinese = "收到與發出文本的原始語言"
+traditional_chinese = "收到與發出文字的原始語言"
 [[message]]
 key = "Original message language"
 [message.translations]

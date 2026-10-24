@@ -729,7 +729,7 @@ Adjust the display options; open a vote to check the layout before joining a bus
 == 表示オプションを調整します。混雑したサーバーに入る前に、投票を開いてレイアウトを確認してください。
 
 Adjust the opacity of entities belonging to other teams, such as tees and name plates
-== 他のチームのエンティティ（Tee やネームプレートなど）の不透明度を調整
+== Adjust the opacity of entities belonging to other teams, such as tees and name plates
 
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
@@ -982,6 +982,15 @@ Anti latency tools
 
 Anti Ping Smoothing
 == アンチピングスムージング
+
+Anti-aliasing for the exported video only, independent of the graphics setting. Explicit levels render each frame into a multisampled offscreen target, so the game itself can stay at a lower setting for performance. Supersampling (output smaller than the window) already reduces jagged edges, so prefer one or the other.
+== 書き出した動画にのみ適用されるアンチエイリアスで、グラフィック設定とは独立しています。明示的な倍率を選ぶと各フレームをマルチサンプルのオフスクリーンターゲットに描画するため、ゲーム本体は負荷軽減のために低めの設定のままにできます。スーパーサンプリング（出力がウィンドウより小さい場合）だけでもギザギザは軽減されるため、どちらか一方を選んでください。
+
+Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
+== Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
+
+Anti-aliasing:
+== アンチエイリアス:
 
 Anti-spoof specific rate limit (0 = unlimited).
 == アンチスプーフ固有のレート制限（0 = 無制限）
@@ -1742,6 +1751,9 @@ Benchmark frame times for number of seconds to file, then quit
 Best
 == 最高
 
+Best quality (all-intra 4:4:4 / MP4)
+== 最高画質 (全フレーム内 4:4:4 / MP4)
+
 Better compression, slower
 == 圧縮率は向上するが遅い
 
@@ -2056,9 +2068,6 @@ Cannot open word list file. Previous words remain active.
 
 Cannot read complete word list file. Previous words remain active.
 == 単語リストファイルを完全に読み込めません。以前の単語を引き続き使用します。
-
-Cannot remove the wiki file
-== Wiki ファイルを削除できません
 
 Cannot swap: the other player is not in your team
 == 交換できません：相手があなたのチームにいません
@@ -3518,9 +3527,6 @@ Customize QmClient visuals and effects
 Customize the position jump hint
 == Customize the position jump hint
 
-Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
-== ホイール1刻みの移動距離を設定。Alt を押しながらスクロールすると3倍の幅
-
 Customize translate button and menu colors
 == 翻訳ボタンとメニューの色をカスタマイズ
 
@@ -3836,9 +3842,6 @@ Delete
 Delete "%s"?
 == Delete "%s"?
 
-Delete button
-== ボタンを削除
-
 Delete category
 == カテゴリを削除
 
@@ -4145,9 +4148,6 @@ Do not translate server messages
 Do not use it to spam: servers may punish repeated automatic messages.
 == スパムには使わないでください。繰り返しの自動メッセージはサーバー側で罰せられる場合があります。
 
-Document too large for the editor (%d of %d bytes)
-== ドキュメントが大きすぎてクライアントのエディターで編集できません（%d / %d バイト）
-
 Done
 == Done
 
@@ -4250,8 +4250,8 @@ Drag to another category to move this friend.
 Drag to pan, scroll to zoom
 == ドラッグで移動、ホイールで拡大・縮小
 
-Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
-== ドラッグで並べ替え、クリックで展開・折りたたみ。右クリックまたは歯車アイコンでカテゴリを管理
+Drag to reorder; right-click or use the gear to manage
+== Drag to reorder; right-click or use the gear to manage
 
 Dragger Inner Color
 == ドラッガー内側の色
@@ -4600,6 +4600,9 @@ Edits individual Tee 7 skin parts and previews the result.
 
 Effects are heavy on crowded servers, so keep "Automatic effect LOD when crowded" enabled.
 == 人が多いサーバーではエフェクトが重いので、密集時の自動 LOD はオンにしておいてください。
+
+Efficient sharing (HEVC / MP4)
+== 高効率共有 (HEVC / MP4)
 
 Elastic
 == エラスティック
@@ -5222,17 +5225,8 @@ Erase items on the in game background
 Error
 == エラー
 
-Error checking player name
-== プレイヤー名の確認中にエラーが発生しました
-
-Error joining Tutorial server
-== チュートリアルサーバーへの参加中にエラーが発生しました
-
 Error loading communities
 == コミュニティの読み込みエラー
-
-Error loading demo
-== デモの読み込み中にエラーが発生しました
 
 Error loading touch controls
 == タッチコントロールの読み込みエラー
@@ -5360,8 +5354,8 @@ Export preset
 Export preset:
 == 書き出しプリセット:
 
-Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov)
-== Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov)
+Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
+== Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
 
 Export range
 == 書き出し範囲
@@ -5545,6 +5539,9 @@ Faster export playback
 
 Faster presets encode quicker but produce larger files
 == 速いプリセットはエンコードが速くなりますが、ファイルは大きくなります
+
+Fastest (hardware H.264 / MP4)
+== 最速 (ハードウェア H.264 / MP4)
 
 Fastest encode, largest files
 == 最速のエンコード、最大のファイル
@@ -5744,6 +5741,9 @@ Folder Link
 Follow
 == フォロー
 
+Follow graphics setting
+== グラフィック設定に従う
+
 Follow option color
 == 追跡の色
 
@@ -5839,9 +5839,6 @@ Frags
 
 Frame rate
 == フレームレート
-
-Frame rate of the recorded video; higher means smoother playback and larger files
-== 録画動画のフレームレート。高いほど滑らかに再生されますが、ファイルは大きくなります
 
 Frame time
 == フレーム時間
@@ -6595,9 +6592,6 @@ High Detail
 
 High particle counts and trails cost frame rate; lower "Particle count" if your FPS drops.
 == パーティクル数が多いとトレイルも相まってフレームレートを食います。FPS が落ちるならパーティクル数を下げてください。
-
-High quality (HEVC / MP4)
-== 高画質 (HEVC / MP4)
 
 High quality, slow
 == 高画質、遅い
@@ -9326,9 +9320,6 @@ No skins match your filter criteria
 No sounds match this search.
 == 検索に一致するサウンドがありません。
 
-No space for button
-== ボタンのスペースがありません
-
 No status bar items
 == ステータスバーアイテムがありません
 
@@ -9578,6 +9569,9 @@ Opacity of entity layers on the map such as death, freeze, unfreeze, teleport, c
 Opacity of freeze bars inside freeze
 == フリーズ内のフリーズバーの不透明度
 
+Opacity of other teams' tees and name plates
+== Opacity of other teams' tees and name plates
+
 Open a link to join the community.
 == リンクを開いてコミュニティに参加できます。
 
@@ -9723,7 +9717,10 @@ Original
 == オリジナル
 
 Original language for both received and outgoing messages. Use Auto to detect each message.
-== 受信・送信の両方で使う原文の言語です。「自動」で各メッセージの言語を判定します。
+== Original language for both received and outgoing messages. Use Auto to detect each message.
+
+Original language for incoming and outgoing text
+== Original language for incoming and outgoing text
 
 Original message language
 == 原文の言語
@@ -10460,11 +10457,26 @@ Port for server info connection to server (0=random, >=1024 sets manual port)
 Port for the external console.
 == 外部コンソール用ポート
 
+Pose capture pixel budget in megapixels (0 = unlimited)
+== Pose capture pixel budget in megapixels (0 = unlimited)
+
 Pose file
 == ポーズファイル
 
 Pose preview
 == ポーズプレビュー
+
+Pose render fills the background with the entity layer
+== Pose render fills the background with the entity layer
+
+Pose render output format (0 = png, 1 = webp)
+== Pose render output format (0 = png, 1 = webp)
+
+Pose render supersampling scale (1-4)
+== Pose render supersampling scale (1-4)
+
+Pose render unsharp mask strength (0 = off)
+== Pose render unsharp mask strength (0 = off)
 
 Poses
 == Poses
@@ -11069,9 +11081,6 @@ Randomize player color (0 = all, 1 = body, 2 = feet, 3 = skin, 4 = flag) example
 Rank 1
 == ランク1
 
-Rank 1 demo
-== ランク1デモ
-
 Rank 1 demo already cached under 'Rank 1 replays': %s
 == Rank 1 リプレイは「Rank 1 replays」にキャッシュ済み：%s
 
@@ -11236,6 +11245,9 @@ Record demo
 
 Record to a file
 == ファイルに記録
+
+Recorded frame rate; higher is smoother and larger
+== Recorded frame rate; higher is smoother and larger
 
 Recorder FPS
 == 録画フレームレート
@@ -11543,8 +11555,8 @@ Renames your Tee automatically when you get close to the finish, so the finish i
 Render
 == レンダリング
 
-Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling)
-== Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling)
+Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
+== Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
 
 Render all custom colored feet as white feet skin
 == カスタム足色をすべて白い足スキンとしてレンダリング
@@ -11647,9 +11659,6 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == このプレフィックスを持つスキンに置き換え（例：cats、santa）
-
-Replace video
-== 動画を置き換え
 
 Replacement chars
 == 置換文字
@@ -11768,9 +11777,6 @@ Reset column widths
 Reset console appearance
 == コンソールの外観をリセット
 
-Reset controls
-== コントロールをリセット
-
 Reset count appearance
 == カウンターの外観を初期化
 
@@ -11846,6 +11852,9 @@ Restart
 Restart in x seconds (0 = abort)
 == x 秒後に再起動（0 = 中止）
 
+Restart smooth scrolling on every wheel tick
+== Restart smooth scrolling on every wheel tick
+
 Restart the client
 == クライアントを再起動
 
@@ -11858,9 +11867,6 @@ Restore a recently used Tee skin
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == 2人用セーブを復元しますか？ /qm Yes で最新、/qm Yes 番号 で別のセーブを選択、/qm No で閉じます。
 
-Restore configuration package
-== 設定パッケージを復元
-
 Restore Kugou files
 == Kugou の元ファイルを復元
 
@@ -11872,12 +11878,6 @@ Restore recommended
 
 Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
 == 従来のホイール操作に戻す：各刻みで速度を引き継がず、滑らかなスクロールを再開
-
-Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
-== 従来のホイール操作に戻す：各刻みで速度を引き継がず、滑らかなスクロールを再開
-
-Restored the built-in content
-== 内蔵コンテンツに戻しました
 
 Restoring save %d: main '%s', dummy '%s'.
 == セーブ %d を復元中：メイン「%s」、ダミー「%s」。
@@ -12176,9 +12176,6 @@ Save/Load Name
 Save/Load Skin
 == スキンを保存/読み込み
 
-Saved
-== 保存しました
-
 Saved to the bind wheel.
 == バインドホイールに保存しました。
 
@@ -12283,12 +12280,6 @@ Screenshot
 
 Screenshot directory
 == スクリーンショットの保存先
-
-Screenshot error
-== スクリーンショットの処理に失敗しました
-
-Screenshot saved
-== スクリーンショットを保存しました
 
 Screenshot watermark custom text
 == スクリーンショットのウォーターマークのカスタムテキスト
@@ -12451,9 +12442,6 @@ Select the country flag for each player
 
 Selected %d
 == %d 個選択済み
-
-Selected button not visible
-== 選択したボタンが表示されていません
 
 Selected candidate %d/%d under cursor.
 == カーソル下の候補 %d/%d が選択されました。
@@ -12824,6 +12812,9 @@ Shape
 Share of the server browser name/map split given to the name column (per mille)
 == サーバーブラウザーの名前/マップ分割で名前列に割り当てる割合（パーミル）
 
+Sharpen
+== Sharpen
+
 Shimmer speed
 == きらめきの速度
 
@@ -12859,6 +12850,9 @@ Shotgun laser outline color
 
 Show %s group
 == %s グループを表示
+
+Show a ghost of your best time after crossing the start line
+== Show a ghost of your best time after crossing the start line
 
 Show a MomentCap .poses file in game (no export)
 == Show a MomentCap .poses file in game (no export)
@@ -14423,11 +14417,14 @@ Start (s)
 Start and connect to local server
 == ローカルサーバーを起動して接続
 
+Start at a random queue position on every map join
+== Start at a random queue position on every map join
+
 Start dummy skin queue from a random position when entering a map
 == マップ参加時にダミーのスキンキューをランダムな位置から開始
 
 Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
-== マップに参加するたび（ダミー接続・キュー再有効化時も）キューのランダムな位置からローテーションを開始します。切替間隔を 0 にすると時間ローテーションが無効になり、マップ参加時のみ切り替わります
+== Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
 
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 == デフォルト値から始め、他のプレイヤーの動きが飛んで見えるなら少し上げ、自分が遅れて見えるなら下げます。
@@ -16584,7 +16581,10 @@ Use Tee icons instead of circles
 == 円の代わりに Tee アイコンを使用
 
 Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== フックキー押下中にフック衝突ラインを表示する際、下のカスタム色を使用します。無効の場合は非押下時の色を自動反転します
+== Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
+
+Use the custom colors below while the hook key is held
+== Use the custom colors below while the hook key is held
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == ホバーした HUD モジュール上でマウスホイールを使用すると 5% 単位で拡大縮小します
@@ -17081,6 +17081,9 @@ What level DDRace binding is set to (automatic, you don't need to use it).
 What this controls
 == これは何か
 
+Wheel distance per tick; hold Alt for 3x
+== Wheel distance per tick; hold Alt for 3x
+
 Wheel label
 == ホイールの表示名
 
@@ -17091,7 +17094,7 @@ When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient のレインボー Tee が有効な場合、この機能は効果がありません。
 
 When you cross the start line, show a ghost tee replicating the movements of your best time
-== スタートラインを越えると、自分のベストタイムの動きを再現するゴーストティーを表示します
+== When you cross the start line, show a ghost tee replicating the movements of your best time
 
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 == 称号をどこに出すか、どう見せるか。ネームプレート、スタイル、アニメーション、色、発光です。
@@ -17296,9 +17299,6 @@ Writing item %d failed
 
 Written %d items
 == %d 個のアイテムを書き込みました
-
-Wrong button settings
-== ボタン設定が正しくありません
 
 x = DDNet CPU% / total CPU%
 == x = DDNet CPU% / 合計 CPU%

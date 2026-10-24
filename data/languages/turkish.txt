@@ -729,7 +729,7 @@ Adjust the display options; open a vote to check the layout before joining a bus
 == Görünüm seçeneklerini ayarlayın; kalabalık bir sunucuya katılmadan önce bir oylama açıp yerleşimi kontrol edin.
 
 Adjust the opacity of entities belonging to other teams, such as tees and name plates
-== Diğer takımlara ait varlıkların (tee'ler ve isim plakaları gibi) opaklığını ayarlayın
+== Adjust the opacity of entities belonging to other teams, such as tees and name plates
 
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
@@ -982,6 +982,15 @@ Anti latency tools
 
 Anti Ping Smoothing
 == Anti Ping Düzeltme
+
+Anti-aliasing for the exported video only, independent of the graphics setting. Explicit levels render each frame into a multisampled offscreen target, so the game itself can stay at a lower setting for performance. Supersampling (output smaller than the window) already reduces jagged edges, so prefer one or the other.
+== Yalnızca dışa aktarılan video için kenar yumuşatma; grafik ayarından bağımsızdır. Açık bir düzey seçildiğinde her kare çok örneklemeli ekran dışı hedefe çizilir, böylece oyun performans için daha düşük ayarda kalabilir. Süper örnekleme (çıktının pencereden küçük olması) zaten testere dişlerini azaltır; ikisinden birini tercih edin.
+
+Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
+== Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
+
+Anti-aliasing:
+== Kenar yumuşatma:
 
 Anti-spoof specific rate limit (0 = unlimited).
 == Sahteciliği önleme özel hız sınırı (0 = sınırsız).
@@ -1742,6 +1751,9 @@ Benchmark frame times for number of seconds to file, then quit
 Best
 == En iyi
 
+Best quality (all-intra 4:4:4 / MP4)
+== En yüksek kalite (tam küçük resim 4:4:4 / MP4)
+
 Better compression, slower
 == Daha iyi sıkıştırma, daha yavaş
 
@@ -2056,9 +2068,6 @@ Cannot open word list file. Previous words remain active.
 
 Cannot read complete word list file. Previous words remain active.
 == Kelime listesi dosyası tamamen okunamıyor. Önceki kelimeler etkin kalır.
-
-Cannot remove the wiki file
-== Wiki dosyası kaldırılamadı
 
 Cannot swap: the other player is not in your team
 == Takas yapılamıyor: diğer oyuncu takımında değil
@@ -3518,9 +3527,6 @@ Customize QmClient visuals and effects
 Customize the position jump hint
 == Customize the position jump hint
 
-Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
-== Tekerlek kademesi başına kaydırma mesafesini ayarlayın. Alt basılıyken adım 3 katına çıkar
-
 Customize translate button and menu colors
 == Çevir düğmesi ve menü renklerini özelleştir
 
@@ -3836,9 +3842,6 @@ Delete
 Delete "%s"?
 == Delete "%s"?
 
-Delete button
-== Düğmeyi sil
-
 Delete category
 == Kategoriyi sil
 
@@ -4145,9 +4148,6 @@ Do not translate server messages
 Do not use it to spam: servers may punish repeated automatic messages.
 == Spam için kullanmayın: sunucular tekrarlanan otomatik mesajları cezalandırabilir.
 
-Document too large for the editor (%d of %d bytes)
-== Belge istemci düzenleyicisi için çok büyük (%d / %d bayt)
-
 Done
 == Done
 
@@ -4250,8 +4250,8 @@ Drag to another category to move this friend.
 Drag to pan, scroll to zoom
 == Kaydırmak için sürükleyin, yakınlaştırmak için tekerleği kullanın
 
-Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
-== Sıralamayı değiştirmek için sürükleyin; genişletmek veya daraltmak için tıklayın. Kategorileri yönetmek için sağ tıklayın veya dişli simgesini kullanın
+Drag to reorder; right-click or use the gear to manage
+== Drag to reorder; right-click or use the gear to manage
 
 Dragger Inner Color
 == Sürükleyici İç Rengi
@@ -4600,6 +4600,9 @@ Edits individual Tee 7 skin parts and previews the result.
 
 Effects are heavy on crowded servers, so keep "Automatic effect LOD when crowded" enabled.
 == Kalabalık sunucularda efektler ağır kalır, kalabalıkta otomatik efekt LOD seçeneğini açık tut.
+
+Efficient sharing (HEVC / MP4)
+== Verimli paylaşım (HEVC / MP4)
 
 Elastic
 == Elastik
@@ -5222,17 +5225,8 @@ Erase items on the in game background
 Error
 == Hata
 
-Error checking player name
-== Oyuncu adı kontrol edilirken hata oluştu
-
-Error joining Tutorial server
-== Eğitim sunucusuna katılırken hata oluştu
-
 Error loading communities
 == Topluluklar yüklenirken hata oluştu
-
-Error loading demo
-== Demo yüklenirken hata oluştu
 
 Error loading touch controls
 == Dokunmatik kontroller yüklenirken hata oluştu
@@ -5360,8 +5354,8 @@ Export preset
 Export preset:
 == Dışa aktarma ön ayarı:
 
-Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov)
-== Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov)
+Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
+== Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
 
 Export range
 == Dışa aktarma aralığı
@@ -5545,6 +5539,9 @@ Faster export playback
 
 Faster presets encode quicker but produce larger files
 == Daha hızlı ön ayarlar daha çabuk kodlar ancak daha büyük dosyalar üretir
+
+Fastest (hardware H.264 / MP4)
+== En hızlı (donanım H.264 / MP4)
 
 Fastest encode, largest files
 == En hızlı kodlama, en büyük dosyalar
@@ -5744,6 +5741,9 @@ Folder Link
 Follow
 == Takip et
 
+Follow graphics setting
+== Grafik ayarını izle
+
 Follow option color
 == Takip rengi
 
@@ -5839,9 +5839,6 @@ Frags
 
 Frame rate
 == Kare hızı
-
-Frame rate of the recorded video; higher means smoother playback and larger files
-== Kaydedilen videonun kare hızı; yüksek olması daha akıcı oynatma ve daha büyük dosyalar anlamına gelir
 
 Frame time
 == Kare süresi
@@ -6595,9 +6592,6 @@ High Detail
 
 High particle counts and trails cost frame rate; lower "Particle count" if your FPS drops.
 == Yüksek parçacık sayısı ve izler kare hızını yer; FPS düşerse parçacık sayısını azalt.
-
-High quality (HEVC / MP4)
-== Yüksek kalite (HEVC / MP4)
 
 High quality, slow
 == Yüksek kalite, yavaş
@@ -9326,9 +9320,6 @@ No skins match your filter criteria
 No sounds match this search.
 == Bu aramayla eşleşen ses yok.
 
-No space for button
-== Düğme için yer yok
-
 No status bar items
 == Durum çubuğu öğesi yok
 
@@ -9578,6 +9569,9 @@ Opacity of entity layers on the map such as death, freeze, unfreeze, teleport, c
 Opacity of freeze bars inside freeze
 == Dondurucu içindeki çözülme çubuklarının opaklığı
 
+Opacity of other teams' tees and name plates
+== Opacity of other teams' tees and name plates
+
 Open a link to join the community.
 == Topluluğa katılmak için bir bağlantı açın.
 
@@ -9723,7 +9717,10 @@ Original
 == Özgün
 
 Original language for both received and outgoing messages. Use Auto to detect each message.
-== Alınan ve gönderilen mesajların orijinal dili. Her mesajın dilini algılamak için Otomatik seçin.
+== Original language for both received and outgoing messages. Use Auto to detect each message.
+
+Original language for incoming and outgoing text
+== Original language for incoming and outgoing text
 
 Original message language
 == Orijinal mesajın dili
@@ -10460,11 +10457,26 @@ Port for server info connection to server (0=random, >=1024 sets manual port)
 Port for the external console.
 == Harici konsol için port.
 
+Pose capture pixel budget in megapixels (0 = unlimited)
+== Pose capture pixel budget in megapixels (0 = unlimited)
+
 Pose file
 == Poz dosyası
 
 Pose preview
 == Poz önizlemesi
+
+Pose render fills the background with the entity layer
+== Pose render fills the background with the entity layer
+
+Pose render output format (0 = png, 1 = webp)
+== Pose render output format (0 = png, 1 = webp)
+
+Pose render supersampling scale (1-4)
+== Pose render supersampling scale (1-4)
+
+Pose render unsharp mask strength (0 = off)
+== Pose render unsharp mask strength (0 = off)
 
 Poses
 == Poses
@@ -11069,9 +11081,6 @@ Randomize player color (0 = all, 1 = body, 2 = feet, 3 = skin, 4 = flag) example
 Rank 1
 == Rank 1
 
-Rank 1 demo
-== Rank 1 demosu
-
 Rank 1 demo already cached under 'Rank 1 replays': %s
 == Rank 1 demosu zaten 'Rank 1 replays' içinde önbelleğe alındı: %s
 
@@ -11236,6 +11245,9 @@ Record demo
 
 Record to a file
 == Bir dosyaya kaydet
+
+Recorded frame rate; higher is smoother and larger
+== Recorded frame rate; higher is smoother and larger
 
 Recorder FPS
 == Kayıt FPS
@@ -11543,8 +11555,8 @@ Renames your Tee automatically when you get close to the finish, so the finish i
 Render
 == Oluştur
 
-Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling)
-== Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling)
+Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
+== Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
 
 Render all custom colored feet as white feet skin
 == Tüm özel renkli ayakları beyaz ayak görünümü olarak işle
@@ -11647,9 +11659,6 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == Bu öneke sahip bir skin ile değiştir (ör. kediler, noel baba)
-
-Replace video
-== Videoyu değiştir
 
 Replacement chars
 == Değiştirme karakterleri
@@ -11768,9 +11777,6 @@ Reset column widths
 Reset console appearance
 == Konsol görünümünü sıfırla
 
-Reset controls
-== Kontrolleri sıfırla
-
 Reset count appearance
 == Sayaç görünümünü sıfırla
 
@@ -11846,6 +11852,9 @@ Restart
 Restart in x seconds (0 = abort)
 == x saniye içinde yeniden başlat (0 = iptal)
 
+Restart smooth scrolling on every wheel tick
+== Restart smooth scrolling on every wheel tick
+
 Restart the client
 == İstemciyi yeniden başlat
 
@@ -11858,9 +11867,6 @@ Restore a recently used Tee skin
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == İki kişilik kayıt geri yüklensin mi? /qm Yes en yeniyi yükler; /qm Yes numara başka kayıt seçer; /qm No kapatır.
 
-Restore configuration package
-== Yapılandırma paketini geri yükle
-
 Restore Kugou files
 == Kugou dosyalarını geri yükle
 
@@ -11872,12 +11878,6 @@ Restore recommended
 
 Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
 == Özgün tekerlek kaydırmasını geri getir: her kademe hızı devralmadan yumuşak kaydırmayı yeniden başlatır
-
-Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
-== Özgün tekerlek kaydırmasını geri getir: her kademe hızı devralmadan yumuşak kaydırmayı yeniden başlatır
-
-Restored the built-in content
-== Paket içeriği geri yüklendi
 
 Restoring save %d: main '%s', dummy '%s'.
 == %d numaralı kayıt geri yükleniyor: ana oyuncu '%s', kukla '%s'.
@@ -12176,9 +12176,6 @@ Save/Load Name
 Save/Load Skin
 == Görünümü Kaydet/Yükle
 
-Saved
-== Kaydedildi
-
 Saved to the bind wheel.
 == Komut çarkına kaydedildi.
 
@@ -12283,12 +12280,6 @@ Screenshot
 
 Screenshot directory
 == Ekran görüntüsü dizini
-
-Screenshot error
-== Ekran görüntüsü hatası
-
-Screenshot saved
-== Ekran görüntüsü kaydedildi
 
 Screenshot watermark custom text
 == Ekran görüntüsü filigranı özel metni
@@ -12451,9 +12442,6 @@ Select the country flag for each player
 
 Selected %d
 == %d seçildi
-
-Selected button not visible
-== Seçili düğme görünmüyor
 
 Selected candidate %d/%d under cursor.
 == İmleç altında seçilen aday %d/%d.
@@ -12824,6 +12812,9 @@ Shape
 Share of the server browser name/map split given to the name column (per mille)
 == Sunucu tarayıcısı ad/harita bölünmesinden ad sütununa ayrılan oran (binde)
 
+Sharpen
+== Sharpen
+
 Shimmer speed
 == Parıltı hızı
 
@@ -12859,6 +12850,9 @@ Shotgun laser outline color
 
 Show %s group
 == %s grubunu göster
+
+Show a ghost of your best time after crossing the start line
+== Show a ghost of your best time after crossing the start line
 
 Show a MomentCap .poses file in game (no export)
 == Show a MomentCap .poses file in game (no export)
@@ -14423,11 +14417,14 @@ Start (s)
 Start and connect to local server
 == Yerel sunucuyu başlat ve bağlan
 
+Start at a random queue position on every map join
+== Start at a random queue position on every map join
+
 Start dummy skin queue from a random position when entering a map
 == Haritaya girerken kukla skin kuyruğunu rastgele bir konumdan başlat
 
 Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
-== Her haritaya girişte (dummy bağlantısı ve kuyruğun yeniden etkinleştirilmesinde de) kuyruğun rastgele bir konumundan başlar. Geçiş aralığı 0 olduğunda zamanlanmış döndürme devre dışı kalır ve skinler yalnızca haritaya girişte değişir
+== Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
 
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 == Varsayılan değerle başlayın; diğer oyuncular sıçrıyormuş gibi görünüyorsa biraz artırın, onların gerisinde kaldığınızı düşünüyorsanız azaltın.
@@ -16584,7 +16581,10 @@ Use Tee icons instead of circles
 == Daireler yerine Tee simgeleri kullan
 
 Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== Kanca tuşuna basılırken kanca çarpışma çizgisi gösterildiğinde aşağıdaki özel renkleri kullanır; devre dışı bırakıldığında basılmamış renkler otomatik olarak ters çevrilir
+== Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
+
+Use the custom colors below while the hook key is held
+== Use the custom colors below while the hook key is held
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == Üzerine gelinen bir modülü fare tekerleği ile %5 oranında ölçeklendir
@@ -17081,6 +17081,9 @@ What level DDRace binding is set to (automatic, you don't need to use it).
 What this controls
 == Ne ayarlar
 
+Wheel distance per tick; hold Alt for 3x
+== Wheel distance per tick; hold Alt for 3x
+
 Wheel label
 == Çark etiketi
 
@@ -17091,7 +17094,7 @@ When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient gökkuşağı Tee açıkken bu özellik etkili olmaz.
 
 When you cross the start line, show a ghost tee replicating the movements of your best time
-== Başlangıç çizgisini geçtiğinde, en iyi zamanının hareketlerini gösteren bir hayalet oyuncu belirir
+== When you cross the start line, show a ghost tee replicating the movements of your best time
 
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 == Unvanının nerede görüneceği ve nasıl duracağı: isim etiketi, stil, animasyon, renkler ve parıltı.
@@ -17296,9 +17299,6 @@ Writing item %d failed
 
 Written %d items
 == %d öğe yazıldı
-
-Wrong button settings
-== Yanlış düğme ayarları
 
 x = DDNet CPU% / total CPU%
 == x = DDNet CPU% / toplam CPU%

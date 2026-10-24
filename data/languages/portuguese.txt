@@ -729,7 +729,7 @@ Adjust the display options; open a vote to check the layout before joining a bus
 == Ajuste as opções de apresentação; abra uma votação para verificar o esquema antes de entrar num servidor cheio.
 
 Adjust the opacity of entities belonging to other teams, such as tees and name plates
-== Ajustar a opacidade de entidades de outras equipas, como tees e placas de nome
+== Adjust the opacity of entities belonging to other teams, such as tees and name plates
 
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
@@ -982,6 +982,15 @@ Anti latency tools
 
 Anti Ping Smoothing
 == Suavização Anti-Ping
+
+Anti-aliasing for the exported video only, independent of the graphics setting. Explicit levels render each frame into a multisampled offscreen target, so the game itself can stay at a lower setting for performance. Supersampling (output smaller than the window) already reduces jagged edges, so prefer one or the other.
+== Antialiasing apenas para o vídeo exportado, independente da definição gráfica. Com um nível explícito, cada frame é desenhado num destino off-screen com multisampling, pelo que o jogo pode manter uma definição mais baixa por desempenho. O supersampling (saída menor que a janela) já reduz as margens serrilhadas, por isso prefira um ou outro.
+
+Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
+== Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
+
+Anti-aliasing:
+== Antialiasing:
 
 Anti-spoof specific rate limit (0 = unlimited).
 == Limite de taxa específico anti-spoof (0 = ilimitado).
@@ -1742,6 +1751,9 @@ Benchmark frame times for number of seconds to file, then quit
 Best
 == Melhor
 
+Best quality (all-intra 4:4:4 / MP4)
+== Qualidade máxima (todos intra 4:4:4 / MP4)
+
 Better compression, slower
 == Melhor compressão, mais lento
 
@@ -2056,9 +2068,6 @@ Cannot open word list file. Previous words remain active.
 
 Cannot read complete word list file. Previous words remain active.
 == Não foi possível ler o ficheiro completo. As palavras anteriores continuam ativas.
-
-Cannot remove the wiki file
-== Não foi possível remover o ficheiro do Wiki
 
 Cannot swap: the other player is not in your team
 == Não é possível trocar: o outro jogador não está na tua equipa
@@ -3518,9 +3527,6 @@ Customize QmClient visuals and effects
 Customize the position jump hint
 == Customize the position jump hint
 
-Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
-== Personalize a distância por passo da roda. Mantenha Alt premido para um passo 3 vezes maior
-
 Customize translate button and menu colors
 == Personalizar cores do botão de tradução e menu
 
@@ -3836,9 +3842,6 @@ Delete
 Delete "%s"?
 == Delete "%s"?
 
-Delete button
-== Eliminar botão
-
 Delete category
 == Eliminar categoria
 
@@ -4145,9 +4148,6 @@ Do not translate server messages
 Do not use it to spam: servers may punish repeated automatic messages.
 == Não utilize para spam: os servidores podem punir mensagens automáticas repetidas.
 
-Document too large for the editor (%d of %d bytes)
-== Documento demasiado grande para o editor (%d de %d bytes)
-
 Done
 == Done
 
@@ -4250,8 +4250,8 @@ Drag to another category to move this friend.
 Drag to pan, scroll to zoom
 == Arraste para mover, use a roda para ampliar
 
-Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
-== Arraste para reordenar; clique para expandir ou recolher. Clique com o botão direito ou use a engrenagem para gerir categorias
+Drag to reorder; right-click or use the gear to manage
+== Drag to reorder; right-click or use the gear to manage
 
 Dragger Inner Color
 == Cor interior do arrastador
@@ -4600,6 +4600,9 @@ Edits individual Tee 7 skin parts and previews the result.
 
 Effects are heavy on crowded servers, so keep "Automatic effect LOD when crowded" enabled.
 == Em servidores cheios os efeitos pesam, por isso mantém ligado o LOD automático de efeitos em multidão.
+
+Efficient sharing (HEVC / MP4)
+== Partilha eficiente (HEVC / MP4)
 
 Elastic
 == Elástico
@@ -5222,17 +5225,8 @@ Erase items on the in game background
 Error
 == Erro
 
-Error checking player name
-== Erro ao verificar nome do jogador
-
-Error joining Tutorial server
-== Erro ao entrar no servidor de Tutorial
-
 Error loading communities
 == Erro ao carregar comunidades
-
-Error loading demo
-== Erro ao carregar demo
 
 Error loading touch controls
 == Erro ao carregar os controlos táteis
@@ -5360,8 +5354,8 @@ Export preset
 Export preset:
 == Predefinição de exportação:
 
-Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov)
-== Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov)
+Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
+== Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
 
 Export range
 == Intervalo de exportação
@@ -5545,6 +5539,9 @@ Faster export playback
 
 Faster presets encode quicker but produce larger files
 == Predefinições mais rápidas codificam mais depressa, mas geram ficheiros maiores
+
+Fastest (hardware H.264 / MP4)
+== Mais rápido (H.264 por hardware / MP4)
 
 Fastest encode, largest files
 == Codificação mais rápida, ficheiros maiores
@@ -5744,6 +5741,9 @@ Folder Link
 Follow
 == Seguir
 
+Follow graphics setting
+== Seguir as definições gráficas
+
 Follow option color
 == Cor de seguir
 
@@ -5839,9 +5839,6 @@ Frags
 
 Frame rate
 == Taxa de frames
-
-Frame rate of the recorded video; higher means smoother playback and larger files
-== Taxa de fotogramas do vídeo gravado; mais alta significa reprodução mais suave e ficheiros maiores
 
 Frame time
 == Tempo de fotograma
@@ -6595,9 +6592,6 @@ High Detail
 
 High particle counts and trails cost frame rate; lower "Particle count" if your FPS drops.
 == Muitas partículas e rastos custam fotogramas por segundo; reduz a quantidade de partículas se os teus FPS caírem.
-
-High quality (HEVC / MP4)
-== Alta qualidade (HEVC / MP4)
 
 High quality, slow
 == Alta qualidade, lento
@@ -9326,9 +9320,6 @@ No skins match your filter criteria
 No sounds match this search.
 == Nenhum som corresponde a esta pesquisa.
 
-No space for button
-== Sem espaço para o botão
-
 No status bar items
 == Nenhum item na barra de estado
 
@@ -9578,6 +9569,9 @@ Opacity of entity layers on the map such as death, freeze, unfreeze, teleport, c
 Opacity of freeze bars inside freeze
 == Opacidade das barras de freeze dentro do freeze
 
+Opacity of other teams' tees and name plates
+== Opacity of other teams' tees and name plates
+
 Open a link to join the community.
 == Abre uma ligação para entrar na comunidade.
 
@@ -9723,7 +9717,10 @@ Original
 == Estilo original
 
 Original language for both received and outgoing messages. Use Auto to detect each message.
-== Idioma original das mensagens recebidas e enviadas. Use Auto para detetar cada mensagem.
+== Original language for both received and outgoing messages. Use Auto to detect each message.
+
+Original language for incoming and outgoing text
+== Original language for incoming and outgoing text
 
 Original message language
 == Idioma da mensagem original
@@ -10460,11 +10457,26 @@ Port for server info connection to server (0=random, >=1024 sets manual port)
 Port for the external console.
 == Porta para a consola externa.
 
+Pose capture pixel budget in megapixels (0 = unlimited)
+== Pose capture pixel budget in megapixels (0 = unlimited)
+
 Pose file
 == Ficheiro de poses
 
 Pose preview
 == Pré-visualização das poses
+
+Pose render fills the background with the entity layer
+== Pose render fills the background with the entity layer
+
+Pose render output format (0 = png, 1 = webp)
+== Pose render output format (0 = png, 1 = webp)
+
+Pose render supersampling scale (1-4)
+== Pose render supersampling scale (1-4)
+
+Pose render unsharp mask strength (0 = off)
+== Pose render unsharp mask strength (0 = off)
 
 Poses
 == Poses
@@ -11069,9 +11081,6 @@ Randomize player color (0 = all, 1 = body, 2 = feet, 3 = skin, 4 = flag) example
 Rank 1
 == Rank 1
 
-Rank 1 demo
-== Demo de rank 1
-
 Rank 1 demo already cached under 'Rank 1 replays': %s
 == A demo de rank 1 já está em cache em 'Rank 1 replays': %s
 
@@ -11236,6 +11245,9 @@ Record demo
 
 Record to a file
 == Gravar para um ficheiro
+
+Recorded frame rate; higher is smoother and larger
+== Recorded frame rate; higher is smoother and larger
 
 Recorder FPS
 == FPS de gravação
@@ -11543,8 +11555,8 @@ Renames your Tee automatically when you get close to the finish, so the finish i
 Render
 == Renderizar
 
-Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling)
-== Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling)
+Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
+== Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
 
 Render all custom colored feet as white feet skin
 == Renderizar todas as cores de pés personalizadas como pele de pés branca
@@ -11647,9 +11659,6 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == Substituir skin por uma com este prefixo (ex.: gatos, santa)
-
-Replace video
-== Substituir vídeo
 
 Replacement chars
 == Caracteres de substituição
@@ -11768,9 +11777,6 @@ Reset column widths
 Reset console appearance
 == Repor o aspeto da consola
 
-Reset controls
-== Repor controlos
-
 Reset count appearance
 == Repor aspeto do contador
 
@@ -11846,6 +11852,9 @@ Restart
 Restart in x seconds (0 = abort)
 == Reiniciar em x segundos (0 = abortar)
 
+Restart smooth scrolling on every wheel tick
+== Restart smooth scrolling on every wheel tick
+
 Restart the client
 == Reiniciar o cliente
 
@@ -11858,9 +11867,6 @@ Restore a recently used Tee skin
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == Restaurar um jogo guardado de dois jogadores? /qm Yes carrega o mais recente; /qm Yes número escolhe outro; /qm No ignora.
 
-Restore configuration package
-== Restaurar pacote de configurações
-
 Restore Kugou files
 == Restaurar ficheiros do Kugou
 
@@ -11872,12 +11878,6 @@ Restore recommended
 
 Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
 == Restaurar o deslocamento original: cada passo da roda reinicia o deslocamento suave sem manter a velocidade
-
-Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
-== Restaurar o deslocamento original: cada passo da roda reinicia o deslocamento suave sem manter a velocidade
-
-Restored the built-in content
-== Conteúdo incluído restaurado
 
 Restoring save %d: main '%s', dummy '%s'.
 == A restaurar o jogo guardado %d: principal '%s', dummy '%s'.
@@ -12176,9 +12176,6 @@ Save/Load Name
 Save/Load Skin
 == Guardar/Carregar Pele
 
-Saved
-== Salvo
-
 Saved to the bind wheel.
 == Guardado na roda de comandos.
 
@@ -12283,12 +12280,6 @@ Screenshot
 
 Screenshot directory
 == Pasta de capturas de ecrã
-
-Screenshot error
-== Erro na captura de ecrã
-
-Screenshot saved
-== Captura de ecrã guardada
 
 Screenshot watermark custom text
 == Texto personalizado da marca de água da captura de ecrã
@@ -12451,9 +12442,6 @@ Select the country flag for each player
 
 Selected %d
 == Selecionados %d
-
-Selected button not visible
-== Botão selecionado não visível
 
 Selected candidate %d/%d under cursor.
 == Candidato selecionado %d/%d sob o cursor.
@@ -12824,6 +12812,9 @@ Shape
 Share of the server browser name/map split given to the name column (per mille)
 == Parte da divisão nome/mapa do navegador de servidores dada à coluna de nome (por mil)
 
+Sharpen
+== Sharpen
+
 Shimmer speed
 == Velocidade do brilho
 
@@ -12859,6 +12850,9 @@ Shotgun laser outline color
 
 Show %s group
 == Mostrar grupo %s
+
+Show a ghost of your best time after crossing the start line
+== Show a ghost of your best time after crossing the start line
 
 Show a MomentCap .poses file in game (no export)
 == Show a MomentCap .poses file in game (no export)
@@ -14423,11 +14417,14 @@ Start (s)
 Start and connect to local server
 == Iniciar e conectar ao servidor local
 
+Start at a random queue position on every map join
+== Start at a random queue position on every map join
+
 Start dummy skin queue from a random position when entering a map
 == Iniciar a fila de skins do Dummy a partir de uma posição aleatória ao entrar no mapa
 
 Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
-== Começa numa posição aleatória da fila sempre que entra no mapa (também ao ligar o dummy ou reativar a fila). Com intervalo 0, a rotação temporizada é desativada e as skins só mudam ao entrar no mapa
+== Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
 
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 == Comece pelo valor predefinido: aumente um pouco se os outros jogadores parecerem aos saltos e diminua se parecer que está atrasado em relação a eles.
@@ -16584,7 +16581,10 @@ Use Tee icons instead of circles
 == Usar ícones de Tee em vez de círculos
 
 Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== Usa as cores personalizadas abaixo quando a linha de colisão é apresentada ao premir a tecla de gancho; se desativado, as cores não premidas são invertidas automaticamente
+== Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
+
+Use the custom colors below while the hook key is held
+== Use the custom colors below while the hook key is held
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == Use a roda do rato num módulo pairando para o escalar em 5%
@@ -17081,6 +17081,9 @@ What level DDRace binding is set to (automatic, you don't need to use it).
 What this controls
 == O que controla
 
+Wheel distance per tick; hold Alt for 3x
+== Wheel distance per tick; hold Alt for 3x
+
 Wheel label
 == Nome na roda
 
@@ -17091,7 +17094,7 @@ When TClient rainbow Tee is enabled, this feature has no effect.
 == Quando o Tee arco-íris do TClient está ativado, esta funcionalidade não tem efeito.
 
 When you cross the start line, show a ghost tee replicating the movements of your best time
-== Quando cruzares a linha de partida, mostra um fantasma a replicar os movimentos do teu melhor tempo
+== When you cross the start line, show a ghost tee replicating the movements of your best time
 
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 == Onde aparece o teu título e como fica: placa de nome, estilo, animação, cores e brilho.
@@ -17296,9 +17299,6 @@ Writing item %d failed
 
 Written %d items
 == %d itens escritos
-
-Wrong button settings
-== Definições de botão erradas
 
 x = DDNet CPU% / total CPU%
 == x = DDNet CPU% / CPU total%
