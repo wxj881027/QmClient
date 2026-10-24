@@ -367,12 +367,6 @@ turkish = "Sistem konsolu ayrıntı düzeyini ayarla (-3=Yok, -2=Yalnızca Hatal
 polish = "Dostosuj szczegółowość konsoli systemowej (-3=Brak, -2=Tylko błędy, -1=Ostrzeżenia, 0=Informacje, 1=Debugowanie, 2=Śledzenie)"
 
 [[message]]
-key = "Opacity of other teams' tees and name plates"
-[message.translations]
-simplified_chinese = "其他队伍玩家与名牌的透明度"
-traditional_chinese = "其他隊伍玩家與名牌的透明度"
-
-[[message]]
 key = "Adjust verbosity in external console (-3 = none, -2 = errors only, -1 = warnings, 0 = info, 1 = debug, 2 = trace)."
 [message.translations]
 simplified_chinese = "调整外部控制台中的信息量（-3 = 无、-2 = 仅错误、-1 = 警告、0 = 信息、1 = 调试、2 = 跟踪）"
@@ -2195,12 +2189,6 @@ brazilian_portuguese = "Tamanho da fonte do chat"
 portuguese = "Tamanho da fonte do chat"
 turkish = "Sohbet yazı tipi boyutu"
 polish = "Rozmiar czcionki czatu"
-
-[[message]]
-key = "Chat line spacing"
-[message.translations]
-simplified_chinese = "聊天行间隔"
-traditional_chinese = "聊天行間隔"
 
 [[message]]
 key = "Chat log retention days"
@@ -7753,12 +7741,6 @@ brazilian_portuguese = "Ao pressionar: Algo engatável"
 portuguese = "Ao premir: Algo que possa ser agarrado"
 turkish = "Basınca: Kancalanabilir bir şey"
 polish = "Po wciśnięciu: Coś do zahaczenia"
-
-[[message]]
-key = "Use the custom colors below while the hook key is held"
-[message.translations]
-simplified_chinese = "按住钩索键时使用下方的自定义颜色"
-traditional_chinese = "按住鉤索鍵時使用下方的自訂顏色"
 
 [[message]]
 key = "Hook Strength"
@@ -19354,12 +19336,6 @@ turkish = "DDRace bağlamasının hangi seviyeye ayarlandığı (otomatiktir, ku
 polish = "Poziom ustawienia wiązania DDRace (automatyczny, nie musisz go używać)"
 
 [[message]]
-key = "Show a ghost of your best time after crossing the start line"
-[message.translations]
-simplified_chinese = "越过起跑线后显示最佳成绩的残影"
-traditional_chinese = "越過起跑線後顯示最佳成績的殘影"
-
-[[message]]
 key = "Whether dummy copies your movement"
 [message.translations]
 simplified_chinese = "分身是否复制你的移动"
@@ -21769,12 +21745,6 @@ turkish = "Kuyruktan rastgele bir kaplama uygula"
 polish = "Zastosuj losową skórkę z kolejki"
 
 [[message]]
-key = "Start at a random queue position on every map join"
-[message.translations]
-simplified_chinese = "每次进图从随机队列位置开始"
-traditional_chinese = "每次進圖從隨機佇列位置開始"
-
-[[message]]
 key = "0 disables timed rotation; skins only switch on random start events"
 [message.translations]
 simplified_chinese = "0 表示不做时间轮换；仅在随机起点事件时切换皮肤"
@@ -22923,12 +22893,6 @@ turkish = "Kaydırma adımı"
 polish = "Krok przewijania"
 
 [[message]]
-key = "Wheel distance per tick; hold Alt for 3x"
-[message.translations]
-simplified_chinese = "每格滚轮距离；按住 Alt 为三倍"
-traditional_chinese = "每格滾輪距離；按住 Alt 為三倍"
-
-[[message]]
 key = "Width of difficulty column in server browser"
 [message.translations]
 simplified_chinese = "服务器浏览器中难度列的宽度"
@@ -22961,18 +22925,6 @@ turkish = "Sunucu tarayıcısı sütun sırası (virgülle ayrılmış kimlikler
 polish = "Kolejność kolumn przeglądarki serwerów (ID oddzielone przecinkami: community,name,map,difficulty,gametype,friends,players,qm,ping; puste = domyślna)"
 
 [[message]]
-key = "Save loaded and marked as used."
-[message.translations]
-simplified_chinese = "存档已载入并标记为已使用。"
-traditional_chinese = "存檔已載入並標記為已使用。"
-
-[[message]]
-key = "Used"
-[message.translations]
-simplified_chinese = "已使用"
-traditional_chinese = "已使用"
-
-[[message]]
 key = "Fully block enemy players"
 [message.translations]
 simplified_chinese = "完全屏蔽敌对玩家"
@@ -22987,3 +22939,115 @@ brazilian_portuguese = "Bloquear completamente jogadores inimigos"
 portuguese = "Bloquear completamente jogadores inimigos"
 turkish = "Düşman oyuncuları tamamen engelle"
 polish = "Całkowicie blokuj wrogich graczy"
+
+[[message]]
+key = "Could not delete \"%s\""
+[message.translations]
+simplified_chinese = "无法删除\"%s\""
+traditional_chinese = "無法刪除\"%s\""
+japanese = "「%s」を削除できませんでした"
+korean = "\"%s\"을(를) 삭제할 수 없습니다"
+russian = "Не удалось удалить \"%s\""
+german = "\"%s\" konnte nicht gelöscht werden"
+spanish = "No se pudo eliminar \"%s\""
+french = "Impossible de supprimer \"%s\""
+brazilian_portuguese = "Não foi possível excluir \"%s\""
+portuguese = "Não foi possível eliminar \"%s\""
+turkish = "\"%s\" silinemedi"
+polish = "Nie można usunąć \"%s\""
+
+[[message]]
+key = "Could not download \"%s\""
+[message.translations]
+simplified_chinese = "无法下载\"%s\""
+traditional_chinese = "無法下載\"%s\""
+japanese = "「%s」をダウンロードできませんでした"
+korean = "\"%s\"을(를) 다운로드할 수 없습니다"
+russian = "Не удалось скачать \"%s\""
+german = "\"%s\" konnte nicht heruntergeladen werden"
+spanish = "No se pudo descargar \"%s\""
+french = "Impossible de télécharger \"%s\""
+brazilian_portuguese = "Não foi possível baixar \"%s\""
+portuguese = "Não foi possível transferir \"%s\""
+turkish = "\"%s\" indirilemedi"
+polish = "Nie można pobrać \"%s\""
+
+[[message]]
+key = "Delete \"%s\"?"
+[message.translations]
+simplified_chinese = "删除\"%s\"？"
+traditional_chinese = "刪除\"%s\"？"
+japanese = "「%s」を削除しますか？"
+korean = "\"%s\"을(를) 삭제할까요?"
+russian = "Удалить \"%s\"?"
+german = "\"%s\" löschen?"
+spanish = "¿Eliminar \"%s\"?"
+french = "Supprimer \"%s\" ?"
+brazilian_portuguese = "Excluir \"%s\"?"
+portuguese = "Eliminar \"%s\"?"
+turkish = "\"%s\" silinsin mi?"
+polish = "Usunąć \"%s\"?"
+
+[[message]]
+key = "Deleted \"%s\""
+[message.translations]
+simplified_chinese = "已删除\"%s\""
+traditional_chinese = "已刪除\"%s\""
+japanese = "「%s」を削除しました"
+korean = "\"%s\"을(를) 삭제했습니다"
+russian = "\"%s\" удалено"
+german = "\"%s\" gelöscht"
+spanish = "Se eliminó \"%s\""
+french = "\"%s\" supprimé"
+brazilian_portuguese = "\"%s\" excluído"
+portuguese = "\"%s\" eliminado"
+turkish = "\"%s\" silindi"
+polish = "Usunięto \"%s\""
+
+[[message]]
+key = "Download \"%s\"?"
+[message.translations]
+simplified_chinese = "下载\"%s\"？"
+traditional_chinese = "下載\"%s\"？"
+japanese = "「%s」をダウンロードしますか？"
+korean = "\"%s\"을(를) 다운로드할까요?"
+russian = "Скачать \"%s\"?"
+german = "\"%s\" herunterladen?"
+spanish = "¿Descargar \"%s\"?"
+french = "Télécharger \"%s\" ?"
+brazilian_portuguese = "Baixar \"%s\"?"
+portuguese = "Transferir \"%s\"?"
+turkish = "\"%s\" indirilsin mi?"
+polish = "Pobrać \"%s\"?"
+
+[[message]]
+key = "Downloaded \"%s\""
+[message.translations]
+simplified_chinese = "已下载\"%s\""
+traditional_chinese = "已下載\"%s\""
+japanese = "「%s」をダウンロードしました"
+korean = "\"%s\"을(를) 다운로드했습니다"
+russian = "\"%s\" скачано"
+german = "\"%s\" heruntergeladen"
+spanish = "Se descargó \"%s\""
+french = "\"%s\" téléchargé"
+brazilian_portuguese = "\"%s\" baixado"
+portuguese = "\"%s\" transferido"
+turkish = "\"%s\" indirildi"
+polish = "Pobrano \"%s\""
+
+[[message]]
+key = "Downloading…"
+[message.translations]
+simplified_chinese = "下载中…"
+traditional_chinese = "下載中…"
+japanese = "ダウンロード中…"
+korean = "다운로드 중…"
+russian = "Скачивание…"
+german = "Wird heruntergeladen…"
+spanish = "Descargando…"
+french = "Téléchargement…"
+brazilian_portuguese = "Baixando…"
+portuguese = "A transferir…"
+turkish = "İndiriliyor…"
+polish = "Pobieranie…"

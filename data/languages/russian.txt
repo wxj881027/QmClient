@@ -729,7 +729,7 @@ Adjust the display options; open a vote to check the layout before joining a bus
 == Настройте параметры отображения; перед заходом на оживлённый сервер откройте голосование и проверьте вид.
 
 Adjust the opacity of entities belonging to other teams, such as tees and name plates
-== Adjust the opacity of entities belonging to other teams, such as tees and name plates
+== Регулирует непрозрачность сущностей других команд, таких как тии и таблички с именами
 
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
@@ -789,16 +789,16 @@ Air jump
 == Прыжок в воздухе
 
 Alias of poses_close
-== Alias of poses_close
+== Псевдоним poses_close
 
 Alias of poses_open
-== Alias of poses_open
+== Псевдоним poses_open
 
 Alias of poses_render
-== Alias of poses_render
+== Псевдоним poses_render
 
 Alias of poses_video
-== Alias of poses_video
+== Псевдоним poses_video
 
 Alive notification color
 == Цвет уведомления о жизни
@@ -873,7 +873,7 @@ Allow mic permission in system settings, then reopen voice
 == Разрешите доступ к микрофону в настройках системы, затем снова включите голос.
 
 Allow the client to send kill requests (0 = ignore client-initiated kills)
-== Allow the client to send kill requests (0 = ignore client-initiated kills)
+== Разрешить клиенту отправлять запросы на самоубийство (0 = игнорировать самоубийства со стороны клиента)
 
 Allow voting to kick players
 == Разрешить голосование за кик игроков
@@ -987,7 +987,7 @@ Anti-aliasing for the exported video only, independent of the graphics setting. 
 == Сглаживание только для экспортируемого видео, независимо от настроек графики. При явном уровне каждый кадр рисуется в многоэкранную (мультисэмпловую) внеэкранную цель, поэтому сама игра может остаться на низких настройках ради производительности. Суперсэмплинг (вывод меньше окна) уже снижает ступенчатость, так что выбирайте что-то одно.
 
 Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
-== Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
+== Сглаживание при экспорте видео: -1 = следовать gfx_fsaa_samples, 0 = выкл., 2/4/8 = мультисэмпловый закадровый рендеринг
 
 Anti-aliasing:
 == Сглаживание:
@@ -1524,7 +1524,7 @@ Automatically record replays
 == Автоматически записывать повторы
 
 Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
-== Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
+== Автоматически удалять локальную запись сохранения после успешной загрузки (0 = сохранять и помечать как использованную, 1 = удалять)
 
 Automatically reply to muted players
 == Автоматически отвечать заглушённым игрокам
@@ -1902,7 +1902,7 @@ Bound functions
 == Назначенные действия
 
 Bounded capture frame queue depth for demo export (higher values use more memory)
-== Bounded capture frame queue depth for demo export (higher values use more memory)
+== Ограничение глубины очереди захвата кадров для экспорта демо (большие значения используют больше памяти)
 
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Цвет титула в скобках: 0 = как на сервере, 1 = один цвет, 2 = радуга
@@ -2250,7 +2250,7 @@ Chat gradient vertical position percentage
 == Вертикальное положение градиента (чат, %)
 
 Chat line spacing
-== Chat line spacing
+== Межстрочный интервал чата
 
 Chat log retention days
 == Дни хранения лога чата
@@ -2409,7 +2409,7 @@ Chroma sampling
 == Цветовая субдискретизация
 
 Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)
-== Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)
+== Предпочтение субдискретизации цветности при экспорте: 0=авто, 1=4:2:0, 2=4:2:2, 3=4:4:4 (выше — лучше сохраняются тонкие цветные детали)
 
 Chroma sampling. 4:2:0 is smallest and most compatible; 4:4:4 keeps full color detail for thin lines and small colored text. Rendering is 8-bit, so 10-bit formats do not add detail by themselves.
 == Дискретизация цветности. 4:2:0 даёт минимальный размер и лучшую совместимость; 4:4:4 сохраняет цветность полностью, поэтому тонкие линии и мелкий цветной текст выглядят чётче. Рендеринг 8-битный, поэтому 10-битный формат сам по себе не добавляет деталей.
@@ -2994,7 +2994,7 @@ Configures the main HUD: health, ammo, timer, race progress and their positions.
 == Настраивает основной HUD: здоровье, патроны, таймер, прогресс гонки и их положение.
 
 Confirm
-== Confirm
+== Подтвердить
 
 Confirm both are on same server, same room, and support voice
 == Убедитесь, что оба находятся на одном сервере, в одной комнате и поддерживают голос.
@@ -3261,10 +3261,10 @@ Could not connect to the translation service. Please try again later.
 == Не удалось подключиться к сервису перевода. Повторите попытку позже.
 
 Could not delete "%s"
-== Could not delete "%s"
+== Не удалось удалить "%s"
 
 Could not download "%s"
-== Could not download "%s"
+== Не удалось скачать "%s"
 
 Could not find a Tutorial server. Check your internet connection.
 == Не удалось найти учебный сервер. Проверьте ваше интернет-соединение.
@@ -3465,7 +3465,7 @@ Custom community list fetch URL (must be https, leave empty to disable)
 == URL для загрузки пользовательского списка сообществ (должен быть https, оставьте пустым для отключения)
 
 Custom export container: mp4, mov or mkv
-== Custom export container: mp4, mov or mkv
+== Пользовательский контейнер экспорта: mp4, mov или mkv
 
 Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
 == Свой шрифт для китайского/CJK текста (семейство или семейство + стиль); пусто — как у латинского своего шрифта
@@ -3837,7 +3837,7 @@ Delete
 == Удалить
 
 Delete "%s"?
-== Delete "%s"?
+== Удалить "%s"?
 
 Delete category
 == Удалить категорию
@@ -3864,7 +3864,7 @@ Delete this preset
 == Удалить этот пресет
 
 Deleted "%s"
-== Deleted "%s"
+== "%s" удалено
 
 Demo
 == Демо
@@ -3882,7 +3882,7 @@ Demo effects
 == Эффекты демо
 
 Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
-== Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
+== Длина сегмента экспорта демо в секундах (0 = один файл, 300 = 5 минут)
 
 Demo hook strength (0=Off 1=Icon 2=Icon and number)
 == Сила крюка в демо (0=выкл. 1=значок 2=значок и число)
@@ -3903,7 +3903,7 @@ Demo target
 == Цель демо
 
 Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
-== Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
+== Количество тиков демо, проигрываемых без записи перед каждым сегментом для восстановления эффектов и состояния чата (50 тиков = 1 секунда)
 
 Demofile: %s
 == Файл демо: %s
@@ -3999,7 +3999,7 @@ Disable after picking up other weapons
 == Отключить после подбора другого оружия
 
 Disable client-initiated self-kill (K key / kill command)
-== Disable client-initiated self-kill (K key / kill command)
+== Отключить самоубийство со стороны клиента (клавиша K / команда kill)
 
 Disable clipping
 == Отключить обрезку.
@@ -4149,7 +4149,7 @@ Document too large for the editor (%d of %d bytes)
 == Документ слишком большой для редактора клиента (%d из %d байт)
 
 Done
-== Done
+== Готово
 
 Donor (drag parts from left)
 == Донор (перетащите части слева)
@@ -4179,7 +4179,7 @@ Download
 == Скачать
 
 Download "%s"?
-== Download "%s"?
+== Скачать "%s"?
 
 Download community skins
 == Скачать скины сообщества
@@ -4212,7 +4212,7 @@ Downloaded
 == Скачано
 
 Downloaded "%s"
-== Downloaded "%s"
+== "%s" скачано
 
 Downloaded: %.1f MiB (total size unknown)
 == Загружено: %.1f MiB (общий размер неизвестен)
@@ -4227,7 +4227,7 @@ Downloading update...
 == Загрузка обновления...
 
 Downloading…
-== Downloading…
+== Скачивание…
 
 Downscaled (0.78)
 == Уменьшенный масштаб (0.78)
@@ -4251,7 +4251,7 @@ Drag to pan, scroll to zoom
 == Перетаскивание — перемещение, колесо — масштаб
 
 Drag to reorder; right-click or use the gear to manage
-== Drag to reorder; right-click or use the gear to manage
+== Перетаскивайте для изменения порядка; правый клик или шестерёнка для управления
 
 Dragger Inner Color
 == Внутренний цвет драггера
@@ -4737,7 +4737,7 @@ Enable client stutter diagnostics at startup
 == Включить диагностику рывков клиента при запуске
 
 Enable client-initiated self-kill (K key / kill command)
-== Enable client-initiated self-kill (K key / kill command)
+== Включить самоубийство со стороны клиента (клавиша K / команда kill)
 
 Enable colored console output
 == Включить цветной вывод консоли
@@ -5340,10 +5340,10 @@ Export name contains invalid characters.
 == Имя экспорта содержит недопустимые символы.
 
 Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
-== Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== Высота вывода экспорта в пикселях (0 = по размеру рендера окна; меньше окна = даунскейл из supersampling)
 
 Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
-== Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== Ширина вывода экспорта в пикселях (0 = по размеру рендера окна; меньше окна = даунскейл из supersampling)
 
 Export playback speed. The value snaps to the nearest available speed.
 == Скорость воспроизведения при экспорте. Значение привязывается к ближайшей доступной скорости.
@@ -5355,7 +5355,7 @@ Export preset:
 == Пресет экспорта:
 
 Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
-== Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
+== Пресет экспорта: 0=свой, 1=повседневный(libx264/mp4), 2=экономный шеринг(hevc/mp4), 3=монтаж(all-intra H.264/mp4), 4=обмен(ProRes/mov), 5=лучшее качество(all-intra H.264 4:4:4/mp4), 6=быстрейший(аппаратный h264/mp4)
 
 Export range
 == Диапазон экспорта
@@ -5391,7 +5391,7 @@ External sites are not controlled by the client.
 == Внешние сайты не контролируются клиентом.
 
 Extra vertical spacing between chat lines in pixels (0 = default)
-== Extra vertical spacing between chat lines in pixels (0 = default)
+== Дополнительный вертикальный интервал между строками чата в пикселях (0 = по умолчанию)
 
 Extras
 == Дополнительно
@@ -5493,7 +5493,7 @@ Failed to save video
 == Не удалось сохранить видео
 
 Failed to save video. See local console for details.
-== Failed to save video. See local console for details.
+== Не удалось сохранить видео. Подробности в локальной консоли.
 
 Failed to write PNG export.
 == Не удалось записать PNG экспорт.
@@ -7479,7 +7479,7 @@ Keyframe interval (GOP)
 == Интервал ключевых кадров (GOP)
 
 Keyframe interval (GOP) in frames for demo export (0 = encoder default, 1 = all-intra, 60 = recommended)
-== Keyframe interval (GOP) in frames for demo export (0 = encoder default, 1 = all-intra, 60 = recommended)
+== Интервал ключевых кадров (GOP) в кадрах для экспорта демо (0 = по умолчанию кодировщика, 1 = all-intra, 60 = рекомендуется)
 
 Keyframe interval (GOP):
 == Интервал ключевых кадров (GOP):
@@ -7731,7 +7731,7 @@ Leave the path empty to auto-detect; fill it in only when the status says "Steam
 == Оставьте путь пустым для автоопределения; заполняйте его только если статус сообщает, что Steam не найден.
 
 Leave the pose session
-== Leave the pose session
+== Покинуть сеанс поз
 
 Left jump
 == Левый прыжок
@@ -9219,7 +9219,7 @@ No login required
 == Вход не требуется
 
 No map
-== No map
+== Нет карты
 
 No map matches the typed name
 == Нет карты, совпадающей с введённым именем
@@ -9480,7 +9480,7 @@ Number of threads backend can use for rendering (Note: value may be ignored by b
 == Количество потоков, которое может использовать бэкенд для рендеринга (примечание: значение может игнорироваться бэкендом)
 
 Number of video pixel-format conversion threads for demo export (2-4 recommended)
-== Number of video pixel-format conversion threads for demo export (2-4 recommended)
+== Число потоков преобразования пиксельного формата видео для экспорта демо (рекомендуется 2-4)
 
 Number of vote options sent per tick
 == Количество вариантов голосования, отправляемых за тик
@@ -9591,7 +9591,7 @@ Opacity of freeze bars inside freeze
 == Прозрачность полос разморозки внутри заморозки
 
 Opacity of other teams' tees and name plates
-== Opacity of other teams' tees and name plates
+== Непрозрачность тии и табличек других команд
 
 Open a link to join the community.
 == Откройте ссылку, чтобы присоединиться к сообществу.
@@ -9738,10 +9738,10 @@ Original
 == Оригинал
 
 Original language for both received and outgoing messages. Use Auto to detect each message.
-== Original language for both received and outgoing messages. Use Auto to detect each message.
+== Исходный язык для входящих и исходящих сообщений. Используйте «Авто» для определения каждого сообщения.
 
 Original language for incoming and outgoing text
-== Original language for incoming and outgoing text
+== Исходный язык входящего и исходящего текста
 
 Original message language
 == Язык исходного сообщения
@@ -10482,7 +10482,7 @@ Port for the external console.
 == Порт для внешней консоли.
 
 Pose capture pixel budget in megapixels (0 = unlimited)
-== Pose capture pixel budget in megapixels (0 = unlimited)
+== Бюджет пикселей захвата поз в мегапикселях (0 = без ограничений)
 
 Pose file
 == Файл поз
@@ -10491,19 +10491,19 @@ Pose preview
 == Просмотр поз
 
 Pose render fills the background with the entity layer
-== Pose render fills the background with the entity layer
+== Рендер поз заполняет фон слоем сущностей
 
 Pose render output format (0 = png, 1 = webp)
-== Pose render output format (0 = png, 1 = webp)
+== Формат вывода рендера поз (0 = png, 1 = webp)
 
 Pose render supersampling scale (1-4)
-== Pose render supersampling scale (1-4)
+== Масштаб суперсэмплинга рендера поз (1-4)
 
 Pose render unsharp mask strength (0 = off)
-== Pose render unsharp mask strength (0 = off)
+== Сила маски нерезкости рендера поз (0 = выкл.)
 
 Poses
-== Poses
+== Позы
 
 Position
 == Позиция
@@ -10638,19 +10638,19 @@ Press F2, log in, then use: change_map map_name
 == Нажмите F2, войдите и выполните: change_map map_name
 
 Pressed hook collision line color when hitting a tee
-== Pressed hook collision line color when hitting a tee
+== Цвет линии зацепа при нажатой клавише при попадании в тии
 
 Pressed hook collision line color when hitting something hookable
-== Pressed hook collision line color when hitting something hookable
+== Цвет линии зацепа при нажатой клавише при попадании в зацепляемый объект
 
 Pressed hook collision line color when not aiming at anything hookable
-== Pressed hook collision line color when not aiming at anything hookable
+== Цвет линии зацепа при нажатой клавише, когда цель не зацепляема
 
 Pressed hook line color; always used when custom pressed colors are enabled
 == Цвет линии при нажатии; всегда применяется при включении своих цветов нажатия
 
 Pressed hook line tip color
-== Pressed hook line tip color
+== Цвет кончика линии зацепа при нажатой клавише
 
 Pressed: A Tee
 == При нажатии: Другой игрок
@@ -10815,7 +10815,7 @@ Projectile / explosion range
 == Радиус снаряда / взрыва
 
 ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
-== ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
+== Переопределение профиля ProRes: -1=авто (4444 для 4:4:4, иначе HQ), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
 
 Protect names and skins while streaming
 == Защищать имена и скины во время стрима
@@ -11259,7 +11259,7 @@ Reconnect in %d sec
 == Переподключение через %d сек
 
 Record a MomentCap .poses scene to a video
-== Record a MomentCap .poses scene to a video
+== Записать сцену MomentCap .poses в видео
 
 Record chat replays.
 == Записывать повторы чата.
@@ -11271,7 +11271,7 @@ Record to a file
 == Записать в файл
 
 Recorded frame rate; higher is smoother and larger
-== Recorded frame rate; higher is smoother and larger
+== Частота кадров записи; выше — плавнее и крупнее файл
 
 Recorder FPS
 == Частота кадров записи
@@ -11580,7 +11580,7 @@ Render
 == Рендер
 
 Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
-== Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
+== Отрисовать файл MomentCap .poses как скриншот (опционально 1-4-кратный суперсэмплинг, наложение слоя сущностей, резкость 0-100)
 
 Render all custom colored feet as white feet skin
 == Отображать все кастомные цвета ног как белый скин ног
@@ -11862,7 +11862,7 @@ Resetting restores defaults immediately, so note down values you want to keep.
 == Сброс сразу возвращает значения по умолчанию, поэтому заранее запишите нужные.
 
 Resolution:
-== Resolution:
+== Разрешение:
 
 Resource preview VRAM budget override (MB, 0=auto)
 == Переопределение бюджета видеопамяти для предпросмотра ресурсов (МБ, 0=авто)
@@ -11877,7 +11877,7 @@ Restart in x seconds (0 = abort)
 == Перезапуск через x секунд (0 = отмена)
 
 Restart smooth scrolling on every wheel tick
-== Restart smooth scrolling on every wheel tick
+== Перезапускать плавную прокрутку на каждом шаге колёсика
 
 Restart the client
 == Перезапустить клиент
@@ -12132,7 +12132,7 @@ Save last %d min
 == Сохранить последние %d мин
 
 Save loaded and marked as used.
-== Save loaded and marked as used.
+== Сохранение загружено и помечено как использованное.
 
 Save loaded; local record removed.
 == Сохранение загружено, локальная запись удалена.
@@ -12843,7 +12843,7 @@ Share of the server browser name/map split given to the name column (per mille)
 == Доля разделения имени и карты в браузере серверов для столбца имени (промилле)
 
 Sharpen
-== Sharpen
+== Резкость
 
 Shimmer speed
 == Скорость мерцания
@@ -12882,10 +12882,10 @@ Show %s group
 == Показать группу %s
 
 Show a ghost of your best time after crossing the start line
-== Show a ghost of your best time after crossing the start line
+== Показывать призрак лучшего времени после пересечения стартовой линии
 
 Show a MomentCap .poses file in game (no export)
-== Show a MomentCap .poses file in game (no export)
+== Показать файл MomentCap .poses в игре (без экспорта)
 
 Show a small view of the dummy
 == Показать небольшой вид дамми
@@ -14451,13 +14451,13 @@ Start and connect to local server
 == Запустить и подключиться к локальному серверу
 
 Start at a random queue position on every map join
-== Start at a random queue position on every map join
+== Начинать со случайной позиции в очереди при каждом входе на карту
 
 Start dummy skin queue from a random position when entering a map
 == Начинать очередь скинов Дами со случайной позиции при входе на карту
 
 Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
-== Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
+== Начинать со случайной позиции в очереди при каждом входе на карту (включая подключение дамми или повторное включение очереди). Установите интервал переключения 0, чтобы отключить ротацию по времени и переключаться только при входе на карту.
 
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 == Начните со значения по умолчанию: слегка увеличьте, если другие игроки дёргаются, и уменьшите, если кажется, что вы отстаёте от них.
@@ -16323,7 +16323,7 @@ Unfreeze/Deep unfreeze tile outline width
 == Ширина контура тайлов разморозки/глубокой разморозки
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
-== Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
+== Единое качество экспорта (шкала CRF/CQ/QP 0-51, -1 = использовать cl_video_crf); отображается на собственный параметр каждого кодировщика
 
 Uninvite player from team
 == Отменить приглашение игрока в команду
@@ -16509,7 +16509,7 @@ Use current settings
 == Использовать текущие настройки
 
 Use custom colors for the pressed hook collision line (0 = always invert)
-== Use custom colors for the pressed hook collision line (0 = always invert)
+== Использовать свои цвета линии зацепа при нажатой клавише (0 = всегда инвертировать)
 
 Use custom skins instead of the ninja tee
 == Использовать пользовательские скины вместо скина ниндзя
@@ -16596,7 +16596,7 @@ Use pre-input to predict other players for more accurate input prediction
 == Использовать предварительный ввод для прогнозирования других игроков для более точного прогнозирования ввода
 
 Use procedural ring pipeline
-== Use procedural ring pipeline
+== Использовать процедурный конвейер колец
 
 Use server defaults
 == Использовать настройки сервера
@@ -16620,10 +16620,10 @@ Use Tee icons instead of circles
 == Использовать иконки Tee вместо кругов
 
 Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
+== Использовать указанные ниже цвета линии зацепа, когда она показана при нажатой клавише зацепа; если отключено, цвета ненажатого состояния инвертируются автоматически
 
 Use the custom colors below while the hook key is held
-== Use the custom colors below while the hook key is held
+== Использовать указанные ниже цвета, пока удерживается клавиша зацепа
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == Используйте колесо мыши на наведённом модуле для масштабирования на 5%
@@ -16647,7 +16647,7 @@ Use warlist groups for indicator
 == Использовать группы списка врагов для индикатора
 
 Used
-== Used
+== Использовано
 
 Used by active shared text and numeric input fields
 == Используется активными общими полями ввода текста и чисел
@@ -16725,7 +16725,7 @@ Video directory
 == Папка видеозаписей
 
 Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
-== Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
+== Видеокодировщик для экспорта демо (пусто = программный кодировщик по умолчанию, например h264_nvenc)
 
 Video encoding
 == Кодирование видео
@@ -17121,7 +17121,7 @@ What this controls
 == Что это настраивает
 
 Wheel distance per tick; hold Alt for 3x
-== Wheel distance per tick; hold Alt for 3x
+== Дистанция прокрутки за шаг колёсика; с Alt — в 3 раза
 
 Wheel label
 == Название в колесе
@@ -17133,7 +17133,7 @@ When TClient rainbow Tee is enabled, this feature has no effect.
 == Если включен радужный Tee TClient, эта функция не действует.
 
 When you cross the start line, show a ghost tee replicating the movements of your best time
-== When you cross the start line, show a ghost tee replicating the movements of your best time
+== При пересечении стартовой линии показывает призрачного тии, повторяющего движения вашего лучшего времени
 
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 == Где показывается титул и как он выглядит: табличка с именем, стиль, анимация, цвета и свечение.

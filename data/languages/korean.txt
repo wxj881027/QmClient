@@ -729,7 +729,7 @@ Adjust the display options; open a vote to check the layout before joining a bus
 == 표시 옵션을 조정하세요. 붐비는 서버에 접속하기 전에 투표를 열어 배치를 확인하세요.
 
 Adjust the opacity of entities belonging to other teams, such as tees and name plates
-== Adjust the opacity of entities belonging to other teams, such as tees and name plates
+== Tee와 이름표 등 다른 팀 엔티티의 불투명도를 조정합니다
 
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
@@ -789,16 +789,16 @@ Air jump
 == 공중 점프
 
 Alias of poses_close
-== Alias of poses_close
+== poses_close의 별칭
 
 Alias of poses_open
-== Alias of poses_open
+== poses_open의 별칭
 
 Alias of poses_render
-== Alias of poses_render
+== poses_render의 별칭
 
 Alias of poses_video
-== Alias of poses_video
+== poses_video의 별칭
 
 Alive notification color
 == 생존 알림 색상
@@ -873,7 +873,7 @@ Allow mic permission in system settings, then reopen voice
 == 시스템 설정에서 마이크 권한을 허용한 후 음성을 다시 켜세요
 
 Allow the client to send kill requests (0 = ignore client-initiated kills)
-== Allow the client to send kill requests (0 = ignore client-initiated kills)
+== 클라이언트 킬 요청 허용 (0 = 클라이언트 발 킬 무시)
 
 Allow voting to kick players
 == 플레이어 추방 투표 허용
@@ -987,7 +987,7 @@ Anti-aliasing for the exported video only, independent of the graphics setting. 
 == 내보낸 영상에만 적용되는 안티앨리어싱이며 그래픽 설정과 독립적입니다. 명시적 단계를 선택하면 매 프레임을 멀티샘플 오프스크린 대상에 렌더링하므로, 게임 자체는 성능을 위해 낮은 설정을 유지할 수 있습니다. 슈퍼샘플링(출력이 창보다 작은 경우)만으로도 계단 현상이 줄어들므로 둘 중 하나만 사용하세요.
 
 Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
-== Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
+== 영상 내보내기 안티에일리어싱: -1 = gfx_fsaa_samples 따름, 0 = 끔, 2/4/8 = 멀티샘플 오프스크린 렌더링
 
 Anti-aliasing:
 == 안티앨리어싱:
@@ -1524,7 +1524,7 @@ Automatically record replays
 == 리플레이 자동 녹화
 
 Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
-== Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
+== 로컬 저장 기록을 성공적으로 불러온 후 자동 삭제 (0 = 유지하고 사용됨으로 표시, 1 = 삭제)
 
 Automatically reply to muted players
 == 음소거된 플레이어에게 자동 응답
@@ -1902,7 +1902,7 @@ Bound functions
 == 지정된 기능
 
 Bounded capture frame queue depth for demo export (higher values use more memory)
-== Bounded capture frame queue depth for demo export (higher values use more memory)
+== 데모 내보내기 캡처 프레임 큐 깊이 상한 (값이 클수록 메모리를 더 사용)
 
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 대괄호 칭호 색상: 0 = 서버 설정 따르기, 1 = 단색, 2 = 무지개
@@ -2250,7 +2250,7 @@ Chat gradient vertical position percentage
 == 그라데이션 세로 위치 (채팅, %)
 
 Chat line spacing
-== Chat line spacing
+== 채팅 줄 간격
 
 Chat log retention days
 == 채팅 로그 보관 일수
@@ -2409,7 +2409,7 @@ Chroma sampling
 == 색차 샘플링
 
 Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)
-== Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)
+== 내보내기 크로마 샘플링 기본 설정: 0=자동, 1=4:2:0, 2=4:2:2, 3=4:4:4 (높을수록 가는 색 디테일 유지)
 
 Chroma sampling. 4:2:0 is smallest and most compatible; 4:4:4 keeps full color detail for thin lines and small colored text. Rendering is 8-bit, so 10-bit formats do not add detail by themselves.
 == 색상 샘플링. 4:2:0은 가장 작고 호환성이 좋습니다. 4:4:4는 색차를 전부 보존해 얇은 선과 작은 색상 글자가 가장 선명합니다. 렌더링 자체가 8비트이므로 10비트 형식이 세부 정보를 늘려 주지는 않습니다.
@@ -2994,7 +2994,7 @@ Configures the main HUD: health, ammo, timer, race progress and their positions.
 == 기본 HUD를 설정합니다. 체력, 탄약, 타이머, 레이스 진행 상황과 각 요소의 위치입니다.
 
 Confirm
-== Confirm
+== 확인
 
 Confirm both are on same server, same room, and support voice
 == 둘 다 같은 서버, 같은 방에 있으며 음성을 지원하는지 확인
@@ -3261,10 +3261,10 @@ Could not connect to the translation service. Please try again later.
 == 번역 서비스에 연결할 수 없습니다. 잠시 후 다시 시도하세요.
 
 Could not delete "%s"
-== Could not delete "%s"
+== "%s"을(를) 삭제할 수 없습니다
 
 Could not download "%s"
-== Could not download "%s"
+== "%s"을(를) 다운로드할 수 없습니다
 
 Could not find a Tutorial server. Check your internet connection.
 == 튜토리얼 서버를 찾을 수 없습니다. 인터넷 연결을 확인하세요.
@@ -3465,7 +3465,7 @@ Custom community list fetch URL (must be https, leave empty to disable)
 == 사용자 정의 커뮤니티 목록 가져오기 URL (https여야 함, 비우면 비활성화)
 
 Custom export container: mp4, mov or mkv
-== Custom export container: mp4, mov or mkv
+== 사용자 지정 내보내기 컨테이너: mp4, mov 또는 mkv
 
 Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
 == 중국어/CJK 텍스트용 사용자 정의 글꼴(패밀리 또는 패밀리 + 스타일), 비우면 라틴 사용자 정의 글꼴을 따릅니다
@@ -3837,7 +3837,7 @@ Delete
 == 삭제
 
 Delete "%s"?
-== Delete "%s"?
+== "%s"을(를) 삭제할까요?
 
 Delete category
 == 카테고리 삭제
@@ -3864,7 +3864,7 @@ Delete this preset
 == 이 프리셋 삭제
 
 Deleted "%s"
-== Deleted "%s"
+== "%s"을(를) 삭제했습니다
 
 Demo
 == 데모
@@ -3882,7 +3882,7 @@ Demo effects
 == 데모 효과
 
 Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
-== Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
+== 데모 내보내기 세그먼트 길이(초) (0 = 단일 파일, 300 = 5분)
 
 Demo hook strength (0=Off 1=Icon 2=Icon and number)
 == 데모 훅 강도(0=끔 1=아이콘 2=아이콘과 숫자)
@@ -3903,7 +3903,7 @@ Demo target
 == 데모 대상
 
 Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
-== Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
+== 각 세그먼트 전에 녹화 없이 재생하는 데모 틱 수. 이펙트와 채팅 상태를 복원합니다 (50틱 = 1초)
 
 Demofile: %s
 == 데모 파일: %s
@@ -3999,7 +3999,7 @@ Disable after picking up other weapons
 == 다른 무기를 획득한 후 비활성화
 
 Disable client-initiated self-kill (K key / kill command)
-== Disable client-initiated self-kill (K key / kill command)
+== 클라이언트 발 자살 비활성화 (K키 / kill 명령)
 
 Disable clipping
 == 클리핑 비활성화
@@ -4149,7 +4149,7 @@ Document too large for the editor (%d of %d bytes)
 == 문서가 너무 커서 클라이언트 편집기에서 수정할 수 없습니다(%d / %d바이트)
 
 Done
-== Done
+== 완료
 
 Donor (drag parts from left)
 == 공급자 (왼쪽에서 부품 드래그)
@@ -4179,7 +4179,7 @@ Download
 == 다운로드
 
 Download "%s"?
-== Download "%s"?
+== "%s"을(를) 다운로드할까요?
 
 Download community skins
 == 커뮤니티 스킨 다운로드
@@ -4212,7 +4212,7 @@ Downloaded
 == 다운로드 완료
 
 Downloaded "%s"
-== Downloaded "%s"
+== "%s"을(를) 다운로드했습니다
 
 Downloaded: %.1f MiB (total size unknown)
 == 다운로드됨: %.1f MiB (전체 크기 알 수 없음)
@@ -4227,7 +4227,7 @@ Downloading update...
 == 업데이트 다운로드 중...
 
 Downloading…
-== Downloading…
+== 다운로드 중…
 
 Downscaled (0.78)
 == 축소됨 (0.78)
@@ -4251,7 +4251,7 @@ Drag to pan, scroll to zoom
 == 드래그하여 이동, 휠로 확대/축소
 
 Drag to reorder; right-click or use the gear to manage
-== Drag to reorder; right-click or use the gear to manage
+== 드래그하여 순서 변경. 마우스 오른쪽 버튼이나 톱니바퀴로 관리
 
 Dragger Inner Color
 == 드래거 내부 색상
@@ -4737,7 +4737,7 @@ Enable client stutter diagnostics at startup
 == 시작 시 클라이언트 끊김 진단 활성화
 
 Enable client-initiated self-kill (K key / kill command)
-== Enable client-initiated self-kill (K key / kill command)
+== 클라이언트 발 자살 활성화 (K키 / kill 명령)
 
 Enable colored console output
 == 콘솔 컬러 출력 활성화
@@ -5340,10 +5340,10 @@ Export name contains invalid characters.
 == 내보내기 이름에 유효하지 않은 문자가 포함되어 있습니다.
 
 Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
-== Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== 내보내기 출력 높이(픽셀) (0 = 창 렌더링 크기 따름. 창보다 작으면 슈퍼샘플링 후 축소)
 
 Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
-== Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== 내보내기 출력 너비(픽셀) (0 = 창 렌더링 크기 따름. 창보다 작으면 슈퍼샘플링 후 축소)
 
 Export playback speed. The value snaps to the nearest available speed.
 == 내보내기 재생 속도입니다. 입력값은 사용 가능한 가장 가까운 속도로 맞춰집니다.
@@ -5355,7 +5355,7 @@ Export preset:
 == 내보내기 프리셋:
 
 Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
-== Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
+== 내보내기 프리셋: 0=사용자 지정, 1=일상(libx264/mp4), 2=효율적 공유(hevc/mp4), 3=편집(all-intra H.264/mp4), 4=교환(ProRes/mov), 5=최고 품질(all-intra H.264 4:4:4/mp4), 6=최속(하드웨어 h264/mp4)
 
 Export range
 == 내보내기 범위
@@ -5391,7 +5391,7 @@ External sites are not controlled by the client.
 == 외부 사이트는 클라이언트가 관리하지 않습니다.
 
 Extra vertical spacing between chat lines in pixels (0 = default)
-== Extra vertical spacing between chat lines in pixels (0 = default)
+== 채팅 줄 사이의 추가 세로 간격(픽셀) (0 = 기본값)
 
 Extras
 == 기타
@@ -5493,7 +5493,7 @@ Failed to save video
 == 동영상 저장에 실패했습니다
 
 Failed to save video. See local console for details.
-== Failed to save video. See local console for details.
+== 영상 저장에 실패했습니다. 자세한 내용은 로컬 콘솔을 확인하세요.
 
 Failed to write PNG export.
 == PNG 내보내기 쓰기에 실패했습니다.
@@ -7479,7 +7479,7 @@ Keyframe interval (GOP)
 == 키프레임 간격(GOP)
 
 Keyframe interval (GOP) in frames for demo export (0 = encoder default, 1 = all-intra, 60 = recommended)
-== Keyframe interval (GOP) in frames for demo export (0 = encoder default, 1 = all-intra, 60 = recommended)
+== 데모 내보내기 키프레임 간격(GOP, 프레임) (0 = 인코더 기본값, 1 = 올인트라, 60 = 권장)
 
 Keyframe interval (GOP):
 == 키프레임 간격 (GOP):
@@ -7731,7 +7731,7 @@ Leave the path empty to auto-detect; fill it in only when the status says "Steam
 == 경로를 비워 두면 자동으로 찾습니다. 상태에 Steam을 찾을 수 없음이 표시될 때만 입력하세요.
 
 Leave the pose session
-== Leave the pose session
+== 포즈 세션 나가기
 
 Left jump
 == 왼쪽 점프
@@ -9219,7 +9219,7 @@ No login required
 == 로그인 불필요
 
 No map
-== No map
+== 맵 없음
 
 No map matches the typed name
 == 입력한 이름과 일치하는 맵이 없습니다
@@ -9480,7 +9480,7 @@ Number of threads backend can use for rendering (Note: value may be ignored by b
 == 백엔드가 렌더링에 사용할 수 있는 스레드 수 (참고: 백엔드에서 값을 무시할 수 있음)
 
 Number of video pixel-format conversion threads for demo export (2-4 recommended)
-== Number of video pixel-format conversion threads for demo export (2-4 recommended)
+== 데모 내보내기 영상 픽셀 포맷 변환 스레드 수 (2-4 권장)
 
 Number of vote options sent per tick
 == 틱당 전송되는 투표 옵션 수
@@ -9591,7 +9591,7 @@ Opacity of freeze bars inside freeze
 == 얼음 안에서의 해동 게이지 불투명도
 
 Opacity of other teams' tees and name plates
-== Opacity of other teams' tees and name plates
+== 다른 팀 Tee와 이름표 불투명도
 
 Open a link to join the community.
 == 링크를 열면 커뮤니티에 참여할 수 있습니다.
@@ -9738,10 +9738,10 @@ Original
 == 기본
 
 Original language for both received and outgoing messages. Use Auto to detect each message.
-== Original language for both received and outgoing messages. Use Auto to detect each message.
+== 받은 메시지와 보낸 메시지 모두 원래 언어를 사용합니다. 각 메시지 감지에는 자동을 사용하세요.
 
 Original language for incoming and outgoing text
-== Original language for incoming and outgoing text
+== 받은 텍스트와 보낸 텍스트의 원래 언어
 
 Original message language
 == 원문 언어
@@ -10482,7 +10482,7 @@ Port for the external console.
 == 외부 콘솔 포트
 
 Pose capture pixel budget in megapixels (0 = unlimited)
-== Pose capture pixel budget in megapixels (0 = unlimited)
+== 포즈 캡처 픽셀 예산(메가픽셀) (0 = 무제한)
 
 Pose file
 == 포즈 파일
@@ -10491,19 +10491,19 @@ Pose preview
 == 포즈 미리보기
 
 Pose render fills the background with the entity layer
-== Pose render fills the background with the entity layer
+== 포즈 렌더링은 엔티티 레이어로 배경을 채웁니다
 
 Pose render output format (0 = png, 1 = webp)
-== Pose render output format (0 = png, 1 = webp)
+== 포즈 렌더링 출력 형식 (0 = png, 1 = webp)
 
 Pose render supersampling scale (1-4)
-== Pose render supersampling scale (1-4)
+== 포즈 렌더링 슈퍼샘플링 배율 (1-4)
 
 Pose render unsharp mask strength (0 = off)
-== Pose render unsharp mask strength (0 = off)
+== 포즈 렌더링 언샵 마스크 강도 (0 = 끔)
 
 Poses
-== Poses
+== 포즈
 
 Position
 == 위치
@@ -10638,19 +10638,19 @@ Press F2, log in, then use: change_map map_name
 == F2를 눌러 로그인한 후 change_map map_name을 입력하세요
 
 Pressed hook collision line color when hitting a tee
-== Pressed hook collision line color when hitting a tee
+== 훅 키를 누를 때 Tee에 닿았을 때의 훅 보조선 색상
 
 Pressed hook collision line color when hitting something hookable
-== Pressed hook collision line color when hitting something hookable
+== 훅 키를 누를 때 훅 가능한 물체에 닿았을 때의 훅 보조선 색상
 
 Pressed hook collision line color when not aiming at anything hookable
-== Pressed hook collision line color when not aiming at anything hookable
+== 훅 키를 누를 때 훅 가능한 물체를 겨누지 않았을 때의 훅 보조선 색상
 
 Pressed hook line color; always used when custom pressed colors are enabled
 == 누른 후 갈고리선 색. 사용자 지정 누른 후 색이 켜져 있을 때 항상 사용
 
 Pressed hook line tip color
-== Pressed hook line tip color
+== 누를 때 훅 보조선 끝 색상
 
 Pressed: A Tee
 == 누른 후: 다른 플레이어
@@ -10815,7 +10815,7 @@ Projectile / explosion range
 == 투사체 / 폭발 범위
 
 ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
-== ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
+== ProRes 프로필 재정의: -1=자동 (4:4:4는 4444, 그 외는 HQ), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
 
 Protect names and skins while streaming
 == 스트리밍 중 이름과 스킨 보호
@@ -11259,7 +11259,7 @@ Reconnect in %d sec
 == %d 초 후 재접속
 
 Record a MomentCap .poses scene to a video
-== Record a MomentCap .poses scene to a video
+== MomentCap .poses 장면을 영상으로 녹화합니다
 
 Record chat replays.
 == 채팅 리플레이 녹화
@@ -11271,7 +11271,7 @@ Record to a file
 == 파일에 기록
 
 Recorded frame rate; higher is smoother and larger
-== Recorded frame rate; higher is smoother and larger
+== 녹화 프레임 레이트. 높을수록 부드럽고 파일이 커집니다
 
 Recorder FPS
 == 녹화 FPS
@@ -11580,7 +11580,7 @@ Render
 == 렌더링
 
 Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
-== Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
+== MomentCap .poses 파일을 스크린샷으로 렌더링 (선택적 1-4배 슈퍼샘플링, 엔티티 오버레이, 샤픈 0-100)
 
 Render all custom colored feet as white feet skin
 == 모든 사용자 지정 발 색상을 흰색 발 스킨으로 렌더링
@@ -11862,7 +11862,7 @@ Resetting restores defaults immediately, so note down values you want to keep.
 == 초기화하면 곧바로 기본값으로 돌아가니, 유지할 값은 미리 적어 두세요.
 
 Resolution:
-== Resolution:
+== 해상도:
 
 Resource preview VRAM budget override (MB, 0=auto)
 == 리소스 미리보기 VRAM 예산 오버라이드 (MB, 0=자동)
@@ -11877,7 +11877,7 @@ Restart in x seconds (0 = abort)
 == x초 후 재시작 (0 = 중단)
 
 Restart smooth scrolling on every wheel tick
-== Restart smooth scrolling on every wheel tick
+== 휠 한 눈금마다 부드러운 스크롤을 다시 시작
 
 Restart the client
 == 클라이언트 재시작
@@ -12132,7 +12132,7 @@ Save last %d min
 == 마지막 %d분 저장
 
 Save loaded and marked as used.
-== Save loaded and marked as used.
+== 세이브를 불러오고 사용됨으로 표시했습니다.
 
 Save loaded; local record removed.
 == 저장 데이터를 불러왔으며 로컬 기록을 삭제했습니다.
@@ -12843,7 +12843,7 @@ Share of the server browser name/map split given to the name column (per mille)
 == 서버 브라우저 이름/맵 분할에서 이름 열에 할당할 비율(천분율)
 
 Sharpen
-== Sharpen
+== 샤픈
 
 Shimmer speed
 == 반짝임 속도
@@ -12882,10 +12882,10 @@ Show %s group
 == %s 그룹 표시
 
 Show a ghost of your best time after crossing the start line
-== Show a ghost of your best time after crossing the start line
+== 시작선을 통과한 후 최고 기록의 고스트 표시
 
 Show a MomentCap .poses file in game (no export)
-== Show a MomentCap .poses file in game (no export)
+== 게임 내에서 MomentCap .poses 파일 보기 (내보내기 없음)
 
 Show a small view of the dummy
 == 더미의 작은 화면 표시
@@ -14451,13 +14451,13 @@ Start and connect to local server
 == 로컬 서버를 시작하고 연결
 
 Start at a random queue position on every map join
-== Start at a random queue position on every map join
+== 맵에 참여할 때마다 무작위 대기열 위치에서 시작
 
 Start dummy skin queue from a random position when entering a map
 == 맵 입장 시 더미 스킨 큐를 무작위 위치에서 시작
 
 Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
-== Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
+== 매번 맵에 참여할 때 무작위 대기열 위치에서 시작합니다 (더미 연결 또는 대기열 다시 활성화 시에도 포함). 전환 간격을 0으로 설정하면 시간제 로테이션이 꺼지고 맵 참여 시에만 전환됩니다.
 
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 == 기본값에서 시작하세요. 다른 플레이어가 튀어 보이면 조금 올리고, 내가 뒤처져 보이면 낮추세요.
@@ -16323,7 +16323,7 @@ Unfreeze/Deep unfreeze tile outline width
 == 언프리즈/딥 언프리즈 타일 윤곽선 두께
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
-== Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
+== 통합 내보내기 품질 (CRF/CQ/QP 척도 0-51, -1 = cl_video_crf 사용). 각 인코더의 고유 매개변수로 매핑됩니다
 
 Uninvite player from team
 == 플레이어의 팀 초대 취소
@@ -16509,7 +16509,7 @@ Use current settings
 == 현재 설정 가져오기
 
 Use custom colors for the pressed hook collision line (0 = always invert)
-== Use custom colors for the pressed hook collision line (0 = always invert)
+== 훅 키를 누를 때 사용자 지정 색상 사용 (0 = 항상 반전)
 
 Use custom skins instead of the ninja tee
 == 닌자 티 대신 사용자 정의 스킨 사용
@@ -16596,7 +16596,7 @@ Use pre-input to predict other players for more accurate input prediction
 == 사전 입력을 사용하여 다른 플레이어를 예측해 더 정확한 입력 예측
 
 Use procedural ring pipeline
-== Use procedural ring pipeline
+== 절차적 링 파이프라인 사용
 
 Use server defaults
 == 서버 기본값 사용
@@ -16620,10 +16620,10 @@ Use Tee icons instead of circles
 == 원 대신 Tee 아이콘 사용
 
 Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
+== 훅 키를 누르고 있는 동안 훅 보조선이 표시될 때 아래의 사용자 지정 색상을 사용합니다. 비활성화하면 누르지 않은 색상이 자동으로 반전됩니다.
 
 Use the custom colors below while the hook key is held
-== Use the custom colors below while the hook key is held
+== 훅 키를 누르고 있는 동안 아래의 사용자 지정 색상 사용
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == 마우스를 모듈 위에 올리고 휠을 굴리면 5% 씩 크기 조정
@@ -16647,7 +16647,7 @@ Use warlist groups for indicator
 == 표시기에 전쟁 목록 그룹 사용
 
 Used
-== Used
+== 사용됨
 
 Used by active shared text and numeric input fields
 == 활성화된 공용 텍스트 및 숫자 입력 필드에서 사용됩니다
@@ -16725,7 +16725,7 @@ Video directory
 == 동영상 저장 폴더
 
 Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
-== Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
+== 데모 내보내기 영상 인코더 (비우면 = 기본 소프트웨어 인코더, 예: h264_nvenc)
 
 Video encoding
 == 동영상 인코딩
@@ -17121,7 +17121,7 @@ What this controls
 == 무엇인가요
 
 Wheel distance per tick; hold Alt for 3x
-== Wheel distance per tick; hold Alt for 3x
+== 휠 한 눈금당 이동 거리. Alt는 3배
 
 Wheel label
 == 휠 표시 이름
@@ -17133,7 +17133,7 @@ When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient 무지개 Tee가 켜져 있으면 이 기능은 적용되지 않습니다.
 
 When you cross the start line, show a ghost tee replicating the movements of your best time
-== When you cross the start line, show a ghost tee replicating the movements of your best time
+== 시작선을 통과하면 최고 기록의 움직임을 재현하는 고스트 Tee를 표시합니다
 
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 == 칭호가 어디에 나타나고 어떻게 보일지를 정합니다. 이름표, 스타일, 애니메이션, 색상, 발광입니다.

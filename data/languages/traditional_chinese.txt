@@ -729,7 +729,7 @@ Adjust the display options; open a vote to check the layout before joining a bus
 == 調整顯示選項；在加入熱鬧的伺服器前，先開啟一項投票確認版面。
 
 Adjust the opacity of entities belonging to other teams, such as tees and name plates
-== Adjust the opacity of entities belonging to other teams, such as tees and name plates
+== 調整其他隊伍實體（如 Tee 與名牌）的不透明度
 
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
@@ -789,16 +789,16 @@ Air jump
 == 空中二段跳
 
 Alias of poses_close
-== Alias of poses_close
+== poses_close 的別名
 
 Alias of poses_open
-== Alias of poses_open
+== poses_open 的別名
 
 Alias of poses_render
-== Alias of poses_render
+== poses_render 的別名
 
 Alias of poses_video
-== Alias of poses_video
+== poses_video 的別名
 
 Alive notification color
 == 存活提醒顏色
@@ -873,7 +873,7 @@ Allow mic permission in system settings, then reopen voice
 == 需要在系統設置裡允許麥克風權限，然後重新打開語音
 
 Allow the client to send kill requests (0 = ignore client-initiated kills)
-== Allow the client to send kill requests (0 = ignore client-initiated kills)
+== 允許用戶端傳送自殺請求（0 = 忽略用戶端發起的自殺）
 
 Allow voting to kick players
 == 允許投票踢出玩家
@@ -987,7 +987,7 @@ Anti-aliasing for the exported video only, independent of the graphics setting. 
 == 只影響匯出成片的抗鋸齒，與全域圖形設定相互獨立。選明確檔位時每一幀會繪製進多取樣離屏目標，遊戲本體可以保持低檔位省效能。超取樣（輸出小於視窗）本身已經能減輕鋸齒，兩者二選一即可。
 
 Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
-== Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
+== 影片匯出抗鋸齒：-1 = 跟隨 gfx_fsaa_samples，0 = 關閉，2/4/8 = 多重取樣離屏渲染
 
 Anti-aliasing:
 == 抗鋸齒:
@@ -1524,7 +1524,7 @@ Automatically record replays
 == 自動錄製回放
 
 Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
-== Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
+== 存檔載入成功後自動刪除本地記錄（0 = 保留並標記為已使用，1 = 刪除）
 
 Automatically reply to muted players
 == 對已屏蔽發言的玩家自動回覆
@@ -1902,7 +1902,7 @@ Bound functions
 == 已綁定功能
 
 Bounded capture frame queue depth for demo export (higher values use more memory)
-== Bounded capture frame queue depth for demo export (higher values use more memory)
+== demo 匯出擷取影格佇列深度上限（數值越大占用記憶體越多）
 
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 方括號頭銜顏色：0 = 跟隨伺服器，1 = 單色，2 = 彩虹
@@ -2409,7 +2409,7 @@ Chroma sampling
 == 色彩取樣
 
 Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)
-== Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)
+== 匯出色度取樣偏好：0=自動，1=4:2:0，2=4:2:2，3=4:4:4（越高越能保留細小彩色細節）
 
 Chroma sampling. 4:2:0 is smallest and most compatible; 4:4:4 keeps full color detail for thin lines and small colored text. Rendering is 8-bit, so 10-bit formats do not add detail by themselves.
 == 色度取樣。4:2:0 體積最小、相容性最好；4:4:4 保留完整色度，細線與彩色小字最清楚。算繪本身是 8 位元，因此 10 位元格式不會自行增加細節。
@@ -2994,7 +2994,7 @@ Configures the main HUD: health, ammo, timer, race progress and their positions.
 == 設定主 HUD：生命值、彈藥、計時器、跑圖進度及其位置。
 
 Confirm
-== Confirm
+== 確認
 
 Confirm both are on same server, same room, and support voice
 == 建議確認雙方在同服、同房間，並且對方也支持語音
@@ -3261,10 +3261,10 @@ Could not connect to the translation service. Please try again later.
 == 無法連線至翻譯服務，請稍後重試。
 
 Could not delete "%s"
-== Could not delete "%s"
+== 無法刪除"%s"
 
 Could not download "%s"
-== Could not download "%s"
+== 無法下載"%s"
 
 Could not find a Tutorial server. Check your internet connection.
 == 找不到教學伺服器。請檢查你的網路連線。
@@ -3465,7 +3465,7 @@ Custom community list fetch URL (must be https, leave empty to disable)
 == 自定義社區列表的獲取 URL（必須是 https，留空則禁用）
 
 Custom export container: mp4, mov or mkv
-== Custom export container: mp4, mov or mkv
+== 自訂匯出容器：mp4、mov 或 mkv
 
 Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
 == 中文/CJK 文字的自訂字型（字族，或字族 + 樣式）；留空則跟隨拉丁自訂字型
@@ -3837,7 +3837,7 @@ Delete
 == 刪除
 
 Delete "%s"?
-== Delete "%s"?
+== 刪除"%s"？
 
 Delete category
 == 刪除分類
@@ -3864,7 +3864,7 @@ Delete this preset
 == 刪除該預設
 
 Deleted "%s"
-== Deleted "%s"
+== 已刪除"%s"
 
 Demo
 == 回放
@@ -3882,7 +3882,7 @@ Demo effects
 == Demo 特效
 
 Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
-== Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
+== demo 匯出分段時長（秒）（0 = 單一檔案，300 = 5 分鐘）
 
 Demo hook strength (0=Off 1=Icon 2=Icon and number)
 == 回放鉤子強弱（0=關閉 1=圖示 2=圖示與數字）
@@ -3903,7 +3903,7 @@ Demo target
 == Demo 目標
 
 Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
-== Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
+== 每段開始前不錄製預放的 demo tick 數，用於恢復特效與聊天狀態（50 tick = 1 秒）
 
 Demofile: %s
 == 回放文件：%s
@@ -3999,7 +3999,7 @@ Disable after picking up other weapons
 == 拿到其他武器時停用
 
 Disable client-initiated self-kill (K key / kill command)
-== Disable client-initiated self-kill (K key / kill command)
+== 停用用戶端發起的自殺（K 鍵 / kill 指令）
 
 Disable clipping
 == 禁用裁剪
@@ -4149,7 +4149,7 @@ Document too large for the editor (%d of %d bytes)
 == 文件過大，無法在客戶端編輯器內修改（%d / %d 位元組）
 
 Done
-== Done
+== 完成
 
 Donor (drag parts from left)
 == 來源材質（從左側拖拽部件）
@@ -4179,7 +4179,7 @@ Download
 == 下載
 
 Download "%s"?
-== Download "%s"?
+== 下載"%s"？
 
 Download community skins
 == 下載社群皮膚
@@ -4212,7 +4212,7 @@ Downloaded
 == 已下載
 
 Downloaded "%s"
-== Downloaded "%s"
+== 已下載"%s"
 
 Downloaded: %.1f MiB (total size unknown)
 == 已下載：%.1f MiB（總大小未知）
@@ -4227,7 +4227,7 @@ Downloading update...
 == 正在下載更新……
 
 Downloading…
-== Downloading…
+== 下載中…
 
 Downscaled (0.78)
 == 降採樣縮放 (0.78)
@@ -4737,7 +4737,7 @@ Enable client stutter diagnostics at startup
 == 啟動時啟用用戶端卡頓診斷
 
 Enable client-initiated self-kill (K key / kill command)
-== Enable client-initiated self-kill (K key / kill command)
+== 啟用用戶端發起的自殺（K 鍵 / kill 指令）
 
 Enable colored console output
 == 啟用控制台彩色輸出
@@ -5340,10 +5340,10 @@ Export name contains invalid characters.
 == 導出名稱包含無效字符。
 
 Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
-== Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== 匯出輸出高度（像素）（0 = 跟隨視窗渲染尺寸；小於視窗 = 超取樣後縮小）
 
 Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
-== Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== 匯出輸出寬度（像素）（0 = 跟隨視窗渲染尺寸；小於視窗 = 超取樣後縮小）
 
 Export playback speed. The value snaps to the nearest available speed.
 == 匯出播放速度；輸入值會吸附到最接近的可用速度。
@@ -5355,7 +5355,7 @@ Export preset:
 == 匯出預設:
 
 Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
-== Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
+== 匯出預設：0=自訂，1=日常(libx264/mp4)，2=高效分享(hevc/mp4)，3=剪輯(all-intra H.264/mp4)，4=交換(ProRes/mov)，5=最佳品質(all-intra H.264 4:4:4/mp4)，6=最快(硬體 h264/mp4)
 
 Export range
 == 匯出範圍
@@ -5391,7 +5391,7 @@ External sites are not controlled by the client.
 == 外部網站不受用戶端控制。
 
 Extra vertical spacing between chat lines in pixels (0 = default)
-== Extra vertical spacing between chat lines in pixels (0 = default)
+== 聊天行與行之間的額外垂直間距（像素）（0 = 預設）
 
 Extras
 == 其他
@@ -5493,7 +5493,7 @@ Failed to save video
 == 影片儲存失敗
 
 Failed to save video. See local console for details.
-== Failed to save video. See local console for details.
+== 儲存影片失敗。詳情見本機主控台。
 
 Failed to write PNG export.
 == 寫入 PNG 導出文件失敗。
@@ -7479,7 +7479,7 @@ Keyframe interval (GOP)
 == 關鍵影格間隔（GOP）
 
 Keyframe interval (GOP) in frames for demo export (0 = encoder default, 1 = all-intra, 60 = recommended)
-== Keyframe interval (GOP) in frames for demo export (0 = encoder default, 1 = all-intra, 60 = recommended)
+== demo 匯出關鍵影格間隔（GOP，影格）（0 = 編碼器預設，1 = 全影格內，60 = 建議）
 
 Keyframe interval (GOP):
 == 關鍵影格間隔 (GOP):
@@ -7731,7 +7731,7 @@ Leave the path empty to auto-detect; fill it in only when the status says "Steam
 == 路徑留空即可自動偵測；只有狀態顯示找不到 Steam 時才需要填寫。
 
 Leave the pose session
-== Leave the pose session
+== 離開姿態會話
 
 Left jump
 == 左跳
@@ -9219,7 +9219,7 @@ No login required
 == 無需登錄
 
 No map
-== No map
+== 無地圖
 
 No map matches the typed name
 == 沒有符合輸入的地圖
@@ -9480,7 +9480,7 @@ Number of threads backend can use for rendering (Note: value may be ignored by b
 == 渲染後端可用執行緒數（後端可能忽略該設定）
 
 Number of video pixel-format conversion threads for demo export (2-4 recommended)
-== Number of video pixel-format conversion threads for demo export (2-4 recommended)
+== demo 匯出影片像素格式轉換執行緒數（建議 2-4）
 
 Number of vote options sent per tick
 == 每 tick 發送的投票選項數量
@@ -9738,7 +9738,7 @@ Original
 == 原版
 
 Original language for both received and outgoing messages. Use Auto to detect each message.
-== Original language for both received and outgoing messages. Use Auto to detect each message.
+== 收發訊息均使用原文語言。使用「自動」可逐條偵測。
 
 Original language for incoming and outgoing text
 == 收到與發出文字的原始語言
@@ -10482,7 +10482,7 @@ Port for the external console.
 == 用於外部控制台的端口
 
 Pose capture pixel budget in megapixels (0 = unlimited)
-== Pose capture pixel budget in megapixels (0 = unlimited)
+== 姿態擷取像素預算（百萬像素）（0 = 不限）
 
 Pose file
 == 合影檔案
@@ -10491,19 +10491,19 @@ Pose preview
 == 合影預覽
 
 Pose render fills the background with the entity layer
-== Pose render fills the background with the entity layer
+== 姿態渲染用實體層填充背景
 
 Pose render output format (0 = png, 1 = webp)
-== Pose render output format (0 = png, 1 = webp)
+== 姿態渲染輸出格式（0 = png，1 = webp）
 
 Pose render supersampling scale (1-4)
-== Pose render supersampling scale (1-4)
+== 姿態渲染超取樣倍率（1-4）
 
 Pose render unsharp mask strength (0 = off)
-== Pose render unsharp mask strength (0 = off)
+== 姿態渲染銳利化遮罩強度（0 = 關閉）
 
 Poses
-== Poses
+== 姿態
 
 Position
 == 位置
@@ -10638,19 +10638,19 @@ Press F2, log in, then use: change_map map_name
 == 按 F2 登入管理後，輸入：change_map 地圖名
 
 Pressed hook collision line color when hitting a tee
-== Pressed hook collision line color when hitting a tee
+== 按住鉤鍵時命中角色的鉤子輔助線顏色
 
 Pressed hook collision line color when hitting something hookable
-== Pressed hook collision line color when hitting something hookable
+== 按住鉤鍵時命中可鉤物體的鉤子輔助線顏色
 
 Pressed hook collision line color when not aiming at anything hookable
-== Pressed hook collision line color when not aiming at anything hookable
+== 按住鉤鍵時未瞄準可鉤物體的鉤子輔助線顏色
 
 Pressed hook line color; always used when custom pressed colors are enabled
 == 按下後顏色；開啟自訂按下後顏色時始終生效
 
 Pressed hook line tip color
-== Pressed hook line tip color
+== 按下時的鉤子輔助線尖端顏色
 
 Pressed: A Tee
 == 按下後：其他玩家
@@ -10815,7 +10815,7 @@ Projectile / explosion range
 == 投射物 / 爆炸範圍
 
 ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
-== ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
+== ProRes 檔位覆寫：-1=自動（4:4:4 用 4444，其餘用 HQ），0=Proxy，1=LT，2=422，3=HQ，4=4444，5=4444XQ
 
 Protect names and skins while streaming
 == 串流時保護名稱與外觀
@@ -11259,7 +11259,7 @@ Reconnect in %d sec
 == %d 秒後重新連接
 
 Record a MomentCap .poses scene to a video
-== Record a MomentCap .poses scene to a video
+== 將 MomentCap .poses 場景錄製為影片
 
 Record chat replays.
 == 錄製聊天回放
@@ -11580,7 +11580,7 @@ Render
 == 渲染
 
 Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
-== Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
+== 將 MomentCap .poses 檔案渲染為截圖（可選 1-4 倍超取樣、實體層疊加、銳利化 0-100）
 
 Render all custom colored feet as white feet skin
 == 將所有自定義腳部顏色渲染為白色
@@ -11862,7 +11862,7 @@ Resetting restores defaults immediately, so note down values you want to keep.
 == 重設會立即恢復預設值，想保留的數值先記下來。
 
 Resolution:
-== Resolution:
+== 解析度：
 
 Resource preview VRAM budget override (MB, 0=auto)
 == 資源預覽顯存預算覆蓋（MB，0=自動）
@@ -12843,7 +12843,7 @@ Share of the server browser name/map split given to the name column (per mille)
 == 伺服器瀏覽器名稱/地圖分欄中分配給名稱列的千分比
 
 Sharpen
-== Sharpen
+== 銳利化
 
 Shimmer speed
 == 流光速度
@@ -12885,7 +12885,7 @@ Show a ghost of your best time after crossing the start line
 == 越過起跑線後顯示最佳成績的殘影
 
 Show a MomentCap .poses file in game (no export)
-== Show a MomentCap .poses file in game (no export)
+== 在遊戲中檢視 MomentCap .poses 檔案（不匯出）
 
 Show a small view of the dummy
 == 顯示分身的小視窗
@@ -14457,7 +14457,7 @@ Start dummy skin queue from a random position when entering a map
 == 進入地圖時從分身皮膚佇列隨機位置開始
 
 Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
-== Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
+== 每次進圖都從隨機佇列位置開始（連接分身或重新啟用輪換時也一樣）。將切換間隔設為 0 可停用定時輪換，僅進圖時切換。
 
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 == 從預設值開始；其他玩家看起來一跳一跳時稍微調高，覺得自己比他們慢半拍時調低。
@@ -16323,7 +16323,7 @@ Unfreeze/Deep unfreeze tile outline width
 == 解凍/深解凍圖塊輪廓寬度
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
-== Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
+== 統一匯出品質（CRF/CQ/QP 標度 0-51，-1 = 使用 cl_video_crf）；映射到各編碼器的原生參數
 
 Uninvite player from team
 == 取消對玩家的隊伍邀請
@@ -16509,7 +16509,7 @@ Use current settings
 == 讀取目前設定
 
 Use custom colors for the pressed hook collision line (0 = always invert)
-== Use custom colors for the pressed hook collision line (0 = always invert)
+== 按下鉤鍵時使用自訂鉤子輔助線顏色（0 = 始終反色）
 
 Use custom skins instead of the ninja tee
 == 使用自定義皮膚代替忍者 Tee
@@ -16596,7 +16596,7 @@ Use pre-input to predict other players for more accurate input prediction
 == 使用預輸入預測其他玩家以獲得更精確的輸入預測
 
 Use procedural ring pipeline
-== Use procedural ring pipeline
+== 使用程序化圓環管線
 
 Use server defaults
 == 使用服務預設值
@@ -16620,7 +16620,7 @@ Use Tee icons instead of circles
 == 用 Tee 圖標代替圓圈
 
 Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
+== 按住鉤鍵顯示鉤子輔助線時使用下方自訂顏色；關閉時自動反色使用未按下配色
 
 Use the custom colors below while the hook key is held
 == 按住鉤索鍵時使用下方的自訂顏色
@@ -16725,7 +16725,7 @@ Video directory
 == 影片匯出目錄
 
 Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
-== Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
+== demo 匯出影片編碼器（留空 = 預設軟體編碼器，例如 h264_nvenc）
 
 Video encoding
 == 影片編碼
@@ -17133,7 +17133,7 @@ When TClient rainbow Tee is enabled, this feature has no effect.
 == 已啟用 TClient 彩虹 Tee 時，本功能不會生效。
 
 When you cross the start line, show a ghost tee replicating the movements of your best time
-== When you cross the start line, show a ghost tee replicating the movements of your best time
+== 越過起點線時顯示一個重播你最好成績動作的幽靈角色
 
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 == 你的頭銜出現在哪裡、長什麼樣：名牌、風格、動畫、顏色和光暈。

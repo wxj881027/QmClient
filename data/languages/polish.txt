@@ -729,7 +729,7 @@ Adjust the display options; open a vote to check the layout before joining a bus
 == Dostosuj opcje wyświetlania; przed dołączeniem do zatłoczonego serwera otwórz głosowanie i sprawdź układ.
 
 Adjust the opacity of entities belonging to other teams, such as tees and name plates
-== Adjust the opacity of entities belonging to other teams, such as tees and name plates
+== Dostosowuje przezroczystość obiektów innych drużyn, takich jak tee i tabliczki z nazwami
 
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
@@ -789,16 +789,16 @@ Air jump
 == Skok w powietrzu
 
 Alias of poses_close
-== Alias of poses_close
+== Alias poses_close
 
 Alias of poses_open
-== Alias of poses_open
+== Alias poses_open
 
 Alias of poses_render
-== Alias of poses_render
+== Alias poses_render
 
 Alias of poses_video
-== Alias of poses_video
+== Alias poses_video
 
 Alive notification color
 == Kolor powiadomienia o życiu
@@ -873,7 +873,7 @@ Allow mic permission in system settings, then reopen voice
 == Zezwól na uprawnienia mikrofonu w ustawieniach systemu, a następnie ponownie włącz głos
 
 Allow the client to send kill requests (0 = ignore client-initiated kills)
-== Allow the client to send kill requests (0 = ignore client-initiated kills)
+== Zezwól klientowi na wysyłanie żądań samobójstwa (0 = ignoruj samobójstwa inicjowane przez klienta)
 
 Allow voting to kick players
 == Zezwól na głosowanie w celu wyrzucenia graczy
@@ -987,7 +987,7 @@ Anti-aliasing for the exported video only, independent of the graphics setting. 
 == Wygładzanie krawędzi tylko dla eksportowanego wideo, niezależne od ustawień grafiki. Przy jawnym poziomie każda klatka jest rysowana do wielopróbkowego celu pozaekranowego, więc sama gra może zostać na niższym ustawieniu dla wydajności. Supersampling (wyjście mniejsze niż okno) już zmniejsza schodki, więc wybierz jedno z dwóch.
 
 Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
-== Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
+== Anti-aliasing dla eksportu wideo: -1 = zgodnie z gfx_fsaa_samples, 0 = wyłączone, 2/4/8 = wielopróbkowany rendering pozaekranowy
 
 Anti-aliasing:
 == Wygładzanie krawędzi:
@@ -1524,7 +1524,7 @@ Automatically record replays
 == Automatycznie nagrywaj powtórki
 
 Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
-== Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
+== Automatycznie usuń lokalny zapis po pomyślnym wczytaniu (0 = zachowaj i oznacz jako użyty, 1 = usuń)
 
 Automatically reply to muted players
 == Automatycznie odpowiadaj wyciszonym graczom
@@ -1902,7 +1902,7 @@ Bound functions
 == Przypisane funkcje
 
 Bounded capture frame queue depth for demo export (higher values use more memory)
-== Bounded capture frame queue depth for demo export (higher values use more memory)
+== Ograniczenie głębokości kolejki klatek przechwytywania dla eksportu dema (wyższe wartości używają więcej pamięci)
 
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Kolor tytułu w nawiasach: 0 = zgodnie z serwerem, 1 = jeden kolor, 2 = tęcza
@@ -2250,7 +2250,7 @@ Chat gradient vertical position percentage
 == Pionowa pozycja gradientu (czat, %)
 
 Chat line spacing
-== Chat line spacing
+== Odstęp linii czatu
 
 Chat log retention days
 == Dni przechowywania logów czatu
@@ -2409,7 +2409,7 @@ Chroma sampling
 == Próbkowanie koloru
 
 Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)
-== Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)
+== Preferencja próbkowania chromy dla eksportu: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (wyższe zachowuje drobne szczegóły kolorów)
 
 Chroma sampling. 4:2:0 is smallest and most compatible; 4:4:4 keeps full color detail for thin lines and small colored text. Rendering is 8-bit, so 10-bit formats do not add detail by themselves.
 == Próbkowanie chrominancji. 4:2:0 jest najmniejsze i najbardziej zgodne; 4:4:4 zachowuje pełny kolor, więc cienkie linie i małe kolorowe napisy pozostają najostrzejsze. Renderowanie jest 8-bitowe, więc format 10-bitowy sam z siebie nie dodaje szczegółów.
@@ -2994,7 +2994,7 @@ Configures the main HUD: health, ammo, timer, race progress and their positions.
 == Konfiguruje główny HUD: zdrowie, amunicję, timer, postęp wyścigu i ich pozycje.
 
 Confirm
-== Confirm
+== Potwierdź
 
 Confirm both are on same server, same room, and support voice
 == Potwierdź, że oboje jesteście na tym samym serwerze, w tym samym pokoju i obsługujecie głos
@@ -3261,10 +3261,10 @@ Could not connect to the translation service. Please try again later.
 == Nie udało się połączyć z usługą tłumaczenia. Spróbuj ponownie później.
 
 Could not delete "%s"
-== Could not delete "%s"
+== Nie można usunąć "%s"
 
 Could not download "%s"
-== Could not download "%s"
+== Nie można pobrać "%s"
 
 Could not find a Tutorial server. Check your internet connection.
 == Nie można znaleźć serwera samouczka. Sprawdź połączenie internetowe.
@@ -3465,7 +3465,7 @@ Custom community list fetch URL (must be https, leave empty to disable)
 == Niestandardowy URL pobierania listy społeczności (musi być https, pozostaw puste, aby wyłączyć)
 
 Custom export container: mp4, mov or mkv
-== Custom export container: mp4, mov or mkv
+== Niestandardowy kontener eksportu: mp4, mov lub mkv
 
 Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
 == Niestandardowa czcionka dla tekstu chińskiego/CJK (rodzina lub rodzina + styl); puste = zgodnie z łacińską czcionką niestandardową
@@ -3837,7 +3837,7 @@ Delete
 == Usuń
 
 Delete "%s"?
-== Delete "%s"?
+== Usunąć "%s"?
 
 Delete category
 == Usuń kategorię
@@ -3864,7 +3864,7 @@ Delete this preset
 == Usuń ten preset
 
 Deleted "%s"
-== Deleted "%s"
+== Usunięto "%s"
 
 Demo
 == Demo
@@ -3882,7 +3882,7 @@ Demo effects
 == Efekty demo
 
 Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
-== Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
+== Długość segmentu eksportu dema w sekundach (0 = pojedynczy plik, 300 = 5 minut)
 
 Demo hook strength (0=Off 1=Icon 2=Icon and number)
 == Siła haka w demie (0=Wył. 1=Ikona 2=Ikona i liczba)
@@ -3903,7 +3903,7 @@ Demo target
 == Cel demo
 
 Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
-== Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
+== Liczba tików dema odtwarzanych bez nagrywania przed każdym segmentem, aby przywrócić efekty i stan czatu (50 tików = 1 sekunda)
 
 Demofile: %s
 == Plik demo: %s
@@ -3999,7 +3999,7 @@ Disable after picking up other weapons
 == Wyłącz po podniesieniu innej broni
 
 Disable client-initiated self-kill (K key / kill command)
-== Disable client-initiated self-kill (K key / kill command)
+== Wyłącz samobójstwo inicjowane przez klienta (klawisz K / polecenie kill)
 
 Disable clipping
 == Wyłącz przycinanie
@@ -4149,7 +4149,7 @@ Document too large for the editor (%d of %d bytes)
 == Dokument jest za duży dla edytora (%d z %d bajtów)
 
 Done
-== Done
+== Gotowe
 
 Donor (drag parts from left)
 == Dawca (przeciągnij części z lewej)
@@ -4179,7 +4179,7 @@ Download
 == Pobierz
 
 Download "%s"?
-== Download "%s"?
+== Pobrać "%s"?
 
 Download community skins
 == Pobierz skórki społeczności
@@ -4212,7 +4212,7 @@ Downloaded
 == Pobrano
 
 Downloaded "%s"
-== Downloaded "%s"
+== Pobrano "%s"
 
 Downloaded: %.1f MiB (total size unknown)
 == Pobrano: %.1f MiB (łączny rozmiar nieznany)
@@ -4227,7 +4227,7 @@ Downloading update...
 == Pobieranie aktualizacji...
 
 Downloading…
-== Downloading…
+== Pobieranie…
 
 Downscaled (0.78)
 == Pomniejszone (0.78)
@@ -4251,7 +4251,7 @@ Drag to pan, scroll to zoom
 == Przeciągnij, aby przesunąć; przewijaj, aby przybliżyć
 
 Drag to reorder; right-click or use the gear to manage
-== Drag to reorder; right-click or use the gear to manage
+== Przeciągnij, aby zmienić kolejność; kliknij prawym lub użyj zębatki, aby zarządzać
 
 Dragger Inner Color
 == Kolor wewnętrzny przeciągacza
@@ -4737,7 +4737,7 @@ Enable client stutter diagnostics at startup
 == Włącz diagnostykę przycięć klienta przy uruchamianiu
 
 Enable client-initiated self-kill (K key / kill command)
-== Enable client-initiated self-kill (K key / kill command)
+== Włącz samobójstwo inicjowane przez klienta (klawisz K / polecenie kill)
 
 Enable colored console output
 == Włącz kolorowe wyjście konsoli
@@ -5340,10 +5340,10 @@ Export name contains invalid characters.
 == Nazwa eksportu zawiera niedozwolone znaki.
 
 Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
-== Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== Wysokość wyjściowa eksportu w pikselach (0 = zgodnie z rozmiarem renderowania okna; mniejsze niż okno = downscaling z supersamplingu)
 
 Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
-== Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== Szerokość wyjściowa eksportu w pikselach (0 = zgodnie z rozmiarem renderowania okna; mniejsze niż okno = downscaling z supersamplingu)
 
 Export playback speed. The value snaps to the nearest available speed.
 == Prędkość odtwarzania przy eksporcie. Wartość przyciąga do najbliższej dostępnej prędkości.
@@ -5355,7 +5355,7 @@ Export preset:
 == Preset eksportu:
 
 Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
-== Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
+== Preset eksportu: 0=własny, 1=codzienny(libx264/mp4), 2=efektywne udostępnianie(hevc/mp4), 3=montaż(all-intra H.264/mp4), 4=wymiana(ProRes/mov), 5=najlepsza jakość(all-intra H.264 4:4:4/mp4), 6=najszybszy(sprzętowy h264/mp4)
 
 Export range
 == Zakres eksportu
@@ -5391,7 +5391,7 @@ External sites are not controlled by the client.
 == Klient nie kontroluje zewnętrznych stron.
 
 Extra vertical spacing between chat lines in pixels (0 = default)
-== Extra vertical spacing between chat lines in pixels (0 = default)
+== Dodatkowy pionowy odstęp między liniami czatu w pikselach (0 = domyślny)
 
 Extras
 == Dodatki
@@ -5493,7 +5493,7 @@ Failed to save video
 == Nie udało się zapisać filmu
 
 Failed to save video. See local console for details.
-== Failed to save video. See local console for details.
+== Nie udało się zapisać wideo. Szczegóły w konsoli lokalnej.
 
 Failed to write PNG export.
 == Nie udało się zapisać eksportu PNG.
@@ -7479,7 +7479,7 @@ Keyframe interval (GOP)
 == Interwał klatek kluczowych (GOP)
 
 Keyframe interval (GOP) in frames for demo export (0 = encoder default, 1 = all-intra, 60 = recommended)
-== Keyframe interval (GOP) in frames for demo export (0 = encoder default, 1 = all-intra, 60 = recommended)
+== Odstęp klatek kluczowych (GOP) w klatkach dla eksportu dema (0 = domyślny koder, 1 = all-intra, 60 = zalecane)
 
 Keyframe interval (GOP):
 == Interwał klatek kluczowych (GOP):
@@ -7731,7 +7731,7 @@ Leave the path empty to auto-detect; fill it in only when the status says "Steam
 == Zostaw ścieżkę pustą, aby wykryć automatycznie; wpisz ją tylko, gdy status mówi, że nie znaleziono Steam.
 
 Leave the pose session
-== Leave the pose session
+== Opuść sesję poz
 
 Left jump
 == Lewy skok
@@ -9219,7 +9219,7 @@ No login required
 == Logowanie nie jest wymagane
 
 No map
-== No map
+== Brak mapy
 
 No map matches the typed name
 == Żadna mapa nie pasuje do wpisanej nazwy
@@ -9480,7 +9480,7 @@ Number of threads backend can use for rendering (Note: value may be ignored by b
 == Liczba wątków, których backend może użyć do renderowania (Uwaga: wartość może być zignorowana przez backend)
 
 Number of video pixel-format conversion threads for demo export (2-4 recommended)
-== Number of video pixel-format conversion threads for demo export (2-4 recommended)
+== Liczba wątków konwersji formatu pikseli wideo dla eksportu dema (zalecane 2-4)
 
 Number of vote options sent per tick
 == Liczba opcji głosowania wysyłanych na tick
@@ -9591,7 +9591,7 @@ Opacity of freeze bars inside freeze
 == Nieprzezroczystość pasków odmrażania w zamrożeniu
 
 Opacity of other teams' tees and name plates
-== Opacity of other teams' tees and name plates
+== Przezroczystość tee i tabliczek innych drużyn
 
 Open a link to join the community.
 == Otwórz link, aby dołączyć do społeczności.
@@ -9738,10 +9738,10 @@ Original
 == Oryginalny
 
 Original language for both received and outgoing messages. Use Auto to detect each message.
-== Original language for both received and outgoing messages. Use Auto to detect each message.
+== Język oryginalny zarówno dla wiadomości odebranych, jak i wysłanych. Użyj Auto, aby wykrywać każdą wiadomość.
 
 Original language for incoming and outgoing text
-== Original language for incoming and outgoing text
+== Język oryginalny tekstu przychodzącego i wychodzącego
 
 Original message language
 == Język oryginalnej wiadomości
@@ -10482,7 +10482,7 @@ Port for the external console.
 == Port dla zewnętrznej konsoli.
 
 Pose capture pixel budget in megapixels (0 = unlimited)
-== Pose capture pixel budget in megapixels (0 = unlimited)
+== Budżet pikseli przechwytywania poz w megapikselach (0 = bez limitu)
 
 Pose file
 == Plik póz
@@ -10491,19 +10491,19 @@ Pose preview
 == Podgląd póz
 
 Pose render fills the background with the entity layer
-== Pose render fills the background with the entity layer
+== Renderowanie poz wypełnia tło warstwą obiektów
 
 Pose render output format (0 = png, 1 = webp)
-== Pose render output format (0 = png, 1 = webp)
+== Format wyjściowy renderowania poz (0 = png, 1 = webp)
 
 Pose render supersampling scale (1-4)
-== Pose render supersampling scale (1-4)
+== Współczynnik supersamplingu renderowania poz (1-4)
 
 Pose render unsharp mask strength (0 = off)
-== Pose render unsharp mask strength (0 = off)
+== Siła maski wyostrzającej renderowania poz (0 = wyłączone)
 
 Poses
-== Poses
+== Pozy
 
 Position
 == Pozycja
@@ -10638,19 +10638,19 @@ Press F2, log in, then use: change_map map_name
 == Naciśnij F2, zaloguj się i użyj: change_map map_name
 
 Pressed hook collision line color when hitting a tee
-== Pressed hook collision line color when hitting a tee
+== Kolor linii haka przy wciśniętym klawiszu przy trafieniu w tee
 
 Pressed hook collision line color when hitting something hookable
-== Pressed hook collision line color when hitting something hookable
+== Kolor linii haka przy wciśniętym klawiszu przy trafieniu w coś zaczepialnego
 
 Pressed hook collision line color when not aiming at anything hookable
-== Pressed hook collision line color when not aiming at anything hookable
+== Kolor linii haka przy wciśniętym klawiszu, gdy nic zaczepialnego nie jest wycelowane
 
 Pressed hook line color; always used when custom pressed colors are enabled
 == Kolor linii haka po wciśnięciu; zawsze używany, gdy włączone są niestandardowe kolory wciśnięcia
 
 Pressed hook line tip color
-== Pressed hook line tip color
+== Kolor końcówki linii haka przy wciśniętym klawiszu
 
 Pressed: A Tee
 == Po wciśnięciu: Tee
@@ -10815,7 +10815,7 @@ Projectile / explosion range
 == Zasięg pocisku / eksplozji
 
 ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
-== ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
+== Nadpisanie profilu ProRes: -1=auto (4444 dla 4:4:4, w innym wypadku HQ), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
 
 Protect names and skins while streaming
 == Chroń nazwy i skórki podczas streamowania
@@ -11259,7 +11259,7 @@ Reconnect in %d sec
 == Ponowne połączenie za %d s
 
 Record a MomentCap .poses scene to a video
-== Record a MomentCap .poses scene to a video
+== Nagraj scenę MomentCap .poses jako wideo
 
 Record chat replays.
 == Nagrywaj powtórki czatu.
@@ -11271,7 +11271,7 @@ Record to a file
 == Nagraj do pliku
 
 Recorded frame rate; higher is smoother and larger
-== Recorded frame rate; higher is smoother and larger
+== Klatkaż nagrania; wyższy jest płynniejszy i większy
 
 Recorder FPS
 == FPS nagrywania
@@ -11580,7 +11580,7 @@ Render
 == Renderuj
 
 Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
-== Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
+== Renderuj plik MomentCap .poses jako zrzut ekranu (opcjonalnie supersampling 1-4x, nakładka obiektów, wyostrzanie 0-100)
 
 Render all custom colored feet as white feet skin
 == Renderuj wszystkie niestandardowe kolory stóp jako białą skórkę stóp
@@ -11862,7 +11862,7 @@ Resetting restores defaults immediately, so note down values you want to keep.
 == Reset natychmiast przywraca wartości domyślne, więc najpierw zapisz te, które chcesz zachować.
 
 Resolution:
-== Resolution:
+== Rozdzielczość:
 
 Resource preview VRAM budget override (MB, 0=auto)
 == Nadpisanie budżetu pamięci VRAM podglądu zasobów (MB, 0=automatyczny)
@@ -11877,7 +11877,7 @@ Restart in x seconds (0 = abort)
 == Uruchom ponownie za x sekund (0 = przerwij)
 
 Restart smooth scrolling on every wheel tick
-== Restart smooth scrolling on every wheel tick
+== Uruchamia płynne przewijanie od nowa przy każdym skoku kółka
 
 Restart the client
 == Uruchom ponownie klienta
@@ -12132,7 +12132,7 @@ Save last %d min
 == Zapisz ostatnie %d min
 
 Save loaded and marked as used.
-== Save loaded and marked as used.
+== Zapis wczytano i oznaczono jako użyty.
 
 Save loaded; local record removed.
 == Zapis wczytany; lokalny wpis usunięty.
@@ -12843,7 +12843,7 @@ Share of the server browser name/map split given to the name column (per mille)
 == Udział podziału nazwa/mapa w przeglądarce serwerów dla kolumny nazwy (na tysiąc)
 
 Sharpen
-== Sharpen
+== Wyostrzanie
 
 Shimmer speed
 == Prędkość połysku
@@ -12882,10 +12882,10 @@ Show %s group
 == Pokaż grupę %s
 
 Show a ghost of your best time after crossing the start line
-== Show a ghost of your best time after crossing the start line
+== Pokazuje ducha twojego najlepszego czasu po przekroczeniu linii startu
 
 Show a MomentCap .poses file in game (no export)
-== Show a MomentCap .poses file in game (no export)
+== Pokaż plik MomentCap .poses w grze (bez eksportu)
 
 Show a small view of the dummy
 == Pokaż mały podgląd kukły
@@ -14451,13 +14451,13 @@ Start and connect to local server
 == Uruchom i połącz z lokalnym serwerem
 
 Start at a random queue position on every map join
-== Start at a random queue position on every map join
+== Startuje z losowej pozycji w kolejce przy każdym wejściu na mapę
 
 Start dummy skin queue from a random position when entering a map
 == Rozpoczynaj kolejkę skórek Dummy od losowej pozycji przy wejściu na mapę
 
 Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
-== Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
+== Startuje z losowej pozycji w kolejce przy każdym wejściu na mapę (także przy łączeniu dummy lub ponownym włączeniu kolejki). Ustaw interwał zmiany na 0, aby wyłączyć rotację czasową; zmiana następuje tylko przy wejściu na mapę.
 
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 == Zacznij od wartości domyślnej: nieco ją zwiększ, jeśli inni gracze wyglądają na skaczących, i zmniejsz, jeśli wydaje ci się, że zostajesz z tyłu.
@@ -16323,7 +16323,7 @@ Unfreeze/Deep unfreeze tile outline width
 == Szerokość konturu kafelków odmrożenia/głębokiego odmrożenia
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
-== Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
+== Ujednolicona jakość eksportu (skala CRF/CQ/QP 0-51, -1 = użyj cl_video_crf); mapowana na natywny parametr każdego kodera
 
 Uninvite player from team
 == Anuluj zaproszenie gracza z drużyny
@@ -16509,7 +16509,7 @@ Use current settings
 == Użyj bieżących ustawień
 
 Use custom colors for the pressed hook collision line (0 = always invert)
-== Use custom colors for the pressed hook collision line (0 = always invert)
+== Użyj własnych kolorów linii haka przy wciśniętym klawiszu (0 = zawsze odwracaj)
 
 Use custom skins instead of the ninja tee
 == Użyj niestandardowych skórek zamiast ninja tee
@@ -16596,7 +16596,7 @@ Use pre-input to predict other players for more accurate input prediction
 == Użyj pre-input do przewidywania innych graczy dla dokładniejszego przewidywania wejścia
 
 Use procedural ring pipeline
-== Use procedural ring pipeline
+== Użyj proceduralnego potoku pierścieni
 
 Use server defaults
 == Użyj ustawień domyślnych serwera
@@ -16620,10 +16620,10 @@ Use Tee icons instead of circles
 == Użyj ikon Tee zamiast kółek
 
 Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
+== Używa poniższych własnych kolorów, gdy linia haka jest pokazywana z wciśniętym klawiszem haka; gdy wyłączone, kolory niewciśnięte są automatycznie odwracane
 
 Use the custom colors below while the hook key is held
-== Use the custom colors below while the hook key is held
+== Używa poniższych własnych kolorów, gdy wciśnięty jest klawisz haka
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == Użyj kółka myszy na najechanej wizualizacji, aby skalować ją o 5%
@@ -16647,7 +16647,7 @@ Use warlist groups for indicator
 == Użyj grup listy wrogów dla wskaźnika
 
 Used
-== Used
+== Użyty
 
 Used by active shared text and numeric input fields
 == Używane przez aktywne współdzielone pola tekstowe i numeryczne
@@ -16725,7 +16725,7 @@ Video directory
 == Katalog filmów
 
 Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
-== Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
+== Koder wideo dla eksportu dema (puste = domyślny koder programowy, np. h264_nvenc)
 
 Video encoding
 == Kodowanie wideo
@@ -17121,7 +17121,7 @@ What this controls
 == Co ustawia
 
 Wheel distance per tick; hold Alt for 3x
-== Wheel distance per tick; hold Alt for 3x
+== Dystans na skok kółka; przytrzymaj Alt dla 3x
 
 Wheel label
 == Nazwa w kole
@@ -17133,7 +17133,7 @@ When TClient rainbow Tee is enabled, this feature has no effect.
 == Gdy tęczowy Tee TClienta jest włączony, ta funkcja nie działa.
 
 When you cross the start line, show a ghost tee replicating the movements of your best time
-== When you cross the start line, show a ghost tee replicating the movements of your best time
+== Po przekroczeniu linii startu pokazuje ducha tee odtwarzającego ruchy twojego najlepszego czasu
 
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 == Gdzie pojawia się twój tytuł i jak wygląda: plakietka z nazwą, styl, animacja, kolory i poświata.

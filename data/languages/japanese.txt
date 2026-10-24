@@ -729,7 +729,7 @@ Adjust the display options; open a vote to check the layout before joining a bus
 == 表示オプションを調整します。混雑したサーバーに入る前に、投票を開いてレイアウトを確認してください。
 
 Adjust the opacity of entities belonging to other teams, such as tees and name plates
-== Adjust the opacity of entities belonging to other teams, such as tees and name plates
+== Tee やネームプレートなど、他チームのエンティティの不透明度を調整します
 
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
@@ -789,16 +789,16 @@ Air jump
 == 空中ジャンプ
 
 Alias of poses_close
-== Alias of poses_close
+== poses_close のエイリアス
 
 Alias of poses_open
-== Alias of poses_open
+== poses_open のエイリアス
 
 Alias of poses_render
-== Alias of poses_render
+== poses_render のエイリアス
 
 Alias of poses_video
-== Alias of poses_video
+== poses_video のエイリアス
 
 Alive notification color
 == 生存通知の色
@@ -873,7 +873,7 @@ Allow mic permission in system settings, then reopen voice
 == システム設定でマイクの許可を許可してから、ボイスを再度開いてください
 
 Allow the client to send kill requests (0 = ignore client-initiated kills)
-== Allow the client to send kill requests (0 = ignore client-initiated kills)
+== クライアントからのキル要求を許可（0 = クライアント発のキルを無視）
 
 Allow voting to kick players
 == プレイヤーをキックする投票を許可
@@ -987,7 +987,7 @@ Anti-aliasing for the exported video only, independent of the graphics setting. 
 == 書き出した動画にのみ適用されるアンチエイリアスで、グラフィック設定とは独立しています。明示的な倍率を選ぶと各フレームをマルチサンプルのオフスクリーンターゲットに描画するため、ゲーム本体は負荷軽減のために低めの設定のままにできます。スーパーサンプリング（出力がウィンドウより小さい場合）だけでもギザギザは軽減されるため、どちらか一方を選んでください。
 
 Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
-== Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
+== 動画書き出しのアンチエイリアス: -1 = gfx_fsaa_samples に従う、0 = オフ、2/4/8 = マルチサンプルのオフスクリーンレンダリング
 
 Anti-aliasing:
 == アンチエイリアス:
@@ -1524,7 +1524,7 @@ Automatically record replays
 == リプレイを自動録画
 
 Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
-== Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
+== 読み込みに成功したローカルセーブ記録を自動削除（0 = 保持して使用済みとしてマーク、1 = 削除）
 
 Automatically reply to muted players
 == ミュートされたプレイヤーに自動返信
@@ -1902,7 +1902,7 @@ Bound functions
 == 割り当て済みの機能
 
 Bounded capture frame queue depth for demo export (higher values use more memory)
-== Bounded capture frame queue depth for demo export (higher values use more memory)
+== デモ書き出しのキャプチャフレームキュー深さの上限（大きいほどメモリを消費）
 
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 括弧内の称号の色：0 = サーバーに従う、1 = 単色、2 = 虹色
@@ -2250,7 +2250,7 @@ Chat gradient vertical position percentage
 == グラデーションの垂直位置 (チャット, %)
 
 Chat line spacing
-== Chat line spacing
+== チャットの行間
 
 Chat log retention days
 == チャットログ保持日数
@@ -2409,7 +2409,7 @@ Chroma sampling
 == 色差サンプリング
 
 Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)
-== Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)
+== 書き出しのクロマサンプリング設定: 0=自動、1=4:2:0、2=4:2:2、3=4:4:4（高いほど細かい色のディテールを保持）
 
 Chroma sampling. 4:2:0 is smallest and most compatible; 4:4:4 keeps full color detail for thin lines and small colored text. Rendering is 8-bit, so 10-bit formats do not add detail by themselves.
 == 色度サンプリング。4:2:0 は最も小さく互換性も高い設定です。4:4:4 は色度を完全に保持するため、細い線や小さな色文字が最も鮮明になります。描画自体は 8 ビットなので、10 ビット形式にしても情報量は増えません。
@@ -2994,7 +2994,7 @@ Configures the main HUD: health, ammo, timer, race progress and their positions.
 == メイン HUD を設定します。体力、弾薬、タイマー、レースの進行状況とそれぞれの位置です。
 
 Confirm
-== Confirm
+== 確認
 
 Confirm both are on same server, same room, and support voice
 == 両方が同じサーバー、同じルームにいて、音声をサポートしていることを確認する
@@ -3261,10 +3261,10 @@ Could not connect to the translation service. Please try again later.
 == 翻訳サービスに接続できませんでした。しばらくしてから再試行してください。
 
 Could not delete "%s"
-== Could not delete "%s"
+== 「%s」を削除できませんでした
 
 Could not download "%s"
-== Could not download "%s"
+== 「%s」をダウンロードできませんでした
 
 Could not find a Tutorial server. Check your internet connection.
 == チュートリアルサーバーが見つかりませんでした。インターネット接続を確認してください。
@@ -3465,7 +3465,7 @@ Custom community list fetch URL (must be https, leave empty to disable)
 == カスタムコミュニティリスト取得 URL（https 必須、空欄で無効）
 
 Custom export container: mp4, mov or mkv
-== Custom export container: mp4, mov or mkv
+== カスタム書き出しコンテナ: mp4、mov、mkv
 
 Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
 == 中国語/CJK テキスト用のカスタムフォント（ファミリー、またはファミリー + スタイル）。空欄ならラテン用カスタムフォントに従います
@@ -3837,7 +3837,7 @@ Delete
 == 削除
 
 Delete "%s"?
-== Delete "%s"?
+== 「%s」を削除しますか？
 
 Delete category
 == カテゴリを削除
@@ -3864,7 +3864,7 @@ Delete this preset
 == このプリセットを削除
 
 Deleted "%s"
-== Deleted "%s"
+== 「%s」を削除しました
 
 Demo
 == デモ
@@ -3882,7 +3882,7 @@ Demo effects
 == デモエフェクト
 
 Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
-== Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
+== デモ書き出しのセグメント長（秒）（0 = 単一ファイル、300 = 5分）
 
 Demo hook strength (0=Off 1=Icon 2=Icon and number)
 == デモのフック強弱（0=オフ 1=アイコン 2=アイコンと数値）
@@ -3903,7 +3903,7 @@ Demo target
 == デモターゲット
 
 Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
-== Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
+== 各セグメントの前に録画せずに再生するデモtick数。エフェクトとチャット状態を復元します（50 tick = 1秒）
 
 Demofile: %s
 == デモファイル：%s
@@ -3999,7 +3999,7 @@ Disable after picking up other weapons
 == 他の武器を拾ったら無効化
 
 Disable client-initiated self-kill (K key / kill command)
-== Disable client-initiated self-kill (K key / kill command)
+== クライアント発の自殺を無効化（Kキー / killコマンド）
 
 Disable clipping
 == クリッピングを無効化
@@ -4149,7 +4149,7 @@ Document too large for the editor (%d of %d bytes)
 == ドキュメントが大きすぎてクライアントのエディターで編集できません（%d / %d バイト）
 
 Done
-== Done
+== 完了
 
 Donor (drag parts from left)
 == 提供元（左からパーツをドラッグ）
@@ -4179,7 +4179,7 @@ Download
 == ダウンロード
 
 Download "%s"?
-== Download "%s"?
+== 「%s」をダウンロードしますか？
 
 Download community skins
 == コミュニティスキンをダウンロード
@@ -4212,7 +4212,7 @@ Downloaded
 == ダウンロード済み
 
 Downloaded "%s"
-== Downloaded "%s"
+== 「%s」をダウンロードしました
 
 Downloaded: %.1f MiB (total size unknown)
 == ダウンロード済み：%.1f MiB（総サイズ不明）
@@ -4227,7 +4227,7 @@ Downloading update...
 == アップデートをダウンロード中...
 
 Downloading…
-== Downloading…
+== ダウンロード中…
 
 Downscaled (0.78)
 == ダウンスケール (0.78)
@@ -4251,7 +4251,7 @@ Drag to pan, scroll to zoom
 == ドラッグで移動、ホイールで拡大・縮小
 
 Drag to reorder; right-click or use the gear to manage
-== Drag to reorder; right-click or use the gear to manage
+== ドラッグで並べ替え。右クリックまたは歯車で管理
 
 Dragger Inner Color
 == ドラッガー内側の色
@@ -4737,7 +4737,7 @@ Enable client stutter diagnostics at startup
 == 起動時にクライアントのスタッター診断を有効にする
 
 Enable client-initiated self-kill (K key / kill command)
-== Enable client-initiated self-kill (K key / kill command)
+== クライアント発の自殺を有効化（Kキー / killコマンド）
 
 Enable colored console output
 == コンソールのカラー出力を有効にする
@@ -5340,10 +5340,10 @@ Export name contains invalid characters.
 == エクスポート名に無効な文字が含まれています。
 
 Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
-== Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== 書き出し出力の高さ（ピクセル）（0 = ウィンドウのレンダリングサイズに従う。ウィンドウより小さい = 超サンプリングして縮小）
 
 Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
-== Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== 書き出し出力の幅（ピクセル）（0 = ウィンドウのレンダリングサイズに従う。ウィンドウより小さい = 超サンプリングして縮小）
 
 Export playback speed. The value snaps to the nearest available speed.
 == 書き出しの再生速度です。入力値は利用可能な最も近い速度にスナップします。
@@ -5355,7 +5355,7 @@ Export preset:
 == 書き出しプリセット:
 
 Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
-== Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
+== 書き出しプリセット: 0=カスタム、1=日常(libx264/mp4)、2=効率的な共有(hevc/mp4)、3=編集用(all-intra H.264/mp4)、4=交換用(ProRes/mov)、5=最高品質(all-intra H.264 4:4:4/mp4)、6=最速(ハードウェア h264/mp4)
 
 Export range
 == 書き出し範囲
@@ -5391,7 +5391,7 @@ External sites are not controlled by the client.
 == 外部サイトはクライアントの管理下にはありません。
 
 Extra vertical spacing between chat lines in pixels (0 = default)
-== Extra vertical spacing between chat lines in pixels (0 = default)
+== チャット行間の追加の縦余白（ピクセル）（0 = 既定）
 
 Extras
 == その他
@@ -5493,7 +5493,7 @@ Failed to save video
 == 動画の保存に失敗しました
 
 Failed to save video. See local console for details.
-== Failed to save video. See local console for details.
+== 動画の保存に失敗しました。詳細はローカルコンソールを参照。
 
 Failed to write PNG export.
 == PNG エクスポートの書き込みに失敗しました。
@@ -7479,7 +7479,7 @@ Keyframe interval (GOP)
 == キーフレーム間隔（GOP）
 
 Keyframe interval (GOP) in frames for demo export (0 = encoder default, 1 = all-intra, 60 = recommended)
-== Keyframe interval (GOP) in frames for demo export (0 = encoder default, 1 = all-intra, 60 = recommended)
+== デモ書き出しのキーフレーム間隔（GOP、フレーム）（0 = エンコーダーの既定、1 = 全フレームイントラ、60 = 推奨）
 
 Keyframe interval (GOP):
 == キーフレーム間隔 (GOP):
@@ -7731,7 +7731,7 @@ Leave the path empty to auto-detect; fill it in only when the status says "Steam
 == パスを空にすると自動検出します。状態が Steam が見つかりませんと表示されたときだけ入力してください。
 
 Leave the pose session
-== Leave the pose session
+== ポーズセッションを離れる
 
 Left jump
 == 左ジャンプ
@@ -9219,7 +9219,7 @@ No login required
 == ログイン不要
 
 No map
-== No map
+== マップなし
 
 No map matches the typed name
 == 入力した名前に一致するマップはありません
@@ -9480,7 +9480,7 @@ Number of threads backend can use for rendering (Note: value may be ignored by b
 == バックエンドがレンダリングに使用できるスレッド数（注: バックエンドによって値が無視される場合があります）
 
 Number of video pixel-format conversion threads for demo export (2-4 recommended)
-== Number of video pixel-format conversion threads for demo export (2-4 recommended)
+== デモ書き出しのピクセルフォーマット変換スレッド数（2-4 推奨）
 
 Number of vote options sent per tick
 == 1 ティックあたりに送る投票オプション数
@@ -9591,7 +9591,7 @@ Opacity of freeze bars inside freeze
 == フリーズ内のフリーズバーの不透明度
 
 Opacity of other teams' tees and name plates
-== Opacity of other teams' tees and name plates
+== 他チームのTeeとネームプレートの不透明度
 
 Open a link to join the community.
 == リンクを開いてコミュニティに参加できます。
@@ -9738,10 +9738,10 @@ Original
 == オリジナル
 
 Original language for both received and outgoing messages. Use Auto to detect each message.
-== Original language for both received and outgoing messages. Use Auto to detect each message.
+== 受信・送信メッセージとも原文の言語を使用します。各メッセージの検出には「自動」を使用。
 
 Original language for incoming and outgoing text
-== Original language for incoming and outgoing text
+== 受信・送信テキストの原文言語
 
 Original message language
 == 原文の言語
@@ -10482,7 +10482,7 @@ Port for the external console.
 == 外部コンソール用ポート
 
 Pose capture pixel budget in megapixels (0 = unlimited)
-== Pose capture pixel budget in megapixels (0 = unlimited)
+== ポーズキャプチャのピクセル予算（メガピクセル）（0 = 無制限）
 
 Pose file
 == ポーズファイル
@@ -10491,19 +10491,19 @@ Pose preview
 == ポーズプレビュー
 
 Pose render fills the background with the entity layer
-== Pose render fills the background with the entity layer
+== ポーズレンダリングはエンティティレイヤーで背景を埋めます
 
 Pose render output format (0 = png, 1 = webp)
-== Pose render output format (0 = png, 1 = webp)
+== ポーズレンダリングの出力形式（0 = png、1 = webp）
 
 Pose render supersampling scale (1-4)
-== Pose render supersampling scale (1-4)
+== ポーズレンダリングのスーパーサンプリング倍率（1-4）
 
 Pose render unsharp mask strength (0 = off)
-== Pose render unsharp mask strength (0 = off)
+== ポーズレンダリングのアンシャープマスク強度（0 = オフ）
 
 Poses
-== Poses
+== ポーズ
 
 Position
 == 位置
@@ -10638,19 +10638,19 @@ Press F2, log in, then use: change_map map_name
 == F2 を押してログイン後、change_map map_name を実行します
 
 Pressed hook collision line color when hitting a tee
-== Pressed hook collision line color when hitting a tee
+== フックキー押下時にTeeに当たったときのフック補助線の色
 
 Pressed hook collision line color when hitting something hookable
-== Pressed hook collision line color when hitting something hookable
+== フックキー押下時にフック可能な物体に当たったときのフック補助線の色
 
 Pressed hook collision line color when not aiming at anything hookable
-== Pressed hook collision line color when not aiming at anything hookable
+== フックキー押下時にフック可能な物体を狙っていないときのフック補助線の色
 
 Pressed hook line color; always used when custom pressed colors are enabled
 == 押下時のフックライン色。カスタム押下色が有効なとき常に使用
 
 Pressed hook line tip color
-== Pressed hook line tip color
+== 押下時のフック補助線の先端の色
 
 Pressed: A Tee
 == 押下時：他のプレイヤー
@@ -10815,7 +10815,7 @@ Projectile / explosion range
 == 投射物 / 爆発範囲
 
 ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
-== ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
+== ProRes プロファイル上書き: -1=自動（4:4:4 は 4444、その他は HQ）、0=Proxy、1=LT、2=422、3=HQ、4=4444、5=4444XQ
 
 Protect names and skins while streaming
 == 配信時に名前とスキンを保護
@@ -11259,7 +11259,7 @@ Reconnect in %d sec
 == %d 秒後に再接続
 
 Record a MomentCap .poses scene to a video
-== Record a MomentCap .poses scene to a video
+== MomentCap .poses シーンを動画に録画します
 
 Record chat replays.
 == チャットリプレイを録画
@@ -11271,7 +11271,7 @@ Record to a file
 == ファイルに記録
 
 Recorded frame rate; higher is smoother and larger
-== Recorded frame rate; higher is smoother and larger
+== 録画フレームレート。高いほど滑らかでファイルも大きくなります
 
 Recorder FPS
 == 録画フレームレート
@@ -11580,7 +11580,7 @@ Render
 == レンダリング
 
 Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
-== Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
+== MomentCap .poses ファイルをスクリーンショットとしてレンダリング（任意で 1-4 倍スーパーサンプリング、エンティティオーバーレイ、シャープン 0-100）
 
 Render all custom colored feet as white feet skin
 == カスタム足色をすべて白い足スキンとしてレンダリング
@@ -11862,7 +11862,7 @@ Resetting restores defaults immediately, so note down values you want to keep.
 == リセットするとすぐ既定値に戻るので、残したい値は先に控えておきましょう。
 
 Resolution:
-== Resolution:
+== 解像度:
 
 Resource preview VRAM budget override (MB, 0=auto)
 == リソースプレビューのVRAM予算オーバーライド（MB、0=自動）
@@ -11877,7 +11877,7 @@ Restart in x seconds (0 = abort)
 == x 秒後に再起動（0 = 中止）
 
 Restart smooth scrolling on every wheel tick
-== Restart smooth scrolling on every wheel tick
+== ホイールの目盛りごとにスクロールをやり直す
 
 Restart the client
 == クライアントを再起動
@@ -12132,7 +12132,7 @@ Save last %d min
 == 最後の %d 分を保存
 
 Save loaded and marked as used.
-== Save loaded and marked as used.
+== セーブを読み込み、使用済みとしてマークしました。
 
 Save loaded; local record removed.
 == セーブを読み込み、ローカルの記録を削除しました。
@@ -12843,7 +12843,7 @@ Share of the server browser name/map split given to the name column (per mille)
 == サーバーブラウザーの名前/マップ分割で名前列に割り当てる割合（パーミル）
 
 Sharpen
-== Sharpen
+== シャープン
 
 Shimmer speed
 == きらめきの速度
@@ -12882,10 +12882,10 @@ Show %s group
 == %s グループを表示
 
 Show a ghost of your best time after crossing the start line
-== Show a ghost of your best time after crossing the start line
+== スタートライン通過後にベストタイムのゴーストを表示
 
 Show a MomentCap .poses file in game (no export)
-== Show a MomentCap .poses file in game (no export)
+== MomentCap .poses ファイルをゲーム内で表示（書き出しなし）
 
 Show a small view of the dummy
 == ダミーの小さなビューを表示
@@ -14451,13 +14451,13 @@ Start and connect to local server
 == ローカルサーバーを起動して接続
 
 Start at a random queue position on every map join
-== Start at a random queue position on every map join
+== マップに参加するたびにランダムなキュー位置から開始
 
 Start dummy skin queue from a random position when entering a map
 == マップ参加時にダミーのスキンキューをランダムな位置から開始
 
 Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
-== Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
+== マップに参加するたびにランダムなキュー位置から開始します（ダミー接続時やキューの再有効化時も含む）。切り替え間隔を 0 にすると時間によるローテーションが無効になり、マップ参加時のみ切り替えます。
 
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 == デフォルト値から始め、他のプレイヤーの動きが飛んで見えるなら少し上げ、自分が遅れて見えるなら下げます。
@@ -16323,7 +16323,7 @@ Unfreeze/Deep unfreeze tile outline width
 == フリーズ解除/ディープフリーズ解除タイルのアウトライン幅
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
-== Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
+== 統一書き出し品質（CRF/CQ/QP スケール 0-51、-1 = cl_video_crf を使用）。各エンコーダーのネイティブパラメータにマッピングされます
 
 Uninvite player from team
 == チームへのプレイヤー招待を取り消し
@@ -16509,7 +16509,7 @@ Use current settings
 == 現在の設定を使用
 
 Use custom colors for the pressed hook collision line (0 = always invert)
-== Use custom colors for the pressed hook collision line (0 = always invert)
+== フックキー押下時にカスタムカラーを使用（0 = 常に反転）
 
 Use custom skins instead of the ninja tee
 == ニンジャ Tee の代わりにカスタムスキンを使用
@@ -16596,7 +16596,7 @@ Use pre-input to predict other players for more accurate input prediction
 == プリ入力を使用して他のプレイヤーを予測し、より正確な入力予測を実現
 
 Use procedural ring pipeline
-== Use procedural ring pipeline
+== 手続き的リングパイプラインを使用
 
 Use server defaults
 == サーバーの既定値を使用
@@ -16620,10 +16620,10 @@ Use Tee icons instead of circles
 == 円の代わりに Tee アイコンを使用
 
 Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
+== フックキー押下中にフック補助線を表示するときは下のカスタムカラーを使用します。無効の場合は非押下時の色を自動反転します。
 
 Use the custom colors below while the hook key is held
-== Use the custom colors below while the hook key is held
+== フックキー押下中は下のカスタムカラーを使用
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == ホバーした HUD モジュール上でマウスホイールを使用すると 5% 単位で拡大縮小します
@@ -16647,7 +16647,7 @@ Use warlist groups for indicator
 == インジケーターに敵対リストグループを使用
 
 Used
-== Used
+== 使用済み
 
 Used by active shared text and numeric input fields
 == 有効な共通テキスト・数値入力欄で使用されます
@@ -16725,7 +16725,7 @@ Video directory
 == 動画の保存先
 
 Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
-== Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
+== デモ書き出しの動画エンコーダー（空 = 既定のソフトウェアエンコーダー、例: h264_nvenc）
 
 Video encoding
 == 動画エンコード
@@ -17121,7 +17121,7 @@ What this controls
 == これは何か
 
 Wheel distance per tick; hold Alt for 3x
-== Wheel distance per tick; hold Alt for 3x
+== ホイール目盛りごとの移動距離。Alt で 3 倍
 
 Wheel label
 == ホイールの表示名
@@ -17133,7 +17133,7 @@ When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient のレインボー Tee が有効な場合、この機能は効果がありません。
 
 When you cross the start line, show a ghost tee replicating the movements of your best time
-== When you cross the start line, show a ghost tee replicating the movements of your best time
+== スタートラインを通過すると、ベストタイムの動きを再現するゴーストTeeを表示します
 
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 == 称号をどこに出すか、どう見せるか。ネームプレート、スタイル、アニメーション、色、発光です。

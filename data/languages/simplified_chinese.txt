@@ -729,7 +729,7 @@ Adjust the display options; open a vote to check the layout before joining a bus
 == 调整显示选项，进拥挤的服务器前先开一个投票查看布局。
 
 Adjust the opacity of entities belonging to other teams, such as tees and name plates
-== Adjust the opacity of entities belonging to other teams, such as tees and name plates
+== 调整其他队伍实体（如 Tee 和名牌）的不透明度
 
 Adjust trails rendered behind Tees
 == 调整 Tee 身后的轨迹效果
@@ -789,16 +789,16 @@ Air jump
 == 空中跳跃
 
 Alias of poses_close
-== Alias of poses_close
+== poses_close 的别名
 
 Alias of poses_open
-== Alias of poses_open
+== poses_open 的别名
 
 Alias of poses_render
-== Alias of poses_render
+== poses_render 的别名
 
 Alias of poses_video
-== Alias of poses_video
+== poses_video 的别名
 
 Alive notification color
 == 存活提醒颜色
@@ -873,7 +873,7 @@ Allow mic permission in system settings, then reopen voice
 == 需要在系统设置里允许麦克风权限，然后重新打开语音
 
 Allow the client to send kill requests (0 = ignore client-initiated kills)
-== Allow the client to send kill requests (0 = ignore client-initiated kills)
+== 允许客户端发送自杀请求（0 = 忽略客户端发起的自杀）
 
 Allow voting to kick players
 == 允许投票踢出玩家
@@ -987,7 +987,7 @@ Anti-aliasing for the exported video only, independent of the graphics setting. 
 == 只影响导出成片的抗锯齿，与全局图形设置相互独立。选显式档位时每一帧会画进多采样离屏目标，游戏本体可以保持低档位省性能。超采样（输出小于窗口）本身已经能减轻锯齿，两者二选一即可。
 
 Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
-== Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
+== 视频导出抗锯齿：-1 = 跟随 gfx_fsaa_samples，0 = 关闭，2/4/8 = 多重采样离屏渲染
 
 Anti-aliasing:
 == 抗锯齿：
@@ -1524,7 +1524,7 @@ Automatically record replays
 == 自动录制回放
 
 Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
-== Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
+== 存档载入成功后自动删除本地记录（0 = 保留并标记为已使用，1 = 删除）
 
 Automatically reply to muted players
 == 对已屏蔽发言的玩家自动回复
@@ -1902,7 +1902,7 @@ Bound functions
 == 已绑定功能
 
 Bounded capture frame queue depth for demo export (higher values use more memory)
-== Bounded capture frame queue depth for demo export (higher values use more memory)
+== demo 导出捕捉帧队列深度上限（数值越大占用内存越多）
 
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 方括号头衔颜色：0 = 跟随服务器，1 = 单色，2 = 彩虹
@@ -2409,7 +2409,7 @@ Chroma sampling
 == 色彩采样
 
 Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)
-== Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)
+== 导出色度采样偏好：0=自动，1=4:2:0，2=4:2:2，3=4:4:4（越高越能保留细小彩色细节）
 
 Chroma sampling. 4:2:0 is smallest and most compatible; 4:4:4 keeps full color detail for thin lines and small colored text. Rendering is 8-bit, so 10-bit formats do not add detail by themselves.
 == 色度采样。4:2:0 体积最小、兼容性最好；4:4:4 保留完整色度，细线和彩色小字最清楚。渲染本身是 8 位，所以 10 位格式并不会自己增加细节。
@@ -2994,7 +2994,7 @@ Configures the main HUD: health, ammo, timer, race progress and their positions.
 == 配置主 HUD：生命值、弹药、计时器、竞速进度及其位置。
 
 Confirm
-== Confirm
+== 确认
 
 Confirm both are on same server, same room, and support voice
 == 建议确认双方在同服、同房间，并且对方也支持语音
@@ -3261,10 +3261,10 @@ Could not connect to the translation service. Please try again later.
 == 无法连接翻译服务，请稍后重试。
 
 Could not delete "%s"
-== Could not delete "%s"
+== 无法删除"%s"
 
 Could not download "%s"
-== Could not download "%s"
+== 无法下载"%s"
 
 Could not find a Tutorial server. Check your internet connection.
 == 未找到教程服务器。请检查你的网络连接。
@@ -3465,7 +3465,7 @@ Custom community list fetch URL (must be https, leave empty to disable)
 == 自定义社区列表的获取 URL（必须是 https，留空则禁用）
 
 Custom export container: mp4, mov or mkv
-== Custom export container: mp4, mov or mkv
+== 自定义导出容器：mp4、mov 或 mkv
 
 Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
 == 中文 /CJK 文本的自定义字体（字族，或字族 + 样式）；留空则跟随拉丁自定义字体
@@ -3837,7 +3837,7 @@ Delete
 == 删除
 
 Delete "%s"?
-== Delete "%s"?
+== 删除"%s"？
 
 Delete category
 == 删除分类
@@ -3864,7 +3864,7 @@ Delete this preset
 == 删除该预设
 
 Deleted "%s"
-== Deleted "%s"
+== 已删除"%s"
 
 Demo
 == 回放
@@ -3882,7 +3882,7 @@ Demo effects
 == Demo 特效
 
 Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
-== Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
+== demo 导出分段时长（秒）（0 = 单文件，300 = 5 分钟）
 
 Demo hook strength (0=Off 1=Icon 2=Icon and number)
 == 回放钩子强弱（0=关闭 1=图标 2=图标与数字）
@@ -3903,7 +3903,7 @@ Demo target
 == Demo 目标
 
 Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
-== Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
+== 每段开始前不录制预放的 demo tick 数，用于恢复特效与聊天状态（50 tick = 1 秒）
 
 Demofile: %s
 == 回放文件：%s
@@ -3999,7 +3999,7 @@ Disable after picking up other weapons
 == 拿到其他武器时停用
 
 Disable client-initiated self-kill (K key / kill command)
-== Disable client-initiated self-kill (K key / kill command)
+== 禁用客户端发起的自杀（K 键 / kill 命令）
 
 Disable clipping
 == 禁用裁剪
@@ -4149,7 +4149,7 @@ Document too large for the editor (%d of %d bytes)
 == 文档过大，无法在客户端编辑器内修改（%d / %d 字节）
 
 Done
-== Done
+== 完成
 
 Donor (drag parts from left)
 == 来源材质（从左侧拖拽部件）
@@ -4179,7 +4179,7 @@ Download
 == 下载
 
 Download "%s"?
-== Download "%s"?
+== 下载"%s"？
 
 Download community skins
 == 下载社区皮肤
@@ -4212,7 +4212,7 @@ Downloaded
 == 已下载
 
 Downloaded "%s"
-== Downloaded "%s"
+== 已下载"%s"
 
 Downloaded: %.1f MiB (total size unknown)
 == 已下载：%.1f MiB（总大小未知）
@@ -4227,7 +4227,7 @@ Downloading update...
 == 正在下载更新……
 
 Downloading…
-== Downloading…
+== 下载中…
 
 Downscaled (0.78)
 == 缩小 (0.78)
@@ -4737,7 +4737,7 @@ Enable client stutter diagnostics at startup
 == 启动时启用客户端卡顿诊断
 
 Enable client-initiated self-kill (K key / kill command)
-== Enable client-initiated self-kill (K key / kill command)
+== 启用客户端发起的自杀（K 键 / kill 命令）
 
 Enable colored console output
 == 启用控制台彩色输出
@@ -5340,10 +5340,10 @@ Export name contains invalid characters.
 == 导出名称包含无效字符。
 
 Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
-== Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== 导出输出高度（像素）（0 = 跟随窗口渲染尺寸；小于窗口 = 超采样后缩小）
 
 Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
-== Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== 导出输出宽度（像素）（0 = 跟随窗口渲染尺寸；小于窗口 = 超采样后缩小）
 
 Export playback speed. The value snaps to the nearest available speed.
 == 导出播放速度；输入值会吸附到最接近的可用速度。
@@ -5355,7 +5355,7 @@ Export preset:
 == 导出预设：
 
 Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
-== Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
+== 导出预设：0=自定义，1=日常(libx264/mp4)，2=高效分享(hevc/mp4)，3=剪辑(all-intra H.264/mp4)，4=交换(ProRes/mov)，5=最佳质量(all-intra H.264 4:4:4/mp4)，6=最快(硬件 h264/mp4)
 
 Export range
 == 导出范围
@@ -5391,7 +5391,7 @@ External sites are not controlled by the client.
 == 外部网站不受客户端控制。
 
 Extra vertical spacing between chat lines in pixels (0 = default)
-== Extra vertical spacing between chat lines in pixels (0 = default)
+== 聊天行与行之间的额外垂直间距（像素）（0 = 默认）
 
 Extras
 == 其他
@@ -5493,7 +5493,7 @@ Failed to save video
 == 视频保存失败
 
 Failed to save video. See local console for details.
-== Failed to save video. See local console for details.
+== 保存视频失败。详情见本地控制台。
 
 Failed to write PNG export.
 == 写入 PNG 导出文件失败。
@@ -7482,7 +7482,7 @@ Keyframe interval (GOP)
 == 关键帧间隔（GOP）
 
 Keyframe interval (GOP) in frames for demo export (0 = encoder default, 1 = all-intra, 60 = recommended)
-== Keyframe interval (GOP) in frames for demo export (0 = encoder default, 1 = all-intra, 60 = recommended)
+== demo 导出关键帧间隔（GOP，帧）（0 = 编码器默认，1 = 全帧内，60 = 推荐）
 
 Keyframe interval (GOP):
 == 关键帧间隔 (GOP):
@@ -7734,7 +7734,7 @@ Leave the path empty to auto-detect; fill it in only when the status says "Steam
 == 路径留空即可自动检测；只有状态显示未找到 Steam 时才需要填写。
 
 Leave the pose session
-== Leave the pose session
+== 离开姿态会话
 
 Left jump
 == 左跳
@@ -9222,7 +9222,7 @@ No login required
 == 无需登录
 
 No map
-== No map
+== 无地图
 
 No map matches the typed name
 == 没有匹配输入的地图
@@ -9483,7 +9483,7 @@ Number of threads backend can use for rendering (Note: value may be ignored by b
 == 渲染后端可用线程数（后端可能忽略该设置）
 
 Number of video pixel-format conversion threads for demo export (2-4 recommended)
-== Number of video pixel-format conversion threads for demo export (2-4 recommended)
+== demo 导出视频像素格式转换线程数（推荐 2-4）
 
 Number of vote options sent per tick
 == 每 tick 发送的投票选项数量
@@ -9741,7 +9741,7 @@ Original
 == 原版
 
 Original language for both received and outgoing messages. Use Auto to detect each message.
-== Original language for both received and outgoing messages. Use Auto to detect each message.
+== 收发消息均使用原文语言。使用“自动”可逐条检测。
 
 Original language for incoming and outgoing text
 == 收到与发出文本的原始语言
@@ -10485,7 +10485,7 @@ Port for the external console.
 == 用于外部控制台的端口
 
 Pose capture pixel budget in megapixels (0 = unlimited)
-== Pose capture pixel budget in megapixels (0 = unlimited)
+== 姿态捕捉像素预算（百万像素）（0 = 不限）
 
 Pose file
 == 合影文件
@@ -10494,19 +10494,19 @@ Pose preview
 == 合影预览
 
 Pose render fills the background with the entity layer
-== Pose render fills the background with the entity layer
+== 姿态渲染用实体层填充背景
 
 Pose render output format (0 = png, 1 = webp)
-== Pose render output format (0 = png, 1 = webp)
+== 姿态渲染输出格式（0 = png，1 = webp）
 
 Pose render supersampling scale (1-4)
-== Pose render supersampling scale (1-4)
+== 姿态渲染超采样倍率（1-4）
 
 Pose render unsharp mask strength (0 = off)
-== Pose render unsharp mask strength (0 = off)
+== 姿态渲染锐化遮罩强度（0 = 关闭）
 
 Poses
-== Poses
+== 姿态
 
 Position
 == 位置
@@ -10641,19 +10641,19 @@ Press F2, log in, then use: change_map map_name
 == 按 F2 登录管理后，输入：change_map 地图名
 
 Pressed hook collision line color when hitting a tee
-== Pressed hook collision line color when hitting a tee
+== 按住钩键时命中角色的钩子辅助线颜色
 
 Pressed hook collision line color when hitting something hookable
-== Pressed hook collision line color when hitting something hookable
+== 按住钩键时命中可钩物体的钩子辅助线颜色
 
 Pressed hook collision line color when not aiming at anything hookable
-== Pressed hook collision line color when not aiming at anything hookable
+== 按住钩键时未瞄准可钩物体的钩子辅助线颜色
 
 Pressed hook line color; always used when custom pressed colors are enabled
 == 按下后颜色；开启自定义按下后颜色时始终生效
 
 Pressed hook line tip color
-== Pressed hook line tip color
+== 按下时的钩子辅助线尖端颜色
 
 Pressed: A Tee
 == 按下后：其他玩家
@@ -10818,7 +10818,7 @@ Projectile / explosion range
 == 投射物/爆炸范围
 
 ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
-== ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
+== ProRes 档位覆盖：-1=自动（4:4:4 用 4444，其余用 HQ），0=Proxy，1=LT，2=422，3=HQ，4=4444，5=4444XQ
 
 Protect names and skins while streaming
 == 直播时保护名称和皮肤
@@ -11262,7 +11262,7 @@ Reconnect in %d sec
 == %d 秒后重新连接
 
 Record a MomentCap .poses scene to a video
-== Record a MomentCap .poses scene to a video
+== 将 MomentCap .poses 场景录制为视频
 
 Record chat replays.
 == 录制聊天回放
@@ -11583,7 +11583,7 @@ Render
 == 渲染
 
 Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
-== Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
+== 将 MomentCap .poses 文件渲染为截图（可选 1-4 倍超采样、实体层叠加、锐化 0-100）
 
 Render all custom colored feet as white feet skin
 == 将所有自定义脚部颜色渲染为白色
@@ -11865,7 +11865,7 @@ Resetting restores defaults immediately, so note down values you want to keep.
 == 重置会立刻恢复默认值，想保留的值请先记下来。
 
 Resolution:
-== Resolution:
+== 分辨率：
 
 Resource preview VRAM budget override (MB, 0=auto)
 == 资源预览显存预算覆盖（MB，0=自动）
@@ -12846,7 +12846,7 @@ Share of the server browser name/map split given to the name column (per mille)
 == 服务器浏览器名称/地图分栏中分配给名称列的千分比
 
 Sharpen
-== Sharpen
+== 锐化
 
 Shimmer speed
 == 流光速度
@@ -12888,7 +12888,7 @@ Show a ghost of your best time after crossing the start line
 == 越过起跑线后显示最佳成绩的残影
 
 Show a MomentCap .poses file in game (no export)
-== Show a MomentCap .poses file in game (no export)
+== 在游戏中查看 MomentCap .poses 文件（不导出）
 
 Show a small view of the dummy
 == 显示分身小视图
@@ -14460,7 +14460,7 @@ Start dummy skin queue from a random position when entering a map
 == 进入地图时从分身皮肤队列随机位置开始
 
 Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
-== Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
+== 每次进图都从随机队列位置开始（连接分身或重新启用轮换时也一样）。将切换间隔设为 0 可禁用定时轮换，仅进图时切换。
 
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 == 先保持默认值；其他玩家看起来跳动就稍微调高，感觉自己落后于他们就调低。
@@ -16326,7 +16326,7 @@ Unfreeze/Deep unfreeze tile outline width
 == 解冻/深解冻图块轮廓宽度
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
-== Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
+== 统一导出质量（CRF/CQ/QP 标度 0-51，-1 = 使用 cl_video_crf）；映射到各编码器的原生参数
 
 Uninvite player from team
 == 取消对玩家的队伍邀请
@@ -16512,7 +16512,7 @@ Use current settings
 == 读取当前设置
 
 Use custom colors for the pressed hook collision line (0 = always invert)
-== Use custom colors for the pressed hook collision line (0 = always invert)
+== 按下钩键时使用自定义钩子辅助线颜色（0 = 始终反色）
 
 Use custom skins instead of the ninja tee
 == 使用自定义皮肤代替忍者 Tee
@@ -16599,7 +16599,7 @@ Use pre-input to predict other players for more accurate input prediction
 == 使用预输入预测其他玩家以获得更精确的输入预测
 
 Use procedural ring pipeline
-== Use procedural ring pipeline
+== 使用程序化圆环管线
 
 Use server defaults
 == 使用服务默认值
@@ -16623,7 +16623,7 @@ Use Tee icons instead of circles
 == 用 Tee 图标代替圆圈
 
 Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
+== 按住钩键显示钩子辅助线时使用下方自定义颜色；关闭时自动反色使用未按下配色
 
 Use the custom colors below while the hook key is held
 == 按住钩索键时使用下方的自定义颜色
@@ -16728,7 +16728,7 @@ Video directory
 == 视频导出目录
 
 Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
-== Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
+== demo 导出视频编码器（留空 = 默认软件编码器，例如 h264_nvenc）
 
 Video encoding
 == 视频编码
@@ -17136,7 +17136,7 @@ When TClient rainbow Tee is enabled, this feature has no effect.
 == 已启用 TClient 彩虹 Tee 时，本功能不会生效。
 
 When you cross the start line, show a ghost tee replicating the movements of your best time
-== When you cross the start line, show a ghost tee replicating the movements of your best time
+== 越过起点线时显示一个重放你最好成绩动作的幽灵角色
 
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 == 你的头衔出现在哪里、长什么样：名牌、风格、动画、颜色和光晕。

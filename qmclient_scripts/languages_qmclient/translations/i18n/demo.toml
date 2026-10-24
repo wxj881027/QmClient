@@ -1,4 +1,5 @@
 # 请抬头享受阳光｜日子很好 我很我---------致咩子
+
 [[message]]
 key = "%.2f KiB"
 [message.translations]
@@ -2105,6 +2106,16 @@ key = "Recorded frame rate; higher is smoother and larger"
 [message.translations]
 simplified_chinese = "录制帧率；越高越流畅、文件越大"
 traditional_chinese = "錄製幀率；越高越流暢、檔案越大"
+japanese = "録画フレームレート。高いほど滑らかでファイルも大きくなります"
+korean = "녹화 프레임 레이트. 높을수록 부드럽고 파일이 커집니다"
+russian = "Частота кадров записи; выше — плавнее и крупнее файл"
+german = "Aufnahme-Framerate; höher ist flüssiger und größer"
+spanish = "Frecuencia de fotogramas de grabación; más alta es más fluida y más grande"
+french = "cadence d'images enregistrée ; plus haute est plus fluide et plus grande"
+brazilian_portuguese = "Taxa de quadros da gravação; mais alta é mais suave e maior"
+portuguese = "Taxa de fotogramas da gravação; mais alta é mais suave e maior"
+turkish = "Kayıt kare hızı; yüksek olan daha akıcı ve daha büyüktür"
+polish = "Klatkaż nagrania; wyższy jest płynniejszy i większy"
 
 [[message]]
 key = "Lower means better quality and larger files; 18 is recommended"
@@ -3582,3 +3593,83 @@ brazilian_portuguese = "Mostrar camada de entidades"
 portuguese = "Mostrar camada de entidades"
 turkish = "Varlık katmanını göster"
 polish = "Pokaż warstwę obiektów"
+
+[[message]]
+key = "Failed to save video. See local console for details."
+[message.translations]
+simplified_chinese = "保存视频失败。详情见本地控制台。"
+traditional_chinese = "儲存影片失敗。詳情見本機主控台。"
+japanese = "動画の保存に失敗しました。詳細はローカルコンソールを参照。"
+korean = "영상 저장에 실패했습니다. 자세한 내용은 로컬 콘솔을 확인하세요."
+russian = "Не удалось сохранить видео. Подробности в локальной консоли."
+german = "Video konnte nicht gespeichert werden. Details in der lokalen Konsole."
+spanish = "No se pudo guardar el vídeo. Consulta la consola local para más detalles."
+french = "échec de l'enregistrement de la vidéo. Consultez la console locale pour plus de détails."
+brazilian_portuguese = "Falha ao salvar o vídeo. Consulte o console local para obter detalhes."
+portuguese = "Falha ao guardar o vídeo. Consulte a consola local para obter detalhes."
+turkish = "Video kaydedilemedi. Ayrıntılar için yerel konsola bakın."
+polish = "Nie udało się zapisać wideo. Szczegóły w konsoli lokalnej."
+
+[[message]]
+key = "No map"
+[message.translations]
+simplified_chinese = "无地图"
+traditional_chinese = "無地圖"
+japanese = "マップなし"
+korean = "맵 없음"
+russian = "Нет карты"
+german = "Keine Karte"
+spanish = "Sin mapa"
+french = "Aucune carte"
+brazilian_portuguese = "Sem mapa"
+portuguese = "Sem mapa"
+turkish = "Harita yok"
+polish = "Brak mapy"
+
+[[message]]
+key = "Poses"
+[message.translations]
+simplified_chinese = "姿态"
+traditional_chinese = "姿態"
+japanese = "ポーズ"
+korean = "포즈"
+russian = "Позы"
+german = "Posen"
+spanish = "Poses"
+french = "Poses"
+brazilian_portuguese = "Poses"
+portuguese = "Poses"
+turkish = "Pozlar"
+polish = "Pozy"
+
+[[message]]
+key = "Resolution:"
+[message.translations]
+simplified_chinese = "分辨率："
+traditional_chinese = "解析度："
+japanese = "解像度:"
+korean = "해상도:"
+russian = "Разрешение:"
+german = "Auflösung:"
+spanish = "Resolución:"
+french = "Résolution :"
+brazilian_portuguese = "Resolução:"
+portuguese = "Resolução:"
+turkish = "Çözünürlük:"
+polish = "Rozdzielczość:"
+
+[[message]]
+key = "Sharpen"
+[message.translations]
+simplified_chinese = "锐化"
+traditional_chinese = "銳利化"
+japanese = "シャープン"
+korean = "샤픈"
+russian = "Резкость"
+german = "Schärfen"
+spanish = "Enfocar"
+french = "Netteté"
+brazilian_portuguese = "Nitidez"
+portuguese = "Nitidez"
+turkish = "Keskinleştirme"
+polish = "Wyostrzanie"

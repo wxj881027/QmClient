@@ -19375,12 +19375,6 @@ turkish = "İsteğe bağlı ses WebSocket uç noktası (boşsa UDP taşıması k
 polish = "Opcjonalny punkt końcowy WebSocket dla głosu (puste zachowuje transport UDP)"
 
 [[message]]
-key = "Original language for incoming and outgoing text"
-[message.translations]
-simplified_chinese = "收到与发出文本的原始语言"
-traditional_chinese = "收到與發出文字的原始語言"
-
-[[message]]
 key = "Original message language"
 [message.translations]
 simplified_chinese = "原文语言"
@@ -38302,12 +38296,6 @@ turkish = "Özgün tekerlek kaydırmasını geri getir: her kademe hızı devral
 polish = "Przywróć oryginalne przewijanie kółkiem: każdy skok uruchamia płynne przewijanie od nowa bez zachowania prędkości"
 
 [[message]]
-key = "Restart smooth scrolling on every wheel tick"
-[message.translations]
-simplified_chinese = "每次滚轮都从静止重新开始平滑滚动"
-traditional_chinese = "每次滾輪都從靜止重新開始平滑捲動"
-
-[[message]]
 key = "Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick"
 [message.translations]
 simplified_chinese = "滚轮每格的界面像素步长；设置卡片页面每格滚动此值的 12 倍"
@@ -38706,3 +38694,451 @@ brazilian_portuguese = "Tamanho do título na placa de nome"
 portuguese = "Tamanho do título na placa de nome"
 turkish = "İsim etiketindeki unvan boyutu"
 polish = "Rozmiar tytułu na plakietce gracza"
+
+[[message]]
+key = "Allow the client to send kill requests (0 = ignore client-initiated kills)"
+[message.translations]
+simplified_chinese = "允许客户端发送自杀请求（0 = 忽略客户端发起的自杀）"
+traditional_chinese = "允許用戶端傳送自殺請求（0 = 忽略用戶端發起的自殺）"
+japanese = "クライアントからのキル要求を許可（0 = クライアント発のキルを無視）"
+korean = "클라이언트 킬 요청 허용 (0 = 클라이언트 발 킬 무시)"
+russian = "Разрешить клиенту отправлять запросы на самоубийство (0 = игнорировать самоубийства со стороны клиента)"
+german = "Selbsttötungsanfragen des Clients erlauben (0 = clientseitige Selbsttötungen ignorieren)"
+spanish = "Permite que el cliente envíe solicitudes de suicidio (0 = ignorar los suicidios iniciados por el cliente)"
+french = "Autorise le client à envoyer des demandes de suicide (0 = ignorer les suicides initiés par le client)"
+brazilian_portuguese = "Permite que o cliente envie solicitações de morte (0 = ignorar mortes iniciadas pelo cliente)"
+portuguese = "Permite que o cliente envie pedidos de morte (0 = ignorar mortes iniciadas pelo cliente)"
+turkish = "İstemcinin intihar isteği göndermesine izin ver (0 = istemci kaynaklı intiharları yok say)"
+polish = "Zezwól klientowi na wysyłanie żądań samobójstwa (0 = ignoruj samobójstwa inicjowane przez klienta)"
+
+[[message]]
+key = "Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering"
+[message.translations]
+simplified_chinese = "视频导出抗锯齿：-1 = 跟随 gfx_fsaa_samples，0 = 关闭，2/4/8 = 多重采样离屏渲染"
+traditional_chinese = "影片匯出抗鋸齒：-1 = 跟隨 gfx_fsaa_samples，0 = 關閉，2/4/8 = 多重取樣離屏渲染"
+japanese = "動画書き出しのアンチエイリアス: -1 = gfx_fsaa_samples に従う、0 = オフ、2/4/8 = マルチサンプルのオフスクリーンレンダリング"
+korean = "영상 내보내기 안티에일리어싱: -1 = gfx_fsaa_samples 따름, 0 = 끔, 2/4/8 = 멀티샘플 오프스크린 렌더링"
+russian = "Сглаживание при экспорте видео: -1 = следовать gfx_fsaa_samples, 0 = выкл., 2/4/8 = мультисэмпловый закадровый рендеринг"
+german = "Kantenglättung für den Videoexport: -1 = gfx_fsaa_samples folgen, 0 = aus, 2/4/8 = multisampled Offscreen-Rendering"
+spanish = "Antialiasing para la exportación de vídeo: -1 = seguir gfx_fsaa_samples, 0 = desactivado, 2/4/8 = renderizado fuera de pantalla con multisampleo"
+french = "anticrénelage pour l'export vidéo : -1 = suivre gfx_fsaa_samples, 0 = désactivé, 2/4/8 = rendu hors écran multiséchantillonné"
+brazilian_portuguese = "Antialiasing para exportação de vídeo: -1 = seguir gfx_fsaa_samples, 0 = desativado, 2/4/8 = renderização offscreen com multisampling"
+portuguese = "Antialiasing para a exportação de vídeo: -1 = seguir gfx_fsaa_samples, 0 = desativado, 2/4/8 = renderização offscreen com multisampling"
+turkish = "Video dışa aktarma için kenar yumuşatma: -1 = gfx_fsaa_samples izle, 0 = kapalı, 2/4/8 = çok örneklemeli ekran dışı işleme"
+polish = "Anti-aliasing dla eksportu wideo: -1 = zgodnie z gfx_fsaa_samples, 0 = wyłączone, 2/4/8 = wielopróbkowany rendering pozaekranowy"
+
+[[message]]
+key = "Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)"
+[message.translations]
+simplified_chinese = "存档载入成功后自动删除本地记录（0 = 保留并标记为已使用，1 = 删除）"
+traditional_chinese = "存檔載入成功後自動刪除本地記錄（0 = 保留並標記為已使用，1 = 刪除）"
+japanese = "読み込みに成功したローカルセーブ記録を自動削除（0 = 保持して使用済みとしてマーク、1 = 削除）"
+korean = "로컬 저장 기록을 성공적으로 불러온 후 자동 삭제 (0 = 유지하고 사용됨으로 표시, 1 = 삭제)"
+russian = "Автоматически удалять локальную запись сохранения после успешной загрузки (0 = сохранять и помечать как использованную, 1 = удалять)"
+german = "Lokalen Spielstand-Eintrag nach erfolgreichem Laden automatisch entfernen (0 = behalten und als benutzt markieren, 1 = entfernen)"
+spanish = "Elimina automáticamente un registro guardado local tras cargarlo correctamente (0 = conservar y marcar como usado, 1 = eliminar)"
+french = "Supprime automatiquement un enregistrement local après l'avoir chargé avec succès (0 = conserver et marquer comme utilisé, 1 = supprimer)"
+brazilian_portuguese = "Remove automaticamente um registro salvo local após carregá-lo com sucesso (0 = manter e marcar como usado, 1 = remover)"
+portuguese = "Remove automaticamente um registo guardado localmente após o carregar com sucesso (0 = manter e marcar como usado, 1 = remover)"
+turkish = "Yüklendikten sonra yerel kayıt girişini otomatik sil (0 = tut ve kullanıldı olarak işaretle, 1 = sil)"
+polish = "Automatycznie usuń lokalny zapis po pomyślnym wczytaniu (0 = zachowaj i oznacz jako użyty, 1 = usuń)"
+
+[[message]]
+key = "Bounded capture frame queue depth for demo export (higher values use more memory)"
+[message.translations]
+simplified_chinese = "demo 导出捕捉帧队列深度上限（数值越大占用内存越多）"
+traditional_chinese = "demo 匯出擷取影格佇列深度上限（數值越大占用記憶體越多）"
+japanese = "デモ書き出しのキャプチャフレームキュー深さの上限（大きいほどメモリを消費）"
+korean = "데모 내보내기 캡처 프레임 큐 깊이 상한 (값이 클수록 메모리를 더 사용)"
+russian = "Ограничение глубины очереди захвата кадров для экспорта демо (большие значения используют больше памяти)"
+german = "Begrenzte Tiefe der Capture-Frame-Queue für den Demo-Export (höhere Werte verwenden mehr Speicher)"
+spanish = "Profundidad máxima de la cola de fotogramas de captura para la exportación de demo (valores más altos usan más memoria)"
+french = "profondeur maximale de la file d'images de capture pour l'export de démo (des valeurs plus hautes utilisent plus de mémoire)"
+brazilian_portuguese = "Profundidade máxima da fila de quadros de captura para exportação de demo (valores maiores usam mais memória)"
+portuguese = "Profundidade máxima da fila de fotogramas de captura para a exportação de demo (valores maiores usam mais memória)"
+turkish = "Demo dışa aktarma için yakalama kare kuyruğu derinlik sınırı (yüksek değerler daha çok bellek kullanır)"
+polish = "Ograniczenie głębokości kolejki klatek przechwytywania dla eksportu dema (wyższe wartości używają więcej pamięci)"
+
+[[message]]
+key = "Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)"
+[message.translations]
+simplified_chinese = "导出色度采样偏好：0=自动，1=4:2:0，2=4:2:2，3=4:4:4（越高越能保留细小彩色细节）"
+traditional_chinese = "匯出色度取樣偏好：0=自動，1=4:2:0，2=4:2:2，3=4:4:4（越高越能保留細小彩色細節）"
+japanese = "書き出しのクロマサンプリング設定: 0=自動、1=4:2:0、2=4:2:2、3=4:4:4（高いほど細かい色のディテールを保持）"
+korean = "내보내기 크로마 샘플링 기본 설정: 0=자동, 1=4:2:0, 2=4:2:2, 3=4:4:4 (높을수록 가는 색 디테일 유지)"
+russian = "Предпочтение субдискретизации цветности при экспорте: 0=авто, 1=4:2:0, 2=4:2:2, 3=4:4:4 (выше — лучше сохраняются тонкие цветные детали)"
+german = "Chroma-Subsampling-Präferenz für den Export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (höher erhält feine Farbdetails)"
+spanish = "Preferencia de submuestreo de croma para la exportación: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (más alto conserva detalles finos de color)"
+french = "préférence de sous-échantillonnage de la chroma pour l'export : 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (plus haut conserve les détails fins des couleurs)"
+brazilian_portuguese = "Preferência de subamostragem de croma para exportação: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (maior mantém detalhes finos de cor)"
+portuguese = "Preferência de subamostragem de croma para a exportação: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (maior mantém detalhes finos de cor)"
+turkish = "Dışa aktarma için kroma örnekleme tercihi: 0=otomatik, 1=4:2:0, 2=4:2:2, 3=4:4:4 (yüksek olan ince renk ayrıntılarını korur)"
+polish = "Preferencja próbkowania chromy dla eksportu: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (wyższe zachowuje drobne szczegóły kolorów)"
+
+[[message]]
+key = "Custom export container: mp4, mov or mkv"
+[message.translations]
+simplified_chinese = "自定义导出容器：mp4、mov 或 mkv"
+traditional_chinese = "自訂匯出容器：mp4、mov 或 mkv"
+japanese = "カスタム書き出しコンテナ: mp4、mov、mkv"
+korean = "사용자 지정 내보내기 컨테이너: mp4, mov 또는 mkv"
+russian = "Пользовательский контейнер экспорта: mp4, mov или mkv"
+german = "Benutzerdefinierter Export-Container: mp4, mov oder mkv"
+spanish = "Contenedor de exportación personalizado: mp4, mov o mkv"
+french = "conteneur d'export personnalisé : mp4, mov ou mkv"
+brazilian_portuguese = "Contêiner de exportação personalizado: mp4, mov ou mkv"
+portuguese = "Contentor de exportação personalizado: mp4, mov ou mkv"
+turkish = "Özel dışa aktarma kapsayıcısı: mp4, mov veya mkv"
+polish = "Niestandardowy kontener eksportu: mp4, mov lub mkv"
+
+[[message]]
+key = "Demo export segment length in seconds (0 = single file, 300 = 5 minutes)"
+[message.translations]
+simplified_chinese = "demo 导出分段时长（秒）（0 = 单文件，300 = 5 分钟）"
+traditional_chinese = "demo 匯出分段時長（秒）（0 = 單一檔案，300 = 5 分鐘）"
+japanese = "デモ書き出しのセグメント長（秒）（0 = 単一ファイル、300 = 5分）"
+korean = "데모 내보내기 세그먼트 길이(초) (0 = 단일 파일, 300 = 5분)"
+russian = "Длина сегмента экспорта демо в секундах (0 = один файл, 300 = 5 минут)"
+german = "Segmentlänge des Demo-Exports in Sekunden (0 = einzelne Datei, 300 = 5 Minuten)"
+spanish = "Duración del segmento de exportación de demo en segundos (0 = archivo único, 300 = 5 minutos)"
+french = "durée des segments d'export de démo en secondes (0 = fichier unique, 300 = 5 minutes)"
+brazilian_portuguese = "Duração do segmento de exportação de demo em segundos (0 = arquivo único, 300 = 5 minutos)"
+portuguese = "Duração do segmento de exportação de demo em segundos (0 = ficheiro único, 300 = 5 minutos)"
+turkish = "Demo dışa aktarma segment süresi (saniye) (0 = tek dosya, 300 = 5 dakika)"
+polish = "Długość segmentu eksportu dema w sekundach (0 = pojedynczy plik, 300 = 5 minut)"
+
+[[message]]
+key = "Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)"
+[message.translations]
+simplified_chinese = "每段开始前不录制预放的 demo tick 数，用于恢复特效与聊天状态（50 tick = 1 秒）"
+traditional_chinese = "每段開始前不錄製預放的 demo tick 數，用於恢復特效與聊天狀態（50 tick = 1 秒）"
+japanese = "各セグメントの前に録画せずに再生するデモtick数。エフェクトとチャット状態を復元します（50 tick = 1秒）"
+korean = "각 세그먼트 전에 녹화 없이 재생하는 데모 틱 수. 이펙트와 채팅 상태를 복원합니다 (50틱 = 1초)"
+russian = "Количество тиков демо, проигрываемых без записи перед каждым сегментом для восстановления эффектов и состояния чата (50 тиков = 1 секунда)"
+german = "Demo-Ticks, die vor jedem Segment ohne Aufnahme abgespielt werden, um Effekte und Chat-Zustand wiederherzustellen (50 Ticks = 1 Sekunde)"
+spanish = "Ticks de demo reproducidos sin grabar antes de cada segmento para restaurar efectos y el estado del chat (50 ticks = 1 segundo)"
+french = "ticks de démo joués sans enregistrement avant chaque segment pour restaurer les effets et l'état du chat (50 ticks = 1 seconde)"
+brazilian_portuguese = "Ticks de demo reproduzidos sem gravação antes de cada segmento para restaurar efeitos e o estado do chat (50 ticks = 1 segundo)"
+portuguese = "Ticks de demo reproduzidos sem gravação antes de cada segmento para restaurar efeitos e o estado do chat (50 ticks = 1 segundo)"
+turkish = "Her segmentden önce efektleri ve sohbet durumunu geri yüklemek için kayıt yapılmadan oynanan demo tick sayısı (50 tick = 1 saniye)"
+polish = "Liczba tików dema odtwarzanych bez nagrywania przed każdym segmentem, aby przywrócić efekty i stan czatu (50 tików = 1 sekunda)"
+
+[[message]]
+key = "Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)"
+[message.translations]
+simplified_chinese = "导出输出高度（像素）（0 = 跟随窗口渲染尺寸；小于窗口 = 超采样后缩小）"
+traditional_chinese = "匯出輸出高度（像素）（0 = 跟隨視窗渲染尺寸；小於視窗 = 超取樣後縮小）"
+japanese = "書き出し出力の高さ（ピクセル）（0 = ウィンドウのレンダリングサイズに従う。ウィンドウより小さい = 超サンプリングして縮小）"
+korean = "내보내기 출력 높이(픽셀) (0 = 창 렌더링 크기 따름. 창보다 작으면 슈퍼샘플링 후 축소)"
+russian = "Высота вывода экспорта в пикселях (0 = по размеру рендера окна; меньше окна = даунскейл из supersampling)"
+german = "Ausgabehöhe des Exports in Pixeln (0 = Fenster-Rendergröße folgen; kleiner als das Fenster = herunterskaliertes Supersampling)"
+spanish = "Altura de salida de la exportación en píxeles (0 = seguir el tamaño de renderizado de la ventana; menor que la ventana = reducción con supersampling)"
+french = "hauteur de sortie de l'export en pixels (0 = suivre la taille de rendu de la fenêtre ; plus petit que la fenêtre = réduction surséchantillonnée)"
+brazilian_portuguese = "Altura de saída da exportação em pixels (0 = seguir o tamanho de renderização da janela; menor que a janela = redução com supersampling)"
+portuguese = "Altura de saída da exportação em pixéis (0 = seguir o tamanho de renderização da janela; menor que a janela = redução com supersampling)"
+turkish = "Dışa aktarma çıktı yüksekliği (piksel) (0 = pencere işleme boyutunu izle. Pencereden küçük = supersampling ile küçültme)"
+polish = "Wysokość wyjściowa eksportu w pikselach (0 = zgodnie z rozmiarem renderowania okna; mniejsze niż okno = downscaling z supersamplingu)"
+
+[[message]]
+key = "Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)"
+[message.translations]
+simplified_chinese = "导出输出宽度（像素）（0 = 跟随窗口渲染尺寸；小于窗口 = 超采样后缩小）"
+traditional_chinese = "匯出輸出寬度（像素）（0 = 跟隨視窗渲染尺寸；小於視窗 = 超取樣後縮小）"
+japanese = "書き出し出力の幅（ピクセル）（0 = ウィンドウのレンダリングサイズに従う。ウィンドウより小さい = 超サンプリングして縮小）"
+korean = "내보내기 출력 너비(픽셀) (0 = 창 렌더링 크기 따름. 창보다 작으면 슈퍼샘플링 후 축소)"
+russian = "Ширина вывода экспорта в пикселях (0 = по размеру рендера окна; меньше окна = даунскейл из supersampling)"
+german = "Ausgabebreite des Exports in Pixeln (0 = Fenster-Rendergröße folgen; kleiner als das Fenster = herunterskaliertes Supersampling)"
+spanish = "Anchura de salida de la exportación en píxeles (0 = seguir el tamaño de renderizado de la ventana; menor que la ventana = reducción con supersampling)"
+french = "largeur de sortie de l'export en pixels (0 = suivre la taille de rendu de la fenêtre ; plus petit que la fenêtre = réduction surséchantillonnée)"
+brazilian_portuguese = "Largura de saída da exportação em pixels (0 = seguir o tamanho de renderização da janela; menor que a janela = redução com supersampling)"
+portuguese = "Largura de saída da exportação em pixéis (0 = seguir o tamanho de renderização da janela; menor que a janela = redução com supersampling)"
+turkish = "Dışa aktarma çıktı genişliği (piksel) (0 = pencere işleme boyutunu izle. Pencereden küçük = supersampling ile küçültme)"
+polish = "Szerokość wyjściowa eksportu w pikselach (0 = zgodnie z rozmiarem renderowania okna; mniejsze niż okno = downscaling z supersamplingu)"
+
+[[message]]
+key = "Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)"
+[message.translations]
+simplified_chinese = "导出预设：0=自定义，1=日常(libx264/mp4)，2=高效分享(hevc/mp4)，3=剪辑(all-intra H.264/mp4)，4=交换(ProRes/mov)，5=最佳质量(all-intra H.264 4:4:4/mp4)，6=最快(硬件 h264/mp4)"
+traditional_chinese = "匯出預設：0=自訂，1=日常(libx264/mp4)，2=高效分享(hevc/mp4)，3=剪輯(all-intra H.264/mp4)，4=交換(ProRes/mov)，5=最佳品質(all-intra H.264 4:4:4/mp4)，6=最快(硬體 h264/mp4)"
+japanese = "書き出しプリセット: 0=カスタム、1=日常(libx264/mp4)、2=効率的な共有(hevc/mp4)、3=編集用(all-intra H.264/mp4)、4=交換用(ProRes/mov)、5=最高品質(all-intra H.264 4:4:4/mp4)、6=最速(ハードウェア h264/mp4)"
+korean = "내보내기 프리셋: 0=사용자 지정, 1=일상(libx264/mp4), 2=효율적 공유(hevc/mp4), 3=편집(all-intra H.264/mp4), 4=교환(ProRes/mov), 5=최고 품질(all-intra H.264 4:4:4/mp4), 6=최속(하드웨어 h264/mp4)"
+russian = "Пресет экспорта: 0=свой, 1=повседневный(libx264/mp4), 2=экономный шеринг(hevc/mp4), 3=монтаж(all-intra H.264/mp4), 4=обмен(ProRes/mov), 5=лучшее качество(all-intra H.264 4:4:4/mp4), 6=быстрейший(аппаратный h264/mp4)"
+german = "Export-Preset: 0=benutzerdefiniert, 1=täglich(libx264/mp4), 2=effizientes Teilen(hevc/mp4), 3=Schnitt(all-intra H.264/mp4), 4=Austausch(ProRes/mov), 5=beste Qualität(all-intra H.264 4:4:4/mp4), 6=am schnellsten(Hardware-h264/mp4)"
+spanish = "Preset de exportación: 0=personalizado, 1=diario(libx264/mp4), 2=compartir eficiente(hevc/mp4), 3=edición(all-intra H.264/mp4), 4=intercambio(ProRes/mov), 5=mejor calidad(all-intra H.264 4:4:4/mp4), 6=más rápido(hardware h264/mp4)"
+french = "préréglage d'export : 0=personnalisé, 1=quotidien(libx264/mp4), 2=partage efficace(hevc/mp4), 3=montage(all-intra H.264/mp4), 4=échange(ProRes/mov), 5=meilleure qualité(all-intra H.264 4:4:4/mp4), 6=le plus rapide(hardware h264/mp4)"
+brazilian_portuguese = "Predefinição de exportação: 0=personalizado, 1=diário(libx264/mp4), 2=compartilhamento eficiente(hevc/mp4), 3=edição(all-intra H.264/mp4), 4=intercâmbio(ProRes/mov), 5=melhor qualidade(all-intra H.264 4:4:4/mp4), 6=mais rápido(hardware h264/mp4)"
+portuguese = "Predefinição de exportação: 0=personalizado, 1=diário(libx264/mp4), 2=partilha eficiente(hevc/mp4), 3=edição(all-intra H.264/mp4), 4=intercâmbio(ProRes/mov), 5=melhor qualidade(all-intra H.264 4:4:4/mp4), 6=mais rápido(hardware h264/mp4)"
+turkish = "Dışa aktarma ön ayarı: 0=özel, 1=günlük(libx264/mp4), 2=verimli paylaşım(hevc/mp4), 3=kurgu(all-intra H.264/mp4), 4=takas(ProRes/mov), 5=en iyi kalite(all-intra H.264 4:4:4/mp4), 6=en hızlı(donanım h264/mp4)"
+polish = "Preset eksportu: 0=własny, 1=codzienny(libx264/mp4), 2=efektywne udostępnianie(hevc/mp4), 3=montaż(all-intra H.264/mp4), 4=wymiana(ProRes/mov), 5=najlepsza jakość(all-intra H.264 4:4:4/mp4), 6=najszybszy(sprzętowy h264/mp4)"
+
+[[message]]
+key = "Extra vertical spacing between chat lines in pixels (0 = default)"
+[message.translations]
+simplified_chinese = "聊天行与行之间的额外垂直间距（像素）（0 = 默认）"
+traditional_chinese = "聊天行與行之間的額外垂直間距（像素）（0 = 預設）"
+japanese = "チャット行間の追加の縦余白（ピクセル）（0 = 既定）"
+korean = "채팅 줄 사이의 추가 세로 간격(픽셀) (0 = 기본값)"
+russian = "Дополнительный вертикальный интервал между строками чата в пикселях (0 = по умолчанию)"
+german = "Zusätzlicher vertikaler Abstand zwischen Chat-Zeilen in Pixeln (0 = Standard)"
+spanish = "Espaciado vertical adicional entre líneas de chat en píxeles (0 = predeterminado)"
+french = "espacement vertical supplémentaire entre les lignes de chat en pixels (0 = par défaut)"
+brazilian_portuguese = "Espaçamento vertical adicional entre linhas de chat em pixels (0 = padrão)"
+portuguese = "Espaçamento vertical adicional entre linhas de chat em pixéis (0 = predefinido)"
+turkish = "Sohbet satırları arasına ek dikey boşluk (piksel) (0 = varsayılan)"
+polish = "Dodatkowy pionowy odstęp między liniami czatu w pikselach (0 = domyślny)"
+
+[[message]]
+key = "Keyframe interval (GOP) in frames for demo export (0 = encoder default, 1 = all-intra, 60 = recommended)"
+[message.translations]
+simplified_chinese = "demo 导出关键帧间隔（GOP，帧）（0 = 编码器默认，1 = 全帧内，60 = 推荐）"
+traditional_chinese = "demo 匯出關鍵影格間隔（GOP，影格）（0 = 編碼器預設，1 = 全影格內，60 = 建議）"
+japanese = "デモ書き出しのキーフレーム間隔（GOP、フレーム）（0 = エンコーダーの既定、1 = 全フレームイントラ、60 = 推奨）"
+korean = "데모 내보내기 키프레임 간격(GOP, 프레임) (0 = 인코더 기본값, 1 = 올인트라, 60 = 권장)"
+russian = "Интервал ключевых кадров (GOP) в кадрах для экспорта демо (0 = по умолчанию кодировщика, 1 = all-intra, 60 = рекомендуется)"
+german = "Keyframe-Intervall (GOP) in Frames für den Demo-Export (0 = Encoder-Standard, 1 = all-intra, 60 = empfohlen)"
+spanish = "Intervalo de fotogramas clave (GOP) en fotogramas para la exportación de demo (0 = predeterminado del codificador, 1 = all-intra, 60 = recomendado)"
+french = "intervalle d'images clés (GOP) en images pour l'export de démo (0 = valeur par défaut de l'encodeur, 1 = all-intra, 60 = recommandé)"
+brazilian_portuguese = "Intervalo de quadros-chave (GOP) em quadros para a exportação de demo (0 = padrão do codificador, 1 = all-intra, 60 = recomendado)"
+portuguese = "Intervalo de fotogramas-chave (GOP) em fotogramas para a exportação de demo (0 = predefinição do codificador, 1 = all-intra, 60 = recomendado)"
+turkish = "Demo dışa aktarma için anahtar kare aralığı (GOP, kare) (0 = kodlayıcı varsayılanı, 1 = all-intra, 60 = önerilen)"
+polish = "Odstęp klatek kluczowych (GOP) w klatkach dla eksportu dema (0 = domyślny koder, 1 = all-intra, 60 = zalecane)"
+
+[[message]]
+key = "Number of video pixel-format conversion threads for demo export (2-4 recommended)"
+[message.translations]
+simplified_chinese = "demo 导出视频像素格式转换线程数（推荐 2-4）"
+traditional_chinese = "demo 匯出影片像素格式轉換執行緒數（建議 2-4）"
+japanese = "デモ書き出しのピクセルフォーマット変換スレッド数（2-4 推奨）"
+korean = "데모 내보내기 영상 픽셀 포맷 변환 스레드 수 (2-4 권장)"
+russian = "Число потоков преобразования пиксельного формата видео для экспорта демо (рекомендуется 2-4)"
+german = "Anzahl der Threads zur Pixelformat-Konvertierung für den Demo-Export (2-4 empfohlen)"
+spanish = "Número de hilos de conversión de formato de píxel de vídeo para la exportación de demo (se recomienda 2-4)"
+french = "nombre de threads de conversion de format de pixels vidéo pour l'export de démo (2-4 recommandé)"
+brazilian_portuguese = "Número de threads de conversão de formato de pixel de vídeo para a exportação de demo (2-4 recomendado)"
+portuguese = "Número de threads de conversão de formato de pixel de vídeo para a exportação de demo (2-4 recomendado)"
+turkish = "Demo dışa aktarma için video piksel biçimi dönüştürme iş parçacığı sayısı (2-4 önerilir)"
+polish = "Liczba wątków konwersji formatu pikseli wideo dla eksportu dema (zalecane 2-4)"
+
+[[message]]
+key = "Pose capture pixel budget in megapixels (0 = unlimited)"
+[message.translations]
+simplified_chinese = "姿态捕捉像素预算（百万像素）（0 = 不限）"
+traditional_chinese = "姿態擷取像素預算（百萬像素）（0 = 不限）"
+japanese = "ポーズキャプチャのピクセル予算（メガピクセル）（0 = 無制限）"
+korean = "포즈 캡처 픽셀 예산(메가픽셀) (0 = 무제한)"
+russian = "Бюджет пикселей захвата поз в мегапикселях (0 = без ограничений)"
+german = "Pixel-Budget der Posen-Aufnahme in Megapixeln (0 = unbegrenzt)"
+spanish = "Presupuesto de píxeles de la captura de poses en megapíxeles (0 = ilimitado)"
+french = "budget de pixels de la capture de poses en mégapixels (0 = illimité)"
+brazilian_portuguese = "Orçamento de pixels da captura de poses em megapixels (0 = ilimitado)"
+portuguese = "Orçamento de píxeis da captura de poses em megapixéis (0 = ilimitado)"
+turkish = "Poz yakalama piksel bütçesi (megapiksel) (0 = sınırsız)"
+polish = "Budżet pikseli przechwytywania poz w megapikselach (0 = bez limitu)"
+
+[[message]]
+key = "Pose render fills the background with the entity layer"
+[message.translations]
+simplified_chinese = "姿态渲染用实体层填充背景"
+traditional_chinese = "姿態渲染用實體層填充背景"
+japanese = "ポーズレンダリングはエンティティレイヤーで背景を埋めます"
+korean = "포즈 렌더링은 엔티티 레이어로 배경을 채웁니다"
+russian = "Рендер поз заполняет фон слоем сущностей"
+german = "Das Posen-Rendering füllt den Hintergrund mit der Entity-Ebene"
+spanish = "El renderizado de poses rellena el fondo con la capa de entidades"
+french = "le rendu des poses remplit l'arrière-plan avec la couche d'entités"
+brazilian_portuguese = "O render de poses preenche o fundo com a camada de entidades"
+portuguese = "A renderização de poses preenche o fundo com a camada de entidades"
+turkish = "Poz işleme, arka planı varlık katmanıyla doldurur"
+polish = "Renderowanie poz wypełnia tło warstwą obiektów"
+
+[[message]]
+key = "Pose render output format (0 = png, 1 = webp)"
+[message.translations]
+simplified_chinese = "姿态渲染输出格式（0 = png，1 = webp）"
+traditional_chinese = "姿態渲染輸出格式（0 = png，1 = webp）"
+japanese = "ポーズレンダリングの出力形式（0 = png、1 = webp）"
+korean = "포즈 렌더링 출력 형식 (0 = png, 1 = webp)"
+russian = "Формат вывода рендера поз (0 = png, 1 = webp)"
+german = "Ausgabeformat des Posen-Renderings (0 = png, 1 = webp)"
+spanish = "Formato de salida del renderizado de poses (0 = png, 1 = webp)"
+french = "format de sortie du rendu des poses (0 = png, 1 = webp)"
+brazilian_portuguese = "Formato de saída do render de poses (0 = png, 1 = webp)"
+portuguese = "Formato de saída da renderização de poses (0 = png, 1 = webp)"
+turkish = "Poz işleme çıktı biçimi (0 = png, 1 = webp)"
+polish = "Format wyjściowy renderowania poz (0 = png, 1 = webp)"
+
+[[message]]
+key = "Pose render supersampling scale (1-4)"
+[message.translations]
+simplified_chinese = "姿态渲染超采样倍率（1-4）"
+traditional_chinese = "姿態渲染超取樣倍率（1-4）"
+japanese = "ポーズレンダリングのスーパーサンプリング倍率（1-4）"
+korean = "포즈 렌더링 슈퍼샘플링 배율 (1-4)"
+russian = "Масштаб суперсэмплинга рендера поз (1-4)"
+german = "Supersampling-Faktor des Posen-Renderings (1-4)"
+spanish = "Factor de supersampling del renderizado de poses (1-4)"
+french = "facteur de surséchantillonnage du rendu des poses (1-4)"
+brazilian_portuguese = "Fator de supersampling do render de poses (1-4)"
+portuguese = "Fator de supersampling da renderização de poses (1-4)"
+turkish = "Poz işleme supersampling ölçeği (1-4)"
+polish = "Współczynnik supersamplingu renderowania poz (1-4)"
+
+[[message]]
+key = "Pose render unsharp mask strength (0 = off)"
+[message.translations]
+simplified_chinese = "姿态渲染锐化遮罩强度（0 = 关闭）"
+traditional_chinese = "姿態渲染銳利化遮罩強度（0 = 關閉）"
+japanese = "ポーズレンダリングのアンシャープマスク強度（0 = オフ）"
+korean = "포즈 렌더링 언샵 마스크 강도 (0 = 끔)"
+russian = "Сила маски нерезкости рендера поз (0 = выкл.)"
+german = "Unsharp-Mask-Stärke des Posen-Renderings (0 = aus)"
+spanish = "Intensidad de la máscara de enfoque del renderizado de poses (0 = desactivado)"
+french = "intensité du masque de netteté du rendu des poses (0 = désactivé)"
+brazilian_portuguese = "Intensidade da máscara de nitidez do render de poses (0 = desativado)"
+portuguese = "Intensidade da máscara de nitidez da renderização de poses (0 = desativado)"
+turkish = "Poz işleme unsharp mask gücü (0 = kapalı)"
+polish = "Siła maski wyostrzającej renderowania poz (0 = wyłączone)"
+
+[[message]]
+key = "Pressed hook collision line color when hitting a tee"
+[message.translations]
+simplified_chinese = "按住钩键时命中角色的钩子辅助线颜色"
+traditional_chinese = "按住鉤鍵時命中角色的鉤子輔助線顏色"
+japanese = "フックキー押下時にTeeに当たったときのフック補助線の色"
+korean = "훅 키를 누를 때 Tee에 닿았을 때의 훅 보조선 색상"
+russian = "Цвет линии зацепа при нажатой клавише при попадании в тии"
+german = "Farbe der Haken-Hilfslinie bei gedrückter Taste beim Treffen eines Tees"
+spanish = "Color de la línea de gancho al presionar cuando golpea a un tee"
+french = "couleur de la ligne de grappin maintenue lors d'un impact sur un tee"
+brazilian_portuguese = "Cor da linha de gancho pressionada ao acertar um tee"
+portuguese = "Cor da linha de gancho premida ao acertar um tee"
+turkish = "Tee'ye isabet ettiğinde basılı kanca yardımcı çizgi rengi"
+polish = "Kolor linii haka przy wciśniętym klawiszu przy trafieniu w tee"
+
+[[message]]
+key = "Pressed hook collision line color when hitting something hookable"
+[message.translations]
+simplified_chinese = "按住钩键时命中可钩物体的钩子辅助线颜色"
+traditional_chinese = "按住鉤鍵時命中可鉤物體的鉤子輔助線顏色"
+japanese = "フックキー押下時にフック可能な物体に当たったときのフック補助線の色"
+korean = "훅 키를 누를 때 훅 가능한 물체에 닿았을 때의 훅 보조선 색상"
+russian = "Цвет линии зацепа при нажатой клавише при попадании в зацепляемый объект"
+german = "Farbe der Haken-Hilfslinie bei gedrückter Taste beim Treffen eines hakenbaren Objekts"
+spanish = "Color de la línea de gancho al presionar cuando golpea algo enganchable"
+french = "couleur de la ligne de grappin maintenue lors d'un impact sur un objet accrochable"
+brazilian_portuguese = "Cor da linha de gancho pressionada ao acertar algo agarrável"
+portuguese = "Cor da linha de gancho premida ao acertar algo agarrável"
+turkish = "Kanca atılabilir bir şeye isabet ettiğinde basılı kanca yardımcı çizgi rengi"
+polish = "Kolor linii haka przy wciśniętym klawiszu przy trafieniu w coś zaczepialnego"
+
+[[message]]
+key = "Pressed hook collision line color when not aiming at anything hookable"
+[message.translations]
+simplified_chinese = "按住钩键时未瞄准可钩物体的钩子辅助线颜色"
+traditional_chinese = "按住鉤鍵時未瞄準可鉤物體的鉤子輔助線顏色"
+japanese = "フックキー押下時にフック可能な物体を狙っていないときのフック補助線の色"
+korean = "훅 키를 누를 때 훅 가능한 물체를 겨누지 않았을 때의 훅 보조선 색상"
+russian = "Цвет линии зацепа при нажатой клавише, когда цель не зацепляема"
+german = "Farbe der Haken-Hilfslinie bei gedrückter Taste, wenn nichts Hakenbares anvisiert wird"
+spanish = "Color de la línea de gancho al presionar cuando no se apunta a nada enganchable"
+french = "couleur de la ligne de grappin maintenue quand rien d'accrochable n'est visé"
+brazilian_portuguese = "Cor da linha de gancho pressionada quando não se mira em nada agarrável"
+portuguese = "Cor da linha de gancho premida quando não se mira em nada agarrável"
+turkish = "Kanca atılabilir bir şeyi nişan almadığında basılı kanca yardımcı çizgi rengi"
+polish = "Kolor linii haka przy wciśniętym klawiszu, gdy nic zaczepialnego nie jest wycelowane"
+
+[[message]]
+key = "Pressed hook line tip color"
+[message.translations]
+simplified_chinese = "按下时的钩子辅助线尖端颜色"
+traditional_chinese = "按下時的鉤子輔助線尖端顏色"
+japanese = "押下時のフック補助線の先端の色"
+korean = "누를 때 훅 보조선 끝 색상"
+russian = "Цвет кончика линии зацепа при нажатой клавише"
+german = "Farbe der Spitze der Haken-Hilfslinie bei gedrückter Taste"
+spanish = "Color de la punta de la línea de gancho al presionar"
+french = "couleur de la pointe de la ligne de grappin maintenue"
+brazilian_portuguese = "Cor da ponta da linha de gancho pressionada"
+portuguese = "Cor da ponta da linha de gancho premida"
+turkish = "Basılı kanca çizgisi ucu rengi"
+polish = "Kolor końcówki linii haka przy wciśniętym klawiszu"
+
+[[message]]
+key = "ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ"
+[message.translations]
+simplified_chinese = "ProRes 档位覆盖：-1=自动（4:4:4 用 4444，其余用 HQ），0=Proxy，1=LT，2=422，3=HQ，4=4444，5=4444XQ"
+traditional_chinese = "ProRes 檔位覆寫：-1=自動（4:4:4 用 4444，其餘用 HQ），0=Proxy，1=LT，2=422，3=HQ，4=4444，5=4444XQ"
+japanese = "ProRes プロファイル上書き: -1=自動（4:4:4 は 4444、その他は HQ）、0=Proxy、1=LT、2=422、3=HQ、4=4444、5=4444XQ"
+korean = "ProRes 프로필 재정의: -1=자동 (4:4:4는 4444, 그 외는 HQ), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ"
+russian = "Переопределение профиля ProRes: -1=авто (4444 для 4:4:4, иначе HQ), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ"
+german = "ProRes-Profil-Überschreibung: -1=auto (4444 für 4:4:4, sonst HQ), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ"
+spanish = "Anulación de perfil ProRes: -1=auto (4444 para 4:4:4, HQ en los demás), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ"
+french = "remplacement de profil ProRes : -1=auto (4444 pour 4:4:4, HQ sinon), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ"
+brazilian_portuguese = "Substituição de perfil ProRes: -1=auto (4444 para 4:4:4, HQ nos demais), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ"
+portuguese = "Substituição de perfil ProRes: -1=auto (4444 para 4:4:4, HQ nos restantes), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ"
+turkish = "ProRes profil geçersiz kılma: -1=otomatik (4:4:4 için 4444, aksi halde HQ), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ"
+polish = "Nadpisanie profilu ProRes: -1=auto (4444 dla 4:4:4, w innym wypadku HQ), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ"
+
+[[message]]
+key = "Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter"
+[message.translations]
+simplified_chinese = "统一导出质量（CRF/CQ/QP 标度 0-51，-1 = 使用 cl_video_crf）；映射到各编码器的原生参数"
+traditional_chinese = "統一匯出品質（CRF/CQ/QP 標度 0-51，-1 = 使用 cl_video_crf）；映射到各編碼器的原生參數"
+japanese = "統一書き出し品質（CRF/CQ/QP スケール 0-51、-1 = cl_video_crf を使用）。各エンコーダーのネイティブパラメータにマッピングされます"
+korean = "통합 내보내기 품질 (CRF/CQ/QP 척도 0-51, -1 = cl_video_crf 사용). 각 인코더의 고유 매개변수로 매핑됩니다"
+russian = "Единое качество экспорта (шкала CRF/CQ/QP 0-51, -1 = использовать cl_video_crf); отображается на собственный параметр каждого кодировщика"
+german = "Einheitliche Exportqualität (CRF/CQ/QP-Skala 0-51, -1 = cl_video_crf verwenden); wird auf den nativen Parameter jedes Encoders abgebildet"
+spanish = "Calidad de exportación unificada (escala CRF/CQ/QP 0-51, -1 = usar cl_video_crf); se mapea al parámetro nativo de cada codificador"
+french = "qualité d'export unifiée (échelle CRF/CQ/QP 0-51, -1 = utiliser cl_video_crf) ; mappée sur le paramètre natif de chaque encodeur"
+brazilian_portuguese = "Qualidade de exportação unificada (escala CRF/CQ/QP 0-51, -1 = usar cl_video_crf); mapeada para o parâmetro nativo de cada codificador"
+portuguese = "Qualidade de exportação unificada (escala CRF/CQ/QP 0-51, -1 = usar cl_video_crf); mapeada para o parâmetro nativo de cada codificador"
+turkish = "Birleşik dışa aktarma kalitesi (CRF/CQ/QP ölçeği 0-51, -1 = cl_video_crf kullan); her kodlayıcının yerel parametresine eşlenir"
+polish = "Ujednolicona jakość eksportu (skala CRF/CQ/QP 0-51, -1 = użyj cl_video_crf); mapowana na natywny parametr każdego kodera"
+
+[[message]]
+key = "Use custom colors for the pressed hook collision line (0 = always invert)"
+[message.translations]
+simplified_chinese = "按下钩键时使用自定义钩子辅助线颜色（0 = 始终反色）"
+traditional_chinese = "按下鉤鍵時使用自訂鉤子輔助線顏色（0 = 始終反色）"
+japanese = "フックキー押下時にカスタムカラーを使用（0 = 常に反転）"
+korean = "훅 키를 누를 때 사용자 지정 색상 사용 (0 = 항상 반전)"
+russian = "Использовать свои цвета линии зацепа при нажатой клавише (0 = всегда инвертировать)"
+german = "Eigene Farben für die Haken-Hilfslinie bei gedrückter Taste verwenden (0 = immer invertieren)"
+spanish = "Usa colores personalizados para la línea de gancho al presionar (0 = invertir siempre)"
+french = "utilise des couleurs personnalisées pour la ligne de grappin maintenue (0 = toujours inverser)"
+brazilian_portuguese = "Usa cores personalizadas para a linha de gancho pressionada (0 = sempre inverter)"
+portuguese = "Usa cores personalizadas para a linha de gancho premida (0 = sempre inverter)"
+turkish = "Basılı kanca yardımcı çizgisi için özel renkler kullan (0 = her zaman ters çevir)"
+polish = "Użyj własnych kolorów linii haka przy wciśniętym klawiszu (0 = zawsze odwracaj)"
+
+[[message]]
+key = "Use procedural ring pipeline"
+[message.translations]
+simplified_chinese = "使用程序化圆环管线"
+traditional_chinese = "使用程序化圓環管線"
+japanese = "手続き的リングパイプラインを使用"
+korean = "절차적 링 파이프라인 사용"
+russian = "Использовать процедурный конвейер колец"
+german = "Prozedurale Ring-Pipeline verwenden"
+spanish = "Usa el pipeline de anillo procedural"
+french = "utilise le pipeline d'anneau procédural"
+brazilian_portuguese = "Usa o pipeline de anel procedural"
+portuguese = "Utiliza o pipeline de anel procedural"
+turkish = "Prosedürel halka işlem hattını kullan"
+polish = "Użyj proceduralnego potoku pierścieni"
+
+[[message]]
+key = "Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)"
+[message.translations]
+simplified_chinese = "demo 导出视频编码器（留空 = 默认软件编码器，例如 h264_nvenc）"
+traditional_chinese = "demo 匯出影片編碼器（留空 = 預設軟體編碼器，例如 h264_nvenc）"
+japanese = "デモ書き出しの動画エンコーダー（空 = 既定のソフトウェアエンコーダー、例: h264_nvenc）"
+korean = "데모 내보내기 영상 인코더 (비우면 = 기본 소프트웨어 인코더, 예: h264_nvenc)"
+russian = "Видеокодировщик для экспорта демо (пусто = программный кодировщик по умолчанию, например h264_nvenc)"
+german = "Videoencoder für den Demo-Export (leer = Standard-Softwareencoder, z. B. h264_nvenc)"
+spanish = "Codificador de vídeo para la exportación de demo (vacío = codificador de software predeterminado, p. ej. h264_nvenc)"
+french = "encodeur vidéo pour l'export de démo (vide = encodeur logiciel par défaut, p. ex. h264_nvenc)"
+brazilian_portuguese = "Codificador de vídeo para a exportação de demo (vazio = codificador de software padrão, ex.: h264_nvenc)"
+portuguese = "Codificador de vídeo para a exportação de demo (vazio = codificador de software predefinido, p. ex. h264_nvenc)"
+turkish = "Demo dışa aktarma için video kodlayıcı (boş = varsayılan yazılım kodlayıcı, örn. h264_nvenc)"
+polish = "Koder wideo dla eksportu dema (puste = domyślny koder programowy, np. h264_nvenc)"

@@ -729,7 +729,7 @@ Adjust the display options; open a vote to check the layout before joining a bus
 == Görünüm seçeneklerini ayarlayın; kalabalık bir sunucuya katılmadan önce bir oylama açıp yerleşimi kontrol edin.
 
 Adjust the opacity of entities belonging to other teams, such as tees and name plates
-== Adjust the opacity of entities belonging to other teams, such as tees and name plates
+== Tee'ler ve isim etiketleri gibi diğer takımların varlıklarının opaklığını ayarlar
 
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
@@ -789,16 +789,16 @@ Air jump
 == Havada zıplama
 
 Alias of poses_close
-== Alias of poses_close
+== poses_close takma adı
 
 Alias of poses_open
-== Alias of poses_open
+== poses_open takma adı
 
 Alias of poses_render
-== Alias of poses_render
+== poses_render takma adı
 
 Alias of poses_video
-== Alias of poses_video
+== poses_video takma adı
 
 Alive notification color
 == Canlı bildirimi rengi
@@ -873,7 +873,7 @@ Allow mic permission in system settings, then reopen voice
 == Sistem ayarlarından mikrofon iznine izin ver, ardından sesi tekrar aç
 
 Allow the client to send kill requests (0 = ignore client-initiated kills)
-== Allow the client to send kill requests (0 = ignore client-initiated kills)
+== İstemcinin intihar isteği göndermesine izin ver (0 = istemci kaynaklı intiharları yok say)
 
 Allow voting to kick players
 == Oyuncuları atmak için oylamaya izin ver
@@ -987,7 +987,7 @@ Anti-aliasing for the exported video only, independent of the graphics setting. 
 == Yalnızca dışa aktarılan video için kenar yumuşatma; grafik ayarından bağımsızdır. Açık bir düzey seçildiğinde her kare çok örneklemeli ekran dışı hedefe çizilir, böylece oyun performans için daha düşük ayarda kalabilir. Süper örnekleme (çıktının pencereden küçük olması) zaten testere dişlerini azaltır; ikisinden birini tercih edin.
 
 Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
-== Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
+== Video dışa aktarma için kenar yumuşatma: -1 = gfx_fsaa_samples izle, 0 = kapalı, 2/4/8 = çok örneklemeli ekran dışı işleme
 
 Anti-aliasing:
 == Kenar yumuşatma:
@@ -1524,7 +1524,7 @@ Automatically record replays
 == Tekrarları otomatik olarak kaydet
 
 Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
-== Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
+== Yüklendikten sonra yerel kayıt girişini otomatik sil (0 = tut ve kullanıldı olarak işaretle, 1 = sil)
 
 Automatically reply to muted players
 == Sessize alınmış oyunculara otomatik yanıt ver
@@ -1902,7 +1902,7 @@ Bound functions
 == Atanmış işlevler
 
 Bounded capture frame queue depth for demo export (higher values use more memory)
-== Bounded capture frame queue depth for demo export (higher values use more memory)
+== Demo dışa aktarma için yakalama kare kuyruğu derinlik sınırı (yüksek değerler daha çok bellek kullanır)
 
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Köşeli parantezli unvan rengi: 0 = sunucuyu takip et, 1 = tek renk, 2 = gökkuşağı
@@ -2250,7 +2250,7 @@ Chat gradient vertical position percentage
 == Gradyan dikey konumu (sohbet, %)
 
 Chat line spacing
-== Chat line spacing
+== Sohbet satır aralığı
 
 Chat log retention days
 == Sohbet günlüğü saklama günü
@@ -2409,7 +2409,7 @@ Chroma sampling
 == Renk örneklemesi
 
 Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)
-== Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)
+== Dışa aktarma için kroma örnekleme tercihi: 0=otomatik, 1=4:2:0, 2=4:2:2, 3=4:4:4 (yüksek olan ince renk ayrıntılarını korur)
 
 Chroma sampling. 4:2:0 is smallest and most compatible; 4:4:4 keeps full color detail for thin lines and small colored text. Rendering is 8-bit, so 10-bit formats do not add detail by themselves.
 == Renk örnekleme. 4:2:0 en küçük ve en uyumlu seçenektir; 4:4:4 rengi tam koruduğu için ince çizgiler ve küçük renkli yazılar en net görünür. Görüntü 8 bit oluşturulduğundan 10 bit biçim tek başına ayrıntı eklemez.
@@ -2994,7 +2994,7 @@ Configures the main HUD: health, ammo, timer, race progress and their positions.
 == Ana HUD'u yapılandırır: can, mermi, süre, yarış ilerlemesi ve bunların konumları.
 
 Confirm
-== Confirm
+== Onayla
 
 Confirm both are on same server, same room, and support voice
 == Her ikisinin de aynı sunucuda, aynı odada olduğunu ve sesi desteklediğini onaylayın
@@ -3261,10 +3261,10 @@ Could not connect to the translation service. Please try again later.
 == Çeviri servisine bağlanılamadı. Daha sonra tekrar deneyin.
 
 Could not delete "%s"
-== Could not delete "%s"
+== "%s" silinemedi
 
 Could not download "%s"
-== Could not download "%s"
+== "%s" indirilemedi
 
 Could not find a Tutorial server. Check your internet connection.
 == Bir Eğitim sunucusu bulunamadı. İnternet bağlantınızı kontrol edin.
@@ -3465,7 +3465,7 @@ Custom community list fetch URL (must be https, leave empty to disable)
 == Özel topluluk listesi getirme URL'si (https olmalı, devre dışı bırakmak için boş bırakın)
 
 Custom export container: mp4, mov or mkv
-== Custom export container: mp4, mov or mkv
+== Özel dışa aktarma kapsayıcısı: mp4, mov veya mkv
 
 Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
 == Çince/CJK metin için özel yazı tipi (aile veya aile + stil); boş = Latin özel yazı tipini izle
@@ -3837,7 +3837,7 @@ Delete
 == Sil
 
 Delete "%s"?
-== Delete "%s"?
+== "%s" silinsin mi?
 
 Delete category
 == Kategoriyi sil
@@ -3864,7 +3864,7 @@ Delete this preset
 == Bu ön ayarı sil
 
 Deleted "%s"
-== Deleted "%s"
+== "%s" silindi
 
 Demo
 == Demo
@@ -3882,7 +3882,7 @@ Demo effects
 == Demo efektleri
 
 Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
-== Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
+== Demo dışa aktarma segment süresi (saniye) (0 = tek dosya, 300 = 5 dakika)
 
 Demo hook strength (0=Off 1=Icon 2=Icon and number)
 == Demoda kanca gücü (0=Kapalı 1=Simge 2=Simge ve sayı)
@@ -3903,7 +3903,7 @@ Demo target
 == Demo hedefi
 
 Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
-== Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)
+== Her segmentden önce efektleri ve sohbet durumunu geri yüklemek için kayıt yapılmadan oynanan demo tick sayısı (50 tick = 1 saniye)
 
 Demofile: %s
 == Demo dosyası: %s
@@ -3999,7 +3999,7 @@ Disable after picking up other weapons
 == Diğer silahları aldıktan sonra devre dışı bırak
 
 Disable client-initiated self-kill (K key / kill command)
-== Disable client-initiated self-kill (K key / kill command)
+== İstemci kaynaklı intiharı devre dışı bırak (K tuşu / kill komutu)
 
 Disable clipping
 == Kırpmayı devre dışı bırak
@@ -4149,7 +4149,7 @@ Document too large for the editor (%d of %d bytes)
 == Belge istemci düzenleyicisi için çok büyük (%d / %d bayt)
 
 Done
-== Done
+== Tamam
 
 Donor (drag parts from left)
 == Kaynak (parçaları soldan sürükleyin)
@@ -4179,7 +4179,7 @@ Download
 == İndir
 
 Download "%s"?
-== Download "%s"?
+== "%s" indirilsin mi?
 
 Download community skins
 == Topluluk görünümlerini indir
@@ -4212,7 +4212,7 @@ Downloaded
 == İndirildi
 
 Downloaded "%s"
-== Downloaded "%s"
+== "%s" indirildi
 
 Downloaded: %.1f MiB (total size unknown)
 == İndirilen: %.1f MiB (toplam boyut bilinmiyor)
@@ -4227,7 +4227,7 @@ Downloading update...
 == Güncelleme indiriliyor...
 
 Downloading…
-== Downloading…
+== İndiriliyor…
 
 Downscaled (0.78)
 == Küçültülmüş (0.78)
@@ -4251,7 +4251,7 @@ Drag to pan, scroll to zoom
 == Kaydırmak için sürükleyin, yakınlaştırmak için tekerleği kullanın
 
 Drag to reorder; right-click or use the gear to manage
-== Drag to reorder; right-click or use the gear to manage
+== Yeniden sıralamak için sürükleyin; yönetmek için sağ tıklayın veya dişliyi kullanın
 
 Dragger Inner Color
 == Sürükleyici İç Rengi
@@ -4737,7 +4737,7 @@ Enable client stutter diagnostics at startup
 == Başlangıçta istemci takılma tanılamasını etkinleştir
 
 Enable client-initiated self-kill (K key / kill command)
-== Enable client-initiated self-kill (K key / kill command)
+== İstemci kaynaklı intiharı etkinleştir (K tuşu / kill komutu)
 
 Enable colored console output
 == Renkli konsol çıktısını etkinleştir
@@ -5340,10 +5340,10 @@ Export name contains invalid characters.
 == Dışa aktarma adı geçersiz karakterler içeriyor.
 
 Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
-== Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== Dışa aktarma çıktı yüksekliği (piksel) (0 = pencere işleme boyutunu izle. Pencereden küçük = supersampling ile küçültme)
 
 Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
-== Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
+== Dışa aktarma çıktı genişliği (piksel) (0 = pencere işleme boyutunu izle. Pencereden küçük = supersampling ile küçültme)
 
 Export playback speed. The value snaps to the nearest available speed.
 == Dışa aktarma oynatma hızı. Değer, kullanılabilir en yakın hıza oturtulur.
@@ -5355,7 +5355,7 @@ Export preset:
 == Dışa aktarma ön ayarı:
 
 Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
-== Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)
+== Dışa aktarma ön ayarı: 0=özel, 1=günlük(libx264/mp4), 2=verimli paylaşım(hevc/mp4), 3=kurgu(all-intra H.264/mp4), 4=takas(ProRes/mov), 5=en iyi kalite(all-intra H.264 4:4:4/mp4), 6=en hızlı(donanım h264/mp4)
 
 Export range
 == Dışa aktarma aralığı
@@ -5391,7 +5391,7 @@ External sites are not controlled by the client.
 == Dış siteler istemcinin denetiminde değildir.
 
 Extra vertical spacing between chat lines in pixels (0 = default)
-== Extra vertical spacing between chat lines in pixels (0 = default)
+== Sohbet satırları arasına ek dikey boşluk (piksel) (0 = varsayılan)
 
 Extras
 == Ekstralar
@@ -5493,7 +5493,7 @@ Failed to save video
 == Video kaydedilemedi
 
 Failed to save video. See local console for details.
-== Failed to save video. See local console for details.
+== Video kaydedilemedi. Ayrıntılar için yerel konsola bakın.
 
 Failed to write PNG export.
 == PNG dışa aktarımı yazılamadı.
@@ -7479,7 +7479,7 @@ Keyframe interval (GOP)
 == Anahtar kare aralığı (GOP)
 
 Keyframe interval (GOP) in frames for demo export (0 = encoder default, 1 = all-intra, 60 = recommended)
-== Keyframe interval (GOP) in frames for demo export (0 = encoder default, 1 = all-intra, 60 = recommended)
+== Demo dışa aktarma için anahtar kare aralığı (GOP, kare) (0 = kodlayıcı varsayılanı, 1 = all-intra, 60 = önerilen)
 
 Keyframe interval (GOP):
 == Anahtar kare aralığı (GOP):
@@ -7731,7 +7731,7 @@ Leave the path empty to auto-detect; fill it in only when the status says "Steam
 == Yolu boş bırakırsan otomatik bulunur; yalnızca durum Steam bulunamadı dediğinde doldur.
 
 Leave the pose session
-== Leave the pose session
+== Poz oturumundan ayrıl
 
 Left jump
 == Sol zıplama
@@ -9219,7 +9219,7 @@ No login required
 == Giriş gerekmez
 
 No map
-== No map
+== Harita yok
 
 No map matches the typed name
 == Yazılan adla eşleşen harita yok
@@ -9480,7 +9480,7 @@ Number of threads backend can use for rendering (Note: value may be ignored by b
 == Arka uçun işleme için kullanabileceği iş parçacığı sayısı (Not: değer arka uç tarafından yok sayılabilir)
 
 Number of video pixel-format conversion threads for demo export (2-4 recommended)
-== Number of video pixel-format conversion threads for demo export (2-4 recommended)
+== Demo dışa aktarma için video piksel biçimi dönüştürme iş parçacığı sayısı (2-4 önerilir)
 
 Number of vote options sent per tick
 == Tick başına gönderilen oylama seçeneği sayısı
@@ -9591,7 +9591,7 @@ Opacity of freeze bars inside freeze
 == Dondurucu içindeki çözülme çubuklarının opaklığı
 
 Opacity of other teams' tees and name plates
-== Opacity of other teams' tees and name plates
+== Diğer takımların Tee ve isim etiketlerinin opaklığı
 
 Open a link to join the community.
 == Topluluğa katılmak için bir bağlantı açın.
@@ -9738,10 +9738,10 @@ Original
 == Özgün
 
 Original language for both received and outgoing messages. Use Auto to detect each message.
-== Original language for both received and outgoing messages. Use Auto to detect each message.
+== Alınan ve gönderilen mesajlar için özgün dil. Her mesajı algılamak için Otomatik'i kullanın.
 
 Original language for incoming and outgoing text
-== Original language for incoming and outgoing text
+== Gelen ve giden metnin özgün dili
 
 Original message language
 == Orijinal mesajın dili
@@ -10482,7 +10482,7 @@ Port for the external console.
 == Harici konsol için port.
 
 Pose capture pixel budget in megapixels (0 = unlimited)
-== Pose capture pixel budget in megapixels (0 = unlimited)
+== Poz yakalama piksel bütçesi (megapiksel) (0 = sınırsız)
 
 Pose file
 == Poz dosyası
@@ -10491,19 +10491,19 @@ Pose preview
 == Poz önizlemesi
 
 Pose render fills the background with the entity layer
-== Pose render fills the background with the entity layer
+== Poz işleme, arka planı varlık katmanıyla doldurur
 
 Pose render output format (0 = png, 1 = webp)
-== Pose render output format (0 = png, 1 = webp)
+== Poz işleme çıktı biçimi (0 = png, 1 = webp)
 
 Pose render supersampling scale (1-4)
-== Pose render supersampling scale (1-4)
+== Poz işleme supersampling ölçeği (1-4)
 
 Pose render unsharp mask strength (0 = off)
-== Pose render unsharp mask strength (0 = off)
+== Poz işleme unsharp mask gücü (0 = kapalı)
 
 Poses
-== Poses
+== Pozlar
 
 Position
 == Konum
@@ -10638,19 +10638,19 @@ Press F2, log in, then use: change_map map_name
 == F2'ye basın, giriş yapın ve şunu kullanın: change_map map_name
 
 Pressed hook collision line color when hitting a tee
-== Pressed hook collision line color when hitting a tee
+== Tee'ye isabet ettiğinde basılı kanca yardımcı çizgi rengi
 
 Pressed hook collision line color when hitting something hookable
-== Pressed hook collision line color when hitting something hookable
+== Kanca atılabilir bir şeye isabet ettiğinde basılı kanca yardımcı çizgi rengi
 
 Pressed hook collision line color when not aiming at anything hookable
-== Pressed hook collision line color when not aiming at anything hookable
+== Kanca atılabilir bir şeyi nişan almadığında basılı kanca yardımcı çizgi rengi
 
 Pressed hook line color; always used when custom pressed colors are enabled
 == Basınca kanca çizgisi rengi; özel basma renkleri etkin olduğunda her zaman kullanılır
 
 Pressed hook line tip color
-== Pressed hook line tip color
+== Basılı kanca çizgisi ucu rengi
 
 Pressed: A Tee
 == Basınca: Bir Tee
@@ -10815,7 +10815,7 @@ Projectile / explosion range
 == Mermi / patlama menzili
 
 ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
-== ProRes profile override: -1=auto (4444 for 4:4:4, HQ otherwise), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
+== ProRes profil geçersiz kılma: -1=otomatik (4:4:4 için 4444, aksi halde HQ), 0=Proxy, 1=LT, 2=422, 3=HQ, 4=4444, 5=4444XQ
 
 Protect names and skins while streaming
 == Yayın yaparken isimleri ve skinleri koru
@@ -11259,7 +11259,7 @@ Reconnect in %d sec
 == %d sn sonra yeniden bağlan
 
 Record a MomentCap .poses scene to a video
-== Record a MomentCap .poses scene to a video
+== MomentCap .poses sahnesini videoya kaydet
 
 Record chat replays.
 == Sohbet tekrarlarını kaydet.
@@ -11271,7 +11271,7 @@ Record to a file
 == Bir dosyaya kaydet
 
 Recorded frame rate; higher is smoother and larger
-== Recorded frame rate; higher is smoother and larger
+== Kayıt kare hızı; yüksek olan daha akıcı ve daha büyüktür
 
 Recorder FPS
 == Kayıt FPS
@@ -11580,7 +11580,7 @@ Render
 == Oluştur
 
 Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
-== Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)
+== MomentCap .poses dosyasını ekran görüntüsü olarak işleyin (isteğe bağlı 1-4x supersampling, varlık katmanı, keskinleştirme 0-100)
 
 Render all custom colored feet as white feet skin
 == Tüm özel renkli ayakları beyaz ayak görünümü olarak işle
@@ -11862,7 +11862,7 @@ Resetting restores defaults immediately, so note down values you want to keep.
 == Sıfırlama varsayılanları hemen geri yükler; saklamak istediğin değerleri önceden not al.
 
 Resolution:
-== Resolution:
+== Çözünürlük:
 
 Resource preview VRAM budget override (MB, 0=auto)
 == Kaynak Önizleme VRAM Bütçe Geçersiz Kılma (MB, 0=Otomatik)
@@ -11877,7 +11877,7 @@ Restart in x seconds (0 = abort)
 == x saniye içinde yeniden başlat (0 = iptal)
 
 Restart smooth scrolling on every wheel tick
-== Restart smooth scrolling on every wheel tick
+== Her tekerlek kademesinde yumuşak kaydırmayı yeniden başlat
 
 Restart the client
 == İstemciyi yeniden başlat
@@ -12132,7 +12132,7 @@ Save last %d min
 == Son %d dakikayı kaydet
 
 Save loaded and marked as used.
-== Save loaded and marked as used.
+== Kayıt yüklendi ve kullanıldı olarak işaretlendi.
 
 Save loaded; local record removed.
 == Kayıt yüklendi; yerel kayıt girdisi silindi.
@@ -12843,7 +12843,7 @@ Share of the server browser name/map split given to the name column (per mille)
 == Sunucu tarayıcısı ad/harita bölünmesinden ad sütununa ayrılan oran (binde)
 
 Sharpen
-== Sharpen
+== Keskinleştirme
 
 Shimmer speed
 == Parıltı hızı
@@ -12882,10 +12882,10 @@ Show %s group
 == %s grubunu göster
 
 Show a ghost of your best time after crossing the start line
-== Show a ghost of your best time after crossing the start line
+== Başlangıç çizgisini geçtikten sonra en iyi sürenin hayaletini göster
 
 Show a MomentCap .poses file in game (no export)
-== Show a MomentCap .poses file in game (no export)
+== MomentCap .poses dosyasını oyun içinde göster (dışa aktarma yok)
 
 Show a small view of the dummy
 == Dummy'nin küçük bir görünümünü göster
@@ -14451,13 +14451,13 @@ Start and connect to local server
 == Yerel sunucuyu başlat ve bağlan
 
 Start at a random queue position on every map join
-== Start at a random queue position on every map join
+== Her haritaya katıldığında rastgele kuyruk konumundan başla
 
 Start dummy skin queue from a random position when entering a map
 == Haritaya girerken kukla skin kuyruğunu rastgele bir konumdan başlat
 
 Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
-== Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
+== Her haritaya katıldığında rastgele kuyruk konumundan başlayın (dummy bağlanmasında ve kuyruğun yeniden etkinleştirilmesinde de geçerlidir). Zamanlanmış rotasyonu kapatmak için geçiş aralığını 0 yapın; böylece yalnızca haritaya girişte geçilir.
 
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 == Varsayılan değerle başlayın; diğer oyuncular sıçrıyormuş gibi görünüyorsa biraz artırın, onların gerisinde kaldığınızı düşünüyorsanız azaltın.
@@ -16323,7 +16323,7 @@ Unfreeze/Deep unfreeze tile outline width
 == Çözülme/derin çözülme döşemesi anahat genişliği
 
 Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
-== Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter
+== Birleşik dışa aktarma kalitesi (CRF/CQ/QP ölçeği 0-51, -1 = cl_video_crf kullan); her kodlayıcının yerel parametresine eşlenir
 
 Uninvite player from team
 == Oyuncuyu takımdan davetsiz çıkar
@@ -16509,7 +16509,7 @@ Use current settings
 == Geçerli ayarları kullan
 
 Use custom colors for the pressed hook collision line (0 = always invert)
-== Use custom colors for the pressed hook collision line (0 = always invert)
+== Basılı kanca yardımcı çizgisi için özel renkler kullan (0 = her zaman ters çevir)
 
 Use custom skins instead of the ninja tee
 == Ninja tee yerine özel görünümler kullan
@@ -16596,7 +16596,7 @@ Use pre-input to predict other players for more accurate input prediction
 == Daha doğru girdi tahmini için diğer oyuncuları tahmin etmek üzere ön girdi kullan
 
 Use procedural ring pipeline
-== Use procedural ring pipeline
+== Prosedürel halka işlem hattını kullan
 
 Use server defaults
 == Sunucu varsayılanlarını kullan
@@ -16620,10 +16620,10 @@ Use Tee icons instead of circles
 == Daireler yerine Tee simgeleri kullan
 
 Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
+== Kanca tuşu basılıyken kanca yardımcı çizgisi gösterildiğinde aşağıdaki özel renkleri kullanın; devre dışı bırakıldığında basılı olmayan renkler otomatik olarak ters çevrilir
 
 Use the custom colors below while the hook key is held
-== Use the custom colors below while the hook key is held
+== Kanca tuşu basılı tutulurken aşağıdaki özel renkleri kullan
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == Üzerine gelinen bir modülü fare tekerleği ile %5 oranında ölçeklendir
@@ -16647,7 +16647,7 @@ Use warlist groups for indicator
 == Gösterge için savaş listesi gruplarını kullan
 
 Used
-== Used
+== Kullanıldı
 
 Used by active shared text and numeric input fields
 == Etkin ortak metin ve sayısal giriş alanları tarafından kullanılır
@@ -16725,7 +16725,7 @@ Video directory
 == Video kayıt dizini
 
 Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
-== Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)
+== Demo dışa aktarma için video kodlayıcı (boş = varsayılan yazılım kodlayıcı, örn. h264_nvenc)
 
 Video encoding
 == Video kodlama
@@ -17121,7 +17121,7 @@ What this controls
 == Ne ayarlar
 
 Wheel distance per tick; hold Alt for 3x
-== Wheel distance per tick; hold Alt for 3x
+== Tekerlek kademesi başına mesafe; 3x için Alt basılı tutun
 
 Wheel label
 == Çark etiketi
@@ -17133,7 +17133,7 @@ When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient gökkuşağı Tee açıkken bu özellik etkili olmaz.
 
 When you cross the start line, show a ghost tee replicating the movements of your best time
-== When you cross the start line, show a ghost tee replicating the movements of your best time
+== Başlangıç çizgisini geçtiğinde en iyi sürenizin hareketlerini yineleyen hayalet bir Tee gösterir
 
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 == Unvanının nerede görüneceği ve nasıl duracağı: isim etiketi, stil, animasyon, renkler ve parıltı.

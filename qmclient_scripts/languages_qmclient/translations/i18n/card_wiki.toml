@@ -6898,3 +6898,19 @@ brazilian_portuguese = "Os resultados incluem cartões de outras páginas; a aba
 portuguese = "Os resultados incluem cartões de outras páginas; o separador muda automaticamente."
 turkish = "Sonuçlar diğer sayfalardaki kartları da içerir; sekme otomatik olarak değişir."
 polish = "Wyniki obejmują karty na innych stronach; zakładka przełącza się automatycznie."
+
+[[message]]
+key = "Done"
+[message.translations]
+simplified_chinese = "完成"
+traditional_chinese = "完成"
+japanese = "完了"
+korean = "완료"
+russian = "Готово"
+german = "Fertig"
+spanish = "Hecho"
+french = "Terminé"
+brazilian_portuguese = "Concluído"
+portuguese = "Concluído"
+turkish = "Tamam"
+polish = "Gotowe"
