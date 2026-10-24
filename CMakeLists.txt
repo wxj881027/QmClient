@@ -3103,6 +3103,7 @@ if(CLIENT)
     ghost.cpp
     ghost.h
     game_ping.h
+    link_probe.h
     gpu_upload_limiter.h
     graph.cpp
     graph.h
@@ -4749,6 +4750,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/jobs_test.cpp
     src/test/unit/engine/json_test.cpp
     src/test/unit/engine/jsonwriter_test.cpp
+    src/test/unit/engine/link_probe_test.cpp
     src/test/unit/client/keyword_reply_rules_test.cpp
     src/test/unit/engine/logger_test.cpp
     src/test/unit/client/map_difficulty_catalog_test.cpp
@@ -4774,6 +4776,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/server/mutes_test.cpp
     src/test/unit/engine/name_ban_test.cpp
     src/test/unit/engine/net_test.cpp
+    src/test/integration/engine/net_dup_upstream_test.cpp
     src/test/contract/base/net_protocol_contract_test.cpp
     src/test/unit/base/netaddr_test.cpp
     src/test/unit/engine/network_test.cpp

@@ -4679,6 +4679,9 @@ Expanded dropdown background opacity percentage
 Experimental
 == deneysel
 
+Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.
+== Deneysel: gidiş-dönüş yoklamaları yanıtsız kalırsa giden UDP oyun paketlerini tekrar gönderir. Yükleme trafiği üç katına çıkabilir; indirme kayıpları ve geç ulaşan yinelenmiş girdiler sorun çıkarmaya devam edebilir. KCP kullanılırken devre dışıdır.
+
 Export
 == Dışa aktar
 
@@ -7445,6 +7448,9 @@ Maximum number of automatic scoreboard screenshots (0 = unlimited)
 Maximum number of clients on server
 == Sunucudaki maksimum istemci sayısı
 
+Maximum number of copies per outgoing UDP game packet
+== Giden her UDP oyun paketinin azami kopya sayısı
+
 Maximum number of packets received in one batch before returning to the main loop (0 = unlimited).
 == Ana döngüye dönmeden önce tek bir toplu işlemde alınabilecek maksimum paket sayısı (0 = sınırsız).
 
@@ -7462,6 +7468,9 @@ Maximum number of skins loaded simultaneously
 
 Maximum number of vanilla antispoof handshakes answered per second (0 = unlimited).
 == Saniyede yanıtlanacak Vanilla sahteciliği önleme el sıkışmalarının maksimum sayısı (0 = sınırsız).
+
+Maximum packet copies
+== Azami paket kopyası
 
 Maximum players participating in a vote (0 = unlimited)
 == Bir oylamaya katılabilecek maksimum oyuncu sayısı (0 = sınırsız)
@@ -14701,6 +14710,9 @@ Upload a saved map to the public test server
 
 Upload map
 == Haritayı yükle
+
+Upstream redundancy (experimental)
+== Giden paketleri yedekli gönder (deneysel)
 
 URL for downloading community skins
 == Topluluk skinleri indirmek için URL
