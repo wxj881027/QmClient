@@ -20,9 +20,11 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/QmAuthorName.h>
 #include <game/client/QmUi/QmIslandNotice.h>
 #include <game/client/QmUi/QmPlayersMenu.h>
 #include <game/client/QmUi/QmScroll.h>
+#include <game/client/QmUi/QmSeasonalSidebar.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/QmVoteMenu.h>
 #include <game/client/QmUi/SettingsCardDeck.h>
@@ -3225,6 +3227,8 @@ private:
 	std::string m_SettingsCardFocusStableId;
 	qm_card_order::CModel m_SettingsCardOrderModel;
 	bool m_SettingsCardOrderLoaded = false;
+	CQmAuthorName m_QmAuthorName;
+	CQmSeasonalSidebar m_QmSeasonalSidebar;
 	CSettingsCardDeck m_SettingsCardDeck;
 	qm_card_order::CModel m_SettingsCardRenderOnlyOrderModel;
 	std::string m_SettingsCardRenderOnlyOrderSource;

@@ -5,6 +5,7 @@
 
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/QmBadgeGeometry.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/ui_rect.h>
 
@@ -89,8 +90,10 @@ struct SQmTitleBadgePlacement
 
 class CQmTitleBadge
 {
-	IGraphics::CTextureHandle m_Logo;
-	IGraphics::CTextureHandle m_aPatterns[2];
+	CQmBadgeGeometry m_Logo{EQmBadgeGeometry::LOGO};
+	CQmBadgeGeometry m_aPatterns[6] = {
+		CQmBadgeGeometry{EQmBadgeGeometry::MOON_LEFT}, CQmBadgeGeometry{EQmBadgeGeometry::MOON_MIDDLE}, CQmBadgeGeometry{EQmBadgeGeometry::MOON_RIGHT},
+		CQmBadgeGeometry{EQmBadgeGeometry::SUN_LEFT}, CQmBadgeGeometry{EQmBadgeGeometry::SUN_MIDDLE}, CQmBadgeGeometry{EQmBadgeGeometry::SUN_RIGHT}};
 
 public:
 	void Init(IGraphics *pGraphics);

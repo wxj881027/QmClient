@@ -683,10 +683,15 @@ void CMenus::AppendQmClientContributorCards(std::vector<SSettingsCardDefinition>
 			CUIRect AuthorColumn{AuthorsRow.x + AuthorIndex * (AuthorWidth + AuthorGap), AuthorsRow.y, AuthorWidth, AuthorsRow.h};
 			CUIRect TeeRect, Label;
 			AuthorColumn.HSplitTop(AuthorTeeSize, &TeeRect, &Label);
-			RenderDevSkin(TeeRect.Center(), AuthorTeeSize, Author.m_pSkin, "default", Author.m_CustomColors, 0, 0, 0, false, true, Author.m_FeetColor, Author.m_BodyColor);
+			const double Time = Ctx.m_pAnim != nullptr ? Ctx.m_pAnim->TimeSec() : 0.0;
+			const auto Tee = QmSponsorAuthors::TeePresentation(Author, Time, g_Config.m_QmUiMotionLevel);
+			RenderDevSkin(TeeRect.Center() + Tee.m_Offset * AuthorTeeSize, AuthorTeeSize * Tee.m_Scale, Author.m_pSkin, "default", Author.m_CustomColors, 0, 0, 0, false, true, Author.m_FeetColor, Author.m_BodyColor);
 			Label.HSplitTop(LineSpacing, nullptr, &Label);
 			Label.HSplitTop(LineHeight, &Label, nullptr);
-			DoSettingsMenuLabel(SETTINGS_CONTRIBUTORS, -1, -1, Author.m_pTextId, &Label, Author.m_pName, BodySize, TEXTALIGN_MC, {}, (int)Label.w);
+			if(Author.m_Glitch)
+				m_QmAuthorName.Render(Ui(), Graphics(), Author, Label, BodySize, !ReadOnly && Ui()->VisualMouseHovered(Ui()->Screen()));
+			else
+				DoSettingsMenuLabel(SETTINGS_CONTRIBUTORS, -1, -1, Author.m_pTextId, &Label, Author.m_pName, BodySize, TEXTALIGN_MC, {}, (int)Label.w);
 		}
 		Flow.Space(LineSpacing);
 		static ui_widget::SSettingsActionGroupState s_RefreshWidths;
