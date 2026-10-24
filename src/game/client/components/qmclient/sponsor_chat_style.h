@@ -11,14 +11,11 @@
 enum class EQmSponsorChatStyle
 {
 	NONE = 0,
-	SOFT_GLOW,
 	PLATINUM,
 };
 
 inline EQmSponsorChatStyle QmSponsorChatStyleFromId(const char *pId)
 {
-	if(pId != nullptr && str_comp(pId, "soft_glow") == 0)
-		return EQmSponsorChatStyle::SOFT_GLOW;
 	if(pId != nullptr && str_comp(pId, "platinum") == 0)
 		return EQmSponsorChatStyle::PLATINUM;
 	return EQmSponsorChatStyle::NONE;
@@ -28,7 +25,6 @@ inline const char *QmSponsorChatStyleId(EQmSponsorChatStyle Style)
 {
 	switch(Style)
 	{
-	case EQmSponsorChatStyle::SOFT_GLOW: return "soft_glow";
 	case EQmSponsorChatStyle::PLATINUM: return "platinum";
 	default: return "";
 	}
@@ -42,11 +38,6 @@ inline EQmSponsorChatStyle QmSponsorChatMessageStyle(EQmSponsorChatStyle Style, 
 inline EQmSponsorChatStyle QmSponsorChatMergedStyle(EQmSponsorChatStyle Previous, EQmSponsorChatStyle Incoming)
 {
 	return Previous == Incoming ? Previous : EQmSponsorChatStyle::NONE;
-}
-
-inline float QmSponsorChatGlowRadius(float FontSizePx)
-{
-	return std::isfinite(FontSizePx) && FontSizePx > 0.0f ? std::clamp(FontSizePx * 0.1f, 1.0f, 2.5f) : 0.0f;
 }
 
 struct SQmSponsorChatSweep

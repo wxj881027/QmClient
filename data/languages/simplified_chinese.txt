@@ -14267,9 +14267,6 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == 汽水音乐 Hook 辅助程序路径（留空则使用 QmClient 所在目录中的程序）
 
-Soft glow
-== 柔光
-
 Solid
 == 纯色
 
@@ -14450,8 +14447,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == 本体和分身分别进队，方便开局 solo 同步（部分地图不好同步时使用）
 
-Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
-== 赞助者发言样式草稿：0=普通，1=柔光，2=铂金高光
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight
+== 赞助者发言样式草稿：0=普通，1=铂金高光
 
 Sponsor code
 == 认证码

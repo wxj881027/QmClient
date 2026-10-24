@@ -414,7 +414,6 @@ void CChat::CLine::Reset(CChat &This)
 	m_ChatEmojiRect = {};
 	m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
 	m_RenderSponsorChatStyle = EQmSponsorChatStyle::NONE;
-	m_SponsorTextBounds = {};
 	m_QmTitleBobPadding = 0.0f;
 	m_aYOffset[0] = -1.0f;
 	m_aYOffset[1] = -1.0f;
@@ -664,7 +663,6 @@ void CChat::ClearLines()
 	FlushPendingConsoleLine(true);
 	for(auto &Line : m_aLines)
 		Line.Reset(*this);
-	m_SponsorChatRenderer.Reset(Graphics());
 	m_BacklogCurLine = 0;
 	m_ScrollbarDragging = false;
 	m_ScrollbarDragOffset = 0.0f;
@@ -794,14 +792,12 @@ void CChat::OnWindowResize()
 {
 	m_CommandHud.Hide();
 	RebuildChat();
-	m_SponsorChatRenderer.Reset(Graphics());
 }
 
 void CChat::OnShutdown()
 {
 	for(auto &Line : m_aLines)
 		Line.DeleteTextContainers(TextRender());
-	m_SponsorChatRenderer.Reset(Graphics());
 }
 
 void CChat::Reset()
@@ -2502,8 +2498,6 @@ bool CChat::OnPrepareLines(float y)
 	{
 		m_PrevSponsorChatEffects = g_Config.m_QmSponsorChatEffects != 0;
 		RebuildChat();
-		if(!m_PrevSponsorChatEffects)
-			m_SponsorChatRenderer.Reset(Graphics());
 	}
 	const bool DeveloperBadgeAvailable = GameClient()->m_QmClient.DeveloperBadge().Available();
 	// 保留消息原始头衔，重新开启本地显示后可以恢复历史消息。
@@ -3075,7 +3069,6 @@ bool CChat::OnPrepareLines(float y)
 				FullWidth += maximum(LineCursor.m_LongestLineWidth, AppendCursor.m_LongestLineWidth);
 			}
 			Line.m_ContentWidth = maximum(0.0f, FullWidth);
-			Line.m_SponsorTextBounds = {Begin, TargetY, FullWidth, LineHeight};
 			if(!g_Config.m_ClChatOld)
 			{
 				const CUIRect Rect = {Begin, TargetY, FullWidth, LineHeight};
@@ -3692,8 +3685,8 @@ void CChat::OnRender()
 				SQmSponsorChatSweep SweepState;
 				if(!HudEditorPreview && Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM)
 					SweepState = QmSponsorChatSweepState(AgeSeconds, TextRender()->GetTextContainerRenderedLineCount(Line.m_BodyTextContainerIndex), LatestVisibleSponsor);
-				m_SponsorChatRenderer.Render(Graphics(), TextRender(), Line.m_BodyTextContainerIndex,
-					Line.m_RenderSponsorChatStyle, Line.m_SponsorTextBounds, FontSize(), AnimAlpha, AnimOffsetX, AnimOffsetY, SweepState);
+				QmRenderSponsorChatText(Graphics(), TextRender(), Line.m_BodyTextContainerIndex,
+					Line.m_RenderSponsorChatStyle, AnimAlpha, AnimOffsetX, AnimOffsetY, FontSize(), SweepState);
 			}
 
 			if(Line.m_TextContainerIndex.Valid())

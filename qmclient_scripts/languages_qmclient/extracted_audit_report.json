@@ -1,7 +1,7 @@
 {
   "summary": {
     "must_i18n": 10646,
-    "business_data": 14323,
+    "business_data": 14319,
     "test_only": 6083,
     "needs_review": 2516,
     "violation": 0
@@ -8095,7 +8095,7 @@
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 409,
-      "text": "Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight",
+      "text": "Sponsor chat style draft: 0=Normal, 1=Platinum highlight",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
@@ -36032,741 +36032,727 @@
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2984,
-      "text": "Soft glow",
+      "text": "Solid",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2985,
-      "text": "Solid",
+      "text": "Sponsor code",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2986,
-      "text": "Sponsor code",
+      "text": "Sponsor title",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2987,
-      "text": "Sponsor title",
+      "text": "Subtle",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2988,
-      "text": "Subtle",
+      "text": "Text effect",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2989,
-      "text": "Text effect",
+      "text": "Title color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2990,
-      "text": "Title color",
+      "text": "Title opacity",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2991,
-      "text": "Title opacity",
+      "text": "Title preview",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2992,
-      "text": "Title preview",
+      "text": "Title style",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2993,
-      "text": "Title style",
+      "text": "Turning this off only changes your display.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2994,
-      "text": "Turning this off only changes your display.",
+      "text": "Up to 6 Chinese or 12 ASCII characters",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2995,
-      "text": "Up to 6 Chinese or 12 ASCII characters",
+      "text": "Use style colors",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2996,
-      "text": "Use style colors",
+      "text": "Strength of the vertical or pop wave. Zero keeps the title still.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2997,
-      "text": "Strength of the vertical or pop wave. Zero keeps the title still.",
+      "text": "Title motion",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2998,
-      "text": "Title motion",
+      "text": "Vertical wave",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2999,
-      "text": "Vertical wave",
+      "text": "Pop wave",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3000,
-      "text": "Pop wave",
+      "text": "Wave amount",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3001,
-      "text": "Wave amount",
+      "text": "Wave spacing",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3002,
-      "text": "Wave spacing",
+      "text": "Wave speed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3003,
-      "text": "Wave speed",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3004,
       "text": "Zero uses the style default. Higher values make color bands narrower.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3030,
+      "line": 3029,
       "text": "Advanced mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3031,
+      "line": 3030,
       "text": "Applies to single-color and rainbow overrides.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3032,
+      "line": 3031,
       "text": "Chat message preview",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3033,
+      "line": 3032,
       "text": "Chat message style",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3034,
+      "line": 3033,
       "text": "Classic",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3035,
+      "line": 3034,
       "text": "Classic title glow",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3036,
+      "line": 3035,
       "text": "Custom title",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3037,
+      "line": 3036,
       "text": "Exact bound nickname",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3038,
+      "line": 3037,
       "text": "Full",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3039,
+      "line": 3038,
       "text": "Higher values make the wave move faster. Zero stops the movement.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3040,
+      "line": 3039,
       "text": "Highlight movement in Polished mode. Zero turns it off.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3041,
+      "line": 3040,
       "text": "Instant compact hints",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3042,
+      "line": 3041,
       "text": "Light band",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3043,
+      "line": 3042,
       "text": "Limit the title to the exact nickname below.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3044,
+      "line": 3043,
       "text": "Normal",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3045,
+      "line": 3044,
       "text": "Off",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3046,
+      "line": 3045,
       "text": "Only show with this nickname",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3047,
+      "line": 3046,
       "text": "Permanent access; up to 4 online IP addresses",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3048,
+      "line": 3047,
       "text": "Platinum highlight",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3049,
+      "line": 3048,
       "text": "Polished",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3050,
+      "line": 3049,
       "text": "Rainbow",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3051,
+      "line": 3050,
       "text": "Redeem",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3052,
+      "line": 3051,
       "text": "Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3053,
+      "line": 3052,
       "text": "Refresh",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3054,
+      "line": 3053,
       "text": "Save",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3055,
+      "line": 3054,
       "text": "Saved with your title and shared with other QmClient players.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3056,
+      "line": 3055,
       "text": "See you at the next checkpoint.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3057,
+      "line": 3056,
       "text": "Server-assigned style",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3058,
+      "line": 3057,
       "text": "Shimmer speed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3059,
+      "line": 3058,
       "text": "Show dummy title locally",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3060,
+      "line": 3059,
       "text": "Show main tee title locally",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3061,
+      "line": 3060,
       "text": "Show sponsor chat effects locally",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3062,
+      "line": 3061,
       "text": "Show titles above player names",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3063,
+      "line": 3062,
       "text": "Show titles on nameplates",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3064,
+      "line": 3063,
       "text": "Single color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3065,
+      "line": 3064,
       "text": "Single color and Rainbow override the color of animated styles; the style keeps its motion",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3066,
+      "line": 3065,
       "text": "Snap wave to pixels",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3067,
-      "text": "Soft glow",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3068,
+      "line": 3066,
       "text": "Solid",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3069,
+      "line": 3067,
       "text": "Sponsor code",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3070,
+      "line": 3068,
       "text": "Sponsor title",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3071,
+      "line": 3069,
       "text": "Subtle",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3072,
+      "line": 3070,
       "text": "Text effect",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3073,
+      "line": 3071,
       "text": "Title color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3074,
+      "line": 3072,
       "text": "Title opacity",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3075,
+      "line": 3073,
       "text": "Title preview",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3076,
+      "line": 3074,
       "text": "Title style",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3077,
+      "line": 3075,
       "text": "Turning this off only changes your display.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3078,
+      "line": 3076,
       "text": "Up to 6 Chinese or 12 ASCII characters",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3079,
+      "line": 3077,
       "text": "Use style colors",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3080,
+      "line": 3078,
       "text": "Strength of the vertical or pop wave. Zero keeps the title still.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3081,
+      "line": 3079,
       "text": "Title motion",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3082,
+      "line": 3080,
       "text": "Vertical wave",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3083,
+      "line": 3081,
       "text": "Pop wave",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3084,
+      "line": 3082,
       "text": "Wave amount",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3085,
+      "line": 3083,
       "text": "Wave spacing",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3086,
+      "line": 3084,
       "text": "Wave speed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3087,
+      "line": 3085,
       "text": "Zero uses the style default. Higher values make color bands narrower.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3113,
+      "line": 3111,
       "text": "Cute:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3114,
+      "line": 3112,
       "text": "Flip:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3115,
+      "line": 3113,
       "text": "Kaomoji",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3116,
+      "line": 3114,
       "text": "Lenny:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3117,
+      "line": 3115,
       "text": "Shrug:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3118,
+      "line": 3116,
       "text": "Unflip:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3122,
+      "line": 3120,
       "text": "Add [group] [clan] [reason]:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3123,
+      "line": 3121,
       "text": "Add [group] [name] [reason]:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3124,
+      "line": 3122,
       "text": "Add team clan:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3125,
+      "line": 3123,
       "text": "Add team name:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3126,
+      "line": 3124,
       "text": "Add war clan:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3127,
+      "line": 3125,
       "text": "Add war name:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3128,
+      "line": 3126,
       "text": "Remove [group] [clan]:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3129,
+      "line": 3127,
       "text": "Remove [group] [name]:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3130,
+      "line": 3128,
       "text": "Remove team clan:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3131,
+      "line": 3129,
       "text": "Remove team name:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3132,
+      "line": 3130,
       "text": "Remove war clan:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3133,
+      "line": 3131,
       "text": "Remove war name:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3134,
+      "line": 3132,
       "text": "Warlist",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3138,
+      "line": 3136,
       "text": "Mute:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3139,
+      "line": 3137,
       "text": "Other",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3140,
+      "line": 3138,
       "text": "Translate ID:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3141,
+      "line": 3139,
       "text": "Translate:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3142,
+      "line": 3140,
       "text": "Unmute:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3146,
+      "line": 3144,
       "text": "Command",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3147,
+      "line": 3145,
       "text": "Custom",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3148,
+      "line": 3146,
       "text": "Key",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -40189,252 +40175,245 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 183,
+      "line": 180,
       "text": "Sponsor code",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 184,
+      "line": 181,
       "text": "Custom title",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 185,
+      "line": 182,
       "text": "Exact bound nickname",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 211,
+      "line": 208,
       "text": "Permanent access; up to 4 online IP addresses",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 218,
+      "line": 215,
       "text": "Redeem",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 224,
+      "line": 221,
       "text": "Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 225,
+      "line": 222,
       "text": "Redeem",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 229,
+      "line": 226,
       "text": "Custom title",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 233,
+      "line": 230,
       "text": "Up to 6 Chinese or 12 ASCII characters",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 236,
+      "line": 233,
       "text": "Only show with this nickname",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 238,
+      "line": 235,
       "text": "Limit the title to the exact nickname below.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 246,
+      "line": 243,
       "text": "Chat message style",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 250,
+      "line": 247,
       "text": "Normal",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 250,
+      "line": 247,
       "text": "Platinum highlight",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 250,
-      "text": "Soft glow",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 258,
+      "line": 255,
       "text": "Saved with your title and shared with other QmClient players.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 267,
+      "line": 264,
       "text": "Chat message preview",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 275,
+      "line": 272,
       "text": "Refresh",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 275,
+      "line": 272,
       "text": "Save",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 279,
+      "line": 276,
       "text": "Save",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 281,
+      "line": 278,
       "text": "Refresh",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 286,
+      "line": 283,
       "text": "Title display",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 307,
+      "line": 304,
       "text": "Show titles on nameplates",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 309,
+      "line": 306,
       "text": "Nameplate title size",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 311,
+      "line": 308,
       "text": "Show titles above player names",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 312,
+      "line": 309,
       "text": "Show main tee title locally",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 313,
+      "line": 310,
       "text": "Show dummy title locally",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 316,
+      "line": 313,
       "text": "Show sponsor chat effects locally",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 318,
+      "line": 315,
       "text": "Turning this off only changes your display.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 323,
+      "line": 320,
       "text": "Title style",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 326,
+      "line": 323,
       "text": "Moon",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 326,
+      "line": 323,
       "text": "Sun",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 346,
+      "line": 343,
       "text": "Title color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 350,
+      "line": 347,
       "text": "Title opacity",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 354,
+      "line": 351,
       "text": "Save",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 362,
+      "line": 359,
       "text": "Title preview",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -43836,154 +43815,154 @@
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1062,
+      "line": 1058,
       "text": "Append saved word list chunk",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1063,
+      "line": 1059,
       "text": "Reload word list files",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1064,
+      "line": 1060,
       "text": "Say in chat",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1065,
+      "line": 1061,
       "text": "Say in team chat",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1066,
+      "line": 1062,
       "text": "Enable chat with all/team mode",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1067,
+      "line": 1063,
       "text": "Show chat",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1068,
+      "line": 1064,
       "text": "Echo the text in chat window",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1069,
+      "line": 1065,
       "text": "Clear chat messages",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2708,
+      "line": 2702,
       "text": "Translated text hidden due to streamer mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3214,
+      "line": 3207,
       "text": "All",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3214,
+      "line": 3207,
       "text": "Chat",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3214,
+      "line": 3207,
       "text": "Team",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4030,
+      "line": 4023,
       "text": "Right-click to disable auto-translate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4030,
+      "line": 4023,
       "text": "Right-click to enable auto-translate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4230,
+      "line": 4223,
       "text": "Chat",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4277,
+      "line": 4270,
       "text": "Copy",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4282,
+      "line": 4275,
       "text": "Add one",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4287,
+      "line": 4280,
       "text": "Reply",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4292,
+      "line": 4285,
       "text": "Spectate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4303,
+      "line": 4296,
       "text": "Mute player",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4308,
+      "line": 4301,
       "text": "Add to blocked words",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4313,
+      "line": 4306,
       "text": "Copy name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -60433,21 +60412,28 @@
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1440,
+      "line": 1428,
+      "text": "Title server unavailable; retry",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qmclient.cpp",
+      "line": 1450,
       "text": "Enter your sponsor code",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1440,
+      "line": 1450,
       "text": "Permanent sponsor verified",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1449,
+      "line": 1459,
       "text": "Four IP addresses are already online",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -60475,112 +60461,126 @@
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3106,
+      "line": 3109,
       "text": "Contacting title server",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3115,
-      "text": "Title too long or contains unsupported characters",
+      "line": 3112,
+      "text": "Title server unavailable; retry",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3120,
-      "text": "Title server does not support badge appearance yet",
+      "line": 3121,
+      "text": "Title too long or contains unsupported characters",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
       "line": 3126,
+      "text": "Title server does not support badge appearance yet",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qmclient.cpp",
+      "line": 3132,
       "text": "Unknown title style",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3131,
+      "line": 3137,
       "text": "Title server does not support chat styles yet",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3155,
+      "line": 3161,
       "text": "Contacting title server",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3223,
+      "line": 3229,
       "text": "Title server unavailable; retry",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3240,
-      "text": "Permanent sponsor verified",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3246,
+      "line": 3237,
       "text": "Title server unavailable; retry",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3248,
-      "text": "Sponsor code already claimed",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3250,
-      "text": "Invalid sponsor code",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3252,
-      "text": "Title too long or contains unsupported characters",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
       "line": 3254,
-      "text": "Invalid bound name",
+      "text": "Permanent sponsor verified",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3256,
-      "text": "Unknown sponsor chat style",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3258,
-      "text": "Invalid title appearance",
+      "line": 3260,
+      "text": "Title server unavailable; retry",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
       "line": 3262,
+      "text": "Sponsor code already claimed",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qmclient.cpp",
+      "line": 3264,
+      "text": "Invalid sponsor code",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qmclient.cpp",
+      "line": 3266,
+      "text": "Title too long or contains unsupported characters",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qmclient.cpp",
+      "line": 3268,
+      "text": "Invalid bound name",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qmclient.cpp",
+      "line": 3270,
+      "text": "Unknown sponsor chat style",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qmclient.cpp",
+      "line": 3272,
+      "text": "Invalid title appearance",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qmclient.cpp",
+      "line": 3276,
       "text": "Enter your sponsor code",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -103157,1973 +103157,1959 @@
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2984,
-      "text": "柔光",
+      "text": "纯色",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2985,
-      "text": "纯色",
+      "text": "认证码",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2986,
-      "text": "认证码",
+      "text": "赞助头衔",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2987,
-      "text": "赞助头衔",
+      "text": "柔和",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2988,
-      "text": "柔和",
+      "text": "文字效果",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2989,
-      "text": "文字效果",
+      "text": "头衔颜色",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2990,
-      "text": "头衔颜色",
+      "text": "头衔不透明度",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2991,
-      "text": "头衔不透明度",
+      "text": "头衔成品预览",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2992,
-      "text": "头衔成品预览",
+      "text": "头衔风格",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2993,
-      "text": "头衔风格",
+      "text": "关闭后仅影响本机显示。",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2994,
-      "text": "关闭后仅影响本机显示。",
+      "text": "最多 6 个中文或 12 个英文字符",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2995,
-      "text": "最多 6 个中文或 12 个英文字符",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2996,
       "text": "Title color mode",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2996,
+      "line": 2995,
       "text": "使用风格颜色",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 2996,
+      "text": "调整上下波动或放大凸起的强度，设为零时保持静止。",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2997,
-      "text": "调整上下波动或放大凸起的强度，设为零时保持静止。",
+      "text": "头衔动画",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2998,
-      "text": "头衔动画",
+      "text": "上下波动",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2999,
-      "text": "上下波动",
+      "text": "放大凸起",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3000,
-      "text": "放大凸起",
+      "text": "波浪幅度",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3001,
-      "text": "波浪幅度",
+      "text": "波浪间距",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3002,
-      "text": "波浪间距",
+      "text": "波浪速度",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3003,
-      "text": "波浪速度",
+      "text": "设为零时使用样式默认值；数值越大，色带越窄。",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3004,
-      "text": "设为零时使用样式默认值；数值越大，色带越窄。",
+      "text": "cl_message_color",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3005,
-      "text": "cl_message_color",
+      "text": "cl_message_gradient",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3006,
-      "text": "cl_message_gradient",
+      "text": "qm_nameplate_title_above_name",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3007,
-      "text": "qm_nameplate_title_above_name",
+      "text": "qm_show_dummy_title",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3008,
-      "text": "qm_show_dummy_title",
+      "text": "qm_show_main_title",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3009,
-      "text": "qm_show_main_title",
+      "text": "qm_show_nameplate_title",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3010,
-      "text": "qm_show_nameplate_title",
+      "text": "qm_sponsor_chat_effects",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3011,
-      "text": "qm_sponsor_chat_effects",
+      "text": "qm_sponsor_chat_style",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3012,
-      "text": "qm_sponsor_chat_style",
+      "text": "qm_title_motion_mode",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3013,
-      "text": "qm_title_motion_mode",
+      "text": "qm_title_bob_amplitude",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3014,
-      "text": "qm_title_bob_amplitude",
+      "text": "qm_title_bob_pixel_snap",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3015,
-      "text": "qm_title_bob_pixel_snap",
+      "text": "qm_title_bob_speed",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3016,
-      "text": "qm_title_bob_speed",
+      "text": "qm_title_bob_wavelength",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3017,
-      "text": "qm_title_bob_wavelength",
+      "text": "qm_title_color",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3018,
-      "text": "qm_title_color",
+      "text": "qm_title_color_mode",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3019,
-      "text": "qm_title_color_mode",
+      "text": "qm_title_effect",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3020,
-      "text": "qm_title_effect",
+      "text": "qm_title_instant_hints",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3021,
-      "text": "qm_title_instant_hints",
+      "text": "qm_title_opacity",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3022,
-      "text": "qm_title_opacity",
+      "text": "qm_title_phase",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3023,
-      "text": "qm_title_phase",
+      "text": "qm_title_shimmer_speed",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3024,
-      "text": "qm_title_shimmer_speed",
+      "text": "qm_title_style",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3025,
-      "text": "qm_title_style",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3026,
       "text": "qm_title_style_enabled",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3030,
+      "line": 3029,
       "text": "高级模式",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3031,
+      "line": 3030,
       "text": "用于单色和彩虹配色。",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3032,
+      "line": 3031,
       "text": "发言预览",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3033,
+      "line": 3032,
       "text": "发言样式",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3034,
+      "line": 3033,
       "text": "古典",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3035,
+      "line": 3034,
       "text": "经典效果光晕",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3036,
+      "line": 3035,
       "text": "自定义头衔",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3037,
+      "line": 3036,
       "text": "要绑定的完整昵称",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3038,
+      "line": 3037,
       "text": "完整",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3039,
+      "line": 3038,
       "text": "数值越大，波浪越快；设为零时停止运动。",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3040,
+      "line": 3039,
       "text": "调整精致模式中的流光速度，设为零时关闭。",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3041,
+      "line": 3040,
       "text": "即时小字提示",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3042,
+      "line": 3041,
       "text": "色带宽度",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3043,
+      "line": 3042,
       "text": "仅在使用下方昵称时显示头衔。",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3044,
+      "line": 3043,
       "text": "正常",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3045,
+      "line": 3044,
       "text": "关",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3046,
+      "line": 3045,
       "text": "仅在使用此昵称时显示",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3047,
+      "line": 3046,
       "text": "永久资格，最多 4 个 IP 同时在线",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3048,
+      "line": 3047,
       "text": "铂金高光",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3049,
+      "line": 3048,
       "text": "抛光",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3050,
+      "line": 3049,
       "text": "彩虹",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3051,
+      "line": 3050,
       "text": "领取",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3052,
+      "line": 3051,
       "text": "使用赞助兑换码解锁自定义称号，称号会显示在聊天与名牌上。",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3053,
+      "line": 3052,
       "text": "刷新",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3054,
+      "line": 3053,
       "text": "保存",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3055,
+      "line": 3054,
       "text": "随头衔一起保存，并同步给其他 QmClient 玩家。",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3056,
+      "line": 3055,
       "text": "下个检查点见。",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3057,
+      "line": 3056,
       "text": "服务器分配风格",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3058,
+      "line": 3057,
       "text": "流光速度",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3059,
+      "line": 3058,
       "text": "本机显示分身头衔",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3060,
+      "line": 3059,
       "text": "本机显示本体头衔",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3061,
+      "line": 3060,
       "text": "本机显示赞助者发言特效",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3062,
+      "line": 3061,
       "text": "头衔显示在名字上方",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3063,
+      "line": 3062,
       "text": "显示名牌头衔",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3064,
+      "line": 3063,
       "text": "单色",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3065,
+      "line": 3064,
       "text": "单色与彩虹档会覆盖动态风格自带的颜色；风格只保留浮动与掠光",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3066,
+      "line": 3065,
       "text": "波浪位移对齐整数像素",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3067,
-      "text": "柔光",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3068,
+      "line": 3066,
       "text": "纯色",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3069,
+      "line": 3067,
       "text": "认证码",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3070,
+      "line": 3068,
       "text": "赞助头衔",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3071,
+      "line": 3069,
       "text": "柔和",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3072,
+      "line": 3070,
       "text": "文字效果",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3073,
+      "line": 3071,
       "text": "头衔颜色",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3074,
+      "line": 3072,
       "text": "头衔不透明度",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3075,
+      "line": 3073,
       "text": "头衔成品预览",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3076,
+      "line": 3074,
       "text": "头衔风格",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3077,
+      "line": 3075,
       "text": "关闭后仅影响本机显示。",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3078,
+      "line": 3076,
       "text": "最多 6 个中文或 12 个英文字符",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3079,
+      "line": 3077,
       "text": "Title color mode",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3079,
+      "line": 3077,
       "text": "使用风格颜色",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3080,
+      "line": 3078,
       "text": "调整上下波动或放大凸起的强度，设为零时保持静止。",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3081,
+      "line": 3079,
       "text": "头衔动画",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3082,
+      "line": 3080,
       "text": "上下波动",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3083,
+      "line": 3081,
       "text": "放大凸起",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3084,
+      "line": 3082,
       "text": "波浪幅度",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3085,
+      "line": 3083,
       "text": "波浪间距",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3086,
+      "line": 3084,
       "text": "波浪速度",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3087,
+      "line": 3085,
       "text": "设为零时使用样式默认值；数值越大，色带越窄。",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3088,
+      "line": 3086,
       "text": "cl_message_color",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3089,
+      "line": 3087,
       "text": "cl_message_gradient",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3090,
+      "line": 3088,
       "text": "qm_nameplate_title_above_name",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3091,
+      "line": 3089,
       "text": "qm_show_dummy_title",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3092,
+      "line": 3090,
       "text": "qm_show_main_title",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3093,
+      "line": 3091,
       "text": "qm_show_nameplate_title",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3094,
+      "line": 3092,
       "text": "qm_sponsor_chat_effects",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3095,
+      "line": 3093,
       "text": "qm_sponsor_chat_style",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3096,
+      "line": 3094,
       "text": "qm_title_motion_mode",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3097,
+      "line": 3095,
       "text": "qm_title_bob_amplitude",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3098,
+      "line": 3096,
       "text": "qm_title_bob_pixel_snap",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3099,
+      "line": 3097,
       "text": "qm_title_bob_speed",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3100,
+      "line": 3098,
       "text": "qm_title_bob_wavelength",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3101,
+      "line": 3099,
       "text": "qm_title_color",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3102,
+      "line": 3100,
       "text": "qm_title_color_mode",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3103,
+      "line": 3101,
       "text": "qm_title_effect",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3104,
+      "line": 3102,
       "text": "qm_title_instant_hints",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3105,
+      "line": 3103,
       "text": "qm_title_opacity",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3106,
+      "line": 3104,
       "text": "qm_title_phase",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3107,
+      "line": 3105,
       "text": "qm_title_shimmer_speed",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3108,
+      "line": 3106,
       "text": "qm_title_style",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3109,
+      "line": 3107,
       "text": "qm_title_style_enabled",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3113,
+      "line": 3111,
       "text": "可爱：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3114,
+      "line": 3112,
       "text": "翻转：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3115,
+      "line": 3113,
       "text": "表情符号",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3116,
+      "line": 3114,
       "text": "Lenny ͡° ͜ʖ ͡°:",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3117,
+      "line": 3115,
       "text": "耸肩：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3118,
+      "line": 3116,
       "text": "取消翻转：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3122,
+      "line": 3120,
       "text": "添加 [组名] [战队名] [原因]",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3123,
+      "line": 3121,
       "text": "添加 [组名] [玩家名] [原因]",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3124,
+      "line": 3122,
       "text": "添加友好战队：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3125,
+      "line": 3123,
       "text": "添加友好玩家：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3126,
+      "line": 3124,
       "text": "添加敌对战队：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3127,
+      "line": 3125,
       "text": "添加敌对玩家：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3128,
+      "line": 3126,
       "text": "删除 [组名] [战队名]：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3129,
+      "line": 3127,
       "text": "删除 [组名] [玩家名]：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3130,
+      "line": 3128,
       "text": "删除友好战队：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3131,
+      "line": 3129,
       "text": "删除友好玩家：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3132,
+      "line": 3130,
       "text": "删除敌对战队",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3133,
+      "line": 3131,
       "text": "删除敌对玩家：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3134,
+      "line": 3132,
       "text": "敌对列表",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3138,
+      "line": 3136,
       "text": "禁言：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3139,
+      "line": 3137,
       "text": "其他",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3140,
+      "line": 3138,
       "text": "翻译 ID：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3141,
+      "line": 3139,
       "text": "翻译：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3142,
+      "line": 3140,
       "text": "取消禁言：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3146,
+      "line": 3144,
       "text": "命令",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3147,
+      "line": 3145,
       "text": "自定义",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3159,
+      "line": 3157,
       "text": "deck:controls-mouse",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3160,
+      "line": 3158,
       "text": "deck:controls-controller",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3161,
+      "line": 3159,
       "text": "qm:gores_actor",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3162,
+      "line": 3160,
       "text": "qm:gores",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3163,
+      "line": 3161,
       "text": "qm:key_binds",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3164,
+      "line": 3162,
       "text": "qm:emoticons",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3165,
+      "line": 3163,
       "text": "qm:ime",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3166,
+      "line": 3164,
       "text": "qm:better_scoreboard",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3167,
+      "line": 3165,
       "text": "qm:block_words",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3168,
+      "line": 3166,
       "text": "qm:translate",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3169,
+      "line": 3167,
       "text": "qm:translate_ui",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3170,
+      "line": 3168,
       "text": "qm:qiafen",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3171,
+      "line": 3169,
       "text": "qm:pie_menu",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3172,
+      "line": 3170,
       "text": "qm:map_upload",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3173,
+      "line": 3171,
       "text": "qm:favorite_maps",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3174,
+      "line": 3172,
       "text": "deck:general-game",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3175,
+      "line": 3173,
       "text": "deck:general-language",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3176,
+      "line": 3174,
       "text": "deck:general-client",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3177,
+      "line": 3175,
       "text": "deck:general-recording",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3178,
+      "line": 3176,
       "text": "deck:tclient-info-files",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3179,
+      "line": 3177,
       "text": "qm:dummy_miniview",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3180,
+      "line": 3178,
       "text": "qm:coords",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3181,
+      "line": 3179,
       "text": "qm:player_stats",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3182,
+      "line": 3180,
       "text": "qm:debug_graph",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3183,
+      "line": 3181,
       "text": "qm:debug_mode",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3184,
+      "line": 3182,
       "text": "qm:input_overlay",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3185,
+      "line": 3183,
       "text": "qm:hud_notifications",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3186,
+      "line": 3184,
       "text": "qm:voice",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3187,
+      "line": 3185,
       "text": "qm:dynamic_island",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3188,
+      "line": 3186,
       "text": "qm:system_media_controls",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3189,
+      "line": 3187,
       "text": "qm:lyrics",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3190,
+      "line": 3188,
       "text": "qm:background_3d",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3191,
+      "line": 3189,
       "text": "qm:bind_status_hud",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3192,
+      "line": 3190,
       "text": "qm:gores_drown_board",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3193,
+      "line": 3191,
       "text": "deck:appearance-name-plate-settings",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3194,
+      "line": 3192,
       "text": "deck:appearance-name-plate-text",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3195,
+      "line": 3193,
       "text": "deck:appearance-name-plate-hook-strength",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3196,
+      "line": 3194,
       "text": "deck:appearance-name-plate-key-presses",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3197,
+      "line": 3195,
       "text": "deck:tclient-bind-wheel-editor",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3198,
+      "line": 3196,
       "text": "deck:tclient-configs-actions",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3199,
+      "line": 3197,
       "text": "deck:tclient-profiles",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3200,
+      "line": 3198,
       "text": "deck:tclient-status-bar-settings",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3201,
+      "line": 3199,
       "text": "deck:tclient-status-bar-preview",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3202,
+      "line": 3200,
       "text": "deck:tclient-warlist",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3203,
+      "line": 3201,
       "text": "deck:tee-identity",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3204,
+      "line": 3202,
       "text": "deck:tee-skin-options",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3205,
+      "line": 3203,
       "text": "deck:tee-skin-list",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3206,
+      "line": 3204,
       "text": "deck:tee-skin-queue",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3207,
+      "line": 3205,
       "text": "deck:tee-glow",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3208,
+      "line": 3206,
       "text": "qm:chat_bubble",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3209,
+      "line": 3207,
       "text": "qm:camera_view",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3210,
+      "line": 3208,
       "text": "qm:spectator_mode",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3211,
+      "line": 3209,
       "text": "qm:weapon_animation",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3212,
+      "line": 3210,
       "text": "qm:streamer",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3213,
+      "line": 3211,
       "text": "qm:focus_mode",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3214,
+      "line": 3212,
       "text": "qm:entity_overlay",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3215,
+      "line": 3213,
       "text": "qm:collision_hitbox",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3216,
+      "line": 3214,
       "text": "deck:player-identity",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3217,
+      "line": 3215,
       "text": "deck:player-country",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3218,
+      "line": 3216,
       "text": "deck:graphics-modes",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3219,
+      "line": 3217,
       "text": "deck:graphics-display",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3220,
+      "line": 3218,
       "text": "deck:graphics-visual",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3221,
+      "line": 3219,
       "text": "deck:graphics-icons",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3222,
+      "line": 3220,
       "text": "deck:graphics-interaction",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3223,
+      "line": 3221,
       "text": "deck:sound-toggle",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3224,
+      "line": 3222,
       "text": "deck:sound-volume",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3225,
+      "line": 3223,
       "text": "deck:sound-audio-pack",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3226,
+      "line": 3224,
       "text": "deck:ddnet-demo",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3227,
+      "line": 3225,
       "text": "deck:ddnet-gameplay",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3228,
+      "line": 3226,
       "text": "deck:ddnet-background",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3229,
+      "line": 3227,
       "text": "deck:ddnet-miscellaneous",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3230,
+      "line": 3228,
       "text": "deck:appearance-hud-main",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3231,
+      "line": 3229,
       "text": "deck:appearance-hud-ddrace",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3232,
+      "line": 3230,
       "text": "deck:appearance-chat-messages",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3233,
+      "line": 3231,
       "text": "deck:appearance-chat-preview",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3234,
+      "line": 3232,
       "text": "deck:appearance-name-plate-preview",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3235,
+      "line": 3233,
       "text": "deck:appearance-hook-collision-main",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3236,
+      "line": 3234,
       "text": "deck:appearance-hook-collision-preview",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3237,
+      "line": 3235,
       "text": "deck:appearance-info-messages",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3238,
+      "line": 3236,
       "text": "deck:appearance-laser-enhanced",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3239,
+      "line": 3237,
       "text": "deck:appearance-laser-colors",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3240,
+      "line": 3238,
       "text": "deck:appearance-laser-preview",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3241,
+      "line": 3239,
       "text": "deck:appearance-chat-settings",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3242,
+      "line": 3240,
       "text": "tclient:visual-nameplates",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3243,
+      "line": 3241,
       "text": "tclient:visual-effects",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3244,
+      "line": 3242,
       "text": "tclient:input",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3245,
+      "line": 3243,
       "text": "tclient:anti-latency-tools",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3246,
+      "line": 3244,
       "text": "tclient:improved-anti-ping",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3247,
+      "line": 3245,
       "text": "tclient:execute-on-join",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3248,
+      "line": 3246,
       "text": "tclient:voting",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3249,
+      "line": 3247,
       "text": "tclient:player-indicator",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3250,
+      "line": 3248,
       "text": "tclient:tee-status-bar",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3251,
+      "line": 3249,
       "text": "tclient:tile-outlines",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3252,
+      "line": 3250,
       "text": "tclient:ghost-tools",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3253,
+      "line": 3251,
       "text": "tclient:rainbow",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3254,
+      "line": 3252,
       "text": "tclient:tee-trails",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3255,
+      "line": 3253,
       "text": "tclient:background-draw",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3256,
+      "line": 3254,
       "text": "tclient:finish-name",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3257,
+      "line": 3255,
       "text": "tclient:font",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3258,
+      "line": 3256,
       "text": "tclient:auto-reply",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3259,
+      "line": 3257,
       "text": "tclient:pet",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3260,
+      "line": 3258,
       "text": "tclient:hud",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3261,
+      "line": 3259,
       "text": "tclient:cursor",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3262,
+      "line": 3260,
       "text": "deck:tee7-editor",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3263,
+      "line": 3261,
       "text": "qm:steam",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3264,
+      "line": 3262,
       "text": "qm:appearance_preset",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3265,
+      "line": 3263,
       "text": "deck:controls-movement",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3266,
+      "line": 3264,
       "text": "deck:controls-weapon",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3267,
+      "line": 3265,
       "text": "deck:controls-voting",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3268,
+      "line": 3266,
       "text": "deck:controls-chat",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3269,
+      "line": 3267,
       "text": "deck:controls-dummy",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3270,
+      "line": 3268,
       "text": "deck:controls-miscellaneous",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3271,
+      "line": 3269,
       "text": "qm:skin_appearance",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3272,
+      "line": 3270,
       "text": "qm:solo_split",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3273,
+      "line": 3271,
       "text": "qm:self_kill_protection",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3274,
+      "line": 3272,
       "text": "qm:mini_features",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3275,
+      "line": 3273,
       "text": "qm:jump_hint",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3276,
+      "line": 3274,
       "text": "qm:weapon_trajectory",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3277,
+      "line": 3275,
       "text": "qm:friend_notify",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3278,
+      "line": 3276,
       "text": "qm:hj_assist",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3279,
+      "line": 3277,
       "text": "qm:skin_transition",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3280,
+      "line": 3278,
       "text": "qm:tooltip",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3281,
+      "line": 3279,
       "text": "qm:water_hammer",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3282,
+      "line": 3280,
       "text": "qm:bind_editor",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3283,
+      "line": 3281,
       "text": "qm:bind_overview",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3284,
+      "line": 3282,
       "text": "deck:qmclient-contributors-title",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3285,
+      "line": 3283,
       "text": "deck:qmclient-contributors-title-display",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3286,
+      "line": 3284,
       "text": "deck:tclient-chat-binds-kaomoji",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3287,
+      "line": 3285,
       "text": "deck:tclient-chat-binds-warlist",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3288,
+      "line": 3286,
       "text": "deck:tclient-chat-binds-other",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3289,
+      "line": 3287,
       "text": "deck:controls-custom",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
@@ -109036,126 +109022,126 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 138,
+      "line": 135,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 154,
+      "line": 151,
       "text": "deck:qmclient-contributors-title-display",
       "category": "business_data",
       "reason": "settings matcher, command, or serialized config token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 155,
+      "line": 152,
       "text": "deck:qmclient-contributors-title",
       "category": "business_data",
       "reason": "settings matcher, command, or serialized config token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 186,
+      "line": 183,
       "text": "settings_sponsor_title",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 209,
+      "line": 206,
       "text": "title-auth-status",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 236,
+      "line": 233,
       "text": "qm-title-bind-name",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 246,
+      "line": 243,
       "text": "qm-sponsor-chat-style",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 280,
+      "line": 277,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 307,
+      "line": 304,
       "text": "qm-title-show-nameplate",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 309,
+      "line": 306,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 309,
+      "line": 306,
       "text": "qm-nameplate-title-scale",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 311,
+      "line": 308,
       "text": "qm-title-above-name",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 312,
+      "line": 309,
       "text": "qm-title-show-main",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 313,
+      "line": 310,
       "text": "qm-title-show-dummy",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 316,
+      "line": 313,
       "text": "qm-sponsor-chat-effects",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 350,
+      "line": 347,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 350,
+      "line": 347,
       "text": "qm-title-opacity",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
-      "line": 355,
+      "line": 352,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -114398,392 +114384,413 @@
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 465,
+      "line": 464,
       "text": "/login ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 466,
+      "line": 465,
       "text": "/register ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 467,
+      "line": 466,
       "text": "/code ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 468,
+      "line": 467,
       "text": "/timeout ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 469,
+      "line": 468,
       "text": "/save ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 470,
+      "line": 469,
       "text": "/load ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 775,
+      "line": 773,
       "text": "event=server_message_presentation line_age_ms=%.0f class=%d state=%d force_visible=%d show_large=%d text_container=%d text_container_valid=%d render_alpha=%.3f layout_visibility=%.3f",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 780,
+      "line": 778,
       "text": "perf/autodiag_chat",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 867,
+      "line": 863,
       "text": "all",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 869,
+      "line": 865,
       "text": "team",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 872,
+      "line": 868,
       "text": "chat",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 872,
+      "line": 868,
       "text": "expected all or team as mode",
       "category": "business_data",
       "reason": "chat command preview, preview fixture, or streamer mask data"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1007,
+      "line": 1003,
       "text": "— %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1008,
+      "line": 1004,
       "text": "chat/client",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1023,
+      "line": 1019,
       "text": "— %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1024,
+      "line": 1020,
       "text": "chat/client",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1062,
+      "line": 1058,
       "text": "qm_block_words_list_append",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1062,
+      "line": 1058,
       "text": "s[hex]",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1063,
+      "line": 1059,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1063,
+      "line": 1059,
       "text": "qm_reload_word_files",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1064,
+      "line": 1060,
       "text": "r[message]",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1064,
+      "line": 1060,
       "text": "say",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1065,
+      "line": 1061,
       "text": "r[message]",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1065,
+      "line": 1061,
       "text": "say_team",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1066,
+      "line": 1062,
       "text": "chat",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1066,
+      "line": 1062,
       "text": "s['team'|'all'] ?r[message]",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1067,
+      "line": 1063,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1067,
+      "line": 1063,
       "text": "+show_chat",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1068,
+      "line": 1064,
       "text": "echo",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1068,
+      "line": 1064,
       "text": "r[message]",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1069,
+      "line": 1065,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1069,
+      "line": 1065,
       "text": "clear_chat",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1077,
+      "line": 1073,
       "text": "cl_chat_old",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1078,
+      "line": 1074,
       "text": "cl_chat_size",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1079,
+      "line": 1075,
       "text": "cl_chat_width",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1081,
+      "line": 1077,
       "text": "center_x",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1081,
+      "line": 1077,
       "text": "center_y",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1087,
+      "line": 1083,
       "text": "qm_chat_%s_gradient_%s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1336,
+      "line": 1332,
       "text": "/",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1340,
+      "line": 1336,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1340,
+      "line": 1336,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1426,
+      "line": 1422,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1426,
+      "line": 1422,
       "text": "\"",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1441,
+      "line": 1437,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1443,
+      "line": 1439,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1443,
+      "line": 1439,
       "text": ": ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1445,
+      "line": 1441,
       "text": ":",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1580,
+      "line": 1576,
       "text": "chat/server",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1593,
+      "line": 1589,
       "text": "event=server_message_received handled=%d show_chat_system=%d notifications=%d focus_hide_info=%d focus_hide_prompt=%d route=%d class=%d text_len=%d",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1597,
+      "line": 1593,
       "text": "perf/autodiag_chat",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1606,
+      "line": 1602,
       "text": "' invited you to team ",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1608,
+      "line": 1604,
       "text": "' invited you to team ",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1609,
+      "line": 1605,
       "text": "' invited you to team ",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1609,
+      "line": 1605,
       "text": ". Use /team ",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1613,
+      "line": 1609,
       "text": "' 邀请你加入 ",
       "category": "business_data",
       "reason": "chat command preview, preview fixture, or streamer mask data"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1613,
+      "line": 1609,
+      "text": "。输入 /team ",
+      "category": "business_data",
+      "reason": "chat command preview, preview fixture, or streamer mask data"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 1611,
+      "text": "' 邀请你加入 ",
+      "category": "business_data",
+      "reason": "chat command preview, preview fixture, or streamer mask data"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 1612,
+      "text": "' 邀请你加入 ",
+      "category": "business_data",
+      "reason": "chat command preview, preview fixture, or streamer mask data"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 1612,
       "text": "。输入 /team ",
       "category": "business_data",
       "reason": "chat command preview, preview fixture, or streamer mask data"
@@ -114798,289 +114805,275 @@
     {
       "file": "src/game/client/components/chat.cpp",
       "line": 1616,
-      "text": "' 邀请你加入 ",
-      "category": "business_data",
-      "reason": "chat command preview, preview fixture, or streamer mask data"
-    },
-    {
-      "file": "src/game/client/components/chat.cpp",
-      "line": 1616,
-      "text": "。输入 /team ",
-      "category": "business_data",
-      "reason": "chat command preview, preview fixture, or streamer mask data"
-    },
-    {
-      "file": "src/game/client/components/chat.cpp",
-      "line": 1619,
-      "text": "' 邀请你加入 ",
-      "category": "business_data",
-      "reason": "chat command preview, preview fixture, or streamer mask data"
-    },
-    {
-      "file": "src/game/client/components/chat.cpp",
-      "line": 1620,
       "text": " 队",
       "category": "business_data",
       "reason": "chat command preview, preview fixture, or streamer mask data"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1621,
+      "line": 1617,
       "text": " 队",
       "category": "business_data",
       "reason": "chat command preview, preview fixture, or streamer mask data"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1627,
+      "line": 1623,
       "text": "/team %s",
       "category": "business_data",
       "reason": "chat or console command template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1686,
+      "line": 1682,
       "text": "Team successfully saved by ",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1687,
+      "line": 1683,
       "text": ". Use '/load ",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1688,
+      "line": 1684,
       "text": "' on ",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1689,
+      "line": 1685,
       "text": " to continue",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1689,
+      "line": 1685,
       "text": "' to continue",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1726,
+      "line": 1722,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1728,
+      "line": 1724,
       "text": "chat",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1728,
+      "line": 1724,
       "text": "Failed to create chat log root folder",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1733,
+      "line": 1729,
       "text": "chat",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1733,
+      "line": 1729,
       "text": "Failed to create chat log folder '%s'",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1745,
+      "line": 1741,
       "text": "%Y-%m-%d",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1761,
+      "line": 1757,
       "text": "%Y-%m-%d",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1781,
+      "line": 1777,
       "text": "client %d",
       "category": "business_data",
       "reason": "console command format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1791,
+      "line": 1787,
       "text": "%s/%s%s%s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1794,
+      "line": 1790,
       "text": "[%s] [%s] %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1796,
+      "line": 1792,
       "text": "[%s] [%s] %s: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1807,
+      "line": 1803,
       "text": "chat",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1807,
+      "line": 1803,
       "text": "Failed to open chat log '%s'",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1822,
+      "line": 1818,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1824,
+      "line": 1820,
       "text": "chat/all",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1829,
+      "line": 1825,
       "text": "*** ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1830,
+      "line": 1826,
       "text": "chat/server",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1836,
+      "line": 1832,
       "text": "chat/client",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1861,
+      "line": 1857,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1865,
+      "line": 1861,
       "text": "chat/whisper",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1871,
+      "line": 1867,
       "text": "chat/team",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1884,
+      "line": 1880,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1884,
+      "line": 1880,
       "text": "%s%s%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1884,
+      "line": 1880,
       "text": ": ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1947,
+      "line": 1943,
       "text": ",",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1973,
+      "line": 1969,
       "text": "chat/whisper",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1975,
+      "line": 1971,
       "text": "chat/team",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1977,
+      "line": 1973,
       "text": "chat/server",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1979,
+      "line": 1975,
       "text": "chat/client",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1981,
+      "line": 1977,
       "text": "chat/all",
       "category": "business_data",
       "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/chat.cpp",
+      "line": 1979,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
@@ -115091,343 +115084,336 @@
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1987,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/chat.cpp",
-      "line": 1987,
+      "line": 1983,
       "text": "%s%s%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1987,
+      "line": 1983,
       "text": ": ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1997,
+      "line": 1993,
       "text": ",",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2006,
+      "line": 2002,
       "text": " [%d]: ",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2014,
+      "line": 2010,
       "text": " [%d]",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2059,
+      "line": 2055,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2148,
+      "line": 2144,
       "text": ", ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2152,
+      "line": 2148,
       "text": "屏蔽词: %s",
       "category": "business_data",
       "reason": "chat command preview, preview fixture, or streamer mask data"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2154,
+      "line": 2150,
       "text": "chat/blocklist",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2359,
+      "line": 2355,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2371,
+      "line": 2367,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2420,
+      "line": 2416,
       "text": "%s: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2421,
+      "line": 2417,
       "text": "DDNet Chat",
       "category": "business_data",
       "reason": "chat command preview, preview fixture, or streamer mask data"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2511,
+      "line": 2505,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2560,
+      "line": 2554,
       "text": "event=server_message_prepare_skip reason=collapsed class=%d text_container=%d text_container_valid=%d",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2562,
+      "line": 2556,
       "text": "perf/autodiag_chat",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2639,
+      "line": 2633,
       "text": ": ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2642,
+      "line": 2636,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2650,
+      "line": 2644,
       "text": "[%d] ",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2652,
+      "line": 2646,
       "text": " [%d]",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2657,
+      "line": 2651,
       "text": "'",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2657,
+      "line": 2651,
       "text": "Team save in progress. You'll be able to load with '/load ",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2659,
+      "line": 2653,
       "text": "Team save in progress. You'll be able to load with '/load *** *** ***'",
       "category": "business_data",
       "reason": "chat command preview, preview fixture, or streamer mask data"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2661,
+      "line": 2655,
       "text": "if it fails",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2661,
+      "line": 2655,
       "text": "Team save in progress. You'll be able to load with '/load",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2663,
+      "line": 2657,
       "text": "Team save in progress. You'll be able to load with '/load *** *** ***' if save is successful or with '/load *** *** ***' if it fails",
       "category": "business_data",
       "reason": "chat command preview, preview fixture, or streamer mask data"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2665,
+      "line": 2659,
       "text": " to continue",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2665,
+      "line": 2659,
       "text": "Team successfully saved by ",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2667,
+      "line": 2661,
       "text": "Team successfully saved by ***. Use '/load *** *** ***' to continue",
       "category": "business_data",
       "reason": "chat command preview, preview fixture, or streamer mask data"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2769,
+      "line": 2763,
       "text": ",",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2784,
+      "line": 2778,
       "text": ": ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2794,
+      "line": 2788,
       "text": ": ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2862,
+      "line": 2856,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2917,
+      "line": 2911,
       "text": ",",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 2940,
+      "line": 2934,
       "text": ": ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3003,
+      "line": 2997,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3103,
+      "line": 3096,
       "text": "event=server_message_upload_requested class=%d text_container=%d text_buffering=%d",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3105,
+      "line": 3098,
       "text": "perf/autodiag_chat",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3215,
+      "line": 3208,
       "text": ": ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3241,
+      "line": 3234,
       "text": ": ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3641,
+      "line": 3634,
       "text": "event=server_message_render_skip reason=invalid_text_container class=%d text_container=%d",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3642,
+      "line": 3635,
       "text": "perf/autodiag_chat",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3736,
+      "line": 3729,
       "text": "Welcome to QmClient",
       "category": "business_data",
       "reason": "chat command preview, preview fixture, or streamer mask data"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3738,
+      "line": 3731,
       "text": "Let's go!",
       "category": "business_data",
       "reason": "chat command preview, preview fixture, or streamer mask data"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3747,
+      "line": 3740,
       "text": "%s: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3916,
+      "line": 3909,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4155,
+      "line": 4148,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4164,
+      "line": 4157,
       "text": "%s: ",
       "category": "business_data",
       "reason": "display formatting template"
@@ -115483,6 +115469,20 @@
     },
     {
       "file": "src/game/client/components/chat.h",
+      "line": 411,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/components/chat.h",
+      "line": 412,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/components/chat.h",
       "line": 413,
       "text": "",
       "category": "business_data",
@@ -115490,70 +115490,56 @@
     },
     {
       "file": "src/game/client/components/chat.h",
-      "line": 414,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/chat.h",
-      "line": 415,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/chat.h",
-      "line": 493,
+      "line": 491,
       "text": "/w \"",
       "category": "business_data",
       "reason": "chat or console command template"
     },
     {
       "file": "src/game/client/components/chat.h",
-      "line": 505,
+      "line": 503,
       "text": "say /spec \"",
       "category": "business_data",
       "reason": "chat, vote, or bind command data"
     },
     {
       "file": "src/game/client/components/chat.h",
-      "line": 514,
+      "line": 512,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.h",
-      "line": 514,
+      "line": 512,
       "text": "*** ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.h",
-      "line": 516,
+      "line": 514,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.h",
-      "line": 517,
+      "line": 515,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.h",
-      "line": 543,
+      "line": 541,
       "text": "/team ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.h",
-      "line": 547,
+      "line": 545,
       "text": "/vote particle",
       "category": "business_data",
       "reason": "chat or console command template"
@@ -144302,169 +144288,190 @@
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 60,
+      "line": 61,
       "text": "ping",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 62,
+      "line": 63,
       "text": "pong",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 64,
+      "line": 65,
       "text": "state",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 71,
+      "line": 72,
       "text": "online_users",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 72,
+      "line": 73,
       "text": "online_dummies",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 75,
+      "line": 76,
       "text": "broadcast",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 88,
+      "line": 89,
       "text": "titles",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 96,
+      "line": 97,
       "text": "server_time",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 102,
+      "line": 103,
       "text": "emoticon",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 112,
+      "line": 113,
       "text": "users_sync",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 116,
+      "line": 117,
       "text": "title_profile",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 117,
+      "line": 118,
       "text": "title_status",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 129,
+      "line": 130,
       "text": "server_time",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 130,
+      "line": 131,
       "text": "playtime_seconds",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 134,
+      "line": 135,
       "text": "bound_name",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 183,
+      "line": 184,
       "text": "emoticon",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 187,
+      "line": 188,
       "text": "client_id",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 188,
+      "line": 189,
       "text": "player_name",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 189,
+      "line": 190,
       "text": "server_address",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 190,
+      "line": 191,
       "text": "launch_mode",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 191,
+      "line": 192,
       "text": "super_launch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 193,
+      "line": 194,
       "text": "player_id",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 230,
+      "line": 231,
       "text": "wss://qmclient.icu/ws",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qm_realtime.cpp",
-      "line": 235,
+      "line": 236,
       "text": "wss://qmclient.icu/ws",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qm_realtime.cpp",
+      "line": 245,
+      "text": "type",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qm_realtime.cpp",
+      "line": 246,
+      "text": "subscribe_titles",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qm_realtime.cpp",
+      "line": 247,
+      "text": "title_token",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
@@ -145429,316 +145436,295 @@
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1371,
+      "line": 1372,
       "text": "gores",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1398,
+      "line": 1399,
       "text": "total_seconds",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1400,
+      "line": 1401,
       "text": "last_start_at",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1406,
+      "line": 1407,
       "text": "action",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1406,
+      "line": 1407,
       "text": "start",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1414,
+      "line": 1415,
       "text": "action",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1414,
+      "line": 1415,
       "text": "stop",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1420,
+      "line": 1431,
       "text": "bound_name",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1422,
+      "line": 1433,
       "text": "chat_style",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1423,
+      "line": 1434,
       "text": "chat_style",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1463,
+      "line": 1473,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1463,
+      "line": 1473,
       "text": "realtime users: no payload, client_state=%s",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1469,
+      "line": 1479,
       "text": "server_address",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1471,
+      "line": 1481,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1471,
+      "line": 1481,
       "text": "realtime users: client_state=%s payload_server='%s' users_array=%s users_count=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1473,
+      "line": 1483,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1481,
+      "line": 1491,
       "text": "server_address",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1482,
+      "line": 1492,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1504,
+      "line": 1514,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1519,
+      "line": 1529,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1522,
+      "line": 1532,
       "text": "server_address",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1561,
+      "line": 1571,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1563,
+      "line": 1573,
       "text": "server_address",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1575,
+      "line": 1585,
       "text": "[%s]",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1588,
+      "line": 1598,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1593,
+      "line": 1603,
       "text": "type",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1597,
+      "line": 1607,
       "text": "v",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1599,
+      "line": 1609,
       "text": "client_version",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1601,
+      "line": 1611,
       "text": "capabilities",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1605,
+      "line": 1615,
       "text": "machine_hash",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1607,
+      "line": 1617,
       "text": "client_id",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1609,
-      "text": "player_name",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1613,
-      "text": "recovery_stop_at",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1617,
-      "text": "server_address",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/qmclient.cpp",
       "line": 1619,
-      "text": "session_id",
+      "text": "player_name",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
       "line": 1623,
+      "text": "recovery_stop_at",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qmclient.cpp",
+      "line": 1627,
+      "text": "server_address",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qmclient.cpp",
+      "line": 1629,
+      "text": "session_id",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qmclient.cpp",
+      "line": 1633,
       "text": "title_token",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1625,
+      "line": 1635,
       "text": "developer_token",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1628,
+      "line": 1638,
       "text": "players",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1639,
+      "line": 1649,
       "text": "player_id",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1641,
+      "line": 1651,
       "text": "player_name",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1643,
+      "line": 1653,
       "text": "dummy",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1645,
+      "line": 1655,
       "text": "voice_supported",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1661,
-      "text": "type",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1662,
-      "text": "subscribe_titles",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 1665,
-      "text": "title_token",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
@@ -146479,45 +146465,24 @@
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3123,
+      "line": 3129,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3136,
+      "line": 3142,
       "text": "title",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3138,
+      "line": 3144,
       "text": "bound_name",
       "category": "business_data",
       "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3140,
-      "text": "style",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3142,
-      "text": "chat_style",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3144,
-      "text": "appearance",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
@@ -146529,97 +146494,118 @@
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
       "line": 3148,
+      "text": "chat_style",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qmclient.cpp",
+      "line": 3150,
+      "text": "appearance",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qmclient.cpp",
+      "line": 3152,
+      "text": "style",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qmclient.cpp",
+      "line": 3154,
       "text": "color",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3150,
+      "line": 3156,
       "text": "opacity",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3171,
+      "line": 3177,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3176,
+      "line": 3182,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3189,
+      "line": 3195,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3229,
+      "line": 3243,
       "text": "bound_name",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3236,
+      "line": 3250,
       "text": "chat_style",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3237,
-      "text": "chat_style",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3247,
-      "text": "code_used",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3249,
-      "text": "invalid_code",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
       "line": 3251,
+      "text": "chat_style",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qmclient.cpp",
+      "line": 3261,
+      "text": "code_used",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qmclient.cpp",
+      "line": 3263,
+      "text": "invalid_code",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qmclient.cpp",
+      "line": 3265,
       "text": "invalid_title",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3253,
+      "line": 3267,
       "text": "invalid_name",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3255,
+      "line": 3269,
       "text": "invalid_chat_style",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3257,
+      "line": 3271,
       "text": "invalid_appearance",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -146696,13 +146682,6 @@
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.h",
-      "line": 58,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/qmclient/qmclient.h",
       "line": 59,
       "text": "",
       "category": "business_data",
@@ -146724,14 +146703,14 @@
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.h",
-      "line": 122,
+      "line": 62,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.h",
-      "line": 125,
+      "line": 123,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -146745,14 +146724,14 @@
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.h",
-      "line": 135,
+      "line": 127,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.h",
-      "line": 145,
+      "line": 136,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -146787,7 +146766,7 @@
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.h",
-      "line": 152,
+      "line": 150,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -146795,6 +146774,13 @@
     {
       "file": "src/game/client/components/qmclient/qmclient.h",
       "line": 153,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/components/qmclient/qmclient.h",
+      "line": 154,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -148971,28 +148957,14 @@
     },
     {
       "file": "src/game/client/components/qmclient/sponsor_chat_style.h",
-      "line": 20,
-      "text": "soft_glow",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/sponsor_chat_style.h",
-      "line": 22,
+      "line": 19,
       "text": "platinum",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/sponsor_chat_style.h",
-      "line": 31,
-      "text": "soft_glow",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/sponsor_chat_style.h",
-      "line": 33,
+      "line": 29,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -209299,7 +209271,7 @@
     },
     {
       "file": "src/test/unit/qmclient/client/qm_realtime_test.cpp",
-      "line": 34,
+      "line": 36,
       "text": " Example.COM:08303/ ",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -210027,7 +209999,7 @@
     },
     {
       "file": "src/test/unit/qmclient/client/qm_sponsor_chat_style_test.cpp",
-      "line": 89,
+      "line": 78,
       "text": "A中\\n文",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -218401,14 +218373,14 @@
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1040,
+      "line": 1036,
       "text": "Cannot append word list: invalid UTF-8 or capacity exceeded",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 1611,
+      "line": 1607,
       "text": "' invited you to team ",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
@@ -220711,14 +220683,14 @@
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.cpp",
-      "line": 3173,
+      "line": 3179,
       "text": "[开发者]",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/qmclient.h",
-      "line": 76,
+      "line": 77,
       "text": "Enter your sponsor code",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"

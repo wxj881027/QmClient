@@ -1,6 +1,7 @@
 #include "qm_realtime.h"
 
 #include <engine/shared/json.h>
+#include <engine/shared/jsonwriter.h>
 #include <engine/shared/protocol.h>
 
 #include <generated/client_data.h>
@@ -233,4 +234,18 @@ const char *QmRealtimeEffectiveUrl(const char *pConfiguredUrl)
 bool QmRealtimeAllowsCredentials(const char *pUrl)
 {
 	return pUrl && str_comp(pUrl, "wss://qmclient.icu/ws") == 0;
+}
+
+std::string QmRealtimeTitleRefreshRequest(const char *pUrl, const char *pToken)
+{
+	if(!QmRealtimeAllowsCredentials(pUrl) || !pToken || !pToken[0])
+		return {};
+	CJsonStringWriter Writer;
+	Writer.BeginObject();
+	Writer.WriteAttribute("type");
+	Writer.WriteStrValue("subscribe_titles");
+	Writer.WriteAttribute("title_token");
+	Writer.WriteStrValue(pToken);
+	Writer.EndObject();
+	return Writer.GetOutputString();
 }

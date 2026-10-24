@@ -14264,9 +14264,6 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == SodaMusic Hook ヘルパーのパス（空欄の場合は QmClient と同じディレクトリ）
 
-Soft glow
-== 柔らかな光
-
 Solid
 == 単色
 
@@ -14447,8 +14444,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == 本体と分身を別々のチームに入れ、solo ランの開始を同期します（team-0 で同期しにくいマップ向け）
 
-Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
-== 支援者チャットのスタイル下書き：0=通常、1=柔らかな光、2=プラチナの輝き
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight
+== 支援者チャットのスタイル下書き：0=通常、1=プラチナの輝き
 
 Sponsor code
 == 認証コード
