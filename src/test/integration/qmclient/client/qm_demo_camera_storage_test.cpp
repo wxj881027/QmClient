@@ -13,6 +13,13 @@ namespace
 	public:
 		bool m_ThrowRead = false, m_ShortRead = false, m_CloseError = false;
 		int m_Closes = 0;
+		size_t m_JsonCalls = 0, m_FailJsonAt = 0;
+		void *AllocateJson(size_t Size, int Zero) noexcept override
+		{
+			if(++m_JsonCalls == m_FailJsonAt)
+				return nullptr;
+			return CFileOperations::AllocateJson(Size, Zero);
+		}
 		bool ReadText(IOHANDLE File, size_t Length, std::string &Json) override
 		{
 			if(m_ThrowRead)
@@ -193,4 +200,53 @@ TEST_F(CQmDemoCameraStorage, FailedSessionWriteSurvivesSwitchAndCanBeSavedAfterR
 	EXPECT_TRUE(Reopened.m_Enabled);
 	ASSERT_EQ(Reopened.m_Track.Frames().size(), 1u);
 	EXPECT_EQ(Reopened.m_Track.Frames()[0].m_View.m_Center, vec2(10.0f, 20.0f));
+}
+
+TEST_F(CQmDemoCameraStorage, ParserHeapFailureClosesTheReadFileAndAllowsRetry)
+{
+	ASSERT_TRUE(qm_demo_camera::Save(m_pStorage.get(), m_Path, m_Project));
+	CFileFaults Operations;
+	Operations.m_FailJsonAt = 1;
+	qm_demo_camera::SProject Previous;
+	EXPECT_EQ(qm_demo_camera::Load(m_pStorage.get(), m_Path, Previous, &Operations), qm_demo_camera::ELoadResult::UNAVAILABLE);
+	EXPECT_EQ(Operations.m_Closes, 1);
+	EXPECT_TRUE(Previous.m_Track.Empty());
+	Operations.m_FailJsonAt = 0;
+	EXPECT_EQ(qm_demo_camera::Load(m_pStorage.get(), m_Path, Previous, &Operations), qm_demo_camera::ELoadResult::LOADED);
+	EXPECT_EQ(Operations.m_Closes, 2);
+	EXPECT_TRUE(Previous.m_Enabled);
+}
+
+TEST_F(CQmDemoCameraStorage, ParserHeapFailureDoesNotBindAnEmptySessionOrSaveOverOldEdits)
+{
+	ASSERT_TRUE(qm_demo_camera::Save(m_pStorage.get(), m_Path, m_Project));
+	const std::string NextPath = qm_demo_camera::SidecarPath("next.demo");
+	qm_demo_camera::SProject Incoming;
+	ASSERT_GE(Incoming.m_Track.Insert({100.0, {{99.0f, 0.0f}, 1.0f}}), 0);
+	ASSERT_TRUE(qm_demo_camera::Save(m_pStorage.get(), NextPath, Incoming));
+	CFileFaults Operations;
+	qm_demo_camera::CSessionStore Store;
+	int Saves = 0;
+	const auto Load = [&](const std::string &Path, qm_demo_camera::SProject &Project) { return qm_demo_camera::Load(m_pStorage.get(), Path, Project, &Operations); };
+	const auto Save = [&](const std::string &Path, const qm_demo_camera::SProject &Project) { ++Saves; return qm_demo_camera::Save(m_pStorage.get(), Path, Project); };
+	ASSERT_TRUE(Store.Open("race.demo", [&] { return m_Path; }, Load, Save));
+	ASSERT_GE(Store.Project().m_Track.Insert({100.0, {{33.0f, 0.0f}, 1.0f}}), 0);
+	Store.Changed();
+	Operations.m_JsonCalls = 0;
+	Operations.m_FailJsonAt = 1;
+	EXPECT_FALSE(Store.Open("next.demo", [&] { return NextPath; }, Load, Save));
+	EXPECT_TRUE(Store.Matches("race.demo"));
+	EXPECT_TRUE(Store.Dirty());
+	EXPECT_EQ(Saves, 0);
+	EXPECT_EQ(Operations.m_Closes, 2);
+	Operations.m_FailJsonAt = 0;
+	ASSERT_TRUE(Store.Open("next.demo", [&] { return NextPath; }, Load, Save));
+	EXPECT_FALSE(Store.Project().m_Enabled);
+	ASSERT_EQ(Store.Project().m_Track.Frames().size(), 1u);
+	EXPECT_FLOAT_EQ(Store.Project().m_Track.Frames()[0].m_View.m_Center.x, 99.0f);
+	EXPECT_EQ(Saves, 1);
+	qm_demo_camera::SProject Saved;
+	ASSERT_EQ(qm_demo_camera::Load(m_pStorage.get(), m_Path, Saved), qm_demo_camera::ELoadResult::LOADED);
+	ASSERT_EQ(Saved.m_Track.Frames().size(), 1u);
+	EXPECT_FLOAT_EQ(Saved.m_Track.Frames()[0].m_View.m_Center.x, 33.0f);
 }
