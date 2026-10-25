@@ -3,6 +3,8 @@
 #include <base/system.h>
 
 #include <algorithm>
+#include <new>
+#include <type_traits>
 #include <utility>
 
 bool CTranslateJobQueue::CanSubmit(int Limit) const
@@ -14,46 +16,63 @@ bool CTranslateJobQueue::Submit(STranslateJob Job, int Limit)
 {
 	if(!CanSubmit(Limit) || !Job.m_pBackend || !Job.m_pTranslateResponse)
 		return false;
-	m_vJobs.emplace_back(std::move(Job));
+	m_vJobs.push_back({std::move(Job), std::nullopt});
 	return true;
 }
 
 void CTranslateJobQueue::CancelOutgoing(int Connection)
 {
-	m_vJobs.erase(std::remove_if(m_vJobs.begin(), m_vJobs.end(), [Connection](const STranslateJob &Job) { return Job.m_Outgoing && Job.m_Connection == Connection; }), m_vJobs.end());
+	m_vJobs.erase(std::remove_if(m_vJobs.begin(), m_vJobs.end(), [Connection](const SPending &Pending) { return Pending.m_Job.m_Outgoing && Pending.m_Job.m_Connection == Connection; }), m_vJobs.end());
 }
 
-std::vector<STranslateCompletion> CTranslateJobQueue::Update(const std::function<bool(const STranslateJob &)> &IncomingStillValid)
+std::pmr::vector<STranslateCompletion> CTranslateJobQueue::Update(const std::function<bool(const STranslateJob &)> &IncomingStillValid, std::pmr::memory_resource *pResultMemory)
 {
-	std::vector<STranslateCompletion> vCompleted;
+	static_assert(std::is_nothrow_move_constructible_v<STranslateCompletion>);
+	static_assert(std::is_nothrow_move_assignable_v<SPending>);
+	std::pmr::vector<STranslateCompletion> vCompleted(pResultMemory);
 	for(auto It = m_vJobs.begin(); It != m_vJobs.end();)
 	{
-		if(!It->m_Outgoing && !IncomingStillValid(*It))
+		try
 		{
+			auto &Job = It->m_Job;
+			if(!Job.m_Outgoing && !IncomingStillValid(Job))
+			{
+				It = m_vJobs.erase(It);
+				continue;
+			}
+			if(!It->m_Completion.has_value())
+			{
+				const std::optional<bool> Done = Job.m_pBackend->Update(*Job.m_pTranslateResponse);
+				if(!Done.has_value())
+				{
+					++It;
+					continue;
+				}
+				bool Success = *Done;
+				if(Job.m_Outgoing && Success && Job.m_pTranslateResponse->m_Text[0] == '\0')
+				{
+					Success = false;
+					str_copy(Job.m_pTranslateResponse->m_Text, "Empty translation result");
+				}
+				Job.m_pTranslateResponse->m_Error = !Success;
+				It->m_Completion = Success;
+			}
+			const bool Success = *It->m_Completion;
+			// 只有出现完成结果才准备容量，等待HTTP的帧不为结果列表分配。
+			if(vCompleted.capacity() == 0)
+				vCompleted.reserve(m_vJobs.size());
+			std::pmr::string SendText(pResultMemory);
+			if(Job.m_Outgoing && Success)
+				SendText = Job.m_pTranslateResponse->m_Text;
+			// 容量和正文均已准备；后续移动与队列擦除不抛异常。
+			vCompleted.push_back({std::move(Job), Success, std::move(SendText)});
 			It = m_vJobs.erase(It);
-			continue;
 		}
-		const std::optional<bool> Done = It->m_pBackend->Update(*It->m_pTranslateResponse);
-		if(!Done.has_value())
+		catch(const std::bad_alloc &)
 		{
-			++It;
-			continue;
+			// 保留当前任务及已有完成状态供下帧重试，先返回此前结果。
+			break;
 		}
-		bool Success = *Done;
-		if(It->m_Outgoing && Success && It->m_pTranslateResponse->m_Text[0] == '\0')
-		{
-			Success = false;
-			str_copy(It->m_pTranslateResponse->m_Text, "Empty translation result");
-		}
-		It->m_pTranslateResponse->m_Error = !Success;
-		std::string SendText;
-		if(It->m_Outgoing)
-		{
-			if(Success)
-				SendText = It->m_pTranslateResponse->m_Text;
-		}
-		vCompleted.push_back({std::move(*It), Success, std::move(SendText)});
-		It = m_vJobs.erase(It);
 	}
 	return vCompleted;
 }

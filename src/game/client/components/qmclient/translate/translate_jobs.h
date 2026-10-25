@@ -4,6 +4,7 @@
 #include "translate_backend.h"
 
 #include <functional>
+#include <memory_resource>
 #include <string>
 #include <vector>
 
@@ -29,7 +30,7 @@ struct STranslateCompletion
 	STranslateJob m_Job;
 	bool m_Success;
 	// 仅成功译文可作为发送内容；失败、拒绝、取消均不回退发送原文。
-	std::string m_SendText;
+	std::pmr::string m_SendText;
 };
 
 // 分发器只调用一次译文发送入口，原文通过独立的本地附注参数传递。
@@ -38,7 +39,13 @@ bool DispatchOutgoingTranslation(const STranslateCompletion &Completed, const st
 // 收发任务共用容量，完成或取消时统一释放后端。
 class CTranslateJobQueue
 {
-	std::vector<STranslateJob> m_vJobs;
+	struct SPending
+	{
+		STranslateJob m_Job;
+		// 已完成后端不因结果存储失败而再次轮询。
+		std::optional<bool> m_Completion;
+	};
+	std::vector<SPending> m_vJobs;
 
 public:
 	bool CanSubmit(int Limit) const;
@@ -46,7 +53,8 @@ public:
 	size_t Size() const { return m_vJobs.size(); }
 	void Clear() { m_vJobs.clear(); }
 	void CancelOutgoing(int Connection);
-	std::vector<STranslateCompletion> Update(const std::function<bool(const STranslateJob &)> &IncomingStillValid);
+	// 自定义结果内存源须存活到返回列表及其发送文本销毁；回调不得重入本队列。
+	std::pmr::vector<STranslateCompletion> Update(const std::function<bool(const STranslateJob &)> &IncomingStillValid, std::pmr::memory_resource *pResultMemory = std::pmr::new_delete_resource());
 };
 
 bool IsTranslateResponseCurrent(bool Initialized, unsigned int TranslationId, const std::shared_ptr<CTranslateResponse> &pResponse, const STranslateJob &Job);
