@@ -4739,6 +4739,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/monitoring/qm_stutter_capture_logging_test.cpp
     src/test/unit/client/player_points_parse_test.cpp
     src/test/unit/qmclient/client/qm_player_points_cache_test.cpp
+    src/test/integration/client/player_points_controller_test.cpp
     src/test/unit/qmclient/client/qm_gores_drown_tracker_test.cpp
     src/test/unit/qmclient/client/qm_trail_geometry_test.cpp
     src/test/integration/qmclient/client/qm_map_upload_lifecycle_test.cpp

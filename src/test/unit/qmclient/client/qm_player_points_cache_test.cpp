@@ -99,3 +99,33 @@ TEST(QmPlayerPointsCache, RefreshStartsAtCacheExpiry)
 	EXPECT_FALSE(Cache.ShouldQuery("player", 7200999, 1000));
 	EXPECT_TRUE(Cache.ShouldQuery("player", 7201000, 1000));
 }
+
+TEST(QmPlayerPointsCache, BorrowedNameViewUsesItsLengthWithoutRequiringATerminator)
+{
+	CQmPlayerPointsCache Cache;
+	Cache.Load("player", 42);
+	const char aName[] = {'p', 'l', 'a', 'y', 'e', 'r', 'x'};
+	EXPECT_EQ(Cache.Get(std::string_view(aName, 6)).m_Points, 42);
+	EXPECT_EQ(Cache.Get(std::string_view(aName, 7)).m_Status, EPointsStatus::NOT_REQUESTED);
+}
+
+TEST(QmPlayerPointsCache, BorrowedNameViewSharesFreshnessWithTheOwnedEntry)
+{
+	CQmPlayerPointsCache Cache;
+	const auto Token = Cache.BeginRequest("player");
+	ASSERT_TRUE(Cache.CompleteSuccess("player", Token, 42, 1000));
+	const std::string NameWithSuffix = "player/ignored";
+	const std::string_view Name(NameWithSuffix.data(), 6);
+	EXPECT_FALSE(Cache.ShouldQuery(Name, 1001, 1000));
+	EXPECT_TRUE(Cache.ShouldQuery(Name, 7201000, 1000));
+}
+
+TEST(QmPlayerPointsCache, MissingBorrowedNameLookupDoesNotCreateAnEntryOrSuppressQuery)
+{
+	CQmPlayerPointsCache Cache;
+	const char aName[] = {'n', 'e', 'w'};
+	const std::string_view Name(aName, sizeof(aName));
+	EXPECT_EQ(Cache.Get(Name).m_Status, EPointsStatus::NOT_REQUESTED);
+	EXPECT_TRUE(Cache.ShouldQuery(Name, 1000, 1000));
+	EXPECT_EQ(Cache.Get(Name).m_Status, EPointsStatus::NOT_REQUESTED);
+}

@@ -48,7 +48,7 @@ private:
 		std::shared_ptr<IHttpRequest> m_pRequest;
 		CQmPlayerPointsCache::SRequestToken m_Token;
 	};
-	std::map<std::string, SRequestSlot> m_ActiveRequests;
+	std::map<std::string, SRequestSlot, std::less<>> m_ActiveRequests;
 	// 已完成的 HTTP 响应每个玩家最多交给一个后台任务解析。
 	std::map<std::string, std::shared_ptr<IJob>> m_ParseJobs;
 
@@ -62,8 +62,15 @@ private:
 	// Helper functions
 	void StartRequest(const char *pPlayerName);
 	void ProcessCompletedRequests();
-	void StoreToDb(const char *pPlayerName, int Points);
-	void CancelRequests(bool NewServer = false);
+	void CancelRequests(bool NewServer = false) noexcept;
+
+protected:
+	// 只分离外部HTTP、作业、时钟和持久化边界，状态与所有权仍归组件。
+	virtual std::shared_ptr<IHttpRequest> CreateRequest(const char *pPlayerName);
+	virtual void SubmitRequest(const std::shared_ptr<IHttpRequest> &pRequest);
+	virtual bool SubmitParseJob(const std::shared_ptr<IJob> &pJob);
+	virtual int64_t Now() const noexcept;
+	virtual void StoreToDb(const char *pPlayerName, int Points);
 
 public:
 	int Sizeof() const override { return sizeof(*this); }

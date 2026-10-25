@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <string_view>
 
 enum class EPointsStatus
 {
@@ -37,7 +38,7 @@ private:
 		int64_t m_LastFailureTick = 0;
 		uint64_t m_PendingRequestId = 0;
 	};
-	std::map<std::string, SEntry> m_Entries;
+	std::map<std::string, SEntry, std::less<>> m_Entries;
 	uint64_t m_Generation = 1;
 	uint64_t m_RequestId = 0;
 
@@ -60,13 +61,13 @@ public:
 		Entry.m_Status = EPointsStatus::READY;
 	}
 
-	SPlayerPointsResult Get(const std::string &Name) const
+	SPlayerPointsResult Get(std::string_view Name) const
 	{
 		const auto It = m_Entries.find(Name);
 		return It == m_Entries.end() ? SPlayerPointsResult{EPointsStatus::NOT_REQUESTED, 0} : SPlayerPointsResult{It->second.m_Status, It->second.m_Points};
 	}
 
-	bool ShouldQuery(const std::string &Name, int64_t Now, int64_t Frequency) const
+	bool ShouldQuery(std::string_view Name, int64_t Now, int64_t Frequency) const
 	{
 		const auto It = m_Entries.find(Name);
 		if(It == m_Entries.end())

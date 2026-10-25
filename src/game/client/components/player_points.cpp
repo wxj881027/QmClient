@@ -58,7 +58,11 @@ namespace
 	};
 }
 void CPlayerPoints::OnInit()
+try
 {
+	m_pStoreStmt.reset();
+	m_pLoadStmt.reset();
+	m_pDb.reset();
 	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
 	m_pDb = SqliteOpen(Console(), Storage(), "qmclient/score_cache.sqlite3");
 	if(!m_pDb)
@@ -79,6 +83,8 @@ void CPlayerPoints::OnInit()
 	m_pStoreStmt = SqlitePrepare(Console(), pSqlite, "INSERT OR REPLACE INTO player_points (name, points) VALUES (?, ?)");
 	if(!m_pLoadStmt || !m_pStoreStmt)
 	{
+		m_pStoreStmt.reset();
+		m_pLoadStmt.reset();
 		m_pDb = nullptr;
 		return;
 	}
@@ -105,6 +111,28 @@ void CPlayerPoints::OnInit()
 		m_Cache.Load(pName, Points);
 	}
 }
+catch(...)
+{
+	// 可选的磁盘缓存失败不终止客户端；已加载的积分仍可用。
+	m_pStoreStmt.reset();
+	m_pLoadStmt.reset();
+	m_pDb.reset();
+}
+
+int64_t CPlayerPoints::Now() const noexcept
+{
+	return time_get();
+}
+
+void CPlayerPoints::SubmitRequest(const std::shared_ptr<IHttpRequest> &pRequest)
+{
+	Http()->Run(pRequest);
+}
+
+bool CPlayerPoints::SubmitParseJob(const std::shared_ptr<IJob> &pJob)
+{
+	return Engine()->TryAddJob(pJob);
+}
 
 void CPlayerPoints::OnRender()
 {
@@ -125,12 +153,19 @@ void CPlayerPoints::StoreToDb(const char *pPlayerName, int Points)
 		log_warn("player_points", "failed to store points for '%s'", pPlayerName);
 }
 
-void CPlayerPoints::CancelRequests(bool NewServer)
+void CPlayerPoints::CancelRequests(bool NewServer) noexcept
 {
 	for(auto &[Name, Slot] : m_ActiveRequests)
 	{
-		if(Slot.m_pRequest)
-			Slot.m_pRequest->Abort();
+		try
+		{
+			if(Slot.m_pRequest && !Slot.m_pRequest->Done())
+				Slot.m_pRequest->Abort();
+		}
+		catch(...)
+		{
+			// 单个外部取消失败不能阻止其余槽位失效。
+		}
 	}
 	m_ActiveRequests.clear();
 	// 后台任务只拥有响应体；移除槽位后，旧解析结果不会再发布到缓存。
@@ -164,9 +199,10 @@ void CPlayerPoints::EnsureQueried(const char *pPlayerName)
 {
 	if(!pPlayerName || pPlayerName[0] == '\0')
 		return;
-	const std::string Name(pPlayerName);
-	if(!m_Cache.ShouldQuery(Name, time_get(), time_freq()) ||
-		m_ActiveRequests.size() >= MAX_CONCURRENT_REQUESTS || m_ActiveRequests.contains(Name))
+	// 绘制和排序只借用名字查表，命中缓存不再临时分配字符串。
+	const std::string_view Name(pPlayerName);
+	if(m_ActiveRequests.size() >= MAX_CONCURRENT_REQUESTS || m_ActiveRequests.contains(Name) ||
+		!m_Cache.ShouldQuery(Name, Now(), time_freq()))
 		return;
 	StartRequest(pPlayerName);
 }
@@ -178,30 +214,55 @@ SPlayerPointsResult CPlayerPoints::GetPoints(const char *pPlayerName)
 	return m_Cache.Get(pPlayerName);
 }
 
-void CPlayerPoints::StartRequest(const char *pPlayerName)
+std::shared_ptr<IHttpRequest> CPlayerPoints::CreateRequest(const char *pPlayerName)
 {
-	// 玩家名先做 URL 编码。
 	char aEncodedName[256];
 	EscapeUrl(aEncodedName, sizeof(aEncodedName), pPlayerName);
-
-	// 拼接查询 URL。
 	char aUrl[512];
 	str_format(aUrl, sizeof(aUrl), "https://ddnet.org/players/?json2=%s", aEncodedName);
-
-	// 创建并配置 HTTP 请求。
 	std::shared_ptr<IHttpRequest> pRequest = HttpGet(aUrl);
 	pRequest->MaxResponseSize(1024 * 1000);
 	pRequest->Timeout(CTimeout{10000, 30000, 100, 10});
 	pRequest->LogProgress(HTTPLOG::FAILURE);
+	return pRequest;
+}
 
-	// 保留已有 READY 数据可见；只有在没有任何缓存时才切换到 FETCHING，
-	// 避免重新获取过程中记分板短暂显示 "..."。
-	std::string Name(pPlayerName);
-	const CQmPlayerPointsCache::SRequestToken Token = m_Cache.BeginRequest(Name);
-
-	// 记录入服代际和请求序号，迟到结果不能覆盖后续入服的新缓存。
-	m_ActiveRequests[Name] = {pRequest, Token};
-	Http()->Run(pRequest);
+void CPlayerPoints::StartRequest(const char *pPlayerName)
+{
+	auto Slot = m_ActiveRequests.end();
+	try
+	{
+		// 先准备拥有名字的槽位，再发布FETCHING令牌和交给外部启动。
+		const auto [It, Inserted] = m_ActiveRequests.try_emplace(pPlayerName);
+		if(!Inserted)
+			return;
+		Slot = It;
+		Slot->second.m_Token = m_Cache.BeginRequest(Slot->first);
+		Slot->second.m_pRequest = CreateRequest(Slot->first.c_str());
+		if(!Slot->second.m_pRequest)
+		{
+			m_Cache.CompleteFailure(Slot->first, Slot->second.m_Token, Now());
+			m_ActiveRequests.erase(Slot);
+			return;
+		}
+		SubmitRequest(Slot->second.m_pRequest);
+	}
+	catch(...)
+	{
+		if(Slot != m_ActiveRequests.end())
+		{
+			try
+			{
+				if(Slot->second.m_pRequest && !Slot->second.m_pRequest->Done())
+					Slot->second.m_pRequest->Abort();
+			}
+			catch(...)
+			{
+			}
+			m_Cache.CompleteFailure(Slot->first, Slot->second.m_Token, Now());
+			m_ActiveRequests.erase(Slot);
+		}
+	}
 }
 
 void CPlayerPoints::ProcessCompletedRequests()
@@ -219,76 +280,98 @@ void CPlayerPoints::ProcessCompletedRequests()
 			continue;
 		}
 
-		EHttpState State = pRequest->State();
-
-		if(State == EHttpState::DONE)
+		try
 		{
-			const int Code = pRequest->StatusCode();
+			EHttpState State = pRequest->State();
 
-			if(Code != 200)
+			if(State == EHttpState::DONE)
 			{
-				unsigned char *pData = nullptr;
-				size_t DataSize = 0;
-				pRequest->Result(&pData, &DataSize);
-				// 仅失败时记录详细日志。
-				dbg_msg("player_points", "Response for '%s': %zu bytes, status=%d (failed)", Name.c_str(), DataSize, Code);
-				m_Cache.CompleteFailure(Name, Token, time_get());
-				m_ParseJobs.erase(Name);
-				Iter = m_ActiveRequests.erase(Iter);
-				continue;
-			}
+				const int Code = pRequest->StatusCode();
 
-			// 解析下放到后台任务；每个玩家同时只跑一个解析任务。
-			auto ParseIter = m_ParseJobs.find(Name);
-			if(ParseIter == m_ParseJobs.end())
-			{
-				auto pParseJob = std::make_shared<CPlayerPointsParseJob>(pRequest);
-				m_ParseJobs.emplace(Name, pParseJob);
-				Engine()->AddJob(pParseJob);
-				++Iter;
-				continue;
-			}
+				if(Code != 200)
+				{
+					unsigned char *pData = nullptr;
+					size_t DataSize = 0;
+					pRequest->Result(&pData, &DataSize);
+					// 仅失败时记录详细日志。
+					dbg_msg("player_points", "Response for '%s': %zu bytes, status=%d (failed)", Name.c_str(), DataSize, Code);
+					m_Cache.CompleteFailure(Name, Token, Now());
+					m_ParseJobs.erase(Name);
+					Iter = m_ActiveRequests.erase(Iter);
+					continue;
+				}
 
-			if(ParseIter->second->State() != IJob::STATE_DONE)
-			{
-				++Iter;
-				continue;
-			}
+				// 解析下放到后台任务；每个玩家同时只跑一个解析任务。
+				auto ParseIter = m_ParseJobs.find(Name);
+				if(ParseIter == m_ParseJobs.end())
+				{
+					auto pParseJob = std::make_shared<CPlayerPointsParseJob>(pRequest);
+					m_ParseJobs.emplace(Name, pParseJob);
+					if(SubmitParseJob(pParseJob))
+					{
+						++Iter;
+						continue;
+					}
+					m_ParseJobs.erase(Name);
+					m_Cache.CompleteFailure(Name, Token, Now());
+					Iter = m_ActiveRequests.erase(Iter);
+					continue;
+				}
 
-			auto pParseJob = std::static_pointer_cast<CPlayerPointsParseJob>(ParseIter->second);
-			const SPlayerPointsParseResult Result = pParseJob->TakeResult();
-			m_ParseJobs.erase(ParseIter);
-			if(!Result.m_JsonParsed)
-			{
-				m_Cache.CompleteFailure(Name, Token, time_get());
-				dbg_msg("player_points", "'%s' -> JSON parse failed", Name.c_str());
-			}
-			else if(!Result.m_PointsFound)
-			{
-				// 常见情况：玩家不存在时 DDNet 会返回 {}。
-				m_Cache.CompleteFailure(Name, Token, time_get());
-				dbg_msg("player_points", "'%s' -> points missing (maybe player not found)", Name.c_str());
+				const IJob::EJobState ParseState = ParseIter->second->State();
+				if(ParseState == IJob::STATE_QUEUED || ParseState == IJob::STATE_RUNNING)
+				{
+					++Iter;
+					continue;
+				}
+				if(ParseState != IJob::STATE_DONE)
+				{
+					m_ParseJobs.erase(ParseIter);
+					m_Cache.CompleteFailure(Name, Token, Now());
+					Iter = m_ActiveRequests.erase(Iter);
+					continue;
+				}
+
+				auto pParseJob = std::static_pointer_cast<CPlayerPointsParseJob>(ParseIter->second);
+				const SPlayerPointsParseResult Result = pParseJob->TakeResult();
+				m_ParseJobs.erase(ParseIter);
+				if(!Result.m_JsonParsed)
+				{
+					m_Cache.CompleteFailure(Name, Token, Now());
+					dbg_msg("player_points", "'%s' -> JSON parse failed", Name.c_str());
+				}
+				else if(!Result.m_PointsFound)
+				{
+					// 常见情况：玩家不存在时 DDNet 会返回 {}。
+					m_Cache.CompleteFailure(Name, Token, Now());
+					dbg_msg("player_points", "'%s' -> points missing (maybe player not found)", Name.c_str());
+				}
+				else
+				{
+					if(m_Cache.CompleteSuccess(Name, Token, Result.m_Points, Now()))
+						StoreToDb(Name.c_str(), Result.m_Points);
+					// 成功路径默认不打日志，避免刷屏。
+				}
 			}
 			else
 			{
-				if(m_Cache.CompleteSuccess(Name, Token, Result.m_Points, time_get()))
-					StoreToDb(Name.c_str(), Result.m_Points);
-				// 成功路径默认不打日志，避免刷屏。
+				m_Cache.CompleteFailure(Name, Token, Now());
+				const char *pStateStr = nullptr;
+				switch(State)
+				{
+				case EHttpState::ERROR: pStateStr = "ERROR"; break;
+				case EHttpState::ABORTED: pStateStr = "ABORTED"; break;
+				case EHttpState::QUEUED: pStateStr = "QUEUED"; break;
+				case EHttpState::RUNNING: pStateStr = "RUNNING"; break;
+				case EHttpState::DONE: pStateStr = "DONE"; break;
+				}
+				dbg_msg("player_points", "'%s' -> HTTP failed, state=%s", Name.c_str(), pStateStr ? pStateStr : "UNKNOWN");
 			}
 		}
-		else
+		catch(...)
 		{
-			m_Cache.CompleteFailure(Name, Token, time_get());
-			const char *pStateStr = nullptr;
-			switch(State)
-			{
-			case EHttpState::ERROR: pStateStr = "ERROR"; break;
-			case EHttpState::ABORTED: pStateStr = "ABORTED"; break;
-			case EHttpState::QUEUED: pStateStr = "QUEUED"; break;
-			case EHttpState::RUNNING: pStateStr = "RUNNING"; break;
-			case EHttpState::DONE: pStateStr = "DONE"; break;
-			}
-			dbg_msg("player_points", "'%s' -> HTTP failed, state=%s", Name.c_str(), pStateStr ? pStateStr : "UNKNOWN");
+			m_Cache.CompleteFailure(Name, Token, Now());
+			m_ParseJobs.erase(Name);
 		}
 
 		Iter = m_ActiveRequests.erase(Iter);
