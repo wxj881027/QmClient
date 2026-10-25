@@ -105,7 +105,7 @@ float CMenus::LayoutTClientVisualNameplateCard(const qm_card_catalog::SQmCardBui
 	}
 	if(Flow.Control("freeze-katana", LineSize, Row, MarginSmall))
 	{
-		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFreezeKatana, "tclient-freeze-katana", Localize("Show katan on frozen players"), &g_Config.m_QmFreezeKatana, &Row, LineSize);
+		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFreezeKatana, "tclient-freeze-katana", Localize("Show katana on frozen players"), &g_Config.m_QmFreezeKatana, &Row, LineSize);
 	}
 	if(Flow.Control("white-feet", LineSize, Row, MarginSmall))
 	{

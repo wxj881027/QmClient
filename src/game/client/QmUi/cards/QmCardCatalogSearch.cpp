@@ -2098,7 +2098,7 @@ namespace qm_card_catalog
 			{Localizable("Freeze stars"), nullptr, "显示冻结效果的星星动画"},
 			{Localizable("Render all custom colored feet as white feet skin"), nullptr, "将所有自定义脚部颜色渲染为白色"},
 			{Localizable("Show country flags in nameplates"), nullptr, "在玩家昵称旁显示国旗"},
-			{Localizable("Show katan on frozen players"), nullptr, "在被冻结的玩家身上显示武士刀"},
+			{Localizable("Show katana on frozen players"), nullptr, "在被冻结的玩家身上显示武士刀"},
 			{Localizable("Show ping colored circle in nameplates"), nullptr, "在玩家昵称旁显示延迟颜色圆圈"},
 			{Localizable("Show skin names in nameplate"), nullptr, "在玩家昵称旁显示皮肤名"},
 			{Localizable("Use colored skins for frozen tees"), nullptr, "冻结 Tee 使用彩色皮肤"},
