@@ -4766,6 +4766,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_map_upload_lifecycle_test.cpp
     src/test/integration/qmclient/client/qm_chat_emoji_resource_test.cpp
     src/test/integration/qmclient/client/qm_skin_download_session_test.cpp
+    src/test/integration/qmclient/client/qm_skin_outline_render_test.cpp
     src/test/integration/qmclient/client/qm_font_download_storage_test.cpp
     src/test/integration/qmclient/client/qm_font_store_catalog_test.cpp
     src/test/integration/qmclient/client/qm_statistics_save_test.cpp

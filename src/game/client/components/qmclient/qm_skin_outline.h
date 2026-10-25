@@ -7,10 +7,10 @@
 #include <engine/graphics.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdlib>
 #include <memory>
-#include <vector>
 
 inline bool QmShouldDrawSkinOutline(int ClientId, int MainId, int DummyId, bool LocalEnabled, bool OthersEnabled)
 {
@@ -25,28 +25,39 @@ class CQmSkinOutline
 	IGraphics::CTextureHandle m_Texture;
 	vec2 m_QuadScale = vec2(1, 1);
 	int m_CachedWidth = 0;
+	static void *Allocate(size_t Size) noexcept { return malloc(Size); }
+	void *(*m_pAllocate)(size_t) noexcept;
 
 public:
-	CQmSkinOutline(const CImageInfo &Source, ivec2 FillPos, ivec2 OutlinePos, ivec2 Size, vec2 RenderSize) :
-		m_RenderSize(RenderSize)
+	// 分配边界须返回兼容free的缓冲；函数需存活到描边对象销毁。
+	CQmSkinOutline(const CImageInfo &Source, ivec2 FillPos, ivec2 OutlinePos, ivec2 Size, vec2 RenderSize, void *(*pAllocate)(size_t) noexcept = Allocate) :
+		m_RenderSize(RenderSize), m_pAllocate(pAllocate)
 	{
 		if(Source.m_Format != CImageInfo::FORMAT_RGBA || Source.m_pData == nullptr || Size.x <= 0 || Size.y <= 0 ||
 			FillPos.x < 0 || FillPos.y < 0 || OutlinePos.x < 0 || OutlinePos.y < 0 ||
 			(size_t)std::max(FillPos.x, OutlinePos.x) + (size_t)Size.x > Source.m_Width ||
 			(size_t)std::max(FillPos.y, OutlinePos.y) + (size_t)Size.y > Source.m_Height || RenderSize.x <= 0 || RenderSize.y <= 0)
 			return;
+		size_t SourceBytes = 0;
+		if(!Source.DataSize(SourceBytes))
+			return;
 
 		m_Mask.m_Width = Size.x;
 		m_Mask.m_Height = Size.y;
 		m_Mask.m_Format = CImageInfo::FORMAT_RGBA;
-		m_Mask.m_pData = static_cast<uint8_t *>(malloc(m_Mask.DataSize()));
+		size_t MaskBytes = 0;
+		if(!m_Mask.DataSize(MaskBytes) || !(m_Mask.m_pData = static_cast<uint8_t *>(m_pAllocate(MaskBytes))))
+		{
+			m_Mask.Free();
+			return;
+		}
 		for(int y = 0; y < Size.y; ++y)
 		{
 			for(int x = 0; x < Size.x; ++x)
 			{
-				const size_t Dst = (y * Size.x + x) * 4;
-				const size_t Fill = ((FillPos.y + y) * Source.m_Width + FillPos.x + x) * 4;
-				const size_t Outline = ((OutlinePos.y + y) * Source.m_Width + OutlinePos.x + x) * 4;
+				const size_t Dst = ((size_t)y * Size.x + x) * 4;
+				const size_t Fill = (((size_t)FillPos.y + y) * Source.m_Width + FillPos.x + x) * 4;
+				const size_t Outline = (((size_t)OutlinePos.y + y) * Source.m_Width + OutlinePos.x + x) * 4;
 				m_Mask.m_pData[Dst] = m_Mask.m_pData[Dst + 1] = m_Mask.m_pData[Dst + 2] = 255;
 				m_Mask.m_pData[Dst + 3] = std::max(Source.m_pData[Fill + 3], Source.m_pData[Outline + 3]);
 			}
@@ -57,6 +68,9 @@ public:
 		const int MaskHeight = std::clamp((int)std::round(Size.y * Scale), std::clamp((int)std::ceil(RenderSize.y), 1, 128), 128);
 		if(MaskWidth != Size.x || MaskHeight != Size.y)
 			ResizeImage(m_Mask, MaskWidth, MaskHeight);
+		// 缩图失败会保留原图；大遮罩不能流入有界扩边队列。
+		if(m_Mask.m_Width > 128 || m_Mask.m_Height > 128)
+			m_Mask.Free();
 	}
 
 	~CQmSkinOutline() { m_Mask.Free(); }
@@ -78,14 +92,20 @@ public:
 		Image.m_Width = m_Mask.m_Width + 2 * PadX;
 		Image.m_Height = m_Mask.m_Height + 2 * PadY;
 		Image.m_Format = CImageInfo::FORMAT_RGBA;
-		Image.m_pData = static_cast<uint8_t *>(malloc(Image.DataSize()));
-		for(size_t Offset = 0; Offset < Image.DataSize(); Offset += 4)
+		size_t ImageBytes = 0;
+		if(!Image.DataSize(ImageBytes))
+			return {};
+		std::unique_ptr<uint8_t, decltype(&free)> pPixels(static_cast<uint8_t *>(m_pAllocate(ImageBytes)), free);
+		if(!pPixels)
+			return {};
+		Image.m_pData = pPixels.get();
+		for(size_t Offset = 0; Offset < ImageBytes; Offset += 4)
 		{
 			Image.m_pData[Offset] = Image.m_pData[Offset + 1] = Image.m_pData[Offset + 2] = 255;
 			Image.m_pData[Offset + 3] = 0;
 		}
 		// 每个圆盘截面用滑动最大值展开，避免高分辨率脚部逐像素扫描整个圆盘。
-		std::vector<int> vQueue(m_Mask.m_Width);
+		std::array<int, 128> aQueue;
 		for(int dy = 0; dy <= RadiusY; ++dy)
 		{
 			const float Remaining = Width * Width - dy * dy * StepY * StepY;
@@ -101,15 +121,15 @@ public:
 					const int Right = std::min((int)m_Mask.m_Width - 1, x - PadX + SpanX);
 					while(Next <= Right)
 					{
-						while(Tail > Head && RowAlpha(vQueue[Tail - 1]) <= RowAlpha(Next))
+						while(Tail > Head && RowAlpha(aQueue[Tail - 1]) <= RowAlpha(Next))
 							--Tail;
-						vQueue[Tail++] = Next++;
+						aQueue[Tail++] = Next++;
 					}
-					while(Head < Tail && vQueue[Head] < x - PadX - SpanX)
+					while(Head < Tail && aQueue[Head] < x - PadX - SpanX)
 						++Head;
 					if(Head == Tail)
 						continue;
-					const uint8_t Value = RowAlpha(vQueue[Head]);
+					const uint8_t Value = RowAlpha(aQueue[Head]);
 					for(int TargetY : {y + PadY - dy, y + PadY + dy})
 					{
 						uint8_t &Alpha = Image.m_pData[(TargetY * Image.m_Width + x) * 4 + 3];
@@ -131,6 +151,7 @@ public:
 				Image.m_pData[Offset + 3] -= Original;
 			}
 		}
+		pPixels.release();
 		return Image;
 	}
 
@@ -148,6 +169,8 @@ public:
 		if(m_CachedWidth != Width || !m_Texture.IsValid() || !pGraphics->IsTextureHandleAllocated(m_Texture))
 		{
 			CImageInfo Image = BuildImage(Width);
+			if(Image.m_pData == nullptr)
+				return;
 			m_QuadScale = vec2((float)Image.m_Width / m_Mask.m_Width, (float)Image.m_Height / m_Mask.m_Height);
 			pGraphics->UnloadTexture(&m_Texture);
 			m_Texture = pGraphics->LoadTextureRawMove(Image, 0, "qm_skin_outline");
