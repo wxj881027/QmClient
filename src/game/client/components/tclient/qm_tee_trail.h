@@ -26,6 +26,8 @@ public:
 
 namespace qm_tee_trail
 {
+	class CPixelNoiseCache;
+
 	// 0 保留原版；旧配置中的 4、5 由 ResolveStyle 映射到新的艺术风格。
 	enum
 	{
@@ -101,7 +103,7 @@ namespace qm_tee_trail
 
 	// 同一网格构建器服务全部样式，包括原版。输入从新到旧，输出缓存由调用者复用。
 	// PixelSize 是一个屏幕像素对应的世界单位，放大时增加曲线细分并缩窄抗锯齿边。
-	void BuildEffect(const std::vector<CTrailPart> &vTrail, int Style, bool UsePresetPalette, double CurTime, float Width, int Seed, std::vector<SQuad> &vOut, float PixelSize = 1.0f, bool Taper = true, bool Fade = false);
+	void BuildEffect(const std::vector<CTrailPart> &vTrail, int Style, bool UsePresetPalette, double CurTime, float Width, int Seed, std::vector<SQuad> &vOut, float PixelSize = 1.0f, bool Taper = true, bool Fade = false, CPixelNoiseCache *pPixelNoiseCache = nullptr);
 }
 
 #endif

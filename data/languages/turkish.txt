@@ -1487,6 +1487,9 @@ Automatic game-end scoreboard screenshot
 Automatic updates
 == Otomatik güncellemeler
 
+Automatic updates require Windows x64
+== Otomatik güncellemeler Windows x64 gerektirir
+
 Automatically add a watermark to screenshots
 == Ekran görüntülerine otomatik olarak filigran ekle
 
@@ -1561,6 +1564,15 @@ Axiom auto login failed
 
 Axiom auto login failed, retrying
 == Axiom otomatik girişi başarısız oldu, yeniden deneniyor
+
+Axiom auto login failed: already in game
+== Axiom oturumu açılamadı: hesap zaten oyunda
+
+Axiom auto login failed: invalid credentials
+== Axiom oturumu açılamadı: geçersiz kimlik bilgileri
+
+Axiom auto login failed: wrong password
+== Axiom oturumu açılamadı: yanlış parola
 
 Axiom auto login skipped: no password
 == Axiom otomatik girişi: parola yok, atlandı
@@ -5441,11 +5453,17 @@ Failed
 Failed saving the replay!
 == Kayıt kaydedilemedi!
 
+Failed to check for updates
+== Güncelleme kontrolü başarısız oldu
+
 Failed to copy main asset image.
 == Ana varlık görüntüsü kopyalanamadı.
 
 Failed to create bgdraw folder
 == bgdraw klasörü oluşturulamadı
+
+Failed to create the update working directory
+== Güncelleme çalışma dizini oluşturulamadı
 
 Failed to download the rank 1 demo
 == Rank 1 demosu indirilemedi
@@ -5749,6 +5767,9 @@ Follow
 
 Follow graphics setting
 == Grafik ayarını izle
+
+Follow main island width
+== Ana adanın genişliğini izle
 
 Follow option color
 == Takip rengi
@@ -8371,6 +8392,9 @@ Match %d of %d
 
 Match ghost by map version instead of map name
 == Ghost'u harita adı yerine harita sürümüyle eşle
+
+Match lyrics island width to the main Dynamic Island, excluding satellites
+== Şarkı sözü adasının genişliğini yardımcı adalar hariç ana Dynamic Island ile eşleştir
 
 Matched with callable peer
 == Aranabilir eşle eşleşti
@@ -13859,8 +13883,8 @@ Show titles on nameplates
 Show toast
 == Toast'ı göster
 
-Show total DDNet playtime from activity instead of points in scoreboard
-== Skor tablosunda puanlar yerine DDNet activity toplam oyun süresini göster
+Show total playtime from DDStats instead of points in scoreboard
+== Skor tablosunda puanlar yerine DDStats toplam oyun süresini göster
 
 Show tune zone colors
 == Tune bölge renklerini göster
@@ -16499,6 +16523,9 @@ Update a rcon key
 Update a rcon key with prehashed data
 == Önceden hashlenmiş veri ile bir rcon anahtarı güncelle
 
+Update failed
+== Güncelleme başarısız
+
 Update failed. Please try again
 == Güncelleme başarısız oldu. Lütfen tekrar deneyin
 
@@ -16516,6 +16543,9 @@ Update Rate
 
 Update ready to install
 == Güncelleme kuruluma hazır
+
+Update sources are temporarily unavailable
+== Güncelleme kaynakları geçici olarak kullanılamıyor
 
 Upload .map files. Server and admin passwords: s.
 == .map dosyalarını yükleyin. Sunucu ve yönetici şifreleri: s.

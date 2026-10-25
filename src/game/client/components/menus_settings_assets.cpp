@@ -4386,16 +4386,16 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	static CQmLocalizedLabelCache s_AssetsTabNames;
 	s_AssetsTabNames.Refresh(g_Config.m_ClLanguagefile,
 		{
-			"Entities",
-			"Game",
-			"Emoticons",
-			"Particles",
-			"HUD",
-			"Mouse",
-			"Direction Keys",
-			"Strong Weak Hook",
-			"Entity Background Image",
-			"Other",
+			Localizable("Entities"),
+			Localizable("Game"),
+			Localizable("Emoticons"),
+			Localizable("Particles"),
+			Localizable("HUD"),
+			Localizable("Mouse"),
+			Localizable("Direction Keys"),
+			Localizable("Strong Weak Hook"),
+			Localizable("Entity Background Image"),
+			Localizable("Other"),
 		});
 
 	// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签文字 —— 滑块压在文字之下。

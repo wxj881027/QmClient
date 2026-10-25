@@ -1487,6 +1487,9 @@ Automatic game-end scoreboard screenshot
 Automatic updates
 == 自動更新
 
+Automatic updates require Windows x64
+== 自動更新には Windows x64 が必要です
+
 Automatically add a watermark to screenshots
 == スクリーンショットに透かしを自動追加
 
@@ -1561,6 +1564,15 @@ Axiom auto login failed
 
 Axiom auto login failed, retrying
 == Axiom 自動ログイン失敗、再試行中
+
+Axiom auto login failed: already in game
+== Axiom ログイン失敗：アカウントはすでにゲーム内です
+
+Axiom auto login failed: invalid credentials
+== Axiom ログイン失敗：認証情報が無効です
+
+Axiom auto login failed: wrong password
+== Axiom ログイン失敗：パスワードが違います
 
 Axiom auto login skipped: no password
 == Axiom 自動ログイン：パスワード未入力のためスキップ
@@ -5441,11 +5453,17 @@ Failed
 Failed saving the replay!
 == リプレイの保存に失敗しました！
 
+Failed to check for updates
+== アップデートの確認に失敗しました
+
 Failed to copy main asset image.
 == メインアセット画像のコピーに失敗しました。
 
 Failed to create bgdraw folder
 == bgdraw フォルダの作成に失敗しました
+
+Failed to create the update working directory
+== 更新用作業ディレクトリを作成できません
 
 Failed to download the rank 1 demo
 == ランク1デモのダウンロードに失敗
@@ -5749,6 +5767,9 @@ Follow
 
 Follow graphics setting
 == グラフィック設定に従う
+
+Follow main island width
+== 歌詞アイランドをメインと同じ幅にする
 
 Follow option color
 == 追跡の色
@@ -8371,6 +8392,9 @@ Match %d of %d
 
 Match ghost by map version instead of map name
 == マップ名ではなくマップバージョンでゴーストを一致させる
+
+Match lyrics island width to the main Dynamic Island, excluding satellites
+== 歌詞アイランドをダイナミックアイランド本体と同じ幅にし、サブアイランドは含めない
 
 Matched with callable peer
 == 通話可能なピアとマッチしました
@@ -13859,8 +13883,8 @@ Show titles on nameplates
 Show toast
 == トーストを表示
 
-Show total DDNet playtime from activity instead of points in scoreboard
-== スコアボードのポイントの代わりに、DDNet の activity から合計したプレイ時間を表示
+Show total playtime from DDStats instead of points in scoreboard
+== スコアボードのポイントの代わりに DDStats の合計プレイ時間を表示
 
 Show tune zone colors
 == tune zone の領域色を表示
@@ -16499,6 +16523,9 @@ Update a rcon key
 Update a rcon key with prehashed data
 == 事前ハッシュ化されたデータで rcon キーを更新する
 
+Update failed
+== 更新に失敗しました
+
 Update failed. Please try again
 == 更新に失敗しました。もう一度お試しください
 
@@ -16516,6 +16543,9 @@ Update Rate
 
 Update ready to install
 == 更新をインストールできます
+
+Update sources are temporarily unavailable
+== 更新元は一時的に利用できません
 
 Upload .map files. Server and admin passwords: s.
 == .map ファイルをアップロードします。サーバーと管理者のパスワードは s です。

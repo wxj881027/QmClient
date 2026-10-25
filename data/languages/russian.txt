@@ -1487,6 +1487,9 @@ Automatic game-end scoreboard screenshot
 Automatic updates
 == Автоматические обновления
 
+Automatic updates require Windows x64
+== Для автоматического обновления требуется Windows x64
+
 Automatically add a watermark to screenshots
 == Автоматически добавлять водяной знак на снимки экрана
 
@@ -1561,6 +1564,15 @@ Axiom auto login failed
 
 Axiom auto login failed, retrying
 == Ошибка автоматического входа в Axiom, повторная попытка
+
+Axiom auto login failed: already in game
+== Ошибка входа в Axiom: аккаунт уже в игре
+
+Axiom auto login failed: invalid credentials
+== Ошибка входа в Axiom: неверные учётные данные
+
+Axiom auto login failed: wrong password
+== Ошибка входа в Axiom: неверный пароль
 
 Axiom auto login skipped: no password
 == Автовход Axiom: пароль не задан, пропущено
@@ -5441,11 +5453,17 @@ Failed
 Failed saving the replay!
 == Не удалось сохранить повтор!
 
+Failed to check for updates
+== Не удалось проверить обновления
+
 Failed to copy main asset image.
 == Не удалось скопировать основное изображение ресурса.
 
 Failed to create bgdraw folder
 == Не удалось создать папку bgdraw
+
+Failed to create the update working directory
+== Не удалось создать рабочий каталог обновления
 
 Failed to download the rank 1 demo
 == Не удалось скачать демо ранга 1
@@ -5749,6 +5767,9 @@ Follow
 
 Follow graphics setting
 == Как в настройках графики
+
+Follow main island width
+== Ширина текста по основному острову
 
 Follow option color
 == Цвет следования
@@ -8371,6 +8392,9 @@ Match %d of %d
 
 Match ghost by map version instead of map name
 == Сопоставлять ghost по версии карты, а не по имени карты
+
+Match lyrics island width to the main Dynamic Island, excluding satellites
+== Сохранять ширину текста равной основной части динамического острова без дополнительных островков
 
 Matched with callable peer
 == Найден вызываемый пир
@@ -13859,8 +13883,8 @@ Show titles on nameplates
 Show toast
 == Показать toast
 
-Show total DDNet playtime from activity instead of points in scoreboard
-== Показывать в таблице суммарное время игры из DDNet activity вместо очков
+Show total playtime from DDStats instead of points in scoreboard
+== Показывать в таблице суммарное время игры из DDStats вместо очков
 
 Show tune zone colors
 == Показывать цвета tune-зон
@@ -16499,6 +16523,9 @@ Update a rcon key
 Update a rcon key with prehashed data
 == Обновить rcon ключ с предварительно хэшированными данными
 
+Update failed
+== Ошибка обновления
+
 Update failed. Please try again
 == Обновление не удалось. Пожалуйста, попробуйте снова
 
@@ -16516,6 +16543,9 @@ Update Rate
 
 Update ready to install
 == Обновление готово к установке
+
+Update sources are temporarily unavailable
+== Источники обновлений временно недоступны
 
 Upload .map files. Server and admin passwords: s.
 == Загрузите файлы .map. Пароли сервера и администратора: s.

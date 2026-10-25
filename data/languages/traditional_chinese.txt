@@ -1487,6 +1487,9 @@ Automatic game-end scoreboard screenshot
 Automatic updates
 == 自動更新
 
+Automatic updates require Windows x64
+== 自動更新需要 Windows x64
+
 Automatically add a watermark to screenshots
 == 截圖時自動加入浮水印
 
@@ -1561,6 +1564,15 @@ Axiom auto login failed
 
 Axiom auto login failed, retrying
 == Axiom 自動登錄失敗，正在重試
+
+Axiom auto login failed: already in game
+== Axiom 登錄失敗：帳號已在遊戲中
+
+Axiom auto login failed: invalid credentials
+== Axiom 登錄失敗：憑證無效
+
+Axiom auto login failed: wrong password
+== Axiom 登錄失敗：密碼錯誤
 
 Axiom auto login skipped: no password
 == Axiom 自動登錄：未填寫密碼，已跳過
@@ -5441,11 +5453,17 @@ Failed
 Failed saving the replay!
 == 保存回放失敗！
 
+Failed to check for updates
+== 檢查更新失敗
+
 Failed to copy main asset image.
 == 複製主要資源圖片失敗。
 
 Failed to create bgdraw folder
 == 創建 bgdraw 文件夾失敗
+
+Failed to create the update working directory
+== 無法建立更新工作目錄
 
 Failed to download the rank 1 demo
 == 下載 Rank 1 示範失敗
@@ -5749,6 +5767,9 @@ Follow
 
 Follow graphics setting
 == 跟隨圖形設定
+
+Follow main island width
+== 歌詞島跟隨主島寬度
 
 Follow option color
 == 跟隨顏色
@@ -8371,6 +8392,9 @@ Match %d of %d
 
 Match ghost by map version instead of map name
 == 按地圖版本而不是僅按地圖名稱匹配鬼魂
+
+Match lyrics island width to the main Dynamic Island, excluding satellites
+== 讓歌詞島始終與靈動島主島等寬，不包含眼睛等附島
 
 Matched with callable peer
 == 已匹配到可通話對端
@@ -13859,8 +13883,8 @@ Show titles on nameplates
 Show toast
 == 顯示提示
 
-Show total DDNet playtime from activity instead of points in scoreboard
-== 在計分板中累加 DDNet activity 的遊玩小時數，取代積分顯示
+Show total playtime from DDStats instead of points in scoreboard
+== 在計分板中顯示 DDStats 的累計遊玩時間，取代積分顯示
 
 Show tune zone colors
 == 顯示 Tune Zone 顏色
@@ -16499,6 +16523,9 @@ Update a rcon key
 Update a rcon key with prehashed data
 == 使用預哈希數據更新 rcon 密鑰
 
+Update failed
+== 更新失敗
+
 Update failed. Please try again
 == 更新失敗，請重試
 
@@ -16516,6 +16543,9 @@ Update Rate
 
 Update ready to install
 == 更新已準備就緒，可以安裝
+
+Update sources are temporarily unavailable
+== 更新來源暫時無法使用
 
 Upload .map files. Server and admin passwords: s.
 == 上傳 .map 檔案；伺服器密碼和管理密碼均為 s。

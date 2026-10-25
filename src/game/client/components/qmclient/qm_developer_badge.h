@@ -10,6 +10,8 @@
 
 #include <algorithm>
 
+class CQmTitleBadge;
+
 inline vec2 QmDeveloperBadgeSize(float FontSize)
 {
 	const float Height = std::max(FontSize, 0.0f);
@@ -19,6 +21,13 @@ inline vec2 QmDeveloperBadgeSize(float FontSize)
 inline float QmDeveloperBadgeAdvance(float FontSize)
 {
 	return QmDeveloperBadgeSize(FontSize).x + std::max(FontSize, 0.0f) * 0.15f;
+}
+
+inline CUIRect QmDeveloperBadgeLogoRect(const CUIRect &Rect)
+{
+	// 标准 16 单位兔子在开发者 SVG 中放大 5 倍，SVG 到徽章的比例为 1/4。
+	const vec2 Scale(Rect.w / QM_DEVELOPER_BADGE_WIDTH, Rect.h / QM_DEVELOPER_BADGE_HEIGHT);
+	return {Rect.x + 9.62375f * Scale.x, Rect.y + 1.6266f * Scale.y, 20.0f * Scale.x, 20.0f * Scale.y};
 }
 
 // 测量和绘制共用这次游标推进，徽章作为整体换行，不拆成文字占位。
@@ -54,13 +63,14 @@ inline CUIRect QmLayoutDeveloperBadge(CTextCursor &Cursor)
 class CQmDeveloperBadge
 {
 	CQmBadgeGeometry m_Surface{EQmBadgeGeometry::DEVELOPER};
+	const CQmTitleBadge *m_pTitleBadge = nullptr;
 	mutable double m_MotionTime = -1.0;
 	mutable SQmDeveloperBadgeMotion m_Motion{};
 
 public:
-	void Init(IGraphics *pGraphics);
+	void Init(IGraphics *pGraphics, const CQmTitleBadge &TitleBadge);
 	void Shutdown(IGraphics *pGraphics);
-	bool Available() const { return m_Surface.Available(); }
+	bool Available() const { return m_Surface.Available() && m_pTitleBadge != nullptr; }
 	void Render(IGraphics *pGraphics, const CUIRect &Rect, float Alpha, double TimeSec) const;
 };
 

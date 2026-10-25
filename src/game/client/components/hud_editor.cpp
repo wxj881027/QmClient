@@ -160,11 +160,14 @@ void CHudEditor::UpdateVisibleRect(EHudEditorElement Element, const CUIRect &Ren
 		RenderedRect.h * pUiScreen->h / ScreenH};
 
 	const SElementState &State = this->State(Element);
-	const float Scale = std::clamp(State.m_HasCustom ? State.m_ScalePercent / 100.0f : 1.0f, MIN_SCALE_PERCENT / 100.0f, MAX_SCALE_PERCENT / 100.0f);
-	Visible.m_BaseWidth = Visible.m_Rect.w / Scale;
+	const float Scale = QmHudEditor::ResolveScale(State.m_HasCustom ? State.m_ScalePercent : 100, Visible.m_Scalable);
+	if(Visible.m_HorizontalPlacement == QmHudEditor::EHorizontalPlacement::VisibleBounds)
+	{
+		Visible.m_BaseWidth = Visible.m_Rect.w / Scale;
+		Visible.m_StateOffsetX = (Visible.m_Rect.x - Visible.m_TargetUiRect.x) / Scale;
+	}
 	Visible.m_BaseHeight = Visible.m_Rect.h / Scale;
 	// 命中、拖动与下一帧恢复共同使用实际内容边界。
-	Visible.m_StateOffsetX = (Visible.m_Rect.x - Visible.m_TargetUiRect.x) / Scale;
 	Visible.m_StateOffsetY = (Visible.m_Rect.y - Visible.m_TargetUiRect.y) / Scale;
 	m_aVisibleBounds[static_cast<int>(Element)].Observe(Visible.m_TransformRect, Visible.m_DeclaredVisibleRect, Visible.m_TargetUiRect, Visible.m_Rect);
 }
@@ -299,13 +302,25 @@ const CHudEditor::SElementState &CHudEditor::State(EHudEditorElement Element) co
 	return m_aElementStates[static_cast<int>(Element)];
 }
 
+void CHudEditor::BeginCustomPosition(SElementState &State, const SVisibleElement &Visible, const CUIRect &Screen) const
+{
+	if(!State.m_HasCustom && Visible.m_HorizontalPlacement != QmHudEditor::EHorizontalPlacement::VisibleBounds)
+	{
+		// 首次缩放或纵向拖动从当前落点开始，避免未保存的另一轴回到零点。
+		const float Scale = QmHudEditor::ResolveScale(State.m_ScalePercent, Visible.m_Scalable);
+		State.m_PosXPermille = round_to_int(QmHudEditor::StoreAxisAnchor(Visible.m_TargetUiRect.x, Visible.m_BaseWidth * Scale, Screen.x, Screen.w, Visible.m_StateOffsetX * Scale) * POSITION_SCALE);
+		State.m_PosYPermille = round_to_int(QmHudEditor::StoreAxisAnchor(Visible.m_TargetUiRect.y, Visible.m_BaseHeight * Scale, Screen.y, Screen.h, Visible.m_StateOffsetY * Scale) * POSITION_SCALE);
+	}
+	State.m_HasCustom = true;
+}
+
 void CHudEditor::ClampStateToScreen(SElementState &State, float BaseWidth, float BaseHeight, float StateOffsetX, float StateOffsetY) const
 {
 	const CUIRect *pScreen = Ui()->Screen();
 	if(pScreen == nullptr || pScreen->w <= 0.0f || pScreen->h <= 0.0f)
 		return;
 
-	const float Scale = std::clamp(State.m_ScalePercent / 100.0f, MIN_SCALE_PERCENT / 100.0f, MAX_SCALE_PERCENT / 100.0f);
+	const float Scale = QmHudEditor::ResolveScale(State.m_ScalePercent);
 	const float Width = BaseWidth * Scale;
 	const float Height = BaseHeight * Scale;
 	const bool AnchorRight = State.m_PosXPermille >= POSITION_SCALE;
@@ -331,7 +346,7 @@ CHudEditor::STransformScope CHudEditor::BeginTransform(EHudEditorElement Element
 	return BeginTransform(Element, TransformRect, VisibleRect, QmHudEditor::SEdgeMargin{}, Scalable, ApplyMapScreen);
 }
 
-bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, bool Scalable, STransformScope &Scope, SVisibleElement *pVisible, const QmHudEditor::SEdgeMargin &EdgeMargin)
+bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, bool Scalable, STransformScope &Scope, SVisibleElement *pVisible, const QmHudEditor::SEdgeMargin &EdgeMargin, QmHudEditor::EHorizontalPlacement HorizontalPlacement)
 {
 	const CUIRect EffectiveVisibleRect = m_aVisibleBounds[static_cast<int>(Element)].Resolve(TransformRect, VisibleRect);
 	if(TransformRect.w <= 0.0f || TransformRect.h <= 0.0f || EffectiveVisibleRect.w <= 0.0f || EffectiveVisibleRect.h <= 0.0f)
@@ -355,21 +370,16 @@ bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIR
 	const float SafeRight = maximum(0.0f, EdgeMargin.m_Right);
 	const float SafeTop = maximum(0.0f, EdgeMargin.m_Top);
 	const float SafeBottom = maximum(0.0f, EdgeMargin.m_Bottom);
-	const float EffScreenX0 = ScreenX0 + SafeLeft;
 	const float EffScreenY0 = ScreenY0 + SafeTop;
-	const float EffScreenW = maximum(EPSILON, ScreenW - SafeLeft - SafeRight);
 	const float EffScreenH = maximum(EPSILON, ScreenH - SafeTop - SafeBottom);
 
-	const float DefaultNormX = Clamp01((TransformRect.x - ScreenX0) / ScreenW);
 	const float DefaultNormY = Clamp01((TransformRect.y - ScreenY0) / ScreenH);
-	const float BaseUiWidth = EffectiveVisibleRect.w * pUiScreen->w / ScreenW;
 	const float BaseUiHeight = EffectiveVisibleRect.h * pUiScreen->h / ScreenH;
 	const float TransformToVisibleOffsetX = EffectiveVisibleRect.x - TransformRect.x;
 	const float TransformToVisibleOffsetY = EffectiveVisibleRect.y - TransformRect.y;
 
 	const SElementState &SavedState = State(Element);
-	const float Scale = std::clamp(SavedState.m_HasCustom ? SavedState.m_ScalePercent / 100.0f : 1.0f, MIN_SCALE_PERCENT / 100.0f, MAX_SCALE_PERCENT / 100.0f);
-	const float NormX = SavedState.m_HasCustom ? QmHudEditor::ClampStoredAxisPosition(SavedState.m_PosXPermille / (float)POSITION_SCALE) : DefaultNormX;
+	const float Scale = QmHudEditor::ResolveScale(SavedState.m_HasCustom ? SavedState.m_ScalePercent : 100, Scalable);
 	const float NormY = SavedState.m_HasCustom ? QmHudEditor::ClampStoredAxisPosition(SavedState.m_PosYPermille / (float)POSITION_SCALE) : DefaultNormY;
 
 	const float TransformWidth = TransformRect.w * Scale;
@@ -379,9 +389,9 @@ bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIR
 	const float VisibleOffsetX = TransformToVisibleOffsetX * Scale;
 	const float VisibleOffsetY = TransformToVisibleOffsetY * Scale;
 	// 默认布局保留设计留白；手动布局按真实可见屏幕边恢复，避免每次重进又被内推。
-	const float AnchorX = SavedState.m_HasCustom ?
-				      QmHudEditor::RestoreAxisAnchor(NormX, VisibleWidth, ScreenX0, ScreenW, VisibleOffsetX) :
-				      QmHudEditor::SnapAxisToScreenEdgesEx(ScreenX0 + NormX * ScreenW, VisibleWidth, EffScreenX0, EffScreenW, VisibleOffsetX);
+	const auto Horizontal = QmHudEditor::ResolveHorizontalPlacement(HorizontalPlacement, SavedState.m_HasCustom,
+		SavedState.m_PosXPermille / (float)POSITION_SCALE, TransformRect.x, VisibleWidth, VisibleOffsetX, ScreenX0, ScreenW, SafeLeft, SafeRight);
+	const float AnchorX = Horizontal.m_Position;
 	const float AnchorY = SavedState.m_HasCustom ?
 				      QmHudEditor::RestoreAxisAnchor(NormY, VisibleHeight, ScreenY0, ScreenH, VisibleOffsetY) :
 				      QmHudEditor::SnapAxisToScreenEdgesEx(ScreenY0 + NormY * ScreenH, VisibleHeight, EffScreenY0, EffScreenH, VisibleOffsetY);
@@ -427,13 +437,14 @@ bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIR
 		pVisible->m_Rect = {
 			pUiScreen->x + (AnchorX + VisibleOffsetX - ScreenX0) * pUiScreen->w / ScreenW,
 			pUiScreen->y + (AnchorY + VisibleOffsetY - ScreenY0) * pUiScreen->h / ScreenH,
-			BaseUiWidth * Scale,
+			VisibleWidth * pUiScreen->w / ScreenW,
 			BaseUiHeight * Scale};
-		pVisible->m_BaseWidth = BaseUiWidth;
+		pVisible->m_BaseWidth = Horizontal.m_Width / Scale * pUiScreen->w / ScreenW;
 		pVisible->m_BaseHeight = BaseUiHeight;
-		pVisible->m_StateOffsetX = TransformToVisibleOffsetX * pUiScreen->w / ScreenW;
+		pVisible->m_StateOffsetX = Horizontal.m_Offset / Scale * pUiScreen->w / ScreenW;
 		pVisible->m_StateOffsetY = TransformToVisibleOffsetY * pUiScreen->h / ScreenH;
 		pVisible->m_Scalable = Scalable;
+		pVisible->m_HorizontalPlacement = HorizontalPlacement;
 	}
 	return true;
 }
@@ -455,11 +466,16 @@ CHudEditor::STransformScope CHudEditor::PreviewTransform(EHudEditorElement Eleme
 	return Scope;
 }
 
-CHudEditor::STransformScope CHudEditor::BeginTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, const QmHudEditor::SEdgeMargin &EdgeMargin, bool Scalable, bool ApplyMapScreen)
+CHudEditor::STransformScope CHudEditor::BeginTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, QmHudEditor::EHorizontalPlacement HorizontalPlacement, bool Scalable, bool ApplyMapScreen)
+{
+	return BeginTransform(Element, TransformRect, VisibleRect, QmHudEditor::SEdgeMargin{}, Scalable, ApplyMapScreen, HorizontalPlacement);
+}
+
+CHudEditor::STransformScope CHudEditor::BeginTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, const QmHudEditor::SEdgeMargin &EdgeMargin, bool Scalable, bool ApplyMapScreen, QmHudEditor::EHorizontalPlacement HorizontalPlacement)
 {
 	STransformScope Scope;
 	SVisibleElement Visible;
-	if(!ComputeTransformPlacement(Element, TransformRect, VisibleRect, Scalable, Scope, &Visible, EdgeMargin))
+	if(!ComputeTransformPlacement(Element, TransformRect, VisibleRect, Scalable, Scope, &Visible, EdgeMargin, HorizontalPlacement))
 		return Scope;
 	m_vVisibleElements.push_back(Visible);
 
@@ -516,6 +532,10 @@ CHudEditor::SAlignmentReferences CHudEditor::BuildAlignmentReferences(EHudEditor
 	for(const SVisibleElement &Visible : m_vVisibleElements)
 	{
 		if(Visible.m_Element == DraggingElement || Visible.m_Rect.w <= 0.0f || Visible.m_Rect.h <= 0.0f)
+			continue;
+		// 主岛不能吸附到随自身移动的歌词岛，否则拖动会产生反馈偏移。
+		if(Visible.m_Element == EHudEditorElement::Lyrics && Visible.m_HorizontalPlacement == QmHudEditor::EHorizontalPlacement::DefaultPosition &&
+			(DraggingElement == EHudEditorElement::MediaIsland || DraggingElement == EHudEditorElement::LegacyMediaInfo))
 			continue;
 		dbg_assert(References.m_XCount < (int)References.m_aXReferences.size(), "too many HUD editor x alignment references");
 		dbg_assert(References.m_YCount < (int)References.m_aYReferences.size(), "too many HUD editor y alignment references");
@@ -795,7 +815,9 @@ void CHudEditor::OnRender()
 		if(!HandleElementDoubleClick(Element))
 		{
 			m_DraggingElement = static_cast<int>(Element);
-			m_DragGrabOffset = vec2(Ui()->MouseX() - m_vVisibleElements[HoveredIndex].m_Rect.x, Ui()->MouseY() - m_vVisibleElements[HoveredIndex].m_Rect.y);
+			const SVisibleElement &Visible = m_vVisibleElements[HoveredIndex];
+			const float GrabX = Visible.m_HorizontalPlacement == QmHudEditor::EHorizontalPlacement::TransformOrigin ? Visible.m_TargetUiRect.x : Visible.m_Rect.x;
+			m_DragGrabOffset = vec2(Ui()->MouseX() - GrabX, Ui()->MouseY() - Visible.m_Rect.y);
 		}
 	}
 
@@ -806,23 +828,25 @@ void CHudEditor::OnRender()
 		{
 			const SVisibleElement &Visible = m_vVisibleElements[VisibleIndex];
 			SElementState &State = EnsureState(Visible.m_Element);
-			State.m_HasCustom = true;
-			const float Scale = std::clamp(State.m_ScalePercent / 100.0f, MIN_SCALE_PERCENT / 100.0f, MAX_SCALE_PERCENT / 100.0f);
+			BeginCustomPosition(State, Visible, *pUiScreen);
+			const float Scale = QmHudEditor::ResolveScale(State.m_ScalePercent, Visible.m_Scalable);
 			const float Width = Visible.m_BaseWidth * Scale;
 			const float Height = Visible.m_BaseHeight * Scale;
 			const float VisibleOffsetX = Visible.m_StateOffsetX * Scale;
 			const float VisibleOffsetY = Visible.m_StateOffsetY * Scale;
 			const SAlignmentReferences References = BuildAlignmentReferences(Visible.m_Element);
-			// 鼠标抓取的是可见矩形；转换为锚点后，吸附和存储都只使用这个锚点。
-			const QmHudEditor::SSnapAxisResult SnapX = QmHudEditor::ResolveAxisSnapEx(Ui()->MouseX() - m_DragGrabOffset.x - VisibleOffsetX, Width, pUiScreen->x, pUiScreen->w, References.m_aXReferences.data(), References.m_XCount, VisibleOffsetX);
+			// 点锚定以固定的变换原点拖动，内容增减不会改变鼠标抓取的基准。
+			if(Visible.m_HorizontalPlacement != QmHudEditor::EHorizontalPlacement::DefaultPosition)
+			{
+				const QmHudEditor::SSnapAxisResult SnapX = QmHudEditor::ResolveAxisSnapEx(Ui()->MouseX() - m_DragGrabOffset.x - VisibleOffsetX, Width, pUiScreen->x, pUiScreen->w, References.m_aXReferences.data(), References.m_XCount, VisibleOffsetX);
+				ShowDragGuideX = SnapX.m_HasGuide;
+				DragGuideX = SnapX.m_GuidePosition;
+				State.m_PosXPermille = round_to_int(QmHudEditor::StoreAxisAnchor(SnapX.m_Position, Width, pUiScreen->x, pUiScreen->w, VisibleOffsetX) * POSITION_SCALE);
+			}
 			const QmHudEditor::SSnapAxisResult SnapY = QmHudEditor::ResolveAxisSnapEx(Ui()->MouseY() - m_DragGrabOffset.y - VisibleOffsetY, Height, pUiScreen->y, pUiScreen->h, References.m_aYReferences.data(), References.m_YCount, VisibleOffsetY);
-			const float X = SnapX.m_Position;
 			const float Y = SnapY.m_Position;
-			ShowDragGuideX = SnapX.m_HasGuide;
 			ShowDragGuideY = SnapY.m_HasGuide;
-			DragGuideX = SnapX.m_GuidePosition;
 			DragGuideY = SnapY.m_GuidePosition;
-			State.m_PosXPermille = round_to_int(QmHudEditor::StoreAxisAnchor(X, Width, pUiScreen->x, pUiScreen->w, VisibleOffsetX) * POSITION_SCALE);
 			State.m_PosYPermille = round_to_int(QmHudEditor::StoreAxisAnchor(Y, Height, pUiScreen->y, pUiScreen->h, VisibleOffsetY) * POSITION_SCALE);
 			m_DirtyLayout = true;
 		}
@@ -839,7 +863,7 @@ void CHudEditor::OnRender()
 			DeltaScale -= 5;
 		if(DeltaScale != 0)
 		{
-			State.m_HasCustom = true;
+			BeginCustomPosition(State, Visible, *pUiScreen);
 			State.m_ScalePercent = std::clamp(State.m_ScalePercent + DeltaScale, MIN_SCALE_PERCENT, MAX_SCALE_PERCENT);
 			ClampStateToScreen(State, Visible.m_BaseWidth, Visible.m_BaseHeight, Visible.m_StateOffsetX, Visible.m_StateOffsetY);
 			m_DirtyLayout = true;

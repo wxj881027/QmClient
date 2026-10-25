@@ -10,6 +10,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/practice_hook_input.h>
 #include <game/client/prediction/gameworld.h>
 #include <game/gamecore.h>
 
@@ -94,7 +95,7 @@ private:
 		bool m_RightHeld = false;
 		bool m_RightReleased = true;
 		bool m_JumpReleased = true;
-		bool m_HookReleased = true;
+		CQmPracticeHookInput m_Hook;
 	};
 
 	struct SPracticeCommandState
@@ -168,7 +169,7 @@ private:
 	void ReleaseBufferedInputState();
 	void CaptureServerReleasedFireStates();
 	void ReleaseBufferedActionInputState();
-	void CapturePracticeInputFilterStates();
+	void CapturePracticeInputFilterStates(bool PreserveHeldHook = false);
 	void PreserveCurrentPracticeInputFilterStates();
 	void FilterPracticeInput(CNetObj_PlayerInput &Input, int InputConn, bool Commit);
 

@@ -51,6 +51,12 @@ bool CQmTitleBadge::RenderDistanceLogo(IGraphics *pGraphics, const CUIRect &Rect
 	return true;
 }
 
+void CQmTitleBadge::RenderLogo(IGraphics *pGraphics, const CUIRect &Rect, ColorRGBA Color) const
+{
+	if(!RenderDistanceLogo(pGraphics, Rect, Color))
+		m_Logo.Render(pGraphics, Rect, Color);
+}
+
 void CQmTitleBadge::RenderSurface(IGraphics *pGraphics, const CUIRect &Rect, const SQmTitleAppearance &Appearance, float Alpha) const
 {
 	if(Rect.w <= 0.0f || Rect.h <= 0.0f || Alpha <= 0.0f || Appearance.m_Opacity <= 0)
@@ -74,7 +80,6 @@ void CQmTitleBadge::RenderSurface(IGraphics *pGraphics, const CUIRect &Rect, con
 	m_aPatterns[Pattern + 1].Render(pGraphics, {Rect.x + LeftWidth, Rect.y, Rect.w - LeftWidth - RightWidth, Rect.h}, PatternColor);
 	m_aPatterns[Pattern + 2].Render(pGraphics, {Rect.x + Rect.w - RightWidth, Rect.y, RightWidth, Rect.h}, PatternColor);
 	const CUIRect Logo{Rect.x + 9.0f * Scale, Rect.y + 4.0f * Scale, 16.0f * Scale, 16.0f * Scale};
-	if(!RenderDistanceLogo(pGraphics, Logo, Palette.m_Icon))
-		m_Logo.Render(pGraphics, Logo, Palette.m_Icon);
+	RenderLogo(pGraphics, Logo, Palette.m_Icon);
 	pGraphics->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 }

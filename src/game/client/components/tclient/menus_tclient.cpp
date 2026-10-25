@@ -42,11 +42,11 @@ void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)
 	static CQmLocalizedLabelCache s_TClientTabNames;
 	const bool TabNamesRefreshed = s_TClientTabNames.Refresh(g_Config.m_ClLanguagefile,
 		{
-			"Settings",
-			"Bind Wheel",
-			"War List",
-			"Chat Binds",
-			"Status Bar",
+			Localizable("Settings"),
+			Localizable("Bind Wheel"),
+			Localizable("War List"),
+			Localizable("Chat Binds"),
+			Localizable("Status Bar"),
 		});
 	if(TabNamesRefreshed && !ReadOnly)
 	{

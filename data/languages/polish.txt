@@ -1487,6 +1487,9 @@ Automatic game-end scoreboard screenshot
 Automatic updates
 == Automatyczne aktualizacje
 
+Automatic updates require Windows x64
+== Automatyczne aktualizacje wymagają Windows x64
+
 Automatically add a watermark to screenshots
 == Automatycznie dodawaj znak wodny do zrzutów ekranu
 
@@ -1561,6 +1564,15 @@ Axiom auto login failed
 
 Axiom auto login failed, retrying
 == Automatyczne logowanie Axiom nie powiodło się, ponawianie
+
+Axiom auto login failed: already in game
+== Logowanie do Axiom nie powiodło się: konto jest już w grze
+
+Axiom auto login failed: invalid credentials
+== Logowanie do Axiom nie powiodło się: nieprawidłowe dane logowania
+
+Axiom auto login failed: wrong password
+== Logowanie do Axiom nie powiodło się: nieprawidłowe hasło
 
 Axiom auto login skipped: no password
 == Automatyczne logowanie Axiom: brak hasła, pominięto
@@ -5441,11 +5453,17 @@ Failed
 Failed saving the replay!
 == Nie udało się zapisać powtórki!
 
+Failed to check for updates
+== Nie udało się sprawdzić aktualizacji
+
 Failed to copy main asset image.
 == Nie udało się skopiować głównego obrazu zasobu.
 
 Failed to create bgdraw folder
 == Nie udało się utworzyć folderu bgdraw
+
+Failed to create the update working directory
+== Nie udało się utworzyć katalogu roboczego aktualizacji
 
 Failed to download the rank 1 demo
 == Nie udało się pobrać dema rangi 1
@@ -5749,6 +5767,9 @@ Follow
 
 Follow graphics setting
 == Zgodnie z ustawieniami grafiki
+
+Follow main island width
+== Dopasuj szerokość wyspy tekstu do głównej
 
 Follow option color
 == Kolor podążania
@@ -8371,6 +8392,9 @@ Match %d of %d
 
 Match ghost by map version instead of map name
 == Dopasuj ducha według wersji mapy zamiast nazwy mapy
+
+Match lyrics island width to the main Dynamic Island, excluding satellites
+== Dopasuj szerokość wyspy tekstu do głównej części Dynamic Island, bez wysp pomocniczych
 
 Matched with callable peer
 == Dopasowano do osiągalnego peera
@@ -13859,8 +13883,8 @@ Show titles on nameplates
 Show toast
 == Pokaż toast
 
-Show total DDNet playtime from activity instead of points in scoreboard
-== Pokazuj w tabeli łączny czas gry z DDNet activity zamiast punktów
+Show total playtime from DDStats instead of points in scoreboard
+== Pokazuj w tabeli łączny czas gry z DDStats zamiast punktów
 
 Show tune zone colors
 == Pokaż kolory stref tune
@@ -16499,6 +16523,9 @@ Update a rcon key
 Update a rcon key with prehashed data
 == Zaktualizuj klucz rcon z prehashowanymi danymi
 
+Update failed
+== Aktualizacja nie powiodła się
+
 Update failed. Please try again
 == Aktualizacja nie powiodła się. Spróbuj ponownie
 
@@ -16516,6 +16543,9 @@ Update Rate
 
 Update ready to install
 == Aktualizacja gotowa do instalacji
+
+Update sources are temporarily unavailable
+== Źródła aktualizacji są tymczasowo niedostępne
 
 Upload .map files. Server and admin passwords: s.
 == Prześlij pliki .map. Hasła serwera i administratora: s.

@@ -494,6 +494,7 @@ Automatic effect LOD when crowded
 Automatic gain control (0=off 1=on)
 Automatic game-end scoreboard screenshot
 Automatic updates
+Automatic updates require Windows x64
 Automatically add a watermark to screenshots
 Automatically adds voting options for all maps
 Automatically ban blacklisted addresses
@@ -519,6 +520,9 @@ Avg %.*f   ↓ %.*f   ↑ %.*f
 Axiom API returned an error
 Axiom auto login failed
 Axiom auto login failed, retrying
+Axiom auto login failed: already in game
+Axiom auto login failed: invalid credentials
+Axiom auto login failed: wrong password
 Axiom auto login skipped: no password
 Axiom auto login stopped after repeated failures
 Axiom auto login succeeded
@@ -1812,8 +1816,10 @@ Fade trail alpha
 Fading death and freeze tiles helps you see tees and weapons behind them, but the exact tile edge gets harder to judge.
 Failed
 Failed saving the replay!
+Failed to check for updates
 Failed to copy main asset image.
 Failed to create bgdraw folder
+Failed to create the update working directory
 Failed to download the rank 1 demo
 Failed to export audio pack file.
 Failed to export demo cut
@@ -1915,6 +1921,7 @@ Folder
 Folder Link
 Follow
 Follow graphics setting
+Follow main island width
 Follow option color
 Follow remote placements in the collaborative editor
 Follow server
@@ -2790,6 +2797,7 @@ Marks teammates who hold hammer while stuck in death or freeze areas, so you can
 Master server URL to register
 Match %d of %d
 Match ghost by map version instead of map name
+Match lyrics island width to the main Dynamic Island, excluding satellites
 Matched with callable peer
 Max attempts for remote console authentication
 Max CSVs
@@ -4619,7 +4627,7 @@ Show title setting hints immediately in small text
 Show titles above player names
 Show titles on nameplates
 Show toast
-Show total DDNet playtime from activity instead of points in scoreboard
+Show total playtime from DDStats instead of points in scoreboard
 Show tune zone colors
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 Show unfreeze/deep unfreeze tile outlines
@@ -5499,12 +5507,14 @@ Up to 6 Chinese or 12 ASCII characters
 Update
 Update a rcon key
 Update a rcon key with prehashed data
+Update failed
 Update failed. Please try again
 Update keyframe
 Update notice
 Update or add a specific war group
 Update Rate
 Update ready to install
+Update sources are temporarily unavailable
 Upload .map files. Server and admin passwords: s.
 Upload a saved map to the public test server
 Upload map
