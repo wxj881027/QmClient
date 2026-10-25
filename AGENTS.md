@@ -61,6 +61,8 @@ QmClient（Q1menG Client）基于 DDNet / TaterClient，主要使用 C++，辅�
 | 翻译、生成链及污染/迁移/覆盖审计     | `qmclient-i18n-workflow/SKILL.md`     |
 | 提交、PR、版本与发布                 | `qmclient-git-commit/SKILL.md`        |
 
+翻译不是每个任务的默认步骤：改了 `Localize` 文案但任务本身与翻译无关时，不要运行 extract/generate/validate，也不要提交 `data/languages/*.txt` 的顺带变化；在任务尾声询问用户是否本次同步，由用户决定。
+
 维护规则时读 `.agents/README.md`；使用脚本时按需读 `qmclient_scripts/scripts_overview.md`。
 
 ## 测试代码规范
