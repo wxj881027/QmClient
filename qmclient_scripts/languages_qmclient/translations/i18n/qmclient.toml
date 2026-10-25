@@ -39366,3 +39366,35 @@ brazilian_portuguese = "Enviar três linhas consecutivas da letra no chat públi
 portuguese = "Enviar três linhas consecutivas da letra no chat público em intervalos aleatórios de 30 a 90 segundos, com 3 segundos entre linhas"
 turkish = "30 ile 90 saniye arasında rastgele aralıklarla genel sohbete art arda üç şarkı sözü satırı gönder, satırlar arasında 3 saniye bekle"
 polish = "Wysyłaj trzy kolejne wersy do czatu publicznego w losowych odstępach od 30 do 90 sekund, z przerwą 3 sekund między wersami"
+
+[[message]]
+key = "Follow main island width"
+[message.translations]
+simplified_chinese = "歌词岛跟随主岛宽度"
+traditional_chinese = "歌詞島跟隨主島寬度"
+japanese = "歌詞アイランドをメインと同じ幅にする"
+korean = "가사 섬 너비를 메인 섬에 맞춤"
+russian = "Ширина текста по основному острову"
+german = "Breite der Liedtextinsel an Hauptinsel anpassen"
+spanish = "Adaptar el ancho de letras a la isla principal"
+french = "Adapter la largeur des paroles à l’îlot principal"
+brazilian_portuguese = "Seguir a largura da ilha principal"
+portuguese = "Seguir a largura da ilha principal"
+turkish = "Ana adanın genişliğini izle"
+polish = "Dopasuj szerokość wyspy tekstu do głównej"
+
+[[message]]
+key = "Match lyrics island width to the main Dynamic Island, excluding satellites"
+[message.translations]
+simplified_chinese = "让歌词岛始终与灵动岛主岛等宽，不包含眼睛等附岛"
+traditional_chinese = "讓歌詞島始終與靈動島主島等寬，不包含眼睛等附島"
+japanese = "歌詞アイランドをダイナミックアイランド本体と同じ幅にし、サブアイランドは含めない"
+korean = "가사 섬 너비를 다이내믹 아일랜드 본체에 맞추고 보조 섬은 제외"
+russian = "Сохранять ширину текста равной основной части динамического острова без дополнительных островков"
+german = "Liedtextinsel an die Breite der Hauptinsel von Dynamic Island anpassen, ohne Nebeninseln"
+spanish = "Igualar el ancho de la isla de letras al cuerpo principal de Dynamic Island, sin islas secundarias"
+french = "Aligner la largeur des paroles sur le corps principal de Dynamic Island, sans les îlots secondaires"
+brazilian_portuguese = "Ajustar a largura da ilha de letras à ilha principal da Dynamic Island, sem ilhas auxiliares"
+portuguese = "Ajustar a largura da ilha de letras à ilha principal da Dynamic Island, sem ilhas auxiliares"
+turkish = "Şarkı sözü adasının genişliğini yardımcı adalar hariç ana Dynamic Island ile eşleştir"
+polish = "Dopasuj szerokość wyspy tekstu do głównej części Dynamic Island, bez wysp pomocniczych"

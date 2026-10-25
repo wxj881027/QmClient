@@ -1022,9 +1022,6 @@ API key
 APP ID
 == App-ID
 
-Appearance
-== Erscheinungsbild
-
 Appearance and command highlighting of the local console
 == Darstellung der lokalen Konsole und Befehlshervorhebung
 
@@ -1183,9 +1180,6 @@ Asset preset
 
 Asset with this name already exists.
 == Ein Asset mit diesem Namen existiert bereits.
-
-Assets
-== Ressourcen
 
 Assets directory
 == Asset-Verzeichnis
@@ -2849,9 +2843,6 @@ Config Filters
 Config version. Helps new client fix old config errors.
 == Konfigurationsversion. Hilft neuen Clients, alte Konfigurationsfehler zu beheben.
 
-Configs
-== Konfigurationen
-
 Configuration
 == Konfiguration
 
@@ -3178,9 +3169,6 @@ Controller GUID of the active controller
 
 Controller jitter tolerance
 == Controller-Jitter-Toleranz
-
-Controls
-== Steuerung
 
 Controls demo recording and playback behavior.
 == Steuert Aufnahme und Wiedergabe von Demos.
@@ -5201,9 +5189,6 @@ Entities background color
 Entity assets
 == Entitäts-Assets
 
-Entity Background Image
-== Hintergrundbild der Entitäten
-
 Entity overlay
 == Entity-Overlay
 
@@ -5750,6 +5735,9 @@ Follow
 Follow graphics setting
 == Grafikeinstellung übernehmen
 
+Follow main island width
+== Breite der Liedtextinsel an Hauptinsel anpassen
+
 Follow option color
 == Farbe des Folgens
 
@@ -6083,9 +6071,6 @@ Gap between tee and nametag
 Gaussian
 == Gauß
 
-General
-== Allgemein
-
 Generated skin outline color
 == Farbe der erzeugten Umrandung
 
@@ -6289,9 +6274,6 @@ Gradient type
 
 Gradient vertical position
 == Vertikale Verlaufsposition
-
-Graphics
-== Grafik
 
 Graphics backend does not support dummy mini view
 == Das Grafik-Backend unterstützt die Dummy-Miniansicht nicht
@@ -6703,9 +6685,6 @@ Hook collision line length follows cursor distance
 
 Hook collision line opacity
 == Deckkraft der Haken-Kollisionslinie
-
-Hook Collisions
-== Haken-Kollisionen
 
 Hook collisions
 == Haken-Kollisionslinien
@@ -8371,6 +8350,9 @@ Match %d of %d
 
 Match ghost by map version instead of map name
 == Ghost nach Kartenversion statt nach Kartennamen abgleichen
+
+Match lyrics island width to the main Dynamic Island, excluding satellites
+== Liedtextinsel an die Breite der Hauptinsel von Dynamic Island anpassen, ohne Nebeninseln
 
 Matched with callable peer
 == Mit anrufbarem Peer abgeglichen
@@ -13859,8 +13841,8 @@ Show titles on nameplates
 Show toast
 == Toast anzeigen
 
-Show total DDNet playtime from activity instead of points in scoreboard
-== Gesamte Spielzeit aus DDNet activity statt Punkten in der Punktetabelle anzeigen
+Show total playtime from DDStats instead of points in scoreboard
+== Gesamte Spielzeit aus DDStats statt Punkten in der Punktetabelle anzeigen
 
 Show tune zone colors
 == Tune-Zonen-Farben anzeigen
@@ -15073,9 +15055,6 @@ Teams are not available on this server; if the team is locked, any team member d
 
 Tee
 == Tee
-
-Tee 0.7
-== Tee 0.7
 
 Tee appearance
 == Tee-Aussehen

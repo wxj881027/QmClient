@@ -4643,11 +4643,11 @@ void CHud::RenderMediaIsland()
 	float TransformedScreenX0, TransformedScreenY0, TransformedScreenX1, TransformedScreenY1;
 	Graphics()->GetScreen(&TransformedScreenX0, &TransformedScreenY0, &TransformedScreenX1, &TransformedScreenY1);
 	const CUIRect TargetMainIslandSdfRect = {IslandX, IslandY, UnifiedWidth, AnimatedIslandHeight};
-	m_LyricsIslandAnchor = QmLyricsHudAnchor(TargetMainIslandSdfRect, EditorTransformRect, HudEditorScope.m_TargetRect);
-	m_LyricsIslandAnchorValid = true;
 	const SHudMediaIslandEntrancePose EntrancePose = QmHudMediaIslandEntrancePose(TargetMainIslandSdfRect, Radius, IslandBackgroundColor, EntranceSprings.m_ExpandProgress, EntranceSprings.m_DropProgress, TransformedScreenY0);
 	const float EntranceContentAlpha = EntrancePose.m_ContentAlpha;
 	const CUIRect MainIslandSdfRect = EntrancePose.m_Rect;
+	m_LyricsIslandAnchor = QmLyricsHudAnchor(MainIslandSdfRect, EditorTransformRect, HudEditorScope.m_TargetRect);
+	m_LyricsIslandAnchorValid = true;
 	TextRender()->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.42f * EntranceContentAlpha);
 	const float SpectatorCenterX = SpectatorLiquidCapsule.m_Rect.x + SpectatorLiquidCapsule.m_Rect.w * 0.5f;
 	const float SpectatorCenterY = SpectatorLiquidCapsule.m_Rect.y + SpectatorLiquidCapsule.m_Rect.h * 0.5f;
@@ -6755,6 +6755,8 @@ float CHud::RenderLegacyMediaInfoAt(float AnchorX, float CenterY)
 
 	const SQmLegacyMediaHudLayout Layout = QmLegacyMediaHudLayout(AnchorX, CenterY, m_Width, m_Height, Content);
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::LegacyMediaInfo, Layout.m_Panel);
+	m_LyricsIslandAnchor = QmLyricsHudAnchor(Layout.m_Panel, Layout.m_Panel, HudEditorScope.m_TargetRect);
+	m_LyricsIslandAnchorValid = true;
 	const char *pLyrics = Content.m_ShowLyrics ? m_MediaIslandFrameCache.m_aLyrics : "";
 	const int64_t Now = time_get();
 	m_LegacyMediaLyricState.Update(MediaState, pLyrics, Now, m_MediaIslandFrameCache.m_aLyricsTranslation);
@@ -7457,7 +7459,8 @@ void CHud::RenderRecord()
 
 void CHud::RenderLyricsIsland()
 {
-	if(!g_Config.m_QmLyricsSeparateIsland || !g_Config.m_QmLyrics || !g_Config.m_QmLyricsInMediaIsland)
+	if(!g_Config.m_QmLyricsSeparateIsland || !g_Config.m_QmLyrics || !g_Config.m_QmLyricsInMediaIsland ||
+		(g_Config.m_QmLyricsIslandFollowWidth && !m_LyricsIslandAnchorValid))
 		return;
 	const auto &Lyrics = GameClient()->m_LyricsPresentation.Frame();
 	int Count = Lyrics.m_RowCount;
@@ -7470,8 +7473,8 @@ void CHud::RenderLyricsIsland()
 		apRows[1] = Localize("Lyrics translation");
 		Count = g_Config.m_QmLyricsLanguage == 2 ? 2 : 1;
 	}
-	const CUIRect Anchor = m_LyricsIslandAnchorValid ? m_LyricsIslandAnchor : CUIRect{m_Width * 0.5f - 52.5f, 5.0f, 105.0f, 11.2f};
 	const float Elapsed = m_LyricsMarquee.Update(apRows, Count, time_get(), time_freq());
+	const CUIRect Anchor = m_LyricsIslandAnchorValid ? m_LyricsIslandAnchor : CUIRect{m_Width * 0.5f - 52.5f, 5.0f, 105.0f, 11.2f};
 	QmRenderLyricsIsland(*Graphics(), *TextRender(), GameClient()->m_HudEditor, Anchor, m_Width, m_Height,
 		apRows, Count, Elapsed, MediaIslandBlurBackdrop());
 }

@@ -1022,9 +1022,6 @@ API key
 APP ID
 == ID aplikacji
 
-Appearance
-== Wygląd
-
 Appearance and command highlighting of the local console
 == Wygląd lokalnej konsoli i podświetlanie poleceń
 
@@ -1183,9 +1180,6 @@ Asset preset
 
 Asset with this name already exists.
 == Zasób o tej nazwie już istnieje.
-
-Assets
-== Zasoby
 
 Assets directory
 == Katalog zasobów
@@ -2849,9 +2843,6 @@ Config Filters
 Config version. Helps new client fix old config errors.
 == Wersja konfiguracji. Pomaga nowemu klientowi naprawić stare błędy konfiguracji.
 
-Configs
-== Konfiguracje
-
 Configuration
 == Konfiguracja
 
@@ -3178,9 +3169,6 @@ Controller GUID of the active controller
 
 Controller jitter tolerance
 == Tolerancja drgań kontrolera
-
-Controls
-== Sterowanie
 
 Controls demo recording and playback behavior.
 == Steruje nagrywaniem i odtwarzaniem dem.
@@ -5201,9 +5189,6 @@ Entities background color
 Entity assets
 == Zasoby encji
 
-Entity Background Image
-== Obraz tła encji
-
 Entity overlay
 == Nakładka encji
 
@@ -5750,6 +5735,9 @@ Follow
 Follow graphics setting
 == Zgodnie z ustawieniami grafiki
 
+Follow main island width
+== Dopasuj szerokość wyspy tekstu do głównej
+
 Follow option color
 == Kolor podążania
 
@@ -6083,9 +6071,6 @@ Gap between tee and nametag
 Gaussian
 == Gaussa
 
-General
-== Ogólne
-
 Generated skin outline color
 == Kolor generowanego obrysu
 
@@ -6289,9 +6274,6 @@ Gradient type
 
 Gradient vertical position
 == Pionowa pozycja gradientu
-
-Graphics
-== Grafika
 
 Graphics backend does not support dummy mini view
 == Backend graficzny nie obsługuje miniwidoku dummy
@@ -6703,9 +6685,6 @@ Hook collision line length follows cursor distance
 
 Hook collision line opacity
 == Nieprzezroczystość linii kolizji haka
-
-Hook Collisions
-== Asysta celowania
 
 Hook collisions
 == Linie kolizji haka
@@ -8371,6 +8350,9 @@ Match %d of %d
 
 Match ghost by map version instead of map name
 == Dopasuj ducha według wersji mapy zamiast nazwy mapy
+
+Match lyrics island width to the main Dynamic Island, excluding satellites
+== Dopasuj szerokość wyspy tekstu do głównej części Dynamic Island, bez wysp pomocniczych
 
 Matched with callable peer
 == Dopasowano do osiągalnego peera
@@ -13859,8 +13841,8 @@ Show titles on nameplates
 Show toast
 == Pokaż toast
 
-Show total DDNet playtime from activity instead of points in scoreboard
-== Pokazuj w tabeli łączny czas gry z DDNet activity zamiast punktów
+Show total playtime from DDStats instead of points in scoreboard
+== Pokazuj w tabeli łączny czas gry z DDStats zamiast punktów
 
 Show tune zone colors
 == Pokaż kolory stref tune
@@ -15073,9 +15055,6 @@ Teams are not available on this server; if the team is locked, any team member d
 
 Tee
 == Tee
-
-Tee 0.7
-== Tee 0.7
 
 Tee appearance
 == Wygląd Tee

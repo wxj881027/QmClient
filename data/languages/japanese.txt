@@ -1022,9 +1022,6 @@ API key
 APP ID
 == アプリ ID
 
-Appearance
-== 外観
-
 Appearance and command highlighting of the local console
 == ローカルコンソールの外観とコマンドの強調表示
 
@@ -1183,9 +1180,6 @@ Asset preset
 
 Asset with this name already exists.
 == 同名のアセットが既に存在します。
-
-Assets
-== アセット
 
 Assets directory
 == アセットディレクトリ
@@ -2849,9 +2843,6 @@ Config Filters
 Config version. Helps new client fix old config errors.
 == 設定バージョン。新しいクライアントが古い設定のエラーを修正するのに役立ちます
 
-Configs
-== 設定
-
 Configuration
 == 設定
 
@@ -3178,9 +3169,6 @@ Controller GUID of the active controller
 
 Controller jitter tolerance
 == コントローラーのジッター許容値
-
-Controls
-== コントロール
 
 Controls demo recording and playback behavior.
 == デモの録画と再生の動作を制御します。
@@ -5201,9 +5189,6 @@ Entities background color
 Entity assets
 == エンティティアセット
 
-Entity Background Image
-== エンティティ背景画像
-
 Entity overlay
 == エンティティオーバーレイ
 
@@ -5750,6 +5735,9 @@ Follow
 Follow graphics setting
 == グラフィック設定に従う
 
+Follow main island width
+== 歌詞アイランドをメインと同じ幅にする
+
 Follow option color
 == 追跡の色
 
@@ -6083,9 +6071,6 @@ Gap between tee and nametag
 Gaussian
 == ガウス
 
-General
-== 一般
-
 Generated skin outline color
 == 生成アウトラインの色
 
@@ -6289,9 +6274,6 @@ Gradient type
 
 Gradient vertical position
 == グラデーションの垂直位置
-
-Graphics
-== グラフィック
 
 Graphics backend does not support dummy mini view
 == この描画環境は分身の小窓に対応していません
@@ -6703,9 +6685,6 @@ Hook collision line length follows cursor distance
 
 Hook collision line opacity
 == フック衝突線の不透明度
-
-Hook Collisions
-== フック衝突
 
 Hook collisions
 == フック衝突
@@ -8371,6 +8350,9 @@ Match %d of %d
 
 Match ghost by map version instead of map name
 == マップ名ではなくマップバージョンでゴーストを一致させる
+
+Match lyrics island width to the main Dynamic Island, excluding satellites
+== 歌詞アイランドをダイナミックアイランド本体と同じ幅にし、サブアイランドは含めない
 
 Matched with callable peer
 == 通話可能なピアとマッチしました
@@ -13859,8 +13841,8 @@ Show titles on nameplates
 Show toast
 == トーストを表示
 
-Show total DDNet playtime from activity instead of points in scoreboard
-== スコアボードのポイントの代わりに、DDNet の activity から合計したプレイ時間を表示
+Show total playtime from DDStats instead of points in scoreboard
+== スコアボードのポイントの代わりに DDStats の合計プレイ時間を表示
 
 Show tune zone colors
 == tune zone の領域色を表示
@@ -15073,9 +15055,6 @@ Teams are not available on this server; if the team is locked, any team member d
 
 Tee
 == Tee
-
-Tee 0.7
-== Tee 0.7
 
 Tee appearance
 == Tee 外観

@@ -1022,9 +1022,6 @@ API key
 APP ID
 == ID приложения
 
-Appearance
-== Внешний вид
-
 Appearance and command highlighting of the local console
 == Оформление локальной консоли и подсветка команд
 
@@ -1183,9 +1180,6 @@ Asset preset
 
 Asset with this name already exists.
 == Ресурс с таким именем уже существует.
-
-Assets
-== Ресурсы
 
 Assets directory
 == Папка ресурсов
@@ -2849,9 +2843,6 @@ Config Filters
 Config version. Helps new client fix old config errors.
 == Версия конфигурации. Помогает новому клиенту исправить старые ошибки конфигурации.
 
-Configs
-== Конфиги
-
 Configuration
 == Конфигурация
 
@@ -3178,9 +3169,6 @@ Controller GUID of the active controller
 
 Controller jitter tolerance
 == Допуск дрожания контроллера
-
-Controls
-== Управление
 
 Controls demo recording and playback behavior.
 == Управляет записью и воспроизведением демо.
@@ -5201,9 +5189,6 @@ Entities background color
 Entity assets
 == Ресурсы сущностей
 
-Entity Background Image
-== Фоновое изображение сущностей
-
 Entity overlay
 == Наложение сущностей
 
@@ -5750,6 +5735,9 @@ Follow
 Follow graphics setting
 == Как в настройках графики
 
+Follow main island width
+== Ширина текста по основному острову
+
 Follow option color
 == Цвет следования
 
@@ -6083,9 +6071,6 @@ Gap between tee and nametag
 Gaussian
 == Гаусс
 
-General
-== Общие
-
 Generated skin outline color
 == Цвет сгенерированной обводки
 
@@ -6289,9 +6274,6 @@ Gradient type
 
 Gradient vertical position
 == Вертикальное положение градиента
-
-Graphics
-== Графика
 
 Graphics backend does not support dummy mini view
 == Графический движок не поддерживает мини-окно двойника
@@ -6703,9 +6685,6 @@ Hook collision line length follows cursor distance
 
 Hook collision line opacity
 == Прозрачность линии столкновения крюка
-
-Hook Collisions
-== Столкновения крюка
 
 Hook collisions
 == Столкновения крюка
@@ -8371,6 +8350,9 @@ Match %d of %d
 
 Match ghost by map version instead of map name
 == Сопоставлять ghost по версии карты, а не по имени карты
+
+Match lyrics island width to the main Dynamic Island, excluding satellites
+== Сохранять ширину текста равной основной части динамического острова без дополнительных островков
 
 Matched with callable peer
 == Найден вызываемый пир
@@ -13859,8 +13841,8 @@ Show titles on nameplates
 Show toast
 == Показать toast
 
-Show total DDNet playtime from activity instead of points in scoreboard
-== Показывать в таблице суммарное время игры из DDNet activity вместо очков
+Show total playtime from DDStats instead of points in scoreboard
+== Показывать в таблице суммарное время игры из DDStats вместо очков
 
 Show tune zone colors
 == Показывать цвета tune-зон
@@ -15073,9 +15055,6 @@ Teams are not available on this server; if the team is locked, any team member d
 
 Tee
 == Ти
-
-Tee 0.7
-== Ти 0.7
 
 Tee appearance
 == Внешний вид Tee

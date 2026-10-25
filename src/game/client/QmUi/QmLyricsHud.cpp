@@ -69,10 +69,12 @@ void QmRenderLyricsIsland(IGraphics &Graphics, ITextRender &TextRender, CHudEdit
 	const CUIRect &Anchor, float ScreenWidth, float ScreenHeight, const char *const *ppRows, int RowCount,
 	float ElapsedSeconds, IGraphics::CRenderTargetHandle Backdrop)
 {
-	const CUIRect Panel = QmLyricsIslandLayout(Anchor, ScreenWidth, ScreenHeight, RowCount);
+	const bool FollowWidth = g_Config.m_QmLyricsIslandFollowWidth != 0;
+	const CUIRect Panel = QmLyricsIslandLayout(Anchor, ScreenWidth, ScreenHeight, RowCount, FollowWidth);
 	if(Panel.w <= 0.0f || Panel.h <= 0.0f)
 		return;
-	const auto Scope = Editor.BeginTransform(EHudEditorElement::Lyrics, Panel);
+	// 跟随时只接受位置调整，避免旧缩放再次放大主岛宽度。
+	const auto Scope = Editor.BeginTransform(EHudEditorElement::Lyrics, Panel, !FollowWidth);
 	const auto PreviousPreset = TextRender.GetFontPreset();
 	const auto PreviousFlags = TextRender.GetRenderFlags();
 	const auto PreviousOutline = TextRender.GetTextOutlineColor();

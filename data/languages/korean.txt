@@ -1022,9 +1022,6 @@ API key
 APP ID
 == 앱 ID
 
-Appearance
-== 외형
-
 Appearance and command highlighting of the local console
 == 로컬 콘솔의 모양과 명령어 강조 표시
 
@@ -1183,9 +1180,6 @@ Asset preset
 
 Asset with this name already exists.
 == 같은 이름의 에셋이 이미 존재합니다.
-
-Assets
-== 에셋
 
 Assets directory
 == 에셋 디렉터리
@@ -2849,9 +2843,6 @@ Config Filters
 Config version. Helps new client fix old config errors.
 == 설정 버전. 새 클라이언트가 이전 설정 오류를 수정하는 데 도움
 
-Configs
-== 설정 파일
-
 Configuration
 == 설정
 
@@ -3178,9 +3169,6 @@ Controller GUID of the active controller
 
 Controller jitter tolerance
 == 컨트롤러 지터 허용 범위
-
-Controls
-== 조작
 
 Controls demo recording and playback behavior.
 == 데모 녹화와 재생 동작을 제어합니다.
@@ -5201,9 +5189,6 @@ Entities background color
 Entity assets
 == 엔티티 에셋
 
-Entity Background Image
-== 엔티티 배경 이미지
-
 Entity overlay
 == 엔티티 오버레이
 
@@ -5750,6 +5735,9 @@ Follow
 Follow graphics setting
 == 그래픽 설정 따르기
 
+Follow main island width
+== 가사 섬 너비를 메인 섬에 맞춤
+
 Follow option color
 == 따라가기 색상
 
@@ -6083,9 +6071,6 @@ Gap between tee and nametag
 Gaussian
 == 가우시안
 
-General
-== 일반
-
 Generated skin outline color
 == 생성된 외곽선 색상
 
@@ -6289,9 +6274,6 @@ Gradient type
 
 Gradient vertical position
 == 그라데이션 세로 위치
-
-Graphics
-== 그래픽
 
 Graphics backend does not support dummy mini view
 == 현재 그래픽 백엔드는 분신 미니 화면을 지원하지 않습니다
@@ -6703,9 +6685,6 @@ Hook collision line length follows cursor distance
 
 Hook collision line opacity
 == 갈고리 충돌선 불투명도
-
-Hook Collisions
-== 갈고리 충돌
 
 Hook collisions
 == 갈고리 충돌
@@ -8371,6 +8350,9 @@ Match %d of %d
 
 Match ghost by map version instead of map name
 == 맵 이름 대신 맵 버전으로 고스트 일치
+
+Match lyrics island width to the main Dynamic Island, excluding satellites
+== 가사 섬 너비를 다이내믹 아일랜드 본체에 맞추고 보조 섬은 제외
 
 Matched with callable peer
 == 통화 가능 피어와 매칭됨
@@ -13859,8 +13841,8 @@ Show titles on nameplates
 Show toast
 == 토스트 메시지 표시
 
-Show total DDNet playtime from activity instead of points in scoreboard
-== 스코어보드에서 포인트 대신 DDNet activity의 총 플레이 시간을 표시
+Show total playtime from DDStats instead of points in scoreboard
+== 스코어보드에서 포인트 대신 DDStats의 총 플레이 시간을 표시
 
 Show tune zone colors
 == tune zone 영역 색상 표시
@@ -15073,9 +15055,6 @@ Teams are not available on this server; if the team is locked, any team member d
 
 Tee
 == 티
-
-Tee 0.7
-== 티 0.7
 
 Tee appearance
 == Tee 외형

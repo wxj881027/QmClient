@@ -339,7 +339,6 @@ AntiPing: predict weapons
 Anything smaller than the window supersamples: the frame is drawn at window size and scaled down, so 1080p to 720p gives smoother edges. Sizes above the window are ignored.
 API key
 APP ID
-Appearance
 Appearance and command highlighting of the local console
 Appearance of help bubbles
 Append saved word list chunk
@@ -393,7 +392,6 @@ Aspect ratio preset
 Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)
 Asset preset
 Asset with this name already exists.
-Assets
 Assets directory
 Assets editor
 Assign "Self-kill off" and "Self-kill on"; after pressing the off key, K is ignored until you press the on key.
@@ -948,7 +946,6 @@ Config directory
 Config Files
 Config Filters
 Config version. Helps new client fix old config errors.
-Configs
 Configuration
 Configuration package already exists.
 Configuration package exported.
@@ -1058,7 +1055,6 @@ Controller axis for cursor Y
 Controller axis tolerance for jitter
 Controller GUID of the active controller
 Controller jitter tolerance
-Controls
 Controls demo recording and playback behavior.
 Controls how UI surfaces are drawn: card surface opacity, border width, corner rounding, segment count and the rainbow title effect.
 Controls laser shape, glow and animation.
@@ -1732,7 +1728,6 @@ Enter your sponsor code
 Entities
 Entities background color
 Entity assets
-Entity Background Image
 Entity overlay
 Entity Preview
 Entity wall outline opacity
@@ -1915,6 +1910,7 @@ Folder
 Folder Link
 Follow
 Follow graphics setting
+Follow main island width
 Follow option color
 Follow remote placements in the collaborative editor
 Follow server
@@ -2027,7 +2023,6 @@ Gap aim rescue
 Gap between statusbar items
 Gap between tee and nametag
 Gaussian
-General
 Generated skin outline color
 Generated skin outline opacity
 Generated skin outline width
@@ -2096,7 +2091,6 @@ Gradient range
 Gradient settings
 Gradient type
 Gradient vertical position
-Graphics
 Graphics backend does not support dummy mini view
 Graphics card
 Graphics display
@@ -2234,7 +2228,6 @@ Hook collision line
 Hook collision line alpha (0 invisible, 100 fully visible)
 Hook collision line length follows cursor distance
 Hook collision line opacity
-Hook Collisions
 Hook collisions
 Hook countdown colors
 Hook countdown ring color
@@ -2790,6 +2783,7 @@ Marks teammates who hold hammer while stuck in death or freeze areas, so you can
 Master server URL to register
 Match %d of %d
 Match ghost by map version instead of map name
+Match lyrics island width to the main Dynamic Island, excluding satellites
 Matched with callable peer
 Max attempts for remote console authentication
 Max CSVs
@@ -4619,7 +4613,7 @@ Show title setting hints immediately in small text
 Show titles above player names
 Show titles on nameplates
 Show toast
-Show total DDNet playtime from activity instead of points in scoreboard
+Show total playtime from DDStats instead of points in scoreboard
 Show tune zone colors
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 Show unfreeze/deep unfreeze tile outlines
@@ -5024,7 +5018,6 @@ Teams are disabled
 Teams are not available on this server
 Teams are not available on this server; if the team is locked, any team member dying will kill the whole team
 Tee
-Tee 0.7
 Tee appearance
 Tee collision
 Tee collision (Tee to Tee)

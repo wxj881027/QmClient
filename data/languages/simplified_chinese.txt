@@ -1022,9 +1022,6 @@ API key
 APP ID
 == 应用 ID
 
-Appearance
-== 游戏界面
-
 Appearance and command highlighting of the local console
 == 本地控制台的外观和命令高亮
 
@@ -1183,9 +1180,6 @@ Asset preset
 
 Asset with this name already exists.
 == 同名材质已存在。
-
-Assets
-== 资源
 
 Assets directory
 == 资源目录
@@ -2849,9 +2843,6 @@ Config Filters
 Config version. Helps new client fix old config errors.
 == 配置版本。帮助新客户端修复旧配置错误。
 
-Configs
-== 客户端配置
-
 Configuration
 == 配置
 
@@ -3178,9 +3169,6 @@ Controller GUID of the active controller
 
 Controller jitter tolerance
 == 摇杆死区
-
-Controls
-== 控制
 
 Controls demo recording and playback behavior.
 == 控制 demo 的录制与回放行为。
@@ -5201,9 +5189,6 @@ Entities background color
 Entity assets
 == 实体资源
 
-Entity Background Image
-== 实体层背景图
-
 Entity overlay
 == 实体层叠加
 
@@ -5750,6 +5735,9 @@ Follow
 Follow graphics setting
 == 跟随图形设置
 
+Follow main island width
+== 歌词岛跟随主岛宽度
+
 Follow option color
 == 跟随颜色
 
@@ -6086,9 +6074,6 @@ Gap between tee and nametag
 Gaussian
 == 高斯
 
-General
-== 常规
-
 Generated skin outline color
 == 生成描边颜色
 
@@ -6292,9 +6277,6 @@ Gradient type
 
 Gradient vertical position
 == 渐变垂直位置
-
-Graphics
-== 图像
 
 Graphics backend does not support dummy mini view
 == 当前图形后端不支持分身小窗
@@ -6706,9 +6688,6 @@ Hook collision line length follows cursor distance
 
 Hook collision line opacity
 == 钩子辅助线不透明度
-
-Hook Collisions
-== 钩子辅助线
 
 Hook collisions
 == 钩子辅助线
@@ -8374,6 +8353,9 @@ Match %d of %d
 
 Match ghost by map version instead of map name
 == 按地图版本而不是地图名称匹配幽灵
+
+Match lyrics island width to the main Dynamic Island, excluding satellites
+== 让歌词岛始终与灵动岛主岛等宽，不包含眼睛等附岛
 
 Matched with callable peer
 == 已匹配到可通话对端
@@ -13862,8 +13844,8 @@ Show titles on nameplates
 Show toast
 == 显示提示消息
 
-Show total DDNet playtime from activity instead of points in scoreboard
-== 在计分板中累加 DDNet activity 的游玩小时数，替代积分显示
+Show total playtime from DDStats instead of points in scoreboard
+== 在计分板中显示 DDStats 的累计游玩时间，替代积分显示
 
 Show tune zone colors
 == 显示 Tune Zone 颜色
@@ -15076,9 +15058,6 @@ Teams are not available on this server; if the team is locked, any team member d
 
 Tee
 == Tee
-
-Tee 0.7
-== Tee 0.7
 
 Tee appearance
 == Tee 外观

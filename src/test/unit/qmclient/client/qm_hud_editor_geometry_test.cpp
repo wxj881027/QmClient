@@ -2,6 +2,22 @@
 
 #include <gtest/gtest.h>
 
+TEST(QmHudTransformScale, PositionOnlyElementsIgnoreSavedScale)
+{
+	for(const int SavedScale : {25, 75, 100, 110, 200, 400})
+	{
+		SCOPED_TRACE(SavedScale);
+		EXPECT_FLOAT_EQ(QmHudEditor::ResolveScale(SavedScale, false), 1.0f);
+	}
+}
+
+TEST(QmHudTransformScale, ScalableElementsKeepTheirScaleAndBounds)
+{
+	EXPECT_FLOAT_EQ(QmHudEditor::ResolveScale(125), 1.25f);
+	EXPECT_FLOAT_EQ(QmHudEditor::ResolveScale(10), 0.25f);
+	EXPECT_FLOAT_EQ(QmHudEditor::ResolveScale(500), 4.0f);
+}
+
 TEST(QmHudMeasuredGeometry, ReportsLocalContentOffsetAndSizeAfterRendering)
 {
 	QmHudEditor::CVisibleBounds Geometry;

@@ -22,6 +22,14 @@ namespace QmHudEditor
 	// 屏幕边吸附没有邻近半径：只有 HUD 边与窗口边真正重合时才吸附，
 	// 未重合时保留拖拽后的原始位置与样式。容差只用于吸收浮点误差。
 	inline constexpr float EDGE_COINCIDENCE_DISTANCE = EPSILON;
+	inline constexpr int MIN_SCALE_PERCENT = 25;
+	inline constexpr int MAX_SCALE_PERCENT = 400;
+
+	inline float ResolveScale(int ScalePercent, bool Scalable = true)
+	{
+		// 禁用缩放的元素只恢复位置，旧布局里的缩放值也不能改变尺寸。
+		return Scalable ? std::clamp(ScalePercent, MIN_SCALE_PERCENT, MAX_SCALE_PERCENT) / 100.0f : 1.0f;
+	}
 
 	// 绘制后报告的可见范围可能小于预估范围（例如聊天只显示底部几行）。
 	// 保存源坐标中的实际范围，让下一帧恢复、缩放和拖动使用同一个边界。
@@ -428,8 +436,8 @@ private:
 
 	static constexpr int ELEMENT_COUNT = static_cast<int>(EHudEditorElement::Count);
 	static constexpr int POSITION_SCALE = 10000;
-	static constexpr int MIN_SCALE_PERCENT = 25;
-	static constexpr int MAX_SCALE_PERCENT = 400;
+	static constexpr int MIN_SCALE_PERCENT = QmHudEditor::MIN_SCALE_PERCENT;
+	static constexpr int MAX_SCALE_PERCENT = QmHudEditor::MAX_SCALE_PERCENT;
 
 	bool m_Active = false;
 	bool m_DirtyLayout = false;

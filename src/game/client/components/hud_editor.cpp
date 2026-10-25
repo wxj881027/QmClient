@@ -160,7 +160,7 @@ void CHudEditor::UpdateVisibleRect(EHudEditorElement Element, const CUIRect &Ren
 		RenderedRect.h * pUiScreen->h / ScreenH};
 
 	const SElementState &State = this->State(Element);
-	const float Scale = std::clamp(State.m_HasCustom ? State.m_ScalePercent / 100.0f : 1.0f, MIN_SCALE_PERCENT / 100.0f, MAX_SCALE_PERCENT / 100.0f);
+	const float Scale = QmHudEditor::ResolveScale(State.m_HasCustom ? State.m_ScalePercent : 100, Visible.m_Scalable);
 	Visible.m_BaseWidth = Visible.m_Rect.w / Scale;
 	Visible.m_BaseHeight = Visible.m_Rect.h / Scale;
 	// 命中、拖动与下一帧恢复共同使用实际内容边界。
@@ -305,7 +305,7 @@ void CHudEditor::ClampStateToScreen(SElementState &State, float BaseWidth, float
 	if(pScreen == nullptr || pScreen->w <= 0.0f || pScreen->h <= 0.0f)
 		return;
 
-	const float Scale = std::clamp(State.m_ScalePercent / 100.0f, MIN_SCALE_PERCENT / 100.0f, MAX_SCALE_PERCENT / 100.0f);
+	const float Scale = QmHudEditor::ResolveScale(State.m_ScalePercent);
 	const float Width = BaseWidth * Scale;
 	const float Height = BaseHeight * Scale;
 	const bool AnchorRight = State.m_PosXPermille >= POSITION_SCALE;
@@ -368,7 +368,7 @@ bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIR
 	const float TransformToVisibleOffsetY = EffectiveVisibleRect.y - TransformRect.y;
 
 	const SElementState &SavedState = State(Element);
-	const float Scale = std::clamp(SavedState.m_HasCustom ? SavedState.m_ScalePercent / 100.0f : 1.0f, MIN_SCALE_PERCENT / 100.0f, MAX_SCALE_PERCENT / 100.0f);
+	const float Scale = QmHudEditor::ResolveScale(SavedState.m_HasCustom ? SavedState.m_ScalePercent : 100, Scalable);
 	const float NormX = SavedState.m_HasCustom ? QmHudEditor::ClampStoredAxisPosition(SavedState.m_PosXPermille / (float)POSITION_SCALE) : DefaultNormX;
 	const float NormY = SavedState.m_HasCustom ? QmHudEditor::ClampStoredAxisPosition(SavedState.m_PosYPermille / (float)POSITION_SCALE) : DefaultNormY;
 
@@ -807,7 +807,7 @@ void CHudEditor::OnRender()
 			const SVisibleElement &Visible = m_vVisibleElements[VisibleIndex];
 			SElementState &State = EnsureState(Visible.m_Element);
 			State.m_HasCustom = true;
-			const float Scale = std::clamp(State.m_ScalePercent / 100.0f, MIN_SCALE_PERCENT / 100.0f, MAX_SCALE_PERCENT / 100.0f);
+			const float Scale = QmHudEditor::ResolveScale(State.m_ScalePercent, Visible.m_Scalable);
 			const float Width = Visible.m_BaseWidth * Scale;
 			const float Height = Visible.m_BaseHeight * Scale;
 			const float VisibleOffsetX = Visible.m_StateOffsetX * Scale;
