@@ -7,6 +7,7 @@
 #include <base/thread.h>
 
 #include <engine/shared/config.h>
+#include <engine/shared/http_response_headers.h>
 #include <engine/storage.h>
 
 #include <emscripten/emscripten.h>
@@ -109,9 +110,8 @@ bool CHttpRequestEmscripten::ConfigureAndRun()
 		m_State = EHttpState::RUNNING;
 	}
 	m_pFetch = emscripten_fetch(&FetchAttributes, m_aUrl);
-	dbg_assert(m_pFetch != nullptr, "emscripten_fetch failure");
-
-	return true;
+	// SDK 的资源申请失败可以返回空句柄，交回既有初始化失败收尾。
+	return m_pFetch != nullptr;
 }
 
 void CHttpRequestEmscripten::OnSuccess()
@@ -184,25 +184,10 @@ void CHttpRequestEmscripten::OnCompletionInternal(EHttpState State, const char *
 	if(m_pFetch != nullptr)
 	{
 		const size_t HeadersLength = emscripten_fetch_get_response_headers_length(m_pFetch);
-		if(HeadersLength != 0)
+		if(!ReadHttpResponseHeaders(HeadersLength, [this](char *pHeaders, size_t Capacity) { return emscripten_fetch_get_response_headers(m_pFetch, pHeaders, Capacity); }, [this](const char *pName, const char *pValue) { OnHeader(pName, pValue); }) && State != EHttpState::ABORTED)
 		{
-			char *pHeaders = static_cast<char *>(malloc(HeadersLength + 1));
-			dbg_assert(emscripten_fetch_get_response_headers(m_pFetch, pHeaders, HeadersLength + 1) == HeadersLength + 1, "emscripten_fetch_get_response_headers failure");
-			char **ppUnpackedHeaders = emscripten_fetch_unpack_response_headers(pHeaders);
-
-			int HeaderIndex = 0;
-			while(ppUnpackedHeaders[HeaderIndex] != nullptr)
-			{
-				const char *pName = ppUnpackedHeaders[HeaderIndex];
-				++HeaderIndex;
-				const char *pValue = ppUnpackedHeaders[HeaderIndex];
-				++HeaderIndex;
-				dbg_assert(pValue != nullptr, "emscripten_fetch_unpack_response_headers result unexpected: value is nullptr for header '%s'", pName);
-				OnHeader(pName, pValue);
-			}
-
-			emscripten_fetch_free_unpacked_response_headers(ppUnpackedHeaders);
-			free(pHeaders);
+			State = EHttpState::ERROR;
+			pErrorDetail = "Failed to read response headers";
 		}
 
 		m_StatusCode = m_pFetch->status;

@@ -2840,6 +2840,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   http_curl.h
   http_url.h
   http_range.h
+  http_response_headers.h
   http_emscripten.cpp
   http_emscripten.h
   huffman.cpp
@@ -5189,6 +5190,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qmclient_update_batch_test.cpp
     src/test/unit/engine/http/http_range_test.cpp
     src/test/unit/engine/http/http_response_buffer_test.cpp
+    src/test/unit/engine/http/http_response_headers_test.cpp
     src/test/unit/qmclient/client/qmclient_update_package_plan_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_assets_contract_test.cpp
     src/test/integration/qmclient/settings/settings_resource_preview_pipeline_test.cpp
