@@ -6845,6 +6845,9 @@ Hue
 Hue speed
 == 색조 속도
 
+Humming
+== 흥얼거리기
+
 i = Receive rate
 == i = 수신 속도
 
@@ -8099,8 +8102,17 @@ LXGW WenKai is unavailable. Current fonts and weights will be kept.
 Lyrics
 == 가사
 
+Lyrics language
+== 가사 언어
+
+Lyrics language (0=Original, 1=Translation, 2=Original and translation)
+== 가사 언어 (0=원문, 1=번역, 2=원문 및 번역)
+
 Lyrics live in the Dynamic Island, so they stay hidden until that option is on.
 == 가사는 Dynamic Island에 표시되므로 해당 옵션을 켜기 전에는 보이지 않습니다.
+
+Lyrics translation
+== 가사 번역
 
 Magic: Spirit Script
 == 마법풍: 영혼의 문자
@@ -9758,6 +9770,9 @@ Or visit DDNet.org
 Original
 == 기본
 
+Original and translation
+== 원문 및 번역
+
 Original language for both received and outgoing messages. Use Auto to detect each message.
 == 받은 메시지와 보낸 메시지 모두 원래 언어를 사용합니다. 각 메시지 감지에는 자동을 사용하세요.
 
@@ -9766,6 +9781,9 @@ Original language for incoming and outgoing text
 
 Original message language
 == 원문 언어
+
+Original only
+== 원문만
 
 Original options
 == 원본 투표 항목
@@ -12581,6 +12599,9 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == 지정된 명령을 rcon 으로 전송
 
+Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
+== 30~90초의 무작위 간격으로 연속 세 줄의 가사를 전체 채팅에 보내며 줄 사이에 3초 대기
+
 Send translation method
 == 번역 방식 보내기
 
@@ -12604,6 +12625,9 @@ Sends a saved .map file from your client to the public test server and reports p
 
 Sends an automatic chat reply when someone whispers you while you are muted or away.
 == 음소거 중이거나 자리를 비웠을 때 누군가 귓속말을 보내면 자동으로 채팅 답장을 보냅니다.
+
+Separate Dynamic Island
+== 다이나믹 아일랜드 분리
 
 Separate with commas
 == 쉼표로 구분
@@ -13423,6 +13447,12 @@ Show local time seconds
 
 Show logs of the last i seconds
 == 마지막 i 초의 로그 표시
+
+Show lyrics in a separate island below Dynamic Island
+== 다이나믹 아일랜드 아래의 별도 아일랜드에 가사 표시
+
+Show lyrics in Dynamic Island
+== 다이나믹 아일랜드에 가사 표시
 
 Show lyrics inside Dynamic Island
 == 다이나믹 아일랜드에 가사 표시
@@ -15976,6 +16006,9 @@ Translation menu selected color
 
 Translation model was not found. Check the model name.
 == 번역 모델을 찾을 수 없습니다. 모델 이름을 확인하세요.
+
+Translation only
+== 번역만
 
 Translation service
 == 번역 서비스

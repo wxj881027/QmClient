@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <vector>
 
 // 多音乐客户端(酷狗/汽水/QQ)歌词的统一数据模型。
@@ -41,6 +42,31 @@ namespace QmMusicLyrics
 			return false;
 		}
 	};
+	inline void AlignTranslations(const NeteaseLyrics::STimeline &Main, std::string_view TranslationLrc, std::vector<std::string> *pOut)
+	{
+		if(pOut == nullptr)
+			return;
+		pOut->clear();
+		NeteaseLyrics::STimeline Translation;
+		if(TranslationLrc.empty() || !NeteaseLyrics::ParseLrc(TranslationLrc, &Translation))
+			return;
+		for(const auto &Line : Main.m_vLines)
+		{
+			std::string Matched;
+			int64_t BestDelta = INT64_MAX;
+			for(const auto &TransLine : Translation.m_vLines)
+			{
+				const int64_t Delta = TransLine.m_StartMs >= Line.m_StartMs ? TransLine.m_StartMs - Line.m_StartMs : Line.m_StartMs - TransLine.m_StartMs;
+				if(Delta < BestDelta)
+				{
+					BestDelta = Delta;
+					Matched = TransLine.m_Text;
+				}
+			}
+			// 各来源的原文与翻译时间戳允许有 150 毫秒误差。
+			pOut->push_back(BestDelta <= 150 ? Matched : std::string());
+		}
+	}
 } // namespace QmMusicLyrics
 
 #endif

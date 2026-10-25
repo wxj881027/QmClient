@@ -2281,6 +2281,7 @@ HUD notifications
 HUD rainbow colors
 Hue
 Hue speed
+Humming
 i = Receive rate
 I am away from the game window
 I muted you
@@ -2699,7 +2700,10 @@ Lower means better quality and larger files; 18 is recommended
 LXGW WenKai is available.
 LXGW WenKai is unavailable. Current fonts and weights will be kept.
 Lyrics
+Lyrics language
+Lyrics language (0=Original, 1=Translation, 2=Original and translation)
 Lyrics live in the Dynamic Island, so they stay hidden until that option is on.
+Lyrics translation
 Magic: Spirit Script
 Main Asset
 Main menu
@@ -3252,9 +3256,11 @@ Options here affect networking or identity; test on a server before using them i
 Options only exist within "Detection distance"; turn off the ones you never use to keep the wheel short.
 Or visit DDNet.org
 Original
+Original and translation
 Original language for both received and outgoing messages. Use Auto to detect each message.
 Original language for incoming and outgoing text
 Original message language
+Original only
 Original options
 Original scroll feel
 Other
@@ -4193,6 +4199,7 @@ Send probability
 Send Rate
 Send sampling and token limit parameters
 Send specified command to rcon
+Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
 Send translation method
 Sending and receiving
 Sending initial client info
@@ -4201,6 +4208,7 @@ Sending, waiting for peer echo
 Sends a command to the antibot
 Sends a saved .map file from your client to the public test server and reports progress and errors.
 Sends an automatic chat reply when someone whispers you while you are muted or away.
+Separate Dynamic Island
 Separate with commas
 Serif
 Server
@@ -4474,6 +4482,8 @@ Show list of vote mutes (page 1 by default, 20 entries per page)
 Show local time always
 Show local time seconds
 Show logs of the last i seconds
+Show lyrics in a separate island below Dynamic Island
+Show lyrics in Dynamic Island
 Show lyrics inside Dynamic Island
 Show main tee title locally
 Show map details
@@ -5325,6 +5335,7 @@ Translation menu background color
 Translation menu normal color
 Translation menu selected color
 Translation model was not found. Check the model name.
+Translation only
 Translation service
 Translation service authentication failed. Check the API key and service address.
 Translation service is not configured correctly.

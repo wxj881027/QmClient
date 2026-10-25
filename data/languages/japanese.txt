@@ -6845,6 +6845,9 @@ Hue
 Hue speed
 == 色相変化速度
 
+Humming
+== 口ずさむ
+
 i = Receive rate
 == i = 受信レート
 
@@ -8099,8 +8102,17 @@ LXGW WenKai is unavailable. Current fonts and weights will be kept.
 Lyrics
 == 歌詞
 
+Lyrics language
+== 歌詞の言語
+
+Lyrics language (0=Original, 1=Translation, 2=Original and translation)
+== 歌詞の言語（0=原文、1=翻訳、2=原文と翻訳）
+
 Lyrics live in the Dynamic Island, so they stay hidden until that option is on.
 == 歌詞は Dynamic Island に表示されるため、その設定をオンにするまで表示されません。
+
+Lyrics translation
+== 歌詞の翻訳
 
 Magic: Spirit Script
 == 魔法風：精霊の筆跡
@@ -9758,6 +9770,9 @@ Or visit DDNet.org
 Original
 == オリジナル
 
+Original and translation
+== 原文と翻訳
+
 Original language for both received and outgoing messages. Use Auto to detect each message.
 == 受信・送信メッセージとも原文の言語を使用します。各メッセージの検出には「自動」を使用。
 
@@ -9766,6 +9781,9 @@ Original language for incoming and outgoing text
 
 Original message language
 == 原文の言語
+
+Original only
+== 原文のみ
 
 Original options
 == 元の投票項目
@@ -12581,6 +12599,9 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == rcon に指定コマンドを送信
 
+Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
+== 30～90秒のランダムな間隔で連続する三行の歌詞を全体チャットに送り、各行の間隔を3秒にする
+
 Send translation method
 == 翻訳方式を送信
 
@@ -12604,6 +12625,9 @@ Sends a saved .map file from your client to the public test server and reports p
 
 Sends an automatic chat reply when someone whispers you while you are muted or away.
 == ミュート中や離席中に誰かがささやいてきたとき、自動でチャット返信を送ります。
+
+Separate Dynamic Island
+== Dynamic Island から分離
 
 Separate with commas
 == カンマで区切る
@@ -13423,6 +13447,12 @@ Show local time seconds
 
 Show logs of the last i seconds
 == 最後の i 秒間のログを表示
+
+Show lyrics in a separate island below Dynamic Island
+== Dynamic Island の下に独立した島で歌詞を表示
+
+Show lyrics in Dynamic Island
+== Dynamic Island に歌詞を表示
 
 Show lyrics inside Dynamic Island
 == Dynamic Island 内に歌詞を表示
@@ -15976,6 +16006,9 @@ Translation menu selected color
 
 Translation model was not found. Check the model name.
 == 翻訳モデルが見つかりません。モデル名を確認してください。
+
+Translation only
+== 翻訳のみ
 
 Translation service
 == 翻訳サービス

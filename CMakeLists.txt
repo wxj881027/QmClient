@@ -246,6 +246,7 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64" AND CMAKE_C_COMPIL
     src/qm/music/qm_kugou_protocol.h
     src/qm/music/qm_qqmusic_protocol.h
     src/qm/hooks/netease/qm_netease_frontend_bridge.cpp
+    src/game/client/components/qmclient/netease_hook/qm_netease_lyrics_channel.cpp
     src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
     src/game/client/components/qmclient/netease/netease_lyric_state.cpp
     src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp
@@ -3220,6 +3221,8 @@ if(CLIENT)
     QmUi/QmAnimResolve.cpp
     QmUi/QmAnimResolve.h
     QmUi/QmHookCountdownRender.h
+    QmUi/QmLyricsHud.cpp
+    QmUi/QmLyricsHud.h
     QmUi/QmLegacyMediaHud.cpp
     QmUi/QmLegacyMediaHud.h
     QmUi/QmColorGradient.h
@@ -3594,6 +3597,12 @@ if(CLIENT)
     components/qmclient/monitoring/monitoring.h
     components/qmclient/music_app_watcher.cpp
     components/qmclient/music_app_watcher.h
+    components/qmclient/music_lyrics/music_lyrics_display.h
+    components/qmclient/music_lyrics/music_humming_state.h
+    components/qmclient/music_lyrics/music_lyrics_presentation.cpp
+    components/qmclient/music_lyrics/music_lyrics_presentation.h
+    components/qmclient/netease_hook/qm_netease_lyrics_channel.cpp
+    components/qmclient/netease_hook/qm_netease_lyrics_channel.h
     components/qmclient/music_lyrics/music_lyrics_integration.cpp
     components/qmclient/music_lyrics/music_lyrics_integration.h
     components/qmclient/music_lyrics/music_lyrics_krc.cpp
@@ -4921,6 +4930,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_hud_hook_countdown_test.cpp
     src/test/contract/qmclient/ui/qm_media_island_shader_contract_test.cpp
     src/test/unit/qmclient/client/qm_media_island_render_params_test.cpp
+    src/test/integration/qmclient/client/qm_netease_lyrics_channel_test.cpp
+    src/test/unit/qmclient/music/music_lyrics_display_test.cpp
+    src/test/unit/qmclient/music/music_humming_state_test.cpp
+    src/test/unit/qmclient/client/qm_lyrics_hud_layout_test.cpp
     src/test/unit/qmclient/client/qm_media_island_content_test.cpp
     src/test/unit/qmclient/client/qm_media_island_satellite_test.cpp
     src/test/unit/qmclient/client/qm_media_island_motion_test.cpp
@@ -5343,6 +5356,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/music_lyrics/qm_spotify_token.cpp
     src/game/client/components/qmclient/music_lyrics/qm_spotify_parser.cpp
     src/qm/music/qm_music_publication.cpp
+    src/game/client/components/qmclient/netease_hook/qm_netease_lyrics_channel.cpp
     src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
     src/game/client/components/qmclient/netease/netease_lyric_state.cpp
     src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp

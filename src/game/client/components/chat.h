@@ -647,6 +647,7 @@ public:
 	// @param pLine the chat message
 	// 返回是否已发送或由本地命令处理，失败时调用方可保留消息。
 	bool SendChat(int Team, const char *pLine, const char *pLocalOriginal = nullptr, int Connection = -1);
+	bool SendAutomaticChat(int Connection, const char *pLine);
 	void InvalidateOutgoingConnection(int Connection)
 	{
 		m_PendingChatMessages.InvalidateConnection(Connection);

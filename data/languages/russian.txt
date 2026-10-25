@@ -6845,6 +6845,9 @@ Hue
 Hue speed
 == Скорость оттенка
 
+Humming
+== Напевание
+
 i = Receive rate
 == i = Скорость приёма
 
@@ -8099,8 +8102,17 @@ LXGW WenKai is unavailable. Current fonts and weights will be kept.
 Lyrics
 == Текст песни
 
+Lyrics language
+== Язык текста песни
+
+Lyrics language (0=Original, 1=Translation, 2=Original and translation)
+== Язык текста песни (0=оригинал, 1=перевод, 2=оригинал и перевод)
+
 Lyrics live in the Dynamic Island, so they stay hidden until that option is on.
 == Текст песни выводится в Dynamic Island, поэтому не появится, пока эта опция не включена.
+
+Lyrics translation
+== Перевод текста песни
 
 Magic: Spirit Script
 == Магия: духовное письмо
@@ -9758,6 +9770,9 @@ Or visit DDNet.org
 Original
 == Оригинал
 
+Original and translation
+== Оригинал и перевод
+
 Original language for both received and outgoing messages. Use Auto to detect each message.
 == Исходный язык для входящих и исходящих сообщений. Используйте «Авто» для определения каждого сообщения.
 
@@ -9766,6 +9781,9 @@ Original language for incoming and outgoing text
 
 Original message language
 == Язык исходного сообщения
+
+Original only
+== Только оригинал
 
 Original options
 == Исходные варианты
@@ -12581,6 +12599,9 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == Отправить указанную команду в rcon
 
+Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
+== Отправлять три последовательные строки песни в общий чат через случайные интервалы от 30 до 90 секунд, с паузой 3 секунды между строками
+
 Send translation method
 == Способ отправки перевода
 
@@ -12604,6 +12625,9 @@ Sends a saved .map file from your client to the public test server and reports p
 
 Sends an automatic chat reply when someone whispers you while you are muted or away.
 == Автоматически отвечает в чате, когда вам шепчут, а вы в муте или отошли.
+
+Separate Dynamic Island
+== Отделить от Dynamic Island
 
 Separate with commas
 == Разделяйте запятыми
@@ -13423,6 +13447,12 @@ Show local time seconds
 
 Show logs of the last i seconds
 == Показать логи за последние i секунд
+
+Show lyrics in a separate island below Dynamic Island
+== Показывать текст песни на отдельном островке под Dynamic Island
+
+Show lyrics in Dynamic Island
+== Показывать текст песни в Dynamic Island
 
 Show lyrics inside Dynamic Island
 == Показывать текст песни в Dynamic Island
@@ -15976,6 +16006,9 @@ Translation menu selected color
 
 Translation model was not found. Check the model name.
 == Модель перевода не найдена. Проверьте её имя.
+
+Translation only
+== Только перевод
 
 Translation service
 == Сервис перевода

@@ -47,37 +47,6 @@ namespace QmSodaLyricFile
 				return (int64_t)pValue->u.dbl;
 			return 0;
 		}
-
-		// 把独立 LRC 翻译轨按行起始时间与主歌词行对齐。
-		void AlignTranslations(const NeteaseLyrics::STimeline &Main, std::string_view TranslationLrc, std::vector<std::string> *pOut)
-		{
-			if(pOut == nullptr)
-				return;
-			pOut->clear();
-			if(TranslationLrc.empty())
-				return;
-			NeteaseLyrics::STimeline Translation;
-			if(!NeteaseLyrics::ParseLrc(TranslationLrc, &Translation))
-				return;
-			for(const NeteaseLyrics::SLine &Line : Main.m_vLines)
-			{
-				std::string Matched;
-				int64_t BestDelta = INT64_MAX;
-				for(const NeteaseLyrics::SLine &TransLine : Translation.m_vLines)
-				{
-					int64_t Delta = TransLine.m_StartMs - Line.m_StartMs;
-					if(Delta < 0)
-						Delta = -Delta;
-					if(Delta < BestDelta)
-					{
-						BestDelta = Delta;
-						Matched = TransLine.m_Text;
-					}
-				}
-				// 允许 ±150ms 对齐误差;超过视为无匹配。
-				pOut->push_back(BestDelta <= 150 ? Matched : std::string());
-			}
-		}
 	}
 
 	bool ParseLyricFileJson(std::string_view Json, QmMusicLyrics::SLyricsData *pOut, std::string *pError)
@@ -127,7 +96,14 @@ namespace QmSodaLyricFile
 				*pError = Error.empty() ? "lyric parse failed" : Error;
 			return false;
 		}
-		AlignTranslations(pOut->m_Timeline, TranslationLrc, &pOut->m_vTranslations);
+		if(!TranslationLrc.empty())
+			QmMusicLyrics::AlignTranslations(pOut->m_Timeline, TranslationLrc, &pOut->m_vTranslations);
+		else if(LyricType == "krc")
+		{
+			pOut->m_vTranslations = QmMusicLyrics::ExtractKrcTranslation(LyricContent);
+			if(!pOut->m_vTranslations.empty())
+				pOut->m_vTranslations.resize(pOut->m_Timeline.m_vLines.size());
+		}
 		return true;
 	}
 } // namespace QmSodaLyricFile
