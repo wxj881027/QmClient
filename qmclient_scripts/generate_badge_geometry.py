@@ -128,14 +128,64 @@ def trapezoids(contours, clip):
                     yield (l0 - left, y0, r0 - left, y0, l1 - left, y1, r1 - left, y1)
 
 
-def mesh(name, path, clip, developer=False):
+def clip_quad(quad, mask):
+    # 凸形 SVG 裁剪路径在离线阶段执行，避免运行时逐顶点裁剪或重新绘制遮罩。
+    points = [(quad[0], quad[1]), (quad[2], quad[3]), (quad[6], quad[7]), (quad[4], quad[5])]
+    if math.dist(mask[0], mask[-1]) < 1e-8:
+        mask = mask[:-1]
+    winding = sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(mask, mask[1:] + mask[:1]))
+    direction = 1 if winding > 0 else -1
+    for a, b in zip(mask, mask[1:] + mask[:1]):
+        if not points:
+            return
+        source, points = points, []
+        def distance(p):
+            return direction * ((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]))
+        previous = source[-1]
+        previous_distance = distance(previous)
+        for current in source:
+            current_distance = distance(current)
+            if (previous_distance >= 0) != (current_distance >= 0):
+                t = previous_distance / (previous_distance - current_distance)
+                points.append(tuple(previous[i] + (current[i] - previous[i]) * t for i in (0, 1)))
+            if current_distance >= 0:
+                points.append(current)
+            previous, previous_distance = current, current_distance
+    if len(points) < 3:
+        return
+    if len(points) == 4:
+        ordered = (points[0], points[1], points[3], points[2])
+        yield tuple(value for point in ordered for value in point)
+    else:
+        for i in range(1, len(points) - 1):
+            ordered = (points[0], points[i], points[i + 1], points[i + 1])
+            yield tuple(value for point in ordered for value in point)
+
+
+def build_mesh(path, clip, developer=False):
     root = ET.parse(ROOT / path).getroot()
     scale = 0.25 if developer else 1.0
     output = []
+    mask = None
+    if developer:
+        content = next((element for element in root.iter() if element.get("id") == "developer-content"), None)
+        if content is None:
+            raise ValueError("developer badge requires the developer-content layer")
+        reference = re.fullmatch(r"url\(#([^)]*)\)", content.get("clip-path", ""))
+        clip_layer = next((element for element in root.iter() if reference and element.get("id") == reference.group(1)), None)
+        clip_path = clip_layer.find('{*}path') if clip_layer is not None else None
+        if clip_path is None:
+            raise ValueError("developer badge requires its capsule clip path")
+        points, closed = flatten(clip_path.attrib['d'], 0.045 / scale)[0]
+        if not closed:
+            raise ValueError("developer capsule clip path must be closed")
+        mask = [(x * scale, y * scale) for x, y in points]
 
     def visit(element, opacity=1.0):
         tag = element.tag.rsplit("}", 1)[-1]
         if tag in {"defs", "mask", "clipPath"}:
+            return
+        if developer and element.get("id") == "developer-logo":
             return
         opacity *= float(element.get("opacity", "1"))
         if tag == "path":
@@ -148,15 +198,21 @@ def mesh(name, path, clip, developer=False):
                 contours = [points for points, _ in paths] if kind == "fill" else [outline for points, closed in paths for outline in stroke_outline(points, closed, float(element.get("stroke-width", "1")) * scale)]
                 for quad in trapezoids(contours, clip):
                     # 开发者保留原配色，其余图案由玩家所选配色着色。
-                    output.append((quad, color[1:] if developer else "ffffff", opacity))
+                    for visible in clip_quad(quad, mask) if mask else [quad]:
+                        output.append((visible, color[1:] if developer else "ffffff", opacity))
         for child in element:
             visit(child, opacity)
 
     if developer:
-        # 胶囊底色与边框由共享几何入口绘制，此处只展开内部图案与 Dev 字样。
-        visit(next(element for element in root if element.tag.endswith("g")))
+        # 胶囊由共享入口绘制，兔子使用共享距离场；仅展开明确标记的文字和电路线。
+        visit(content)
     else:
         visit(root)
+    return output
+
+
+def mesh(name, path, clip, developer=False):
+    output = build_mesh(path, clip, developer)
     lines = [f"inline const SQmBadgeGeometryQuad g_aQmBadge{name}[] = {{"]
     for quad, color, opacity in output:
         coords = ", ".join(f"{v:.5f}f" for v in quad)
@@ -169,7 +225,7 @@ def mesh(name, path, clip, developer=False):
 def main():
     lines = ["// 由 qmclient_scripts/generate_badge_geometry.py 从既有 SVG 路径生成，不手工修改。",
              "#ifndef GAME_CLIENT_QMUI_QMBADGEGEOMETRYDATA_H", "#define GAME_CLIENT_QMUI_QMBADGEGEOMETRYDATA_H", "", '#include "QmBadgeGeometry.h"', "", "// clang-format off"]
-    lines += mesh("Developer", "data/qmclient/developer_badge.svg", (1, 1, 90, 23), True)
+    lines += mesh("Developer", "data/qmclient/developer_badge.svg", (0, 0, 91, 24), True)
     lines += mesh("Logo", "data/qmclient/title_badges/logo.svg", (0, 0, 16, 16))
     for style in ("Moon", "Sun"):
         for part, left, right in (("Left", 0, 40), ("Middle", 40, 85), ("Right", 85, 117)):

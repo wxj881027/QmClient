@@ -3688,6 +3688,8 @@ if(CLIENT)
     components/qmclient/route_visited.h
     components/qmclient/settings_resource_preview.cpp
     components/qmclient/settings_resource_preview.h
+    components/qmclient/screenshot_clipboard.cpp
+    components/qmclient/screenshot_clipboard.h
     components/qmclient/screenshot_image_job.cpp
     components/qmclient/screenshot_image_job.h
     components/qmclient/screenshot_viewer.cpp
@@ -4738,6 +4740,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/monitoring/qm_perf_json_test.cpp
     src/test/unit/qmclient/monitoring/qm_device_sampler_lifecycle_test.cpp
     src/test/unit/client/player_points_parse_test.cpp
+    src/test/unit/qmclient/client/qm_ddnet_activity_test.cpp
     src/test/unit/qmclient/client/qm_player_points_cache_test.cpp
     src/test/unit/qmclient/client/qm_player_points_request_test.cpp
     src/test/unit/qmclient/client/qm_gores_drown_tracker_test.cpp
@@ -4937,6 +4940,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/music/music_lyrics_display_test.cpp
     src/test/unit/qmclient/music/music_humming_state_test.cpp
     src/test/unit/qmclient/client/qm_lyrics_hud_layout_test.cpp
+    src/test/unit/qmclient/client/qm_fast_practice_hook_input_test.cpp
     src/test/unit/qmclient/client/qm_media_island_content_test.cpp
     src/test/unit/qmclient/client/qm_media_island_satellite_test.cpp
     src/test/unit/qmclient/client/qm_media_island_motion_test.cpp
@@ -5065,6 +5069,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_predicted_event_queue_test.cpp
     src/test/unit/qmclient/client/qm_tee_hue_cycle_test.cpp
     src/test/unit/qmclient/client/qm_tee_trail_test.cpp
+    src/test/unit/qmclient/client/qm_tee_trail_pixel_cache_test.cpp
     src/test/unit/qmclient/client/qm_sidebar_holiday_test.cpp
     src/test/unit/qmclient/ui/qm_badge_geometry_test.cpp
     src/test/integration/qmclient/client/qm_badge_geometry_render_test.cpp
@@ -5156,6 +5161,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_screenshot_watermark_test.cpp
     src/test/unit/qmclient/client/qm_config_package_test.cpp
     src/test/integration/qmclient/client/qm_config_package_storage_test.cpp
+    src/test/unit/qmclient/client/qm_screenshot_clipboard_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_image_policy_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_viewer_viewport_test.cpp
     src/test/unit/qmclient/client/qm_image_view_test.cpp
@@ -5296,6 +5302,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/tclient/qm_tee_trail.cpp
     src/game/client/components/qmclient/tee_trail_styles.cpp
     src/game/client/components/qmclient/qm_title_badge.cpp
+    src/game/client/components/qmclient/screenshot_clipboard.cpp
     src/game/client/components/qmclient/screenshot_image_job.cpp
     src/game/client/components/qmclient/skin_source_job.cpp
     src/game/client/components/qmclient/config_package.cpp

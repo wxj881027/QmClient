@@ -1,5 +1,6 @@
 import importlib.util
 import pathlib
+import tempfile
 import unittest
 
 
@@ -12,7 +13,45 @@ def area(quads):
     return sum(((q[2] - q[0]) + (q[6] - q[4])) * (q[5] - q[1]) / 2 for q in quads)
 
 
+def polygon_area(quads):
+    total = 0
+    for q in quads:
+        points = [(q[0], q[1]), (q[2], q[3]), (q[6], q[7]), (q[4], q[5])]
+        total += abs(sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(points, points[1:] + points[:1]))) / 2
+    return total
+
+
+def developer_fixture(content):
+    source = f'''<svg xmlns="http://www.w3.org/2000/svg">
+      <path d="M0 0H16V16H0Z" fill="#19343B"/>
+      <g id="developer-content" clip-path="url(#capsule)">
+        <g id="developer-logo"><path d="M6 6H10V10H6Z" fill="#8BDFCF"/></g>
+        <path d="{content}" fill="#D8FFF5"/>
+      </g>
+      <path d="M0 0H16V16H0Z" fill="#4B7D84" mask="url(#border)"/>
+      <defs><clipPath id="unrelated"><path d="M0 0H16V16H0Z"/></clipPath>
+      <clipPath id="capsule"><path d="M0 8L8 0L16 8L8 16Z"/></clipPath></defs>
+    </svg>'''
+    with tempfile.TemporaryDirectory() as directory:
+        path = pathlib.Path(directory) / "developer.svg"
+        path.write_text(source, encoding="utf-8")
+        return MODULE.build_mesh(path, (0, 0, 4, 4), developer=True)
+
+
 class BadgeGeometryGenerationTest(unittest.TestCase):
+    def test_developer_content_excludes_background_border_and_shared_logo(self):
+        quads = developer_fixture("M4 4H12V12H4Z")
+        self.assertTrue(quads)
+        self.assertEqual({color for _, color, _ in quads}, {"D8FFF5"})
+        self.assertAlmostEqual(polygon_area([q for q, _, _ in quads]), 4)
+
+    def test_developer_content_respects_the_svg_capsule_mask(self):
+        quads = developer_fixture("M0 0H16V16H0Z")
+        self.assertAlmostEqual(polygon_area([q for q, _, _ in quads]), 8)
+        for q, _, _ in quads:
+            for x, y in zip(q[::2], q[1::2]):
+                self.assertLessEqual(abs(x - 2) + abs(y - 2), 2 + 1e-7)
+
     def test_rectangle_preserves_its_area(self):
         self.assertAlmostEqual(area(MODULE.trapezoids([[(0, 0), (4, 0), (4, 3), (0, 3)]], (0, 0, 4, 3))), 12)
 

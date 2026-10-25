@@ -27,7 +27,7 @@ void CMenus::RenderQmFunctionBetterScoreboardContent(CUIRect &Content, float Lin
 		{
 			{&g_Config.m_QmBetterScoreboard, "Better scoreboard", Localize("Better scoreboard")},
 			{&g_Config.m_QmScoreboardPoints, "Scoreboard point check", Localize("Scoreboard point check")},
-			{&g_Config.m_QmScoreboardPlaytime, "Scoreboard playtime", Localize("Scoreboard playtime"), nullptr, 0, Localize("Show total DDNet playtime from activity instead of points in scoreboard")},
+			{&g_Config.m_QmScoreboardPlaytime, "Scoreboard playtime", Localize("Scoreboard playtime"), nullptr, 0, Localize("Show total playtime from DDStats instead of points in scoreboard")},
 			{&g_Config.m_QmScoreboardOnDeath, "Show scoreboard after death", Localize("Show scoreboard after death")},
 			{&g_Config.m_QmScoreboardScroll, "Scroll mode", Localize("Scroll mode"), nullptr, 0, Localize("Use the scoreboard cursor mode to scroll the list")},
 		},

@@ -1118,7 +1118,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const int NumPlayers = Scroll ? 16 : CountEnd - CountStart;
 	const bool LowScoreboardWidth = Scoreboard.w < 350.0f;
 	const bool ShowPlaytime = g_Config.m_QmScoreboardPlaytime != 0;
-	// 积分视图在 Axiom 服显示当前模式分数，游玩时间视图统一使用 DDNet activity。
+	// 积分视图在 Axiom 服显示当前模式分数，游玩时间独立使用 DDStats。
 	const bool AxiomScoreColumn = !ShowPlaytime && HasQmAxiomScoreMode();
 	const bool ShowStatistics = ShowPlaytime || AxiomScoreColumn || g_Config.m_QmScoreboardPoints != 0;
 	const float ContentAlpha = m_AnimContentAlpha;
@@ -1737,7 +1737,10 @@ void CScoreboard::OnRender()
 			{
 				if(!NeedDdnetPoints && GameClient()->ShouldHideStreamerIdentity(i))
 					continue;
-				GameClient()->m_PlayerPoints.EnsureQueried(GameClient()->m_aClients[i].m_aName);
+				if(g_Config.m_QmScoreboardPlaytime && !GameClient()->ShouldHideStreamerIdentity(i))
+					GameClient()->m_PlayerPoints.EnsurePlaytimeQueried(GameClient()->m_aClients[i].m_aName);
+				if(NeedDdnetPoints)
+					GameClient()->m_PlayerPoints.EnsureQueried(GameClient()->m_aClients[i].m_aName);
 			}
 		}
 	}

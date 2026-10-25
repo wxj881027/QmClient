@@ -19,6 +19,7 @@
 #include <game/client/components/menu_background.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/mobile_spectator_controls.h>
+#include <game/client/components/qmclient/screenshot_clipboard.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
@@ -251,6 +252,12 @@ namespace qm_card_catalog
 				DoAutoRecord(&g_Config.m_ClAutoScreenshot, &g_Config.m_ClAutoScreenshotMax, "general-auto-screenshot", Localize("Automatically take game over screenshot"), "general-auto-screenshot-max", Localize("Max Screenshots"));
 				DoAutoRecord(&g_Config.m_ClAutoStatboardScreenshot, &g_Config.m_ClAutoStatboardScreenshotMax, "general-auto-statboard-screenshot", Localize("Automatically take statboard screenshot"), "general-auto-statboard-screenshot-max", Localize("Max Screenshots"));
 				DoAutoRecord(&g_Config.m_ClAutoCSV, &g_Config.m_ClAutoCSVMax, "general-auto-csv", Localize("Automatically create statboard csv"), "general-auto-csv-max", Localize("Max CSVs"));
+				if(qm_screenshot_clipboard::Supported())
+				{
+					if(Flow.Control("general-screenshot-clipboard", GeneralMetrics.m_LineHeight, Button) && pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, -1, &g_Config.m_QmScreenshotClipboard, "general-screenshot-clipboard", Localize("Automatically copy manual screenshots to clipboard"), g_Config.m_QmScreenshotClipboard, &Button))
+						g_Config.m_QmScreenshotClipboard ^= 1;
+					Flow.Space(GeneralMetrics.m_LineSpacing);
+				}
 				Flow.Space(GeneralMetrics.m_SectionGap);
 				static CLineInput s_DemoDirectoryInput(g_Config.m_QmDemoDirectory, sizeof(g_Config.m_QmDemoDirectory));
 				static CLineInput s_VideoDirectoryInput(g_Config.m_QmVideoDirectory, sizeof(g_Config.m_QmVideoDirectory));

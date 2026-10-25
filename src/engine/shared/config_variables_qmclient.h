@@ -153,6 +153,7 @@ MACRO_CONFIG_INT(QmVideoHeight, qm_video_height, 0, 0, 4320, CFGFLAG_CLIENT | CF
 // 后端不支持或像素预算超限时自动降档。输出大于窗口时必然离屏渲染，跟随全局则按全局档位采样。
 MACRO_CONFIG_INT(QmVideoFsaa, qm_video_fsaa, -1, -1, 8, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering")
 
+MACRO_CONFIG_INT(QmScreenshotClipboard, qm_screenshot_clipboard, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically copy manual screenshots to clipboard")
 MACRO_CONFIG_INT(QmScreenshotWatermark, qm_screenshot_watermark, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically add a watermark to screenshots")
 MACRO_CONFIG_INT(QmScreenshotWatermarkTimestamp, qm_screenshot_watermark_timestamp, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Screenshot watermark: include timestamp")
 MACRO_CONFIG_INT(QmScreenshotWatermarkMap, qm_screenshot_watermark_map, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Screenshot watermark: include map name")
@@ -225,7 +226,7 @@ MACRO_CONFIG_INT(QmSponsorNudge, qm_sponsor_nudge, 1, 0, 1, CFGFLAG_CLIENT | CFG
 
 // Scoreboard / 计分板
 MACRO_CONFIG_INT(QmScoreboardPoints, qm_scoreboard_points, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scoreboard score lookup")
-MACRO_CONFIG_INT(QmScoreboardPlaytime, qm_scoreboard_playtime, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show total DDNet playtime from activity instead of points in scoreboard")
+MACRO_CONFIG_INT(QmScoreboardPlaytime, qm_scoreboard_playtime, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show total playtime from DDStats instead of points in scoreboard")
 MACRO_CONFIG_INT(QmScoreboardSortMode, qm_scoreboard_sort_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scoreboard sort mode (0=Score, 1=Points)")
 MACRO_CONFIG_INT(QmScoreboardOnDeath, qm_scoreboard_on_death, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show scoreboard after death")
 MACRO_CONFIG_INT(QmScoreboardScroll, qm_scoreboard_scroll, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers")
@@ -830,6 +831,7 @@ MACRO_CONFIG_INT(QmLyricsInMediaIsland, qm_lyrics_in_media_island, 1, 0, 1, CFGF
 
 MACRO_CONFIG_INT(QmLyricsLanguage, qm_lyrics_language, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Lyrics language (0=Original, 1=Translation, 2=Original and translation)")
 MACRO_CONFIG_INT(QmLyricsSeparateIsland, qm_lyrics_separate_island, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show lyrics in a separate island below Dynamic Island")
+MACRO_CONFIG_INT(QmLyricsIslandFollowWidth, qm_lyrics_island_follow_width, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Match lyrics island width to the main Dynamic Island, excluding satellites")
 MACRO_CONFIG_INT(QmHumming, qm_humming, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines")
 
 // 汽水音乐 Hook 集成(共享同一套歌词展示开关)。

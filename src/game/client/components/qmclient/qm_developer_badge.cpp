@@ -1,14 +1,18 @@
 #include "qm_developer_badge.h"
 
-void CQmDeveloperBadge::Init(IGraphics *pGraphics)
+#include "qm_title_badge.h"
+
+void CQmDeveloperBadge::Init(IGraphics *pGraphics, const CQmTitleBadge &TitleBadge)
 {
 	Shutdown(pGraphics);
 	m_Surface.Init(pGraphics);
+	m_pTitleBadge = &TitleBadge;
 }
 
 void CQmDeveloperBadge::Shutdown(IGraphics *pGraphics)
 {
 	m_Surface.Shutdown(pGraphics);
+	m_pTitleBadge = nullptr;
 	m_MotionTime = -1.0;
 }
 
@@ -19,6 +23,7 @@ void CQmDeveloperBadge::Render(IGraphics *pGraphics, const CUIRect &Rect, float 
 	Alpha = std::clamp(Alpha, 0.0f, 1.0f);
 	QmDrawBadgeCapsuleGeometry(pGraphics, Rect, ColorRGBA(0x19343b).WithAlpha(Alpha), ColorRGBA(0x4b7d84).WithAlpha(Alpha));
 	m_Surface.Render(pGraphics, Rect, ColorRGBA(1, 1, 1, Alpha));
+	m_pTitleBadge->RenderLogo(pGraphics, QmDeveloperBadgeLogoRect(Rect), ColorRGBA(0x8bdfcf).WithAlpha(Alpha));
 	if(std::isfinite(TimeSec))
 	{
 		// 聊天、名牌和多个玩家共用同一时间采样，不为每枚徽章重复计算轨迹。

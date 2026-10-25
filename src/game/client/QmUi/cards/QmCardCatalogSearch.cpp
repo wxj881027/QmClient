@@ -1,5 +1,6 @@
 #include "QmCardCatalogSearch.h"
 
+#include <base/detect.h>
 #include <base/str.h>
 
 #include <engine/shared/localization.h>
@@ -139,7 +140,7 @@ namespace qm_card_catalog
 			{Localizable("Leave empty to show everyone"), nullptr, "留空显示所有玩家"},
 			{Localizable("Scoreboard filter: only show players whose name or clan contains this text"), nullptr, "计分板筛选：匹配名字或战队"},
 			{Localizable("Scoreboard point check"), nullptr, "计分板积分检查"},
-			{Localizable("Scoreboard playtime"), nullptr, "计分板游玩时间 累计小时 activity"},
+			{Localizable("Scoreboard playtime"), nullptr, "计分板游玩时间 累计小时 DDStats"},
 			{Localizable("Show scoreboard after death"), nullptr, "死亡后显示计分板"},
 			{Localizable("Use the scoreboard cursor mode to scroll the list"), nullptr, "使用计分板光标模式滚动查看列表"},
 			{nullptr, "qm_better_scoreboard", nullptr},
@@ -458,6 +459,9 @@ namespace qm_card_catalog
 		};
 
 		static constexpr SCardSettingSearch s_adeck_general_recording[] = {
+#if defined(CONF_FAMILY_WINDOWS)
+			{Localizable("Automatically copy manual screenshots to clipboard"), "qm_screenshot_clipboard", "手动截图 自动复制 剪贴板 剪切板 F10 clipboard screenshot"},
+#endif
 			{Localizable("Automatically add a watermark to screenshots"), nullptr, "截图自动水印 时间戳 地图名 自定义文本"},
 			{Localizable("Custom watermark text"), nullptr, "截图水印文本"},
 			{Localizable("Timestamp"), nullptr, "截图时间戳"},
@@ -800,6 +804,7 @@ namespace qm_card_catalog
 		};
 
 		static constexpr SCardSettingSearch s_aqm_lyrics[] = {
+			{Localizable("Follow main island width"), nullptr, "歌词岛跟随主岛宽度 灵动岛等宽 排除眼睛附岛"},
 			{Localizable("Enable lyrics"), nullptr, "启用歌词"},
 			{Localizable("Paste sp_dc from Spotify web cookies"), nullptr, "粘贴浏览器中的 sp_dc cookie"},
 			{Localizable("Restore Kugou files"), nullptr, "恢复酷狗原始文件"},
@@ -808,6 +813,7 @@ namespace qm_card_catalog
 			{nullptr, "qm_kugou_hook_enable", nullptr},
 			{nullptr, "qm_lyrics", nullptr},
 			{nullptr, "qm_lyrics_in_media_island", nullptr},
+			{nullptr, "qm_lyrics_island_follow_width", nullptr},
 			{nullptr, "qm_qqmusic_hook_enable", nullptr},
 			{nullptr, "qm_spotify_enable", nullptr},
 			{nullptr, "qm_spotify_sp_dc", nullptr},

@@ -1019,6 +1019,9 @@ API key
 APP ID
 == アプリ ID
 
+Appearance
+== 外観
+
 Appearance and command highlighting of the local console
 == ローカルコンソールの外観とコマンドの強調表示
 
@@ -1177,6 +1180,9 @@ Asset preset
 
 Asset with this name already exists.
 == 同名のアセットが既に存在します。
+
+Assets
+== アセット
 
 Assets directory
 == アセットディレクトリ
@@ -1484,6 +1490,9 @@ Automatic game-end scoreboard screenshot
 Automatic updates
 == 自動更新
 
+Automatic updates require Windows x64
+== 自動更新には Windows x64 が必要です
+
 Automatically add a watermark to screenshots
 == スクリーンショットに透かしを自動追加
 
@@ -1498,6 +1507,9 @@ Automatically check for stable updates and install them on exit
 
 Automatically close the current chat after waking from freeze
 == フリーズ解除後に現在のチャットを自動的に閉じる
+
+Automatically copy manual screenshots to clipboard
+== 手動撮影したスクリーンショットをクリップボードに自動コピー
 
 Automatically create statboard csv
 == 統計ボードの CSV を自動生成
@@ -1558,6 +1570,15 @@ Axiom auto login failed
 
 Axiom auto login failed, retrying
 == Axiom 自動ログイン失敗、再試行中
+
+Axiom auto login failed: already in game
+== Axiom ログイン失敗：アカウントはすでにゲーム内です
+
+Axiom auto login failed: invalid credentials
+== Axiom ログイン失敗：認証情報が無効です
+
+Axiom auto login failed: wrong password
+== Axiom ログイン失敗：パスワードが違います
 
 Axiom auto login skipped: no password
 == Axiom 自動ログイン：パスワード未入力のためスキップ
@@ -2846,6 +2867,9 @@ Config Filters
 Config version. Helps new client fix old config errors.
 == 設定バージョン。新しいクライアントが古い設定のエラーを修正するのに役立ちます
 
+Configs
+== 設定
+
 Configuration
 == 設定
 
@@ -3172,6 +3196,9 @@ Controller GUID of the active controller
 
 Controller jitter tolerance
 == コントローラーのジッター許容値
+
+Controls
+== コントロール
 
 Controls demo recording and playback behavior.
 == デモの録画と再生の動作を制御します。
@@ -5195,6 +5222,9 @@ Entities background color
 Entity assets
 == エンティティアセット
 
+Entity Background Image
+== エンティティ背景画像
+
 Entity overlay
 == エンティティオーバーレイ
 
@@ -5432,11 +5462,17 @@ Failed
 Failed saving the replay!
 == リプレイの保存に失敗しました！
 
+Failed to check for updates
+== アップデートの確認に失敗しました
+
 Failed to copy main asset image.
 == メインアセット画像のコピーに失敗しました。
 
 Failed to create bgdraw folder
 == bgdraw フォルダの作成に失敗しました
+
+Failed to create the update working directory
+== 更新用作業ディレクトリを作成できません
 
 Failed to download the rank 1 demo
 == ランク1デモのダウンロードに失敗
@@ -5740,6 +5776,9 @@ Follow
 
 Follow graphics setting
 == グラフィック設定に従う
+
+Follow main island width
+== 歌詞アイランドをメインと同じ幅にする
 
 Follow option color
 == 追跡の色
@@ -6074,6 +6113,9 @@ Gap between tee and nametag
 Gaussian
 == ガウス
 
+General
+== 一般
+
 Generated skin outline color
 == 生成アウトラインの色
 
@@ -6277,6 +6319,9 @@ Gradient type
 
 Gradient vertical position
 == グラデーションの垂直位置
+
+Graphics
+== グラフィック
 
 Graphics backend does not support dummy mini view
 == この描画環境は分身の小窓に対応していません
@@ -6688,6 +6733,9 @@ Hook collision line length follows cursor distance
 
 Hook collision line opacity
 == フック衝突線の不透明度
+
+Hook Collisions
+== フック衝突
 
 Hook collisions
 == フック衝突
@@ -8350,6 +8398,9 @@ Match %d of %d
 
 Match ghost by map version instead of map name
 == マップ名ではなくマップバージョンでゴーストを一致させる
+
+Match lyrics island width to the main Dynamic Island, excluding satellites
+== 歌詞アイランドをダイナミックアイランド本体と同じ幅にし、サブアイランドは含めない
 
 Matched with callable peer
 == 通話可能なピアとマッチしました
@@ -13847,8 +13898,8 @@ Show titles on nameplates
 Show toast
 == トーストを表示
 
-Show total DDNet playtime from activity instead of points in scoreboard
-== スコアボードのポイントの代わりに、DDNet の activity から合計したプレイ時間を表示
+Show total playtime from DDStats instead of points in scoreboard
+== スコアボードのポイントの代わりに DDStats の合計プレイ時間を表示
 
 Show tune zone colors
 == tune zone の領域色を表示
@@ -15061,6 +15112,9 @@ Teams are not available on this server; if the team is locked, any team member d
 
 Tee
 == Tee
+
+Tee 0.7
+== Tee 0.7
 
 Tee appearance
 == Tee 外観
@@ -16484,6 +16538,9 @@ Update a rcon key
 Update a rcon key with prehashed data
 == 事前ハッシュ化されたデータで rcon キーを更新する
 
+Update failed
+== 更新に失敗しました
+
 Update failed. Please try again
 == 更新に失敗しました。もう一度お試しください
 
@@ -16501,6 +16558,9 @@ Update Rate
 
 Update ready to install
 == 更新をインストールできます
+
+Update sources are temporarily unavailable
+== 更新元は一時的に利用できません
 
 Upload .map files. Server and admin passwords: s.
 == .map ファイルをアップロードします。サーバーと管理者のパスワードは s です。

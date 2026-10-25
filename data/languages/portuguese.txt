@@ -1019,6 +1019,9 @@ API key
 APP ID
 == ID da aplicação
 
+Appearance
+== Aparência
+
 Appearance and command highlighting of the local console
 == Aspeto da consola local e destaque dos comandos
 
@@ -1177,6 +1180,9 @@ Asset preset
 
 Asset with this name already exists.
 == Já existe um recurso com este nome.
+
+Assets
+== Recursos
 
 Assets directory
 == Diretório de recursos
@@ -1484,6 +1490,9 @@ Automatic game-end scoreboard screenshot
 Automatic updates
 == Atualizações automáticas
 
+Automatic updates require Windows x64
+== As atualizações automáticas requerem Windows x64
+
 Automatically add a watermark to screenshots
 == Adicionar automaticamente uma marca de água às capturas de ecrã
 
@@ -1498,6 +1507,9 @@ Automatically check for stable updates and install them on exit
 
 Automatically close the current chat after waking from freeze
 == Fechar automaticamente o chat atual ao acordar do congelamento
+
+Automatically copy manual screenshots to clipboard
+== Copiar capturas de ecrã manuais automaticamente para a área de transferência
 
 Automatically create statboard csv
 == Criar automaticamente CSV do quadro de estatísticas
@@ -1558,6 +1570,15 @@ Axiom auto login failed
 
 Axiom auto login failed, retrying
 == Início de sessão automático do Axiom falhou, a tentar novamente
+
+Axiom auto login failed: already in game
+== Falha no início de sessão na Axiom: a conta já está no jogo
+
+Axiom auto login failed: invalid credentials
+== Falha no início de sessão na Axiom: credenciais inválidas
+
+Axiom auto login failed: wrong password
+== Falha no início de sessão na Axiom: palavra-passe incorreta
 
 Axiom auto login skipped: no password
 == Início de sessão automático do Axiom: sem palavra-passe, ignorado
@@ -2846,6 +2867,9 @@ Config Filters
 Config version. Helps new client fix old config errors.
 == Versão da configuração. Ajuda o novo cliente a corrigir erros de configuração antigos.
 
+Configs
+== Configurações
+
 Configuration
 == Configuração
 
@@ -3172,6 +3196,9 @@ Controller GUID of the active controller
 
 Controller jitter tolerance
 == Tolerância de vibração do comando
+
+Controls
+== Controlos
 
 Controls demo recording and playback behavior.
 == Controla o comportamento de gravação e reprodução de demos.
@@ -5195,6 +5222,9 @@ Entities background color
 Entity assets
 == Assets de entidades
 
+Entity Background Image
+== Imagem de fundo das entidades
+
 Entity overlay
 == Sobreposição de entidades
 
@@ -5432,11 +5462,17 @@ Failed
 Failed saving the replay!
 == Falha ao guardar a repetição!
 
+Failed to check for updates
+== Falha ao verificar atualizações
+
 Failed to copy main asset image.
 == Falha ao copiar a imagem do recurso principal.
 
 Failed to create bgdraw folder
 == Falha ao criar pasta bgdraw
+
+Failed to create the update working directory
+== Não foi possível criar o diretório de trabalho da atualização
 
 Failed to download the rank 1 demo
 == Falha ao descarregar a demo de rank 1
@@ -5740,6 +5776,9 @@ Follow
 
 Follow graphics setting
 == Seguir as definições gráficas
+
+Follow main island width
+== Seguir a largura da ilha principal
 
 Follow option color
 == Cor de seguir
@@ -6074,6 +6113,9 @@ Gap between tee and nametag
 Gaussian
 == Gaussiano
 
+General
+== Geral
+
 Generated skin outline color
 == Cor do contorno gerado
 
@@ -6277,6 +6319,9 @@ Gradient type
 
 Gradient vertical position
 == Posição vertical do gradiente
+
+Graphics
+== Gráficos
 
 Graphics backend does not support dummy mini view
 == O backend gráfico não suporta a minivista do dummy
@@ -6688,6 +6733,9 @@ Hook collision line length follows cursor distance
 
 Hook collision line opacity
 == Opacidade da linha de colisão de gancho
+
+Hook Collisions
+== Colisões de Gancho
 
 Hook collisions
 == Colisões de gancho
@@ -8350,6 +8398,9 @@ Match %d of %d
 
 Match ghost by map version instead of map name
 == Corresponder ghost pela versão do mapa em vez do nome do mapa
+
+Match lyrics island width to the main Dynamic Island, excluding satellites
+== Ajustar a largura da ilha de letras à ilha principal da Dynamic Island, sem ilhas auxiliares
 
 Matched with callable peer
 == Correspondido com par contactável
@@ -13847,8 +13898,8 @@ Show titles on nameplates
 Show toast
 == Mostrar toast
 
-Show total DDNet playtime from activity instead of points in scoreboard
-== Mostrar o tempo total de jogo de DDNet activity em vez dos pontos no painel
+Show total playtime from DDStats instead of points in scoreboard
+== Mostrar o tempo total de jogo do DDStats em vez dos pontos no painel
 
 Show tune zone colors
 == Mostrar as cores das zonas de tune
@@ -15061,6 +15112,9 @@ Teams are not available on this server; if the team is locked, any team member d
 
 Tee
 == Tee
+
+Tee 0.7
+== Tee 0.7
 
 Tee appearance
 == Aparência do Tee
@@ -16484,6 +16538,9 @@ Update a rcon key
 Update a rcon key with prehashed data
 == Atualizar uma chave rcon com dados pré-hash
 
+Update failed
+== Falha na atualização
+
 Update failed. Please try again
 == Atualização falhou. Por favor, tente novamente
 
@@ -16501,6 +16558,9 @@ Update Rate
 
 Update ready to install
 == Atualização pronta para instalar
+
+Update sources are temporarily unavailable
+== As fontes de atualização estão temporariamente indisponíveis
 
 Upload .map files. Server and admin passwords: s.
 == Envie ficheiros .map. Palavras-passe do servidor e do administrador: s.

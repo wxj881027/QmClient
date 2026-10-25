@@ -104,6 +104,7 @@ class CQmTitleBadge
 public:
 	void Init(IGraphics *pGraphics);
 	void Shutdown(IGraphics *pGraphics);
+	void RenderLogo(IGraphics *pGraphics, const CUIRect &Rect, ColorRGBA Color) const;
 	void RenderSurface(IGraphics *pGraphics, const CUIRect &Rect, const SQmTitleAppearance &Appearance, float Alpha) const;
 };
 
