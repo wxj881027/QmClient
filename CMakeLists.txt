@@ -3485,6 +3485,7 @@ if(CLIENT)
     components/message_gradient.h
     components/motd.cpp
     components/motd.h
+    components/motd_message.h
     components/nameplates.cpp
     components/nameplates.h
     components/particles.cpp
@@ -5240,6 +5241,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/serverbrowser_community_load_test.cpp
     src/test/integration/client/serverbrowser_metadata_recovery_test.cpp
     src/test/integration/client/serverbrowser_info_download_test.cpp
+    src/test/unit/client/motd_message_test.cpp
+    src/test/integration/client/motd_message_test.cpp
     src/test/unit/client/qm_hang_snapshot_test.cpp
     src/test/unit/client/qm_hang_watchdog_start_test.cpp
     src/test/integration/client/qm_hang_watchdog_lifecycle_test.cpp

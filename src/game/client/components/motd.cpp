@@ -2,6 +2,8 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "motd.h"
 
+#include "motd_message.h"
+
 #include <base/log_color.h>
 
 #include <engine/graphics.h>
@@ -115,37 +117,13 @@ void CMotd::OnMessage(int MsgType, void *pRawMsg)
 	{
 		const CNetMsg_Sv_Motd *pMsg = static_cast<CNetMsg_Sv_Motd *>(pRawMsg);
 
-		// copy it manually to process all \n
-		const char *pMsgStr = pMsg->m_pMessage;
-		const size_t MotdLen = str_length(pMsgStr) + 1;
-		const char *pLast = m_aServerMotd; // for console printing
+		const std::string_view Message = DecodeMotdMessage(pMsg->m_pMessage, m_aServerMotd, sizeof(m_aServerMotd));
 		const LOG_COLOR LogColor = color_cast<LOG_COLOR>(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageHighlightColor)));
-		for(size_t i = 0, k = 0; i < MotdLen && k < sizeof(m_aServerMotd); i++, k++)
+		if(g_Config.m_ClPrintMotd)
 		{
-			// handle incoming "\\n"
-			if(pMsgStr[i] == '\\' && pMsgStr[i + 1] == 'n')
-			{
-				m_aServerMotd[k] = '\n';
-				i++; // skip the 'n'
-			}
-			else
-			{
-				m_aServerMotd[k] = pMsgStr[i];
-			}
-
-			// print the line to the console when receiving the newline character
-			if(g_Config.m_ClPrintMotd && m_aServerMotd[k] == '\n')
-			{
-				m_aServerMotd[k] = '\0';
-				log_info_color(LogColor, "motd", "%s", pLast);
-				m_aServerMotd[k] = '\n';
-				pLast = m_aServerMotd + k + 1;
-			}
-		}
-		m_aServerMotd[sizeof(m_aServerMotd) - 1] = '\0';
-		if(g_Config.m_ClPrintMotd && *pLast != '\0')
-		{
-			log_info_color(LogColor, "motd", "%s", pLast);
+			ForEachMotdLine(Message, [&](std::string_view Line) {
+				log_info_color(LogColor, "motd", "%.*s", static_cast<int>(Line.size()), Line.data());
+			});
 		}
 
 		if(!IsActive())
