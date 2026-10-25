@@ -2301,6 +2301,8 @@ PROCESS shell_execute(const char *file, EShellExecuteWindowState window_state, c
 	return info.hProcess;
 #elif defined(CONF_FAMILY_UNIX)
 	char **argv = (char **)malloc((num_arguments + 2) * sizeof(*argv));
+	if(argv == nullptr)
+		return INVALID_PROCESS;
 	pid_t pid;
 	argv[0] = (char *)file;
 	for(size_t i = 0; i < num_arguments; ++i)

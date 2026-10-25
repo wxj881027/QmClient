@@ -29,6 +29,7 @@
 #include <exception>
 #include <filesystem>
 #include <limits>
+#include <new>
 #include <utility>
 
 #if defined(CONF_FAMILY_WINDOWS)
@@ -282,26 +283,29 @@ const CQmScreenshotManager::SThumbnail *CQmScreenshotManager::LoadThumbnail(cons
 	if(pPath == nullptr || pPath[0] == '\0')
 		return nullptr;
 
-	const std::string Key = ThumbnailKey(pPath, StorageType);
-	auto It = m_vThumbnails.find(Key);
-	if(It == m_vThumbnails.end())
+	try
 	{
-		SThumbnailEntry Entry;
-		Entry.m_Path = pPath;
-		Entry.m_StorageType = StorageType;
-		Entry.m_Thumbnail.m_Loading = true;
-		Entry.m_LastUsedFrame = m_ThumbnailFrame;
-		It = m_vThumbnails.emplace(Key, std::move(Entry)).first;
-	}
+		const std::string Key = ThumbnailKey(pPath, StorageType);
+		auto It = m_vThumbnails.find(Key);
+		if(It == m_vThumbnails.end())
+		{
+			SThumbnailEntry Entry;
+			Entry.m_Path = pPath;
+			Entry.m_StorageType = StorageType;
+			Entry.m_Thumbnail.m_Loading = true;
+			Entry.m_LastUsedFrame = m_ThumbnailFrame;
+			It = m_vThumbnails.emplace(Key, std::move(Entry)).first;
+		}
 
-	SThumbnailEntry &Entry = It->second;
-	if(!Entry.m_Requested)
-	{
-		Entry.m_Requested = true;
-		m_vThumbnailRequests.push_back(Key);
+		SThumbnailEntry &Entry = It->second;
+		QmTryQueueScreenshotThumbnailRequest(m_vThumbnailRequests, Entry.m_Requested, Key);
+		Entry.m_LastUsedFrame = m_ThumbnailFrame;
+		return &Entry.m_Thumbnail;
 	}
-	Entry.m_LastUsedFrame = m_ThumbnailFrame;
-	return &Entry.m_Thumbnail;
+	catch(const std::bad_alloc &)
+	{
+		return nullptr;
+	}
 }
 
 void CQmScreenshotManager::PumpThumbnails(IGraphics *pGraphics, IStorage *pStorage, IEngine *pEngine, CGpuUploadLimiter *pLimiter)
@@ -392,8 +396,9 @@ void CQmScreenshotManager::PumpThumbnails(IGraphics *pGraphics, IStorage *pStora
 		{
 			std::vector<std::string> vEvictable;
 			vEvictable.reserve(m_vThumbnails.size());
+			// 入队分配失败时也保留本帧可见项，不能把“未排队”当成“不可见”。
 			for(const auto &[Key, Entry] : m_vThumbnails)
-				if(Entry.m_pJob == nullptr && !Entry.m_Requested)
+				if(Entry.m_pJob == nullptr && Entry.m_LastUsedFrame != m_ThumbnailFrame)
 					vEvictable.push_back(Key);
 			std::sort(vEvictable.begin(), vEvictable.end(), [this](const std::string &Left, const std::string &Right) {
 				return m_vThumbnails.at(Left).m_LastUsedFrame < m_vThumbnails.at(Right).m_LastUsedFrame;

@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <new>
 #include <string>
 
 class IStorage;
@@ -40,6 +41,24 @@ inline int QmScreenshotImageEvictionCount(int ResidentEntries, int MaxResident)
 	if(MaxResident <= 0)
 		return ResidentEntries;
 	return std::max(0, ResidentEntries - MaxResident);
+}
+
+// 队列准备成功后才发布请求标记；失败时保留未请求状态，后续帧可以重试。
+template<typename TRequests, typename TKey>
+bool QmTryQueueScreenshotThumbnailRequest(TRequests &Requests, bool &Requested, const TKey &Key)
+{
+	if(Requested)
+		return true;
+	try
+	{
+		Requests.push_back(Key);
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	Requested = true;
+	return true;
 }
 
 // 后台读取、解码并按最大边等比缩小的图片任务。
