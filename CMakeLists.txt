@@ -5403,10 +5403,12 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/translate/translate_jobs_integration_test.cpp
     src/test/integration/qmclient/translate/translate_creation_memory_test.cpp
     src/test/integration/qmclient/translate/translate_retry_memory_test.cpp
+    src/test/integration/qmclient/translate/translate_json_identity_test.cpp
     src/test/unit/qmclient/translate/translate_responses_test.cpp
     src/test/unit/qmclient/translate/translate_completion_memory_test.cpp
     src/test/unit/qmclient/translate/translate_submission_memory_test.cpp
     src/test/unit/qmclient/translate/translate_outgoing_target_test.cpp
+    src/test/unit/qmclient/translate/translate_json_metadata_test.cpp
     src/test/unit/qmclient/translate/translate_llm_parse_test.cpp
     src/test/unit/base/unix_test.cpp
     src/test/unit/engine/uuid_test.cpp
