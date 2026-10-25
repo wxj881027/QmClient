@@ -599,9 +599,45 @@ std::unique_ptr<IHttpRequest> CreateHttpRequest(const char *pUrl)
 
 void EscapeUrl(char *pBuf, size_t Size, const char *pStr)
 {
-	char *pEsc = curl_easy_escape(nullptr, pStr, 0);
-	str_copy(pBuf, pEsc, Size);
-	curl_free(pEsc);
+	if(Size == 0)
+		return;
+	const auto Encode = [](unsigned char Byte, char (&aEncoded)[3]) -> size_t {
+		if((Byte >= 'a' && Byte <= 'z') || (Byte >= 'A' && Byte <= 'Z') ||
+			(Byte >= '0' && Byte <= '9') || Byte == '-' || Byte == '.' || Byte == '_' || Byte == '~')
+		{
+			aEncoded[0] = static_cast<char>(Byte);
+			return 1;
+		}
+		static constexpr char HEX[] = "0123456789ABCDEF";
+		aEncoded[0] = '%';
+		aEncoded[1] = HEX[Byte >> 4];
+		aEncoded[2] = HEX[Byte & 15];
+		return 3;
+	};
+
+	size_t InputLength = 0;
+	size_t OutputLength = 0;
+	size_t LastLength = 0;
+	char aEncoded[3];
+	while(pStr[InputLength] != '\0' && OutputLength < Size - 1)
+	{
+		LastLength = std::min(Encode(static_cast<unsigned char>(pStr[InputLength]), aEncoded), Size - 1 - OutputLength);
+		OutputLength += LastLength;
+		++InputLength;
+	}
+	// 先搬入实际需要的源字节，再反向展开，保留原接口的重叠缓冲和截断前缀行为。
+	std::memmove(pBuf, pStr, InputLength);
+	size_t Output = OutputLength;
+	bool Last = true;
+	while(InputLength > 0)
+	{
+		const size_t EncodedLength = Encode(static_cast<unsigned char>(pBuf[--InputLength]), aEncoded);
+		const size_t Length = Last ? LastLength : EncodedLength;
+		Last = false;
+		Output -= Length;
+		std::memcpy(pBuf + Output, aEncoded, Length);
+	}
+	pBuf[OutputLength] = '\0';
 }
 
 bool CHttpCurl::Init(std::chrono::milliseconds ShutdownDelay)

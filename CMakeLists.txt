@@ -5198,6 +5198,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/http/http_response_buffer_test.cpp
     src/test/unit/engine/http/http_response_headers_test.cpp
     src/test/unit/engine/http/http_completion_test.cpp
+    src/test/unit/engine/http/http_url_escape_test.cpp
     src/test/unit/qmclient/client/qmclient_update_package_plan_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_assets_contract_test.cpp
     src/test/integration/qmclient/settings/settings_resource_preview_pipeline_test.cpp
