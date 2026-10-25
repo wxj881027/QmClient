@@ -896,12 +896,7 @@ void CHttpCurl::RunLoop()
 		// We may have been woken up for a shutdown
 		if(m_Shutdown)
 		{
-			bool NoPending;
-			{
-				std::unique_lock PendingLock(m_Lock);
-				NoPending = m_PendingRequests.empty();
-			}
-			if(m_RunningRequests.empty() && NoPending)
+			if(m_RunningRequests.empty() && m_PendingRequests.empty())
 				break;
 
 			auto Now = std::chrono::steady_clock::now();
