@@ -11,12 +11,19 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <limits>
+#include <memory_resource>
 #include <vector>
 
 namespace QmEmoticon
 {
+	inline std::size_t AlphaByteOffset(int X, int Y, int Stride)
+	{
+		return static_cast<std::size_t>(Y) * Stride + static_cast<std::size_t>(X) * 4 + 3;
+	}
+
 	inline float ProjectileOwnerAlpha(bool ClientActive, bool HasPlayerRenderInfo, float TeeAlpha)
 	{
 		// 在线玩家可能被队伍规则排除出角色快照，透明度不足以判断其可见性。
@@ -48,8 +55,8 @@ namespace QmEmoticon
 			std::size_t m_NextNode;
 		};
 		static constexpr std::size_t RECTS_PER_LEAF = 8;
-		std::vector<SRect> m_vRects;
-		std::vector<SBoundsNode> m_vBoundsNodes;
+		std::pmr::vector<SRect> m_vRects;
+		std::pmr::vector<SBoundsNode> m_vBoundsNodes;
 		int m_Width = 1;
 		int m_Height = 1;
 		vec2 m_BoundsCenter = vec2(0.0f, 0.0f);
@@ -66,7 +73,7 @@ namespace QmEmoticon
 				Bounds.m_Right = std::max(Bounds.m_Right, Rect.m_Right);
 				Bounds.m_Bottom = std::max(Bounds.m_Bottom, Rect.m_Bottom);
 			}
-			Bounds.m_NormalizedCenter = vec2((Bounds.m_Left + Bounds.m_Right) / (2.0f * m_Width) - 0.5f, (Bounds.m_Top + Bounds.m_Bottom) / (2.0f * m_Height) - 0.5f);
+			Bounds.m_NormalizedCenter = vec2((static_cast<int64_t>(Bounds.m_Left) + Bounds.m_Right) / (2.0f * m_Width) - 0.5f, (static_cast<int64_t>(Bounds.m_Top) + Bounds.m_Bottom) / (2.0f * m_Height) - 0.5f);
 			const std::size_t NodeIndex = m_vBoundsNodes.size();
 			m_vBoundsNodes.push_back({Bounds, FirstRect, EndRect, 0});
 			if(EndRect - FirstRect > RECTS_PER_LEAF)
@@ -106,76 +113,106 @@ namespace QmEmoticon
 			return false;
 		}
 
-	public:
-		void Build(const unsigned char *pRgba, int Width, int Height, int Stride = 0)
+		void Clear() noexcept
 		{
 			m_vRects.clear();
 			m_vBoundsNodes.clear();
 			m_BoundsCenter = m_BoundsHalf = vec2(0.0f, 0.0f);
-			m_Width = std::max(1, Width);
-			m_Height = std::max(1, Height);
+			m_Width = m_Height = 1;
+		}
+
+	public:
+		// 自定义内存源借用到本对象全部存储释放；默认仍使用标准new/delete。
+		explicit CAlphaMask(std::pmr::memory_resource *pMemory = std::pmr::new_delete_resource()) :
+			m_vRects(pMemory), m_vBoundsNodes(pMemory)
+		{
+		}
+
+		bool Build(const unsigned char *pRgba, int Width, int Height, int Stride = 0) noexcept
+		{
+			Clear();
 			if(pRgba == nullptr || Width <= 0 || Height <= 0)
-				return;
+				return true;
+			if(Width > std::numeric_limits<int>::max() / 4 || Stride < 0 || (Stride != 0 && Stride < Width * 4))
+				return false;
 			if(Stride == 0)
 				Stride = Width * 4;
-			// 按上一行的全部区间合并，避免分离轮廓退化成每个像素行一个矩形。
-			// 两行的区间都按横坐标排列，游标单向推进，不扫描历史矩形。
-			std::vector<std::size_t> vPreviousRow;
-			std::vector<std::size_t> vCurrentRow;
-			for(int Y = 0; Y < Height; ++Y)
+			const std::size_t RowBytes = static_cast<std::size_t>(Width) * 4;
+			if(static_cast<std::size_t>(Height - 1) > (std::numeric_limits<std::size_t>::max() - RowBytes) / static_cast<std::size_t>(Stride))
+				return false;
+			m_Width = Width;
+			m_Height = Height;
+			try
 			{
-				vCurrentRow.clear();
-				std::size_t PreviousIndex = 0;
-				for(int X = 0; X < Width;)
+				// 按上一行的全部区间合并，避免分离轮廓退化成每个像素行一个矩形。
+				// 两行的区间都按横坐标排列，游标单向推进，不扫描历史矩形。
+				std::pmr::vector<std::size_t> vPreviousRow(m_vRects.get_allocator().resource());
+				std::pmr::vector<std::size_t> vCurrentRow(m_vRects.get_allocator().resource());
+				for(int Y = 0; Y < Height; ++Y)
 				{
-					if(pRgba[Y * Stride + X * 4 + 3] == 0)
+					vCurrentRow.clear();
+					std::size_t PreviousIndex = 0;
+					for(int X = 0; X < Width;)
 					{
-						++X;
-						continue;
-					}
-					const int Left = X++;
-					while(X < Width && pRgba[Y * Stride + X * 4 + 3] != 0)
-						++X;
-					while(PreviousIndex < vPreviousRow.size() && m_vRects[vPreviousRow[PreviousIndex]].m_Left < Left)
-						++PreviousIndex;
-					if(PreviousIndex < vPreviousRow.size())
-					{
-						const std::size_t RectIndex = vPreviousRow[PreviousIndex];
-						SRect &Rect = m_vRects[RectIndex];
-						if(Rect.m_Left == Left && Rect.m_Right == X)
+						if(pRgba[AlphaByteOffset(X, Y, Stride)] == 0)
 						{
-							Rect.m_Bottom = Y + 1;
-							vCurrentRow.push_back(RectIndex);
+							++X;
 							continue;
 						}
+						const int Left = X++;
+						while(X < Width && pRgba[AlphaByteOffset(X, Y, Stride)] != 0)
+							++X;
+						while(PreviousIndex < vPreviousRow.size() && m_vRects[vPreviousRow[PreviousIndex]].m_Left < Left)
+							++PreviousIndex;
+						if(PreviousIndex < vPreviousRow.size())
+						{
+							const std::size_t RectIndex = vPreviousRow[PreviousIndex];
+							SRect &Rect = m_vRects[RectIndex];
+							if(Rect.m_Left == Left && Rect.m_Right == X)
+							{
+								Rect.m_Bottom = Y + 1;
+								vCurrentRow.push_back(RectIndex);
+								continue;
+							}
+						}
+						vCurrentRow.push_back(m_vRects.size());
+						m_vRects.push_back({Left, Y, X, Y + 1});
 					}
-					vCurrentRow.push_back(m_vRects.size());
-					m_vRects.push_back({Left, Y, X, Y + 1});
+					vPreviousRow.swap(vCurrentRow);
 				}
-				vPreviousRow.swap(vCurrentRow);
+				if(m_vRects.empty())
+					return true;
+				int Left = Width, Top = Height, Right = 0, Bottom = 0;
+				for(SRect &Rect : m_vRects)
+				{
+					Rect.m_NormalizedCenter = vec2((static_cast<int64_t>(Rect.m_Left) + Rect.m_Right) / (2.0f * m_Width) - 0.5f, (static_cast<int64_t>(Rect.m_Top) + Rect.m_Bottom) / (2.0f * m_Height) - 0.5f);
+					Left = std::min(Left, Rect.m_Left);
+					Top = std::min(Top, Rect.m_Top);
+					Right = std::max(Right, Rect.m_Right);
+					Bottom = std::max(Bottom, Rect.m_Bottom);
+				}
+				m_BoundsCenter = vec2((static_cast<int64_t>(Left) + Right) / (2.0f * m_Width) - 0.5f, (static_cast<int64_t>(Top) + Bottom) / (2.0f * m_Height) - 0.5f);
+				m_BoundsHalf = vec2((Right - Left) / (2.0f * m_Width), (Bottom - Top) / (2.0f * m_Height));
+				// 轮廓只在材质加载时分层，避免消散膨胀后每块墙砖都扫描全部矩形。
+				if(m_vRects.size() > RECTS_PER_LEAF)
+				{
+					m_vBoundsNodes.reserve(m_vRects.size() / 2 + 1);
+					BuildBoundsNodes(0, m_vRects.size());
+				}
+				return true;
 			}
-			if(m_vRects.empty())
-				return;
-			int Left = Width, Top = Height, Right = 0, Bottom = 0;
-			for(SRect &Rect : m_vRects)
+			catch(...)
 			{
-				Rect.m_NormalizedCenter = vec2((Rect.m_Left + Rect.m_Right) / (2.0f * m_Width) - 0.5f, (Rect.m_Top + Rect.m_Bottom) / (2.0f * m_Height) - 0.5f);
-				Left = std::min(Left, Rect.m_Left);
-				Top = std::min(Top, Rect.m_Top);
-				Right = std::max(Right, Rect.m_Right);
-				Bottom = std::max(Bottom, Rect.m_Bottom);
-			}
-			m_BoundsCenter = vec2((Left + Right) / (2.0f * m_Width) - 0.5f, (Top + Bottom) / (2.0f * m_Height) - 0.5f);
-			m_BoundsHalf = vec2((Right - Left) / (2.0f * m_Width), (Bottom - Top) / (2.0f * m_Height));
-			// 轮廓只在材质加载时分层，避免消散膨胀后每块墙砖都扫描全部矩形。
-			if(m_vRects.size() > RECTS_PER_LEAF)
-			{
-				m_vBoundsNodes.reserve(m_vRects.size() / 2 + 1);
-				BuildBoundsNodes(0, m_vRects.size());
+				// 新材质已经开始加载，不能继续使用旧轮廓或部分构建的包围树。
+				Clear();
+				// 分配失败时释放容量，避免半成品继续占用内存。
+				std::pmr::vector<SRect>(m_vRects.get_allocator()).swap(m_vRects);
+				std::pmr::vector<SBoundsNode>(m_vBoundsNodes.get_allocator()).swap(m_vBoundsNodes);
+				return false;
 			}
 		}
 
-		void BuildSprite(const CImageInfo &Image, const CDataSprite &Sprite, const CImageInfo *pFallbackImage = nullptr)
+		bool BuildSprite(const CImageInfo &Image, const CDataSprite &Sprite, const CImageInfo *pFallbackImage = nullptr)
 		{
 			std::size_t X = 0, Y = 0, Width = 0, Height = 0;
 			const auto Resolve = [&](const CImageInfo &Source, bool *pOutOfBounds = nullptr) {
@@ -196,10 +233,9 @@ namespace QmEmoticon
 				pSource->m_Width > static_cast<std::size_t>(std::numeric_limits<int>::max() / 4) ||
 				Height > static_cast<std::size_t>(std::numeric_limits<int>::max()))
 			{
-				Build(nullptr, 0, 0);
-				return;
+				return Build(nullptr, 0, 0);
 			}
-			Build(pSource->m_pData + (Y * pSource->m_Width + X) * 4, static_cast<int>(Width), static_cast<int>(Height), static_cast<int>(pSource->m_Width * 4));
+			return Build(pSource->m_pData + (Y * pSource->m_Width + X) * 4, static_cast<int>(Width), static_cast<int>(Height), static_cast<int>(pSource->m_Width * 4));
 		}
 
 		std::size_t NumRects() const { return m_vRects.size(); }

@@ -4,6 +4,8 @@
 
 #include "chat.h"
 
+#include <base/log.h>
+
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 
@@ -159,6 +161,12 @@ void CEmoticon::OnConsoleInit()
 	Console()->Register("super_emote", "i[emote-id]", CFGFLAG_CLIENT, ConSuperEmote, this, "Use large emote");
 	Console()->Register("qm_blink", "", CFGFLAG_CLIENT, ConLocalBlink, this, "Blink the active local tee");
 	Console()->Register("toggle_emote_launcher", "", CFGFLAG_CLIENT, ConToggleLaunchMode, this, "Toggle emote launcher");
+}
+
+void CEmoticon::SetCollisionMask(int Emoticon, const CImageInfo &Image, const CDataSprite &Sprite, const CImageInfo *pFallbackImage)
+{
+	if(Emoticon >= 0 && Emoticon < NUM_EMOTICONS && !m_aCollisionMasks[Emoticon].BuildSprite(Image, Sprite, pFallbackImage))
+		log_warn("emoticon", "Could not prepare collision mask for '%s'; contour disabled until asset reload", Sprite.m_pName);
 }
 
 void CEmoticon::OnReset()
