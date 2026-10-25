@@ -26,6 +26,7 @@
 #include <game/client/components/qmclient/qm_skin_outline.h>
 #include <game/client/components/qmclient/settings_resource_preview.h>
 #include <game/client/components/qmclient/skin_load_budget.h>
+#include <game/client/components/qmclient/skin_usage_tracking.h>
 #include <game/client/components/settings_runtime_cache.h>
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
@@ -741,10 +742,8 @@ void CSkins::CSkinContainer::SetState(EState State, ESettingsResourcePriority Pr
 
 void CSkins::CSkinContainer::TouchUsage()
 {
-	ClearBackgroundUsage();
-	ClearUsage();
-	m_pSkins->m_SkinsUsageList.emplace_front(Name());
-	m_UsageEntryIterator = m_pSkins->m_SkinsUsageList.begin();
+	QmTouchSkinUsageEntry(m_pSkins->m_SkinsUsageList, m_UsageEntryIterator,
+		m_pSkins->m_SkinsBackgroundList, m_BackgroundEntryIterator, Name());
 }
 
 void CSkins::CSkinContainer::ClearUsage()
