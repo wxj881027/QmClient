@@ -66,6 +66,7 @@
 - `qmclient_scripts/export_settings_commands_table.py`
 - `qmclient_scripts/generate_release_notes.py`
 - `qmclient_scripts/generate_title_logo_sdf.cjs` — 从 `data/qmclient/title_badges/logo.svg` 离线生成 `logo_sdf.png`。需要 Node.js 和 `sharp` 模块，运行 `node qmclient_scripts/generate_title_logo_sdf.cjs`；客户端和正常构建只读取已生成的纹理。生成器回归测试入口为 `node --test qmclient_scripts/test_generate_title_logo_sdf.cjs`。
+- `qmclient_scripts/generate_developer_badge_sdf.cjs` — 从 `developer_badge.svg` 标记的原始路径生成 `developer_wordmark_sdf.png` 和 `developer_code_sdf.png`；共用 Logo 距离场编码，需要同样的 Node.js / `sharp` 环境。正常构建只打包生成的纹理。对应测试入口为 `node --test qmclient_scripts/test_generate_developer_badge_sdf.cjs`。
 
 ### 4. 其他专用脚本
 

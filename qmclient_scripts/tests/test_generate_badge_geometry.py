@@ -21,12 +21,13 @@ def polygon_area(quads):
     return total
 
 
-def developer_fixture(content):
+def developer_fixture(content, lettering=False):
     source = f'''<svg xmlns="http://www.w3.org/2000/svg">
       <path d="M0 0H16V16H0Z" fill="#19343B"/>
       <g id="developer-content" clip-path="url(#capsule)">
         <g id="developer-logo"><path d="M6 6H10V10H6Z" fill="#8BDFCF"/></g>
         <path d="{content}" fill="#D8FFF5"/>
+        <g id="developer-lettering"><path d="M6 6H10V10H6Z" fill="#FF0000"/></g>
       </g>
       <path d="M0 0H16V16H0Z" fill="#4B7D84" mask="url(#border)"/>
       <defs><clipPath id="unrelated"><path d="M0 0H16V16H0Z"/></clipPath>
@@ -35,7 +36,7 @@ def developer_fixture(content):
     with tempfile.TemporaryDirectory() as directory:
         path = pathlib.Path(directory) / "developer.svg"
         path.write_text(source, encoding="utf-8")
-        return MODULE.build_mesh(path, (0, 0, 4, 4), developer=True)
+        return MODULE.build_mesh(path, (0, 0, 4, 4), developer=True, lettering=lettering)
 
 
 class BadgeGeometryGenerationTest(unittest.TestCase):
@@ -51,6 +52,11 @@ class BadgeGeometryGenerationTest(unittest.TestCase):
         for q, _, _ in quads:
             for x, y in zip(q[::2], q[1::2]):
                 self.assertLessEqual(abs(x - 2) + abs(y - 2), 2 + 1e-7)
+
+    def test_developer_lettering_remains_separate_for_geometry_fallback(self):
+        quads = developer_fixture("M0 0H16V16H0Z", lettering=True)
+        self.assertEqual({color for _, color, _ in quads}, {"FF0000"})
+        self.assertAlmostEqual(polygon_area([q for q, _, _ in quads]), 1)
 
     def test_rectangle_preserves_its_area(self):
         self.assertAlmostEqual(area(MODULE.trapezoids([[(0, 0), (4, 0), (4, 3), (0, 3)]], (0, 0, 4, 3))), 12)

@@ -162,7 +162,7 @@ def clip_quad(quad, mask):
             yield tuple(value for point in ordered for value in point)
 
 
-def build_mesh(path, clip, developer=False):
+def build_mesh(path, clip, developer=False, lettering=False):
     root = ET.parse(ROOT / path).getroot()
     scale = 0.25 if developer else 1.0
     output = []
@@ -187,6 +187,8 @@ def build_mesh(path, clip, developer=False):
             return
         if developer and element.get("id") == "developer-logo":
             return
+        if developer and element.get("id") == "developer-lettering" and not lettering:
+            return
         opacity *= float(element.get("opacity", "1"))
         if tag == "path":
             paths = flatten(element.attrib["d"], 0.045 / scale)
@@ -204,15 +206,19 @@ def build_mesh(path, clip, developer=False):
             visit(child, opacity)
 
     if developer:
-        # 胶囊由共享入口绘制，兔子使用共享距离场；仅展开明确标记的文字和电路线。
+        # 电路线常驻几何；文字独立展开，仅在距离场资源或后端能力不可用时回退。
+        if lettering:
+            content = next((element for element in content.iter() if element.get("id") == "developer-lettering"), None)
+            if content is None:
+                raise ValueError("developer badge requires the developer-lettering layer")
         visit(content)
     else:
         visit(root)
     return output
 
 
-def mesh(name, path, clip, developer=False):
-    output = build_mesh(path, clip, developer)
+def mesh(name, path, clip, developer=False, lettering=False):
+    output = build_mesh(path, clip, developer, lettering)
     lines = [f"inline const SQmBadgeGeometryQuad g_aQmBadge{name}[] = {{"]
     for quad, color, opacity in output:
         coords = ", ".join(f"{v:.5f}f" for v in quad)
@@ -226,6 +232,7 @@ def main():
     lines = ["// 由 qmclient_scripts/generate_badge_geometry.py 从既有 SVG 路径生成，不手工修改。",
              "#ifndef GAME_CLIENT_QMUI_QMBADGEGEOMETRYDATA_H", "#define GAME_CLIENT_QMUI_QMBADGEGEOMETRYDATA_H", "", '#include "QmBadgeGeometry.h"', "", "// clang-format off"]
     lines += mesh("Developer", "data/qmclient/developer_badge.svg", (0, 0, 91, 24), True)
+    lines += mesh("DeveloperLettering", "data/qmclient/developer_badge.svg", (0, 0, 91, 24), True, True)
     lines += mesh("Logo", "data/qmclient/title_badges/logo.svg", (0, 0, 16, 16))
     for style in ("Moon", "Sun"):
         for part, left, right in (("Left", 0, 40), ("Middle", 40, 85), ("Right", 85, 117)):
