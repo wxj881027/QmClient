@@ -26,6 +26,7 @@
 #include <generated/protocolglue.h>
 
 #include <game/client/components/qmclient/connection_resource_preparation.h>
+#include <game/client/components/qmclient/self_kill_protection.h>
 #include <game/client/components/qmclient/snapshot_entities.h>
 #include <game/client/prediction/gameworld.h>
 #include <game/client/race.h>
@@ -1014,6 +1015,12 @@ public:
 	void SendReadyChange7();
 	static void ConQmSelfKillOff(IConsole::IResult *pResult, void *pUserData);
 	static void ConQmSelfKillOn(IConsole::IResult *pResult, void *pUserData);
+	// 自杀保护：拦截状态与"开局 N 分钟后自动开启"计时都在这台状态机里，
+	// 默认不拦截，只有玩家自己按键/勾选或被显式配置的延迟到点才开启。
+	void UpdateQmSelfKillProtection(float FrameSeconds);
+	void ResetQmSelfKillProtectionRound(bool InRound);
+	void SetQmSelfKillProtection(bool Enabled, bool Announce);
+	CQmSelfKillProtection m_QmSelfKillProtection;
 	// 自杀保护提示限流时间戳（每秒最多一次），避免按住 K 键刷屏。
 	int64_t m_QmSelfKillHintLastTime = 0;
 

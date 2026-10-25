@@ -2732,9 +2732,13 @@ namespace qm_card_catalog
 
 		static constexpr SCardSettingSearch s_aqm_self_kill_protection[] = {
 			{Localizable("Client-side self-kill protection"), nullptr, "客户端侧自杀保护 自杀保护 自杀开关"},
+			{Localizable("Enable self-kill protection"), nullptr, "自杀保护开关 拦截自杀 防止误触 K 键"},
 			{Localizable("Self-kill off"), nullptr, "关闭自杀 禁止自杀 防误触"},
 			{Localizable("Self-kill on"), nullptr, "开启自杀 允许自杀 解除"},
-			{Localizable("To prevent accidental kills while racing, use the two bind rows above to toggle. To self-kill, press the enable key first, then press K. Server commands are not affected"), nullptr, "跑图 防误触 绑定按键 bind 按键开关"},
+			{Localizable("Auto-enable after"), nullptr, "自动开启 开局后 自动拦截 延迟 分钟"},
+			{Localizable("To prevent accidental kills while racing, toggle the switch above or use the two bind rows. To self-kill, enable first, then press K. Auto-enable counts from the moment you join a game; 0 minutes keeps it off. Server commands are not affected"), nullptr, "跑图 防误触 绑定按键 bind 按键开关"},
+			{nullptr, "qm_self_kill_auto_delay", nullptr},
+			{nullptr, "qm_self_kill_enabled", nullptr},
 			{nullptr, "qm_self_kill_off", nullptr},
 			{nullptr, "qm_self_kill_on", nullptr},
 		};

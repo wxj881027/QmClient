@@ -950,5 +950,9 @@ MACRO_CONFIG_INT(QmPoseSharpen, qm_pose_sharpen, 0, 0, 60, CFGFLAG_CLIENT | CFGF
 MACRO_CONFIG_INT(QmPoseCaptureMaxMegapixels, qm_pose_capture_max_megapixels, 40, 0, 300, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pose capture pixel budget in megapixels (0 = unlimited)")
 
 // Self-kill protection / 自杀保护 - 仅拦截客户端主动自杀（K 键 / kill 命令），服务端命令不受影响。
-// 开/关通过可绑定命令 qm_self_kill_off / qm_self_kill_on 切换。
-MACRO_CONFIG_INT(QmSelfKillEnabled, qm_self_kill_enabled, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Allow the client to send kill requests (0 = ignore client-initiated kills)")
+// 默认关闭：需要玩家自己按下绑定键（qm_self_kill_off / qm_self_kill_on）或设置卡开关才会拦截，
+// 不会"自己打开"。
+MACRO_CONFIG_INT(QmSelfKillEnabled, qm_self_kill_enabled, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Block client-initiated self-kill (K key / kill command)")
+// 进图后自动开启保护的延迟（分钟）。0 = 不自动开启，保持配置里的默认状态。
+// 自动开启只改本局运行时状态，不写回 qm_self_kill_enabled。
+MACRO_CONFIG_INT(QmSelfKillAutoDelay, qm_self_kill_auto_delay, 0, 0, 60, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-enable self-kill protection this many minutes after joining a game (0 = never)")

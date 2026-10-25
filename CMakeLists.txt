@@ -4891,6 +4891,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/client/qm_browser_map_preview_loader_test.cpp
     src/test/unit/qmclient/client/qm_hud_editor_visible_bounds_test.cpp
     src/test/unit/qmclient/client/qm_hud_hook_countdown_test.cpp
+    src/test/unit/qmclient/client/qm_self_kill_protection_test.cpp
     src/test/contract/qmclient/ui/qm_media_island_shader_contract_test.cpp
     src/test/unit/qmclient/client/qm_media_island_render_params_test.cpp
     src/test/unit/qmclient/client/qm_media_island_content_test.cpp
