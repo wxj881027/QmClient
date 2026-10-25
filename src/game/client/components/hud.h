@@ -146,6 +146,7 @@ class CHud : public CComponent
 		float m_TargetTrackMetaOutAlpha = 0.0f;
 		float m_TargetTrackMetaInOffset = 0.0f;
 		float m_TargetTrackMetaOutOffset = 0.0f;
+		SHudMediaIslandWaveformClock m_WaveformClock;
 		bool m_WaveformWasPlaying = false;
 		bool m_WaveformSettling = false;
 		int64_t m_WaveformSettleStartTick = 0;
@@ -250,6 +251,7 @@ class CHud : public CComponent
 			m_TargetTrackMetaOutAlpha = 0.0f;
 			m_TargetTrackMetaInOffset = 0.0f;
 			m_TargetTrackMetaOutOffset = 0.0f;
+			m_WaveformClock.Reset();
 			m_WaveformWasPlaying = false;
 			m_WaveformSettling = false;
 			m_WaveformSettleStartTick = 0;
