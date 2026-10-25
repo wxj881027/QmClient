@@ -399,7 +399,6 @@ MACRO_CONFIG_INT(QmTitleBadgeStyle, qm_title_badge_style, 0, 0, 1, CFGFLAG_CLIEN
 MACRO_CONFIG_COL(QmTitleBadgeColor, qm_title_badge_color, 0xC3638E, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Overall sponsor title badge color")
 MACRO_CONFIG_INT(QmTitleInstantHints, qm_title_instant_hints, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show title setting hints immediately in small text")
 MACRO_CONFIG_INT(QmTitleColorMode, qm_title_color_mode, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow")
-MACRO_CONFIG_COL(QmTitleColor, qm_title_color, 0xFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Bracketed title single color")
 MACRO_CONFIG_INT(QmTitleOpacity, qm_title_opacity, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Sponsor title badge opacity (0-100)")
 MACRO_CONFIG_INT(QmTitleStyleEnabled, qm_title_style_enabled, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use animated title style (overrides qm_title_color_mode)")
 MACRO_CONFIG_STR(QmTitleStyle, qm_title_style, 32, "exotic_rainbow", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Animated title style id")
