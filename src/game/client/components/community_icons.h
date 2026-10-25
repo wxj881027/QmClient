@@ -8,6 +8,7 @@
 #include <engine/shared/jobs.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/community_icon_scan.h>
 #include <game/client/ui_rect.h>
 
 #include <deque>
@@ -83,7 +84,9 @@ private:
 	std::vector<CCommunityIcon> m_vCommunityIcons;
 	std::deque<std::shared_ptr<CCommunityIconLoadJob>> m_CommunityIconLoadJobs;
 	std::deque<std::shared_ptr<CCommunityIconDownloadJob>> m_CommunityIconDownloadJobs;
-	std::optional<SHA256_DIGEST> m_CommunityIconsInfoSha256;
+	qm_community_icons::CScan m_IconScan;
+	bool m_ScanPreparationFailed = false;
+	bool QueueLoadJob(const char *pCommunityId, int StorageType);
 	static int FileScan(const char *pName, int IsDir, int DirType, void *pUser);
 	bool LoadFile(const char *pPath, int DirType, CImageInfo &Info, CImageInfo &InfoGrayscale, SHA256_DIGEST &Sha256);
 	void LoadFinish(const char *pCommunityId, CImageInfo &Info, CImageInfo &InfoGrayscale, const SHA256_DIGEST &Sha256);
