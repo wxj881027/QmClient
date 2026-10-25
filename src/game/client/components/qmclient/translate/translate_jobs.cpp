@@ -3,9 +3,39 @@
 #include <base/system.h>
 
 #include <algorithm>
+#include <cctype>
 #include <new>
 #include <type_traits>
 #include <utility>
+
+std::optional<SOutgoingTranslateText> ParseOutgoingTranslateTarget(const char *pLine)
+{
+	if(!pLine)
+		return std::nullopt;
+	const char *pTrimmedLine = str_utf8_skip_whitespaces(pLine);
+	if(*pTrimmedLine == '\0' || *pTrimmedLine == '/')
+		return std::nullopt;
+	const std::string_view Line(pLine);
+	const size_t LastNonWhitespace = Line.find_last_not_of(" \t\r\n");
+	if(LastNonWhitespace == std::string_view::npos || Line[LastNonWhitespace] != ']')
+		return std::nullopt;
+	const size_t OpenBracket = Line.rfind('[', LastNonWhitespace);
+	if(OpenBracket == std::string_view::npos || OpenBracket + 1 >= LastNonWhitespace)
+		return std::nullopt;
+	const std::string_view Target = Line.substr(OpenBracket + 1, LastNonWhitespace - OpenBracket - 1);
+	if(Target.size() < 2 || Target.size() >= 16)
+		return std::nullopt;
+	if(std::any_of(Target.begin(), Target.end(), [](char Character) {
+		   return std::isalnum(static_cast<unsigned char>(Character)) == 0 && Character != '-' && Character != '_';
+	   }))
+		return std::nullopt;
+	size_t TextEnd = OpenBracket;
+	while(TextEnd > 0 && std::isspace(static_cast<unsigned char>(Line[TextEnd - 1])) != 0)
+		--TextEnd;
+	if(TextEnd == 0)
+		return std::nullopt;
+	return SOutgoingTranslateText{Line.substr(0, TextEnd), Target};
+}
 
 bool CTranslateJobQueue::CanSubmit(int Limit) const
 {

@@ -5,7 +5,10 @@
 
 #include <functional>
 #include <memory_resource>
+#include <new>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 struct STranslateJob
@@ -36,6 +39,15 @@ struct STranslateCompletion
 // 分发器只调用一次译文发送入口，原文通过独立的本地附注参数传递。
 bool DispatchOutgoingTranslation(const STranslateCompletion &Completed, const std::function<bool(int, const char *, const char *, int)> &SendTranslated);
 
+struct SOutgoingTranslateText
+{
+	std::string_view m_Text;
+	std::string_view m_Target;
+};
+
+// 返回值借用输入，仅在调用期间创建任务时使用，不跨帧保存。
+std::optional<SOutgoingTranslateText> ParseOutgoingTranslateTarget(const char *pLine);
+
 // 收发任务共用容量，完成或取消时统一释放后端。
 class CTranslateJobQueue
 {
@@ -54,6 +66,21 @@ public:
 	bool CanSubmit(int Limit) const;
 	// 拒绝或扩容失败均释放传入任务，不发布响应或进度状态。
 	bool Submit(STranslateJob Job, int Limit);
+	// 创建回调不得重入队列或发布UI；构造失败与入队失败共用拒绝路径。
+	template<typename FCreateJob>
+	bool CreateAndSubmit(FCreateJob &&CreateJob, int Limit)
+	{
+		if(!CanSubmit(Limit))
+			return false;
+		try
+		{
+			return Submit(std::forward<FCreateJob>(CreateJob)(), Limit);
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+	}
 	size_t Size() const { return m_vJobs.size(); }
 	void Clear() { m_vJobs.clear(); }
 	void CancelOutgoing(int Connection);
