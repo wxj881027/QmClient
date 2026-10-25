@@ -1,7 +1,5 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
-#include <game/client/components/assets_author_persistence.h>
 #include <game/client/components/assets_preview_scale.h>
-#include <game/client/components/assets_resource_registry.h>
 
 #include <gtest/gtest.h>
 
@@ -153,70 +151,4 @@ TEST(AssetsPreviewScale, EntityBgCorruptInstallDetectionRecognizesPreviewHeaders
 	EXPECT_TRUE(DetectCorruptEntityBgInstallHeader(s_aWebp, sizeof(s_aWebp)));
 	EXPECT_FALSE(DetectCorruptEntityBgInstallHeader(s_aMap, sizeof(s_aMap)));
 	EXPECT_FALSE(DetectCorruptEntityBgInstallHeader(nullptr, 0));
-}
-
-TEST(AssetsPreviewScale, LocalAuthorPersistenceTabRoundTripsCategoryIds)
-{
-	EXPECT_TRUE(SupportsPersistedLocalAssetAuthorCategory("entities"));
-	EXPECT_TRUE(SupportsPersistedLocalAssetAuthorCategory("game"));
-	EXPECT_TRUE(SupportsPersistedLocalAssetAuthorCategory("hud"));
-	EXPECT_TRUE(SupportsPersistedLocalAssetAuthorCategory("entity_bg"));
-	EXPECT_TRUE(SupportsPersistedLocalAssetAuthorCategory("extras"));
-	EXPECT_FALSE(SupportsPersistedLocalAssetAuthorCategory("missing"));
-}
-
-TEST(AssetsPreviewScale, LocalAuthorPersistenceBuildsStablePerTabKeys)
-{
-	EXPECT_EQ(BuildPersistedLocalAssetAuthorKey("entities", "default"), "entities:default");
-	EXPECT_EQ(BuildPersistedLocalAssetAuthorKey("game", "default"), "game:default");
-	EXPECT_NE(BuildPersistedLocalAssetAuthorKey("entities", "same"), BuildPersistedLocalAssetAuthorKey("game", "same"));
-	EXPECT_TRUE(BuildPersistedLocalAssetAuthorKey(nullptr, "same").empty());
-	EXPECT_TRUE(BuildPersistedLocalAssetAuthorKey("entities", "").empty());
-}
-
-TEST(AssetsPreviewScale, LocalAuthorPersistencePrimarySourcePathsFollowActualAssetLoadRules)
-{
-	const SAssetResourceCategory *pGame = FindAssetResourceCategory("game");
-	const SAssetResourceCategory *pCursor = FindAssetResourceCategory("gui_cursor");
-	const SAssetResourceCategory *pEntityBg = FindAssetResourceCategory("entity_bg");
-	const SAssetResourceCategory *pExtras = FindAssetResourceCategory("extras");
-	ASSERT_NE(pGame, nullptr);
-	ASSERT_NE(pCursor, nullptr);
-	ASSERT_NE(pEntityBg, nullptr);
-	ASSERT_NE(pExtras, nullptr);
-
-	const auto GamePaths = LocalAssetPrimarySourcePaths(*pGame, "foo");
-	EXPECT_EQ(GamePaths.m_PrimaryPath, "assets/game/foo.png");
-	EXPECT_EQ(GamePaths.m_FallbackPath, "assets/game/foo/game.png");
-
-	const auto CursorPaths = LocalAssetPrimarySourcePaths(*pCursor, "foo");
-	EXPECT_EQ(CursorPaths.m_PrimaryPath, "assets/gui_cursor/foo.png");
-	EXPECT_TRUE(CursorPaths.m_FallbackPath.empty());
-
-	const auto EntityBgPaths = LocalAssetPrimarySourcePaths(*pEntityBg, "foo");
-	EXPECT_EQ(EntityBgPaths.m_PrimaryPath, "maps/foo.map");
-	EXPECT_TRUE(EntityBgPaths.m_FallbackPath.empty());
-
-	const auto ManagedEntityBgPaths = LocalAssetPrimarySourcePaths(*pEntityBg, "entity_bg/foo");
-	EXPECT_EQ(ManagedEntityBgPaths.m_PrimaryPath, "assets/entity_bg/foo.map");
-	EXPECT_EQ(ManagedEntityBgPaths.m_FallbackPath, "maps/entity_bg/foo.map");
-
-	const auto ExtrasPaths = LocalAssetPrimarySourcePaths(*pExtras, "foo");
-	EXPECT_EQ(ExtrasPaths.m_PrimaryPath, "assets/extras/foo.png");
-	EXPECT_EQ(ExtrasPaths.m_FallbackPath, "assets/extras/foo/extras.png");
-}
-
-TEST(AssetsPreviewScale, LocalAuthorPersistenceResolvesPrimarySourcePathUsingRuntimeSelectionRules)
-{
-	const SAssetResourceCategory *pGame = FindAssetResourceCategory("game");
-	const SAssetResourceCategory *pEntityBg = FindAssetResourceCategory("entity_bg");
-	ASSERT_NE(pGame, nullptr);
-	ASSERT_NE(pEntityBg, nullptr);
-
-	EXPECT_EQ(ResolveLocalAssetPrimarySourcePath(*pGame, "foo", true, true), "assets/game/foo.png");
-	EXPECT_EQ(ResolveLocalAssetPrimarySourcePath(*pGame, "foo", false, true), "assets/game/foo/game.png");
-
-	EXPECT_EQ(ResolveLocalAssetPrimarySourcePath(*pEntityBg, "foo", true, false), "maps/foo.map");
-	EXPECT_EQ(ResolveLocalAssetPrimarySourcePath(*pEntityBg, "entity_bg/foo", true, false), "assets/entity_bg/foo.map");
-	EXPECT_EQ(ResolveLocalAssetPrimarySourcePath(*pEntityBg, "entity_bg/foo", false, true), "maps/entity_bg/foo.map");
 }

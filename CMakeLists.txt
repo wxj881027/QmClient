@@ -4810,7 +4810,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/base/logger_file_creation_test.cpp
     src/test/unit/client/assets_editor_layout_test.cpp
     src/test/unit/client/assets_preview_scale_test.cpp
-    src/test/contract/qmclient/settings/assets_preview_scale_contract_test.cpp
+    src/test/unit/client/assets_author_persistence_test.cpp
     src/test/unit/client/assets_resource_migration_test.cpp
     src/test/unit/client/assets_resource_registry_test.cpp
     src/test/unit/client/audio_pack_editor_test.cpp
