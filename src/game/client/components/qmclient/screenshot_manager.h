@@ -148,6 +148,7 @@ private:
 	static void DrawBitmapText(CImageInfo &Image, const std::string &Text, int X, int Y, int Scale, ColorRGBA Color);
 	static int TextWidth(const std::string &Text, int Scale);
 	static std::string ThumbnailKey(const char *pPath, int StorageType);
+	void PumpThumbnailWork(IGraphics *pGraphics, IStorage *pStorage, IEngine *pEngine, CGpuUploadLimiter *pLimiter);
 
 	std::vector<SEntry> m_vEntries;
 	mutable std::unordered_map<std::string, SCaptureMetadata> m_CaptureMetadata;

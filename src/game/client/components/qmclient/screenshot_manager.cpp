@@ -310,6 +310,26 @@ const CQmScreenshotManager::SThumbnail *CQmScreenshotManager::LoadThumbnail(cons
 
 void CQmScreenshotManager::PumpThumbnails(IGraphics *pGraphics, IStorage *pStorage, IEngine *pEngine, CGpuUploadLimiter *pLimiter)
 {
+	try
+	{
+		PumpThumbnailWork(pGraphics, pStorage, pEngine, pLimiter);
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 保留尚未交付的图像与纹理；已完成的上传或卸载不回滚，下帧继续处理。
+	}
+	for(const std::string &Key : m_vThumbnailRequests)
+	{
+		const auto It = m_vThumbnails.find(Key);
+		if(It != m_vThumbnails.end())
+			It->second.m_Requested = false;
+	}
+	m_vThumbnailRequests.clear();
+	++m_ThumbnailFrame;
+}
+
+void CQmScreenshotManager::PumpThumbnailWork(IGraphics *pGraphics, IStorage *pStorage, IEngine *pEngine, CGpuUploadLimiter *pLimiter)
+{
 	// 请求表记录的是「本帧可见」的条目：先回收上一帧的结果，再按需补足后台任务。
 	if(pGraphics != nullptr)
 	{
@@ -325,9 +345,12 @@ void CQmScreenshotManager::PumpThumbnails(IGraphics *pGraphics, IStorage *pStora
 			CImageInfo *pImage = Entry.m_pJob->Image();
 			if(pImage != nullptr && pImage->m_Width > 0 && pImage->m_Height > 0)
 			{
-				Entry.m_Thumbnail.m_Width = (int)pImage->m_Width;
-				Entry.m_Thumbnail.m_Height = (int)pImage->m_Height;
-				Entry.m_Thumbnail.m_Texture = pGraphics->LoadTextureRawMove(*pImage, 0, Entry.m_Path.c_str());
+				const int Width = (int)pImage->m_Width;
+				const int Height = (int)pImage->m_Height;
+				const auto Texture = pGraphics->LoadTextureRawMove(*pImage, 0, Entry.m_Path.c_str());
+				Entry.m_Thumbnail.m_Width = Width;
+				Entry.m_Thumbnail.m_Height = Height;
+				Entry.m_Thumbnail.m_Texture = Texture;
 				Entry.m_Thumbnail.m_LoadFailed = !Entry.m_Thumbnail.m_Texture.IsValid();
 				if(pLimiter != nullptr)
 					pLimiter->OnUploaded();
@@ -426,15 +449,6 @@ void CQmScreenshotManager::PumpThumbnails(IGraphics *pGraphics, IStorage *pStora
 			}
 		}
 	}
-
-	for(const std::string &Key : m_vThumbnailRequests)
-	{
-		const auto It = m_vThumbnails.find(Key);
-		if(It != m_vThumbnails.end())
-			It->second.m_Requested = false;
-	}
-	m_vThumbnailRequests.clear();
-	++m_ThumbnailFrame;
 }
 
 void CQmScreenshotManager::ClearThumbnails(IGraphics *pGraphics)
