@@ -37,6 +37,12 @@
 
 namespace
 {
+	struct SImageLifetime
+	{
+		CImageInfo m_Image;
+		~SImageLifetime() { m_Image.Free(); }
+	};
+
 	void BlendImagePixel(CImageInfo &Image, int X, int Y, ColorRGBA Color)
 	{
 		if(X < 0 || Y < 0 || X >= (int)Image.m_Width || Y >= (int)Image.m_Height)
@@ -52,7 +58,7 @@ namespace
 	{
 		FT_Library m_Library = nullptr;
 		FT_Face m_Face = nullptr;
-		std::vector<unsigned char> m_vData;
+		std::unique_ptr<unsigned char, decltype(&free)> m_pData{nullptr, free};
 
 		~SWatermarkFont()
 		{
@@ -79,21 +85,19 @@ namespace
 				unsigned DataSize = 0;
 				const bool ReadOk = io_read_all(File, &pData, &DataSize);
 				io_close(File);
-				if(!ReadOk || pData == nullptr || DataSize == 0 || (uint64_t)DataSize > (uint64_t)std::numeric_limits<FT_Long>::max())
-				{
-					free(pData);
+				std::unique_ptr<unsigned char, decltype(&free)> Data(static_cast<unsigned char *>(pData), free);
+				if(!ReadOk || Data == nullptr || DataSize == 0 || (uint64_t)DataSize > (uint64_t)std::numeric_limits<FT_Long>::max())
 					continue;
-				}
 
-				m_vData.assign(static_cast<unsigned char *>(pData), static_cast<unsigned char *>(pData) + DataSize);
-				free(pData);
-				if(FT_New_Memory_Face(m_Library, m_vData.data(), static_cast<FT_Long>(m_vData.size()), 0, &m_Face) == 0)
+				// FreeType 借用文件缓冲，字体面释放前始终由本对象持有，不再复制一份。
+				m_pData = std::move(Data);
+				if(FT_New_Memory_Face(m_Library, m_pData.get(), static_cast<FT_Long>(DataSize), 0, &m_Face) == 0)
 				{
 					// TTC 的默认字面是日文，不依赖当前集合中的简体字面序号。
 					for(FT_Long FaceIndex = 1; FaceIndex < m_Face->num_faces; ++FaceIndex)
 					{
 						FT_Face Candidate = nullptr;
-						if(FT_New_Memory_Face(m_Library, m_vData.data(), static_cast<FT_Long>(m_vData.size()), FaceIndex, &Candidate) != 0)
+						if(FT_New_Memory_Face(m_Library, m_pData.get(), static_cast<FT_Long>(DataSize), FaceIndex, &Candidate) != 0)
 							continue;
 						if(Candidate->family_name != nullptr && str_comp(Candidate->family_name, "Source Han Sans SC") == 0)
 						{
@@ -105,7 +109,7 @@ namespace
 					}
 					return true;
 				}
-				m_vData.clear();
+				m_pData.reset();
 			}
 
 			return false;
@@ -626,18 +630,14 @@ bool CQmScreenshotManager::ApplyWatermark(IStorage *pStorage, const char *pSourc
 {
 	if(pStorage == nullptr || pSourcePath == nullptr || pTargetPath == nullptr || pTargetPath[0] == '\0')
 		return false;
-	CImageInfo Image;
+	SImageLifetime ImageLifetime;
+	CImageInfo &Image = ImageLifetime.m_Image;
 	if(!LoadScreenshotImage(pStorage, pSourcePath, SourceStorageType, Image) || !DrawWatermark(pStorage, Image, BuildWatermarkText(pStorage, pSourcePath, SourceStorageType, Options), Options.m_Position))
-	{
-		Image.Free();
 		return false;
-	}
 	const SCaptureMetadata &Metadata = CaptureMetadata(pStorage, pSourcePath, SourceStorageType);
 	char aTargetPath[IO_MAX_PATH_LENGTH];
 	pStorage->GetCompletePath(IStorage::TYPE_SAVE_OR_ABSOLUTE, pTargetPath, aTargetPath, sizeof(aTargetPath));
-	const bool Saved = SavePngAtomically(aTargetPath, Image, Metadata.m_Comment.c_str());
-	Image.Free();
-	return Saved;
+	return SavePngAtomically(aTargetPath, Image, Metadata.m_Comment.c_str());
 }
 
 namespace
@@ -753,9 +753,10 @@ std::shared_ptr<CQmScreenshotWatermarkJob> CQmScreenshotManager::CreateWatermark
 	{
 		char aFont[IO_MAX_PATH_LENGTH];
 		IOHANDLE File = pStorage->OpenFile(pPath, IOFLAG_READ, IStorage::TYPE_ALL, aFont, sizeof(aFont));
-		vFontPaths.push_back(File != nullptr ? AbsoluteScreenshotPath(aFont) : std::string());
-		if(File != nullptr)
+		const bool Found = File != nullptr;
+		if(Found)
 			io_close(File);
+		vFontPaths.push_back(Found ? AbsoluteScreenshotPath(aFont) : std::string());
 	}
 	return std::make_shared<CQmScreenshotWatermarkJob>(Source, Target, BuildWatermarkText(pStorage, pSourcePath, SourceStorageType, Options), CaptureMetadata(pStorage, pSourcePath, SourceStorageType).m_Comment, std::move(vFontPaths), Options.m_Position);
 }
@@ -774,12 +775,8 @@ void CQmScreenshotWatermarkJob::Run()
 {
 	if(m_Control.Canceled())
 		return;
-	CImageInfo Image;
-	struct SFreeImage
-	{
-		CImageInfo &m_Image;
-		~SFreeImage() { m_Image.Free(); }
-	} FreeImage{Image};
+	SImageLifetime ImageLifetime;
+	CImageInfo &Image = ImageLifetime.m_Image;
 	try
 	{
 		auto pStorage = CreateLocalStorage();
