@@ -56,10 +56,13 @@ TEST(QmTitleProfileRefresh, RequestsAnAuthenticatedProfileOnTheExistingWebSocket
 	const std::unique_ptr<json_value, decltype(&json_value_free)> pJson(json_parse(Request.c_str(), Request.size()), json_value_free);
 	ASSERT_NE(pJson, nullptr);
 	ASSERT_EQ(pJson->type, json_object);
-	const json_value *pType = JsonObjectField(pJson.get(), "type");
+	// 直接用引擎的只读访问器：缺失键返回空指针，先在断言里挡掉再解引用。
+	const json_value *pType = json_object_get(pJson.get(), "type");
+	ASSERT_NE(pType, nullptr);
 	ASSERT_EQ(pType->type, json_string);
 	EXPECT_STREQ(pType->u.string.ptr, "subscribe_titles");
-	const json_value *pToken = JsonObjectField(pJson.get(), "title_token");
+	const json_value *pToken = json_object_get(pJson.get(), "title_token");
+	ASSERT_NE(pToken, nullptr);
 	ASSERT_EQ(pToken->type, json_string);
 	EXPECT_EQ(pToken->u.string.ptr, Token);
 	EXPECT_EQ(pJson->u.object.length, 2u);
