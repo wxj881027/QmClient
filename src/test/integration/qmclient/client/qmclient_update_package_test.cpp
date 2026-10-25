@@ -13,7 +13,8 @@ namespace
 	{
 	public:
 		bool m_DeferredAbort = false;
-		explicit CPackageResponse(const std::string &Url) : IHttpRequest(Url.c_str()) {}
+		explicit CPackageResponse(const std::string &Url) :
+			IHttpRequest(Url.c_str()) {}
 		void Header(const char *) override {}
 		void UsedProxy() { m_ResultUsedProxy = true; }
 		void PendingRateLimit()
@@ -58,10 +59,10 @@ namespace
 		std::vector<std::shared_ptr<CPackageResponse>> m_vRequests;
 		std::shared_ptr<qm_update::CPackageDownload> m_Download;
 		std::string m_Body;
-		void AddJob(std::shared_ptr<IJob> Job)
+		bool AddJob(std::shared_ptr<IJob> Job)
 		{
 			m_vJobs.push_back(Job);
-			m_Jobs.Add(std::move(Job));
+			return m_Jobs.TryAdd(std::move(Job));
 		}
 		void SetUp() override
 		{
@@ -69,7 +70,7 @@ namespace
 			m_Body.resize(4 * 1024 * 1024 + 3);
 			for(size_t Index = 0; Index < m_Body.size(); ++Index)
 				m_Body[Index] = static_cast<char>((Index * 37 + Index / 251) % 256);
-			m_Download = std::make_shared<qm_update::CPackageDownload>("https://github.com/wxj881027/QmClient/releases/download/v3.4/file.7z", m_Storage.get(), "package.tmp", 8 * 1024 * 1024, [](const std::shared_ptr<IHttpRequest> &) {}, [this](std::shared_ptr<IJob> Job) { AddJob(std::move(Job)); }, [this](const std::string &Url) { auto Request = std::make_shared<CPackageResponse>(Url); m_vRequests.push_back(Request); return Request; });
+			m_Download = std::make_shared<qm_update::CPackageDownload>("https://github.com/wxj881027/QmClient/releases/download/v3.4/file.7z", m_Storage.get(), "package.tmp", 8 * 1024 * 1024, [](const std::shared_ptr<IHttpRequest> &) {}, [this](std::shared_ptr<IJob> Job) { return AddJob(std::move(Job)); }, [this](const std::string &Url) { auto Request = std::make_shared<CPackageResponse>(Url); m_vRequests.push_back(Request); return Request; });
 		}
 		void TearDown() override
 		{
@@ -504,7 +505,7 @@ TEST_F(QmPackageDownload, LateCancelledSegmentsCannotOverwriteTheNextSourceSessi
 		m_vRequests[Index]->m_DeferredAbort = true;
 	const auto Previous = m_Download;
 	Previous->Abort();
-	m_Download = std::make_shared<qm_update::CPackageDownload>("https://gh-proxy.com/https://github.com/wxj881027/QmClient/releases/download/v3.4/file.7z", m_Storage.get(), "next/package.tmp", 8 * 1024 * 1024, [](const std::shared_ptr<IHttpRequest> &) {}, [this](std::shared_ptr<IJob> Job) { m_Jobs.Add(std::move(Job)); }, [this](const std::string &Url) { auto Request = std::make_shared<CPackageResponse>(Url); m_vRequests.push_back(Request); return Request; });
+	m_Download = std::make_shared<qm_update::CPackageDownload>("https://gh-proxy.com/https://github.com/wxj881027/QmClient/releases/download/v3.4/file.7z", m_Storage.get(), "next/package.tmp", 8 * 1024 * 1024, [](const std::shared_ptr<IHttpRequest> &) {}, [this](std::shared_ptr<IJob> Job) { return m_Jobs.TryAdd(std::move(Job)); }, [this](const std::string &Url) { auto Request = std::make_shared<CPackageResponse>(Url); m_vRequests.push_back(Request); return Request; });
 	m_vRequests[5]->Reply(206, std::string_view(m_Body).substr(0, 1), CHttpByteRange{0, 0, static_cast<int64_t>(m_Body.size())});
 	m_Download->Poll(1);
 	ASSERT_EQ(m_vRequests.size(), 10U);

@@ -347,7 +347,7 @@ void CTClient::StartUpdateDownload(bool NextSource)
 				Http()->Run(Request);
 			}
 			else
-				RunUpdateHttp(Request); }, [this](std::shared_ptr<IJob> Job) { Engine()->AddJob(std::move(Job)); });
+				RunUpdateHttp(Request); }, [this](std::shared_ptr<IJob> Job) { return Engine()->TryAddJob(std::move(Job)); });
 	m_pUpdatePackageTask = m_pUpdatePackageDownload;
 	StartDownload(m_pUpdatePackageSignatureTask, m_UpdateUseSetup ? m_UpdateRelease.m_aSetupSignatureUrl : m_UpdateRelease.m_aPackageSignatureUrl, m_aUpdatePackageSignatureTmp, 64);
 	StartDownload(m_pUpdateManifestTask, m_UpdateUseSetup ? m_UpdateRelease.m_aSetupManifestUrl : m_UpdateRelease.m_aManifestUrl, m_aUpdateManifestTmp, QMCLIENT_UPDATE_MAX_MANIFEST_SIZE);
@@ -666,7 +666,7 @@ void CTClient::FinishUpdateDownloads()
 		!IsSuccessful(m_pUpdateManifestTask) || !IsSuccessful(m_pUpdateManifestSignatureTask))
 	{
 		const bool LocalError = m_pUpdatePackageDownload && m_pUpdatePackageDownload->LocalError();
-		Fail(LocalError ? "Failed to assemble the downloaded update package" : "All approved update sources failed to download", !LocalError, !LocalError);
+		Fail(LocalError ? "Failed to prepare or assemble the downloaded update package" : "All approved update sources failed to download", !LocalError, !LocalError);
 		return;
 	}
 
