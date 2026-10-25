@@ -467,42 +467,50 @@ size_t CHttpRequestCurl::OnHeader(char *pHeader, size_t HeaderSize)
 
 void CHttpRequestCurl::OnCompletionInternal(CURL *pHandle, CURLcode Code)
 {
-	if(pHandle)
+	bool MetadataFailed = false;
+	try
 	{
-		long StatusCode = 0;
-		curl_easy_getinfo(pHandle, CURLINFO_RESPONSE_CODE, &StatusCode);
-		m_StatusCode = StatusCode;
-		std::optional<bool> UsedProxyResult;
+		if(pHandle)
+		{
+			long StatusCode = 0;
+			curl_easy_getinfo(pHandle, CURLINFO_RESPONSE_CODE, &StatusCode);
+			m_StatusCode = StatusCode;
+			std::optional<bool> UsedProxyResult;
 #if LIBCURL_VERSION_NUM >= 0x080700
-		long UsedProxy = 0;
-		if(curl_easy_getinfo(pHandle, CURLINFO_USED_PROXY, &UsedProxy) == CURLE_OK)
-		{
-			UsedProxyResult = UsedProxy != 0;
-			m_ResultUsedProxy = *UsedProxyResult;
-		}
-#endif
-		// 没有 HTTP 状态也可能已按 NO_PROXY 直连，必须检查重定向后的最终主机。
-		char *pEffectiveUrl = nullptr;
-		if(curl_easy_getinfo(pHandle, CURLINFO_EFFECTIVE_URL, &pEffectiveUrl) == CURLE_OK && pEffectiveUrl)
-		{
-			const std::string Host = HttpUrlHost(pEffectiveUrl);
-			if(!Host.empty())
+			long UsedProxy = 0;
+			if(curl_easy_getinfo(pHandle, CURLINFO_USED_PROXY, &UsedProxy) == CURLE_OK)
 			{
-				const char *pNoProxy = std::getenv("no_proxy");
-				if(!pNoProxy || !*pNoProxy)
-					pNoProxy = std::getenv("NO_PROXY");
-				// 实测最终连接优先，早期失败才使用与运行库兼容的旁路证据。
-				const auto *pVersion = curl_version_info(CURLVERSION_NOW);
-				const bool FinalProxyKnown = UsedProxyResult.has_value() && m_StatusCode >= 200 && (m_StatusCode < 300 || m_StatusCode >= 400);
-				const bool BypassEvidence = pNoProxy && (FinalProxyKnown ? ProxyBypassed(Host, pNoProxy) :
-											   pVersion && ProxyBypassEvidence(Host, pNoProxy, pVersion->version_num));
-				if(ProxyFallbackBypassed(m_StatusCode, UsedProxyResult, BypassEvidence))
+				UsedProxyResult = UsedProxy != 0;
+				m_ResultUsedProxy = *UsedProxyResult;
+			}
+#endif
+			// 没有 HTTP 状态也可能已按 NO_PROXY 直连，必须检查重定向后的最终主机。
+			char *pEffectiveUrl = nullptr;
+			if(curl_easy_getinfo(pHandle, CURLINFO_EFFECTIVE_URL, &pEffectiveUrl) == CURLE_OK && pEffectiveUrl)
+			{
+				const std::string Host = HttpUrlHost(pEffectiveUrl);
+				if(!Host.empty())
 				{
-					m_aProxy[0] = '\0';
-					m_ResultUsedProxy = false;
+					const char *pNoProxy = std::getenv("no_proxy");
+					if(!pNoProxy || !*pNoProxy)
+						pNoProxy = std::getenv("NO_PROXY");
+					// 实测最终连接优先，早期失败才使用与运行库兼容的旁路证据。
+					const auto *pVersion = curl_version_info(CURLVERSION_NOW);
+					const bool FinalProxyKnown = UsedProxyResult.has_value() && m_StatusCode >= 200 && (m_StatusCode < 300 || m_StatusCode >= 400);
+					const bool BypassEvidence = pNoProxy && (FinalProxyKnown ? ProxyBypassed(Host, pNoProxy) :
+												   pVersion && ProxyBypassEvidence(Host, pNoProxy, pVersion->version_num));
+					if(ProxyFallbackBypassed(m_StatusCode, UsedProxyResult, BypassEvidence))
+					{
+						m_aProxy[0] = '\0';
+						m_ResultUsedProxy = false;
+					}
 				}
 			}
 		}
+	}
+	catch(...)
+	{
+		MetadataFailed = true;
 	}
 
 	// 取消可能与成功或错误消息同时到达，用户取消优先于结果发布。
@@ -535,6 +543,9 @@ void CHttpRequestCurl::OnCompletionInternal(CURL *pHandle, CURLcode Code)
 		(m_StatusCode != 206 || !m_ResultContentRange ||
 			m_ResultContentRange->m_First != m_ByteRange->m_First || m_ResultContentRange->m_Last != m_ByteRange->m_Last ||
 			m_ResponseLength != static_cast<uint64_t>(m_ByteRange->Length())))
+		State = EHttpState::ERROR;
+
+	if(MetadataFailed && State != EHttpState::ABORTED)
 		State = EHttpState::ERROR;
 
 	IHttpRequest::OnCompletionInternal(State);
@@ -643,17 +654,40 @@ CHttpCurl::~CHttpCurl()
 
 void CHttpCurl::Run(std::shared_ptr<IHttpRequest> pRequest)
 {
-	std::shared_ptr<CHttpRequestCurl> pRequestImpl = std::static_pointer_cast<CHttpRequestCurl>(pRequest);
-	std::unique_lock Lock(m_Lock);
-	m_ConditionVariableInit.wait(Lock, [this]() { return m_Shutdown || m_State != CHttpCurl::UNINITIALIZED; });
-	if(m_Shutdown || m_State == CHttpCurl::ERROR)
+	auto pRequestImpl = std::static_pointer_cast<CHttpRequestCurl>(pRequest);
+	bool ShuttingDown;
+	bool QueueFailed = false;
+	{
+		std::unique_lock Lock(m_Lock);
+		m_ConditionVariableInit.wait(Lock, [this]() { return m_Shutdown || m_State != CHttpCurl::UNINITIALIZED; });
+		if(pRequestImpl->m_Submitted)
+			return;
+		pRequestImpl->m_Submitted = true;
+		ShuttingDown = m_Shutdown || m_State == CHttpCurl::ERROR;
+		if(!ShuttingDown)
+		{
+			try
+			{
+				m_PendingRequests.emplace_back(pRequestImpl);
+				curl_multi_wakeup(m_pMultiH);
+			}
+			catch(...)
+			{
+				QueueFailed = true;
+			}
+		}
+	}
+	// 拒绝回调可以提交其他请求，不能持有队列锁。
+	if(ShuttingDown)
 	{
 		str_copy(pRequestImpl->m_aErr, "Shutting down");
 		pRequestImpl->OnCompletionInternal(nullptr, CURLE_ABORTED_BY_CALLBACK);
-		return;
 	}
-	m_PendingRequests.emplace_back(pRequestImpl);
-	curl_multi_wakeup(m_pMultiH);
+	else if(QueueFailed)
+	{
+		str_copy(pRequestImpl->m_aErr, "Failed to queue request");
+		pRequestImpl->OnCompletionInternal(nullptr, CURLE_FAILED_INIT);
+	}
 }
 
 bool CHttpCurl::HasIpresolveBug() const
@@ -668,32 +702,158 @@ void CHttpCurl::ThreadMain(void *pUser)
 	static_cast<CHttpCurl *>(pUser)->RunLoop();
 }
 
-void CHttpCurl::CompleteRunningRequest(CURL *pHandle, CURLcode Code, std::unordered_map<std::string, size_t> &RunningRequestsPerHost)
+size_t CHttpCurl::RunningForHost(std::string_view Host) const
+{
+	// 活动表最多16项；完成/取消不再为主机计数重新分配字符串或节点。
+	return std::count_if(m_RunningRequests.begin(), m_RunningRequests.end(), [Host](const auto &Entry) {
+		return Entry.second->m_HostKey == Host;
+	});
+}
+
+void CHttpCurl::CompleteRunningRequest(CURL *pHandle, CURLcode Code, bool Cleanup)
 {
 	auto RequestIt = m_RunningRequests.find(pHandle);
 	dbg_assert(RequestIt != m_RunningRequests.end(), "Running handle not added to map");
-	const std::string HostKey = HttpUrlHost(RequestIt->second->m_aUrl);
-	if(auto HostIt = RunningRequestsPerHost.find(HostKey); HostIt != RunningRequestsPerHost.end())
-	{
-		if(HostIt->second > 1)
-			--HostIt->second;
-		else
-			RunningRequestsPerHost.erase(HostIt);
-	}
 	auto pRequest = std::move(RequestIt->second);
 	m_RunningRequests.erase(RequestIt);
-	curl_multi_remove_handle(m_pMultiH, pHandle);
+	if(Cleanup)
+		curl_multi_remove_handle(m_pMultiH, pHandle);
 	pRequest->OnCompletionInternal(pHandle, Code);
-	curl_easy_cleanup(pHandle);
+	if(Cleanup)
+		curl_easy_cleanup(pHandle);
 }
 
-void CHttpCurl::CancelAbortedRequests(std::unordered_map<std::string, size_t> &RunningRequestsPerHost)
+void CHttpCurl::CancelAbortedRequests()
 {
 	for(auto It = m_RunningRequests.begin(); It != m_RunningRequests.end();)
 	{
 		const auto Current = It++;
 		if(Current->second->IsAbortRequested())
-			CompleteRunningRequest(Current->first, CURLE_ABORTED_BY_CALLBACK, RunningRequestsPerHost);
+			CompleteRunningRequest(Current->first, CURLE_ABORTED_BY_CALLBACK);
+	}
+}
+
+CHttpCurl::EPrepareResult CHttpCurl::PrepareRequest(const std::shared_ptr<CHttpRequestCurl> &pRequest)
+{
+	CURL *pHandle = nullptr;
+	bool Tracked = false;
+	bool Added = false;
+	EPrepareResult Result = EPrepareResult::LOCAL_ERROR;
+	try
+	{
+		if(pRequest->IsAbortRequested())
+		{
+			pRequest->m_AbortTriggeredByProgressCallback = true;
+			return EPrepareResult::ABORTED;
+		}
+		if(g_Config.m_DbgHttp)
+			log_debug("http", "task: %s %s", CHttpRequestCurl::GetRequestType(pRequest->m_Type), pRequest->m_aUrl);
+		if(pRequest->ShouldSkipRequest())
+			return EPrepareResult::CACHED;
+
+		pRequest->m_HostKey = HttpUrlHost(pRequest->m_aUrl);
+		if(m_RunningRequests.size() >= HTTP_MAX_CONCURRENT_REQUESTS ||
+			(!pRequest->m_HostKey.empty() && RunningForHost(pRequest->m_HostKey) >= HTTP_MAX_CONCURRENT_REQUESTS_PER_HOST))
+			return EPrepareResult::DEFERRED;
+
+		pHandle = curl_easy_init();
+		if(!pHandle)
+		{
+			log_error("http", "curl_easy_init failed");
+			return EPrepareResult::SYSTEM_ERROR;
+		}
+		// 先登记再打开文件和移交multi；后续准备异常仍有稳定的请求owner。
+		m_RunningRequests.emplace(pHandle, pRequest);
+		Tracked = true;
+		if(!pRequest->ConfigureHandle(pHandle))
+		{
+			str_copy(pRequest->m_aErr, "Failed to initialize request");
+			Result = EPrepareResult::ABORTED;
+		}
+		else
+		{
+			std::unique_lock WaitLock(pRequest->m_WaitMutex);
+			if(curl_multi_add_handle(m_pMultiH, pHandle) == CURLM_OK)
+			{
+				Added = true;
+				pRequest->m_State = EHttpState::RUNNING;
+				return EPrepareResult::RUNNING;
+			}
+			log_error("http", "curl_multi_add_handle failed");
+			Result = EPrepareResult::SYSTEM_ERROR;
+		}
+	}
+	catch(...)
+	{
+		str_copy(pRequest->m_aErr, "Failed to prepare request");
+	}
+	if(Added)
+		curl_multi_remove_handle(m_pMultiH, pHandle);
+	if(Tracked)
+		m_RunningRequests.erase(pHandle);
+	if(pHandle)
+		curl_easy_cleanup(pHandle);
+	return Result;
+}
+
+bool CHttpCurl::ProcessPendingRequests()
+{
+	dbg_assert(m_WorkRequests.empty() && m_DeferredRequests.empty(), "HTTP batch was not consumed");
+	{
+		std::unique_lock Lock(m_Lock);
+		m_WorkRequests.splice(m_WorkRequests.end(), m_PendingRequests);
+	}
+	while(!m_WorkRequests.empty())
+	{
+		auto pRequest = m_WorkRequests.front();
+		const EPrepareResult Result = PrepareRequest(pRequest);
+		if(Result == EPrepareResult::DEFERRED)
+		{
+			m_DeferredRequests.splice(m_DeferredRequests.end(), m_WorkRequests, m_WorkRequests.begin());
+			continue;
+		}
+		if(Result == EPrepareResult::SYSTEM_ERROR)
+		{
+			std::unique_lock Lock(m_Lock);
+			m_State = CHttpCurl::ERROR;
+			return false;
+		}
+		m_WorkRequests.pop_front();
+		// 消费者不位于准备catch中，失败不会重放完成动作。
+		if(Result == EPrepareResult::CACHED)
+			pRequest->PublishCompletion(EHttpState::DONE);
+		else if(Result != EPrepareResult::RUNNING)
+			pRequest->OnCompletionInternal(nullptr, Result == EPrepareResult::ABORTED ? CURLE_ABORTED_BY_CALLBACK : CURLE_FAILED_INIT);
+	}
+	if(!m_DeferredRequests.empty())
+	{
+		std::unique_lock Lock(m_Lock);
+		// 迁移已有节点，保留旧候选优先，不为回队或错误收尾申请内存。
+		m_PendingRequests.splice(m_PendingRequests.begin(), m_DeferredRequests);
+	}
+	return true;
+}
+
+void CHttpCurl::DrainRequests(bool Cleanup)
+{
+	{
+		std::unique_lock Lock(m_Lock);
+		m_Shutdown = true;
+		m_WorkRequests.splice(m_WorkRequests.begin(), m_PendingRequests);
+		m_WorkRequests.splice(m_WorkRequests.end(), m_DeferredRequests);
+	}
+	while(!m_WorkRequests.empty())
+	{
+		auto pRequest = m_WorkRequests.front();
+		m_WorkRequests.pop_front();
+		str_copy(pRequest->m_aErr, "Shutting down");
+		pRequest->OnCompletionInternal(nullptr, CURLE_ABORTED_BY_CALLBACK);
+	}
+	while(!m_RunningRequests.empty())
+	{
+		auto It = m_RunningRequests.begin();
+		str_copy(It->second->m_aErr, "Shutting down");
+		CompleteRunningRequest(It->first, CURLE_ABORTED_BY_CALLBACK, Cleanup);
 	}
 }
 
@@ -727,8 +887,6 @@ void CHttpCurl::RunLoop()
 	m_ConditionVariableInit.notify_all();
 	Lock.unlock();
 	m_NextTimeout = std::numeric_limits<int>::max();
-	std::unordered_map<std::string, size_t> RunningRequestsPerHost;
-	RunningRequestsPerHost.reserve(HTTP_MAX_CONCURRENT_REQUESTS);
 
 	while(m_State == CHttpCurl::RUNNING)
 	{
@@ -738,7 +896,12 @@ void CHttpCurl::RunLoop()
 		// We may have been woken up for a shutdown
 		if(m_Shutdown)
 		{
-			if(m_RunningRequests.empty() && m_PendingRequests.empty())
+			bool NoPending;
+			{
+				std::unique_lock PendingLock(m_Lock);
+				NoPending = m_PendingRequests.empty();
+			}
+			if(m_RunningRequests.empty() && NoPending)
 				break;
 
 			auto Now = std::chrono::steady_clock::now();
@@ -775,131 +938,21 @@ void CHttpCurl::RunLoop()
 		{
 			if(pMsg->msg == CURLMSG_DONE)
 			{
-				CompleteRunningRequest(pMsg->easy_handle, pMsg->data.result, RunningRequestsPerHost);
+				CompleteRunningRequest(pMsg->easy_handle, pMsg->data.result);
 			}
 		}
 
 		// 连接建立期间也主动释放取消请求，不依赖 curl 进度回调。
-		CancelAbortedRequests(RunningRequestsPerHost);
+		CancelAbortedRequests();
 
-		decltype(m_PendingRequests) NewRequests = {};
-		Lock.lock();
-		std::swap(m_PendingRequests, NewRequests);
+		if(!ProcessPendingRequests())
+			break;
+	}
+
+	if(Lock.owns_lock())
 		Lock.unlock();
-
-		decltype(m_PendingRequests) DeferredRequests = {};
-		while(!NewRequests.empty())
-		{
-			auto &pRequest = NewRequests.front();
-			if(pRequest->IsAbortRequested())
-			{
-				pRequest->m_AbortTriggeredByProgressCallback = true;
-				pRequest->OnCompletionInternal(nullptr, CURLE_ABORTED_BY_CALLBACK);
-				NewRequests.pop_front();
-				continue;
-			}
-			if(g_Config.m_DbgHttp)
-				log_debug("http", "task: %s %s", CHttpRequestCurl::GetRequestType(pRequest->m_Type), pRequest->m_aUrl);
-
-			if(pRequest->ShouldSkipRequest())
-			{
-				pRequest->PublishCompletion(EHttpState::DONE);
-				NewRequests.pop_front();
-				continue;
-			}
-
-			const std::string HostKey = HttpUrlHost(pRequest->m_aUrl);
-			const size_t RunningForHost = HostKey.empty() ? 0 : RunningRequestsPerHost[HostKey];
-			if(m_RunningRequests.size() >= HTTP_MAX_CONCURRENT_REQUESTS ||
-				(!HostKey.empty() && RunningForHost >= HTTP_MAX_CONCURRENT_REQUESTS_PER_HOST))
-			{
-				DeferredRequests.push_back(std::move(pRequest));
-				NewRequests.pop_front();
-				continue;
-			}
-
-			CURL *pEH = curl_easy_init();
-			if(!pEH)
-			{
-				log_error("http", "curl_easy_init failed");
-				goto error_init;
-			}
-
-			if(!pRequest->ConfigureHandle(pEH))
-			{
-				curl_easy_cleanup(pEH);
-				str_copy(pRequest->m_aErr, "Failed to initialize request");
-				pRequest->OnCompletionInternal(nullptr, CURLE_ABORTED_BY_CALLBACK);
-				NewRequests.pop_front();
-				continue;
-			}
-
-			if(curl_multi_add_handle(m_pMultiH, pEH) != CURLM_OK)
-			{
-				log_error("http", "curl_multi_add_handle failed");
-				goto error_configure;
-			}
-
-			{
-				std::unique_lock WaitLock(pRequest->m_WaitMutex);
-				pRequest->m_State = EHttpState::RUNNING;
-			}
-			m_RunningRequests.emplace(pEH, std::move(pRequest));
-			if(!HostKey.empty())
-				++RunningRequestsPerHost[HostKey];
-			NewRequests.pop_front();
-			continue;
-
-		error_configure:
-			curl_easy_cleanup(pEH);
-		error_init:
-			Lock.lock();
-			m_State = CHttpCurl::ERROR;
-			break;
-		}
-
-		if(m_State == CHttpCurl::ERROR)
-		{
-			if(!NewRequests.empty())
-				m_PendingRequests.insert(m_PendingRequests.end(), std::make_move_iterator(NewRequests.begin()), std::make_move_iterator(NewRequests.end()));
-			if(!DeferredRequests.empty())
-				m_PendingRequests.insert(m_PendingRequests.end(), std::make_move_iterator(DeferredRequests.begin()), std::make_move_iterator(DeferredRequests.end()));
-			break;
-		}
-
-		if(!DeferredRequests.empty())
-		{
-			Lock.lock();
-			m_PendingRequests.insert(m_PendingRequests.begin(), std::make_move_iterator(DeferredRequests.begin()), std::make_move_iterator(DeferredRequests.end()));
-			Lock.unlock();
-		}
-	}
-
-	if(!Lock.owns_lock())
-		Lock.lock();
-
-	bool Cleanup = m_State != CHttpCurl::ERROR;
-	for(auto &pRequest : m_PendingRequests)
-	{
-		str_copy(pRequest->m_aErr, "Shutting down");
-		pRequest->OnCompletionInternal(nullptr, CURLE_ABORTED_BY_CALLBACK);
-	}
-	m_PendingRequests.clear();
-
-	for(auto &ReqPair : m_RunningRequests)
-	{
-		auto &[pHandle, pRequest] = ReqPair;
-
-		str_copy(pRequest->m_aErr, "Shutting down");
-		pRequest->OnCompletionInternal(pHandle, CURLE_ABORTED_BY_CALLBACK);
-
-		if(Cleanup)
-		{
-			curl_multi_remove_handle(m_pMultiH, pHandle);
-			curl_easy_cleanup(pHandle);
-		}
-	}
-	m_RunningRequests.clear();
+	const bool Cleanup = m_State != CHttpCurl::ERROR;
+	DrainRequests(Cleanup);
 
 	if(Cleanup)
 	{

@@ -12,15 +12,17 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
-#include <deque>
+#include <list>
 #include <mutex>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <unordered_map>
 
 class CHttpRequestCurl : public IHttpRequest
 {
 	friend class CHttpCurl;
+	friend class CHttpCurlTestPeer;
 	friend class CHttpRequestCurlTestPeer;
 
 public:
@@ -34,16 +36,19 @@ public:
 	static bool ProxyBypassEvidence(std::string_view Host, std::string_view List, unsigned int RuntimeVersion);
 	static bool ProxyFallbackBypassed(int StatusCode, std::optional<bool> UsedProxy, bool BypassEvidence);
 
+protected:
+	virtual bool ConfigureHandle(CURL *pHandle);
+
 private:
 	curl_slist *m_pRequestHeaders = nullptr;
 	curl_slist *m_pDnsBootstrap = nullptr;
 	CURLSH *m_pDnsShare = nullptr;
 
-	char m_aErr[CURL_ERROR_SIZE];
+	char m_aErr[CURL_ERROR_SIZE] = "";
 
 	bool m_ResponseHeadersEnded = false;
-
-	bool ConfigureHandle(CURL *pHandle);
+	bool m_Submitted = false;
+	std::string m_HostKey;
 
 	// Abort the request if `OnHeader()` returns something other than
 	// `DataSize`. `pHeader` is NOT null-terminated.
@@ -73,11 +78,21 @@ public:
 
 private:
 	friend class CHttpCurlTestPeer;
+	friend class CHttpCurlSchedulerTestPeer;
 	enum EState
 	{
 		UNINITIALIZED,
 		RUNNING,
 		ERROR,
+	};
+	enum class EPrepareResult
+	{
+		RUNNING,
+		DEFERRED,
+		CACHED,
+		ABORTED,
+		LOCAL_ERROR,
+		SYSTEM_ERROR,
 	};
 
 	void *m_pThread = nullptr;
@@ -86,7 +101,10 @@ private:
 	std::mutex m_Lock;
 	std::condition_variable m_ConditionVariableInit;
 	std::atomic<EState> m_State = UNINITIALIZED;
-	std::deque<std::shared_ptr<CHttpRequestCurl>> m_PendingRequests;
+	std::list<std::shared_ptr<CHttpRequestCurl>> m_PendingRequests;
+	// 工作线程复用批次容器，避免循环内构造MSVC链表哨兵时再分配。
+	std::list<std::shared_ptr<CHttpRequestCurl>> m_WorkRequests;
+	std::list<std::shared_ptr<CHttpRequestCurl>> m_DeferredRequests;
 	std::unordered_map<CURL *, std::shared_ptr<CHttpRequestCurl>> m_RunningRequests;
 	std::chrono::milliseconds m_ShutdownDelay{};
 	std::optional<std::chrono::time_point<std::chrono::steady_clock>> m_ShutdownTime;
@@ -98,8 +116,12 @@ private:
 
 	static void ThreadMain(void *pUser);
 	void RunLoop();
-	void CompleteRunningRequest(CURL *pHandle, CURLcode Code, std::unordered_map<std::string, size_t> &RunningRequestsPerHost);
-	void CancelAbortedRequests(std::unordered_map<std::string, size_t> &RunningRequestsPerHost);
+	size_t RunningForHost(std::string_view Host) const;
+	EPrepareResult PrepareRequest(const std::shared_ptr<CHttpRequestCurl> &pRequest);
+	bool ProcessPendingRequests();
+	void DrainRequests(bool Cleanup);
+	void CompleteRunningRequest(CURL *pHandle, CURLcode Code, bool Cleanup = true);
+	void CancelAbortedRequests();
 };
 
 #endif // !CONF_PLATFORM_EMSCRIPTEN

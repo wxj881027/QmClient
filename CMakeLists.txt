@@ -4896,6 +4896,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/http_response_buffer_test.cpp
     src/test/integration/engine/http_completion_test.cpp
     src/test/integration/engine/http_file_result_test.cpp
+    src/test/integration/engine/http_scheduler_test.cpp
     src/test/unit/engine/json_test.cpp
     src/test/unit/engine/jsonwriter_test.cpp
     src/test/unit/client/keyword_reply_rules_test.cpp
