@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <utility>
 
 IHttpRequest::IHttpRequest(const char *pUrl)
 {
@@ -148,28 +149,36 @@ void IHttpRequest::Wait()
 	});
 }
 
-void IHttpRequest::OnValidation(bool Success)
+void IHttpRequest::OnValidation(bool Success) noexcept
 {
 	dbg_assert(m_ValidateBeforeOverwrite, "this function is illegal to call without having set ValidateBeforeOverwrite");
 	m_ValidateBeforeOverwrite = false;
-	if(Success)
+	try
 	{
-		if(m_IfModifiedSince >= 0 && m_StatusCode == 304) // 304 Not Modified
+		if(Success)
 		{
-			(void)fs_remove(m_aDestAbsoluteTmp);
-			return;
+			if(m_IfModifiedSince >= 0 && m_StatusCode == 304) // 304 Not Modified
+			{
+				(void)RemoveResponseFile();
+				return;
+			}
+			if(RenameResponseFile(false))
+			{
+				m_State = EHttpState::ERROR;
+				RemoveResponseFileBestEffort();
+				log_error("http", "i/o error, cannot move file: %s", m_aDest);
+			}
 		}
-		if(fs_rename(m_aDestAbsoluteTmp, m_aDestAbsolute))
+		else
 		{
 			m_State = EHttpState::ERROR;
-			(void)fs_remove(m_aDestAbsoluteTmp);
-			log_error("http", "i/o error, cannot move file: %s", m_aDest);
+			RemoveResponseFileBestEffort();
 		}
 	}
-	else
+	catch(...)
 	{
 		m_State = EHttpState::ERROR;
-		(void)fs_remove(m_aDestAbsoluteTmp);
+		RemoveResponseFileBestEffort();
 	}
 }
 
@@ -360,6 +369,41 @@ void *IHttpRequest::ReallocateResponseBuffer(size_t Size) noexcept
 	return realloc(m_pBuffer, Size);
 }
 
+int IHttpRequest::CloseResponseFile(IOHANDLE File) noexcept
+{
+	return io_close(File);
+}
+
+int IHttpRequest::RenameResponseFile(bool AllowDestinationRemoval)
+{
+	return fs_rename(m_aDestAbsoluteTmp, m_aDestAbsolute, AllowDestinationRemoval);
+}
+
+int IHttpRequest::RemoveResponseFile()
+{
+	return fs_remove(m_aDestAbsoluteTmp);
+}
+
+bool IHttpRequest::ReadResponseFile(void **ppResult, unsigned *pLength)
+{
+	*ppResult = nullptr;
+	*pLength = 0;
+	const std::unique_ptr<void, decltype(&io_close)> File(io_open(m_aDestAbsolute, IOFLAG_READ), io_close);
+	return File && io_read_all(File.get(), ppResult, pLength);
+}
+
+void IHttpRequest::RemoveResponseFileBestEffort() noexcept
+{
+	try
+	{
+		(void)RemoveResponseFile();
+	}
+	catch(...)
+	{
+		// 候选文件可能残留，清理失败不能中断终态发布或逃出析构。
+	}
+}
+
 size_t IHttpRequest::OnData(const char *pData, size_t DataSize)
 {
 	if(m_ResponseFailed)
@@ -435,76 +479,94 @@ size_t IHttpRequest::OnData(const char *pData, size_t DataSize)
 
 void IHttpRequest::OnCompletionInternal(EHttpState State)
 {
-	// 后端完成成功也不能覆盖正文接收失败，文件候选仍走原错误回收路径。
-	if(State == EHttpState::DONE && (m_ResponseFailed || m_ProgressCallbackFailed))
-		State = EHttpState::ERROR;
-	if(State == EHttpState::DONE)
+	try
 	{
-		m_ActualSha256 = sha256_finish(&m_ActualSha256Ctx);
-		if(m_ExpectedSha256.has_value() && m_ActualSha256.value() != m_ExpectedSha256.value())
-		{
-			if(g_Config.m_DbgHttp || m_LogProgress >= HTTPLOG::FAILURE)
-			{
-				char aActualSha256[SHA256_MAXSTRSIZE];
-				sha256_str(m_ActualSha256.value(), aActualSha256, sizeof(aActualSha256));
-				char aExpectedSha256[SHA256_MAXSTRSIZE];
-				sha256_str(m_ExpectedSha256.value(), aExpectedSha256, sizeof(aExpectedSha256));
-				log_error("http", "SHA256 mismatch: got=%s, expected=%s, url=%s", aActualSha256, aExpectedSha256, m_aUrl);
-			}
+		// 后端完成成功也不能覆盖正文接收失败，文件候选仍走原错误回收路径。
+		if(State == EHttpState::DONE && (m_ResponseFailed || m_ProgressCallbackFailed))
 			State = EHttpState::ERROR;
+		if(State == EHttpState::DONE)
+		{
+			m_ActualSha256 = sha256_finish(&m_ActualSha256Ctx);
+			if(m_ExpectedSha256.has_value() && m_ActualSha256.value() != m_ExpectedSha256.value())
+			{
+				if(g_Config.m_DbgHttp || m_LogProgress >= HTTPLOG::FAILURE)
+				{
+					char aActualSha256[SHA256_MAXSTRSIZE];
+					sha256_str(m_ActualSha256.value(), aActualSha256, sizeof(aActualSha256));
+					char aExpectedSha256[SHA256_MAXSTRSIZE];
+					sha256_str(m_ExpectedSha256.value(), aExpectedSha256, sizeof(aExpectedSha256));
+					log_error("http", "SHA256 mismatch: got=%s, expected=%s, url=%s", aActualSha256, aExpectedSha256, m_aUrl);
+				}
+				State = EHttpState::ERROR;
+			}
+		}
+
+		if(m_WriteToFile)
+		{
+			// fclose 返回失败也已消费句柄；先解除成员，异常路径不能再次关闭。
+			IOHANDLE File = std::exchange(m_File, nullptr);
+			if(File && CloseResponseFile(File) != 0)
+			{
+				if(State != EHttpState::ABORTED)
+					State = EHttpState::ERROR;
+				log_error("http", "i/o error, cannot close file: %s", m_aDest);
+			}
+
+			if(State == EHttpState::ERROR || State == EHttpState::ABORTED)
+			{
+				RemoveResponseFileBestEffort();
+			}
+			else if(m_IfModifiedSince >= 0 && m_StatusCode == 304) // 304 Not Modified
+			{
+				(void)RemoveResponseFile();
+				if(m_WriteToMemory)
+				{
+					void *pBuffer = nullptr;
+					unsigned Length = 0;
+					bool Success;
+					try
+					{
+						Success = ReadResponseFile(&pBuffer, &Length);
+					}
+					catch(...)
+					{
+						free(pBuffer);
+						throw;
+					}
+					std::unique_ptr<void, decltype(&free)> Buffer(pBuffer, free);
+					if(Success)
+					{
+						free(m_pBuffer);
+						m_pBuffer = static_cast<unsigned char *>(Buffer.release());
+						m_ResponseLength = Length;
+						m_BufferSize = static_cast<size_t>(Length) + 1;
+					}
+					else
+					{
+						State = EHttpState::ERROR;
+						log_error("http", "i/o error, cannot read existing file: %s", m_aDest);
+					}
+				}
+			}
+			else if(!m_ValidateBeforeOverwrite)
+			{
+				if(RenameResponseFile(false))
+				{
+					State = EHttpState::ERROR;
+					RemoveResponseFileBestEffort();
+					log_error("http", "i/o error, cannot move file: %s", m_aDest);
+				}
+			}
 		}
 	}
-
-	if(m_WriteToFile)
+	catch(...)
 	{
-		if(m_File && io_close(m_File) != 0)
-		{
-			log_error("http", "i/o error, cannot close file: %s", m_aDest);
+		if(State != EHttpState::ABORTED)
 			State = EHttpState::ERROR;
-		}
-		m_File = nullptr;
-
-		if(State == EHttpState::ERROR || State == EHttpState::ABORTED)
-		{
-			(void)fs_remove(m_aDestAbsoluteTmp);
-		}
-		else if(m_IfModifiedSince >= 0 && m_StatusCode == 304) // 304 Not Modified
-		{
-			(void)fs_remove(m_aDestAbsoluteTmp);
-			if(m_WriteToMemory)
-			{
-				free(m_pBuffer);
-				m_pBuffer = nullptr;
-				m_ResponseLength = 0;
-				void *pBuffer;
-				unsigned Length;
-				IOHANDLE File = io_open(m_aDestAbsolute, IOFLAG_READ);
-				bool Success = File && io_read_all(File, &pBuffer, &Length);
-				if(File)
-				{
-					io_close(File);
-				}
-				if(Success)
-				{
-					m_pBuffer = (unsigned char *)pBuffer;
-					m_ResponseLength = Length;
-				}
-				else
-				{
-					log_error("http", "i/o error, cannot read existing file: %s", m_aDest);
-					State = EHttpState::ERROR;
-				}
-			}
-		}
-		else if(!m_ValidateBeforeOverwrite)
-		{
-			if(fs_rename(m_aDestAbsoluteTmp, m_aDestAbsolute))
-			{
-				log_error("http", "i/o error, cannot move file: %s", m_aDest);
-				State = EHttpState::ERROR;
-				(void)fs_remove(m_aDestAbsoluteTmp);
-			}
-		}
+		if(m_File)
+			(void)CloseResponseFile(std::exchange(m_File, nullptr));
+		if(m_WriteToFile)
+			RemoveResponseFileBestEffort();
 	}
 
 	PublishCompletion(State);

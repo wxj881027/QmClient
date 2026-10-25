@@ -160,7 +160,7 @@ public:
 	// If called with `true`, it'll place the downloaded file at the final
 	// destination, if called with `false`, it'll instead delete the
 	// temporary downloaded file.
-	void OnValidation(bool Success);
+	void OnValidation(bool Success) noexcept;
 
 	void Result(unsigned char **ppResult, size_t *pResultLength) const;
 	json_value *ResultJson() const;
@@ -261,6 +261,12 @@ protected:
 	bool BeforeInit();
 	// 扩容失败必须保留旧缓冲；成功返回的内存须兼容 free。
 	virtual void *ReallocateResponseBuffer(size_t Size) noexcept;
+	// 文件边界：关闭总是消费句柄，读取返回的非空缓冲由请求用 free 接管。
+	virtual int CloseResponseFile(IOHANDLE File) noexcept;
+	virtual int RenameResponseFile(bool AllowDestinationRemoval);
+	virtual int RemoveResponseFile();
+	virtual bool ReadResponseFile(void **ppResult, unsigned *pLength);
+	void RemoveResponseFileBestEffort() noexcept;
 
 	// Abort the request if `OnData()` returns something other than
 	// `DataSize`.
