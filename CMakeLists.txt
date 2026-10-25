@@ -5398,6 +5398,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/translate/translate_backend_test.cpp
     src/test/integration/qmclient/translate/translate_services_test.cpp
     src/test/integration/qmclient/translate/translate_local_test.cpp
+    src/test/integration/qmclient/translate/translate_probe_memory_test.cpp
     src/test/integration/qmclient/translate/translate_auto_backend_test.cpp
     src/test/support/translate_http_test_support.h
     src/test/unit/qmclient/translate/translate_detect_test.cpp
