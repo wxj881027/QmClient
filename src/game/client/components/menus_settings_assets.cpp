@@ -2897,28 +2897,6 @@ namespace
 		Asset.m_InstallPath = CanonicalInstallPath;
 	}
 
-	std::string NextReservedNamedSingleFileMigrationName(const SAssetResourceCategory &Category, std::string_view OldName, const std::vector<std::string> &vExistingNames)
-	{
-		const auto NameExists = [&Category, &vExistingNames](std::string_view Candidate) {
-			if(IsReservedNamedSingleFileAssetName(Category, Candidate))
-				return true;
-			return std::any_of(vExistingNames.begin(), vExistingNames.end(), [Candidate](const std::string &Name) {
-				return Name == Candidate;
-			});
-		};
-
-		std::string Candidate = std::string(OldName) + "_local";
-		if(!NameExists(Candidate))
-			return Candidate;
-
-		for(int Suffix = 2;; ++Suffix)
-		{
-			Candidate = std::string(OldName) + "_local_" + std::to_string(Suffix);
-			if(!NameExists(Candidate))
-				return Candidate;
-		}
-	}
-
 	void UpdateNamedSingleFileConfigSelectionAfterMigration(const SAssetResourceCategory &Category, const char *pOldName, const char *pNewName)
 	{
 		if(str_comp(Category.m_pId, "gui_cursor") == 0)

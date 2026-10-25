@@ -162,6 +162,28 @@ std::string NextLegacyAssetName(std::span<const std::string> ExistingNames)
 	}
 }
 
+std::string NextReservedNamedSingleFileMigrationName(const SAssetResourceCategory &Category, std::string_view OldName, std::span<const std::string> ExistingNames)
+{
+	const auto NameExists = [&Category, ExistingNames](std::string_view Candidate) {
+		if(IsReservedNamedSingleFileAssetName(Category, Candidate))
+			return true;
+		return std::any_of(ExistingNames.begin(), ExistingNames.end(), [Candidate](const std::string &Name) {
+			return Name == Candidate;
+		});
+	};
+
+	std::string Candidate = std::string(OldName) + "_local";
+	if(!NameExists(Candidate))
+		return Candidate;
+
+	for(int Suffix = 2;; ++Suffix)
+	{
+		Candidate = std::string(OldName) + "_local_" + std::to_string(Suffix);
+		if(!NameExists(Candidate))
+			return Candidate;
+	}
+}
+
 namespace
 {
 	// 内置虚拟条目的固定次序：default 最前，blank 其次，其余按名称排序。

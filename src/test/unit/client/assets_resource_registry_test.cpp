@@ -7,8 +7,6 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
-#include <fstream>
-#include <sstream>
 #include <unordered_map>
 
 namespace
@@ -36,6 +34,70 @@ TEST(AssetsResourceRegistry, IncludesAllApprovedCategories)
 	EXPECT_NE(FindAssetResourceCategory("strong_weak"), nullptr);
 	EXPECT_NE(FindAssetResourceCategory("entity_bg"), nullptr);
 	EXPECT_NE(FindAssetResourceCategory("extras"), nullptr);
+}
+
+TEST(AssetsResourceRegistry, LegacyImportUsesBareNameWhenAvailable)
+{
+	EXPECT_EQ(NextLegacyAssetName({}), "legacy");
+	const std::vector<std::string> Names{"other", "legacy_2"};
+	EXPECT_EQ(NextLegacyAssetName(Names), "legacy");
+}
+
+TEST(AssetsResourceRegistry, LegacyImportFindsFirstGapWithoutReorderingOrRemovingDuplicateNames)
+{
+	const std::vector<std::string> Names{"legacy_4", "legacy_2", "legacy", "legacy_2"};
+	const auto Before = Names;
+	EXPECT_EQ(NextLegacyAssetName(Names), "legacy_3");
+	EXPECT_EQ(Names, Before);
+}
+
+TEST(AssetsResourceRegistry, NoncanonicalSuffixesDoNotOccupyCanonicalLegacyCandidate)
+{
+	const std::vector<std::string> Names{"legacy", "legacy_02", "legacy_1", "legacy_-2", "legacy_2extra", "LEGACY_2"};
+	EXPECT_EQ(NextLegacyAssetName(Names), "legacy_2");
+}
+
+TEST(AssetsResourceRegistry, MigrationUsesLocalSuffixThenFirstAvailableNumber)
+{
+	const auto *pCategory = FindAssetResourceCategory("arrow");
+	ASSERT_NE(pCategory, nullptr);
+	EXPECT_EQ(NextReservedNamedSingleFileMigrationName(*pCategory, "arrow", {}), "arrow_local");
+	const std::vector<std::string> Names{"arrow_local_4", "arrow_local", "arrow_local_2"};
+	EXPECT_EQ(NextReservedNamedSingleFileMigrationName(*pCategory, "arrow", Names), "arrow_local_3");
+}
+
+TEST(AssetsResourceRegistry, MigrationExcludesCategoryReservedBareAndNumberedNames)
+{
+	const auto *pArrow = FindAssetResourceCategory("arrow");
+	ASSERT_NE(pArrow, nullptr);
+	SAssetResourceCategory Category = *pArrow;
+	Category.m_pId = "arrow_local";
+	EXPECT_EQ(NextReservedNamedSingleFileMigrationName(Category, "arrow", {}), "arrow_local_2");
+	Category.m_pId = "arrow_local_2";
+	const std::vector<std::string> Names{"arrow_local"};
+	EXPECT_EQ(NextReservedNamedSingleFileMigrationName(Category, "arrow", Names), "arrow_local_3");
+}
+
+TEST(AssetsResourceRegistry, MigrationKeepsExactCaseAndCanonicalNumberSpelling)
+{
+	const auto *pCategory = FindAssetResourceCategory("arrow");
+	ASSERT_NE(pCategory, nullptr);
+	const std::vector<std::string> Names{"arrow_local", "arrow_local_02", "ARROW_LOCAL_2"};
+	EXPECT_EQ(NextReservedNamedSingleFileMigrationName(*pCategory, "arrow", Names), "arrow_local_2");
+}
+
+TEST(AssetsResourceRegistry, ContiguousOccupiedNamesContinueBeyondSmallSuffixes)
+{
+	const auto *pCategory = FindAssetResourceCategory("arrow");
+	ASSERT_NE(pCategory, nullptr);
+	std::vector<std::string> Legacy{"legacy"}, Migration{"arrow_local"};
+	for(int Suffix = 2; Suffix <= 256; ++Suffix)
+	{
+		Legacy.push_back("legacy_" + std::to_string(Suffix));
+		Migration.push_back("arrow_local_" + std::to_string(Suffix));
+	}
+	EXPECT_EQ(NextLegacyAssetName(Legacy), "legacy_257");
+	EXPECT_EQ(NextReservedNamedSingleFileMigrationName(*pCategory, "arrow", Migration), "arrow_local_257");
 }
 
 TEST(AssetsResourceRegistry, LocalOnlyCategoriesExposeBadgeFlag)

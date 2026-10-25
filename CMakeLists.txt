@@ -5918,6 +5918,8 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
   # 对象库集合与 testrunner 一致，基准可覆盖 base/engine/game 各层代码
   add_executable(qm-benchmarks EXCLUDE_FROM_ALL
     src/test/benchmark/qm_skin_download_benchmark.cpp
+    src/test/benchmark/qm_asset_names_benchmark.cpp
+    src/game/client/components/assets_resource_registry.cpp
     src/test/benchmark/qm_startup_info_benchmark.cpp
     src/test/benchmark/qm_benchmark_main.cpp
     src/test/benchmark/qm_online_replay_benchmark.cpp
