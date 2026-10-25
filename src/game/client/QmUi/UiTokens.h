@@ -195,6 +195,14 @@ namespace ui_token::secondary_panel
 	inline constexpr float UPDATE_ACTION_LINE_FACTOR = 2.4f;
 } // namespace ui_token::secondary_panel
 
+namespace ui_token::confirm_dialog
+{
+	inline constexpr float MIN_WIDTH = 300.0f;
+	inline constexpr float MAX_WIDTH = 380.0f;
+	inline constexpr float TITLE_HEIGHT = 24.0f;
+	inline constexpr float BUTTON_HEIGHT = 28.0f;
+} // namespace ui_token::confirm_dialog
+
 namespace ui_token::elevation
 {
 	inline constexpr float SHADOW_X_LOW = 1.0f;

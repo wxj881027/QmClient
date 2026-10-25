@@ -1433,6 +1433,8 @@ public:
 		char m_aPositiveButtonLabel[128];
 		char m_aNegativeButtonLabel[128];
 		char m_aMessage[1024];
+		// 非空标题启用标准确认面板；未指定标题的调用点保留原有紧凑布局。
+		char m_aTitle[128] = {};
 		EConfirmationResult m_Result;
 		ETone m_Tone = ETone::NEUTRAL;
 
