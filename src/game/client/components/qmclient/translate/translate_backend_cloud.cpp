@@ -7,6 +7,7 @@
 #include <engine/shared/config.h>
 #include <engine/shared/json.h>
 
+#include <memory>
 #include <string>
 
 namespace
@@ -58,10 +59,8 @@ namespace
 	{
 		bool ParseResponse(CTranslateResponse &Out) override
 		{
-			json_value *pJson = m_pHttpRequest->ResultJson();
-			const bool Success = ParseResponseJson(pJson, Out);
-			json_value_free(pJson);
-			return Success;
+			const std::unique_ptr<json_value, decltype(&json_value_free)> pJson(m_pHttpRequest->ResultJson(), json_value_free);
+			return ParseResponseJson(pJson.get(), Out);
 		}
 		bool ParseHttpError() const override { return true; }
 
@@ -72,8 +71,13 @@ namespace
 			const json_value *pError = json_object_get(pJson, "error_code");
 			if(pError != &json_value_none)
 			{
-				const int Code = pError->type == json_string ? str_toint(pError->u.string.ptr) : pError->type == json_integer ? static_cast<int>(pError->u.integer) :
-																		-1;
+				int Code = 0;
+				if((pError->type != json_integer && pError->type != json_string) || !TryParseTranslateServiceCode(pError, Code))
+				{
+					Out.m_Notice = ETranslateNotice::INVALID_RESPONSE;
+					str_copy(Out.m_Text, "Invalid Baidu translation error code");
+					return false;
+				}
 				if(Code != 52000)
 				{
 					Out.m_Notice = BaiduErrorNotice(Code);
@@ -85,23 +89,28 @@ namespace
 			if(pResults->type != json_array || pResults->u.array.length == 0)
 				return false;
 			// 先校验全部段落，禁止把已成功的前半段发布为完整译文。
-			std::string Text;
+			char aText[sizeof(Out.m_Text)];
+			size_t Length = 0;
 			for(unsigned int i = 0; i < pResults->u.array.length; ++i)
 			{
 				const json_value *pItem = pResults->u.array.values[i];
 				CTranslateResponse Segment;
 				if(pItem->type != json_object || !CopyTranslateText(json_object_get(pItem, "dst"), Segment))
 					return false;
-				if(i > 0)
-					Text += '\n';
-				Text += Segment.m_Text;
-				if(Text.size() >= sizeof(Out.m_Text))
+				const size_t SegmentLength = str_length(Segment.m_Text);
+				const size_t Separator = i > 0 ? 1 : 0;
+				if(SegmentLength + Separator >= sizeof(aText) - Length)
 					return false;
+				if(Separator)
+					aText[Length++] = '\n';
+				mem_copy(aText + Length, Segment.m_Text, SegmentLength);
+				Length += SegmentLength;
 			}
 			const json_value *pSource = json_object_get(pJson, "from");
 			if(pSource->type == json_string)
 				str_copy(Out.m_Language, DecodeBaiduLanguage(pSource->u.string.ptr));
-			str_copy(Out.m_Text, Text.c_str());
+			aText[Length] = '\0';
+			str_copy(Out.m_Text, aText);
 			return true;
 		}
 

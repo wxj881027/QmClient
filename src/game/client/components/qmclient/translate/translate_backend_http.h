@@ -29,6 +29,8 @@ public:
 
 std::string EncodeTranslateUrl(std::string_view Text);
 bool CopyTranslateText(const json_value *pText, CTranslateResponse &Out);
+// 仅接受完整、可表示的整数码；失败不修改输出，服务方另行约束允许的JSON类型。
+bool TryParseTranslateServiceCode(const json_value *pValue, int &Out);
 std::string BuildBaiduTranslateForm(const char *pText, const char *pSource, const char *pTarget, const char *pAppId, const char *pKey, const char *pSalt);
 std::unique_ptr<ITranslateBackend> CreateBaiduTranslateBackend(IHttp &Http, const char *pText, const char *pTarget, const char *pSource, FTranslateRequestFactory pCreateRequest);
 

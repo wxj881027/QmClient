@@ -4,6 +4,41 @@
 
 #include <engine/shared/json.h>
 
+#include <charconv>
+#include <cmath>
+#include <limits>
+
+bool TryParseTranslateServiceCode(const json_value *pValue, int &Out)
+{
+	if(!pValue)
+		return false;
+	int Code = 0;
+	if(pValue->type == json_integer)
+	{
+		if(pValue->u.integer < std::numeric_limits<int>::min() || pValue->u.integer > std::numeric_limits<int>::max())
+			return false;
+		Code = static_cast<int>(pValue->u.integer);
+	}
+	else if(pValue->type == json_double)
+	{
+		const double Value = pValue->u.dbl;
+		if(!std::isfinite(Value) || Value < std::numeric_limits<int>::min() || Value > std::numeric_limits<int>::max() || std::trunc(Value) != Value)
+			return false;
+		Code = static_cast<int>(Value);
+	}
+	else if(pValue->type == json_string)
+	{
+		const char *pEnd = pValue->u.string.ptr + pValue->u.string.length;
+		const auto Result = std::from_chars(pValue->u.string.ptr, pEnd, Code);
+		if(Result.ec != std::errc{} || Result.ptr != pEnd)
+			return false;
+	}
+	else
+		return false;
+	Out = Code;
+	return true;
+}
+
 ITranslateBackendHttp::ITranslateBackendHttp(FTranslateRequestFactory pCreateRequest) : m_pCreateRequest(pCreateRequest) {}
 
 void ITranslateBackendHttp::SetInitError(const char *pError, ETranslateNotice Notice)

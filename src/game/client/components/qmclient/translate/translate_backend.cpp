@@ -56,7 +56,9 @@ namespace
 			return ETranslateNotice::QUOTA_EXCEEDED;
 		if(!Zhipu)
 			return ETranslateNotice::NONE;
-		const int Code = pCode->type == json_integer ? static_cast<int>(pCode->u.integer) : str_toint(pErrorCode);
+		int Code = 0;
+		if((pCode->type != json_integer && pCode->type != json_string) || !TryParseTranslateServiceCode(pCode, Code))
+			return ETranslateNotice::NONE;
 		switch(Code)
 		{
 		case 1000:
@@ -847,10 +849,11 @@ private:
 		const json_value *pStatus = json_object_get(pObj, "responseStatus");
 		if(pStatus != &json_value_none)
 		{
-			if(pStatus->type == json_integer)
-				Status = (int)pStatus->u.integer;
-			else if(pStatus->type == json_double)
-				Status = (int)pStatus->u.dbl;
+			if((pStatus->type != json_integer && pStatus->type != json_double) || !TryParseTranslateServiceCode(pStatus, Status))
+			{
+				str_copy(Out.m_Text, "Invalid MyMemory response status");
+				return false;
+			}
 		}
 
 		const json_value *pData = json_object_get(pObj, "responseData");
