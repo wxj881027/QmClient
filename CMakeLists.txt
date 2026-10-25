@@ -3696,6 +3696,7 @@ if(CLIENT)
     components/qmclient/skin_prepared_visuals.h
     components/qmclient/snapshot_entities.h
     components/qmclient/spectator_selector_layout.h
+    components/qmclient/spectator_selection.h
     components/qmclient/shortcut_held_bind.h
     components/qmclient/spectator_tele_search.h
     components/qmclient/stutter_capture.cpp
@@ -4745,6 +4746,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_particle_position_test.cpp
     src/test/integration/client/item_render_inputs_test.cpp
     src/test/integration/client/camera_zoom_inputs_test.cpp
+    src/test/unit/qmclient/client/qm_spectator_selection_test.cpp
+    src/test/integration/client/spectator_selection_inputs_test.cpp
     src/test/unit/qmclient/client/qm_gores_drown_tracker_test.cpp
     src/test/unit/qmclient/client/qm_trail_geometry_test.cpp
     src/test/integration/qmclient/client/qm_map_upload_lifecycle_test.cpp

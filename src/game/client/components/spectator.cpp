@@ -16,6 +16,7 @@
 #include <game/client/animstate.h>
 #include <game/client/components/qmclient/friend_heart_icon.h>
 #include <game/client/components/qmclient/spectator_friend_priority.h>
+#include <game/client/components/qmclient/spectator_selection.h>
 #include <game/client/components/qmclient/spectator_selector_layout.h>
 #include <game/client/components/qmclient/spectator_tele_search.h>
 #include <game/client/gameclient.h>
@@ -24,7 +25,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <limits>
 
 namespace
 {
@@ -866,7 +866,7 @@ void CSpectator::OnRender()
 					if(GameClient()->m_MultiViewTeam == DDTeam)
 					{
 						GameClient()->m_aMultiViewId[m_SelectedSpectatorId] = !GameClient()->m_aMultiViewId[m_SelectedSpectatorId];
-						if(!GameClient()->m_aMultiViewId[GameClient()->m_Snap.m_SpecInfo.m_SpectatorId])
+						if(QmSpectatorSelection::NeedsRetarget(GameClient()->m_aMultiViewId, GameClient()->m_Snap.m_SpecInfo.m_SpectatorId))
 						{
 							int NewClientId = GameClient()->FindFirstMultiViewId();
 							if(NewClientId < MAX_CLIENTS && NewClientId >= 0)
@@ -1224,22 +1224,16 @@ void CSpectator::SpectateClosest()
 {
 	if(GameClient()->m_RankGhost.IsViewModeActive())
 	{
-		int Closest = -1;
-		float ClosestDistance = std::numeric_limits<float>::max();
+		QmSpectatorSelection::CClosest Closest(GameClient()->m_Camera.m_Center);
 		for(int Index = 0; Index < GameClient()->m_RankGhost.ViewMemberCount(); ++Index)
 		{
 			vec2 Position;
 			if((GameClient()->m_RankGhost.ViewCameraMode() == CRankGhost::EViewCameraMode::MEMBER && Index == GameClient()->m_RankGhost.ViewSelectedMember()) || !GameClient()->m_RankGhost.ViewMemberPosition(Index, &Position))
 				continue;
-			const float Distance = distance(GameClient()->m_Camera.m_Center, Position);
-			if(Distance < ClosestDistance)
-			{
-				Closest = Index;
-				ClosestDistance = Distance;
-			}
+			Closest.Consider(Index, Position);
 		}
-		if(Closest >= 0)
-			Spectate(Closest);
+		if(Closest.SelectedId() >= 0)
+			Spectate(Closest.SelectedId());
 		return;
 	}
 	if(!CanChangeSpectatorId())
@@ -1248,8 +1242,6 @@ void CSpectator::SpectateClosest()
 	const CGameClient::CSnapState &Snap = GameClient()->m_Snap;
 	int SpectatorId = Snap.m_SpecInfo.m_SpectatorId;
 
-	int NewSpectatorId = -1;
-
 	vec2 CurPosition = GameClient()->m_Camera.m_Center;
 	if(SpectatorId != SPEC_FREEVIEW)
 	{
@@ -1257,7 +1249,7 @@ void CSpectator::SpectateClosest()
 		CurPosition = vec2(CurCharacter.m_X, CurCharacter.m_Y);
 	}
 
-	int ClosestDistance = std::numeric_limits<int>::max();
+	QmSpectatorSelection::CClosest Closest(CurPosition);
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
 	{
 		if(ClientId == SpectatorId || !Snap.m_aCharacters[ClientId].m_Active || !Snap.m_apPlayerInfos[ClientId] || Snap.m_apPlayerInfos[ClientId]->m_Team == TEAM_SPECTATORS)
@@ -1267,13 +1259,8 @@ void CSpectator::SpectateClosest()
 			continue;
 
 		const CNetObj_Character &MaybeClosestCharacter = Snap.m_aCharacters[ClientId].m_Cur;
-		int Distance = distance(CurPosition, vec2(MaybeClosestCharacter.m_X, MaybeClosestCharacter.m_Y));
-		if(NewSpectatorId == -1 || Distance < ClosestDistance)
-		{
-			NewSpectatorId = ClientId;
-			ClosestDistance = Distance;
-		}
+		Closest.Consider(ClientId, vec2(MaybeClosestCharacter.m_X, MaybeClosestCharacter.m_Y));
 	}
-	if(NewSpectatorId > -1)
-		Spectate(NewSpectatorId);
+	if(Closest.SelectedId() >= 0)
+		Spectate(Closest.SelectedId());
 }

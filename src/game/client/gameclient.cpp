@@ -39,6 +39,7 @@
 #include "components/qmclient/predicted_event_queue.h"
 #include "components/qmclient/qmclient_utils.h"
 #include "components/qmclient/screenshot_manager.h"
+#include "components/qmclient/spectator_selection.h"
 #include "components/qmclient/streamer_word_filter.h"
 #include "components/qmclient/translate/translate_ui_settings.h"
 #include "components/race_demo.h"
@@ -8880,8 +8881,6 @@ bool CGameClient::InitMultiView(int Team)
 	if(IsMultiViewIdSet())
 	{
 		int SpectatorId = m_Snap.m_SpecInfo.m_SpectatorId;
-		int NewSpectatorId = -1;
-
 		vec2 CurPosition(m_Camera.m_Center);
 		if(SpectatorId != SPEC_FREEVIEW)
 		{
@@ -8890,7 +8889,7 @@ bool CGameClient::InitMultiView(int Team)
 			CurPosition.y = CurCharacter.m_Y;
 		}
 
-		int ClosestDistance = std::numeric_limits<int>::max();
+		QmSpectatorSelection::CClosest Closest(CurPosition);
 		for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
 		{
 			if(!m_Snap.m_apPlayerInfos[ClientId] || m_Snap.m_apPlayerInfos[ClientId]->m_Team == TEAM_SPECTATORS || m_Teams.Team(ClientId) != m_MultiViewTeam)
@@ -8904,16 +8903,11 @@ bool CGameClient::InitMultiView(int Team)
 			else
 				continue;
 
-			int Distance = distance(CurPosition, PlayerPos);
-			if(NewSpectatorId == -1 || Distance < ClosestDistance)
-			{
-				NewSpectatorId = ClientId;
-				ClosestDistance = Distance;
-			}
+			Closest.Consider(ClientId, PlayerPos);
 		}
 
-		if(NewSpectatorId > -1)
-			m_Spectator.Spectate(NewSpectatorId);
+		if(Closest.SelectedId() >= 0)
+			m_Spectator.Spectate(Closest.SelectedId());
 	}
 
 	return IsMultiViewIdSet();
