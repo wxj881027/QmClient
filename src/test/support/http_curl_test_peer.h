@@ -34,6 +34,10 @@ public:
 	{
 		return CHttpRequestCurl::WriteCallback(pData, Size, Number, &Request);
 	}
+	static int Progress(CHttpRequestCurl &Request, double Total, double Current)
+	{
+		return CHttpRequestCurl::ProgressCallback(&Request, Total, Current, 0, 0);
+	}
 	static void Complete(CHttpRequestCurl &Request, CURL *pHandle = nullptr, CURLcode Code = CURLE_OK)
 	{
 		Request.m_aErr[0] = '\0';

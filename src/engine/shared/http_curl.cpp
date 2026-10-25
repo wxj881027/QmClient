@@ -516,7 +516,7 @@ void CHttpRequestCurl::OnCompletionInternal(CURL *pHandle, CURLcode Code)
 	const bool SampleComplete = Code == CURLE_WRITE_ERROR && m_ResponseSampleComplete && !IsAbortRequested() && m_StatusCode == 200;
 	if(Code != CURLE_OK && !SampleComplete)
 	{
-		State = (Code == CURLE_ABORTED_BY_CALLBACK) ? EHttpState::ABORTED : EHttpState::ERROR;
+		State = Code == CURLE_ABORTED_BY_CALLBACK && (IsAbortRequested() || !m_ProgressCallbackFailed) ? EHttpState::ABORTED : EHttpState::ERROR;
 		const bool IsShutdownAbort = State == EHttpState::ABORTED && str_comp(m_aErr, "Shutting down") == 0;
 		if(!IsShutdownAbort && (g_Config.m_DbgHttp || (m_LogProgress >= HTTPLOG::FAILURE && HttpShouldLogFailure(State, m_AbortTriggeredByProgressCallback.load()))))
 		{
@@ -571,10 +571,8 @@ int CHttpRequestCurl::ProgressCallback(void *pUser, double DlTotal, double DlCur
 	pTask->m_Current.store(DlCurr, std::memory_order_relaxed);
 	pTask->m_Size.store(DlTotal, std::memory_order_relaxed);
 	pTask->m_Progress.store(DlTotal == 0.0 ? 0 : (100 * DlCurr) / DlTotal, std::memory_order_relaxed);
-	if(pTask->m_pProgressCallback != nullptr)
-	{
-		pTask->m_pProgressCallback->OnProgress();
-	}
+	if(!pTask->PublishProgress())
+		return -1;
 	if(pTask->m_Abort)
 	{
 		pTask->m_AbortTriggeredByProgressCallback = true;
@@ -805,15 +803,7 @@ void CHttpCurl::RunLoop()
 
 			if(pRequest->ShouldSkipRequest())
 			{
-				if(pRequest->m_pProgressCallback != nullptr)
-				{
-					pRequest->m_pProgressCallback->OnCompletion(EHttpState::DONE);
-				}
-				{
-					std::unique_lock WaitLock(pRequest->m_WaitMutex);
-					pRequest->m_State = EHttpState::DONE;
-				}
-				pRequest->m_WaitCondition.notify_all();
+				pRequest->PublishCompletion(EHttpState::DONE);
 				NewRequests.pop_front();
 				continue;
 			}

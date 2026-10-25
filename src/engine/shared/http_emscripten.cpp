@@ -37,19 +37,14 @@ void CHttpRequestEmscripten::Header(const char *pNameColonValue)
 
 void CHttpRequestEmscripten::Abort()
 {
-	if(m_Abort)
+	if(m_Abort.exchange(true))
 	{
 		return;
 	}
 
-	IHttpRequest::Abort();
-
-	if(m_pFetch == nullptr)
-	{
-		return;
-	}
-
-	m_pHttp->AddPendingStateChange(m_pFetch, EHttpState::ABORTED);
+	// 主线程不读取由 SDK 线程拥有的 fetch 指针。
+	if(auto *pHttp = m_pHttp.load(); pHttp && !Done())
+		pHttp->AddPendingStateChange(*this, EHttpState::ABORTED);
 }
 
 EM_JS(void, FormatTimestampJsImpl, (char *pBuf, size_t Size, time_t Timestamp), {
@@ -114,39 +109,45 @@ bool CHttpRequestEmscripten::ConfigureAndRun()
 	return m_pFetch != nullptr;
 }
 
-void CHttpRequestEmscripten::OnSuccess()
+void CHttpRequestEmscripten::OnSuccess(emscripten_fetch_t *pFetch)
 {
-	dbg_assert(!m_CallbackFinished, "OnSuccess was called multiple times");
-	dbg_assert(m_pFetch != nullptr, "OnSuccess was called with an unset fetch handle");
+	if(m_CallbackFinished)
+		return;
+	m_pFetch = pFetch;
 	m_CallbackFinished = true;
 
 	const uint64_t BodySize = m_pFetch->numBytes;
 	const bool Accepted = BodySize <= std::numeric_limits<size_t>::max() &&
 			      (OnData(m_pFetch->data, static_cast<size_t>(BodySize)) == BodySize || m_ResponseSampleComplete);
 	// 正文超限、不可表示或分配失败时不能发布成功；有界采样主动截断仍成功。
-	m_pHttp->AddPendingStateChange(m_pFetch, Accepted ? EHttpState::DONE : EHttpState::ERROR);
+	m_pHttp.load()->AddPendingStateChange(*this, Accepted ? EHttpState::DONE : EHttpState::ERROR);
 }
 
-void CHttpRequestEmscripten::OnFailure()
+void CHttpRequestEmscripten::OnFailure(emscripten_fetch_t *pFetch)
 {
-	if(m_CallbackFinished || m_pFetch == nullptr)
+	if(m_CallbackFinished)
 	{
 		// Failure callback may be called several times after the fetch handle has already been closed.
 		return;
 	}
+	m_pFetch = pFetch;
 	m_CallbackFinished = true;
 
-	m_pHttp->AddPendingStateChange(m_pFetch, !m_FailOnErrorStatus && m_pFetch->status >= 400 ? EHttpState::DONE : EHttpState::ERROR);
+	m_pHttp.load()->AddPendingStateChange(*this, !m_FailOnErrorStatus && pFetch->status >= 400 ? EHttpState::DONE : EHttpState::ERROR);
 }
 
-void CHttpRequestEmscripten::OnProgress()
+void CHttpRequestEmscripten::OnProgress(emscripten_fetch_t *pFetch)
 {
-	m_Current.store(m_pFetch->dataOffset, std::memory_order_relaxed);
-	m_Size.store(m_pFetch->totalBytes, std::memory_order_relaxed);
-	m_Progress.store(m_pFetch->totalBytes == 0 ? 0 : (100 * m_pFetch->dataOffset) / m_pFetch->totalBytes, std::memory_order_relaxed);
-	if(m_pProgressCallback != nullptr)
+	if(m_CallbackFinished)
+		return;
+	m_pFetch = pFetch;
+	m_Current.store(pFetch->dataOffset, std::memory_order_relaxed);
+	m_Size.store(pFetch->totalBytes, std::memory_order_relaxed);
+	m_Progress.store(pFetch->totalBytes == 0 ? 0 : (100 * pFetch->dataOffset) / pFetch->totalBytes, std::memory_order_relaxed);
+	if(!PublishProgress())
 	{
-		m_pProgressCallback->OnProgress();
+		m_CallbackFinished = true;
+		m_pHttp.load()->AddPendingStateChange(*this, EHttpState::ERROR);
 	}
 }
 
@@ -181,6 +182,9 @@ void CHttpRequestEmscripten::OnHeader(const char *pName, const char *pValue)
 
 void CHttpRequestEmscripten::OnCompletionInternal(EHttpState State, const char *pErrorDetail)
 {
+	m_CallbackFinished = true;
+	if(IsAbortRequested())
+		State = EHttpState::ABORTED;
 	if(m_pFetch != nullptr)
 	{
 		const size_t HeadersLength = emscripten_fetch_get_response_headers_length(m_pFetch);
@@ -226,17 +230,17 @@ void CHttpRequestEmscripten::OnCompletionInternal(EHttpState State, const char *
 
 void CHttpRequestEmscripten::FetchCallbackSuccess(emscripten_fetch_t *pFetch)
 {
-	static_cast<CHttpRequestEmscripten *>(pFetch->userData)->OnSuccess();
+	static_cast<CHttpRequestEmscripten *>(pFetch->userData)->OnSuccess(pFetch);
 }
 
 void CHttpRequestEmscripten::FetchCallbackFailure(emscripten_fetch_t *pFetch)
 {
-	static_cast<CHttpRequestEmscripten *>(pFetch->userData)->OnFailure();
+	static_cast<CHttpRequestEmscripten *>(pFetch->userData)->OnFailure(pFetch);
 }
 
 void CHttpRequestEmscripten::FetchCallbackProgress(emscripten_fetch_t *pFetch)
 {
-	static_cast<CHttpRequestEmscripten *>(pFetch->userData)->OnProgress();
+	static_cast<CHttpRequestEmscripten *>(pFetch->userData)->OnProgress(pFetch);
 }
 
 std::unique_ptr<IHttpRequest> CreateHttpRequest(const char *pUrl)
@@ -290,18 +294,33 @@ CHttpEmscripten::~CHttpEmscripten()
 
 void CHttpEmscripten::Run(std::shared_ptr<IHttpRequest> pRequest)
 {
+	auto pRequestImpl = std::static_pointer_cast<CHttpRequestEmscripten>(pRequest);
+	bool ShuttingDown;
+	bool QueueFailed = false;
 	{
 		std::unique_lock Lock(m_Lock);
 		m_ConditionVariableInit.wait(Lock, [this]() { return m_Initialized || m_Shutdown; });
-		std::shared_ptr<CHttpRequestEmscripten> pRequestImpl = std::static_pointer_cast<CHttpRequestEmscripten>(pRequest);
-		pRequestImpl->m_pHttp = this;
-		if(m_Shutdown)
-		{
-			pRequestImpl->OnCompletionInternal(EHttpState::ABORTED, "Shutting down");
+		if(pRequestImpl->m_Submitted)
 			return;
+		pRequestImpl->m_Submitted = true;
+		pRequestImpl->m_pHttp = this;
+		ShuttingDown = m_Shutdown;
+		if(!ShuttingDown)
+		{
+			try
+			{
+				m_PendingRequests.emplace_back(pRequestImpl);
+			}
+			catch(...)
+			{
+				QueueFailed = true;
+			}
 		}
-		m_PendingRequests.emplace_back(pRequestImpl);
 	}
+	// 完成消费者可以重新提交别的请求，不能在持有队列锁时调用。
+	if(ShuttingDown || QueueFailed)
+		pRequestImpl->OnCompletionInternal(ShuttingDown ? EHttpState::ABORTED : EHttpState::ERROR,
+			ShuttingDown ? "Shutting down" : "Failed to queue request");
 	m_ConditionVariableLoop.notify_all();
 }
 
@@ -357,12 +376,9 @@ void CHttpEmscripten::RunLoop()
 					{
 						for(auto &[_, pRequest] : m_RunningRequests)
 						{
-							auto [ExistingElement, Inserted] = m_PendingFetchChanges.emplace(pRequest->m_pFetch, EHttpState::ABORTED);
-							if(!Inserted)
-							{
-								ExistingElement->second = EHttpState::ABORTED;
-							}
+							pRequest->m_Completion.Publish(EHttpState::ABORTED);
 						}
+						m_HasPendingStateChanges = true;
 						m_StartedShutdown = true;
 						m_ShutdownTime = Now + m_ShutdownDelay;
 					}
@@ -371,76 +387,60 @@ void CHttpEmscripten::RunLoop()
 		}
 
 		decltype(m_PendingRequests) PendingRequests = {};
-		decltype(m_PendingFetchChanges) PendingFetchChanges = {};
 		{
 			std::unique_lock Lock(m_Lock);
 			std::swap(m_PendingRequests, PendingRequests);
-			std::swap(m_PendingFetchChanges, PendingFetchChanges);
+			m_HasPendingStateChanges = false;
 		}
 
-		while(!PendingRequests.empty())
+		for(const auto &pRequest : PendingRequests)
 		{
-			auto &pRequest = PendingRequests.front();
-			if(g_Config.m_DbgHttp)
+			try
 			{
-				log_debug("http", "task: %s %s", CHttpRequestEmscripten::GetRequestType(pRequest->m_Type), pRequest->m_aUrl);
-			}
-
-			if(pRequest->ShouldSkipRequest())
-			{
-				if(pRequest->m_pProgressCallback != nullptr)
+				if(g_Config.m_DbgHttp)
 				{
-					pRequest->m_pProgressCallback->OnCompletion(EHttpState::DONE);
+					log_debug("http", "task: %s %s", CHttpRequestEmscripten::GetRequestType(pRequest->m_Type), pRequest->m_aUrl);
 				}
+				if(pRequest->ShouldSkipRequest())
 				{
-					std::unique_lock WaitLock(pRequest->m_WaitMutex);
-					pRequest->m_State = EHttpState::DONE;
+					pRequest->PublishCompletion(EHttpState::DONE);
+					continue;
 				}
-				pRequest->m_WaitCondition.notify_all();
-				PendingRequests.pop_front();
-				continue;
+				if(m_StartedShutdown || pRequest->IsAbortRequested())
+				{
+					pRequest->OnCompletionInternal(EHttpState::ABORTED, m_StartedShutdown ? "Shutting down" : "Request aborted");
+					continue;
+				}
+				// 先登记稳定的请求身份，再创建 SDK 句柄；同步回调也已经有 owner。
+				const auto [_, Inserted] = m_RunningRequests.emplace(pRequest.get(), pRequest);
+				if(!Inserted)
+					continue;
+				if(!pRequest->ConfigureAndRun())
+				{
+					pRequest->OnCompletionInternal(EHttpState::ABORTED, "Failed to initialize request");
+					m_RunningRequests.erase(pRequest.get());
+				}
 			}
-
-			if(m_StartedShutdown || pRequest->IsAbortRequested())
+			catch(...)
 			{
-				pRequest->OnCompletionInternal(EHttpState::ABORTED, m_StartedShutdown ? "Shutting down" : "Request aborted");
-				PendingRequests.pop_front();
-				continue;
+				pRequest->OnCompletionInternal(EHttpState::ERROR, "Failed to prepare request");
+				m_RunningRequests.erase(pRequest.get());
 			}
-
-			if(!pRequest->ConfigureAndRun())
-			{
-				pRequest->OnCompletionInternal(EHttpState::ABORTED, "Failed to initialize request");
-				PendingRequests.pop_front();
-				continue;
-			}
-
-			{
-				emscripten_fetch_t *pFetch = pRequest->m_pFetch;
-				auto [_, Inserted] = m_RunningRequests.emplace(pFetch, std::move(pRequest));
-				dbg_assert(Inserted, "Request with same fetch handle already running");
-			}
-			PendingRequests.pop_front();
 		}
 
-		for(const auto &[pFetch, NewState] : PendingFetchChanges)
+		for(auto It = m_RunningRequests.begin(); It != m_RunningRequests.end();)
 		{
-			auto pRequest = m_RunningRequests.find(pFetch);
-			if(pRequest == m_RunningRequests.end())
+			const auto NewState = It->second->m_Completion.State();
+			if(NewState == EHttpState::QUEUED)
 			{
-				// Requests can be aborted even if they are not in m_RunningRequests anymore.
-				// We only hold the lock to swap the pending fetch changes above, so another
-				// pending state change to abort a request can be added while the HTTP thread
-				// is removing the running request in the branch below.
-				dbg_assert(NewState == EHttpState::ABORTED, "Request for pending fetch state change not found");
+				++It;
 			}
 			else
 			{
-				pRequest->second->OnCompletionInternal(NewState, nullptr);
-				m_RunningRequests.erase(pRequest);
+				It->second->OnCompletionInternal(NewState, nullptr);
+				It = m_RunningRequests.erase(It);
 			}
 		}
-		PendingFetchChanges.clear();
 
 		// Return control to the browser so the created fetch handles are serviced.
 		// This will cause the success, failure and progress callbacks to be called.
@@ -449,7 +449,7 @@ void CHttpEmscripten::RunLoop()
 		// Wait a bit for state changes, but also wake up periodically because we
 		// need to call emscripten_sleep to service the handles.
 		std::unique_lock Lock(m_Lock);
-		const auto &&WaitPredicate = [this]() { return m_Shutdown || !m_PendingRequests.empty() || !m_PendingFetchChanges.empty(); };
+		const auto &&WaitPredicate = [this]() { return m_Shutdown || !m_PendingRequests.empty() || m_HasPendingStateChanges; };
 		const auto WaitTime = std::chrono::milliseconds(100);
 		const auto Now = std::chrono::steady_clock::now();
 		if(m_ShutdownTime.has_value() && m_ShutdownTime.value() - Now < WaitTime)
@@ -462,12 +462,16 @@ void CHttpEmscripten::RunLoop()
 		}
 	}
 
-	std::unique_lock Lock(m_Lock);
-	for(auto &pRequest : m_PendingRequests)
+	decltype(m_PendingRequests) PendingRequests;
+	{
+		std::unique_lock Lock(m_Lock);
+		PendingRequests.swap(m_PendingRequests);
+	}
+	for(auto &pRequest : PendingRequests)
 	{
 		pRequest->OnCompletionInternal(EHttpState::ABORTED, "Shutting down");
 	}
-	m_PendingRequests.clear();
+	PendingRequests.clear();
 
 	for(auto &[_, pRequest] : m_RunningRequests)
 	{
@@ -476,15 +480,12 @@ void CHttpEmscripten::RunLoop()
 	m_RunningRequests.clear();
 }
 
-void CHttpEmscripten::AddPendingStateChange(emscripten_fetch_t *pFetch, EHttpState State)
+void CHttpEmscripten::AddPendingStateChange(CHttpRequestEmscripten &Request, EHttpState State)
 {
+	Request.m_Completion.Publish(State);
 	{
 		std::unique_lock Lock(m_Lock);
-		auto [ExistingElement, Inserted] = m_PendingFetchChanges.emplace(pFetch, State);
-		if(!Inserted && ExistingElement->second != EHttpState::ABORTED)
-		{
-			ExistingElement->second = State;
-		}
+		m_HasPendingStateChanges = true;
 	}
 	m_ConditionVariableLoop.notify_all();
 }

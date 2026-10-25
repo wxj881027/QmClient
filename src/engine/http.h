@@ -221,6 +221,7 @@ protected:
 	SHA256_CTX m_ActualSha256Ctx;
 	uint64_t m_ResponseLength = 0;
 	bool m_ResponseFailed = false;
+	bool m_ProgressCallbackFailed = false;
 	int m_StatusCode = 0;
 	std::optional<int64_t> m_ResultAge = std::nullopt;
 	std::optional<std::chrono::nanoseconds> m_ResultHeadersReceivedAt;
@@ -265,6 +266,9 @@ protected:
 	// `DataSize`.
 	size_t OnData(const char *pData, size_t DataSize);
 	void OnCompletionInternal(EHttpState State);
+	// 回调失败也必须发布终态并唤醒等待者，不重复执行已部分完成的消费者。
+	void PublishCompletion(EHttpState State);
+	bool PublishProgress();
 };
 
 std::unique_ptr<IHttpRequest> CreateHttpRequest(const char *pUrl);

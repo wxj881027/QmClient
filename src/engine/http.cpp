@@ -436,7 +436,7 @@ size_t IHttpRequest::OnData(const char *pData, size_t DataSize)
 void IHttpRequest::OnCompletionInternal(EHttpState State)
 {
 	// 后端完成成功也不能覆盖正文接收失败，文件候选仍走原错误回收路径。
-	if(State == EHttpState::DONE && m_ResponseFailed)
+	if(State == EHttpState::DONE && (m_ResponseFailed || m_ProgressCallbackFailed))
 		State = EHttpState::ERROR;
 	if(State == EHttpState::DONE)
 	{
@@ -507,12 +507,47 @@ void IHttpRequest::OnCompletionInternal(EHttpState State)
 		}
 	}
 
+	PublishCompletion(State);
+}
+
+bool IHttpRequest::PublishProgress()
+{
+	if(m_ProgressCallbackFailed)
+		return false;
+	auto pOwnedCallback = m_pOwnedProgressCallback;
+	auto *pCallback = m_pProgressCallback;
+	try
+	{
+		if(pCallback)
+			pCallback->OnProgress();
+		return true;
+	}
+	catch(...)
+	{
+		m_ProgressCallbackFailed = true;
+		return false;
+	}
+}
+
+void IHttpRequest::PublishCompletion(EHttpState State)
+{
+	// 自有回调可以在执行时清除或替换注册，保活本次正在调用的对象。
+	auto pOwnedCallback = m_pOwnedProgressCallback;
+	auto *pCallback = m_pProgressCallback;
 	// The globally visible state must be updated after OnCompletion has finished,
 	// or other threads may try to access the result of a completed HTTP request,
 	// before the result has been initialized/updated in OnCompletion.
-	if(m_pProgressCallback != nullptr)
+	if(pCallback != nullptr)
 	{
-		m_pProgressCallback->OnCompletion(State);
+		try
+		{
+			pCallback->OnCompletion(State);
+		}
+		catch(...)
+		{
+			if(State != EHttpState::ABORTED)
+				State = EHttpState::ERROR;
+		}
 	}
 	{
 		std::unique_lock WaitLock(m_WaitMutex);
