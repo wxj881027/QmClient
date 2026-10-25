@@ -4873,6 +4873,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/screenshot_submit_test.cpp
     src/test/integration/engine/screenshot_save_test.cpp
     src/test/integration/client/community_icon_image_test.cpp
+    src/test/integration/client/entity_bg_install_path_test.cpp
     src/test/unit/engine/graphics/qm_graphics_adapters_test.cpp
     src/test/unit/engine/graphics/graphics_vulkan_scheduler_test.cpp
     src/test/integration/client/graphics_fatal_error_test.cpp

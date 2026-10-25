@@ -96,6 +96,27 @@ bool IsEntityBgWorkshopRootEntry(const SEntityBgHierarchyEntry &Entry);
 EEntityBgHierarchyEntrySource MergeEntityBgHierarchyEntrySource(EEntityBgHierarchyEntrySource Existing, EEntityBgHierarchyEntrySource Incoming);
 std::string RebuildEntityBgWorkshopLocalName(std::string_view InstallPath);
 std::string NormalizeEntityBgWorkshopInstallPath(std::string_view InstallPath);
+
+struct SEntityBgInstallPathPreparation
+{
+	std::string m_Path;
+	bool m_RenameFailed = false;
+};
+
+// 路径元数据只在文件改名成功后跟进；已有目标与没有旧文件时保留原规范化策略。
+template<typename TStorage>
+SEntityBgInstallPathPreparation PrepareEntityBgWorkshopInstallPath(TStorage *pStorage, std::string_view InstallPath, int StorageType)
+{
+	const std::string Current(InstallPath);
+	const std::string Normalized = NormalizeEntityBgWorkshopInstallPath(InstallPath);
+	if(Normalized.empty() || Normalized == Current)
+		return {Current, false};
+	if(pStorage && pStorage->FileExists(Current.c_str(), StorageType) && !pStorage->FileExists(Normalized.c_str(), StorageType) &&
+		!pStorage->RenameFile(Current.c_str(), Normalized.c_str(), StorageType))
+		return {Current, true};
+	return {Normalized, false};
+}
+
 bool EntityBgHierarchyEntryLess(const SEntityBgHierarchyEntry &Left, const SEntityBgHierarchyEntry &Right);
 std::vector<SEntityBgHierarchyEntry> BuildEntityBgHierarchyEntries(const std::vector<std::string> &vAssetNames, const char *pCurrentFolder, bool ShowWorkshopFolder = true, const std::unordered_map<std::string, EEntityBgHierarchyEntrySource> *pAssetSources = nullptr, bool ForceShowWorkshopFolder = false);
 bool ShouldShowEntityBgDirectorySubtitle(bool IsDirectory);

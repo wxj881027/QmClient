@@ -2178,17 +2178,13 @@ namespace
 		if(Asset.m_InstallPath.empty())
 			return;
 
-		const std::string NormalizedInstallPath = NormalizeEntityBgWorkshopInstallPath(Asset.m_InstallPath);
-		if(!NormalizedInstallPath.empty() && NormalizedInstallPath != Asset.m_InstallPath)
+		const auto Prepared = PrepareEntityBgWorkshopInstallPath(pStorage, Asset.m_InstallPath, IStorage::TYPE_SAVE);
+		if(Prepared.m_RenameFailed)
 		{
-			if(pStorage != nullptr &&
-				pStorage->FileExists(Asset.m_InstallPath.c_str(), IStorage::TYPE_SAVE) &&
-				!pStorage->FileExists(NormalizedInstallPath.c_str(), IStorage::TYPE_SAVE))
-			{
-				pStorage->RenameFile(Asset.m_InstallPath.c_str(), NormalizedInstallPath.c_str(), IStorage::TYPE_SAVE);
-			}
-			Asset.m_InstallPath = NormalizedInstallPath;
+			log_warn("assets", "Could not rename workshop asset '%s'; keeping previous install path", Asset.m_InstallPath.c_str());
+			return;
 		}
+		Asset.m_InstallPath = Prepared.m_Path;
 
 		const std::string LocalName = RebuildEntityBgWorkshopLocalName(Asset.m_InstallPath);
 		if(!LocalName.empty())
