@@ -1505,6 +1505,9 @@ Automatically check for stable updates and install them on exit
 Automatically close the current chat after waking from freeze
 == 얼음에서 깨어난 후 현재 채팅 자동 닫기
 
+Automatically copy manual screenshots to clipboard
+== 수동으로 촬영한 스크린샷을 클립보드에 자동 복사
+
 Automatically create statboard csv
 == 통계판 CSV 자동 생성
 

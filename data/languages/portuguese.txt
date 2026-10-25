@@ -1505,6 +1505,9 @@ Automatically check for stable updates and install them on exit
 Automatically close the current chat after waking from freeze
 == Fechar automaticamente o chat atual ao acordar do congelamento
 
+Automatically copy manual screenshots to clipboard
+== Copiar capturas de ecrã manuais automaticamente para a área de transferência
+
 Automatically create statboard csv
 == Criar automaticamente CSV do quadro de estatísticas
 

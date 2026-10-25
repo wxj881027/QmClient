@@ -3688,6 +3688,8 @@ if(CLIENT)
     components/qmclient/route_visited.h
     components/qmclient/settings_resource_preview.cpp
     components/qmclient/settings_resource_preview.h
+    components/qmclient/screenshot_clipboard.cpp
+    components/qmclient/screenshot_clipboard.h
     components/qmclient/screenshot_image_job.cpp
     components/qmclient/screenshot_image_job.h
     components/qmclient/screenshot_viewer.cpp
@@ -5157,6 +5159,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_screenshot_watermark_test.cpp
     src/test/unit/qmclient/client/qm_config_package_test.cpp
     src/test/integration/qmclient/client/qm_config_package_storage_test.cpp
+    src/test/unit/qmclient/client/qm_screenshot_clipboard_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_image_policy_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_viewer_viewport_test.cpp
     src/test/unit/qmclient/client/qm_image_view_test.cpp
@@ -5297,6 +5300,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/tclient/qm_tee_trail.cpp
     src/game/client/components/qmclient/tee_trail_styles.cpp
     src/game/client/components/qmclient/qm_title_badge.cpp
+    src/game/client/components/qmclient/screenshot_clipboard.cpp
     src/game/client/components/qmclient/screenshot_image_job.cpp
     src/game/client/components/qmclient/skin_source_job.cpp
     src/game/client/components/qmclient/config_package.cpp

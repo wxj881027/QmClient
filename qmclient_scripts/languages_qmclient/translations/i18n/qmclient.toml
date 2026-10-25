@@ -39492,3 +39492,19 @@ brazilian_portuguese = "As fontes de atualização estão temporariamente indisp
 portuguese = "As fontes de atualização estão temporariamente indisponíveis"
 turkish = "Güncelleme kaynakları geçici olarak kullanılamıyor"
 polish = "Źródła aktualizacji są tymczasowo niedostępne"
+
+[[message]]
+key = "Automatically copy manual screenshots to clipboard"
+[message.translations]
+simplified_chinese = "手动截图时自动复制到剪贴板"
+traditional_chinese = "手動截圖時自動複製到剪貼簿"
+japanese = "手動撮影したスクリーンショットをクリップボードに自動コピー"
+korean = "수동으로 촬영한 스크린샷을 클립보드에 자동 복사"
+russian = "Автоматически копировать ручные снимки экрана в буфер обмена"
+german = "Manuelle Screenshots automatisch in die Zwischenablage kopieren"
+spanish = "Copiar automáticamente las capturas manuales al portapapeles"
+french = "Copier automatiquement les captures manuelles dans le presse-papiers"
+brazilian_portuguese = "Copiar capturas de tela manuais automaticamente para a área de transferência"
+portuguese = "Copiar capturas de ecrã manuais automaticamente para a área de transferência"
+turkish = "Elle alınan ekran görüntülerini otomatik olarak panoya kopyala"
+polish = "Automatycznie kopiuj ręczne zrzuty ekranu do schowka"

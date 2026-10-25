@@ -151,6 +151,7 @@ MACRO_CONFIG_INT(QmVideoHeight, qm_video_height, 0, 0, 4320, CFGFLAG_CLIENT | CF
 // 后端不支持或像素预算超限时自动降档。输出大于窗口时必然离屏渲染，跟随全局则按全局档位采样。
 MACRO_CONFIG_INT(QmVideoFsaa, qm_video_fsaa, -1, -1, 8, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering")
 
+MACRO_CONFIG_INT(QmScreenshotClipboard, qm_screenshot_clipboard, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically copy manual screenshots to clipboard")
 MACRO_CONFIG_INT(QmScreenshotWatermark, qm_screenshot_watermark, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically add a watermark to screenshots")
 MACRO_CONFIG_INT(QmScreenshotWatermarkTimestamp, qm_screenshot_watermark_timestamp, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Screenshot watermark: include timestamp")
 MACRO_CONFIG_INT(QmScreenshotWatermarkMap, qm_screenshot_watermark_map, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Screenshot watermark: include map name")
