@@ -1,6 +1,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_MUSIC_LYRICS_QM_SPOTIFY_INTEGRATION_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_MUSIC_LYRICS_QM_SPOTIFY_INTEGRATION_H
 
+#include "music_lyrics_display.h"
+
 #include <game/client/component.h>
 
 #include <cstddef>
@@ -28,6 +30,7 @@ public:
 	bool GetCurrentLyric(char *pBuffer, size_t BufferSize) const;
 	bool HasCurrentLyric() const;
 	bool HasActiveLyrics() const;
+	QmMusicLyrics::SSourceSnapshot LyricsSnapshot() const;
 	// 当前歌曲身份(标题+歌手的稳定哈希)。
 	uint64_t CurrentSongId() const;
 

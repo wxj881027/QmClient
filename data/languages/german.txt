@@ -6845,6 +6845,9 @@ Hue
 Hue speed
 == Farbton-Geschwindigkeit
 
+Humming
+== Mitsummen
+
 i = Receive rate
 == i = Empfangsrate
 
@@ -8099,8 +8102,17 @@ LXGW WenKai is unavailable. Current fonts and weights will be kept.
 Lyrics
 == Songtext
 
+Lyrics language
+== Sprache des Liedtexts
+
+Lyrics language (0=Original, 1=Translation, 2=Original and translation)
+== Sprache des Liedtexts (0=Original, 1=Übersetzung, 2=Original und Übersetzung)
+
 Lyrics live in the Dynamic Island, so they stay hidden until that option is on.
 == Der Songtext erscheint im Dynamic Island und bleibt daher verborgen, bis diese Option aktiv ist.
+
+Lyrics translation
+== Übersetzung des Liedtexts
 
 Magic: Spirit Script
 == Magie: Geisterschrift
@@ -9758,6 +9770,9 @@ Or visit DDNet.org
 Original
 == Originalstil
 
+Original and translation
+== Original und Übersetzung
+
 Original language for both received and outgoing messages. Use Auto to detect each message.
 == Originalsprache für empfangene und ausgehende Nachrichten. Mit „Auto“ wird jede Nachricht erkannt.
 
@@ -9766,6 +9781,9 @@ Original language for incoming and outgoing text
 
 Original message language
 == Sprache der Originalnachricht
+
+Original only
+== Nur Original
 
 Original options
 == Ursprüngliche Optionen
@@ -12581,6 +12599,9 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == Angegebenen Befehl an Rcon senden
 
+Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
+== Drei aufeinanderfolgende Liedtextzeilen in zufälligen Abständen von 30 bis 90 Sekunden im öffentlichen Chat senden, mit 3 Sekunden zwischen den Zeilen
+
 Send translation method
 == Übersetzungsmethode senden
 
@@ -12604,6 +12625,9 @@ Sends a saved .map file from your client to the public test server and reports p
 
 Sends an automatic chat reply when someone whispers you while you are muted or away.
 == Sendet automatisch eine Chat-Antwort, wenn dir jemand flüstert, während du stummgeschaltet oder abwesend bist.
+
+Separate Dynamic Island
+== Dynamic Island trennen
 
 Separate with commas
 == Mit Kommas trennen
@@ -13423,6 +13447,12 @@ Show local time seconds
 
 Show logs of the last i seconds
 == Protokolle der letzten i Sekunden anzeigen
+
+Show lyrics in a separate island below Dynamic Island
+== Liedtext in einer eigenen Insel unter Dynamic Island anzeigen
+
+Show lyrics in Dynamic Island
+== Liedtext in Dynamic Island anzeigen
 
 Show lyrics inside Dynamic Island
 == Show lyrics in Dynamic Island
@@ -15976,6 +16006,9 @@ Translation menu selected color
 
 Translation model was not found. Check the model name.
 == Übersetzungsmodell nicht gefunden. Prüfen Sie den Modellnamen.
+
+Translation only
+== Nur Übersetzung
 
 Translation service
 == Übersetzungsdienst

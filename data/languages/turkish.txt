@@ -6845,6 +6845,9 @@ Hue
 Hue speed
 == Ton hızı
 
+Humming
+== Mırıldanma
+
 i = Receive rate
 == i = Alma hızı
 
@@ -8099,8 +8102,17 @@ LXGW WenKai is unavailable. Current fonts and weights will be kept.
 Lyrics
 == Şarkı sözleri
 
+Lyrics language
+== Şarkı sözü dili
+
+Lyrics language (0=Original, 1=Translation, 2=Original and translation)
+== Şarkı sözü dili (0=özgün metin, 1=çeviri, 2=özgün metin ve çeviri)
+
 Lyrics live in the Dynamic Island, so they stay hidden until that option is on.
 == Şarkı sözleri Dynamic Island'da görünür; bu seçenek açılana kadar gizli kalır.
+
+Lyrics translation
+== Şarkı sözü çevirisi
 
 Magic: Spirit Script
 == Büyü: ruh yazısı
@@ -9758,6 +9770,9 @@ Or visit DDNet.org
 Original
 == Özgün
 
+Original and translation
+== Özgün metin ve çeviri
+
 Original language for both received and outgoing messages. Use Auto to detect each message.
 == Alınan ve gönderilen mesajlar için özgün dil. Her mesajı algılamak için Otomatik'i kullanın.
 
@@ -9766,6 +9781,9 @@ Original language for incoming and outgoing text
 
 Original message language
 == Orijinal mesajın dili
+
+Original only
+== Yalnızca özgün metin
 
 Original options
 == Özgün seçenekler
@@ -12581,6 +12599,9 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == Belirtilen komutu rcon'a gönder
 
+Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
+== 30 ile 90 saniye arasında rastgele aralıklarla genel sohbete art arda üç şarkı sözü satırı gönder, satırlar arasında 3 saniye bekle
+
 Send translation method
 == Çeviri yöntemini gönder
 
@@ -12604,6 +12625,9 @@ Sends a saved .map file from your client to the public test server and reports p
 
 Sends an automatic chat reply when someone whispers you while you are muted or away.
 == Susturulduğunuzda veya uzaktayken biri size fısıldarsa otomatik sohbet yanıtı gönderir.
+
+Separate Dynamic Island
+== Dynamic Island ayır
 
 Separate with commas
 == Virgülle ayır
@@ -13423,6 +13447,12 @@ Show local time seconds
 
 Show logs of the last i seconds
 == Son i saniyenin günlüklerini göster
+
+Show lyrics in a separate island below Dynamic Island
+== Şarkı sözlerini Dynamic Island altında ayrı bir adada göster
+
+Show lyrics in Dynamic Island
+== Şarkı sözlerini Dynamic Island içinde göster
 
 Show lyrics inside Dynamic Island
 == Show lyrics in Dynamic Island
@@ -15976,6 +16006,9 @@ Translation menu selected color
 
 Translation model was not found. Check the model name.
 == Çeviri modeli bulunamadı. Model adını kontrol edin.
+
+Translation only
+== Yalnızca çeviri
 
 Translation service
 == Çeviri hizmeti

@@ -524,14 +524,14 @@ struct SHudMediaIslandSwapRows
 	int m_LyricsLineIndex = -1;
 };
 
-inline SHudMediaIslandSwapRows QmHudMediaIslandSwapRows(int IncomingSwapCount, bool HasRaceTimer, bool ShowLyrics)
+inline SHudMediaIslandSwapRows QmHudMediaIslandSwapRows(int IncomingSwapCount, bool HasRaceTimer, bool ShowLyrics, int LyricsLineCount = 1)
 {
 	SHudMediaIslandSwapRows Result;
 	IncomingSwapCount = std::max(0, IncomingSwapCount);
 	Result.m_InlineSwapCount = HasRaceTimer && IncomingSwapCount > 0 ? 1 : 0;
 	Result.m_BottomSwapCount = IncomingSwapCount - Result.m_InlineSwapCount;
 	Result.m_LyricsLineIndex = ShowLyrics ? Result.m_BottomSwapCount : -1;
-	Result.m_BottomLineCount = Result.m_BottomSwapCount + (ShowLyrics ? 1 : 0);
+	Result.m_BottomLineCount = Result.m_BottomSwapCount + (ShowLyrics ? std::clamp(LyricsLineCount, 1, 2) : 0);
 	return Result;
 }
 

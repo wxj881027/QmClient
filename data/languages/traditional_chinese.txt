@@ -6845,6 +6845,9 @@ Hue
 Hue speed
 == 變色速度
 
+Humming
+== 哼歌
+
 i = Receive rate
 == i = 接收速率
 
@@ -8099,8 +8102,17 @@ LXGW WenKai is unavailable. Current fonts and weights will be kept.
 Lyrics
 == 歌詞
 
+Lyrics language
+== 歌詞語言
+
+Lyrics language (0=Original, 1=Translation, 2=Original and translation)
+== 歌詞語言（0=原文，1=譯文，2=原文＋譯文）
+
 Lyrics live in the Dynamic Island, so they stay hidden until that option is on.
 == 歌詞只顯示在 Dynamic Island 中，因此該選項未開啟前不會出現。
+
+Lyrics translation
+== 歌詞譯文
 
 Magic: Spirit Script
 == 魔法風：靈文游絲
@@ -9758,6 +9770,9 @@ Or visit DDNet.org
 Original
 == 原版
 
+Original and translation
+== 原文＋譯文
+
 Original language for both received and outgoing messages. Use Auto to detect each message.
 == 收發訊息均使用原文語言。使用「自動」可逐條偵測。
 
@@ -9766,6 +9781,9 @@ Original language for incoming and outgoing text
 
 Original message language
 == 原文語言
+
+Original only
+== 僅原文
 
 Original options
 == 原始選項
@@ -12581,6 +12599,9 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == 向 rcon 發送指定命令
 
+Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
+== 每隔隨機30到90秒向公共聊天逐句傳送連續三句歌詞，句間隔3秒
+
 Send translation method
 == 發送翻譯方式
 
@@ -12604,6 +12625,9 @@ Sends a saved .map file from your client to the public test server and reports p
 
 Sends an automatic chat reply when someone whispers you while you are muted or away.
 == 當你被禁言或暫離時，若有人對你私聊，會自動送出聊天回覆。
+
+Separate Dynamic Island
+== 靈動島分離
 
 Separate with commas
 == 用 , 分隔
@@ -13423,6 +13447,12 @@ Show local time seconds
 
 Show logs of the last i seconds
 == 顯示最後 i 秒的日誌
+
+Show lyrics in a separate island below Dynamic Island
+== 將歌詞顯示在靈動島下方的獨立附島
+
+Show lyrics in Dynamic Island
+== 在靈動島顯示歌詞
 
 Show lyrics inside Dynamic Island
 == 將歌詞顯示在靈動島內
@@ -15976,6 +16006,9 @@ Translation menu selected color
 
 Translation model was not found. Check the model name.
 == 找不到翻譯模型，請檢查模型名稱。
+
+Translation only
+== 僅譯文
 
 Translation service
 == 翻譯服務

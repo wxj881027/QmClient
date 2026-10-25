@@ -3817,6 +3817,15 @@ static bool ShouldSyncDummyCommandToOther(const char *pLine)
 	return g_Config.m_ClDummyCopyMoves && CChat::ShouldSyncDummyCommand(pLine);
 }
 
+bool CChat::SendAutomaticChat(int Connection, const char *pLine)
+{
+	int PendingCount = static_cast<int>(m_PendingChatMessages.Size());
+	if(Client()->State() != IClient::STATE_ONLINE ||
+		CPendingChatMessages::Reserve(m_LastChatSend, time(), time_freq(), PendingCount) != CPendingChatMessages::EAdmission::SENT)
+		return false;
+	return SendChatOnConn(Connection, 0, pLine, false, false);
+}
+
 bool CChat::SendChat(int Team, const char *pLine, const char *pLocalOriginal, int Connection)
 {
 	if(pLine && GameClient()->TClientComponent().TryHandleLocalSaveReply(pLine))

@@ -11,6 +11,7 @@
 
 #include <game/client/QmUi/QmLayout.h>
 #include <game/client/QmUi/QmLegacyMediaHud.h>
+#include <game/client/QmUi/QmLyricsHud.h>
 #include <game/client/component.h>
 #include <game/client/components/hud_media_island_logic.h>
 #include <game/client/components/qmclient/hook_countdown.h>
@@ -126,9 +127,6 @@ class CHud : public CComponent
 		int64_t m_ExpandUntilTick = 0;
 		int64_t m_TrackDetailsUntilTick = 0;
 		bool m_LyricsActive = false;
-		bool m_LyricsMarqueeInitialized = false;
-		int64_t m_LyricsMarqueeStartTick = 0;
-		char m_aLyricsMarquee[256] = {};
 		float m_TargetX = 0.0f;
 		float m_TargetWidth = 0.0f;
 		float m_TargetHeight = 0.0f;
@@ -233,9 +231,6 @@ class CHud : public CComponent
 			m_ExpandUntilTick = 0;
 			m_TrackDetailsUntilTick = 0;
 			m_LyricsActive = false;
-			m_LyricsMarqueeInitialized = false;
-			m_LyricsMarqueeStartTick = 0;
-			m_aLyricsMarquee[0] = '\0';
 			m_TargetX = 0.0f;
 			m_TargetWidth = 0.0f;
 			m_TargetHeight = 0.0f;
@@ -298,7 +293,9 @@ class CHud : public CComponent
 		CSystemMediaControls::SState m_MediaState{};
 		bool m_ShowLyrics = false;
 		bool m_LyricsActive = false;
-		char m_aLyrics[256] = {};
+		char m_aLyrics[1024] = {};
+		char m_aLyricsTranslation[1024] = {};
+		int m_LyricsRowCount = 0;
 		ColorRGBA m_LyricsColor = ColorRGBA(0.97f, 0.98f, 1.0f, 0.90f);
 		int m_SpectatorCount = 0;
 		bool m_HasVisible = false;
@@ -452,6 +449,10 @@ class CHud : public CComponent
 	float GetTopIslandAvoidanceRight() const;
 	IGraphics::CRenderTargetHandle MediaIslandBlurBackdrop();
 	void RenderMediaIsland();
+	void RenderLyricsIsland();
+	CQmLyricsMarqueeState m_LyricsMarquee;
+	CUIRect m_LyricsIslandAnchor{};
+	bool m_LyricsIslandAnchorValid = false;
 
 	int m_LastSpectatorCountTick;
 	void RenderSpectatorCount();

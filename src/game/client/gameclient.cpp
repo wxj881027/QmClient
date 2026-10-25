@@ -658,6 +658,7 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_NeteaseIntegration, "netease_integration");
 	AddComponent(&m_MusicLyricsIntegration, "music_lyrics_integration");
 	AddComponent(&m_SpotifyIntegration, "spotify_integration");
+	AddComponent(&m_LyricsPresentation, "lyrics_presentation");
 	AddComponent(&m_MusicAppWatcher, "music_app_watcher");
 	AddComponent(&m_Players, "players");
 	AddComponent(&m_MovingTilesBackground, "moving_tiles_background");
