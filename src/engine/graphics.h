@@ -333,12 +333,15 @@ class IGraphics : public IInterface
 protected:
 	int m_ScreenWidth;
 	int m_ScreenHeight;
+	// 离屏帧只覆盖绘制尺寸，窗口逻辑坐标和 drawable 尺寸保持独立。
+	ivec2 m_RenderScreenSize = ivec2(0, 0);
 	int m_ViewportX = 0;
 	int m_DrawableWidth;
 	int m_DrawableHeight;
 	int m_ScreenRefreshRate;
 	float m_ScreenHiDPIScale;
 	float m_GameScreenAspectOverride = 0.0f;
+	void SetRenderScreenSize(int Width, int Height) { m_RenderScreenSize = ivec2(Width, Height); }
 
 public:
 	static constexpr int MEDIA_ISLAND_SDF_MAX_ITEMS = 12;
@@ -553,12 +556,13 @@ public:
 		}
 	};
 
-	int ScreenWidth() const { return m_ScreenWidth; }
-	int ScreenHeight() const { return m_ScreenHeight; }
-	vec2 ScreenSize() const { return vec2(m_ScreenWidth, m_ScreenHeight); }
+	int ScreenWidth() const { return m_RenderScreenSize.x > 0 ? m_RenderScreenSize.x : m_ScreenWidth; }
+	int ScreenHeight() const { return m_RenderScreenSize.y > 0 ? m_RenderScreenSize.y : m_ScreenHeight; }
+	vec2 ScreenSize() const { return vec2(ScreenWidth(), ScreenHeight()); }
 	float ScreenAspect() const { return (float)ScreenWidth() / (float)ScreenHeight(); }
 	float GameScreenAspect() const { return m_GameScreenAspectOverride > 0.0f ? m_GameScreenAspectOverride : ScreenAspect(); }
 	float ScreenHiDPIScale() const { return m_ScreenHiDPIScale; }
+	// 输入使用窗口逻辑尺寸，不随离屏绘制分辨率变化。
 	int WindowWidth() const { return m_ScreenWidth / m_ScreenHiDPIScale; }
 	int WindowHeight() const { return m_ScreenHeight / m_ScreenHiDPIScale; }
 	// 整张 drawable 的尺寸；强制 viewport 可能只覆盖其中一部分。
@@ -699,6 +703,16 @@ public:
 		float m_V0 = 1.0f;
 		float m_U1 = 1.0f;
 		float m_V1 = 0.0f;
+
+		// 整幅预览按实际后端的纹理原点取样，不改变导出像素的读回方向。
+		void SetNativeTextureCoordinates(EBackendType Backend)
+		{
+			const bool TopLeftOrigin = Backend == BACKEND_TYPE_VULKAN || Backend == BACKEND_TYPE_METAL;
+			m_U0 = 0.0f;
+			m_U1 = 1.0f;
+			m_V0 = TopLeftOrigin ? 0.0f : 1.0f;
+			m_V1 = TopLeftOrigin ? 1.0f : 0.0f;
+		}
 	};
 	virtual void DrawRenderTarget(CRenderTargetHandle Target, const SRenderTargetDrawParams &Params) = 0;
 	// Captures all drawing submitted before this call and scales the current backbuffer
