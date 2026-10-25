@@ -2242,6 +2242,7 @@ set(EXPECTED_DATA
   qmclient/developer_badge.png
   qmclient/gui_logo.png
   qmclient/map_difficulty.sql
+  qmclient/title_badges/logo_sdf.png
   race_flag.png
   shader/gaussian_blur.frag
   shader/gaussian_blur.vert
@@ -5078,6 +5079,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_map_upload_test.cpp
     src/test/unit/qmclient/client/qm_developer_badge_test.cpp
     src/test/unit/qmclient/client/qm_title_badge_test.cpp
+    src/test/unit/qmclient/client/qm_title_badge_render_test.cpp
     src/test/unit/qmclient/client/qm_title_style_test.cpp
     src/test/unit/qmclient/client/qm_sponsor_chat_style_test.cpp
     src/test/unit/qmclient/client/qm_skin_outline_test.cpp
@@ -5291,6 +5293,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/tclient/swap_countdown_message.cpp
     src/game/client/components/tclient/qm_tee_trail.cpp
     src/game/client/components/qmclient/tee_trail_styles.cpp
+    src/game/client/components/qmclient/qm_title_badge.cpp
     src/game/client/components/qmclient/screenshot_image_job.cpp
     src/game/client/components/qmclient/skin_source_job.cpp
     src/game/client/components/qmclient/config_package.cpp

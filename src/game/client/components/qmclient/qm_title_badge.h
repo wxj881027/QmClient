@@ -9,6 +9,8 @@
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/ui_rect.h>
 
+#include <cstdint>
+
 // 聊天测量和绘制共用整块胶囊的推进，保持与普通行相同的高度。
 inline CUIRect QmLayoutTitleBadge(CTextCursor &Cursor, float LabelWidth)
 {
@@ -91,9 +93,13 @@ struct SQmTitleBadgePlacement
 class CQmTitleBadge
 {
 	CQmBadgeGeometry m_Logo{EQmBadgeGeometry::LOGO};
+	IGraphics::CTextureHandle m_LogoDistance;
+	uint32_t m_LogoGraphicsVersion = 0;
 	CQmBadgeGeometry m_aPatterns[6] = {
 		CQmBadgeGeometry{EQmBadgeGeometry::MOON_LEFT}, CQmBadgeGeometry{EQmBadgeGeometry::MOON_MIDDLE}, CQmBadgeGeometry{EQmBadgeGeometry::MOON_RIGHT},
 		CQmBadgeGeometry{EQmBadgeGeometry::SUN_LEFT}, CQmBadgeGeometry{EQmBadgeGeometry::SUN_MIDDLE}, CQmBadgeGeometry{EQmBadgeGeometry::SUN_RIGHT}};
+
+	bool RenderDistanceLogo(IGraphics *pGraphics, const CUIRect &Rect, ColorRGBA Color) const;
 
 public:
 	void Init(IGraphics *pGraphics);

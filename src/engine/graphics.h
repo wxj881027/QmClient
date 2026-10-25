@@ -433,6 +433,8 @@ public:
 	enum
 	{
 		ROUNDED_RECT_SDF_GRADIENT_MAX_COLORS = 7,
+		ROUNDED_RECT_SDF_TEXTURE_RGBA = 1,
+		ROUNDED_RECT_SDF_TEXTURE_DISTANCE = 2,
 	};
 
 	// A compact rounded-rectangle primitive shared by UI chrome. It intentionally
@@ -456,10 +458,10 @@ public:
 		// x=是否启用渐变, y=只描边, z=边框羽化指数
 		vec4 m_GradientParams2{};
 		// 可选纹理采样：为圆角容器放图时，片元按圆角覆盖度裁剪纹理，四角不再露出方角。
-		// x=是否启用纹理（0 关闭，关闭时着色器完全跳过采样）,
+		// x=采样模式：0 关闭，1 RGBA 图片，2 单通道距离场（内侧大于 0.5），
 		// y/z=UV 相对矩形本地坐标的缩放, w=UV 偏移 x
 		vec4 m_TextureParams0{};
-		// x=UV 偏移 y，其余保留
+		// x=UV 偏移 y，y=纹理透明度，z=距离场完整编码范围（UV 单位），w 保留
 		vec4 m_TextureParams1{};
 		// 纹理由 SState 携带（调用方先 TextureSet），不进入 uniform 块，保证结构体是纯 vec4 数组。
 	};
