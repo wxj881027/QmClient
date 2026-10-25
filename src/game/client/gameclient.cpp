@@ -6858,7 +6858,7 @@ void CGameClient::UpdateQmSelfKillProtection(float FrameSeconds)
 	m_QmSelfKillProtection.Configure(g_Config.m_QmSelfKillEnabled != 0, g_Config.m_QmSelfKillAutoDelay * 60);
 	// 只在真正进入对局（在线）时计时：菜单、连接中、demo 回放都不推进，
 	// 玩家看到的"开始游戏后 N 分钟"才是他实际在玩的时间。
-	const bool InGame = Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK;
+	const bool InGame = Client()->State() == IClient::STATE_ONLINE;
 	if(!InGame)
 		return;
 	if(!m_QmSelfKillProtection.Update(FrameSeconds))
