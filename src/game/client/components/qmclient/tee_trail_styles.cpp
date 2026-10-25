@@ -398,15 +398,13 @@ namespace
 		return true;
 	}
 
-	void ShadePixels(SPixelGrid &Grid, bool Preset, unsigned Seed)
+	void ShadePixels(SPixelGrid &Grid, bool Preset, unsigned Seed, CPixelNoiseCache *pPixelNoiseCache)
 	{
 		for(size_t i = 0; i < Grid.m_Count; ++i)
 		{
 			auto &Cell = Grid.m_aCells[i];
-			// 旋转噪声坐标并混合两种簇尺度，实际像素仍保持世界轴对齐。
-			const double U = Cell.m_X * 0.8 + Cell.m_Y * 0.6, V = Cell.m_Y * 0.8 - Cell.m_X * 0.6;
-			const float Cluster = mix(PixelClusterNoise(U / 3.0, V / 3.0, Seed), PixelClusterNoise(U / 7.0, V / 7.0, Seed + 101u), 0.35f);
-			const float Grain = Random(PixelHash(Cell.m_X, Cell.m_Y, Seed + 43u));
+			const SPixelNoise Noise = pPixelNoiseCache ? pPixelNoiseCache->Get(Cell.m_X, Cell.m_Y, Seed) : SamplePixelNoise(Cell.m_X, Cell.m_Y, Seed);
+			const float Cluster = Noise.m_Cluster, Grain = Noise.m_Grain;
 			const float Boundary = 0.94f + Cluster * 0.16f;
 			const float Threshold = (0.08f + Cluster * 0.70f + Grain * 0.22f) * (0.65f + 0.35f * std::min(Cell.m_Radius, 1.0f));
 			if(Cell.m_Radius > Boundary || Cell.m_Integrity <= Threshold)
@@ -460,7 +458,7 @@ namespace
 		}
 	}
 
-	void Pixels(const SStyleSample *pSamples, size_t Count, bool Preset, float Width, unsigned Seed, std::vector<SQuad> &vOut)
+	void Pixels(const SStyleSample *pSamples, size_t Count, bool Preset, float Width, unsigned Seed, std::vector<SQuad> &vOut, CPixelNoiseCache *pPixelNoiseCache)
 	{
 		SPixelGrid Grid;
 		const size_t FirstQuad = vOut.size();
@@ -470,7 +468,7 @@ namespace
 		{
 			if(!RasterizePixels(Grid, pSamples, Count, CellSize))
 				continue;
-			ShadePixels(Grid, Preset, Seed);
+			ShadePixels(Grid, Preset, Seed, pPixelNoiseCache);
 			size_t QuadCount = FirstQuad;
 			PixelPass(Grid, CellSize, false, QuadCount, vOut);
 			PixelPass(Grid, CellSize, true, QuadCount, vOut);
@@ -482,7 +480,29 @@ namespace
 	}
 }
 
-void qm_tee_trail::BuildStyledEffect(const SStyleSample *pSamples, size_t Count, int Style, bool Preset, float Width, float PixelSize, unsigned Seed, std::vector<SQuad> &vOut)
+qm_tee_trail::SPixelNoise qm_tee_trail::SamplePixelNoise(int X, int Y, unsigned Seed)
+{
+	// 保留原有坐标旋转、两级簇噪声及浮点运算顺序，缓存只省去重复计算。
+	const double U = X * 0.8 + Y * 0.6, V = Y * 0.8 - X * 0.6;
+	return {mix(PixelClusterNoise(U / 3.0, V / 3.0, Seed), PixelClusterNoise(U / 7.0, V / 7.0, Seed + 101u), 0.35f),
+		Random(PixelHash(X, Y, Seed + 43u))};
+}
+
+const qm_tee_trail::SPixelNoise &qm_tee_trail::CPixelNoiseCache::Get(int X, int Y, unsigned Seed)
+{
+	SEntry &Entry = m_aEntries[PixelHash(X, Y, Seed) & (m_aEntries.size() - 1)];
+	if(!Entry.m_Valid || Entry.m_X != X || Entry.m_Y != Y || Entry.m_Seed != Seed)
+	{
+		Entry.m_Noise = SamplePixelNoise(X, Y, Seed);
+		Entry.m_X = X;
+		Entry.m_Y = Y;
+		Entry.m_Seed = Seed;
+		Entry.m_Valid = true;
+	}
+	return Entry.m_Noise;
+}
+
+void qm_tee_trail::BuildStyledEffect(const SStyleSample *pSamples, size_t Count, int Style, bool Preset, float Width, float PixelSize, unsigned Seed, std::vector<SQuad> &vOut, CPixelNoiseCache *pPixelNoiseCache)
 {
 	if(Count < 2 || Count > MAX_RENDER_POINTS)
 		return;
@@ -491,5 +511,5 @@ void qm_tee_trail::BuildStyledEffect(const SStyleSample *pSamples, size_t Count,
 	else if(Style == STYLE_MAGIC)
 		Magic(pSamples, Count, Preset, PixelSize, Seed, vOut);
 	else if(Style == STYLE_PIXEL)
-		Pixels(pSamples, Count, Preset, Width, Seed, vOut);
+		Pixels(pSamples, Count, Preset, Width, Seed, vOut, pPixelNoiseCache);
 }

@@ -5065,6 +5065,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_predicted_event_queue_test.cpp
     src/test/unit/qmclient/client/qm_tee_hue_cycle_test.cpp
     src/test/unit/qmclient/client/qm_tee_trail_test.cpp
+    src/test/unit/qmclient/client/qm_tee_trail_pixel_cache_test.cpp
     src/test/unit/qmclient/client/qm_sidebar_holiday_test.cpp
     src/test/unit/qmclient/ui/qm_badge_geometry_test.cpp
     src/test/integration/qmclient/client/qm_badge_geometry_render_test.cpp

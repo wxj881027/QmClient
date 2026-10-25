@@ -211,7 +211,7 @@ float qm_tee_trail::Lifetime(int Style, int Length, float Speed)
 
 namespace
 {
-	void BuildTrailSegment(std::span<const CTrailPart> Trail, int Style, bool UsePresetPalette, double CurTime, float Width, int Seed, std::vector<SQuad> &vOut, float PixelSize, bool Taper, bool Fade)
+	void BuildTrailSegment(std::span<const CTrailPart> Trail, int Style, bool UsePresetPalette, double CurTime, float Width, int Seed, std::vector<SQuad> &vOut, float PixelSize, bool Taper, bool Fade, CPixelNoiseCache *pPixelNoiseCache)
 	{
 		const size_t Count = Trail.size();
 		if(Count < 2)
@@ -286,7 +286,7 @@ namespace
 				const vec2 Tangent = Unit(After - Before);
 				aSamples[i].m_Normal = vec2(-Tangent.y, Tangent.x);
 			}
-			BuildStyledEffect(aSamples.data(), SampleCount, Style, UsePresetPalette, Width, PixelSize, unsigned(Seed) * 0x9e3779b9u, vOut);
+			BuildStyledEffect(aSamples.data(), SampleCount, Style, UsePresetPalette, Width, PixelSize, unsigned(Seed) * 0x9e3779b9u, vOut, pPixelNoiseCache);
 			return;
 		}
 
@@ -313,7 +313,7 @@ namespace
 	}
 }
 
-void qm_tee_trail::BuildEffect(const std::vector<CTrailPart> &vTrail, int Style, bool UsePresetPalette, double CurTime, float Width, int Seed, std::vector<SQuad> &vOut, float PixelSize, bool Taper, bool Fade)
+void qm_tee_trail::BuildEffect(const std::vector<CTrailPart> &vTrail, int Style, bool UsePresetPalette, double CurTime, float Width, int Seed, std::vector<SQuad> &vOut, float PixelSize, bool Taper, bool Fade, CPixelNoiseCache *pPixelNoiseCache)
 {
 	vOut.clear();
 	if(vTrail.size() < 2 || !std::isfinite(CurTime) || !std::isfinite(Width) || !std::isfinite(PixelSize))
@@ -330,7 +330,7 @@ void qm_tee_trail::BuildEffect(const std::vector<CTrailPart> &vTrail, int Style,
 			++End;
 		// 分段只隔开位置来源的跳变；旧段仍按原始出生时间参与绘制和消散。
 		const size_t PreviousSize = vOut.size();
-		BuildTrailSegment(Trail.subspan(First, End - First), Style, UsePresetPalette, CurTime, Width, Seed, vOut, PixelSize, Taper, Fade);
+		BuildTrailSegment(Trail.subspan(First, End - First), Style, UsePresetPalette, CurTime, Width, Seed, vOut, PixelSize, Taper, Fade, pPixelNoiseCache);
 		size_t NormalEnd = PreviousSize;
 		while(NormalEnd < vOut.size() && !vOut[NormalEnd].m_Additive)
 			++NormalEnd;
