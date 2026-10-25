@@ -49,6 +49,7 @@ namespace
 		};
 		EUpload m_Upload = EUpload::NORMAL;
 		bool m_ThrowUnload = false;
+		int m_FailUnloadOnAttempt = 0;
 		int m_UploadAttempts = 0;
 		int m_UnloadAttempts = 0;
 		int m_Unloads = 0;
@@ -72,7 +73,7 @@ namespace
 		void UnloadTexture(CTextureHandle *pHandle) override
 		{
 			++m_UnloadAttempts;
-			if(m_ThrowUnload)
+			if(m_ThrowUnload || m_UnloadAttempts == m_FailUnloadOnAttempt)
 				throw std::bad_alloc();
 			if(pHandle->IsValid())
 			{
@@ -242,4 +243,81 @@ TEST_F(QmScreenshotThumbnailUpload, EvictionFailureRetainsTextureOwnershipAndRet
 	m_Manager.ClearThumbnails(&m_Graphics);
 	EXPECT_EQ(m_Graphics.m_ActiveTextures, 0);
 	EXPECT_EQ(m_Graphics.m_Unloads, QM_SCREENSHOT_THUMBNAIL_MAX_RESIDENT + 1);
+}
+
+TEST_F(QmScreenshotThumbnailUpload, FailedClearRetainsOwnershipAndBlocksOldCacheUntilFrameRetry)
+{
+	ASSERT_NO_FATAL_FAILURE(Decode());
+	Pump();
+	m_Graphics.m_ThrowUnload = true;
+	EXPECT_NO_THROW(m_Manager.ClearThumbnails(&m_Graphics));
+	EXPECT_EQ(m_Graphics.m_ActiveTextures, 1);
+	EXPECT_EQ(m_Graphics.m_Unloads, 0);
+	EXPECT_EQ(Thumbnail(), nullptr);
+	EXPECT_EQ(m_Manager.LoadThumbnail("new.png", IStorage::TYPE_SAVE), nullptr);
+	EXPECT_NO_THROW(Pump());
+	EXPECT_EQ(m_Graphics.m_UploadAttempts, 1);
+	EXPECT_EQ(m_Engine.m_Submissions, 1);
+	m_Graphics.m_ThrowUnload = false;
+	Pump();
+	EXPECT_EQ(m_Graphics.m_ActiveTextures, 0);
+	EXPECT_EQ(m_Graphics.m_Unloads, 1);
+	ASSERT_NO_FATAL_FAILURE(Decode());
+	Pump();
+	const auto *pThumbnail = Thumbnail();
+	ASSERT_NE(pThumbnail, nullptr);
+	EXPECT_TRUE(pThumbnail->m_Texture.IsValid());
+	EXPECT_EQ(m_Engine.m_Submissions, 2);
+	EXPECT_EQ(m_Graphics.m_UploadAttempts, 2);
+}
+
+TEST_F(QmScreenshotThumbnailUpload, PartialClearContinuesPastFailureWithoutUnloadingSuccessfulEntryTwice)
+{
+	ASSERT_NO_FATAL_FAILURE(Decode());
+	Pump();
+	ASSERT_NO_FATAL_FAILURE(Decode("second.png"));
+	Pump();
+	ASSERT_EQ(m_Graphics.m_ActiveTextures, 2);
+	m_Graphics.m_FailUnloadOnAttempt = 1;
+	EXPECT_NO_THROW(m_Manager.ClearThumbnails(&m_Graphics));
+	EXPECT_EQ(m_Graphics.m_UnloadAttempts, 2);
+	EXPECT_EQ(m_Graphics.m_Unloads, 1);
+	EXPECT_EQ(m_Graphics.m_ActiveTextures, 1);
+	EXPECT_EQ(Thumbnail(), nullptr);
+	m_Manager.ClearThumbnails(&m_Graphics);
+	m_Manager.ClearThumbnails(&m_Graphics);
+	EXPECT_EQ(m_Graphics.m_UnloadAttempts, 3);
+	EXPECT_EQ(m_Graphics.m_Unloads, 2);
+	EXPECT_EQ(m_Graphics.m_ActiveTextures, 0);
+}
+
+TEST_F(QmScreenshotThumbnailUpload, ClearWithoutGraphicsRetainsTextureUntilGraphicsBecomesAvailable)
+{
+	ASSERT_NO_FATAL_FAILURE(Decode());
+	Pump();
+	m_Manager.ClearThumbnails(nullptr);
+	EXPECT_EQ(m_Graphics.m_ActiveTextures, 1);
+	EXPECT_EQ(Thumbnail(), nullptr);
+	m_Manager.PumpThumbnails(nullptr, m_pStorage.get(), &m_Engine, nullptr);
+	EXPECT_EQ(m_Graphics.m_UnloadAttempts, 0);
+	EXPECT_EQ(m_Engine.m_Submissions, 1);
+	Pump();
+	EXPECT_EQ(m_Graphics.m_ActiveTextures, 0);
+	EXPECT_EQ(m_Graphics.m_Unloads, 1);
+	ASSERT_NO_FATAL_FAILURE(Decode());
+	Pump();
+	EXPECT_EQ(m_Graphics.m_UploadAttempts, 2);
+}
+
+TEST_F(QmScreenshotThumbnailUpload, ClearWithoutGpuResourcesDropsDecodedTaskAndAllowsFreshSubmission)
+{
+	ASSERT_NO_FATAL_FAILURE(Decode());
+	m_Manager.ClearThumbnails(nullptr);
+	ASSERT_NO_FATAL_FAILURE(Decode());
+	Pump();
+	EXPECT_EQ(m_Engine.m_Submissions, 2);
+	EXPECT_EQ(m_Graphics.m_UploadAttempts, 1);
+	const auto *pThumbnail = Thumbnail();
+	ASSERT_NE(pThumbnail, nullptr);
+	EXPECT_TRUE(pThumbnail->m_Texture.IsValid());
 }

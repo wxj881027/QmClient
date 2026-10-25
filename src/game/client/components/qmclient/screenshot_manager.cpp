@@ -280,7 +280,7 @@ std::string CQmScreenshotManager::ThumbnailKey(const char *pPath, int StorageTyp
 
 const CQmScreenshotManager::SThumbnail *CQmScreenshotManager::LoadThumbnail(const char *pPath, int StorageType)
 {
-	if(pPath == nullptr || pPath[0] == '\0')
+	if(m_ThumbnailClearPending || pPath == nullptr || pPath[0] == '\0')
 		return nullptr;
 
 	try
@@ -312,7 +312,10 @@ void CQmScreenshotManager::PumpThumbnails(IGraphics *pGraphics, IStorage *pStora
 {
 	try
 	{
-		PumpThumbnailWork(pGraphics, pStorage, pEngine, pLimiter);
+		if(m_ThumbnailClearPending)
+			ClearThumbnails(pGraphics);
+		if(!m_ThumbnailClearPending)
+			PumpThumbnailWork(pGraphics, pStorage, pEngine, pLimiter);
 	}
 	catch(const std::bad_alloc &)
 	{
@@ -453,18 +456,32 @@ void CQmScreenshotManager::PumpThumbnailWork(IGraphics *pGraphics, IStorage *pSt
 
 void CQmScreenshotManager::ClearThumbnails(IGraphics *pGraphics)
 {
-	if(pGraphics != nullptr)
-	{
-		for(auto &[Key, Entry] : m_vThumbnails)
-		{
-			(void)Key;
-			if(Entry.m_Thumbnail.m_Texture.IsValid())
-				pGraphics->UnloadTexture(&Entry.m_Thumbnail.m_Texture);
-		}
-	}
-	// 正在运行的任务不再持有结果引用，解码结束后随任务对象自行释放。
-	m_vThumbnails.clear();
+	m_ThumbnailClearPending = true;
 	m_vThumbnailRequests.clear();
+	for(auto It = m_vThumbnails.begin(); It != m_vThumbnails.end();)
+	{
+		if(It->second.m_Thumbnail.m_Texture.IsValid())
+		{
+			if(pGraphics == nullptr)
+			{
+				++It;
+				continue;
+			}
+			try
+			{
+				pGraphics->UnloadTexture(&It->second.m_Thumbnail.m_Texture);
+			}
+			catch(const std::bad_alloc &)
+			{
+				// 保留尚未交付的句柄，并继续释放其它条目；成功的卸载不重复提交。
+				++It;
+				continue;
+			}
+		}
+		// 任务池继续拥有正在运行的任务，结果不再发布给已清理的缓存。
+		It = m_vThumbnails.erase(It);
+	}
+	m_ThumbnailClearPending = !m_vThumbnails.empty();
 }
 
 int CQmScreenshotManager::ScanCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser)
