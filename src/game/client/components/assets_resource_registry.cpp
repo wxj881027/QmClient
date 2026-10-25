@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <new>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -143,45 +144,63 @@ bool AssetResourceNeedsLegacyImport(std::string_view CurrentName)
 	return !IsProtectedDefaultAsset(CurrentName);
 }
 
+namespace
+{
+	std::string NextIndexedAssetName(std::span<const std::string> ExistingNames, std::string_view BaseName, const SAssetResourceCategory *pReservedCategory)
+	{
+		const auto IsReserved = [pReservedCategory](std::string_view Name) {
+			return pReservedCategory && IsReservedNamedSingleFileAssetName(*pReservedCategory, Name);
+		};
+		const auto HasName = [ExistingNames](std::string_view Name) {
+			return std::any_of(ExistingNames.begin(), ExistingNames.end(), [Name](const auto &Existing) { return Existing == Name; });
+		};
+		if(!IsReserved(BaseName) && !HasName(BaseName))
+			return std::string(BaseName);
+
+		const std::string Prefix = std::string(BaseName) + "_";
+		std::string Candidate = Prefix + "2";
+		if(!IsReserved(Candidate) && !HasName(Candidate))
+			return Candidate;
+
+		// 只索引同族名称；基础名或首个数字名可用时不分配索引。
+		const auto InFamily = [&Prefix](const std::string &Name) { return Name.starts_with(Prefix); };
+		const auto FamilyCount = static_cast<std::size_t>(std::count_if(ExistingNames.begin(), ExistingNames.end(), InFamily));
+		std::vector<std::string_view> Occupied;
+		bool Indexed = false;
+		try
+		{
+			Occupied.reserve(FamilyCount);
+			for(const auto &Name : ExistingNames)
+				if(InFamily(Name))
+					Occupied.emplace_back(Name);
+			std::sort(Occupied.begin(), Occupied.end());
+			Indexed = true;
+		}
+		catch(const std::bad_alloc &)
+		{
+			// 辅助索引申请失败时仍可按原扫描规则选名，不改变迁移结果。
+		}
+
+		for(std::size_t Suffix = 3;; ++Suffix)
+		{
+			Candidate = Prefix + std::to_string(Suffix);
+			if(IsReserved(Candidate))
+				continue;
+			const bool Exists = Indexed ? std::binary_search(Occupied.begin(), Occupied.end(), std::string_view(Candidate)) : HasName(Candidate);
+			if(!Exists)
+				return Candidate;
+		}
+	}
+}
+
 std::string NextLegacyAssetName(std::span<const std::string> ExistingNames)
 {
-	const auto HasName = [ExistingNames](std::string_view Name) {
-		return std::any_of(ExistingNames.begin(), ExistingNames.end(), [Name](const std::string &ExistingName) {
-			return ExistingName == Name;
-		});
-	};
-
-	if(!HasName("legacy"))
-		return "legacy";
-
-	for(int Suffix = 2;; ++Suffix)
-	{
-		std::string Candidate = "legacy_" + std::to_string(Suffix);
-		if(!HasName(Candidate))
-			return Candidate;
-	}
+	return NextIndexedAssetName(ExistingNames, "legacy", nullptr);
 }
 
 std::string NextReservedNamedSingleFileMigrationName(const SAssetResourceCategory &Category, std::string_view OldName, std::span<const std::string> ExistingNames)
 {
-	const auto NameExists = [&Category, ExistingNames](std::string_view Candidate) {
-		if(IsReservedNamedSingleFileAssetName(Category, Candidate))
-			return true;
-		return std::any_of(ExistingNames.begin(), ExistingNames.end(), [Candidate](const std::string &Name) {
-			return Name == Candidate;
-		});
-	};
-
-	std::string Candidate = std::string(OldName) + "_local";
-	if(!NameExists(Candidate))
-		return Candidate;
-
-	for(int Suffix = 2;; ++Suffix)
-	{
-		Candidate = std::string(OldName) + "_local_" + std::to_string(Suffix);
-		if(!NameExists(Candidate))
-			return Candidate;
-	}
+	return NextIndexedAssetName(ExistingNames, std::string(OldName) + "_local", &Category);
 }
 
 namespace
