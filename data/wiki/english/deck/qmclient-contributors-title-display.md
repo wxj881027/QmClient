@@ -10,7 +10,7 @@ Turn off "Show titles on nameplates" and the small icon badge above other player
 
 "Show main tee title locally" and "Show dummy title locally" filter only your own two connections; everyone else stays as is.
 
-Turn off "Show sponsor chat effects locally" and the soft glow and highlight effects stop being drawn on your own screen; other players' displays are unaffected.
+Turn off "Show sponsor chat effects locally" and the platinum highlight stops being drawn on your own screen; other players' displays are unaffected.
 
 ## How to tune it
 

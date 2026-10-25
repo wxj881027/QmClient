@@ -6,7 +6,7 @@ Redeems a sponsor code, writes a custom title, stores it on the title server. Th
 
 Once saved, the badge shows beside your name in chat and on the name plate above your head. Unredeemed players can still open the card; the status line just stays on "Enter your sponsor code".
 
-"Chat message style" decides how your chat messages render: Normal, Soft glow, Platinum highlight. Others see the same style, and "Chat message preview" below uses the same rendering.
+"Chat message style" decides how your chat messages render: Normal or Platinum highlight. Others see the same style, and "Chat message preview" below uses the same rendering.
 
 The title follows the nickname. With "Only show with this nickname" ticked, a name change — even just capitalization — hides the badge until you rebind and save.
 
