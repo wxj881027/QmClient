@@ -374,9 +374,19 @@ void CQmScreenshotManager::PumpThumbnails(IGraphics *pGraphics, IStorage *pStora
 			if(Entry.m_pJob != nullptr || !Entry.m_Thumbnail.m_Loading)
 				continue;
 
-			Entry.m_pJob = std::make_shared<CQmScreenshotImageJob>(pStorage, Entry.m_Path, Entry.m_StorageType, QM_SCREENSHOT_THUMBNAIL_MAX_EDGE);
-			pEngine->AddJob(Entry.m_pJob);
-			--JobsToStart;
+			try
+			{
+				auto pJob = std::make_shared<CQmScreenshotImageJob>(pStorage, Entry.m_Path, Entry.m_StorageType, QM_SCREENSHOT_THUMBNAIL_MAX_EDGE);
+				if(!pEngine->TryAddJob(pJob))
+					continue;
+				Entry.m_pJob = std::move(pJob);
+				--JobsToStart;
+			}
+			catch(const std::bad_alloc &)
+			{
+				// 未接收的条目保持待处理，帧末清理请求标记后可重新尝试。
+				break;
+			}
 		}
 	}
 

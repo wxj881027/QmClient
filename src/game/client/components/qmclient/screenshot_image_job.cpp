@@ -100,7 +100,15 @@ bool CQmScreenshotImageJob::LoadImageFromDisk(IStorage *pStorage, const std::str
 	{
 		const SPreviewTargetSize Target = ComputePreviewTargetSize((int)Image.m_Width, (int)Image.m_Height, MaxEdge);
 		if(Target.m_Resized)
+		{
 			ResizeImage(Image, Target.m_Width, Target.m_Height);
+			if(Image.m_Width != (size_t)Target.m_Width || Image.m_Height != (size_t)Target.m_Height)
+			{
+				// 缩图分配失败会保留原图，不能继续把超限原图交给缩略图上传。
+				Image.Free();
+				return false;
+			}
+		}
 	}
 
 	return true;
