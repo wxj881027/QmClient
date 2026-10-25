@@ -1298,10 +1298,7 @@ bool CGraphics_Threaded::BeginOffscreenTileFrame(int TileWidth, int TileHeight, 
 	// 分块时逻辑尺寸是整幅（N 倍），物理目标只是其中一块。
 	m_OffscreenFrameWidth = TileWidth;
 	m_OffscreenFrameHeight = TileHeight;
-	m_OffscreenFrameSavedWidth = m_ScreenWidth;
-	m_OffscreenFrameSavedHeight = m_ScreenHeight;
-	m_ScreenWidth = LogicalWidth;
-	m_ScreenHeight = LogicalHeight;
+	SetRenderScreenSize(LogicalWidth, LogicalHeight);
 	return true;
 }
 
@@ -1339,11 +1336,8 @@ bool CGraphics_Threaded::EndOffscreenFrame(CImageInfo &Image)
 			log_error("graphics", "offscreen frame readback produced no pixels (%dx%d)", m_OffscreenFrameWidth, m_OffscreenFrameHeight);
 	}
 	DestroyRenderTarget(&m_OffscreenFrameTarget);
-	// 无论读回成功与否都要恢复窗口尺寸，否则下一帧的界面与取景会按错误的屏幕尺寸排版。
-	m_ScreenWidth = m_OffscreenFrameSavedWidth;
-	m_ScreenHeight = m_OffscreenFrameSavedHeight;
-	m_OffscreenFrameSavedWidth = 0;
-	m_OffscreenFrameSavedHeight = 0;
+	// 无论读回成功与否都要退出离屏尺寸，否则下一帧仍会按截图尺寸排版。
+	SetRenderScreenSize(0, 0);
 	m_OffscreenFrameWidth = 0;
 	m_OffscreenFrameHeight = 0;
 	return Read;
@@ -1386,10 +1380,7 @@ bool CGraphics_Threaded::BeginVideoFrame(int Width, int Height, int SampleCount)
 
 	// 帧内所有按屏幕尺寸排版与取样的代码必须看到导出尺寸（与静帧离屏同因），
 	// 否则世界会画在窗口大小的角落里，文字也不会按导出像素重新光栅化。
-	m_VideoFrameSavedWidth = m_ScreenWidth;
-	m_VideoFrameSavedHeight = m_ScreenHeight;
-	m_ScreenWidth = Width;
-	m_ScreenHeight = Height;
+	SetRenderScreenSize(Width, Height);
 	return true;
 }
 
@@ -1403,10 +1394,9 @@ void CGraphics_Threaded::EndVideoFrame(CImageInfo &Image)
 
 	// 恢复窗口逻辑尺寸，再把成片回绘到窗口：导出期间预览不能冻结。
 	// 宽高比与窗口不同的导出按窗口拉伸显示（只是预览，成片仍按目标尺寸读回）。
-	const int WindowWidth = m_VideoFrameSavedWidth;
-	const int WindowHeight = m_VideoFrameSavedHeight;
-	m_ScreenWidth = WindowWidth;
-	m_ScreenHeight = WindowHeight;
+	SetRenderScreenSize(0, 0);
+	const int WindowWidth = ScreenWidth();
+	const int WindowHeight = ScreenHeight();
 
 	const CCommandBuffer::SPoint SavedScreenTL = m_State.m_ScreenTL;
 	const CCommandBuffer::SPoint SavedScreenBR = m_State.m_ScreenBR;
@@ -1415,6 +1405,7 @@ void CGraphics_Threaded::EndVideoFrame(CImageInfo &Image)
 	PreviewParams.m_W = (float)WindowWidth;
 	PreviewParams.m_H = (float)WindowHeight;
 	PreviewParams.m_Opaque = true;
+	PreviewParams.SetNativeTextureCoordinates(m_pBackend->GetBackendType());
 	DrawRenderTarget(m_VideoFrameTarget, PreviewParams);
 	MapScreen(SavedScreenTL.x, SavedScreenTL.y, SavedScreenBR.x, SavedScreenBR.y);
 
@@ -1489,6 +1480,8 @@ int CGraphics_Threaded::FlushVideoFrameReadbacks(CImageInfo *pOutImages, int Max
 
 void CGraphics_Threaded::StopVideoFrame()
 {
+	if(m_VideoFrameActive)
+		SetRenderScreenSize(0, 0);
 	m_VideoFrameActive = false;
 	if(m_VideoFramePendingReadbackCount > 0)
 	{
@@ -1508,8 +1501,6 @@ void CGraphics_Threaded::StopVideoFrame()
 	m_VideoFrameWidth = 0;
 	m_VideoFrameHeight = 0;
 	m_VideoFrameSampleCount = 1;
-	m_VideoFrameSavedWidth = 0;
-	m_VideoFrameSavedHeight = 0;
 }
 
 bool CGraphics_Threaded::LoadTextTextures(size_t Width, size_t Height, CTextureHandle &TextTexture, CTextureHandle &TextOutlineTexture, uint8_t *pTextData, uint8_t *pTextOutlineData)
@@ -2262,11 +2253,11 @@ void CGraphics_Threaded::QuadsText(float x, float y, float Size, const char *pTe
 
 float CGraphics_Threaded::RoundedRectAntialiasSize() const
 {
-	const float ScreenWidth = absolute(m_State.m_ScreenBR.x - m_State.m_ScreenTL.x);
-	const float ScreenHeight = absolute(m_State.m_ScreenBR.y - m_State.m_ScreenTL.y);
-	if(ScreenWidth <= 0.0f || ScreenHeight <= 0.0f || m_ScreenWidth <= 0 || m_ScreenHeight <= 0)
+	const float MappedWidth = absolute(m_State.m_ScreenBR.x - m_State.m_ScreenTL.x);
+	const float MappedHeight = absolute(m_State.m_ScreenBR.y - m_State.m_ScreenTL.y);
+	if(MappedWidth <= 0.0f || MappedHeight <= 0.0f || ScreenWidth() <= 0 || ScreenHeight() <= 0)
 		return 0.0f;
-	return maximum(ScreenWidth / (float)m_ScreenWidth, ScreenHeight / (float)m_ScreenHeight) * RECT_ANTIALIAS_PIXEL_SIZE;
+	return maximum(MappedWidth / (float)ScreenWidth(), MappedHeight / (float)ScreenHeight()) * RECT_ANTIALIAS_PIXEL_SIZE;
 }
 
 void CGraphics_Threaded::DrawRectExtAntialias(float x, float y, float w, float h, float r, int Corners, ColorRGBA Color, bool ResolveGeometry)
@@ -4327,6 +4318,7 @@ int CGraphics_Threaded::Init()
 	m_RenderTargets.Clear();
 	m_RenderTargetActive = false;
 	m_RenderTargetReadbacks.Clear();
+	SetRenderScreenSize(0, 0);
 	// 视频离屏目标同样随设备销毁：句柄、簿记与「本帧进行中」一起复位，
 	// 否则重建后第一帧会拿到悬挂句柄（后端槽位已全部回收）。
 	m_VideoFrameTarget = CRenderTargetHandle();
@@ -4337,8 +4329,6 @@ int CGraphics_Threaded::Init()
 	m_VideoFrameWidth = 0;
 	m_VideoFrameHeight = 0;
 	m_VideoFrameSampleCount = 1;
-	m_VideoFrameSavedWidth = 0;
-	m_VideoFrameSavedHeight = 0;
 
 	// 这三类资源由 vector 自身保存对象，没有独立的代数校验，因此必须连容器一起清空。
 	// 只把空闲链表头置 -1 会把旧条目留成「看起来仍然已分配」的孤儿：

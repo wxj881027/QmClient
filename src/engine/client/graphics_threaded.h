@@ -1060,8 +1060,6 @@ class CGraphics_Threaded : public IEngineGraphics
 	CRenderTargetHandle m_OffscreenFrameTarget;
 	int m_OffscreenFrameWidth = 0;
 	int m_OffscreenFrameHeight = 0;
-	int m_OffscreenFrameSavedWidth = 0;
-	int m_OffscreenFrameSavedHeight = 0;
 
 	// 视频导出离屏帧状态：目标跨帧复用（整段录制只建一次），尺寸或采样数变化时重建。
 	// 与静帧离屏不同，视频每帧都要回绘窗口保持预览，并从 resolve 后的单采样纹理读回。
@@ -1077,8 +1075,6 @@ class CGraphics_Threaded : public IEngineGraphics
 	int m_VideoFrameWidth = 0;
 	int m_VideoFrameHeight = 0;
 	int m_VideoFrameSampleCount = 1;
-	int m_VideoFrameSavedWidth = 0;
-	int m_VideoFrameSavedHeight = 0;
 
 	// 截图命名与目录解析（screenshots/ + 时间戳 + media_paths），
 	// 供 TakeScreenshot 与「从内存图像落盘」共用，保证两条路径落盘规则一致。
