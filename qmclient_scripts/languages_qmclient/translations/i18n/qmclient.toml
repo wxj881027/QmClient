@@ -38760,8 +38760,6 @@ turkish = "Çevrimdışı arkadaşların son görülme tarihlerini DDStats ile g
 polish = "Pokazuj przez DDStats daty ostatniej aktywności znajomych offline (codzienna aktualizacja, dopasowanie po nazwie)"
 
 [[message]]
-
-[[message]]
 key = "Auto-enable self-kill protection this many minutes after joining a game (0 = never)"
 [message.translations]
 simplified_chinese = "进图多少分钟后自动开启自杀保护（0 = 不自动开启）"
