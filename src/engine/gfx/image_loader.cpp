@@ -500,11 +500,17 @@ bool CImageLoader::SavePng(IOHANDLE File, const char *pFilename, const CImageInf
 		return false;
 	}
 
+	// PNG编码会分配内存；异常退出也必须关闭已经交接的文件。
+	struct SCloseFile
+	{
+		IOHANDLE m_File;
+		~SCloseFile() { io_close(m_File); }
+	} CloseFile{File};
+
 	CByteBufferWriter Writer;
 	if(!CImageLoader::SavePng(Writer, Image, pComment))
 	{
 		// error already logged
-		io_close(File);
 		return false;
 	}
 
@@ -513,7 +519,6 @@ bool CImageLoader::SavePng(IOHANDLE File, const char *pFilename, const CImageInf
 	{
 		log_error("png", "failed to write PNG data to file. filename='%s'", pFilename);
 	}
-	io_close(File);
 	return WriteSuccess;
 }
 

@@ -3146,6 +3146,7 @@ if(CLIENT)
     buffer_container_pool.h
     buffer_object_pool.h
     graphics_buffer_pair.h
+    screenshot_save.h
     quad_container_render.h
     graphics_upload_data.h
     graphics_vertex_budget.h
@@ -4864,6 +4865,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/vulkan_render_workers_test.cpp
     src/test/unit/engine/graphics/readback_image_test.cpp
     src/test/unit/engine/graphics/screenshot_image_test.cpp
+    src/test/unit/engine/graphics/screenshot_submit_test.cpp
+    src/test/integration/engine/screenshot_save_test.cpp
     src/test/unit/engine/graphics/qm_graphics_adapters_test.cpp
     src/test/unit/engine/graphics/graphics_vulkan_scheduler_test.cpp
     src/test/integration/client/graphics_fatal_error_test.cpp

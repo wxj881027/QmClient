@@ -12,6 +12,7 @@
 #include <engine/client/plausible_sizes.h>
 #include <engine/client/quad_container_render.h>
 #include <engine/client/rounded_rect_geometry.h>
+#include <engine/client/screenshot_save.h>
 #include <engine/engine.h>
 #include <engine/gfx/image_loader.h>
 #include <engine/gfx/image_manipulation.h>
@@ -1508,67 +1509,20 @@ void CGraphics_Threaded::KickCommandBuffer()
 	}
 }
 
-namespace
-{
-	class CScreenshotSaveJob : public IJob
-	{
-		IStorage *m_pStorage;
-		std::function<void()> m_pfnFailure;
-		char m_aName[IO_MAX_PATH_LENGTH];
-		CImageInfo m_Image;
-		IGraphics::FScreenshotProcessor m_pfnProcessor;
-
-	protected:
-		void Run() override
-		{
-			static constexpr LOG_COLOR SCREENSHOT_LOG_COLOR = LOG_COLOR{255, 153, 76};
-			std::string Comment;
-			if(m_pfnProcessor && !m_pfnProcessor(m_Image, Comment))
-			{
-				log_error_color(SCREENSHOT_LOG_COLOR, "client", "Failed to process screenshot '%s'", m_aName);
-				m_pfnFailure();
-				return;
-			}
-			char aWholePath[IO_MAX_PATH_LENGTH];
-			if(CImageLoader::SavePng(m_pStorage->OpenFile(m_aName, IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE, aWholePath, sizeof(aWholePath)), m_aName, m_Image, Comment.c_str()))
-			{
-				log_info_color(SCREENSHOT_LOG_COLOR, "client", "Saved screenshot to '%s'", aWholePath);
-			}
-			else
-			{
-				log_error_color(SCREENSHOT_LOG_COLOR, "client", "Failed to save screenshot to '%s'", aWholePath);
-				m_pfnFailure();
-			}
-		}
-
-	public:
-		CScreenshotSaveJob(IStorage *pStorage, const char *pName, CImageInfo &&Image, IGraphics::FScreenshotProcessor pfnProcessor, std::function<void()> pfnFailure) :
-			m_pStorage(pStorage),
-			m_pfnFailure(std::move(pfnFailure)),
-			m_Image(std::move(Image)),
-			m_pfnProcessor(std::move(pfnProcessor))
-		{
-			str_copy(m_aName, pName);
-		}
-
-		~CScreenshotSaveJob() override
-		{
-			m_Image.Free();
-		}
-	};
-} // namespace
-
 void CGraphics_Threaded::ScreenshotDirect(bool *pSwapped)
 {
 	if(!m_DoScreenshot)
 		return;
 	m_DoScreenshot = false;
+	// 先取走本次回调，异常或回调中发起下一次截图都不会复用旧请求。
+	auto Preview = std::move(m_pfnScreenshotCallback);
+	m_pfnScreenshotCallback = nullptr;
+	auto Processor = std::move(m_pfnScreenshotProcessor);
+	m_pfnScreenshotProcessor = nullptr;
+	char aScreenshotName[sizeof(m_aScreenshotName)];
+	str_copy(aScreenshotName, m_aScreenshotName);
 	if(!WindowActive())
-	{
-		m_pfnScreenshotCallback = nullptr;
-		m_pfnScreenshotProcessor = nullptr;
 		return;
-	}
 
 	CImageInfo Image;
 
@@ -1582,19 +1536,19 @@ void CGraphics_Threaded::ScreenshotDirect(bool *pSwapped)
 
 	if(Image.m_pData)
 	{
-		if(m_pfnScreenshotCallback)
-			m_pfnScreenshotCallback(Image.DeepCopy());
-		SWarning FailureWarning;
-		str_copy(FailureWarning.m_aWarningMsg, Localize("Failed to save screenshot"));
-		// AddWarning 自带互斥保护；本地化在主线程完成，后台任务只发布提示。
-		m_pEngine->AddJob(std::make_shared<CScreenshotSaveJob>(m_pStorage, m_aScreenshotName, std::move(Image), std::move(m_pfnScreenshotProcessor), [this, FailureWarning]() { AddWarning(FailureWarning); }));
+		screenshot_save::Finish(Image, Preview, Processor, [&](CImageInfo &&Captured, IGraphics::FScreenshotProcessor &&SaveProcessor) {
+			SWarning FailureWarning;
+			str_copy(FailureWarning.m_aWarningMsg, Localize("Failed to save screenshot"));
+			// 本地化在主线程完成，后台只通过已有同步入口发布提示。
+			return std::make_shared<screenshot_save::CSaveJob>(m_pStorage, aScreenshotName, std::move(Captured), std::move(SaveProcessor), [this, FailureWarning]() { AddWarning(FailureWarning); }); }, [this](const auto &pJob) { return m_pEngine->TryAddJob(pJob); }, [this]() {
+			SWarning FailureWarning;
+			str_copy(FailureWarning.m_aWarningMsg, Localize("Failed to save screenshot"));
+			AddWarning(FailureWarning); });
 	}
 	else
 	{
 		log_error("graphics", "Failed to create screenshot");
 	}
-	m_pfnScreenshotCallback = nullptr;
-	m_pfnScreenshotProcessor = nullptr;
 }
 
 void CGraphics_Threaded::TextureSet(CTextureHandle TextureId)
