@@ -3662,6 +3662,9 @@ DDraceNetwork is a cooperative online game where the goal is for you and your gr
 DDRaceNetwork · DDNet
 == DDRaceNetwork · DDNet
 
+DDStats shows UTC dates, updates daily and matches players by name only.
+== DDStats UTC tarihlerini gösterir, günlük güncellenir ve oyuncuları yalnızca adlarına göre eşleştirir.
+
 ddstats.tw ID stats
 == ddstats.tw ID istatistikleri
 
@@ -5324,6 +5327,9 @@ Expanded dropdown background opacity percentage
 Experimental
 == deneysel
 
+Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.
+== Deneysel: gidiş-dönüş yoklamaları yanıtsız kalırsa giden UDP oyun paketlerini tekrar gönderir. Yükleme trafiği üç katına çıkabilir; indirme kayıpları ve geç ulaşan yinelenmiş girdiler sorun çıkarmaya devam edebilir. KCP kullanılırken devre dışıdır.
+
 Export
 == Dışa aktar
 
@@ -6839,6 +6845,9 @@ Hue
 Hue speed
 == Ton hızı
 
+Humming
+== Mırıldanma
+
 i = Receive rate
 == i = Alma hızı
 
@@ -7640,6 +7649,9 @@ Last entered
 Last page in console
 == Konsolda son sayfa
 
+Last seen (DDStats): %s
+== Son görülme (DDStats): %s
+
 Last successful sync: %s
 == Son başarılı eşitleme: %s
 
@@ -8090,8 +8102,17 @@ LXGW WenKai is unavailable. Current fonts and weights will be kept.
 Lyrics
 == Şarkı sözleri
 
+Lyrics language
+== Şarkı sözü dili
+
+Lyrics language (0=Original, 1=Translation, 2=Original and translation)
+== Şarkı sözü dili (0=özgün metin, 1=çeviri, 2=özgün metin ve çeviri)
+
 Lyrics live in the Dynamic Island, so they stay hidden until that option is on.
 == Şarkı sözleri Dynamic Island'da görünür; bu seçenek açılana kadar gizli kalır.
+
+Lyrics translation
+== Şarkı sözü çevirisi
 
 Magic: Spirit Script
 == Büyü: ruh yazısı
@@ -8438,6 +8459,9 @@ Maximum number of automatic scoreboard screenshots (0 = unlimited)
 Maximum number of clients on server
 == Sunucudaki maksimum istemci sayısı
 
+Maximum number of copies per outgoing UDP game packet
+== Giden her UDP oyun paketinin azami kopya sayısı
+
 Maximum number of packets received in one batch before returning to the main loop (0 = unlimited).
 == Ana döngüye dönmeden önce tek bir toplu işlemde alınabilecek maksimum paket sayısı (0 = sınırsız).
 
@@ -8455,6 +8479,9 @@ Maximum number of skins loaded simultaneously
 
 Maximum number of vanilla antispoof handshakes answered per second (0 = unlimited).
 == Saniyede yanıtlanacak Vanilla sahteciliği önleme el sıkışmalarının maksimum sayısı (0 = sınırsız).
+
+Maximum packet copies
+== Azami paket kopyası
 
 Maximum players participating in a vote (0 = unlimited)
 == Bir oylamaya katılabilecek maksimum oyuncu sayısı (0 = sınırsız)
@@ -8737,6 +8764,9 @@ Moves to the point with x/y-coordinates ii
 
 Moves to the tile with x/y-number ii
 == x/y-numarası ii olan karoya gider
+
+Moving block and freeze prediction (experimental)
+== Hareketli blok ve donma alanı tahmini (deneysel)
 
 MP4 is the most compatible for sharing, MOV is the editing standard and required by ProRes, and MKV suits lossless archives but is poorly supported by editors.
 == MP4 paylaşım için en uyumlusu, MOV kurgu standardı ve ProRes için zorunlu, MKV kayıpsız arşive uygun ama kurgu programlarında desteği zayıf.
@@ -9293,6 +9323,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 No recently used skins
 == Son kullanılan görünüm yok
 
+No record
+== Kayıt yok
+
 No release notes provided
 == Bu sürüm için not sağlanmadı
 
@@ -9737,6 +9770,9 @@ Or visit DDNet.org
 Original
 == Özgün
 
+Original and translation
+== Özgün metin ve çeviri
+
 Original language for both received and outgoing messages. Use Auto to detect each message.
 == Alınan ve gönderilen mesajlar için özgün dil. Her mesajı algılamak için Otomatik'i kullanın.
 
@@ -9745,6 +9781,9 @@ Original language for incoming and outgoing text
 
 Original message language
 == Orijinal mesajın dili
+
+Original only
+== Yalnızca özgün metin
 
 Original options
 == Özgün seçenekler
@@ -10424,6 +10463,9 @@ Plays a short effect when a tee's skin changes, and can copy the skin of the tee
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == Çekiçle çalınanlar dahil, skinin değiştiğinde bir animasyon oynatır.
 
+Playtime (h)
+== Oyun süresi (sa.)
+
 Please add a valid cut first
 == Lütfen önce geçerli bir kesim ekleyin
 
@@ -10555,6 +10597,9 @@ Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when fr
 
 Predict grenade trajectory (only with cl_antiping 1)
 == Bomba yörüngesini tahmin et (yalnızca cl_antiping 1 ile)
+
+Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)
+== Axiom dörtgen kurallarını kullanan sunucularda hareketli blokları ve donma alanlarını tahmin et (deneysel)
 
 Predict ninja path
 == Ninja yolunu tahmin et
@@ -11011,6 +11056,9 @@ Querying points for %s...
 
 Querying points...
 == Puanlar sorgulanıyor...
+
+Querying...
+== Sorgulanıyor…
 
 Queue is empty
 == Sıra boş
@@ -12260,6 +12308,9 @@ Scoreboard cursor
 Scoreboard filter: only show players whose name or clan contains this text
 == Skor tablosu filtresi: adı veya klanı bu metni içeren oyuncuları göster
 
+Scoreboard playtime
+== Skor tablosunda oyun süresi
+
 Scoreboard point check
 == Skor tablosu puan kontrolü
 
@@ -12548,6 +12599,9 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == Belirtilen komutu rcon'a gönder
 
+Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
+== 30 ile 90 saniye arasında rastgele aralıklarla genel sohbete art arda üç şarkı sözü satırı gönder, satırlar arasında 3 saniye bekle
+
 Send translation method
 == Çeviri yöntemini gönder
 
@@ -12571,6 +12625,9 @@ Sends a saved .map file from your client to the public test server and reports p
 
 Sends an automatic chat reply when someone whispers you while you are muted or away.
 == Susturulduğunuzda veya uzaktayken biri size fısıldarsa otomatik sohbet yanıtı gönderir.
+
+Separate Dynamic Island
+== Dynamic Island ayır
 
 Separate with commas
 == Virgülle ayır
@@ -13175,6 +13232,9 @@ Show friend tag (♥) on nametag
 Show friends only
 == Sadece arkadaşları göster
 
+Show friends' last seen dates (DDStats)
+== Arkadaşların son görülme tarihlerini göster (DDStats)
+
 Show frozen Tee HUD
 == Donmuş Tee HUD'unu göster
 
@@ -13370,6 +13430,9 @@ Show kill messages
 Show labels on status bar items
 == Durum çubuğu öğelerinde etiketleri göster
 
+Show last seen dates for offline friends using DDStats (updated daily, matched by player name)
+== Çevrimdışı arkadaşların son görülme tarihlerini DDStats ile göster (günlük güncelleme, oyuncu adına göre eşleştirme)
+
 Show list of mutes (page 1 by default, 20 entries per page)
 == Sessize alınanlar listesini göster (varsayılan sayfa 1, sayfa başına 20 giriş)
 
@@ -13384,6 +13447,12 @@ Show local time seconds
 
 Show logs of the last i seconds
 == Son i saniyenin günlüklerini göster
+
+Show lyrics in a separate island below Dynamic Island
+== Şarkı sözlerini Dynamic Island altında ayrı bir adada göster
+
+Show lyrics in Dynamic Island
+== Şarkı sözlerini Dynamic Island içinde göster
 
 Show lyrics inside Dynamic Island
 == Show lyrics in Dynamic Island
@@ -13586,6 +13655,12 @@ Show player Tee
 Show players' key presses
 == Oyuncuların tuş vuruşlarını göster
 
+Show playtime
+== Oyun süresini göster
+
+Show points
+== Puanları göster
+
 Show position and angle
 == Konum ve açıyı göster
 
@@ -13783,6 +13858,9 @@ Show titles on nameplates
 
 Show toast
 == Toast'ı göster
+
+Show total DDNet playtime from activity instead of points in scoreboard
+== Skor tablosunda puanlar yerine DDNet activity toplam oyun süresini göster
 
 Show tune zone colors
 == Tune bölge renklerini göster
@@ -14216,9 +14294,6 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == SodaMusic Hook yardımcı yolu (boş = QmClient'ın yanında)
 
-Soft glow
-== Yumuşak parıltı
-
 Solid
 == Düz
 
@@ -14399,8 +14474,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == Ana karakter ve kuklayı solo koşu senkronizasyonu için farklı takımlara dağıtır
 
-Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
-== Destekçi sohbet stili taslağı: 0=Normal, 1=Yumuşak parıltı, 2=Platin ışıltısı
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight
+== Destekçi sohbet stili taslağı: 0=Normal, 1=Platin ışıltısı
 
 Sponsor code
 == Destekçi kodu
@@ -15932,6 +16007,9 @@ Translation menu selected color
 Translation model was not found. Check the model name.
 == Çeviri modeli bulunamadı. Model adını kontrol edin.
 
+Translation only
+== Yalnızca çeviri
+
 Translation service
 == Çeviri hizmeti
 
@@ -16447,6 +16525,9 @@ Upload a saved map to the public test server
 
 Upload map
 == Haritayı yükle
+
+Upstream redundancy (experimental)
+== Giden paketleri yedekli gönder (deneysel)
 
 URL for downloading community skins
 == Topluluk skinleri indirmek için URL

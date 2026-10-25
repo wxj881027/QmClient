@@ -22941,6 +22941,70 @@ turkish = "Düşman oyuncuları tamamen engelle"
 polish = "Całkowicie blokuj wrogich graczy"
 
 [[message]]
+key = "Upstream redundancy (experimental)"
+[message.translations]
+simplified_chinese = "上行冗余发送（实验性）"
+traditional_chinese = "上行冗餘傳送（實驗性）"
+japanese = "上りパケットの冗長送信（実験的）"
+korean = "상향 패킷 중복 전송 (실험적)"
+russian = "Дублирование исходящих пакетов (экспериментально)"
+german = "Redundanter Paketversand (experimentell)"
+spanish = "Envío redundante de paquetes (experimental)"
+french = "Envoi redondant de paquets (expérimental)"
+brazilian_portuguese = "Envio redundante de pacotes (experimental)"
+portuguese = "Envio redundante de pacotes (experimental)"
+turkish = "Giden paketleri yedekli gönder (deneysel)"
+polish = "Nadmiarowe wysyłanie pakietów (eksperymentalne)"
+
+[[message]]
+key = "Maximum packet copies"
+[message.translations]
+simplified_chinese = "最大包份数"
+traditional_chinese = "封包份數上限"
+japanese = "パケットの最大送信数"
+korean = "최대 패킷 전송 사본 수"
+russian = "Максимальное число копий пакета"
+german = "Maximale Paketkopien"
+spanish = "Máximo de copias por paquete"
+french = "Nombre maximal de copies par paquet"
+brazilian_portuguese = "Máximo de cópias por pacote"
+portuguese = "Máximo de cópias por pacote"
+turkish = "Azami paket kopyası"
+polish = "Maksymalna liczba kopii pakietu"
+
+[[message]]
+key = "Maximum number of copies per outgoing UDP game packet"
+[message.translations]
+simplified_chinese = "每个上行 UDP 游戏包的最大发送份数"
+traditional_chinese = "每個上行 UDP 遊戲封包的傳送份數上限"
+japanese = "上り UDP ゲームパケットごとの最大送信数"
+korean = "상향 UDP 게임 패킷당 최대 전송 사본 수"
+russian = "Максимальное число копий каждого исходящего игрового UDP-пакета"
+german = "Maximale Anzahl der Kopien pro ausgehendem UDP-Spielpaket"
+spanish = "Número máximo de copias de cada paquete UDP saliente del juego"
+french = "Nombre maximal de copies de chaque paquet UDP de jeu sortant"
+brazilian_portuguese = "Número máximo de cópias de cada pacote UDP de saída do jogo"
+portuguese = "Número máximo de cópias de cada pacote UDP enviado pelo jogo"
+turkish = "Giden her UDP oyun paketinin azami kopya sayısı"
+polish = "Maksymalna liczba kopii każdego wychodzącego pakietu UDP gry"
+
+[[message]]
+key = "Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP."
+[message.translations]
+simplified_chinese = "实验功能：往返探针未获回复时重复发送上行 UDP 游戏包。上行流量最多增至三倍；下行丢包和晚到的重复输入仍可能造成问题。使用 KCP 时停用。"
+traditional_chinese = "實驗功能：往返探針未獲回覆時重複傳送上行 UDP 遊戲封包。上行流量最多增至三倍；下行丟包和晚到的重複輸入仍可能造成問題。使用 KCP 時停用。"
+japanese = "実験機能：往復プローブに応答がない場合、上り UDP ゲームパケットを繰り返し送信します。送信量は最大三倍になります。下りのパケット損失や遅れて届く重複入力による問題は残ります。KCP 使用時は無効です。"
+korean = "실험 기능: 왕복 탐침에 응답이 없으면 상향 UDP 게임 패킷을 반복 전송합니다. 업로드 트래픽은 최대 세 배가 되며, 하향 패킷 손실이나 늦게 도착한 중복 입력은 여전히 문제를 일으킬 수 있습니다. KCP 사용 시 비활성화됩니다."
+russian = "Экспериментальная функция: повторно отправляет исходящие игровые UDP-пакеты, если нет ответов на проверочные запросы. Исходящий трафик может утроиться; потеря входящих пакетов и запоздалые копии ввода всё ещё могут вызывать проблемы. При KCP отключена."
+german = "Experimentell: Sendet ausgehende UDP-Spielpakete mehrfach, wenn Prüfanfragen unbeantwortet bleiben. Der Upload kann sich verdreifachen; verlorene eingehende Pakete und verspätete Eingabekopien können weiterhin Probleme verursachen. Bei KCP deaktiviert."
+spanish = "Experimental: repite los paquetes UDP salientes del juego cuando las sondas de ida y vuelta no reciben respuesta. El tráfico de subida puede triplicarse; la pérdida de bajada y las entradas duplicadas tardías aún pueden causar problemas. Se desactiva con KCP."
+french = "Expérimental : répète les paquets UDP sortants du jeu lorsque les sondes aller-retour restent sans réponse. Le trafic montant peut tripler ; les pertes descendantes et les entrées dupliquées tardives peuvent toujours poser problème. Désactivé avec KCP."
+brazilian_portuguese = "Experimental: repete pacotes UDP de saída do jogo quando as sondagens de ida e volta ficam sem resposta. O tráfego de envio pode triplicar; perdas no recebimento e entradas duplicadas atrasadas ainda podem causar problemas. Desativado com KCP."
+portuguese = "Experimental: repete pacotes UDP enviados pelo jogo quando as sondagens de ida e volta ficam sem resposta. O tráfego de envio pode triplicar; perdas na receção e entradas duplicadas atrasadas ainda podem causar problemas. Desativado com KCP."
+turkish = "Deneysel: gidiş-dönüş yoklamaları yanıtsız kalırsa giden UDP oyun paketlerini tekrar gönderir. Yükleme trafiği üç katına çıkabilir; indirme kayıpları ve geç ulaşan yinelenmiş girdiler sorun çıkarmaya devam edebilir. KCP kullanılırken devre dışıdır."
+polish = "Eksperymentalnie powtarza wychodzące pakiety UDP gry, gdy sondy nie otrzymują odpowiedzi. Ruch wychodzący może wzrosnąć trzykrotnie; utrata pakietów przychodzących i opóźnione kopie wejścia nadal mogą powodować problemy. Wyłączone przy KCP."
+
+[[message]]
 key = "Could not delete \"%s\""
 [message.translations]
 simplified_chinese = "无法删除\"%s\""

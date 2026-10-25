@@ -10,6 +10,8 @@
 
 #include <engine/shared/protocolglue.h>
 
+#include <algorithm>
+
 const unsigned char SECURITY_TOKEN_MAGIC[4] = {'T', 'K', 'E', 'N'};
 
 SECURITY_TOKEN ToSecurityToken(const unsigned char *pData)
@@ -281,13 +283,20 @@ int CNetBase::PackPacket(unsigned char *pBuffer, int BufferSize, CNetPacketConst
 	return FinalSize;
 }
 
-void CNetBase::SendPacket(NETSOCKET Socket, NETADDR *pAddr, CNetPacketConstruct *pPacket, SECURITY_TOKEN SecurityToken, bool Sixup)
+void CNetBase::SendPacket(NETSOCKET Socket, NETADDR *pAddr, CNetPacketConstruct *pPacket, SECURITY_TOKEN SecurityToken, bool Sixup, int NumCopies)
 {
+	// 在编码成 0.6/0.7 包头之前判断，避免把 0.7 的压缩标志当成控制包。
+	const int Copies = pPacket->m_NumChunks > 0 && (pPacket->m_Flags & NET_PACKETFLAG_CONTROL) == 0 ? std::clamp(NumCopies, 1, 3) : 1;
 	unsigned char aBuffer[NET_MAX_PACKETSIZE];
 	const int FinalSize = PackPacket(aBuffer, sizeof(aBuffer), pPacket, SecurityToken, Sixup);
 	if(FinalSize >= 0)
 	{
-		net_udp_send(Socket, pAddr, aBuffer, FinalSize);
+		// 只打包一次；每份都经过统一发送入口，流量和错误统计包含实际副本。
+		for(int Copy = 0; Copy < Copies; ++Copy)
+		{
+			if(net_udp_send(Socket, pAddr, aBuffer, FinalSize) < 0)
+				break;
+		}
 	}
 }
 

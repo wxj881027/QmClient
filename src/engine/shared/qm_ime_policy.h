@@ -134,8 +134,11 @@ public:
 		m_SuppressStaleReload = true;
 	}
 
-	void UpdateFromNative(std::optional<SQmImeCandidateList> List, bool IsOpenNotify)
+	void UpdateFromNative(std::optional<SQmImeCandidateList> List, bool IsOpenNotify, bool HasActiveComposition = false)
 	{
+		// 提交后可能漏收下一轮打开/编辑通知；仅由当前 IMM 组合串确认恢复。
+		if(HasActiveComposition)
+			ResumeComposition();
 		const bool Suppress = QmImeShouldSuppressStaleCandidateReload(m_SuppressStaleReload, IsOpenNotify);
 		if(IsOpenNotify)
 			ResumeComposition();
@@ -152,13 +155,15 @@ public:
 		}
 	}
 
-	void UpdateFromSdl(const char *const *ppCandidates, int Count, int SelectedIndex, bool WindowsNumberedCandidates, std::optional<SQmImeCandidateList> NativeCandidates = std::nullopt)
+	void UpdateFromSdl(const char *const *ppCandidates, int Count, int SelectedIndex, bool WindowsNumberedCandidates, std::optional<SQmImeCandidateList> NativeCandidates = std::nullopt, bool HasActiveComposition = false)
 	{
 		if(Count <= 0 || ppCandidates == nullptr)
 		{
 			Clear();
 			return;
 		}
+		if(HasActiveComposition)
+			ResumeComposition();
 		if(!AcceptsSdlCandidates())
 			return;
 

@@ -323,7 +323,25 @@ void CMenus::RenderQmHudLyricsContent(CUIRect &Content, float LineHeight, float 
 		}
 	}
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyrics, "Enable lyrics", Localize("Enable lyrics"), &g_Config.m_QmLyrics);
-	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyricsInMediaIsland, "Show lyrics inside Dynamic Island", Localize("Show lyrics inside Dynamic Island"), &g_Config.m_QmLyricsInMediaIsland);
+	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyricsInMediaIsland, "Show lyrics in Dynamic Island", Localize("Show lyrics in Dynamic Island"), &g_Config.m_QmLyricsInMediaIsland);
+	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyricsSeparateIsland, "Separate Dynamic Island", Localize("Separate Dynamic Island"), &g_Config.m_QmLyricsSeparateIsland);
+	{
+		CUIRect Row;
+		if(Flow.Control("qmclient-lyrics-language", CurrentSettingsContentMetrics().m_LineHeight, Row))
+		{
+			CUIRect Label, Control;
+			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &Label, &Control);
+			RenderQmHudLabel("qmclient-lyrics-language-label", &Label, Localize("Lyrics language"), ui_token::font::BODY);
+			const char *apNames[] = {Localize("Original only"), Localize("Translation only"), Localize("Original and translation")};
+			static CUi::SDropDownState s_LanguageDropDown;
+			static CScrollRegion s_LanguageScroll;
+			s_LanguageDropDown.m_SelectionPopupContext.m_pScrollRegion = &s_LanguageScroll;
+			const int Selected = DoSettingsDropDown(&Control, g_Config.m_QmLyricsLanguage, apNames, std::size(apNames), s_LanguageDropDown, {}, &g_Config.m_QmLyricsLanguage, nullptr, &Row);
+			if(!PrewarmOnly && !Ui()->RenderOnly() && Selected >= 0)
+				g_Config.m_QmLyricsLanguage = Selected;
+		}
+		Flow.Space(LineSpacing);
+	}
 	if(g_Config.m_QmKugouHookEnable != 0)
 	{
 		CUIRect Row, SetupButton, RestoreButton;

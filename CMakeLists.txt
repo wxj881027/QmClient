@@ -246,6 +246,7 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64" AND CMAKE_C_COMPIL
     src/qm/music/qm_kugou_protocol.h
     src/qm/music/qm_qqmusic_protocol.h
     src/qm/hooks/netease/qm_netease_frontend_bridge.cpp
+    src/game/client/components/qmclient/netease_hook/qm_netease_lyrics_channel.cpp
     src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
     src/game/client/components/qmclient/netease/netease_lyric_state.cpp
     src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp
@@ -2241,6 +2242,7 @@ set(EXPECTED_DATA
   qmclient/developer_badge.png
   qmclient/gui_logo.png
   qmclient/map_difficulty.sql
+  qmclient/title_badges/logo_sdf.png
   race_flag.png
   shader/gaussian_blur.frag
   shader/gaussian_blur.vert
@@ -2291,6 +2293,7 @@ set(EXPECTED_DATA
   shader/vulkan/tile_border.frag
   shader/vulkan/tile_border.vert
   skins/PaladiN.png
+  skins/Vaporeon.png
   skins/antiantey.png
   skins/beast.png
   skins/blacktee.png
@@ -2931,6 +2934,8 @@ set_src(GAME_SHARED GLOB src/game
   mapitems_ex_types.h
   prng.cpp
   prng.h
+  qm_axiom_quad_collision.cpp
+  qm_axiom_quad_collision.h
   race_state.h
   team_state.h
   teamscore.cpp
@@ -3103,6 +3108,7 @@ if(CLIENT)
     ghost.cpp
     ghost.h
     game_ping.h
+    link_probe.h
     gpu_upload_limiter.h
     graph.cpp
     graph.h
@@ -3180,6 +3186,15 @@ if(CLIENT)
     QmUi/QmDemoCameraPanel.cpp
     QmUi/QmAnimationBackend.cpp
     QmUi/QmAnimationBackend.h
+    QmUi/QmSeasonalSidebar.cpp
+    QmUi/QmSeasonalSidebar.h
+    QmUi/QmBadgeGeometry.cpp
+    QmUi/QmBadgeGeometry.h
+    QmUi/QmBadgeGeometryData.h
+    QmUi/QmAuthorName.cpp
+    QmUi/QmAuthorName.h
+    QmUi/QmAuthorTee.cpp
+    QmUi/QmAuthorTee.h
     QmUi/QmAnim.cpp
     QmUi/QmAnim.h
     QmUi/QmUiPerf.cpp
@@ -3207,6 +3222,8 @@ if(CLIENT)
     QmUi/QmAnimResolve.cpp
     QmUi/QmAnimResolve.h
     QmUi/QmHookCountdownRender.h
+    QmUi/QmLyricsHud.cpp
+    QmUi/QmLyricsHud.h
     QmUi/QmLegacyMediaHud.cpp
     QmUi/QmLegacyMediaHud.h
     QmUi/QmColorGradient.h
@@ -3480,6 +3497,8 @@ if(CLIENT)
     components/pie_menu_logic.h
     components/player_points.cpp
     components/player_points.h
+    components/qmclient/ddnet_activity.h
+    components/qmclient/player_points_request.h
     components/qmclient/player_points_state.h
     components/qmclient/gores_drown_tracker.h
     components/players.cpp
@@ -3487,11 +3506,16 @@ if(CLIENT)
     components/qm_console_log_filter.h
     components/qmclient/axiom_auto_login.cpp
     components/qmclient/axiom_auto_login.h
+    components/qmclient/axiom_prediction.cpp
     components/qmclient/axiom_scores.cpp
     components/qmclient/axiom_scores.h
     components/qmclient/axiom_scores_data.cpp
     components/qmclient/axiom_scores_data.h
     components/qmclient/axiom_scores_parse_job.h
+    components/qmclient/friend_last_seen.cpp
+    components/qmclient/friend_last_seen.h
+    components/qmclient/friend_last_seen_data.cpp
+    components/qmclient/friend_last_seen_data.h
     components/qmclient/bind_editor.cpp
     components/qmclient/bind_editor.h
     components/qmclient/bind_overview.h
@@ -3574,6 +3598,12 @@ if(CLIENT)
     components/qmclient/monitoring/monitoring.h
     components/qmclient/music_app_watcher.cpp
     components/qmclient/music_app_watcher.h
+    components/qmclient/music_lyrics/music_lyrics_display.h
+    components/qmclient/music_lyrics/music_humming_state.h
+    components/qmclient/music_lyrics/music_lyrics_presentation.cpp
+    components/qmclient/music_lyrics/music_lyrics_presentation.h
+    components/qmclient/netease_hook/qm_netease_lyrics_channel.cpp
+    components/qmclient/netease_hook/qm_netease_lyrics_channel.h
     components/qmclient/music_lyrics/music_lyrics_integration.cpp
     components/qmclient/music_lyrics/music_lyrics_integration.h
     components/qmclient/music_lyrics/music_lyrics_krc.cpp
@@ -3618,6 +3648,9 @@ if(CLIENT)
     components/qmclient/netease_hook/qm_netease_hook_provider.cpp
     components/qmclient/netease_hook/qm_netease_hook_provider.h
     components/qmclient/qm_music_hook_registry.h
+    components/qmclient/qm_sidebar_holiday.cpp
+    components/qmclient/qm_sidebar_holiday.h
+    components/qmclient/qm_sidebar_calendar_data.h
     components/qmclient/qm_sponsor_authors.cpp
     components/qmclient/qm_sponsor_authors.h
     components/qmclient/qm_markdown.cpp
@@ -4695,6 +4728,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_mobile_spectator_test.cpp
     src/test/unit/qmclient/client/qm_friend_enter_tracker_test.cpp
     src/test/unit/qmclient/client/qm_friend_online_tracker_test.cpp
+    src/test/unit/qmclient/client/qm_friend_last_seen_test.cpp
     src/test/unit/qmclient/client/qm_friends_category_drag_test.cpp
     src/test/unit/engine/friends_revision_test.cpp
     src/test/unit/engine/friends_pin_test.cpp
@@ -4705,6 +4739,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/monitoring/qm_device_sampler_lifecycle_test.cpp
     src/test/unit/client/player_points_parse_test.cpp
     src/test/unit/qmclient/client/qm_player_points_cache_test.cpp
+    src/test/unit/qmclient/client/qm_player_points_request_test.cpp
     src/test/unit/qmclient/client/qm_gores_drown_tracker_test.cpp
     src/test/unit/qmclient/client/qm_trail_geometry_test.cpp
     src/test/integration/qmclient/client/qm_map_upload_lifecycle_test.cpp
@@ -4802,6 +4837,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/jobs_test.cpp
     src/test/unit/engine/json_test.cpp
     src/test/unit/engine/jsonwriter_test.cpp
+    src/test/unit/engine/link_probe_test.cpp
     src/test/unit/client/keyword_reply_rules_test.cpp
     src/test/unit/engine/logger_test.cpp
     src/test/unit/client/map_difficulty_catalog_test.cpp
@@ -4827,6 +4863,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/server/mutes_test.cpp
     src/test/unit/engine/name_ban_test.cpp
     src/test/unit/engine/net_test.cpp
+    src/test/integration/engine/net_dup_upstream_test.cpp
     src/test/contract/base/net_protocol_contract_test.cpp
     src/test/unit/base/netaddr_test.cpp
     src/test/unit/engine/network_test.cpp
@@ -4838,6 +4875,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_bind_overview_test.cpp
     src/test/unit/qmclient/client/qm_background_particles_test.cpp
     src/test/unit/qmclient/client/qm_axiom_scores_test.cpp
+    src/test/integration/qmclient/client/qm_axiom_quad_collision_test.cpp
     src/test/contract/qmclient/client/qm_axiom_scores_contract_test.cpp
     src/test/unit/qmclient/client/qm_chat_emoji_test.cpp
     src/test/unit/qmclient/client/qm_chat_interactions_test.cpp
@@ -4893,6 +4931,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_hud_hook_countdown_test.cpp
     src/test/contract/qmclient/ui/qm_media_island_shader_contract_test.cpp
     src/test/unit/qmclient/client/qm_media_island_render_params_test.cpp
+    src/test/integration/qmclient/client/qm_netease_lyrics_channel_test.cpp
+    src/test/unit/qmclient/music/music_lyrics_display_test.cpp
+    src/test/unit/qmclient/music/music_humming_state_test.cpp
+    src/test/unit/qmclient/client/qm_lyrics_hud_layout_test.cpp
     src/test/unit/qmclient/client/qm_media_island_content_test.cpp
     src/test/unit/qmclient/client/qm_media_island_satellite_test.cpp
     src/test/unit/qmclient/client/qm_media_island_motion_test.cpp
@@ -4900,6 +4942,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_media_volume_test.cpp
     src/test/unit/qmclient/client/qm_mpris_policy_test.cpp
     src/test/unit/qmclient/client/qm_media_island_layout_test.cpp
+    src/test/integration/qmclient/client/qm_media_island_editor_placement_test.cpp
     src/test/unit/qmclient/client/qm_legacy_media_hud_test.cpp
     src/test/contract/qmclient/client/qm_hud_media_island_contract_test.cpp
     src/test/unit/qmclient/client/qm_hud_frozen_tee_state_test.cpp
@@ -5020,6 +5063,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_predicted_event_queue_test.cpp
     src/test/unit/qmclient/client/qm_tee_hue_cycle_test.cpp
     src/test/unit/qmclient/client/qm_tee_trail_test.cpp
+    src/test/unit/qmclient/client/qm_sidebar_holiday_test.cpp
+    src/test/unit/qmclient/ui/qm_badge_geometry_test.cpp
+    src/test/integration/qmclient/client/qm_badge_geometry_render_test.cpp
     src/test/unit/qmclient/client/qm_sponsor_authors_test.cpp
     src/test/unit/qmclient/client/qm_sponsors_test.cpp
     src/test/unit/qmclient/client/qm_solo_split_test.cpp
@@ -5033,6 +5079,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_map_upload_test.cpp
     src/test/unit/qmclient/client/qm_developer_badge_test.cpp
     src/test/unit/qmclient/client/qm_title_badge_test.cpp
+    src/test/unit/qmclient/client/qm_title_badge_render_test.cpp
     src/test/unit/qmclient/client/qm_title_style_test.cpp
     src/test/unit/qmclient/client/qm_sponsor_chat_style_test.cpp
     src/test/unit/qmclient/client/qm_skin_outline_test.cpp
@@ -5246,6 +5293,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/tclient/swap_countdown_message.cpp
     src/game/client/components/tclient/qm_tee_trail.cpp
     src/game/client/components/qmclient/tee_trail_styles.cpp
+    src/game/client/components/qmclient/qm_title_badge.cpp
     src/game/client/components/qmclient/screenshot_image_job.cpp
     src/game/client/components/qmclient/skin_source_job.cpp
     src/game/client/components/qmclient/config_package.cpp
@@ -5296,6 +5344,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/hammer_hit_detection.cpp
     src/game/client/components/qmclient/axiom_scores.cpp
     src/game/client/components/qmclient/axiom_scores_data.cpp
+    src/game/client/components/qmclient/friend_last_seen_data.cpp
     src/game/client/components/qmclient/streamer_word_filter.cpp
     src/game/client/components/qmclient/word_filter_list.cpp
     src/test/support/ui_test_stubs.cpp
@@ -5310,6 +5359,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/music_lyrics/qm_spotify_token.cpp
     src/game/client/components/qmclient/music_lyrics/qm_spotify_parser.cpp
     src/qm/music/qm_music_publication.cpp
+    src/game/client/components/qmclient/netease_hook/qm_netease_lyrics_channel.cpp
     src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
     src/game/client/components/qmclient/netease/netease_lyric_state.cpp
     src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp
@@ -5323,6 +5373,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/wheel_presets.cpp
     src/game/client/components/qmclient/settings_resource_preview.cpp
     src/game/client/components/qmclient/tee_hue_cycle.cpp
+    src/game/client/components/qmclient/qm_developer_badge.cpp
+    src/game/client/components/qmclient/qm_title_badge.cpp
+    src/game/client/QmUi/QmBadgeGeometry.cpp
+    src/game/client/components/qmclient/qm_sidebar_holiday.cpp
     src/game/client/components/qmclient/qm_sponsor_authors.cpp
     src/game/client/components/qmclient/qm_markdown.cpp
     src/game/client/components/qmclient/qm_markdown_broadcast.cpp
@@ -5566,6 +5620,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/client/qm_text_initialization_test.cpp
       src/test/integration/qmclient/client/qm_text_device_recovery_test.cpp
       src/test/integration/qmclient/ui/qm_popup_blur_scope_test.cpp
+      src/test/integration/qmclient/ui/qm_author_name_blur_test.cpp
+      src/game/client/QmUi/QmAuthorName.cpp
+      src/game/client/components/qmclient/qm_sponsor_authors.cpp
       src/test/unit/qmclient/ui/qm_ui_overlay_semantics_test.cpp
       src/test/unit/qmclient/ui/qm_slot_reflow_test.cpp
       src/game/client/QmUi/QmToast.cpp
@@ -5578,6 +5635,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_background_controls_test.cpp
       src/test/integration/qmclient/ui/qm_navigation_selection_test.cpp
       src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp
+      src/test/integration/qmclient/ui/qm_offscreen_cursor_test.cpp
       src/test/unit/qmclient/ui/qm_line_input_multiline_test.cpp
       src/test/integration/qmclient/ui/qm_multiline_edit_scroll_test.cpp
       src/test/integration/qmclient/ui/qm_wiki_panel_test.cpp

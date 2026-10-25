@@ -488,6 +488,13 @@ inline SHudMediaIslandTimerAnchor QmHudMediaIslandAnchorTimer(float CenterX, flo
 	return {TimerX, TimerX - MainWidth - MainGap};
 }
 
+inline CUIRect QmHudMediaIslandEditorTransformRect(const CUIRect &VisibleRect)
+{
+	// 固定大小的变换框跟随整岛水平中心，媒体显隐和内容宽度变化不改变保存位置的基准。
+	constexpr float AnchorSize = QmHudMediaIslandScaled(QmHudMediaIslandBaseHeight);
+	return {VisibleRect.x + (VisibleRect.w - AnchorSize) * 0.5f, VisibleRect.y, AnchorSize, AnchorSize};
+}
+
 struct SHudMediaIslandTimerRowLayout
 {
 	float m_RaceY = 0.0f;
@@ -517,14 +524,14 @@ struct SHudMediaIslandSwapRows
 	int m_LyricsLineIndex = -1;
 };
 
-inline SHudMediaIslandSwapRows QmHudMediaIslandSwapRows(int IncomingSwapCount, bool HasRaceTimer, bool ShowLyrics)
+inline SHudMediaIslandSwapRows QmHudMediaIslandSwapRows(int IncomingSwapCount, bool HasRaceTimer, bool ShowLyrics, int LyricsLineCount = 1)
 {
 	SHudMediaIslandSwapRows Result;
 	IncomingSwapCount = std::max(0, IncomingSwapCount);
 	Result.m_InlineSwapCount = HasRaceTimer && IncomingSwapCount > 0 ? 1 : 0;
 	Result.m_BottomSwapCount = IncomingSwapCount - Result.m_InlineSwapCount;
 	Result.m_LyricsLineIndex = ShowLyrics ? Result.m_BottomSwapCount : -1;
-	Result.m_BottomLineCount = Result.m_BottomSwapCount + (ShowLyrics ? 1 : 0);
+	Result.m_BottomLineCount = Result.m_BottomSwapCount + (ShowLyrics ? std::clamp(LyricsLineCount, 1, 2) : 0);
 	return Result;
 }
 

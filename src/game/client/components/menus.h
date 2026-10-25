@@ -20,10 +20,13 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/QmAuthorName.h>
+#include <game/client/QmUi/QmAuthorTee.h>
 #include <game/client/QmUi/QmIslandNotice.h>
 #include <game/client/QmUi/QmLocalizedLabels.h>
 #include <game/client/QmUi/QmPlayersMenu.h>
 #include <game/client/QmUi/QmScroll.h>
+#include <game/client/QmUi/QmSeasonalSidebar.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/QmVoteMenu.h>
 #include <game/client/QmUi/SettingsCardDeck.h>
@@ -3225,6 +3228,8 @@ private:
 	std::string m_SettingsCardFocusStableId;
 	qm_card_order::CModel m_SettingsCardOrderModel;
 	bool m_SettingsCardOrderLoaded = false;
+	CQmAuthorName m_QmAuthorName;
+	CQmSeasonalSidebar m_QmSeasonalSidebar;
 	CSettingsCardDeck m_SettingsCardDeck;
 	qm_card_order::CModel m_SettingsCardRenderOnlyOrderModel;
 	std::string m_SettingsCardRenderOnlyOrderSource;
@@ -3421,7 +3426,7 @@ private:
 	const CWarType *m_pRemoveWarType = nullptr;
 	void PopupConfirmRemoveWarType();
 	void RenderDevSkin(vec2 RenderPos, float Size, const char *pSkinName, const char *pBackupSkin, bool CustomColors, int FeetColor, int BodyColor, int Emote, bool Rainbow, bool Cute,
-		ColorRGBA ColorFeet = ColorRGBA(0, 0, 0, 0), ColorRGBA ColorBody = ColorRGBA(0, 0, 0, 0));
+		ColorRGBA ColorFeet = ColorRGBA(0, 0, 0, 0), ColorRGBA ColorBody = ColorRGBA(0, 0, 0, 0), const QmSponsorAuthors::STeePresentation *pGlitch = nullptr);
 	void RenderFontIcon(CUIRect Rect, const char *pText, float Size, int Align);
 	// 图集优先、字形回退（pFallbackIcon 为 FontIcons::FONT_ICON_* 字形）。
 	void RenderFontIcon_QmIcon(CUIRect Rect, EQmIcon Icon, const char *pFallbackIcon, float Size, int Align);

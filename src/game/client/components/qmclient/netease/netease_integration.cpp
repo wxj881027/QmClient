@@ -3,7 +3,9 @@
 #include <base/color.h>
 #include <base/str.h>
 
+#include <engine/engine.h>
 #include <engine/shared/config.h>
+#include <engine/shared/jobs.h>
 
 #include <game/client/components/system_media_controls.h>
 #include <game/client/gameclient.h>
@@ -48,10 +50,64 @@ namespace
 	}
 }
 
+class CNeteaseIntegration::CLyricsParseJob : public IJob
+{
+public:
+	NeteaseLyrics::SRawLyrics m_Raw;
+	QmMusicLyrics::SLyricsData m_Result;
+	void Run() override
+	{
+		if(NeteaseLyrics::ParseRawLyrics(m_Raw, &m_Result.m_Timeline))
+			QmMusicLyrics::AlignTranslations(m_Result.m_Timeline, m_Raw.m_TranslationLrc, &m_Result.m_vTranslations);
+		m_Raw = {};
+	}
+};
+
+void CNeteaseIntegration::ResetLyricsData()
+{
+	m_pLyricsParseJob.reset();
+	m_LyricsData = {};
+	m_DataSongId = 0;
+	m_DataGeneration = 0;
+	m_DataPid = 0;
+	m_DataRevision = 0;
+	m_NextLyricsReadTick = 0;
+	m_LyricsChannel.Close();
+}
+
+void CNeteaseIntegration::UpdateLyricsData(const QmNeteaseHook::SSnapshotV5 &Snapshot)
+{
+	if(m_DataSongId != Snapshot.m_SongId || m_DataGeneration != Snapshot.m_Generation || m_DataPid != Snapshot.m_CloudMusicPid)
+	{
+		ResetLyricsData();
+		m_DataSongId = Snapshot.m_SongId;
+		m_DataGeneration = Snapshot.m_Generation;
+		m_DataPid = Snapshot.m_CloudMusicPid;
+	}
+	if(m_pLyricsParseJob && m_pLyricsParseJob->State() == IJob::STATE_DONE)
+	{
+		m_LyricsData = std::move(m_pLyricsParseJob->m_Result);
+		m_pLyricsParseJob.reset();
+	}
+	const uint64_t Now = MonotonicTickMs();
+	if(Now < m_NextLyricsReadTick)
+		return;
+	m_NextLyricsReadTick = Now + 250;
+	NeteaseLyrics::SRawLyrics Raw;
+	if(m_LyricsChannel.Read(m_DataPid, m_DataSongId, m_DataGeneration, m_DataRevision, Raw))
+	{
+		auto pJob = std::make_shared<CLyricsParseJob>();
+		pJob->m_Raw = std::move(Raw);
+		m_pLyricsParseJob = pJob;
+		Engine()->AddJob(pJob);
+	}
+}
+
 CNeteaseIntegration::CNeteaseIntegration() = default;
 
 void CNeteaseIntegration::OnInit()
 {
+	ResetLyricsData();
 	m_LyricState.Reset();
 	m_LastBridgeSequence = 0;
 	m_LastBridgeGeneration = 0;
@@ -73,6 +129,7 @@ void CNeteaseIntegration::OnInit()
 
 void CNeteaseIntegration::OnShutdown()
 {
+	ResetLyricsData();
 	m_LyricState.Reset();
 	m_LastBridgeSequence = 0;
 	m_LastBridgeGeneration = 0;
@@ -94,6 +151,7 @@ void CNeteaseIntegration::OnShutdown()
 
 void CNeteaseIntegration::OnReset()
 {
+	ResetLyricsData();
 	m_LyricState.Reset();
 	m_LastBridgeSequence = 0;
 	m_LastBridgeGeneration = 0;
@@ -114,6 +172,7 @@ void CNeteaseIntegration::OnReset()
 
 void CNeteaseIntegration::ClearForStaleMedia()
 {
+	ResetLyricsData();
 	const NeteaseLyrics::SCurrentState &State = m_LyricState.Snapshot();
 	const bool HasLyricState = State.m_SongId != 0 || State.m_Generation != 0 || State.m_HasSong || State.m_LyricValid || !State.m_CurrentLyric.empty();
 	const bool HasBridgeState = m_LastBridgeSequence != 0 || m_LastBridgeGeneration != 0 || m_LastBridgeSnapshotTick != 0 || m_LastBridgePositionMs != 0;
@@ -288,6 +347,7 @@ void CNeteaseIntegration::OnUpdate()
 	}
 	m_LastBridgeGeneration = BridgeSnapshot.m_Generation;
 	m_LyricState.AdoptGeneration(BridgeSnapshot.m_Generation);
+	UpdateLyricsData(BridgeSnapshot);
 	const bool PositionValid = (BridgeSnapshot.m_Flags & QmNeteaseHook::V5_FLAG_POSITION_VALID) != 0;
 	const bool PositionAnchored = (BridgeSnapshot.m_Flags & QmNeteaseHook::V5_FLAG_POSITION_ANCHORED) != 0;
 	const bool PausedPositionChanged = NeteaseLyrics::HasPausedLyricSeek(
@@ -377,4 +437,30 @@ uint64_t CNeteaseIntegration::CurrentSongId() const
 uint64_t CNeteaseIntegration::CurrentGeneration() const
 {
 	return m_LyricState.Snapshot().m_Generation;
+}
+
+QmMusicLyrics::SSourceSnapshot CNeteaseIntegration::LyricsSnapshot() const
+{
+	const auto &State = m_LyricState.Snapshot();
+	if(!State.m_HasSong || m_WaitingForBridgeIdentity)
+		return {};
+	const QmMusicLyrics::SLyricsData *pData = m_LyricsData.HasLyrics() &&
+		m_DataSongId == State.m_SongId && m_DataGeneration == State.m_Generation && m_DataPid == m_LastCloudMusicPid ? &m_LyricsData : nullptr;
+	std::string_view Translation;
+	if(pData && State.m_LyricValid)
+	{
+		const auto &vLines = pData->m_Timeline.m_vLines;
+		auto It = std::lower_bound(vLines.begin(), vLines.end(), State.m_LineStartMs,
+			[](const NeteaseLyrics::SLine &Line, int64_t StartMs) { return Line.m_StartMs < StartMs; });
+		for(; It != vLines.end() && It->m_StartMs == State.m_LineStartMs; ++It)
+		{
+			if(It->m_Text == State.m_CurrentLyric)
+			{
+				Translation = QmMusicLyrics::TranslationAt(*pData, static_cast<int>(It - vLines.begin()));
+				break;
+			}
+		}
+	}
+	return {State.m_SongId, State.m_Generation, m_LastCloudMusicPid, m_ActiveLyrics, pData,
+		State.m_LyricValid ? std::string_view(State.m_CurrentLyric) : std::string_view(), Translation};
 }

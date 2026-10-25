@@ -181,7 +181,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 		LogTClientPerfStage("tclient_bindwheel_editor", EditorTimer.ElapsedMs(), false);
 	};
 	const auto MeasurePreview = [PreviewContentHeight](float) { return PreviewContentHeight; };
-	const auto RenderPreview = [this, ReadOnly](CUIRect RightView) {
+	const auto RenderPreview = [this, ReadOnly](CUIRect RightView, bool ProcessInput) {
 		if(ReadOnly)
 			return;
 		CPerfTimer WheelTimer;
@@ -202,20 +202,20 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 			if(HoveringAngle < 0.0f)
 				HoveringAngle += 2.0f * pi;
 			HoveringIndex = std::clamp((int)(HoveringAngle / (2.0f * pi) * SegmentCount), 0, SegmentCount - 1);
-			if(!ReadOnly && Ui()->MouseButtonClicked(0))
+			if(ProcessInput && Ui()->MouseButtonClicked(0))
 			{
 				s_SelectedBindIndex = HoveringIndex;
 				str_copy(s_aBindName, GameClient()->m_BindWheel.m_vBinds[HoveringIndex].m_aName);
 				str_copy(s_aBindCommand, GameClient()->m_BindWheel.m_vBinds[HoveringIndex].m_aCommand);
 			}
-			else if(!ReadOnly && Ui()->MouseButtonClicked(1) && s_SelectedBindIndex >= 0 && s_SelectedBindIndex < SegmentCount && HoveringIndex != s_SelectedBindIndex)
+			else if(ProcessInput && Ui()->MouseButtonClicked(1) && s_SelectedBindIndex >= 0 && s_SelectedBindIndex < SegmentCount && HoveringIndex != s_SelectedBindIndex)
 			{
 				std::swap(GameClient()->m_BindWheel.m_vBinds[s_SelectedBindIndex], GameClient()->m_BindWheel.m_vBinds[HoveringIndex]);
 			}
-			else if(!ReadOnly && Ui()->MouseButtonClicked(2))
+			else if(ProcessInput && Ui()->MouseButtonClicked(2))
 				s_SelectedBindIndex = HoveringIndex;
 		}
-		else if(!ReadOnly && MouseDist < Radius && Ui()->MouseButtonClicked(0))
+		else if(ProcessInput && MouseDist < Radius && Ui()->MouseButtonClicked(0))
 		{
 			s_SelectedBindIndex = -1;
 			str_copy(s_aBindName, "");
@@ -258,7 +258,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 		CSettingsContentLayoutFlow Flow(Content);
 		CUIRect Block;
 		if(Flow.Control("tclient-bindwheel-preview", Height, Block))
-			RenderPreview(Block);
+			RenderPreview(Block, Flow.Input() && !ReadOnly && !Ui()->RenderOnly());
 		return {Height, CardRevision};
 	}
 	return {0.0f, CardRevision};

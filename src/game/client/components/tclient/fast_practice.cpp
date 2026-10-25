@@ -1258,8 +1258,10 @@ bool CFastPractice::AdvanceBaseWorldToTick(int TargetTick, int LocalClientId, in
 		return false;
 
 	const int FirstBaseTick = m_PracticeBaseWorld.GameTick() + 1;
+	CQmAxiomQuadTimeScope BaseQuadTime(Collision(), m_PracticeBaseWorld.GameTick(), Client()->GameTickSpeed());
 	for(int Tick = m_PracticeBaseWorld.GameTick() + 1; Tick <= TargetTick; Tick++)
 	{
+		Collision()->SetQmAxiomQuadTick(Tick, Client()->GameTickSpeed());
 		CCharacter *pLocalChar = m_PracticeBaseWorld.GetCharacterById(LocalClientId);
 		CCharacter *pDummyChar = m_RequireDummy ? m_PracticeBaseWorld.GetCharacterById(DummyClientId) : nullptr;
 		if(!pLocalChar || (m_RequireDummy && !pDummyChar))
@@ -1453,8 +1455,10 @@ bool CFastPractice::OverridePredict()
 		return true;
 	}
 
+	CQmAxiomQuadTimeScope PredictedQuadTime(Collision(), BaseGameTick, Client()->GameTickSpeed());
 	for(int Tick = BaseGameTick + 1; Tick <= FinalTickSelf; Tick++)
 	{
+		Collision()->SetQmAxiomQuadTick(Tick, Client()->GameTickSpeed());
 		std::vector<STrackedProjectile> vTrackedProjectilesBefore;
 		std::vector<STrackedProjectile> vTrackedProjectilesAfter;
 
@@ -1724,8 +1728,10 @@ int CFastPractice::ApplyVisualFastInputPrediction(int FinalTickRegular, int Loca
 	const int LocalTee = ResolveInputSlotByClientId(LocalClientId, g_Config.m_ClDummy);
 	const int DummyTee = ResolveInputSlotByClientId(DummyClientId, LocalTee ^ 1);
 
+	CQmAxiomQuadTimeScope VisualQuadTime(Collision(), FinalTickRegular, Client()->GameTickSpeed());
 	for(int Tick = FinalTickRegular + 1; Tick <= FinalTickSelf; Tick++)
 	{
+		Collision()->SetQmAxiomQuadTick(Tick, Client()->GameTickSpeed());
 		pLocalChar = VisualWorld.GetCharacterById(LocalClientId);
 		pDummyChar = m_RequireDummy ? VisualWorld.GetCharacterById(DummyClientId) : nullptr;
 		if(!pLocalChar || (m_RequireDummy && !pDummyChar))

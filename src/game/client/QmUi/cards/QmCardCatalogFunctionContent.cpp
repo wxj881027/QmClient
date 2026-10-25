@@ -157,6 +157,8 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 		Flow.Space(LineSpacing);
 	};
 	RenderCheckbox(&g_Config.m_QmGores, "qmclient-gores-enable", "Enable Gores mode", &g_Config.m_QmGores);
+	RenderCheckbox(&g_Config.m_QmAxiomQuadPrediction, "qmclient-gores-axiom-quad-prediction", "Moving block and freeze prediction (experimental)", &g_Config.m_QmAxiomQuadPrediction);
+	RenderCheckbox(&g_Config.m_QmMovingTilesEntities, "qmclient-gores-moving-tiles-entities", "Show moving tiles in entities", &g_Config.m_QmMovingTilesEntities);
 	RenderCheckbox(&g_Config.m_QmAxiomAutoLogin, "qmclient-gores-axiom-auto-login", "Auto login Axiom server", &g_Config.m_QmAxiomAutoLogin);
 	const char *pAxiomHelp = Localize("Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.");
 	if(!Flow.Declaring())
@@ -448,6 +450,7 @@ void CMenus::RenderQmFunctionFriendNotifyContent(CUIRect &Content, float LineHei
 	static int s_QmFriendOnlineRefreshSecondsInputId;
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
 		{
+			{&g_Config.m_QmFriendLastSeen, "Show friends' last seen dates (DDStats)", Localize("Show friends' last seen dates (DDStats)")},
 			{&g_Config.m_QmFriendOnlineNotify, "Notify when friends come online", Localize("Notify when friends come online")},
 			{&g_Config.m_QmFriendOnlineAutoRefresh, "Auto refresh server list", Localize("Auto refresh server list")},
 		},
@@ -530,6 +533,7 @@ void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHei
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
 		{
 			{&g_Config.m_QmRepeatEnabled, "Enable repeat", Localize("Enable repeat")},
+			{&g_Config.m_QmHumming, "Humming", Localize("Humming"), nullptr, 0, Localize("Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines")},
 			{&g_Config.m_QmRandomEmoteOnHit, "Random emoticon", Localize("Random emoticon")},
 		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);

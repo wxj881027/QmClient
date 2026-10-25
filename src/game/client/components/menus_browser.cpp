@@ -3538,6 +3538,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				const bool IsPlayerFriend = Friend.FriendState() == IFriends::FRIEND_PLAYER;
 				const char *pNote = IsPlayerFriend ? GameClient()->Friends()->GetFriendNote(Friend.Name(), Friend.Clan()) : "";
 				const bool HasNote = pNote[0] != '\0';
+				const bool ShowLastSeen = g_Config.m_QmFriendLastSeen && IsPlayerFriend && Friend.ServerInfo() == nullptr;
 				const unsigned NameHash = str_quickhash(Friend.Name());
 				const unsigned ClanHash = str_quickhash(Friend.Clan());
 				const unsigned AddrHash = Friend.ServerInfo() != nullptr ? str_quickhash(Friend.ServerInfo()->m_aAddress) : 0;
@@ -3552,12 +3553,13 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				const void *pPinButtonId = reinterpret_cast<const void *>(FriendUiIdBase | 0xd);
 				const void *pCommunityTooltipId = reinterpret_cast<const void *>(FriendUiIdBase | 0x5);
 				const void *pSkinTooltipId = reinterpret_cast<const void *>(FriendUiIdBase | 0x7);
-				List.HSplitTop(11.0f + 10.0f + 2 * 2.0f + 1.0f + (Friend.ServerInfo() == nullptr ? 0.0f : 10.0f), &Rect, &List);
+				List.HSplitTop(11.0f + 10.0f + 2 * 2.0f + 1.0f + (Friend.ServerInfo() != nullptr || ShowLastSeen ? 10.0f : 0.0f), &Rect, &List);
 				s_ScrollRegion.AddRect(Rect);
 				if(s_ScrollRegion.RectClipped(Rect))
 					continue;
 				++VisibleFriendItems;
 
+				const SQmFriendLastSeenEntry *pLastSeen = ShowLastSeen ? GameClient()->m_QmFriendLastSeen.Get(Friend.Name()) : nullptr;
 				const CUIRect FriendRow = Rect;
 				const bool Inside = Ui()->MouseHovered(&Rect);
 				int ButtonResult = Ui()->DoButtonLogic(pListItemId, 0, &Rect, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
@@ -3589,6 +3591,12 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 						if(!TooltipText.empty())
 							TooltipText.append("\n");
 						TooltipText.append(Localize("Drag to another category to move this friend."));
+					}
+					if(ShowLastSeen)
+					{
+						if(!TooltipText.empty())
+							TooltipText.append("\n");
+						TooltipText.append(Localize("DDStats shows UTC dates, updates daily and matches players by name only."));
 					}
 					GameClient()->m_Tooltips.DoToolTip(pListItemId, &Rect, TooltipText.c_str(), 320.0f);
 				}
@@ -3699,7 +3707,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				ActionAlpha = std::clamp(ActionAlpha, 0.0f, 1.0f);
 				const bool ActionVisible = Inside || ActionAlpha > 0.01f;
 
-				if(Friend.ServerInfo())
+				if(Friend.ServerInfo() || ShowLastSeen)
 					Rect.HSplitBottom(10.0f, &Rect, &InfoLabel);
 				Rect.HSplitTop(11.0f + 10.0f, &Rect, nullptr);
 
@@ -3768,6 +3776,25 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					else
 						str_format(aBuf, sizeof(aBuf), "%s | %s", Friend.ServerInfo()->m_aMap, Friend.ServerInfo()->m_aGameType);
 					Ui()->DoLabel(&InfoLabel, aBuf, FontSize - 2.0f, TEXTALIGN_ML);
+				}
+				else if(ShowLastSeen)
+				{
+					const char *pValue = Localize("No record");
+					if(pLastSeen)
+					{
+						if(!pLastSeen->m_Date.empty())
+							pValue = pLastSeen->m_Date.c_str();
+						else if(pLastSeen->m_Status == EQmFriendLastSeenStatus::LOADING)
+							pValue = Localize("Querying...");
+						else if(pLastSeen->m_Status == EQmFriendLastSeenStatus::ERROR)
+							pValue = Localize("Unavailable");
+					}
+					str_format(aBuf, sizeof(aBuf), Localize("Last seen (DDStats): %s"), pValue);
+					SLabelProperties LastSeenProps;
+					LastSeenProps.m_MaxWidth = maximum(0.0f, InfoLabel.w);
+					LastSeenProps.m_DisallowNewline = true;
+					LastSeenProps.m_EllipsisAtEnd = true;
+					Ui()->DoLabel(&InfoLabel, aBuf, FontSize - 2.0f, TEXTALIGN_ML, LastSeenProps);
 				}
 
 				// 置顶入口：已置顶时常显，否则和右侧三个动作图标一样只在悬停时出现，

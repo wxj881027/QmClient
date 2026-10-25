@@ -337,6 +337,19 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				}
 			}
 			Flow.Space(DDNetMetrics.m_LineSpacing);
+			if(Flow.Control("upstream-redundancy", DDNetMetrics.m_LineHeight, Button))
+			{
+				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_QmUpstreamRedundancy, "Upstream redundancy (experimental)", Localize("Upstream redundancy (experimental)"), g_Config.m_QmUpstreamRedundancy, &Button) && CanCommit)
+					g_Config.m_QmUpstreamRedundancy ^= 1;
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUpstreamRedundancy, &Button, Localize("Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP."));
+			}
+			Flow.Space(DDNetMetrics.m_LineSpacing);
+			if(g_Config.m_QmUpstreamRedundancy)
+			{
+				if(Flow.Control("upstream-redundancy-copies", DDNetMetrics.m_LineHeight, Button))
+					DoDDNetNumericField("ddnet-upstream-redundancy-copies", &g_Config.m_QmUpstreamRedundancyMaxCopies, &g_Config.m_QmUpstreamRedundancyMaxCopies, Button, Localize("Maximum packet copies"), 2, 3);
+				Flow.Space(DDNetMetrics.m_LineSpacing);
+			}
 			if(Flow.Control("anti-ping", DDNetMetrics.m_LineHeight, Button))
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClAntiPing, "AntiPing (latency compensation)", Localize("AntiPing (latency compensation)"), g_Config.m_ClAntiPing, &Button) && CanCommit)

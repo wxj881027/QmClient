@@ -203,7 +203,6 @@ private:
 
 		STextContainerIndex m_TextContainerIndex;
 		STextContainerIndex m_BodyTextContainerIndex;
-		CUIRect m_SponsorTextBounds = {};
 		int m_QuadContainerIndex;
 		CUIRect m_BackgroundRect = {};
 		float m_BackgroundRounding = 0.0f;
@@ -245,7 +244,6 @@ private:
 	QmWordFilterList::CFileList m_StreamerWordsFile;
 	uint64_t m_PreparedGlyphAtlasRevision = 0;
 	std::array<int, 5> m_aPreparedChatTextSettings = {-1, -1, -1, -1, -1};
-	CQmSponsorChatRenderer m_SponsorChatRenderer;
 	int64_t m_LastPresentationUpdateTime;
 	int64_t m_LargeAreaOpenTick;
 	bool m_LastPresentationShowLargeArea;
@@ -649,6 +647,7 @@ public:
 	// @param pLine the chat message
 	// 返回是否已发送或由本地命令处理，失败时调用方可保留消息。
 	bool SendChat(int Team, const char *pLine, const char *pLocalOriginal = nullptr, int Connection = -1);
+	bool SendAutomaticChat(int Connection, const char *pLine);
 	void InvalidateOutgoingConnection(int Connection)
 	{
 		m_PendingChatMessages.InvalidateConnection(Connection);

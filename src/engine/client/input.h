@@ -137,7 +137,7 @@ private:
 	};
 	std::deque<SWindowsMessage> m_QueuedWindowsMessages;
 	uint32_t m_WindowsMessageEvent = 0;
-	std::optional<SQmImeCandidateList> ReadWindowsImeCandidates(void *pWindow, unsigned CandidateListFlags);
+	std::optional<SQmImeCandidateList> ReadWindowsImeCandidates(void *pWindow, unsigned CandidateListFlags, bool *pHasActiveComposition = nullptr);
 	void ProcessSystemMessage(tagMSG *pMsg);
 	static bool SDLCALL WindowsMessageHook(void *pUser, tagMSG *pMsg);
 #endif

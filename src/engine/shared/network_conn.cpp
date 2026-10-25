@@ -6,6 +6,8 @@
 #include <base/log.h>
 #include <base/system.h>
 
+#include <algorithm>
+
 bool CNetConnection::IsPeerAddress(const NETADDR &Addr) const
 {
 	// While connecting, the peer address is not determined yet, so any of the
@@ -78,6 +80,7 @@ void CNetConnection::Reset()
 	mem_zero(&m_Construct, sizeof(m_Construct));
 	m_pfnPacketOutput = nullptr;
 	m_pPacketOutputUser = nullptr;
+	m_QmUpstreamCopies = 1;
 }
 
 const char *CNetConnection::ErrorString()
@@ -169,7 +172,7 @@ int CNetConnection::Flush()
 			return Result;
 	}
 	else
-		CNetBase::SendPacket(m_Socket, &m_PeerAddr, &Packet, m_SecurityToken, m_Sixup);
+		CNetBase::SendPacket(m_Socket, &m_PeerAddr, &Packet, m_SecurityToken, m_Sixup, m_QmUpstreamCopies);
 
 	// update send times
 	m_LastSendTime = time_get();
@@ -177,6 +180,11 @@ int CNetConnection::Flush()
 	// clear construct so we can start building a new package
 	mem_zero(&m_Construct, sizeof(m_Construct));
 	return NumChunks;
+}
+
+void CNetConnection::SetQmUpstreamCopies(int Copies)
+{
+	m_QmUpstreamCopies = std::clamp(Copies, 1, 3);
 }
 
 void CNetConnection::SetPacketOutput(NETFUNC_PACKETOUTPUT pfnPacketOutput, void *pUser)

@@ -3662,6 +3662,9 @@ DDraceNetwork is a cooperative online game where the goal is for you and your gr
 DDRaceNetwork · DDNet
 == DDRaceNetwork · DDNet
 
+DDStats shows UTC dates, updates daily and matches players by name only.
+== DDStats muestra fechas UTC, se actualiza a diario e identifica a los jugadores solo por su nombre.
+
 ddstats.tw ID stats
 == Estadísticas del ID en ddstats.tw
 
@@ -5324,6 +5327,9 @@ Expanded dropdown background opacity percentage
 Experimental
 == experimental
 
+Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.
+== Experimental: repite los paquetes UDP salientes del juego cuando las sondas de ida y vuelta no reciben respuesta. El tráfico de subida puede triplicarse; la pérdida de bajada y las entradas duplicadas tardías aún pueden causar problemas. Se desactiva con KCP.
+
 Export
 == Exportar
 
@@ -6839,6 +6845,9 @@ Hue
 Hue speed
 == Velocidad de tono
 
+Humming
+== Tararear
+
 i = Receive rate
 == i = Tasa de recepción
 
@@ -7640,6 +7649,9 @@ Last entered
 Last page in console
 == Última página en la consola
 
+Last seen (DDStats): %s
+== Última conexión (DDStats): %s
+
 Last successful sync: %s
 == Última sincronización correcta: %s
 
@@ -8090,8 +8102,17 @@ LXGW WenKai is unavailable. Current fonts and weights will be kept.
 Lyrics
 == Letra
 
+Lyrics language
+== Idioma de la letra
+
+Lyrics language (0=Original, 1=Translation, 2=Original and translation)
+== Idioma de la letra (0=original, 1=traducción, 2=original y traducción)
+
 Lyrics live in the Dynamic Island, so they stay hidden until that option is on.
 == La letra se muestra en el Dynamic Island, así que no aparece hasta activar esa opción.
+
+Lyrics translation
+== Traducción de la letra
 
 Magic: Spirit Script
 == Magia: escritura espiritual
@@ -8438,6 +8459,9 @@ Maximum number of automatic scoreboard screenshots (0 = unlimited)
 Maximum number of clients on server
 == Número máximo de clientes en el servidor
 
+Maximum number of copies per outgoing UDP game packet
+== Número máximo de copias de cada paquete UDP saliente del juego
+
 Maximum number of packets received in one batch before returning to the main loop (0 = unlimited).
 == Número máximo de paquetes recibidos en un lote antes de volver al bucle principal (0 = ilimitado).
 
@@ -8455,6 +8479,9 @@ Maximum number of skins loaded simultaneously
 
 Maximum number of vanilla antispoof handshakes answered per second (0 = unlimited).
 == Número máximo de handshakes antispoof de Vanilla respondidos por segundo (0 = ilimitado).
+
+Maximum packet copies
+== Máximo de copias por paquete
 
 Maximum players participating in a vote (0 = unlimited)
 == Máximo de jugadores participando en una votación (0 = ilimitado)
@@ -8737,6 +8764,9 @@ Moves to the point with x/y-coordinates ii
 
 Moves to the tile with x/y-number ii
 == Se mueve a la casilla con número x/y ii
+
+Moving block and freeze prediction (experimental)
+== Predicción de bloques móviles y zonas de congelación (experimental)
 
 MP4 is the most compatible for sharing, MOV is the editing standard and required by ProRes, and MKV suits lossless archives but is poorly supported by editors.
 == MP4 es el más compatible para compartir, MOV es el estándar de edición y lo exige ProRes, y MKV sirve para archivos sin pérdida pero los editores lo soportan mal.
@@ -9293,6 +9323,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 No recently used skins
 == No hay aspectos usados recientemente
 
+No record
+== Sin registros
+
 No release notes provided
 == No se proporcionaron notas para esta versión
 
@@ -9737,6 +9770,9 @@ Or visit DDNet.org
 Original
 == Estilo original
 
+Original and translation
+== Original y traducción
+
 Original language for both received and outgoing messages. Use Auto to detect each message.
 == Idioma original tanto para los mensajes recibidos como para los enviados. Usa Auto para detectar cada mensaje.
 
@@ -9745,6 +9781,9 @@ Original language for incoming and outgoing text
 
 Original message language
 == Idioma del mensaje original
+
+Original only
+== Solo original
 
 Original options
 == Opciones originales
@@ -10424,6 +10463,9 @@ Plays a short effect when a tee's skin changes, and can copy the skin of the tee
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == Reproduce una animación cuando cambia tu skin, incluidas las robadas con el martillo.
 
+Playtime (h)
+== Tiempo de juego (h)
+
 Please add a valid cut first
 == Por favor, añade primero un corte válido
 
@@ -10555,6 +10597,9 @@ Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when fr
 
 Predict grenade trajectory (only with cl_antiping 1)
 == Predecir trayectoria de granada (solo con cl_antiping 1)
+
+Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)
+== Predecir bloques móviles y zonas de congelación en servidores con reglas de cuadriláteros de Axiom (experimental)
 
 Predict ninja path
 == Predecir la trayectoria del ninja
@@ -11011,6 +11056,9 @@ Querying points for %s...
 
 Querying points...
 == Consultando puntos...
+
+Querying...
+== Consultando…
 
 Queue is empty
 == La cola está vacía
@@ -12260,6 +12308,9 @@ Scoreboard cursor
 Scoreboard filter: only show players whose name or clan contains this text
 == Filtro del marcador: mostrar solo jugadores cuyo nombre o clan contenga este texto
 
+Scoreboard playtime
+== Tiempo de juego en el marcador
+
 Scoreboard point check
 == Verificación de puntos en el marcador
 
@@ -12548,6 +12599,9 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == Enviar comando especificado a rcon
 
+Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
+== Enviar tres líneas consecutivas de la letra al chat público a intervalos aleatorios de 30 a 90 segundos, con 3 segundos entre líneas
+
 Send translation method
 == Método de envío de traducción
 
@@ -12571,6 +12625,9 @@ Sends a saved .map file from your client to the public test server and reports p
 
 Sends an automatic chat reply when someone whispers you while you are muted or away.
 == Envía una respuesta automática en el chat cuando alguien te susurra mientras estás silenciado o ausente.
+
+Separate Dynamic Island
+== Separar Dynamic Island
 
 Separate with commas
 == Separar con comas
@@ -13175,6 +13232,9 @@ Show friend tag (♥) on nametag
 Show friends only
 == Mostrar solo amigos
 
+Show friends' last seen dates (DDStats)
+== Mostrar la fecha de última conexión de amigos (DDStats)
+
 Show frozen Tee HUD
 == Mostrar HUD de Tee congelado
 
@@ -13370,6 +13430,9 @@ Show kill messages
 Show labels on status bar items
 == Mostrar etiquetas en los elementos de la barra de estado
 
+Show last seen dates for offline friends using DDStats (updated daily, matched by player name)
+== Mostrar con DDStats la última conexión de amigos desconectados (actualización diaria, búsqueda por nombre)
+
 Show list of mutes (page 1 by default, 20 entries per page)
 == Mostrar lista de silenciados (página 1 por defecto, 20 entradas por página)
 
@@ -13384,6 +13447,12 @@ Show local time seconds
 
 Show logs of the last i seconds
 == Mostrar registros de los últimos i segundos
+
+Show lyrics in a separate island below Dynamic Island
+== Mostrar la letra en una isla separada debajo de Dynamic Island
+
+Show lyrics in Dynamic Island
+== Mostrar letra en Dynamic Island
 
 Show lyrics inside Dynamic Island
 == Show lyrics in Dynamic Island
@@ -13586,6 +13655,12 @@ Show player Tee
 Show players' key presses
 == Mostrar pulsaciones de teclas de los jugadores
 
+Show playtime
+== Ver tiempo de juego
+
+Show points
+== Ver puntos
+
 Show position and angle
 == Mostrar posición y ángulo
 
@@ -13783,6 +13858,9 @@ Show titles on nameplates
 
 Show toast
 == Mostrar toast
+
+Show total DDNet playtime from activity instead of points in scoreboard
+== Mostrar el tiempo total de juego de DDNet activity en lugar de puntos en el marcador
 
 Show tune zone colors
 == Mostrar los colores de las zonas de tune
@@ -14216,9 +14294,6 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == Ruta del ayudante de SodaMusic Hook (vacía = junto a QmClient)
 
-Soft glow
-== Resplandor suave
-
 Solid
 == Sólido
 
@@ -14399,8 +14474,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == Reparte el personaje principal y el clon en equipos distintos para sincronizar carreras en solitario
 
-Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
-== Borrador del estilo de chat de patrocinador: 0=Normal, 1=Resplandor suave, 2=Brillo de platino
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight
+== Borrador del estilo de chat de patrocinador: 0=Normal, 1=Brillo de platino
 
 Sponsor code
 == Código de patrocinador
@@ -15932,6 +16007,9 @@ Translation menu selected color
 Translation model was not found. Check the model name.
 == No se encontró el modelo de traducción. Comprueba su nombre.
 
+Translation only
+== Solo traducción
+
 Translation service
 == Servicio de traducción
 
@@ -16447,6 +16525,9 @@ Upload a saved map to the public test server
 
 Upload map
 == Subir mapa
+
+Upstream redundancy (experimental)
+== Envío redundante de paquetes (experimental)
 
 URL for downloading community skins
 == URL para descargar skins de la comunidad

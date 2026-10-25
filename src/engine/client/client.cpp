@@ -138,6 +138,10 @@ static bool gs_QmTestMainThreadAssert = false;
 // QmClient: 测试专用注入开关（--qm-test-main-thread-stall），供进程级回归测试在
 // 主循环内模拟一次长时间阻塞，验证看门狗使用单调时钟后能真实报告卡死。
 static bool gs_QmTestMainThreadStall = false;
+#if defined(CONF_FAMILY_WINDOWS)
+// 进程回归注入真实结构化异常，验证本地报告完成后不会阻塞在旧处理器中。
+static bool gs_QmTestMainThreadException = false;
+#endif
 // 进程回归注入最终清理卡死，验证隐藏窗口后的强制退出。
 static bool gs_QmTestShutdownCleanupStall = false;
 static constexpr const char *gs_pQmCrashDumpDir = "dumps/QmClient_Crash";
@@ -1343,6 +1347,9 @@ void CClient::DisconnectWithReason(const char *pReason)
 	mem_zero(&m_CurrentServerPingUuid, sizeof(m_CurrentServerPingUuid));
 	m_CurrentServerCurrentPingTime = -1;
 	m_CurrentServerNextPingTime = -1;
+	m_LinkProbeTracker.Reset(time_get());
+	m_UpstreamProbeEnabled = false;
+	m_NextUpstreamProbeTime = 0;
 	m_ManualPingProbe.Reset();
 	for(int Conn = 0; Conn < NUM_DUMMIES; ++Conn)
 		m_aGamePingProbes[Conn].Reset();
@@ -2673,6 +2680,8 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 			{
 				return;
 			}
+			if(Conn == CONN_MAIN && m_LinkProbeTracker.Confirm(*pId))
+				return;
 			const int64_t Now = time_get();
 			m_aGamePingProbes[Conn].HandlePong(*pId, Now, time_freq());
 			if(Conn == CONN_MAIN && m_ServerCapabilities.m_PingEx && m_CurrentServerCurrentPingTime >= 0 && *pId == m_CurrentServerPingUuid)
@@ -3933,8 +3942,53 @@ void CClient::UpdateDemoIntraTimers()
 	m_aGameIntraTickSincePrev[0] = pInfo->m_IntraTickSincePrev;
 }
 
+void CClient::UpdateUpstreamRedundancy()
+{
+	const bool MainOnline = State() == IClient::STATE_ONLINE && m_aNetClient[CONN_MAIN].State() == NETSTATE_ONLINE;
+	// KCP 已有自己的输入冗余和重传，避免在现有发送策略上再次叠加。
+	const bool ProbeEnabled = MainOnline && g_Config.m_QmUpstreamRedundancy && m_ServerCapabilities.m_PingEx && !m_aNetClient[CONN_MAIN].IsKcpActive();
+	const int64_t Now = time_get();
+	if(ProbeEnabled != m_UpstreamProbeEnabled)
+	{
+		m_LinkProbeTracker.Reset(Now);
+		m_UpstreamProbeEnabled = ProbeEnabled;
+		m_NextUpstreamProbeTime = ProbeEnabled ? Now : 0;
+	}
+
+	if(ProbeEnabled)
+		m_LinkProbeTracker.Update(Now, time_freq());
+	const int Copies = ProbeEnabled ? m_LinkProbeTracker.Copies(g_Config.m_QmUpstreamRedundancyMaxCopies) : 1;
+	for(int Conn = 0; Conn < NUM_DUMMIES; ++Conn)
+		m_aNetClient[Conn].SetQmUpstreamCopies(m_aNetClient[Conn].State() == NETSTATE_ONLINE ? Copies : 1);
+
+	if(ProbeEnabled && Now >= m_NextUpstreamProbeTime)
+	{
+		// 先发送已排队的游戏数据，再单发独立探针；不补发暂停期间错过的探针。
+		m_NextUpstreamProbeTime = Now + time_freq() / 2;
+		m_aNetClient[CONN_MAIN].Flush();
+		m_aNetClient[CONN_MAIN].SetQmUpstreamCopies(1);
+		const CUuid Id = RandomUuid();
+		CMsgPacker Probe(NETMSG_PINGEX, true);
+		Probe.AddRaw(&Id, sizeof(Id));
+		if(SendMsg(CONN_MAIN, &Probe, MSGFLAG_FLUSH) == 0)
+			m_LinkProbeTracker.RecordSent(Id, Now);
+		m_aNetClient[CONN_MAIN].SetQmUpstreamCopies(Copies);
+	}
+
+	static int64_t s_LastLogTime = 0;
+	if(g_Config.m_Debug && g_Config.m_QmUpstreamRedundancy && MainOnline && Now - s_LastLogTime >= time_freq())
+	{
+		s_LastLogTime = Now;
+		dbg_msg("upstream-redundancy", "copies=%d probe_enabled=%d estimated=%d round_trip_unconfirmed=%.1f%% samples=%llu ignored=%llu",
+			Copies, (int)ProbeEnabled, (int)m_LinkProbeTracker.HasEstimate(), m_LinkProbeTracker.UnconfirmedPercent(),
+			(unsigned long long)m_LinkProbeTracker.WindowSamples(), (unsigned long long)m_LinkProbeTracker.TotalIgnored());
+	}
+}
+
 void CClient::Update()
 {
+	m_LinkProbeTracker.OnFrame(time_get(), time_freq());
+
 	const bool GraphicsTrace = QmGraphicsTraceEnabled(2);
 	const bool PerfRuntime = QmPerfEnabled();
 	// GraphicsTrace 走原有 perf/graphics 通道；常规性能/卡顿诊断下把 client_update 的子阶段
@@ -3968,6 +4022,8 @@ void CClient::Update()
 	}
 	else
 		PumpNetwork();
+
+	UpdateUpstreamRedundancy();
 
 	GameClient()->OnConnectionResourceUpdate();
 	// 官方 178da1ead：在采集/发送输入之前先更新 editor/gameclient，
@@ -4615,6 +4671,14 @@ void CClient::Run()
 	// 此时看门狗时钟仍在推进，可验证弹窗期间不会误报“客户端卡死”。
 	if(gs_QmTestMainThreadAssert)
 		dbg_assert_failed("qm test main thread assertion (--qm-test-main-thread-assert)");
+#if defined(CONF_FAMILY_WINDOWS)
+	if(gs_QmTestMainThreadException)
+	{
+		log_info("test/crashdump", "raising_noncontinuable_access_violation");
+		const ULONG_PTR aParameters[] = {0, 1};
+		RaiseException(EXCEPTION_ACCESS_VIOLATION, EXCEPTION_NONCONTINUABLE, 2, aParameters);
+	}
+#endif
 
 	bool LastD = false;
 	bool LastE = false;
@@ -7690,6 +7754,10 @@ int main(int argc, const char **argv)
 			gs_QmTestMainThreadAssert = true;
 		if(str_comp(argv[i], "--qm-test-main-thread-stall") == 0)
 			gs_QmTestMainThreadStall = true;
+#if defined(CONF_FAMILY_WINDOWS)
+		if(str_comp(argv[i], "--qm-test-main-thread-exception") == 0)
+			gs_QmTestMainThreadException = true;
+#endif
 		if(str_comp(argv[i], "--qm-test-shutdown-cleanup-stall") == 0)
 			gs_QmTestShutdownCleanupStall = true;
 	}

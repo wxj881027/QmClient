@@ -492,9 +492,11 @@ void CMenus::RenderGame(CUIRect MainView)
 				}
 				str_append(aBuf, Localize("There are unsaved changes in the touch controls editor. Saving first is recommended."));
 			}
-			// 断开当前服务器：Cancel/OK + 危险色；正文可能还带触摸控件未保存提示。
+			// 断开确认沿用客户端面板主题，保留触摸控件未保存提示。
 			s_DisconnectConfirm.Reset();
 			s_DisconnectConfirm.DefaultButtons();
+			str_copy(s_DisconnectConfirm.m_aTitle, pDisconnectButtonLabel);
+			str_copy(s_DisconnectConfirm.m_aPositiveButtonLabel, pDisconnectButtonLabel);
 			s_DisconnectConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
 			str_copy(s_DisconnectConfirm.m_aMessage, aBuf, sizeof(s_DisconnectConfirm.m_aMessage));
 			Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_DisconnectConfirm);

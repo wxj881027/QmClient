@@ -360,6 +360,7 @@ private:
 	CNetPacketConstruct m_Construct;
 	NETFUNC_PACKETOUTPUT m_pfnPacketOutput = nullptr;
 	void *m_pPacketOutputUser = nullptr;
+	int m_QmUpstreamCopies = 1;
 
 	NETADDR m_aConnectAddrs[16];
 	int m_NumConnectAddrs;
@@ -414,6 +415,7 @@ public:
 	int Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr, SECURITY_TOKEN SecurityToken = NET_SECURITY_TOKEN_UNSUPPORTED, SECURITY_TOKEN ResponseToken = NET_SECURITY_TOKEN_UNSUPPORTED);
 	int QueueChunk(int Flags, int DataSize, const void *pData);
 	void SetPacketOutput(NETFUNC_PACKETOUTPUT pfnPacketOutput, void *pUser);
+	void SetQmUpstreamCopies(int Copies);
 
 	const char *ErrorString();
 	void SignalResend();
@@ -791,6 +793,7 @@ public:
 	// communication
 	int Recv(CNetChunk *pChunk, SECURITY_TOKEN *pResponseToken, bool Sixup);
 	int Send(CNetChunk *pChunk);
+	void SetQmUpstreamCopies(int Copies) { m_Connection.SetQmUpstreamCopies(IsKcpActive() ? 1 : Copies); }
 
 	// pumping
 	void Update();
@@ -842,7 +845,7 @@ public:
 	static void SendPacketConnless(NETSOCKET Socket, NETADDR *pAddr, const void *pData, int DataSize, bool Extended, unsigned char aExtra[NET_CONNLESS_EXTRA_SIZE]);
 	static void SendPacketConnlessWithToken7(NETSOCKET Socket, NETADDR *pAddr, const void *pData, int DataSize, SECURITY_TOKEN Token, SECURITY_TOKEN ResponseToken);
 	static int PackPacket(unsigned char *pBuffer, int BufferSize, CNetPacketConstruct *pPacket, SECURITY_TOKEN SecurityToken, bool Sixup = false);
-	static void SendPacket(NETSOCKET Socket, NETADDR *pAddr, CNetPacketConstruct *pPacket, SECURITY_TOKEN SecurityToken, bool Sixup = false);
+	static void SendPacket(NETSOCKET Socket, NETADDR *pAddr, CNetPacketConstruct *pPacket, SECURITY_TOKEN SecurityToken, bool Sixup = false, int NumCopies = 1);
 
 	static std::optional<int> UnpackPacketFlags(unsigned char *pBuffer, int Size);
 	static int UnpackPacket(unsigned char *pBuffer, int Size, CNetPacketConstruct *pPacket, bool &Sixup, bool AllowDecompression = true, SECURITY_TOKEN *pSecurityToken = nullptr, SECURITY_TOKEN *pResponseToken = nullptr, bool *pDecompressed = nullptr);

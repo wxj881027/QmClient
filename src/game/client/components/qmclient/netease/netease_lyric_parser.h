@@ -39,6 +39,7 @@ namespace NeteaseLyrics
 	{
 		std::string m_Lrc;
 		std::string m_Yrc;
+		std::string m_TranslationLrc;
 	};
 
 	// 解析网易云 LRC。无有效时间戳时返回 false，不构造虚假时间轴。

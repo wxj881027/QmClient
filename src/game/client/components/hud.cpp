@@ -1185,6 +1185,8 @@ void CHud::OnWindowResize()
 
 void CHud::OnReset()
 {
+	m_LyricsMarquee.Reset();
+	m_LyricsIslandAnchorValid = false;
 	m_TimeCpDiff = 0.0f;
 	m_DDRaceTime = 0;
 	m_FinishTimeLastReceivedTick = 0;
@@ -3509,25 +3511,12 @@ void CHud::EnsureMediaIslandFrameCache() const
 	const bool MediaHudEnabled = g_Config.m_QmSmtcShowHud && SystemMediaControls::AnyMediaSourceEnabled(g_Config.m_QmSmtcEnable != 0, g_Config.m_QmNeteaseHookEnable != 0 || MusicLyricsEnabled || g_Config.m_QmSpotifyEnable != 0);
 	Cache.m_HasMediaState = MediaHudEnabled && GameClient()->m_SystemMediaControls.GetStateSnapshot(Cache.m_MediaState);
 
-	// 歌词来源选择:各来源可同时开启(菜单已保证同一时间只启用一个 Hook)。
-	// 若用户手动同时开启，网易云优先，统一歌词组件次之，Spotify 再后备。
-	if(g_Config.m_QmNeteaseHookEnable != 0)
-	{
-		Cache.m_LyricsActive = GameClient()->m_NeteaseIntegration.HasActiveLyrics();
-		Cache.m_ShowLyrics = GameClient()->m_NeteaseIntegration.GetCurrentLyric(Cache.m_aLyrics, sizeof(Cache.m_aLyrics), &Cache.m_LyricsColor);
-	}
-	if(!Cache.m_ShowLyrics && MusicLyricsEnabled)
-	{
-		// 统一歌词组件按开关选择汽水、酷狗或 QQ 音乐。
-		Cache.m_LyricsActive = GameClient()->m_MusicLyricsIntegration.HasActiveLyrics();
-		Cache.m_ShowLyrics = GameClient()->m_MusicLyricsIntegration.GetCurrentLyric(Cache.m_aLyrics, sizeof(Cache.m_aLyrics));
-	}
-	if(!Cache.m_ShowLyrics && g_Config.m_QmSpotifyEnable != 0)
-	{
-		// Spotify 歌词(官方内置 color-lyrics)作为再后备来源。
-		Cache.m_LyricsActive = GameClient()->m_SpotifyIntegration.HasActiveLyrics();
-		Cache.m_ShowLyrics = GameClient()->m_SpotifyIntegration.GetCurrentLyric(Cache.m_aLyrics, sizeof(Cache.m_aLyrics));
-	}
+	const auto &Lyrics = GameClient()->m_LyricsPresentation.Frame();
+	Cache.m_LyricsActive = Lyrics.m_Active;
+	Cache.m_ShowLyrics = Lyrics.m_RowCount > 0;
+	Cache.m_LyricsRowCount = Lyrics.m_RowCount;
+	str_copy(Cache.m_aLyrics, Lyrics.m_aaRows[0], sizeof(Cache.m_aLyrics));
+	str_copy(Cache.m_aLyricsTranslation, Lyrics.m_aaRows[1], sizeof(Cache.m_aLyricsTranslation));
 	if(g_Config.m_QmHudIslandUseOriginalStyle)
 		return;
 	Cache.m_SpectatorCount = GetMediaIslandSpectatorCount(*GameClient(), *Client());
@@ -3591,7 +3580,7 @@ void CHud::EnsureMediaIslandFrameCache() const
 		}
 	}
 
-	Cache.m_HasVisible = Cache.m_ShowLyrics || Cache.m_LyricsActive || Cache.m_HasMediaState;
+	Cache.m_HasVisible = (!g_Config.m_QmLyricsSeparateIsland && (Cache.m_ShowLyrics || Cache.m_LyricsActive)) || Cache.m_HasMediaState;
 }
 
 bool CHud::HasVisibleMediaIsland() const
@@ -3769,7 +3758,7 @@ void CHud::RenderMediaIsland()
 	const int64_t Now = time_get();
 	const CSystemMediaControls::SState &MediaState = m_MediaIslandFrameCache.m_MediaState;
 	const bool HasMediaState = m_MediaIslandFrameCache.m_HasMediaState;
-	const bool LyricsActive = m_MediaIslandFrameCache.m_LyricsActive;
+	const bool LyricsActive = !g_Config.m_QmLyricsSeparateIsland && m_MediaIslandFrameCache.m_LyricsActive;
 	const bool AlwaysShowTrackDetails = g_Config.m_QmHudIslandAlwaysShowTrackDetails != 0;
 	if(!HasMediaState)
 	{
@@ -3907,7 +3896,6 @@ void CHud::RenderMediaIsland()
 	const bool ShowLocalTime = ShouldRenderHudLocalTime(*GameClient());
 	const SHudGameTimerInfo TimerInfo = g_Config.m_ClShowhudTimer ? BuildHudGameTimerInfo(*GameClient(), *Client(), TextRender(), m_Width) : SHudGameTimerInfo{};
 	SHudTopTimerCapsuleInfo TimerCapsule = BuildHudTopTimerCapsuleInfo(TimerInfo);
-	const float TimerAnchorWidth = TimerCapsule.m_BoxW;
 	char aRecordingBuf[512];
 	const bool ShowRecordingStatus = TimerCapsule.m_Visible && BuildHudRecordingStatusText(*GameClient(), aRecordingBuf, sizeof(aRecordingBuf));
 	const bool ScoreboardExpanded = GameClient()->m_Scoreboard.IsActive();
@@ -3963,8 +3951,8 @@ void CHud::RenderMediaIsland()
 	const bool ShowTeam = BuildHudTeamText(*GameClient(), aTeamBuf, sizeof(aTeamBuf));
 	const char *pLyricsIslandBuf = m_MediaIslandFrameCache.m_aLyrics;
 	const ColorRGBA &LyricsIslandColor = m_MediaIslandFrameCache.m_LyricsColor;
-	const bool ShowLyricsIslandLine = m_MediaIslandFrameCache.m_ShowLyrics || LyricsActive;
-	const SHudMediaIslandSwapRows SwapRows = QmHudMediaIslandSwapRows(IncomingSwapCount, TimerCapsule.m_Visible, ShowLyricsIslandLine);
+	const bool ShowLyricsIslandLine = !g_Config.m_QmLyricsSeparateIsland && (m_MediaIslandFrameCache.m_ShowLyrics || LyricsActive);
+	const SHudMediaIslandSwapRows SwapRows = QmHudMediaIslandSwapRows(IncomingSwapCount, TimerCapsule.m_Visible, ShowLyricsIslandLine, m_MediaIslandFrameCache.m_LyricsRowCount);
 	const bool ShowTopRow = HasMediaState || ShowInfoStack || TimerCapsule.m_Visible || ShowRecordingStatus || ShowSpectator || ShowTeam;
 
 	if(!ShowTopRow && !ShowLyricsIslandLine && !HasSatellitePresentation)
@@ -4631,14 +4619,12 @@ void CHud::RenderMediaIsland()
 		SpectatorSatelliteRestGap,
 		SpectatorBlobPose);
 	const float SpectatorVisibleRight = SpectatorLiquidCapsule.m_Rect.x + SpectatorLiquidCapsule.m_Rect.w + QmHudMediaIslandScaled(1.0f);
-	const float EditorX = TimerCapsule.m_Visible ? (m_Width - TimerAnchorWidth) * 0.5f : IslandX;
-	const float EditorWidth = TimerCapsule.m_Visible ? TimerAnchorWidth : UnifiedWidth;
-	const CUIRect EditorTransformRect = {EditorX, IslandY, EditorWidth, TimerCapsule.m_Visible ? BaseIslandHeight : AnimatedIslandHeight};
 	const float EditorVisibleRight = std::max(UnifiedRight, SpectatorVisibleRight);
 	// 屏幕外的副岛不参与整岛平移，避免边界约束把居中的大时间推走。
 	const float VisibleLeft = TimerCapsule.m_Visible ? std::max(0.0f, SatelliteVisibleLeft) : SatelliteVisibleLeft;
 	const float VisibleRight = TimerCapsule.m_Visible ? std::min(m_Width, EditorVisibleRight) : EditorVisibleRight;
 	const CUIRect EditorVisibleRect = {VisibleLeft, IslandY, VisibleRight - VisibleLeft, AnimatedIslandHeight};
+	const CUIRect EditorTransformRect = QmHudMediaIslandEditorTransformRect(EditorVisibleRect);
 	const bool RenderLeftSection = ShowCover || ShowTeam || ShowWaveform;
 	const bool ShowTimerSecondaryLine = SwapRows.m_InlineSwapCount > 0 || Checkpoint > 0;
 	const SHudMediaIslandTimerRowLayout TimerRows = QmHudMediaIslandTimerRows(TimerCapsule.m_BoxY, TimerCapsule.m_BoxH, ShowTimerSecondaryLine);
@@ -4657,6 +4643,8 @@ void CHud::RenderMediaIsland()
 	float TransformedScreenX0, TransformedScreenY0, TransformedScreenX1, TransformedScreenY1;
 	Graphics()->GetScreen(&TransformedScreenX0, &TransformedScreenY0, &TransformedScreenX1, &TransformedScreenY1);
 	const CUIRect TargetMainIslandSdfRect = {IslandX, IslandY, UnifiedWidth, AnimatedIslandHeight};
+	m_LyricsIslandAnchor = QmLyricsHudAnchor(TargetMainIslandSdfRect, EditorTransformRect, HudEditorScope.m_TargetRect);
+	m_LyricsIslandAnchorValid = true;
 	const SHudMediaIslandEntrancePose EntrancePose = QmHudMediaIslandEntrancePose(TargetMainIslandSdfRect, Radius, IslandBackgroundColor, EntranceSprings.m_ExpandProgress, EntranceSprings.m_DropProgress, TransformedScreenY0);
 	const float EntranceContentAlpha = EntrancePose.m_ContentAlpha;
 	const CUIRect MainIslandSdfRect = EntrancePose.m_Rect;
@@ -5025,30 +5013,6 @@ void CHud::RenderMediaIsland()
 		float BottomTextY = BottomRowY + BottomRowPaddingY;
 		const float ContentX = IslandX + BottomRowPaddingX;
 		const float ContentWidth = std::max(0.0f, UnifiedWidth - BottomRowPaddingX * 2.0f);
-		if(!AnimState.m_LyricsMarqueeInitialized || QmHudMediaIslandShouldResetMarquee(AnimState.m_aLyricsMarquee, pLyricsIslandBuf))
-		{
-			str_copy(AnimState.m_aLyricsMarquee, pLyricsIslandBuf, sizeof(AnimState.m_aLyricsMarquee));
-			AnimState.m_LyricsMarqueeStartTick = Now;
-			AnimState.m_LyricsMarqueeInitialized = true;
-		}
-		const auto EnableMappedClip = [&](const CUIRect &Rect) {
-			float ScreenX0 = 0.0f;
-			float ScreenY0 = 0.0f;
-			float ScreenX1 = 0.0f;
-			float ScreenY1 = 0.0f;
-			Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-			const float MappedWidth = std::max(0.001f, ScreenX1 - ScreenX0);
-			const float MappedHeight = std::max(0.001f, ScreenY1 - ScreenY0);
-			const float PixelScaleX = Graphics()->ScreenWidth() / MappedWidth;
-			const float PixelScaleY = Graphics()->ScreenHeight() / MappedHeight;
-			const int ClipX0 = std::clamp((int)std::floor((Rect.x - ScreenX0) * PixelScaleX), 0, Graphics()->ScreenWidth());
-			const int ClipY0 = std::clamp((int)std::floor((Rect.y - ScreenY0) * PixelScaleY), 0, Graphics()->ScreenHeight());
-			const int ClipX1 = std::clamp((int)std::ceil((Rect.x + Rect.w - ScreenX0) * PixelScaleX), 0, Graphics()->ScreenWidth());
-			const int ClipY1 = std::clamp((int)std::ceil((Rect.y + Rect.h - ScreenY0) * PixelScaleY), 0, Graphics()->ScreenHeight());
-			if(ClipX1 > ClipX0 && ClipY1 > ClipY0)
-				Graphics()->ClipEnable(ClipX0, ClipY0, ClipX1 - ClipX0, ClipY1 - ClipY0);
-			return ClipX1 > ClipX0 && ClipY1 > ClipY0;
-		};
 		const auto RenderBottomTextBlock = [&](float X, float Y, float MaxWidth, const char *pText, const ColorRGBA &Color, bool AlignRight) {
 			if(pText == nullptr || pText[0] == '\0' || MaxWidth <= 0.0f)
 				return;
@@ -5096,31 +5060,13 @@ void CHud::RenderMediaIsland()
 
 		if(ShowLyricsIslandLine)
 		{
-			const float LyricsRowY = BottomTextY + BottomRowLineHeight * SwapRows.m_LyricsLineIndex;
-			ColorRGBA LyricsTextColor = LyricsIslandColor;
-			LyricsTextColor.a *= VisibleBottomAlpha;
-			if(pLyricsIslandBuf[0] != '\0' && ContentWidth > 0.0f)
-			{
-				float LyricsVisualTop = 0.0f;
-				float LyricsVisualBottom = 0.0f;
-				STextSizeProperties LyricsTextSizeProps{};
-				LyricsTextSizeProps.m_pVisualTop = &LyricsVisualTop;
-				LyricsTextSizeProps.m_pVisualBottom = &LyricsVisualBottom;
-				const float LyricsTextWidth = std::round(TextRender()->TextWidth(LyricsFontSize, pLyricsIslandBuf, -1, -1.0f, 0, LyricsTextSizeProps));
-				const float ElapsedSeconds = AnimState.m_LyricsMarqueeStartTick > 0 && Now >= AnimState.m_LyricsMarqueeStartTick ?
-								     (Now - AnimState.m_LyricsMarqueeStartTick) / (float)time_freq() :
-								     0.0f;
-				const float LyricsOffset = QmHudMediaIslandMarqueeOffset(LyricsTextWidth, ContentWidth, ElapsedSeconds, QmHudMediaIslandScaled(32.0f));
-				const CUIRect LyricsRect = {ContentX, LyricsRowY, ContentWidth, BottomRowLineHeight};
-				const float DrawX = LyricsTextWidth <= ContentWidth ? LyricsRect.x + (LyricsRect.w - LyricsTextWidth) * 0.5f : LyricsRect.x - LyricsOffset;
-				const float DrawY = LyricsRect.y + LyricsRect.h * 0.5f - (LyricsVisualTop + LyricsVisualBottom) * 0.5f;
-				TextRender()->TextColor(LyricsTextColor);
-				if(EnableMappedClip(LyricsRect))
-				{
-					TextRender()->Text(DrawX, DrawY, LyricsFontSize, pLyricsIslandBuf, -1.0f);
-					Graphics()->ClipDisable();
-				}
-			}
+			const char *apRows[] = {pLyricsIslandBuf, m_MediaIslandFrameCache.m_aLyricsTranslation};
+			const int Count = m_MediaIslandFrameCache.m_LyricsRowCount;
+			const float Elapsed = m_LyricsMarquee.Update(apRows, Count, Now, time_freq());
+			const CUIRect LyricsRect{ContentX, BottomTextY + BottomRowLineHeight * SwapRows.m_LyricsLineIndex,
+				ContentWidth, BottomRowLineHeight * std::max(1, Count)};
+			QmRenderLyricsRows(*Graphics(), *TextRender(), LyricsRect, apRows, Count, LyricsFontSize,
+				LyricsIslandColor.WithMultipliedAlpha(VisibleBottomAlpha), Elapsed);
 		}
 	}
 
@@ -6798,7 +6744,8 @@ float CHud::RenderLegacyMediaInfoAt(float AnchorX, float CenterY)
 	const CSystemMediaControls::SState &MediaState = *pMediaState;
 	const SQmLegacyMediaHudContent Content = QmLegacyMediaHudContent(
 		MediaState.m_aTitle[0] != '\0', MediaState.m_aArtist[0] != '\0',
-		m_MediaIslandFrameCache.m_ShowLyrics, m_MediaIslandFrameCache.m_LyricsActive);
+		!g_Config.m_QmLyricsSeparateIsland && m_MediaIslandFrameCache.m_ShowLyrics,
+		!g_Config.m_QmLyricsSeparateIsland && m_MediaIslandFrameCache.m_LyricsActive, m_MediaIslandFrameCache.m_LyricsRowCount);
 	if(!Content.m_Visible)
 	{
 		m_LegacyMediaLyricState.Reset();
@@ -6810,9 +6757,10 @@ float CHud::RenderLegacyMediaInfoAt(float AnchorX, float CenterY)
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::LegacyMediaInfo, Layout.m_Panel);
 	const char *pLyrics = Content.m_ShowLyrics ? m_MediaIslandFrameCache.m_aLyrics : "";
 	const int64_t Now = time_get();
-	m_LegacyMediaLyricState.Update(MediaState, pLyrics, Now);
+	m_LegacyMediaLyricState.Update(MediaState, pLyrics, Now, m_MediaIslandFrameCache.m_aLyricsTranslation);
 	QmRenderLegacyMediaHud(*Ui(), *Graphics(), *TextRender(), MediaState, Content, Layout, pLyrics,
-		m_MediaIslandFrameCache.m_LyricsColor, m_LegacyMediaLyricState.ElapsedSeconds(Now, time_freq()), HudEditorScope.m_Corners);
+		m_MediaIslandFrameCache.m_LyricsColor, m_LegacyMediaLyricState.ElapsedSeconds(Now, time_freq()), HudEditorScope.m_Corners,
+		m_MediaIslandFrameCache.m_aLyricsTranslation);
 	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 	return Layout.m_Panel.y + Layout.m_Panel.h;
 }
@@ -6938,6 +6886,7 @@ void CHud::OnRender()
 	Graphics()->MapScreen(0.0f, 0.0f, m_Width, m_Height);
 	m_MovementInfoBoxValid = false;
 	m_LegacyMediaInfoRendered = false;
+	m_LyricsIslandAnchorValid = false;
 	UpdateSwitchCountdownTracker();
 	UpdateHookCountdownTracker();
 	const bool ShowMediaIsland = HasVisibleMediaIsland();
@@ -7049,6 +6998,7 @@ void CHud::OnRender()
 			RenderLocalTime((m_Width / 7) * 3);
 			RenderLegacyMediaInfo();
 		}
+		RenderLyricsIsland();
 		if(LocalCharacterHudVisible || GameClient()->m_RankGhost.IsViewModeActive())
 			RenderDDRaceEffects();
 		RenderGoresDrownBoard();
@@ -7503,4 +7453,25 @@ void CHud::RenderRecord()
 			TextRender()->Text(53, 82, 6, aBuf, -1.0f);
 		}
 	}
+}
+
+void CHud::RenderLyricsIsland()
+{
+	if(!g_Config.m_QmLyricsSeparateIsland || !g_Config.m_QmLyrics || !g_Config.m_QmLyricsInMediaIsland)
+		return;
+	const auto &Lyrics = GameClient()->m_LyricsPresentation.Frame();
+	int Count = Lyrics.m_RowCount;
+	const char *apRows[] = {Lyrics.m_aaRows[0], Lyrics.m_aaRows[1]};
+	if(Count == 0 && !Lyrics.m_Active)
+	{
+		if(!GameClient()->m_HudEditor.IsActive())
+			return;
+		apRows[0] = g_Config.m_QmLyricsLanguage == 1 ? Localize("Lyrics translation") : Localize("Lyrics");
+		apRows[1] = Localize("Lyrics translation");
+		Count = g_Config.m_QmLyricsLanguage == 2 ? 2 : 1;
+	}
+	const CUIRect Anchor = m_LyricsIslandAnchorValid ? m_LyricsIslandAnchor : CUIRect{m_Width * 0.5f - 52.5f, 5.0f, 105.0f, 11.2f};
+	const float Elapsed = m_LyricsMarquee.Update(apRows, Count, time_get(), time_freq());
+	QmRenderLyricsIsland(*Graphics(), *TextRender(), GameClient()->m_HudEditor, Anchor, m_Width, m_Height,
+		apRows, Count, Elapsed, MediaIslandBlurBackdrop());
 }

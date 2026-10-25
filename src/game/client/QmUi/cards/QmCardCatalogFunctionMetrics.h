@@ -35,14 +35,14 @@ namespace qm_card_catalog
 		int *m_pValue;
 	};
 
-	inline const std::array<SQmMiniFeatureRow, 10> &QmMiniFeatureRows()
+	inline const std::array<SQmMiniFeatureRow, 11> &QmMiniFeatureRows()
 	{
 		// 行文案以 Localizable 标注：表在卡片目录里，渲染侧只做 Localize(m_pTextId)，
 		// 不加标注翻译提取脚本就看不到这些 source key，语言文件会整行退回英文。
 		// IME 设置已移到独立卡片；本表只保留小功能卡片自己的开关。
 		// 本地差异：远程此表含 g_Config.m_QmProcessHighPriority（"High process priority"），
-		// 该项为本地既定不吸收（本地合同测试断言其不存在），故整行删除且表长保持为实际的 10 项。
-		static const std::array<SQmMiniFeatureRow, 10> s_aRows = {{
+		// 该项为本地既定不吸收（本地合同测试断言其不存在），故整行删除且表长保持为实际行数。
+		static const std::array<SQmMiniFeatureRow, 11> s_aRows = {{
 			{&g_Config.m_QmClientShowBadge, Localizable("Show Qm badge"), &g_Config.m_QmClientShowBadge},
 			{&g_Config.m_QmAutoUpdate, Localizable("Automatic updates"), &g_Config.m_QmAutoUpdate},
 			{&g_Config.m_QmShowOutdatedVersionWarning, Localizable("Show outdated version warning"), &g_Config.m_QmShowOutdatedVersionWarning},
@@ -50,6 +50,7 @@ namespace qm_card_catalog
 			{&g_Config.m_QmMessageMerge, Localizable("Message merging"), &g_Config.m_QmMessageMerge},
 			{&g_Config.m_QmShortServerNames, Localizable("Short server names"), &g_Config.m_QmShortServerNames},
 			{&g_Config.m_QmRepeatEnabled, Localizable("Enable repeat"), &g_Config.m_QmRepeatEnabled},
+			{&g_Config.m_QmHumming, Localizable("Humming"), &g_Config.m_QmHumming},
 			{&g_Config.m_QmRandomEmoteOnHit, Localizable("Random emoticon"), &g_Config.m_QmRandomEmoteOnHit},
 			{&g_Config.m_QmComboPopup, Localizable("Combo"), &g_Config.m_QmComboPopup},
 			{&g_Config.m_QmSayNoPop, Localizable("Hide input emoticon"), &g_Config.m_QmSayNoPop},
