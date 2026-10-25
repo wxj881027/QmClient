@@ -764,14 +764,8 @@ void CCamera::ConSpectatorTeleportToHoveredTele(IConsole::IResult *pResult, void
 
 void CCamera::SetView(ivec2 Pos, bool Relative)
 {
-	vec2 RealPos = vec2(Pos.x * 32.0, Pos.y * 32.0);
-	vec2 UntestedViewPos = Relative ? m_ForceFreeviewPos + RealPos : RealPos;
-
 	m_ForceFreeview = true;
-
-	m_ForceFreeviewPos = vec2(
-		std::clamp(UntestedViewPos.x, 200.0f, Collision()->GetWidth() * 32 - 200.0f),
-		std::clamp(UntestedViewPos.y, 200.0f, Collision()->GetHeight() * 32 - 200.0f));
+	m_ForceFreeviewPos = QmCameraEffects::ViewTarget(Pos, m_ForceFreeviewPos, Relative, Collision()->GetWidth(), Collision()->GetHeight());
 }
 
 // 镜头轨迹已经给出最终取景，不再叠加自动镜头、动态视野或鼠标阻尼。

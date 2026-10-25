@@ -13,9 +13,37 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace QmCameraEffects
 {
+	inline float ClampViewAxis(float Position, int MapTiles)
+	{
+		const float Extent = static_cast<float>(MapTiles) * 32.0f;
+		const float Margin = std::min(200.0f, Extent * 0.5f);
+		return std::clamp(Position, Margin, Extent - Margin);
+	}
+
+	inline vec2 ViewTarget(ivec2 TilePosition, vec2 Current, bool Relative, int MapWidth, int MapHeight)
+	{
+		const vec2 Offset(TilePosition.x * 32.0, TilePosition.y * 32.0);
+		const vec2 Desired = Relative ? Current + Offset : Offset;
+		return vec2(ClampViewAxis(Desired.x, MapWidth), ClampViewAxis(Desired.y, MapHeight));
+	}
+
+	inline int EncodeDemoZoom(float Zoom)
+	{
+		// 仅限制录像整数参数；游戏内仍允许无限缩放。
+		if(!(Zoom > 0.0f))
+			return 0;
+		constexpr int Max = std::numeric_limits<int>::max();
+		if(static_cast<double>(Zoom) >= static_cast<double>(Max) / 1000.0)
+			return Max;
+		// 正常范围保持原float乘法及向零截断，避免量化精度变化。
+		const float Scaled = Zoom * 1000.0f;
+		return static_cast<double>(Scaled) >= Max ? Max : static_cast<int>(Scaled);
+	}
+
 	inline bool IsValidZoom(float Value, float MinZoom, float MaxZoom)
 	{
 		return std::isfinite(Value) && Value >= MinZoom && Value <= MaxZoom;

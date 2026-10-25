@@ -5075,6 +5075,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_ghost_render_test.cpp
     src/test/integration/qmclient/client/qm_demo_camera_storage_test.cpp
     src/test/unit/qmclient/client/qm_camera_effects_test.cpp
+    src/test/unit/qmclient/client/qm_camera_boundaries_test.cpp
+    src/test/integration/client/camera_boundary_inputs_test.cpp
     src/test/contract/qmclient/ui/qm_capsule_tab_wiring_contract_test.cpp
     src/test/unit/qmclient/ui/qm_capsule_tab_geometry_test.cpp
     src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp

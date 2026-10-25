@@ -3185,7 +3185,7 @@ void CGameClient::ProcessDemoSnapshot(CSnapshot *pSnap)
 			// always record local camera info as follow mode
 			CNetObj_DDNetSpectatorInfo *pDDNetSpectatorInfo = (CNetObj_DDNetSpectatorInfo *)((void *)pItem->Data());
 			pDDNetSpectatorInfo->m_HasCameraInfo = true;
-			pDDNetSpectatorInfo->m_Zoom = (m_Camera.m_Zooming ? m_Camera.m_ZoomSmoothingTarget : m_Camera.BaseZoom()) * 1000.0f;
+			pDDNetSpectatorInfo->m_Zoom = QmCameraEffects::EncodeDemoZoom(m_Camera.m_Zooming ? m_Camera.m_ZoomSmoothingTarget : m_Camera.BaseZoom());
 			pDDNetSpectatorInfo->m_Deadzone = m_Camera.Deadzone();
 			pDDNetSpectatorInfo->m_FollowFactor = m_Camera.FollowFactor();
 		}
