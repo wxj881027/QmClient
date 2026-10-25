@@ -5,6 +5,7 @@
 
 #include <engine/gfx/image_manipulation.h>
 
+#include <game/client/components/qmclient/collision_position.h>
 #include <game/teamscore.h>
 
 #include <algorithm>
@@ -215,10 +216,16 @@ namespace QmEmoticon
 			// 只查询不透明轮廓包围盒覆盖的瓦片；精细相交仍由原来的 SAT 判定。
 			const vec2 BoundsCenter = Pos + AxisX * (m_BoundsCenter.x * Size) + AxisY * (m_BoundsCenter.y * Size);
 			const vec2 BoundsHalf = (AbsX * m_BoundsHalf.x + AbsY * m_BoundsHalf.y) * Size + vec2(0.01f, 0.01f);
-			const int MinX = (int)std::floor((BoundsCenter.x - BoundsHalf.x) / 32.0f);
-			const int MaxX = (int)std::floor((BoundsCenter.x + BoundsHalf.x) / 32.0f);
-			const int MinY = (int)std::floor((BoundsCenter.y - BoundsHalf.y) / 32.0f);
-			const int MaxY = (int)std::floor((BoundsCenter.y + BoundsHalf.y) / 32.0f);
+			const vec2 MinTile(std::floor((BoundsCenter.x - BoundsHalf.x) / 32.0f), std::floor((BoundsCenter.y - BoundsHalf.y) / 32.0f));
+			const vec2 MaxTile(std::floor((BoundsCenter.x + BoundsHalf.x) / 32.0f), std::floor((BoundsCenter.y + BoundsHalf.y) / 32.0f));
+			// Solid会把瓦片中心还原为世界坐标再转int，整个查询轮廓都必须可转换。
+			if(!QmCollision::CanRoundPosition(MinTile * 32.0f + vec2(16.0f, 16.0f)) ||
+				!QmCollision::CanRoundPosition(MaxTile * 32.0f + vec2(16.0f, 16.0f)))
+				return true;
+			const int MinX = static_cast<int>(MinTile.x);
+			const int MaxX = static_cast<int>(MaxTile.x);
+			const int MinY = static_cast<int>(MinTile.y);
+			const int MaxY = static_cast<int>(MaxTile.y);
 			for(int Y = MinY; Y <= MaxY; ++Y)
 			{
 				for(int X = MinX; X <= MaxX; ++X)
@@ -324,7 +331,7 @@ struct CEmoticonProjectile
 	template<typename TSolid, typename TCanReach>
 	bool PlaceOutside(const QmEmoticon::CAlphaMask &Mask, const TSolid &Solid, vec2 Origin, const TCanReach &CanReach)
 	{
-		if(!CanReach(Origin, Origin))
+		if(!QmCollision::CanRoundPosition(Origin) || !QmCollision::CanRoundPosition(m_Pos) || !CanReach(Origin, Origin))
 			return false;
 		if(!Mask.Overlaps(m_Pos, Size(), m_Angle, Solid) && CanReach(Origin, m_Pos))
 			return true;
@@ -341,8 +348,8 @@ struct CEmoticonProjectile
 					continue;
 				const vec2 Candidate = Origin + aDirections[Index] * static_cast<float>(Radius);
 				const vec2 Previous = Origin + aDirections[Index] * static_cast<float>(Radius - 2);
-				// 只查本轮新增的两像素路径，方向和状态都在栈上，不增加每帧成本。
-				if(!CanReach(Previous, Candidate))
+				// 只查本轮新增的两像素路径，方向和阻挡状态保存在栈上。
+				if(!QmCollision::CanRoundPosition(Previous) || !QmCollision::CanRoundPosition(Candidate) || !CanReach(Previous, Candidate))
 				{
 					aBlocked[Index] = true;
 					continue;

@@ -3497,6 +3497,7 @@ if(CLIENT)
     components/player_points.h
     components/qmclient/player_points_state.h
     components/qmclient/item_render_math.h
+    components/qmclient/collision_position.h
     components/qmclient/gores_drown_tracker.h
     components/players.cpp
     components/players.h
@@ -4748,6 +4749,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/camera_zoom_inputs_test.cpp
     src/test/unit/qmclient/client/qm_spectator_selection_test.cpp
     src/test/unit/qmclient/client/qm_emoticon_deadline_test.cpp
+    src/test/unit/qmclient/client/qm_emoticon_collision_bounds_test.cpp
+    src/test/integration/client/emoticon_collision_inputs_test.cpp
     src/test/integration/client/spectator_selection_inputs_test.cpp
     src/test/unit/qmclient/client/qm_gores_drown_tracker_test.cpp
     src/test/unit/qmclient/client/qm_trail_geometry_test.cpp

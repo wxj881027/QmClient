@@ -6,23 +6,16 @@
 #include <base/vmath.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/collision_position.h>
 
 #include <cmath>
-#include <limits>
 
 // particles
 struct CParticle
 {
 	static bool CanCollideAt(vec2 Pos)
 	{
-		const auto CanRound = [](float Value) {
-			// 与碰撞入口的round_to_int保持相同浮点舍入，转换前检查真实int边界。
-			const float Rounded = Value > 0.0f ? Value + 0.5f : Value - 0.5f;
-			return std::isfinite(Rounded) &&
-			       static_cast<double>(Rounded) >= std::numeric_limits<int>::min() &&
-			       static_cast<double>(Rounded) <= std::numeric_limits<int>::max();
-		};
-		return CanRound(Pos.x) && CanRound(Pos.y);
+		return QmCollision::CanRoundPosition(Pos);
 	}
 
 	bool CanMove(vec2 Displacement) const
