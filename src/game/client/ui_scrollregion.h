@@ -73,7 +73,11 @@ inline CScrollRegionParams QmScrollRegionParamsForSize(EQmScrollSize Size, float
 	Params.m_ScrollbarThickness = Style.m_ScrollbarWidth;
 	Params.m_ScrollbarMargin = Style.m_ScrollbarMargin;
 	Params.m_SliderMinSize = Style.m_MinThumbHeight;
-	Params.m_ScrollUnit = Config.m_WheelScale;
+	// 整面板级滚动面（wiki 弹窗、统计页、音频包编辑器、控制台卡等）与设置主区
+	// 同口径：每档 = qm_ui_scroll_step × QmPanelWheelStepMultiplier()。此前直接
+	// 取 step 基准值（默认 10px），只有设置页的 1/12，二级面板的滚轮手感因此
+	// 明显脱节。
+	Params.m_ScrollUnit = Config.m_WheelScale * QmPanelWheelStepMultiplier();
 	Params.m_ScrollHorizontal = Axis == EQmScrollAxis::HORIZONTAL;
 	return Params;
 }

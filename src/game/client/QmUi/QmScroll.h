@@ -10,6 +10,14 @@ constexpr float QmScrollAltMultiplier()
 	return 3.0f;
 }
 
+// 面板级滚动面（设置主区、wiki 弹窗、统计页等整页容器）的滚轮档位倍率：
+// 这类容器行高远大于列表行，每档 = qm_ui_scroll_step × 该倍率，保持单屏节奏。
+// 全站滚轮档位都由 qm_ui_scroll_step 等比驱动，此处只定义语义倍率，不含第二处 token。
+constexpr float QmPanelWheelStepMultiplier()
+{
+	return 12.0f;
+}
+
 constexpr int QM_POPUP_LIST_MAX_VISIBLE_ITEMS = 8;
 
 struct SQmScrollMetrics

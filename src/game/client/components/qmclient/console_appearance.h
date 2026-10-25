@@ -1,6 +1,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_CONSOLE_APPEARANCE_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_CONSOLE_APPEARANCE_H
 
+#include "console_color_schemes.h"
+
 #include <base/color.h>
 
 #include <engine/shared/config.h>
@@ -10,6 +12,10 @@
 
 namespace QmConsoleAppearance
 {
+	// 方案编号：k_CustomScheme 是"自定义"，其余 >= 0 的编号对应
+	// QmConsoleSchemes::At() 的内置方案；-1 表示未启用内置方案。
+	static constexpr int k_CustomScheme = 1000;
+
 	enum EColor
 	{
 		BACKGROUND,
@@ -40,6 +46,49 @@ namespace QmConsoleAppearance
 			First.b + (Second.b - First.b) * Amount, First.a};
 	}
 
+	// 内置方案编号的起点：0=现代终端、1=经典 PowerShell、2=自定义，
+	// 之后的编号依次对应 QmConsoleSchemes::At() 的 Windows Terminal 配色。
+	static constexpr int k_BuiltinSchemeBase = 3;
+
+	inline bool IsBuiltinScheme(int Scheme)
+	{
+		return Scheme >= k_BuiltinSchemeBase && Scheme < k_BuiltinSchemeBase + QmConsoleSchemes::Count();
+	}
+
+	inline const QmConsoleSchemes::SDefinition &BuiltinScheme(int Scheme)
+	{
+		return QmConsoleSchemes::At(Scheme - k_BuiltinSchemeBase);
+	}
+
+	// 取一个与正文有区别的强调色。个别方案（如 Solarized）的亮蓝色就是前景色本身，
+	// 直接用它会让链接和正文一模一样，所以命中时退回同一色相的非亮版本。
+	inline ColorRGBA AccentColor(const QmConsoleSchemes::SAnsiPalette &Ansi, int Preferred, int Fallback)
+	{
+		const ColorRGBA PreferredColor = Ansi.m_aColors[Preferred];
+		return PreferredColor != Ansi.m_Foreground ? PreferredColor : Ansi.m_aColors[Fallback];
+	}
+
+	// 把 ANSI 16 色映射到控制台的语法语义色。
+	// 选色与默认方案一致：命令最醒目、参数次之、链接偏冷、搜索偏暖，
+	// 这样换配色只换色相，语法层级的强弱关系仍然可读。
+	inline std::array<ColorRGBA, COLOR_COUNT> AnsiToSemanticColors(const QmConsoleSchemes::SAnsiPalette &Ansi)
+	{
+		std::array<ColorRGBA, COLOR_COUNT> Colors{};
+		Colors[BACKGROUND] = Ansi.m_Background;
+		Colors[TEXT] = Ansi.m_Foreground;
+		Colors[COMMAND] = AccentColor(Ansi, 11, 3); // brightYellow / yellow
+		Colors[PARAMETER] = AccentColor(Ansi, 14, 6); // brightCyan / cyan
+		Colors[STRING] = AccentColor(Ansi, 10, 2); // brightGreen / green
+		Colors[NUMBER] = AccentColor(Ansi, 13, 5); // brightPurple / purple
+		Colors[LINK] = AccentColor(Ansi, 12, 4); // brightBlue / blue
+		Colors[SEARCH] = AccentColor(Ansi, 9, 1); // brightRed / red
+		Colors[SEARCH_SELECTED] = Ansi.m_aColors[3]; // yellow
+		// 搜索命中与当前命中必须能区分开，否则看不出选中的是哪一个。
+		if(Colors[SEARCH_SELECTED] == Colors[SEARCH])
+			Colors[SEARCH_SELECTED] = AccentColor(Ansi, 0, 8);
+		return Colors;
+	}
+
 	inline SPalette ResolvePalette(int Scheme, int Opacity, const std::array<unsigned, COLOR_COUNT> &Custom)
 	{
 		SPalette Result{{ColorRGBA(0.047f, 0.047f, 0.047f, 1.0f), ColorRGBA(0.80f, 0.80f, 0.80f, 1.0f),
@@ -58,6 +107,10 @@ namespace QmConsoleAppearance
 			for(size_t i = 0; i < Custom.size(); ++i)
 				Result.m_aColors[i] = color_cast<ColorRGBA>(ColorHSLA(Custom[i]));
 		}
+		else if(IsBuiltinScheme(Scheme))
+		{
+			Result.m_aColors = AnsiToSemanticColors(BuiltinScheme(Scheme).m_Palette);
+		}
 		Result.m_aColors[BACKGROUND].a = std::clamp(Opacity, 20, 100) / 100.0f;
 		Result.m_Panel = Blend(Result.m_aColors[BACKGROUND], Result.m_aColors[TEXT], 0.06f);
 		Result.m_SelectedButton = Blend(Result.m_Panel, Result.m_aColors[COMMAND], 0.22f);
@@ -68,12 +121,18 @@ namespace QmConsoleAppearance
 		return Result;
 	}
 
+	// 自定义方案的九项取色，按 EColor 顺序排列。凡是需要"替玩家算配色"的地方
+	//（渲染、列表预览）都必须走这里，传空数组会把自定义方案算成一片黑。
+	inline std::array<unsigned, COLOR_COUNT> CustomColors(const CConfig &Config)
+	{
+		return {Config.m_QmConsoleBackgroundColor, Config.m_QmConsoleTextColor, Config.m_QmConsoleCommandColor,
+			Config.m_QmConsoleParameterColor, Config.m_QmConsoleStringColor, Config.m_QmConsoleNumberColor,
+			Config.m_QmConsoleLinkColor, Config.m_QmConsoleSearchColor, Config.m_QmConsoleSearchSelectedColor};
+	}
+
 	inline SPalette Palette(const CConfig &Config)
 	{
-		return ResolvePalette(Config.m_QmConsoleColorScheme, Config.m_QmConsoleOpacity,
-			{Config.m_QmConsoleBackgroundColor, Config.m_QmConsoleTextColor, Config.m_QmConsoleCommandColor,
-				Config.m_QmConsoleParameterColor, Config.m_QmConsoleStringColor, Config.m_QmConsoleNumberColor,
-				Config.m_QmConsoleLinkColor, Config.m_QmConsoleSearchColor, Config.m_QmConsoleSearchSelectedColor});
+		return ResolvePalette(Config.m_QmConsoleColorScheme, Config.m_QmConsoleOpacity, CustomColors(Config));
 	}
 
 	inline float FontSize(int ConfiguredSize)

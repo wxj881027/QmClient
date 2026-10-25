@@ -4762,6 +4762,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/config_tags_test.cpp
     src/test/unit/engine/qm_legacy_config_test.cpp
     src/test/unit/qmclient/settings/qm_appearance_preset_test.cpp
+    src/test/unit/qmclient/settings/qm_console_scheme_list_test.cpp
     src/test/unit/engine/csv_test.cpp
     src/test/unit/engine/datafile_test.cpp
     src/test/unit/base/dbg_test.cpp

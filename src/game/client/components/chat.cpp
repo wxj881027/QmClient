@@ -1110,6 +1110,11 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			return true;
 	}
 	const bool IsWheelEvent = Event.m_Key == KEY_MOUSE_WHEEL_UP || Event.m_Key == KEY_MOUSE_WHEEL_DOWN;
+	// 聊天弹层由公共弹层栈绘制，滚轮增量只在 CUi 的滚轮归属帧里从 CUi 热键取；
+	// 聊天组件不向 CUi 转发按键，弹层里的列表因此只能拖动滚动条。只转发滚轮，
+	// 方向键、回车、Esc 仍走聊天原有路径；弹层关闭时滚轮继续滚聊天记录。
+	if(AnyChatPopupOpen && (Event.m_Flags & IInput::FLAG_PRESS) && IsWheelEvent)
+		Ui()->OnInput(Event);
 	if(!AnyChatPopupOpen && (Event.m_Flags & IInput::FLAG_PRESS) && IsWheelEvent)
 	{
 		const float Height = 300.0f;

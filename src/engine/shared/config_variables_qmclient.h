@@ -18,7 +18,9 @@ MACRO_CONFIG_INT(QmSteamAutoLaunch, qm_steam_auto_launch, 0, 0, 1, CFGFLAG_CLIEN
 MACRO_CONFIG_STR(QmSteamClientPath, qm_steam_client_path, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Steam client path (leave empty to detect automatically)")
 MACRO_CONFIG_INT(QmConsoleFilterMask, qm_console_filter_mask, 15, 0, 15, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Local console log category filter mask (bit flags)")
 MACRO_CONFIG_INT(QmConsoleFontSize, qm_console_font_size, 10, 1, 24, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console font size")
-MACRO_CONFIG_INT(QmConsoleColorScheme, qm_console_color_scheme, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom")
+// 0=现代终端 1=经典 PowerShell 2=自定义；3 起为 Windows Terminal 内置配色
+//（顺序见 console_color_schemes.h，只在末尾追加，不重排）。
+MACRO_CONFIG_INT(QmConsoleColorScheme, qm_console_color_scheme, 0, 0, 18, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom, 3+=Windows Terminal schemes")
 MACRO_CONFIG_INT(QmConsoleOpacity, qm_console_opacity, 96, 20, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console background opacity")
 MACRO_CONFIG_INT(QmConsoleHighlightCommands, qm_console_highlight_commands, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Highlight console commands")
 MACRO_CONFIG_COL(QmConsoleBackgroundColor, qm_console_background_color, 0x00000C, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console background color")

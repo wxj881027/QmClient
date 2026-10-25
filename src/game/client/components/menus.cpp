@@ -2908,7 +2908,6 @@ void CMenus::RenderStatistics(CUIRect MainView)
 
 	static CScrollRegion s_StatisticsScrollRegion;
 	CScrollRegionParams StatisticsScrollParams = QmScrollRegionParamsForSize(EQmScrollSize::MEDIUM);
-	StatisticsScrollParams.m_ScrollUnit = 96.0f;
 	StatisticsScrollParams.m_HideScrollbar = true;
 	vec2 StatisticsScrollOffset;
 	s_StatisticsScrollRegion.Begin(&Window, &StatisticsScrollOffset, &StatisticsScrollParams);
