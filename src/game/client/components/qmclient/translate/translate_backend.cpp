@@ -19,6 +19,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <string>
+#include <string_view>
 #include <utility>
 
 const char *NormalizeTranslateSource(const char *pSource)
@@ -1322,7 +1323,7 @@ protected:
 		str_format(aUrl, sizeof(aUrl), "%s%s", m_aBaseUrl, pPath);
 		const char *pPayload = Style == ELlmApiStyle::RESPONSES ? m_ResponsesPayload.c_str() : m_ChatPayload.c_str();
 
-		// 配置和HTTP接收成功前保留原请求及其解析格式，分配失败后仍可重试。
+		// 配置完成、Run未抛出前保留原请求及其解析格式，分配失败后仍可重试。
 		std::shared_ptr<IHttpRequest> pRequest = m_pCreateRequest(aUrl);
 		pRequest->LogProgress(HTTPLOG::NONE);
 		pRequest->FailOnErrorStatus(false);
@@ -1644,7 +1645,7 @@ const char *TranslateNoticeSource(ETranslateNotice Notice)
 	return nullptr;
 }
 
-bool IsLocalTranslateEndpoint(const char *pEndpoint)
+bool IsLocalTranslateEndpoint(const char *pEndpoint) noexcept
 {
 	if(!pEndpoint)
 		return false;
@@ -1653,21 +1654,22 @@ bool IsLocalTranslateEndpoint(const char *pEndpoint)
 		pHost = str_startswith_nocase(pEndpoint, "https://");
 	if(!pHost)
 		return false;
-	const std::string Authority(pHost, strcspn(pHost, "/?#"));
-	if(Authority.empty() || Authority.find('@') != std::string::npos)
+	// 渲染警告也调用本判断，仅借用主机片段，不为配置检查分配字符串。
+	const std::string_view Authority(pHost, strcspn(pHost, "/?#"));
+	if(Authority.empty() || Authority.find('@') != std::string_view::npos)
 		return false;
-	std::string Host = Authority;
+	std::string_view Host = Authority;
 	const size_t Port = Host[0] == '[' ? Host.find(']', 1) : Host.find(':');
-	if(Port != std::string::npos)
+	if(Port != std::string_view::npos)
 	{
 		if(Host[0] == '[')
 		{
 			if(Port + 1 < Host.size() && Host[Port + 1] != ':')
 				return false;
-			Host.resize(Port + 1);
+			Host = Host.substr(0, Port + 1);
 		}
 		else
-			Host.resize(Port);
+			Host = Host.substr(0, Port);
 	}
-	return str_comp_nocase(Host.c_str(), "localhost") == 0 || Host == "127.0.0.1" || Host == "[::1]";
+	return (Host.size() == 9 && str_comp_nocase_num(Host.data(), "localhost", 9) == 0) || Host == "127.0.0.1" || Host == "[::1]";
 }

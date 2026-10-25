@@ -5417,6 +5417,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/translate/translate_json_metadata_test.cpp
     src/test/unit/qmclient/translate/translate_service_code_test.cpp
     src/test/unit/qmclient/translate/translate_llm_parse_test.cpp
+    src/test/unit/qmclient/translate/translate_local_endpoint_test.cpp
     src/test/unit/base/unix_test.cpp
     src/test/unit/engine/uuid_test.cpp
     src/test/unit/base/vmath_test.cpp

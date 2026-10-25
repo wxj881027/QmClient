@@ -59,7 +59,7 @@ const char *GetSelectedTranslateLlmKey();
 int GetTranslateConcurrency();
 bool TranslateBackendNeedsConfiguration();
 const char *TranslateNoticeSource(ETranslateNotice Notice);
-bool IsLocalTranslateEndpoint(const char *pEndpoint);
+bool IsLocalTranslateEndpoint(const char *pEndpoint) noexcept;
 const char *NormalizeTranslateSource(const char *pSource);
 
 #endif
