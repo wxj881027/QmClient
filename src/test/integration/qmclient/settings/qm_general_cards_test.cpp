@@ -1,3 +1,5 @@
+#include <base/detect.h>
+
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 
@@ -25,6 +27,11 @@ TEST(QmGeneralCards, InternalSettingsCanFindTheirSharedCardBeforeOpeningThePage)
 		{"cl_auto_demo_max", "deck:general-recording"},
 		{"Automatically take statboard screenshot", "deck:general-recording"},
 		{"自动录像", "deck:general-recording"},
+#if defined(CONF_FAMILY_WINDOWS)
+		{"qm_screenshot_clipboard", "deck:general-recording"},
+		{"Automatically copy manual screenshots to clipboard", "deck:general-recording"},
+		{"剪贴板", "deck:general-recording"},
+#endif
 		{"Chat Binds", "deck:tclient-info-files"},
 		{"配置文件", "deck:tclient-info-files"},
 	};

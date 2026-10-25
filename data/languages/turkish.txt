@@ -1505,6 +1505,9 @@ Automatically check for stable updates and install them on exit
 Automatically close the current chat after waking from freeze
 == Donmadan uyandıktan sonra mevcut sohbeti otomatik kapat
 
+Automatically copy manual screenshots to clipboard
+== Elle alınan ekran görüntülerini otomatik olarak panoya kopyala
+
 Automatically create statboard csv
 == Otomatik olarak istatistik tablosu csv oluştur
 

@@ -500,6 +500,7 @@ Automatically adds voting options for all maps
 Automatically ban blacklisted addresses
 Automatically check for stable updates and install them on exit
 Automatically close the current chat after waking from freeze
+Automatically copy manual screenshots to clipboard
 Automatically create statboard csv
 Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)

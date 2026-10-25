@@ -74,6 +74,7 @@
 #include <game/client/components/qmclient/pose_capture.h>
 #include <game/client/components/qmclient/pose_file.h>
 #include <game/client/components/qmclient/pose_scene.h>
+#include <game/client/components/qmclient/screenshot_clipboard.h>
 #include <game/client/components/qmclient/screenshot_viewer.h>
 #include <game/client/frame_scheduler.h>
 #include <game/localization.h>
@@ -5945,7 +5946,9 @@ void CClient::Con_RenderPoses(IConsole::IResult *pResult, void *pUserData)
 void CClient::Con_Screenshot(IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = (CClient *)pUserData;
-	pSelf->Graphics()->TakeScreenshot(nullptr, [pSelf](CImageInfo &&Image, const char *pPath) { pSelf->GameClient()->OnScreenshotTaken(std::move(Image), pPath); }, pSelf->GameClient()->ScreenshotProcessor());
+	auto Callback = qm_screenshot_clipboard::CaptureCallback(g_Config.m_QmScreenshotClipboard != 0 && qm_screenshot_clipboard::Supported(),
+		[pSelf](CImageInfo &&Image, const char *pPath) { pSelf->GameClient()->OnScreenshotTaken(std::move(Image), pPath); });
+	pSelf->Graphics()->TakeScreenshot(nullptr, std::move(Callback), pSelf->GameClient()->ScreenshotProcessor());
 }
 
 #if defined(CONF_VIDEORECORDER)

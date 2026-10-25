@@ -1505,6 +1505,9 @@ Automatically check for stable updates and install them on exit
 Automatically close the current chat after waking from freeze
 == 從凍結狀態中醒來自動關閉聊天框
 
+Automatically copy manual screenshots to clipboard
+== 手動截圖時自動複製到剪貼簿
+
 Automatically create statboard csv
 == 自動將統計板導出為 csv 文件
 
