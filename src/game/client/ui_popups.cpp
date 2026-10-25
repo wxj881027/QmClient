@@ -788,12 +788,25 @@ void CUi::SConfirmPopupContext::DefaultButtons()
 
 void CUi::ShowPopupConfirm(float X, float Y, SConfirmPopupContext *pContext, bool CenterInViewport)
 {
-	const float TextWidth = minimum(std::ceil(TextRender()->TextWidth(SConfirmPopupContext::POPUP_FONT_SIZE, pContext->m_aMessage, -1, -1.0f) + 0.5f), SConfirmPopupContext::POPUP_MAX_WIDTH);
+	const bool Titled = pContext->m_aTitle[0] != '\0';
+	const float FontSize = Titled ? ui_token::font::BODY : SConfirmPopupContext::POPUP_FONT_SIZE;
+	const float Inset = Titled ? ui_token::spacing::LG : PopupMenuContentInset() * 0.5f;
+	const float MessageWidth = std::ceil(TextRender()->TextWidth(FontSize, pContext->m_aMessage, -1, -1.0f) + 0.5f);
+	float PopupWidth = minimum(MessageWidth, SConfirmPopupContext::POPUP_MAX_WIDTH) + 2.0f * Inset;
+	if(Titled)
+	{
+		const float TitleWidth = TextRender()->TextWidth(ui_token::font::HEADLINE_LG, pContext->m_aTitle);
+		const float ButtonWidth = maximum(TextRender()->TextWidth(FontSize, pContext->m_aPositiveButtonLabel), TextRender()->TextWidth(FontSize, pContext->m_aNegativeButtonLabel)) + 2.0f * ui_token::spacing::SM;
+		const float RequiredWidth = std::max({MessageWidth, TitleWidth, 2.0f * ButtonWidth + ui_token::spacing::SM}) + 2.0f * Inset;
+		const float MaxWidth = std::min(ui_token::confirm_dialog::MAX_WIDTH, std::max(2.0f * Inset + 1.0f, Screen()->w - 2.0f * ui_token::spacing::LG));
+		PopupWidth = std::clamp(RequiredWidth, std::min(ui_token::confirm_dialog::MIN_WIDTH, MaxWidth), MaxWidth);
+	}
 	float TextHeight = 0.0f;
 	STextSizeProperties TextSizeProps{};
 	TextSizeProps.m_pHeight = &TextHeight;
-	TextRender()->TextWidth(SConfirmPopupContext::POPUP_FONT_SIZE, pContext->m_aMessage, -1, TextWidth, 0, TextSizeProps);
-	const float PopupHeight = TextHeight + SConfirmPopupContext::POPUP_BUTTON_HEIGHT + SConfirmPopupContext::POPUP_BUTTON_SPACING + 10.0f;
+	TextRender()->TextWidth(FontSize, pContext->m_aMessage, -1, PopupWidth - 2.0f * Inset, 0, TextSizeProps);
+	const float PopupHeight = Titled ? TextHeight + ui_token::confirm_dialog::TITLE_HEIGHT + ui_token::spacing::MD + ui_token::spacing::XL + ui_token::confirm_dialog::BUTTON_HEIGHT + 2.0f * Inset :
+					   TextHeight + SConfirmPopupContext::POPUP_BUTTON_HEIGHT + SConfirmPopupContext::POPUP_BUTTON_SPACING + 2.0f * Inset;
 	pContext->m_pUI = this;
 	pContext->m_Result = SConfirmPopupContext::UNSET;
 	SPopupMenuProperties Props;
@@ -802,7 +815,8 @@ void CUi::ShowPopupConfirm(float X, float Y, SConfirmPopupContext *pContext, boo
 	Props.m_BlockUnderlyingPointerInput = true;
 	Props.m_BlockUnderlyingScroll = true;
 	Props.m_Animate = true;
-	DoPopupMenu(pContext, X, Y, TextWidth + 10.0f, PopupHeight, pContext, PopupConfirm, Props);
+	Props.m_ContentInset = Inset;
+	DoPopupMenu(pContext, X, Y, PopupWidth, PopupHeight, pContext, PopupConfirm, Props);
 }
 
 CUi::EPopupMenuFunctionResult CUi::PopupConfirm(void *pContext, CUIRect View, bool Active)
@@ -810,13 +824,29 @@ CUi::EPopupMenuFunctionResult CUi::PopupConfirm(void *pContext, CUIRect View, bo
 	SConfirmPopupContext *pConfirmPopup = static_cast<SConfirmPopupContext *>(pContext);
 	CUi *pUI = pConfirmPopup->m_pUI;
 
+	const bool Titled = pConfirmPopup->m_aTitle[0] != '\0';
+	const float FontSize = Titled ? ui_token::font::BODY : SConfirmPopupContext::POPUP_FONT_SIZE;
+	const float ButtonHeight = Titled ? ui_token::confirm_dialog::BUTTON_HEIGHT : SConfirmPopupContext::POPUP_BUTTON_HEIGHT;
+	const float ButtonSpacing = Titled ? ui_token::spacing::SM : SConfirmPopupContext::POPUP_BUTTON_SPACING;
+	const float ButtonPadding = Titled ? ui_token::spacing::SM : 0.0f;
+	const float MinimumFontSize = Titled ? ui_token::font::SMALL : -1.0f;
+	if(Titled)
+	{
+		CUIRect Title;
+		View.HSplitTop(ui_token::confirm_dialog::TITLE_HEIGHT, &Title, &View);
+		SLabelProperties TitleProps;
+		TitleProps.m_MaxWidth = Title.w;
+		TitleProps.m_EllipsisAtEnd = true;
+		pUI->DoLabel(&Title, pConfirmPopup->m_aTitle, ui_token::font::HEADLINE_LG, TEXTALIGN_ML, TitleProps);
+		View.HSplitTop(ui_token::spacing::MD, nullptr, &View);
+	}
 	CUIRect Label, ButtonBar, CancelButton, ConfirmButton;
-	View.HSplitBottom(SConfirmPopupContext::POPUP_BUTTON_HEIGHT, &Label, &ButtonBar);
-	ButtonBar.VSplitMid(&CancelButton, &ConfirmButton, SConfirmPopupContext::POPUP_BUTTON_SPACING);
+	View.HSplitBottom(ButtonHeight, &Label, &ButtonBar);
+	ButtonBar.VSplitMid(&CancelButton, &ConfirmButton, ButtonSpacing);
 
-	pUI->TextRender()->Text(Label.x, Label.y, SConfirmPopupContext::POPUP_FONT_SIZE, pConfirmPopup->m_aMessage, Label.w);
+	pUI->TextRender()->Text(Label.x, Label.y, FontSize, pConfirmPopup->m_aMessage, Label.w);
 
-	if(pUI->DoButton_PopupMenu(&pConfirmPopup->m_CancelButton, pConfirmPopup->m_aNegativeButtonLabel, &CancelButton, SConfirmPopupContext::POPUP_FONT_SIZE, TEXTALIGN_MC))
+	if(pUI->DoButton_PopupMenu(&pConfirmPopup->m_CancelButton, pConfirmPopup->m_aNegativeButtonLabel, &CancelButton, FontSize, TEXTALIGN_MC, ButtonPadding, false, true, std::nullopt, MinimumFontSize))
 	{
 		pConfirmPopup->m_Result = SConfirmPopupContext::CANCELED;
 		return CUi::POPUP_CLOSE_CURRENT;
@@ -824,7 +854,7 @@ CUi::EPopupMenuFunctionResult CUi::PopupConfirm(void *pContext, CUIRect View, bo
 
 	const std::optional<ColorRGBA> ConfirmColor =
 		pConfirmPopup->m_Tone == SConfirmPopupContext::ETone::DANGER ? std::optional<ColorRGBA>(ui_token::color::DANGER) : std::nullopt;
-	if(pUI->DoButton_PopupMenu(&pConfirmPopup->m_ConfirmButton, pConfirmPopup->m_aPositiveButtonLabel, &ConfirmButton, SConfirmPopupContext::POPUP_FONT_SIZE, TEXTALIGN_MC, 0.0f, false, true, ConfirmColor))
+	if(pUI->DoButton_PopupMenu(&pConfirmPopup->m_ConfirmButton, pConfirmPopup->m_aPositiveButtonLabel, &ConfirmButton, FontSize, TEXTALIGN_MC, ButtonPadding, false, true, ConfirmColor, MinimumFontSize))
 	{
 		pConfirmPopup->m_Result = SConfirmPopupContext::CONFIRMED;
 		return CUi::POPUP_CLOSE_CURRENT;

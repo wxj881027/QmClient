@@ -16,18 +16,22 @@ from unittest import SkipTest
 from collections.abc import Callable
 
 try:
+	from qmclient_scripts.integration.e2e_crash_reporting import scenario_fatal_exception_exits_without_hang
 	from qmclient_scripts.integration.e2e_menu_background import (
 		scenario_menu_background_failed_switch_shutdown,
 		scenario_menu_background_pending_switch_shutdown,
 		scenario_menu_background_switch_shutdown,
 	)
+	from qmclient_scripts.integration.e2e_settings_language import scenario_settings_language_round_trip
 	from qmclient_scripts.integration.process_harness import ProcessEnvironment
 except ModuleNotFoundError:
+	from e2e_crash_reporting import scenario_fatal_exception_exits_without_hang  # type: ignore[no-redef]
 	from e2e_menu_background import (  # type: ignore[no-redef]
 		scenario_menu_background_failed_switch_shutdown,
 		scenario_menu_background_pending_switch_shutdown,
 		scenario_menu_background_switch_shutdown,
 	)
+	from e2e_settings_language import scenario_settings_language_round_trip  # type: ignore[no-redef]
 	from process_harness import ProcessEnvironment  # type: ignore[no-redef]
 
 
@@ -391,6 +395,7 @@ E2E_TESTS: dict[str, Callable[[ProcessEnvironment], None]] = {
 	"asset_loading_stall_reports_hang": scenario_asset_loading_stall_reports_hang,
 	"hang_watchdog_reports_stall": scenario_hang_watchdog_reports_stall,
 	"connection_failure_recovery": scenario_connection_failure_recovery,
+	"fatal_exception_exits_without_hang": scenario_fatal_exception_exits_without_hang,
 	"demo_recording": scenario_demo_recording,
 	"online_replay_without_source": scenario_online_replay_without_source,
 	"invalid_statistics_preserved": scenario_invalid_statistics_preserved,
@@ -400,6 +405,7 @@ E2E_TESTS: dict[str, Callable[[ProcessEnvironment], None]] = {
 	"perf_log_persistence": scenario_perf_log_persistence,
 	"qm_lifecycle_persistence": scenario_qm_lifecycle_persistence,
 	"recording_without_connection": scenario_recording_without_connection,
+	"settings_language_round_trip": scenario_settings_language_round_trip,
 	"slow_asset_loading_no_false_hang": scenario_slow_asset_loading_no_false_hang,
 	"startup_saved_favorites": scenario_startup_saved_favorites,
 	"system_font_restore_no_false_hang": scenario_system_font_restore_no_false_hang,

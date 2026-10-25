@@ -1,4 +1,36 @@
 [[message]]
+key = "Moving block and freeze prediction (experimental)"
+[message.translations]
+simplified_chinese = "移动方块与移动水预测（实验性）"
+traditional_chinese = "移動方塊與移動水預測（實驗性）"
+japanese = "移動ブロックと凍結領域の予測（実験的）"
+korean = "이동 블록 및 동결 영역 예측 (실험적)"
+russian = "Предсказание движущихся блоков и зон заморозки (экспериментально)"
+german = "Vorhersage beweglicher Blöcke und Gefrierzonen (experimentell)"
+spanish = "Predicción de bloques móviles y zonas de congelación (experimental)"
+french = "Prédiction des blocs mobiles et des zones de gel (expérimental)"
+brazilian_portuguese = "Previsão de blocos móveis e áreas de congelamento (experimental)"
+portuguese = "Previsão de blocos móveis e áreas de congelamento (experimental)"
+turkish = "Hareketli blok ve donma alanı tahmini (deneysel)"
+polish = "Przewidywanie ruchomych bloków i stref zamrożenia (eksperymentalne)"
+
+[[message]]
+key = "Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)"
+[message.translations]
+simplified_chinese = "在使用 Axiom 四边形规则的服务器中预测移动方块和冻结区域（实验性）"
+traditional_chinese = "在使用 Axiom 四邊形規則的伺服器中預測移動方塊和凍結區域（實驗性）"
+japanese = "Axiom の四角形ルールを使うサーバーで移動ブロックと凍結領域を予測（実験的）"
+korean = "Axiom 사각형 규칙을 사용하는 서버에서 이동 블록과 동결 영역 예측 (실험적)"
+russian = "Предсказывать движущиеся блоки и зоны заморозки на серверах с правилами четырёхугольников Axiom (экспериментально)"
+german = "Bewegliche Blöcke und Gefrierzonen auf Servern mit Axiom-Quad-Regeln vorhersagen (experimentell)"
+spanish = "Predecir bloques móviles y zonas de congelación en servidores con reglas de cuadriláteros de Axiom (experimental)"
+french = "Prédire les blocs mobiles et les zones de gel sur les serveurs utilisant les règles de quadrilatères Axiom (expérimental)"
+brazilian_portuguese = "Prever blocos móveis e áreas de congelamento em servidores com regras de quadriláteros do Axiom (experimental)"
+portuguese = "Prever blocos móveis e áreas de congelamento em servidores com regras de quadriláteros do Axiom (experimental)"
+turkish = "Axiom dörtgen kurallarını kullanan sunucularda hareketli blokları ve donma alanlarını tahmin et (deneysel)"
+polish = "Przewiduj ruchome bloki i strefy zamrożenia na serwerach z regułami czworokątów Axiom (eksperymentalne)"
+
+[[message]]
 key = "%d points"
 [message.translations]
 simplified_chinese = "%d 分"
@@ -2449,7 +2481,7 @@ polish = "Automatycznie sprawdzaj stabilne aktualizacje i instaluj je przy wyjś
 [[message]]
 key = "Automatically close the current chat after waking from freeze"
 [message.translations]
-simplified_chinese = "从冻结状态中醒来自动关闭聊天框"
+simplified_chinese = "解冻自动关闭聊天框"
 traditional_chinese = "從凍結狀態中醒來自動關閉聊天框"
 japanese = "フリーズ解除後に現在のチャットを自動的に閉じる"
 korean = "얼음에서 깨어난 후 현재 채팅 자동 닫기"
@@ -26918,7 +26950,7 @@ polish = "Pokaż stan połączenia głosowego"
 [[message]]
 key = "Show wake-up popup on the other tee"
 [message.translations]
-simplified_chinese = "在另一侧 Tee 显示唤醒提示"
+simplified_chinese = "显示唤醒提示"
 traditional_chinese = "在另一側 Tee 顯示喚醒提示"
 japanese = "もう一方の Tee にウェイクアップポップアップを表示"
 korean = "다른 티에 깨우기 팝업 표시"
@@ -27956,22 +27988,6 @@ turkish = "SodaMusic Hook yardımcı yolu (boş = QmClient'ın yanında)"
 polish = "Ścieżka pomocnika SodaMusic Hook (pusta = obok QmClient)"
 
 [[message]]
-key = "Soft glow"
-[message.translations]
-simplified_chinese = "柔光"
-traditional_chinese = "柔光"
-japanese = "柔らかな光"
-korean = "은은한 빛"
-russian = "Мягкое свечение"
-german = "Sanftes Leuchten"
-spanish = "Resplandor suave"
-french = "Lueur douce"
-brazilian_portuguese = "Brilho suave"
-portuguese = "Brilho suave"
-turkish = "Yumuşak parıltı"
-polish = "Delikatna poświata"
-
-[[message]]
 key = "Solo Split"
 [message.translations]
 simplified_chinese = "单刷模式"
@@ -28308,20 +28324,20 @@ turkish = "Ana/kukla karakteri iki boş takıma böler; takım 0'a dönmek için
 polish = "Dzieli główną postać/dummy na dwie wolne drużyny; ponowne naciśnięcie wraca do drużyny 0"
 
 [[message]]
-key = "Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight"
+key = "Sponsor chat style draft: 0=Normal, 1=Platinum highlight"
 [message.translations]
-simplified_chinese = "赞助者发言样式草稿：0=普通，1=柔光，2=铂金高光"
-traditional_chinese = "贊助者發言樣式草稿：0=普通，1=柔光，2=鉑金高光"
-japanese = "支援者チャットのスタイル下書き：0=通常、1=柔らかな光、2=プラチナの輝き"
-korean = "후원자 채팅 스타일 초안: 0=보통, 1=은은한 빛, 2=백금 하이라이트"
-russian = "Черновик стиля чата спонсора: 0=Обычный, 1=Мягкое свечение, 2=Платиновый блеск"
-german = "Entwurf des Unterstützer-Chatstils: 0=Normal, 1=Sanftes Leuchten, 2=Platin-Glanz"
-spanish = "Borrador del estilo de chat de patrocinador: 0=Normal, 1=Resplandor suave, 2=Brillo de platino"
-french = "Brouillon du style de chat de soutien : 0=Normal, 1=Lueur douce, 2=Éclat de platine"
-brazilian_portuguese = "Rascunho do estilo de chat de apoiador: 0=Normal, 1=Brilho suave, 2=Reflexo de platina"
-portuguese = "Rascunho do estilo de chat de apoiante: 0=Normal, 1=Brilho suave, 2=Reflexo de platina"
-turkish = "Destekçi sohbet stili taslağı: 0=Normal, 1=Yumuşak parıltı, 2=Platin ışıltısı"
-polish = "Szkic stylu czatu wspierającego: 0=Normalny, 1=Delikatna poświata, 2=Platynowy połysk"
+simplified_chinese = "赞助者发言样式草稿：0=普通，1=铂金高光"
+traditional_chinese = "贊助者發言樣式草稿：0=普通，1=鉑金高光"
+japanese = "支援者チャットのスタイル下書き：0=通常、1=プラチナの輝き"
+korean = "후원자 채팅 스타일 초안: 0=보통, 1=백금 하이라이트"
+russian = "Черновик стиля чата спонсора: 0=Обычный, 1=Платиновый блеск"
+german = "Entwurf des Unterstützer-Chatstils: 0=Normal, 1=Platin-Glanz"
+spanish = "Borrador del estilo de chat de patrocinador: 0=Normal, 1=Brillo de platino"
+french = "Brouillon du style de chat de soutien : 0=Normal, 1=Éclat de platine"
+brazilian_portuguese = "Rascunho do estilo de chat de apoiador: 0=Normal, 1=Reflexo de platina"
+portuguese = "Rascunho do estilo de chat de apoiante: 0=Normal, 1=Reflexo de platina"
+turkish = "Destekçi sohbet stili taslağı: 0=Normal, 1=Platin ışıltısı"
+polish = "Szkic stylu czatu wspierającego: 0=Normalny, 1=Platynowy połysk"
 
 [[message]]
 key = "Sponsor code"
@@ -36650,7 +36666,7 @@ polish = "Tłumaczenie anulowane, ponieważ zmienił się nadawca"
 [[message]]
 key = "Auto unspec both tees when either is hammered awake"
 [message.translations]
-simplified_chinese = "任一方被锤醒时两个 Tee 都取消旁观"
+simplified_chinese = "解冻取消本体分身的旁观"
 traditional_chinese = "任一方被錘醒時兩個 Tee 都取消旁觀"
 japanese = "どちらかがハンマーで解凍されたら両方の Tee の観戦を解除"
 korean = "어느 한 Tee가 망치로 해동되면 두 Tee 모두 관전 해제"
@@ -38712,6 +38728,40 @@ turkish = "İstemci kaynaklı intiharı engelle (K tuşu / kill komutu)"
 polish = "Blokuj samobójstwo inicjowane przez klienta (klawisz K / polecenie kill)"
 
 [[message]]
+key = "Show friends' last seen dates (DDStats)"
+[message.translations]
+simplified_chinese = "显示好友最近在线日期（DDStats）"
+traditional_chinese = "顯示好友最近上線日期（DDStats）"
+japanese = "フレンドの最終オンライン日を表示（DDStats）"
+korean = "친구의 최근 접속 날짜 표시(DDStats)"
+russian = "Показывать даты последнего появления друзей в сети (DDStats)"
+german = "Letztes Online-Datum von Freunden anzeigen (DDStats)"
+spanish = "Mostrar la fecha de última conexión de amigos (DDStats)"
+french = "Afficher la date de dernière connexion des amis (DDStats)"
+brazilian_portuguese = "Mostrar a data da última conexão dos amigos (DDStats)"
+portuguese = "Mostrar a data da última ligação dos amigos (DDStats)"
+turkish = "Arkadaşların son görülme tarihlerini göster (DDStats)"
+polish = "Pokazuj daty ostatniej aktywności znajomych (DDStats)"
+
+[[message]]
+key = "Show last seen dates for offline friends using DDStats (updated daily, matched by player name)"
+[message.translations]
+simplified_chinese = "使用 DDStats 显示离线好友最近在线日期（每天更新，仅按玩家名字匹配）"
+traditional_chinese = "使用 DDStats 顯示離線好友最近上線日期（每天更新，僅按玩家名稱比對）"
+japanese = "DDStats でオフラインのフレンドの最終オンライン日を表示（毎日更新、プレイヤー名で照合）"
+korean = "DDStats로 오프라인 친구의 최근 접속 날짜 표시(매일 갱신, 플레이어 이름으로 일치 여부 확인)"
+russian = "Показывать через DDStats даты последнего появления друзей в сети (обновление ежедневно, поиск по имени)"
+german = "Letztes Online-Datum von Offline-Freunden mit DDStats anzeigen (tägliche Aktualisierung, Zuordnung nach Spielernamen)"
+spanish = "Mostrar con DDStats la última conexión de amigos desconectados (actualización diaria, búsqueda por nombre)"
+french = "Afficher avec DDStats la dernière connexion des amis hors ligne (mise à jour quotidienne, recherche par nom)"
+brazilian_portuguese = "Mostrar com o DDStats a última conexão de amigos offline (atualização diária, busca pelo nome)"
+portuguese = "Mostrar com o DDStats a última ligação dos amigos offline (atualização diária, pesquisa pelo nome)"
+turkish = "Çevrimdışı arkadaşların son görülme tarihlerini DDStats ile göster (günlük güncelleme, oyuncu adına göre eşleştirme)"
+polish = "Pokazuj przez DDStats daty ostatniej aktywności znajomych offline (codzienna aktualizacja, dopasowanie po nazwie)"
+
+[[message]]
+
+[[message]]
 key = "Auto-enable self-kill protection this many minutes after joining a game (0 = never)"
 [message.translations]
 simplified_chinese = "进图多少分钟后自动开启自杀保护（0 = 不自动开启）"
@@ -39206,3 +39256,179 @@ brazilian_portuguese = "Codificador de vídeo para a exportação de demo (vazio
 portuguese = "Codificador de vídeo para a exportação de demo (vazio = codificador de software predefinido, p. ex. h264_nvenc)"
 turkish = "Demo dışa aktarma için video kodlayıcı (boş = varsayılan yazılım kodlayıcı, örn. h264_nvenc)"
 polish = "Koder wideo dla eksportu dema (puste = domyślny koder programowy, np. h264_nvenc)"
+
+[[message]]
+key = "Lyrics language"
+[message.translations]
+simplified_chinese = "歌词语言"
+traditional_chinese = "歌詞語言"
+japanese = "歌詞の言語"
+korean = "가사 언어"
+russian = "Язык текста песни"
+german = "Sprache des Liedtexts"
+spanish = "Idioma de la letra"
+french = "Langue des paroles"
+brazilian_portuguese = "Idioma da letra"
+portuguese = "Idioma da letra"
+turkish = "Şarkı sözü dili"
+polish = "Język tekstu piosenki"
+
+[[message]]
+key = "Original only"
+[message.translations]
+simplified_chinese = "仅原文"
+traditional_chinese = "僅原文"
+japanese = "原文のみ"
+korean = "원문만"
+russian = "Только оригинал"
+german = "Nur Original"
+spanish = "Solo original"
+french = "Original uniquement"
+brazilian_portuguese = "Somente original"
+portuguese = "Apenas original"
+turkish = "Yalnızca özgün metin"
+polish = "Tylko oryginał"
+
+[[message]]
+key = "Translation only"
+[message.translations]
+simplified_chinese = "仅译文"
+traditional_chinese = "僅譯文"
+japanese = "翻訳のみ"
+korean = "번역만"
+russian = "Только перевод"
+german = "Nur Übersetzung"
+spanish = "Solo traducción"
+french = "Traduction uniquement"
+brazilian_portuguese = "Somente tradução"
+portuguese = "Apenas tradução"
+turkish = "Yalnızca çeviri"
+polish = "Tylko tłumaczenie"
+
+[[message]]
+key = "Original and translation"
+[message.translations]
+simplified_chinese = "原文＋译文"
+traditional_chinese = "原文＋譯文"
+japanese = "原文と翻訳"
+korean = "원문 및 번역"
+russian = "Оригинал и перевод"
+german = "Original und Übersetzung"
+spanish = "Original y traducción"
+french = "Original et traduction"
+brazilian_portuguese = "Original e tradução"
+portuguese = "Original e tradução"
+turkish = "Özgün metin ve çeviri"
+polish = "Oryginał i tłumaczenie"
+
+[[message]]
+key = "Separate Dynamic Island"
+[message.translations]
+simplified_chinese = "灵动岛分离"
+traditional_chinese = "靈動島分離"
+japanese = "Dynamic Island から分離"
+korean = "다이나믹 아일랜드 분리"
+russian = "Отделить от Dynamic Island"
+german = "Dynamic Island trennen"
+spanish = "Separar Dynamic Island"
+french = "Séparer Dynamic Island"
+brazilian_portuguese = "Separar Dynamic Island"
+portuguese = "Separar Dynamic Island"
+turkish = "Dynamic Island ayır"
+polish = "Oddziel Dynamic Island"
+
+[[message]]
+key = "Show lyrics in Dynamic Island"
+[message.translations]
+simplified_chinese = "在灵动岛显示歌词"
+traditional_chinese = "在靈動島顯示歌詞"
+japanese = "Dynamic Island に歌詞を表示"
+korean = "다이나믹 아일랜드에 가사 표시"
+russian = "Показывать текст песни в Dynamic Island"
+german = "Liedtext in Dynamic Island anzeigen"
+spanish = "Mostrar letra en Dynamic Island"
+french = "Afficher les paroles dans Dynamic Island"
+brazilian_portuguese = "Mostrar letra no Dynamic Island"
+portuguese = "Mostrar letra no Dynamic Island"
+turkish = "Şarkı sözlerini Dynamic Island içinde göster"
+polish = "Pokaż tekst w Dynamic Island"
+
+[[message]]
+key = "Lyrics translation"
+[message.translations]
+simplified_chinese = "歌词译文"
+traditional_chinese = "歌詞譯文"
+japanese = "歌詞の翻訳"
+korean = "가사 번역"
+russian = "Перевод текста песни"
+german = "Übersetzung des Liedtexts"
+spanish = "Traducción de la letra"
+french = "Traduction des paroles"
+brazilian_portuguese = "Tradução da letra"
+portuguese = "Tradução da letra"
+turkish = "Şarkı sözü çevirisi"
+polish = "Tłumaczenie tekstu piosenki"
+
+[[message]]
+key = "Humming"
+[message.translations]
+simplified_chinese = "哼歌"
+traditional_chinese = "哼歌"
+japanese = "口ずさむ"
+korean = "흥얼거리기"
+russian = "Напевание"
+german = "Mitsummen"
+spanish = "Tararear"
+french = "Fredonner"
+brazilian_portuguese = "Cantarolar"
+portuguese = "Cantarolar"
+turkish = "Mırıldanma"
+polish = "Nucenie"
+
+[[message]]
+key = "Lyrics language (0=Original, 1=Translation, 2=Original and translation)"
+[message.translations]
+simplified_chinese = "歌词语言（0=原文，1=译文，2=原文＋译文）"
+traditional_chinese = "歌詞語言（0=原文，1=譯文，2=原文＋譯文）"
+japanese = "歌詞の言語（0=原文、1=翻訳、2=原文と翻訳）"
+korean = "가사 언어 (0=원문, 1=번역, 2=원문 및 번역)"
+russian = "Язык текста песни (0=оригинал, 1=перевод, 2=оригинал и перевод)"
+german = "Sprache des Liedtexts (0=Original, 1=Übersetzung, 2=Original und Übersetzung)"
+spanish = "Idioma de la letra (0=original, 1=traducción, 2=original y traducción)"
+french = "Langue des paroles (0=original, 1=traduction, 2=original et traduction)"
+brazilian_portuguese = "Idioma da letra (0=original, 1=tradução, 2=original e tradução)"
+portuguese = "Idioma da letra (0=original, 1=tradução, 2=original e tradução)"
+turkish = "Şarkı sözü dili (0=özgün metin, 1=çeviri, 2=özgün metin ve çeviri)"
+polish = "Język tekstu (0=oryginał, 1=tłumaczenie, 2=oryginał i tłumaczenie)"
+
+[[message]]
+key = "Show lyrics in a separate island below Dynamic Island"
+[message.translations]
+simplified_chinese = "将歌词显示在灵动岛下方的独立附岛"
+traditional_chinese = "將歌詞顯示在靈動島下方的獨立附島"
+japanese = "Dynamic Island の下に独立した島で歌詞を表示"
+korean = "다이나믹 아일랜드 아래의 별도 아일랜드에 가사 표시"
+russian = "Показывать текст песни на отдельном островке под Dynamic Island"
+german = "Liedtext in einer eigenen Insel unter Dynamic Island anzeigen"
+spanish = "Mostrar la letra en una isla separada debajo de Dynamic Island"
+french = "Afficher les paroles dans un îlot séparé sous Dynamic Island"
+brazilian_portuguese = "Mostrar a letra em uma ilha separada abaixo do Dynamic Island"
+portuguese = "Mostrar a letra numa ilha separada abaixo do Dynamic Island"
+turkish = "Şarkı sözlerini Dynamic Island altında ayrı bir adada göster"
+polish = "Pokaż tekst na oddzielnej wyspie pod Dynamic Island"
+
+[[message]]
+key = "Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines"
+[message.translations]
+simplified_chinese = "每隔随机 30 到 90 秒向公共聊天逐句发送连续三句歌词，句间隔 3 秒"
+traditional_chinese = "每隔隨機30到90秒向公共聊天逐句傳送連續三句歌詞，句間隔3秒"
+japanese = "30～90秒のランダムな間隔で連続する三行の歌詞を全体チャットに送り、各行の間隔を3秒にする"
+korean = "30~90초의 무작위 간격으로 연속 세 줄의 가사를 전체 채팅에 보내며 줄 사이에 3초 대기"
+russian = "Отправлять три последовательные строки песни в общий чат через случайные интервалы от 30 до 90 секунд, с паузой 3 секунды между строками"
+german = "Drei aufeinanderfolgende Liedtextzeilen in zufälligen Abständen von 30 bis 90 Sekunden im öffentlichen Chat senden, mit 3 Sekunden zwischen den Zeilen"
+spanish = "Enviar tres líneas consecutivas de la letra al chat público a intervalos aleatorios de 30 a 90 segundos, con 3 segundos entre líneas"
+french = "Envoyer trois lignes consécutives des paroles dans le chat public à des intervalles aléatoires de 30 à 90 secondes, avec 3 secondes entre les lignes"
+brazilian_portuguese = "Enviar três linhas consecutivas da letra no chat público em intervalos aleatórios de 30 a 90 segundos, com 3 segundos entre linhas"
+portuguese = "Enviar três linhas consecutivas da letra no chat público em intervalos aleatórios de 30 a 90 segundos, com 3 segundos entre linhas"
+turkish = "30 ile 90 saniye arasında rastgele aralıklarla genel sohbete art arda üç şarkı sözü satırı gönder, satırlar arasında 3 saniye bekle"
+polish = "Wysyłaj trzy kolejne wersy do czatu publicznego w losowych odstępach od 30 do 90 sekund, z przerwą 3 sekund między wersami"

@@ -1019,9 +1019,6 @@ API key
 APP ID
 == ID приложения
 
-Appearance
-== Внешний вид
-
 Appearance and command highlighting of the local console
 == Оформление локальной консоли и подсветка команд
 
@@ -1180,9 +1177,6 @@ Asset preset
 
 Asset with this name already exists.
 == Ресурс с таким именем уже существует.
-
-Assets
-== Ресурсы
 
 Assets directory
 == Папка ресурсов
@@ -2852,9 +2846,6 @@ Config Filters
 Config version. Helps new client fix old config errors.
 == Версия конфигурации. Помогает новому клиенту исправить старые ошибки конфигурации.
 
-Configs
-== Конфиги
-
 Configuration
 == Конфигурация
 
@@ -3181,9 +3172,6 @@ Controller GUID of the active controller
 
 Controller jitter tolerance
 == Допуск дрожания контроллера
-
-Controls
-== Управление
 
 Controls demo recording and playback behavior.
 == Управляет записью и воспроизведением демо.
@@ -3664,6 +3652,9 @@ DDraceNetwork is a cooperative online game where the goal is for you and your gr
 
 DDRaceNetwork · DDNet
 == DDRaceNetwork · DDNet
+
+DDStats shows UTC dates, updates daily and matches players by name only.
+== DDStats показывает даты по UTC, обновляется ежедневно и сопоставляет игроков только по имени.
 
 ddstats.tw ID stats
 == Статистика ID на ddstats.tw
@@ -5204,9 +5195,6 @@ Entities background color
 Entity assets
 == Ресурсы сущностей
 
-Entity Background Image
-== Фоновое изображение сущностей
-
 Entity overlay
 == Наложение сущностей
 
@@ -5329,6 +5317,9 @@ Expanded dropdown background opacity percentage
 
 Experimental
 == экспериментально
+
+Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.
+== Экспериментальная функция: повторно отправляет исходящие игровые UDP-пакеты, если нет ответов на проверочные запросы. Исходящий трафик может утроиться; потеря входящих пакетов и запоздалые копии ввода всё ещё могут вызывать проблемы. При KCP отключена.
 
 Export
 == Экспорт
@@ -6083,9 +6074,6 @@ Gap between tee and nametag
 Gaussian
 == Гаусс
 
-General
-== Общие
-
 Generated skin outline color
 == Цвет сгенерированной обводки
 
@@ -6289,9 +6277,6 @@ Gradient type
 
 Gradient vertical position
 == Вертикальное положение градиента
-
-Graphics
-== Графика
 
 Graphics backend does not support dummy mini view
 == Графический движок не поддерживает мини-окно двойника
@@ -6704,9 +6689,6 @@ Hook collision line length follows cursor distance
 Hook collision line opacity
 == Прозрачность линии столкновения крюка
 
-Hook Collisions
-== Столкновения крюка
-
 Hook collisions
 == Столкновения крюка
 
@@ -6844,6 +6826,9 @@ Hue
 
 Hue speed
 == Скорость оттенка
+
+Humming
+== Напевание
 
 i = Receive rate
 == i = Скорость приёма
@@ -7646,6 +7631,9 @@ Last entered
 Last page in console
 == Последняя страница в консоли
 
+Last seen (DDStats): %s
+== Последний раз в сети (DDStats): %s
+
 Last successful sync: %s
 == Последняя успешная синхронизация: %s
 
@@ -8096,8 +8084,17 @@ LXGW WenKai is unavailable. Current fonts and weights will be kept.
 Lyrics
 == Текст песни
 
+Lyrics language
+== Язык текста песни
+
+Lyrics language (0=Original, 1=Translation, 2=Original and translation)
+== Язык текста песни (0=оригинал, 1=перевод, 2=оригинал и перевод)
+
 Lyrics live in the Dynamic Island, so they stay hidden until that option is on.
 == Текст песни выводится в Dynamic Island, поэтому не появится, пока эта опция не включена.
+
+Lyrics translation
+== Перевод текста песни
 
 Magic: Spirit Script
 == Магия: духовное письмо
@@ -8441,6 +8438,9 @@ Maximum number of automatic scoreboard screenshots (0 = unlimited)
 Maximum number of clients on server
 == Максимальное количество клиентов на сервере
 
+Maximum number of copies per outgoing UDP game packet
+== Максимальное число копий каждого исходящего игрового UDP-пакета
+
 Maximum number of packets received in one batch before returning to the main loop (0 = unlimited).
 == Максимальное число пакетов, получаемых за одну пачку до возврата в главный цикл (0 = без ограничений).
 
@@ -8458,6 +8458,9 @@ Maximum number of skins loaded simultaneously
 
 Maximum number of vanilla antispoof handshakes answered per second (0 = unlimited).
 == Максимальное число ответов на ванильные рукопожатия защиты от подмены в секунду (0 = без ограничений).
+
+Maximum packet copies
+== Максимальное число копий пакета
 
 Maximum players participating in a vote (0 = unlimited)
 == Максимальное количество игроков, участвующих в голосовании (0 = без ограничений)
@@ -8740,6 +8743,9 @@ Moves to the point with x/y-coordinates ii
 
 Moves to the tile with x/y-number ii
 == Перемещает на тайл с номером x/y ii
+
+Moving block and freeze prediction (experimental)
+== Предсказание движущихся блоков и зон заморозки (экспериментально)
 
 MP4 is the most compatible for sharing, MOV is the editing standard and required by ProRes, and MKV suits lossless archives but is poorly supported by editors.
 == MP4 — самый совместимый для обмена, MOV — стандарт монтажа и обязателен для ProRes, MKV подходит для архивов без потерь, но плохо поддерживается монтажными программами.
@@ -9296,6 +9302,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 No recently used skins
 == Нет недавно использованных скинов
 
+No record
+== Нет записей
+
 No release notes provided
 == Примечания к этому выпуску не предоставлены
 
@@ -9746,6 +9755,9 @@ Or visit DDNet.org
 Original
 == Оригинал
 
+Original and translation
+== Оригинал и перевод
+
 Original language for both received and outgoing messages. Use Auto to detect each message.
 == Исходный язык для входящих и исходящих сообщений. Используйте «Авто» для определения каждого сообщения.
 
@@ -9754,6 +9766,9 @@ Original language for incoming and outgoing text
 
 Original message language
 == Язык исходного сообщения
+
+Original only
+== Только оригинал
 
 Original options
 == Исходные варианты
@@ -10433,6 +10448,9 @@ Plays a short effect when a tee's skin changes, and can copy the skin of the tee
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == Проигрывает анимацию при смене скина, в том числе скина, украденного молотом.
 
+Playtime (h)
+== Время игры (ч)
+
 Please add a valid cut first
 == Сначала добавьте действительный отрезок обрезки
 
@@ -10564,6 +10582,9 @@ Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when fr
 
 Predict grenade trajectory (only with cl_antiping 1)
 == Прогнозировать траекторию гранатомёта (только с cl_antiping 1)
+
+Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)
+== Предсказывать движущиеся блоки и зоны заморозки на серверах с правилами четырёхугольников Axiom (экспериментально)
 
 Predict ninja path
 == Предсказывать путь ниндзя
@@ -11020,6 +11041,9 @@ Querying points for %s...
 
 Querying points...
 == Запрос очков...
+
+Querying...
+== Запрос…
 
 Queue is empty
 == Очередь пуста
@@ -12269,6 +12293,9 @@ Scoreboard cursor
 Scoreboard filter: only show players whose name or clan contains this text
 == Фильтр таблицы: показывать только игроков, чьё имя или клан содержит этот текст
 
+Scoreboard playtime
+== Время игры в таблице
+
 Scoreboard point check
 == Проверка очков на табло
 
@@ -12560,6 +12587,9 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == Отправить указанную команду в rcon
 
+Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
+== Отправлять три последовательные строки песни в общий чат через случайные интервалы от 30 до 90 секунд, с паузой 3 секунды между строками
+
 Send translation method
 == Способ отправки перевода
 
@@ -12583,6 +12613,9 @@ Sends a saved .map file from your client to the public test server and reports p
 
 Sends an automatic chat reply when someone whispers you while you are muted or away.
 == Автоматически отвечает в чате, когда вам шепчут, а вы в муте или отошли.
+
+Separate Dynamic Island
+== Отделить от Dynamic Island
 
 Separate with commas
 == Разделяйте запятыми
@@ -13187,6 +13220,9 @@ Show friend tag (♥) on nametag
 Show friends only
 == Показывать только друзей
 
+Show friends' last seen dates (DDStats)
+== Показывать даты последнего появления друзей в сети (DDStats)
+
 Show frozen Tee HUD
 == Показывать HUD замороженного Tee
 
@@ -13382,6 +13418,9 @@ Show kill messages
 Show labels on status bar items
 == Показывать метки на элементах строки состояния
 
+Show last seen dates for offline friends using DDStats (updated daily, matched by player name)
+== Показывать через DDStats даты последнего появления друзей в сети (обновление ежедневно, поиск по имени)
+
 Show list of mutes (page 1 by default, 20 entries per page)
 == Показать список заглушений (страница 1 по умолчанию, 20 записей на странице)
 
@@ -13396,6 +13435,12 @@ Show local time seconds
 
 Show logs of the last i seconds
 == Показать логи за последние i секунд
+
+Show lyrics in a separate island below Dynamic Island
+== Показывать текст песни на отдельном островке под Dynamic Island
+
+Show lyrics in Dynamic Island
+== Показывать текст песни в Dynamic Island
 
 Show lyrics inside Dynamic Island
 == Показывать текст песни в Dynamic Island
@@ -13598,6 +13643,12 @@ Show player Tee
 Show players' key presses
 == Показывать нажатия клавиш игроков
 
+Show playtime
+== Показать время
+
+Show points
+== Показать очки
+
 Show position and angle
 == Показывать позицию и угол
 
@@ -13795,6 +13846,9 @@ Show titles on nameplates
 
 Show toast
 == Показать toast
+
+Show total DDNet playtime from activity instead of points in scoreboard
+== Показывать в таблице суммарное время игры из DDNet activity вместо очков
 
 Show tune zone colors
 == Показывать цвета tune-зон
@@ -14228,9 +14282,6 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == Путь к помощнику SodaMusic Hook (пусто = рядом с QmClient)
 
-Soft glow
-== Мягкое свечение
-
 Solid
 == Сплошной
 
@@ -14411,8 +14462,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == Распределяет основного и двойника по разным командам для синхронизации соло-забегов
 
-Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
-== Черновик стиля чата спонсора: 0=Обычный, 1=Мягкое свечение, 2=Платиновый блеск
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight
+== Черновик стиля чата спонсора: 0=Обычный, 1=Платиновый блеск
 
 Sponsor code
 == Код спонсора
@@ -15010,9 +15061,6 @@ Teams are not available on this server; if the team is locked, any team member d
 
 Tee
 == Ти
-
-Tee 0.7
-== Ти 0.7
 
 Tee appearance
 == Внешний вид Tee
@@ -15944,6 +15992,9 @@ Translation menu selected color
 Translation model was not found. Check the model name.
 == Модель перевода не найдена. Проверьте её имя.
 
+Translation only
+== Только перевод
+
 Translation service
 == Сервис перевода
 
@@ -16459,6 +16510,9 @@ Upload a saved map to the public test server
 
 Upload map
 == Загрузить карту
+
+Upstream redundancy (experimental)
+== Дублирование исходящих пакетов (экспериментально)
 
 URL for downloading community skins
 == URL для загрузки скинов сообщества

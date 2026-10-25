@@ -1019,9 +1019,6 @@ API key
 APP ID
 == ID aplikacji
 
-Appearance
-== Wygląd
-
 Appearance and command highlighting of the local console
 == Wygląd lokalnej konsoli i podświetlanie poleceń
 
@@ -1180,9 +1177,6 @@ Asset preset
 
 Asset with this name already exists.
 == Zasób o tej nazwie już istnieje.
-
-Assets
-== Zasoby
 
 Assets directory
 == Katalog zasobów
@@ -2852,9 +2846,6 @@ Config Filters
 Config version. Helps new client fix old config errors.
 == Wersja konfiguracji. Pomaga nowemu klientowi naprawić stare błędy konfiguracji.
 
-Configs
-== Konfiguracje
-
 Configuration
 == Konfiguracja
 
@@ -3181,9 +3172,6 @@ Controller GUID of the active controller
 
 Controller jitter tolerance
 == Tolerancja drgań kontrolera
-
-Controls
-== Sterowanie
 
 Controls demo recording and playback behavior.
 == Steruje nagrywaniem i odtwarzaniem dem.
@@ -3664,6 +3652,9 @@ DDraceNetwork is a cooperative online game where the goal is for you and your gr
 
 DDRaceNetwork · DDNet
 == DDRaceNetwork · DDNet
+
+DDStats shows UTC dates, updates daily and matches players by name only.
+== DDStats pokazuje daty UTC, aktualizuje je codziennie i rozpoznaje graczy wyłącznie po nazwie.
 
 ddstats.tw ID stats
 == Statystyki ID ddstats.tw
@@ -5204,9 +5195,6 @@ Entities background color
 Entity assets
 == Zasoby encji
 
-Entity Background Image
-== Obraz tła encji
-
 Entity overlay
 == Nakładka encji
 
@@ -5329,6 +5317,9 @@ Expanded dropdown background opacity percentage
 
 Experimental
 == eksperymentalne
+
+Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.
+== Eksperymentalnie powtarza wychodzące pakiety UDP gry, gdy sondy nie otrzymują odpowiedzi. Ruch wychodzący może wzrosnąć trzykrotnie; utrata pakietów przychodzących i opóźnione kopie wejścia nadal mogą powodować problemy. Wyłączone przy KCP.
 
 Export
 == Eksportuj
@@ -6083,9 +6074,6 @@ Gap between tee and nametag
 Gaussian
 == Gaussa
 
-General
-== Ogólne
-
 Generated skin outline color
 == Kolor generowanego obrysu
 
@@ -6289,9 +6277,6 @@ Gradient type
 
 Gradient vertical position
 == Pionowa pozycja gradientu
-
-Graphics
-== Grafika
 
 Graphics backend does not support dummy mini view
 == Backend graficzny nie obsługuje miniwidoku dummy
@@ -6704,9 +6689,6 @@ Hook collision line length follows cursor distance
 Hook collision line opacity
 == Nieprzezroczystość linii kolizji haka
 
-Hook Collisions
-== Asysta celowania
-
 Hook collisions
 == Linie kolizji haka
 
@@ -6844,6 +6826,9 @@ Hue
 
 Hue speed
 == Szybkość odcienia
+
+Humming
+== Nucenie
 
 i = Receive rate
 == i = Szybkość odbioru
@@ -7646,6 +7631,9 @@ Last entered
 Last page in console
 == Ostatnia strona w konsoli
 
+Last seen (DDStats): %s
+== Ostatnio online (DDStats): %s
+
 Last successful sync: %s
 == Ostatnia udana synchronizacja: %s
 
@@ -8096,8 +8084,17 @@ LXGW WenKai is unavailable. Current fonts and weights will be kept.
 Lyrics
 == Tekst utworu
 
+Lyrics language
+== Język tekstu piosenki
+
+Lyrics language (0=Original, 1=Translation, 2=Original and translation)
+== Język tekstu (0=oryginał, 1=tłumaczenie, 2=oryginał i tłumaczenie)
+
 Lyrics live in the Dynamic Island, so they stay hidden until that option is on.
 == Tekst utworu jest w Dynamic Island, więc pozostaje ukryty, dopóki ta opcja nie zostanie włączona.
+
+Lyrics translation
+== Tłumaczenie tekstu piosenki
 
 Magic: Spirit Script
 == Magia: pismo duchów
@@ -8441,6 +8438,9 @@ Maximum number of automatic scoreboard screenshots (0 = unlimited)
 Maximum number of clients on server
 == Maksymalna liczba klientów na serwerze
 
+Maximum number of copies per outgoing UDP game packet
+== Maksymalna liczba kopii każdego wychodzącego pakietu UDP gry
+
 Maximum number of packets received in one batch before returning to the main loop (0 = unlimited).
 == Maksymalna liczba pakietów odebranych w jednej partii przed powrotem do głównej pętli (0 = bez ograniczeń).
 
@@ -8458,6 +8458,9 @@ Maximum number of skins loaded simultaneously
 
 Maximum number of vanilla antispoof handshakes answered per second (0 = unlimited).
 == Maksymalna liczba odpowiedzi na waniliowe uzgadnianie ochrony przed podszywaniem na sekundę (0 = bez ograniczeń).
+
+Maximum packet copies
+== Maksymalna liczba kopii pakietu
 
 Maximum players participating in a vote (0 = unlimited)
 == Maksymalna liczba graczy uczestniczących w głosowaniu (0 = bez ograniczeń)
@@ -8740,6 +8743,9 @@ Moves to the point with x/y-coordinates ii
 
 Moves to the tile with x/y-number ii
 == Przenosi do kafelka o numerze x/y ii
+
+Moving block and freeze prediction (experimental)
+== Przewidywanie ruchomych bloków i stref zamrożenia (eksperymentalne)
 
 MP4 is the most compatible for sharing, MOV is the editing standard and required by ProRes, and MKV suits lossless archives but is poorly supported by editors.
 == MP4 jest najbardziej zgodny przy udostępnianiu, MOV to standard montażu i wymóg ProRes, a MKV nadaje się do archiwów bezstratnych, ale jest słabo obsługiwany przez edytory.
@@ -9296,6 +9302,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 No recently used skins
 == Brak ostatnio używanych skórek
 
+No record
+== Brak danych
+
 No release notes provided
 == Nie podano informacji o tym wydaniu
 
@@ -9746,6 +9755,9 @@ Or visit DDNet.org
 Original
 == Oryginalny
 
+Original and translation
+== Oryginał i tłumaczenie
+
 Original language for both received and outgoing messages. Use Auto to detect each message.
 == Język oryginalny zarówno dla wiadomości odebranych, jak i wysłanych. Użyj Auto, aby wykrywać każdą wiadomość.
 
@@ -9754,6 +9766,9 @@ Original language for incoming and outgoing text
 
 Original message language
 == Język oryginalnej wiadomości
+
+Original only
+== Tylko oryginał
 
 Original options
 == Oryginalne opcje
@@ -10433,6 +10448,9 @@ Plays a short effect when a tee's skin changes, and can copy the skin of the tee
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == Odtwarza animację przy zmianie skina, także tego skradzionego młotkiem.
 
+Playtime (h)
+== Czas gry (h)
+
 Please add a valid cut first
 == Najpierw dodaj prawidłowe przycięcie
 
@@ -10564,6 +10582,9 @@ Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when fr
 
 Predict grenade trajectory (only with cl_antiping 1)
 == Przewiduj trajektorię granatu (tylko z cl_antiping 1)
+
+Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)
+== Przewiduj ruchome bloki i strefy zamrożenia na serwerach z regułami czworokątów Axiom (eksperymentalne)
 
 Predict ninja path
 == Przewiduj ścieżkę ninja
@@ -11020,6 +11041,9 @@ Querying points for %s...
 
 Querying points...
 == Sprawdzanie punktów...
+
+Querying...
+== Pobieranie…
 
 Queue is empty
 == Kolejka jest pusta
@@ -12269,6 +12293,9 @@ Scoreboard cursor
 Scoreboard filter: only show players whose name or clan contains this text
 == Filtr tabeli wyników: pokazuj tylko graczy, których nazwa lub klan zawiera ten tekst
 
+Scoreboard playtime
+== Czas gry w tabeli wyników
+
 Scoreboard point check
 == Sprawdzanie punktów na tablicy wyników
 
@@ -12560,6 +12587,9 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == Wyślij określone polecenie do rcon
 
+Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
+== Wysyłaj trzy kolejne wersy do czatu publicznego w losowych odstępach od 30 do 90 sekund, z przerwą 3 sekund między wersami
+
 Send translation method
 == Wyślij metodę tłumaczenia
 
@@ -12583,6 +12613,9 @@ Sends a saved .map file from your client to the public test server and reports p
 
 Sends an automatic chat reply when someone whispers you while you are muted or away.
 == Wysyła automatyczną odpowiedź na czacie, gdy ktoś szepcze do ciebie, gdy jesteś wyciszony lub nieobecny.
+
+Separate Dynamic Island
+== Oddziel Dynamic Island
 
 Separate with commas
 == Oddziel przecinkami
@@ -13187,6 +13220,9 @@ Show friend tag (♥) on nametag
 Show friends only
 == Pokaż tylko znajomych
 
+Show friends' last seen dates (DDStats)
+== Pokazuj daty ostatniej aktywności znajomych (DDStats)
+
 Show frozen Tee HUD
 == Pokaż HUD zamrożonego Tee
 
@@ -13382,6 +13418,9 @@ Show kill messages
 Show labels on status bar items
 == Pokaż etykiety na elementach paska statusu
 
+Show last seen dates for offline friends using DDStats (updated daily, matched by player name)
+== Pokazuj przez DDStats daty ostatniej aktywności znajomych offline (codzienna aktualizacja, dopasowanie po nazwie)
+
 Show list of mutes (page 1 by default, 20 entries per page)
 == Pokaż listę wyciszeń (domyślnie strona 1, 20 wpisów na stronę)
 
@@ -13396,6 +13435,12 @@ Show local time seconds
 
 Show logs of the last i seconds
 == Pokaż logi z ostatnich i sekund
+
+Show lyrics in a separate island below Dynamic Island
+== Pokaż tekst na oddzielnej wyspie pod Dynamic Island
+
+Show lyrics in Dynamic Island
+== Pokaż tekst w Dynamic Island
 
 Show lyrics inside Dynamic Island
 == Show lyrics in Dynamic Island
@@ -13598,6 +13643,12 @@ Show player Tee
 Show players' key presses
 == Pokaż naciśnięcia klawiszy graczy
 
+Show playtime
+== Pokaż czas gry
+
+Show points
+== Pokaż punkty
+
 Show position and angle
 == Pokaż pozycję i kąt
 
@@ -13795,6 +13846,9 @@ Show titles on nameplates
 
 Show toast
 == Pokaż toast
+
+Show total DDNet playtime from activity instead of points in scoreboard
+== Pokazuj w tabeli łączny czas gry z DDNet activity zamiast punktów
 
 Show tune zone colors
 == Pokaż kolory stref tune
@@ -14228,9 +14282,6 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == Ścieżka pomocnika SodaMusic Hook (pusta = obok QmClient)
 
-Soft glow
-== Delikatna poświata
-
 Solid
 == Jednolity
 
@@ -14411,8 +14462,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == Rozdziela główną postać i dummy do różnych drużyn w celu synchronizacji biegów solo
 
-Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
-== Szkic stylu czatu wspierającego: 0=Normalny, 1=Delikatna poświata, 2=Platynowy połysk
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight
+== Szkic stylu czatu wspierającego: 0=Normalny, 1=Platynowy połysk
 
 Sponsor code
 == Kod wspierającego
@@ -15010,9 +15061,6 @@ Teams are not available on this server; if the team is locked, any team member d
 
 Tee
 == Tee
-
-Tee 0.7
-== Tee 0.7
 
 Tee appearance
 == Wygląd Tee
@@ -15944,6 +15992,9 @@ Translation menu selected color
 Translation model was not found. Check the model name.
 == Nie znaleziono modelu tłumaczenia. Sprawdź jego nazwę.
 
+Translation only
+== Tylko tłumaczenie
+
 Translation service
 == Usługa tłumaczenia
 
@@ -16459,6 +16510,9 @@ Upload a saved map to the public test server
 
 Upload map
 == Prześlij mapę
+
+Upstream redundancy (experimental)
+== Nadmiarowe wysyłanie pakietów (eksperymentalne)
 
 URL for downloading community skins
 == URL do pobierania skórek społeczności

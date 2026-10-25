@@ -80,6 +80,7 @@
 #include "components/qmclient/collision_hitbox.h"
 #include "components/qmclient/data_version.h"
 #include "components/qmclient/demo_camera.h"
+#include "components/qmclient/friend_last_seen.h"
 #include "components/qmclient/hammer_hit_detection.h"
 #include "components/qmclient/hud_notifications/hud_notifications.h"
 #include "components/qmclient/input_overlay.h"
@@ -87,6 +88,7 @@
 #include "components/qmclient/monitoring/monitoring.h"
 #include "components/qmclient/music_app_watcher.h"
 #include "components/qmclient/music_lyrics/music_lyrics_integration.h"
+#include "components/qmclient/music_lyrics/music_lyrics_presentation.h"
 #include "components/qmclient/music_lyrics/qm_spotify_integration.h"
 #include "components/qmclient/netease/netease_integration.h"
 #include "components/qmclient/qm_hook_coll_candidates.h"
@@ -268,6 +270,7 @@ public:
 	CMusicLyricsIntegration m_MusicLyricsIntegration;
 	CQmMusicAppWatcher m_MusicAppWatcher;
 	CSpotifyIntegration m_SpotifyIntegration;
+	CQmLyricsPresentation m_LyricsPresentation;
 
 	CDamageInd m_DamageInd;
 	CTouchControls m_TouchControls;
@@ -306,6 +309,7 @@ public:
 	CQmClient m_QmClient;
 	CQmAxiomAutoLogin m_QmAxiomAutoLogin;
 	CQmAxiomScores m_QmAxiomScores;
+	CQmFriendLastSeen m_QmFriendLastSeen;
 	CQmChatEmoji m_QmChatEmoji;
 	CQmMonitoring m_QmMonitoring;
 	CQmMobileSpectator m_QmMobileSpectator;
@@ -334,6 +338,8 @@ public:
 	CMovingTiles m_MovingTilesForeground = CMovingTiles{true};
 
 private:
+	void UpdateQmAxiomPrediction();
+
 	struct SQmStutterComponentWindowSamples
 	{
 		CQmStutterSampleSeries m_Update;

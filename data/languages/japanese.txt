@@ -1019,9 +1019,6 @@ API key
 APP ID
 == アプリ ID
 
-Appearance
-== 外観
-
 Appearance and command highlighting of the local console
 == ローカルコンソールの外観とコマンドの強調表示
 
@@ -1180,9 +1177,6 @@ Asset preset
 
 Asset with this name already exists.
 == 同名のアセットが既に存在します。
-
-Assets
-== アセット
 
 Assets directory
 == アセットディレクトリ
@@ -2852,9 +2846,6 @@ Config Filters
 Config version. Helps new client fix old config errors.
 == 設定バージョン。新しいクライアントが古い設定のエラーを修正するのに役立ちます
 
-Configs
-== 設定
-
 Configuration
 == 設定
 
@@ -3181,9 +3172,6 @@ Controller GUID of the active controller
 
 Controller jitter tolerance
 == コントローラーのジッター許容値
-
-Controls
-== コントロール
 
 Controls demo recording and playback behavior.
 == デモの録画と再生の動作を制御します。
@@ -3664,6 +3652,9 @@ DDraceNetwork is a cooperative online game where the goal is for you and your gr
 
 DDRaceNetwork · DDNet
 == DDRaceNetwork · DDNet
+
+DDStats shows UTC dates, updates daily and matches players by name only.
+== DDStats の日付は UTC 基準で毎日更新され、プレイヤー名のみで照合されます。
 
 ddstats.tw ID stats
 == ddstats.tw ID統計
@@ -5204,9 +5195,6 @@ Entities background color
 Entity assets
 == エンティティアセット
 
-Entity Background Image
-== エンティティ背景画像
-
 Entity overlay
 == エンティティオーバーレイ
 
@@ -5329,6 +5317,9 @@ Expanded dropdown background opacity percentage
 
 Experimental
 == 実験的
+
+Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.
+== 実験機能：往復プローブに応答がない場合、上り UDP ゲームパケットを繰り返し送信します。送信量は最大三倍になります。下りのパケット損失や遅れて届く重複入力による問題は残ります。KCP 使用時は無効です。
 
 Export
 == エクスポート
@@ -6083,9 +6074,6 @@ Gap between tee and nametag
 Gaussian
 == ガウス
 
-General
-== 一般
-
 Generated skin outline color
 == 生成アウトラインの色
 
@@ -6289,9 +6277,6 @@ Gradient type
 
 Gradient vertical position
 == グラデーションの垂直位置
-
-Graphics
-== グラフィック
 
 Graphics backend does not support dummy mini view
 == この描画環境は分身の小窓に対応していません
@@ -6704,9 +6689,6 @@ Hook collision line length follows cursor distance
 Hook collision line opacity
 == フック衝突線の不透明度
 
-Hook Collisions
-== フック衝突
-
 Hook collisions
 == フック衝突
 
@@ -6844,6 +6826,9 @@ Hue
 
 Hue speed
 == 色相変化速度
+
+Humming
+== 口ずさむ
 
 i = Receive rate
 == i = 受信レート
@@ -7646,6 +7631,9 @@ Last entered
 Last page in console
 == コンソールの最終ページ
 
+Last seen (DDStats): %s
+== 最終オンライン（DDStats）：%s
+
 Last successful sync: %s
 == 前回の同期成功: %s
 
@@ -8096,8 +8084,17 @@ LXGW WenKai is unavailable. Current fonts and weights will be kept.
 Lyrics
 == 歌詞
 
+Lyrics language
+== 歌詞の言語
+
+Lyrics language (0=Original, 1=Translation, 2=Original and translation)
+== 歌詞の言語（0=原文、1=翻訳、2=原文と翻訳）
+
 Lyrics live in the Dynamic Island, so they stay hidden until that option is on.
 == 歌詞は Dynamic Island に表示されるため、その設定をオンにするまで表示されません。
+
+Lyrics translation
+== 歌詞の翻訳
 
 Magic: Spirit Script
 == 魔法風：精霊の筆跡
@@ -8441,6 +8438,9 @@ Maximum number of automatic scoreboard screenshots (0 = unlimited)
 Maximum number of clients on server
 == サーバー上の最大クライアント数
 
+Maximum number of copies per outgoing UDP game packet
+== 上り UDP ゲームパケットごとの最大送信数
+
 Maximum number of packets received in one batch before returning to the main loop (0 = unlimited).
 == メインループに戻る前に1バッチで受信するパケットの最大数（0 = 無制限）。
 
@@ -8458,6 +8458,9 @@ Maximum number of skins loaded simultaneously
 
 Maximum number of vanilla antispoof handshakes answered per second (0 = unlimited).
 == 毎秒応答できるバニラのなりすまし防止ハンドシェイクの最大数（0 = 無制限）。
+
+Maximum packet copies
+== パケットの最大送信数
 
 Maximum players participating in a vote (0 = unlimited)
 == 投票に参加できる最大プレイヤー数（0 = 無制限）
@@ -8740,6 +8743,9 @@ Moves to the point with x/y-coordinates ii
 
 Moves to the tile with x/y-number ii
 == x/y 番号 ii のタイルに移動
+
+Moving block and freeze prediction (experimental)
+== 移動ブロックと凍結領域の予測（実験的）
 
 MP4 is the most compatible for sharing, MOV is the editing standard and required by ProRes, and MKV suits lossless archives but is poorly supported by editors.
 == MP4 は共有向けで最も互換性が高く、MOV は編集ソフトの標準で ProRes に必須、MKV は可逆アーカイブ向けですが編集ソフトの対応は乏しいです。
@@ -9296,6 +9302,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 No recently used skins
 == 最近使ったスキンはありません
 
+No record
+== 記録なし
+
 No release notes provided
 == このバージョンのリリースノートはありません
 
@@ -9746,6 +9755,9 @@ Or visit DDNet.org
 Original
 == オリジナル
 
+Original and translation
+== 原文と翻訳
+
 Original language for both received and outgoing messages. Use Auto to detect each message.
 == 受信・送信メッセージとも原文の言語を使用します。各メッセージの検出には「自動」を使用。
 
@@ -9754,6 +9766,9 @@ Original language for incoming and outgoing text
 
 Original message language
 == 原文の言語
+
+Original only
+== 原文のみ
 
 Original options
 == 元の投票項目
@@ -10433,6 +10448,9 @@ Plays a short effect when a tee's skin changes, and can copy the skin of the tee
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == ハンマーで奪ったスキンも含め、スキンが変わるときにアニメーションを再生します。
 
+Playtime (h)
+== プレイ時間 (h)
+
 Please add a valid cut first
 == 有効なカットを先に追加してください
 
@@ -10564,6 +10582,9 @@ Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when fr
 
 Predict grenade trajectory (only with cl_antiping 1)
 == グレネードの軌道を予測（cl_antiping 1 の場合のみ）
+
+Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)
+== Axiom の四角形ルールを使うサーバーで移動ブロックと凍結領域を予測（実験的）
 
 Predict ninja path
 == 忍者の経路を予測
@@ -11020,6 +11041,9 @@ Querying points for %s...
 
 Querying points...
 == ポイントを取得中...
+
+Querying...
+== 照会中…
 
 Queue is empty
 == キューが空です
@@ -12269,6 +12293,9 @@ Scoreboard cursor
 Scoreboard filter: only show players whose name or clan contains this text
 == スコアボードフィルター：名前またはクランにこの文字列を含むプレイヤーのみ表示します
 
+Scoreboard playtime
+== スコアボードのプレイ時間
+
 Scoreboard point check
 == スコアボードポイントチェック
 
@@ -12560,6 +12587,9 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == rcon に指定コマンドを送信
 
+Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
+== 30～90秒のランダムな間隔で連続する三行の歌詞を全体チャットに送り、各行の間隔を3秒にする
+
 Send translation method
 == 翻訳方式を送信
 
@@ -12583,6 +12613,9 @@ Sends a saved .map file from your client to the public test server and reports p
 
 Sends an automatic chat reply when someone whispers you while you are muted or away.
 == ミュート中や離席中に誰かがささやいてきたとき、自動でチャット返信を送ります。
+
+Separate Dynamic Island
+== Dynamic Island から分離
 
 Separate with commas
 == カンマで区切る
@@ -13187,6 +13220,9 @@ Show friend tag (♥) on nametag
 Show friends only
 == フレンドのみ表示
 
+Show friends' last seen dates (DDStats)
+== フレンドの最終オンライン日を表示（DDStats）
+
 Show frozen Tee HUD
 == フリーズ Tee HUD を表示
 
@@ -13382,6 +13418,9 @@ Show kill messages
 Show labels on status bar items
 == ステータスバー項目にラベルを表示
 
+Show last seen dates for offline friends using DDStats (updated daily, matched by player name)
+== DDStats でオフラインのフレンドの最終オンライン日を表示（毎日更新、プレイヤー名で照合）
+
 Show list of mutes (page 1 by default, 20 entries per page)
 == ミュート一覧を表示（既定はページ1、1ページ20件）
 
@@ -13396,6 +13435,12 @@ Show local time seconds
 
 Show logs of the last i seconds
 == 最後の i 秒間のログを表示
+
+Show lyrics in a separate island below Dynamic Island
+== Dynamic Island の下に独立した島で歌詞を表示
+
+Show lyrics in Dynamic Island
+== Dynamic Island に歌詞を表示
 
 Show lyrics inside Dynamic Island
 == Dynamic Island 内に歌詞を表示
@@ -13598,6 +13643,12 @@ Show player Tee
 Show players' key presses
 == プレイヤーのキー入力を表示
 
+Show playtime
+== プレイ時間を表示
+
+Show points
+== ポイントを表示
+
 Show position and angle
 == 位置と角度を表示
 
@@ -13795,6 +13846,9 @@ Show titles on nameplates
 
 Show toast
 == トーストを表示
+
+Show total DDNet playtime from activity instead of points in scoreboard
+== スコアボードのポイントの代わりに、DDNet の activity から合計したプレイ時間を表示
 
 Show tune zone colors
 == tune zone の領域色を表示
@@ -14228,9 +14282,6 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == SodaMusic Hook ヘルパーのパス（空欄の場合は QmClient と同じディレクトリ）
 
-Soft glow
-== 柔らかな光
-
 Solid
 == 単色
 
@@ -14411,8 +14462,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == 本体と分身を別々のチームに入れ、solo ランの開始を同期します（team-0 で同期しにくいマップ向け）
 
-Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
-== 支援者チャットのスタイル下書き：0=通常、1=柔らかな光、2=プラチナの輝き
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight
+== 支援者チャットのスタイル下書き：0=通常、1=プラチナの輝き
 
 Sponsor code
 == 認証コード
@@ -15010,9 +15061,6 @@ Teams are not available on this server; if the team is locked, any team member d
 
 Tee
 == Tee
-
-Tee 0.7
-== Tee 0.7
 
 Tee appearance
 == Tee 外観
@@ -15944,6 +15992,9 @@ Translation menu selected color
 Translation model was not found. Check the model name.
 == 翻訳モデルが見つかりません。モデル名を確認してください。
 
+Translation only
+== 翻訳のみ
+
 Translation service
 == 翻訳サービス
 
@@ -16459,6 +16510,9 @@ Upload a saved map to the public test server
 
 Upload map
 == マップをアップロード
+
+Upstream redundancy (experimental)
+== 上りパケットの冗長送信（実験的）
 
 URL for downloading community skins
 == コミュニティスキン用ダウンロード URL

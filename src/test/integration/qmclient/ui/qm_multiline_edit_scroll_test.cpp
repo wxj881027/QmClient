@@ -99,3 +99,56 @@ TEST_F(QmMultilineEditScroll, ShortTextNeverScrolls)
 
 	EXPECT_LE(m_Field.GetScrollOffsetY(), 0.001f);
 }
+
+TEST_F(QmMultilineEditScroll, ZeroHeightAnchorPreservesBottomAlignment)
+{
+	// 控制台传入零高度的底部锚点，输入文字应始终排在锚点上方。
+	const CUIRect Anchor{10.0f, 200.0f, 0.0f, 0.0f};
+	for(bool Active : {false, true})
+	{
+		SCOPED_TRACE(Active);
+		if(Active)
+			m_Field.Activate(EInputPriority::CONSOLE);
+		for(float FontSize : {10.0f, 16.0f, 24.0f})
+		{
+			SCOPED_TRACE(FontSize);
+			for(const char *pText : {"d", "中文"})
+			{
+				SCOPED_TRACE(pText);
+				m_Field.Set(pText);
+				const auto Bounds = m_Field.Render(&Anchor, FontSize, TEXTALIGN_BL, true, 200.0f, 1.0f);
+				ASSERT_EQ(Bounds.m_LineCount, 1);
+				EXPECT_GT(Bounds.m_H, 0.0f);
+				EXPECT_NEAR(Bounds.m_Y + Bounds.m_H, Anchor.y, 0.001f);
+			}
+		}
+		m_Field.Deactivate();
+	}
+}
+
+TEST_F(QmMultilineEditScroll, ZeroHeightAnchorWrapsUpwardAndRestoresSingleLine)
+{
+	const CUIRect Anchor{10.0f, 200.0f, 0.0f, 0.0f};
+	for(bool Active : {false, true})
+	{
+		SCOPED_TRACE(Active);
+		if(Active)
+			m_Field.Activate(EInputPriority::CONSOLE);
+		m_Field.Set("d");
+		const auto SingleLine = m_Field.Render(&Anchor, 12.0f, TEXTALIGN_BL, true, 120.0f, 1.0f);
+		ASSERT_EQ(SingleLine.m_LineCount, 1);
+
+		m_Field.Set("echo first_argument second_argument third_argument fourth_argument");
+		const auto Wrapped = m_Field.Render(&Anchor, 12.0f, TEXTALIGN_BL, true, 120.0f, 1.0f);
+		ASSERT_GT(Wrapped.m_LineCount, 1);
+		EXPECT_LT(Wrapped.m_Y, SingleLine.m_Y);
+		EXPECT_NEAR(Wrapped.m_Y + Wrapped.m_H, Anchor.y, 0.001f);
+
+		m_Field.Set("d");
+		const auto Restored = m_Field.Render(&Anchor, 12.0f, TEXTALIGN_BL, true, 120.0f, 1.0f);
+		EXPECT_EQ(Restored.m_LineCount, 1);
+		EXPECT_NEAR(Restored.m_Y, SingleLine.m_Y, 0.001f);
+		EXPECT_NEAR(Restored.m_Y + Restored.m_H, Anchor.y, 0.001f);
+		m_Field.Deactivate();
+	}
+}

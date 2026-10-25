@@ -20,15 +20,20 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/QmAuthorName.h>
+#include <game/client/QmUi/QmAuthorTee.h>
 #include <game/client/QmUi/QmIslandNotice.h>
+#include <game/client/QmUi/QmLocalizedLabels.h>
 #include <game/client/QmUi/QmPlayersMenu.h>
 #include <game/client/QmUi/QmScroll.h>
+#include <game/client/QmUi/QmSeasonalSidebar.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/QmVoteMenu.h>
 #include <game/client/QmUi/SettingsCardDeck.h>
 #include <game/client/QmUi/SettingsChoice.h>
 #include <game/client/QmUi/SettingsColorPicker.h>
 #include <game/client/QmUi/SettingsTextPlanUnits.h>
+#include <game/client/QmUi/SettingsTextPrewarm.h>
 #include <game/client/QmUi/SettingsToggleGrid.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
@@ -1650,7 +1655,6 @@ protected:
 	bool m_SettingsTabLabelElementsInit = false;
 	bool m_SettingsTabLabelsInit = false;
 	bool m_SettingsTabSixup = false;
-	char m_aSettingsTabLanguageFile[IO_MAX_PATH_LENGTH] = "";
 	bool m_NeedSendinfo;
 	bool m_NeedSendDummyinfo;
 
@@ -2758,7 +2762,7 @@ public:
 	SUIAnimator m_aAnimatorsSettingsTab[SETTINGS_LENGTH];
 	std::array<CButtonContainer, SETTINGS_LENGTH> m_aSettingsTabButtons;
 	std::array<CUIElement, SETTINGS_LENGTH> m_aSettingsTabLabelElements;
-	std::array<const char *, SETTINGS_LENGTH> m_apSettingsTabs{};
+	CQmLocalizedLabelCache m_SettingsTabLabels;
 	int m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_VISUAL;
 	int m_CreditsSettingsTab = CREDITS_SETTINGS_TAB_QMCLIENT;
 	// 启动赞助提醒（灵动岛）的两段式状态（掉落/展开进度 + 停留倒计时）。
@@ -2961,7 +2965,7 @@ public:
 	void BuildVisibleSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);
 	void PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOverride);
 	void CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollectionUnit &Unit, CUIRect Screen, CUIRect SettingsMainView);
-	bool AdvanceSettingsMenuTextPlanCollection(int Budget, const char *pOperationOverride);
+	bool AdvanceSettingsMenuTextPlanCollection(int Budget, const char *pOperationOverride, int64_t Deadline);
 	bool PrebuildSettingsTextPlanItem(const SMenuTextPlanItem &Item, int &RemainingBudget);
 	int CountMissingSettingsMenuTextPlanItems() const;
 	bool SettingsMenuTextPrebuildReady(const char *pOperationOverride) const;
@@ -3211,10 +3215,8 @@ private:
 	std::unordered_set<std::string> m_SettingsMenuTextPlannedKeys;
 	size_t m_SettingsMenuTextPlanCursor = 0;
 	size_t m_SettingsMenuTextPlanCollectionCursor = 0;
-	// 字形预热：构建文本容器前，先把当前 plan item 的字符分帧预热（每帧限量）
-	std::vector<std::pair<int, int>> m_vMenuTextGlyphPrewarmQueue;
-	size_t m_MenuTextGlyphPrewarmCursor = 0;
-	size_t m_MenuTextGlyphPrewarmPlanCursor = static_cast<size_t>(-1);
+	// 字形预热：每轮共用数量和时间预算，构建容器前完成当前条目的预热。
+	CSettingsTextPrewarm m_MenuTextGlyphPrewarm;
 	uint64_t m_SettingsMenuTextPlanGeneration = 0;
 	uint64_t m_SettingsMenuTextPlanCollectionGeneration = 0;
 	std::string m_SettingsMenuTextPlanCollectionOperation;
@@ -3226,6 +3228,8 @@ private:
 	std::string m_SettingsCardFocusStableId;
 	qm_card_order::CModel m_SettingsCardOrderModel;
 	bool m_SettingsCardOrderLoaded = false;
+	CQmAuthorName m_QmAuthorName;
+	CQmSeasonalSidebar m_QmSeasonalSidebar;
 	CSettingsCardDeck m_SettingsCardDeck;
 	qm_card_order::CModel m_SettingsCardRenderOnlyOrderModel;
 	std::string m_SettingsCardRenderOnlyOrderSource;
@@ -3422,7 +3426,7 @@ private:
 	const CWarType *m_pRemoveWarType = nullptr;
 	void PopupConfirmRemoveWarType();
 	void RenderDevSkin(vec2 RenderPos, float Size, const char *pSkinName, const char *pBackupSkin, bool CustomColors, int FeetColor, int BodyColor, int Emote, bool Rainbow, bool Cute,
-		ColorRGBA ColorFeet = ColorRGBA(0, 0, 0, 0), ColorRGBA ColorBody = ColorRGBA(0, 0, 0, 0));
+		ColorRGBA ColorFeet = ColorRGBA(0, 0, 0, 0), ColorRGBA ColorBody = ColorRGBA(0, 0, 0, 0), const QmSponsorAuthors::STeePresentation *pGlitch = nullptr);
 	void RenderFontIcon(CUIRect Rect, const char *pText, float Size, int Align);
 	// 图集优先、字形回退（pFallbackIcon 为 FontIcons::FONT_ICON_* 字形）。
 	void RenderFontIcon_QmIcon(CUIRect Rect, EQmIcon Icon, const char *pFallbackIcon, float Size, int Align);

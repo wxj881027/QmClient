@@ -119,6 +119,14 @@ void main()
 		vec4 TexColor = vec4(0.0);
 		if(all(greaterThanEqual(TexUV, vec2(0.0))) && all(lessThanEqual(TexUV, vec2(1.0))))
 			TexColor = texture(gTextureSampler, TexUV);
+		if(TexParams0.x > 1.5)
+		{
+			// 距离场只存轮廓，颜色由调用方提供；按屏幕像素恢复覆盖率，缩放不重建纹理。
+			vec2 UVWidth = max(fwidth(TexUV), vec2(0.000001));
+			float ScreenRange = max(0.5 * dot(vec2(TexParams1.z), vec2(1.0) / UVWidth), 1.0);
+			float IconCoverage = clamp((TexColor.r - 0.5) * ScreenRange + 0.5, 0.0, 1.0);
+			TexColor = vec4(FillColor.rgb, FillColor.a * IconCoverage);
+		}
 		TexColor.a *= clamp(TexParams1.y, 0.0, 1.0);
 		FillColor = TexColor;
 		FillCoverage = OuterCoverage;

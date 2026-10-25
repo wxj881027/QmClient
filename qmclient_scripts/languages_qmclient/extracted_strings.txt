@@ -338,7 +338,6 @@ AntiPing: predict weapons
 Anything smaller than the window supersamples: the frame is drawn at window size and scaled down, so 1080p to 720p gives smoother edges. Sizes above the window are ignored.
 API key
 APP ID
-Appearance
 Appearance and command highlighting of the local console
 Appearance of help bubbles
 Append saved word list chunk
@@ -392,7 +391,6 @@ Aspect ratio preset
 Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)
 Asset preset
 Asset with this name already exists.
-Assets
 Assets directory
 Assets editor
 Assign "Self-kill off" and "Self-kill on"; after pressing the off key, K is ignored until you press the on key.
@@ -949,7 +947,6 @@ Config directory
 Config Files
 Config Filters
 Config version. Helps new client fix old config errors.
-Configs
 Configuration
 Configuration package already exists.
 Configuration package exported.
@@ -1059,7 +1056,6 @@ Controller axis for cursor Y
 Controller axis tolerance for jitter
 Controller GUID of the active controller
 Controller jitter tolerance
-Controls
 Controls demo recording and playback behavior.
 Controls how UI surfaces are drawn: card surface opacity, border width, corner rounding, segment count and the rainbow title effect.
 Controls laser shape, glow and animation.
@@ -1220,6 +1216,7 @@ DDRace HUD is driven by server messages, so it stays empty on servers without DD
 DDRace HUD Pro
 DDraceNetwork is a cooperative online game where the goal is for you and your group of tees to reach the finish line of the map. As a newcomer you should start on Novice servers, which host the easiest maps. Consider the ping to choose a server close to you.
 DDRaceNetwork · DDNet
+DDStats shows UTC dates, updates daily and matches players by name only.
 ddstats.tw ID stats
 Deactivate
 Deactivate all
@@ -1733,7 +1730,6 @@ Enter your sponsor code
 Entities
 Entities background color
 Entity assets
-Entity Background Image
 Entity overlay
 Entity Preview
 Entity wall outline opacity
@@ -1775,6 +1771,7 @@ Expand console
 Expanded dropdown background color
 Expanded dropdown background opacity percentage
 Experimental
+Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.
 Export
 Export configuration package
 Export cut as a separate demo
@@ -2027,7 +2024,6 @@ Gap aim rescue
 Gap between statusbar items
 Gap between tee and nametag
 Gaussian
-General
 Generated skin outline color
 Generated skin outline opacity
 Generated skin outline width
@@ -2096,7 +2092,6 @@ Gradient range
 Gradient settings
 Gradient type
 Gradient vertical position
-Graphics
 Graphics backend does not support dummy mini view
 Graphics card
 Graphics display
@@ -2234,7 +2229,6 @@ Hook collision line
 Hook collision line alpha (0 invisible, 100 fully visible)
 Hook collision line length follows cursor distance
 Hook collision line opacity
-Hook Collisions
 Hook collisions
 Hook countdown colors
 Hook countdown ring color
@@ -2281,6 +2275,7 @@ HUD notifications
 HUD rainbow colors
 Hue
 Hue speed
+Humming
 i = Receive rate
 I am away from the game window
 I muted you
@@ -2548,6 +2543,7 @@ Lasers can hit you if you shot them and they pull you towards the bounce origin 
 Lasers can't hit you if you shot them, and they pull others towards the shooter
 Last entered
 Last page in console
+Last seen (DDStats): %s
 Last successful sync: %s
 Last verified approved update source
 Last viewed announcement content revision
@@ -2698,7 +2694,10 @@ Lower means better quality and larger files; 18 is recommended
 LXGW WenKai is available.
 LXGW WenKai is unavailable. Current fonts and weights will be kept.
 Lyrics
+Lyrics language
+Lyrics language (0=Original, 1=Translation, 2=Original and translation)
 Lyrics live in the Dynamic Island, so they stay hidden until that option is on.
+Lyrics translation
 Magic: Spirit Script
 Main Asset
 Main menu
@@ -2813,12 +2812,14 @@ Maximum number of auto-screenshots (0 = unlimited)
 Maximum number of automatic replays (0 = unlimited)
 Maximum number of automatic scoreboard screenshots (0 = unlimited)
 Maximum number of clients on server
+Maximum number of copies per outgoing UDP game packet
 Maximum number of packets received in one batch before returning to the main loop (0 = unlimited).
 Maximum number of pre-inputs per tick and client sent to other clients (0 for no limit)
 Maximum number of resend requests answered per second (0 for no limit)
 Maximum number of server info responses of any size sent per second (0 = unlimited).
 Maximum number of skins loaded simultaneously
 Maximum number of vanilla antispoof handshakes answered per second (0 = unlimited).
+Maximum packet copies
 Maximum players participating in a vote (0 = unlimited)
 Maximum players shown in the Gores team drown board
 Maximum reduction
@@ -2913,6 +2914,7 @@ Move to category
 Movement
 Moves to the point with x/y-coordinates ii
 Moves to the tile with x/y-number ii
+Moving block and freeze prediction (experimental)
 MP4 is the most compatible for sharing, MOV is the editing standard and required by ProRes, and MKV suits lossless archives but is poorly supported by editors.
 Multi-resolution blur with a stronger result and balanced GPU cost.
 Multi-View
@@ -3098,6 +3100,7 @@ No Rank 1 replay for the current map (not generated by the official service yet)
 No rank 1 replay was found for this map
 No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 No recently used skins
+No record
 No release notes provided
 No results
 No Rules Defined, Kill em all!!
@@ -3248,9 +3251,11 @@ Options here affect networking or identity; test on a server before using them i
 Options only exist within "Detection distance"; turn off the ones you never use to keep the wheel short.
 Or visit DDNet.org
 Original
+Original and translation
 Original language for both received and outgoing messages. Use Auto to detect each message.
 Original language for incoming and outgoing text
 Original message language
+Original only
 Original options
 Original scroll feel
 Other
@@ -3477,6 +3482,7 @@ Players weapons has no affect on others
 Playing effects
 Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
+Playtime (h)
 Please add a valid cut first
 Please balance teams!
 Please enable finished indicator first
@@ -3521,6 +3527,7 @@ Predict events (sounds, particles)
 Predict fire and show predicted weapon physics (requires cl_antiping_grenade 1 and cl_antiping_weapons 1)
 Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when frozen))
 Predict grenade trajectory (only with cl_antiping 1)
+Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)
 Predict ninja path
 Predict other player's movement (only enabled if cl_antiping is set to 1) (1 = always on, 2 = interaction only, 3 = 2 and frozen tees always)
 Predict weapon projectiles (only with cl_antiping 1)
@@ -3673,6 +3680,7 @@ Query server setting: %s
 Query team rank for %s
 Querying points for %s...
 Querying points...
+Querying...
 Queue is empty
 Queue preset: %s
 Quick action menu for players
@@ -4089,6 +4097,7 @@ Score option color
 Scoreboard
 Scoreboard cursor
 Scoreboard filter: only show players whose name or clan contains this text
+Scoreboard playtime
 Scoreboard point check
 Scoreboard score lookup
 Scoreboard sort mode (0=Score, 1=Points)
@@ -4186,6 +4195,7 @@ Send probability
 Send Rate
 Send sampling and token limit parameters
 Send specified command to rcon
+Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
 Send translation method
 Sending and receiving
 Sending initial client info
@@ -4194,6 +4204,7 @@ Sending, waiting for peer echo
 Sends a command to the antibot
 Sends a saved .map file from your client to the public test server and reports progress and errors.
 Sends an automatic chat reply when someone whispers you while you are muted or away.
+Separate Dynamic Island
 Separate with commas
 Serif
 Server
@@ -4395,6 +4406,7 @@ Show friend join in large text
 Show friend option
 Show friend tag (♥) on nametag
 Show friends only
+Show friends' last seen dates (DDStats)
 Show frozen Tee HUD
 Show frozen Tee HUD only in team
 Show frozen tee particles
@@ -4460,11 +4472,14 @@ Show key presses (1 = others, 2 = all, 3 = own only)
 Show key stuck status
 Show kill messages
 Show labels on status bar items
+Show last seen dates for offline friends using DDStats (updated daily, matched by player name)
 Show list of mutes (page 1 by default, 20 entries per page)
 Show list of vote mutes (page 1 by default, 20 entries per page)
 Show local time always
 Show local time seconds
 Show logs of the last i seconds
+Show lyrics in a separate island below Dynamic Island
+Show lyrics in Dynamic Island
 Show lyrics inside Dynamic Island
 Show main tee title locally
 Show map details
@@ -4532,6 +4547,8 @@ Show player stats HUD
 Show player target angle
 Show player Tee
 Show players' key presses
+Show playtime
+Show points
 Show position and angle
 Show position and angle (mini debug)
 Show position and angle debug info
@@ -4598,6 +4615,7 @@ Show title setting hints immediately in small text
 Show titles above player names
 Show titles on nameplates
 Show toast
+Show total DDNet playtime from activity instead of points in scoreboard
 Show tune zone colors
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 Show unfreeze/deep unfreeze tile outlines
@@ -4742,7 +4760,6 @@ Snapshot tick gap
 Social
 SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
-Soft glow
 Solid
 Solid favorite icon
 Solid friend icon
@@ -4803,7 +4820,7 @@ Speed:
 Sphere
 Spin pop
 Split main and dummy into different teams for solo-run sync
-Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight
 Sponsor code
 Sponsor code already claimed
 Sponsor reminder
@@ -5003,7 +5020,6 @@ Teams are disabled
 Teams are not available on this server
 Teams are not available on this server; if the team is locked, any team member dying will kill the whole team
 Tee
-Tee 0.7
 Tee appearance
 Tee collision
 Tee collision (Tee to Tee)
@@ -5314,6 +5330,7 @@ Translation menu background color
 Translation menu normal color
 Translation menu selected color
 Translation model was not found. Check the model name.
+Translation only
 Translation service
 Translation service authentication failed. Check the API key and service address.
 Translation service is not configured correctly.
@@ -5486,6 +5503,7 @@ Update ready to install
 Upload .map files. Server and admin passwords: s.
 Upload a saved map to the public test server
 Upload map
+Upstream redundancy (experimental)
 URL for downloading community skins
 URL for downloading maps (must start with https://)
 URL for downloading skins

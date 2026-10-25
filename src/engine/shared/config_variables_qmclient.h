@@ -10,6 +10,10 @@
 
 // QmClient specific variables - 栖梦客户端配置项
 
+// 往返探针无法区分上下行丢包；仅作为默认关闭的灰测功能。
+MACRO_CONFIG_INT(QmUpstreamRedundancy, qm_upstream_redundancy, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.")
+MACRO_CONFIG_INT(QmUpstreamRedundancyMaxCopies, qm_upstream_redundancy_max_copies, 3, 2, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Maximum number of copies per outgoing UDP game packet")
+
 // 地图编辑器
 MACRO_CONFIG_INT(QmEditorCollabFollowPlacement, qm_editor_collab_follow_placement, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Follow remote placements in the collaborative editor")
 
@@ -221,6 +225,7 @@ MACRO_CONFIG_INT(QmSponsorNudge, qm_sponsor_nudge, 1, 0, 1, CFGFLAG_CLIENT | CFG
 
 // Scoreboard / 计分板
 MACRO_CONFIG_INT(QmScoreboardPoints, qm_scoreboard_points, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scoreboard score lookup")
+MACRO_CONFIG_INT(QmScoreboardPlaytime, qm_scoreboard_playtime, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show total DDNet playtime from activity instead of points in scoreboard")
 MACRO_CONFIG_INT(QmScoreboardSortMode, qm_scoreboard_sort_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scoreboard sort mode (0=Score, 1=Points)")
 MACRO_CONFIG_INT(QmScoreboardOnDeath, qm_scoreboard_on_death, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show scoreboard after death")
 MACRO_CONFIG_INT(QmScoreboardScroll, qm_scoreboard_scroll, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers")
@@ -402,7 +407,7 @@ MACRO_CONFIG_INT(QmTitleColorMode, qm_title_color_mode, 0, 0, 2, CFGFLAG_CLIENT 
 MACRO_CONFIG_INT(QmTitleOpacity, qm_title_opacity, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Sponsor title badge opacity (0-100)")
 MACRO_CONFIG_INT(QmTitleStyleEnabled, qm_title_style_enabled, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use animated title style (overrides qm_title_color_mode)")
 MACRO_CONFIG_STR(QmTitleStyle, qm_title_style, 32, "exotic_rainbow", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Animated title style id")
-MACRO_CONFIG_INT(QmSponsorChatStyle, qm_sponsor_chat_style, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight")
+MACRO_CONFIG_INT(QmSponsorChatStyle, qm_sponsor_chat_style, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Sponsor chat style draft: 0=Normal, 1=Platinum highlight")
 MACRO_CONFIG_INT(QmSponsorChatEffects, qm_sponsor_chat_effects, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show synchronized sponsor chat styles")
 MACRO_CONFIG_INT(QmTitleMotionMode, qm_title_motion_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Title motion: 0 = vertical wave, 1 = pop wave")
 MACRO_CONFIG_INT(QmTitleBobAmplitude, qm_title_bob_amplitude, 1, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Title wave strength (0-3, 0 = off)")
@@ -550,7 +555,8 @@ MACRO_CONFIG_INT(QmStreamerHideNames, qm_streamer_hide_names, 0, 0, 1, CFGFLAG_C
 MACRO_CONFIG_INT(QmStreamerHideSkins, qm_streamer_hide_skins, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Non-friends use default skin")
 MACRO_CONFIG_INT(QmStreamerScoreboardDefaultFlags, qm_streamer_scoreboard_default_flags, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show default flag in scoreboard")
 
-// 好友上线 / 进服提醒（默认文案为英文 source key，运行时 Localize）
+// 好友状态 / 上线 / 进服提醒（默认文案为英文 source key，运行时 Localize）
+MACRO_CONFIG_INT(QmFriendLastSeen, qm_friend_last_seen, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show last seen dates for offline friends using DDStats (updated daily, matched by player name)")
 MACRO_CONFIG_INT(QmFriendOnlineNotify, qm_friend_online_notify, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Friend online notification")
 MACRO_CONFIG_INT(QmFriendOnlineAutoRefresh, qm_friend_online_auto_refresh, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-refresh server list for friend notifications")
 MACRO_CONFIG_INT(QmFriendOnlineRefreshSeconds, qm_friend_online_refresh_seconds, 30, 5, 300, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Friend notification refresh interval (sec)")
@@ -627,6 +633,7 @@ MACRO_CONFIG_INT(QmGoresHideGuides, qm_gores_hide_guides, 0, 0, 1, CFGFLAG_CLIEN
 MACRO_CONFIG_INT(QmGoresDisableDummyHammer, qm_gores_disable_dummy_hammer, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Temporarily disable dummy hammering in Gores mode")
 MACRO_CONFIG_INT(QmGoresSuppressSwitchAnim, qm_gores_suppress_switch_anim, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Skip the weapon switch animation for hammer switches in Gores mode")
 MACRO_CONFIG_INT(QmAxiomAutoLogin, qm_axiom_auto_login, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-login after entering Axiom community server")
+MACRO_CONFIG_INT(QmAxiomQuadPrediction, qm_axiom_quad_prediction, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)")
 MACRO_CONFIG_STR(QmAxiomLoginPassword, qm_axiom_login_password, 128, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Password for Axiom main account auto-login")
 MACRO_CONFIG_STR(QmAxiomDummyLoginPassword, qm_axiom_dummy_login_password, 128, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Password for Axiom alt account auto-login")
 
@@ -820,6 +827,10 @@ MACRO_CONFIG_STR(QmNeteaseHookHelperPath, qm_netease_hook_helper_path, 512, "", 
 // 网易云歌词展示开关。关闭展示时后台桥接仍可继续采集并维护当前歌曲状态。
 MACRO_CONFIG_INT(QmLyrics, qm_lyrics, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable Netease lyric integration")
 MACRO_CONFIG_INT(QmLyricsInMediaIsland, qm_lyrics_in_media_island, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show current Netease lyric in Media Island")
+
+MACRO_CONFIG_INT(QmLyricsLanguage, qm_lyrics_language, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Lyrics language (0=Original, 1=Translation, 2=Original and translation)")
+MACRO_CONFIG_INT(QmLyricsSeparateIsland, qm_lyrics_separate_island, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show lyrics in a separate island below Dynamic Island")
+MACRO_CONFIG_INT(QmHumming, qm_humming, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines")
 
 // 汽水音乐 Hook 集成(共享同一套歌词展示开关)。
 // 与网易云 Hook 互斥:默认关闭,用户在 Lyrics 设置里切换。

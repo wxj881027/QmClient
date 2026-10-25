@@ -31,7 +31,7 @@ void qm_tclient_menu::AdvancePreviewTime(float FrameTime)
 	}
 }
 
-void CMenus::RenderDevSkin(vec2 RenderPos, float Size, const char *pSkinName, const char *pBackupSkin, bool CustomColors, int FeetColor, int BodyColor, int Emote, bool Rainbow, bool Cute, ColorRGBA ColorFeet, ColorRGBA ColorBody)
+void CMenus::RenderDevSkin(vec2 RenderPos, float Size, const char *pSkinName, const char *pBackupSkin, bool CustomColors, int FeetColor, int BodyColor, int Emote, bool Rainbow, bool Cute, ColorRGBA ColorFeet, ColorRGBA ColorBody, const QmSponsorAuthors::STeePresentation *pGlitch)
 {
 	bool WhiteFeetTemp = g_Config.m_QmWhiteFeet;
 	g_Config.m_QmWhiteFeet = false;
@@ -73,7 +73,12 @@ void CMenus::RenderDevSkin(vec2 RenderPos, float Size, const char *pSkinName, co
 	vec2 OffsetToMid;
 	CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &SkinInfo, OffsetToMid);
 	vec2 TeeRenderPos(RenderPos.x, RenderPos.y + OffsetToMid.y);
-	if(Cute)
+	if(pGlitch != nullptr)
+	{
+		const CUIRect Bounds{RenderPos.x - Size * 0.75f, RenderPos.y - Size * 0.5f, Size * 1.5f, Size};
+		QmAuthorTee::Render(Ui(), RenderTools(), pIdleState, SkinInfo, Emote, Cute, TeeRenderPos, Bounds, *pGlitch);
+	}
+	else if(Cute)
 		RenderTeeCute(pIdleState, &SkinInfo, Emote, vec2(1.0f, 0.0f), TeeRenderPos, true);
 	else
 		RenderTools()->RenderTee(pIdleState, &SkinInfo, Emote, vec2(1.0f, 0.0f), TeeRenderPos);

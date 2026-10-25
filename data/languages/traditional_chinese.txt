@@ -1019,9 +1019,6 @@ API key
 APP ID
 == 應用 ID
 
-Appearance
-== 遊戲界面
-
 Appearance and command highlighting of the local console
 == 本機控制台的外觀和命令醒目顯示
 
@@ -1180,9 +1177,6 @@ Asset preset
 
 Asset with this name already exists.
 == 同名材質已存在。
-
-Assets
-== 資源
 
 Assets directory
 == 資源目錄
@@ -2852,9 +2846,6 @@ Config Filters
 Config version. Helps new client fix old config errors.
 == 配置版本。幫助新客戶修復舊配置的錯誤。
 
-Configs
-== 客戶端配置
-
 Configuration
 == 配置
 
@@ -3181,9 +3172,6 @@ Controller GUID of the active controller
 
 Controller jitter tolerance
 == 搖桿死區
-
-Controls
-== 控制
 
 Controls demo recording and playback behavior.
 == 控制回放錄製與播放的行為。
@@ -3664,6 +3652,9 @@ DDraceNetwork is a cooperative online game where the goal is for you and your gr
 
 DDRaceNetwork · DDNet
 == DDRaceNetwork · DDNet
+
+DDStats shows UTC dates, updates daily and matches players by name only.
+== DDStats 的日期使用 UTC，每天更新，且僅按玩家名稱比對。
 
 ddstats.tw ID stats
 == ddstats.tw ID 統計
@@ -5204,9 +5195,6 @@ Entities background color
 Entity assets
 == 實體的資產
 
-Entity Background Image
-== 實體層背景圖
-
 Entity overlay
 == 實體疊加
 
@@ -5329,6 +5317,9 @@ Expanded dropdown background opacity percentage
 
 Experimental
 == 實驗性
+
+Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.
+== 實驗功能：往返探針未獲回覆時重複傳送上行 UDP 遊戲封包。上行流量最多增至三倍；下行丟包和晚到的重複輸入仍可能造成問題。使用 KCP 時停用。
 
 Export
 == 導出
@@ -6083,9 +6074,6 @@ Gap between tee and nametag
 Gaussian
 == 高斯
 
-General
-== 常規
-
 Generated skin outline color
 == 生成描邊顏色
 
@@ -6289,9 +6277,6 @@ Gradient type
 
 Gradient vertical position
 == 漸層垂直位置
-
-Graphics
-== 圖像
 
 Graphics backend does not support dummy mini view
 == 目前的圖形後端不支援分身小窗
@@ -6704,9 +6689,6 @@ Hook collision line length follows cursor distance
 Hook collision line opacity
 == 鉤子輔助線不透明度
 
-Hook Collisions
-== 鉤子輔助線
-
 Hook collisions
 == 鉤子輔助線
 
@@ -6844,6 +6826,9 @@ Hue
 
 Hue speed
 == 變色速度
+
+Humming
+== 哼歌
 
 i = Receive rate
 == i = 接收速率
@@ -7646,6 +7631,9 @@ Last entered
 Last page in console
 == 控制台最後一頁
 
+Last seen (DDStats): %s
+== 最近上線（DDStats）：%s
+
 Last successful sync: %s
 == 上次成功同步：%s
 
@@ -8096,8 +8084,17 @@ LXGW WenKai is unavailable. Current fonts and weights will be kept.
 Lyrics
 == 歌詞
 
+Lyrics language
+== 歌詞語言
+
+Lyrics language (0=Original, 1=Translation, 2=Original and translation)
+== 歌詞語言（0=原文，1=譯文，2=原文＋譯文）
+
 Lyrics live in the Dynamic Island, so they stay hidden until that option is on.
 == 歌詞只顯示在 Dynamic Island 中，因此該選項未開啟前不會出現。
+
+Lyrics translation
+== 歌詞譯文
 
 Magic: Spirit Script
 == 魔法風：靈文游絲
@@ -8441,6 +8438,9 @@ Maximum number of automatic scoreboard screenshots (0 = unlimited)
 Maximum number of clients on server
 == 伺服器上允許的最大客戶端數
 
+Maximum number of copies per outgoing UDP game packet
+== 每個上行 UDP 遊戲封包的傳送份數上限
+
 Maximum number of packets received in one batch before returning to the main loop (0 = unlimited).
 == 返回主迴圈前單批接收的封包最大數量（0 = 不限）。
 
@@ -8458,6 +8458,9 @@ Maximum number of skins loaded simultaneously
 
 Maximum number of vanilla antispoof handshakes answered per second (0 = unlimited).
 == 每秒回應的原版反欺騙交握最大數量（0 = 不限）。
+
+Maximum packet copies
+== 封包份數上限
 
 Maximum players participating in a vote (0 = unlimited)
 == 最多可有多少玩家參與投票（0 = 無限制）
@@ -8740,6 +8743,9 @@ Moves to the point with x/y-coordinates ii
 
 Moves to the tile with x/y-number ii
 == 移動到 x/y 編號 ii 的圖塊
+
+Moving block and freeze prediction (experimental)
+== 移動方塊與移動水預測（實驗性）
 
 MP4 is the most compatible for sharing, MOV is the editing standard and required by ProRes, and MKV suits lossless archives but is poorly supported by editors.
 == MP4 相容性最好，適合分享；MOV 是剪輯軟體的通用容器，ProRes 必須用它；MKV 適合無損歸檔，但剪輯軟體支援很差。
@@ -9296,6 +9302,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 No recently used skins
 == 暫無最近使用的皮膚
 
+No record
+== 暫無記錄
+
 No release notes provided
 == 此版本未提供更新說明
 
@@ -9746,6 +9755,9 @@ Or visit DDNet.org
 Original
 == 原版
 
+Original and translation
+== 原文＋譯文
+
 Original language for both received and outgoing messages. Use Auto to detect each message.
 == 收發訊息均使用原文語言。使用「自動」可逐條偵測。
 
@@ -9754,6 +9766,9 @@ Original language for incoming and outgoing text
 
 Original message language
 == 原文語言
+
+Original only
+== 僅原文
 
 Original options
 == 原始選項
@@ -10433,6 +10448,9 @@ Plays a short effect when a tee's skin changes, and can copy the skin of the tee
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == 皮膚變化時播放動畫，包括錘子偷來的皮膚。
 
+Playtime (h)
+== 遊玩（小時）
+
 Please add a valid cut first
 == 請先添加有效裁剪片段
 
@@ -10564,6 +10582,9 @@ Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when fr
 
 Predict grenade trajectory (only with cl_antiping 1)
 == 預測榴彈軌跡（僅在 cl_antiping 為 1 時）
+
+Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)
+== 在使用 Axiom 四邊形規則的伺服器中預測移動方塊和凍結區域（實驗性）
 
 Predict ninja path
 == 預測忍者路徑
@@ -11020,6 +11041,9 @@ Querying points for %s...
 
 Querying points...
 == 正在查詢積分...
+
+Querying...
+== 查詢中…
 
 Queue is empty
 == 隊列為空
@@ -12269,6 +12293,9 @@ Scoreboard cursor
 Scoreboard filter: only show players whose name or clan contains this text
 == 計分板篩選：符合名字或戰隊
 
+Scoreboard playtime
+== 計分板遊玩時間
+
 Scoreboard point check
 == 計分板積分檢查
 
@@ -12560,6 +12587,9 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == 向 rcon 發送指定命令
 
+Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
+== 每隔隨機30到90秒向公共聊天逐句傳送連續三句歌詞，句間隔3秒
+
 Send translation method
 == 發送翻譯方式
 
@@ -12583,6 +12613,9 @@ Sends a saved .map file from your client to the public test server and reports p
 
 Sends an automatic chat reply when someone whispers you while you are muted or away.
 == 當你被禁言或暫離時，若有人對你私聊，會自動送出聊天回覆。
+
+Separate Dynamic Island
+== 靈動島分離
 
 Separate with commas
 == 用 , 分隔
@@ -13187,6 +13220,9 @@ Show friend tag (♥) on nametag
 Show friends only
 == 僅好友
 
+Show friends' last seen dates (DDStats)
+== 顯示好友最近上線日期（DDStats）
+
 Show frozen Tee HUD
 == 顯示凍結 Tee HUD
 
@@ -13382,6 +13418,9 @@ Show kill messages
 Show labels on status bar items
 == 在狀態欄上顯示條目標籤
 
+Show last seen dates for offline friends using DDStats (updated daily, matched by player name)
+== 使用 DDStats 顯示離線好友最近上線日期（每天更新，僅按玩家名稱比對）
+
 Show list of mutes (page 1 by default, 20 entries per page)
 == 顯示靜音列表（默認第 1 頁，每頁 20 條）
 
@@ -13396,6 +13435,12 @@ Show local time seconds
 
 Show logs of the last i seconds
 == 顯示最後 i 秒的日誌
+
+Show lyrics in a separate island below Dynamic Island
+== 將歌詞顯示在靈動島下方的獨立附島
+
+Show lyrics in Dynamic Island
+== 在靈動島顯示歌詞
 
 Show lyrics inside Dynamic Island
 == 將歌詞顯示在靈動島內
@@ -13598,6 +13643,12 @@ Show player Tee
 Show players' key presses
 == 顯示按鍵
 
+Show playtime
+== 顯示遊玩時間
+
+Show points
+== 顯示積分
+
 Show position and angle
 == 顯示位置和角度
 
@@ -13795,6 +13846,9 @@ Show titles on nameplates
 
 Show toast
 == 顯示提示
+
+Show total DDNet playtime from activity instead of points in scoreboard
+== 在計分板中累加 DDNet activity 的遊玩小時數，取代積分顯示
 
 Show tune zone colors
 == 顯示 Tune Zone 顏色
@@ -14228,9 +14282,6 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == 汽水音樂 Hook 輔助程式路徑（留空則使用 QmClient 所在目錄中的程式）
 
-Soft glow
-== 柔光
-
 Solid
 == 純色
 
@@ -14411,8 +14462,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == 本體和分身分別進隊，方便開局 solo 同步（部分地圖不好同步時使用）
 
-Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
-== 贊助者發言樣式草稿：0=普通，1=柔光，2=鉑金高光
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight
+== 贊助者發言樣式草稿：0=普通，1=鉑金高光
 
 Sponsor code
 == 認證碼
@@ -15010,9 +15061,6 @@ Teams are not available on this server; if the team is locked, any team member d
 
 Tee
 == Tee
-
-Tee 0.7
-== Tee 0.7
 
 Tee appearance
 == Tee 外觀
@@ -15944,6 +15992,9 @@ Translation menu selected color
 Translation model was not found. Check the model name.
 == 找不到翻譯模型，請檢查模型名稱。
 
+Translation only
+== 僅譯文
+
 Translation service
 == 翻譯服務
 
@@ -16459,6 +16510,9 @@ Upload a saved map to the public test server
 
 Upload map
 == 上傳地圖
+
+Upstream redundancy (experimental)
+== 上行冗餘傳送（實驗性）
 
 URL for downloading community skins
 == 用於下載社區皮膚的 URL

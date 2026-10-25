@@ -102,7 +102,8 @@ namespace
 	// ScrollOffsetY 是可见带的上移量，0 表示内容顶部贴着输入框顶部。
 	void QmApplyMultilineScrollY(const float LineWidth, const CUIRect *pRect, const STextBoundingBox &BoundingBox, const float ScrollOffsetY, vec2 &CursorPos)
 	{
-		if(LineWidth < 0.0f || pRect == nullptr)
+		// 控制台用零高度矩形作为底部锚点，不能将它当成可滚动的可视区域。
+		if(LineWidth < 0.0f || pRect == nullptr || pRect->h <= 0.0f)
 			return;
 		if(BoundingBox.m_H > pRect->h)
 			CursorPos.y = pRect->y;

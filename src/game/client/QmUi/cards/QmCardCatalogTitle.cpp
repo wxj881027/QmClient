@@ -106,11 +106,8 @@ static void RenderQmSponsorChatPreview(IGraphics *pGraphics, ITextRender *pTextR
 	else
 		pTextRender->CreateOrAppendTextContainer(s_SponsorChatPreviewContainer, &Cursor, pText);
 	pTextRender->TextColor(PreviousColor);
-	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-	pGraphics->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-	const vec2 PixelSize((ScreenX1 - ScreenX0) / std::max(1, pGraphics->ScreenWidth()), (ScreenY1 - ScreenY0) / std::max(1, pGraphics->ScreenHeight()));
 	const SQmSponsorChatSweep SweepState = QmSponsorChatSweepState(TimeSeconds - s_StartTime, pTextRender->GetTextContainerRenderedLineCount(s_SponsorChatPreviewContainer), true);
-	QmRenderSponsorChatText(pTextRender, s_SponsorChatPreviewContainer, Style, 1.0f, PixelSize, 0.0f, 0.0f, FontSize, SweepState);
+	QmRenderSponsorChatText(pGraphics, pTextRender, s_SponsorChatPreviewContainer, Style, 1.0f, 0.0f, 0.0f, FontSize, SweepState);
 }
 
 namespace
@@ -246,8 +243,8 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 				pMenus->DoSettingsMenuLabel(Page, Tab, -1, "qm-sponsor-chat-style", &ChatStyleLabel, Localize("Chat message style"), BodySize, TEXTALIGN_ML);
 				static CUi::SDropDownState s_ChatStyleState;
 				static CScrollRegion s_ChatStyleScroll;
-				static std::array<const char *, 3> s_apChatStyleNames;
-				s_apChatStyleNames = {Localize("Normal"), Localize("Soft glow"), Localize("Platinum highlight")};
+				static std::array<const char *, 2> s_apChatStyleNames;
+				s_apChatStyleNames = {Localize("Normal"), Localize("Platinum highlight")};
 				s_ChatStyleState.m_SelectionPopupContext.m_pScrollRegion = &s_ChatStyleScroll;
 				CUi::SDropDownProperties ChatStyleProperties;
 				ChatStyleProperties.m_Enabled = Auth.TitleAuthenticated() && !Auth.TitleBusy() && !pMenus->GameClient()->m_GameConsole.IsActive();

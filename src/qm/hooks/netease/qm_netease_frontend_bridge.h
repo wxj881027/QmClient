@@ -7,6 +7,7 @@
 #include <game/client/components/qmclient/netease/netease_lyric_state.h>
 #include <game/client/components/qmclient/netease/netease_lyric_timeline.h>
 #include <game/client/components/qmclient/netease_hook/qm_netease_hook_v5_writer.h>
+#include <game/client/components/qmclient/netease_hook/qm_netease_lyrics_channel.h>
 
 #include <atomic>
 #include <cstdint>
@@ -42,6 +43,10 @@ namespace QmNeteaseBridge
 		std::thread m_TickThread;
 		QmNeteaseCdp::CFrontendBridgeWorker m_Worker;
 		QmNeteaseHook::CV5Writer m_Writer;
+		QmNeteaseHook::CLyricsChannel m_LyricsChannel;
+		NeteaseLyrics::SRawLyrics m_RawLyrics;
+		NeteaseLyrics::SRawLyrics m_PendingRawLyrics;
+		bool m_RawLyricsDirty = false;
 		mutable std::mutex m_Mutex;
 		uint32_t m_CloudMusicPid = 0;
 		uint64_t m_SongId = 0;

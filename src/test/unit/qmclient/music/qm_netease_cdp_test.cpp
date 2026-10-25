@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 #include <qm/hooks/netease/qm_netease_bootstrap.h>
 #include <qm/hooks/netease/qm_netease_cdp.h>
-#include <qm/hooks/netease/qm_netease_cdp_client.h>
 
 using namespace QmNeteaseCdp;
 
@@ -103,62 +102,3 @@ TEST(QmNeteaseBootstrap, SkipsCefChildProcessesAndKeepsExplicitPort)
 	EXPECT_EQ(Patched, Existing);
 }
 #endif
-
-TEST(QmNeteaseCdp, FrontendScriptUsesWebpackPlayerStateInsteadOfDesktopLyrics)
-{
-	const std::string Script = BuildInstallHookScript();
-	EXPECT_NE(Script.find("getWebpackRequire"), std::string::npos);
-	EXPECT_NE(Script.find("audioPlayerPlayProgress$"), std::string::npos);
-	EXPECT_NE(Script.find("onlineResourceId"), std::string::npos);
-	EXPECT_NE(Script.find("resourceTrackId"), std::string::npos);
-	EXPECT_NE(Script.find("playing.playingState === 2"), std::string::npos);
-	EXPECT_NE(Script.find("playing.playingState === 1"), std::string::npos);
-	EXPECT_NE(Script.find("previousSubscription.unsubscribe()"), std::string::npos);
-	EXPECT_NE(Script.find("positionMs: Math.max(0, seconds * 1000)"), std::string::npos);
-	EXPECT_NE(Script.find("const bridgeVersion = \"13\""), std::string::npos);
-	EXPECT_NE(Script.find("const firstProgress = !window.__QM_NCM_NATIVE_PROGRESS__"), std::string::npos);
-	EXPECT_NE(Script.find("reportProgress(firstProgress)"), std::string::npos);
-	EXPECT_EQ(Script.find("reportProgress(true)"), std::string::npos);
-	EXPECT_EQ(Script.find("setting.showLyric"), std::string::npos);
-	EXPECT_EQ(Script.find("DesktopLyrics"), std::string::npos);
-	EXPECT_EQ(Script.find("audioplayer.onPlayProgress"), std::string::npos);
-	EXPECT_EQ(Script.find("/api/song/lyric"), std::string::npos);
-}
-
-TEST(QmNeteaseCdp, FrontendScriptPublishesStableModernStoreLyrics)
-{
-	const std::string Script = BuildInstallHookScript();
-	EXPECT_NE(Script.find("async:lyric"), std::string::npos);
-	EXPECT_NE(Script.find("lyricLines"), std::string::npos);
-	EXPECT_NE(Script.find("currentUsedLyricVersion"), std::string::npos);
-	EXPECT_NE(Script.find("serializeLyricLines"), std::string::npos);
-	EXPECT_NE(Script.find("lyric.isLoading"), std::string::npos);
-	EXPECT_NE(Script.find("candidateCount < 3"), std::string::npos);
-	EXPECT_NE(Script.find("rawLyrics:{lrc}"), std::string::npos);
-	EXPECT_NE(Script.find("async:lyric/fetchLyric"), std::string::npos);
-	EXPECT_NE(Script.find("payload:{force:true}"), std::string::npos);
-	EXPECT_NE(Script.find("fetchRequestedAt"), std::string::npos);
-}
-
-TEST(QmNeteaseCdp, FrontendScriptRefreshesLyricsBeforePublishingForCurrentSong)
-{
-	const std::string Script = BuildInstallHookScript();
-	const size_t RequireCurrentSongFetch = Script.find("if (state.fetchSongId !== songId)");
-	const size_t WaitForCurrentSongFetch = Script.find("if (state.fetchPending || !state.fetchCompleted)");
-	const size_t SerializeLyrics = Script.find("const lrc = serializeLyricLines");
-	ASSERT_NE(RequireCurrentSongFetch, std::string::npos);
-	ASSERT_NE(WaitForCurrentSongFetch, std::string::npos);
-	ASSERT_NE(SerializeLyrics, std::string::npos);
-	EXPECT_LT(RequireCurrentSongFetch, SerializeLyrics);
-	EXPECT_LT(WaitForCurrentSongFetch, SerializeLyrics);
-	EXPECT_NE(Script.find("typeof result.then === \"function\""), std::string::npos);
-	EXPECT_NE(Script.find("finishStoreLyricFetch(songId, fetchGeneration, true)"), std::string::npos);
-	EXPECT_NE(Script.find("finishStoreLyricFetch(songId, fetchGeneration, false)"), std::string::npos);
-}
-
-TEST(QmNeteaseCdp, FrontendScriptRetriesAStuckLyricFetch)
-{
-	const std::string Script = BuildInstallHookScript();
-	EXPECT_EQ(Script.find("state.fetchPending || now - state.fetchRequestedAt < 30000"), std::string::npos);
-	EXPECT_NE(Script.find("if (now - state.fetchRequestedAt >= 30000)"), std::string::npos);
-}

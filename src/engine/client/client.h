@@ -5,6 +5,7 @@
 
 #include "game_ping.h"
 #include "graph.h"
+#include "link_probe.h"
 #include "qm_hang_diagnostics.h"
 #include "smooth_time.h"
 
@@ -167,6 +168,9 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	// pinging
 	SManualPingProbe m_ManualPingProbe;
 	SGamePingProbe m_aGamePingProbes[NUM_DUMMIES];
+	CLinkProbeTracker m_LinkProbeTracker;
+	int64_t m_NextUpstreamProbeTime = 0;
+	bool m_UpstreamProbeEnabled = false;
 
 	char m_aCurrentMap[IO_MAX_PATH_LENGTH] = "";
 	char m_aCurrentMapPath[IO_MAX_PATH_LENGTH] = "";
@@ -376,6 +380,7 @@ private:
 
 	void UpdateNetStatsSnapshot() const;
 	void UpdateGamePing();
+	void UpdateUpstreamRedundancy();
 
 	// Shared by RenderDebug and Qm monitoring.
 	mutable NETSTATS m_NetstatsPrev = {};

@@ -1,4 +1,5 @@
 #include "QmLegacyMediaHud.h"
+#include "QmLyricsHud.h"
 
 #include <engine/textrender.h>
 
@@ -10,22 +11,6 @@
 
 namespace
 {
-	bool EnableMappedClip(IGraphics &Graphics, const CUIRect &Rect)
-	{
-		float X0, Y0, X1, Y1;
-		Graphics.GetScreen(&X0, &Y0, &X1, &Y1);
-		const float ScaleX = Graphics.ScreenWidth() / std::max(0.001f, X1 - X0);
-		const float ScaleY = Graphics.ScreenHeight() / std::max(0.001f, Y1 - Y0);
-		const int Left = std::clamp(static_cast<int>(std::floor((Rect.x - X0) * ScaleX)), 0, Graphics.ScreenWidth());
-		const int Top = std::clamp(static_cast<int>(std::floor((Rect.y - Y0) * ScaleY)), 0, Graphics.ScreenHeight());
-		const int Right = std::clamp(static_cast<int>(std::ceil((Rect.x + Rect.w - X0) * ScaleX)), 0, Graphics.ScreenWidth());
-		const int Bottom = std::clamp(static_cast<int>(std::ceil((Rect.y + Rect.h - Y0) * ScaleY)), 0, Graphics.ScreenHeight());
-		if(Right <= Left || Bottom <= Top)
-			return false;
-		Graphics.ClipEnable(Left, Top, Right - Left, Bottom - Top);
-		return true;
-	}
-
 	void RenderMetadata(ITextRender &TextRender, const CUIRect &Row, float FontSize, const char *pText, ColorRGBA Color)
 	{
 		float VisualTop = 0.0f;
@@ -45,7 +30,7 @@ namespace
 }
 
 void QmRenderLegacyMediaHud(CUi &Ui, IGraphics &Graphics, ITextRender &TextRender, const CSystemMediaControls::SState &Media,
-	const SQmLegacyMediaHudContent &Content, const SQmLegacyMediaHudLayout &Layout, const char *pLyrics, ColorRGBA LyricsColor, float LyricsElapsedSeconds, int Corners)
+	const SQmLegacyMediaHudContent &Content, const SQmLegacyMediaHudLayout &Layout, const char *pLyrics, ColorRGBA LyricsColor, float LyricsElapsedSeconds, int Corners, const char *pTranslation)
 {
 	if(!Content.m_Visible || Layout.m_Panel.w <= 0.0f || Layout.m_Panel.h <= 0.0f)
 		return;
@@ -107,29 +92,8 @@ void QmRenderLegacyMediaHud(CUi &Ui, IGraphics &Graphics, ITextRender &TextRende
 		if(Content.m_ShowMetadata)
 			Graphics.DrawRect(Panel.x + 3.0f * Scale, Row.y - Scale, Panel.w - 6.0f * Scale, 0.3f * Scale,
 				ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), IGraphics::CORNER_ALL, 0.15f * Scale);
-		if(pLyrics[0] != '\0')
-		{
-			const float FontSize = 5.2f * Scale;
-			float VisualTop = 0.0f;
-			float VisualBottom = 0.0f;
-			STextSizeProperties Props{};
-			Props.m_pVisualTop = &VisualTop;
-			Props.m_pVisualBottom = &VisualBottom;
-			const float TextWidth = TextRender.TextWidth(FontSize, pLyrics, -1, -1.0f, TEXTFLAG_DISALLOW_NEWLINE, Props);
-			const float Offset = QmHudMediaIslandMarqueeOffset(TextWidth, Row.w, LyricsElapsedSeconds, 22.4f * Scale);
-			const float X = TextWidth <= Row.w ? Row.x + (Row.w - TextWidth) * 0.5f : Row.x - Offset;
-			const float Y = Row.y + Row.h * 0.5f - (VisualTop + VisualBottom) * 0.5f;
-			TextRender.TextColor(LyricsColor);
-			if(EnableMappedClip(Graphics, Row))
-			{
-				CTextCursor Cursor;
-				Cursor.m_FontSize = FontSize;
-				Cursor.m_Flags = TEXTFLAG_RENDER | TEXTFLAG_DISALLOW_NEWLINE;
-				Cursor.SetPosition(vec2(X, Y));
-				TextRender.TextEx(&Cursor, pLyrics);
-				Graphics.ClipDisable();
-			}
-		}
+		const char *apRows[] = {pLyrics, pTranslation};
+		QmRenderLyricsRows(Graphics, TextRender, Row, apRows, Content.m_LyricsRowCount, 5.2f * Scale, LyricsColor, LyricsElapsedSeconds);
 	}
 
 	TextRender.SetFontPreset(PreviousPreset);

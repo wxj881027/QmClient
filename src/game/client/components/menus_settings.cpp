@@ -24,6 +24,7 @@
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmListEntryAnimation.h>
+#include <game/client/QmUi/QmLocalizedLabels.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/SettingsCard.h>
@@ -915,6 +916,8 @@ void CMenus::RenderSettings(CUIRect MainView)
 	if(!CollectingMenuTextPlan)
 	{
 		TabBar.Draw(SettingsTabbarColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+		const auto *pAnimation = Ui()->QmAnimationRuntime();
+		m_QmSeasonalSidebar.Render(Ui(), Graphics(), TabBar, pAnimation != nullptr ? pAnimation->TimeSec() : 0.0);
 		Shell.m_ContentPanelRect.Draw(MenuPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 	}
 	const float PreviousDropDownFontSize = Ui()->DropDownFontSize();
@@ -982,7 +985,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		for(int Index = 0; Index < Count; ++Index)
 		{
 			const int Page = aPages[Index];
-			DoButton_MenuTab(&m_aSettingsTabButtons[Page], m_apSettingsTabs[Page], g_Config.m_UiSettingsPage == Page, &aSlots[Index], IGraphics::CORNER_ALL, &m_aAnimatorsSettingsTab[Page], nullptr, &SettingsNavigationSelected, &SettingsNavigationHover, 10.0f, nullptr, &m_aSettingsTabLabelElements[Page]);
+			DoButton_MenuTab(&m_aSettingsTabButtons[Page], m_SettingsTabLabels.Get(Page), g_Config.m_UiSettingsPage == Page, &aSlots[Index], IGraphics::CORNER_ALL, &m_aAnimatorsSettingsTab[Page], nullptr, &SettingsNavigationSelected, &SettingsNavigationHover, 10.0f, nullptr, &m_aSettingsTabLabelElements[Page]);
 		}
 
 		if(SettingsPerfEnabled)
@@ -1586,20 +1589,16 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 	MainView = AppearanceSubTabs.m_ContentRect;
 	const float TabWidth = TabBar.w / (float)NUMBER_OF_APPEARANCE_TABS;
 	static CButtonContainer s_aPageTabs[NUMBER_OF_APPEARANCE_TABS] = {};
-	static const char *s_apAppearanceTabNames[NUMBER_OF_APPEARANCE_TABS] = {};
-	static char s_aAppearanceLanguageFile[IO_MAX_PATH_LENGTH] = {};
-	static bool s_AppearanceTabNamesInitialized = false;
-	if(!s_AppearanceTabNamesInitialized || str_comp(s_aAppearanceLanguageFile, g_Config.m_ClLanguagefile) != 0)
-	{
-		s_AppearanceTabNamesInitialized = true;
-		str_copy(s_aAppearanceLanguageFile, g_Config.m_ClLanguagefile, sizeof(s_aAppearanceLanguageFile));
-		s_apAppearanceTabNames[APPEARANCE_TAB_HUD] = Localize("HUD");
-		s_apAppearanceTabNames[APPEARANCE_TAB_CHAT] = Localize("Chat");
-		s_apAppearanceTabNames[APPEARANCE_TAB_NAME_PLATE] = Localize("Name Plate");
-		s_apAppearanceTabNames[APPEARANCE_TAB_HOOK_COLLISION] = Localize("Hook Collisions");
-		s_apAppearanceTabNames[APPEARANCE_TAB_INFO_MESSAGES] = Localize("Info Messages");
-		s_apAppearanceTabNames[APPEARANCE_TAB_LASER] = Localize("Laser");
-	}
+	static CQmLocalizedLabelCache s_AppearanceTabNames;
+	s_AppearanceTabNames.Refresh(g_Config.m_ClLanguagefile,
+		{
+			"HUD",
+			"Chat",
+			"Name Plate",
+			"Hook Collisions",
+			"Info Messages",
+			"Laser",
+		});
 
 	CUIRect aAppearanceTabSlots[NUMBER_OF_APPEARANCE_TABS];
 	CUIRect AppearanceTabsRemainder = TabBar;
@@ -1611,7 +1610,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 
 	for(int Tab = APPEARANCE_TAB_HUD; Tab < NUMBER_OF_APPEARANCE_TABS; ++Tab)
 	{
-		DoButton_MenuTab(&s_aPageTabs[Tab], s_apAppearanceTabNames[Tab], m_AppearanceSettingsTab == Tab, &aAppearanceTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
+		DoButton_MenuTab(&s_aPageTabs[Tab], s_AppearanceTabNames.Get(Tab), m_AppearanceSettingsTab == Tab, &aAppearanceTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
 	}
 
 	static const char *const s_apTabs[] = {"appearance-hud", "appearance-chat", "appearance-name-plate", "appearance-hook-collision", "appearance-info-messages", "appearance-laser"};

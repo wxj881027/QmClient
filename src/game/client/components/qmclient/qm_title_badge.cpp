@@ -5,23 +5,50 @@
 void CQmTitleBadge::Init(IGraphics *pGraphics)
 {
 	Shutdown(pGraphics);
-	const auto Load = [&](const char *pPath, IGraphics::CTextureHandle &Texture) {
-		CImageInfo Image;
-		if(pGraphics->LoadPng(Image, pPath, IStorage::TYPE_ALL))
-			Texture = pGraphics->LoadTextureRawMove(Image, 0, pPath);
-	};
-	Load("qmclient/title_badges/logo.png", m_Logo);
-	Load("qmclient/title_badges/moon.png", m_aPatterns[0]);
-	Load("qmclient/title_badges/sun.png", m_aPatterns[1]);
+	m_LogoGraphicsVersion = pGraphics->GraphicsResourcesResetVersion();
+	m_Logo.Init(pGraphics);
+	for(auto &Pattern : m_aPatterns)
+		Pattern.Init(pGraphics);
+	CImageInfo Image;
+	if(pGraphics->LoadPng(Image, "qmclient/title_badges/logo_sdf.png", IStorage::TYPE_ALL))
+	{
+		// 距离值不能经过普通颜色 mipmap 平均，否则小尺寸下耳朵和眼睛的轮廓会消失。
+		m_LogoDistance = pGraphics->LoadTextureRawMove(Image, IGraphics::TEXLOAD_NO_MIPMAPS, "qm_title_logo_sdf");
+	}
 }
 
 void CQmTitleBadge::Shutdown(IGraphics *pGraphics)
 {
-	if(m_Logo.IsValid())
-		pGraphics->UnloadTexture(&m_Logo);
+	m_Logo.Shutdown(pGraphics);
 	for(auto &Pattern : m_aPatterns)
-		if(Pattern.IsValid())
-			pGraphics->UnloadTexture(&Pattern);
+		Pattern.Shutdown(pGraphics);
+	if(m_LogoDistance.IsValid())
+		pGraphics->UnloadTexture(&m_LogoDistance);
+}
+
+bool CQmTitleBadge::RenderDistanceLogo(IGraphics *pGraphics, const CUIRect &Rect, ColorRGBA Color) const
+{
+	if(!m_LogoDistance.IsValid() || m_LogoGraphicsVersion != pGraphics->GraphicsResourcesResetVersion() ||
+		!pGraphics->HasRoundedRectSdf() || !pGraphics->HasRoundedRectSdfTexture())
+		return false;
+	float X0, Y0, X1, Y1;
+	pGraphics->GetScreen(&X0, &Y0, &X1, &Y1);
+	if(pGraphics->ScreenWidth() <= 0 || pGraphics->ScreenHeight() <= 0 || X1 <= X0 || Y1 <= Y0)
+		return false;
+
+	// 与 generate_title_logo_sdf.cjs 一致：16 单位原图外留 2 单位，编码范围为 [-2, 2]。
+	const float Padding = Rect.w * (2.0f / 16.0f);
+	const CUIRect Field{Rect.x - Padding, Rect.y - Padding, Rect.w + Padding * 2.0f, Rect.h + Padding * 2.0f};
+	IGraphics::SRoundedRectSdfParams Params;
+	Params.m_Rect = vec4(Field.x, Field.y, Field.w, Field.h);
+	Params.m_FillColor = vec4(Color.r, Color.g, Color.b, Color.a);
+	Params.m_Params.y = std::max((X1 - X0) / pGraphics->ScreenWidth(), (Y1 - Y0) / pGraphics->ScreenHeight());
+	Params.m_TextureParams0 = vec4(IGraphics::ROUNDED_RECT_SDF_TEXTURE_DISTANCE, 1.0f / Field.w, 1.0f / Field.h, 0.5f);
+	Params.m_TextureParams1 = vec4(0.5f, 1.0f, 4.0f / 20.0f, 0.0f);
+	pGraphics->TextureSet(m_LogoDistance);
+	pGraphics->RenderRoundedRectSdf(Params);
+	pGraphics->TextureClear();
+	return true;
 }
 
 void CQmTitleBadge::RenderSurface(IGraphics *pGraphics, const CUIRect &Rect, const SQmTitleAppearance &Appearance, float Alpha) const
@@ -36,31 +63,18 @@ void CQmTitleBadge::RenderSurface(IGraphics *pGraphics, const CUIRect &Rect, con
 	CUIRect Shadow = Rect;
 	Shadow.y += Scale;
 	DrawPill(Shadow, Palette.m_Background.WithMultipliedAlpha(0.05f));
-	DrawPill(Rect, Palette.m_Border);
-	CUIRect Inside;
-	Rect.Margin(Scale, &Inside);
-	DrawPill(Inside, Palette.m_Background);
+	QmDrawBadgeCapsuleGeometry(pGraphics, Rect, Palette.m_Background, Palette.m_Border);
 
-	const auto Draw = [&](IGraphics::CTextureHandle Texture, const CUIRect &Area, ColorRGBA Color, float U0, float U1) {
-		if(!Texture.IsValid() || Area.w <= 0.0f)
-			return;
-		pGraphics->TextureSet(Texture);
-		pGraphics->QuadsBegin();
-		pGraphics->QuadsSetRotation(0.0f);
-		pGraphics->QuadsSetSubset(U0, 0.0f, U1, 1.0f);
-		pGraphics->SetColor(Color);
-		IGraphics::CQuadItem Quad(Area.x, Area.y, Area.w, Area.h);
-		pGraphics->QuadsDrawTL(&Quad, 1);
-		pGraphics->QuadsEnd();
-	};
-	// 两端保持图标比例；中间只伸展星轨，文字长度不会拉宽月亮或太阳。
+	// 两端保持图标比例，中间只伸展星轨；日月图案继续使用离线展开的几何网格。
 	const float RightWidth = std::min(32.0f * Scale, Rect.w);
 	const float LeftWidth = std::min(40.0f * Scale, Rect.w - RightWidth);
-	const auto Pattern = m_aPatterns[Appearance.m_Style == EQmTitleBadgeStyle::SUN ? 1 : 0];
+	const int Pattern = Appearance.m_Style == EQmTitleBadgeStyle::SUN ? 3 : 0;
 	const ColorRGBA PatternColor = Palette.m_Icon.WithMultipliedAlpha(0.20f);
-	Draw(Pattern, {Rect.x, Rect.y, LeftWidth, Rect.h}, PatternColor, 0.0f, LeftWidth / (117.0f * Scale));
-	Draw(Pattern, {Rect.x + LeftWidth, Rect.y, Rect.w - LeftWidth - RightWidth, Rect.h}, PatternColor, 40.0f / 117.0f, 85.0f / 117.0f);
-	Draw(Pattern, {Rect.x + Rect.w - RightWidth, Rect.y, RightWidth, Rect.h}, PatternColor, 85.0f / 117.0f, 1.0f);
-	Draw(m_Logo, {Rect.x + 9.0f * Scale, Rect.y + 4.0f * Scale, 16.0f * Scale, 16.0f * Scale}, Palette.m_Icon, 0.0f, 1.0f);
+	m_aPatterns[Pattern].Render(pGraphics, {Rect.x, Rect.y, 40.0f * Scale, Rect.h}, PatternColor, LeftWidth / Scale);
+	m_aPatterns[Pattern + 1].Render(pGraphics, {Rect.x + LeftWidth, Rect.y, Rect.w - LeftWidth - RightWidth, Rect.h}, PatternColor);
+	m_aPatterns[Pattern + 2].Render(pGraphics, {Rect.x + Rect.w - RightWidth, Rect.y, RightWidth, Rect.h}, PatternColor);
+	const CUIRect Logo{Rect.x + 9.0f * Scale, Rect.y + 4.0f * Scale, 16.0f * Scale, 16.0f * Scale};
+	if(!RenderDistanceLogo(pGraphics, Logo, Palette.m_Icon))
+		m_Logo.Render(pGraphics, Logo, Palette.m_Icon);
 	pGraphics->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 }

@@ -9,17 +9,25 @@
 #include <engine/sqlite.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/ddnet_activity.h>
+#include <game/client/components/qmclient/player_points_request.h>
 #include <game/client/components/qmclient/player_points_state.h>
 
 #include <map>
 #include <memory>
 #include <string>
 
+namespace qm_update
+{
+	class CSystemProxyJob;
+}
+
 struct SPlayerPointsParseResult
 {
 	bool m_JsonParsed = false;
 	bool m_PointsFound = false;
 	int m_Points = 0;
+	int64_t m_PlaytimeHours = -1;
 };
 
 inline SPlayerPointsParseResult ExtractPlayerPointsJson(const json_value *pRoot)
@@ -28,6 +36,7 @@ inline SPlayerPointsParseResult ExtractPlayerPointsJson(const json_value *pRoot)
 	if(!pRoot)
 		return Result;
 	Result.m_JsonParsed = true;
+	Result.m_PlaytimeHours = QmDdnetActivityHours(pRoot);
 	const json_value *pPointsObj = json_object_get(pRoot, "points");
 	const json_value *pPointsVal = pPointsObj ? json_object_get(pPointsObj, "points") : nullptr;
 	if(pPointsVal)
@@ -45,8 +54,9 @@ private:
 
 	struct SRequestSlot
 	{
-		std::shared_ptr<IHttpRequest> m_pRequest;
+		CQmPlayerPointsRequest m_Request;
 		CQmPlayerPointsCache::SRequestToken m_Token;
+		std::shared_ptr<qm_update::CSystemProxyJob> m_pProxyJob;
 	};
 	std::map<std::string, SRequestSlot> m_ActiveRequests;
 	// 已完成的 HTTP 响应每个玩家最多交给一个后台任务解析。
@@ -76,6 +86,7 @@ public:
 	// Public interface
 	void EnsureQueried(const char *pPlayerName);
 	SPlayerPointsResult GetPoints(const char *pPlayerName);
+	SPlayerPlaytimeResult GetPlaytime(const char *pPlayerName) const;
 };
 
 #endif

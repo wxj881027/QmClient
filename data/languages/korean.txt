@@ -1019,9 +1019,6 @@ API key
 APP ID
 == 앱 ID
 
-Appearance
-== 외형
-
 Appearance and command highlighting of the local console
 == 로컬 콘솔의 모양과 명령어 강조 표시
 
@@ -1180,9 +1177,6 @@ Asset preset
 
 Asset with this name already exists.
 == 같은 이름의 에셋이 이미 존재합니다.
-
-Assets
-== 에셋
 
 Assets directory
 == 에셋 디렉터리
@@ -2852,9 +2846,6 @@ Config Filters
 Config version. Helps new client fix old config errors.
 == 설정 버전. 새 클라이언트가 이전 설정 오류를 수정하는 데 도움
 
-Configs
-== 설정 파일
-
 Configuration
 == 설정
 
@@ -3181,9 +3172,6 @@ Controller GUID of the active controller
 
 Controller jitter tolerance
 == 컨트롤러 지터 허용 범위
-
-Controls
-== 조작
 
 Controls demo recording and playback behavior.
 == 데모 녹화와 재생 동작을 제어합니다.
@@ -3664,6 +3652,9 @@ DDraceNetwork is a cooperative online game where the goal is for you and your gr
 
 DDRaceNetwork · DDNet
 == DDRaceNetwork · DDNet
+
+DDStats shows UTC dates, updates daily and matches players by name only.
+== DDStats의 날짜는 UTC 기준으로 매일 갱신되며 플레이어 이름만으로 일치 여부를 확인합니다.
 
 ddstats.tw ID stats
 == ddstats.tw ID 통계
@@ -5204,9 +5195,6 @@ Entities background color
 Entity assets
 == 엔티티 에셋
 
-Entity Background Image
-== 엔티티 배경 이미지
-
 Entity overlay
 == 엔티티 오버레이
 
@@ -5329,6 +5317,9 @@ Expanded dropdown background opacity percentage
 
 Experimental
 == 실험적
+
+Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP.
+== 실험 기능: 왕복 탐침에 응답이 없으면 상향 UDP 게임 패킷을 반복 전송합니다. 업로드 트래픽은 최대 세 배가 되며, 하향 패킷 손실이나 늦게 도착한 중복 입력은 여전히 문제를 일으킬 수 있습니다. KCP 사용 시 비활성화됩니다.
 
 Export
 == 내보내기
@@ -6083,9 +6074,6 @@ Gap between tee and nametag
 Gaussian
 == 가우시안
 
-General
-== 일반
-
 Generated skin outline color
 == 생성된 외곽선 색상
 
@@ -6289,9 +6277,6 @@ Gradient type
 
 Gradient vertical position
 == 그라데이션 세로 위치
-
-Graphics
-== 그래픽
 
 Graphics backend does not support dummy mini view
 == 현재 그래픽 백엔드는 분신 미니 화면을 지원하지 않습니다
@@ -6704,9 +6689,6 @@ Hook collision line length follows cursor distance
 Hook collision line opacity
 == 갈고리 충돌선 불투명도
 
-Hook Collisions
-== 갈고리 충돌
-
 Hook collisions
 == 갈고리 충돌
 
@@ -6844,6 +6826,9 @@ Hue
 
 Hue speed
 == 색조 속도
+
+Humming
+== 흥얼거리기
 
 i = Receive rate
 == i = 수신 속도
@@ -7646,6 +7631,9 @@ Last entered
 Last page in console
 == 콘솔의 마지막 페이지
 
+Last seen (DDStats): %s
+== 최근 접속(DDStats): %s
+
 Last successful sync: %s
 == 마지막 동기화 성공: %s
 
@@ -8096,8 +8084,17 @@ LXGW WenKai is unavailable. Current fonts and weights will be kept.
 Lyrics
 == 가사
 
+Lyrics language
+== 가사 언어
+
+Lyrics language (0=Original, 1=Translation, 2=Original and translation)
+== 가사 언어 (0=원문, 1=번역, 2=원문 및 번역)
+
 Lyrics live in the Dynamic Island, so they stay hidden until that option is on.
 == 가사는 Dynamic Island에 표시되므로 해당 옵션을 켜기 전에는 보이지 않습니다.
+
+Lyrics translation
+== 가사 번역
 
 Magic: Spirit Script
 == 마법풍: 영혼의 문자
@@ -8441,6 +8438,9 @@ Maximum number of automatic scoreboard screenshots (0 = unlimited)
 Maximum number of clients on server
 == 서버의 최대 클라이언트 수
 
+Maximum number of copies per outgoing UDP game packet
+== 상향 UDP 게임 패킷당 최대 전송 사본 수
+
 Maximum number of packets received in one batch before returning to the main loop (0 = unlimited).
 == 메인 루프로 돌아가기 전에 한 번에 수신할 수 있는 최대 패킷 수(0 = 제한 없음).
 
@@ -8458,6 +8458,9 @@ Maximum number of skins loaded simultaneously
 
 Maximum number of vanilla antispoof handshakes answered per second (0 = unlimited).
 == 초당 응답할 수 있는 바닐라 스푸핑 방지 핸드셰이크의 최대 수(0 = 제한 없음).
+
+Maximum packet copies
+== 최대 패킷 전송 사본 수
 
 Maximum players participating in a vote (0 = unlimited)
 == 투표에 참여할 수 있는 최대 플레이어 수 (0 = 무제한)
@@ -8740,6 +8743,9 @@ Moves to the point with x/y-coordinates ii
 
 Moves to the tile with x/y-number ii
 == x/y 번호 ii 의 타일로 이동
+
+Moving block and freeze prediction (experimental)
+== 이동 블록 및 동결 영역 예측 (실험적)
 
 MP4 is the most compatible for sharing, MOV is the editing standard and required by ProRes, and MKV suits lossless archives but is poorly supported by editors.
 == MP4는 공유에 가장 호환성이 좋고, MOV는 편집 표준이며 ProRes에 필요하고, MKV는 무손실 보관에 알맞지만 편집 프로그램 지원이 부족합니다.
@@ -9296,6 +9302,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 No recently used skins
 == 최근 사용한 스킨 없음
 
+No record
+== 기록 없음
+
 No release notes provided
 == 이 버전의 업데이트 내용이 없습니다
 
@@ -9746,6 +9755,9 @@ Or visit DDNet.org
 Original
 == 기본
 
+Original and translation
+== 원문 및 번역
+
 Original language for both received and outgoing messages. Use Auto to detect each message.
 == 받은 메시지와 보낸 메시지 모두 원래 언어를 사용합니다. 각 메시지 감지에는 자동을 사용하세요.
 
@@ -9754,6 +9766,9 @@ Original language for incoming and outgoing text
 
 Original message language
 == 원문 언어
+
+Original only
+== 원문만
 
 Original options
 == 원본 투표 항목
@@ -10433,6 +10448,9 @@ Plays a short effect when a tee's skin changes, and can copy the skin of the tee
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == 해머로 빼앗은 스킨을 포함해 스킨이 바뀔 때 애니메이션을 재생합니다.
 
+Playtime (h)
+== 플레이 시간(h)
+
 Please add a valid cut first
 == 먼저 유효한 잘라내기 구간을 추가하세요
 
@@ -10564,6 +10582,9 @@ Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when fr
 
 Predict grenade trajectory (only with cl_antiping 1)
 == 유탄 궤적 예측 (cl_antiping 1에서만)
+
+Predict moving blocks and freeze quads on servers using Axiom quad rules (experimental)
+== Axiom 사각형 규칙을 사용하는 서버에서 이동 블록과 동결 영역 예측 (실험적)
 
 Predict ninja path
 == 닌자 경로 예측
@@ -11020,6 +11041,9 @@ Querying points for %s...
 
 Querying points...
 == 포인트 조회 중...
+
+Querying...
+== 조회 중…
 
 Queue is empty
 == 대기열이 비어 있습니다
@@ -12269,6 +12293,9 @@ Scoreboard cursor
 Scoreboard filter: only show players whose name or clan contains this text
 == 스코어보드 필터: 이름 또는 클랜에 이 텍스트가 포함된 플레이어만 표시합니다
 
+Scoreboard playtime
+== 스코어보드 플레이 시간
+
 Scoreboard point check
 == 점수판 포인트 확인
 
@@ -12560,6 +12587,9 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == 지정된 명령을 rcon 으로 전송
 
+Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
+== 30~90초의 무작위 간격으로 연속 세 줄의 가사를 전체 채팅에 보내며 줄 사이에 3초 대기
+
 Send translation method
 == 번역 방식 보내기
 
@@ -12583,6 +12613,9 @@ Sends a saved .map file from your client to the public test server and reports p
 
 Sends an automatic chat reply when someone whispers you while you are muted or away.
 == 음소거 중이거나 자리를 비웠을 때 누군가 귓속말을 보내면 자동으로 채팅 답장을 보냅니다.
+
+Separate Dynamic Island
+== 다이나믹 아일랜드 분리
 
 Separate with commas
 == 쉼표로 구분
@@ -13187,6 +13220,9 @@ Show friend tag (♥) on nametag
 Show friends only
 == 친구만 표시
 
+Show friends' last seen dates (DDStats)
+== 친구의 최근 접속 날짜 표시(DDStats)
+
 Show frozen Tee HUD
 == 얼어붙은 Tee HUD 표시
 
@@ -13382,6 +13418,9 @@ Show kill messages
 Show labels on status bar items
 == 상태 표시줄 항목에 레이블 표시
 
+Show last seen dates for offline friends using DDStats (updated daily, matched by player name)
+== DDStats로 오프라인 친구의 최근 접속 날짜 표시(매일 갱신, 플레이어 이름으로 일치 여부 확인)
+
 Show list of mutes (page 1 by default, 20 entries per page)
 == 음소거 목록 표시 (기본값 1페이지, 페이지당 20개 항목)
 
@@ -13396,6 +13435,12 @@ Show local time seconds
 
 Show logs of the last i seconds
 == 마지막 i 초의 로그 표시
+
+Show lyrics in a separate island below Dynamic Island
+== 다이나믹 아일랜드 아래의 별도 아일랜드에 가사 표시
+
+Show lyrics in Dynamic Island
+== 다이나믹 아일랜드에 가사 표시
 
 Show lyrics inside Dynamic Island
 == 다이나믹 아일랜드에 가사 표시
@@ -13598,6 +13643,12 @@ Show player Tee
 Show players' key presses
 == 플레이어 키 입력 표시
 
+Show playtime
+== 플레이 시간 표시
+
+Show points
+== 포인트 표시
+
 Show position and angle
 == 위치와 각도 표시
 
@@ -13795,6 +13846,9 @@ Show titles on nameplates
 
 Show toast
 == 토스트 메시지 표시
+
+Show total DDNet playtime from activity instead of points in scoreboard
+== 스코어보드에서 포인트 대신 DDNet activity의 총 플레이 시간을 표시
 
 Show tune zone colors
 == tune zone 영역 색상 표시
@@ -14228,9 +14282,6 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == SodaMusic Hook 도우미 경로(비워 두면 QmClient과 같은 디렉터리)
 
-Soft glow
-== 은은한 빛
-
 Solid
 == 단색
 
@@ -14411,8 +14462,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == 본체와 분신을 서로 다른 팀에 넣어 solo 런 시작을 동기화합니다（team-0 동기화가 어려운 맵용）
 
-Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
-== 후원자 채팅 스타일 초안: 0=보통, 1=은은한 빛, 2=백금 하이라이트
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight
+== 후원자 채팅 스타일 초안: 0=보통, 1=백금 하이라이트
 
 Sponsor code
 == 인증 코드
@@ -15010,9 +15061,6 @@ Teams are not available on this server; if the team is locked, any team member d
 
 Tee
 == 티
-
-Tee 0.7
-== 티 0.7
 
 Tee appearance
 == Tee 외형
@@ -15944,6 +15992,9 @@ Translation menu selected color
 Translation model was not found. Check the model name.
 == 번역 모델을 찾을 수 없습니다. 모델 이름을 확인하세요.
 
+Translation only
+== 번역만
+
 Translation service
 == 번역 서비스
 
@@ -16459,6 +16510,9 @@ Upload a saved map to the public test server
 
 Upload map
 == 맵 업로드
+
+Upstream redundancy (experimental)
+== 상향 패킷 중복 전송 (실험적)
 
 URL for downloading community skins
 == 커뮤니티 스킨 다운로드 URL
