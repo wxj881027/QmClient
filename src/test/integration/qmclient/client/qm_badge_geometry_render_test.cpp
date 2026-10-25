@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 #include <test/support/icon_benchmark_graphics.h>
 
+#include <cstring>
 #include <unordered_set>
 #include <vector>
 
@@ -31,6 +32,10 @@ namespace
 		using CIconBenchmarkGraphics::LoadPng;
 		bool LoadPng(CImageInfo &Image, const char *pPath, int StorageType) override
 		{
+			// 距离场 Logo 是当前正常读取的贴图；几何用例不加载它，让它失败后渲染
+			// 退回几何胶囊。其它 PNG 仍然代表回退到旧贴图管线。
+			if(strcmp(pPath, "qmclient/title_badges/logo_sdf.png") == 0)
+				return false;
 			ADD_FAILURE() << "徽章几何不应读取 PNG: " << pPath;
 			return false;
 		}

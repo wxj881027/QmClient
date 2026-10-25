@@ -61,7 +61,9 @@ TEST(QmHudMediaIslandSource, DisablesNeteaseOnlyWorkWhenTheHookIsOff)
 	const std::string IntegrationSource = ReadTestSourceFile("src/game/client/components/qmclient/netease/netease_integration.cpp");
 	const std::string IntegrationBody = FunctionBody(IntegrationSource, "void CNeteaseIntegration::OnUpdate()");
 
-	EXPECT_NE(HudCacheBody.find("if(g_Config.m_QmNeteaseHookEnable != 0)"), std::string::npos);
+	// 关闭网易云 hook 时，媒体岛缓存不再把网易云算作可用媒体源（判断已并入
+	// SystemMediaControls::AnyMediaSourceEnabled 的入参，不再单独开 if）。
+	EXPECT_NE(HudCacheBody.find("g_Config.m_QmNeteaseHookEnable != 0"), std::string::npos);
 	EXPECT_NE(VisibleBody.find("if(g_Config.m_QmHudIslandUseOriginalStyle)"), std::string::npos);
 	EXPECT_NE(AvoidanceBody.find("if(g_Config.m_QmHudIslandUseOriginalStyle)"), std::string::npos);
 	EXPECT_NE(IntegrationBody.find("if(!g_Config.m_QmNeteaseHookEnable)"), std::string::npos);
@@ -102,8 +104,12 @@ TEST(QmHudMediaIslandSource, RenderPathKeepsStableNodesAndEditorRect)
 	EXPECT_NE(RenderBody.find("TimerCapsule.m_Alpha * EntranceContentAlpha"), std::string::npos);
 	EXPECT_NE(RenderBody.find("QmHudMediaIslandDesiredBottomWidth("), std::string::npos);
 	EXPECT_EQ(RenderBody.find("TextBoundingBox(BottomFontSize, aLyricsIslandBuf)"), std::string::npos);
-	EXPECT_NE(RenderBody.find("QmHudMediaIslandMarqueeOffset("), std::string::npos);
-	EXPECT_NE(RenderBody.find("EnableMappedClip("), std::string::npos);
+	// 岛内歌词渲染已收口到共享歌词层：岛只调用 QmRenderLyricsRows，
+	// 跑马灯偏移与裁剪由该层负责，两条不变量跟随模块一起校验。
+	EXPECT_NE(RenderBody.find("QmRenderLyricsRows("), std::string::npos);
+	const std::string LyricsHudSource = ReadTestSourceFile("src/game/client/QmUi/QmLyricsHud.cpp");
+	EXPECT_NE(LyricsHudSource.find("QmHudMediaIslandMarqueeOffset("), std::string::npos);
+	EXPECT_NE(LyricsHudSource.find("EnableMappedClip("), std::string::npos);
 	EXPECT_NE(RenderBody.find("0.42f * EntranceContentAlpha"), std::string::npos);
 	EXPECT_NE(RenderBody.find("SdfItem.m_ContentScale = Item.m_ContentScale * EntranceContentAlpha"), std::string::npos);
 	EXPECT_NE(RenderBody.find("SatelliteIconSize * Item.m_ContentScale * EntranceContentAlpha"), std::string::npos);
