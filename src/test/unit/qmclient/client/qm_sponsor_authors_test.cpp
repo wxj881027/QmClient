@@ -4,6 +4,9 @@
 
 #include <gtest/gtest.h>
 
+#include <cmath>
+#include <limits>
+
 TEST(QmSponsorAuthors, ProvidesTheFourDisplayedAuthors)
 {
 	const auto &Authors = QmSponsorAuthors::Authors();
@@ -98,28 +101,103 @@ TEST(QmSponsorAuthors, InactivePointerRestoresBaselineBlurWithoutRedaction)
 	EXPECT_FLOAT_EQ(Result.m_Blur, 0.12f);
 }
 
-TEST(QmSponsorAuthors, GlitchHasShortBurstsAndReturnsToTheOriginalTee)
+TEST(QmSponsorAuthors, XiariKeepsVisibleGlitchComponentsThroughoutTheCycle)
 {
 	const auto &Author = QmSponsorAuthors::Authors()[2];
-	const auto Burst = QmSponsorAuthors::TeePresentation(Author, 0.13, 2);
-	EXPECT_GT(length(Burst.m_Offset), 0.0f);
-	const auto Rest = QmSponsorAuthors::TeePresentation(Author, 1.0, 2);
-	EXPECT_FLOAT_EQ(length(Rest.m_Offset), 0.0f);
-	EXPECT_FLOAT_EQ(Rest.m_Scale, 1.0f);
-	const auto Repeated = QmSponsorAuthors::TeePresentation(Author, 3.33, 2);
-	EXPECT_EQ(Burst.m_Offset, Repeated.m_Offset);
-	EXPECT_FLOAT_EQ(Burst.m_Scale, Repeated.m_Scale);
+	for(const double Time : {0.0, 0.13, 0.5, 1.0, 2.8, 3.19, 3.21, 4.0, 5.7, 7.99})
+	{
+		SCOPED_TRACE(Time);
+		const auto Result = QmSponsorAuthors::TeePresentation(Author, Time);
+		EXPECT_TRUE(Result.m_Glitch);
+		EXPECT_GT(Result.m_ChromaOffset, 0.0f);
+		EXPECT_GT(Result.m_ChromaAlpha, 0.0f);
+		EXPECT_GT(Result.m_ScanlineHeight, 0.0f);
+		EXPECT_GT(Result.m_ScanlineAlpha, 0.0f);
+		for(float Offset : Result.m_aSliceOffsets)
+			EXPECT_GT(std::abs(Offset), 0.0f);
+	}
 }
 
-TEST(QmSponsorAuthors, ReducedMotionAndOtherAuthorsRemainStationary)
+TEST(QmSponsorAuthors, SliceTearingChangesOverTimeAndStaysWithinTheAvatarMargin)
 {
-	for(const int Level : {0, 1})
+	const auto &Author = QmSponsorAuthors::Authors()[2];
+	const auto First = QmSponsorAuthors::TeePresentation(Author, 0.0);
+	const auto Later = QmSponsorAuthors::TeePresentation(Author, 0.2);
+	EXPECT_NE(First.m_aSliceOffsets, Later.m_aSliceOffsets);
+	for(const auto &Result : {First, Later})
 	{
-		const auto Result = QmSponsorAuthors::TeePresentation(QmSponsorAuthors::Authors()[2], 0.13, Level);
-		EXPECT_FLOAT_EQ(length(Result.m_Offset), 0.0f);
-		EXPECT_FLOAT_EQ(Result.m_Scale, 1.0f);
+		bool HasLeft = false, HasRight = false;
+		for(float Offset : Result.m_aSliceOffsets)
+		{
+			HasLeft |= Offset < 0.0f;
+			HasRight |= Offset > 0.0f;
+			EXPECT_LT(std::abs(Offset), 0.15f);
+		}
+		EXPECT_TRUE(HasLeft);
+		EXPECT_TRUE(HasRight);
 	}
-	const auto Qiuka = QmSponsorAuthors::TeePresentation(QmSponsorAuthors::Authors()[3], 0.13, 2);
-	EXPECT_FLOAT_EQ(length(Qiuka.m_Offset), 0.0f);
-	EXPECT_FLOAT_EQ(Qiuka.m_Scale, 1.0f);
+}
+
+TEST(QmSponsorAuthors, ScanlineTravelsAndWrapsWhileChromaRemainsVisible)
+{
+	const auto &Author = QmSponsorAuthors::Authors()[2];
+	const auto First = QmSponsorAuthors::TeePresentation(Author, 0.25);
+	const auto Later = QmSponsorAuthors::TeePresentation(Author, 1.25);
+	const auto Wrapped = QmSponsorAuthors::TeePresentation(Author, 2.25);
+	EXPECT_LT(First.m_ScanlineY, Later.m_ScanlineY);
+	EXPECT_FLOAT_EQ(First.m_ScanlineY, Wrapped.m_ScanlineY);
+	EXPECT_NE(First.m_ChromaOffset, Later.m_ChromaOffset);
+	for(const auto &Result : {First, Later, Wrapped})
+	{
+		EXPECT_GE(Result.m_ScanlineY, 0.0f);
+		EXPECT_LT(Result.m_ScanlineY, 1.0f);
+		EXPECT_GT(Result.m_ChromaAlpha, 0.0f);
+		EXPECT_LE(Result.m_ChromaAlpha, 1.0f);
+	}
+}
+
+TEST(QmSponsorAuthors, GlitchIsDeterministicAcrossClockWrapAndNegativeTimes)
+{
+	const auto &Author = QmSponsorAuthors::Authors()[2];
+	const auto Reference = QmSponsorAuthors::TeePresentation(Author, 7.75);
+	for(const double Time : {-0.25, 15.75, 8000007.75})
+	{
+		SCOPED_TRACE(Time);
+		const auto Result = QmSponsorAuthors::TeePresentation(Author, Time);
+		EXPECT_EQ(Result.m_aSliceOffsets, Reference.m_aSliceOffsets);
+		EXPECT_FLOAT_EQ(Result.m_ChromaOffset, Reference.m_ChromaOffset);
+		EXPECT_FLOAT_EQ(Result.m_ChromaAlpha, Reference.m_ChromaAlpha);
+		EXPECT_FLOAT_EQ(Result.m_ScanlineY, Reference.m_ScanlineY);
+	}
+}
+
+TEST(QmSponsorAuthors, InvalidClockKeepsAVisibleFiniteInitialGlitch)
+{
+	const auto &Author = QmSponsorAuthors::Authors()[2];
+	const auto Initial = QmSponsorAuthors::TeePresentation(Author, 0.0);
+	for(const double Time : {std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()})
+	{
+		const auto Result = QmSponsorAuthors::TeePresentation(Author, Time);
+		EXPECT_TRUE(Result.m_Glitch);
+		EXPECT_EQ(Result.m_aSliceOffsets, Initial.m_aSliceOffsets);
+		EXPECT_FLOAT_EQ(Result.m_ChromaOffset, Initial.m_ChromaOffset);
+		EXPECT_FLOAT_EQ(Result.m_ScanlineY, Initial.m_ScanlineY);
+	}
+}
+
+TEST(QmSponsorAuthors, OtherAuthorsKeepTheirOriginalSkinWithoutGlitchLayers)
+{
+	for(const auto &Author : QmSponsorAuthors::Authors())
+	{
+		if(Author.m_Glitch)
+			continue;
+		SCOPED_TRACE(Author.m_pName);
+		const auto Result = QmSponsorAuthors::TeePresentation(Author, 1.25);
+		EXPECT_FALSE(Result.m_Glitch);
+		EXPECT_FLOAT_EQ(Result.m_ChromaOffset, 0.0f);
+		EXPECT_FLOAT_EQ(Result.m_ChromaAlpha, 0.0f);
+		EXPECT_FLOAT_EQ(Result.m_ScanlineAlpha, 0.0f);
+		for(float Offset : Result.m_aSliceOffsets)
+			EXPECT_FLOAT_EQ(Offset, 0.0f);
+	}
 }

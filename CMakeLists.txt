@@ -3191,6 +3191,8 @@ if(CLIENT)
     QmUi/QmBadgeGeometryData.h
     QmUi/QmAuthorName.cpp
     QmUi/QmAuthorName.h
+    QmUi/QmAuthorTee.cpp
+    QmUi/QmAuthorTee.h
     QmUi/QmAnim.cpp
     QmUi/QmAnim.h
     QmUi/QmUiPerf.cpp

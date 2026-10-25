@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 const std::array<QmSponsorAuthors::SAuthor, 4> &QmSponsorAuthors::Authors()
 {
@@ -34,21 +35,37 @@ QmSponsorAuthors::SNamePresentation QmSponsorAuthors::NamePresentation(const SAu
 	return {Author.m_pName, 0.12f + 0.88f * Proximity * Proximity, false};
 }
 
-QmSponsorAuthors::STeePresentation QmSponsorAuthors::TeePresentation(const SAuthor &Author, double TimeSec, int MotionLevel)
+QmSponsorAuthors::STeePresentation QmSponsorAuthors::TeePresentation(const SAuthor &Author, double TimeSec)
 {
 	STeePresentation Result;
-	if(!Author.m_Glitch || MotionLevel < 2 || !std::isfinite(TimeSec))
+	if(!Author.m_Glitch)
 		return Result;
-	// 一个短故障段内离散跳帧，其余时间静止；时间取模，不随运行时长降低精度。
-	double Phase = std::fmod(TimeSec, 3.2);
+	if(!std::isfinite(TimeSec))
+		TimeSec = 0.0;
+	// 故障始终存在；只在有界时间内计算相位，不使用全局 UI 动效等级。
+	double Phase = std::fmod(TimeSec, 8.0);
 	if(Phase < 0.0)
-		Phase += 3.2;
-	if(Phase >= 0.36)
-		return Result;
-	static constexpr vec2 s_aOffsets[] = {{-0.045f, 0.015f}, {0.06f, -0.025f}, {-0.02f, 0.035f}, {0.04f, 0.0f}, {-0.055f, -0.02f}, {0.025f, 0.01f}};
-	const int Frame = std::min(static_cast<int>(Phase / 0.06), 5);
-	Result.m_Offset = s_aOffsets[Frame];
-	Result.m_Scale = Frame % 2 == 0 ? 0.96f : 1.04f;
+		Phase += 8.0;
+	const float Pulse = 0.5f + 0.5f * std::sin(static_cast<float>(Phase * pi * 1.5));
+	const uint32_t Frame = static_cast<uint32_t>(Phase * 18.0);
+	const auto Noise = [](uint32_t Seed) {
+		Seed ^= Seed >> 16;
+		Seed *= 0x7feb352du;
+		Seed ^= Seed >> 15;
+		return static_cast<float>(Seed & 0xffffu) / 65535.0f;
+	};
+	Result.m_Glitch = true;
+	Result.m_ChromaOffset = 0.035f + 0.035f * Pulse;
+	Result.m_ChromaAlpha = 0.38f + 0.18f * Pulse;
+	for(size_t Index = 0; Index < Result.m_aSliceOffsets.size(); ++Index)
+	{
+		const float Sign = (Index + Frame) % 2 == 0 ? -1.0f : 1.0f;
+		const float Tear = Index == Frame % Result.m_aSliceOffsets.size() ? 0.035f : 0.0f;
+		Result.m_aSliceOffsets[Index] = Sign * (0.018f + 0.04f * Noise(Frame * 37u + static_cast<uint32_t>(Index) * 101u + 1u) + Tear);
+	}
+	Result.m_ScanlineY = static_cast<float>(std::fmod(Phase * 0.5, 1.0));
+	Result.m_ScanlineHeight = 0.035f;
+	Result.m_ScanlineAlpha = 0.45f + 0.20f * Pulse;
 	return Result;
 }
 
