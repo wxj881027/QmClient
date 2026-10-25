@@ -56,7 +56,7 @@ void QmForEachItemTrailSample(SQmItemTrailRange Range, FEmit &&Emit)
 {
 	for(int64_t Index = Range.m_First; Index < Range.m_End; ++Index)
 	{
-		// 发射器拒绝时后续样本也不能接收；不为空粒子反复计算轨迹和随机参数。
+		// 首个拒收即结束本次重建，避免继续为拒收的烟迹计算轨迹和随机参数。
 		if(!Emit(Index))
 			return;
 	}
