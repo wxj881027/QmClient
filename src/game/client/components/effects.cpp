@@ -361,6 +361,8 @@ void CEffects::Explosion(vec2 Pos, float Alpha)
 {
 	if(GetQmFocusModeDecisions().m_HideExplosionEffects)
 		return;
+	if(!CParticle::CanCollideAt(Pos))
+		return;
 
 	// add to flow
 	for(int y = -8; y <= 8; y++)

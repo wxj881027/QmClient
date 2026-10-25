@@ -41,6 +41,9 @@ void CParticles::OnReset()
 
 bool CParticles::Add(int Group, CParticle *pPart, float TimePassed)
 {
+	if(!std::isfinite(TimePassed) || !pPart->CanMove(vec2(0.0f, 0.0f)))
+		return false;
+
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
 	{
 		const IDemoPlayer::CInfo *pInfo = DemoPlayer()->BaseInfo();
@@ -79,7 +82,7 @@ bool CParticles::Add(int Group, CParticle *pPart, float TimePassed)
 
 void CParticles::Update(float TimePassed)
 {
-	if(TimePassed <= 0.0f)
+	if(!std::isfinite(TimePassed) || TimePassed <= 0.0f)
 		return;
 
 	m_FrictionFraction += TimePassed;
@@ -107,21 +110,24 @@ void CParticles::Update(float TimePassed)
 
 			// move the point
 			vec2 Vel = m_aParticles[i].m_Vel * TimePassed;
-			if(m_aParticles[i].m_Collides)
+			const bool CanMove = m_aParticles[i].CanMove(Vel);
+			if(CanMove)
 			{
-				Collision()->MovePoint(&m_aParticles[i].m_Pos, &Vel, random_float(0.1f, 1.0f), nullptr);
+				if(m_aParticles[i].m_Collides)
+				{
+					Collision()->MovePoint(&m_aParticles[i].m_Pos, &Vel, random_float(0.1f, 1.0f), nullptr);
+				}
+				else
+				{
+					m_aParticles[i].m_Pos += Vel;
+				}
+				m_aParticles[i].m_Vel = Vel * (1.0f / TimePassed);
+				m_aParticles[i].m_Life += TimePassed;
+				m_aParticles[i].m_Rot += TimePassed * m_aParticles[i].m_Rotspeed;
 			}
-			else
-			{
-				m_aParticles[i].m_Pos += Vel;
-			}
-			m_aParticles[i].m_Vel = Vel * (1.0f / TimePassed);
-
-			m_aParticles[i].m_Life += TimePassed;
-			m_aParticles[i].m_Rot += TimePassed * m_aParticles[i].m_Rotspeed;
 
 			// check particle death
-			if(m_aParticles[i].m_Life > m_aParticles[i].m_LifeSpan)
+			if(!CanMove || m_aParticles[i].m_Life > m_aParticles[i].m_LifeSpan)
 			{
 				// remove it from the group list
 				if(m_aParticles[i].m_PrevPart != -1)

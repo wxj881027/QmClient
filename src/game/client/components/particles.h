@@ -7,9 +7,34 @@
 
 #include <game/client/component.h>
 
+#include <cmath>
+#include <limits>
+
 // particles
 struct CParticle
 {
+	static bool CanCollideAt(vec2 Pos)
+	{
+		const auto CanRound = [](float Value) {
+			// 与碰撞入口的round_to_int保持相同浮点舍入，转换前检查真实int边界。
+			const float Rounded = Value > 0.0f ? Value + 0.5f : Value - 0.5f;
+			return std::isfinite(Rounded) &&
+			       static_cast<double>(Rounded) >= std::numeric_limits<int>::min() &&
+			       static_cast<double>(Rounded) <= std::numeric_limits<int>::max();
+		};
+		return CanRound(Pos.x) && CanRound(Pos.y);
+	}
+
+	bool CanMove(vec2 Displacement) const
+	{
+		const vec2 NextPos = m_Pos + Displacement;
+		if(!std::isfinite(m_Pos.x) || !std::isfinite(m_Pos.y) ||
+			!std::isfinite(Displacement.x) || !std::isfinite(Displacement.y) ||
+			!std::isfinite(NextPos.x) || !std::isfinite(NextPos.y))
+			return false;
+		return !m_Collides || (CanCollideAt(m_Pos) && CanCollideAt(NextPos));
+	}
+
 	void SetDefault()
 	{
 		m_Pos = vec2(0, 0);

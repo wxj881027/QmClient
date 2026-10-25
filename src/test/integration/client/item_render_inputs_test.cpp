@@ -2,9 +2,11 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/components/particles.h>
 #include <game/client/components/qmclient/item_render_math.h>
 #include <game/client/laser_data.h>
 #include <game/client/projectile_data.h>
+#include <game/gamecore.h>
 
 #include <gtest/gtest.h>
 
@@ -57,4 +59,53 @@ TEST(ItemRenderInputs, SecureProjectileCanProduceTrailCountersBeyondIntRange)
 	int Calls = 0;
 	QmForEachItemTrailSample(Range, [&](int64_t) { ++Calls; return false; });
 	EXPECT_EQ(Calls, 1);
+}
+
+TEST(ItemRenderInputs, SecureDeathCoordinateCanRoundOutsideParticleCollisionDomain)
+{
+	CNetEvent_Death Input{};
+	Input.m_X = std::numeric_limits<int>::max();
+	CUnpacker Unpacker;
+	Unpacker.Reset(&Input, sizeof(Input));
+	CNetObjHandler Handler;
+	const auto *pSecured = static_cast<const CNetEvent_Death *>(Handler.SecureUnpackObj(NETEVENTTYPE_DEATH, &Unpacker));
+	ASSERT_NE(pSecured, nullptr);
+	ASSERT_EQ(pSecured->m_X, std::numeric_limits<int>::max());
+	CParticle Particle;
+	Particle.SetDefault();
+	Particle.m_Pos = vec2(pSecured->m_X, pSecured->m_Y);
+	EXPECT_FALSE(Particle.CanMove(vec2(0.0f, 0.0f)));
+}
+
+TEST(ItemRenderInputs, SecureExplosionOffMapCoordinateInsideNumericDomainIsKept)
+{
+	CNetEvent_Explosion Input{};
+	Input.m_X = -100000;
+	Input.m_Y = 100000;
+	CUnpacker Unpacker;
+	Unpacker.Reset(&Input, sizeof(Input));
+	CNetObjHandler Handler;
+	const auto *pSecured = static_cast<const CNetEvent_Explosion *>(Handler.SecureUnpackObj(NETEVENTTYPE_EXPLOSION, &Unpacker));
+	ASSERT_NE(pSecured, nullptr);
+	EXPECT_TRUE(CParticle::CanCollideAt(vec2(pSecured->m_X, pSecured->m_Y)));
+}
+
+TEST(ItemRenderInputs, ExtremeProjectileAgeCanLeaveParticleCollisionDomain)
+{
+	CNetObj_Projectile Input{};
+	Input.m_StartTick = std::numeric_limits<int>::min();
+	Input.m_VelX = 100;
+	CUnpacker Unpacker;
+	Unpacker.Reset(&Input, sizeof(Input));
+	CNetObjHandler Handler;
+	const auto *pSecured = static_cast<const CNetObj_Projectile *>(Handler.SecureUnpackObj(NETOBJTYPE_PROJECTILE, &Unpacker));
+	ASSERT_NE(pSecured, nullptr);
+	const auto Projectile = ExtractProjectileInfo(NETOBJTYPE_PROJECTILE, pSecured, nullptr, nullptr);
+	const float Time = QmItemTickDelta(0, Projectile.m_StartTick) / 50.0f;
+	CParticle Particle;
+	Particle.SetDefault();
+	Particle.m_Pos = CalcPos(Projectile.m_StartPos, Projectile.m_StartVel, 0.0f, 1000.0f, Time);
+	EXPECT_FALSE(Particle.CanMove(vec2(0.0f, 0.0f)));
+	Particle.m_Collides = false;
+	EXPECT_TRUE(Particle.CanMove(vec2(0.0f, 0.0f)));
 }

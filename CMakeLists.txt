@@ -4742,6 +4742,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_player_points_cache_test.cpp
     src/test/integration/client/player_points_controller_test.cpp
     src/test/unit/qmclient/client/qm_item_render_math_test.cpp
+    src/test/unit/qmclient/client/qm_particle_position_test.cpp
     src/test/integration/client/item_render_inputs_test.cpp
     src/test/unit/qmclient/client/qm_gores_drown_tracker_test.cpp
     src/test/unit/qmclient/client/qm_trail_geometry_test.cpp
