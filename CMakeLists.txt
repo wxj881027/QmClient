@@ -4747,6 +4747,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/item_render_inputs_test.cpp
     src/test/integration/client/camera_zoom_inputs_test.cpp
     src/test/unit/qmclient/client/qm_spectator_selection_test.cpp
+    src/test/unit/qmclient/client/qm_emoticon_deadline_test.cpp
     src/test/integration/client/spectator_selection_inputs_test.cpp
     src/test/unit/qmclient/client/qm_gores_drown_tracker_test.cpp
     src/test/unit/qmclient/client/qm_trail_geometry_test.cpp

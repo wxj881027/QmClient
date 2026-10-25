@@ -547,7 +547,7 @@ void CEmoticon::RenderProjectiles()
 				if(Effect == QmEmoticon::EEffect::SUPER_HEAD)
 				{
 					m_aRemoteSuperHeadEmoticons[PlayerId] = Message.m_Emoticon;
-					m_aRemoteSuperHeadExpireTicks[PlayerId] = Client()->GameTick(g_Config.m_ClDummy) + 2 * Client()->GameTickSpeed();
+					m_aRemoteSuperHeadExpireTicks[PlayerId] = QmEmoticon::SuperHeadExpireTick(Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed());
 					continue;
 				}
 				const vec2 Position = GameClient()->m_aClients[PlayerId].m_RenderPos - vec2(0.0f, 20.0f);
@@ -682,7 +682,7 @@ void CEmoticon::Emote(int Emoticon, bool ForceLaunch)
 	if(Effect == QmEmoticon::EEffect::SUPER_HEAD)
 	{
 		m_LocalSuperHeadEmoticon = Emoticon;
-		m_LocalSuperHeadExpireTick = Client()->GameTick(g_Config.m_ClDummy) + 2 * Client()->GameTickSpeed();
+		m_LocalSuperHeadExpireTick = QmEmoticon::SuperHeadExpireTick(Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed());
 	}
 	else
 	{

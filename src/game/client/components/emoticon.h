@@ -20,6 +20,11 @@
 
 namespace QmEmoticon
 {
+	inline int64_t SuperHeadExpireTick(int CurrentTick, int TickSpeed)
+	{
+		return static_cast<int64_t>(CurrentTick) + 2 * static_cast<int64_t>(TickSpeed);
+	}
+
 	struct SSelectorCharge
 	{
 		static constexpr float REQUIRED_SECONDS = 1.5f;
@@ -92,7 +97,7 @@ struct SQmLocalBlinkState
 
 	void Trigger(int CurrentTick)
 	{
-		m_StopTick = CurrentTick + DURATION_TICKS;
+		m_StopTick = static_cast<int64_t>(CurrentTick) + DURATION_TICKS;
 	}
 
 	void Reset()
@@ -106,7 +111,7 @@ struct SQmLocalBlinkState
 	}
 
 private:
-	int m_StopTick = 0;
+	int64_t m_StopTick = 0;
 };
 
 class CEmoticon : public CComponent
@@ -147,9 +152,9 @@ class CEmoticon : public CComponent
 	void SpawnProjectile(vec2 Position, vec2 Direction, int Emoticon, bool Super, int OwnerClientId);
 	// 本机自己的头顶大表情；远端玩家的按 ClientId 各存一份（-1 表示没有）。
 	int m_LocalSuperHeadEmoticon = -1;
-	int m_LocalSuperHeadExpireTick = -1;
+	int64_t m_LocalSuperHeadExpireTick = -1;
 	int m_aRemoteSuperHeadEmoticons[MAX_CLIENTS] = {};
-	int m_aRemoteSuperHeadExpireTicks[MAX_CLIENTS] = {};
+	int64_t m_aRemoteSuperHeadExpireTicks[MAX_CLIENTS] = {};
 
 public:
 	CEmoticon();
