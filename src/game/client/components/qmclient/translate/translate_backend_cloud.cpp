@@ -60,7 +60,7 @@ namespace
 	{
 		bool ParseResponse(CTranslateResponse &Out) override
 		{
-			const std::unique_ptr<json_value, decltype(&json_value_free)> pJson(m_pHttpRequest->ResultJson(), json_value_free);
+			const std::unique_ptr<json_value, decltype(&json_value_free)> pJson(ParseTranslateResponseJson(*m_pHttpRequest, ETranslateLanguageMetadata::BAIDU), json_value_free);
 			return ParseResponseJson(pJson.get(), Out);
 		}
 		bool ParseHttpError() const override { return true; }
@@ -107,9 +107,12 @@ namespace
 				mem_copy(aText + Length, Segment.m_Text, SegmentLength);
 				Length += SegmentLength;
 			}
-			const json_value *pSource = TranslateJsonObjectGet(pJson, "from");
-			if(pSource->type == json_string)
-				str_copy(Out.m_Language, DecodeBaiduLanguage(pSource->u.string.ptr));
+			if(CopyTranslateLanguage(TranslateResponseLanguage(pJson, ETranslateLanguageMetadata::BAIDU), Out))
+			{
+				const char *pDecoded = DecodeBaiduLanguage(Out.m_Language);
+				if(pDecoded != Out.m_Language)
+					str_copy(Out.m_Language, pDecoded);
+			}
 			aText[Length] = '\0';
 			str_copy(Out.m_Text, aText);
 			return true;

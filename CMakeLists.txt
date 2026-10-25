@@ -5415,6 +5415,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/translate/translate_json_identity_test.cpp
     src/test/integration/qmclient/translate/translate_service_codes_test.cpp
     src/test/integration/qmclient/translate/translate_provider_identity_test.cpp
+    src/test/integration/qmclient/translate/translate_language_metadata_test.cpp
     src/test/integration/qmclient/translate/translate_native_body_failure_test.cpp
     src/test/unit/qmclient/translate/translate_responses_test.cpp
     src/test/unit/qmclient/translate/translate_completion_memory_test.cpp
@@ -5422,6 +5423,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/translate/translate_outgoing_target_test.cpp
     src/test/unit/qmclient/translate/translate_json_metadata_test.cpp
     src/test/unit/qmclient/translate/translate_service_code_test.cpp
+    src/test/unit/qmclient/translate/translate_language_metadata_test.cpp
     src/test/unit/qmclient/translate/translate_llm_parse_test.cpp
     src/test/unit/qmclient/translate/translate_local_endpoint_test.cpp
     src/test/unit/base/unix_test.cpp

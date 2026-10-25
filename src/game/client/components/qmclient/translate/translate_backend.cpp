@@ -447,33 +447,9 @@ private:
 			return false;
 		}
 
-		const json_value *pDetectedLanguage = TranslateJsonObjectGet(pObj, "detectedLanguage");
-		if(pDetectedLanguage == &json_value_none)
-		{
-			Out.m_Language[0] = '\0';
-			return CopyTranslateText(pTranslatedText, Out);
-		}
-		if(pDetectedLanguage->type != json_object)
-		{
-			str_copy(Out.m_Text, "detectedLanguage is not object");
-			return false;
-		}
-
-		const json_value *pLanguage = TranslateJsonObjectGet(pDetectedLanguage, "language");
-		if(pLanguage == &json_value_none)
-		{
-			str_copy(Out.m_Text, "No language");
-			return false;
-		}
-		if(pLanguage->type != json_string)
-		{
-			str_copy(Out.m_Text, "language is not string");
-			return false;
-		}
-
 		if(!CopyTranslateText(pTranslatedText, Out))
 			return false;
-		str_copy(Out.m_Language, pLanguage->u.string.ptr);
+		CopyTranslateLanguage(TranslateResponseLanguage(pObj, ETranslateLanguageMetadata::LIBRE), Out);
 
 		return true;
 	}
@@ -481,7 +457,7 @@ private:
 protected:
 	bool ParseResponse(CTranslateResponse &Out) override
 	{
-		json_value *pObj = m_pHttpRequest->ResultJson();
+		json_value *pObj = ParseTranslateResponseJson(*m_pHttpRequest, ETranslateLanguageMetadata::LIBRE);
 		bool Res = ParseResponseJson(pObj, Out);
 		if(m_pHttpRequest->StatusCode() != 200)
 			Res = false;
@@ -577,11 +553,7 @@ private:
 			return false;
 		}
 
-		const json_value *pSource = TranslateJsonObjectGet(pResponse, "Source");
-		if(pSource != &json_value_none && pSource->type == json_string)
-			str_copy(Out.m_Language, pSource->u.string.ptr);
-		else
-			Out.m_Language[0] = '\0';
+		CopyTranslateLanguage(TranslateResponseLanguage(pObj, ETranslateLanguageMetadata::TENCENT), Out);
 
 		if(!CopyTranslateText(pTranslatedText, Out))
 			return false;
@@ -591,7 +563,7 @@ private:
 protected:
 	bool ParseResponse(CTranslateResponse &Out) override
 	{
-		json_value *pObj = m_pHttpRequest->ResultJson();
+		json_value *pObj = ParseTranslateResponseJson(*m_pHttpRequest, ETranslateLanguageMetadata::TENCENT);
 		const bool Result = ParseResponseJson(pObj, Out);
 		json_value_free(pObj);
 		return Result;
@@ -731,21 +703,9 @@ private:
 			return false;
 		}
 
-		const json_value *pDetectedLanguage = TranslateJsonObjectGet(pObj, "source-language");
-		if(pDetectedLanguage == &json_value_none)
-		{
-			str_copy(Out.m_Text, "No source-language");
-			return false;
-		}
-		if(pDetectedLanguage->type != json_string)
-		{
-			str_copy(Out.m_Text, "source-language is not string");
-			return false;
-		}
-
 		if(!CopyTranslateText(pTranslatedText, Out))
 			return false;
-		str_copy(Out.m_Language, pDetectedLanguage->u.string.ptr);
+		CopyTranslateLanguage(TranslateResponseLanguage(pObj, ETranslateLanguageMetadata::FTAPI), Out);
 
 		return true;
 	}
@@ -753,7 +713,7 @@ private:
 protected:
 	bool ParseResponse(CTranslateResponse &Out) override
 	{
-		json_value *pObj = m_pHttpRequest->ResultJson();
+		json_value *pObj = ParseTranslateResponseJson(*m_pHttpRequest, ETranslateLanguageMetadata::FTAPI);
 		bool Res = ParseResponseJson(pObj, Out);
 		json_value_free(pObj);
 		return Res;
@@ -1001,11 +961,7 @@ private:
 		if(!CopyTranslateText(pText, Out))
 			return false;
 
-		const json_value *pDetected = TranslateJsonObjectGet(pTranslation, "detected_source_language");
-		if(pDetected != &json_value_none && pDetected->type == json_string)
-			str_copy(Out.m_Language, pDetected->u.string.ptr);
-		else
-			Out.m_Language[0] = '\0';
+		CopyTranslateLanguage(TranslateResponseLanguage(pObj, ETranslateLanguageMetadata::DEEPL), Out);
 
 		return true;
 	}
@@ -1050,7 +1006,7 @@ protected:
 			return false;
 		}
 
-		json_value *pObj = m_pHttpRequest->ResultJson();
+		json_value *pObj = ParseTranslateResponseJson(*m_pHttpRequest, ETranslateLanguageMetadata::DEEPL);
 		const bool Result = ParseResponseJson(pObj, Out);
 		json_value_free(pObj);
 		return Result;

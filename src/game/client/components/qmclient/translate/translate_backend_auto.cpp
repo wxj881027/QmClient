@@ -52,7 +52,7 @@ namespace
 				Out.m_Notice = ETranslateNotice::NETWORK_ERROR;
 				return false;
 			}
-			json_value *pJson = m_pRequest->ResultJson();
+			json_value *pJson = ParseTranslateResponseJson(*m_pRequest, ETranslateLanguageMetadata::AUTOMATIC);
 			Out.m_Notice = ETranslateNotice::SERVICE_UNAVAILABLE;
 			bool Success = false;
 			if(pJson != nullptr && pJson->type == json_object)
@@ -60,14 +60,12 @@ namespace
 				const json_value &Ok = *TranslateJsonObjectGet(pJson, "ok");
 				const json_value &Error = *TranslateJsonObjectGet(pJson, "error");
 				const json_value &Text = *TranslateJsonObjectGet(pJson, "text");
-				const json_value &Language = *TranslateJsonObjectGet(pJson, "language");
 				if(m_pRequest->StatusCode() == 200 && Ok.type == json_boolean && Ok.u.boolean && Error.type == json_none)
 				{
 					Success = CopyTranslateText(&Text, Out);
 					if(Success)
 					{
-						if(Language.type == json_string)
-							str_copy(Out.m_Language, Language.u.string.ptr);
+						CopyTranslateLanguage(TranslateResponseLanguage(pJson, ETranslateLanguageMetadata::AUTOMATIC), Out);
 						Out.m_Notice = ETranslateNotice::NONE;
 					}
 					else

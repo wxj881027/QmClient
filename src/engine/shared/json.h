@@ -3,6 +3,9 @@
 
 #include <engine/external/json-parser/json.h>
 
+// 默认校验整棵树；调用方可显式排除一个可选值子树，父对象中的成员名仍会校验。
+bool JsonValidateUtf8(const json_value *pRoot, const json_value *pIgnoredValue = nullptr);
+
 json_value *JsonParse(const json_char *pJson, size_t Length);
 json_value *JsonParseEx(json_settings *pSettings, const json_char *pJson, size_t Length, char *pError);
 

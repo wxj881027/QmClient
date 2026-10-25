@@ -1,5 +1,7 @@
 #include "translate_backend_http.h"
 
+#include "translate_parse.h"
+
 #include <base/system.h>
 
 #include <engine/shared/json.h>
@@ -7,6 +9,52 @@
 #include <charconv>
 #include <cmath>
 #include <limits>
+
+const json_value *TranslateResponseLanguage(const json_value *pRoot, ETranslateLanguageMetadata Metadata)
+{
+	switch(Metadata)
+	{
+	case ETranslateLanguageMetadata::AUTOMATIC: return TranslateJsonObjectGet(pRoot, "language");
+	case ETranslateLanguageMetadata::LIBRE: return TranslateJsonObjectGet(TranslateJsonObjectGet(pRoot, "detectedLanguage"), "language");
+	case ETranslateLanguageMetadata::TENCENT: return TranslateJsonObjectGet(TranslateJsonObjectGet(pRoot, "Response"), "Source");
+	case ETranslateLanguageMetadata::FTAPI: return TranslateJsonObjectGet(pRoot, "source-language");
+	case ETranslateLanguageMetadata::DEEPL: return TranslateJsonObjectGet(json_array_get(TranslateJsonObjectGet(pRoot, "translations"), 0), "detected_source_language");
+	case ETranslateLanguageMetadata::BAIDU: return TranslateJsonObjectGet(pRoot, "from");
+	}
+	return &json_value_none;
+}
+
+json_value *ParseTranslateResponseJson(const IHttpRequest &Request, ETranslateLanguageMetadata Metadata)
+{
+	unsigned char *pData = nullptr;
+	size_t Length = 0;
+	Request.Result(&pData, &Length);
+	if(pData == nullptr || Length == 0)
+		return nullptr;
+	std::unique_ptr<json_value, decltype(&json_value_free)> pJson(json_parse(reinterpret_cast<const char *>(pData), Length), json_value_free);
+	if(!pJson)
+		return nullptr;
+	const json_value *pOptionalMetadata = TranslateResponseLanguage(pJson.get(), Metadata);
+	if(Metadata == ETranslateLanguageMetadata::LIBRE)
+	{
+		const json_value *pContainer = TranslateJsonObjectGet(pJson.get(), "detectedLanguage");
+		if(pContainer->type != json_object)
+			pOptionalMetadata = pContainer;
+	}
+	if(!JsonValidateUtf8(pJson.get(), pOptionalMetadata))
+		return nullptr;
+	return pJson.release();
+}
+
+bool CopyTranslateLanguage(const json_value *pLanguage, CTranslateResponse &Out)
+{
+	Out.m_Language[0] = '\0';
+	if(!pLanguage || pLanguage->type != json_string || pLanguage->u.string.length == 0 || pLanguage->u.string.length >= sizeof(Out.m_Language) ||
+		pLanguage->u.string.length != static_cast<size_t>(str_length(pLanguage->u.string.ptr)) || !str_utf8_check(pLanguage->u.string.ptr))
+		return false;
+	str_copy(Out.m_Language, pLanguage->u.string.ptr);
+	return true;
+}
 
 bool TryParseTranslateServiceCode(const json_value *pValue, int &Out)
 {
