@@ -23,6 +23,55 @@ class CTranslateQueueTest : public CTranslateBackendTest
 {
 };
 
+TEST_F(CTranslateQueueTest, OutgoingQueueAllocationFailureAbortsRequestAndRetrySendsOnlyTranslation)
+{
+	for(bool Automatic : {false, true})
+	{
+		SCOPED_TRACE(Automatic);
+		CTranslateCompletionTestMemory Memory;
+		CTranslateJobQueue Queue(&Memory);
+		Memory.m_FailAt = 1;
+		EXPECT_FALSE(Queue.Submit(MakeJob(m_Http, true, Automatic, "original"), 1));
+		EXPECT_TRUE(m_Http.m_vSubmissions.back().m_pRequest->IsAbortRequested());
+		EXPECT_TRUE(Queue.Update([](const auto &) { return true; }).empty());
+		EXPECT_EQ(Queue.Size(), 0u);
+		Memory.AllowAllocations();
+		ASSERT_TRUE(Queue.Submit(MakeJob(m_Http, true, Automatic, "retry original"), 1));
+		m_Http.m_vSubmissions.back().m_pRequest->Finish(R"({"choices":[{"message":{"content":"translated"}}]})");
+		const auto Done = Queue.Update([](const auto &) { return true; });
+		ASSERT_EQ(Done.size(), 1u);
+		int Sends = 0;
+		EXPECT_TRUE(DispatchOutgoingTranslation(Done[0], [&](int, const char *pText, const char *pOriginal, int) {
+			++Sends;
+			EXPECT_STREQ(pText, "translated");
+			EXPECT_STREQ(pOriginal, "retry original");
+			return true;
+		}));
+		EXPECT_EQ(Sends, 1);
+		EXPECT_TRUE(Queue.Update([](const auto &) { return true; }).empty());
+	}
+}
+
+TEST_F(CTranslateQueueTest, IncomingQueueAllocationFailureReleasesResponseAndAllowsFreshRequest)
+{
+	CTranslateCompletionTestMemory Memory;
+	CTranslateJobQueue Queue(&Memory);
+	auto Job = MakeJob(m_Http, false, false);
+	const std::weak_ptr<CTranslateResponse> Response = Job.m_pTranslateResponse;
+	Memory.m_FailAt = 1;
+	EXPECT_FALSE(Queue.Submit(std::move(Job), 1));
+	EXPECT_TRUE(Response.expired());
+	EXPECT_TRUE(m_Http.m_vSubmissions.back().m_pRequest->IsAbortRequested());
+	Memory.AllowAllocations();
+	ASSERT_TRUE(Queue.Submit(MakeJob(m_Http, false, false), 1));
+	m_Http.m_vSubmissions.back().m_pRequest->Finish(R"({"choices":[{"message":{"content":"translated"}}]})");
+	const auto Done = Queue.Update([](const auto &) { return true; });
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_FALSE(Done[0].m_Job.m_Outgoing);
+	EXPECT_TRUE(Done[0].m_Success);
+	EXPECT_STREQ(Done[0].m_Job.m_pTranslateResponse->m_Text, "translated");
+}
+
 TEST_F(CTranslateQueueTest, RefusedAutomaticOutgoingSendsNeitherOriginalNorServiceText)
 {
 	CTranslateJobQueue Queue;

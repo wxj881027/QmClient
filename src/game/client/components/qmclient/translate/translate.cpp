@@ -247,21 +247,28 @@ void CTranslate::Translate(CChat::CLine &Line, bool ShowProgress, bool AutoTrigg
 		return;
 	}
 
-	Line.m_pTranslateResponse = Job.m_pTranslateResponse;
 	if(ShowProgress)
 	{
 		str_format(Job.m_pTranslateResponse->m_Text, sizeof(Job.m_pTranslateResponse->m_Text), Localize("%s translating to %s"), Job.m_pBackend->Name(), Job.m_aTarget);
-		Line.m_Time = time();
 	}
 	else
 	{
 		Job.m_pTranslateResponse->m_Text[0] = '\0';
 	}
 
-	m_Jobs.Submit(std::move(Job), GetMaxConcurrency());
+	const auto pResponse = Job.m_pTranslateResponse;
+	if(!m_Jobs.Submit(std::move(Job), GetMaxConcurrency()))
+	{
+		dbg_msg("translate", "could not enqueue incoming translation task");
+		return;
+	}
+	Line.m_pTranslateResponse = pResponse;
 
 	if(ShowProgress)
+	{
+		Line.m_Time = time();
 		GameClient()->m_Chat.RebuildChat();
+	}
 }
 
 bool CTranslate::TryTranslateOutgoingChat(int Team, const char *pText)
@@ -298,8 +305,13 @@ bool CTranslate::TryTranslateOutgoingChat(int Team, const char *pText)
 
 		char aBuf[128];
 		str_format(aBuf, sizeof(aBuf), Localize("%s translating to %s before send"), Job.m_pBackend->Name(), Job.m_aTarget);
+		if(!m_Jobs.Submit(std::move(Job), GetMaxConcurrency()))
+		{
+			dbg_msg("translate", "could not enqueue explicit outgoing translation task");
+			return false;
+		}
 		GameClient()->m_Chat.Echo(aBuf);
-		return m_Jobs.Submit(std::move(Job), GetMaxConcurrency());
+		return true;
 	};
 	StartTranslation();
 	// 显式请求已处理，拒绝时也不能让下游再次发送或翻译。
@@ -481,8 +493,13 @@ void CTranslate::StartAutoOutgoingTranslate(int Team, const char *pText)
 
 		char aBuf[128];
 		str_format(aBuf, sizeof(aBuf), Localize("Translating to %s..."), Job.m_aTarget);
+		if(!m_Jobs.Submit(std::move(Job), GetMaxConcurrency()))
+		{
+			dbg_msg("translate", "could not enqueue automatic outgoing translation task");
+			return false;
+		}
 		GameClient()->m_Chat.Echo(aBuf);
-		return m_Jobs.Submit(std::move(Job), GetMaxConcurrency());
+		return true;
 	};
 	StartTranslation();
 }

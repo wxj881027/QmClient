@@ -5,7 +5,7 @@
 #include <memory_resource>
 #include <new>
 
-// 仅影响调用方显式传入的结果内存域，不替换全局new。
+// 仅影响调用方显式传入的队列或结果内存域，不替换全局new。
 class CTranslateCompletionTestMemory final : public std::pmr::memory_resource
 {
 	void *do_allocate(std::size_t Bytes, std::size_t Alignment) override

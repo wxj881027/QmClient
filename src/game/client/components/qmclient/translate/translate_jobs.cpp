@@ -16,7 +16,15 @@ bool CTranslateJobQueue::Submit(STranslateJob Job, int Limit)
 {
 	if(!CanSubmit(Limit) || !Job.m_pBackend || !Job.m_pTranslateResponse)
 		return false;
-	m_vJobs.push_back({std::move(Job), std::nullopt});
+	static_assert(std::is_nothrow_move_constructible_v<SPending>);
+	try
+	{
+		m_vJobs.push_back({std::move(Job), std::nullopt});
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
 	return true;
 }
 

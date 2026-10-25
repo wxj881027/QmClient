@@ -45,10 +45,14 @@ class CTranslateJobQueue
 		// 已完成后端不因结果存储失败而再次轮询。
 		std::optional<bool> m_Completion;
 	};
-	std::vector<SPending> m_vJobs;
+	std::pmr::vector<SPending> m_vJobs;
 
 public:
+	// 自定义队列内存源须存活到队列销毁，不影响完成结果的独立内存域。
+	explicit CTranslateJobQueue(std::pmr::memory_resource *pMemory = std::pmr::new_delete_resource()) :
+		m_vJobs(pMemory) {}
 	bool CanSubmit(int Limit) const;
+	// 拒绝或扩容失败均释放传入任务，不发布响应或进度状态。
 	bool Submit(STranslateJob Job, int Limit);
 	size_t Size() const { return m_vJobs.size(); }
 	void Clear() { m_vJobs.clear(); }
