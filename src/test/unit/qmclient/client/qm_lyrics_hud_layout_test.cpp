@@ -9,7 +9,20 @@ TEST(QmLyricsHudLayout, DetachedIslandHasAGapBelowTheMainIsland)
 	const CUIRect Main{150.0f, 10.0f, 80.0f, 12.0f};
 	const auto Lyrics = QmLyricsIslandLayout(Main, 400.0f, 300.0f, 1);
 	EXPECT_GT(Lyrics.y, Main.y + Main.h);
+	EXPECT_FLOAT_EQ(Lyrics.w, Main.w);
 	EXPECT_FLOAT_EQ(Lyrics.x + Lyrics.w * 0.5f, Main.x + Main.w * 0.5f);
+}
+
+TEST(QmLyricsHudLayout, DetachedWidthFollowsChangesToTheMainIsland)
+{
+	for(const float Width : {60.0f, 80.0f, 140.0f})
+	{
+		SCOPED_TRACE(Width);
+		const CUIRect Main{100.0f, 10.0f, Width, 12.0f};
+		const auto Lyrics = QmLyricsIslandLayout(Main, 400.0f, 300.0f, 1);
+		EXPECT_FLOAT_EQ(Lyrics.x, Main.x);
+		EXPECT_FLOAT_EQ(Lyrics.w, Width);
+	}
 }
 
 TEST(QmLyricsHudLayout, BilingualRowsIncreaseHeightWithoutChangingWidthOrTop)
@@ -39,6 +52,9 @@ TEST(QmLyricsHudLayout, DefaultAnchorFollowsTheEditedMainIslandTransform)
 	EXPECT_FLOAT_EQ(Anchor.y, 70.0f);
 	EXPECT_FLOAT_EQ(Anchor.w, 200.0f);
 	EXPECT_FLOAT_EQ(Anchor.h, 24.0f);
+	const auto Lyrics = QmLyricsIslandLayout(Anchor, 600.0f, 300.0f, 2);
+	EXPECT_FLOAT_EQ(Lyrics.x, Anchor.x);
+	EXPECT_FLOAT_EQ(Lyrics.w, Anchor.w);
 }
 
 TEST(QmLyricsHudLayout, TwoLyricRowsReserveSpaceAfterIncomingSwapRequests)

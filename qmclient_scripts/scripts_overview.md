@@ -71,6 +71,8 @@
 
 与门禁主链无直接关系，按各自职责独立存在：
 
+- `qmclient_scripts/tests/test_netease_frontend.cjs`：使用 Node.js 隔离执行 helper 的同源注入脚本，检查网易云原文、翻译轨及刷新状态转换。运行 `node --test qmclient_scripts/tests/test_netease_frontend.cjs`；不连接实际播放器。
+
 - `qmclient_scripts/integration/`：QmClient 自有客户端/服务端进程级集成与冒烟测试；不得把 QmClient 特化场景加入根目录上游 `scripts/`
 - `qmclient_scripts/coverage/`：使用独立 clang/Ninja 构建采集 C++ LLVM line/function/region/branch coverage
 - `qmclient_scripts/benchmark/`：Google Benchmark 构建/运行编排、结果校验与重复统计；见 [README](benchmark/README.md)
