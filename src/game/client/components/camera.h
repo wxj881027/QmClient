@@ -16,6 +16,17 @@
 
 namespace QmCameraEffects
 {
+	inline bool IsValidZoom(float Value, float MinZoom, float MaxZoom)
+	{
+		return std::isfinite(Value) && Value >= MinZoom && Value <= MaxZoom;
+	}
+
+	inline float TransitionProgress(float Now, float Start, float End)
+	{
+		// 零时长或浮点时间戳重合表示过渡已经结束，不再用零作分母。
+		return End > Start ? (Now - Start) / (End - Start) : 1.0f;
+	}
+
 	inline float ZoomWithoutDynamicFov(float EffectiveZoom, float AppliedFactor)
 	{
 		return AppliedFactor > 0.0f ? EffectiveZoom / AppliedFactor : EffectiveZoom;

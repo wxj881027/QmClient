@@ -382,9 +382,7 @@ void CItems::RenderLaser(vec2 From, vec2 Pos, ColorRGBA OuterColor, ColorRGBA In
 			const float SizeScale = std::clamp(g_Config.m_QmLaserSize / 100.0f, 0.5f, 2.0f);
 			const float AlphaScale = std::clamp(g_Config.m_QmLaserAlpha / 100.0f, 0.0f, 1.0f);
 
-			float Ms = TicksBody * 1000.0f / Client()->GameTickSpeed();
-			float a = Ms / GameClient()->GetTuning(TuneZone)->m_LaserBounceDelay;
-			a = std::clamp(a, 0.0f, 1.0f);
+			float a = QmLaserFadeProgress(TicksBody, Client()->GameTickSpeed(), GameClient()->GetTuning(TuneZone)->m_LaserBounceDelay);
 			float Ia = 1 - a;
 
 			Graphics()->TextureClear();
@@ -441,17 +439,10 @@ void CItems::RenderLaser(vec2 From, vec2 Pos, ColorRGBA OuterColor, ColorRGBA In
 		{
 			vec2 Dir = normalize_pre_length(Pos - From, Len);
 
-			float Ms = TicksBody * 1000.0f / Client()->GameTickSpeed();
-			float a;
-			if(Type == LASERTYPE_RIFLE || Type == LASERTYPE_SHOTGUN)
-			{
-				a = Ms / GameClient()->GetTuning(TuneZone)->m_LaserBounceDelay;
-			}
-			else
-			{
-				a = Ms / CTuningParams::DEFAULT.m_LaserBounceDelay;
-			}
-			a = std::clamp(a, 0.0f, 1.0f);
+			const float Delay = Type == LASERTYPE_RIFLE || Type == LASERTYPE_SHOTGUN ?
+						    GameClient()->GetTuning(TuneZone)->m_LaserBounceDelay :
+						    CTuningParams::DEFAULT.m_LaserBounceDelay;
+			float a = QmLaserFadeProgress(TicksBody, Client()->GameTickSpeed(), Delay);
 			float Ia = 1 - a;
 
 			Graphics()->TextureClear();

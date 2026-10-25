@@ -117,13 +117,15 @@ CCamera::CCamera()
 
 float CCamera::CameraSmoothingProgress(float CurrentTime) const
 {
-	float Progress = (CurrentTime - m_CameraSmoothingStart) / (m_CameraSmoothingEnd - m_CameraSmoothingStart);
+	if(!(m_CameraSmoothingEnd > m_CameraSmoothingStart))
+		return 1.0f;
+	float Progress = QmCameraEffects::TransitionProgress(CurrentTime, m_CameraSmoothingStart, m_CameraSmoothingEnd);
 	return 1.0 - std::pow(2.0, -10.0 * Progress);
 }
 
 float CCamera::ZoomProgress(float CurrentTime) const
 {
-	return (CurrentTime - m_ZoomSmoothingStart) / (m_ZoomSmoothingEnd - m_ZoomSmoothingStart);
+	return QmCameraEffects::TransitionProgress(CurrentTime, m_ZoomSmoothingStart, m_ZoomSmoothingEnd);
 }
 
 void CCamera::ScaleZoom(float Factor)
@@ -153,11 +155,11 @@ bool CCamera::GhostMultiViewZoomActive() const
 
 void CCamera::ChangeZoom(float Target, int Smoothness, bool IsUser, bool IsReset)
 {
-	RemoveDynamicFovZoom();
-	if(Target > MaxZoomLevel() || Target < MinZoomLevel())
+	if(!QmCameraEffects::IsValidZoom(Target, MinZoomLevel(), MaxZoomLevel()))
 	{
 		return;
 	}
+	RemoveDynamicFovZoom();
 
 	float Now = Client()->LocalTime();
 	float Current = m_Zoom;
@@ -179,7 +181,12 @@ void CCamera::ChangeZoom(float Target, int Smoothness, bool IsUser, bool IsReset
 	if(IsUser)
 		m_UserZoomTarget = Target;
 
-	m_Zooming = true;
+	m_Zooming = m_ZoomSmoothingEnd > m_ZoomSmoothingStart;
+	if(!m_Zooming)
+	{
+		m_Zoom = Target;
+		m_AutoSpecCameraZooming = false;
+	}
 }
 
 void CCamera::RemoveDynamicFovZoom()
@@ -647,6 +654,8 @@ void CCamera::ConZoomPlus(IConsole::IResult *pResult, void *pUserData)
 	CCamera *pSelf = (CCamera *)pUserData;
 
 	float ZoomAmount = pResult->NumArguments() ? pResult->GetFloat(0) : 1.0f;
+	if(!std::isfinite(ZoomAmount))
+		return;
 
 	// 影子多人同框：m_Zoom 每帧由包围盒自动取景覆写（且取景本身不受服务器 zoom 策略约束），
 	// 所以倍率走独立状态并放在 ZoomAllowed 之前——服务器禁止缩放时自动取景仍在，倍率却收不到
@@ -657,6 +666,8 @@ void CCamera::ConZoomPlus(IConsole::IResult *pResult, void *pUserData)
 	}
 
 	if(!pSelf->ZoomAllowed())
+		return;
+	if(pSelf->GameClient()->m_MultiViewActivated && !std::isfinite(pSelf->GameClient()->m_MultiViewPersonalZoom + ZoomAmount))
 		return;
 
 	pSelf->ScaleZoom(CCamera::ZoomStepsToValue(ZoomAmount));
@@ -670,6 +681,8 @@ void CCamera::ConZoomMinus(IConsole::IResult *pResult, void *pUserData)
 
 	float ZoomAmount = pResult->NumArguments() ? pResult->GetFloat(0) : 1.0f;
 	ZoomAmount *= -1.0f;
+	if(!std::isfinite(ZoomAmount))
+		return;
 
 	// 影子多人同框：与 ConZoomPlus 同理，倍率不受服务器 zoom 策略约束
 	if(pSelf->GhostMultiViewZoomActive())
@@ -679,6 +692,8 @@ void CCamera::ConZoomMinus(IConsole::IResult *pResult, void *pUserData)
 	}
 
 	if(!pSelf->ZoomAllowed())
+		return;
+	if(pSelf->GameClient()->m_MultiViewActivated && !std::isfinite(pSelf->GameClient()->m_MultiViewPersonalZoom + ZoomAmount))
 		return;
 
 	pSelf->ScaleZoom(CCamera::ZoomStepsToValue(ZoomAmount));
@@ -693,6 +708,8 @@ void CCamera::ConZoom(IConsole::IResult *pResult, void *pUserData)
 	bool IsReset = !pResult->NumArguments();
 
 	float TargetLevel = !IsReset ? pResult->GetFloat(0) : g_Config.m_ClDefaultZoom;
+	if(!std::isfinite(TargetLevel))
+		return;
 
 	// 影子多人同框：绝对档位换算成用户倍率，默认档 = 回到纯自动取景
 	if(pSelf->GhostMultiViewZoomActive())
@@ -703,11 +720,14 @@ void CCamera::ConZoom(IConsole::IResult *pResult, void *pUserData)
 
 	if(!pSelf->ZoomAllowed())
 		return;
+	const float Target = CCamera::ZoomStepsToValue(TargetLevel - 10.0f);
+	if(!QmCameraEffects::IsValidZoom(Target, pSelf->MinZoomLevel(), pSelf->MaxZoomLevel()))
+		return;
 
 	if(!pSelf->CanUseAutoSpecCamera() || !pSelf->m_CanUseCameraInfo)
-		pSelf->ChangeZoom(CCamera::ZoomStepsToValue(TargetLevel - 10.0f), pSelf->GameClient()->m_Snap.m_SpecInfo.m_Active && pSelf->GameClient()->m_MultiViewActivated ? g_Config.m_ClMultiViewZoomSmoothness : g_Config.m_ClSmoothZoomTime, true, IsReset);
+		pSelf->ChangeZoom(Target, pSelf->GameClient()->m_Snap.m_SpecInfo.m_Active && pSelf->GameClient()->m_MultiViewActivated ? g_Config.m_ClMultiViewZoomSmoothness : g_Config.m_ClSmoothZoomTime, true, IsReset);
 	else
-		pSelf->m_UserZoomTarget = CCamera::ZoomStepsToValue(TargetLevel - 10.0f);
+		pSelf->m_UserZoomTarget = Target;
 
 	pSelf->m_AutoSpecCamera = IsReset;
 

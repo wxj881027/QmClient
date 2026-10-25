@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_ITEM_RENDER_MATH_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_ITEM_RENDER_MATH_H
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -8,6 +9,15 @@
 inline float QmItemTickDelta(int Tick, int StartTick, int Offset = 0) noexcept
 {
 	return static_cast<float>(static_cast<int64_t>(Tick) + Offset - static_cast<int64_t>(StartTick));
+}
+
+inline float QmLaserFadeProgress(float Ticks, int TickSpeed, float Delay) noexcept
+{
+	// 零延迟的线段立即淡出，头部动画由原绘制路径单独处理。
+	if(Delay == 0.0f)
+		return 1.0f;
+	const float Ms = Ticks * 1000.0f / TickSpeed;
+	return std::clamp(Ms / Delay, 0.0f, 1.0f);
 }
 
 struct SQmLaserSplatFrame

@@ -6,6 +6,36 @@
 #include <limits>
 #include <vector>
 
+TEST(QmLaserFade, PositiveDelayKeepsExistingTimeConversion)
+{
+	EXPECT_FLOAT_EQ(QmLaserFadeProgress(0.0f, 50, 150.0f), 0.0f);
+	EXPECT_FLOAT_EQ(QmLaserFadeProgress(3.75f, 50, 150.0f), 0.5f);
+	EXPECT_FLOAT_EQ(QmLaserFadeProgress(7.5f, 50, 150.0f), 1.0f);
+}
+
+TEST(QmLaserFade, ClampsOrdinaryPastAndFutureTimes)
+{
+	EXPECT_FLOAT_EQ(QmLaserFadeProgress(-1.0f, 50, 150.0f), 0.0f);
+	EXPECT_FLOAT_EQ(QmLaserFadeProgress(100.0f, 50, 150.0f), 1.0f);
+}
+
+TEST(QmLaserFade, ZeroDelayImmediatelyCompletesEvenAtFirstFrame)
+{
+	for(float Tick : {-1.0f, 0.0f, 1.0f})
+		EXPECT_FLOAT_EQ(QmLaserFadeProgress(Tick, 50, 0.0f), 1.0f);
+}
+
+TEST(QmLaserFade, NegativeZeroDelayAlsoCompletesImmediately)
+{
+	EXPECT_FLOAT_EQ(QmLaserFadeProgress(0.0f, 50, -0.0f), 1.0f);
+}
+
+TEST(QmLaserFade, NonzeroNegativeDelayRetainsPreviousFormula)
+{
+	EXPECT_FLOAT_EQ(QmLaserFadeProgress(3.75f, 50, -150.0f), 0.0f);
+	EXPECT_FLOAT_EQ(QmLaserFadeProgress(-3.75f, 50, -150.0f), 0.5f);
+}
+
 TEST(QmItemTickDelta, PreservesOrdinaryElapsedAndFutureTicks)
 {
 	EXPECT_FLOAT_EQ(QmItemTickDelta(150, 100), 50.0f);
