@@ -128,7 +128,12 @@ void CTClient::TickUpdateLifecycle()
 	}
 
 	if(m_UpdateSurvey.Running() && m_UpdateSurvey.Poll(m_UpdateSources, time_get() / static_cast<double>(time_freq())))
-		StartUpdateDownload();
+	{
+		if(m_UpdateSurvey.LocalError())
+			FailUpdateDownloadPreparation();
+		else
+			StartUpdateDownload();
+	}
 	if(m_UpdateDownloadTasks.AllDone() && !m_UpdateReady && !m_UpdateCheckFailed)
 	{
 		FinishUpdateDownloads();
@@ -225,6 +230,7 @@ void CTClient::RequestQmClientUpdateCheck(const bool UpdateAfterCheck)
 }
 
 void CTClient::StartUpdateSourceSurvey()
+try
 {
 	char aSetupMarker[IO_MAX_PATH_LENGTH];
 	Storage()->GetBinaryPath("QmClient-Setup.ini", aSetupMarker, sizeof(aSetupMarker));
@@ -233,39 +239,43 @@ void CTClient::StartUpdateSourceSurvey()
 		return;
 	const char *pSignatureUrl = m_UpdateUseSetup ? m_UpdateRelease.m_aSetupSignatureUrl : m_UpdateRelease.m_aPackageSignatureUrl;
 	const double Now = time_get() / static_cast<double>(time_freq());
-	const auto StartProbe = [this](const std::string &Url, bool Direct) -> std::shared_ptr<IHttpRequest> {
+	const auto StartRequest = [this](const std::string &Url, bool Direct, bool Sample) -> std::shared_ptr<IHttpRequest> {
 		std::shared_ptr<IHttpRequest> pRequest = HttpGet(Url.c_str());
-		pRequest->Timeout(CTimeout{5000, 10000, 1, 10});
-		pRequest->MaxResponseSize(64);
-		pRequest->LogProgress(HTTPLOG::FAILURE);
-		if(Direct)
+		try
 		{
-			pRequest->Proxy("");
-			Http()->Run(pRequest);
+			pRequest->Timeout(Sample ? CTimeout{5000, 8000, 1, 5} : CTimeout{5000, 10000, 1, 10});
+			pRequest->MaxResponseSize(Sample ? QMCLIENT_UPDATE_MAX_PACKAGE_SIZE : 64);
+			if(Sample)
+				pRequest->ResponseSample(qm_update::CSourceSurvey::SAMPLE_BYTES);
+			pRequest->LogProgress(HTTPLOG::FAILURE);
+			if(Direct)
+			{
+				pRequest->Proxy("");
+				Http()->Run(pRequest);
+			}
+			else
+				RunUpdateHttp(pRequest);
 		}
-		else
-			RunUpdateHttp(pRequest);
+		catch(...)
+		{
+			// 尚未返回给探测 owner；配置或启动失败时取消可能已入队的请求。
+			pRequest->Abort();
+			throw;
+		}
 		return pRequest;
 	};
 	const char *pPackageUrl = m_UpdateUseSetup ? m_UpdateRelease.m_aSetupUrl : m_UpdateRelease.m_aPackageUrl;
-	const auto StartSample = [this](const std::string &Url, bool Direct) -> std::shared_ptr<IHttpRequest> {
-		std::shared_ptr<IHttpRequest> pRequest = HttpGet(Url.c_str());
-		pRequest->Timeout(CTimeout{5000, 8000, 1, 5});
-		pRequest->MaxResponseSize(QMCLIENT_UPDATE_MAX_PACKAGE_SIZE);
-		pRequest->ResponseSample(qm_update::CSourceSurvey::SAMPLE_BYTES);
-		pRequest->LogProgress(HTTPLOG::FAILURE);
-		if(Direct)
-		{
-			pRequest->Proxy("");
-			Http()->Run(pRequest);
-		}
-		else
-			RunUpdateHttp(pRequest);
-		return pRequest;
-	};
-	m_UpdateSurvey.Begin(m_UpdateSources.Candidates(pSignatureUrl, qm_update::RELEASE, Now), pSignatureUrl, Now, [StartProbe](const std::string &Url) { return StartProbe(Url, false); }, [StartProbe](const std::string &Url) { return StartProbe(Url, true); }, pPackageUrl, StartSample);
-	if(!m_UpdateSurvey.Running())
+	m_UpdateSurvey.Begin(m_UpdateSources.Candidates(pSignatureUrl, qm_update::RELEASE, Now), pSignatureUrl, Now, [StartRequest](const std::string &Url) { return StartRequest(Url, false, false); }, [StartRequest](const std::string &Url) { return StartRequest(Url, true, false); }, pPackageUrl, [StartRequest](const std::string &Url, bool Direct) { return StartRequest(Url, Direct, true); });
+	if(m_UpdateSurvey.LocalError())
+		FailUpdateDownloadPreparation();
+	else if(!m_UpdateSurvey.Running())
 		StartUpdateDownload();
+}
+catch(...)
+{
+	// 覆盖进入 Begin 前的候选快照和回调/字符串参数准备。
+	m_UpdateSurvey.Cancel();
+	FailUpdateDownloadPreparation();
 }
 
 void CTClient::StartUpdateDownload(bool NextSource)

@@ -31,8 +31,15 @@ namespace qm_update
 		std::vector<CProbe> m_vProbes;
 		CUpdateRequest::TFactory m_DirectOfficialFactory;
 		bool m_Running = false;
+		bool m_LocalError = false;
 		std::string m_PackageUrl;
 		TSampleFactory m_SampleFactory;
+
+		void FailLocally() noexcept
+		{
+			m_LocalError = true;
+			Cancel();
+		}
 
 		bool StartSample(CProbe &Probe, double Now)
 		{
@@ -60,16 +67,34 @@ namespace qm_update
 	public:
 		~CSourceSurvey() { Cancel(); }
 		void Begin(std::vector<CSource> vSources, const std::string &OfficialSignatureUrl, double Now, const CUpdateRequest::TFactory &Factory, CUpdateRequest::TFactory DirectOfficialFactory = {}, const std::string &PackageUrl = {}, TSampleFactory SampleFactory = {})
+		try
 		{
 			Cancel();
+			m_LocalError = false;
 			m_DirectOfficialFactory = std::move(DirectOfficialFactory);
 			m_PackageUrl = PackageUrl;
 			m_SampleFactory = std::move(SampleFactory);
-			for(const auto &Source : vSources)
-				m_vProbes.push_back({Source, Factory(Source.m_Prefix + OfficialSignatureUrl), Now});
+			// 所有追踪记录先准备完成，HTTP 启动后不再分配记录或复制来源。
+			m_vProbes.reserve(vSources.size());
+			for(auto &Source : vSources)
+				m_vProbes.push_back({std::move(Source), nullptr, Now});
+			for(auto &Probe : m_vProbes)
+			{
+				Probe.m_pRequest = Factory(Probe.m_Source.m_Prefix + OfficialSignatureUrl);
+				if(!Probe.m_pRequest)
+				{
+					FailLocally();
+					return;
+				}
+			}
 			m_Running = !m_vProbes.empty();
 		}
+		catch(...)
+		{
+			FailLocally();
+		}
 		bool Poll(CSourceRegistry &Sources, double Now)
+		try
 		{
 			if(!m_Running)
 				return true;
@@ -103,6 +128,11 @@ namespace qm_update
 					Probe.m_Reachable = Size == 64;
 					if(Probe.m_Reachable && StartSample(Probe, Now))
 					{
+						if(!Probe.m_pRequest)
+						{
+							FailLocally();
+							return true;
+						}
 						Complete = false;
 						continue;
 					}
@@ -117,6 +147,11 @@ namespace qm_update
 						Probe.m_Finished = false;
 						Probe.m_Start = Now;
 						Probe.m_pRequest = Probe.m_Sampling ? m_SampleFactory(Url, true) : m_DirectOfficialFactory(Url);
+						if(!Probe.m_pRequest)
+						{
+							FailLocally();
+							return true;
+						}
 						Complete = false;
 						continue;
 					}
@@ -126,6 +161,11 @@ namespace qm_update
 			if(Complete)
 				m_Running = false;
 			return !m_Running;
+		}
+		catch(...)
+		{
+			FailLocally();
+			return true;
 		}
 		std::vector<CSource> Candidates() const
 		{
@@ -162,6 +202,7 @@ namespace qm_update
 					Probe.m_Start = Now;
 		}
 		bool Running() const { return m_Running; }
+		bool LocalError() const { return m_LocalError; }
 		double Speed(const CSource *pSource) const
 		{
 			if(pSource)
@@ -177,16 +218,25 @@ namespace qm_update
 					return Probe.m_DirectRetried;
 			return false;
 		}
-		void Cancel()
+		void Cancel() noexcept
 		{
+			m_Running = false;
 			for(auto &Probe : m_vProbes)
-				if(Probe.m_pRequest && !Probe.m_pRequest->Done())
-					Probe.m_pRequest->Abort();
+			{
+				try
+				{
+					if(Probe.m_pRequest && !Probe.m_pRequest->Done() && !Probe.m_pRequest->IsAbortRequested())
+						Probe.m_pRequest->Abort();
+				}
+				catch(...)
+				{
+					// 单个外部取消失败不阻止其余探测解除引用，析构不传播异常。
+				}
+			}
 			m_vProbes.clear();
 			m_DirectOfficialFactory = {};
 			m_SampleFactory = {};
 			m_PackageUrl.clear();
-			m_Running = false;
 		}
 	};
 }
