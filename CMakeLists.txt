@@ -3701,6 +3701,7 @@ if(CLIENT)
     components/qmclient/spectator_selection.h
     components/qmclient/community_icon_scan.h
     components/qmclient/community_icon_store.h
+    components/qmclient/community_icon_image.h
     components/qmclient/shortcut_held_bind.h
     components/qmclient/spectator_tele_search.h
     components/qmclient/stutter_capture.cpp
@@ -4871,6 +4872,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/screenshot_image_test.cpp
     src/test/unit/engine/graphics/screenshot_submit_test.cpp
     src/test/integration/engine/screenshot_save_test.cpp
+    src/test/integration/client/community_icon_image_test.cpp
     src/test/unit/engine/graphics/qm_graphics_adapters_test.cpp
     src/test/unit/engine/graphics/graphics_vulkan_scheduler_test.cpp
     src/test/integration/client/graphics_fatal_error_test.cpp

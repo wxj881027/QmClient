@@ -3,10 +3,10 @@
 #include <base/log.h>
 
 #include <engine/engine.h>
-#include <engine/gfx/image_loader.h>
-#include <engine/gfx/image_manipulation.h>
 #include <engine/http.h>
 #include <engine/storage.h>
+
+#include <game/client/components/qmclient/community_icon_image.h>
 
 static constexpr size_t MAX_CONCURRENT_ICON_DOWNLOADS = 4;
 
@@ -74,43 +74,20 @@ const CCommunityIcon *CCommunityIcons::Find(const char *pCommunityId)
 
 bool CCommunityIcons::LoadFile(const char *pPath, int DirType, CImageInfo &Info, CImageInfo &InfoGrayscale, SHA256_DIGEST &Sha256)
 {
-	void *pFileData = nullptr;
-	unsigned FileSize = 0;
-	if(!Storage()->ReadFile(pPath, DirType, &pFileData, &FileSize))
+	const auto Result = qm_community_icons::LoadImage(*Storage(), pPath, DirType, Info, InfoGrayscale, Sha256);
+	if(Result == qm_community_icons::ELoadResult::LOADED)
+		return true;
+	const char *pReason;
+	switch(Result)
 	{
-		log_error("menus/browser", "Failed to read community icon from '%s'", pPath);
-		return false;
+	case qm_community_icons::ELoadResult::READ_FAILED: pReason = "could not read file"; break;
+	case qm_community_icons::ELoadResult::DECODE_FAILED: pReason = "could not decode PNG"; break;
+	case qm_community_icons::ELoadResult::FORMAT_UNSUPPORTED: pReason = "must be an RGBA image"; break;
+	case qm_community_icons::ELoadResult::COPY_FAILED: pReason = "could not copy image data"; break;
+	default: pReason = "image processing failed"; break;
 	}
-
-	if(!CImageLoader::LoadPng(pFileData, FileSize, pPath, Info))
-	{
-		free(pFileData);
-		log_error("menus/browser", "Failed to decode community icon from '%s'", pPath);
-		return false;
-	}
-	free(pFileData);
-
-	if(Info.m_Format != CImageInfo::FORMAT_RGBA)
-	{
-		Info.Free();
-		log_error("menus/browser", "Failed to load community icon from '%s': must be an RGBA image", pPath);
-		return false;
-	}
-	if(!Storage()->CalculateHashes(pPath, DirType, &Sha256))
-	{
-		Info.Free();
-		log_error("menus/browser", "Failed to load community icon from '%s': could not calculate hash", pPath);
-		return false;
-	}
-	InfoGrayscale = Info.DeepCopy();
-	if(InfoGrayscale.m_pData == nullptr)
-	{
-		Info.Free();
-		log_error("menus/browser", "Failed to load community icon from '%s': could not copy image data", pPath);
-		return false;
-	}
-	ConvertToGrayscale(InfoGrayscale);
-	return true;
+	log_error("menus/browser", "Failed to load community icon from '%s': %s", pPath, pReason);
+	return false;
 }
 
 bool CCommunityIcons::LoadFinish(const char *pCommunityId, CImageInfo &Info, CImageInfo &InfoGrayscale, const SHA256_DIGEST &Sha256)
