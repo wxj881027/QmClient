@@ -5329,6 +5329,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/contract/qmclient/settings/settings_warmup_loading_contract_test.cpp
     src/test/contract/qmclient/settings/settings_warmup_cleanup_contract_test.cpp
     src/test/unit/client/skins/skin_transition_test.cpp
+    src/test/unit/client/skins/skin_download_registration_test.cpp
     src/test/unit/client/skins/skins_test.cpp
     src/test/integration/client/skins/skin_source_job_test.cpp
     src/test/integration/client/skins/skin7_info_job_test.cpp

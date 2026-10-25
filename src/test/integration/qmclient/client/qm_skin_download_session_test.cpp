@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <functional>
+#include <memory_resource>
 #include <new>
 #include <string>
 #include <thread>
@@ -18,6 +19,20 @@
 
 namespace
 {
+	class CTrackingMemory : public std::pmr::memory_resource
+	{
+		void *do_allocate(size_t Bytes, size_t Alignment) override
+		{
+			if(m_Fail)
+				throw std::bad_alloc();
+			return std::pmr::new_delete_resource()->allocate(Bytes, Alignment);
+		}
+		void do_deallocate(void *pData, size_t Bytes, size_t Alignment) override { std::pmr::new_delete_resource()->deallocate(pData, Bytes, Alignment); }
+		bool do_is_equal(const std::pmr::memory_resource &Other) const noexcept override { return this == &Other; }
+
+	public:
+		bool m_Fail = false;
+	};
 	class CTestSkinDataJob : public IQmSkinDataJob
 	{
 		bool m_SourceValid;
@@ -587,4 +602,74 @@ TEST_F(QmSkinDownloadSession, ExternalHttpSubmissionAllocationFailureAbortsPrepa
 	EXPECT_TRUE(m_Http.m_pRejected->IsAbortRequested());
 	EXPECT_TRUE(m_Http.m_vRequests.empty());
 	EXPECT_EQ(pSession->Poll(), EResult::ERROR);
+}
+
+TEST_F(QmSkinDownloadSession, TrackedCreationRegistersOwnerBeforeNormalPolling)
+{
+	std::vector<std::string> Names;
+	auto pSession = QmCreateTrackedSkinDownloadSession(Names, "test", [&] { return Create(false); });
+	ASSERT_NE(pSession, nullptr);
+	ASSERT_EQ(Names.size(), 1u);
+	EXPECT_EQ(Names[0], "test");
+	BeginWithoutCache(*pSession);
+	EXPECT_EQ(m_Http.m_vRequests.size(), 1u);
+}
+
+TEST_F(QmSkinDownloadSession, ExistingTrackingNameDoesNotAllocateRegistryStorageOrDuplicateEntry)
+{
+	CTrackingMemory Memory;
+	std::pmr::vector<std::string> Names(&Memory);
+	Names.emplace_back("test");
+	Memory.m_Fail = true;
+	auto pSession = QmCreateTrackedSkinDownloadSession(Names, "test", [&] { return Create(false); });
+	ASSERT_NE(pSession, nullptr);
+	EXPECT_EQ(Names.size(), 1u);
+	BeginWithoutCache(*pSession);
+}
+
+TEST_F(QmSkinDownloadSession, TrackingAllocationFailureCancelsCandidateAndPreservesRegistry)
+{
+	CTrackingMemory Memory;
+	std::pmr::vector<std::string> Names(&Memory);
+	Names.reserve(1);
+	const auto Capacity = Names.capacity();
+	while(Names.size() < Capacity)
+		Names.emplace_back("kept");
+	Memory.m_Fail = true;
+	auto pSession = QmCreateTrackedSkinDownloadSession(Names, "test", [&] { return Create(false); });
+	EXPECT_EQ(pSession, nullptr);
+	EXPECT_EQ(Names.size(), Capacity);
+	EXPECT_EQ(Names[0], "kept");
+	WaitJobs();
+	ASSERT_NE(m_pLastSubmitted, nullptr);
+	EXPECT_EQ(m_pLastSubmitted->State(), IJob::STATE_ABORTED);
+	EXPECT_TRUE(m_Http.m_vRequests.empty());
+}
+
+TEST_F(QmSkinDownloadSession, TrackingFailureCanRetryWithANewCandidate)
+{
+	CTrackingMemory Memory;
+	std::pmr::vector<std::string> Names(&Memory);
+	Memory.m_Fail = true;
+	EXPECT_EQ(QmCreateTrackedSkinDownloadSession(Names, "test", [&] { return Create(false); }), nullptr);
+	Memory.m_Fail = false;
+	auto pSession = QmCreateTrackedSkinDownloadSession(Names, "test", [&] { return Create(false); });
+	ASSERT_NE(pSession, nullptr);
+	ASSERT_EQ(Names.size(), 1u);
+	EXPECT_EQ(Names[0], "test");
+	EXPECT_EQ(m_SubmitCalls, 2);
+	BeginWithoutCache(*pSession);
+}
+
+TEST_F(QmSkinDownloadSession, FailedNewTrackingDoesNotCancelExistingSession)
+{
+	auto pExisting = Create(false);
+	CTrackingMemory Memory;
+	std::pmr::vector<std::string> Names(&Memory);
+	Memory.m_Fail = true;
+	auto pRejected = QmCreateTrackedSkinDownloadSession(Names, "new", [&] { return Create(false); });
+	EXPECT_EQ(pRejected, nullptr);
+	EXPECT_TRUE(Names.empty());
+	BeginWithoutCache(*pExisting);
+	EXPECT_EQ(m_Http.m_vRequests.size(), 1u);
 }

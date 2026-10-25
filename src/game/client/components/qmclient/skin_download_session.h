@@ -6,6 +6,7 @@
 #include <engine/http.h>
 #include <engine/shared/jobs.h>
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <new>
@@ -207,5 +208,24 @@ private:
 	bool m_RetriedUnconditional = false;
 	bool m_NeedsValidation = false;
 };
+
+// 候选会话与轮询登记同时准备成功才交接；工厂内的字符串/包装分配也在边界内。
+template<typename TNames, typename FCreate>
+std::unique_ptr<CQmSkinDownloadSession> QmCreateTrackedSkinDownloadSession(TNames &Names, const char *pName, FCreate &&Create)
+{
+	try
+	{
+		auto pSession = std::forward<FCreate>(Create)();
+		if(!pSession)
+			return nullptr;
+		if(std::find(Names.begin(), Names.end(), pName) == Names.end())
+			Names.emplace_back(pName);
+		return pSession;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return nullptr;
+	}
+}
 
 #endif

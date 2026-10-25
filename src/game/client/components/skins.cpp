@@ -2164,10 +2164,13 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 			pSkinContainer->m_pLoadJob = std::make_shared<CSkinLoadJob>(this, pSkinContainer->Name(), pSkinContainer->StorageType());
 			break;
 		case CSkinContainer::EType::DOWNLOAD:
-			pSkinContainer->m_pDownloadSession = CreateSkinDownloadSession(pSkinContainer->Name());
-			if(std::find(m_vSkinDownloadNames.begin(), m_vSkinDownloadNames.end(), pSkinContainer->Name()) == m_vSkinDownloadNames.end())
-				m_vSkinDownloadNames.emplace_back(pSkinContainer->Name());
+		{
+			auto pSession = TryCreateTrackedSkinDownloadSession(pSkinContainer->Name());
+			if(!pSession)
+				return false;
+			pSkinContainer->m_pDownloadSession = std::move(pSession);
 			break;
+		}
 		default:
 			dbg_assert_failed("pSkinContainer->Type() invalid");
 		}
@@ -3761,18 +3764,20 @@ void CSkins::CSkinLoadJob::Run()
 	}
 }
 
-std::unique_ptr<CQmSkinDownloadSession> CSkins::CreateSkinDownloadSession(const char *pName)
+std::unique_ptr<CQmSkinDownloadSession> CSkins::TryCreateTrackedSkinDownloadSession(const char *pName)
 {
-	char aEscapedName[256];
-	EscapeUrl(aEscapedName, pName);
-	const std::string OfficialUrl = std::string(g_Config.m_ClSkinDownloadUrl) + aEscapedName + ".png";
-	const std::string CommunityUrl = g_Config.m_ClDownloadCommunitySkins ? std::string(g_Config.m_ClSkinCommunityDownloadUrl) + aEscapedName + ".png" : "";
-	const std::string Name(pName);
-	const std::string Path = "downloadedskins/" + Name + ".png";
-	return std::make_unique<CQmSkinDownloadSession>(*Http(), OfficialUrl, CommunityUrl, std::make_shared<CQmSkinDownloadJob>(Storage(), pName, PrepareSkinData), [this, Path](const char *pUrl, bool Unconditional) -> std::shared_ptr<IHttpRequest> {
+	return QmCreateTrackedSkinDownloadSession(m_vSkinDownloadNames, pName, [&] {
+		char aEscapedName[256];
+		EscapeUrl(aEscapedName, pName);
+		const std::string OfficialUrl = std::string(g_Config.m_ClSkinDownloadUrl) + aEscapedName + ".png";
+		const std::string CommunityUrl = g_Config.m_ClDownloadCommunitySkins ? std::string(g_Config.m_ClSkinCommunityDownloadUrl) + aEscapedName + ".png" : "";
+		const std::string Name(pName);
+		const std::string Path = "downloadedskins/" + Name + ".png";
+		return std::make_unique<CQmSkinDownloadSession>(*Http(), OfficialUrl, CommunityUrl, std::make_shared<CQmSkinDownloadJob>(Storage(), pName, PrepareSkinData), [this, Path](const char *pUrl, bool Unconditional) -> std::shared_ptr<IHttpRequest> {
 			auto pRequest = HttpGetBoth(pUrl, Storage(), Path.c_str(), IStorage::TYPE_SAVE);
 			pRequest->SkipByFileTime(!Unconditional);
 			return pRequest; }, [this, Name](std::shared_ptr<IHttpRequest> pResponse) -> std::shared_ptr<IQmSkinDataJob> { return std::make_shared<CQmSkinDownloadJob>(Storage(), Name.c_str(), PrepareSkinData, std::move(pResponse)); }, [this](std::shared_ptr<IJob> pJob) { Engine()->AddJob(std::move(pJob)); });
+	});
 }
 
 void CSkins::ConAddFavoriteSkin(IConsole::IResult *pResult, void *pUserData)

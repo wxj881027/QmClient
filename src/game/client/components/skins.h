@@ -965,7 +965,7 @@ private:
 	bool ReclaimBackgroundSkinForPriorityRequest(const char *pRequesterName, int CountFuseLimit);
 	void UpdateStartLoading(CSkinLoadingStats &Stats);
 	void UpdateSkinDownloads(CSkinLoadingStats &Stats);
-	std::unique_ptr<CQmSkinDownloadSession> CreateSkinDownloadSession(const char *pName);
+	std::unique_ptr<CQmSkinDownloadSession> TryCreateTrackedSkinDownloadSession(const char *pName);
 	std::vector<std::string> m_vSkinDownloadNames;
 	void UpdateFinishLoading(CSkinLoadingStats &Stats, std::chrono::nanoseconds StartTime, std::chrono::nanoseconds MaxTime);
 	void CollectUnresolvedSkins();
