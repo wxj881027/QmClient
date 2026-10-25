@@ -872,9 +872,6 @@ Allow left-click to toggle between spectating nearest player and free view
 Allow mic permission in system settings, then reopen voice
 == Разрешите доступ к микрофону в настройках системы, затем снова включите голос.
 
-Allow the client to send kill requests (0 = ignore client-initiated kills)
-== Разрешить клиенту отправлять запросы на самоубийство (0 = игнорировать самоубийства со стороны клиента)
-
 Allow voting to kick players
 == Разрешить голосование за кик игроков
 
@@ -1388,6 +1385,12 @@ Auto-connect dummy
 Auto-create CSV on game end
 == Автоматически создавать CSV при завершении игры
 
+Auto-enable after
+== Автовключение через
+
+Auto-enable self-kill protection this many minutes after joining a game (0 = never)
+== Через сколько минут после входа в игру автоматически включать защиту от самоубийства (0 = никогда)
+
 Auto-fetch all players' skins for dummy rotation queue
 == Автоматически получать скины игроков на карте и использовать их для ротации дамми
 
@@ -1844,6 +1847,9 @@ Blink
 Blink the active local tee
 == Заставить активного локального персонажа мигнуть
 
+Block client-initiated self-kill (K key / kill command)
+== Блокировать самоубийство со стороны клиента (клавиша K / команда kill)
+
 Block enemy chat
 == Блокировать чат врагов
 
@@ -1906,9 +1912,6 @@ Bounded capture frame queue depth for demo export (higher values use more memory
 
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Цвет титула в скобках: 0 = как на сервере, 1 = один цвет, 2 = радуга
-
-Bracketed title single color
-== Один цвет для титула в скобках
 
 Bright backgrounds reduce text contrast; keep the overlay dark enough.
 == Светлый фон снижает контраст текста; держите затемнение достаточно тёмным.
@@ -3092,8 +3095,8 @@ Console color
 Console color scheme
 == Консоль: цветовая схема
 
-Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom
-== Консоль: цветовая схема: 0=Современный терминал, 1=Классический PowerShell, 2=своя
+Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom, 3+=Windows Terminal schemes
+== Цветовая схема консоли: 0=современный терминал, 1=классический PowerShell, 2=своя, 3 и выше — схемы Windows Terminal
 
 Console command color
 == Консоль: цвет команд
@@ -4957,6 +4960,9 @@ Enable rotation
 
 Enable saving games (/save and /load)
 == Включить сохранение игр (/save и /load)
+
+Enable self-kill protection
+== Включить защиту от самоубийства
 
 Enable server message sound
 == Включить звук сообщения сервера
@@ -8195,9 +8201,6 @@ Manual Steam path is invalid; using automatic detection
 Manual target
 == Ручная цель
 
-Manually toggle client-initiated self-kill with the bindable commands qm_self_kill_off and qm_self_kill_on
-== Переключайте самоубийство по инициативе клиента вручную с помощью привязываемых команд qm_self_kill_off и qm_self_kill_on
-
 Map
 == Карта
 
@@ -9665,6 +9668,9 @@ Open the folder containing screenshots
 Open the guide
 == Открыть руководство
 
+Open the local console appearance settings
+== Открыть настройки внешнего вида локальной консоли
+
 Open the saves file
 == Открыть файл сохранений
 
@@ -9706,6 +9712,9 @@ Opens the spectator menu (this does not work with binds).
 
 Opt out of spectator count and hide auth status to non-authed players (1 = hidden, 0 = shown)
 == Отказаться от подсчёта наблюдателей и скрыть статус авторизации для неавторизованных игроков (1 = скрыт, 0 = показан)
+
+Opt-in protection for client-initiated self-kill, with optional auto-enable after joining a game
+== Защита от самоубийства со стороны клиента по умолчанию выключена и включается по желанию (в том числе автоматически после входа в игру)
 
 Optimistic prediction along stable direction
 == Оптимистичное предсказание вдоль стабильного направления
@@ -12515,6 +12524,9 @@ Self-kill off
 Self-kill on
 == Включить самоубийство
 
+Self-kill protection enabled automatically
+== Защита от самоубийства включена автоматически
+
 Send & Receive
 == Отправить эмоцию в воде
 
@@ -13346,7 +13358,7 @@ Show jump hint based on fractional part of position
 Show jumps indicator
 == Показывать индикатор прыжков
 
-Show katan on frozen players
+Show katana on frozen players
 == Показывать катану на замороженных игроках
 
 Show katana on frozen players (restores old behavior)
@@ -15638,7 +15650,7 @@ Title wave strength (0-3, 0 = off)
 to check a server setting say /settings and setting's name, setting names are:
 == Чтобы посмотреть настройку сервера, введите /settings и её название. Названия настроек:
 
-To prevent accidental kills while racing, use the two bind rows above to toggle. To self-kill, press the enable key first, then press K. Server commands are not affected
+To prevent accidental kills while racing, toggle the switch above or use the two bind rows. To self-kill, enable first, then press K. Auto-enable counts from the moment you join a game; 0 minutes keeps it off. Server commands are not affected
 == Чтобы избежать случайных самоубийств на трассах, используйте две строки привязки выше для переключения. Чтобы совершить самоубийство, сначала нажмите клавишу включения, затем K. Команды сервера не затрагиваются
 
 To save all players in your team have to be alive and not in '/spec'

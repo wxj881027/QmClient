@@ -872,9 +872,6 @@ Allow left-click to toggle between spectating nearest player and free view
 Allow mic permission in system settings, then reopen voice
 == 需要在系統設置裡允許麥克風權限，然後重新打開語音
 
-Allow the client to send kill requests (0 = ignore client-initiated kills)
-== 允許用戶端傳送自殺請求（0 = 忽略用戶端發起的自殺）
-
 Allow voting to kick players
 == 允許投票踢出玩家
 
@@ -1388,6 +1385,12 @@ Auto-connect dummy
 Auto-create CSV on game end
 == 遊戲結束時自動創建 CSV
 
+Auto-enable after
+== 自動開啟
+
+Auto-enable self-kill protection this many minutes after joining a game (0 = never)
+== 進圖多少分鐘後自動開啟自殺保護（0 = 不自動開啟）
+
 Auto-fetch all players' skins for dummy rotation queue
 == 自動獲取全圖玩家皮膚並作為分身輪換隊列
 
@@ -1844,6 +1847,9 @@ Blink
 Blink the active local tee
 == 讓目前本機角色閃爍
 
+Block client-initiated self-kill (K key / kill command)
+== 攔截用戶端發起的自殺（K 鍵 / kill 命令）
+
 Block enemy chat
 == 封鎖敵對玩家聊天
 
@@ -1906,9 +1912,6 @@ Bounded capture frame queue depth for demo export (higher values use more memory
 
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 方括號頭銜顏色：0 = 跟隨伺服器，1 = 單色，2 = 彩虹
-
-Bracketed title single color
-== 方括號頭銜單色
 
 Bright backgrounds reduce text contrast; keep the overlay dark enough.
 == 過亮的背景會降低文字對比度；請讓遮罩保持足夠暗。
@@ -3092,8 +3095,8 @@ Console color
 Console color scheme
 == 控制台: 配色
 
-Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom
-== 控制台: 配色: 0=現代終端, 1=經典 PowerShell, 2=自訂
+Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom, 3+=Windows Terminal schemes
+== 控制台配色：0=現代終端，1=經典 PowerShell, 2=自訂，3 以上為 Windows Terminal 配色
 
 Console command color
 == 控制台: 命令顏色
@@ -4957,6 +4960,9 @@ Enable rotation
 
 Enable saving games (/save and /load)
 == 启用保存游戏（/save 和 /load）
+
+Enable self-kill protection
+== 開啟自殺保護
 
 Enable server message sound
 == 啟用伺服器消息提示音
@@ -8195,9 +8201,6 @@ Manual Steam path is invalid; using automatic detection
 Manual target
 == 手動目標
 
-Manually toggle client-initiated self-kill with the bindable commands qm_self_kill_off and qm_self_kill_on
-== 透過可綁定命令 qm_self_kill_off / qm_self_kill_on 手動開關客戶端自殺能力
-
 Map
 == 地圖
 
@@ -9665,6 +9668,9 @@ Open the folder containing screenshots
 Open the guide
 == 開啟說明
 
+Open the local console appearance settings
+== 開啟本機控制台外觀設定
+
 Open the saves file
 == 打開存檔密碼文件
 
@@ -9706,6 +9712,9 @@ Opens the spectator menu (this does not work with binds).
 
 Opt out of spectator count and hide auth status to non-authed players (1 = hidden, 0 = shown)
 == 選擇退出觀眾計數並對未經授權的玩家隱藏身份驗證狀態（1 = 隱藏，0 = 顯示）
+
+Opt-in protection for client-initiated self-kill, with optional auto-enable after joining a game
+== 用戶端自殺保護預設關閉，可視需要開啟（含進圖後自動開啟）
 
 Optimistic prediction along stable direction
 == 沿穩定方向更樂觀的預測
@@ -12515,6 +12524,9 @@ Self-kill off
 Self-kill on
 == 開啟自殺
 
+Self-kill protection enabled automatically
+== 自殺保護已自動開啟
+
 Send & Receive
 == 收發
 
@@ -13346,7 +13358,7 @@ Show jump hint based on fractional part of position
 Show jumps indicator
 == 顯示可跳躍次數
 
-Show katan on frozen players
+Show katana on frozen players
 == 在被凍結的玩家身上顯示武士刀
 
 Show katana on frozen players (restores old behavior)
@@ -15638,7 +15650,7 @@ Title wave strength (0-3, 0 = off)
 to check a server setting say /settings and setting's name, setting names are:
 == 輸入 /settings 加設定名即可查看伺服器設定。可用設定的名稱有：
 
-To prevent accidental kills while racing, use the two bind rows above to toggle. To self-kill, press the enable key first, then press K. Server commands are not affected
+To prevent accidental kills while racing, toggle the switch above or use the two bind rows. To self-kill, enable first, then press K. Auto-enable counts from the moment you join a game; 0 minutes keeps it off. Server commands are not affected
 == 跑圖防誤觸：用上方兩行綁定開關鍵，需要自殺時先按開啟鍵再按 K；服務端命令不受影響
 
 To save all players in your team have to be alive and not in '/spec'

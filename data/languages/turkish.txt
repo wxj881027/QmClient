@@ -872,9 +872,6 @@ Allow left-click to toggle between spectating nearest player and free view
 Allow mic permission in system settings, then reopen voice
 == Sistem ayarlarından mikrofon iznine izin ver, ardından sesi tekrar aç
 
-Allow the client to send kill requests (0 = ignore client-initiated kills)
-== İstemcinin intihar isteği göndermesine izin ver (0 = istemci kaynaklı intiharları yok say)
-
 Allow voting to kick players
 == Oyuncuları atmak için oylamaya izin ver
 
@@ -1388,6 +1385,12 @@ Auto-connect dummy
 Auto-create CSV on game end
 == Oyun sonunda otomatik CSV oluştur
 
+Auto-enable after
+== Otomatik açma süresi
+
+Auto-enable self-kill protection this many minutes after joining a game (0 = never)
+== Oyun içinde bu kadar dakika sonra intihar korumasını otomatik aç (0 = hiçbir zaman)
+
 Auto-fetch all players' skins for dummy rotation queue
 == Haritadaki Tüm Oyuncuların Skinlerini Otomatik Al ve Dummy Döngü Kuyruğu Olarak Kullan
 
@@ -1844,6 +1847,9 @@ Blink
 Blink the active local tee
 == Etkin yerel karakteri yanıp söndür
 
+Block client-initiated self-kill (K key / kill command)
+== İstemci kaynaklı intiharı engelle (K tuşu / kill komutu)
+
 Block enemy chat
 == Düşman sohbetini engelle
 
@@ -1906,9 +1912,6 @@ Bounded capture frame queue depth for demo export (higher values use more memory
 
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Köşeli parantezli unvan rengi: 0 = sunucuyu takip et, 1 = tek renk, 2 = gökkuşağı
-
-Bracketed title single color
-== Köşeli parantezli unvan tek renk
 
 Bright backgrounds reduce text contrast; keep the overlay dark enough.
 == Parlak arka planlar metin kontrastını düşürür; katmanı yeterince koyu tutun.
@@ -3092,8 +3095,8 @@ Console color
 Console color scheme
 == Konsol: renk şeması
 
-Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom
-== Konsol: renk şeması: 0=Çağdaş terminal, 1=Klasik PowerShell, 2=özel
+Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom, 3+=Windows Terminal schemes
+== Konsol renk şeması: 0=Çağdaş terminal, 1=Klasik PowerShell, 2=özel, 3+ = Windows Terminal şemaları
 
 Console command color
 == Konsol: komut rengi
@@ -4957,6 +4960,9 @@ Enable rotation
 
 Enable saving games (/save and /load)
 == Oyun kaydetmeyi etkinleştir (/save ve /load)
+
+Enable self-kill protection
+== İntihar korumasını etkinleştir
 
 Enable server message sound
 == Sunucu mesajı sesini etkinleştir
@@ -8195,9 +8201,6 @@ Manual Steam path is invalid; using automatic detection
 Manual target
 == Manuel hedef
 
-Manually toggle client-initiated self-kill with the bindable commands qm_self_kill_off and qm_self_kill_on
-== İstemci kaynaklı intiharı bağlanabilir qm_self_kill_off ve qm_self_kill_on komutlarıyla elle açıp kapatın
-
 Map
 == Harita
 
@@ -9665,6 +9668,9 @@ Open the folder containing screenshots
 Open the guide
 == Kılavuzu aç
 
+Open the local console appearance settings
+== Yerel konsol görünüm ayarlarını aç
+
 Open the saves file
 == Kayıtlı oyun dosyasını aç
 
@@ -9706,6 +9712,9 @@ Opens the spectator menu (this does not work with binds).
 
 Opt out of spectator count and hide auth status to non-authed players (1 = hidden, 0 = shown)
 == İzleyici sayısından çık ve yetkisiz oyunculara kimlik doğrulama durumunu gizle (1 = gizli, 0 = göster)
+
+Opt-in protection for client-initiated self-kill, with optional auto-enable after joining a game
+== İstemci kaynaklı intihar koruması varsayılan olarak kapalıdır ve isteğe bağlı açılır (katıldıktan sonra otomatik açma dahil)
 
 Optimistic prediction along stable direction
 == Kararlı yön boyunca iyimser tahmin
@@ -12515,6 +12524,9 @@ Self-kill off
 Self-kill on
 == İntiharı aç
 
+Self-kill protection enabled automatically
+== İntihar koruması otomatik olarak açıldı
+
 Send & Receive
 == Gönder ve Al
 
@@ -13346,7 +13358,7 @@ Show jump hint based on fractional part of position
 Show jumps indicator
 == Zıplama göstergesini göster
 
-Show katan on frozen players
+Show katana on frozen players
 == Donmuş oyuncuların üzerinde katanayı göster
 
 Show katana on frozen players (restores old behavior)
@@ -15638,7 +15650,7 @@ Title wave strength (0-3, 0 = off)
 to check a server setting say /settings and setting's name, setting names are:
 == Bir sunucu ayarını görmek için /settings ve ayar adını yazın. Ayar adları şunlardır:
 
-To prevent accidental kills while racing, use the two bind rows above to toggle. To self-kill, press the enable key first, then press K. Server commands are not affected
+To prevent accidental kills while racing, toggle the switch above or use the two bind rows. To self-kill, enable first, then press K. Auto-enable counts from the moment you join a game; 0 minutes keeps it off. Server commands are not affected
 == Yarışlarda yanlışlıkla intiharları önlemek için yukarıdaki iki bağlama satırını kullanarak açıp kapatın. İntihar için önce etkinleştirme tuşuna, sonra K'ya basın. Sunucu komutları etkilenmez
 
 To save all players in your team have to be alive and not in '/spec'

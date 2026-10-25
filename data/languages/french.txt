@@ -872,9 +872,6 @@ Allow left-click to toggle between spectating nearest player and free view
 Allow mic permission in system settings, then reopen voice
 == Autorisez la permission du microphone dans les paramètres système, puis réactivez la voix
 
-Allow the client to send kill requests (0 = ignore client-initiated kills)
-== Autorise le client à envoyer des demandes de suicide (0 = ignorer les suicides initiés par le client)
-
 Allow voting to kick players
 == Autoriser le vote pour exclure des joueurs
 
@@ -1388,6 +1385,12 @@ Auto-connect dummy
 Auto-create CSV on game end
 == Créer automatiquement un CSV à la fin de la partie
 
+Auto-enable after
+== Activer automatiquement après
+
+Auto-enable self-kill protection this many minutes after joining a game (0 = never)
+== Activer automatiquement la protection contre le suicide après ce nombre de minutes en jeu (0 = jamais)
+
 Auto-fetch all players' skins for dummy rotation queue
 == Récupérer automatiquement les skins des joueurs de la carte entière et les utiliser comme file d’attente de rotation pour le Dummy
 
@@ -1844,6 +1847,9 @@ Blink
 Blink the active local tee
 == Faire clignoter le personnage local actif
 
+Block client-initiated self-kill (K key / kill command)
+== Bloquer le suicide initié par le client (touche K / commande kill)
+
 Block enemy chat
 == Bloquer le tchat des ennemis
 
@@ -1906,9 +1912,6 @@ Bounded capture frame queue depth for demo export (higher values use more memory
 
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Couleur du titre entre crochets : 0 = suivre le serveur, 1 = couleur unique, 2 = arc-en-ciel
-
-Bracketed title single color
-== Couleur unique du titre entre crochets
 
 Bright backgrounds reduce text contrast; keep the overlay dark enough.
 == Un fond clair réduit le contraste du texte ; garde l'overlay assez sombre.
@@ -3092,8 +3095,8 @@ Console color
 Console color scheme
 == Console: palette de couleurs
 
-Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom
-== Console: palette de couleurs: 0=Terminal moderne, 1=PowerShell classique, 2=personnalisée
+Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom, 3+=Windows Terminal schemes
+== Palette de couleurs de la console : 0=Terminal moderne, 1=PowerShell classique, 2=personnalisée, 3+ = schémas Windows Terminal
 
 Console command color
 == Console: couleur des commandes
@@ -4957,6 +4960,9 @@ Enable rotation
 
 Enable saving games (/save and /load)
 == Activer la sauvegarde des parties (/save et /load)
+
+Enable self-kill protection
+== Activer la protection contre le suicide
 
 Enable server message sound
 == Activer le son des messages du serveur
@@ -8195,9 +8201,6 @@ Manual Steam path is invalid; using automatic detection
 Manual target
 == Cible manuelle
 
-Manually toggle client-initiated self-kill with the bindable commands qm_self_kill_off and qm_self_kill_on
-== Activez ou désactivez manuellement le suicide côté client avec les commandes assignables qm_self_kill_off et qm_self_kill_on
-
 Map
 == Carte
 
@@ -9665,6 +9668,9 @@ Open the folder containing screenshots
 Open the guide
 == Ouvrir le guide
 
+Open the local console appearance settings
+== Ouvrir les réglages d'apparence de la console locale
+
 Open the saves file
 == Ouvrir le fichier de sauvegardes
 
@@ -9706,6 +9712,9 @@ Opens the spectator menu (this does not work with binds).
 
 Opt out of spectator count and hide auth status to non-authed players (1 = hidden, 0 = shown)
 == Se retirer du comptage des spectateurs et cacher le statut d'authentification aux joueurs non authentifiés (1 = caché, 0 = affiché)
+
+Opt-in protection for client-initiated self-kill, with optional auto-enable after joining a game
+== La protection contre le suicide côté client est désactivée par défaut et s'active au besoin (aussi automatiquement après avoir rejoint)
 
 Optimistic prediction along stable direction
 == Prédiction optimiste le long d'une direction stable
@@ -12515,6 +12524,9 @@ Self-kill off
 Self-kill on
 == Activer le suicide
 
+Self-kill protection enabled automatically
+== Protection contre le suicide activée automatiquement
+
 Send & Receive
 == Envoyer et recevoir
 
@@ -13346,7 +13358,7 @@ Show jump hint based on fractional part of position
 Show jumps indicator
 == Afficher l'indicateur de sauts
 
-Show katan on frozen players
+Show katana on frozen players
 == Afficher un katana sur les joueurs gelés
 
 Show katana on frozen players (restores old behavior)
@@ -15638,7 +15650,7 @@ Title wave strength (0-3, 0 = off)
 to check a server setting say /settings and setting's name, setting names are:
 == Pour consulter un paramètre du serveur, tapez /settings et son nom. Les noms sont :
 
-To prevent accidental kills while racing, use the two bind rows above to toggle. To self-kill, press the enable key first, then press K. Server commands are not affected
+To prevent accidental kills while racing, toggle the switch above or use the two bind rows. To self-kill, enable first, then press K. Auto-enable counts from the moment you join a game; 0 minutes keeps it off. Server commands are not affected
 == Pour éviter les suicides accidentels en course, utilisez les deux lignes de liaison ci-dessus pour basculer. Pour vous suicider, appuyez d'abord sur la touche d'activation, puis sur K. Les commandes du serveur ne sont pas affectées
 
 To save all players in your team have to be alive and not in '/spec'

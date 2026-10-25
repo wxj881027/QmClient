@@ -872,9 +872,6 @@ Allow left-click to toggle between spectating nearest player and free view
 Allow mic permission in system settings, then reopen voice
 == 시스템 설정에서 마이크 권한을 허용한 후 음성을 다시 켜세요
 
-Allow the client to send kill requests (0 = ignore client-initiated kills)
-== 클라이언트 킬 요청 허용 (0 = 클라이언트 발 킬 무시)
-
 Allow voting to kick players
 == 플레이어 추방 투표 허용
 
@@ -1388,6 +1385,12 @@ Auto-connect dummy
 Auto-create CSV on game end
 == 게임 종료 시 CSV 자동 생성
 
+Auto-enable after
+== 자동 켜기
+
+Auto-enable self-kill protection this many minutes after joining a game (0 = never)
+== 게임 참가 후 몇 분 뒤에 자살 보호를 자동으로 켤지 (0 = 자동으로 켜지 않음)
+
 Auto-fetch all players' skins for dummy rotation queue
 == 맵 전체 플레이어 스킨을 자동으로 가져와 더미 순환 대기열로 사용
 
@@ -1844,6 +1847,9 @@ Blink
 Blink the active local tee
 == 활성 로컬 캐릭터를 깜박이게 합니다
 
+Block client-initiated self-kill (K key / kill command)
+== 클라이언트 발 자살 차단 (K 키 / kill 명령)
+
 Block enemy chat
 == 적대 플레이어 채팅 차단
 
@@ -1906,9 +1912,6 @@ Bounded capture frame queue depth for demo export (higher values use more memory
 
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 대괄호 칭호 색상: 0 = 서버 설정 따르기, 1 = 단색, 2 = 무지개
-
-Bracketed title single color
-== 대괄호 칭호 단색
 
 Bright backgrounds reduce text contrast; keep the overlay dark enough.
 == 밝은 배경은 글자 대비를 떨어뜨리니, 오버레이는 충분히 어둡게 유지하세요.
@@ -3092,8 +3095,8 @@ Console color
 Console color scheme
 == 콘솔: 색 구성
 
-Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom
-== 콘솔: 색 구성: 0=현대식 터미널, 1=클래식 PowerShell, 2=사용자 지정
+Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom, 3+=Windows Terminal schemes
+== 콘솔 색 구성: 0=현대식 터미널, 1=클래식 PowerShell, 2=사용자 지정, 3 이상은 Windows Terminal 색 구성
 
 Console command color
 == 콘솔: 명령어 색상
@@ -4957,6 +4960,9 @@ Enable rotation
 
 Enable saving games (/save and /load)
 == 게임 저장 활성화 (/save 및 /load)
+
+Enable self-kill protection
+== 자살 보호 사용
 
 Enable server message sound
 == 서버 메시지 사운드 활성화
@@ -8195,9 +8201,6 @@ Manual Steam path is invalid; using automatic detection
 Manual target
 == 수동 대상
 
-Manually toggle client-initiated self-kill with the bindable commands qm_self_kill_off and qm_self_kill_on
-== 바인딩 가능한 명령 qm_self_kill_off / qm_self_kill_on으로 클라이언트 자살을 수동으로 전환합니다
-
 Map
 == 맵
 
@@ -9665,6 +9668,9 @@ Open the folder containing screenshots
 Open the guide
 == 안내 열기
 
+Open the local console appearance settings
+== 로컬 콘솔 모양 설정 열기
+
 Open the saves file
 == 저장 파일 열기
 
@@ -9706,6 +9712,9 @@ Opens the spectator menu (this does not work with binds).
 
 Opt out of spectator count and hide auth status to non-authed players (1 = hidden, 0 = shown)
 == 관전자 수에서 제외되고 인증되지 않은 플레이어에게 인증 상태 숨기기 (1 = 숨김, 0 = 표시)
+
+Opt-in protection for client-initiated self-kill, with optional auto-enable after joining a game
+== 클라이언트 자살 보호는 기본으로 꺼져 있으며 필요할 때 켤 수 있습니다 (참가 후 자동 켜기 포함)
 
 Optimistic prediction along stable direction
 == 안정적인 방향을 따라 낙관적 예측
@@ -12515,6 +12524,9 @@ Self-kill off
 Self-kill on
 == 자살 켜기
 
+Self-kill protection enabled automatically
+== 자살 보호가 자동으로 켜졌습니다
+
 Send & Receive
 == 보내기 및 받기
 
@@ -13346,7 +13358,7 @@ Show jump hint based on fractional part of position
 Show jumps indicator
 == 점프 횟수 표시
 
-Show katan on frozen players
+Show katana on frozen players
 == 얼어붙은 플레이어에 카타나 표시
 
 Show katana on frozen players (restores old behavior)
@@ -15638,7 +15650,7 @@ Title wave strength (0-3, 0 = off)
 to check a server setting say /settings and setting's name, setting names are:
 == 서버 설정을 확인하려면 /settings 와 설정 이름을 입력하세요. 설정 이름은 다음과 같습니다:
 
-To prevent accidental kills while racing, use the two bind rows above to toggle. To self-kill, press the enable key first, then press K. Server commands are not affected
+To prevent accidental kills while racing, toggle the switch above or use the two bind rows. To self-kill, enable first, then press K. Auto-enable counts from the moment you join a game; 0 minutes keeps it off. Server commands are not affected
 == 레이스 중 실수 방지: 위의 두 바인딩 행으로 전환하세요. 자살하려면 먼저 활성화 키를 누른 뒤 K를 누릅니다. 서버 명령은 영향을 받지 않습니다
 
 To save all players in your team have to be alive and not in '/spec'
