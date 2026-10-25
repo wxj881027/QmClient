@@ -9,23 +9,13 @@
 
 #include <game/client/component.h>
 #include <game/client/components/qmclient/community_icon_scan.h>
+#include <game/client/components/qmclient/community_icon_store.h>
 #include <game/client/ui_rect.h>
 
 #include <deque>
 #include <optional>
 
 class IHttpRequest;
-
-class CCommunityIcon
-{
-	friend class CCommunityIcons;
-
-private:
-	char m_aCommunityId[CServerInfo::MAX_COMMUNITY_ID_LENGTH];
-	SHA256_DIGEST m_Sha256;
-	IGraphics::CTextureHandle m_OrgTexture;
-	IGraphics::CTextureHandle m_GreyTexture;
-};
 
 class CCommunityIcons : public CComponentInterfaces
 {
@@ -81,15 +71,16 @@ private:
 		std::shared_ptr<IHttpRequest> HttpRequest() { return m_pHttpRequest; }
 	};
 
-	std::vector<CCommunityIcon> m_vCommunityIcons;
+	qm_community_icons::CStore m_Icons;
 	std::deque<std::shared_ptr<CCommunityIconLoadJob>> m_CommunityIconLoadJobs;
 	std::deque<std::shared_ptr<CCommunityIconDownloadJob>> m_CommunityIconDownloadJobs;
 	qm_community_icons::CScan m_IconScan;
 	bool m_ScanPreparationFailed = false;
+	bool m_CleanupFailed = false;
 	bool QueueLoadJob(const char *pCommunityId, int StorageType);
 	static int FileScan(const char *pName, int IsDir, int DirType, void *pUser);
 	bool LoadFile(const char *pPath, int DirType, CImageInfo &Info, CImageInfo &InfoGrayscale, SHA256_DIGEST &Sha256);
-	void LoadFinish(const char *pCommunityId, CImageInfo &Info, CImageInfo &InfoGrayscale, const SHA256_DIGEST &Sha256);
+	bool LoadFinish(const char *pCommunityId, CImageInfo &Info, CImageInfo &InfoGrayscale, const SHA256_DIGEST &Sha256);
 };
 
 #endif
