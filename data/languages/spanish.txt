@@ -1022,6 +1022,9 @@ API key
 APP ID
 == ID de aplicación
 
+Appearance
+== Apariencia
+
 Appearance and command highlighting of the local console
 == Apariencia de la consola local y resaltado de comandos
 
@@ -1180,6 +1183,9 @@ Asset preset
 
 Asset with this name already exists.
 == Ya existe un activo con este nombre.
+
+Assets
+== Recursos
 
 Assets directory
 == Directorio de activos
@@ -1481,6 +1487,9 @@ Automatic game-end scoreboard screenshot
 Automatic updates
 == Actualizaciones automáticas
 
+Automatic updates require Windows x64
+== Las actualizaciones automáticas requieren Windows x64
+
 Automatically add a watermark to screenshots
 == Añadir automáticamente una marca de agua a las capturas de pantalla
 
@@ -1555,6 +1564,15 @@ Axiom auto login failed
 
 Axiom auto login failed, retrying
 == Falló el inicio de sesión automático de Axiom, reintentando
+
+Axiom auto login failed: already in game
+== Error al iniciar sesión en Axiom: la cuenta ya está en el juego
+
+Axiom auto login failed: invalid credentials
+== Error al iniciar sesión en Axiom: credenciales no válidas
+
+Axiom auto login failed: wrong password
+== Error al iniciar sesión en Axiom: contraseña incorrecta
 
 Axiom auto login skipped: no password
 == Inicio de sesión automático de Axiom: sin contraseña, omitido
@@ -2843,6 +2861,9 @@ Config Filters
 Config version. Helps new client fix old config errors.
 == Versión de configuración. Ayuda al nuevo cliente a corregir errores de configuración antiguos.
 
+Configs
+== Configuraciones
+
 Configuration
 == Configuración
 
@@ -3169,6 +3190,9 @@ Controller GUID of the active controller
 
 Controller jitter tolerance
 == Tolerancia de vibración del mando
+
+Controls
+== Controles
 
 Controls demo recording and playback behavior.
 == Controla el comportamiento de grabación y reproducción de las demos.
@@ -5189,6 +5213,9 @@ Entities background color
 Entity assets
 == Recursos de entidades
 
+Entity Background Image
+== Imagen de fondo de entidades
+
 Entity overlay
 == Superposición de entidades
 
@@ -5426,11 +5453,17 @@ Failed
 Failed saving the replay!
 == ¡Falló al guardar la repetición!
 
+Failed to check for updates
+== Error al buscar actualizaciones
+
 Failed to copy main asset image.
 == Error al copiar la imagen del activo principal.
 
 Failed to create bgdraw folder
 == Error al crear la carpeta bgdraw
+
+Failed to create the update working directory
+== No se pudo crear el directorio de trabajo de la actualización
 
 Failed to download the rank 1 demo
 == Error al descargar la demo de rango 1
@@ -6071,6 +6104,9 @@ Gap between tee and nametag
 Gaussian
 == Gaussiano
 
+General
+== General
+
 Generated skin outline color
 == Color del contorno generado
 
@@ -6274,6 +6310,9 @@ Gradient type
 
 Gradient vertical position
 == Posición vertical del degradado
+
+Graphics
+== Gráficos
 
 Graphics backend does not support dummy mini view
 == El motor gráfico no admite la vista pequeña del dummy
@@ -6685,6 +6724,9 @@ Hook collision line length follows cursor distance
 
 Hook collision line opacity
 == Opacidad de la línea de colisión de gancho
+
+Hook Collisions
+== Colisiones de gancho
 
 Hook collisions
 == Colisiones de gancho
@@ -15056,6 +15098,9 @@ Teams are not available on this server; if the team is locked, any team member d
 Tee
 == Tee
 
+Tee 0.7
+== Tee 0.7
+
 Tee appearance
 == Apariencia del Tee
 
@@ -16478,6 +16523,9 @@ Update a rcon key
 Update a rcon key with prehashed data
 == Actualizar una clave rcon con datos prehash
 
+Update failed
+== Error de actualización
+
 Update failed. Please try again
 == Error al actualizar. Inténtalo de nuevo
 
@@ -16495,6 +16543,9 @@ Update Rate
 
 Update ready to install
 == Actualización lista para instalar
+
+Update sources are temporarily unavailable
+== Las fuentes de actualización no están disponibles temporalmente
 
 Upload .map files. Server and admin passwords: s.
 == Sube archivos .map. Contraseñas del servidor y de administración: s.

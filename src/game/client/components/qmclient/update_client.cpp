@@ -117,7 +117,7 @@ void CTClient::TickUpdateLifecycle()
 			m_UpdateCheckFailed = true;
 			m_UpdateNetworkError = !m_UpdateMetadataRequest.RejectedContent();
 			m_FetchedQmClientUpdateInfo = false;
-			str_copy(m_aUpdateError, "Failed to check for updates");
+			str_copy(m_aUpdateError, Localizable("Failed to check for updates"));
 			log_error("qm-update", "All approved metadata sources failed");
 			m_UpdateNextCheck = time_get() + time_freq() * QMCLIENT_UPDATE_RETRY_INTERVAL;
 			if(m_UpdateShutdownRequested)
@@ -287,7 +287,7 @@ void CTClient::StartUpdateDownload(bool NextSource)
 	{
 		m_UpdateCheckFailed = true;
 		m_UpdateNetworkError = true;
-		str_copy(m_aUpdateError, "Update sources are temporarily unavailable");
+		str_copy(m_aUpdateError, Localizable("Update sources are temporarily unavailable"));
 		return;
 	}
 	if(!NextSource)
@@ -309,7 +309,7 @@ void CTClient::StartUpdateDownload(bool NextSource)
 	if(!Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE) || !Storage()->CreateFolder(m_aUpdateAssetDirectory, IStorage::TYPE_SAVE))
 	{
 		m_UpdateCheckFailed = true;
-		str_copy(m_aUpdateError, "Failed to create the update working directory");
+		str_copy(m_aUpdateError, Localizable("Failed to create the update working directory"));
 		return;
 	}
 	const auto TempPath = [&](char *pDestination, size_t Size, const char *pUrl) {
@@ -435,7 +435,7 @@ void CTClient::FetchQmClientUpdateInfo()
 	m_UpdateCheckFailed = true;
 	m_UpdatePopupRequested = true;
 	m_UpdateNextCheck = time_get() + time_freq() * QMCLIENT_UPDATE_RETRY_INTERVAL;
-	str_copy(m_aUpdateError, "Automatic updates require Windows x64");
+	str_copy(m_aUpdateError, Localizable("Automatic updates require Windows x64"));
 	return;
 #else
 	if(m_pQmClientUpdateInfoTask && !m_pQmClientUpdateInfoTask->Done())
@@ -463,7 +463,7 @@ void CTClient::FetchQmClientUpdateInfo()
 		m_UpdateCheckFailed = true;
 		m_UpdateNetworkError = true;
 		m_UpdateNextCheck = time_get() + time_freq() * QMCLIENT_UPDATE_RETRY_INTERVAL;
-		str_copy(m_aUpdateError, "Update sources are temporarily unavailable");
+		str_copy(m_aUpdateError, Localizable("Update sources are temporarily unavailable"));
 	}
 #endif
 }
@@ -650,7 +650,7 @@ void CTClient::FinishUpdateDownloads()
 		m_UpdateCheckFailed = true;
 		m_UpdateNetworkError = NetworkError;
 		m_UpdateNextCheck = time_get() + time_freq() * QMCLIENT_UPDATE_RETRY_INTERVAL;
-		str_copy(m_aUpdateError, pMessage != nullptr && pMessage[0] != '\0' ? pMessage : "Update failed", sizeof(m_aUpdateError));
+		str_copy(m_aUpdateError, pMessage != nullptr && pMessage[0] != '\0' ? pMessage : Localizable("Update failed"), sizeof(m_aUpdateError));
 		log_error("qm-update", "update download or validation failed: %s", m_aUpdateError);
 		ResetUpdateDownloadTasks();
 		RemoveUpdateTempFiles();

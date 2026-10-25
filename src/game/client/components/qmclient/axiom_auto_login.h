@@ -5,6 +5,7 @@
 #include <base/str.h>
 
 #include <game/client/component.h>
+#include <game/localization.h>
 
 #include <cstdint>
 #include <initializer_list>
@@ -111,15 +112,15 @@ inline const char *QmAxiomAutoLoginFailureKey(EQmAxiomLoginFailureReason Reason)
 	switch(Reason)
 	{
 	case EQmAxiomLoginFailureReason::WRONG_PASSWORD:
-		return "Axiom auto login failed: wrong password";
+		return Localizable("Axiom auto login failed: wrong password");
 	case EQmAxiomLoginFailureReason::ALREADY_IN_GAME:
-		return "Axiom auto login failed: already in game";
+		return Localizable("Axiom auto login failed: already in game");
 	case EQmAxiomLoginFailureReason::BAD_CREDENTIAL:
-		return "Axiom auto login failed: invalid credentials";
+		return Localizable("Axiom auto login failed: invalid credentials");
 	case EQmAxiomLoginFailureReason::NONE:
 		break;
 	}
-	return "Axiom auto login failed";
+	return Localizable("Axiom auto login failed");
 }
 
 inline bool QmShouldHandleAxiomLoginReply(EQmAxiomLoginReply Reply, int Attempts, bool WaitingReply)

@@ -1022,6 +1022,9 @@ API key
 APP ID
 == ID приложения
 
+Appearance
+== Внешний вид
+
 Appearance and command highlighting of the local console
 == Оформление локальной консоли и подсветка команд
 
@@ -1180,6 +1183,9 @@ Asset preset
 
 Asset with this name already exists.
 == Ресурс с таким именем уже существует.
+
+Assets
+== Ресурсы
 
 Assets directory
 == Папка ресурсов
@@ -1481,6 +1487,9 @@ Automatic game-end scoreboard screenshot
 Automatic updates
 == Автоматические обновления
 
+Automatic updates require Windows x64
+== Для автоматического обновления требуется Windows x64
+
 Automatically add a watermark to screenshots
 == Автоматически добавлять водяной знак на снимки экрана
 
@@ -1555,6 +1564,15 @@ Axiom auto login failed
 
 Axiom auto login failed, retrying
 == Ошибка автоматического входа в Axiom, повторная попытка
+
+Axiom auto login failed: already in game
+== Ошибка входа в Axiom: аккаунт уже в игре
+
+Axiom auto login failed: invalid credentials
+== Ошибка входа в Axiom: неверные учётные данные
+
+Axiom auto login failed: wrong password
+== Ошибка входа в Axiom: неверный пароль
 
 Axiom auto login skipped: no password
 == Автовход Axiom: пароль не задан, пропущено
@@ -2843,6 +2861,9 @@ Config Filters
 Config version. Helps new client fix old config errors.
 == Версия конфигурации. Помогает новому клиенту исправить старые ошибки конфигурации.
 
+Configs
+== Конфиги
+
 Configuration
 == Конфигурация
 
@@ -3169,6 +3190,9 @@ Controller GUID of the active controller
 
 Controller jitter tolerance
 == Допуск дрожания контроллера
+
+Controls
+== Управление
 
 Controls demo recording and playback behavior.
 == Управляет записью и воспроизведением демо.
@@ -5189,6 +5213,9 @@ Entities background color
 Entity assets
 == Ресурсы сущностей
 
+Entity Background Image
+== Фоновое изображение сущностей
+
 Entity overlay
 == Наложение сущностей
 
@@ -5426,11 +5453,17 @@ Failed
 Failed saving the replay!
 == Не удалось сохранить повтор!
 
+Failed to check for updates
+== Не удалось проверить обновления
+
 Failed to copy main asset image.
 == Не удалось скопировать основное изображение ресурса.
 
 Failed to create bgdraw folder
 == Не удалось создать папку bgdraw
+
+Failed to create the update working directory
+== Не удалось создать рабочий каталог обновления
 
 Failed to download the rank 1 demo
 == Не удалось скачать демо ранга 1
@@ -6071,6 +6104,9 @@ Gap between tee and nametag
 Gaussian
 == Гаусс
 
+General
+== Общие
+
 Generated skin outline color
 == Цвет сгенерированной обводки
 
@@ -6274,6 +6310,9 @@ Gradient type
 
 Gradient vertical position
 == Вертикальное положение градиента
+
+Graphics
+== Графика
 
 Graphics backend does not support dummy mini view
 == Графический движок не поддерживает мини-окно двойника
@@ -6685,6 +6724,9 @@ Hook collision line length follows cursor distance
 
 Hook collision line opacity
 == Прозрачность линии столкновения крюка
+
+Hook Collisions
+== Столкновения крюка
 
 Hook collisions
 == Столкновения крюка
@@ -15056,6 +15098,9 @@ Teams are not available on this server; if the team is locked, any team member d
 Tee
 == Ти
 
+Tee 0.7
+== Ти 0.7
+
 Tee appearance
 == Внешний вид Tee
 
@@ -16478,6 +16523,9 @@ Update a rcon key
 Update a rcon key with prehashed data
 == Обновить rcon ключ с предварительно хэшированными данными
 
+Update failed
+== Ошибка обновления
+
 Update failed. Please try again
 == Обновление не удалось. Пожалуйста, попробуйте снова
 
@@ -16495,6 +16543,9 @@ Update Rate
 
 Update ready to install
 == Обновление готово к установке
+
+Update sources are temporarily unavailable
+== Источники обновлений временно недоступны
 
 Upload .map files. Server and admin passwords: s.
 == Загрузите файлы .map. Пароли сервера и администратора: s.

@@ -1022,6 +1022,9 @@ API key
 APP ID
 == 应用 ID
 
+Appearance
+== 游戏界面
+
 Appearance and command highlighting of the local console
 == 本地控制台的外观和命令高亮
 
@@ -1180,6 +1183,9 @@ Asset preset
 
 Asset with this name already exists.
 == 同名材质已存在。
+
+Assets
+== 资源
 
 Assets directory
 == 资源目录
@@ -1481,6 +1487,9 @@ Automatic game-end scoreboard screenshot
 Automatic updates
 == 自动更新
 
+Automatic updates require Windows x64
+== 自动更新需要 Windows x64
+
 Automatically add a watermark to screenshots
 == 截图时自动添加水印
 
@@ -1555,6 +1564,15 @@ Axiom auto login failed
 
 Axiom auto login failed, retrying
 == Axiom 自动登录失败，正在重试
+
+Axiom auto login failed: already in game
+== Axiom 登录失败：账号已在游戏中
+
+Axiom auto login failed: invalid credentials
+== Axiom 登录失败：凭据无效
+
+Axiom auto login failed: wrong password
+== Axiom 登录失败：密码错误
 
 Axiom auto login skipped: no password
 == Axiom 自动登录：未填写密码，已跳过
@@ -2843,6 +2861,9 @@ Config Filters
 Config version. Helps new client fix old config errors.
 == 配置版本。帮助新客户端修复旧配置错误。
 
+Configs
+== 客户端配置
+
 Configuration
 == 配置
 
@@ -3169,6 +3190,9 @@ Controller GUID of the active controller
 
 Controller jitter tolerance
 == 摇杆死区
+
+Controls
+== 控制
 
 Controls demo recording and playback behavior.
 == 控制 demo 的录制与回放行为。
@@ -5189,6 +5213,9 @@ Entities background color
 Entity assets
 == 实体资源
 
+Entity Background Image
+== 实体层背景图
+
 Entity overlay
 == 实体层叠加
 
@@ -5426,11 +5453,17 @@ Failed
 Failed saving the replay!
 == 保存回放失败！
 
+Failed to check for updates
+== 检查更新失败
+
 Failed to copy main asset image.
 == 复制主要资源图片失败。
 
 Failed to create bgdraw folder
 == 创建 bgdraw 文件夹失败
+
+Failed to create the update working directory
+== 无法创建更新工作目录
 
 Failed to download the rank 1 demo
 == 下载 Rank 1 演示失败
@@ -6074,6 +6107,9 @@ Gap between tee and nametag
 Gaussian
 == 高斯
 
+General
+== 常规
+
 Generated skin outline color
 == 生成描边颜色
 
@@ -6277,6 +6313,9 @@ Gradient type
 
 Gradient vertical position
 == 渐变垂直位置
+
+Graphics
+== 图像
 
 Graphics backend does not support dummy mini view
 == 当前图形后端不支持分身小窗
@@ -6688,6 +6727,9 @@ Hook collision line length follows cursor distance
 
 Hook collision line opacity
 == 钩子辅助线不透明度
+
+Hook Collisions
+== 钩子辅助线
 
 Hook collisions
 == 钩子辅助线
@@ -15059,6 +15101,9 @@ Teams are not available on this server; if the team is locked, any team member d
 Tee
 == Tee
 
+Tee 0.7
+== Tee 0.7
+
 Tee appearance
 == Tee 外观
 
@@ -16481,6 +16526,9 @@ Update a rcon key
 Update a rcon key with prehashed data
 == 使用预哈希数据更新 rcon 密钥
 
+Update failed
+== 更新失败
+
 Update failed. Please try again
 == 更新失败，请重试
 
@@ -16498,6 +16546,9 @@ Update Rate
 
 Update ready to install
 == 更新已准备就绪，可以安装
+
+Update sources are temporarily unavailable
+== 更新源暂时不可用
 
 Upload .map files. Server and admin passwords: s.
 == 上传 .map 文件；服务器密码和管理密码均为 s。

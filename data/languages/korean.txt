@@ -1022,6 +1022,9 @@ API key
 APP ID
 == 앱 ID
 
+Appearance
+== 외형
+
 Appearance and command highlighting of the local console
 == 로컬 콘솔의 모양과 명령어 강조 표시
 
@@ -1180,6 +1183,9 @@ Asset preset
 
 Asset with this name already exists.
 == 같은 이름의 에셋이 이미 존재합니다.
+
+Assets
+== 에셋
 
 Assets directory
 == 에셋 디렉터리
@@ -1481,6 +1487,9 @@ Automatic game-end scoreboard screenshot
 Automatic updates
 == 자동 업데이트
 
+Automatic updates require Windows x64
+== 자동 업데이트에는 Windows x64가 필요합니다
+
 Automatically add a watermark to screenshots
 == 스크린샷에 워터마크 자동 추가
 
@@ -1555,6 +1564,15 @@ Axiom auto login failed
 
 Axiom auto login failed, retrying
 == Axiom 자동 로그인 실패, 재시도 중
+
+Axiom auto login failed: already in game
+== Axiom 로그인 실패: 계정이 이미 게임에 접속해 있습니다
+
+Axiom auto login failed: invalid credentials
+== Axiom 로그인 실패: 유효하지 않은 인증 정보
+
+Axiom auto login failed: wrong password
+== Axiom 로그인 실패: 잘못된 비밀번호
 
 Axiom auto login skipped: no password
 == Axiom 자동 로그인: 비밀번호 미입력, 건너뜀
@@ -2843,6 +2861,9 @@ Config Filters
 Config version. Helps new client fix old config errors.
 == 설정 버전. 새 클라이언트가 이전 설정 오류를 수정하는 데 도움
 
+Configs
+== 설정 파일
+
 Configuration
 == 설정
 
@@ -3169,6 +3190,9 @@ Controller GUID of the active controller
 
 Controller jitter tolerance
 == 컨트롤러 지터 허용 범위
+
+Controls
+== 조작
 
 Controls demo recording and playback behavior.
 == 데모 녹화와 재생 동작을 제어합니다.
@@ -5189,6 +5213,9 @@ Entities background color
 Entity assets
 == 엔티티 에셋
 
+Entity Background Image
+== 엔티티 배경 이미지
+
 Entity overlay
 == 엔티티 오버레이
 
@@ -5426,11 +5453,17 @@ Failed
 Failed saving the replay!
 == 리플레이 저장 실패!
 
+Failed to check for updates
+== 업데이트 확인 실패
+
 Failed to copy main asset image.
 == 주요 에셋 이미지를 복사하지 못했습니다.
 
 Failed to create bgdraw folder
 == bgdraw 폴더 생성 실패
+
+Failed to create the update working directory
+== 업데이트 작업 디렉터리를 만들 수 없습니다
 
 Failed to download the rank 1 demo
 == 랭크 1 데모 다운로드 실패
@@ -6071,6 +6104,9 @@ Gap between tee and nametag
 Gaussian
 == 가우시안
 
+General
+== 일반
+
 Generated skin outline color
 == 생성된 외곽선 색상
 
@@ -6274,6 +6310,9 @@ Gradient type
 
 Gradient vertical position
 == 그라데이션 세로 위치
+
+Graphics
+== 그래픽
 
 Graphics backend does not support dummy mini view
 == 현재 그래픽 백엔드는 분신 미니 화면을 지원하지 않습니다
@@ -6685,6 +6724,9 @@ Hook collision line length follows cursor distance
 
 Hook collision line opacity
 == 갈고리 충돌선 불투명도
+
+Hook Collisions
+== 갈고리 충돌
 
 Hook collisions
 == 갈고리 충돌
@@ -15056,6 +15098,9 @@ Teams are not available on this server; if the team is locked, any team member d
 Tee
 == 티
 
+Tee 0.7
+== 티 0.7
+
 Tee appearance
 == Tee 외형
 
@@ -16478,6 +16523,9 @@ Update a rcon key
 Update a rcon key with prehashed data
 == 사전 해시된 데이터로 rcon 키 업데이트
 
+Update failed
+== 업데이트 실패
+
 Update failed. Please try again
 == 업데이트 실패. 다시 시도해 주세요
 
@@ -16495,6 +16543,9 @@ Update Rate
 
 Update ready to install
 == 업데이트 설치 준비 완료
+
+Update sources are temporarily unavailable
+== 업데이트 서버를 일시적으로 사용할 수 없습니다
 
 Upload .map files. Server and admin passwords: s.
 == .map 파일을 업로드합니다. 서버 및 관리자 비밀번호는 s입니다.

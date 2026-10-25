@@ -1592,12 +1592,12 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 	static CQmLocalizedLabelCache s_AppearanceTabNames;
 	s_AppearanceTabNames.Refresh(g_Config.m_ClLanguagefile,
 		{
-			"HUD",
-			"Chat",
-			"Name Plate",
-			"Hook Collisions",
-			"Info Messages",
-			"Laser",
+			Localizable("HUD"),
+			Localizable("Chat"),
+			Localizable("Name Plate"),
+			Localizable("Hook Collisions"),
+			Localizable("Info Messages"),
+			Localizable("Laser"),
 		});
 
 	CUIRect aAppearanceTabSlots[NUMBER_OF_APPEARANCE_TABS];
