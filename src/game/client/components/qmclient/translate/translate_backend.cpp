@@ -47,12 +47,13 @@ namespace
 	{
 		if(!pObj || pObj->type != json_object)
 			return ETranslateNotice::NONE;
-		const json_value *pError = json_object_get(pObj, "error");
-		const json_value *pCode = pError->type == json_object ? json_object_get(pError, "code") : json_object_get(pObj, "code");
-		const char *pErrorCode = pCode->type == json_string ? pCode->u.string.ptr : "";
-		if(str_comp(pErrorCode, "model_not_found") == 0)
+		const json_value *pError = TranslateJsonObjectGet(pObj, "error");
+		const json_value *pCode = pError->type == json_object ? TranslateJsonObjectGet(pError, "code") : TranslateJsonObjectGet(pObj, "code");
+		if(pCode->type == json_string && (pCode->u.string.length != static_cast<unsigned int>(str_length(pCode->u.string.ptr)) || !str_utf8_check(pCode->u.string.ptr)))
+			return ETranslateNotice::INVALID_RESPONSE;
+		if(TranslateJsonStringIs(pCode, "model_not_found"))
 			return ETranslateNotice::MODEL_NOT_FOUND;
-		if(str_comp(pErrorCode, "insufficient_quota") == 0)
+		if(TranslateJsonStringIs(pCode, "insufficient_quota"))
 			return ETranslateNotice::QUOTA_EXCEEDED;
 		if(!Zhipu)
 			return ETranslateNotice::NONE;
@@ -423,7 +424,7 @@ private:
 			return false;
 		}
 
-		const json_value *pError = json_object_get(pObj, "error");
+		const json_value *pError = TranslateJsonObjectGet(pObj, "error");
 		if(pError != &json_value_none)
 		{
 			if(pError->type != json_string)
@@ -433,7 +434,7 @@ private:
 			return false;
 		}
 
-		const json_value *pTranslatedText = json_object_get(pObj, "translatedText");
+		const json_value *pTranslatedText = TranslateJsonObjectGet(pObj, "translatedText");
 		if(pTranslatedText == &json_value_none)
 		{
 			str_copy(Out.m_Text, "No translatedText");
@@ -445,7 +446,7 @@ private:
 			return false;
 		}
 
-		const json_value *pDetectedLanguage = json_object_get(pObj, "detectedLanguage");
+		const json_value *pDetectedLanguage = TranslateJsonObjectGet(pObj, "detectedLanguage");
 		if(pDetectedLanguage == &json_value_none)
 		{
 			Out.m_Language[0] = '\0';
@@ -457,7 +458,7 @@ private:
 			return false;
 		}
 
-		const json_value *pLanguage = json_object_get(pDetectedLanguage, "language");
+		const json_value *pLanguage = TranslateJsonObjectGet(pDetectedLanguage, "language");
 		if(pLanguage == &json_value_none)
 		{
 			str_copy(Out.m_Text, "No language");
@@ -537,18 +538,18 @@ private:
 			return false;
 		}
 
-		const json_value *pResponse = json_object_get(pObj, "Response");
+		const json_value *pResponse = TranslateJsonObjectGet(pObj, "Response");
 		if(pResponse == &json_value_none || pResponse->type != json_object)
 		{
 			str_copy(Out.m_Text, "No Response object");
 			return false;
 		}
 
-		const json_value *pError = json_object_get(pResponse, "Error");
+		const json_value *pError = TranslateJsonObjectGet(pResponse, "Error");
 		if(pError != &json_value_none)
 		{
-			const json_value *pCode = json_object_get(pError, "Code");
-			const json_value *pMessage = json_object_get(pError, "Message");
+			const json_value *pCode = TranslateJsonObjectGet(pError, "Code");
+			const json_value *pMessage = TranslateJsonObjectGet(pError, "Message");
 			const char *pCodeStr = pCode != &json_value_none && pCode->type == json_string ? pCode->u.string.ptr : "UnknownError";
 			const char *pMessageStr = pMessage != &json_value_none && pMessage->type == json_string ? pMessage->u.string.ptr : "TencentCloud request failed";
 			if(str_startswith(pCodeStr, "AuthFailure"))
@@ -563,7 +564,7 @@ private:
 			return false;
 		}
 
-		const json_value *pTranslatedText = json_object_get(pResponse, "TargetText");
+		const json_value *pTranslatedText = TranslateJsonObjectGet(pResponse, "TargetText");
 		if(pTranslatedText == &json_value_none)
 		{
 			str_copy(Out.m_Text, "No TargetText");
@@ -575,7 +576,7 @@ private:
 			return false;
 		}
 
-		const json_value *pSource = json_object_get(pResponse, "Source");
+		const json_value *pSource = TranslateJsonObjectGet(pResponse, "Source");
 		if(pSource != &json_value_none && pSource->type == json_string)
 			str_copy(Out.m_Language, pSource->u.string.ptr);
 		else
@@ -717,7 +718,7 @@ private:
 			return false;
 		}
 
-		const json_value *pTranslatedText = json_object_get(pObj, "destination-text");
+		const json_value *pTranslatedText = TranslateJsonObjectGet(pObj, "destination-text");
 		if(pTranslatedText == &json_value_none)
 		{
 			str_copy(Out.m_Text, "No destination-text");
@@ -729,7 +730,7 @@ private:
 			return false;
 		}
 
-		const json_value *pDetectedLanguage = json_object_get(pObj, "source-language");
+		const json_value *pDetectedLanguage = TranslateJsonObjectGet(pObj, "source-language");
 		if(pDetectedLanguage == &json_value_none)
 		{
 			str_copy(Out.m_Text, "No source-language");
@@ -846,7 +847,7 @@ private:
 		}
 
 		int Status = 200;
-		const json_value *pStatus = json_object_get(pObj, "responseStatus");
+		const json_value *pStatus = TranslateJsonObjectGet(pObj, "responseStatus");
 		if(pStatus != &json_value_none)
 		{
 			if((pStatus->type != json_integer && pStatus->type != json_double) || !TryParseTranslateServiceCode(pStatus, Status))
@@ -856,14 +857,14 @@ private:
 			}
 		}
 
-		const json_value *pData = json_object_get(pObj, "responseData");
+		const json_value *pData = TranslateJsonObjectGet(pObj, "responseData");
 		if(pData == &json_value_none || pData->type != json_object)
 		{
 			str_copy(Out.m_Text, "No responseData");
 			return false;
 		}
 
-		const json_value *pTranslatedText = json_object_get(pData, "translatedText");
+		const json_value *pTranslatedText = TranslateJsonObjectGet(pData, "translatedText");
 		if(pTranslatedText == &json_value_none || pTranslatedText->type != json_string)
 		{
 			str_copy(Out.m_Text, "No translatedText");
@@ -970,7 +971,7 @@ private:
 			return false;
 		}
 
-		const json_value *pTranslations = json_object_get(pObj, "translations");
+		const json_value *pTranslations = TranslateJsonObjectGet(pObj, "translations");
 		if(pTranslations == &json_value_none || pTranslations->type != json_array)
 		{
 			str_copy(Out.m_Text, "No translations");
@@ -989,7 +990,7 @@ private:
 			return false;
 		}
 
-		const json_value *pText = json_object_get(pTranslation, "text");
+		const json_value *pText = TranslateJsonObjectGet(pTranslation, "text");
 		if(pText == &json_value_none || pText->type != json_string)
 		{
 			str_copy(Out.m_Text, "No translation text");
@@ -999,7 +1000,7 @@ private:
 		if(!CopyTranslateText(pText, Out))
 			return false;
 
-		const json_value *pDetected = json_object_get(pTranslation, "detected_source_language");
+		const json_value *pDetected = TranslateJsonObjectGet(pTranslation, "detected_source_language");
 		if(pDetected != &json_value_none && pDetected->type == json_string)
 			str_copy(Out.m_Language, pDetected->u.string.ptr);
 		else
@@ -1040,7 +1041,7 @@ protected:
 			json_value *pObj = m_pHttpRequest->ResultJson();
 			if(pObj && pObj->type == json_object)
 			{
-				const json_value *pMessage = json_object_get(pObj, "message");
+				const json_value *pMessage = TranslateJsonObjectGet(pObj, "message");
 				if(pMessage != &json_value_none && pMessage->type == json_string)
 					str_format(Out.m_Text, sizeof(Out.m_Text), "DeepL HTTP %d: %.200s", StatusCode, pMessage->u.string.ptr);
 			}
@@ -1205,10 +1206,10 @@ protected:
 					json_value_free(pObj);
 					return false;
 				}
-				const json_value *pError = json_object_get(pObj, "error");
+				const json_value *pError = TranslateJsonObjectGet(pObj, "error");
 				if(pError != &json_value_none && pError->type == json_object)
 				{
-					const json_value *pMessage = json_object_get(pError, "message");
+					const json_value *pMessage = TranslateJsonObjectGet(pError, "message");
 					if(pMessage != &json_value_none && pMessage->type == json_string)
 					{
 						str_format(Out.m_Text, sizeof(Out.m_Text), "HTTP %d: %.200s", StatusCode, pMessage->u.string.ptr);
@@ -1217,7 +1218,7 @@ protected:
 				else
 				{
 					// 智谱AI格式: code/msg
-					const json_value *pMsg = json_object_get(pObj, "msg");
+					const json_value *pMsg = TranslateJsonObjectGet(pObj, "msg");
 					if(pMsg != &json_value_none && pMsg->type == json_string)
 					{
 						str_format(Out.m_Text, sizeof(Out.m_Text), "HTTP %d: %.200s", StatusCode, pMsg->u.string.ptr);

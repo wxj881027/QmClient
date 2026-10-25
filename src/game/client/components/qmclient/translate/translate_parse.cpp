@@ -5,28 +5,28 @@
 
 #include <engine/shared/json.h>
 
+// JSON名称可含内嵌NUL，不能把未知字段的C字符串前缀当成协议字段。
+const json_value *TranslateJsonObjectGet(const json_value *pObject, const char *pName)
+{
+	if(!pObject || pObject->type != json_object)
+		return &json_value_none;
+	const auto Length = static_cast<unsigned int>(str_length(pName));
+	for(unsigned int i = 0; i < pObject->u.object.length; ++i)
+	{
+		const auto &Entry = pObject->u.object.values[i];
+		if(Entry.name_length == Length && str_comp(Entry.name, pName) == 0)
+			return Entry.value;
+	}
+	return &json_value_none;
+}
+
+bool TranslateJsonStringIs(const json_value *pValue, const char *pExpected)
+{
+	return pValue && pValue->type == json_string && pValue->u.string.length == static_cast<unsigned int>(str_length(pExpected)) && str_comp(pValue->u.string.ptr, pExpected) == 0;
+}
+
 namespace
 {
-	// JSON名称可含内嵌NUL，不能把未知字段的C字符串前缀当成协议字段。
-	const json_value *JsonObjectGet(const json_value *pObject, const char *pName)
-	{
-		if(!pObject || pObject->type != json_object)
-			return &json_value_none;
-		const auto Length = static_cast<unsigned int>(str_length(pName));
-		for(unsigned int i = 0; i < pObject->u.object.length; ++i)
-		{
-			const auto &Entry = pObject->u.object.values[i];
-			if(Entry.name_length == Length && str_comp(Entry.name, pName) == 0)
-				return Entry.value;
-		}
-		return &json_value_none;
-	}
-
-	bool JsonStringIs(const json_value *pValue, const char *pExpected)
-	{
-		return pValue->type == json_string && pValue->u.string.length == static_cast<unsigned int>(str_length(pExpected)) && str_comp(pValue->u.string.ptr, pExpected) == 0;
-	}
-
 	bool RejectInvalidMetadata(const json_value *pValue, SLlmParseResult &Out)
 	{
 		if(pValue->type != json_string || (pValue->u.string.length == static_cast<unsigned int>(str_length(pValue->u.string.ptr)) && str_utf8_check(pValue->u.string.ptr)))
@@ -37,8 +37,8 @@ namespace
 
 	bool IsContentRefusalError(const json_value *pError)
 	{
-		const json_value *pCode = JsonObjectGet(pError, "code");
-		return JsonStringIs(pCode, "content_filter") || JsonStringIs(pCode, "content_policy_violation");
+		const json_value *pCode = TranslateJsonObjectGet(pError, "code");
+		return TranslateJsonStringIs(pCode, "content_filter") || TranslateJsonStringIs(pCode, "content_policy_violation");
 	}
 
 	bool RefuseContent(SLlmParseResult &Out)
@@ -68,26 +68,26 @@ bool ParseLlmResponseJson(const json_value *pObj, SLlmParseResult &Out)
 		return false;
 	}
 
-	const json_value *pError = JsonObjectGet(pObj, "error");
+	const json_value *pError = TranslateJsonObjectGet(pObj, "error");
 	if(pError != &json_value_none && pError->type != json_null)
 	{
 		if(IsContentRefusalError(pError))
 			return RefuseContent(Out);
-		const json_value *pMessage = JsonObjectGet(pError, "message");
+		const json_value *pMessage = TranslateJsonObjectGet(pError, "message");
 		const char *pMessageStr = pMessage != &json_value_none && pMessage->type == json_string ? pMessage->u.string.ptr : "LLM API request failed";
 		str_copy(Out.m_aError, pMessageStr, sizeof(Out.m_aError));
 		Out.m_Success = false;
 		return false;
 	}
 
-	const json_value *pChoices = JsonObjectGet(pObj, "choices");
+	const json_value *pChoices = TranslateJsonObjectGet(pObj, "choices");
 	if(pChoices == &json_value_none)
 	{
 		char aErrorMsg[512];
 		str_copy(aErrorMsg, "No choices in response", sizeof(aErrorMsg));
 
-		const json_value *pCode = JsonObjectGet(pObj, "code");
-		const json_value *pMsg = JsonObjectGet(pObj, "msg");
+		const json_value *pCode = TranslateJsonObjectGet(pObj, "code");
+		const json_value *pMsg = TranslateJsonObjectGet(pObj, "msg");
 		if(pCode != &json_value_none && pCode->type == json_string)
 		{
 			str_format(aErrorMsg + str_length(aErrorMsg), sizeof(aErrorMsg) - str_length(aErrorMsg),
@@ -124,11 +124,11 @@ bool ParseLlmResponseJson(const json_value *pObj, SLlmParseResult &Out)
 		return false;
 	}
 
-	const json_value *pMessage = JsonObjectGet(pChoice, "message");
-	const json_value *pFinishReason = JsonObjectGet(pChoice, "finish_reason");
+	const json_value *pMessage = TranslateJsonObjectGet(pChoice, "message");
+	const json_value *pFinishReason = TranslateJsonObjectGet(pChoice, "finish_reason");
 	if(RejectInvalidMetadata(pFinishReason, Out))
 		return false;
-	if(JsonStringIs(pFinishReason, "content_filter"))
+	if(TranslateJsonStringIs(pFinishReason, "content_filter"))
 		return RefuseContent(Out);
 	if(pMessage == &json_value_none)
 	{
@@ -142,16 +142,16 @@ bool ParseLlmResponseJson(const json_value *pObj, SLlmParseResult &Out)
 		Out.m_Success = false;
 		return false;
 	}
-	const json_value *pRefusal = JsonObjectGet(pMessage, "refusal");
+	const json_value *pRefusal = TranslateJsonObjectGet(pMessage, "refusal");
 	if(pRefusal->type == json_string && pRefusal->u.string.length > 0)
 		return RefuseContent(Out);
 
-	if(JsonStringIs(pFinishReason, "length") || JsonStringIs(pFinishReason, "tool_calls"))
+	if(TranslateJsonStringIs(pFinishReason, "length") || TranslateJsonStringIs(pFinishReason, "tool_calls"))
 	{
 		str_copy(Out.m_aError, "Translation response is incomplete");
 		return false;
 	}
-	const json_value *pContent = JsonObjectGet(pMessage, "content");
+	const json_value *pContent = TranslateJsonObjectGet(pMessage, "content");
 	if(pContent == &json_value_none)
 	{
 		str_copy(Out.m_aError, "No content in message", sizeof(Out.m_aError));
@@ -188,47 +188,47 @@ bool ParseLlmResponsesJson(const json_value *pObj, SLlmParseResult &Out)
 		str_copy(Out.m_aError, "Response is not a JSON object");
 		return false;
 	}
-	const json_value *pError = JsonObjectGet(pObj, "error");
+	const json_value *pError = TranslateJsonObjectGet(pObj, "error");
 	if(pError != &json_value_none && pError->type != json_null)
 	{
 		if(IsContentRefusalError(pError))
 			return RefuseContent(Out);
-		const json_value *pMessage = JsonObjectGet(pError, "message");
+		const json_value *pMessage = TranslateJsonObjectGet(pError, "message");
 		str_copy(Out.m_aError, pMessage->type == json_string ? pMessage->u.string.ptr : "LLM API request failed");
 		return false;
 	}
-	const json_value *pIncompleteReason = JsonObjectGet(JsonObjectGet(pObj, "incomplete_details"), "reason");
+	const json_value *pIncompleteReason = TranslateJsonObjectGet(TranslateJsonObjectGet(pObj, "incomplete_details"), "reason");
 	if(RejectInvalidMetadata(pIncompleteReason, Out))
 		return false;
-	if(JsonStringIs(pIncompleteReason, "content_filter"))
+	if(TranslateJsonStringIs(pIncompleteReason, "content_filter"))
 		return RefuseContent(Out);
-	const json_value *pStatus = JsonObjectGet(pObj, "status");
-	if(pStatus->type == json_string && !JsonStringIs(pStatus, "completed"))
+	const json_value *pStatus = TranslateJsonObjectGet(pObj, "status");
+	if(pStatus->type == json_string && !TranslateJsonStringIs(pStatus, "completed"))
 	{
 		str_copy(Out.m_aError, "Translation response is incomplete");
 		return false;
 	}
 	// 顶层文本也可能伴随拒绝片段，先检查所有消息，避免发布部分译文。
-	const json_value *pOutput = JsonObjectGet(pObj, "output");
+	const json_value *pOutput = TranslateJsonObjectGet(pObj, "output");
 	if(pOutput->type == json_array)
 	{
 		for(size_t i = 0; i < pOutput->u.array.length; ++i)
 		{
 			const json_value *pItem = pOutput->u.array.values[i];
-			const json_value *pType = JsonObjectGet(pItem, "type");
+			const json_value *pType = TranslateJsonObjectGet(pItem, "type");
 			if(RejectInvalidMetadata(pType, Out))
 				return false;
-			if(!JsonStringIs(pType, "message"))
+			if(!TranslateJsonStringIs(pType, "message"))
 				continue;
-			const json_value *pContent = JsonObjectGet(pItem, "content");
+			const json_value *pContent = TranslateJsonObjectGet(pItem, "content");
 			if(pContent->type != json_array)
 				continue;
 			for(size_t j = 0; j < pContent->u.array.length; ++j)
 			{
-				const json_value *pPartType = JsonObjectGet(pContent->u.array.values[j], "type");
+				const json_value *pPartType = TranslateJsonObjectGet(pContent->u.array.values[j], "type");
 				if(RejectInvalidMetadata(pPartType, Out))
 					return false;
-				if(JsonStringIs(pPartType, "refusal"))
+				if(TranslateJsonStringIs(pPartType, "refusal"))
 					return RefuseContent(Out);
 			}
 		}
@@ -250,7 +250,7 @@ bool ParseLlmResponsesJson(const json_value *pObj, SLlmParseResult &Out)
 		str_append(Out.m_aText, pText->u.string.ptr);
 		return true;
 	};
-	const json_value *pTopText = JsonObjectGet(pObj, "output_text");
+	const json_value *pTopText = TranslateJsonObjectGet(pObj, "output_text");
 	if(pTopText->type == json_string && pTopText->u.string.length > 0)
 	{
 		if(!AppendText(pTopText))
@@ -263,15 +263,15 @@ bool ParseLlmResponsesJson(const json_value *pObj, SLlmParseResult &Out)
 		for(size_t i = 0; i < pOutput->u.array.length; ++i)
 		{
 			const json_value *pItem = pOutput->u.array.values[i];
-			if(!JsonStringIs(JsonObjectGet(pItem, "type"), "message"))
+			if(!TranslateJsonStringIs(TranslateJsonObjectGet(pItem, "type"), "message"))
 				continue;
-			const json_value *pContent = JsonObjectGet(pItem, "content");
+			const json_value *pContent = TranslateJsonObjectGet(pItem, "content");
 			if(pContent->type != json_array)
 				continue;
 			for(size_t j = 0; j < pContent->u.array.length; ++j)
 			{
 				const json_value *pPart = pContent->u.array.values[j];
-				if(JsonStringIs(JsonObjectGet(pPart, "type"), "output_text") && !AppendText(JsonObjectGet(pPart, "text")))
+				if(TranslateJsonStringIs(TranslateJsonObjectGet(pPart, "type"), "output_text") && !AppendText(TranslateJsonObjectGet(pPart, "text")))
 					return false;
 			}
 		}

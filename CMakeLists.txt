@@ -5405,6 +5405,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/translate/translate_retry_memory_test.cpp
     src/test/integration/qmclient/translate/translate_json_identity_test.cpp
     src/test/integration/qmclient/translate/translate_service_codes_test.cpp
+    src/test/integration/qmclient/translate/translate_provider_identity_test.cpp
     src/test/unit/qmclient/translate/translate_responses_test.cpp
     src/test/unit/qmclient/translate/translate_completion_memory_test.cpp
     src/test/unit/qmclient/translate/translate_submission_memory_test.cpp

@@ -1,5 +1,6 @@
 #include "translate_backend.h"
 #include "translate_backend_http.h"
+#include "translate_parse.h"
 
 #include <base/str.h>
 
@@ -56,10 +57,10 @@ namespace
 			bool Success = false;
 			if(pJson != nullptr && pJson->type == json_object)
 			{
-				const json_value &Ok = (*pJson)["ok"];
-				const json_value &Error = (*pJson)["error"];
-				const json_value &Text = (*pJson)["text"];
-				const json_value &Language = (*pJson)["language"];
+				const json_value &Ok = *TranslateJsonObjectGet(pJson, "ok");
+				const json_value &Error = *TranslateJsonObjectGet(pJson, "error");
+				const json_value &Text = *TranslateJsonObjectGet(pJson, "text");
+				const json_value &Language = *TranslateJsonObjectGet(pJson, "language");
 				if(m_pRequest->StatusCode() == 200 && Ok.type == json_boolean && Ok.u.boolean && Error.type == json_none)
 				{
 					Success = CopyTranslateText(&Text, Out);
@@ -82,7 +83,7 @@ namespace
 					for(const auto &Notice : {SNotice{"content_refused", ETranslateNotice::CONTENT_REFUSED}, SNotice{"authentication", ETranslateNotice::AUTHENTICATION},
 						    SNotice{"rate_limit", ETranslateNotice::RATE_LIMIT}, SNotice{"quota_exceeded", ETranslateNotice::QUOTA_EXCEEDED},
 						    SNotice{"network_error", ETranslateNotice::NETWORK_ERROR}, SNotice{"service_notice", ETranslateNotice::SERVICE_NOTICE}})
-						if(str_comp(Error.u.string.ptr, Notice.m_pCode) == 0)
+						if(TranslateJsonStringIs(&Error, Notice.m_pCode))
 							Out.m_Notice = Notice.m_Notice;
 				}
 			}

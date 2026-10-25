@@ -1,4 +1,5 @@
 #include "translate_backend_http.h"
+#include "translate_parse.h"
 
 #include <base/hash.h>
 #include <base/secure.h>
@@ -68,7 +69,7 @@ namespace
 		{
 			if(!pJson || pJson->type != json_object)
 				return false;
-			const json_value *pError = json_object_get(pJson, "error_code");
+			const json_value *pError = TranslateJsonObjectGet(pJson, "error_code");
 			if(pError != &json_value_none)
 			{
 				int Code = 0;
@@ -85,7 +86,7 @@ namespace
 					return false;
 				}
 			}
-			const json_value *pResults = json_object_get(pJson, "trans_result");
+			const json_value *pResults = TranslateJsonObjectGet(pJson, "trans_result");
 			if(pResults->type != json_array || pResults->u.array.length == 0)
 				return false;
 			// 先校验全部段落，禁止把已成功的前半段发布为完整译文。
@@ -95,7 +96,7 @@ namespace
 			{
 				const json_value *pItem = pResults->u.array.values[i];
 				CTranslateResponse Segment;
-				if(pItem->type != json_object || !CopyTranslateText(json_object_get(pItem, "dst"), Segment))
+				if(pItem->type != json_object || !CopyTranslateText(TranslateJsonObjectGet(pItem, "dst"), Segment))
 					return false;
 				const size_t SegmentLength = str_length(Segment.m_Text);
 				const size_t Separator = i > 0 ? 1 : 0;
@@ -106,7 +107,7 @@ namespace
 				mem_copy(aText + Length, Segment.m_Text, SegmentLength);
 				Length += SegmentLength;
 			}
-			const json_value *pSource = json_object_get(pJson, "from");
+			const json_value *pSource = TranslateJsonObjectGet(pJson, "from");
 			if(pSource->type == json_string)
 				str_copy(Out.m_Language, DecodeBaiduLanguage(pSource->u.string.ptr));
 			aText[Length] = '\0';

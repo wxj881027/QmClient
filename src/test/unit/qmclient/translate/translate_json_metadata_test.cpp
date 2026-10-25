@@ -114,3 +114,51 @@ TEST(TranslateJsonMetadata, ValidUnknownTypesRemainIgnored)
 {
 	ExpectText(R"({"output_text":"translated","output":[{"type":"future_reasoning_type","content":[]}]})", ParseLlmResponsesJson, "translated");
 }
+
+TEST(TranslateJsonIdentity, MemberNameMatchesEntireJsonNameAndBorrowsCanonicalValue)
+{
+	const auto pJson = Read(R"({"key\u0000other":"forged","key":"real"})");
+	ASSERT_NE(pJson, nullptr);
+	ASSERT_EQ(pJson->u.object.length, 2u);
+	const auto *pValue = TranslateJsonObjectGet(pJson.get(), "key");
+	EXPECT_EQ(pValue, pJson->u.object.values[1].value);
+	EXPECT_TRUE(TranslateJsonStringIs(pValue, "real"));
+}
+
+TEST(TranslateJsonIdentity, MissingOrNonObjectMemberReturnsNone)
+{
+	for(const char *pBody : {"{}", "[]", "1"})
+	{
+		SCOPED_TRACE(pBody);
+		const auto pJson = Read(pBody);
+		ASSERT_NE(pJson, nullptr);
+		EXPECT_EQ(TranslateJsonObjectGet(pJson.get(), "missing"), &json_value_none);
+	}
+	EXPECT_EQ(TranslateJsonObjectGet(nullptr, "missing"), &json_value_none);
+}
+
+TEST(TranslateJsonIdentity, DuplicateCanonicalMemberKeepsFirstMatch)
+{
+	const auto pJson = Read(R"({"key":"first","key":"second"})");
+	ASSERT_NE(pJson, nullptr);
+	EXPECT_TRUE(TranslateJsonStringIs(TranslateJsonObjectGet(pJson.get(), "key"), "first"));
+}
+
+TEST(TranslateJsonIdentity, StringValueMatchesEntireLength)
+{
+	const auto pMalformed = Read(R"("completed\u0000other")");
+	const auto pValid = Read(R"("completed")");
+	ASSERT_NE(pMalformed, nullptr);
+	ASSERT_NE(pValid, nullptr);
+	EXPECT_FALSE(TranslateJsonStringIs(pMalformed.get(), "completed"));
+	EXPECT_TRUE(TranslateJsonStringIs(pValid.get(), "completed"));
+}
+
+TEST(TranslateJsonIdentity, StringEqualityDoesNotCoerceOtherTypesOrMissingValues)
+{
+	const auto pJson = Read("200");
+	ASSERT_NE(pJson, nullptr);
+	EXPECT_FALSE(TranslateJsonStringIs(pJson.get(), "200"));
+	EXPECT_FALSE(TranslateJsonStringIs(&json_value_none, "200"));
+	EXPECT_FALSE(TranslateJsonStringIs(nullptr, "200"));
+}
