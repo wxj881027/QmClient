@@ -30,8 +30,8 @@ public:
 
 	void OnRender() override;
 
-	void BulletTrail(vec2 Pos, float Alpha, float TimePassed);
-	void SmokeTrail(vec2 Pos, vec2 Vel, float Alpha, float TimePassed);
+	bool BulletTrail(vec2 Pos, float Alpha, float TimePassed);
+	bool SmokeTrail(vec2 Pos, vec2 Vel, float Alpha, float TimePassed);
 	void SkidTrail(vec2 Pos, vec2 Vel, int Direction, float Alpha, float Volume);
 	void Explosion(vec2 Pos, float Alpha);
 	void HammerHit(vec2 Pos, float Alpha, float Volume);

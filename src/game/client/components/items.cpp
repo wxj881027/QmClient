@@ -12,6 +12,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/components/effects.h>
+#include <game/client/components/qmclient/item_render_math.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/gameclient.h>
 #include <game/client/laser_data.h>
@@ -68,9 +69,9 @@ void CItems::RenderProjectile(const CProjectileData *pCurrent, int ItemId, const
 
 	float Ct;
 	if(GameClient()->Predict() && GameClient()->AntiPingGrenade() && LocalPlayerInGame && !IsOtherTeam)
-		Ct = ((float)(PredictionTick - 1 - pCurrent->m_StartTick) + Client()->PredIntraGameTick(g_Config.m_ClDummy)) / (float)Client()->GameTickSpeed();
+		Ct = (QmItemTickDelta(PredictionTick, pCurrent->m_StartTick, -1) + Client()->PredIntraGameTick(g_Config.m_ClDummy)) / (float)Client()->GameTickSpeed();
 	else
-		Ct = (Client()->PrevGameTick(g_Config.m_ClDummy) - pCurrent->m_StartTick) / (float)Client()->GameTickSpeed() + s_LastGameTickTime;
+		Ct = QmItemTickDelta(Client()->PrevGameTick(g_Config.m_ClDummy), pCurrent->m_StartTick) / (float)Client()->GameTickSpeed() + s_LastGameTickTime;
 	if(Ct < 0)
 	{
 		if(Ct > -s_LastGameTickTime / 2)
@@ -338,12 +339,12 @@ void CItems::RenderLaser(const CLaserData *pCurrent, bool IsPredicted)
 	else if(IsPredicted)
 	{
 		int PredictionTick = Client()->GetPredictionTick();
-		Ticks = (float)(PredictionTick - pCurrent->m_StartTick) + Client()->PredIntraGameTick(g_Config.m_ClDummy);
+		Ticks = QmItemTickDelta(PredictionTick, pCurrent->m_StartTick) + Client()->PredIntraGameTick(g_Config.m_ClDummy);
 		TicksHead += Client()->PredIntraGameTick(g_Config.m_ClDummy);
 	}
 	else
 	{
-		Ticks = (float)(Client()->GameTick(g_Config.m_ClDummy) - pCurrent->m_StartTick) + Client()->IntraGameTick(g_Config.m_ClDummy);
+		Ticks = QmItemTickDelta(Client()->GameTick(g_Config.m_ClDummy), pCurrent->m_StartTick) + Client()->IntraGameTick(g_Config.m_ClDummy);
 		TicksHead += Client()->IntraGameTick(g_Config.m_ClDummy);
 	}
 
@@ -546,7 +547,8 @@ void CItems::RenderLaser(vec2 From, vec2 Pos, ColorRGBA OuterColor, ColorRGBA In
 	}
 	else
 	{
-		int CurParticle = (int)TicksHead % 3;
+		const SQmLaserSplatFrame SplatFrame = QmLaserSplatFrame(TicksHead);
+		const int CurParticle = SplatFrame.m_Index;
 		Graphics()->TextureSet(GameClient()->m_ParticlesSkin.m_aSpriteParticleSplat[CurParticle]);
 
 		if(UseEnhancedLaserGlow)
@@ -582,7 +584,7 @@ void CItems::RenderLaser(vec2 From, vec2 Pos, ColorRGBA OuterColor, ColorRGBA In
 		}
 		else
 		{
-			Graphics()->QuadsSetRotation((int)TicksHead);
+			Graphics()->QuadsSetRotation(SplatFrame.m_Rotation);
 			Graphics()->SetColor(OuterColor);
 			Graphics()->RenderQuadContainerAsSprite(m_ItemsQuadContainerIndex, m_aParticleSplatOffset[CurParticle], Pos.x, Pos.y);
 			Graphics()->SetColor(InnerColor);
@@ -888,11 +890,11 @@ void CItems::ReconstructSmokeTrail(const CProjectileData *pCurrent, int DestroyT
 		Speed = pTuning->m_GunSpeed;
 	}
 
-	float Pt = ((float)(PredictionTick - pCurrent->m_StartTick) + Client()->PredIntraGameTick(g_Config.m_ClDummy)) / (float)Client()->GameTickSpeed();
+	float Pt = (QmItemTickDelta(PredictionTick, pCurrent->m_StartTick) + Client()->PredIntraGameTick(g_Config.m_ClDummy)) / (float)Client()->GameTickSpeed();
 	if(Pt < 0)
 		return; // projectile haven't been shot yet
 
-	float Gt = (Client()->PrevGameTick(g_Config.m_ClDummy) - pCurrent->m_StartTick) / (float)Client()->GameTickSpeed() + Client()->GameTickTime(g_Config.m_ClDummy);
+	float Gt = QmItemTickDelta(Client()->PrevGameTick(g_Config.m_ClDummy), pCurrent->m_StartTick) / (float)Client()->GameTickSpeed() + Client()->GameTickTime(g_Config.m_ClDummy);
 
 	float Alpha = 1.f;
 	if(pCurrent->m_ExtraInfo && pCurrent->m_Owner >= 0)
@@ -903,13 +905,12 @@ void CItems::ReconstructSmokeTrail(const CProjectileData *pCurrent, int DestroyT
 
 	float T = Pt;
 	if(DestroyTick >= 0)
-		T = minimum(Pt, ((float)(DestroyTick - 1 - pCurrent->m_StartTick) + Client()->PredIntraGameTick(g_Config.m_ClDummy)) / (float)Client()->GameTickSpeed());
+		T = minimum(Pt, (QmItemTickDelta(DestroyTick, pCurrent->m_StartTick, -1) + Client()->PredIntraGameTick(g_Config.m_ClDummy)) / (float)Client()->GameTickSpeed());
 
 	float MinTrailSpan = 0.4f * ((pCurrent->m_Type == WEAPON_GRENADE) ? 0.5f : 0.25f);
 	float Step = maximum(Client()->FrameTimeAverage(), (pCurrent->m_Type == WEAPON_GRENADE) ? 0.02f : 0.01f);
-	for(int i = 1 + (int)(Gt / Step); i < (int)(T / Step); i++)
-	{
-		float t = Step * (float)i + 0.4f * Step * random_float(-0.5f, 0.5f);
+	QmForEachItemTrailSample(QmItemTrailRange(Gt, T, Step), [&](int64_t Index) {
+		float t = Step * static_cast<float>(Index) + 0.4f * Step * random_float(-0.5f, 0.5f);
 		vec2 Pos = CalcPos(pCurrent->m_StartPos, pCurrent->m_StartVel, Curvature, Speed, t);
 		vec2 PrevPos = CalcPos(pCurrent->m_StartPos, pCurrent->m_StartVel, Curvature, Speed, t - 0.001f);
 		vec2 Vel = Pos - PrevPos;
@@ -918,8 +919,7 @@ void CItems::ReconstructSmokeTrail(const CProjectileData *pCurrent, int DestroyT
 			TimePassed = minimum(TimePassed, (TimePassed - MinTrailSpan) / (Pt - MinTrailSpan) * (MinTrailSpan * 0.5f) + MinTrailSpan);
 		// add particle for this projectile
 		if(pCurrent->m_Type == WEAPON_GRENADE && !Focus.m_HideExplosionEffects)
-			GameClient()->m_Effects.SmokeTrail(Pos, Vel * -1, Alpha, TimePassed);
-		else
-			GameClient()->m_Effects.BulletTrail(Pos, Alpha, TimePassed);
-	}
+			return GameClient()->m_Effects.SmokeTrail(Pos, Vel * -1, Alpha, TimePassed);
+		return GameClient()->m_Effects.BulletTrail(Pos, Alpha, TimePassed);
+	});
 }

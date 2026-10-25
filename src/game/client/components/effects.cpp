@@ -136,10 +136,10 @@ void CEffects::SparkleTrail(vec2 Pos, float Alpha)
 	GameClient()->m_Particles.Add(CParticles::GROUP_TRAIL_EXTRA, &p);
 }
 
-void CEffects::SmokeTrail(vec2 Pos, vec2 Vel, float Alpha, float TimePassed)
+bool CEffects::SmokeTrail(vec2 Pos, vec2 Vel, float Alpha, float TimePassed)
 {
 	if(!m_Add50hz && TimePassed < 0.001f)
-		return;
+		return false;
 
 	CParticle p;
 	p.SetDefault();
@@ -153,7 +153,7 @@ void CEffects::SmokeTrail(vec2 Pos, vec2 Vel, float Alpha, float TimePassed)
 	p.m_Gravity = random_float(-500.0f);
 	p.m_Color.a = Alpha;
 	p.m_StartAlpha = Alpha;
-	GameClient()->m_Particles.Add(CParticles::GROUP_PROJECTILE_TRAIL, &p, TimePassed);
+	return GameClient()->m_Particles.Add(CParticles::GROUP_PROJECTILE_TRAIL, &p, TimePassed);
 }
 
 void CEffects::SkidTrail(vec2 Pos, vec2 Vel, int Direction, float Alpha, float Volume)
@@ -185,10 +185,10 @@ void CEffects::SkidTrail(vec2 Pos, vec2 Vel, int Direction, float Alpha, float V
 	}
 }
 
-void CEffects::BulletTrail(vec2 Pos, float Alpha, float TimePassed)
+bool CEffects::BulletTrail(vec2 Pos, float Alpha, float TimePassed)
 {
 	if(!m_Add100hz && TimePassed < 0.001f)
-		return;
+		return false;
 
 	CParticle p;
 	p.SetDefault();
@@ -202,7 +202,7 @@ void CEffects::BulletTrail(vec2 Pos, float Alpha, float TimePassed)
 	p.m_Collides = false;
 	p.m_Color.a *= Alpha;
 	p.m_StartAlpha = Alpha;
-	GameClient()->m_Particles.Add(CParticles::GROUP_PROJECTILE_TRAIL, &p, TimePassed);
+	return GameClient()->m_Particles.Add(CParticles::GROUP_PROJECTILE_TRAIL, &p, TimePassed);
 }
 
 int CEffects::PlayerSpawn(vec2 Pos, float Alpha, float Volume)
