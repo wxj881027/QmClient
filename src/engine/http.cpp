@@ -86,32 +86,34 @@ void IHttpRequest::Head()
 
 void IHttpRequest::Post(const unsigned char *pData, size_t DataLength)
 {
-	m_Type = REQUEST::POST;
-	m_BodyLength = DataLength;
-	free(m_pBody);
-	m_pBody = (unsigned char *)malloc(std::max((size_t)1, DataLength));
-	if(m_pBody != nullptr && DataLength > 0)
-		mem_copy(m_pBody, pData, DataLength);
+	SetPostBody(REQUEST::POST, pData, DataLength);
 }
 
 void IHttpRequest::PostForm(const unsigned char *pData, size_t DataLength)
 {
-	m_Type = REQUEST::POST_FORM;
-	m_BodyLength = DataLength;
-	free(m_pBody);
-	m_pBody = (unsigned char *)malloc(std::max((size_t)1, DataLength));
-	if(m_pBody != nullptr && DataLength > 0)
-		mem_copy(m_pBody, pData, DataLength);
+	SetPostBody(REQUEST::POST_FORM, pData, DataLength);
 }
 
 void IHttpRequest::PostJson(const char *pJson)
 {
-	m_Type = REQUEST::POST_JSON;
-	m_BodyLength = str_length(pJson);
+	SetPostBody(REQUEST::POST_JSON, reinterpret_cast<const unsigned char *>(pJson), str_length(pJson));
+}
+
+void *IHttpRequest::AllocateRequestBody(size_t Size) noexcept
+{
+	return malloc(Size);
+}
+
+void IHttpRequest::SetPostBody(REQUEST Type, const unsigned char *pData, size_t DataLength)
+{
+	m_Type = Type;
+	m_BodyLength = DataLength;
 	free(m_pBody);
-	m_pBody = (unsigned char *)malloc(m_BodyLength);
-	if(m_pBody != nullptr && m_BodyLength > 0)
-		mem_copy(m_pBody, pJson, m_BodyLength);
+	m_pBody = nullptr;
+	// 空POST也持有非空正文，不能把malloc(0)的空返回交给传输后端。
+	m_pBody = static_cast<unsigned char *>(AllocateRequestBody(std::max(size_t{1}, DataLength)));
+	if(m_pBody && DataLength > 0)
+		mem_copy(m_pBody, pData, DataLength);
 }
 
 void IHttpRequest::HeaderString(const char *pName, const char *pValue)
@@ -307,6 +309,11 @@ bool IHttpRequest::ShouldSkipRequest()
 
 bool IHttpRequest::BeforeInit()
 {
+	if((m_Type == REQUEST::POST || m_Type == REQUEST::POST_FORM || m_Type == REQUEST::POST_JSON) && !m_pBody)
+	{
+		log_error("http", "failed to allocate HTTP request body");
+		return false;
+	}
 	if(m_WriteToFile)
 	{
 		if(m_SkipByFileTime)

@@ -189,6 +189,7 @@ protected:
 		POST_JSON,
 	};
 	static const char *GetRequestType(REQUEST Type);
+	void SetPostBody(REQUEST Type, const unsigned char *pData, size_t DataLength);
 
 	// Request
 	char m_aUrl[2048] = "";
@@ -259,6 +260,8 @@ protected:
 	bool ShouldSkipRequest();
 	// Abort the request with an error if `BeforeInit()` returns false.
 	bool BeforeInit();
+	// 返回内存由请求用free接管；分配失败必须返回nullptr，不抛异常。
+	virtual void *AllocateRequestBody(size_t Size) noexcept;
 	// 扩容失败必须保留旧缓冲；成功返回的内存须兼容 free。
 	virtual void *ReallocateResponseBuffer(size_t Size) noexcept;
 	// 文件边界：关闭总是消费句柄，读取返回的非空缓冲由请求用 free 接管。

@@ -4924,6 +4924,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/http_completion_test.cpp
     src/test/integration/engine/http_file_result_test.cpp
     src/test/integration/engine/http_scheduler_test.cpp
+    src/test/integration/engine/http_request_body_test.cpp
     src/test/unit/engine/json_test.cpp
     src/test/unit/engine/jsonwriter_test.cpp
     src/test/unit/client/keyword_reply_rules_test.cpp
@@ -5223,6 +5224,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qmclient_update_batch_test.cpp
     src/test/unit/engine/http/http_range_test.cpp
     src/test/unit/engine/http/http_response_buffer_test.cpp
+    src/test/unit/engine/http/http_request_body_test.cpp
     src/test/unit/engine/http/http_response_headers_test.cpp
     src/test/unit/engine/http/http_completion_test.cpp
     src/test/unit/engine/http/http_url_escape_test.cpp
@@ -5406,6 +5408,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/translate/translate_json_identity_test.cpp
     src/test/integration/qmclient/translate/translate_service_codes_test.cpp
     src/test/integration/qmclient/translate/translate_provider_identity_test.cpp
+    src/test/integration/qmclient/translate/translate_native_body_failure_test.cpp
     src/test/unit/qmclient/translate/translate_responses_test.cpp
     src/test/unit/qmclient/translate/translate_completion_memory_test.cpp
     src/test/unit/qmclient/translate/translate_submission_memory_test.cpp
