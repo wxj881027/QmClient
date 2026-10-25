@@ -5167,6 +5167,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_scoreboard_media_test.cpp
     src/test/unit/qmclient/client/qm_voting_hud_test.cpp
     src/test/unit/qmclient/client/recent_tee_skins_test.cpp
+    src/test/unit/qmclient/client/tee_skin_collection_cache_test.cpp
     src/test/unit/qmclient/client/tee_skin_apply_test.cpp
     src/test/contract/qmclient/client/qm_weapon_trajectory_contract_test.cpp
     src/test/unit/qmclient/client/qm_rank_demo_manifest_test.cpp
