@@ -113,19 +113,44 @@ namespace qm_update
 		std::string m_OfficialUrl;
 		EState m_State = EState::IDLE;
 		bool m_RejectedContent = false;
+		bool m_LocalError = false;
+
+		static void AbortRequest(const std::shared_ptr<IHttpRequest> &Request) noexcept
+		{
+			try
+			{
+				if(Request && !Request->Done() && !Request->IsAbortRequested())
+					Request->Abort();
+			}
+			catch(...)
+			{
+				// 外部取消失败不能让析构抛出；owner 已经发布终态，不再处理晚到结果。
+			}
+		}
+		void FailLocally() noexcept
+		{
+			m_LocalError = true;
+			m_State = EState::FAILED;
+			const auto Request = m_pRequest;
+			AbortRequest(Request);
+		}
 
 		void Start(double Now)
 		{
 			m_Deadline.Begin(Now);
 			m_pRequest = m_Factory(m_Attempt.Current()->m_Prefix + m_OfficialUrl);
+			if(!m_pRequest)
+				FailLocally();
 		}
 
 	public:
 		~CUpdateRequest() { Cancel(); }
 		void Begin(CSourceRegistry &Sources, const std::string &OfficialUrl, EResource Resource, double Now, TFactory Factory, TValidator Validator, TFactory DirectOfficialFactory = {})
+		try
 		{
 			Cancel();
 			m_RejectedContent = false;
+			m_LocalError = false;
 			m_DirectOfficialRetried = false;
 			m_DirectOfficialFactory = std::move(DirectOfficialFactory);
 			m_pSources = &Sources;
@@ -137,7 +162,12 @@ namespace qm_update
 			if(m_State == EState::RUNNING)
 				Start(Now);
 		}
+		catch(...)
+		{
+			FailLocally();
+		}
 		EState Poll(double Now)
+		try
 		{
 			if(m_State != EState::RUNNING)
 				return m_State;
@@ -161,6 +191,8 @@ namespace qm_update
 					m_DirectOfficialRetried = true;
 					m_Deadline.Begin(Now);
 					m_pRequest = m_DirectOfficialFactory(m_OfficialUrl);
+					if(!m_pRequest)
+						FailLocally();
 					return m_State;
 				}
 				m_pSources->Failed(*m_Attempt.Current(), Now, SourceRetryDelay(m_pRequest.get()));
@@ -171,17 +203,24 @@ namespace qm_update
 			}
 			return m_State;
 		}
-		void Cancel()
+		catch(...)
 		{
-			if(m_pRequest && !m_pRequest->Done())
-				m_pRequest->Abort();
-			m_pRequest.reset();
-			m_Attempt.Cancel();
-			m_State = EState::CANCELLED;
+			// 本地创建/验证/发布失败不降级健康来源，也不反复解析同一响应。
+			FailLocally();
+			return m_State;
 		}
+		void Cancel() noexcept
+		{
+			m_State = EState::CANCELLED;
+			m_Attempt.Cancel();
+			auto Request = std::move(m_pRequest);
+			AbortRequest(Request);
+		}
+		EState State() const { return m_State; }
 		const std::shared_ptr<IHttpRequest> &Request() const { return m_pRequest; }
 		const CSource *Source() const { return m_Attempt.Current(); }
 		bool RejectedContent() const { return m_RejectedContent; }
+		bool LocalError() const { return m_LocalError; }
 		// 系统代理解析有独立预算，移交 HTTP 时才开始传输截止时间。
 		void BeginTransfer(double Now)
 		{

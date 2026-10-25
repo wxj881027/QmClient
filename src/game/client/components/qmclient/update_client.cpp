@@ -114,16 +114,16 @@ void CTClient::TickUpdateLifecycle()
 		}
 		else if(State == qm_update::CUpdateRequest::EState::FAILED)
 		{
-			m_UpdateCheckFailed = true;
-			m_UpdateNetworkError = !m_UpdateMetadataRequest.RejectedContent();
-			m_FetchedQmClientUpdateInfo = false;
-			str_copy(m_aUpdateError, "Failed to check for updates");
-			log_error("qm-update", "All approved metadata sources failed");
-			m_UpdateNextCheck = time_get() + time_freq() * QMCLIENT_UPDATE_RETRY_INTERVAL;
-			if(m_UpdateShutdownRequested)
-				m_UpdateFailureExitAt = time_get() + 2 * time_freq();
-			ResetQmClientUpdateInfoTask();
-			m_QmClientAutoUpdateAfterCheck = false;
+			const bool LocalError = m_UpdateMetadataRequest.LocalError();
+			FailUpdateMetadataCheck("Failed to check for updates", !LocalError && !m_UpdateMetadataRequest.RejectedContent());
+			try
+			{
+				log_error("qm-update", "%s", LocalError ? "Metadata check failed locally" : "All approved metadata sources failed");
+			}
+			catch(...)
+			{
+				// 状态和重试已经完成，诊断异常不重新启动本次检查。
+			}
 		}
 	}
 
@@ -436,41 +436,67 @@ void CTClient::ResetUpdateTasks()
 	ResetUpdateDownloadTasks();
 }
 
-void CTClient::ResetQmClientUpdateInfoTask()
+void CTClient::ResetQmClientUpdateInfoTask() noexcept
 {
+	auto Request = std::move(m_pQmClientUpdateInfoTask);
 	m_UpdateMetadataRequest.Cancel();
-	if(m_pQmClientUpdateInfoTask)
+	try
 	{
-		m_pQmClientUpdateInfoTask->Abort();
-		m_pQmClientUpdateInfoTask = NULL;
+		if(Request && !Request->Done() && !Request->IsAbortRequested())
+			Request->Abort();
 	}
+	catch(...)
+	{
+		// 当前检查已解除引用，单个请求取消失败不阻止后续恢复或退出。
+	}
+}
+
+void CTClient::FailUpdateMetadataCheck(const char *pMessage, bool NetworkError) noexcept
+{
+	m_UpdateCheckFailed = true;
+	m_UpdateNetworkError = NetworkError;
+	m_FetchedQmClientUpdateInfo = false;
+	m_UpdatePopupRequested = true;
+	m_QmClientAutoUpdateAfterCheck = false;
+	str_copy(m_aUpdateError, pMessage);
+	const int64_t Now = time_get();
+	m_UpdateNextCheck = Now + time_freq() * QMCLIENT_UPDATE_RETRY_INTERVAL;
+	m_UpdateFailureExitAt = m_UpdateShutdownRequested ? Now + 2 * time_freq() : 0;
+	ResetQmClientUpdateInfoTask();
 }
 
 std::shared_ptr<IHttpRequest> CTClient::CreateUpdateInfoRequest(const std::string &Url, bool Direct)
 {
 	log_info("qm-update", "Checking approved metadata source: %s%s", Url.c_str(), Direct ? " (direct fallback)" : "");
 	std::shared_ptr<IHttpRequest> Request = HttpGet(Url.c_str());
-	Request->Timeout(CTimeout{5000, 30000, 1, 10});
-	Request->MaxResponseSize(4 * 1024 * 1024);
-	Request->LogProgress(HTTPLOG::FAILURE);
-	if(Direct)
+	try
 	{
-		Request->Proxy("");
-		Http()->Run(Request);
+		Request->Timeout(CTimeout{5000, 30000, 1, 10});
+		Request->MaxResponseSize(4 * 1024 * 1024);
+		Request->LogProgress(HTTPLOG::FAILURE);
+		if(Direct)
+		{
+			Request->Proxy("");
+			Http()->Run(Request);
+		}
+		else
+			RunUpdateHttp(Request);
 	}
-	else
-		RunUpdateHttp(Request);
+	catch(...)
+	{
+		// 工厂尚未返回，状态机还没有接管；取消可能已经移交 HTTP/代理队列的请求。
+		Request->Abort();
+		throw;
+	}
 	return Request;
 }
 
 void CTClient::FetchQmClientUpdateInfo()
+try
 {
 	m_QmClientUpdateCheckAttempted = true;
 #if !defined(CONF_FAMILY_WINDOWS) || !defined(CONF_ARCH_AMD64)
-	m_UpdateCheckFailed = true;
-	m_UpdatePopupRequested = true;
-	m_UpdateNextCheck = time_get() + time_freq() * QMCLIENT_UPDATE_RETRY_INTERVAL;
-	str_copy(m_aUpdateError, "Automatic updates require Windows x64");
+	FailUpdateMetadataCheck("Automatic updates require Windows x64", false);
 	return;
 #else
 	if(m_pQmClientUpdateInfoTask && !m_pQmClientUpdateInfoTask->Done())
@@ -493,14 +519,17 @@ void CTClient::FetchQmClientUpdateInfo()
 			char aError[256];
 			return ParseQmClientReleaseInfo(reinterpret_cast<const char *>(pResult), Size, QMCLIENT_VERSION, Release, aError, sizeof(aError), QMCLIENT_IS_DEVELOPMENT_BUILD, IsQmClientPortableBuild()); }, [this](const std::string &Url) { return CreateUpdateInfoRequest(Url, true); });
 	m_pQmClientUpdateInfoTask = m_UpdateMetadataRequest.Request();
-	if(!m_pQmClientUpdateInfoTask)
+	if(m_UpdateMetadataRequest.State() == qm_update::CUpdateRequest::EState::FAILED || !m_pQmClientUpdateInfoTask)
 	{
-		m_UpdateCheckFailed = true;
-		m_UpdateNetworkError = true;
-		m_UpdateNextCheck = time_get() + time_freq() * QMCLIENT_UPDATE_RETRY_INTERVAL;
-		str_copy(m_aUpdateError, "Update sources are temporarily unavailable");
+		const bool LocalError = m_UpdateMetadataRequest.LocalError();
+		FailUpdateMetadataCheck(LocalError ? "Failed to check for updates" : "Update sources are temporarily unavailable", !LocalError);
 	}
 #endif
+}
+catch(...)
+{
+	// 包含 Begin 的字符串/回调参数准备以及源注册表设置，不能只依赖状态机内部捕获。
+	FailUpdateMetadataCheck("Failed to check for updates", false);
 }
 
 void CTClient::CancelQmClientUpdate()

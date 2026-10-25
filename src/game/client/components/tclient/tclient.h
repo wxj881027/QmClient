@@ -170,6 +170,7 @@ class CTClient : public CComponent
 	const char *CurrentCommunityIdForFinishCheck() const;
 	void StartUpdateDownload(bool NextSource = false);
 	void FailUpdateDownloadPreparation() noexcept;
+	void FailUpdateMetadataCheck(const char *pMessage, bool NetworkError) noexcept;
 	void StartUpdateSourceSurvey();
 	void PollUpdateRequests();
 	void RunUpdateHttp(std::shared_ptr<IHttpRequest> pRequest);
@@ -496,7 +497,7 @@ public:
 	std::shared_ptr<IHttpRequest> CreateUpdateInfoRequest(const std::string &Url, bool Direct = false);
 	void FetchQmClientUpdateInfo();
 	void FinishQmClientUpdateInfo();
-	void ResetQmClientUpdateInfoTask();
+	void ResetQmClientUpdateInfoTask() noexcept;
 	bool NeedQmClientUpdate();
 	void RequestQmClientUpdateCheck(bool UpdateAfterCheck = false);
 	void RequestQmClientUpdateCheckAndUpdate();

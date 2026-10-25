@@ -5180,6 +5180,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_serverlist_follow_test.cpp
     src/test/integration/qmclient/client/qm_serverlist_recovery_test.cpp
     src/test/integration/qmclient/client/qmclient_update_request_test.cpp
+    src/test/integration/qmclient/client/qmclient_update_request_failure_test.cpp
     src/test/integration/qmclient/client/qmclient_update_survey_test.cpp
     src/test/integration/qmclient/client/qmclient_update_package_test.cpp
     src/test/integration/qmclient/client/qmclient_update_package_failure_test.cpp
