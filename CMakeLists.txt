@@ -4873,6 +4873,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/vulkan_recording_batch_test.cpp
     src/test/unit/engine/graphics/vulkan_render_workers_test.cpp
     src/test/unit/engine/graphics/readback_image_test.cpp
+    src/test/unit/engine/graphics/gpu_upload_limiter_test.cpp
     src/test/unit/engine/graphics/screenshot_image_test.cpp
     src/test/unit/engine/graphics/screenshot_submit_test.cpp
     src/test/integration/engine/screenshot_save_test.cpp
