@@ -548,6 +548,34 @@ inline SHudMediaIslandInfoStackLayout QmHudMediaIslandMirroredInfoStack(float Is
 	return {MidY - CenterOffset, MidY + CenterOffset};
 }
 
+struct SHudMediaIslandWaveformClock
+{
+	int64_t m_LastTick = 0;
+	int64_t m_Tick = 0;
+	bool m_Initialized = false;
+	bool m_UsesVideoClock = false;
+
+	int64_t Update(int64_t RealTick, int64_t VideoTick, bool UseVideoClock)
+	{
+		const int64_t Now = UseVideoClock ? VideoTick : RealTick;
+		if(!m_Initialized)
+			m_Tick = Now;
+		else if(m_UsesVideoClock == UseVideoClock && Now >= m_LastTick)
+			m_Tick += Now - m_LastTick;
+
+		// 切换时间源时只重设采样基准，保留波形相位与暂停收拢的进度。
+		m_LastTick = Now;
+		m_UsesVideoClock = UseVideoClock;
+		m_Initialized = true;
+		return m_Tick;
+	}
+
+	void Reset()
+	{
+		*this = {};
+	}
+};
+
 inline float QmHudMediaIslandWaveBarHeight(int BarIndex, float TimeSeconds, float Activity)
 {
 	constexpr float RestHeight = 0.20f;

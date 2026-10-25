@@ -126,6 +126,89 @@ TEST(QmHudMediaIslandRecording, SdfDotIsAPlainCircleWithPixelFeather)
 	EXPECT_FLOAT_EQ(Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_BACKGROUND].w, 0.7f);
 }
 
+TEST(QmHudMediaIslandWaveformClock, NormalPlaybackFollowsRealTime)
+{
+	SHudMediaIslandWaveformClock Clock;
+	EXPECT_EQ(Clock.Update(1000, 9000, false), 1000);
+	EXPECT_EQ(Clock.Update(1250, 9500, false), 1250);
+}
+
+TEST(QmHudMediaIslandWaveformClock, ExportFrameRatesIgnoreRenderingDuration)
+{
+	constexpr int64_t Frequency = 24000;
+	constexpr int64_t StartTick = Frequency;
+	for(const int Fps : {30, 60, 120, 240})
+	{
+		SCOPED_TRACE(Fps);
+		for(const int64_t RenderTicksPerFrame : {20, 4000})
+		{
+			SCOPED_TRACE(RenderTicksPerFrame);
+			SHudMediaIslandWaveformClock Clock;
+			Clock.Update(StartTick, StartTick, true);
+			int64_t WaveTick = StartTick;
+			for(int Frame = 1; Frame <= Fps; ++Frame)
+				WaveTick = Clock.Update(StartTick + Frame * RenderTicksPerFrame, StartTick + Frame * (Frequency / Fps), true);
+
+			EXPECT_EQ(WaveTick - StartTick, Frequency);
+			for(int Bar = 0; Bar < 7; ++Bar)
+				EXPECT_FLOAT_EQ(QmHudMediaIslandWaveBarHeight(Bar, WaveTick / static_cast<float>(Frequency), 1.0f), QmHudMediaIslandWaveBarHeight(Bar, 2.0f, 1.0f));
+		}
+	}
+}
+
+TEST(QmHudMediaIslandWaveformClock, PausedExportDoesNotAdvanceWithRealTime)
+{
+	SHudMediaIslandWaveformClock Clock;
+	const int64_t Before = Clock.Update(1000, 1000, true);
+	const int64_t After = Clock.Update(9000, 1000, true);
+	EXPECT_EQ(After, Before);
+	for(int Bar = 0; Bar < 7; ++Bar)
+		EXPECT_FLOAT_EQ(QmHudMediaIslandWaveBarHeight(Bar, Before / 1000.0f, 1.0f), QmHudMediaIslandWaveBarHeight(Bar, After / 1000.0f, 1.0f));
+}
+
+TEST(QmHudMediaIslandWaveformClock, SwitchingClockPreservesPhaseAndPausedBarSettling)
+{
+	for(const int64_t RealTickAfterExport : {2000, 9000})
+	{
+		SCOPED_TRACE(RealTickAfterExport);
+		SHudMediaIslandWaveformClock Clock;
+		EXPECT_EQ(Clock.Update(1000, 0, false), 1000);
+		EXPECT_EQ(Clock.Update(1100, 5000, true), 1000);
+		const int64_t SettleStart = Clock.Update(1200, 5100, true);
+		const int64_t BeforeStop = Clock.Update(1300, 5500, true);
+		EXPECT_EQ(BeforeStop, 1500);
+		EXPECT_EQ(Clock.Update(RealTickAfterExport, 0, false), BeforeStop);
+		const int64_t AfterStop = Clock.Update(RealTickAfterExport + 1000, 0, false);
+		for(int Bar = 0; Bar < 7; ++Bar)
+		{
+			const float BeforeProgress = QmHudMediaIslandWaveBarSettleProgress(Bar, 7, (BeforeStop - SettleStart) / 1000.0f);
+			const float AfterProgress = QmHudMediaIslandWaveBarSettleProgress(Bar, 7, (AfterStop - SettleStart) / 1000.0f);
+			EXPECT_GE(AfterProgress, BeforeProgress);
+			EXPECT_FLOAT_EQ(AfterProgress, 1.0f);
+		}
+		EXPECT_EQ(Clock.Update(RealTickAfterExport + 1100, 20000, true), AfterStop);
+		EXPECT_EQ(Clock.Update(RealTickAfterExport + 1200, 20100, true), AfterStop + 100);
+	}
+}
+
+TEST(QmHudMediaIslandWaveformClock, RewindingVideoClockKeepsTheAnimationMovingForward)
+{
+	SHudMediaIslandWaveformClock Clock;
+	Clock.Update(1000, 5000, true);
+	EXPECT_EQ(Clock.Update(1100, 5100, true), 5100);
+	EXPECT_EQ(Clock.Update(1200, 2000, true), 5100);
+	EXPECT_EQ(Clock.Update(1300, 2100, true), 5200);
+}
+
+TEST(QmHudMediaIslandWaveformClock, ResetDiscardsThePreviousClock)
+{
+	SHudMediaIslandWaveformClock Clock;
+	Clock.Update(1000, 5000, true);
+	Clock.Update(2000, 5500, true);
+	Clock.Reset();
+	EXPECT_EQ(Clock.Update(200, 0, false), 200);
+}
+
 TEST(QmHudMediaIslandWaveform, PlayingBarsVaryIndependentlyAndPausedBarsSettle)
 {
 	bool AnyChanged = false;

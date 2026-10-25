@@ -14,6 +14,7 @@
 #include <engine/graphics.h>
 #include <engine/image.h>
 #include <engine/shared/config.h>
+#include <engine/shared/video.h>
 #include <engine/textrender.h>
 
 #include <generated/client_data.h>
@@ -3762,6 +3763,7 @@ void CHud::RenderMediaIsland()
 	const bool AlwaysShowTrackDetails = g_Config.m_QmHudIslandAlwaysShowTrackDetails != 0;
 	if(!HasMediaState)
 	{
+		AnimState.m_WaveformClock.Reset();
 		AnimState.m_WaveformWasPlaying = false;
 		AnimState.m_WaveformSettling = false;
 		AnimState.m_WaveformSettleStartTick = 0;
@@ -4861,7 +4863,12 @@ void CHud::RenderMediaIsland()
 		const float WaveWidth = WaveBarCount * WaveBarWidth + (WaveBarCount - 1) * WaveBarGap;
 		const float WaveX = WaveformSlotX + (WaveformSlotWidth - WaveWidth) * 0.5f;
 		const float WaveCenterY = IslandY + BaseIslandHeight * 0.5f;
-		const float WaveTime = Now / static_cast<float>(time_freq());
+		bool UseVideoClock = false;
+#if defined(CONF_VIDEORECORDER)
+		UseVideoClock = IVideo::Current() != nullptr;
+#endif
+		const int64_t WaveNow = AnimState.m_WaveformClock.Update(Now, time(), UseVideoClock);
+		const float WaveTime = WaveNow / static_cast<float>(time_freq());
 		if(MediaState.m_Playing)
 		{
 			AnimState.m_WaveformWasPlaying = true;
@@ -4871,12 +4878,12 @@ void CHud::RenderMediaIsland()
 		{
 			AnimState.m_WaveformWasPlaying = false;
 			AnimState.m_WaveformSettling = true;
-			AnimState.m_WaveformSettleStartTick = Now;
+			AnimState.m_WaveformSettleStartTick = WaveNow;
 			AnimState.m_WaveformSettleSampleTime = WaveTime;
 		}
 		float WaveSettleElapsed = 0.0f;
-		if(AnimState.m_WaveformSettling && Now >= AnimState.m_WaveformSettleStartTick)
-			WaveSettleElapsed = (Now - AnimState.m_WaveformSettleStartTick) / static_cast<float>(time_freq());
+		if(AnimState.m_WaveformSettling && WaveNow >= AnimState.m_WaveformSettleStartTick)
+			WaveSettleElapsed = (WaveNow - AnimState.m_WaveformSettleStartTick) / static_cast<float>(time_freq());
 		const float WaveSampleTime = AnimState.m_WaveformSettling ? AnimState.m_WaveformSettleSampleTime : WaveTime;
 		const bool WaveMotionEnabled = g_Config.m_QmUiMotionLevel > 0;
 		for(int Bar = 0; Bar < WaveBarCount; ++Bar)
