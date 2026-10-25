@@ -545,9 +545,9 @@ void CMenus::RenderQmUpdatePopup(CUIRect Screen)
 		Content.HSplitBottom(Gap, &Content, nullptr);
 	}
 	// 下载进度固定在说明滚动区外，长发布说明不会遮住下载结果。
-	if(Update.IsUpdateDownloading() && Update.m_pUpdatePackageTask)
+	if(Update.IsUpdateDownloading() && Update.m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::PACKAGE))
 	{
-		const auto &Task = Update.m_pUpdatePackageTask;
+		const auto &Task = Update.m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::PACKAGE);
 		char aProgress[128];
 		const bool KnownSize = Task->Size() > 0;
 		const int Percent = std::clamp(Task->Progress(), 0, 100);

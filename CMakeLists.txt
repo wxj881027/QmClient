@@ -5183,6 +5183,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qmclient_update_survey_test.cpp
     src/test/integration/qmclient/client/qmclient_update_package_test.cpp
     src/test/integration/qmclient/client/qmclient_update_package_failure_test.cpp
+    src/test/integration/qmclient/client/qmclient_update_batch_test.cpp
     src/test/unit/engine/http/http_range_test.cpp
     src/test/unit/qmclient/client/qmclient_update_package_plan_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_assets_contract_test.cpp

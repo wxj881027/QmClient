@@ -15,18 +15,6 @@
 
 namespace qm_update
 {
-	// 取消意图必须保留；文件转换或删除失败不能从析构/HTTP完成回调继续抛出。
-	inline void RemoveCancelledPackageFile(const std::string &Path) noexcept
-	{
-		try
-		{
-			fs_remove(Path.c_str());
-		}
-		catch(...)
-		{
-		}
-	}
-
 	// 参考 Ketch 的连续区间规划与分段边界检查，独立使用现有 HTTP/Job 接口实现。
 	inline std::vector<CHttpByteRange> PlanPackageRanges(int64_t Size)
 	{
@@ -115,28 +103,6 @@ namespace qm_update
 	};
 
 	// 聚合请求不交给 HTTP 引擎；子请求完成并合并后才发布 DONE，兼容现有验签路径。
-	class CPackageFileCleanup : public IHttpRequest::IProgressCallback
-	{
-		std::string m_Path;
-		std::atomic<bool> m_Cancelled = false;
-
-	public:
-		explicit CPackageFileCleanup(std::string Path) :
-			m_Path(std::move(Path)) {}
-		void OnProgress() override {}
-		void OnCompletion(EHttpState) override
-		{
-			if(m_Cancelled)
-				RemoveCancelledPackageFile(m_Path);
-		}
-		void Cancel() noexcept
-		{
-			m_Cancelled = true;
-			// 回调发生在关闭/重命名之后；两边都尝试，覆盖完成状态发布前的取消竞态。
-			RemoveCancelledPackageFile(m_Path);
-		}
-	};
-
 	class CPackageDownload : public IHttpRequest
 	{
 	public:

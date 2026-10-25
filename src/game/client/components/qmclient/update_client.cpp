@@ -129,9 +129,7 @@ void CTClient::TickUpdateLifecycle()
 
 	if(m_UpdateSurvey.Running() && m_UpdateSurvey.Poll(m_UpdateSources, time_get() / static_cast<double>(time_freq())))
 		StartUpdateDownload();
-	if(m_pUpdatePackageTask && m_pUpdatePackageSignatureTask && m_pUpdateManifestTask && m_pUpdateManifestSignatureTask &&
-		m_pUpdatePackageTask->Done() && m_pUpdatePackageSignatureTask->Done() && m_pUpdateManifestTask->Done() && m_pUpdateManifestSignatureTask->Done() &&
-		!m_UpdateReady && !m_UpdateCheckFailed)
+	if(m_UpdateDownloadTasks.AllDone() && !m_UpdateReady && !m_UpdateCheckFailed)
 	{
 		FinishUpdateDownloads();
 	}
@@ -181,8 +179,9 @@ bool CTClient::CanDownloadQmClientUpdate() const
 
 EQmClientUpdateStatus CTClient::QmClientUpdateStatus() const
 {
-	return ResolveQmClientUpdateStatus(IsUpdateChecking(), IsUpdateDownloading(), m_pUpdatePackageTask != nullptr,
-		m_pUpdatePackageTask && m_pUpdatePackageTask->State() == EHttpState::DONE,
+	const auto &PackageTask = m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::PACKAGE);
+	return ResolveQmClientUpdateStatus(IsUpdateChecking(), IsUpdateDownloading(), PackageTask != nullptr,
+		PackageTask && PackageTask->State() == EHttpState::DONE,
 		m_UpdateReady, m_UpdateInstallerStarted, m_UpdateCheckFailed, m_FetchedQmClientUpdateInfo, m_UpdateRelease.m_NewVersion);
 }
 
@@ -270,12 +269,12 @@ void CTClient::StartUpdateSourceSurvey()
 }
 
 void CTClient::StartUpdateDownload(bool NextSource)
+try
 {
 #if !defined(CONF_FAMILY_WINDOWS)
 	return;
 #else
-	const std::shared_ptr<IHttpRequest> apRequests[] = {m_pUpdatePackageTask, m_pUpdatePackageSignatureTask, m_pUpdateManifestTask, m_pUpdateManifestSignatureTask};
-	if(!qm_update::CanStartDownloadBatch(m_UpdateSurvey.Running(), NextSource, apRequests))
+	if(!m_UpdateDownloadTasks.CanStart(m_UpdateSurvey.Running(), NextSource))
 		return;
 
 	if(!NextSource)
@@ -321,52 +320,88 @@ void CTClient::StartUpdateDownload(bool NextSource)
 	TempPath(m_aUpdateManifestTmp, sizeof(m_aUpdateManifestTmp), m_UpdateUseSetup ? m_UpdateRelease.m_aSetupManifestUrl : m_UpdateRelease.m_aManifestUrl);
 	TempPath(m_aUpdateManifestSignatureTmp, sizeof(m_aUpdateManifestSignatureTmp), m_UpdateUseSetup ? m_UpdateRelease.m_aSetupManifestSignatureUrl : m_UpdateRelease.m_aManifestSignatureUrl);
 
-	const auto StartDownload = [&](std::shared_ptr<IHttpRequest> &pTask, const char *pUrl, const char *pDestination, int64_t MaxResponseSize) {
-		const std::string Url = m_UpdateDownloadAttempt.Current()->m_Prefix + pUrl;
-		pTask = HttpGet(Url.c_str());
-		pTask->Timeout(CTimeout{5000, 0, 1, 20});
-		pTask->MaxResponseSize(MaxResponseSize);
-		pTask->SkipByFileTime(false);
-		pTask->LogProgress(HTTPLOG::FAILURE);
-		pTask->WriteToFile(Storage(), pDestination, IStorage::TYPE_SAVE);
-		if(m_UpdateDownloadDirect)
-		{
-			pTask->Proxy("");
-			Http()->Run(pTask);
-		}
-		else
-			RunUpdateHttp(pTask);
-	};
 	for(int Index = 0; Index < 4; ++Index)
 		m_UpdateDeadlines[Index].Begin(time_get() / static_cast<double>(time_freq()));
-	const std::string PackageUrl = m_UpdateDownloadAttempt.Current()->m_Prefix + (m_UpdateUseSetup ? m_UpdateRelease.m_aSetupUrl : m_UpdateRelease.m_aPackageUrl);
-	m_pUpdatePackageDownload = std::make_shared<qm_update::CPackageDownload>(PackageUrl, Storage(), m_aUpdatePackageTmp, QMCLIENT_UPDATE_MAX_PACKAGE_SIZE, [this](const std::shared_ptr<IHttpRequest> &Request) {
-			if(m_UpdateDownloadDirect)
-			{
-				Request->Proxy("");
-				Http()->Run(Request);
-			}
-			else
-				RunUpdateHttp(Request); }, [this](std::shared_ptr<IJob> Job) { return Engine()->TryAddJob(std::move(Job)); });
-	m_pUpdatePackageTask = m_pUpdatePackageDownload;
-	StartDownload(m_pUpdatePackageSignatureTask, m_UpdateUseSetup ? m_UpdateRelease.m_aSetupSignatureUrl : m_UpdateRelease.m_aPackageSignatureUrl, m_aUpdatePackageSignatureTmp, 64);
-	StartDownload(m_pUpdateManifestTask, m_UpdateUseSetup ? m_UpdateRelease.m_aSetupManifestUrl : m_UpdateRelease.m_aManifestUrl, m_aUpdateManifestTmp, QMCLIENT_UPDATE_MAX_MANIFEST_SIZE);
-	StartDownload(m_pUpdateManifestSignatureTask, m_UpdateUseSetup ? m_UpdateRelease.m_aSetupManifestSignatureUrl : m_UpdateRelease.m_aManifestSignatureUrl, m_aUpdateManifestSignatureTmp, 64);
+	const char *apUrls[] = {
+		m_UpdateUseSetup ? m_UpdateRelease.m_aSetupUrl : m_UpdateRelease.m_aPackageUrl,
+		m_UpdateUseSetup ? m_UpdateRelease.m_aSetupSignatureUrl : m_UpdateRelease.m_aPackageSignatureUrl,
+		m_UpdateUseSetup ? m_UpdateRelease.m_aSetupManifestUrl : m_UpdateRelease.m_aManifestUrl,
+		m_UpdateUseSetup ? m_UpdateRelease.m_aSetupManifestSignatureUrl : m_UpdateRelease.m_aManifestSignatureUrl,
+	};
+	const char *apPaths[] = {m_aUpdatePackageTmp, m_aUpdatePackageSignatureTmp, m_aUpdateManifestTmp, m_aUpdateManifestSignatureTmp};
+	const int64_t aMaxSizes[] = {QMCLIENT_UPDATE_MAX_PACKAGE_SIZE, 64, QMCLIENT_UPDATE_MAX_MANIFEST_SIZE, 64};
+	if(!m_UpdateDownloadTasks.TryStart([&](qm_update::CDownloadTasks::EFile File, std::shared_ptr<IHttpRequest> &pTask, std::shared_ptr<qm_update::CPackageFileCleanup> &pCleanup) {
+		   const std::string Url = m_UpdateDownloadAttempt.Current()->m_Prefix + apUrls[File];
+		   if(File == qm_update::CDownloadTasks::PACKAGE)
+		   {
+			   m_pUpdatePackageDownload = std::make_shared<qm_update::CPackageDownload>(Url, Storage(), m_aUpdatePackageTmp, QMCLIENT_UPDATE_MAX_PACKAGE_SIZE, [this](const std::shared_ptr<IHttpRequest> &Request) {
+				   if(m_UpdateDownloadDirect)
+				   {
+					   Request->Proxy("");
+					   Http()->Run(Request);
+				   }
+				   else
+					   RunUpdateHttp(Request); }, [this](std::shared_ptr<IJob> Job) { return Engine()->TryAddJob(std::move(Job)); });
+			   pTask = m_pUpdatePackageDownload;
+			   return;
+		   }
+		   pTask = HttpGet(Url.c_str());
+		   if(!pTask)
+			   return;
+		   pTask->Timeout(CTimeout{5000, 0, 1, 20});
+		   pTask->MaxResponseSize(aMaxSizes[File]);
+		   pTask->SkipByFileTime(false);
+		   pTask->LogProgress(HTTPLOG::FAILURE);
+		   pTask->WriteToFile(Storage(), apPaths[File], IStorage::TYPE_SAVE);
+		   char aAbsolute[IO_MAX_PATH_LENGTH];
+		   Storage()->GetCompletePath(IStorage::TYPE_SAVE, apPaths[File], aAbsolute, sizeof(aAbsolute));
+		   pCleanup = std::make_shared<qm_update::CPackageFileCleanup>(aAbsolute);
+		   pTask->SetProgressCallback(pCleanup);
+		   if(m_UpdateDownloadDirect)
+		   {
+			   pTask->Proxy("");
+			   Http()->Run(pTask);
+		   }
+		   else
+			   RunUpdateHttp(pTask);
+	   }))
+		FailUpdateDownloadPreparation();
 #endif
+}
+catch(...)
+{
+	FailUpdateDownloadPreparation();
+}
+
+void CTClient::FailUpdateDownloadPreparation() noexcept
+{
+	// 先完成可见失败状态；清理分配失败不能重新逃到调用它的主循环或输入命令。
+	m_UpdateReady = false;
+	m_UpdateCheckFailed = true;
+	m_UpdateNetworkError = false;
+	m_UpdateFailureNoticeShown = false;
+	m_UpdatePopupRequested = true;
+	m_QmClientAutoUpdateAfterCheck = false;
+	const int64_t Now = time_get();
+	m_UpdateNextCheck = Now + time_freq() * QMCLIENT_UPDATE_RETRY_INTERVAL;
+	m_UpdateFailureExitAt = m_UpdateShutdownRequested ? Now + 2 * time_freq() : 0;
+	str_copy(m_aUpdateError, "Failed to prepare or assemble the downloaded update package");
+	m_UpdateDownloadTasks.Reset(true);
+	m_pUpdatePackageDownload.reset();
+	try
+	{
+		RemoveUpdateTempFiles();
+	}
+	catch(...)
+	{
+		// 保留既有临时路径，后续取消或退出仍可重试回收；本次失败状态已经发布。
+	}
 }
 
 void CTClient::ResetUpdateDownloadTasks()
 {
-	const auto ResetTask = [](std::shared_ptr<IHttpRequest> &pTask) {
-		if(pTask)
-			pTask->Abort();
-		pTask = nullptr;
-	};
-	ResetTask(m_pUpdatePackageTask);
+	m_UpdateDownloadTasks.Reset();
 	m_pUpdatePackageDownload.reset();
-	ResetTask(m_pUpdatePackageSignatureTask);
-	ResetTask(m_pUpdateManifestTask);
-	ResetTask(m_pUpdateManifestSignatureTask);
 }
 
 void CTClient::RemoveUpdateTempFiles()
@@ -527,7 +562,7 @@ void CTClient::PollUpdateProxyRequests()
 		m_UpdateSurvey.BeginTransfer(It->m_pRequest, Now);
 		if(It->m_pRequest == m_UpdateMetadataRequest.Request())
 			m_UpdateMetadataRequest.BeginTransfer(Now);
-		const std::shared_ptr<IHttpRequest> apTasks[] = {m_pUpdatePackageTask, m_pUpdatePackageSignatureTask, m_pUpdateManifestTask, m_pUpdateManifestSignatureTask};
+		const std::shared_ptr<IHttpRequest> apTasks[] = {m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::PACKAGE), m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::PACKAGE_SIGNATURE), m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::MANIFEST), m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::MANIFEST_SIGNATURE)};
 		for(size_t Index = 0; Index < std::size(apTasks); ++Index)
 			if(It->m_pRequest == apTasks[Index])
 			{
@@ -543,6 +578,7 @@ void CTClient::PollUpdateProxyRequests()
 void CTClient::PollUpdateRequests()
 {
 	const double Now = time_get() / static_cast<double>(time_freq());
+	const auto &PackageTask = m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::PACKAGE);
 	if(m_pUpdatePackageDownload)
 	{
 		m_pUpdatePackageDownload->Poll(Now);
@@ -550,23 +586,23 @@ void CTClient::PollUpdateRequests()
 			m_UpdateSpeedMonitor.Begin(Now);
 	}
 	// 包的分段有各自的传输期限；后台合并不受网络无进展期限影响。
-	const std::shared_ptr<IHttpRequest> apRequests[] = {m_pUpdatePackageDownload ? nullptr : m_pUpdatePackageTask, m_pUpdatePackageSignatureTask, m_pUpdateManifestTask, m_pUpdateManifestSignatureTask};
+	const std::shared_ptr<IHttpRequest> apRequests[] = {m_pUpdatePackageDownload ? nullptr : PackageTask, m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::PACKAGE_SIGNATURE), m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::MANIFEST), m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::MANIFEST_SIGNATURE)};
 	qm_update::PollDownloadBatch(apRequests, m_UpdateDeadlines, Now);
-	bool Failed = m_pUpdatePackageTask && m_pUpdatePackageTask->Done() && m_pUpdatePackageTask->State() != EHttpState::DONE;
+	bool Failed = PackageTask && PackageTask->Done() && PackageTask->State() != EHttpState::DONE;
 	for(const auto &Request : apRequests)
 		Failed |= Request && Request->Done() && Request->State() != EHttpState::DONE;
-	if(Failed && m_pUpdatePackageTask && !m_pUpdatePackageTask->Done())
-		m_pUpdatePackageTask->Abort();
+	if(Failed && PackageTask && !PackageTask->Done())
+		PackageTask->Abort();
 	if(Failed)
 		for(const auto &Request : apRequests)
 			if(Request && !Request->Done())
 				Request->Abort();
 	if(m_pUpdatePackageDownload && m_pUpdatePackageDownload->Downloading() && m_UpdateDownloadAttempt.Current() &&
-		m_UpdateSpeedMonitor.ShouldSwitch(Now, m_pUpdatePackageTask->Current(), m_pUpdatePackageTask->Size(), m_UpdateSurvey.Speed(m_UpdateDownloadAttempt.NextCandidate()), m_UpdateDownloadAttempt.Current()->m_Prefix.empty()))
+		m_UpdateSpeedMonitor.ShouldSwitch(Now, PackageTask->Current(), PackageTask->Size(), m_UpdateSurvey.Speed(m_UpdateDownloadAttempt.NextCandidate()), m_UpdateDownloadAttempt.Current()->m_Prefix.empty()))
 	{
 		m_UpdateSwitchForSpeed = true;
 		log_info("qm-update", "Package remained below 100 KiB/s for 5 seconds; switching approved source");
-		m_pUpdatePackageTask->Abort();
+		PackageTask->Abort();
 		for(const auto &pRequest : apRequests)
 			if(pRequest && !pRequest->Done())
 				pRequest->Abort();
@@ -626,10 +662,10 @@ void CTClient::FinishUpdateDownloads()
 		if(Retryable && m_UpdateDownloadAttempt.Current())
 		{
 			double RetryAfter = 0;
-			for(const auto &pTask : {m_pUpdatePackageTask, m_pUpdatePackageSignatureTask, m_pUpdateManifestTask, m_pUpdateManifestSignatureTask})
+			for(const auto &pTask : {m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::PACKAGE), m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::PACKAGE_SIGNATURE), m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::MANIFEST), m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::MANIFEST_SIGNATURE)})
 				if(pTask)
 					RetryAfter = std::max(RetryAfter, qm_update::SourceRetryDelay(pTask.get()));
-			const std::shared_ptr<IHttpRequest> apRequests[] = {m_pUpdatePackageTask, m_pUpdatePackageSignatureTask, m_pUpdateManifestTask, m_pUpdateManifestSignatureTask};
+			const std::shared_ptr<IHttpRequest> apRequests[] = {m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::PACKAGE), m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::PACKAGE_SIGNATURE), m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::MANIFEST), m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::MANIFEST_SIGNATURE)};
 			if(!m_UpdateSwitchForSpeed && qm_update::CanRetryOfficialDirect(m_UpdateDownloadAttempt.Current(), m_UpdateDownloadDirect, apRequests))
 			{
 				m_UpdateDownloadDirect = true;
@@ -662,8 +698,8 @@ void CTClient::FinishUpdateDownloads()
 	const auto IsSuccessful = [](const std::shared_ptr<IHttpRequest> &pTask) {
 		return pTask && pTask->State() == EHttpState::DONE && pTask->StatusCode() == 200;
 	};
-	if(!IsSuccessful(m_pUpdatePackageTask) || !IsSuccessful(m_pUpdatePackageSignatureTask) ||
-		!IsSuccessful(m_pUpdateManifestTask) || !IsSuccessful(m_pUpdateManifestSignatureTask))
+	if(!IsSuccessful(m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::PACKAGE)) || !IsSuccessful(m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::PACKAGE_SIGNATURE)) ||
+		!IsSuccessful(m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::MANIFEST)) || !IsSuccessful(m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::MANIFEST_SIGNATURE)))
 	{
 		const bool LocalError = m_pUpdatePackageDownload && m_pUpdatePackageDownload->LocalError();
 		Fail(LocalError ? "Failed to prepare or assemble the downloaded update package" : "All approved update sources failed to download", !LocalError, !LocalError);
@@ -719,7 +755,7 @@ void CTClient::FinishUpdateDownloads()
 		return;
 	}
 
-	const SHA256_DIGEST ActualDigest = m_pUpdatePackageTask->ResultSha256();
+	const SHA256_DIGEST ActualDigest = m_UpdateDownloadTasks.Get(qm_update::CDownloadTasks::PACKAGE)->ResultSha256();
 	IOHANDLE PackageFile = Storage()->OpenFile(m_aUpdatePackageTmp, IOFLAG_READ, IStorage::TYPE_SAVE);
 	const int64_t ActualSize = PackageFile ? io_length(PackageFile) : -1;
 	if(PackageFile)

@@ -3,13 +3,52 @@
 
 #include "update_sources.h"
 
+#include <base/fs.h>
+
 #include <engine/http.h>
 
+#include <atomic>
+#include <cstddef>
 #include <functional>
 #include <memory>
 
 namespace qm_update
 {
+	// 取消意图必须保留；文件转换或删除失败不能从析构/HTTP完成回调继续抛出。
+	inline void RemoveCancelledPackageFile(const std::string &Path) noexcept
+	{
+		try
+		{
+			fs_remove(Path.c_str());
+		}
+		catch(...)
+		{
+		}
+	}
+
+	// 请求和批次共同持有清理状态，异步完成不借用客户端或批次对象。
+	class CPackageFileCleanup : public IHttpRequest::IProgressCallback
+	{
+		std::string m_Path;
+		std::atomic<bool> m_Cancelled = false;
+
+	public:
+		explicit CPackageFileCleanup(std::string Path) :
+			m_Path(std::move(Path)) {}
+		void OnProgress() override {}
+		void OnCompletion(EHttpState) override
+		{
+			if(m_Cancelled)
+				RemoveCancelledPackageFile(m_Path);
+		}
+		void Cancel() noexcept
+		{
+			m_Cancelled = true;
+			// 回调发生在关闭/重命名之后；两边都尝试，覆盖完成状态发布前的取消竞态。
+			RemoveCancelledPackageFile(m_Path);
+		}
+	};
+
 	// 代理作业尚未移交的请求也必须走 HTTP 的取消完成路径，不能永远停在 QUEUED。
 	inline bool CompleteAbortedUpdateRequest(IHttp &Http, const std::shared_ptr<IHttpRequest> &Request)
 	{
@@ -161,6 +200,94 @@ namespace qm_update
 				return false;
 		return true;
 	}
+
+	// 四个附件属于同一下载批次；准备期间先保存请求，再交给可能失败的外部启动边界。
+	// 仅由客户端主线程操作，完成回调只访问独立的 CPackageFileCleanup。
+	class CDownloadTasks
+	{
+	public:
+		enum EFile : size_t
+		{
+			PACKAGE,
+			PACKAGE_SIGNATURE,
+			MANIFEST,
+			MANIFEST_SIGNATURE,
+			NUM_FILES,
+		};
+
+	private:
+		std::shared_ptr<IHttpRequest> m_apRequests[NUM_FILES];
+		std::shared_ptr<CPackageFileCleanup> m_apCleanup[NUM_FILES];
+
+	public:
+		CDownloadTasks() = default;
+		CDownloadTasks(const CDownloadTasks &) = delete;
+		CDownloadTasks &operator=(const CDownloadTasks &) = delete;
+		~CDownloadTasks() { Reset(); }
+		const std::shared_ptr<IHttpRequest> &Get(EFile File) const { return m_apRequests[File]; }
+		bool Any() const
+		{
+			for(const auto &Request : m_apRequests)
+				if(Request)
+					return true;
+			return false;
+		}
+		bool AllDone() const
+		{
+			for(const auto &Request : m_apRequests)
+				if(!Request || !Request->Done())
+					return false;
+			return true;
+		}
+		bool CanStart(bool SurveyRunning, bool Retry) const
+		{
+			return CanStartDownloadBatch(SurveyRunning, Retry, m_apRequests);
+		}
+		void Reset(bool DiscardCompleted = false) noexcept
+		{
+			for(size_t Index = 0; Index < NUM_FILES; ++Index)
+			{
+				auto &Request = m_apRequests[Index];
+				if(m_apCleanup[Index] && (DiscardCompleted || !Request || Request->State() != EHttpState::DONE))
+					m_apCleanup[Index]->Cancel();
+				try
+				{
+					if(Request && !Request->Done())
+						Request->Abort();
+				}
+				catch(...)
+				{
+					// 单项取消失败不阻止其余附件释放，独立清理状态仍标记为已取消。
+				}
+				Request.reset();
+				m_apCleanup[Index].reset();
+			}
+		}
+		template<typename FPrepare>
+		bool TryStart(FPrepare &&Prepare)
+		{
+			if(Any())
+				return false;
+			try
+			{
+				for(size_t Index = 0; Index < NUM_FILES; ++Index)
+				{
+					Prepare(static_cast<EFile>(Index), m_apRequests[Index], m_apCleanup[Index]);
+					if(!m_apRequests[Index])
+					{
+						Reset(true);
+						return false;
+					}
+				}
+				return true;
+			}
+			catch(...)
+			{
+				Reset(true);
+				return false;
+			}
+		}
+	};
 
 	// 所有附件共用批次失败和进度监控，包含索引零的完整包。
 	template<size_t N>
