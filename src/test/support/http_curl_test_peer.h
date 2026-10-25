@@ -30,6 +30,10 @@ public:
 	{
 		return CHttpRequestCurl::WriteCallback(Text.data(), 1, Text.size(), &Request);
 	}
+	static size_t BodySize(CHttpRequestCurl &Request, char *pData, size_t Size, size_t Number)
+	{
+		return CHttpRequestCurl::WriteCallback(pData, Size, Number, &Request);
+	}
 	static void Complete(CHttpRequestCurl &Request, CURL *pHandle = nullptr, CURLcode Code = CURLE_OK)
 	{
 		Request.m_aErr[0] = '\0';

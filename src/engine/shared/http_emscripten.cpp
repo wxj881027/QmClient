@@ -120,9 +120,11 @@ void CHttpRequestEmscripten::OnSuccess()
 	dbg_assert(m_pFetch != nullptr, "OnSuccess was called with an unset fetch handle");
 	m_CallbackFinished = true;
 
-	OnData(m_pFetch->data, m_pFetch->numBytes);
-
-	m_pHttp->AddPendingStateChange(m_pFetch, EHttpState::DONE);
+	const uint64_t BodySize = m_pFetch->numBytes;
+	const bool Accepted = BodySize <= std::numeric_limits<size_t>::max() &&
+			      (OnData(m_pFetch->data, static_cast<size_t>(BodySize)) == BodySize || m_ResponseSampleComplete);
+	// 正文超限、不可表示或分配失败时不能发布成功；有界采样主动截断仍成功。
+	m_pHttp->AddPendingStateChange(m_pFetch, Accepted ? EHttpState::DONE : EHttpState::ERROR);
 }
 
 void CHttpRequestEmscripten::OnFailure()

@@ -4891,6 +4891,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/jobs_test.cpp
     src/test/integration/engine/job_pool_startup_test.cpp
     src/test/integration/engine/http_startup_test.cpp
+    src/test/integration/engine/http_response_buffer_test.cpp
     src/test/unit/engine/json_test.cpp
     src/test/unit/engine/jsonwriter_test.cpp
     src/test/unit/client/keyword_reply_rules_test.cpp
@@ -5187,6 +5188,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qmclient_update_package_failure_test.cpp
     src/test/integration/qmclient/client/qmclient_update_batch_test.cpp
     src/test/unit/engine/http/http_range_test.cpp
+    src/test/unit/engine/http/http_response_buffer_test.cpp
     src/test/unit/qmclient/client/qmclient_update_package_plan_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_assets_contract_test.cpp
     src/test/integration/qmclient/settings/settings_resource_preview_pipeline_test.cpp

@@ -355,16 +355,34 @@ void IHttpRequest::ResultResponseSample(unsigned char **ppResult, size_t *pResul
 	*pResultLength = m_ResponseLength;
 }
 
+void *IHttpRequest::ReallocateResponseBuffer(size_t Size) noexcept
+{
+	return realloc(m_pBuffer, Size);
+}
+
 size_t IHttpRequest::OnData(const char *pData, size_t DataSize)
 {
+	if(m_ResponseFailed)
+		return 0;
+	const auto Reject = [this] {
+		m_ResponseFailed = true;
+		return size_t{0};
+	};
 	const size_t IncomingSize = DataSize;
 	if(m_ResponseSampleSize > 0)
+	{
+		if(m_ResponseLength >= m_ResponseSampleSize)
+			return 0;
 		DataSize = std::min<uint64_t>(DataSize, m_ResponseSampleSize - m_ResponseLength);
+	}
+	if(DataSize > std::numeric_limits<uint64_t>::max() - m_ResponseLength)
+		return Reject();
+	const uint64_t NewResponseLength = m_ResponseLength + DataSize;
 	// Need to check for the maximum response size here as implementation may not support it,
 	// e.g. curl can only guarantee it if the server sets a Content-Length header.
-	if(m_MaxResponseSize >= 0 && m_ResponseLength + DataSize > (uint64_t)m_MaxResponseSize)
+	if(m_MaxResponseSize >= 0 && NewResponseLength > (uint64_t)m_MaxResponseSize)
 	{
-		return 0;
+		return Reject();
 	}
 
 	if(DataSize == 0)
@@ -372,29 +390,41 @@ size_t IHttpRequest::OnData(const char *pData, size_t DataSize)
 		return DataSize;
 	}
 
-	sha256_update(&m_ActualSha256Ctx, pData, DataSize);
-
 	size_t Result = DataSize;
 
 	if(m_WriteToMemory)
 	{
+		if(NewResponseLength > std::numeric_limits<size_t>::max())
+			return Reject();
 		size_t NewBufferSize = std::max((size_t)1024, m_BufferSize);
-		while(m_ResponseLength + DataSize > NewBufferSize)
+		while(NewResponseLength > NewBufferSize)
 		{
+			if(NewBufferSize > std::numeric_limits<size_t>::max() / 2)
+			{
+				NewBufferSize = static_cast<size_t>(NewResponseLength);
+				break;
+			}
 			NewBufferSize *= 2;
 		}
 		if(NewBufferSize != m_BufferSize)
 		{
-			m_pBuffer = (unsigned char *)realloc(m_pBuffer, NewBufferSize);
+			auto *pNewBuffer = static_cast<unsigned char *>(ReallocateResponseBuffer(NewBufferSize));
+			if(pNewBuffer == nullptr)
+				return Reject();
+			m_pBuffer = pNewBuffer;
 			m_BufferSize = NewBufferSize;
 		}
 		mem_copy(m_pBuffer + m_ResponseLength, pData, DataSize);
 	}
+	// 分配失败的正文既不计入长度，也不能提前污染摘要。
+	sha256_update(&m_ActualSha256Ctx, pData, DataSize);
 	if(m_WriteToFile)
 	{
 		Result = io_write(m_File, pData, DataSize);
+		if(Result != DataSize)
+			m_ResponseFailed = true;
 	}
-	m_ResponseLength += DataSize;
+	m_ResponseLength = NewResponseLength;
 	if(m_ResponseSampleSize > 0 && m_ResponseLength == m_ResponseSampleSize)
 	{
 		m_ResponseSampleComplete = true;
@@ -405,6 +435,9 @@ size_t IHttpRequest::OnData(const char *pData, size_t DataSize)
 
 void IHttpRequest::OnCompletionInternal(EHttpState State)
 {
+	// 后端完成成功也不能覆盖正文接收失败，文件候选仍走原错误回收路径。
+	if(State == EHttpState::DONE && m_ResponseFailed)
+		State = EHttpState::ERROR;
 	if(State == EHttpState::DONE)
 	{
 		m_ActualSha256 = sha256_finish(&m_ActualSha256Ctx);

@@ -220,6 +220,7 @@ protected:
 	std::optional<SHA256_DIGEST> m_ActualSha256 = std::nullopt;
 	SHA256_CTX m_ActualSha256Ctx;
 	uint64_t m_ResponseLength = 0;
+	bool m_ResponseFailed = false;
 	int m_StatusCode = 0;
 	std::optional<int64_t> m_ResultAge = std::nullopt;
 	std::optional<std::chrono::nanoseconds> m_ResultHeadersReceivedAt;
@@ -257,6 +258,8 @@ protected:
 	bool ShouldSkipRequest();
 	// Abort the request with an error if `BeforeInit()` returns false.
 	bool BeforeInit();
+	// 扩容失败必须保留旧缓冲；成功返回的内存须兼容 free。
+	virtual void *ReallocateResponseBuffer(size_t Size) noexcept;
 
 	// Abort the request if `OnData()` returns something other than
 	// `DataSize`.

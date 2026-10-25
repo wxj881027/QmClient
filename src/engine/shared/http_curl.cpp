@@ -549,6 +549,11 @@ size_t CHttpRequestCurl::HeaderCallback(char *pData, size_t Size, size_t Number,
 size_t CHttpRequestCurl::WriteCallback(char *pData, size_t Size, size_t Number, void *pUser)
 {
 	auto *pRequest = static_cast<CHttpRequestCurl *>(pUser);
+	if(Size != 0 && Number > std::numeric_limits<size_t>::max() / Size)
+	{
+		pRequest->m_ResponseFailed = true;
+		return 0;
+	}
 	// 中间重定向正文不属于分段；终态 3xx 仍由完成检查拒绝。
 	if(pRequest->m_ByteRange && pRequest->m_StatusCode >= 300 && pRequest->m_StatusCode < 400)
 		return Size * Number;
