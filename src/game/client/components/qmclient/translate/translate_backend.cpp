@@ -1313,23 +1313,25 @@ protected:
 
 	void StartRequest(ELlmApiStyle Style)
 	{
-		m_ActiveStyle = Style;
 		const char *pPath = Style == ELlmApiStyle::RESPONSES ? "/responses" : "/chat/completions";
 		char aUrl[512];
 		str_format(aUrl, sizeof(aUrl), "%s%s", m_aBaseUrl, pPath);
 		const char *pPayload = Style == ELlmApiStyle::RESPONSES ? m_ResponsesPayload.c_str() : m_ChatPayload.c_str();
 
-		m_pHttpRequest = m_pCreateRequest(aUrl);
-		m_pHttpRequest->LogProgress(HTTPLOG::NONE);
-		m_pHttpRequest->FailOnErrorStatus(false);
-		m_pHttpRequest->MaxResponseSize(64 * 1024);
+		// 配置和HTTP接收成功前保留原请求及其解析格式，分配失败后仍可重试。
+		std::shared_ptr<IHttpRequest> pRequest = m_pCreateRequest(aUrl);
+		pRequest->LogProgress(HTTPLOG::NONE);
+		pRequest->FailOnErrorStatus(false);
+		pRequest->MaxResponseSize(64 * 1024);
 		// 连接最多 10 秒，完整请求最多 60 秒；低速限制独立于总时限。
-		m_pHttpRequest->Timeout(IsLocalTranslateEndpoint(m_aBaseUrl) ? CTimeout{2000, 30000, 100, 15} : CTimeout{10000, 60000, 100, 30});
-		m_pHttpRequest->HeaderString("Content-Type", "application/json");
+		pRequest->Timeout(IsLocalTranslateEndpoint(m_aBaseUrl) ? CTimeout{2000, 30000, 100, 15} : CTimeout{10000, 60000, 100, 30});
+		pRequest->HeaderString("Content-Type", "application/json");
 		if(m_aAuthorization[0])
-			m_pHttpRequest->HeaderString("Authorization", m_aAuthorization);
-		m_pHttpRequest->Post(reinterpret_cast<const unsigned char *>(pPayload), str_length(pPayload));
-		m_pHttp->Run(m_pHttpRequest);
+			pRequest->HeaderString("Authorization", m_aAuthorization);
+		pRequest->Post(reinterpret_cast<const unsigned char *>(pPayload), str_length(pPayload));
+		m_pHttp->Run(pRequest);
+		m_pHttpRequest = std::move(pRequest);
+		m_ActiveStyle = Style;
 	}
 
 	// Chat 格式请求失败且可能是端点不支持时，判断是否值得回退尝试 Responses
