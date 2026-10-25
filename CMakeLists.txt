@@ -3702,6 +3702,7 @@ if(CLIENT)
     components/qmclient/community_icon_scan.h
     components/qmclient/community_icon_store.h
     components/qmclient/community_icon_image.h
+    components/qmclient/community_icon_limits.h
     components/qmclient/shortcut_held_bind.h
     components/qmclient/spectator_tele_search.h
     components/qmclient/stutter_capture.cpp
@@ -4756,6 +4757,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_emoticon_collision_bounds_test.cpp
     src/test/unit/qmclient/client/qm_emoticon_mask_build_test.cpp
     src/test/unit/qmclient/client/qm_community_icon_scan_test.cpp
+    src/test/unit/qmclient/client/qm_community_icon_load_queue_test.cpp
     src/test/unit/qmclient/client/qm_community_icon_store_test.cpp
     src/test/integration/client/emoticon_collision_inputs_test.cpp
     src/test/integration/client/spectator_selection_inputs_test.cpp

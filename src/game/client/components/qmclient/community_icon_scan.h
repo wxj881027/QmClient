@@ -8,9 +8,12 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <deque>
+#include <memory>
 #include <memory_resource>
 #include <optional>
 #include <span>
+#include <utility>
 #include <vector>
 
 namespace qm_community_icons
@@ -67,6 +70,81 @@ namespace qm_community_icons
 			return false;
 		}
 	}
+
+	// 主线程登记后按预算提交；已完成结果仍占槽，直到主线程消费。
+	template<typename TJob>
+	class CLoadQueue
+	{
+		struct SEntry
+		{
+			std::shared_ptr<TJob> m_pJob;
+			bool m_Submitted = false;
+		};
+		std::deque<SEntry> m_Entries;
+		std::size_t m_Submitted = 0;
+
+	public:
+		CLoadQueue() = default;
+		CLoadQueue(const CLoadQueue &) = delete;
+		CLoadQueue &operator=(const CLoadQueue &) = delete;
+
+		template<typename TCreate>
+		bool Enqueue(TCreate &&Create) noexcept
+		{
+			try
+			{
+				auto pJob = Create();
+				if(!pJob)
+					return false;
+				m_Entries.push_back({std::move(pJob), false});
+				return true;
+			}
+			catch(...)
+			{
+				return false;
+			}
+		}
+
+		// Submit返回false/抛异常表示尚未接管；回调不得重入本队列。
+		template<typename TSubmit>
+		void SubmitPending(std::size_t Limit, TSubmit &&Submit) noexcept
+		{
+			for(auto &Entry : m_Entries)
+			{
+				if(m_Submitted >= Limit)
+					break;
+				if(Entry.m_Submitted)
+					continue;
+				try
+				{
+					if(!Submit(Entry.m_pJob))
+						break;
+				}
+				catch(...)
+				{
+					break;
+				}
+				Entry.m_Submitted = true;
+				++m_Submitted;
+			}
+		}
+
+		bool Empty() const { return m_Entries.empty(); }
+		std::size_t Size() const { return m_Entries.size(); }
+		std::size_t Submitted() const { return m_Submitted; }
+		std::shared_ptr<TJob> Front() const { return m_Entries.front().m_pJob; }
+		void PopFront() noexcept
+		{
+			if(m_Entries.front().m_Submitted)
+				--m_Submitted;
+			m_Entries.pop_front();
+		}
+		void Clear() noexcept
+		{
+			m_Entries.clear();
+			m_Submitted = 0;
+		}
+	};
 
 	class CScan
 	{

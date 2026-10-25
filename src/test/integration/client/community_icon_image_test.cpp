@@ -225,3 +225,77 @@ TEST_F(CommunityIconImage, EmptyFileFailsDecodeWithoutChangingDigest)
 	EXPECT_EQ(m_Original.m_pData, nullptr);
 	EXPECT_EQ(m_Gray.m_pData, nullptr);
 }
+
+TEST_F(CommunityIconImage, BoundedReaderRejectsOversizedFileBeforeReturningAnySnapshot)
+{
+	const auto Data = Png();
+	ASSERT_GT(Data.size(), 1u);
+	ASSERT_TRUE(Write(*m_pStorage, "icon.png", Data));
+	qm_community_icons::CBoundedFileReader Reader(*m_pStorage, Data.size() - 1);
+	void *pData = nullptr;
+	unsigned Size = 7;
+	EXPECT_FALSE(Reader.ReadFile("icon.png", IStorage::TYPE_SAVE, &pData, &Size));
+	EXPECT_TRUE(Reader.TooLarge());
+	EXPECT_EQ(pData, nullptr);
+	EXPECT_EQ(Size, 0u);
+	std::free(pData);
+}
+
+TEST_F(CommunityIconImage, BoundedReaderAcceptsExactFileLimitAndKeepsSnapshotDigest)
+{
+	const auto Data = Png();
+	ASSERT_TRUE(Write(*m_pStorage, "icon.png", Data));
+	qm_community_icons::CBoundedFileReader Reader(*m_pStorage, Data.size());
+	ASSERT_EQ(qm_community_icons::LoadImage(Reader, "icon.png", IStorage::TYPE_SAVE, m_Original, m_Gray, m_Digest), ELoadResult::LOADED);
+	EXPECT_FALSE(Reader.TooLarge());
+	EXPECT_EQ(m_Digest, sha256(Data.data(), Data.size()));
+	ASSERT_NE(m_Original.m_pData, nullptr);
+	EXPECT_EQ(m_Original.m_pData[0], 200);
+}
+
+TEST_F(CommunityIconImage, OversizedReplacementKeepsPreviouslyPreparedPairAndDigest)
+{
+	const auto Data = Png();
+	ASSERT_TRUE(Write(*m_pStorage, "icon.png", Data));
+	qm_community_icons::CBoundedFileReader Reader(*m_pStorage, Data.size());
+	ASSERT_EQ(qm_community_icons::LoadImage(Reader, "icon.png", IStorage::TYPE_SAVE, m_Original, m_Gray, m_Digest), ELoadResult::LOADED);
+	const auto *pOriginal = m_Original.m_pData;
+	const auto *pGray = m_Gray.m_pData;
+	const auto Before = m_Digest;
+	ASSERT_TRUE(Write(*m_pStorage, "icon.png", std::vector<uint8_t>(Data.size() + 1, 0)));
+	EXPECT_EQ(qm_community_icons::LoadImage(Reader, "icon.png", IStorage::TYPE_SAVE, m_Original, m_Gray, m_Digest), ELoadResult::READ_FAILED);
+	EXPECT_TRUE(Reader.TooLarge());
+	EXPECT_EQ(m_Original.m_pData, pOriginal);
+	EXPECT_EQ(m_Gray.m_pData, pGray);
+	EXPECT_EQ(m_Digest, Before);
+}
+
+TEST_F(CommunityIconImage, DecodedRgbaByteLimitRejectsBeforePublicationAndAcceptsExactBoundary)
+{
+	ASSERT_TRUE(Write(*m_pStorage, "icon.png", Png()));
+	const auto Before = m_Digest;
+	EXPECT_EQ(qm_community_icons::LoadImage(*m_pStorage, "icon.png", IStorage::TYPE_SAVE, m_Original, m_Gray, m_Digest, 3), ELoadResult::DECODE_FAILED);
+	EXPECT_EQ(m_Original.m_pData, nullptr);
+	EXPECT_EQ(m_Gray.m_pData, nullptr);
+	EXPECT_EQ(m_Digest, Before);
+	EXPECT_EQ(qm_community_icons::LoadImage(*m_pStorage, "icon.png", IStorage::TYPE_SAVE, m_Original, m_Gray, m_Digest, 4), ELoadResult::LOADED);
+	EXPECT_EQ(m_Original.DataSize(), 4u);
+	EXPECT_EQ(m_Gray.DataSize(), 4u);
+}
+
+TEST_F(CommunityIconImage, MissingFileDoesNotReusePreviousOversizeFailureReason)
+{
+	ASSERT_TRUE(Write(*m_pStorage, "icon.png", Png()));
+	qm_community_icons::CBoundedFileReader Reader(*m_pStorage, 1);
+	void *pData = nullptr;
+	unsigned Size = 0;
+	EXPECT_FALSE(Reader.ReadFile("icon.png", IStorage::TYPE_SAVE, &pData, &Size));
+	EXPECT_TRUE(Reader.TooLarge());
+	std::free(pData);
+	pData = nullptr;
+	EXPECT_FALSE(Reader.ReadFile("missing.png", IStorage::TYPE_SAVE, &pData, &Size));
+	EXPECT_FALSE(Reader.TooLarge());
+	EXPECT_EQ(pData, nullptr);
+	EXPECT_EQ(Size, 0u);
+	std::free(pData);
+}

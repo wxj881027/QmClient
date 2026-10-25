@@ -58,6 +58,11 @@ private:
 		CCommunityIconLoadJob(CCommunityIcons *pCommunityIcons, const char *pCommunityId, int StorageType);
 		~CCommunityIconLoadJob() override;
 
+		void DiscardImages()
+		{
+			m_ImageInfo.Free();
+			m_ImageInfoGrayscale.Free();
+		}
 		CImageInfo &ImageInfo() { return m_ImageInfo; }
 		CImageInfo &ImageInfoGrayscale() { return m_ImageInfoGrayscale; }
 	};
@@ -72,7 +77,7 @@ private:
 	};
 
 	qm_community_icons::CStore m_Icons;
-	std::deque<std::shared_ptr<CCommunityIconLoadJob>> m_CommunityIconLoadJobs;
+	qm_community_icons::CLoadQueue<CCommunityIconLoadJob> m_CommunityIconLoadJobs;
 	std::deque<std::shared_ptr<CCommunityIconDownloadJob>> m_CommunityIconDownloadJobs;
 	qm_community_icons::CScan m_IconScan;
 	bool m_ScanPreparationFailed = false;
