@@ -235,7 +235,14 @@ void CPlayerPoints::StartRequest(const char *pPlayerName, bool Playtime)
 	// 创建并配置 HTTP 请求。
 	std::shared_ptr<IHttpRequest> pRequest = HttpGet(aUrl);
 	pRequest->MaxResponseSize(Playtime ? 8 * 1024 * 1024 : 1024 * 1000);
-	pRequest->Timeout(CTimeout{10000, Playtime ? 90000 : 30000, 100, 10});
+	if(Playtime)
+	{
+		// DDStats 现算历史数据，沿用现有采集器的慢响应及 IPv4 策略。
+		pRequest->Timeout(CTimeout{5000, 90000, 0, 0});
+		pRequest->IpResolve(IPRESOLVE::V4);
+	}
+	else
+		pRequest->Timeout(CTimeout{10000, 30000, 100, 10});
 	pRequest->LogProgress(HTTPLOG::FAILURE);
 
 	// 保留已有 READY 数据可见；只有在没有任何缓存时才切换到 FETCHING，
