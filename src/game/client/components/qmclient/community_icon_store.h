@@ -1,6 +1,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_COMMUNITY_ICON_STORE_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_COMMUNITY_ICON_STORE_H
 
+#include "community_icon_limits.h"
+
 #include <base/hash.h>
 #include <base/system.h>
 
@@ -9,7 +11,9 @@
 
 #include <algorithm>
 #include <array>
+#include <limits>
 #include <memory_resource>
+#include <optional>
 #include <span>
 #include <type_traits>
 #include <vector>
@@ -39,6 +43,7 @@ namespace qm_community_icons
 		PUBLISHED,
 		DEFERRED,
 		FAILED,
+		BUDGET_EXCEEDED,
 	};
 
 	// 主线程持有双纹理。释放失败的句柄保留到后续Update，析构不调用设备。
@@ -48,20 +53,51 @@ namespace qm_community_icons
 		{
 			CCommunityIcon m_Icon;
 			bool m_Published = true;
+			std::array<std::size_t, 2> m_aPixelBytes{};
 		};
 		static_assert(std::is_nothrow_copy_constructible_v<SEntry> && std::is_nothrow_move_assignable_v<SEntry>);
 		std::pmr::vector<SEntry> m_vEntries;
 		// 上传期间持有候选对，替换后持有旧对，均不需要再次分配。
 		std::array<IGraphics::CTextureHandle, 2> m_aRetired;
+		std::array<std::size_t, 2> m_aRetiredPixelBytes{};
+		std::size_t m_PixelByteLimit;
+		// 成功交回后端删除后扣减，非驱动即时用量。
+		std::size_t m_HeldTexturePixelBytes = 0;
 		bool m_CleanupPending = false;
 
-		static bool Release(IGraphics *pGraphics, IGraphics::CTextureHandle &Texture) noexcept
+		static std::optional<std::size_t> TexturePixelBytes(const CImageInfo &Image) noexcept
+		{
+			std::size_t BaseBytes = 0;
+			if(!Image.m_pData || Image.m_Format != CImageInfo::FORMAT_RGBA || !Image.m_Width || !Image.m_Height || !Image.DataSize(BaseBytes))
+				return std::nullopt;
+			std::size_t Width = Image.m_Width, Height = Image.m_Height, Total = 0;
+			for(;;)
+			{
+				// 基层DataSize已经校验，后续每层只缩小；累计仍需防溢出。
+				const auto LevelBytes = Width * Height * 4;
+				if(LevelBytes > std::numeric_limits<std::size_t>::max() - Total)
+					return std::nullopt;
+				Total += LevelBytes;
+				if(Width == 1 && Height == 1)
+					return Total;
+				Width = std::max<std::size_t>(1, Width / 2);
+				Height = std::max<std::size_t>(1, Height / 2);
+			}
+		}
+
+		bool Release(IGraphics *pGraphics, IGraphics::CTextureHandle &Texture, std::size_t &PixelBytes) noexcept
 		{
 			if(!Texture.IsValid())
+			{
+				m_HeldTexturePixelBytes -= PixelBytes;
+				PixelBytes = 0;
 				return true;
+			}
 			if(Texture.IsNullTexture())
 			{
 				Texture.Invalidate();
+				m_HeldTexturePixelBytes -= PixelBytes;
+				PixelBytes = 0;
 				return true;
 			}
 			if(!pGraphics)
@@ -70,6 +106,8 @@ namespace qm_community_icons
 			{
 				pGraphics->UnloadTexture(&Texture);
 				Texture.Invalidate();
+				m_HeldTexturePixelBytes -= PixelBytes;
+				PixelBytes = 0;
 				return true;
 			}
 			catch(...)
@@ -79,12 +117,13 @@ namespace qm_community_icons
 		}
 
 	public:
-		explicit CStore(std::pmr::memory_resource *pMemory = std::pmr::new_delete_resource()) :
-			m_vEntries(pMemory)
+		explicit CStore(std::pmr::memory_resource *pMemory = std::pmr::new_delete_resource(), std::size_t PixelByteLimit = MAX_STORE_TEXTURE_PIXEL_BYTES) :
+			m_vEntries(pMemory), m_PixelByteLimit(PixelByteLimit)
 		{
 		}
 		CStore(const CStore &) = delete;
 		CStore &operator=(const CStore &) = delete;
+		std::size_t HeldTexturePixelBytes() const { return m_HeldTexturePixelBytes; }
 
 		const CCommunityIcon *Find(const char *pId) const
 		{
@@ -105,8 +144,8 @@ namespace qm_community_icons
 			if(!m_CleanupPending)
 				return true;
 			bool Clean = true;
-			for(auto &Texture : m_aRetired)
-				Clean = Release(pGraphics, Texture) && Clean;
+			for(std::size_t Index = 0; Index < m_aRetired.size(); ++Index)
+				Clean = Release(pGraphics, m_aRetired[Index], m_aRetiredPixelBytes[Index]) && Clean;
 			for(auto It = m_vEntries.begin(); It != m_vEntries.end();)
 			{
 				if(It->m_Published)
@@ -114,8 +153,8 @@ namespace qm_community_icons
 					++It;
 					continue;
 				}
-				const bool OrgReleased = Release(pGraphics, It->m_Icon.m_OrgTexture);
-				const bool GreyReleased = Release(pGraphics, It->m_Icon.m_GreyTexture);
+				const bool OrgReleased = Release(pGraphics, It->m_Icon.m_OrgTexture, It->m_aPixelBytes[0]);
+				const bool GreyReleased = Release(pGraphics, It->m_Icon.m_GreyTexture, It->m_aPixelBytes[1]);
 				if(OrgReleased && GreyReleased)
 					It = m_vEntries.erase(It);
 				else
@@ -132,6 +171,12 @@ namespace qm_community_icons
 		{
 			if(!pGraphics || !Drain(pGraphics))
 				return EPublishResult::DEFERRED;
+			const auto OrgBytes = TexturePixelBytes(Info), GreyBytes = TexturePixelBytes(Grayscale);
+			if(!OrgBytes || !GreyBytes)
+				return EPublishResult::FAILED;
+			const auto Available = m_PixelByteLimit - m_HeldTexturePixelBytes;
+			if(*OrgBytes > Available || *GreyBytes > Available - *OrgBytes)
+				return EPublishResult::BUDGET_EXCEEDED;
 			const auto It = std::find_if(m_vEntries.begin(), m_vEntries.end(), [&](const auto &Entry) {
 				return str_comp(Entry.m_Icon.m_aCommunityId, pId) == 0;
 			});
@@ -155,8 +200,20 @@ namespace qm_community_icons
 			try
 			{
 				m_aRetired[0] = pGraphics->LoadTextureRawMove(Info, 0, pId);
+				if(m_aRetired[0].IsValid() && !m_aRetired[0].IsNullTexture())
+				{
+					m_aRetiredPixelBytes[0] = *OrgBytes;
+					m_HeldTexturePixelBytes += *OrgBytes;
+				}
 				if(m_aRetired[0].IsValid())
+				{
 					m_aRetired[1] = pGraphics->LoadTextureRawMove(Grayscale, 0, pId);
+					if(m_aRetired[1].IsValid() && !m_aRetired[1].IsNullTexture())
+					{
+						m_aRetiredPixelBytes[1] = *GreyBytes;
+						m_HeldTexturePixelBytes += *GreyBytes;
+					}
+				}
 			}
 			catch(...)
 			{
@@ -173,6 +230,7 @@ namespace qm_community_icons
 			auto &Icon = m_vEntries[Index].m_Icon;
 			std::swap(Icon.m_OrgTexture, m_aRetired[0]);
 			std::swap(Icon.m_GreyTexture, m_aRetired[1]);
+			m_vEntries[Index].m_aPixelBytes.swap(m_aRetiredPixelBytes);
 			str_copy(Icon.m_aCommunityId, pId);
 			Icon.m_Sha256 = Sha256;
 			Drain(pGraphics);

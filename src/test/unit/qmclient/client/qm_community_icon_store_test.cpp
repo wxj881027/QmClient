@@ -4,6 +4,7 @@
 #include <test/support/icon_benchmark_graphics.h>
 
 #include <cstdlib>
+#include <limits>
 #include <map>
 #include <memory_resource>
 #include <new>
@@ -82,13 +83,14 @@ namespace
 	{
 		CImageInfo m_Original;
 		CImageInfo m_Grayscale;
-		SImages()
+		SImages(std::size_t Width = 1, std::size_t Height = 1)
 		{
 			for(auto *pImage : {&m_Original, &m_Grayscale})
 			{
-				pImage->m_Width = pImage->m_Height = 1;
+				pImage->m_Width = Width;
+				pImage->m_Height = Height;
 				pImage->m_Format = CImageInfo::FORMAT_RGBA;
-				pImage->m_pData = static_cast<uint8_t *>(std::malloc(4));
+				pImage->m_pData = static_cast<uint8_t *>(std::malloc(pImage->DataSize()));
 				if(!pImage->m_pData)
 				{
 					m_Original.Free();
@@ -108,7 +110,7 @@ namespace
 	protected:
 		CFailureResource m_Memory;
 		CIconGraphics m_Graphics;
-		CStore m_Store{&m_Memory};
+		CStore m_Store{&m_Memory, 16};
 
 		EPublishResult Publish(const char *pId = "a", unsigned char Hash = 1)
 		{
@@ -119,6 +121,7 @@ namespace
 		{
 			m_Graphics.m_FailDeletes.clear();
 			EXPECT_TRUE(m_Store.Clear(&m_Graphics));
+			EXPECT_EQ(m_Store.HeldTexturePixelBytes(), 0u);
 			EXPECT_TRUE(m_Graphics.m_Live.empty());
 		}
 	};
@@ -155,6 +158,7 @@ TEST_F(QmCommunityIconStore, SecondInvalidUploadKeepsOldPairAndReleasesCandidate
 	EXPECT_TRUE(m_Store.IsCurrent("a", Digest(1)));
 	EXPECT_EQ(m_Graphics.m_Live, (std::set<int>{1, 2}));
 	EXPECT_EQ(m_Graphics.m_DeleteAttempts[3], 1);
+	EXPECT_EQ(m_Store.HeldTexturePixelBytes(), 8u);
 }
 
 TEST_F(QmCommunityIconStore, ThrownSecondUploadRetainsFailedCandidateCleanupAndDefersNextImages)
@@ -287,6 +291,7 @@ TEST_F(QmCommunityIconStore, SharedNullTextureRemainsValidAndIsNeverDeleted)
 	ASSERT_NE(m_Store.Find("a"), nullptr);
 	EXPECT_TRUE(m_Store.Find("a")->Texture(true).IsNullTexture());
 	EXPECT_TRUE(m_Store.Find("a")->Texture(false).IsNullTexture());
+	EXPECT_EQ(m_Store.HeldTexturePixelBytes(), 0u);
 	EXPECT_TRUE(m_Store.Clear(&m_Graphics));
 	EXPECT_TRUE(m_Graphics.m_DeleteAttempts.empty());
 }
@@ -301,4 +306,125 @@ TEST_F(QmCommunityIconStore, PublishedMetadataDoesNotBorrowCallerStorage)
 	Sha256 = Digest(2);
 	EXPECT_TRUE(m_Store.IsCurrent("a", Digest(1)));
 	EXPECT_EQ(m_Store.Find("b"), nullptr);
+}
+
+TEST_F(QmCommunityIconStore, TotalPixelLimitRejectsNewIconBeforeUploadAndLeavesImagesOwnedByCaller)
+{
+	ASSERT_EQ(Publish("a"), EPublishResult::PUBLISHED);
+	ASSERT_EQ(Publish("b"), EPublishResult::PUBLISHED);
+	EXPECT_EQ(m_Store.HeldTexturePixelBytes(), 16u);
+	SImages Images;
+	const auto *pOriginal = Images.m_Original.m_pData;
+	const auto *pGray = Images.m_Grayscale.m_pData;
+	EXPECT_EQ(m_Store.Publish(&m_Graphics, "c", Digest(1), Images.m_Original, Images.m_Grayscale), EPublishResult::BUDGET_EXCEEDED);
+	EXPECT_EQ(m_Graphics.m_LoadCalls, 4);
+	EXPECT_EQ(m_Store.Find("c"), nullptr);
+	EXPECT_TRUE(m_Store.IsCurrent("a", Digest(1)));
+	EXPECT_TRUE(m_Store.IsCurrent("b", Digest(1)));
+	EXPECT_EQ(Images.m_Original.m_pData, pOriginal);
+	EXPECT_EQ(Images.m_Grayscale.m_pData, pGray);
+	EXPECT_EQ(m_Store.HeldTexturePixelBytes(), 16u);
+}
+
+TEST_F(QmCommunityIconStore, ReplacementCountsOldPairAndRetainsOldIconWhenPeakWouldExceedLimit)
+{
+	ASSERT_EQ(Publish("a"), EPublishResult::PUBLISHED);
+	ASSERT_EQ(Publish("b"), EPublishResult::PUBLISHED);
+	EXPECT_EQ(Publish("a", 2), EPublishResult::BUDGET_EXCEEDED);
+	EXPECT_TRUE(m_Store.IsCurrent("a", Digest(1)));
+	ASSERT_NE(m_Store.Find("a"), nullptr);
+	EXPECT_EQ(m_Store.Find("a")->Texture(true).Id(), 1);
+	EXPECT_EQ(m_Graphics.m_LoadCalls, 4);
+	EXPECT_TRUE(m_Graphics.m_DeleteAttempts.empty());
+	EXPECT_EQ(m_Store.HeldTexturePixelBytes(), 16u);
+}
+
+TEST_F(QmCommunityIconStore, RetiredDeletionFailureKeepsChargeUntilCleanupSucceeds)
+{
+	ASSERT_EQ(Publish(), EPublishResult::PUBLISHED);
+	m_Graphics.m_FailDeletes.insert(1);
+	ASSERT_EQ(Publish("a", 2), EPublishResult::PUBLISHED);
+	EXPECT_EQ(m_Store.HeldTexturePixelBytes(), 12u);
+	EXPECT_EQ(Publish("b"), EPublishResult::DEFERRED);
+	EXPECT_EQ(m_Store.HeldTexturePixelBytes(), 12u);
+	m_Graphics.m_FailDeletes.clear();
+	EXPECT_TRUE(m_Store.Drain(&m_Graphics));
+	EXPECT_EQ(m_Store.HeldTexturePixelBytes(), 8u);
+	EXPECT_EQ(Publish("b"), EPublishResult::PUBLISHED);
+	EXPECT_EQ(m_Store.HeldTexturePixelBytes(), 16u);
+	EXPECT_EQ(m_Graphics.m_DeleteAttempts[2], 1);
+}
+
+TEST_F(QmCommunityIconStore, RemovedEntryRetainsFailedTextureChargeAndAllowsNewIconAfterRecovery)
+{
+	ASSERT_EQ(Publish("a"), EPublishResult::PUBLISHED);
+	ASSERT_EQ(Publish("b"), EPublishResult::PUBLISHED);
+	const std::vector<CCommunity> Communities{CCommunity("b", "B", Digest(1), "https://example.test/b")};
+	m_Graphics.m_FailDeletes.insert(1);
+	EXPECT_FALSE(m_Store.Prune(Communities, &m_Graphics));
+	EXPECT_EQ(m_Store.Find("a"), nullptr);
+	EXPECT_EQ(m_Store.HeldTexturePixelBytes(), 12u);
+	m_Graphics.m_FailDeletes.clear();
+	EXPECT_TRUE(m_Store.Drain(&m_Graphics));
+	EXPECT_EQ(m_Store.HeldTexturePixelBytes(), 8u);
+	EXPECT_EQ(Publish("c"), EPublishResult::PUBLISHED);
+	EXPECT_EQ(m_Store.HeldTexturePixelBytes(), 16u);
+}
+
+TEST_F(QmCommunityIconStore, RepeatedClearReleasesEachChargeOnceAndCanPublishAgain)
+{
+	ASSERT_EQ(Publish(), EPublishResult::PUBLISHED);
+	m_Graphics.m_FailDeletes.insert(2);
+	EXPECT_FALSE(m_Store.Clear(&m_Graphics));
+	EXPECT_EQ(m_Store.HeldTexturePixelBytes(), 4u);
+	m_Graphics.m_FailDeletes.clear();
+	EXPECT_TRUE(m_Store.Clear(&m_Graphics));
+	EXPECT_TRUE(m_Store.Clear(&m_Graphics));
+	EXPECT_EQ(m_Store.HeldTexturePixelBytes(), 0u);
+	EXPECT_EQ(Publish(), EPublishResult::PUBLISHED);
+	EXPECT_EQ(m_Store.HeldTexturePixelBytes(), 8u);
+}
+
+TEST_F(QmCommunityIconStore, FullMipChainIsIncludedAtExactBudgetBoundary)
+{
+	SImages Images(2, 2);
+	CStore Rejected(&m_Memory, 39);
+	EXPECT_EQ(Rejected.Publish(&m_Graphics, "a", Digest(1), Images.m_Original, Images.m_Grayscale), EPublishResult::BUDGET_EXCEEDED);
+	EXPECT_EQ(m_Graphics.m_LoadCalls, 0);
+	CStore Accepted(&m_Memory, 40);
+	EXPECT_EQ(Accepted.Publish(&m_Graphics, "a", Digest(1), Images.m_Original, Images.m_Grayscale), EPublishResult::PUBLISHED);
+	EXPECT_EQ(Accepted.HeldTexturePixelBytes(), 40u);
+	EXPECT_TRUE(Accepted.Clear(&m_Graphics));
+	EXPECT_EQ(Accepted.HeldTexturePixelBytes(), 0u);
+}
+
+TEST_F(QmCommunityIconStore, NarrowTextureMipChainContinuesUntilBothAxesReachOne)
+{
+	SImages Images(1, 4);
+	CStore Store(&m_Memory, 56);
+	EXPECT_EQ(Store.Publish(&m_Graphics, "a", Digest(1), Images.m_Original, Images.m_Grayscale), EPublishResult::PUBLISHED);
+	EXPECT_EQ(Store.HeldTexturePixelBytes(), 56u);
+	EXPECT_TRUE(Store.Clear(&m_Graphics));
+	EXPECT_EQ(Store.HeldTexturePixelBytes(), 0u);
+}
+
+TEST_F(QmCommunityIconStore, OverflowingImageDimensionsFailWithoutUploadingOrChangingExistingCharge)
+{
+	ASSERT_EQ(Publish(), EPublishResult::PUBLISHED);
+	SImages Images;
+	Images.m_Original.m_Width = std::numeric_limits<std::size_t>::max();
+	EXPECT_EQ(m_Store.Publish(&m_Graphics, "a", Digest(2), Images.m_Original, Images.m_Grayscale), EPublishResult::FAILED);
+	EXPECT_EQ(m_Graphics.m_LoadCalls, 2);
+	EXPECT_TRUE(m_Store.IsCurrent("a", Digest(1)));
+	EXPECT_EQ(m_Store.HeldTexturePixelBytes(), 8u);
+}
+
+TEST_F(QmCommunityIconStore, OverflowingMipSumFailsEvenWhenBaseLevelSizeIsRepresentable)
+{
+	SImages Images;
+	Images.m_Original.m_Width = std::numeric_limits<std::size_t>::max() / 4;
+	EXPECT_EQ(m_Store.Publish(&m_Graphics, "a", Digest(1), Images.m_Original, Images.m_Grayscale), EPublishResult::FAILED);
+	EXPECT_EQ(m_Graphics.m_LoadCalls, 0);
+	EXPECT_EQ(m_Store.Find("a"), nullptr);
+	EXPECT_EQ(m_Store.HeldTexturePixelBytes(), 0u);
 }

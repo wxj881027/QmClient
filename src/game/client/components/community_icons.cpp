@@ -96,7 +96,9 @@ bool CCommunityIcons::LoadFinish(const char *pCommunityId, CImageInfo &Info, CIm
 	const auto Result = m_Icons.Publish(Graphics(), pCommunityId, Sha256, Info, InfoGrayscale);
 	if(Result == qm_community_icons::EPublishResult::DEFERRED)
 		return false;
-	if(Result == qm_community_icons::EPublishResult::FAILED)
+	if(Result == qm_community_icons::EPublishResult::BUDGET_EXCEEDED)
+		log_warn("menus/browser", "Community icon '%s' exceeds texture pixel budget; keeping previous icon", pCommunityId);
+	else if(Result == qm_community_icons::EPublishResult::FAILED)
 		log_warn("menus/browser", "Could not upload community icon '%s'; keeping previous icon", pCommunityId);
 	else
 		log_trace("menus/browser", "Loaded community icon '%s'", pCommunityId);
