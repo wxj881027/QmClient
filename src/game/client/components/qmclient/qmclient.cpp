@@ -763,8 +763,8 @@ void CQmClient::OnInit()
 	QmSponsorsReloadDraft();
 	if(!m_QmStatisticsFileExists)
 		SaveQmClientStatistics();
-	m_DeveloperBadge.Init(Graphics());
 	m_TitleBadge.Init(Graphics());
+	m_DeveloperBadge.Init(Graphics(), m_TitleBadge);
 	InitQmDeveloperAuthentication();
 	InitTitleAuthentication();
 }
