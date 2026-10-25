@@ -1,5 +1,7 @@
 #include "QmAuthorName.h"
 
+#include "UiTokens.h"
+
 #include <engine/client.h>
 #include <engine/textrender.h>
 
@@ -96,7 +98,7 @@ void CQmAuthorName::Render(CUi *pUi, IGraphics *pGraphics, const QmSponsorAuthor
 			m_aTemporary[0] = pGraphics->CreateRenderTarget(m_Width, m_Height);
 			m_Blurred = pGraphics->CreateRenderTarget(m_Width, m_Height);
 		}
-		if(m_Source.IsValid() && m_aTemporary[0].IsValid() && m_Blurred.IsValid() && pGraphics->BeginRenderTarget(m_Source, ColorRGBA(0, 0, 0, 0)))
+		if(m_Source.IsValid() && m_aTemporary[0].IsValid() && m_Blurred.IsValid() && pGraphics->BeginRenderTarget(m_Source, ui_token::color::COLOR_TRANSPARENT))
 		{
 			pGraphics->MapScreen(Area.x, Area.y, Area.x + m_Width * PixelSize.x, Area.y + m_Height * PixelSize.y);
 			pTextRender->RenderTextContainer(Text.m_UITextContainer, Text.m_TextColor, Text.m_TextOutlineColor);

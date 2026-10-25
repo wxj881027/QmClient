@@ -1,5 +1,7 @@
 #include "QmLyricsHud.h"
 
+#include "UiTokens.h"
+
 #include <engine/shared/config.h>
 #include <engine/textrender.h>
 
@@ -101,7 +103,7 @@ void QmRenderLyricsIsland(IGraphics &Graphics, ITextRender &TextRender, CHudEdit
 		Graphics.DrawRect(Panel.x, Panel.y, Panel.w, Panel.h, Background, Scope.m_Corners, Radius);
 	const CUIRect TextRect{Panel.x + 4.9f, Panel.y + 1.75f, std::max(0.0f, Panel.w - 9.8f), std::max(0.0f, Panel.h - 3.5f)};
 	QmRenderLyricsRows(Graphics, TextRender, TextRect, ppRows, RowCount, 4.368f,
-		ColorRGBA(0.97f, 0.98f, 1.0f, 0.90f), ElapsedSeconds);
+		ui_token::color::ADAPTIVE_ON_DARK.WithAlpha(0.90f), ElapsedSeconds);
 	TextRender.SetFontPreset(PreviousPreset);
 	TextRender.SetRenderFlags(PreviousFlags);
 	TextRender.TextOutlineColor(PreviousOutline);
