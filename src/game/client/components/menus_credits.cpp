@@ -683,9 +683,8 @@ void CMenus::AppendQmClientContributorCards(std::vector<SSettingsCardDefinition>
 			CUIRect AuthorColumn{AuthorsRow.x + AuthorIndex * (AuthorWidth + AuthorGap), AuthorsRow.y, AuthorWidth, AuthorsRow.h};
 			CUIRect TeeRect, Label;
 			AuthorColumn.HSplitTop(AuthorTeeSize, &TeeRect, &Label);
-			const double Time = Ctx.m_pAnim != nullptr ? Ctx.m_pAnim->TimeSec() : 0.0;
-			const auto Tee = QmSponsorAuthors::TeePresentation(Author, Time, g_Config.m_QmUiMotionLevel);
-			RenderDevSkin(TeeRect.Center() + Tee.m_Offset * AuthorTeeSize, AuthorTeeSize * Tee.m_Scale, Author.m_pSkin, "default", Author.m_CustomColors, 0, 0, 0, false, true, Author.m_FeetColor, Author.m_BodyColor);
+			const auto Tee = QmSponsorAuthors::TeePresentation(Author, Client()->GlobalTime());
+			RenderDevSkin(TeeRect.Center(), AuthorTeeSize, Author.m_pSkin, "default", Author.m_CustomColors, 0, 0, 0, false, true, Author.m_FeetColor, Author.m_BodyColor, Tee.m_Glitch ? &Tee : nullptr);
 			Label.HSplitTop(LineSpacing, nullptr, &Label);
 			Label.HSplitTop(LineHeight, &Label, nullptr);
 			if(Author.m_Glitch)

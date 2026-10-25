@@ -33,14 +33,19 @@ namespace QmSponsorAuthors
 
 	struct STeePresentation
 	{
-		vec2 m_Offset = vec2(0.0f, 0.0f);
-		float m_Scale = 1.0f;
+		bool m_Glitch = false;
+		float m_ChromaOffset = 0.0f;
+		float m_ChromaAlpha = 0.0f;
+		std::array<float, 8> m_aSliceOffsets{};
+		float m_ScanlineY = 0.0f;
+		float m_ScanlineHeight = 0.0f;
+		float m_ScanlineAlpha = 0.0f;
 	};
 
 	const std::array<SAuthor, 4> &Authors();
 	float RowsHeight(float TeeSize, float LineSpacing, float LabelHeight);
 	SNamePresentation NamePresentation(const SAuthor &Author, const CUIRect &NameBounds, const CUIRect &RedactedBounds, vec2 Mouse, bool PointerActive, bool WasRedacted);
-	STeePresentation TeePresentation(const SAuthor &Author, double TimeSec, int MotionLevel);
+	STeePresentation TeePresentation(const SAuthor &Author, double TimeSec);
 }
 
 #endif
