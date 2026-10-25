@@ -7,6 +7,7 @@
 #include <engine/client/qm_storage_mode.h>
 #include <engine/engine.h>
 #include <engine/shared/config.h>
+#include <engine/shared/localization.h>
 #include <engine/storage.h>
 
 #include <game/client/components/qmclient/update_package.h>

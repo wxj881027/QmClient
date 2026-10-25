@@ -6193,7 +6193,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 438
+      "line": 439
     },
     {
       "key": "Automatically add a watermark to screenshots",
@@ -6459,7 +6459,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/axiom_auto_login.h",
       "context": "",
-      "line": 123
+      "line": 124
     },
     {
       "key": "Axiom auto login failed, retrying",
@@ -6480,21 +6480,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/axiom_auto_login.h",
       "context": "",
-      "line": 117
+      "line": 118
     },
     {
       "key": "Axiom auto login failed: invalid credentials",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/axiom_auto_login.h",
       "context": "",
-      "line": 119
+      "line": 120
     },
     {
       "key": "Axiom auto login failed: wrong password",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/axiom_auto_login.h",
       "context": "",
-      "line": 115
+      "line": 116
     },
     {
       "key": "Axiom auto login skipped: no password",
@@ -9826,14 +9826,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 202
+      "line": 203
     },
     {
       "key": "Check for updates",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 204
+      "line": 205
     },
     {
       "key": "Check if voice server address is reachable",
@@ -9910,7 +9910,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 193
+      "line": 194
     },
     {
       "key": "Checking Steam...",
@@ -18023,14 +18023,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 195
+      "line": 196
     },
     {
       "key": "Downloading update...",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 906
+      "line": 907
     },
     {
       "key": "Downloading…",
@@ -23308,7 +23308,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 120
+      "line": 121
     },
     {
       "key": "Failed to convert image from file \"%s\".",
@@ -23364,7 +23364,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 312
+      "line": 313
     },
     {
       "key": "Failed to delete file '%s'. Check the local console for details.",
@@ -30938,14 +30938,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 198
+      "line": 199
     },
     {
       "key": "Installing update. Please wait...",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 905
+      "line": 906
     },
     {
       "key": "Instant compact hints",
@@ -38673,7 +38673,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 200
+      "line": 201
     },
     {
       "key": "Newest first",
@@ -53828,7 +53828,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 194
+      "line": 195
     },
     {
       "key": "Selection",
@@ -69760,7 +69760,7 @@
       "category": "register_help",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 58
+      "line": 59
     },
     {
       "key": "Update a rcon key",
@@ -69781,7 +69781,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 653
+      "line": 654
     },
     {
       "key": "Update failed. Please try again",
@@ -69795,14 +69795,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 199
+      "line": 200
     },
     {
       "key": "Update failed. Please try again",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 903
+      "line": 904
     },
     {
       "key": "Update keyframe",
@@ -69844,21 +69844,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 197
+      "line": 198
     },
     {
       "key": "Update sources are temporarily unavailable",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 290
+      "line": 291
     },
     {
       "key": "Update sources are temporarily unavailable",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 466
+      "line": 467
     },
     {
       "key": "Upload .map files. Server and admin passwords: s.",
@@ -70775,7 +70775,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 196
+      "line": 197
     },
     {
       "key": "Version",
@@ -73484,7 +73484,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/update_client.cpp",
       "context": "",
-      "line": 201
+      "line": 202
     },
     {
       "key": "You are force-paused for %s seconds.",

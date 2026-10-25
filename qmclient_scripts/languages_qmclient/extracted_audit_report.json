@@ -54770,28 +54770,28 @@
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 115,
+      "line": 116,
       "text": "Axiom auto login failed: wrong password",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 117,
+      "line": 118,
       "text": "Axiom auto login failed: already in game",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 119,
+      "line": 120,
       "text": "Axiom auto login failed: invalid credentials",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 123,
+      "line": 124,
       "text": "Axiom auto login failed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -61406,147 +61406,147 @@
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 58,
+      "line": 59,
       "text": "Update",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 120,
+      "line": 121,
       "text": "Failed to check for updates",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 193,
+      "line": 194,
       "text": "Checking for updates...",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 194,
+      "line": 195,
       "text": "Selecting download source...",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 195,
+      "line": 196,
       "text": "Downloading update...",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 196,
+      "line": 197,
       "text": "Verifying downloaded update...",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 197,
+      "line": 198,
       "text": "Update ready to install",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 198,
-      "text": "Installing update. Please wait...",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/update_client.cpp",
       "line": 199,
-      "text": "Update failed. Please try again",
+      "text": "Installing update. Please wait...",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
       "line": 200,
-      "text": "New version available",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 201,
-      "text": "You are already on the latest version",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 202,
-      "text": "Check for updates",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 204,
-      "text": "Check for updates",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 290,
-      "text": "Update sources are temporarily unavailable",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 312,
-      "text": "Failed to create the update working directory",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 438,
-      "text": "Automatic updates require Windows x64",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 466,
-      "text": "Update sources are temporarily unavailable",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 653,
-      "text": "Update failed",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 903,
       "text": "Update failed. Please try again",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 905,
-      "text": "Installing update. Please wait...",
+      "line": 201,
+      "text": "New version available",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/update_client.cpp",
+      "line": 202,
+      "text": "You are already on the latest version",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/update_client.cpp",
+      "line": 203,
+      "text": "Check for updates",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/update_client.cpp",
+      "line": 205,
+      "text": "Check for updates",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/update_client.cpp",
+      "line": 291,
+      "text": "Update sources are temporarily unavailable",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/update_client.cpp",
+      "line": 313,
+      "text": "Failed to create the update working directory",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/update_client.cpp",
+      "line": 439,
+      "text": "Automatic updates require Windows x64",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/update_client.cpp",
+      "line": 467,
+      "text": "Update sources are temporarily unavailable",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/update_client.cpp",
+      "line": 654,
+      "text": "Update failed",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/update_client.cpp",
+      "line": 904,
+      "text": "Update failed. Please try again",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
       "line": 906,
+      "text": "Installing update. Please wait...",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/update_client.cpp",
+      "line": 907,
       "text": "Downloading update...",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -133179,14 +133179,14 @@
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 241,
+      "line": 242,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 247,
+      "line": 248,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -151141,325 +151141,318 @@
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 34,
+      "line": 35,
       "text": "https://api.github.com/repos/wxj881027/QmClient/releases/latest",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 35,
+      "line": 36,
       "text": "https://api.github.com/repos/wxj881027/QmClient/releases?per_page=100",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 58,
+      "line": 59,
       "text": "?s[action]",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 58,
+      "line": 59,
       "text": "qm_update",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 61,
+      "line": 62,
       "text": "cancel",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 63,
+      "line": 64,
       "text": "status",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 67,
+      "line": 68,
       "text": "qm-update",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 67,
+      "line": 68,
       "text": "state=%s network_error=%d",
       "category": "business_data",
       "reason": "log or telemetry payload"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 121,
+      "line": 122,
       "text": "All approved metadata sources failed",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 121,
+      "line": 122,
       "text": "qm-update",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 169,
+      "line": 170,
       "text": "0",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 231,
+      "line": 232,
       "text": "QmClient-Setup.ini",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 244,
+      "line": 245,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 260,
+      "line": 261,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 305,
+      "line": 306,
       "text": "QmClient-Setup.ini",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 308,
+      "line": 309,
       "text": "qmclient/update-%d-%llu",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 309,
+      "line": 310,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 317,
+      "line": 318,
       "text": "%s/%s.%d.tmp",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 334,
+      "line": 335,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 346,
+      "line": 347,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 416,
+      "line": 417,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 416,
+      "line": 417,
       "text": " (direct fallback)",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 416,
+      "line": 417,
       "text": "Checking approved metadata source: %s%s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 416,
+      "line": 417,
       "text": "qm-update",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 423,
+      "line": 424,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 451,
+      "line": 452,
       "text": "0",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 475,
+      "line": 476,
       "text": "qm-update",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 475,
+      "line": 476,
       "text": "Update cancelled",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 493,
+      "line": 494,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 568,
+      "line": 569,
       "text": "Package remained below 100 KiB/s for 5 seconds; switching approved source",
       "category": "business_data",
       "reason": "MIME type or protocol metadata"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 568,
+      "line": 569,
       "text": "qm-update",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 590,
+      "line": 591,
       "text": "qm-update",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 590,
+      "line": 591,
       "text": "release metadata rejected: %s",
       "category": "business_data",
       "reason": "console command format template"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 595,
+      "line": 596,
       "text": "QmClient-Setup.ini",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 597,
+      "line": 598,
       "text": "0",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 602,
+      "line": 603,
       "text": "qm-update",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 602,
+      "line": 603,
       "text": "release_info version=%s newer=%d package_available=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 636,
+      "line": 637,
       "text": "Official proxy route failed; trying one direct route",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 636,
+      "line": 637,
       "text": "qm-update",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 644,
+      "line": 645,
       "text": "qm-update",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 644,
+      "line": 645,
       "text": "Trying next approved update source after: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 654,
+      "line": 655,
       "text": "qm-update",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 654,
+      "line": 655,
       "text": "update download or validation failed: %s",
       "category": "business_data",
       "reason": "log or telemetry payload"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 702,
+      "line": 703,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 737,
+      "line": 738,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 742,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
@@ -151470,52 +151463,52 @@
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 749,
+      "line": 744,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/components/qmclient/update_client.cpp",
+      "line": 750,
       "text": "%s/QmClient-Setup-%d.exe",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 758,
+      "line": 759,
       "text": "%s/qmclient",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 765,
+      "line": 766,
       "text": "%s/QmClient-Updater-%d.exe",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 768,
+      "line": 769,
       "text": "QmClient-Updater.exe",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 786,
+      "line": 787,
       "text": "%s/qmclient",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 792,
+      "line": 793,
       "text": "%s/qmclient/QmClient-Updater-%d.exe",
       "category": "business_data",
       "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 821,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
@@ -151547,35 +151540,42 @@
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 841,
+      "line": 826,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/components/qmclient/update_client.cpp",
+      "line": 842,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 845,
+      "line": 846,
       "text": "--package",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 849,
+      "line": 850,
       "text": "--manifest",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 853,
+      "line": 854,
       "text": "--install",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 858,
+      "line": 859,
       "text": "--setup",
       "category": "business_data",
       "reason": "numeric display format template"
@@ -219402,861 +219402,861 @@
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 70,
+      "line": 71,
       "text": "in game",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 70,
+      "line": 71,
       "text": "logged in",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 70,
+      "line": 71,
       "text": "在線",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 70,
+      "line": 71,
       "text": "在线",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 70,
+      "line": 71,
       "text": "密码",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 70,
+      "line": 71,
       "text": "密碼",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 70,
+      "line": 71,
       "text": "登入",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 70,
+      "line": 71,
       "text": "登录",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 75,
+      "line": 76,
       "text": "already logged in",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 75,
+      "line": 76,
       "text": "authenticated successfully",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 75,
+      "line": 76,
       "text": "authentication successful",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 75,
+      "line": 76,
       "text": "login success",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 75,
+      "line": 76,
       "text": "login successful",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 75,
+      "line": 76,
       "text": "you are logged in",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 75,
+      "line": 76,
       "text": "you are now logged in",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 75,
+      "line": 76,
       "text": "已登入",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 75,
+      "line": 76,
       "text": "已登录",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 75,
+      "line": 76,
       "text": "已經登入",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 75,
+      "line": 76,
       "text": "已经登录",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 75,
+      "line": 76,
       "text": "登入成功",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 75,
+      "line": 76,
       "text": "登录成功",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "credential incorrect",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "credential invalid",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "credential wrong",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "incorrect credential",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "incorrect password",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "incorrect token",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "invalid credential",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "invalid password",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "invalid token",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "not authenticated",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "password incorrect",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "password invalid",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "password wrong",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "token incorrect",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "token invalid",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "token wrong",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "token 无效",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "token 無效",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "wrong credential",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "wrong password",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "wrong token",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "令牌无效",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "令牌無效",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "令牌錯誤",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "令牌错误",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "凭证无效",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "凭证错误",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "密码不正确",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "密码错误",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "密碼不正確",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "密碼錯誤",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "憑證無效",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "憑證錯誤",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "无效 token",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 78,
+      "line": 79,
       "text": "無效 token",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 79,
+      "line": 80,
       "text": "already in game",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 79,
+      "line": 80,
       "text": "player already online",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 79,
+      "line": 80,
       "text": "已在游戏中",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 79,
+      "line": 80,
       "text": "已在遊戲中",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 79,
+      "line": 80,
       "text": "已有玩家在線",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 79,
+      "line": 80,
       "text": "已有玩家在线",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 82,
+      "line": 83,
       "text": "did not succeed",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 82,
+      "line": 83,
       "text": "not logged in",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 82,
+      "line": 83,
       "text": "not succeeded",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 82,
+      "line": 83,
       "text": "not successful",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 82,
+      "line": 83,
       "text": "went wrong",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 82,
+      "line": 83,
       "text": "失敗",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 82,
+      "line": 83,
       "text": "失败",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 82,
+      "line": 83,
       "text": "拒絕",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 82,
+      "line": 83,
       "text": "拒绝",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 82,
+      "line": 83,
       "text": "无法连接",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 82,
+      "line": 83,
       "text": "無法連接",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 82,
+      "line": 83,
       "text": "登入失敗",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 82,
+      "line": 83,
       "text": "登入失败",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 82,
+      "line": 83,
       "text": "登录失敗",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 82,
+      "line": 83,
       "text": "登录失败",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 82,
+      "line": 83,
       "text": "錯誤",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 82,
+      "line": 83,
       "text": "错误",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 85,
+      "line": 86,
       "text": "verification in progress",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 85,
+      "line": 86,
       "text": "驗證中",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 85,
+      "line": 86,
       "text": "验证中",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 97,
+      "line": 98,
       "text": "incorrect password",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 97,
+      "line": 98,
       "text": "invalid password",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 97,
+      "line": 98,
       "text": "password incorrect",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 97,
+      "line": 98,
       "text": "password invalid",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 97,
+      "line": 98,
       "text": "password wrong",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 97,
+      "line": 98,
       "text": "wrong password",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 97,
+      "line": 98,
       "text": "密码不正确",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 97,
+      "line": 98,
       "text": "密码错误",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 97,
+      "line": 98,
       "text": "密碼不正確",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 97,
+      "line": 98,
       "text": "密碼錯誤",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 100,
+      "line": 101,
       "text": "already in game",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 100,
+      "line": 101,
       "text": "player already online",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 100,
+      "line": 101,
       "text": "已在游戏中",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 100,
+      "line": 101,
       "text": "已在遊戲中",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 100,
+      "line": 101,
       "text": "已有玩家在線",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 100,
+      "line": 101,
       "text": "已有玩家在线",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "credential incorrect",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "credential invalid",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "credential wrong",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "incorrect credential",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "incorrect token",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "invalid credential",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "invalid token",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "not authenticated",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "token incorrect",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "token invalid",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "token wrong",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "token 无效",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "token 無效",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "wrong credential",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "wrong token",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "令牌无效",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "令牌無效",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "令牌錯誤",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "令牌错误",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "凭证无效",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "凭证错误",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "憑證無效",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "憑證錯誤",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "无效 token",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/axiom_auto_login.h",
-      "line": 103,
+      "line": 104,
       "text": "無效 token",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
@@ -235229,84 +235229,84 @@
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 669,
+      "line": 670,
       "text": "All approved update sources failed to download",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 669,
+      "line": 670,
       "text": "Failed to assemble the downloaded update package",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 683,
+      "line": 684,
       "text": "Failed to read the downloaded update manifest",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 690,
+      "line": 691,
       "text": "Failed to read the downloaded manifest signature",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 697,
+      "line": 698,
       "text": "Failed to read the downloaded package signature",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 718,
+      "line": 719,
       "text": "Update manifest does not match the selected release",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 729,
+      "line": 730,
       "text": "Downloaded update package size or SHA-256 is invalid",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 739,
+      "line": 740,
       "text": "Failed to create the update working directory",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 752,
+      "line": 753,
       "text": "Failed to prepare the Setup executable",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 761,
+      "line": 762,
       "text": "Failed to create the Setup session directory",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 773,
+      "line": 774,
       "text": "Failed to prepare the Setup session helper",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/update_client.cpp",
-      "line": 789,
+      "line": 790,
       "text": "Failed to create the update working directory",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"

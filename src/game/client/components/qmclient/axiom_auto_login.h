@@ -4,8 +4,9 @@
 
 #include <base/str.h>
 
+#include <engine/shared/localization.h>
+
 #include <game/client/component.h>
-#include <game/localization.h>
 
 #include <cstdint>
 #include <initializer_list>
