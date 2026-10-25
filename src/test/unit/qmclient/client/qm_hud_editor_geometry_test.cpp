@@ -18,6 +18,50 @@ TEST(QmHudTransformScale, ScalableElementsKeepTheirScaleAndBounds)
 	EXPECT_FLOAT_EQ(QmHudEditor::ResolveScale(500), 4.0f);
 }
 
+TEST(QmHudHorizontalPlacement, PointAnchorIgnoresAsymmetricVisibleBounds)
+{
+	for(const float Width : {80.0f, 300.0f, 1000.0f})
+	{
+		SCOPED_TRACE(Width);
+		for(const float Offset : {-600.0f, -30.0f, 20.0f})
+		{
+			SCOPED_TRACE(Offset);
+			const auto Placement = QmHudEditor::ResolveHorizontalPlacement(QmHudEditor::EHorizontalPlacement::TransformOrigin,
+				true, 0.35f, 300.0f, Width, Offset, 0.0f, 600.0f);
+			EXPECT_FLOAT_EQ(Placement.m_Position, 210.0f);
+			EXPECT_FLOAT_EQ(Placement.m_Width, 0.0f);
+			EXPECT_FLOAT_EQ(Placement.m_Offset, 0.0f);
+		}
+	}
+}
+
+TEST(QmHudHorizontalPlacement, LockedPositionIgnoresSavedXAndIndependentScreenClamp)
+{
+	for(const float X : {-100.0f, 200.0f, 550.0f})
+	{
+		SCOPED_TRACE(X);
+		for(const float Stored : {0.0f, 0.2f, 0.7f, 1.0f})
+		{
+			SCOPED_TRACE(Stored);
+			const auto Placement = QmHudEditor::ResolveHorizontalPlacement(QmHudEditor::EHorizontalPlacement::DefaultPosition,
+				true, Stored, X, 150.0f, 0.0f, 0.0f, 600.0f, 10.0f, 10.0f);
+			EXPECT_FLOAT_EQ(Placement.m_Position, X);
+		}
+	}
+}
+
+TEST(QmHudHorizontalPlacement, VisibleBoundsRetainSavedPositionClampingAndDefaultMargins)
+{
+	const auto Saved = QmHudEditor::ResolveHorizontalPlacement(QmHudEditor::EHorizontalPlacement::VisibleBounds,
+		true, 0.95f, 300.0f, 120.0f, -20.0f, 0.0f, 600.0f);
+	EXPECT_FLOAT_EQ(Saved.m_Position, 500.0f);
+	EXPECT_FLOAT_EQ(Saved.m_Width, 120.0f);
+	EXPECT_FLOAT_EQ(Saved.m_Offset, -20.0f);
+	const auto Default = QmHudEditor::ResolveHorizontalPlacement(QmHudEditor::EHorizontalPlacement::VisibleBounds,
+		false, 0.0f, -5.0f, 120.0f, -20.0f, 0.0f, 600.0f, 10.0f, 10.0f);
+	EXPECT_FLOAT_EQ(Default.m_Position, 30.0f);
+}
+
 TEST(QmHudMeasuredGeometry, ReportsLocalContentOffsetAndSizeAfterRendering)
 {
 	QmHudEditor::CVisibleBounds Geometry;

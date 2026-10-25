@@ -36,13 +36,13 @@ TEST(QmLyricsHudLayout, BilingualRowsIncreaseHeightWithoutChangingWidthOrTop)
 	EXPECT_FLOAT_EQ(Bilingual.y, Single.y);
 }
 
-TEST(QmLyricsHudLayout, NarrowViewportKeepsTheWholeIslandOnScreen)
+TEST(QmLyricsHudLayout, NarrowViewportKeepsHorizontalAlignmentAndClampsOnlyHeight)
 {
-	const auto Lyrics = QmLyricsIslandLayout({100.0f, 290.0f, 80.0f, 12.0f}, 80.0f, 300.0f, 2);
-	EXPECT_GE(Lyrics.x, 0.0f);
+	const CUIRect Main{100.0f, 290.0f, 80.0f, 12.0f};
+	const auto Lyrics = QmLyricsIslandLayout(Main, 80.0f, 300.0f, 2);
+	EXPECT_FLOAT_EQ(Lyrics.x, Main.x);
 	EXPECT_GE(Lyrics.y, 0.0f);
-	EXPECT_FLOAT_EQ(Lyrics.w, 80.0f);
-	EXPECT_LE(Lyrics.x + Lyrics.w, 80.0f);
+	EXPECT_FLOAT_EQ(Lyrics.w, Main.w);
 	EXPECT_LE(Lyrics.y + Lyrics.h, 300.0f);
 }
 
@@ -51,6 +51,18 @@ TEST(QmLyricsHudLayout, NarrowViewportDoesNotShrinkLyricsIndependently)
 	const CUIRect Main{0.0f, 10.0f, 140.0f, 12.0f};
 	const auto Lyrics = QmLyricsIslandLayout(Main, 80.0f, 300.0f, 2);
 	EXPECT_FLOAT_EQ(Lyrics.w, Main.w);
+}
+
+TEST(QmLyricsHudLayout, FollowingKeepsBothEdgesAlignedWhenTheMainCapsuleCrossesScreenEdges)
+{
+	for(const float X : {-50.0f, 0.0f, 500.0f})
+	{
+		SCOPED_TRACE(X);
+		const CUIRect Main{X, 10.0f, 140.0f, 12.0f};
+		const auto Lyrics = QmLyricsIslandLayout(Main, 600.0f, 300.0f, 2, true);
+		EXPECT_FLOAT_EQ(Lyrics.x, Main.x);
+		EXPECT_FLOAT_EQ(Lyrics.x + Lyrics.w, Main.x + Main.w);
+	}
 }
 
 TEST(QmLyricsHudLayout, EntranceAnimationFollowsTheCurrentMainWidthAndHudScale)
@@ -115,6 +127,21 @@ TEST(QmLyricsHudLayout, DisablingFollowingRestoresIndependentWidthAndScaling)
 	const auto Lyrics = QmLyricsIslandLayout({100.0f, 10.0f, 80.0f, 12.0f}, 600.0f, 300.0f, 2, false);
 	EXPECT_FLOAT_EQ(Lyrics.w, 105.0f);
 	EXPECT_FLOAT_EQ(Lyrics.w * QmHudEditor::ResolveScale(150, true), 157.5f);
+}
+
+TEST(QmLyricsHudLayout, DisablingFollowingRestoresSavedHorizontalPosition)
+{
+	const CUIRect Main{200.0f, 10.0f, 140.0f, 12.0f};
+	for(const bool Follow : {true, false, true})
+	{
+		SCOPED_TRACE(Follow);
+		const auto Lyrics = QmLyricsIslandLayout(Main, 600.0f, 300.0f, 2, Follow);
+		const float Scale = QmHudEditor::ResolveScale(150, !Follow);
+		const auto Mode = Follow ? QmHudEditor::EHorizontalPlacement::DefaultPosition : QmHudEditor::EHorizontalPlacement::VisibleBounds;
+		const auto Placement = QmHudEditor::ResolveHorizontalPlacement(Mode, true, 0.25f, Lyrics.x, Lyrics.w * Scale, 0.0f, 0.0f, 600.0f);
+		EXPECT_FLOAT_EQ(Placement.m_Position, Follow ? Main.x : 150.0f);
+		EXPECT_FLOAT_EQ(Lyrics.w * Scale, Follow ? Main.w : 157.5f);
+	}
 }
 
 TEST(QmLyricsHudLayout, TwoLyricRowsReserveSpaceAfterIncomingSwapRequests)

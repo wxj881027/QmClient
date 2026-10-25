@@ -4620,11 +4620,12 @@ void CHud::RenderMediaIsland()
 		SpectatorBlobPose);
 	const float SpectatorVisibleRight = SpectatorLiquidCapsule.m_Rect.x + SpectatorLiquidCapsule.m_Rect.w + QmHudMediaIslandScaled(1.0f);
 	const float EditorVisibleRight = std::max(UnifiedRight, SpectatorVisibleRight);
-	// 屏幕外的副岛不参与整岛平移，避免边界约束把居中的大时间推走。
-	const float VisibleLeft = TimerCapsule.m_Visible ? std::max(0.0f, SatelliteVisibleLeft) : SatelliteVisibleLeft;
-	const float VisibleRight = TimerCapsule.m_Visible ? std::min(m_Width, EditorVisibleRight) : EditorVisibleRight;
-	const CUIRect EditorVisibleRect = {VisibleLeft, IslandY, VisibleRight - VisibleLeft, AnimatedIslandHeight};
-	const CUIRect EditorTransformRect = QmHudMediaIslandEditorTransformRect(EditorVisibleRect);
+	// 整组可见范围用于命中，定位单独使用时间中心，越界内容不再参与平移约束。
+	const CUIRect EditorVisibleRect = {SatelliteVisibleLeft, IslandY, EditorVisibleRight - SatelliteVisibleLeft, AnimatedIslandHeight};
+	const CUIRect EditorAnchorRect = TimerCapsule.m_Visible ?
+		CUIRect{TimerBoxX, IslandY, TimerCapsule.m_BoxW, AnimatedIslandHeight} :
+		CUIRect{IslandX, IslandY, UnifiedWidth, AnimatedIslandHeight};
+	const CUIRect EditorTransformRect = QmHudMediaIslandEditorTransformRect(EditorAnchorRect);
 	const bool RenderLeftSection = ShowCover || ShowTeam || ShowWaveform;
 	const bool ShowTimerSecondaryLine = SwapRows.m_InlineSwapCount > 0 || Checkpoint > 0;
 	const SHudMediaIslandTimerRowLayout TimerRows = QmHudMediaIslandTimerRows(TimerCapsule.m_BoxY, TimerCapsule.m_BoxH, ShowTimerSecondaryLine);
@@ -4636,7 +4637,7 @@ void CHud::RenderMediaIsland()
 	const float CheckpointTextY = TimerRows.m_CheckpointY + (TimerRows.m_CheckpointH - CheckpointFontSize) * 0.5f - QmHudMediaIslandScaled(0.5f);
 	ColorRGBA IslandBackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmHudIslandBgColor));
 	IslandBackgroundColor.a = std::clamp(g_Config.m_QmHudIslandBgOpacity / 100.0f, 0.0f, 1.0f);
-	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::MediaIsland, EditorTransformRect, EditorVisibleRect);
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::MediaIsland, EditorTransformRect, EditorVisibleRect, QmHudEditor::EHorizontalPlacement::TransformOrigin);
 	m_MediaIslandLastVisibleRect = HudEditorScope.m_VisibleRect;
 	m_MediaIslandLastVisibleRectValid = true;
 

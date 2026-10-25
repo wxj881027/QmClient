@@ -73,8 +73,9 @@ void QmRenderLyricsIsland(IGraphics &Graphics, ITextRender &TextRender, CHudEdit
 	const CUIRect Panel = QmLyricsIslandLayout(Anchor, ScreenWidth, ScreenHeight, RowCount, FollowWidth);
 	if(Panel.w <= 0.0f || Panel.h <= 0.0f)
 		return;
-	// 跟随时只接受位置调整，避免旧缩放再次放大主岛宽度。
-	const auto Scope = Editor.BeginTransform(EHudEditorElement::Lyrics, Panel, !FollowWidth);
+	// 跟随时横向边界完全取自主岛，旧横向位置和缩放只在关闭跟随后恢复。
+	const auto Placement = FollowWidth ? QmHudEditor::EHorizontalPlacement::DefaultPosition : QmHudEditor::EHorizontalPlacement::VisibleBounds;
+	const auto Scope = Editor.BeginTransform(EHudEditorElement::Lyrics, Panel, Panel, Placement, !FollowWidth);
 	const auto PreviousPreset = TextRender.GetFontPreset();
 	const auto PreviousFlags = TextRender.GetRenderFlags();
 	const auto PreviousOutline = TextRender.GetTextOutlineColor();

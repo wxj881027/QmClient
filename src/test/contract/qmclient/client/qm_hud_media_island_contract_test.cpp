@@ -111,7 +111,6 @@ TEST(QmHudMediaIslandSource, RenderPathKeepsStableNodesAndEditorRect)
 	EXPECT_EQ(RenderBody.find("EUiAnimInterruptPolicy::QUEUE"), std::string::npos);
 	EXPECT_EQ(RenderBody.find("m_CoverRotation"), std::string::npos);
 	EXPECT_NE(RenderBody.find("m_MediaIslandLastVisibleRect = HudEditorScope.m_VisibleRect;"), std::string::npos);
-	EXPECT_NE(RenderBody.find("BeginTransform(EHudEditorElement::MediaIsland, EditorTransformRect, EditorVisibleRect);"), std::string::npos);
 	EXPECT_EQ(RenderBody.find("QmHudIslandEdgeMargin"), std::string::npos);
 	const std::string HudEditorSource = ReadTestSourceFile("src/game/client/components/hud_editor.cpp");
 	// 灵动岛不再有独立的邻近吸附半径：所有 HUD 元素共用同一套「屏幕边只认重合」判定。

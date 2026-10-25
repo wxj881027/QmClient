@@ -160,6 +160,43 @@ namespace QmHudEditor
 		return AnchorFraction;
 	}
 
+	enum class EHorizontalPlacement
+	{
+		VisibleBounds,
+		// 仅约束变换原点，可见内容的宽度和偏移不参与定位。
+		TransformOrigin,
+		// 横向完全使用调用方位置，忽略独立位置和屏幕边界约束。
+		DefaultPosition,
+	};
+
+	struct SHorizontalPlacement
+	{
+		float m_Position;
+		// 保存、吸附和拖动的参考范围，与实际绘制及命中范围分开。
+		float m_Width;
+		float m_Offset;
+	};
+
+	inline SHorizontalPlacement ResolveHorizontalPlacement(EHorizontalPlacement Mode, bool HasCustom, float StoredPosition,
+		float DefaultPosition, float VisibleWidth, float VisibleOffset, float ScreenStart, float ScreenWidth,
+		float LeftMargin = 0.0f, float RightMargin = 0.0f)
+	{
+		SHorizontalPlacement Result{DefaultPosition, VisibleWidth, VisibleOffset};
+		if(Mode == EHorizontalPlacement::DefaultPosition)
+			return Result;
+		if(Mode == EHorizontalPlacement::TransformOrigin)
+		{
+			// 点锚定不随可见内容或缩放改变保存、吸附和边界约束的基准。
+			Result.m_Width = 0.0f;
+			Result.m_Offset = 0.0f;
+		}
+		Result.m_Position = HasCustom ?
+			RestoreAxisAnchor(ClampStoredAxisPosition(StoredPosition), Result.m_Width, ScreenStart, ScreenWidth, Result.m_Offset) :
+			SnapAxisToScreenEdgesEx(std::clamp(DefaultPosition, ScreenStart, ScreenStart + ScreenWidth), Result.m_Width,
+				ScreenStart + LeftMargin, std::max(EPSILON, ScreenWidth - LeftMargin - RightMargin), Result.m_Offset);
+		return Result;
+	}
+
 	// 一个轴上的最终落点：先试屏幕边重合吸附，再试屏幕中线与其它 HUD 模块的对齐参考线。
 	// 屏幕边只认重合，对齐参考线仍保留 SNAP_DISTANCE 邻近吸附。
 	inline SSnapAxisResult ResolveAxisSnapEx(float Position, float Size, float ScreenStart, float ScreenSize, const SAxisReference *pReferences, int ReferenceCount, float VisibleEdgeOffset = 0.0f)
@@ -400,7 +437,8 @@ public:
 	STransformScope PreviewTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, const QmHudEditor::SEdgeMargin &EdgeMargin, bool Scalable = true);
 	STransformScope BeginTransform(EHudEditorElement Element, const CUIRect &DefaultRect, bool Scalable = true, bool ApplyMapScreen = true);
 	STransformScope BeginTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, bool Scalable = true, bool ApplyMapScreen = true);
-	STransformScope BeginTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, const QmHudEditor::SEdgeMargin &EdgeMargin, bool Scalable = true, bool ApplyMapScreen = true);
+	STransformScope BeginTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, QmHudEditor::EHorizontalPlacement HorizontalPlacement, bool Scalable = true, bool ApplyMapScreen = true);
+	STransformScope BeginTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, const QmHudEditor::SEdgeMargin &EdgeMargin, bool Scalable = true, bool ApplyMapScreen = true, QmHudEditor::EHorizontalPlacement HorizontalPlacement = QmHudEditor::EHorizontalPlacement::VisibleBounds);
 	void EndTransform(const STransformScope &Scope);
 
 private:
@@ -423,6 +461,7 @@ private:
 		float m_BaseHeight = 0.0f;
 		float m_StateOffsetX = 0.0f;
 		float m_StateOffsetY = 0.0f;
+		QmHudEditor::EHorizontalPlacement m_HorizontalPlacement = QmHudEditor::EHorizontalPlacement::VisibleBounds;
 		bool m_Scalable = true;
 	};
 
@@ -459,6 +498,7 @@ private:
 	void SaveLayoutConfig();
 	void ResetLayoutConfig();
 	void ClampStateToScreen(SElementState &State, float BaseWidth, float BaseHeight, float StateOffsetX, float StateOffsetY) const;
+	void BeginCustomPosition(SElementState &State, const SVisibleElement &Visible, const CUIRect &Screen) const;
 	SElementState &EnsureState(EHudEditorElement Element);
 	const SElementState &State(EHudEditorElement Element) const;
 	int FindHoveredVisibleElement() const;
@@ -471,7 +511,7 @@ private:
 	bool DoJumpHintTextArea(CLineInput *pLineInput, const CUIRect *pRect, float FontSize);
 	void RenderJumpHintTextEditor(const CUIRect &Screen);
 	SAlignmentReferences BuildAlignmentReferences(EHudEditorElement DraggingElement) const;
-	bool ComputeTransformPlacement(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, bool Scalable, STransformScope &Scope, SVisibleElement *pVisible, const QmHudEditor::SEdgeMargin &EdgeMargin);
+	bool ComputeTransformPlacement(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, bool Scalable, STransformScope &Scope, SVisibleElement *pVisible, const QmHudEditor::SEdgeMargin &EdgeMargin, QmHudEditor::EHorizontalPlacement HorizontalPlacement = QmHudEditor::EHorizontalPlacement::VisibleBounds);
 	static const char *ElementToken(EHudEditorElement Element);
 	static int ElementFromToken(const char *pToken);
 };
