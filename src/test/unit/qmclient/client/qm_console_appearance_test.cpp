@@ -25,7 +25,7 @@ TEST(QmConsoleAppearance, CustomColorsKeepOpaqueTextAndIndependentBackgroundOpac
 {
 	std::array<unsigned, QmConsoleAppearance::COLOR_COUNT> aCustom{};
 	aCustom.fill(ColorHSLA(0.5f, 0.75f, 0.6f, 1.0f).Pack(false));
-	const auto Palette = QmConsoleAppearance::ResolvePalette(2, 50, aCustom);
+	const auto Palette = QmConsoleAppearance::ResolvePalette(QmConsoleAppearance::CONFIG_CUSTOM_SCHEME, 50, aCustom);
 	const auto Expected = color_cast<ColorRGBA>(ColorHSLA(aCustom[0]));
 	EXPECT_EQ(Palette.m_aColors[QmConsoleAppearance::TEXT], Expected);
 	EXPECT_FLOAT_EQ(Palette.m_aColors[QmConsoleAppearance::BACKGROUND].r, Expected.r);
@@ -70,9 +70,9 @@ TEST(QmConsoleAppearance, CustomBackgroundChangesBorderAndShadowColors)
 	std::array<unsigned, QmConsoleAppearance::COLOR_COUNT> aCustom{};
 	aCustom.fill(ColorHSLA(0.0f, 0.0f, 0.9f, 1.0f).Pack(false));
 	aCustom[QmConsoleAppearance::BACKGROUND] = ColorHSLA(0.0f, 0.8f, 0.4f, 1.0f).Pack(false);
-	const auto Red = QmConsoleAppearance::ResolvePalette(2, 80, aCustom);
+	const auto Red = QmConsoleAppearance::ResolvePalette(QmConsoleAppearance::CONFIG_CUSTOM_SCHEME, 80, aCustom);
 	aCustom[QmConsoleAppearance::BACKGROUND] = ColorHSLA(0.6f, 0.8f, 0.4f, 1.0f).Pack(false);
-	const auto Blue = QmConsoleAppearance::ResolvePalette(2, 80, aCustom);
+	const auto Blue = QmConsoleAppearance::ResolvePalette(QmConsoleAppearance::CONFIG_CUSTOM_SCHEME, 80, aCustom);
 	EXPECT_NE(Red.m_Border, Blue.m_Border);
 	EXPECT_GT(Red.m_Border.r, Red.m_Border.b);
 	EXPECT_GT(Blue.m_Border.b, Blue.m_Border.r);
@@ -92,9 +92,9 @@ TEST(QmConsoleAppearance, CustomTextChangesBorderWithoutChangingShadow)
 	std::array<unsigned, QmConsoleAppearance::COLOR_COUNT> aCustom{};
 	aCustom.fill(ColorHSLA(0.0f, 0.0f, 0.4f, 1.0f).Pack(false));
 	aCustom[QmConsoleAppearance::TEXT] = ColorHSLA(0.0f, 0.0f, 0.1f, 1.0f).Pack(false);
-	const auto DarkText = QmConsoleAppearance::ResolvePalette(2, 80, aCustom);
+	const auto DarkText = QmConsoleAppearance::ResolvePalette(QmConsoleAppearance::CONFIG_CUSTOM_SCHEME, 80, aCustom);
 	aCustom[QmConsoleAppearance::TEXT] = ColorHSLA(0.0f, 0.0f, 0.9f, 1.0f).Pack(false);
-	const auto LightText = QmConsoleAppearance::ResolvePalette(2, 80, aCustom);
+	const auto LightText = QmConsoleAppearance::ResolvePalette(QmConsoleAppearance::CONFIG_CUSTOM_SCHEME, 80, aCustom);
 	const auto Background = LightText.m_aColors[QmConsoleAppearance::BACKGROUND];
 	EXPECT_LT(DarkText.m_Border.r, Background.r);
 	EXPECT_GT(LightText.m_Border.r, Background.r);
@@ -135,7 +135,7 @@ TEST(QmConsoleAppearance, SwitchingBackToPresetsRestoresDecorations)
 {
 	std::array<unsigned, QmConsoleAppearance::COLOR_COUNT> aCustom{};
 	aCustom.fill(ColorHSLA(0.3f, 0.8f, 0.6f, 1.0f).Pack(false));
-	const auto Custom = QmConsoleAppearance::ResolvePalette(2, 96, aCustom);
+	const auto Custom = QmConsoleAppearance::ResolvePalette(QmConsoleAppearance::CONFIG_CUSTOM_SCHEME, 96, aCustom);
 	for(int Scheme : {0, 1})
 	{
 		SCOPED_TRACE(Scheme);
@@ -233,4 +233,13 @@ TEST(QmConsoleAppearance, BuiltinSchemeOpacityOnlyAffectsBackgroundAlpha)
 		EXPECT_EQ(Opaque.m_aColors[Color], Translucent.m_aColors[Color]);
 	EXPECT_FLOAT_EQ(Translucent.m_aColors[QmConsoleAppearance::BACKGROUND].a, 0.4f);
 	EXPECT_EQ(Opaque.m_aColors[QmConsoleAppearance::BACKGROUND].WithAlpha(1.0f), Translucent.m_aColors[QmConsoleAppearance::BACKGROUND].WithAlpha(1.0f));
+}
+
+TEST(QmConsoleAppearance, CustomSchemeIsTheOnlyConfigValueUsingPlayerColors)
+{
+	// 渲染、布局与测量共用这一个判断：只有配置值 2 走玩家的九项取色。
+	EXPECT_TRUE(QmConsoleAppearance::IsCustomScheme(QmConsoleAppearance::CONFIG_CUSTOM_SCHEME));
+	EXPECT_FALSE(QmConsoleAppearance::IsCustomScheme(0));
+	EXPECT_FALSE(QmConsoleAppearance::IsCustomScheme(1));
+	EXPECT_FALSE(QmConsoleAppearance::IsCustomScheme(3));
 }

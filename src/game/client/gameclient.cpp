@@ -1240,8 +1240,8 @@ void CGameClient::OnUpdate()
 
 	HandleLanguageChanged();
 	RefreshStreamerSkinPrivacyAfterStateChange();
-	// 自杀保护的自动开启计时：帧时间夹住上限，卡顿或断点续跑都不会把延迟一次跳完。
-	UpdateQmSelfKillProtection(std::clamp(Client()->RenderFrameTime(), 0.0f, 0.1f));
+	// 自杀保护的自动开启计时：按墙钟推进，与渲染帧率无关。
+	UpdateQmSelfKillProtection();
 
 	CUIElementBase::Init(Ui()); // update static pointer because game and editor use separate UI
 
@@ -6853,15 +6853,24 @@ void CGameClient::SetQmSelfKillProtection(bool Enabled, bool Announce)
 }
 
 // 每帧推进自动开启计时：只有玩家显式设置了延迟才会到点开启，默认永不触发。
-void CGameClient::UpdateQmSelfKillProtection(float FrameSeconds)
+// 用墙钟时间推进而不是渲染帧时间：帧时间被夹在 0.1s，掉帧时"进图 N 分钟"会被拉长。
+void CGameClient::UpdateQmSelfKillProtection()
 {
 	m_QmSelfKillProtection.Configure(g_Config.m_QmSelfKillEnabled != 0, g_Config.m_QmSelfKillAutoDelay * 60);
 	// 只在真正进入对局（在线）时计时：菜单、连接中、demo 回放都不推进，
 	// 玩家看到的"开始游戏后 N 分钟"才是他实际在玩的时间。
 	const bool InGame = Client()->State() == IClient::STATE_ONLINE;
 	if(!InGame)
+	{
+		m_QmSelfKillWallClockLastTime = 0;
 		return;
-	if(!m_QmSelfKillProtection.Update(FrameSeconds))
+	}
+	const int64_t Now = time_get();
+	float DeltaSeconds = 0.0f;
+	if(m_QmSelfKillWallClockLastTime != 0 && Now > m_QmSelfKillWallClockLastTime)
+		DeltaSeconds = static_cast<float>(static_cast<double>(Now - m_QmSelfKillWallClockLastTime) / static_cast<double>(time_freq()));
+	m_QmSelfKillWallClockLastTime = Now;
+	if(!m_QmSelfKillProtection.Update(DeltaSeconds))
 		return;
 	// 自动开启进入拦截态，回显一次让玩家知道 K 键已被接管；
 	// 不写回 qm_self_kill_enabled，重启后不会"自己开着"。
@@ -6876,6 +6885,8 @@ void CGameClient::UpdateQmSelfKillProtection(float FrameSeconds)
 void CGameClient::ResetQmSelfKillProtectionRound(bool InRound)
 {
 	m_QmSelfKillProtection.Configure(g_Config.m_QmSelfKillEnabled != 0, g_Config.m_QmSelfKillAutoDelay * 60);
+	// 进出对局都从零开始计，避免把上一段的时间带进这一局的开头。
+	m_QmSelfKillWallClockLastTime = 0;
 	if(InRound)
 		m_QmSelfKillProtection.BeginRound();
 	else

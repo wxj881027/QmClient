@@ -26,6 +26,7 @@
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/components/qmclient/colored_parts.h>
+#include <game/client/components/qmclient/console_scroll.h>
 #include <game/client/components/qmclient/console_syntax.h>
 #include <game/client/components/qmclient/console_text.h>
 #include <game/client/components/qmclient/qm_chat_export.h>
@@ -1320,13 +1321,10 @@ void CGameConsole::CInstance::SetChatExportMode(bool Enable)
 	UpdateBacklogTextAttributes();
 }
 
-// 滚轮每档滚几行：按通用滚动步长折算到行高，至少 3 行。
-// 控制台的行高随字号变化，直接用固定像素会让小字号滚得过多、大字号过少。
+// 滚轮每档滚几行：把像素口径的 qm_ui_scroll_step 按当前行高折算成行数（见 console_scroll.h）。
 int CGameConsole::CInstance::GetWheelLinesToScroll() const
 {
-	const float StepPixels = g_Config.m_QmUiScrollStep > 0.0f ? static_cast<float>(g_Config.m_QmUiScrollStep) : 10.0f;
-	const float LineHeight = maximum(1.0f, FontSize() + LINE_SPACING);
-	return std::clamp(static_cast<int>(std::round(StepPixels / LineHeight)) + 2, 3, 8);
+	return QmConsoleWheelLines(g_Config.m_QmUiScrollStep, FontSize() + LINE_SPACING);
 }
 
 int CGameConsole::CInstance::GetLinesToScroll(int Direction, int LinesToScroll)

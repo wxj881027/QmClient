@@ -12,9 +12,14 @@
 
 namespace QmConsoleAppearance
 {
-	// 方案编号：k_CustomScheme 是"自定义"，其余 >= 0 的编号对应
-	// QmConsoleSchemes::At() 的内置方案；-1 表示未启用内置方案。
-	static constexpr int k_CustomScheme = 1000;
+	// 配置里的方案编号：0=现代终端、1=经典 PowerShell、2=自定义，
+	// 3 起是 QmConsoleSchemes 的内置配色。整套代码只在这里定义「自定义」的编号，
+	// 调用点统一走 IsCustomScheme，避免字面量 2 散落到渲染、布局和测量各处。
+	static constexpr int CONFIG_CUSTOM_SCHEME = 2;
+	inline bool IsCustomScheme(int Scheme)
+	{
+		return Scheme == CONFIG_CUSTOM_SCHEME;
+	}
 
 	enum EColor
 	{
@@ -102,7 +107,7 @@ namespace QmConsoleAppearance
 			Result.m_aColors[BACKGROUND] = ColorRGBA(0.004f, 0.141f, 0.337f, 1.0f);
 			Result.m_aColors[TEXT] = ColorRGBA(0.94f, 0.94f, 0.94f, 1.0f);
 		}
-		else if(Scheme == 2)
+		else if(IsCustomScheme(Scheme))
 		{
 			for(size_t i = 0; i < Custom.size(); ++i)
 				Result.m_aColors[i] = color_cast<ColorRGBA>(ColorHSLA(Custom[i]));

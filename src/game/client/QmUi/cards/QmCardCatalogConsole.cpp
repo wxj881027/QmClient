@@ -29,9 +29,12 @@ void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetr
 		CButtonContainer m_aColorReset[QmConsoleAppearance::COLOR_COUNT];
 		CButtonContainer m_Reset;
 	};
-	// 菜单背后仍可能绘制同一卡片；弹窗使用自己的输入状态和 ID。
+	// 菜单背后仍可能绘制同一卡片；弹窗使用自己的输入状态、ID 和滚动状态。
+	// 滚动区与「上次滚到的选中项」也按上下文分开，否则同帧两处渲染会共用
+	// 一个偏移：一处滚动会带着另一处跳，选中项也只会在先渲染的那处滚进视野。
+	const int RenderContext = Ui()->RenderingPopupMenus() ? 1 : 0;
 	static SControls s_aControls[2];
-	SControls &Controls = s_aControls[Ui()->RenderingPopupMenus() ? 1 : 0];
+	SControls &Controls = s_aControls[RenderContext];
 	const IUiContext Ctx = SettingsUiContext("console_appearance", Metrics.m_UiScale);
 	CUIRect Row;
 	const auto TakeRow = [&](const char *pId, float Height) {
@@ -143,7 +146,8 @@ void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetr
 	{
 		CUIRect List = Row;
 		vec2 Offset(0.0f, 0.0f);
-		static CScrollRegion s_SchemeScrollRegion;
+		static CScrollRegion s_aSchemeScrollRegions[2];
+		CScrollRegion &SchemeScrollRegion = s_aSchemeScrollRegions[RenderContext];
 		// 轨道尺寸与设置页其它卡片内列表一致（SMALL 紧凑轨道）。
 		// 滑块颜色必须和其它滚动条同源：CScrollRegionParams 的默认滑块色是写死的
 		// 0.8 灰（m_SliderColor），只有在带动画运行时才走主题强调色那条分支；
@@ -159,33 +163,33 @@ void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetr
 		ScrollParams.m_SliderColor = s_SliderAccent;
 		ScrollParams.m_SliderColorHover = s_SliderAccent;
 		ScrollParams.m_SliderColorGrabbed = s_SliderAccent;
-		s_SchemeScrollRegion.Begin(&List, &Offset, &ScrollParams);
+		SchemeScrollRegion.Begin(&List, &Offset, &ScrollParams);
 		CUIRect Content = List;
 		Content.y += Offset.y;
 		// 选中行滚进可见区域只在选中项变化时做一次；每帧都请求会把玩家人工
 		// 滚动的位置一直拽回去，列表就再也翻不动了。
 		const int SelectedIndex = qm_console_scheme_list::IndexOf(g_Config.m_QmConsoleColorScheme);
-		static int s_LastScrolledIndex = -1;
-		const bool ScrollToSelected = SelectedIndex >= 0 && SelectedIndex != s_LastScrolledIndex;
+		static int s_aLastScrolledIndex[2] = {-1, -1};
+		const bool ScrollToSelected = SelectedIndex >= 0 && SelectedIndex != s_aLastScrolledIndex[RenderContext];
 		if(SelectedIndex >= 0)
-			s_LastScrolledIndex = SelectedIndex;
+			s_aLastScrolledIndex[RenderContext] = SelectedIndex;
 		for(int Index = 0; Index < qm_console_scheme_list::Count(); ++Index)
 		{
 			CUIRect ItemRect;
 			Content.HSplitTop(QmConsoleSettingsLayout::SchemeRowHeight(Metrics), &ItemRect, &Content);
 			ItemRect.HMargin(Metrics.m_LineSpacing * 0.5f, &ItemRect);
-			if(!s_SchemeScrollRegion.AddRect(ItemRect, ScrollToSelected && Index == SelectedIndex))
+			if(!SchemeScrollRegion.AddRect(ItemRect, ScrollToSelected && Index == SelectedIndex))
 				continue;
 			RenderConsoleSchemeRow(Controls.m_aSchemeRows[Index], qm_console_scheme_list::All()[Index], ItemRect);
 		}
 		CUIRect EndRect = {List.x, Content.y, List.w, 0.0f};
-		s_SchemeScrollRegion.AddRect(EndRect);
-		s_SchemeScrollRegion.End();
+		SchemeScrollRegion.AddRect(EndRect);
+		SchemeScrollRegion.End();
 		Row = List;
 	}
 	// 选中「自定义」时的九项取色。放在列表之后：列表是滚动区，
 	// 行内控件不能塞进滚动内容里，否则会被滚动裁剪、点不到。
-	if(g_Config.m_QmConsoleColorScheme == 2)
+	if(QmConsoleAppearance::IsCustomScheme(g_Config.m_QmConsoleColorScheme))
 	{
 		struct SColorSetting
 		{
@@ -261,7 +265,7 @@ namespace qm_card_catalog
 
 void CGameConsole::OpenSettings()
 {
-	const CUIRect Panel = QmConsoleSettingsLayout::PanelRect(*Ui()->Screen(), g_Config.m_QmConsoleColorScheme == 2, g_Config.m_QmConsoleFontSize);
+	const CUIRect Panel = QmConsoleSettingsLayout::PanelRect(*Ui()->Screen(), QmConsoleAppearance::IsCustomScheme(g_Config.m_QmConsoleColorScheme), g_Config.m_QmConsoleFontSize);
 	m_SettingsScrollRegion.Reset();
 	m_LocalConsole.m_Selection.Finish();
 	m_LocalConsole.m_MouseIsPress = false;
@@ -291,20 +295,20 @@ CUi::EPopupMenuFunctionResult CGameConsole::PopupSettings(void *pContext, CUIRec
 	Params.m_pWheelOwnerId = &pThis->m_SettingsPopupId;
 	Params.m_WheelOwnerPreRegistered = true;
 	pThis->Ui()->RegisterWheelOwner(Params.m_pWheelOwnerId, Params.m_WheelOwnerPriority, View,
-		Active && QmConsoleSettingsLayout::ContentHeight(Metrics, g_Config.m_QmConsoleColorScheme == 2, g_Config.m_QmConsoleFontSize) > View.h);
-	pThis->m_SettingsScrollRegion.SetContentHeightForNextFrame(QmConsoleSettingsLayout::ContentHeight(Metrics, g_Config.m_QmConsoleColorScheme == 2, g_Config.m_QmConsoleFontSize));
+		Active && QmConsoleSettingsLayout::ContentHeight(Metrics, QmConsoleAppearance::IsCustomScheme(g_Config.m_QmConsoleColorScheme), g_Config.m_QmConsoleFontSize) > View.h);
+	pThis->m_SettingsScrollRegion.SetContentHeightForNextFrame(QmConsoleSettingsLayout::ContentHeight(Metrics, QmConsoleAppearance::IsCustomScheme(g_Config.m_QmConsoleColorScheme), g_Config.m_QmConsoleFontSize));
 	pThis->m_SettingsScrollRegion.Begin(&View, &Offset, &Params);
 	View.y += Offset.y;
 	const float StartY = View.y;
 	CUIRect Content = View;
-	Content.h = QmConsoleSettingsLayout::ContentHeight(Metrics, g_Config.m_QmConsoleColorScheme == 2, g_Config.m_QmConsoleFontSize);
+	Content.h = QmConsoleSettingsLayout::ContentHeight(Metrics, QmConsoleAppearance::IsCustomScheme(g_Config.m_QmConsoleColorScheme), g_Config.m_QmConsoleFontSize);
 	qm_card_catalog::QmCardRenderHook::RenderQmConsoleContent(&pThis->GameClient()->m_Menus, Content, Metrics, false);
 	pThis->m_SettingsScrollRegion.AddRect({View.x, StartY, View.w, Content.y - StartY});
 	pThis->m_SettingsScrollRegion.End();
 	if(!Close && Active)
 	{
 		// 更新同一弹层的几何，保留控件输入、滚动和嵌套颜色选择器状态。
-		const CUIRect Next = QmConsoleSettingsLayout::PanelRect(*pThis->Ui()->Screen(), g_Config.m_QmConsoleColorScheme == 2, g_Config.m_QmConsoleFontSize);
+		const CUIRect Next = QmConsoleSettingsLayout::PanelRect(*pThis->Ui()->Screen(), QmConsoleAppearance::IsCustomScheme(g_Config.m_QmConsoleColorScheme), g_Config.m_QmConsoleFontSize);
 		auto Props = ui_widget::SecondaryPanelProperties();
 		pThis->Ui()->DoPopupMenu(&pThis->m_SettingsPopupId, Next.x, Next.y, Next.w, Next.h, pThis, PopupSettings, Props);
 	}
