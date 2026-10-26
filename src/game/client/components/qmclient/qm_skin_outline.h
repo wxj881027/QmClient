@@ -168,7 +168,13 @@ public:
 			return;
 		if(m_CachedWidth != Width || !m_Texture.IsValid() || !pGraphics->IsTextureHandleAllocated(m_Texture))
 		{
-			CImageInfo Image = BuildImage(Width);
+			// 上传前的任何异常都要释放扩边像素；移动上传成功后源图已被清空。
+			struct SImageOwner
+			{
+				CImageInfo m_Image;
+				~SImageOwner() { m_Image.Free(); }
+			} ImageOwner{BuildImage(Width)};
+			CImageInfo &Image = ImageOwner.m_Image;
 			if(Image.m_pData == nullptr)
 				return;
 			m_QuadScale = vec2((float)Image.m_Width / m_Mask.m_Width, (float)Image.m_Height / m_Mask.m_Height);
