@@ -2706,6 +2706,7 @@ add_custom_command(OUTPUT "src/generated/wordlist.h"
 # Sources
 set_src(BASE GLOB_RECURSE src/base
   aio_buffer.h
+  assert_handler_slot.h
   borrowed_allocator.h
   bezier.cpp
   bezier.h
@@ -4861,6 +4862,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/csv_test.cpp
     src/test/unit/engine/datafile_test.cpp
     src/test/unit/base/dbg_test.cpp
+    src/test/unit/base/assert_handler_slot_test.cpp
     src/test/contract/base/ddnet_19_9_sync_contract_test.cpp
     src/test/unit/engine/demo_player_test.cpp
     src/test/integration/engine/demo_recorder_io_test.cpp

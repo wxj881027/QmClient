@@ -206,9 +206,9 @@ int main(int argc, const char **argv)
 {
 	QmInstallMacTestTerminateDiagnostics();
 	CCmdlineFix CmdlineFix(&argc, &argv);
-	log_set_global_logger_default();
 	if(const auto Result = QmCrashdumpProcessProbe(argc, argv))
 		return *Result;
+	log_set_global_logger_default();
 	if(const auto Result = QmExitProcessProbe(argc, argv))
 		return *Result;
 	if(const auto Result = QmOpenLinkProbe(argc, argv))

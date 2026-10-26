@@ -78,6 +78,52 @@ def check_fatal_report(directory: Path, reason: str, *, exception: str | None = 
 		raise AssertionError(f"missing or partial confirmation: {confirmed}")
 
 
+def check_assert_termination(binary: Path, directory: Path, mode: str, marker: bytes) -> subprocess.CompletedProcess[bytes]:
+	log, report, dump, confirmed = paths(directory)
+	result = run_probe(binary, directory, mode, log)
+	if result.returncode in (0, 2, 4, 5, 6, 7, 8, 77):
+		raise AssertionError(f"assert probe did not reach the fatal exit: {result.returncode}")
+	if result.stderr.count(marker) != 1:
+		raise AssertionError(f"missing or repeated assert diagnostic marker: {result.stderr!r}")
+	text = report.read_text(encoding="utf-8")
+	if "Report type: fatal-crash" not in text or "Fallback minidump written: yes" not in text:
+		raise AssertionError(f"assert did not produce a native fatal artifact: {report}")
+	if "Reason: Fatal signal" in text and "SIGABRT" in text:
+		# MSVC的dbg_break走abort；信号路径不创建报告进程，也不要求confirmed。
+		pass
+	elif "Reason: Unhandled structured exception" in text and "EXCEPTION_ILLEGAL_INSTRUCTION" in text:
+		if confirmed.read_bytes() != b"confirmed fatal crash\r\n":
+			raise AssertionError(f"trap report lacks confirmation: {confirmed}")
+	else:
+		raise AssertionError(f"diagnostic exception replaced the original assertion exit: {report}")
+	with dump.open("rb") as file:
+		if file.read(4) != b"MDMP":
+			raise AssertionError(f"assert minidump is invalid: {dump}")
+	return result
+
+
+def scenario_assert_snapshot_does_not_copy_failing_target(binary: Path, directory: Path) -> None:
+	check_assert_termination(binary, directory, "assert-copy-failure", b"assert-copy-target-invoked")
+
+
+def scenario_assert_handler_exception_keeps_assert_exit(binary: Path, directory: Path) -> None:
+	check_assert_termination(binary, directory, "assert-handler-throws", b"assert-throwing-handler-invoked")
+
+
+def scenario_assert_reentry_does_not_repeat_diagnostics(binary: Path, directory: Path) -> None:
+	result = check_assert_termination(binary, directory, "assert-reenter", b"assert-reentrant-handler-cleared")
+	if b"recursive-diagnostic-must-not-run" in result.stdout + result.stderr:
+		raise AssertionError("recursive assertion reentered diagnostic logging")
+
+
+def scenario_assert_finish_exception_keeps_assert_exit(binary: Path, directory: Path) -> None:
+	check_assert_termination(binary, directory, "assert-finish-throws", b"assert-finish-entered")
+
+
+def scenario_assert_slot_remains_alive_during_static_cleanup(binary: Path, directory: Path) -> None:
+	check_assert_termination(binary, directory, "assert-at-exit", b"assert-exit-handler-invoked")
+
+
 def scenario_recovered_exception_does_not_create_fatal_files(binary: Path, directory: Path) -> None:
 	log, report, dump, confirmed = paths(directory)
 	require_exit(run_probe(binary, directory, "recovered", log), 0)
@@ -119,6 +165,11 @@ def scenario_unicode_directory_keeps_all_fatal_artifacts(binary: Path, directory
 
 
 SCENARIOS = {
+	"assert_copy_failure": scenario_assert_snapshot_does_not_copy_failing_target,
+	"assert_handler_exception": scenario_assert_handler_exception_keeps_assert_exit,
+	"assert_reentry": scenario_assert_reentry_does_not_repeat_diagnostics,
+	"assert_finish_exception": scenario_assert_finish_exception_keeps_assert_exit,
+	"assert_static_cleanup": scenario_assert_slot_remains_alive_during_static_cleanup,
 	"recovered_no_artifacts": scenario_recovered_exception_does_not_create_fatal_files,
 	"recovered_preserves_existing": scenario_recovered_exception_preserves_existing_report,
 	"fatal_after_recovery": scenario_fatal_after_recovery_uses_current_reason,
