@@ -2,11 +2,13 @@
 #include <game/client/components/qmclient/settings_resource_preview.h>
 
 #include <gtest/gtest.h>
+#include <test/support/icon_benchmark_graphics.h>
 
 #include <chrono>
 #include <cstdlib>
 #include <thread>
 #include <utility>
+#include <vector>
 
 namespace
 {
@@ -227,4 +229,104 @@ TEST(SettingsResourcePreviewPipeline, MovedArtifactRetainsPixelsAfterSourceOwner
 	EXPECT_EQ(Destination.m_Image.m_pData, nullptr);
 	EXPECT_EQ(Transferred.m_pData[0], 47);
 	Transferred.Free();
+}
+
+TEST(SettingsResourcePreviewPipeline, UploadBudgetDefersOriginalRequestAndPublishesOnNextFrame)
+{
+	CSettingsResourcePreviewUploadScheduler Queue;
+	CSettingsResourcePreviewCache Cache;
+	CIconBenchmarkGraphics Graphics;
+	const auto Key = PreviewKey("deferred");
+	Cache.MarkArtifactReady(Key);
+	CPreviewImage Input(2, 1);
+	ASSERT_NE(Input.m_Image.m_pData, nullptr);
+	Queue.EnqueueUpload(Key, std::move(Input.m_Image), "deferred");
+	SResourcePreviewUploadBudget Budget;
+	SResourcePreviewTelemetry Telemetry;
+	EXPECT_FALSE(Queue.DrainOne(Budget, Telemetry, Cache, &Graphics));
+	EXPECT_EQ(Queue.QueueDepth(), 1u);
+	EXPECT_EQ(Telemetry.m_UploadBudgetExhausted, 1);
+	EXPECT_EQ(Graphics.m_Uploads, 0u);
+	ASSERT_NE(Cache.Find(Key), nullptr);
+	EXPECT_TRUE(Cache.Find(Key)->m_UploadPending);
+	EXPECT_FALSE(Cache.Find(Key)->m_Failed);
+	Budget.m_MaxUploads = 1;
+	Telemetry = {};
+	EXPECT_EQ(Queue.Drain(Budget, Telemetry, Cache, &Graphics), 1);
+	EXPECT_EQ(Queue.QueueDepth(), 0u);
+	EXPECT_EQ(Graphics.m_Uploads, 1u);
+	EXPECT_EQ(Graphics.m_UploadBytes, 8u);
+	EXPECT_EQ(Budget.m_UploadsUsed, 1);
+	EXPECT_TRUE(Cache.Find(Key)->m_TextureReady);
+	EXPECT_FALSE(Cache.Find(Key)->m_UploadPending);
+	Cache.Clear(&Graphics);
+}
+
+TEST(SettingsResourcePreviewPipeline, TargetCallbacksKeepFifoOrderAndRunOnceAcrossDeferredFrames)
+{
+	CSettingsResourcePreviewUploadScheduler Queue;
+	CSettingsResourcePreviewCache Cache;
+	CIconBenchmarkGraphics Graphics;
+	std::vector<int> Order;
+	CPreviewImage First(1, 1), Second(1, 1);
+	ASSERT_NE(First.m_Image.m_pData, nullptr);
+	ASSERT_NE(Second.m_Image.m_pData, nullptr);
+	IGraphics::CTextureHandle FirstTexture, SecondTexture;
+	Queue.EnqueueUploadToTarget(PreviewKey("first"), std::move(First.m_Image), [&](bool Success, IGraphics::CTextureHandle Texture) {
+		EXPECT_TRUE(Success);
+		FirstTexture = Texture;
+		Order.push_back(1); }, "first");
+	Queue.EnqueueUploadToTarget(PreviewKey("second"), std::move(Second.m_Image), [&](bool Success, IGraphics::CTextureHandle Texture) {
+		EXPECT_TRUE(Success);
+		SecondTexture = Texture;
+		Order.push_back(2); }, "second");
+	SResourcePreviewUploadBudget Budget;
+	SResourcePreviewTelemetry Telemetry;
+	EXPECT_EQ(Queue.Drain(Budget, Telemetry, Cache, &Graphics), 0);
+	EXPECT_TRUE(Order.empty());
+	EXPECT_EQ(Queue.QueueDepth(), 2u);
+	Budget.m_MaxUploads = 1;
+	Telemetry = {};
+	EXPECT_EQ(Queue.Drain(Budget, Telemetry, Cache, &Graphics), 1);
+	EXPECT_EQ(Order, (std::vector<int>{1}));
+	EXPECT_EQ(Queue.QueueDepth(), 1u);
+	Budget = {};
+	Budget.m_MaxUploads = 1;
+	Telemetry = {};
+	EXPECT_EQ(Queue.Drain(Budget, Telemetry, Cache, &Graphics), 1);
+	EXPECT_EQ(Order, (std::vector<int>{1, 2}));
+	EXPECT_EQ(Queue.QueueDepth(), 0u);
+	EXPECT_EQ(Queue.Drain(Budget, Telemetry, Cache, &Graphics), 0);
+	EXPECT_EQ(Order.size(), 2u);
+	EXPECT_TRUE(FirstTexture.IsValid());
+	EXPECT_TRUE(SecondTexture.IsValid());
+	Graphics.UnloadTexture(&FirstTexture);
+	Graphics.UnloadTexture(&SecondTexture);
+}
+
+TEST(SettingsResourcePreviewPipeline, InvalidFrontDoesNotConsumeTheFollowingValidImagesUploadBudget)
+{
+	CSettingsResourcePreviewUploadScheduler Queue;
+	CSettingsResourcePreviewCache Cache;
+	CIconBenchmarkGraphics Graphics;
+	const auto InvalidKey = PreviewKey("invalid"), ValidKey = PreviewKey("valid");
+	CPreviewImage Invalid(1, 1), Valid(1, 1);
+	ASSERT_NE(Invalid.m_Image.m_pData, nullptr);
+	ASSERT_NE(Valid.m_Image.m_pData, nullptr);
+	Invalid.m_Image.m_Width = 0;
+	Queue.EnqueueUpload(InvalidKey, std::move(Invalid.m_Image), "invalid");
+	Queue.EnqueueUpload(ValidKey, std::move(Valid.m_Image), "valid");
+	SResourcePreviewUploadBudget Budget;
+	Budget.m_MaxUploads = 1;
+	SResourcePreviewTelemetry Telemetry;
+	EXPECT_EQ(Queue.Drain(Budget, Telemetry, Cache, &Graphics), 1);
+	EXPECT_EQ(Queue.QueueDepth(), 0u);
+	EXPECT_EQ(Budget.m_UploadsUsed, 1);
+	EXPECT_EQ(Graphics.m_Uploads, 1u);
+	EXPECT_EQ(Graphics.m_UploadBytes, 4u);
+	ASSERT_NE(Cache.Find(InvalidKey), nullptr);
+	EXPECT_TRUE(Cache.Find(InvalidKey)->m_Failed);
+	ASSERT_NE(Cache.Find(ValidKey), nullptr);
+	EXPECT_TRUE(Cache.Find(ValidKey)->m_TextureReady);
+	Cache.Clear(&Graphics);
 }

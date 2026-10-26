@@ -6,24 +6,6 @@
 
 #include <string>
 
-TEST(QmMonitoringAssetsContract, SettingsResourcePreviewUploadBudgetExhaustionRequeuesWithoutFailure)
-{
-	const std::string Source = ReadRepoFile("src/game/client/components/qmclient/settings_resource_preview.cpp");
-	const std::string DrainOneBody = ExtractSourceFunctionBody(Source, "bool CSettingsResourcePreviewUploadScheduler::DrainOne(SResourcePreviewUploadBudget &Budget, SResourcePreviewTelemetry &Telemetry, CSettingsResourcePreviewCache &Cache, IGraphics *pGraphics)");
-	ASSERT_FALSE(DrainOneBody.empty());
-
-	const size_t BudgetExhaustedPos = DrainOneBody.find("!SettingsResourcePreviewConsumeUploadBudget(Budget)");
-	const size_t UploadPos = DrainOneBody.find("pGraphics->LoadTextureRawMove");
-	ASSERT_NE(BudgetExhaustedPos, std::string::npos);
-	ASSERT_NE(UploadPos, std::string::npos);
-	ASSERT_LT(BudgetExhaustedPos, UploadPos);
-	const std::string BudgetExhaustedBody = DrainOneBody.substr(BudgetExhaustedPos, UploadPos - BudgetExhaustedPos);
-	EXPECT_NE(BudgetExhaustedBody.find("m_vUploadQueue.push_front(std::move(Item));"), std::string::npos);
-	EXPECT_EQ(BudgetExhaustedBody.find("Item.m_Image.Free()"), std::string::npos);
-	EXPECT_EQ(BudgetExhaustedBody.find("Item.m_Finalize(false)"), std::string::npos);
-	EXPECT_EQ(BudgetExhaustedBody.find("Cache.MarkPreviewJobDone(Item.m_Key, false)"), std::string::npos);
-}
-
 TEST(QmMonitoringAssetsContract, AssetsSharedUploadSchedulerDoesNotRequeueMovedPreviewImages)
 {
 	const std::string Source = ReadRepoFile("src/game/client/components/menus_settings_assets.cpp");
@@ -51,24 +33,4 @@ TEST(QmMonitoringAssetsContract, AssetsSharedUploadSchedulerDoesNotRequeueMovedP
 	EXPECT_EQ(WorkshopFailureBody.find("WorkshopState.m_vReadyThumbQueue.push_front"), std::string::npos);
 	EXPECT_EQ(WorkshopFailureBody.find("ResetWorkshopThumbReadyState(*pAsset)"), std::string::npos);
 	EXPECT_NE(WorkshopFailureBody.find("GPU_UPLOAD_BUDGET"), std::string::npos);
-}
-
-
-TEST(QmMonitoringAssetsContract, SettingsResourcePreviewDrainRejectsInvalidImagesBeforeConsumingBudget)
-{
-	const std::string Source = ReadRepoFile("src/game/client/components/qmclient/settings_resource_preview.cpp");
-	const std::string DrainBody = ExtractSourceFunctionBody(Source, "int CSettingsResourcePreviewUploadScheduler::Drain(SResourcePreviewUploadBudget &Budget, SResourcePreviewTelemetry &Telemetry, CSettingsResourcePreviewCache &Cache, IGraphics *pGraphics)");
-	const std::string DrainOneBody = ExtractSourceFunctionBody(Source, "bool CSettingsResourcePreviewUploadScheduler::DrainOne(SResourcePreviewUploadBudget &Budget, SResourcePreviewTelemetry &Telemetry, CSettingsResourcePreviewCache &Cache, IGraphics *pGraphics)");
-	ASSERT_FALSE(DrainBody.empty());
-	ASSERT_FALSE(DrainOneBody.empty());
-
-	EXPECT_NE(DrainBody.find("DrainOne(Budget, Telemetry, Cache, pGraphics)"), std::string::npos);
-	const size_t ValidatePos = DrainOneBody.find("!SettingsResourcePreviewImageValidForUpload(Item.m_Image)");
-	const size_t ConsumePos = DrainOneBody.find("SettingsResourcePreviewConsumeUploadBudget(Budget");
-	ASSERT_NE(ValidatePos, std::string::npos);
-	ASSERT_NE(ConsumePos, std::string::npos);
-	EXPECT_LT(ValidatePos, ConsumePos);
-	EXPECT_NE(DrainOneBody.find("Cache.MarkUploadFailed(Item.m_Key);"), std::string::npos);
-	EXPECT_NE(DrainOneBody.find("Item.m_Finalize(false, IGraphics::CTextureHandle())"), std::string::npos);
-	EXPECT_NE(DrainOneBody.find("m_vUploadQueue.push_front(std::move(Item));"), std::string::npos);
 }

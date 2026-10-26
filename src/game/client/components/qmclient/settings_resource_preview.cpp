@@ -249,21 +249,22 @@ bool CSettingsResourcePreviewUploadScheduler::DrainOne(SResourcePreviewUploadBud
 		return false;
 	}
 
+	const bool ValidImage = SettingsResourcePreviewImageValidForUpload(m_vUploadQueue.front().m_Image);
+	if(ValidImage && !SettingsResourcePreviewConsumeUploadBudget(Budget))
+	{
+		// 延期时保留原节点及像素，不通过重新入队分配容器节点。
+		Telemetry.m_UploadBudgetExhausted = 1;
+		Telemetry.m_UploadQueueDepth = (int)m_vUploadQueue.size();
+		return false;
+	}
 	SUploadItem Item = std::move(m_vUploadQueue.front());
 	m_vUploadQueue.pop_front();
-	if(!SettingsResourcePreviewImageValidForUpload(Item.m_Image))
+	if(!ValidImage)
 	{
 		Item.m_Image.Free();
 		Cache.MarkUploadFailed(Item.m_Key);
 		if(Item.m_Finalize)
 			Item.m_Finalize(false, IGraphics::CTextureHandle());
-		Telemetry.m_UploadQueueDepth = (int)m_vUploadQueue.size();
-		return false;
-	}
-	if(!SettingsResourcePreviewConsumeUploadBudget(Budget))
-	{
-		Telemetry.m_UploadBudgetExhausted = 1;
-		m_vUploadQueue.push_front(std::move(Item));
 		Telemetry.m_UploadQueueDepth = (int)m_vUploadQueue.size();
 		return false;
 	}
