@@ -6,6 +6,7 @@
 #include "demoedit.h"
 #include "friends.h"
 #include "perf_file_logger.h"
+#include "qm_crash_report_file.h"
 #include "qm_graphics_diagnostics.h"
 #include "qm_storage_mode.h"
 #include "replay_save.h"
@@ -208,47 +209,44 @@ static bool MarkQmCrashReportShown(const char *pReportPath)
 
 static bool ShowQmCrashReporterDialog(const char *pReportPath)
 {
-	if(!IsQmCrashReporterPath(pReportPath))
-		return false;
-
-	IOHANDLE File = io_open(pReportPath, IOFLAG_READ);
-	if(!File)
-		return false;
-	const int64_t ReportLength = io_length(File);
-	if(ReportLength < 0 || ReportLength > 2 * 1024 * 1024)
+	try
 	{
-		io_close(File);
+		if(!IsQmCrashReporterPath(pReportPath))
+			return false;
+
+		auto Report = QmCrashReportFile::ReadFile(pReportPath);
+		if(!Report)
+			return false;
+
+		const std::vector<IGraphics::CMessageBoxButton> vButtons = {
+			{.m_pLabel = "Show crash reports"},
+			{.m_pLabel = "Close report", .m_Confirm = true, .m_Cancel = true},
+		};
+		const std::optional<int> Result = ShowMessageBoxWithoutGraphics({
+			.m_pTitle = "QmClient Crash Report",
+			.m_pMessage = Report->c_str(),
+			.m_Style = IGraphics::EMessageBoxStyle::QM_FESTIVE,
+			.m_vButtons = vButtons,
+		});
+		if(!Result.has_value())
+			return false;
+
+		if(!MarkQmCrashReportShown(pReportPath))
+			log_warn("crash_reporter", "failed to mark report as shown: %s", pReportPath);
+		if(*Result == 0)
+		{
+			char aReportDirectory[IO_MAX_PATH_LENGTH];
+			str_copy(aReportDirectory, pReportPath);
+			if(fs_parent_dir(aReportDirectory) == 0)
+				open_file(aReportDirectory);
+		}
+		return true;
+	}
+	catch(...)
+	{
+		// 报告准备的C++异常按失败返回，原报告仍保留在磁盘。
 		return false;
 	}
-	char *pReport = io_read_all_str(File);
-	io_close(File);
-	if(pReport == nullptr)
-		return false;
-
-	const std::vector<IGraphics::CMessageBoxButton> vButtons = {
-		{.m_pLabel = "Show crash reports"},
-		{.m_pLabel = "Close report", .m_Confirm = true, .m_Cancel = true},
-	};
-	const std::optional<int> Result = ShowMessageBoxWithoutGraphics({
-		.m_pTitle = "QmClient Crash Report",
-		.m_pMessage = pReport,
-		.m_Style = IGraphics::EMessageBoxStyle::QM_FESTIVE,
-		.m_vButtons = vButtons,
-	});
-	free(pReport);
-	if(!Result.has_value())
-		return false;
-
-	if(!MarkQmCrashReportShown(pReportPath))
-		log_warn("crash_reporter", "failed to mark report as shown: %s", pReportPath);
-	if(*Result == 0)
-	{
-		char aReportDirectory[IO_MAX_PATH_LENGTH];
-		str_copy(aReportDirectory, pReportPath);
-		if(fs_parent_dir(aReportDirectory) == 0)
-			open_file(aReportDirectory);
-	}
-	return true;
 }
 
 struct SQmPendingCrashReportSearch
