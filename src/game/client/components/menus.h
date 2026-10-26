@@ -40,6 +40,7 @@
 #include <game/client/components/menus_ingame_touch_controls.h>
 #include <game/client/components/menus_settings_controls.h>
 #include <game/client/components/menus_start.h>
+#include <game/client/components/qmclient/audio_pack_candidates.h>
 #include <game/client/components/qmclient/audio_pack_catalog.h>
 #include <game/client/components/qmclient/browser_friend_list.h>
 #include <game/client/components/qmclient/browser_map_preview.h>
@@ -503,13 +504,7 @@ public:
 
 	using SAudioPackSlot = qm_audio_pack::SSlot;
 
-	struct SAudioPackCandidateEntry
-	{
-		std::string m_Path;
-		std::string m_DisplayName;
-		bool m_IsCurrentFile = false;
-		bool m_IsCurrentPackFile = false;
-	};
+	using SAudioPackCandidateEntry = qm_audio_pack::SCandidateEntry;
 
 	static void GetStrongWeakEditorGridSize(int &OutGridX, int &OutGridY)
 	{
@@ -652,91 +647,26 @@ public:
 		return std::string("audio/") + pResolvedRelativePath;
 	}
 
-	struct SAudioPackCandidateScanRoot
-	{
-		const char *m_pScanRoot;
-		const char *m_pOutputPrefix;
-	};
+	using SAudioPackCandidateScanRoot = qm_audio_pack::SScanRoot;
 
 	static constexpr std::array<SAudioPackCandidateScanRoot, 2> BuildAudioPackCandidateScanRoots()
 	{
-		return {{
-			{"audio", "audio"},
-			{"data/audio", "audio"},
-		}};
+		return qm_audio_pack::CandidateScanRoots();
 	}
 
 	static bool TryBuildAudioPackCandidatePathFromScan(const char *pOutputPrefix, const char *pRelativePath, std::string &OutPath)
 	{
-		OutPath.clear();
-
-		const char *pResolvedRelativePath = pRelativePath != nullptr ? pRelativePath : "";
-		while(*pResolvedRelativePath == '/')
-			++pResolvedRelativePath;
-
-		if(pResolvedRelativePath[0] == '\0' || !str_endswith(pResolvedRelativePath, ".wv"))
-			return false;
-
-		const char *pResolvedOutputPrefix = pOutputPrefix != nullptr && pOutputPrefix[0] != '\0' ? pOutputPrefix : "audio";
-		OutPath = pResolvedOutputPrefix;
-		OutPath += "/";
-		OutPath += pResolvedRelativePath;
-		return true;
+		return qm_audio_pack::TryBuildCandidatePath(pOutputPrefix, pRelativePath, OutPath);
 	}
 
 	static std::vector<SAudioPackCandidateEntry> BuildAudioPackCandidateEntries(const std::vector<std::string> &vPaths, const char *pPackName, const char *pCurrentPath)
 	{
-		std::vector<SAudioPackCandidateEntry> vEntries;
-		vEntries.reserve(vPaths.size());
-
-		std::unordered_set<std::string> vSeenPaths;
-		const char *pResolvedPackName = pPackName != nullptr && pPackName[0] != '\0' ? pPackName : "default";
-		const char *pResolvedCurrentPath = pCurrentPath != nullptr ? pCurrentPath : "";
-
-		char aCurrentPackPrefix[IO_MAX_PATH_LENGTH];
-		str_format(aCurrentPackPrefix, sizeof(aCurrentPackPrefix), "audio/%s/", pResolvedPackName);
-
-		for(const std::string &Path : vPaths)
-		{
-			if(!str_endswith(Path.c_str(), ".wv"))
-				continue;
-			if(!vSeenPaths.insert(Path).second)
-				continue;
-
-			SAudioPackCandidateEntry Entry;
-			Entry.m_Path = Path;
-
-			const char *pDisplayName = Path.c_str();
-			if(str_startswith(pDisplayName, "audio/"))
-				pDisplayName += str_length("audio/");
-			Entry.m_DisplayName = pDisplayName;
-			Entry.m_IsCurrentFile = pResolvedCurrentPath[0] != '\0' && str_comp(Path.c_str(), pResolvedCurrentPath) == 0;
-			Entry.m_IsCurrentPackFile = str_startswith(Path.c_str(), aCurrentPackPrefix) != nullptr;
-			vEntries.push_back(std::move(Entry));
-		}
-
-		std::sort(vEntries.begin(), vEntries.end(), [](const SAudioPackCandidateEntry &Left, const SAudioPackCandidateEntry &Right) {
-			if(Left.m_IsCurrentFile != Right.m_IsCurrentFile)
-				return Left.m_IsCurrentFile > Right.m_IsCurrentFile;
-			if(Left.m_IsCurrentPackFile != Right.m_IsCurrentPackFile)
-				return Left.m_IsCurrentPackFile > Right.m_IsCurrentPackFile;
-			return str_comp_nocase(Left.m_DisplayName.c_str(), Right.m_DisplayName.c_str()) < 0;
-		});
-
-		return vEntries;
+		return qm_audio_pack::BuildCandidateEntries(vPaths, pPackName, pCurrentPath);
 	}
 
 	static int FindAudioPackCandidateEntryIndex(const std::vector<SAudioPackCandidateEntry> &vEntries, const char *pPath)
 	{
-		if(pPath == nullptr || pPath[0] == '\0')
-			return -1;
-
-		for(int Index = 0; Index < (int)vEntries.size(); ++Index)
-		{
-			if(str_comp(vEntries[Index].m_Path.c_str(), pPath) == 0)
-				return Index;
-		}
-		return -1;
+		return qm_audio_pack::FindCandidateEntryIndex(vEntries, pPath);
 	}
 
 	static std::string ResolveAudioPackPreviewPath(const char *pSelectedCandidatePath, const char *pManualSourcePath)
@@ -1519,6 +1449,7 @@ private:
 	void AudioPackEditorClose();
 	void AudioPackEditorSetStatus(const char *pMessage, bool IsError);
 	void AudioPackEditorRefreshCandidates();
+	void AudioPackEditorUpdateCandidates(bool Rescan);
 	void AudioPackEditorRebuildCandidates();
 	void AudioPackEditorStopPreview();
 	bool AudioPackEditorPlayPreview(const char *pFilename, int StorageType);

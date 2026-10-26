@@ -14,6 +14,7 @@
 #include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/audio_pack_candidates.h>
 #include <game/client/components/qmclient/audio_pack_export.h>
 #include <game/client/components/sounds.h>
 #include <game/client/components/tooltips.h>
@@ -69,54 +70,6 @@ void CMenus::AudioPackEditorSetStatus(const char *pMessage, bool IsError)
 
 namespace
 {
-	struct SAudioPackCandidateScanContext
-	{
-		IStorage *m_pStorage = nullptr;
-		std::set<std::string> *m_pEntries = nullptr;
-		char m_aScanRoot[IO_MAX_PATH_LENGTH] = "";
-		char m_aOutputPrefix[IO_MAX_PATH_LENGTH] = "";
-		char m_aRelativePath[IO_MAX_PATH_LENGTH] = "";
-	};
-
-}
-
-namespace
-{
-
-	static int AudioPackCandidateScanCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser)
-	{
-		(void)StorageType;
-
-		auto *pContext = static_cast<SAudioPackCandidateScanContext *>(pUser);
-		if(!str_comp(pInfo->m_pName, ".") || !str_comp(pInfo->m_pName, ".."))
-			return 0;
-
-		char aRelativePath[IO_MAX_PATH_LENGTH];
-		if(pContext->m_aRelativePath[0] != '\0')
-			str_format(aRelativePath, sizeof(aRelativePath), "%s/%s", pContext->m_aRelativePath, pInfo->m_pName);
-		else
-			str_copy(aRelativePath, pInfo->m_pName);
-
-		char aScanPath[IO_MAX_PATH_LENGTH];
-		str_format(aScanPath, sizeof(aScanPath), "%s/%s", pContext->m_aScanRoot, aRelativePath);
-
-		if(IsDir)
-		{
-			if(pInfo->m_pName[0] == '.')
-				return 0;
-
-			SAudioPackCandidateScanContext NextContext = *pContext;
-			str_copy(NextContext.m_aRelativePath, aRelativePath, sizeof(NextContext.m_aRelativePath));
-			pContext->m_pStorage->ListDirectoryInfo(IStorage::TYPE_ALL, aScanPath, AudioPackCandidateScanCallback, &NextContext);
-			return 0;
-		}
-
-		std::string CandidatePath;
-		if(CMenus::TryBuildAudioPackCandidatePathFromScan(pContext->m_aOutputPrefix, aRelativePath, CandidatePath))
-			pContext->m_pEntries->insert(std::move(CandidatePath));
-
-		return 0;
-	}
 
 	static const char *ResolveAudioPackEditorPackName(const CLineInputBuffered<64> &PackNameInput, const char *pFallbackPackName)
 	{
@@ -149,46 +102,53 @@ namespace
 
 void CMenus::AudioPackEditorRefreshCandidates()
 {
-	std::set<std::string> vCandidatePaths;
-	for(const auto &ScanRoot : BuildAudioPackCandidateScanRoots())
-	{
-		if(!Storage()->FolderExists(ScanRoot.m_pScanRoot, IStorage::TYPE_ALL))
-			continue;
-
-		SAudioPackCandidateScanContext Context;
-		Context.m_pStorage = Storage();
-		Context.m_pEntries = &vCandidatePaths;
-		str_copy(Context.m_aScanRoot, ScanRoot.m_pScanRoot, sizeof(Context.m_aScanRoot));
-		str_copy(Context.m_aOutputPrefix, ScanRoot.m_pOutputPrefix, sizeof(Context.m_aOutputPrefix));
-		Storage()->ListDirectoryInfo(IStorage::TYPE_ALL, ScanRoot.m_pScanRoot, AudioPackCandidateScanCallback, &Context);
-	}
-
-	m_AudioPackEditorState.m_vCandidatePaths.assign(vCandidatePaths.begin(), vCandidatePaths.end());
-	AudioPackEditorRebuildCandidates();
+	AudioPackEditorUpdateCandidates(true);
 }
 
 void CMenus::AudioPackEditorRebuildCandidates()
 {
-	char aCurrentPath[IO_MAX_PATH_LENGTH] = "";
-	const auto vSlots = BuildAudioPackSlots();
-	if(!vSlots.empty())
+	AudioPackEditorUpdateCandidates(false);
+}
+
+void CMenus::AudioPackEditorUpdateCandidates(bool Rescan)
+{
+	try
 	{
-		m_AudioPackEditorState.m_SelectedSlotIndex = std::clamp(m_AudioPackEditorState.m_SelectedSlotIndex, 0, (int)vSlots.size() - 1);
-		ResolveAudioPackEditorCurrentFilePath(Storage(), ResolveAudioPackEditorPackName(m_AudioPackEditorState.m_PackNameInput, g_Config.m_SndPack), vSlots[m_AudioPackEditorState.m_SelectedSlotIndex], aCurrentPath, sizeof(aCurrentPath));
+		char aCurrentPath[IO_MAX_PATH_LENGTH] = "";
+		const auto vSlots = BuildAudioPackSlots();
+		int SelectedSlot = m_AudioPackEditorState.m_SelectedSlotIndex;
+		if(!vSlots.empty())
+			SelectedSlot = std::clamp(SelectedSlot, 0, (int)vSlots.size() - 1);
+		const char *pPackName = ResolveAudioPackEditorPackName(m_AudioPackEditorState.m_PackNameInput, g_Config.m_SndPack);
+		const auto ResolveCurrentPath = [&] {
+			if(!vSlots.empty())
+				ResolveAudioPackEditorCurrentFilePath(Storage(), pPackName, vSlots[SelectedSlot], aCurrentPath, sizeof(aCurrentPath));
+		};
+		bool Published;
+		if(Rescan)
+		{
+			qm_audio_pack::CCandidateScan Scan(*Storage());
+			Published = qm_audio_pack::TryRefreshCandidates(m_AudioPackEditorState.m_vCandidatePaths, m_AudioPackEditorState.m_vCandidateEntries,
+				m_AudioPackEditorState.m_SelectedCandidateIndex, pPackName, aCurrentPath, [&](auto &Paths) {
+					if(!Scan.Scan(qm_audio_pack::CandidateScanRoots(), Paths))
+						return false;
+					ResolveCurrentPath();
+					return true;
+				});
+		}
+		else
+		{
+			ResolveCurrentPath();
+			Published = qm_audio_pack::TryRebuildCandidates(m_AudioPackEditorState.m_vCandidatePaths, m_AudioPackEditorState.m_vCandidateEntries,
+				m_AudioPackEditorState.m_SelectedCandidateIndex, pPackName, aCurrentPath);
+		}
+		if(Published)
+			m_AudioPackEditorState.m_SelectedSlotIndex = SelectedSlot;
 	}
-
-	std::string SelectedPath;
-	if(m_AudioPackEditorState.m_SelectedCandidateIndex >= 0 && m_AudioPackEditorState.m_SelectedCandidateIndex < (int)m_AudioPackEditorState.m_vCandidateEntries.size())
-		SelectedPath = m_AudioPackEditorState.m_vCandidateEntries[m_AudioPackEditorState.m_SelectedCandidateIndex].m_Path;
-
-	m_AudioPackEditorState.m_vCandidateEntries = BuildAudioPackCandidateEntries(m_AudioPackEditorState.m_vCandidatePaths, ResolveAudioPackEditorPackName(m_AudioPackEditorState.m_PackNameInput, g_Config.m_SndPack), aCurrentPath);
-
-	int SelectedIndex = FindAudioPackCandidateEntryIndex(m_AudioPackEditorState.m_vCandidateEntries, aCurrentPath);
-	if(SelectedIndex < 0 && !SelectedPath.empty())
-		SelectedIndex = FindAudioPackCandidateEntryIndex(m_AudioPackEditorState.m_vCandidateEntries, SelectedPath.c_str());
-	if(SelectedIndex < 0 && !m_AudioPackEditorState.m_vCandidateEntries.empty())
-		SelectedIndex = 0;
-	m_AudioPackEditorState.m_SelectedCandidateIndex = SelectedIndex;
+	catch(...)
+	{
+		// 目录、路径或显示准备失败保留旧候选和选择，下次手动刷新再尝试。
+	}
 }
 
 void CMenus::AudioPackEditorStopPreview()
