@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+class CQmThemeIconLoadJob;
+
 class CMenuMap : public CBackgroundEngineMap
 {
 	MACRO_INTERFACE("menu_enginemap")
@@ -40,7 +42,6 @@ class CMenuBackground : public CBackground
 {
 	std::chrono::nanoseconds m_ThemeScanStartTime{0};
 	class CThemeListLoadJob;
-	class CThemeIconLoadJob;
 
 public:
 	enum
@@ -131,7 +132,7 @@ private:
 
 	std::vector<CTheme> m_vThemes;
 	std::shared_ptr<CThemeListLoadJob> m_pThemeListLoadJob;
-	std::vector<std::shared_ptr<CThemeIconLoadJob>> m_vThemeIconLoadJobs;
+	std::vector<std::shared_ptr<CQmThemeIconLoadJob>> m_vThemeIconLoadJobs;
 	bool m_ThemeListLoaded = false;
 
 public:

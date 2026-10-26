@@ -1,5 +1,6 @@
 #include "menu_background.h"
 
+#include "qmclient/theme_icon_load_job.h"
 #include "theme_scan.h"
 
 #include <base/lock.h>
@@ -26,24 +27,6 @@
 #include <chrono>
 
 using namespace std::chrono_literals;
-
-namespace
-{
-	constexpr int MAX_THEME_ICON_DIMENSION = 512;
-
-	void ResizeThemeIconIfNeeded(CImageInfo &Image)
-	{
-		if(Image.m_Width <= MAX_THEME_ICON_DIMENSION && Image.m_Height <= MAX_THEME_ICON_DIMENSION)
-			return;
-
-		const double Scale = minimum(
-			(double)MAX_THEME_ICON_DIMENSION / (double)Image.m_Width,
-			(double)MAX_THEME_ICON_DIMENSION / (double)Image.m_Height);
-		const int NewWidth = maximum(1, (int)std::floor((double)Image.m_Width * Scale));
-		const int NewHeight = maximum(1, (int)std::floor((double)Image.m_Height * Scale));
-		ResizeImage(Image, NewWidth, NewHeight);
-	}
-}
 
 class CMenuBackground::CThemeListLoadJob : public IJob
 {
@@ -94,82 +77,6 @@ public:
 	{
 		const CLockScope Lock(m_Lock);
 		return m_vEntries;
-	}
-};
-
-class CMenuBackground::CThemeIconLoadJob : public IJob
-{
-public:
-	struct SResult
-	{
-		std::string m_ThemeName;
-		CImageInfo m_Image;
-		bool m_Success = false;
-	};
-
-private:
-	IStorage *m_pStorage;
-	std::string m_ThemeName;
-	std::string m_IconPath;
-	mutable CLock m_Lock;
-	SResult m_Result;
-	bool m_Completed = false;
-
-protected:
-	void Run() override REQUIRES(!m_Lock)
-	{
-		void *pFileData = nullptr;
-		unsigned FileSize = 0;
-		if(!m_pStorage->ReadFile(m_IconPath.c_str(), IStorage::TYPE_ALL, &pFileData, &FileSize))
-		{
-			const CLockScope Lock(m_Lock);
-			m_Completed = true;
-			return;
-		}
-
-		CImageInfo Image;
-		bool Loaded = LoadBackgroundImageData(pFileData, FileSize, m_IconPath.c_str(), Image);
-		free(pFileData);
-		if(Loaded)
-			Loaded = ConvertToRgba(Image) || (Image.m_pData != nullptr && Image.m_Format == CImageInfo::FORMAT_RGBA);
-
-		const CLockScope Lock(m_Lock);
-		if(Loaded)
-		{
-			ResizeThemeIconIfNeeded(Image);
-			m_Result.m_Image = std::move(Image);
-			m_Result.m_Success = true;
-		}
-		m_Completed = true;
-	}
-
-public:
-	CThemeIconLoadJob(const char *pThemeName, const char *pIconPath, IStorage *pStorage) :
-		m_pStorage(pStorage),
-		m_ThemeName(pThemeName),
-		m_IconPath(pIconPath)
-	{
-		m_Result.m_ThemeName = pThemeName;
-		Abortable(true);
-	}
-
-	~CThemeIconLoadJob()
-	{
-		m_Result.m_Image.Free();
-	}
-
-	bool IsCompleted() const REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		return m_Completed;
-	}
-
-	SResult TakeResult() REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		SResult Result = std::move(m_Result);
-		m_Result = SResult();
-		return Result;
 	}
 };
 
@@ -423,7 +330,7 @@ void CMenuBackground::QueueThemeIconLoad(CTheme &Theme)
 	}
 
 	Theme.m_IconLoadRequested = true;
-	auto pJob = std::make_shared<CThemeIconLoadJob>(Theme.m_Name.c_str(), Theme.m_IconPath.c_str(), Storage());
+	auto pJob = std::make_shared<CQmThemeIconLoadJob>(Theme.m_Name.c_str(), Theme.m_IconPath.c_str(), Storage(), LoadBackgroundImageData);
 	Engine()->AddJob(pJob);
 	m_vThemeIconLoadJobs.push_back(pJob);
 }
@@ -440,7 +347,7 @@ void CMenuBackground::ProcessThemeIconJobs()
 			continue;
 		}
 
-		CThemeIconLoadJob::SResult Result = pJob->TakeResult();
+		CQmThemeIconLoadJob::SResult Result = pJob->TakeResult();
 		auto ThemeIt = std::find_if(m_vThemes.begin(), m_vThemes.end(), [&](const CTheme &Theme) {
 			return str_comp(Theme.m_Name.c_str(), Result.m_ThemeName.c_str()) == 0;
 		});
@@ -449,7 +356,7 @@ void CMenuBackground::ProcessThemeIconJobs()
 			ThemeIt->m_IconLoadRequested = false;
 			ThemeIt->m_IconLoadFailed = !Result.m_Success;
 			if(Result.m_Success)
-				ThemeIt->m_IconTexture = Graphics()->LoadTextureRawMove(const_cast<CImageInfo &>(Result.m_Image), 0, Result.m_ThemeName.c_str());
+				ThemeIt->m_IconTexture = Graphics()->LoadTextureRawMove(Result.m_Image, 0, Result.m_ThemeName.c_str());
 		}
 
 		It = m_vThemeIconLoadJobs.erase(It);
