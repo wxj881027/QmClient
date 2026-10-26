@@ -38,6 +38,7 @@ namespace
 TEST(VoteOptionPacket, SixupSecuredHugeCountWithNoDescriptionsStopsAtFirstReadError)
 {
 	CPacker Packet;
+	Packet.Reset();
 	Packet.AddInt(std::numeric_limits<int>::max());
 	ASSERT_FALSE(Packet.Error());
 	CUnpacker Unpacker;
@@ -60,6 +61,7 @@ TEST(VoteOptionPacket, SixupSecuredHugeCountWithNoDescriptionsStopsAtFirstReadEr
 TEST(VoteOptionPacket, HugeDeclaredCountPreservesValidPrefixAndStopsWhenPacketEnds)
 {
 	CPacker Packet;
+	Packet.Reset();
 	Packet.AddInt(std::numeric_limits<int>::max());
 	Packet.AddString("first");
 	Packet.AddString("second");
@@ -83,6 +85,7 @@ TEST(VoteOptionPacket, HugeDeclaredCountPreservesValidPrefixAndStopsWhenPacketEn
 TEST(VoteOptionPacket, UnterminatedDescriptionDoesNotPublishPartialTextOrReadAgain)
 {
 	CPacker Packet;
+	Packet.Reset();
 	Packet.AddString("first");
 	Packet.AddRaw("broken", 6);
 	ASSERT_FALSE(Packet.Error());
@@ -101,6 +104,7 @@ TEST(VoteOptionPacket, UnterminatedDescriptionDoesNotPublishPartialTextOrReadAga
 TEST(VoteOptionPacket, InvalidUtf8StopsAfterTheLastValidDescription)
 {
 	CPacker Packet;
+	Packet.Reset();
 	Packet.AddString("first");
 	const unsigned char aInvalid[] = {0xff, 0};
 	Packet.AddRaw(aInvalid, sizeof(aInvalid));
@@ -119,6 +123,7 @@ TEST(VoteOptionPacket, InvalidUtf8StopsAfterTheLastValidDescription)
 TEST(VoteOptionPacket, LongValidListPreservesEveryOptionInOrder)
 {
 	CPacker Packet;
+	Packet.Reset();
 	std::vector<std::string> vExpected;
 	for(int i = 0; i < 40; ++i)
 	{
@@ -141,6 +146,7 @@ TEST(VoteOptionPacket, LongValidListPreservesEveryOptionInOrder)
 TEST(VoteOptionPacket, DeclaredShortListLeavesTrailingDataUnread)
 {
 	CPacker Packet;
+	Packet.Reset();
 	Packet.AddString("one");
 	Packet.AddString("two");
 	Packet.AddString("trailing");
@@ -159,6 +165,7 @@ TEST(VoteOptionPacket, NonpositiveCountsDoNotReadOrPublishDescriptions)
 	{
 		SCOPED_TRACE(Count);
 		CPacker Packet;
+		Packet.Reset();
 		Packet.AddInt(Count);
 		Packet.AddString("untouched");
 		CUnpacker Unpacker;
@@ -178,6 +185,7 @@ TEST(VoteOptionPacket, NonpositiveCountsDoNotReadOrPublishDescriptions)
 TEST(VoteOptionPacket, EmptyDescriptionOccupiesItsOriginalSlot)
 {
 	CPacker Packet;
+	Packet.Reset();
 	Packet.AddString("");
 	Packet.AddString("next");
 	CUnpacker Unpacker;
