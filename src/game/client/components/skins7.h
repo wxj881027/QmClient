@@ -17,6 +17,7 @@
 
 #include <game/client/component.h>
 #include <game/client/components/qmclient/qm_chat_avatar.h>
+#include <game/client/components/qmclient/skin7_part_load_job.h>
 #include <game/client/components/qmclient/skin7_resource_lifecycle.h>
 #include <game/client/render.h>
 
@@ -75,55 +76,7 @@ public:
 		bool operator==(const CSkin &Other) const;
 	};
 
-	class CSkinPartLoadJob : public IJob
-	{
-	public:
-		struct SResult
-		{
-			CImageInfo m_OriginalImage;
-			CImageInfo m_GrayscaleImage;
-			ColorRGBA m_BloodColor;
-			std::shared_ptr<CQmSkinOutline> m_QmSkinOutline;
-			std::shared_ptr<const QmChatAvatar::SSource> m_pChatAvatarOriginal;
-			std::shared_ptr<const QmChatAvatar::SSource> m_pChatAvatarColorable;
-			int m_PartType;
-			int m_Flags;
-			char m_aName[24];
-			bool m_Success = false;
-		};
-
-	private:
-		std::string m_Path;
-		std::string m_PartName;
-		IStorage *m_pStorage;
-		int m_StorageType;
-		[[maybe_unused]] int m_PartType;
-		[[maybe_unused]] int m_Flags;
-		mutable CLock m_Mutex;
-		SResult m_Result;
-		bool m_Completed = false;
-
-	protected:
-		void Run() override REQUIRES(!m_Mutex);
-
-	public:
-		CSkinPartLoadJob(const char *pPath, const char *pPartName, IStorage *pStorage, int StorageType, int PartType, int Flags);
-		~CSkinPartLoadJob() override;
-
-		bool IsCompleted() const REQUIRES(!m_Mutex)
-		{
-			CLockScope Lock(m_Mutex);
-			return m_Completed;
-		}
-
-		SResult GetResult() REQUIRES(!m_Mutex)
-		{
-			CLockScope Lock(m_Mutex);
-			SResult Result = std::move(m_Result);
-			m_Result = SResult();
-			return Result;
-		}
-	};
+	using CSkinPartLoadJob = CQmSkin7PartLoadJob;
 
 	static const char *const ms_apSkinPartNames[protocol7::NUM_SKINPARTS];
 	static const char *const ms_apSkinPartNamesLocalized[protocol7::NUM_SKINPARTS];

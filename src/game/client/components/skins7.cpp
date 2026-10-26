@@ -70,102 +70,6 @@ static ColorRGBA DetermineBloodColorFromInfo(const CImageInfo &Info)
 	return ColorRGBA(NormalizedColor.x, NormalizedColor.y, NormalizedColor.z);
 }
 
-static std::shared_ptr<CQmSkinOutline> CreateSkinPartOutline(const CImageInfo &Image, int Part);
-static std::shared_ptr<const QmChatAvatar::SSource> CreateChatAvatarPartSource(const CImageInfo &Image, int Part);
-
-CSkins7::CSkinPartLoadJob::CSkinPartLoadJob(const char *pPath, const char *pPartName, IStorage *pStorage, int StorageType, int PartType, int Flags) :
-	m_Path(pPath),
-	m_PartName(pPartName),
-	m_pStorage(pStorage),
-	m_StorageType(StorageType),
-	m_PartType(PartType),
-	m_Flags(Flags)
-{
-	str_copy(m_Result.m_aName, pPartName, sizeof(m_Result.m_aName));
-	m_Result.m_PartType = PartType;
-	m_Result.m_Flags = Flags;
-	Abortable(true);
-}
-
-CSkins7::CSkinPartLoadJob::~CSkinPartLoadJob()
-{
-	m_Result.m_OriginalImage.Free();
-	m_Result.m_GrayscaleImage.Free();
-}
-
-void CSkins7::CSkinPartLoadJob::Run()
-{
-	if(State() == STATE_ABORTED)
-		return;
-	void *pFileData = nullptr;
-	unsigned FileSize = 0;
-	if(!m_pStorage->ReadFile(m_Path.c_str(), m_StorageType, &pFileData, &FileSize))
-	{
-		log_error("skins7", "Failed to read skin part file '%s'", m_Path.c_str());
-		CLockScope Lock(m_Mutex);
-		m_Completed = true;
-		return;
-	}
-	if(State() == STATE_ABORTED)
-	{
-		free(pFileData);
-		return;
-	}
-
-	CImageInfo OriginalImage;
-	if(!CImageLoader::LoadPng(static_cast<uint8_t *>(pFileData), FileSize, m_Path.c_str(), OriginalImage))
-	{
-		free(pFileData);
-		log_error("skins7", "Failed to decode skin part PNG '%s'", m_Path.c_str());
-		CLockScope Lock(m_Mutex);
-		m_Completed = true;
-		return;
-	}
-	free(pFileData);
-	if(State() == STATE_ABORTED)
-	{
-		OriginalImage.Free();
-		return;
-	}
-
-	if(OriginalImage.m_Format != CImageInfo::FORMAT_RGBA)
-	{
-		log_error("skins7", "Skin part '%s' must be RGBA format", m_Path.c_str());
-		OriginalImage.Free();
-		CLockScope Lock(m_Mutex);
-		m_Completed = true;
-		return;
-	}
-
-	CImageInfo GrayscaleImage = OriginalImage.DeepCopy();
-	if(GrayscaleImage.m_pData == nullptr)
-	{
-		log_error("skins7", "Failed to copy skin part '%s'", m_Path.c_str());
-		OriginalImage.Free();
-		CLockScope Lock(m_Mutex);
-		m_Completed = true;
-		return;
-	}
-	ConvertToGrayscale(GrayscaleImage);
-
-	ColorRGBA BloodColor = DetermineBloodColorFromInfo(OriginalImage);
-	auto pOutline = CreateSkinPartOutline(OriginalImage, m_PartType);
-	auto pAvatarOriginal = CreateChatAvatarPartSource(OriginalImage, m_PartType);
-	auto pAvatarColorable = CreateChatAvatarPartSource(GrayscaleImage, m_PartType);
-
-	{
-		CLockScope Lock(m_Mutex);
-		m_Result.m_OriginalImage = std::move(OriginalImage);
-		m_Result.m_GrayscaleImage = std::move(GrayscaleImage);
-		m_Result.m_BloodColor = BloodColor;
-		m_Result.m_QmSkinOutline = std::move(pOutline);
-		m_Result.m_pChatAvatarOriginal = std::move(pAvatarOriginal);
-		m_Result.m_pChatAvatarColorable = std::move(pAvatarColorable);
-		m_Result.m_Success = true;
-		m_Completed = true;
-	}
-}
-
 // TODO: uncomment
 // const float MIN_EYE_BODY_COLOR_DIST = 80.f; // between body and eyes (LAB color space)
 
@@ -214,6 +118,14 @@ static std::shared_ptr<const QmChatAvatar::SSource> CreateChatAvatarPartSource(c
 		return nullptr;
 	}
 	return pSource;
+}
+
+static void PrepareSkinPartVisuals(CSkins7::CSkinPartLoadJob::SResult &Result)
+{
+	Result.m_BloodColor = DetermineBloodColorFromInfo(Result.m_OriginalImage);
+	Result.m_QmSkinOutline = CreateSkinPartOutline(Result.m_OriginalImage, Result.m_PartType);
+	Result.m_pChatAvatarOriginal = CreateChatAvatarPartSource(Result.m_OriginalImage, Result.m_PartType);
+	Result.m_pChatAvatarColorable = CreateChatAvatarPartSource(Result.m_GrayscaleImage, Result.m_PartType);
 }
 
 void CSkins7::CSkinPart::ApplyTo(CTeeRenderInfo::CSixup &SixupRenderInfo) const
@@ -275,7 +187,7 @@ void CSkins7::StartSkinPartLoadJob(int PartType, const char *pName, int DirType)
 		Flags |= SKINFLAG_STANDARD;
 	}
 
-	auto pJob = std::make_shared<CSkinPartLoadJob>(aFilename, aPartName, Storage(), DirType, PartType, Flags);
+	auto pJob = std::make_shared<CSkinPartLoadJob>(aFilename, aPartName, Storage(), DirType, PartType, Flags, PrepareSkinPartVisuals);
 	Engine()->AddJob(pJob);
 	m_PendingSkinPartJobs.push_back(pJob);
 }
