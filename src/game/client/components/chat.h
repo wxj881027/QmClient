@@ -236,7 +236,7 @@ private:
 
 	bool m_PrevScoreBoardShowed;
 	bool m_PrevShowChat;
-	std::array<int, 4> m_aPrevTitleVisibility = {};
+	std::array<int, 5> m_aPrevTitleVisibility = {};
 	bool m_PrevSponsorChatEffects = true;
 	int m_LastStreamerFilterWords = -1;
 	uint64_t m_LastStreamerFilterRevision = 0;

@@ -26644,6 +26644,22 @@ turkish = "Yer değiştirme seçeneğini göster"
 polish = "Pokaż opcję zamiany"
 
 [[message]]
+key = "Show sponsor badges in chat"
+[message.translations]
+simplified_chinese = "显示聊天赞助徽章"
+traditional_chinese = "顯示聊天贊助徽章"
+japanese = "チャットに支援者バッジを表示"
+korean = "채팅에 후원자 배지 표시"
+russian = "Показывать значки спонсоров в чате"
+german = "Sponsorenabzeichen im Chat anzeigen"
+spanish = "Mostrar insignias de patrocinadores en el chat"
+french = "Afficher les badges des sponsors dans le chat"
+brazilian_portuguese = "Mostrar emblemas de patrocinadores no chat"
+portuguese = "Mostrar emblemas de patrocinadores no chat"
+turkish = "Sohbette sponsor rozetlerini göster"
+polish = "Pokazuj odznaki sponsorów na czacie"
+
+[[message]]
 key = "Show synchronized sponsor chat styles"
 [message.translations]
 simplified_chinese = "显示同步的赞助者发言样式"

@@ -13787,6 +13787,9 @@ Show spectator cursor
 Show speedometer when changing
 == Afficher le compteur de vitesse lors du changement
 
+Show sponsor badges in chat
+== Afficher les badges des sponsors dans le chat
+
 Show sponsor chat effects locally
 == Afficher localement les effets de chat des soutiens
 

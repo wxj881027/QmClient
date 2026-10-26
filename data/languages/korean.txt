@@ -13787,6 +13787,9 @@ Show spectator cursor
 Show speedometer when changing
 == 변경 시 속도계 표시
 
+Show sponsor badges in chat
+== 채팅에 후원자 배지 표시
+
 Show sponsor chat effects locally
 == 로컬에서 후원자 채팅 효과 표시
 

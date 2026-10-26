@@ -2486,7 +2486,7 @@ bool CChat::OnPrepareLines(float y)
 
 	const bool IsScoreBoardOpen = GameClient()->m_Scoreboard.IsActive();
 	const bool ShowLargeArea = m_Show || (m_Mode != MODE_NONE && g_Config.m_ClShowChat == 1) || g_Config.m_ClShowChat == 2;
-	const std::array<int, 4> aTitleVisibility = {g_Config.m_QmShowMainTitle, g_Config.m_QmShowDummyTitle,
+	const std::array<int, 5> aTitleVisibility = {g_Config.m_QmShowMainTitle, g_Config.m_QmShowDummyTitle, g_Config.m_QmChatSponsorBadges,
 		GameClient()->m_aLocalIds[IClient::CONN_MAIN], GameClient()->m_aLocalIds[IClient::CONN_DUMMY]};
 	const bool ForceRecreate = IsScoreBoardOpen != m_PrevScoreBoardShowed || ShowLargeArea != m_PrevShowChat;
 	m_PrevScoreBoardShowed = IsScoreBoardOpen;
@@ -2504,7 +2504,7 @@ bool CChat::OnPrepareLines(float y)
 	const bool DeveloperBadgeAvailable = GameClient()->m_QmClient.DeveloperBadge().Available();
 	// 保留消息原始头衔，重新开启本地显示后可以恢复历史消息。
 	const auto VisibleTitle = [this](const char *pTitle, int ClientId) {
-		return GameClient()->m_QmClient.ShouldShowPlayerTitle(ClientId) ? pTitle : "";
+		return g_Config.m_QmChatSponsorBadges && GameClient()->m_QmClient.ShouldShowPlayerTitle(ClientId) ? pTitle : "";
 	};
 
 	const int TeeSize = MessageTeeSize();

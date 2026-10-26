@@ -4595,6 +4595,7 @@ Show song info in top-left corner
 Show spectate option
 Show spectator cursor
 Show speedometer when changing
+Show sponsor badges in chat
 Show sponsor chat effects locally
 Show sponsor QR code
 Show start menu image

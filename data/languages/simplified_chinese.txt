@@ -13790,6 +13790,9 @@ Show spectator cursor
 Show speedometer when changing
 == 显示变化时的速度计
 
+Show sponsor badges in chat
+== 显示聊天赞助徽章
+
 Show sponsor chat effects locally
 == 本机显示赞助者发言特效
 
