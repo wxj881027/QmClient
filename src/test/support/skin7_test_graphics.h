@@ -7,6 +7,7 @@
 #include <array>
 #include <new>
 #include <stdexcept>
+#include <utility>
 
 // 只替换纹理设备边界，实际发布器、部件容器和上传限额不替换。
 class CSkin7TestGraphics : public CIconBenchmarkGraphics
@@ -36,10 +37,22 @@ public:
 
 	void UnloadTexture(CTextureHandle *pHandle) override
 	{
+		if(!pHandle->IsValid() || pHandle->IsNullTexture())
+			return;
 		if(m_FailUnload)
 			throw std::runtime_error("device queue unavailable");
 		m_aLive.at(pHandle->Id()) = false;
 		pHandle->Invalidate();
+	}
+
+	CTextureHandle LoadTextureRawMove(CImageInfo &Image, int Flags, const char *pName) override
+	{
+		struct SOwner
+		{
+			CImageInfo m_Image;
+			~SOwner() { m_Image.Free(); }
+		} Owner{std::move(Image)};
+		return LoadTextureRaw(Owner.m_Image, Flags, pName);
 	}
 
 	bool IsTextureHandleAllocated(CTextureHandle Handle) const override

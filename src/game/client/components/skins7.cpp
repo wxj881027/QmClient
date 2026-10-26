@@ -440,6 +440,10 @@ void CSkins7::OnShutdown()
 
 void CSkins7::CancelPendingLoads()
 {
+	if(m_StartingRefresh)
+		m_StartingRefresh->m_pJob->Abort();
+	m_StartingRefresh.reset();
+	m_RefreshRetirement.Drain(*Graphics(), 32);
 	m_RefreshRequest.Cancel();
 	m_PartPublisher.TryRelease(*Graphics());
 	for(auto &pJob : m_PendingSkinPartJobs)
@@ -462,16 +466,20 @@ void CSkins7::OnUpdate()
 		GameClient()->RefreshSkins(CSkinDescriptor::FLAG_SEVEN);
 	else if(Action == CQmSkin7ResourceLifecycle::EAction::CANCEL)
 	{
-		if(QmPerfEnabled())
-			QmPerfLogPayloadForce("perf/skins7", "event=resource_load_cancel", Client());
+		try
+		{
+			if(QmPerfEnabled())
+				QmPerfLogPayloadForce("perf/skins7", "event=resource_load_cancel", Client());
+		}
+		catch(...)
+		{
+		}
 		CancelPendingLoads();
 	}
+	else
+		TryStartRefresh();
 	if(QmNeedsSkin7Resources(Client()->State(), Client()->IsSixup()))
-	{
-		if(Action != CQmSkin7ResourceLifecycle::EAction::LOAD)
-			TryStartRefresh();
 		ProcessCompletedJobs();
-	}
 }
 
 void CSkins7::InitPlaceholderSkinParts()
@@ -493,56 +501,60 @@ void CSkins7::Refresh(TSkinLoadedCallback &&SkinLoadedCallback)
 	// 先登记可重试请求，已有缓存/任务在新请求被接收前保持可用。
 	if(!m_ResourceLifecycle.RequestRefresh(Client()->State(), Client()->IsSixup()))
 		return;
+	if(m_StartingRefresh)
+		m_StartingRefresh->m_pJob->Abort();
+	m_StartingRefresh.reset();
 	m_RefreshRequest.Request(std::move(SkinLoadedCallback));
 	TryStartRefresh();
 }
 
 void CSkins7::TryStartRefresh()
 {
-	if(!QmNeedsSkin7Resources(Client()->State(), Client()->IsSixup()))
+	const auto Begin = time_get_nanoseconds();
+	const auto DrainRetired = [&] {
+		return m_RefreshRetirement.Drain(*Graphics(), 32, [&] {
+			return time_get_nanoseconds() - Begin < std::chrono::milliseconds(1);
+		});
+	};
+	// 离线也只继续释放既有资源，不创建新任务或上传新图。
+	if(!DrainRetired() || !QmNeedsSkin7Resources(Client()->State(), Client()->IsSixup()))
 		return;
-	auto Plan = m_RefreshRequest.TryStart(*Engine(), Storage(), SKINFLAG_STANDARD);
-	if(!Plan)
-		return;
-	m_ResourceLifecycle.BeginRefresh(Client()->State(), Client()->IsSixup());
-	m_PartPublisher.TryRelease(*Graphics());
-	try
+	if(!m_StartingRefresh)
 	{
-		if(QmPerfEnabled())
-			QmPerfLogPayloadForce("perf/skins7", "event=resource_load_begin", Client());
-	}
-	catch(...)
-	{
-	}
-	m_vSkins.clear();
-	m_NextPart = 0;
-	m_NextSkin = 0;
-	m_NextAccessory = 0;
-	if(m_pSkinInfoJob)
-		m_pSkinInfoJob->Abort();
-	m_pSkinInfoJob = std::move(Plan->m_pJob);
-
-	for(auto &pJob : m_PendingSkinPartJobs)
-	{
-		pJob->Abort();
-	}
-	m_PendingSkinPartJobs.clear();
-
-	for(int Part = 0; Part < protocol7::NUM_SKINPARTS; Part++)
-	{
-		for(CSkinPart &SkinPart : m_avSkinParts[Part])
+		auto Plan = m_RefreshRequest.TryStart(*Engine(), Storage(), SKINFLAG_STANDARD);
+		if(!Plan)
+			return;
+		m_StartingRefresh.emplace(std::move(*Plan));
+		m_ResourceLifecycle.BeginRefresh(Client()->State(), Client()->IsSixup());
+		m_PartPublisher.TryRelease(*Graphics());
+		m_vSkins.clear();
+		m_NextPart = 0;
+		m_NextSkin = 0;
+		m_NextAccessory = 0;
+		if(m_pSkinInfoJob)
+			m_pSkinInfoJob->Abort();
+		m_pSkinInfoJob.reset();
+		for(auto &pJob : m_PendingSkinPartJobs)
+			pJob->Abort();
+		m_PendingSkinPartJobs.clear();
+		m_RefreshRetirement.Adopt(m_avSkinParts, m_StartingRefresh->m_aParts);
+		m_SkinLoadedCallback = {};
+		m_Loading = true;
+		try
 		{
-			Graphics()->UnloadTexture(&SkinPart.m_OriginalTexture);
-			Graphics()->UnloadTexture(&SkinPart.m_ColorableTexture);
-			if(SkinPart.m_QmSkinOutline)
-				SkinPart.m_QmSkinOutline->Unload(Graphics());
+			if(QmPerfEnabled())
+				QmPerfLogPayloadForce("perf/skins7", "event=resource_load_begin", Client());
 		}
-		m_avSkinParts[Part].swap(Plan->m_aParts[Part]);
+		catch(...)
+		{
+		}
+		if(!DrainRetired())
+			return;
 	}
-
-	m_SkinLoadedCallback = std::move(Plan->m_Callback);
-	m_Loading = true;
-
+	// 旧资源全部释放后才移交新扫描结果，计划和完成回调可跨帧保留。
+	m_pSkinInfoJob = std::move(m_StartingRefresh->m_pJob);
+	m_SkinLoadedCallback = std::move(m_StartingRefresh->m_Callback);
+	m_StartingRefresh.reset();
 	ProcessCompletedJobs();
 }
 

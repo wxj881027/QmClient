@@ -20,6 +20,7 @@
 #include <game/client/components/qmclient/skin7_part_load_job.h>
 #include <game/client/components/qmclient/skin7_part_publisher.h>
 #include <game/client/components/qmclient/skin7_refresh_request.h>
+#include <game/client/components/qmclient/skin7_refresh_retirement.h>
 #include <game/client/components/qmclient/skin7_resource_lifecycle.h>
 #include <game/client/render.h>
 
@@ -138,6 +139,8 @@ private:
 	CQmSkin7ResourceLifecycle m_ResourceLifecycle;
 	CQmSkin7PartPublisher m_PartPublisher;
 	CQmSkin7RefreshRequest<CSkinPart> m_RefreshRequest;
+	std::optional<CQmSkin7RefreshRequest<CSkinPart>::SPlan> m_StartingRefresh;
+	CQmSkin7RefreshRetirement<CSkinPart> m_RefreshRetirement;
 	TSkinLoadedCallback m_SkinLoadedCallback;
 
 	IGraphics::CTextureHandle m_XmasHatTexture;
