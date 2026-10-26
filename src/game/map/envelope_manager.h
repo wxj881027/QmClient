@@ -14,6 +14,7 @@ public:
 	CEnvelopeManager(const IEnvelopeEval *pEnvelopeEval, IMap *pMap) :
 		m_pEnvelopeEval(pEnvelopeEval), m_EnvelopeExtrema(pMap) {}
 
+	void SetEnvelopeEval(const IEnvelopeEval *pEnvelopeEval) { m_pEnvelopeEval = pEnvelopeEval; }
 	const IEnvelopeEval *EnvelopeEval() const { return m_pEnvelopeEval; }
 	const CEnvelopeExtrema *EnvelopeExtrema() const { return &m_EnvelopeExtrema; }
 

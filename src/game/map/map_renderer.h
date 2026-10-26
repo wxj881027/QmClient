@@ -17,6 +17,12 @@ class CMapRenderer : public CRenderComponent
 public:
 	CMapRenderer() = default;
 
+	// 管理器由已加载图层共享，交换所属组件后只重绑求值器借用。
+	void RebindEnvelopeEval(const IEnvelopeEval *pEnvelopeEval)
+	{
+		if(m_pLoadEnvelopeManager)
+			m_pLoadEnvelopeManager->SetEnvelopeEval(pEnvelopeEval);
+	}
 	void Clear();
 	void BeginLoad(ERenderType Type, CLayers *pLayers, IMapImages *pMapImages, const IEnvelopeEval *pEnvelopeEval, std::optional<FCallbackMapRendererInit> CallbackMapRendererInitOptional = std::nullopt);
 	void LoadStep(int MaxLayers = 1);

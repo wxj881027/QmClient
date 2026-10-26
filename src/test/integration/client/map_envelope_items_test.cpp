@@ -6,6 +6,7 @@
 #include <game/editor/mapitems/load_envelopes.h>
 #include <game/gamecore.h>
 #include <game/map/envelope_extrema.h>
+#include <game/map/envelope_manager.h>
 #include <game/mapitems_ex.h>
 
 #include <gtest/gtest.h>
@@ -486,4 +487,57 @@ TEST_F(MapEnvelopeItems, RotationFlagStillReflectsTheThirdPositionChannel)
 	ASSERT_NO_FATAL_FAILURE(Load(Items));
 	CEnvelopeExtrema Extrema(m_pMap.get());
 	EXPECT_TRUE(Extrema.GetExtrema(0).m_Rotating);
+}
+
+namespace
+{
+	// 只替换求值接口边界；manager及地图/裁剪缓存均使用生产实现。
+	class CMarkerEnvelopeEval : public IEnvelopeEval
+	{
+		float m_Value;
+
+	public:
+		explicit CMarkerEnvelopeEval(float Value) :
+			m_Value(Value) {}
+		void EnvelopeEval(int, int, ColorRGBA &Result, size_t) const override
+		{
+			Result.r = m_Value;
+		}
+	};
+}
+
+TEST_F(MapEnvelopeItems, RebindingSharedManagerPreservesItsMapExtrema)
+{
+	ASSERT_NO_FATAL_FAILURE(Load({}));
+	CMarkerEnvelopeEval Original(1.0f), Replacement(2.0f);
+	auto pManager = std::make_shared<CEnvelopeManager>(&Original, m_pMap.get());
+	const std::shared_ptr<CEnvelopeManager> pSharedReader = pManager;
+	const auto *pExtrema = pManager->EnvelopeExtrema();
+	ASSERT_TRUE(pExtrema->GetExtrema(0).m_Available);
+
+	pManager->SetEnvelopeEval(&Replacement);
+	EXPECT_EQ(pSharedReader->EnvelopeEval(), &Replacement);
+	ColorRGBA Result{};
+	pSharedReader->EnvelopeEval()->EnvelopeEval(0, 0, Result, 3);
+	EXPECT_FLOAT_EQ(Result.r, 2.0f);
+	EXPECT_EQ(pSharedReader->EnvelopeExtrema(), pExtrema);
+	EXPECT_EQ(pExtrema->GetExtrema(0).m_Minima.x, 1024);
+	EXPECT_EQ(pExtrema->GetExtrema(0).m_Maxima.x, 2048);
+}
+
+TEST_F(MapEnvelopeItems, ReboundManagerRemainsUsableAfterOriginalEvaluatorIsDestroyed)
+{
+	ASSERT_NO_FATAL_FAILURE(Load({}));
+	CMarkerEnvelopeEval Replacement(3.0f);
+	auto pOriginal = std::make_unique<CMarkerEnvelopeEval>(1.0f);
+	CEnvelopeManager Manager(pOriginal.get(), m_pMap.get());
+	Manager.SetEnvelopeEval(&Replacement);
+	Manager.SetEnvelopeEval(&Replacement);
+	pOriginal.reset();
+
+	ASSERT_EQ(Manager.EnvelopeEval(), &Replacement);
+	ColorRGBA Result{};
+	Manager.EnvelopeEval()->EnvelopeEval(0, 0, Result, 3);
+	EXPECT_FLOAT_EQ(Result.r, 3.0f);
+	EXPECT_TRUE(Manager.EnvelopeExtrema()->GetExtrema(0).m_Available);
 }
