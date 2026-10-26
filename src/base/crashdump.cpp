@@ -173,6 +173,10 @@ using MiniDumpWriteDumpFunc = BOOL(WINAPI *)(HANDLE, DWORD, HANDLE, MINIDUMP_TYP
 static char gs_aCrashLogPath[IO_MAX_PATH_LENGTH] = "";
 static char gs_aFallbackReportPath[IO_MAX_PATH_LENGTH] = "";
 static char gs_aFallbackDumpPath[IO_MAX_PATH_LENGTH] = "";
+// UTF-8路径在初始化期转换，致命处理器不再按系统ANSI代码页打开文件。
+static wchar_t gs_aWideFallbackReportPath[IO_MAX_PATH_LENGTH] = L"";
+static wchar_t gs_aWideFallbackDumpPath[IO_MAX_PATH_LENGTH] = L"";
+static wchar_t gs_aWideConfirmedPath[IO_MAX_PATH_LENGTH + 16] = L"";
 
 static HMODULE gs_pDbgHelpLib = nullptr;
 static MiniDumpWriteDumpFunc gs_pMiniDumpWriteDump = nullptr;
@@ -182,7 +186,6 @@ static std::atomic_flag gs_FatalReportInProgress = ATOMIC_FLAG_INIT;
 static std::atomic_flag gs_FatalReporterLaunched = ATOMIC_FLAG_INIT;
 static std::atomic<bool> gs_FallbackReportWritten{false};
 
-static PVOID gs_pVectoredExceptionHandler = nullptr;
 static LPTOP_LEVEL_EXCEPTION_FILTER gs_pPreviousUnhandledExceptionFilter = nullptr;
 
 static void WriteRaw(HANDLE FileHandle, const char *pText);
@@ -644,32 +647,6 @@ static const char *SignalToString(int SignalNumber)
 	}
 }
 
-static bool IsLikelyFatalException(DWORD ExceptionCode)
-{
-	switch(ExceptionCode)
-	{
-	case EXCEPTION_ACCESS_VIOLATION:
-	case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
-	case EXCEPTION_DATATYPE_MISALIGNMENT:
-	case EXCEPTION_FLT_DENORMAL_OPERAND:
-	case EXCEPTION_FLT_DIVIDE_BY_ZERO:
-	case EXCEPTION_FLT_INVALID_OPERATION:
-	case EXCEPTION_FLT_OVERFLOW:
-	case EXCEPTION_FLT_UNDERFLOW:
-	case EXCEPTION_ILLEGAL_INSTRUCTION:
-	case EXCEPTION_IN_PAGE_ERROR:
-	case EXCEPTION_INT_DIVIDE_BY_ZERO:
-	case EXCEPTION_INT_OVERFLOW:
-	case EXCEPTION_INVALID_DISPOSITION:
-	case EXCEPTION_NONCONTINUABLE_EXCEPTION:
-	case EXCEPTION_PRIV_INSTRUCTION:
-	case EXCEPTION_STACK_OVERFLOW:
-		return true;
-	default:
-		return false;
-	}
-}
-
 static void BuildSidecarPath(const char *pBasePath, const char *pSuffix, char *pOutPath, size_t OutPathSize)
 {
 	str_copy(pOutPath, pBasePath, OutPathSize);
@@ -684,6 +661,13 @@ static void BuildSidecarPath(const char *pBasePath, const char *pSuffix, char *p
 		*pExtension = '\0';
 
 	str_append(pOutPath, pSuffix, OutPathSize);
+}
+
+template<size_t N>
+static void PrepareWideOutputPath(const char *pUtf8, wchar_t (&aWide)[N])
+{
+	if(MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, pUtf8, -1, aWide, static_cast<int>(N)) <= 0)
+		aWide[0] = L'\0';
 }
 
 static void WriteRaw(HANDLE FileHandle, const char *pText)
@@ -704,10 +688,10 @@ static void WriteRaw(HANDLE FileHandle, const char *pText)
 static bool WriteMinimalCrashReport(const char *pReason, EXCEPTION_POINTERS *pExceptionPointers, int SignalNumber, bool DumpWritten)
 {
 	gs_FallbackReportWritten.store(false, std::memory_order_release);
-	if(gs_aFallbackReportPath[0] == '\0')
+	if(gs_aWideFallbackReportPath[0] == L'\0')
 		return false;
 
-	HANDLE FileHandle = CreateFileA(gs_aFallbackReportPath, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+	HANDLE FileHandle = CreateFileW(gs_aWideFallbackReportPath, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if(FileHandle == INVALID_HANDLE_VALUE)
 		return false;
 
@@ -778,16 +762,16 @@ static bool WriteMinimalCrashReport(const char *pReason, EXCEPTION_POINTERS *pEx
 	return true;
 }
 
-static bool TryWriteMiniDumpFile(const char *pFilename, EXCEPTION_POINTERS *pExceptionPointers, MINIDUMP_TYPE DumpType, DWORD *pOutError)
+static bool TryWriteMiniDumpFile(const wchar_t *pFilename, EXCEPTION_POINTERS *pExceptionPointers, MINIDUMP_TYPE DumpType, DWORD *pOutError)
 {
-	if(gs_pMiniDumpWriteDump == nullptr || pFilename == nullptr || pFilename[0] == '\0')
+	if(gs_pMiniDumpWriteDump == nullptr || pFilename == nullptr || pFilename[0] == L'\0')
 	{
 		if(pOutError != nullptr)
 			*pOutError = gs_pMiniDumpWriteDump == nullptr ? ERROR_PROC_NOT_FOUND : ERROR_INVALID_PARAMETER;
 		return false;
 	}
 
-	HANDLE FileHandle = CreateFileA(pFilename, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+	HANDLE FileHandle = CreateFileW(pFilename, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if(FileHandle == INVALID_HANDLE_VALUE)
 	{
 		if(pOutError != nullptr)
@@ -813,7 +797,7 @@ static bool TryWriteMiniDumpFile(const char *pFilename, EXCEPTION_POINTERS *pExc
 	return Result != FALSE;
 }
 
-static bool WriteMiniDumpFile(const char *pFilename, EXCEPTION_POINTERS *pExceptionPointers)
+static bool WriteMiniDumpFile(const wchar_t *pFilename, EXCEPTION_POINTERS *pExceptionPointers)
 {
 	gs_LastMiniDumpWrittenFlags = 0;
 	gs_LastMiniDumpExtendedAttemptError = ERROR_SUCCESS;
@@ -879,7 +863,7 @@ static void HandleFatalCrash(const char *pReason, EXCEPTION_POINTERS *pException
 		return;
 	}
 
-	const bool DumpWritten = WriteMiniDumpFile(gs_aFallbackDumpPath, pExceptionPointers);
+	const bool DumpWritten = WriteMiniDumpFile(gs_aWideFallbackDumpPath, pExceptionPointers);
 	WriteMinimalCrashReport(pReason, pExceptionPointers, SignalNumber, DumpWritten);
 }
 
@@ -892,9 +876,9 @@ static void LaunchFatalCrashReporter()
 	if(gs_FatalReporterLaunched.test_and_set(std::memory_order_acq_rel))
 		return;
 
-	char aConfirmedPath[IO_MAX_PATH_LENGTH + 16];
-	str_format(aConfirmedPath, sizeof(aConfirmedPath), "%s.confirmed", gs_aFallbackReportPath);
-	HANDLE ConfirmedFile = CreateFileA(aConfirmedPath, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+	HANDLE ConfirmedFile = INVALID_HANDLE_VALUE;
+	if(gs_aWideConfirmedPath[0] != L'\0')
+		ConfirmedFile = CreateFileW(gs_aWideConfirmedPath, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if(ConfirmedFile != INVALID_HANDLE_VALUE)
 	{
 		WriteRaw(ConfirmedFile, "confirmed fatal crash\r\n");
@@ -902,23 +886,6 @@ static void LaunchFatalCrashReporter()
 		CloseHandle(ConfirmedFile);
 	}
 	crashdump_launch_reporter_if_available(gs_aFallbackReportPath);
-}
-
-static LONG WINAPI FallbackVectoredExceptionHandler(PEXCEPTION_POINTERS pExceptionPointers)
-{
-	if(pExceptionPointers == nullptr || pExceptionPointers->ExceptionRecord == nullptr)
-		return EXCEPTION_CONTINUE_SEARCH;
-
-	// Keep debugger behavior predictable and avoid reports for normal unwind flow.
-	if(IsDebuggerPresent())
-		return EXCEPTION_CONTINUE_SEARCH;
-	if((pExceptionPointers->ExceptionRecord->ExceptionFlags & EXCEPTION_UNWINDING) != 0)
-		return EXCEPTION_CONTINUE_SEARCH;
-	if(!IsLikelyFatalException(pExceptionPointers->ExceptionRecord->ExceptionCode))
-		return EXCEPTION_CONTINUE_SEARCH;
-
-	HandleFatalCrash("Vectored exception fallback", pExceptionPointers, 0);
-	return EXCEPTION_CONTINUE_SEARCH;
 }
 
 static LONG WINAPI FallbackUnhandledExceptionFilter(EXCEPTION_POINTERS *pExceptionPointers)
@@ -993,13 +960,8 @@ static void InstallFallbackHandlersIfNeeded()
 	if(!gs_FallbackHandlersInstalled.compare_exchange_strong(Expected, true, std::memory_order_acq_rel))
 		return;
 
-	gs_pVectoredExceptionHandler = AddVectoredExceptionHandler(1, FallbackVectoredExceptionHandler);
-	if(gs_pVectoredExceptionHandler == nullptr)
-	{
-		const DWORD LastError = GetLastError();
-		log_warn("crashdump", "failed to install vectored exception handler (error %ld %s)", LastError, windows_format_system_message(LastError).c_str());
-	}
-
+	// VEH先于栈上的异常处理器，已恢复异常不能占用致命报告名额。
+	// SEH只在未处理过滤器收集，C++终止与致命信号保留各自入口。
 	std::set_terminate(FallbackTerminateHandler);
 	std::signal(SIGABRT, FallbackSignalHandler);
 }
@@ -1016,6 +978,11 @@ void crashdump_init_if_available(const char *log_file_path)
 	str_copy(gs_aCrashLogPath, log_file_path, sizeof(gs_aCrashLogPath));
 	BuildSidecarPath(gs_aCrashLogPath, "_fatal_report.txt", gs_aFallbackReportPath, sizeof(gs_aFallbackReportPath));
 	BuildSidecarPath(gs_aCrashLogPath, "_fatal_dump.dmp", gs_aFallbackDumpPath, sizeof(gs_aFallbackDumpPath));
+	PrepareWideOutputPath(gs_aFallbackReportPath, gs_aWideFallbackReportPath);
+	PrepareWideOutputPath(gs_aFallbackDumpPath, gs_aWideFallbackDumpPath);
+	char aConfirmedPath[IO_MAX_PATH_LENGTH + 16];
+	str_format(aConfirmedPath, sizeof(aConfirmedPath), "%s.confirmed", gs_aFallbackReportPath);
+	PrepareWideOutputPath(aConfirmedPath, gs_aWideConfirmedPath);
 
 	if(gs_aCrashLogPath[0] != '\0')
 		fs_makedir_rec_for(gs_aCrashLogPath);

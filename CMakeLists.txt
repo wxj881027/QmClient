@@ -4938,6 +4938,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/base/borrowed_allocator_test.cpp
     src/test/unit/base/io_read_all_test.cpp
     src/test/contract/base/ios_runtime_contract_test.cpp
+    src/test/support/qm_crashdump_process_probe.cpp
+    src/test/support/qm_crashdump_process_probe.h
     src/test/support/qm_exit_process_probe.cpp
     src/test/support/qm_exit_process_probe.h
     src/test/support/qm_open_link_probe.cpp
@@ -5851,6 +5853,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/support/qm_test_terminate_diagnostics.cpp
       src/test/support/qm_open_link_probe.cpp
       src/test/support/qm_popup_tooltip_boundary.cpp
+      src/test/support/qm_crashdump_process_probe.cpp
+      src/test/support/qm_crashdump_process_probe.h
       src/test/support/qm_exit_process_probe.cpp
       src/test/integration/qmclient/ui/qm_dropdown_popup_wheel_test.cpp
       src/test/integration/qmclient/ui/qm_discrete_slider_spring_test.cpp

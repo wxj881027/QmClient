@@ -7,6 +7,7 @@
 #include <engine/storage.h>
 
 #include <gtest/gtest.h>
+#include <test/support/qm_crashdump_process_probe.h>
 #include <test/support/qm_exit_process_probe.h>
 #include <test/support/qm_open_link_probe.h>
 #include <test/support/qm_test_terminate_diagnostics.h>
@@ -206,6 +207,8 @@ int main(int argc, const char **argv)
 	QmInstallMacTestTerminateDiagnostics();
 	CCmdlineFix CmdlineFix(&argc, &argv);
 	log_set_global_logger_default();
+	if(const auto Result = QmCrashdumpProcessProbe(argc, argv))
+		return *Result;
 	if(const auto Result = QmExitProcessProbe(argc, argv))
 		return *Result;
 	if(const auto Result = QmOpenLinkProbe(argc, argv))

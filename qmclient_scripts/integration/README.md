@@ -1,5 +1,13 @@
 # QmClient 进程级测试
 
+Windows 崩溃处理回归使用当前源码已构建、`EXCEPTION_HANDLING=ON` 的 `testrunner`，不会自动配置或编译：
+
+```text
+python qmclient_scripts/integration/e2e_crashdump.py <build-dir>/testrunner.exe
+```
+
+五个场景通过测试程序的独立进程入口调用真实崩溃处理器：可恢复的 Windows 软件异常不生成致命文件、不覆盖已有报告，恢复后 terminate 记录当前原因，未处理 SEH 仍生成报告，以及中文/emoji 目录同时保存文本、原生 MDMP 转储和确认文件。软件异常使用 `RaiseException` 经过原生分发，不代表真实非法访存、栈损坏或驱动崩溃已验收。每次等待上限 20 秒，超时只结束本次启动的探测进程；不启动完整客户端或报告窗口，不读玩家配置，不访问网络。日志和产物保留在 `tmp/tests/crashdump-*`。场景已补充，未执行。
+
 Windows 独立截图查看器冒烟使用已有构建，不自动编译：
 
 ```text

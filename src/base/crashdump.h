@@ -11,7 +11,7 @@
  *
  * @ingroup Crash-Dumping
  *
- * @param log_file_path Absolute path to which crash log file should be written.
+ * @param log_file_path UTF-8编码的崩溃日志绝对路径。
  */
 void crashdump_init_if_available(const char *log_file_path);
 
