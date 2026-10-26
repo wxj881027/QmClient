@@ -155,6 +155,7 @@ void crashdump_init_if_available(const char *log_file_path)
 
 #else
 
+#include "crash_output_windows.h"
 #include "crashdump_windows.h"
 #include "log.h"
 #include "windows.h"
@@ -196,63 +197,8 @@ static LPTOP_LEVEL_EXCEPTION_FILTER gs_pPreviousUnhandledExceptionFilter = nullp
 // 首个致命入口独占此固定快照，不额外占用已受损线程的大块栈空间。
 static crashdump_windows::CExceptionSnapshot gs_ExceptionSnapshot;
 
-class CNativeCrashFile
-{
-	HANDLE m_Handle;
-	DWORD m_Error = ERROR_SUCCESS;
-
-public:
-	explicit CNativeCrashFile(HANDLE Handle) noexcept :
-		m_Handle(Handle) {}
-	CNativeCrashFile(const CNativeCrashFile &) = delete;
-	CNativeCrashFile &operator=(const CNativeCrashFile &) = delete;
-	void Fail(DWORD Error) noexcept
-	{
-		if(m_Error == ERROR_SUCCESS)
-			m_Error = Error == ERROR_SUCCESS ? ERROR_WRITE_FAULT : Error;
-	}
-	DWORD Error() const noexcept { return m_Error; }
-	bool Write(const void *pData, size_t Size, size_t &Written) noexcept
-	{
-		const DWORD Requested = Size > MAXDWORD ? MAXDWORD : static_cast<DWORD>(Size);
-		DWORD NativeWritten = 0;
-		if(!WriteFile(m_Handle, pData, Requested, &NativeWritten, nullptr))
-		{
-			Fail(GetLastError());
-			return false;
-		}
-		if(NativeWritten == 0 || NativeWritten > Requested)
-		{
-			Fail(ERROR_WRITE_FAULT);
-			return false;
-		}
-		Written = NativeWritten;
-		return true;
-	}
-	bool Flush() noexcept
-	{
-		if(FlushFileBuffers(m_Handle))
-			return true;
-		Fail(GetLastError());
-		return false;
-	}
-	bool Close() noexcept
-	{
-		const HANDLE Handle = m_Handle;
-		m_Handle = INVALID_HANDLE_VALUE;
-		if(CloseHandle(Handle))
-			return true;
-		Fail(GetLastError());
-		return false;
-	}
-};
-
+using CNativeCrashFile = crash_output::CWindowsFile;
 using CCrashWriter = crash_output::CWriter<CNativeCrashFile>;
-
-static bool PublishCrashOutput(const wchar_t *pCandidate, const wchar_t *pTarget) noexcept
-{
-	return MoveFileExW(pCandidate, pTarget, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != FALSE;
-}
 
 static void WriteRaw(CCrashWriter &Output, const char *pText);
 static const char *ExceptionCodeToString(DWORD ExceptionCode);
@@ -806,7 +752,7 @@ static bool WriteMinimalCrashReport(const char *pReason, const crashdump_windows
 	WriteLoadedModules(Output);
 
 	const bool Completed = Output.Finish();
-	const bool Published = Completed && PublishCrashOutput(gs_aWideReportCandidatePath, gs_aWideFallbackReportPath);
+	const bool Published = Completed && crash_output::PublishWindowsOutput(gs_aWideReportCandidatePath, gs_aWideFallbackReportPath);
 	gs_FallbackReportWritten.store(Published, std::memory_order_release);
 	return Published;
 }
@@ -844,7 +790,7 @@ static bool TryWriteMiniDumpFile(const wchar_t *pFilename, EXCEPTION_POINTERS *p
 	if(!Result)
 		File.Fail(GetLastError());
 	bool Completed = Output.Finish(Result != FALSE);
-	if(Completed && !PublishCrashOutput(gs_aWideDumpCandidatePath, pFilename))
+	if(Completed && !crash_output::PublishWindowsOutput(gs_aWideDumpCandidatePath, pFilename))
 	{
 		File.Fail(GetLastError());
 		Completed = false;
@@ -942,7 +888,7 @@ static void LaunchFatalCrashReporter()
 	CNativeCrashFile File(ConfirmedFile);
 	CCrashWriter Output(File);
 	WriteRaw(Output, "confirmed fatal crash\r\n");
-	if(!Output.Finish() || !PublishCrashOutput(gs_aWideConfirmedCandidatePath, gs_aWideConfirmedPath))
+	if(!Output.Finish() || !crash_output::PublishWindowsOutput(gs_aWideConfirmedCandidatePath, gs_aWideConfirmedPath))
 		return;
 	crashdump_launch_reporter_if_available(gs_aFallbackReportPath);
 }

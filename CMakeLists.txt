@@ -2715,6 +2715,7 @@ set_src(BASE GLOB_RECURSE src/base
   crashdump.cpp
   crashdump.h
   crash_output.h
+  crash_output_windows.h
   crashdump_windows.h
   dbg.cpp
   dbg.h
@@ -5868,6 +5869,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/support/qm_popup_tooltip_boundary.cpp
       src/test/support/qm_crashdump_process_probe.cpp
       src/test/support/qm_crashdump_process_probe.h
+      src/engine/client/qm_hang_diagnostics.cpp
+      src/engine/client/qm_hang_diagnostics.h
       src/test/support/qm_exit_process_probe.cpp
       src/test/integration/qmclient/ui/qm_dropdown_popup_wheel_test.cpp
       src/test/integration/qmclient/ui/qm_discrete_slider_spring_test.cpp

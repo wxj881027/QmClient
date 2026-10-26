@@ -77,7 +77,44 @@ TEST_F(CQmHangDumpReportTest, AppendFailureIsReturnedToTheCaller)
 	EXPECT_EQ(ReadReport(), "Report type: hang\nClient state: offline (0)\n");
 }
 
+TEST_F(CQmHangDumpReportTest, FlushFailureIsRecordedWithoutClaimingACompletedDump)
+{
+	const QmHangDiagnostics::SDumpResult Result{QmHangDiagnostics::EDumpStage::FLUSH_FILE, 112};
+	ASSERT_TRUE(QmHangDiagnostics::AppendDumpResult(m_aReportPath, m_aDumpPath, Result));
+	EXPECT_NE(ReadReport().find("Minidump status: failed\n"), std::string::npos);
+	EXPECT_NE(ReadReport().find("Minidump stage: flush_file\nMinidump error: 112\n"), std::string::npos);
+}
+
+TEST_F(CQmHangDumpReportTest, CloseFailureIsRecordedWithoutClaimingACompletedDump)
+{
+	const QmHangDiagnostics::SDumpResult Result{QmHangDiagnostics::EDumpStage::CLOSE_FILE, 29};
+	ASSERT_TRUE(QmHangDiagnostics::AppendDumpResult(m_aReportPath, m_aDumpPath, Result));
+	EXPECT_NE(ReadReport().find("Minidump status: failed\n"), std::string::npos);
+	EXPECT_NE(ReadReport().find("Minidump stage: close_file\nMinidump error: 29\n"), std::string::npos);
+}
+
+TEST_F(CQmHangDumpReportTest, PublishFailureIsRecordedWithoutClaimingACompletedDump)
+{
+	const QmHangDiagnostics::SDumpResult Result{QmHangDiagnostics::EDumpStage::PUBLISH_FILE, 5};
+	ASSERT_TRUE(QmHangDiagnostics::AppendDumpResult(m_aReportPath, m_aDumpPath, Result));
+	EXPECT_NE(ReadReport().find("Minidump status: failed\n"), std::string::npos);
+	EXPECT_NE(ReadReport().find("Minidump stage: publish_file\nMinidump error: 5\n"), std::string::npos);
+}
+
 #if defined(CONF_FAMILY_WINDOWS)
+TEST_F(CQmHangDumpReportTest, InvalidFilenameReturnsOpenFailureBeforeNativePreparation)
+{
+	const char aInvalid[] = {'x', static_cast<char>(0xff), '\0'};
+	const char *apPaths[] = {nullptr, "", aInvalid};
+	for(const char *pPath : apPaths)
+	{
+		const auto Result = QmHangDiagnostics::WriteDump(pPath);
+		EXPECT_FALSE(Result.Written());
+		EXPECT_EQ(Result.m_Stage, QmHangDiagnostics::EDumpStage::OPEN_FILE);
+		EXPECT_EQ(Result.m_Error, ERROR_INVALID_PARAMETER);
+	}
+}
+
 TEST_F(CQmHangDumpReportTest, MissingDumpDirectoryReportsTheWindowsOpenError)
 {
 	char aMissingDump[IO_MAX_PATH_LENGTH];

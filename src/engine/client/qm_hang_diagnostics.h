@@ -15,6 +15,11 @@
 #include <string>
 #include <thread>
 
+namespace crash_output
+{
+	struct SWindowsFileOperations;
+}
+
 namespace QmHangDiagnostics
 {
 	struct SSnapshot
@@ -78,6 +83,9 @@ namespace QmHangDiagnostics
 		FIND_WRITER,
 		OPEN_FILE,
 		WRITE_DUMP,
+		FLUSH_FILE,
+		CLOSE_FILE,
+		PUBLISH_FILE,
 		COMPLETE,
 	};
 
@@ -94,7 +102,8 @@ namespace QmHangDiagnostics
 
 #if defined(CONF_FAMILY_WINDOWS)
 	using FEncodeFilename = std::wstring (*)(const char *);
-	SDumpResult WriteDump(const char *pFilename, FEncodeFilename pfnEncode = nullptr) noexcept;
+	// 先收尾同目录候选再替换，任何失败保留原正式文件。
+	SDumpResult WriteDump(const char *pFilename, FEncodeFilename pfnEncode = nullptr, const crash_output::SWindowsFileOperations *pOperations = nullptr) noexcept;
 #endif
 }
 

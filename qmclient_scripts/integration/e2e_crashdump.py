@@ -235,7 +235,78 @@ def scenario_confirmation_publish_failure_keeps_candidate(binary: Path, director
 			raise AssertionError("confirmation failure damaged the valid official native dump")
 
 
+def check_hangdump_result(result: subprocess.CompletedProcess[bytes], stage: str, error: int | None, written: bool, closes: int) -> None:
+	require_exit(result, 0)
+	fields = dict(part.split("=", 1) for part in result.stdout.decode("ascii").strip().split() if "=" in part)
+	if fields.get("stage") != stage or fields.get("written") != str(int(written)) or fields.get("closes") != str(closes):
+		raise AssertionError(f"wrong hang dump completion: {result.stdout!r}")
+	actual_error = int(fields["error"])
+	if (error is None and actual_error == 0) or (error is not None and actual_error != error):
+		raise AssertionError(f"wrong hang dump error: {result.stdout!r}")
+
+
+def require_native_dump(path: Path) -> None:
+	with path.open("rb") as file:
+		if file.read(4) != b"MDMP":
+			raise AssertionError(f"invalid real MiniDump signature: {path}")
+
+
+def scenario_hangdump_publishes_after_complete_native_output(binary: Path, directory: Path) -> None:
+	_, _, dump, _ = paths(directory)
+	dump.write_bytes(b"previous dump")
+	result = run_probe(binary, directory, "hangdump-native", dump)
+	check_hangdump_result(result, "complete", 0, True, 1)
+	require_native_dump(dump)
+	if Path(str(dump) + ".tmp").exists():
+		raise AssertionError("successful hang dump publication retained the candidate")
+
+
+def scenario_hangdump_candidate_open_failure_preserves_old_dump(binary: Path, directory: Path) -> None:
+	_, _, dump, _ = paths(directory)
+	dump.write_bytes(b"previous dump")
+	Path(str(dump) + ".tmp").mkdir()
+	check_hangdump_result(run_probe(binary, directory, "hangdump-native", dump), "open_file", None, False, 0)
+	if dump.read_bytes() != b"previous dump":
+		raise AssertionError("candidate open failure changed the official hang dump")
+
+
+def scenario_hangdump_publish_failure_preserves_target_and_candidate(binary: Path, directory: Path) -> None:
+	_, _, dump, _ = paths(directory)
+	dump.mkdir()
+	check_hangdump_result(run_probe(binary, directory, "hangdump-native", dump), "publish_file", None, False, 1)
+	if not dump.is_dir():
+		raise AssertionError("failed hang dump publication replaced a directory")
+	require_native_dump(Path(str(dump) + ".tmp"))
+
+
+def check_failed_hangdump_completion(binary: Path, directory: Path, mode: str, stage: str, error: int) -> None:
+	_, _, dump, _ = paths(directory)
+	dump.write_bytes(b"previous dump")
+	check_hangdump_result(run_probe(binary, directory, mode, dump), stage, error, False, 1)
+	if dump.read_bytes() != b"previous dump":
+		raise AssertionError("failed hang dump completion overwrote the official file")
+	require_native_dump(Path(str(dump) + ".tmp"))
+
+
+def scenario_hangdump_flush_feedback_failure_preserves_old_dump(binary: Path, directory: Path) -> None:
+	check_failed_hangdump_completion(binary, directory, "hangdump-flush-failure", "flush_file", 112)
+
+
+def scenario_hangdump_close_feedback_failure_preserves_old_dump(binary: Path, directory: Path) -> None:
+	check_failed_hangdump_completion(binary, directory, "hangdump-close-failure", "close_file", 29)
+
+
+def scenario_hangdump_first_error_survives_later_close_failure(binary: Path, directory: Path) -> None:
+	check_failed_hangdump_completion(binary, directory, "hangdump-both-failure", "flush_file", 112)
+
+
 SCENARIOS = {
+	"hangdump_complete": scenario_hangdump_publishes_after_complete_native_output,
+	"hangdump_candidate_failure": scenario_hangdump_candidate_open_failure_preserves_old_dump,
+	"hangdump_publish_failure": scenario_hangdump_publish_failure_preserves_target_and_candidate,
+	"hangdump_flush_failure": scenario_hangdump_flush_feedback_failure_preserves_old_dump,
+	"hangdump_close_failure": scenario_hangdump_close_feedback_failure_preserves_old_dump,
+	"hangdump_first_error": scenario_hangdump_first_error_survives_later_close_failure,
 	"complete_publication": scenario_complete_files_replace_previous_artifacts,
 	"report_candidate_failure": scenario_report_candidate_open_failure_preserves_existing_file,
 	"report_publish_failure": scenario_report_publish_failure_keeps_complete_candidate,

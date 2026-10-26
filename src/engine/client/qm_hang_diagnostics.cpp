@@ -1,5 +1,7 @@
 #include "qm_hang_diagnostics.h"
 
+#include <base/crash_output.h>
+#include <base/crash_output_windows.h>
 #include <base/system.h>
 #include <base/windows.h>
 
@@ -139,6 +141,9 @@ namespace QmHangDiagnostics
 		case EDumpStage::FIND_WRITER: return "find_writer";
 		case EDumpStage::OPEN_FILE: return "open_file";
 		case EDumpStage::WRITE_DUMP: return "write_dump";
+		case EDumpStage::FLUSH_FILE: return "flush_file";
+		case EDumpStage::CLOSE_FILE: return "close_file";
+		case EDumpStage::PUBLISH_FILE: return "publish_file";
 		case EDumpStage::COMPLETE: return "complete";
 		}
 		return "unknown";
@@ -165,10 +170,12 @@ namespace QmHangDiagnostics
 	}
 
 #if defined(CONF_FAMILY_WINDOWS)
-	SDumpResult WriteDump(const char *pFilename, FEncodeFilename pfnEncode) noexcept
+	SDumpResult WriteDump(const char *pFilename, FEncodeFilename pfnEncode, const crash_output::SWindowsFileOperations *pOperations) noexcept
 	{
 		using MiniDumpWriteDumpFunc = BOOL(WINAPI *)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE,
 			const MINIDUMP_EXCEPTION_INFORMATION *, const MINIDUMP_USER_STREAM_INFORMATION *, const MINIDUMP_CALLBACK_INFORMATION *);
+		if(!pFilename || !pFilename[0] || !str_utf8_check(pFilename))
+			return {EDumpStage::OPEN_FILE, ERROR_INVALID_PARAMETER};
 		EDumpStage Stage = EDumpStage::LOAD_LIBRARY;
 		try
 		{
@@ -180,17 +187,36 @@ namespace QmHangDiagnostics
 			if(pMiniDumpWriteDump == nullptr)
 				return {Stage, GetLastError()};
 			Stage = EDumpStage::OPEN_FILE;
+			char aCandidate[IO_MAX_PATH_LENGTH];
+			if(!crash_output::AppendPathSuffix(pFilename, ".tmp", aCandidate, sizeof(aCandidate)))
+				return {Stage, ERROR_FILENAME_EXCED_RANGE};
 			const std::wstring Filename = pfnEncode ? pfnEncode(pFilename) : windows_utf8_to_wide(pFilename);
-			HANDLE FileHandle = CreateFileW(Filename.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+			const std::wstring Candidate = pfnEncode ? pfnEncode(aCandidate) : windows_utf8_to_wide(aCandidate);
+			HANDLE FileHandle = CreateFileW(Candidate.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 			if(FileHandle == INVALID_HANDLE_VALUE)
 				return {Stage, GetLastError()};
-			std::unique_ptr<void, decltype(&CloseHandle)> File(FileHandle, &CloseHandle);
+			crash_output::CWindowsFile File(FileHandle, pOperations);
+			crash_output::CWriter Output(File);
 			Stage = EDumpStage::WRITE_DUMP;
 			const MINIDUMP_TYPE DumpType = MINIDUMP_TYPE(MiniDumpWithDataSegs | MiniDumpWithHandleData | MiniDumpWithIndirectlyReferencedMemory); // NOLINT(clang-analyzer-optin.core.EnumCastOutOfRange)
-			const BOOL Result = pMiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), File.get(), DumpType, nullptr, nullptr, nullptr);
-			// 在局部 owner 回收文件和 DLL 前保存原始错误码。
-			const DWORD Error = Result ? ERROR_SUCCESS : GetLastError();
-			return {Result ? EDumpStage::COMPLETE : Stage, Error};
+			const BOOL Result = pMiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), FileHandle, DumpType, nullptr, nullptr, nullptr);
+			if(!Result)
+				File.Fail(GetLastError());
+			if(!Output.Finish(Result != FALSE))
+			{
+				using EOperation = crash_output::CWindowsFile::EOperation;
+				if(File.FailedOperation() == EOperation::FLUSH)
+					Stage = EDumpStage::FLUSH_FILE;
+				else if(File.FailedOperation() == EOperation::CLOSE)
+					Stage = EDumpStage::CLOSE_FILE;
+				return {Stage, File.Error()};
+			}
+			if(!crash_output::PublishWindowsOutput(Candidate.c_str(), Filename.c_str()))
+			{
+				File.Fail(GetLastError(), crash_output::CWindowsFile::EOperation::PUBLISH);
+				return {EDumpStage::PUBLISH_FILE, File.Error()};
+			}
+			return {EDumpStage::COMPLETE, ERROR_SUCCESS};
 		}
 		catch(const std::bad_alloc &)
 		{

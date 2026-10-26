@@ -1,9 +1,12 @@
 #include "qm_crashdump_process_probe.h"
 
+#include <base/crash_output_windows.h>
 #include <base/crashdump.h>
 #include <base/dbg.h>
 #include <base/logger.h>
 #include <base/system.h>
+
+#include <engine/client/qm_hang_diagnostics.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -55,6 +58,27 @@ namespace
 		}
 	};
 
+	int gs_HangDumpCloseCalls = 0;
+	bool gs_HangDumpFailClose = false;
+	BOOL WINAPI FailHangDumpFlush(HANDLE)
+	{
+		SetLastError(ERROR_DISK_FULL);
+		return FALSE;
+	}
+	BOOL WINAPI CloseHangDumpFile(HANDLE File)
+	{
+		++gs_HangDumpCloseCalls;
+		if(!CloseHandle(File))
+			return FALSE;
+		if(gs_HangDumpFailClose)
+		{
+			// 真实句柄已关闭，只替换外部关闭反馈以检查生产完成状态。
+			SetLastError(ERROR_WRITE_FAULT);
+			return FALSE;
+		}
+		return TRUE;
+	}
+
 	LONG WINAPI RecoverAccessViolation(EXCEPTION_POINTERS *pException)
 	{
 		if(pException && pException->ExceptionRecord && pException->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION)
@@ -76,6 +100,23 @@ std::optional<int> QmCrashdumpProcessProbe(int argc, const char **ppArgv)
 	}
 	if(argc != 4)
 		return 2;
+	const bool HangDumpNative = str_comp(ppArgv[2], "hangdump-native") == 0;
+	const bool HangDumpFlush = str_comp(ppArgv[2], "hangdump-flush-failure") == 0;
+	const bool HangDumpClose = str_comp(ppArgv[2], "hangdump-close-failure") == 0;
+	const bool HangDumpBoth = str_comp(ppArgv[2], "hangdump-both-failure") == 0;
+	if(HangDumpNative || HangDumpFlush || HangDumpClose || HangDumpBoth)
+	{
+		SetErrorMode(SEM_NOGPFAULTERRORBOX | SEM_FAILCRITICALERRORS);
+		crash_output::SWindowsFileOperations Operations;
+		Operations.m_pfnClose = CloseHangDumpFile;
+		if(HangDumpFlush || HangDumpBoth)
+			Operations.m_pfnFlush = FailHangDumpFlush;
+		gs_HangDumpCloseCalls = 0;
+		gs_HangDumpFailClose = HangDumpClose || HangDumpBoth;
+		const auto Result = QmHangDiagnostics::WriteDump(ppArgv[3], nullptr, &Operations);
+		std::printf("hangdump stage=%s error=%lu written=%d closes=%d\n", QmHangDiagnostics::DumpStageName(Result.m_Stage), Result.m_Error, Result.Written() ? 1 : 0, gs_HangDumpCloseCalls);
+		return 0;
+	}
 	const bool Recovered = str_comp(ppArgv[2], "recovered") == 0;
 	const bool RecoveredThenTerminate = str_comp(ppArgv[2], "recovered-then-terminate") == 0;
 	const bool Terminate = str_comp(ppArgv[2], "terminate") == 0;
