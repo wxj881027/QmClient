@@ -1,13 +1,14 @@
 #ifndef ENGINE_SHARED_WEBSOCKET_NATIVE_STATE_H
 #define ENGINE_SHARED_WEBSOCKET_NATIVE_STATE_H
 
+#include <base/borrowed_allocator.h>
+
 #include <engine/shared/network.h>
 #include <engine/shared/ringbuffer.h>
 
 #include <limits>
 #include <map>
 #include <memory>
-#include <memory_resource>
 #include <utility>
 
 struct lws;
@@ -38,8 +39,8 @@ public:
 	};
 
 private:
-	std::pmr::map<lws *, std::unique_ptr<SSession>> m_Sessions;
-	std::pmr::map<NETADDR, SSession *> m_Ports;
+	std::map<lws *, std::unique_ptr<SSession>, std::less<lws *>, CBorrowedAllocator<std::pair<lws *const, std::unique_ptr<SSession>>>> m_Sessions;
+	std::map<NETADDR, SSession *, std::less<NETADDR>, CBorrowedAllocator<std::pair<const NETADDR, SSession *>>> m_Ports;
 	TRecvBuffer m_RecvBuffer;
 
 	static bool ChunkSize(size_t Size, size_t Before, size_t After, int &Result)
@@ -52,7 +53,7 @@ private:
 	}
 
 public:
-	explicit CWebsocketNativeState(std::pmr::memory_resource *pResource = std::pmr::get_default_resource()) :
+	explicit CWebsocketNativeState(IAllocationResource *pResource = nullptr) :
 		m_Sessions(pResource), m_Ports(pResource) {}
 	CWebsocketNativeState(const CWebsocketNativeState &) = delete;
 	CWebsocketNativeState &operator=(const CWebsocketNativeState &) = delete;

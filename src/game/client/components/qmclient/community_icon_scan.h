@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_COMMUNITY_ICON_SCAN_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_COMMUNITY_ICON_SCAN_H
 
+#include <base/borrowed_allocator.h>
 #include <base/hash.h>
 #include <base/system.h>
 
@@ -10,7 +11,6 @@
 #include <cstddef>
 #include <deque>
 #include <memory>
-#include <memory_resource>
 #include <optional>
 #include <span>
 #include <utility>
@@ -149,12 +149,12 @@ namespace qm_community_icons
 	class CScan
 	{
 		std::optional<SHA256_DIGEST> m_InfoSha256;
-		std::pmr::vector<SRequest> m_vRequests;
+		std::vector<SRequest, CBorrowedAllocator<SRequest>> m_vRequests;
 		std::size_t m_Pending = 0;
 
 	public:
 		// 内存源借用到计划存储释放；只在主线程使用，回调不得重入或重建本计划。
-		explicit CScan(std::pmr::memory_resource *pMemory = std::pmr::new_delete_resource()) :
+		explicit CScan(IAllocationResource *pMemory = nullptr) :
 			m_vRequests(pMemory) {}
 		bool Matches(const SHA256_DIGEST &InfoSha256) const { return m_InfoSha256 == InfoSha256; }
 		std::size_t Pending() const { return m_Pending; }
@@ -171,7 +171,7 @@ namespace qm_community_icons
 				return true;
 			try
 			{
-				std::pmr::vector<SRequest> vRequests(m_vRequests.get_allocator().resource());
+				std::vector<SRequest, CBorrowedAllocator<SRequest>> vRequests(m_vRequests.get_allocator().Resource());
 				const auto Count = std::count_if(Communities.begin(), Communities.end(), [](const CCommunity &Community) { return Community.IconSha256().has_value(); });
 				vRequests.reserve(static_cast<std::size_t>(Count));
 				for(const auto &Community : Communities)

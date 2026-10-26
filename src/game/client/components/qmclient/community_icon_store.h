@@ -3,6 +3,7 @@
 
 #include "community_icon_limits.h"
 
+#include <base/borrowed_allocator.h>
 #include <base/hash.h>
 #include <base/system.h>
 
@@ -12,7 +13,6 @@
 #include <algorithm>
 #include <array>
 #include <limits>
-#include <memory_resource>
 #include <optional>
 #include <span>
 #include <type_traits>
@@ -56,7 +56,7 @@ namespace qm_community_icons
 			std::array<std::size_t, 2> m_aPixelBytes{};
 		};
 		static_assert(std::is_nothrow_copy_constructible_v<SEntry> && std::is_nothrow_move_assignable_v<SEntry>);
-		std::pmr::vector<SEntry> m_vEntries;
+		std::vector<SEntry, CBorrowedAllocator<SEntry>> m_vEntries;
 		// 上传期间持有候选对，替换后持有旧对，均不需要再次分配。
 		std::array<IGraphics::CTextureHandle, 2> m_aRetired;
 		std::array<std::size_t, 2> m_aRetiredPixelBytes{};
@@ -117,7 +117,7 @@ namespace qm_community_icons
 		}
 
 	public:
-		explicit CStore(std::pmr::memory_resource *pMemory = std::pmr::new_delete_resource(), std::size_t PixelByteLimit = MAX_STORE_TEXTURE_PIXEL_BYTES) :
+		explicit CStore(IAllocationResource *pMemory = nullptr, std::size_t PixelByteLimit = MAX_STORE_TEXTURE_PIXEL_BYTES) :
 			m_vEntries(pMemory), m_PixelByteLimit(PixelByteLimit)
 		{
 		}

@@ -2706,6 +2706,7 @@ add_custom_command(OUTPUT "src/generated/wordlist.h"
 # Sources
 set_src(BASE GLOB_RECURSE src/base
   aio_buffer.h
+  borrowed_allocator.h
   bezier.cpp
   bezier.h
   color.cpp
@@ -4934,6 +4935,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/image_test.cpp
     src/test/unit/engine/sound_buffer_test.cpp
     src/test/unit/base/io_test.cpp
+    src/test/unit/base/borrowed_allocator_test.cpp
     src/test/unit/base/io_read_all_test.cpp
     src/test/contract/base/ios_runtime_contract_test.cpp
     src/test/support/qm_exit_process_probe.cpp

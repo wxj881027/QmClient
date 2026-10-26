@@ -1,10 +1,11 @@
+#include <base/borrowed_allocator.h>
+
 #include <game/client/components/qmclient/font_store_catalog.h>
 
 #include <gtest/gtest.h>
 #include <test/support/job_wait.h>
 #include <test/test.h>
 
-#include <memory_resource>
 #include <new>
 
 namespace
@@ -94,23 +95,22 @@ TEST_F(CQmFontStoreCatalog, MalformedCatalogCompletesWithEmptyResult)
 
 namespace
 {
-	class CFontCatalogMemory : public std::pmr::memory_resource
+	class CFontCatalogMemory : public IAllocationResource
 	{
-		void *do_allocate(size_t Bytes, size_t Alignment) override
+		void *Allocate(size_t Bytes, size_t Alignment) override
 		{
 			if(m_AllowedAllocations == 0)
 				throw std::bad_alloc();
 			if(m_AllowedAllocations > 0)
 				--m_AllowedAllocations;
-			void *pData = std::pmr::new_delete_resource()->allocate(Bytes, Alignment);
+			void *pData = IAllocationResource::AllocateDefault(Bytes, Alignment);
 			++m_Allocations;
 			return pData;
 		}
-		void do_deallocate(void *pData, size_t Bytes, size_t Alignment) override
+		void Deallocate(void *pData, size_t Bytes, size_t Alignment) noexcept override
 		{
-			std::pmr::new_delete_resource()->deallocate(pData, Bytes, Alignment);
+			IAllocationResource::DeallocateDefault(pData, Bytes, Alignment);
 		}
-		bool do_is_equal(const memory_resource &Other) const noexcept override { return this == &Other; }
 
 	public:
 		int m_AllowedAllocations = -1;
@@ -132,8 +132,8 @@ TEST_F(CQmFontStoreCatalog, EachOuterVectorAllocationFailurePreservesBothCatalog
 		Family.m_vEntryIndices.push_back(0);
 	};
 	CFontCatalogMemory BaselineMemory;
-	std::pmr::vector<fontstore::SEntry> BaselineEntries(&BaselineMemory);
-	std::pmr::vector<fontstore::SFamily> BaselineFamilies(&BaselineMemory);
+	std::vector<fontstore::SEntry, CBorrowedAllocator<fontstore::SEntry>> BaselineEntries(&BaselineMemory);
+	std::vector<fontstore::SFamily, CBorrowedAllocator<fontstore::SFamily>> BaselineFamilies(&BaselineMemory);
 	Seed(BaselineEntries, BaselineFamilies);
 	const int Before = BaselineMemory.m_Allocations;
 	fontstore::LoadCatalog(m_pStorage.get(), BaselineEntries, BaselineFamilies);
@@ -143,8 +143,8 @@ TEST_F(CQmFontStoreCatalog, EachOuterVectorAllocationFailurePreservesBothCatalog
 	{
 		SCOPED_TRACE(Allowed);
 		CFontCatalogMemory Memory;
-		std::pmr::vector<fontstore::SEntry> Entries(&Memory);
-		std::pmr::vector<fontstore::SFamily> Families(&Memory);
+		std::vector<fontstore::SEntry, CBorrowedAllocator<fontstore::SEntry>> Entries(&Memory);
+		std::vector<fontstore::SFamily, CBorrowedAllocator<fontstore::SFamily>> Families(&Memory);
 		Seed(Entries, Families);
 		const auto *pEntries = Entries.data();
 		const auto *pFamilies = Families.data();

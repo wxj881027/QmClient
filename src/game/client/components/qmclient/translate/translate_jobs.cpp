@@ -63,11 +63,11 @@ void CTranslateJobQueue::CancelOutgoing(int Connection)
 	m_vJobs.erase(std::remove_if(m_vJobs.begin(), m_vJobs.end(), [Connection](const SPending &Pending) { return Pending.m_Job.m_Outgoing && Pending.m_Job.m_Connection == Connection; }), m_vJobs.end());
 }
 
-std::pmr::vector<STranslateCompletion> CTranslateJobQueue::Update(const std::function<bool(const STranslateJob &)> &IncomingStillValid, std::pmr::memory_resource *pResultMemory)
+std::vector<STranslateCompletion, CBorrowedAllocator<STranslateCompletion>> CTranslateJobQueue::Update(const std::function<bool(const STranslateJob &)> &IncomingStillValid, IAllocationResource *pResultMemory)
 {
 	static_assert(std::is_nothrow_move_constructible_v<STranslateCompletion>);
 	static_assert(std::is_nothrow_move_assignable_v<SPending>);
-	std::pmr::vector<STranslateCompletion> vCompleted(pResultMemory);
+	std::vector<STranslateCompletion, CBorrowedAllocator<STranslateCompletion>> vCompleted(pResultMemory);
 	for(auto It = m_vJobs.begin(); It != m_vJobs.end();)
 	{
 		try
@@ -99,7 +99,7 @@ std::pmr::vector<STranslateCompletion> CTranslateJobQueue::Update(const std::fun
 			// 只有出现完成结果才准备容量，等待HTTP的帧不为结果列表分配。
 			if(vCompleted.capacity() == 0)
 				vCompleted.reserve(m_vJobs.size());
-			std::pmr::string SendText(pResultMemory);
+			std::basic_string<char, std::char_traits<char>, CBorrowedAllocator<char>> SendText(pResultMemory);
 			if(Job.m_Outgoing && Success)
 				SendText = Job.m_pTranslateResponse->m_Text;
 			// 容量和正文均已准备；后续移动与队列擦除不抛异常。

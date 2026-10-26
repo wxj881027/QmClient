@@ -1,31 +1,31 @@
+#include <base/borrowed_allocator.h>
+
 #include <game/client/components/qmclient/emoticon_projectile.h>
 
 #include <gtest/gtest.h>
 
 #include <array>
 #include <limits>
-#include <memory_resource>
 #include <new>
 
 namespace
 {
-	class CFailureResource : public std::pmr::memory_resource
+	class CFailureResource : public IAllocationResource
 	{
-		void *do_allocate(std::size_t Bytes, std::size_t Alignment) override
+		void *Allocate(std::size_t Bytes, std::size_t Alignment) override
 		{
 			++m_Calls;
 			if(m_Calls == m_FailAt)
 				throw std::bad_alloc();
-			void *pMemory = std::pmr::new_delete_resource()->allocate(Bytes, Alignment);
+			void *pMemory = IAllocationResource::AllocateDefault(Bytes, Alignment);
 			++m_LiveBlocks;
 			return pMemory;
 		}
-		void do_deallocate(void *pMemory, std::size_t Bytes, std::size_t Alignment) override
+		void Deallocate(void *pMemory, std::size_t Bytes, std::size_t Alignment) noexcept override
 		{
 			--m_LiveBlocks;
-			std::pmr::new_delete_resource()->deallocate(pMemory, Bytes, Alignment);
+			IAllocationResource::DeallocateDefault(pMemory, Bytes, Alignment);
 		}
-		bool do_is_equal(const std::pmr::memory_resource &Other) const noexcept override { return this == &Other; }
 
 	public:
 		int m_Calls = 0;

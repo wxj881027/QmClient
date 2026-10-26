@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_EMOTICON_PROJECTILE_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_EMOTICON_PROJECTILE_H
 
+#include <base/borrowed_allocator.h>
 #include <base/vmath.h>
 
 #include <engine/gfx/image_manipulation.h>
@@ -14,7 +15,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
-#include <memory_resource>
 #include <vector>
 
 namespace QmEmoticon
@@ -55,8 +55,8 @@ namespace QmEmoticon
 			std::size_t m_NextNode;
 		};
 		static constexpr std::size_t RECTS_PER_LEAF = 8;
-		std::pmr::vector<SRect> m_vRects;
-		std::pmr::vector<SBoundsNode> m_vBoundsNodes;
+		std::vector<SRect, CBorrowedAllocator<SRect>> m_vRects;
+		std::vector<SBoundsNode, CBorrowedAllocator<SBoundsNode>> m_vBoundsNodes;
 		int m_Width = 1;
 		int m_Height = 1;
 		vec2 m_BoundsCenter = vec2(0.0f, 0.0f);
@@ -123,7 +123,7 @@ namespace QmEmoticon
 
 	public:
 		// 自定义内存源借用到本对象全部存储释放；默认仍使用标准new/delete。
-		explicit CAlphaMask(std::pmr::memory_resource *pMemory = std::pmr::new_delete_resource()) :
+		explicit CAlphaMask(IAllocationResource *pMemory = nullptr) :
 			m_vRects(pMemory), m_vBoundsNodes(pMemory)
 		{
 		}
@@ -146,8 +146,8 @@ namespace QmEmoticon
 			{
 				// 按上一行的全部区间合并，避免分离轮廓退化成每个像素行一个矩形。
 				// 两行的区间都按横坐标排列，游标单向推进，不扫描历史矩形。
-				std::pmr::vector<std::size_t> vPreviousRow(m_vRects.get_allocator().resource());
-				std::pmr::vector<std::size_t> vCurrentRow(m_vRects.get_allocator().resource());
+				std::vector<std::size_t, CBorrowedAllocator<std::size_t>> vPreviousRow(m_vRects.get_allocator().Resource());
+				std::vector<std::size_t, CBorrowedAllocator<std::size_t>> vCurrentRow(m_vRects.get_allocator().Resource());
 				for(int Y = 0; Y < Height; ++Y)
 				{
 					vCurrentRow.clear();
@@ -206,8 +206,8 @@ namespace QmEmoticon
 				// 新材质已经开始加载，不能继续使用旧轮廓或部分构建的包围树。
 				Clear();
 				// 分配失败时释放容量，避免半成品继续占用内存。
-				std::pmr::vector<SRect>(m_vRects.get_allocator()).swap(m_vRects);
-				std::pmr::vector<SBoundsNode>(m_vBoundsNodes.get_allocator()).swap(m_vBoundsNodes);
+				std::vector<SRect, CBorrowedAllocator<SRect>>(m_vRects.get_allocator()).swap(m_vRects);
+				std::vector<SBoundsNode, CBorrowedAllocator<SBoundsNode>>(m_vBoundsNodes.get_allocator()).swap(m_vBoundsNodes);
 				return false;
 			}
 		}

@@ -1,10 +1,11 @@
+#include <base/borrowed_allocator.h>
+
 #include <game/client/components/qmclient/theme_catalog.h>
 
 #include <gtest/gtest.h>
+#include <test/support/rejectable_allocation_resource.h>
 
-#include <array>
 #include <cstddef>
-#include <memory_resource>
 #include <new>
 #include <vector>
 
@@ -46,14 +47,13 @@ TEST(ThemeCatalog, ExistingEntriesAndIconStateArePreserved)
 
 TEST(ThemeCatalog, AllocationFailureLeavesNoPartialDefaultsAndSameContainerCanRetry)
 {
-	std::array<std::byte, 4096> aBuffer;
-	std::pmr::monotonic_buffer_resource Memory(aBuffer.data(), aBuffer.size(), std::pmr::null_memory_resource());
-	(void)Memory.allocate(aBuffer.size(), 1);
-	std::pmr::vector<CTheme> Themes(&Memory);
+	CRejectableAllocationResource Memory;
+	Memory.m_Reject = true;
+	std::vector<CTheme, CBorrowedAllocator<CTheme>> Themes(&Memory);
 	EXPECT_FALSE(EnsureDefaultThemeEntries(Themes));
 	EXPECT_TRUE(Themes.empty());
-	// 失败前没有容器获得缓冲，恢复内存后仍通过同一生产入口提交完整列表。
-	Memory.release();
+	// 候选分配失败后保留空目录，恢复该内存域后通过同一入口提交完整列表。
+	Memory.m_Reject = false;
 	ASSERT_TRUE(EnsureDefaultThemeEntries(Themes));
 	ASSERT_EQ(Themes.size(), 3u);
 	EXPECT_EQ(Themes[0].m_Name, "");
@@ -74,23 +74,22 @@ TEST(ThemeCatalog, MetadataOnlyCatalogCanClearWithoutGraphicsAndRebuildDefaults)
 
 namespace
 {
-	class CThemeCatalogMemory : public std::pmr::memory_resource
+	class CThemeCatalogMemory : public IAllocationResource
 	{
-		void *do_allocate(size_t Bytes, size_t Alignment) override
+		void *Allocate(size_t Bytes, size_t Alignment) override
 		{
 			if(m_AllowedAllocations == 0)
 				throw std::bad_alloc();
 			if(m_AllowedAllocations > 0)
 				--m_AllowedAllocations;
-			void *pData = std::pmr::new_delete_resource()->allocate(Bytes, Alignment);
+			void *pData = IAllocationResource::AllocateDefault(Bytes, Alignment);
 			++m_Allocations;
 			return pData;
 		}
-		void do_deallocate(void *pData, size_t Bytes, size_t Alignment) override
+		void Deallocate(void *pData, size_t Bytes, size_t Alignment) noexcept override
 		{
-			std::pmr::new_delete_resource()->deallocate(pData, Bytes, Alignment);
+			IAllocationResource::DeallocateDefault(pData, Bytes, Alignment);
 		}
-		bool do_is_equal(const memory_resource &Other) const noexcept override { return this == &Other; }
 
 	public:
 		int m_AllowedAllocations = -1;
@@ -148,7 +147,7 @@ TEST(ThemeCatalog, EachCandidateVectorAllocationFailurePreservesOriginalStateFor
 	for(int i = 0; i < 40; ++i)
 		Entries.push_back({"theme-" + std::to_string(i) + ".map", false, true, "icon.png"});
 	CThemeCatalogMemory BaselineMemory;
-	std::pmr::vector<CTheme> Baseline(&BaselineMemory);
+	std::vector<CTheme, CBorrowedAllocator<CTheme>> Baseline(&BaselineMemory);
 	ASSERT_TRUE(EnsureDefaultThemeEntries(Baseline));
 	const int Before = BaselineMemory.m_Allocations;
 	ASSERT_TRUE(PublishThemeEntries(Baseline, 3, [&] { return Entries; }));
@@ -159,7 +158,7 @@ TEST(ThemeCatalog, EachCandidateVectorAllocationFailurePreservesOriginalStateFor
 	{
 		SCOPED_TRACE(Allowed);
 		CThemeCatalogMemory Memory;
-		std::pmr::vector<CTheme> Themes(&Memory);
+		std::vector<CTheme, CBorrowedAllocator<CTheme>> Themes(&Memory);
 		ASSERT_TRUE(EnsureDefaultThemeEntries(Themes));
 		Themes[1].m_IconLoadFailed = true;
 		const auto *pOriginal = Themes.data();
@@ -170,7 +169,7 @@ TEST(ThemeCatalog, EachCandidateVectorAllocationFailurePreservesOriginalStateFor
 		EXPECT_TRUE(Themes[1].m_IconLoadFailed);
 		Memory.m_AllowedAllocations = -1;
 		ASSERT_TRUE(PublishThemeEntries(Themes, 3, [&] { return Entries; }));
-		EXPECT_EQ(Themes.get_allocator().resource(), &Memory);
+		EXPECT_EQ(Themes.get_allocator().Resource(), &Memory);
 		ASSERT_EQ(Themes.size(), 43u);
 		EXPECT_TRUE(Themes[1].m_IconLoadFailed);
 		EXPECT_FALSE(Themes[3].m_HasDay);

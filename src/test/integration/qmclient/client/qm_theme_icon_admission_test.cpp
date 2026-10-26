@@ -1,3 +1,5 @@
+#include <base/borrowed_allocator.h>
+
 #include <engine/engine.h>
 #include <engine/gfx/image_loader.h>
 #include <engine/shared/jobs.h>
@@ -7,12 +9,12 @@
 
 #include <gtest/gtest.h>
 #include <test/support/job_wait.h>
+#include <test/support/rejectable_allocation_resource.h>
 #include <test/test.h>
 
 #include <array>
 #include <cstddef>
 #include <memory>
-#include <memory_resource>
 #include <new>
 #include <utility>
 #include <vector>
@@ -108,15 +110,14 @@ TEST_F(QmThemeIconAdmission, AdmissionAllocationExceptionRollsBackTrackingAndCan
 
 TEST_F(QmThemeIconAdmission, TrackingAllocationFailureDoesNotSubmitAndSameContainerRecovers)
 {
-	std::array<std::byte, 4096> aBuffer;
-	std::pmr::monotonic_buffer_resource Memory(aBuffer.data(), aBuffer.size(), std::pmr::null_memory_resource());
-	(void)Memory.allocate(aBuffer.size(), 1);
-	std::pmr::vector<std::shared_ptr<CQmThemeIconLoadJob>> Jobs(&Memory);
+	CRejectableAllocationResource Memory;
+	Memory.m_Reject = true;
+	std::vector<std::shared_ptr<CQmThemeIconLoadJob>, CBorrowedAllocator<std::shared_ptr<CQmThemeIconLoadJob>>> Jobs(&Memory);
 	EXPECT_FALSE(TryQueueThemeIcon(m_Theme, Jobs, *m_pStorage, m_Engine, DecodePng));
 	EXPECT_TRUE(Jobs.empty());
 	EXPECT_FALSE(m_Theme.m_IconLoadRequested);
 	EXPECT_EQ(m_Engine.m_Attempts, 0);
-	Memory.release();
+	Memory.m_Reject = false;
 	ASSERT_TRUE(TryQueueThemeIcon(m_Theme, Jobs, *m_pStorage, m_Engine, DecodePng));
 	EXPECT_EQ(Jobs.size(), 1u);
 	EXPECT_TRUE(m_Theme.m_IconLoadRequested);

@@ -1,3 +1,5 @@
+#include <base/borrowed_allocator.h>
+
 #include <engine/shared/json.h>
 
 #include <game/client/components/qmclient/qm_realtime.h>
@@ -7,7 +9,6 @@
 
 #include <cstring>
 #include <memory>
-#include <memory_resource>
 #include <new>
 #include <string>
 #include <utility>
@@ -500,19 +501,18 @@ TEST(QmRealtime, InvalidInputClearsPreviouslyOwnedPayloadAndNextMessageCanPublis
 
 namespace
 {
-	class CRealtimeQueueMemory : public std::pmr::memory_resource
+	class CRealtimeQueueMemory : public IAllocationResource
 	{
-		void *do_allocate(size_t Bytes, size_t Alignment) override
+		void *Allocate(size_t Bytes, size_t Alignment) override
 		{
 			if(m_RejectAllocation)
 				throw std::bad_alloc();
-			return std::pmr::new_delete_resource()->allocate(Bytes, Alignment);
+			return IAllocationResource::AllocateDefault(Bytes, Alignment);
 		}
-		void do_deallocate(void *pData, size_t Bytes, size_t Alignment) override
+		void Deallocate(void *pData, size_t Bytes, size_t Alignment) noexcept override
 		{
-			std::pmr::new_delete_resource()->deallocate(pData, Bytes, Alignment);
+			IAllocationResource::DeallocateDefault(pData, Bytes, Alignment);
 		}
-		bool do_is_equal(const memory_resource &Other) const noexcept override { return this == &Other; }
 
 	public:
 		bool m_RejectAllocation = false;
@@ -557,7 +557,7 @@ TEST(QmRealtimeQueue, OverflowRetainsMostRecent128InArrivalOrder)
 TEST(QmRealtimeQueue, NodeAllocationFailureKeepsQueuedAndIncomingMessagesAndCanRetry)
 {
 	CRealtimeQueueMemory Memory;
-	std::pmr::deque<SQmRealtimeMessage> Events(&Memory);
+	std::deque<SQmRealtimeMessage, CBorrowedAllocator<SQmRealtimeMessage>> Events(&Memory);
 	SQmRealtimeMessage First;
 	ASSERT_TRUE(TryQueueQmRealtimeMessage(Events, std::move(First)));
 	SQmRealtimeMessage Parsed;

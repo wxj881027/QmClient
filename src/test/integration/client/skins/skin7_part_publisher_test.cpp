@@ -1,3 +1,5 @@
+#include <base/borrowed_allocator.h>
+
 #include <game/client/components/skins7.h>
 
 #include <gtest/gtest.h>
@@ -5,17 +7,15 @@
 #include <test/support/skin7_test_graphics.h>
 #include <test/test.h>
 
-#include <memory_resource>
 #include <new>
 #include <stdexcept>
 
 namespace
 {
-	class CRejectingMemory : public std::pmr::memory_resource
+	class CRejectingMemory : public IAllocationResource
 	{
-		void *do_allocate(size_t, size_t) override { throw std::bad_alloc(); }
-		void do_deallocate(void *, size_t, size_t) override {}
-		bool do_is_equal(const memory_resource &Other) const noexcept override { return this == &Other; }
+		void *Allocate(size_t, size_t) override { throw std::bad_alloc(); }
+		void Deallocate(void *, size_t, size_t) noexcept override {}
 	};
 
 	class CQmSkin7PartPublisherTest : public ::testing::Test
@@ -132,7 +132,7 @@ TEST_F(CQmSkin7PartPublisherTest, SecondUploadExceptionReleasesCandidateAndPrese
 TEST_F(CQmSkin7PartPublisherTest, ContainerAllocationFailureDoesNotStartUpload)
 {
 	CRejectingMemory Memory;
-	std::pmr::vector<CSkins7::CSkinPart> Parts(&Memory);
+	std::vector<CSkins7::CSkinPart, CBorrowedAllocator<CSkins7::CSkinPart>> Parts(&Memory);
 	EXPECT_FALSE(m_Publisher.TryPublish(m_Result, Parts, m_Graphics, m_Limiter));
 	EXPECT_TRUE(Parts.empty());
 	EXPECT_EQ(m_Graphics.m_Attempts, 0);

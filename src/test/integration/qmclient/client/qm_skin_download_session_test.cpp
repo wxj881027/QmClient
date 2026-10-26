@@ -1,4 +1,5 @@
 // 下载会话与真实作业池、隔离存储协作；fake 只替换 HTTP 传输和图片解码边界。
+#include <base/borrowed_allocator.h>
 #include <base/system.h>
 
 #include <engine/storage.h>
@@ -11,7 +12,6 @@
 #include <chrono>
 #include <cstdlib>
 #include <functional>
-#include <memory_resource>
 #include <new>
 #include <string>
 #include <thread>
@@ -19,16 +19,15 @@
 
 namespace
 {
-	class CTrackingMemory : public std::pmr::memory_resource
+	class CTrackingMemory : public IAllocationResource
 	{
-		void *do_allocate(size_t Bytes, size_t Alignment) override
+		void *Allocate(size_t Bytes, size_t Alignment) override
 		{
 			if(m_Fail)
 				throw std::bad_alloc();
-			return std::pmr::new_delete_resource()->allocate(Bytes, Alignment);
+			return IAllocationResource::AllocateDefault(Bytes, Alignment);
 		}
-		void do_deallocate(void *pData, size_t Bytes, size_t Alignment) override { std::pmr::new_delete_resource()->deallocate(pData, Bytes, Alignment); }
-		bool do_is_equal(const std::pmr::memory_resource &Other) const noexcept override { return this == &Other; }
+		void Deallocate(void *pData, size_t Bytes, size_t Alignment) noexcept override { IAllocationResource::DeallocateDefault(pData, Bytes, Alignment); }
 
 	public:
 		bool m_Fail = false;
@@ -618,7 +617,7 @@ TEST_F(QmSkinDownloadSession, TrackedCreationRegistersOwnerBeforeNormalPolling)
 TEST_F(QmSkinDownloadSession, ExistingTrackingNameDoesNotAllocateRegistryStorageOrDuplicateEntry)
 {
 	CTrackingMemory Memory;
-	std::pmr::vector<std::string> Names(&Memory);
+	std::vector<std::string, CBorrowedAllocator<std::string>> Names(&Memory);
 	Names.emplace_back("test");
 	Memory.m_Fail = true;
 	auto pSession = QmCreateTrackedSkinDownloadSession(Names, "test", [&] { return Create(false); });
@@ -630,7 +629,7 @@ TEST_F(QmSkinDownloadSession, ExistingTrackingNameDoesNotAllocateRegistryStorage
 TEST_F(QmSkinDownloadSession, TrackingAllocationFailureCancelsCandidateAndPreservesRegistry)
 {
 	CTrackingMemory Memory;
-	std::pmr::vector<std::string> Names(&Memory);
+	std::vector<std::string, CBorrowedAllocator<std::string>> Names(&Memory);
 	Names.reserve(1);
 	const auto Capacity = Names.capacity();
 	while(Names.size() < Capacity)
@@ -649,7 +648,7 @@ TEST_F(QmSkinDownloadSession, TrackingAllocationFailureCancelsCandidateAndPreser
 TEST_F(QmSkinDownloadSession, TrackingFailureCanRetryWithANewCandidate)
 {
 	CTrackingMemory Memory;
-	std::pmr::vector<std::string> Names(&Memory);
+	std::vector<std::string, CBorrowedAllocator<std::string>> Names(&Memory);
 	Memory.m_Fail = true;
 	EXPECT_EQ(QmCreateTrackedSkinDownloadSession(Names, "test", [&] { return Create(false); }), nullptr);
 	Memory.m_Fail = false;
@@ -665,7 +664,7 @@ TEST_F(QmSkinDownloadSession, FailedNewTrackingDoesNotCancelExistingSession)
 {
 	auto pExisting = Create(false);
 	CTrackingMemory Memory;
-	std::pmr::vector<std::string> Names(&Memory);
+	std::vector<std::string, CBorrowedAllocator<std::string>> Names(&Memory);
 	Memory.m_Fail = true;
 	auto pRejected = QmCreateTrackedSkinDownloadSession(Names, "new", [&] { return Create(false); });
 	EXPECT_EQ(pRejected, nullptr);

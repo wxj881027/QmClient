@@ -1,4 +1,6 @@
 // 资源预览管道通过真实缓存、图像处理和上传队列观察状态；不启动 GPU 设备。
+#include <base/borrowed_allocator.h>
+
 #include <engine/gfx/image_loader.h>
 
 #include <game/client/components/qmclient/settings_resource_preview.h>
@@ -10,7 +12,6 @@
 
 #include <chrono>
 #include <cstdlib>
-#include <memory_resource>
 #include <new>
 #include <stdexcept>
 #include <thread>
@@ -370,16 +371,15 @@ namespace
 		void ShutdownJobs() override {}
 		void SetAdditionalLogger(std::shared_ptr<ILogger> &&) override {}
 	};
-	class CPreviewTrackingMemory : public std::pmr::memory_resource
+	class CPreviewTrackingMemory : public IAllocationResource
 	{
-		void *do_allocate(size_t Bytes, size_t Alignment) override
+		void *Allocate(size_t Bytes, size_t Alignment) override
 		{
 			if(m_Fail)
 				throw std::bad_alloc();
-			return std::pmr::new_delete_resource()->allocate(Bytes, Alignment);
+			return IAllocationResource::AllocateDefault(Bytes, Alignment);
 		}
-		void do_deallocate(void *pData, size_t Bytes, size_t Alignment) override { std::pmr::new_delete_resource()->deallocate(pData, Bytes, Alignment); }
-		bool do_is_equal(const memory_resource &Other) const noexcept override { return this == &Other; }
+		void Deallocate(void *pData, size_t Bytes, size_t Alignment) noexcept override { IAllocationResource::DeallocateDefault(pData, Bytes, Alignment); }
 
 	public:
 		bool m_Fail = false;
@@ -459,7 +459,7 @@ TEST_F(ResourcePreviewAdmission, EngineExceptionWithdrawsTrackingAndRetainsPrior
 TEST_F(ResourcePreviewAdmission, TrackingAllocationFailureDoesNotSubmitCandidateAndCanRecover)
 {
 	CPreviewTrackingMemory Memory;
-	std::pmr::unordered_map<SResourcePreviewKey, std::shared_ptr<CSettingsResourcePreviewJob>, SResourcePreviewKeyHash> Jobs(&Memory);
+	std::unordered_map<SResourcePreviewKey, std::shared_ptr<CSettingsResourcePreviewJob>, SResourcePreviewKeyHash, std::equal_to<SResourcePreviewKey>, CBorrowedAllocator<std::pair<const SResourcePreviewKey, std::shared_ptr<CSettingsResourcePreviewJob>>>> Jobs(&Memory);
 	Memory.m_Fail = true;
 	EXPECT_FALSE(TryStartSettingsResourcePreviewJob(m_Cache, Jobs, m_Key, m_Engine, [this] { return CreateJob(); }));
 	EXPECT_TRUE(Jobs.empty());

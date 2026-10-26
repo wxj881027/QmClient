@@ -1,3 +1,5 @@
+#include <base/borrowed_allocator.h>
+
 #include <game/client/components/qmclient/skin7_descriptor_publication.h>
 #include <game/client/components/qmclient/skin7_save.h>
 #include <game/client/components/skins7.h>
@@ -7,24 +9,22 @@
 #include <test/test.h>
 
 #include <array>
-#include <memory_resource>
 #include <new>
 
 namespace
 {
-	class CDescriptorMemory : public std::pmr::memory_resource
+	class CDescriptorMemory : public IAllocationResource
 	{
-		void *do_allocate(size_t Size, size_t Alignment) override
+		void *Allocate(size_t Size, size_t Alignment) override
 		{
 			if(m_Fail)
 				throw std::bad_alloc();
-			return std::pmr::new_delete_resource()->allocate(Size, Alignment);
+			return IAllocationResource::AllocateDefault(Size, Alignment);
 		}
-		void do_deallocate(void *pData, size_t Size, size_t Alignment) override
+		void Deallocate(void *pData, size_t Size, size_t Alignment) noexcept override
 		{
-			std::pmr::new_delete_resource()->deallocate(pData, Size, Alignment);
+			IAllocationResource::DeallocateDefault(pData, Size, Alignment);
 		}
-		bool do_is_equal(const memory_resource &Other) const noexcept override { return this == &Other; }
 
 	public:
 		bool m_Fail = false;
@@ -291,7 +291,7 @@ TEST_F(CQmSkin7DescriptorPublicationTest, VectorGrowthFailurePreservesExistingDe
 	auto Info = Parse(R"({"skin":{}})");
 	ASSERT_NE(Info, nullptr);
 	CDescriptorMemory Memory;
-	std::pmr::vector<CSkins7::CSkin> Skins(&Memory);
+	std::vector<CSkins7::CSkin, CBorrowedAllocator<CSkins7::CSkin>> Skins(&Memory);
 	Skins.reserve(1);
 	ASSERT_TRUE(PublishTo(Skins, *Info, "keep"));
 	Memory.m_Fail = true;
@@ -343,7 +343,7 @@ TEST_F(CQmSkin7DescriptorBindingJobTest, NativeEntryAndCursorSurviveVectorAlloca
 	const size_t Before = m_Next;
 	const auto *pJson = m_pJob->Entries()[Before].m_pInfo.get();
 	CDescriptorMemory Memory;
-	std::pmr::vector<CSkins7::CSkin> Skins(&Memory);
+	std::vector<CSkins7::CSkin, CBorrowedAllocator<CSkins7::CSkin>> Skins(&Memory);
 	Memory.m_Fail = true;
 	EXPECT_FALSE(FinalizeTo(Skins));
 	EXPECT_EQ(m_Next, Before);

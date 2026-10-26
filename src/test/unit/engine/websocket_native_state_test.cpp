@@ -1,17 +1,18 @@
+#include <base/borrowed_allocator.h>
+
 #include <engine/shared/websocket_native_state.h>
 
 #include <gtest/gtest.h>
 
 #include <array>
 #include <memory>
-#include <memory_resource>
 #include <new>
 
 namespace
 {
-	class CNodeFaultResource : public std::pmr::memory_resource
+	class CNodeFaultResource : public IAllocationResource
 	{
-		void *do_allocate(size_t Bytes, size_t Alignment) override
+		void *Allocate(size_t Bytes, size_t Alignment) override
 		{
 			if(++m_Calls == m_FailOnCall)
 			{
@@ -19,16 +20,15 @@ namespace
 					throw 7;
 				throw std::bad_alloc();
 			}
-			auto *pData = std::pmr::new_delete_resource()->allocate(Bytes, Alignment);
+			auto *pData = IAllocationResource::AllocateDefault(Bytes, Alignment);
 			++m_Live;
 			return pData;
 		}
-		void do_deallocate(void *pData, size_t Bytes, size_t Alignment) override
+		void Deallocate(void *pData, size_t Bytes, size_t Alignment) noexcept override
 		{
 			--m_Live;
-			std::pmr::new_delete_resource()->deallocate(pData, Bytes, Alignment);
+			IAllocationResource::DeallocateDefault(pData, Bytes, Alignment);
 		}
-		bool do_is_equal(const std::pmr::memory_resource &Other) const noexcept override { return this == &Other; }
 
 	public:
 		int m_Calls = 0;

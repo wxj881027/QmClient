@@ -1,36 +1,36 @@
+#include <base/borrowed_allocator.h>
+
 #include <game/client/components/qmclient/skin_usage_tracking.h>
 
 #include <gtest/gtest.h>
 
 #include <iterator>
 #include <list>
-#include <memory_resource>
 #include <new>
 #include <string>
 
 namespace
 {
-	class CTrackingMemory : public std::pmr::memory_resource
+	class CTrackingMemory : public IAllocationResource
 	{
-		void *do_allocate(size_t Bytes, size_t Alignment) override
+		void *Allocate(size_t Bytes, size_t Alignment) override
 		{
 			if(m_Fail)
 				throw std::bad_alloc();
 			++m_Allocations;
-			return std::pmr::new_delete_resource()->allocate(Bytes, Alignment);
+			return IAllocationResource::AllocateDefault(Bytes, Alignment);
 		}
-		void do_deallocate(void *pData, size_t Bytes, size_t Alignment) override
+		void Deallocate(void *pData, size_t Bytes, size_t Alignment) noexcept override
 		{
 			++m_Deallocations;
-			std::pmr::new_delete_resource()->deallocate(pData, Bytes, Alignment);
+			IAllocationResource::DeallocateDefault(pData, Bytes, Alignment);
 		}
-		bool do_is_equal(const std::pmr::memory_resource &Other) const noexcept override { return this == &Other; }
 
 	public:
 		bool m_Fail = false;
 		int m_Allocations = 0, m_Deallocations = 0;
 	};
-	using TList = std::pmr::list<std::string>;
+	using TList = std::list<std::string, CBorrowedAllocator<std::string>>;
 }
 
 TEST(SkinUsageTracking, ExistingEntryMovesToFrontWithoutAllocationOrInvalidatingReferences)

@@ -1,3 +1,5 @@
+#include <base/borrowed_allocator.h>
+
 #include <game/client/components/qmclient/community_icon_store.h>
 
 #include <gtest/gtest.h>
@@ -6,7 +8,6 @@
 #include <cstdlib>
 #include <limits>
 #include <map>
-#include <memory_resource>
 #include <new>
 #include <set>
 #include <stdexcept>
@@ -23,19 +24,18 @@ namespace
 		return Result;
 	}
 
-	class CFailureResource : public std::pmr::memory_resource
+	class CFailureResource : public IAllocationResource
 	{
-		void *do_allocate(size_t Bytes, size_t Alignment) override
+		void *Allocate(size_t Bytes, size_t Alignment) override
 		{
 			if(m_Fail)
 				throw std::bad_alloc();
-			return std::pmr::new_delete_resource()->allocate(Bytes, Alignment);
+			return IAllocationResource::AllocateDefault(Bytes, Alignment);
 		}
-		void do_deallocate(void *pMemory, size_t Bytes, size_t Alignment) override
+		void Deallocate(void *pMemory, size_t Bytes, size_t Alignment) noexcept override
 		{
-			std::pmr::new_delete_resource()->deallocate(pMemory, Bytes, Alignment);
+			IAllocationResource::DeallocateDefault(pMemory, Bytes, Alignment);
 		}
-		bool do_is_equal(const std::pmr::memory_resource &Other) const noexcept override { return this == &Other; }
 
 	public:
 		bool m_Fail = false;

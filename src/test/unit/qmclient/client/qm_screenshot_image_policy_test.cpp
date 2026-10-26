@@ -1,28 +1,28 @@
 // 缩略图调度与请求入队策略：通过生产接口检查边界和失败恢复，不依赖图形设备。
+#include <base/borrowed_allocator.h>
+
 #include <game/client/components/qmclient/screenshot_image_job.h>
 
 #include <gtest/gtest.h>
 
-#include <memory_resource>
 #include <new>
 #include <string>
 #include <vector>
 
 namespace
 {
-	class CRequestMemory : public std::pmr::memory_resource
+	class CRequestMemory : public IAllocationResource
 	{
-		void *do_allocate(size_t Bytes, size_t Alignment) override
+		void *Allocate(size_t Bytes, size_t Alignment) override
 		{
 			if(m_Reject)
 				throw std::bad_alloc();
-			return std::pmr::new_delete_resource()->allocate(Bytes, Alignment);
+			return IAllocationResource::AllocateDefault(Bytes, Alignment);
 		}
-		void do_deallocate(void *pData, size_t Bytes, size_t Alignment) override
+		void Deallocate(void *pData, size_t Bytes, size_t Alignment) noexcept override
 		{
-			std::pmr::new_delete_resource()->deallocate(pData, Bytes, Alignment);
+			IAllocationResource::DeallocateDefault(pData, Bytes, Alignment);
 		}
-		bool do_is_equal(const std::pmr::memory_resource &Other) const noexcept override { return this == &Other; }
 
 	public:
 		bool m_Reject = false;
@@ -69,7 +69,7 @@ TEST(QmScreenshotImagePolicy, QueuesRequestAndPublishesFlag)
 TEST(QmScreenshotImagePolicy, AlreadyQueuedRequestDoesNotAllocateOrDuplicate)
 {
 	CRequestMemory Memory;
-	std::pmr::vector<std::string> Requests(&Memory);
+	std::vector<std::string, CBorrowedAllocator<std::string>> Requests(&Memory);
 	bool Requested = false;
 	ASSERT_TRUE(QmTryQueueScreenshotThumbnailRequest(Requests, Requested, std::string("image.png")));
 	Memory.m_Reject = true;
@@ -81,7 +81,7 @@ TEST(QmScreenshotImagePolicy, AlreadyQueuedRequestDoesNotAllocateOrDuplicate)
 TEST(QmScreenshotImagePolicy, FailedRequestKeepsFlagClearAndCanRetry)
 {
 	CRequestMemory Memory;
-	std::pmr::vector<std::string> Requests(&Memory);
+	std::vector<std::string, CBorrowedAllocator<std::string>> Requests(&Memory);
 	bool Requested = false;
 	Memory.m_Reject = true;
 	EXPECT_FALSE(QmTryQueueScreenshotThumbnailRequest(Requests, Requested, std::string("image.png")));
@@ -98,7 +98,7 @@ TEST(QmScreenshotImagePolicy, FailedRequestKeepsFlagClearAndCanRetry)
 TEST(QmScreenshotImagePolicy, FailedGrowthPreservesOtherQueuedRequests)
 {
 	CRequestMemory Memory;
-	std::pmr::vector<std::string> Requests(&Memory);
+	std::vector<std::string, CBorrowedAllocator<std::string>> Requests(&Memory);
 	Requests.emplace_back("other.png");
 	while(Requests.size() < Requests.capacity())
 		Requests.emplace_back("other.png");

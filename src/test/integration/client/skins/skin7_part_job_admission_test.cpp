@@ -1,3 +1,5 @@
+#include <base/borrowed_allocator.h>
+
 #include <game/client/components/qmclient/skin7_info_job.h>
 #include <game/client/components/qmclient/skin7_part_load_job.h>
 
@@ -6,7 +8,6 @@
 #include <test/test.h>
 
 #include <array>
-#include <memory_resource>
 #include <new>
 #include <vector>
 
@@ -43,19 +44,18 @@ namespace
 		void SetAdditionalLogger(std::shared_ptr<ILogger> &&) override {}
 	};
 
-	class CTrackingMemory : public std::pmr::memory_resource
+	class CTrackingMemory : public IAllocationResource
 	{
-		void *do_allocate(size_t Bytes, size_t Alignment) override
+		void *Allocate(size_t Bytes, size_t Alignment) override
 		{
 			if(m_Fail)
 				throw std::bad_alloc();
-			return std::pmr::new_delete_resource()->allocate(Bytes, Alignment);
+			return IAllocationResource::AllocateDefault(Bytes, Alignment);
 		}
-		void do_deallocate(void *pMemory, size_t Bytes, size_t Alignment) override
+		void Deallocate(void *pMemory, size_t Bytes, size_t Alignment) noexcept override
 		{
-			std::pmr::new_delete_resource()->deallocate(pMemory, Bytes, Alignment);
+			IAllocationResource::DeallocateDefault(pMemory, Bytes, Alignment);
 		}
-		bool do_is_equal(const std::pmr::memory_resource &Other) const noexcept override { return this == &Other; }
 
 	public:
 		bool m_Fail = false;
@@ -127,7 +127,7 @@ TEST_F(CQmSkin7PartAdmissionTest, FactoryFailureKeepsDescriptorAndRetrySubmitsSa
 TEST_F(CQmSkin7PartAdmissionTest, TrackingAllocationFailurePreservesEarlierJobsAndDoesNotSubmitCandidate)
 {
 	CTrackingMemory Memory;
-	std::pmr::deque<std::shared_ptr<TJob>> Pending(&Memory);
+	std::deque<std::shared_ptr<TJob>, CBorrowedAllocator<std::shared_ptr<TJob>>> Pending(&Memory);
 	TParts Parts(2048, {0, IStorage::TYPE_SAVE, "part.png"});
 	size_t Next = 0;
 	ASSERT_TRUE(QmTryQueueNextSkin7Part(Parts, Next, Pending, m_Engine, [this](const auto &Part) { return Create(Part); }));
