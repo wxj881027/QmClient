@@ -5,6 +5,7 @@
 #include <generated/protocol7.h>
 
 #include <game/client/components/countryflags.h>
+#include <game/client/components/qmclient/translated_game_message.h>
 #include <game/client/components/qmclient/vote_option_packet.h>
 #include <game/client/gameclient.h>
 #include <game/gamecore.h>
@@ -194,34 +195,34 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 		dbg_msg("sixup", "dropped weird message '%s' (%d), failed on '%s'", m_NetObjHandler7.GetMsgName(*pMsgId), *pMsgId, m_NetObjHandler7.FailedMsgOn());
 		return nullptr;
 	}
-	static char s_aRawMsg[1024];
+	static CQmTranslatedGameMessage s_Message;
 
 	if(*pMsgId == protocol7::NETMSGTYPE_SV_MOTD)
 	{
 		protocol7::CNetMsg_Sv_Motd *pMsg7 = (protocol7::CNetMsg_Sv_Motd *)pRawMsg;
-		::CNetMsg_Sv_Motd *pMsg = (::CNetMsg_Sv_Motd *)s_aRawMsg;
+		auto *pMsg = s_Message.Reset<::CNetMsg_Sv_Motd>();
 
 		pMsg->m_pMessage = pMsg7->m_pMessage;
 
-		return s_aRawMsg;
+		return pMsg;
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_BROADCAST)
 	{
 		protocol7::CNetMsg_Sv_Broadcast *pMsg7 = (protocol7::CNetMsg_Sv_Broadcast *)pRawMsg;
-		::CNetMsg_Sv_Broadcast *pMsg = (::CNetMsg_Sv_Broadcast *)s_aRawMsg;
+		auto *pMsg = s_Message.Reset<::CNetMsg_Sv_Broadcast>();
 
 		pMsg->m_pMessage = pMsg7->m_pMessage;
 
-		return s_aRawMsg;
+		return pMsg;
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_CL_SETTEAM)
 	{
 		protocol7::CNetMsg_Cl_SetTeam *pMsg7 = (protocol7::CNetMsg_Cl_SetTeam *)pRawMsg;
-		::CNetMsg_Cl_SetTeam *pMsg = (::CNetMsg_Cl_SetTeam *)s_aRawMsg;
+		auto *pMsg = s_Message.Reset<::CNetMsg_Cl_SetTeam>();
 
 		pMsg->m_Team = pMsg7->m_Team;
 
-		return s_aRawMsg;
+		return pMsg;
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_TEAM)
 	{
@@ -262,11 +263,11 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_WEAPONPICKUP)
 	{
 		protocol7::CNetMsg_Sv_WeaponPickup *pMsg7 = (protocol7::CNetMsg_Sv_WeaponPickup *)pRawMsg;
-		::CNetMsg_Sv_WeaponPickup *pMsg = (::CNetMsg_Sv_WeaponPickup *)s_aRawMsg;
+		auto *pMsg = s_Message.Reset<::CNetMsg_Sv_WeaponPickup>();
 
 		pMsg->m_Weapon = pMsg7->m_Weapon;
 
-		return s_aRawMsg;
+		return pMsg;
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_SERVERSETTINGS)
 	{
@@ -290,7 +291,7 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 	{
 		*pMsgId = NETMSGTYPE_SV_RACEFINISH;
 		protocol7::CNetMsg_Sv_RaceFinish *pMsg7 = (protocol7::CNetMsg_Sv_RaceFinish *)pRawMsg;
-		::CNetMsg_Sv_RaceFinish *pMsg = (::CNetMsg_Sv_RaceFinish *)s_aRawMsg;
+		auto *pMsg = s_Message.Reset<::CNetMsg_Sv_RaceFinish>();
 
 		pMsg->m_ClientId = pMsg7->m_ClientId;
 		pMsg->m_Time = pMsg7->m_Time;
@@ -298,41 +299,41 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 		pMsg->m_RecordPersonal = pMsg7->m_RecordPersonal;
 		pMsg->m_RecordServer = pMsg7->m_RecordServer;
 
-		return s_aRawMsg;
+		return pMsg;
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_CHECKPOINT)
 	{
 		*pMsgId = NETMSGTYPE_SV_DDRACETIME;
 		protocol7::CNetMsg_Sv_Checkpoint *pMsg7 = (protocol7::CNetMsg_Sv_Checkpoint *)pRawMsg;
-		::CNetMsg_Sv_DDRaceTime *pMsg = (::CNetMsg_Sv_DDRaceTime *)s_aRawMsg;
+		auto *pMsg = s_Message.Reset<::CNetMsg_Sv_DDRaceTime>();
 
 		pMsg->m_Time = 1;
 		pMsg->m_Finish = 0;
 		pMsg->m_Check = pMsg7->m_Diff / 10;
 
-		return s_aRawMsg;
+		return pMsg;
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_COMMANDINFOREMOVE)
 	{
 		*pMsgId = NETMSGTYPE_SV_COMMANDINFOREMOVE;
 		protocol7::CNetMsg_Sv_CommandInfoRemove *pMsg7 = (protocol7::CNetMsg_Sv_CommandInfoRemove *)pRawMsg;
-		::CNetMsg_Sv_CommandInfoRemove *pMsg = (::CNetMsg_Sv_CommandInfoRemove *)s_aRawMsg;
+		auto *pMsg = s_Message.Reset<::CNetMsg_Sv_CommandInfoRemove>();
 
 		pMsg->m_pName = pMsg7->m_pName;
 
-		return s_aRawMsg;
+		return pMsg;
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_COMMANDINFO)
 	{
 		*pMsgId = NETMSGTYPE_SV_COMMANDINFO;
 		protocol7::CNetMsg_Sv_CommandInfo *pMsg7 = (protocol7::CNetMsg_Sv_CommandInfo *)pRawMsg;
-		::CNetMsg_Sv_CommandInfo *pMsg = (::CNetMsg_Sv_CommandInfo *)s_aRawMsg;
+		auto *pMsg = s_Message.Reset<::CNetMsg_Sv_CommandInfo>();
 
 		pMsg->m_pName = pMsg7->m_pName;
 		pMsg->m_pArgsFormat = pMsg7->m_pArgsFormat;
 		pMsg->m_pHelpText = pMsg7->m_pHelpText;
 
-		return s_aRawMsg;
+		return pMsg;
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_SKINCHANGE)
 	{
@@ -354,27 +355,27 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_VOTECLEAROPTIONS)
 	{
 		*pMsgId = NETMSGTYPE_SV_VOTECLEAROPTIONS;
-		return s_aRawMsg;
+		return s_Message.Reset<::CNetMsg_Sv_VoteClearOptions>();
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_VOTEOPTIONADD)
 	{
 		*pMsgId = NETMSGTYPE_SV_VOTEOPTIONADD;
 		protocol7::CNetMsg_Sv_VoteOptionAdd *pMsg7 = (protocol7::CNetMsg_Sv_VoteOptionAdd *)pRawMsg;
-		::CNetMsg_Sv_VoteOptionAdd *pMsg = (::CNetMsg_Sv_VoteOptionAdd *)s_aRawMsg;
+		auto *pMsg = s_Message.Reset<::CNetMsg_Sv_VoteOptionAdd>();
 		pMsg->m_pDescription = pMsg7->m_pDescription;
-		return s_aRawMsg;
+		return pMsg;
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_VOTEOPTIONREMOVE)
 	{
 		*pMsgId = NETMSGTYPE_SV_VOTEOPTIONREMOVE;
 		protocol7::CNetMsg_Sv_VoteOptionRemove *pMsg7 = (protocol7::CNetMsg_Sv_VoteOptionRemove *)pRawMsg;
-		::CNetMsg_Sv_VoteOptionRemove *pMsg = (::CNetMsg_Sv_VoteOptionRemove *)s_aRawMsg;
+		auto *pMsg = s_Message.Reset<::CNetMsg_Sv_VoteOptionRemove>();
 		pMsg->m_pDescription = pMsg7->m_pDescription;
-		return s_aRawMsg;
+		return pMsg;
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_VOTEOPTIONLISTADD)
 	{
-		::CNetMsg_Sv_VoteOptionListAdd *pMsg = (::CNetMsg_Sv_VoteOptionListAdd *)s_aRawMsg;
+		auto *pMsg = s_Message.Reset<::CNetMsg_Sv_VoteOptionListAdd>();
 		int NumOptions = pUnpacker->GetInt();
 		if(NumOptions > 14)
 		{
@@ -407,13 +408,13 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 			case 14: (pMsg->m_pDescription14 = pDescription);
 			}
 		});
-		return s_aRawMsg;
+		return pMsg;
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_VOTESET)
 	{
 		*pMsgId = NETMSGTYPE_SV_VOTESET;
 		protocol7::CNetMsg_Sv_VoteSet *pMsg7 = (protocol7::CNetMsg_Sv_VoteSet *)pRawMsg;
-		::CNetMsg_Sv_VoteSet *pMsg = (::CNetMsg_Sv_VoteSet *)s_aRawMsg;
+		auto *pMsg = s_Message.Reset<::CNetMsg_Sv_VoteSet>();
 
 		m_TClient.SetVoteCallerId(pMsg7->m_Timeout ? pMsg7->m_ClientId : -1);
 		pMsg->m_Timeout = pMsg7->m_Timeout;
@@ -481,25 +482,25 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 			}
 		}
 
-		return s_aRawMsg;
+		return pMsg;
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_VOTESTATUS)
 	{
 		*pMsgId = NETMSGTYPE_SV_VOTESTATUS;
 		protocol7::CNetMsg_Sv_VoteStatus *pMsg7 = (protocol7::CNetMsg_Sv_VoteStatus *)pRawMsg;
-		::CNetMsg_Sv_VoteStatus *pMsg = (::CNetMsg_Sv_VoteStatus *)s_aRawMsg;
+		auto *pMsg = s_Message.Reset<::CNetMsg_Sv_VoteStatus>();
 
 		pMsg->m_Yes = pMsg7->m_Yes;
 		pMsg->m_No = pMsg7->m_No;
 		pMsg->m_Pass = pMsg7->m_Pass;
 		pMsg->m_Total = pMsg7->m_Total;
 
-		return s_aRawMsg;
+		return pMsg;
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_READYTOENTER)
 	{
 		*pMsgId = NETMSGTYPE_SV_READYTOENTER;
-		return s_aRawMsg;
+		return s_Message.Reset<::CNetMsg_Sv_ReadyToEnter>();
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_CLIENTDROP)
 	{
@@ -578,19 +579,19 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 	{
 		*pMsgId = NETMSGTYPE_SV_EMOTICON;
 		protocol7::CNetMsg_Sv_Emoticon *pMsg7 = (protocol7::CNetMsg_Sv_Emoticon *)pRawMsg;
-		::CNetMsg_Sv_Emoticon *pMsg = (::CNetMsg_Sv_Emoticon *)s_aRawMsg;
+		auto *pMsg = s_Message.Reset<::CNetMsg_Sv_Emoticon>();
 
 		pMsg->m_ClientId = pMsg7->m_ClientId;
 		pMsg->m_Emoticon = pMsg7->m_Emoticon;
 
-		return s_aRawMsg;
+		return pMsg;
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_KILLMSG)
 	{
 		*pMsgId = NETMSGTYPE_SV_KILLMSG;
 
 		protocol7::CNetMsg_Sv_KillMsg *pMsg7 = (protocol7::CNetMsg_Sv_KillMsg *)pRawMsg;
-		::CNetMsg_Sv_KillMsg *pMsg = (::CNetMsg_Sv_KillMsg *)s_aRawMsg;
+		auto *pMsg = s_Message.Reset<::CNetMsg_Sv_KillMsg>();
 
 		// 0.7 用 -1 和 -2 表示无击杀者，0.6 则使用受害者 id。
 		pMsg->m_Killer = pMsg7->m_Killer < 0 ? pMsg7->m_Victim : pMsg7->m_Killer;
@@ -598,14 +599,14 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 		pMsg->m_Weapon = pMsg7->m_Weapon;
 		pMsg->m_ModeSpecial = pMsg7->m_ModeSpecial;
 
-		return s_aRawMsg;
+		return pMsg;
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_CHAT)
 	{
 		*pMsgId = NETMSGTYPE_SV_CHAT;
 
 		protocol7::CNetMsg_Sv_Chat *pMsg7 = (protocol7::CNetMsg_Sv_Chat *)pRawMsg;
-		::CNetMsg_Sv_Chat *pMsg = (::CNetMsg_Sv_Chat *)s_aRawMsg;
+		auto *pMsg = s_Message.Reset<::CNetMsg_Sv_Chat>();
 
 		if(pMsg7->m_Mode == protocol7::CHAT_WHISPER)
 		{
@@ -622,7 +623,7 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 
 		pMsg->m_pMessage = pMsg7->m_pMessage;
 
-		return s_aRawMsg;
+		return pMsg;
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_GAMEMSG)
 	{
