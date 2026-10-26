@@ -654,6 +654,8 @@ int net_socket_read_wait(NETSOCKET sock, std::chrono::nanoseconds nanoseconds);
  *         and `NETTYPE_WEBSOCKET_IPV6`, or `NETTYPE_INVALID` if the socket is invalid.
  */
 int net_socket_type(NETSOCKET sock);
+// Unix的select集合按描述符索引；Windows集合不受相同数值上界限制。
+bool net_socket_is_selectable(int socket);
 
 /**
  * Creates a UDP socket and binds it to a port.
@@ -665,6 +667,8 @@ int net_socket_type(NETSOCKET sock);
  * @return On success it returns an handle to the socket. On failure it returns `nullptr`.
  */
 NETSOCKET net_udp_create(NETADDR bindaddr);
+// 分配边界须返回可由free释放的内存；失败在创建原生socket之前返回空。
+NETSOCKET net_udp_create_with_allocator(NETADDR bindaddr, void *(*pfnAllocate)(size_t));
 
 // 尽力为指定 UDP 目标创建客户端 QoS flow，失败时返回 nullptr。
 NETQOS net_qos_add_socket(NETSOCKET sock, const NETADDR *addr, ENetQosStatus *pStatus);

@@ -8,6 +8,7 @@
 #include <engine/shared/network.h>
 #include <engine/shared/protocol.h>
 #include <engine/shared/ringbuffer.h>
+#include <engine/shared/websocket_log.h>
 
 #if defined(CONF_FAMILY_UNIX)
 #include <arpa/inet.h>
@@ -100,6 +101,31 @@ static void sockaddr_to_netaddr_websocket(const sockaddr *src, socklen_t src_len
 	}
 }
 
+#if defined(CONF_FAMILY_UNIX)
+static bool websocket_reject_large_descriptor(context_data *ctx_data, per_session_data *pss, lws *wsi)
+{
+	// 创建回调中尚未分配描述符的wsi交给原流程；已分配的高fd必须在登记前拒绝。
+	if(lws_get_socket_fd(wsi) < FD_SETSIZE)
+		return false;
+	if(pss != nullptr)
+	{
+		if(ctx_data != nullptr)
+		{
+			for(auto it = ctx_data->port_map.begin(); it != ctx_data->port_map.end();)
+			{
+				if(it->second == pss)
+					it = ctx_data->port_map.erase(it);
+				else
+					++it;
+			}
+		}
+		pss->wsi = nullptr;
+		pss->addr = NETADDR_ZEROED;
+	}
+	return true;
+}
+#endif
+
 static int websocket_protocol_callback(lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
 {
 	per_session_data *pss = (per_session_data *)user;
@@ -115,6 +141,10 @@ static int websocket_protocol_callback(lws *wsi, enum lws_callback_reasons reaso
 		[[fallthrough]];
 	case LWS_CALLBACK_ESTABLISHED:
 	{
+#if defined(CONF_FAMILY_UNIX)
+		if(websocket_reject_large_descriptor(ctx_data, pss, wsi))
+			return -1;
+#endif
 		sockaddr_storage peersockaddr;
 		socklen_t peersockaddr_size = sizeof(peersockaddr);
 		getpeername(lws_get_socket_fd(wsi), (sockaddr *)&peersockaddr, &peersockaddr_size);
@@ -136,10 +166,19 @@ static int websocket_protocol_callback(lws *wsi, enum lws_callback_reasons reaso
 		return 0;
 	}
 
+	case LWS_CALLBACK_CLIENT_ESTABLISHED:
+#if defined(CONF_FAMILY_UNIX)
+		if(websocket_reject_large_descriptor(ctx_data, pss, wsi))
+			return -1;
+#endif
+		return 0;
+
 	case LWS_CALLBACK_CLIENT_CLOSED:
 		[[fallthrough]];
 	case LWS_CALLBACK_CLOSED:
 	{
+		if(pss == nullptr || pss->wsi == nullptr)
+			return 0;
 		char addr_str[NETADDR_MAXSTRSIZE];
 		net_addr_str(&pss->addr, addr_str, sizeof(addr_str), true);
 		log_trace("websockets", "Connection closed with '%s'", addr_str);
@@ -151,7 +190,7 @@ static int websocket_protocol_callback(lws *wsi, enum lws_callback_reasons reaso
 
 	case LWS_CALLBACK_WSI_DESTROY:
 	{
-		if(pss == nullptr)
+		if(pss == nullptr || pss->wsi == nullptr)
 		{
 			return 0;
 		}
@@ -223,20 +262,8 @@ static LEVEL websocket_level_to_loglevel(int level)
 
 static void websocket_log_callback(int level, const char *line)
 {
-	// Truncate duplicate timestamp from beginning and newline from end
 	char line_truncated[4096]; // Longest log line length
-	const char *line_time_end = str_find(line, "] ");
-	dbg_assert(line_time_end != nullptr, "unexpected log format");
-	str_copy(line_truncated, line_time_end + 2);
-	const int length = str_length(line_truncated);
-	if(line_truncated[length - 1] == '\n')
-	{
-		line_truncated[length - 1] = '\0';
-	}
-	if(line_truncated[length - 2] == '\r')
-	{
-		line_truncated[length - 2] = '\0';
-	}
+	CopyWebsocketLogLine(line_truncated, line);
 	log_log(websocket_level_to_loglevel(level), "websockets", "%s", line_truncated);
 }
 
@@ -390,6 +417,10 @@ int websocket_fd_set(int socket, fd_set *set)
 			continue;
 		}
 		int fd = lws_get_socket_fd(pss->wsi);
+#if defined(CONF_FAMILY_UNIX)
+		if(!net_socket_is_selectable(fd))
+			continue;
+#endif
 		max = std::max(fd, max);
 		FD_SET(fd, set);
 	}
@@ -408,7 +439,12 @@ int websocket_fd_get(int socket, fd_set *set)
 		{
 			continue;
 		}
-		if(FD_ISSET(lws_get_socket_fd(pss->wsi), set))
+		const auto fd = lws_get_socket_fd(pss->wsi);
+#if defined(CONF_FAMILY_UNIX)
+		if(!net_socket_is_selectable(fd))
+			continue;
+#endif
+		if(FD_ISSET(fd, set))
 		{
 			return 1;
 		}

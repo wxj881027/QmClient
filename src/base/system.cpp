@@ -1250,6 +1250,15 @@ static void priv_net_close_all_sockets(NETSOCKET sock)
 	free(sock);
 }
 
+bool net_socket_is_selectable(int socket)
+{
+#if defined(CONF_FAMILY_UNIX)
+	return socket >= 0 && socket < FD_SETSIZE;
+#else
+	return socket >= 0;
+#endif
+}
+
 static int priv_net_create_socket(int domain, int type, const NETADDR *bindaddr)
 {
 	int sock = socket(domain, type, 0);
@@ -1260,6 +1269,12 @@ static int priv_net_create_socket(int domain, int type, const NETADDR *bindaddr)
 	}
 
 #if defined(CONF_FAMILY_UNIX)
+	if(!net_socket_is_selectable(sock))
+	{
+		priv_net_close_socket(sock);
+		errno = EMFILE;
+		return -1;
+	}
 	// On TCP sockets set SO_REUSEADDR to fix port rebind on restart
 	if(domain == AF_INET && type == SOCK_STREAM)
 	{
@@ -1327,7 +1342,16 @@ int net_socket_type(NETSOCKET sock)
 
 NETSOCKET net_udp_create(NETADDR bindaddr)
 {
-	NETSOCKET sock = (NETSOCKET_INTERNAL *)malloc(sizeof(*sock));
+	return net_udp_create_with_allocator(bindaddr, malloc);
+}
+
+NETSOCKET net_udp_create_with_allocator(NETADDR bindaddr, void *(*pfnAllocate)(size_t))
+{
+	if(pfnAllocate == nullptr)
+		return nullptr;
+	NETSOCKET sock = static_cast<NETSOCKET_INTERNAL *>(pfnAllocate(sizeof(*sock)));
+	if(sock == nullptr)
+		return nullptr;
 	*sock = invalid_socket;
 
 	if(bindaddr.type & NETTYPE_IPV4)
@@ -1938,6 +1962,14 @@ int net_tcp_accept(NETSOCKET sock, NETSOCKET *new_sock, NETADDR *a)
 		int s = accept(sock->ipv4sock, (sockaddr *)&addr, &sockaddr_len);
 		if(s != -1)
 		{
+#if defined(CONF_FAMILY_UNIX)
+			if(!net_socket_is_selectable(s))
+			{
+				priv_net_close_socket(s);
+				errno = EMFILE;
+				return -1;
+			}
+#endif
 			sockaddr_to_netaddr((sockaddr *)&addr, sockaddr_len, a);
 
 			*new_sock = (NETSOCKET_INTERNAL *)malloc(sizeof(**new_sock));
@@ -1956,6 +1988,14 @@ int net_tcp_accept(NETSOCKET sock, NETSOCKET *new_sock, NETADDR *a)
 		int s = accept(sock->ipv6sock, (sockaddr *)&addr, &sockaddr_len);
 		if(s != -1)
 		{
+#if defined(CONF_FAMILY_UNIX)
+			if(!net_socket_is_selectable(s))
+			{
+				priv_net_close_socket(s);
+				errno = EMFILE;
+				return -1;
+			}
+#endif
 			*new_sock = (NETSOCKET_INTERNAL *)malloc(sizeof(**new_sock));
 			**new_sock = invalid_socket;
 			sockaddr_to_netaddr((sockaddr *)&addr, sockaddr_len, a);

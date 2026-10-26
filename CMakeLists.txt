@@ -4770,6 +4770,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/sound_pack_storage_test.cpp
     src/test/integration/qmclient/client/qm_audio_pack_export_test.cpp
     src/test/integration/base/directory_enumeration_resources_test.cpp
+    src/test/integration/base/net_socket_allocation_test.cpp
+    src/test/unit/base/socket_descriptor_test.cpp
     src/test/unit/client/skins/skin_resize_plan_test.cpp
     src/test/unit/qmclient/client/qm_gores_drown_tracker_test.cpp
     src/test/unit/qmclient/client/qm_trail_geometry_test.cpp
@@ -5206,6 +5208,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_realtime_users_test.cpp
     src/test/unit/qmclient/music/qm_prepared_media_art_test.cpp
     src/test/unit/engine/websocket_client_test.cpp
+    src/test/unit/engine/websocket_log_test.cpp
     src/test/unit/engine/websocket_client_lifecycle_test.cpp
     src/test/unit/qmclient/client/qm_map_upload_test.cpp
     src/test/unit/qmclient/client/qm_developer_badge_test.cpp
