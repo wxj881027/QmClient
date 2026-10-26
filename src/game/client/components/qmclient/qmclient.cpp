@@ -1484,7 +1484,7 @@ void CQmClient::ApplyQmRealtimeUsersSync(const SQmRealtimeMessage &Message)
 	if(Client()->State() == IClient::STATE_ONLINE && Client()->ServerAddress())
 		net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
 	if(m_QmRealtimeUsersState.ApplyAndPublish(Message.m_pPayload.get(), aServer, [this](SQmClientUsersParseResult Result, int LeaseSeconds) {
-		   return ApplyQmClientUsersResult(std::move(Result), time_get() + LeaseSeconds * time_freq());
+		   return ApplyQmClientUsersResult(Result, time_get() + LeaseSeconds * time_freq());
 	   }) != CQmRealtimeUsersState::EApplyResult::APPLIED)
 		return;
 	// 增量必须依次合并，不能像完整快照一样只留下最后一条等待异步解析。
@@ -2928,7 +2928,6 @@ void CQmClient::FinishQmClientUsers()
 
 		auto pParseJob = std::static_pointer_cast<CQmClientUsersParseJob>(m_pQmClientUsersParseJob);
 		const int64_t ExpireTick = pParseJob->ExpireTick();
-		CQmClientUsersParseJob::SResult Result = pParseJob->TakeResult();
 		char aCurrentServer[NETADDR_MAXSTRSIZE] = "";
 		if(Client()->State() == IClient::STATE_ONLINE && Client()->ServerAddress())
 			net_addr_str(Client()->ServerAddress(), aCurrentServer, sizeof(aCurrentServer), true);
@@ -2936,16 +2935,29 @@ void CQmClient::FinishQmClientUsers()
 					 pParseJob->ConnectionTick() != m_QmRealtimeConnectedTick ||
 					 !m_pQmRealtimeTransport || m_pQmRealtimeTransport->State() != EQmWebSocketState::CONNECTED ||
 					 m_pQmRealtimeTransport->LastConnectedTick() != m_QmRealtimeConnectedTick;
-		m_pQmClientUsersParseJob = nullptr;
 		if(StaleServer)
+		{
+			m_pQmClientUsersParseJob = nullptr;
 			return;
+		}
 
-		ApplyQmClientUsersResult(std::move(Result), ExpireTick);
+		using EPublish = CQmClientUsersParseJob::EPublishResult;
+		const EPublish Published = pParseJob->PublishResult(m_pQmRealtimeUsersPayload != nullptr, [this, ExpireTick](auto &Result) {
+			return ApplyQmClientUsersResult(Result, ExpireTick);
+		});
+		if(Published == EPublish::RETRY || Published == EPublish::WAITING)
+			return;
+		if(Published == EPublish::INVALID)
+		{
+			m_QmClientDistributionSuccessLatched = false;
+			LogQmClientDistributionFailureEvent("parse_failed", "users payload could not be parsed");
+		}
+		m_pQmClientUsersParseJob = nullptr;
 		return;
 	}
 }
 
-bool CQmClient::ApplyQmClientUsersResult(SQmClientUsersParseResult Result, int64_t ExpireTick)
+bool CQmClient::ApplyQmClientUsersResult(SQmClientUsersParseResult &Result, int64_t ExpireTick)
 {
 	if(!Result.m_Parsed)
 	{

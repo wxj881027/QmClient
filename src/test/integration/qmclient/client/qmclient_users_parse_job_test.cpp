@@ -61,6 +61,29 @@ namespace
 			return std::make_shared<CQmClientUsersParseJob>(pInput, "one:8303", 900, 12);
 		});
 	}
+
+	std::shared_ptr<CQmClientUsersParseJob> CompletedJob(std::weak_ptr<const json_value> *pInputOwner = nullptr)
+	{
+		auto pInput = Payload();
+		if(pInputOwner)
+			*pInputOwner = pInput;
+		auto pJob = std::make_shared<CQmClientUsersParseJob>(std::move(pInput), "one:8303", 900, 12);
+		CJobPool Pool;
+		if(!Pool.TryInit(1))
+		{
+			ADD_FAILURE() << "could not initialize native job pool";
+			return nullptr;
+		}
+		if(!Pool.TryAdd(pJob))
+		{
+			ADD_FAILURE() << "native pool rejected parse job";
+			return nullptr;
+		}
+		const auto Done = WaitForJobDone(*pJob);
+		EXPECT_TRUE(Done);
+		Pool.Shutdown();
+		return Done ? pJob : nullptr;
+	}
 }
 
 TEST(QmClientUsersParseJob, FactoryBadAllocRetainsSnapshotWithoutDispatch)
@@ -194,4 +217,95 @@ TEST(QmClientUsersParseJob, EmptyInputDoesNotConstructOrDispatchJob)
 	}));
 	EXPECT_EQ(Constructs, 0);
 	EXPECT_EQ(Engine.m_Attempts, 0);
+}
+
+TEST(QmClientUsersParseJob, QueuedPublicationWaitsWithoutConsumingInput)
+{
+	using EPublish = CQmClientUsersParseJob::EPublishResult;
+	auto pJob = std::make_shared<CQmClientUsersParseJob>(Payload(), "one:8303", 900, 12);
+	int Calls = 0;
+	EXPECT_EQ(pJob->PublishResult(true, [&](auto &) { ++Calls; return true; }), EPublish::WAITING);
+	EXPECT_EQ(Calls, 0);
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	ASSERT_TRUE(Pool.TryAdd(pJob));
+	ASSERT_TRUE(WaitForJobDone(*pJob));
+	Pool.Shutdown();
+	EXPECT_EQ(pJob->PublishResult(false, [&](auto &Result) {
+		++Calls;
+		EXPECT_TRUE(Result.m_Parsed);
+		EXPECT_EQ(Result.m_OnlineUserCount, 2);
+		return true;
+	}),
+		EPublish::PUBLISHED);
+	EXPECT_EQ(Calls, 1);
+}
+
+TEST(QmClientUsersParseJob, RejectedPublicationRetainsParsedResultUntilAcceptedOnce)
+{
+	using EPublish = CQmClientUsersParseJob::EPublishResult;
+	auto pJob = CompletedJob();
+	ASSERT_NE(pJob, nullptr);
+	for(int Attempt = 0; Attempt < 2; ++Attempt)
+	{
+		EXPECT_EQ(pJob->PublishResult(false, [](auto &Result) {
+			EXPECT_TRUE(Result.m_Parsed);
+			EXPECT_EQ(Result.m_OnlineUserCount, 2);
+			EXPECT_EQ(Result.m_vLocalServerMarks.size(), 2u);
+			return false;
+		}),
+			EPublish::RETRY);
+	}
+	SQmClientUsersParseResult Published;
+	EXPECT_EQ(pJob->PublishResult(false, [&](auto &Result) { Published = std::move(Result); return true; }), EPublish::PUBLISHED);
+	EXPECT_TRUE(Published.m_Parsed);
+	EXPECT_EQ(Published.m_OnlineUserCount, 2);
+	ASSERT_EQ(Published.m_vLocalServerMarks.size(), 2u);
+	EXPECT_EQ(Published.m_vLocalServerMarks[0].m_Name, "Alice");
+	int Calls = 0;
+	EXPECT_EQ(pJob->PublishResult(false, [&](auto &) { ++Calls; return true; }), EPublish::INVALID);
+	EXPECT_EQ(Calls, 0);
+}
+
+TEST(QmClientUsersParseJob, PublisherBadAllocCanRetryAfterInputTreeWasReleased)
+{
+	using EPublish = CQmClientUsersParseJob::EPublishResult;
+	std::weak_ptr<const json_value> InputOwner;
+	auto pJob = CompletedJob(&InputOwner);
+	ASSERT_NE(pJob, nullptr);
+	ASSERT_TRUE(InputOwner.expired());
+	EXPECT_EQ(pJob->PublishResult(false, [](auto &) -> bool { throw std::bad_alloc(); }), EPublish::RETRY);
+	EXPECT_EQ(pJob->ExpireTick(), 900);
+	EXPECT_EQ(pJob->ConnectionTick(), 12);
+	EXPECT_EQ(pJob->PublishResult(false, [](auto &Result) {
+		EXPECT_EQ(Result.m_OnlineDummyCount, 1);
+		EXPECT_EQ(Result.m_vServerDistribution.size(), 2u);
+		return true;
+	}),
+		EPublish::PUBLISHED);
+	EXPECT_TRUE(InputOwner.expired());
+	EXPECT_EQ(pJob->ExpireTick(), 900);
+}
+
+TEST(QmClientUsersParseJob, NewerSnapshotSupersedesFailedResultWithoutCallingPublisher)
+{
+	using EPublish = CQmClientUsersParseJob::EPublishResult;
+	auto pJob = CompletedJob();
+	ASSERT_NE(pJob, nullptr);
+	ASSERT_EQ(pJob->PublishResult(false, [](auto &) { return false; }), EPublish::RETRY);
+	int Calls = 0;
+	EXPECT_EQ(pJob->PublishResult(true, [&](auto &) { ++Calls; return true; }), EPublish::SUPERSEDED);
+	EXPECT_EQ(Calls, 0);
+	EXPECT_FALSE(pJob->TakeResult().m_Parsed);
+}
+
+TEST(QmClientUsersParseJob, NewerSnapshotAlsoSupersedesFreshCompletedResult)
+{
+	using EPublish = CQmClientUsersParseJob::EPublishResult;
+	auto pJob = CompletedJob();
+	ASSERT_NE(pJob, nullptr);
+	int Calls = 0;
+	EXPECT_EQ(pJob->PublishResult(true, [&](auto &) { ++Calls; return true; }), EPublish::SUPERSEDED);
+	EXPECT_EQ(Calls, 0);
+	EXPECT_FALSE(pJob->TakeResult().m_Parsed);
 }

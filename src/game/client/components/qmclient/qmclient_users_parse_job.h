@@ -18,6 +18,14 @@ class CQmClientUsersParseJob : public IJob
 {
 public:
 	using SResult = SQmClientUsersParseResult;
+	enum class EPublishResult
+	{
+		WAITING,
+		SUPERSEDED,
+		INVALID,
+		RETRY,
+		PUBLISHED,
+	};
 
 private:
 	std::shared_ptr<const json_value> m_pPayload;
@@ -55,6 +63,33 @@ public:
 		SResult Result = std::move(m_Result);
 		m_Result = SResult();
 		return Result;
+	}
+
+	// 发布器在结果锁内执行，不得重入本任务；失败前须保留Result原值。
+	template<typename TPublish>
+	EPublishResult PublishResult(bool HasNewerSnapshot, TPublish &&Publish) REQUIRES(!m_Lock)
+	{
+		if(State() != IJob::STATE_DONE)
+			return EPublishResult::WAITING;
+		const CLockScope Lock(m_Lock);
+		if(HasNewerSnapshot)
+		{
+			m_Result = SResult();
+			return EPublishResult::SUPERSEDED;
+		}
+		if(!m_Result.m_Parsed)
+			return EPublishResult::INVALID;
+		try
+		{
+			if(!std::forward<TPublish>(Publish)(m_Result))
+				return EPublishResult::RETRY;
+		}
+		catch(const std::bad_alloc &)
+		{
+			return EPublishResult::RETRY;
+		}
+		m_Result = SResult();
+		return EPublishResult::PUBLISHED;
 	}
 
 	int64_t ExpireTick() const { return m_ExpireTick; }
