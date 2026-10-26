@@ -59,3 +59,14 @@ TEST(ThemeCatalog, AllocationFailureLeavesNoPartialDefaultsAndSameContainerCanRe
 	EXPECT_EQ(Themes[1].m_Name, "auto");
 	EXPECT_EQ(Themes[2].m_Name, "rand");
 }
+
+TEST(ThemeCatalog, MetadataOnlyCatalogCanClearWithoutGraphicsAndRebuildDefaults)
+{
+	std::vector<CTheme> Themes;
+	ASSERT_TRUE(EnsureDefaultThemeEntries(Themes));
+	ASSERT_TRUE(ClearThemeCatalog(Themes, nullptr));
+	EXPECT_TRUE(Themes.empty());
+	ASSERT_TRUE(EnsureDefaultThemeEntries(Themes));
+	ASSERT_EQ(Themes.size(), 3u);
+	EXPECT_EQ(Themes[0].m_IconPath, "themes/none.png");
+}

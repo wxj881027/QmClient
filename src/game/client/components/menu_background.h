@@ -118,6 +118,7 @@ private:
 	std::shared_ptr<CThemeListLoadJob> m_pThemeListLoadJob;
 	std::vector<std::shared_ptr<CQmThemeIconLoadJob>> m_vThemeIconLoadJobs;
 	bool m_ThemeListLoaded = false;
+	bool m_ThemeRefreshPending = false;
 
 public:
 	CMenuBackground();
@@ -142,7 +143,7 @@ public:
 	void ChangePosition(int PositionNumber);
 
 	void RefreshThemes();
-	std::vector<CTheme> &GetThemes();
+	const std::vector<CTheme> &GetThemes();
 };
 
 std::array<vec2, CMenuBackground::NUM_POS> GenerateMenuBackgroundPositions();

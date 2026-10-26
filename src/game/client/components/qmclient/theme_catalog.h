@@ -31,6 +31,33 @@ public:
 	bool operator<(const CTheme &Other) const { return m_Name < Other.m_Name; }
 };
 
+// 清理成功前保留目录所有权；已释放句柄被图形接口作废，重试不会重复卸载。
+inline bool ClearThemeCatalog(std::vector<CTheme> &Themes, IGraphics *pGraphics)
+{
+	bool Complete = true;
+	for(auto &Theme : Themes)
+	{
+		if(!Theme.m_IconTexture.IsValid())
+			continue;
+		if(pGraphics == nullptr)
+		{
+			Complete = false;
+			continue;
+		}
+		try
+		{
+			pGraphics->UnloadTexture(&Theme.m_IconTexture);
+		}
+		catch(const std::bad_alloc &)
+		{
+			Complete = false;
+		}
+	}
+	if(Complete)
+		Themes.clear();
+	return Complete;
+}
+
 // 分配器沿用调用方；完整默认列表准备成功后交换，失败不留下半成品。
 template<typename TAllocator>
 bool EnsureDefaultThemeEntries(std::vector<CTheme, TAllocator> &Themes)

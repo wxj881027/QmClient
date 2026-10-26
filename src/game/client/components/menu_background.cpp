@@ -208,6 +208,7 @@ void CMenuBackground::OnInit()
 
 void CMenuBackground::OnShutdown()
 {
+	RefreshThemes();
 	ReleasePreviousBackground();
 	CBackground::OnShutdown();
 }
@@ -766,20 +767,32 @@ void CMenuBackground::InvalidateCurrentPosition()
 
 void CMenuBackground::RefreshThemes()
 {
-	m_vThemes.clear();
+	m_ThemeRefreshPending = true;
 	m_pThemeListLoadJob.reset();
 	m_vThemeIconLoadJobs.clear();
 	m_ThemeListLoaded = false;
+	m_ThemeRefreshPending = !ClearThemeCatalog(m_vThemes, InterfacesInitialized() ? Graphics() : nullptr);
 }
 
-std::vector<CTheme> &CMenuBackground::GetThemes()
+const std::vector<CTheme> &CMenuBackground::GetThemes()
 {
+	if(m_ThemeRefreshPending)
+	{
+		static const std::vector<CTheme> s_vEmptyThemes;
+		return s_vEmptyThemes;
+	}
 	EnsureThemeEntries();
 	return m_vThemes;
 }
 
 void CMenuBackground::UpdateThemeLoading()
 {
+	if(m_ThemeRefreshPending)
+	{
+		if(!ClearThemeCatalog(m_vThemes, Graphics()))
+			return;
+		m_ThemeRefreshPending = false;
+	}
 	if(!EnsureThemeEntries())
 		return;
 	ProcessThemeListJob();

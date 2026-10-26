@@ -5401,6 +5401,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/theme_scan_test.cpp
     src/test/integration/qmclient/client/qm_theme_icon_job_test.cpp
     src/test/integration/qmclient/client/qm_theme_icon_admission_test.cpp
+    src/test/integration/qmclient/client/qm_theme_catalog_release_test.cpp
     src/test/unit/client/theme_catalog_test.cpp
     src/test/unit/base/thread_test.cpp
     src/test/unit/base/thread_startup_test.cpp
