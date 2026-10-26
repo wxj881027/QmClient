@@ -106,3 +106,21 @@ TEST_F(QmThemeCatalogRelease, MissingGraphicsRetainsLiveHandlesForLaterRelease)
 	EXPECT_TRUE(m_vThemes.empty());
 	EXPECT_EQ(m_Graphics.m_Releases, 2);
 }
+
+TEST_F(QmThemeCatalogRelease, MetadataPublicationPreservesLiveIconHandlesForCatalogRelease)
+{
+	const auto First = m_vThemes[0].m_IconTexture;
+	const auto Second = m_vThemes[1].m_IconTexture;
+	m_vThemes[0].m_IconLoadRequested = true;
+	const std::vector<SThemeFileEntry> Entries{{"third.map", true, true, "third.png"}};
+	ASSERT_TRUE(PublishThemeEntries(m_vThemes, 0, [&] { return Entries; }));
+	ASSERT_EQ(m_vThemes.size(), 3u);
+	EXPECT_EQ(m_vThemes[0].m_IconTexture.Id(), First.Id());
+	EXPECT_EQ(m_vThemes[0].m_IconTexture.Generation(), First.Generation());
+	EXPECT_EQ(m_vThemes[1].m_IconTexture.Id(), Second.Id());
+	EXPECT_EQ(m_vThemes[1].m_IconTexture.Generation(), Second.Generation());
+	EXPECT_TRUE(m_vThemes[0].m_IconLoadRequested);
+	EXPECT_EQ(m_Graphics.m_Releases, 0);
+	ASSERT_TRUE(ClearThemeCatalog(m_vThemes, &m_Graphics));
+	EXPECT_EQ(m_Graphics.m_Releases, 2);
+}

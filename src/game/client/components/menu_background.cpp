@@ -309,21 +309,8 @@ void CMenuBackground::ProcessThemeListJob()
 	if(!m_pThemeListLoadJob || !m_pThemeListLoadJob->IsCompleted())
 		return;
 
-	for(const auto &Entry : m_pThemeListLoadJob->Entries())
-	{
-		auto It = std::find_if(m_vThemes.begin(), m_vThemes.end(), [&](const CTheme &Theme) {
-			return str_comp(Theme.m_Name.c_str(), Entry.m_Name.c_str()) == 0;
-		});
-		if(It != m_vThemes.end())
-			continue;
-
-		CTheme Theme(Entry.m_Name.c_str(), Entry.m_HasDay, Entry.m_HasNight);
-		Theme.m_IconPath = Entry.m_IconPath;
-		m_vThemes.push_back(std::move(Theme));
-	}
-
-	if(m_vThemes.size() > PREDEFINED_THEMES_COUNT)
-		std::sort(m_vThemes.begin() + PREDEFINED_THEMES_COUNT, m_vThemes.end());
+	if(!PublishThemeEntries(m_vThemes, PREDEFINED_THEMES_COUNT, [this] { return m_pThemeListLoadJob->Entries(); }))
+		return;
 
 	m_ThemeListLoaded = true;
 	m_pThemeListLoadJob.reset();

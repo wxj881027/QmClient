@@ -9,6 +9,7 @@
 
 #include <game/client/components/theme_scan.h>
 
+#include <algorithm>
 #include <initializer_list>
 #include <memory>
 #include <new>
@@ -73,6 +74,35 @@ bool EnsureDefaultThemeEntries(std::vector<CTheme, TAllocator> &Themes)
 			Candidate.emplace_back(pName, true, true);
 			Candidate.back().m_IconPath = ThemeIconPathFromName(pName);
 		}
+		Themes.swap(Candidate);
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+}
+
+// 快照读取与目录扩展都在提交前完成；句柄仍由目录显式释放，候选只复制元数据。
+template<typename TAllocator, typename FEntries>
+bool PublishThemeEntries(std::vector<CTheme, TAllocator> &Themes, size_t PreservedCount, FEntries ReadEntries)
+{
+	try
+	{
+		const auto Entries = ReadEntries();
+		std::vector<CTheme, TAllocator> Candidate(Themes, Themes.get_allocator());
+		for(const auto &Entry : Entries)
+		{
+			const auto It = std::find_if(Candidate.begin(), Candidate.end(), [&](const CTheme &Theme) {
+				return str_comp(Theme.m_Name.c_str(), Entry.m_Name.c_str()) == 0;
+			});
+			if(It != Candidate.end())
+				continue;
+			auto &Theme = Candidate.emplace_back(Entry.m_Name.c_str(), Entry.m_HasDay, Entry.m_HasNight);
+			Theme.m_IconPath = Entry.m_IconPath;
+		}
+		if(Candidate.size() > PreservedCount)
+			std::sort(Candidate.begin() + PreservedCount, Candidate.end());
 		Themes.swap(Candidate);
 		return true;
 	}
