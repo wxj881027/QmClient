@@ -3,6 +3,7 @@
 
 #include <game/client/components/background.h>
 #include <game/client/components/camera.h>
+#include <game/client/components/qmclient/theme_catalog.h>
 
 #include <array>
 #include <chrono>
@@ -19,23 +20,6 @@ class CMenuMap : public CBackgroundEngineMap
 
 public:
 	using CBackgroundEngineMap::CBackgroundEngineMap;
-};
-
-// themes
-class CTheme
-{
-public:
-	CTheme(const char *pName, bool HasDay, bool HasNight) :
-		m_Name(pName), m_HasDay(HasDay), m_HasNight(HasNight) {}
-
-	std::string m_Name;
-	bool m_HasDay;
-	bool m_HasNight;
-	IGraphics::CTextureHandle m_IconTexture;
-	std::string m_IconPath;
-	bool m_IconLoadRequested = false;
-	bool m_IconLoadFailed = false;
-	bool operator<(const CTheme &Other) const { return m_Name < Other.m_Name; }
 };
 
 class CMenuBackground : public CBackground
@@ -118,7 +102,7 @@ private:
 
 	void ResetPositions();
 
-	void EnsureThemeEntries();
+	bool EnsureThemeEntries();
 	void EnsureThemeListJob();
 	void ProcessThemeListJob();
 	void QueueNextThemeIconLoad();

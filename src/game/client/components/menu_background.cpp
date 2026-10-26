@@ -180,8 +180,8 @@ void CMenuBackground::OnInit()
 
 	m_IsInit = true;
 
-	EnsureThemeEntries();
-	EnsureThemeListJob();
+	if(EnsureThemeEntries())
+		EnsureThemeListJob();
 	if(g_Config.m_ClMenuMap[0] != '\0')
 		LoadMenuBackground();
 
@@ -258,28 +258,27 @@ void CMenuBackground::ResetPositions()
 	m_aPositions = GenerateMenuBackgroundPositions();
 }
 
-void CMenuBackground::EnsureThemeEntries()
+bool CMenuBackground::EnsureThemeEntries()
 {
-	if(!m_vThemes.empty())
-		return;
-
-	m_vThemes.emplace_back("", true, true); // no theme
-	m_vThemes.back().m_IconPath = ThemeIconPathFromName("");
-
-	m_vThemes.emplace_back("auto", true, true); // auto theme
-	m_vThemes.back().m_IconPath = ThemeIconPathFromName("auto");
-
-	m_vThemes.emplace_back("rand", true, true); // random theme
-	m_vThemes.back().m_IconPath = ThemeIconPathFromName("rand");
+	return EnsureDefaultThemeEntries(m_vThemes);
 }
 
 void CMenuBackground::EnsureThemeListJob()
 {
 	if(m_pThemeListLoadJob)
 		return;
-	m_ThemeScanStartTime = time_get_nanoseconds();
-	m_pThemeListLoadJob = std::make_shared<CThemeListLoadJob>(Storage());
-	Engine()->AddJob(m_pThemeListLoadJob);
+	try
+	{
+		auto pJob = std::make_shared<CThemeListLoadJob>(Storage());
+		if(!Engine()->TryAddJob(pJob))
+			return;
+		m_pThemeListLoadJob = std::move(pJob);
+		m_ThemeScanStartTime = time_get_nanoseconds();
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 未接收时不发布等待记录，之后的帧可以重新尝试。
+	}
 }
 
 void CMenuBackground::ProcessThemeListJob()
@@ -321,18 +320,7 @@ void CMenuBackground::QueueNextThemeIconLoad()
 
 void CMenuBackground::QueueThemeIconLoad(CTheme &Theme)
 {
-	if(Theme.m_IconLoadRequested || Theme.m_IconLoadFailed || Theme.m_IconPath.empty())
-		return;
-	if(!Storage()->FileExists(Theme.m_IconPath.c_str(), IStorage::TYPE_ALL))
-	{
-		Theme.m_IconLoadFailed = true;
-		return;
-	}
-
-	Theme.m_IconLoadRequested = true;
-	auto pJob = std::make_shared<CQmThemeIconLoadJob>(Theme.m_Name.c_str(), Theme.m_IconPath.c_str(), Storage(), LoadBackgroundImageData);
-	Engine()->AddJob(pJob);
-	m_vThemeIconLoadJobs.push_back(pJob);
+	TryQueueThemeIcon(Theme, m_vThemeIconLoadJobs, *Storage(), *Engine(), LoadBackgroundImageData);
 }
 
 void CMenuBackground::ProcessThemeIconJobs()
@@ -792,7 +780,8 @@ std::vector<CTheme> &CMenuBackground::GetThemes()
 
 void CMenuBackground::UpdateThemeLoading()
 {
-	EnsureThemeEntries();
+	if(!EnsureThemeEntries())
+		return;
 	ProcessThemeListJob();
 	ProcessThemeIconJobs();
 	if(!m_ThemeListLoaded)
