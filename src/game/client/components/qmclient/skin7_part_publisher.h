@@ -41,6 +41,44 @@ public:
 		return Released;
 	}
 
+	bool TryPublishAccessory(const CImageInfo &Image, IGraphics::CTextureHandle &Target,
+		IGraphics &Graphics, CGpuUploadLimiter &Limiter, const char *pName) noexcept
+	{
+		if(!TryRelease(Graphics))
+			return false;
+		try
+		{
+			if(Image.m_pData)
+			{
+				if(!Limiter.CanUpload())
+					return false;
+				Limiter.OnUploaded();
+				m_aUncommitted[0] = Graphics.LoadTextureRaw(Image, 0, pName);
+				if(!m_aUncommitted[0].IsValid() || m_aUncommitted[0].IsNullTexture() || !Graphics.IsTextureHandleAllocated(m_aUncommitted[0]))
+				{
+					TryRelease(Graphics);
+					return false;
+				}
+			}
+			// 候选可用后才卸载旧图；缺失附件仍沿用原来的清空语义。
+			if(Target.IsValid() && !Target.IsNullTexture())
+				Graphics.UnloadTexture(&Target);
+			if(Target.IsValid() && !Target.IsNullTexture())
+			{
+				TryRelease(Graphics);
+				return false;
+			}
+			Target = m_aUncommitted[0];
+			m_aUncommitted[0].Invalidate();
+			return true;
+		}
+		catch(...)
+		{
+			TryRelease(Graphics);
+			return false;
+		}
+	}
+
 	template<typename TPart, typename TAllocator>
 	bool TryPublish(const CQmSkin7PartLoadJob::SResult &Result, std::vector<TPart, TAllocator> &Parts,
 		IGraphics &Graphics, CGpuUploadLimiter &Limiter) noexcept

@@ -209,22 +209,13 @@ void CSkins7::ProcessCompletedJobs()
 	}
 	// GPU 句柄只能在主线程创建，读盘和解码已由描述任务完成。
 	// 1ms 是批处理软预算，单次驱动上传无法抢占，上传后不再开始超预算的下一项。
-	while(m_NextAccessory < 2 && GameClient()->GpuUploadLimiter()->CanUpload(1) && time_get_nanoseconds() - Begin < std::chrono::milliseconds(1))
+	while(m_NextAccessory < 2 && time_get_nanoseconds() - Begin < std::chrono::milliseconds(1))
 	{
-		const bool Hat = m_NextAccessory++ == 0;
-		struct SImageOwner
-		{
-			CImageInfo m_Image;
-			~SImageOwner() { m_Image.Free(); }
-		} ImageOwner{Hat ? m_pSkinInfoJob->TakeXmasHat() : m_pSkinInfoJob->TakeBot()};
-		auto &Image = ImageOwner.m_Image;
-		auto &Texture = Hat ? m_XmasHatTexture : m_BotTexture;
-		Graphics()->UnloadTexture(&Texture);
-		if(Image.m_pData)
-		{
-			Texture = Graphics()->LoadTextureRawMove(Image, 0, Hat ? "skins7/xmas_hat.png" : "skins7/bot.png");
-			GameClient()->GpuUploadLimiter()->OnUploaded();
-		}
+		if(!m_pSkinInfoJob->PublishNextAccessory(m_NextAccessory, [&](const CImageInfo &Image, bool Hat) {
+			   return m_PartPublisher.TryPublishAccessory(Image, Hat ? m_XmasHatTexture : m_BotTexture,
+				   *Graphics(), *GameClient()->GpuUploadLimiter(), Hat ? "skins7/xmas_hat.png" : "skins7/bot.png");
+		   }))
+			break;
 	}
 
 	auto Iter = m_PendingSkinPartJobs.begin();

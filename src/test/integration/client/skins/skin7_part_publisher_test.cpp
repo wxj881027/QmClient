@@ -1,63 +1,16 @@
 #include <game/client/components/skins7.h>
 
 #include <gtest/gtest.h>
-#include <test/support/icon_benchmark_graphics.h>
 #include <test/support/job_wait.h>
+#include <test/support/skin7_test_graphics.h>
 #include <test/test.h>
 
-#include <algorithm>
-#include <array>
 #include <memory_resource>
 #include <new>
 #include <stdexcept>
 
 namespace
 {
-	// 只替换纹理设备边界，实际发布器、部件容器和上传限额不替换。
-	class CPartGraphics : public CIconBenchmarkGraphics
-	{
-	public:
-		std::array<bool, 64> m_aLive{};
-		int m_Attempts = 0;
-		int m_FailAt = 0;
-		int m_ThrowAt = 0;
-		int m_StaleAt = 0;
-		int m_NullAt = 0;
-		bool m_FailUnload = false;
-
-		CTextureHandle LoadTextureRaw(const CImageInfo &Image, int Flags, const char *pName) override
-		{
-			++m_Attempts;
-			if(m_Attempts == m_ThrowAt)
-				throw std::bad_alloc();
-			if(m_Attempts == m_FailAt)
-				return {};
-			if(m_Attempts == m_NullAt)
-				return CreateTextureHandle(0);
-			auto Handle = CIconBenchmarkGraphics::LoadTextureRaw(Image, Flags, pName);
-			m_aLive.at(Handle.Id()) = m_Attempts != m_StaleAt;
-			return Handle;
-		}
-
-		void UnloadTexture(CTextureHandle *pHandle) override
-		{
-			if(m_FailUnload)
-				throw std::runtime_error("device queue unavailable");
-			m_aLive.at(pHandle->Id()) = false;
-			pHandle->Invalidate();
-		}
-
-		bool IsTextureHandleAllocated(CTextureHandle Handle) const override
-		{
-			return Handle.IsValid() && Handle.Id() < static_cast<int>(m_aLive.size()) && m_aLive[Handle.Id()];
-		}
-
-		int LiveCount() const
-		{
-			return std::count(m_aLive.begin(), m_aLive.end(), true);
-		}
-	};
-
 	class CRejectingMemory : public std::pmr::memory_resource
 	{
 		void *do_allocate(size_t, size_t) override { throw std::bad_alloc(); }
@@ -70,7 +23,7 @@ namespace
 	protected:
 		CQmSkin7PartLoadJob::SResult m_Result;
 		std::vector<CSkins7::CSkinPart> m_vParts;
-		CPartGraphics m_Graphics;
+		CSkin7TestGraphics m_Graphics;
 		CGpuUploadLimiter m_Limiter;
 		CQmSkin7PartPublisher m_Publisher;
 
@@ -250,6 +203,23 @@ TEST_F(CQmSkin7PartPublisherTest, FailedDecodeDoesNotUseTextureBudget)
 	EXPECT_EQ(m_Graphics.m_Attempts, 0);
 	EXPECT_EQ(m_Limiter.UploadsThisFrame(), 0);
 	EXPECT_TRUE(m_vParts.empty());
+}
+
+TEST_F(CQmSkin7PartPublisherTest, UnreleasedAccessoryCandidateAlsoBlocksPartUploads)
+{
+	auto OldAccessory = m_Graphics.LoadTextureRaw(m_Result.m_OriginalImage, 0, "old accessory");
+	m_Graphics.m_FailUnload = true;
+	EXPECT_FALSE(m_Publisher.TryPublishAccessory(m_Result.m_OriginalImage, OldAccessory, m_Graphics, m_Limiter, "new accessory"));
+	EXPECT_EQ(m_Graphics.LiveCount(), 2);
+	m_Limiter.OnFrameStart();
+	EXPECT_FALSE(Publish());
+	EXPECT_TRUE(m_vParts.empty());
+	EXPECT_EQ(m_Graphics.m_Attempts, 2);
+	m_Graphics.m_FailUnload = false;
+	EXPECT_TRUE(Publish());
+	EXPECT_EQ(m_vParts.size(), 1u);
+	EXPECT_EQ(m_Graphics.LiveCount(), 3);
+	m_Graphics.UnloadTexture(&OldAccessory);
 }
 
 TEST_F(CQmSkin7PartPublisherTest, NativePngJobRetriesGpuFailureAndConsumesOnlyCommittedResult)

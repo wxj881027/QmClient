@@ -66,6 +66,27 @@ public:
 	CImageInfo TakeXmasHat() { return std::exchange(m_XmasHat, CImageInfo{}); }
 	CImageInfo TakeBot() { return std::exchange(m_Bot, CImageInfo{}); }
 
+	// 只在主线程消费已结束任务；回调不得重入，失败保留图像和附件游标。
+	template<typename TPublish>
+	bool PublishNextAccessory(int &NextAccessory, TPublish &&Publish)
+	{
+		if(State() != STATE_DONE || NextAccessory < 0 || NextAccessory >= 2)
+			return false;
+		auto &Image = NextAccessory == 0 ? m_XmasHat : m_Bot;
+		try
+		{
+			if(!std::forward<TPublish>(Publish)(static_cast<const CImageInfo &>(Image), NextAccessory == 0))
+				return false;
+		}
+		catch(...)
+		{
+			return false;
+		}
+		Image.Free();
+		++NextAccessory;
+		return true;
+	}
+
 protected:
 	void Run() override
 	{
