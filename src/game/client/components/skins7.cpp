@@ -237,34 +237,27 @@ void CSkins7::ProcessCompletedJobs()
 			continue;
 		}
 
-		if(!GameClient()->GpuUploadLimiter()->CanUpload(2))
-		{
+		char aLoadedName[24] = "";
+		int LoadedPart = -1;
+		if(!pJob->PublishResult([&](const CSkinPartLoadJob::SResult &Result) {
+			   if(!m_PartPublisher.TryPublish(Result, m_avSkinParts[Result.m_PartType], *Graphics(), *GameClient()->GpuUploadLimiter()))
+				   return false;
+			   str_copy(aLoadedName, Result.m_aName);
+			   LoadedPart = Result.m_PartType;
+			   return true;
+		   }))
 			break;
-		}
 
-		CSkinPartLoadJob::SResult Result = pJob->GetResult();
-		if(Result.m_Success)
+		// 诊断失败不能回滚已提交部件，也不能让同一任务再次上传。
+		if(LoadedPart >= 0 && Config()->m_Debug)
 		{
-			CSkinPart Part;
-			Part.m_Type = Result.m_PartType;
-			Part.m_Flags = Result.m_Flags;
-			str_copy(Part.m_aName, Result.m_aName, sizeof(Part.m_aName));
-			Part.m_OriginalTexture = Graphics()->LoadTextureRaw(Result.m_OriginalImage, 0, Result.m_aName);
-			GameClient()->GpuUploadLimiter()->OnUploaded();
-			Part.m_BloodColor = Result.m_BloodColor;
-			// CPU 素材已随任务结果发布；主线程只接管并上传纹理。
-			Part.m_QmSkinOutline = std::move(Result.m_QmSkinOutline);
-			Part.m_pChatAvatarOriginal = std::move(Result.m_pChatAvatarOriginal);
-			Part.m_pChatAvatarColorable = std::move(Result.m_pChatAvatarColorable);
-			Part.m_ColorableTexture = Graphics()->LoadTextureRawMove(Result.m_GrayscaleImage, 0, Result.m_aName);
-			GameClient()->GpuUploadLimiter()->OnUploaded();
-			Result.m_OriginalImage.Free();
-
-			if(Config()->m_Debug)
+			try
 			{
-				log_trace("skins7", "Loaded skin part '%s/%s'", CSkins7::ms_apSkinPartNames[Result.m_PartType], Part.m_aName);
+				log_trace("skins7", "Loaded skin part '%s/%s'", CSkins7::ms_apSkinPartNames[LoadedPart], aLoadedName);
 			}
-			m_avSkinParts[Result.m_PartType].emplace_back(Part);
+			catch(...)
+			{
+			}
 		}
 
 		Iter = m_PendingSkinPartJobs.erase(Iter);
@@ -456,6 +449,7 @@ void CSkins7::OnShutdown()
 
 void CSkins7::CancelPendingLoads()
 {
+	m_PartPublisher.TryRelease(*Graphics());
 	for(auto &pJob : m_PendingSkinPartJobs)
 		pJob->Abort();
 	m_PendingSkinPartJobs.clear();
@@ -468,6 +462,7 @@ void CSkins7::CancelPendingLoads()
 
 void CSkins7::OnUpdate()
 {
+	m_PartPublisher.TryRelease(*Graphics());
 	const auto Action = m_ResourceLifecycle.Update(Client()->State(), Client()->IsSixup());
 	if(Action == CQmSkin7ResourceLifecycle::EAction::LOAD)
 		GameClient()->RefreshSkins(CSkinDescriptor::FLAG_SEVEN);
@@ -500,6 +495,7 @@ void CSkins7::Refresh(TSkinLoadedCallback &&SkinLoadedCallback)
 	// 通用皮肤刷新、设置页预热等入口也受同一规则约束，不能绕过按需启用。
 	if(!m_ResourceLifecycle.BeginRefresh(Client()->State(), Client()->IsSixup()))
 		return;
+	m_PartPublisher.TryRelease(*Graphics());
 	if(QmPerfEnabled())
 		QmPerfLogPayloadForce("perf/skins7", "event=resource_load_begin", Client());
 	m_vSkins.clear();

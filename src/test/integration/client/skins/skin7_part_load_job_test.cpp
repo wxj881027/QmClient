@@ -206,3 +206,71 @@ TEST_F(CQmSkin7PartLoadJobTest, AbortedBeforeQueueDoesNotPublishSuccess)
 	EXPECT_FALSE(pJob->IsCompleted());
 	ExpectFailedResult(pJob->GetResult());
 }
+
+TEST_F(CQmSkin7PartLoadJobTest, RejectedPublicationRetainsSamePixelsUntilSuccessfulRetry)
+{
+	WritePng();
+	auto pJob = Queue();
+	ASSERT_TRUE(WaitForJobDone(*pJob));
+	const uint8_t *pOriginal = nullptr;
+	const uint8_t *pGray = nullptr;
+	EXPECT_FALSE(pJob->PublishResult([&](const TJob::SResult &Result) {
+		pOriginal = Result.m_OriginalImage.m_pData;
+		pGray = Result.m_GrayscaleImage.m_pData;
+		return false;
+	}));
+	ASSERT_NE(pOriginal, nullptr);
+	ASSERT_NE(pGray, nullptr);
+	EXPECT_TRUE(pJob->PublishResult([&](const TJob::SResult &Result) {
+		EXPECT_EQ(Result.m_OriginalImage.m_pData, pOriginal);
+		EXPECT_EQ(Result.m_GrayscaleImage.m_pData, pGray);
+		EXPECT_EQ(Result.m_OriginalImage.m_pData[0], 144);
+		EXPECT_STREQ(Result.m_aName, "part");
+		return true;
+	}));
+	EXPECT_FALSE(pJob->PublishResult([](const auto &) {
+		ADD_FAILURE() << "consumed result replayed";
+		return true;
+	}));
+	ExpectFailedResult(pJob->GetResult());
+}
+
+TEST_F(CQmSkin7PartLoadJobTest, ThrowingPublicationKeepsNativeDecodedResultForRetry)
+{
+	WritePng();
+	auto pJob = Queue();
+	ASSERT_TRUE(WaitForJobDone(*pJob));
+	EXPECT_FALSE(pJob->PublishResult([](const auto &) -> bool { throw std::bad_alloc(); }));
+	EXPECT_TRUE(pJob->PublishResult([](const TJob::SResult &Result) {
+		EXPECT_TRUE(Result.m_Success);
+		EXPECT_NE(Result.m_OriginalImage.m_pData, nullptr);
+		EXPECT_NE(Result.m_GrayscaleImage.m_pData, nullptr);
+		return true;
+	}));
+}
+
+TEST_F(CQmSkin7PartLoadJobTest, FailedDecodeDrainsWithoutInvokingGpuPublication)
+{
+	auto pJob = Queue();
+	ASSERT_TRUE(WaitForJobDone(*pJob));
+	const auto Unexpected = [](const auto &) {
+		ADD_FAILURE() << "failed decode reached publisher";
+		return false;
+	};
+	EXPECT_TRUE(pJob->PublishResult(Unexpected));
+	EXPECT_FALSE(pJob->PublishResult(Unexpected));
+}
+
+TEST_F(CQmSkin7PartLoadJobTest, UnqueuedJobDoesNotInvokePublicationOrConsumeFutureResult)
+{
+	WritePng();
+	auto pJob = std::make_shared<TJob>("skins7/part.png", "part", m_pStorage.get(), IStorage::TYPE_SAVE, 2, 3, PrepareBoundary);
+	ExpectFailedResult(pJob->GetResult());
+	EXPECT_FALSE(pJob->PublishResult([](const auto &) {
+		ADD_FAILURE() << "unfinished job reached publisher";
+		return true;
+	}));
+	ASSERT_TRUE(m_Pool.TryAdd(pJob));
+	ASSERT_TRUE(WaitForJobDone(*pJob));
+	EXPECT_TRUE(pJob->PublishResult([](const auto &Result) { return Result.m_Success; }));
+}

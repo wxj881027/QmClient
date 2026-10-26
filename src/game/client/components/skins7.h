@@ -18,6 +18,7 @@
 #include <game/client/component.h>
 #include <game/client/components/qmclient/qm_chat_avatar.h>
 #include <game/client/components/qmclient/skin7_part_load_job.h>
+#include <game/client/components/qmclient/skin7_part_publisher.h>
 #include <game/client/components/qmclient/skin7_resource_lifecycle.h>
 #include <game/client/render.h>
 
@@ -134,6 +135,7 @@ private:
 	size_t m_NextSkin = 0;
 	int m_NextAccessory = 0;
 	CQmSkin7ResourceLifecycle m_ResourceLifecycle;
+	CQmSkin7PartPublisher m_PartPublisher;
 	TSkinLoadedCallback m_SkinLoadedCallback;
 
 	IGraphics::CTextureHandle m_XmasHatTexture;

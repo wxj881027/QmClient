@@ -74,6 +74,7 @@ private:
 	mutable CLock m_Mutex;
 	SResult m_Result;
 	bool m_Completed = false;
+	bool m_ResultConsumed = false;
 
 protected:
 	void Run() override REQUIRES(!m_Mutex)
@@ -158,9 +159,31 @@ public:
 		return m_Completed;
 	}
 
+	// 回调不得重入本任务；只有完整发布成功才释放原 CPU 结果。
+	template<typename TPublish>
+	bool PublishResult(TPublish &&Publish) REQUIRES(!m_Mutex)
+	{
+		CLockScope Lock(m_Mutex);
+		if(!m_Completed || m_ResultConsumed)
+			return false;
+		try
+		{
+			if(m_Result.m_Success && !std::forward<TPublish>(Publish)(static_cast<const SResult &>(m_Result)))
+				return false;
+		}
+		catch(...)
+		{
+			return false;
+		}
+		m_Result = SResult();
+		m_ResultConsumed = true;
+		return true;
+	}
+
 	SResult GetResult() REQUIRES(!m_Mutex)
 	{
 		CLockScope Lock(m_Mutex);
+		m_ResultConsumed = m_Completed;
 		SResult Result = std::move(m_Result);
 		m_Result = SResult();
 		return Result;
