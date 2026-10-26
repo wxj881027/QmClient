@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <new>
 #include <set>
 #include <utility>
 #include <vector>
@@ -58,7 +59,15 @@ bool ParseQmCompressedUsersMessage(const char *pData, size_t Size, SQmRealtimeMe
 	const uint32_t DecodedSize = (uint32_t(pBytes[4]) << 24) | (uint32_t(pBytes[5]) << 16) | (uint32_t(pBytes[6]) << 8) | pBytes[7];
 	if(DecodedSize == 0 || DecodedSize > QMCLIENT_USERS_SYNC_MAX_BYTES)
 		return false;
-	std::string Json(DecodedSize, '\0');
+	std::string Json;
+	try
+	{
+		Json.assign(DecodedSize, '\0');
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
 	z_stream Stream{};
 	Stream.next_in = reinterpret_cast<Bytef *>(const_cast<char *>(pData + 8));
 	Stream.avail_in = static_cast<uInt>(Size - 8);

@@ -712,3 +712,19 @@ TEST(QmRealtimeUsers, NodeEncodedFullAndDeltaMatchClientState)
 	EXPECT_EQ(Result.m_vLocalServerMarks[1].m_Name, "分身");
 	EXPECT_EQ(Result.m_vLocalServerMarks[1].m_Qid, "qid-a");
 }
+
+TEST(QmRealtimeUsers, InvalidCompressedFrameClearsOutputWithoutInvalidatingRetainedPayload)
+{
+	const auto Encoded = Frame(std::string(R"({"type":"users_sync","v":2,"data":)") + FULL + "}");
+	SQmRealtimeMessage Message;
+	ASSERT_TRUE(ParseQmCompressedUsersMessage(Encoded.data(), Encoded.size(), Message));
+	ASSERT_NE(Message.m_pPayload, nullptr);
+	auto pRetained = Message.m_pPayload;
+	EXPECT_FALSE(ParseQmCompressedUsersMessage("QMU1", 4, Message));
+	EXPECT_EQ(Message.m_Event, EQmRealtimeEvent::INVALID);
+	EXPECT_EQ(Message.m_pPayload, nullptr);
+	EXPECT_EQ(json_object_get(pRetained.get(), "revision")->u.integer, 1);
+	ASSERT_TRUE(ParseQmCompressedUsersMessage(Encoded.data(), Encoded.size(), Message));
+	EXPECT_EQ(Message.m_Event, EQmRealtimeEvent::USERS_SYNC);
+	EXPECT_NE(Message.m_pPayload, nullptr);
+}

@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 
 #include <cstring>
+#include <memory>
 #include <string>
 
 TEST(QmRealtime, ParsesStateAndBroadcast)
@@ -433,4 +434,63 @@ TEST(QmRealtime, NewDistributionReplacesOldSnapshotAndValidEmptyListClearsIt)
 	EXPECT_EQ(Snapshot.m_OnlineUserCount, 0);
 	EXPECT_EQ(Snapshot.m_OnlineDummyCount, 0);
 	EXPECT_FALSE(Snapshot.IsStale(180));
+}
+
+TEST(QmRealtime, TitleAliasesRetainRootAndNestedPayloadAfterMessageReuse)
+{
+	const char *apFrames[] = {
+		R"({"type":"titles","server_time":123,"presences":[]})",
+		R"({"type":"titles","data":{"server_time":123,"presences":[]}})",
+	};
+	for(const char *pFrame : apFrames)
+	{
+		SCOPED_TRACE(pFrame);
+		SQmRealtimeMessage Message;
+		ASSERT_TRUE(ParseQmRealtimeMessage(pFrame, std::strlen(pFrame), Message));
+		ASSERT_TRUE(Message.m_HasTitles);
+		auto pTitle = Message.m_pTitlePayload;
+		auto pPayload = Message.m_pPayload;
+		const char *pPing = R"({"type":"ping"})";
+		ASSERT_TRUE(ParseQmRealtimeMessage(pPing, std::strlen(pPing), Message));
+		EXPECT_EQ(Message.m_Event, EQmRealtimeEvent::PING);
+		EXPECT_EQ(Message.m_pPayload, nullptr);
+		ASSERT_NE(pTitle, nullptr);
+		EXPECT_EQ(json_object_get(pTitle.get(), "server_time")->u.integer, 123);
+		EXPECT_EQ(json_object_get(pPayload.get(), "presences")->type, json_array);
+	}
+}
+
+TEST(QmRealtime, ServicePayloadOutlivesInputAndOriginalMessage)
+{
+	std::shared_ptr<const json_value> pPayload;
+	{
+		std::string Input = R"({"type":"users","data":{"server_address":"one:8303","users":[]}})";
+		SQmRealtimeMessage Message;
+		ASSERT_TRUE(ParseQmRealtimeMessage(Input.data(), Input.size(), Message));
+		ASSERT_EQ(Message.m_Event, EQmRealtimeEvent::USERS);
+		pPayload = Message.m_pPayload;
+	}
+	ASSERT_NE(pPayload, nullptr);
+	EXPECT_EQ(json_object_get(pPayload.get(), "users")->type, json_array);
+	EXPECT_STREQ(json_object_get(pPayload.get(), "server_address")->u.string.ptr, "one:8303");
+}
+
+TEST(QmRealtime, InvalidInputClearsPreviouslyOwnedPayloadAndNextMessageCanPublish)
+{
+	SQmRealtimeMessage Message;
+	const char *pUsers = R"({"type":"users","data":{"users":[]}})";
+	ASSERT_TRUE(ParseQmRealtimeMessage(pUsers, std::strlen(pUsers), Message));
+	ASSERT_NE(Message.m_pPayload, nullptr);
+	auto pRetained = Message.m_pPayload;
+	EXPECT_FALSE(ParseQmRealtimeMessage("[]", 2, Message));
+	EXPECT_EQ(Message.m_Event, EQmRealtimeEvent::INVALID);
+	EXPECT_TRUE(Message.m_Type.empty());
+	EXPECT_EQ(Message.m_pPayload, nullptr);
+	EXPECT_FALSE(Message.m_HasRealtimeData);
+	EXPECT_EQ(json_object_get(pRetained.get(), "users")->type, json_array);
+	const char *pState = R"({"type":"state","data":{"online_users":7}})";
+	ASSERT_TRUE(ParseQmRealtimeMessage(pState, std::strlen(pState), Message));
+	EXPECT_EQ(Message.m_Event, EQmRealtimeEvent::STATE);
+	EXPECT_EQ(Message.m_OnlineUsers, 7);
+	EXPECT_EQ(Message.m_pPayload, nullptr);
 }

@@ -8,6 +8,9 @@
 #include <game/client/components/emoticon.h>
 
 #include <algorithm>
+#include <memory>
+#include <new>
+#include <utility>
 
 namespace
 {
@@ -38,24 +41,23 @@ namespace
 	}
 }
 
-bool ParseQmRealtimeMessage(const char *pData, size_t Size, SQmRealtimeMessage &OutMessage)
+static bool PrepareQmRealtimeMessage(const char *pData, size_t Size, SQmRealtimeMessage &OutMessage)
 {
 	OutMessage = {};
 	if(!pData || !Size)
 		return false;
-	json_value *pRoot = json_parse(pData, Size);
+	std::unique_ptr<json_value, decltype(&json_value_free)> pOwner(json_parse(pData, Size), json_value_free);
+	json_value *pRoot = pOwner.get();
 	if(!pRoot || pRoot->type != json_object)
-	{
-		if(pRoot)
-			json_value_free(pRoot);
 		return false;
-	}
+	const auto RetainPayload = [&pOwner](const json_value *pPayload) {
+		// 控制块分配完成才移交整棵树；别名只指向其内部稳定节点。
+		std::shared_ptr<const json_value> Root(std::move(pOwner));
+		return std::shared_ptr<const json_value>(Root, pPayload);
+	};
 	const json_value *pType = ObjectField(pRoot, "type");
 	if(!pType || pType->type != json_string || !pType->u.string.ptr[0])
-	{
-		json_value_free(pRoot);
 		return false;
-	}
 	OutMessage.m_Type = pType->u.string.ptr;
 	if(str_comp(pType->u.string.ptr, "ping") == 0)
 		OutMessage.m_Event = EQmRealtimeEvent::PING;
@@ -95,7 +97,7 @@ bool ParseQmRealtimeMessage(const char *pData, size_t Size, SQmRealtimeMessage &
 		OutMessage.m_HasTitles = pPresences && pPresences->type == json_array &&
 					 Int64Field(pPayload, "server_time", ServerTime) && ServerTime > 0;
 		OutMessage.m_HasRealtimeData = pPayload != pRoot;
-		OutMessage.m_pTitlePayload = std::shared_ptr<const json_value>(pPayload, [pRoot](const json_value *) { json_value_free(pRoot); });
+		OutMessage.m_pTitlePayload = RetainPayload(pPayload);
 		OutMessage.m_pPayload = OutMessage.m_pTitlePayload;
 		return true;
 	}
@@ -173,7 +175,7 @@ bool ParseQmRealtimeMessage(const char *pData, size_t Size, SQmRealtimeMessage &
 				}
 				if(OutMessage.m_HasRealtimeData)
 				{
-					OutMessage.m_pPayload = std::shared_ptr<const json_value>(pDataObject, [pRoot](const json_value *) { json_value_free(pRoot); });
+					OutMessage.m_pPayload = RetainPayload(pDataObject);
 					return true;
 				}
 				break;
@@ -214,15 +216,33 @@ bool ParseQmRealtimeMessage(const char *pData, size_t Size, SQmRealtimeMessage &
 				OutMessage.m_HasEmoticon = true;
 				OutMessage.m_EmoticonPayloadValid = true;
 				OutMessage.m_HasRealtimeData = true;
-				OutMessage.m_pPayload = std::shared_ptr<const json_value>(pDataObject, [pRoot](const json_value *) { json_value_free(pRoot); });
+				OutMessage.m_pPayload = RetainPayload(pDataObject);
 				return true;
 			}
 		}
 	}
 	if(OutMessage.m_Event == EQmRealtimeEvent::INVALID)
 		OutMessage.m_Event = EQmRealtimeEvent::UNKNOWN;
-	json_value_free(pRoot);
 	return true;
+}
+
+bool ParseQmRealtimeMessage(const char *pData, size_t Size, SQmRealtimeMessage &OutMessage)
+{
+	OutMessage = {};
+	try
+	{
+		SQmRealtimeMessage Candidate;
+		if(!PrepareQmRealtimeMessage(pData, Size, Candidate))
+			return false;
+		OutMessage = std::move(Candidate);
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 与普通解析失败共用空输出，不把部分事件交给主线程消费者。
+		OutMessage = {};
+		return false;
+	}
 }
 
 const char *QmRealtimeEffectiveUrl(const char *pConfiguredUrl)

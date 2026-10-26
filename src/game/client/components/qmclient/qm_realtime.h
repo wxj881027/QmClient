@@ -77,6 +77,7 @@ struct SQmRealtimeMessage
 	std::string m_EmoticonServerAddress;
 };
 
+// 准备分配失败返回false并清空输出；payload共享整棵JSON树的所有权。
 bool ParseQmRealtimeMessage(const char *pData, size_t Size, SQmRealtimeMessage &OutMessage);
 
 // 空配置使用中心服；只有固定加密入口允许发送认证凭据。
