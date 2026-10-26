@@ -11,6 +11,7 @@
 
 #include <cerrno>
 #include <cstring>
+#include <memory>
 
 #if defined(CONF_FAMILY_UNIX)
 #include <dirent.h>
@@ -140,6 +141,7 @@ void fs_listdir(const char *dir, FS_LISTDIR_CALLBACK cb, int type, void *user)
 	HANDLE handle = FindFirstFileW(wide_buffer.c_str(), &finddata);
 	if(handle == INVALID_HANDLE_VALUE)
 		return;
+	const std::unique_ptr<void, decltype(&FindClose)> owned_handle(handle, FindClose);
 
 	do
 	{
@@ -151,11 +153,10 @@ void fs_listdir(const char *dir, FS_LISTDIR_CALLBACK cb, int type, void *user)
 		}
 		if(cb(current_entry.value().c_str(), (finddata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0, type, user))
 			break;
-	} while(FindNextFileW(handle, &finddata));
+	} while(FindNextFileW(owned_handle.get(), &finddata));
 
-	FindClose(handle);
 #else
-	DIR *dir_handle = opendir(dir);
+	const std::unique_ptr<DIR, decltype(&closedir)> dir_handle(opendir(dir), closedir);
 	if(dir_handle == nullptr)
 		return;
 
@@ -164,7 +165,7 @@ void fs_listdir(const char *dir, FS_LISTDIR_CALLBACK cb, int type, void *user)
 	size_t length = str_length(buffer);
 	while(true)
 	{
-		struct dirent *entry = readdir(dir_handle);
+		struct dirent *entry = readdir(dir_handle.get());
 		if(entry == nullptr)
 			break;
 		if(!str_utf8_check(entry->d_name))
@@ -177,7 +178,6 @@ void fs_listdir(const char *dir, FS_LISTDIR_CALLBACK cb, int type, void *user)
 			break;
 	}
 
-	closedir(dir_handle);
 #endif
 }
 
@@ -192,6 +192,7 @@ void fs_listdir_fileinfo(const char *dir, FS_LISTDIR_CALLBACK_FILEINFO cb, int t
 	HANDLE handle = FindFirstFileW(wide_buffer.c_str(), &finddata);
 	if(handle == INVALID_HANDLE_VALUE)
 		return;
+	const std::unique_ptr<void, decltype(&FindClose)> owned_handle(handle, FindClose);
 
 	do
 	{
@@ -209,11 +210,10 @@ void fs_listdir_fileinfo(const char *dir, FS_LISTDIR_CALLBACK_FILEINFO cb, int t
 
 		if(cb(&info, (finddata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0, type, user))
 			break;
-	} while(FindNextFileW(handle, &finddata));
+	} while(FindNextFileW(owned_handle.get(), &finddata));
 
-	FindClose(handle);
 #else
-	DIR *dir_handle = opendir(dir);
+	const std::unique_ptr<DIR, decltype(&closedir)> dir_handle(opendir(dir), closedir);
 	if(dir_handle == nullptr)
 		return;
 
@@ -223,7 +223,7 @@ void fs_listdir_fileinfo(const char *dir, FS_LISTDIR_CALLBACK_FILEINFO cb, int t
 
 	while(true)
 	{
-		struct dirent *entry = readdir(dir_handle);
+		struct dirent *entry = readdir(dir_handle.get());
 		if(entry == nullptr)
 			break;
 		if(!str_utf8_check(entry->d_name))
@@ -244,7 +244,6 @@ void fs_listdir_fileinfo(const char *dir, FS_LISTDIR_CALLBACK_FILEINFO cb, int t
 			break;
 	}
 
-	closedir(dir_handle);
 #endif
 }
 

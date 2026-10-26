@@ -4769,6 +4769,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/translated_game_message_test.cpp
     src/test/integration/client/sound_pack_storage_test.cpp
     src/test/integration/qmclient/client/qm_audio_pack_export_test.cpp
+    src/test/integration/base/directory_enumeration_resources_test.cpp
     src/test/unit/qmclient/client/qm_gores_drown_tracker_test.cpp
     src/test/unit/qmclient/client/qm_trail_geometry_test.cpp
     src/test/integration/qmclient/client/qm_map_upload_lifecycle_test.cpp
