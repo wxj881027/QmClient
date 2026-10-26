@@ -316,20 +316,21 @@ SResourcePreviewArtifact BuildPreviewArtifact(CImageInfo &&Image, int TargetSize
 {
 	const auto Start = time_get_nanoseconds();
 	SResourcePreviewArtifact Artifact;
-	if(!SettingsResourcePreviewImageValidForUpload(Image))
+	Artifact.m_Image = std::move(Image);
+	auto &Candidate = Artifact.m_Image;
+	if(!SettingsResourcePreviewImageValidForUpload(Candidate))
 	{
-		Image.Free();
+		Candidate.Free();
 		Artifact.m_DurationMs = std::chrono::duration<double, std::milli>(time_get_nanoseconds() - Start).count();
 		return Artifact;
 	}
-	if(TargetSize > 0 && (Image.m_Width > (size_t)TargetSize || Image.m_Height > (size_t)TargetSize))
+	if(TargetSize > 0 && (Candidate.m_Width > (size_t)TargetSize || Candidate.m_Height > (size_t)TargetSize))
 	{
-		const float Scale = minimum((float)TargetSize / (float)Image.m_Width, (float)TargetSize / (float)Image.m_Height);
-		const int NewWidth = maximum(1, round_to_int((float)Image.m_Width * Scale));
-		const int NewHeight = maximum(1, round_to_int((float)Image.m_Height * Scale));
-		ResizeImage(Image, NewWidth, NewHeight);
+		const float Scale = minimum((float)TargetSize / (float)Candidate.m_Width, (float)TargetSize / (float)Candidate.m_Height);
+		const int NewWidth = maximum(1, round_to_int((float)Candidate.m_Width * Scale));
+		const int NewHeight = maximum(1, round_to_int((float)Candidate.m_Height * Scale));
+		ResizeImage(Candidate, NewWidth, NewHeight);
 	}
-	Artifact.m_Image = std::move(Image);
 	Artifact.m_Success = Artifact.m_Image.m_pData != nullptr;
 	Artifact.m_DurationMs = std::chrono::duration<double, std::milli>(time_get_nanoseconds() - Start).count();
 	return Artifact;
@@ -347,26 +348,22 @@ SResourcePreviewArtifact BuildPreviewArtifactFromPath(const char *pPath, IStorag
 
 	void *pData = nullptr;
 	unsigned DataSize = 0;
-	if(!pStorage->ReadFile(pPath, StorageType, &pData, &DataSize) || pData == nullptr || DataSize == 0)
+	const bool Read = pStorage->ReadFile(pPath, StorageType, &pData, &DataSize);
+	const std::unique_ptr<void, decltype(&free)> pFile(pData, free);
+	if(!Read || pFile == nullptr || DataSize == 0)
 	{
-		if(pData != nullptr)
-			free(pData);
 		Artifact.m_DurationMs = std::chrono::duration<double, std::milli>(time_get_nanoseconds() - Start).count();
 		return Artifact;
 	}
 
-	CImageInfo Image;
+	SResourcePreviewArtifact Decoded;
 	bool Success = false;
-	if(CImageLoader::LoadWebP(pData, DataSize, pContextName != nullptr ? pContextName : pPath, Image))
+	if(CImageLoader::LoadWebP(pFile.get(), DataSize, pContextName != nullptr ? pContextName : pPath, Decoded.m_Image))
 		Success = true;
-	else if(CImageLoader::LoadPng(pData, DataSize, pContextName != nullptr ? pContextName : pPath, Image))
+	else if(CImageLoader::LoadPng(pFile.get(), DataSize, pContextName != nullptr ? pContextName : pPath, Decoded.m_Image))
 		Success = true;
-	free(pData);
-
 	if(Success)
-		Artifact = BuildPreviewArtifact(std::move(Image), TargetSize);
-	else
-		Image.Free();
+		Artifact = BuildPreviewArtifact(std::move(Decoded.m_Image), TargetSize);
 	Artifact.m_DurationMs = std::chrono::duration<double, std::milli>(time_get_nanoseconds() - Start).count();
 	return Artifact;
 }

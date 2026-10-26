@@ -95,6 +95,11 @@ struct SResourcePreviewTelemetry
 
 struct SResourcePreviewArtifact
 {
+	SResourcePreviewArtifact() = default;
+	SResourcePreviewArtifact(SResourcePreviewArtifact &&) = default;
+	SResourcePreviewArtifact &operator=(SResourcePreviewArtifact &&) = default;
+	// 结果未进入上传队列或被调用方丢弃时，也回收仍持有的CPU像素。
+	~SResourcePreviewArtifact() { m_Image.Free(); }
 	CImageInfo m_Image;
 	bool m_Success = false;
 	double m_DurationMs = 0.0;
@@ -178,6 +183,7 @@ public:
 	};
 
 	CSettingsResourcePreviewJob(std::string Name, CImageInfo &&Image, int TargetSize);
+	~CSettingsResourcePreviewJob() override { m_InputImage.Free(); }
 	static std::shared_ptr<CSettingsResourcePreviewJob> FromPath(std::string Name, std::string Path, IStorage *pStorage, int StorageType, int TargetSize);
 
 	bool Completed() const REQUIRES(!m_Lock);

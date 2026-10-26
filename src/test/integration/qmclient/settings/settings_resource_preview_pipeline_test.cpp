@@ -206,3 +206,25 @@ TEST(SettingsResourcePreviewPipeline, WorkerPublishesInvalidInputAsCompletedFail
 	EXPECT_FALSE(Result.m_Artifact.m_Success);
 	EXPECT_EQ(Result.m_Artifact.m_Image.m_pData, nullptr);
 }
+
+TEST(SettingsResourcePreviewPipeline, MovedArtifactRetainsPixelsAfterSourceOwnerLeavesScope)
+{
+	SResourcePreviewArtifact Destination;
+	{
+		CPreviewImage Input(1, 1);
+		ASSERT_NE(Input.m_Image.m_pData, nullptr);
+		Input.m_Image.m_pData[0] = 47;
+		auto Source = BuildPreviewArtifact(std::move(Input.m_Image), 4);
+		ASSERT_TRUE(Source.m_Success);
+		Destination = std::move(Source);
+		EXPECT_EQ(Source.m_Image.m_pData, nullptr);
+	}
+	ASSERT_NE(Destination.m_Image.m_pData, nullptr);
+	EXPECT_EQ(Destination.m_Image.m_pData[0], 47);
+	EXPECT_EQ(Destination.m_Image.m_Width, 1u);
+	EXPECT_TRUE(Destination.m_Success);
+	CImageInfo Transferred = std::move(Destination.m_Image);
+	EXPECT_EQ(Destination.m_Image.m_pData, nullptr);
+	EXPECT_EQ(Transferred.m_pData[0], 47);
+	Transferred.Free();
+}
