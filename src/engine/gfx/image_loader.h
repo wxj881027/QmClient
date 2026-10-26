@@ -6,6 +6,8 @@
 #include <engine/image.h>
 
 #include <limits>
+#include <memory>
+#include <new>
 #include <string>
 #include <vector>
 
@@ -28,10 +30,87 @@ public:
 
 class CByteBufferWriter
 {
-	std::vector<uint8_t> m_vBuffer;
+public:
+	struct SAllocation
+	{
+		void *(*m_pfnAllocate)(size_t Size, size_t Alignment, void *pUser);
+		void (*m_pfnDeallocate)(void *pData, size_t Size, size_t Alignment, void *pUser) noexcept;
+		void *m_pUser;
+	};
+
+private:
+	friend class CImageLoader;
+	// 使用普通标准分配器，避免给旧系统增加PMR运行库依赖。
+	template<typename T>
+	struct CAllocator
+	{
+		using value_type = T;
+		const SAllocation *m_pAllocation = nullptr;
+		CAllocator() = default;
+		explicit CAllocator(const SAllocation *pAllocation) noexcept :
+			m_pAllocation(pAllocation) {}
+		template<typename U>
+		CAllocator(const CAllocator<U> &Other) noexcept :
+			m_pAllocation(Other.m_pAllocation)
+		{
+		}
+		template<typename U>
+		struct rebind
+		{
+			using other = CAllocator<U>;
+		};
+		T *allocate(size_t Count)
+		{
+			if(Count > std::numeric_limits<size_t>::max() / sizeof(T))
+				throw std::bad_array_new_length();
+			if(!m_pAllocation)
+				return std::allocator<T>{}.allocate(Count);
+			auto *pData = m_pAllocation->m_pfnAllocate(Count * sizeof(T), alignof(T), m_pAllocation->m_pUser);
+			if(!pData)
+				throw std::bad_alloc();
+			return static_cast<T *>(pData);
+		}
+		void deallocate(T *pData, size_t Count) noexcept
+		{
+			if(m_pAllocation)
+				m_pAllocation->m_pfnDeallocate(pData, Count * sizeof(T), alignof(T), m_pAllocation->m_pUser);
+			else
+				std::allocator<T>{}.deallocate(pData, Count);
+		}
+		template<typename U>
+		bool operator==(const CAllocator<U> &Other) const noexcept
+		{
+			return m_pAllocation == Other.m_pAllocation;
+		}
+	};
+	std::vector<uint8_t, CAllocator<uint8_t>> m_vBuffer;
+
+	// 只回退本次编码；成功标志在最后一个可longjmp的调用结束后才修改。
+	class CWriteScope
+	{
+		CByteBufferWriter &m_Writer;
+		const size_t m_PreviousSize;
+		bool m_Committed = false;
+
+	public:
+		explicit CWriteScope(CByteBufferWriter &Writer) :
+			m_Writer(Writer), m_PreviousSize(Writer.m_vBuffer.size()) {}
+		~CWriteScope()
+		{
+			if(!m_Committed)
+				m_Writer.m_vBuffer.resize(m_PreviousSize);
+		}
+		CWriteScope(const CWriteScope &) = delete;
+		CWriteScope &operator=(const CWriteScope &) = delete;
+		void Commit() noexcept { m_Committed = true; }
+	};
 
 public:
-	void Write(const void *pData, size_t Size);
+	// 分配表及上下文须比writer活得久，分配/释放配对且释放不抛异常。
+	explicit CByteBufferWriter(const SAllocation *pAllocation = nullptr) :
+		m_vBuffer(CAllocator<uint8_t>(pAllocation)) {}
+	// 输入须为独立有效字节区；失败保留原字节，不让分配异常跨过C回调。
+	bool Write(const void *pData, size_t Size) noexcept;
 	const uint8_t *Data() const { return m_vBuffer.data(); }
 	size_t Size() const { return m_vBuffer.size(); }
 };

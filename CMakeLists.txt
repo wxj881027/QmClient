@@ -5219,6 +5219,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/websocket_native_state_test.cpp
     src/test/unit/engine/graphics/glsl_shader_compiler_test.cpp
     src/test/unit/engine/graphics/image_byte_reader_test.cpp
+    src/test/unit/engine/graphics/image_byte_writer_test.cpp
+    src/test/integration/engine/image_encode_failure_test.cpp
     src/test/integration/engine/glsl_shader_source_test.cpp
     src/test/unit/engine/websocket_client_lifecycle_test.cpp
     src/test/unit/qmclient/client/qm_map_upload_test.cpp
