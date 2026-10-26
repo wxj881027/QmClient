@@ -4765,6 +4765,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_community_icon_store_test.cpp
     src/test/integration/client/emoticon_collision_inputs_test.cpp
     src/test/integration/client/spectator_selection_inputs_test.cpp
+    src/test/integration/client/vote_option_packet_test.cpp
     src/test/unit/qmclient/client/qm_gores_drown_tracker_test.cpp
     src/test/unit/qmclient/client/qm_trail_geometry_test.cpp
     src/test/integration/qmclient/client/qm_map_upload_lifecycle_test.cpp

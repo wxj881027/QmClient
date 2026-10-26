@@ -5,6 +5,7 @@
 #include <generated/protocol7.h>
 
 #include <game/client/components/countryflags.h>
+#include <game/client/components/qmclient/vote_option_packet.h>
 #include <game/client/gameclient.h>
 #include <game/gamecore.h>
 #include <game/localization.h>
@@ -377,28 +378,16 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 		int NumOptions = pUnpacker->GetInt();
 		if(NumOptions > 14)
 		{
-			for(int i = 0; i < NumOptions; i++)
-			{
-				const char *pDescription = pUnpacker->GetString(CUnpacker::SANITIZE_CC);
-				if(pUnpacker->Error())
-					continue;
-
+			ReadQmVoteOptions(*pUnpacker, NumOptions, [this](int, const char *pDescription) {
 				m_Voting.AddOption(pDescription);
-			}
+			});
 			// 0.7 can send more vote options than
 			// the 0.6 protocol fit
 			// in that case we do not translate it but just
 			// reimplement what 0.6 would do
 			return nullptr;
 		}
-		pMsg->m_NumOptions = 0;
-		for(int i = 0; i < NumOptions; i++)
-		{
-			const char *pDescription = pUnpacker->GetString(CUnpacker::SANITIZE_CC);
-			if(pUnpacker->Error())
-				continue;
-
-			pMsg->m_NumOptions++;
+		pMsg->m_NumOptions = ReadQmVoteOptions(*pUnpacker, NumOptions, [pMsg](int i, const char *pDescription) {
 			switch(i)
 			{
 			case 0: (pMsg->m_pDescription0 = pDescription); break;
@@ -417,7 +406,7 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 			case 13: (pMsg->m_pDescription13 = pDescription); break;
 			case 14: (pMsg->m_pDescription14 = pDescription);
 			}
-		}
+		});
 		return s_aRawMsg;
 	}
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_VOTESET)
