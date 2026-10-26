@@ -155,6 +155,7 @@ void crashdump_init_if_available(const char *log_file_path)
 
 #else
 
+#include "crashdump_windows.h"
 #include "log.h"
 #include "windows.h"
 
@@ -192,6 +193,8 @@ static std::atomic_flag gs_FatalReporterLaunched = ATOMIC_FLAG_INIT;
 static std::atomic<bool> gs_FallbackReportWritten{false};
 
 static LPTOP_LEVEL_EXCEPTION_FILTER gs_pPreviousUnhandledExceptionFilter = nullptr;
+// 首个致命入口独占此固定快照，不额外占用已受损线程的大块栈空间。
+static crashdump_windows::CExceptionSnapshot gs_ExceptionSnapshot;
 
 class CNativeCrashFile
 {
@@ -574,12 +577,10 @@ static void WriteExceptionContext(CCrashWriter &Output, const CONTEXT *pContext)
 #endif
 }
 
-static void WriteExceptionDetails(CCrashWriter &Output, EXCEPTION_POINTERS *pExceptionPointers)
+static void WriteExceptionDetails(CCrashWriter &Output, const EXCEPTION_RECORD *pRecord)
 {
-	if(pExceptionPointers == nullptr || pExceptionPointers->ExceptionRecord == nullptr)
+	if(pRecord == nullptr)
 		return;
-
-	const EXCEPTION_RECORD *pRecord = pExceptionPointers->ExceptionRecord;
 
 	WriteSection(Output, "Exception details:");
 
@@ -732,7 +733,7 @@ static void WriteRaw(CCrashWriter &Output, const char *pText)
 	Output.WriteText(pText);
 }
 
-static bool WriteMinimalCrashReport(const char *pReason, EXCEPTION_POINTERS *pExceptionPointers, int SignalNumber, bool DumpWritten)
+static bool WriteMinimalCrashReport(const char *pReason, const crashdump_windows::CExceptionSnapshot &Exception, int SignalNumber, bool DumpWritten)
 {
 	gs_FallbackReportWritten.store(false, std::memory_order_release);
 	if(gs_aWideFallbackReportPath[0] == L'\0')
@@ -800,9 +801,8 @@ static bool WriteMinimalCrashReport(const char *pReason, EXCEPTION_POINTERS *pEx
 		WriteRaw(Output, aLine);
 	}
 
-	WriteExceptionDetails(Output, pExceptionPointers);
-	if(pExceptionPointers != nullptr)
-		WriteExceptionContext(Output, pExceptionPointers->ContextRecord);
+	WriteExceptionDetails(Output, Exception.Record());
+	WriteExceptionContext(Output, Exception.Context());
 	WriteLoadedModules(Output);
 
 	const bool Completed = Output.Finish();
@@ -880,14 +880,14 @@ static bool WriteMiniDumpFile(const wchar_t *pFilename, EXCEPTION_POINTERS *pExc
 // QmClient: 判断异常地址是否落在已知图形驱动模块内。
 // 只在退出阶段使用：退出清理销毁图形后端时，个别驱动会在这类模块内部崩溃，
 // 此时进程本就即将结束，写完整转储与弹窗只会打扰用户。
-static bool IsShutdownGraphicsFault(EXCEPTION_POINTERS *pExceptionPointers)
+static bool IsShutdownGraphicsFault(const EXCEPTION_RECORD *pRecord)
 {
 	if(!gs_ShutdownInProgress.load(std::memory_order_acquire))
 		return false;
-	if(pExceptionPointers == nullptr || pExceptionPointers->ExceptionRecord == nullptr)
+	if(pRecord == nullptr)
 		return false;
 
-	const void *pFaultAddress = pExceptionPointers->ExceptionRecord->ExceptionAddress;
+	const void *pFaultAddress = pRecord->ExceptionAddress;
 	if(pFaultAddress == nullptr)
 		return false;
 
@@ -912,16 +912,17 @@ static void HandleFatalCrash(const char *pReason, EXCEPTION_POINTERS *pException
 	if(gs_FatalReportInProgress.test_and_set(std::memory_order_acq_rel))
 		return;
 
+	gs_ExceptionSnapshot.Capture(pExceptionPointers);
 	// 退出阶段的已知图形驱动故障：只留日志，不写转储、不生成报告。
-	if(IsShutdownGraphicsFault(pExceptionPointers))
+	if(IsShutdownGraphicsFault(gs_ExceptionSnapshot.Record()))
 	{
 		gs_ShutdownGraphicsFault.store(true, std::memory_order_release);
 		log_warn("crashdump", "ignoring graphics driver fault '%s' during shutdown; process is already exiting", pReason);
 		return;
 	}
 
-	const bool DumpWritten = WriteMiniDumpFile(gs_aWideFallbackDumpPath, pExceptionPointers);
-	WriteMinimalCrashReport(pReason, pExceptionPointers, SignalNumber, DumpWritten);
+	const bool DumpWritten = WriteMiniDumpFile(gs_aWideFallbackDumpPath, gs_ExceptionSnapshot.PointersForDump());
+	WriteMinimalCrashReport(pReason, gs_ExceptionSnapshot, SignalNumber, DumpWritten);
 }
 
 static void LaunchFatalCrashReporter()

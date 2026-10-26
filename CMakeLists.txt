@@ -2715,6 +2715,7 @@ set_src(BASE GLOB_RECURSE src/base
   crashdump.cpp
   crashdump.h
   crash_output.h
+  crashdump_windows.h
   dbg.cpp
   dbg.h
   detect.h
@@ -5406,6 +5407,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/base/windows_test.cpp
     src/test/integration/base/windows_com_lifecycle_test.cpp
     src/test/integration/base/windows_io_handle_test.cpp
+    src/test/integration/base/windows_exception_snapshot_test.cpp
     src/test/integration/base/windows_stdout_logger_test.cpp
     src/test/unit/engine/netobj_secure_unpack_test.cpp
     src/test/unit/engine/snapshot_test.cpp
