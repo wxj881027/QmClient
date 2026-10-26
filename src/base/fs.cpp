@@ -130,55 +130,96 @@ static inline time_t filetime_to_unixtime(LPFILETIME filetime)
 }
 #endif
 
-void fs_listdir(const char *dir, FS_LISTDIR_CALLBACK cb, int type, void *user)
+static EFsListDirectoryResult fs_listdir_impl(const char *dir, FS_LISTDIR_CALLBACK cb, int type, void *user, bool checked)
 {
 #if defined(CONF_FAMILY_WINDOWS)
 	char buffer[IO_MAX_PATH_LENGTH];
+	if(checked && (std::strlen(dir) > sizeof(buffer) - 3 || !str_utf8_check(dir)))
+		return EFsListDirectoryResult::IO_FAILURE;
 	str_format(buffer, sizeof(buffer), "%s/*", dir);
 	const std::wstring wide_buffer = windows_utf8_to_wide(buffer);
 
 	WIN32_FIND_DATAW finddata;
 	HANDLE handle = FindFirstFileW(wide_buffer.c_str(), &finddata);
 	if(handle == INVALID_HANDLE_VALUE)
-		return;
+	{
+		if(!checked)
+			return EFsListDirectoryResult::IO_FAILURE;
+		const DWORD error = GetLastError();
+		if(error != ERROR_FILE_NOT_FOUND && error != ERROR_PATH_NOT_FOUND)
+			return EFsListDirectoryResult::IO_FAILURE;
+		const std::wstring wide_dir = windows_utf8_to_wide(dir);
+		const DWORD attributes = GetFileAttributesW(wide_dir.c_str());
+		if(attributes != INVALID_FILE_ATTRIBUTES)
+			return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0 ? EFsListDirectoryResult::SUCCESS : EFsListDirectoryResult::IO_FAILURE;
+		const DWORD attribute_error = GetLastError();
+		return attribute_error == ERROR_FILE_NOT_FOUND || attribute_error == ERROR_PATH_NOT_FOUND ? EFsListDirectoryResult::NOT_FOUND : EFsListDirectoryResult::IO_FAILURE;
+	}
 	const std::unique_ptr<void, decltype(&FindClose)> owned_handle(handle, FindClose);
 
-	do
+	while(true)
 	{
 		const std::optional<std::string> current_entry = windows_wide_to_utf8(finddata.cFileName);
 		if(!current_entry.has_value())
-		{
 			log_error("filesystem", "ERROR: file/folder name containing invalid UTF-16 found in folder '%s'", dir);
-			continue;
-		}
-		if(cb(current_entry.value().c_str(), (finddata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0, type, user))
-			break;
-	} while(FindNextFileW(owned_handle.get(), &finddata));
-
+		else if(cb(current_entry.value().c_str(), (finddata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0, type, user))
+			return EFsListDirectoryResult::STOPPED;
+		if(!FindNextFileW(owned_handle.get(), &finddata))
+			return !checked || GetLastError() == ERROR_NO_MORE_FILES ? EFsListDirectoryResult::SUCCESS : EFsListDirectoryResult::IO_FAILURE;
+	}
 #else
+	char buffer[IO_MAX_PATH_LENGTH];
+	if(checked && std::strlen(dir) > sizeof(buffer) - 2)
+		return EFsListDirectoryResult::IO_FAILURE;
 	const std::unique_ptr<DIR, decltype(&closedir)> dir_handle(opendir(dir), closedir);
 	if(dir_handle == nullptr)
-		return;
+		return checked && errno == ENOENT ? EFsListDirectoryResult::NOT_FOUND : EFsListDirectoryResult::IO_FAILURE;
 
-	char buffer[IO_MAX_PATH_LENGTH];
 	str_format(buffer, sizeof(buffer), "%s/", dir);
-	size_t length = str_length(buffer);
+	const size_t length = str_length(buffer);
 	while(true)
 	{
+		// 回调和stat也会设置errno，不能把它们残留的值当作readdir错误。
+		if(checked)
+			errno = 0;
 		struct dirent *entry = readdir(dir_handle.get());
 		if(entry == nullptr)
-			break;
+			return !checked || errno == 0 ? EFsListDirectoryResult::SUCCESS : EFsListDirectoryResult::IO_FAILURE;
 		if(!str_utf8_check(entry->d_name))
 		{
 			log_error("filesystem", "ERROR: file/folder name containing invalid UTF-8 found in folder '%s'", dir);
 			continue;
 		}
+		if(checked && std::strlen(entry->d_name) >= sizeof(buffer) - length)
+			return EFsListDirectoryResult::IO_FAILURE;
 		str_copy(buffer + length, entry->d_name, sizeof(buffer) - length);
-		if(cb(entry->d_name, fs_is_dir(buffer), type, user))
-			break;
+		bool is_dir;
+		if(checked)
+		{
+			struct stat info;
+			if(stat(buffer, &info) == 0)
+				is_dir = S_ISDIR(info.st_mode);
+			else if(errno == ENOENT || errno == ENOTDIR)
+				is_dir = false; // 消失的条目/断链仍交给回调，保留存储根名称遮蔽规则。
+			else
+				return EFsListDirectoryResult::IO_FAILURE;
+		}
+		else
+			is_dir = fs_is_dir(buffer);
+		if(cb(entry->d_name, is_dir, type, user))
+			return EFsListDirectoryResult::STOPPED;
 	}
-
 #endif
+}
+
+void fs_listdir(const char *dir, FS_LISTDIR_CALLBACK cb, int type, void *user)
+{
+	(void)fs_listdir_impl(dir, cb, type, user, false);
+}
+
+EFsListDirectoryResult fs_listdir_checked(const char *dir, FS_LISTDIR_CALLBACK cb, int type, void *user)
+{
+	return fs_listdir_impl(dir, cb, type, user, true);
 }
 
 void fs_listdir_fileinfo(const char *dir, FS_LISTDIR_CALLBACK_FILEINFO cb, int type, void *user)

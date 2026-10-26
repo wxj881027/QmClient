@@ -12,6 +12,7 @@
 #include <zlib.h>
 
 #include <cstdlib>
+#include <cstring>
 #include <unordered_set>
 
 bool StoragePathFromExecutable(const char *pExecutablePath, const char *pRelativePath, char *pBuffer, unsigned BufferSize)
@@ -598,6 +599,39 @@ namespace
 			{
 				dbg_assert_failed("Type invalid");
 			}
+		}
+
+		EFsListDirectoryResult ListDirectoryChecked(int Type, const char *pPath, FS_LISTDIR_CALLBACK pfnCallback, void *pUser) override
+		{
+			const auto ScanAt = [&](int Index, FS_LISTDIR_CALLBACK Callback, void *pCallbackUser) {
+				char aBuffer[IO_MAX_PATH_LENGTH];
+				const size_t NameLength = std::strlen(pPath);
+				const size_t PrefixLength = Index == TYPE_ABSOLUTE ? 0 : std::strlen(m_aaStoragePaths[Index]);
+				const size_t Separator = PrefixLength != 0 ? 1 : 0;
+				if(NameLength >= sizeof(aBuffer) || PrefixLength + Separator > sizeof(aBuffer) - NameLength - 1)
+					return EFsListDirectoryResult::IO_FAILURE;
+				return fs_listdir_checked(GetPath(Index, pPath, aBuffer, sizeof(aBuffer)), Callback, Index, pCallbackUser);
+			};
+			if(Type == TYPE_ALL)
+			{
+				SListDirectoryUniqueCallbackData Data;
+				Data.m_pfnDelegate = pfnCallback;
+				Data.m_pDelegateUser = pUser;
+				auto Result = EFsListDirectoryResult::NOT_FOUND;
+				for(int i = TYPE_SAVE; i < m_NumPaths; ++i)
+				{
+					const auto Current = ScanAt(i, ListDirectoryUniqueCallback, &Data);
+					if(Current != EFsListDirectoryResult::SUCCESS && Current != EFsListDirectoryResult::NOT_FOUND)
+						return Current;
+					if(Current == EFsListDirectoryResult::SUCCESS)
+						Result = Current;
+				}
+				return Result;
+			}
+			if(Type == TYPE_ABSOLUTE || (Type >= TYPE_SAVE && Type < m_NumPaths))
+				return ScanAt(Type, pfnCallback, pUser);
+			dbg_assert_failed("Type invalid");
+			return EFsListDirectoryResult::IO_FAILURE;
 		}
 
 		const char *GetPath(int Type, const char *pDir, char *pBuffer, unsigned BufferSize) const

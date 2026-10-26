@@ -5,6 +5,7 @@
 
 #include "kernel.h"
 
+#include <base/fs.h>
 #include <base/hash.h>
 #include <base/types.h>
 
@@ -58,6 +59,8 @@ public:
 	virtual bool GetExecutablePath(const char *pFilename, char *pBuffer, unsigned BufferSize) const = 0;
 
 	virtual void ListDirectory(int Type, const char *pPath, FS_LISTDIR_CALLBACK pfnCallback, void *pUser) = 0;
+	// 旧后端不能默认为完整扫描成功，接入后显式返回枚举结果。
+	virtual EFsListDirectoryResult ListDirectoryChecked(int, const char *, FS_LISTDIR_CALLBACK, void *) { return EFsListDirectoryResult::UNSUPPORTED; }
 	virtual void ListDirectoryInfo(int Type, const char *pPath, FS_LISTDIR_CALLBACK_FILEINFO pfnCallback, void *pUser) = 0;
 	virtual IOHANDLE OpenFile(const char *pFilename, int Flags, int Type, char *pBuffer = nullptr, int BufferSize = 0) = 0;
 	virtual bool FileExists(const char *pFilename, int Type) = 0;

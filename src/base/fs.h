@@ -73,6 +73,19 @@ int fs_makedir_rec_for(const char *path);
  */
 void fs_listdir(const char *dir, FS_LISTDIR_CALLBACK cb, int type, void *user);
 
+enum class EFsListDirectoryResult
+{
+	SUCCESS,
+	NOT_FOUND,
+	STOPPED,
+	IO_FAILURE,
+	UNSUPPORTED,
+};
+
+// 区分不存在、正常结束、回调主动停止和实际错误；异常仍传播，目录句柄自动关闭。
+// 不提交截断路径；无效名称仍沿旧规则跳过。UNSUPPORTED只供未接入的存储后端使用。
+EFsListDirectoryResult fs_listdir_checked(const char *dir, FS_LISTDIR_CALLBACK cb, int type, void *user);
+
 /**
  * Lists the files and folders in a directory and gets additional file information.
  *

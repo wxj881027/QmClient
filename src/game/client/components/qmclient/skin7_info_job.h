@@ -14,6 +14,7 @@
 
 #include <cstdlib>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -96,14 +97,14 @@ protected:
 		try
 		{
 			if(State() != STATE_ABORTED)
-				m_pStorage->ListDirectory(IStorage::TYPE_ALL, "skins7", Scan, this);
+				ScanDirectory("skins7", Scan);
 			// 目录扫描和附加 PNG 也会读盘，不能留在加载页的主线程。
 			const char *apParts[] = {"body", "marking", "decoration", "hands", "feet", "eyes"};
 			for(int Part = 0; Part < protocol7::NUM_SKINPARTS && State() != STATE_ABORTED; ++Part)
 			{
 				m_ScanPart = Part;
 				const std::string Path = "skins7/" + std::string(apParts[Part]);
-				m_pStorage->ListDirectory(IStorage::TYPE_ALL, Path.c_str(), ScanPart, this);
+				ScanDirectory(Path.c_str(), ScanPart);
 			}
 			LoadAccessory("skins7/xmas_hat.png", 1, 4, m_XmasHat);
 			LoadAccessory("skins7/bot.png", 12, 5, m_Bot);
@@ -168,6 +169,13 @@ private:
 		m_XmasHat.Free();
 		m_Bot.Free();
 		m_Succeeded = false;
+	}
+
+	void ScanDirectory(const char *pPath, FS_LISTDIR_CALLBACK Callback)
+	{
+		const auto Result = m_pStorage->ListDirectoryChecked(IStorage::TYPE_ALL, pPath, Callback, this);
+		if(State() != STATE_ABORTED && Result != EFsListDirectoryResult::SUCCESS && Result != EFsListDirectoryResult::NOT_FOUND)
+			throw std::runtime_error("skin directory enumeration failed");
 	}
 
 	void LoadAccessory(const char *pPath, int Columns, int Rows, CImageInfo &Image)

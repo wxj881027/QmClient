@@ -26,6 +26,7 @@ namespace
 		const char *m_pFailName = nullptr;
 		bool m_Unknown = false;
 		bool m_ThrowAfterRead = false;
+		std::optional<EFsListDirectoryResult> m_ForcedDirectoryResult;
 		bool m_Triggered = false;
 		CQmSkin7InfoJob *m_pAbortJob = nullptr;
 		std::atomic<bool> m_AbortHit{false};
@@ -34,7 +35,7 @@ namespace
 		int NumPaths() const override { return m_Storage.NumPaths(); }
 		bool GetDataPath(const char *pName, char *pBuffer, unsigned Size) const override { return m_Storage.GetDataPath(pName, pBuffer, Size); }
 		bool GetExecutablePath(const char *pName, char *pBuffer, unsigned Size) const override { return m_Storage.GetExecutablePath(pName, pBuffer, Size); }
-		void ListDirectory(int Type, const char *pPath, FS_LISTDIR_CALLBACK Callback, void *pUser) override
+		EFsListDirectoryResult Enumerate(int Type, const char *pPath, FS_LISTDIR_CALLBACK Callback, void *pUser, bool Checked)
 		{
 			struct SContext
 			{
@@ -43,7 +44,7 @@ namespace
 				FS_LISTDIR_CALLBACK m_Callback;
 				void *m_pUser;
 			} Context{*this, pPath, Callback, pUser};
-			m_Storage.ListDirectory(Type, pPath, [](const char *pName, int IsDir, int StorageType, void *pUser) {
+			const auto Wrapped = [](const char *pName, int IsDir, int StorageType, void *pUser) {
 				auto &Context = *static_cast<SContext *>(pUser);
 				const int Result = Context.m_Callback(pName, IsDir, StorageType, Context.m_pUser);
 				auto &Self = Context.m_Storage;
@@ -60,7 +61,28 @@ namespace
 						throw 7;
 					throw std::bad_alloc();
 				}
-				return Result; }, &Context);
+				return Result;
+			};
+			if(!Checked)
+			{
+				m_Storage.ListDirectory(Type, pPath, Wrapped, &Context);
+				return EFsListDirectoryResult::SUCCESS;
+			}
+			const auto Result = m_Storage.ListDirectoryChecked(Type, pPath, Wrapped, &Context);
+			if(m_ForcedDirectoryResult && Result == EFsListDirectoryResult::SUCCESS)
+			{
+				m_Triggered = true;
+				return *m_ForcedDirectoryResult;
+			}
+			return Result;
+		}
+		void ListDirectory(int Type, const char *pPath, FS_LISTDIR_CALLBACK Callback, void *pUser) override
+		{
+			(void)Enumerate(Type, pPath, Callback, pUser, false);
+		}
+		EFsListDirectoryResult ListDirectoryChecked(int Type, const char *pPath, FS_LISTDIR_CALLBACK Callback, void *pUser) override
+		{
+			return Enumerate(Type, pPath, Callback, pUser, true);
 		}
 		void ListDirectoryInfo(int Type, const char *pPath, FS_LISTDIR_CALLBACK_FILEINFO Callback, void *pUser) override { m_Storage.ListDirectoryInfo(Type, pPath, Callback, pUser); }
 		IOHANDLE OpenFile(const char *pName, int Flags, int Type, char *pBuffer, int Size) override { return m_Storage.OpenFile(pName, Flags, Type, pBuffer, Size); }
@@ -419,4 +441,56 @@ TEST_F(CQmSkin7ScanRetryTest, CancellationAfterNativeCallbackDiscardsPartialResu
 	EXPECT_EQ(m_pJob->State(), IJob::STATE_ABORTED);
 	ExpectEmptyResult();
 	EXPECT_FALSE(m_Request.RetryFailedScan(m_pJob, m_Completion, TTime(0)));
+}
+
+TEST_F(CQmSkin7ScanRetryTest, NativeDirectoryFailureStatusRejectsParsedResultAndCanRecover)
+{
+	m_pFault->m_ForcedDirectoryResult = EFsListDirectoryResult::IO_FAILURE;
+	Queue();
+	ASSERT_FALSE(HasFatalFailure());
+	EXPECT_TRUE(m_pFault->m_Triggered);
+	ExpectEmptyResult();
+	ASSERT_TRUE(m_Request.RetryFailedScan(m_pJob, m_Completion, TTime(0)));
+	m_pFault->m_ForcedDirectoryResult.reset();
+	auto Plan = TryStart(std::chrono::seconds(1));
+	ASSERT_TRUE(Plan);
+	ASSERT_TRUE(WaitForJobDone(*Plan->m_pJob));
+	EXPECT_TRUE(Plan->m_pJob->Succeeded());
+}
+
+TEST_F(CQmSkin7ScanRetryTest, NativeFileAtDirectoryPathIsNotAcceptedAsEmptySkinScan)
+{
+	ASSERT_TRUE(m_pStorage->RemoveFile("skins7/qm_info_fail.json", IStorage::TYPE_SAVE));
+	ASSERT_TRUE(m_pStorage->RemoveFolder("skins7", IStorage::TYPE_SAVE));
+	Write("skins7", "not a directory");
+	Queue();
+	ASSERT_FALSE(HasFatalFailure());
+	ExpectEmptyResult();
+}
+
+TEST_F(CQmSkin7ScanRetryTest, UnsupportedCheckedBackendIsNotAcceptedAsCompleteScan)
+{
+	m_pFault->m_ForcedDirectoryResult = EFsListDirectoryResult::UNSUPPORTED;
+	Queue();
+	ASSERT_FALSE(HasFatalFailure());
+	ExpectEmptyResult();
+}
+
+TEST_F(CQmSkin7ScanRetryTest, UnexpectedCallbackStopIsNotAcceptedWithoutCancellation)
+{
+	m_pFault->m_ForcedDirectoryResult = EFsListDirectoryResult::STOPPED;
+	Queue();
+	ASSERT_FALSE(HasFatalFailure());
+	EXPECT_EQ(m_pJob->State(), IJob::STATE_DONE);
+	ExpectEmptyResult();
+}
+
+TEST_F(CQmSkin7ScanRetryTest, BaseStorageCheckedDefaultReportsUnsupportedWithoutLegacyTraversal)
+{
+	int Calls = 0;
+	const auto Result = m_pFault->IStorage::ListDirectoryChecked(IStorage::TYPE_ALL, "skins7", [](const char *, int, int, void *pUser) {
+		++*static_cast<int *>(pUser);
+		return 0; }, &Calls);
+	EXPECT_EQ(Result, EFsListDirectoryResult::UNSUPPORTED);
+	EXPECT_EQ(Calls, 0);
 }

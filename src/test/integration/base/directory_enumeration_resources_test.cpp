@@ -71,7 +71,7 @@ namespace
 #endif
 	}
 
-	int RunProbe(bool WithInfo, ECompletion Completion)
+	int RunProbe(bool WithInfo, ECompletion Completion, bool Checked = false)
 	{
 #if defined(CONF_FAMILY_WINDOWS)
 		const HANDLE Watchdog = CreateThread(nullptr, 0, ProbeTimeout, nullptr, 0, nullptr);
@@ -95,6 +95,12 @@ namespace
 			{
 				if(WithInfo)
 					fs_listdir_fileinfo(Info.StoragePath(), VisitInfo, IStorage::TYPE_SAVE, &Visitor);
+				else if(Checked)
+				{
+					const auto Result = fs_listdir_checked(Info.StoragePath(), Visit, IStorage::TYPE_SAVE, &Visitor);
+					if(Result != (Mode == ECompletion::EARLY_STOP ? EFsListDirectoryResult::STOPPED : EFsListDirectoryResult::SUCCESS))
+						return false;
+				}
 				else
 					fs_listdir(Info.StoragePath(), Visit, IStorage::TYPE_SAVE, &Visitor);
 			}
@@ -156,4 +162,14 @@ TEST_F(CDirectoryEnumerationDeathTest, NormalCompletionClosesBothNativeSearchKin
 		EXPECT_EXIT(std::_Exit(RunProbe(WithInfo, ECompletion::NORMAL)), ::testing::ExitedWithCode(73), "");
 	}
 }
+TEST_F(CDirectoryEnumerationDeathTest, CheckedExceptionClosesTheNativeSearch)
+{
+	EXPECT_EXIT(std::_Exit(RunProbe(false, ECompletion::THROW, true)), ::testing::ExitedWithCode(73), "");
+}
+
+TEST_F(CDirectoryEnumerationDeathTest, CheckedEarlyStopClosesTheNativeSearch)
+{
+	EXPECT_EXIT(std::_Exit(RunProbe(false, ECompletion::EARLY_STOP, true)), ::testing::ExitedWithCode(73), "");
+}
+
 #endif

@@ -4773,6 +4773,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/audio_pack_candidate_scan_test.cpp
     src/test/unit/qmclient/client/audio_pack_candidate_publication_test.cpp
     src/test/integration/base/directory_enumeration_resources_test.cpp
+    src/test/integration/base/directory_checked_test.cpp
     src/test/integration/base/net_socket_allocation_test.cpp
     src/test/unit/base/socket_descriptor_test.cpp
     src/test/unit/client/skins/skin_resize_plan_test.cpp
