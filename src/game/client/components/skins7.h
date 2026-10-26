@@ -5,6 +5,7 @@
 
 #include <base/color.h>
 #include <base/lock.h>
+#include <base/str.h>
 #include <base/vmath.h>
 
 #include <engine/client/enums.h>
@@ -75,15 +76,15 @@ public:
 		int m_aUseCustomColors[protocol7::NUM_SKINPARTS];
 		unsigned m_aPartColors[protocol7::NUM_SKINPARTS];
 
-		bool operator<(const CSkin &Other) const;
+		bool operator<(const CSkin &Other) const { return str_comp_nocase(m_aName, Other.m_aName) < 0; }
 		bool operator==(const CSkin &Other) const;
 	};
 
 	using CSkinPartLoadJob = CQmSkin7PartLoadJob;
 
-	static const char *const ms_apSkinPartNames[protocol7::NUM_SKINPARTS];
+	inline static const char *const ms_apSkinPartNames[protocol7::NUM_SKINPARTS] = {"body", "marking", "decoration", "hands", "feet", "eyes"};
 	static const char *const ms_apSkinPartNamesLocalized[protocol7::NUM_SKINPARTS];
-	static const char *const ms_apColorComponents[NUM_COLOR_COMPONENTS];
+	inline static const char *const ms_apColorComponents[NUM_COLOR_COMPONENTS] = {"hue", "sat", "lgt", "alp"};
 
 	static char *ms_apSkinNameVariables[NUM_DUMMIES];
 	static char *ms_apSkinVariables[NUM_DUMMIES][protocol7::NUM_SKINPARTS];

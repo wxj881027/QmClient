@@ -25,15 +25,14 @@
 
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/qm_skin_outline.h>
+#include <game/client/components/qmclient/skin7_descriptor_publication.h>
 #include <game/client/components/qmclient/skin7_info_job.h>
 #include <game/client/components/qmclient/skin7_save.h>
 #include <game/client/components/qmclient/skin_load_budget.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
-const char *const CSkins7::ms_apSkinPartNames[protocol7::NUM_SKINPARTS] = {"body", "marking", "decoration", "hands", "feet", "eyes"};
 const char *const CSkins7::ms_apSkinPartNamesLocalized[protocol7::NUM_SKINPARTS] = {Localizable("Body", "skins"), Localizable("Marking", "skins"), Localizable("Decoration", "skins"), Localizable("Hands", "skins"), Localizable("Feet", "skins"), Localizable("Eyes", "skins")};
-const char *const CSkins7::ms_apColorComponents[NUM_COLOR_COMPONENTS] = {"hue", "sat", "lgt", "alp"};
 
 char *CSkins7::ms_apSkinNameVariables[NUM_DUMMIES] = {nullptr};
 char *CSkins7::ms_apSkinVariables[NUM_DUMMIES][protocol7::NUM_SKINPARTS] = {{nullptr}};
@@ -143,11 +142,6 @@ void CSkins7::CSkinPart::ApplyTo(CTeeRenderInfo::CSixup &SixupRenderInfo) const
 }
 
 bool CSkins7::CSkinPart::operator<(const CSkinPart &Other) const
-{
-	return str_comp_nocase(m_aName, Other.m_aName) < 0;
-}
-
-bool CSkins7::CSkin::operator<(const CSkin &Other) const
 {
 	return str_comp_nocase(m_aName, Other.m_aName) < 0;
 }
@@ -280,10 +274,10 @@ bool CSkins7::RebuildSkins()
 	int Processed = 0;
 	while(m_NextSkin < Entries.size() && QmSkinCanFinalize(Processed, time_get_nanoseconds() - Begin, std::chrono::milliseconds(1)))
 	{
-		const auto &Entry = Entries[m_NextSkin++];
-		LoadSkin(Entry.m_Name.c_str(), Entry.m_StorageType, *Entry.m_pInfo);
-		// 每项绑定后即释放 JSON，避免末帧集中销毁全部解析树。
-		m_pSkinInfoJob->ReleaseEntry(m_NextSkin - 1);
+		if(!QmTryFinalizeNextSkin7(*m_pSkinInfoJob, m_NextSkin, [this](const auto &Entry) {
+			   return LoadSkin(Entry.m_Name.c_str(), Entry.m_StorageType, *Entry.m_pInfo);
+		   }))
+			return false;
 		++Processed;
 	}
 	if(m_NextSkin != Entries.size())
@@ -294,88 +288,21 @@ bool CSkins7::RebuildSkins()
 
 bool CSkins7::LoadSkin(const char *pName, int DirType, const json_value &Info)
 {
-	char aFilename[IO_MAX_PATH_LENGTH];
-	str_format(aFilename, sizeof(aFilename), SKINS_DIR "/%s.json", pName);
-
-	CSkin Skin;
-	str_copy(Skin.m_aName, pName);
-	const bool SpecialSkin = IsSpecialSkin(Skin.m_aName);
-	Skin.m_Flags = 0;
-	if(SpecialSkin)
-	{
-		Skin.m_Flags |= SKINFLAG_SPECIAL;
-	}
-	if(DirType != IStorage::TYPE_SAVE)
-	{
-		Skin.m_Flags |= SKINFLAG_STANDARD;
-	}
-
-	const json_value &Start = Info["skin"];
-
-	for(int PartIndex = 0; PartIndex < protocol7::NUM_SKINPARTS; ++PartIndex)
-	{
-		Skin.m_aUseCustomColors[PartIndex] = 0;
-		Skin.m_aPartColors[PartIndex] = (PartIndex == protocol7::SKINPART_MARKING ? 0xFF000000u : 0u) + 0x00FF80u;
-
-		const json_value &Part = Start[(const char *)ms_apSkinPartNames[PartIndex]];
-		if(Part.type == json_none)
-		{
-			Skin.m_apParts[PartIndex] = FindDefaultSkinPart(PartIndex);
-			continue;
-		}
-		if(Part.type != json_object)
-		{
-			log_error("skins7", "Failed to parse skin json file '%s': attribute '%s' must specify an object", aFilename, ms_apSkinPartNames[PartIndex]);
-			return false;
-		}
-
-		const json_value &Filename = Part["filename"];
-		if(Filename.type == json_string)
-		{
-			Skin.m_apParts[PartIndex] = FindSkinPart(PartIndex, (const char *)Filename, SpecialSkin);
-		}
-		else
-		{
-			log_error("skins7", "Failed to parse skin json file '%s': part '%s' attribute 'filename' must specify a string", aFilename, ms_apSkinPartNames[PartIndex]);
-			return false;
-		}
-
-		bool UseCustomColors = false;
-		const json_value &Color = Part["custom_colors"];
-		if(Color.type == json_string)
-			UseCustomColors = str_comp((const char *)Color, "true") == 0;
-		else if(Color.type == json_boolean)
-			UseCustomColors = Color.u.boolean;
-		Skin.m_aUseCustomColors[PartIndex] = UseCustomColors;
-
-		if(!UseCustomColors)
-			continue;
-
-		for(int i = 0; i < NUM_COLOR_COMPONENTS; i++)
-		{
-			if(PartIndex != protocol7::SKINPART_MARKING && i == 3)
-				continue;
-
-			const json_value &Component = Part[(const char *)ms_apColorComponents[i]];
-			if(Component.type == json_integer)
-			{
-				switch(i)
-				{
-				case 0: Skin.m_aPartColors[PartIndex] = (Skin.m_aPartColors[PartIndex] & 0xFF00FFFFu) | (Component.u.integer << 16); break;
-				case 1: Skin.m_aPartColors[PartIndex] = (Skin.m_aPartColors[PartIndex] & 0xFFFF00FFu) | (Component.u.integer << 8); break;
-				case 2: Skin.m_aPartColors[PartIndex] = (Skin.m_aPartColors[PartIndex] & 0xFFFFFF00u) | Component.u.integer; break;
-				case 3: Skin.m_aPartColors[PartIndex] = (Skin.m_aPartColors[PartIndex] & 0x00FFFFFFu) | (Component.u.integer << 24); break;
-				}
-			}
-		}
-	}
-
-	if(Config()->m_Debug)
-	{
-		log_trace("skins7", "Loaded skin '%s'", Skin.m_aName);
-	}
-	m_vSkins.insert(std::lower_bound(m_vSkins.begin(), m_vSkins.end(), Skin), Skin);
-	return true;
+	const bool Special = IsSpecialSkin(pName);
+	const int Flags = (Special ? SKINFLAG_SPECIAL : 0) | (DirType != IStorage::TYPE_SAVE ? SKINFLAG_STANDARD : 0);
+	const auto Lookup = [this](int Part, const char *pFilename, bool AllowSpecial) {
+		return pFilename ? FindSkinPart(Part, pFilename, AllowSpecial) : FindDefaultSkinPart(Part);
+	};
+	const auto Diagnose = [this, pName](qm_skin7_descriptor::SStatus Status) {
+		using EError = qm_skin7_descriptor::EError;
+		if(Status.m_Error == EError::PART_OBJECT)
+			log_error("skins7", "Failed to parse skin json file '" SKINS_DIR "/%s.json': attribute '%s' must specify an object", pName, ms_apSkinPartNames[Status.m_Part]);
+		else if(Status.m_Error == EError::FILENAME_STRING)
+			log_error("skins7", "Failed to parse skin json file '" SKINS_DIR "/%s.json': part '%s' attribute 'filename' must specify a string", pName, ms_apSkinPartNames[Status.m_Part]);
+		else if(Config()->m_Debug)
+			log_trace("skins7", "Loaded skin '%s'", pName);
+	};
+	return qm_skin7_descriptor::Publish(m_vSkins, pName, Flags, Special, Info, ms_apSkinPartNames, ms_apColorComponents, Lookup, Diagnose);
 }
 
 void CSkins7::OnInit()
