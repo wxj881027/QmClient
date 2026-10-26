@@ -5,6 +5,7 @@
 
 #include <base/log.h>
 
+#include <engine/engine.h>
 #include <engine/shared/jobs.h>
 #include <engine/shared/json.h>
 #include <engine/storage.h>
@@ -14,6 +15,7 @@
 #include <cstdlib>
 #include <map>
 #include <memory>
+#include <new>
 #include <string>
 #include <vector>
 
@@ -185,6 +187,25 @@ namespace fontstore
 			return true;
 		}
 	};
+	// 只有引擎确认接收后才发布等待身份，拒绝或构造分配失败可沿原入口再试。
+	inline bool TryQueueCatalogLoadJob(std::shared_ptr<CCatalogLoadJob> &pPending, IEngine &Engine, IStorage *pStorage)
+	{
+		if(pPending)
+			return false;
+		try
+		{
+			auto pCandidate = std::make_shared<CCatalogLoadJob>(pStorage);
+			if(!Engine.TryAddJob(pCandidate))
+				return false;
+			pPending = std::move(pCandidate);
+			return true;
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+	}
+
 }
 
 #endif

@@ -125,10 +125,7 @@ namespace fontstore
 		if(Result.m_Loaded)
 			return;
 		if(!s_pCatalogJob)
-		{
-			s_pCatalogJob = std::make_shared<CCatalogLoadJob>(pStorage);
-			pEngine->AddJob(s_pCatalogJob);
-		}
+			TryQueueCatalogLoadJob(s_pCatalogJob, *pEngine, pStorage);
 		else if(s_pCatalogJob->TakeResult(Result))
 		{
 			s_pCatalogJob.reset();

@@ -1,6 +1,7 @@
 #include <game/client/components/qmclient/font_store_catalog.h>
 
 #include <gtest/gtest.h>
+#include <test/support/job_wait.h>
 #include <test/test.h>
 
 #include <memory_resource>
@@ -219,4 +220,99 @@ TEST_F(CQmFontStoreCatalog, MalformedReplacementDoesNotChangeExistingMetadata)
 	EXPECT_EQ(Entries[0].m_File, "Old.ttf");
 	EXPECT_EQ(Families[0].m_Name, "Old");
 	EXPECT_EQ(Families[0].m_vEntryIndices, (std::vector<size_t>{0}));
+}
+
+namespace
+{
+	class CFontCatalogEngine : public IEngine
+	{
+	public:
+		bool m_Accept = true;
+		bool m_Throw = false;
+		int m_Attempts = 0;
+		CJobPool *m_pPool = nullptr;
+		std::weak_ptr<IJob> m_LastAttempt;
+		std::vector<std::shared_ptr<IJob>> m_vAccepted;
+		void Init() override {}
+		void AddJob(std::shared_ptr<IJob> pJob) override { (void)TryAddJob(std::move(pJob)); }
+		bool TryAddJob(std::shared_ptr<IJob> pJob) override
+		{
+			++m_Attempts;
+			m_LastAttempt = pJob;
+			if(m_Throw)
+				throw std::bad_alloc();
+			if(!m_Accept)
+				return false;
+			if(m_pPool != nullptr)
+				return m_pPool->TryAdd(std::move(pJob));
+			m_vAccepted.push_back(std::move(pJob));
+			return true;
+		}
+		void ShutdownJobs() override {}
+		void SetAdditionalLogger(std::shared_ptr<ILogger> &&) override {}
+	};
+}
+
+TEST_F(CQmFontStoreCatalog, RejectedCatalogAdmissionLeavesNoPendingJobAndCanRetry)
+{
+	CFontCatalogEngine Engine;
+	std::shared_ptr<fontstore::CCatalogLoadJob> pPending;
+	Engine.m_Accept = false;
+	EXPECT_FALSE(fontstore::TryQueueCatalogLoadJob(pPending, Engine, m_pStorage.get()));
+	EXPECT_EQ(pPending, nullptr);
+	EXPECT_TRUE(Engine.m_LastAttempt.expired());
+	Engine.m_Accept = true;
+	ASSERT_TRUE(fontstore::TryQueueCatalogLoadJob(pPending, Engine, m_pStorage.get()));
+	ASSERT_NE(pPending, nullptr);
+	ASSERT_EQ(Engine.m_vAccepted.size(), 1u);
+	EXPECT_EQ(Engine.m_vAccepted[0].get(), pPending.get());
+}
+
+TEST_F(CQmFontStoreCatalog, AdmissionAllocationExceptionDoesNotPublishWaitingIdentity)
+{
+	CFontCatalogEngine Engine;
+	std::shared_ptr<fontstore::CCatalogLoadJob> pPending;
+	Engine.m_Throw = true;
+	EXPECT_FALSE(fontstore::TryQueueCatalogLoadJob(pPending, Engine, m_pStorage.get()));
+	EXPECT_EQ(pPending, nullptr);
+	EXPECT_TRUE(Engine.m_LastAttempt.expired());
+	Engine.m_Throw = false;
+	ASSERT_TRUE(fontstore::TryQueueCatalogLoadJob(pPending, Engine, m_pStorage.get()));
+	EXPECT_EQ(Engine.m_Attempts, 2);
+}
+
+TEST_F(CQmFontStoreCatalog, RepeatedAdmissionKeepsTheAlreadyAcceptedJob)
+{
+	CFontCatalogEngine Engine;
+	std::shared_ptr<fontstore::CCatalogLoadJob> pPending;
+	ASSERT_TRUE(fontstore::TryQueueCatalogLoadJob(pPending, Engine, m_pStorage.get()));
+	const auto pAccepted = pPending;
+	EXPECT_FALSE(fontstore::TryQueueCatalogLoadJob(pPending, Engine, m_pStorage.get()));
+	EXPECT_EQ(pPending, pAccepted);
+	EXPECT_EQ(Engine.m_Attempts, 1);
+}
+
+TEST_F(CQmFontStoreCatalog, ClosedNativePoolRejectsTrackingAndReopenedPoolLoadsCatalog)
+{
+	ASSERT_NO_FATAL_FAILURE(WriteFile("fonts/fonts_store/font_catalog.json", R"({"fonts":[{"n":"Alpha","f":"ofl/alpha/Alpha.ttf"}]})"));
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	Pool.Shutdown();
+	CFontCatalogEngine Engine;
+	Engine.m_pPool = &Pool;
+	std::shared_ptr<fontstore::CCatalogLoadJob> pPending;
+	EXPECT_FALSE(fontstore::TryQueueCatalogLoadJob(pPending, Engine, m_pStorage.get()));
+	EXPECT_EQ(pPending, nullptr);
+	EXPECT_TRUE(Engine.m_LastAttempt.expired());
+	ASSERT_TRUE(Pool.TryInit(1));
+	ASSERT_TRUE(fontstore::TryQueueCatalogLoadJob(pPending, Engine, m_pStorage.get()));
+	ASSERT_NE(pPending, nullptr);
+	ASSERT_TRUE(WaitForJobDone(*pPending));
+	Pool.Shutdown();
+	fontstore::SCatalog Result;
+	ASSERT_TRUE(pPending->TakeResult(Result));
+	EXPECT_TRUE(Result.m_Loaded);
+	ASSERT_EQ(Result.m_vEntries.size(), 1u);
+	EXPECT_EQ(Result.m_vEntries[0].m_File, "Alpha.ttf");
+	EXPECT_FALSE(pPending->TakeResult(Result));
 }
