@@ -86,16 +86,17 @@ void CQmImeManager::OnFrame()
 	if(pInput == nullptr)
 		return;
 
+	// 先验证本帧输入框，再交接会话，最后绘制候选，防止旧候选跟到新输入框。
+	CLineInput::ValidateActiveInputRenderedThisFrame();
 	const bool Wanted = g_Config.m_QmImeAutoManage != 0 ? m_Blocker.WantsTextInput(m_pGameClient) : CLineInput::GetActiveInput() != nullptr;
-	const CQmImeTextInputSession::EAction Action = m_TextInputSession.UpdateFocus(Wanted);
-	if(Action == CQmImeTextInputSession::EAction::START)
-		pInput->StartTextInput();
-	else if(Action == CQmImeTextInputSession::EAction::STOP)
-		pInput->StopTextInput();
+	const CQmImeTextInputSession::EAction Action = m_TextInputSession.UpdateFocus(*pInput, Wanted ? CLineInput::GetActiveInput() : nullptr);
+	if(Action != CQmImeTextInputSession::EAction::NONE)
+		m_CandidatePopup.Reset();
 	else if(!Wanted && (pInput->HasComposition() || pInput->GetCandidateCount() > 0))
 	{
 		pInput->StopTextInput();
 	}
+	RenderCandidatePopup();
 }
 
 SQmImePopupState CQmImeManager::BuildPopupState() const
@@ -150,7 +151,6 @@ void CQmImeManager::RenderCandidatePopup()
 
 	if(RenderAction == EQmImeCandidateRenderAction::VALIDATE_ONLY)
 	{
-		CLineInput::ValidateActiveInputRenderedThisFrame();
 		m_CandidatePopup.Reset();
 		return;
 	}
@@ -162,11 +162,5 @@ void CQmImeManager::RenderCandidatePopup()
 		return;
 	}
 
-	const bool ActiveInputRendered = CLineInput::ValidateActiveInputRenderedThisFrame();
-	SQmImePopupState State;
-	if(ActiveInputRendered)
-		State = BuildPopupState();
-	else
-		State.m_Disabled = true;
-	m_CandidatePopup.Render(m_pGameClient, State);
+	m_CandidatePopup.Render(m_pGameClient, BuildPopupState());
 }

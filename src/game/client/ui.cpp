@@ -1972,22 +1972,19 @@ bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 	const bool Changed = pLineInput->WasChanged();
 	const bool CursorChanged = pLineInput->WasCursorChanged();
 	// 只查看已路由的确认事件，保留给外层提交；IME 已消费的 Enter 不应从原始按键状态绕回来。
-	const bool SubmitPressed = Active && RenderOptions.m_ReleaseFocusOnEnter && (m_HotkeysPressed & HOTKEY_ENTER) != 0;
+	const bool SubmitPressed = Active && RenderOptions.m_ReleaseFocusOnEnter && HotkeyPressed(HOTKEY_ENTER);
 	const bool ClickedOutside = (MouseButtonClicked(0) || MouseButtonClicked(1)) && !Inside;
 
+	if(Inside && MouseButtonClicked(0) && pLineInput->IsActive() && (Input()->HasComposition() || Input()->GetCandidateCount()))
+	{
+		// 点击当帧取消组合，不依赖按住鼠标进入下一帧。
+		Input()->StopTextInput();
+		Input()->StartTextInput();
+	}
 	bool JustGotActive = false;
 	if(CheckActiveItem(pLineInput))
 	{
-		if(MouseButton(0))
-		{
-			if(pLineInput->IsActive() && (Input()->HasComposition() || Input()->GetCandidateCount()))
-			{
-				// Clear IME composition/candidates on mouse press
-				Input()->StopTextInput();
-				Input()->StartTextInput();
-			}
-		}
-		else
+		if(!MouseButton(0))
 		{
 			SetActiveItem(nullptr);
 		}
@@ -2112,18 +2109,16 @@ bool CUi::DoEditBoxMultiLine(CLineInput *pLineInput, const CUIRect *pRect, float
 	const bool Changed = pLineInput->WasChanged();
 	const bool CursorChanged = pLineInput->WasCursorChanged();
 
+	if(Inside && MouseButtonClicked(0) && pLineInput->IsActive() && (Input()->HasComposition() || Input()->GetCandidateCount()))
+	{
+		// 多行输入与单行输入使用相同的点击取消时机。
+		Input()->StopTextInput();
+		Input()->StartTextInput();
+	}
 	bool JustGotActive = false;
 	if(CheckActiveItem(pLineInput))
 	{
-		if(MouseButton(0))
-		{
-			if(pLineInput->IsActive() && (Input()->HasComposition() || Input()->GetCandidateCount()))
-			{
-				Input()->StopTextInput();
-				Input()->StartTextInput();
-			}
-		}
-		else
+		if(!MouseButton(0))
 		{
 			SetActiveItem(nullptr);
 		}
@@ -2675,7 +2670,7 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 		m_ActiveValueSelectorState.m_NumberInput.Render(&Textbox, EditFontSize, Props.m_TextAlign, false, -1.0f, 0.0f, {});
 		TextRender()->TextColor(PreviousTextColor);
 
-		if(Input()->KeyPress(KEY_RETURN) || Input()->KeyPress(KEY_KP_ENTER) || ConsumeHotkey(HOTKEY_ENTER) || ((MouseButtonClicked(1) || MouseButtonClicked(0)) && !Inside))
+		if(ConsumeHotkey(HOTKEY_ENTER) || ((MouseButtonClicked(1) || MouseButtonClicked(0)) && !Inside))
 		{
 			int64_t ParsedValue = 0;
 			if(Props.m_pfnParseValue != nullptr)

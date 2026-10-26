@@ -56,6 +56,7 @@ public:
 		NONE,
 		START,
 		STOP,
+		RESTART,
 	};
 
 	bool SetClientOwnership(bool OwnsInput)
@@ -67,20 +68,29 @@ public:
 		return true;
 	}
 
-	EAction UpdateFocus(bool Wanted)
+	EAction UpdateFocus(IInput &Input, const void *pOwner)
 	{
-		if(!m_ClientOwnsInput || Wanted == m_TextInputWanted)
+		if(!m_ClientOwnsInput || pOwner == m_pOwner)
 			return EAction::NONE;
-		m_TextInputWanted = Wanted;
-		return Wanted ? EAction::START : EAction::STOP;
+		const bool HadOwner = m_pOwner != nullptr;
+		m_pOwner = pOwner;
+		// 同帧从一个输入框切到另一个时，先取消旧组合，再为新 owner 建立会话。
+		if(HadOwner)
+			Input.StopTextInput();
+		if(pOwner != nullptr)
+			Input.StartTextInput();
+		if(pOwner == nullptr)
+			return EAction::STOP;
+		return HadOwner ? EAction::RESTART : EAction::START;
 	}
 
-	void ResetFocus() { m_TextInputWanted = false; }
+	void ResetFocus() { m_pOwner = nullptr; }
 	bool ClientOwnsInput() const { return m_ClientOwnsInput; }
 
 private:
 	bool m_ClientOwnsInput = true;
-	bool m_TextInputWanted = false;
+	// 只保存输入框身份，不拥有或解引用输入框。
+	const void *m_pOwner = nullptr;
 };
 
 class CQmImeManager
@@ -89,10 +99,10 @@ public:
 	void Init(CGameClient *pGameClient);
 	void SetClientOwnership(bool OwnsInput);
 	void OnFrame();
-	void RenderCandidatePopup();
 	void Reset();
 
 private:
+	void RenderCandidatePopup();
 	SQmImePopupState BuildPopupState() const;
 
 	CGameClient *m_pGameClient = nullptr;

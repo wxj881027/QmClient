@@ -1200,6 +1200,8 @@ public:
 	void SetMouseSlow(bool MouseSlow) { m_MouseSlow = MouseSlow; }
 
 	bool ConsumeHotkey(EHotkey Hotkey);
+	// 只查看已路由且尚未消费的热键，供控件报告提交结果，保留外层处理权。
+	bool HotkeyPressed(EHotkey Hotkey) const { return !RenderOnly() && (m_HotkeysPressed & Hotkey) != 0; }
 	void ClearHotkeys() { m_HotkeysPressed = 0; }
 	bool OnInput(const IInput::CEvent &Event);
 
