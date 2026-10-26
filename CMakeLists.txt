@@ -5359,6 +5359,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/skins/skin7_part_load_job_test.cpp
     src/test/integration/client/skins/skin7_part_publisher_test.cpp
     src/test/integration/client/skins/skin7_accessory_publication_test.cpp
+    src/test/integration/client/skins/skin7_refresh_admission_test.cpp
     src/test/integration/client/skins/skin7_part_job_admission_test.cpp
     src/test/integration/client/skins/skin7_save_test.cpp
     src/test/unit/client/skin7_resource_lifecycle_test.cpp

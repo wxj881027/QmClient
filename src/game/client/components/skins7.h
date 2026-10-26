@@ -19,6 +19,7 @@
 #include <game/client/components/qmclient/qm_chat_avatar.h>
 #include <game/client/components/qmclient/skin7_part_load_job.h>
 #include <game/client/components/qmclient/skin7_part_publisher.h>
+#include <game/client/components/qmclient/skin7_refresh_request.h>
 #include <game/client/components/qmclient/skin7_resource_lifecycle.h>
 #include <game/client/render.h>
 
@@ -136,6 +137,7 @@ private:
 	int m_NextAccessory = 0;
 	CQmSkin7ResourceLifecycle m_ResourceLifecycle;
 	CQmSkin7PartPublisher m_PartPublisher;
+	CQmSkin7RefreshRequest<CSkinPart> m_RefreshRequest;
 	TSkinLoadedCallback m_SkinLoadedCallback;
 
 	IGraphics::CTextureHandle m_XmasHatTexture;
@@ -144,6 +146,7 @@ private:
 	std::shared_ptr<CSkinPartLoadJob> CreateSkinPartLoadJob(int PartType, const char *pName, int DirType);
 	void ProcessCompletedJobs();
 	void CancelPendingLoads();
+	void TryStartRefresh();
 	bool RebuildSkins();
 	bool LoadSkin(const char *pName, int DirType, const json_value &Info);
 

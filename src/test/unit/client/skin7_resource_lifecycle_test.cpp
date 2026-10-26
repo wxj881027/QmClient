@@ -88,3 +88,43 @@ TEST(Skin7ResourceLifecycle, SixupDemoLoadsResourcesToPreservePlaybackCompatibil
 	EXPECT_EQ(Lifecycle.Update(IClient::STATE_DEMOPLAYBACK, true), EAction::NONE);
 	EXPECT_EQ(Lifecycle.Update(IClient::STATE_OFFLINE, false), EAction::CANCEL);
 }
+
+TEST(Skin7ResourceLifecycle, DeferredRefreshPreservesReadyCacheUntilNewRequestIsAccepted)
+{
+	CQmSkin7ResourceLifecycle Lifecycle;
+	ASSERT_TRUE(Lifecycle.BeginRefresh(IClient::STATE_ONLINE, true));
+	ASSERT_TRUE(Lifecycle.CompleteLoad());
+	ASSERT_TRUE(Lifecycle.RequestRefresh(IClient::STATE_ONLINE, true));
+	EXPECT_EQ(Lifecycle.Update(IClient::STATE_ONLINE, true), EAction::NONE);
+	EXPECT_EQ(Lifecycle.Update(IClient::STATE_OFFLINE, false), EAction::NONE);
+	EXPECT_EQ(Lifecycle.Update(IClient::STATE_CONNECTING, true), EAction::NONE);
+}
+
+TEST(Skin7ResourceLifecycle, DeferredInitialRequestStillCancelsWhenSixupContextEnds)
+{
+	CQmSkin7ResourceLifecycle Lifecycle;
+	ASSERT_TRUE(Lifecycle.RequestRefresh(IClient::STATE_LOADING, true));
+	EXPECT_EQ(Lifecycle.Update(IClient::STATE_LOADING, true), EAction::NONE);
+	EXPECT_EQ(Lifecycle.Update(IClient::STATE_OFFLINE, false), EAction::CANCEL);
+	EXPECT_EQ(Lifecycle.Update(IClient::STATE_CONNECTING, true), EAction::LOAD);
+}
+
+TEST(Skin7ResourceLifecycle, AcceptedDeferredRefreshReplacesReadyStateWithCancellableLoad)
+{
+	CQmSkin7ResourceLifecycle Lifecycle;
+	ASSERT_TRUE(Lifecycle.BeginRefresh(IClient::STATE_ONLINE, true));
+	ASSERT_TRUE(Lifecycle.CompleteLoad());
+	ASSERT_TRUE(Lifecycle.RequestRefresh(IClient::STATE_ONLINE, true));
+	ASSERT_TRUE(Lifecycle.BeginRefresh(IClient::STATE_ONLINE, true));
+	EXPECT_EQ(Lifecycle.Update(IClient::STATE_OFFLINE, false), EAction::CANCEL);
+}
+
+TEST(Skin7ResourceLifecycle, IneligibleDeferredRequestDoesNotDiscardReadyCache)
+{
+	CQmSkin7ResourceLifecycle Lifecycle;
+	ASSERT_TRUE(Lifecycle.BeginRefresh(IClient::STATE_ONLINE, true));
+	ASSERT_TRUE(Lifecycle.CompleteLoad());
+	EXPECT_FALSE(Lifecycle.RequestRefresh(IClient::STATE_OFFLINE, true));
+	EXPECT_FALSE(Lifecycle.RequestRefresh(IClient::STATE_ONLINE, false));
+	EXPECT_EQ(Lifecycle.Update(IClient::STATE_OFFLINE, false), EAction::NONE);
+}

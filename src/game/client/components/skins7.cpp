@@ -440,6 +440,7 @@ void CSkins7::OnShutdown()
 
 void CSkins7::CancelPendingLoads()
 {
+	m_RefreshRequest.Cancel();
 	m_PartPublisher.TryRelease(*Graphics());
 	for(auto &pJob : m_PendingSkinPartJobs)
 		pJob->Abort();
@@ -454,6 +455,8 @@ void CSkins7::CancelPendingLoads()
 void CSkins7::OnUpdate()
 {
 	m_PartPublisher.TryRelease(*Graphics());
+	if(!QmNeedsSkin7Resources(Client()->State(), Client()->IsSixup()))
+		m_RefreshRequest.Cancel();
 	const auto Action = m_ResourceLifecycle.Update(Client()->State(), Client()->IsSixup());
 	if(Action == CQmSkin7ResourceLifecycle::EAction::LOAD)
 		GameClient()->RefreshSkins(CSkinDescriptor::FLAG_SEVEN);
@@ -464,7 +467,11 @@ void CSkins7::OnUpdate()
 		CancelPendingLoads();
 	}
 	if(QmNeedsSkin7Resources(Client()->State(), Client()->IsSixup()))
+	{
+		if(Action != CQmSkin7ResourceLifecycle::EAction::LOAD)
+			TryStartRefresh();
 		ProcessCompletedJobs();
+	}
 }
 
 void CSkins7::InitPlaceholderSkinParts()
@@ -483,20 +490,37 @@ void CSkins7::InitPlaceholderSkinParts()
 
 void CSkins7::Refresh(TSkinLoadedCallback &&SkinLoadedCallback)
 {
-	// 通用皮肤刷新、设置页预热等入口也受同一规则约束，不能绕过按需启用。
-	if(!m_ResourceLifecycle.BeginRefresh(Client()->State(), Client()->IsSixup()))
+	// 先登记可重试请求，已有缓存/任务在新请求被接收前保持可用。
+	if(!m_ResourceLifecycle.RequestRefresh(Client()->State(), Client()->IsSixup()))
 		return;
+	m_RefreshRequest.Request(std::move(SkinLoadedCallback));
+	TryStartRefresh();
+}
+
+void CSkins7::TryStartRefresh()
+{
+	if(!QmNeedsSkin7Resources(Client()->State(), Client()->IsSixup()))
+		return;
+	auto Plan = m_RefreshRequest.TryStart(*Engine(), Storage(), SKINFLAG_STANDARD);
+	if(!Plan)
+		return;
+	m_ResourceLifecycle.BeginRefresh(Client()->State(), Client()->IsSixup());
 	m_PartPublisher.TryRelease(*Graphics());
-	if(QmPerfEnabled())
-		QmPerfLogPayloadForce("perf/skins7", "event=resource_load_begin", Client());
+	try
+	{
+		if(QmPerfEnabled())
+			QmPerfLogPayloadForce("perf/skins7", "event=resource_load_begin", Client());
+	}
+	catch(...)
+	{
+	}
 	m_vSkins.clear();
 	m_NextPart = 0;
 	m_NextSkin = 0;
 	m_NextAccessory = 0;
 	if(m_pSkinInfoJob)
 		m_pSkinInfoJob->Abort();
-	m_pSkinInfoJob = std::make_shared<CQmSkin7InfoJob>(Storage());
-	Engine()->AddJob(m_pSkinInfoJob);
+	m_pSkinInfoJob = std::move(Plan->m_pJob);
 
 	for(auto &pJob : m_PendingSkinPartJobs)
 	{
@@ -513,20 +537,10 @@ void CSkins7::Refresh(TSkinLoadedCallback &&SkinLoadedCallback)
 			if(SkinPart.m_QmSkinOutline)
 				SkinPart.m_QmSkinOutline->Unload(Graphics());
 		}
-		m_avSkinParts[Part].clear();
-
-		if(Part == protocol7::SKINPART_MARKING || Part == protocol7::SKINPART_DECORATION)
-		{
-			CSkinPart NoneSkinPart;
-			NoneSkinPart.m_Type = Part;
-			NoneSkinPart.m_Flags = SKINFLAG_STANDARD;
-			NoneSkinPart.m_aName[0] = '\0';
-			NoneSkinPart.m_BloodColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
-			m_avSkinParts[Part].emplace_back(NoneSkinPart);
-		}
+		m_avSkinParts[Part].swap(Plan->m_aParts[Part]);
 	}
 
-	m_SkinLoadedCallback = std::move(SkinLoadedCallback);
+	m_SkinLoadedCallback = std::move(Plan->m_Callback);
 	m_Loading = true;
 
 	ProcessCompletedJobs();

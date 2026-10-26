@@ -40,11 +40,19 @@ public:
 		return EAction::LOAD;
 	}
 
-	bool BeginRefresh(int ClientState, bool Sixup)
+	// 失败待重试的请求仍需在离开连接时取消，但不能提前丢弃已就绪缓存状态。
+	bool RequestRefresh(int ClientState, bool Sixup)
 	{
 		if(!QmNeedsSkin7Resources(ClientState, Sixup))
 			return false;
 		m_Requested = true;
+		return true;
+	}
+
+	bool BeginRefresh(int ClientState, bool Sixup)
+	{
+		if(!RequestRefresh(ClientState, Sixup))
+			return false;
 		m_Ready = false;
 		return true;
 	}
