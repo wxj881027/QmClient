@@ -3679,6 +3679,7 @@ if(CLIENT)
     components/qmclient/screenshot_image_job.h
     components/qmclient/theme_icon_load_job.h
     components/qmclient/theme_catalog.h
+    components/qmclient/menu_background_prepare.h
     components/qmclient/screenshot_viewer.cpp
     components/qmclient/screenshot_viewer.h
     components/qmclient/screenshot_viewer_viewport.h
@@ -4876,6 +4877,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/vulkan_render_workers_test.cpp
     src/test/unit/engine/graphics/readback_image_test.cpp
     src/test/unit/engine/graphics/gpu_upload_limiter_test.cpp
+    src/test/unit/engine/graphics/render_component_test.cpp
     src/test/unit/engine/graphics/screenshot_image_test.cpp
     src/test/unit/engine/graphics/screenshot_submit_test.cpp
     src/test/integration/engine/screenshot_save_test.cpp
@@ -5403,6 +5405,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_theme_icon_admission_test.cpp
     src/test/integration/qmclient/client/qm_theme_catalog_release_test.cpp
     src/test/unit/client/theme_catalog_test.cpp
+    src/test/unit/client/menu_background_prepare_test.cpp
     src/test/unit/base/thread_test.cpp
     src/test/unit/base/thread_startup_test.cpp
     src/test/integration/base/qm_test_terminate_diagnostics_test.cpp

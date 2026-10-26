@@ -110,7 +110,7 @@ private:
 	void ProcessThemeIconJobs();
 	void UpdateThemeLoading();
 	void InvalidateCurrentPosition();
-	void PreserveCurrentBackground();
+	bool PreserveCurrentBackground();
 	void ReleasePreviousBackground();
 	void InitializeLoadedMap();
 

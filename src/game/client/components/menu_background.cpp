@@ -1,5 +1,6 @@
 #include "menu_background.h"
 
+#include "qmclient/menu_background_prepare.h"
 #include "qmclient/theme_icon_load_job.h"
 #include "theme_scan.h"
 
@@ -222,27 +223,48 @@ void CMenuBackground::AdvanceLoading()
 		m_Loading = false;
 }
 
-void CMenuBackground::PreserveCurrentBackground()
+bool CMenuBackground::PreserveCurrentBackground()
 {
 	if(!m_Loaded || m_ImageBackground || m_VideoBackground || m_pBackgroundMap == nullptr || m_pBackgroundLayers == nullptr || m_pBackgroundImages == nullptr)
-		return;
+		return true;
 
-	m_pPreviousBackground = std::make_unique<SPreviousBackground>();
-	m_pPreviousBackground->m_pMap = std::move(m_pOwnedBackgroundMap);
-	m_pPreviousBackground->m_pLayers.reset(m_pBackgroundLayers);
-	m_pPreviousBackground->m_pImages.reset(m_pBackgroundImages);
-	m_pPreviousBackground->m_pRenderer = std::make_unique<CMapLayers>(ERenderType::RENDERTYPE_FULL_DESIGN, false);
-	m_pPreviousBackground->m_pRenderer->OnInterfacesInit(GameClient());
-	SwapState(*m_pPreviousBackground->m_pRenderer);
+	using SPrepared = SMenuBackgroundPrepared<CMenuMap, CLayers, CMapImages, CMapLayers>;
+	SPrepared Prepared;
+	std::unique_ptr<SPreviousBackground> pPrevious;
+	try
+	{
+		pPrevious = std::make_unique<SPreviousBackground>();
+		Prepared = PrepareMenuBackgroundResources(
+			[this] { return std::make_unique<CMenuMap>(Storage()); },
+			[] { return std::make_unique<CLayers>(); },
+			[] { return std::make_unique<CMapImages>(); },
+			[] { return std::make_unique<CMapLayers>(ERenderType::RENDERTYPE_FULL_DESIGN, false); },
+			[this](auto &Candidate) {
+				Candidate.m_pRenderer->OnInterfacesInit(GameClient());
+				Candidate.m_pImages->OnInterfacesInit(GameClient());
+			});
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 尚未交接当前资源；保持当前地图及借用指针，沿既有切换入口重试。
+		return false;
+	}
 
-	m_pOwnedBackgroundMap = std::make_unique<CMenuMap>(Storage());
+	// 后续只移动所有者、交换已初始化的状态及重绑指针，不再构造或分配资源。
+	pPrevious->m_pRenderer = std::move(Prepared.m_pRenderer);
+	pPrevious->m_pMap = std::move(m_pOwnedBackgroundMap);
+	pPrevious->m_pLayers.reset(m_pBackgroundLayers);
+	pPrevious->m_pImages.reset(m_pBackgroundImages);
+	SwapState(*pPrevious->m_pRenderer);
+	m_pOwnedBackgroundMap = std::move(Prepared.m_pMap);
 	m_pBackgroundMap = m_pOwnedBackgroundMap.get();
-	m_pBackgroundLayers = new CLayers;
-	m_pBackgroundImages = new CMapImages;
+	m_pBackgroundLayers = Prepared.m_pLayers.release();
+	m_pBackgroundImages = Prepared.m_pImages.release();
 	m_pMap = m_pBackgroundMap;
 	m_pLayers = m_pBackgroundLayers;
 	m_pImages = m_pBackgroundImages;
-	m_pImages->OnInterfacesInit(GameClient());
+	m_pPreviousBackground = std::move(pPrevious);
+	return true;
 }
 
 void CMenuBackground::ReleasePreviousBackground()
@@ -359,7 +381,8 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 		return;
 
 	ReleasePreviousBackground();
-	PreserveCurrentBackground();
+	if(!PreserveCurrentBackground())
+		return;
 	if(m_pMap != nullptr && m_pMap == m_pBackgroundMap && m_pPreviousBackground == nullptr)
 		m_pMap->Unload();
 

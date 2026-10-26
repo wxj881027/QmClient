@@ -24,8 +24,8 @@ class CMapLayers : public CComponent
 	// 图层来源与渲染模式。protected：派生类（如菜单背景、地图预览渲染器）
 	// 需要注入独立的 CLayers/CMapImages 来源。
 protected:
-	CLayers *m_pLayers;
-	CMapImages *m_pImages;
+	CLayers *m_pLayers = nullptr;
+	CMapImages *m_pImages = nullptr;
 	ERenderType m_Type;
 	bool m_OnlineOnly;
 	void RenderWithCamera(const vec2 &Center, float Zoom, std::optional<ERenderType> RenderType = std::nullopt);
@@ -57,7 +57,7 @@ public:
 	CEnvelopeState &EnvEvaluator() { return m_EnvEvaluator; }
 
 private:
-	CRenderLayerParams m_Params;
+	CRenderLayerParams m_Params{};
 	CMapRenderer m_MapRenderer;
 	CEnvelopeState m_EnvEvaluator;
 	bool m_MapLoaded = false;
