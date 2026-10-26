@@ -1,5 +1,6 @@
 #include "crashdump.h"
 
+#include "crash_output.h"
 #include "detect.h"
 #include "fs.h"
 #include "str.h"
@@ -177,6 +178,10 @@ static char gs_aFallbackDumpPath[IO_MAX_PATH_LENGTH] = "";
 static wchar_t gs_aWideFallbackReportPath[IO_MAX_PATH_LENGTH] = L"";
 static wchar_t gs_aWideFallbackDumpPath[IO_MAX_PATH_LENGTH] = L"";
 static wchar_t gs_aWideConfirmedPath[IO_MAX_PATH_LENGTH + 16] = L"";
+static wchar_t gs_aWideCrashLogPath[IO_MAX_PATH_LENGTH] = L"";
+static wchar_t gs_aWideReportCandidatePath[IO_MAX_PATH_LENGTH + 16] = L"";
+static wchar_t gs_aWideDumpCandidatePath[IO_MAX_PATH_LENGTH + 16] = L"";
+static wchar_t gs_aWideConfirmedCandidatePath[IO_MAX_PATH_LENGTH + 32] = L"";
 
 static HMODULE gs_pDbgHelpLib = nullptr;
 static MiniDumpWriteDumpFunc gs_pMiniDumpWriteDump = nullptr;
@@ -188,7 +193,65 @@ static std::atomic<bool> gs_FallbackReportWritten{false};
 
 static LPTOP_LEVEL_EXCEPTION_FILTER gs_pPreviousUnhandledExceptionFilter = nullptr;
 
-static void WriteRaw(HANDLE FileHandle, const char *pText);
+class CNativeCrashFile
+{
+	HANDLE m_Handle;
+	DWORD m_Error = ERROR_SUCCESS;
+
+public:
+	explicit CNativeCrashFile(HANDLE Handle) noexcept :
+		m_Handle(Handle) {}
+	CNativeCrashFile(const CNativeCrashFile &) = delete;
+	CNativeCrashFile &operator=(const CNativeCrashFile &) = delete;
+	void Fail(DWORD Error) noexcept
+	{
+		if(m_Error == ERROR_SUCCESS)
+			m_Error = Error == ERROR_SUCCESS ? ERROR_WRITE_FAULT : Error;
+	}
+	DWORD Error() const noexcept { return m_Error; }
+	bool Write(const void *pData, size_t Size, size_t &Written) noexcept
+	{
+		const DWORD Requested = Size > MAXDWORD ? MAXDWORD : static_cast<DWORD>(Size);
+		DWORD NativeWritten = 0;
+		if(!WriteFile(m_Handle, pData, Requested, &NativeWritten, nullptr))
+		{
+			Fail(GetLastError());
+			return false;
+		}
+		if(NativeWritten == 0 || NativeWritten > Requested)
+		{
+			Fail(ERROR_WRITE_FAULT);
+			return false;
+		}
+		Written = NativeWritten;
+		return true;
+	}
+	bool Flush() noexcept
+	{
+		if(FlushFileBuffers(m_Handle))
+			return true;
+		Fail(GetLastError());
+		return false;
+	}
+	bool Close() noexcept
+	{
+		const HANDLE Handle = m_Handle;
+		m_Handle = INVALID_HANDLE_VALUE;
+		if(CloseHandle(Handle))
+			return true;
+		Fail(GetLastError());
+		return false;
+	}
+};
+
+using CCrashWriter = crash_output::CWriter<CNativeCrashFile>;
+
+static bool PublishCrashOutput(const wchar_t *pCandidate, const wchar_t *pTarget) noexcept
+{
+	return MoveFileExW(pCandidate, pTarget, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != FALSE;
+}
+
+static void WriteRaw(CCrashWriter &Output, const char *pText);
 static const char *ExceptionCodeToString(DWORD ExceptionCode);
 
 static constexpr MINIDUMP_TYPE gs_ExtendedDumpType = static_cast<MINIDUMP_TYPE>(
@@ -224,11 +287,11 @@ static void WideToUtf8(const wchar_t *pWide, char *pOut, size_t OutSize)
 		str_copy(pOut, "(utf8-conversion-failed)", OutSize);
 }
 
-static void WriteSection(HANDLE FileHandle, const char *pTitle)
+static void WriteSection(CCrashWriter &Output, const char *pTitle)
 {
-	WriteRaw(FileHandle, "\r\n");
-	WriteRaw(FileHandle, pTitle);
-	WriteRaw(FileHandle, "\r\n");
+	WriteRaw(Output, "\r\n");
+	WriteRaw(Output, pTitle);
+	WriteRaw(Output, "\r\n");
 }
 
 static bool IsReadableMemoryProtection(DWORD Protection)
@@ -275,7 +338,7 @@ static size_t ReadMemoryWindow(const void *pAddress, unsigned char *pBuffer, siz
 	return (size_t)BytesRead;
 }
 
-static void WriteMemoryBytes(HANDLE FileHandle, const char *pLabel, const void *pAddress, size_t BytesBefore, size_t BytesAfter)
+static void WriteMemoryBytes(CCrashWriter &Output, const char *pLabel, const void *pAddress, size_t BytesBefore, size_t BytesAfter)
 {
 	if(pAddress == nullptr)
 		return;
@@ -294,7 +357,7 @@ static void WriteMemoryBytes(HANDLE FileHandle, const char *pLabel, const void *
 	if(BytesRead == 0)
 	{
 		str_format(aLine, sizeof(aLine), "%s: unavailable\r\n", pLabel);
-		WriteRaw(FileHandle, aLine);
+		WriteRaw(Output, aLine);
 		return;
 	}
 
@@ -302,7 +365,7 @@ static void WriteMemoryBytes(HANDLE FileHandle, const char *pLabel, const void *
 		pLabel,
 		(unsigned long long)StartAddress,
 		(unsigned long long)(StartAddress + BytesRead));
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 
 	for(size_t Offset = 0; Offset < BytesRead; Offset += 16)
 	{
@@ -315,11 +378,11 @@ static void WriteMemoryBytes(HANDLE FileHandle, const char *pLabel, const void *
 			str_append(aLine, aByte, sizeof(aLine));
 		}
 		str_append(aLine, "\r\n", sizeof(aLine));
-		WriteRaw(FileHandle, aLine);
+		WriteRaw(Output, aLine);
 	}
 }
 
-static void WriteExecutablePath(HANDLE FileHandle)
+static void WriteExecutablePath(CCrashWriter &Output)
 {
 	wchar_t aWidePath[IO_MAX_PATH_LENGTH];
 	const DWORD WidePathSize = sizeof(aWidePath) / sizeof(aWidePath[0]);
@@ -332,10 +395,10 @@ static void WriteExecutablePath(HANDLE FileHandle)
 
 	char aLine[1024];
 	str_format(aLine, sizeof(aLine), "Executable path: %s\r\n", aPath);
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 }
 
-static void WriteExceptionModule(HANDLE FileHandle, const void *pAddress)
+static void WriteExceptionModule(CCrashWriter &Output, const void *pAddress)
 {
 	if(pAddress == nullptr)
 		return;
@@ -367,15 +430,15 @@ static void WriteExceptionModule(HANDLE FileHandle, const void *pAddress)
 			str_format(aLine, sizeof(aLine), "Exception module: %s + 0x%llX\r\n",
 				aModuleName[0] != '\0' ? aModuleName : "(unknown-module)",
 				(unsigned long long)(Address - ModuleBase));
-			WriteRaw(FileHandle, aLine);
+			WriteRaw(Output, aLine);
 			str_format(aLine, sizeof(aLine), "Exception module range: 0x%016llX-0x%016llX\r\n",
 				(unsigned long long)ModuleBase,
 				(unsigned long long)ModuleEnd);
-			WriteRaw(FileHandle, aLine);
+			WriteRaw(Output, aLine);
 			if(aModulePath[0] != '\0')
 			{
 				str_format(aLine, sizeof(aLine), "Exception module path: %s\r\n", aModulePath);
-				WriteRaw(FileHandle, aLine);
+				WriteRaw(Output, aLine);
 			}
 			Found = true;
 			break;
@@ -383,19 +446,19 @@ static void WriteExceptionModule(HANDLE FileHandle, const void *pAddress)
 	}
 
 	if(!Found)
-		WriteRaw(FileHandle, "Exception module: unresolved\r\n");
+		WriteRaw(Output, "Exception module: unresolved\r\n");
 
 	CloseHandle(SnapshotHandle);
 }
 
-static void WriteLoadedModules(HANDLE FileHandle)
+static void WriteLoadedModules(CCrashWriter &Output)
 {
-	WriteSection(FileHandle, "Loaded modules:");
+	WriteSection(Output, "Loaded modules:");
 
 	const HANDLE SnapshotHandle = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, GetCurrentProcessId());
 	if(SnapshotHandle == INVALID_HANDLE_VALUE)
 	{
-		WriteRaw(FileHandle, "  <module snapshot unavailable>\r\n");
+		WriteRaw(Output, "  <module snapshot unavailable>\r\n");
 		return;
 	}
 
@@ -428,31 +491,31 @@ static void WriteLoadedModules(HANDLE FileHandle)
 				(unsigned long)ModuleEntry.modBaseSize,
 				aModuleName[0] != '\0' ? aModuleName : "(unknown-module)",
 				aModulePath[0] != '\0' ? aModulePath : "(unknown-path)");
-			WriteRaw(FileHandle, aLine);
+			WriteRaw(Output, aLine);
 			++ModuleCount;
 		} while(Module32NextW(SnapshotHandle, &ModuleEntry));
 	}
 	else
 	{
-		WriteRaw(FileHandle, "  <no modules enumerated>\r\n");
+		WriteRaw(Output, "  <no modules enumerated>\r\n");
 	}
 
 	if(Truncated)
-		WriteRaw(FileHandle, "  <module list truncated after 128 entries>\r\n");
+		WriteRaw(Output, "  <module list truncated after 128 entries>\r\n");
 
 	CloseHandle(SnapshotHandle);
 }
 
-static void WriteExceptionContext(HANDLE FileHandle, const CONTEXT *pContext)
+static void WriteExceptionContext(CCrashWriter &Output, const CONTEXT *pContext)
 {
 	if(pContext == nullptr)
 		return;
 
-	WriteSection(FileHandle, "CPU context:");
+	WriteSection(Output, "CPU context:");
 
 	char aLine[1024];
 	str_format(aLine, sizeof(aLine), "Context flags: 0x%08lX\r\n", (unsigned long)pContext->ContextFlags);
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 
 #if defined(CONF_ARCH_AMD64)
 	str_format(aLine, sizeof(aLine), "RIP=0x%016llX RSP=0x%016llX RBP=0x%016llX EFLAGS=0x%08lX\r\n",
@@ -460,86 +523,86 @@ static void WriteExceptionContext(HANDLE FileHandle, const CONTEXT *pContext)
 		(unsigned long long)pContext->Rsp,
 		(unsigned long long)pContext->Rbp,
 		(unsigned long)pContext->EFlags);
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 	str_format(aLine, sizeof(aLine), "RAX=0x%016llX RBX=0x%016llX RCX=0x%016llX RDX=0x%016llX\r\n",
 		(unsigned long long)pContext->Rax,
 		(unsigned long long)pContext->Rbx,
 		(unsigned long long)pContext->Rcx,
 		(unsigned long long)pContext->Rdx);
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 	str_format(aLine, sizeof(aLine), "RSI=0x%016llX RDI=0x%016llX R8 =0x%016llX R9 =0x%016llX\r\n",
 		(unsigned long long)pContext->Rsi,
 		(unsigned long long)pContext->Rdi,
 		(unsigned long long)pContext->R8,
 		(unsigned long long)pContext->R9);
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 	str_format(aLine, sizeof(aLine), "R10=0x%016llX R11=0x%016llX R12=0x%016llX R13=0x%016llX\r\n",
 		(unsigned long long)pContext->R10,
 		(unsigned long long)pContext->R11,
 		(unsigned long long)pContext->R12,
 		(unsigned long long)pContext->R13);
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 	str_format(aLine, sizeof(aLine), "R14=0x%016llX R15=0x%016llX\r\n",
 		(unsigned long long)pContext->R14,
 		(unsigned long long)pContext->R15);
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 
-	WriteMemoryBytes(FileHandle, "Instruction bytes near RIP", reinterpret_cast<const void *>(pContext->Rip), 32, 64);
-	WriteMemoryBytes(FileHandle, "Stack bytes near RSP", reinterpret_cast<const void *>(pContext->Rsp), 0, 128);
+	WriteMemoryBytes(Output, "Instruction bytes near RIP", reinterpret_cast<const void *>(pContext->Rip), 32, 64);
+	WriteMemoryBytes(Output, "Stack bytes near RSP", reinterpret_cast<const void *>(pContext->Rsp), 0, 128);
 #elif defined(CONF_ARCH_IA32)
 	str_format(aLine, sizeof(aLine), "EIP=0x%08lX ESP=0x%08lX EBP=0x%08lX EFLAGS=0x%08lX\r\n",
 		(unsigned long)pContext->Eip,
 		(unsigned long)pContext->Esp,
 		(unsigned long)pContext->Ebp,
 		(unsigned long)pContext->EFlags);
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 	str_format(aLine, sizeof(aLine), "EAX=0x%08lX EBX=0x%08lX ECX=0x%08lX EDX=0x%08lX\r\n",
 		(unsigned long)pContext->Eax,
 		(unsigned long)pContext->Ebx,
 		(unsigned long)pContext->Ecx,
 		(unsigned long)pContext->Edx);
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 	str_format(aLine, sizeof(aLine), "ESI=0x%08lX EDI=0x%08lX\r\n",
 		(unsigned long)pContext->Esi,
 		(unsigned long)pContext->Edi);
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 
-	WriteMemoryBytes(FileHandle, "Instruction bytes near EIP", reinterpret_cast<const void *>(pContext->Eip), 32, 64);
-	WriteMemoryBytes(FileHandle, "Stack bytes near ESP", reinterpret_cast<const void *>(pContext->Esp), 0, 128);
+	WriteMemoryBytes(Output, "Instruction bytes near EIP", reinterpret_cast<const void *>(pContext->Eip), 32, 64);
+	WriteMemoryBytes(Output, "Stack bytes near ESP", reinterpret_cast<const void *>(pContext->Esp), 0, 128);
 #else
-	WriteRaw(FileHandle, "Register dump: unsupported architecture\r\n");
+	WriteRaw(Output, "Register dump: unsupported architecture\r\n");
 #endif
 }
 
-static void WriteExceptionDetails(HANDLE FileHandle, EXCEPTION_POINTERS *pExceptionPointers)
+static void WriteExceptionDetails(CCrashWriter &Output, EXCEPTION_POINTERS *pExceptionPointers)
 {
 	if(pExceptionPointers == nullptr || pExceptionPointers->ExceptionRecord == nullptr)
 		return;
 
 	const EXCEPTION_RECORD *pRecord = pExceptionPointers->ExceptionRecord;
 
-	WriteSection(FileHandle, "Exception details:");
+	WriteSection(Output, "Exception details:");
 
 	char aLine[1024];
 	const DWORD ExceptionCode = pRecord->ExceptionCode;
 	str_format(aLine, sizeof(aLine), "Exception code: 0x%08lX (%s)\r\n",
 		(unsigned long)ExceptionCode,
 		ExceptionCodeToString(ExceptionCode));
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 	str_format(aLine, sizeof(aLine), "Exception flags: 0x%08lX\r\n", (unsigned long)pRecord->ExceptionFlags);
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 	str_format(aLine, sizeof(aLine), "Exception address: 0x%p\r\n", pRecord->ExceptionAddress);
-	WriteRaw(FileHandle, aLine);
-	WriteExceptionModule(FileHandle, pRecord->ExceptionAddress);
+	WriteRaw(Output, aLine);
+	WriteExceptionModule(Output, pRecord->ExceptionAddress);
 	str_format(aLine, sizeof(aLine), "Exception parameters: %lu\r\n", (unsigned long)pRecord->NumberParameters);
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 
 	for(DWORD Index = 0; Index < pRecord->NumberParameters && Index < EXCEPTION_MAXIMUM_PARAMETERS; ++Index)
 	{
 		str_format(aLine, sizeof(aLine), "  Parameter[%lu]: 0x%016llX\r\n",
 			(unsigned long)Index,
 			(unsigned long long)pRecord->ExceptionInformation[Index]);
-		WriteRaw(FileHandle, aLine);
+		WriteRaw(Output, aLine);
 	}
 
 	if((ExceptionCode == EXCEPTION_ACCESS_VIOLATION || ExceptionCode == EXCEPTION_IN_PAGE_ERROR) && pRecord->NumberParameters >= 2)
@@ -559,25 +622,25 @@ static void WriteExceptionDetails(HANDLE FileHandle, EXCEPTION_POINTERS *pExcept
 		}
 
 		str_format(aLine, sizeof(aLine), "Access violation operation: %s\r\n", pAccessKind);
-		WriteRaw(FileHandle, aLine);
+		WriteRaw(Output, aLine);
 		str_format(aLine, sizeof(aLine), "Access violation target address: 0x%016llX\r\n",
 			(unsigned long long)pRecord->ExceptionInformation[1]);
-		WriteRaw(FileHandle, aLine);
-		WriteMemoryBytes(FileHandle, "Bytes at fault address", reinterpret_cast<const void *>(pRecord->ExceptionInformation[1]), 0, 64);
+		WriteRaw(Output, aLine);
+		WriteMemoryBytes(Output, "Bytes at fault address", reinterpret_cast<const void *>(pRecord->ExceptionInformation[1]), 0, 64);
 	}
 
 	if(ExceptionCode == EXCEPTION_IN_PAGE_ERROR && pRecord->NumberParameters >= 3)
 	{
 		str_format(aLine, sizeof(aLine), "In-page NTSTATUS: 0x%08lX\r\n", (unsigned long)pRecord->ExceptionInformation[2]);
-		WriteRaw(FileHandle, aLine);
+		WriteRaw(Output, aLine);
 	}
 
 	if(pRecord->ExceptionRecord != nullptr)
 	{
 		str_format(aLine, sizeof(aLine), "Nested exception code: 0x%08lX\r\n", (unsigned long)pRecord->ExceptionRecord->ExceptionCode);
-		WriteRaw(FileHandle, aLine);
+		WriteRaw(Output, aLine);
 		str_format(aLine, sizeof(aLine), "Nested exception address: 0x%p\r\n", pRecord->ExceptionRecord->ExceptionAddress);
-		WriteRaw(FileHandle, aLine);
+		WriteRaw(Output, aLine);
 	}
 }
 
@@ -647,42 +710,26 @@ static const char *SignalToString(int SignalNumber)
 	}
 }
 
-static void BuildSidecarPath(const char *pBasePath, const char *pSuffix, char *pOutPath, size_t OutPathSize)
+template<size_t N>
+static bool PrepareWideOutputPath(const char *pUtf8, wchar_t (&aWide)[N])
 {
-	str_copy(pOutPath, pBasePath, OutPathSize);
-	char *pLastSlash = strrchr(pOutPath, '/');
-	char *pLastBackslash = strrchr(pOutPath, '\\');
-	char *pLastSeparator = pLastSlash;
-	if(pLastBackslash != nullptr && (pLastSeparator == nullptr || pLastBackslash > pLastSeparator))
-		pLastSeparator = pLastBackslash;
-
-	char *pExtension = strrchr(pOutPath, '.');
-	if(pExtension != nullptr && (pLastSeparator == nullptr || pExtension > pLastSeparator))
-		*pExtension = '\0';
-
-	str_append(pOutPath, pSuffix, OutPathSize);
+	if(MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, pUtf8, -1, aWide, static_cast<int>(N)) > 0)
+		return true;
+	aWide[0] = L'\0';
+	return false;
 }
 
 template<size_t N>
-static void PrepareWideOutputPath(const char *pUtf8, wchar_t (&aWide)[N])
+static bool PrepareCandidateOutputPath(const char *pFinal, wchar_t (&aWide)[N])
 {
-	if(MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, pUtf8, -1, aWide, static_cast<int>(N)) <= 0)
-		aWide[0] = L'\0';
+	char aCandidate[N];
+	aWide[0] = L'\0';
+	return crash_output::MakeSidecarPath(pFinal, ".tmp", aCandidate, sizeof(aCandidate)) && PrepareWideOutputPath(aCandidate, aWide);
 }
 
-static void WriteRaw(HANDLE FileHandle, const char *pText)
+static void WriteRaw(CCrashWriter &Output, const char *pText)
 {
-	if(pText == nullptr || pText[0] == '\0')
-		return;
-	const DWORD TotalBytes = (DWORD)str_length(pText);
-	DWORD TotalWritten = 0;
-	while(TotalWritten < TotalBytes)
-	{
-		DWORD Written = 0;
-		if(!WriteFile(FileHandle, pText + TotalWritten, TotalBytes - TotalWritten, &Written, nullptr) || Written == 0)
-			break;
-		TotalWritten += Written;
-	}
+	Output.WriteText(pText);
 }
 
 static bool WriteMinimalCrashReport(const char *pReason, EXCEPTION_POINTERS *pExceptionPointers, int SignalNumber, bool DumpWritten)
@@ -691,16 +738,18 @@ static bool WriteMinimalCrashReport(const char *pReason, EXCEPTION_POINTERS *pEx
 	if(gs_aWideFallbackReportPath[0] == L'\0')
 		return false;
 
-	HANDLE FileHandle = CreateFileW(gs_aWideFallbackReportPath, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+	HANDLE FileHandle = CreateFileW(gs_aWideReportCandidatePath, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if(FileHandle == INVALID_HANDLE_VALUE)
 		return false;
 
+	CNativeCrashFile File(FileHandle);
+	CCrashWriter Output(File);
 	char aLine[2048];
 	SYSTEMTIME LocalTime{};
 	GetLocalTime(&LocalTime);
 
-	WriteRaw(FileHandle, "QmClient fatal error report\r\n");
-	WriteRaw(FileHandle, "Report type: fatal-crash\r\n");
+	WriteRaw(Output, "QmClient fatal error report\r\n");
+	WriteRaw(Output, "Report type: fatal-crash\r\n");
 	str_format(aLine, sizeof(aLine), "Timestamp: %04u-%02u-%02u %02u:%02u:%02u.%03u\r\n",
 		(unsigned)LocalTime.wYear,
 		(unsigned)LocalTime.wMonth,
@@ -709,57 +758,57 @@ static bool WriteMinimalCrashReport(const char *pReason, EXCEPTION_POINTERS *pEx
 		(unsigned)LocalTime.wMinute,
 		(unsigned)LocalTime.wSecond,
 		(unsigned)LocalTime.wMilliseconds);
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 	str_format(aLine, sizeof(aLine), "Reason: %s\r\n", pReason != nullptr ? pReason : "unknown");
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 	str_format(aLine, sizeof(aLine), "Process ID: %lu\r\n", (unsigned long)GetCurrentProcessId());
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 	str_format(aLine, sizeof(aLine), "Thread ID: %lu\r\n", (unsigned long)GetCurrentThreadId());
-	WriteRaw(FileHandle, aLine);
-	WriteExecutablePath(FileHandle);
+	WriteRaw(Output, aLine);
+	WriteExecutablePath(Output);
 	str_format(aLine, sizeof(aLine), "Crash log path (.RTP): %s\r\n", gs_aCrashLogPath);
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 	str_format(aLine, sizeof(aLine), "Fallback minidump path: %s\r\n", gs_aFallbackDumpPath);
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 	str_format(aLine, sizeof(aLine), "Fallback minidump written: %s\r\n", DumpWritten ? "yes" : "no");
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 	str_format(aLine, sizeof(aLine), "Requested extended minidump flags: 0x%08lX\r\n", (unsigned long)gs_ExtendedDumpType);
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 	str_format(aLine, sizeof(aLine), "Fallback to minimal minidump flags: %s\r\n", gs_LastMiniDumpRetriedWithMinimalFlags ? "yes" : "no");
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 	str_format(aLine, sizeof(aLine), "Written minidump flags: 0x%08lX\r\n", (unsigned long)gs_LastMiniDumpWrittenFlags);
-	WriteRaw(FileHandle, aLine);
+	WriteRaw(Output, aLine);
 	if(const char *pGraphicsBackend = crashdump_graphics_backend_for_report())
 	{
 		str_format(aLine, sizeof(aLine), "Graphics backend: %s\r\n", pGraphicsBackend);
-		WriteRaw(FileHandle, aLine);
+		WriteRaw(Output, aLine);
 	}
 	if(gs_LastMiniDumpRetriedWithMinimalFlags)
 	{
 		str_format(aLine, sizeof(aLine), "Extended minidump attempt error: 0x%08lX\r\n", (unsigned long)gs_LastMiniDumpExtendedAttemptError);
-		WriteRaw(FileHandle, aLine);
+		WriteRaw(Output, aLine);
 	}
 	if(!DumpWritten)
 	{
 		str_format(aLine, sizeof(aLine), "Final minidump error: 0x%08lX\r\n", (unsigned long)gs_LastMiniDumpFinalError);
-		WriteRaw(FileHandle, aLine);
+		WriteRaw(Output, aLine);
 	}
 
 	if(SignalNumber != 0)
 	{
 		str_format(aLine, sizeof(aLine), "Signal: %d (%s)\r\n", SignalNumber, SignalToString(SignalNumber));
-		WriteRaw(FileHandle, aLine);
+		WriteRaw(Output, aLine);
 	}
 
-	WriteExceptionDetails(FileHandle, pExceptionPointers);
+	WriteExceptionDetails(Output, pExceptionPointers);
 	if(pExceptionPointers != nullptr)
-		WriteExceptionContext(FileHandle, pExceptionPointers->ContextRecord);
-	WriteLoadedModules(FileHandle);
+		WriteExceptionContext(Output, pExceptionPointers->ContextRecord);
+	WriteLoadedModules(Output);
 
-	FlushFileBuffers(FileHandle);
-	CloseHandle(FileHandle);
-	gs_FallbackReportWritten.store(true, std::memory_order_release);
-	return true;
+	const bool Completed = Output.Finish();
+	const bool Published = Completed && PublishCrashOutput(gs_aWideReportCandidatePath, gs_aWideFallbackReportPath);
+	gs_FallbackReportWritten.store(Published, std::memory_order_release);
+	return Published;
 }
 
 static bool TryWriteMiniDumpFile(const wchar_t *pFilename, EXCEPTION_POINTERS *pExceptionPointers, MINIDUMP_TYPE DumpType, DWORD *pOutError)
@@ -771,7 +820,7 @@ static bool TryWriteMiniDumpFile(const wchar_t *pFilename, EXCEPTION_POINTERS *p
 		return false;
 	}
 
-	HANDLE FileHandle = CreateFileW(pFilename, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+	HANDLE FileHandle = CreateFileW(gs_aWideDumpCandidatePath, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if(FileHandle == INVALID_HANDLE_VALUE)
 	{
 		if(pOutError != nullptr)
@@ -779,6 +828,8 @@ static bool TryWriteMiniDumpFile(const wchar_t *pFilename, EXCEPTION_POINTERS *p
 		return false;
 	}
 
+	CNativeCrashFile File(FileHandle);
+	CCrashWriter Output(File);
 	MINIDUMP_EXCEPTION_INFORMATION ExceptionInfo{};
 	PMINIDUMP_EXCEPTION_INFORMATION pExceptionInfo = nullptr;
 	if(pExceptionPointers != nullptr)
@@ -790,11 +841,17 @@ static bool TryWriteMiniDumpFile(const wchar_t *pFilename, EXCEPTION_POINTERS *p
 	}
 
 	const BOOL Result = gs_pMiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), FileHandle, DumpType, pExceptionInfo, nullptr, nullptr);
-	const DWORD LastError = Result ? ERROR_SUCCESS : GetLastError();
-	CloseHandle(FileHandle);
+	if(!Result)
+		File.Fail(GetLastError());
+	bool Completed = Output.Finish(Result != FALSE);
+	if(Completed && !PublishCrashOutput(gs_aWideDumpCandidatePath, pFilename))
+	{
+		File.Fail(GetLastError());
+		Completed = false;
+	}
 	if(pOutError != nullptr)
-		*pOutError = LastError;
-	return Result != FALSE;
+		*pOutError = File.Error();
+	return Completed;
 }
 
 static bool WriteMiniDumpFile(const wchar_t *pFilename, EXCEPTION_POINTERS *pExceptionPointers)
@@ -876,15 +933,16 @@ static void LaunchFatalCrashReporter()
 	if(gs_FatalReporterLaunched.test_and_set(std::memory_order_acq_rel))
 		return;
 
-	HANDLE ConfirmedFile = INVALID_HANDLE_VALUE;
-	if(gs_aWideConfirmedPath[0] != L'\0')
-		ConfirmedFile = CreateFileW(gs_aWideConfirmedPath, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-	if(ConfirmedFile != INVALID_HANDLE_VALUE)
-	{
-		WriteRaw(ConfirmedFile, "confirmed fatal crash\r\n");
-		FlushFileBuffers(ConfirmedFile);
-		CloseHandle(ConfirmedFile);
-	}
+	if(gs_aWideConfirmedPath[0] == L'\0' || gs_aWideConfirmedCandidatePath[0] == L'\0')
+		return;
+	HANDLE ConfirmedFile = CreateFileW(gs_aWideConfirmedCandidatePath, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+	if(ConfirmedFile == INVALID_HANDLE_VALUE)
+		return;
+	CNativeCrashFile File(ConfirmedFile);
+	CCrashWriter Output(File);
+	WriteRaw(Output, "confirmed fatal crash\r\n");
+	if(!Output.Finish() || !PublishCrashOutput(gs_aWideConfirmedCandidatePath, gs_aWideConfirmedPath))
+		return;
 	crashdump_launch_reporter_if_available(gs_aFallbackReportPath);
 }
 
@@ -975,15 +1033,29 @@ static void InstallUnhandledExceptionFilter()
 
 void crashdump_init_if_available(const char *log_file_path)
 {
-	str_copy(gs_aCrashLogPath, log_file_path, sizeof(gs_aCrashLogPath));
-	BuildSidecarPath(gs_aCrashLogPath, "_fatal_report.txt", gs_aFallbackReportPath, sizeof(gs_aFallbackReportPath));
-	BuildSidecarPath(gs_aCrashLogPath, "_fatal_dump.dmp", gs_aFallbackDumpPath, sizeof(gs_aFallbackDumpPath));
-	PrepareWideOutputPath(gs_aFallbackReportPath, gs_aWideFallbackReportPath);
-	PrepareWideOutputPath(gs_aFallbackDumpPath, gs_aWideFallbackDumpPath);
 	char aConfirmedPath[IO_MAX_PATH_LENGTH + 16];
-	str_format(aConfirmedPath, sizeof(aConfirmedPath), "%s.confirmed", gs_aFallbackReportPath);
-	PrepareWideOutputPath(aConfirmedPath, gs_aWideConfirmedPath);
-
+	const bool PathsReady = log_file_path &&
+				crash_output::AppendPathSuffix(log_file_path, {}, gs_aCrashLogPath, sizeof(gs_aCrashLogPath)) &&
+				crash_output::MakeSidecarPath(gs_aCrashLogPath, "_fatal_report.txt", gs_aFallbackReportPath, sizeof(gs_aFallbackReportPath)) &&
+				crash_output::MakeSidecarPath(gs_aCrashLogPath, "_fatal_dump.dmp", gs_aFallbackDumpPath, sizeof(gs_aFallbackDumpPath)) &&
+				crash_output::AppendPathSuffix(gs_aFallbackReportPath, ".confirmed", aConfirmedPath, sizeof(aConfirmedPath)) &&
+				PrepareWideOutputPath(gs_aCrashLogPath, gs_aWideCrashLogPath) &&
+				PrepareWideOutputPath(gs_aFallbackReportPath, gs_aWideFallbackReportPath) &&
+				PrepareWideOutputPath(gs_aFallbackDumpPath, gs_aWideFallbackDumpPath) &&
+				PrepareWideOutputPath(aConfirmedPath, gs_aWideConfirmedPath) &&
+				PrepareCandidateOutputPath(gs_aFallbackReportPath, gs_aWideReportCandidatePath) &&
+				PrepareCandidateOutputPath(gs_aFallbackDumpPath, gs_aWideDumpCandidatePath) &&
+				PrepareCandidateOutputPath(aConfirmedPath, gs_aWideConfirmedCandidatePath);
+	if(!PathsReady)
+	{
+		// 全部路径共同准备，失败不保留任何部分结果或截断别名。
+		gs_aCrashLogPath[0] = gs_aFallbackReportPath[0] = gs_aFallbackDumpPath[0] = '\0';
+		wchar_t *apPaths[] = {gs_aWideCrashLogPath, gs_aWideFallbackReportPath, gs_aWideFallbackDumpPath, gs_aWideConfirmedPath,
+			gs_aWideReportCandidatePath, gs_aWideDumpCandidatePath, gs_aWideConfirmedCandidatePath};
+		for(wchar_t *pPath : apPaths)
+			pPath[0] = L'\0';
+		log_warn("crashdump", "crash output paths are invalid or exceed the path budget; file output disabled");
+	}
 	if(gs_aCrashLogPath[0] != '\0')
 		fs_makedir_rec_for(gs_aCrashLogPath);
 	if(gs_aFallbackReportPath[0] != '\0')
@@ -991,8 +1063,14 @@ void crashdump_init_if_available(const char *log_file_path)
 	if(gs_aFallbackDumpPath[0] != '\0')
 		fs_makedir_rec_for(gs_aFallbackDumpPath);
 
-	InitMiniDumpWriterIfNeeded();
+	if(PathsReady)
+		InitMiniDumpWriterIfNeeded();
 	InstallFallbackHandlersIfNeeded();
+	if(!PathsReady)
+	{
+		InstallUnhandledExceptionFilter();
+		return;
+	}
 
 	HMODULE pCrashdumpLib = LoadLibraryA(CRASHDUMP_LIB);
 	if(pCrashdumpLib == nullptr)
@@ -1004,7 +1082,6 @@ void crashdump_init_if_available(const char *log_file_path)
 		return;
 	}
 
-	const std::wstring WideLogFilePath = windows_utf8_to_wide(log_file_path);
 	// Intentional
 #ifdef __MINGW32__
 #pragma GCC diagnostic push
@@ -1023,7 +1100,7 @@ void crashdump_init_if_available(const char *log_file_path)
 		return;
 	}
 
-	ExceptionLogFilePathFunc(WideLogFilePath.c_str());
+	ExceptionLogFilePathFunc(gs_aWideCrashLogPath);
 
 	// Install our unhandled filter after external crashdump setup so fallback
 	// remains active even if that library changes the top-level filter.

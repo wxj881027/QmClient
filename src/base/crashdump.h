@@ -13,6 +13,8 @@
  *
  * @param log_file_path UTF-8编码的崩溃日志绝对路径。
  */
+// 路径不能完整准备时禁用本次初始化的文件输出，不使用截断文件名。
+// 报告、转储与确认文件分别写入完整候选并收尾后发布，失败保留原正式文件。
 void crashdump_init_if_available(const char *log_file_path);
 
 // 图形后端在初始化/切换时可报告名称；不支持的平台保留空实现。

@@ -164,7 +164,83 @@ def scenario_unicode_directory_keeps_all_fatal_artifacts(binary: Path, directory
 	check_fatal_report(unicode_directory, "Unhandled C++ exception (std::terminate)")
 
 
+def candidate_paths(directory: Path) -> tuple[Path, Path, Path]:
+	_, report, dump, confirmed = paths(directory)
+	return report.with_suffix(".tmp"), dump.with_suffix(".tmp"), confirmed.with_suffix(".tmp")
+
+
+def scenario_complete_files_replace_previous_artifacts(binary: Path, directory: Path) -> None:
+	log, report, dump, confirmed = paths(directory)
+	for path in (report, dump, confirmed):
+		path.write_bytes(b"previous artifact")
+	require_exit(run_probe(binary, directory, "terminate", log), 3)
+	check_fatal_report(directory, "Unhandled C++ exception (std::terminate)")
+	if any(path.exists() for path in candidate_paths(directory)):
+		raise AssertionError("successful publication left a candidate instead of moving it")
+
+
+def scenario_report_candidate_open_failure_preserves_existing_file(binary: Path, directory: Path) -> None:
+	log, report, _, confirmed = paths(directory)
+	report.write_bytes(b"previous report")
+	confirmed.write_bytes(b"previous confirmation")
+	report_candidate, _, _ = candidate_paths(directory)
+	report_candidate.mkdir()
+	require_exit(run_probe(binary, directory, "terminate", log), 3)
+	if report.read_bytes() != b"previous report" or confirmed.read_bytes() != b"previous confirmation":
+		raise AssertionError("failed report candidate changed a previous official artifact")
+
+
+def scenario_report_publish_failure_keeps_complete_candidate(binary: Path, directory: Path) -> None:
+	log, report, _, confirmed = paths(directory)
+	report.mkdir()
+	require_exit(run_probe(binary, directory, "terminate", log), 3)
+	if not report.is_dir() or confirmed.exists():
+		raise AssertionError("failed report publication was treated as a completed report")
+	report_candidate, _, _ = candidate_paths(directory)
+	text = report_candidate.read_text(encoding="utf-8")
+	if "Reason: Unhandled C++ exception (std::terminate)" not in text or "Loaded modules:" not in text:
+		raise AssertionError("report publication failure did not retain the completed candidate")
+
+
+def scenario_dump_publish_failure_is_reported_as_unsaved(binary: Path, directory: Path) -> None:
+	log, report, dump, confirmed = paths(directory)
+	dump.mkdir()
+	require_exit(run_probe(binary, directory, "terminate", log), 3)
+	text = report.read_text(encoding="utf-8")
+	if "Fallback minidump written: no" not in text or "Final minidump error:" not in text:
+		raise AssertionError("failed native dump publication was reported as saved")
+	if "Final minidump error: 0x00000000" in text or not dump.is_dir():
+		raise AssertionError("failed dump publication lost its error or replaced a directory")
+	_, dump_candidate, _ = candidate_paths(directory)
+	with dump_candidate.open("rb") as file:
+		if file.read(4) != b"MDMP":
+			raise AssertionError("completed native dump candidate was lost after publication failed")
+	if confirmed.read_bytes() != b"confirmed fatal crash\r\n":
+		raise AssertionError("valid text report was not confirmed independently of the failed dump")
+
+
+def scenario_confirmation_publish_failure_keeps_candidate(binary: Path, directory: Path) -> None:
+	log, report, dump, confirmed = paths(directory)
+	confirmed.mkdir()
+	require_exit(run_probe(binary, directory, "terminate", log), 3)
+	if not confirmed.is_dir():
+		raise AssertionError("confirmation publication replaced an existing directory")
+	_, _, candidate = candidate_paths(directory)
+	if candidate.read_bytes() != b"confirmed fatal crash\r\n":
+		raise AssertionError("failed confirmation publication did not preserve its complete candidate")
+	if "Report type: fatal-crash" not in report.read_text(encoding="utf-8"):
+		raise AssertionError("confirmation failure damaged the valid official report")
+	with dump.open("rb") as file:
+		if file.read(4) != b"MDMP":
+			raise AssertionError("confirmation failure damaged the valid official native dump")
+
+
 SCENARIOS = {
+	"complete_publication": scenario_complete_files_replace_previous_artifacts,
+	"report_candidate_failure": scenario_report_candidate_open_failure_preserves_existing_file,
+	"report_publish_failure": scenario_report_publish_failure_keeps_complete_candidate,
+	"dump_publish_failure": scenario_dump_publish_failure_is_reported_as_unsaved,
+	"confirmation_publish_failure": scenario_confirmation_publish_failure_keeps_candidate,
 	"assert_copy_failure": scenario_assert_snapshot_does_not_copy_failing_target,
 	"assert_handler_exception": scenario_assert_handler_exception_keeps_assert_exit,
 	"assert_reentry": scenario_assert_reentry_does_not_repeat_diagnostics,
