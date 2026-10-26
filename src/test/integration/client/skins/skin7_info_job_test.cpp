@@ -1,14 +1,24 @@
 #include <game/client/components/qmclient/skin7_info_job.h>
 
 #include <gtest/gtest.h>
+#include <test/support/job_wait.h>
 #include <test/test.h>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
+#include <new>
 #include <thread>
 
 namespace
 {
+	bool DecodeThenThrow(const void *pData, size_t Size, const char *pPath, CImageInfo &Image)
+	{
+		if(!CImageLoader::LoadPng(pData, Size, pPath, Image))
+			return false;
+		throw std::bad_alloc();
+	}
+
 	const CQmSkin7InfoJob::SEntry *FindEntry(const std::vector<CQmSkin7InfoJob::SEntry> &Entries, const char *pName)
 	{
 		auto It = std::find_if(Entries.begin(), Entries.end(), [pName](const auto &Entry) { return Entry.m_Name == pName; });
@@ -39,6 +49,19 @@ namespace
 			ASSERT_NE(File, nullptr);
 			EXPECT_EQ(io_write(File, pBody, str_length(pBody)), static_cast<unsigned>(str_length(pBody)));
 			io_close(File);
+		}
+		void WriteHat()
+		{
+			std::array<uint8_t, 2 * 4 * 4> aPixels;
+			aPixels.fill(123);
+			CImageInfo Image;
+			Image.m_Width = 2;
+			Image.m_Height = 4;
+			Image.m_Format = CImageInfo::FORMAT_RGBA;
+			Image.m_pData = aPixels.data();
+			IOHANDLE File = m_pStorage->OpenFile("skins7/xmas_hat.png", IOFLAG_WRITE, IStorage::TYPE_SAVE);
+			ASSERT_NE(File, nullptr);
+			ASSERT_TRUE(CImageLoader::SavePng(File, "test hat", Image));
 		}
 	};
 }
@@ -159,4 +182,40 @@ TEST_F(CQmSkin7InfoJobTest, FreshJobReadsNewFilesAndOldResultsRemainOwned)
 	ASSERT_NE(pNew, nullptr);
 	EXPECT_STREQ((*pOld->m_pInfo)["skin"]["body"]["filename"], "old");
 	EXPECT_STREQ((*pNew->m_pInfo)["skin"]["body"]["filename"], "new");
+}
+
+TEST_F(CQmSkin7InfoJobTest, ExceptionAfterNativeAccessoryDecodeDoesNotPublishCandidatePixels)
+{
+	WriteHat();
+	Write("good.json", R"({"skin":{}})");
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	auto pJob = std::make_shared<CQmSkin7InfoJob>(m_pStorage.get(), DecodeThenThrow);
+	ASSERT_TRUE(Pool.TryAdd(pJob));
+	ASSERT_TRUE(WaitForJobDone(*pJob));
+	auto Entries = pJob->TakeEntries();
+	EXPECT_NE(FindEntry(Entries, "good"), nullptr);
+	auto Hat = pJob->TakeXmasHat();
+	EXPECT_EQ(Hat.m_pData, nullptr);
+	EXPECT_EQ(Hat.m_Width, 0u);
+	Hat.Free();
+}
+
+TEST_F(CQmSkin7InfoJobTest, FreshNativeJobCanPublishAccessoryAfterEarlierDecodeException)
+{
+	WriteHat();
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	auto pFailed = std::make_shared<CQmSkin7InfoJob>(m_pStorage.get(), DecodeThenThrow);
+	ASSERT_TRUE(Pool.TryAdd(pFailed));
+	ASSERT_TRUE(WaitForJobDone(*pFailed));
+	auto pReady = std::make_shared<CQmSkin7InfoJob>(m_pStorage.get());
+	ASSERT_TRUE(Pool.TryAdd(pReady));
+	ASSERT_TRUE(WaitForJobDone(*pReady));
+	auto Hat = pReady->TakeXmasHat();
+	ASSERT_NE(Hat.m_pData, nullptr);
+	EXPECT_EQ(Hat.m_Width, 2u);
+	EXPECT_EQ(Hat.m_Height, 4u);
+	EXPECT_EQ(Hat.m_pData[0], 123);
+	Hat.Free();
 }

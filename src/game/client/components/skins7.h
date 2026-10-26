@@ -147,7 +147,7 @@ private:
 
 	void InitPlaceholderSkinParts();
 
-	void AddSkinFromConfigVariables(const char *pName, int Dummy);
+	void PrepareSkinFromConfigVariables(std::vector<CSkin> &Skins, const char *pName, int Dummy) const;
 };
 
 #endif

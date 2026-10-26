@@ -26,6 +26,7 @@
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/qm_skin_outline.h>
 #include <game/client/components/qmclient/skin7_info_job.h>
+#include <game/client/components/qmclient/skin7_save.h>
 #include <game/client/components/qmclient/skin_load_budget.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
@@ -211,7 +212,12 @@ void CSkins7::ProcessCompletedJobs()
 	while(m_NextAccessory < 2 && GameClient()->GpuUploadLimiter()->CanUpload(1) && time_get_nanoseconds() - Begin < std::chrono::milliseconds(1))
 	{
 		const bool Hat = m_NextAccessory++ == 0;
-		auto Image = Hat ? m_pSkinInfoJob->TakeXmasHat() : m_pSkinInfoJob->TakeBot();
+		struct SImageOwner
+		{
+			CImageInfo m_Image;
+			~SImageOwner() { m_Image.Free(); }
+		} ImageOwner{Hat ? m_pSkinInfoJob->TakeXmasHat() : m_pSkinInfoJob->TakeBot()};
+		auto &Image = ImageOwner.m_Image;
 		auto &Texture = Hat ? m_XmasHatTexture : m_BotTexture;
 		Graphics()->UnloadTexture(&Texture);
 		if(Image.m_pData)
@@ -539,14 +545,14 @@ void CSkins7::Refresh(TSkinLoadedCallback &&SkinLoadedCallback)
 	ProcessCompletedJobs();
 }
 
-void CSkins7::AddSkinFromConfigVariables(const char *pName, int Dummy)
+void CSkins7::PrepareSkinFromConfigVariables(std::vector<CSkin> &Skins, const char *pName, int Dummy) const
 {
-	auto OldSkin = std::find_if(m_vSkins.begin(), m_vSkins.end(), [pName](const CSkin &Skin) {
+	auto OldSkin = std::find_if(Skins.begin(), Skins.end(), [pName](const CSkin &Skin) {
 		return str_comp(Skin.m_aName, pName) == 0;
 	});
-	if(OldSkin != m_vSkins.end())
+	if(OldSkin != Skins.end())
 	{
-		m_vSkins.erase(OldSkin);
+		Skins.erase(OldSkin);
 	}
 
 	CSkin NewSkin;
@@ -558,8 +564,7 @@ void CSkins7::AddSkinFromConfigVariables(const char *pName, int Dummy)
 		NewSkin.m_aUseCustomColors[PartIndex] = *ms_apUCCVariables[Dummy][PartIndex];
 		NewSkin.m_aPartColors[PartIndex] = *ms_apColorVariables[Dummy][PartIndex];
 	}
-	m_vSkins.insert(std::lower_bound(m_vSkins.begin(), m_vSkins.end(), NewSkin), NewSkin);
-	m_LastRefreshTime = time_get_nanoseconds();
+	Skins.insert(std::lower_bound(Skins.begin(), Skins.end(), NewSkin), NewSkin);
 }
 
 bool CSkins7::RemoveSkin(const char *pName)
@@ -740,99 +745,25 @@ bool CSkins7::ValidateSkinParts(char *apPartNames[protocol7::NUM_SKINPARTS], int
 	return true;
 }
 
-static void SaveSkinfilePart(CJsonFileWriter &Writer, const char *pPartName, const char *pFilename)
-{
-	if(pFilename == nullptr || pFilename[0] == '\0')
-		return;
-
-	Writer.WriteAttribute(pPartName);
-	Writer.BeginObject();
-	Writer.WriteAttribute("filename");
-	Writer.WriteStrValue(pFilename);
-	Writer.WriteAttribute("custom_colors");
-	Writer.WriteBoolValue(false);
-	Writer.EndObject();
-}
-
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 bool SaveSkinfileFromParts(IStorage *pStorage, const char *pName, const char *pBodyPartName, const char *pMarkingPartName, const char *pDecorationPartName, const char *pHandsPartName, const char *pFeetPartName, const char *pEyesPartName)
 {
-	if(pStorage == nullptr || pName == nullptr || pName[0] == '\0')
-		return false;
-
-	char aBuf[IO_MAX_PATH_LENGTH];
-	str_format(aBuf, sizeof(aBuf), SKINS_DIR "/%s.json", pName);
-	IOHANDLE File = pStorage->OpenFile(aBuf, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
-		return false;
-
-	CJsonFileWriter Writer(File);
-	Writer.BeginObject();
-	Writer.WriteAttribute("skin");
-	Writer.BeginObject();
-	SaveSkinfilePart(Writer, CSkins7::ms_apSkinPartNames[protocol7::SKINPART_BODY], pBodyPartName);
-	SaveSkinfilePart(Writer, CSkins7::ms_apSkinPartNames[protocol7::SKINPART_MARKING], pMarkingPartName);
-	SaveSkinfilePart(Writer, CSkins7::ms_apSkinPartNames[protocol7::SKINPART_DECORATION], pDecorationPartName);
-	SaveSkinfilePart(Writer, CSkins7::ms_apSkinPartNames[protocol7::SKINPART_HANDS], pHandsPartName);
-	SaveSkinfilePart(Writer, CSkins7::ms_apSkinPartNames[protocol7::SKINPART_FEET], pFeetPartName);
-	SaveSkinfilePart(Writer, CSkins7::ms_apSkinPartNames[protocol7::SKINPART_EYES], pEyesPartName);
-	Writer.EndObject();
-	Writer.EndObject();
-	return true;
+	const qm_skin7_save::TParts Parts{{{pBodyPartName}, {pMarkingPartName}, {pDecorationPartName}, {pHandsPartName}, {pFeetPartName}, {pEyesPartName}}};
+	return qm_skin7_save::Save(pStorage, pName, Parts);
 }
 
 bool CSkins7::SaveSkinfile(const char *pName, int Dummy)
 {
 	dbg_assert(!IsSpecialSkin(pName), "Cannot save special skins");
-
-	char aBuf[IO_MAX_PATH_LENGTH];
-	str_format(aBuf, sizeof(aBuf), SKINS_DIR "/%s.json", pName);
-	IOHANDLE File = Storage()->OpenFile(aBuf, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
-		return false;
-
-	CJsonFileWriter Writer(File);
-
-	Writer.BeginObject();
-	Writer.WriteAttribute("skin");
-	Writer.BeginObject();
-	for(int PartIndex = 0; PartIndex < protocol7::NUM_SKINPARTS; PartIndex++)
+	qm_skin7_save::TParts Parts;
+	for(int Part = 0; Part < protocol7::NUM_SKINPARTS; ++Part)
 	{
-		if(!ms_apSkinVariables[Dummy][PartIndex][0])
-			continue;
-
-		// part start
-		Writer.WriteAttribute(ms_apSkinPartNames[PartIndex]);
-		Writer.BeginObject();
-		{
-			Writer.WriteAttribute("filename");
-			Writer.WriteStrValue(ms_apSkinVariables[Dummy][PartIndex]);
-
-			const bool CustomColors = *ms_apUCCVariables[Dummy][PartIndex];
-			Writer.WriteAttribute("custom_colors");
-			Writer.WriteBoolValue(CustomColors);
-
-			if(CustomColors)
-			{
-				for(int ColorComponent = 0; ColorComponent < NUM_COLOR_COMPONENTS - 1; ColorComponent++)
-				{
-					int Val = (*ms_apColorVariables[Dummy][PartIndex] >> (2 - ColorComponent) * 8) & 0xff;
-					Writer.WriteAttribute(ms_apColorComponents[ColorComponent]);
-					Writer.WriteIntValue(Val);
-				}
-				if(PartIndex == protocol7::SKINPART_MARKING)
-				{
-					int Val = (*ms_apColorVariables[Dummy][PartIndex] >> 24) & 0xff;
-					Writer.WriteAttribute(ms_apColorComponents[3]);
-					Writer.WriteIntValue(Val);
-				}
-			}
-		}
-		Writer.EndObject();
+		Parts[Part] = {ms_apSkinVariables[Dummy][Part], *ms_apUCCVariables[Dummy][Part] != 0, *ms_apColorVariables[Dummy][Part]};
 	}
-	Writer.EndObject();
-	Writer.EndObject();
-
-	AddSkinFromConfigVariables(pName, Dummy);
+	if(!qm_skin7_save::SaveAndPublish(Storage(), pName, Parts, m_vSkins, [this, pName, Dummy](auto &Candidate) {
+		   PrepareSkinFromConfigVariables(Candidate, pName, Dummy);
+	   }))
+		return false;
+	m_LastRefreshTime = time_get_nanoseconds();
 	return true;
 }

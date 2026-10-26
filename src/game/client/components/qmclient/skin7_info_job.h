@@ -36,6 +36,8 @@ inline TQmSkin7Info QmParseSkin7Info(const void *pData, size_t Size)
 class CQmSkin7InfoJob : public IJob
 {
 public:
+	using FDecodeAccessory = bool (*)(const void *, size_t, const char *, CImageInfo &);
+
 	struct SPart
 	{
 		int m_Part;
@@ -49,7 +51,8 @@ public:
 		TQmSkin7Info m_pInfo;
 	};
 
-	explicit CQmSkin7InfoJob(IStorage *pStorage) : m_pStorage(pStorage) { Abortable(true); }
+	explicit CQmSkin7InfoJob(IStorage *pStorage, FDecodeAccessory pfnDecodeAccessory = DecodeAccessory) :
+		m_pStorage(pStorage), m_pfnDecodeAccessory(pfnDecodeAccessory) { Abortable(true); }
 	~CQmSkin7InfoJob() override
 	{
 		m_XmasHat.Free();
@@ -81,7 +84,30 @@ protected:
 	}
 
 private:
+	struct SFileData
+	{
+		void *m_pData = nullptr;
+		~SFileData() { Free(); }
+		void Free()
+		{
+			free(m_pData);
+			m_pData = nullptr;
+		}
+	};
+
+	struct SImageOwner
+	{
+		CImageInfo m_Image;
+		~SImageOwner() { m_Image.Free(); }
+	};
+
+	static bool DecodeAccessory(const void *pData, size_t Size, const char *pPath, CImageInfo &Image)
+	{
+		return CImageLoader::LoadPng(pData, Size, pPath, Image);
+	}
+
 	IStorage *m_pStorage;
+	FDecodeAccessory m_pfnDecodeAccessory;
 	std::vector<SEntry> m_vEntries;
 	std::vector<SPart> m_vParts;
 	int m_ScanPart = 0;
@@ -92,14 +118,16 @@ private:
 	{
 		if(State() == STATE_ABORTED)
 			return;
-		void *pData = nullptr;
+		SFileData Data;
 		unsigned Size = 0;
-		if(!m_pStorage->ReadFile(pPath, IStorage::TYPE_ALL, &pData, &Size))
+		if(!m_pStorage->ReadFile(pPath, IStorage::TYPE_ALL, &Data.m_pData, &Size))
 			return;
-		const bool Loaded = State() != STATE_ABORTED && CImageLoader::LoadPng(static_cast<uint8_t *>(pData), Size, pPath, Image);
-		free(pData);
-		if(!Loaded || Image.m_Format != CImageInfo::FORMAT_RGBA || Image.m_Width == 0 || Image.m_Height == 0 || Image.m_Width % Columns != 0 || Image.m_Height % Rows != 0 || State() == STATE_ABORTED)
-			Image.Free();
+		SImageOwner Candidate;
+		auto &Prepared = Candidate.m_Image;
+		const bool Loaded = State() != STATE_ABORTED && m_pfnDecodeAccessory(Data.m_pData, Size, pPath, Prepared);
+		Data.Free();
+		if(Loaded && Prepared.m_Format == CImageInfo::FORMAT_RGBA && Prepared.m_Width != 0 && Prepared.m_Height != 0 && Prepared.m_Width % Columns == 0 && Prepared.m_Height % Rows == 0 && State() != STATE_ABORTED)
+			Image = std::move(Prepared);
 	}
 
 	static int ScanPart(const char *pName, int IsDir, int StorageType, void *pUser)
@@ -127,12 +155,12 @@ private:
 			return 0;
 		}
 		std::string Path = "skins7/" + std::string(pName);
-		void *pData = nullptr;
+		SFileData Data;
 		unsigned Size = 0;
-		if(!pSelf->m_pStorage->ReadFile(Path.c_str(), StorageType, &pData, &Size))
+		if(!pSelf->m_pStorage->ReadFile(Path.c_str(), StorageType, &Data.m_pData, &Size))
 			return 0;
-		auto pInfo = QmParseSkin7Info(pData, Size);
-		free(pData);
+		auto pInfo = QmParseSkin7Info(Data.m_pData, Size);
+		Data.Free();
 		if(pInfo && pSelf->State() != STATE_ABORTED)
 			pSelf->m_vEntries.push_back({std::move(Name), StorageType, std::move(pInfo)});
 		else if(pSelf->State() != STATE_ABORTED)
