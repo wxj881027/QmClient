@@ -13,6 +13,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -62,15 +63,21 @@ namespace fontstore
 
 	// 目录与族聚合共用一次解析（懒加载）：条目按族名（大小写不敏感）归并，
 	// 同名族合并文件列表，族内首条即生成器排序后的主文件（可变字体优先）。
-	inline void LoadCatalog(IStorage *pStorage, std::vector<SEntry> &vEntries, std::vector<SFamily> &vFamilies)
+	template<typename TEntryAllocator, typename TFamilyAllocator>
+	void LoadCatalog(IStorage *pStorage, std::vector<SEntry, TEntryAllocator> &vEntries, std::vector<SFamily, TFamilyAllocator> &vFamilies)
 	{
 		void *pCatalogData = nullptr;
 		unsigned CatalogSize = 0;
 		// TYPE_ALL 会先搜用户目录再搜数据目录：用户侧同名目录可整体覆盖随包目录。
-		if(!pStorage->ReadFile("fonts/fonts_store/font_catalog.json", IStorage::TYPE_ALL, &pCatalogData, &CatalogSize))
+		const bool Read = pStorage->ReadFile("fonts/fonts_store/font_catalog.json", IStorage::TYPE_ALL, &pCatalogData, &CatalogSize);
+		const std::unique_ptr<void, decltype(&free)> pFile(pCatalogData, free);
+		if(!Read)
 			return;
 
-		json_value *pJson = json_parse((json_char *)pCatalogData, CatalogSize);
+		const std::unique_ptr<json_value, decltype(&json_value_free)> pJson(json_parse((json_char *)pFile.get(), CatalogSize), json_value_free);
+		// 同一对候选完成后才替换调用方状态，异常不能留下先写入的族索引。
+		std::vector<SEntry, TEntryAllocator> vCandidateEntries(vEntries, vEntries.get_allocator());
+		std::vector<SFamily, TFamilyAllocator> vCandidateFamilies(vFamilies, vFamilies.get_allocator());
 		if(pJson != nullptr && pJson->type == json_object)
 		{
 			const json_value &Fonts = (*pJson)["fonts"];
@@ -121,13 +128,13 @@ namespace fontstore
 						Family.m_Name = Parsed.m_Family;
 						Family.m_Category = Parsed.m_Category;
 						Family.m_vSubsets = Parsed.m_vSubsets;
-						Family.m_vEntryIndices.push_back(vEntries.size());
-						vFamilies.push_back(std::move(Family));
-						It = FamilyIndex.emplace(LowerFamily, vFamilies.size() - 1).first;
+						Family.m_vEntryIndices.push_back(vCandidateEntries.size());
+						vCandidateFamilies.push_back(std::move(Family));
+						It = FamilyIndex.emplace(LowerFamily, vCandidateFamilies.size() - 1).first;
 					}
 					else
-						vFamilies[It->second].m_vEntryIndices.push_back(vEntries.size());
-					vEntries.push_back(std::move(Parsed));
+						vCandidateFamilies[It->second].m_vEntryIndices.push_back(vCandidateEntries.size());
+					vCandidateEntries.push_back(std::move(Parsed));
 				}
 			}
 		}
@@ -135,9 +142,9 @@ namespace fontstore
 		{
 			log_warn("fontstore", "Failed to parse font catalog data/fonts/fonts_store/font_catalog.json");
 		}
-		json_value_free(pJson);
-		free(pCatalogData);
-		log_info("fontstore", "Font catalog loaded with %" PRIzu " files in %" PRIzu " families", vEntries.size(), vFamilies.size());
+		log_info("fontstore", "Font catalog loaded with %" PRIzu " files in %" PRIzu " families", vCandidateEntries.size(), vCandidateFamilies.size());
+		vEntries.swap(vCandidateEntries);
+		vFamilies.swap(vCandidateFamilies);
 	}
 
 	struct SCatalog
@@ -155,16 +162,19 @@ namespace fontstore
 		bool m_Published = false;
 		void Run() override
 		{
-			LoadCatalog(m_pStorage, m_Result.m_vEntries, m_Result.m_vFamilies);
-			for(SFamily &Family : m_Result.m_vFamilies)
+			SCatalog Candidate;
+			LoadCatalog(m_pStorage, Candidate.m_vEntries, Candidate.m_vFamilies);
+			for(SFamily &Family : Candidate.m_vFamilies)
 				Family.m_Installed = std::all_of(Family.m_vEntryIndices.begin(), Family.m_vEntryIndices.end(), [&](size_t Index) {
-					return qm_font_download::Installed(*m_pStorage, m_Result.m_vEntries[Index].m_File);
+					return qm_font_download::Installed(*m_pStorage, Candidate.m_vEntries[Index].m_File);
 				});
-			m_Result.m_Loaded = true;
+			Candidate.m_Loaded = true;
+			m_Result = std::move(Candidate);
 		}
 
 	public:
-		explicit CCatalogLoadJob(IStorage *pStorage) : m_pStorage(pStorage) {}
+		explicit CCatalogLoadJob(IStorage *pStorage) :
+			m_pStorage(pStorage) {}
 
 		bool TakeResult(SCatalog &Result)
 		{
