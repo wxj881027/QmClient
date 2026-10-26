@@ -133,8 +133,10 @@ TEST_P(CQmUpstreamRedundancyLoopback, CompressedPacketsRetainEveryCopy)
 	for(auto &Bytes : Packets)
 	{
 		bool Sixup = GetParam().m_Sixup;
+		// 六人协议的数据包头部带安全令牌，UnpackPacket 在 Sixup 时必须能写回它。
+		SECURITY_TOKEN SecurityToken = NET_SECURITY_TOKEN_UNKNOWN;
 		CNetPacketConstruct Packet = {};
-		EXPECT_EQ(CNetBase::UnpackPacket(Bytes.data(), (int)Bytes.size(), &Packet, Sixup), 0);
+		EXPECT_EQ(CNetBase::UnpackPacket(Bytes.data(), (int)Bytes.size(), &Packet, Sixup, true, Sixup ? &SecurityToken : nullptr), 0);
 		EXPECT_NE(Packet.m_Flags & NET_PACKETFLAG_COMPRESSION, 0);
 		EXPECT_EQ(Packet.m_NumChunks, 1);
 	}

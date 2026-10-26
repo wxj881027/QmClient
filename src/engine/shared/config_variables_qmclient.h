@@ -22,7 +22,9 @@ MACRO_CONFIG_INT(QmSteamAutoLaunch, qm_steam_auto_launch, 0, 0, 1, CFGFLAG_CLIEN
 MACRO_CONFIG_STR(QmSteamClientPath, qm_steam_client_path, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Steam client path (leave empty to detect automatically)")
 MACRO_CONFIG_INT(QmConsoleFilterMask, qm_console_filter_mask, 15, 0, 15, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Local console log category filter mask (bit flags)")
 MACRO_CONFIG_INT(QmConsoleFontSize, qm_console_font_size, 10, 1, 24, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console font size")
-MACRO_CONFIG_INT(QmConsoleColorScheme, qm_console_color_scheme, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom")
+// 0=现代终端 1=经典 PowerShell 2=自定义；3 起为 Windows Terminal 内置配色
+//（顺序见 console_color_schemes.h，只在末尾追加，不重排）。
+MACRO_CONFIG_INT(QmConsoleColorScheme, qm_console_color_scheme, 0, 0, 18, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom, 3+=Windows Terminal schemes")
 MACRO_CONFIG_INT(QmConsoleOpacity, qm_console_opacity, 96, 20, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console background opacity")
 MACRO_CONFIG_INT(QmConsoleHighlightCommands, qm_console_highlight_commands, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Highlight console commands")
 MACRO_CONFIG_COL(QmConsoleBackgroundColor, qm_console_background_color, 0x00000C, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console background color")
@@ -403,7 +405,6 @@ MACRO_CONFIG_INT(QmTitleBadgeStyle, qm_title_badge_style, 0, 0, 1, CFGFLAG_CLIEN
 MACRO_CONFIG_COL(QmTitleBadgeColor, qm_title_badge_color, 0xC3638E, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Overall sponsor title badge color")
 MACRO_CONFIG_INT(QmTitleInstantHints, qm_title_instant_hints, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show title setting hints immediately in small text")
 MACRO_CONFIG_INT(QmTitleColorMode, qm_title_color_mode, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow")
-MACRO_CONFIG_COL(QmTitleColor, qm_title_color, 0xFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Bracketed title single color")
 MACRO_CONFIG_INT(QmTitleOpacity, qm_title_opacity, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Sponsor title badge opacity (0-100)")
 MACRO_CONFIG_INT(QmTitleStyleEnabled, qm_title_style_enabled, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use animated title style (overrides qm_title_color_mode)")
 MACRO_CONFIG_STR(QmTitleStyle, qm_title_style, 32, "exotic_rainbow", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Animated title style id")
@@ -961,5 +962,9 @@ MACRO_CONFIG_INT(QmPoseSharpen, qm_pose_sharpen, 0, 0, 60, CFGFLAG_CLIENT | CFGF
 MACRO_CONFIG_INT(QmPoseCaptureMaxMegapixels, qm_pose_capture_max_megapixels, 40, 0, 300, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pose capture pixel budget in megapixels (0 = unlimited)")
 
 // Self-kill protection / 自杀保护 - 仅拦截客户端主动自杀（K 键 / kill 命令），服务端命令不受影响。
-// 开/关通过可绑定命令 qm_self_kill_off / qm_self_kill_on 切换。
-MACRO_CONFIG_INT(QmSelfKillEnabled, qm_self_kill_enabled, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Allow the client to send kill requests (0 = ignore client-initiated kills)")
+// 默认关闭：需要玩家自己按下绑定键（qm_self_kill_off / qm_self_kill_on）或设置卡开关才会拦截，
+// 不会"自己打开"。
+MACRO_CONFIG_INT(QmSelfKillEnabled, qm_self_kill_enabled, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Block client-initiated self-kill (K key / kill command)")
+// 进图后自动开启保护的延迟（分钟）。0 = 不自动开启，保持配置里的默认状态。
+// 自动开启只改本局运行时状态，不写回 qm_self_kill_enabled。
+MACRO_CONFIG_INT(QmSelfKillAutoDelay, qm_self_kill_auto_delay, 0, 0, 60, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-enable self-kill protection this many minutes after joining a game (0 = never)")

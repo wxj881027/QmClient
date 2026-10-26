@@ -289,7 +289,6 @@ Allow FTAPI auto-translate (may cause overload)
 Allow insecure HTTP protocol in addition to secure HTTPS. Primarily for testing.
 Allow left-click to toggle between spectating nearest player and free view
 Allow mic permission in system settings, then reopen voice
-Allow the client to send kill requests (0 = ignore client-initiated kills)
 Allow voting to kick players
 Allow voting to move players to spectators
 Allow voting to pause players (instead of moving to spectators)
@@ -461,6 +460,8 @@ Auto-accept team invites by sending /team <n>
 Auto-close chat after unfreeze
 Auto-connect dummy
 Auto-create CSV on game end
+Auto-enable after
+Auto-enable self-kill protection this many minutes after joining a game (0 = never)
 Auto-fetch all players' skins for dummy rotation queue
 Auto-fetch all players' skins for rotation queue
 Auto-follow delay
@@ -618,6 +619,7 @@ Blend mode
 Blend strength
 Blink
 Blink the active local tee
+Block client-initiated self-kill (K key / kill command)
 Block enemy chat
 Block votes from blacklisted addresses
 Block words
@@ -639,7 +641,6 @@ Bounce
 Bound functions
 Bounded capture frame queue depth for demo export (higher values use more memory)
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
-Bracketed title single color
 Bright backgrounds reduce text contrast; keep the overlay dark enough.
 Brightness shift
 Broadcast message
@@ -1034,7 +1035,7 @@ Console background color
 Console background opacity
 Console color
 Console color scheme
-Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom
+Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom, 3+=Windows Terminal schemes
 Console command color
 Console font size
 Console link color
@@ -1657,6 +1658,7 @@ Enable repeat function
 Enable replays
 Enable rotation
 Enable saving games (/save and /load)
+Enable self-kill protection
 Enable server message sound
 Enable shout when holding fire while in water
 Enable Sixup connection.
@@ -2746,7 +2748,6 @@ Manual scope
 Manual source file
 Manual Steam path is invalid; using automatic detection
 Manual target
-Manually toggle client-initiated self-kill with the bindable commands qm_self_kill_off and qm_self_kill_on
 Map
 Map browser difficulty star filter bitmask (bits 1-5)
 Map browser: show empty servers only
@@ -3241,6 +3242,7 @@ Open the directory to add custom themes
 Open the folder containing demo files
 Open the folder containing screenshots
 Open the guide
+Open the local console appearance settings
 Open the saves file
 Open the selected folder
 Open the selected screenshot
@@ -3255,6 +3257,7 @@ Opens the emoticon selector (this does not work with binds).
 Opens the ingame menu immediately when released.
 Opens the spectator menu (this does not work with binds).
 Opt out of spectator count and hide auth status to non-authed players (1 = hidden, 0 = shown)
+Opt-in protection for client-initiated self-kill, with optional auto-enable after joining a game
 Optimistic prediction along stable direction
 Option color
 Optional
@@ -4197,6 +4200,7 @@ Self and friends
 Self only
 Self-kill off
 Self-kill on
+Self-kill protection enabled automatically
 Send & Receive
 Send a moderator alert message to player
 Send a server alert message to all players
@@ -4477,7 +4481,7 @@ Show IP addresses in rcon commands (1 = on, 0 = off)
 Show join team option
 Show jump hint based on fractional part of position
 Show jumps indicator
-Show katan on frozen players
+Show katana on frozen players
 Show katana on frozen players (restores old behavior)
 Show key press counts
 Show key presses
@@ -5246,7 +5250,7 @@ Title too long or contains unsupported characters
 Title visibility and appearance
 Title wave strength (0-3, 0 = off)
 to check a server setting say /settings and setting's name, setting names are:
-To prevent accidental kills while racing, use the two bind rows above to toggle. To self-kill, press the enable key first, then press K. Server commands are not affected
+To prevent accidental kills while racing, toggle the switch above or use the two bind rows. To self-kill, enable first, then press K. Auto-enable counts from the moment you join a game; 0 minutes keeps it off. Server commands are not affected
 To save all players in your team have to be alive and not in '/spec'
 Toast uses UiTokens + QmMotion slide
 Toggle auto camera

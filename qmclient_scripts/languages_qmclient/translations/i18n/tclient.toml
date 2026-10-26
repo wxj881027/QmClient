@@ -6961,7 +6961,7 @@ turkish = "Göstergeleri yalnızca takım içinde göster"
 polish = "Pokaż wskaźniki tylko w drużynie"
 
 [[message]]
-key = "Show katan on frozen players"
+key = "Show katana on frozen players"
 [message.translations]
 simplified_chinese = "在被冻结的玩家身上显示武士刀"
 traditional_chinese = "在被凍結的玩家身上顯示武士刀"

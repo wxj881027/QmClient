@@ -9265,6 +9265,22 @@ turkish = "Uzak konsolu değiştir"
 polish = "Przełącz zdalną konsolę"
 
 [[message]]
+key = "Open the local console appearance settings"
+[message.translations]
+simplified_chinese = "打开本地控制台外观设置"
+traditional_chinese = "開啟本機控制台外觀設定"
+japanese = "ローカルコンソールの外観設定を開く"
+korean = "로컬 콘솔 모양 설정 열기"
+russian = "Открыть настройки внешнего вида локальной консоли"
+german = "Darstellungseinstellungen der lokalen Konsole öffnen"
+spanish = "Abrir los ajustes de apariencia de la consola local"
+french = "Ouvrir les réglages d'apparence de la console locale"
+brazilian_portuguese = "Abrir as configurações de aparência do console local"
+portuguese = "Abrir as definições de aparência da consola local"
+turkish = "Yerel konsol görünüm ayarlarını aç"
+polish = "Otwórz ustawienia wyglądu konsoli lokalnej"
+
+[[message]]
 key = "Toggle scoreboard cursor"
 [message.translations]
 simplified_chinese = "切换计分板光标"

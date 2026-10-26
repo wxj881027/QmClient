@@ -1240,6 +1240,8 @@ void CGameClient::OnUpdate()
 
 	HandleLanguageChanged();
 	RefreshStreamerSkinPrivacyAfterStateChange();
+	// 自杀保护的自动开启计时：帧时间夹住上限，卡顿或断点续跑都不会把延迟一次跳完。
+	UpdateQmSelfKillProtection(std::clamp(Client()->RenderFrameTime(), 0.0f, 0.1f));
 
 	CUIElementBase::Init(Ui()); // update static pointer because game and editor use separate UI
 
@@ -1731,6 +1733,9 @@ void CGameClient::OnConnected()
 	LoadMapSettings();
 	LogConnectStage("map_settings");
 
+	// 新一局开始：自杀保护回到配置默认状态，自动开启延迟重新计时。
+	ResetQmSelfKillProtectionRound(true);
+
 	if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
 	{
 		m_ConnectionResourcePreparation.Begin();
@@ -1750,6 +1755,8 @@ void CGameClient::FinishConnectionResourcePreparation()
 
 void CGameClient::OnReset()
 {
+	// 离开对局：自杀保护回到配置默认值，本局自动开启的拦截不会漏到下一局。
+	ResetQmSelfKillProtectionRound(false);
 	m_ConnectionResourcePreparation.Cancel();
 	InvalidateSnapshot();
 	ResetDemoPlaybackState();
@@ -6762,8 +6769,9 @@ void CGameClient::SendKill()
 
 	// 自杀保护：只拦截客户端主动发起的自杀（K 键 / kill 命令）。
 	// fast practice 直杀与服务端发起的击杀不受影响；demo 回放路径不拦截。
-	// 开关本体是 qm_self_kill_enabled，通过可绑定命令 qm_self_kill_off / qm_self_kill_on 手动切换。
-	if(g_Config.m_QmSelfKillEnabled == 0 && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	// 拦截状态由 m_QmSelfKillProtection 决定：开局取配置默认值（默认关闭），
+	// 之后只由玩家按键/勾选或显式配置的自动开启延迟改变。
+	if(m_QmSelfKillProtection.BlocksKill() && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 	{
 		// 提示每秒最多刷一次，避免按住 K 键刷屏。
 		const int64_t Now = time_get();
@@ -6819,23 +6827,59 @@ void CGameClient::ConKill(IConsole::IResult *pResult, void *pUserData)
 void CGameClient::ConQmSelfKillOff(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameClient *pSelf = static_cast<CGameClient *>(pUserData);
-	g_Config.m_QmSelfKillEnabled = 0;
-	// 幂等回显：重复设置同值也提示，保证按键操作有确认反馈。
-	char aBuf[256];
-	str_copy(aBuf, Localize("Client self-kill is disabled (K key / kill command will be ignored)"));
-	if(!pSelf->m_QmHudNotifications.QueueEcho(aBuf, g_Config.m_ClMessageClientColor))
-		dbg_msg("client", "%s", aBuf);
+	pSelf->SetQmSelfKillProtection(false, true);
 }
 
 void CGameClient::ConQmSelfKillOn(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameClient *pSelf = static_cast<CGameClient *>(pUserData);
-	g_Config.m_QmSelfKillEnabled = 1;
+	pSelf->SetQmSelfKillProtection(true, true);
+}
+
+// 手动开关：同时写运行时状态与配置。配置是玩家的默认状态，
+// 让"这次关掉"在换图、重连后仍然有效；自动开启只会读配置里的延迟，
+// 不会把自动触发的结果写回配置（否则下次启动会自己开着）。
+void CGameClient::SetQmSelfKillProtection(bool Enabled, bool Announce)
+{
+	m_QmSelfKillProtection.SetEnabled(Enabled);
+	g_Config.m_QmSelfKillEnabled = Enabled ? 1 : 0;
+	if(!Announce)
+		return;
 	// 幂等回显：重复设置同值也提示，保证按键操作有确认反馈。
 	char aBuf[256];
-	str_copy(aBuf, Localize("Client self-kill is enabled"));
-	if(!pSelf->m_QmHudNotifications.QueueEcho(aBuf, g_Config.m_ClMessageClientColor))
+	str_copy(aBuf, Localize(Enabled ? "Client self-kill is enabled" : "Client self-kill is disabled (K key / kill command will be ignored)"), sizeof(aBuf));
+	if(!m_QmHudNotifications.QueueEcho(aBuf, g_Config.m_ClMessageClientColor))
 		dbg_msg("client", "%s", aBuf);
+}
+
+// 每帧推进自动开启计时：只有玩家显式设置了延迟才会到点开启，默认永不触发。
+void CGameClient::UpdateQmSelfKillProtection(float FrameSeconds)
+{
+	m_QmSelfKillProtection.Configure(g_Config.m_QmSelfKillEnabled != 0, g_Config.m_QmSelfKillAutoDelay * 60);
+	// 只在真正进入对局（在线）时计时：菜单、连接中、demo 回放都不推进，
+	// 玩家看到的"开始游戏后 N 分钟"才是他实际在玩的时间。
+	const bool InGame = Client()->State() == IClient::STATE_ONLINE;
+	if(!InGame)
+		return;
+	if(!m_QmSelfKillProtection.Update(FrameSeconds))
+		return;
+	// 自动开启进入拦截态，回显一次让玩家知道 K 键已被接管；
+	// 不写回 qm_self_kill_enabled，重启后不会"自己开着"。
+	char aBuf[256];
+	str_copy(aBuf, Localize("Self-kill protection enabled automatically"), sizeof(aBuf));
+	if(!m_QmHudNotifications.QueueEcho(aBuf, g_Config.m_ClMessageClientColor))
+		dbg_msg("client", "%s", aBuf);
+}
+
+// 进入/离开对局：进入时按配置默认值重新开始，离开时回到默认值，
+// 避免上一局自动开启的状态漏到下一局的开局瞬间。
+void CGameClient::ResetQmSelfKillProtectionRound(bool InRound)
+{
+	m_QmSelfKillProtection.Configure(g_Config.m_QmSelfKillEnabled != 0, g_Config.m_QmSelfKillAutoDelay * 60);
+	if(InRound)
+		m_QmSelfKillProtection.BeginRound();
+	else
+		m_QmSelfKillProtection.EndRound();
 }
 
 void CGameClient::ConReadyChange7(IConsole::IResult *pResult, void *pUserData)

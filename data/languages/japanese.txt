@@ -872,9 +872,6 @@ Allow left-click to toggle between spectating nearest player and free view
 Allow mic permission in system settings, then reopen voice
 == システム設定でマイクの許可を許可してから、ボイスを再度開いてください
 
-Allow the client to send kill requests (0 = ignore client-initiated kills)
-== クライアントからのキル要求を許可（0 = クライアント発のキルを無視）
-
 Allow voting to kick players
 == プレイヤーをキックする投票を許可
 
@@ -1388,6 +1385,12 @@ Auto-connect dummy
 Auto-create CSV on game end
 == ゲーム終了時に CSV を自動作成
 
+Auto-enable after
+== 自動有効化まで
+
+Auto-enable self-kill protection this many minutes after joining a game (0 = never)
+== ゲーム参加から何分後に自殺保護を自動で有効にするか（0 = 自動で有効にしない）
+
 Auto-fetch all players' skins for dummy rotation queue
 == 全マッププレイヤーのスキンを自動取得しダミーローテーションキューとして使用
 
@@ -1859,6 +1862,9 @@ Blink
 Blink the active local tee
 == 操作中のローカルキャラクターを点滅させる
 
+Block client-initiated self-kill (K key / kill command)
+== クライアント発の自殺をブロック（K キー / kill コマンド）
+
 Block enemy chat
 == 敵対プレイヤーのチャットをブロック
 
@@ -1921,9 +1927,6 @@ Bounded capture frame queue depth for demo export (higher values use more memory
 
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 括弧内の称号の色：0 = サーバーに従う、1 = 単色、2 = 虹色
-
-Bracketed title single color
-== 括弧内の称号の単色
 
 Bright backgrounds reduce text contrast; keep the overlay dark enough.
 == 明るい背景は文字のコントラストを下げます。オーバーレイは十分に暗く保ってください。
@@ -3107,8 +3110,8 @@ Console color
 Console color scheme
 == コンソール: 配色
 
-Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom
-== コンソール: 配色: 0=モダンターミナル, 1=クラシック PowerShell, 2=カスタム
+Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom, 3+=Windows Terminal schemes
+== コンソール配色: 0=モダンターミナル, 1=クラシック PowerShell, 2=カスタム, 3 以上は Windows Terminal の配色
 
 Console command color
 == コンソール: コマンドの色
@@ -4975,6 +4978,9 @@ Enable rotation
 
 Enable saving games (/save and /load)
 == ゲーム保存（/save と /load）を有効にする
+
+Enable self-kill protection
+== 自殺保護を有効にする
 
 Enable server message sound
 == サーバーメッセージサウンドを有効化
@@ -8240,9 +8246,6 @@ Manual Steam path is invalid; using automatic detection
 Manual target
 == 手動ターゲット
 
-Manually toggle client-initiated self-kill with the bindable commands qm_self_kill_off and qm_self_kill_on
-== バインド可能なコマンド qm_self_kill_off / qm_self_kill_on でクライアントの自殺を手動で切り替えます
-
 Map
 == マップ
 
@@ -9725,6 +9728,9 @@ Open the folder containing screenshots
 Open the guide
 == ガイドを開く
 
+Open the local console appearance settings
+== ローカルコンソールの外観設定を開く
+
 Open the saves file
 == セーブファイルを開く
 
@@ -9766,6 +9772,9 @@ Opens the spectator menu (this does not work with binds).
 
 Opt out of spectator count and hide auth status to non-authed players (1 = hidden, 0 = shown)
 == 観戦者カウントから除外し、認証されていないプレイヤーに認証ステータスを非表示にする（1 = 非表示、0 = 表示）
+
+Opt-in protection for client-initiated self-kill, with optional auto-enable after joining a game
+== クライアントの自殺保護は既定でオフ。必要に応じて有効化できます（参加後の自動有効化つき）
 
 Optimistic prediction along stable direction
 == 安定方向に沿った楽観的予測
@@ -12593,6 +12602,9 @@ Self-kill off
 Self-kill on
 == 自殺を有効化
 
+Self-kill protection enabled automatically
+== 自殺保護が自動で有効になりました
+
 Send & Receive
 == 送受信
 
@@ -13433,7 +13445,7 @@ Show jump hint based on fractional part of position
 Show jumps indicator
 == ジャンプ回数インジケーターを表示
 
-Show katan on frozen players
+Show katana on frozen players
 == 凍結されたプレイヤーに刀を表示
 
 Show katana on frozen players (restores old behavior)
@@ -15740,7 +15752,7 @@ Title wave strength (0-3, 0 = off)
 to check a server setting say /settings and setting's name, setting names are:
 == サーバー設定を確認するには /settings と設定名を入力します。設定名は次のとおりです:
 
-To prevent accidental kills while racing, use the two bind rows above to toggle. To self-kill, press the enable key first, then press K. Server commands are not affected
+To prevent accidental kills while racing, toggle the switch above or use the two bind rows. To self-kill, enable first, then press K. Auto-enable counts from the moment you join a game; 0 minutes keeps it off. Server commands are not affected
 == 走行中の誤爆防止：上の2つのバインド行で切り替えてください。自殺したい場合は、有効化キーを押してから K を押します。サーバーのコマンドには影響しません
 
 To save all players in your team have to be alive and not in '/spec'

@@ -4,7 +4,6 @@ QmClient（Q1menG Client）基于 DDNet / TaterClient，主要使用 C++，辅�
 
 ## 执行与授权
 
-- 新功能灰测统一在长期 `preview` 分支开发和提交；相关 PR 以 `preview` 为集成目标。灰测任务完成后保留在该分支，不自动切回 `master`；正式合入 `master` 或发布仍需明确授权。
 - 根据当前请求和已有上下文执行到完成；已授权的调查、准备和可逆修改直接推进，不重复确认。
 - 歧义只有在影响实现、范围或风险时才澄清；先完成不依赖答案的工作。用户追加要求时保留有效成果，调整剩余工作。
 - 系统与开发者指令优先，其次是用户当前指令，再是仓库规则与 skills。引用文档不产生额外授权。
@@ -61,6 +60,8 @@ QmClient（Q1menG Client）基于 DDNet / TaterClient，主要使用 C++，辅�
 | 代码审查、深度质量审计、发布风险审查 | `qmclient-code-review/SKILL.md`       |
 | 翻译、生成链及污染/迁移/覆盖审计     | `qmclient-i18n-workflow/SKILL.md`     |
 | 提交、PR、版本与发布                 | `qmclient-git-commit/SKILL.md`        |
+
+翻译不是每个任务的默认步骤：改了 `Localize` 文案但任务本身与翻译无关时，不要运行 extract/generate/validate，也不要提交 `data/languages/*.txt` 的顺带变化；在任务尾声询问用户是否本次同步，由用户决定。
 
 维护规则时读 `.agents/README.md`；使用脚本时按需读 `qmclient_scripts/scripts_overview.md`。
 

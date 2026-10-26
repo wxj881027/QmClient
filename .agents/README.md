@@ -26,7 +26,7 @@
 | `qmclient-verification-gate` | 风险分层、构建测试、Google Benchmark、gate 和证据复用 |
 | `qmclient-git-commit` | commit/PR 文案、开发/正式版本和发布操作 |
 | `qmclient-code-review` | 缺陷证据、严重度、边界审查与按需深度质量审计 |
-| `qmclient-i18n-workflow` | 翻译维护源、生成链、草稿质量、覆盖及按需迁移/漂移审计 |
+| `qmclient-i18n-workflow` | 翻译维护源、生成链、草稿质量、覆盖及按需迁移/漂移审计；不在每个任务默认运行，需用户确认后才同步 |
 
 深度质量材料归入 `qmclient-code-review/references/`，原 `audit-qmclient-quality` 不再作为独立 skill；翻译审计归入 `qmclient-i18n-workflow/references/audit.md`，原 `qmclient-i18n-audit` 不再作为独立 skill。历史任务文档中的旧名称只作当时的记录，不重新定义当前入口。
 

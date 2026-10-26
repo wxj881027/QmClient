@@ -97,9 +97,13 @@ namespace
 		Content.m_RelativePath = RelativePath;
 		Content.m_HasUserOverride = qm_wiki_store::HasOverride(RelativePath.c_str());
 		if(!LoadMarkdown(RelativePath, &Content.m_Markdown))
+		{
+			// 读失败不缓存：瞬时文件锁（如杀软扫描）会把内置表回落锁死整个
+			// 会话——数据文件晚一点就位也永远看不到。下次访问直接重试。
 			Content.m_Markdown = qm_wiki_store::ComposeFromDocument(Fallback);
-		else
-			Content.m_HasShippedFile = !Content.m_HasUserOverride;
+			return Content;
+		}
+		Content.m_HasShippedFile = !Content.m_HasUserOverride;
 
 		auto Inserted = s_Content.emplace(Key, Content);
 		return Inserted.first->second;

@@ -91,50 +91,92 @@ namespace qm_hook_countdown_ui
 		return std::max(0.0f, Gap - 2.0f * CountdownCapAngle());
 	}
 
-	// 端帽画成整圆：一半落在弧内被同色盖住，另一半正好补出圆头，
-	// 弧端面的羽化与新画的圆重叠，接缝处不会漏出一条暗线。
-	inline void DrawCapDisc(IGraphics *pGraphics, vec2 Center, float Radius, ColorRGBA Color, float PixelSize)
+	// 端帽是以标称端点为圆心、半径为环宽一半的半圆，只朝缺口一侧张开。
+	// 弧身保持完整的一段（环顶到终点），两极不再为端帽让开角度——让开会把
+	// 环身在端头前掐成一段细颈；半圆只覆盖缺口一侧，也不会在弧身上叠第二层。
+	struct SQmHookCountdownCap
+	{
+		vec2 m_Center; // 局部坐标，环心为原点
+		float m_Facing; // 半圆中线方向（atan2 约定：0 = +x，y 向下）
+	};
+
+	struct SQmHookCountdownArcPlan
+	{
+		bool m_FullRing = false;
+		float m_Sweep = 0.0f; // 弧带从环顶顺时针扫过的角度
+		float m_CapRadius = 0.0f;
+		SQmHookCountdownCap m_aCaps[2]{}; // 0 = 起点端帽，1 = 终点端帽
+	};
+
+	inline SQmHookCountdownArcPlan CountdownArcPlan(float Progress, float InnerRadius, float OuterRadius)
+	{
+		SQmHookCountdownArcPlan Plan;
+		Progress = std::clamp(Progress, 0.0f, 1.0f);
+		if(Progress <= 0.0f || OuterRadius <= InnerRadius)
+			return Plan;
+		Plan.m_Sweep = 2.0f * pi * Progress;
+		Plan.m_CapRadius = (OuterRadius - InnerRadius) * 0.5f;
+		// 缺口还被两枚端帽盖住时直接画整环：刚钩住的几帧里环看起来仍是闭合的。
+		Plan.m_FullRing = CountdownVisibleGap(Progress) <= 0.0f;
+		if(Plan.m_FullRing)
+			return Plan;
+		const float MidRadius = (InnerRadius + OuterRadius) * 0.5f;
+		const auto Direction = [](float Angle) { return vec2(std::sin(Angle), -std::cos(Angle)); };
+		// m_Facing 是半圆中线在世界的方向（atan2 约定）：起点朝角度减小（左）、
+		// 终点朝角度增大（前进方向），两枚半圆的平边正好落在标称端点的半径线上。
+		Plan.m_aCaps[0].m_Center = Direction(0.0f) * MidRadius;
+		Plan.m_aCaps[0].m_Facing = pi;
+		Plan.m_aCaps[1].m_Center = Direction(Plan.m_Sweep) * MidRadius;
+		Plan.m_aCaps[1].m_Facing = Plan.m_Sweep;
+		return Plan;
+	}
+
+	// 半圆端帽：新后端用内径 0、扫过 π 的解析扇区，边缘自带抗锯齿；
+	// 老后端用内径极小的扇区当半圆，复用已有的羽化几何。
+	inline void DrawCapHalfDisc(IGraphics *pGraphics, vec2 Center, float Radius, float Facing, ColorRGBA Color, float PixelSize)
 	{
 		if(Radius <= 0.0f || Color.a <= 0.0f)
 			return;
 		if(pGraphics->HasProceduralRing())
 		{
-			// 内径 0、整圈的角度窗口：沿用同一个圆环 SDF，边缘自带抗锯齿。
 			const float Extent = Radius + PixelSize;
 			IGraphics::SProceduralRingParams Params;
 			Params.m_Rect = vec4(Center.x - Extent, Center.y - Extent, Extent * 2.0f, Extent * 2.0f);
 			Params.m_Color = Color;
 			Params.m_RingInnerRadius = 0.0f;
 			Params.m_RingOuterRadius = Radius / (Extent * 2.0f);
-			Params.m_RingStartAngle = 0.0f;
-			Params.m_RingEndAngle = 2.0f * pi;
-			Params.m_Rotation = 0.0f;
+			Params.m_RingStartAngle = -pi * 0.5f;
+			Params.m_RingEndAngle = pi * 0.5f;
+			Params.m_Rotation = Facing;
 			pGraphics->RenderProceduralRing(Params);
 		}
 		else
 		{
-			qm_pie_menu_ui::DrawDisc(pGraphics, Center, Radius, Color);
+			constexpr float RadToDeg = 180.0f / pi;
+			qm_pie_menu_ui::DrawSector(pGraphics, Center, Radius * 0.02f, Radius, (Facing - pi * 0.5f) * RadToDeg, (Facing + pi * 0.5f) * RadToDeg, 360.0f, Color);
 		}
 	}
 
-	// 倒计时弧：两端带圆头端帽。缺口还被端帽盖住时直接画整环——刚钩住的几帧里
-	// 环看起来仍是闭合的，端帽不会在环顶叠出一块更亮的凸起。
+	// 倒计时弧：完整的一段弧带 + 两枚朝缺口的半圆端帽。端帽只覆盖缺口一侧，
+	// 不再整圆压在弧身上，淡出时端头不会比环身更浓；弧身也不必让开角度，
+	// 端头是真正的半圆，环身在端头前不会被掐细。
+	// 弧带两端各向端帽里多铺约一像素：端帽平边自带羽化，会漏出一道更淡的细缝，
+	// 多铺这一小段正好把它盖住。多出来的部分落在端帽内部，轮廓仍是精确的胶囊；
+	// 满不透明时完全看不出来，淡出时也只是端点处一像素略浓。
 	inline void DrawProgressArc(IGraphics *pGraphics, vec2 Center, float InnerRadius, float OuterRadius, float Progress, ColorRGBA Color, float PixelSize)
 	{
 		if(Progress <= 0.0f || Color.a <= 0.0f)
 			return;
-		if(Progress >= 1.0f || CountdownVisibleGap(Progress) <= 0.0f)
+		const SQmHookCountdownArcPlan Plan = CountdownArcPlan(Progress, InnerRadius, OuterRadius);
+		if(Plan.m_FullRing)
 		{
 			DrawArcSegment(pGraphics, Center, InnerRadius, OuterRadius, 0.0f, 2.0f * pi, Color, PixelSize);
 			return;
 		}
-		const float EndAngle = 2.0f * pi * Progress;
-		DrawArcSegment(pGraphics, Center, InnerRadius, OuterRadius, 0.0f, EndAngle, Color, PixelSize);
-		// 0 = 环顶，顺时针到 EndAngle；端帽落在弧两端的中径上。
-		const float CapRadius = (OuterRadius - InnerRadius) * 0.5f;
-		const float MidRadius = (InnerRadius + OuterRadius) * 0.5f;
-		DrawCapDisc(pGraphics, Center + vec2(0.0f, -MidRadius), CapRadius, Color, PixelSize);
-		DrawCapDisc(pGraphics, Center + vec2(std::sin(EndAngle), -std::cos(EndAngle)) * MidRadius, CapRadius, Color, PixelSize);
+		const float BandOverlap = std::min(1.5f * PixelSize / ((InnerRadius + OuterRadius) * 0.5f), 0.25f);
+		DrawArcSegment(pGraphics, Center, InnerRadius, OuterRadius, -BandOverlap, Plan.m_Sweep + BandOverlap, Color, PixelSize);
+		for(const auto &Cap : Plan.m_aCaps)
+			DrawCapHalfDisc(pGraphics, Center + Cap.m_Center, Plan.m_CapRadius, Cap.m_Facing, Color, PixelSize);
 	}
 
 	// 光晕层：越靠外越宽越淡，越靠内越窄越浓；宽度连续衔接，叠起来才是"晕"，

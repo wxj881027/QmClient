@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
+#include <cmath>
 #include <limits>
 #include <tuple>
 
@@ -22,6 +23,7 @@ namespace
 		Input.m_TargetPosition = vec2(300.0f, 100.0f);
 		return Input;
 	}
+
 }
 
 TEST(QmHudHookCountdown, RemainingProgressUsesTheActualHookCounter)
@@ -597,6 +599,61 @@ TEST(QmHookCountdownRender, RoundCapsKeepTheRingClosedUntilTheGapOpens)
 	EXPECT_NEAR(qm_hook_countdown_ui::CountdownCapAngle(), (qm_hook_countdown_ui::OUTER_RADIUS - qm_hook_countdown_ui::INNER_RADIUS) * 0.5f / ((qm_hook_countdown_ui::INNER_RADIUS + qm_hook_countdown_ui::OUTER_RADIUS) * 0.5f), 1e-6f);
 }
 
+// 弧带必须保持完整的一段：从环顶一直铺到终点，不能为端帽让开角度。
+// 让开的角度正好等于端帽在中径张开的角，环身会在端头前掐成一段细颈，
+// 端帽再大也盖不住那道缺口——这就是上一版圆角变形的成因。
+TEST(QmHookCountdownRender, ProgressArcKeepsTheFullBandAndPutsCapsOnTheEndpoints)
+{
+	const float Inner = qm_hook_countdown_ui::INNER_RADIUS;
+	const float Outer = qm_hook_countdown_ui::OUTER_RADIUS;
+	const float Mid = (Inner + Outer) * 0.5f;
+	for(const float Progress : {0.05f, 0.3f, 0.7f, 0.9f})
+	{
+		SCOPED_TRACE(Progress);
+		const auto Plan = qm_hook_countdown_ui::CountdownArcPlan(Progress, Inner, Outer);
+		ASSERT_FALSE(Plan.m_FullRing);
+		// 弧带扫过的角度就是进度本身，没有被端帽角度吃掉的让开量。
+		EXPECT_NEAR(Plan.m_Sweep, 2.0f * pi * Progress, 1e-5f);
+		// 端帽半圆正好是环宽的一半，圆心落在标称端点的中径上。
+		EXPECT_NEAR(Plan.m_CapRadius, (Outer - Inner) * 0.5f, 1e-5f);
+		const qm_hook_countdown_ui::SQmHookCountdownCap &Start = Plan.m_aCaps[0];
+		const qm_hook_countdown_ui::SQmHookCountdownCap &End = Plan.m_aCaps[1];
+		EXPECT_NEAR(length(Start.m_Center), Mid, 1e-4f);
+		EXPECT_NEAR(length(End.m_Center), Mid, 1e-4f);
+		EXPECT_NEAR(Start.m_Center.x, 0.0f, 1e-4f);
+		EXPECT_NEAR(Start.m_Center.y, -Mid, 1e-4f);
+		EXPECT_NEAR(End.m_Center.x, std::sin(Plan.m_Sweep) * Mid, 1e-4f);
+		EXPECT_NEAR(End.m_Center.y, -std::cos(Plan.m_Sweep) * Mid, 1e-4f);
+		// 半圆朝缺口张开：起点朝角度减小（左）、终点朝前进方向；中线与弧带相切，
+		// 平边落在标称端点的半径线上。
+		EXPECT_NEAR(std::cos(Start.m_Facing), -1.0f, 1e-5f);
+		EXPECT_NEAR(std::sin(Start.m_Facing), 0.0f, 1e-5f);
+		EXPECT_NEAR(std::cos(End.m_Facing), std::cos(Plan.m_Sweep), 1e-5f);
+		EXPECT_NEAR(std::sin(End.m_Facing), std::sin(Plan.m_Sweep), 1e-5f);
+	}
+}
+
+// 缺口被端帽盖住后不再画端帽，直接整环收口；进度耗尽时两枚半圆背靠背，
+// 合起来就是一个圆点，不会露出扇形缺口，也不需要额外的“合并端帽”分支。
+TEST(QmHookCountdownRender, ProgressArcCapsCoverTheGapUntilTheRingCloses)
+{
+	const float Inner = qm_hook_countdown_ui::INNER_RADIUS;
+	const float Outer = qm_hook_countdown_ui::OUTER_RADIUS;
+	EXPECT_TRUE(qm_hook_countdown_ui::CountdownArcPlan(1.0f, Inner, Outer).m_FullRing);
+	const float Closing = 1.0f - qm_hook_countdown_ui::CountdownCapAngle() / pi;
+	EXPECT_TRUE(qm_hook_countdown_ui::CountdownArcPlan(Closing + 0.01f, Inner, Outer).m_FullRing);
+	EXPECT_FALSE(qm_hook_countdown_ui::CountdownArcPlan(Closing - 0.05f, Inner, Outer).m_FullRing);
+	// 进度 0 什么都不画。
+	const auto None = qm_hook_countdown_ui::CountdownArcPlan(0.0f, Inner, Outer);
+	EXPECT_FALSE(None.m_FullRing);
+	EXPECT_LE(None.m_Sweep, 0.0f);
+	// 收尾：两枚半圆几乎重合、朝向相反，合起来就是一个完整的圆点。
+	const auto Sliver = qm_hook_countdown_ui::CountdownArcPlan(0.002f, Inner, Outer);
+	ASSERT_FALSE(Sliver.m_FullRing);
+	EXPECT_LT(length(Sliver.m_aCaps[0].m_Center - Sliver.m_aCaps[1].m_Center), 0.2f);
+	EXPECT_NEAR(std::abs(Sliver.m_aCaps[1].m_Facing - Sliver.m_aCaps[0].m_Facing), pi, 0.05f);
+	EXPECT_LT(length(Sliver.m_aCaps[0].m_Center), (qm_hook_countdown_ui::INNER_RADIUS + qm_hook_countdown_ui::OUTER_RADIUS) * 0.5f + 0.01f);
+}
 // HUD 用它决定屏幕外裁剪；必须比实体更大（覆盖光晕）并随尺寸一起放大，
 // 否则把尺寸调到 200% 后光晕外圈会被提前裁成一条硬边。
 TEST(QmHookCountdownRender, ClipRadiusCoversTheGlowAndFollowsTheSizePercent)

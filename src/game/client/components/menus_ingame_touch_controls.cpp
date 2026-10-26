@@ -532,7 +532,7 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 	{
 		static CScrollRegion s_BindToggleScrollRegion;
 		CScrollRegionParams ScrollParam;
-		ScrollParam.m_ScrollUnit = 90.0f;
+		ScrollParam.m_ScrollUnit = QmNativeWheelScrollConfig(1.0f, 0.0f).m_WheelScale * QmPanelWheelStepMultiplier();
 		vec2 ScrollOffset(0.0f, 0.0f);
 		s_BindToggleScrollRegion.Begin(&Block, &ScrollOffset, &ScrollParam);
 		Block.y += ScrollOffset.y;
@@ -677,7 +677,7 @@ bool CMenusIngameTouchControls::RenderVisibilitySettingBlock(CUIRect Block)
 	// Block.HSplitTop(ROWGAP, nullptr, &Block);
 	static CScrollRegion s_VisibilityScrollRegion;
 	CScrollRegionParams ScrollParam;
-	ScrollParam.m_ScrollUnit = 90.0f;
+	ScrollParam.m_ScrollUnit = QmNativeWheelScrollConfig(1.0f, 0.0f).m_WheelScale * QmPanelWheelStepMultiplier();
 	vec2 ScrollOffset(0.0f, 0.0f);
 	s_VisibilityScrollRegion.Begin(&Block, &ScrollOffset, &ScrollParam);
 	Block.y += ScrollOffset.y;
@@ -1093,7 +1093,7 @@ void CMenusIngameTouchControls::RenderPreviewSettings(CUIRect MainView)
 	MainView.HMargin(ROWGAP, &MainView);
 	static CScrollRegion s_VirtualVisibilityScrollRegion;
 	CScrollRegionParams ScrollParam;
-	ScrollParam.m_ScrollUnit = 90.0f;
+	ScrollParam.m_ScrollUnit = QmNativeWheelScrollConfig(1.0f, 0.0f).m_WheelScale * QmPanelWheelStepMultiplier();
 	vec2 ScrollOffset(0.0f, 0.0f);
 	s_VirtualVisibilityScrollRegion.Begin(&MainView, &ScrollOffset, &ScrollParam);
 	MainView.y += ScrollOffset.y;

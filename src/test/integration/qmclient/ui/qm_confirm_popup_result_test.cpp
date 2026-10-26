@@ -136,10 +136,13 @@ TEST_F(QmConfirmPopupResult, TitledPanelKeepsReadableSpacingAndConfirmsFromRende
 	EXPECT_NEAR(pPopup->Center().y, m_Ui.Screen()->Center().y, 0.01f);
 	const CUIRect Confirm = RenderedPanelButton(true);
 	const CUIRect Cancel = RenderedPanelButton(false);
-	EXPECT_GE(Confirm.h, ui_token::confirm_dialog::BUTTON_HEIGHT);
-	EXPECT_GE(Cancel.x - pPopup->x, ui_token::spacing::LG);
-	EXPECT_GE(Confirm.x - (Cancel.x + Cancel.w), ui_token::spacing::SM);
-	EXPECT_GE(pPopup->y + pPopup->h - (Confirm.y + Confirm.h), ui_token::spacing::LG);
+	// 面板布局落在浮点坐标上，进场动画与 UiScale 换算会带来不足一像素的舍入；
+	// 允许 1px 误差，仍能挡住「按钮贴边/挤在一起」这类真实回退。
+	constexpr float SubPixelSlack = 1.0f;
+	EXPECT_GE(Confirm.h, ui_token::confirm_dialog::BUTTON_HEIGHT - SubPixelSlack);
+	EXPECT_GE(Cancel.x - pPopup->x, ui_token::spacing::LG - SubPixelSlack);
+	EXPECT_GE(Confirm.x - (Cancel.x + Cancel.w), ui_token::spacing::SM - SubPixelSlack);
+	EXPECT_GE(pPopup->y + pPopup->h - (Confirm.y + Confirm.h), ui_token::spacing::LG - SubPixelSlack);
 	const auto &ConfirmSurface = UiGraphics()->m_vRoundedSubmissions.back();
 	EXPECT_FLOAT_EQ(ConfirmSurface.m_FillColor.r, ui_token::color::DANGER.r);
 	EXPECT_FLOAT_EQ(ConfirmSurface.m_FillColor.g, ui_token::color::DANGER.g);

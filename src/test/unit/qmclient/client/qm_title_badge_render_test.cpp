@@ -99,7 +99,8 @@ namespace
 			pTexture->Invalidate();
 		}
 		void TextureSet(CTextureHandle Texture) override { m_Texture = Texture; }
-		void TextureClear() override { m_Texture.Invalidate(); }
+		// 不重写 TextureClear：它在 IGraphics 里是非虚便捷函数（内部调本类已重写的
+		// TextureSet），标 override 会编译失败，行为也完全一样。
 		bool HasRoundedRectSdf() override { return m_HasSdf; }
 		bool HasRoundedRectSdfTexture() override { return m_HasSdfTexture; }
 		void RenderRoundedRectSdf(const SRoundedRectSdfParams &Params) override { m_vDistanceDraws.push_back({m_Texture.Id(), Params}); }

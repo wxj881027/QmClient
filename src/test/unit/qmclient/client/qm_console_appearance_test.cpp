@@ -1,3 +1,5 @@
+#include <base/system.h>
+
 #include <game/client/components/qmclient/console_appearance.h>
 
 #include <gtest/gtest.h>
@@ -168,4 +170,67 @@ TEST(QmConsoleAppearance, ResetRestoresDefaultDecorations)
 	const auto Restored = QmConsoleAppearance::Palette(Config);
 	EXPECT_EQ(Restored.m_Border, Default.m_Border);
 	EXPECT_EQ(Restored.m_Shadow, Default.m_Shadow);
+}
+
+// 内置方案必须真的接管背景与前景：选中 Campbell 后不是原来的现代终端配色。
+TEST(QmConsoleAppearance, BuiltinSchemeReplacesBackgroundAndText)
+{
+	const int CampbellIndex = QmConsoleAppearance::k_BuiltinSchemeBase + [] {
+		for(int i = 0; i < QmConsoleSchemes::Count(); ++i)
+			if(str_comp(QmConsoleSchemes::At(i).m_pName, "Campbell") == 0)
+				return i;
+		return -1;
+	}();
+	ASSERT_GT(CampbellIndex, QmConsoleAppearance::k_BuiltinSchemeBase - 1);
+	const auto Palette = QmConsoleAppearance::ResolvePalette(CampbellIndex, 96, {});
+	// Campbell 背景 #0C0C0C、前景 #CCCCCC。
+	EXPECT_NEAR(Palette.m_aColors[QmConsoleAppearance::BACKGROUND].r, 0x0C / 255.0f, 1e-4f);
+	EXPECT_NEAR(Palette.m_aColors[QmConsoleAppearance::TEXT].r, 0xCC / 255.0f, 1e-4f);
+	EXPECT_NE(Palette.m_aColors[QmConsoleAppearance::BACKGROUND], QmConsoleAppearance::ResolvePalette(0, 96, {}).m_aColors[QmConsoleAppearance::BACKGROUND]);
+}
+
+// 语法层级在任意内置方案下都保持强弱关系：命令/链接/搜索都要与正文区分开。
+TEST(QmConsoleAppearance, EveryBuiltinSchemeKeepsSyntaxColorsDistinctFromBodyText)
+{
+	for(int Index = 0; Index < QmConsoleSchemes::Count(); ++Index)
+	{
+		SCOPED_TRACE(QmConsoleSchemes::At(Index).m_pName);
+		const auto Palette = QmConsoleAppearance::ResolvePalette(QmConsoleAppearance::k_BuiltinSchemeBase + Index, 96, {});
+		const auto Text = Palette.m_aColors[QmConsoleAppearance::TEXT];
+		for(int Color : {QmConsoleAppearance::COMMAND, QmConsoleAppearance::PARAMETER, QmConsoleAppearance::STRING,
+			    QmConsoleAppearance::NUMBER, QmConsoleAppearance::LINK})
+		{
+			EXPECT_NE(Palette.m_aColors[Color], Text);
+		}
+		// 搜索高亮必须与正文可区分，否则命中看不出来。
+		EXPECT_NE(Palette.m_aColors[QmConsoleAppearance::SEARCH], Text);
+		// 部分方案的黄色与正文相同，此时"当前命中"改成能与命中色区分的色。
+		EXPECT_NE(Palette.m_aColors[QmConsoleAppearance::SEARCH], Palette.m_aColors[QmConsoleAppearance::SEARCH_SELECTED]);
+		// 内置方案全部不透明，背景透明度仍由 Opacity 单独控制。
+		EXPECT_FLOAT_EQ(Palette.m_aColors[QmConsoleAppearance::BACKGROUND].a, 0.96f);
+		EXPECT_FLOAT_EQ(Palette.m_aColors[QmConsoleAppearance::TEXT].a, 1.0f);
+	}
+}
+
+// 方案编号越界时退回现代终端，不能让界面崩或画面全黑。
+TEST(QmConsoleAppearance, UnknownSchemeValueFallsBackToTheDefaultPalette)
+{
+	const auto Default = QmConsoleAppearance::ResolvePalette(0, 96, {});
+	EXPECT_EQ(QmConsoleAppearance::ResolvePalette(QmConsoleAppearance::k_BuiltinSchemeBase + QmConsoleSchemes::Count(), 96, {}).m_aColors, Default.m_aColors);
+	EXPECT_EQ(QmConsoleAppearance::ResolvePalette(9999, 96, {}).m_aColors, Default.m_aColors);
+	EXPECT_FALSE(QmConsoleAppearance::IsBuiltinScheme(2));
+	EXPECT_FALSE(QmConsoleAppearance::IsBuiltinScheme(QmConsoleAppearance::k_BuiltinSchemeBase + QmConsoleSchemes::Count()));
+	EXPECT_TRUE(QmConsoleAppearance::IsBuiltinScheme(QmConsoleAppearance::k_BuiltinSchemeBase));
+}
+
+// 透明度对外置方案同样只作用于背景，不改变文字与语法色。
+TEST(QmConsoleAppearance, BuiltinSchemeOpacityOnlyAffectsBackgroundAlpha)
+{
+	const int Scheme = QmConsoleAppearance::k_BuiltinSchemeBase;
+	const auto Opaque = QmConsoleAppearance::ResolvePalette(Scheme, 100, {});
+	const auto Translucent = QmConsoleAppearance::ResolvePalette(Scheme, 40, {});
+	for(int Color = 1; Color < QmConsoleAppearance::COLOR_COUNT; ++Color)
+		EXPECT_EQ(Opaque.m_aColors[Color], Translucent.m_aColors[Color]);
+	EXPECT_FLOAT_EQ(Translucent.m_aColors[QmConsoleAppearance::BACKGROUND].a, 0.4f);
+	EXPECT_EQ(Opaque.m_aColors[QmConsoleAppearance::BACKGROUND].WithAlpha(1.0f), Translucent.m_aColors[QmConsoleAppearance::BACKGROUND].WithAlpha(1.0f));
 }

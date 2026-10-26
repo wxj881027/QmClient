@@ -3241,7 +3241,7 @@ Ingame cursor scale
 Wheel animate
 == Анімація колеса
 
-Show katan on frozen players
+Show katana on frozen players
 == Показувати катану на заморожених гравцях
 
 Tiny Tees
@@ -4058,7 +4058,7 @@ Ingame cursor scale
 Wheel animate
 == Анімація колеса
 
-Show katan on frozen players
+Show katana on frozen players
 == Показувати катану на заморожених гравцях
 
 Tiny Tees

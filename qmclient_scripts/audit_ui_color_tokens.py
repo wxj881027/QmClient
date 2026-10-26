@@ -42,6 +42,10 @@ FILE_ALLOWLIST = {
 	"src/game/client/QmUi/UiTokens.h": "ui_token 唯一定义源",
 	"src/game/client/components/qmclient/ime_gradient_probe.cpp": "像素回归探针必须使用固定的已知颜色（纯黑底板、纯红/蓝渐变、纯绿边框），"
 	"才能逐像素断言覆盖率与渐变连续性；这些不是可主题化的 UI 语义色，换成 token 会让断言失去确定基准。",
+	"src/game/client/QmUi/QmAuthorTee.cpp": "赛博故障特效的色差与扫描线用固定的分解色（青/品红/亮青）叠加，"
+	"换成主题 token 会让故障色随主题漂移、失去特效语义。",
+	"src/game/client/QmUi/QmSeasonalSidebar.cpp": "节日侧栏的装饰色板（红/金/绿/暗紫等）本身就是节日语义，"
+	"按节日场景固定，不随 UI 主题变化。",
 	# 例：特效渐变需要连续 HSV 数学，不适用离散语义色（示例条目，实际豁免时填写）。
 }
 
