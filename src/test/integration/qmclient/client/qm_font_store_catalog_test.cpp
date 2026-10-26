@@ -231,6 +231,7 @@ namespace
 		bool m_Throw = false;
 		int m_Attempts = 0;
 		CJobPool *m_pPool = nullptr;
+		IJob::EJobState m_LastNativeState = IJob::STATE_DONE;
 		std::weak_ptr<IJob> m_LastAttempt;
 		std::vector<std::shared_ptr<IJob>> m_vAccepted;
 		void Init() override {}
@@ -244,7 +245,11 @@ namespace
 			if(!m_Accept)
 				return false;
 			if(m_pPool != nullptr)
-				return m_pPool->TryAdd(std::move(pJob));
+			{
+				const bool Accepted = m_pPool->TryAdd(pJob);
+				m_LastNativeState = pJob->State();
+				return Accepted;
+			}
 			m_vAccepted.push_back(std::move(pJob));
 			return true;
 		}
@@ -303,6 +308,7 @@ TEST_F(CQmFontStoreCatalog, ClosedNativePoolRejectsTrackingAndReopenedPoolLoadsC
 	std::shared_ptr<fontstore::CCatalogLoadJob> pPending;
 	EXPECT_FALSE(fontstore::TryQueueCatalogLoadJob(pPending, Engine, m_pStorage.get()));
 	EXPECT_EQ(pPending, nullptr);
+	EXPECT_EQ(Engine.m_LastNativeState, IJob::STATE_QUEUED);
 	EXPECT_TRUE(Engine.m_LastAttempt.expired());
 	ASSERT_TRUE(Pool.TryInit(1));
 	ASSERT_TRUE(fontstore::TryQueueCatalogLoadJob(pPending, Engine, m_pStorage.get()));
