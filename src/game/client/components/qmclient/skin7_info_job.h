@@ -66,7 +66,7 @@ public:
 	std::vector<SPart> TakeParts() { return std::move(m_vParts); }
 	CImageInfo TakeXmasHat() { return std::exchange(m_XmasHat, CImageInfo{}); }
 	CImageInfo TakeBot() { return std::exchange(m_Bot, CImageInfo{}); }
-	// 只表示扫描流程正常结束，个别文件读取/格式失败仍沿原规则跳过。
+	// 只表示扫描流程正常结束，文件缺失/格式无效仍跳过，实际读盘失败必须重扫。
 	// DONE的发布同步后台结果；ABORTED不代表worker已退出，不能据此读取结果。
 	bool Succeeded() const { return State() == STATE_DONE && m_Succeeded; }
 
@@ -178,13 +178,23 @@ private:
 			throw std::runtime_error("skin directory enumeration failed");
 	}
 
+	bool ReadFile(const char *pPath, int StorageType, SFileData &Data, unsigned &Size)
+	{
+		const auto Result = m_pStorage->ReadFileChecked(pPath, StorageType, &Data.m_pData, &Size);
+		if(Result == IStorage::EReadFileResult::SUCCESS)
+			return true;
+		if(Result == IStorage::EReadFileResult::NOT_FOUND || State() == STATE_ABORTED)
+			return false;
+		throw std::runtime_error("skin file read failed");
+	}
+
 	void LoadAccessory(const char *pPath, int Columns, int Rows, CImageInfo &Image)
 	{
 		if(State() == STATE_ABORTED)
 			return;
 		SFileData Data;
 		unsigned Size = 0;
-		if(!m_pStorage->ReadFile(pPath, IStorage::TYPE_ALL, &Data.m_pData, &Size))
+		if(!ReadFile(pPath, IStorage::TYPE_ALL, Data, Size))
 			return;
 		SImageOwner Candidate;
 		auto &Prepared = Candidate.m_Image;
@@ -221,7 +231,7 @@ private:
 		std::string Path = "skins7/" + std::string(pName);
 		SFileData Data;
 		unsigned Size = 0;
-		if(!pSelf->m_pStorage->ReadFile(Path.c_str(), StorageType, &Data.m_pData, &Size))
+		if(!pSelf->ReadFile(Path.c_str(), StorageType, Data, Size))
 			return 0;
 		auto pInfo = QmParseSkin7Info(Data.m_pData, Size);
 		Data.Free();

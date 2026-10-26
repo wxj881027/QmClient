@@ -30,17 +30,25 @@ public:
 		/**
 		 * Translates to TYPE_SAVE if a path is relative
 		 * and to TYPE_ABSOLUTE if a path is absolute.
-		 * Only usable with OpenFile, ReadFile, ReadFileStr,
+		 * Only usable with OpenFile, ReadFile, ReadFileStr, ReadFileChecked,
 		 * GetCompletePath, FileExists and FolderExists.
 		 */
 		TYPE_SAVE_OR_ABSOLUTE = -3,
 		/**
 		 * Translates to TYPE_ALL if a path is relative
 		 * and to TYPE_ABSOLUTE if a path is absolute.
-		 * Only usable with OpenFile, ReadFile, ReadFileStr,
+		 * Only usable with OpenFile, ReadFile, ReadFileStr, ReadFileChecked,
 		 * GetCompletePath, FileExists and FolderExists.
 		 */
 		TYPE_ALL_OR_ABSOLUTE = -4,
+	};
+
+	enum class EReadFileResult
+	{
+		SUCCESS,
+		NOT_FOUND,
+		IO_FAILURE,
+		UNSUPPORTED,
 	};
 
 	enum class EInitializationType
@@ -66,6 +74,13 @@ public:
 	virtual bool FileExists(const char *pFilename, int Type) = 0;
 	virtual bool FolderExists(const char *pFilename, int Type) = 0;
 	virtual bool ReadFile(const char *pFilename, int Type, void **ppResult, unsigned *pResultLen) = 0;
+	// 成功返回malloc缓冲（包含额外终止零），其他结果清空输出；旧后端不冒充成功。
+	virtual EReadFileResult ReadFileChecked(const char *, int, void **ppResult, unsigned *pResultLen)
+	{
+		*ppResult = nullptr;
+		*pResultLen = 0;
+		return EReadFileResult::UNSUPPORTED;
+	}
 	virtual char *ReadFileStr(const char *pFilename, int Type) = 0;
 	virtual bool RetrieveTimes(const char *pFilename, int Type, time_t *pCreated, time_t *pModified) = 0;
 	virtual bool CalculateHashes(const char *pFilename, int Type, SHA256_DIGEST *pSha256, unsigned *pCrc = nullptr) = 0;

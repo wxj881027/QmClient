@@ -216,8 +216,14 @@ static const SQwaveApi &qwave_api()
 }
 #endif
 
-IOHANDLE io_open(const char *filename, int flags)
+static IOHANDLE io_open_impl(const char *filename, int flags, bool *pNotFound)
 {
+	if(pNotFound)
+	{
+		*pNotFound = false;
+		if(!str_utf8_check(filename))
+			return nullptr;
+	}
 	dbg_assert(flags == IOFLAG_READ || flags == IOFLAG_WRITE || flags == IOFLAG_APPEND, "flags must be read, write or append");
 #if defined(CONF_FAMILY_WINDOWS)
 	const std::wstring wide_filename = windows_utf8_to_wide(filename);
@@ -248,7 +254,14 @@ IOHANDLE io_open(const char *filename, int flags)
 	}
 	HANDLE handle = CreateFileW(wide_filename.c_str(), desired_access, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, creation_disposition, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if(handle == INVALID_HANDLE_VALUE)
+	{
+		if(pNotFound)
+		{
+			const DWORD Error = GetLastError();
+			*pNotFound = Error == ERROR_FILE_NOT_FOUND || Error == ERROR_PATH_NOT_FOUND;
+		}
 		return nullptr;
+	}
 	return windows_io_from_handle(reinterpret_cast<intptr_t>(handle), open_mode);
 #else
 	const char *open_mode;
@@ -268,8 +281,21 @@ IOHANDLE io_open(const char *filename, int flags)
 	{
 		dbg_assert_failed("Invalid flags: %d", flags);
 	}
-	return fopen(filename, open_mode);
+	FILE *pFile = fopen(filename, open_mode);
+	if(!pFile && pNotFound)
+		*pNotFound = errno == ENOENT;
+	return pFile;
 #endif
+}
+
+IOHANDLE io_open(const char *filename, int flags)
+{
+	return io_open_impl(filename, flags, nullptr);
+}
+
+IOHANDLE io_open_read_checked(const char *pFilename, bool *pNotFound)
+{
+	return io_open_impl(pFilename, IOFLAG_READ, pNotFound);
 }
 
 unsigned io_read(IOHANDLE io, void *buffer, unsigned size)

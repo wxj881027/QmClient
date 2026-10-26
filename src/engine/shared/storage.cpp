@@ -768,6 +768,61 @@ namespace
 			return true;
 		}
 
+		EReadFileResult ReadFileChecked(const char *pFilename, int Type, void **ppResult, unsigned *pResultLen) override
+		{
+			*ppResult = nullptr;
+			*pResultLen = 0;
+			TranslateType(Type, pFilename);
+			if(Type != TYPE_ABSOLUTE)
+			{
+				if(str_startswith(pFilename, "mapres/../skins/"))
+					pFilename += str_length("mapres/../");
+				if(pFilename[0] == '/' || pFilename[0] == '\\' || str_find(pFilename, "../") || str_find(pFilename, "..\\")
+#ifdef CONF_FAMILY_WINDOWS
+					|| (pFilename[0] && pFilename[1] == ':')
+#endif
+				)
+					return EReadFileResult::IO_FAILURE;
+			}
+			const auto ReadAt = [&](int Index) {
+				char aPath[IO_MAX_PATH_LENGTH];
+				const size_t NameLength = std::strlen(pFilename);
+				const size_t PrefixLength = Index == TYPE_ABSOLUTE ? 0 : std::strlen(m_aaStoragePaths[Index]);
+				const size_t Separator = PrefixLength != 0 ? 1 : 0;
+				if(NameLength >= sizeof(aPath) || PrefixLength + Separator > sizeof(aPath) - NameLength - 1)
+					return EReadFileResult::IO_FAILURE;
+				bool NotFound = false;
+				std::unique_ptr<void, decltype(&io_close)> File(io_open_read_checked(GetPath(Index, pFilename, aPath, sizeof(aPath)), &NotFound), io_close);
+				if(!File)
+					return NotFound ? EReadFileResult::NOT_FOUND : EReadFileResult::IO_FAILURE;
+				void *pData = nullptr;
+				unsigned Size = 0;
+				const bool Read = io_read_all(File.get(), &pData, &Size);
+				std::unique_ptr<void, decltype(&free)> Data(pData, free);
+				const bool Closed = io_close(File.release()) == 0;
+				if(!Read || !Closed)
+					return EReadFileResult::IO_FAILURE;
+				*ppResult = Data.release();
+				*pResultLen = Size;
+				return EReadFileResult::SUCCESS;
+			};
+			if(Type == TYPE_ALL)
+			{
+				// 只有缺失才继续搜索后根，实际失败不得被后根成功掩盖。
+				for(int Index = TYPE_SAVE; Index < m_NumPaths; ++Index)
+				{
+					const auto Result = ReadAt(Index);
+					if(Result != EReadFileResult::NOT_FOUND)
+						return Result;
+				}
+				return EReadFileResult::NOT_FOUND;
+			}
+			if(Type == TYPE_ABSOLUTE || (Type >= TYPE_SAVE && Type < m_NumPaths))
+				return ReadAt(Type);
+			dbg_assert_failed("Type invalid");
+			return EReadFileResult::IO_FAILURE;
+		}
+
 		char *ReadFileStr(const char *pFilename, int Type) override
 		{
 			IOHANDLE File = OpenFile(pFilename, IOFLAG_READ, Type);

@@ -104,6 +104,10 @@ enum ESeekOrigin
  */
 IOHANDLE io_open(const char *filename, int flags);
 
+// 只读打开，只有原生路径不存在才设置NotFound；其他错误不能冒充缺失。
+// 严格校验UTF-8，返回句柄由调用方关闭；旧io_open保持原有语义。
+IOHANDLE io_open_read_checked(const char *pFilename, bool *pNotFound);
+
 /**
  * Reads data into a buffer from a file.
  *

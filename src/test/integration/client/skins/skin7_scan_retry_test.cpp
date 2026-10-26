@@ -26,6 +26,8 @@ namespace
 		const char *m_pFailName = nullptr;
 		bool m_Unknown = false;
 		bool m_ThrowAfterRead = false;
+		const char *m_pFailReadPath = nullptr;
+		std::optional<EReadFileResult> m_ForcedReadResult;
 		std::optional<EFsListDirectoryResult> m_ForcedDirectoryResult;
 		bool m_Triggered = false;
 		CQmSkin7InfoJob *m_pAbortJob = nullptr;
@@ -93,6 +95,21 @@ namespace
 			const bool Result = m_Storage.ReadFile(pName, Type, ppData, pSize);
 			if(m_ThrowAfterRead && str_comp(pName, "skins7/qm_info_fail.json") == 0)
 				throw std::bad_alloc();
+			return Result;
+		}
+		EReadFileResult ReadFileChecked(const char *pName, int Type, void **ppData, unsigned *pSize) override
+		{
+			const auto Result = m_Storage.ReadFileChecked(pName, Type, ppData, pSize);
+			if(m_ThrowAfterRead && str_comp(pName, "skins7/qm_info_fail.json") == 0)
+				throw std::bad_alloc();
+			if(m_pFailReadPath && m_ForcedReadResult && str_comp(pName, m_pFailReadPath) == 0)
+			{
+				m_Triggered = true;
+				free(*ppData);
+				*ppData = nullptr;
+				*pSize = 0;
+				return *m_ForcedReadResult;
+			}
 			return Result;
 		}
 		char *ReadFileStr(const char *pName, int Type) override { return m_Storage.ReadFileStr(pName, Type); }
@@ -493,4 +510,87 @@ TEST_F(CQmSkin7ScanRetryTest, BaseStorageCheckedDefaultReportsUnsupportedWithout
 		return 0; }, &Calls);
 	EXPECT_EQ(Result, EFsListDirectoryResult::UNSUPPORTED);
 	EXPECT_EQ(Calls, 0);
+}
+
+TEST_F(CQmSkin7ScanRetryTest, DescriptionReadFailureRejectsWholeResultAndRetryReadsItAgain)
+{
+	m_pFault->m_pFailReadPath = "skins7/qm_info_fail.json";
+	m_pFault->m_ForcedReadResult = IStorage::EReadFileResult::IO_FAILURE;
+	Queue();
+	ASSERT_FALSE(HasFatalFailure());
+	EXPECT_TRUE(m_pFault->m_Triggered);
+	ExpectEmptyResult();
+	ASSERT_TRUE(m_Request.RetryFailedScan(m_pJob, m_Completion, TTime(0)));
+	m_pFault->m_ForcedReadResult.reset();
+	auto Plan = TryStart(std::chrono::seconds(1));
+	ASSERT_TRUE(Plan);
+	ASSERT_TRUE(WaitForJobDone(*Plan->m_pJob));
+	EXPECT_TRUE(Plan->m_pJob->Succeeded());
+	ASSERT_EQ(Plan->m_pJob->Entries().size(), 1u);
+	EXPECT_EQ(Plan->m_pJob->Entries()[0].m_Name, "qm_info_fail");
+	Plan->m_Callback();
+	EXPECT_EQ(m_Callbacks, 1);
+}
+
+TEST_F(CQmSkin7ScanRetryTest, HatReadFailureCannotPublishEmptyReplacement)
+{
+	WriteImage("skins7/xmas_hat.png", 1, 4);
+	ASSERT_FALSE(HasFatalFailure());
+	m_pFault->m_pFailReadPath = "skins7/xmas_hat.png";
+	m_pFault->m_ForcedReadResult = IStorage::EReadFileResult::IO_FAILURE;
+	Queue();
+	ASSERT_FALSE(HasFatalFailure());
+	EXPECT_TRUE(m_pFault->m_Triggered);
+	ExpectEmptyResult();
+	int Next = 0, Calls = 0;
+	EXPECT_FALSE(m_pJob->PublishNextAccessory(Next, [&](const CImageInfo &, bool) { ++Calls; return true; }));
+	EXPECT_EQ(Calls, 0);
+	EXPECT_EQ(Next, 0);
+}
+
+TEST_F(CQmSkin7ScanRetryTest, NativeAccessoryDirectoryReadFailureDiscardsPreviouslyDecodedHat)
+{
+	WriteImage("skins7/xmas_hat.png", 1, 4);
+	ASSERT_FALSE(HasFatalFailure());
+	ASSERT_TRUE(m_pStorage->CreateFolder("skins7/bot.png", IStorage::TYPE_SAVE));
+	Queue();
+	ASSERT_FALSE(HasFatalFailure());
+	ExpectEmptyResult();
+}
+
+TEST_F(CQmSkin7ScanRetryTest, MissingOptionalImagesKeepSuccessfulScanAndEmptyAccessory)
+{
+	Queue();
+	ASSERT_FALSE(HasFatalFailure());
+	ASSERT_TRUE(m_pJob->Succeeded());
+	EXPECT_EQ(m_pJob->Entries().size(), 1u);
+	int Next = 0, Calls = 0;
+	EXPECT_TRUE(m_pJob->PublishNextAccessory(Next, [&](const CImageInfo &Image, bool Hat) {
+		++Calls;
+		EXPECT_TRUE(Hat);
+		EXPECT_EQ(Image.m_pData, nullptr);
+		return true;
+	}));
+	EXPECT_EQ(Calls, 1);
+	EXPECT_EQ(Next, 1);
+}
+
+TEST_F(CQmSkin7ScanRetryTest, DisappearedDescriptionKeepsExistingSkipPolicy)
+{
+	m_pFault->m_pFailReadPath = "skins7/qm_info_fail.json";
+	m_pFault->m_ForcedReadResult = IStorage::EReadFileResult::NOT_FOUND;
+	Queue();
+	ASSERT_FALSE(HasFatalFailure());
+	EXPECT_TRUE(m_pFault->m_Triggered);
+	EXPECT_TRUE(m_pJob->Succeeded());
+	EXPECT_TRUE(m_pJob->Entries().empty());
+}
+
+TEST_F(CQmSkin7ScanRetryTest, UnsupportedCheckedReadIsNotAcceptedAsMissingDescription)
+{
+	m_pFault->m_pFailReadPath = "skins7/qm_info_fail.json";
+	m_pFault->m_ForcedReadResult = IStorage::EReadFileResult::UNSUPPORTED;
+	Queue();
+	ASSERT_FALSE(HasFatalFailure());
+	ExpectEmptyResult();
 }
