@@ -1522,9 +1522,7 @@ private:
 	void AudioPackEditorRebuildCandidates();
 	void AudioPackEditorStopPreview();
 	bool AudioPackEditorPlayPreview(const char *pFilename, int StorageType);
-	bool AudioPackEditorEnsureStorageDirectories(const char *pStoragePath);
 	bool AudioPackEditorCopyFileToStorage(const char *pSourcePath, int SourceStorageType, const char *pStoragePath);
-	bool AudioPackEditorCopyAbsoluteFileToStorage(const char *pSourcePath, const char *pStoragePath);
 	void RenderAudioPackEditorScreen(CUIRect MainView);
 	void RenderAssetsEditorScreen(CUIRect MainView);
 	void AssetsEditorClearAssets();

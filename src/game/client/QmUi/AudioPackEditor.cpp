@@ -14,6 +14,7 @@
 #include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/audio_pack_export.h>
 #include <game/client/components/sounds.h>
 #include <game/client/components/tooltips.h>
 #include <game/client/gameclient.h>
@@ -216,72 +217,9 @@ bool CMenus::AudioPackEditorPlayPreview(const char *pFilename, int StorageType)
 	return true;
 }
 
-bool CMenus::AudioPackEditorEnsureStorageDirectories(const char *pStoragePath)
-{
-	if(pStoragePath == nullptr || pStoragePath[0] == '\0')
-		return false;
-
-	std::string CurrentDirectory;
-	for(const char *pCursor = pStoragePath; *pCursor != '\0'; ++pCursor)
-	{
-		if(*pCursor == '/')
-		{
-			if(!CurrentDirectory.empty() && !Storage()->FolderExists(CurrentDirectory.c_str(), IStorage::TYPE_SAVE) &&
-				!Storage()->CreateFolder(CurrentDirectory.c_str(), IStorage::TYPE_SAVE))
-			{
-				return false;
-			}
-			CurrentDirectory.push_back('/');
-		}
-		else
-		{
-			CurrentDirectory.push_back(*pCursor);
-		}
-	}
-
-	return true;
-}
-
 bool CMenus::AudioPackEditorCopyFileToStorage(const char *pSourcePath, int SourceStorageType, const char *pStoragePath)
 {
-	if(pSourcePath == nullptr || pSourcePath[0] == '\0' || pStoragePath == nullptr || pStoragePath[0] == '\0')
-		return false;
-	if(!Storage()->FileExists(pSourcePath, SourceStorageType))
-		return false;
-	if(!AudioPackEditorEnsureStorageDirectories(pStoragePath))
-		return false;
-
-	IOHANDLE SourceFile = Storage()->OpenFile(pSourcePath, IOFLAG_READ, SourceStorageType);
-	if(!SourceFile)
-		return false;
-
-	void *pData = nullptr;
-	unsigned DataSize = 0;
-	const bool ReadOk = io_read_all(SourceFile, &pData, &DataSize);
-	io_close(SourceFile);
-	if(!ReadOk || pData == nullptr)
-	{
-		if(pData != nullptr)
-			free(pData);
-		return false;
-	}
-
-	IOHANDLE DestFile = Storage()->OpenFile(pStoragePath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!DestFile)
-	{
-		free(pData);
-		return false;
-	}
-
-	const bool WriteOk = io_write(DestFile, pData, DataSize) == DataSize;
-	io_close(DestFile);
-	free(pData);
-	return WriteOk;
-}
-
-bool CMenus::AudioPackEditorCopyAbsoluteFileToStorage(const char *pSourcePath, const char *pStoragePath)
-{
-	return AudioPackEditorCopyFileToStorage(pSourcePath, IStorage::TYPE_ABSOLUTE, pStoragePath);
+	return qm_audio_pack::ExportFile(Storage(), pSourcePath, SourceStorageType, pStoragePath);
 }
 
 void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
