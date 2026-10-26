@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <memory_resource>
 #include <new>
+#include <stdexcept>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -513,4 +514,142 @@ TEST_F(ResourcePreviewAdmission, ClosedNativePoolLeavesNoWaitingIdentityAndReope
 	EXPECT_EQ(Result.m_Artifact.m_Image.m_Width, 2u);
 	EXPECT_EQ(Result.m_Artifact.m_Image.m_Height, 1u);
 	EXPECT_NE(Result.m_Artifact.m_Image.m_pData, nullptr);
+}
+
+namespace
+{
+	// 只替换文件读取边界，任务、池终态和结果消费均使用生产实现。
+	class CPreviewReadFailureStorage : public IStorage
+	{
+		[[noreturn]] static void Unexpected()
+		{
+			ADD_FAILURE() << "unexpected preview storage boundary";
+			throw std::logic_error("unexpected preview storage boundary");
+		}
+
+	public:
+		enum class EFailure
+		{
+			ALLOCATION,
+			RUNTIME,
+			NON_STANDARD,
+		};
+		struct SReadFailure
+		{
+		};
+		EFailure m_Failure = EFailure::ALLOCATION;
+		int m_Reads = 0;
+		int NumPaths() const override { Unexpected(); }
+		bool GetDataPath(const char *, char *, unsigned) const override { Unexpected(); }
+		bool GetExecutablePath(const char *, char *, unsigned) const override { Unexpected(); }
+		void ListDirectory(int, const char *, FS_LISTDIR_CALLBACK, void *) override { Unexpected(); }
+		void ListDirectoryInfo(int, const char *, FS_LISTDIR_CALLBACK_FILEINFO, void *) override { Unexpected(); }
+		IOHANDLE OpenFile(const char *, int, int, char *, int) override { Unexpected(); }
+		bool FileExists(const char *, int) override { Unexpected(); }
+		bool FolderExists(const char *, int) override { Unexpected(); }
+		bool ReadFile(const char *, int, void **ppResult, unsigned *pResultLen) override
+		{
+			*ppResult = nullptr;
+			*pResultLen = 0;
+			++m_Reads;
+			if(m_Failure == EFailure::ALLOCATION)
+				throw std::bad_alloc();
+			if(m_Failure == EFailure::RUNTIME)
+				throw std::runtime_error("preview read failed");
+			throw SReadFailure{};
+		}
+		char *ReadFileStr(const char *, int) override { Unexpected(); }
+		bool RetrieveTimes(const char *, int, time_t *, time_t *) override { Unexpected(); }
+		bool CalculateHashes(const char *, int, SHA256_DIGEST *, unsigned *) override { Unexpected(); }
+		bool FindFile(const char *, const char *, int, char *, int) override { Unexpected(); }
+		size_t FindFiles(const char *, const char *, int, std::set<std::string> *) override { Unexpected(); }
+		bool RemoveFile(const char *, int) override { Unexpected(); }
+		bool RemoveFolder(const char *, int) override { Unexpected(); }
+		bool RenameFile(const char *, const char *, int, bool) override { Unexpected(); }
+		bool CreateFolder(const char *, int) override { Unexpected(); }
+		void GetCompletePath(int, const char *, char *, unsigned) override { Unexpected(); }
+		bool RemoveBinaryFile(const char *) override { Unexpected(); }
+		bool RenameBinaryFile(const char *, const char *) override { Unexpected(); }
+		const char *GetBinaryPath(const char *, char *, unsigned) override { Unexpected(); }
+		const char *GetBinaryPathAbsolute(const char *, char *, unsigned) override { Unexpected(); }
+	};
+}
+
+TEST(SettingsResourcePreviewWorkerFailure, AllocationExceptionCanBeConsumedAsCompletedFailure)
+{
+	CPreviewReadFailureStorage Storage;
+	CSettingsResourcePreviewCache Cache;
+	const auto Key = PreviewKey("allocation-failure");
+	Cache.MarkPreviewJobStarted(Key);
+	auto pJob = CSettingsResourcePreviewJob::FromPath("failure", "preview.png", &Storage, IStorage::TYPE_ALL, 4);
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	ASSERT_TRUE(Pool.TryAdd(pJob));
+	ASSERT_TRUE(WaitForJobDone(*pJob));
+	Pool.Shutdown();
+	ASSERT_TRUE(pJob->Completed());
+	EXPECT_EQ(Storage.m_Reads, 1);
+	auto Result = pJob->TakeResult();
+	EXPECT_FALSE(Result.m_Artifact.m_Success);
+	EXPECT_EQ(Result.m_Artifact.m_Image.m_pData, nullptr);
+	Cache.MarkPreviewJobDone(Key, Result.m_Artifact.m_Success);
+	ASSERT_NE(Cache.Find(Key), nullptr);
+	EXPECT_FALSE(Cache.Find(Key)->m_PreviewJobPending);
+	EXPECT_EQ(SettingsResourcePreviewDrawResult(*Cache.Find(Key)), ESettingsResourcePreviewDrawResult::FAILED_PLACEHOLDER);
+}
+
+TEST(SettingsResourcePreviewWorkerFailure, NonStandardExceptionCanBeConsumedAsCompletedFailure)
+{
+	CPreviewReadFailureStorage Storage;
+	Storage.m_Failure = CPreviewReadFailureStorage::EFailure::NON_STANDARD;
+	auto pJob = CSettingsResourcePreviewJob::FromPath("failure", "preview.png", &Storage, IStorage::TYPE_ALL, 4);
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	ASSERT_TRUE(Pool.TryAdd(pJob));
+	ASSERT_TRUE(WaitForJobDone(*pJob));
+	Pool.Shutdown();
+	ASSERT_TRUE(pJob->Completed());
+	EXPECT_EQ(Storage.m_Reads, 1);
+	auto Result = pJob->TakeResult();
+	EXPECT_FALSE(Result.m_Artifact.m_Success);
+	EXPECT_EQ(Result.m_Artifact.m_Image.m_pData, nullptr);
+	auto Repeated = pJob->TakeResult();
+	EXPECT_FALSE(Repeated.m_Artifact.m_Success);
+	EXPECT_EQ(Repeated.m_Artifact.m_Image.m_pData, nullptr);
+}
+
+TEST(SettingsResourcePreviewWorkerFailure, RuntimeFailureAllowsRetryOnTheSameNativePool)
+{
+	CPreviewReadFailureStorage Storage;
+	Storage.m_Failure = CPreviewReadFailureStorage::EFailure::RUNTIME;
+	CSettingsResourcePreviewCache Cache;
+	const auto Key = PreviewKey("retry");
+	Cache.MarkPreviewJobStarted(Key);
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	auto pFailed = CSettingsResourcePreviewJob::FromPath("failure", "preview.png", &Storage, IStorage::TYPE_ALL, 4);
+	ASSERT_TRUE(Pool.TryAdd(pFailed));
+	ASSERT_TRUE(WaitForJobDone(*pFailed));
+	ASSERT_TRUE(pFailed->Completed());
+	auto Failed = pFailed->TakeResult();
+	ASSERT_FALSE(Failed.m_Artifact.m_Success);
+	Cache.MarkPreviewJobDone(Key, Failed.m_Artifact.m_Success);
+	EXPECT_FALSE(Cache.Find(Key)->m_PreviewJobPending);
+	EXPECT_TRUE(Cache.Find(Key)->m_Failed);
+
+	CPreviewImage Input(2, 1);
+	ASSERT_NE(Input.m_Image.m_pData, nullptr);
+	auto pRetry = std::make_shared<CSettingsResourcePreviewJob>("retry", std::move(Input.m_Image), 4);
+	Cache.MarkPreviewJobStarted(Key);
+	ASSERT_TRUE(Pool.TryAdd(pRetry));
+	ASSERT_TRUE(WaitForJobDone(*pRetry));
+	Pool.Shutdown();
+	ASSERT_TRUE(pRetry->Completed());
+	auto Success = pRetry->TakeResult();
+	ASSERT_TRUE(Success.m_Artifact.m_Success);
+	Cache.MarkPreviewJobDone(Key, Success.m_Artifact.m_Success);
+	EXPECT_FALSE(Cache.Find(Key)->m_PreviewJobPending);
+	EXPECT_FALSE(Cache.Find(Key)->m_Failed);
+	EXPECT_TRUE(Cache.Find(Key)->m_UploadPending);
+	EXPECT_EQ(Success.m_Artifact.m_Image.m_Width, 2u);
 }

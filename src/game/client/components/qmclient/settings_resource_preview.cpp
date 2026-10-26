@@ -185,7 +185,8 @@ std::shared_ptr<CSettingsResourcePreviewJob> CSettingsResourcePreviewJob::FromPa
 bool CSettingsResourcePreviewJob::Completed() const
 {
 	const CLockScope Lock(m_Lock);
-	return m_Completed;
+	// 池会收拢运行异常并发布DONE；没有正常产出时也必须让消费者取走失败结果。
+	return m_Completed || State() == IJob::STATE_DONE;
 }
 
 CSettingsResourcePreviewJob::SResult CSettingsResourcePreviewJob::TakeResult()
