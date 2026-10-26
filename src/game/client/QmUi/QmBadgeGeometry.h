@@ -19,6 +19,7 @@ enum class EQmBadgeGeometry
 	SUN_LEFT,
 	SUN_MIDDLE,
 	SUN_RIGHT,
+	DEVELOPER_LETTERING,
 };
 
 struct SQmBadgeGeometryQuad
