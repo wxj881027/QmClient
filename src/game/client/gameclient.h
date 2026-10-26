@@ -1023,12 +1023,14 @@ public:
 	static void ConQmSelfKillOn(IConsole::IResult *pResult, void *pUserData);
 	// 自杀保护：拦截状态与"开局 N 分钟后自动开启"计时都在这台状态机里，
 	// 默认不拦截，只有玩家自己按键/勾选或被显式配置的延迟到点才开启。
-	void UpdateQmSelfKillProtection(float FrameSeconds);
+	void UpdateQmSelfKillProtection();
 	void ResetQmSelfKillProtectionRound(bool InRound);
 	void SetQmSelfKillProtection(bool Enabled, bool Announce);
 	CQmSelfKillProtection m_QmSelfKillProtection;
 	// 自杀保护提示限流时间戳（每秒最多一次），避免按住 K 键刷屏。
 	int64_t m_QmSelfKillHintLastTime = 0;
+	// 自动开启计时用的墙钟采样点；0 表示还没开始计时（离开对局或刚开局）。
+	int64_t m_QmSelfKillWallClockLastTime = 0;
 
 	void ApplyPreInputs(int Tick, bool Direct, CGameWorld &GameWorld);
 	bool GetDummyFastInput(CNetObj_PlayerInput &DummyFastInput, const CNetObj_PlayerInput *pDummyInputData, const class CCharacter *pDummyChar, int LocalTee, int DummyTee) const;
