@@ -5,8 +5,11 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <map>
+#include <new>
 #include <string>
+#include <utility>
 
 struct SQmRealtimeMessage;
 
@@ -28,6 +31,20 @@ public:
 
 	// 合并分配失败保留旧名单并请求全量；同修订全量可恢复需要同步的状态。
 	EApplyResult Apply(const json_value *pData, const char *pExpectedServer);
+	// 发布器失败前不得修改外部状态；接收成功后才提交内部修订和名单。
+	template<typename TPublish>
+	EApplyResult ApplyAndPublish(const json_value *pData, const char *pExpectedServer, TPublish &&Publish)
+	{
+		try
+		{
+			return ApplyCandidate(pData, pExpectedServer, FPublish(std::forward<TPublish>(Publish)));
+		}
+		catch(const std::bad_alloc &)
+		{
+			m_NeedsFull = true;
+			return EApplyResult::RESYNC;
+		}
+	}
 	SQmClientUsersParseResult Result() const;
 	void Reset();
 	bool NeedsFull() const { return m_NeedsFull; }
@@ -35,7 +52,9 @@ public:
 	int64_t Revision() const { return m_Revision; }
 
 private:
-	EApplyResult ApplyCandidate(const json_value *pData, const char *pExpectedServer);
+	using FPublish = std::function<bool(SQmClientUsersParseResult, int)>;
+	EApplyResult ApplyCandidate(const json_value *pData, const char *pExpectedServer, const FPublish &Publish);
+	static SQmClientUsersParseResult BuildResult(const std::map<std::string, SQmClientServerDistribution> &Servers, const std::map<std::string, SQmClientRecognitionMark> &Players, bool Parsed);
 
 	std::map<std::string, SQmClientServerDistribution> m_Servers;
 	std::map<std::string, SQmClientRecognitionMark> m_Players;

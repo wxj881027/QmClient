@@ -323,7 +323,7 @@ public:
 	int NumSortedServers() const override { return m_vSortedServerlist.size(); }
 	int NumSortedPlayers() const override { return m_NumSortedPlayers; }
 	const CServerInfo *SortedGet(int Index) const override;
-	void SetQmClientServerCounts(const std::unordered_map<std::string, int> &Counts) override;
+	bool SetQmClientServerCounts(const std::unordered_map<std::string, int> &Counts) override;
 
 	const json_value *LoadDDNetInfo(IHttpRequest *pResponse = nullptr);
 	bool LoadDDNetServers();
@@ -448,7 +448,6 @@ private:
 	static int GetBasicToken(int Token);
 	static int GetExtraToken(int Token);
 	int QmClientCountForServer(const CServerInfo &Info) const;
-	void UpdateQmClientServerCounts();
 
 	// sorting criteria
 	bool SortCompareName(int Index1, int Index2) const;

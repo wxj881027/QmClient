@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <map>
+#include <new>
 #include <set>
 #include <string>
 #include <utility>
@@ -670,14 +671,40 @@ bool CServerBrowser::SortCompareDifficulty(int Index1, int Index2) const
 	return Stars1 < Stars2;
 }
 
-void CServerBrowser::SetQmClientServerCounts(const std::unordered_map<std::string, int> &Counts)
+bool CServerBrowser::SetQmClientServerCounts(const std::unordered_map<std::string, int> &Counts)
 {
 	if(m_QmClientServerCounts == Counts)
-		return;
-	m_QmClientServerCounts = Counts;
-	UpdateQmClientServerCounts();
-	if(g_Config.m_BrSort == IServerBrowser::SORT_QM_CLIENTS)
-		RequestResort();
+		return true;
+	try
+	{
+		auto Candidate = Counts;
+		std::vector<int> vCounts;
+		vCounts.reserve(m_vpServerlist.size());
+		for(const CServerEntry *pEntry : m_vpServerlist)
+		{
+			int Count = 0;
+			if(!Candidate.empty() && pEntry->m_Info.m_NumAddresses > 0)
+			{
+				char aAddress[NETADDR_MAXSTRSIZE];
+				net_addr_str(&pEntry->m_Info.m_aAddresses[0], aAddress, sizeof(aAddress), true);
+				const auto It = Candidate.find(aAddress);
+				if(It != Candidate.end())
+					Count = It->second;
+			}
+			vCounts.push_back(Count);
+		}
+		// 地址查找也可能分配；全部准备成功后才更换索引与现有条目。
+		m_QmClientServerCounts.swap(Candidate);
+		for(size_t i = 0; i < m_vpServerlist.size(); ++i)
+			m_vpServerlist[i]->m_Info.m_QmClientCount = vCounts[i];
+		if(g_Config.m_BrSort == IServerBrowser::SORT_QM_CLIENTS)
+			RequestResort();
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
 }
 
 int CServerBrowser::QmClientCountForServer(const CServerInfo &Info) const
@@ -688,12 +715,6 @@ int CServerBrowser::QmClientCountForServer(const CServerInfo &Info) const
 	net_addr_str(&Info.m_aAddresses[0], aAddress, sizeof(aAddress), true);
 	const auto It = m_QmClientServerCounts.find(aAddress);
 	return It == m_QmClientServerCounts.end() ? 0 : It->second;
-}
-
-void CServerBrowser::UpdateQmClientServerCounts()
-{
-	for(CServerEntry *pEntry : m_vpServerlist)
-		pEntry->m_Info.m_QmClientCount = QmClientCountForServer(pEntry->m_Info);
 }
 
 void CServerBrowser::Filter()

@@ -387,7 +387,8 @@ public:
 	virtual int NumSortedPlayers() const = 0;
 	virtual const CServerInfo *SortedGet(int Index) const = 0;
 	// 中心服下发的在线分布（"ip:port" → 人数），游戏层在分布更新时推送。
-	virtual void SetQmClientServerCounts(const std::unordered_map<std::string, int> &Counts) = 0;
+	// 完整准备失败时保留原计数和排序状态，并返回false。
+	virtual bool SetQmClientServerCounts(const std::unordered_map<std::string, int> &Counts) = 0;
 
 	virtual const std::vector<CCommunity> &Communities() const = 0;
 	virtual const CCommunity *Community(const char *pCommunityId) const = 0;

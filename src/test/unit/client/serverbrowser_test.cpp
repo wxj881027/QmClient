@@ -21,6 +21,7 @@
 #include <limits>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -568,6 +569,51 @@ TEST_F(CServerBrowserStateTest, QmClientCountFollowsReplacedServerAddress)
 	CServerBrowserTestAccess::ReplaceFirstAddress(m_Browser, Address);
 	EXPECT_EQ(m_Browser.Get(0)->m_QmClientCount, 0);
 	EXPECT_NE(m_Browser.Find(Address), nullptr);
+}
+
+TEST_F(CServerBrowserStateTest, AcceptedQmCountsOwnSnapshotForServersAddedLater)
+{
+	std::unordered_map<std::string, int> Counts{{"127.0.0.1:8303", 4}, {"127.0.0.1:8304", 9}};
+	ASSERT_TRUE(m_Browser.SetQmClientServerCounts(Counts));
+	Counts.clear();
+	AddServer("127.0.0.1:8303", "Alpha", 1, 1, {});
+	AddServer("127.0.0.1:8304", "Beta", 1, 1, {});
+	ASSERT_EQ(m_Browser.NumServers(), 2);
+	EXPECT_EQ(m_Browser.Get(0)->m_QmClientCount, 4);
+	EXPECT_EQ(m_Browser.Get(1)->m_QmClientCount, 9);
+}
+
+TEST_F(CServerBrowserStateTest, EqualQmCountsAreAcceptedWithoutRequestingAnotherResort)
+{
+	AddServer("127.0.0.1:8303", "Alpha", 1, 1, {});
+	g_Config.m_BrSort = IServerBrowser::SORT_QM_CLIENTS;
+	ASSERT_TRUE(m_Browser.SetQmClientServerCounts({{"127.0.0.1:8303", 4}}));
+	CServerBrowserTestAccess::Sort(m_Browser);
+	ASSERT_FALSE(CServerBrowserTestAccess::NeedsResort(m_Browser));
+	EXPECT_TRUE(m_Browser.SetQmClientServerCounts({{"127.0.0.1:8303", 4}}));
+	EXPECT_FALSE(CServerBrowserTestAccess::NeedsResort(m_Browser));
+	EXPECT_EQ(m_Browser.Get(0)->m_QmClientCount, 4);
+	EXPECT_TRUE(m_Browser.SetQmClientServerCounts({}));
+	EXPECT_TRUE(CServerBrowserTestAccess::NeedsResort(m_Browser));
+	EXPECT_EQ(m_Browser.Get(0)->m_QmClientCount, 0);
+}
+
+TEST_F(CServerBrowserStateTest, QmCountsReplaceIPv6AndUnmatchedRowsInSamePublication)
+{
+	const char *pAddress = "[2001:db8:abcd:1234::1]:8303";
+	NETADDR Address;
+	ASSERT_FALSE(net_addr_from_str(&Address, pAddress));
+	char aCanonical[NETADDR_MAXSTRSIZE];
+	net_addr_str(&Address, aCanonical, sizeof(aCanonical), true);
+	AddServer(pAddress, "IPv6", 1, 1, {});
+	AddServer("127.0.0.1:8303", "IPv4", 1, 1, {});
+	ASSERT_TRUE(m_Browser.SetQmClientServerCounts({{aCanonical, 2}, {"127.0.0.1:8303", 8}}));
+	ASSERT_EQ(m_Browser.NumServers(), 2);
+	EXPECT_EQ(m_Browser.Get(0)->m_QmClientCount, 2);
+	EXPECT_EQ(m_Browser.Get(1)->m_QmClientCount, 8);
+	ASSERT_TRUE(m_Browser.SetQmClientServerCounts({{aCanonical, 5}}));
+	EXPECT_EQ(m_Browser.Get(0)->m_QmClientCount, 5);
+	EXPECT_EQ(m_Browser.Get(1)->m_QmClientCount, 0);
 }
 
 TEST_F(CServerBrowserStateTest, FriendListMovesOnlineEntriesAndKeepsServerSnapshots)

@@ -53,6 +53,7 @@
 #include <cmath>
 #include <limits>
 #include <mutex>
+#include <new>
 #include <queue>
 #include <string>
 #include <string_view>
@@ -1530,12 +1531,13 @@ void CQmClient::ApplyQmRealtimeUsersSync(const SQmRealtimeMessage &Message)
 	char aServer[NETADDR_MAXSTRSIZE] = "";
 	if(Client()->State() == IClient::STATE_ONLINE && Client()->ServerAddress())
 		net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
-	if(m_QmRealtimeUsersState.Apply(Message.m_pPayload.get(), aServer) != CQmRealtimeUsersState::EApplyResult::APPLIED)
+	if(m_QmRealtimeUsersState.ApplyAndPublish(Message.m_pPayload.get(), aServer, [this](SQmClientUsersParseResult Result, int LeaseSeconds) {
+		   return ApplyQmClientUsersResult(std::move(Result), time_get() + LeaseSeconds * time_freq());
+	   }) != CQmRealtimeUsersState::EApplyResult::APPLIED)
 		return;
 	// 增量必须依次合并，不能像完整快照一样只留下最后一条等待异步解析。
 	m_pQmRealtimeUsersPayload.reset();
 	m_pQmClientUsersParseJob = nullptr;
-	ApplyQmClientUsersResult(m_QmRealtimeUsersState.Result(), time_get() + m_QmRealtimeUsersState.LeaseSeconds() * time_freq());
 }
 
 void CQmClient::ApplyQmRealtimeDevelopers(const SQmRealtimeMessage &Message)
@@ -2885,20 +2887,27 @@ bool CQmClient::QmClientDistributionSyncing() const
 	return m_QmClientDistribution.IsStale(time_get_impl());
 }
 
-void CQmClient::PushQmClientServerCounts()
+bool CQmClient::PushQmClientServerCounts(const std::vector<SQmClientServerDistribution> &vServers)
 {
 	IServerBrowser *pServerBrowser = ServerBrowser();
 	if(pServerBrowser == nullptr)
-		return;
-	std::unordered_map<std::string, int> Counts;
-	Counts.reserve(m_QmClientDistribution.m_vServers.size());
-	for(const SQmClientServerDistribution &Distribution : m_QmClientDistribution.m_vServers)
+		return true;
+	try
 	{
-		const int Count = Distribution.m_UserCount + Distribution.m_DummyCount;
-		if(Count > 0 && !Distribution.m_ServerAddress.empty())
-			Counts.emplace(Distribution.m_ServerAddress, Count);
+		std::unordered_map<std::string, int> Counts;
+		Counts.reserve(vServers.size());
+		for(const SQmClientServerDistribution &Distribution : vServers)
+		{
+			const int Count = Distribution.m_UserCount + Distribution.m_DummyCount;
+			if(Count > 0 && !Distribution.m_ServerAddress.empty())
+				Counts.emplace(Distribution.m_ServerAddress, Count);
+		}
+		return pServerBrowser->SetQmClientServerCounts(Counts);
 	}
-	pServerBrowser->SetQmClientServerCounts(Counts);
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
 }
 
 bool CQmClient::EnsureQmClientMachineHash()
@@ -2984,18 +2993,20 @@ void CQmClient::FinishQmClientUsers()
 	}
 }
 
-void CQmClient::ApplyQmClientUsersResult(SQmClientUsersParseResult Result, int64_t ExpireTick)
+bool CQmClient::ApplyQmClientUsersResult(SQmClientUsersParseResult Result, int64_t ExpireTick)
 {
-	if(!m_QmClientDistribution.Apply(Result, ExpireTick))
+	if(!Result.m_Parsed)
 	{
 		m_QmClientDistributionSuccessLatched = false;
 		LogQmClientDistributionFailureEvent("parse_failed", "users payload could not be parsed");
-		return;
+		return false;
 	}
 
+	if(!PushQmClientServerCounts(Result.m_vServerDistribution))
+		return false;
+	m_QmClientDistribution.Apply(Result, ExpireTick);
 	GameClient()->ClearQ1menGSyncMarks();
 	GameClient()->ClearQmVoiceSyncMarks();
-	PushQmClientServerCounts();
 	if(!m_QmClientDistributionSuccessLatched)
 		LogQmClientDistributionEvent("parse_ok", Result.m_OnlineUserCount, Result.m_OnlineDummyCount, (int)Result.m_vLocalServerMarks.size());
 	m_QmClientDistributionSuccessLatched = true;
@@ -3012,6 +3023,7 @@ void CQmClient::ApplyQmClientUsersResult(SQmClientUsersParseResult Result, int64
 			break;
 		}
 	}
+	return true;
 }
 
 void CQmClient::UpdateQmClientRecognition()

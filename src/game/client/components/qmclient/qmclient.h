@@ -206,10 +206,10 @@ class CQmClient : public CComponent
 
 	void UpdateQmClientRecognition();
 	void FinishQmClientUsers();
-	void ApplyQmClientUsersResult(SQmClientUsersParseResult Result, int64_t ExpireTick);
+	bool ApplyQmClientUsersResult(SQmClientUsersParseResult Result, int64_t ExpireTick);
 	void ApplyQmRealtimeUsersSync(const SQmRealtimeMessage &Message);
 	bool EnsureQmClientMachineHash();
-	void PushQmClientServerCounts();
+	bool PushQmClientServerCounts(const std::vector<SQmClientServerDistribution> &vServers);
 	void InitQmDeveloperAuthentication();
 	void ResetQmDeveloperPresenceTasks();
 

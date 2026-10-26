@@ -88,19 +88,10 @@ bool ParseQmCompressedUsersMessage(const char *pData, size_t Size, SQmRealtimeMe
 
 CQmRealtimeUsersState::EApplyResult CQmRealtimeUsersState::Apply(const json_value *pData, const char *pExpectedServer)
 {
-	try
-	{
-		return ApplyCandidate(pData, pExpectedServer);
-	}
-	catch(const std::bad_alloc &)
-	{
-		// 候选尚未提交，保留旧名单与租约；后续沿已有入口补全修订链。
-		m_NeedsFull = true;
-		return EApplyResult::RESYNC;
-	}
+	return ApplyAndPublish(pData, pExpectedServer, nullptr);
 }
 
-CQmRealtimeUsersState::EApplyResult CQmRealtimeUsersState::ApplyCandidate(const json_value *pData, const char *pExpectedServer)
+CQmRealtimeUsersState::EApplyResult CQmRealtimeUsersState::ApplyCandidate(const json_value *pData, const char *pExpectedServer, const FPublish &Publish)
 {
 	auto Invalid = [this]() {
 		m_NeedsFull = true;
@@ -139,6 +130,8 @@ CQmRealtimeUsersState::EApplyResult CQmRealtimeUsersState::ApplyCandidate(const 
 		return Invalid();
 	if(!Full && !HasChanges)
 	{
+		if(Publish && !Publish(BuildResult(m_Servers, m_Players, true), static_cast<int>(Lease)))
+			return Invalid();
 		m_Revision = Revision;
 		m_LeaseSeconds = static_cast<int>(Lease);
 		return EApplyResult::APPLIED;
@@ -196,6 +189,8 @@ CQmRealtimeUsersState::EApplyResult CQmRealtimeUsersState::ApplyCandidate(const 
 		if(Total > MAX_USERS)
 			return Invalid();
 	}
+	if(Publish && !Publish(BuildResult(Servers, Players, true), static_cast<int>(Lease)))
+		return Invalid();
 	m_Servers = std::move(Servers);
 	m_Players = std::move(Players);
 	m_ServerAddress = std::move(Address);
@@ -207,9 +202,14 @@ CQmRealtimeUsersState::EApplyResult CQmRealtimeUsersState::ApplyCandidate(const 
 
 SQmClientUsersParseResult CQmRealtimeUsersState::Result() const
 {
+	return BuildResult(m_Servers, m_Players, m_Revision != 0);
+}
+
+SQmClientUsersParseResult CQmRealtimeUsersState::BuildResult(const std::map<std::string, SQmClientServerDistribution> &Servers, const std::map<std::string, SQmClientRecognitionMark> &Players, bool Parsed)
+{
 	SQmClientUsersParseResult Result;
-	Result.m_Parsed = m_Revision != 0;
-	for(const auto &[Key, Server] : m_Servers)
+	Result.m_Parsed = Parsed;
+	for(const auto &[Key, Server] : Servers)
 	{
 		Result.m_vServerDistribution.push_back(Server);
 		Result.m_OnlineUserCount += Server.m_UserCount;
@@ -222,7 +222,7 @@ SQmClientUsersParseResult CQmRealtimeUsersState::Result() const
 			return Left.m_DummyCount > Right.m_DummyCount;
 		return Left.m_ServerAddress < Right.m_ServerAddress;
 	});
-	for(const auto &[Key, Player] : m_Players)
+	for(const auto &[Key, Player] : Players)
 		Result.m_vLocalServerMarks.push_back(Player);
 	return Result;
 }
