@@ -161,14 +161,14 @@ bool CSkins7::IsSpecialSkin(const char *pName)
 	return str_startswith(pName, "x_") != nullptr;
 }
 
-void CSkins7::StartSkinPartLoadJob(int PartType, const char *pName, int DirType)
+std::shared_ptr<CSkins7::CSkinPartLoadJob> CSkins7::CreateSkinPartLoadJob(int PartType, const char *pName, int DirType)
 {
 	size_t PartNameSize, PartNameCount;
 	str_utf8_stats(pName, str_length(pName) - str_length(".png") + 1, IO_MAX_PATH_LENGTH, &PartNameSize, &PartNameCount);
 	if(PartNameSize >= protocol7::MAX_SKIN_ARRAY_SIZE || PartNameCount > protocol7::MAX_SKIN_LENGTH)
 	{
 		log_error("skins7", "Failed to load skin part '%s/%s': name too long", CSkins7::ms_apSkinPartNames[PartType], pName);
-		return;
+		return nullptr;
 	}
 
 	char aFilename[IO_MAX_PATH_LENGTH];
@@ -187,9 +187,7 @@ void CSkins7::StartSkinPartLoadJob(int PartType, const char *pName, int DirType)
 		Flags |= SKINFLAG_STANDARD;
 	}
 
-	auto pJob = std::make_shared<CSkinPartLoadJob>(aFilename, aPartName, Storage(), DirType, PartType, Flags, PrepareSkinPartVisuals);
-	Engine()->AddJob(pJob);
-	m_PendingSkinPartJobs.push_back(pJob);
+	return std::make_shared<CSkinPartLoadJob>(aFilename, aPartName, Storage(), DirType, PartType, Flags, PrepareSkinPartVisuals);
 }
 
 void CSkins7::ProcessCompletedJobs()
@@ -202,8 +200,10 @@ void CSkins7::ProcessCompletedJobs()
 	int Scheduled = 0;
 	while(m_NextPart < Parts.size() && QmSkinCanFinalize(Scheduled, time_get_nanoseconds() - Begin, std::chrono::milliseconds(1)))
 	{
-		const auto &Part = Parts[m_NextPart++];
-		StartSkinPartLoadJob(Part.m_Part, Part.m_Name.c_str(), Part.m_StorageType);
+		if(!QmTryQueueNextSkin7Part(Parts, m_NextPart, m_PendingSkinPartJobs, *Engine(), [this](const auto &Part) {
+			   return CreateSkinPartLoadJob(Part.m_Part, Part.m_Name.c_str(), Part.m_StorageType);
+		   }))
+			break;
 		++Scheduled;
 	}
 	// GPU 句柄只能在主线程创建，读盘和解码已由描述任务完成。

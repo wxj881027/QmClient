@@ -139,7 +139,7 @@ private:
 	IGraphics::CTextureHandle m_XmasHatTexture;
 	IGraphics::CTextureHandle m_BotTexture;
 
-	void StartSkinPartLoadJob(int PartType, const char *pName, int DirType);
+	std::shared_ptr<CSkinPartLoadJob> CreateSkinPartLoadJob(int PartType, const char *pName, int DirType);
 	void ProcessCompletedJobs();
 	void CancelPendingLoads();
 	bool RebuildSkins();

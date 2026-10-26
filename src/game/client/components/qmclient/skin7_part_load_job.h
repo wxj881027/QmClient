@@ -6,12 +6,14 @@
 #include <base/log.h>
 #include <base/system.h>
 
+#include <engine/engine.h>
 #include <engine/gfx/image_loader.h>
 #include <engine/gfx/image_manipulation.h>
 #include <engine/shared/jobs.h>
 #include <engine/storage.h>
 
 #include <cstdlib>
+#include <deque>
 #include <memory>
 #include <string>
 #include <utility>
@@ -164,5 +166,38 @@ public:
 		return Result;
 	}
 };
+
+// 空候选表示名称校验后跳过；分配或接收失败保留当前描述，下一帧重试。
+// 跟踪节点先准备，原生引擎确认接收后只推进无分配的游标。
+template<typename TParts, typename TAllocator, typename TFactory>
+bool QmTryQueueNextSkin7Part(const TParts &Parts, size_t &NextPart,
+	std::deque<std::shared_ptr<CQmSkin7PartLoadJob>, TAllocator> &Pending, IEngine &Engine, TFactory &&Factory)
+{
+	if(NextPart >= Parts.size())
+		return false;
+	bool Tracked = false;
+	try
+	{
+		auto pJob = std::forward<TFactory>(Factory)(Parts[NextPart]);
+		if(pJob)
+		{
+			Pending.push_back(pJob);
+			Tracked = true;
+			if(!Engine.TryAddJob(pJob))
+			{
+				Pending.pop_back();
+				return false;
+			}
+		}
+		++NextPart;
+		return true;
+	}
+	catch(...)
+	{
+		if(Tracked)
+			Pending.pop_back();
+		return false;
+	}
+}
 
 #endif
