@@ -18,6 +18,7 @@
 
 #include <game/client/component.h>
 #include <game/client/components/qmclient/qm_chat_avatar.h>
+#include <game/client/components/qmclient/skin7_load_completion.h>
 #include <game/client/components/qmclient/skin7_part_load_job.h>
 #include <game/client/components/qmclient/skin7_part_publisher.h>
 #include <game/client/components/qmclient/skin7_refresh_request.h>
@@ -142,7 +143,7 @@ private:
 	CQmSkin7RefreshRequest<CSkinPart> m_RefreshRequest;
 	std::optional<CQmSkin7RefreshRequest<CSkinPart>::SPlan> m_StartingRefresh;
 	CQmSkin7RefreshRetirement<CSkinPart> m_RefreshRetirement;
-	TSkinLoadedCallback m_SkinLoadedCallback;
+	CQmSkin7LoadCompletion m_LoadCompletion;
 
 	IGraphics::CTextureHandle m_XmasHatTexture;
 	IGraphics::CTextureHandle m_BotTexture;

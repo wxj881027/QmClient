@@ -252,17 +252,14 @@ void CSkins7::ProcessCompletedJobs()
 	{
 		if(!RebuildSkins())
 			return;
-		m_Loading = false;
-		m_ResourceLifecycle.CompleteLoad();
-		if(QmPerfEnabled())
-		{
-			char aPayload[96];
-			str_format(aPayload, sizeof(aPayload), "event=resource_load_complete skins=%zu", m_vSkins.size());
-			QmPerfLogPayloadForce("perf/skins7", aPayload, Client());
-		}
-		m_LastRefreshTime = time_get_nanoseconds();
-		if(m_SkinLoadedCallback)
-			m_SkinLoadedCallback();
+		m_LoadCompletion.Complete(m_Loading, m_ResourceLifecycle, m_LastRefreshTime, time_get_nanoseconds(), [this] {
+			if(QmPerfEnabled())
+			{
+				char aPayload[96];
+				str_format(aPayload, sizeof(aPayload), "event=resource_load_complete skins=%zu", m_vSkins.size());
+				QmPerfLogPayloadForce("perf/skins7", aPayload, Client());
+			}
+		});
 	}
 }
 
@@ -380,14 +377,17 @@ void CSkins7::CancelPendingLoads()
 		m_pSkinInfoJob->Abort();
 	m_pSkinInfoJob.reset();
 	m_Loading = false;
-	m_SkinLoadedCallback = {};
+	m_LoadCompletion.Cancel();
 }
 
 void CSkins7::OnUpdate()
 {
 	m_PartPublisher.TryRelease(*Graphics());
 	if(!QmNeedsSkin7Resources(Client()->State(), Client()->IsSixup()))
+	{
 		m_RefreshRequest.Cancel();
+		m_LoadCompletion.Cancel();
+	}
 	const auto Action = m_ResourceLifecycle.Update(Client()->State(), Client()->IsSixup());
 	if(Action == CQmSkin7ResourceLifecycle::EAction::LOAD)
 		GameClient()->RefreshSkins(CSkinDescriptor::FLAG_SEVEN);
@@ -406,7 +406,10 @@ void CSkins7::OnUpdate()
 	else
 		TryStartRefresh();
 	if(QmNeedsSkin7Resources(Client()->State(), Client()->IsSixup()))
+	{
 		ProcessCompletedJobs();
+		m_LoadCompletion.Dispatch(m_Loading);
+	}
 }
 
 void CSkins7::InitPlaceholderSkinParts()
@@ -465,7 +468,7 @@ void CSkins7::TryStartRefresh()
 			pJob->Abort();
 		m_PendingSkinPartJobs.clear();
 		m_RefreshRetirement.Adopt(m_avSkinParts, m_StartingRefresh->m_aParts);
-		m_SkinLoadedCallback = {};
+		m_LoadCompletion.Cancel();
 		m_Loading = true;
 		try
 		{
@@ -480,7 +483,7 @@ void CSkins7::TryStartRefresh()
 	}
 	// 旧资源全部释放后才移交新扫描结果，计划和完成回调可跨帧保留。
 	m_pSkinInfoJob = std::move(m_StartingRefresh->m_pJob);
-	m_SkinLoadedCallback = std::move(m_StartingRefresh->m_Callback);
+	m_LoadCompletion.Set(std::move(m_StartingRefresh->m_Callback));
 	m_StartingRefresh.reset();
 	ProcessCompletedJobs();
 }
