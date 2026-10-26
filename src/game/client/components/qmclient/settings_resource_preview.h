@@ -5,6 +5,7 @@
 #include <base/lock.h>
 
 #include <engine/client/gpu_upload_limiter.h>
+#include <engine/engine.h>
 #include <engine/graphics.h>
 #include <engine/image.h>
 #include <engine/shared/jobs.h>
@@ -17,8 +18,10 @@
 #include <deque>
 #include <functional>
 #include <memory>
+#include <new>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 enum class ESettingsResourcePreviewPriority
@@ -203,6 +206,42 @@ private:
 	SResult m_Result;
 	bool m_Completed = false;
 };
+
+// 跟踪节点先准备，接收失败撤回；缓存等待标记只在引擎确认后发布。
+template<typename TJobs, typename FCreate>
+bool TryStartSettingsResourcePreviewJob(CSettingsResourcePreviewCache &Cache, TJobs &Jobs, const SResourcePreviewKey &Key, IEngine &Engine, FCreate CreateJob)
+{
+	auto Tracked = Jobs.end();
+	bool Linked = false;
+	try
+	{
+		auto &State = Cache.GetOrCreate(Key);
+		if(State.m_TextureReady || State.m_PreviewJobPending || State.m_UploadPending || Jobs.find(Key) != Jobs.end())
+			return false;
+		auto pCandidate = CreateJob();
+		if(!pCandidate)
+			return false;
+		auto Inserted = Jobs.emplace(Key, pCandidate);
+		if(!Inserted.second)
+			return false;
+		Tracked = Inserted.first;
+		Linked = true;
+		if(!Engine.TryAddJob(pCandidate))
+		{
+			Jobs.erase(Tracked);
+			return false;
+		}
+		State.m_PreviewJobPending = true;
+		State.m_Failed = false;
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		if(Linked)
+			Jobs.erase(Tracked);
+		return false;
+	}
+}
 
 SResourcePreviewArtifact BuildPreviewArtifact(CImageInfo &&Image, int TargetSize);
 SResourcePreviewArtifact BuildPreviewArtifactFromPath(const char *pPath, IStorage *pStorage, int StorageType, const char *pContextName, int TargetSize);

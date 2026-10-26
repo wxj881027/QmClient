@@ -1,11 +1,17 @@
 // 资源预览管道通过真实缓存、图像处理和上传队列观察状态；不启动 GPU 设备。
+#include <engine/gfx/image_loader.h>
+
 #include <game/client/components/qmclient/settings_resource_preview.h>
 
 #include <gtest/gtest.h>
 #include <test/support/icon_benchmark_graphics.h>
+#include <test/support/job_wait.h>
+#include <test/test.h>
 
 #include <chrono>
 #include <cstdlib>
+#include <memory_resource>
+#include <new>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -329,4 +335,182 @@ TEST(SettingsResourcePreviewPipeline, InvalidFrontDoesNotConsumeTheFollowingVali
 	ASSERT_NE(Cache.Find(ValidKey), nullptr);
 	EXPECT_TRUE(Cache.Find(ValidKey)->m_TextureReady);
 	Cache.Clear(&Graphics);
+}
+
+namespace
+{
+	using TPreviewJobs = std::unordered_map<SResourcePreviewKey, std::shared_ptr<CSettingsResourcePreviewJob>, SResourcePreviewKeyHash>;
+	class CPreviewAdmissionEngine : public IEngine
+	{
+	public:
+		bool m_Accept = true, m_Throw = false;
+		int m_Attempts = 0;
+		CJobPool *m_pPool = nullptr;
+		IJob::EJobState m_LastNativeState = IJob::STATE_DONE;
+		std::vector<std::shared_ptr<IJob>> m_vAccepted;
+		void Init() override {}
+		void AddJob(std::shared_ptr<IJob> pJob) override { (void)TryAddJob(std::move(pJob)); }
+		bool TryAddJob(std::shared_ptr<IJob> pJob) override
+		{
+			++m_Attempts;
+			if(m_Throw)
+				throw std::bad_alloc();
+			if(!m_Accept)
+				return false;
+			if(m_pPool != nullptr)
+			{
+				const bool Accepted = m_pPool->TryAdd(pJob);
+				m_LastNativeState = pJob->State();
+				return Accepted;
+			}
+			m_vAccepted.push_back(std::move(pJob));
+			return true;
+		}
+		void ShutdownJobs() override {}
+		void SetAdditionalLogger(std::shared_ptr<ILogger> &&) override {}
+	};
+	class CPreviewTrackingMemory : public std::pmr::memory_resource
+	{
+		void *do_allocate(size_t Bytes, size_t Alignment) override
+		{
+			if(m_Fail)
+				throw std::bad_alloc();
+			return std::pmr::new_delete_resource()->allocate(Bytes, Alignment);
+		}
+		void do_deallocate(void *pData, size_t Bytes, size_t Alignment) override { std::pmr::new_delete_resource()->deallocate(pData, Bytes, Alignment); }
+		bool do_is_equal(const memory_resource &Other) const noexcept override { return this == &Other; }
+
+	public:
+		bool m_Fail = false;
+	};
+	class ResourcePreviewAdmission : public ::testing::Test
+	{
+	protected:
+		CTestInfo m_Info;
+		std::unique_ptr<IStorage> m_pStorage;
+		CSettingsResourcePreviewCache m_Cache;
+		TPreviewJobs m_Jobs;
+		CPreviewAdmissionEngine m_Engine;
+		SResourcePreviewKey m_Key = PreviewKey("admission");
+		std::weak_ptr<CSettingsResourcePreviewJob> m_LastCandidate;
+		int m_FactoryCalls = 0;
+		void SetUp() override
+		{
+			m_pStorage = m_Info.CreateTestStorage();
+			ASSERT_NE(m_pStorage, nullptr);
+			CPreviewImage Image(2, 1);
+			ASSERT_NE(Image.m_Image.m_pData, nullptr);
+			IOHANDLE File = m_pStorage->OpenFile("preview.png", IOFLAG_WRITE, IStorage::TYPE_SAVE);
+			ASSERT_NE(File, nullptr);
+			ASSERT_TRUE(CImageLoader::SavePng(File, "preview.png", Image.m_Image));
+		}
+		std::shared_ptr<CSettingsResourcePreviewJob> CreateJob()
+		{
+			++m_FactoryCalls;
+			auto pJob = CSettingsResourcePreviewJob::FromPath("admission", "preview.png", m_pStorage.get(), IStorage::TYPE_ALL, 4);
+			m_LastCandidate = pJob;
+			return pJob;
+		}
+		bool Start()
+		{
+			return TryStartSettingsResourcePreviewJob(m_Cache, m_Jobs, m_Key, m_Engine, [this] { return CreateJob(); });
+		}
+		void ExpectUntracked()
+		{
+			EXPECT_TRUE(m_Jobs.empty());
+			ASSERT_NE(m_Cache.Find(m_Key), nullptr);
+			EXPECT_FALSE(m_Cache.Find(m_Key)->m_PreviewJobPending);
+		}
+	};
+}
+
+TEST_F(ResourcePreviewAdmission, RejectionCanRetryAndAcceptedIdentityIsNotDuplicated)
+{
+	m_Engine.m_Accept = false;
+	EXPECT_FALSE(Start());
+	ExpectUntracked();
+	EXPECT_TRUE(m_LastCandidate.expired());
+	m_Engine.m_Accept = true;
+	ASSERT_TRUE(Start());
+	ASSERT_EQ(m_Jobs.size(), 1u);
+	const auto pAccepted = m_Jobs.at(m_Key);
+	EXPECT_TRUE(m_Cache.Find(m_Key)->m_PreviewJobPending);
+	EXPECT_FALSE(Start());
+	EXPECT_EQ(m_Jobs.at(m_Key), pAccepted);
+	EXPECT_EQ(m_Engine.m_Attempts, 2);
+	EXPECT_EQ(m_FactoryCalls, 2);
+}
+
+TEST_F(ResourcePreviewAdmission, EngineExceptionWithdrawsTrackingAndRetainsPriorFailureUntilAccepted)
+{
+	m_Cache.MarkPreviewJobDone(m_Key, false);
+	m_Engine.m_Throw = true;
+	EXPECT_FALSE(Start());
+	ExpectUntracked();
+	EXPECT_TRUE(m_LastCandidate.expired());
+	EXPECT_TRUE(m_Cache.Find(m_Key)->m_Failed);
+	m_Engine.m_Throw = false;
+	ASSERT_TRUE(Start());
+	EXPECT_TRUE(m_Cache.Find(m_Key)->m_PreviewJobPending);
+	EXPECT_FALSE(m_Cache.Find(m_Key)->m_Failed);
+}
+
+TEST_F(ResourcePreviewAdmission, TrackingAllocationFailureDoesNotSubmitCandidateAndCanRecover)
+{
+	CPreviewTrackingMemory Memory;
+	std::pmr::unordered_map<SResourcePreviewKey, std::shared_ptr<CSettingsResourcePreviewJob>, SResourcePreviewKeyHash> Jobs(&Memory);
+	Memory.m_Fail = true;
+	EXPECT_FALSE(TryStartSettingsResourcePreviewJob(m_Cache, Jobs, m_Key, m_Engine, [this] { return CreateJob(); }));
+	EXPECT_TRUE(Jobs.empty());
+	EXPECT_EQ(m_Engine.m_Attempts, 0);
+	EXPECT_TRUE(m_LastCandidate.expired());
+	ASSERT_NE(m_Cache.Find(m_Key), nullptr);
+	EXPECT_FALSE(m_Cache.Find(m_Key)->m_PreviewJobPending);
+	Memory.m_Fail = false;
+	ASSERT_TRUE(TryStartSettingsResourcePreviewJob(m_Cache, Jobs, m_Key, m_Engine, [this] { return CreateJob(); }));
+	EXPECT_EQ(Jobs.size(), 1u);
+	EXPECT_TRUE(m_Cache.Find(m_Key)->m_PreviewJobPending);
+}
+
+TEST_F(ResourcePreviewAdmission, SourcePreparationExceptionDoesNotSubmitOrPublishWaitingState)
+{
+	EXPECT_FALSE(TryStartSettingsResourcePreviewJob(m_Cache, m_Jobs, m_Key, m_Engine,
+		[]() -> std::shared_ptr<CSettingsResourcePreviewJob> { throw std::bad_alloc(); }));
+	ExpectUntracked();
+	EXPECT_EQ(m_Engine.m_Attempts, 0);
+	ASSERT_TRUE(Start());
+	EXPECT_TRUE(m_Cache.Find(m_Key)->m_PreviewJobPending);
+}
+
+TEST_F(ResourcePreviewAdmission, MissingSourceCandidateDoesNotSubmitOrPublishWaitingState)
+{
+	EXPECT_FALSE(TryStartSettingsResourcePreviewJob(m_Cache, m_Jobs, m_Key, m_Engine,
+		[] { return std::shared_ptr<CSettingsResourcePreviewJob>(); }));
+	ExpectUntracked();
+	EXPECT_EQ(m_Engine.m_Attempts, 0);
+	ASSERT_TRUE(Start());
+}
+
+TEST_F(ResourcePreviewAdmission, ClosedNativePoolLeavesNoWaitingIdentityAndReopenedPoolDecodes)
+{
+	CJobPool Pool;
+	ASSERT_TRUE(Pool.TryInit(1));
+	Pool.Shutdown();
+	m_Engine.m_pPool = &Pool;
+	EXPECT_FALSE(Start());
+	ExpectUntracked();
+	EXPECT_EQ(m_Engine.m_LastNativeState, IJob::STATE_QUEUED);
+	EXPECT_TRUE(m_LastCandidate.expired());
+	ASSERT_TRUE(Pool.TryInit(1));
+	ASSERT_TRUE(Start());
+	ASSERT_EQ(m_Jobs.size(), 1u);
+	const auto pJob = m_Jobs.at(m_Key);
+	ASSERT_TRUE(WaitForJobDone(*pJob));
+	Pool.Shutdown();
+	ASSERT_TRUE(pJob->Completed());
+	auto Result = pJob->TakeResult();
+	EXPECT_TRUE(Result.m_Artifact.m_Success);
+	EXPECT_EQ(Result.m_Artifact.m_Image.m_Width, 2u);
+	EXPECT_EQ(Result.m_Artifact.m_Image.m_Height, 1u);
+	EXPECT_NE(Result.m_Artifact.m_Image.m_pData, nullptr);
 }

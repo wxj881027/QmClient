@@ -569,21 +569,16 @@ namespace
 	{
 		if(pAssetName == nullptr || pAssetName[0] == '\0' || pEngine == nullptr)
 			return false;
-		SResourcePreviewState &State = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
-		if(State.m_TextureReady || State.m_PreviewJobPending || State.m_UploadPending)
-			return false;
-		if(m_vEntityBgPreviewJobs.find(PreviewKey) != m_vEntityBgPreviewJobs.end())
-			return false;
-
-		std::string SourcePath;
-		if(!ResolveEntityBgPreviewArtifactSource(pStorage, pAssetName, SourcePath))
-			return false;
-		auto pJob = CSettingsResourcePreviewJob::FromPath(PreviewKey.m_Id, std::move(SourcePath), pStorage, IStorage::TYPE_ALL, TargetTextureSize);
-		m_vEntityBgPreviewJobs.emplace(PreviewKey, pJob);
-		gs_SettingsAssetsResourcePreviewCache.MarkPreviewJobStarted(PreviewKey);
-		pEngine->AddJob(pJob);
-		++ResourcePreviewTelemetry.m_PreviewJobsStarted;
-		return true;
+		const bool Started = TryStartSettingsResourcePreviewJob(gs_SettingsAssetsResourcePreviewCache, m_vEntityBgPreviewJobs, PreviewKey, *pEngine,
+			[&]() -> std::shared_ptr<CSettingsResourcePreviewJob> {
+				std::string SourcePath;
+				if(!ResolveEntityBgPreviewArtifactSource(pStorage, pAssetName, SourcePath))
+					return nullptr;
+				return CSettingsResourcePreviewJob::FromPath(PreviewKey.m_Id, std::move(SourcePath), pStorage, IStorage::TYPE_ALL, TargetTextureSize);
+			});
+		if(Started)
+			++ResourcePreviewTelemetry.m_PreviewJobsStarted;
+		return Started;
 	}
 
 	static void ProcessAssetsResourcePreviewJobs(IGraphics *pGraphics, SResourcePreviewTelemetry &ResourcePreviewTelemetry, SResourcePreviewUploadBudget &UploadBudget)
