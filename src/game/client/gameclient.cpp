@@ -2148,7 +2148,6 @@ void CGameClient::OnRender()
 	// clear all events/input for this frame
 	{
 		CPerfTimer StageTimer(PerfEnabled);
-		m_QmImeManager.RenderCandidatePopup();
 		m_QmImeManager.OnFrame();
 		Input()->Clear();
 		LogPerfStage(this, "input_clear_and_candidates", StageTimer.ElapsedMs());

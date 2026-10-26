@@ -3,6 +3,7 @@
 #define TEST_SUPPORT_QM_UI_TEST_INPUT_H
 
 #include <engine/input.h>
+#include <engine/shared/qm_ime_policy.h>
 
 namespace qm_ui_test
 {
@@ -15,6 +16,9 @@ namespace qm_ui_test
 		int m_HeldKey = 0;
 		bool m_Modifier = false;
 		bool m_Composing = false;
+		int m_CandidateCount = 0;
+		int m_TextInputStarts = 0;
+		int m_TextInputStops = 0;
 		std::string m_Clipboard;
 
 		void ConsumeEvents(std::function<void(const CEvent &)>) const override {}
@@ -40,15 +44,20 @@ namespace qm_ui_test
 		void ClearTouchDeltas() override {}
 		std::string GetClipboardText() override { return m_Clipboard; }
 		void SetClipboardText(const char *pText) override { m_Clipboard = pText; }
-		void StartTextInput() override {}
-		void StopTextInput() override {}
+		void StartTextInput() override { ++m_TextInputStarts; }
+		void StopTextInput() override
+		{
+			++m_TextInputStops;
+			m_Composing = false;
+			m_CandidateCount = 0;
+		}
 		void EnsureScreenKeyboardShown() override {}
 		const char *GetComposition() const override { return m_Composing ? "x" : ""; }
-		bool HasComposition() const override { return m_Composing; }
+		bool HasComposition() const override { return QmImeCompositionIsActive(m_Composing, m_CandidateCount); }
 		int GetCompositionCursor() const override { return 0; }
 		int GetCompositionLength() const override { return m_Composing ? 1 : 0; }
 		const char *GetCandidate(int) const override { return ""; }
-		int GetCandidateCount() const override { return 0; }
+		int GetCandidateCount() const override { return m_CandidateCount; }
 		int GetCandidateSelectedIndex() const override { return -1; }
 		int GetCandidatePageStart() const override { return 0; }
 		int GetCandidatePageSize() const override { return 0; }

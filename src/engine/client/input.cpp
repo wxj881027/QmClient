@@ -822,7 +822,7 @@ int CInput::Update()
 	const bool TrackPerf = QmPerfEnabled();
 
 	const auto &&AddKeyEventChecked = [&](int Key, int Flags) {
-		if(Key != KEY_UNKNOWN && !IgnoreKeys && (!(Flags & IInput::FLAG_PRESS) || !HasComposition()))
+		if(Key != KEY_UNKNOWN && !IgnoreKeys && (!(Flags & IInput::FLAG_PRESS) || !QmImeShouldSuppressPress(Key, HasComposition())))
 		{
 			AddKeyEvent(Key, Flags);
 			// SDL3 合并了两个静音扫描码，继续接受旧配置中的两种键名。

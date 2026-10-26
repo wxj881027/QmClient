@@ -4,6 +4,7 @@
 #include <game/client/qm_ime_manager.h>
 
 #include <gtest/gtest.h>
+#include <test/support/qm_ui_test_input.h>
 
 #include <string>
 #include <vector>
@@ -34,42 +35,82 @@ TEST(QmImeFocus, ChatPopupInputExpiresWithChatOwner)
 TEST(QmImeTextInputSession, FocusStartsOnceAndStopsOnRelease)
 {
 	CQmImeTextInputSession Session;
+	qm_ui_test::CTestInput Input;
+	int Field = 0;
 	using EAction = CQmImeTextInputSession::EAction;
-	EXPECT_EQ(Session.UpdateFocus(false), EAction::NONE);
-	EXPECT_EQ(Session.UpdateFocus(true), EAction::START);
-	EXPECT_EQ(Session.UpdateFocus(true), EAction::NONE);
-	EXPECT_EQ(Session.UpdateFocus(false), EAction::STOP);
-	EXPECT_EQ(Session.UpdateFocus(false), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(Input, nullptr), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::START);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(Input, nullptr), EAction::STOP);
+	EXPECT_EQ(Session.UpdateFocus(Input, nullptr), EAction::NONE);
+	EXPECT_EQ(Input.m_TextInputStarts, 1);
+	EXPECT_EQ(Input.m_TextInputStops, 1);
+}
+
+TEST(QmImeTextInputSession, SwitchingFieldsRestartsAndClearsPreviousComposition)
+{
+	CQmImeTextInputSession Session;
+	qm_ui_test::CTestInput Input;
+	int First = 0, Second = 0;
+	using EAction = CQmImeTextInputSession::EAction;
+	ASSERT_EQ(Session.UpdateFocus(Input, &First), EAction::START);
+	Input.m_Composing = true;
+	Input.m_CandidateCount = 3;
+	EXPECT_EQ(Session.UpdateFocus(Input, &Second), EAction::RESTART);
+	EXPECT_FALSE(Input.HasComposition());
+	EXPECT_EQ(Input.m_TextInputStops, 1);
+	EXPECT_EQ(Input.m_TextInputStarts, 2);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Second), EAction::NONE);
+	EXPECT_EQ(Input.m_TextInputStarts, 2);
+}
+
+TEST(QmImeTextInputSession, ReopeningSameFieldStartsANewSession)
+{
+	CQmImeTextInputSession Session;
+	qm_ui_test::CTestInput Input;
+	int Field = 0;
+	using EAction = CQmImeTextInputSession::EAction;
+	ASSERT_EQ(Session.UpdateFocus(Input, &Field), EAction::START);
+	ASSERT_EQ(Session.UpdateFocus(Input, nullptr), EAction::STOP);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::START);
+	EXPECT_EQ(Input.m_TextInputStarts, 2);
+	EXPECT_EQ(Input.m_TextInputStops, 1);
 }
 
 TEST(QmImeTextInputSession, EditorOwnsInputUntilClientReturns)
 {
 	CQmImeTextInputSession Session;
+	qm_ui_test::CTestInput Input;
+	int Field = 0;
 	using EAction = CQmImeTextInputSession::EAction;
-	EXPECT_EQ(Session.UpdateFocus(true), EAction::START);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::START);
 	EXPECT_TRUE(Session.SetClientOwnership(false));
 	EXPECT_FALSE(Session.ClientOwnsInput());
-	EXPECT_EQ(Session.UpdateFocus(true), EAction::NONE);
-	EXPECT_EQ(Session.UpdateFocus(false), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(Input, nullptr), EAction::NONE);
+	EXPECT_EQ(Input.m_TextInputStarts, 1);
+	EXPECT_EQ(Input.m_TextInputStops, 0);
 
 	EXPECT_TRUE(Session.SetClientOwnership(true));
-	EXPECT_EQ(Session.UpdateFocus(false), EAction::NONE);
-	EXPECT_EQ(Session.UpdateFocus(true), EAction::START);
+	EXPECT_EQ(Session.UpdateFocus(Input, nullptr), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::START);
 }
 
 TEST(QmImeTextInputSession, RepeatedOwnershipDoesNotRestartComposition)
 {
 	CQmImeTextInputSession Session;
+	qm_ui_test::CTestInput Input;
+	int Field = 0;
 	using EAction = CQmImeTextInputSession::EAction;
-	EXPECT_EQ(Session.UpdateFocus(true), EAction::START);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::START);
 	EXPECT_FALSE(Session.SetClientOwnership(true));
-	EXPECT_EQ(Session.UpdateFocus(true), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::NONE);
 	Session.ResetFocus();
-	EXPECT_EQ(Session.UpdateFocus(true), EAction::START);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::START);
 	EXPECT_TRUE(Session.SetClientOwnership(false));
 	Session.ResetFocus();
 	EXPECT_FALSE(Session.SetClientOwnership(false));
-	EXPECT_EQ(Session.UpdateFocus(true), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::NONE);
 }
 
 TEST(QmImePlatform, SystemCandidateUiPolicyMatchesPlatform)
@@ -144,6 +185,32 @@ TEST(QmImePlatform, PopupVisibilityDrivenByCandidateCount)
 	EXPECT_FALSE(QmImePopupShouldBeVisible(0));
 	EXPECT_TRUE(QmImePopupShouldBeVisible(1));
 	EXPECT_TRUE(QmImePopupShouldBeVisible(5));
+}
+
+TEST(QmImePlatform, CandidateOnlyCompositionRetainsKeyboardUntilCandidatesClose)
+{
+	CQmImeCandidateState State;
+	const char *apCandidates[] = {"1 候选"};
+	State.UpdateFromSdl(apCandidates, 1, 0, true);
+	EXPECT_TRUE(QmImeCompositionIsActive(false, static_cast<int>(State.Candidates().m_vCandidates.size())));
+	State.Clear();
+	EXPECT_FALSE(QmImeCompositionIsActive(false, static_cast<int>(State.Candidates().m_vCandidates.size())));
+	EXPECT_TRUE(QmImeCompositionIsActive(true, 0));
+}
+
+TEST(QmImePlatform, CompositionAllowsPointerFocusChangesButSuppressesKeyboardPresses)
+{
+	for(const int Key : {KEY_MOUSE_1, KEY_MOUSE_2, KEY_MOUSE_9, KEY_MOUSE_WHEEL_UP, KEY_MOUSE_WHEEL_RIGHT})
+	{
+		SCOPED_TRACE(Key);
+		EXPECT_FALSE(QmImeShouldSuppressPress(Key, true));
+	}
+	for(const int Key : {KEY_RETURN, KEY_KP_ENTER, KEY_BACKSPACE, KEY_ESCAPE, KEY_A})
+	{
+		SCOPED_TRACE(Key);
+		EXPECT_TRUE(QmImeShouldSuppressPress(Key, true));
+		EXPECT_FALSE(QmImeShouldSuppressPress(Key, false));
+	}
 }
 
 TEST(QmImePlatform, FailedCandidateReloadKeepsPreviousOnChangeNotify)

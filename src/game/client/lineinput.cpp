@@ -806,7 +806,8 @@ bool CLineInput::ValidateActiveInputRenderedThisFrame()
 
 bool CLineInput::RenderLegacyCandidates()
 {
-	if(!ValidateActiveInputRenderedThisFrame())
+	// 本帧可见性与 IME 会话已由管理器统一验证，这里只绘制仍活动的输入框。
+	if(GetActiveInput() == nullptr)
 		return false;
 
 	const int CandidateCount = Input()->GetCandidateCount();
