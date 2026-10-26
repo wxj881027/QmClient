@@ -4773,6 +4773,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_skin_outline_render_test.cpp
     src/test/integration/qmclient/client/qm_font_download_storage_test.cpp
     src/test/integration/qmclient/client/qm_font_store_catalog_test.cpp
+    src/test/integration/qmclient/client/qmclient_users_parse_job_test.cpp
     src/test/integration/qmclient/client/qm_statistics_save_test.cpp
     src/test/integration/engine/config_migration_backup_test.cpp
     src/test/integration/qmclient/client/bounded_file_reader_test.cpp

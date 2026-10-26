@@ -3,6 +3,7 @@
 
 #include "bounded_file_reader.h"
 #include "qm_title_style.h"
+#include "qmclient_users_parse_job.h"
 #include "statistics_file.h"
 #include "statistics_save_job.h"
 #include "voice/voice_utils.h"
@@ -210,55 +211,6 @@ namespace
 	[[maybe_unused]] static constexpr std::array<STextPopupDefinition, (int)ETextPopupType::NUM_TYPES> s_aTextPopupDefinitions = {{
 		{QMCLIENT_FREEZE_WAKEUP_TEXT},
 	}};
-
-	class CQmClientUsersParseJob : public IJob
-	{
-	public:
-		using SResult = SQmClientUsersParseResult;
-
-	private:
-		std::shared_ptr<const json_value> m_pPayload;
-		char m_aServerAddress[NETADDR_MAXSTRSIZE] = "";
-		int64_t m_ExpireTick = 0;
-		int64_t m_ConnectionTick = 0;
-		CLock m_Lock;
-		SResult m_Result;
-
-	protected:
-		void Run() override REQUIRES(!m_Lock)
-		{
-			SResult Result;
-			if(m_pPayload)
-				ParseQmClientUsersJson(m_pPayload.get(), m_aServerAddress, Result);
-
-			{
-				const CLockScope Lock(m_Lock);
-				m_Result = std::move(Result);
-			}
-			m_pPayload.reset();
-		}
-
-	public:
-		CQmClientUsersParseJob(std::shared_ptr<const json_value> pPayload, const char *pServerAddress, int64_t ExpireTick, int64_t ConnectionTick) :
-			m_pPayload(std::move(pPayload)),
-			m_ExpireTick(ExpireTick),
-			m_ConnectionTick(ConnectionTick)
-		{
-			str_copy(m_aServerAddress, pServerAddress, sizeof(m_aServerAddress));
-		}
-
-		SResult TakeResult() REQUIRES(!m_Lock)
-		{
-			const CLockScope Lock(m_Lock);
-			SResult Result = std::move(m_Result);
-			m_Result = SResult();
-			return Result;
-		}
-
-		int64_t ExpireTick() const { return m_ExpireTick; }
-		int64_t ConnectionTick() const { return m_ConnectionTick; }
-		const char *ServerAddress() const { return m_aServerAddress; }
-	};
 
 	class CQmDdnetPlayerStatsParseJob : public IJob
 	{
@@ -3032,9 +2984,9 @@ void CQmClient::UpdateQmClientRecognition()
 		FinishQmClientUsers();
 	if(!m_pQmClientUsersParseJob && m_pQmRealtimeUsersPayload)
 	{
-		m_pQmClientUsersParseJob = std::make_shared<CQmClientUsersParseJob>(
-			std::move(m_pQmRealtimeUsersPayload), m_aQmRealtimeUsersServer, m_QmRealtimeUsersExpireTick, m_QmRealtimeConnectedTick);
-		Engine()->AddJob(m_pQmClientUsersParseJob);
+		TryQueueQmClientUsersParseJob(m_pQmClientUsersParseJob, m_pQmRealtimeUsersPayload, *Engine(), [this](const auto &pPayload) {
+			return std::make_shared<CQmClientUsersParseJob>(pPayload, m_aQmRealtimeUsersServer, m_QmRealtimeUsersExpireTick, m_QmRealtimeConnectedTick);
+		});
 	}
 }
 
