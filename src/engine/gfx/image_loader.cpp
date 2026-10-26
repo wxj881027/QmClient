@@ -24,9 +24,10 @@ bool CByteBufferReader::Read(void *pData, size_t Size)
 	if(m_Error)
 		return false;
 
-	if(m_ReadOffset + Size <= m_Size)
+	if(Size <= m_Size - m_ReadOffset)
 	{
-		mem_copy(pData, &m_pData[m_ReadOffset], Size);
+		if(Size != 0)
+			mem_copy(pData, &m_pData[m_ReadOffset], Size);
 		m_ReadOffset += Size;
 		return true;
 	}

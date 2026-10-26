@@ -5217,6 +5217,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/websocket_client_test.cpp
     src/test/unit/engine/websocket_log_test.cpp
     src/test/unit/engine/websocket_native_state_test.cpp
+    src/test/unit/engine/graphics/glsl_shader_compiler_test.cpp
+    src/test/unit/engine/graphics/image_byte_reader_test.cpp
+    src/test/integration/engine/glsl_shader_source_test.cpp
     src/test/unit/engine/websocket_client_lifecycle_test.cpp
     src/test/unit/qmclient/client/qm_map_upload_test.cpp
     src/test/unit/qmclient/client/qm_developer_badge_test.cpp
@@ -5497,6 +5500,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/engine/client/backend_threaded.cpp
     src/engine/client/backend/vulkan/backend_vulkan_qm_ext.cpp
     src/engine/client/backend/graphics_backend_contract.cpp
+    src/engine/client/backend/glsl_shader_compiler.cpp
     src/engine/client/backend/metal/metal_frame_state.cpp
     src/engine/client/backend/metal/metal_render_target_state.cpp
     src/game/client/animstate.cpp

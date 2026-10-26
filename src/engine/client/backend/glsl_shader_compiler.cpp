@@ -130,10 +130,7 @@ void CGLSLCompiler::ParseLine(std::string &Line, const char *pReadLine, EGLSLSha
 						Line.append("texture3D");
 					else if(m_TextureReplaceType == GLSL_COMPILER_TEXTURE_REPLACE_TYPE_2D_ARRAY)
 						Line.append("texture2DArray");
-					std::string RestLine;
-					ParseLine(RestLine, pBuff, Type);
-					Line.append(RestLine);
-					return;
+					// 继续当前扫描，避免长行中每个纹理调用都增加一层栈和一份后缀。
 				}
 				else
 				{
