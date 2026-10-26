@@ -3122,6 +3122,8 @@ if(CLIENT)
     backend_threaded.cpp
     qm_festive_message_box.cpp
     qm_festive_message_box.h
+    qm_festive_report_text.cpp
+    qm_festive_report_text.h
     blocklist_driver.cpp
     blocklist_driver.h
     checksum.h
@@ -5139,7 +5141,6 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/settings/settings_tee_skin_list_state_test.cpp
     src/test/unit/qmclient/client/qm_plausible_sizes_contract_test.cpp
     src/test/unit/qmclient/client/qm_tclient_statusbar_score_contract_test.cpp
-    src/test/contract/qmclient/client/qm_graphics_shutdown_contract_test.cpp
     src/test/unit/qmclient/client/qm_crashdump_shutdown_suppression_test.cpp
     src/test/unit/qmclient/client/qm_hang_watchdog_state_test.cpp
     src/test/contract/qmclient/client/qm_graphics_backend_fallback_contract_test.cpp
@@ -5630,6 +5631,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/engine/client/blocklist_driver.h
     src/engine/client/graph.cpp
     src/engine/client/qm_hang_diagnostics.cpp
+    src/engine/client/qm_festive_report_text.cpp
+    src/test/unit/client/qm_festive_report_text_test.cpp
     src/engine/client/favorites.cpp
     src/engine/client/friends.cpp
     src/engine/client/serverbrowser.cpp
