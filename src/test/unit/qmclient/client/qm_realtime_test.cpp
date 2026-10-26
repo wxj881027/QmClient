@@ -7,7 +7,10 @@
 
 #include <cstring>
 #include <memory>
+#include <memory_resource>
+#include <new>
 #include <string>
+#include <utility>
 
 TEST(QmRealtime, ParsesStateAndBroadcast)
 {
@@ -493,4 +496,96 @@ TEST(QmRealtime, InvalidInputClearsPreviouslyOwnedPayloadAndNextMessageCanPublis
 	EXPECT_EQ(Message.m_Event, EQmRealtimeEvent::STATE);
 	EXPECT_EQ(Message.m_OnlineUsers, 7);
 	EXPECT_EQ(Message.m_pPayload, nullptr);
+}
+
+namespace
+{
+	class CRealtimeQueueMemory : public std::pmr::memory_resource
+	{
+		void *do_allocate(size_t Bytes, size_t Alignment) override
+		{
+			if(m_RejectAllocation)
+				throw std::bad_alloc();
+			return std::pmr::new_delete_resource()->allocate(Bytes, Alignment);
+		}
+		void do_deallocate(void *pData, size_t Bytes, size_t Alignment) override
+		{
+			std::pmr::new_delete_resource()->deallocate(pData, Bytes, Alignment);
+		}
+		bool do_is_equal(const memory_resource &Other) const noexcept override { return this == &Other; }
+
+	public:
+		bool m_RejectAllocation = false;
+	};
+}
+
+TEST(QmRealtimeQueue, AdmissionOwnsParsedPayloadUntilConsumed)
+{
+	std::deque<SQmRealtimeMessage> Events;
+	std::weak_ptr<const json_value> Payload;
+	{
+		const std::string Input = R"({"type":"users","data":{"users":[]}})";
+		SQmRealtimeMessage Message;
+		ASSERT_TRUE(ParseQmRealtimeMessage(Input.data(), Input.size(), Message));
+		Payload = Message.m_pPayload;
+		ASSERT_TRUE(TryQueueQmRealtimeMessage(Events, std::move(Message)));
+	}
+	ASSERT_EQ(Events.size(), 1u);
+	EXPECT_FALSE(Payload.expired());
+	EXPECT_EQ(Events.front().m_Event, EQmRealtimeEvent::USERS);
+	ASSERT_NE(Events.front().m_pPayload, nullptr);
+	EXPECT_EQ(json_object_get(Events.front().m_pPayload.get(), "users")->type, json_array);
+	Events.pop_front();
+	EXPECT_TRUE(Payload.expired());
+}
+
+TEST(QmRealtimeQueue, OverflowRetainsMostRecent128InArrivalOrder)
+{
+	std::deque<SQmRealtimeMessage> Events;
+	for(int Id = 0; Id < 260; ++Id)
+	{
+		SQmRealtimeMessage Message;
+		Message.m_TitleStatusCode = Id;
+		ASSERT_TRUE(TryQueueQmRealtimeMessage(Events, std::move(Message)));
+		ASSERT_LE(Events.size(), 128u);
+	}
+	ASSERT_EQ(Events.size(), 128u);
+	for(size_t i = 0; i < Events.size(); ++i)
+		EXPECT_EQ(Events[i].m_TitleStatusCode, 132 + static_cast<int>(i));
+}
+
+TEST(QmRealtimeQueue, NodeAllocationFailureKeepsQueuedAndIncomingMessagesAndCanRetry)
+{
+	CRealtimeQueueMemory Memory;
+	std::pmr::deque<SQmRealtimeMessage> Events(&Memory);
+	SQmRealtimeMessage First;
+	ASSERT_TRUE(TryQueueQmRealtimeMessage(Events, std::move(First)));
+	SQmRealtimeMessage Parsed;
+	const char *pUsers = R"({"type":"users","data":{"users":[]}})";
+	ASSERT_TRUE(ParseQmRealtimeMessage(pUsers, std::strlen(pUsers), Parsed));
+	ASSERT_NE(Parsed.m_pPayload, nullptr);
+	Memory.m_RejectAllocation = true;
+	bool Failed = false;
+	// 不依赖各STL每块容纳几条消息，只在实际请求新节点/索引时拒绝分配。
+	for(int Id = 1; Id < 128; ++Id)
+	{
+		SQmRealtimeMessage Incoming;
+		Incoming.m_TitleStatusCode = Id;
+		Incoming.m_pPayload = Parsed.m_pPayload;
+		if(TryQueueQmRealtimeMessage(Events, std::move(Incoming)))
+			continue;
+		Failed = true;
+		ASSERT_EQ(Events.size(), static_cast<size_t>(Id));
+		for(int i = 0; i < Id; ++i)
+			EXPECT_EQ(Events[i].m_TitleStatusCode, i);
+		EXPECT_EQ(Incoming.m_TitleStatusCode, Id);
+		EXPECT_EQ(Incoming.m_pPayload, Parsed.m_pPayload);
+		Memory.m_RejectAllocation = false;
+		ASSERT_TRUE(TryQueueQmRealtimeMessage(Events, std::move(Incoming)));
+		ASSERT_EQ(Events.size(), static_cast<size_t>(Id + 1));
+		EXPECT_EQ(Events.back().m_TitleStatusCode, Id);
+		EXPECT_EQ(Events.back().m_pPayload, Parsed.m_pPayload);
+		break;
+	}
+	EXPECT_TRUE(Failed);
 }

@@ -3,8 +3,11 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <memory>
+#include <new>
 #include <string>
+#include <utility>
 
 typedef struct _json_value json_value;
 
@@ -79,6 +82,23 @@ struct SQmRealtimeMessage
 
 // 准备分配失败返回false并清空输出；payload共享整棵JSON树的所有权。
 bool ParseQmRealtimeMessage(const char *pData, size_t Size, SQmRealtimeMessage &OutMessage);
+
+// 保持最近128条；新消息准备失败时，原队列及输入消息仍归原所有者持有。
+template<typename TAllocator>
+bool TryQueueQmRealtimeMessage(std::deque<SQmRealtimeMessage, TAllocator> &Events, SQmRealtimeMessage &&Message)
+{
+	try
+	{
+		Events.push_back(std::move(Message));
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	if(Events.size() > 128)
+		Events.pop_front();
+	return true;
+}
 
 // 空配置使用中心服；只有固定加密入口允许发送认证凭据。
 const char *QmRealtimeEffectiveUrl(const char *pConfiguredUrl);

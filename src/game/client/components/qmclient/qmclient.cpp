@@ -2338,9 +2338,7 @@ void CQmClient::EnqueueQmRealtimeMessage(const char *pData, size_t Size, bool Co
 	// 账号通道不承载匿名表情；两条连接的消息不可互相代送。
 	if(Message.m_Event == EQmRealtimeEvent::EMOTICON)
 		return;
-	if(m_QmRealtimeEvents.size() >= 128)
-		m_QmRealtimeEvents.pop_front();
-	m_QmRealtimeEvents.push_back(std::move(Message));
+	TryQueueQmRealtimeMessage(m_QmRealtimeEvents, std::move(Message));
 }
 
 void CQmClient::QueueQmAnonymousEmoticonEvent(SQmRealtimeMessage Message)

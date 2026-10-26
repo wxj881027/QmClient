@@ -88,6 +88,20 @@ bool ParseQmCompressedUsersMessage(const char *pData, size_t Size, SQmRealtimeMe
 
 CQmRealtimeUsersState::EApplyResult CQmRealtimeUsersState::Apply(const json_value *pData, const char *pExpectedServer)
 {
+	try
+	{
+		return ApplyCandidate(pData, pExpectedServer);
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 候选尚未提交，保留旧名单与租约；后续沿已有入口补全修订链。
+		m_NeedsFull = true;
+		return EApplyResult::RESYNC;
+	}
+}
+
+CQmRealtimeUsersState::EApplyResult CQmRealtimeUsersState::ApplyCandidate(const json_value *pData, const char *pExpectedServer)
+{
 	auto Invalid = [this]() {
 		m_NeedsFull = true;
 		return EApplyResult::RESYNC;
@@ -108,7 +122,7 @@ CQmRealtimeUsersState::EApplyResult CQmRealtimeUsersState::Apply(const json_valu
 	{
 		if(Base != 0)
 			return Invalid();
-		if(m_ServerAddress == Address && Revision <= m_Revision)
+		if(m_ServerAddress == Address && (Revision < m_Revision || (Revision == m_Revision && !m_NeedsFull)))
 			return EApplyResult::IGNORED;
 	}
 	else if(m_Revision == 0 || m_ServerAddress != Address || m_NeedsFull || Base != m_Revision || (Revision != Base && Revision != Base + 1))

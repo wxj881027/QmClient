@@ -728,3 +728,49 @@ TEST(QmRealtimeUsers, InvalidCompressedFrameClearsOutputWithoutInvalidatingRetai
 	EXPECT_EQ(Message.m_Event, EQmRealtimeEvent::USERS_SYNC);
 	EXPECT_NE(Message.m_pPayload, nullptr);
 }
+
+TEST(QmRealtimeUsers, SameRevisionFullRecoversAfterInvalidDeltaWithoutDiscardingOldState)
+{
+	CQmRealtimeUsersState State;
+	ASSERT_EQ(Apply(State, FULL), EResult::APPLIED);
+	const char *pInvalid = R"({"server_address":"one:8303","revision":2,"base_revision":1,"full":false,"lease_seconds":10,"servers":[["one:8303",99,0],["bad:8303",-1,0]],"players":[],"removed_servers":["two:8303"],"removed_players":["p1"]})";
+	ASSERT_EQ(Apply(State, pInvalid), EResult::RESYNC);
+	EXPECT_TRUE(State.NeedsFull());
+	EXPECT_EQ(State.Revision(), 1);
+	EXPECT_EQ(State.LeaseSeconds(), 20);
+	EXPECT_EQ(State.Result().m_OnlineUserCount, 4);
+	ASSERT_EQ(State.Result().m_vLocalServerMarks.size(), 1u);
+	EXPECT_EQ(State.Result().m_vLocalServerMarks[0].m_Name, "本服玩家");
+	ASSERT_EQ(Apply(State, FULL), EResult::APPLIED);
+	EXPECT_FALSE(State.NeedsFull());
+	EXPECT_EQ(State.Revision(), 1);
+	ASSERT_EQ(Apply(State, LEASE), EResult::APPLIED);
+	EXPECT_EQ(State.LeaseSeconds(), 15);
+}
+
+TEST(QmRealtimeUsers, OlderFullCannotClearResyncRequirement)
+{
+	CQmRealtimeUsersState State;
+	ASSERT_EQ(Apply(State, FULL), EResult::APPLIED);
+	const char *pNext = R"({"server_address":"one:8303","revision":2,"base_revision":1,"full":false,"lease_seconds":10,"servers":[["one:8303",2,0]],"players":[],"removed_servers":[],"removed_players":[]})";
+	ASSERT_EQ(Apply(State, pNext), EResult::APPLIED);
+	ASSERT_EQ(Apply(State, "{}"), EResult::RESYNC);
+	ASSERT_TRUE(State.NeedsFull());
+	EXPECT_EQ(Apply(State, FULL), EResult::IGNORED);
+	EXPECT_TRUE(State.NeedsFull());
+	EXPECT_EQ(State.Revision(), 2);
+	EXPECT_EQ(State.LeaseSeconds(), 10);
+	EXPECT_EQ(State.Result().m_OnlineUserCount, 5);
+}
+
+TEST(QmRealtimeUsers, HealthySameRevisionFullDoesNotRenewLease)
+{
+	CQmRealtimeUsersState State;
+	ASSERT_EQ(Apply(State, FULL), EResult::APPLIED);
+	ASSERT_EQ(Apply(State, LEASE), EResult::APPLIED);
+	EXPECT_EQ(Apply(State, FULL), EResult::IGNORED);
+	EXPECT_FALSE(State.NeedsFull());
+	EXPECT_EQ(State.Revision(), 1);
+	EXPECT_EQ(State.LeaseSeconds(), 15);
+	EXPECT_EQ(State.Result().m_OnlineUserCount, 4);
+}

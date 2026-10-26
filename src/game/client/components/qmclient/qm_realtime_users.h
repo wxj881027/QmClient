@@ -26,6 +26,7 @@ public:
 		RESYNC,
 	};
 
+	// 合并分配失败保留旧名单并请求全量；同修订全量可恢复需要同步的状态。
 	EApplyResult Apply(const json_value *pData, const char *pExpectedServer);
 	SQmClientUsersParseResult Result() const;
 	void Reset();
@@ -34,6 +35,8 @@ public:
 	int64_t Revision() const { return m_Revision; }
 
 private:
+	EApplyResult ApplyCandidate(const json_value *pData, const char *pExpectedServer);
+
 	std::map<std::string, SQmClientServerDistribution> m_Servers;
 	std::map<std::string, SQmClientRecognitionMark> m_Players;
 	std::string m_ServerAddress;
