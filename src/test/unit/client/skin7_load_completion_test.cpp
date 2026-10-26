@@ -182,3 +182,29 @@ TEST(Skin7LoadCompletion, CancelReleasesPendingCaptureWithoutInvokingIt)
 	Completion.Cancel();
 	EXPECT_TRUE(Weak.expired());
 }
+
+TEST(Skin7LoadCompletion, TransferForScanRetryKeepsCallbackWithoutInvokingIt)
+{
+	CQmSkin7LoadCompletion Completion;
+	int Calls = 0;
+	Completion.Set([&] { ++Calls; });
+	auto Callback = Completion.TakeForRetry();
+	EXPECT_FALSE(Completion.HasPending());
+	EXPECT_TRUE(Completion.Dispatch(false));
+	EXPECT_EQ(Calls, 0);
+	ASSERT_TRUE(Callback);
+	Callback();
+	EXPECT_EQ(Calls, 1);
+}
+
+TEST(Skin7LoadCompletion, TransferDuringDispatchPreventsOldFailureFromReturning)
+{
+	CQmSkin7LoadCompletion Completion;
+	Completion.Set([&] {
+		auto Callback = Completion.TakeForRetry();
+		EXPECT_FALSE(Callback);
+		throw std::bad_alloc();
+	});
+	EXPECT_FALSE(Completion.Dispatch(false));
+	EXPECT_FALSE(Completion.HasPending());
+}

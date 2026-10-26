@@ -190,6 +190,8 @@ void CSkins7::ProcessCompletedJobs()
 	const auto Begin = time_get_nanoseconds();
 	if(!m_pSkinInfoJob || m_pSkinInfoJob->State() != IJob::STATE_DONE)
 		return;
+	if(m_RefreshRequest.RetryFailedScan(m_pSkinInfoJob, m_LoadCompletion, Begin))
+		return;
 	// 后台扫描的结果分帧入队；文件多时不能一次创建全部任务阻塞输入。
 	const auto &Parts = m_pSkinInfoJob->Parts();
 	int Scheduled = 0;

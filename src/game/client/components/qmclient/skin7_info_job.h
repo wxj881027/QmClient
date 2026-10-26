@@ -65,12 +65,15 @@ public:
 	std::vector<SPart> TakeParts() { return std::move(m_vParts); }
 	CImageInfo TakeXmasHat() { return std::exchange(m_XmasHat, CImageInfo{}); }
 	CImageInfo TakeBot() { return std::exchange(m_Bot, CImageInfo{}); }
+	// 只表示扫描流程正常结束，个别文件读取/格式失败仍沿原规则跳过。
+	// DONE的发布同步后台结果；ABORTED不代表worker已退出，不能据此读取结果。
+	bool Succeeded() const { return State() == STATE_DONE && m_Succeeded; }
 
 	// 只在主线程消费已结束任务；回调不得重入，失败保留图像和附件游标。
 	template<typename TPublish>
 	bool PublishNextAccessory(int &NextAccessory, TPublish &&Publish)
 	{
-		if(State() != STATE_DONE || NextAccessory < 0 || NextAccessory >= 2)
+		if(!Succeeded() || NextAccessory < 0 || NextAccessory >= 2)
 			return false;
 		auto &Image = NextAccessory == 0 ? m_XmasHat : m_Bot;
 		try
@@ -90,18 +93,40 @@ public:
 protected:
 	void Run() override
 	{
-		if(State() != STATE_ABORTED)
-			m_pStorage->ListDirectory(IStorage::TYPE_ALL, "skins7", Scan, this);
-		// 目录扫描和附加 PNG 也会读盘，不能留在加载页的主线程。
-		const char *apParts[] = {"body", "marking", "decoration", "hands", "feet", "eyes"};
-		for(int Part = 0; Part < protocol7::NUM_SKINPARTS && State() != STATE_ABORTED; ++Part)
+		try
 		{
-			m_ScanPart = Part;
-			const std::string Path = "skins7/" + std::string(apParts[Part]);
-			m_pStorage->ListDirectory(IStorage::TYPE_ALL, Path.c_str(), ScanPart, this);
+			if(State() != STATE_ABORTED)
+				m_pStorage->ListDirectory(IStorage::TYPE_ALL, "skins7", Scan, this);
+			// 目录扫描和附加 PNG 也会读盘，不能留在加载页的主线程。
+			const char *apParts[] = {"body", "marking", "decoration", "hands", "feet", "eyes"};
+			for(int Part = 0; Part < protocol7::NUM_SKINPARTS && State() != STATE_ABORTED; ++Part)
+			{
+				m_ScanPart = Part;
+				const std::string Path = "skins7/" + std::string(apParts[Part]);
+				m_pStorage->ListDirectory(IStorage::TYPE_ALL, Path.c_str(), ScanPart, this);
+			}
+			LoadAccessory("skins7/xmas_hat.png", 1, 4, m_XmasHat);
+			LoadAccessory("skins7/bot.png", 12, 5, m_Bot);
+			if(State() != STATE_ABORTED)
+			{
+				m_Succeeded = true;
+				return;
+			}
 		}
-		LoadAccessory("skins7/xmas_hat.png", 1, 4, m_XmasHat);
-		LoadAccessory("skins7/bot.png", 12, 5, m_Bot);
+		catch(...)
+		{
+			// 残缺扫描不发布；失败诊断也不能再次逃逸到作业池的异常路径。
+			DiscardResults();
+			try
+			{
+				log_error("skins7", "Failed to prepare skin scan; retry required");
+			}
+			catch(...)
+			{
+			}
+			return;
+		}
+		DiscardResults();
 	}
 
 private:
@@ -134,6 +159,16 @@ private:
 	int m_ScanPart = 0;
 	CImageInfo m_XmasHat;
 	CImageInfo m_Bot;
+	bool m_Succeeded = false;
+
+	void DiscardResults()
+	{
+		m_vEntries.clear();
+		m_vParts.clear();
+		m_XmasHat.Free();
+		m_Bot.Free();
+		m_Succeeded = false;
+	}
 
 	void LoadAccessory(const char *pPath, int Columns, int Rows, CImageInfo &Image)
 	{

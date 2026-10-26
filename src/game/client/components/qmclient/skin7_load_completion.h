@@ -30,6 +30,14 @@ public:
 
 	bool HasPending() const { return static_cast<bool>(m_Callback); }
 
+	std::function<void()> TakeForRetry() noexcept
+	{
+		++m_Generation;
+		std::function<void()> Callback;
+		Callback.swap(m_Callback);
+		return Callback;
+	}
+
 	template<typename TDiagnose>
 	bool Complete(bool &Loading, CQmSkin7ResourceLifecycle &Lifecycle, std::chrono::nanoseconds &LastRefresh,
 		std::chrono::nanoseconds Now, TDiagnose &&Diagnose) noexcept

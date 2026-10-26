@@ -194,7 +194,9 @@ TEST_F(CQmSkin7InfoJobTest, ExceptionAfterNativeAccessoryDecodeDoesNotPublishCan
 	ASSERT_TRUE(Pool.TryAdd(pJob));
 	ASSERT_TRUE(WaitForJobDone(*pJob));
 	auto Entries = pJob->TakeEntries();
-	EXPECT_NE(FindEntry(Entries, "good"), nullptr);
+	EXPECT_FALSE(pJob->Succeeded());
+	EXPECT_TRUE(Entries.empty());
+	EXPECT_TRUE(pJob->Parts().empty());
 	auto Hat = pJob->TakeXmasHat();
 	EXPECT_EQ(Hat.m_pData, nullptr);
 	EXPECT_EQ(Hat.m_Width, 0u);
@@ -209,9 +211,11 @@ TEST_F(CQmSkin7InfoJobTest, FreshNativeJobCanPublishAccessoryAfterEarlierDecodeE
 	auto pFailed = std::make_shared<CQmSkin7InfoJob>(m_pStorage.get(), DecodeThenThrow);
 	ASSERT_TRUE(Pool.TryAdd(pFailed));
 	ASSERT_TRUE(WaitForJobDone(*pFailed));
+	EXPECT_FALSE(pFailed->Succeeded());
 	auto pReady = std::make_shared<CQmSkin7InfoJob>(m_pStorage.get());
 	ASSERT_TRUE(Pool.TryAdd(pReady));
 	ASSERT_TRUE(WaitForJobDone(*pReady));
+	EXPECT_TRUE(pReady->Succeeded());
 	auto Hat = pReady->TakeXmasHat();
 	ASSERT_NE(Hat.m_pData, nullptr);
 	EXPECT_EQ(Hat.m_Width, 2u);

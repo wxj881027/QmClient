@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 #include <test/support/job_wait.h>
+#include <test/support/skin7_refresh_test_engine.h>
 #include <test/test.h>
 
 #include <algorithm>
@@ -11,39 +12,12 @@ namespace
 {
 	using TRequest = CQmSkin7RefreshRequest<CSkins7::CSkinPart>;
 
-	// 只替换引擎接收边界，候选部件、请求回调和真实扫描作业不替换。
-	class CRefreshEngine : public IEngine
-	{
-	public:
-		bool m_Accept = true;
-		bool m_Throw = false;
-		int m_Attempts = 0;
-		std::shared_ptr<IJob> m_pAccepted;
-		CJobPool *m_pPool = nullptr;
-		void Init() override {}
-		void AddJob(std::shared_ptr<IJob> pJob) override { (void)TryAddJob(std::move(pJob)); }
-		bool TryAddJob(std::shared_ptr<IJob> pJob) override
-		{
-			++m_Attempts;
-			if(m_Throw)
-				throw std::bad_alloc();
-			if(!m_Accept)
-				return false;
-			if(m_pPool && !m_pPool->TryAdd(pJob))
-				return false;
-			m_pAccepted = std::move(pJob);
-			return true;
-		}
-		void ShutdownJobs() override {}
-		void SetAdditionalLogger(std::shared_ptr<ILogger> &&) override {}
-	};
-
 	class CQmSkin7RefreshAdmissionTest : public ::testing::Test
 	{
 	protected:
 		CTestInfo m_Info;
 		std::unique_ptr<IStorage> m_pStorage;
-		CRefreshEngine m_Engine;
+		CSkin7RefreshTestEngine m_Engine;
 		TRequest m_Request;
 		int m_Callbacks = 0;
 
