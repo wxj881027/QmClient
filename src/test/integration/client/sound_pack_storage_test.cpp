@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
+#include <algorithm>
 #include <memory>
 #include <string>
 
@@ -60,6 +61,21 @@ TEST_F(CSoundPackStorage, BatchRetainsTheNameAfterItsSourceIsDestroyed)
 	char aPath[IO_MAX_PATH_LENGTH];
 	EXPECT_STREQ(pPack->Resolve("audio/hit.wv", m_pStorage.get(), aPath, sizeof(aPath)), "audio/first/hit.wv");
 	EXPECT_STREQ(pPack->Resolve("audio/jump.wv", m_pStorage.get(), aPath, sizeof(aPath)), "audio/first/jump.wv");
+}
+
+TEST_F(CSoundPackStorage, MaximumConfiguredNameIsRetainedWithoutTruncation)
+{
+	char aName[sizeof(CConfig::m_SndPack)];
+	std::fill_n(aName, sizeof(aName) - 1, 'x');
+	aName[sizeof(aName) - 1] = '\0';
+	const std::string Directory = std::string("audio/") + aName;
+	ASSERT_TRUE(m_pStorage->CreateFolder(Directory.c_str(), IStorage::TYPE_SAVE));
+	const std::string Filename = Directory + "/hit.wv";
+	Store(Filename.c_str());
+	const CSoundPack Pack(aName);
+	aName[0] = '\0';
+	char aPath[IO_MAX_PATH_LENGTH];
+	EXPECT_STREQ(Pack.Resolve("audio/hit.wv", m_pStorage.get(), aPath, sizeof(aPath)), Filename.c_str());
 }
 
 TEST_F(CSoundPackStorage, ShortOverrideLayoutHasPriorityOverLegacyLayout)
