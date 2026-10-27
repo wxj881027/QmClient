@@ -254,3 +254,51 @@ TEST(QmChatPrefix, RefreshPreservesPlayerAndMergedNames)
 		EXPECT_STREQ(aName, "Alice,Bob");
 	}
 }
+
+TEST(QmChatPresentation, ClientEchoExpiresRegardlessOfForceVisibilityAndAnimationSetting)
+{
+	for(bool ForceVisible : {false, true})
+	{
+		SCOPED_TRACE(ForceVisible);
+		for(bool ExtraAnimations : {false, true})
+		{
+			SCOPED_TRACE(ExtraAnimations);
+			CChat::SPresentationState Presentation;
+			const int64_t Start = TestTicks(60.0f);
+			CChat::BeginLinePresentation(Presentation, Start, false);
+			CChat::UpdateLinePresentation(Presentation, Start, Start + TestTicks(30.0f), 0.10f, false, ForceVisible, 0, 0.0f, ExtraAnimations, CChat::CLIENT_MSG);
+			EXPECT_EQ(Presentation.m_State, CChat::EPresentationState::COLLAPSED);
+			EXPECT_FLOAT_EQ(Presentation.m_RenderAlpha, 0.0f);
+			EXPECT_FLOAT_EQ(Presentation.m_LayoutVisibility, 0.0f);
+		}
+	}
+}
+
+TEST(QmChatPresentation, ForcedClientEchoUsesNormalExitAnimation)
+{
+	CChat::SPresentationState Presentation;
+	const int64_t Start = TestTicks(60.0f);
+	CChat::BeginLinePresentation(Presentation, Start, false);
+	CChat::UpdateLinePresentation(Presentation, Start, Start + TestTicks(14.1f), 0.10f, false, true, 0, 0.0f, true, CChat::CLIENT_MSG);
+	EXPECT_EQ(Presentation.m_State, CChat::EPresentationState::EXITING);
+	EXPECT_NEAR(Presentation.m_RenderAlpha, 0.5f, 0.001f);
+	EXPECT_FLOAT_EQ(Presentation.m_LayoutVisibility, 1.0f);
+}
+
+TEST(QmChatPresentation, ExpiredClientEchoReturnsInHistoryAndHidesWhenHistoryCloses)
+{
+	CChat::SPresentationState Presentation;
+	const int64_t Start = TestTicks(60.0f);
+	const int64_t OpenTick = Start + TestTicks(31.0f);
+	CChat::BeginLinePresentation(Presentation, Start, false);
+	CChat::UpdateLinePresentation(Presentation, Start, Start + TestTicks(30.0f), 0.10f, false, true, 0, 0.0f, true, CChat::CLIENT_MSG);
+	ASSERT_EQ(Presentation.m_State, CChat::EPresentationState::COLLAPSED);
+
+	CChat::UpdateLinePresentation(Presentation, Start, OpenTick + TestTicks(0.30f), 0.10f, true, true, OpenTick, 0.0f, true, CChat::CLIENT_MSG);
+	EXPECT_EQ(Presentation.m_State, CChat::EPresentationState::VISIBLE);
+	EXPECT_FLOAT_EQ(Presentation.m_RenderAlpha, 1.0f);
+
+	CChat::UpdateLinePresentation(Presentation, Start, OpenTick + TestTicks(0.31f), 0.01f, false, true, 0, 0.0f, true, CChat::CLIENT_MSG);
+	EXPECT_EQ(Presentation.m_State, CChat::EPresentationState::COLLAPSED);
+	EXPECT_FLOAT_EQ(Presentation.m_LayoutVisibility, 0.0f);
+}

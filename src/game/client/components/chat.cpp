@@ -759,7 +759,8 @@ void CChat::UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowL
 			Line.m_ForceVisible,
 			m_LargeAreaOpenTick,
 			RecallDelaySeconds,
-			ExtraAnimations);
+			ExtraAnimations,
+			Line.m_ClientId);
 
 		if(Line.m_ClientId == SERVER_MSG && QmMacosGraphicsDiagnosticsEnabled())
 		{
@@ -2551,7 +2552,7 @@ bool CChat::OnPrepareLines(float y)
 		{
 			continue;
 		}
-		if(!ShowLargeArea && !Line.m_ForceVisible && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
+		if(!ShowLargeArea && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
 		{
 			if(Line.m_ClientId == SERVER_MSG && QmMacosGraphicsDiagnosticsEnabled() && !Line.m_DiagnosticCollapsedSkipLogged)
 			{
@@ -3543,7 +3544,7 @@ void CChat::OnRender()
 		{
 			continue;
 		}
-		if(!ShowLargeArea && !Line.m_ForceVisible && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
+		if(!ShowLargeArea && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
 		{
 			continue;
 		}
@@ -4064,7 +4065,7 @@ bool CChat::TranslateVisibleChatLines()
 		const bool ServerMessageIsBasicInfo = Line.m_ServerMessageClass == QmHudNotifications::EServerMessageClass::BasicInfo;
 		if(!ShouldRenderFocusFilteredChatLine(FocusHideChat, FocusHideSystemInfoMessages, FocusHideSystemPromptMessages, FocusHideEcho, Line.m_ClientId, Line.m_ForceVisible, ServerMessageIsBasicInfo))
 			continue;
-		if(!ShowLargeArea && !Line.m_ForceVisible && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
+		if(!ShowLargeArea && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
 			continue;
 		if(!ShowLargeArea && Line.m_Presentation.m_LayoutVisibility <= 0.001f && Line.m_Presentation.m_RenderAlpha <= 0.001f)
 			continue;
