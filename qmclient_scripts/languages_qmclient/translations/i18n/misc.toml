@@ -15266,3 +15266,51 @@ brazilian_portuguese = "Ao cruzar a linha de largada, mostra um tee fantasma rep
 portuguese = "Ao cruzar a linha de partida, mostra um tee fantasma a replicar os movimentos do teu melhor tempo"
 turkish = "Başlangıç çizgisini geçtiğinde en iyi sürenizin hareketlerini yineleyen hayalet bir Tee gösterir"
 polish = "Po przekroczeniu linii startu pokazuje ducha tee odtwarzającego ruchy twojego najlepszego czasu"
+
+[[message]]
+key = "Public words match literal text in incoming player chat."
+[message.translations]
+simplified_chinese = "公共词库按字面匹配收到的玩家聊天。"
+traditional_chinese = "公共詞庫按字面比對收到的玩家聊天。"
+japanese = "共有NGワードは、受信したプレイヤーのチャットに文字列として照合されます。"
+korean = "공용 금칙어는 수신한 플레이어 채팅에서 일반 텍스트로 일치 여부를 확인합니다."
+russian = "Слова из общего списка ищутся как обычный текст во входящих сообщениях игроков."
+german = "Öffentliche Wörter werden als normaler Text im empfangenen Spielerchat gesucht."
+spanish = "La lista pública busca texto literal en los mensajes recibidos de los jugadores."
+french = "Les mots de la liste publique sont recherchés littéralement dans les messages reçus des joueurs."
+brazilian_portuguese = "As palavras públicas são buscadas como texto literal nas mensagens recebidas dos jogadores."
+portuguese = "As palavras públicas são procuradas como texto literal nas mensagens recebidas dos jogadores."
+turkish = "Ortak kelimeler, oyunculardan alınan sohbet mesajlarında düz metin olarak eşleştirilir."
+polish = "Słowa z publicznej listy są dopasowywane dosłownie do odebranych wiadomości graczy."
+
+[[message]]
+key = "Public words: %d"
+[message.translations]
+simplified_chinese = "公共词库：%d 个词条"
+traditional_chinese = "公共詞庫：%d 個詞條"
+japanese = "共有NGワード：%d 件"
+korean = "공용 금칙어: %d개"
+russian = "Слов в общем списке: %d"
+german = "Öffentliche Wörter: %d"
+spanish = "Palabras públicas: %d"
+french = "Mots de la liste publique : %d"
+brazilian_portuguese = "Palavras da lista pública: %d"
+portuguese = "Palavras da lista pública: %d"
+turkish = "Ortak kelimeler: %d"
+polish = "Słowa na publicznej liście: %d"
+
+[[message]]
+key = "Updating public word list..."
+[message.translations]
+simplified_chinese = "正在更新公共词库……"
+traditional_chinese = "正在更新公共詞庫..."
+japanese = "共有NGワードを更新中..."
+korean = "공용 금칙어 목록 업데이트 중..."
+russian = "Обновление общего списка слов..."
+german = "Öffentliche Wortliste wird aktualisiert..."
+spanish = "Actualizando la lista pública de palabras..."
+french = "Mise à jour de la liste de mots publique..."
+brazilian_portuguese = "Atualizando a lista pública de palavras..."
+portuguese = "A atualizar a lista pública de palavras..."
+turkish = "Ortak kelime listesi güncelleniyor..."
+polish = "Aktualizowanie publicznej listy słów..."

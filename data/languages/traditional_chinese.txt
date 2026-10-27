@@ -2090,6 +2090,9 @@ Cannot remove the wiki file
 Cannot swap: the other player is not in your team
 == 無法交換：對方不在你的隊伍中
 
+Cannot update public words. Previous words remain active.
+== 無法更新公共詞庫，繼續使用原有詞條。
+
 Cannot write the wiki file
 == 無法寫入 Wiki 檔案
 
@@ -7274,6 +7277,9 @@ Invalid option
 Invalid or duplicate configuration path.
 == 配置路徑無效或重複。
 
+Invalid public word list response. Previous words remain active.
+== 公共詞庫回應無效，繼續使用原有詞條。
+
 Invalid quoted word. Use one word per line.
 == 帶引號的詞條格式錯誤，請每行填寫一個詞。
 
@@ -10903,6 +10909,12 @@ Protect names and skins while streaming
 
 PTT release delay (ms)
 == PTT 釋放延遲（毫秒）
+
+Public words match literal text in incoming player chat.
+== 公共詞庫按字面比對收到的玩家聊天。
+
+Public words: %d
+== 公共詞庫：%d 個詞條
 
 Publicly messages everyone your current time in this current running race
 == 公開發送你當前競速時間給所有人
@@ -16562,6 +16574,9 @@ Update ready to install
 Update sources are temporarily unavailable
 == 更新來源暫時無法使用
 
+Updating public word list...
+== 正在更新公共詞庫...
+
 Upload .map files. Server and admin passwords: s.
 == 上傳 .map 檔案；伺服器密碼和管理密碼均為 s。
 
@@ -16723,6 +16738,9 @@ Use pre-input to predict other players for more accurate input prediction
 
 Use procedural ring pipeline
 == 使用程序化圓環管線
+
+Use public word filter
+== 使用公共屏蔽詞
 
 Use server defaults
 == 使用服務預設值

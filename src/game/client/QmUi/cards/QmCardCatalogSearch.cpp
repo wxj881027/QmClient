@@ -166,6 +166,8 @@ namespace qm_card_catalog
 			{Localizable("Show blocked words in console"), nullptr, "在控制台中显示被屏蔽的词语"},
 			{Localizable("Use multi-char replacement based on word length"), nullptr, "根据词语长度使用多字符替换"},
 			{Localizable("Word Filter"), nullptr, "屏蔽词"},
+			{Localizable("Use public word filter"), nullptr, "公共屏蔽词 公共词库"},
+			{nullptr, "qm_public_block_words", nullptr},
 			{nullptr, "qm_block_words_action", nullptr},
 			{nullptr, "qm_block_words_console_color", nullptr},
 			{nullptr, "qm_block_words_enabled", nullptr},

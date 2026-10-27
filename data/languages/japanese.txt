@@ -2090,6 +2090,9 @@ Cannot remove the wiki file
 Cannot swap: the other player is not in your team
 == 交換できません：相手があなたのチームにいません
 
+Cannot update public words. Previous words remain active.
+== 共有NGワードを更新できません。以前の単語を引き続き使用します。
+
 Cannot write the wiki file
 == Wiki ファイルを書き込めません
 
@@ -7274,6 +7277,9 @@ Invalid option
 Invalid or duplicate configuration path.
 == 設定ファイルのパスが無効または重複しています。
 
+Invalid public word list response. Previous words remain active.
+== 共有NGワードの応答が無効です。以前の単語を引き続き使用します。
+
 Invalid quoted word. Use one word per line.
 == 引用符付き単語の形式が無効です。1 行に 1 語を記入してください。
 
@@ -10903,6 +10909,12 @@ Protect names and skins while streaming
 
 PTT release delay (ms)
 == PTT 解放遅延（ミリ秒）
+
+Public words match literal text in incoming player chat.
+== 共有NGワードは、受信したプレイヤーのチャットに文字列として照合されます。
+
+Public words: %d
+== 共有NGワード：%d 件
 
 Publicly messages everyone your current time in this current running race
 == 現在のレース中の自分のタイムを全員に公開メッセージで送信
@@ -16562,6 +16574,9 @@ Update ready to install
 Update sources are temporarily unavailable
 == 更新元は一時的に利用できません
 
+Updating public word list...
+== 共有NGワードを更新中...
+
 Upload .map files. Server and admin passwords: s.
 == .map ファイルをアップロードします。サーバーと管理者のパスワードは s です。
 
@@ -16723,6 +16738,9 @@ Use pre-input to predict other players for more accurate input prediction
 
 Use procedural ring pipeline
 == 手続き的リングパイプラインを使用
+
+Use public word filter
+== 共有NGワードを使用
 
 Use server defaults
 == サーバーの既定値を使用
