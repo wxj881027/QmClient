@@ -6,7 +6,7 @@
 
 TEST(QmBadgeGeometry, EveryMeshContainsFiniteGeometryWithinItsDesignBounds)
 {
-	for(const auto Kind : {EQmBadgeGeometry::DEVELOPER, EQmBadgeGeometry::LOGO, EQmBadgeGeometry::MOON_LEFT, EQmBadgeGeometry::MOON_MIDDLE, EQmBadgeGeometry::MOON_RIGHT, EQmBadgeGeometry::SUN_LEFT, EQmBadgeGeometry::SUN_MIDDLE, EQmBadgeGeometry::SUN_RIGHT})
+	for(const auto Kind : {EQmBadgeGeometry::DEVELOPER, EQmBadgeGeometry::LOGO, EQmBadgeGeometry::MOON_LEFT, EQmBadgeGeometry::MOON_MIDDLE, EQmBadgeGeometry::MOON_RIGHT, EQmBadgeGeometry::SUN_LEFT, EQmBadgeGeometry::SUN_MIDDLE, EQmBadgeGeometry::SUN_RIGHT, EQmBadgeGeometry::DEVELOPER_LETTERING})
 	{
 		SCOPED_TRACE(static_cast<int>(Kind));
 		const auto Mesh = QmBadgeGeometryMesh(Kind);

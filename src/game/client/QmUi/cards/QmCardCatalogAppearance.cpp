@@ -373,6 +373,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				DoSettingsToggleGroup(SETTINGS_APPEARANCE, APPEARANCE_TAB_CHAT, APPEARANCE_TAB_CHAT, LeftView,
 					{
 						{&g_Config.m_ClChatTeamColors, "appearance-chat-team-colors", Localize("Show names in chat in team colors")},
+						{&g_Config.m_QmChatSponsorBadges, "appearance-chat-sponsor-badges", Localize("Show sponsor badges in chat")},
 						{&g_Config.m_ClShowChatFriends, "appearance-chat-friends-only", Localize("Show only chat messages from friends")},
 						{&g_Config.m_ClShowChatTeamMembersOnly, "appearance-chat-team-members-only", Localize("Show only chat messages from team members")},
 						{&g_Config.m_QmChatRelatedOnly, "appearance-chat-related-only", Localize("Only show messages related to me")},

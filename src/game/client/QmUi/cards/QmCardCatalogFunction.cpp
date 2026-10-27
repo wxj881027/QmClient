@@ -32,6 +32,19 @@ void CMenus::RenderQmFunctionBlockWordsContent(CUIRect &Content, float UiScale, 
 	static CButtonContainer s_BlockWordsConsoleColorId;
 	if(Flow.Control("console-color", ResolveSettingsColorRowLayout(Content, CurrentSettingsContentMetrics(), false).m_ConsumedHeight, Row))
 		DoLine_ColorPicker(&s_BlockWordsConsoleColorId, CurrentSettingsContentMetrics(), &Row, Localize("Console color"), &g_Config.m_QmBlockWordsConsoleColor, ui_token::color::NEUTRAL_WHITE, false);
+	RenderCheckbox(&g_Config.m_QmPublicBlockWords, Localizable("Use public word filter"), &g_Config.m_QmPublicBlockWords);
+	if(g_Config.m_QmPublicBlockWords)
+	{
+		const auto &PublicWords = GameClient()->m_Chat.PublicWordFilter();
+		char aCount[128];
+		str_format(aCount, sizeof(aCount), Localize("Public words: %d"), static_cast<int>(PublicWords.Words().size()));
+		const char *pStatus = PublicWords.Refreshing() ? Localize("Updating public word list...") :
+			!PublicWords.Error().empty() ? Localize(PublicWords.Error().c_str()) : Localize("Public words match literal text in incoming player chat.");
+		auto Measure = [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H; };
+		auto Render = [this, BodySize](const CUIRect &Rect, const char *pText) { Ui()->DoLabel(&Rect, pText, BodySize, TEXTALIGN_ML, {.m_MaxWidth = Rect.w}); };
+		Flow.Text("public-word-filter-count", aCount, 0.0f, BodySize, LineSpacing, Measure, Render, LineHeight);
+		Flow.Text("public-word-filter-status", pStatus, 0.0f, BodySize, LineSpacing, Measure, Render, LineHeight);
+	}
 	RenderCheckbox(&g_Config.m_QmBlockWordsEnabled, Localizable("Enable word filter list"), &g_Config.m_QmBlockWordsEnabled);
 
 	const int BlockWordsAction = g_Config.m_QmBlockWordsAction;

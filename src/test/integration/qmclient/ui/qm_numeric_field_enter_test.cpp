@@ -132,6 +132,15 @@ namespace
 			m_Ui.Update();
 		}
 
+		void PressKey(int Key)
+		{
+			m_Input.m_RawPressedKey = Key;
+			IInput::CEvent Event{};
+			Event.m_Key = Key;
+			Event.m_Flags = IInput::FLAG_PRESS;
+			m_Ui.OnInput(Event);
+		}
+
 		ui_widget::SNumericFieldOptions Options()
 		{
 			ui_widget::SNumericFieldOptions Opt;
@@ -167,7 +176,7 @@ namespace
 		ASSERT_TRUE(m_State.m_Input.IsActive()) << "点击数值框未进入编辑态（测试前置失效）";
 
 		// 编辑态按 Enter：必须失焦（修复目标：此前停在选中态）。
-		m_Input.m_RawPressedKey = KEY_RETURN;
+		PressKey(KEY_RETURN);
 		BeginFrame();
 		ui_widget::NumericField(ui_widget::ControlContext(&m_Ui), &m_State, &m_Id, &m_Value, 2, 100, m_Rect, Options());
 		m_Input.m_RawPressedKey = 0;
@@ -189,7 +198,7 @@ namespace
 		ASSERT_TRUE(m_State.m_Input.IsActive());
 
 		m_Input.m_Composing = true;
-		m_Input.m_RawPressedKey = KEY_RETURN;
+		PressKey(KEY_RETURN);
 		BeginFrame();
 		ui_widget::NumericField(ui_widget::ControlContext(&m_Ui), &m_State, &m_Id, &m_Value, 2, 100, m_Rect, Options());
 		m_Input.m_RawPressedKey = 0;
@@ -205,7 +214,7 @@ namespace
 		ClickInputField();
 		ASSERT_TRUE(m_State.m_Input.IsActive());
 
-		m_Input.m_RawPressedKey = KEY_KP_ENTER;
+		PressKey(KEY_KP_ENTER);
 		BeginFrame();
 		ui_widget::NumericField(ui_widget::ControlContext(&m_Ui), &m_State, &m_Id, &m_Value, 2, 100, m_Rect, Options());
 		m_Input.m_RawPressedKey = 0;

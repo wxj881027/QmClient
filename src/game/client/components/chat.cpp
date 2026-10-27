@@ -759,7 +759,8 @@ void CChat::UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowL
 			Line.m_ForceVisible,
 			m_LargeAreaOpenTick,
 			RecallDelaySeconds,
-			ExtraAnimations);
+			ExtraAnimations,
+			Line.m_ClientId);
 
 		if(Line.m_ClientId == SERVER_MSG && QmMacosGraphicsDiagnosticsEnabled())
 		{
@@ -793,6 +794,7 @@ void CChat::OnWindowResize()
 
 void CChat::OnShutdown()
 {
+	m_PublicWords.Shutdown();
 	for(auto &Line : m_aLines)
 		Line.DeleteTextContainers(TextRender());
 }
@@ -1065,6 +1067,7 @@ void CChat::OnConsoleInit()
 void CChat::OnInit()
 {
 	Reset();
+	m_PublicWords.Initialize(Storage(), g_Config.m_QmPublicBlockWords != 0);
 	ReloadWordFilterFile(false);
 	ReloadWordFilterFile(true);
 	Console()->Chain("cl_chat_old", ConchainChatOld, this);
@@ -2129,12 +2132,16 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 	const bool CanHideBlockWordsMessage = ShouldHideBlockWordsMessage(BlockWordsAction, true, ClientId, IsLocalBlockWordsClient, Team);
 	ReloadWordFilterFile(false, false);
 	ReloadWordFilterFile(true, false);
-	if(g_Config.m_QmBlockWordsEnabled && (g_Config.m_QmBlockWordsList[0] != '\0' || !m_BlockWordsFile.Words().empty()) &&
+	const bool UsePublicWords = g_Config.m_QmPublicBlockWords && !m_PublicWords.State().Words().empty() &&
+		QmPublicWordFilter::IsIncomingPlayerChat(ClientId, IsLocalBlockWordsClient, Team == TEAM_WHISPER_SEND, Client()->State() == IClient::STATE_DEMOPLAYBACK);
+	if((UsePublicWords || (g_Config.m_QmBlockWordsEnabled && (g_Config.m_QmBlockWordsList[0] != '\0' || !m_BlockWordsFile.Words().empty()))) &&
 		(BlockWordsAction == EBlockWordsAction::REPLACE || CanHideBlockWordsMessage))
 	{
 		std::string Text = pLine;
 		std::vector<std::string> *pMatched = g_Config.m_QmBlockWordsShowConsole ? &BlockedWords : nullptr;
-		if(ApplyBlockWords(Text, pMatched, m_BlockWordsFile))
+		bool Matched = UsePublicWords && m_PublicWords.State().Filter(Text, g_Config.m_QmBlockWordsReplacementChar, g_Config.m_QmBlockWordsMultiReplace != 0, pMatched);
+		Matched |= ApplyBlockWords(Text, pMatched, m_BlockWordsFile);
+		if(Matched)
 		{
 			FlushPendingConsoleLine(true);
 			if(g_Config.m_QmBlockWordsShowConsole && !BlockedWords.empty())
@@ -2486,7 +2493,7 @@ bool CChat::OnPrepareLines(float y)
 
 	const bool IsScoreBoardOpen = GameClient()->m_Scoreboard.IsActive();
 	const bool ShowLargeArea = m_Show || (m_Mode != MODE_NONE && g_Config.m_ClShowChat == 1) || g_Config.m_ClShowChat == 2;
-	const std::array<int, 4> aTitleVisibility = {g_Config.m_QmShowMainTitle, g_Config.m_QmShowDummyTitle,
+	const std::array<int, 5> aTitleVisibility = {g_Config.m_QmShowMainTitle, g_Config.m_QmShowDummyTitle, g_Config.m_QmChatSponsorBadges,
 		GameClient()->m_aLocalIds[IClient::CONN_MAIN], GameClient()->m_aLocalIds[IClient::CONN_DUMMY]};
 	const bool ForceRecreate = IsScoreBoardOpen != m_PrevScoreBoardShowed || ShowLargeArea != m_PrevShowChat;
 	m_PrevScoreBoardShowed = IsScoreBoardOpen;
@@ -2504,7 +2511,7 @@ bool CChat::OnPrepareLines(float y)
 	const bool DeveloperBadgeAvailable = GameClient()->m_QmClient.DeveloperBadge().Available();
 	// 保留消息原始头衔，重新开启本地显示后可以恢复历史消息。
 	const auto VisibleTitle = [this](const char *pTitle, int ClientId) {
-		return GameClient()->m_QmClient.ShouldShowPlayerTitle(ClientId) ? pTitle : "";
+		return g_Config.m_QmChatSponsorBadges && GameClient()->m_QmClient.ShouldShowPlayerTitle(ClientId) ? pTitle : "";
 	};
 
 	const int TeeSize = MessageTeeSize();
@@ -2545,7 +2552,7 @@ bool CChat::OnPrepareLines(float y)
 		{
 			continue;
 		}
-		if(!ShowLargeArea && !Line.m_ForceVisible && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
+		if(!ShowLargeArea && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
 		{
 			if(Line.m_ClientId == SERVER_MSG && QmMacosGraphicsDiagnosticsEnabled() && !Line.m_DiagnosticCollapsedSkipLogged)
 			{
@@ -3104,6 +3111,7 @@ bool CChat::OnPrepareLines(float y)
 
 void CChat::OnRender()
 {
+	m_PublicWords.Update(Http(), Storage(), g_Config.m_QmPublicBlockWords != 0, time_get() / time_freq());
 	m_TranslateButton.m_RectValid = false;
 	ReloadWordFilterFile(false, false);
 	ReloadWordFilterFile(true, false);
@@ -3536,7 +3544,7 @@ void CChat::OnRender()
 		{
 			continue;
 		}
-		if(!ShowLargeArea && !Line.m_ForceVisible && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
+		if(!ShowLargeArea && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
 		{
 			continue;
 		}
@@ -4057,7 +4065,7 @@ bool CChat::TranslateVisibleChatLines()
 		const bool ServerMessageIsBasicInfo = Line.m_ServerMessageClass == QmHudNotifications::EServerMessageClass::BasicInfo;
 		if(!ShouldRenderFocusFilteredChatLine(FocusHideChat, FocusHideSystemInfoMessages, FocusHideSystemPromptMessages, FocusHideEcho, Line.m_ClientId, Line.m_ForceVisible, ServerMessageIsBasicInfo))
 			continue;
-		if(!ShowLargeArea && !Line.m_ForceVisible && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
+		if(!ShowLargeArea && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
 			continue;
 		if(!ShowLargeArea && Line.m_Presentation.m_LayoutVisibility <= 0.001f && Line.m_Presentation.m_RenderAlpha <= 0.001f)
 			continue;

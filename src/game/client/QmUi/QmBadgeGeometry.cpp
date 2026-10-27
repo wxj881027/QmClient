@@ -18,6 +18,7 @@ SQmBadgeGeometryMesh QmBadgeGeometryMesh(EQmBadgeGeometry Kind)
 	case EQmBadgeGeometry::SUN_LEFT: return {g_aQmBadgeSunLeft, std::size(g_aQmBadgeSunLeft), {40, 24}};
 	case EQmBadgeGeometry::SUN_MIDDLE: return {g_aQmBadgeSunMiddle, std::size(g_aQmBadgeSunMiddle), {45, 24}};
 	case EQmBadgeGeometry::SUN_RIGHT: return {g_aQmBadgeSunRight, std::size(g_aQmBadgeSunRight), {32, 24}};
+	case EQmBadgeGeometry::DEVELOPER_LETTERING: return {g_aQmBadgeDeveloperLettering, std::size(g_aQmBadgeDeveloperLettering), {91, 24}};
 	}
 	return {};
 }

@@ -9,6 +9,8 @@
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
+#include <array>
+#include <cstdint>
 
 class CQmTitleBadge;
 
@@ -63,9 +65,13 @@ inline CUIRect QmLayoutDeveloperBadge(CTextCursor &Cursor)
 class CQmDeveloperBadge
 {
 	CQmBadgeGeometry m_Surface{EQmBadgeGeometry::DEVELOPER};
+	CQmBadgeGeometry m_Lettering{EQmBadgeGeometry::DEVELOPER_LETTERING};
+	std::array<IGraphics::CTextureHandle, 2> m_aLetteringDistance;
+	uint32_t m_LetteringGraphicsVersion = 0;
 	const CQmTitleBadge *m_pTitleBadge = nullptr;
 	mutable double m_MotionTime = -1.0;
 	mutable SQmDeveloperBadgeMotion m_Motion{};
+	bool RenderDistanceLettering(IGraphics *pGraphics, const CUIRect &Rect, float Alpha) const;
 
 public:
 	void Init(IGraphics *pGraphics, const CQmTitleBadge &TitleBadge);

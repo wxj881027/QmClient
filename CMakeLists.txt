@@ -3546,6 +3546,8 @@ if(CLIENT)
     components/qmclient/console_text.h
     components/qmclient/streamer_word_filter.cpp
     components/qmclient/streamer_word_filter.h
+    components/qmclient/public_word_filter.cpp
+    components/qmclient/public_word_filter.h
     components/qmclient/word_filter_list.cpp
     components/qmclient/word_filter_list.h
     components/qmclient/data_version.h
@@ -4899,7 +4901,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_console_text_test.cpp
     src/test/unit/qmclient/client/qm_console_wheel_test.cpp
     src/test/unit/qmclient/client/qm_streamer_word_filter_test.cpp
+    src/test/unit/qmclient/client/qm_public_word_filter_test.cpp
     src/test/unit/qmclient/client/qm_word_filter_list_test.cpp
+    src/test/integration/qmclient/client/qm_public_word_filter_cache_test.cpp
     src/test/integration/qmclient/client/qm_word_filter_persistence_test.cpp
     src/test/integration/qmclient/client/qm_console_text_pipeline_test.cpp
     src/test/unit/qmclient/client/qm_red_packet_auto_claim_test.cpp
@@ -5302,6 +5306,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/tclient/swap_countdown_message.cpp
     src/game/client/components/tclient/qm_tee_trail.cpp
     src/game/client/components/qmclient/tee_trail_styles.cpp
+    src/game/client/components/qmclient/qm_developer_badge.cpp
     src/game/client/components/qmclient/qm_title_badge.cpp
     src/game/client/components/qmclient/screenshot_clipboard.cpp
     src/game/client/components/qmclient/screenshot_image_job.cpp
@@ -5356,6 +5361,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/axiom_scores_data.cpp
     src/game/client/components/qmclient/friend_last_seen_data.cpp
     src/game/client/components/qmclient/streamer_word_filter.cpp
+    src/game/client/components/qmclient/public_word_filter.cpp
     src/game/client/components/qmclient/word_filter_list.cpp
     src/test/support/ui_test_stubs.cpp
     src/game/client/components/qmclient/monitoring/monitoring_device_perf.cpp
@@ -5621,6 +5627,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_dropdown_popup_wheel_test.cpp
       src/test/integration/qmclient/ui/qm_discrete_slider_spring_test.cpp
       src/test/integration/qmclient/ui/qm_numeric_field_enter_test.cpp
+      src/test/integration/qmclient/ui/qm_ime_menu_input_test.cpp
       src/test/integration/qmclient/ui/qm_font_combobox_test.cpp
       src/test/integration/qmclient/ui/qm_color_picker_text_input_test.cpp
       src/test/integration/qmclient/client/qm_font_loading_test.cpp

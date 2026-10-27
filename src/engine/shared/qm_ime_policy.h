@@ -70,6 +70,18 @@ inline bool QmImePopupShouldBeVisible(int CandidateCount)
 	return CandidateCount > 0;
 }
 
+// 部分 IME 在翻页或选词时短暂清空组合串，仍有效的候选也属于组合输入。
+inline bool QmImeCompositionIsActive(bool HasCompositionText, int CandidateCount)
+{
+	return HasCompositionText || CandidateCount > 0;
+}
+
+// 组合输入期间键盘由 IME 处理，鼠标仍须能切换输入框、清除组合或操作页面。
+inline bool QmImeShouldSuppressPress(int Key, bool CompositionActive)
+{
+	return CompositionActive && !(Key >= KEY_MOUSE_1 && Key <= KEY_MOUSE_WHEEL_RIGHT);
+}
+
 // 空 TEXTEDITING 不应清空候选：搜狗等 IME 在页边界/高亮时会短暂发空串
 inline bool QmImeEmptyTextEditingShouldClearCandidates()
 {

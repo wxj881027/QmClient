@@ -1,9 +1,11 @@
+#include <game/client/components/qmclient/qm_developer_badge.h>
 #include <game/client/components/qmclient/qm_title_badge.h>
 
 #include <gtest/gtest.h>
 #include <test/support/icon_benchmark_graphics.h>
 
 #include <cstdlib>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -255,4 +257,169 @@ TEST_F(CQmTitleBadgeRender, ReinitializationAndRepeatedShutdownReleaseEachTextur
 	EXPECT_TRUE(m_Graphics.m_Containers.empty());
 	for(size_t i = 0; i < m_Graphics.m_vUnloaded.size(); ++i)
 		EXPECT_EQ(m_Graphics.m_vUnloaded[i], m_Graphics.m_vTextures[i].m_Id);
+}
+
+namespace
+{
+	class CQmDeveloperBadgeRender : public testing::Test
+	{
+	protected:
+		CTitleBadgeGraphics m_Graphics;
+		CQmTitleBadge m_Title;
+		CQmDeveloperBadge m_Badge;
+		const CUIRect m_Rect{10, 20, 91, 24};
+		int m_CircuitContainer = -1;
+		int m_LetteringContainer = -1;
+		int m_LogoTexture = -1;
+
+		void Init()
+		{
+			m_Title.Init(&m_Graphics);
+			m_LogoTexture = m_Graphics.m_vTextures.back().m_Id;
+			const auto FirstContainer = m_Graphics.m_vCreatedContainers.size();
+			m_Badge.Init(&m_Graphics, m_Title);
+			m_CircuitContainer = m_Graphics.m_vCreatedContainers[FirstContainer];
+			m_LetteringContainer = m_Graphics.m_vCreatedContainers.back();
+		}
+		void Render(float Alpha = 1.0f)
+		{
+			// 本组只验证静态字形提交，光点轨迹由独立的运动测试负责。
+			m_Badge.Render(&m_Graphics, m_Rect, Alpha, std::numeric_limits<double>::quiet_NaN());
+		}
+		void TearDown() override
+		{
+			m_Badge.Shutdown(&m_Graphics);
+			m_Title.Shutdown(&m_Graphics);
+		}
+	};
+}
+
+TEST_F(CQmDeveloperBadgeRender, WordmarkAndCodeUseSeparateDistanceTexturesWithoutColorMipmaps)
+{
+	Init();
+	ASSERT_EQ(m_Graphics.m_vTextures.size(), 3u);
+	EXPECT_EQ(m_Graphics.m_vTextures[1].m_Path, "qmclient/title_badges/developer_wordmark_sdf.png");
+	EXPECT_EQ(m_Graphics.m_vTextures[2].m_Path, "qmclient/title_badges/developer_code_sdf.png");
+	for(size_t i = 1; i < m_Graphics.m_vTextures.size(); ++i)
+		EXPECT_NE(m_Graphics.m_vTextures[i].m_Flags & IGraphics::TEXLOAD_NO_MIPMAPS, 0);
+	Render(0.4f);
+	ASSERT_EQ(m_Graphics.m_vDistanceDraws.size(), 3u);
+	const auto &Wordmark = m_Graphics.m_vDistanceDraws[0];
+	const auto &Code = m_Graphics.m_vDistanceDraws[1];
+	EXPECT_EQ(Wordmark.m_Texture, m_Graphics.m_vTextures[1].m_Id);
+	EXPECT_EQ(Code.m_Texture, m_Graphics.m_vTextures[2].m_Id);
+	const ColorRGBA WordmarkColor(0xd8fff5);
+	const ColorRGBA CodeColor(0x8bdfcf);
+	EXPECT_EQ(Wordmark.m_Params.m_FillColor, vec4(WordmarkColor.r, WordmarkColor.g, WordmarkColor.b, 0.4f));
+	EXPECT_EQ(Code.m_Params.m_FillColor, vec4(CodeColor.r, CodeColor.g, CodeColor.b, 0.55f * 0.4f));
+	// 正常管线只绘制电路线网格，文字回退网格不能与距离场叠加。
+	ASSERT_EQ(m_Graphics.m_vGeometryDraws.size(), 1u);
+	EXPECT_EQ(m_Graphics.m_vGeometryDraws[0].m_Container, m_CircuitContainer);
+}
+
+TEST_F(CQmDeveloperBadgeRender, FieldsKeepTheOriginalDesignCoordinates)
+{
+	Init();
+	Render();
+	ASSERT_EQ(m_Graphics.m_vDistanceDraws.size(), 3u);
+	const auto &Wordmark = m_Graphics.m_vDistanceDraws[0].m_Params;
+	const auto &Code = m_Graphics.m_vDistanceDraws[1].m_Params;
+	EXPECT_EQ(Wordmark.m_Rect, vec4(44, 16, 32, 32));
+	EXPECT_EQ(Code.m_Rect, vec4(75, 22, 20, 20));
+	EXPECT_FLOAT_EQ(Wordmark.m_TextureParams0.y * Wordmark.m_Rect.z, 1.0f);
+	EXPECT_FLOAT_EQ(Wordmark.m_TextureParams0.z * Wordmark.m_Rect.w, 1.0f);
+	EXPECT_FLOAT_EQ(Wordmark.m_TextureParams1.z, 4.0f / 32.0f);
+	EXPECT_FLOAT_EQ(Code.m_TextureParams1.z, 4.0f / 20.0f);
+}
+
+TEST_F(CQmDeveloperBadgeRender, CameraZoomReusesBothFieldsWithoutUploadsOrContainerRebuilds)
+{
+	Init();
+	const auto Uploads = m_Graphics.m_Uploads;
+	const auto Containers = m_Graphics.m_vCreatedContainers.size();
+	for(const float Zoom : {0.375f, 0.75f, 1.0f, 4.0f, 0.375f})
+	{
+		m_Graphics.m_Zoom = Zoom;
+		m_Graphics.m_vDistanceDraws.clear();
+		Render();
+		ASSERT_EQ(m_Graphics.m_vDistanceDraws.size(), 3u);
+		EXPECT_FLOAT_EQ(m_Graphics.m_vDistanceDraws[0].m_Params.m_Params.y, 1.0f / Zoom);
+		EXPECT_FLOAT_EQ(m_Graphics.m_vDistanceDraws[1].m_Params.m_Params.y, 1.0f / Zoom);
+		EXPECT_EQ(m_Graphics.m_Uploads, Uploads);
+		EXPECT_EQ(m_Graphics.m_vTextures.size(), 3u);
+		EXPECT_EQ(m_Graphics.m_vCreatedContainers.size(), Containers);
+	}
+}
+
+TEST_F(CQmDeveloperBadgeRender, MissingEitherFieldFallsBackToTheCompleteLettering)
+{
+	for(const char *pMissing : {"qmclient/title_badges/developer_wordmark_sdf.png", "qmclient/title_badges/developer_code_sdf.png"})
+	{
+		SCOPED_TRACE(pMissing);
+		m_Graphics.m_MissingPath = pMissing;
+		Init();
+		m_Graphics.m_vDistanceDraws.clear();
+		m_Graphics.m_vGeometryDraws.clear();
+		Render();
+		// 仅剩共享兔子使用距离场，Dev 和代码符号整体回退。
+		ASSERT_EQ(m_Graphics.m_vDistanceDraws.size(), 1u);
+		EXPECT_EQ(m_Graphics.m_vDistanceDraws[0].m_Texture, m_LogoTexture);
+		ASSERT_EQ(m_Graphics.m_vGeometryDraws.size(), 3u);
+		EXPECT_EQ(m_Graphics.m_vGeometryDraws[1].m_Container, m_LetteringContainer);
+		EXPECT_EQ(m_Graphics.m_vGeometryDraws[2].m_Container, m_LetteringContainer);
+	}
+}
+
+TEST_F(CQmDeveloperBadgeRender, UnsupportedTexturePipelineKeepsBothOriginalGlyphLayers)
+{
+	Init();
+	for(const bool HasSdf : {false, true})
+	{
+		m_Graphics.m_HasSdf = HasSdf;
+		m_Graphics.m_HasSdfTexture = false;
+		m_Graphics.m_vGeometryDraws.clear();
+		Render();
+		EXPECT_TRUE(m_Graphics.m_vDistanceDraws.empty());
+		ASSERT_EQ(m_Graphics.m_vGeometryDraws.size(), 4u);
+		EXPECT_EQ(m_Graphics.m_vGeometryDraws[1].m_Container, m_LetteringContainer);
+		EXPECT_EQ(m_Graphics.m_vGeometryDraws[2].m_Container, m_LetteringContainer);
+	}
+}
+
+TEST_F(CQmDeveloperBadgeRender, DeviceResetUsesGeometryUntilLetteringIsInitializedAgain)
+{
+	Init();
+	m_Graphics.m_Containers.clear();
+	++m_Graphics.m_ResetVersion;
+	Render();
+	EXPECT_TRUE(m_Graphics.m_vDistanceDraws.empty());
+	EXPECT_EQ(m_Graphics.m_vGeometryDraws.size(), 4u);
+	Init();
+	m_Graphics.m_vDistanceDraws.clear();
+	Render();
+	EXPECT_EQ(m_Graphics.m_vDistanceDraws.size(), 3u);
+}
+
+TEST_F(CQmDeveloperBadgeRender, ReinitializationAndRepeatedShutdownReleaseBothFieldsOnce)
+{
+	Init();
+	m_Badge.Init(&m_Graphics, m_Title);
+	EXPECT_EQ(m_Graphics.m_vUnloaded.size(), 2u);
+	m_Badge.Shutdown(&m_Graphics);
+	EXPECT_EQ(m_Graphics.m_vUnloaded.size(), 4u);
+	m_Badge.Shutdown(&m_Graphics);
+	EXPECT_EQ(m_Graphics.m_vUnloaded.size(), 4u);
+	EXPECT_FALSE(m_Badge.Available());
+	m_Graphics.m_vDistanceDraws.clear();
+	Render();
+	EXPECT_TRUE(m_Graphics.m_vDistanceDraws.empty());
+}
+
+TEST_F(CQmDeveloperBadgeRender, InvisibleOrEmptyBadgesDoNotSubmitTheLettering)
+{
+	Init();
+	Render(0.0f);
+	m_Badge.Render(&m_Graphics, {0, 0, 0, 24}, 1.0f, 0.0);
+	EXPECT_TRUE(m_Graphics.m_vDistanceDraws.empty());
+	EXPECT_TRUE(m_Graphics.m_vGeometryDraws.empty());
 }

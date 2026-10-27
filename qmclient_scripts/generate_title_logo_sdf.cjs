@@ -65,12 +65,9 @@ function signedDistances(mask, width, height) {
     return Float32Array.from(mask, (value, i) => value ? Math.sqrt(outside[i]) - 0.5 : 0.5 - Math.sqrt(inside[i]));
 }
 
-async function main() {
+// 所有徽章距离场共用编码方式；SVG 的 viewBox 必须是 extent × extent 的正方形。
+async function generateDistanceField(svg, extent) {
     const sharp = require('sharp');
-    const directory = path.resolve(__dirname, '../data/qmclient/title_badges');
-    const source = await fs.readFile(path.join(directory, 'logo.svg'), 'utf8');
-    const extent = SOURCE_SIZE + 2 * PADDING;
-    const svg = source.replace(/<svg\b[^>]*>/, `<svg xmlns="http://www.w3.org/2000/svg" width="${RASTER_SIZE}" height="${RASTER_SIZE}" viewBox="${-PADDING} ${-PADDING} ${extent} ${extent}" fill="none">`);
     const { data, info } = await sharp(Buffer.from(svg)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     if (info.width !== RASTER_SIZE || info.height !== RASTER_SIZE || info.channels !== 4)
         throw new Error('SVG 光栅化结果尺寸或格式错误');
@@ -93,12 +90,20 @@ async function main() {
             pixels[offset + 3] = 255;
         }
     }
+    return sharp(pixels, { raw: { width: FIELD_SIZE, height: FIELD_SIZE, channels: 4 } }).png().toBuffer();
+}
+
+async function main() {
+    const directory = path.resolve(__dirname, '../data/qmclient/title_badges');
+    const source = await fs.readFile(path.join(directory, 'logo.svg'), 'utf8');
+    const extent = SOURCE_SIZE + 2 * PADDING;
+    const svg = source.replace(/<svg\b[^>]*>/, `<svg xmlns="http://www.w3.org/2000/svg" width="${RASTER_SIZE}" height="${RASTER_SIZE}" viewBox="${-PADDING} ${-PADDING} ${extent} ${extent}" fill="none">`);
     const destination = path.join(directory, 'logo_sdf.png');
-    await sharp(pixels, { raw: { width: FIELD_SIZE, height: FIELD_SIZE, channels: 4 } }).png().toFile(destination);
+    await fs.writeFile(destination, await generateDistanceField(svg, extent));
     process.stdout.write(`Generated ${destination}\n`);
 }
 
-module.exports = { signedDistances };
+module.exports = { signedDistances, generateDistanceField };
 if (require.main === module) {
     main().catch((error) => {
         process.stderr.write(`${error.message}\n`);
