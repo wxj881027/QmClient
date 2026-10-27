@@ -793,6 +793,7 @@ void CChat::OnWindowResize()
 
 void CChat::OnShutdown()
 {
+	m_PublicWords.Shutdown();
 	for(auto &Line : m_aLines)
 		Line.DeleteTextContainers(TextRender());
 }
@@ -1065,6 +1066,7 @@ void CChat::OnConsoleInit()
 void CChat::OnInit()
 {
 	Reset();
+	m_PublicWords.Initialize(Storage(), g_Config.m_QmPublicBlockWords != 0);
 	ReloadWordFilterFile(false);
 	ReloadWordFilterFile(true);
 	Console()->Chain("cl_chat_old", ConchainChatOld, this);
@@ -2129,12 +2131,16 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 	const bool CanHideBlockWordsMessage = ShouldHideBlockWordsMessage(BlockWordsAction, true, ClientId, IsLocalBlockWordsClient, Team);
 	ReloadWordFilterFile(false, false);
 	ReloadWordFilterFile(true, false);
-	if(g_Config.m_QmBlockWordsEnabled && (g_Config.m_QmBlockWordsList[0] != '\0' || !m_BlockWordsFile.Words().empty()) &&
+	const bool UsePublicWords = g_Config.m_QmPublicBlockWords && !m_PublicWords.State().Words().empty() &&
+		QmPublicWordFilter::IsIncomingPlayerChat(ClientId, IsLocalBlockWordsClient, Team == TEAM_WHISPER_SEND, Client()->State() == IClient::STATE_DEMOPLAYBACK);
+	if((UsePublicWords || (g_Config.m_QmBlockWordsEnabled && (g_Config.m_QmBlockWordsList[0] != '\0' || !m_BlockWordsFile.Words().empty()))) &&
 		(BlockWordsAction == EBlockWordsAction::REPLACE || CanHideBlockWordsMessage))
 	{
 		std::string Text = pLine;
 		std::vector<std::string> *pMatched = g_Config.m_QmBlockWordsShowConsole ? &BlockedWords : nullptr;
-		if(ApplyBlockWords(Text, pMatched, m_BlockWordsFile))
+		bool Matched = UsePublicWords && m_PublicWords.State().Filter(Text, g_Config.m_QmBlockWordsReplacementChar, g_Config.m_QmBlockWordsMultiReplace != 0, pMatched);
+		Matched |= ApplyBlockWords(Text, pMatched, m_BlockWordsFile);
+		if(Matched)
 		{
 			FlushPendingConsoleLine(true);
 			if(g_Config.m_QmBlockWordsShowConsole && !BlockedWords.empty())
@@ -3104,6 +3110,7 @@ bool CChat::OnPrepareLines(float y)
 
 void CChat::OnRender()
 {
+	m_PublicWords.Update(Http(), Storage(), g_Config.m_QmPublicBlockWords != 0, time_get() / time_freq());
 	m_TranslateButton.m_RectValid = false;
 	ReloadWordFilterFile(false, false);
 	ReloadWordFilterFile(true, false);

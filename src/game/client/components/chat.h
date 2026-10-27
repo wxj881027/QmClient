@@ -18,6 +18,7 @@
 #include <game/client/components/qmclient/chat_translation_notes.h>
 #include <game/client/components/qmclient/hud_notifications/hud_notifications.h>
 #include <game/client/components/qmclient/pending_chat_messages.h>
+#include <game/client/components/qmclient/public_word_filter.h>
 #include <game/client/components/qmclient/qm_chat_export_metadata.h>
 #include <game/client/components/qmclient/qm_chat_log_jobs.h>
 #include <game/client/components/qmclient/qm_chat_text_layout.h>
@@ -240,6 +241,7 @@ private:
 	bool m_PrevSponsorChatEffects = true;
 	int m_LastStreamerFilterWords = -1;
 	uint64_t m_LastStreamerFilterRevision = 0;
+	QmPublicWordFilter::CClient m_PublicWords;
 	QmWordFilterList::CFileList m_BlockWordsFile;
 	QmWordFilterList::CFileList m_StreamerWordsFile;
 	uint64_t m_PreparedGlyphAtlasRevision = 0;
@@ -583,6 +585,7 @@ public:
 	void OnInit() override;
 	void OnShutdown() override;
 
+	const QmPublicWordFilter::CState &PublicWordFilter() const { return m_PublicWords.State(); }
 	void ReloadWordFilterFile(bool Streamer, bool Force = true);
 	const QmWordFilterList::CFileList &WordFilterFile(bool Streamer) const { return Streamer ? m_StreamerWordsFile : m_BlockWordsFile; }
 	void RebuildChat();

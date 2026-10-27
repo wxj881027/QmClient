@@ -568,6 +568,7 @@ MACRO_CONFIG_STR(QmFriendEnterBroadcastText, qm_friend_enter_broadcast_text, 128
 MACRO_CONFIG_STR(QmFriendEnterGreetText, qm_friend_enter_greet_text, 128, "Hi!", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto greet friend text")
 
 // Block Words / 屏蔽词
+MACRO_CONFIG_INT(QmPublicBlockWords, qm_public_block_words, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use public word filter")
 MACRO_CONFIG_INT(QmBlockWordsEnabled, qm_block_words_enabled, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable word filter list")
 MACRO_CONFIG_INT(QmWarListBlockEnemyChat, qm_warlist_block_enemy_chat, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hide chat messages from players marked as enemies")
 MACRO_CONFIG_INT(QmWarListBlockEnemies, qm_warlist_block_enemies, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hide enemy chat, replace enemy names with client IDs and use default skins; keep local players visible")

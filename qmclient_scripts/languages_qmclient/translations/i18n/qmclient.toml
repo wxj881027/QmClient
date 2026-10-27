@@ -39588,3 +39588,51 @@ brazilian_portuguese = "Copiar capturas de tela manuais automaticamente para a �
 portuguese = "Copiar capturas de ecrã manuais automaticamente para a área de transferência"
 turkish = "Elle alınan ekran görüntülerini otomatik olarak panoya kopyala"
 polish = "Automatycznie kopiuj ręczne zrzuty ekranu do schowka"
+
+[[message]]
+key = "Cannot update public words. Previous words remain active."
+[message.translations]
+simplified_chinese = "无法更新公共词库，继续使用原有词条。"
+traditional_chinese = "無法更新公共詞庫，繼續使用原有詞條。"
+japanese = "共有NGワードを更新できません。以前の単語を引き続き使用します。"
+korean = "공용 금칙어를 업데이트할 수 없습니다. 기존 단어를 계속 사용합니다."
+russian = "Не удалось обновить общий список слов. Продолжает действовать прежний список."
+german = "Öffentliche Wörter konnten nicht aktualisiert werden. Bisherige Wörter bleiben aktiv."
+spanish = "No se pudo actualizar la lista pública. Se siguen usando las palabras anteriores."
+french = "Impossible de mettre à jour les mots publics. Les mots précédents restent actifs."
+brazilian_portuguese = "Não foi possível atualizar as palavras públicas. As palavras anteriores continuam ativas."
+portuguese = "Não foi possível atualizar as palavras públicas. As palavras anteriores continuam ativas."
+turkish = "Ortak kelimeler güncellenemedi. Önceki kelimeler etkin kalır."
+polish = "Nie można zaktualizować publicznych słów. Poprzednie słowa pozostają aktywne."
+
+[[message]]
+key = "Invalid public word list response. Previous words remain active."
+[message.translations]
+simplified_chinese = "公共词库响应无效，继续使用原有词条。"
+traditional_chinese = "公共詞庫回應無效，繼續使用原有詞條。"
+japanese = "共有NGワードの応答が無効です。以前の単語を引き続き使用します。"
+korean = "공용 금칙어 응답이 올바르지 않습니다. 기존 단어를 계속 사용합니다."
+russian = "Некорректный ответ общего списка слов. Продолжает действовать прежний список."
+german = "Ungültige Antwort für die öffentliche Wortliste. Bisherige Wörter bleiben aktiv."
+spanish = "La respuesta de la lista pública no es válida. Se siguen usando las palabras anteriores."
+french = "Réponse de la liste de mots publique invalide. Les mots précédents restent actifs."
+brazilian_portuguese = "Resposta inválida da lista pública de palavras. As palavras anteriores continuam ativas."
+portuguese = "Resposta inválida da lista pública de palavras. As palavras anteriores continuam ativas."
+turkish = "Ortak kelime listesi yanıtı geçersiz. Önceki kelimeler etkin kalır."
+polish = "Nieprawidłowa odpowiedź publicznej listy słów. Poprzednie słowa pozostają aktywne."
+
+[[message]]
+key = "Use public word filter"
+[message.translations]
+simplified_chinese = "使用公共屏蔽词"
+traditional_chinese = "使用公共屏蔽詞"
+japanese = "共有NGワードを使用"
+korean = "공용 금칙어 필터 사용"
+russian = "Использовать общий фильтр слов"
+german = "Öffentlichen Wortfilter verwenden"
+spanish = "Usar filtro público de palabras"
+french = "Utiliser le filtre de mots public"
+brazilian_portuguese = "Usar filtro público de palavras"
+portuguese = "Usar filtro público de palavras"
+turkish = "Ortak kelime filtresini kullan"
+polish = "Używaj publicznego filtra słów"

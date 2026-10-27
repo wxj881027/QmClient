@@ -2090,6 +2090,9 @@ Cannot remove the wiki file
 Cannot swap: the other player is not in your team
 == Tausch nicht möglich: der andere Spieler ist nicht in deinem Team
 
+Cannot update public words. Previous words remain active.
+== Öffentliche Wörter konnten nicht aktualisiert werden. Bisherige Wörter bleiben aktiv.
+
 Cannot write the wiki file
 == Wiki-Datei kann nicht geschrieben werden
 
@@ -7274,6 +7277,9 @@ Invalid option
 Invalid or duplicate configuration path.
 == Ungültiger oder doppelter Konfigurationspfad.
 
+Invalid public word list response. Previous words remain active.
+== Ungültige Antwort für die öffentliche Wortliste. Bisherige Wörter bleiben aktiv.
+
 Invalid quoted word. Use one word per line.
 == Ungültiges Wort in Anführungszeichen. Ein Wort pro Zeile verwenden.
 
@@ -10903,6 +10909,12 @@ Protect names and skins while streaming
 
 PTT release delay (ms)
 == PTT-Freigabeverzögerung (ms)
+
+Public words match literal text in incoming player chat.
+== Öffentliche Wörter werden als normaler Text im empfangenen Spielerchat gesucht.
+
+Public words: %d
+== Öffentliche Wörter: %d
 
 Publicly messages everyone your current time in this current running race
 == Sendet öffentlich deine aktuelle Zeit in diesem laufenden Rennen an alle
@@ -16565,6 +16577,9 @@ Update ready to install
 Update sources are temporarily unavailable
 == Updatequellen sind vorübergehend nicht verfügbar
 
+Updating public word list...
+== Öffentliche Wortliste wird aktualisiert...
+
 Upload .map files. Server and admin passwords: s.
 == .map-Dateien hochladen. Server- und Admin-Passwort: s.
 
@@ -16726,6 +16741,9 @@ Use pre-input to predict other players for more accurate input prediction
 
 Use procedural ring pipeline
 == Prozedurale Ring-Pipeline verwenden
+
+Use public word filter
+== Öffentlichen Wortfilter verwenden
 
 Use server defaults
 == Servervorgaben verwenden
