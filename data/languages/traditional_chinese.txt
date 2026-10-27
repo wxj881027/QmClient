@@ -13799,6 +13799,9 @@ Show spectator cursor
 Show speedometer when changing
 == 顯示變化時的速度計
 
+Show sponsor badges in chat
+== 顯示聊天贊助徽章
+
 Show sponsor chat effects locally
 == 本機顯示贊助者發言特效
 

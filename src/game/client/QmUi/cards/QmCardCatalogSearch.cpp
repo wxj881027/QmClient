@@ -2092,6 +2092,7 @@ namespace qm_card_catalog
 			{Localizable("Save unsent chat draft"), nullptr, "保存未发送的聊天草稿"},
 			{Localizable("Show chat"), nullptr, "显示聊天框"},
 			{Localizable("Show names in chat in team colors"), nullptr, "以队伍颜色显示玩家昵称"},
+			{Localizable("Show sponsor badges in chat"), "qm_chat_sponsor_badges", "显示聊天赞助徽章 赞助图标 头衔"},
 			{Localizable("Show only chat messages from friends"), nullptr, "只显示好友聊天消息"},
 			{Localizable("Show only chat messages from team members"), nullptr, "只显示队伍聊天消息"},
 			{Localizable("Only show messages related to me"), "qm_chat_related_only", "只显示与我相关的消息 提及 @ 私聊"},

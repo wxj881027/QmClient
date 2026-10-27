@@ -13799,6 +13799,9 @@ Show spectator cursor
 Show speedometer when changing
 == Показывать спидометр при изменении
 
+Show sponsor badges in chat
+== Показывать значки спонсоров в чате
+
 Show sponsor chat effects locally
 == Показывать эффекты сообщений спонсоров локально
 

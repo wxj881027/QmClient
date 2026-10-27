@@ -13799,6 +13799,9 @@ Show spectator cursor
 Show speedometer when changing
 == Değişiklik sırasında hız göstergesini göster
 
+Show sponsor badges in chat
+== Sohbette sponsor rozetlerini göster
+
 Show sponsor chat effects locally
 == Destekçi sohbet efektlerini yerel olarak göster
 

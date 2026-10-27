@@ -13799,6 +13799,9 @@ Show spectator cursor
 Show speedometer when changing
 == 変更時にスピードメーターを表示
 
+Show sponsor badges in chat
+== チャットに支援者バッジを表示
+
 Show sponsor chat effects locally
 == 支援者のチャット効果をローカル表示
 
