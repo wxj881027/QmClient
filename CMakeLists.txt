@@ -3363,6 +3363,7 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogKeywordReply.cpp
     QmUi/cards/QmCardCatalogBetterScoreboard.cpp
     QmUi/cards/QmCardCatalogSteam.cpp
+    QmUi/cards/QmSteamProbeState.h
     QmUi/cards/QmAppearancePreset.h
     QmUi/cards/QmCardCatalogAppearancePreset.cpp
     QmUi/cards/QmCardCatalogIme.cpp
@@ -4704,6 +4705,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/ui/settings_card_info_test.cpp
     src/test/unit/qmclient/ui/qm_list_entry_animation_test.cpp
     src/test/unit/engine/steam_client_path_test.cpp
+    src/test/integration/qmclient/settings/steam_probe_state_test.cpp
     src/test/unit/qmclient/ui/settings_toggle_grid_test.cpp
     src/test/unit/qmclient/ui/settings_choice_grid_test.cpp
     src/test/unit/qmclient/ui/QmAnimTest.cpp
