@@ -1,5 +1,7 @@
 #include "android_main.h"
 
+#include "asset_unpack.h"
+
 #include <base/hash.h>
 #include <base/log.h>
 #include <base/system.h>
@@ -8,64 +10,73 @@
 
 #include <SDL3/SDL.h>
 #include <jni.h>
+#include <unistd.h>
 
 #include <atomic>
+#include <cstdio>
+#include <cstdlib>
+#include <memory>
 #include <string>
 #include <vector>
 
-static bool UnpackAsset(const char *pFilename)
+static bool UnpackAsset(const char *pFilename) noexcept
 {
-	char aAssetFilename[IO_MAX_PATH_LENGTH] = "asset_integrity_files/";
-	str_append(aAssetFilename, pFilename);
-
-	// This uses SDL_IOFromFile because it can read Android assets,
-	// which are files stored in the app's APK file. All data files
-	// are stored as assets and unpacked to the external storage.
-	SDL_IOStream *pAssetFile = SDL_IOFromFile(aAssetFilename, "rb");
-	if(!pAssetFile)
+	try
 	{
-		log_error("android", "Failed to open asset '%s' for reading", pFilename);
+		constexpr const char *pPrefix = "asset_integrity_files/";
+		char aAssetFilename[IO_MAX_PATH_LENGTH];
+		if(!pFilename || !pFilename[0] || str_length(pFilename) >= static_cast<int>(sizeof(aAssetFilename)) - str_length(pPrefix))
+			return false;
+		str_copy(aAssetFilename, pPrefix);
+		str_append(aAssetFilename, pFilename);
+		std::unique_ptr<SDL_IOStream, decltype(&SDL_CloseIO)> pAssetFile(SDL_IOFromFile(aAssetFilename, "rb"), &SDL_CloseIO);
+		if(!pAssetFile)
+		{
+			log_error("android", "Failed to open asset '%s' for reading", pFilename);
+			return false;
+		}
+		const auto FileLength = SDL_GetIOSize(pAssetFile.get());
+		if(FileLength < 0)
+		{
+			log_error("android", "Failed to determine length of asset '%s'", pFilename);
+			return false;
+		}
+		// 同目录独占候选，不截断正式资源，也不复用其他解包留下的候选。
+		char aCandidate[IO_MAX_PATH_LENGTH + 16];
+		str_format(aCandidate, sizeof(aCandidate), "%s.tmp.XXXXXX", pFilename);
+		const int CandidateDescriptor = mkstemp(aCandidate);
+		if(CandidateDescriptor < 0)
+			return false;
+		FILE *pCandidateFile = fdopen(CandidateDescriptor, "wb");
+		if(!pCandidateFile)
+		{
+			close(CandidateDescriptor);
+			return false;
+		}
+		std::unique_ptr<void, decltype(&io_close)> Target(pCandidateFile, &io_close);
+		const auto Read = [&](void *pData, size_t Size, size_t &ReadBytes) {
+			ReadBytes = SDL_ReadIO(pAssetFile.get(), pData, Size);
+			return SDL_GetIOStatus(pAssetFile.get()) != SDL_IO_STATUS_ERROR;
+		};
+		const auto Write = [&](const void *pData, size_t Size) {
+			return io_write(Target.get(), pData, static_cast<unsigned>(Size)) == Size && io_error(Target.get()) == 0;
+		};
+		const auto CloseInput = [&]() noexcept { return SDL_CloseIO(pAssetFile.release()); };
+		const auto CloseOutput = [&](bool Complete) noexcept {
+			const bool Flushed = !Complete || io_flush(Target.get()) == 0;
+			const bool Closed = io_close(Target.release()) == 0;
+			return Complete && Flushed && Closed;
+		};
+		const auto Publish = [&] { return fs_rename(aCandidate, pFilename, false) == 0; };
+		const auto Stage = android_assets::Unpack(FileLength, Read, Write, CloseInput, CloseOutput, Publish);
+		if(Stage != android_assets::EStage::DONE)
+			log_error("android", "Failed to unpack asset '%s' at stage %d (candidate '%s')", pFilename, static_cast<int>(Stage), aCandidate);
+		return Stage == android_assets::EStage::DONE;
+	}
+	catch(...)
+	{
 		return false;
 	}
-
-	const long int FileLength = SDL_GetIOSize(pAssetFile);
-	if(FileLength < 0)
-	{
-		SDL_CloseIO(pAssetFile);
-		log_error("android", "Failed to determine length of asset '%s'", pFilename);
-		return false;
-	}
-
-	char *pData = static_cast<char *>(malloc(FileLength));
-	const size_t ReadLength = SDL_ReadIO(pAssetFile, pData, FileLength);
-	SDL_CloseIO(pAssetFile);
-
-	if(ReadLength != (size_t)FileLength)
-	{
-		free(pData);
-		log_error("android", "Failed to read asset '%s' (read %" PRIzu ", wanted %ld)", pFilename, ReadLength, FileLength);
-		return false;
-	}
-
-	IOHANDLE TargetFile = io_open(pFilename, IOFLAG_WRITE);
-	if(!TargetFile)
-	{
-		free(pData);
-		log_error("android", "Failed to open '%s' for writing", pFilename);
-		return false;
-	}
-
-	const size_t WriteLength = io_write(TargetFile, pData, FileLength);
-	io_close(TargetFile);
-	free(pData);
-
-	if(WriteLength != (size_t)FileLength)
-	{
-		log_error("android", "Failed to write data to '%s' (wrote %" PRIzu ", wanted %ld)", pFilename, WriteLength, FileLength);
-		return false;
-	}
-
-	return true;
 }
 
 constexpr const char *INTEGRITY_INDEX = "integrity.txt";
@@ -237,7 +248,7 @@ const char *InitAndroid()
 
 	// The integrity file will be unpacked every time when launching,
 	// so we can simply rename it to update the saved integrity file.
-	if(fs_remove(INTEGRITY_INDEX_SAVE) != 0 || fs_rename(INTEGRITY_INDEX, INTEGRITY_INDEX_SAVE) != 0)
+	if(fs_rename(INTEGRITY_INDEX, INTEGRITY_INDEX_SAVE, false) != 0)
 	{
 		return "Failed to update the saved integrity index file.";
 	}

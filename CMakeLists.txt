@@ -1109,6 +1109,7 @@ elseif(TARGET_OS STREQUAL "haiku")
 elseif(TARGET_OS STREQUAL "android")
     set(PLATFORM_CLIENT
       src/android/android_main.cpp
+      src/android/asset_unpack.h
     )
     set(PLATFORM_LIBS ${TW_ANDROID_LIBS})
     set(PLATFORM_CLIENT_LIBS ${TW_ANDROID_LIBS_CLIENT})
@@ -4706,6 +4707,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/ui/settings_card_info_test.cpp
     src/test/unit/qmclient/ui/qm_list_entry_animation_test.cpp
     src/test/unit/engine/steam_client_path_test.cpp
+    src/test/unit/client/android_asset_unpack_test.cpp
+    src/test/integration/client/android_asset_unpack_test.cpp
     src/test/integration/engine/steam_client_path_test.cpp
     src/test/unit/engine/steam_startup_test.cpp
     src/test/integration/qmclient/settings/steam_probe_state_test.cpp
