@@ -222,6 +222,7 @@ public final class QmMediaExporter {
 							throw new IOException("No output stream");
 						QmMediaFiles.copy(input, output);
 					}
+					checkWorkerOpen();
 					success = true;
 				} catch(IOException | RuntimeException | OutOfMemoryError error) {
 					logFailure("Export failed", error);
@@ -261,6 +262,7 @@ public final class QmMediaExporter {
 						QmMediaFiles.copy(input, output);
 					}
 					uri = FileProvider.getUriForFile(activity, activity.getPackageName() + ".qm.media", staged);
+					checkWorkerOpen();
 					success = true;
 				} catch(IOException | RuntimeException | OutOfMemoryError error) {
 					if(staged != null) {
