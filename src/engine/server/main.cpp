@@ -254,7 +254,7 @@ JNI_EXPORTED_FUNCTION(ANDROID_PACKAGE_NAME_JNI, NativeServer, runServer, jint, J
 	return android_jni::RunServer(pEnv, WorkingDirectory, ArgumentsArray, GAME_NAME "-Server", [](const char *pDirectory) { return fs_chdir(pDirectory) == 0; }, [](int Count, const char **ppArguments) { return main(Count, ppArguments); });
 }
 
-JNI_EXPORTED_FUNCTION(ANDROID_PACKAGE_NAME_JNI, NativeServer, executeCommand, void, JNIEnv *pEnv, jobject Object, jstring Command)
+JNI_EXPORTED_FUNCTION(ANDROID_PACKAGE_NAME_JNI, NativeServer, executeCommand, jboolean, JNIEnv *pEnv, jobject Object, jstring Command)
 {
 	const bool Accepted = android_jni::ReceiveCommand(pEnv, Command, [](std::string Text) {
 		const std::unique_lock Lock(AndroidNativeMutex);
@@ -271,6 +271,7 @@ JNI_EXPORTED_FUNCTION(ANDROID_PACKAGE_NAME_JNI, NativeServer, executeCommand, vo
 		{
 		}
 	}
+	return Accepted ? JNI_TRUE : JNI_FALSE;
 }
 
 #undef EXPAND_MACRO

@@ -55,11 +55,19 @@ public class ServerService extends Service {
 	private Messenger messenger;
 	private NotificationManager notificationManager;
 	private NativeServerThread thread;
-	private boolean stopping = false;
+	private QmServerCommands nativeCommands;
+	private boolean startFailed;
 
 	@Override
 	public void onCreate() {
 		super.onCreate();
+		try {
+			nativeCommands = new QmServerCommands(NativeServer::executeCommand);
+		} catch(RuntimeException | OutOfMemoryError error) {
+			startFailed = true;
+			NativeServerThread.failStart(this);
+			return;
+		}
 
 		notificationManager = getSystemService(NotificationManager.class);
 
@@ -79,14 +87,14 @@ public class ServerService extends Service {
 			String action = intent.getAction();
 			if(INTENT_ACTION_START.equals(action)) {
 				String[] commands = intent.getStringArrayExtra(INTENT_EXTRA_COMMANDS);
-				if(commands != null && thread == null && !stopping) {
+				if(commands != null && thread == null && !startFailed && !nativeCommands.isStopping()) {
 					// 重复start intent不能并行进入共享同一组全局状态的native main。
 					try {
 						NativeServerThread candidate = new NativeServerThread(this, commands);
 						candidate.start();
 						thread = candidate;
 					} catch(RuntimeException | OutOfMemoryError error) {
-						stopping = true;
+						startFailed = true;
 						NativeServerThread.failStart(this);
 					}
 				}
@@ -97,7 +105,7 @@ public class ServerService extends Service {
 					if(remoteCommand != null) {
 						executeCommand(remoteCommand.toString());
 					}
-					if(!stopping) {
+					if(!nativeCommands.isStopping()) {
 						// Need to send the notification again to acknowledge that we got the remote input,
 						// otherwise the remote input will not be completed.
 						updateNotification(false);
@@ -255,19 +263,15 @@ public class ServerService extends Service {
 		}
 	}
 
-	private void executeCommand(String command) {
+	private boolean executeCommand(String command) {
 		if(thread == null) {
-			return;
+			return false;
 		}
-		// Detect simple case where the server is being stopped to update the notification
-		if("shutdown".equalsIgnoreCase(command)) {
-			if(stopping) {
-				return;
-			}
-			stopping = true;
+		boolean wasStopping = nativeCommands.isStopping();
+		boolean accepted = nativeCommands.execute(command);
+		if(accepted && !wasStopping && nativeCommands.isStopping())
 			updateNotification(true);
-		}
-		NativeServer.executeCommand(command);
+		return accepted;
 	}
 
 	public static Intent createStartIntent(Context context, String[] arguments) {
@@ -382,5 +386,6 @@ class NativeServer {
 	 *
 	 * @param command The command to add to the queue.
 	 */
-	public static native void executeCommand(String command);
+	// 返回值只确认已进入native队列，不代表服务器已经执行该命令。
+	public static native boolean executeCommand(String command);
 }
