@@ -2,6 +2,7 @@
 
 #include "QmTree.h"
 #include "UiButtons.h"
+#include <game/client/QmUi/QmIconSwap.h>
 #include "UiForms.h"
 #include "UiSurface.h"
 
@@ -509,7 +510,22 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		Label(Name, pSelected != nullptr ? pSelected->m_Name.c_str() : Localize("Select a map"), 15.0f);
 		static CButtonContainer s_Favorite;
 		const bool IsFavorite = pSelected != nullptr && GameClient()->m_TClient.IsFavoriteMap(pSelected->m_Name.c_str());
-		if(Ui()->DoButton_QmIcon(&s_Favorite, EQmIcon::STAR, FontIcons::FONT_ICON_STAR, IsFavorite, &Favorite, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, pSelected != nullptr))
+		// 收藏点亮：实心样式开着时未收藏=描边、已收藏=实心，形态切换走帧条形变；
+		// 关着时两端同形（只靠语义色区分），形变没有意义，保持原绘制。
+		const bool FavoriteMorph = g_Config.m_QmUiFavoriteIconFilled != 0;
+		ui_widget::SIconSwapBinding FavoriteBinding;
+		ui_widget::SIconButtonIconDraw FavoriteDraw;
+		if(FavoriteMorph)
+		{
+			IUiContext FavoriteCtx = ui_widget::ControlContext(Ui());
+			FavoriteBinding = ui_widget::ResolveIconSwapBinding(
+				FavoriteCtx, EQmIconSwapPair::STAR_FAVORITE,
+				EQmIcon::STAR, FontIcons::FONT_ICON_STAR,
+				EQmIcon::STAR, FontIcons::FONT_ICON_STAR,
+				IsFavorite ? 1.0f : 0.0f, str_quickhash("vote-favorite-star"), &s_Favorite, 0.26f, true);
+			FavoriteDraw = {&ui_widget::DrawIconSwapBinding, &FavoriteBinding};
+		}
+		if(Ui()->DoButton_QmIcon(&s_Favorite, FavoriteMorph ? EQmIcon::COUNT : EQmIcon::STAR, FavoriteMorph ? nullptr : FontIcons::FONT_ICON_STAR, IsFavorite, &Favorite, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, pSelected != nullptr, std::nullopt, false, false, FavoriteMorph ? &FavoriteDraw : nullptr))
 		{
 			if(IsFavorite)
 				GameClient()->m_TClient.RemoveFavoriteMap(pSelected->m_Name.c_str());

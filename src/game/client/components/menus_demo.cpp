@@ -32,6 +32,7 @@
 #include <generated/client_data.h>
 
 #include <game/client/QmUi/QmCardWikiPanel.h>
+#include <game/client/QmUi/QmIconSwap.h>
 #include <game/client/QmUi/QmToast.h>
 #include <game/client/QmUi/QmWikiDocs.h>
 #include <game/client/QmUi/UiButtons.h>
@@ -1788,7 +1789,16 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	// combined play and pause button
 	ButtonBar.VSplitLeft(ButtonbarHeight, &Button, &ButtonBar);
 	static CButtonContainer s_PlayPauseButton;
-	if(Ui()->DoButton_QmIcon(&s_PlayPauseButton, pInfo->m_Paused ? EQmIcon::PLAY : EQmIcon::PAUSE, pInfo->m_Paused ? FONT_ICON_PLAY : FONT_ICON_PAUSE, false, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, DEMO_ACCENT))
+	// 播放/暂停是同位置双态：有轮廓字重的形变帧条走弹簧，Fill 字重回交叉淡化。
+	// 静止态仍由 DrawIconSwapBinding 画原字形，避免帧条与字形字号不一致。
+	IUiContext PlayPauseCtx = ui_widget::ControlContext(Ui());
+	ui_widget::SIconSwapBinding PlayPauseIcon = ui_widget::ResolveIconSwapBinding(
+		PlayPauseCtx, EQmIconSwapPair::PLAY_PAUSE,
+		EQmIcon::PLAY, FONT_ICON_PLAY,
+		EQmIcon::PAUSE, FONT_ICON_PAUSE,
+		pInfo->m_Paused ? 0.0f : 1.0f, str_quickhash("demo-playpause"), &s_PlayPauseButton, 0.24f, true);
+	ui_widget::SIconButtonIconDraw PlayPauseDraw{&ui_widget::DrawIconSwapBinding, &PlayPauseIcon};
+	if(Ui()->DoButton_QmIcon(&s_PlayPauseButton, EQmIcon::COUNT, nullptr, false, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, DEMO_ACCENT, false, false, &PlayPauseDraw))
 	{
 		if(pInfo->m_Paused)
 		{
@@ -2024,8 +2034,16 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	const bool PreviewEnabled = CutControlsEnabled &&
 				    ((PendingCut.m_StartTick >= 0 && PendingCut.m_StartTick < PendingCut.m_EndTick) || m_DemoCutPreview.IsActive());
 	static CButtonContainer s_CutPreviewButton;
-	if(Ui()->DoButton_QmIcon(&s_CutPreviewButton, m_DemoCutPreview.IsActive() ? EQmIcon::STOP : EQmIcon::PLAY,
-		   m_DemoCutPreview.IsActive() ? FONT_ICON_STOP : FONT_ICON_PLAY, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, PreviewEnabled) &&
+	// 预览/停止同位置双态：复用 PLAY_STOP 帧条（与好友跟随同资产），点击或快捷键 P
+	// 切换时弹簧推进；预览自然结束 Reset() 引起的状态回落也由轨道自动收敛。
+	IUiContext CutPreviewCtx = ui_widget::ControlContext(Ui());
+	ui_widget::SIconSwapBinding CutPreviewIcon = ui_widget::ResolveIconSwapBinding(
+		CutPreviewCtx, EQmIconSwapPair::PLAY_STOP,
+		EQmIcon::PLAY, FONT_ICON_PLAY,
+		EQmIcon::STOP, FONT_ICON_STOP,
+		m_DemoCutPreview.IsActive() ? 1.0f : 0.0f, str_quickhash("demo-cut-preview"), &s_CutPreviewButton, 0.24f, true);
+	ui_widget::SIconButtonIconDraw CutPreviewDraw{&ui_widget::DrawIconSwapBinding, &CutPreviewIcon};
+	if(Ui()->DoButton_QmIcon(&s_CutPreviewButton, EQmIcon::COUNT, nullptr, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, PreviewEnabled, std::nullopt, false, false, &CutPreviewDraw) &&
 		PreviewEnabled)
 		PreviewCut();
 	GameClient()->m_Tooltips.DoToolTip(&s_CutPreviewButton, &Button, m_DemoCutPreview.IsActive() ? Localize("Stop preview (P)") : Localize("Preview cut (P)"));
