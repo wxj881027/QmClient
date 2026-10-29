@@ -2243,6 +2243,24 @@ set(EXPECTED_DATA
   qmclient/gui_logo.png
   qmclient/map_difficulty.sql
   qmclient/title_badges/logo_sdf.png
+  qmclient/ui/password_icon_bold.png
+  qmclient/ui/password_icon_light.png
+  qmclient/ui/password_icon_regular.png
+  qmclient/ui/chevron_swap_bold.png
+  qmclient/ui/chevron_swap_light.png
+  qmclient/ui/chevron_swap_regular.png
+  qmclient/ui/play_pause_swap_bold.png
+  qmclient/ui/play_pause_swap_light.png
+  qmclient/ui/play_pause_swap_regular.png
+  qmclient/ui/play_stop_swap_bold.png
+  qmclient/ui/play_stop_swap_light.png
+  qmclient/ui/play_stop_swap_regular.png
+  qmclient/ui/star_favorite_swap_bold.png
+  qmclient/ui/star_favorite_swap_light.png
+  qmclient/ui/star_favorite_swap_regular.png
+  qmclient/ui/plus_minus_swap_bold.png
+  qmclient/ui/plus_minus_swap_light.png
+  qmclient/ui/plus_minus_swap_regular.png
   race_flag.png
   shader/gaussian_blur.frag
   shader/gaussian_blur.vert
@@ -3290,6 +3308,8 @@ if(CLIENT)
     QmUi/UiFormLogic.h
     QmUi/UiForms.cpp
     QmUi/UiForms.h
+    QmUi/QmIconSwap.cpp
+    QmUi/QmIconSwap.h
     QmUi/UiNavigation.cpp
     QmUi/UiNavigation.h
     QmUi/UiOverlays.h
@@ -4712,6 +4732,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/QmListRowFeedbackTest.cpp
     src/test/unit/qmclient/ui/QmAnimTreeTest.cpp
     src/test/unit/qmclient/ui/qm_icon_policy_test.cpp
+    src/test/unit/qmclient/ui/qm_password_icon_test.cpp
+    src/test/unit/qmclient/ui/qm_icon_swap_test.cpp
     src/test/unit/qmclient/ui/qm_icon_diagnostics_test.cpp
     src/test/unit/qmclient/ui/qm_signal_icon_font_size_test.cpp
     src/test/unit/qmclient/ui/qm_signal_icon_color_test.cpp
@@ -5683,6 +5705,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/game/client/QmUi/UiButtons.cpp
       src/game/client/QmUi/UiSurface.cpp
       src/game/client/QmUi/UiForms.cpp
+      src/game/client/QmUi/QmIconSwap.cpp
       src/game/client/QmUi/UiFormLogic.cpp
       src/game/client/QmUi/QmAnim.cpp
       src/game/client/QmUi/QmAnimationBackend.cpp
