@@ -16,23 +16,55 @@ public class ClientActivity extends SDLActivity {
 	private String[] launchArguments = new String[0];
 	private QmMediaExporter mediaExporter;
 
-	private final Object serverServiceMonitor = new Object();
-	private Messenger serverServiceMessenger = null;
-	private final ServiceConnection serverServiceConnection = new ServiceConnection() {
+	private final QmServerBinding<Messenger> serverBinding = new QmServerBinding<>();
+
+	private final class ServerConnection implements ServiceConnection, QmServerBinding.Connection {
+		private final Intent intent;
+		private boolean bindingAttempted;
+
+		ServerConnection(String[] arguments) {
+			intent = ServerService.createStartIntent(ClientActivity.this, arguments);
+		}
+
 		@Override
-		public void onServiceConnected(ComponentName name, IBinder service) {
-			synchronized(serverServiceMonitor) {
-				serverServiceMessenger = new Messenger(service);
+		public boolean bind() {
+			ContextCompat.startForegroundService(ClientActivity.this, intent);
+			bindingAttempted = true;
+			return bindService(intent, this, 0);
+		}
+
+		@Override
+		public void unbind() {
+			if(!bindingAttempted)
+				return;
+			bindingAttempted = false;
+			try {
+				unbindService(this);
+			} catch(IllegalArgumentException e) {
+				// bind抛出异常且未登记连接时，框架可能已经没有可解绑记录。
 			}
 		}
 
 		@Override
-		public void onServiceDisconnected(ComponentName name) {
-			synchronized(serverServiceMonitor) {
-				serverServiceMessenger = null;
-			}
+		public void onServiceConnected(ComponentName name, IBinder service) {
+			serverBinding.connected(this, new Messenger(service));
 		}
-	};
+
+		@Override
+		public void onServiceDisconnected(ComponentName name) {
+			serverBinding.disconnected(this);
+		}
+
+		@Override
+		public void onBindingDied(ComponentName name) {
+			serverBinding.failed(this);
+		}
+
+		@Override
+		public void onNullBinding(ComponentName name) {
+			serverBinding.failed(this);
+		}
+	}
 
 	@Override
 	protected String[] getLibraries() {
@@ -85,13 +117,12 @@ public class ClientActivity extends SDLActivity {
 
 	@Override
 	protected void onDestroy() {
-		if(mediaExporter != null)
-			mediaExporter.close();
-		super.onDestroy();
-		synchronized(serverServiceMonitor) {
-			if(serverServiceMessenger != null) {
-				unbindService(serverServiceConnection);
-			}
+		try {
+			serverBinding.close();
+			if(mediaExporter != null)
+				mediaExporter.close();
+		} finally {
+			super.onDestroy();
 		}
 	}
 
@@ -123,35 +154,23 @@ public class ClientActivity extends SDLActivity {
 
 	// Called from native code, see android_main.cpp
 	public void startServer(String[] arguments) {
-		synchronized(serverServiceMonitor) {
-			if(serverServiceMessenger != null) {
-				return;
-			}
-			Intent startIntent = ServerService.createStartIntent(this, arguments);
-			ContextCompat.startForegroundService(this, startIntent);
-			bindService(startIntent, serverServiceConnection, 0);
-		}
+		serverBinding.start(() -> new ServerConnection(arguments));
 	}
 
 	// Called from native code, see android_main.cpp
 	public void executeCommand(String command) {
-		synchronized(serverServiceMonitor) {
-			if(serverServiceMessenger == null) {
-				return;
-			}
+		serverBinding.send(messenger -> {
 			try {
-				serverServiceMessenger.send(ServerService.createExecuteCommandMessage(command));
+				messenger.send(ServerService.createExecuteCommandMessage(command));
+				return true;
 			} catch (RemoteException e) {
-				// Connection broken
-				unbindService(serverServiceConnection);
+				return false;
 			}
-		}
+		});
 	}
 
 	// Called from native code, see android_main.cpp
 	public boolean isServerRunning() {
-		synchronized(serverServiceMonitor) {
-			return serverServiceMessenger != null;
-		}
+		return serverBinding.isRunning();
 	}
 }

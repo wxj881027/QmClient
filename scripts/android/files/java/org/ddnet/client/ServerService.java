@@ -79,9 +79,11 @@ public class ServerService extends Service {
 			String action = intent.getAction();
 			if(INTENT_ACTION_START.equals(action)) {
 				String[] commands = intent.getStringArrayExtra(INTENT_EXTRA_COMMANDS);
-				if(commands != null) {
-					thread = new NativeServerThread(this, commands);
-					thread.start();
+				if(commands != null && thread == null && !stopping) {
+					// 重复start intent不能并行进入共享同一组全局状态的native main。
+					NativeServerThread candidate = new NativeServerThread(this, commands);
+					candidate.start();
+					thread = candidate;
 				}
 			} else if(INTENT_ACTION_EXECUTE.equals(action)) {
 				Bundle remoteInput = RemoteInput.getResultsFromIntent(intent);
