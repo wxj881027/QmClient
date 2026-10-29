@@ -43,7 +43,9 @@ static bool UnpackAsset(const char *pFilename) noexcept
 		}
 		// 同目录独占候选，不截断正式资源，也不复用其他解包留下的候选。
 		char aCandidate[IO_MAX_PATH_LENGTH + 16];
-		str_format(aCandidate, sizeof(aCandidate), "%s.tmp.XXXXXX", pFilename);
+		const char *pLastSlash = str_rchr(pFilename, '/');
+		const int ParentLength = pLastSlash ? static_cast<int>(pLastSlash - pFilename + 1) : 0;
+		str_format(aCandidate, sizeof(aCandidate), "%.*s.qm-asset-XXXXXX", ParentLength, pFilename);
 		const int CandidateDescriptor = mkstemp(aCandidate);
 		if(CandidateDescriptor < 0)
 			return false;
