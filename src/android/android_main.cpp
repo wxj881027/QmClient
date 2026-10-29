@@ -1,5 +1,6 @@
 #include "android_main.h"
 
+#include "asset_integrity.h"
 #include "asset_unpack.h"
 
 #include <base/hash.h>
@@ -124,53 +125,8 @@ static bool EqualIntegrityFiles(const char *pAssetFilename, const char *pStorage
 	return str_comp(aStorageMainSha256, aAssetMainSha256) == 0;
 }
 
-class CIntegrityFileLine
-{
-public:
-	char m_aFilename[IO_MAX_PATH_LENGTH];
-	SHA256_DIGEST m_Sha256;
-};
-
-static std::vector<CIntegrityFileLine> ReadIntegrityFile(const char *pFilename)
-{
-	CLineReader LineReader;
-	if(!LineReader.OpenFile(io_open(pFilename, IOFLAG_READ)))
-	{
-		return {};
-	}
-
-	std::vector<CIntegrityFileLine> vLines;
-	while(const char *pReadLine = LineReader.Get())
-	{
-		const char *pSpaceInLine = str_rchr(pReadLine, ' ');
-		CIntegrityFileLine Line;
-		char aSha256[SHA256_MAXSTRSIZE];
-		if(pSpaceInLine == nullptr)
-		{
-			if(!vLines.empty())
-			{
-				// Only the first line is allowed to not contain a filename
-				log_error("android", "Failed to parse line %" PRIzu " of '%s': line does not contain space", vLines.size() + 1, pFilename);
-				return {};
-			}
-			Line.m_aFilename[0] = '\0';
-			str_copy(aSha256, pReadLine);
-		}
-		else
-		{
-			str_truncate(Line.m_aFilename, sizeof(Line.m_aFilename), pReadLine, pSpaceInLine - pReadLine);
-			str_copy(aSha256, pSpaceInLine + 1);
-		}
-		if(sha256_from_str(&Line.m_Sha256, aSha256) != 0)
-		{
-			log_error("android", "Failed to parse line %" PRIzu " of '%s': invalid SHA256 string", vLines.size() + 1, pFilename);
-			return {};
-		}
-		vLines.emplace_back(std::move(Line));
-	}
-
-	return vLines;
-}
+using android_assets::CIntegrityFileLine;
+using android_assets::ReadIntegrityFile;
 
 const char *InitAndroid()
 {
@@ -201,13 +157,13 @@ const char *InitAndroid()
 		return "Failed to unpack the integrity index file. Consider reinstalling the app.";
 	}
 
-	std::vector<CIntegrityFileLine> vIntegrityLines = ReadIntegrityFile(INTEGRITY_INDEX);
+	auto vIntegrityLines = ReadIntegrityFile(INTEGRITY_INDEX);
 	if(vIntegrityLines.empty())
 	{
 		return "Failed to load the integrity index file. Consider reinstalling the app.";
 	}
 
-	std::vector<CIntegrityFileLine> vIntegritySaveLines = ReadIntegrityFile(INTEGRITY_INDEX_SAVE);
+	auto vIntegritySaveLines = ReadIntegrityFile(INTEGRITY_INDEX_SAVE);
 
 	// The remaining lines of each integrity file list all assets and their hashes
 	for(size_t i = 1; i < vIntegrityLines.size(); ++i)

@@ -131,6 +131,11 @@ bool CLineReader::IsValidBuffer(const char *pBuffer)
 
 bool CLineReader::OpenFile(IOHANDLE File, bool RejectInvalidLines)
 {
+	return OpenFileWithBudget(File, 0, RejectInvalidLines);
+}
+
+bool CLineReader::OpenFileWithBudget(IOHANDLE File, unsigned MaxBufferBytes, bool RejectInvalidLines)
+{
 	const auto Fail = [this](EOpenResult Result) {
 		m_LastOpenResult = Result;
 		return false;
@@ -142,7 +147,13 @@ bool CLineReader::OpenFile(IOHANDLE File, bool RejectInvalidLines)
 	}
 	void *pRaw = nullptr;
 	unsigned RawLength = 0;
-	const bool Read = io_read_all(File, &pRaw, &RawLength);
+	const SIOReadAllAllocator BoundedAllocator{
+		[](void *pBuffer, size_t Size, void *pUser) -> void * {
+			return Size <= *static_cast<unsigned *>(pUser) ? realloc(pBuffer, Size) : nullptr;
+		},
+		[](void *pBuffer, void *) { free(pBuffer); },
+		&MaxBufferBytes};
+	const bool Read = MaxBufferBytes ? io_read_all_with_allocator(File, &pRaw, &RawLength, BoundedAllocator) : io_read_all(File, &pRaw, &RawLength);
 	io_close(File);
 	if(!Read)
 	{
