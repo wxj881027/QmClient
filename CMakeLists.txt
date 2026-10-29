@@ -4506,6 +4506,8 @@ if(SERVER)
       ${DEPS}
       $<TARGET_OBJECTS:game-server-without-main>
       "${PROJECT_SOURCE_DIR}/src/engine/server/main.cpp"
+      src/android/jni_calls.h
+      src/android/jni_server.h
       ${SERVER_ICON}
       ${SERVER_VERSIONINFO}
       $<TARGET_OBJECTS:engine-shared>
@@ -4713,6 +4715,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/android_asset_integrity_test.cpp
     src/test/unit/client/android_jni_calls_test.cpp
     src/test/unit/client/android_jni_string_test.cpp
+    src/test/unit/client/android_jni_server_string_test.cpp
+    src/test/unit/client/android_jni_server_test.cpp
+    src/test/integration/client/android_jni_roundtrip_test.cpp
     src/test/integration/client/android_asset_integrity_test.cpp
     src/test/integration/engine/linereader_budget_test.cpp
     src/test/integration/client/android_asset_unpack_test.cpp

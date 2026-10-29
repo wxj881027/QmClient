@@ -25,6 +25,8 @@
 #if defined(CONF_FAMILY_WINDOWS)
 #include <windows.h>
 #elif defined(CONF_PLATFORM_ANDROID)
+#include <android/jni_server.h>
+
 #include <jni.h>
 #endif
 
@@ -249,48 +251,26 @@ std::vector<std::string> FetchAndroidServerCommandQueue()
 
 JNI_EXPORTED_FUNCTION(ANDROID_PACKAGE_NAME_JNI, NativeServer, runServer, jint, JNIEnv *pEnv, jobject Object, jstring WorkingDirectory, jobjectArray ArgumentsArray)
 {
-	// Set working directory to external storage location. This is not possible
-	// in Java so we pass the intended working directory to the native code.
-	const char *pWorkingDirectory = pEnv->GetStringUTFChars(WorkingDirectory, nullptr);
-	const std::string WorkingDirectoryCopy = pWorkingDirectory;
-	pEnv->ReleaseStringUTFChars(WorkingDirectory, pWorkingDirectory);
-	if(fs_chdir(WorkingDirectoryCopy.c_str()) != 0)
-	{
-		return -1001;
-	}
-
-	const jsize NumArguments = pEnv->GetArrayLength(ArgumentsArray);
-
-	std::vector<std::string> vArguments;
-	vArguments.reserve(NumArguments + 1);
-	vArguments.push_back(WorkingDirectoryCopy + "/" + GAME_NAME "-Server");
-	for(jsize ArgumentIndex = 0; ArgumentIndex < NumArguments; ArgumentIndex++)
-	{
-		jstring ArgumentString = (jstring)pEnv->GetObjectArrayElement(ArgumentsArray, ArgumentIndex);
-		const char *pArgumentString = pEnv->GetStringUTFChars(ArgumentString, nullptr);
-		vArguments.emplace_back(pArgumentString);
-		pEnv->ReleaseStringUTFChars(ArgumentString, pArgumentString);
-		pEnv->DeleteLocalRef(ArgumentString);
-	}
-
-	std::vector<const char *> vpArguments;
-	vpArguments.reserve(vArguments.size());
-	for(const std::string &Argument : vArguments)
-	{
-		vpArguments.emplace_back(Argument.c_str());
-	}
-
-	return main(vpArguments.size(), vpArguments.data());
+	return android_jni::RunServer(pEnv, WorkingDirectory, ArgumentsArray, GAME_NAME "-Server", [](const char *pDirectory) { return fs_chdir(pDirectory) == 0; }, [](int Count, const char **ppArguments) { return main(Count, ppArguments); });
 }
 
 JNI_EXPORTED_FUNCTION(ANDROID_PACKAGE_NAME_JNI, NativeServer, executeCommand, void, JNIEnv *pEnv, jobject Object, jstring Command)
 {
-	const char *pCommand = pEnv->GetStringUTFChars(Command, nullptr);
-	{
+	const bool Accepted = android_jni::ReceiveCommand(pEnv, Command, [](std::string Text) {
 		const std::unique_lock Lock(AndroidNativeMutex);
-		vAndroidCommandQueue.emplace_back(pCommand);
+		vAndroidCommandQueue.push_back(std::move(Text));
+		return true;
+	});
+	if(!Accepted)
+	{
+		try
+		{
+			log_error("android", "Could not receive local server command");
+		}
+		catch(...)
+		{
+		}
 	}
-	pEnv->ReleaseStringUTFChars(Command, pCommand);
 }
 
 #undef EXPAND_MACRO

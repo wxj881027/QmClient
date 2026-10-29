@@ -25,7 +25,11 @@ public:
 		ELEMENT,
 		METHOD,
 		VOID_CALL,
-		BOOLEAN_CALL
+		BOOLEAN_CALL,
+		STRING_LENGTH,
+		CHARS,
+		ARRAY_LENGTH,
+		GET_ELEMENT
 	};
 	struct CReference
 	{
@@ -45,6 +49,9 @@ public:
 	int m_Depth = 0, m_Pushes = 0, m_Pops = 0, m_Clears = 0, m_Describes = 0;
 	int m_Live = 0, m_PeakLive = 0, m_BadCalls = 0, m_VoidCalls = 0, m_BooleanCalls = 0;
 	int m_Arrays = 0, m_Strings = 0, m_Elements = 0, m_ThrowAtString = 0;
+	int m_Borrows = 0, m_Releases = 0, m_ReadStrings = 0, m_ThrowAtReadString = 0;
+	int m_ArrayLengthOverride = -2, m_StringLengthOverride = -2, m_NullElement = -1;
+	bool m_CharsWithException = false;
 	const char *m_pMethod = nullptr;
 	const char *m_pSignature = nullptr;
 	std::u16string m_LastString;
@@ -177,6 +184,49 @@ public:
 			Ref->m_Live = false;
 			--m_Live;
 		}
+	}
+	std::int32_t GetStringLength(TObject String)
+	{
+		if(++m_ReadStrings == m_ThrowAtReadString)
+			throw std::bad_alloc();
+		if(Fault(EFailure::STRING_LENGTH) || !Valid(String))
+			return 0;
+		return m_StringLengthOverride != -2 ? m_StringLengthOverride : static_cast<std::int32_t>(String->m_Text.size());
+	}
+	const char16_t *GetStringChars(TObject String, std::nullptr_t)
+	{
+		if(Fault(EFailure::CHARS) || !Valid(String))
+			return nullptr;
+		++m_Borrows;
+		m_Pending = m_CharsWithException;
+		return String->m_Text.data();
+	}
+	void ReleaseStringChars(TObject String, const char16_t *pChars) noexcept
+	{
+		if(!String || !String->m_Live || pChars != String->m_Text.data() || m_Borrows <= 0)
+			++m_BadCalls;
+		--m_Borrows;
+		++m_Releases;
+	}
+	std::int32_t GetArrayLength(TObject Array)
+	{
+		if(Fault(EFailure::ARRAY_LENGTH) || !Valid(Array))
+			return 0;
+		return m_ArrayLengthOverride != -2 ? m_ArrayLengthOverride : static_cast<std::int32_t>(m_ArrayValues.size());
+	}
+	TObject GetObjectArrayElement(TObject Array, std::int32_t Index)
+	{
+		if(Fault(EFailure::GET_ELEMENT) || !Valid(Array) || Index == m_NullElement)
+			return nullptr;
+		if(Index < 0 || static_cast<size_t>(Index) >= m_ArrayValues.size())
+		{
+			++m_BadCalls;
+			return nullptr;
+		}
+		auto Ref = NewReference();
+		if(Ref)
+			Ref->m_Text = m_ArrayValues[Index];
+		return Ref;
 	}
 	CMethod *GetMethodID(TObject Class, const char *pName, const char *pSignature)
 	{
