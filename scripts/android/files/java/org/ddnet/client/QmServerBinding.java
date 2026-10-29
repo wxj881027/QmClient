@@ -114,4 +114,8 @@ public final class QmServerBinding<T> implements AutoCloseable {
 		closed = true;
 		release(connection);
 	}
+
+	public synchronized void cancel() {
+		release(connection);
+	}
 }

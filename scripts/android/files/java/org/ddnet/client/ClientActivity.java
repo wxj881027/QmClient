@@ -118,7 +118,11 @@ public class ClientActivity extends SDLActivity {
 	@Override
 	protected void onDestroy() {
 		try {
-			serverBinding.close();
+			try {
+				serverBinding.close();
+			} finally {
+				stopServer();
+			}
 			if(mediaExporter != null)
 				mediaExporter.close();
 		} finally {
@@ -155,6 +159,20 @@ public class ClientActivity extends SDLActivity {
 	// Called from native code, see android_main.cpp
 	public void startServer(String[] arguments) {
 		serverBinding.start(() -> new ServerConnection(arguments));
+	}
+
+	// Called from native code, see android_main.cpp
+	public void stopServer() {
+		try {
+			executeCommand("shutdown");
+		} finally {
+			try {
+				serverBinding.cancel();
+			} finally {
+				// 服务的started状态独立于绑定，即使未收到connected也要显式停止。
+				stopService(new Intent(this, ServerService.class));
+			}
+		}
 	}
 
 	// Called from native code, see android_main.cpp

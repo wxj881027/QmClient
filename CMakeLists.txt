@@ -3471,6 +3471,7 @@ if(CLIENT)
     components/key_binder.h
     components/local_server.cpp
     components/local_server.h
+    components/local_server_launch.h
     components/mapimages.cpp
     components/mapimages.h
     components/maplayers.cpp
@@ -4715,9 +4716,11 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/android_asset_integrity_test.cpp
     src/test/unit/client/android_jni_calls_test.cpp
     src/test/unit/client/android_jni_string_test.cpp
+    src/test/unit/client/local_server_launch_test.cpp
     src/test/unit/client/android_jni_server_string_test.cpp
     src/test/unit/client/android_jni_server_test.cpp
     src/test/integration/client/android_jni_roundtrip_test.cpp
+    src/test/integration/client/local_server_launch_jni_test.cpp
     src/test/integration/client/android_asset_integrity_test.cpp
     src/test/integration/engine/linereader_budget_test.cpp
     src/test/integration/client/android_asset_unpack_test.cpp

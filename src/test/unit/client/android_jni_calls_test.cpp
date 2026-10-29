@@ -281,3 +281,27 @@ TEST(AndroidJniCalls, RepeatedQueriesDoNotAccumulateLocalReferences)
 	EXPECT_EQ(Env.m_Pushes, 100);
 	ExpectClean(Env);
 }
+
+TEST(AndroidJniCalls, StopCallsJavaWithoutRequiringServerMessenger)
+{
+	CEnv Env;
+	EXPECT_TRUE(android_jni::Call(&Env, [&] { return Env.Activity(); }, [&](auto Activity) { return android_jni::StopServer(Env, Activity); }));
+	EXPECT_STREQ(Env.m_pMethod, "stopServer");
+	EXPECT_STREQ(Env.m_pSignature, "()V");
+	EXPECT_EQ(Env.m_VoidCalls, 1);
+	EXPECT_EQ(Env.m_Strings, 0);
+	ExpectClean(Env);
+}
+
+TEST(AndroidJniCalls, StopFailureClearsJavaExceptionAndReleasesFrame)
+{
+	for(const auto Stage : {EFailure::CLASS, EFailure::METHOD, EFailure::VOID_CALL})
+	{
+		SCOPED_TRACE(static_cast<int>(Stage));
+		CEnv Env;
+		Env.m_Failure = Stage;
+		EXPECT_FALSE(android_jni::Call(&Env, [&] { return Env.Activity(); }, [&](auto Activity) { return android_jni::StopServer(Env, Activity); }));
+		EXPECT_EQ(Env.m_Clears, 1);
+		ExpectClean(Env);
+	}
+}

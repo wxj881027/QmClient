@@ -17,22 +17,28 @@ bool CLocalServer::RunServer(const std::vector<const char *> &vpArguments, bool 
 			Client()->Connect("localhost");
 		return true;
 	}
-	secure_random_password(m_aRconPassword, sizeof(m_aRconPassword), 16);
+	char aPassword[sizeof(m_aRconPassword)] = "";
+	secure_random_password(aPassword, sizeof(aPassword), 16);
 	char aAuthCommand[64 + sizeof(m_aRconPassword)];
-	str_format(aAuthCommand, sizeof(aAuthCommand), "auth_add %s admin %s", DEFAULT_SAVED_RCON_USER, m_aRconPassword);
-
-	std::vector<const char *> vpArgumentsWithAuth = vpArguments;
-	vpArgumentsWithAuth.push_back(aAuthCommand);
+	str_format(aAuthCommand, sizeof(aAuthCommand), "auth_add %s admin %s", DEFAULT_SAVED_RCON_USER, aPassword);
 
 #if defined(CONF_PLATFORM_ANDROID)
-	m_vPendingArguments.clear();
-	for(const char *pArgument : vpArgumentsWithAuth)
-		m_vPendingArguments.emplace_back(pArgument);
-	m_ConnectWhenReady = ConnectWhenReady;
-	m_StartPending = true;
+	if(!m_Launch.TryPrepare(vpArguments.data(), vpArguments.size(), aAuthCommand, ConnectWhenReady))
+	{
+		ReportStartFailure();
+		return false;
+	}
+	mem_copy(m_aRconPassword, aPassword, sizeof(m_aRconPassword));
 	RequestAndroidNotificationPermission();
 	return true;
 #else
+	CLocalServerLaunch Launch;
+	if(!Launch.TryPrepare(vpArguments.data(), vpArguments.size(), aAuthCommand, ConnectWhenReady))
+	{
+		ReportStartFailure();
+		return false;
+	}
+	mem_copy(m_aRconPassword, aPassword, sizeof(m_aRconPassword));
 	char aBuf[IO_MAX_PATH_LENGTH];
 	Storage()->GetBinaryPath(PLAT_SERVER_EXEC, aBuf, sizeof(aBuf));
 #if defined(CONF_PLATFORM_MACOS)
@@ -45,11 +51,18 @@ bool CLocalServer::RunServer(const std::vector<const char *> &vpArguments, bool 
 	// No / in binary path means to search in $PATH, so it is expected that the file can't be opened. Just try executing anyway.
 	if(str_find(aBuf, "/") == nullptr || fs_is_file(aBuf))
 	{
+		try
+		{
 #if defined(CONF_FAMILY_WINDOWS)
-		m_Process = shell_execute_owned(aBuf, vpArgumentsWithAuth.data(), vpArgumentsWithAuth.size());
+			m_Process = shell_execute_owned(aBuf, Launch.Data(), Launch.Count());
 #else
-		m_Process = shell_execute(aBuf, EShellExecuteWindowState::BACKGROUND, vpArgumentsWithAuth.data(), vpArgumentsWithAuth.size());
+			m_Process = shell_execute(aBuf, EShellExecuteWindowState::BACKGROUND, Launch.Data(), Launch.Count());
 #endif
+		}
+		catch(...)
+		{
+			m_Process = INVALID_PROCESS;
+		}
 		if(m_Process != INVALID_PROCESS)
 		{
 			GameClient()->m_Menus.ForceRefreshLanPage();
@@ -59,24 +72,49 @@ bool CLocalServer::RunServer(const std::vector<const char *> &vpArguments, bool 
 		}
 		else
 		{
-			Client()->AddWarning(SWarning(Localize("Server could not be started")));
-			mem_zero(m_aRconPassword, sizeof(m_aRconPassword));
+			ReportStartFailure();
 			return false;
 		}
 	}
 	else
 	{
-		Client()->AddWarning(SWarning(Localize("Server executable not found, can't run server")));
-		mem_zero(m_aRconPassword, sizeof(m_aRconPassword));
+		ReportStartFailure(true);
 		return false;
 	}
 #endif
 }
 
+void CLocalServer::ReportStartFailure(bool ExecutableMissing) noexcept
+{
+#if defined(CONF_PLATFORM_ANDROID)
+	m_Launch.Reset();
+#endif
+	mem_zero(m_aRconPassword, sizeof(m_aRconPassword));
+	try
+	{
+		const char *pMessage;
+		if(ExecutableMissing)
+			pMessage = Localize("Server executable not found, can't run server");
+		else
+		{
+#if defined(CONF_PLATFORM_ANDROID)
+			pMessage = Localize("Server could not be started. Make sure to grant the notification permission in the app settings so the server can run in the background.");
+#else
+			pMessage = Localize("Server could not be started");
+#endif
+		}
+		Client()->AddWarning(SWarning(pMessage));
+	}
+	catch(...)
+	{
+		// 内存不足时提示本身也可能分配失败，仍须保留已清理的失败状态。
+	}
+}
+
 bool CLocalServer::IsServerStarting() const
 {
 #if defined(CONF_PLATFORM_ANDROID)
-	return m_StartPending;
+	return m_Launch.IsStarting();
 #else
 	return false;
 #endif
@@ -85,38 +123,47 @@ bool CLocalServer::IsServerStarting() const
 void CLocalServer::Update()
 {
 #if defined(CONF_PLATFORM_ANDROID)
-	if(!m_StartPending)
+	if(!m_Launch.IsStarting())
 		return;
-	const auto Permission = AndroidNotificationPermission();
-	if(Permission == EAndroidPermissionState::PENDING || Permission == EAndroidPermissionState::UNKNOWN)
+	if(m_Launch.IsReady())
+	{
+		const auto Permission = AndroidNotificationPermission();
+		if(Permission == EAndroidPermissionState::PENDING || Permission == EAndroidPermissionState::UNKNOWN)
+			return;
+		if(Permission == EAndroidPermissionState::GRANTED && StartAndroidServer(m_Launch.Data(), m_Launch.Count()))
+		{
+			m_Launch.MarkBinding(time_get_nanoseconds());
+			GameClient()->m_Menus.ForceRefreshLanPage();
+		}
+		else
+		{
+			if(Permission == EAndroidPermissionState::GRANTED)
+				StopAndroidServer();
+			ReportStartFailure();
+		}
 		return;
-	m_StartPending = false;
-	std::vector<const char *> vpArguments;
-	for(const auto &Argument : m_vPendingArguments)
-		vpArguments.push_back(Argument.c_str());
-	if(Permission == EAndroidPermissionState::GRANTED && StartAndroidServer(vpArguments.data(), vpArguments.size()))
-	{
-		GameClient()->m_Menus.ForceRefreshLanPage();
-		if(m_ConnectWhenReady)
-			Client()->Connect("localhost");
 	}
-	else
+	switch(m_Launch.PollBinding(IsAndroidServerRunning(), time_get_nanoseconds()))
 	{
-		Client()->AddWarning(SWarning(Localize("Server could not be started. Make sure to grant the notification permission in the app settings so the server can run in the background.")));
-		mem_zero(m_aRconPassword, sizeof(m_aRconPassword));
+	case CLocalServerLaunch::EBindingResult::CONNECT:
+		Client()->Connect("localhost");
+		break;
+	case CLocalServerLaunch::EBindingResult::FAILED:
+		StopAndroidServer();
+		ReportStartFailure();
+		break;
+	default:
+		break;
 	}
-	m_vPendingArguments.clear();
-	m_ConnectWhenReady = false;
 #endif
 }
 
 void CLocalServer::KillServer()
 {
+	mem_zero(m_aRconPassword, sizeof(m_aRconPassword));
 #if defined(CONF_PLATFORM_ANDROID)
-	m_StartPending = false;
-	m_ConnectWhenReady = false;
-	m_vPendingArguments.clear();
-	ExecuteAndroidServerCommand("shutdown");
+	m_Launch.Reset();
+	StopAndroidServer();
 	GameClient()->m_Menus.ForceRefreshLanPage();
 #else
 	if(m_Process != INVALID_PROCESS && kill_process(m_Process))
@@ -125,7 +172,6 @@ void CLocalServer::KillServer()
 		GameClient()->m_Menus.ForceRefreshLanPage();
 	}
 #endif
-	mem_zero(m_aRconPassword, sizeof(m_aRconPassword));
 }
 
 bool CLocalServer::IsServerRunning()

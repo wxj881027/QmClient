@@ -132,6 +132,19 @@ namespace android_jni
 	}
 
 	template<typename TEnv, typename TObject>
+	bool StopServer(TEnv &Env, TObject Activity)
+	{
+		auto ActivityClass = Env.GetObjectClass(Activity);
+		if(!ActivityClass || Env.ExceptionCheck())
+			return false;
+		auto Method = Env.GetMethodID(ActivityClass, "stopServer", "()V");
+		if(!Method || Env.ExceptionCheck())
+			return false;
+		Env.CallVoidMethod(Activity, Method);
+		return !Env.ExceptionCheck();
+	}
+
+	template<typename TEnv, typename TObject>
 	bool ExecuteCommand(TEnv &Env, TObject Activity, const char *pCommand)
 	{
 		if(!pCommand)

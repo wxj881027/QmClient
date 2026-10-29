@@ -286,6 +286,44 @@ public final class QmServerBindingTest {
 		binding.close();
 	}
 
+	private static void cancelPendingBindingAllowsRetryAndRejectsOldCallback() {
+		QmServerBinding<String> binding = new QmServerBinding<>();
+		FakeConnection first = new FakeConnection();
+		FakeConnection retry = new FakeConnection();
+		binding.start(() -> first);
+		binding.cancel();
+		binding.cancel();
+		check(first.unbinds == 1, "Cancel releases pending tracking once");
+		binding.start(() -> retry);
+		binding.connected(first, "late");
+		check(!binding.isRunning(), "Cancelled callback cannot connect new request");
+		binding.connected(retry, "new");
+		check(binding.isRunning(), "Cancellation permits a new request");
+		binding.close();
+	}
+
+	private static void cancelConnectedBindingDropsMessenger() {
+		QmServerBinding<String> binding = new QmServerBinding<>();
+		FakeConnection first = new FakeConnection();
+		binding.start(() -> first);
+		binding.connected(first, "old");
+		binding.cancel();
+		check(!binding.isRunning(), "Cancel clears running channel");
+		check(!binding.send(channel -> { throw new AssertionError("Do not send after cancel"); }), "Cancelled channel is unavailable");
+		binding.close();
+		check(first.unbinds == 1, "Close does not repeat cancellation");
+	}
+
+	private static void cancelCannotReopenDestroyedOwner() {
+		QmServerBinding<String> binding = new QmServerBinding<>();
+		binding.close();
+		binding.cancel();
+		try {
+			binding.start(() -> { throw new AssertionError("No platform call after close"); });
+			throw new AssertionError("Cancellation must not reopen destroyed owner");
+		} catch(IllegalStateException expected) { }
+	}
+
 	public static void main(String[] arguments) throws Exception {
 		pendingStartIsDeduplicated();
 		connectedStartIsDeduplicatedAndCanSend();
@@ -303,6 +341,9 @@ public final class QmServerBindingTest {
 		missingConnectionCallbackCanRetryAfterTimeout();
 		connectedServiceIsNotExpiredByBindingTimeout();
 		concurrentStartsShareOneBinding();
-		System.out.println("QmServerBinding: 16 scenarios passed");
+		cancelPendingBindingAllowsRetryAndRejectsOldCallback();
+		cancelConnectedBindingDropsMessenger();
+		cancelCannotReopenDestroyedOwner();
+		System.out.println("QmServerBinding: 19 scenarios passed");
 	}
 }

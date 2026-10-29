@@ -230,6 +230,12 @@ bool StartAndroidServer(const char **ppArguments, size_t NumArguments)
 	return android_jni::Call(pEnv, [] { return static_cast<jobject>(SDL_GetAndroidActivity()); }, [&](jobject Activity) { return android_jni::StartServer(*pEnv, Activity, ppArguments, NumArguments); });
 }
 
+void StopAndroidServer()
+{
+	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
+	android_jni::Call(pEnv, [] { return static_cast<jobject>(SDL_GetAndroidActivity()); }, [&](jobject Activity) { return android_jni::StopServer(*pEnv, Activity); });
+}
+
 void ExecuteAndroidServerCommand(const char *pCommand)
 {
 	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
