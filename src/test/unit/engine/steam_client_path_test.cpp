@@ -1,4 +1,5 @@
 #include <engine/client/steam_client_path.h>
+#include <engine/client/steam_probe.h>
 
 #include <gtest/gtest.h>
 
@@ -34,3 +35,40 @@ TEST(SteamManualPath, UnixAndMacUseTheirOwnClientNames)
 	EXPECT_TRUE(SteamManualPathCandidate("/usr/bin/other", ESteamClientPlatform::UNIX).empty());
 	EXPECT_TRUE(SteamManualPathCandidate("/Applications/Other.app", ESteamClientPlatform::MACOS).empty());
 }
+
+#if defined(CONF_FAMILY_WINDOWS)
+TEST(SteamRegistryString, TerminatedUtf16ValuePreservesTheWholePath)
+{
+	const wchar_t aValue[] = L"D:\\测试\\Steam\\steam.exe";
+	const auto Value = SteamProbeDecodeRegistryString(aValue, sizeof(aValue) / sizeof(wchar_t), sizeof(aValue));
+	ASSERT_TRUE(Value);
+	EXPECT_EQ(*Value, "D:\\测试\\Steam\\steam.exe");
+}
+
+TEST(SteamRegistryString, FullBufferWithoutTerminatorIsRejected)
+{
+	const wchar_t aValue[] = {L'a', L'b', L'c', L'd'};
+	EXPECT_FALSE(SteamProbeDecodeRegistryString(aValue, 4, sizeof(aValue)));
+}
+
+TEST(SteamRegistryString, TerminatorOutsideReturnedBytesDoesNotCompleteTheValue)
+{
+	const wchar_t aValue[] = {L'a', L'b', L'\0'};
+	EXPECT_FALSE(SteamProbeDecodeRegistryString(aValue, 3, 2 * sizeof(wchar_t)));
+}
+
+TEST(SteamRegistryString, OddOrOversizedByteCountIsRejected)
+{
+	const wchar_t aValue[] = L"x";
+	EXPECT_FALSE(SteamProbeDecodeRegistryString(aValue, 2, sizeof(aValue) - 1));
+	EXPECT_FALSE(SteamProbeDecodeRegistryString(aValue, 2, sizeof(aValue) + sizeof(wchar_t)));
+	EXPECT_FALSE(SteamProbeDecodeRegistryString(aValue, 2, 0));
+	EXPECT_FALSE(SteamProbeDecodeRegistryString(nullptr, 2, sizeof(aValue)));
+}
+
+TEST(SteamRegistryString, InvalidUtf16DoesNotPublishAPath)
+{
+	const wchar_t aValue[] = {static_cast<wchar_t>(0xd800), L'\0'};
+	EXPECT_FALSE(SteamProbeDecodeRegistryString(aValue, 2, sizeof(aValue)));
+}
+#endif

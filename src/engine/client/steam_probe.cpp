@@ -8,6 +8,9 @@
 
 #include <engine/steam.h>
 
+#include <iterator>
+#include <memory>
+
 #if defined(CONF_FAMILY_WINDOWS)
 #include <windows.h>
 
@@ -75,7 +78,7 @@ namespace
 		RegCloseKey(Key);
 		if(Result != ERROR_SUCCESS || (Type != REG_SZ && Type != REG_EXPAND_SZ))
 			return false;
-		const std::optional<std::string> Utf8 = windows_wide_to_utf8(aValue);
+		const std::optional<std::string> Utf8 = SteamProbeDecodeRegistryString(aValue, std::size(aValue), Size);
 		if(!Utf8.has_value() || Utf8->empty() || (int)Utf8->size() >= BufferSize)
 			return false;
 		str_copy(pBuffer, Utf8->c_str(), BufferSize);
@@ -88,6 +91,7 @@ namespace
 		HANDLE Snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 		if(Snapshot == INVALID_HANDLE_VALUE)
 			return false;
+		std::unique_ptr<void, decltype(&CloseHandle)> SnapshotOwner(Snapshot, &CloseHandle);
 		bool Found = false;
 		PROCESSENTRY32W Entry;
 		Entry.dwSize = sizeof(Entry);
@@ -100,6 +104,7 @@ namespace
 				HANDLE Process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, Entry.th32ProcessID);
 				if(Process == nullptr)
 					continue;
+				std::unique_ptr<void, decltype(&CloseHandle)> ProcessOwner(Process, &CloseHandle);
 				wchar_t aImage[1024] = {};
 				DWORD ImageLength = sizeof(aImage) / sizeof(aImage[0]);
 				if(QueryFullProcessImageNameW(Process, 0, aImage, &ImageLength))
@@ -107,10 +112,8 @@ namespace
 					const std::optional<std::string> Utf8 = windows_wide_to_utf8(aImage);
 					Found = Utf8.has_value() && SteamAcceptCandidatePath(Utf8->c_str(), pBuffer, BufferSize);
 				}
-				CloseHandle(Process);
 			} while(!Found && Process32NextW(Snapshot, &Entry));
 		}
-		CloseHandle(Snapshot);
 		return Found;
 	}
 
