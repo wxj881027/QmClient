@@ -2,6 +2,7 @@
 
 #include "asset_integrity.h"
 #include "asset_unpack.h"
+#include "jni_calls.h"
 
 #include <base/hash.h>
 #include <base/log.h>
@@ -226,125 +227,25 @@ void RestartAndroidApp()
 bool StartAndroidServer(const char **ppArguments, size_t NumArguments)
 {
 	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
-	jobject Activity = (jobject)SDL_GetAndroidActivity();
-	jclass ActivityClass = pEnv->GetObjectClass(Activity);
-
-	jclass StringClass = pEnv->FindClass("java/lang/String");
-	jobjectArray ArgumentsArray = pEnv->NewObjectArray(NumArguments, StringClass, nullptr);
-	pEnv->DeleteLocalRef(StringClass);
-	for(size_t ArgumentIndex = 0; ArgumentIndex < NumArguments; ArgumentIndex++)
-	{
-		jstring ArgumentString = pEnv->NewStringUTF(ppArguments[ArgumentIndex]);
-		pEnv->SetObjectArrayElement(ArgumentsArray, ArgumentIndex, ArgumentString);
-		pEnv->DeleteLocalRef(ArgumentString);
-	}
-
-	jmethodID MethodId = pEnv->GetMethodID(ActivityClass, "startServer", "([Ljava/lang/String;)V");
-	pEnv->CallVoidMethod(Activity, MethodId, ArgumentsArray);
-
-	pEnv->DeleteLocalRef(ArgumentsArray);
-	pEnv->DeleteLocalRef(Activity);
-	pEnv->DeleteLocalRef(ActivityClass);
-
-	return true;
+	return android_jni::Call(pEnv, [] { return static_cast<jobject>(SDL_GetAndroidActivity()); }, [&](jobject Activity) { return android_jni::StartServer(*pEnv, Activity, ppArguments, NumArguments); });
 }
 
 void ExecuteAndroidServerCommand(const char *pCommand)
 {
 	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
-	jobject Activity = (jobject)SDL_GetAndroidActivity();
-	jclass ActivityClass = pEnv->GetObjectClass(Activity);
-
-	jstring Command = pEnv->NewStringUTF(pCommand);
-
-	jmethodID MethodId = pEnv->GetMethodID(ActivityClass, "executeCommand", "(Ljava/lang/String;)V");
-	pEnv->CallVoidMethod(Activity, MethodId, Command);
-
-	pEnv->DeleteLocalRef(Command);
-	pEnv->DeleteLocalRef(Activity);
-	pEnv->DeleteLocalRef(ActivityClass);
+	android_jni::Call(pEnv, [] { return static_cast<jobject>(SDL_GetAndroidActivity()); }, [&](jobject Activity) { return android_jni::ExecuteCommand(*pEnv, Activity, pCommand); });
 }
 
 bool IsAndroidServerRunning()
 {
 	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
-	jobject Activity = (jobject)SDL_GetAndroidActivity();
-	jclass ActivityClass = pEnv->GetObjectClass(Activity);
-
-	jmethodID MethodId = pEnv->GetMethodID(ActivityClass, "isServerRunning", "()Z");
-	const bool Result = pEnv->CallBooleanMethod(Activity, MethodId);
-
-	pEnv->DeleteLocalRef(Activity);
-	pEnv->DeleteLocalRef(ActivityClass);
-
-	return Result;
+	return android_jni::Call(pEnv, [] { return static_cast<jobject>(SDL_GetAndroidActivity()); }, [&](jobject Activity) { return android_jni::IsRunning(*pEnv, Activity); });
 }
 
 bool ShowAndroidMediaFiles(const char *pDirectory, bool Videos, const char *const *ppExcluded, size_t NumExcluded)
 {
 	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
-	if(pEnv == nullptr)
-		return false;
-	jobject Activity = static_cast<jobject>(SDL_GetAndroidActivity());
-	if(Activity == nullptr)
-		return false;
-	const bool HasFrame = pEnv->PushLocalFrame(8) == 0;
-	// JNI 的 NewStringUTF 使用 modified UTF-8，路径中的表情等字符需转为 UTF-16。
-	auto MakeString = [&](const char *pText) {
-		std::vector<jchar> vCharacters;
-		while(*pText != '\0')
-		{
-			const int Codepoint = str_utf8_decode(&pText);
-			if(Codepoint < 0)
-				vCharacters.push_back(0xfffd);
-			else if(Codepoint <= 0xffff)
-				vCharacters.push_back((jchar)Codepoint);
-			else
-			{
-				vCharacters.push_back((jchar)(0xd800 + ((Codepoint - 0x10000) >> 10)));
-				vCharacters.push_back((jchar)(0xdc00 + ((Codepoint - 0x10000) & 0x3ff)));
-			}
-		}
-		return pEnv->NewString(vCharacters.data(), (jsize)vCharacters.size());
-	};
-	const bool Success = HasFrame && [&] {
-		jclass ActivityClass = pEnv->GetObjectClass(Activity);
-		if(ActivityClass == nullptr)
-			return false;
-		jmethodID Method = pEnv->GetMethodID(ActivityClass, "showMediaFiles", "(Ljava/lang/String;Z[Ljava/lang/String;)V");
-		if(Method == nullptr)
-			return false;
-		jclass StringClass = pEnv->FindClass("java/lang/String");
-		if(StringClass == nullptr)
-			return false;
-		jstring Directory = MakeString(pDirectory);
-		if(Directory == nullptr)
-			return false;
-		jobjectArray Excluded = pEnv->NewObjectArray((jsize)NumExcluded, StringClass, nullptr);
-		if(Excluded == nullptr)
-			return false;
-		for(size_t i = 0; i < NumExcluded; ++i)
-		{
-			jstring Path = MakeString(ppExcluded[i]);
-			if(Path == nullptr)
-				return false;
-			pEnv->SetObjectArrayElement(Excluded, (jsize)i, Path);
-			pEnv->DeleteLocalRef(Path);
-			if(pEnv->ExceptionCheck())
-				return false;
-		}
-		pEnv->CallVoidMethod(Activity, Method, Directory, (jboolean)Videos, Excluded);
-		return !pEnv->ExceptionCheck();
-	}();
-	if(pEnv->ExceptionCheck())
-	{
-		pEnv->ExceptionDescribe();
-		pEnv->ExceptionClear();
-	}
-	if(HasFrame)
-		pEnv->PopLocalFrame(nullptr);
-	pEnv->DeleteLocalRef(Activity);
-	return Success;
+	return android_jni::Call(pEnv, [] { return static_cast<jobject>(SDL_GetAndroidActivity()); }, [&](jobject Activity) { return android_jni::ShowMedia(*pEnv, Activity, pDirectory, Videos, ppExcluded, NumExcluded); });
 }
 
 namespace
