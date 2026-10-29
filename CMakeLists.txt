@@ -3126,6 +3126,7 @@ if(CLIENT)
     qm_festive_report_text.cpp
     qm_festive_report_text.h
     qm_crash_report_file.h
+    qm_crash_report_marker.h
     blocklist_driver.cpp
     blocklist_driver.h
     checksum.h
@@ -5637,6 +5638,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/qm_festive_report_text_test.cpp
     src/test/unit/client/qm_crash_report_file_test.cpp
     src/test/integration/client/qm_crash_report_file_test.cpp
+    src/test/integration/client/qm_crash_report_marker_test.cpp
     src/engine/client/favorites.cpp
     src/engine/client/friends.cpp
     src/engine/client/serverbrowser.cpp

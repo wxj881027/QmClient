@@ -7,6 +7,7 @@
 #include "friends.h"
 #include "perf_file_logger.h"
 #include "qm_crash_report_file.h"
+#include "qm_crash_report_marker.h"
 #include "qm_graphics_diagnostics.h"
 #include "qm_storage_mode.h"
 #include "replay_save.h"
@@ -195,16 +196,8 @@ static bool IsQmCrashReporterPath(const char *pPath)
 static bool MarkQmCrashReportShown(const char *pReportPath)
 {
 	char aMarkerPath[IO_MAX_PATH_LENGTH + 16];
-	str_format(aMarkerPath, sizeof(aMarkerPath), "%s.shown", pReportPath);
-	IOHANDLE File = io_open(aMarkerPath, IOFLAG_WRITE);
-	if(!File)
-		return false;
-
-	char aTimestamp[64];
-	str_format(aTimestamp, sizeof(aTimestamp), "%lld\n", (long long)time_timestamp());
-	const bool Success = io_write(File, aTimestamp, str_length(aTimestamp)) == str_length(aTimestamp);
-	io_close(File);
-	return Success;
+	return crash_output::AppendPathSuffix(pReportPath, ".shown", aMarkerPath, sizeof(aMarkerPath)) &&
+	       QmCrashReportMarker::Save(aMarkerPath, time_timestamp());
 }
 
 static bool ShowQmCrashReporterDialog(const char *pReportPath)
@@ -294,16 +287,17 @@ static bool ReadQmCrashReporterStartedAt(IStorage *pStorage, int64_t &StartedAt)
 
 static bool WriteQmCrashReporterStartedAt(IStorage *pStorage, int64_t StartedAt)
 {
-	pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-	IOHANDLE File = pStorage->OpenFile(gs_pQmCrashReporterBaselineFile, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
+	try
+	{
+		pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+		char aPath[IO_MAX_PATH_LENGTH + 64];
+		pStorage->GetCompletePath(IStorage::TYPE_SAVE, gs_pQmCrashReporterBaselineFile, aPath, sizeof(aPath));
+		return QmCrashReportMarker::Save(aPath, StartedAt);
+	}
+	catch(...)
+	{
 		return false;
-
-	char aTimestamp[64];
-	str_format(aTimestamp, sizeof(aTimestamp), "%lld\n", (long long)StartedAt);
-	const bool Success = io_write(File, aTimestamp, str_length(aTimestamp)) == str_length(aTimestamp);
-	io_close(File);
-	return Success;
+	}
 }
 
 static void ShowPendingQmCrashReport(IStorage *pStorage)
