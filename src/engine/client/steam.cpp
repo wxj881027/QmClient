@@ -186,39 +186,27 @@ namespace
 	bool SteamFindClientUnix(char *pBuffer, int BufferSize)
 	{
 #if defined(CONF_PLATFORM_MACOS)
-		if(fs_is_dir("/Applications/Steam.app"))
-		{
-			str_copy(pBuffer, "/Applications/Steam.app", BufferSize);
-			return true;
-		}
-		return false;
+		return steam_path::Accept("/Applications/Steam.app", pBuffer, BufferSize, fs_is_dir);
 #else
 		const char *apSystemCandidates[] = {"/usr/bin/steam", "/usr/local/bin/steam"};
 		for(const char *pCandidate : apSystemCandidates)
 		{
-			if(fs_is_file(pCandidate))
-			{
-				str_copy(pBuffer, pCandidate, BufferSize);
+			if(steam_path::Accept(pCandidate, pBuffer, BufferSize, fs_is_file))
 				return true;
-			}
 		}
 		const char *pHome = getenv("HOME");
 		if(pHome == nullptr || pHome[0] == '\0')
 			return false;
-		char aPath[1024];
 		const char *apHomeCandidates[] = {
-			".steam/steam/steam.sh",
-			".steam/root/steam.sh",
-			".local/share/Steam/steam.sh",
+			"/.steam/steam/steam.sh",
+			"/.steam/root/steam.sh",
+			"/.local/share/Steam/steam.sh",
 		};
 		for(const char *pCandidate : apHomeCandidates)
 		{
-			str_format(aPath, (int)sizeof(aPath), "%s/%s", pHome, pCandidate);
-			if(fs_is_file(aPath))
-			{
-				str_copy(pBuffer, aPath, BufferSize);
+			const auto Path = steam_path::Join(pHome, pCandidate);
+			if(Path && steam_path::Accept(Path->data(), pBuffer, BufferSize, fs_is_file))
 				return true;
-			}
 		}
 		return false;
 #endif
@@ -242,13 +230,11 @@ bool SteamFindClient(char *pBuffer, int BufferSize, ESteamClientSource *pSource,
 #else
 #if defined(CONF_PLATFORM_MACOS)
 	const std::string ManualPath = SteamManualPathCandidate(pManualPath, ESteamClientPlatform::MACOS);
-	ManualFound = !ManualPath.empty() && fs_is_dir(ManualPath.c_str());
+	ManualFound = steam_path::Accept(ManualPath.c_str(), pBuffer, BufferSize, fs_is_dir);
 #else
 	const std::string ManualPath = SteamManualPathCandidate(pManualPath, ESteamClientPlatform::UNIX);
-	ManualFound = !ManualPath.empty() && fs_is_file(ManualPath.c_str());
+	ManualFound = steam_path::Accept(ManualPath.c_str(), pBuffer, BufferSize, fs_is_file);
 #endif
-	if(ManualFound)
-		str_copy(pBuffer, ManualPath.c_str(), BufferSize);
 #endif
 	if(ManualFound)
 	{

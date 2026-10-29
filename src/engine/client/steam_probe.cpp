@@ -22,43 +22,24 @@ namespace
 	// 引号与空白，统一斜杠后拼接/确认 steam.exe 存在，有效时写出完整路径。
 	bool SteamAcceptCandidatePath(const char *pCandidate, char *pBuffer, int BufferSize)
 	{
-		if(pCandidate == nullptr || pCandidate[0] == '\0')
+		const auto Path = steam_path::WindowsCandidate(pCandidate);
+		if(!Path)
 			return false;
-		const char *pStart = pCandidate;
-		while(*pStart == '"' || *pStart == ' ')
-			pStart++;
-		const int Length = str_length(pStart);
-		int Trimmed = Length;
-		while(Trimmed > 0 && (pStart[Trimmed - 1] == '"' || pStart[Trimmed - 1] == ' '))
-			Trimmed--;
-		char aPath[1024];
-		if(Trimmed == 0 || Trimmed >= (int)sizeof(aPath))
-			return false;
-		str_truncate(aPath, (int)sizeof(aPath), pStart, Trimmed);
-		if(str_endswith_nocase(aPath, ".exe") == nullptr)
-			str_append(aPath, "\\steam.exe", (int)sizeof(aPath));
-		// 注册表 SteamPath 使用正斜杠，统一替换后再验证。
-		for(char *pChar = aPath; *pChar != '\0'; pChar++)
-		{
-			if(*pChar == '/')
-				*pChar = '\\';
-		}
-		// UNC 路径与断连的网络映射盘上的存在性探测会走 SMB I/O，断连时
-		// GetFileAttributesW 可能阻塞数秒以上；Steam 不支持网络安装，此类
-		// 候选直接拒绝，避免启动期一次性扫描被网络超时拖慢。
-		if(aPath[0] == '\\' && aPath[1] == '\\')
-			return false;
-		if(aPath[1] == ':' && aPath[2] == '\\')
-		{
-			// GetDriveTypeW 只查盘符映射，不触网络，断连映射盘也立即返回。
-			const wchar_t aRoot[4] = {(wchar_t)aPath[0], L':', L'\\', L'\0'};
-			if(GetDriveTypeW(aRoot) == DRIVE_REMOTE)
+		return steam_path::Accept(Path->data(), pBuffer, BufferSize, [](const char *pPath) {
+			// UNC 路径与断连的网络映射盘上的存在性探测会走 SMB I/O，断连时
+			// GetFileAttributesW 可能阻塞数秒以上；Steam 不支持网络安装，此类
+			// 候选直接拒绝，避免启动期一次性扫描被网络超时拖慢。
+			if(pPath[0] == '\\' && pPath[1] == '\\')
 				return false;
-		}
-		if(!fs_is_file(aPath))
-			return false;
-		str_copy(pBuffer, aPath, BufferSize);
-		return true;
+			if(pPath[1] == ':' && pPath[2] == '\\')
+			{
+				// GetDriveTypeW 只查盘符映射，不触网络，断连映射盘也立即返回。
+				const wchar_t aRoot[4] = {(wchar_t)pPath[0], L':', L'\\', L'\0'};
+				if(GetDriveTypeW(aRoot) == DRIVE_REMOTE)
+					return false;
+			}
+			return fs_is_file(pPath) != 0;
+		});
 	}
 
 	// 读取 REG_SZ 注册表值并转为 UTF-8；先按 64 位视图打开，失败再按当前视图兜底，
@@ -79,15 +60,14 @@ namespace
 		if(Result != ERROR_SUCCESS || (Type != REG_SZ && Type != REG_EXPAND_SZ))
 			return false;
 		const std::optional<std::string> Utf8 = SteamProbeDecodeRegistryString(aValue, std::size(aValue), Size);
-		if(!Utf8.has_value() || Utf8->empty() || (int)Utf8->size() >= BufferSize)
-			return false;
-		str_copy(pBuffer, Utf8->c_str(), BufferSize);
-		return true;
+		return Utf8.has_value() && steam_path::Copy(*Utf8, pBuffer, BufferSize);
 	}
 
 	// Steam 正在运行时直接取其映像路径，覆盖自定义目录安装。
 	bool SteamPathFromRunningProcess(char *pBuffer, int BufferSize)
 	{
+		if(!pBuffer || BufferSize <= 0)
+			return false;
 		HANDLE Snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 		if(Snapshot == INVALID_HANDLE_VALUE)
 			return false;
@@ -161,6 +141,8 @@ bool SteamProbeFindClientWindows(char *pBuffer, int BufferSize, ESteamClientSour
 {
 	if(pSource != nullptr)
 		*pSource = ESteamClientSource::NOT_FOUND;
+	if(!pBuffer || BufferSize <= 0)
+		return false;
 	// 注册表：Steam 安装器写入的标准位置。用户级记录是自定义目录安装（含免
 	// 管理员安装）唯一可靠记录，优先于机器级视图与 App Paths。
 	const struct SSteamRegistryProbe
