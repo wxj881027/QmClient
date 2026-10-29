@@ -1810,6 +1810,7 @@ Extras
 Extreme values make movement feel wrong, so change one step at a time.
 Extremely slow, for testing only
 f = Frame rate
+Fade
 Fade and slide
 Fade in
 Fade only
@@ -2917,6 +2918,7 @@ Monospace
 Moon
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 More teammates...
+Morph
 MOTD
 Motion and focus feedback
 Mouse
@@ -3341,8 +3343,10 @@ Parts are stored in the skin file; unsaved changes are lost when leaving the pag
 Password
 Password for Axiom alt account auto-login
 Password for Axiom main account auto-login
+Password icon animation
 Password incorrect
 Password required to use reserved slots.
+Password visibility icon animation: 0=Fade, 1=Morph
 Past year
 Paste sp_dc from Spotify web cookies
 Path to CA certificate for verifying the MySQL/MariaDB server certificate
@@ -5187,6 +5191,7 @@ This team is locked using /lock. Only members of the team can invite you or unlo
 This team is locked using /lock. Only members of the team can unlock it using /lock.
 This team started already
 This team was disbanded because there are more players than allowed in the team.
+This text is already in the target language.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 Tick "Auto-connect dummy" to connect the dummy for you, then bind "Solo split key" to toggle, or use the enter and leave keys.
 Tick "Debug mode" to turn all options on, then set "Performance debug log threshold (ms)" to choose which frames get logged.

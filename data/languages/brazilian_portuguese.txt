@@ -5435,6 +5435,9 @@ Extremely slow, for testing only
 f = Frame rate
 == f = Taxa de quadros
 
+Fade
+== Fusão
+
 Fade and slide
 == Desvanecer e deslizar
 
@@ -8753,6 +8756,9 @@ More optimistic prediction along Tee's stable direction, reduces delay to stabil
 More teammates...
 == Mais companheiros de equipe...
 
+Morph
+== Transformação
+
 MOTD
 == MOTD
 
@@ -10025,11 +10031,17 @@ Password for Axiom alt account auto-login
 Password for Axiom main account auto-login
 == Senha de login automático da conta principal do Axiom
 
+Password icon animation
+== Animação do ícone de senha
+
 Password incorrect
 == Senha incorreta
 
 Password required to use reserved slots.
 == Senha necessária para usar slots reservados.
+
+Password visibility icon animation: 0=Fade, 1=Morph
+== Animação do ícone de visibilidade da senha: 0=Fusão, 1=Transformação
 
 Past year
 == Último ano
@@ -15562,6 +15574,9 @@ This team started already
 
 This team was disbanded because there are more players than allowed in the team.
 == Este time foi dissolvido porque há mais jogadores do que o permitido no time.
+
+This text is already in the target language.
+== Este texto já está no idioma de destino.
 
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == Esta dica é fornecida por ui_widget::Tooltip, uma camada fina sobre CTooltips.

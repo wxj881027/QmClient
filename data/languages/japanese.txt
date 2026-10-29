@@ -5435,6 +5435,9 @@ Extremely slow, for testing only
 f = Frame rate
 == f = フレームレート
 
+Fade
+== フェード
+
 Fade and slide
 == フェード＆スライド
 
@@ -8753,6 +8756,9 @@ More optimistic prediction along Tee's stable direction, reduces delay to stabil
 More teammates...
 == さらにチームメイト…
 
+Morph
+== モーフ
+
 MOTD
 == MOTD
 
@@ -10025,11 +10031,17 @@ Password for Axiom alt account auto-login
 Password for Axiom main account auto-login
 == Axiom メインアカウント自動ログインパスワード
 
+Password icon animation
+== パスワードアイコンのアニメーション
+
 Password incorrect
 == パスワードが間違っています
 
 Password required to use reserved slots.
 == 予約スロットを使用するために必要なパスワード
+
+Password visibility icon animation: 0=Fade, 1=Morph
+== パスワード表示アイコンのアニメーション：0=フェード、1=モーフ
 
 Past year
 == 過去1年間
@@ -15562,6 +15574,9 @@ This team started already
 
 This team was disbanded because there are more players than allowed in the team.
 == チームの許容人数を超えたため、このチームは解散されました
+
+This text is already in the target language.
+== このテキストは既に目標の言語です。
 
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == このツールチップは ui_widget::Tooltip が提供しています。CTooltips の薄いラッパーです。

@@ -176,7 +176,6 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 		auto &Auth = pMenus->GameClient()->m_QmClient;
 		auto &Draft = TitleProfileDraft(Auth, ReadOnly);
 		static CButtonContainer s_RedeemButton, s_SaveButton, s_RefreshButton;
-		Draft.m_Code.SetHidden(true);
 		Draft.m_Code.SetEmptyText(Localize("Sponsor code"));
 		Draft.m_Title.SetEmptyText(Localize("Custom title"));
 		Draft.m_Name.SetEmptyText(Localize("Exact bound nickname"));
@@ -217,7 +216,12 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 				const auto InputActions = ResolveSettingsInputActionsLayout(Row, 1, Metrics, Actions.m_aButtons[0].w);
 				Row = InputActions.m_Input;
 				Button = InputActions.m_Actions.m_aButtons[0];
-				ui_widget::InputField(TitleCtx, &Draft.m_Code, Row, Draft.m_Code.GetEmptyText(), BodySize, nullptr, true);
+				static ui_widget::SPasswordFieldState s_TitleCodeState;
+				ui_widget::SPasswordFieldOptions CodeOptions;
+				CodeOptions.m_pPlaceholder = Draft.m_Code.GetEmptyText();
+				CodeOptions.m_FontSize = BodySize;
+				CodeOptions.m_Clearable = true;
+				ui_widget::PasswordField(TitleCtx, &Draft.m_Code, Row, &s_TitleCodeState, CodeOptions);
 				Hint(&Draft.m_Code, Row, Localize("Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate."));
 				if(pMenus->DoButton_Menu(&s_RedeemButton, Localize("Redeem"), 0, &Button) && Enabled && !Auth.TitleAuthenticated())
 					Auth.RedeemTitleCode(Draft.m_Code.GetString());

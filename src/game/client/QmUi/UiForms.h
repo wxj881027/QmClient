@@ -280,6 +280,27 @@ namespace ui_widget
 	// 只读输入框（不接收输入，仅渲染文本）。
 	void ReadOnlyTextField(const IUiContext &Ctx, CLineInput *pInput, const CUIRect &Rect, const char *pPlaceholder = nullptr, float FontSize = ui_token::font::BODY);
 
+	// 密码输入框：统一封装「内容隐藏 + 尾部眼睛按钮 + 显隐状态」。
+	// 所有密码类输入框都走这里，显隐图标的外观与动画只在 UiForms 一处定义。
+	struct SPasswordFieldOptions
+	{
+		const char *m_pPlaceholder = nullptr;
+		float m_FontSize = ui_token::font::BODY;
+		int m_Corners = IGraphics::CORNER_ALL;
+		// 尾部按钮的方形槽位宽度；<= 0 时按输入框高度取。
+		float m_TrailingWidth = 0.0f;
+		bool m_Clearable = false;
+	};
+
+	// 调用点持有：显隐状态与尾部按钮 id 必须跨帧稳定。
+	struct SPasswordFieldState
+	{
+		CButtonContainer m_Toggle;
+		bool m_Visible = false;
+	};
+
+	SInputFieldResult PasswordField(const IUiContext &Ctx, CLineInput *pInput, const CUIRect &Rect, SPasswordFieldState *pState, const SPasswordFieldOptions &Options = {});
+
 	// 整数输入框，自动与外部 int 同步。
 	SInputFieldResult IntegerField(const IUiContext &Ctx, CLineInputNumber *pInput, int *pValue, int Min, int Max, const CUIRect &Rect, const STextFieldOptions &Options);
 

@@ -5435,6 +5435,9 @@ Extremely slow, for testing only
 f = Frame rate
 == f = 幀率
 
+Fade
+== 漸變
+
 Fade and slide
 == 淡入並滑入
 
@@ -8753,6 +8756,9 @@ More optimistic prediction along Tee's stable direction, reduces delay to stabil
 More teammates...
 == 更多隊友……
 
+Morph
+== 形變
+
 MOTD
 == 公告
 
@@ -10025,11 +10031,17 @@ Password for Axiom alt account auto-login
 Password for Axiom main account auto-login
 == Axiom 主號自動登錄密碼
 
+Password icon animation
+== 密碼圖示動畫
+
 Password incorrect
 == 密碼錯誤
 
 Password required to use reserved slots.
 == 使用預留插槽所需的密碼
+
+Password visibility icon animation: 0=Fade, 1=Morph
+== 密碼顯示圖示動畫：0=漸變，1=形變
 
 Past year
 == 最近一年
@@ -15562,6 +15574,9 @@ This team started already
 
 This team was disbanded because there are more players than allowed in the team.
 == 該隊伍因人數超過允許上限而被解散
+
+This text is already in the target language.
+== 這段文字已經是目標語言。
 
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == 這個提示由 ui_widget::Tooltip 提供，它是 CTooltips 上的一層薄封裝。

@@ -2477,7 +2477,7 @@ int CUi::DoButton_FontIcon(CButtonContainer *pButtonContainer, const char *pText
 	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, EQmIcon::COUNT, pText, Checked, *pRect, Flags, Corners, Enabled, ButtonColor);
 }
 
-bool CUi::DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color) const
+bool CUi::DrawQmIcon(const CUIRect &Rect, const EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color, const bool ForceOutlineStyle) const
 {
 	if(pFallbackIcon == nullptr || pFallbackIcon[0] == '\0')
 		return false;
@@ -2492,7 +2492,7 @@ bool CUi::DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIco
 	pTextRender->TextColor(QmSignalIconFamily(Icon) ? Color : ConfiguredQmUiIconColor(Color, Icon));
 	const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
 	// 实心态切换 Fill 字面渲染同一码位；字形文本与度量不变，缓存按预设自然隔离。
-	pTextRender->SetFontPreset(QmUiIconFilledStyle(Icon) ? EFontPreset::ICON_FONT_FILL : EFontPreset::ICON_FONT);
+	pTextRender->SetFontPreset(ForceOutlineStyle ? EFontPreset::ICON_FONT : QmUiIconFilledStyle(Icon) ? EFontPreset::ICON_FONT_FILL : EFontPreset::ICON_FONT);
 	pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
 	// 信号柱家族按 bbox 占比补足字号，四档可视尺寸趋近常规图标；其余图标走通用字号。
 	const float FontSize = QmSignalIconFamily(Icon) ? QmSignalIconFontSize(Rect, Icon) : QmIconFontSize(Rect);
@@ -2513,9 +2513,9 @@ CLabelResult CUi::DoLabel_QmIcon(const CUIRect *pRect, EQmIcon Icon, const char 
 	return DoLabel(pRect, pFallbackIcon, Size, Align, LabelProps);
 }
 
-int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor, bool ShowSlash, bool TransparentInactive)
+int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor, bool ShowSlash, bool TransparentInactive, const ui_widget::SIconButtonIconDraw *pIconDraw)
 {
-	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, Enabled, ButtonColor, ShowSlash, TransparentInactive);
+	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, Enabled, ButtonColor, ShowSlash, TransparentInactive, nullptr, pIconDraw);
 }
 
 int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding, bool TransparentInactive, bool Enabled, const std::optional<ColorRGBA> ButtonColor, float MinimumFontSize)

@@ -5435,6 +5435,9 @@ Extremely slow, for testing only
 f = Frame rate
 == f = 프레임 속도
 
+Fade
+== 페이드
+
 Fade and slide
 == 페이드 및 슬라이드
 
@@ -8753,6 +8756,9 @@ More optimistic prediction along Tee's stable direction, reduces delay to stabil
 More teammates...
 == 팀원이 더 있습니다...
 
+Morph
+== 변형
+
 MOTD
 == 공지
 
@@ -10025,11 +10031,17 @@ Password for Axiom alt account auto-login
 Password for Axiom main account auto-login
 == Axiom 메인 계정 자동 로그인 비밀번호
 
+Password icon animation
+== 비밀번호 아이콘 애니메이션
+
 Password incorrect
 == 비밀번호가 틀렸습니다
 
 Password required to use reserved slots.
 == 예약된 슬롯을 사용하는 데 필요한 비밀번호
+
+Password visibility icon animation: 0=Fade, 1=Morph
+== 비밀번호 표시 아이콘 애니메이션: 0=페이드, 1=변형
 
 Past year
 == 지난 1년
@@ -15562,6 +15574,9 @@ This team started already
 
 This team was disbanded because there are more players than allowed in the team.
 == 허용된 인원보다 많은 플레이어가 있어 이 팀이 해체되었습니다
+
+This text is already in the target language.
+== 이 텍스트는 이미 대상 언어입니다.
 
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == 이 툴팁은 ui_widget::Tooltip — CTooltips 위의 얇은 레이어에 의해 제공됩니다.

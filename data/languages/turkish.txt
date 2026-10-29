@@ -5435,6 +5435,9 @@ Extremely slow, for testing only
 f = Frame rate
 == f = Kare hızı
 
+Fade
+== Solma
+
 Fade and slide
 == Soldur ve kaydır
 
@@ -8753,6 +8756,9 @@ More optimistic prediction along Tee's stable direction, reduces delay to stabil
 More teammates...
 == Daha fazla takım arkadaşı...
 
+Morph
+== Dönüşüm
+
 MOTD
 == MOTD
 
@@ -10025,11 +10031,17 @@ Password for Axiom alt account auto-login
 Password for Axiom main account auto-login
 == Axiom ana hesap otomatik giriş şifresi
 
+Password icon animation
+== Parola simgesi animasyonu
+
 Password incorrect
 == Parola yanlış
 
 Password required to use reserved slots.
 == Ayrılmış yuvaları kullanmak için gereken şifre.
+
+Password visibility icon animation: 0=Fade, 1=Morph
+== Parola görünürlüğü simgesi animasyonu: 0=Solma, 1=Dönüşüm
 
 Past year
 == Geçen yıl
@@ -15562,6 +15574,9 @@ This team started already
 
 This team was disbanded because there are more players than allowed in the team.
 == Bu takım, takımda izin verilenden daha fazla oyuncu olduğu için dağıtıldı.
+
+This text is already in the target language.
+== This text is already in the target language.
 
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == Bu ipucu ui_widget::Tooltip tarafından sağlanır; CTooltips üzerinde ince bir sarmalayıcıdır.

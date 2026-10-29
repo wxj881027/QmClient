@@ -86,7 +86,7 @@ namespace ui_widget
 		return Fill;
 	}
 
-	int DoIconButton(const IUiContext &Ctx, const void *pId, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect &Rect, unsigned Flags, int Corners, bool Enabled, std::optional<ColorRGBA> Color, bool ShowSlash, bool TransparentInactive, const CUIRect *pHitRect)
+	int DoIconButton(const IUiContext &Ctx, const void *pId, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect &Rect, unsigned Flags, int Corners, bool Enabled, std::optional<ColorRGBA> Color, bool ShowSlash, bool TransparentInactive, const CUIRect *pHitRect, const SIconButtonIconDraw *pIconDraw)
 	{
 		if(Ctx.m_pUi == nullptr || pId == nullptr || (Ctx.m_pUi->DrawingSuppressed() && !Ctx.m_pUi->PreLayoutInput()))
 			return 0;
@@ -113,7 +113,12 @@ namespace ui_widget
 			Foreground = ResolveUiSurfaceIconColor(SurfaceText.Surface(), SemanticColor);
 		if(!Options.m_Enabled)
 			Foreground.a *= 0.65f;
-		pUi->DrawQmIcon(Label, Icon, pFallbackIcon, Foreground);
+		// 自定义图标与默认字形共用同一个 Box 和前景色：换绘制方式不该改变图标在按钮里
+		// 的位置、大小或颜色，否则同一个按钮在静止态和过渡态之间会跳一下。
+		if(pIconDraw != nullptr && pIconDraw->m_pfnDraw != nullptr)
+			pIconDraw->m_pfnDraw(Ctx, Label, Foreground, pIconDraw->m_pUser);
+		else
+			pUi->DrawQmIcon(Label, Icon, pFallbackIcon, Foreground);
 		if((ShowSlash || !Options.m_Enabled) && Label.w > 0.0f && Label.h > 0.0f)
 		{
 			// 禁用标记使用左上到右下的平头斜线，不依赖字体字形的方向和端点形状。
