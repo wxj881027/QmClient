@@ -37,6 +37,11 @@ void CAbstractPacker::AddString(const char *pStr, int Limit, bool AllowTruncatio
 {
 	if(m_Error)
 		return;
+	if(m_pCurrent == m_pEnd)
+	{
+		m_Error = true;
+		return;
+	}
 
 	unsigned char *const pPrevCurrent = m_pCurrent;
 	if(Limit <= 0)
@@ -64,7 +69,7 @@ void CAbstractPacker::AddString(const char *pStr, int Limit, bool AllowTruncatio
 			return;
 		}
 		// Ensure space for the null termination.
-		if(m_pCurrent + Length + 1 > m_pEnd)
+		if(Length + 1 > m_pEnd - m_pCurrent)
 		{
 			m_Error = true;
 			m_pCurrent = pPrevCurrent;
@@ -82,21 +87,24 @@ void CAbstractPacker::AddRaw(const void *pData, int Size)
 	if(m_Error)
 		return;
 
-	if(m_pCurrent + Size > m_pEnd)
+	if(Size < 0 || Size > m_pEnd - m_pCurrent || (Size > 0 && pData == nullptr))
 	{
 		m_Error = true;
 		return;
 	}
 
-	mem_copy(m_pCurrent, pData, Size);
-	m_pCurrent += Size;
+	if(Size > 0)
+	{
+		mem_copy(m_pCurrent, pData, Size);
+		m_pCurrent += Size;
+	}
 }
 
 void CUnpacker::Reset(const void *pData, int Size)
 {
-	m_Error = false;
+	m_Error = Size < 0 || (Size > 0 && pData == nullptr);
 	m_pStart = (const unsigned char *)pData;
-	m_pEnd = m_pStart + Size;
+	m_pEnd = !m_Error && Size > 0 ? m_pStart + Size : m_pStart;
 	m_pCurrent = m_pStart;
 }
 
@@ -105,7 +113,7 @@ int CUnpacker::GetInt()
 	if(m_Error)
 		return 0;
 
-	if(m_pCurrent >= m_pEnd)
+	if(m_pCurrent == m_pEnd)
 	{
 		m_Error = true;
 		return 0;
@@ -140,7 +148,7 @@ int CUnpacker::GetUncompressedInt()
 	if(m_Error)
 		return 0;
 
-	if(m_pCurrent + sizeof(int) > m_pEnd)
+	if(m_pCurrent == m_pEnd || m_pEnd - m_pCurrent < static_cast<ptrdiff_t>(sizeof(int)))
 	{
 		m_Error = true;
 		return 0;
@@ -170,7 +178,7 @@ const char *CUnpacker::GetString(int SanitizeType)
 	if(m_Error)
 		return "";
 
-	if(m_pCurrent >= m_pEnd)
+	if(m_pCurrent == m_pEnd)
 	{
 		m_Error = true;
 		return "";
@@ -209,13 +217,15 @@ const unsigned char *CUnpacker::GetRaw(int Size)
 		return nullptr;
 
 	// check for nasty sizes
-	if(Size < 0 || Size > m_pEnd - m_pCurrent)
+	const auto Remaining = m_pCurrent == m_pEnd ? 0 : m_pEnd - m_pCurrent;
+	if(Size < 0 || Size > Remaining)
 	{
 		m_Error = true;
 		return nullptr;
 	}
 
 	// "unpack" the data
-	m_pCurrent += Size;
+	if(Size > 0)
+		m_pCurrent += Size;
 	return pPtr;
 }

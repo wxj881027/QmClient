@@ -4733,6 +4733,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/map_download_file_test.cpp
     src/test/unit/engine/map_download_progress_test.cpp
     src/test/unit/engine/unpacker_raw_test.cpp
+    src/test/unit/engine/packer_boundary_test.cpp
+    src/test/unit/engine/unpacker_boundary_test.cpp
     src/test/integration/engine/sixup_server_info_test.cpp
     src/test/integration/client/android_asset_unpack_test.cpp
     src/test/integration/engine/steam_client_path_test.cpp
