@@ -12,6 +12,7 @@
 #include "qm_storage_mode.h"
 #include "replay_save.h"
 #include "serverbrowser.h"
+#include "sixup_system_messages.h"
 
 #include <base/crashdump.h>
 #include <base/hash.h>
@@ -445,41 +446,10 @@ static inline bool RepackMsg(const CMsgPacker *pMsg, CPacker &Packer, bool Sixup
 	{
 		if(pMsg->m_System)
 		{
-			if(MsgId >= OFFSET_UUID)
+			MsgId = sixup_translation::OutgoingSystemMessageId(MsgId);
+			if(MsgId < 0)
 			{
-				;
-			}
-			else if(MsgId == NETMSG_INFO || MsgId == NETMSG_REQUEST_MAP_DATA)
-			{
-				;
-			}
-			else if(MsgId == NETMSG_READY)
-			{
-				MsgId = protocol7::NETMSG_READY;
-			}
-			else if(MsgId == NETMSG_RCON_CMD)
-			{
-				MsgId = protocol7::NETMSG_RCON_CMD;
-			}
-			else if(MsgId == NETMSG_ENTERGAME)
-			{
-				MsgId = protocol7::NETMSG_ENTERGAME;
-			}
-			else if(MsgId == NETMSG_INPUT)
-			{
-				MsgId = protocol7::NETMSG_INPUT;
-			}
-			else if(MsgId == NETMSG_RCON_AUTH)
-			{
-				MsgId = protocol7::NETMSG_RCON_AUTH;
-			}
-			else if(MsgId == NETMSG_PING)
-			{
-				MsgId = protocol7::NETMSG_PING;
-			}
-			else
-			{
-				log_error("net", "0.7 DROP send sys %d", MsgId);
+				log_error("net", "0.7 DROP send sys %d", pMsg->m_MsgId);
 				return false;
 			}
 		}

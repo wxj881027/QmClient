@@ -3186,6 +3186,7 @@ if(CLIENT)
     serverbrowser_ping_cache.h
     sixup_map_change.h
     sixup_server_info.h
+    sixup_system_messages.h
     sixup_translate_system.cpp
     smooth_time.cpp
     smooth_time.h
@@ -4730,6 +4731,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/android_asset_unpack_test.cpp
     src/test/integration/engine/steam_client_path_test.cpp
     src/test/unit/engine/steam_startup_test.cpp
+    src/test/unit/engine/sixup_system_messages_test.cpp
     src/test/integration/qmclient/settings/steam_probe_state_test.cpp
     src/test/unit/qmclient/ui/settings_toggle_grid_test.cpp
     src/test/unit/qmclient/ui/settings_choice_grid_test.cpp
