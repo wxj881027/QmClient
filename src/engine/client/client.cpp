@@ -5,6 +5,7 @@
 
 #include "demoedit.h"
 #include "friends.h"
+#include "map_download_request.h"
 #include "perf_file_logger.h"
 #include "qm_crash_report_file.h"
 #include "qm_crash_report_marker.h"
@@ -609,17 +610,9 @@ void CClient::SendMapRequest()
 {
 	dbg_assert(!m_MapdownloadFileTemp, "Map download already in progress");
 	m_MapdownloadFileTemp = Storage()->OpenFile(m_aMapdownloadFilenameTemp, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(IsSixup())
-	{
-		CMsgPacker MsgP(protocol7::NETMSG_REQUEST_MAP_DATA, true, true);
-		SendMsg(CONN_MAIN, &MsgP, MSGFLAG_VITAL | MSGFLAG_FLUSH);
-	}
-	else
-	{
-		CMsgPacker Msg(NETMSG_REQUEST_MAP_DATA, true);
-		Msg.AddInt(m_MapdownloadChunk);
+	map_download::SendRequest(IsSixup(), m_MapdownloadChunk, [this](CMsgPacker &Msg) {
 		SendMsg(CONN_MAIN, &Msg, MSGFLAG_VITAL | MSGFLAG_FLUSH);
-	}
+	});
 }
 
 void CClient::RconAuth(const char *pName, const char *pPassword, bool Dummy)
@@ -2525,19 +2518,12 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 				// request new chunk
 				m_MapdownloadChunk++;
 
-				if(IsSixup() && (m_MapdownloadChunk % m_TranslationContext.m_MapDownloadChunksPerRequest == 0))
-				{
-					CMsgPacker MsgP(protocol7::NETMSG_REQUEST_MAP_DATA, true, true);
-					SendMsg(CONN_MAIN, &MsgP, MSGFLAG_VITAL | MSGFLAG_FLUSH);
-				}
-				else
-				{
-					CMsgPacker MsgP(NETMSG_REQUEST_MAP_DATA, true);
-					MsgP.AddInt(m_MapdownloadChunk);
-					SendMsg(CONN_MAIN, &MsgP, MSGFLAG_VITAL | MSGFLAG_FLUSH);
-				}
+				const bool Requested = map_download::ContinueRequest(IsSixup(), m_MapdownloadChunk,
+					m_TranslationContext.m_MapDownloadChunksPerRequest, [this](CMsgPacker &MsgP) {
+						SendMsg(CONN_MAIN, &MsgP, MSGFLAG_VITAL | MSGFLAG_FLUSH);
+					});
 
-				if(g_Config.m_Debug)
+				if(Requested && g_Config.m_Debug)
 				{
 					char aBuf[256];
 					str_format(aBuf, sizeof(aBuf), "requested chunk %d", m_MapdownloadChunk);
