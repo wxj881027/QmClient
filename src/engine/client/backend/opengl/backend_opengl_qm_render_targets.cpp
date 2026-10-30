@@ -29,48 +29,85 @@
 
 void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Create(const CCommandBuffer::SCommand_RenderTarget_Create *pCommand)
 {
-	if(pCommand->m_TargetId < 0 || pCommand->m_Width <= 0 || pCommand->m_Height <= 0)
+	if(m_RenderTargetActive && m_ActiveRenderTargetId == pCommand->m_TargetId)
 		return;
-	if((size_t)pCommand->m_TargetId >= m_vRenderTargets.size())
-		m_vRenderTargets.resize((size_t)pCommand->m_TargetId + 1);
 
-	SOpenGLRenderTarget &Target = m_vRenderTargets[pCommand->m_TargetId];
-	if(Target.m_Framebuffer != 0 || Target.m_Texture != 0)
+	class COperations final : public opengl_render_target::IOperations
 	{
-		CCommandBuffer::SCommand_RenderTarget_Destroy DestroyCmd;
-		DestroyCmd.m_TargetId = pCommand->m_TargetId;
-		Cmd_RenderTarget_Destroy(&DestroyCmd);
-	}
+		bool m_SeparateBindings;
 
-	glGenTextures(1, &Target.m_Texture);
-	glBindTexture(GL_TEXTURE_2D, Target.m_Texture);
+	public:
+		GLenum m_Status = 0;
+		explicit COperations(bool SeparateBindings) :
+			m_SeparateBindings(SeparateBindings) {}
+		opengl_render_target::SBindings GetBindings() noexcept override
+		{
+			GLint Draw = 0, Read = 0, Texture = 0;
+			if(m_SeparateBindings)
+			{
+				glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &Draw);
+				glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &Read);
+			}
+			else
+			{
+				glGetIntegerv(GL_FRAMEBUFFER_BINDING, &Draw);
+				Read = Draw;
+			}
+			glGetIntegerv(GL_TEXTURE_BINDING_2D, &Texture);
+			return {static_cast<TWGLuint>(Draw), static_cast<TWGLuint>(Read), static_cast<TWGLuint>(Texture)};
+		}
+		TWGLuint CreateTexture(int Width, int Height) noexcept override
+		{
+			TWGLuint Texture = 0;
+			glGenTextures(1, &Texture);
+			if(Texture == 0)
+				return 0;
+			glBindTexture(GL_TEXTURE_2D, Texture);
 #if defined(BACKEND_AS_OPENGL_ES)
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, pCommand->m_Width, pCommand->m_Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Width, Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 #else
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, pCommand->m_Width, pCommand->m_Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, Width, Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 #endif
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			return Texture;
+		}
+		TWGLuint CreateFramebuffer(TWGLuint Texture) noexcept override
+		{
+			TWGLuint Framebuffer = 0;
+			glGenFramebuffers(1, &Framebuffer);
+			if(Framebuffer == 0)
+				return 0;
+			glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Texture, 0);
+			return Framebuffer;
+		}
+		bool IsFramebufferComplete() noexcept override
+		{
+			m_Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+			return m_Status == GL_FRAMEBUFFER_COMPLETE;
+		}
+		void RestoreBindings(const opengl_render_target::SBindings &Bindings) noexcept override
+		{
+			if(m_SeparateBindings)
+			{
+				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, Bindings.m_DrawFramebuffer);
+				glBindFramebuffer(GL_READ_FRAMEBUFFER, Bindings.m_ReadFramebuffer);
+			}
+			else
+				glBindFramebuffer(GL_FRAMEBUFFER, Bindings.m_DrawFramebuffer);
+			glBindTexture(GL_TEXTURE_2D, Bindings.m_Texture);
+		}
+		void DeleteFramebuffer(TWGLuint Framebuffer) noexcept override { glDeleteFramebuffers(1, &Framebuffer); }
+		void DeleteTexture(TWGLuint Texture) noexcept override { glDeleteTextures(1, &Texture); }
+	};
 
-	glGenFramebuffers(1, &Target.m_Framebuffer);
-	glBindFramebuffer(GL_FRAMEBUFFER, Target.m_Framebuffer);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Target.m_Texture, 0);
-	const GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	if(Status != GL_FRAMEBUFFER_COMPLETE)
-	{
-		dbg_msg("opengl", "render target %d incomplete: 0x%x", pCommand->m_TargetId, Status);
-		CCommandBuffer::SCommand_RenderTarget_Destroy DestroyCmd;
-		DestroyCmd.m_TargetId = pCommand->m_TargetId;
-		Cmd_RenderTarget_Destroy(&DestroyCmd);
-		return;
-	}
-
-	Target.m_Width = pCommand->m_Width;
-	Target.m_Height = pCommand->m_Height;
+	COperations Operations(IsNewApi());
+	if(!opengl_render_target::Create(m_vRenderTargets, pCommand->m_TargetId, pCommand->m_Width, pCommand->m_Height, Operations) &&
+		Operations.m_Status != 0 && Operations.m_Status != GL_FRAMEBUFFER_COMPLETE)
+		dbg_msg("opengl", "render target %d incomplete: 0x%x", pCommand->m_TargetId, Operations.m_Status);
 }
 
 void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Destroy(const CCommandBuffer::SCommand_RenderTarget_Destroy *pCommand)

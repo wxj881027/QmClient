@@ -3075,6 +3075,7 @@ if(CLIENT)
     backend/backend_base.h
     backend/readback_image.h
     backend/screenshot_image.h
+    backend/opengl/render_target_create.h
     backend/graphics_backend_contract.cpp
     backend/graphics_backend_contract.h
     backend/graphics_command_execution.h
@@ -4967,6 +4968,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/vulkan_render_workers_test.cpp
     src/test/unit/engine/graphics/readback_image_test.cpp
     src/test/unit/engine/graphics/render_target_capture_image_test.cpp
+    src/test/unit/engine/graphics/opengl_render_target_create_test.cpp
     src/test/unit/engine/graphics/gpu_upload_limiter_test.cpp
     src/test/unit/engine/graphics/render_component_test.cpp
     src/test/unit/engine/graphics/screenshot_image_test.cpp

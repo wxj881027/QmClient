@@ -14,6 +14,7 @@
 
 #include <engine/client/backend/backend_base.h>
 #include <engine/client/backend/opengl/buffer_data.h>
+#include <engine/client/backend/opengl/render_target_create.h>
 #include <engine/client/backend_sdl.h>
 #include <engine/client/graphics_defines.h>
 #include <engine/client/graphics_upload_data.h>
@@ -60,13 +61,7 @@ protected:
 	int m_ViewportX = 0;
 	int m_ViewportY = 0;
 
-	struct SOpenGLRenderTarget
-	{
-		TWGLuint m_Framebuffer = 0;
-		TWGLuint m_Texture = 0;
-		int m_Width = 0;
-		int m_Height = 0;
-	};
+	using SOpenGLRenderTarget = opengl_render_target::STarget;
 	std::vector<SOpenGLRenderTarget> m_vRenderTargets;
 	TWGLint m_aRenderTargetPreviousViewport[4] = {0, 0, 0, 0};
 	TWGLint m_RenderTargetPreviousFramebuffer = 0;
