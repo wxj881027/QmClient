@@ -118,6 +118,8 @@ void CInput::Shutdown()
 {
 	StopTextInput();
 	CloseJoysticks();
+	// 关闭后仍可能收到输入法析构触发的清理，此时图形对象可能已销毁。
+	m_pGraphics = nullptr;
 }
 
 void CInput::InitJoysticks()
