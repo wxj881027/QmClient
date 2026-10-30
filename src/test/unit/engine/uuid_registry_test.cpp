@@ -43,9 +43,9 @@ TEST(UuidRegistry, ReusedInputBufferProducesIndependentEntries)
 	for(int i = 0; i < 100; ++i)
 	{
 		SCOPED_TRACE(i);
-		str_format(aName, sizeof(aName), "name-%d@uuid-test", i);
-		EXPECT_STREQ(Manager.GetName(OFFSET_UUID + i), aName);
-		EXPECT_EQ(Manager.LookupUuid(CalculateUuid(aName)), OFFSET_UUID + i);
+		const std::string Expected = "name-" + std::to_string(i) + "@uuid-test";
+		EXPECT_STREQ(Manager.GetName(OFFSET_UUID + i), Expected.c_str());
+		EXPECT_EQ(Manager.LookupUuid(CalculateUuid(Expected.c_str())), OFFSET_UUID + i);
 	}
 	EXPECT_EQ(Manager.NumUuids(), 100);
 }
