@@ -47,7 +47,7 @@ public:
 			Inits the compressor/decompressor.
 
 		Remarks:
-			- Does no allocation whatsoever.
+			- 编解码不分配内存；初始化排序可能使用标准库临时存储。
 			- You don't have to call any cleanup functions when you are done with it.
 	*/
 	void Init();
