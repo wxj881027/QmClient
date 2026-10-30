@@ -3188,6 +3188,7 @@ if(CLIENT)
     map_download_request.h
     map_download_file.h
     message_repack.h
+    sixup_connless.h
     sixup_server_info.h
     sixup_system_messages.h
     sixup_translate_system.cpp
@@ -4738,6 +4739,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/packer_boundary_test.cpp
     src/test/unit/engine/unpacker_boundary_test.cpp
     src/test/integration/engine/sixup_server_info_test.cpp
+    src/test/integration/engine/sixup_connless_test.cpp
     src/test/integration/client/android_asset_unpack_test.cpp
     src/test/integration/engine/steam_client_path_test.cpp
     src/test/unit/engine/steam_startup_test.cpp
