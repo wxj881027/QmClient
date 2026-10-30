@@ -5087,9 +5087,11 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_chat_interactions_test.cpp
     src/test/unit/qmclient/client/qm_chat_message_filter_test.cpp
     src/test/unit/qmclient/client/qm_chat_command_policy_test.cpp
+    src/test/unit/qmclient/client/qm_axiom_login_reply_test.cpp
     src/test/unit/qmclient/client/qm_chat_command_hud_test.cpp
     src/test/unit/qmclient/client/qm_chat_presentation_test.cpp
     src/test/unit/qmclient/client/qm_pending_chat_messages_test.cpp
+    src/test/unit/qmclient/client/qm_pending_chat_preparation_test.cpp
     src/test/unit/qmclient/client/qm_outgoing_chat_annotations_test.cpp
     src/test/unit/qmclient/client/qm_chat_text_layout_test.cpp
     src/test/unit/qmclient/client/qm_console_log_filter_test.cpp

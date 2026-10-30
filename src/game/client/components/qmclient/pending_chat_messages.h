@@ -1,10 +1,10 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_PENDING_CHAT_MESSAGES_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_PENDING_CHAT_MESSAGES_H
 
-#include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
-#include <deque>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -14,7 +14,7 @@ class CPendingChatMessages
 public:
 	struct SMessage
 	{
-		int m_Team;
+		int m_Team = 0;
 		int m_Connection = -1;
 		int m_ClientId = -1;
 		std::string m_Text;
@@ -32,7 +32,9 @@ public:
 	static constexpr size_t CAPACITY = 3;
 
 private:
-	std::deque<SMessage> m_Messages;
+	// 容量固定为三条，接管已准备正文和弹出队首都不再分配容器节点。
+	std::array<SMessage, CAPACITY> m_aMessages{};
+	size_t m_Size = 0;
 	int64_t m_LastObservedTime = -1;
 
 	static bool ValidTime(int64_t LastSend, int64_t Now, int64_t Frequency)
@@ -76,14 +78,33 @@ public:
 	template<typename TSend>
 	EAdmission Admit(int64_t LastSend, int64_t Now, int64_t Frequency, SMessage Message, TSend &&Send)
 	{
+		return PrepareAndAdmit(LastSend, Now, Frequency, [&] { return std::move(Message); }, std::forward<TSend>(Send));
+	}
+
+	// 准备与发送回调仅同步借用且不能重入本队列；只回退准备异常。
+	template<typename TPrepare, typename TSend>
+	EAdmission PrepareAndAdmit(int64_t LastSend, int64_t Now, int64_t Frequency, TPrepare &&Prepare, TSend &&Send)
+	{
 		if(!ObserveTime(LastSend, Now, Frequency))
 			return EAdmission::REJECTED;
-		int PendingCount = static_cast<int>(m_Messages.size());
+		int PendingCount = static_cast<int>(m_Size);
 		EAdmission Admission = Reserve(LastSend, Now, Frequency, PendingCount);
-		if(Admission == EAdmission::SENT && !Send(std::as_const(Message)))
+		if(Admission == EAdmission::REJECTED)
+			return Admission;
+		std::optional<SMessage> Message;
+		try
+		{
+			Message.emplace(Prepare());
+		}
+		catch(...)
+		{
+			return EAdmission::REJECTED;
+		}
+		// 发送可能已有外部副作用，不能把它的异常伪装成正文准备失败。
+		if(Admission == EAdmission::SENT && !Send(std::as_const(*Message)))
 			Admission = EAdmission::QUEUED;
 		if(Admission == EAdmission::QUEUED)
-			m_Messages.push_back(std::move(Message));
+			m_aMessages[m_Size++] = std::move(*Message);
 		return Admission;
 	}
 
@@ -91,28 +112,40 @@ public:
 	template<typename TProcess>
 	bool ProcessReady(int64_t LastSend, int64_t Now, int64_t Frequency, TProcess &&Process)
 	{
-		if(!ObserveTime(LastSend, Now, Frequency) || m_Messages.empty() || !Ready(LastSend, Now, Frequency))
+		if(!ObserveTime(LastSend, Now, Frequency) || m_Size == 0 || !Ready(LastSend, Now, Frequency))
 			return false;
-		if(!Process(std::as_const(m_Messages.front())))
+		if(!Process(std::as_const(m_aMessages[0])))
 			return false;
-		m_Messages.pop_front();
+		for(size_t Index = 1; Index < m_Size; ++Index)
+			m_aMessages[Index - 1] = std::move(m_aMessages[Index]);
+		m_aMessages[--m_Size] = {};
 		return true;
 	}
 
 	void Clear()
 	{
-		m_Messages.clear();
+		for(size_t Index = 0; Index < m_Size; ++Index)
+			m_aMessages[Index] = {};
+		m_Size = 0;
 		m_LastObservedTime = -1;
 	}
 
-	size_t Size() const { return m_Messages.size(); }
+	size_t Size() const { return m_Size; }
 
 	void InvalidateConnection(int Connection)
 	{
-		m_Messages.erase(std::remove_if(m_Messages.begin(), m_Messages.end(), [Connection](const SMessage &Message) {
-			return Message.m_Connection == Connection;
-		}),
-			m_Messages.end());
+		size_t Write = 0;
+		for(size_t Read = 0; Read < m_Size; ++Read)
+		{
+			if(m_aMessages[Read].m_Connection == Connection)
+				continue;
+			if(Write != Read)
+				m_aMessages[Write] = std::move(m_aMessages[Read]);
+			++Write;
+		}
+		for(size_t Index = Write; Index < m_Size; ++Index)
+			m_aMessages[Index] = {};
+		m_Size = Write;
 	}
 };
 
