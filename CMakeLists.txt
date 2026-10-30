@@ -4761,6 +4761,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/contract/qmclient/ui/qm_anim_contract_test.cpp
     src/test/unit/qmclient/ui/QmAnimDropdownTest.cpp
     src/test/unit/qmclient/ui/qm_dropdown_search_allocation_test.cpp
+    src/test/unit/qmclient/ui/qm_dropdown_selection_bounds_test.cpp
     src/test/unit/qmclient/ui/QmAnimFormsTest.cpp
     src/test/unit/qmclient/ui/QmDiscreteSliderTest.cpp
     src/test/unit/client/map_browser_filter_slider_test.cpp

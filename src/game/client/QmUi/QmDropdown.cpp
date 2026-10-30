@@ -277,7 +277,7 @@ SQmDropdownUpdateResult QmUpdateDropdownPopupSelection(const SQmDropdownInput &I
 		ActiveIndex = Input.m_HoveredIndex;
 
 	if(Input.m_KeyUp)
-		ActiveIndex = (ActiveIndex + ItemCount - 1) % ItemCount;
+		ActiveIndex = ActiveIndex > 0 ? ActiveIndex - 1 : ItemCount - 1;
 	if(Input.m_KeyDown)
 		ActiveIndex = (ActiveIndex + 1) % ItemCount;
 
