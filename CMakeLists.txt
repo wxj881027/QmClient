@@ -3184,6 +3184,7 @@ if(CLIENT)
     serverbrowser_http.h
     serverbrowser_ping_cache.cpp
     serverbrowser_ping_cache.h
+    sixup_map_change.h
     sixup_translate_system.cpp
     smooth_time.cpp
     smooth_time.h
@@ -4723,6 +4724,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/local_server_launch_jni_test.cpp
     src/test/integration/client/android_asset_integrity_test.cpp
     src/test/integration/engine/linereader_budget_test.cpp
+    src/test/integration/engine/sixup_map_change_test.cpp
     src/test/integration/client/android_asset_unpack_test.cpp
     src/test/integration/engine/steam_client_path_test.cpp
     src/test/unit/engine/steam_startup_test.cpp

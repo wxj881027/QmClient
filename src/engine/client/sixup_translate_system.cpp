@@ -1,3 +1,5 @@
+#include "sixup_map_change.h"
+
 #include <engine/client/client.h>
 
 int CClient::TranslateSysMsg(int *pMsgId, bool System, CUnpacker *pUnpacker, CPacker *pPacker, CNetChunk *pPacket, bool *pIsExMsg)
@@ -18,17 +20,11 @@ int CClient::TranslateSysMsg(int *pMsgId, bool System, CUnpacker *pUnpacker, CPa
 	if(*pMsgId == protocol7::NETMSG_MAP_CHANGE)
 	{
 		*pMsgId = NETMSG_MAP_CHANGE;
-		const char *pMapName = pUnpacker->GetString(CUnpacker::SANITIZE_CC | CUnpacker::SKIP_START_WHITESPACES);
-		int MapCrc = pUnpacker->GetInt();
-		int Size = pUnpacker->GetInt();
-		m_TranslationContext.m_MapDownloadChunksPerRequest = pUnpacker->GetInt();
-		int ChunkSize = pUnpacker->GetInt();
-		// void *pSha256 = pUnpacker->GetRaw(); // probably safe to ignore
-		pPacker->AddString(pMapName, 0);
-		pPacker->AddInt(MapCrc);
-		pPacker->AddInt(Size);
-		m_TranslationContext.m_MapdownloadTotalsize = Size;
-		m_TranslationContext.m_MapDownloadChunkSize = ChunkSize;
+		if(!sixup_translation::TranslateMapChange(m_TranslationContext, *pUnpacker, *pPacker))
+		{
+			*pMsgId = -1;
+			return -1;
+		}
 		return 0;
 	}
 	else if(*pMsgId == protocol7::NETMSG_SERVERINFO)
