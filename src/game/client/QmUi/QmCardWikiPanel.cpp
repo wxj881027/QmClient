@@ -92,7 +92,12 @@ namespace
 		const bool IsCard = str_startswith(pTarget, "qm:") != nullptr || str_startswith(pTarget, "tclient:") != nullptr || str_startswith(pTarget, "deck:") != nullptr;
 		if(!IsCard)
 		{
+#if defined(CONF_PLATFORM_ANDROID)
+			// Android 上 base 层不提供 open_link（system.h 在 Android 下隐藏该声明），
+			// 外部链接的打开入口由平台侧负责；这里先不处理，避免当作卡片跳转。
+#else
 			open_link(pTarget);
+#endif
 			return;
 		}
 		const SCardWikiCopy *pCopy = FindCardWikiCopy(pTarget);

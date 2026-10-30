@@ -2,6 +2,9 @@
 set -e
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+# 仓库根目录：构建目录不一定是仓库的直接子目录（Windows 主机上把构建目录放在
+# tmp/ 下可以绕开 clang 在某些目录建临时文件被拒绝的问题），所以不能用 ../ 定位。
+REPO_ROOT="$(cd -- "${SCRIPT_DIR}/../.." &> /dev/null && pwd)"
 # shellcheck source=scripts/compile_libs/_build_common.sh
 source "${SCRIPT_DIR}/../../scripts/compile_libs/_build_common.sh"
 
@@ -213,7 +216,7 @@ mkdir -p gradle/wrapper
 
 function copy_dummy_files() {
 	rm -f ./"$2"
-	cp ../"$1" "$2"
+	cp "${REPO_ROOT}/$1" "$2"
 }
 
 copy_dummy_files scripts/android/files/build.sh build.sh
@@ -228,10 +231,10 @@ copy_dummy_files scripts/android/files/settings.gradle settings.gradle
 copy_dummy_files scripts/android/files/AndroidManifest.xml src/main/AndroidManifest.xml
 
 rm -R -f src/main/res
-cp -R ../scripts/android/files/res src/main/
+cp -R "${REPO_ROOT}/scripts/android/files/res" src/main/
 mkdir -p src/main/res/mipmap
-cp ../other/icons/DDNet_256x256x32.png src/main/res/mipmap/ic_launcher.png
-cp ../other/icons/DDNet_256x256x32.png src/main/res/mipmap/ic_launcher_round.png
+cp "${REPO_ROOT}/other/icons/DDNet_256x256x32.png" src/main/res/mipmap/ic_launcher.png
+cp "${REPO_ROOT}/other/icons/DDNet_256x256x32.png" src/main/res/mipmap/ic_launcher_round.png
 chmod +x ./gradlew
 
 log_info "Copying libraries..."
@@ -271,7 +274,8 @@ cp -R "$ANDROID_SUB_BUILD_DIR/$ANDROID_BUILD_DUMMY/data" ./assets/asset_integrit
 log_info "Creating integrity index file..."
 (
 	cd assets/asset_integrity_files || exit 1
-	tmpfile="$(mktemp /tmp/hash_strings.XXX)"
+	# 尊重 TMPDIR：受限沙箱或只读挂载下 /tmp 可能不可写。
+	tmpfile="$(mktemp "${TMPDIR:-/tmp}/hash_strings.XXX")"
 	find data -iname "*" -type f -print0 | xargs -0 sha256sum | awk '{gsub(/^\*/, "", $2); print substr($0, index($0, $2)), $1}' > "$tmpfile"
 	full_hash="$(sha256sum "$tmpfile" | cut -d' ' -f 1)"
 
@@ -286,7 +290,7 @@ log_info "Preparing gradle build..."
 
 rm -R -f src/main/java/org
 mkdir -p src/main/java
-cp -R ../scripts/android/files/java/org/. src/main/java/org/
+cp -R "${REPO_ROOT}/scripts/android/files/java/org/." src/main/java/org/
 # Java 与当前 ABI 使用同一份固定版本的 SDL3 源码。
 SDL3_JAVA_DIR=$(cat "$ANDROID_SUB_BUILD_DIR/$ANDROID_BUILD_DUMMY/qm_sdl3_java_dir.txt")
 if [ ! -d "$SDL3_JAVA_DIR/org/libsdl/app" ]; then
