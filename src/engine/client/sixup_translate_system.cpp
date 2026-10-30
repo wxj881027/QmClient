@@ -1,4 +1,5 @@
 #include "sixup_map_change.h"
+#include "sixup_server_info.h"
 
 #include <engine/client/client.h>
 
@@ -32,25 +33,7 @@ int CClient::TranslateSysMsg(int *pMsgId, bool System, CUnpacker *pUnpacker, CPa
 		// side effect only
 		// this is a 0.7 only message and not handled in 0.6 code
 		*pMsgId = -1;
-		net_addr_str(&pPacket->m_Address, m_CurrentServerInfo.m_aAddress, sizeof(m_CurrentServerInfo.m_aAddress), true);
-		str_copy(m_CurrentServerInfo.m_aVersion, pUnpacker->GetString(CUnpacker::SANITIZE_CC | CUnpacker::SKIP_START_WHITESPACES));
-		str_copy(m_CurrentServerInfo.m_aName, pUnpacker->GetString(CUnpacker::SANITIZE_CC | CUnpacker::SKIP_START_WHITESPACES));
-		str_clean_whitespaces(m_CurrentServerInfo.m_aName);
-		pUnpacker->GetString(CUnpacker::SANITIZE_CC | CUnpacker::SKIP_START_WHITESPACES); // Hostname
-		pUnpacker->GetString(CUnpacker::SANITIZE_CC | CUnpacker::SKIP_START_WHITESPACES); // Map, determined based on filename
-		str_copy(m_CurrentServerInfo.m_aGameType, pUnpacker->GetString(CUnpacker::SANITIZE_CC | CUnpacker::SKIP_START_WHITESPACES));
-		int Flags = pUnpacker->GetInt();
-		if(Flags & SERVER_FLAG_PASSWORD)
-			m_CurrentServerInfo.m_Flags |= SERVER_FLAG_PASSWORD;
-		// ddnets http master server handles timescore for us already
-		// if(Flags&SERVER_FLAG_TIMESCORE)
-		// 	m_CurrentServerInfo.m_Flags |= SERVER_FLAG_TIMESCORE;
-		pUnpacker->GetInt(); // Server level
-		m_CurrentServerInfo.m_NumPlayers = pUnpacker->GetInt();
-		m_CurrentServerInfo.m_MaxPlayers = pUnpacker->GetInt();
-		m_CurrentServerInfo.m_NumClients = pUnpacker->GetInt();
-		m_CurrentServerInfo.m_MaxClients = pUnpacker->GetInt();
-		return 0;
+		return sixup_translation::ApplyServerInfo(m_CurrentServerInfo, pPacket->m_Address, *pUnpacker) ? 0 : -1;
 	}
 	else if(*pMsgId == protocol7::NETMSG_RCON_AUTH_ON)
 	{
