@@ -36,6 +36,19 @@ class IAllocationResource;
 
 class CDataFileReader
 {
+public:
+	class IOperations
+	{
+	public:
+		virtual ~IOperations() = default;
+		// 与 io_length 一致，查询后将文件位置恢复到起点。
+		virtual int64_t Length(IOHANDLE File) noexcept;
+		virtual unsigned Read(IOHANDLE File, void *pData, unsigned Size) noexcept;
+		// 返回的缓冲必须可由 free 回收，包括交给数据处理器的输入。
+		virtual void *Allocate(size_t Size) noexcept;
+	};
+
+private:
 	class CDatafile *m_pDataFile = nullptr;
 
 	int GetExternalItemType(int InternalType, CUuid *pUuid);
@@ -48,6 +61,8 @@ public:
 	[[nodiscard]] bool Open(class IStorage *pStorage, const char *pFilename, int StorageType);
 	// 校验分配器只在 Open 期间借用；空指针沿用普通 new/delete 分配。
 	[[nodiscard]] bool Open(class IStorage *pStorage, const char *pFilename, int StorageType, IAllocationResource *pValidationMemory);
+	// 文件操作只借用，须存活到 Close 或移动后的持有者关闭；默认操作不保留临时对象。
+	[[nodiscard]] bool Open(class IStorage *pStorage, const char *pFilename, int StorageType, IAllocationResource *pValidationMemory, IOperations *pOperations);
 	void Close();
 	bool IsOpen() const;
 	IOHANDLE File() const;
@@ -57,6 +72,8 @@ public:
 	void *GetDataSwapped(int Index); // makes sure that the data is 32bit LE ints when saved
 	const char *GetDataString(int Index);
 	void AddDataProcessor(int Index, FDataProcessor DataProcessor);
+	// 输入预算在读取/解压分配前检查，不改变处理结果长度的独立检查。
+	void AddDataProcessor(int Index, size_t MaxInputSize, FDataProcessor DataProcessor);
 	void UnloadData(int Index);
 	int NumData() const;
 

@@ -85,6 +85,11 @@ bool CMap::Load(const char *pMapName, int StorageType)
 }
 
 bool CMap::Load(const char *pMapName, int StorageType, IAllocationResource *pPreparationMemory)
+{
+	return Load(pMapName, StorageType, pPreparationMemory, nullptr);
+}
+
+bool CMap::Load(const char *pMapName, int StorageType, IAllocationResource *pPreparationMemory, CDataFileReader::IOperations *pOperations)
 try
 {
 	IStorage *pStorage = m_pStorage;
@@ -95,7 +100,7 @@ try
 
 	// 避免加载失败时留下不一致的 datafile，先单独加载新 datafile
 	CDataFileReader NewDataFile;
-	if(!NewDataFile.Open(pStorage, pMapName, StorageType))
+	if(!NewDataFile.Open(pStorage, pMapName, StorageType, nullptr, pOperations))
 		return false;
 
 	if(!ValidateMapVersion(NewDataFile))
@@ -696,7 +701,13 @@ bool CMap::ValidateAndUnpackTilesLayerData(CDataFileReader &NewDataFile, int Gro
 		return false;
 	}
 
-	NewDataFile.AddDataProcessor(DataIndex, [pLayerTilemap, TileSize, LayerType, GroupIndex, LayerIndex, TilemapCount, TilemapSize](void *pData, size_t Size) -> std::pair<void *, size_t> {
+	size_t MaxInputSize = std::numeric_limits<size_t>::max();
+	if(pLayerTilemap->m_Version >= 4)
+	{
+		// 每条记录至少展开一个 tile；保留旧逻辑忽略不足一个 tile 的尾字节。
+		MaxInputSize = LayerType == LAYERTYPE_TILES || LayerType == LAYERTYPE_GAME ? TilemapSize + sizeof(CTile) - 1 : 0;
+	}
+	NewDataFile.AddDataProcessor(DataIndex, MaxInputSize, [pLayerTilemap, TileSize, LayerType, GroupIndex, LayerIndex, TilemapCount, TilemapSize](void *pData, size_t Size) -> std::pair<void *, size_t> {
 		const size_t SavedTilesSize = Size / TileSize;
 		if(pLayerTilemap->m_Version >= 4)
 		{

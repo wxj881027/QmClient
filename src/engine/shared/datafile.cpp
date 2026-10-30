@@ -136,12 +136,14 @@ class CDataProcessorWrapper
 {
 public:
 	FDataProcessor m_DataProcessor;
+	size_t m_MaxInputSize = std::numeric_limits<size_t>::max();
 };
 
 class CDatafile
 {
 public:
 	IOHANDLE m_File;
+	CDataFileReader::IOperations *m_pOperations;
 	unsigned m_FileSize;
 	SHA256_DIGEST m_Sha256;
 	unsigned m_Crc;
@@ -215,6 +217,15 @@ public:
 		}
 
 		const unsigned DataSize = GetFileDataSize(Index);
+		const size_t InputSize = m_Info.m_pDataSizes ? (size_t)m_Info.m_pDataSizes[Index] : DataSize;
+		if(m_ppDataProcessors[Index] && InputSize > m_ppDataProcessors[Index]->m_MaxInputSize)
+		{
+			log_error("datafile", "data exceeds processor input budget. index=%d size=%" PRIzu, Index, InputSize);
+			m_pDataSizes[Index] = -1;
+			return nullptr;
+		}
+		CDataFileReader::IOperations DefaultOperations;
+		auto &Operations = m_pOperations ? *m_pOperations : DefaultOperations;
 		if(m_Info.m_pDataSizes != nullptr)
 		{
 			// v4 has compressed data
@@ -229,7 +240,7 @@ public:
 			}
 
 			// read the compressed data
-			void *pCompressedData = malloc(DataSize);
+			void *pCompressedData = Operations.Allocate(DataSize);
 			if(pCompressedData == nullptr)
 			{
 				log_error("datafile", "out of memory. could not allocate memory for compressed data. index=%d size=%d", Index, DataSize);
@@ -240,7 +251,7 @@ public:
 			unsigned ActualDataSize = 0;
 			if(io_seek(m_File, m_DataStartOffset + m_Info.m_pDataOffsets[Index], IOSEEK_START) == 0)
 			{
-				ActualDataSize = io_read(m_File, pCompressedData, DataSize);
+				ActualDataSize = Operations.Read(m_File, pCompressedData, DataSize);
 			}
 			if(DataSize != ActualDataSize)
 			{
@@ -252,7 +263,7 @@ public:
 			}
 
 			// decompress the data
-			m_ppDataPtrs[Index] = static_cast<char *>(malloc(OriginalUncompressedSize));
+			m_ppDataPtrs[Index] = Operations.Allocate(OriginalUncompressedSize);
 			if(m_ppDataPtrs[Index] == nullptr)
 			{
 				free(pCompressedData);
@@ -276,7 +287,7 @@ public:
 		else
 		{
 			log_trace("datafile", "loading data. index=%d size=%d", Index, DataSize);
-			m_ppDataPtrs[Index] = malloc(DataSize);
+			m_ppDataPtrs[Index] = Operations.Allocate(DataSize);
 			if(m_ppDataPtrs[Index] == nullptr)
 			{
 				log_error("datafile", "out of memory. could not allocate memory for uncompressed data. index=%d size=%d", Index, DataSize);
@@ -286,7 +297,7 @@ public:
 			unsigned ActualDataSize = 0;
 			if(io_seek(m_File, m_DataStartOffset + m_Info.m_pDataOffsets[Index], IOSEEK_START) == 0)
 			{
-				ActualDataSize = io_read(m_File, m_ppDataPtrs[Index], DataSize);
+				ActualDataSize = Operations.Read(m_File, m_ppDataPtrs[Index], DataSize);
 			}
 			if(DataSize != ActualDataSize)
 			{
@@ -320,12 +331,13 @@ public:
 		return m_ppDataPtrs[Index];
 	}
 
-	void AddDataProcessor(int Index, FDataProcessor DataProcessor) const
+	void AddDataProcessor(int Index, size_t MaxInputSize, FDataProcessor DataProcessor) const
 	{
 		dbg_assert(Index >= 0 && Index < m_Header.m_NumRawData, "Index invalid: %d", Index);
 		dbg_assert(m_ppDataProcessors[Index] == nullptr, "Data already intercepted: %d", Index);
 
 		m_ppDataProcessors[Index] = new CDataProcessorWrapper;
+		m_ppDataProcessors[Index]->m_MaxInputSize = MaxInputSize;
 		m_ppDataProcessors[Index]->m_DataProcessor = std::move(DataProcessor);
 	}
 
@@ -521,6 +533,15 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 }
 
 bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int StorageType, IAllocationResource *pValidationMemory)
+{
+	return Open(pStorage, pFilename, StorageType, pValidationMemory, nullptr);
+}
+
+int64_t CDataFileReader::IOperations::Length(IOHANDLE File) noexcept { return io_length(File); }
+unsigned CDataFileReader::IOperations::Read(IOHANDLE File, void *pData, unsigned Size) noexcept { return io_read(File, pData, Size); }
+void *CDataFileReader::IOperations::Allocate(size_t Size) noexcept { return malloc(Size); }
+
+bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int StorageType, IAllocationResource *pValidationMemory, IOperations *pOperations)
 try
 {
 	dbg_assert(m_pDataFile == nullptr, "File already open");
@@ -534,6 +555,14 @@ try
 		log_error("datafile", "failed to open file '%s' for reading", pFilename);
 		return false;
 	}
+	IOperations DefaultOperations;
+	auto &Operations = pOperations ? *pOperations : DefaultOperations;
+	const int64_t ReportedSize = Operations.Length(File);
+	if(ReportedSize < (int64_t)sizeof(CDatafileHeader) || ReportedSize > std::numeric_limits<int>::max())
+	{
+		log_error("datafile", "file size is not representable. size=%" PRId64, ReportedSize);
+		return false;
+	}
 
 	// determine size and hashes of the file and store them
 	int64_t FileSize = 0;
@@ -545,7 +574,12 @@ try
 		unsigned char aBuffer[64 * 1024];
 		while(true)
 		{
-			const unsigned Bytes = io_read(File, aBuffer, sizeof(aBuffer));
+			const unsigned Bytes = Operations.Read(File, aBuffer, sizeof(aBuffer));
+			if(Bytes > sizeof(aBuffer) || (int64_t)Bytes > std::numeric_limits<int>::max() - FileSize)
+			{
+				log_error("datafile", "file grew beyond the supported size or read returned an invalid byte count");
+				return false;
+			}
 			if(Bytes == 0)
 				break;
 			FileSize += Bytes;
@@ -562,7 +596,7 @@ try
 
 	// read header
 	CDatafileHeader Header;
-	if(io_read(File, &Header, sizeof(Header)) != sizeof(Header))
+	if(Operations.Read(File, &Header, sizeof(Header)) != sizeof(Header))
 	{
 		log_error("datafile", "could not read file header. file truncated or not a datafile.");
 		return false;
@@ -675,6 +709,7 @@ try
 		return false;
 	}
 	pTmpDataFile->m_Header = Header;
+	pTmpDataFile->m_pOperations = pOperations;
 	pTmpDataFile->m_DataStartOffset = sizeof(CDatafileHeader) + Size;
 	pTmpDataFile->m_ppDataPtrs = (void **)(pTmpDataFile + 1);
 	pTmpDataFile->m_ppDataProcessors = (CDataProcessorWrapper **)(pTmpDataFile->m_ppDataPtrs + Header.m_NumRawData);
@@ -693,7 +728,7 @@ try
 	mem_zero(pTmpDataFile->m_pDataSizes, Header.m_NumRawData * sizeof(int));
 
 	// read types, offsets, sizes and item data
-	const unsigned ReadSize = io_read(pTmpDataFile->m_File, pTmpDataFile->m_pData, Size);
+	const unsigned ReadSize = Operations.Read(pTmpDataFile->m_File, pTmpDataFile->m_pData, Size);
 	if((int64_t)ReadSize != Size)
 	{
 		log_error("datafile", "truncation error. could not read all item data. wanted=%" PRId64 " got=%d", Size, ReadSize);
@@ -819,9 +854,14 @@ const char *CDataFileReader::GetDataString(int Index)
 
 void CDataFileReader::AddDataProcessor(int Index, FDataProcessor DataProcessor)
 {
+	AddDataProcessor(Index, std::numeric_limits<size_t>::max(), std::move(DataProcessor));
+}
+
+void CDataFileReader::AddDataProcessor(int Index, size_t MaxInputSize, FDataProcessor DataProcessor)
+{
 	dbg_assert(m_pDataFile != nullptr, "File not open");
 
-	m_pDataFile->AddDataProcessor(Index, std::move(DataProcessor));
+	m_pDataFile->AddDataProcessor(Index, MaxInputSize, std::move(DataProcessor));
 }
 
 void CDataFileReader::UnloadData(int Index)

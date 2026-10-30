@@ -44,6 +44,8 @@ public:
 	[[nodiscard]] bool Load(const char *pMapName, int StorageType) override;
 	// 内存域只借用到加载准备结束，不交给已发布地图或惰性处理器。
 	[[nodiscard]] bool Load(const char *pMapName, int StorageType, IAllocationResource *pPreparationMemory);
+	// 文件操作与 reader 同寿命，须存活到 Unload 或接收地图的对象卸载。
+	[[nodiscard]] bool Load(const char *pMapName, int StorageType, IAllocationResource *pPreparationMemory, CDataFileReader::IOperations *pOperations);
 	void Adopt(CMap &&Other);
 	void Unload() override;
 	bool IsLoaded() const override;
