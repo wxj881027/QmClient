@@ -757,10 +757,14 @@ void CConsole::ExecuteLine(const char *pStr, int ClientId, bool InterpretSemicol
 
 void CConsole::ExecuteLineFlag(const char *pStr, int FlagMask, int ClientId, bool InterpretSemicolons)
 {
-	int Temp = m_FlagMask;
+	struct CRestoreFlagMask
+	{
+		int &m_FlagMask;
+		const int m_Previous;
+		~CRestoreFlagMask() { m_FlagMask = m_Previous; }
+	} Restore{m_FlagMask, m_FlagMask};
 	m_FlagMask = FlagMask;
 	ExecuteLine(pStr, ClientId, InterpretSemicolons);
-	m_FlagMask = Temp;
 }
 
 bool CConsole::ExecuteFile(const char *pFilename, int ClientId, bool LogFailure, int StorageType, bool RejectInvalidLines)

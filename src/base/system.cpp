@@ -18,6 +18,7 @@
 #include <cmath>
 #include <cstring>
 #include <iterator> // std::size
+#include <limits>
 #include <mutex>
 #include <new>
 #include <string_view>
@@ -1047,7 +1048,10 @@ static int parse_int(int *out, const char **str)
 			return 0;
 		}
 
-		i = (i * 10) + (**str - '0');
+		const int Digit = **str - '0';
+		if(i > (std::numeric_limits<int>::max() - Digit) / 10)
+			return -1;
+		i = (i * 10) + Digit;
 		(*str)++;
 	}
 
@@ -1196,6 +1200,8 @@ int net_addr_from_str(NETADDR *addr, const char *string)
 		else
 			return -1;
 
+		if(*str != '\0')
+			return -1;
 		return 0;
 	}
 	else
