@@ -31,6 +31,8 @@ enum
 typedef std::function<std::pair<void *, size_t>(void *pData, size_t Size)> FDataProcessor;
 
 // raw datafile access
+class IAllocationResource;
+
 class CDataFileReader
 {
 	class CDatafile *m_pDataFile = nullptr;
@@ -43,6 +45,8 @@ public:
 	CDataFileReader &operator=(CDataFileReader &&Other);
 
 	[[nodiscard]] bool Open(class IStorage *pStorage, const char *pFilename, int StorageType);
+	// 校验分配器只在 Open 期间借用；空指针沿用普通 new/delete 分配。
+	[[nodiscard]] bool Open(class IStorage *pStorage, const char *pFilename, int StorageType, IAllocationResource *pValidationMemory);
 	void Close();
 	bool IsOpen() const;
 	IOHANDLE File() const;

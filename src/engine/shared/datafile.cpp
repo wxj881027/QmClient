@@ -5,6 +5,7 @@
 
 #include "uuid_manager.h"
 
+#include <base/borrowed_allocator.h>
 #include <base/hash_ctxt.h>
 #include <base/log.h>
 #include <base/math.h>
@@ -382,7 +383,7 @@ public:
 		return true;
 	}
 
-	bool Validate() const
+	bool Validate(IAllocationResource *pMemory) const
 	{
 #define Check(Test, ErrorMessage, ...) \
 	do \
@@ -395,8 +396,9 @@ public:
 	} while(false)
 
 		// validate item types
+		using CValidationSet = std::unordered_set<int, std::hash<int>, std::equal_to<int>, CBorrowedAllocator<int>>;
 		int64_t CountedItems = 0;
-		std::unordered_set<int> UsedItemTypes;
+		CValidationSet UsedItemTypes{CBorrowedAllocator<int>{pMemory}};
 		for(int Index = 0; Index < m_Header.m_NumItemTypes; Index++)
 		{
 			const CDatafileItemType &ItemType = m_Info.m_pItemTypes[Index];
@@ -434,7 +436,7 @@ public:
 		int64_t TotalItemSize = 0;
 		for(int TypeIndex = 0; TypeIndex < m_Header.m_NumItemTypes; TypeIndex++)
 		{
-			std::unordered_set<int> UsedItemIds;
+			CValidationSet UsedItemIds{CBorrowedAllocator<int>{pMemory}};
 			const CDatafileItemType &ItemType = m_Info.m_pItemTypes[TypeIndex];
 			for(int ItemIndex = ItemType.m_Start; ItemIndex < ItemType.m_Start + ItemType.m_Num; ItemIndex++)
 			{
@@ -514,11 +516,18 @@ CDataFileReader &CDataFileReader::operator=(CDataFileReader &&Other)
 
 bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int StorageType)
 {
+	return Open(pStorage, pFilename, StorageType, nullptr);
+}
+
+bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int StorageType, IAllocationResource *pValidationMemory)
+try
+{
 	dbg_assert(m_pDataFile == nullptr, "File already open");
 
 	log_trace("datafile", "loading '%s'", pFilename);
 
 	IOHANDLE File = pStorage->OpenFile(pFilename, IOFLAG_READ, StorageType);
+	std::unique_ptr<void, decltype(&io_close)> FileOwner(File, io_close);
 	if(!File)
 	{
 		log_error("datafile", "failed to open file '%s' for reading", pFilename);
@@ -545,7 +554,6 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 		Sha256 = sha256_finish(&Sha256Ctxt);
 		if(io_seek(File, 0, IOSEEK_START) != 0)
 		{
-			io_close(File);
 			log_error("datafile", "could not seek to start after calculating hashes");
 			return false;
 		}
@@ -555,7 +563,6 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 	CDatafileHeader Header;
 	if(io_read(File, &Header, sizeof(Header)) != sizeof(Header))
 	{
-		io_close(File);
 		log_error("datafile", "could not read file header. file truncated or not a datafile.");
 		return false;
 	}
@@ -564,7 +571,6 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 	if((Header.m_aId[0] != 'A' || Header.m_aId[1] != 'T' || Header.m_aId[2] != 'A' || Header.m_aId[3] != 'D') &&
 		(Header.m_aId[0] != 'D' || Header.m_aId[1] != 'A' || Header.m_aId[2] != 'T' || Header.m_aId[3] != 'A'))
 	{
-		io_close(File);
 		log_error("datafile", "wrong header magic. magic=%x%x%x%x", Header.m_aId[0], Header.m_aId[1], Header.m_aId[2], Header.m_aId[3]);
 		return false;
 	}
@@ -574,7 +580,6 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 	// check header version
 	if(Header.m_Version != 3 && Header.m_Version != 4)
 	{
-		io_close(File);
 		log_error("datafile", "unsupported header version. version=%d", Header.m_Version);
 		return false;
 	}
@@ -588,7 +593,6 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 		Header.m_ItemSize % sizeof(int) != 0 ||
 		Header.m_DataSize < 0)
 	{
-		io_close(File);
 		log_error("datafile", "invalid header information. num_types=%d num_items=%d num_data=%d item_size=%d data_size=%d",
 			Header.m_NumItemTypes, Header.m_NumItems, Header.m_NumRawData, Header.m_ItemSize, Header.m_DataSize);
 		return false;
@@ -614,7 +618,6 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 
 	if((int64_t)sizeof(Header) + Size + (int64_t)Header.m_DataSize != FileSize)
 	{
-		io_close(File);
 		log_error("datafile", "invalid header data size or truncated file. data_size=%d file_size=%" PRId64, Header.m_DataSize, FileSize);
 		return false;
 	}
@@ -629,7 +632,6 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 		}
 		else
 		{
-			io_close(File);
 			log_error("datafile", "invalid header size or truncated file. size=%" PRId64 " actual=%" PRId64, HeaderFileSize, FileSize);
 			return false;
 		}
@@ -646,7 +648,6 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 		}
 		else
 		{
-			io_close(File);
 			log_error("datafile", "invalid header swaplen or truncated file. swaplen=%" PRId64 " actual=%" PRId64, HeaderSwaplen, FileSizeSwaplen);
 			return false;
 		}
@@ -661,15 +662,14 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 	AllocSize += (int64_t)Header.m_NumRawData * sizeof(int); // add space for data sizes
 	if(AllocSize > MaxAllocSize)
 	{
-		io_close(File);
 		log_error("datafile", "file too large. alloc_size=%" PRId64 " max=%" PRId64, AllocSize, MaxAllocSize);
 		return false;
 	}
 
 	CDatafile *pTmpDataFile = static_cast<CDatafile *>(malloc(AllocSize));
+	std::unique_ptr<CDatafile, decltype(&free)> Candidate(pTmpDataFile, free);
 	if(pTmpDataFile == nullptr)
 	{
-		io_close(File);
 		log_error("datafile", "out of memory. could not allocate memory for datafile. alloc_size=%" PRId64, AllocSize);
 		return false;
 	}
@@ -695,8 +695,6 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 	const unsigned ReadSize = io_read(pTmpDataFile->m_File, pTmpDataFile->m_pData, Size);
 	if((int64_t)ReadSize != Size)
 	{
-		io_close(pTmpDataFile->m_File);
-		free(pTmpDataFile);
 		log_error("datafile", "truncation error. could not read all item data. wanted=%" PRId64 " got=%d", Size, ReadSize);
 		return false;
 	}
@@ -721,17 +719,21 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 	}
 	pTmpDataFile->m_Info.m_pDataStart = pTmpDataFile->m_Info.m_pItemStart + pTmpDataFile->m_Header.m_ItemSize;
 
-	if(!pTmpDataFile->Validate())
+	if(!pTmpDataFile->Validate(pValidationMemory))
 	{
-		io_close(pTmpDataFile->m_File);
-		free(pTmpDataFile);
 		return false;
 	}
 
-	m_pDataFile = pTmpDataFile;
 	log_trace("datafile", "loading done. datafile='%s'", pFilename);
+	m_pDataFile = Candidate.release();
+	(void)FileOwner.release();
 
 	return true;
+}
+catch(...)
+{
+	log_error("datafile", "could not prepare datafile for reading: %s", pFilename);
+	return false;
 }
 
 void CDataFileReader::Close()
