@@ -6,6 +6,7 @@
 #include "demoedit.h"
 #include "friends.h"
 #include "map_download_request.h"
+#include "message_repack.h"
 #include "perf_file_logger.h"
 #include "qm_crash_report_file.h"
 #include "qm_crash_report_marker.h"
@@ -13,7 +14,6 @@
 #include "qm_storage_mode.h"
 #include "replay_save.h"
 #include "serverbrowser.h"
-#include "sixup_system_messages.h"
 
 #include <base/crashdump.h>
 #include <base/hash.h>
@@ -438,46 +438,6 @@ CClient::CClient() :
 }
 
 // ----- send functions -----
-static inline bool RepackMsg(const CMsgPacker *pMsg, CPacker &Packer, bool Sixup)
-{
-	int MsgId = pMsg->m_MsgId;
-	Packer.Reset();
-
-	if(Sixup && !pMsg->m_NoTranslate)
-	{
-		if(pMsg->m_System)
-		{
-			MsgId = sixup_translation::OutgoingSystemMessageId(MsgId);
-			if(MsgId < 0)
-			{
-				log_error("net", "0.7 DROP send sys %d", pMsg->m_MsgId);
-				return false;
-			}
-		}
-		else
-		{
-			if(MsgId >= 0 && MsgId < OFFSET_UUID)
-				MsgId = Msg_SixToSeven(MsgId);
-
-			if(MsgId < 0)
-				return false;
-		}
-	}
-
-	if(pMsg->m_MsgId < OFFSET_UUID)
-	{
-		Packer.AddInt((MsgId << 1) | (pMsg->m_System ? 1 : 0));
-	}
-	else
-	{
-		Packer.AddInt(pMsg->m_System ? 1 : 0); // NETMSG_EX, NETMSGTYPE_EX
-		g_UuidManager.PackUuid(pMsg->m_MsgId, &Packer);
-	}
-	Packer.AddRaw(pMsg->Data(), pMsg->Size());
-
-	return true;
-}
-
 int CClient::SendMsg(int Conn, CMsgPacker *pMsg, int Flags)
 {
 	CNetChunk Packet;
@@ -487,7 +447,7 @@ int CClient::SendMsg(int Conn, CMsgPacker *pMsg, int Flags)
 
 	// repack message (inefficient)
 	CPacker Pack;
-	if(!RepackMsg(pMsg, Pack, IsSixup()))
+	if(!client_message::Repack(*pMsg, Pack, IsSixup(), g_UuidManager, Flags))
 		return -1;
 
 	mem_zero(&Packet, sizeof(CNetChunk));
