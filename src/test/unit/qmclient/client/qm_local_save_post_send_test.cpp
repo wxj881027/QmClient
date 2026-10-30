@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <limits>
 #include <new>
 #include <stdexcept>
 
@@ -71,4 +72,52 @@ TEST_F(QmLocalSavePostSend, UnrelatedMessageNoOpKeepsTheExistingTracking)
 	EXPECT_EQ(m_Confirmation.Request().m_Code, "old");
 	EXPECT_TRUE(m_Restore.Active());
 	EXPECT_EQ(m_Restore.Entry().m_Code, "old");
+}
+
+TEST_F(QmLocalSavePostSend, TakingTheRequestClearsTheSourceAndKeepsOwnedDataForCompletion)
+{
+	m_Confirmation.Reset();
+	const std::string Map(96, 'm');
+	const std::string Code(96, 'c');
+	m_Confirmation.Track({Map, Code, 1, 2, 51, true, 10000});
+	const auto Request = m_Confirmation.TakeRequest();
+	EXPECT_FALSE(m_Confirmation.Active());
+	EXPECT_EQ(Request.m_Map, Map);
+	EXPECT_EQ(Request.m_Code, Code);
+	EXPECT_EQ(Request.m_Conn, 1);
+	EXPECT_EQ(Request.m_Team, 2);
+	EXPECT_EQ(Request.m_SentTick, 51);
+	EXPECT_TRUE(Request.m_WasRacing);
+	EXPECT_EQ(Request.m_Deadline, 10000);
+	m_Confirmation.Track({"next", "next", 0, 3, 52, false, 20000});
+	EXPECT_EQ(Request.m_Map, Map);
+	EXPECT_EQ(Request.m_Code, Code);
+}
+
+TEST_F(QmLocalSavePostSend, TakingAnAmbiguousRequestDoesNotContaminateTheNextConfirmation)
+{
+	m_Confirmation.Track({"map", "different", 0, 2, 51, false, 10000});
+	ASSERT_EQ(m_Confirmation.Message(0, -1, "Loading successfully done", "map", 2, 101), QmLocalSaves::EResult::FAILED);
+	EXPECT_EQ(m_Confirmation.TakeRequest().m_Code, "old");
+	EXPECT_FALSE(m_Confirmation.Active());
+	m_Confirmation.Track({"new map", "new", 0, 2, 52, false, 10000});
+	EXPECT_EQ(m_Confirmation.Message(0, -1, "Loading successfully done", "new map", 2, 102), QmLocalSaves::EResult::SUCCESS);
+}
+
+TEST_F(QmLocalSavePostSend, MinimumWarmupTimerCannotConfirmAnEarlierRaceStart)
+{
+	EXPECT_FALSE(m_Confirmation.RestoredRaceFromWarmupTimer("map", 2, 60, std::numeric_limits<int>::min(), 10, 101));
+	EXPECT_TRUE(m_Confirmation.Active());
+}
+
+TEST_F(QmLocalSavePostSend, EncodedRaceStartKeepsTheStrictTwoSecondBoundary)
+{
+	EXPECT_TRUE(m_Confirmation.RestoredRaceFromWarmupTimer("map", 2, 60, -29, 10, 101));
+	EXPECT_FALSE(m_Confirmation.RestoredRaceFromWarmupTimer("map", 2, 60, -30, 10, 101));
+	EXPECT_FALSE(m_Confirmation.RestoredRaceFromWarmupTimer("map", 2, 60, -31, 10, 101));
+}
+
+TEST_F(QmLocalSavePostSend, WideTickSpeedMultiplicationCannotTurnTheThresholdIntoAnEarlierRace)
+{
+	EXPECT_FALSE(m_Confirmation.RestoredRaceFromWarmupTimer("map", 2, 60, std::numeric_limits<int>::max(), std::numeric_limits<int>::max(), 101));
 }

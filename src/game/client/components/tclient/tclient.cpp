@@ -5282,40 +5282,46 @@ bool CTClient::LoadLocalSaveEntries(std::vector<SLocalSaveEntry> &vEntries, bool
 
 bool CTClient::RemoveLocalSaveByCode(const char *pMap, const char *pCode)
 {
-	IOHANDLE File = Storage()->OpenFile(SAVES_FILE, IOFLAG_READ, IStorage::TYPE_SAVE);
-	if(!File)
-		return false;
-	char *pContent = io_read_all_str(File);
-	io_close(File);
-	if(!pContent)
-		return false;
-	const std::string Original(pContent);
-	free(pContent);
-	if(Original.size() > std::numeric_limits<unsigned>::max())
-		return false;
-	std::string Updated;
-	if(!QmLocalSaves::RemoveEntries(Original, pMap, pCode, Updated))
-		return false;
-
-	// 先完整写入临时文件，再替换存档列表，避免写入中断损坏其他记录。
-	constexpr const char *pTempFile = "ddnet-saves.txt.tmp";
-	File = Storage()->OpenFile(pTempFile, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
-		return false;
-	const bool Written = io_write(File, Updated.data(), (unsigned)Updated.size()) == Updated.size() && io_flush(File) == 0 && io_error(File) == 0;
-	const int CloseResult = io_close(File);
-	if(!Written || CloseResult != 0)
+	try
 	{
-		Storage()->RemoveFile(pTempFile, IStorage::TYPE_SAVE);
+		IOHANDLE File = Storage()->OpenFile(SAVES_FILE, IOFLAG_READ, IStorage::TYPE_SAVE);
+		if(!File)
+			return false;
+		std::unique_ptr<char, decltype(&free)> pContent(io_read_all_str(File), free);
+		io_close(File);
+		if(!pContent)
+			return false;
+		const std::string_view Original(pContent.get());
+		if(Original.size() > std::numeric_limits<unsigned>::max())
+			return false;
+		std::string Updated;
+		if(!QmLocalSaves::RemoveEntries(Original, pMap, pCode, Updated))
+			return false;
+
+		// 先完整写入临时文件，再替换存档列表，避免写入中断损坏其他记录。
+		constexpr const char *pTempFile = "ddnet-saves.txt.tmp";
+		File = Storage()->OpenFile(pTempFile, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+		if(!File)
+			return false;
+		const bool Written = io_write(File, Updated.data(), (unsigned)Updated.size()) == Updated.size() && io_flush(File) == 0 && io_error(File) == 0;
+		const int CloseResult = io_close(File);
+		if(!Written || CloseResult != 0)
+		{
+			Storage()->RemoveFile(pTempFile, IStorage::TYPE_SAVE);
+			return false;
+		}
+		char aBackupFile[IO_MAX_PATH_LENGTH];
+		if(IStorage::ReplaceFileSafely(Storage(), pTempFile, SAVES_FILE, aBackupFile, sizeof(aBackupFile)))
+			return true;
+
+		// 替换失败时保留临时文件与备份，便于恢复其他存档记录。
+		log_error("saves", "Failed to replace saves file; remaining records are in %s, backup %s", pTempFile, aBackupFile);
 		return false;
 	}
-	char aBackupFile[IO_MAX_PATH_LENGTH];
-	if(IStorage::ReplaceFileSafely(Storage(), pTempFile, SAVES_FILE, aBackupFile, sizeof(aBackupFile)))
-		return true;
-
-	// 替换失败时保留临时文件与备份，便于恢复其他存档记录。
-	log_error("saves", "Failed to replace saves file; remaining records are in %s, backup %s", pTempFile, aBackupFile);
-	return false;
+	catch(...)
+	{
+		return false;
+	}
 }
 
 QmLocalSaves::CRestore::SWorld CTClient::LocalSaveWorld() const
@@ -5385,9 +5391,8 @@ void CTClient::CompleteLocalSaveLoad(bool Success)
 {
 	if(!m_LocalSaveConfirmation.Active())
 		return;
-	const auto Request = m_LocalSaveConfirmation.Request();
+	const auto Request = m_LocalSaveConfirmation.TakeRequest();
 	const bool Automatic = m_LocalSaveRestore.Active();
-	m_LocalSaveConfirmation.Reset();
 	m_LocalSaveRestore.Reset();
 	if(Success)
 	{
@@ -5495,7 +5500,7 @@ void CTClient::UpdateLocalSaveRestore()
 		{
 			const CNetObj_GameInfo *pInfo = GameClient()->m_Snap.m_pGameInfoObj;
 			if(pInfo && World.m_Racing && GameClient()->m_Snap.m_pLocalCharacter &&
-				m_LocalSaveConfirmation.RestoredRace(World.m_Map.c_str(), World.m_aTeams[g_Config.m_ClDummy], Client()->GameTick(g_Config.m_ClDummy), -pInfo->m_WarmupTimer, Client()->GameTickSpeed(), Now))
+				m_LocalSaveConfirmation.RestoredRaceFromWarmupTimer(World.m_Map.c_str(), World.m_aTeams[g_Config.m_ClDummy], Client()->GameTick(g_Config.m_ClDummy), pInfo->m_WarmupTimer, Client()->GameTickSpeed(), Now))
 				CompleteLocalSaveLoad(true);
 		}
 	}
