@@ -952,11 +952,11 @@ void CConsole::TraverseChain(FCommandCallback *ppfnCallback, void **ppUserData)
 	}
 }
 
-CConsole::CConsole(int FlagMask)
+CConsole::CConsole(int FlagMask, CHeap::FAllocate TempAllocate) :
+	m_TempCommands(TempAllocate)
 {
 	m_FlagMask = FlagMask;
 	m_pRecycleList = nullptr;
-	m_TempCommands.Reset();
 	m_StoreCommands = true;
 	m_apStrokeStr[0] = "0";
 	m_apStrokeStr[1] = "1";
@@ -1101,16 +1101,24 @@ void CConsole::RegisterTemp(const char *pName, const char *pParams, int Flags, c
 	}
 	else
 	{
-		pCommand = new(m_TempCommands.Allocate(sizeof(CCommand))) CCommand;
-		char *pMem = static_cast<char *>(m_TempCommands.Allocate(TEMPCMD_NAME_LENGTH));
-		str_copy(pMem, pName, TEMPCMD_NAME_LENGTH);
-		pCommand->m_pName = pMem;
-		pMem = static_cast<char *>(m_TempCommands.Allocate(TEMPCMD_HELP_LENGTH));
-		str_copy(pMem, pHelp, TEMPCMD_HELP_LENGTH);
-		pCommand->m_pHelp = pMem;
-		pMem = static_cast<char *>(m_TempCommands.Allocate(TEMPCMD_PARAMS_LENGTH));
-		str_copy(pMem, pParams, TEMPCMD_PARAMS_LENGTH);
-		pCommand->m_pParams = pMem;
+		struct CTempCommand
+		{
+			CCommand m_Command;
+			char m_aName[TEMPCMD_NAME_LENGTH];
+			char m_aHelp[TEMPCMD_HELP_LENGTH];
+			char m_aParams[TEMPCMD_PARAMS_LENGTH];
+		};
+		void *pMemory = m_TempCommands.Allocate(sizeof(CTempCommand), alignof(CTempCommand));
+		if(!pMemory)
+			return;
+		auto *pEntry = new(pMemory) CTempCommand;
+		str_copy(pEntry->m_aName, pName);
+		str_copy(pEntry->m_aHelp, pHelp);
+		str_copy(pEntry->m_aParams, pParams);
+		pCommand = &pEntry->m_Command;
+		pCommand->m_pName = pEntry->m_aName;
+		pCommand->m_pHelp = pEntry->m_aHelp;
+		pCommand->m_pParams = pEntry->m_aParams;
 	}
 
 	pCommand->m_pfnCallback = nullptr;
