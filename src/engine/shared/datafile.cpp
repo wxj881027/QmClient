@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <limits>
 #include <unordered_set>
+#include <utility>
 
 static constexpr int MAX_ITEM_TYPE = 0xFFFF;
 static constexpr int MAX_ITEM_ID = 0xFFFF;
@@ -1005,35 +1006,64 @@ int CDataFileReader::Size() const
 	return m_pDataFile->m_FileSize;
 }
 
-CDataFileWriter::CDataFileWriter()
+void *CDataFileWriter::IOperations::Allocate(size_t Size) noexcept
 {
-	m_File = nullptr;
+	return malloc(Size);
+}
+
+bool CDataFileWriter::IOperations::Compress(void *pOutput, unsigned long &OutputSize, const void *pInput, unsigned long InputSize, int Level)
+{
+	return compress2(static_cast<Bytef *>(pOutput), &OutputSize, static_cast<const Bytef *>(pInput), InputSize, Level) == Z_OK;
+}
+
+unsigned CDataFileWriter::IOperations::Write(IOHANDLE File, const void *pData, unsigned Size)
+{
+	return io_write(File, pData, Size);
+}
+
+int CDataFileWriter::IOperations::Error(IOHANDLE File)
+{
+	return io_error(File);
+}
+
+int CDataFileWriter::IOperations::Close(IOHANDLE File) noexcept
+{
+	return io_close(File);
+}
+
+CDataFileWriter::CDataFileWriter(IOperations *pOperations) :
+	m_pOperations(pOperations ? pOperations : &m_DefaultOperations)
+{
 }
 
 CDataFileWriter::~CDataFileWriter()
 {
 	if(m_File)
 	{
-		io_close(m_File);
-		m_File = nullptr;
-	}
-
-	for(CItemInfo &ItemInfo : m_vItems)
-	{
-		free(ItemInfo.m_pData);
-	}
-
-	for(CDataInfo &DataInfo : m_vDatas)
-	{
-		free(DataInfo.m_pUncompressedData);
-		free(DataInfo.m_pCompressedData);
+		m_pOperations->Close(m_File);
 	}
 }
 
 bool CDataFileWriter::Open(class IStorage *pStorage, const char *pFilename, int StorageType)
 {
 	dbg_assert(!m_File, "File already open");
-	m_File = pStorage->OpenFile(pFilename, IOFLAG_WRITE, StorageType);
+	if(m_Finished)
+	{
+		m_ItemTypes.clear();
+		m_vItems.clear();
+		m_vDatas.clear();
+		m_vExtendedItemTypes.clear();
+		m_Error = false;
+		m_Finished = false;
+	}
+	try
+	{
+		m_File = pStorage->OpenFile(pFilename, IOFLAG_WRITE, StorageType);
+	}
+	catch(...)
+	{
+		return false;
+	}
 	return m_File != nullptr;
 }
 
@@ -1071,6 +1101,11 @@ int CDataFileWriter::GetExtendedItemTypeIndex(int Type, const CUuid *pUuid)
 	}
 
 	// Type not found, add it.
+	if(GetTypeFromIndex(Index) <= OFFSET_UUID_TYPE)
+	{
+		m_Error = true;
+		return -1;
+	}
 	const CUuid Uuid = Type == -1 ? *pUuid : g_UuidManager.GetUuid(Type);
 	CExtendedItemType ExtendedType;
 	ExtendedType.m_Type = Type;
@@ -1078,7 +1113,8 @@ int CDataFileWriter::GetExtendedItemTypeIndex(int Type, const CUuid *pUuid)
 	m_vExtendedItemTypes.emplace_back(ExtendedType);
 
 	const CItemEx ItemEx = CItemEx::FromUuid(Uuid);
-	AddItem(ITEMTYPE_EX, GetTypeFromIndex(Index), sizeof(ItemEx), &ItemEx);
+	if(AddItem(ITEMTYPE_EX, GetTypeFromIndex(Index), sizeof(ItemEx), &ItemEx) < 0)
+		return -1;
 	return Index;
 }
 
@@ -1091,47 +1127,60 @@ int CDataFileWriter::AddItem(int Type, int Id, size_t Size, const void *pData, c
 	dbg_assert(Size % sizeof(int) == 0, "Invalid data boundary");
 	dbg_assert(m_vItems.size() < (size_t)std::numeric_limits<int>::max(), "Too many items");
 
-	if(Type == -1 || Type >= OFFSET_UUID)
+	if(m_Error || m_Finished)
+		return -1;
+	try
 	{
-		Type = GetTypeFromIndex(GetExtendedItemTypeIndex(Type, pUuid));
+		if(Type == -1 || Type >= OFFSET_UUID)
+		{
+			const int Index = GetExtendedItemTypeIndex(Type, pUuid);
+			if(Index < 0)
+				return -1;
+			Type = GetTypeFromIndex(Index);
+		}
+		if(m_vItems.size() >= (size_t)std::numeric_limits<int>::max())
+		{
+			m_Error = true;
+			return -1;
+		}
+
+		const int NumItems = m_vItems.size();
+		CItemInfo Info{};
+		Info.m_Type = Type;
+		Info.m_Id = Id;
+		Info.m_Size = Size;
+
+		if(Size > 0)
+		{
+			Info.m_pData.reset(m_pOperations->Allocate(Size));
+			if(!Info.m_pData)
+			{
+				m_Error = true;
+				return -1;
+			}
+			mem_copy(Info.m_pData.get(), pData, Size);
+		}
+
+		CItemTypeInfo &ItemType = m_ItemTypes[Type];
+		Info.m_Prev = ItemType.m_Last;
+		Info.m_Next = -1;
+		m_vItems.emplace_back(std::move(Info));
+
+		if(ItemType.m_Last != -1)
+			m_vItems[ItemType.m_Last].m_Next = NumItems;
+		ItemType.m_Last = NumItems;
+
+		if(ItemType.m_First == -1)
+			ItemType.m_First = NumItems;
+
+		ItemType.m_Num++;
+		return NumItems;
 	}
-
-	const int NumItems = m_vItems.size();
-	m_vItems.emplace_back();
-	CItemInfo &Info = m_vItems.back();
-	Info.m_Type = Type;
-	Info.m_Id = Id;
-	Info.m_Size = Size;
-
-	// copy data
-	if(Size > 0)
+	catch(...)
 	{
-		Info.m_pData = malloc(Size);
-		mem_copy(Info.m_pData, pData, Size);
+		m_Error = true;
+		return -1;
 	}
-	else
-	{
-		Info.m_pData = nullptr;
-	}
-
-	// link
-	CItemTypeInfo &ItemType = m_ItemTypes[Type];
-	Info.m_Prev = ItemType.m_Last;
-	Info.m_Next = -1;
-
-	if(ItemType.m_Last != -1)
-	{
-		m_vItems[ItemType.m_Last].m_Next = NumItems;
-	}
-	ItemType.m_Last = NumItems;
-
-	if(ItemType.m_First == -1)
-	{
-		ItemType.m_First = NumItems;
-	}
-
-	ItemType.m_Num++;
-	return NumItems;
 }
 
 int CDataFileWriter::AddData(size_t Size, const void *pData, ECompressionLevel CompressionLevel)
@@ -1140,16 +1189,28 @@ int CDataFileWriter::AddData(size_t Size, const void *pData, ECompressionLevel C
 	dbg_assert(Size <= (size_t)std::numeric_limits<int>::max(), "Data too large");
 	dbg_assert(m_vDatas.size() < (size_t)std::numeric_limits<int>::max(), "Too many data");
 
-	CDataInfo Info;
-	Info.m_pUncompressedData = malloc(Size);
-	mem_copy(Info.m_pUncompressedData, pData, Size);
-	Info.m_UncompressedSize = Size;
-	Info.m_pCompressedData = nullptr;
-	Info.m_CompressedSize = 0;
-	Info.m_CompressionLevel = CompressionLevel;
-	m_vDatas.emplace_back(Info);
-
-	return m_vDatas.size() - 1;
+	if(m_Error || m_Finished)
+		return -1;
+	try
+	{
+		CDataInfo Info{};
+		Info.m_pUncompressedData.reset(m_pOperations->Allocate(Size));
+		if(!Info.m_pUncompressedData)
+		{
+			m_Error = true;
+			return -1;
+		}
+		mem_copy(Info.m_pUncompressedData.get(), pData, Size);
+		Info.m_UncompressedSize = Size;
+		Info.m_CompressionLevel = CompressionLevel;
+		m_vDatas.emplace_back(std::move(Info));
+		return m_vDatas.size() - 1;
+	}
+	catch(...)
+	{
+		m_Error = true;
+		return -1;
+	}
 }
 
 int CDataFileWriter::AddDataSwapped(size_t Size, const void *pData)
@@ -1160,12 +1221,17 @@ int CDataFileWriter::AddDataSwapped(size_t Size, const void *pData)
 	dbg_assert(Size % sizeof(int) == 0, "Invalid data boundary");
 
 #if defined(CONF_ARCH_ENDIAN_BIG)
-	void *pSwapped = malloc(Size); // temporary buffer that we use during compression
-	mem_copy(pSwapped, pData, Size);
-	swap_endian(pSwapped, sizeof(int), Size / sizeof(int));
-	int Index = AddData(Size, pSwapped);
-	free(pSwapped);
-	return Index;
+	if(m_Error || m_Finished)
+		return -1;
+	CBuffer pSwapped(m_pOperations->Allocate(Size));
+	if(!pSwapped)
+	{
+		m_Error = true;
+		return -1;
+	}
+	mem_copy(pSwapped.get(), pData, Size);
+	swap_endian(pSwapped.get(), sizeof(int), Size / sizeof(int));
+	return AddData(Size, pSwapped.get());
 #else
 	return AddData(Size, pData);
 #endif
@@ -1195,21 +1261,65 @@ static int CompressionLevelToZlib(CDataFileWriter::ECompressionLevel Compression
 	}
 }
 
-void CDataFileWriter::Finish()
+bool CDataFileWriter::Finish() noexcept
 {
-	dbg_assert((bool)m_File, "File not open");
+	if(m_Finished)
+		return !m_Error;
+	m_Finished = true;
+	if(!m_File)
+		m_Error = true;
+	if(!m_Error)
+	{
+		try
+		{
+			m_Error = !WriteFile();
+		}
+		catch(...)
+		{
+			m_Error = true;
+		}
+	}
+	if(m_File)
+	{
+		const IOHANDLE File = std::exchange(m_File, nullptr);
+		try
+		{
+			m_Error = m_pOperations->Error(File) != 0 || m_Error;
+		}
+		catch(...)
+		{
+			m_Error = true;
+		}
+		if(m_pOperations->Close(File) != 0)
+			m_Error = true;
+	}
+	m_vItems.clear();
+	m_vDatas.clear();
+	m_ItemTypes.clear();
+	m_vExtendedItemTypes.clear();
+	return !m_Error;
+}
 
+bool CDataFileWriter::Write(const void *pData, unsigned Size)
+{
+	return m_pOperations->Write(m_File, pData, Size) == Size && m_pOperations->Error(m_File) == 0;
+}
+
+bool CDataFileWriter::WriteFile()
+{
 	// Compress data. This takes the majority of the time when saving a datafile,
 	// so it's delayed until the end so it can be off-loaded to another thread.
 	for(CDataInfo &DataInfo : m_vDatas)
 	{
 		unsigned long CompressedSize = compressBound(DataInfo.m_UncompressedSize);
-		DataInfo.m_pCompressedData = malloc(CompressedSize);
-		const int Result = compress2(static_cast<Bytef *>(DataInfo.m_pCompressedData), &CompressedSize, static_cast<Bytef *>(DataInfo.m_pUncompressedData), DataInfo.m_UncompressedSize, CompressionLevelToZlib(DataInfo.m_CompressionLevel));
+		const unsigned long Capacity = CompressedSize;
+		DataInfo.m_pCompressedData.reset(m_pOperations->Allocate(CompressedSize));
+		if(!DataInfo.m_pCompressedData ||
+			!m_pOperations->Compress(DataInfo.m_pCompressedData.get(), CompressedSize, DataInfo.m_pUncompressedData.get(), DataInfo.m_UncompressedSize, CompressionLevelToZlib(DataInfo.m_CompressionLevel)) ||
+			CompressedSize == 0 || CompressedSize > Capacity || CompressedSize > (unsigned long)std::numeric_limits<int>::max())
+			return false;
 		DataInfo.m_CompressedSize = CompressedSize;
-		free(DataInfo.m_pUncompressedData);
-		DataInfo.m_pUncompressedData = nullptr;
-		dbg_assert(Result == Z_OK, "datafile zlib compression failed with error %d", Result);
+		DataInfo.m_pUncompressedData.reset();
 	}
 
 	// Calculate total size of items
@@ -1218,6 +1328,8 @@ void CDataFileWriter::Finish()
 	{
 		ItemSize += ItemInfo.m_Size;
 		ItemSize += sizeof(CDatafileItem);
+		if(ItemSize > std::numeric_limits<int>::max())
+			return false;
 	}
 
 	// Calculate total size of data
@@ -1225,17 +1337,20 @@ void CDataFileWriter::Finish()
 	for(const CDataInfo &DataInfo : m_vDatas)
 	{
 		DataSize += DataInfo.m_CompressedSize;
+		if(DataSize > std::numeric_limits<int>::max())
+			return false;
 	}
 
 	// Calculate complete file size
-	const int64_t TypesSize = m_ItemTypes.size() * sizeof(CDatafileItemType);
+	const int64_t TypesSize = (int64_t)m_ItemTypes.size() * sizeof(CDatafileItemType);
 	const int64_t HeaderSize = sizeof(CDatafileHeader);
-	const int64_t OffsetSize = (m_vItems.size() + m_vDatas.size() * 2) * sizeof(int); // ItemOffsets, DataOffsets, DataUncompressedSizes
+	const int64_t OffsetSize = ((int64_t)m_vItems.size() + (int64_t)m_vDatas.size() * 2) * sizeof(int); // ItemOffsets, DataOffsets, DataUncompressedSizes
 	const int64_t SwapSize = HeaderSize + TypesSize + OffsetSize + ItemSize;
 	const int64_t FileSize = SwapSize + DataSize;
 
 	// This also ensures that SwapSize, ItemSize and DataSize are valid.
-	dbg_assert(FileSize <= (int64_t)std::numeric_limits<int>::max(), "File size too large");
+	if(FileSize > (int64_t)std::numeric_limits<int>::max())
+		return false;
 
 	// Construct and write header
 	{
@@ -1254,7 +1369,8 @@ void CDataFileWriter::Finish()
 		Header.m_DataSize = DataSize;
 
 		SwapEndianInPlace(&Header);
-		io_write(m_File, &Header, sizeof(Header));
+		if(!Write(&Header, sizeof(Header)))
+			return false;
 	}
 
 	// Write item types
@@ -1269,7 +1385,8 @@ void CDataFileWriter::Finish()
 		Info.m_Num = ItemType.m_Num;
 
 		SwapEndianInPlace(&Info);
-		io_write(m_File, &Info, sizeof(Info));
+		if(!Write(&Info, sizeof(Info)))
+			return false;
 		ItemCount += ItemType.m_Num;
 	}
 
@@ -1281,7 +1398,8 @@ void CDataFileWriter::Finish()
 		for(int ItemIndex = ItemType.m_First; ItemIndex != -1; ItemIndex = m_vItems[ItemIndex].m_Next)
 		{
 			const int ItemOffsetWrite = SwapEndianInt(ItemOffset);
-			io_write(m_File, &ItemOffsetWrite, sizeof(ItemOffsetWrite));
+			if(!Write(&ItemOffsetWrite, sizeof(ItemOffsetWrite)))
+				return false;
 			ItemOffset += m_vItems[ItemIndex].m_Size + sizeof(CDatafileItem);
 		}
 	}
@@ -1291,7 +1409,8 @@ void CDataFileWriter::Finish()
 	for(const CDataInfo &DataInfo : m_vDatas)
 	{
 		const int DataOffsetWrite = SwapEndianInt(DataOffset);
-		io_write(m_File, &DataOffsetWrite, sizeof(DataOffsetWrite));
+		if(!Write(&DataOffsetWrite, sizeof(DataOffsetWrite)))
+			return false;
 		DataOffset += DataInfo.m_CompressedSize;
 	}
 
@@ -1299,7 +1418,8 @@ void CDataFileWriter::Finish()
 	for(const CDataInfo &DataInfo : m_vDatas)
 	{
 		const int UncompressedSizeWrite = SwapEndianInt(DataInfo.m_UncompressedSize);
-		io_write(m_File, &UncompressedSizeWrite, sizeof(UncompressedSizeWrite));
+		if(!Write(&UncompressedSizeWrite, sizeof(UncompressedSizeWrite)))
+			return false;
 	}
 
 	// Write items sorted by type
@@ -1313,14 +1433,15 @@ void CDataFileWriter::Finish()
 			Item.m_Size = m_vItems[ItemIndex].m_Size;
 
 			SwapEndianInPlace(&Item);
-			io_write(m_File, &Item, sizeof(Item));
+			if(!Write(&Item, sizeof(Item)))
+				return false;
 
 			if(m_vItems[ItemIndex].m_pData != nullptr)
 			{
-				SwapEndianInPlace(m_vItems[ItemIndex].m_pData, m_vItems[ItemIndex].m_Size);
-				io_write(m_File, m_vItems[ItemIndex].m_pData, m_vItems[ItemIndex].m_Size);
-				free(m_vItems[ItemIndex].m_pData);
-				m_vItems[ItemIndex].m_pData = nullptr;
+				SwapEndianInPlace(m_vItems[ItemIndex].m_pData.get(), m_vItems[ItemIndex].m_Size);
+				if(!Write(m_vItems[ItemIndex].m_pData.get(), m_vItems[ItemIndex].m_Size))
+					return false;
+				m_vItems[ItemIndex].m_pData.reset();
 			}
 		}
 	}
@@ -1328,11 +1449,10 @@ void CDataFileWriter::Finish()
 	// Write data
 	for(CDataInfo &DataInfo : m_vDatas)
 	{
-		io_write(m_File, DataInfo.m_pCompressedData, DataInfo.m_CompressedSize);
-		free(DataInfo.m_pCompressedData);
-		DataInfo.m_pCompressedData = nullptr;
+		if(!Write(DataInfo.m_pCompressedData.get(), DataInfo.m_CompressedSize))
+			return false;
+		DataInfo.m_pCompressedData.reset();
 	}
 
-	io_close(m_File);
-	m_File = nullptr;
+	return true;
 }

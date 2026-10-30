@@ -5,9 +5,6 @@
 
 #include <base/types.h>
 
-#include <engine/shared/datafile.h>
-#include <engine/shared/jobs.h>
-
 #include <game/editor/editor_history.h>
 #include <game/editor/editor_server_settings.h>
 #include <game/editor/editor_trackers.h>
@@ -19,6 +16,7 @@
 #include <game/editor/mapitems/envelope.h>
 #include <game/editor/mapitems/envelope_evaluator.h>
 #include <game/editor/mapitems/layer.h>
+#include <game/editor/mapitems/save_job.h>
 #include <game/editor/proof_mode.h>
 #include <game/editor/quad_knife.h>
 #include <game/editor/quadart.h>
@@ -44,24 +42,6 @@ class CLayerTele;
 class CLayerTune;
 class CQuad;
 class IEditorEnvelopeReference;
-
-class CDataFileWriterFinishJob : public IJob
-{
-	IStorage *m_pStorage;
-	CEditorMap *m_pMap;
-	char m_aRealFilename[IO_MAX_PATH_LENGTH];
-	char m_aTempFilename[IO_MAX_PATH_LENGTH];
-	char m_aErrorMessage[2 * IO_MAX_PATH_LENGTH + 128];
-	CDataFileWriter m_Writer;
-
-	void Run() override;
-
-public:
-	CDataFileWriterFinishJob(IStorage *pStorage, CEditorMap *pMap, const char *pRealFilename, const char *pTempFilename, CDataFileWriter &&Writer);
-	CEditorMap *Map() const { return m_pMap; }
-	const char *RealFilename() const { return m_aRealFilename; }
-	const char *ErrorMessage() const { return m_aErrorMessage; }
-};
 
 using FErrorHandler = std::function<void(const char *pErrorMessage)>;
 

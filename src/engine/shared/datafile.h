@@ -11,8 +11,10 @@
 #include <engine/storage.h>
 
 #include <cstdint>
+#include <cstdlib>
 #include <functional>
 #include <map>
+#include <memory>
 #include <vector>
 
 enum
@@ -76,13 +78,32 @@ public:
 		COMPRESSION_BEST,
 	};
 
+	class IOperations
+	{
+	public:
+		virtual ~IOperations() = default;
+		// 返回的内存由 free 释放；注入对象须比写入器及其移动后的实例存活更久。
+		virtual void *Allocate(size_t Size) noexcept;
+		virtual bool Compress(void *pOutput, unsigned long &OutputSize, const void *pInput, unsigned long InputSize, int Level);
+		virtual unsigned Write(IOHANDLE File, const void *pData, unsigned Size);
+		virtual int Error(IOHANDLE File);
+		// 即使返回失败也已消费句柄，不能重试关闭。
+		virtual int Close(IOHANDLE File) noexcept;
+	};
+
 private:
+	struct CFreeDeleter
+	{
+		void operator()(void *pData) const noexcept { std::free(pData); }
+	};
+	using CBuffer = std::unique_ptr<void, CFreeDeleter>;
+
 	class CDataInfo
 	{
 	public:
-		void *m_pUncompressedData;
+		CBuffer m_pUncompressedData;
 		int m_UncompressedSize;
-		void *m_pCompressedData;
+		CBuffer m_pCompressedData;
 		int m_CompressedSize;
 		ECompressionLevel m_CompressionLevel;
 	};
@@ -95,7 +116,7 @@ private:
 		int m_Size;
 		int m_Next;
 		int m_Prev;
-		void *m_pData;
+		CBuffer m_pData;
 	};
 
 	class CItemTypeInfo
@@ -113,7 +134,11 @@ private:
 		CUuid m_Uuid;
 	};
 
-	IOHANDLE m_File;
+	IOperations m_DefaultOperations;
+	IOperations *m_pOperations;
+	IOHANDLE m_File = nullptr;
+	bool m_Error = false;
+	bool m_Finished = false;
 	std::map<uint16_t, CItemTypeInfo, std::less<>> m_ItemTypes; // item types must be sorted in ascending order
 	std::vector<CItemInfo> m_vItems;
 	std::vector<CDataInfo> m_vDatas;
@@ -121,18 +146,25 @@ private:
 
 	int GetTypeFromIndex(int Index) const;
 	int GetExtendedItemTypeIndex(int Type, const CUuid *pUuid);
+	bool WriteFile();
+	bool Write(const void *pData, unsigned Size);
 
 public:
-	CDataFileWriter();
+	explicit CDataFileWriter(IOperations *pOperations = nullptr);
 	// NOLINTNEXTLINE(bugprone-exception-escape)
 	CDataFileWriter(CDataFileWriter &&Other) :
+		m_pOperations(Other.m_pOperations == &Other.m_DefaultOperations ? &m_DefaultOperations : Other.m_pOperations),
 		m_File(Other.m_File),
+		m_Error(Other.m_Error),
+		m_Finished(Other.m_Finished),
 		m_ItemTypes(std::move(Other.m_ItemTypes)),
 		m_vItems(std::move(Other.m_vItems)),
 		m_vDatas(std::move(Other.m_vDatas)),
 		m_vExtendedItemTypes(std::move(Other.m_vExtendedItemTypes))
 	{
 		Other.m_File = nullptr;
+		Other.m_Error = true;
+		Other.m_Finished = true;
 	}
 	~CDataFileWriter();
 
@@ -141,7 +173,8 @@ public:
 	int AddData(size_t Size, const void *pData, ECompressionLevel CompressionLevel = COMPRESSION_DEFAULT);
 	int AddDataSwapped(size_t Size, const void *pData);
 	int AddDataString(const char *pStr);
-	void Finish();
+	// 只完成一次；任何准备、压缩、写入或关闭失败都禁止发布候选文件。
+	bool Finish() noexcept;
 };
 
 #endif

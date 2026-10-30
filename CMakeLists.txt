@@ -4024,6 +4024,8 @@ if(CLIENT)
     mapitems/map.cpp
     mapitems/map.h
     mapitems/map_io.cpp
+    mapitems/save_job.cpp
+    mapitems/save_job.h
     mapitems/map_setting.h
     mapitems/sound.cpp
     mapitems/sound.h
@@ -4912,6 +4914,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/settings/qm_appearance_preset_test.cpp
     src/test/unit/engine/csv_test.cpp
     src/test/unit/engine/datafile_test.cpp
+    src/test/integration/engine/datafile_writer_failure_test.cpp
+    src/test/integration/client/editor_save_job_test.cpp
     src/test/unit/base/dbg_test.cpp
     src/test/unit/base/assert_handler_slot_test.cpp
     src/test/unit/base/crash_output_path_test.cpp
@@ -5556,6 +5560,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/engine/client/demoedit.cpp
     src/engine/client/ghost.cpp
     src/game/editor/collab_camera.cpp
+    src/game/editor/mapitems/save_job.cpp
     src/game/editor/mapitems/envelope.cpp
     src/game/map/envelope_eval.cpp
     src/game/map/envelope_extrema.cpp
@@ -5625,6 +5630,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/game/client/components/qmclient/streamer_word_filter.cpp
     src/game/client/components/qmclient/word_filter_list.cpp
     src/test/support/ui_test_stubs.cpp
+    src/test/support/datafile_writer_operations.h
     src/game/client/components/qmclient/monitoring/monitoring_device_perf.cpp
     src/game/client/components/qmclient/stutter_capture.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_krc.cpp
