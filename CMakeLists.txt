@@ -4918,6 +4918,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/datafile_writer_failure_test.cpp
     src/test/integration/engine/datafile_reader_move_test.cpp
     src/test/integration/engine/datafile_open_allocation_test.cpp
+    src/test/integration/engine/datafile_processor_bounds_test.cpp
     src/test/integration/client/editor_save_job_test.cpp
     src/test/integration/client/editor_save_submission_test.cpp
     src/test/unit/base/dbg_test.cpp

@@ -306,7 +306,12 @@ bool CMap::ExtractTiles(CTile *pDest, size_t DestSize, const CTile *pSrc, size_t
 
 CTile *CMap::DecodeTileskip(size_t DestSize, const CTile *pSrc, size_t SrcSize, const std::function<void *(size_t)> &Allocate)
 {
-	if(DestSize == 0 || DestSize > std::numeric_limits<size_t>::max() / sizeof(CTile) || !ValidateTileskip(DestSize, pSrc, SrcSize))
+	return DecodeTileskip(DestSize, pSrc, SrcSize, Allocate, std::numeric_limits<size_t>::max());
+}
+
+CTile *CMap::DecodeTileskip(size_t DestSize, const CTile *pSrc, size_t SrcSize, const std::function<void *(size_t)> &Allocate, size_t MaxBytes)
+{
+	if(DestSize == 0 || DestSize > MaxBytes / sizeof(CTile) || !ValidateTileskip(DestSize, pSrc, SrcSize))
 		return nullptr;
 	CTile *pTiles = static_cast<CTile *>(Allocate ? Allocate(DestSize * sizeof(CTile)) : malloc(DestSize * sizeof(CTile)));
 	if(pTiles == nullptr)
@@ -693,7 +698,7 @@ bool CMap::ValidateAndUnpackTilesLayerData(CDataFileReader &NewDataFile, int Gro
 				free(pData);
 				return std::make_pair(nullptr, 0);
 			}
-			CTile *pTiles = DecodeTileskip(TilemapCount, static_cast<const CTile *>(pData), SavedTilesSize);
+			CTile *pTiles = DecodeTileskip(TilemapCount, static_cast<const CTile *>(pData), SavedTilesSize, {}, static_cast<size_t>(std::numeric_limits<int>::max()));
 			free(pData);
 			if(pTiles == nullptr)
 			{

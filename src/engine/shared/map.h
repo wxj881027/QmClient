@@ -53,6 +53,8 @@ public:
 	static bool ExtractTiles(class CTile *pDest, size_t DestSize, const class CTile *pSrc, size_t SrcSize);
 	// 完整校验压缩流后才分配；分配器返回可交由 free 回收的缓冲，成功时由调用方接管。
 	static class CTile *DecodeTileskip(size_t DestSize, const class CTile *pSrc, size_t SrcSize, const std::function<void *(size_t)> &Allocate = {});
+	// 接收方可在校验与分配前限制展开字节数，避免分配其长度接口无法表示的缓冲。
+	static class CTile *DecodeTileskip(size_t DestSize, const class CTile *pSrc, size_t SrcSize, const std::function<void *(size_t)> &Allocate, size_t MaxBytes);
 
 private:
 	static bool ValidateTileskip(size_t DestSize, const class CTile *pSrc, size_t SrcSize);

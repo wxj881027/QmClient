@@ -1,11 +1,13 @@
 #include <engine/shared/datafile.h>
 #include <engine/shared/map.h>
 
+#include <game/gamecore.h>
 #include <game/mapitems.h>
 
 #include <gtest/gtest.h>
 #include <test/test.h>
 
+#include <array>
 #include <memory>
 #include <utility>
 
@@ -24,20 +26,24 @@ namespace
 			CMapItemVersion Version{};
 			Version.m_Version = 1;
 			ASSERT_GE(Writer.AddItem(MAPITEMTYPE_VERSION, 0, sizeof(Version), &Version), 0);
-			const CTile Tile{};
+			const std::array<CTile, 4> aTiles{};
 			CMapItemLayerTilemap Game{};
 			Game.m_Version = 3;
 			Game.m_Layer.m_Type = LAYERTYPE_TILES;
-			Game.m_Width = Game.m_Height = 1;
+			Game.m_Width = Game.m_Height = 2;
 			Game.m_Flags = TILESLAYERFLAG_GAME;
 			Game.m_Image = -1;
 			Game.m_ColorEnv = -1;
-			Game.m_Data = Writer.AddData(sizeof(Tile), &Tile);
+			Game.m_Color = CColor(255, 255, 255, 255);
+			Game.m_Tele = Game.m_Speedup = Game.m_Front = Game.m_Switch = Game.m_Tune = -1;
+			Game.m_Data = Writer.AddData(sizeof(aTiles), aTiles.data());
+			StrToInts(Game.m_aName, std::size(Game.m_aName), "Game");
 			ASSERT_GE(Writer.AddItem(MAPITEMTYPE_LAYER, 0, sizeof(Game), &Game), 0);
 			CMapItemGroup Group{};
 			Group.m_Version = 3;
 			Group.m_ParallaxX = Group.m_ParallaxY = 100;
 			Group.m_NumLayers = 1;
+			StrToInts(Group.m_aName, std::size(Group.m_aName), "Game");
 			ASSERT_GE(Writer.AddItem(MAPITEMTYPE_GROUP, 0, sizeof(Group), &Group), 0);
 			ASSERT_TRUE(Writer.Finish());
 		}

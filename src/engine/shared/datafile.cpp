@@ -306,14 +306,15 @@ public:
 		if(m_ppDataProcessors[Index] != nullptr)
 		{
 			const auto [pNewData, NewSize] = m_ppDataProcessors[Index]->m_DataProcessor(m_ppDataPtrs[Index], m_pDataSizes[Index]);
-			if(pNewData == nullptr)
+			if(pNewData == nullptr || NewSize > (size_t)std::numeric_limits<int>::max())
 			{
+				free(pNewData);
 				m_ppDataPtrs[Index] = nullptr;
 				m_pDataSizes[Index] = -1;
 				return nullptr;
 			}
 			m_ppDataPtrs[Index] = pNewData;
-			m_pDataSizes[Index] = NewSize;
+			m_pDataSizes[Index] = static_cast<int>(NewSize);
 		}
 
 		return m_ppDataPtrs[Index];

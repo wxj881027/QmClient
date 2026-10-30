@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <limits>
 #include <memory>
+#include <vector>
 
 namespace
 {
@@ -156,6 +157,67 @@ TEST(MapTileskip, MaximumSkipExpandsAllItsTiles)
 	EXPECT_EQ(pTiles.get()[255].m_Index, 7);
 	EXPECT_EQ(pTiles.get()[255].m_Flags, 255);
 	EXPECT_EQ(pTiles.get()[255].m_Skip, 0);
+}
+
+TEST(MapTileskip, ByteBudgetRejectsBeforeCallingAllocator)
+{
+	const CTile Source{7, 0, 3, 0};
+	int AllocationCalls = 0;
+	EXPECT_EQ(CMap::DecodeTileskip(4, &Source, 1, [&](size_t) -> void * {
+		++AllocationCalls;
+		return nullptr; }, 4 * sizeof(CTile) - 1), nullptr);
+	EXPECT_EQ(AllocationCalls, 0);
+}
+
+TEST(MapTileskip, ExactByteBudgetAllowsTheRequestedOutput)
+{
+	const CTile Source{7, TILEFLAG_XFLIP, 3, 0};
+	size_t RequestedBytes = 0;
+	TTileBuffer pTiles(CMap::DecodeTileskip(4, &Source, 1, [&](size_t Bytes) -> void * {
+		RequestedBytes = Bytes;
+		return malloc(Bytes); }, 4 * sizeof(CTile)), &free);
+	ASSERT_NE(pTiles, nullptr);
+	EXPECT_EQ(RequestedBytes, 4 * sizeof(CTile));
+	EXPECT_EQ(pTiles.get()[3].m_Index, 7);
+}
+
+TEST(MapTileskip, UnalignedByteBudgetDoesNotPadTheAllocation)
+{
+	const CTile Source{7, 0, 3, 0};
+	size_t RequestedBytes = 0;
+	TTileBuffer pTiles(CMap::DecodeTileskip(4, &Source, 1, [&](size_t Bytes) -> void * {
+		RequestedBytes = Bytes;
+		return malloc(Bytes); }, 4 * sizeof(CTile) + sizeof(CTile) - 1), &free);
+	ASSERT_NE(pTiles, nullptr);
+	EXPECT_EQ(RequestedBytes, 4 * sizeof(CTile));
+}
+
+TEST(MapTileskip, BudgetFailureCanRetryWithSufficientCapacity)
+{
+	const CTile Source{7, 0, 3, 0};
+	int AllocationCalls = 0;
+	const auto Allocate = [&](size_t Bytes) -> void * {
+		++AllocationCalls;
+		return malloc(Bytes);
+	};
+	EXPECT_EQ(CMap::DecodeTileskip(4, &Source, 1, Allocate, 0), nullptr);
+	EXPECT_EQ(AllocationCalls, 0);
+	TTileBuffer pTiles(CMap::DecodeTileskip(4, &Source, 1, Allocate, 4 * sizeof(CTile)), &free);
+	ASSERT_NE(pTiles, nullptr);
+	EXPECT_EQ(AllocationCalls, 1);
+	EXPECT_EQ(pTiles.get()[3].m_Index, 7);
+}
+
+TEST(MapTileskip, DatafileByteLimitRejectsValidLargeStreamWithoutGibibyteAllocation)
+{
+	const size_t DestCount = (size_t)std::numeric_limits<int>::max() / sizeof(CTile) + 1;
+	// 输入约 8 MiB；故障分配器永远返回空，测试不会实际分配 GiB 输出。
+	const std::vector<CTile> vSource((DestCount + 255) / 256, CTile{7, 0, 255, 0});
+	int AllocationCalls = 0;
+	EXPECT_EQ(CMap::DecodeTileskip(DestCount, vSource.data(), vSource.size(), [&](size_t) -> void * {
+		++AllocationCalls;
+		return nullptr; }, std::numeric_limits<int>::max()), nullptr);
+	EXPECT_EQ(AllocationCalls, 0);
 }
 
 TEST(MapTileskip, FailedExtractionLeavesCallerStorageUntouched)

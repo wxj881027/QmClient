@@ -27,6 +27,7 @@ enum
  * 函数可以校验数据，出错时返回 `std::make_pair(nullptr, 0)`，成功时返回原始数据。
  * 函数也可以替换数据并返回新的数据指针与大小；新数据必须用 `malloc` 分配。
  * 返回不同数据或出错时，函数必须用 `free` 释放原始数据。
+ * 返回长度须能由读取器的 `int` 长度接口表示，超范围结果由读取器释放并拒绝。
  */
 typedef std::function<std::pair<void *, size_t>(void *pData, size_t Size)> FDataProcessor;
 
