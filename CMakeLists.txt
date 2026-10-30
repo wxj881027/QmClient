@@ -3131,6 +3131,7 @@ if(CLIENT)
     qm_festive_report_text.h
     qm_crash_report_file.h
     qm_crash_report_marker.h
+    qm_forced_exit_watchdog.h
     blocklist_driver.cpp
     blocklist_driver.h
     checksum.h
@@ -5403,6 +5404,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/motd_message_test.cpp
     src/test/unit/client/qm_hang_snapshot_test.cpp
     src/test/unit/client/qm_hang_watchdog_start_test.cpp
+    src/test/unit/client/qm_forced_exit_watchdog_test.cpp
+    src/test/integration/client/qm_forced_exit_watchdog_test.cpp
     src/test/integration/client/qm_hang_watchdog_lifecycle_test.cpp
     src/test/integration/client/qm_hang_dump_report_test.cpp
     src/test/unit/engine/serverinfo_test.cpp

@@ -10,6 +10,7 @@
 #include "perf_file_logger.h"
 #include "qm_crash_report_file.h"
 #include "qm_crash_report_marker.h"
+#include "qm_forced_exit_watchdog.h"
 #include "qm_graphics_diagnostics.h"
 #include "qm_storage_mode.h"
 #include "replay_save.h"
@@ -132,8 +133,7 @@ static constexpr std::chrono::nanoseconds gs_NetworkPumpLoadingBudget = 6ms;
 static constexpr int64_t gs_HangTimeoutSeconds = 10;
 // QmClient: 退出兜底超时（秒）。正常退出通常 1-2 秒，超过该时间视为退出清理挂起。
 static constexpr int64_t gs_ForcedExitTimeoutSeconds = 10;
-static std::atomic<uint64_t> gs_ForcedExitWatchdogGeneration{0};
-static std::atomic<bool> gs_ForcedExitWatchdogArmed{false};
+static QmForcedExit::CWatchdog gs_ForcedExitWatchdog;
 // QmClient: 测试专用注入开关（--qm-test-main-thread-assert），供进程级回归测试
 // 在真实客户端里触发一次主线程断言，验证弹窗期间看门狗的行为。
 static bool gs_QmTestMainThreadAssert = false;
@@ -154,23 +154,17 @@ static bool gs_aLoadedPreviousConfigPath[ConfigDomain::NUM] = {};
 // 配置保存完成后启动本看门狗线程：清理若未在超时前解除看门狗，直接强制退出。
 static void StartForcedExitWatchdog()
 {
-	gs_ForcedExitWatchdogArmed.store(true, std::memory_order_release);
-	const uint64_t Generation = gs_ForcedExitWatchdogGeneration.fetch_add(1, std::memory_order_relaxed) + 1;
-	log_info("client", "shutdown watchdog armed: forcing exit if shutdown does not finish within %lld seconds", (long long)gs_ForcedExitTimeoutSeconds);
-	std::thread([Generation]() {
-		std::this_thread::sleep_for(std::chrono::seconds(gs_ForcedExitTimeoutSeconds));
-		if(gs_ForcedExitWatchdogGeneration.load(std::memory_order_acquire) != Generation)
-			return;
-		// 使用 std::_Exit 跳过 atexit/静态析构，确保清理阶段卡死时也能结束进程。
-		std::_Exit(0);
-	}).detach();
+	const bool Started = gs_ForcedExitWatchdog.Start(std::chrono::seconds(gs_ForcedExitTimeoutSeconds), []() { std::_Exit(0); });
+	if(Started)
+		log_info("client", "shutdown watchdog armed: forcing exit if shutdown does not finish within %lld seconds", (long long)gs_ForcedExitTimeoutSeconds);
+	else
+		log_warn("client", "failed to start a new shutdown watchdog; normal cleanup will continue");
 }
 
 static void StopForcedExitWatchdog()
 {
 	// 弹窗路径也会调用本函数（此时看门狗可能并未武装），因此只在真正解除时记录日志。
-	const bool WasArmed = gs_ForcedExitWatchdogArmed.exchange(false, std::memory_order_acq_rel);
-	gs_ForcedExitWatchdogGeneration.fetch_add(1, std::memory_order_release);
+	const bool WasArmed = gs_ForcedExitWatchdog.Stop();
 	if(WasArmed)
 		log_info("client", "shutdown watchdog disarmed after cleanup completed");
 }
