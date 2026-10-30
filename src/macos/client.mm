@@ -23,7 +23,8 @@ int main(int argc, const char **argv)
 		if(!pResourcePath)
 			return -1;
 
-		[[NSFileManager defaultManager] changeCurrentDirectoryPath:pResourcePath];
+		if(![[NSFileManager defaultManager] changeCurrentDirectoryPath:pResourcePath])
+			return -1;
 	}
 
 	if(FinderLaunch)
