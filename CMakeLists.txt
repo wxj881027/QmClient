@@ -4760,6 +4760,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/ui/qm_animation_motion_disable_test.cpp
     src/test/contract/qmclient/ui/qm_anim_contract_test.cpp
     src/test/unit/qmclient/ui/QmAnimDropdownTest.cpp
+    src/test/unit/qmclient/ui/qm_dropdown_search_allocation_test.cpp
     src/test/unit/qmclient/ui/QmAnimFormsTest.cpp
     src/test/unit/qmclient/ui/QmDiscreteSliderTest.cpp
     src/test/unit/client/map_browser_filter_slider_test.cpp
@@ -5942,6 +5943,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/engine/client/qm_hang_diagnostics.h
       src/test/support/qm_exit_process_probe.cpp
       src/test/integration/qmclient/ui/qm_dropdown_popup_wheel_test.cpp
+      src/test/integration/qmclient/ui/qm_dropdown_search_failure_test.cpp
       src/test/integration/qmclient/ui/qm_discrete_slider_spring_test.cpp
       src/test/integration/qmclient/ui/qm_numeric_field_enter_test.cpp
       src/test/integration/qmclient/ui/qm_font_combobox_test.cpp

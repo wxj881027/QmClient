@@ -1452,6 +1452,8 @@ public:
 		CQmDropdownSearch m_Search;
 
 		SSelectionPopupContext();
+		// 源快照内存域由调用者持有，须存活到本上下文及存储销毁。
+		explicit SSelectionPopupContext(IAllocationResource *pSourceMemory);
 		void Reset();
 	};
 	void ShowPopupSelection(float X, float Y, SSelectionPopupContext *pContext);

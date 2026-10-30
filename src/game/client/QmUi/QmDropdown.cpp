@@ -6,25 +6,43 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 bool CQmDropdownSearch::Update(const std::vector<std::string> &vEntries, const char *pQuery)
 {
-	const std::string Query = pQuery != nullptr ? pQuery : "";
-	if(m_Initialized && m_vSource == vEntries && m_Query == Query)
-		return false;
-	m_Initialized = true;
-	m_vSource = vEntries;
-	m_Query = Query;
-	m_vIndices.clear();
+	return TryUpdate(vEntries, pQuery) == EUpdateResult::UPDATED;
+}
+
+CQmDropdownSearch::EUpdateResult CQmDropdownSearch::TryUpdate(const std::vector<std::string> &vEntries, const char *pQuery) noexcept
+try
+{
+	if(vEntries.size() > (size_t)std::numeric_limits<int>::max())
+		return EUpdateResult::FAILED;
+	const char *pEffectiveQuery = pQuery != nullptr ? pQuery : "";
+	if(m_Initialized && m_Query == pEffectiveQuery && m_vSource.size() == vEntries.size() && std::equal(m_vSource.begin(), m_vSource.end(), vEntries.begin()))
+		return EUpdateResult::UNCHANGED;
+
+	std::string Query(pEffectiveQuery);
+	decltype(m_vSource) vSource(vEntries.begin(), vEntries.end(), m_vSource.get_allocator());
+	std::vector<int> vIndices;
 	for(size_t Index = 0; Index < vEntries.size(); ++Index)
 		if(Query.empty() || str_utf8_find_nocase(vEntries[Index].c_str(), Query.c_str()))
-			m_vIndices.push_back(Index);
-	return true;
+			vIndices.push_back(static_cast<int>(Index));
+	// 三个候选都准备成功后只做同内存域交换，不发布部分查询或匹配。
+	m_vSource.swap(vSource);
+	m_Query.swap(Query);
+	m_vIndices.swap(vIndices);
+	m_Initialized = true;
+	return EUpdateResult::UPDATED;
+}
+catch(...)
+{
+	return EUpdateResult::FAILED;
 }
 
 int CQmDropdownSearch::SourceIndex(int VisibleIndex) const
 {
-	return VisibleIndex >= 0 && VisibleIndex < static_cast<int>(m_vIndices.size()) ? m_vIndices[VisibleIndex] : -1;
+	return VisibleIndex >= 0 && static_cast<size_t>(VisibleIndex) < m_vIndices.size() ? m_vIndices[VisibleIndex] : -1;
 }
 
 void CQmDropdownSearch::Reset()

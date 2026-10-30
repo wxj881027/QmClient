@@ -827,7 +827,13 @@ CUi::EPopupMenuFunctionResult CUi::PopupConfirm(void *pContext, CUIRect View, bo
 	return CUi::POPUP_KEEP_OPEN;
 }
 
-CUi::SSelectionPopupContext::SSelectionPopupContext()
+CUi::SSelectionPopupContext::SSelectionPopupContext() :
+	SSelectionPopupContext(nullptr)
+{
+}
+
+CUi::SSelectionPopupContext::SSelectionPopupContext(IAllocationResource *pSourceMemory) :
+	m_Search(pSourceMemory)
 {
 	Reset();
 }
@@ -900,7 +906,10 @@ CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, 
 			pSelectionPopup->m_FocusSearch = false;
 		}
 	}
-	if(pSelectionPopup->m_Search.Update(pSelectionPopup->m_vEntries, pSelectionPopup->m_Searchable ? pSelectionPopup->m_SearchInput.GetString() : "") && pSelectionPopup->m_Searchable)
+	const auto SearchResult = pSelectionPopup->m_Search.TryUpdate(pSelectionPopup->m_vEntries, pSelectionPopup->m_Searchable ? pSelectionPopup->m_SearchInput.GetString() : "");
+	if(SearchResult == CQmDropdownSearch::EUpdateResult::FAILED)
+		return CUi::POPUP_CLOSE_CURRENT;
+	if(SearchResult == CQmDropdownSearch::EUpdateResult::UPDATED && pSelectionPopup->m_Searchable)
 	{
 		pSelectionPopup->m_ActiveIndex = pSelectionPopup->m_Search.Indices().empty() ? -1 : 0;
 		pSelectionPopup->m_ScrollToActiveItem = true;
