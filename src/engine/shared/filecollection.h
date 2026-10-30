@@ -30,18 +30,18 @@ class CFileCollection
 	};
 
 	std::vector<CFileEntry> m_vFileEntries;
-	char m_aFileDesc[128];
-	int m_FileDescLength;
-	char m_aFileExt[32];
-	int m_FileExtLength;
-	char m_aPath[IO_MAX_PATH_LENGTH];
-	IStorage *m_pStorage;
+	char m_aFileDesc[128]{};
+	int m_FileDescLength = 0;
+	char m_aFileExt[32]{};
+	int m_FileExtLength = 0;
+	char m_aPath[IO_MAX_PATH_LENGTH]{};
+	IStorage *m_pStorage = nullptr;
 
 	bool ExtractTimestamp(const char *pTimestring, time_t *pTimestamp);
 	bool ParseFilename(const char *pFilename, time_t *pTimestamp);
 
 public:
-	void Init(IStorage *pStorage, const char *pPath, const char *pFileDesc, const char *pFileExt, int MaxEntries);
+	void Init(IStorage *pStorage, const char *pPath, const char *pFileDesc, const char *pFileExt, int MaxEntries) noexcept;
 
 	static int FilelistCallback(const char *pFilename, int IsDir, int StorageType, void *pUser);
 };
