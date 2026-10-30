@@ -4916,6 +4916,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/csv_test.cpp
     src/test/unit/engine/datafile_test.cpp
     src/test/integration/engine/datafile_writer_failure_test.cpp
+    src/test/integration/engine/datafile_reader_move_test.cpp
     src/test/integration/client/editor_save_job_test.cpp
     src/test/integration/client/editor_save_submission_test.cpp
     src/test/unit/base/dbg_test.cpp

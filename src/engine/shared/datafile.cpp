@@ -505,8 +505,10 @@ CDataFileReader::~CDataFileReader()
 
 CDataFileReader &CDataFileReader::operator=(CDataFileReader &&Other)
 {
-	m_pDataFile = Other.m_pDataFile;
-	Other.m_pDataFile = nullptr;
+	if(this == &Other)
+		return *this;
+	Close();
+	m_pDataFile = std::exchange(Other.m_pDataFile, nullptr);
 	return *this;
 }
 
