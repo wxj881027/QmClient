@@ -5272,12 +5272,11 @@ bool CTClient::LoadLocalSaveEntries(std::vector<SLocalSaveEntry> &vEntries, bool
 		return false;
 	if(pFileExists)
 		*pFileExists = true;
-	char *pContent = io_read_all_str(File);
+	std::unique_ptr<char, decltype(&free)> pContent(io_read_all_str(File), free);
 	io_close(File);
 	if(!pContent)
 		return false;
-	vEntries = QmLocalSaves::ParseEntries(pContent);
-	free(pContent);
+	vEntries = QmLocalSaves::ParseEntries(pContent.get());
 	return true;
 }
 
