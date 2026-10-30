@@ -5,6 +5,7 @@
 
 #include "game_ping.h"
 #include "graph.h"
+#include "map_download_file.h"
 #include "qm_hang_diagnostics.h"
 #include "smooth_time.h"
 
@@ -185,7 +186,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	char m_aMapdownloadFilename[256] = "";
 	char m_aMapdownloadFilenameTemp[256] = "";
 	char m_aMapdownloadName[256] = "";
-	IOHANDLE m_MapdownloadFileTemp = nullptr;
+	CMapDownloadFile m_MapdownloadFileTemp;
 	int m_MapdownloadChunk = 0;
 	int m_MapdownloadCrc = 0;
 	int m_MapdownloadAmount = -1;
@@ -495,6 +496,7 @@ public:
 
 	void ResetMapDownload(bool ResetActive);
 	void FinishMapDownload();
+	void ReportMapDownloadSaveFailure(const char *pFilename);
 
 	EInfoState InfoState() const override { return m_InfoState; }
 	void RequestDDNetInfo() override;

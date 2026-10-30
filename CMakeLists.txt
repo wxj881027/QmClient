@@ -3186,6 +3186,7 @@ if(CLIENT)
     serverbrowser_ping_cache.h
     sixup_map_change.h
     map_download_request.h
+    map_download_file.h
     sixup_server_info.h
     sixup_system_messages.h
     sixup_translate_system.cpp
@@ -4729,6 +4730,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/linereader_budget_test.cpp
     src/test/integration/engine/sixup_map_change_test.cpp
     src/test/integration/engine/map_download_request_test.cpp
+    src/test/integration/engine/map_download_file_test.cpp
+    src/test/unit/engine/map_download_progress_test.cpp
+    src/test/unit/engine/unpacker_raw_test.cpp
     src/test/integration/engine/sixup_server_info_test.cpp
     src/test/integration/client/android_asset_unpack_test.cpp
     src/test/integration/engine/steam_client_path_test.cpp

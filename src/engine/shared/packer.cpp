@@ -209,7 +209,7 @@ const unsigned char *CUnpacker::GetRaw(int Size)
 		return nullptr;
 
 	// check for nasty sizes
-	if(Size < 0 || m_pCurrent + Size > m_pEnd)
+	if(Size < 0 || Size > m_pEnd - m_pCurrent)
 	{
 		m_Error = true;
 		return nullptr;

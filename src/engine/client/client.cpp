@@ -609,7 +609,11 @@ void CClient::SendReady(int Conn)
 void CClient::SendMapRequest()
 {
 	dbg_assert(!m_MapdownloadFileTemp, "Map download already in progress");
-	m_MapdownloadFileTemp = Storage()->OpenFile(m_aMapdownloadFilenameTemp, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!m_MapdownloadFileTemp.Open(*Storage(), m_aMapdownloadFilenameTemp))
+	{
+		ReportMapDownloadSaveFailure(m_aMapdownloadFilenameTemp);
+		return;
+	}
 	map_download::SendRequest(IsSixup(), m_MapdownloadChunk, [this](CMsgPacker &Msg) {
 		SendMsg(CONN_MAIN, &Msg, MSGFLAG_VITAL | MSGFLAG_FLUSH);
 	});
@@ -2491,13 +2495,24 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 				Size = Unpacker.GetInt();
 			}
 
-			const unsigned char *pData = Unpacker.GetRaw(Size);
 			if(Unpacker.Error() || Size <= 0 || MapCRC != m_MapdownloadCrc || Chunk != m_MapdownloadChunk)
 			{
 				return;
 			}
+			if(!map_download::CanAppend(m_MapdownloadAmount, Size, m_MapdownloadTotalsize))
+			{
+				DisconnectWithReason("invalid map size");
+				return;
+			}
+			const unsigned char *pData = Unpacker.GetRaw(Size);
+			if(Unpacker.Error())
+				return;
 
-			io_write(m_MapdownloadFileTemp, pData, Size);
+			if(!m_MapdownloadFileTemp.Write(pData, static_cast<unsigned>(Size)))
+			{
+				ReportMapDownloadSaveFailure(m_aMapdownloadFilenameTemp);
+				return;
+			}
 
 			m_MapdownloadAmount += Size;
 
@@ -2506,10 +2521,10 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 
 			if(Last)
 			{
-				if(m_MapdownloadFileTemp)
+				if(!m_MapdownloadFileTemp.Close())
 				{
-					io_close(m_MapdownloadFileTemp);
-					m_MapdownloadFileTemp = nullptr;
+					ReportMapDownloadSaveFailure(m_aMapdownloadFilenameTemp);
+					return;
 				}
 				FinishMapDownload();
 			}
@@ -3225,11 +3240,7 @@ void CClient::ResetMapDownload(bool ResetActive)
 		m_pMapdownloadTask = nullptr;
 	}
 
-	if(m_MapdownloadFileTemp)
-	{
-		io_close(m_MapdownloadFileTemp);
-		m_MapdownloadFileTemp = nullptr;
-	}
+	m_MapdownloadFileTemp.Close();
 
 	if(Storage()->FileExists(m_aMapdownloadFilenameTemp, IStorage::TYPE_SAVE))
 	{
@@ -3249,20 +3260,21 @@ void CClient::ResetMapDownload(bool ResetActive)
 	}
 }
 
+void CClient::ReportMapDownloadSaveFailure(const char *pFilename)
+{
+	char aError[128 + IO_MAX_PATH_LENGTH];
+	str_format(aError, sizeof(aError), Localize("Could not save downloaded map. Try manually deleting this file: %s"), pFilename);
+	DisconnectWithReason(aError);
+}
+
 void CClient::FinishMapDownload()
 {
-	m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", "download complete, loading map");
-
-	bool FileSuccess = true;
-	FileSuccess &= Storage()->RemoveFile(m_aMapdownloadFilename, IStorage::TYPE_SAVE);
-	FileSuccess &= Storage()->RenameFile(m_aMapdownloadFilenameTemp, m_aMapdownloadFilename, IStorage::TYPE_SAVE);
-	if(!FileSuccess)
+	if(!map_download::Publish(*Storage(), m_aMapdownloadFilenameTemp, m_aMapdownloadFilename))
 	{
-		char aError[128 + IO_MAX_PATH_LENGTH];
-		str_format(aError, sizeof(aError), Localize("Could not save downloaded map. Try manually deleting this file: %s"), m_aMapdownloadFilename);
-		DisconnectWithReason(aError);
+		ReportMapDownloadSaveFailure(m_aMapdownloadFilename);
 		return;
 	}
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", "download complete, loading map");
 
 	const char *pError = LoadMap(m_aMapdownloadName, m_aMapdownloadFilename, m_MapdownloadSha256, m_MapdownloadCrc);
 	if(!pError)
