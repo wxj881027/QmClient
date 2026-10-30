@@ -4846,6 +4846,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_trail_geometry_test.cpp
     src/test/integration/qmclient/client/qm_map_upload_lifecycle_test.cpp
     src/test/integration/qmclient/client/qm_chat_emoji_resource_test.cpp
+    src/test/integration/qmclient/client/qm_chat_post_send_failure_test.cpp
     src/test/integration/qmclient/client/qm_skin_download_session_test.cpp
     src/test/integration/qmclient/client/qm_skin_outline_render_test.cpp
     src/test/integration/qmclient/client/qm_font_download_storage_test.cpp
@@ -5093,6 +5094,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_pending_chat_messages_test.cpp
     src/test/unit/qmclient/client/qm_pending_chat_preparation_test.cpp
     src/test/unit/qmclient/client/qm_outgoing_chat_annotations_test.cpp
+    src/test/unit/qmclient/client/qm_outgoing_chat_annotation_failure_test.cpp
     src/test/unit/qmclient/client/qm_chat_text_layout_test.cpp
     src/test/unit/qmclient/client/qm_console_log_filter_test.cpp
     src/test/unit/qmclient/client/qm_console_selection_test.cpp
@@ -5230,6 +5232,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/contract/qmclient/client/qm_demo_cut_contract_test.cpp
     src/test/unit/qmclient/client/qm_demo_cut_test.cpp
     src/test/unit/qmclient/client/qm_local_saves_test.cpp
+    src/test/unit/qmclient/client/qm_local_save_post_send_test.cpp
     src/test/contract/qmclient/client/qm_storage_path_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_cards_surface_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_cards_deck_contract_test.cpp

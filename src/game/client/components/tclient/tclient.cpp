@@ -5354,30 +5354,32 @@ QmLocalSaves::CRestore::SWorld CTClient::LocalSaveWorld() const
 
 void CTClient::TrackLocalSaveLoadCommand(int Conn, const char *pLine)
 {
-	const std::string Code = QmLocalSaves::LoadCode(pLine);
-	if(Code.empty() || Client()->State() != IClient::STATE_ONLINE || Conn < 0 || Conn > 1)
-		return;
-	const int Id = GameClient()->m_aLocalIds[Conn];
-	if(Id < 0 || Id >= MAX_CLIENTS || !GameClient()->m_aClients[Id].m_Active)
-		return;
-	const int64_t Now = time_get();
-	if(m_LocalSaveConfirmation.Active() && Now > m_LocalSaveConfirmation.Request().m_Deadline)
-		m_LocalSaveConfirmation.Reset();
-	const char *pMap = Client()->GetCurrentMap();
-	std::vector<SLocalSaveEntry> vEntries;
-	LoadLocalSaveEntries(vEntries);
-	const bool KnownCode = std::any_of(vEntries.begin(), vEntries.end(), [&](const SLocalSaveEntry &Entry) {
-		return Entry.m_Code == Code && str_comp_nocase(Entry.m_Map.c_str(), pMap) == 0;
+	QmLocalSaves::TrackAfterSend(m_LocalSaveConfirmation, m_LocalSaveRestore, [&] {
+		const std::string Code = QmLocalSaves::LoadCode(pLine);
+		if(Code.empty() || Client()->State() != IClient::STATE_ONLINE || Conn < 0 || Conn > 1)
+			return;
+		const int Id = GameClient()->m_aLocalIds[Conn];
+		if(Id < 0 || Id >= MAX_CLIENTS || !GameClient()->m_aClients[Id].m_Active)
+			return;
+		const int64_t Now = time_get();
+		if(m_LocalSaveConfirmation.Active() && Now > m_LocalSaveConfirmation.Request().m_Deadline)
+			m_LocalSaveConfirmation.Reset();
+		const char *pMap = Client()->GetCurrentMap();
+		std::vector<SLocalSaveEntry> vEntries;
+		LoadLocalSaveEntries(vEntries);
+		const bool KnownCode = std::any_of(vEntries.begin(), vEntries.end(), [&](const SLocalSaveEntry &Entry) {
+			return Entry.m_Code == Code && str_comp_nocase(Entry.m_Map.c_str(), pMap) == 0;
+		});
+		if(!KnownCode && !m_LocalSaveConfirmation.Active())
+			return;
+		const auto World = LocalSaveWorld();
+		const int Team = GameClient()->m_Teams.Team(Id);
+		const bool CanObserveClock = GameClient()->m_Snap.m_pGameInfoObj && GameClient()->m_Snap.m_pLocalCharacter &&
+					     World.m_aTeams[g_Config.m_ClDummy] == Team && !GameClient()->m_Snap.m_SpecInfo.m_Active;
+		m_LocalSaveConfirmation.Track({pMap, Code, Conn, Team, Client()->GameTick(Conn), World.m_Racing || !CanObserveClock, Now + 30 * time_freq()});
+		if(m_LocalSaveRestore.Active() && m_LocalSaveRestore.Entry().m_Code != Code)
+			m_LocalSaveRestore.Reset();
 	});
-	if(!KnownCode && !m_LocalSaveConfirmation.Active())
-		return;
-	const auto World = LocalSaveWorld();
-	const int Team = GameClient()->m_Teams.Team(Id);
-	const bool CanObserveClock = GameClient()->m_Snap.m_pGameInfoObj && GameClient()->m_Snap.m_pLocalCharacter &&
-				     World.m_aTeams[g_Config.m_ClDummy] == Team && !GameClient()->m_Snap.m_SpecInfo.m_Active;
-	m_LocalSaveConfirmation.Track({pMap, Code, Conn, Team, Client()->GameTick(Conn), World.m_Racing || !CanObserveClock, Now + 30 * time_freq()});
-	if(m_LocalSaveRestore.Active() && m_LocalSaveRestore.Entry().m_Code != Code)
-		m_LocalSaveRestore.Reset();
 }
 
 void CTClient::CompleteLocalSaveLoad(bool Success)

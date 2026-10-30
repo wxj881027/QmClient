@@ -13,6 +13,7 @@
 #include <limits>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace QmLocalSaves
@@ -270,7 +271,7 @@ namespace QmLocalSaves
 	public:
 		bool Active() const { return !m_Request.m_Code.empty(); }
 		const SRequest &Request() const { return m_Request; }
-		void Reset() { *this = {}; }
+		void Reset() noexcept { *this = {}; }
 		void Track(const SRequest &Request)
 		{
 			if(!Active())
@@ -355,7 +356,7 @@ namespace QmLocalSaves
 		const SEntry &Entry() const { return m_Entry; }
 		const std::array<std::string, 2> &Names() const { return m_aNames; }
 		int Team() const { return m_Team; }
-		void Reset() { *this = {}; }
+		void Reset() noexcept { *this = {}; }
 		void Begin(const SEntry &Entry, const std::array<std::string, 2> &Names, int64_t Now, int64_t Frequency)
 		{
 			Reset();
@@ -416,6 +417,23 @@ namespace QmLocalSaves
 			return World.m_aTeamSizes[m_Team] == 2 ? Send(m_LoadSent, EAction::LOAD) : EAction::WAIT;
 		}
 	};
+
+	// 网络已接收 /load 后只维护本地观察；失败不能重发或沿用旧确认/恢复状态。
+	template<typename TTrack>
+	bool TrackAfterSend(CConfirmation &Confirmation, CRestore &Restore, TTrack &&Track) noexcept
+	{
+		try
+		{
+			std::forward<TTrack>(Track)();
+			return true;
+		}
+		catch(...)
+		{
+			Confirmation.Reset();
+			Restore.Reset();
+			return false;
+		}
+	}
 }
 
 #endif
