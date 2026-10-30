@@ -1075,7 +1075,8 @@ bool os_version_str(char *version, size_t length);
  *
  * @remark The strings are treated as null-terminated strings.
  */
-void os_locale_str(char *locale, size_t length);
+// 读取或转换失败不抛C++异常；length为0或locale为空时不访问输出。
+void os_locale_str(char *locale, size_t length) noexcept;
 
 /**
  * Fixes the command line arguments to be encoded in UTF-8 on all systems.

@@ -2742,6 +2742,7 @@ set_src(BASE GLOB_RECURSE src/base
   math.h
   mem.cpp
   mem.h
+  os_locale.h
   perf_timer.h
   rust.h
   secure.cpp
@@ -5087,6 +5088,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/base/netaddr_test.cpp
     src/test/unit/engine/network_test.cpp
     src/test/unit/base/os_test.cpp
+    src/test/unit/base/os_locale_test.cpp
     src/test/unit/engine/packer_test.cpp
     src/test/unit/base/prng_test.cpp
     src/test/unit/qmclient/client/qm_bind_editor_console_test.cpp

@@ -6,6 +6,7 @@
 #include "io_read_all.h"
 #include "lock.h"
 #include "logger.h"
+#include "os_locale.h"
 #include "sphore.h"
 #include "thread.h"
 #include "windows.h"
@@ -2643,29 +2644,34 @@ bool os_version_str(char *version, size_t length)
 #endif
 }
 
-void os_locale_str(char *locale, size_t length)
+static bool query_os_locale(char *locale, size_t length)
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	wchar_t wide_buffer[LOCALE_NAME_MAX_LENGTH];
-	dbg_assert(GetUserDefaultLocaleName(wide_buffer, std::size(wide_buffer)) > 0, "GetUserDefaultLocaleName failure");
-
-	const std::optional<std::string> buffer = windows_wide_to_utf8(wide_buffer);
-	dbg_assert(buffer.has_value(), "GetUserDefaultLocaleName returned invalid UTF-16");
+	wchar_t wide_buffer[LOCALE_NAME_MAX_LENGTH]{};
+	const int count = GetUserDefaultLocaleName(wide_buffer, std::size(wide_buffer));
+	if(count <= 0 || static_cast<size_t>(count) > std::size(wide_buffer) || wide_buffer[count - 1] != L'\0')
+		return false;
+	const std::optional<std::string> buffer = windows_wide_to_utf8_bounded(wide_buffer, wide_buffer + count);
+	if(!buffer)
+		return false;
 	str_copy(locale, buffer.value().c_str(), length);
+	return true;
 #elif defined(CONF_PLATFORM_MACOS) || defined(CONF_PLATFORM_IOS)
-	CFLocaleRef locale_ref = CFLocaleCopyCurrent();
-	CFStringRef locale_identifier_ref = static_cast<CFStringRef>(CFLocaleGetValue(locale_ref, kCFLocaleIdentifier));
-
-	// Count number of UTF16 codepoints, +1 for zero-termination.
-	// Assume maximum possible length for encoding as UTF-8.
-	CFIndex locale_identifier_size = (UTF8_BYTE_LENGTH * CFStringGetLength(locale_identifier_ref) + 1) * sizeof(char);
-	char *locale_identifier = (char *)malloc(locale_identifier_size);
-	dbg_assert(CFStringGetCString(locale_identifier_ref, locale_identifier, locale_identifier_size, kCFStringEncodingUTF8), "CFStringGetCString failure");
-
-	str_copy(locale, locale_identifier, length);
-
-	free(locale_identifier);
-	CFRelease(locale_ref);
+	struct CAppleLocaleOperations
+	{
+		CFLocaleRef Acquire() { return CFLocaleCopyCurrent(); }
+		void Release(CFLocaleRef Locale) noexcept { CFRelease(Locale); }
+		CFStringRef Identifier(CFLocaleRef Locale)
+		{
+			const CFTypeRef Value = CFLocaleGetValue(Locale, kCFLocaleIdentifier);
+			return Value && CFGetTypeID(Value) == CFStringGetTypeID() ? static_cast<CFStringRef>(Value) : nullptr;
+		}
+		CFIndex Length(CFStringRef Identifier) { return CFStringGetLength(Identifier); }
+		char *Allocate(size_t Bytes) { return static_cast<char *>(malloc(Bytes)); }
+		void Free(char *pBuffer) noexcept { free(pBuffer); }
+		bool Convert(CFStringRef Identifier, char *pBuffer, CFIndex Capacity) { return CFStringGetCString(Identifier, pBuffer, Capacity, kCFStringEncodingUTF8); }
+	} Operations;
+	return os_locale::ReadOwnedIdentifier(locale, length, Operations);
 #else
 	static const char *ENV_VARIABLES[] = {
 		"LC_ALL",
@@ -2673,36 +2679,20 @@ void os_locale_str(char *locale, size_t length)
 		"LANG",
 	};
 
-	locale[0] = '\0';
 	for(const char *env_variable : ENV_VARIABLES)
 	{
 		const char *env_value = getenv(env_variable);
 		if(env_value)
 		{
 			str_copy(locale, env_value, length);
-			break;
+			return true;
 		}
 	}
+	return false;
 #endif
+}
 
-	// Ensure RFC 3066 format:
-	// - use hyphens instead of underscores
-	// - truncate locale string after first non-standard letter
-	for(int i = 0; i < str_length(locale); ++i)
-	{
-		if(locale[i] == '_')
-		{
-			locale[i] = '-';
-		}
-		else if(locale[i] != '-' && !(locale[i] >= 'a' && locale[i] <= 'z') && !(locale[i] >= 'A' && locale[i] <= 'Z') && !(str_isnum(locale[i])))
-		{
-			locale[i] = '\0';
-			break;
-		}
-	}
-
-	// Use default if we could not determine the locale,
-	// i.e. if only the C or POSIX locale is available.
-	if(locale[0] == '\0' || str_comp(locale, "C") == 0 || str_comp(locale, "POSIX") == 0)
-		str_copy(locale, "en-US", length);
+void os_locale_str(char *locale, size_t length) noexcept
+{
+	os_locale::Read(locale, length, query_os_locale);
 }
