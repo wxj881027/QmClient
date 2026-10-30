@@ -20,6 +20,12 @@ size_t StunMessagePrepare(unsigned char *pBuffer, size_t BufferSize, CStunData *
 {
 	dbg_assert(BufferSize >= 20, "stun message buffer too small");
 	secure_random_fill(pData->m_aSecret, sizeof(pData->m_aSecret));
+	return StunMessagePrepare(pBuffer, BufferSize, *pData);
+}
+
+size_t StunMessagePrepare(unsigned char *pBuffer, size_t BufferSize, const CStunData &Data)
+{
+	dbg_assert(BufferSize >= 20, "stun message buffer too small");
 	pBuffer[0] = 0x00; // STUN Request Message Type 1: Binding
 	pBuffer[1] = 0x01;
 	pBuffer[2] = 0x00; // Message Length: 0 (extra bytes after the header)
@@ -28,7 +34,7 @@ size_t StunMessagePrepare(unsigned char *pBuffer, size_t BufferSize, CStunData *
 	pBuffer[5] = 0x12;
 	pBuffer[6] = 0xA4;
 	pBuffer[7] = 0x42;
-	mem_copy(pBuffer + 8, pData->m_aSecret, sizeof(pData->m_aSecret)); // Transaction ID
+	mem_copy(pBuffer + 8, Data.m_aSecret, sizeof(Data.m_aSecret)); // Transaction ID
 	return 20;
 }
 

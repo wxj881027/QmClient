@@ -83,6 +83,20 @@ TEST_F(CStunMessageTest, Ipv4MappedAddressDecodesCookieAndPort)
 	ExpectV4();
 }
 
+TEST_F(CStunMessageTest, KnownTransactionRequestPreservesHeaderSecretAndOuterGuard)
+{
+	std::array<unsigned char, 24> Buffer;
+	Buffer.fill(0xa5);
+	const CStunData Original = m_Data;
+	ASSERT_EQ(StunMessagePrepare(Buffer.data(), 20, m_Data), 20U);
+	const unsigned char aHeader[] = {0, 1, 0, 0, 0x21, 0x12, 0xa4, 0x42};
+	EXPECT_EQ(mem_comp(Buffer.data(), aHeader, sizeof(aHeader)), 0);
+	EXPECT_EQ(mem_comp(Buffer.data() + 8, Original.m_aSecret, sizeof(Original.m_aSecret)), 0);
+	EXPECT_EQ(mem_comp(m_Data.m_aSecret, Original.m_aSecret, sizeof(Original.m_aSecret)), 0);
+	for(size_t i = 20; i < Buffer.size(); ++i)
+		EXPECT_EQ(Buffer[i], 0xa5);
+}
+
 TEST_F(CStunMessageTest, Ipv6MappedAddressDecodesCookieAndTransactionId)
 {
 	Append({0, 0x20, 0, 20, 0, 2, 0x01, 0x7d, 0x01, 0x13, 0xa9, 0xfa, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13});

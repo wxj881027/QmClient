@@ -39,14 +39,33 @@ static int RetryWaitSeconds(int NumUnsuccessfulTries)
 // Refresh()/FeedStunServer() 重新武装时会清零计数。
 static constexpr int STUN_SEND_FAILURES_BEFORE_GIVEUP = 3;
 
-CStun::CProtocol::CProtocol(int Index, NETSOCKET Socket) :
+int64_t CStun::CDefaultOperations::Now()
+{
+	return time_get();
+}
+
+int64_t CStun::CDefaultOperations::Frequency()
+{
+	return time_freq();
+}
+
+void CStun::CDefaultOperations::RandomFill(void *pData, unsigned Size)
+{
+	secure_random_fill(pData, Size);
+}
+
+int CStun::CDefaultOperations::Send(NETSOCKET Socket, const NETADDR *pAddr, const void *pData, int Size)
+{
+	return net_udp_send(Socket, pAddr, pData, Size);
+}
+
+CStun::CProtocol::CProtocol(int Index, NETSOCKET Socket, IOperations *pOperations) :
 	m_Index(Index),
-	m_Socket(Socket)
+	m_Socket(Socket),
+	m_pOperations(pOperations)
 {
 	mem_zero(&m_StunServer, sizeof(NETADDR));
-	// Initialize `m_Stun` with random data.
-	unsigned char aBuf[32];
-	StunMessagePrepare(aBuf, sizeof(aBuf), &m_Stun);
+	m_pOperations->RandomFill(m_Stun.m_aSecret, sizeof(m_Stun.m_aSecret));
 }
 
 void CStun::CProtocol::FeedStunServer(NETADDR StunServer)
@@ -63,22 +82,23 @@ void CStun::CProtocol::FeedStunServer(NETADDR StunServer)
 
 void CStun::CProtocol::Refresh()
 {
-	m_NextTry = time_get();
+	m_NextTry = m_pOperations->Now();
 	m_NumSendFailures = 0;
 }
 
 void CStun::CProtocol::Update()
 {
-	int64_t Now = time_get();
+	int64_t Now = m_pOperations->Now();
 	if(m_NextTry == -1 || Now < m_NextTry || !m_HaveStunServer)
 	{
 		return;
 	}
-	m_NextTry = Now + RetryWaitSeconds(m_NumUnsuccessfulTries) * time_freq();
+	m_NextTry = Now + RetryWaitSeconds(m_NumUnsuccessfulTries) * m_pOperations->Frequency();
 	m_NumUnsuccessfulTries += 1;
 	unsigned char aBuf[32];
-	int Size = StunMessagePrepare(aBuf, sizeof(aBuf), &m_Stun);
-	if(net_udp_send(m_Socket, &m_StunServer, aBuf, Size) == -1)
+	m_pOperations->RandomFill(m_Stun.m_aSecret, sizeof(m_Stun.m_aSecret));
+	int Size = StunMessagePrepare(aBuf, sizeof(aBuf), m_Stun);
+	if(m_pOperations->Send(m_Socket, &m_StunServer, aBuf, Size) == -1)
 	{
 		m_NumSendFailures += 1;
 		// 首次失败照常记录便于诊断；连续失败达阈值则止损：停止重试直到
@@ -111,7 +131,7 @@ bool CStun::CProtocol::OnPacket(NETADDR Addr, unsigned char *pData, int DataSize
 	{
 		return false;
 	}
-	m_LastResponse = time_get();
+	m_LastResponse = m_pOperations->Now();
 	if(!Success)
 	{
 		m_HaveAddr = false;
@@ -135,8 +155,8 @@ CONNECTIVITY CStun::CProtocol::GetConnectivity(NETADDR *pGlobalAddr)
 	{
 		return CONNECTIVITY::UNKNOWN;
 	}
-	int64_t Now = time_get();
-	int64_t Freq = time_freq();
+	int64_t Now = m_pOperations->Now();
+	int64_t Freq = m_pOperations->Frequency();
 	bool HaveTriedALittle = m_NumUnsuccessfulTries >= 5 && (m_LastResponse == -1 || Now - m_LastResponse >= 30 * Freq);
 	if(m_LastResponse == -1 && !HaveTriedALittle)
 	{
@@ -157,8 +177,8 @@ CONNECTIVITY CStun::CProtocol::GetConnectivity(NETADDR *pGlobalAddr)
 	}
 }
 
-CStun::CStun(NETSOCKET Socket) :
-	m_aProtocols{CProtocol(0, Socket), CProtocol(1, Socket)}
+CStun::CStun(NETSOCKET Socket, IOperations *pOperations) :
+	m_aProtocols{CProtocol(0, Socket, pOperations ? pOperations : &m_DefaultOperations), CProtocol(1, Socket, pOperations ? pOperations : &m_DefaultOperations)}
 {
 }
 
