@@ -4240,8 +4240,8 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 
 	char aSavesPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, SAVES_FILE, aSavesPath, sizeof(aSavesPath));
-	if(auto pJob = m_LocalSaveDisplay.Refresh(aSavesPath, time_get(), time_freq() * 2))
-		Engine()->AddJob(std::move(pJob));
+	m_LocalSaveDisplay.Refresh(aSavesPath, time_get(), time_freq() * 2,
+		[this](std::shared_ptr<IJob> pJob) { return Engine()->TryAddJob(std::move(pJob)); });
 	const auto &vSaveEntries = m_LocalSaveDisplay.Entries();
 	const bool SaveFileExists = m_LocalSaveDisplay.FileExists();
 	const std::set<std::string> &FavoriteMaps = GameClient()->m_TClient.GetFavoriteMaps();
