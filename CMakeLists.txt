@@ -4984,6 +4984,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/glyph_render_retry_test.cpp
     src/test/unit/base/hash_test.cpp
     src/test/unit/engine/huffman_test.cpp
+    src/test/unit/engine/stun_message_test.cpp
     src/test/contract/base/http_shutdown_lifecycle_contract_test.cpp
     src/test/unit/engine/image_test.cpp
     src/test/unit/engine/sound_buffer_test.cpp

@@ -101,7 +101,7 @@ void CStun::CProtocol::Update()
 
 bool CStun::CProtocol::OnPacket(NETADDR Addr, unsigned char *pData, int DataSize)
 {
-	if(m_NextTry < 0 || !m_HaveStunServer)
+	if(m_NextTry < 0 || !m_HaveStunServer || DataSize < 0 || net_addr_comp(&Addr, &m_StunServer) != 0)
 	{
 		return false;
 	}
