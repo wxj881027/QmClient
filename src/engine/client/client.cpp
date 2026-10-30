@@ -14,6 +14,7 @@
 #include "qm_graphics_diagnostics.h"
 #include "qm_storage_mode.h"
 #include "replay_save.h"
+#include "server_info_client.h"
 #include "serverbrowser.h"
 #include "snapshot_ticks.h"
 
@@ -1952,6 +1953,7 @@ static int SavedServerInfoType(int Type)
 }
 
 void CClient::ProcessServerInfo(int RawType, NETADDR *pFrom, const void *pData, int DataSize)
+try
 {
 	CServerBrowser::CServerEntry *pEntry = m_ServerBrowser.Find(*pFrom);
 
@@ -2056,30 +2058,15 @@ void CClient::ProcessServerInfo(int RawType, NETADDR *pFrom, const void *pData, 
 		Info.m_ReceivedPackets |= Flag;
 	}
 
-	bool IgnoreError = false;
-	for(int i = 0; i < MAX_CLIENTS && (int)Info.m_vClients.size() < MAX_CLIENTS && !Up.Error(); i++)
+	const int ClientLimit = SavedType == SERVERINFO_64_LEGACY ? LEGACY_MAX_CLIENTS : MAX_CLIENTS;
+	for(int i = 0; i < ClientLimit && (int)Info.m_vClients.size() < MAX_CLIENTS && !Up.Error(); i++)
 	{
 		CServerInfo::CClient Client = {};
-		GET_STRING(Client.m_aName);
-		if(Up.Error())
-		{
-			// Packet end, no problem unless it happens during one
-			// player info, so ignore the error.
-			IgnoreError = true;
+		const auto ReadResult = server_info::ReadClient(Up, SavedType == SERVERINFO_EXTENDED, Client);
+		if(ReadResult == server_info::EClientReadResult::INVALID)
+			return;
+		if(ReadResult == server_info::EClientReadResult::END)
 			break;
-		}
-		GET_STRING(Client.m_aClan);
-		GET_INT(Client.m_Country);
-		if(!in_range(Client.m_Country, CountryCode::MINIMUM, CountryCode::MAXIMUM))
-		{
-			Client.m_Country = CountryCode::DEFAULT;
-		}
-		GET_INT(Client.m_Score);
-		GET_INT(Client.m_Player);
-		if(SavedType == SERVERINFO_EXTENDED)
-		{
-			Up.GetString(); // extra info, reserved
-		}
 		if(!Up.Error())
 		{
 			if(SavedType == SERVERINFO_64_LEGACY)
@@ -2100,7 +2087,7 @@ void CClient::ProcessServerInfo(int RawType, NETADDR *pFrom, const void *pData, 
 
 	str_clean_whitespaces(Info.m_aName);
 
-	if(!Up.Error() || IgnoreError)
+	if(!Up.Error())
 	{
 		if(!DuplicatedPacket && (!pEntry || !pEntry->m_GotInfo || SavedType >= pEntry->m_Info.m_Type))
 		{
@@ -2157,6 +2144,11 @@ void CClient::ProcessServerInfo(int RawType, NETADDR *pFrom, const void *pData, 
 
 #undef GET_STRING
 #undef GET_INT
+}
+catch(...)
+{
+	// 候选/列表准备或通知异常不逸出收包循环；已完成发布不自动回滚或重放。
+	log_warn("client", "Failed to process server info packet");
 }
 
 static CServerCapabilities GetServerCapabilities(int Version, int Flags, bool Sixup)

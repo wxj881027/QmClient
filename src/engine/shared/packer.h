@@ -74,6 +74,7 @@ public:
 	const unsigned char *GetRaw(int Size);
 	bool Error() const { return m_Error; }
 
+	int RemainingSize() const { return m_pCurrent == m_pEnd ? 0 : static_cast<int>(m_pEnd - m_pCurrent); }
 	int CompleteSize() const { return m_pEnd == m_pStart ? 0 : static_cast<int>(m_pEnd - m_pStart); }
 	const unsigned char *CompleteData() const { return m_pStart; }
 };
