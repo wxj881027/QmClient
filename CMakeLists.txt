@@ -4758,6 +4758,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_spectator_tele_search_test.cpp
     src/test/unit/qmclient/client/qm_spectator_friend_priority_test.cpp
     src/test/unit/qmclient/client/qm_mobile_spectator_test.cpp
+    src/test/unit/qmclient/client/qm_media_open_test.cpp
     src/test/unit/qmclient/client/qm_friend_enter_tracker_test.cpp
     src/test/integration/qmclient/client/qm_friend_enter_notify_test.cpp
     src/test/unit/qmclient/client/qm_friend_online_tracker_test.cpp

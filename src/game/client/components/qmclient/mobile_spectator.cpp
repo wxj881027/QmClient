@@ -133,23 +133,19 @@ void CQmMobileSpectator::ShowMediaFiles(bool Videos)
 #if defined(CONF_PLATFORM_ANDROID)
 	using namespace qmclient::media_paths;
 	const auto Kind = Videos ? EKind::VIDEOS : EKind::DEMOS;
-	const std::string Root = CompletePath(Storage(), Directory(Storage(), g_Config, Kind));
-	std::array<std::string, RECORDER_MAX> aExcluded;
-	std::array<const char *, RECORDER_MAX> apExcluded;
-	size_t Count = 0;
-	for(int i = 0; i < RECORDER_MAX; ++i)
+	std::string Root;
+	if(!TryOpenMedia<RECORDER_MAX>(Root, [&] { return CompletePath(Storage(), Directory(Storage(), g_Config, Kind)); }, [&](size_t i) { return DemoRecorder(static_cast<int>(i))->IsRecording(); }, [&](size_t i) { return CompletePath(Storage(), DemoRecorder(static_cast<int>(i))->CurrentFilename()); }, [&](const char *pRoot, const char *const *ppExcluded, size_t Count) { return ShowAndroidMediaFiles(pRoot, Videos, ppExcluded, Count); }))
 	{
-		if(!DemoRecorder(i)->IsRecording())
-			continue;
-		aExcluded[Count] = CompletePath(Storage(), DemoRecorder(i)->CurrentFilename());
-		apExcluded[Count] = aExcluded[Count].c_str();
-		++Count;
-	}
-	if(Root.empty() || !ShowAndroidMediaFiles(Root.c_str(), Videos, apExcluded.data(), Count))
-	{
-		char aMessage[IO_MAX_PATH_LENGTH + 64];
-		str_format(aMessage, sizeof(aMessage), Localize("Failed to open the directory '%s'.", "Editor"), Root.c_str());
-		Client()->AddWarning(SWarning(Localize("Error"), aMessage));
+		try
+		{
+			char aMessage[IO_MAX_PATH_LENGTH + 64];
+			str_format(aMessage, sizeof(aMessage), Localize("Failed to open the directory '%s'.", "Editor"), Root.c_str());
+			Client()->AddWarning(SWarning(Localize("Error"), aMessage));
+		}
+		catch(...)
+		{
+			// 失败提示本身也可能分配失败，不能再抛回UI。
+		}
 	}
 #else
 	(void)Videos;

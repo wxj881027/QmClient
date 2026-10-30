@@ -8,10 +8,40 @@
 #include <engine/storage.h>
 
 #include <algorithm>
+#include <array>
 #include <string>
 
 namespace qmclient::media_paths
 {
+	// 完整准备排除项后才进入平台入口，不能遗漏仍在录制的文件。
+	template<size_t Recorders, typename TRoot, typename TRecording, typename TPath, typename TOpen>
+	bool TryOpenMedia(std::string &Root, TRoot &&MakeRoot, TRecording &&Recording, TPath &&Path, TOpen &&Open) noexcept
+	{
+		try
+		{
+			Root = MakeRoot();
+			if(Root.empty())
+				return false;
+			std::array<std::string, Recorders> aExcluded;
+			std::array<const char *, Recorders> apExcluded;
+			size_t Count = 0;
+			for(size_t i = 0; i < Recorders; ++i)
+			{
+				if(!Recording(i))
+					continue;
+				aExcluded[Count] = Path(i);
+				if(aExcluded[Count].empty())
+					return false;
+				apExcluded[Count] = aExcluded[Count].c_str();
+				++Count;
+			}
+			return Open(Root.c_str(), apExcluded.data(), Count);
+		}
+		catch(...)
+		{
+			return false;
+		}
+	}
 
 	enum class EKind
 	{
