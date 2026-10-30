@@ -21,6 +21,7 @@ public:
 	};
 	EFailure m_Failure = EFailure::NONE;
 	int m_Requests = 0;
+	int m_FailAt = -1;
 	size_t m_LastSize = 0;
 	CHeapAllocationProbe() :
 		m_pPrevious(std::exchange(s_pActive, this)) {}
@@ -34,6 +35,8 @@ public:
 		auto &Self = *s_pActive;
 		++Self.m_Requests;
 		Self.m_LastSize = Size;
+		if(Self.m_FailAt >= 0 && Self.m_Requests != Self.m_FailAt)
+			return std::malloc(Size);
 		switch(Self.m_Failure)
 		{
 		case EFailure::NULL_RESULT: return nullptr;

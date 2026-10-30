@@ -6818,7 +6818,16 @@ int main(int argc, const char **argv)
 
 	pEngine->Init();
 	pConsole->Init();
-	pConfigManager->Init();
+	try
+	{
+		pConfigManager->Init();
+	}
+	catch(...)
+	{
+		log_error("client", "Failed to initialize configuration");
+		PerformAllCleanup();
+		return -1;
+	}
 	pNotifications->Init(GAME_NAME " Client");
 
 	// register all console commands

@@ -2,11 +2,10 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "memheap.h"
 
-#include <base/str.h>
-
 #include <algorithm>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <limits>
 
 // allocates a new chunk to be used
@@ -74,6 +73,22 @@ void CHeap::Reset()
 	NewChunk(CHUNK_SIZE);
 }
 
+void CHeap::Absorb(CHeap &Other) noexcept
+{
+	if(this == &Other || !Other.m_pCurrent)
+		return;
+	CChunk *pTail = Other.m_pCurrent;
+	while(pTail->m_pNext)
+		pTail = pTail->m_pNext;
+	pTail->m_pNext = m_pCurrent;
+	m_pCurrent = std::exchange(Other.m_pCurrent, nullptr);
+}
+
+void CHeap::SwapStorage(CHeap &Other) noexcept
+{
+	std::swap(m_pCurrent, Other.m_pCurrent);
+}
+
 // destroys the heap
 void CHeap::Clear()
 {
@@ -108,8 +123,12 @@ void *CHeap::Allocate(size_t Size, size_t Alignment)
 
 const char *CHeap::StoreString(const char *pSrc)
 {
-	const int Size = str_length(pSrc) + 1;
-	char *pMem = static_cast<char *>(Allocate(Size));
-	str_copy(pMem, pSrc, Size);
+	const size_t Length = std::strlen(pSrc);
+	if(Length == std::numeric_limits<size_t>::max())
+		throw std::bad_alloc();
+	char *pMem = static_cast<char *>(Allocate(Length + 1));
+	if(!pMem)
+		throw std::bad_alloc();
+	std::memcpy(pMem, pSrc, Length + 1);
 	return pMem;
 }

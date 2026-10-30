@@ -4925,6 +4925,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/filecollection_storage_test.cpp
     src/test/unit/engine/memheap_allocation_test.cpp
     src/test/integration/engine/console_temp_command_allocation_test.cpp
+    src/test/integration/engine/localization_storage_transaction_test.cpp
+    src/test/integration/engine/config_allocation_failure_test.cpp
     src/test/unit/engine/config_tags_test.cpp
     src/test/unit/engine/qm_legacy_config_test.cpp
     src/test/unit/qmclient/settings/qm_appearance_preset_test.cpp

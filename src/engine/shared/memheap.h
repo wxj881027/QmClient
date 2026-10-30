@@ -37,15 +37,23 @@ private:
 
 public:
 	explicit CHeap(FAllocate Allocate = std::malloc) noexcept;
+	CHeap(const CHeap &) = delete;
+	CHeap &operator=(const CHeap &) = delete;
 	~CHeap();
 	void Reset();
+	// 转移块所有权，分配器仍归各自实例；既有指针保持有效。
+	void Absorb(CHeap &Other) noexcept;
+	void SwapStorage(CHeap &Other) noexcept;
 	void *Allocate(size_t Size, size_t Alignment = alignof(std::max_align_t));
 	const char *StoreString(const char *pSrc);
 
 	template<typename T, typename... TArgs>
 	T *Allocate(TArgs &&...Args)
 	{
-		return new(Allocate(sizeof(T), alignof(T))) T(std::forward<TArgs>(Args)...);
+		void *pMemory = Allocate(sizeof(T), alignof(T));
+		if(!pMemory)
+			throw std::bad_alloc();
+		return new(pMemory) T(std::forward<TArgs>(Args)...);
 	}
 };
 

@@ -370,7 +370,14 @@ void CVoting::AddOption(const char *pDescription)
 	}
 	else
 	{
-		pOption = m_Heap.Allocate<CVoteOptionClient>();
+		try
+		{
+			pOption = m_Heap.Allocate<CVoteOptionClient>();
+		}
+		catch(...)
+		{
+			return;
+		}
 	}
 
 	pOption->m_pNext = nullptr;

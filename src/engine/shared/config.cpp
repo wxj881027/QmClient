@@ -518,7 +518,8 @@ void SStringConfigVariable::ResetToOld()
 }
 
 // ----------------------- Config Manager
-CConfigManager::CConfigManager()
+CConfigManager::CConfigManager(CHeap::FAllocate Allocate) :
+	m_ConfigHeap(Allocate)
 {
 	m_pConsole = nullptr;
 	m_pStorage = nullptr;
@@ -531,6 +532,7 @@ CConfigManager::CConfigManager()
 
 void CConfigManager::Init()
 {
+	m_Initialized = false;
 	m_pConsole = Kernel()->RequestInterface<IConsole>();
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
 	// 在加载前记录可读性，避免加载失败后用默认设置覆盖损坏的配置。
@@ -586,6 +588,8 @@ void CConfigManager::Init()
 		const size_t HelpSize = str_format(aHelp, sizeof(aHelp), "%s (default: \"%s\", max length: %d)", Desc, Def, Len - 1); \
 		dbg_assert(HelpSize < sizeof(aHelp) - UTF8_BYTE_LENGTH - 1, "MACRO_CONFIG_STR(%s): help text possibly truncated. Increase size of aHelp.", pScriptName); \
 		char *pOldValue = static_cast<char *>(m_ConfigHeap.Allocate(Len)); \
+		if(!pOldValue) \
+			throw std::bad_alloc(); \
 		AddVariable(m_ConfigHeap.Allocate<SStringConfigVariable>( \
 			m_pConsole, pScriptName, SConfigVariable::VAR_STRING, Flags, m_ConfigHeap.StoreString(aHelp), Desc, g_Config.m_##Name, Def, Len, pOldValue)); \
 	}
@@ -599,6 +603,7 @@ void CConfigManager::Init()
 	m_pConsole->Register("toggle", "s[config-option] s[value 1] s[value 2]", CFGFLAG_SERVER | CFGFLAG_CLIENT, Con_Toggle, this, "Toggle config value");
 	m_pConsole->Register("+toggle", "s[config-option] s[value 1] s[value 2]", CFGFLAG_CLIENT, Con_ToggleStroke, this, "Toggle config value via keypress");
 	m_pConsole->Register("+toggle_restore", "s[config-option] s[value]", CFGFLAG_CLIENT, Con_ToggleRestore, this, "Temporarily set a config value while pressed");
+	m_Initialized = true;
 }
 
 void CConfigManager::Reset(const char *pScriptName)
@@ -751,7 +756,7 @@ bool CConfigManager::CheckConfigFiles(bool RefreshBaseline)
 
 bool CConfigManager::Save(bool Force)
 {
-	if(!m_pStorage)
+	if(!m_pStorage || !m_Initialized || m_UnknownCommandsIncomplete)
 		return false;
 	if(!Force && !g_Config.m_ClSaveSettings)
 		return true;
@@ -911,6 +916,7 @@ void CConfigManager::WriteLine(const char *pLine, ConfigDomain ConfigDomain)
 }
 
 void CConfigManager::StoreUnknownCommand(const char *pCommand, ConfigDomain ConfigDomain)
+try
 {
 	// 已移除的界面开关不再作为未知命令写回旧配置。
 	std::string_view Command(pCommand);
@@ -920,6 +926,11 @@ void CConfigManager::StoreUnknownCommand(const char *pCommand, ConfigDomain Conf
 		str_comp_nocase(Token.c_str(), "qm_ui_popup_blur") == 0)
 		return;
 	m_avpUnknownCommands[ConfigDomain].push_back(m_ConfigHeap.StoreString(pCommand));
+}
+catch(...)
+{
+	// 当前输入无法保留，禁止用缺少未知命令的候选覆盖原配置。
+	m_UnknownCommandsIncomplete = true;
 }
 
 void CConfigManager::PossibleConfigVariables(const char *pStr, int FlagMask, POSSIBLECFGFUNC pfnCallback, void *pUserData)

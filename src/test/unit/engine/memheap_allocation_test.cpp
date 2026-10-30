@@ -6,6 +6,10 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <string>
+#include <type_traits>
+
+static_assert(!std::is_copy_constructible_v<CHeap> && !std::is_copy_assignable_v<CHeap>);
 
 TEST(MemHeapAllocation, InitialBlockFailureReturnsNullAndCanRecover)
 {
@@ -205,4 +209,91 @@ TEST(MemHeapAllocation, StoredStringsRemainOwnedAcrossGrowth)
 	ASSERT_NE(Heap.Allocate(Probe.m_LastSize + 1), nullptr);
 	EXPECT_STREQ(pFirst, "original");
 	EXPECT_STREQ(Heap.StoreString(""), "");
+}
+
+TEST(MemHeapAllocation, TypedFailureThrowsBeforeInvokingConstructor)
+{
+	struct CValue
+	{
+		explicit CValue(int &Calls) { ++Calls; }
+	};
+	CHeapAllocationProbe Probe;
+	Probe.m_Failure = CHeapAllocationProbe::EFailure::NULL_RESULT;
+	CHeap Heap(CHeapAllocationProbe::Allocate);
+	int Calls = 0;
+	EXPECT_THROW(Heap.Allocate<CValue>(Calls), std::bad_alloc);
+	EXPECT_EQ(Calls, 0);
+	Probe.m_Failure = CHeapAllocationProbe::EFailure::NONE;
+	EXPECT_NE(Heap.Allocate<CValue>(Calls), nullptr);
+	EXPECT_EQ(Calls, 1);
+}
+
+TEST(MemHeapAllocation, StringFailureThrowsAndPreservesPreviousString)
+{
+	CHeapAllocationProbe Probe;
+	CHeap Heap(CHeapAllocationProbe::Allocate);
+	const char *pOld = Heap.StoreString("old");
+	const std::string Large(Probe.m_LastSize + 1, 'x');
+	Probe.m_Failure = CHeapAllocationProbe::EFailure::NULL_RESULT;
+	EXPECT_THROW(Heap.StoreString(Large.c_str()), std::bad_alloc);
+	EXPECT_STREQ(pOld, "old");
+	Probe.m_Failure = CHeapAllocationProbe::EFailure::NONE;
+	EXPECT_STREQ(Heap.StoreString("retry"), "retry");
+}
+
+TEST(MemHeapAllocation, EmptyStringFailureDoesNotWriteToNull)
+{
+	CHeap Heap(nullptr);
+	EXPECT_THROW(Heap.StoreString(""), std::bad_alloc);
+}
+
+TEST(MemHeapAllocation, AbsorbKeepsSourcePointersAfterSourceDestruction)
+{
+	CHeap Owner;
+	const char *pOld = Owner.StoreString("owner");
+	const char *pNew;
+	{
+		CHeap Candidate;
+		pNew = Candidate.StoreString("candidate");
+		Owner.Absorb(Candidate);
+	}
+	EXPECT_STREQ(pOld, "owner");
+	EXPECT_STREQ(pNew, "candidate");
+	EXPECT_STREQ(Owner.StoreString("later"), "later");
+}
+
+TEST(MemHeapAllocation, AbsorbedSourceCanResetWithoutInvalidatingTransferredPointers)
+{
+	CHeap Owner, Candidate;
+	const char *pNew = Candidate.StoreString("transferred");
+	Owner.Absorb(Candidate);
+	Candidate.Reset();
+	EXPECT_STREQ(Candidate.StoreString("separate"), "separate");
+	EXPECT_STREQ(pNew, "transferred");
+}
+
+TEST(MemHeapAllocation, AbsorbingEmptyAndSelfDoesNotLoseExistingData)
+{
+	CHeap Owner;
+	CHeap Empty(nullptr);
+	const char *pOld = Owner.StoreString("kept");
+	Owner.Absorb(Empty);
+	Owner.Absorb(Owner);
+	EXPECT_STREQ(pOld, "kept");
+	Owner.Reset();
+	EXPECT_NE(Owner.Allocate(16), nullptr);
+}
+
+TEST(MemHeapAllocation, StorageSwapKeepsAllocatorPoliciesWithTheirInstances)
+{
+	CHeapAllocationProbe Probe;
+	CHeap Enabled(CHeapAllocationProbe::Allocate), Disabled(nullptr);
+	const char *pMoved = Enabled.StoreString("moved");
+	const size_t Large = Probe.m_LastSize + 1;
+	Enabled.SwapStorage(Disabled);
+	EXPECT_STREQ(pMoved, "moved");
+	EXPECT_EQ(Disabled.Allocate(Large), nullptr);
+	EXPECT_NE(Enabled.Allocate(16), nullptr);
+	Enabled.SwapStorage(Enabled);
+	EXPECT_NE(Enabled.Allocate(16), nullptr);
 }
