@@ -67,9 +67,9 @@ namespace qm_friend_notify
 			vNextClients.reserve(vClients.size() + m_vClients.size());
 			for(const auto &Client : vClients)
 			{
-				// 同槽位资料变化、短暂缺席和身份换槽都延续原来的在服状态。
+				// 在场时的资料变化保持静默；缺席后的槽位复用要核对身份。
 				const bool Known = std::any_of(m_vClients.begin(), m_vClients.end(), [&](const CTrackedClient &Tracked) {
-					return Tracked.m_Client.m_ClientId == Client.m_ClientId || SameIdentity(Tracked.m_Client, Client, IgnoreClan);
+					return (!Tracked.m_Missing && Tracked.m_Client.m_ClientId == Client.m_ClientId) || SameIdentity(Tracked.m_Client, Client, IgnoreClan);
 				});
 				if(m_Initialized && !Known && Client.m_IsFriend && !Client.m_IsLocal)
 					vNewFriends.push_back(Client.m_Name);
@@ -86,6 +86,46 @@ namespace qm_friend_notify
 			m_vClients.swap(vNextClients);
 			m_Initialized = true;
 			return vNewFriends;
+		}
+	};
+
+	// 问候只等待聊天发送额度，名单更新时丢弃已经离服的待发对象。
+	class CGreetQueue
+	{
+		std::vector<std::string> m_vNames;
+
+	public:
+		void Reset() { m_vNames.clear(); }
+
+		void Update(const std::vector<std::string> &vNewNames, const std::vector<CEnterTracker::CClient> &vClients)
+		{
+			for(const auto &Name : vNewNames)
+				if(std::find(m_vNames.begin(), m_vNames.end(), Name) == m_vNames.end())
+					m_vNames.push_back(Name);
+			m_vNames.erase(std::remove_if(m_vNames.begin(), m_vNames.end(), [&](const std::string &Name) {
+				return std::none_of(vClients.begin(), vClients.end(), [&](const CEnterTracker::CClient &Client) {
+					return Client.m_Name == Name && Client.m_IsFriend && !Client.m_IsLocal;
+				});
+			}),
+				m_vNames.end());
+		}
+
+		template<typename F>
+		bool TrySend(F &&Send)
+		{
+			if(m_vNames.empty())
+				return false;
+			std::string Names;
+			for(const auto &Name : m_vNames)
+			{
+				if(!Names.empty())
+					Names += ' ';
+				Names += Name;
+			}
+			if(!Send(Names))
+				return false;
+			Reset();
+			return true;
 		}
 	};
 }

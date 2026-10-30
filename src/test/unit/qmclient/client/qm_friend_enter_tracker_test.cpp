@@ -96,6 +96,56 @@ TEST(QmFriendEnterTracker, ResetBuildsANewSilentBaseline)
 	EXPECT_TRUE(Tracker.Update({{1, "Friend", "Clan", true, false}, {2, "Another", "Clan", true, false}}, 1.0, false).empty());
 }
 
+TEST(QmFriendEnterTracker, DifferentFriendReusingMissingSlotIsAnnouncedImmediately)
+{
+	qm_friend_notify::CEnterTracker Tracker;
+	EXPECT_TRUE(Tracker.Update({{1, "Old", "Clan", false, false}}, 0.0, false).empty());
+	EXPECT_TRUE(Tracker.Update({}, 0.2, false).empty());
+	EXPECT_EQ(Tracker.Update({{1, "NewFriend", "Clan", true, false}}, 0.4, false), std::vector<std::string>{"NewFriend"});
+}
+
+TEST(QmFriendGreetQueue, NewFriendCanBeGreetedInTheSameUpdate)
+{
+	qm_friend_notify::CGreetQueue Queue;
+	const std::vector<qm_friend_notify::CEnterTracker::CClient> vClients = {{1, "Friend", "Clan", true, false}};
+	Queue.Update({"Friend"}, vClients);
+	EXPECT_TRUE(Queue.TrySend([](const std::string &Names) {
+		EXPECT_EQ(Names, "Friend");
+		return true;
+	}));
+	EXPECT_FALSE(Queue.TrySend([](const std::string &) { ADD_FAILURE(); return true; }));
+}
+
+TEST(QmFriendGreetQueue, RejectedSendRemainsPendingAndMergesLaterArrival)
+{
+	qm_friend_notify::CGreetQueue Queue;
+	std::vector<qm_friend_notify::CEnterTracker::CClient> vClients = {{1, "Alice", "Clan", true, false}};
+	Queue.Update({"Alice"}, vClients);
+	EXPECT_FALSE(Queue.TrySend([](const std::string &) { return false; }));
+	vClients.push_back({2, "Bob", "Clan", true, false});
+	Queue.Update({"Bob", "Alice"}, vClients);
+	EXPECT_TRUE(Queue.TrySend([](const std::string &Names) {
+		EXPECT_EQ(Names, "Alice Bob");
+		return true;
+	}));
+}
+
+TEST(QmFriendGreetQueue, FriendLeavingBeforeSendIsDiscarded)
+{
+	qm_friend_notify::CGreetQueue Queue;
+	Queue.Update({"Alice"}, {{1, "Alice", "Clan", true, false}});
+	Queue.Update({}, {});
+	EXPECT_FALSE(Queue.TrySend([](const std::string &) { ADD_FAILURE(); return true; }));
+}
+
+TEST(QmFriendGreetQueue, DisablingOrChangingConnectionCancelsPendingGreeting)
+{
+	qm_friend_notify::CGreetQueue Queue;
+	Queue.Update({"Alice"}, {{1, "Alice", "Clan", true, false}});
+	Queue.Reset();
+	EXPECT_FALSE(Queue.TrySend([](const std::string &) { ADD_FAILURE(); return true; }));
+}
+
 TEST(QmFriendOnlineScan, InitialAndNewlyCompletedServersAreSilentUntilTheirNextSnapshot)
 {
 	qm_friend_notify::COnlineTracker Tracker;

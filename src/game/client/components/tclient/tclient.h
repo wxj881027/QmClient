@@ -17,10 +17,12 @@
 #include <generated/protocol.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/auto_reply.h>
 #include <game/client/components/qmclient/friend_enter_tracker.h>
 #include <game/client/components/qmclient/friend_online_tracker.h>
 #include <game/client/components/qmclient/gores_drown_tracker.h>
 #include <game/client/components/qmclient/hammer_hit_detection.h>
+#include <game/client/components/qmclient/keyword_reply_rules.h>
 #include <game/client/components/qmclient/local_saves.h>
 #include <game/client/components/qmclient/map_progress.h>
 #include <game/client/components/qmclient/modes.h>
@@ -181,7 +183,8 @@ class CTClient : public CComponent
 	void FinishUpdateDownloads();
 
 	bool ServerCommandExists(const char *pCommand);
-	int64_t m_LastAutoReplyTime = 0;
+	qm_auto_reply::CSendState m_AutoReplySendState;
+	QmKeywordReplyRules::CRuleSet m_KeywordReplyRules;
 	CQmRedPacketAutoClaim m_RedPacketAutoClaim;
 	bool TryHandleRedPacketAutoClaim(const CNetMsg_Sv_Chat *pMsg);
 
@@ -456,8 +459,7 @@ class CTClient : public CComponent
 	int m_FriendEnterPrevDummy = -1;
 	uint64_t m_FriendEnterPrevRevision = 0;
 	float m_FriendEnterNextCheck = 0.0f;
-	std::string m_FriendEnterPendingNames;
-	float m_FriendEnterPendingSendAt = 0.0f;
+	qm_friend_notify::CGreetQueue m_FriendEnterPending;
 	void ResetFriendEnter();
 	void CheckFriendEnterGreet();
 
@@ -478,6 +480,7 @@ public:
 	void OnShutdown() override;
 	void OnWindowResize() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
+	void OnChatMessage(const CNetMsg_Sv_Chat *pMsg, int Connection);
 	void OnConsoleInit() override;
 	void OnUpdate() override;
 	void OnRender() override;
