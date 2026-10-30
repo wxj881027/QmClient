@@ -3623,7 +3623,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 							TooltipText.append("\n");
 						TooltipText.append(Localize("DDStats shows UTC dates, updates daily and matches players by name only."));
 					}
-					GameClient()->m_Tooltips.DoToolTip(pListItemId, &Rect, TooltipText.c_str(), 320.0f);
+					// 好友卡片在右栏，提示贴卡片左侧向左弹出，避免盖住卡片本身与右侧动作区。
+					GameClient()->m_Tooltips.DoToolTipFromSide(pListItemId, &Rect, TooltipText.c_str(), EQmTooltipPlacement::LEFT, 320.0f);
 				}
 				++FriendTooltipIndex;
 				const bool IsOffline = Friend.ServerInfo() == nullptr;

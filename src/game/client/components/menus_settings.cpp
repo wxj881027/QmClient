@@ -884,6 +884,9 @@ void CMenus::RenderSettings(CUIRect MainView)
 	}
 	if(g_Config.m_UiSettingsPage < 0 || g_Config.m_UiSettingsPage >= SETTINGS_LENGTH)
 		g_Config.m_UiSettingsPage = SETTINGS_GENERAL;
+	// 手机端不呈现的页签（键鼠绑键、资源包等）也不能成为落地页：旧配置或搜索跳转会回落到通用页。
+	if(SettingsPageHiddenForMobile(g_Config.m_UiSettingsPage, SettingsMobilePlatform()))
+		g_Config.m_UiSettingsPage = SETTINGS_GENERAL;
 	if(g_Config.m_UiSettingsPage == SETTINGS_CONFIGS)
 	{
 		g_Config.m_UiSettingsPage = SETTINGS_QMCLIENT;

@@ -38,6 +38,9 @@ class CSpectator : public CComponent
 	vec2 m_SelectorMouse;
 
 	CUi::CTouchState m_TouchState;
+	// 上一帧的触摸主键状态：m_PrimaryPressed 在整个按压期间保持为 true（是电平不是边沿），
+	// 直接当点击用会让一次按压在每帧都触发一次，表现为"点了没加上"或反复切换。
+	bool m_TouchPressedLast = false;
 
 	float m_MultiViewActivateDelay;
 

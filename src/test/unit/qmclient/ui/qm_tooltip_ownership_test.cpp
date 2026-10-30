@@ -52,6 +52,66 @@ TEST(QmTooltips, BubbleAtTopEdgeOpensBelowAndRespectsNonzeroScreenOrigin)
 	EXPECT_LE(Rect.x + Rect.w, Screen.x + Screen.w - 5);
 }
 
+TEST(QmTooltips, LeftPlacementSitsBesideTheCardAndCentersVertically)
+{
+	const CUIRect Screen{0, 0, 1280, 720};
+	const CUIRect Card{960, 300, 300, 44};
+	const auto Rect = QmTooltipRect(Card, Screen, vec2(320, 60), 5, EQmTooltipPlacement::LEFT);
+	EXPECT_FLOAT_EQ(Rect.w, 320);
+	EXPECT_FLOAT_EQ(Rect.x + Rect.w, Card.x - 5);
+	EXPECT_FLOAT_EQ(Rect.Center().y, Card.Center().y);
+	EXPECT_GE(Rect.x, Screen.x + 5);
+}
+
+TEST(QmTooltips, LeftPlacementFallsBackWhenTheCardIsNearTheLeftEdge)
+{
+	const CUIRect Screen{0, 0, 600, 400};
+	const CUIRect Card{60, 200, 120, 20};
+	const auto Rect = QmTooltipRect(Card, Screen, vec2(320, 60), 5, EQmTooltipPlacement::LEFT);
+	// 左侧放不下时沿用原布局（贴上方），仍完整落在屏幕内。
+	EXPECT_FLOAT_EQ(Rect.y, Card.y - Rect.h - 5);
+	EXPECT_GE(Rect.x, 5);
+	EXPECT_LE(Rect.x + Rect.w, Screen.w - 5);
+}
+
+TEST(QmTooltips, FallbackPlacementIsNotTreatedAsASidePop)
+{
+	CTooltip Tooltip;
+	Tooltip.m_Placement = EQmTooltipPlacement::LEFT;
+	Tooltip.m_Anchor = {960, 300, 300, 44};
+	EXPECT_TRUE(QmTooltipSidePlaced(Tooltip, {635, 292, 320, 60}));
+	const auto Fallback = QmTooltipRect({60, 200, 120, 20}, {0, 0, 600, 400}, vec2(320, 60), 5, Tooltip.m_Placement);
+	Tooltip.m_Anchor = {60, 200, 120, 20};
+	EXPECT_FALSE(QmTooltipSidePlaced(Tooltip, Fallback));
+}
+
+TEST(QmTooltips, SidePopScalesFromTheCardFacingEdge)
+{
+	const CUIRect Screen{0, 0, 1280, 720};
+	const CUIRect Fixed{635, 292, 320, 60};
+	const auto Entering = QmTooltipAnimatedRect(Fixed, Screen, QmTooltipScale(0.0f, true), vec2(1.0f, 0.5f));
+	EXPECT_LT(Entering.w, Fixed.w);
+	EXPECT_NEAR(Entering.x + Entering.w, Fixed.x + Fixed.w, 0.001f);
+	EXPECT_NEAR(Entering.x, Fixed.x + Fixed.w - Entering.w, 0.001f);
+	EXPECT_FLOAT_EQ(Entering.Center().y, Fixed.Center().y);
+}
+
+TEST(QmTooltips, SidePopOffsetSettlesWithTheEntranceAndHonorsDisabledMotion)
+{
+	EXPECT_FLOAT_EQ(QmTooltipSidePopOffset(0.0f, true), QM_TOOLTIP_SIDE_POP_DISTANCE);
+	EXPECT_FLOAT_EQ(QmTooltipSidePopOffset(QM_TOOLTIP_ENTER_SECONDS, true), 0.0f);
+	float Previous = QM_TOOLTIP_SIDE_POP_DISTANCE + 1.0f;
+	for(float Elapsed = 0.0f; Elapsed <= QM_TOOLTIP_ENTER_SECONDS; Elapsed += 0.01f)
+	{
+		const float Offset = QmTooltipSidePopOffset(Elapsed, true);
+		EXPECT_LE(Offset, Previous + 0.0001f) << "offset regressed at " << Elapsed;
+		EXPECT_GE(Offset, 0.0f);
+		Previous = Offset;
+	}
+	EXPECT_FLOAT_EQ(QmTooltipSidePopOffset(0.0f, false), 0.0f);
+	EXPECT_FLOAT_EQ(QmTooltipEnterEase(QM_TOOLTIP_ENTER_SECONDS, true), 1.0f);
+}
+
 TEST(QmTooltips, OversizedBubbleRemainsInsideSmallViewport)
 {
 	const CUIRect Screen{20, 30, 90, 60};

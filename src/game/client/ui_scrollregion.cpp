@@ -122,6 +122,7 @@ void CScrollRegion::End()
 	if(m_Params.m_Interactive)
 	{
 		UpdateHotScrollRegion();
+		DoContentDrag();
 		DoScrollInput();
 	}
 	AdvanceAnimation();
@@ -343,6 +344,83 @@ void CScrollRegion::DrawBackground(const CUIRect &ScrollbarBg)
 		int CornersPartial = m_Params.m_ScrollHorizontal ? IGraphics::CORNER_T : IGraphics::CORNER_L;
 		DrawRoundedSurface(Ui(), m_ClipRect, m_Params.m_ClipBgColor, ColorRGBA(), 4.0f, 0.0f, ScrollbarShown() ? CornersPartial : IGraphics::CORNER_ALL);
 	}
+}
+
+void CScrollRegion::DoContentDrag()
+{
+	SQmScrollContentDragState &Drag = m_ScrollState.ContentDragState();
+	// 手机以外的平台没有内容拖动语义：这里必须清空，避免旧候选状态在新一帧继续生效。
+	if(!QmScrollRegionContentDragEnabled())
+	{
+		Drag = {};
+		m_ContentDragVelocity = 0.0f;
+		m_ContentDragLastMoveTime = 0;
+		return;
+	}
+	if(!Ui()->MouseButton(0))
+	{
+		// 松手：刚拖过且速度够快就交给滚动状态做惯性衰减。
+		const bool MovedRecently = m_ContentDragLastMoveTime != 0 && (time_get() - m_ContentDragLastMoveTime) <= time_freq() / 10;
+		if(Drag.m_Active && MovedRecently && std::abs(m_ContentDragVelocity) >= QM_SCROLL_FLING_MIN_VELOCITY)
+			m_ScrollState.Fling(m_ContentDragVelocity, ScrollMetrics());
+		Drag = {};
+		m_ContentDragVelocity = 0.0f;
+		m_ContentDragLastMoveTime = 0;
+		return;
+	}
+	// 滚动条滑块有独立语义，同一次按住不能再当作内容拖动。
+	if(m_ScrollState.ThumbDragActive())
+	{
+		Drag = {};
+		return;
+	}
+
+	const float MousePos = m_Params.m_ScrollHorizontal ? Ui()->MouseX() : Ui()->MouseY();
+	if(!Drag.m_Candidate && !Drag.m_Active)
+	{
+		// 只在内容区内部起手。列表行本身是按钮，按下时会把 ActiveItem 抢走，
+		// 所以这里不能要求 ActiveItem 为空，而是等位移超过阈值后再取消那次按下。
+		if(!Ui()->MouseButtonClicked(0) || !Ui()->MouseHovered(&m_ClipRect))
+			return;
+		Drag.m_Candidate = true;
+		Drag.m_PressMousePos = MousePos;
+		Drag.m_PressOffset = m_ScrollState.Offset();
+		Drag.m_LastMousePos = MousePos;
+		m_ContentDragVelocity = 0.0f;
+		m_ContentDragLastMoveTime = 0;
+		return;
+	}
+
+	const float DragDistance = MousePos - Drag.m_PressMousePos;
+	const float Threshold = QmScrollRegionContentDragThreshold(Ui()->PixelSize());
+	if(!QmScrollRegionContentDragBecomesActive(Drag.m_Active, DragDistance, Threshold))
+	{
+		Drag.m_LastMousePos = MousePos;
+		return;
+	}
+	if(!Drag.m_Active)
+	{
+		// 这一下已经变成拖动：取消被按下的列表项，松手时不再触发它的点击。
+		if(Ui()->ActiveItem() != nullptr)
+			Ui()->SetActiveItem(nullptr);
+		Drag.m_Active = true;
+	}
+	// 内容跟手：向上滑动内容即增大滚动偏移，允许越界以便松手后回弹。
+	m_ScrollState.SetOffset(Drag.m_PressOffset - DragDistance * QM_SCROLL_TOUCH_DRAG_GAIN, ScrollMetrics(), ScrollConfig(), true);
+	// 用相邻两次移动的时间差估计速度，再做一阶低通，避免单帧抖动决定甩动幅度。
+	const int64_t Now = time_get();
+	if(m_ContentDragLastMoveTime != 0)
+	{
+		const float Dt = (Now - m_ContentDragLastMoveTime) / (float)time_freq();
+		if(Dt > 0.0005f)
+		{
+			const float FingerVelocity = (MousePos - Drag.m_LastMousePos) / Dt;
+			const float Blend = std::clamp(Dt / 0.05f, 0.0f, 1.0f);
+			m_ContentDragVelocity += (-FingerVelocity * QM_SCROLL_TOUCH_DRAG_GAIN - m_ContentDragVelocity) * Blend;
+		}
+	}
+	m_ContentDragLastMoveTime = Now;
+	Drag.m_LastMousePos = MousePos;
 }
 
 void CScrollRegion::DoScrollInput()

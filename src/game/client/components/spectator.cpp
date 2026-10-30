@@ -725,7 +725,10 @@ void CSpectator::OnRender()
 	// clamp mouse position to selector area
 	m_SelectorMouse = qm_spectator_layout::ClampMouse(SelectorLayout, ScreenCenter, m_SelectorMouse);
 
-	const bool MousePressed = WantActive && (Input()->KeyPress(KEY_MOUSE_1) || m_TouchState.m_PrimaryPressed);
+	// 触摸主键是电平信号，只取按下沿当一次点击；鼠标本来就只在按下那一帧为 true。
+	const bool TouchPressedEdge = WantActive && m_TouchState.m_PrimaryPressed && !m_TouchPressedLast;
+	m_TouchPressedLast = WantActive && m_TouchState.m_PrimaryPressed;
+	const bool MousePressed = WantActive && (Input()->KeyPress(KEY_MOUSE_1) || TouchPressedEdge);
 
 	// draw selections
 	if(SelectedId() == SPEC_FREEVIEW)
@@ -1158,6 +1161,7 @@ void CSpectator::OnReset()
 	m_SelectedSpectatorId = NO_SELECTION;
 	m_MultiViewActivateDelay = 0.0f;
 	m_TouchState = {};
+	m_TouchPressedLast = false;
 	m_ReplayUi.Reset();
 	m_TeleNumberInput.Deactivate();
 	m_TeleNumberInput.Set("1");

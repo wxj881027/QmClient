@@ -239,6 +239,24 @@ struct SSettingsRadioRowLayout
 	bool m_UseDropdown = false;
 };
 
+// 字号放大会牵连行高、标签列宽和控制区宽度；只放大字号会立刻把卡片排版压坏
+// （标签互相压行、控件变窄到点不中）。移动端字号暂与桌面一致，排版靠单列适配。
+constexpr float QM_SETTINGS_MOBILE_TEXT_SCALE = 1.0f;
+
+constexpr bool QmSettingsMobilePlatform()
+{
+#if defined(CONF_PLATFORM_ANDROID) || defined(CONF_PLATFORM_IOS)
+	return true;
+#else
+	return false;
+#endif
+}
+
+constexpr float ResolveSettingsTextScale(bool MobilePlatform)
+{
+	return MobilePlatform ? QM_SETTINGS_MOBILE_TEXT_SCALE : 1.0f;
+}
+
 inline float ResolveSettingsUiScale(const float ContentWidth)
 {
 	// 在窄窗口保留紧凑基线，并平滑过渡到 800px 处的标准缩放，避免跨阈值跳变。
@@ -251,16 +269,18 @@ inline float ResolveSettingsSmallFontSize(const float UiScale)
 	return std::clamp(ui_token::font::SMALL * std::max(0.0f, UiScale), 9.0f, ui_token::font::SMALL);
 }
 
-inline SSettingsContentMetrics ResolveSettingsContentMetrics(const float ContentWidth)
+inline SSettingsContentMetrics ResolveSettingsContentMetrics(const float ContentWidth, const float TextScale)
 {
 	SSettingsContentMetrics Metrics;
+	// TextScale 只放大字号与行高，不改变密度缩放本身的语义：桌面传 1.0 时与旧行为逐位一致。
+	const float Scale = std::max(0.01f, TextScale);
 	Metrics.m_UiScale = ResolveSettingsUiScale(ContentWidth);
-	Metrics.m_BodySize = std::clamp(ui_token::font::BODY * Metrics.m_UiScale, 10.0f, ui_token::font::BODY);
+	Metrics.m_BodySize = std::clamp(ui_token::font::BODY * Metrics.m_UiScale * Scale, 10.0f * Scale, ui_token::font::BODY * Scale);
 	// 所有单行控件共用高度；窄视口保留胶囊文字的可读下限和上下内边距。
-	Metrics.m_LineHeight = ResolveSettingsControlHeight(Metrics.m_BodySize, Metrics.m_UiScale);
-	Metrics.m_SmallSize = ResolveSettingsSmallFontSize(Metrics.m_UiScale);
-	Metrics.m_HeadlineSize = std::clamp(ui_token::font::HEADLINE * Metrics.m_UiScale, 12.0f, ui_token::font::HEADLINE);
-	Metrics.m_LineSpacing = std::clamp(ui_token::settings::ROW_GAP * Metrics.m_UiScale, 3.0f, ui_token::settings::ROW_GAP);
+	Metrics.m_LineHeight = ResolveSettingsControlHeight(Metrics.m_BodySize, Metrics.m_UiScale * Scale);
+	Metrics.m_SmallSize = std::clamp(ResolveSettingsSmallFontSize(Metrics.m_UiScale) * Scale, 9.0f * Scale, ui_token::font::SMALL * Scale);
+	Metrics.m_HeadlineSize = std::clamp(ui_token::font::HEADLINE * Metrics.m_UiScale * Scale, 12.0f * Scale, ui_token::font::HEADLINE * Scale);
+	Metrics.m_LineSpacing = std::clamp(ui_token::settings::ROW_GAP * Metrics.m_UiScale * Scale, 3.0f * Scale, ui_token::settings::ROW_GAP * Scale);
 	Metrics.m_RowStep = Metrics.m_LineHeight + Metrics.m_LineSpacing;
 	Metrics.m_InputHeight = Metrics.m_LineHeight;
 	Metrics.m_ButtonHeight = Metrics.m_LineHeight;
@@ -273,6 +293,11 @@ inline SSettingsContentMetrics ResolveSettingsContentMetrics(const float Content
 	const float PreferredLabelWidth = ContentWidth * 0.32f;
 	Metrics.m_LabelWidth = std::clamp(PreferredLabelWidth, 96.0f * Metrics.m_UiScale, std::max(96.0f * Metrics.m_UiScale, ContentWidth - MinimumControlWidth - Gap));
 	return Metrics;
+}
+
+inline SSettingsContentMetrics ResolveSettingsContentMetrics(const float ContentWidth)
+{
+	return ResolveSettingsContentMetrics(ContentWidth, ResolveSettingsTextScale(QmSettingsMobilePlatform()));
 }
 
 inline float ResolveSettingsCardLabelWidth(const float CardContentWidth, const SSettingsContentMetrics &Metrics)
@@ -1274,7 +1299,8 @@ inline SSettingsPageLayoutFrame ResolveSettingsPageLayout(const CUIRect &PageRec
 	Frame.m_UnreservedScrollViewport = Frame.m_ScrollViewport;
 	Frame.m_ContentViewport = Frame.m_ScrollViewport;
 	Frame.m_CardGap = ui_token::settings::CARD_GAP * Scale;
-	Frame.m_TwoColumns = Frame.m_ContentViewport.w >= ui_token::settings::TWO_COLUMN_MIN_WIDTH;
+	// 手机端卡片单列：屏幕窄、触摸目标大，双列会把每张卡压得又窄又难读。
+	Frame.m_TwoColumns = !QmSettingsMobilePlatform() && Frame.m_ContentViewport.w >= ui_token::settings::TWO_COLUMN_MIN_WIDTH;
 	if(Frame.m_TwoColumns)
 	{
 		const float ColumnWidth = std::max(0.0f, (Frame.m_ContentViewport.w - Frame.m_CardGap) * 0.5f);
@@ -1293,7 +1319,7 @@ inline SSettingsPageLayoutFrame ResolveSettingsPageLayoutForScrollViewport(const
 	SSettingsPageLayoutFrame Frame = Layout;
 	Frame.m_ScrollViewport = ScrollViewport;
 	Frame.m_ContentViewport = ScrollViewport;
-	Frame.m_TwoColumns = Frame.m_ContentViewport.w >= ui_token::settings::TWO_COLUMN_MIN_WIDTH;
+	Frame.m_TwoColumns = !QmSettingsMobilePlatform() && Frame.m_ContentViewport.w >= ui_token::settings::TWO_COLUMN_MIN_WIDTH;
 	Frame.m_aColumns[0] = {};
 	Frame.m_aColumns[1] = {};
 	if(Frame.m_TwoColumns)
