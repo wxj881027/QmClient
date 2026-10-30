@@ -4919,6 +4919,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/datafile_reader_move_test.cpp
     src/test/integration/engine/datafile_open_allocation_test.cpp
     src/test/integration/engine/datafile_processor_bounds_test.cpp
+    src/test/integration/engine/map_load_allocation_test.cpp
     src/test/integration/client/editor_save_job_test.cpp
     src/test/integration/client/editor_save_submission_test.cpp
     src/test/unit/base/dbg_test.cpp
@@ -5636,6 +5637,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/game/client/components/qmclient/word_filter_list.cpp
     src/test/support/ui_test_stubs.cpp
     src/test/support/datafile_writer_operations.h
+    src/test/support/tracked_allocation_resource.h
     src/game/client/components/qmclient/monitoring/monitoring_device_perf.cpp
     src/game/client/components/qmclient/stutter_capture.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_krc.cpp

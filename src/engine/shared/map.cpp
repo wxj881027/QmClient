@@ -81,6 +81,12 @@ int CMap::NumItems() const
 
 bool CMap::Load(const char *pMapName, int StorageType)
 {
+	return Load(pMapName, StorageType, nullptr);
+}
+
+bool CMap::Load(const char *pMapName, int StorageType, IAllocationResource *pPreparationMemory)
+try
+{
 	IStorage *pStorage = m_pStorage;
 	if(pStorage == nullptr && Kernel() != nullptr)
 		pStorage = Kernel()->RequestInterface<IStorage>();
@@ -105,7 +111,7 @@ bool CMap::Load(const char *pMapName, int StorageType)
 	// 将旧版本的地图条目替换为与最新版本兼容的条目，避免使用地图条目时做版本检查。
 	// 确保存在 game 层与 game group。
 	const CMapItemLayerTilemap *pGameLayer = nullptr;
-	std::set<int> UsedLayerItemIndices;
+	CPreparationIndices UsedLayerItemIndices{CBorrowedAllocator<int>{pPreparationMemory}};
 	for(int GroupIndex = 0; GroupIndex < GroupsNum; GroupIndex++)
 	{
 		const size_t GroupItemSize = NewDataFile.GetItemSize(GroupsStart + GroupIndex);
@@ -179,7 +185,7 @@ bool CMap::Load(const char *pMapName, int StorageType)
 	}
 
 	// 惰性校验数据并把压缩的 tile 层替换为未压缩版本。
-	std::set<int> UsedDataIndices;
+	CPreparationIndices UsedDataIndices{CBorrowedAllocator<int>{pPreparationMemory}};
 	for(int GroupIndex = 0; GroupIndex < GroupsNum; GroupIndex++)
 	{
 		const CMapItemGroup *pGroup = static_cast<CMapItemGroup *>(NewDataFile.GetItem(GroupsStart + GroupIndex));
@@ -208,6 +214,11 @@ bool CMap::Load(const char *pMapName, int StorageType)
 	m_DataFile.Close();
 	m_DataFile = std::move(NewDataFile);
 	return true;
+}
+catch(...)
+{
+	log_error("map/load", "Could not prepare map '%s'.", pMapName);
+	return false;
 }
 
 void CMap::Adopt(CMap &&Other)
@@ -604,7 +615,7 @@ bool CMap::UpgradeAndValidateTilesLayerItem(
 	return true;
 }
 
-bool CMap::ValidateAndUnpackTilesLayerData(CDataFileReader &NewDataFile, int GroupIndex, int LayerIndex, const CMapItemLayerTilemap *pLayerTilemap, const CMapItemLayerTilemap &GameLayer, std::set<int> &UsedDataIndices)
+bool CMap::ValidateAndUnpackTilesLayerData(CDataFileReader &NewDataFile, int GroupIndex, int LayerIndex, const CMapItemLayerTilemap *pLayerTilemap, const CMapItemLayerTilemap &GameLayer, CPreparationIndices &UsedDataIndices)
 {
 	size_t TileSize;
 	int DataIndex;
