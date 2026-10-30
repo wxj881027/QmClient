@@ -94,7 +94,7 @@ void CRaceDemo::OnNewSnapshot()
 
 	// start the demo
 	bool ForceStart = ServerControl && qm_race_timing::IsNewServerStart(s_LastRaceTick, RaceTick, Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed());
-	bool AllowRestart = (m_AllowRestart || ForceStart) && m_RaceStartTick + 10 * Client()->GameTickSpeed() < Client()->GameTick(g_Config.m_ClDummy);
+	bool AllowRestart = (m_AllowRestart || ForceStart) && qm_race_timing::CanRestartRecording(Client()->GameTick(g_Config.m_ClDummy), m_RaceStartTick, Client()->GameTickSpeed());
 	if(m_RaceState == RACE_IDLE || m_RaceState == RACE_PREPARE || (m_RaceState == RACE_STARTED && AllowRestart))
 	{
 		vec2 PrevPos = vec2(GameClient()->m_Snap.m_pLocalPrevCharacter->m_X, GameClient()->m_Snap.m_pLocalPrevCharacter->m_Y);
@@ -134,7 +134,7 @@ void CRaceDemo::OnNewSnapshot()
 	}
 
 	// stop recording if the player did not pass the start line after 20 seconds
-	if(m_RaceState == RACE_PREPARE && Client()->GameTick(g_Config.m_ClDummy) - m_RaceStartTick >= Client()->GameTickSpeed() * 20)
+	if(m_RaceState == RACE_PREPARE && qm_race_timing::PreparationExpired(Client()->GameTick(g_Config.m_ClDummy), m_RaceStartTick, Client()->GameTickSpeed()))
 	{
 		StopRecord();
 		m_RaceState = RACE_IDLE;
@@ -190,7 +190,7 @@ void CRaceDemo::OnMessage(int MsgType, void *pRawMsg)
 			if(Time > 0 && GameClient()->m_Snap.m_LocalClientId >= 0 && str_comp(aName, GameClient()->m_aClients[GameClient()->m_Snap.m_LocalClientId].m_aName) == 0)
 			{
 				m_RaceState = RACE_FINISHED;
-				m_RecordStopTick = Client()->GameTick(g_Config.m_ClDummy) + Client()->GameTickSpeed();
+				m_RecordStopTick = qm_race_timing::RecordingStopTick(Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed());
 				m_Time = Time;
 			}
 		}
@@ -201,7 +201,7 @@ void CRaceDemo::OnMessage(int MsgType, void *pRawMsg)
 		if(m_RaceState == RACE_STARTED && pMsg->m_ClientId == GameClient()->m_Snap.m_LocalClientId)
 		{
 			m_RaceState = RACE_FINISHED;
-			m_RecordStopTick = Client()->GameTick(g_Config.m_ClDummy) + Client()->GameTickSpeed();
+			m_RecordStopTick = qm_race_timing::RecordingStopTick(Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed());
 			m_Time = pMsg->m_Time;
 		}
 	}

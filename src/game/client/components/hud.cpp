@@ -29,6 +29,7 @@
 #include <game/client/components/qmclient/dummy_miniview_render.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
+#include <game/client/components/qmclient/race_timing.h>
 #include <game/client/components/qmclient/rank_ghost.h>
 #include <game/client/components/qmclient/score_hud_layout.h>
 #include <game/client/components/qmclient/spectator_hud_layout.h>
@@ -476,25 +477,11 @@ namespace
 		if(pGameInfoObj == nullptr || (pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_SUDDENDEATH) != 0)
 			return Result;
 
-		int Time = 0;
-		if(pGameInfoObj->m_TimeLimit && pGameInfoObj->m_WarmupTimer <= 0)
-		{
-			Time = pGameInfoObj->m_TimeLimit * 60 - ((Client.GameTick(g_Config.m_ClDummy) - pGameInfoObj->m_RoundStartTick) / Client.GameTickSpeed());
-
-			if(pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER)
-				Time = 0;
-		}
-		else if(pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_RACETIME)
-		{
-			// The Warmup timer is negative in this case to make sure that incompatible clients will not see a warmup timer
-			Time = (Client.GameTick(g_Config.m_ClDummy) + pGameInfoObj->m_WarmupTimer) / Client.GameTickSpeed();
-		}
-		else
-		{
-			Time = (Client.GameTick(g_Config.m_ClDummy) - pGameInfoObj->m_RoundStartTick) / Client.GameTickSpeed();
-		}
-
-		str_time((int64_t)Time * 100, TIME_DAYS, Result.m_aText, sizeof(Result.m_aText));
+		const int64_t Time = qm_race_timing::GameTimerSeconds(Client.GameTick(g_Config.m_ClDummy), pGameInfoObj->m_RoundStartTick,
+			pGameInfoObj->m_WarmupTimer, pGameInfoObj->m_TimeLimit, Client.GameTickSpeed(),
+			(pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_RACETIME) != 0,
+			(pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER) != 0);
+		str_time(Time * 100, TIME_DAYS, Result.m_aText, sizeof(Result.m_aText));
 
 		static float s_TextWidthM = pTextRender->TextWidth(Result.m_FontSize, "00:00", -1, -1.0f);
 		static float s_TextWidthH = pTextRender->TextWidth(Result.m_FontSize, "00:00:00", -1, -1.0f);
