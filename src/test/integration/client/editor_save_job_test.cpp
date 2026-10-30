@@ -5,6 +5,7 @@
 #include <test/test.h>
 
 #include <memory>
+#include <new>
 #include <utility>
 
 namespace
@@ -14,6 +15,29 @@ namespace
 	public:
 		using CDataFileWriterFinishJob::CDataFileWriterFinishJob;
 		void RunNow() { Run(); }
+	};
+
+	class CSavePublicationOperations : public CDataFileWriterFinishJob::IOperations
+	{
+	public:
+		bool m_Throw = true;
+		bool m_ThrowAfterBackup = false;
+		int m_Attempts = 0;
+		bool Replace(IStorage &Storage, const char *pTemporary, const char *pDestination, char *pBackup, unsigned BackupSize) override
+		{
+			++m_Attempts;
+			if(m_ThrowAfterBackup)
+			{
+				// 在外部发布边界安排“旧文件已备份、下一次文件操作失败”的状态。
+				str_format(pBackup, BackupSize, "%s.backup", pTemporary);
+				if(!Storage.RenameFile(pDestination, pBackup, IStorage::TYPE_SAVE))
+					return false;
+				throw std::bad_alloc();
+			}
+			if(m_Throw)
+				throw std::bad_alloc();
+			return IOperations::Replace(Storage, pTemporary, pDestination, pBackup, BackupSize);
+		}
 	};
 
 	class EditorSaveJob : public ::testing::Test
@@ -159,4 +183,61 @@ TEST_F(EditorSaveJob, LaterSaveCanSucceedAfterFailedCandidate)
 	CDataFileReader Reader;
 	ASSERT_TRUE(Reader.Open(m_pStorage.get(), "map.map", IStorage::TYPE_SAVE));
 	EXPECT_STREQ(Reader.GetDataString(0), "new map");
+}
+
+TEST_F(EditorSaveJob, PublicationExceptionReportsFailureAndKeepsPreviousFile)
+{
+	CreatePrevious();
+	CDataFileWriter Writer(&m_Operations);
+	Prepare(Writer);
+	CSavePublicationOperations Operations;
+	CSaveJobForTest Job(m_pStorage.get(), nullptr, "map.map", "candidate.map", std::move(Writer), &Operations);
+	EXPECT_NO_THROW(Job.RunNow());
+	EXPECT_NE(Job.ErrorMessage()[0], '\0');
+	EXPECT_EQ(Operations.m_Attempts, 1);
+	EXPECT_EQ(m_Operations.m_Closes, 1);
+	ExpectPrevious();
+}
+
+TEST_F(EditorSaveJob, NewSaveCanPublishAfterPublicationException)
+{
+	CreatePrevious();
+	CSavePublicationOperations Operations;
+	{
+		CDataFileWriter Writer(&m_Operations);
+		Prepare(Writer);
+		CSaveJobForTest Job(m_pStorage.get(), nullptr, "map.map", "candidate.map", std::move(Writer), &Operations);
+		Job.RunNow();
+		ASSERT_NE(Job.ErrorMessage()[0], '\0');
+	}
+	ExpectPrevious();
+	Operations.m_Throw = false;
+	CDataFileWriter Writer(&m_Operations);
+	Prepare(Writer);
+	CSaveJobForTest Job(m_pStorage.get(), nullptr, "map.map", "candidate.map", std::move(Writer), &Operations);
+	Job.RunNow();
+	EXPECT_STREQ(Job.ErrorMessage(), "");
+	EXPECT_EQ(Operations.m_Attempts, 2);
+	CDataFileReader Reader;
+	ASSERT_TRUE(Reader.Open(m_pStorage.get(), "map.map", IStorage::TYPE_SAVE));
+	EXPECT_STREQ(Reader.GetDataString(0), "new map");
+}
+
+TEST_F(EditorSaveJob, PublicationExceptionAfterBackupReportsThePreservedFilePath)
+{
+	CreatePrevious();
+	CDataFileWriter Writer(&m_Operations);
+	Prepare(Writer);
+	CSavePublicationOperations Operations;
+	Operations.m_ThrowAfterBackup = true;
+	CSaveJobForTest Job(m_pStorage.get(), nullptr, "map.map", "candidate.map", std::move(Writer), &Operations);
+	EXPECT_NO_THROW(Job.RunNow());
+	ASSERT_NE(Job.ErrorMessage()[0], '\0');
+	EXPECT_NE(str_find(Job.ErrorMessage(), "candidate.map.backup"), nullptr);
+	IOHANDLE File = m_pStorage->OpenFile("candidate.map.backup", IOFLAG_READ, IStorage::TYPE_SAVE);
+	ASSERT_NE(File, nullptr);
+	char aBuffer[16]{};
+	EXPECT_EQ(io_read(File, aBuffer, sizeof(aBuffer)), 8);
+	EXPECT_STREQ(aBuffer, "previous");
+	EXPECT_EQ(io_close(File), 0);
 }

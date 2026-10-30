@@ -3,6 +3,7 @@
 #include "load_envelopes.h"
 #include "load_info.h"
 #include "load_resources.h"
+#include "save_submission.h"
 #include "sound.h"
 
 #include <base/log.h>
@@ -55,6 +56,15 @@ static bool CheckedTileLayerCount(int Width, int Height, size_t &TileCount)
 
 bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 {
+	const auto Outcome = EditorMapSave::Submit(m_pEditor->m_WriterFinishJobs, [&] { return PrepareSave(pFilename, ErrorHandler); }, [&](const std::shared_ptr<CDataFileWriterFinishJob> &pJob) { return m_pEditor->Engine()->TryAddJob(pJob); }, [&](EditorMapSave::EOutcome) {
+			const char *pError = Localize("Saving failed: Could not prepare or queue the map.", "Editor");
+			log_error("editor/save", "%s", pError);
+			ErrorHandler(pError); });
+	return Outcome == EditorMapSave::EOutcome::SUBMITTED;
+}
+
+std::shared_ptr<CDataFileWriterFinishJob> CEditorMap::PrepareSave(const char *pFilename, const FErrorHandler &ErrorHandler)
+{
 	char aFilenameTmp[IO_MAX_PATH_LENGTH];
 	IStorage::FormatTmpPath(aFilenameTmp, sizeof(aFilenameTmp), pFilename);
 
@@ -64,7 +74,7 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 
 	if(!PerformPreSaveSanityChecks(ErrorHandler))
 	{
-		return false;
+		return nullptr;
 	}
 
 	CDataFileWriter Writer;
@@ -72,7 +82,7 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 	{
 		str_format(aBuf, sizeof(aBuf), Localize("Error: Failed to open file '%s' for writing.", "Editor"), aFilenameTmp);
 		ErrorHandler(aBuf);
-		return false;
+		return nullptr;
 	}
 
 	// save version
@@ -101,21 +111,21 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 				if(Size > std::numeric_limits<size_t>::max() - Length)
 				{
 					ErrorHandler(Localize("Error: could not save because the map settings data is too large.", "Editor"));
-					return false;
+					return nullptr;
 				}
 				Size += Length;
 			}
 			if(Size == 0 || !CheckedDatafileSize(Size))
 			{
 				ErrorHandler(Localize("Error: could not save because the map settings data is too large.", "Editor"));
-				return false;
+				return nullptr;
 			}
 
 			char *pSettings = (char *)malloc(Size);
 			if(pSettings == nullptr)
 			{
 				ErrorHandler(Localize("Error: could not allocate memory for map settings.", "Editor"));
-				return false;
+				return nullptr;
 			}
 			char *pNext = pSettings;
 			for(const auto &Setting : m_vSettings)
@@ -160,7 +170,7 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 				char aError[IO_MAX_PATH_LENGTH + 128];
 				str_format(aError, sizeof(aError), Localize("Error: could not save because the data for image \"%s\" is invalid or too large.", "Editor"), pImg->m_aName);
 				ErrorHandler(aError);
-				return false;
+				return nullptr;
 			}
 			Item.m_ImageData = Writer.AddData(ImageDataSize, pImg->m_pData);
 		}
@@ -182,7 +192,7 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 			char aError[IO_MAX_PATH_LENGTH + 128];
 			str_format(aError, sizeof(aError), Localize("Error: could not save because the data for sound \"%s\" is invalid or too large.", "Editor"), pSound->m_aName);
 			ErrorHandler(aError);
-			return false;
+			return nullptr;
 		}
 		Item.m_SoundData = Writer.AddData(pSound->m_DataSize, pSound->m_pData);
 		// Value is not read in new versions, but we still need to write it for compatibility with old versions.
@@ -266,7 +276,7 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 				if(!CheckedTileLayerCount(pLayerTiles->m_Width, pLayerTiles->m_Height, TileCount) || !CheckedDatafileArraySize(TileCount, sizeof(CTile), TileDataSize))
 				{
 					ErrorHandler(Localize("Error: could not save because the tile layer dimensions are invalid or too large.", "Editor"));
-					return false;
+					return nullptr;
 				}
 				if(Item.m_Flags && !(pLayerTiles->m_HasGame))
 				{
@@ -274,7 +284,7 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 					if(pEmptyTiles == nullptr)
 					{
 						ErrorHandler(Localize("Error: could not allocate temporary memory for the tile layer.", "Editor"));
-						return false;
+						return nullptr;
 					}
 					Item.m_Data = Writer.AddData(TileDataSize, pEmptyTiles);
 					free(pEmptyTiles);
@@ -285,7 +295,7 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 						if(!CheckedDatafileArraySize(TileCount, sizeof(CTeleTile), DataSize))
 						{
 							ErrorHandler(Localize("Error: could not save because the tele layer data is too large.", "Editor"));
-							return false;
+							return nullptr;
 						}
 						Item.m_Tele = Writer.AddData(DataSize, std::static_pointer_cast<CLayerTele>(pLayerTiles)->m_pTeleTile);
 					}
@@ -295,7 +305,7 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 						if(!CheckedDatafileArraySize(TileCount, sizeof(CSpeedupTile), DataSize))
 						{
 							ErrorHandler(Localize("Error: could not save because the speedup layer data is too large.", "Editor"));
-							return false;
+							return nullptr;
 						}
 						Item.m_Speedup = Writer.AddData(DataSize, std::static_pointer_cast<CLayerSpeedup>(pLayerTiles)->m_pSpeedupTile);
 					}
@@ -307,7 +317,7 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 						if(!CheckedDatafileArraySize(TileCount, sizeof(CSwitchTile), DataSize))
 						{
 							ErrorHandler(Localize("Error: could not save because the switch layer data is too large.", "Editor"));
-							return false;
+							return nullptr;
 						}
 						Item.m_Switch = Writer.AddData(DataSize, std::static_pointer_cast<CLayerSwitch>(pLayerTiles)->m_pSwitchTile);
 					}
@@ -317,7 +327,7 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 						if(!CheckedDatafileArraySize(TileCount, sizeof(CTuneTile), DataSize))
 						{
 							ErrorHandler(Localize("Error: could not save because the tune layer data is too large.", "Editor"));
-							return false;
+							return nullptr;
 						}
 						Item.m_Tune = Writer.AddData(DataSize, std::static_pointer_cast<CLayerTune>(pLayerTiles)->m_pTuneTile);
 					}
@@ -370,7 +380,7 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 					if(!CheckedDatafileArraySize(pLayerQuads->m_vQuads.size(), sizeof(CQuad), DataSize) || pLayerQuads->m_vQuads.size() > (size_t)std::numeric_limits<int>::max())
 					{
 						ErrorHandler(Localize("Error: could not save because the quad layer data is too large.", "Editor"));
-						return false;
+						return nullptr;
 					}
 					Item.m_NumQuads = pLayerQuads->m_vQuads.size();
 					Item.m_Data = Writer.AddDataSwapped(DataSize, pLayerQuads->m_vQuads.data());
@@ -408,7 +418,7 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 					if(!CheckedDatafileArraySize(pLayerSounds->m_vSources.size(), sizeof(CSoundSource), DataSize) || pLayerSounds->m_vSources.size() > (size_t)std::numeric_limits<int>::max())
 					{
 						ErrorHandler(Localize("Error: could not save because the sound layer data is too large.", "Editor"));
-						return false;
+						return nullptr;
 					}
 					Item.m_NumSources = pLayerSounds->m_vSources.size();
 					Item.m_Data = Writer.AddDataSwapped(DataSize, pLayerSounds->m_vSources.data());
@@ -449,7 +459,7 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 			PointCount > std::numeric_limits<int>::max() - (int)vvRuntimePoints[e].size())
 		{
 			ErrorHandler(Localize("Error: Saving is not possible because there are too many envelope points.", "Editor"));
-			return false;
+			return nullptr;
 		}
 		CMapItemEnvelope Item;
 		Item.m_Version = 2;
@@ -465,7 +475,7 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 		if(!CheckedDatafileSize(ChannelData.size() * sizeof(int)))
 		{
 			ErrorHandler(Localize("Error: Saving is not possible because there are too many envelope points.", "Editor"));
-			return false;
+			return nullptr;
 		}
 		Writer.AddItem(MAPITEMTYPE_QM_ENVELOPE_CHANNELS, e, ChannelData.size() * sizeof(int), ChannelData.data());
 	}
@@ -491,13 +501,13 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 	if(!CheckedDatafileArraySize((size_t)PointCount, sizeof(CEnvPoint), EnvPointDataSize))
 	{
 		ErrorHandler(Localize("Error: Saving is not possible because the envelope point data is too large.", "Editor"));
-		return false;
+		return nullptr;
 	}
 	CEnvPoint *pPoints = (CEnvPoint *)calloc(maximum(PointCount, 1), sizeof(CEnvPoint));
 	if(pPoints == nullptr)
 	{
 		ErrorHandler(Localize("Error: Failed to allocate memory for envelope points.", "Editor"));
-		return false;
+		return nullptr;
 	}
 	CEnvPointBezier *pPointsBezier = nullptr;
 	if(BezierUsed)
@@ -507,14 +517,14 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 		{
 			free(pPoints);
 			ErrorHandler(Localize("Error: Saving is not possible because the bezier envelope point data is too large.", "Editor"));
-			return false;
+			return nullptr;
 		}
 		pPointsBezier = (CEnvPointBezier *)calloc(maximum(PointCount, 1), sizeof(CEnvPointBezier));
 		if(pPointsBezier == nullptr)
 		{
 			free(pPoints);
 			ErrorHandler(Localize("Error: Failed to allocate memory for bezier envelope points.", "Editor"));
-			return false;
+			return nullptr;
 		}
 	}
 	PointCount = 0;
@@ -553,18 +563,14 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 		{
 			free(pPointsBezier);
 			ErrorHandler(Localize("Error: Saving is not possible because the bezier envelope point data is too large.", "Editor"));
-			return false;
+			return nullptr;
 		}
 		Writer.AddItem(MAPITEMTYPE_ENVPOINTS_BEZIER, 0, EnvPointBezierDataSize, pPointsBezier);
 		free(pPointsBezier);
 	}
 
-	// finish the data file
-	std::shared_ptr<CDataFileWriterFinishJob> pWriterFinishJob = std::make_shared<CDataFileWriterFinishJob>(m_pEditor->Storage(), this, pFilename, aFilenameTmp, std::move(Writer));
-	m_pEditor->Engine()->AddJob(pWriterFinishJob);
-	m_pEditor->m_WriterFinishJobs.push_back(pWriterFinishJob);
-
-	return true;
+	// 候选准备完成后才交给统一的登记和投递入口。
+	return std::make_shared<CDataFileWriterFinishJob>(m_pEditor->Storage(), this, pFilename, aFilenameTmp, std::move(Writer));
 }
 
 bool CEditorMap::PerformPreSaveSanityChecks(const FErrorHandler &ErrorHandler)

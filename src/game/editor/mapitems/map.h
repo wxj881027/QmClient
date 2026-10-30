@@ -256,6 +256,7 @@ public:
 	void AddQuadArt(CImageInfo &&Image, const CQuadArtParameters &Parameters, bool IgnoreHistory);
 
 private:
+	std::shared_ptr<CDataFileWriterFinishJob> PrepareSave(const char *pFilename, const FErrorHandler &ErrorHandler);
 	CEditor *m_pEditor;
 };
 
