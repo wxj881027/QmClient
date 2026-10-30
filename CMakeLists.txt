@@ -3567,6 +3567,7 @@ if(CLIENT)
     components/qmclient/input_overlay.h
     components/qmclient/jelly_tee.cpp
     components/qmclient/jelly_tee.h
+    components/qmclient/auto_reply.h
     components/qmclient/keyword_reply_rules.h
     components/qmclient/recent_tee_skins.cpp
     components/qmclient/recent_tee_skins.h
@@ -4845,6 +4846,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/jsonwriter_test.cpp
     src/test/unit/engine/link_probe_test.cpp
     src/test/unit/client/keyword_reply_rules_test.cpp
+    src/test/unit/qmclient/client/qm_auto_reply_test.cpp
+    src/test/integration/qmclient/client/qm_friend_greet_flow_test.cpp
     src/test/unit/engine/logger_test.cpp
     src/test/unit/client/map_difficulty_catalog_test.cpp
     src/test/unit/qmclient/ui/vote_map_library_test.cpp

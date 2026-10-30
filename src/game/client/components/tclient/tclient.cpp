@@ -84,26 +84,6 @@ static constexpr int QMCLIENT_COMBO_FREEZE_PARTICLE_COUNT = 14;
 static constexpr float QMCLIENT_COMBO_FREEZE_PARTICLE_RADIUS = 42.0f;
 static constexpr ColorRGBA QMCLIENT_POPUP_ROLL_COLOR_FROM = ColorRGBA(0.0f, 1.0f, 1.0f, 1.0f);
 static constexpr ColorRGBA QMCLIENT_POPUP_ROLL_COLOR_TO = ColorRGBA(1.0f, 0.0f, 1.0f, 1.0f);
-static constexpr const char *s_apKeywordNegationWords[] = {
-	"不",
-	"没",
-	"無",
-	"无",
-	"別",
-	"别",
-	"勿",
-	"莫",
-	"非",
-	"未",
-	"沒",
-};
-static constexpr const char *s_apKeywordClauseContrastWords[] = {
-	"但是",
-	"但",
-	"不过",
-	"然而",
-	"可是",
-};
 // 好友进服默认文案：英文 source key（extract 靠下方 Localize 字面量收录）
 static constexpr const char *s_pFriendEnterBroadcastDefaultText = "%s joined this server";
 static constexpr const char *s_pFriendEnterGreetDefaultText = "Hi!";
@@ -131,9 +111,6 @@ static const char *ResolveFriendEnterLocalizeText(const char *pConfigText, const
 	}
 	return Localize(pConfigText);
 }
-
-static int AutoReplySeparatorLength(const char *pStr);
-static bool AppendAutoReplyRuleBlock(char *pOutRules, size_t OutRulesSize, const char *pRules);
 
 namespace
 {
@@ -217,131 +194,6 @@ namespace
 				LocalHammer = true;
 		}
 		return LocalHammer ? EFreezeWakeupType::LOCAL_HAMMER : EFreezeWakeupType::NONE;
-	}
-}
-
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-struct SKeywordReplyRule
-{
-	std::string m_Keywords;
-	std::string m_Reply;
-	bool m_AutoRename = false;
-	bool m_Regex = false;
-	bool m_HasExplicitRenameFlag = false;
-	bool m_HasExplicitRegexFlag = false;
-};
-
-static char *ParseAutoReplyRulePrefixes(char *pLine, bool &OutAutoRename, bool &OutRegex, bool &OutHasExplicitRenameFlag, bool &OutHasExplicitRegexFlag)
-{
-	OutAutoRename = false;
-	OutRegex = false;
-	OutHasExplicitRenameFlag = false;
-	OutHasExplicitRegexFlag = false;
-
-	char *pTrimmedLine = (char *)str_utf8_skip_whitespaces(pLine);
-	while(true)
-	{
-		const char *pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[rename]");
-		if(!pAfterPrefix)
-			pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[r]");
-		if(pAfterPrefix)
-		{
-			OutAutoRename = true;
-			OutHasExplicitRenameFlag = true;
-			pTrimmedLine = (char *)str_utf8_skip_whitespaces(pAfterPrefix);
-			continue;
-		}
-
-		pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[regex]");
-		if(!pAfterPrefix)
-			pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[re]");
-		if(!pAfterPrefix)
-			pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[rx]");
-		if(pAfterPrefix)
-		{
-			OutRegex = true;
-			OutHasExplicitRegexFlag = true;
-			pTrimmedLine = (char *)str_utf8_skip_whitespaces(pAfterPrefix);
-			continue;
-		}
-
-		break;
-	}
-
-	return pTrimmedLine;
-}
-
-[[maybe_unused]] static void ParseKeywordReplyRules(const char *pRules, std::vector<SKeywordReplyRule> &vOutRules)
-{
-	vOutRules.clear();
-	if(!pRules || pRules[0] == '\0')
-		return;
-
-	const char *pCursor = pRules;
-	while(*pCursor)
-	{
-		char aLine[sizeof(g_Config.m_QmKeywordReplyRules)];
-		int LineLen = 0;
-		while(*pCursor && *pCursor != '\n' && *pCursor != '\r')
-		{
-			if(LineLen < (int)sizeof(aLine) - 1)
-				aLine[LineLen++] = *pCursor;
-			++pCursor;
-		}
-		aLine[LineLen] = '\0';
-
-		while(*pCursor == '\n' || *pCursor == '\r')
-			++pCursor;
-
-		char *pLine = (char *)str_utf8_skip_whitespaces(aLine);
-		str_utf8_trim_right(pLine);
-		if(pLine[0] == '\0' || pLine[0] == '#')
-			continue;
-
-		bool AutoRename = false;
-		bool RegexRule = false;
-		bool HasExplicitRenameFlag = false;
-		bool HasExplicitRegexFlag = false;
-		char *pRuleText = ParseAutoReplyRulePrefixes(pLine, AutoRename, RegexRule, HasExplicitRenameFlag, HasExplicitRegexFlag);
-		const char *pArrowConst = str_find(pRuleText, "=>");
-		if(!pArrowConst)
-			continue;
-
-		char *pArrow = pRuleText + (pArrowConst - pRuleText);
-		*pArrow = '\0';
-		pArrow += 2;
-
-		char *pKeywords = (char *)str_utf8_skip_whitespaces(pRuleText);
-		str_utf8_trim_right(pKeywords);
-		char *pReply = (char *)str_utf8_skip_whitespaces(pArrow);
-		str_utf8_trim_right(pReply);
-		if(pKeywords[0] == '\0' || pReply[0] == '\0')
-			continue;
-
-		vOutRules.push_back({pKeywords, pReply, AutoRename, RegexRule, HasExplicitRenameFlag, HasExplicitRegexFlag});
-	}
-}
-
-[[maybe_unused]] static void BuildKeywordReplyRules(const std::vector<SKeywordReplyRule> &vRules, char *pOutRules, size_t OutRulesSize)
-{
-	if(!pOutRules || OutRulesSize == 0)
-		return;
-
-	pOutRules[0] = '\0';
-	for(const auto &Rule : vRules)
-	{
-		if(Rule.m_Keywords.empty() || Rule.m_Reply.empty())
-			continue;
-
-		if(pOutRules[0] != '\0')
-			str_append(pOutRules, "\n", OutRulesSize);
-		if(Rule.m_AutoRename)
-			str_append(pOutRules, "[rename] ", OutRulesSize);
-		if(Rule.m_Regex)
-			str_append(pOutRules, "[regex] ", OutRulesSize);
-		str_append(pOutRules, Rule.m_Keywords.c_str(), OutRulesSize);
-		str_append(pOutRules, "=>", OutRulesSize);
-		str_append(pOutRules, Rule.m_Reply.c_str(), OutRulesSize);
 	}
 }
 
@@ -661,13 +513,10 @@ static bool LineShouldHighlight(const char *pLine, const char *pName)
 
 bool CTClient::SendNonDuplicateMessage(int Team, const char *pLine)
 {
-	if(str_comp(pLine, m_PreviousOwnMessage) != 0)
-	{
-		GameClient()->m_Chat.SendChat(Team, pLine);
-		return true;
-	}
+	if(str_comp(pLine, m_PreviousOwnMessage) == 0 || !GameClient()->m_Chat.SendChat(Team, pLine))
+		return false;
 	str_copy(m_PreviousOwnMessage, pLine);
-	return false;
+	return true;
 }
 
 void CTClient::TryAppendKeywordReplyRenameSuffix(bool UseDummy)
@@ -694,472 +543,6 @@ void CTClient::TryAppendKeywordReplyRenameSuffix(bool UseDummy)
 		GameClient()->SendDummyInfo(false);
 	else
 		GameClient()->SendInfo(false);
-}
-
-static int AutoReplySeparatorLength(const char *pStr)
-{
-	const unsigned char C0 = (unsigned char)pStr[0];
-	if(C0 == ',' || C0 == ';' || C0 == '|' || C0 == '\n' || C0 == '\r')
-		return 1;
-	if(C0 == 0xEF && (unsigned char)pStr[1] == 0xBC)
-	{
-		const unsigned char C2 = (unsigned char)pStr[2];
-		if(C2 == 0x8C || C2 == 0x9B)
-			return 3;
-	}
-	// Full-width vertical bar `｜` (U+FF5C), commonly produced by CJK IMEs.
-	if(C0 == 0xEF && (unsigned char)pStr[1] == 0xBD && (unsigned char)pStr[2] == 0x9C)
-		return 3;
-	return 0;
-}
-
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-enum class EAutoReplyTokenMode
-{
-	Literal,
-	RegexAuto,
-	RegexDelimited,
-};
-
-static const char *FindDelimitedAutoReplyTokenEnd(const char *pTokenStart)
-{
-	if(!pTokenStart || pTokenStart[0] != '/')
-		return nullptr;
-
-	// Keep `/.../` together so regex alternation does not collide with the rule separators.
-	bool Escaped = false;
-	for(const char *pCursor = pTokenStart + 1; *pCursor; ++pCursor)
-	{
-		if(Escaped)
-		{
-			Escaped = false;
-			continue;
-		}
-		if(*pCursor == '\\')
-		{
-			Escaped = true;
-			continue;
-		}
-		if(*pCursor != '/')
-			continue;
-
-		++pCursor;
-		if(*pCursor == 'i' || *pCursor == 'I')
-			++pCursor;
-
-		const char *pAfterWhitespace = str_utf8_skip_whitespaces(pCursor);
-		if(*pAfterWhitespace != '\0' && AutoReplySeparatorLength(pAfterWhitespace) == 0)
-			return nullptr;
-		return pAfterWhitespace;
-	}
-
-	return nullptr;
-}
-
-template<typename F>
-static bool ForEachAutoReplyToken(const char *pText, F &&Fn)
-{
-	if(!pText || pText[0] == '\0')
-		return false;
-
-	const char *pCursor = pText;
-	while(*pCursor)
-	{
-		int SepLen = AutoReplySeparatorLength(pCursor);
-		while(*pCursor && SepLen > 0)
-		{
-			pCursor += SepLen;
-			SepLen = AutoReplySeparatorLength(pCursor);
-		}
-
-		if(*pCursor == '\0')
-			break;
-
-		const char *pTokenStart = pCursor;
-		const char *pTokenEnd = nullptr;
-		const char *pTrimmedStart = str_utf8_skip_whitespaces(pTokenStart);
-		if(*pTrimmedStart == '/')
-			pTokenEnd = FindDelimitedAutoReplyTokenEnd(pTrimmedStart);
-
-		if(!pTokenEnd)
-		{
-			pTokenEnd = pCursor;
-			while(*pTokenEnd && AutoReplySeparatorLength(pTokenEnd) == 0)
-				++pTokenEnd;
-		}
-
-		pCursor = pTokenEnd;
-
-		std::string Token(pTokenStart, pTokenEnd - pTokenStart);
-		char *pMutableToken = Token.data();
-		char *pTrimmedToken = (char *)str_utf8_skip_whitespaces(pMutableToken);
-		str_utf8_trim_right(pTrimmedToken);
-		if(pTrimmedToken[0] == '\0')
-			continue;
-
-		if(Fn(std::string_view(pTrimmedToken)))
-			return true;
-	}
-
-	return false;
-}
-
-static bool IsAutoReplyRegexEscapeMarker(char C)
-{
-	switch(C)
-	{
-	case 'd':
-	case 'D':
-	case 's':
-	case 'S':
-	case 'w':
-	case 'W':
-	case 'b':
-	case 'B':
-	case 'A':
-	case 'Z':
-	case 'z':
-	case 't':
-	case 'n':
-	case 'r':
-	case 'v':
-	case 'f':
-	case '\\':
-	case '.':
-	case '+':
-	case '*':
-	case '?':
-	case '^':
-	case '$':
-	case '|':
-	case '(':
-	case ')':
-	case '[':
-	case ']':
-	case '{':
-	case '}':
-		return true;
-	default:
-		return false;
-	}
-}
-
-static bool LooksLikeAutoReplyRegex(std::string_view Token)
-{
-	if(Token.empty())
-		return false;
-
-	if(Token.front() == '^' || Token.back() == '$')
-		return true;
-
-	if(Token.find(".*") != std::string_view::npos ||
-		Token.find(".+") != std::string_view::npos ||
-		Token.find(".?") != std::string_view::npos)
-	{
-		return true;
-	}
-
-	if(Token.find('[') != std::string_view::npos || Token.find(']') != std::string_view::npos ||
-		Token.find('(') != std::string_view::npos || Token.find(')') != std::string_view::npos ||
-		Token.find('{') != std::string_view::npos || Token.find('}') != std::string_view::npos)
-	{
-		return true;
-	}
-
-	for(size_t i = 0; i + 1 < Token.size(); ++i)
-	{
-		if(Token[i] == '\\' && IsAutoReplyRegexEscapeMarker(Token[i + 1]))
-			return true;
-	}
-
-	return false;
-}
-
-static EAutoReplyTokenMode ParseAutoReplyTokenMode(std::string_view Token, std::string &OutPattern, bool &OutCaseInsensitive)
-{
-	OutPattern.clear();
-	OutCaseInsensitive = true;
-
-	if(Token.size() >= 2 && Token.front() == '/')
-	{
-		bool Escaped = false;
-		for(size_t i = 1; i < Token.size(); ++i)
-		{
-			const char C = Token[i];
-			if(Escaped)
-			{
-				Escaped = false;
-				continue;
-			}
-			if(C == '\\')
-			{
-				Escaped = true;
-				continue;
-			}
-			if(C != '/')
-				continue;
-
-			const std::string_view Flags = Token.substr(i + 1);
-			if(Flags.empty() || Flags == "i" || Flags == "I")
-			{
-				OutPattern.assign(Token.substr(1, i - 1));
-				return EAutoReplyTokenMode::RegexDelimited;
-			}
-			break;
-		}
-	}
-
-	if(LooksLikeAutoReplyRegex(Token))
-	{
-		OutPattern.assign(Token.begin(), Token.end());
-		return EAutoReplyTokenMode::RegexAuto;
-	}
-
-	OutPattern.assign(Token.begin(), Token.end());
-	return EAutoReplyTokenMode::Literal;
-}
-
-static void ParseExplicitAutoReplyRegexPattern(std::string_view PatternText, std::string &OutPattern, bool &OutCaseInsensitive)
-{
-	OutCaseInsensitive = true;
-	if(ParseAutoReplyTokenMode(PatternText, OutPattern, OutCaseInsensitive) == EAutoReplyTokenMode::RegexDelimited)
-		return;
-
-	OutPattern.assign(PatternText.begin(), PatternText.end());
-}
-
-[[maybe_unused]] static bool AppendAutoReplyRuleBlock(char *pOutRules, size_t OutRulesSize, const char *pRules)
-{
-	if(!pOutRules || OutRulesSize == 0 || !pRules || pRules[0] == '\0')
-		return false;
-
-	const size_t CurrentLen = str_length(pOutRules);
-	const size_t RulesLen = str_length(pRules);
-	const size_t SeparatorLen = CurrentLen > 0 && pOutRules[CurrentLen - 1] != '\n' ? 1 : 0;
-	if(CurrentLen + SeparatorLen + RulesLen >= OutRulesSize)
-		return false;
-
-	if(SeparatorLen > 0)
-		str_append(pOutRules, "\n", OutRulesSize);
-
-	str_append(pOutRules, pRules, OutRulesSize);
-	return true;
-}
-
-static bool IsKeywordClauseSeparatorCodepoint(int Codepoint)
-{
-	return Codepoint == '\n' || Codepoint == '\r' ||
-	       Codepoint == ',' || Codepoint == '.' || Codepoint == ';' || Codepoint == ':' || Codepoint == '!' || Codepoint == '?' ||
-	       Codepoint == 0xFF0C || Codepoint == 0x3002 || Codepoint == 0xFF1B || Codepoint == 0xFF1A || Codepoint == 0xFF01 || Codepoint == 0xFF1F;
-}
-
-static const char *FindLastKeywordClauseSeparatorBoundary(const char *pMessageStart, const char *pLimit)
-{
-	const char *pBoundary = pMessageStart;
-	const char *pCursor = pMessageStart;
-	while(*pCursor && pCursor < pLimit)
-	{
-		const char *pCharStart = pCursor;
-		const int Codepoint = str_utf8_decode(&pCursor);
-		if(pCharStart >= pLimit)
-			break;
-		if(IsKeywordClauseSeparatorCodepoint(Codepoint))
-			pBoundary = pCursor;
-	}
-	return pBoundary;
-}
-
-static const char *FindLastKeywordContrastBoundary(const char *pMessageStart, const char *pLimit)
-{
-	const char *pBoundary = pMessageStart;
-	for(const char *pContrast : s_apKeywordClauseContrastWords)
-	{
-		const char *pSearchCursor = pMessageStart;
-		while(pSearchCursor && pSearchCursor < pLimit)
-		{
-			const char *pMatchEnd = nullptr;
-			const char *pMatch = str_utf8_find_nocase(pSearchCursor, pContrast, &pMatchEnd);
-			if(!pMatch || pMatch >= pLimit)
-				break;
-			if(pMatchEnd && pMatchEnd <= pLimit && pMatchEnd > pBoundary)
-				pBoundary = pMatchEnd;
-
-			if(!pMatchEnd || pMatchEnd <= pSearchCursor)
-				break;
-			pSearchCursor = pMatchEnd;
-		}
-	}
-	return pBoundary;
-}
-
-static const char *FindKeywordClauseStart(const char *pMessageStart, const char *pMatchStart)
-{
-	const char *pSeparatorBoundary = FindLastKeywordClauseSeparatorBoundary(pMessageStart, pMatchStart);
-	const char *pContrastBoundary = FindLastKeywordContrastBoundary(pMessageStart, pMatchStart);
-	return pSeparatorBoundary > pContrastBoundary ? pSeparatorBoundary : pContrastBoundary;
-}
-
-static int CountKeywordNegationsInRange(const char *pRangeStart, const char *pRangeEnd)
-{
-	if(!pRangeStart || !pRangeEnd || pRangeEnd <= pRangeStart)
-		return 0;
-
-	int NegationCount = 0;
-	for(const char *pNegationWord : s_apKeywordNegationWords)
-	{
-		const char *pSearchCursor = pRangeStart;
-		while(pSearchCursor && pSearchCursor < pRangeEnd)
-		{
-			const char *pMatchEnd = nullptr;
-			const char *pMatch = str_utf8_find_nocase(pSearchCursor, pNegationWord, &pMatchEnd);
-			if(!pMatch || pMatch >= pRangeEnd)
-				break;
-			if(pMatchEnd && pMatchEnd <= pRangeEnd)
-				++NegationCount;
-
-			if(!pMatchEnd || pMatchEnd <= pSearchCursor)
-				break;
-			pSearchCursor = pMatchEnd;
-		}
-	}
-
-	return NegationCount;
-}
-
-static bool HasPositiveKeywordMatch(const char *pMessage, const char *pToken)
-{
-	const char *pSearchCursor = pMessage;
-	while(*pSearchCursor)
-	{
-		const char *pMatchEnd = nullptr;
-		const char *pMatch = str_utf8_find_nocase(pSearchCursor, pToken, &pMatchEnd);
-		if(!pMatch)
-			return false;
-
-		const char *pClauseStart = FindKeywordClauseStart(pMessage, pMatch);
-		const int NegationCount = CountKeywordNegationsInRange(pClauseStart, pMatch);
-		if((NegationCount % 2) == 0)
-			return true;
-
-		if(!pMatchEnd || pMatchEnd <= pSearchCursor)
-			return false;
-		pSearchCursor = pMatchEnd;
-	}
-	return false;
-}
-
-static bool MatchAutoReplyLiteralToken(const char *pMessage, const char *pToken, bool UseNegationFilter)
-{
-	if(!UseNegationFilter)
-		return str_utf8_find_nocase(pMessage, pToken) != nullptr;
-	return HasPositiveKeywordMatch(pMessage, pToken);
-}
-
-static bool MatchAutoReplyRuleKeywords(const char *pMessage, const char *pKeywords, bool UseNegationFilter, bool ForceRegex)
-{
-	if(ForceRegex)
-	{
-		std::string Pattern;
-		bool CaseInsensitive = true;
-		ParseExplicitAutoReplyRegexPattern(pKeywords, Pattern, CaseInsensitive);
-		Regex Re(Pattern, CaseInsensitive);
-		return Re.error().empty() && Re.test(pMessage);
-	}
-
-	return ForEachAutoReplyToken(pKeywords, [&](std::string_view Token) {
-		std::string Pattern;
-		bool CaseInsensitive = true;
-		const EAutoReplyTokenMode Mode = ParseAutoReplyTokenMode(Token, Pattern, CaseInsensitive);
-		if(Mode != EAutoReplyTokenMode::Literal)
-		{
-			Regex Re(Pattern, CaseInsensitive);
-			if(Re.error().empty())
-				return Re.test(pMessage);
-			if(Mode == EAutoReplyTokenMode::RegexDelimited)
-				return false;
-		}
-
-		std::string TokenString(Token);
-		return MatchAutoReplyLiteralToken(pMessage, TokenString.c_str(), UseNegationFilter);
-	});
-}
-
-static bool MatchAutoReplyRules(const char *pMessage, const char *pRules, char *pOutReply, size_t OutReplySize, bool &OutAutoRename, bool UseNegationFilter)
-{
-	OutAutoRename = false;
-	if(!pRules || pRules[0] == '\0')
-		return false;
-
-	static constexpr int MAX_MATCHED_REPLIES = 32;
-	char aaMatchedReplies[MAX_MATCHED_REPLIES][256];
-	bool aMatchedRenameFlags[MAX_MATCHED_REPLIES] = {};
-	int MatchedReplyCount = 0;
-
-	char aDecodedRules[sizeof(g_Config.m_QmKeywordReplyRules)];
-	QmKeywordReplyRules::DecodeFromConfig(pRules, aDecodedRules, sizeof(aDecodedRules));
-	const char *pCursor = aDecodedRules;
-	while(*pCursor)
-	{
-		char aLine[1024];
-		int LineLen = 0;
-		while(*pCursor && *pCursor != '\n' && *pCursor != '\r')
-		{
-			if(LineLen < (int)sizeof(aLine) - 1)
-				aLine[LineLen++] = *pCursor;
-			pCursor++;
-		}
-		aLine[LineLen] = '\0';
-
-		while(*pCursor == '\n' || *pCursor == '\r')
-			pCursor++;
-
-		char *pLine = (char *)str_utf8_skip_whitespaces(aLine);
-		str_utf8_trim_right(pLine);
-		if(pLine[0] == '\0' || pLine[0] == '#')
-			continue;
-
-		bool AutoRename = false;
-		bool RegexRule = false;
-		bool HasExplicitRenameFlag = false;
-		bool HasExplicitRegexFlag = false;
-		char *pRuleText = ParseAutoReplyRulePrefixes(pLine, AutoRename, RegexRule, HasExplicitRenameFlag, HasExplicitRegexFlag);
-		(void)HasExplicitRenameFlag;
-		(void)HasExplicitRegexFlag;
-
-		const char *pArrowConst = str_find(pRuleText, "=>");
-		if(!pArrowConst)
-			continue;
-		char *pArrow = pRuleText + (pArrowConst - pRuleText);
-		*pArrow = '\0';
-		pArrow += 2;
-
-		char *pKeywords = (char *)str_utf8_skip_whitespaces(pRuleText);
-		str_utf8_trim_right(pKeywords);
-		char *pReply = (char *)str_utf8_skip_whitespaces(pArrow);
-		str_utf8_trim_right(pReply);
-		if(pKeywords[0] == '\0' || pReply[0] == '\0')
-			continue;
-
-		if(MatchAutoReplyRuleKeywords(pMessage, pKeywords, UseNegationFilter, RegexRule))
-		{
-			if(MatchedReplyCount < MAX_MATCHED_REPLIES)
-			{
-				if(!QmKeywordReplyRules::PickReply(pReply, aaMatchedReplies[MatchedReplyCount], sizeof(aaMatchedReplies[MatchedReplyCount]), secure_rand_below))
-					continue;
-				aMatchedRenameFlags[MatchedReplyCount] = AutoRename;
-			}
-			MatchedReplyCount++;
-		}
-	}
-
-	if(MatchedReplyCount <= 0)
-		return false;
-
-	const int StoredReplyCount = MatchedReplyCount < MAX_MATCHED_REPLIES ? MatchedReplyCount : MAX_MATCHED_REPLIES;
-	const int PickedIndex = secure_rand_below(StoredReplyCount);
-	str_copy(pOutReply, aaMatchedReplies[PickedIndex], OutReplySize);
-	OutAutoRename = aMatchedRenameFlags[PickedIndex];
-	return true;
 }
 
 const char *CTClient::CurrentCommunityIdForFinishCheck() const
@@ -1202,6 +585,67 @@ bool CTClient::TryHandleRedPacketAutoClaim(const CNetMsg_Sv_Chat *pMsg)
 
 	GameClient()->m_Chat.SendChatOnConn(IClient::CONN_MAIN, 0, Password.c_str(), true, false);
 	return true;
+}
+
+void CTClient::OnChatMessage(const CNetMsg_Sv_Chat *pMsg, int Connection)
+{
+	if(Client()->State() != IClient::STATE_ONLINE || pMsg == nullptr || pMsg->m_pMessage == nullptr ||
+		pMsg->m_ClientId < 0 || pMsg->m_ClientId >= MAX_CLIENTS)
+		return;
+	const int Sender = pMsg->m_ClientId;
+	const bool OwnMessage = GameClient()->IsLocalClientId(Sender);
+	if(!qm_auto_reply::ShouldHandle(Connection, g_Config.m_ClDummy, pMsg->m_Team, OwnMessage))
+		return;
+	const auto &Player = GameClient()->m_aClients[Sender];
+	if(!Player.m_Active)
+		return;
+	const bool Away = g_Config.m_QmAutoReplyMinimized && m_pGraphics && !m_pGraphics->WindowActive();
+	m_AutoReplySendState.UpdateStatus(g_Config.m_QmAutoReplyMuted != 0, Away);
+	const int64_t Now = time_get();
+	const int64_t Cooldown = (int64_t)maximum(0, g_Config.m_QmAutoReplyCooldown) * time_freq();
+	if(!m_AutoReplySendState.Ready(Now, Cooldown))
+		return;
+	const std::string Identity = std::string(Player.m_aName) + "\t" + Player.m_aClan;
+	const auto Send = [&](int Target, qm_auto_reply::EKind Kind, const std::string &Text) {
+		return m_AutoReplySendState.TrySend(Target, Sender, Identity, Kind, Text, Now, Cooldown, [&] {
+			return GameClient()->m_Chat.SendAutomaticChat(Target, Text.c_str());
+		});
+	};
+
+	if(g_Config.m_QmKeywordReplyEnabled && pMsg->m_Team == 0 && pMsg->m_pMessage[0] != '/' && pMsg->m_pMessage[0] != '\0')
+	{
+		m_KeywordReplyRules.SetConfig(g_Config.m_QmKeywordReplyRules);
+		char aReply[256];
+		bool Rename = false;
+		if(m_KeywordReplyRules.Match(pMsg->m_pMessage, aReply, sizeof(aReply), Rename, secure_rand_below))
+		{
+			const bool UseDummy = g_Config.m_QmKeywordReplyUseDummy && Client()->DummyConnected();
+			if(Send(UseDummy ? IClient::CONN_DUMMY : IClient::CONN_MAIN, qm_auto_reply::EKind::KEYWORD, aReply))
+			{
+				if(Rename)
+					TryAppendKeywordReplyRenameSuffix(UseDummy);
+				return;
+			}
+		}
+	}
+
+	bool Ping = pMsg->m_Team == TEAM_WHISPER_RECV;
+	for(int LocalConnection = 0; LocalConnection < NUM_DUMMIES; ++LocalConnection)
+	{
+		const int LocalId = GameClient()->m_aLocalIds[LocalConnection];
+		if(LocalId >= 0 && LocalId < MAX_CLIENTS && (LocalConnection == 0 || Client()->DummyConnected()))
+			Ping |= LineShouldHighlight(pMsg->m_pMessage, GameClient()->m_aClients[LocalId].m_aName);
+	}
+	if(!Ping)
+		return;
+	const bool Muted = g_Config.m_QmAutoReplyMuted && (Player.m_Foe || Player.m_ChatIgnore);
+	const char *pReply = Muted ? g_Config.m_QmAutoReplyMutedMessage : g_Config.m_QmAutoReplyMinimizedMessage;
+	if((!Muted && !Away) || *str_utf8_skip_whitespaces(pReply) == '\0')
+		return;
+	const std::string Text = pMsg->m_Team == TEAM_WHISPER_RECV || ServerCommandExists("w") ?
+					 qm_auto_reply::Whisper(Player.m_aName, pReply) :
+					 std::string(Player.m_aName) + ": " + pReply;
+	Send(Connection, Muted ? qm_auto_reply::EKind::MUTED : qm_auto_reply::EKind::AWAY, Text);
 }
 
 void CTClient::OnMessage(int MsgType, void *pRawMsg)
@@ -1264,85 +708,6 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 				str_copy(m_aLastChatMessage, pMessage, sizeof(m_aLastChatMessage));
 				m_LastChatTeam = pMsg->m_Team;
 			}
-		}
-
-		const auto TrySendAutoReply = [&](const char *pReply, bool UseDummy) -> bool {
-			if(!pReply || pReply[0] == '\0')
-				return false;
-			int Cooldown = g_Config.m_QmAutoReplyCooldown;
-			if(Cooldown < 0)
-				Cooldown = 0;
-			const int64_t Now = time_get();
-			if(Cooldown > 0 && Now - m_LastAutoReplyTime < (int64_t)Cooldown * time_freq())
-				return false;
-
-			const int TargetConn = UseDummy ? IClient::CONN_DUMMY : IClient::CONN_MAIN;
-			GameClient()->m_Chat.SendChatOnConn(TargetConn, 0, pReply);
-			m_LastAutoReplyTime = Now;
-			return true;
-		};
-
-		bool AutoReplyHandled = false;
-
-		// === 关键词回复 ===
-		if(!AutoReplyHandled && g_Config.m_QmKeywordReplyEnabled && !IsOwnMessage && pMsg->m_Team == 0 && pMsg->m_pMessage != nullptr)
-		{
-			const char *pMessage = pMsg->m_pMessage;
-			if(pMessage[0] != '\0' && pMessage[0] != '/')
-			{
-				char aReply[256] = "";
-				bool AutoRename = false;
-				if(MatchAutoReplyRules(pMessage, g_Config.m_QmKeywordReplyRules, aReply, sizeof(aReply), AutoRename, true))
-				{
-					const bool UseDummy = g_Config.m_QmKeywordReplyUseDummy && Client()->DummyConnected();
-					AutoReplyHandled = TrySendAutoReply(aReply, UseDummy);
-					if(AutoReplyHandled && AutoRename)
-						TryAppendKeywordReplyRenameSuffix(UseDummy);
-				}
-			}
-		}
-
-		bool PingMessage = false;
-
-		bool ValidIds = !(GameClient()->m_aLocalIds[0] < 0 || (GameClient()->Client()->DummyConnected() && GameClient()->m_aLocalIds[1] < 0));
-
-		if(ValidIds && ClientId >= 0 && ClientId != GameClient()->m_aLocalIds[0] && (!GameClient()->Client()->DummyConnected() || ClientId != GameClient()->m_aLocalIds[1]))
-		{
-			PingMessage |= LineShouldHighlight(pMsg->m_pMessage, GameClient()->m_aClients[GameClient()->m_aLocalIds[0]].m_aName);
-			PingMessage |= GameClient()->Client()->DummyConnected() && LineShouldHighlight(pMsg->m_pMessage, GameClient()->m_aClients[GameClient()->m_aLocalIds[1]].m_aName);
-		}
-
-		if(pMsg->m_Team == TEAM_WHISPER_RECV)
-			PingMessage = true;
-
-		if(!PingMessage)
-			return;
-
-		char aPlayerName[MAX_NAME_LENGTH];
-		str_copy(aPlayerName, GameClient()->m_aClients[ClientId].m_aName, sizeof(aPlayerName));
-
-		bool PlayerMuted = GameClient()->m_aClients[ClientId].m_Foe || GameClient()->m_aClients[ClientId].m_ChatIgnore;
-		if(g_Config.m_QmAutoReplyMuted && PlayerMuted)
-		{
-			char aBuf[256];
-			if(pMsg->m_Team == TEAM_WHISPER_RECV || ServerCommandExists("w"))
-				str_format(aBuf, sizeof(aBuf), "/w \"%s\" %s", aPlayerName, g_Config.m_QmAutoReplyMutedMessage);
-			else
-				str_format(aBuf, sizeof(aBuf), "%s: %s", aPlayerName, g_Config.m_QmAutoReplyMutedMessage);
-			SendNonDuplicateMessage(0, aBuf);
-			return;
-		}
-
-		bool WindowActive = m_pGraphics && m_pGraphics->WindowActive();
-		if(g_Config.m_QmAutoReplyMinimized && !WindowActive && m_pGraphics)
-		{
-			char aBuf[256];
-			if(pMsg->m_Team == TEAM_WHISPER_RECV || ServerCommandExists("w"))
-				str_format(aBuf, sizeof(aBuf), "/w \"%s\" %s", aPlayerName, g_Config.m_QmAutoReplyMinimizedMessage);
-			else
-				str_format(aBuf, sizeof(aBuf), "%s: %s", aPlayerName, g_Config.m_QmAutoReplyMinimizedMessage);
-			SendNonDuplicateMessage(0, aBuf);
-			return;
 		}
 	}
 
@@ -1994,6 +1359,7 @@ bool CTClient::ServerCommandExists(const char *pCommand)
 
 void CTClient::OnUpdate()
 {
+	m_AutoReplySendState.UpdateStatus(g_Config.m_QmAutoReplyMuted != 0, g_Config.m_QmAutoReplyMinimized && m_pGraphics && !m_pGraphics->WindowActive());
 	const bool PlayerIdsValid = GameClient()->m_aLocalIds[0] >= 0 && GameClient()->m_aLocalIds[1] >= 0;
 	const int SoloSplitAction = m_SoloSplit.TakeReadyAction(Client()->State() == IClient::STATE_ONLINE, Client()->DummyConnected(), PlayerIdsValid, time_get());
 	if(SoloSplitAction != 0)
@@ -2766,8 +2132,7 @@ void CTClient::CheckFriendOnline()
 void CTClient::ResetFriendEnter()
 {
 	m_FriendEnterTracker.Reset();
-	m_FriendEnterPendingNames.clear();
-	m_FriendEnterPendingSendAt = 0.0f;
+	m_FriendEnterPending.Reset();
 	m_FriendEnterNextCheck = 0.0f;
 }
 
@@ -2799,33 +2164,10 @@ void CTClient::CheckFriendEnterGreet()
 		ResetFriendEnter();
 		return;
 	}
-	if(!AutoGreetEnabled)
-	{
-		m_FriendEnterPendingNames.clear();
-		m_FriendEnterPendingSendAt = 0.0f;
-	}
+	if(!AutoGreetEnabled || g_Config.m_QmFriendEnterGreetText[0] == '\0')
+		m_FriendEnterPending.Reset();
 
-	static constexpr float FriendEnterGreetDelaySeconds = 3.0f;
 	const float Now = LocalTime();
-	if(AutoGreetEnabled && !m_FriendEnterPendingNames.empty() && Now >= m_FriendEnterPendingSendAt)
-	{
-		// 空配置表示关闭问候；非空则按当前语言 Localize 后再发送
-		if(g_Config.m_QmFriendEnterGreetText[0] != '\0')
-		{
-			char aMsg[256];
-			aMsg[0] = '\0';
-			str_append(aMsg, m_FriendEnterPendingNames.c_str(), sizeof(aMsg));
-			if(aMsg[0] != '\0')
-				str_append(aMsg, ": ", sizeof(aMsg));
-			str_append(aMsg, ResolveFriendEnterLocalizeText(g_Config.m_QmFriendEnterGreetText, s_pFriendEnterGreetDefaultText), sizeof(aMsg));
-
-			if(aMsg[0] != '\0')
-				GameClient()->m_Chat.SendChat(0, aMsg);
-		}
-		m_FriendEnterPendingNames.clear();
-		m_FriendEnterPendingSendAt = 0.0f;
-	}
-
 	if(Now < m_FriendEnterNextCheck)
 		return;
 	m_FriendEnterNextCheck = Now + 0.2f;
@@ -2846,6 +2188,17 @@ void CTClient::CheckFriendEnterGreet()
 			ClientId == LocalMain || (HasDummy && ClientId == LocalDummy)});
 	}
 	const auto NewFriends = m_FriendEnterTracker.Update(vCurrentClients, Now, IgnoreClanSetting != 0);
+
+	if(AutoGreetEnabled && g_Config.m_QmFriendEnterGreetText[0] != '\0')
+	{
+		m_FriendEnterPending.Update(NewFriends, vCurrentClients);
+		m_FriendEnterPending.TrySend([&](const std::string &Names) {
+			char aMessage[256];
+			str_format(aMessage, sizeof(aMessage), "%s: %s", Names.c_str(),
+				ResolveFriendEnterLocalizeText(g_Config.m_QmFriendEnterGreetText, s_pFriendEnterGreetDefaultText));
+			return GameClient()->m_Chat.SendAutomaticChat(g_Config.m_ClDummy, aMessage);
+		});
+	}
 
 	if(NewFriends.empty())
 		return;
@@ -2871,15 +2224,6 @@ void CTClient::CheckFriendEnterGreet()
 		if(!BroadcastText.empty())
 			GameClient()->m_Broadcast.DoBroadcast(BroadcastText.c_str());
 	}
-
-	if(!AutoGreetEnabled || g_Config.m_QmFriendEnterGreetText[0] == '\0')
-		return;
-
-	if(!m_FriendEnterPendingNames.empty())
-		m_FriendEnterPendingNames.push_back(' ');
-	m_FriendEnterPendingNames.append(NewNames);
-	if(m_FriendEnterPendingSendAt <= 0.0f)
-		m_FriendEnterPendingSendAt = Now + FriendEnterGreetDelaySeconds;
 }
 
 void CTClient::QueueAspectApply()
@@ -2957,7 +2301,8 @@ void CTClient::OnStateChange(int NewState, int OldState)
 		m_LastRepeatTime = 0;
 		m_LastRepeatKeyPressTime = 0;
 		m_RepeatKeyDown = false;
-		m_LastAutoReplyTime = 0;
+		m_AutoReplySendState.Reset();
+		m_PreviousOwnMessage[0] = '\0';
 		m_RedPacketAutoClaim.Reset();
 		m_FinishTextTimeout = 0.0f;
 		for(int i = 0; i < NUM_DUMMIES; ++i)

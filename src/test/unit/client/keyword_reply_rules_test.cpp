@@ -170,3 +170,123 @@ TEST(KeywordReplyRules, ExternalConfigInvalidatesInitializedEditorRows)
 	EXPECT_TRUE(QmKeywordReplyRules::EditorConfigChanged(true, "old", "external"));
 	EXPECT_FALSE(QmKeywordReplyRules::EditorConfigChanged(true, nullptr, nullptr));
 }
+
+TEST(KeywordReplyRules, OverflowPreservesPreviousConfigIncludingUtf8)
+{
+	char aConfig[32] = "existing=>reply";
+	const std::string Rules = "你好=>" + std::string(40, 'X');
+	EXPECT_FALSE(QmKeywordReplyRules::EncodeForConfig(Rules.c_str(), aConfig, sizeof(aConfig)));
+	EXPECT_STREQ(aConfig, "existing=>reply");
+}
+
+TEST(KeywordReplyRules, EncodingExpansionIsIncludedInCapacityCheck)
+{
+	char aConfig[8] = "old";
+	EXPECT_FALSE(QmKeywordReplyRules::EncodeForConfig("a=>\\\\\\", aConfig, sizeof(aConfig)));
+	EXPECT_STREQ(aConfig, "old");
+	EXPECT_TRUE(QmKeywordReplyRules::EncodeForConfig("a=>1234", aConfig, sizeof(aConfig)));
+	EXPECT_STREQ(aConfig, "a=>1234");
+}
+
+TEST(KeywordReplyRules, FailedRuleSaveCanBeShortenedAndSavedWithoutLosingOtherRules)
+{
+	char aConfig[32] = "old=>reply";
+	std::vector<QmKeywordReplyRules::SRule> vRules = {{"first", "reply"}, {"second", std::string(50, 'X')}};
+	EXPECT_FALSE(QmKeywordReplyRules::EncodeRules(vRules, aConfig, sizeof(aConfig)));
+	EXPECT_STREQ(aConfig, "old=>reply");
+	vRules[1].m_Reply = "ok";
+	EXPECT_TRUE(QmKeywordReplyRules::EncodeRules(vRules, aConfig, sizeof(aConfig)));
+	char aDecoded[32];
+	QmKeywordReplyRules::DecodeFromConfig(aConfig, aDecoded, sizeof(aDecoded));
+	const auto vParsed = QmKeywordReplyRules::ParseDecoded(aDecoded);
+	ASSERT_EQ(vParsed.size(), 2u);
+	EXPECT_EQ(vParsed[0].m_Reply, "reply");
+	EXPECT_EQ(vParsed[1].m_Reply, "ok");
+}
+
+TEST(KeywordReplyRules, EditorAndMatcherShareFlagsAndEscaping)
+{
+	char aConfig[128];
+	ASSERT_TRUE(QmKeywordReplyRules::EncodeRules({{"^hello$", "C:\\new|你好", true, true}}, aConfig, sizeof(aConfig)));
+	QmKeywordReplyRules::CRuleSet Rules;
+	Rules.SetConfig(aConfig);
+	char aReply[64];
+	bool Rename = false;
+	ASSERT_TRUE(Rules.Match("HELLO", aReply, sizeof(aReply), Rename, [](int Count) { return Count - 1; }));
+	EXPECT_STREQ(aReply, "你好");
+	EXPECT_TRUE(Rename);
+}
+
+TEST(KeywordReplyRules, DisabledRegexTreatsMetacharactersLiterally)
+{
+	QmKeywordReplyRules::CRuleSet Rules;
+	Rules.SetConfig("[abc]=>literal");
+	char aReply[32];
+	bool Rename = false;
+	EXPECT_FALSE(Rules.Match("a", aReply, sizeof(aReply), Rename, [](int) { return 0; }));
+	EXPECT_TRUE(Rules.Match("look [ABC]", aReply, sizeof(aReply), Rename, [](int) { return 0; }));
+	EXPECT_STREQ(aReply, "literal");
+}
+
+TEST(KeywordReplyRules, LiteralKeywordsDoNotGuessChineseNegation)
+{
+	QmKeywordReplyRules::CRuleSet Rules;
+	Rules.SetConfig("帮忙=>在的");
+	char aReply[32];
+	bool Rename = false;
+	EXPECT_TRUE(Rules.Match("有没有人帮忙", aReply, sizeof(aReply), Rename, [](int) { return 0; }));
+	EXPECT_STREQ(aReply, "在的");
+	EXPECT_TRUE(Rules.Match("不用帮忙", aReply, sizeof(aReply), Rename, [](int) { return 0; }));
+}
+
+TEST(KeywordReplyRules, LiteralModeKeepsSupportedKeywordSeparators)
+{
+	QmKeywordReplyRules::CRuleSet Rules;
+	Rules.SetConfig("one，two；three｜four,five;six|七=>ok");
+	for(const char *pMessage : {"one", "two", "three", "four", "five", "six", "七"})
+	{
+		SCOPED_TRACE(pMessage);
+		char aReply[32];
+		bool Rename = false;
+		EXPECT_TRUE(Rules.Match(pMessage, aReply, sizeof(aReply), Rename, [](int) { return 0; }));
+	}
+}
+
+TEST(KeywordReplyRules, RegexModeKeepsAlternationTogetherAndInvalidRegexDoesNotReply)
+{
+	QmKeywordReplyRules::CRuleSet Rules;
+	Rules.SetConfig("[regex] /^(one|two)$/i=>ok");
+	char aReply[32];
+	bool Rename = false;
+	EXPECT_TRUE(Rules.Match("TWO", aReply, sizeof(aReply), Rename, [](int) { return 0; }));
+	EXPECT_FALSE(Rules.Match("two words", aReply, sizeof(aReply), Rename, [](int) { return 0; }));
+	Rules.SetConfig("[regex] [=>invalid");
+	EXPECT_FALSE(Rules.Match("[", aReply, sizeof(aReply), Rename, [](int) { return 0; }));
+}
+
+TEST(KeywordReplyRules, ConfigChangeReplacesCompiledRulesAndClearingDisablesThem)
+{
+	QmKeywordReplyRules::CRuleSet Rules;
+	char aReply[32];
+	bool Rename = false;
+	Rules.SetConfig("old=>first");
+	EXPECT_TRUE(Rules.Match("old", aReply, sizeof(aReply), Rename, [](int) { return 0; }));
+	Rules.SetConfig("new=>second");
+	EXPECT_FALSE(Rules.Match("old", aReply, sizeof(aReply), Rename, [](int) { return 0; }));
+	EXPECT_TRUE(Rules.Match("new", aReply, sizeof(aReply), Rename, [](int) { return 0; }));
+	Rules.SetConfig("");
+	EXPECT_FALSE(Rules.Match("new", aReply, sizeof(aReply), Rename, [](int) { return 0; }));
+}
+
+TEST(KeywordReplyRules, EmptyReplyAlternativesDoNotHideOtherMatchingRules)
+{
+	QmKeywordReplyRules::CRuleSet Rules;
+	Rules.SetConfig("hello=>| |　|\\nhello=>ok");
+	char aReply[32];
+	bool Rename = false;
+	EXPECT_TRUE(Rules.Match("hello", aReply, sizeof(aReply), Rename, [](int Count) {
+		EXPECT_EQ(Count, 1);
+		return 0;
+	}));
+	EXPECT_STREQ(aReply, "ok");
+}

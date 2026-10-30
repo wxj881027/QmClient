@@ -2960,6 +2960,7 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 	if(MsgId == NETMSGTYPE_SV_CHAT)
 	{
 		CNetMsg_Sv_Chat *pMsg = (CNetMsg_Sv_Chat *)pRawMsg;
+		m_TClient.OnChatMessage(pMsg, Conn);
 		if(pMsg->m_ClientId < 0 && pMsg->m_pMessage != nullptr)
 		{
 			m_TClient.HandleLocalSaveMessage(pMsg, Conn);
