@@ -30,7 +30,7 @@ import java.util.concurrent.Executors;
 public final class QmMediaExporter {
 	private static final int REQUEST_EXPORT = 0x514d;
 	private final Activity activity;
-	private final ExecutorService worker = Executors.newSingleThreadExecutor();
+	private ExecutorService worker;
 	private final Set<String> excludedPaths = new HashSet<>();
 	private File root;
 	private boolean videos;
@@ -55,7 +55,8 @@ public final class QmMediaExporter {
 	public void close() {
 		closed = true;
 		try {
-			worker.shutdownNow();
+			if(worker != null)
+				worker.shutdownNow();
 		} catch(RuntimeException | OutOfMemoryError ignored) {
 		} finally {
 			clearDialog();
@@ -69,6 +70,15 @@ public final class QmMediaExporter {
 		} catch(RuntimeException | OutOfMemoryError ignored) {
 			// 失败提示不能覆盖已经清理的操作状态。
 		}
+	}
+
+	// 创建、提交和关闭均由Activity主线程调用；构造异常交给提交方的失败出口。
+	private ExecutorService getWorker() {
+		if(closed)
+			throw new IllegalStateException("Media exporter is closed");
+		if(worker == null)
+			worker = Executors.newSingleThreadExecutor();
+		return worker;
 	}
 
 	private void clearDialog() {
@@ -212,7 +222,7 @@ public final class QmMediaExporter {
 		Uri target = data.getData();
 		notifyUser(R.string.qm_media_copying);
 		try {
-			worker.execute(() -> {
+			getWorker().execute(() -> {
 				boolean success = false;
 				try {
 					checkWorkerOpen();
@@ -248,7 +258,7 @@ public final class QmMediaExporter {
 		busy = true;
 		notifyUser(R.string.qm_media_copying);
 		try {
-			worker.execute(() -> {
+			getWorker().execute(() -> {
 				File staged = null;
 				boolean success = false;
 				Uri uri = null;
