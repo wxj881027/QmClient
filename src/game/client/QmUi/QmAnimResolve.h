@@ -67,6 +67,7 @@ ColorRGBA ResolveUiAnimInterpolatedColor(
 // Presentation State resolver for interruptible, redirectable UI surfaces.
 // The caller updates Target from business state; this helper keeps a single
 // spring track per property and lets MERGE_TARGET preserve velocity continuity.
+// 目标缓存由传入运行时持有，随 Reset 清理；Epsilon 控制目标变更阈值。
 float ResolveUiPresentationStateValue(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, EUiAnimProperty Property, float Target, const SUiSpringConfig &Spring, int Priority = 2, float Epsilon = 0.01f);
 void SetUiPresentationStateValue(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, EUiAnimProperty Property, float Value);
 

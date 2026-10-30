@@ -4755,6 +4755,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/ui/QmAnimTest.cpp
     src/test/unit/qmclient/ui/QmAnimSpringTest.cpp
     src/test/unit/qmclient/ui/QmAnimCoreTest.cpp
+    src/test/unit/qmclient/ui/qm_animation_completion_test.cpp
+    src/test/unit/qmclient/ui/qm_animation_resolver_lifetime_test.cpp
+    src/test/unit/qmclient/ui/qm_animation_motion_disable_test.cpp
     src/test/contract/qmclient/ui/qm_anim_contract_test.cpp
     src/test/unit/qmclient/ui/QmAnimDropdownTest.cpp
     src/test/unit/qmclient/ui/QmAnimFormsTest.cpp
@@ -5640,6 +5643,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/support/ui_test_stubs.cpp
     src/test/support/datafile_writer_operations.h
     src/test/support/tracked_allocation_resource.h
+    src/test/support/qm_animation_lifecycle_fixture.h
     src/test/support/datafile_reader_operations.h
     src/test/support/datafile_wire_fixture.h
     src/game/client/components/qmclient/monitoring/monitoring_device_perf.cpp

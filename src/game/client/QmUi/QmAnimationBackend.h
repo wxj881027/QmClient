@@ -152,6 +152,8 @@ public:
 	void RegisterCustomEasing(uint32_t EasingId, FCustomEasing pfnEasing, void *pUser = nullptr);
 	void UnregisterCustomEasing(uint32_t EasingId);
 	float ResolveTargetValue(uint64_t NodeKey, EUiAnimProperty Property, float Target, const SUiAnimTransition &Transition);
+	// 展示状态可指定目标变化阈值；缓存与运行时一起重置和销毁。
+	float ResolveTargetValue(uint64_t NodeKey, EUiAnimProperty Property, float Target, const SUiAnimTransition &Transition, float Epsilon);
 	ColorRGBA ResolveColorFromValue(uint64_t NodeKey, const ColorRGBA &Current, const ColorRGBA &Target);
 	float ResolveColorMixValue(uint64_t NodeKey, const ColorRGBA &Target, float DurationSec, EEasing Easing);
 
