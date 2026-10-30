@@ -5470,6 +5470,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/render_target_geometry_test.cpp
     src/test/unit/engine/graphics/opengl_buffer_data_test.cpp
     src/test/unit/engine/graphics/render_target_policy_test.cpp
+    src/test/unit/engine/graphics/render_target_readback_allocation_test.cpp
     src/test/unit/engine/graphics/render_target_readback_queue_test.cpp
     src/test/unit/engine/graphics/render_target_pool_test.cpp
     src/test/unit/qmclient/client/dummy_miniview_render_test.cpp

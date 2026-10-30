@@ -1,11 +1,13 @@
 #ifndef ENGINE_CLIENT_RENDER_TARGET_READBACK_QUEUE_H
 #define ENGINE_CLIENT_RENDER_TARGET_READBACK_QUEUE_H
 
+#include <base/borrowed_allocator.h>
 #include <base/sphore.h>
 
 #include <engine/graphics.h>
 
 #include <deque>
+#include <limits>
 #include <memory>
 #include <utility>
 
@@ -15,10 +17,10 @@ class CRenderTargetReadbackQueue
 public:
 	struct SAllocation
 	{
-		int m_Index;
-		uint32_t m_Generation;
-		CImageInfo *m_pImage;
-		CSemaphore *m_pCompletion;
+		int m_Index = -1;
+		uint32_t m_Generation = 0;
+		CImageInfo *m_pImage = nullptr;
+		CSemaphore *m_pCompletion = nullptr;
 	};
 
 private:
@@ -41,7 +43,7 @@ private:
 	};
 
 	// 新增请求不能移动已交给渲染线程的 Image 地址。
-	std::deque<SRequest> m_Requests;
+	std::deque<SRequest, CBorrowedAllocator<SRequest>> m_Requests;
 	int m_FirstFree = -1;
 	uint32_t m_Generation = 0;
 
@@ -85,22 +87,45 @@ private:
 	}
 
 public:
+	// 内存域须存活到队列销毁，包括 Clear 后保留的容器存储。
+	explicit CRenderTargetReadbackQueue(IAllocationResource *pResource = nullptr) :
+		m_Requests(CBorrowedAllocator<SRequest>(pResource)) {}
 	~CRenderTargetReadbackQueue() { Clear(); }
 
-	SAllocation Allocate()
+	SAllocation Allocate() noexcept
+	{
+		return Allocate([] { return std::make_unique<CSemaphore>(); });
+	}
+
+	// 工厂仅同步借用；返回新建且未发信号的完成对象，失败不发布请求。
+	template<typename TCreateCompletion>
+	SAllocation Allocate(TCreateCompletion &&CreateCompletion) noexcept
 	{
 		CleanupCanceled();
 		int Index = m_FirstFree;
 		if(Index < 0)
 		{
+			if(m_Requests.size() > static_cast<size_t>(std::numeric_limits<int>::max()) ||
+				m_Requests.size() == m_Requests.max_size())
+				return {};
 			Index = static_cast<int>(m_Requests.size());
-			m_Requests.emplace_back();
+			try
+			{
+				// 先准备信号，再扩容；任何分配失败都不留下未登记的空槽。
+				std::unique_ptr<CSemaphore> pCompletion = CreateCompletion();
+				if(pCompletion == nullptr)
+					return {};
+				m_Requests.emplace_back();
+				m_Requests.back().m_pCompletion = std::move(pCompletion);
+			}
+			catch(...)
+			{
+				return {};
+			}
 		}
 		else
 			m_FirstFree = m_Requests[Index].m_NextFree;
 		SRequest &Request = m_Requests[Index];
-		if(Request.m_pCompletion == nullptr)
-			Request.m_pCompletion = std::make_unique<CSemaphore>();
 		if(++m_Generation == 0)
 			++m_Generation;
 		Request.m_Generation = m_Generation;

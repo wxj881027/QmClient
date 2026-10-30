@@ -1154,6 +1154,8 @@ IGraphics::CRenderTargetReadbackHandle CGraphics_Threaded::BeginRenderTargetRead
 		KickCommandBuffer();
 
 	const auto Allocation = m_RenderTargetReadbacks.Allocate();
+	if(Allocation.m_Index < 0)
+		return CRenderTargetReadbackHandle();
 	const auto Handle = CreateRenderTargetReadbackHandle(Allocation.m_Index, Allocation.m_Generation);
 
 	CCommandBuffer::SCommand_RenderTarget_Readback Cmd;
