@@ -38,6 +38,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Create(const CCommandBuf
 
 	public:
 		GLenum m_Status = 0;
+		bool m_FramebufferChecked = false;
 		explicit COperations(bool SeparateBindings) :
 			m_SeparateBindings(SeparateBindings) {}
 		opengl_render_target::SBindings GetBindings() noexcept override
@@ -86,6 +87,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Create(const CCommandBuf
 		}
 		bool IsFramebufferComplete() noexcept override
 		{
+			m_FramebufferChecked = true;
 			m_Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 			return m_Status == GL_FRAMEBUFFER_COMPLETE;
 		}
@@ -106,7 +108,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Create(const CCommandBuf
 
 	COperations Operations(IsNewApi());
 	if(!opengl_render_target::Create(m_vRenderTargets, pCommand->m_TargetId, pCommand->m_Width, pCommand->m_Height, Operations) &&
-		Operations.m_Status != 0 && Operations.m_Status != GL_FRAMEBUFFER_COMPLETE)
+		Operations.m_FramebufferChecked && Operations.m_Status != GL_FRAMEBUFFER_COMPLETE)
 		dbg_msg("opengl", "render target %d incomplete: 0x%x", pCommand->m_TargetId, Operations.m_Status);
 }
 
