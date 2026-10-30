@@ -74,6 +74,19 @@ mod ffi {
         /// Register a UUID by name with the specified ID.
         ///
         /// The IDs must be registered in order starting from [`OFFSET_UUID`].
+        /// 名称由注册表复制，调用后原字符串可以释放。
+        ///
+        /// ```
+        /// # extern crate ddnet_test;
+        /// # use ddnet_engine_shared::{CUuidManager, OFFSET_UUID};
+        /// # use std::ffi::CString;
+        /// let mut manager = CUuidManager::New();
+        /// {
+        ///     let name = CString::new("temporary@uuid-test").unwrap();
+        ///     manager.pin_mut().RegisterName(OFFSET_UUID, name.as_c_str().into());
+        /// }
+        /// assert_eq!(manager.GetName(OFFSET_UUID), "temporary@uuid-test");
+        /// ```
         ///
         /// ```
         /// # extern crate ddnet_test;

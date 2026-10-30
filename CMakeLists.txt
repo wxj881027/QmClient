@@ -5532,6 +5532,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/translate/translate_local_endpoint_test.cpp
     src/test/unit/base/unix_test.cpp
     src/test/unit/engine/uuid_test.cpp
+    src/test/unit/engine/uuid_registry_test.cpp
     src/test/unit/base/vmath_test.cpp
     src/test/unit/client/voice_core_test.cpp
     src/test/unit/client/voice_vad_state_test.cpp
