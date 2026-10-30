@@ -52,6 +52,17 @@ namespace qm_race_timing
 		return TickDifference(Current, RoundStart) / TickSpeed;
 	}
 
+	inline float GameTimerTextWidth(int64_t Centiseconds, float Minutes, float Hours, float Days, float TwoDigitDays, float ThreeDigitDays) noexcept
+	{
+		if(Centiseconds >= 100LL * 24 * 3600 * 100)
+			return ThreeDigitDays;
+		if(Centiseconds >= 10LL * 24 * 3600 * 100)
+			return TwoDigitDays;
+		if(Centiseconds >= 24LL * 3600 * 100)
+			return Days;
+		return Centiseconds >= 3600LL * 100 ? Hours : Minutes;
+	}
+
 	inline bool CanRestartRecording(int Current, int Start, int TickSpeed) noexcept
 	{
 		return TickDifference(Current, Start) > static_cast<int64_t>(TickSpeed) * 10;

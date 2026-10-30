@@ -1,16 +1,53 @@
 #ifndef ENGINE_CLIENT_QM_CRASH_REPORT_MARKER_H
 #define ENGINE_CLIENT_QM_CRASH_REPORT_MARKER_H
 
+#include "qm_crash_report_file.h"
+
 #include <base/detect.h>
+#include <base/str.h>
+
+#include <charconv>
+#include <cstdint>
+#include <optional>
+#include <string_view>
+#include <system_error>
+
+namespace QmCrashReportMarker
+{
+	constexpr unsigned MAX_TIMESTAMP_BYTES = 64;
+
+	inline std::optional<int64_t> ParseStartedAt(std::string_view Text) noexcept
+	{
+		const auto IsSpace = [](char Character) { return str_isspace(Character) || Character == '\v' || Character == '\f'; };
+		while(!Text.empty() && IsSpace(Text.front()))
+			Text.remove_prefix(1);
+		while(!Text.empty() && IsSpace(Text.back()))
+			Text.remove_suffix(1);
+		if(!Text.empty() && Text.front() == '+')
+			Text.remove_prefix(1);
+		if(Text.empty())
+			return std::nullopt;
+		int64_t Timestamp = 0;
+		const auto Parsed = std::from_chars(Text.data(), Text.data() + Text.size(), Timestamp, 10);
+		if(Parsed.ec != std::errc{} || Parsed.ptr != Text.data() + Text.size() || Timestamp <= 0)
+			return std::nullopt;
+		return Timestamp;
+	}
+
+	// 标记沿用正十进制时间戳格式，读取额度不依赖磁盘声明长度。
+	inline std::optional<int64_t> ReadStartedAt(const char *pPath, IAllocationResource *pResource = nullptr) noexcept
+	{
+		const auto Text = QmCrashReportFile::ReadFile(pPath, pResource, MAX_TIMESTAMP_BYTES);
+		return Text ? ParseStartedAt(std::string_view(Text->data(), Text->size())) : std::nullopt;
+	}
+}
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <base/crash_output.h>
 #include <base/crash_output_windows.h>
-#include <base/str.h>
 #include <base/system.h>
 
 #include <atomic>
-#include <cstdint>
 #include <iterator>
 
 namespace QmCrashReportMarker

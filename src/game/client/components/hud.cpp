@@ -463,10 +463,7 @@ namespace
 			static float s_TextWidth0D = pTextRender->TextWidth(Result.m_FontSize, "0d 00:00:00", -1, -1.0f);
 			static float s_TextWidth00D = pTextRender->TextWidth(Result.m_FontSize, "00d 00:00:00", -1, -1.0f);
 			static float s_TextWidth000D = pTextRender->TextWidth(Result.m_FontSize, "000d 00:00:00", -1, -1.0f);
-			Result.m_W = TimeCentiseconds >= 3600 * 24 * 100 ? s_TextWidth000D :
-									   (TimeCentiseconds >= 3600 * 24 * 10 ? s_TextWidth00D :
-														 (TimeCentiseconds >= 3600 * 24 ? s_TextWidth0D :
-																		  (TimeCentiseconds >= 3600 ? s_TextWidthH : s_TextWidthM)));
+			Result.m_W = qm_race_timing::GameTimerTextWidth(TimeCentiseconds, s_TextWidthM, s_TextWidthH, s_TextWidth0D, s_TextWidth00D, s_TextWidth000D);
 			Result.m_X = HudWidth * 0.5f - Result.m_W * 0.5f;
 			Result.m_Left = Result.m_X;
 			Result.m_Visible = true;
@@ -481,7 +478,8 @@ namespace
 			pGameInfoObj->m_WarmupTimer, pGameInfoObj->m_TimeLimit, Client.GameTickSpeed(),
 			(pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_RACETIME) != 0,
 			(pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER) != 0);
-		str_time(Time * 100, TIME_DAYS, Result.m_aText, sizeof(Result.m_aText));
+		const int64_t TimeCentiseconds = Time * 100;
+		str_time(TimeCentiseconds, TIME_DAYS, Result.m_aText, sizeof(Result.m_aText));
 
 		static float s_TextWidthM = pTextRender->TextWidth(Result.m_FontSize, "00:00", -1, -1.0f);
 		static float s_TextWidthH = pTextRender->TextWidth(Result.m_FontSize, "00:00:00", -1, -1.0f);
@@ -489,10 +487,7 @@ namespace
 		static float s_TextWidth00D = pTextRender->TextWidth(Result.m_FontSize, "00d 00:00:00", -1, -1.0f);
 		static float s_TextWidth000D = pTextRender->TextWidth(Result.m_FontSize, "000d 00:00:00", -1, -1.0f);
 
-		Result.m_W = Time >= 3600 * 24 * 100 ? s_TextWidth000D :
-						       (Time >= 3600 * 24 * 10 ? s_TextWidth00D :
-										 (Time >= 3600 * 24 ? s_TextWidth0D :
-												      (Time >= 3600 ? s_TextWidthH : s_TextWidthM)));
+		Result.m_W = qm_race_timing::GameTimerTextWidth(TimeCentiseconds, s_TextWidthM, s_TextWidthH, s_TextWidth0D, s_TextWidth00D, s_TextWidth000D);
 
 		Result.m_X = HudWidth * 0.5f - Result.m_W * 0.5f;
 		Result.m_Left = Result.m_X;

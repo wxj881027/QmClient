@@ -63,9 +63,9 @@ namespace QmCrashReportFile
 	}
 
 	// 仅消费可取长度的报告文件；长度是快速拒绝条件，实际读取仍独立受限。
-	inline std::optional<CText> ReadFile(const char *pPath, IAllocationResource *pResource = nullptr) noexcept
+	inline std::optional<CText> ReadFile(const char *pPath, IAllocationResource *pResource = nullptr, unsigned Limit = MAX_REPORT_BYTES) noexcept
 	{
-		if(!pPath || !pPath[0])
+		if(!pPath || !pPath[0] || Limit > MAX_REPORT_BYTES)
 			return std::nullopt;
 		try
 		{
@@ -74,10 +74,10 @@ namespace QmCrashReportFile
 			if(!File)
 				return std::nullopt;
 			const int64_t Length = io_length(File.get());
-			if(Length < 0 || Length > MAX_REPORT_BYTES)
+			if(Length < 0 || Length > Limit)
 				return std::nullopt;
 			detail::CFileInput Input(File.get());
-			auto Text = ReadText(Input, MAX_REPORT_BYTES, pResource);
+			auto Text = ReadText(Input, Limit, pResource);
 			const bool Closed = io_close(File.release()) == 0;
 			if(!Closed)
 				return std::nullopt;

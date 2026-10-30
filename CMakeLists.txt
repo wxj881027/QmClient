@@ -5242,6 +5242,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_local_save_display_test.cpp
     src/test/unit/qmclient/client/qm_race_timing_test.cpp
     src/test/unit/qmclient/client/qm_game_timer_test.cpp
+    src/test/unit/qmclient/client/qm_game_timer_width_test.cpp
     src/test/unit/qmclient/client/qm_race_recording_timing_test.cpp
     src/test/contract/qmclient/client/qm_storage_path_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_cards_surface_contract_test.cpp
@@ -5731,6 +5732,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/qm_crash_report_file_test.cpp
     src/test/integration/client/qm_crash_report_file_test.cpp
     src/test/integration/client/qm_crash_report_marker_test.cpp
+    src/test/unit/client/qm_crash_report_baseline_test.cpp
+    src/test/integration/client/qm_crash_report_baseline_test.cpp
     src/engine/client/favorites.cpp
     src/engine/client/friends.cpp
     src/engine/client/serverbrowser.cpp

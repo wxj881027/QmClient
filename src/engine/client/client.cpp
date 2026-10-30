@@ -277,15 +277,21 @@ static int FindPendingQmCrashReportCallback(const CFsFileInfo *pInfo, int IsDir,
 	return 0;
 }
 
-static bool ReadQmCrashReporterStartedAt(IStorage *pStorage, int64_t &StartedAt)
+static bool ReadQmCrashReporterStartedAt(IStorage *pStorage, int64_t &StartedAt) noexcept
 {
 	StartedAt = 0;
-	char *pState = pStorage->ReadFileStr(gs_pQmCrashReporterBaselineFile, IStorage::TYPE_SAVE);
-	if(pState == nullptr)
+	try
+	{
+		char aPath[IO_MAX_PATH_LENGTH + 64];
+		pStorage->GetCompletePath(IStorage::TYPE_SAVE, gs_pQmCrashReporterBaselineFile, aPath, sizeof(aPath));
+		const auto Timestamp = QmCrashReportMarker::ReadStartedAt(aPath);
+		StartedAt = Timestamp.value_or(0);
+		return Timestamp.has_value();
+	}
+	catch(...)
+	{
 		return false;
-	StartedAt = str_toint64_base(pState);
-	free(pState);
-	return StartedAt > 0;
+	}
 }
 
 static bool WriteQmCrashReporterStartedAt(IStorage *pStorage, int64_t StartedAt)
