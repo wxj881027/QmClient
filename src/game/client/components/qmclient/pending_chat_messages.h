@@ -81,6 +81,19 @@ public:
 		return PrepareAndAdmit(LastSend, Now, Frequency, [&] { return std::move(Message); }, std::forward<TSend>(Send));
 	}
 
+	template<typename TPrepare>
+	static std::optional<SMessage> TryPrepare(TPrepare &&Prepare) noexcept
+	{
+		try
+		{
+			return std::forward<TPrepare>(Prepare)();
+		}
+		catch(...)
+		{
+			return std::nullopt;
+		}
+	}
+
 	// 准备与发送回调仅同步借用且不能重入本队列；只回退准备异常。
 	template<typename TPrepare, typename TSend>
 	EAdmission PrepareAndAdmit(int64_t LastSend, int64_t Now, int64_t Frequency, TPrepare &&Prepare, TSend &&Send)
@@ -91,15 +104,9 @@ public:
 		EAdmission Admission = Reserve(LastSend, Now, Frequency, PendingCount);
 		if(Admission == EAdmission::REJECTED)
 			return Admission;
-		std::optional<SMessage> Message;
-		try
-		{
-			Message.emplace(Prepare());
-		}
-		catch(...)
-		{
+		auto Message = TryPrepare(std::forward<TPrepare>(Prepare));
+		if(!Message)
 			return EAdmission::REJECTED;
-		}
 		// 发送可能已有外部副作用，不能把它的异常伪装成正文准备失败。
 		if(Admission == EAdmission::SENT && !Send(std::as_const(*Message)))
 			Admission = EAdmission::QUEUED;

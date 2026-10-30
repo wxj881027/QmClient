@@ -3908,10 +3908,13 @@ CChat::EChatSendResult CChat::SendChatQueued(int Team, const char *pLine, bool A
 		const auto PrepareMessage = [&] {
 			return CPendingChatMessages::SMessage{Team, Connection, Connection >= 0 ? GameClient()->m_aLocalIds[Connection] : -1, pLine, pLocalOriginal != nullptr ? pLocalOriginal : ""};
 		};
+		auto Message = CPendingChatMessages::TryPrepare(PrepareMessage);
+		if(!Message)
+			return EChatSendResult::REJECTED;
 		const auto SendMessage = [&](const CPendingChatMessages::SMessage &Pending) {
 			return SendChat(Pending.m_Team, Pending.m_Text.c_str(), Pending.m_Original.empty() ? nullptr : Pending.m_Original.c_str(), Pending.m_Connection);
 		};
-		const EChatSendResult Result = static_cast<EChatSendResult>(m_PendingChatMessages.PrepareAndAdmit(m_LastChatSend, time(), time_freq(), PrepareMessage, SendMessage));
+		const EChatSendResult Result = static_cast<EChatSendResult>(m_PendingChatMessages.Admit(m_LastChatSend, time(), time_freq(), std::move(*Message), SendMessage));
 
 		if(Result != EChatSendResult::REJECTED)
 		{
