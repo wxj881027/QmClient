@@ -4929,6 +4929,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/map_load_allocation_test.cpp
     src/test/integration/engine/map_tile_input_budget_test.cpp
     src/test/integration/engine/render_target_capture_queue_test.cpp
+    src/test/integration/engine/render_target_completion_prepare_test.cpp
     src/test/integration/client/editor_save_job_test.cpp
     src/test/integration/client/editor_save_submission_test.cpp
     src/test/unit/base/dbg_test.cpp
@@ -5471,6 +5472,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/opengl_buffer_data_test.cpp
     src/test/unit/engine/graphics/render_target_policy_test.cpp
     src/test/unit/engine/graphics/render_target_readback_allocation_test.cpp
+    src/test/unit/engine/graphics/render_target_readback_initialization_test.cpp
     src/test/unit/engine/graphics/render_target_readback_queue_test.cpp
     src/test/unit/engine/graphics/render_target_pool_test.cpp
     src/test/unit/qmclient/client/dummy_miniview_render_test.cpp
@@ -5523,6 +5525,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/theme_catalog_test.cpp
     src/test/unit/client/menu_background_prepare_test.cpp
     src/test/unit/base/thread_test.cpp
+    src/test/unit/base/semaphore_creation_test.cpp
     src/test/unit/base/thread_startup_test.cpp
     src/test/integration/base/qm_test_terminate_diagnostics_test.cpp
     src/test/integration/base/qm_mac_exception_recovery_test.cpp

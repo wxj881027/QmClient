@@ -9,6 +9,7 @@
 #include <deque>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <utility>
 
 // 主线程管理请求；渲染线程只写分配时取得的 Image，并在写完后发出完成信号。
@@ -43,15 +44,17 @@ private:
 	};
 
 	// 新增请求不能移动已交给渲染线程的 Image 地址。
-	std::deque<SRequest, CBorrowedAllocator<SRequest>> m_Requests;
+	using CRequests = std::deque<SRequest, CBorrowedAllocator<SRequest>>;
+	IAllocationResource *m_pResource;
+	std::optional<CRequests> m_Requests;
 	int m_FirstFree = -1;
 	uint32_t m_Generation = 0;
 
 	SRequest *Get(int Index, uint32_t Generation)
 	{
-		if(Index < 0 || static_cast<size_t>(Index) >= m_Requests.size())
+		if(!m_Requests || Index < 0 || static_cast<size_t>(Index) >= m_Requests->size())
 			return nullptr;
-		SRequest &Request = m_Requests[Index];
+		SRequest &Request = (*m_Requests)[Index];
 		if(Request.m_State == EState::FREE || Request.m_State == EState::CANCELED || Request.m_Generation != Generation)
 			return nullptr;
 		return &Request;
@@ -67,7 +70,7 @@ private:
 
 	void Release(int Index)
 	{
-		SRequest &Request = m_Requests[Index];
+		SRequest &Request = (*m_Requests)[Index];
 		Request.m_Image.Free();
 		Request.m_State = EState::FREE;
 		Request.m_NextFree = m_FirstFree;
@@ -76,9 +79,11 @@ private:
 
 	void CleanupCanceled()
 	{
-		for(size_t Index = 0; Index < m_Requests.size(); ++Index)
+		if(!m_Requests)
+			return;
+		for(size_t Index = 0; Index < m_Requests->size(); ++Index)
 		{
-			SRequest &Request = m_Requests[Index];
+			SRequest &Request = (*m_Requests)[Index];
 			if(Request.m_State != EState::CANCELED || Request.m_pCompletion->GetApproximateValue() <= 0)
 				continue;
 			Request.m_pCompletion->Wait();
@@ -88,16 +93,16 @@ private:
 
 public:
 	// 内存域须存活到队列销毁，包括 Clear 后保留的容器存储。
-	explicit CRenderTargetReadbackQueue(IAllocationResource *pResource = nullptr) :
-		m_Requests(CBorrowedAllocator<SRequest>(pResource)) {}
+	explicit CRenderTargetReadbackQueue(IAllocationResource *pResource = nullptr) noexcept :
+		m_pResource(pResource) {}
 	~CRenderTargetReadbackQueue() { Clear(); }
 
 	SAllocation Allocate() noexcept
 	{
-		return Allocate([] { return std::make_unique<CSemaphore>(); });
+		return Allocate([] { return CSemaphore::TryCreate(); });
 	}
 
-	// 工厂仅同步借用；返回新建且未发信号的完成对象，失败不发布请求。
+	// 工厂仅同步借用且不能重入队列；返回未发信号的新对象，失败不发布请求。
 	template<typename TCreateCompletion>
 	SAllocation Allocate(TCreateCompletion &&CreateCompletion) noexcept
 	{
@@ -105,18 +110,21 @@ public:
 		int Index = m_FirstFree;
 		if(Index < 0)
 		{
-			if(m_Requests.size() > static_cast<size_t>(std::numeric_limits<int>::max()) ||
-				m_Requests.size() == m_Requests.max_size())
+			if(m_Requests && (m_Requests->size() > static_cast<size_t>(std::numeric_limits<int>::max()) ||
+						 m_Requests->size() == m_Requests->max_size()))
 				return {};
-			Index = static_cast<int>(m_Requests.size());
 			try
 			{
 				// 先准备信号，再扩容；任何分配失败都不留下未登记的空槽。
 				std::unique_ptr<CSemaphore> pCompletion = CreateCompletion();
 				if(pCompletion == nullptr)
 					return {};
-				m_Requests.emplace_back();
-				m_Requests.back().m_pCompletion = std::move(pCompletion);
+				// deque 构造本身也可能分配，放在同一失败回退内。
+				if(!m_Requests)
+					m_Requests.emplace(CBorrowedAllocator<SRequest>(m_pResource));
+				Index = static_cast<int>(m_Requests->size());
+				m_Requests->emplace_back();
+				m_Requests->back().m_pCompletion = std::move(pCompletion);
 			}
 			catch(...)
 			{
@@ -124,8 +132,8 @@ public:
 			}
 		}
 		else
-			m_FirstFree = m_Requests[Index].m_NextFree;
-		SRequest &Request = m_Requests[Index];
+			m_FirstFree = (*m_Requests)[Index].m_NextFree;
+		SRequest &Request = (*m_Requests)[Index];
 		if(++m_Generation == 0)
 			++m_Generation;
 		Request.m_Generation = m_Generation;
@@ -155,7 +163,7 @@ public:
 			Release(Index);
 		if(State != IGraphics::ERenderTargetReadbackState::READY)
 			return false;
-		SRequest &Request = m_Requests[Index];
+		SRequest &Request = (*m_Requests)[Index];
 		Image = std::move(Request.m_Image);
 		Release(Index);
 		return true;
@@ -167,16 +175,19 @@ public:
 		if(State == IGraphics::ERenderTargetReadbackState::READY || State == IGraphics::ERenderTargetReadbackState::FAILED)
 			Release(Index);
 		else if(State == IGraphics::ERenderTargetReadbackState::PENDING)
-			m_Requests[Index].m_State = EState::CANCELED;
+			(*m_Requests)[Index].m_State = EState::CANCELED;
 		CleanupCanceled();
 	}
 
 	// 调用方必须先停止渲染线程或等待其空闲，再销毁请求和完成信号。
 	void Clear()
 	{
-		for(SRequest &Request : m_Requests)
-			Request.m_Image.Free();
-		m_Requests.clear();
+		if(m_Requests)
+		{
+			for(SRequest &Request : *m_Requests)
+				Request.m_Image.Free();
+			m_Requests->clear();
+		}
 		m_FirstFree = -1;
 		// 保留代数，设备重建后的新请求不能接管旧句柄。
 	}
