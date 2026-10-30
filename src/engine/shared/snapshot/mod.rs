@@ -67,6 +67,27 @@ fn type_id_from_i32(sixup: bool, mut type_: i32) -> Option<TypeId> {
             type_.try_into().expect("type id must be positive"),
         ))
     } else {
-        Some(TypeId::Uuid(CUuidManager::Global().GetUuid(type_).into()))
+        let manager = CUuidManager::Global();
+        // 非法构建类型仍按NewItem既有契约panic，不能回退为空UUID后写入快照。
+        assert!(
+            type_ - OFFSET_UUID < manager.NumUuids(),
+            "type id must be registered"
+        );
+        Some(TypeId::Uuid(manager.GetUuid(type_).into()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    extern crate ddnet_test;
+
+    use super::CSnapshotBuilder;
+
+    #[test]
+    #[should_panic(expected = "type id must be registered")]
+    fn unknown_uuid_type_preserves_builder_panic_contract() {
+        let mut builder = CSnapshotBuilder::New();
+        builder.Init(false);
+        builder.NewItem(i32::MAX, 0, &[]);
     }
 }

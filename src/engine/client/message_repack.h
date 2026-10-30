@@ -47,10 +47,11 @@ namespace client_message
 		}
 		else
 		{
-			if(Msg.m_MsgId - OFFSET_UUID >= Uuids.NumUuids())
+			if(!Uuids.IsValidId(Msg.m_MsgId))
 				return false;
 			Packer.AddInt(Msg.m_System ? 1 : 0);
-			Uuids.PackUuid(Msg.m_MsgId, &Packer);
+			if(!Uuids.PackUuid(Msg.m_MsgId, &Packer))
+				return false;
 		}
 		Packer.AddRaw(Msg.Data(), Msg.Size());
 		return !Packer.Error() && ((Flags & MSGFLAG_NOSEND) != 0 || Packer.Size() <= NET_MAX_CHUNK_SIZE);

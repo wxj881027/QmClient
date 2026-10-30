@@ -112,7 +112,7 @@ bool CUuid::operator<(const CUuid &Other) const
 
 static int GetIndex(int Id)
 {
-	return Id - OFFSET_UUID;
+	return Id < OFFSET_UUID ? UUID_INVALID : Id - OFFSET_UUID;
 }
 
 static int GetId(int Index)
@@ -140,13 +140,23 @@ void CUuidManager::RegisterName(int Id, const char *pName)
 	m_vNamesSorted.insert(Position, NameIndexed);
 }
 
+bool CUuidManager::IsValidId(int Id) const
+{
+	const int Index = GetIndex(Id);
+	return Index >= 0 && static_cast<size_t>(Index) < m_Names.size();
+}
+
 CUuid CUuidManager::GetUuid(int Id) const
 {
+	if(!IsValidId(Id))
+		return UUID_ZEROED;
 	return m_Names[GetIndex(Id)].m_Uuid;
 }
 
 const char *CUuidManager::GetName(int Id) const
 {
+	if(!IsValidId(Id))
+		return "";
 	return m_Names[GetIndex(Id)].m_Name.c_str();
 }
 
@@ -185,10 +195,13 @@ int CUuidManager::UnpackUuid(CUnpacker *pUnpacker, CUuid *pOut) const
 	return LookupUuid(*pUuid);
 }
 
-void CUuidManager::PackUuid(int Id, CPacker *pPacker) const
+bool CUuidManager::PackUuid(int Id, CPacker *pPacker) const
 {
+	if(!IsValidId(Id))
+		return false;
 	CUuid Uuid = GetUuid(Id);
 	pPacker->AddRaw(&Uuid, sizeof(Uuid));
+	return !pPacker->Error();
 }
 
 void CUuidManager::DebugDump() const

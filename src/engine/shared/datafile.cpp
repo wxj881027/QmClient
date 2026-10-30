@@ -886,6 +886,8 @@ int CDataFileReader::GetInternalItemType(int ExternalType)
 		return ExternalType;
 	}
 
+	if(!g_UuidManager.IsValidId(ExternalType))
+		return -1;
 	const CUuid Uuid = g_UuidManager.GetUuid(ExternalType);
 	int Start, Num;
 	GetType(ITEMTYPE_EX, &Start, &Num);
@@ -1042,6 +1044,7 @@ int CDataFileWriter::GetTypeFromIndex(int Index) const
 
 int CDataFileWriter::GetExtendedItemTypeIndex(int Type, const CUuid *pUuid)
 {
+	dbg_assert(Type == -1 || g_UuidManager.IsValidId(Type), "Unregistered external item type: %d", Type);
 	int Index = 0;
 	if(Type == -1)
 	{

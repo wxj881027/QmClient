@@ -76,9 +76,13 @@ void CSnapshot::InvalidateItem(int Index)
 
 const void *CSnapshot::FindItem(int Type, int Id) const
 {
+	if(Type < 0 || Id < 0 || Id > MAX_ID)
+		return nullptr;
 	int InternalType = Type;
 	if(Type >= OFFSET_UUID)
 	{
+		if(!g_UuidManager.IsValidId(Type))
+			return nullptr;
 		CUuid TypeUuid = g_UuidManager.GetUuid(Type);
 		int aTypeUuidItem[sizeof(CUuid) / sizeof(int32_t)];
 		for(size_t i = 0; i < sizeof(CUuid) / sizeof(int32_t); i++)
@@ -88,7 +92,7 @@ const void *CSnapshot::FindItem(int Type, int Id) const
 		for(int i = 0; i < m_NumItems; i++)
 		{
 			const CSnapshotItem *pItem = GetItem(i);
-			if(pItem->InternalType() == 0 && pItem->Id() >= OFFSET_UUID_TYPE) // NETOBJTYPE_EX
+			if(pItem->InternalType() == 0 && pItem->Id() >= OFFSET_UUID_TYPE && GetItemSize(i) >= (int)sizeof(CUuid)) // NETOBJTYPE_EX
 			{
 				if(mem_comp(pItem->Data(), aTypeUuidItem, sizeof(CUuid)) == 0)
 				{

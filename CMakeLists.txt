@@ -4741,6 +4741,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/sixup_server_info_test.cpp
     src/test/integration/engine/sixup_connless_test.cpp
     src/test/integration/engine/stun_controller_test.cpp
+    src/test/integration/engine/uuid_boundaries_test.cpp
     src/test/integration/client/android_asset_unpack_test.cpp
     src/test/integration/engine/steam_client_path_test.cpp
     src/test/unit/engine/steam_startup_test.cpp

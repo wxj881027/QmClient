@@ -4,6 +4,8 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -114,4 +116,50 @@ TEST(UuidRegistry, LongNameIsRetainedWithoutTruncation)
 	Name.assign(Expected.size(), 'x');
 	EXPECT_EQ(std::string(Manager.GetName(OFFSET_UUID)), Expected);
 	EXPECT_EQ(Manager.GetUuid(OFFSET_UUID), Uuid);
+}
+
+TEST(UuidRegistry, EmptyRegistryRejectsAllLookupIdsWithoutIndexing)
+{
+	CUuidManager Manager;
+	const std::array<int, 7> Ids = {std::numeric_limits<int>::min(), -1, 0, OFFSET_UUID - 1, OFFSET_UUID, OFFSET_UUID + 1, std::numeric_limits<int>::max()};
+	for(int Id : Ids)
+	{
+		SCOPED_TRACE(Id);
+		EXPECT_FALSE(Manager.IsValidId(Id));
+		EXPECT_EQ(Manager.GetUuid(Id), UUID_ZEROED);
+		ASSERT_NE(Manager.GetName(Id), nullptr);
+		EXPECT_STREQ(Manager.GetName(Id), "");
+	}
+	EXPECT_EQ(Manager.NumUuids(), 0);
+}
+
+TEST(UuidRegistry, PopulatedRegistryKeepsBothValidBoundariesAndRejectsOutsideIds)
+{
+	CUuidManager Manager;
+	Manager.RegisterName(OFFSET_UUID, "first@uuid-test");
+	Manager.RegisterName(OFFSET_UUID + 1, "last@uuid-test");
+	EXPECT_TRUE(Manager.IsValidId(OFFSET_UUID));
+	EXPECT_TRUE(Manager.IsValidId(OFFSET_UUID + 1));
+	EXPECT_EQ(Manager.GetUuid(OFFSET_UUID), CalculateUuid("first@uuid-test"));
+	EXPECT_STREQ(Manager.GetName(OFFSET_UUID + 1), "last@uuid-test");
+	const std::array<int, 5> InvalidIds = {std::numeric_limits<int>::min(), UUID_INVALID, OFFSET_UUID - 1, OFFSET_UUID + 2, std::numeric_limits<int>::max()};
+	for(int Id : InvalidIds)
+	{
+		SCOPED_TRACE(Id);
+		EXPECT_FALSE(Manager.IsValidId(Id));
+		EXPECT_EQ(Manager.GetUuid(Id), UUID_ZEROED);
+		EXPECT_STREQ(Manager.GetName(Id), "");
+	}
+	EXPECT_EQ(Manager.NumUuids(), 2);
+}
+
+TEST(UuidRegistry, InvalidLookupDoesNotPreventLaterRegistration)
+{
+	CUuidManager Manager;
+	EXPECT_EQ(Manager.GetUuid(OFFSET_UUID), UUID_ZEROED);
+	EXPECT_STREQ(Manager.GetName(std::numeric_limits<int>::min()), "");
+	Manager.RegisterName(OFFSET_UUID, "after-lookup@uuid-test");
+	EXPECT_TRUE(Manager.IsValidId(OFFSET_UUID));
+	EXPECT_EQ(Manager.LookupUuid(Manager.GetUuid(OFFSET_UUID)), OFFSET_UUID);
+	EXPECT_STREQ(Manager.GetName(OFFSET_UUID), "after-lookup@uuid-test");
 }
