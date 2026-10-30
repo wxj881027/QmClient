@@ -38,6 +38,7 @@
 #include "components/qmclient/player_display_privacy.h"
 #include "components/qmclient/predicted_event_queue.h"
 #include "components/qmclient/qmclient_utils.h"
+#include "components/qmclient/race_timing.h"
 #include "components/qmclient/screenshot_manager.h"
 #include "components/qmclient/spectator_selection.h"
 #include "components/qmclient/streamer_word_filter.h"
@@ -2243,10 +2244,8 @@ int CGameClient::LastRaceTick() const
 int CGameClient::CurrentRaceTime() const
 {
 	if(m_LastRaceTick < 0)
-	{
 		return 0;
-	}
-	return (Client()->GameTick(g_Config.m_ClDummy) - m_LastRaceTick) / Client()->GameTickSpeed();
+	return qm_race_timing::ElapsedSeconds(Client()->GameTick(g_Config.m_ClDummy), m_LastRaceTick, Client()->GameTickSpeed());
 }
 
 bool CGameClient::IsTeamPlay() const
@@ -4547,7 +4546,7 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		m_Snap.m_pLocalPrevCharacter)
 	{
 		const bool RaceFlag = m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_RACETIME;
-		m_LastRaceTick = RaceFlag ? -m_Snap.m_pGameInfoObj->m_WarmupTimer : -1;
+		m_LastRaceTick = qm_race_timing::UpdateLastTick(m_LastRaceTick, RaceFlag, m_Snap.m_pGameInfoObj->m_WarmupTimer);
 	}
 
 	SnapCollectEntities(); // creates a collection that associates EntityEx snap items with the entities they belong to

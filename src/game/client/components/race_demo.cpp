@@ -10,6 +10,7 @@
 #include <engine/storage.h>
 
 #include <game/client/components/qmclient/media_paths.h>
+#include <game/client/components/qmclient/race_timing.h>
 #include <game/client/gameclient.h>
 #include <game/client/race.h>
 #include <game/localization.h>
@@ -89,10 +90,10 @@ void CRaceDemo::OnNewSnapshot()
 
 	bool RaceFlag = GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_RACETIME;
 	bool ServerControl = RaceFlag && g_Config.m_ClRaceRecordServerControl;
-	int RaceTick = -GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer;
+	const auto RaceTick = qm_race_timing::DecodeStartTick(GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer);
 
 	// start the demo
-	bool ForceStart = ServerControl && s_LastRaceTick != RaceTick && Client()->GameTick(g_Config.m_ClDummy) - RaceTick < Client()->GameTickSpeed();
+	bool ForceStart = ServerControl && qm_race_timing::IsNewServerStart(s_LastRaceTick, RaceTick, Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed());
 	bool AllowRestart = (m_AllowRestart || ForceStart) && m_RaceStartTick + 10 * Client()->GameTickSpeed() < Client()->GameTick(g_Config.m_ClDummy);
 	if(m_RaceState == RACE_IDLE || m_RaceState == RACE_PREPARE || (m_RaceState == RACE_STARTED && AllowRestart))
 	{
@@ -143,7 +144,7 @@ void CRaceDemo::OnNewSnapshot()
 	if(m_RaceState == RACE_FINISHED && m_RecordStopTick <= Client()->GameTick(g_Config.m_ClDummy))
 		StopRecord(m_Time);
 
-	s_LastRaceTick = RaceFlag ? RaceTick : -1;
+	s_LastRaceTick = qm_race_timing::UpdateLastTick(s_LastRaceTick, RaceFlag, GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer);
 }
 
 void CRaceDemo::OnReset()

@@ -3189,6 +3189,7 @@ if(CLIENT)
     map_download_request.h
     map_download_file.h
     message_repack.h
+    snapshot_ticks.h
     sixup_connless.h
     sixup_server_info.h
     sixup_system_messages.h
@@ -3428,6 +3429,7 @@ if(CLIENT)
     components/qmclient/demo_camera_session.h
     components/qmclient/ghost_path.h
     components/qmclient/ghost_timeline.h
+    components/qmclient/race_timing.h
     components/qmclient/ghost_manual.h
     components/qmclient/ghost_render.h
     components/camera.cpp
@@ -4738,6 +4740,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/map_download_request_test.cpp
     src/test/integration/engine/map_download_file_test.cpp
     src/test/integration/engine/message_repack_test.cpp
+    src/test/integration/engine/client_snapshot_ticks_test.cpp
     src/test/unit/engine/map_download_progress_test.cpp
     src/test/unit/engine/unpacker_raw_test.cpp
     src/test/unit/engine/packer_boundary_test.cpp
@@ -5234,6 +5237,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_local_saves_test.cpp
     src/test/unit/qmclient/client/qm_local_save_post_send_test.cpp
     src/test/unit/qmclient/client/qm_local_save_removal_test.cpp
+    src/test/unit/qmclient/client/qm_race_timing_test.cpp
     src/test/contract/qmclient/client/qm_storage_path_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_cards_surface_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_cards_deck_contract_test.cpp

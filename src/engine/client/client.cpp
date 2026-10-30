@@ -14,6 +14,7 @@
 #include "qm_storage_mode.h"
 #include "replay_save.h"
 #include "serverbrowser.h"
+#include "snapshot_ticks.h"
 
 #include <base/crashdump.h>
 #include <base/hash.h>
@@ -2803,8 +2804,11 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 				return;
 			}
 
-			int GameTick = Unpacker.GetInt();
-			int DeltaTick = GameTick - Unpacker.GetInt();
+			client_snapshot::STicks Ticks;
+			if(!client_snapshot::UnpackTicks(Unpacker, Ticks))
+				return;
+			const int GameTick = Ticks.m_GameTick;
+			const int DeltaTick = Ticks.m_DeltaTick;
 
 			int NumParts = 1;
 			int Part = 0;

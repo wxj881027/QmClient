@@ -16,6 +16,7 @@
 #include <game/client/components/players.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/ghost_timeline.h>
+#include <game/client/components/qmclient/race_timing.h>
 #include <game/client/components/skins.h>
 #include <game/client/gameclient.h>
 #include <game/client/race.h>
@@ -140,10 +141,10 @@ int CGhost::FreeSlots() const
 
 void CGhost::CheckStart()
 {
-	int RaceTick = -GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer;
+	const auto RaceTick = qm_race_timing::DecodeStartTick(GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer);
 	int RenderTick = m_NewRenderTick;
 
-	if(GameClient()->LastRaceTick() != RaceTick && Client()->GameTick(g_Config.m_ClDummy) - RaceTick < Client()->GameTickSpeed())
+	if(qm_race_timing::IsNewServerStart(GameClient()->LastRaceTick(), RaceTick, Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed()))
 	{
 		if(m_Rendering && m_RenderingStartedByServer) // race restarted: stop rendering
 			StopRender();
@@ -153,7 +154,7 @@ void CGhost::CheckStart()
 			m_NewRenderTick = -1;
 		if(GhostRecorder()->IsRecording()) // race restarted: stop recording
 			GhostRecorder()->Stop(0, -1);
-		int StartTick = RaceTick;
+		int StartTick = *RaceTick;
 
 		if(GameClient()->m_GameInfo.m_BugDDRaceGhost) // the client recognizes the start one tick earlier than ddrace servers
 			StartTick--;
