@@ -2,6 +2,7 @@
 
 #include <base/detect.h>
 
+#include <engine/client/backend/screenshot_image.h>
 #include <engine/graphics.h>
 
 #if defined(BACKEND_AS_OPENGL_ES) || !defined(CONF_BACKEND_OPENGL_ES)
@@ -178,32 +179,21 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Readback(const CCommandB
 	const int w = Target.m_Width;
 	const int h = Target.m_Height;
 
-	// we allocate one more row to use when we are flipping the texture
-	unsigned char *pPixelData = (unsigned char *)malloc((size_t)w * (h + 1) * 4);
-	unsigned char *pTempRow = pPixelData + w * h * 4;
-
-	GLint Alignment;
-	GLint PreviousFramebuffer;
-	glGetIntegerv(GL_PACK_ALIGNMENT, &Alignment);
-	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &PreviousFramebuffer);
-	glBindFramebuffer(GL_FRAMEBUFFER, Target.m_Framebuffer);
-	glPixelStorei(GL_PACK_ALIGNMENT, 1);
-	glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, pPixelData);
-	glPixelStorei(GL_PACK_ALIGNMENT, Alignment);
-	glBindFramebuffer(GL_FRAMEBUFFER, PreviousFramebuffer);
-
-	// flip the pixel because opengl works from bottom left corner
-	for(int y = 0; y < h / 2; y++)
-	{
-		mem_copy(pTempRow, pPixelData + y * w * 4, w * 4);
-		mem_copy(pPixelData + y * w * 4, pPixelData + (h - y - 1) * w * 4, w * 4);
-		mem_copy(pPixelData + (h - y - 1) * w * 4, pTempRow, w * 4);
-	}
-
-	pCommand->m_pImage->m_Width = w;
-	pCommand->m_pImage->m_Height = h;
-	pCommand->m_pImage->m_Format = CImageInfo::FORMAT_RGBA;
-	pCommand->m_pImage->m_pData = pPixelData;
+	// 先校验/分配完整缓冲，失败时不触碰 GL 状态；离屏纹理须保留透明度。
+	const auto ReadPixels = [&](uint8_t *pData, size_t) {
+		GLint Alignment;
+		GLint PreviousFramebuffer;
+		glGetIntegerv(GL_PACK_ALIGNMENT, &Alignment);
+		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &PreviousFramebuffer);
+		glBindFramebuffer(GL_FRAMEBUFFER, Target.m_Framebuffer);
+		glPixelStorei(GL_PACK_ALIGNMENT, 1);
+		glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, pData);
+		glPixelStorei(GL_PACK_ALIGNMENT, Alignment);
+		glBindFramebuffer(GL_FRAMEBUFFER, PreviousFramebuffer);
+		return true;
+	};
+	screenshot_image::CaptureRgba(*pCommand->m_pImage, static_cast<size_t>(w), static_cast<size_t>(h),
+		screenshot_image::ERowOrder::BOTTOM_UP, ReadPixels, std::malloc, screenshot_image::EAlphaMode::PRESERVE);
 }
 
 #endif

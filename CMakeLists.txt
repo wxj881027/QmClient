@@ -4927,6 +4927,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/datafile_processor_bounds_test.cpp
     src/test/integration/engine/map_load_allocation_test.cpp
     src/test/integration/engine/map_tile_input_budget_test.cpp
+    src/test/integration/engine/render_target_capture_queue_test.cpp
     src/test/integration/client/editor_save_job_test.cpp
     src/test/integration/client/editor_save_submission_test.cpp
     src/test/unit/base/dbg_test.cpp
@@ -4965,6 +4966,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/vulkan_recording_batch_test.cpp
     src/test/unit/engine/graphics/vulkan_render_workers_test.cpp
     src/test/unit/engine/graphics/readback_image_test.cpp
+    src/test/unit/engine/graphics/render_target_capture_image_test.cpp
     src/test/unit/engine/graphics/gpu_upload_limiter_test.cpp
     src/test/unit/engine/graphics/render_component_test.cpp
     src/test/unit/engine/graphics/screenshot_image_test.cpp

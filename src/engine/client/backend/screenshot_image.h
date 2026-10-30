@@ -17,10 +17,15 @@ namespace screenshot_image
 		TOP_DOWN,
 		BOTTOM_UP,
 	};
+	enum class EAlphaMode
+	{
+		OPAQUE,
+		PRESERVE,
+	};
 
-	// 仅在完整读回后发布截图。分配边界返回 nullptr 或可由 free 释放的内存。
+	// 仅在完整读回后发布图像。分配边界返回 nullptr 或可由 free 释放的内存。
 	template<typename TRead, typename TAllocate>
-	bool CaptureRgba(CImageInfo &Image, size_t Width, size_t Height, ERowOrder RowOrder, TRead &&Read, TAllocate &&Allocate) noexcept
+	bool CaptureRgba(CImageInfo &Image, size_t Width, size_t Height, ERowOrder RowOrder, TRead &&Read, TAllocate &&Allocate, EAlphaMode AlphaMode) noexcept
 	{
 		Image.Free();
 		if(Width == 0 || Height == 0)
@@ -57,9 +62,10 @@ namespace screenshot_image
 					std::memcpy(pBottom, pScratch, RowBytes);
 				}
 			}
-			// 奇数高度的中间行也必须与其余截图像素一样不透明。
-			for(size_t Offset = 3; Offset < DataBytes; Offset += 4)
-				pData.get()[Offset] = 255;
+			// 普通截图保持不透明；离屏读回保留每个像素（含中间行）的原 alpha。
+			if(AlphaMode == EAlphaMode::OPAQUE)
+				for(size_t Offset = 3; Offset < DataBytes; Offset += 4)
+					pData.get()[Offset] = 255;
 
 			Candidate.m_pData = pData.release();
 			Image = std::move(Candidate);
@@ -69,6 +75,12 @@ namespace screenshot_image
 		{
 			return false;
 		}
+	}
+
+	template<typename TRead, typename TAllocate>
+	bool CaptureRgba(CImageInfo &Image, size_t Width, size_t Height, ERowOrder RowOrder, TRead &&Read, TAllocate &&Allocate) noexcept
+	{
+		return CaptureRgba(Image, Width, Height, RowOrder, std::forward<TRead>(Read), std::forward<TAllocate>(Allocate), EAlphaMode::OPAQUE);
 	}
 
 	template<typename TRead>
