@@ -123,6 +123,56 @@ namespace
 using namespace std::chrono_literals;
 
 static constexpr ColorRGBA gs_ClientNetworkPrintColor{0.7f, 1, 0.7f, 1.0f};
+
+#if defined(CONF_FAMILY_WINDOWS)
+static const char *QmIntegrityLevelName(DWORD Rid)
+{
+	switch(Rid)
+	{
+	case SECURITY_MANDATORY_UNTRUSTED_RID: return "untrusted";
+	case SECURITY_MANDATORY_LOW_RID: return "low";
+	case SECURITY_MANDATORY_MEDIUM_RID: return "medium";
+	case SECURITY_MANDATORY_MEDIUM_PLUS_RID: return "medium-plus";
+	case SECURITY_MANDATORY_HIGH_RID: return "high";
+	case SECURITY_MANDATORY_SYSTEM_RID: return "system";
+	case SECURITY_MANDATORY_PROTECTED_PROCESS_RID: return "protected";
+	default: return "unknown";
+	}
+}
+#endif
+
+// 进程令牌的完整性级别与受限令牌标记：Windows 低完整性/受限令牌对用户目录只读，
+// 保存失败时这条信息能直接说明是环境限制而不是配置内容损坏。
+static void QmProcessTokenDescription(char *pBuffer, int BufferSize)
+{
+#if defined(CONF_FAMILY_WINDOWS)
+	HANDLE Token = INVALID_HANDLE_VALUE;
+	if(!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &Token))
+	{
+		str_copy(pBuffer, "integrity=unknown restricted=unknown", BufferSize);
+		return;
+	}
+	DWORD Needed = 0;
+	GetTokenInformation(Token, TokenIntegrityLevel, nullptr, 0, &Needed);
+	const char *pIntegrity = "unknown";
+	if(Needed > 0)
+	{
+		std::vector<unsigned char> Buffer(Needed);
+		if(GetTokenInformation(Token, TokenIntegrityLevel, Buffer.data(), Needed, &Needed))
+		{
+			const auto *pLabel = reinterpret_cast<const TOKEN_MANDATORY_LABEL *>(Buffer.data());
+			const DWORD Count = *GetSidSubAuthorityCount(pLabel->Label.Sid);
+			if(Count > 0)
+				pIntegrity = QmIntegrityLevelName(*GetSidSubAuthority(pLabel->Label.Sid, Count - 1));
+		}
+	}
+	const bool Restricted = IsTokenRestricted(Token) != 0;
+	str_format(pBuffer, BufferSize, "integrity=%s restricted=%s", pIntegrity, Restricted ? "yes" : "no");
+	CloseHandle(Token);
+#else
+	str_copy(pBuffer, "integrity=n/a restricted=n/a", BufferSize);
+#endif
+}
 static constexpr ColorRGBA gs_ClientNetworkErrPrintColor{1.0f, 0.25f, 0.25f, 1.0f};
 // 网络积压分帧处理，避免异常 burst 把整个渲染帧占满。
 static constexpr int gs_NetworkPumpMaxChunksPerFrame = 256;
@@ -4495,8 +4545,40 @@ void CClient::InitConfigCommands()
 	m_Foes.Init(true);
 }
 
+void CClient::QmProbeSaveDirectory()
+{
+	if(m_pStorage == nullptr)
+	{
+		str_copy(m_aQmSaveDiagnostics, "save_dir=unknown\nprocess=integrity=unknown restricted=unknown\nwrite_probe=unknown");
+		return;
+	}
+	char aSaveDir[IO_MAX_PATH_LENGTH] = "";
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "", aSaveDir, sizeof(aSaveDir));
+	char aProcess[128];
+	QmProcessTokenDescription(aProcess, sizeof(aProcess));
+	if(!m_pStorage->FolderExists("qmclient", IStorage::TYPE_SAVE))
+		m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+	char aProbePath[IO_MAX_PATH_LENGTH];
+	str_format(aProbePath, sizeof(aProbePath), "qmclient/.save_probe_%d", pid());
+	IOHANDLE Probe = m_pStorage->OpenFile(aProbePath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	m_QmSaveDirectoryWritable = Probe != nullptr;
+	if(Probe != nullptr)
+	{
+		io_close(Probe);
+		m_pStorage->RemoveFile(aProbePath, IStorage::TYPE_SAVE);
+	}
+	str_format(m_aQmSaveDiagnostics, sizeof(m_aQmSaveDiagnostics), "save_dir=%s\nprocess=%s\nwrite_probe=%s",
+		aSaveDir, aProcess, m_QmSaveDirectoryWritable ? "ok" : "denied");
+	if(!m_QmSaveDirectoryWritable)
+	{
+		// 诊断只在保存失败弹出系统对话框时展示，不额外增加启动弹窗。
+		log_error("config", "save directory is not writable: %s (%s)", aSaveDir, aProcess);
+	}
+}
+
 void CClient::Run()
 {
+	QmProbeSaveDirectory();
 	m_LocalStartTime = m_GlobalStartTime = time_get();
 #if defined(CONF_VIDEORECORDER)
 	IVideo::SetLocalStartTime(m_LocalStartTime);
@@ -5211,8 +5293,13 @@ void CClient::Run()
 			str_append(s_aConfigDomains[ConfigDomain].m_aConfigPath);
 		}
 		*/
-		// TODO
-		m_vQuittingWarnings.emplace_back(Localize("Error saving settings"));
+		const char *pSaveError = m_pConfigManager->LastSaveError();
+		char aMessage[1024];
+		str_format(aMessage, sizeof(aMessage), "%s\n%s\n%s",
+			Localize("Error saving settings"),
+			pSaveError[0] != '\0' ? pSaveError : "stage=unknown",
+			m_aQmSaveDiagnostics[0] != '\0' ? m_aQmSaveDiagnostics : "save_dir=unknown");
+		m_vQuittingWarnings.emplace_back(aMessage);
 	}
 
 	// QmClient: 配置已保存，启动退出兜底看门狗；若退出清理（如驱动销毁渲染上下文、
@@ -5855,6 +5942,7 @@ void CClient::Con_PosesClose(IConsole::IResult *pResult, void *pUserData)
 
 void CClient::Con_PosesVideo(IConsole::IResult *pResult, void *pUserData)
 {
+#if defined(CONF_VIDEORECORDER)
 	CClient *pSelf = static_cast<CClient *>(pUserData);
 
 	// 用法：poses_video <poses 文件> <视频名> [秒数]
@@ -5899,6 +5987,11 @@ void CClient::Con_PosesVideo(IConsole::IResult *pResult, void *pUserData)
 	str_format(aBuf, sizeof(aBuf), "recording %d poses for %.1f seconds (%d frames) to '%s'", TeeCount, Seconds,
 		qm_pose::VideoFrameCount(Seconds, maximum(g_Config.m_ClVideoRecorderFPS, 1)), pVideoName);
 	pSelf->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+#else
+	// 未启用视频录制（FFmpeg 不可用或平台关闭）时该命令只做提示，不录制。
+	static_cast<void>(pResult);
+	static_cast<CClient *>(pUserData)->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "video recording is not available in this build");
+#endif
 }
 
 void CClient::Con_RenderPoses(IConsole::IResult *pResult, void *pUserData)

@@ -282,25 +282,19 @@ class CClient : public IClient, public CDemoPlayer::IListener
 public:
 	bool ServerCapAnyPlayerFlag() const override { return m_ServerCapabilities.m_AnyPlayerFlag; }
 
+#if defined(CONF_VIDEORECORDER)
 	// 分段导出的后台拼接是否仍未结束。UI 用它推迟"渲染完成"弹窗，
 	// 否则用户在成片写出前点"Videos directory"会看到文件不存在或不可播放。
 	bool VideoExportConcatPending() const override
 	{
-#if defined(CONF_VIDEORECORDER)
 		return m_ConcatThread.joinable() && !m_ConcatThreadFinished.load();
-#else
-		return false;
-#endif
 	}
 	// 最近一次拼接是否失败（有尝试且未成功）。失败时 UI 不应宣称渲染完成。
 	bool VideoExportConcatFailed() const override
 	{
-#if defined(CONF_VIDEORECORDER)
 		return m_ConcatAttempted.load() && !m_ConcatLastSucceeded.load();
-#else
-		return false;
-#endif
 	}
+#endif
 
 private:
 	CServerInfo m_CurrentServerInfo;
@@ -329,6 +323,11 @@ private:
 	std::mutex m_WarningsMutex;
 	std::vector<SWarning> m_vWarnings;
 	std::vector<SWarning> m_vQuittingWarnings;
+
+	// QmClient: 启动时对存档目录做一次写探针，并记录进程完整性/受限令牌，
+	// 供保存失败提示直接说明"写到哪里、以什么令牌写、哪一步被拒"。
+	char m_aQmSaveDiagnostics[768] = "";
+	bool m_QmSaveDirectoryWritable = true;
 
 	CFifo m_Fifo;
 
@@ -415,6 +414,7 @@ public:
 	// 性能日志文件运行时开/关（供 client.cpp 启动与主循环调用）。
 	void SetQmPerfFileSwitch(std::shared_ptr<CQmPerfFileSwitchLogger> pSwitch);
 	void UpdateQmPerfFileLogger();
+	void QmProbeSaveDirectory();
 
 	// ----- send functions -----
 	int SendMsg(int Conn, CMsgPacker *pMsg, int Flags) override;
