@@ -8,6 +8,6 @@
 class IGraphics;
 
 void QmSponsorChatAddPlatinumSplits(CTextCursor &Cursor, const char *pText, float Alpha);
-void QmRenderSponsorChatText(IGraphics *pGraphics, ITextRender *pTextRender, STextContainerIndex Index, EQmSponsorChatStyle Style, float Alpha, float X, float Y, float FontSize, const SQmSponsorChatSweep &SweepState);
+void QmRenderSponsorChatText(IGraphics *pGraphics, ITextRender *pTextRender, STextContainerIndex Index, EQmSponsorChatStyle Style, float Alpha, float X, float Y, float FontSize, const SQmSponsorChatSweep &SweepState, double TimeSeconds);
 
 #endif

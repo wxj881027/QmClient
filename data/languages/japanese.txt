@@ -5771,6 +5771,9 @@ Flags are cosmetic and can be hidden by other clients.
 Flip:
 == 反転：
 
+Fluid
+== 流体
+
 Folder
 == フォルダ
 
@@ -12938,6 +12941,9 @@ Settings card states: stableId for collapsed, !stableId for expanded, separated 
 Settings card titles use rainbow colors
 == 設定カードタイトルに虹色を使用
 
+Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+== Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+
 Settings file
 == 設定ファイル
 
@@ -14537,8 +14543,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == 本体と分身を別々のチームに入れ、solo ランの開始を同期します（team-0 で同期しにくいマップ向け）
 
-Sponsor chat style draft: 0=Normal, 1=Platinum highlight
-== 支援者チャットのスタイル下書き：0=通常、1=プラチナの輝き
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid
+== 支援者チャットのスタイル下書き：0=通常、1=プラチナの輝き、2=流体
 
 Sponsor code
 == 認証コード

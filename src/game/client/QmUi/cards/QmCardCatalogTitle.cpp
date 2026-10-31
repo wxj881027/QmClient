@@ -89,7 +89,7 @@ static void RenderQmSponsorChatPreview(IGraphics *pGraphics, ITextRender *pTextR
 	const char *pText = Localize("See you at the next checkpoint.");
 	const ColorRGBA Color = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageColor));
 	const ColorRGBA PreviousColor = pTextRender->GetTextColor();
-	pTextRender->TextColor(Color);
+	pTextRender->TextColor(Style == EQmSponsorChatStyle::FLUID ? ColorRGBA(1, 1, 1, Color.a) : Color);
 	CTextCursor Cursor;
 	Cursor.SetPosition(vec2(Rect.x, Rect.y + (Rect.h - FontSize) / 2.0f));
 	Cursor.m_FontSize = FontSize;
@@ -100,14 +100,14 @@ static void RenderQmSponsorChatPreview(IGraphics *pGraphics, ITextRender *pTextR
 	if(Style == EQmSponsorChatStyle::PLATINUM)
 		QmSponsorChatAddPlatinumSplits(Cursor, pText, Color.a);
 	const auto Gradient = QmChatGradientStyle(g_Config, EQmChatGradientRole::NORMAL, Color);
-	const CQmChatGradientPaint Paint(pTextRender, Cursor, pText, Style != EQmSponsorChatStyle::PLATINUM ? &Gradient : nullptr);
+	const CQmChatGradientPaint Paint(pTextRender, Cursor, pText, Style == EQmSponsorChatStyle::NONE ? &Gradient : nullptr);
 	if(s_SponsorChatPreviewContainer.Valid())
 		pTextRender->RecreateTextContainerSoft(s_SponsorChatPreviewContainer, &Cursor, pText);
 	else
 		pTextRender->CreateOrAppendTextContainer(s_SponsorChatPreviewContainer, &Cursor, pText);
 	pTextRender->TextColor(PreviousColor);
 	const SQmSponsorChatSweep SweepState = QmSponsorChatSweepState(TimeSeconds - s_StartTime, pTextRender->GetTextContainerRenderedLineCount(s_SponsorChatPreviewContainer), true);
-	QmRenderSponsorChatText(pGraphics, pTextRender, s_SponsorChatPreviewContainer, Style, 1.0f, 0.0f, 0.0f, FontSize, SweepState);
+	QmRenderSponsorChatText(pGraphics, pTextRender, s_SponsorChatPreviewContainer, Style, 1.0f, 0.0f, 0.0f, FontSize, SweepState, TimeSeconds - s_StartTime);
 }
 
 namespace
@@ -243,8 +243,8 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 				pMenus->DoSettingsMenuLabel(Page, Tab, -1, "qm-sponsor-chat-style", &ChatStyleLabel, Localize("Chat message style"), BodySize, TEXTALIGN_ML);
 				static CUi::SDropDownState s_ChatStyleState;
 				static CScrollRegion s_ChatStyleScroll;
-				static std::array<const char *, 2> s_apChatStyleNames;
-				s_apChatStyleNames = {Localize("Normal"), Localize("Platinum highlight")};
+				static std::array<const char *, 3> s_apChatStyleNames;
+				s_apChatStyleNames = {Localize("Normal"), Localize("Platinum highlight"), Localize("Fluid")};
 				s_ChatStyleState.m_SelectionPopupContext.m_pScrollRegion = &s_ChatStyleScroll;
 				CUi::SDropDownProperties ChatStyleProperties;
 				ChatStyleProperties.m_Enabled = Auth.TitleAuthenticated() && !Auth.TitleBusy() && !pMenus->GameClient()->m_GameConsole.IsActive();
