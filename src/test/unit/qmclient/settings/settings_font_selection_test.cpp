@@ -135,3 +135,23 @@ TEST(SettingsFontSelection, MissingOrEmptyConfigurationPreservesRawValueWithoutG
 	EXPECT_TRUE(Empty.m_Family.empty());
 	EXPECT_TRUE(Empty.m_Config.empty());
 }
+
+TEST(SettingsFontSelection, RefreshAcceptsNamesAndFamiliesBorrowedFromItsOwnSnapshot)
+{
+	CSettingsFontSelection Selection;
+	ASSERT_TRUE(Selection.Update({"Short", "A longer font family name to exercise owned storage"}, "Missing", "Follow", "Default"));
+	const char *pConfig = Selection.Names()[2];
+	const char *pPrefix = Selection.Names()[0];
+	ASSERT_TRUE(Selection.Update(Selection.Families(), pConfig, pPrefix, "Changed default label"));
+	EXPECT_EQ(Selection.Selected(), 2);
+	EXPECT_TRUE(Selection.IsFamilySelection(2));
+	ASSERT_EQ(Selection.Names().size(), 3u);
+	EXPECT_STREQ(Selection.Names()[0], "Follow");
+	EXPECT_STREQ(Selection.Names()[1], "Short");
+	EXPECT_STREQ(Selection.Names()[2], "A longer font family name to exercise owned storage");
+	ASSERT_TRUE(Selection.Update(Selection.Families(), Selection.Names()[1], nullptr, "Default"));
+	EXPECT_EQ(Selection.Selected(), 0);
+	EXPECT_TRUE(Selection.IsFamilySelection(0));
+	ASSERT_EQ(Selection.Names().size(), 2u);
+	EXPECT_STREQ(Selection.Names()[0], "Short");
+}
