@@ -19,7 +19,7 @@ public:
 		int m_Stars = -1;
 	};
 
-	// 读取随客户端发布的 ddnet-maps 分类 SQL，不访问网络或用户目录。
+	// 沿现有存储搜索路径读取 ddnet-maps 分类 SQL，不访问网络；失败保留旧目录。
 	bool Load(IStorage *pStorage, IConsole *pConsole);
 	// 供行为测试和生成数据校验使用的 SQL 加载入口。
 	bool LoadSqlText(const char *pSql, size_t Length);

@@ -6095,6 +6095,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/client/qm_text_initialization_test.cpp
       src/test/integration/qmclient/client/qm_text_device_recovery_test.cpp
       src/test/integration/engine/recent_glyph_file_test.cpp
+      src/test/integration/client/map_difficulty_catalog_file_test.cpp
+      src/game/client/components/qmclient/map_difficulty_catalog.cpp
+      src/engine/client/sqlite.cpp
       src/test/integration/qmclient/client/qm_text_temporary_lifetime_test.cpp
       src/test/integration/client/graph_rendering_test.cpp
       src/test/integration/qmclient/ui/qm_popup_blur_scope_test.cpp
@@ -6225,6 +6228,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/vote_map_loader_failure_test.cpp
       src/game/client/components/qmclient/vote_map_loader.cpp
       src/game/client/components/qmclient/vote_map_library.cpp
+      src/test/unit/client/map_difficulty_catalog_failure_test.cpp
+      src/game/client/components/qmclient/map_difficulty_catalog.cpp
+      src/engine/client/sqlite.cpp
       src/test/unit/engine/recent_glyph_cache_test.cpp
       src/test/integration/qmclient/client/qm_warlist_cache_prepare_test.cpp
       src/game/client/components/qmclient/warlist_model.cpp

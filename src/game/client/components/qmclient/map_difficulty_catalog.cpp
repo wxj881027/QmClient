@@ -12,7 +12,8 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <cstdlib>
+#include <limits>
+#include <memory>
 #include <string>
 #include <utility>
 
@@ -20,6 +21,40 @@ namespace
 {
 	constexpr const char *MAP_DIFFICULTY_SQL = "qmclient/map_difficulty.sql";
 	constexpr size_t MAX_MAP_DIFFICULTY_SQL_BYTES = 2 * 1024 * 1024;
+	class CInputFile
+	{
+		IOHANDLE m_File;
+
+	public:
+		explicit CInputFile(IOHANDLE File) :
+			m_File(File) {}
+		CInputFile(const CInputFile &) = delete;
+		CInputFile &operator=(const CInputFile &) = delete;
+		~CInputFile() { Close(); }
+		IOHANDLE Get() const { return m_File; }
+		bool Close() { return !m_File || io_close(std::exchange(m_File, nullptr)) == 0; }
+	};
+
+	void ReportLoadFailure(IConsole *pConsole) noexcept
+	{
+		try
+		{
+			log_warn("map_difficulty", "failed to load '%s'", MAP_DIFFICULTY_SQL);
+		}
+		catch(...)
+		{
+		}
+		if(pConsole != nullptr)
+		{
+			try
+			{
+				pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_difficulty", "map difficulty SQL is unavailable or invalid");
+			}
+			catch(...)
+			{
+			}
+		}
+	}
 
 	bool EntryLess(const CQmMapDifficultyCatalog::SEntry &A, const CQmMapDifficultyCatalog::SEntry &B)
 	{
@@ -34,86 +69,111 @@ namespace
 }
 
 bool CQmMapDifficultyCatalog::LoadSqlText(const char *pSql, size_t Length)
+try
 {
-	m_vEntries.clear();
-	if(pSql == nullptr || Length == 0 || Length > MAX_MAP_DIFFICULTY_SQL_BYTES)
+	if(pSql == nullptr || Length == 0 || Length > MAX_MAP_DIFFICULTY_SQL_BYTES || std::char_traits<char>::find(pSql, Length, '\0') != nullptr)
 		return false;
 
 	sqlite3 *pRawDb = nullptr;
-	if(sqlite3_open(":memory:", &pRawDb) != SQLITE_OK || pRawDb == nullptr)
-	{
-		if(pRawDb != nullptr)
-			sqlite3_close(pRawDb);
-		return false;
-	}
+	const int OpenResult = sqlite3_open(":memory:", &pRawDb);
 	CSqlite pDb{pRawDb};
+	if(OpenResult != SQLITE_OK || !pDb)
+		return false;
 	const std::string SqlText(pSql, Length);
 
 	char *pError = nullptr;
 	const int ExecResult = sqlite3_exec(pDb.get(), SqlText.c_str(), nullptr, nullptr, &pError);
+	const std::unique_ptr<char, decltype(&sqlite3_free)> Error(pError, sqlite3_free);
 	if(ExecResult != SQLITE_OK)
 	{
 		if(pError != nullptr)
 		{
 			log_warn("map_difficulty", "failed to load SQL: %s", pError);
-			sqlite3_free(pError);
 		}
 		return false;
 	}
 
-	CSqliteStmt pStatement{nullptr};
 	const char *pQuery = "SELECT map_name, category, stars FROM map_difficulty ORDER BY map_name COLLATE NOCASE, category COLLATE NOCASE";
 	sqlite3_stmt *pRawStatement = nullptr;
-	if(sqlite3_prepare_v2(pDb.get(), pQuery, -1, &pRawStatement, nullptr) != SQLITE_OK || pRawStatement == nullptr)
+	const int PrepareResult = sqlite3_prepare_v2(pDb.get(), pQuery, -1, &pRawStatement, nullptr);
+	CSqliteStmt pStatement{pRawStatement};
+	if(PrepareResult != SQLITE_OK || !pStatement)
 		return false;
-	pStatement.reset(pRawStatement);
 
+	std::vector<SEntry> vEntries;
 	while(true)
 	{
 		const int StepResult = sqlite3_step(pStatement.get());
 		if(StepResult == SQLITE_DONE)
 			break;
 		if(StepResult != SQLITE_ROW)
-		{
-			m_vEntries.clear();
 			return false;
-		}
 
 		const char *pMapName = reinterpret_cast<const char *>(sqlite3_column_text(pStatement.get(), 0));
+		if(pMapName == nullptr && sqlite3_errcode(pDb.get()) == SQLITE_NOMEM)
+			return false;
 		const char *pCategory = reinterpret_cast<const char *>(sqlite3_column_text(pStatement.get(), 1));
-		const int Stars = sqlite3_column_int(pStatement.get(), 2);
-		if(pMapName == nullptr || pMapName[0] == '\0' || pCategory == nullptr || pCategory[0] == '\0' || Stars < 0 || Stars > 5)
+		if(pCategory == nullptr && sqlite3_errcode(pDb.get()) == SQLITE_NOMEM)
+			return false;
+		const int StarType = sqlite3_column_type(pStatement.get(), 2);
+		const sqlite3_int64 Stars = StarType == SQLITE_INTEGER ? sqlite3_column_int64(pStatement.get(), 2) : -1;
+		if(pMapName == nullptr || pMapName[0] == '\0' || pCategory == nullptr || pCategory[0] == '\0' ||
+			Stars < 0 || Stars > 5 ||
+			str_length(pMapName) != sqlite3_column_bytes(pStatement.get(), 0) ||
+			str_length(pCategory) != sqlite3_column_bytes(pStatement.get(), 1) || !str_utf8_check(pMapName) || !str_utf8_check(pCategory))
 			continue;
+		if(vEntries.size() >= static_cast<size_t>(std::numeric_limits<int>::max()))
+			return false;
 
 		SEntry Entry;
 		Entry.m_MapName = pMapName;
 		Entry.m_Category = pCategory;
-		Entry.m_Stars = Stars;
-		m_vEntries.push_back(std::move(Entry));
+		Entry.m_Stars = static_cast<int>(Stars);
+		vEntries.push_back(std::move(Entry));
 	}
 
-	std::sort(m_vEntries.begin(), m_vEntries.end(), EntryLess);
-	return !m_vEntries.empty();
+	if(vEntries.empty())
+		return false;
+	std::sort(vEntries.begin(), vEntries.end(), EntryLess);
+	m_vEntries.swap(vEntries);
+	return true;
+}
+catch(...)
+{
+	return false;
 }
 
 bool CQmMapDifficultyCatalog::Load(IStorage *pStorage, IConsole *pConsole)
 {
-	m_vEntries.clear();
-	if(pStorage == nullptr)
-		return false;
-
-	void *pData = nullptr;
-	unsigned DataSize = 0;
-	if(!pStorage->ReadFile(MAP_DIFFICULTY_SQL, IStorage::TYPE_ALL, &pData, &DataSize))
+	try
 	{
-		log_warn("map_difficulty", "failed to read '%s'", MAP_DIFFICULTY_SQL);
-		return false;
+		CInputFile File(pStorage != nullptr ? pStorage->OpenFile(MAP_DIFFICULTY_SQL, IOFLAG_READ, IStorage::TYPE_ALL) : nullptr);
+		if(File.Get())
+		{
+			std::string Sql;
+			char aBuffer[4096];
+			while(true)
+			{
+				// 按实际读取计数，达到旧上限后仅探测一个字节，不先整文件分配。
+				const unsigned Want = static_cast<unsigned>(std::min(sizeof(aBuffer), MAX_MAP_DIFFICULTY_SQL_BYTES - Sql.size() + 1));
+				const unsigned Count = io_read(File.Get(), aBuffer, Want);
+				if(Count == 0)
+				{
+					if(io_error(File.Get()) == 0 && File.Close() && LoadSqlText(Sql.data(), Sql.size()))
+						return true;
+					break;
+				}
+				if(Count > MAX_MAP_DIFFICULTY_SQL_BYTES - Sql.size())
+					break;
+				Sql.append(aBuffer, Count);
+			}
+		}
 	}
-	const bool Loaded = LoadSqlText(static_cast<const char *>(pData), DataSize);
-	free(pData);
-	if(!Loaded && pConsole != nullptr)
-		pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "map_difficulty", "map difficulty SQL is unavailable or invalid");
-	return Loaded;
+	catch(...)
+	{
+	}
+	ReportLoadFailure(pConsole);
+	return false;
 }
 
 const CQmMapDifficultyCatalog::SEntry *CQmMapDifficultyCatalog::FindForServer(const CServerInfo &Server, const char *pCategoryHint) const
