@@ -36,52 +36,121 @@ TEST(QmChatBubble, ShrinkingKeepsTextAndTailInTheSameCoordinateSystem)
 	EXPECT_FLOAT_EQ(Small.m_Stroke, Full.m_Stroke * 0.2f);
 }
 
-TEST(QmChatBubble, FillTrianglesStayInsideContourAtFontAndAnimationExtremes)
+TEST(QmChatBubble, AllStylesKeepContoursWoundAndAnchoredAtFontAndAnimationExtremes)
 {
-	for(const float FontSize : {8.0f, 20.0f, 32.0f})
-		for(const float Scale : {0.2f, 1.0f, 1.05f})
+	for(int StyleIndex = 0; StyleIndex < qm_chat_bubble::STYLE_COUNT; ++StyleIndex)
+		for(const float FontSize : {8.0f, 20.0f, 32.0f})
+			for(const float Scale : {0.2f, 1.0f, 1.05f})
+				for(const vec2 TextSize : {vec2(0, 0), vec2(230, 200)})
+				{
+					SCOPED_TRACE(::testing::Message() << "style=" << StyleIndex << " font=" << FontSize << " scale=" << Scale << " width=" << TextSize.x);
+					const auto Bubble = qm_chat_bubble::Layout(vec2(0, 0), TextSize, FontSize, Scale, qm_chat_bubble::StyleFromConfig(StyleIndex));
+					const auto Inner = qm_chat_bubble::Contour(Bubble, Bubble.m_Stroke);
+					const auto Outer = qm_chat_bubble::Contour(Bubble);
+					ASSERT_GT(Inner.m_Count, 0);
+					ASSERT_LE(Inner.m_Count, qm_chat_bubble::MAX_CONTOUR_POINTS);
+					ASSERT_EQ(Inner.m_Count, Outer.m_Count);
+					const vec2 Center = Bubble.m_Position + Bubble.m_Size * 0.5f;
+					float LowestY = Bubble.m_Position.y;
+					for(int i = 0; i < Inner.m_Count; ++i)
+					{
+						const vec2 A = Inner.m_aPoints[i] - Center;
+						const vec2 B = Inner.m_aPoints[(i + 1) % Inner.m_Count] - Center;
+						EXPECT_GE(A.x * B.y - A.y * B.x, -0.0001f);
+						EXPECT_LE(Outer.m_aPoints[i].y, 0.0001f);
+						LowestY = std::max(LowestY, Outer.m_aPoints[i].y);
+					}
+					EXPECT_NEAR(LowestY, 0.0f, 0.0001f);
+				}
+}
+
+TEST(QmChatBubble, CustomColorsOverrideEveryPresetWithoutChangingSavedColors)
+{
+	const ColorRGBA Dark(0.1f, 0.05f, 0.2f, 0.8f);
+	const ColorRGBA Text(0.9f, 0.8f, 0.7f);
+	for(int i = 0; i < qm_chat_bubble::STYLE_COUNT; ++i)
+	{
+		const auto Colors = qm_chat_bubble::Palette(qm_chat_bubble::StyleFromConfig(i), true, Dark, Text, 0.5f);
+		EXPECT_EQ(Colors.m_Fill, Dark.WithAlpha(0.4f));
+		EXPECT_EQ(Colors.m_FillBottom, Colors.m_Fill);
+		EXPECT_EQ(Colors.m_Text, Text.WithAlpha(0.5f));
+		EXPECT_GT(Colors.m_Outline.r, Dark.r);
+	}
+}
+
+TEST(QmChatBubble, ZeroOpacityOrTransparentCustomBackgroundHidesAllDecoration)
+{
+	for(int i = 0; i < qm_chat_bubble::STYLE_COUNT; ++i)
+		for(const bool Custom : {false, true})
 		{
-			SCOPED_TRACE(::testing::Message() << "font=" << FontSize << " scale=" << Scale);
-			const auto Bubble = qm_chat_bubble::Layout(vec2(0, 0), vec2(0, 0), FontSize, Scale);
-			const auto aInner = qm_chat_bubble::Contour(Bubble, Bubble.m_Stroke);
-			const auto aOuter = qm_chat_bubble::Contour(Bubble);
-			EXPECT_GT(Bubble.m_Size.x * 0.5f - Bubble.m_Radius, Bubble.m_TailLean + Bubble.m_TailHalfWidth);
-			const vec2 Center = Bubble.m_Position + Bubble.m_Size * 0.5f;
-			float LowestY = Bubble.m_Position.y;
-			for(size_t i = 0; i < aInner.size(); ++i)
-			{
-				const vec2 A = aInner[i] - Center;
-				const vec2 B = aInner[(i + 1) % aInner.size()] - Center;
-				EXPECT_GE(A.x * B.y - A.y * B.x, -0.0001f);
-				EXPECT_LE(aOuter[i].y, 0.0001f);
-				LowestY = std::max(LowestY, aOuter[i].y);
-			}
-			EXPECT_NEAR(LowestY, 0.0f, 0.0001f);
+			const auto Style = qm_chat_bubble::StyleFromConfig(i);
+			const auto Colors = qm_chat_bubble::Palette(Style, Custom, ColorRGBA(1, 1, 1, 1), ColorRGBA(1, 1, 1), 0.0f);
+			EXPECT_FLOAT_EQ(Colors.m_Fill.a, 0.0f);
+			EXPECT_FLOAT_EQ(Colors.m_Outline.a, 0.0f);
+			EXPECT_FLOAT_EQ(Colors.m_Shadow.a, 0.0f);
+			EXPECT_FLOAT_EQ(Colors.m_Text.a, 0.0f);
+			const auto Transparent = qm_chat_bubble::Palette(Style, true, ColorRGBA(1, 1, 1, 0), ColorRGBA(1, 1, 1), 1.0f);
+			EXPECT_FLOAT_EQ(Transparent.m_Fill.a, 0.0f);
+			EXPECT_FLOAT_EQ(Transparent.m_Outline.a, 0.0f);
+			EXPECT_FLOAT_EQ(Transparent.m_Shadow.a, 0.0f);
+			EXPECT_FLOAT_EQ(Transparent.m_Text.a, 1.0f);
 		}
 }
 
-TEST(QmChatBubble, CustomBackgroundKeepsItsColorAndGetsContrastingInk)
+TEST(QmChatBubble, PresetsSupplyTheirOwnReadableTextAndGradientColors)
 {
-	const ColorRGBA Dark(0.1f, 0.05f, 0.2f, 0.8f);
-	const auto DarkPalette = qm_chat_bubble::Palette(Dark, 0.5f);
-	EXPECT_FLOAT_EQ(DarkPalette.m_Fill.r, Dark.r);
-	EXPECT_FLOAT_EQ(DarkPalette.m_Fill.g, Dark.g);
-	EXPECT_FLOAT_EQ(DarkPalette.m_Fill.b, Dark.b);
-	EXPECT_FLOAT_EQ(DarkPalette.m_Fill.a, 0.4f);
-	EXPECT_GT(DarkPalette.m_Outline.r, Dark.r);
-	const ColorRGBA Light(1.0f, 0.95f, 0.8f, 1.0f);
-	const auto LightPalette = qm_chat_bubble::Palette(Light, 1.0f);
-	EXPECT_LT(LightPalette.m_Outline.r, Light.r);
+	using qm_chat_bubble::EStyle;
+	const auto Comic = qm_chat_bubble::Palette(EStyle::COMIC, false, {}, {}, 1.0f);
+	const auto Candy = qm_chat_bubble::Palette(EStyle::CANDY, false, {}, {}, 1.0f);
+	const auto Sticker = qm_chat_bubble::Palette(EStyle::STICKER, false, {}, {}, 1.0f);
+	EXPECT_EQ(Comic.m_Fill, Comic.m_FillBottom);
+	EXPECT_GT(Comic.m_Fill.r - Comic.m_Text.r, 0.7f);
+	EXPECT_NE(Candy.m_Fill, Candy.m_FillBottom);
+	EXPECT_GT(Candy.m_Fill.b - Candy.m_Text.b, 0.5f);
+	EXPECT_NE(Sticker.m_Fill, Candy.m_Fill);
 }
 
-TEST(QmChatBubble, ZeroOpacityOrTransparentBackgroundHidesAllDecoration)
+TEST(QmChatBubble, StickerEarsAndBurstOutlineAreDifferentSilhouettes)
 {
-	for(const auto &Colors : {
-		    qm_chat_bubble::Palette(ColorRGBA(1, 1, 1, 1), 0.0f),
-		    qm_chat_bubble::Palette(ColorRGBA(1, 1, 1, 0), 1.0f)})
-	{
-		EXPECT_FLOAT_EQ(Colors.m_Fill.a, 0.0f);
-		EXPECT_FLOAT_EQ(Colors.m_Outline.a, 0.0f);
-		EXPECT_FLOAT_EQ(Colors.m_Shadow.a, 0.0f);
-	}
+	using qm_chat_bubble::EStyle;
+	const auto Sticker = qm_chat_bubble::Layout(vec2(0, 0), vec2(80, 20), 20, 1, EStyle::STICKER);
+	const auto Burst = qm_chat_bubble::Layout(vec2(0, 0), vec2(80, 20), 20, 1, EStyle::BURST);
+	const auto Ears = qm_chat_bubble::Contour(Sticker);
+	float Top = Sticker.m_Position.y;
+	for(int i = 0; i < Ears.m_Count; ++i)
+		Top = std::min(Top, Ears.m_aPoints[i].y);
+	EXPECT_LT(Top, Sticker.m_Position.y);
+	EXPECT_EQ(Burst.m_TailHeight, 0.0f);
+	EXPECT_NE(qm_chat_bubble::Contour(Burst).m_Count, Ears.m_Count);
+}
+
+TEST(QmChatBubble, InvalidStyleValuesStayWithinAvailablePresets)
+{
+	EXPECT_EQ(qm_chat_bubble::StyleFromConfig(-1), qm_chat_bubble::EStyle::COMIC);
+	EXPECT_EQ(qm_chat_bubble::StyleFromConfig(4), qm_chat_bubble::EStyle::STICKER);
+}
+
+TEST(QmChatBubble, MultilineTextCornersStayInsideEveryStyle)
+{
+	for(int StyleIndex = 0; StyleIndex < qm_chat_bubble::STYLE_COUNT; ++StyleIndex)
+		for(const vec2 TextSize : {vec2(230, 20), vec2(230, 200), vec2(20, 200)})
+		{
+			SCOPED_TRACE(::testing::Message() << "style=" << StyleIndex << " text=" << TextSize.x << "," << TextSize.y);
+			const auto Bubble = qm_chat_bubble::Layout(vec2(0, 0), TextSize, 20.0f, 1.0f, qm_chat_bubble::StyleFromConfig(StyleIndex));
+			const auto Inner = qm_chat_bubble::Contour(Bubble, Bubble.m_Stroke);
+			for(const vec2 Offset : {vec2(0, 0), vec2(TextSize.x, 0), TextSize, vec2(0, TextSize.y)})
+			{
+				const vec2 Point = Bubble.m_TextPosition + Offset;
+				bool Inside = false;
+				// 用射线交点判定文字边界，不复刻生产轮廓生成过程。
+				for(int i = 0, j = Inner.m_Count - 1; i < Inner.m_Count; j = i++)
+				{
+					const vec2 A = Inner.m_aPoints[i];
+					const vec2 B = Inner.m_aPoints[j];
+					if((A.y > Point.y) != (B.y > Point.y) && Point.x < (B.x - A.x) * (Point.y - A.y) / (B.y - A.y) + A.x)
+						Inside = !Inside;
+				}
+				EXPECT_TRUE(Inside);
+			}
+		}
 }

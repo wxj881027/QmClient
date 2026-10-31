@@ -690,6 +690,7 @@ Cancel
 Cancel translation test
 Cancel your swap request
 Candidate files
+Candy gradient
 Cannot join the target player's team
 Cannot open word list file. Previous words remain active.
 Cannot read complete word list file. Previous words remain active.
@@ -735,6 +736,7 @@ Chat bubble background color
 Chat bubble disappear animation (0=Fade, 1=Shrink, 2=Slide up)
 Chat bubble display duration (seconds)
 Chat bubble font size
+Chat bubble style (0=Comic dialogue, 1=Comic burst, 2=Candy gradient, 3=Sticker)
 Chat bubble text color
 Chat bubble transparency (0-100)
 Chat command
@@ -920,6 +922,8 @@ Colors of the hook collision line, in case of a possible collision with:
 Colors of the translate button in the chat input and of the language menu that button opens.
 Colors too close to the map background are hard to read while moving.
 Combo
+Comic burst
+Comic dialogue
 Comma-separated list of banned clients to be kicked on join
 Command
 Command completion
@@ -2605,6 +2609,7 @@ Length
 Lenny:
 Let server start ghost
 Let server start race recorder
+Let's play together!
 Lets you join team i (shows your team if left blank)
 Lht.
 LibreTranslate API Key
@@ -4903,6 +4908,7 @@ Steam is installed but not running
 Steam is running
 Steam not found
 Steam profile name
+Sticker
 Still free after %d sponsors. Take a look?
 Stop following
 Stop following a player across servers
@@ -4932,6 +4938,7 @@ Strong / Weak
 Strong hook
 Strong hook color
 Strong Weak Hook
+Style
 Style chat names, text, and message colors
 Style kill, finish, and system messages
 Styles chat names and message colors, including gradients.
@@ -5555,6 +5562,8 @@ Use compact list view for config variables
 Use current map as background
 Use current name
 Use current settings
+Use custom chat bubble colors
+Use custom colors
 Use custom colors for the pressed hook collision line (0 = always invert)
 Use custom skins instead of the ninja tee
 Use custom UI icon color

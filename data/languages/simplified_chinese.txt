@@ -2075,6 +2075,9 @@ Cancel your swap request
 Candidate files
 == 候选文件
 
+Candy gradient
+== 糖果渐变
+
 Cannot join the target player's team
 == 无法加入目标玩家的队伍
 
@@ -2209,6 +2212,9 @@ Chat bubble display duration (seconds)
 
 Chat bubble font size
 == 聊天气泡字体大小
+
+Chat bubble style (0=Comic dialogue, 1=Comic burst, 2=Candy gradient, 3=Sticker)
+== 消息气泡样式（0=漫画对白，1=漫画爆炸框，2=糖果渐变，3=猫耳贴纸）
 
 Chat bubble text color
 == 聊天气泡文字颜色
@@ -2764,6 +2770,12 @@ Colors too close to the map background are hard to read while moving.
 
 Combo
 == 连击
+
+Comic burst
+== 漫画爆炸框
+
+Comic dialogue
+== 漫画对白
 
 Comma-separated list of banned clients to be kicked on join
 == 加入时将被踢出的以逗号分隔的被禁止客户端列表
@@ -7819,6 +7831,9 @@ Let server start ghost
 
 Let server start race recorder
 == 让服务器启动比赛记录器
+
+Let's play together!
+== 一起玩吧！
 
 Lets you join team i (shows your team if left blank)
 == 让你加入队伍 i（留空则显示你的队伍）
@@ -14711,6 +14726,9 @@ Steam not found
 Steam profile name
 ==  Steam 个人资料名称
 
+Sticker
+== 猫耳贴纸
+
 Still free after %d sponsors. Take a look?
 == 已经靠 %d 位赞助者撑到现在，要看看吗？
 
@@ -14797,6 +14815,9 @@ Strong hook color
 
 Strong Weak Hook
 == 强弱钩
+
+Style
+== 样式
 
 Style chat names, text, and message colors
 == 设置聊天名称、文本和消息颜色样式
@@ -16666,6 +16687,12 @@ Use current name
 
 Use current settings
 == 读取当前设置
+
+Use custom chat bubble colors
+== 使用自定义消息气泡颜色
+
+Use custom colors
+== 使用自定义颜色
 
 Use custom colors for the pressed hook collision line (0 = always invert)
 == 按下钩键时使用自定义钩子辅助线颜色（0 = 始终反色）

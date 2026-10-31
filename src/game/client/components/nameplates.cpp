@@ -2805,12 +2805,15 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 		TextWidth = AnimState.m_CachedTextWidth;
 	}
 
+	const auto BubbleStyle = qm_chat_bubble::StyleFromConfig(g_Config.m_QmChatBubbleStyle);
 	const qm_chat_bubble::SLayout Bubble = qm_chat_bubble::Layout(
 		vec2(InterfaceX, InterfaceNameplateTopY - DEFAULT_PADDING + AnimSlideOffset),
-		vec2(TextWidth, TextHeight), FontSize, AnimScale);
+		vec2(TextWidth, TextHeight), FontSize, AnimScale, BubbleStyle);
 	const float ConfigAlpha = g_Config.m_QmChatBubbleAlpha / 100.0f;
 	const ColorRGBA BgColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmChatBubbleBgColor, true));
-	qm_chat_bubble::Render(Graphics(), Bubble, BgColor, BubbleAlpha * ConfigAlpha);
+	const auto BubbleColors = qm_chat_bubble::Palette(BubbleStyle, g_Config.m_QmChatBubbleCustomColors != 0, BgColor,
+		color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmChatBubbleTextColor, false)), BubbleAlpha * ConfigAlpha);
+	qm_chat_bubble::Render(Graphics(), Bubble, BubbleColors);
 
 	if(RenderChatEmoji)
 	{
@@ -2826,12 +2829,11 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 	}
 	else
 	{
-		ColorHSLA TextHSLA(g_Config.m_QmChatBubbleTextColor, false);
-		ColorRGBA TextColor = color_cast<ColorRGBA>(TextHSLA);
-		TextColor.a *= BubbleAlpha * ConfigAlpha;
+		const ColorRGBA TextColor = BubbleColors.m_Text;
 
 		ColorRGBA OutlineColor = TextRender()->DefaultTextOutlineColor();
-		OutlineColor.a *= TextColor.a;
+		// 预设浅色底上的深色字无需黑色外描边，自定义模式保留原来的文字效果。
+		OutlineColor.a *= g_Config.m_QmChatBubbleCustomColors ? TextColor.a : 0.0f;
 
 		TextRender()->TextColor(TextColor);
 		TextRender()->TextOutlineColor(OutlineColor);

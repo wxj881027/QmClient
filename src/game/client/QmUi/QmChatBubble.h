@@ -13,10 +13,28 @@ class IGraphics;
 namespace qm_chat_bubble
 {
 
+	enum class EStyle
+	{
+		COMIC,
+		BURST,
+		CANDY,
+		STICKER
+	};
+	constexpr int STYLE_COUNT = 4;
 	constexpr float MAX_TEXT_WIDTH = 230.0f;
 	constexpr int CORNER_SEGMENTS = 8;
-	constexpr int CONTOUR_POINTS = 4 * (CORNER_SEGMENTS + 1) + 3;
-	using TContour = std::array<vec2, CONTOUR_POINTS>;
+	constexpr int MAX_CONTOUR_POINTS = 48;
+
+	inline EStyle StyleFromConfig(int Value)
+	{
+		return static_cast<EStyle>(std::clamp(Value, 0, STYLE_COUNT - 1));
+	}
+
+	struct SContour
+	{
+		std::array<vec2, MAX_CONTOUR_POINTS> m_aPoints;
+		int m_Count = 0;
+	};
 
 	struct SLayout
 	{
@@ -29,44 +47,81 @@ namespace qm_chat_bubble
 		float m_TailHalfWidth;
 		float m_TailLean;
 		float m_Scale;
+		EStyle m_Style;
 	};
 
-	// 锚点位于尾尖；缩放时尾巴和正文一同收放，尾尖与名牌的间距保持稳定。
-	inline SLayout Layout(vec2 Anchor, vec2 TextSize, float FontSize, float Scale)
+	// 锚点位于尾尖；文字尺寸独立于镜头缩放，样式只改变留白和外壳。
+	inline SLayout Layout(vec2 Anchor, vec2 TextSize, float FontSize, float Scale, EStyle Style = EStyle::COMIC)
 	{
 		const float PaddingX = std::clamp(FontSize * 0.8f, 12.0f, 20.0f);
 		const float PaddingY = std::clamp(FontSize * 0.5f, 8.0f, 14.0f);
-		const float Height = std::max(TextSize.y, FontSize) + PaddingY * 2.0f;
-		const float Radius = std::min(18.0f, Height * 0.4f);
-		// 短消息也要为倾斜尾巴留出直边，避免尾根进入两侧圆角。
-		const vec2 Size(std::max(std::max(TextSize.x, FontSize) + PaddingX * 2.0f, Radius * 2.0f + 24.0f), Height);
-		const float TailHeight = 9.0f * Scale;
-		const vec2 Position(Anchor.x - Size.x * Scale * 0.5f, Anchor.y - TailHeight - Size.y * Scale);
-		return {
-			Position,
-			Size * Scale,
-			Position + (Size - TextSize) * (Scale * 0.5f),
-			Radius * Scale,
-			2.0f * Scale,
-			TailHeight,
-			8.0f * Scale,
-			3.0f * Scale,
-			Scale};
+		float Height = std::max(TextSize.y, FontSize) + PaddingY * 2.0f;
+		float Radius = std::min(26.0f, Height * 0.48f);
+		float Width = std::max(std::max(TextSize.x, FontSize) + PaddingX * 2.0f, Radius * 2.0f + 26.0f);
+		float Stroke = 2.2f;
+		float TailHeight = 11.0f;
+		float TailWidth = 9.0f;
+		float TailLean = 3.0f;
+		if(Style == EStyle::BURST)
+		{
+			// 锯齿谷底之外再留安全区，长消息的四角不会伸入尖角。
+			Width = (std::max(TextSize.x, FontSize) + PaddingX * 2.0f) * 1.65f;
+			Height *= 1.65f;
+			Radius = 0.0f;
+			TailHeight = 0.0f;
+			Stroke = 2.5f;
+		}
+		else if(Style == EStyle::CANDY)
+		{
+			Radius = Height * 0.5f;
+			Width = std::max(Width, Radius * 2.0f + 24.0f);
+			Stroke = 1.2f;
+			TailHeight = 7.0f;
+			TailWidth = 6.0f;
+			TailLean = -3.0f;
+		}
+		else if(Style == EStyle::STICKER)
+		{
+			Radius = std::min(14.0f, Height * 0.35f);
+			Width = std::max(Width, Radius * 2.0f + 48.0f);
+			Stroke = 2.0f;
+			TailHeight = 9.0f;
+		}
+		const vec2 Size(Width, Height);
+		const vec2 Position(Anchor.x - Width * Scale * 0.5f, Anchor.y - (Height + TailHeight) * Scale);
+		return {Position, Size * Scale, Position + (Size - TextSize) * (Scale * 0.5f), Radius * Scale,
+			Stroke * Scale, TailHeight * Scale, TailWidth * Scale, TailLean * Scale, Scale, Style};
 	}
 
-	// 主体和尾巴共用闭合轮廓，半透明填充不会在接缝处叠出深色三角形。
-	inline TContour Contour(const SLayout &Layout, float Inset = 0.0f)
+	inline SContour Contour(const SLayout &Layout, float Inset = 0.0f)
 	{
+		SContour Result;
+		const vec2 Center = Layout.m_Position + Layout.m_Size * 0.5f;
+		if(Layout.m_Style == EStyle::BURST)
+		{
+			static const auto s_aDirections = [] {
+				std::array<vec2, 32> aDirections;
+				for(int i = 0; i < 32; ++i)
+				{
+					const float Angle = -pi * 0.5f + i * pi / 16.0f;
+					aDirections[i] = vec2(std::cos(Angle), std::sin(Angle));
+				}
+				return aDirections;
+			}();
+			for(int i = 0; i < 32; ++i)
+			{
+				const float Factor = i % 2 == 0 ? 1.0f : 0.84f;
+				const vec2 Radius = Layout.m_Size * (0.5f * Factor) - vec2(Inset, Inset);
+				Result.m_aPoints[Result.m_Count++] = Center + vec2(s_aDirections[i].x * Radius.x, s_aDirections[i].y * Radius.y);
+			}
+			return Result;
+		}
 		const vec2 TopLeft = Layout.m_Position + vec2(Inset, Inset);
 		const vec2 BottomRight = Layout.m_Position + Layout.m_Size - vec2(Inset, Inset);
 		const float Radius = Layout.m_Radius - Inset;
-		const float MiddleX = Layout.m_Position.x + Layout.m_Size.x * 0.5f;
 		const float BottomY = Layout.m_Position.y + Layout.m_Size.y;
 		const std::array<vec2, 4> aCenters = {{{BottomRight.x - Radius, TopLeft.y + Radius},
-			{BottomRight.x - Radius, BottomRight.y - Radius},
-			{TopLeft.x + Radius, BottomRight.y - Radius},
-			{TopLeft.x + Radius, TopLeft.y + Radius}}};
-		// 单位圆采样只初始化一次，屏幕位置与动画缩放无需逐帧计算三角函数。
+			{BottomRight.x - Radius, BottomRight.y - Radius}, {TopLeft.x + Radius, BottomRight.y - Radius}, {TopLeft.x + Radius, TopLeft.y + Radius}}};
 		static const auto s_aDirections = [] {
 			std::array<vec2, 4 * (CORNER_SEGMENTS + 1)> aDirections;
 			for(int Corner = 0; Corner < 4; ++Corner)
@@ -77,45 +132,72 @@ namespace qm_chat_bubble
 				}
 			return aDirections;
 		}();
-
-		TContour aPoints;
-		int Index = 0;
 		for(int Corner = 0; Corner < 4; ++Corner)
 		{
 			for(int Segment = 0; Segment <= CORNER_SEGMENTS; ++Segment)
-				aPoints[Index++] = aCenters[Corner] + s_aDirections[Corner * (CORNER_SEGMENTS + 1) + Segment] * Radius;
+				Result.m_aPoints[Result.m_Count++] = aCenters[Corner] + s_aDirections[Corner * (CORNER_SEGMENTS + 1) + Segment] * Radius;
 			if(Corner == 1)
 			{
 				const float HalfWidth = Layout.m_TailHalfWidth - Inset;
-				aPoints[Index++] = vec2(MiddleX + Layout.m_TailLean + HalfWidth, BottomRight.y);
-				aPoints[Index++] = vec2(MiddleX, BottomY + Layout.m_TailHeight - Inset * 2.0f);
-				aPoints[Index++] = vec2(MiddleX + Layout.m_TailLean - HalfWidth, BottomRight.y);
+				Result.m_aPoints[Result.m_Count++] = vec2(Center.x + Layout.m_TailLean + HalfWidth, BottomRight.y);
+				Result.m_aPoints[Result.m_Count++] = vec2(Center.x, BottomY + Layout.m_TailHeight - Inset * 2.0f);
+				Result.m_aPoints[Result.m_Count++] = vec2(Center.x + Layout.m_TailLean - HalfWidth, BottomRight.y);
+			}
+			if(Corner == 3 && Layout.m_Style == EStyle::STICKER)
+			{
+				// 两只小耳朵属于同一轮廓，透明填充不会在耳根处叠色。
+				for(float Side : {-1.0f, 1.0f})
+				{
+					const float EarX = Center.x + Side * 14.0f * Layout.m_Scale;
+					const float EarWidth = 6.0f * Layout.m_Scale - Inset;
+					Result.m_aPoints[Result.m_Count++] = vec2(EarX - EarWidth, TopLeft.y);
+					Result.m_aPoints[Result.m_Count++] = vec2(EarX + Side * 4.0f * Layout.m_Scale, Layout.m_Position.y - 9.0f * Layout.m_Scale + Inset * 2.0f);
+					Result.m_aPoints[Result.m_Count++] = vec2(EarX + EarWidth, TopLeft.y);
+				}
 			}
 		}
-		return aPoints;
+		return Result;
 	}
 
 	struct SPalette
 	{
 		ColorRGBA m_Fill;
+		ColorRGBA m_FillBottom;
 		ColorRGBA m_Outline;
 		ColorRGBA m_Shadow;
+		ColorRGBA m_Text;
 	};
 
-	inline SPalette Palette(ColorRGBA Background, float Opacity)
+	inline SPalette Palette(EStyle Style, bool CustomColors, ColorRGBA Background, ColorRGBA Text, float Opacity)
 	{
+		SPalette Result;
+		switch(Style)
+		{
+		case EStyle::BURST: Result = {{1.0f, 0.96f, 0.54f}, {1.0f, 0.76f, 0.26f}, {0.20f, 0.12f, 0.08f}, {0.80f, 0.26f, 0.12f, 0.4f}, {0.22f, 0.12f, 0.08f}}; break;
+		case EStyle::CANDY: Result = {{0.66f, 0.94f, 1.0f}, {0.78f, 0.70f, 1.0f}, {0.96f, 0.98f, 1.0f, 0.9f}, {0.28f, 0.22f, 0.53f, 0.25f}, {0.15f, 0.17f, 0.35f}}; break;
+		case EStyle::STICKER: Result = {{1.0f, 0.92f, 0.96f}, {1.0f, 0.78f, 0.86f}, {0.60f, 0.30f, 0.46f}, {0.45f, 0.22f, 0.34f, 0.28f}, {0.35f, 0.17f, 0.28f}}; break;
+		default: Result = {{1.0f, 0.99f, 0.94f}, {1.0f, 0.99f, 0.94f}, {0.16f, 0.13f, 0.17f}, {0.16f, 0.13f, 0.17f, 0.35f}, {0.16f, 0.13f, 0.17f}}; break;
+		}
+		if(CustomColors)
+		{
+			Background.a = std::clamp(Background.a, 0.0f, 1.0f);
+			Result.m_Fill = Result.m_FillBottom = Background;
+			const float Luminance = Background.r * 0.2126f + Background.g * 0.7152f + Background.b * 0.0722f;
+			Result.m_Outline = Luminance < 0.45f ? ColorRGBA(0.91f, 0.86f, 0.98f) : ColorRGBA(0.19f, 0.14f, 0.25f);
+			Result.m_Outline.a = std::sqrt(Background.a) * 0.9f;
+			Result.m_Shadow.a *= Background.a;
+			Result.m_Text = Text;
+		}
 		Opacity = std::clamp(Opacity, 0.0f, 1.0f);
-		const float BackgroundAlpha = std::clamp(Background.a, 0.0f, 1.0f);
-		const float Luminance = Background.r * 0.2126f + Background.g * 0.7152f + Background.b * 0.0722f;
-		// 深底使用浅色墨线，浅底使用深色墨线；保留玩家选择的底色与透明背景。
-		ColorRGBA Outline = Luminance < 0.45f ? ColorRGBA(0.91f, 0.86f, 0.98f) : ColorRGBA(0.19f, 0.14f, 0.25f);
-		Outline.a = std::sqrt(BackgroundAlpha) * Opacity * 0.9f;
-		return {Background.WithAlpha(BackgroundAlpha * Opacity), Outline,
-			ColorRGBA(0.08f, 0.06f, 0.12f, BackgroundAlpha * Opacity * 0.35f)};
+		Result.m_Fill.a *= Opacity;
+		Result.m_FillBottom.a *= Opacity;
+		Result.m_Outline.a *= Opacity;
+		Result.m_Shadow.a *= Opacity;
+		Result.m_Text.a *= Opacity;
+		return Result;
 	}
 
-	void Render(IGraphics *pGraphics, const SLayout &Layout, ColorRGBA Background, float Opacity);
+	void Render(IGraphics *pGraphics, const SLayout &Layout, const SPalette &Colors);
 
 }
-
 #endif
