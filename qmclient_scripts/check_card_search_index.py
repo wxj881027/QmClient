@@ -3,12 +3,13 @@
 
 索引维护在 src/game/client/QmUi/cards/QmCardCatalogSearch.cpp：
 每张卡一张 SCardSettingSearch 表，表内写着可检索的界面标签与配置名。
-本脚本做两件事：
+本脚本做三件事：
 
 1. 找出索引里指向不存在源码文案的失效标签（索引漂移）；
-2. 对能静态映射到渲染函数的卡片，列出卡片实际渲染、但没有进索引的标签。
+2. 按可映射程度收集每张卡实际渲染的 Localize 文案，列出没有进索引的标签；
+3. 把共享取色弹窗、运行期状态等不属于具体卡片的文案列为例外。
 
-默认只输出报告，不阻断；--strict 只在索引漂移或表/卡片登记不一致时失败。
+默认只报告；--strict 只在索引漂移或表/卡片登记不一致时失败。
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INDEX_RELATIVE = Path("src/game/client/QmUi/cards/QmCardCatalogSearch.cpp")
 CLIENT_SOURCE_RELATIVE = Path("src/game/client")
+CARD_SOURCE_RELATIVE = Path("src/game/client/QmUi/cards")
 
 TABLE_RE = re.compile(
 	r"static constexpr SCardSettingSearch (s_\w+)\[\] = \{(.*?)\n[\t ]*\};",
@@ -32,9 +34,33 @@ CONFIG_RE = re.compile(r'\{nullptr,\s*"([^"]+)"')
 METADATA_RE = re.compile(r'\{"((?:qm|deck|tclient):[^"]+)",\s*(s_\w+)\s*,')
 ADD_RE = re.compile(r'Add\(Id,\s*"((?:qm|deck|tclient):[^"]+)"')
 MAKE_MODULE_RE = re.compile(r"MakeModuleCard\(")
-RENDER_HOOK_RE = re.compile(r"QmCardRenderHook::(Render\w+)")
+RENDER_HOOK_RE = re.compile(r"(?:QmCardRenderHook::)?(Render\w+)")
 LOCALIZE_RE = re.compile(r'Localize\("((?:[^"\\]|\\.)*)"')
 FUNCTION_RE = re.compile(r"CMenus::(\w+)\s*\(")
+
+# 不属于具体设置卡片的文案：共享取色弹窗、运行期状态、卡片标题与预览内容。
+IGNORED_SOURCE_LABELS = {
+	"Edit color",
+	"Gradient settings",
+	"Gradient type",
+	"Linear gradient",
+	"Radial gradient",
+	"Angular gradient",
+	"Reflected gradient",
+	"Diamond gradient",
+	"Radial gradients spread from the center",
+	"Gradient direction",
+	"Gradient horizontal position",
+	"Gradient vertical position",
+	"Gradient range",
+	"Reverse gradient colors",
+	"Loading…",
+	"Preview unavailable",
+	"Preview loading…",
+	"Unavailable",
+	"Console settings",
+	"Info",
+}
 
 
 def _skip_string(text: str, index: int) -> int:
@@ -154,8 +180,93 @@ def parse_make_module_mappings(text: str) -> dict[str, str]:
 	return mappings
 
 
+def parse_find_stable_id_vars(text: str) -> dict[str, str]:
+	"""变量名 -> stableId（X = ...FindByStableId("id")）。"""
+	return {match.group(1): match.group(2) for match in re.finditer(r'(\w+)\s*=\s*[^;\n]*FindByStableId\("([^"]+)"\)', text)}
+
+
+def parse_spec_vars(text: str, var_to_stable_id: dict[str, str]) -> dict[str, str]:
+	"""SSettingsCardSpec 变量 -> stableId。"""
+	specs: dict[str, str] = {}
+	for match in re.finditer(r"SSettingsCardSpec\s+(\w+)\s*\{\s*(\w+)->m_pStableId", text):
+		stable_id = var_to_stable_id.get(match.group(2))
+		if stable_id is not None:
+			specs[match.group(1)] = stable_id
+	return specs
+
+
+def parse_stable_id_branches(text: str) -> dict[str, str]:
+	"""str_comp(pStableId, "id") 之后的 if 块正文。"""
+	bodies: dict[str, str] = {}
+	for match in re.finditer(r'str_comp\(pStableId,\s*"((?:qm|deck|tclient):[^"]+)"\)', text):
+		open_paren = text.find("(", match.start())
+		close_paren = find_matching(text, open_paren)
+		if close_paren < 0:
+			continue
+		open_brace = text.find("{", close_paren)
+		if open_brace < 0 or open_brace - close_paren > 200:
+			continue
+		close_brace = find_matching(text, open_brace)
+		if close_brace < 0:
+			continue
+		bodies[match.group(1)] = bodies.get(match.group(1), "") + text[open_brace : close_brace + 1]
+	return bodies
+
+
+def parse_addcard_spec_blocks(text: str, spec_to_stable_id: dict[str, str]) -> dict[str, str]:
+	bodies: dict[str, str] = {}
+	for match in re.finditer(r"AddCard\((\w+)\s*,", text):
+		stable_id = spec_to_stable_id.get(match.group(1))
+		if stable_id is None:
+			continue
+		open_paren = text.find("(", match.start())
+		close_paren = find_matching(text, open_paren)
+		if close_paren < 0:
+			continue
+		bodies[stable_id] = bodies.get(stable_id, "") + text[match.start() : close_paren + 1]
+	return bodies
+
+
+def parse_appearance_index_blocks(text: str) -> dict[str, str]:
+	"""Appearance 的 aAppearanceIds 数组 + AddCard(Index, ...)。"""
+	array_match = re.search(r"aAppearanceIds\[\] = \{(.*?)\};", text, re.DOTALL)
+	if array_match is None:
+		return {}
+	stable_ids = re.findall(r'"((?:qm|deck|tclient):[^"]+)"', array_match.group(1))
+	bodies: dict[str, str] = {}
+	for match in re.finditer(r"AddCard\((\d+)\s*,", text):
+		index = int(match.group(1))
+		if index >= len(stable_ids):
+			continue
+		open_paren = text.find("(", match.start())
+		close_paren = find_matching(text, open_paren)
+		if close_paren < 0:
+			continue
+		stable_id = stable_ids[index]
+		bodies[stable_id] = bodies.get(stable_id, "") + text[match.start() : close_paren + 1]
+	return bodies
+
+
 def extract_function_body(text: str, function_name: str) -> str | None:
 	match = re.search(r"CMenus::" + re.escape(function_name) + r"\s*\(", text)
+	if match is None:
+		return None
+	open_paren = text.find("(", match.start())
+	close_paren = find_matching(text, open_paren)
+	if close_paren < 0:
+		return None
+	open_brace = text.find("{", close_paren)
+	if open_brace < 0:
+		return None
+	close_brace = find_matching(text, open_brace)
+	if close_brace < 0:
+		return None
+	return text[open_brace : close_brace + 1]
+
+
+def extract_named_function_body(text: str, function_name: str) -> str | None:
+	pattern = re.compile(r"^[A-Za-z_][^\n;]*::" + re.escape(function_name) + r"\s*\(", re.MULTILINE)
+	match = pattern.search(text)
 	if match is None:
 		return None
 	open_paren = text.find("(", match.start())
@@ -200,15 +311,27 @@ def extract_localize_labels(text: str) -> set[str]:
 	return set(LOCALIZE_RE.findall(strip_comments(text)))
 
 
-def read_client_sources(root: Path) -> dict[Path, str]:
+def read_sources(root: Path, relative: Path) -> dict[Path, str]:
 	sources: dict[Path, str] = {}
-	for path in (root / CLIENT_SOURCE_RELATIVE).rglob("*"):
-		if path.suffix not in {".cpp", ".h"}:
-			continue
-		if path == root / INDEX_RELATIVE:
-			continue
-		sources[path] = path.read_text(encoding="utf-8", errors="replace")
+	for path in (root / relative).rglob("*"):
+		if path.suffix in {".cpp", ".h"}:
+			sources[path] = path.read_text(encoding="utf-8", errors="replace")
 	return sources
+
+
+def called_render_labels(body: str, sources: dict[Path, str], seen: set[str]) -> set[str]:
+	"""块内调用的 Render* 函数正文标签（只展开一层）。"""
+	labels: set[str] = set()
+	for name in set(re.findall(r"\b(Render\w+)\s*\(", body)):
+		if name in seen:
+			continue
+		seen.add(name)
+		for text in sources.values():
+			function_body = extract_named_function_body(text, name)
+			if function_body is not None:
+				labels |= extract_localize_labels(function_body)
+				break
+	return labels
 
 
 def analyze(root: Path) -> dict:
@@ -216,8 +339,20 @@ def analyze(root: Path) -> dict:
 	tables = parse_tables(index_text)
 	metadata = parse_metadata(index_text)
 
-	client_sources = read_client_sources(root)
+	client_sources = read_sources(root, CLIENT_SOURCE_RELATIVE)
+	client_sources.pop(root / INDEX_RELATIVE, None)
+	card_sources = read_sources(root, CARD_SOURCE_RELATIVE)
+	card_sources.pop(root / INDEX_RELATIVE, None)
 	corpus = "\n".join(client_sources.values()).lower()
+
+	all_index_labels: set[str] = set()
+	for table in tables.values():
+		all_index_labels |= table["labels"]
+
+	card_labels: set[str] = set()
+	for text in card_sources.values():
+		card_labels |= extract_localize_labels(text)
+	global_unindexed = sorted(label for label in card_labels if label not in all_index_labels and label not in IGNORED_SOURCE_LABELS)
 
 	tables_by_card = {stable_id: table for stable_id, table in metadata.items() if table in tables}
 	registered_tables = set(tables_by_card.values())
@@ -229,45 +364,83 @@ def analyze(root: Path) -> dict:
 				drifted.append({"table": table_name, "label": label})
 
 	add_mappings: dict[str, tuple[str, str]] = {}
+	block_mappings: dict[str, tuple[str, str]] = {}
 	for path, text in client_sources.items():
+		relative = str(path.relative_to(root))
 		for stable_id, function_name in parse_add_mappings(text).items():
-			add_mappings.setdefault(stable_id, (str(path.relative_to(root)), function_name))
+			add_mappings.setdefault(stable_id, (relative, function_name))
 		for stable_id, function_name in parse_make_module_mappings(text).items():
-			add_mappings.setdefault(stable_id, (str(path.relative_to(root)), function_name))
+			add_mappings.setdefault(stable_id, (relative, function_name))
+		var_to_stable_id = parse_find_stable_id_vars(text)
+		spec_to_stable_id = parse_spec_vars(text, var_to_stable_id)
+		blocks: dict[str, str] = {}
+		for source in (parse_stable_id_branches(text), parse_addcard_spec_blocks(text, spec_to_stable_id), parse_appearance_index_blocks(text)):
+			for stable_id, body in source.items():
+				blocks[stable_id] = blocks.get(stable_id, "") + body
+		for stable_id, body in blocks.items():
+			block_mappings.setdefault(stable_id, (relative, body))
 
+	unindexed_set = set(global_unindexed)
 	cards = []
 	unmapped = []
+	exact_cards = 0
 	for stable_id, table_name in sorted(tables_by_card.items()):
-		mapping = add_mappings.get(stable_id)
-		if mapping is None:
+		table_labels = tables[table_name]["labels"]
+		source_labels: set[str] = set()
+		origin = ""
+		confidence = ""
+		if stable_id in add_mappings:
+			source_path, function_name = add_mappings[stable_id]
+			body = extract_function_body(client_sources[root / source_path], function_name)
+			origin = function_name
+			confidence = "function"
+			if body is not None:
+				source_labels = extract_localize_labels(body)
+				source_labels |= called_render_labels(body, client_sources, set())
+		elif stable_id in block_mappings:
+			source_path, body = block_mappings[stable_id]
+			origin = "block"
+			confidence = "block"
+			source_labels = extract_localize_labels(body)
+			source_labels |= called_render_labels(body, client_sources, set())
+		else:
 			unmapped.append(stable_id)
+			cards.append({
+				"stable_id": stable_id,
+				"confidence": "none",
+				"function": "",
+				"source": "",
+				"source_labels": 0,
+				"indexed_labels": len(table_labels),
+				"missing": [],
+			})
 			continue
-		source_path, function_name = mapping
-		body = extract_function_body(client_sources[root / source_path], function_name)
-		source_labels = extract_localize_labels(body) if body is not None else set()
-		missing = sorted(source_labels - tables[table_name]["labels"])
+		exact_cards += 1
+		missing = sorted((source_labels - table_labels) & unindexed_set)
 		cards.append({
 			"stable_id": stable_id,
-			"function": function_name,
+			"confidence": confidence,
+			"function": origin,
 			"source": source_path,
 			"source_labels": len(source_labels),
-			"indexed_labels": len(tables[table_name]["labels"]),
+			"indexed_labels": len(table_labels),
 			"missing": missing,
 		})
 
-	metadata_tables = set(tables_by_card.values())
 	return {
 		"tables": len(tables),
 		"registered_cards": len(metadata),
 		"unregistered_tables": sorted(set(tables) - registered_tables),
 		"missing_tables": sorted(stable_id for stable_id, table in metadata.items() if table not in tables),
-		"index_labels": sum(len(table["labels"]) for table in tables.values()),
+		"index_labels": len(all_index_labels),
 		"drifted_labels": drifted,
-		"mapped_cards": len(cards),
-		"unmapped_cards": unmapped,
+		"mapped_cards": exact_cards,
+		"exact_cards": exact_cards,
+		"no_source_cards": unmapped,
 		"cards": cards,
 		"missing_total": sum(len(card["missing"]) for card in cards),
-		"metadata_tables": len(metadata_tables),
+		"unindexed_labels": global_unindexed,
+		"ignored_labels": sorted(IGNORED_SOURCE_LABELS),
 	}
 
 
@@ -277,9 +450,10 @@ def render_markdown(report: dict) -> str:
 		"",
 		f"- 索引表：{report['tables']}，登记卡：{report['registered_cards']}",
 		f"- 索引标签：{report['index_labels']}",
-		f"- 可映射渲染函数的卡：{report['mapped_cards']}，未映射：{len(report['unmapped_cards'])}",
+		f"- 精确映射卡片：{report['mapped_cards']}；未精确映射：{len(report['no_source_cards'])}",
 		f"- 索引标签在源码中失配：{len(report['drifted_labels'])}",
-		f"- 已映射卡未入索引的标签合计：{report['missing_total']}",
+		f"- 未入索引的卡片文案：{len(report['unindexed_labels'])}",
+		f"- 已知例外（共享弹窗/状态/标题）：{len(report['ignored_labels'])}",
 		"",
 	]
 	if report["drifted_labels"]:
@@ -287,25 +461,39 @@ def render_markdown(report: dict) -> str:
 		for item in report["drifted_labels"]:
 			lines.append(f"| {item['table']} | {item['label']} |")
 		lines.append("")
+	if report["unindexed_labels"]:
+		lines.extend(["## 未入索引的卡片文案", ""])
+		for label in report["unindexed_labels"]:
+			lines.append(f"- {label}")
+		lines.append("")
 	rows = [card for card in report["cards"] if card["missing"]]
 	if rows:
 		lines.extend([
 			"## 有缺口的卡片",
 			"",
-			"| 卡片 | 渲染函数 | 源码标签 | 已入索引 | 缺口 | 示例 |",
+			"| 卡片 | 映射 | 源码标签 | 已入索引 | 缺口 | 示例 |",
 			"| --- | --- | --- | --- | --- | --- |",
 		])
 		for card in sorted(rows, key=lambda item: len(item["missing"]), reverse=True):
 			examples = "；".join(card["missing"][:4])
-			lines.append(f"| {card['stable_id']} | {card['function']} | {card['source_labels']} | {card['indexed_labels']} | {len(card['missing'])} | {examples} |")
+			lines.append(f"| {card['stable_id']} | {card['confidence']} | {card['source_labels']} | {card['indexed_labels']} | {len(card['missing'])} | {examples} |")
 		lines.append("")
-	if report["unmapped_cards"]:
+	if report["no_source_cards"]:
 		lines.extend([
-			"## 未映射的卡片",
+			"## 未精确映射的卡片",
 			"",
-			"这些卡没有 Add(...) 形式的渲染函数映射（标准卡/预览卡），需要人工核对：",
+			"这些卡的索引标签来自绑定命令、共享组件或纯配置名，无法在卡片源码中定位到唯一文案；它们仍参与全局“未入索引文案”统计：",
 			"",
-			", ".join(report["unmapped_cards"]),
+			", ".join(report["no_source_cards"]),
+			"",
+		])
+	if report["ignored_labels"]:
+		lines.extend([
+			"## 已知例外",
+			"",
+			"共享取色弹窗、运行期状态与卡片标题不计入缺口：",
+			"",
+			", ".join(report["ignored_labels"]),
 			"",
 		])
 	return "\n".join(lines) + "\n"

@@ -90,41 +90,89 @@ class ParserTest(unittest.TestCase):
 		self.assertEqual(checker.parse_add_mappings(text), {"qm:alpha": "RenderAlpha"})
 		self.assertEqual(checker.parse_make_module_mappings(text), {"qm:beta": "RenderBeta"})
 
+	def test_resolves_spec_vars_and_stable_id_branches(self) -> None:
+		text = """void Build()
+{
+	const auto *pCard = FindByStableId("deck:alpha");
+	const SSettingsCardSpec AlphaSpec{pCard->m_pStableId, Localize("Alpha"), ""};
+	if(str_comp(pStableId, "deck:beta") == 0)
+	{
+		Localize("Beta");
+	}
+	AddCard(AlphaSpec, [](CUIRect &Content) { Localize("Alpha"); });
+}
+"""
+		variables = checker.parse_find_stable_id_vars(text)
+		self.assertEqual(variables, {"pCard": "deck:alpha"})
+		self.assertEqual(checker.parse_spec_vars(text, variables), {"AlphaSpec": "deck:alpha"})
+		blocks = checker.parse_addcard_spec_blocks(text, {"AlphaSpec": "deck:alpha"})
+		self.assertIn('Localize("Alpha")', blocks["deck:alpha"])
+		branches = checker.parse_stable_id_branches(text)
+		self.assertIn('Localize("Beta")', branches["deck:beta"])
+
 
 class AnalyzeTest(unittest.TestCase):
 	def _write_repo(self, root: Path, index_text: str, card_text: str) -> None:
 		index_path = root / checker.INDEX_RELATIVE
 		index_path.parent.mkdir(parents=True)
 		index_path.write_text(index_text, encoding="utf-8")
-		card_path = root / checker.CLIENT_SOURCE_RELATIVE / "Card.cpp"
+		card_path = root / checker.CARD_SOURCE_RELATIVE / "Card.cpp"
 		card_path.parent.mkdir(parents=True, exist_ok=True)
 		card_path.write_text(card_text, encoding="utf-8")
+
+	def _analyze(self, index_text: str, card_text: str) -> dict:
+		with tempfile.TemporaryDirectory() as temp_dir:
+			root = Path(temp_dir)
+			self._write_repo(root, index_text, card_text)
+			return checker.analyze(root)
 
 	def test_reports_missing_labels_and_drift(self) -> None:
 		index_text = INDEX_SAMPLE.replace(
 			'\t\t{Localizable("Beta", "ctx"), nullptr, "测试"},',
 			'\t\t{Localizable("Beta", "ctx"), nullptr, "测试"},\n\t\t{Localizable("Ghost label"), nullptr, "幽灵"},',
 		)
-		with tempfile.TemporaryDirectory() as temp_dir:
-			root = Path(temp_dir)
-			self._write_repo(root, index_text, CARD_SOURCE)
-			report = checker.analyze(root)
+		report = self._analyze(index_text, CARD_SOURCE)
 		self.assertEqual(report["tables"], 1)
 		self.assertEqual(report["mapped_cards"], 1)
+		self.assertEqual(report["exact_cards"], 1)
 		self.assertEqual(report["drifted_labels"], [{"table": "s_acard", "label": "Ghost label"}])
+		self.assertEqual(report["unindexed_labels"], ["Delta", "Gamma", "ShouldNotBeCollected"])
 		card = report["cards"][0]
 		self.assertEqual(card["stable_id"], "qm:alpha")
+		self.assertEqual(card["confidence"], "function")
 		self.assertEqual(card["missing"], ["Delta", "Gamma"])
+
+	def test_ignores_shared_dialog_and_status_labels(self) -> None:
+		card_text = CARD_SOURCE.replace('Localize("Gamma");', 'Localize("Gamma");\n\tLocalize("Loading…");')
+		report = self._analyze(INDEX_SAMPLE, card_text)
+		self.assertNotIn("Loading…", report["unindexed_labels"])
+		self.assertNotIn("Loading…", report["cards"][0]["missing"])
+
+	def test_marks_cards_without_exact_mapping(self) -> None:
+		card_text = CARD_SOURCE.replace('Add(Id, "qm:alpha"', 'Add(Id, "qm:other"')
+		report = self._analyze(INDEX_SAMPLE, card_text)
+		card = report["cards"][0]
+		self.assertEqual(card["confidence"], "none")
+		self.assertEqual(card["source"], "")
+		self.assertEqual(report["no_source_cards"], ["qm:alpha"])
+
+	def test_marks_cards_without_static_labels(self) -> None:
+		index_text = INDEX_SAMPLE.replace(
+			'{Localizable("Alpha label"), nullptr, "别名"},',
+			'{Localizable("Only config"), nullptr, "仅配置"},',
+		).replace('{Localizable("Beta", "ctx"), nullptr, "测试"},', "")
+		card_text = CARD_SOURCE.replace('Add(Id, "qm:alpha"', 'Add(Id, "qm:other"')
+		report = self._analyze(index_text, card_text)
+		self.assertEqual(report["no_source_cards"], ["qm:alpha"])
+		self.assertEqual(report["mapped_cards"], 0)
+		self.assertEqual(report["unindexed_labels"], ["Alpha label", "Beta", "Delta", "Gamma", "ShouldNotBeCollected"])
 
 	def test_counts_registration_problems(self) -> None:
 		index_text = INDEX_SAMPLE.replace(
 			'{"qm:alpha", s_acard, std::size(s_acard)},',
 			'{"qm:alpha", s_missing, std::size(s_acard)},',
 		)
-		with tempfile.TemporaryDirectory() as temp_dir:
-			root = Path(temp_dir)
-			self._write_repo(root, index_text, CARD_SOURCE)
-			report = checker.analyze(root)
+		report = self._analyze(index_text, CARD_SOURCE)
 		self.assertEqual(report["unregistered_tables"], ["s_acard"])
 		self.assertEqual(report["missing_tables"], ["qm:alpha"])
 
