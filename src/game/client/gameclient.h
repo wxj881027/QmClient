@@ -88,6 +88,7 @@
 #include "components/qmclient/music_lyrics/music_lyrics_integration.h"
 #include "components/qmclient/music_lyrics/qm_spotify_integration.h"
 #include "components/qmclient/netease/netease_integration.h"
+#include "components/qmclient/pending_hammer_hits.h"
 #include "components/qmclient/qm_hook_coll_candidates.h"
 #include "components/qmclient/qm_hook_coll_spatial_index.h"
 #include "components/qmclient/qmclient.h"
@@ -388,15 +389,7 @@ private:
 	CQmImeManager m_QmImeManager;
 	CRaceHelper m_RaceHelper;
 	CQmHammerHitTracker m_HammerHitTracker;
-	struct SPendingHammerHitEvent
-	{
-		vec2 m_Pos;
-		int m_SnapshotTick;
-		int m_Connection;
-		int m_EventOrdinal;
-		bool m_RenderEffect;
-	};
-	std::vector<SPendingHammerHitEvent> m_vPendingHammerHitEvents;
+	CQmPendingHammerHits m_PendingHammerHits;
 
 	// 主/分身连接的重复送达只有在攻击者和目标均已确定且一致时才合并。
 	SQmHammerHitRecord m_LastHammerEffect;

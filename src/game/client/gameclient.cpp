@@ -1750,7 +1750,7 @@ void CGameClient::OnReset()
 	m_NewTick = false;
 	m_NewPredictedTick = false;
 	m_HammerHitTracker.Reset();
-	m_vPendingHammerHitEvents.clear();
+	m_PendingHammerHits.Reset();
 	std::fill(std::begin(m_aConfirmedHammerHitEvent), std::end(m_aConfirmedHammerHitEvent), false);
 
 	m_aFlagDropTick[TEAM_RED] = 0;
@@ -2253,7 +2253,7 @@ void CGameClient::OnDummyDisconnect()
 	m_aLastPredictedAirJumpTick[1] = -1;
 	m_PredictedDummyId = -1;
 	m_HammerHitTracker.Reset();
-	m_vPendingHammerHitEvents.clear();
+	m_PendingHammerHits.Reset();
 	std::fill(std::begin(m_aConfirmedHammerHitEvent), std::end(m_aConfirmedHammerHitEvent), false);
 	m_FastPractice.InvalidateBufferedInputState();
 }
@@ -3054,7 +3054,7 @@ void CGameClient::ResetDemoPlaybackState()
 	m_DemoHudPlaybackState = {};
 	m_DemoInputPlaybackState = {};
 	m_HammerHitTracker.Reset();
-	m_vPendingHammerHitEvents.clear();
+	m_PendingHammerHits.Reset();
 	for(auto &Client : m_aClients)
 		Client.m_HudFrozenTeeState = {};
 }
@@ -3230,7 +3230,7 @@ void CGameClient::OnRconLine(const char *pLine)
 
 void CGameClient::ProcessEvents()
 {
-	m_vPendingHammerHitEvents.clear();
+	m_PendingHammerHits.Reset();
 	std::fill(std::begin(m_aConfirmedHammerHitEvent), std::end(m_aConfirmedHammerHitEvent), false);
 	const int EventDummy = g_Config.m_ClDummy;
 	const int EventTick = Client()->GameTick(EventDummy);
@@ -3328,7 +3328,7 @@ void CGameClient::ProcessEvents()
 			const CNetEvent_HammerHit *pEvent = (const CNetEvent_HammerHit *)Item.m_pData;
 			const vec2 HammerHitPos(pEvent->m_X, pEvent->m_Y);
 			bool RenderEffect = true;
-			m_vPendingHammerHitEvents.push_back({HammerHitPos,
+			(void)m_PendingHammerHits.TryAppend({HammerHitPos,
 				Client()->GameTick(g_Config.m_ClDummy),
 				g_Config.m_ClDummy,
 				Index,
@@ -3414,7 +3414,7 @@ void CGameClient::FinalizeHammerHitEvents()
 		(void)m_PredictedWorld.TryAppendPredictedEvent(Event);
 	};
 
-	for(const SPendingHammerHitEvent &Event : m_vPendingHammerHitEvents)
+	for(const CQmPendingHammerHits::SEvent &Event : m_PendingHammerHits.Events())
 	{
 		const SQmHammerHitMatch Match = QmInferHammerHit(this, Event.m_Pos, Event.m_SnapshotTick);
 		bool TargetWoke = false;
@@ -3470,7 +3470,7 @@ void CGameClient::FinalizeHammerHitEvents()
 			}
 		}
 	}
-	m_vPendingHammerHitEvents.clear();
+	m_PendingHammerHits.Reset();
 }
 
 static CGameInfo GetGameInfo(const CNetObj_GameInfoEx *pInfoEx, int InfoExSize, const CServerInfo *pFallbackServerInfo)

@@ -3652,6 +3652,7 @@ if(CLIENT)
     components/qmclient/pie_menu_follow.cpp
     components/qmclient/pie_menu_points.h
     components/qmclient/pie_menu_settings.cpp
+    components/qmclient/pending_hammer_hits.h
     components/qmclient/predicted_event_queue.h
     components/qmclient/netease/netease_integration.cpp
     components/qmclient/netease/netease_integration.h
@@ -6149,6 +6150,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/client/prediction_door_geometry_test.cpp
       src/test/integration/client/prediction_door_rebuild_test.cpp
       src/test/integration/client/prediction_event_allocation_test.cpp
+      src/test/unit/qmclient/client/qm_pending_hammer_hits_test.cpp
       src/game/client/components/qmclient/practice_tick_shift.cpp
       src/test/integration/client/prediction_entity_copy_test.cpp
       src/test/integration/client/prediction_world_copy_test.cpp
