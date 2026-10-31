@@ -39,6 +39,7 @@
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SettingsCard.h>
 #include <game/client/QmUi/SettingsLabelMetadata.h>
+#include <game/client/QmUi/SettingsMenuPrewarmScope.h>
 #include <game/client/QmUi/ThemeSelectionLayout.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiContainers.h>
@@ -7104,37 +7105,19 @@ void CMenus::BuildBaseSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItem
 		SETTINGS_DDNET,
 	};
 
-	const int PreviousSettingsPage = g_Config.m_UiSettingsPage;
-	const bool PreviousCollecting = m_MenuTextPlanCollecting;
-	std::vector<SMenuTextPlanItem> *pPreviousCollection = m_pMenuTextPlanCollection;
-	const bool PreviousPendingActive = m_MenuTextPlanPendingActive;
-	SMenuTextPlanItem PreviousPendingItem;
-	if(PreviousPendingActive)
-		PreviousPendingItem = m_MenuTextPlanPendingItem;
-	const int PreviousTextContextPage = m_SettingsTextContextPage;
-	const int PreviousTextContextTab = m_SettingsTextContextTab;
-	const int PreviousTextContextSubtab = m_SettingsTextContextSubtab;
+	const CSettingsTextPlanValueRestore SettingsPageRestore(g_Config.m_UiSettingsPage);
+	const CSettingsTextPlanCollectionScope CollectionScope(m_MenuTextPlanCollecting, m_pMenuTextPlanCollection, m_MenuTextPlanPendingActive, m_MenuTextPlanPendingItem, vItems);
+	const CSettingsTextPlanValueRestore TextContextPageRestore(m_SettingsTextContextPage);
+	const CSettingsTextPlanValueRestore TextContextTabRestore(m_SettingsTextContextTab);
+	const CSettingsTextPlanValueRestore TextContextSubtabRestore(m_SettingsTextContextSubtab);
 
-	m_MenuTextPlanCollecting = true;
-	m_pMenuTextPlanCollection = &vItems;
-	m_MenuTextPlanPendingActive = false;
-	Ui()->BeginRenderOnly();
-	for(const int Page : s_aBaseSettingsPages)
-	{
-		g_Config.m_UiSettingsPage = Page;
-		RenderSettings(MainView);
-	}
-	Ui()->EndRenderOnly();
-
-	m_SettingsTextContextSubtab = PreviousTextContextSubtab;
-	m_SettingsTextContextTab = PreviousTextContextTab;
-	m_SettingsTextContextPage = PreviousTextContextPage;
-	if(PreviousPendingActive)
-		m_MenuTextPlanPendingItem = PreviousPendingItem;
-	m_MenuTextPlanPendingActive = PreviousPendingActive;
-	m_pMenuTextPlanCollection = pPreviousCollection;
-	m_MenuTextPlanCollecting = PreviousCollecting;
-	g_Config.m_UiSettingsPage = PreviousSettingsPage;
+	RunSettingsTextPlanMeasurement(Ui(), [&] {
+		for(const int Page : s_aBaseSettingsPages)
+		{
+			g_Config.m_UiSettingsPage = Page;
+			RenderSettings(MainView);
+		}
+	});
 }
 
 void CMenus::BuildIngameMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView)
@@ -7148,35 +7131,18 @@ void CMenus::BuildIngameMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUI
 		"ingame-tab-call-vote",
 	};
 	(void)s_apRequiredIngameTabTextIds;
-	const int PreviousGamePage = m_GamePage;
-	const bool PreviousControlPageOpening = m_ControlPageOpening;
-	const bool PreviousCollecting = m_MenuTextPlanCollecting;
-	std::vector<SMenuTextPlanItem> *pPreviousCollection = m_pMenuTextPlanCollection;
-	const bool PreviousPendingActive = m_MenuTextPlanPendingActive;
-	SMenuTextPlanItem PreviousPendingItem;
-	if(PreviousPendingActive)
-		PreviousPendingItem = m_MenuTextPlanPendingItem;
+	const CSettingsTextPlanValueRestore GamePageRestore(m_GamePage);
+	const CSettingsTextPlanValueRestore ControlPageOpeningRestore(m_ControlPageOpening);
+	const CSettingsTextPlanCollectionScope CollectionScope(m_MenuTextPlanCollecting, m_pMenuTextPlanCollection, m_MenuTextPlanPendingActive, m_MenuTextPlanPendingItem, vItems);
 
 	CUIRect TabBar, ContentView;
 	MainView.HSplitTop(MENU_MENUBAR_HEIGHT_NEW, &TabBar, &ContentView);
 
-	m_MenuTextPlanCollecting = true;
-	m_pMenuTextPlanCollection = &vItems;
-	m_MenuTextPlanPendingActive = false;
-	Ui()->BeginRenderOnly();
-
-	m_GamePage = PAGE_SERVER_INFO;
-	RenderMenubar(TabBar, IClient::STATE_ONLINE);
-	RenderServerInfo(ContentView);
-
-	Ui()->EndRenderOnly();
-	if(PreviousPendingActive)
-		m_MenuTextPlanPendingItem = PreviousPendingItem;
-	m_MenuTextPlanPendingActive = PreviousPendingActive;
-	m_pMenuTextPlanCollection = pPreviousCollection;
-	m_MenuTextPlanCollecting = PreviousCollecting;
-	m_ControlPageOpening = PreviousControlPageOpening;
-	m_GamePage = PreviousGamePage;
+	RunSettingsTextPlanMeasurement(Ui(), [&] {
+		m_GamePage = PAGE_SERVER_INFO;
+		RenderMenubar(TabBar, IClient::STATE_ONLINE);
+		RenderServerInfo(ContentView);
+	});
 }
 
 void CMenus::BuildSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems)
@@ -7289,27 +7255,11 @@ void CMenus::CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollecti
 		break;
 	case MENU_TEXT_PLAN_UNIT_BASE_PAGE:
 	{
-		const int PreviousSettingsPage = g_Config.m_UiSettingsPage;
-		const bool PreviousCollecting = m_MenuTextPlanCollecting;
-		std::vector<SMenuTextPlanItem> *pPreviousCollection = m_pMenuTextPlanCollection;
-		const bool PreviousPendingActive = m_MenuTextPlanPendingActive;
-		SMenuTextPlanItem PreviousPendingItem;
-		if(PreviousPendingActive)
-			PreviousPendingItem = m_MenuTextPlanPendingItem;
+		const CSettingsTextPlanValueRestore SettingsPageRestore(g_Config.m_UiSettingsPage);
+		const CSettingsTextPlanCollectionScope CollectionScope(m_MenuTextPlanCollecting, m_pMenuTextPlanCollection, m_MenuTextPlanPendingActive, m_MenuTextPlanPendingItem, m_vSettingsMenuTextPrebuildPlan);
 		g_Config.m_UiSettingsPage = Unit.m_Page;
-		m_MenuTextPlanCollecting = true;
-		m_pMenuTextPlanCollection = &m_vSettingsMenuTextPrebuildPlan;
-		m_MenuTextPlanPendingActive = false;
 		Ui()->MapScreen();
-		Ui()->BeginRenderOnly();
-		RenderSettings(SettingsMainView);
-		Ui()->EndRenderOnly();
-		if(PreviousPendingActive)
-			m_MenuTextPlanPendingItem = PreviousPendingItem;
-		m_MenuTextPlanPendingActive = PreviousPendingActive;
-		m_pMenuTextPlanCollection = pPreviousCollection;
-		m_MenuTextPlanCollecting = PreviousCollecting;
-		g_Config.m_UiSettingsPage = PreviousSettingsPage;
+		RunSettingsTextPlanMeasurement(Ui(), [&] { RenderSettings(SettingsMainView); });
 		break;
 	}
 	case MENU_TEXT_PLAN_UNIT_INGAME_ESC:
@@ -7381,26 +7331,10 @@ void CMenus::BuildVisibleSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vI
 		return;
 	}
 
-	const int PreviousSettingsPage = g_Config.m_UiSettingsPage;
-	const bool PreviousCollecting = m_MenuTextPlanCollecting;
-	std::vector<SMenuTextPlanItem> *pPreviousCollection = m_pMenuTextPlanCollection;
-	const bool PreviousPendingActive = m_MenuTextPlanPendingActive;
-	SMenuTextPlanItem PreviousPendingItem;
-	if(PreviousPendingActive)
-		PreviousPendingItem = m_MenuTextPlanPendingItem;
+	const CSettingsTextPlanValueRestore SettingsPageRestore(g_Config.m_UiSettingsPage);
+	const CSettingsTextPlanCollectionScope CollectionScope(m_MenuTextPlanCollecting, m_pMenuTextPlanCollection, m_MenuTextPlanPendingActive, m_MenuTextPlanPendingItem, vItems);
 	g_Config.m_UiSettingsPage = Page;
-	m_MenuTextPlanCollecting = true;
-	m_pMenuTextPlanCollection = &vItems;
-	m_MenuTextPlanPendingActive = false;
-	Ui()->BeginRenderOnly();
-	RenderSettings(MainView);
-	Ui()->EndRenderOnly();
-	if(PreviousPendingActive)
-		m_MenuTextPlanPendingItem = PreviousPendingItem;
-	m_MenuTextPlanPendingActive = PreviousPendingActive;
-	m_pMenuTextPlanCollection = pPreviousCollection;
-	m_MenuTextPlanCollecting = PreviousCollecting;
-	g_Config.m_UiSettingsPage = PreviousSettingsPage;
+	RunSettingsTextPlanMeasurement(Ui(), [&] { RenderSettings(MainView); });
 }
 
 int CMenus::CountMissingSettingsMenuTextPlanItems() const

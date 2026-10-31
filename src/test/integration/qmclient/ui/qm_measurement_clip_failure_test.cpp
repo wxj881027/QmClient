@@ -1,4 +1,5 @@
 #include <game/client/QmUi/SettingsCardMeasure.h>
+#include <game/client/QmUi/SettingsMenuPrewarmScope.h>
 
 #include <test/support/qm_real_ui_fixture.h>
 #include <test/support/tracked_allocation_resource.h>
@@ -192,4 +193,92 @@ TEST_F(QmMeasurementClipFailure, MeasuredContentExceptionRestoresParentAndBackgr
 	ExpectRect(Graphics().m_ClipRect, DeviceParent);
 	m_Ui.EndBackgroundRender();
 	EXPECT_FALSE(m_Ui.RenderOnly());
+}
+
+TEST_F(QmMeasurementClipFailure, TextPlanMeasurementExitsBeforeRestoringCollectionContext)
+{
+	bool Collecting = false, PendingActive = true;
+	int Pending = 9, Page = 3;
+	std::vector<int> vOriginal, vTemporary;
+	std::vector<int> *pCollection = &vOriginal;
+	{
+		const CSettingsTextPlanValueRestore PageRestore(Page);
+		const CSettingsTextPlanCollectionScope CollectionScope(Collecting, pCollection, PendingActive, Pending, vTemporary);
+		Page = 19;
+		RunSettingsTextPlanMeasurement(&m_Ui, [&] {
+			EXPECT_TRUE(m_Ui.MeasurementOnly());
+			EXPECT_TRUE(Collecting);
+			EXPECT_EQ(pCollection, &vTemporary);
+			Pending = 23;
+		});
+		EXPECT_FALSE(m_Ui.MeasurementOnly());
+		EXPECT_TRUE(Collecting);
+	}
+	EXPECT_EQ(Page, 3);
+	EXPECT_FALSE(Collecting);
+	EXPECT_EQ(pCollection, &vOriginal);
+	EXPECT_TRUE(PendingActive);
+	EXPECT_EQ(Pending, 9);
+}
+
+TEST_F(QmMeasurementClipFailure, TextPlanRenderExceptionRestoresMeasurementCollectionAndParentClip)
+{
+	ASSERT_TRUE(PrepareFullParentClipStorage());
+	const CUIRect Parent = *m_Ui.ClipArea();
+	const CUIRect DeviceParent = Graphics().m_ClipRect;
+	bool Collecting = false, PendingActive = true;
+	int Pending = 9;
+	std::vector<int> vOriginal, vTemporary;
+	std::vector<int> *pCollection = &vOriginal;
+	EXPECT_THROW({
+		const CSettingsTextPlanCollectionScope CollectionScope(Collecting, pCollection, PendingActive, Pending, vTemporary);
+		RunSettingsTextPlanMeasurement(&m_Ui, [&] {
+			Pending = 23;
+			throw 7;
+		}); }, int);
+	EXPECT_FALSE(m_Ui.MeasurementOnly());
+	ExpectRect(*m_Ui.ClipArea(), Parent);
+	ExpectRect(Graphics().m_ClipRect, DeviceParent);
+	EXPECT_FALSE(Collecting);
+	EXPECT_EQ(pCollection, &vOriginal);
+	EXPECT_EQ(Pending, 9);
+}
+
+TEST_F(QmMeasurementClipFailure, TextPlanClipPreparationFailureRestoresCollectionWithoutRendering)
+{
+	bool Collecting = false, PendingActive = true, Rendered = false;
+	int Pending = 9;
+	std::vector<int> vOriginal, vTemporary;
+	std::vector<int> *pCollection = &vOriginal;
+	FailNextAllocation();
+	EXPECT_THROW({
+		const CSettingsTextPlanCollectionScope CollectionScope(Collecting, pCollection, PendingActive, Pending, vTemporary);
+		RunSettingsTextPlanMeasurement(&m_Ui, [&] { Rendered = true; }); }, std::bad_alloc);
+	EXPECT_FALSE(Rendered);
+	EXPECT_FALSE(m_Ui.MeasurementOnly());
+	EXPECT_FALSE(m_Ui.IsClipped());
+	EXPECT_FALSE(Collecting);
+	EXPECT_EQ(pCollection, &vOriginal);
+	EXPECT_TRUE(PendingActive);
+}
+
+TEST_F(QmMeasurementClipFailure, TextPlanExitFailureDuringRenderExceptionStillUnwindsCollectionContext)
+{
+	bool Collecting = false, PendingActive = true;
+	int Pending = 9;
+	std::vector<int> vOriginal, vTemporary;
+	std::vector<int> *pCollection = &vOriginal;
+	EXPECT_THROW({
+		const CSettingsTextPlanCollectionScope CollectionScope(Collecting, pCollection, PendingActive, Pending, vTemporary);
+		RunSettingsTextPlanMeasurement(&m_Ui, [&] {
+			Pending = 23;
+			Graphics().m_FailClipDisable = true;
+			throw 7;
+		}); }, std::bad_alloc);
+	EXPECT_FALSE(Collecting);
+	EXPECT_EQ(pCollection, &vOriginal);
+	EXPECT_TRUE(PendingActive);
+	EXPECT_EQ(Pending, 9);
+	EXPECT_FALSE(m_Ui.MeasurementOnly());
+	// 设备提交失败的画面恢复仍由原图形路径负责，此处仅保证上下文可以展开。
 }

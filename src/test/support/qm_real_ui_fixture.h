@@ -171,6 +171,7 @@ namespace qm_ui_test
 		void RenderRoundedRectSdf(const SRoundedRectSdfParams &Params) override { m_vRoundedSubmissions.push_back(Params); }
 		// 裁剪、光标与选区只提交 GPU 绘制，不替代真实文字布局和输入行为。
 		bool m_Clipped = false;
+		bool m_FailClipDisable = false;
 		CUIRect m_ClipRect{};
 		int m_ClipChanges = 0;
 		void ClipEnable(int X, int Y, int W, int H) override
@@ -181,6 +182,8 @@ namespace qm_ui_test
 		}
 		void ClipDisable() override
 		{
+			if(std::exchange(m_FailClipDisable, false))
+				throw std::bad_alloc();
 			m_Clipped = false;
 			++m_ClipChanges;
 		}
