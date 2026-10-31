@@ -116,6 +116,31 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 	}
 }
 
+TEST(QmCatalogSearch, RevealRequestMatchesOnlyTargetRowAndExpires)
+{
+	qm_settings_reveal::Clear();
+	qm_settings_reveal::Request("qm:lyrics", {"Lyrics language", "qm_lyrics_language"});
+	ASSERT_TRUE(qm_settings_reveal::Pending());
+	qm_settings_reveal::BeginCard("qm:other", nullptr, true);
+	EXPECT_FALSE(qm_settings_reveal::ShouldReveal("Lyrics language", nullptr));
+	qm_settings_reveal::EndCard();
+
+	qm_settings_reveal::BeginCard("qm:lyrics", nullptr, true);
+	EXPECT_TRUE(qm_settings_reveal::ShouldReveal("qm_lyrics_language", nullptr));
+	EXPECT_TRUE(qm_settings_reveal::ShouldReveal(nullptr, "Lyrics language"));
+	qm_settings_reveal::EndCard();
+	EXPECT_FALSE(qm_settings_reveal::ShouldReveal(nullptr, "Lyrics language"));
+
+	// 墙钟到期：不依赖目标卡是否绘制。
+	qm_settings_reveal::State().m_ExpireSeconds = qm_settings_reveal::NowSeconds() - 1.0;
+	EXPECT_FALSE(qm_settings_reveal::Pending());
+	EXPECT_FALSE(qm_settings_reveal::ShouldReveal(nullptr, "Lyrics language"));
+
+	qm_settings_reveal::Request("qm:lyrics", {"Lyrics language"});
+	qm_settings_reveal::Clear();
+	EXPECT_FALSE(qm_settings_reveal::Pending());
+}
+
 TEST(QmCatalogSearch, MatchKeysCoverDisplayedMatches)
 {
 	qm_card_order::CModel Model;

@@ -100,14 +100,21 @@ namespace qm_settings_reveal
 		S.m_Interactive = false;
 	}
 
-	// 命中目标卡片里的某一行时请求滚动，并返回是否命中。
-	inline bool OnRow(const char *pTextId, const char *pText, const CUIRect &Rect)
+	// 纯匹配规则：是否命中目标卡片里的这一行（不触发滚动，便于测试）。
+	inline bool ShouldReveal(const char *pTextId, const char *pText)
 	{
 		SState &S = State();
 		if(!Pending() || !S.m_Interactive || S.m_ActiveCard != S.m_TargetCard)
 			return false;
-		if(!KeyMatches(S.m_vKeys, pTextId, pText))
+		return KeyMatches(S.m_vKeys, pTextId, pText);
+	}
+
+	// 命中目标卡片里的某一行时请求滚动，并返回是否命中。
+	inline bool OnRow(const char *pTextId, const char *pText, const CUIRect &Rect)
+	{
+		if(!ShouldReveal(pTextId, pText))
 			return false;
+		SState &S = State();
 		if(!S.m_Scrolled && S.m_pScrollRegion != nullptr)
 		{
 			S.m_Scrolled = true;

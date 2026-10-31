@@ -270,6 +270,38 @@ class AnalyzeTest(unittest.TestCase):
 			with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
 				self.assertEqual(checker.main(["--root", str(root), "--strict"]), 1)
 
+	def test_reports_duplicate_stable_id(self) -> None:
+		inc_text = """namespace
+{
+	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_alpha[] = {
+		{Localizable("Alpha label"), nullptr, "别名"},
+	};
+	QM_CARD_SEARCH_REGISTER("qm:alpha", qm_alpha);
+}
+"""
+		with tempfile.TemporaryDirectory() as temp_dir:
+			root = Path(temp_dir)
+			self._write_declaration_repo(root, '#include "QmCardSearch/Ghost.inc"\n#include "QmCardSearch/Other.inc"\n', inc_text, DEFAULTS_SAMPLE)
+			other_path = root / "src/game/client/QmUi/cards/QmCardSearch/Other.inc"
+			other_path.write_text(inc_text, encoding="utf-8")
+			report = checker.analyze(root)
+		self.assertIn("duplicate_stable_id", {item["kind"] for item in report["declaration_problems"]})
+
+	def test_reports_unknown_card(self) -> None:
+		inc_text = """namespace
+{
+	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_alpha[] = {
+		{Localizable("Alpha label"), nullptr, "别名"},
+	};
+	QM_CARD_SEARCH_REGISTER("qm:alpha", qm_alpha);
+}
+"""
+		with tempfile.TemporaryDirectory() as temp_dir:
+			root = Path(temp_dir)
+			self._write_declaration_repo(root, '#include "QmCardSearch/Ghost.inc"\n', inc_text, DEFAULTS_SAMPLE.replace("qm:alpha", "qm:other"))
+			report = checker.analyze(root)
+		self.assertIn("unknown_card", {item["kind"] for item in report["declaration_problems"]})
+
 	def test_reports_missing_aggregator_include(self) -> None:
 		inc_text = """namespace
 {
