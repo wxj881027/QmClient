@@ -7,6 +7,7 @@
 #include <engine/storage.h>
 
 #include <algorithm>
+#include <memory>
 #include <unordered_set>
 #include <utility>
 
@@ -34,71 +35,102 @@ namespace
 		return Result;
 	}
 
+	void SetPreparationError(std::string &Error) noexcept
+	{
+		try
+		{
+			Error = Localizable("Cannot prepare word list. Previous words remain active.");
+		}
+		catch(...)
+		{
+			// 内存仍不足时保留已有诊断，不能从失败出口再次抛出。
+		}
+	}
+
 }
 
-bool QmWordFilterList::ParseFile(std::string_view Content, std::vector<std::string> &vWords, std::string &Error)
+namespace QmWordFilterList
 {
-	Error.clear();
-	if(Content.size() > MAX_FILE_BYTES)
+	static bool ParseFileChecked(std::string_view Content, std::vector<std::string> &vWords, std::string &Error, bool &PreparationFailed) noexcept
 	{
-		Error = Localizable("Word list file exceeds 2 MiB.");
-		return false;
-	}
-	const std::string Text(Content);
-	if(Content.find('\0') != std::string_view::npos || !str_utf8_check(Text.c_str()))
-	{
-		Error = Localizable("Word list must be UTF-8 text without NUL characters.");
-		return false;
-	}
-	if(Content.substr(0, 3) == "\xef\xbb\xbf")
-		Content.remove_prefix(3);
-	std::vector<std::string> vParsed;
-	std::unordered_set<std::string> Seen;
-	while(!Content.empty())
-	{
-		const size_t End = Content.find('\n');
-		std::string_view Line = Trim(Content.substr(0, End));
-		Content = End == std::string_view::npos ? std::string_view{} : Content.substr(End + 1);
-		if(Line.empty() || Line.front() == '#')
-			continue;
-		std::string Word;
-		if(Line.front() == '"')
+		PreparationFailed = false;
+		try
 		{
-			size_t Position = 1;
-			for(; Position < Line.size() && Line[Position] != '"'; ++Position)
+			if(Content.size() > MAX_FILE_BYTES)
 			{
-				if(Line[Position] == '\\' && Position + 1 < Line.size() && (Line[Position + 1] == '\\' || Line[Position + 1] == '"'))
-					++Position;
-				Word += Line[Position];
-			}
-			if(Position == Line.size() || (Trim(Line.substr(Position + 1)) != "," && !Trim(Line.substr(Position + 1)).empty()))
-			{
-				Error = Localizable("Invalid quoted word. Use one word per line.");
+				Error = Localizable("Word list file exceeds 2 MiB.");
 				return false;
 			}
-		}
-		else
-			Word = Line;
-		if(Word.empty())
-			continue;
-		for(unsigned char Character : Word)
-		{
-			if(Character < ' ' || Character == 0x7f)
+			const std::string Text(Content);
+			if(Content.find('\0') != std::string_view::npos || !str_utf8_check(Text.c_str()))
 			{
-				Error = Localizable("Word list entries cannot contain control characters.");
+				Error = Localizable("Word list must be UTF-8 text without NUL characters.");
 				return false;
 			}
+			if(Content.substr(0, 3) == "\xef\xbb\xbf")
+				Content.remove_prefix(3);
+			std::vector<std::string> vParsed;
+			std::unordered_set<std::string> Seen;
+			while(!Content.empty())
+			{
+				const size_t End = Content.find('\n');
+				std::string_view Line = Trim(Content.substr(0, End));
+				Content = End == std::string_view::npos ? std::string_view{} : Content.substr(End + 1);
+				if(Line.empty() || Line.front() == '#')
+					continue;
+				std::string Word;
+				if(Line.front() == '"')
+				{
+					size_t Position = 1;
+					for(; Position < Line.size() && Line[Position] != '"'; ++Position)
+					{
+						if(Line[Position] == '\\' && Position + 1 < Line.size() && (Line[Position + 1] == '\\' || Line[Position + 1] == '"'))
+							++Position;
+						Word += Line[Position];
+					}
+					if(Position == Line.size() || (Trim(Line.substr(Position + 1)) != "," && !Trim(Line.substr(Position + 1)).empty()))
+					{
+						Error = Localizable("Invalid quoted word. Use one word per line.");
+						return false;
+					}
+				}
+				else
+					Word = Line;
+				if(Word.empty())
+					continue;
+				for(unsigned char Character : Word)
+				{
+					if(Character < ' ' || Character == 0x7f)
+					{
+						Error = Localizable("Word list entries cannot contain control characters.");
+						return false;
+					}
+				}
+				if(Seen.insert(Word).second)
+					vParsed.push_back(std::move(Word));
+				if(vParsed.size() > MAX_FILE_WORDS)
+				{
+					Error = Localizable("Word list exceeds 100000 unique entries.");
+					return false;
+				}
+			}
+			Error.clear();
+			vWords = std::move(vParsed);
+			return true;
 		}
-		if(Seen.insert(Word).second)
-			vParsed.push_back(std::move(Word));
-		if(vParsed.size() > MAX_FILE_WORDS)
+		catch(...)
 		{
-			Error = Localizable("Word list exceeds 100000 unique entries.");
+			PreparationFailed = true;
+			SetPreparationError(Error);
 			return false;
 		}
 	}
-	vWords = std::move(vParsed);
-	return true;
+}
+
+bool QmWordFilterList::ParseFile(std::string_view Content, std::vector<std::string> &vWords, std::string &Error) noexcept
+{
+	bool PreparationFailed;
+	return ParseFileChecked(Content, vWords, Error, PreparationFailed);
 }
 
 bool QmWordFilterList::AppendInlineChunk(char *pList, size_t Capacity, const char *pChunk)
@@ -111,31 +143,38 @@ bool QmWordFilterList::AppendInlineChunk(char *pList, size_t Capacity, const cha
 	return true;
 }
 
-bool QmWordFilterList::AppendInlineHexChunk(char *pList, size_t Capacity, const char *pChunk)
+bool QmWordFilterList::AppendInlineHexChunk(char *pList, size_t Capacity, const char *pChunk) noexcept
 {
-	const size_t Length = str_length(pChunk);
-	if(Length % 2 != 0 || Length / 2 >= Capacity)
-		return false;
-	std::string Decoded;
-	Decoded.reserve(Length / 2);
-	for(size_t Position = 0; Position < Length; Position += 2)
+	try
 	{
-		int Byte = 0;
-		for(size_t Offset = 0; Offset < 2; ++Offset)
-		{
-			const char Character = pChunk[Position + Offset];
-			const int Digit = Character >= '0' && Character <= '9' ? Character - '0' :
-					  Character >= 'a' && Character <= 'f' ? Character - 'a' + 10 :
-										 -1;
-			if(Digit < 0)
-				return false;
-			Byte = Byte * 16 + Digit;
-		}
-		if(Byte == 0)
+		const size_t Length = str_length(pChunk);
+		if(Length % 2 != 0 || Length / 2 >= Capacity)
 			return false;
-		Decoded += static_cast<char>(Byte);
+		std::string Decoded;
+		Decoded.reserve(Length / 2);
+		for(size_t Position = 0; Position < Length; Position += 2)
+		{
+			int Byte = 0;
+			for(size_t Offset = 0; Offset < 2; ++Offset)
+			{
+				const char Character = pChunk[Position + Offset];
+				const int Digit = Character >= '0' && Character <= '9' ? Character - '0' :
+						  Character >= 'a' && Character <= 'f' ? Character - 'a' + 10 :
+											 -1;
+				if(Digit < 0)
+					return false;
+				Byte = Byte * 16 + Digit;
+			}
+			if(Byte == 0)
+				return false;
+			Decoded += static_cast<char>(Byte);
+		}
+		return AppendInlineChunk(pList, Capacity, Decoded.c_str());
 	}
-	return AppendInlineChunk(pList, Capacity, Decoded.c_str());
+	catch(...)
+	{
+		return false;
+	}
 }
 
 std::vector<std::string> QmWordFilterList::SerializeInline(const char *pList)
@@ -163,11 +202,16 @@ std::vector<std::string> QmWordFilterList::SerializeInline(const char *pList)
 	return vLines;
 }
 
-bool QmWordFilterList::CFileList::UpdateFromText(std::string_view Content)
+bool QmWordFilterList::CFileList::UpdateFromText(std::string_view Content) noexcept
 {
 	std::vector<std::string> vWords;
-	if(!ParseFile(Content, vWords, m_Error))
+	bool PreparationFailed;
+	if(!ParseFileChecked(Content, vWords, m_Error, PreparationFailed))
+	{
+		if(PreparationFailed)
+			m_AttemptedPath.clear();
 		return false;
+	}
 	if(vWords != m_vWords)
 	{
 		m_vWords = std::move(vWords);
@@ -176,38 +220,46 @@ bool QmWordFilterList::CFileList::UpdateFromText(std::string_view Content)
 	return true;
 }
 
-void QmWordFilterList::CFileList::Refresh(IStorage *pStorage, const char *pPath, bool Force)
+void QmWordFilterList::CFileList::Refresh(IStorage *pStorage, const char *pPath, bool Force) noexcept
 {
-	if(!Force && m_AttemptedPath == pPath)
-		return;
-	m_AttemptedPath = pPath;
-	if(m_AttemptedPath.empty())
+	try
 	{
-		UpdateFromText({});
-		return;
+		if(!Force && m_AttemptedPath == pPath)
+			return;
+		m_AttemptedPath = pPath;
+		if(m_AttemptedPath.empty())
+		{
+			UpdateFromText({});
+			return;
+		}
+		std::unique_ptr<void, decltype(&io_close)> File(pStorage->OpenFile(pPath, IOFLAG_READ, IStorage::TYPE_ALL_OR_ABSOLUTE), &io_close);
+		if(!File)
+		{
+			m_Error = Localizable("Cannot open word list file. Previous words remain active.");
+			return;
+		}
+		const int64_t Length = io_length(File.get());
+		if(Length < 0 || static_cast<uint64_t>(Length) > MAX_FILE_BYTES)
+		{
+			m_Error = Localizable("Word list file exceeds 2 MiB.");
+			return;
+		}
+		std::string Content(static_cast<size_t>(Length), '\0');
+		const unsigned Read = io_read(File.get(), Content.data(), static_cast<unsigned>(Content.size()));
+		char Extra;
+		const bool Changed = io_read(File.get(), &Extra, 1) != 0;
+		File.reset();
+		if(Read != Content.size() || Changed)
+		{
+			m_Error = Localizable("Cannot read complete word list file. Previous words remain active.");
+			return;
+		}
+		UpdateFromText(Content);
 	}
-	IOHANDLE File = pStorage->OpenFile(pPath, IOFLAG_READ, IStorage::TYPE_ALL_OR_ABSOLUTE);
-	if(!File)
+	catch(...)
 	{
-		m_Error = Localizable("Cannot open word list file. Previous words remain active.");
-		return;
+		// 资源失败不消耗路径刷新机会；局部文件所有权已先释放。
+		m_AttemptedPath.clear();
+		SetPreparationError(m_Error);
 	}
-	const int64_t Length = io_length(File);
-	if(Length < 0 || static_cast<uint64_t>(Length) > MAX_FILE_BYTES)
-	{
-		io_close(File);
-		m_Error = Localizable("Word list file exceeds 2 MiB.");
-		return;
-	}
-	std::string Content(static_cast<size_t>(Length), '\0');
-	const unsigned Read = io_read(File, Content.data(), static_cast<unsigned>(Content.size()));
-	char Extra;
-	const bool Changed = io_read(File, &Extra, 1) != 0;
-	io_close(File);
-	if(Read != Content.size() || Changed)
-	{
-		m_Error = Localizable("Cannot read complete word list file. Previous words remain active.");
-		return;
-	}
-	UpdateFromText(Content);
 }

@@ -5148,6 +5148,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_console_color_preparation_test.cpp
     src/test/unit/qmclient/client/qm_streamer_word_filter_test.cpp
     src/test/unit/qmclient/client/qm_word_filter_list_test.cpp
+    src/test/integration/qmclient/client/qm_word_filter_file_test.cpp
     src/test/integration/qmclient/client/qm_word_filter_persistence_test.cpp
     src/test/integration/qmclient/client/qm_console_text_pipeline_test.cpp
     src/test/unit/qmclient/client/qm_red_packet_auto_claim_test.cpp
@@ -6165,6 +6166,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_hook_coll_geometry_test.cpp
       src/test/integration/client/hook_coll_prepare_test.cpp
       src/test/integration/client/weapon_trajectory_preparation_test.cpp
+      src/test/unit/qmclient/client/qm_word_filter_allocation_test.cpp
+      src/game/client/components/qmclient/word_filter_list.cpp
       src/game/client/components/qmclient/practice_tick_shift.cpp
       src/test/integration/client/prediction_entity_copy_test.cpp
       src/test/integration/client/prediction_world_copy_test.cpp
