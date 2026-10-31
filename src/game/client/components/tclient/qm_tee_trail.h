@@ -8,7 +8,10 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <new>
 #include <optional>
+#include <stdexcept>
+#include <utility>
 #include <vector>
 
 // 保留旧几何接口的输入类型；时间和弧长使用双精度，避免长时间游戏后丢失帧内精度。
@@ -92,6 +95,34 @@ namespace qm_tee_trail
 		ColorRGBA m_aColor[4];
 		bool m_Additive = false;
 	};
+
+	// 完整准备本帧后才绘制；资源不足丢弃部分输出，设备异常仍由绘制层处理。
+	template<typename TPrepare, typename TDraw>
+	bool RenderFrame(std::vector<SQuad> &vFrame, TPrepare &&Prepare, TDraw &&Draw)
+	{
+		vFrame.clear();
+		try
+		{
+			std::forward<TPrepare>(Prepare)(vFrame);
+		}
+		catch(const std::bad_alloc &)
+		{
+			vFrame.clear();
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			vFrame.clear();
+			return false;
+		}
+		catch(...)
+		{
+			vFrame.clear();
+			throw;
+		}
+		std::forward<TDraw>(Draw)(std::as_const(vFrame));
+		return true;
+	}
 
 	// 一段轨迹的切线只准备一次，细分采样保留原三次公式与浮点运算顺序。
 	struct SPreparedCurve

@@ -32,6 +32,7 @@ private:
 	int m_aPositionSources[MAX_CLIENTS] = {};
 	std::vector<CTrailPart> m_vTrail;
 	std::vector<qm_tee_trail::SQuad> m_vQuads;
+	std::vector<qm_tee_trail::SQuad> m_vFrameQuads;
 	int m_LastDummy = -1;
 	int m_LastStyle = -1;
 	int m_LastLength = -1;
