@@ -3,6 +3,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cmath>
 #include <limits>
 
 TEST(SettingsRuntimeCache, BudgetStopsEveryMainThreadCost)
@@ -177,6 +178,17 @@ TEST(SettingsRuntimeCache, NumericKeysClampBeforeIntConversion)
 	EXPECT_EQ(SettingsRuntimeCacheRoundedKey(12.6f), 13);
 	EXPECT_EQ(SettingsRuntimeCacheDimensionKey(std::numeric_limits<float>::max()), std::numeric_limits<int>::max());
 	EXPECT_EQ(SettingsRuntimeCacheRoundedKey(-std::numeric_limits<float>::max()), std::numeric_limits<int>::min());
+}
+
+TEST(SettingsRuntimeCache, FiniteDimensionsBelowOneClampBeforeIntegerConversion)
+{
+	for(float Value : {-std::numeric_limits<float>::max(),
+		    std::nextafter(static_cast<float>(std::numeric_limits<int>::min()), -std::numeric_limits<float>::infinity()),
+		    static_cast<float>(std::numeric_limits<int>::min()), -1.0f, -0.0f, 0.5f, 1.0f})
+	{
+		SCOPED_TRACE(Value);
+		EXPECT_EQ(SettingsRuntimeCacheDimensionKey(Value), 1);
+	}
 }
 
 TEST(SettingsRuntimeCache, CompactVisibleTextIsRejected)

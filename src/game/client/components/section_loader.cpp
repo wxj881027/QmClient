@@ -476,7 +476,8 @@ bool CSectionLoader::LoadSessionCache(SSessionUiCache &Cache, const char *pFilen
 	if(!File)
 		return false;
 
-	char aBuf[256];
+	// 当前12个字段使用最大整数、64位hash和有限float文本时也必须完整读入。
+	char aBuf[512];
 	const unsigned Read = io_read(File, aBuf, sizeof(aBuf) - 1);
 	io_close(File);
 	if(Read == 0)
