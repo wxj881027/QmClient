@@ -1761,19 +1761,79 @@ class CTextRender : public IEngineTextRender
 	int m_FirstFreeTextContainerIndex;
 
 	SBufferContainerInfo m_DefaultTextContainerInfo;
-	std::vector<STextCharQuad> m_vTextSweepQuads;
+	std::vector<STextCharQuad> m_vTextEffectQuads;
 	std::chrono::nanoseconds m_NextGraphicsRestoreAttempt{0};
-	int m_TextSweepBufferObject = -1;
-	int m_TextSweepBufferContainer = -1;
+	int m_TextEffectBufferObject = -1;
+	int m_TextEffectBufferContainer = -1;
 
-	void ClearTextSweepBuffers()
+	void ClearTextEffectBuffers()
 	{
-		if(m_TextSweepBufferContainer != -1)
-			Graphics()->DeleteBufferContainer(m_TextSweepBufferContainer, true);
-		else if(m_TextSweepBufferObject != -1)
-			Graphics()->DeleteBufferObject(m_TextSweepBufferObject);
-		m_TextSweepBufferObject = m_TextSweepBufferContainer = -1;
-		m_vTextSweepQuads.clear();
+		if(m_TextEffectBufferContainer != -1)
+			Graphics()->DeleteBufferContainer(m_TextEffectBufferContainer, true);
+		else if(m_TextEffectBufferObject != -1)
+			Graphics()->DeleteBufferObject(m_TextEffectBufferObject);
+		m_TextEffectBufferObject = m_TextEffectBufferContainer = -1;
+		m_vTextEffectQuads.clear();
+	}
+
+	void DrawTextEffectQuads(const STextContainer &TextContainer, const ColorRGBA &Tint, float X, float Y)
+	{
+		if(m_vTextEffectQuads.empty())
+			return;
+
+		if(!m_pGlyphMap->FlushPendingGlyphUploads())
+			return;
+		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+		const vec2 Offset = AlignTextContainerOffset(TextContainer, vec2(X, Y), ScreenX1 - ScreenX0, ScreenY1 - ScreenY0);
+		Graphics()->MapScreen(ScreenX0 - Offset.x, ScreenY0 - Offset.y, ScreenX1 - Offset.x, ScreenY1 - Offset.y);
+		if(Graphics()->IsTextBufferingEnabled())
+		{
+			const size_t DataSize = m_vTextEffectQuads.size() * sizeof(STextCharQuad);
+			const int Flags = IGraphics::EBufferObjectCreateFlags::BUFFER_OBJECT_CREATE_FLAGS_ONE_TIME_USE_BIT;
+			if(m_TextEffectBufferObject == -1)
+				m_TextEffectBufferObject = Graphics()->CreateBufferObject(DataSize, m_vTextEffectQuads.data(), Flags);
+			else
+				Graphics()->RecreateBufferObject(m_TextEffectBufferObject, DataSize, m_vTextEffectQuads.data(), Flags);
+			if(m_TextEffectBufferContainer == -1)
+			{
+				m_DefaultTextContainerInfo.m_VertBufferBindingIndex = m_TextEffectBufferObject;
+				m_TextEffectBufferContainer = Graphics()->CreateBufferContainer(&m_DefaultTextContainerInfo);
+			}
+			Graphics()->IndicesNumRequiredNotify(m_vTextEffectQuads.size() * 6);
+			Graphics()->TextureClear();
+			Graphics()->RenderText(m_TextEffectBufferContainer, m_vTextEffectQuads.size(), m_pGlyphMap->TextureDimension(),
+				m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_FILL), m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_OUTLINE),
+				Tint, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f));
+		}
+		else
+		{
+			const float UVScale = 1.0f / m_pGlyphMap->TextureDimension();
+			Graphics()->FlushVertices();
+			Graphics()->TextureSet(m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_FILL));
+			Graphics()->QuadsBegin();
+			for(const auto &Quad : m_vTextEffectQuads)
+			{
+				const auto &aVertices = Quad.m_aVertices;
+				// Freeform 接口的后两个角与文字网格顺序相反。
+				const int aCorners[] = {0, 1, 3, 2};
+				IGraphics::CColorVertex aColors[4];
+				for(int i = 0; i < 4; ++i)
+				{
+					const auto &Color = aVertices[aCorners[i]].m_Color;
+					aColors[i] = {i, ColorRGBA(Color.r / 255.0f * Tint.r, Color.g / 255.0f * Tint.g, Color.b / 255.0f * Tint.b, Color.a / 255.0f * Tint.a)};
+				}
+				Graphics()->SetColorVertex(aColors, std::size(aColors));
+				Graphics()->QuadsSetSubsetFree(aVertices[0].m_U * UVScale, aVertices[0].m_V * UVScale, aVertices[1].m_U * UVScale, aVertices[1].m_V * UVScale,
+					aVertices[3].m_U * UVScale, aVertices[3].m_V * UVScale, aVertices[2].m_U * UVScale, aVertices[2].m_V * UVScale);
+				const IGraphics::CFreeformItem Item(aVertices[0].m_X, aVertices[0].m_Y, aVertices[1].m_X, aVertices[1].m_Y,
+					aVertices[3].m_X, aVertices[3].m_Y, aVertices[2].m_X, aVertices[2].m_Y);
+				Graphics()->QuadsDrawFreeform(&Item, 1);
+			}
+			Graphics()->QuadsEnd();
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+		}
+		Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 	}
 
 	vec2 AlignTextContainerOffset(const STextContainer &TextContainer, vec2 Offset, float ScreenWidth, float ScreenHeight)
@@ -2323,7 +2383,7 @@ public:
 		// 主循环已 ShutdownJobs，未接收的文件字节在此释放。
 		m_pQmSystemFontScan.reset();
 		m_QmFontRestore.Reset();
-		ClearTextSweepBuffers();
+		ClearTextEffectBuffers();
 		InvalidateTextContainers();
 
 		delete m_pGlyphMap;
@@ -4327,7 +4387,7 @@ public:
 		}
 		Band.m_Center = TextSweepCenter(MinProjection, MaxProjection, Band.m_HalfWidth, Params.m_Progress);
 		// 一次只绘制当前行；工作网格复用容量，只上传光带命中的字形片段。
-		m_vTextSweepQuads.clear();
+		m_vTextEffectQuads.clear();
 		for(size_t QuadIndex = Range.m_Begin; QuadIndex < Range.m_End; ++QuadIndex)
 		{
 			const auto &Quad = vSourceQuads[QuadIndex];
@@ -4338,7 +4398,7 @@ public:
 				aVertices[i] = {vec2(Vertex.m_X, Vertex.m_Y), vec2(Vertex.m_U, Vertex.m_V), Vertex.m_Color.a / 255.0f};
 			}
 			TextSweepClipQuad(aVertices, Band, [&](const auto &aClipped) {
-				auto &Output = m_vTextSweepQuads.emplace_back();
+				auto &Output = m_vTextEffectQuads.emplace_back();
 				for(size_t i = 0; i < aClipped.size(); ++i)
 				{
 					auto &Vertex = Output.m_aVertices[i];
@@ -4350,60 +4410,54 @@ public:
 				}
 			});
 		}
-		if(m_vTextSweepQuads.empty())
-			return;
+		DrawTextEffectQuads(TextContainer, Params.m_Color, X, Y);
+	}
 
-		if(!m_pGlyphMap->FlushPendingGlyphUploads())
+	void RenderTextContainerFill(STextContainerIndex Index, CTextCursor::FColorSampler pfnSample, const void *pContext, int Columns, int Rows, const ColorRGBA &Tint, float X, float Y) override
+	{
+		if(!Index.Valid() || !m_pGlyphMap->TexturesReady() || pfnSample == nullptr || Tint.a <= 0.0f)
 			return;
-		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-		const vec2 Offset = AlignTextContainerOffset(TextContainer, vec2(X, Y), ScreenX1 - ScreenX0, ScreenY1 - ScreenY0);
-		Graphics()->MapScreen(ScreenX0 - Offset.x, ScreenY0 - Offset.y, ScreenX1 - Offset.x, ScreenY1 - Offset.y);
-		if(Graphics()->IsTextBufferingEnabled())
+		const STextContainer &TextContainer = GetTextContainer(Index);
+		struct SLocalSampler
 		{
-			const size_t DataSize = m_vTextSweepQuads.size() * sizeof(STextCharQuad);
-			const int Flags = IGraphics::EBufferObjectCreateFlags::BUFFER_OBJECT_CREATE_FLAGS_ONE_TIME_USE_BIT;
-			if(m_TextSweepBufferObject == -1)
-				m_TextSweepBufferObject = Graphics()->CreateBufferObject(DataSize, m_vTextSweepQuads.data(), Flags);
-			else
-				Graphics()->RecreateBufferObject(m_TextSweepBufferObject, DataSize, m_vTextSweepQuads.data(), Flags);
-			if(m_TextSweepBufferContainer == -1)
-			{
-				m_DefaultTextContainerInfo.m_VertBufferBindingIndex = m_TextSweepBufferObject;
-				m_TextSweepBufferContainer = Graphics()->CreateBufferContainer(&m_DefaultTextContainerInfo);
-			}
-			Graphics()->IndicesNumRequiredNotify(m_vTextSweepQuads.size() * 6);
-			Graphics()->TextureClear();
-			Graphics()->RenderText(m_TextSweepBufferContainer, m_vTextSweepQuads.size(), m_pGlyphMap->TextureDimension(),
-				m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_FILL), m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_OUTLINE),
-				Params.m_Color, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f));
-		}
-		else
+			CTextCursor::FColorSampler m_pfnSample;
+			const void *m_pContext;
+			vec2 m_Origin;
+		};
+		const SLocalSampler Sampler{pfnSample, pContext, vec2(TextContainer.m_AlignedStartX, TextContainer.m_AlignedStartY)};
+		const auto Sample = [](vec2 Position, const void *pLocalContext) {
+			const auto &Local = *static_cast<const SLocalSampler *>(pLocalContext);
+			return Local.m_pfnSample(Position - Local.m_Origin, Local.m_pContext);
+		};
+		// 只重建填充网格，原容器的布局、字形 UV 与描边保持不变。
+		m_vTextEffectQuads.clear();
+		for(const auto &Glyph : TextContainer.m_StringInfo.m_vCharacterQuads)
 		{
-			const float UVScale = 1.0f / m_pGlyphMap->TextureDimension();
-			Graphics()->FlushVertices();
-			Graphics()->TextureSet(m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_FILL));
-			Graphics()->QuadsBegin();
-			for(const auto &Quad : m_vTextSweepQuads)
-			{
-				const auto &aVertices = Quad.m_aVertices;
-				// Freeform 接口的后两个角与文字网格顺序相反。
-				const IGraphics::CColorVertex aColors[] = {
-					{0, Params.m_Color.WithMultipliedAlpha(aVertices[0].m_Color.a / 255.0f)},
-					{1, Params.m_Color.WithMultipliedAlpha(aVertices[1].m_Color.a / 255.0f)},
-					{2, Params.m_Color.WithMultipliedAlpha(aVertices[3].m_Color.a / 255.0f)},
-					{3, Params.m_Color.WithMultipliedAlpha(aVertices[2].m_Color.a / 255.0f)}};
-				Graphics()->SetColorVertex(aColors, std::size(aColors));
-				Graphics()->QuadsSetSubsetFree(aVertices[0].m_U * UVScale, aVertices[0].m_V * UVScale, aVertices[1].m_U * UVScale, aVertices[1].m_V * UVScale,
-					aVertices[3].m_U * UVScale, aVertices[3].m_V * UVScale, aVertices[2].m_U * UVScale, aVertices[2].m_V * UVScale);
-				const IGraphics::CFreeformItem Item(aVertices[0].m_X, aVertices[0].m_Y, aVertices[1].m_X, aVertices[1].m_Y,
-					aVertices[3].m_X, aVertices[3].m_Y, aVertices[2].m_X, aVertices[2].m_Y);
-				Graphics()->QuadsDrawFreeform(&Item, 1);
-			}
-			Graphics()->QuadsEnd();
-			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+			ForEachTextGradientCell(vec2(Glyph.m_aVertices[3].m_X, Glyph.m_aVertices[3].m_Y),
+				vec2(Glyph.m_aVertices[1].m_X, Glyph.m_aVertices[1].m_Y),
+				vec2(Glyph.m_aVertices[3].m_U, Glyph.m_aVertices[3].m_V),
+				vec2(Glyph.m_aVertices[1].m_U, Glyph.m_aVertices[1].m_V),
+				Sample, &Sampler, Columns, Rows, [&](const STextGradientCell &Cell) {
+					auto &Quad = m_vTextEffectQuads.emplace_back();
+					const int aCorners[] = {2, 3, 1, 0};
+					const auto &BaseColor = Glyph.m_aVertices[0].m_Color;
+					for(int i = 0; i < 4; ++i)
+					{
+						const int Corner = aCorners[i];
+						auto &Vertex = Quad.m_aVertices[i];
+						Vertex.m_X = Cell.m_aPositions[Corner].x;
+						Vertex.m_Y = Cell.m_aPositions[Corner].y;
+						Vertex.m_U = Cell.m_aUvs[Corner].x;
+						Vertex.m_V = Cell.m_aUvs[Corner].y;
+						const auto &Color = Cell.m_aColors[Corner];
+						Vertex.m_Color.r = static_cast<unsigned char>(std::clamp(Color.r, 0.0f, 1.0f) * BaseColor.r);
+						Vertex.m_Color.g = static_cast<unsigned char>(std::clamp(Color.g, 0.0f, 1.0f) * BaseColor.g);
+						Vertex.m_Color.b = static_cast<unsigned char>(std::clamp(Color.b, 0.0f, 1.0f) * BaseColor.b);
+						Vertex.m_Color.a = static_cast<unsigned char>(std::clamp(Color.a, 0.0f, 1.0f) * BaseColor.a);
+					}
+				});
 		}
-		Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+		DrawTextEffectQuads(TextContainer, Tint, X, Y);
 	}
 
 	int GetTextContainerRenderedLineCount(STextContainerIndex TextContainerIndex) override
@@ -4508,7 +4562,7 @@ public:
 
 	void OnPreWindowResize() override
 	{
-		ClearTextSweepBuffers();
+		ClearTextEffectBuffers();
 		for(auto *pTextContainer : m_vpTextContainers)
 		{
 			if(pTextContainer->m_pContainerUseCount != nullptr && pTextContainer->m_pContainerUseCount.use_count() <= 1)
@@ -4524,8 +4578,8 @@ public:
 		// 旧 GPU 缓冲和选区都已销毁，所有副本句柄须失效，由原 owner 重新排版。
 		InvalidateTextContainers();
 		m_DefaultTextContainerInfo.m_VertBufferBindingIndex = -1;
-		m_TextSweepBufferObject = m_TextSweepBufferContainer = -1;
-		m_vTextSweepQuads.clear();
+		m_TextEffectBufferObject = m_TextEffectBufferContainer = -1;
+		m_vTextEffectQuads.clear();
 		if(m_pGlyphMap == nullptr)
 			return false;
 		m_pGlyphMap->OnGraphicsResourcesReset();

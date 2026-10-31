@@ -10,7 +10,7 @@
 
 TEST(QmSponsorChatStyle, StableIdsRoundTripAndUnknownIdsUseNormalText)
 {
-	for(const auto Style : {EQmSponsorChatStyle::NONE, EQmSponsorChatStyle::PLATINUM})
+	for(const auto Style : {EQmSponsorChatStyle::NONE, EQmSponsorChatStyle::PLATINUM, EQmSponsorChatStyle::FLUID})
 		EXPECT_EQ(QmSponsorChatStyleFromId(QmSponsorChatStyleId(Style)), Style);
 	for(const char *pId : std::array<const char *, 5>{nullptr, "unknown", "rainbow", "Soft_Glow", "soft_glow"})
 		EXPECT_EQ(QmSponsorChatStyleFromId(pId), EQmSponsorChatStyle::NONE);
@@ -18,7 +18,8 @@ TEST(QmSponsorChatStyle, StableIdsRoundTripAndUnknownIdsUseNormalText)
 
 TEST(QmSponsorChatStyle, OrdinaryMessagesKeepTheSelectedStyle)
 {
-	EXPECT_EQ(QmSponsorChatMessageStyle(EQmSponsorChatStyle::PLATINUM, false, false, false, false, false), EQmSponsorChatStyle::PLATINUM);
+	for(const auto Style : {EQmSponsorChatStyle::PLATINUM, EQmSponsorChatStyle::FLUID})
+		EXPECT_EQ(QmSponsorChatMessageStyle(Style, false, false, false, false, false), Style);
 }
 
 class CQmSponsorChatSemanticTest : public testing::TestWithParam<int>
@@ -28,7 +29,8 @@ class CQmSponsorChatSemanticTest : public testing::TestWithParam<int>
 TEST_P(CQmSponsorChatSemanticTest, FunctionalMessagePresentationTakesPriority)
 {
 	const int Flag = GetParam();
-	EXPECT_EQ(QmSponsorChatMessageStyle(EQmSponsorChatStyle::PLATINUM, Flag == 0, Flag == 1, Flag == 2, Flag == 3, Flag == 4), EQmSponsorChatStyle::NONE);
+	for(const auto Style : {EQmSponsorChatStyle::PLATINUM, EQmSponsorChatStyle::FLUID})
+		EXPECT_EQ(QmSponsorChatMessageStyle(Style, Flag == 0, Flag == 1, Flag == 2, Flag == 3, Flag == 4), EQmSponsorChatStyle::NONE);
 }
 
 INSTANTIATE_TEST_SUITE_P(HighlightTeamWhisperCustomColorEmoji, CQmSponsorChatSemanticTest, testing::Range(0, 5));
@@ -237,4 +239,69 @@ TEST(QmSponsorChatPresence, StyleDoesNotBypassLeaseOrServerValidation)
 		{"server_address":"test:8303","player_id":5,"player_name":"C","title":"Sponsor","chat_style":"platinum","issued_at":1001,"expires_at":1015}
 	]})");
 	EXPECT_TRUE(Presences.empty());
+}
+
+TEST(QmSponsorChatStyle, FluidMergesOnlyWithTheSameStyle)
+{
+	EXPECT_EQ(QmSponsorChatMergedStyle(EQmSponsorChatStyle::FLUID, EQmSponsorChatStyle::FLUID), EQmSponsorChatStyle::FLUID);
+	for(const auto Style : {EQmSponsorChatStyle::NONE, EQmSponsorChatStyle::PLATINUM})
+	{
+		EXPECT_EQ(QmSponsorChatMergedStyle(Style, EQmSponsorChatStyle::FLUID), EQmSponsorChatStyle::NONE);
+		EXPECT_EQ(QmSponsorChatMergedStyle(EQmSponsorChatStyle::FLUID, Style), EQmSponsorChatStyle::NONE);
+	}
+}
+
+TEST(QmSponsorChatFluid, FixedPaletteStaysBlueCyanAndOpaque)
+{
+	for(double Time : {0.0, 1.7, 5.0, 11.9, 120000.0})
+	{
+		SCOPED_TRACE(Time);
+		const CQmSponsorChatFluid Fluid(Time);
+		for(int Y = 0; Y <= 8; ++Y)
+			for(int X = 0; X <= 32; ++X)
+			{
+				const auto Color = Fluid.Sample(vec2(X / 4.0f, Y / 4.0f));
+				EXPECT_GE(Color.r, 0.0f);
+				EXPECT_LE(Color.r, Color.g);
+				EXPECT_LE(Color.g, Color.b);
+				EXPECT_LE(Color.b, 1.0f);
+				EXPECT_GE(Color.g, 0.30f);
+				EXPECT_FLOAT_EQ(Color.a, 1.0f);
+			}
+	}
+}
+
+TEST(QmSponsorChatFluid, ColorVariesWithinOneGlyphInBothDirectionsAndOverTime)
+{
+	const CQmSponsorChatFluid Fluid(0.0);
+	const auto Center = Fluid.Sample(vec2(0.5f, 0.5f));
+	EXPECT_NE(Fluid.Sample(vec2(0.1f, 0.5f)), Center);
+	EXPECT_NE(Fluid.Sample(vec2(0.5f, 0.1f)), Center);
+	EXPECT_NE(CQmSponsorChatFluid(1.0).Sample(vec2(0.5f, 0.5f)), Center);
+	// 相邻字使用连续的文字坐标，不在每个字的左边缘重启同一份纹理。
+	EXPECT_NE(Fluid.Sample(vec2(1.5f, 0.5f)), Center);
+}
+
+TEST(QmSponsorChatFluid, LoopBoundaryAndLongRunningClocksRemainContinuous)
+{
+	const vec2 Position(2.25f, 0.6f);
+	const auto Start = CQmSponsorChatFluid(0).Sample(Position);
+	const auto Before = CQmSponsorChatFluid(11.99999).Sample(Position);
+	EXPECT_NEAR(Before.r, Start.r, 0.0001f);
+	EXPECT_NEAR(Before.g, Start.g, 0.0001f);
+	EXPECT_NEAR(Before.b, Start.b, 0.0001f);
+	EXPECT_EQ(CQmSponsorChatFluid(120000.25).Sample(Position), CQmSponsorChatFluid(0.25).Sample(Position));
+	for(double Time : {-1.0, std::numeric_limits<double>::infinity(), std::numeric_limits<double>::quiet_NaN()})
+		EXPECT_EQ(CQmSponsorChatFluid(Time).Sample(Position), Start);
+}
+
+TEST(QmSponsorChatPresence, FluidSurvivesPresenceParsingForMainAndDummy)
+{
+	const auto Presences = ReadPresences(R"({"server_time":1000,"presences":[
+		{"server_address":"test:8303","player_id":3,"player_name":"Main","title":"Sponsor","chat_style":"fluid","issued_at":1000,"expires_at":1015},
+		{"server_address":"test:8303","player_id":4,"player_name":"Dummy","title":"Sponsor","chat_style":"fluid","issued_at":1000,"expires_at":1015}
+	]})");
+	ASSERT_EQ(Presences.size(), 2u);
+	for(const auto &Presence : Presences)
+		EXPECT_EQ(Presence.m_ChatStyle, EQmSponsorChatStyle::FLUID);
 }

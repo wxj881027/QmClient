@@ -2978,6 +2978,8 @@ bool CChat::OnPrepareLines(float y)
 		}
 		if(Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM)
 			Color = QmSponsorChatPlatinumColor(0.0f, Color.a);
+		else if(Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::FLUID)
+			Color = ColorRGBA(1, 1, 1, Color.a);
 		TextRender()->TextColor(Color);
 
 		CTextCursor AppendCursor = LineCursor;
@@ -3009,7 +3011,7 @@ bool CChat::OnPrepareLines(float y)
 				QmSponsorChatAddPlatinumSplits(Cursor, pMessage, Color.a);
 			if(UseColoredParts && !FilteredAfterColors)
 				ColoredParts.AddSplitsToCursor(Cursor);
-			const bool SpatialGradient = UseGradient && !Platinum && Line.m_CustomColor == std::nullopt && ColoredParts.Colors().empty();
+			const bool SpatialGradient = UseGradient && Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::NONE && Line.m_CustomColor == std::nullopt && ColoredParts.Colors().empty();
 			const auto Gradient = QmChatGradientStyle(g_Config, GradientRole, Color);
 			const CQmChatGradientPaint Paint(TextRender(), Cursor, pMessage, SpatialGradient ? &Gradient : nullptr);
 			TextRender()->CreateOrAppendTextContainer(BodyContainer, &Cursor, pMessage);
@@ -3693,7 +3695,7 @@ void CChat::OnRender()
 				if(!HudEditorPreview && Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM)
 					SweepState = QmSponsorChatSweepState(AgeSeconds, TextRender()->GetTextContainerRenderedLineCount(Line.m_BodyTextContainerIndex), LatestVisibleSponsor);
 				QmRenderSponsorChatText(Graphics(), TextRender(), Line.m_BodyTextContainerIndex,
-					Line.m_RenderSponsorChatStyle, AnimAlpha, AnimOffsetX, AnimOffsetY, FontSize(), SweepState);
+					Line.m_RenderSponsorChatStyle, AnimAlpha, AnimOffsetX, AnimOffsetY, FontSize(), SweepState, HudEditorPreview ? 0.0 : AgeSeconds);
 			}
 
 			if(Line.m_TextContainerIndex.Valid())

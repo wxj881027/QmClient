@@ -605,6 +605,11 @@ public:
 	virtual void RenderTextContainer(STextContainerIndex TextContainerIndex, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor, float X, float Y) = 0;
 	// 扫光只覆盖字形填充，复用容器布局和当前裁剪区域。
 	virtual void RenderTextContainerSweep(STextContainerIndex TextContainerIndex, const STextSweepParams &Params, float X, float Y) {}
+	// 同步取色并绘制已有布局的字形填充；采样坐标相对容器起点，不保存回调上下文。
+	virtual void RenderTextContainerFill(STextContainerIndex Index, CTextCursor::FColorSampler pfnSample, const void *pContext, int Columns, int Rows, const ColorRGBA &Tint, float X, float Y)
+	{
+		RenderTextContainer(Index, Tint, ColorRGBA(0, 0, 0, 0), X, Y);
+	}
 	// 排版时启用 m_TrackLineRanges 后，返回包含绘制字形的行数。
 	virtual int GetTextContainerRenderedLineCount(STextContainerIndex TextContainerIndex) { return 0; }
 

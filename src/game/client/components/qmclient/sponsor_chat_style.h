@@ -3,6 +3,7 @@
 
 #include <base/color.h>
 #include <base/str.h>
+#include <base/vmath.h>
 
 #include <algorithm>
 #include <array>
@@ -12,12 +13,15 @@ enum class EQmSponsorChatStyle
 {
 	NONE = 0,
 	PLATINUM,
+	FLUID,
 };
 
 inline EQmSponsorChatStyle QmSponsorChatStyleFromId(const char *pId)
 {
 	if(pId != nullptr && str_comp(pId, "platinum") == 0)
 		return EQmSponsorChatStyle::PLATINUM;
+	if(pId != nullptr && str_comp(pId, "fluid") == 0)
+		return EQmSponsorChatStyle::FLUID;
 	return EQmSponsorChatStyle::NONE;
 }
 
@@ -26,6 +30,7 @@ inline const char *QmSponsorChatStyleId(EQmSponsorChatStyle Style)
 	switch(Style)
 	{
 	case EQmSponsorChatStyle::PLATINUM: return "platinum";
+	case EQmSponsorChatStyle::FLUID: return "fluid";
 	default: return "";
 	}
 }
@@ -79,5 +84,35 @@ inline ColorRGBA QmSponsorChatPlatinumColor(float Position, float Alpha)
 	return ColorRGBA(From.r + (To.r - From.r) * Amount, From.g + (To.g - From.g) * Amount,
 		From.b + (To.b - From.b) * Amount, Alpha);
 }
+
+// 坐标以字号为单位，整段文字共享流场；周期回绕保持连续，避免长时间运行损失精度。
+class CQmSponsorChatFluid
+{
+	float m_Phase;
+
+public:
+	explicit CQmSponsorChatFluid(double TimeSeconds) :
+		m_Phase(std::isfinite(TimeSeconds) && TimeSeconds >= 0.0 ? static_cast<float>(std::fmod(TimeSeconds, 12.0) / 12.0) * 2.0f * pi : 0.0f)
+	{
+	}
+
+	ColorRGBA Sample(vec2 Position) const
+	{
+		const float Warp = 0.35f * std::sin(Position.x * 0.9f + Position.y * 1.7f - m_Phase) +
+			0.18f * std::sin(Position.x * 1.9f - Position.y * 0.8f + 2.0f * m_Phase);
+		const float Wave = 0.5f + 0.5f * std::sin(Position.y * 4.2f + Position.x * 0.7f + Warp * 2.8f - m_Phase);
+		float Crest = 0.5f + 0.5f * std::sin(Position.y * 5.8f - Position.x * 1.1f + Warp * 3.0f + 2.0f * m_Phase);
+		Crest *= Crest;
+		Crest *= Crest;
+		Crest *= Crest;
+		const ColorRGBA Deep(0.025f, 0.32f, 0.70f, 1.0f);
+		const ColorRGBA Cyan(0.08f, 0.78f, 0.98f, 1.0f);
+		const ColorRGBA Foam(0.80f, 0.97f, 1.0f, 1.0f);
+		const float Blend = Wave * Wave * (3.0f - 2.0f * Wave);
+		return ColorRGBA(mix(mix(Deep.r, Cyan.r, Blend), Foam.r, Crest * 0.75f),
+			mix(mix(Deep.g, Cyan.g, Blend), Foam.g, Crest * 0.75f),
+			mix(mix(Deep.b, Cyan.b, Blend), Foam.b, Crest * 0.75f), 1.0f);
+	}
+};
 
 #endif
