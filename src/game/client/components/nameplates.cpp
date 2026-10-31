@@ -22,6 +22,7 @@
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/nameplate_layout.h>
 #include <game/client/components/qmclient/nameplate_text_build.h>
+#include <game/client/components/qmclient/nameplate_update.h>
 #include <game/client/components/qmclient/qm_title_badge.h>
 #include <game/client/components/qmclient/qmclient_utils.h>
 #include <game/client/gameclient.h>
@@ -830,10 +831,9 @@ protected:
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
 		Cursor.m_CalculateVisualBoundingBox = true;
-		const ColorRGBA PreviousColor = This.TextRender()->GetTextColor();
-		This.TextRender()->TextColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
-		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, QmTitleBadgeText(m_aText).c_str());
-		This.TextRender()->TextColor(PreviousColor);
+		QmWithNameplateTextColor(*This.TextRender(), ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), [&] {
+			This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, QmTitleBadgeText(m_aText).c_str());
+		});
 		m_TextVisualBounds = QmTitleBadgeVisualBounds(Cursor);
 	}
 
@@ -1318,11 +1318,10 @@ protected:
 	{
 		m_FontSize = Data.m_FontSize;
 		CTextCursor Cursor;
-		const EFontPreset PreviousPreset = This.TextRender()->GetFontPreset();
-		This.TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		Cursor.m_FontSize = m_FontSize;
-		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, FontIcons::FONT_ICON_COMMENT_SLASH);
-		This.TextRender()->SetFontPreset(PreviousPreset);
+		QmWithNameplateFontPreset(*This.TextRender(), EFontPreset::ICON_FONT, [&] {
+			This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, FontIcons::FONT_ICON_COMMENT_SLASH);
+		});
 	}
 
 public:
@@ -1349,6 +1348,7 @@ private:
 
 	bool m_Inited = false;
 	bool m_InGame = false;
+	CQmNameplateUpdate m_Update;
 	CQmNameplateDensity m_Density;
 	PartsVector m_vpParts;
 	std::vector<SCoreRowParts> m_vCoreRows;
@@ -1492,6 +1492,8 @@ public:
 	{
 		HasFrame = false;
 		HasTargetRow = false;
+		if(!m_Update.Ready())
+			return;
 		vec2 Position = PositionBottomMiddle;
 		for(const SCoreRowParts &CoreRow : m_vCoreRows)
 		{
@@ -1535,6 +1537,8 @@ public:
 	}
 	float ContentSpan(const CNamePlate *pLayoutReference = nullptr) const
 	{
+		if(!m_Update.Ready())
+			return 0.0f;
 		return QmNameplatePreviewContentSpan(LayoutCoreRowHeights(pLayoutReference));
 	}
 
@@ -1651,56 +1655,57 @@ private:
 
 public:
 	CNamePlate() = default;
-	CNamePlate(CGameClient &This, const CNamePlateData &Data)
-	{
-		// Convenience constructor
-		Update(This, Data);
-	}
 	void Reset(CGameClient &This)
 	{
+		m_Update.Reset();
 		for(auto &Part : m_vpParts)
 			Part->Reset(This);
 		m_Density.Reset();
 	}
-	void Update(CGameClient &This, const CNamePlateData &Data)
+	bool Update(CGameClient &This, const CNamePlateData &Data)
 	{
-		Init(This);
-		if(m_InGame != Data.m_InGame)
-			Reset(This);
-		m_InGame = Data.m_InGame;
-		CNamePlateData BakeData = Data;
-		if(Data.m_InGame)
-		{
-			float X0, Y0, X1, Y1, RefWidth, RefHeight;
-			This.Graphics()->GetScreen(&X0, &Y0, &X1, &Y1);
-			This.Graphics()->CalcScreenParams(This.Graphics()->GameScreenAspect(), 1.0f, &RefWidth, &RefHeight);
-			if(Y1 > Y0 && RefHeight > 0.0f)
+		return m_Update.Run([&] {
+			Init(This);
+			if(m_InGame != Data.m_InGame)
+				Reset(This);
+			m_InGame = Data.m_InGame;
+			CNamePlateData BakeData = Data;
+			if(Data.m_InGame)
 			{
-				int Cost = 0;
-				for(const auto &Part : m_vpParts)
-					Cost += Part->TextRebuildCost();
-				// 小像素姓名只增加有限采样密度，整块名牌继续共用档位、滞回和重建预算。
-				const float SamplingScale = QmNameplateSmallTextSamplingScale(Data.m_FontSize, This.Graphics()->ScreenHeight() / (Y1 - Y0));
-				const bool DensityChanged = m_Density.Update(SamplingScale * RefHeight / (Y1 - Y0), This.Graphics()->ScreenHeight() / RefHeight,
-					QM_NAMEPLATE_BAKE_DENSITY_LOG_GRID, This.m_Camera.m_Zooming, Cost,
-					NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME, s_NameplateTextRebuildBudget, RefHeight / (Y1 - Y0));
-				if(DensityChanged && QmPerfEnabled())
+				float X0, Y0, X1, Y1, RefWidth, RefHeight;
+				This.Graphics()->GetScreen(&X0, &Y0, &X1, &Y1);
+				This.Graphics()->CalcScreenParams(This.Graphics()->GameScreenAspect(), 1.0f, &RefWidth, &RefHeight);
+				if(Y1 > Y0 && RefHeight > 0.0f)
 				{
-					char aPayload[256];
-					str_format(aPayload, sizeof(aPayload), "event=nameplate_density_commit client_id=%d requested_density=%.6f bake_density=%.6f text_parts=%d budget_remaining=%d zooming=%d",
-						Data.m_ClientId, This.Graphics()->ScreenHeight() / (Y1 - Y0), m_Density.Ratio() * This.Graphics()->ScreenHeight() / RefHeight,
-						Cost, s_NameplateTextRebuildBudget, int(This.m_Camera.m_Zooming));
-					QmPerfLogPayload("perf/nameplates", aPayload, This.Client());
+					int Cost = 0;
+					for(const auto &Part : m_vpParts)
+						Cost += Part->TextRebuildCost();
+					// 小像素姓名只增加有限采样密度，整块名牌继续共用档位、滞回和重建预算。
+					const float SamplingScale = QmNameplateSmallTextSamplingScale(Data.m_FontSize, This.Graphics()->ScreenHeight() / (Y1 - Y0));
+					const bool DensityChanged = m_Density.Update(SamplingScale * RefHeight / (Y1 - Y0), This.Graphics()->ScreenHeight() / RefHeight,
+						QM_NAMEPLATE_BAKE_DENSITY_LOG_GRID, This.m_Camera.m_Zooming, Cost,
+						NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME, s_NameplateTextRebuildBudget, RefHeight / (Y1 - Y0));
+					if(DensityChanged && QmPerfEnabled())
+					{
+						char aPayload[256];
+						str_format(aPayload, sizeof(aPayload), "event=nameplate_density_commit client_id=%d requested_density=%.6f bake_density=%.6f text_parts=%d budget_remaining=%d zooming=%d",
+							Data.m_ClientId, This.Graphics()->ScreenHeight() / (Y1 - Y0), m_Density.Ratio() * This.Graphics()->ScreenHeight() / RefHeight,
+							Cost, s_NameplateTextRebuildBudget, int(This.m_Camera.m_Zooming));
+						QmPerfLogPayload("perf/nameplates", aPayload, This.Client());
+					}
 				}
+				BakeData.m_BakeDensity = m_Density.Ratio();
+				BakeData.m_DensityRevision = m_Density.Revision();
 			}
-			BakeData.m_BakeDensity = m_Density.Ratio();
-			BakeData.m_DensityRevision = m_Density.Revision();
-		}
-		for(auto &Part : m_vpParts)
-			Part->Update(This, BakeData);
+			for(auto &Part : m_vpParts)
+				Part->Update(This, BakeData);
+			return true;
+		});
 	}
 	void Render(CGameClient &This, const vec2 &PositionBottomMiddle, const CNamePlate *pLayoutReference = nullptr)
 	{
+		if(!m_Update.Ready())
+			return;
 		dbg_assert(m_Inited, "Tried to render uninited nameplate");
 		if(NameplateFreeMoveEnabled())
 		{
@@ -1724,10 +1729,12 @@ public:
 	}
 	bool IsInitialized() const
 	{
-		return m_Inited;
+		return m_Inited && m_Update.Ready();
 	}
 	float TopY(const vec2 &PositionBottomMiddle) const
 	{
+		if(!m_Update.Ready())
+			return PositionBottomMiddle.y;
 		dbg_assert(m_Inited, "Tried to get top of uninited nameplate");
 		if(NameplateFreeMoveEnabled())
 		{
@@ -1744,6 +1751,8 @@ public:
 	}
 	vec2 Size() const
 	{
+		if(!m_Update.Ready())
+			return vec2(0.0f, 0.0f);
 		dbg_assert(m_Inited, "Tried to get size of uninited nameplate");
 		if(NameplateFreeMoveEnabled())
 		{
@@ -1761,6 +1770,8 @@ public:
 	{
 		for(SNameplateCoreRowRect &Rect : aRects)
 			Rect = SNameplateCoreRowRect();
+		if(!m_Update.Ready())
+			return;
 
 		vec2 BaselinePos = PositionBottomMiddle;
 		for(const SCoreRowParts &CoreRow : m_vCoreRows)
@@ -1788,6 +1799,7 @@ public:
 	CNamePlate m_aNamePlateFrameReferences[MAX_CLIENTS];
 	CNamePlate m_aPreviewNamePlates[2];
 	CNamePlate m_aPreviewFrameReferences[2];
+	float m_PreviewContentSpan = 0.0f;
 	SChatBubbleAnimState m_aChatBubbleAnim[MAX_CLIENTS];
 	SCoordXAlignState m_aCoordXAlign[MAX_CLIENTS];
 	SCoordXAlignFrameState m_CoordXAlignFrame;
@@ -2146,13 +2158,15 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 			FrameData.m_ShowClan = true;
 
 		CNamePlate &FrameNamePlate = m_pData->m_aNamePlateFrameReferences[ClientId];
-		FrameNamePlate.Update(*GameClient(), FrameData);
+		if(!FrameNamePlate.Update(*GameClient(), FrameData))
+			return;
 		pLayoutReference = &FrameNamePlate;
 	}
 
 	// Check if the nameplate is actually on screen
 	CNamePlate &NamePlate = m_pData->m_aNamePlates[ClientId];
-	NamePlate.Update(*GameClient(), Data);
+	if(!NamePlate.Update(*GameClient(), Data))
+		return;
 	if(Alpha > 0.0f)
 	{
 		// 昵称和战队行共用一块名牌的档位人数，只在真正绘制时计一次。
@@ -2273,26 +2287,33 @@ static void BuildNamePlatePreviewData(CGameClient &This, int DummyIdx, CNamePlat
 float CNamePlates::MeasurePreviewAreaHeight() const
 {
 	float MaxContentSpan = 0.0f;
-	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
-	{
-		CNamePlateData Data;
-		BuildNamePlatePreviewData(*GameClient(), Dummy, Data);
-		CNamePlate PreviewPlate(*GameClient(), Data);
-		CNamePlate FramePlate;
-		CNamePlate *pFramePlate = nullptr;
-		if(NameplateFreeMoveEnabled())
-		{
-			CNamePlateData FrameData;
-			BuildNamePlatePreviewData(*GameClient(), Dummy, FrameData, true);
-			FramePlate.Update(*GameClient(), FrameData);
-			pFramePlate = &FramePlate;
-		}
-		MaxContentSpan = std::max(MaxContentSpan, PreviewPlate.ContentSpan(pFramePlate));
-		PreviewPlate.Reset(*GameClient());
-		if(pFramePlate != nullptr)
-			pFramePlate->Reset(*GameClient());
-	}
-	return NAMEPLATE_PREVIEW_AREA_MARGIN * 2.0f + MaxContentSpan + (float)g_Config.m_ClNamePlatesOffset + NAMEPLATE_PREVIEW_TEE_SIZE / 2.0f;
+	CQmNameplateUpdate Measurement;
+	if(Measurement.Run([&] {
+		   for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+		   {
+			   CNamePlateData Data;
+			   BuildNamePlatePreviewData(*GameClient(), Dummy, Data);
+			   // 测量与绘制复用已有持久owner，异常不会销毁仍持有文字槽的临时名牌。
+			   CNamePlate &PreviewPlate = m_pData->m_aPreviewNamePlates[Dummy];
+			   if(!PreviewPlate.Update(*GameClient(), Data))
+				   return false;
+			   CNamePlate *pFramePlate = nullptr;
+			   if(NameplateFreeMoveEnabled())
+			   {
+				   CNamePlateData FrameData;
+				   BuildNamePlatePreviewData(*GameClient(), Dummy, FrameData, true);
+				   CNamePlate &FramePlate = m_pData->m_aPreviewFrameReferences[Dummy];
+				   if(!FramePlate.Update(*GameClient(), FrameData))
+					   return false;
+				   pFramePlate = &FramePlate;
+			   }
+			   MaxContentSpan = std::max(MaxContentSpan, PreviewPlate.ContentSpan(pFramePlate));
+		   }
+		   return true;
+	   }))
+		m_pData->m_PreviewContentSpan = MaxContentSpan;
+	// 失败时保留上次完整测量的高度；首次失败沿用不含文字的基础高度。
+	return NAMEPLATE_PREVIEW_AREA_MARGIN * 2.0f + m_pData->m_PreviewContentSpan + (float)g_Config.m_ClNamePlatesOffset + NAMEPLATE_PREVIEW_TEE_SIZE / 2.0f;
 }
 
 void CNamePlates::RenderNamePlatePreview(const CUIRect &PreviewArea, int Dummy)
@@ -2300,7 +2321,8 @@ void CNamePlates::RenderNamePlatePreview(const CUIRect &PreviewArea, int Dummy)
 	CNamePlateData Data;
 	BuildNamePlatePreviewData(*GameClient(), Dummy, Data);
 	CNamePlate &NamePlate = m_pData->m_aPreviewNamePlates[Dummy];
-	NamePlate.Update(*GameClient(), Data);
+	if(!NamePlate.Update(*GameClient(), Data))
+		return;
 
 	CTeeRenderInfo TeeRenderInfo;
 	if(Dummy == 0)
@@ -2321,7 +2343,8 @@ void CNamePlates::RenderNamePlatePreview(const CUIRect &PreviewArea, int Dummy)
 		CNamePlateData FrameData;
 		BuildNamePlatePreviewData(*GameClient(), Dummy, FrameData, true);
 		CNamePlate &FrameNamePlate = m_pData->m_aPreviewFrameReferences[Dummy];
-		FrameNamePlate.Update(*GameClient(), FrameData);
+		if(!FrameNamePlate.Update(*GameClient(), FrameData))
+			return;
 		pFrameNamePlate = &FrameNamePlate;
 	}
 
