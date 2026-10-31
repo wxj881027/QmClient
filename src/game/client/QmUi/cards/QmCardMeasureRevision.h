@@ -86,7 +86,14 @@ namespace qm_card_catalog
 			       (g_Config.m_QmHitboxShowHook ? 1u << 10 : 0u) |
 			       (g_Config.m_QmHitboxShowFreezeProjectiles ? 1u << 11 : 0u);
 		case EQmModuleId::DummyMiniView: return DummyMiniViewExpanded ? 1u : 0u;
-		case EQmModuleId::Ime: return (g_Config.m_QmNewIme != 0 ? 1u : 0u) | (g_Config.m_QmImeAutoManage != 0 ? 2u : 0u);
+		case EQmModuleId::Ime:
+			return (g_Config.m_QmNewIme != 0 ? 1u : 0u) |
+			       (g_Config.m_QmImeAutoManage != 0 ? 2u : 0u) |
+			       (g_Config.m_QmImeEngine != 0 ? 4u : 0u) |
+			       (g_Config.m_QmImeDomainWords != 0 ? 8u : 0u) |
+			       (g_Config.m_QmImeLearning != 0 ? 16u : 0u) |
+			       (g_Config.m_QmImeEnglishCompletion != 0 ? 32u : 0u) |
+			       (g_Config.m_QmImeShiftSwitch != 0 ? 64u : 0u);
 		case EQmModuleId::PlayerStats: return (g_Config.m_QmPlayerStatsMapProgress ? 1u : 0u) | (g_Config.m_QmPlayerStatsMapProgressStyle ? 2u : 0u);
 		case EQmModuleId::InputOverlay: return g_Config.m_QmInputOverlay ? 1u : 0u;
 		case EQmModuleId::Console: return static_cast<uint64_t>(g_Config.m_QmConsoleFontSize) | (static_cast<uint64_t>(QmConsoleAppearance::IsCustomScheme(g_Config.m_QmConsoleColorScheme)) << 8);

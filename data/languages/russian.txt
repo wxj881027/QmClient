@@ -1967,6 +1967,21 @@ Bubble opacity
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
+Built-in IME language switch key (SDL key code, 0=disabled)
+== Клавиша языка встроенного ввода (код SDL, 0=выкл.)
+
+Built-in IME switch modifiers (Shift=1, Ctrl=4, Alt=8, GUI=64); default Ctrl+Space
+== Модификаторы смены языка (Shift=1, Ctrl=4, Alt=8, GUI=64); по умолчанию Ctrl+Space
+
+Built-in input supports Chinese Pinyin and English suggestions with a US keyboard layout on Windows. Use system input for other layouts or input methods.
+== Встроенный ввод поддерживает китайский пиньинь и английские подсказки с раскладкой US в Windows. Для других раскладок и методов используйте системный ввод.
+
+Built-in Pinyin
+== Встроенный пиньинь
+
+Built-in Pinyin is only available on Windows. This platform uses system input.
+== Встроенный пиньинь доступен только в Windows. На этой платформе используется системный ввод.
+
 Button - Disabled
 == Кнопка - Отключена
 
@@ -2542,6 +2557,12 @@ Clear finished
 
 Clear friend note
 == Очистить заметку о друге
+
+Clear learned built-in pinyin words
+== Очистить историю обучения встроенного пиньиня
+
+Clear learned words
+== Очистить историю обучения
 
 Clear local console
 == Очистить локальную консоль
@@ -3863,6 +3884,9 @@ Delete
 Delete "%s"?
 == Удалить "%s"?
 
+Delete all locally learned input words? Current game words will remain available.
+== Удалить все локально изученные слова ввода? Текущие игровые слова останутся доступны.
+
 Delete category
 == Удалить категорию
 
@@ -4171,6 +4195,9 @@ Do not use it to spam: servers may punish repeated automatic messages.
 
 Document too large for the editor (%d of %d bytes)
 == Документ слишком большой для редактора клиента (%d из %d байт)
+
+Domain candidates per page
+== Игровых терминов на страницу
 
 Done
 == Готово
@@ -5192,6 +5219,12 @@ Endpoint (optional)
 English font:
 == Английский шрифт:
 
+English word suggestions
+== Подсказки английских слов
+
+English: Tab accepts the selected suggestion; Space keeps your typed text.
+== Английский ввод: Tab принимает выбранную подсказку, Space сохраняет введённый текст.
+
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == Войдите в режим /practice или перезапуститесь, чтобы избежать убийства всей команды через 60 секунд.
 
@@ -6055,6 +6088,9 @@ Game
 
 Game assets
 == Игровые ресурсы
+
+Game domain words
+== Игровые термины
 
 Game graphics assets not from Teeworlds
 == Графические ресурсы игры не из Teeworlds
@@ -6950,6 +6986,12 @@ IME appearance
 IME background color
 == Цвет фона IME
 
+IME engine
+== Движок ввода (IME)
+
+IME engine (0=system, 1=built-in pinyin, Windows US layout only)
+== Движок ввода (0=системный, 1=встроенный пиньинь, только US-раскладка Windows)
+
 IME font size
 == Размер шрифта IME
 
@@ -6973,6 +7015,9 @@ IME gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
 
 IME gradient vertical position percentage
 == Вертикальное положение градиента (IME, %)
+
+IME language switch key
+== Клавиша переключения языка ввода
 
 IME selected text color
 == Цвет выбранного текста IME
@@ -7030,6 +7075,9 @@ Include emoticon when saving/loading config preset
 
 Include game audio in the recording.
 == Включать звук игры в запись.
+
+Include game words in built-in pinyin candidates
+== Добавлять игровые термины в кандидаты встроенного пиньиня
 
 Include name when saving/loading config preset
 == Включать имя при сохранении/загрузке пресета конфигурации
@@ -7744,6 +7792,12 @@ Learn
 
 Learn "Toggle dummy" first; the other dummy keys only help once you already play with a second tee.
 == Сначала освойте переключение дамми: остальные клавиши дамми полезны, лишь когда вы уже играете вторым tee.
+
+Learn committed words
+== Автоматически учить введённые слова
+
+Learn committed words in built-in pinyin
+== Учить введённые слова во встроенном пиньине
 
 Leave "Automatic updates" off if you update by hand: it can restart the client to install a build.
 == Если обновляетесь вручную, оставьте «Автоматические обновления» выключенными: клиент может перезапуститься, чтобы установить сборку.
@@ -8473,6 +8527,9 @@ Maximum dynamic camera cursor distance
 
 Maximum framerate for entity layer video background
 == Максимальная частота кадров для видеофона слоя объектов
+
+Maximum game words on the first pinyin candidate page
+== Максимум игровых терминов на первой странице кандидатов пиньиня
 
 Maximum notification count
 == Максимальное количество отображаемых уведомлений
@@ -14810,6 +14867,9 @@ Successfully saved the replay!
 Sudden Death
 == Внезапная смерть
 
+Suggest English words in built-in IME English mode; Tab accepts, Space keeps typed text
+== Подсказки английских слов во встроенном вводе: Tab принимает, Space сохраняет исходный текст
+
 Suicides
 == Самоубийства
 
@@ -14845,6 +14905,9 @@ Swap option color
 
 Swaps the active action (fire and hook) for direct touch input and virtual joysticks.
 == Меняет активное действие (огонь и крюк) для прямого сенсорного ввода и виртуальных джойстиков.
+
+Switch built-in IME language by tapping Shift
+== Переключать язык встроенного ввода одиночным нажатием Shift
 
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 == Положение обратного отсчета переключателя (0 = следовать за Tee, 1 = динамический остров, 2 = оба)
@@ -14939,6 +15002,9 @@ System default
 System graphics settings
 == Системные настройки графики
 
+System input
+== Системный ввод
+
 System media controls
 == Системные медиа-кнопки
 
@@ -14962,6 +15028,9 @@ Take a screenshot
 
 Take photo
 == Сделать снимок
+
+Tap Shift to switch language
+== Переключать язык одиночным нажатием Shift
 
 Taper trail ends
 == Сужающиеся концы следа

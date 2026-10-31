@@ -1,0 +1,7 @@
+# 作为主方案依赖部署，只提供游戏英文缩写表，不加入用户方案列表。
+schema:
+  schema_id: qm_game_aliases
+  name: Qm game abbreviations
+  version: "1"
+translator:
+  dictionary: qm_game_aliases
