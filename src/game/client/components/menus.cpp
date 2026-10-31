@@ -7185,6 +7185,21 @@ void CMenus::BuildSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, C
 	BuildBaseSettingsMenuTextPlan(vItems, MainView);
 }
 
+SSettingsTextPlanProgressView CMenus::SettingsTextPlanProgress()
+{
+	return {m_SettingsMenuTextPlanCursor, m_SettingsMenuTextPlanCollectionCursor, m_vMenuTextGlyphPrewarmQueue,
+		m_MenuTextGlyphPrewarmCursor, m_MenuTextGlyphPrewarmPlanCursor, m_SettingsMenuTextPlanCollectionDirty, m_SettingsMenuTextPlanCollectionComplete, m_SettingsMenuTextVisiblePlanReady, m_SettingsMenuTextVisiblePlanContext};
+}
+
+std::array<int, 3> CMenus::SettingsTextPlanVisibleContext(bool Ingame)
+{
+	if(Ingame)
+		return {1, -1, -1};
+	const int Page = SettingsCanonicalPage(g_Config.m_UiSettingsPage);
+	const int Tab = Page == SETTINGS_TCLIENT ? m_TClientSettingsTab : (Page == SETTINGS_QMCLIENT ? m_QmClientSettingsTab : -1);
+	return {0, Page, Tab};
+}
+
 bool CMenus::PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOverride)
 {
 	try
@@ -7228,19 +7243,12 @@ bool CMenus::PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOv
 		m_vSettingsMenuTextPrebuildPlan.clear();
 		m_SettingsMenuTextPlannedDescriptors.clear();
 		m_SettingsMenuTextPlannedKeys.clear();
-		m_SettingsMenuTextPlanCursor = 0;
-		m_SettingsMenuTextPlanCollectionCursor = 0;
 		m_SettingsMenuTextPlanGeneration = m_MenuTextPoolGeneration;
 		m_SettingsMenuTextPlanCollectionGeneration = m_MenuTextPoolGeneration;
 		m_SettingsMenuTextPlanCollectionOperation.swap(Operation);
 		m_vSettingsMenuTextPlanCollectionUnits.swap(vUnits);
 		m_SettingsMenuTextPlanMetadataDirty = false;
-		m_SettingsMenuTextPlanCollectionDirty = false;
-		m_SettingsMenuTextPlanCollectionComplete = false;
-		// plan 重建后此前的字形预热队列已失效
-		m_vMenuTextGlyphPrewarmQueue.clear();
-		m_MenuTextGlyphPrewarmCursor = 0;
-		m_MenuTextGlyphPrewarmPlanCursor = static_cast<size_t>(-1);
+		SettingsTextPlanProgress().RestartCollection(false);
 
 		return true;
 	}
@@ -7320,6 +7328,12 @@ bool CMenus::AdvanceSettingsMenuTextPlanCollection(int Budget, const char *pOper
 			CollectionFailed = true;
 			break;
 		}
+		const auto Kind = m_vSettingsMenuTextPlanCollectionUnits[m_SettingsMenuTextPlanCollectionCursor].m_Kind;
+		if(Kind == MENU_TEXT_PLAN_UNIT_VISIBLE_SETTINGS || Kind == MENU_TEXT_PLAN_UNIT_INGAME_ESC)
+		{
+			m_SettingsMenuTextVisiblePlanContext = SettingsTextPlanVisibleContext(Kind == MENU_TEXT_PLAN_UNIT_INGAME_ESC);
+			m_SettingsMenuTextVisiblePlanReady = true;
+		}
 		++m_SettingsMenuTextPlanCollectionCursor;
 		--RemainingBudget;
 	}
@@ -7354,7 +7368,7 @@ void CMenus::BuildVisibleSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vI
 int CMenus::CountMissingSettingsMenuTextPlanItems() const
 {
 	if(m_SettingsMenuTextPlanCollectionDirty || !m_SettingsMenuTextPlanCollectionComplete)
-		return maximum(0, (int)m_vSettingsMenuTextPlanCollectionUnits.size() - (int)m_SettingsMenuTextPlanCollectionCursor);
+		return SettingsTextPlanPendingUnitCount(m_vSettingsMenuTextPlanCollectionUnits.size(), m_SettingsMenuTextPlanCollectionCursor, m_SettingsMenuTextPlanCollectionDirty);
 	return maximum(0, (int)m_vSettingsMenuTextPrebuildPlan.size() - (int)m_SettingsMenuTextPlanCursor);
 }
 
@@ -7405,7 +7419,9 @@ void CMenus::EnsureSettingsMenuTextPlanReadyForVisible()
 {
 	if(Ui()->Screen() == nullptr)
 		return;
-	if(!m_SettingsMenuTextPlanMetadataDirty && m_SettingsMenuTextPlanGeneration == m_MenuTextPoolGeneration && !m_vSettingsMenuTextPrebuildPlan.empty() && !m_SettingsMenuTextPlannedDescriptors.empty())
+	const auto VisibleContext = SettingsTextPlanVisibleContext(str_comp(SettingsPerfActiveOperation(), "ingame_esc_open") == 0);
+	if(!m_SettingsMenuTextPlanMetadataDirty && m_SettingsMenuTextPlanGeneration == m_MenuTextPoolGeneration &&
+		(SettingsTextPlanProgress().VisiblePlanMatches(VisibleContext) || (!m_vSettingsMenuTextPrebuildPlan.empty() && !m_SettingsMenuTextPlannedDescriptors.empty())))
 		return;
 
 	std::vector<SMenuTextPlanItem> vPlan;
@@ -7429,6 +7445,13 @@ void CMenus::EnsureSettingsMenuTextPlanReadyForVisible()
 	m_SettingsMenuTextPlannedKeys.swap(Keys);
 	m_SettingsMenuTextPlanGeneration = m_MenuTextPoolGeneration;
 	m_SettingsMenuTextPlanMetadataDirty = false;
+	SettingsTextPlanProgress().ReplaceVisiblePlan(VisibleContext);
+	m_SettingsMenuTextLastCollectionStats = {};
+	m_SettingsMenuTextLastCollectionStats.m_Dirty = true;
+	m_SettingsMenuTextLastCollectionStats.m_UnitsTotal = SettingsTextPlanPendingUnitCount(m_vSettingsMenuTextPlanCollectionUnits.size(), 0, false);
+	m_SettingsMenuTextLastCollectionStats.m_Remaining = SettingsTextPlanPendingUnitCount(m_vSettingsMenuTextPlanCollectionUnits.size(), 0, true);
+	m_SettingsMenuTextLastPrebuildStats = {};
+	m_SettingsMenuTextLastPrebuildStats.m_Remaining = m_SettingsMenuTextLastCollectionStats.m_Remaining;
 }
 
 void CMenus::PrebuildIngameEscTextPoolBeforeOpen(int Budget)
@@ -7484,10 +7507,7 @@ int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperatio
 	if(m_SettingsMenuTextPlanGeneration != m_MenuTextPoolGeneration)
 	{
 		m_SettingsMenuTextPlanGeneration = m_MenuTextPoolGeneration;
-		m_SettingsMenuTextPlanCursor = 0;
-		m_vMenuTextGlyphPrewarmQueue.clear();
-		m_MenuTextGlyphPrewarmCursor = 0;
-		m_MenuTextGlyphPrewarmPlanCursor = static_cast<size_t>(-1);
+		SettingsTextPlanProgress().RestartConsumption();
 	}
 
 	// QmClient: 字形预热。首次构建文本容器时一次可能光栅化 100+ 个新字形
@@ -7714,13 +7734,10 @@ void CMenus::InvalidateMenuTextPool(const char *pReason)
 		m_SettingsMenuTextPlannedDescriptors.clear();
 		m_SettingsMenuTextPlannedKeys.clear();
 	}
-	m_SettingsMenuTextPlanCursor = 0;
-	m_SettingsMenuTextPlanCollectionCursor = 0;
+	SettingsTextPlanProgress().RestartCollection(true);
 	m_SettingsMenuTextPlanGeneration = 0;
 	m_SettingsMenuTextPlanCollectionGeneration = 0;
 	m_SettingsMenuTextPlanCollectionOperation.clear();
-	m_SettingsMenuTextPlanCollectionDirty = true;
-	m_SettingsMenuTextPlanCollectionComplete = false;
 	m_SettingsMenuTextLastPrebuildStats = {};
 	m_SettingsMenuTextLastCollectionStats = {};
 	m_SettingsMenuTextLastCollectionStats.m_Dirty = true;

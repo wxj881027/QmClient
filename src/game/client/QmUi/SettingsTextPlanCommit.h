@@ -2,12 +2,64 @@
 #define GAME_CLIENT_QMUI_SETTINGSTEXTPLANCOMMIT_H
 
 #include <algorithm>
+#include <array>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
+// 仅借用菜单已有进度字段，视图不能比字段所属对象活得更久。
+struct SSettingsTextPlanProgressView
+{
+	size_t &m_TextCursor;
+	size_t &m_CollectionCursor;
+	std::vector<std::pair<int, int>> &m_vGlyphs;
+	size_t &m_GlyphCursor;
+	size_t &m_GlyphPlanCursor;
+	bool &m_CollectionDirty;
+	bool &m_CollectionComplete;
+	bool &m_VisiblePlanReady;
+	std::array<int, 3> &m_VisibleContext;
+
+	void RestartConsumption() const noexcept
+	{
+		m_TextCursor = 0;
+		m_vGlyphs.clear();
+		m_GlyphCursor = 0;
+		m_GlyphPlanCursor = static_cast<size_t>(-1);
+	}
+	// 已准备好新单元时Dirty为false；替换/失效后须重新准备时为true。
+	void RestartCollection(bool Dirty) const noexcept
+	{
+		RestartConsumption();
+		m_CollectionCursor = 0;
+		m_CollectionDirty = Dirty;
+		m_CollectionComplete = false;
+		m_VisiblePlanReady = false;
+	}
+	void ReplaceVisiblePlan(const std::array<int, 3> &Context) const noexcept
+	{
+		RestartCollection(true);
+		// 空可见页也是已准备结果，不能每帧重建并重置后续收集进度。
+		m_VisibleContext = Context;
+		m_VisiblePlanReady = true;
+	}
+	bool VisiblePlanMatches(const std::array<int, 3> &Context) const noexcept
+	{
+		return m_VisiblePlanReady && m_VisibleContext == Context;
+	}
+};
+
+inline int SettingsTextPlanPendingUnitCount(size_t UnitCount, size_t Cursor, bool Dirty) noexcept
+{
+	const size_t Remaining = UnitCount > Cursor ? UnitCount - Cursor : 0;
+	// dirty还需重建，即使旧单元为空/已经走完，也不能报告无待办。
+	const size_t Pending = Dirty ? std::max(size_t{1}, Remaining) : Remaining;
+	return static_cast<int>(std::min(Pending, static_cast<size_t>(std::numeric_limits<int>::max())));
+}
 
 // 单元先收集到候选，文本和两套索引全部准备成功才共同发布。
 // 失败保留值；reserve可能改变容量和引用，调用方不能跨此调用保存容器迭代器。

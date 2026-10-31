@@ -82,6 +82,7 @@ class IHttpRequest;
 class CChat;
 class CProfile;
 struct SQmProfileWheelEditorState;
+struct SSettingsTextPlanProgressView;
 namespace qm_card_registry
 {
 	struct SCardNavigationTarget;
@@ -3055,6 +3056,8 @@ private:
 	int m_MenuTextStableUnplannedThisFrame = 0;
 	SSettingsTextPerfStats *m_pActiveSettingsTextPerfStats = nullptr;
 	std::vector<SMenuTextPlanItem> m_vSettingsMenuTextPrebuildPlan;
+	SSettingsTextPlanProgressView SettingsTextPlanProgress();
+	std::array<int, 3> SettingsTextPlanVisibleContext(bool Ingame);
 	std::vector<SSettingsMenuTextPlanCollectionUnit> m_vSettingsMenuTextPlanCollectionUnits;
 	std::unordered_set<std::string> m_SettingsMenuTextPlannedDescriptors;
 	std::unordered_set<std::string> m_SettingsMenuTextPlannedKeys;
@@ -3070,6 +3073,8 @@ private:
 	bool m_SettingsMenuTextPlanMetadataDirty = true;
 	bool m_SettingsMenuTextPlanCollectionDirty = true;
 	bool m_SettingsMenuTextPlanCollectionComplete = false;
+	bool m_SettingsMenuTextVisiblePlanReady = false;
+	std::array<int, 3> m_SettingsMenuTextVisiblePlanContext{{-1, -1, -1}};
 	SSettingsMenuTextPrebuildStats m_SettingsMenuTextLastPrebuildStats;
 	SSettingsMenuTextPlanCollectionStats m_SettingsMenuTextLastCollectionStats;
 	std::string m_SettingsCardFocusStableId;
