@@ -5482,6 +5482,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/pie_menu_geometry_test.cpp
     src/test/unit/client/pie_menu_points_test.cpp
     src/test/unit/qmclient/client/qm_collision_hitbox_geometry_test.cpp
+    src/test/unit/qmclient/client/qm_collision_hitbox_tile_range_test.cpp
     src/test/unit/qmclient/client/qm_collision_hitbox_projectile_test.cpp
     src/test/unit/qmclient/settings/settings_form_state_test.cpp
     src/test/unit/qmclient/settings/settings_card_surface_geometry_test.cpp

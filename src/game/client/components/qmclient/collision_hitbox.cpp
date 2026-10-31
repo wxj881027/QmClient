@@ -2,6 +2,7 @@
 #include "collision_hitbox.h"
 
 #include "collision_hitbox_projectile_logic.h"
+#include "collision_position.h"
 #include "item_render_math.h"
 
 #include <base/log.h>
@@ -324,45 +325,54 @@ void CCollisionHitbox::OnMapLoad()
 {
 	m_vMapData.clear();
 
-	// 查找有效的图层并计算尺寸
-	std::vector<const CHitboxLayer *> vValidLayers;
 	m_MapDataSize = {0, 0};
-	for(const auto &Layer : HITBOX_LAYERS)
+	try
 	{
-		ivec2 LayerSize;
-		Layer.GetMeta(GameClient(), LayerSize);
-		if(LayerSize.x <= 0 || LayerSize.y <= 0)
-			continue;
-		m_MapDataSize.x = std::max(m_MapDataSize.x, LayerSize.x);
-		m_MapDataSize.y = std::max(m_MapDataSize.y, LayerSize.y);
-		vValidLayers.push_back(&Layer);
+		// 查找有效的图层并计算尺寸
+		std::vector<const CHitboxLayer *> vValidLayers;
+		for(const auto &Layer : HITBOX_LAYERS)
+		{
+			ivec2 LayerSize;
+			Layer.GetMeta(GameClient(), LayerSize);
+			if(LayerSize.x <= 0 || LayerSize.y <= 0)
+				continue;
+			m_MapDataSize.x = std::max(m_MapDataSize.x, LayerSize.x);
+			m_MapDataSize.y = std::max(m_MapDataSize.y, LayerSize.y);
+			vValidLayers.push_back(&Layer);
+		}
+
+		if(m_MapDataSize.x <= 0 || m_MapDataSize.y <= 0)
+			return;
+
+		const size_t MapWidth = (size_t)m_MapDataSize.x;
+		const size_t MapHeight = (size_t)m_MapDataSize.y;
+		if(MapWidth > std::numeric_limits<size_t>::max() / MapHeight)
+		{
+			log_warn("collision_hitbox", "Map size overflow for hitbox cache: %dx%d", m_MapDataSize.x, m_MapDataSize.y);
+			m_MapDataSize = {0, 0};
+			return;
+		}
+		const size_t NumTiles = MapWidth * MapHeight;
+		if(NumTiles > MAX_HITBOX_MAP_TILES)
+		{
+			log_warn("collision_hitbox", "Map too large for hitbox cache: %dx%d", m_MapDataSize.x, m_MapDataSize.y);
+			m_MapDataSize = {0, 0};
+			return;
+		}
+
+		m_vMapData.assign(NumTiles, HITBOX_NONE);
+
+		// 填充碰撞数据
+		for(const auto *pLayer : vValidLayers)
+		{
+			pLayer->SetData(GameClient(), m_vMapData.data(), m_MapDataSize);
+		}
 	}
-
-	if(m_MapDataSize.x <= 0 || m_MapDataSize.y <= 0)
-		return;
-
-	const size_t MapWidth = (size_t)m_MapDataSize.x;
-	const size_t MapHeight = (size_t)m_MapDataSize.y;
-	if(MapWidth > std::numeric_limits<size_t>::max() / MapHeight)
+	catch(...)
 	{
-		log_warn("collision_hitbox", "Map size overflow for hitbox cache: %dx%d", m_MapDataSize.x, m_MapDataSize.y);
+		// 新地图不能沿用旧轮廓；可选缓存失败时释放存储，连接继续初始化。
 		m_MapDataSize = {0, 0};
-		return;
-	}
-	const size_t NumTiles = MapWidth * MapHeight;
-	if(NumTiles > MAX_HITBOX_MAP_TILES)
-	{
-		log_warn("collision_hitbox", "Map too large for hitbox cache: %dx%d", m_MapDataSize.x, m_MapDataSize.y);
-		m_MapDataSize = {0, 0};
-		return;
-	}
-
-	m_vMapData.assign(NumTiles, HITBOX_NONE);
-
-	// 填充碰撞数据
-	for(const auto *pLayer : vValidLayers)
-	{
-		pLayer->SetData(GameClient(), m_vMapData.data(), m_MapDataSize);
+		std::vector<int>().swap(m_vMapData);
 	}
 }
 
@@ -379,22 +389,13 @@ void CCollisionHitbox::RenderTileHitboxes()
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 
-	int StartY = (int)(ScreenY0 / Scale) - 1;
-	int StartX = (int)(ScreenX0 / Scale) - 1;
-	int EndY = (int)(ScreenY1 / Scale) + 1;
-	int EndX = (int)(ScreenX1 / Scale) + 1;
-
-	// 限制渲染范围避免性能问题
-	int MaxScale = 12;
-	if(EndX - StartX > Graphics()->ScreenWidth() / MaxScale || EndY - StartY > Graphics()->ScreenHeight() / MaxScale)
-	{
-		int EdgeX = (EndX - StartX) - (Graphics()->ScreenWidth() / MaxScale);
-		StartX += EdgeX / 2;
-		EndX -= EdgeX / 2;
-		int EdgeY = (EndY - StartY) - (Graphics()->ScreenHeight() / MaxScale);
-		StartY += EdgeY / 2;
-		EndY -= EdgeY / 2;
-	}
+	const auto Range = QmCalcHitboxTileRange(vec2(ScreenX0, ScreenY0), vec2(ScreenX1, ScreenY1), ivec2(Graphics()->ScreenWidth(), Graphics()->ScreenHeight()), m_MapDataSize);
+	if(!Range)
+		return;
+	const int StartY = Range->m_Begin.y;
+	const int StartX = Range->m_Begin.x;
+	const int EndY = Range->m_End.y;
+	const int EndX = Range->m_End.x;
 
 	auto GetTile = [&](int x, int y) -> int {
 		if(x < 0 || x >= m_MapDataSize.x || y < 0 || y >= m_MapDataSize.y)
@@ -519,6 +520,8 @@ void CCollisionHitbox::RenderTeeHitboxes()
 			continue;
 
 		vec2 Position = Player.m_RenderPos;
+		if(!QmCollision::CanRoundPosition(Position))
+			continue;
 		if(ShowTeeCollision && HitboxModeEnabled())
 			DrawCircleOutline(Position, CCharacterCore::PhysicalSize(), TeeColor(ClientId, PlayerAlpha), 36);
 

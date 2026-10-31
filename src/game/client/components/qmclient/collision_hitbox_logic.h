@@ -8,7 +8,48 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <optional>
 #include <vector>
+
+struct SQmHitboxTileRange
+{
+	ivec2 m_Begin;
+	ivec2 m_End;
+};
+
+inline std::optional<SQmHitboxTileRange> QmCalcHitboxTileRange(vec2 ScreenMin, vec2 ScreenMax, ivec2 Pixels, ivec2 MapSize)
+{
+	if(Pixels.x <= 0 || Pixels.y <= 0 || MapSize.x <= 0 || MapSize.y <= 0 ||
+		!std::isfinite(ScreenMin.x) || !std::isfinite(ScreenMin.y) || !std::isfinite(ScreenMax.x) || !std::isfinite(ScreenMax.y) ||
+		ScreenMin.x > ScreenMax.x || ScreenMin.y > ScreenMax.y)
+		return std::nullopt;
+
+	// 先沿原float除法和向零截断，再用double计算边距与密度；限幅后才转int。
+	double StartX = std::trunc(static_cast<double>(ScreenMin.x / 32.0f)) - 1;
+	double StartY = std::trunc(static_cast<double>(ScreenMin.y / 32.0f)) - 1;
+	double EndX = std::trunc(static_cast<double>(ScreenMax.x / 32.0f)) + 1;
+	double EndY = std::trunc(static_cast<double>(ScreenMax.y / 32.0f)) + 1;
+	const int LimitX = Pixels.x / 12;
+	const int LimitY = Pixels.y / 12;
+	if(EndX - StartX > LimitX || EndY - StartY > LimitY)
+	{
+		// 原规则在任一轴超限时同时调整两轴，奇数边差仍向零截断。
+		const double EdgeX = std::trunc((EndX - StartX - LimitX) / 2);
+		const double EdgeY = std::trunc((EndY - StartY - LimitY) / 2);
+		StartX += EdgeX;
+		EndX -= EdgeX;
+		StartY += EdgeY;
+		EndY -= EdgeY;
+		// 极大有限坐标的抵消可能失去低位；不能让误差扩大遍历范围。
+		if(EndX - StartX > LimitX + 1 || EndY - StartY > LimitY + 1)
+			return std::nullopt;
+	}
+	if(EndX < StartX || EndY < StartY)
+		return std::nullopt;
+	return SQmHitboxTileRange{
+		{static_cast<int>(std::clamp(StartX, 0.0, static_cast<double>(MapSize.x))), static_cast<int>(std::clamp(StartY, 0.0, static_cast<double>(MapSize.y)))},
+		{static_cast<int>(std::clamp(EndX, 0.0, static_cast<double>(MapSize.x))), static_cast<int>(std::clamp(EndY, 0.0, static_cast<double>(MapSize.y)))}};
+}
 
 // 分段数只决定单位圆方向；中心、半径和颜色仍由每次绘制决定。
 class CQmHitboxCircleDirections
