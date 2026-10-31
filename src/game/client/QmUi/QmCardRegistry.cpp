@@ -573,7 +573,13 @@ namespace qm_card_registry
 				continue;
 
 			// 命中项按设置项累计分数：同时命中多个查询词的标签优先展示，最多保留前几条。
-			std::vector<std::pair<int, std::string>> vSettingMatches;
+			struct SSettingMatch
+			{
+				int m_Score;
+				const SCardSettingSearch *m_pSetting;
+				const char *m_pDisplay;
+			};
+			std::vector<SSettingMatch> vSettingMatches;
 			for(size_t Index = 0; Index < SettingCount; ++Index)
 			{
 				const SCardSettingSearch &Setting = pSettings[Index];
@@ -592,16 +598,17 @@ namespace qm_card_registry
 				}
 				if(SettingScore > 0 && pDisplay != nullptr)
 				{
-					vSettingMatches.emplace_back(SettingScore, pDisplay);
-					AddSearchKey(Candidate.m_Result.m_vMatchKeys, Setting.m_pLabel);
-					AddSearchKey(Candidate.m_Result.m_vMatchKeys, Setting.m_pConfigName);
+					vSettingMatches.push_back({SettingScore, &Setting, pDisplay});
 				}
 			}
-			std::stable_sort(vSettingMatches.begin(), vSettingMatches.end(), [](const auto &Left, const auto &Right) { return Left.first > Right.first; });
+			std::stable_sort(vSettingMatches.begin(), vSettingMatches.end(), [](const auto &Left, const auto &Right) { return Left.m_Score > Right.m_Score; });
+			// 先按分数排序再填键：展示的前几条命中项一定拥有定位键，不会滚到声明顺序更靠前的其他行。
 			for(const auto &Match : vSettingMatches)
 			{
-				AddSearchMatch(Candidate.m_Result.m_vMatches, Match.second.c_str());
-				AddSearchKey(Candidate.m_Result.m_vMatchKeys, Match.second.c_str());
+				AddSearchMatch(Candidate.m_Result.m_vMatches, Match.m_pDisplay);
+				AddSearchKey(Candidate.m_Result.m_vMatchKeys, Match.m_pDisplay);
+				AddSearchKey(Candidate.m_Result.m_vMatchKeys, Match.m_pSetting->m_pLabel);
+				AddSearchKey(Candidate.m_Result.m_vMatchKeys, Match.m_pSetting->m_pConfigName);
 			}
 
 			// 旧入口只贡献检索词；命中后展示实际承载设置的卡片，并按该 ID 去重。

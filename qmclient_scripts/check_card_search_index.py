@@ -62,6 +62,30 @@ IGNORED_SOURCE_LABELS = {
 	"Info",
 }
 
+# 只用于搜索副标题、没有独立 Localize 渲染点的卡片标签（迁移前也只存在于集中表）。
+# 没有设置行、因此不需要搜索表的默认卡片（预览/输入框/信息页）。
+CARDS_WITHOUT_SEARCH_TABLE = {
+	"deck:credits-friend-links",
+	"deck:global-search-input",
+	"deck:global-search-results",
+	"deck:qmclient-contributors-community",
+	"deck:qmclient-contributors-ddnet",
+	"deck:qmclient-contributors-sponsors",
+	"deck:tclient-bind-wheel-preview",
+	"deck:tclient-info-developers",
+	"qm:info",
+	"qm:laser",
+	"qm:nameplate_text",
+	"tclient:visual-font-cursor",
+}
+
+SEARCH_ONLY_LABELS = {
+	"Anti Latency Tools",
+	"Background Draw",
+	"Finish Name",
+	"Tee Trails",
+}
+
 
 def _skip_string(text: str, index: int) -> int:
 	"""index 指向开引号，返回闭引号之后的位置。"""
@@ -147,14 +171,13 @@ def parse_metadata(text: str) -> dict[str, str]:
 
 
 DECLARATION_RE = re.compile(r'QM_CARD_SEARCH_TABLE\(\s*"((?:qm|deck|tclient):[^"]+)"\s*,\s*(\w+)\s*,')
-
-
 ARRAY_RE = re.compile(r"constexpr qm_card_registry::SCardSettingSearch (s_aQmSearch_\w+)\[\] = \{")
 REGISTER_RE = re.compile(r'QM_CARD_SEARCH_REGISTER\(\s*"((?:qm|deck|tclient):[^"]+)"\s*,\s*(\w+)\s*\)')
+INCLUDE_RE = re.compile(r'#include\s+"(QmCardSearch/[^"]+\.inc)"')
 
 
-def parse_declared_entries(text: str) -> dict[str, set[str]]:
-	"""解析卡片声明文件里的搜索表与注册调用。"""
+def parse_declaration_file(text: str) -> dict:
+	"""解析单个源文件里的声明表、注册调用与旧格式宏。"""
 	arrays: dict[str, set[str]] = {}
 	for match in ARRAY_RE.finditer(text):
 		open_brace = text.find("{", match.end() - 1)
@@ -164,13 +187,8 @@ def parse_declared_entries(text: str) -> dict[str, set[str]]:
 		if close_brace < 0:
 			continue
 		arrays[match.group(1)] = set(LABEL_RE.findall(text[open_brace : close_brace + 1]))
-	declared: dict[str, set[str]] = {}
-	for match in REGISTER_RE.finditer(text):
-		symbol = "s_aQmSearch_" + match.group(2)
-		labels = arrays.get(symbol)
-		if labels is not None:
-			declared.setdefault(match.group(1), set()).update(labels)
-	# 兼容旧的 QM_CARD_SEARCH_TABLE 宏形式。
+	registrations = [(match.group(1), match.group(2)) for match in REGISTER_RE.finditer(text)]
+	legacy: list[tuple[str, set[str]]] = []
 	for match in DECLARATION_RE.finditer(text):
 		open_paren = text.find("(", match.start())
 		if open_paren < 0:
@@ -178,8 +196,19 @@ def parse_declared_entries(text: str) -> dict[str, set[str]]:
 		close_paren = find_matching(text, open_paren)
 		if close_paren < 0:
 			continue
-		declared.setdefault(match.group(1), set()).update(LABEL_RE.findall(text[match.end() : close_paren]))
-	return declared
+		legacy.append((match.group(1), set(LABEL_RE.findall(text[match.end() : close_paren]))))
+	cards: dict[str, set[str]] = {}
+	for stable_id, symbol in registrations:
+		labels = arrays.get("s_aQmSearch_" + symbol)
+		if labels is not None:
+			cards.setdefault(stable_id, set()).update(labels)
+	for stable_id, labels in legacy:
+		cards.setdefault(stable_id, set()).update(labels)
+	return {"cards": cards, "arrays": arrays, "registrations": registrations, "legacy": legacy}
+
+
+def parse_declared_entries(text: str) -> dict[str, set[str]]:
+	return parse_declaration_file(text)["cards"]
 
 
 def parse_add_mappings(text: str) -> dict[str, str]:
@@ -375,16 +404,64 @@ def analyze(root: Path) -> dict:
 	tables = parse_tables(index_text)
 	metadata = parse_metadata(index_text)
 
-	client_sources = read_sources(root, CLIENT_SOURCE_RELATIVE)
-	client_sources.pop(root / INDEX_RELATIVE, None)
+	all_sources = read_sources(root, CLIENT_SOURCE_RELATIVE)
+	all_sources.pop(root / INDEX_RELATIVE, None)
+	client_sources = {path: text for path, text in all_sources.items() if path.suffix != ".inc"}
 	card_sources = read_sources(root, CARD_SOURCE_RELATIVE)
 	card_sources.pop(root / INDEX_RELATIVE, None)
+	card_sources = {path: text for path, text in card_sources.items() if path.suffix != ".inc"}
 	corpus = "\n".join(client_sources.values()).lower()
 
 	declared: dict[str, set[str]] = {}
-	for text in client_sources.values():
-		for stable_id, labels in parse_declared_entries(text).items():
+	declaration_problems: list[dict[str, str]] = []
+	declared_symbols: dict[str, str] = {}
+	registered_ids: set[str] = set()
+	for path, text in all_sources.items():
+		parsed = parse_declaration_file(text)
+		relative = str(path.relative_to(root))
+		file_registered: set[str] = set()
+		for symbol in parsed["arrays"]:
+			if symbol in declared_symbols:
+				declaration_problems.append({"kind": "duplicate_symbol", "symbol": symbol, "source": relative})
+			else:
+				declared_symbols[symbol] = relative
+		for stable_id, symbol in parsed["registrations"]:
+			full_symbol = "s_aQmSearch_" + symbol
+			file_registered.add(full_symbol)
+			if full_symbol not in parsed["arrays"]:
+				declaration_problems.append({"kind": "registration_without_array", "stable_id": stable_id, "symbol": symbol, "source": relative})
+			if stable_id in registered_ids:
+				declaration_problems.append({"kind": "duplicate_stable_id", "stable_id": stable_id, "source": relative})
+			registered_ids.add(stable_id)
+		for symbol in parsed["arrays"]:
+			if symbol not in file_registered:
+				declaration_problems.append({"kind": "array_without_registration", "symbol": symbol, "source": relative})
+		for stable_id, labels in parsed["cards"].items():
 			declared.setdefault(stable_id, set()).update(labels)
+
+	decl_dir = root / "src/game/client/QmUi/cards/QmCardSearch"
+	if decl_dir.is_dir():
+		disk_files = {path.name for path in decl_dir.glob("*.inc")}
+		included_files = {Path(name).name for name in INCLUDE_RE.findall(index_text)}
+		for name in sorted(disk_files - included_files):
+			declaration_problems.append({"kind": "missing_aggregator_include", "symbol": name, "source": str(decl_dir.relative_to(root) / name)})
+		for name in sorted(included_files - disk_files):
+			declaration_problems.append({"kind": "missing_declaration_file", "symbol": name, "source": str(decl_dir.relative_to(root) / name)})
+
+	defaults: set[str] | None = None
+	registry_path = root / "src/game/client/QmUi/QmCardRegistry.cpp"
+	if registry_path.exists():
+		registry_text = registry_path.read_text(encoding="utf-8")
+		start = registry_text.find("DefaultsTable()")
+		end = registry_text.find("return s_aDefaults;", start)
+		if start >= 0 and end > start:
+			defaults = set(re.findall(r'\{"((?:qm|deck|tclient):[^"]+)"\s*,', registry_text[start:end]))
+	if defaults is not None:
+		for stable_id in sorted(declared.keys() - defaults):
+			declaration_problems.append({"kind": "unknown_card", "stable_id": stable_id})
+		known_cards = set(declared) | set(metadata)
+		for stable_id in sorted(defaults - known_cards - CARDS_WITHOUT_SEARCH_TABLE):
+			declaration_problems.append({"kind": "unregistered_default_card", "stable_id": stable_id})
 
 	all_index_labels: set[str] = set()
 	for labels in declared.values():
@@ -409,11 +486,11 @@ def analyze(root: Path) -> dict:
 	drifted = []
 	for stable_id, labels in sorted(declared.items()):
 		for label in sorted(labels):
-			if label.lower() not in corpus:
+			if label not in SEARCH_ONLY_LABELS and label.lower() not in corpus:
 				drifted.append({"table": stable_id, "label": label})
 	for table_name, table in sorted(tables.items()):
 		for label in sorted(table["labels"]):
-			if label.lower() not in corpus:
+			if label not in SEARCH_ONLY_LABELS and label.lower() not in corpus:
 				drifted.append({"table": table_name, "label": label})
 
 	add_mappings: dict[str, tuple[str, str]] = {}
@@ -484,6 +561,7 @@ def analyze(root: Path) -> dict:
 		"registered_cards": len(tables_by_card),
 		"unregistered_tables": sorted(set(tables) - registered_tables),
 		"missing_tables": sorted(missing_tables),
+		"declaration_problems": declaration_problems,
 		"index_labels": len(all_index_labels),
 		"drifted_labels": drifted,
 		"mapped_cards": exact_cards,
@@ -504,10 +582,16 @@ def render_markdown(report: dict) -> str:
 		f"- 索引标签：{report['index_labels']}",
 		f"- 精确映射卡片：{report['mapped_cards']}；未精确映射：{len(report['no_source_cards'])}",
 		f"- 索引标签在源码中失配：{len(report['drifted_labels'])}",
+		f"- 声明结构问题：{len(report['declaration_problems'])}",
 		f"- 未入索引的卡片文案：{len(report['unindexed_labels'])}",
 		f"- 已知例外（共享弹窗/状态/标题）：{len(report['ignored_labels'])}",
 		"",
 	]
+	if report["declaration_problems"]:
+		lines.extend(["## 声明结构问题", "", "| 类型 | stableId | symbol | 位置 |", "| --- | --- | --- | --- |"])
+		for item in report["declaration_problems"]:
+			lines.append(f"| {item['kind']} | {item.get('stable_id', '')} | {item.get('symbol', '')} | {item.get('source', '')} |")
+		lines.append("")
 	if report["drifted_labels"]:
 		lines.extend(["## 失效索引标签", "", "| 表 | 标签 |", "| --- | --- |"])
 		for item in report["drifted_labels"]:
@@ -569,7 +653,7 @@ def main(argv: list[str] | None = None) -> int:
 		args.json.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
 	if args.strict:
-		problems = len(report["drifted_labels"]) + len(report["unregistered_tables"]) + len(report["missing_tables"])
+		problems = len(report["drifted_labels"]) + len(report["unregistered_tables"]) + len(report["missing_tables"]) + len(report["declaration_problems"])
 		if problems:
 			print(f"索引结构检查失败：{problems} 项", file=sys.stderr)
 			return 1

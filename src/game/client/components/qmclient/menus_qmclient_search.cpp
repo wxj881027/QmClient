@@ -197,6 +197,8 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	s_GlobalSearchCardBuild.m_pFunctionLayout = &s_GlobalSearchFunctionCardLayout;
 
 	const bool HasSearchQuery = pModuleSearch != nullptr && pModuleSearch[0] != '\0';
+	if(!HasSearchQuery)
+		qm_settings_reveal::Clear();
 	// s_GlobalSearchCardBuild 是函数内静态对象，直接引用即可，无需附加捕获。
 	const auto BuildDefinitions = [this, UiScale, BodySize, SmallSize, LineHeight, LineSpacing, Metrics, SearchMatchedGlobalCardCount, HasSearchQuery, ReadOnly, SearchCtx, &SearchVisibleGlobalCards](std::vector<SSettingsCardDefinition> &vCards) {
 		vCards.reserve(SearchMatchedGlobalCardCount + 1);

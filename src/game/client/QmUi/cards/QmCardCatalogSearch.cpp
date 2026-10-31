@@ -33,7 +33,6 @@
 #include "QmCardSearch/QmCardCatalogVisual.inc"
 #include "QmCardSearch/QmCardCatalogWaterHammer.inc"
 
-#include <base/detect.h>
 #include <base/str.h>
 
 #include <engine/shared/localization.h>

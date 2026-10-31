@@ -15,7 +15,7 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parents[1]
-SOURCE_EXTENSIONS = {".c", ".cpp", ".h", ".hpp"}
+SOURCE_EXTENSIONS = {".c", ".cpp", ".h", ".hpp", ".inc"}
 SOURCE_PATHS = (PROJECT_ROOT / "src",)
 AUDIT_PATHS = (PROJECT_ROOT / "src", SCRIPT_DIR)
 AUDIT_REPORT_FILE = SCRIPT_DIR / "extracted_audit_report.json"

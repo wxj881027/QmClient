@@ -1,14 +1,55 @@
+#include <base/str.h>
+
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmCardSearchRegistry.h>
 #include <game/client/QmUi/SettingsSearchReveal.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
+#include <game/client/QmUi/cards/QmCardCatalogSearch.h>
 #include <game/localization.h>
 
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <iterator>
 #include <string>
 #include <vector>
+
+TEST(QmCatalogSearch, EveryDefaultCardResolvesDeclaredSearchTable)
+{
+	// 预览/输入框/信息页没有设置行；其余默认卡都必须能找到声明表，
+	// 以兜住漏 include、漏 REGISTER 或 stableId 拼错。
+	const char *s_apTablelessCards[] = {
+		"deck:credits-friend-links",
+		"deck:global-search-input",
+		"deck:global-search-results",
+		"deck:qmclient-contributors-community",
+		"deck:qmclient-contributors-ddnet",
+		"deck:qmclient-contributors-sponsors",
+		"deck:tclient-bind-wheel-preview",
+		"deck:tclient-info-developers",
+		"qm:info",
+		"qm:laser",
+		"qm:nameplate_text",
+		"tclient:visual-font-cursor",
+	};
+	for(const qm_card_registry::SCardDefault &Card : qm_card_registry::Defaults())
+	{
+		const qm_card_registry::SCardSettingSearch *pSettings = nullptr;
+		size_t SettingCount = 0;
+		const bool Found = qm_card_catalog::FindSearchMetadata(Card.m_pStableId, &pSettings, &SettingCount);
+		const bool Tableless = std::any_of(std::begin(s_apTablelessCards), std::end(s_apTablelessCards), [&Card](const char *pStableId) {
+			return str_comp(Card.m_pStableId, pStableId) == 0;
+		});
+		if(Tableless)
+		{
+			EXPECT_FALSE(Found) << Card.m_pStableId;
+			continue;
+		}
+		EXPECT_TRUE(Found) << Card.m_pStableId;
+		EXPECT_GT(SettingCount, 0u) << Card.m_pStableId;
+		EXPECT_NE(pSettings, nullptr) << Card.m_pStableId;
+	}
+}
 
 TEST(QmCatalogSearch, DeclaredSearchTablesRegisterBeforeSearch)
 {
@@ -73,6 +114,20 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		EXPECT_TRUE(qm_card_catalog::HasCardModule(It->m_pStableId));
 		EXPECT_STREQ(It->m_Target.m_pStableId, Case.m_pCard);
 	}
+}
+
+TEST(QmCatalogSearch, MatchKeysCoverDisplayedMatches)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	const auto Results = qm_card_registry::SearchCards("lyrics", Model);
+	const auto It = std::find_if(Results.begin(), Results.end(), [](const auto &Result) {
+		return std::string(Result.m_pStableId) == "qm:lyrics";
+	});
+	ASSERT_NE(It, Results.end());
+	ASSERT_FALSE(It->m_vMatches.empty());
+	for(const std::string &Display : It->m_vMatches)
+		EXPECT_NE(std::find(It->m_vMatchKeys.begin(), It->m_vMatchKeys.end(), Display), It->m_vMatchKeys.end()) << Display;
 }
 
 TEST(QmCatalogSearch, EveryQueryTokenMustMatchTheSameCard)

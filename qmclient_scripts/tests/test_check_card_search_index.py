@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+import io
 import tempfile
 import unittest
 from pathlib import Path
@@ -54,6 +56,19 @@ void CMenus::RenderAlpha(CUIRect &Content)
 void CMenus::RenderOther(CUIRect &Content)
 {
 	Localize("ShouldNotBeCollected");
+}
+"""
+
+
+DEFAULTS_SAMPLE = """static const std::vector<SCardDefault> &DefaultsTable()
+{
+	static const std::vector<SCardDefault> s_aDefaults = [] {
+		std::vector<SCardDefault> Cards = {
+			{"qm:alpha", "visual", ECardColumn::Left, 1, "Alpha", "alpha", "desc"},
+		};
+		return Cards;
+	}();
+	return s_aDefaults;
 }
 """
 
@@ -200,6 +215,75 @@ class AnalyzeTest(unittest.TestCase):
 		self.assertEqual(report["index_labels"], 1)
 		self.assertEqual(report["drifted_labels"], [])
 		self.assertEqual(report["mapped_cards"], 1)
+
+	def _write_declaration_repo(self, root: Path, index_text: str, inc_text: str, defaults_text: str) -> None:
+		self._write_repo(root, index_text, CARD_SOURCE)
+		inc_path = root / "src/game/client/QmUi/cards/QmCardSearch/Ghost.inc"
+		inc_path.parent.mkdir(parents=True, exist_ok=True)
+		inc_path.write_text(inc_text, encoding="utf-8")
+		registry_path = root / "src/game/client/QmUi/QmCardRegistry.cpp"
+		registry_path.write_text(defaults_text, encoding="utf-8")
+
+	def test_reports_ghost_label_only_in_inc(self) -> None:
+		inc_text = """namespace
+{
+	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_alpha[] = {
+		{Localizable("Alpha label"), nullptr, "别名"},
+		{Localizable("Ghost search label"), nullptr, "幽灵"},
+	};
+	QM_CARD_SEARCH_REGISTER("qm:alpha", qm_alpha);
+}
+"""
+		with tempfile.TemporaryDirectory() as temp_dir:
+			root = Path(temp_dir)
+			self._write_declaration_repo(root, '#include "QmCardSearch/Ghost.inc"\n', inc_text, DEFAULTS_SAMPLE)
+			report = checker.analyze(root)
+		self.assertIn({"table": "qm:alpha", "label": "Ghost search label"}, report["drifted_labels"])
+		self.assertNotIn({"table": "qm:alpha", "label": "Alpha label"}, report["drifted_labels"])
+		self.assertEqual(report["declaration_problems"], [])
+
+	def test_reports_array_without_registration(self) -> None:
+		inc_text = """namespace
+{
+	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_alpha[] = {
+		{Localizable("Alpha label"), nullptr, "别名"},
+	};
+}
+"""
+		with tempfile.TemporaryDirectory() as temp_dir:
+			root = Path(temp_dir)
+			self._write_declaration_repo(root, '#include "QmCardSearch/Ghost.inc"\n', inc_text, DEFAULTS_SAMPLE)
+			report = checker.analyze(root)
+		self.assertIn("array_without_registration", {item["kind"] for item in report["declaration_problems"]})
+
+	def test_strict_fails_on_declaration_problems(self) -> None:
+		inc_text = """namespace
+{
+	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_alpha[] = {
+		{Localizable("Alpha label"), nullptr, "别名"},
+	};
+}
+"""
+		with tempfile.TemporaryDirectory() as temp_dir:
+			root = Path(temp_dir)
+			self._write_declaration_repo(root, '#include "QmCardSearch/Ghost.inc"\n', inc_text, DEFAULTS_SAMPLE)
+			with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+				self.assertEqual(checker.main(["--root", str(root), "--strict"]), 1)
+
+	def test_reports_missing_aggregator_include(self) -> None:
+		inc_text = """namespace
+{
+	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_alpha[] = {
+		{Localizable("Alpha label"), nullptr, "别名"},
+	};
+	QM_CARD_SEARCH_REGISTER("qm:alpha", qm_alpha);
+}
+"""
+		with tempfile.TemporaryDirectory() as temp_dir:
+			root = Path(temp_dir)
+			self._write_declaration_repo(root, "", inc_text, DEFAULTS_SAMPLE)
+			report = checker.analyze(root)
+		self.assertIn("missing_aggregator_include", {item["kind"] for item in report["declaration_problems"]})
 
 	def test_counts_registration_problems(self) -> None:
 		index_text = INDEX_SAMPLE.replace(

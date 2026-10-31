@@ -39,11 +39,4 @@ namespace qm_card_search
 #define QM_CARD_SEARCH_REGISTER(stable_id, symbol) \
 	const qm_card_search::CRegistrar s_QmSearchRegistrar_##symbol(stable_id, s_aQmSearch_##symbol, std::size(s_aQmSearch_##symbol))
 
-#define QM_CARD_SEARCH_TABLE(stable_id, symbol, ...) \
-	namespace \
-	{ \
-		constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_##symbol[] = {__VA_ARGS__}; \
-		const qm_card_search::CRegistrar s_QmSearchRegistrar_##symbol(stable_id, s_aQmSearch_##symbol, std::size(s_aQmSearch_##symbol)); \
-	}
-
 #endif // GAME_CLIENT_QMUI_QMCARDSEARCHREGISTRY_H
