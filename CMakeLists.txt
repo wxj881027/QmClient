@@ -5619,6 +5619,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/text_layout_string_test.cpp
     src/test/unit/engine/graphics/text_utf8_cursor_test.cpp
     src/test/unit/engine/graphics/texture_slot_pool_test.cpp
+    src/test/integration/client/texture_handle_lifetime_test.cpp
     src/test/unit/engine/graphics/text_sweep_test.cpp
     src/test/unit/engine/graphics/text_gradient_geometry_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_effect_lod_test.cpp
