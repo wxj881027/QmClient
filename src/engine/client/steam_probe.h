@@ -15,9 +15,7 @@ enum class ESteamClientSource;
 // 容量按wchar_t元素计，注册表返回长度按字节计；不能借用缓冲外的终止符。
 inline std::optional<std::string> SteamProbeDecodeRegistryString(const wchar_t *pValue, std::size_t Capacity, std::size_t Bytes)
 {
-	if(!pValue || Bytes == 0 || Bytes % sizeof(wchar_t) != 0 || Bytes / sizeof(wchar_t) > Capacity)
-		return std::nullopt;
-	return windows_wide_to_utf8_bounded(pValue, pValue + Bytes / sizeof(wchar_t));
+	return windows_registry_string_to_utf8(pValue, Capacity, Bytes);
 }
 
 // Steam 客户端探测链的内部实现（仅 Windows），供 steam.cpp 与 qm-benchmarks 使用。

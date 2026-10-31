@@ -5541,6 +5541,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/dummy_miniview_render_test.cpp
     src/test/unit/qmclient/client/qm_quad_rotation_cache_test.cpp
     src/test/unit/base/windows_test.cpp
+    src/test/unit/base/windows_registry_string_test.cpp
     src/test/integration/base/windows_com_lifecycle_test.cpp
     src/test/integration/base/windows_io_handle_test.cpp
     src/test/integration/base/windows_exception_snapshot_test.cpp

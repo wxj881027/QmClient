@@ -74,6 +74,9 @@ std::optional<std::string> windows_wide_to_utf8(const wchar_t *wide_str);
 // 转换有界 UTF-16 字符串，且不会读取 End 之后的数据；输入错误或缺少终止符时返回空值。
 std::optional<std::string> windows_wide_to_utf8_bounded(const wchar_t *wide_str, const wchar_t *wide_end);
 
+// 注册表容量按wchar_t元素计，返回长度按字节计；终止符必须位于返回范围内。
+std::optional<std::string> windows_registry_string_to_utf8(const wchar_t *wide_str, size_t capacity, size_t bytes);
+
 /**
  * This is a RAII wrapper to initialize/uninitialize the Windows COM library,
  * which may be necessary for using the @link open_file @endlink and

@@ -116,6 +116,14 @@ std::optional<std::string> windows_wide_to_utf8_bounded(const wchar_t *wide_str,
 		return {};
 	return String;
 }
+
+std::optional<std::string> windows_registry_string_to_utf8(const wchar_t *wide_str, size_t capacity, size_t bytes)
+{
+	if(!wide_str || bytes == 0 || bytes % sizeof(wchar_t) != 0 || bytes / sizeof(wchar_t) > capacity)
+		return std::nullopt;
+	return windows_wide_to_utf8_bounded(wide_str, wide_str + bytes / sizeof(wchar_t));
+}
+
 // See https://learn.microsoft.com/en-us/windows/win32/learnwin32/initializing-the-com-library
 CWindowsComLifecycle::CWindowsComLifecycle(bool HasWindow, EInitMode InitMode)
 {

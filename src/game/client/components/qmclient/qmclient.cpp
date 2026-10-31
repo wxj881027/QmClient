@@ -614,10 +614,10 @@ static bool ReadPlatformMachineIdentity(std::string &OutIdentity)
 		RegCloseKey(Key);
 		if(QueryResult == ERROR_SUCCESS && Type == REG_SZ)
 		{
-			const auto Utf8 = windows_wide_to_utf8(aValue);
+			auto Utf8 = windows_registry_string_to_utf8(aValue, sizeof(aValue) / sizeof(aValue[0]), Size);
 			if(Utf8.has_value() && !Utf8->empty())
 			{
-				OutIdentity = *Utf8;
+				OutIdentity = std::move(*Utf8);
 				return true;
 			}
 		}
@@ -2829,56 +2829,63 @@ bool CQmClient::EnsureQmClientMachineHash()
 	if(IsValidQmClientMachineHash(m_aQmClientMachineHash))
 		return true;
 
-	std::string Identity;
-	if(!ReadPlatformMachineIdentity(Identity))
+	try
 	{
-		char aLoaded[128] = "";
-		IOHANDLE File = Storage()->OpenFile(QMCLIENT_MACHINE_ID_FALLBACK_FILE, IOFLAG_READ, IStorage::TYPE_SAVE);
-		if(File)
+		std::string Identity;
+		if(!ReadPlatformMachineIdentity(Identity))
 		{
-			const int Read = io_read(File, aLoaded, sizeof(aLoaded) - 1);
-			io_close(File);
-			if(Read > 0)
+			char aLoaded[128] = "";
+			IOHANDLE File = Storage()->OpenFile(QMCLIENT_MACHINE_ID_FALLBACK_FILE, IOFLAG_READ, IStorage::TYPE_SAVE);
+			if(File)
 			{
-				aLoaded[Read] = '\0';
-				TrimQmClientTextInPlace(aLoaded);
-				if(aLoaded[0] != '\0')
-					Identity = aLoaded;
+				const int Read = io_read(File, aLoaded, sizeof(aLoaded) - 1);
+				io_close(File);
+				if(Read > 0)
+				{
+					aLoaded[Read] = '\0';
+					TrimQmClientTextInPlace(aLoaded);
+					if(aLoaded[0] != '\0')
+						Identity = aLoaded;
+				}
+			}
+
+			if(Identity.empty())
+			{
+				unsigned char aRandom[32];
+				secure_random_fill(aRandom, sizeof(aRandom));
+
+				static constexpr const char HEX[] = "0123456789abcdef";
+				char aHex[sizeof(aRandom) * 2 + 1];
+				for(size_t i = 0; i < sizeof(aRandom); ++i)
+				{
+					aHex[i * 2] = HEX[aRandom[i] >> 4];
+					aHex[i * 2 + 1] = HEX[aRandom[i] & 0x0f];
+				}
+				aHex[sizeof(aHex) - 1] = '\0';
+				Identity = aHex;
+
+				Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+				IOHANDLE OutFile = Storage()->OpenFile(QMCLIENT_MACHINE_ID_FALLBACK_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+				if(OutFile)
+				{
+					io_write(OutFile, Identity.c_str(), Identity.size());
+					io_write(OutFile, "\n", 1);
+					io_close(OutFile);
+				}
 			}
 		}
 
 		if(Identity.empty())
-		{
-			unsigned char aRandom[32];
-			secure_random_fill(aRandom, sizeof(aRandom));
+			return false;
 
-			static constexpr const char HEX[] = "0123456789abcdef";
-			char aHex[sizeof(aRandom) * 2 + 1];
-			for(size_t i = 0; i < sizeof(aRandom); ++i)
-			{
-				aHex[i * 2] = HEX[aRandom[i] >> 4];
-				aHex[i * 2 + 1] = HEX[aRandom[i] & 0x0f];
-			}
-			aHex[sizeof(aHex) - 1] = '\0';
-			Identity = aHex;
-
-			Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-			IOHANDLE OutFile = Storage()->OpenFile(QMCLIENT_MACHINE_ID_FALLBACK_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-			if(OutFile)
-			{
-				io_write(OutFile, Identity.c_str(), Identity.size());
-				io_write(OutFile, "\n", 1);
-				io_close(OutFile);
-			}
-		}
+		const SHA256_DIGEST Digest = sha256(Identity.data(), Identity.size());
+		sha256_str(Digest, m_aQmClientMachineHash, sizeof(m_aQmClientMachineHash));
+		return IsValidQmClientMachineHash(m_aQmClientMachineHash);
 	}
-
-	if(Identity.empty())
+	catch(const std::bad_alloc &)
+	{
 		return false;
-
-	const SHA256_DIGEST Digest = sha256(Identity.data(), Identity.size());
-	sha256_str(Digest, m_aQmClientMachineHash, sizeof(m_aQmClientMachineHash));
-	return IsValidQmClientMachineHash(m_aQmClientMachineHash);
+	}
 }
 
 void CQmClient::FinishQmClientUsers()
