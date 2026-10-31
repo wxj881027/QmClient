@@ -1052,10 +1052,9 @@ void CChat::ConReloadWordFiles(IConsole::IResult *, void *pUserData)
 void CChat::ReloadWordFilterFile(bool Streamer, bool Force)
 {
 	auto &File = Streamer ? m_StreamerWordsFile : m_BlockWordsFile;
-	const uint64_t PreviousRevision = File.Revision();
 	File.Refresh(Storage(), Streamer ? g_Config.m_QmStreamerWordsFile : g_Config.m_QmBlockWordsFile, Force);
-	if(Streamer && (Force || File.Revision() != PreviousRevision))
-		QmStreamerWordFilter::SetAdditionalWords(File.Words());
+	if(Streamer)
+		File.PublishStreamerWords(Force);
 }
 
 void CChat::OnConsoleInit()

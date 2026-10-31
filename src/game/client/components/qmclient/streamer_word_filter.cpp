@@ -2225,45 +2225,64 @@ namespace
 		}
 	};
 
-	struct SSharedFilter
+	QmStreamerWordFilter::CFilter &SharedFilter()
 	{
-		CWordTrie m_Trie;
-		std::vector<std::string> m_vAdditionalWords;
-		uint64_t m_Revision = 1;
-	};
-
-	SSharedFilter &SharedFilter()
-	{
-		static SSharedFilter s_Filter;
+		static QmStreamerWordFilter::CFilter s_Filter;
 		return s_Filter;
 	}
 }
 
-void QmStreamerWordFilter::SetAdditionalWords(const std::vector<std::string> &vWords)
+struct QmStreamerWordFilter::CFilter::SState
 {
-	auto &Filter = SharedFilter();
-	if(Filter.m_vAdditionalWords == vWords)
-		return;
-	CWordTrie Trie;
-	for(const std::string &Word : vWords)
-		Trie.Add(Word.c_str());
-	Filter.m_Trie = std::move(Trie);
-	Filter.m_vAdditionalWords = vWords;
-	++Filter.m_Revision;
+	std::vector<std::string> m_vAdditionalWords;
+	CWordTrie m_Trie;
+	uint64_t m_Revision;
+
+	SState(const std::vector<std::string> &vWords, uint64_t Revision) :
+		m_vAdditionalWords(vWords), m_Revision(Revision)
+	{
+		for(const std::string &Word : m_vAdditionalWords)
+			m_Trie.Add(Word.c_str());
+	}
+};
+
+QmStreamerWordFilter::CFilter::CFilter() noexcept = default;
+QmStreamerWordFilter::CFilter::~CFilter() = default;
+
+bool QmStreamerWordFilter::CFilter::SetAdditionalWords(const std::vector<std::string> &vWords) noexcept
+{
+	try
+	{
+		if(m_pState && m_pState->m_vAdditionalWords == vWords)
+			return true;
+		const uint64_t NextRevision = m_pState ? m_pState->m_Revision + 1 : (vWords.empty() ? 1 : 2);
+		auto pPrepared = std::make_unique<SState>(vWords, NextRevision);
+		m_pState.swap(pPrepared);
+		return true;
+	}
+	catch(...)
+	{
+		return false;
+	}
 }
 
-uint64_t QmStreamerWordFilter::Revision()
+bool QmStreamerWordFilter::CFilter::EnsureState() noexcept
 {
-	return SharedFilter().m_Revision;
+	return m_pState || SetAdditionalWords({});
 }
 
-bool QmStreamerWordFilter::Filter(char *pText, bool Enabled)
+uint64_t QmStreamerWordFilter::CFilter::Revision() noexcept
 {
-	if(!Enabled || pText == nullptr || pText[0] == '\0')
+	return EnsureState() ? m_pState->m_Revision : 0;
+}
+
+bool QmStreamerWordFilter::CFilter::Filter(char *pText, bool Enabled) noexcept
+{
+	if(!Enabled || pText == nullptr || pText[0] == '\0' || !EnsureState())
 		return false;
 
 	// 过滤只读取已发布的词表；直接在调用方缓冲区压缩。
-	const CWordTrie &Trie = SharedFilter().m_Trie;
+	const CWordTrie &Trie = m_pState->m_Trie;
 	bool Changed = false;
 	const char *pRead = pText;
 	char *pWrite = pText;
@@ -2292,10 +2311,30 @@ bool QmStreamerWordFilter::Filter(char *pText, bool Enabled)
 	return Changed;
 }
 
-bool QmStreamerWordFilter::Filter(std::string &Text, bool Enabled)
+bool QmStreamerWordFilter::CFilter::Filter(std::string &Text, bool Enabled) noexcept
 {
 	if(!Filter(Text.data(), Enabled))
 		return false;
 	Text.resize(str_length(Text.c_str()));
 	return true;
+}
+
+bool QmStreamerWordFilter::SetAdditionalWords(const std::vector<std::string> &vWords) noexcept
+{
+	return SharedFilter().SetAdditionalWords(vWords);
+}
+
+uint64_t QmStreamerWordFilter::Revision() noexcept
+{
+	return SharedFilter().Revision();
+}
+
+bool QmStreamerWordFilter::Filter(char *pText, bool Enabled) noexcept
+{
+	return SharedFilter().Filter(pText, Enabled);
+}
+
+bool QmStreamerWordFilter::Filter(std::string &Text, bool Enabled) noexcept
+{
+	return SharedFilter().Filter(Text, Enabled);
 }

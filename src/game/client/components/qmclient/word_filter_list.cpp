@@ -1,5 +1,7 @@
 #include "word_filter_list.h"
 
+#include "streamer_word_filter.h"
+
 #include <base/str.h>
 #include <base/system.h>
 
@@ -276,4 +278,14 @@ void QmWordFilterList::CFileList::Refresh(IStorage *pStorage, const char *pPath,
 		m_AttemptedPath.clear();
 		SetPreparationError(m_Error);
 	}
+}
+
+bool QmWordFilterList::CFileList::PublishStreamerWords(bool Force) noexcept
+{
+	if(!Force && m_PublishedStreamerRevision == m_Revision)
+		return true;
+	if(!QmStreamerWordFilter::SetAdditionalWords(m_vWords))
+		return false;
+	m_PublishedStreamerRevision = m_Revision;
+	return true;
 }

@@ -29,10 +29,13 @@ namespace QmWordFilterList
 		std::vector<std::string> m_vWords;
 		std::string m_Error;
 		uint64_t m_Revision = 1;
+		uint64_t m_PublishedStreamerRevision = 0;
 
 	public:
 		void Refresh(IStorage *pStorage, const char *pPath, bool Force = false) noexcept;
 		bool UpdateFromText(std::string_view Content) noexcept;
+		// 只有派生过滤器发布成功才确认本词表修订，失败由后续帧重试。
+		bool PublishStreamerWords(bool Force = false) noexcept;
 		const std::vector<std::string> &Words() const { return m_vWords; }
 		const std::string &Error() const { return m_Error; }
 		uint64_t Revision() const { return m_Revision; }

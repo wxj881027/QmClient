@@ -6168,6 +6168,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/client/weapon_trajectory_preparation_test.cpp
       src/test/unit/qmclient/client/qm_word_filter_allocation_test.cpp
       src/game/client/components/qmclient/word_filter_list.cpp
+      src/game/client/components/qmclient/streamer_word_filter.cpp
+      src/test/unit/qmclient/client/qm_streamer_filter_allocation_test.cpp
+      src/test/integration/qmclient/client/qm_streamer_filter_publication_test.cpp
       src/test/unit/qmclient/client/qm_warlist_allocation_test.cpp
       src/test/integration/qmclient/client/qm_warlist_cache_prepare_test.cpp
       src/game/client/components/qmclient/warlist_model.cpp

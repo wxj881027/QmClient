@@ -9,6 +9,7 @@ class CPredictionAllocationFailure
 	inline static thread_local CPredictionAllocationFailure *s_pActive = nullptr;
 	CPredictionAllocationFailure *m_pPrevious;
 	std::size_t m_Remaining;
+	std::size_t m_Attempts = 0;
 	bool m_Triggered = false;
 
 public:
@@ -22,9 +23,13 @@ public:
 	CPredictionAllocationFailure &operator=(const CPredictionAllocationFailure &) = delete;
 
 	bool Triggered() const { return m_Triggered; }
+	std::size_t Attempts() const { return m_Attempts; }
 	static bool FailNextAllocation() noexcept
 	{
-		if(!s_pActive || s_pActive->m_Triggered)
+		if(!s_pActive)
+			return false;
+		++s_pActive->m_Attempts;
+		if(s_pActive->m_Triggered)
 			return false;
 		if(s_pActive->m_Remaining > 0)
 		{
