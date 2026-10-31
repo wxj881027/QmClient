@@ -203,30 +203,40 @@ class CSettingsChoiceWidthCache
 
 public:
 	template<typename TMeasure>
-	float Resolve(const std::vector<const char *> &vLabels, const float FontSize, const uint64_t FontRevision, TMeasure &&Measure)
+	float Resolve(const std::vector<const char *> &vLabels, const float FontSize, const uint64_t FontRevision, TMeasure &&Measure) noexcept
 	{
 		return Resolve(vLabels.data(), vLabels.size(), FontSize, FontRevision, std::forward<TMeasure>(Measure));
 	}
 
 	template<typename TMeasure>
-	float Resolve(const char *const *ppLabels, const size_t Count, const float FontSize, const uint64_t FontRevision, TMeasure &&Measure)
+	float Resolve(const char *const *ppLabels, const size_t Count, const float FontSize, const uint64_t FontRevision, TMeasure &&Measure) noexcept
 	{
 		bool Changed = !m_Initialized || m_FontSize != FontSize || m_FontRevision != FontRevision || m_vLabels.size() != Count;
 		for(size_t i = 0; !Changed && i < Count; ++i)
 			Changed = m_vLabels[i] != (ppLabels[i] != nullptr ? ppLabels[i] : "");
 		if(!Changed)
 			return m_Width;
-		m_vLabels.resize(Count);
-		m_Width = 0.0f;
-		for(size_t i = 0; i < Count; ++i)
+		try
 		{
-			m_vLabels[i] = ppLabels[i] != nullptr ? ppLabels[i] : "";
-			if(!m_vLabels[i].empty())
-				m_Width = std::max(m_Width, Measure(m_vLabels[i].c_str(), FontSize));
+			std::vector<std::string> vLabels;
+			vLabels.reserve(Count);
+			float Width = 0.0f;
+			for(size_t i = 0; i < Count; ++i)
+			{
+				vLabels.emplace_back(ppLabels[i] != nullptr ? ppLabels[i] : "");
+				if(!vLabels.back().empty())
+					Width = std::max(Width, Measure(vLabels.back().c_str(), FontSize));
+			}
+			// 标签、测量结果和字体键一并发布，失败时保持旧缓存并允许下帧重试。
+			m_vLabels.swap(vLabels);
+			m_Width = Width;
+			m_FontSize = FontSize;
+			m_FontRevision = FontRevision;
+			m_Initialized = true;
 		}
-		m_FontSize = FontSize;
-		m_FontRevision = FontRevision;
-		m_Initialized = true;
+		catch(...)
+		{
+		}
 		return m_Width;
 	}
 };

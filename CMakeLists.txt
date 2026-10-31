@@ -6203,6 +6203,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/client/qm_streamer_filter_publication_test.cpp
       src/test/unit/qmclient/client/qm_warlist_allocation_test.cpp
       src/test/unit/qmclient/settings/settings_font_selection_allocation_test.cpp
+      src/test/unit/qmclient/settings/settings_choice_width_failure_test.cpp
       src/test/integration/qmclient/client/qm_warlist_cache_prepare_test.cpp
       src/game/client/components/qmclient/warlist_model.cpp
       src/game/client/components/qmclient/practice_tick_shift.cpp
