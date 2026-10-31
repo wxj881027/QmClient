@@ -9605,6 +9605,9 @@ Only show with this nickname
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 == Seul le Tee sélectionné change ; passe sur Dummy avant de régler les couleurs de ton dummy.
 
+Only what you can't imagine, nothing Dream can't do
+== Seul ce que vous ne pouvez pas imaginer, rien que Dream ne puisse faire
+
 Opacity
 == Opacité
 
@@ -16729,9 +16732,6 @@ Variable custom font weight for Chinese/CJK text
 
 Variable custom font weight for Latin text
 == Graisse variable de la police perso pour le texte latin
-
-Various small features
-== Diverses petites fonctionnalités
 
 Velocity
 == Vitesse

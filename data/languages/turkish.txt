@@ -9605,6 +9605,9 @@ Only show with this nickname
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 == Yalnızca seçili Tee değişir; dummy'nin renklerini düzenlemeden önce Dummy'ye geç.
 
+Only what you can't imagine, nothing Dream can't do
+== Hayal edemediğin şeyler dışında, Dream'in yapamayacağı hiçbir şey yok
+
 Opacity
 == Opaklık
 
@@ -16729,9 +16732,6 @@ Variable custom font weight for Chinese/CJK text
 
 Variable custom font weight for Latin text
 == Latin metin için değişken özel yazı tipi kalınlığı
-
-Various small features
-== Çeşitli küçük özellikler
 
 Velocity
 == Hız

@@ -3201,6 +3201,7 @@ Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
 Only show with this nickname
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
+Only what you can't imagine, nothing Dream can't do
 Opacity
 Opacity of entity layers on the map such as death, freeze, unfreeze, teleport, checkpoint and switch tiles.
 Opacity of freeze bars inside freeze
@@ -5576,7 +5577,6 @@ VAD threshold (percent)
 Vanilla skins only
 Variable custom font weight for Chinese/CJK text
 Variable custom font weight for Latin text
-Various small features
 Velocity
 Verifying downloaded update...
 Version

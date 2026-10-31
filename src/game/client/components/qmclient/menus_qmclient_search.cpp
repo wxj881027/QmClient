@@ -196,16 +196,24 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	s_GlobalSearchCardBuild.m_pFunctionLayout = &s_GlobalSearchFunctionCardLayout;
 
 	const bool HasSearchQuery = pModuleSearch != nullptr && pModuleSearch[0] != '\0';
-	if(!ReadOnly && HasSearchQuery && !SearchVisibleGlobalCards.empty())
+	if(!ReadOnly)
 	{
-		const SQmGlobalSearchCard &FirstCard = SearchVisibleGlobalCards.front();
-		if(FirstCard.m_vMatchKeys.empty())
-			qm_settings_reveal::Clear();
+		if(HasSearchQuery)
+		{
+			std::vector<qm_settings_reveal::SPreview> vPreviews;
+			vPreviews.reserve(SearchVisibleGlobalCards.size());
+			for(const SQmGlobalSearchCard &Card : SearchVisibleGlobalCards)
+			{
+				if(!Card.m_vMatchKeys.empty())
+					vPreviews.push_back({Card.m_pStableId, Card.m_vMatchKeys});
+			}
+			qm_settings_reveal::SetPreviews(vPreviews);
+		}
 		else
-			qm_settings_reveal::RequestPreview(FirstCard.m_pStableId, FirstCard.m_vMatchKeys);
+		{
+			qm_settings_reveal::Clear();
+		}
 	}
-	else if(!HasSearchQuery)
-		qm_settings_reveal::Clear();
 	// s_GlobalSearchCardBuild 是函数内静态对象，直接引用即可，无需附加捕获。
 	const auto BuildDefinitions = [this, UiScale, BodySize, SmallSize, LineHeight, LineSpacing, Metrics, SearchMatchedGlobalCardCount, HasSearchQuery, ReadOnly, SearchCtx, &SearchVisibleGlobalCards](std::vector<SSettingsCardDefinition> &vCards) {
 		vCards.reserve(SearchMatchedGlobalCardCount + 1);

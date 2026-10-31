@@ -9605,6 +9605,9 @@ Only show with this nickname
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 == 변경은 선택한 Tee에만 적용되니, dummy 색을 바꾸려면 먼저 Dummy로 전환하세요.
 
+Only what you can't imagine, nothing Dream can't do
+== 상상할 수 없는 것만 있을 뿐, Dream 이 할 수 없는 것은 없습니다
+
 Opacity
 == 불투명도
 
@@ -16729,9 +16732,6 @@ Variable custom font weight for Chinese/CJK text
 
 Variable custom font weight for Latin text
 == 라틴 텍스트용 가변 사용자 정의 글꼴 굵기
-
-Various small features
-== 다양한 소기능
 
 Velocity
 == 속도

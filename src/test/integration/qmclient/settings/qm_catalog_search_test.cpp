@@ -117,6 +117,46 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 	}
 }
 
+TEST(QmCatalogSearch, ChineseQueryKeepsActualRowAndDropsLongHelp)
+{
+	struct CLocalizationCleanup
+	{
+		~CLocalizationCleanup() { g_Localization.Load("", nullptr, nullptr); }
+	} Cleanup;
+	g_Localization.Load("", nullptr, nullptr);
+	g_Localization.AddString("Blank asset auto fallback", "空白资源自动回退", "");
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	const auto Results = qm_card_registry::SearchCards("回退", Model);
+	const auto It = std::find_if(Results.begin(), Results.end(), [](const auto &Result) {
+		return std::string(Result.m_pStableId) == "qm:mini_features";
+	});
+	ASSERT_NE(It, Results.end());
+	EXPECT_NE(std::find(It->m_vMatchKeys.begin(), It->m_vMatchKeys.end(), "空白资源自动回退"), It->m_vMatchKeys.end());
+	EXPECT_TRUE(std::none_of(It->m_vMatchKeys.begin(), It->m_vMatchKeys.end(), [](const std::string &Key) {
+		return Key.find("自定义资源的贴图全透明") != std::string::npos;
+	}));
+}
+
+TEST(QmCatalogSearch, PreviewHighlightsEveryResultCard)
+{
+	qm_settings_reveal::Clear();
+	qm_settings_reveal::SetPreviews({
+		{"qm:lyrics", {"Lyrics language"}},
+		{"qm:mini_features", {"Blank asset auto fallback"}},
+	});
+	qm_settings_reveal::BeginCard("qm:mini_features", nullptr, true);
+	EXPECT_TRUE(qm_settings_reveal::ShouldReveal("Blank asset auto fallback", nullptr));
+	qm_settings_reveal::EndCard();
+	qm_settings_reveal::BeginCard("qm:lyrics", nullptr, true);
+	EXPECT_TRUE(qm_settings_reveal::ShouldReveal(nullptr, "Lyrics language"));
+	qm_settings_reveal::EndCard();
+	qm_settings_reveal::BeginCard("qm:other", nullptr, true);
+	EXPECT_FALSE(qm_settings_reveal::ShouldReveal(nullptr, "Lyrics language"));
+	qm_settings_reveal::EndCard();
+	qm_settings_reveal::Clear();
+}
+
 TEST(QmCatalogSearch, HighlightStyleUsesThemeAccentAndClampsRadius)
 {
 	SUiTheme Theme;

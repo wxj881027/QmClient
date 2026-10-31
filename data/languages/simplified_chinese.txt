@@ -9608,6 +9608,9 @@ Only show with this nickname
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 == 改动只作用于选中的 Tee，想改 dummy 的颜色要先切到 Dummy。
 
+Only what you can't imagine, nothing Dream can't do
+== 只有你想不到，没有梦做不到
+
 Opacity
 == 不透明度
 
@@ -16732,9 +16735,6 @@ Variable custom font weight for Chinese/CJK text
 
 Variable custom font weight for Latin text
 == 拉丁文本的可变自定义字体字重
-
-Various small features
-== 各种小功能
 
 Velocity
 == 速度

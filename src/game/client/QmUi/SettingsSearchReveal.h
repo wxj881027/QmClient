@@ -10,19 +10,29 @@
 #include <string>
 #include <vector>
 
-// 搜索结果的逐行定位：搜索页发起请求，卡片绘制时只让目标卡片内的命中行
-// 滚动到可视区并加底色。状态全部留在客户端 UI 层，不触碰配置或页面状态。
+// 搜索结果的逐行定位：搜索页可为多张结果卡设置预览键，卡片绘制时只让
+// 当前卡片内命中的行加高亮底色；点“定位”时切换为单卡请求并滚动到首行。
+// 状态全部留在客户端 UI 层，不触碰配置或页面状态。
 namespace qm_settings_reveal
 {
+	struct SPreview
+	{
+		std::string m_Card;
+		std::vector<std::string> m_vKeys;
+	};
+
 	struct SState
 	{
 		std::string m_TargetCard;
 		std::vector<std::string> m_vKeys;
+		std::vector<SPreview> m_vPreviews;
 		std::string m_ActiveCard;
+		const std::vector<std::string> *m_pActiveKeys = nullptr;
 		CScrollRegion *m_pScrollRegion = nullptr;
 		bool m_Interactive = false;
 		bool m_Scrolled = false;
 		double m_ExpireSeconds = 0.0;
+		double m_PreviewExpireSeconds = 0.0;
 	};
 
 	inline SState &State()
@@ -55,11 +65,14 @@ namespace qm_settings_reveal
 		SState &S = State();
 		S.m_TargetCard.clear();
 		S.m_vKeys.clear();
+		S.m_vPreviews.clear();
 		S.m_ActiveCard.clear();
+		S.m_pActiveKeys = nullptr;
 		S.m_pScrollRegion = nullptr;
 		S.m_Interactive = false;
 		S.m_Scrolled = false;
 		S.m_ExpireSeconds = 0.0;
+		S.m_PreviewExpireSeconds = 0.0;
 	}
 
 	inline void Request(const char *pCardStableId, const std::vector<std::string> &vKeys)
@@ -69,16 +82,20 @@ namespace qm_settings_reveal
 		SState &S = State();
 		S.m_TargetCard = pCardStableId;
 		S.m_vKeys = vKeys;
+		S.m_vPreviews.clear();
+		S.m_PreviewExpireSeconds = 0.0;
 		S.m_Scrolled = false;
 		// 墙钟到期：折叠卡/不在当前 tab 时不会永远挂着，也不随刷新率缩短。
 		S.m_ExpireSeconds = NowSeconds() + 5.0;
 	}
 
-	// 搜索结果卡预览：只铺底色，不主动滚动；由搜索页每帧刷新，离开后 5 秒自然过期。
-	inline void RequestPreview(const char *pCardStableId, const std::vector<std::string> &vKeys)
+	// 搜索结果页每帧刷新：每张可见结果卡各自持有命中键，多卡可同时高亮。
+	// 预览不滚动、不抢“定位”请求，1 秒内没有刷新就自然失效。
+	inline void SetPreviews(const std::vector<SPreview> &vPreviews)
 	{
-		Request(pCardStableId, vKeys);
-		State().m_Scrolled = true;
+		SState &S = State();
+		S.m_vPreviews = vPreviews;
+		S.m_PreviewExpireSeconds = vPreviews.empty() ? 0.0 : NowSeconds() + 1.0;
 	}
 
 	inline bool Pending()
@@ -92,37 +109,59 @@ namespace qm_settings_reveal
 	inline void BeginCard(const char *pCardStableId, CScrollRegion *pScrollRegion, bool Interactive)
 	{
 		SState &S = State();
-		if(!Pending() || pCardStableId == nullptr || S.m_TargetCard != pCardStableId)
+		S.m_ActiveCard.clear();
+		S.m_pActiveKeys = nullptr;
+		S.m_pScrollRegion = nullptr;
+		S.m_Interactive = false;
+		if(pCardStableId == nullptr)
 			return;
-		S.m_ActiveCard = pCardStableId;
-		S.m_pScrollRegion = pScrollRegion;
-		S.m_Interactive = Interactive;
+		const double Now = NowSeconds();
+		if(!S.m_TargetCard.empty() && S.m_TargetCard == pCardStableId && Now < S.m_ExpireSeconds)
+		{
+			S.m_ActiveCard = pCardStableId;
+			S.m_pActiveKeys = &S.m_vKeys;
+			S.m_pScrollRegion = pScrollRegion;
+			S.m_Interactive = Interactive;
+			return;
+		}
+		if(Now >= S.m_PreviewExpireSeconds)
+			return;
+		for(const SPreview &Preview : S.m_vPreviews)
+		{
+			if(Preview.m_Card == pCardStableId && !Preview.m_vKeys.empty())
+			{
+				S.m_ActiveCard = pCardStableId;
+				S.m_pActiveKeys = &Preview.m_vKeys;
+				return;
+			}
+		}
 	}
 
 	inline void EndCard()
 	{
 		SState &S = State();
 		S.m_ActiveCard.clear();
+		S.m_pActiveKeys = nullptr;
 		S.m_pScrollRegion = nullptr;
 		S.m_Interactive = false;
 	}
 
-	// 纯匹配规则：是否命中目标卡片里的这一行（不触发滚动，便于测试）。
+	// 纯匹配规则：当前卡片是否有命中行（预览卡不滚动）。
 	inline bool ShouldReveal(const char *pTextId, const char *pText)
 	{
-		SState &S = State();
-		if(!Pending() || !S.m_Interactive || S.m_ActiveCard != S.m_TargetCard)
+		const SState &S = State();
+		if(S.m_pActiveKeys == nullptr || S.m_ActiveCard.empty())
 			return false;
-		return KeyMatches(S.m_vKeys, pTextId, pText);
+		return KeyMatches(*S.m_pActiveKeys, pTextId, pText);
 	}
 
-	// 命中目标卡片里的某一行时请求滚动，并返回是否命中。
+	// 命中当前卡片里的某一行时请求滚动，并返回是否命中。
 	inline bool OnRow(const char *pTextId, const char *pText, const CUIRect &Rect)
 	{
 		if(!ShouldReveal(pTextId, pText))
 			return false;
 		SState &S = State();
-		if(!S.m_Scrolled && S.m_pScrollRegion != nullptr)
+		if(S.m_Interactive && !S.m_Scrolled && S.m_pScrollRegion != nullptr)
 		{
 			S.m_Scrolled = true;
 			if(Rect.w > 0.0f && Rect.h > 0.0f)

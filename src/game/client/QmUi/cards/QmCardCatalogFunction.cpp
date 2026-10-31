@@ -257,7 +257,7 @@ namespace qm_card_catalog
 			const auto RenderMiniFeatures = [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth](CUIRect &Content, const bool PrewarmOnly) {
 				QmCardRenderHook::RenderQmFunctionMiniFeaturesContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
 			};
-			Add(Id, "qm:mini_features", "Dream Features", "Various small features",
+			Add(Id, "qm:mini_features", "Dream Features", "Only what you can't imagine, nothing Dream can't do",
 				[RenderMiniFeatures, ReadOnly](CUIRect &Content) { RenderMiniFeatures(Content, ReadOnly); });
 			return true;
 		}
