@@ -3633,6 +3633,7 @@ if(CLIENT)
     components/qmclient/modes.cpp
     components/qmclient/modes.h
     components/qmclient/nameplate_layout.h
+    components/qmclient/nameplate_coordinates.h
     components/qmclient/monitoring/monitoring.cpp
     components/qmclient/monitoring/monitoring_device_perf.cpp
     components/qmclient/monitoring/monitoring.h
@@ -4912,6 +4913,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_screenshot_image_job_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_cache_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_layout_test.cpp
+    src/test/unit/qmclient/client/qm_nameplate_coordinates_test.cpp
+    src/test/integration/qmclient/client/qm_nameplate_coordinates_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_effects_test.cpp
     src/test/unit/qmclient/client/qm_route_visited_test.cpp
     src/test/unit/qmclient/client/qm_route_render_cache_test.cpp

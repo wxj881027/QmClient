@@ -21,6 +21,7 @@
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/friend_heart_icon.h>
 #include <game/client/components/qmclient/modes.h>
+#include <game/client/components/qmclient/nameplate_coordinates.h>
 #include <game/client/components/qmclient/nameplate_layout.h>
 #include <game/client/components/qmclient/nameplate_text_build.h>
 #include <game/client/components/qmclient/nameplate_update.h>
@@ -90,13 +91,13 @@ struct SCoordXAlignFrameState
 	bool m_LocalAligned = false;
 	bool m_aClientAligned[MAX_CLIENTS] = {};
 	int m_LocalClientId = -1;
-	int m_LocalRoundedX = 0;
+	int64_t m_LocalRoundedX = 0;
 };
 
 struct SCoordXAlignReference
 {
 	int m_ClientId = -1;
-	int m_RoundedX = 0;
+	int64_t m_RoundedX = 0;
 };
 
 static uint64_t ChatBubbleAnimNodeKey(int ClientId)
@@ -1207,11 +1208,6 @@ private:
 	bool m_Aligned = false;
 	char m_aText[32] = "";
 
-	static int RoundCoordToCentitiles(float Value)
-	{
-		return round_to_int(Value * 100.0f);
-	}
-
 protected:
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
 	{
@@ -1219,17 +1215,28 @@ protected:
 		m_Visible = Show;
 		if(!m_Visible)
 			return false;
+		const auto Coord = QmNameplateDisplayCoordinate(m_IsX ? Data.m_Coords.x : Data.m_Coords.y);
+		if(!Coord)
+		{
+			m_Visible = false;
+			return false;
+		}
 		const bool Aligned = m_IsX && Data.m_CoordXAligned;
 		m_Color = Aligned ? Data.m_CoordXAlignColor : Data.m_Color;
-		const float Coord = RoundCoordToCentitiles(m_IsX ? Data.m_Coords.x : Data.m_Coords.y) / 100.0f;
-		return m_FontSize != Data.m_FontSizeCoords || m_Show != Show || m_Aligned != Aligned || m_Coord != Coord;
+		return m_FontSize != Data.m_FontSizeCoords || m_Show != Show || m_Aligned != Aligned || m_Coord != *Coord;
 	}
 	void UpdateText(CGameClient &This, const CNamePlateData &Data) override
 	{
+		const auto Coord = QmNameplateDisplayCoordinate(m_IsX ? Data.m_Coords.x : Data.m_Coords.y);
+		if(!Coord)
+		{
+			m_Visible = false;
+			return;
+		}
 		m_FontSize = Data.m_FontSizeCoords;
 		m_Show = Data.m_ShowCoords && (m_IsX ? Data.m_ShowCoordX : Data.m_ShowCoordY);
 		m_Aligned = m_IsX && Data.m_CoordXAligned;
-		m_Coord = RoundCoordToCentitiles(m_IsX ? Data.m_Coords.x : Data.m_Coords.y) / 100.0f;
+		m_Coord = *Coord;
 		str_format(m_aText, sizeof(m_aText), "%c:%.2f", m_IsX ? 'X' : 'Y', m_Coord);
 
 		CTextCursor Cursor;
@@ -1801,11 +1808,6 @@ static bool NameplateCoreRowRectContains(const SNameplateCoreRowRect &Rect, vec2
 	       Position.y <= Rect.m_Max.y;
 }
 
-static int RoundCoordToCentitiles(float Value)
-{
-	return round_to_int(Value * 100.0f);
-}
-
 void CNamePlates::UpdateCoordXAlignFrameState()
 {
 	SCoordXAlignFrameState &FrameState = m_pData->m_CoordXAlignFrame;
@@ -1832,7 +1834,10 @@ void CNamePlates::UpdateCoordXAlignFrameState()
 		const vec2 LocalPos = LocalClientId == GameClient()->m_Snap.m_LocalClientId ?
 					      GameClient()->m_LocalCharacterPos :
 					      GameClient()->m_aClients[LocalClientId].m_RenderPos;
-		aLocalRefs[NumLocalRefs++] = {LocalClientId, RoundCoordToCentitiles(LocalPos.x / 32.0f)};
+		const auto RoundedX = QmNameplateCentitiles(LocalPos.x / 32.0f);
+		if(!RoundedX)
+			continue;
+		aLocalRefs[NumLocalRefs++] = {LocalClientId, *RoundedX};
 	}
 
 	if(NumLocalRefs == 0)
@@ -1845,7 +1850,7 @@ void CNamePlates::UpdateCoordXAlignFrameState()
 	FrameState.m_LocalClientId = aLocalRefs[0].m_ClientId;
 	FrameState.m_LocalRoundedX = aLocalRefs[0].m_RoundedX;
 
-	const int MaxAllowedDiff = g_Config.m_QmNameplateCoordXAlignHintStrict ? 0 : 3;
+	const uint64_t MaxAllowedDiff = g_Config.m_QmNameplateCoordXAlignHintStrict ? 0 : 3;
 	const float WindowSeconds = std::clamp(g_Config.m_QmNameplateCoordXAlignHintWindowMs / 1000.0f, 0.1f, 3.0f);
 	const float Now = Client()->LocalTime();
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
@@ -1867,7 +1872,7 @@ void CNamePlates::UpdateCoordXAlignFrameState()
 			continue;
 		}
 
-		int RoundedX = RoundCoordToCentitiles(GameClient()->m_aClients[ClientId].m_RenderPos.x / 32.0f);
+		auto RoundedX = QmNameplateCentitiles(GameClient()->m_aClients[ClientId].m_RenderPos.x / 32.0f);
 		for(int i = 0; i < NumLocalRefs; ++i)
 		{
 			if(aLocalRefs[i].m_ClientId == ClientId)
@@ -1877,20 +1882,25 @@ void CNamePlates::UpdateCoordXAlignFrameState()
 			}
 		}
 
+		if(!RoundedX)
+		{
+			CoordXAlignState = SCoordXAlignState();
+			continue;
+		}
 		int ReferenceClientId = -1;
-		int RoundedXDiff = std::numeric_limits<int>::max();
+		uint64_t RoundedXDiff = 0;
 		for(int i = 0; i < NumLocalRefs; ++i)
 		{
 			if(aLocalRefs[i].m_ClientId == ClientId)
 				continue;
-			const int Diff = absolute(RoundedX - aLocalRefs[i].m_RoundedX);
-			if(Diff < RoundedXDiff)
+			const uint64_t Diff = QmNameplateCoordinateDistance(*RoundedX, aLocalRefs[i].m_RoundedX);
+			if(ReferenceClientId < 0 || Diff < RoundedXDiff)
 			{
 				RoundedXDiff = Diff;
 				ReferenceClientId = aLocalRefs[i].m_ClientId;
 			}
 		}
-		if(RoundedXDiff == std::numeric_limits<int>::max())
+		if(ReferenceClientId < 0)
 		{
 			CoordXAlignState = SCoordXAlignState();
 			continue;
