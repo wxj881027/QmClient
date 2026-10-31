@@ -4535,6 +4535,9 @@ Dynamic FOV smoothness
 Dynamic FOV smoothness (0=instant, 100=smoothest)
 == 動的視野の滑らかさ（0=瞬時、100=最も滑らか）
 
+Dynamic Island
+== ダイナミックアイランド
+
 Dynamic island
 == ダイナミックアイランド
 
@@ -4682,8 +4685,8 @@ enable
 Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
 == ハンマーで叩くたびにスキンを変えたいときだけ、ハンマースキン強奪をオンにしてください。相手にも見えます。
 
-Enable "Show player stats HUD"; tick "Map progress bar", then pick "Use embedded HUD progress bar" or place the bar with the sliders.
-== プレイヤー統計 HUD を表示を有効にし、マップ進行バーをオンにしてから、内蔵 HUD 進行バーを使うを選ぶか、スライダーでバーを配置します。
+Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
+== 「マップ進行バー」を有効にし、表示位置を単独表示、プレイヤー統計、ダイナミックアイランドから選びます。プレイヤー統計を選ぶ場合は「プレイヤー統計 HUD を表示」も有効にしてください。
 
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
 == 「他のプレイヤーの未予測ゴーストを表示」をオンにし、予測ゴーストと未予測ゴーストの不透明度を調整します。
@@ -7553,6 +7556,9 @@ Keyword reply use Dummy
 Keyword rules
 == キワードルール
 
+Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+== Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+
 Kick player
 == プレイヤーをキック
 
@@ -8312,8 +8318,8 @@ Map progress bar height
 Map progress bar horizontal position (center, % of screen width)
 == マップ進行バーの水平位置（中心点、画面幅に対するパーセント）
 
-Map progress bar style (0=bottom bar, 1=HUD overlay)
-== マップ進行バーのスタイル（0=下部横バー、1=HUD 内蔵）
+Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)
+== マップ進行バーの表示位置（0=単独表示、1=プレイヤー統計、2=ダイナミックアイランド）
 
 Map progress bar vertical position (top edge, % of screen height)
 == マップ進行バーの垂直位置（上端、画面高さに対するパーセント）
@@ -8698,9 +8704,6 @@ Minimum time between kills (in seconds)
 
 Minimum time between map votes (in seconds)
 == マップ投票間の最小時間（秒）
-
-Minimum width for name column in server browser
-== サーバーブラウザの名前列の最小幅
 
 Minutes on server before a player can call a map change vote (0 = disabled)
 == プレイヤーがマップ変更投票を呼び出せるまでのサーバー滞在時間（分）（0 = 無効）
@@ -10894,6 +10897,9 @@ Progress bar color
 
 Progress bar height
 == プログレスバーの高さ
+
+Progress bar location
+== 進行バーの表示位置
 
 Progress bar width
 == プログレスバーの幅
@@ -14573,6 +14579,9 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Q 弾 Tee 変形強度
 
+Standalone
+== 単独表示
+
 Star
 == 星形
 
@@ -16679,9 +16688,6 @@ Use default voice input device
 Use default voice output device
 == デフォルトの音声出力デバイスを使用
 
-Use embedded HUD progress bar
-== HUD 埋め込みプログレスバーを使用
-
 Use emote
 == エモートを使用
 
@@ -17413,6 +17419,9 @@ Width of latency column in server browser
 
 Width of map column in server browser
 == サーバーブラウザのマップ列の幅
+
+Width of name column in server browser
+== サーバーブラウザの名前列の幅
 
 Width of others' hook collision line
 == 他のプレイヤーのフック衝突線の幅

@@ -4535,6 +4535,9 @@ Dynamic FOV smoothness
 Dynamic FOV smoothness (0=instant, 100=smoothest)
 == Płynność dynamicznego pola widzenia (0 = natychmiast, 100 = najpłynniejsze)
 
+Dynamic Island
+== Dynamiczna Wyspa
+
 Dynamic island
 == Dynamiczna wyspa
 
@@ -4682,8 +4685,8 @@ enable
 Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
 == Włącz kradzież skina młotkiem tylko wtedy, gdy chcesz zmieniać skin przy każdym trafieniu — inni też to widzą.
 
-Enable "Show player stats HUD"; tick "Map progress bar", then pick "Use embedded HUD progress bar" or place the bar with the sliders.
-== Włącz pokazuj HUD statystyk gracza; zaznacz pasek postępu mapy, a potem wybierz użyj wbudowanego paska HUD albo ustaw pasek suwakami.
+Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
+== Włącz pasek postępu mapy i wybierz jego położenie: osobno, w statystykach gracza lub na Dynamicznej Wyspie. Dla statystyk włącz także HUD statystyk gracza.
 
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
 == Włącz „Pokaż nieprzewidziane duchy innych graczy", a potem ustaw krycie duchów przewidywanych i nieprzewidzianych.
@@ -7553,6 +7556,9 @@ Keyword reply use Dummy
 Keyword rules
 == Reguły słów kluczowych
 
+Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+== Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+
 Kick player
 == Wyrzuć gracza
 
@@ -8312,8 +8318,8 @@ Map progress bar height
 Map progress bar horizontal position (center, % of screen width)
 == Pozioma pozycja paska postępu mapy (punkt środkowy, procent szerokości ekranu)
 
-Map progress bar style (0=bottom bar, 1=HUD overlay)
-== Styl paska postępu mapy (0 = dolny pasek, 1 = wbudowany w HUD)
+Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)
+== Położenie paska postępu mapy (0=osobno, 1=statystyki gracza, 2=Dynamiczna Wyspa)
 
 Map progress bar vertical position (top edge, % of screen height)
 == Pionowa pozycja paska postępu mapy (górna krawędź, % wysokości ekranu)
@@ -8698,9 +8704,6 @@ Minimum time between kills (in seconds)
 
 Minimum time between map votes (in seconds)
 == Minimalny czas między głosowaniami nad mapą (w sekundach)
-
-Minimum width for name column in server browser
-== Minimalna szerokość kolumny nazwy w przeglądarce serwerów
 
 Minutes on server before a player can call a map change vote (0 = disabled)
 == Minuty na serwerze, zanim gracz może wezwać głosowanie nad zmianą mapy (0 = wyłączone)
@@ -10894,6 +10897,9 @@ Progress bar color
 
 Progress bar height
 == Wysokość paska postępu
+
+Progress bar location
+== Położenie paska postępu
 
 Progress bar width
 == Szerokość paska postępu
@@ -14573,6 +14579,9 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Siła deformacji sprężystego Tee
 
+Standalone
+== Osobno
+
 Star
 == Gwiazda
 
@@ -16679,9 +16688,6 @@ Use default voice input device
 Use default voice output device
 == Użyj domyślnego urządzenia wyjściowego głosu
 
-Use embedded HUD progress bar
-== Użyj wbudowanego paska postępu HUD
-
 Use emote
 == Użyj emotki
 
@@ -17413,6 +17419,9 @@ Width of latency column in server browser
 
 Width of map column in server browser
 == Szerokość kolumny mapy w przeglądarce serwerów
+
+Width of name column in server browser
+== Szerokość kolumny nazwy w przeglądarce serwerów
 
 Width of others' hook collision line
 == Szerokość linii kolizji haka innych graczy

@@ -153,6 +153,32 @@ void CRenderTools::RenderCursor(vec2 Center, float Size, float Alpha) const
 	Graphics()->WrapNormal();
 }
 
+void CRenderTools::RenderResizeCursor(vec2 Center, float Size, float Alpha) const
+{
+	// 左右箭头以鼠标位置为中心，热点始终落在所拖动的列边界上。
+	const float Scale = Size / 24.0f;
+	auto DrawArrow = [&](float Tip, float Shoulder, float HeadHeight, float ShaftHeight) {
+		const IGraphics::CQuadItem Shaft(Center.x - Shoulder * Scale, Center.y - ShaftHeight * Scale,
+			2.0f * Shoulder * Scale, 2.0f * ShaftHeight * Scale);
+		Graphics()->QuadsDrawTL(&Shaft, 1);
+		const IGraphics::CFreeformItem aHeads[] = {
+			{Center + vec2(-Tip, 0.0f) * Scale, Center + vec2(-Shoulder, -HeadHeight) * Scale,
+				Center + vec2(-Shoulder, HeadHeight) * Scale, Center + vec2(-Shoulder, HeadHeight) * Scale},
+			{Center + vec2(Shoulder, -HeadHeight) * Scale, Center + vec2(Tip, 0.0f) * Scale,
+				Center + vec2(Shoulder, HeadHeight) * Scale, Center + vec2(Shoulder, HeadHeight) * Scale},
+		};
+		Graphics()->QuadsDrawFreeform(aHeads, 2);
+	};
+
+	Graphics()->TextureClear();
+	Graphics()->QuadsBegin();
+	Graphics()->SetColor(0.0f, 0.0f, 0.0f, Alpha);
+	DrawArrow(12.0f, 5.0f, 7.0f, 2.0f);
+	Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
+	DrawArrow(10.0f, 6.0f, 4.0f, 0.75f);
+	Graphics()->QuadsEnd();
+}
+
 void CRenderTools::RenderIcon(int ImageId, int SpriteId, const CUIRect *pRect, const ColorRGBA *pColor) const
 {
 	Graphics()->TextureSet(g_pData->m_aImages[ImageId].m_Id);

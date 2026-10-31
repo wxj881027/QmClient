@@ -4535,6 +4535,9 @@ Dynamic FOV smoothness
 Dynamic FOV smoothness (0=instant, 100=smoothest)
 == Dynamische Ansichtsglätte (0=sofort, 100=am glattesten)
 
+Dynamic Island
+== Dynamische Insel
+
 Dynamic island
 == Dynamische Insel
 
@@ -4682,8 +4685,8 @@ enable
 Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
 == Aktiviere das Skin-Stehlen per Hammer nur, wenn dein Skin bei jedem Treffer wechseln soll – andere Spieler sehen das mit.
 
-Enable "Show player stats HUD"; tick "Map progress bar", then pick "Use embedded HUD progress bar" or place the bar with the sliders.
-== Aktiviere Spielerstatistik-HUD anzeigen, markiere Map-Fortschrittsbalken und wähle dann eingebetteten HUD-Fortschrittsbalken verwenden oder platziere den Balken mit den Schiebereglern.
+Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
+== Aktiviere den Kartenfortschrittsbalken und wähle seine Position: separat, in der Spielerstatistik oder in der Dynamischen Insel. Aktiviere für die Spielerstatistik auch das Spielerstatistik-HUD.
 
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
 == Aktiviere „Unvorhergesagte Geister anderer Spieler anzeigen" und justiere die Deckkraft der vorhergesagten und unvorhergesagten Geister.
@@ -7553,6 +7556,9 @@ Keyword reply use Dummy
 Keyword rules
 == Schlüsselwortregeln
 
+Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+== Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+
 Kick player
 == Spieler kicken
 
@@ -8312,8 +8318,8 @@ Map progress bar height
 Map progress bar horizontal position (center, % of screen width)
 == Horizontale Position der Karten-Fortschrittsleiste (Mitte, Prozent der Bildschirmbreite)
 
-Map progress bar style (0=bottom bar, 1=HUD overlay)
-== Stil der Kartenfortschrittsleiste (0=unterer Balken, 1=im HUD eingebettet)
+Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)
+== Position des Kartenfortschrittsbalkens (0=separat, 1=Spielerstatistik, 2=Dynamische Insel)
 
 Map progress bar vertical position (top edge, % of screen height)
 == Vertikale Position der Karten-Fortschrittsleiste (Oberkante, Prozent der Bildschirmhöhe)
@@ -8698,9 +8704,6 @@ Minimum time between kills (in seconds)
 
 Minimum time between map votes (in seconds)
 == Minimale Zeit zwischen Karten-Voten (in Sekunden)
-
-Minimum width for name column in server browser
-== Minimale Breite für die Namensspalte im Server-Browser
 
 Minutes on server before a player can call a map change vote (0 = disabled)
 == Minuten auf dem Server, bevor ein Spieler ein Kartenwechsel-Votum aufrufen kann (0 = deaktiviert)
@@ -10894,6 +10897,9 @@ Progress bar color
 
 Progress bar height
 == Fortschrittsbalkenhöhe
+
+Progress bar location
+== Position des Fortschrittsbalkens
 
 Progress bar width
 == Fortschrittsbalkenbreite
@@ -14573,6 +14579,9 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Federndes Tee-Verformungsstärke
 
+Standalone
+== Separat
+
 Star
 == Stern
 
@@ -16679,9 +16688,6 @@ Use default voice input device
 Use default voice output device
 == Standard-Sprachausgabegerät verwenden
 
-Use embedded HUD progress bar
-== Eingebettete HUD-Fortschrittsleiste verwenden
-
 Use emote
 == Emote verwenden
 
@@ -17413,6 +17419,9 @@ Width of latency column in server browser
 
 Width of map column in server browser
 == Breite der Kartenspalte im Server-Browser
+
+Width of name column in server browser
+== Breite der Namensspalte im Server-Browser
 
 Width of others' hook collision line
 == Breite der Hakenkollisionslinie anderer

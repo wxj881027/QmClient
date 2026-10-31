@@ -8313,6 +8313,7 @@ void CMenus::OnUpdate()
 
 void CMenus::OnRender()
 {
+	m_BrowserColumnResizeCursor = false;
 	PumpDemoScreenshotWatermark();
 	// 引擎侧（Windows 双击 .poses、poses_open 命令）缺少地图时留下的请求：
 	// 转成地图选择弹窗，玩家选好地图后再走同一条 poses_open。
@@ -8454,7 +8455,12 @@ void CMenus::OnRender()
 		if(IsActive())
 			Ui()->RenderBackButton();
 		if(!GameClient()->m_GameConsole.IsActive() && (IsActive() || GameClient()->m_Spectator.PlaybackControlsActive() || QmPoseMapPopupOpen() || QmPoseHudActive()))
-			RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
+		{
+			if(m_BrowserColumnResizeCursor && !Ui()->IsPopupOpen())
+				RenderTools()->RenderResizeCursor(Ui()->MousePos(), 24.0f);
+			else
+				RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
+		}
 		LogPerfStage(Client(), "cursor_render", StageTimer.ElapsedMs());
 	}
 

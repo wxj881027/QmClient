@@ -1510,6 +1510,7 @@ Dynamic FOV intensity
 Dynamic FOV intensity (0-200)
 Dynamic FOV smoothness
 Dynamic FOV smoothness (0=instant, 100=smoothest)
+Dynamic Island
 Dynamic island
 Dynamic Island background alpha
 Dynamic Island background color
@@ -1559,7 +1560,7 @@ Emoticons
 Empty slots still take space, so clear the ones you no longer use.
 enable
 Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
-Enable "Show player stats HUD"; tick "Map progress bar", then pick "Use embedded HUD progress bar" or place the bar with the sliders.
+Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
 Enable "Try to rename before finishing", then fill in the finishing name and run to the finish to test it.
 Enable /swap
@@ -2771,7 +2772,7 @@ Map progress bar
 Map progress bar color
 Map progress bar height
 Map progress bar horizontal position (center, % of screen width)
-Map progress bar style (0=bottom bar, 1=HUD overlay)
+Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)
 Map progress bar vertical position (top edge, % of screen height)
 Map progress bar width (percentage of screen width)
 Map Progress: %.1f%%
@@ -2900,7 +2901,6 @@ Minimum time
 Minimum time between kick votes (in seconds)
 Minimum time between kills (in seconds)
 Minimum time between map votes (in seconds)
-Minimum width for name column in server browser
 Minutes on server before a player can call a map change vote (0 = disabled)
 Minutes to save replay on ESC menu
 Misc
@@ -3632,6 +3632,7 @@ Profiles
 Profiles file
 Progress bar color
 Progress bar height
+Progress bar location
 Progress bar width
 Project and community websites
 Projectile / explosion range
@@ -4311,6 +4312,7 @@ Settings card border color
 Settings card default layout migration version
 Settings card states: stableId for collapsed, !stableId for expanded, separated by semicolons
 Settings card titles use rainbow colors
+Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
 Settings file
 Settings page opacity
 Settings page right panel opacity
@@ -4858,6 +4860,7 @@ Spree
 SQL Server name for record table
 Squishy Tee deformation duration
 Squishy Tee deformation intensity
+Standalone
 Star
 Start (s)
 Start and connect to local server
@@ -5560,7 +5563,6 @@ Use default input
 Use default output
 Use default voice input device
 Use default voice output device
-Use embedded HUD progress bar
 Use emote
 Use enemy color instead of frozen color
 Use enemy list to drive player indicators
@@ -5805,6 +5807,7 @@ Width of difficulty column in server browser
 Width of friends column in server browser
 Width of latency column in server browser
 Width of map column in server browser
+Width of name column in server browser
 Width of others' hook collision line
 Width of players column in server browser
 Width of Qm clients column in server browser

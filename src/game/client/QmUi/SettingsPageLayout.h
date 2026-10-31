@@ -1117,7 +1117,7 @@ inline float ResolveQmHudPlayerStatsHeight(const SSettingsContentMetrics &Metric
 {
 	if(!MapProgress)
 		return 3.0f * Metrics.m_RowStep - Metrics.m_LineSpacing;
-	return (EmbeddedProgress ? 5.0f : 10.0f) * Metrics.m_RowStep - Metrics.m_LineSpacing;
+	return (EmbeddedProgress ? 6.0f : 10.0f) * Metrics.m_RowStep - Metrics.m_LineSpacing;
 }
 
 inline float ResolveQmHudInputOverlayHeight(const SSettingsContentMetrics &Metrics, const bool Enabled)

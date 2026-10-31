@@ -4535,6 +4535,9 @@ Dynamic FOV smoothness
 Dynamic FOV smoothness (0=instant, 100=smoothest)
 == Плавность динамического обзора (0 = мгновенно, 100 = максимально плавно)
 
+Dynamic Island
+== Динамический остров
+
 Dynamic island
 == Динамический остров
 
@@ -4682,8 +4685,8 @@ enable
 Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
 == Включайте кражу скина молотом только если хотите менять скин при каждом ударе: другие игроки это видят.
 
-Enable "Show player stats HUD"; tick "Map progress bar", then pick "Use embedded HUD progress bar" or place the bar with the sliders.
-== Включите показ HUD статистики игрока, отметьте полосу прогресса карты, затем выберите встроенную полосу HUD или разместите её ползунками.
+Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
+== Включите полосу прогресса карты и выберите расположение: отдельно, в статистике игрока или в Динамическом острове. Для размещения в статистике включите показ HUD статистики игрока.
 
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
 == Включите «Показывать непредсказанных призраков других игроков» и настройте непрозрачность предсказанного и непредсказанного призраков.
@@ -7553,6 +7556,9 @@ Keyword reply use Dummy
 Keyword rules
 == Правила ключевых слов
 
+Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+== Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+
 Kick player
 == Кикнуть игрока
 
@@ -8312,8 +8318,8 @@ Map progress bar height
 Map progress bar horizontal position (center, % of screen width)
 == Горизонтальное положение индикатора прогресса карты (центр, в процентах от ширины экрана)
 
-Map progress bar style (0=bottom bar, 1=HUD overlay)
-== Стиль индикатора прогресса карты (0 = нижняя полоса, 1 = встроенный в HUD)
+Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)
+== Расположение полосы прогресса карты (0=отдельно, 1=статистика игрока, 2=Динамический остров)
 
 Map progress bar vertical position (top edge, % of screen height)
 == Вертикальное положение индикатора прогресса карты (верхний край, в процентах от высоты экрана)
@@ -8698,9 +8704,6 @@ Minimum time between kills (in seconds)
 
 Minimum time between map votes (in seconds)
 == Минимальное время между голосованиями за карту (в секундах)
-
-Minimum width for name column in server browser
-== Минимальная ширина столбца имени в браузере серверов
 
 Minutes on server before a player can call a map change vote (0 = disabled)
 == Минуты на сервере, прежде чем игрок сможет вызвать голосование за смену карты (0 = отключено)
@@ -10894,6 +10897,9 @@ Progress bar color
 
 Progress bar height
 == Высота индикатора прогресса
+
+Progress bar location
+== Расположение полосы прогресса
 
 Progress bar width
 == Ширина индикатора прогресса
@@ -14573,6 +14579,9 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Интенсивность деформации упругого Tee
 
+Standalone
+== Отдельно
+
 Star
 == Звезда
 
@@ -16679,9 +16688,6 @@ Use default voice input device
 Use default voice output device
 == Использовать устройство вывода голоса по умолчанию
 
-Use embedded HUD progress bar
-== Использовать встроенную шкалу прогресса HUD
-
 Use emote
 == Использовать эмоцию
 
@@ -17413,6 +17419,9 @@ Width of latency column in server browser
 
 Width of map column in server browser
 == Ширина столбца карты в списке серверов
+
+Width of name column in server browser
+== Ширина столбца имени в браузере серверов
 
 Width of others' hook collision line
 == Ширина линии столкновения крюка других

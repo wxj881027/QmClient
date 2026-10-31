@@ -1200,6 +1200,8 @@ void CHud::OnReset()
 	m_aLastPlayerSpeedChange[0] = ESpeedChange::NONE;
 	m_aLastPlayerSpeedChange[1] = ESpeedChange::NONE;
 	m_LastSpectatorCountTick = 0;
+	for(auto &Progress : m_aIslandMapProgress)
+		Progress.Reset();
 	m_aMapProgressDisplayed[0] = 0.0f;
 	m_aMapProgressDisplayed[1] = 0.0f;
 	m_aMapProgressInitialized[0] = false;
@@ -3498,6 +3500,14 @@ void CHud::PreparePlayerStateQuads()
 	m_Team0ModeOffset = Graphics()->QuadContainerAddSprite(m_HudQuadContainerIndex, 0.f, 0.f, 12.f, 12.f);
 }
 
+QmHudMapProgress::ESurface CHud::MapProgressSurface() const
+{
+	const bool Enabled = GameClient()->m_HudEditor.IsActive() ||
+		(GameClient()->m_TClient.IsGoresMapProgressEnabled() && !GetQmFocusModeDecisions().m_HideMapProgress);
+	return QmHudMapProgress::ResolveSurface(Enabled, g_Config.m_QmPlayerStatsMapProgressStyle,
+		g_Config.m_QmPlayerStatsHud != 0, g_Config.m_QmHudIslandUseOriginalStyle == 0);
+}
+
 void CHud::EnsureMediaIslandFrameCache() const
 {
 	const uint64_t CurrentFrame = Client()->PerfFrame();
@@ -3521,6 +3531,11 @@ void CHud::EnsureMediaIslandFrameCache() const
 	if(g_Config.m_QmHudIslandUseOriginalStyle)
 		return;
 	Cache.m_SpectatorCount = GetMediaIslandSpectatorCount(*GameClient(), *Client());
+	if(MapProgressSurface() == QmHudMapProgress::ESurface::ISLAND)
+	{
+		Cache.m_HasVisible = true;
+		return;
+	}
 
 	if(m_MediaIslandAnimState.HasVisibleSatellite())
 	{
@@ -3621,7 +3636,8 @@ float CHud::GetTopIslandAvoidanceRight() const
 	const CSystemMediaControls::SState &MediaState = m_MediaIslandFrameCache.m_MediaState;
 	const bool HasMediaState = m_MediaIslandFrameCache.m_HasMediaState;
 	const bool ShowTopRow = HasMediaState || ShowInfoStack || TimerCapsule.m_Visible || ShowRecordingStatus || ShowSpectatorSatellite || ShowTeam;
-	if(!ShowTopRow)
+	const bool ShowMapProgress = MapProgressSurface() == QmHudMapProgress::ESurface::ISLAND;
+	if(!ShowTopRow && !ShowMapProgress)
 	{
 		m_MediaIslandFrameCache.m_AvoidanceValid = true;
 		m_MediaIslandFrameCache.m_AvoidanceRight = 0.0f;
@@ -3735,6 +3751,11 @@ float CHud::GetTopIslandAvoidanceRight() const
 	if(TrackDetailsExpanded && TitleWidth > 0.0f)
 		TargetWidth += Gap + TitleWidth;
 
+	if(ShowMapProgress)
+	{
+		const float OtherWidth = (TimerCapsule.m_Visible ? TimerCapsule.m_BoxW + GapToTimer : 0.0f) + RightSlotGap + RightSlotWidth;
+		TargetWidth = std::max(TargetWidth, QmHudMapProgress::MeasureMinimumWidth(*TextRender(), QmHudMediaIslandDesignScale) - OtherWidth);
+	}
 	const float MainToTimerGap = TargetWidth > 0.0f ? GapToTimer : 0.0f;
 	const float PlannedUnifiedWidth = TimerCapsule.m_Visible ?
 						  TargetWidth + MainToTimerGap + TimerCapsule.m_BoxW + RightSlotGap + RightSlotWidth :
@@ -3760,6 +3781,12 @@ void CHud::RenderMediaIsland()
 	const CSystemMediaControls::SState &MediaState = m_MediaIslandFrameCache.m_MediaState;
 	const bool HasMediaState = m_MediaIslandFrameCache.m_HasMediaState;
 	const bool LyricsActive = !g_Config.m_QmLyricsSeparateIsland && m_MediaIslandFrameCache.m_LyricsActive;
+	const bool ShowMapProgress = MapProgressSurface() == QmHudMapProgress::ESurface::ISLAND;
+	if(!ShowMapProgress)
+	{
+		for(auto &Progress : m_aIslandMapProgress)
+			Progress.Reset();
+	}
 	const bool AlwaysShowTrackDetails = g_Config.m_QmHudIslandAlwaysShowTrackDetails != 0;
 	if(!HasMediaState)
 	{
@@ -3957,7 +3984,7 @@ void CHud::RenderMediaIsland()
 	const SHudMediaIslandSwapRows SwapRows = QmHudMediaIslandSwapRows(IncomingSwapCount, TimerCapsule.m_Visible, ShowLyricsIslandLine, m_MediaIslandFrameCache.m_LyricsRowCount);
 	const bool ShowTopRow = HasMediaState || ShowInfoStack || TimerCapsule.m_Visible || ShowRecordingStatus || ShowSpectator || ShowTeam;
 
-	if(!ShowTopRow && !ShowLyricsIslandLine && !HasSatellitePresentation)
+	if(!ShowTopRow && !ShowLyricsIslandLine && !HasSatellitePresentation && !ShowMapProgress)
 	{
 		RelaxMediaIslandEntranceSprings(GameClient()->UiRuntimeV2()->AnimRuntime());
 		m_MediaIslandAnimState.Reset();
@@ -4120,9 +4147,11 @@ void CHud::RenderMediaIsland()
 		PlannedStatusWidth = InfoStackWidth;
 	else if(ShowRecordingStatus)
 		PlannedStatusWidth = StatusPaddingLeft + ConnectionSlot.m_Width + (ScoreboardExpanded ? RawExpandedStatusWidth : RawCollapsedStatusWidth);
-	const bool ShowBottomRow = SwapRows.m_BottomLineCount > 0;
-	const int BottomRowLineCount = SwapRows.m_BottomLineCount;
-	const float DesiredBottomUnifiedWidth = QmHudMediaIslandDesiredBottomWidth(
+	const QmHudMapProgress::SIslandRows ProgressRows = QmHudMapProgress::IslandRows(
+		ShowTopRow || HasSatellitePresentation, ShowMapProgress, SwapRows.m_BottomLineCount,
+		BaseIslandHeight, BottomRowLineHeight, BottomRowPaddingY);
+	const bool ShowBottomRow = ProgressRows.m_BottomHeight > 0.0f;
+	float DesiredBottomUnifiedWidth = QmHudMediaIslandDesiredBottomWidth(
 		ShowLyricsIslandLine,
 		ShowTopRow,
 		IncomingSwapCount > 0,
@@ -4130,6 +4159,8 @@ void CHud::RenderMediaIsland()
 		MaxTitleWidth,
 		MaxUnifiedWidth,
 		BottomRowPaddingX);
+	if(ShowMapProgress)
+		DesiredBottomUnifiedWidth = std::min(MaxUnifiedWidth, std::max(DesiredBottomUnifiedWidth, QmHudMapProgress::MeasureMinimumWidth(*TextRender(), QmHudMediaIslandDesignScale)));
 	const bool ShowCover = HasMediaState;
 	const int MetaItemCount = (ShowTeam ? 1 : 0) + (ShowWaveform ? 1 : 0);
 	float BaseWidth = PaddingX;
@@ -4191,7 +4222,7 @@ void CHud::RenderMediaIsland()
 	const float TargetX = TimerCapsule.m_Visible ?
 				      QmHudMediaIslandAnchorTimer(m_Width * 0.5f, TimerCapsule.m_BoxW, TargetWidth, MainToTimerGap).m_MainX :
 				      std::clamp(m_Width * 0.5f - PlannedUnifiedWidth * 0.5f, ScreenPadding, MaxTargetX);
-	const float TargetBottomHeight = ShowBottomRow ? (BottomRowPaddingY * 2.0f + BottomRowLineHeight * BottomRowLineCount) : 0.0f;
+	const float TargetBottomHeight = ProgressRows.m_BottomHeight;
 	const float TargetHeight = BaseIslandHeight + TargetBottomHeight;
 	const float TitleAlphaTarget = TrackDetailsExpanded && TitleWidth > 0.0f ? 1.0f : 0.0f;
 	const float TitleOffsetTarget = TrackDetailsExpanded ? 0.0f : QmHudMediaIslandScaled(4.0f);
@@ -5007,18 +5038,33 @@ void CHud::RenderMediaIsland()
 		}
 	}
 
+	if(ShowMapProgress)
+	{
+		const int DummyIndex = g_Config.m_ClDummy ? 1 : 0;
+		const bool Preview = GameClient()->m_HudEditor.IsActive();
+		const bool HasProgress = Preview || GameClient()->m_TClient.HasGoresMapProgress(DummyIndex);
+		const float TargetProgress = Preview ? 0.426f : GameClient()->m_TClient.GetGoresMapProgress(DummyIndex);
+		const float Progress = m_aIslandMapProgress[DummyIndex].Update(HasProgress, TargetProgress, Client()->RenderFrameTime());
+		const float RowY = IslandY + ProgressRows.m_ProgressY;
+		const float RowHeight = std::min(BottomRowLineHeight, std::max(0.0f, IslandY + AnimatedIslandHeight - BottomRowPaddingY - RowY));
+		const float ProgressAlpha = EntranceContentAlpha * (ProgressRows.m_ProgressInHeader ? 1.0f : BottomAlpha);
+		const ColorRGBA ProgressColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmPlayerStatsMapProgressColor, true));
+		QmHudMapProgress::RenderIslandStrip(*Graphics(), *TextRender(), {IslandX, RowY, UnifiedWidth, RowHeight},
+			QmHudMediaIslandDesignScale, HasProgress, Progress, ProgressColor, ProgressAlpha);
+	}
+
 	const float VisibleBottomAlpha = BottomAlpha * EntranceContentAlpha;
 	if(VisibleBottomAlpha > 0.01f && AnimatedIslandHeight > BaseIslandHeight + QmHudMediaIslandScaled(0.5f))
 	{
 		const float BottomRowY = IslandY + BaseIslandHeight;
 		const float DividerInset = std::min(BottomRowDividerInset, UnifiedWidth * 0.25f);
 		const float DividerWidth = std::max(0.0f, UnifiedWidth - DividerInset * 2.0f);
-		if(DividerWidth > 0.0f)
+		if(DividerWidth > 0.0f && !ShowMapProgress)
 		{
 			Graphics()->DrawRect(IslandX + DividerInset, BottomRowY, DividerWidth, QmHudMediaIslandScaled(0.75f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f * VisibleBottomAlpha), IGraphics::CORNER_ALL, QmHudMediaIslandScaled(0.375f));
 		}
 
-		float BottomTextY = BottomRowY + BottomRowPaddingY;
+		const float BottomTextY = IslandY + ProgressRows.m_TextY;
 		const float ContentX = IslandX + BottomRowPaddingX;
 		const float ContentWidth = std::max(0.0f, UnifiedWidth - BottomRowPaddingX * 2.0f);
 		const auto RenderBottomTextBlock = [&](float X, float Y, float MaxWidth, const char *pText, const ColorRGBA &Color, bool AlignRight) {
@@ -5951,7 +5997,7 @@ inline float CHud::GetMovementInformationBoxHeight()
 	if(g_Config.m_QmPlayerStatsHud)
 	{
 		BoxHeight += 3.0f * MOVEMENT_INFORMATION_LINE_HEIGHT;
-		if(g_Config.m_QmPlayerStatsMapProgressStyle != 0 && GameClient()->m_TClient.IsGoresMapProgressEnabled())
+		if(MapProgressSurface() == QmHudMapProgress::ESurface::PLAYER_STATS)
 			BoxHeight += 2.0f * MOVEMENT_INFORMATION_LINE_HEIGHT;
 	}
 	if(g_Config.m_ClShowhudPlayerPosition || g_Config.m_ClShowhudPlayerSpeed || g_Config.m_ClShowhudPlayerAngle)
@@ -6304,7 +6350,7 @@ void CHud::RenderMovementInformation()
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
 				y += MOVEMENT_INFORMATION_LINE_HEIGHT;
 
-				if(g_Config.m_QmPlayerStatsMapProgressStyle != 0 && GameClient()->m_TClient.IsGoresMapProgressEnabled())
+				if(MapProgressSurface() == QmHudMapProgress::ESurface::PLAYER_STATS)
 				{
 					const int DummyIndex = g_Config.m_ClDummy ? 1 : 0;
 					const bool HasProgress = GameClient()->m_TClient.HasGoresMapProgress(DummyIndex);
@@ -6463,13 +6509,7 @@ void CHud::RenderProgressBarWithTee(const CUIRect &BarRect, float Progress, cons
 void CHud::RenderMapProgressBar()
 {
 	const bool Preview = GameClient()->m_HudEditor.IsActive();
-	if(GetQmFocusModeDecisions().m_HideMapProgress && !Preview)
-		return;
-	if(!g_Config.m_QmPlayerStatsMapProgress && !Preview)
-		return;
-	if(!GameClient()->m_TClient.IsGoresMapProgressEnabled() && !Preview)
-		return;
-	if(g_Config.m_QmPlayerStatsMapProgressStyle != 0 && g_Config.m_QmPlayerStatsHud)
+	if(MapProgressSurface() != QmHudMapProgress::ESurface::STANDALONE)
 		return;
 
 	const int DummyIndex = g_Config.m_ClDummy ? 1 : 0;
@@ -6902,6 +6942,8 @@ void CHud::OnRender()
 	const bool ShowMediaIsland = HasVisibleMediaIsland();
 	if(!ShowMediaIsland)
 	{
+		for(auto &Progress : m_aIslandMapProgress)
+			Progress.Reset();
 		RelaxMediaIslandEntranceSprings(GameClient()->UiRuntimeV2()->AnimRuntime());
 		m_MediaIslandAnimState.Reset();
 		m_MediaIslandLastVisibleRectValid = false;

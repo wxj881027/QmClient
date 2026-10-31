@@ -4535,6 +4535,9 @@ Dynamic FOV smoothness
 Dynamic FOV smoothness (0=instant, 100=smoothest)
 == 動態視野平滑度（0 = 瞬時，100 = 最平滑）
 
+Dynamic Island
+== 靈動島
+
 Dynamic island
 == 靈動島
 
@@ -4682,8 +4685,8 @@ enable
 Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
 == 只有想每次錘中都換皮膚時才開啟錘中偷皮——別人也會看到你的皮膚在變。
 
-Enable "Show player stats HUD"; tick "Map progress bar", then pick "Use embedded HUD progress bar" or place the bar with the sliders.
-== 啟用顯示玩家統計 HUD；勾選地圖進度條，然後選擇使用內嵌 HUD 進度條，或用滑桿自行擺放進度條。
+Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
+== 開啟「地圖進度條」，選擇獨立顯示、玩家統計或靈動島。選擇玩家統計時，還需開啟「顯示玩家統計 HUD」。
 
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
 == 打開「顯示其他玩家未預測的影子」，再調整預測影子和未預測影子的不透明度。
@@ -7553,6 +7556,9 @@ Keyword reply use Dummy
 Keyword rules
 == 關鍵詞規則
 
+Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+== Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+
 Kick player
 == 踢出玩家
 
@@ -8312,8 +8318,8 @@ Map progress bar height
 Map progress bar horizontal position (center, % of screen width)
 == 地圖進度條水平位置（中心點，佔屏幕寬度百分比）
 
-Map progress bar style (0=bottom bar, 1=HUD overlay)
-== 地圖進度條樣式（0=底部橫條，1=HUD 內嵌）
+Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)
+== 地圖進度條位置（0=獨立顯示，1=玩家統計，2=靈動島）
 
 Map progress bar vertical position (top edge, % of screen height)
 == 地圖進度條垂直位置（頂邊，佔屏幕高度百分比）
@@ -8698,9 +8704,6 @@ Minimum time between kills (in seconds)
 
 Minimum time between map votes (in seconds)
 == 地圖投票之間的最短時間（秒）
-
-Minimum width for name column in server browser
-== 伺服器瀏覽器中名稱列的最小寬度
 
 Minutes on server before a player can call a map change vote (0 = disabled)
 == 玩家可以否決地圖更改投票之前伺服器上的時間分鐘數（0 = 禁用）
@@ -10894,6 +10897,9 @@ Progress bar color
 
 Progress bar height
 == 進度條高度
+
+Progress bar location
+== 進度條位置
 
 Progress bar width
 == 進度條寬度
@@ -14573,6 +14579,9 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Q 彈 Tee 形變強度
 
+Standalone
+== 獨立顯示
+
 Star
 == 星形
 
@@ -16679,9 +16688,6 @@ Use default voice input device
 Use default voice output device
 == 使用默認語音輸出設備
 
-Use embedded HUD progress bar
-== 使用 HUD 內嵌進度條
-
 Use emote
 == 使用表情
 
@@ -17413,6 +17419,9 @@ Width of latency column in server browser
 
 Width of map column in server browser
 == 伺服器瀏覽器中地圖列的寬度
+
+Width of name column in server browser
+== 伺服器瀏覽器中名稱列的寬度
 
 Width of others' hook collision line
 == 其他玩家的鉤子輔助線線寬度
