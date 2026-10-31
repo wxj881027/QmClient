@@ -966,6 +966,10 @@ namespace
 		if(Dummy < 0 || Dummy >= NUM_DUMMIES)
 			return false;
 
+		const auto InstanceId = QmSwapCountdownDisplayId(State.m_InstanceId, Dummy);
+		if(!InstanceId)
+			return false;
+
 		const int StartTick = State.m_StartTick;
 		if(StartTick <= 0)
 			return false;
@@ -985,7 +989,7 @@ namespace
 					     (Dummy == 0 ? Client.PlayerName() : Client.DummyName());
 		const int SecondsLeft = Lifecycle.m_SecondsLeft;
 		Out.m_Dummy = Dummy;
-		Out.m_InstanceId = State.m_InstanceId * NUM_DUMMIES + Dummy;
+		Out.m_InstanceId = *InstanceId;
 		Out.m_StartTick = StartTick;
 		Out.m_Outgoing = State.m_Outgoing;
 		Out.m_Lifecycle = Lifecycle;
