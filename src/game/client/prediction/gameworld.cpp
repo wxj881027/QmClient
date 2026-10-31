@@ -167,8 +167,11 @@ void CGameWorld::RemoveCharacter(CCharacter *pChar)
 	int Id = pChar->GetCid();
 	if(Id >= 0 && Id < MAX_CLIENTS)
 	{
-		m_apCharacters[Id] = nullptr;
-		m_Core.m_apCharacters[Id] = nullptr;
+		// 临时匹配对象和未登记副本也会析构，只解除仍属于该对象的索引。
+		if(m_apCharacters[Id] == pChar)
+			m_apCharacters[Id] = nullptr;
+		if(m_Core.m_apCharacters[Id] == &pChar->m_Core)
+			m_Core.m_apCharacters[Id] = nullptr;
 	}
 }
 

@@ -6128,6 +6128,43 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     add_test(NAME qm-script-allocation-tests COMMAND $<TARGET_FILE:qm-script-allocation-tests>)
   endif()
 
+  if(CLIENT AND QM_GTEST_MAIN_TARGET)
+    # 客户端与服务端有同名的预测/实体类，独立目标只链接客户端实现。
+    add_executable(qm-prediction-tests EXCLUDE_FROM_ALL
+      src/test/integration/client/prediction_entity_copy_test.cpp
+      src/test/integration/client/prediction_world_copy_test.cpp
+      src/game/client/prediction/entity.cpp
+      src/game/client/prediction/gameworld.cpp
+      src/game/client/prediction/entities/character.cpp
+      src/game/client/prediction/entities/door.cpp
+      src/game/client/prediction/entities/dragger.cpp
+      src/game/client/prediction/entities/laser.cpp
+      src/game/client/prediction/entities/pickup.cpp
+      src/game/client/prediction/entities/plasma.cpp
+      src/game/client/prediction/entities/projectile.cpp
+      src/game/client/laser_data.cpp
+      src/game/client/pickup_data.cpp
+      src/game/client/projectile_data.cpp
+      src/generated/client_data.cpp
+      $<TARGET_OBJECTS:engine-shared>
+      $<TARGET_OBJECTS:game-shared>
+      $<TARGET_OBJECTS:rust-bridge-shared>
+      ${DEPS}
+    )
+    add_dependencies(qm-prediction-tests generate_protocol)
+    target_include_directories(qm-prediction-tests SYSTEM PRIVATE ${GTEST_INCLUDE_DIRS})
+    target_link_libraries(qm-prediction-tests ${QM_GTEST_MAIN_TARGET} ${LIBS})
+    if(TARGET_OS STREQUAL "windows")
+      target_link_libraries(qm-prediction-tests bcrypt winhttp ws2_32)
+    endif()
+    if(TARGET_OS STREQUAL "mac" OR TARGET_OS STREQUAL "ios")
+      target_link_libraries(qm-prediction-tests "-framework Foundation" "-framework CoreFoundation")
+    endif()
+    list(APPEND TARGETS_OWN qm-prediction-tests)
+    list(APPEND TARGETS_LINK qm-prediction-tests)
+    add_test(NAME qm-prediction-tests COMMAND $<TARGET_FILE:qm-prediction-tests>)
+  endif()
+
   # 独立测试目标也进入日常 C++ gate，避免只有注册却从未执行。
   set(CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:${TARGET_TESTRUNNER}> ${TESTRUNNER_ARGS})
   set(CXX_TEST_DEPENDS ${TARGET_TESTRUNNER})
@@ -6138,6 +6175,10 @@ if(QM_GTEST_LIBRARIES AND SERVER)
   if(TARGET qm-ui-popup-tests)
     list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-ui-popup-tests> ${TESTRUNNER_ARGS})
     list(APPEND CXX_TEST_DEPENDS qm-ui-popup-tests)
+  endif()
+  if(TARGET qm-prediction-tests)
+    list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-prediction-tests> ${TESTRUNNER_ARGS})
+    list(APPEND CXX_TEST_DEPENDS qm-prediction-tests)
   endif()
   if(TARGET qm-script-allocation-tests)
     list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-script-allocation-tests> ${TESTRUNNER_ARGS})

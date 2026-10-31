@@ -30,6 +30,25 @@ CEntity::CEntity(CGameWorld *pGameWorld, int ObjType, vec2 Pos, int ProximityRad
 	m_LastRenderTick = -1;
 }
 
+CEntity::CEntity(const CEntity &Other) :
+	m_pPrevTypeEntity(nullptr),
+	m_pNextTypeEntity(nullptr),
+	m_pGameWorld(Other.m_pGameWorld),
+	m_MarkedForDestroy(Other.m_MarkedForDestroy),
+	m_Id(Other.m_Id),
+	m_ObjType(Other.m_ObjType),
+	m_ProximityRadius(Other.m_ProximityRadius),
+	m_Pos(Other.m_Pos),
+	m_Number(Other.m_Number),
+	m_Layer(Other.m_Layer),
+	m_SnapTicks(Other.m_SnapTicks),
+	m_DestroyTick(Other.m_DestroyTick),
+	m_LastRenderTick(Other.m_LastRenderTick),
+	m_pParent(nullptr),
+	m_pChild(nullptr)
+{
+}
+
 CEntity::~CEntity()
 {
 	if(GameWorld())

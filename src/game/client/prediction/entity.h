@@ -28,6 +28,8 @@ public:
 	int GetId() const { return m_Id; }
 
 	CEntity(CGameWorld *pGameWorld, int Objtype, vec2 Pos = vec2(0, 0), int ProximityRadius = 0);
+	// 复制数据但不复制列表身份，派生成员准备失败时不能从源世界移除实体。
+	CEntity(const CEntity &Other);
 	virtual ~CEntity();
 
 	std::vector<SSwitchers> &Switchers() { return m_pGameWorld->Switchers(); }
