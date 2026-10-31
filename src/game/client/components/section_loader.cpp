@@ -9,18 +9,13 @@
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/settings_runtime_cache.h>
 
+#include <cerrno>
+#include <charconv>
+#include <cmath>
 #include <cstdlib>
-
-static uint64_t ParseSessionCacheU64(const char *pValue)
-{
-	if(pValue == nullptr || pValue[0] == '\0')
-		return 0;
-#if defined(CONF_FAMILY_WINDOWS)
-	return _strtoui64(pValue, nullptr, 10);
-#else
-	return strtoull(pValue, nullptr, 10);
-#endif
-}
+#include <cstring>
+#include <memory>
+#include <string_view>
 
 CSectionLoader::CSectionLoader() = default;
 
@@ -470,134 +465,199 @@ void CSectionLoader::SetDirtyByConfig(const void *pConfigVar)
 
 // -- Session cache I/O --
 
-bool CSectionLoader::LoadSessionCache(SSessionUiCache &Cache, const char *pFilename, IStorage *pStorage)
+namespace
 {
-	const IOHANDLE File = pStorage->OpenFile(pFilename, IOFLAG_READ, IStorage::TYPE_SAVE);
-	if(!File)
-		return false;
-
-	// 当前12个字段使用最大整数、64位hash和有限float文本时也必须完整读入。
-	char aBuf[512];
-	const unsigned Read = io_read(File, aBuf, sizeof(aBuf) - 1);
-	io_close(File);
-	if(Read == 0)
-		return false;
-
-	aBuf[Read] = '\0';
-
-	// Parse simple key=value lines
-	const char *p = aBuf;
-	while(*p)
+	template<typename T>
+	bool ParseSessionCacheNumber(const char *pBegin, const char *pEnd, T &Value)
 	{
-		// Skip whitespace
-		while(*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n')
-			++p;
-		if(*p == '\0')
-			break;
-
-		// Read key
-		const char *pKeyEnd = p;
-		while(*pKeyEnd && *pKeyEnd != '=' && *pKeyEnd != '\r' && *pKeyEnd != '\n')
-			++pKeyEnd;
-		const int KeyLen = (int)(pKeyEnd - p);
-		if(KeyLen <= 0 || *pKeyEnd != '=')
+		if(pBegin != pEnd && *pBegin == '+')
 		{
-			// Advance past this line
-			while(*p && *p != '\n')
-				++p;
-			if(*p == '\n')
-				++p;
-			continue;
+			++pBegin;
+			if(pBegin == pEnd || *pBegin < '0' || *pBegin > '9')
+				return false;
 		}
-
-		const char *pVal = pKeyEnd + 1;
-		const char *pValEnd = pVal;
-		while(*pValEnd && *pValEnd != '\r' && *pValEnd != '\n')
-			++pValEnd;
-		if(KeyLen == 13 && strncmp(p, "settings_page", 13) == 0)
-			Cache.m_LastSettingsPage = str_toint(pVal);
-		else if(KeyLen == 11 && strncmp(p, "tab_tclient", 11) == 0)
-			Cache.m_LastTClientTab = str_toint(pVal);
-		else if(KeyLen == 6 && strncmp(p, "tab_qm", 6) == 0)
-			Cache.m_LastQmTab = str_toint(pVal);
-		else if(KeyLen == 8 && strncmp(p, "scroll_y", 8) == 0)
-			Cache.m_LastScrollY = str_tofloat(pVal);
-		else if(KeyLen == 14 && strncmp(p, "viewport_width", 14) == 0)
-			Cache.m_RuntimeKey.m_ViewportWidth = str_toint(pVal);
-		else if(KeyLen == 15 && strncmp(p, "viewport_height", 15) == 0)
-			Cache.m_RuntimeKey.m_ViewportHeight = str_toint(pVal);
-		else if(KeyLen == 8 && strncmp(p, "ui_scale", 8) == 0)
-			Cache.m_RuntimeKey.m_UiScale = str_toint(pVal);
-		else if(KeyLen == 11 && strncmp(p, "config_hash", 11) == 0)
-			Cache.m_RuntimeKey.m_ConfigHash = ParseSessionCacheU64(pVal);
-		else if(KeyLen == 13 && strncmp(p, "language_hash", 13) == 0)
-			Cache.m_RuntimeKey.m_LanguageHash = ParseSessionCacheU64(pVal);
-		else if(KeyLen == 9 && strncmp(p, "font_hash", 9) == 0)
-			Cache.m_RuntimeKey.m_FontHash = ParseSessionCacheU64(pVal);
-		else if(KeyLen == 12 && strncmp(p, "backend_hash", 12) == 0)
-			Cache.m_RuntimeKey.m_BackendHash = ParseSessionCacheU64(pVal);
-		else if(KeyLen == 11 && strncmp(p, "window_hash", 11) == 0)
-			Cache.m_RuntimeKey.m_WindowHash = ParseSessionCacheU64(pVal);
-
-		p = pValEnd;
-		if(*p == '\n')
-			++p;
+		const auto Result = std::from_chars(pBegin, pEnd, Value);
+		return Result.ec == std::errc() && Result.ptr == pEnd;
 	}
 
-	Cache.m_Valid = (Cache.m_LastSettingsPage >= 0 || Cache.m_LastTClientTab >= 0 || Cache.m_LastQmTab >= 0);
-	return Cache.m_Valid;
+	bool ParseSessionCacheNumber(const char *pBegin, const char *pEnd, float &Value)
+	{
+		if(pBegin == pEnd)
+			return false;
+		char *pParsedEnd;
+		errno = 0;
+		Value = std::strtof(pBegin, &pParsedEnd);
+		return pParsedEnd == pEnd && errno != ERANGE && std::isfinite(Value);
+	}
+
+	struct SSessionCacheFileCloser
+	{
+		CSectionLoader::CSessionCacheFileOperations &m_Operations;
+		void operator()(void *pFile) const noexcept { m_Operations.Close(pFile); }
+	};
+
+	struct SSessionCacheCandidate
+	{
+		IStorage &m_Storage;
+		const std::string &m_Path;
+		bool m_Owned = false;
+		~SSessionCacheCandidate()
+		{
+			if(m_Owned)
+			{
+				try
+				{
+					m_Storage.RemoveFile(m_Path.c_str(), IStorage::TYPE_SAVE);
+				}
+				catch(...)
+				{
+				}
+			}
+		}
+	};
 }
 
-void CSectionLoader::SaveSessionCache(const SSessionUiCache &Cache, const char *pFilename, IStorage *pStorage)
+IOHANDLE CSectionLoader::CSessionCacheFileOperations::Open(IStorage &Storage, const char *pFilename, int Flags)
 {
-	if(!Cache.m_Valid)
-		return;
+	return Storage.OpenFile(pFilename, Flags, IStorage::TYPE_SAVE);
+}
 
-	pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-	const IOHANDLE File = pStorage->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
-		return;
+bool CSectionLoader::CSessionCacheFileOperations::Publish(IStorage &Storage, const char *pTemporary, const char *pTarget)
+{
+	return Storage.RenameFile(pTemporary, pTarget, IStorage::TYPE_SAVE, false);
+}
 
-	char aLine[128];
-	int Len;
+bool CSectionLoader::LoadSessionCache(SSessionUiCache &Cache, const char *pFilename, IStorage *pStorage, CSessionCacheFileOperations *pOperations) noexcept
+{
+	try
+	{
+		if(!pStorage || !pFilename || !pFilename[0])
+			return false;
+		CSessionCacheFileOperations Default;
+		auto &Operations = pOperations ? *pOperations : Default;
+		std::unique_ptr<void, SSessionCacheFileCloser> File(Operations.Open(*pStorage, pFilename, IOFLAG_READ), {Operations});
+		if(!File)
+			return false;
+		// 当前12个字段最长368字节；超出缓冲或含NUL的数据不能作为完整快照发布。
+		char aBuf[512];
+		const unsigned Read = Operations.Read(File.get(), aBuf, sizeof(aBuf) - 1);
+		char Extra;
+		const bool TooLong = Read == sizeof(aBuf) - 1 && Operations.Read(File.get(), &Extra, 1) != 0;
+		const bool Clean = Operations.Error(File.get()) == 0;
+		const bool Closed = Operations.Close(File.release()) == 0;
+		if(Read == 0 || TooLong || !Clean || !Closed || std::memchr(aBuf, '\0', Read) != nullptr)
+			return false;
+		aBuf[Read] = '\0';
 
-	Len = str_format(aLine, sizeof(aLine), "settings_page=%d\n", Cache.m_LastSettingsPage);
-	io_write(File, aLine, (unsigned)Len);
+		SSessionUiCache Candidate;
+		char *p = aBuf;
+		while(*p)
+		{
+			while(*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n')
+				++p;
+			if(!*p)
+				break;
+			char *pLineEnd = p;
+			while(*pLineEnd && *pLineEnd != '\r' && *pLineEnd != '\n')
+				++pLineEnd;
+			const bool LastLine = *pLineEnd == '\0';
+			*pLineEnd = '\0';
+			char *pEquals = std::strchr(p, '=');
+			if(!pEquals)
+				return false;
+			const std::string_view Key(p, pEquals - p);
+			char *pValue = pEquals + 1;
+			while(*pValue == ' ' || *pValue == '\t')
+				++pValue;
+			char *pEnd = pLineEnd;
+			while(pEnd > pValue && (pEnd[-1] == ' ' || pEnd[-1] == '\t'))
+				--pEnd;
+			*pEnd = '\0';
+			bool Valid = true;
+			if(Key == "settings_page")
+				Valid = ParseSessionCacheNumber(pValue, pEnd, Candidate.m_LastSettingsPage);
+			else if(Key == "tab_tclient")
+				Valid = ParseSessionCacheNumber(pValue, pEnd, Candidate.m_LastTClientTab);
+			else if(Key == "tab_qm")
+				Valid = ParseSessionCacheNumber(pValue, pEnd, Candidate.m_LastQmTab);
+			else if(Key == "scroll_y")
+				Valid = ParseSessionCacheNumber(pValue, pEnd, Candidate.m_LastScrollY);
+			else if(Key == "viewport_width")
+				Valid = ParseSessionCacheNumber(pValue, pEnd, Candidate.m_RuntimeKey.m_ViewportWidth);
+			else if(Key == "viewport_height")
+				Valid = ParseSessionCacheNumber(pValue, pEnd, Candidate.m_RuntimeKey.m_ViewportHeight);
+			else if(Key == "ui_scale")
+				Valid = ParseSessionCacheNumber(pValue, pEnd, Candidate.m_RuntimeKey.m_UiScale);
+			else if(Key == "config_hash")
+				Valid = ParseSessionCacheNumber(pValue, pEnd, Candidate.m_RuntimeKey.m_ConfigHash);
+			else if(Key == "language_hash")
+				Valid = ParseSessionCacheNumber(pValue, pEnd, Candidate.m_RuntimeKey.m_LanguageHash);
+			else if(Key == "font_hash")
+				Valid = ParseSessionCacheNumber(pValue, pEnd, Candidate.m_RuntimeKey.m_FontHash);
+			else if(Key == "backend_hash")
+				Valid = ParseSessionCacheNumber(pValue, pEnd, Candidate.m_RuntimeKey.m_BackendHash);
+			else if(Key == "window_hash")
+				Valid = ParseSessionCacheNumber(pValue, pEnd, Candidate.m_RuntimeKey.m_WindowHash);
+			if(!Valid)
+				return false;
+			if(LastLine)
+				break;
+			p = pLineEnd + 1;
+		}
+		Candidate.m_Valid = Candidate.m_LastSettingsPage >= 0 || Candidate.m_LastTClientTab >= 0 || Candidate.m_LastQmTab >= 0;
+		if(!Candidate.m_Valid)
+			return false;
+		Cache = Candidate;
+		return true;
+	}
+	catch(...)
+	{
+		return false;
+	}
+}
 
-	Len = str_format(aLine, sizeof(aLine), "tab_tclient=%d\n", Cache.m_LastTClientTab);
-	io_write(File, aLine, (unsigned)Len);
-
-	Len = str_format(aLine, sizeof(aLine), "tab_qm=%d\n", Cache.m_LastQmTab);
-	io_write(File, aLine, (unsigned)Len);
-
-	Len = str_format(aLine, sizeof(aLine), "scroll_y=%f\n", Cache.m_LastScrollY);
-	io_write(File, aLine, (unsigned)Len);
-
-	Len = str_format(aLine, sizeof(aLine), "viewport_width=%d\n", Cache.m_RuntimeKey.m_ViewportWidth);
-	io_write(File, aLine, (unsigned)Len);
-
-	Len = str_format(aLine, sizeof(aLine), "viewport_height=%d\n", Cache.m_RuntimeKey.m_ViewportHeight);
-	io_write(File, aLine, (unsigned)Len);
-
-	Len = str_format(aLine, sizeof(aLine), "ui_scale=%d\n", Cache.m_RuntimeKey.m_UiScale);
-	io_write(File, aLine, (unsigned)Len);
-
-	Len = str_format(aLine, sizeof(aLine), "config_hash=%llu\n", (unsigned long long)Cache.m_RuntimeKey.m_ConfigHash);
-	io_write(File, aLine, (unsigned)Len);
-
-	Len = str_format(aLine, sizeof(aLine), "language_hash=%llu\n", (unsigned long long)Cache.m_RuntimeKey.m_LanguageHash);
-	io_write(File, aLine, (unsigned)Len);
-
-	Len = str_format(aLine, sizeof(aLine), "font_hash=%llu\n", (unsigned long long)Cache.m_RuntimeKey.m_FontHash);
-	io_write(File, aLine, (unsigned)Len);
-
-	Len = str_format(aLine, sizeof(aLine), "backend_hash=%llu\n", (unsigned long long)Cache.m_RuntimeKey.m_BackendHash);
-	io_write(File, aLine, (unsigned)Len);
-
-	Len = str_format(aLine, sizeof(aLine), "window_hash=%llu\n", (unsigned long long)Cache.m_RuntimeKey.m_WindowHash);
-	io_write(File, aLine, (unsigned)Len);
-
-	io_close(File);
+bool CSectionLoader::SaveSessionCache(const SSessionUiCache &Cache, const char *pFilename, IStorage *pStorage, CSessionCacheFileOperations *pOperations) noexcept
+{
+	try
+	{
+		if(!pStorage || !pFilename || !pFilename[0] || !Cache.m_Valid || !std::isfinite(Cache.m_LastScrollY) ||
+			(Cache.m_LastSettingsPage < 0 && Cache.m_LastTClientTab < 0 && Cache.m_LastQmTab < 0))
+			return false;
+		char aData[512];
+		const int Length = str_format(aData, sizeof(aData),
+			"settings_page=%d\ntab_tclient=%d\ntab_qm=%d\nscroll_y=%f\nviewport_width=%d\nviewport_height=%d\nui_scale=%d\nconfig_hash=%llu\nlanguage_hash=%llu\nfont_hash=%llu\nbackend_hash=%llu\nwindow_hash=%llu\n",
+			Cache.m_LastSettingsPage, Cache.m_LastTClientTab, Cache.m_LastQmTab, Cache.m_LastScrollY,
+			Cache.m_RuntimeKey.m_ViewportWidth, Cache.m_RuntimeKey.m_ViewportHeight, Cache.m_RuntimeKey.m_UiScale,
+			static_cast<unsigned long long>(Cache.m_RuntimeKey.m_ConfigHash), static_cast<unsigned long long>(Cache.m_RuntimeKey.m_LanguageHash),
+			static_cast<unsigned long long>(Cache.m_RuntimeKey.m_FontHash), static_cast<unsigned long long>(Cache.m_RuntimeKey.m_BackendHash), static_cast<unsigned long long>(Cache.m_RuntimeKey.m_WindowHash));
+		if(Length <= 0 || Length >= static_cast<int>(sizeof(aData)) - 1)
+			return false;
+		const std::string Target(pFilename);
+		const std::string Temporary = Target + ".qm-save." + std::to_string(pid()) + ".tmp";
+		char aRoot[IO_MAX_PATH_LENGTH] = "";
+		pStorage->GetCompletePath(IStorage::TYPE_SAVE, "", aRoot, sizeof(aRoot));
+		if(!aRoot[0] || str_length(aRoot) + Temporary.size() >= IO_MAX_PATH_LENGTH ||
+			pStorage->FileExists(Temporary.c_str(), IStorage::TYPE_SAVE) || pStorage->FolderExists(Temporary.c_str(), IStorage::TYPE_SAVE))
+			return false;
+		pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+		CSessionCacheFileOperations Default;
+		auto &Operations = pOperations ? *pOperations : Default;
+		SSessionCacheCandidate Candidate{*pStorage, Temporary};
+		std::unique_ptr<void, SSessionCacheFileCloser> File(Operations.Open(*pStorage, Temporary.c_str(), IOFLAG_WRITE), {Operations});
+		if(!File)
+			return false;
+		Candidate.m_Owned = true;
+		if(Operations.Write(File.get(), aData, Length) != static_cast<unsigned>(Length) || Operations.Sync(File.get()) != 0 || Operations.Error(File.get()) != 0)
+			return false;
+		if(Operations.Close(File.release()) != 0 || !Operations.Publish(*pStorage, Temporary.c_str(), Target.c_str()))
+			return false;
+		Candidate.m_Owned = false;
+		return true;
+	}
+	catch(...)
+	{
+		return false;
+	}
 }
 
 // -- Profiling --

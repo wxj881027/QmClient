@@ -170,6 +170,20 @@ TEST(SettingsRuntimeCache, NumericKeysRejectNonFiniteValues)
 	EXPECT_EQ(SettingsRuntimeCacheRoundedKey(std::numeric_limits<float>::infinity(), 7), 7);
 }
 
+TEST(SettingsRuntimeCache, WindowIdentityChangeRejectsOtherwiseMatchingRuntimeMetadata)
+{
+	SSettingsRuntimeCacheKey Current;
+	Current.m_WindowWidth = 900;
+	Current.m_WindowHeight = 620;
+	Current.m_WindowHash = 42;
+	auto Persisted = Current;
+	EXPECT_TRUE(SettingsRuntimeCacheKeyMatches(Current, Persisted));
+	Persisted.m_WindowHash = 43;
+	EXPECT_FALSE(SettingsRuntimeCacheKeyMatches(Current, Persisted));
+	Persisted.m_WindowHash = Current.m_WindowHash;
+	EXPECT_TRUE(SettingsRuntimeCacheKeyMatches(Current, Persisted));
+}
+
 TEST(SettingsRuntimeCache, NumericKeysClampBeforeIntConversion)
 {
 	EXPECT_EQ(SettingsRuntimeCacheDimensionKey(0.0f), 1);

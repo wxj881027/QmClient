@@ -60,7 +60,8 @@ bool SettingsRuntimeCacheKeyMatches(const SSettingsRuntimeCacheKey &A, const SSe
 	       A.m_WindowWidth == B.m_WindowWidth &&
 	       A.m_WindowHeight == B.m_WindowHeight &&
 	       A.m_UiScale == B.m_UiScale &&
-	       A.m_ConfigHash == B.m_ConfigHash;
+	       A.m_ConfigHash == B.m_ConfigHash &&
+	       A.m_WindowHash == B.m_WindowHash;
 }
 
 ESettingsCacheDirtyReason SettingsRuntimeKeyMismatchDirtyReason(const SSettingsSectionCacheRuntimeKey &Current, const SSettingsSectionCacheRuntimeKey &Next)

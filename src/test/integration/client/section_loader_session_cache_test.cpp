@@ -28,7 +28,7 @@ TEST(SectionLoader, SessionCacheRoundTripsLastTabAndScroll)
 	Saved.m_RuntimeKey.m_WindowHash = 55;
 	Saved.m_Valid = true;
 
-	CSectionLoader::SaveSessionCache(Saved, "qmclient/settings_section_cache_metadata.cfg", pStorage.get());
+	ASSERT_TRUE(CSectionLoader::SaveSessionCache(Saved, "qmclient/settings_section_cache_metadata.cfg", pStorage.get()));
 
 	SSessionUiCache Loaded;
 	ASSERT_TRUE(CSectionLoader::LoadSessionCache(Loaded, "qmclient/settings_section_cache_metadata.cfg", pStorage.get()));
@@ -102,7 +102,7 @@ TEST(SectionLoaderSessionCache, MaximumScalarWidthsRoundTripEveryRuntimeKeyField
 	{
 		SCOPED_TRACE(Scroll);
 		Saved.m_LastScrollY = Scroll;
-		CSectionLoader::SaveSessionCache(Saved, "qmclient/full_width.cfg", pStorage.get());
+		ASSERT_TRUE(CSectionLoader::SaveSessionCache(Saved, "qmclient/full_width.cfg", pStorage.get()));
 		SSessionUiCache Loaded;
 		ASSERT_TRUE(CSectionLoader::LoadSessionCache(Loaded, "qmclient/full_width.cfg", pStorage.get()));
 		EXPECT_EQ(Loaded.m_LastSettingsPage, Saved.m_LastSettingsPage);
@@ -131,7 +131,7 @@ TEST(SectionLoaderSessionCache, ReloadingLongMetadataReplacesThePreviousComplete
 	Saved.m_RuntimeKey.m_BackendHash = std::numeric_limits<uint64_t>::max() - 3;
 	Saved.m_RuntimeKey.m_WindowHash = std::numeric_limits<uint64_t>::max() - 4;
 	Saved.m_Valid = true;
-	CSectionLoader::SaveSessionCache(Saved, "qmclient/reload.cfg", pStorage.get());
+	ASSERT_TRUE(CSectionLoader::SaveSessionCache(Saved, "qmclient/reload.cfg", pStorage.get()));
 	SSessionUiCache Loaded;
 	ASSERT_TRUE(CSectionLoader::LoadSessionCache(Loaded, "qmclient/reload.cfg", pStorage.get()));
 	ASSERT_TRUE(Loaded.m_RuntimeKey == Saved.m_RuntimeKey);
@@ -139,7 +139,7 @@ TEST(SectionLoaderSessionCache, ReloadingLongMetadataReplacesThePreviousComplete
 	Saved.m_RuntimeKey.m_FontHash = std::numeric_limits<uint64_t>::max() - 5;
 	Saved.m_RuntimeKey.m_BackendHash = std::numeric_limits<uint64_t>::max() - 6;
 	Saved.m_RuntimeKey.m_WindowHash = std::numeric_limits<uint64_t>::max() - 7;
-	CSectionLoader::SaveSessionCache(Saved, "qmclient/reload.cfg", pStorage.get());
+	ASSERT_TRUE(CSectionLoader::SaveSessionCache(Saved, "qmclient/reload.cfg", pStorage.get()));
 	ASSERT_TRUE(CSectionLoader::LoadSessionCache(Loaded, "qmclient/reload.cfg", pStorage.get()));
 	EXPECT_FLOAT_EQ(Loaded.m_LastScrollY, -480);
 	EXPECT_TRUE(Loaded.m_RuntimeKey == Saved.m_RuntimeKey);

@@ -2,6 +2,7 @@
 #define GAME_CLIENT_COMPONENTS_SECTION_LOADER_H
 
 #include <base/math.h>
+#include <base/system.h>
 
 #include <game/client/components/settings_runtime_cache.h>
 #include <game/client/ui_rect.h>
@@ -12,6 +13,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+class IStorage;
 
 enum class ESettingsSectionState : uint8_t
 {
@@ -422,8 +425,22 @@ public:
 
 	// -- Session cache I/O --
 
-	static bool LoadSessionCache(SSessionUiCache &Cache, const char *pFilename, class IStorage *pStorage);
-	static void SaveSessionCache(const SSessionUiCache &Cache, const char *pFilename, class IStorage *pStorage);
+	class CSessionCacheFileOperations
+	{
+	public:
+		virtual ~CSessionCacheFileOperations() = default;
+		virtual IOHANDLE Open(IStorage &Storage, const char *pFilename, int Flags);
+		virtual unsigned Read(IOHANDLE File, void *pData, unsigned Size) { return io_read(File, pData, Size); }
+		virtual unsigned Write(IOHANDLE File, const void *pData, unsigned Size) { return io_write(File, pData, Size); }
+		virtual int Sync(IOHANDLE File) { return io_sync(File); }
+		virtual int Error(IOHANDLE File) { return io_error(File); }
+		virtual int Close(IOHANDLE File) noexcept { return io_close(File); }
+		// false或异常表示未替换，失败路径不能先删除旧目标。
+		virtual bool Publish(IStorage &Storage, const char *pTemporary, const char *pTarget);
+	};
+
+	static bool LoadSessionCache(SSessionUiCache &Cache, const char *pFilename, IStorage *pStorage, CSessionCacheFileOperations *pOperations = nullptr) noexcept;
+	static bool SaveSessionCache(const SSessionUiCache &Cache, const char *pFilename, IStorage *pStorage, CSessionCacheFileOperations *pOperations = nullptr) noexcept;
 	static bool IsVisibleSummarySectionName(const char *pName);
 	void SetRuntimeKey(const SSettingsSectionCacheRuntimeKey &RuntimeKey);
 	void SetProgressiveEnabled(bool Enabled);

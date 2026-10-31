@@ -5477,6 +5477,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/legacy_updater_data_test.cpp
     src/test/unit/client/section_loader_test.cpp
     src/test/integration/client/section_loader_session_cache_test.cpp
+    src/test/integration/client/section_loader_session_cache_failure_test.cpp
     src/test/contract/qmclient/settings/section_loader_cleanup_contract_test.cpp
     src/test/unit/client/swap_countdown_message_test.cpp
     src/test/unit/base/secure_random_test.cpp
