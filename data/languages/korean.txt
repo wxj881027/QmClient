@@ -4535,6 +4535,9 @@ Dynamic FOV smoothness
 Dynamic FOV smoothness (0=instant, 100=smoothest)
 == 동적 시야 부드러움 (0=즉시, 100=가장 부드러움)
 
+Dynamic Island
+== 다이내믹 아일랜드
+
 Dynamic island
 == 다이나믹 아일랜드
 
@@ -4682,8 +4685,8 @@ enable
 Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
 == 해머로 칠 때마다 스킨이 바뀌길 원할 때만 해머 스킨 강탈을 켜세요. 다른 플레이어에게도 보입니다.
 
-Enable "Show player stats HUD"; tick "Map progress bar", then pick "Use embedded HUD progress bar" or place the bar with the sliders.
-== 플레이어 통계 HUD 표시를 켜고 맵 진행 막대를 선택한 다음, 내장 HUD 진행 막대 사용을 고르거나 슬라이더로 막대를 배치하세요.
+Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
+== 맵 진행률 바를 켜고 위치를 별도 표시, 플레이어 통계 또는 다이내믹 아일랜드로 선택하세요. 플레이어 통계를 선택하면 플레이어 통계 HUD 표시도 켜야 합니다.
 
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
 == "다른 플레이어의 예측되지 않은 고스트 표시"를 켠 뒤 예측 고스트와 예측되지 않은 고스트의 불투명도를 조정하세요.
@@ -7553,6 +7556,9 @@ Keyword reply use Dummy
 Keyword rules
 == 키워드 규칙
 
+Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+== Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+
 Kick player
 == 플레이어 추방
 
@@ -8312,8 +8318,8 @@ Map progress bar height
 Map progress bar horizontal position (center, % of screen width)
 == 맵 진행률 바 가로 위치(중앙 기준, 화면 너비 백분율)
 
-Map progress bar style (0=bottom bar, 1=HUD overlay)
-== 맵 진행률 바 스타일(0=하단 막대, 1=HUD 내장)
+Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)
+== 맵 진행률 바 위치(0=별도 표시, 1=플레이어 통계, 2=다이내믹 아일랜드)
 
 Map progress bar vertical position (top edge, % of screen height)
 == 맵 진행률 바 세로 위치(상단 기준, 화면 높이 백분율)
@@ -10888,6 +10894,9 @@ Progress bar color
 
 Progress bar height
 == 진행 표시줄 높이
+
+Progress bar location
+== 진행률 바 위치
 
 Progress bar width
 == 진행 표시줄 너비
@@ -14567,6 +14576,9 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Q 탄 Tee 변형 강도
 
+Standalone
+== 별도 표시
+
 Star
 == 별
 
@@ -16672,9 +16684,6 @@ Use default voice input device
 
 Use default voice output device
 == 기본 음성 출력 장치 사용
-
-Use embedded HUD progress bar
-== 내장 HUD 진행 표시줄 사용
 
 Use emote
 == 이모트 사용

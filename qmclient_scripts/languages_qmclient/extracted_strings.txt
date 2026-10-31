@@ -1510,6 +1510,7 @@ Dynamic FOV intensity
 Dynamic FOV intensity (0-200)
 Dynamic FOV smoothness
 Dynamic FOV smoothness (0=instant, 100=smoothest)
+Dynamic Island
 Dynamic island
 Dynamic Island background alpha
 Dynamic Island background color
@@ -1559,7 +1560,7 @@ Emoticons
 Empty slots still take space, so clear the ones you no longer use.
 enable
 Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
-Enable "Show player stats HUD"; tick "Map progress bar", then pick "Use embedded HUD progress bar" or place the bar with the sliders.
+Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
 Enable "Try to rename before finishing", then fill in the finishing name and run to the finish to test it.
 Enable /swap
@@ -2517,6 +2518,7 @@ Keyword reply
 Keyword reply rules (each line: [rename] [regex] keyword=>reply)
 Keyword reply use Dummy
 Keyword rules
+Keyword rules are too long. Changes were not saved; shorten or remove a rule.
 Kick player
 Kick player with specified id for any reason
 Kick voting requires %s players
@@ -2770,7 +2772,7 @@ Map progress bar
 Map progress bar color
 Map progress bar height
 Map progress bar horizontal position (center, % of screen width)
-Map progress bar style (0=bottom bar, 1=HUD overlay)
+Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)
 Map progress bar vertical position (top edge, % of screen height)
 Map progress bar width (percentage of screen width)
 Map Progress: %.1f%%
@@ -3629,6 +3631,7 @@ Profiles
 Profiles file
 Progress bar color
 Progress bar height
+Progress bar location
 Progress bar width
 Project and community websites
 Projectile / explosion range
@@ -4855,6 +4858,7 @@ Spree
 SQL Server name for record table
 Squishy Tee deformation duration
 Squishy Tee deformation intensity
+Standalone
 Star
 Start (s)
 Start and connect to local server
@@ -5557,7 +5561,6 @@ Use default input
 Use default output
 Use default voice input device
 Use default voice output device
-Use embedded HUD progress bar
 Use emote
 Use enemy color instead of frozen color
 Use enemy list to drive player indicators

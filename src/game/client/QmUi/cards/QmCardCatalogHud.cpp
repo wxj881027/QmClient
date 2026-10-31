@@ -10,9 +10,11 @@
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/qm_music_hook_registry.h>
 #include <game/client/gameclient.h>
+#include <game/client/ui_scrollregion.h>
 #include <game/localization.h>
 
 #include <algorithm>
+#include <iterator>
 
 // HUD 分类卡片模块（14 张）：卡片的高度测量、重测版本、预布局输入与内容渲染都在这里，
 // 页面（栖梦「HUD」页、搜索页）只声明"这一页有这些卡"。
@@ -211,8 +213,21 @@ void CMenus::RenderQmHudPlayerStatsContent(CUIRect &Content, float LineHeight, f
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmPlayerStatsMapProgress, "Map progress bar", Localize("Map progress bar"), &g_Config.m_QmPlayerStatsMapProgress);
 	if(g_Config.m_QmPlayerStatsMapProgress)
 	{
-		DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmPlayerStatsMapProgressStyle, "Use embedded HUD progress bar", Localize("Use embedded HUD progress bar"), &g_Config.m_QmPlayerStatsMapProgressStyle);
-		if(g_Config.m_QmPlayerStatsMapProgressStyle == 0)
+		CUIRect LocationRow, LocationLabel, LocationControl;
+		if(Flow.Control("qmclient-map-progress-location", LineHeight, LocationRow))
+		{
+			SplitSettingsControlRow(LocationRow, CurrentSettingsContentMetrics(), &LocationLabel, &LocationControl);
+			RenderQmHudLabel("qmclient-map-progress-location", &LocationLabel, Localize("Progress bar location"), BodySize);
+			static CUi::SDropDownState s_MapProgressLocation;
+			static CScrollRegion s_MapProgressLocationScroll;
+			const char *apLocations[] = {Localize("Standalone"), Localize("Player stats"), Localize("Dynamic Island")};
+			s_MapProgressLocation.m_SelectionPopupContext.m_pScrollRegion = &s_MapProgressLocationScroll;
+			const int Selection = DoSettingsDropDown(&LocationControl, std::clamp(g_Config.m_QmPlayerStatsMapProgressStyle, 0, 2),
+				apLocations, std::size(apLocations), s_MapProgressLocation, {}, &g_Config.m_QmPlayerStatsMapProgressStyle, nullptr, &LocationRow);
+			if(!PrewarmOnly && !Ui()->RenderOnly())
+				g_Config.m_QmPlayerStatsMapProgressStyle = Selection;
+		}
+		Flow.Space(LineSpacing);
 		{
 			static CButtonContainer s_MapProgressColorId;
 			{
@@ -223,6 +238,9 @@ void CMenus::RenderQmHudPlayerStatsContent(CUIRect &Content, float LineHeight, f
 				}
 				Flow.Space(CurrentSettingsContentMetrics().m_LineSpacing);
 			}
+		}
+		if(g_Config.m_QmPlayerStatsMapProgressStyle == 0)
+		{
 			CUIRect Row, LabelColumn, ControlColumn;
 			auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "") {
 				if(Flow.Control(pTextId, CurrentSettingsContentMetrics().m_LineHeight, Row))

@@ -3595,6 +3595,8 @@ if(CLIENT)
     components/qmclient/menus_qmclient_internal.h
     components/qmclient/menus_qmclient_popups.cpp
     components/qmclient/menus_qmclient_search.cpp
+    components/qmclient/hud_map_progress.cpp
+    components/qmclient/hud_map_progress.h
     components/qmclient/modes.cpp
     components/qmclient/modes.h
     components/qmclient/nameplate_layout.h
@@ -5070,6 +5072,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/music/qm_spotify_parser_test.cpp
     src/test/unit/qmclient/client/qm_modes_test.cpp
     src/test/unit/qmclient/client/qm_map_progress_test.cpp
+    src/test/unit/qmclient/client/qm_hud_map_progress_test.cpp
     src/test/unit/qmclient/client/qm_config_save_value_override_test.cpp
     src/test/integration/qmclient/client/qm_removed_ui_config_test.cpp
     src/test/integration/qmclient/client/qm_legacy_config_load_test.cpp
