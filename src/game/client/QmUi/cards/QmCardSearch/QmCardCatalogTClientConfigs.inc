@@ -2,13 +2,11 @@
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_tclient_configs_actions[] = {
-		{Localizable("Apply Changes"), nullptr, "应用更改"},
 		{Localizable("Audio"), nullptr, "语音音效"},
 		{Localizable("Auto"), nullptr, "自动"},
 		{Localizable("Camera"), nullptr, "镜头视野"},
 		{Localizable("Changes: %d"), nullptr, "更改数：%d"},
 		{Localizable("Chat"), nullptr, "聊天"},
-		{Localizable("Clear Changes"), nullptr, "清除更改"},
 		{Localizable("Compact"), nullptr, "紧凑列表"},
 		{Localizable("Config Changes"), nullptr, "配置更改"},
 		{Localizable("Config Filters"), nullptr, "配置过滤器"},
@@ -19,7 +17,6 @@ namespace
 		{Localizable("Misc"), nullptr, "其他杂项"},
 		{Localizable("Modified"), nullptr, "仅已修改"},
 		{Localizable("QmClient"), nullptr, "栖梦"},
-		{Localizable("Reset"), nullptr, "重置"},
 		{Localizable("Search"), nullptr, "搜索"},
 		{Localizable("Social"), nullptr, "社交功能"},
 		{Localizable("TClient"), nullptr, "TClient"},

@@ -91,9 +91,7 @@ namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_ddnet_miscellaneous[] = {
 		{Localizable("Chat command (e.g. showall 1)"), nullptr, "聊天指令（例如：showall 1）"},
-		{Localizable("New random timeout code"), nullptr, "随机生成新的超时代码"},
 		{Localizable("Run on join"), nullptr, "进入时执行"},
-		{Localizable("Unregister protocol and file extensions"), nullptr, "解除协议与文件类型关联"},
 		{nullptr, "cl_run_on_join", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("deck:ddnet-miscellaneous", deck_ddnet_miscellaneous);

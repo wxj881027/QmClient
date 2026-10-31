@@ -15,7 +15,6 @@ namespace
 		{Localizable("Console string color"), nullptr, "控制台字符串颜色"},
 		{Localizable("Console text color"), nullptr, "控制台文字颜色"},
 		{Localizable("Highlight console commands"), nullptr, "高亮控制台命令"},
-		{Localizable("Reset console appearance"), nullptr, "恢复控制台默认外观"},
 		{Localizable("Classic PowerShell"), nullptr, "经典 PowerShell"},
 		{Localizable("Modern terminal"), nullptr, "现代终端"},
 		{nullptr, "qm_console_background_color", nullptr},

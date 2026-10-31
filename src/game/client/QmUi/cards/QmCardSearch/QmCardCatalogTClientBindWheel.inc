@@ -2,7 +2,6 @@
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_tclient_bind_wheel_editor[] = {
-		{Localizable("Add Bind"), nullptr, "添加绑定"},
 		{Localizable("Bind Wheel Key"), nullptr, "唤出滚轮绑键"},
 		{Localizable("Command"), nullptr, "命令"},
 		{Localizable("Command:"), nullptr, "指令："},
@@ -10,17 +9,13 @@ namespace
 		{Localizable("L select  R swap  M select only"), nullptr, "左键选择 右键交换 中键仅选择"},
 		{Localizable("Name"), nullptr, "名称"},
 		{Localizable("Name:"), nullptr, "名称："},
-		{Localizable("Override Selected"), nullptr, "覆盖选定项"},
-		{Localizable("Remove Bind"), nullptr, "删除绑定"},
 		{Localizable("Reset position of mouse when opening bindwheel"), nullptr, "打开快捷绑定轮盘时重置鼠标位置"},
 		{Localizable("Create wheel presets here. Existing wheel entries are kept."), nullptr, "在这里创建轮盘预设；现有轮盘条目会保留。"},
-		{Localizable("Add default presets"), nullptr, "添加默认预设"},
 		{Localizable("Thanks!"), nullptr, "感谢！"},
 		{Localizable("Wheel label"), nullptr, "轮盘标签"},
 		{Localizable("Preset type"), nullptr, "预设类型"},
 		{Localizable("Main Tee"), nullptr, "本体"},
 		{Localizable("Main Tee and dummy"), nullptr, "本体与分身"},
-		{Localizable("Apply to"), nullptr, "应用到"},
 		{Localizable("Skin"), nullptr, "皮肤"},
 		{Localizable("Country code"), nullptr, "国家代码"},
 		{Localizable("Pain"), nullptr, "痛苦"},
@@ -38,8 +33,6 @@ namespace
 		{Localizable("GUI cursor"), nullptr, "界面光标"},
 		{Localizable("Strong / Weak"), nullptr, "强 / 弱"},
 		{Localizable("Use current settings"), nullptr, "使用当前设置"},
-		{Localizable("Save changes"), nullptr, "保存修改"},
-		{Localizable("New preset"), nullptr, "新建预设"},
 		{Localizable("Bind Wheel"), nullptr, "绑定轮盘"},
 		{nullptr, "qm_reset_bindwheel_mouse", nullptr},
 	};

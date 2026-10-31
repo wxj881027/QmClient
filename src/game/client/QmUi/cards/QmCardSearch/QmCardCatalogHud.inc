@@ -266,8 +266,6 @@ namespace
 		{Localizable("Keyboard size"), nullptr, "键盘大小"},
 		{Localizable("Mouse size"), nullptr, "鼠标大小"},
 		{Localizable("Opacity"), nullptr, "不透明度"},
-		{Localizable("Reset count appearance"), nullptr, "恢复计数默认外观"},
-		{Localizable("Reset key press counts"), nullptr, "清零按键累计次数"},
 		{Localizable("Show inputs"), nullptr, "显示按键"},
 		{Localizable("Show key press counts"), nullptr, "显示按键累计次数"},
 		{Localizable("Vertical position"), nullptr, "垂直位置"},
@@ -300,9 +298,7 @@ namespace
 		{Localizable("Original and translation"), nullptr, "原文和译文"},
 		{Localizable("Original only"), nullptr, "仅原文"},
 		{Localizable("Paste sp_dc from Spotify web cookies"), nullptr, "粘贴浏览器中的 sp_dc cookie"},
-		{Localizable("Restore Kugou files"), nullptr, "恢复酷狗原始文件"},
 		{Localizable("Separate Dynamic Island"), nullptr, "独立灵动岛 歌词附岛"},
-		{Localizable("Set up Kugou lyrics"), nullptr, "设置酷狗歌词接入"},
 		{Localizable("Show lyrics in Dynamic Island"), nullptr, "将歌词显示在灵动岛内"},
 		{Localizable("Translation only"), nullptr, "仅译文"},
 		{nullptr, "qm_kugou_hook_enable", nullptr},
@@ -353,9 +349,6 @@ namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_system_media_controls[] = {
 		{Localizable("Enable system media control"), nullptr, "启用系统媒体控制"},
-		{Localizable("Next"), nullptr, "下一个"},
-		{Localizable("Play/Pause"), nullptr, "播放/暂停"},
-		{Localizable("Previous"), nullptr, "上一个"},
 		{Localizable("Show song info in top-left corner"), nullptr, "在左上角显示歌曲信息"},
 		{nullptr, "qm_smtc_enable", nullptr},
 		{nullptr, "qm_smtc_show_hud", nullptr},

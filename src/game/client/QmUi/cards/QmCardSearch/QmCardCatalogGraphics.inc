@@ -39,7 +39,6 @@ namespace
 		{Localizable("Current graphics backend"), nullptr, "当前图形后端"},
 		{Localizable("Error"), nullptr, "错误"},
 		{Localizable("Ok"), nullptr, "确定"},
-		{Localizable("System graphics settings"), nullptr, "系统图形设置"},
 		{Localizable("Unknown"), nullptr, "未知"},
 	};
 	QM_CARD_SEARCH_REGISTER("deck:graphics-display", deck_graphics_display);

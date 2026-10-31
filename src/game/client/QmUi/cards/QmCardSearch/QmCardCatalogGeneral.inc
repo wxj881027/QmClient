@@ -4,10 +4,6 @@ namespace
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_general_client[] = {
 		{Localizable("Config directory"), nullptr, "配置目录（cfg）"},
 		{Localizable("Hz", "Hertz"), nullptr, "Hz", "Hertz"},
-		{Localizable("Open the directory that contains the configuration and user files"), nullptr, "打开存有配置文件与用户文件的文件夹路径"},
-		{Localizable("Open the directory to add custom themes"), nullptr, "打开用以添加自定义主题的文件夹路径"},
-		{Localizable("Open the saves file"), nullptr, "打开存档密码文件"},
-		{Localizable("Open the settings file"), nullptr, "打开设置文件"},
 		{Localizable("Save power by lowering update rate (higher input latency)"), nullptr, "降低刷新率以节约功耗（增加输入延迟）"},
 		{Localizable("Saves file"), nullptr, "存档密码文件"},
 		{Localizable("Settings file"), nullptr, "设置文件"},
@@ -105,9 +101,7 @@ namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_tclient_info_files[] = {
 		{Localizable("Configuration packages"), nullptr, "配置包 打包 qmconfig"},
-		{Localizable("Export configuration package"), nullptr, "导出 配置 备份 bind cfg"},
 		{Localizable("Import configuration package"), nullptr, "导入 配置 恢复 bind cfg"},
-		{Localizable("Import and restart"), nullptr, "恢复 重启"},
 		{Localizable("Chat Binds"), nullptr, "聊天绑定"},
 		{Localizable("Profiles"), nullptr, "配置文件"},
 		{Localizable("QmClient Settings"), nullptr, "QmClient 设置"},
@@ -118,8 +112,6 @@ namespace
 		{Localizable("Complete restore replaces the listed files. A backup is saved before importing. The client will restart."), nullptr, "完整恢复会替换列出的文件；导入前自动备份，客户端将重启。"},
 		{Localizable("Replace settings, binds and the listed cfg files, then restart? The current configuration will be backed up first."), nullptr, "替换设置、绑定和列出的 cfg 文件并重启？当前配置会先备份。"},
 		{Localizable("Select a configuration package to preview its contents."), nullptr, "选择一个配置包以预览内容。"},
-		{Localizable("Open package folder"), nullptr, "打开配置包目录"},
-
-	};
+};
 	QM_CARD_SEARCH_REGISTER("deck:tclient-info-files", deck_tclient_info_files);
 }

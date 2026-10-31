@@ -72,7 +72,6 @@ namespace
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_tclient_font[] = {
 		{Localizable("(Follow Chinese font)"), nullptr, "（跟随中文字体）"},
 		{Localizable("(Follow English font)"), nullptr, "（跟随英文字体）"},
-		{Localizable("Browse font store…"), nullptr, "浏览字体商店…"},
 		{Localizable("CJK font weight:"), nullptr, "中日韩字体字重："},
 		{Localizable("Chinese font:"), nullptr, "中文字体："},
 		{Localizable("Default"), nullptr, "默认"},
@@ -84,7 +83,6 @@ namespace
 		{Localizable("Icon symbols:"), nullptr, "图标符号："},
 		{Localizable("Installed"), nullptr, "已安装"},
 		{Localizable("Preview"), nullptr, "预览"},
-		{Localizable("Retry"), nullptr, "重试"},
 		{Localizable("Japanese"), nullptr, "日语"},
 		{Localizable("Korean"), nullptr, "韩语"},
 		{Localizable("Chinese (Simplified)"), nullptr, "简体中文"},
@@ -101,7 +99,6 @@ namespace
 		{Localizable("Monospace"), nullptr, "等宽"},
 		{Localizable("Not installed"), nullptr, "未安装"},
 		{Localizable("Total fonts:"), nullptr, "字体总数："},
-		{Localizable("Download"), nullptr, "下载"},
 		{Localizable("Show system fonts"), nullptr, "显示系统字体"},
 		{nullptr, "cl_text_entities_size", nullptr},
 		{nullptr, "qm_custom_font", nullptr},

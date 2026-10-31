@@ -2,7 +2,6 @@
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_tooltip[] = {
-		{Localizable("Reset tooltip appearance"), nullptr, "恢复气泡默认外观"},
 		{Localizable("Tooltip background color"), nullptr, "提示气泡背景颜色"},
 		{Localizable("Tooltip bounce animation"), nullptr, "提示气泡回弹动画"},
 		{Localizable("Tooltip font size"), nullptr, "提示气泡字号"},

@@ -2,7 +2,6 @@
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_appearance_preset[] = {
-		{Localizable("Apply Qm recommended appearance"), nullptr, "应用栖梦推荐外观"},
 		{Localizable("Applying this preset changes the appearance settings listed below."), nullptr, "应用预设会修改下面列出的外观设置。"},
 		{Localizable("CJK font"), nullptr, "中日韩文字字体"},
 		{Localizable("LXGW WenKai is available."), nullptr, "霞鹜文楷可用。"},

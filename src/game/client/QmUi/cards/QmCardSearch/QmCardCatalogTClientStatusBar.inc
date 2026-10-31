@@ -2,10 +2,7 @@
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_tclient_status_bar_preview[] = {
-		{Localizable("Add Item"), nullptr, "添加项"},
-		{Localizable("Apply"), nullptr, "应用"},
 		{Localizable("No status bar items"), nullptr, "暂无状态栏项目"},
-		{Localizable("Remove Item"), nullptr, "删除项"},
 		{Localizable("Status Bar Codes"), nullptr, "状态栏代码"},
 		{Localizable("Status Scheme:"), nullptr, "状态方案："},
 		{nullptr, "cl_languagefile", nullptr},

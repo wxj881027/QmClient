@@ -102,7 +102,6 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		{"Console color scheme", "qm:console"},
 		{"Console font size", "qm:console"},
 		{"Selection background color", "qm:chat_completion"},
-		{"Reset chat completion appearance", "qm:chat_completion"},
 	};
 	for(const auto &Case : aCases)
 	{
@@ -115,6 +114,23 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		EXPECT_TRUE(qm_card_catalog::HasCardModule(It->m_pStableId));
 		EXPECT_STREQ(It->m_Target.m_pStableId, Case.m_pCard);
 	}
+}
+
+TEST(QmCatalogSearch, ActionButtonTextDoesNotMatchCards)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	const auto HasSkinQueue = [&](const char *pQuery) {
+		const auto Results = qm_card_registry::SearchCards(pQuery, Model);
+		return std::any_of(Results.begin(), Results.end(), [](const auto &Result) {
+			return std::string(Result.m_pStableId) == "deck:tee-skin-queue";
+		});
+	};
+	EXPECT_TRUE(HasSkinQueue("皮肤队列"));
+	EXPECT_TRUE(HasSkinQueue("Enable skin queue rotation"));
+	EXPECT_FALSE(HasSkinQueue("将改动保存回此预设"));
+	EXPECT_FALSE(HasSkinQueue("Save changes back to this preset"));
+	EXPECT_FALSE(HasSkinQueue("回"));
 }
 
 TEST(QmCatalogSearch, ChineseQueryKeepsActualRowAndDropsLongHelp)

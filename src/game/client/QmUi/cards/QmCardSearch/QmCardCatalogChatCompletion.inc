@@ -4,7 +4,6 @@ namespace
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_chat_completion[] = {
 		{Localizable("Background color"), nullptr, "背景颜色"},
 		{Localizable("Background opacity"), nullptr, "背景不透明度"},
-		{Localizable("Reset chat completion appearance"), nullptr, "恢复聊天补全默认外观"},
 		{Localizable("Selected text color"), nullptr, "选中文字颜色"},
 		{Localizable("Selection background color"), nullptr, "选中项背景颜色"},
 		{Localizable("Text color"), nullptr, "文字颜色"},

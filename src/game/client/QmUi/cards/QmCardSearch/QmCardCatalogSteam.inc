@@ -3,7 +3,6 @@ namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_steam[] = {
 		{Localizable("Checking Steam..."), nullptr, "正在检测 Steam…"},
-		{Localizable("Detect Steam again"), nullptr, "重新检测 Steam"},
 		{Localizable("Enter the Steam client program path, without command arguments"), nullptr, "填写 Steam 客户端程序路径，不要附带启动参数"},
 		{Localizable("Launch Steam automatically when starting externally"), nullptr, "从外部启动时自动启动 Steam"},
 		{Localizable("Manual Steam path is invalid; using automatic detection"), nullptr, "手动填写的 Steam 路径无效，已使用自动检测"},

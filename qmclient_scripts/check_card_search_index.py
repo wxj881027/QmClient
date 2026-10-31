@@ -20,6 +20,11 @@ import re
 import sys
 from pathlib import Path
 
+try:
+	from card_search_action_labels import ACTION_BUTTON_LABELS
+except ImportError:
+	from qmclient_scripts.card_search_action_labels import ACTION_BUTTON_LABELS
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INDEX_RELATIVE = Path("src/game/client/QmUi/cards/QmCardCatalogSearch.cpp")
 CLIENT_SOURCE_RELATIVE = Path("src/game/client")
@@ -472,7 +477,7 @@ def analyze(root: Path) -> dict:
 	card_labels: set[str] = set()
 	for text in card_sources.values():
 		card_labels |= extract_localize_labels(text)
-	global_unindexed = sorted(label for label in card_labels if label not in all_index_labels and label not in IGNORED_SOURCE_LABELS)
+	global_unindexed = sorted(label for label in card_labels if label not in all_index_labels and label not in IGNORED_SOURCE_LABELS and label not in ACTION_BUTTON_LABELS)
 
 	tables_by_card: dict[str, set[str]] = {stable_id: labels for stable_id, labels in declared.items()}
 	missing_tables = []
@@ -571,6 +576,7 @@ def analyze(root: Path) -> dict:
 		"missing_total": sum(len(card["missing"]) for card in cards),
 		"unindexed_labels": global_unindexed,
 		"ignored_labels": sorted(IGNORED_SOURCE_LABELS),
+		"indexed_action_labels": sorted(ACTION_BUTTON_LABELS & all_index_labels),
 	}
 
 
@@ -585,6 +591,7 @@ def render_markdown(report: dict) -> str:
 		f"- 声明结构问题：{len(report['declaration_problems'])}",
 		f"- 未入索引的卡片文案：{len(report['unindexed_labels'])}",
 		f"- 已知例外（共享弹窗/状态/标题）：{len(report['ignored_labels'])}",
+		f"- 仍被索引的动作按钮文案：{len(report['indexed_action_labels'])}",
 		"",
 	]
 	if report["declaration_problems"]:
@@ -653,7 +660,7 @@ def main(argv: list[str] | None = None) -> int:
 		args.json.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
 	if args.strict:
-		problems = len(report["drifted_labels"]) + len(report["unregistered_tables"]) + len(report["missing_tables"]) + len(report["declaration_problems"])
+		problems = len(report["drifted_labels"]) + len(report["unregistered_tables"]) + len(report["missing_tables"]) + len(report["declaration_problems"]) + len(report["indexed_action_labels"])
 		if problems:
 			print(f"索引结构检查失败：{problems} 项", file=sys.stderr)
 			return 1
