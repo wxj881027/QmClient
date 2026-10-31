@@ -447,7 +447,7 @@ void CGameWorld::NetObjAdd(int ObjId, int ObjType, const void *pObjData, const C
 			{
 				pProj->Keep();
 				if(pProj->m_Type == WEAPON_SHOTGUN && m_WorldConfig.m_IsDDRace)
-					pProj->m_LifeSpan = 20 * GameTickSpeed() - (GameTick() - pProj->m_StartTick);
+					pProj->m_LifeSpan = NetProj.GetLifeSpan();
 				return;
 			}
 		}

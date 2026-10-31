@@ -19,6 +19,15 @@ namespace QmCollision
 		};
 		return CanRound(Pos.x) && CanRound(Pos.y);
 	}
+	inline bool CanQueryLine(vec2 From, vec2 To)
+	{
+		// 仅约束端点、实际 mix 终点与 int 遍历计数；不代表该步数已满足帧预算。
+		if(!CanRoundPosition(From) || !CanRoundPosition(To) || !CanRoundPosition(mix(From, To, 1.0f)))
+			return false;
+		const float Steps = distance(From, To) + 1.0f;
+		return std::isfinite(Steps) && static_cast<double>(Steps) < std::numeric_limits<int>::max();
+	}
+
 }
 
 #endif

@@ -3,7 +3,9 @@
 
 #include "entity.h"
 
+#include <game/client/components/qmclient/collision_position.h>
 #include <game/collision.h>
+#include <game/mapitems.h>
 
 //////////////////////////////////////////////////
 // Entity
@@ -13,6 +15,8 @@ CEntity::CEntity(CGameWorld *pGameWorld, int ObjType, vec2 Pos, int ProximityRad
 	m_pGameWorld = pGameWorld;
 
 	m_ObjType = ObjType;
+	m_Number = 0;
+	m_Layer = LAYER_GAME;
 	m_Pos = Pos;
 	m_ProximityRadius = ProximityRadius;
 
@@ -57,6 +61,8 @@ CEntity::~CEntity()
 
 bool CEntity::GameLayerClipped(vec2 CheckPos)
 {
-	return round_to_int(CheckPos.x) / 32 < -200 || round_to_int(CheckPos.x) / 32 > Collision()->GetWidth() + 200 ||
-	       round_to_int(CheckPos.y) / 32 < -200 || round_to_int(CheckPos.y) / 32 > Collision()->GetHeight() + 200;
+	if(!QmCollision::CanRoundPosition(CheckPos))
+		return true;
+	return round_to_int(CheckPos.x) / 32 < -200 || round_to_int(CheckPos.x) / 32 > static_cast<int64_t>(Collision()->GetWidth()) + 200 ||
+	       round_to_int(CheckPos.y) / 32 < -200 || round_to_int(CheckPos.y) / 32 > static_cast<int64_t>(Collision()->GetHeight()) + 200;
 }

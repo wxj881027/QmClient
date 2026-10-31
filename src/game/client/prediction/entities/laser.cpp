@@ -8,6 +8,7 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/components/qmclient/collision_position.h>
 #include <game/client/laser_data.h>
 #include <game/collision.h>
 #include <game/mapitems.h>
@@ -109,6 +110,11 @@ void CLaser::DoBounce()
 
 	int Res;
 	vec2 To = m_Pos + m_Dir * m_Energy;
+	if(!QmCollision::CanQueryLine(m_Pos, To))
+	{
+		m_MarkedForDestroy = true;
+		return;
+	}
 
 	Res = Collision()->IntersectLineTeleWeapon(m_Pos, To, &Coltile, &To);
 
@@ -181,7 +187,7 @@ void CLaser::Tick()
 	}
 	else
 	{
-		if((GameWorld()->GameTick() - m_EvalTick) > (GameWorld()->GameTickSpeed() * Delay / 1000.0f))
+		if((static_cast<int64_t>(GameWorld()->GameTick()) - m_EvalTick) > (GameWorld()->GameTickSpeed() * Delay / 1000.0f))
 			DoBounce();
 	}
 }

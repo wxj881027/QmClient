@@ -5,6 +5,8 @@
 
 #include <game/client/prediction/entity.h>
 
+#include <cstdint>
+
 class CProjectileData;
 
 class CProjectile : public CEntity
@@ -37,12 +39,13 @@ public:
 	const vec2 &GetDirection() const { return m_Direction; }
 	const int &GetOwner() const { return m_Owner; }
 	const int &GetStartTick() const { return m_StartTick; }
+	int64_t GetLifeSpan() const { return m_LifeSpan; }
 	void ShiftStartTick(int TickDelta) { m_StartTick += TickDelta; }
 	CProjectile(CGameWorld *pGameWorld, int Id, const CProjectileData *pProj);
 
 private:
 	vec2 m_Direction;
-	int m_LifeSpan;
+	int64_t m_LifeSpan;
 	int m_Owner;
 	int m_Type;
 	int m_SoundImpact;

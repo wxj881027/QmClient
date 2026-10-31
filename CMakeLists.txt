@@ -4838,6 +4838,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/item_render_inputs_test.cpp
     src/test/unit/client/laser_positions_test.cpp
     src/test/unit/client/projectile_positions_test.cpp
+    src/test/unit/client/collision_line_domain_test.cpp
     src/test/unit/client/pickup_positions_test.cpp
     src/test/unit/client/plasma_movement_test.cpp
     src/test/integration/client/projectile_position_inputs_test.cpp
@@ -6134,6 +6135,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/support/prediction_allocation_main.cpp
       src/test/support/prediction_allocation_failure.h
       src/test/integration/client/prediction_world_copy_failure_test.cpp
+      src/test/integration/client/prediction_entity_numeric_test.cpp
       src/test/integration/client/prediction_entity_copy_test.cpp
       src/test/integration/client/prediction_world_copy_test.cpp
       src/game/client/prediction/entity.cpp

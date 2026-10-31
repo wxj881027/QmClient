@@ -3,7 +3,7 @@
 
 #include <game/client/prediction/gameworld.h>
 
-// 复制/登记测试不执行碰撞或 Tick，调参使用本地默认值，显式初始化外部借用和配置。
+// 调参使用本地默认值，显式初始化外部借用和配置；执行几何路径前由调用者提供碰撞对象。
 class CPredictionTestWorld : public CGameWorld
 {
 	CTuningParams m_Tuning;

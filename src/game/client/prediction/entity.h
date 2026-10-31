@@ -76,11 +76,7 @@ public:
 		m_MarkedForDestroy = false;
 	}
 
-	CEntity()
-	{
-		m_Id = -1;
-		m_pGameWorld = nullptr;
-	}
+	CEntity() = delete;
 };
 
 #endif
