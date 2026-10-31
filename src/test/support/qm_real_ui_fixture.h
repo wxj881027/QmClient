@@ -170,8 +170,20 @@ namespace qm_ui_test
 		}
 		void RenderRoundedRectSdf(const SRoundedRectSdfParams &Params) override { m_vRoundedSubmissions.push_back(Params); }
 		// 裁剪、光标与选区只提交 GPU 绘制，不替代真实文字布局和输入行为。
-		void ClipEnable(int, int, int, int) override {}
-		void ClipDisable() override {}
+		bool m_Clipped = false;
+		CUIRect m_ClipRect{};
+		int m_ClipChanges = 0;
+		void ClipEnable(int X, int Y, int W, int H) override
+		{
+			m_Clipped = true;
+			m_ClipRect = {static_cast<float>(X), static_cast<float>(Y), static_cast<float>(W), static_cast<float>(H)};
+			++m_ClipChanges;
+		}
+		void ClipDisable() override
+		{
+			m_Clipped = false;
+			++m_ClipChanges;
+		}
 		void QuadsDrawTL(const CQuadItem *pItems, int Num) override
 		{
 			if(m_RecordLegacyText)
@@ -289,8 +301,8 @@ namespace qm_ui_test
 
 	protected:
 		CUi m_Ui;
-		explicit CRealUiFixture(IAllocationResource *pPopupCallbackMemory = nullptr) :
-			m_Ui(pPopupCallbackMemory) {}
+		explicit CRealUiFixture(IAllocationResource *pPopupCallbackMemory = nullptr, IAllocationResource *pClipMemory = nullptr) :
+			m_Ui(pPopupCallbackMemory, pClipMemory) {}
 		CRealUiTestGraphics &Graphics() { return m_Graphics; }
 		// 真实 UI 环境默认挂动画运行时（生产 gameclient 恒挂）；动效等级
 		// 默认 0 时资格门仍禁动画，需要动画的测试显式开 FullMotion 并用

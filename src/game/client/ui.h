@@ -841,7 +841,7 @@ private:
 	CUIRect m_Screen;
 	int m_LastUiScale = -1;
 
-	std::vector<CUIRect> m_vClips;
+	std::vector<CUIRect, CBorrowedAllocator<CUIRect>> m_vClips;
 	void UpdateClipping();
 
 	struct SPopupMenu
@@ -955,6 +955,8 @@ public:
 	CUi();
 	// 内存域仅借用，须存活到CUi及关闭回调存储销毁。
 	explicit CUi(IAllocationResource *pPopupCallbackMemory);
+	// 两个内存域分别管理关闭回调与裁剪栈，均须覆盖CUi的完整寿命。
+	CUi(IAllocationResource *pPopupCallbackMemory, IAllocationResource *pClipMemory);
 	~CUi();
 
 	enum EHotkey : unsigned

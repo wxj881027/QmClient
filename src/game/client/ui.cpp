@@ -227,6 +227,12 @@ CUi::CUi() :
 }
 
 CUi::CUi(IAllocationResource *pPopupCallbackMemory) :
+	CUi(pPopupCallbackMemory, nullptr)
+{
+}
+
+CUi::CUi(IAllocationResource *pPopupCallbackMemory, IAllocationResource *pClipMemory) :
+	m_vClips(CBorrowedAllocator<CUIRect>(pClipMemory)),
 	m_vPopupCloseCallbacks(CBorrowedAllocator<std::shared_ptr<FPopupMenuClosedCallback>>(pPopupCallbackMemory))
 {
 	m_Enabled = true;
@@ -1015,7 +1021,7 @@ float CUi::PixelSize()
 
 void CUi::BeginRenderOnly()
 {
-	if(m_RenderOnlyDepth++ == 0)
+	if(m_RenderOnlyDepth == 0)
 	{
 		CUIRect RenderOnlyClip = IsClipped() ? *ClipArea() : *Screen();
 		// 锚定在现有裁剪区右下角，确保后续嵌套裁剪不会产生负宽高。
@@ -1025,6 +1031,8 @@ void CUi::BeginRenderOnly()
 		RenderOnlyClip.h = 0.0f;
 		ClipEnable(&RenderOnlyClip);
 	}
+	// 裁剪准备失败时尚未进入测量，构造失败的RAII对象无需恢复深度。
+	++m_RenderOnlyDepth;
 }
 
 void CUi::EndRenderOnly()
