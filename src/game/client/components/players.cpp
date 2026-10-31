@@ -456,7 +456,6 @@ void CPlayers::RenderHookCollLine(
 	vec2 SegmentStartPos = LineStartPos;
 
 	ColorRGBA HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl));
-	m_HookCollLineScratch.Reset();
 	auto &vLineSegments = m_HookCollLineScratch.m_vLineSegments;
 
 	const int MaxHookTicks = 5 * Client()->GameTickSpeed(); // calculating above 5 seconds is very expensive and unlikely to happen
@@ -484,173 +483,169 @@ void CPlayers::RenderHookCollLine(
 		}
 	};
 
-	// simulate the hook into the future
-	int HookTick;
-	bool HookEnteredTelehook = false;
-	std::optional<IGraphics::CLineItem> HookTipLineSegment;
-	for(HookTick = 0; HookTick < MaxHookTicks; ++HookTick)
-	{
-		int Tele;
-		vec2 HitPos, IntersectedPlayerPosition;
-		vec2 SegmentEndPos = SegmentStartPos + QuantizedDirection * HookFireSpeed;
+	const ColorRGBA HookCollTipColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollTipColor, true));
+	auto &HookTipLineSegment = m_HookCollLineScratch.m_TipLine;
+	if(!m_HookCollLineScratch.TryPrepare([&] {
+		   // simulate the hook into the future
+		   int HookTick;
+		   bool HookEnteredTelehook = false;
+		   for(HookTick = 0; HookTick < MaxHookTicks; ++HookTick)
+		   {
+			   int Tele;
+			   vec2 HitPos, IntersectedPlayerPosition;
+			   vec2 SegmentEndPos = SegmentStartPos + QuantizedDirection * HookFireSpeed;
 
-		// check if a hook would enter retracting state in this tick
-		if(distance(BasePos, SegmentEndPos) > HookLength)
-		{
-			// check if the retracting hook hits a player
-			if(!HookEnteredTelehook)
-			{
-				vec2 RetractingHookEndPos = BasePos + normalize(SegmentEndPos - BasePos) * HookLength;
-				// you can't hook a player, if the hook is behind solids, however you miss the solids as well
-				if(!QmCollision::CanQueryHookLine(SegmentStartPos, RetractingHookEndPos))
-					return;
-				int Hit = Collision()->IntersectLineTeleHook(SegmentStartPos, RetractingHookEndPos, &HitPos, nullptr, &Tele);
+			   // check if a hook would enter retracting state in this tick
+			   if(distance(BasePos, SegmentEndPos) > HookLength)
+			   {
+				   // check if the retracting hook hits a player
+				   if(!HookEnteredTelehook)
+				   {
+					   vec2 RetractingHookEndPos = BasePos + normalize(SegmentEndPos - BasePos) * HookLength;
+					   // you can't hook a player, if the hook is behind solids, however you miss the solids as well
+					   if(!QmCollision::CanQueryHookLine(SegmentStartPos, RetractingHookEndPos))
+						   return false;
+					   int Hit = Collision()->IntersectLineTeleHook(SegmentStartPos, RetractingHookEndPos, &HitPos, nullptr, &Tele);
 
-				if(GameClient()->IntersectCharacter(SegmentStartPos, HitPos, RetractingHookEndPos, ClientId, &IntersectedPlayerPosition) != -1)
-				{
-					AddHookPlayerSegment(LineStartPos, SegmentEndPos, IntersectedPlayerPosition, RetractingHookEndPos);
-					break;
-				}
+					   if(GameClient()->IntersectCharacter(SegmentStartPos, HitPos, RetractingHookEndPos, ClientId, &IntersectedPlayerPosition) != -1)
+					   {
+						   AddHookPlayerSegment(LineStartPos, SegmentEndPos, IntersectedPlayerPosition, RetractingHookEndPos);
+						   break;
+					   }
 
-				// Retracting hooks don't go through hook teleporters
-				if(Hit && Hit != TILE_TELEINHOOK)
-				{
-					// The hook misses the player, but also misses the solid
-					vLineSegments.emplace_back(LineStartPos, SegmentStartPos);
+					   // Retracting hooks don't go through hook teleporters
+					   if(Hit && Hit != TILE_TELEINHOOK)
+					   {
+						   // The hook misses the player, but also misses the solid
+						   vLineSegments.emplace_back(LineStartPos, SegmentStartPos);
 
-					// The player hook misses due to a solid
-					HookTipLineSegment = IGraphics::CLineItem(SegmentStartPos, HitPos);
-					break;
-				}
+						   // The player hook misses due to a solid
+						   HookTipLineSegment = IGraphics::CLineItem(SegmentStartPos, HitPos);
+						   break;
+					   }
 
-				// we are missing the player, the solid hookline stopped already, but we want this extra line segment
-				// the player-hooking-hook is only longer, if we didn't go through a tele hook
-				HookTipLineSegment = IGraphics::CLineItem(SegmentStartPos, RetractingHookEndPos);
-			}
+					   // we are missing the player, the solid hookline stopped already, but we want this extra line segment
+					   // the player-hooking-hook is only longer, if we didn't go through a tele hook
+					   HookTipLineSegment = IGraphics::CLineItem(SegmentStartPos, RetractingHookEndPos);
+				   }
 
-			// the line is too long here, and the hook retracts, use old position
-			vLineSegments.emplace_back(LineStartPos, SegmentStartPos);
-			break;
-		}
+				   // the line is too long here, and the hook retracts, use old position
+				   vLineSegments.emplace_back(LineStartPos, SegmentStartPos);
+				   break;
+			   }
 
-		// check for map collisions
-		if(!QmCollision::CanQueryHookLine(SegmentStartPos, SegmentEndPos))
-			return;
-		int Hit = Collision()->IntersectLineTeleHook(SegmentStartPos, SegmentEndPos, &HitPos, nullptr, &Tele);
+			   // check for map collisions
+			   if(!QmCollision::CanQueryHookLine(SegmentStartPos, SegmentEndPos))
+				   return false;
+			   int Hit = Collision()->IntersectLineTeleHook(SegmentStartPos, SegmentEndPos, &HitPos, nullptr, &Tele);
 
-		// check if we intersect a player
-		if(GameClient()->IntersectCharacter(SegmentStartPos, HitPos, SegmentEndPos, ClientId, &IntersectedPlayerPosition) != -1)
-		{
-			AddHookPlayerSegment(LineStartPos, HitPos, IntersectedPlayerPosition, SegmentEndPos);
-			break;
-		}
+			   // check if we intersect a player
+			   if(GameClient()->IntersectCharacter(SegmentStartPos, HitPos, SegmentEndPos, ClientId, &IntersectedPlayerPosition) != -1)
+			   {
+				   AddHookPlayerSegment(LineStartPos, HitPos, IntersectedPlayerPosition, SegmentEndPos);
+				   break;
+			   }
 
-		// we hit nothing, continue calculating segments
-		if(!Hit)
-		{
-			SegmentStartPos = SegmentEndPos;
-			SegmentStartPos.x = round_to_int(SegmentStartPos.x);
-			SegmentStartPos.y = round_to_int(SegmentStartPos.y);
+			   // we hit nothing, continue calculating segments
+			   if(!Hit)
+			   {
+				   SegmentStartPos = SegmentEndPos;
+				   SegmentStartPos.x = round_to_int(SegmentStartPos.x);
+				   SegmentStartPos.y = round_to_int(SegmentStartPos.y);
 
-			// direction is always the same after the first tick quantization
-			if(HookTick == 0)
-			{
-				QuantizedDirection.x = round_to_int(QuantizedDirection.x * 256.0f) / 256.0f;
-				QuantizedDirection.y = round_to_int(QuantizedDirection.y * 256.0f) / 256.0f;
-			}
-			continue;
-		}
+				   // direction is always the same after the first tick quantization
+				   if(HookTick == 0)
+				   {
+					   QuantizedDirection.x = round_to_int(QuantizedDirection.x * 256.0f) / 256.0f;
+					   QuantizedDirection.y = round_to_int(QuantizedDirection.y * 256.0f) / 256.0f;
+				   }
+				   continue;
+			   }
 
-		// we hit a solid / hook stopper
-		if(Hit != TILE_TELEINHOOK)
-		{
-			if(Hit != TILE_NOHOOK)
-				HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl));
-			vLineSegments.emplace_back(LineStartPos, HitPos);
-			break;
-		}
+			   // we hit a solid / hook stopper
+			   if(Hit != TILE_TELEINHOOK)
+			   {
+				   if(Hit != TILE_NOHOOK)
+					   HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl));
+				   vLineSegments.emplace_back(LineStartPos, HitPos);
+				   break;
+			   }
 
-		// we are hitting TILE_TELEINHOOK
-		vLineSegments.emplace_back(LineStartPos, HitPos);
-		HookEnteredTelehook = true;
+			   // we are hitting TILE_TELEINHOOK
+			   vLineSegments.emplace_back(LineStartPos, HitPos);
+			   HookEnteredTelehook = true;
 
-		// check tele outs
-		const std::vector<vec2> &vTeleOuts = Collision()->TeleOuts(Tele - 1);
-		if(vTeleOuts.empty())
-		{
-			// the hook gets stuck, this is a feature or a bug
-			HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl));
-			break;
-		}
-		else if(vTeleOuts.size() > 1)
-		{
-			// we don't know which teleout the hook takes, just invert the color
-			HookCollColor = color_invert(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)));
-			break;
-		}
+			   // check tele outs
+			   const std::vector<vec2> &vTeleOuts = Collision()->TeleOuts(Tele - 1);
+			   if(vTeleOuts.empty())
+			   {
+				   // the hook gets stuck, this is a feature or a bug
+				   HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl));
+				   break;
+			   }
+			   else if(vTeleOuts.size() > 1)
+			   {
+				   // we don't know which teleout the hook takes, just invert the color
+				   HookCollColor = color_invert(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)));
+				   break;
+			   }
 
-		// go through one teleout, update positions and continue
-		BasePos = vTeleOuts[0];
-		LineStartPos = BasePos; // make the line start in the teleporter to prevent a gap
-		SegmentStartPos = BasePos + Direction * HOOK_START_DISTANCE;
-		if(!QmCollision::CanRoundPosition(SegmentStartPos))
-			return;
-		SegmentStartPos.x = round_to_int(SegmentStartPos.x);
-		SegmentStartPos.y = round_to_int(SegmentStartPos.y);
+			   // go through one teleout, update positions and continue
+			   BasePos = vTeleOuts[0];
+			   LineStartPos = BasePos; // make the line start in the teleporter to prevent a gap
+			   SegmentStartPos = BasePos + Direction * HOOK_START_DISTANCE;
+			   if(!QmCollision::CanRoundPosition(SegmentStartPos))
+				   return false;
+			   SegmentStartPos.x = round_to_int(SegmentStartPos.x);
+			   SegmentStartPos.y = round_to_int(SegmentStartPos.y);
 
-		// direction is always the same after the first tick quantization
-		if(HookTick == 0)
-		{
-			QuantizedDirection.x = round_to_int(QuantizedDirection.x * 256.0f) / 256.0f;
-			QuantizedDirection.y = round_to_int(QuantizedDirection.y * 256.0f) / 256.0f;
-		}
-	}
+			   // direction is always the same after the first tick quantization
+			   if(HookTick == 0)
+			   {
+				   QuantizedDirection.x = round_to_int(QuantizedDirection.x * 256.0f) / 256.0f;
+				   QuantizedDirection.y = round_to_int(QuantizedDirection.y * 256.0f) / 256.0f;
+			   }
+		   }
 
-	// The hook line is too expensive to calculate and didn't hit anything before, just set a straight line
-	if(HookTick >= MaxHookTicks && vLineSegments.empty())
-	{
-		// we simply don't know if we hit anything or not
-		HookCollColor = color_invert(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)));
-		vLineSegments.emplace_back(LineStartPos, BasePos + QuantizedDirection * HookLength);
-	}
+		   // The hook line is too expensive to calculate and didn't hit anything before, just set a straight line
+		   if(HookTick >= MaxHookTicks && vLineSegments.empty())
+		   {
+			   // we simply don't know if we hit anything or not
+			   HookCollColor = color_invert(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)));
+			   vLineSegments.emplace_back(LineStartPos, BasePos + QuantizedDirection * HookLength);
+		   }
 
-	// add a line from the player to the start position to prevent a visual gap
-	vLineSegments.emplace_back(Position, Position + StartOffset);
+		   // add a line from the player to the start position to prevent a visual gap
+		   vLineSegments.emplace_back(Position, Position + StartOffset);
 
-	if(AlwaysRenderHookColl && RenderHookCollPlayer)
-	{
-		// invert the hook coll colors when using cl_show_hook_coll_always and +showhookcoll is pressed
-		HookCollColor = color_invert(HookCollColor);
-	}
+		   if(AlwaysRenderHookColl && RenderHookCollPlayer)
+		   {
+			   // invert the hook coll colors when using cl_show_hook_coll_always and +showhookcoll is pressed
+			   HookCollColor = color_invert(HookCollColor);
+		   }
 
-	// Render hook coll line
-	ColorRGBA HookCollTipColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollTipColor, true));
+		   if(HookCollSize > 0)
+		   {
+			   const float LineWidth = 0.5f + (float)(HookCollSize - 1) * 0.25f;
+			   const vec2 PerpToAngle = normalize(vec2(Direction.y, -Direction.x)) * GameClient()->m_Camera.m_Zoom;
+			   m_HookCollLineScratch.PrepareQuads(PerpToAngle, LineWidth, HookCollTipColor.a > 0.0f && !g_Config.m_QmRevertHookLine);
+		   }
+		   return true;
+	   }))
+		return;
 
 	Graphics()->TextureClear();
 	if(HookCollSize > 0)
 	{
 		auto &vLineQuadSegments = m_HookCollLineScratch.m_vLineQuadSegments;
-		vLineQuadSegments.reserve(vLineSegments.size());
-
-		float LineWidth = 0.5f + (float)(HookCollSize - 1) * 0.25f;
-		const vec2 PerpToAngle = normalize(vec2(Direction.y, -Direction.x)) * GameClient()->m_Camera.m_Zoom;
-
-		for(const auto &LineSegment : vLineSegments)
-		{
-			m_HookCollLineScratch.AppendQuad(LineSegment, PerpToAngle, LineWidth);
-		}
-
-		vLineSegments.clear();
 
 		Graphics()->QuadsBegin();
 		Graphics()->SetColor(HookCollColor.WithAlpha(Alpha));
 		Graphics()->QuadsDrawFreeform(vLineQuadSegments.data(), vLineQuadSegments.size());
-		if(HookTipLineSegment.has_value() && HookCollTipColor.a > 0.0f && !g_Config.m_QmRevertHookLine)
+		if(m_HookCollLineScratch.m_TipQuad)
 		{
-			vLineQuadSegments.clear();
-			m_HookCollLineScratch.AppendQuad(HookTipLineSegment.value(), PerpToAngle, LineWidth);
 			Graphics()->SetColor(HookCollTipColor.WithMultipliedAlpha(Alpha));
-			Graphics()->QuadsDrawFreeform(vLineQuadSegments.data(), vLineQuadSegments.size());
+			Graphics()->QuadsDrawFreeform(&*m_HookCollLineScratch.m_TipQuad, 1);
 		}
 		Graphics()->QuadsEnd();
 	}

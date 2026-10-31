@@ -3579,6 +3579,7 @@ if(CLIENT)
     components/qmclient/emoticon_commands.h
     components/qmclient/hammer_hit_detection.cpp
     components/qmclient/hammer_hit_detection.h
+    components/qmclient/qm_hook_coll_geometry.h
     components/qmclient/qm_hook_coll_tuning.h
     components/qmclient/hook_countdown.h
     components/qmclient/hud_notifications/hud_notification_catalog.cpp
@@ -6154,6 +6155,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/client/prediction_door_rebuild_test.cpp
       src/test/integration/client/prediction_event_allocation_test.cpp
       src/test/unit/qmclient/client/qm_pending_hammer_hits_test.cpp
+      src/test/unit/qmclient/client/qm_hook_coll_geometry_test.cpp
+      src/test/integration/client/hook_coll_prepare_test.cpp
       src/game/client/components/qmclient/practice_tick_shift.cpp
       src/test/integration/client/prediction_entity_copy_test.cpp
       src/test/integration/client/prediction_world_copy_test.cpp
