@@ -1,6 +1,7 @@
 #ifndef GAME_MAP_RENDER_SCREEN_H
 #define GAME_MAP_RENDER_SCREEN_H
 
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -45,6 +46,48 @@ namespace MapRenderScreen
 		if(static_cast<int64_t>(aBounds[2]) - aBounds[0] > Max || static_cast<int64_t>(aBounds[3]) - aBounds[1] > Max)
 			return std::nullopt;
 		return STileRange{aBounds[0], aBounds[1], aBounds[2], aBounds[3]};
+	}
+	struct SClipRect
+	{
+		int m_X;
+		int m_Y;
+		int m_Width;
+		int m_Height;
+	};
+
+	inline std::optional<SClipRect> GroupClip(const std::array<float, 4> &aScreen, int PixelWidth, int PixelHeight, const SClipRect &WorldClip)
+	{
+		for(float Value : aScreen)
+			if(!std::isfinite(Value))
+				return std::nullopt;
+		const float Width = aScreen[2] - aScreen[0];
+		const float Height = aScreen[3] - aScreen[1];
+		if(!std::isfinite(Width) || !std::isfinite(Height) || !(Width > 0.0f) || !(Height > 0.0f) ||
+			PixelWidth <= 0 || PixelHeight <= 0 || WorldClip.m_Width < 0 || WorldClip.m_Height < 0)
+			return std::nullopt;
+		const float Left = WorldClip.m_X - aScreen[0];
+		const float Top = WorldClip.m_Y - aScreen[1];
+		// 普通范围仍先整数相加再转 float；拓宽只消除端点加法溢出。
+		const float Right = static_cast<float>(static_cast<int64_t>(WorldClip.m_X) + WorldClip.m_Width) - aScreen[0];
+		const float Bottom = static_cast<float>(static_cast<int64_t>(WorldClip.m_Y) + WorldClip.m_Height) - aScreen[1];
+		if(Right < 0.0f || Left > Width || Bottom < 0.0f || Top > Height)
+			return std::nullopt;
+		// 保留原 float 乘除与 round，包括负起点和零像素遮罩。
+		const float aPixels[] = {
+			std::round(Left * PixelWidth / Width), std::round(Top * PixelHeight / Height),
+			std::round(Right * PixelWidth / Width), std::round(Bottom * PixelHeight / Height)};
+		int aEdges[4];
+		for(int i = 0; i < 4; ++i)
+		{
+			if(!std::isfinite(aPixels[i]) || static_cast<double>(aPixels[i]) < std::numeric_limits<int>::min() || static_cast<double>(aPixels[i]) > std::numeric_limits<int>::max())
+				return std::nullopt;
+			aEdges[i] = static_cast<int>(aPixels[i]);
+		}
+		const int64_t ClipWidth = static_cast<int64_t>(aEdges[2]) - aEdges[0];
+		const int64_t ClipHeight = static_cast<int64_t>(aEdges[3]) - aEdges[1];
+		if(ClipWidth < 0 || ClipWidth > std::numeric_limits<int>::max() || ClipHeight < 0 || ClipHeight > std::numeric_limits<int>::max())
+			return std::nullopt;
+		return SClipRect{aEdges[0], aEdges[1], static_cast<int>(ClipWidth), static_cast<int>(ClipHeight)};
 	}
 }
 

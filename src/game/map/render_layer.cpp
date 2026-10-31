@@ -256,20 +256,14 @@ bool CRenderLayerGroup::DoRender(const CRenderLayerParams &Params)
 		Graphics()->ClipDisable();
 		if(m_pGroup->m_Version >= 2 && m_pGroup->m_UseClipping)
 		{
-			// set clipping
-			Graphics()->MapScreenToGameInterface(Params.m_Center.x, Params.m_Center.y, Params.m_Zoom);
-
-			float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-			Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-			float ScreenWidth = ScreenX1 - ScreenX0;
-			float ScreenHeight = ScreenY1 - ScreenY0;
-			float Left = m_pGroup->m_ClipX - ScreenX0;
-			float Top = m_pGroup->m_ClipY - ScreenY0;
-			float Right = m_pGroup->m_ClipX + m_pGroup->m_ClipW - ScreenX0;
-			float Bottom = m_pGroup->m_ClipY + m_pGroup->m_ClipH - ScreenY0;
-
-			if(Right < 0.0f || Left > ScreenWidth || Bottom < 0.0f || Top > ScreenHeight)
+			std::array<float, 4> aPoints;
+			Graphics()->MapScreenToWorld(Params.m_Center.x, Params.m_Center.y, 100.0f, 100.0f, 100.0f,
+				0, 0, Graphics()->GameScreenAspect(), Params.m_Zoom, aPoints.data());
+			const auto Clip = MapRenderScreen::GroupClip(aPoints, Graphics()->ScreenWidth(), Graphics()->ScreenHeight(),
+				{m_pGroup->m_ClipX, m_pGroup->m_ClipY, m_pGroup->m_ClipW, m_pGroup->m_ClipH});
+			if(!Clip)
 				return false;
+			Graphics()->MapScreen(aPoints[0], aPoints[1], aPoints[2], aPoints[3]);
 
 			// Render debug before enabling the clip
 			if(Params.m_DebugRenderGroupClips)
@@ -279,14 +273,7 @@ bool CRenderLayerGroup::DoRender(const CRenderLayerParams &Params)
 				RenderMap()->RenderDebugClip(m_pGroup->m_ClipX, m_pGroup->m_ClipY, m_pGroup->m_ClipW, m_pGroup->m_ClipH, ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f), Params.m_Zoom, aDebugText);
 			}
 
-			int ClipX = (int)std::round(Left * Graphics()->ScreenWidth() / ScreenWidth);
-			int ClipY = (int)std::round(Top * Graphics()->ScreenHeight() / ScreenHeight);
-
-			Graphics()->ClipEnable(
-				ClipX,
-				ClipY,
-				(int)std::round(Right * Graphics()->ScreenWidth() / ScreenWidth) - ClipX,
-				(int)std::round(Bottom * Graphics()->ScreenHeight() / ScreenHeight) - ClipY);
+			Graphics()->ClipEnable(Clip->m_X, Clip->m_Y, Clip->m_Width, Clip->m_Height);
 		}
 	}
 	return true;
