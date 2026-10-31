@@ -6222,6 +6222,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_tree_allocation_failure_test.cpp
       src/game/client/QmUi/QmTree.cpp
       src/game/client/QmUi/QmAnimationBackend.cpp
+      src/test/integration/qmclient/ui/vote_map_loader_failure_test.cpp
+      src/game/client/components/qmclient/vote_map_loader.cpp
+      src/game/client/components/qmclient/vote_map_library.cpp
       src/test/unit/engine/recent_glyph_cache_test.cpp
       src/test/integration/qmclient/client/qm_warlist_cache_prepare_test.cpp
       src/game/client/components/qmclient/warlist_model.cpp

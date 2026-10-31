@@ -17,11 +17,18 @@ class CQmVoteMapLoader::CLoadJob : public IJob
 
 	void Run() override
 	{
-		unsigned char *pData = nullptr;
-		size_t Length = 0;
-		m_pRequest->Result(&pData, &Length);
-		m_Success = m_Catalog ? QmVoteMaps::ParseCatalog((const char *)pData, Length, m_vMaps) :
-					QmVoteMaps::ParseDetails((const char *)pData, Length, m_Map, m_Details);
+		try
+		{
+			unsigned char *pData = nullptr;
+			size_t Length = 0;
+			m_pRequest->Result(&pData, &Length);
+			m_Success = m_Catalog ? QmVoteMaps::ParseCatalog((const char *)pData, Length, m_vMaps) :
+						QmVoteMaps::ParseDetails((const char *)pData, Length, m_Map, m_Details);
+		}
+		catch(...)
+		{
+			m_Success = false;
+		}
 		m_pRequest.reset();
 	}
 
@@ -33,10 +40,18 @@ public:
 		m_pRequest(std::move(pRequest)), m_Map(Map), m_Catalog(Catalog) {}
 };
 
-void CQmVoteMapLoader::Cancel(SRequest &Request)
+void CQmVoteMapLoader::Cancel(SRequest &Request) noexcept
 {
 	if(Request.m_pHttp)
-		Request.m_pHttp->Abort();
+	{
+		try
+		{
+			Request.m_pHttp->Abort();
+		}
+		catch(...)
+		{
+		}
+	}
 	// Job 只拥有请求和结果，不持有菜单；丢弃句柄后旧结果无法发布。
 	Request = {};
 }
@@ -65,11 +80,30 @@ void CQmVoteMapLoader::Start(SRequest &Request, IHttp *pHttp, const char *pUrl, 
 {
 	Cancel(Request);
 	Request.m_Attempted = true;
-	Request.m_pHttp = m_CreateRequest(pUrl);
-	Request.m_pHttp->Timeout({5000, 20000, 1024, 10});
-	Request.m_pHttp->MaxResponseSize(MaxBytes);
-	Request.m_pHttp->LogProgress(HTTPLOG::FAILURE);
-	pHttp->Run(Request.m_pHttp);
+	try
+	{
+		if(pHttp == nullptr)
+		{
+			Request.m_Error = true;
+			return;
+		}
+		Request.m_pHttp = m_CreateRequest(pUrl);
+		if(!Request.m_pHttp)
+		{
+			Request.m_Error = true;
+			return;
+		}
+		Request.m_pHttp->Timeout({5000, 20000, 1024, 10});
+		Request.m_pHttp->MaxResponseSize(MaxBytes);
+		Request.m_pHttp->LogProgress(HTTPLOG::FAILURE);
+		pHttp->Run(Request.m_pHttp);
+	}
+	catch(...)
+	{
+		Cancel(Request);
+		Request.m_Attempted = true;
+		Request.m_Error = true;
+	}
 }
 
 void CQmVoteMapLoader::Refresh(IHttp *pHttp)
@@ -83,8 +117,23 @@ bool CQmVoteMapLoader::Poll(SRequest &Request, IEngine *pEngine, bool Catalog)
 	{
 		if(Request.m_pHttp->State() == EHttpState::DONE)
 		{
-			Request.m_pJob = std::make_shared<CLoadJob>(Request.m_pHttp, m_Selected, Catalog);
-			pEngine->AddJob(Request.m_pJob);
+			try
+			{
+				auto pJob = std::make_shared<CLoadJob>(Request.m_pHttp, m_Selected, Catalog);
+				if(pEngine == nullptr || !pEngine->TryAddJob(pJob))
+				{
+					Request.m_Error = true;
+					return false;
+				}
+				Request.m_pJob = std::move(pJob);
+				Request.m_Error = false;
+			}
+			catch(...)
+			{
+				// 保留已完成的响应，后续帧重试解析入队，不重下目录或挂住空作业。
+				Request.m_Error = true;
+				return false;
+			}
 		}
 		else
 			Request.m_Error = true;
@@ -114,8 +163,19 @@ void CQmVoteMapLoader::Select(const QmVoteMaps::SMap *pMap, float Now)
 {
 	if(pMap != nullptr ? (pMap->m_Name == m_Selected.m_Name && pMap->m_Category == m_Selected.m_Category) : m_Selected.m_Name.empty())
 		return;
-	Cancel(m_DetailRequest);
-	m_Selected = pMap != nullptr ? *pMap : QmVoteMaps::SMap{};
+	try
+	{
+		auto Selected = pMap != nullptr ? *pMap : QmVoteMaps::SMap{};
+		Cancel(m_DetailRequest);
+		m_Selected = std::move(Selected);
+	}
+	catch(...)
+	{
+		// 菜单已选中另一张图，失败时不暴露旧图统计；下次Select可重新准备。
+		Cancel(m_DetailRequest);
+		m_Selected = {};
+		m_DetailRequest.m_Error = true;
+	}
 	m_SelectedAt = Now;
 	m_DetailsReady = false;
 }
