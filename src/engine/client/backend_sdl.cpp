@@ -1319,6 +1319,7 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		if(!BackendInitGlew(m_BackendType, GlewMajor, GlewMinor, GlewPatch))
 		{
 			SDL_GL_DestroyContext(m_GLContext);
+			m_GLContext = nullptr;
 			SDL_DestroyWindow(m_pWindow);
 			m_pWindow = nullptr;
 			return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GLEW_INIT_FAILED;
@@ -1351,6 +1352,7 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	{
 		if(m_GLContext)
 			SDL_GL_DestroyContext(m_GLContext);
+		m_GLContext = nullptr;
 		SDL_DestroyWindow(m_pWindow);
 		m_pWindow = nullptr;
 
@@ -1482,6 +1484,7 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 
 		if(m_GLContext)
 			SDL_GL_DestroyContext(m_GLContext);
+		m_GLContext = nullptr;
 		SDL_DestroyWindow(m_pWindow);
 		m_pWindow = nullptr;
 
@@ -1554,6 +1557,7 @@ int CGraphicsBackend_SDL_GL::Shutdown()
 
 	if(m_GLContext != nullptr)
 		SDL_GL_DestroyContext(m_GLContext);
+	m_GLContext = nullptr;
 	SDL_DestroyWindow(m_pWindow);
 	m_pWindow = nullptr;
 
