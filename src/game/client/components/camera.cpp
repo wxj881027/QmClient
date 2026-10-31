@@ -173,7 +173,7 @@ void CCamera::ChangeZoom(float Target, int Smoothness, bool IsUser, bool IsReset
 	}
 
 	m_ZoomSmoothingTarget = Target;
-	m_ZoomSmoothing = CCubicBezier::With(Current, Derivative, 0, m_ZoomSmoothingTarget);
+	m_ZoomSmoothing = QmCameraEffects::CZoomSmoothingCurve::With(Current, Derivative, m_ZoomSmoothingTarget);
 	m_ZoomSmoothingStart = Now;
 	m_ZoomSmoothingEnd = Now + (float)Smoothness / 1000;
 	m_ZoomSmoothingIsReset = IsReset;

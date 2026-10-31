@@ -5244,6 +5244,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_camera_boundaries_test.cpp
     src/test/unit/qmclient/client/qm_camera_network_test.cpp
     src/test/unit/qmclient/client/qm_camera_dynamic_fov_test.cpp
+    src/test/unit/qmclient/client/qm_camera_zoom_curve_test.cpp
     src/test/integration/client/camera_network_messages_test.cpp
     src/test/integration/client/camera_boundary_inputs_test.cpp
     src/test/contract/qmclient/ui/qm_capsule_tab_wiring_contract_test.cpp

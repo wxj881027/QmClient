@@ -112,6 +112,53 @@ namespace QmCameraEffects
 		}
 	};
 
+	// 只用于镜头缩放；普通 float 结果保持原值，非有限结果再用宽精度重算。
+	class CZoomSmoothingCurve
+	{
+		CCubicBezier m_Curve = CCubicBezier::With(1.0f, 0.0f, 0.0f, 1.0f);
+		float m_Start = 1.0f;
+		float m_StartDerivative = 0.0f;
+		float m_End = 1.0f;
+
+		static float Representable(double Value)
+		{
+			constexpr double Max = std::numeric_limits<float>::max();
+			return static_cast<float>(std::clamp(Value, -Max, Max));
+		}
+
+	public:
+		// 调用方提供有限端点、导数与进度；不改变其它路径已有的无效输入语义。
+		static CZoomSmoothingCurve With(float Start, float StartDerivative, float End)
+		{
+			CZoomSmoothingCurve Result;
+			Result.m_Start = Start;
+			Result.m_StartDerivative = StartDerivative;
+			Result.m_End = End;
+			Result.m_Curve = CCubicBezier::With(Start, StartDerivative, 0.0f, End);
+			return Result;
+		}
+		float Evaluate(float Progress) const
+		{
+			const float Value = m_Curve.Evaluate(Progress);
+			if(std::isfinite(Value))
+				return Value;
+			const double T = Progress;
+			const double U = 1.0 - T;
+			const double Control = static_cast<double>(m_Start) + static_cast<double>(m_StartDerivative) / 3.0;
+			return Representable(U * U * U * m_Start + 3.0 * U * U * T * Control + 3.0 * U * T * T * m_End + T * T * T * m_End);
+		}
+		float Derivative(float Progress) const
+		{
+			const float Value = m_Curve.Derivative(Progress);
+			if(std::isfinite(Value))
+				return Value;
+			const double T = Progress;
+			const double U = 1.0 - T;
+			const double Control = static_cast<double>(m_Start) + static_cast<double>(m_StartDerivative) / 3.0;
+			return Representable(3.0 * U * U * (Control - m_Start) + 6.0 * U * T * (m_End - Control));
+		}
+	};
+
 	// 帧率无关指数阻尼：FrameTime 为本帧时长（秒），HalfLife 为逼近目标剩余一半所需的秒数。
 	inline vec2 SmoothPosition(vec2 Current, vec2 Target, float FrameTime, float HalfLife)
 	{
@@ -252,7 +299,7 @@ private:
 
 	float CameraSmoothingProgress(float CurrentTime) const;
 
-	CCubicBezier m_ZoomSmoothing;
+	QmCameraEffects::CZoomSmoothingCurve m_ZoomSmoothing;
 	float m_ZoomSmoothingStart;
 	float m_ZoomSmoothingEnd;
 	bool m_ZoomSmoothingIsReset;
