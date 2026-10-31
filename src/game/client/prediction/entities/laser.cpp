@@ -16,6 +16,8 @@ CLaser::CLaser(CGameWorld *pGameWorld, vec2 Pos, vec2 Direction, float StartEner
 	CEntity(pGameWorld, CGameWorld::ENTTYPE_LASER)
 {
 	m_Pos = Pos;
+	m_Number = 0;
+	m_Layer = LAYER_GAME;
 	m_Owner = Owner;
 	m_Energy = StartEnergy;
 	if(pGameWorld->m_WorldConfig.m_IsFNG && m_Energy < 10.f)

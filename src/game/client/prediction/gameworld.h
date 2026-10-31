@@ -3,9 +3,11 @@
 #ifndef GAME_CLIENT_PREDICTION_GAMEWORLD_H
 #define GAME_CLIENT_PREDICTION_GAMEWORLD_H
 
+#include <game/client/components/qmclient/collision_position.h>
 #include <game/gamecore.h>
 #include <game/teamscore.h>
 
+#include <cstdint>
 #include <list>
 #include <vector>
 
@@ -128,9 +130,14 @@ public:
 		bool m_ServerConfirmed = false;
 
 		CPredictedEvent(int EventId, vec2 Pos, int Id, int Tick, int ExtraInfo = -1) :
-			m_EventId(EventId), m_Pos(vec2((int)Pos.x, (int)Pos.y)), m_Id(Id), m_Tick(Tick), m_ExtraInfo(ExtraInfo)
+			m_EventId(EventId), m_Pos(Pos), m_Id(Id), m_Tick(Tick), m_ExtraInfo(ExtraInfo)
 		{
+			// 无效位置保留为无效值，不能通过截断转换生成可参与匹配的事件。
+			if(HasValidPosition())
+				m_Pos = vec2(static_cast<int>(Pos.x), static_cast<int>(Pos.y));
 		}
+
+		bool HasValidPosition() const { return QmCollision::CanRoundPosition(m_Pos); }
 	};
 
 	std::vector<CPredictedEvent> m_PredictedEvents;
@@ -179,22 +186,22 @@ inline bool QmCheckPredictedHammerHitHandled(std::vector<CGameWorld::CPredictedE
 	constexpr float MaxPositionCorrection = 32.0f;
 	constexpr float MaxPositionCorrectionSquared = MaxPositionCorrection * MaxPositionCorrection;
 	constexpr int MaxTickDifference = SERVER_TICK_SPEED;
-	if(CheckEvent.m_Id < 0 || CheckEvent.m_ExtraInfo < 0)
+	if(!CheckEvent.HasValidPosition() || CheckEvent.m_Id < 0 || CheckEvent.m_ExtraInfo < 0)
 		return false;
 	auto Closest = vPredictedEvents.end();
-	int ClosestTickDifference = MaxTickDifference + 1;
+	int64_t ClosestTickDifference = MaxTickDifference + 1;
 	float ClosestDistanceSquared = 0.0f;
 	for(auto It = vPredictedEvents.begin(); It != vPredictedEvents.end(); ++It)
 	{
-		if(It->m_EventId != NETEVENTTYPE_HAMMERHIT || CheckEvent.m_EventId != NETEVENTTYPE_HAMMERHIT ||
-			(CheckEvent.m_Id >= 0 && It->m_Id != CheckEvent.m_Id) || It->m_Tick > CheckEvent.m_Tick || CheckEvent.m_Tick - It->m_Tick > MaxTickDifference || It->m_ExtraInfo != CheckEvent.m_ExtraInfo)
+		const int64_t TickDifference = static_cast<int64_t>(CheckEvent.m_Tick) - It->m_Tick;
+		if(!It->HasValidPosition() || It->m_EventId != NETEVENTTYPE_HAMMERHIT || CheckEvent.m_EventId != NETEVENTTYPE_HAMMERHIT ||
+			(CheckEvent.m_Id >= 0 && It->m_Id != CheckEvent.m_Id) || TickDifference < 0 || TickDifference > MaxTickDifference || It->m_ExtraInfo != CheckEvent.m_ExtraInfo)
 			continue;
-		if(It->m_ServerConfirmed && CheckEvent.m_Tick - It->m_Tick > 1)
+		if(It->m_ServerConfirmed && TickDifference > 1)
 			continue;
 		const float DistanceSquared = length_squared(It->m_Pos - CheckEvent.m_Pos);
 		if(DistanceSquared > MaxPositionCorrectionSquared)
 			continue;
-		const int TickDifference = CheckEvent.m_Tick - It->m_Tick;
 		if(Closest == vPredictedEvents.end() || TickDifference < ClosestTickDifference || (TickDifference == ClosestTickDifference && DistanceSquared < ClosestDistanceSquared))
 		{
 			Closest = It;
@@ -233,23 +240,23 @@ inline bool QmCheckPredictedHammerHitHandledLoose(std::vector<CGameWorld::CPredi
 	constexpr float MaxPositionCorrection = 64.0f;
 	constexpr float MaxPositionCorrectionSquared = MaxPositionCorrection * MaxPositionCorrection;
 	constexpr int MaxTickDifference = SERVER_TICK_SPEED;
-	if(AttackerId < 0)
+	if(AttackerId < 0 || !QmCollision::CanRoundPosition(Pos))
 		return false;
 	// 与严格版一致，选 tick 最接近的候选：一次误预测的孤儿事件（本地预测
 	// 命中但服务端判定未命中，永远等不到确认）若被直接匹配，会吞掉后续
 	// 同位置挥锤的合法确认，导致特效/声音丢失。
 	auto Closest = vPredictedEvents.end();
-	int ClosestTickDifference = MaxTickDifference + 1;
+	int64_t ClosestTickDifference = MaxTickDifference + 1;
 	for(auto It = vPredictedEvents.begin(); It != vPredictedEvents.end(); ++It)
 	{
-		if(It->m_EventId != NETEVENTTYPE_HAMMERHIT || It->m_Id != AttackerId ||
-			It->m_Tick > Tick || Tick - It->m_Tick > MaxTickDifference)
+		const int64_t TickDifference = static_cast<int64_t>(Tick) - It->m_Tick;
+		if(!It->HasValidPosition() || It->m_EventId != NETEVENTTYPE_HAMMERHIT || It->m_Id != AttackerId ||
+			TickDifference < 0 || TickDifference > MaxTickDifference)
 			continue;
-		if(It->m_ServerConfirmed && Tick - It->m_Tick > 1)
+		if(It->m_ServerConfirmed && TickDifference > 1)
 			continue;
 		if(length_squared(It->m_Pos - Pos) > MaxPositionCorrectionSquared)
 			continue;
-		const int TickDifference = Tick - It->m_Tick;
 		if(Closest == vPredictedEvents.end() || TickDifference < ClosestTickDifference)
 		{
 			Closest = It;
@@ -264,6 +271,8 @@ inline bool QmCheckPredictedHammerHitHandledLoose(std::vector<CGameWorld::CPredi
 
 inline bool QmPredictedEventPositionsMatch(int EventId, vec2 ExistingPos, vec2 ConfirmedPos)
 {
+	if(!QmCollision::CanRoundPosition(ExistingPos) || !QmCollision::CanRoundPosition(ConfirmedPos))
+		return false;
 	constexpr float SoundMaxPositionCorrection = 96.0f;
 	constexpr float ExplosionMaxPositionCorrection = 64.0f;
 	constexpr float DamageIndicatorMaxPositionCorrection = 32.0f;
@@ -281,7 +290,7 @@ inline bool QmPredictedEventPositionsMatch(int EventId, vec2 ExistingPos, vec2 C
 
 inline bool QmPredictedEventMatchesForCreation(const CGameWorld::CPredictedEvent &Existing, const CGameWorld::CPredictedEvent &NewEvent)
 {
-	if(Existing.m_EventId != NewEvent.m_EventId || Existing.m_ExtraInfo != NewEvent.m_ExtraInfo)
+	if(!Existing.HasValidPosition() || !NewEvent.HasValidPosition() || Existing.m_EventId != NewEvent.m_EventId || Existing.m_ExtraInfo != NewEvent.m_ExtraInfo)
 		return false;
 
 	// 声音事件由实体和 tick 标识。预测重放同一 tick 时位置可能被校正，
@@ -292,28 +301,41 @@ inline bool QmPredictedEventMatchesForCreation(const CGameWorld::CPredictedEvent
 
 	// 服务端事件可能先于本地预测抵达。把这种已播放的无 Id 确认事件
 	// 作为短期屏障，避免稍后的预测再次播放同一效果。
-	if(!Existing.m_ServerConfirmed || NewEvent.m_Id < 0 || (Existing.m_Id >= 0 && Existing.m_Id != NewEvent.m_Id) || NewEvent.m_Tick < Existing.m_Tick || NewEvent.m_Tick - Existing.m_Tick > 1)
+	if(!Existing.m_ServerConfirmed || NewEvent.m_Id < 0 || (Existing.m_Id >= 0 && Existing.m_Id != NewEvent.m_Id) || NewEvent.m_Tick < Existing.m_Tick || static_cast<int64_t>(NewEvent.m_Tick) - Existing.m_Tick > 1)
 		return false;
 	return QmPredictedEventPositionsMatch(NewEvent.m_EventId, Existing.m_Pos, NewEvent.m_Pos);
+}
+
+// 锤击创建路径与确认匹配共用原事件身份，先排除无效位置并拓宽 tick 差。
+inline bool QmPredictedHammerHitMatchesForCreation(const CGameWorld::CPredictedEvent &Existing, const CGameWorld::CPredictedEvent &Event)
+{
+	if(!Existing.HasValidPosition() || !Event.HasValidPosition() || Existing.m_EventId != Event.m_EventId || Existing.m_Id != Event.m_Id || Existing.m_ExtraInfo != Event.m_ExtraInfo)
+		return false;
+	if(Existing.m_Tick == Event.m_Tick)
+		return true;
+	const int64_t TickDifference = static_cast<int64_t>(Event.m_Tick) - Existing.m_Tick;
+	return Existing.m_Handled && TickDifference >= 0 && TickDifference <= 1 && QmPredictedEventPositionsMatch(Event.m_EventId, Existing.m_Pos, Event.m_Pos);
 }
 
 // pUnplayedMatch（可空）：匹配成功且该预测事件尚未被预测侧播放时置 true，
 // 调用方应当场代播一次（本函数同时把事件标记 handled，预测循环不会再播）。
 inline bool QmCheckPredictedEventHandled(std::vector<CGameWorld::CPredictedEvent> &vPredictedEvents, const CGameWorld::CPredictedEvent &CheckEvent, bool *pUnplayedMatch = nullptr)
 {
+	if(!CheckEvent.HasValidPosition())
+		return false;
 	constexpr int MaxTickDifference = 3 * SERVER_TICK_SPEED;
 	auto Closest = vPredictedEvents.end();
-	int ClosestTickDifference = MaxTickDifference + 1;
+	int64_t ClosestTickDifference = MaxTickDifference + 1;
 	float ClosestDistanceSquared = 0.0f;
 	for(auto It = vPredictedEvents.begin(); It != vPredictedEvents.end(); ++It)
 	{
-		if(It->m_EventId != CheckEvent.m_EventId || It->m_Tick > CheckEvent.m_Tick || CheckEvent.m_Tick - It->m_Tick > MaxTickDifference || It->m_ExtraInfo != CheckEvent.m_ExtraInfo)
+		const int64_t TickDifference = static_cast<int64_t>(CheckEvent.m_Tick) - It->m_Tick;
+		if(!It->HasValidPosition() || It->m_EventId != CheckEvent.m_EventId || TickDifference < 0 || TickDifference > MaxTickDifference || It->m_ExtraInfo != CheckEvent.m_ExtraInfo)
 			continue;
 		if(!QmPredictedEventPositionsMatch(CheckEvent.m_EventId, It->m_Pos, CheckEvent.m_Pos))
 			continue;
 
 		const float DistanceSquared = length_squared(It->m_Pos - CheckEvent.m_Pos);
-		const int TickDifference = CheckEvent.m_Tick - It->m_Tick;
 		if(It->m_ServerConfirmed && TickDifference > 1)
 			continue;
 		// 无 Id 的确认事件只作为服务端先到的短期屏障，不能在数秒内

@@ -5328,6 +5328,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/console_script_storage_test.cpp
     src/test/contract/qmclient/client/qm_prediction_contract_test.cpp
     src/test/unit/qmclient/client/qm_predicted_event_queue_test.cpp
+    src/test/unit/qmclient/client/qm_predicted_event_positions_test.cpp
+    src/test/unit/qmclient/client/qm_predicted_event_matching_test.cpp
+    src/test/integration/client/predicted_event_inputs_test.cpp
     src/test/unit/qmclient/client/qm_tee_hue_cycle_test.cpp
     src/test/unit/qmclient/client/qm_tee_trail_test.cpp
     src/test/unit/qmclient/client/qm_sponsor_authors_test.cpp

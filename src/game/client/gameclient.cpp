@@ -32,6 +32,7 @@
 #include "components/nameplates.h"
 #include "components/particles.h"
 #include "components/players.h"
+#include "components/qmclient/collision_position.h"
 #include "components/qmclient/item_render_math.h"
 #include "components/qmclient/jelly_tee.h"
 #include "components/qmclient/modes.h"
@@ -3221,6 +3222,8 @@ void CGameClient::ProcessEvents()
 	m_aLastProcessedEventTick[EventDummy] = EventTick;
 	auto RememberConfirmedEvent = [this, EventTick](int EventId, vec2 Pos, int ExtraInfo = -1) {
 		CGameWorld::CPredictedEvent Event(EventId, Pos, -1, EventTick, ExtraInfo);
+		if(!Event.HasValidPosition())
+			return;
 		Event.m_Handled = true;
 		Event.m_ServerConfirmed = true;
 		m_PredictedWorld.m_PredictedEvents.push_back(Event);
@@ -3231,6 +3234,28 @@ void CGameClient::ProcessEvents()
 	for(int Index = 0; Index < Num; Index++)
 	{
 		const IClient::CSnapItem Item = Client()->SnapGetItem(SnapType, Index);
+
+		// 事件公共坐标先校验，避免构造确认记录或提交音效/粒子后才遇到越界取整。
+		switch(Item.m_Type)
+		{
+		case NETEVENTTYPE_DAMAGEIND:
+		case NETEVENTTYPE_EXPLOSION:
+		case NETEVENTTYPE_HAMMERHIT:
+		case NETEVENTTYPE_BIRTHDAY:
+		case NETEVENTTYPE_FINISH:
+		case NETEVENTTYPE_SPAWN:
+		case NETEVENTTYPE_DEATH:
+		case NETEVENTTYPE_SOUNDWORLD:
+		case NETEVENTTYPE_MAPSOUNDWORLD:
+		{
+			const auto *pEvent = static_cast<const CNetEvent_Common *>(Item.m_pData);
+			if(!QmCollision::CanRoundPosition(vec2(pEvent->m_X, pEvent->m_Y)))
+				continue;
+			break;
+		}
+		default:
+			break;
+		}
 
 		// TODO: We don't have enough info about us, others, to know a correct alpha or volume value.
 		const float Alpha = 1.0f;
@@ -3358,6 +3383,8 @@ void CGameClient::FinalizeHammerHitEvents()
 {
 	auto RememberConfirmedEvent = [this](vec2 Pos, int AttackerId, int TargetId, int SnapshotTick) {
 		CGameWorld::CPredictedEvent Event(NETEVENTTYPE_HAMMERHIT, Pos, AttackerId, SnapshotTick, TargetId);
+		if(!Event.HasValidPosition())
+			return;
 		Event.m_Handled = true;
 		Event.m_ServerConfirmed = true;
 		m_PredictedWorld.m_PredictedEvents.push_back(Event);

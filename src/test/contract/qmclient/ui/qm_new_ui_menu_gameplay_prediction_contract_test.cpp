@@ -65,17 +65,6 @@ TEST(QmNewUiMenuGameplayPredictionContract, GhostPlayersDoNotEmitDuplicateWeapon
 	EXPECT_NE(RenderPlayerGhost.find("if(AllowEffects && !Focus.m_HideMuzzleEffects &&"), std::string::npos);
 }
 
-TEST(QmNewUiMenuGameplayPredictionContract, HammerPredictionDeduplicatesSameTargetAndTick)
-{
-	const std::string Source = ReadTextFile("src/game/client/prediction/gameworld.cpp");
-	const std::string CreateHammerEvent = FunctionBody(Source, "void CGameWorld::CreatePredictedHammerHitEvent(");
-
-	EXPECT_NE(CreateHammerEvent.find("Existing.m_EventId == Event.m_EventId"), std::string::npos);
-	EXPECT_NE(CreateHammerEvent.find("Existing.m_Id == Event.m_Id"), std::string::npos);
-	EXPECT_NE(CreateHammerEvent.find("Existing.m_Tick == Event.m_Tick"), std::string::npos);
-	EXPECT_NE(CreateHammerEvent.find("Existing.m_ExtraInfo == Event.m_ExtraInfo"), std::string::npos);
-}
-
 TEST(QmNewUiMenuGameplayPredictionContract, ExtraPredictionWorldDoesNotReplayVisibleEffects)
 {
 	const std::string Source = ReadTextFile("src/game/client/gameclient.cpp");

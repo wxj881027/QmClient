@@ -869,7 +869,7 @@ bool CGameWorld::EmulateBug(int Bug) const
 
 void CGameWorld::CreatePredictedEvent(const CPredictedEvent &NewEvent)
 {
-	if(!g_Config.m_ClPredictEvents || !m_WorldConfig.m_PredictEvents)
+	if(!NewEvent.HasValidPosition() || !g_Config.m_ClPredictEvents || !m_WorldConfig.m_PredictEvents)
 		return;
 
 	// prediction is ran multiple times per tick, check if event already exists
@@ -928,6 +928,8 @@ void CGameWorld::CreateHandledPredictedSound(vec2 Pos, int SoundId, int Id)
 		return;
 
 	CPredictedEvent Event(NETEVENTTYPE_SOUNDWORLD, Pos, Id, GameTick(), SoundId);
+	if(!Event.HasValidPosition())
+		return;
 	Event.m_Handled = true;
 	const auto It = std::find_if(
 		m_PredictedEvents.begin(),
@@ -949,17 +951,13 @@ void CGameWorld::CreatePredictedHammerHitEvent(vec2 Pos, int Id, int TargetId)
 		return;
 
 	CPredictedEvent Event(NETEVENTTYPE_HAMMERHIT, Pos, Id, GameTick(), TargetId);
+	if(!Event.HasValidPosition())
+		return;
 	// 预测在同一 tick 内可能重复运行，位置修正不应把同一次命中拆成多个粒子事件。
 	const auto It = std::find_if(
 		m_PredictedEvents.begin(),
 		m_PredictedEvents.end(),
-		[Event](const CPredictedEvent &Existing) {
-			return (Existing.m_EventId == Event.m_EventId && Existing.m_Id == Event.m_Id &&
-				       Existing.m_Tick == Event.m_Tick && Existing.m_ExtraInfo == Event.m_ExtraInfo) ||
-			       (Existing.m_EventId == Event.m_EventId && Existing.m_Handled && Existing.m_Id == Event.m_Id &&
-				       Existing.m_ExtraInfo == Event.m_ExtraInfo && Event.m_Tick >= Existing.m_Tick &&
-				       Event.m_Tick - Existing.m_Tick <= 1 && QmPredictedEventPositionsMatch(Event.m_EventId, Existing.m_Pos, Event.m_Pos));
-		});
+		[Event](const CPredictedEvent &Existing) { return QmPredictedHammerHitMatchesForCreation(Existing, Event); });
 	if(It != m_PredictedEvents.end())
 	{
 		// 命中身份由攻击者、目标和 tick 决定；仅在粒子尚未播放时
