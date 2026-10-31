@@ -4,6 +4,7 @@
 #define GAME_CLIENT_PREDICTION_ENTITIES_LASER_H
 
 #include <game/client/prediction/entity.h>
+#include <game/client/prediction/tick_shift.h>
 
 class CLaserData;
 
@@ -19,7 +20,10 @@ public:
 	const vec2 &GetFrom() const { return m_From; }
 	const int &GetOwner() const { return m_Owner; }
 	const int &GetEvalTick() const { return m_EvalTick; }
-	void ShiftEvalTick(int TickDelta) { m_EvalTick += TickDelta; }
+	[[nodiscard]] bool ShiftEvalTick(int64_t TickDelta, QmTickShift::EMode Mode = QmTickShift::EMode::COMMIT)
+	{
+		return QmTickShift::TryShiftFields(TickDelta, Mode, {&m_EvalTick});
+	}
 	CLaser(CGameWorld *pGameWorld, int Id, const CLaserData *pLaser);
 	bool Match(CLaser *pLaser);
 	CLaserData GetData() const;

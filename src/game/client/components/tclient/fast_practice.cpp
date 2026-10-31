@@ -13,10 +13,10 @@
 #include <game/client/components/binds.h>
 #include <game/client/components/particles.h>
 #include <game/client/components/qmclient/modes.h>
+#include <game/client/components/qmclient/practice_tick_shift.h>
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
 #include <game/client/prediction/entities/laser.h>
-#include <game/client/prediction/entities/plasma.h>
 #include <game/client/prediction/entities/projectile.h>
 #include <game/client/projectile_data.h>
 #include <game/gamecore.h>
@@ -516,42 +516,17 @@ void CFastPractice::PrunePracticeWorld(CGameWorld &World) const
 	}
 }
 
-void CFastPractice::ShiftPracticeWorldTicks(int TickDelta)
-{
-	if(TickDelta <= 0)
-		return;
-
-	m_PracticeBaseWorld.m_GameTick += TickDelta;
-	for(auto &Switcher : m_PracticeBaseWorld.Switchers())
-	{
-		for(int Team = 0; Team < NUM_DDRACE_TEAMS; Team++)
-		{
-			if(Switcher.m_aEndTick[Team] > 0)
-				Switcher.m_aEndTick[Team] += TickDelta;
-			if(Switcher.m_aLastUpdateTick[Team] > 0)
-				Switcher.m_aLastUpdateTick[Team] += TickDelta;
-		}
-	}
-	for(int &LastAttackTick : m_aLastAttackTick)
-		if(LastAttackTick >= 0)
-			LastAttackTick += TickDelta;
-	for(CCharacter *pChar = (CCharacter *)m_PracticeBaseWorld.FindFirst(CGameWorld::ENTTYPE_CHARACTER); pChar; pChar = (CCharacter *)pChar->TypeNext())
-		pChar->ShiftTickBase(TickDelta);
-	for(CProjectile *pProj = (CProjectile *)m_PracticeBaseWorld.FindFirst(CGameWorld::ENTTYPE_PROJECTILE); pProj; pProj = (CProjectile *)pProj->TypeNext())
-		pProj->ShiftStartTick(TickDelta);
-	for(CLaser *pLaser = (CLaser *)m_PracticeBaseWorld.FindFirst(CGameWorld::ENTTYPE_LASER); pLaser; pLaser = (CLaser *)pLaser->TypeNext())
-		pLaser->ShiftEvalTick(TickDelta);
-	for(CPlasma *pPlasma = (CPlasma *)m_PracticeBaseWorld.FindFirst(CGameWorld::ENTTYPE_PLASMA); pPlasma; pPlasma = (CPlasma *)pPlasma->TypeNext())
-		pPlasma->ShiftEvalTick(TickDelta);
-}
-
 void CFastPractice::FreezePracticeWorldForServerPause()
 {
 	if(!m_PracticeWorldInitialized)
 		return;
 
 	const int TargetTick = Client()->PredGameTick(g_Config.m_ClDummy);
-	ShiftPracticeWorldTicks(TargetTick - m_PracticeBaseWorld.GameTick());
+	if(!QmPractice::TryShiftTicks(m_PracticeBaseWorld, static_cast<int64_t>(TargetTick) - m_PracticeBaseWorld.GameTick(), m_aLastAttackTick))
+	{
+		Disable();
+		return;
+	}
 
 	CaptureServerReleasedFireStates();
 	CapturePracticeInputFilterStates();

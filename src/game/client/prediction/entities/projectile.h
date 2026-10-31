@@ -4,6 +4,7 @@
 #define GAME_CLIENT_PREDICTION_ENTITIES_PROJECTILE_H
 
 #include <game/client/prediction/entity.h>
+#include <game/client/prediction/tick_shift.h>
 
 #include <cstdint>
 
@@ -40,7 +41,10 @@ public:
 	const int &GetOwner() const { return m_Owner; }
 	const int &GetStartTick() const { return m_StartTick; }
 	int64_t GetLifeSpan() const { return m_LifeSpan; }
-	void ShiftStartTick(int TickDelta) { m_StartTick += TickDelta; }
+	[[nodiscard]] bool ShiftStartTick(int64_t TickDelta, QmTickShift::EMode Mode = QmTickShift::EMode::COMMIT)
+	{
+		return QmTickShift::TryShiftFields(TickDelta, Mode, {&m_StartTick});
+	}
 	CProjectile(CGameWorld *pGameWorld, int Id, const CProjectileData *pProj);
 
 private:

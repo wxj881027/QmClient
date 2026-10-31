@@ -1394,22 +1394,9 @@ void CCharacter::ApplyMoveRestrictions()
 	m_Core.m_Vel = ClampVel(m_MoveRestrictions, m_Core.m_Vel);
 }
 
-void CCharacter::ShiftTickBase(int TickDelta)
+bool CCharacter::ShiftTickBase(int64_t TickDelta, QmTickShift::EMode Mode)
 {
-	if(TickDelta == 0)
-		return;
-
-	m_AttackTick += TickDelta;
-	if(m_LastDamageTick >= 0)
-		m_LastDamageTick += TickDelta;
-	m_LastWeaponSwitchTick += TickDelta;
-	m_LastTuneZoneTick += TickDelta;
-	if(m_Core.m_aWeapons[WEAPON_NINJA].m_Got)
-		m_Core.m_Ninja.m_ActivationTick += TickDelta;
-	if(m_Core.m_FreezeStart > 0)
-		m_Core.m_FreezeStart += TickDelta;
-	if(m_Core.m_FreezeEnd > 0)
-		m_Core.m_FreezeEnd += TickDelta;
+	return QmTickShift::TryShiftFields(TickDelta, Mode, {&m_AttackTick, m_LastDamageTick >= 0 ? &m_LastDamageTick : nullptr, &m_LastWeaponSwitchTick, &m_LastTuneZoneTick, m_Core.m_aWeapons[WEAPON_NINJA].m_Got ? &m_Core.m_Ninja.m_ActivationTick : nullptr, m_Core.m_FreezeStart > 0 ? &m_Core.m_FreezeStart : nullptr, m_Core.m_FreezeEnd > 0 ? &m_Core.m_FreezeEnd : nullptr});
 }
 
 CTeamsCore *CCharacter::TeamsCore()

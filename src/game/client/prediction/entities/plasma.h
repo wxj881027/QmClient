@@ -4,6 +4,7 @@
 
 #include <game/client/components/qmclient/collision_position.h>
 #include <game/client/prediction/entity.h>
+#include <game/client/prediction/tick_shift.h>
 
 class CLaserData;
 
@@ -36,7 +37,10 @@ public:
 
 	bool Match(const CPlasma *pPlasma) const;
 	void Read(const CLaserData *pData);
-	void ShiftEvalTick(int TickDelta) { m_EvalTick += TickDelta; }
+	[[nodiscard]] bool ShiftEvalTick(int64_t TickDelta, QmTickShift::EMode Mode = QmTickShift::EMode::COMMIT)
+	{
+		return QmTickShift::TryShiftFields(TickDelta, Mode, {&m_EvalTick});
+	}
 
 	void Reset();
 	void Tick() override;

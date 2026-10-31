@@ -6,6 +6,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/prediction/entity.h>
+#include <game/client/prediction/tick_shift.h>
 #include <game/gamecore.h>
 #include <game/race_state.h>
 
@@ -151,7 +152,7 @@ public:
 
 	// TClient
 	CNetObj_PlayerInput *LatestInput() { return &m_LatestInput; }
-	void ShiftTickBase(int TickDelta);
+	[[nodiscard]] bool ShiftTickBase(int64_t TickDelta, QmTickShift::EMode Mode = QmTickShift::EMode::COMMIT);
 
 private:
 	void BindAntiPingInterferenceCallback();

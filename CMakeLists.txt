@@ -3855,6 +3855,8 @@ if(CLIENT)
     components/tclient/custom_communities.cpp
     components/tclient/custom_communities.h
     components/tclient/fast_practice.cpp
+    components/qmclient/practice_tick_shift.cpp
+    components/qmclient/practice_tick_shift.h
     components/tclient/fast_practice.h
     components/tclient/map_history.cpp
     components/tclient/map_history.h
@@ -3927,6 +3929,7 @@ if(CLIENT)
     prediction/entity.h
     prediction/gameworld.cpp
     prediction/gameworld.h
+    prediction/tick_shift.h
     projectile_data.cpp
     projectile_data.h
     qm_icon.h
@@ -4839,6 +4842,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/laser_positions_test.cpp
     src/test/unit/client/projectile_positions_test.cpp
     src/test/unit/client/collision_line_domain_test.cpp
+    src/test/unit/client/prediction_tick_shift_test.cpp
     src/test/unit/client/pickup_positions_test.cpp
     src/test/unit/client/plasma_movement_test.cpp
     src/test/integration/client/projectile_position_inputs_test.cpp
@@ -6136,6 +6140,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/support/prediction_allocation_failure.h
       src/test/integration/client/prediction_world_copy_failure_test.cpp
       src/test/integration/client/prediction_entity_numeric_test.cpp
+      src/test/integration/client/practice_tick_shift_test.cpp
+      src/game/client/components/qmclient/practice_tick_shift.cpp
       src/test/integration/client/prediction_entity_copy_test.cpp
       src/test/integration/client/prediction_world_copy_test.cpp
       src/game/client/prediction/entity.cpp
