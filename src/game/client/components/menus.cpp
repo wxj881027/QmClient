@@ -38,6 +38,7 @@
 #include <game/client/QmUi/QmTree.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SettingsCard.h>
+#include <game/client/QmUi/SettingsGlyphPrewarm.h>
 #include <game/client/QmUi/SettingsLabelMetadata.h>
 #include <game/client/QmUi/SettingsMenuPrewarmScope.h>
 #include <game/client/QmUi/SettingsTextPlanCommit.h>
@@ -7061,6 +7062,10 @@ bool CMenus::PrebuildSettingsTextPlanItem(const SMenuTextPlanItem &Item, int &Re
 {
 	if(RemainingBudget <= 0 || !SettingsMenuTextPlanItemBuildable(Item))
 		return false;
+	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+	if(!SettingsGlyphPixelSize(Item.m_FontSize, ScreenY1 - ScreenY0, Graphics()->ScreenHeight()))
+		return false;
 
 	const SMenuTextStyleKey StyleKey = SettingsMenuTextPlanStyleKey(Item);
 	CUIElement &Element = MenuTextElement(Item.m_Scope, Item.m_Page, Item.m_Tab, Item.m_Subtab, Item.m_TextId.c_str(), StyleKey);
@@ -7515,43 +7520,39 @@ int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperatio
 	// 单帧 5–33ms）。容器构建无法跨帧续建，但字形光栅化幂等、可中断，因此在
 	// 构建当前 item 之前先把它的字符分帧预热，全部命中后容器构建只剩布局与写顶点。
 	constexpr int GLYPH_PREWARM_PER_FRAME = 24;
+	const auto PixelSizeForFont = [this](float FontSize) {
+		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+		return SettingsGlyphPixelSize(FontSize, ScreenY1 - ScreenY0, Graphics()->ScreenHeight());
+	};
 	if(m_SettingsMenuTextPlanCursor < m_vSettingsMenuTextPrebuildPlan.size())
 	{
 		if(m_MenuTextGlyphPrewarmPlanCursor != m_SettingsMenuTextPlanCursor)
 		{
 			const SMenuTextPlanItem &PrewarmItem = m_vSettingsMenuTextPrebuildPlan[m_SettingsMenuTextPlanCursor];
-			m_vMenuTextGlyphPrewarmQueue.clear();
-			m_MenuTextGlyphPrewarmCursor = 0;
-			m_MenuTextGlyphPrewarmPlanCursor = m_SettingsMenuTextPlanCursor;
-			if(SettingsMenuTextPlanItemBuildable(PrewarmItem) && !PrewarmItem.m_Text.empty())
+			const char *pText = "";
+			std::optional<int> PixelSize = 1;
+			if(SettingsMenuTextPlanItemBuildable(PrewarmItem))
 			{
-				// 与 CTextRender::AppendTextContainerImpl 的 ActualSize 保持同一换算，
-				// 否则预热使用的字号键与运行时不匹配。
-				float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-				Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-				const float ScreenHeight = ScreenY1 - ScreenY0;
-				const float GraphicsHeight = Graphics()->ScreenHeight();
-				const float FakeToScreenY = ScreenHeight >= 1.0f && std::isfinite(ScreenHeight) && GraphicsHeight > 0.0f && std::isfinite(GraphicsHeight) ? GraphicsHeight / ScreenHeight : 1.0f;
-				const int ActualSize = round_truncate(PrewarmItem.m_FontSize * FakeToScreenY);
-				std::unordered_set<int> SeenChars;
-				for(const char *pCursor = PrewarmItem.m_Text.c_str(); *pCursor != '\0';)
-				{
-					const int Chr = str_utf8_decode(&pCursor);
-					if(Chr > 0 && SeenChars.insert(Chr).second)
-						m_vMenuTextGlyphPrewarmQueue.emplace_back(Chr, ActualSize);
-				}
+				PixelSize = PixelSizeForFont(PrewarmItem.m_FontSize);
+				pText = PrewarmItem.m_Text.c_str();
+			}
+			if(!PixelSize)
+			{
+				// 不可表示的像素字号不能进入预热或后续容器构建。
+				++m_SettingsMenuTextPlanCursor;
+				m_SettingsMenuTextLastPrebuildStats.m_Remaining = CountMissingSettingsMenuTextPlanItems();
+				return RemainingBudget;
+			}
+			if(!PrepareSettingsGlyphQueue(m_vMenuTextGlyphPrewarmQueue, m_MenuTextGlyphPrewarmCursor, m_MenuTextGlyphPrewarmPlanCursor, m_SettingsMenuTextPlanCursor, pText, *PixelSize))
+			{
+				m_SettingsMenuTextLastPrebuildStats.m_Remaining = CountMissingSettingsMenuTextPlanItems();
+				return RemainingBudget;
 			}
 		}
-		int PrewarmedThisFrame = 0;
-		while(m_MenuTextGlyphPrewarmCursor < m_vMenuTextGlyphPrewarmQueue.size() && PrewarmedThisFrame < GLYPH_PREWARM_PER_FRAME)
+		if(!AdvanceSettingsGlyphQueue(m_vMenuTextGlyphPrewarmQueue, m_MenuTextGlyphPrewarmCursor, GLYPH_PREWARM_PER_FRAME, [this](int Chr, int Size) { TextRender()->QmPrewarmGlyph(Chr, Size); }))
 		{
-			const std::pair<int, int> &Glyph = m_vMenuTextGlyphPrewarmQueue[m_MenuTextGlyphPrewarmCursor++];
-			TextRender()->QmPrewarmGlyph(Glyph.first, Glyph.second);
-			++PrewarmedThisFrame;
-		}
-		if(m_MenuTextGlyphPrewarmCursor < m_vMenuTextGlyphPrewarmQueue.size())
-		{
-			// 本帧只预热，暂不下发容器构建
+			// 准备/调用失败或本帧预算耗尽时，下帧从未完成位置继续。
 			m_SettingsMenuTextLastPrebuildStats.m_Remaining = CountMissingSettingsMenuTextPlanItems();
 			return RemainingBudget;
 		}
@@ -7560,7 +7561,7 @@ int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperatio
 	while(m_SettingsMenuTextPlanCursor < m_vSettingsMenuTextPrebuildPlan.size())
 	{
 		const SMenuTextPlanItem &Item = m_vSettingsMenuTextPrebuildPlan[m_SettingsMenuTextPlanCursor];
-		if(!SettingsMenuTextPlanItemBuildable(Item))
+		if(!SettingsMenuTextPlanItemBuildable(Item) || !PixelSizeForFont(Item.m_FontSize))
 		{
 			++m_SettingsMenuTextPlanCursor;
 			continue;

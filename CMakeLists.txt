@@ -3302,6 +3302,7 @@ if(CLIENT)
     QmUi/SettingsMenuPrewarm.cpp
     QmUi/SettingsMenuPrewarmScope.h
     QmUi/SettingsTextPlanCommit.h
+    QmUi/SettingsGlyphPrewarm.h
     QmUi/SettingsRuntimeCache.cpp
     QmUi/SettingsCard.cpp
     QmUi/SettingsCardInfo.cpp
@@ -6213,6 +6214,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/settings/settings_text_plan_scope_test.cpp
       src/test/unit/qmclient/settings/settings_text_plan_commit_test.cpp
       src/test/unit/qmclient/settings/settings_text_plan_progress_test.cpp
+      src/test/unit/qmclient/settings/settings_glyph_prewarm_test.cpp
       src/test/integration/qmclient/client/qm_warlist_cache_prepare_test.cpp
       src/game/client/components/qmclient/warlist_model.cpp
       src/game/client/components/qmclient/practice_tick_shift.cpp
