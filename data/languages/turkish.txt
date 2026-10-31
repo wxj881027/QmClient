@@ -2663,6 +2663,9 @@ Close the demo player
 Close window after changing settings
 == Ayarları değiştirdikten sonra pencereyi kapat
 
+Collapse
+== Daralt
+
 Collapse console
 == Konsolu daralt
 
@@ -5305,6 +5308,9 @@ Exit replay view
 
 Exit spectating on both tees when either is hammered awake by another player
 == Başka bir oyuncu birini çekiçle çözdüğünde iki Tee de seyirci modundan çıksın
+
+Expand
+== Genişlet
 
 Expand console
 == Konsolu genişlet

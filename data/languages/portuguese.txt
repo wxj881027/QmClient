@@ -2663,6 +2663,9 @@ Close the demo player
 Close window after changing settings
 == Fechar janela após alterar definições
 
+Collapse
+== Recolher
+
 Collapse console
 == Recolher consola
 
@@ -5305,6 +5308,9 @@ Exit replay view
 
 Exit spectating on both tees when either is hammered awake by another player
 == Sair do modo espectador com ambos os Tees quando outro jogador descongelar um deles com o martelo
+
+Expand
+== Expandir
 
 Expand console
 == Expandir consola

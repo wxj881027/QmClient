@@ -2663,6 +2663,9 @@ Close the demo player
 Close window after changing settings
 == Zamknij okno po zmianie ustawień
 
+Collapse
+== Zwiń
+
 Collapse console
 == Zwiń konsolę
 
@@ -5305,6 +5308,9 @@ Exit replay view
 
 Exit spectating on both tees when either is hammered awake by another player
 == Wyłącz obserwowanie obu Tee, gdy inny gracz odmrozi młotkiem któregokolwiek z nich
+
+Expand
+== Rozwiń
 
 Expand console
 == Rozwiń konsolę

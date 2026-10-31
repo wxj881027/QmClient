@@ -2663,6 +2663,9 @@ Close the demo player
 Close window after changing settings
 == 設定変更後にウィンドウを閉じる
 
+Collapse
+== 折りたたむ
+
 Collapse console
 == コンソールを縮小
 
@@ -5305,6 +5308,9 @@ Exit replay view
 
 Exit spectating on both tees when either is hammered awake by another player
 == どちらかが他のプレイヤーのハンマーで解凍されたら両方の Tee の観戦を解除
+
+Expand
+== 展開する
 
 Expand console
 == コンソールを展開

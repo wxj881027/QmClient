@@ -15332,3 +15332,36 @@ brazilian_portuguese = "Atualizando a lista pública de palavras..."
 portuguese = "A atualizar a lista pública de palavras..."
 turkish = "Ortak kelime listesi güncelleniyor..."
 polish = "Aktualizowanie publicznej listy słów..."
+
+[[message]]
+key = "Collapse"
+[message.translations]
+simplified_chinese = "折叠"
+traditional_chinese = "摺疊"
+japanese = "折りたたむ"
+korean = "접기"
+russian = "Свернуть"
+german = "Einklappen"
+spanish = "Contraer"
+french = "Réduire"
+brazilian_portuguese = "Recolher"
+portuguese = "Recolher"
+turkish = "Daralt"
+polish = "Zwiń"
+
+[[message]]
+key = "Expand"
+[message.translations]
+simplified_chinese = "展开"
+traditional_chinese = "展開"
+japanese = "展開する"
+korean = "펼치기"
+russian = "Развернуть"
+german = "Erweitern"
+spanish = "Expandir"
+french = "Développer"
+brazilian_portuguese = "Expandir"
+portuguese = "Expandir"
+turkish = "Genişlet"
+polish = "Rozwiń"
+

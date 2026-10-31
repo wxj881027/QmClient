@@ -2663,6 +2663,9 @@ Close the demo player
 Close window after changing settings
 == 설정 변경 후 창 닫기
 
+Collapse
+== 접기
+
 Collapse console
 == 콘솔 축소
 
@@ -5305,6 +5308,9 @@ Exit replay view
 
 Exit spectating on both tees when either is hammered awake by another player
 == 어느 한 Tee가 다른 플레이어의 망치로 해동되면 두 Tee 모두 관전 해제
+
+Expand
+== 펼치기
 
 Expand console
 == 콘솔 확장

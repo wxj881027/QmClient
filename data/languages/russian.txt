@@ -2663,6 +2663,9 @@ Close the demo player
 Close window after changing settings
 == Закрыть окно после изменения настроек
 
+Collapse
+== Свернуть
+
 Collapse console
 == Уменьшить консоль
 
@@ -5305,6 +5308,9 @@ Exit replay view
 
 Exit spectating on both tees when either is hammered awake by another player
 == Выходить из наблюдения обоими Tee, когда другой игрок размораживает любого из них молотком
+
+Expand
+== Развернуть
 
 Expand console
 == Развернуть консоль

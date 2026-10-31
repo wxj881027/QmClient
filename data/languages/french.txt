@@ -2663,6 +2663,9 @@ Close the demo player
 Close window after changing settings
 == Fermer la fenêtre après avoir modifié les paramètres
 
+Collapse
+== Réduire
+
 Collapse console
 == Réduire la console
 
@@ -5305,6 +5308,9 @@ Exit replay view
 
 Exit spectating on both tees when either is hammered awake by another player
 == Quitter le mode spectateur avec les deux Tees quand un autre joueur dégèle l'un d'eux au marteau
+
+Expand
+== Développer
 
 Expand console
 == Agrandir la console

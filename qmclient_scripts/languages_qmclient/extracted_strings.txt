@@ -886,6 +886,7 @@ Client-side self-kill protection
 Close
 Close the demo player
 Close window after changing settings
+Collapse
 Collapse console
 Collects the remaining DDNet client preferences that do not belong to other cards.
 Collision hitbox
@@ -1767,6 +1768,7 @@ Existing Player
 Exit and install
 Exit replay view
 Exit spectating on both tees when either is hammered awake by another player
+Expand
 Expand console
 Expanded dropdown background color
 Expanded dropdown background opacity percentage

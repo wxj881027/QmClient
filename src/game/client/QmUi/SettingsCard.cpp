@@ -25,6 +25,7 @@
 #include <game/client/qm_icon.h>
 #include <game/client/qm_icon_label.h>
 #include <game/client/ui.h>
+#include <game/localization.h>
 
 #include <algorithm>
 #include <cmath>
@@ -110,6 +111,8 @@ void RenderSettingsCardCollapseButton(const IUiContext &Ctx, const CUIRect &Rect
 		const CUIRect IconRect = QmIconLabelRect(DrawRect, Size, TEXTALIGN_MC);
 		ui_widget::DrawIconSwapBinding(Ctx, IconRect, IconColor, &CollapseIcon);
 	});
+	if(Ctx.m_pTooltips != nullptr)
+		Ctx.m_pTooltips->DoToolTip(pId, &Rect, Collapsed ? Localize("Expand") : Localize("Collapse"));
 }
 
 SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const CUIRect &Slot, const SSettingsCardSpec &Spec, const SSettingsCardVisualState &State, const SSettingsCardDeckVisualOptions &VisualOptions, const FSettingsCardMeasure &Measure, const FSettingsCardRender &Render, const FSettingsCardHeaderAction &HeaderAction, const FSettingsCardRenderMeasured &RenderMeasured, bool *pPointerInside, float *pObservedContentHeight)

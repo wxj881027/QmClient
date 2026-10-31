@@ -298,13 +298,13 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 				if(LocateButton.w < TextRender()->TextWidth(SmallSize, pLabel) + 16.0f * UiScale)
 				{
 					RenderSettingsCardHeaderIcon(SearchCtx, LocateButton, EQmIcon::ARROW_RIGHT, FontIcons::FONT_ICON_CHEVRON_RIGHT, 1.0f, pLocateButton);
-					GameClient()->m_Tooltips.DoSmallToolTip(pLocateButton, &LocateButton, pLabel, SmallSize);
 				}
 				else
 				{
 					DrawRoundedSurface(Ui(), LocateButton, ChromeColor, ChromeColor, Radius);
 					Ui()->DoLabel(&LocateButton, pLabel, SmallSize, TEXTALIGN_MC);
 				}
+				GameClient()->m_Tooltips.DoSmallToolTip(pLocateButton, &LocateButton, pLabel, SmallSize);
 			};
 			vCards.push_back(std::move(Definition));
 		}

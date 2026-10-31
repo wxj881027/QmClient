@@ -2663,6 +2663,9 @@ Close the demo player
 Close window after changing settings
 == 更改設置後關閉窗口
 
+Collapse
+== 摺疊
+
 Collapse console
 == 收起控制台
 
@@ -5305,6 +5308,9 @@ Exit replay view
 
 Exit spectating on both tees when either is hammered awake by another player
 == 任一方被其他玩家錘醒時，自動讓兩個 Tee 退出旁觀
+
+Expand
+== 展開
 
 Expand console
 == 展開控制台
