@@ -1967,6 +1967,21 @@ Bubble opacity
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
+Built-in IME language switch key (SDL key code, 0=disabled)
+== Yerleşik giriş dili tuşu (SDL tuş kodu, 0=devre dışı)
+
+Built-in IME switch modifiers (Shift=1, Ctrl=4, Alt=8, GUI=64); default Ctrl+Space
+== Dil değiştirme değiştiricileri (Shift=1, Ctrl=4, Alt=8, GUI=64); varsayılan Ctrl+Space
+
+Built-in input supports Chinese Pinyin and English suggestions with a US keyboard layout on Windows. Use system input for other layouts or input methods.
+== Yerleşik giriş, Windows üzerinde US klavye düzeniyle Çince Pinyin ve İngilizce önerileri destekler. Diğer düzenler veya yöntemler için sistem girişini kullanın.
+
+Built-in Pinyin
+== Yerleşik Pinyin
+
+Built-in Pinyin is only available on Windows. This platform uses system input.
+== Yerleşik Pinyin yalnızca Windows'ta kullanılabilir. Bu platform sistem girişini kullanır.
+
 Button - Disabled
 == Düğme - Devre Dışı
 
@@ -2542,6 +2557,12 @@ Clear finished
 
 Clear friend note
 == Arkadaş notunu temizle
+
+Clear learned built-in pinyin words
+== Yerleşik pinyin öğrenme geçmişini temizle
+
+Clear learned words
+== Öğrenme geçmişini temizle
 
 Clear local console
 == Yerel konsolu temizle
@@ -3863,6 +3884,9 @@ Delete
 Delete "%s"?
 == "%s" silinsin mi?
 
+Delete all locally learned input words? Current game words will remain available.
+== Yerel olarak öğrenilen tüm giriş sözcükleri silinsin mi? Mevcut oyun sözcükleri kullanılabilir kalır.
+
 Delete category
 == Kategoriyi sil
 
@@ -4171,6 +4195,9 @@ Do not use it to spam: servers may punish repeated automatic messages.
 
 Document too large for the editor (%d of %d bytes)
 == Belge istemci düzenleyicisi için çok büyük (%d / %d bayt)
+
+Domain candidates per page
+== Sayfa başına oyun terimi
 
 Done
 == Tamam
@@ -5192,6 +5219,12 @@ Endpoint (optional)
 English font:
 == İngilizce yazı tipi:
 
+English word suggestions
+== İngilizce sözcük önerileri
+
+English: Tab accepts the selected suggestion; Space keeps your typed text.
+== İngilizce: Tab seçili öneriyi kabul eder; Boşluk yazdığınız metni korur.
+
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == /practice yazın veya yeniden başlatın, aksi takdirde tüm takım 60 saniye içinde öldürülecek
 
@@ -6055,6 +6088,9 @@ Game
 
 Game assets
 == Oyun varlıkları
+
+Game domain words
+== Oyun terimleri
 
 Game graphics assets not from Teeworlds
 == Teeworlds kaynaklı olmayan oyun grafik varlıkları
@@ -6950,6 +6986,12 @@ IME appearance
 IME background color
 == IME arka plan rengi
 
+IME engine
+== IME motoru
+
+IME engine (0=system, 1=built-in pinyin, Windows US layout only)
+== IME motoru (0=sistem, 1=yerleşik pinyin, yalnızca Windows US düzeni)
+
 IME font size
 == IME yazı boyutu
 
@@ -6973,6 +7015,9 @@ IME gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
 
 IME gradient vertical position percentage
 == Gradyan dikey konumu (IME, %)
+
+IME language switch key
+== Giriş dili değiştirme tuşu
 
 IME selected text color
 == IME seçili metin rengi
@@ -7030,6 +7075,9 @@ Include emoticon when saving/loading config preset
 
 Include game audio in the recording.
 == Kayda oyun sesini dahil et.
+
+Include game words in built-in pinyin candidates
+== Oyun terimlerini yerleşik pinyin adaylarına ekle
 
 Include name when saving/loading config preset
 == Yapılandırma ön ayarını kaydederken/yüklerken adı dahil et
@@ -7744,6 +7792,12 @@ Learn
 
 Learn "Toggle dummy" first; the other dummy keys only help once you already play with a second tee.
 == Önce Dummy'yi değiştir tuşunu öğren; diğer dummy tuşları ancak ikinci tee ile oynamaya başlayınca işe yarar.
+
+Learn committed words
+== Girilen sözcükleri öğren
+
+Learn committed words in built-in pinyin
+== Yerleşik pinyinde girilen sözcükleri öğren
 
 Leave "Automatic updates" off if you update by hand: it can restart the client to install a build.
 == Elle güncelliyorsan "Otomatik güncellemeler"i kapalı bırak: yeni sürümü kurmak için istemciyi yeniden başlatabilir.
@@ -8473,6 +8527,9 @@ Maximum dynamic camera cursor distance
 
 Maximum framerate for entity layer video background
 == Varlık katmanı video arka planı için maksimum kare hızı
+
+Maximum game words on the first pinyin candidate page
+== Pinyin adaylarının ilk sayfasındaki en fazla oyun terimi
 
 Maximum notification count
 == Bildirim çubuğu maksimum görüntüleme sayısı
@@ -14810,6 +14867,9 @@ Successfully saved the replay!
 Sudden Death
 == Ani Ölüm
 
+Suggest English words in built-in IME English mode; Tab accepts, Space keeps typed text
+== Yerleşik İngilizce girişinde sözcük öner; Tab kabul eder, Boşluk yazılan metni korur
+
 Suicides
 == İntiharlar
 
@@ -14845,6 +14905,9 @@ Swap option color
 
 Swaps the active action (fire and hook) for direct touch input and virtual joysticks.
 == Doğrudan dokunma girişi ve sanal joystick'ler için etkin eylemi (ateş ve kanca) değiştirir.
+
+Switch built-in IME language by tapping Shift
+== Shift tuşuna dokunarak yerleşik giriş dilini değiştir
 
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 == Anahtar geri sayımının konumu (0 = Tee'yi takip et, 1 = Dinamik Ada, 2 = ikisi de)
@@ -14939,6 +15002,9 @@ System default
 System graphics settings
 == Sistem grafik ayarları
 
+System input
+== Sistem girişi
+
 System media controls
 == Sistem medya kontrolleri
 
@@ -14962,6 +15028,9 @@ Take a screenshot
 
 Take photo
 == Fotoğraf çek
+
+Tap Shift to switch language
+== Dili değiştirmek için Shift tuşuna dokun
 
 Taper trail ends
 == İz uçlarını incelt

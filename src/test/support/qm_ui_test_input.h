@@ -7,7 +7,7 @@
 
 namespace qm_ui_test
 {
-	class CTestInput final : public IInput
+	class CTestInput : public IInput
 	{
 		std::vector<CTouchFingerState> m_vTouch;
 
@@ -52,6 +52,8 @@ namespace qm_ui_test
 			m_CandidateCount = 0;
 		}
 		void EnsureScreenKeyboardShown() override {}
+		void SetImeProvider(IImeProvider *) override {}
+		void SetImeEngineEnabled(bool) override {}
 		const char *GetComposition() const override { return m_Composing ? "x" : ""; }
 		bool HasComposition() const override { return QmImeCompositionIsActive(m_Composing, m_CandidateCount); }
 		int GetCompositionCursor() const override { return 0; }
