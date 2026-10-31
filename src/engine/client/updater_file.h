@@ -24,6 +24,30 @@ namespace QmLegacyUpdater
 		return IUpdater::FAIL;
 	}
 
+	// 任何阶段失败立即停止后续写盘；已经成功的文件不冒充可以整体回滚。
+	template<typename TJobs, typename TMove, typename TClient, typename TServer, typename TRemove>
+	bool CommitFiles(const TJobs &Jobs, bool ClientUpdate, bool ServerUpdate, TMove &&Move, TClient &&Client, TServer &&Server, TRemove &&Remove) noexcept
+	{
+		try
+		{
+			for(const auto &[Name, Download] : Jobs)
+				if(Download && !Move(Name.c_str()))
+					return false;
+			if(ClientUpdate && !Client())
+				return false;
+			if(ServerUpdate && !Server())
+				return false;
+			for(const auto &[Name, Download] : Jobs)
+				if(!Download && !Remove(Name.c_str()))
+					return false;
+			return true;
+		}
+		catch(...)
+		{
+			return false;
+		}
+	}
+
 	inline bool FormatPlatformLibraryName(const char *pFile, size_t ExtensionLength, const char *pPlatform, char *pOut, unsigned OutSize) noexcept
 	{
 		if(OutSize == 0)

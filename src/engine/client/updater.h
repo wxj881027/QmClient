@@ -64,7 +64,6 @@ class CUpdater : public IUpdater
 	bool m_ClientFetched;
 	bool m_ServerFetched;
 
-	void AddFileJob(const char *pFile, bool Job);
 	bool FetchFile(const char *pFile, const char *pDestPath = nullptr) noexcept REQUIRES(!m_Lock);
 	bool MoveFile(const char *pFile);
 	bool ReplaceBinaryFile(const char *pCandidate, const char *pDestination, const char *pBackup, bool Executable);

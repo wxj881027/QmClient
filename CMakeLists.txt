@@ -3229,6 +3229,8 @@ if(CLIENT)
     updater.cpp
     updater.h
     updater_file.h
+    updater_data.cpp
+    updater_data.h
     video.cpp
     video.h
     video_frame_capture.h
@@ -5341,6 +5343,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_legacy_config_load_test.cpp
     src/test/integration/engine/config_persistence_test.cpp
     src/test/integration/engine/legacy_updater_file_test.cpp
+    src/test/integration/engine/legacy_updater_manifest_test.cpp
     src/test/integration/engine/console_script_storage_test.cpp
     src/test/contract/qmclient/client/qm_prediction_contract_test.cpp
     src/test/unit/qmclient/client/qm_predicted_event_queue_test.cpp
@@ -5454,6 +5457,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/storage_replace_test.cpp
     src/test/unit/engine/legacy_updater_test.cpp
     src/engine/client/updater.cpp
+    src/engine/client/updater_data.cpp
+    src/test/unit/engine/legacy_updater_data_test.cpp
     src/test/unit/client/section_loader_test.cpp
     src/test/contract/qmclient/settings/section_loader_cleanup_contract_test.cpp
     src/test/unit/client/swap_countdown_message_test.cpp
@@ -6172,6 +6177,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/client/weapon_trajectory_preparation_test.cpp
       src/test/unit/qmclient/client/qm_word_filter_allocation_test.cpp
       src/game/client/components/qmclient/word_filter_list.cpp
+      src/engine/client/updater_data.cpp
+      src/test/unit/engine/legacy_updater_allocation_test.cpp
       src/game/client/components/qmclient/streamer_word_filter.cpp
       src/test/unit/qmclient/client/qm_streamer_filter_allocation_test.cpp
       src/test/integration/qmclient/client/qm_streamer_filter_publication_test.cpp
