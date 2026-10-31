@@ -730,6 +730,8 @@ void CCollisionHitbox::RenderLaserHitboxes()
 			continue;
 
 		const CLaserData Data = ExtractLaserInfo(Item.m_Type, Item.m_pData, &GameClient()->m_GameWorld, Ent.m_pDataEx);
+		if(!Data.HasValidPositions())
+			continue;
 		if(Data.m_ExtraInfo && Data.m_Owner >= 0 && !ShouldRenderClient(Data.m_Owner))
 			continue;
 

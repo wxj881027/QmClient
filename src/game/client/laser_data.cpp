@@ -7,8 +7,14 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/components/qmclient/collision_position.h>
 #include <game/client/prediction/gameworld.h>
 #include <game/collision.h>
+
+bool CLaserData::HasValidPositions() const
+{
+	return QmCollision::CanRoundPosition(m_From) && QmCollision::CanRoundPosition(m_To);
+}
 
 CLaserData ExtractLaserInfo(int NetObjType, const void *pData, CGameWorld *pGameWorld, const CNetObj_EntityEx *pEntEx)
 {
@@ -32,7 +38,7 @@ CLaserData ExtractLaserInfo(int NetObjType, const void *pData, CGameWorld *pGame
 		Result.m_Type = -1;
 		Result.m_SwitchNumber = 0;
 		Result.m_Subtype = -1;
-		Result.m_TuneZone = pGameWorld && pGameWorld->m_WorldConfig.m_UseTuneZones ? pGameWorld->Collision()->IsTune(pGameWorld->Collision()->GetMapIndex(Result.m_From)) : 0;
+		Result.m_TuneZone = pGameWorld && pGameWorld->m_WorldConfig.m_UseTuneZones && Result.HasValidPositions() ? pGameWorld->Collision()->IsTune(pGameWorld->Collision()->GetMapIndex(Result.m_From)) : 0;
 		Result.m_Predict = true;
 	}
 
@@ -73,7 +79,7 @@ CLaserData ExtractLaserInfoDDNet(const CNetObj_DDNetLaser *pLaser, CGameWorld *p
 	Result.m_Type = pLaser->m_Type;
 	Result.m_SwitchNumber = pLaser->m_SwitchNumber;
 	Result.m_Subtype = pLaser->m_Subtype;
-	Result.m_TuneZone = pGameWorld && pGameWorld->m_WorldConfig.m_UseTuneZones ? pGameWorld->Collision()->IsTune(pGameWorld->Collision()->GetMapIndex(Result.m_From)) : 0;
+	Result.m_TuneZone = pGameWorld && pGameWorld->m_WorldConfig.m_UseTuneZones && Result.HasValidPositions() ? pGameWorld->Collision()->IsTune(pGameWorld->Collision()->GetMapIndex(Result.m_From)) : 0;
 	Result.m_Predict = !(pLaser->m_Flags & LASERFLAG_NO_PREDICT);
 	return Result;
 }

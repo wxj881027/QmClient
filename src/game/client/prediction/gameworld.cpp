@@ -519,7 +519,7 @@ void CGameWorld::NetObjAdd(int ObjId, int ObjType, const void *pObjData, const C
 	else if(ObjType == NETOBJTYPE_LASER || ObjType == NETOBJTYPE_DDNETLASER)
 	{
 		CLaserData Data = ExtractLaserInfo(ObjType, pObjData, this, pDataEx);
-		if(!IsLocalTeam(Data.m_Owner) || !Data.m_Predict)
+		if(!Data.HasValidPositions() || !IsLocalTeam(Data.m_Owner) || !Data.m_Predict)
 		{
 			return;
 		}
@@ -787,6 +787,8 @@ CEntity *CGameWorld::FindMatch(int ObjId, int ObjType, const void *pObjData)
 	case NETOBJTYPE_DDNETLASER:
 	{
 		CLaserData Data = ExtractLaserInfo(ObjType, pObjData, this, nullptr);
+		if(!Data.HasValidPositions())
+			return nullptr;
 		if(Data.m_Type == LASERTYPE_RIFLE || Data.m_Type == LASERTYPE_SHOTGUN)
 		{
 			CLaser *pEnt = (CLaser *)GetEntity(ObjId, ENTTYPE_LASER);

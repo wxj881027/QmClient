@@ -615,6 +615,8 @@ void CItems::OnRender()
 	ScreenRectPickup.Expand(1.75f * TileSize, 0.75f * TileSize);
 
 	auto IsLaserInside = [&](const CLaserData &LaserData) -> bool {
+		if(!LaserData.HasValidPositions())
+			return false;
 		const vec2 &From = LaserData.m_From;
 		const vec2 &To = LaserData.m_To;
 		return !((From.x < ScreenRectLaser.m_TopLeft.x && To.x < ScreenRectLaser.m_TopLeft.x) || (From.x > ScreenRectLaser.m_BottomRight.x && To.x > ScreenRectLaser.m_BottomRight.x) ||

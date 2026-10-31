@@ -24,6 +24,9 @@ public:
 	bool m_Predict = false;
 	// TuneZone is introduced locally
 	int m_TuneZone;
+
+	// 端点须可安全取整；可表示的地图外坐标仍有效。
+	bool HasValidPositions() const;
 };
 
 CLaserData ExtractLaserInfo(int NetObjType, const void *pData, class CGameWorld *pGameWorld, const CNetObj_EntityEx *pEntEx);
