@@ -5327,11 +5327,13 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_emoticon_projectile_test.cpp
     src/test/unit/qmclient/client/qm_realtime_test.cpp
     src/test/unit/qmclient/client/qm_realtime_envelope_test.cpp
+    src/test/unit/qmclient/client/qm_realtime_budget_test.cpp
     src/test/unit/qmclient/client/qm_realtime_users_test.cpp
     src/test/unit/qmclient/client/qm_users_json_test.cpp
     src/test/unit/qmclient/client/qm_json_number_test.cpp
     src/test/integration/qmclient/client/qm_users_sync_text_test.cpp
     src/test/integration/qmclient/client/qm_realtime_service_data_test.cpp
+    src/test/integration/qmclient/client/qm_realtime_budget_test.cpp
     src/test/integration/qmclient/client/qm_users_legacy_text_test.cpp
     src/test/unit/qmclient/music/qm_prepared_media_art_test.cpp
     src/test/unit/engine/websocket_client_test.cpp

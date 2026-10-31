@@ -49,9 +49,11 @@ namespace
 static bool PrepareQmRealtimeMessage(const char *pData, size_t Size, SQmRealtimeMessage &OutMessage)
 {
 	OutMessage = {};
-	if(!pData || !Size)
+	if(!pData || !Size || Size > QMCLIENT_REALTIME_MAX_BYTES)
 		return false;
-	std::unique_ptr<json_value, decltype(&json_value_free)> pOwner(json_parse(pData, Size), json_value_free);
+	json_settings Settings{};
+	Settings.max_memory = static_cast<unsigned long>(QMCLIENT_REALTIME_JSON_MEMORY_BUDGET);
+	std::unique_ptr<json_value, decltype(&json_value_free)> pOwner(json_parse_ex(&Settings, pData, Size, nullptr), json_value_free);
 	json_value *pRoot = pOwner.get();
 	if(!pRoot || pRoot->type != json_object)
 		return false;

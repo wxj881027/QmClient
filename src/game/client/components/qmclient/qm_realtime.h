@@ -11,6 +11,10 @@
 
 typedef struct _json_value json_value;
 
+// 与账号通道接收上限一致；JSON 节点、成员、数组和字符串共用分配预算。
+inline constexpr size_t QMCLIENT_REALTIME_MAX_BYTES = 8 * 1024 * 1024;
+inline constexpr size_t QMCLIENT_REALTIME_JSON_MEMORY_BUDGET = 16 * 1024 * 1024;
+
 enum class EQmRealtimeEvent
 {
 	INVALID,
@@ -80,7 +84,7 @@ struct SQmRealtimeMessage
 	std::string m_EmoticonServerAddress;
 };
 
-// 准备分配失败返回false并清空输出；payload共享整棵JSON树的所有权。
+// 输入/JSON分配超限或准备失败返回false并清空输出；payload共享整棵JSON树的所有权。
 bool ParseQmRealtimeMessage(const char *pData, size_t Size, SQmRealtimeMessage &OutMessage);
 
 // 保持最近128条；新消息准备失败时，原队列及输入消息仍归原所有者持有。

@@ -1929,7 +1929,7 @@ void CQmClient::UpdateQmRealtime()
 	}
 
 	ConnectConfig.m_Protocol = g_Config.m_QmWebSocketProtocol;
-	ConnectConfig.m_MaxMessageSize = 8 * 1024 * 1024;
+	ConnectConfig.m_MaxMessageSize = QMCLIENT_REALTIME_MAX_BYTES;
 	ConnectConfig.m_AllowInsecureTls = g_Config.m_QmWebSocketAllowInsecureTls != 0;
 	if(!m_pQmRealtimeTransport->Desired())
 	{
