@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
+
 namespace
 {
 	class CPartLayout : public CQmNameplatePartLayout
@@ -88,4 +90,35 @@ TEST(QmNameplatePartLayout, HookPlaceholderReservesOnlyVerticalSpace)
 	EXPECT_TRUE(Part.HasLayout());
 	EXPECT_FALSE(Part.ShiftOnInvis());
 	EXPECT_EQ(Part.LayoutSize(), vec2(0.0f, 33.0f));
+}
+
+TEST(QmNameplateCoreLayout, DirectionBaselineDoesNotFollowHookHeightChanges)
+{
+	std::array<float, kNameplateCoreRowCount> Heights{24, 16, 43, 12, 57};
+	const size_t Hook = static_cast<size_t>(ENameplateCoreRow::HOOK);
+	const size_t Keys = static_cast<size_t>(ENameplateCoreRow::KEYS);
+	const float OriginalDirectionBaseline = QmNameplateCoreRowBaselines(Heights)[Keys];
+	for(float HookHeight : {0.0f, 24.0f, 43.0f, 100.0f})
+	{
+		SCOPED_TRACE(HookHeight);
+		Heights[Hook] = HookHeight;
+		EXPECT_FLOAT_EQ(QmNameplateCoreRowBaselines(Heights)[Keys], OriginalDirectionBaseline);
+	}
+}
+
+TEST(QmNameplateCoreLayout, PreviewReservationIsStableAcrossHookAndDirectionSizeChanges)
+{
+	std::array<float, kNameplateCoreRowCount> Heights{24, 16, 43, 12, 57};
+	const float Reserved = QmNameplatePreviewContentSpan(Heights);
+	for(float HookHeight : {0.0f, 24.0f, 43.0f, 100.0f})
+		for(float DirectionHeight : {0.0f, 38.0f, 57.0f, 150.0f})
+		{
+			SCOPED_TRACE(HookHeight);
+			SCOPED_TRACE(DirectionHeight);
+			Heights[static_cast<size_t>(ENameplateCoreRow::HOOK)] = HookHeight;
+			Heights[static_cast<size_t>(ENameplateCoreRow::KEYS)] = DirectionHeight;
+			EXPECT_FLOAT_EQ(QmNameplatePreviewContentSpan(Heights), Reserved);
+		}
+	Heights[static_cast<size_t>(ENameplateCoreRow::NAME)] += 20.0f;
+	EXPECT_GT(QmNameplatePreviewContentSpan(Heights), Reserved);
 }
