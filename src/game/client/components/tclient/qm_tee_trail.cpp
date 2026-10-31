@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <span>
 
 namespace
@@ -51,6 +52,21 @@ namespace
 				vOut.push_back({{A.m_aPos[Strip], B.m_aPos[Strip], B.m_aPos[Strip + 1], A.m_aPos[Strip + 1]}, {Ca, Cb, Cc, Cd}, false});
 		}
 	}
+}
+
+std::optional<int64_t> qm_tee_trail::TickFromTime(double Time)
+{
+	// 最大int64转double会舍入到2^63，必须在转换前排除这个上界。
+	if(!std::isfinite(Time) || Time < 0.0 || Time >= static_cast<double>(std::numeric_limits<int64_t>::max()))
+		return std::nullopt;
+	return static_cast<int64_t>(Time);
+}
+
+float qm_tee_trail::LegacySpeed(float Segment, int64_t TickA, int64_t TickB)
+{
+	const uint64_t Difference = TickA >= TickB ? static_cast<uint64_t>(TickA) - static_cast<uint64_t>(TickB) :
+						     static_cast<uint64_t>(TickB) - static_cast<uint64_t>(TickA);
+	return Segment / std::max(0.01f, static_cast<float>(Difference));
 }
 
 qm_tee_trail::SPreparedCurve qm_tee_trail::PrepareCurve(vec2 P0, vec2 P1, vec2 P2, vec2 P3)
@@ -107,7 +123,8 @@ void qm_tee_trail::CTrailState::Push(const CTrailPart &Point)
 
 void qm_tee_trail::CTrailState::Update(vec2 Position, double Time, float Speed, float Life, EUpdateMode Mode)
 {
-	if(!std::isfinite(Position.x) || !std::isfinite(Position.y) || !std::isfinite(Time) || !std::isfinite(Speed) || Time < 0)
+	const auto Tick = TickFromTime(Time);
+	if(!std::isfinite(Position.x) || !std::isfinite(Position.y) || !Tick || !std::isfinite(Speed))
 	{
 		Reset();
 		return;
@@ -115,10 +132,16 @@ void qm_tee_trail::CTrailState::Update(vec2 Position, double Time, float Speed, 
 	Speed = std::max(0.0f, Speed);
 	Life = std::clamp(Life, 1.0f, 400.0f);
 	const double Dt = Time - m_LastTime;
-	const float Dist = distance(Position, m_LastPos);
+	const bool ResetHistory = Mode == EUpdateMode::RESET || Dt < 0 || Dt > 12.5;
+	const float Dist = m_LastTime >= 0 && !ResetHistory ? distance(Position, m_LastPos) : 0.0f;
+	if(!std::isfinite(Dist))
+	{
+		Reset();
+		return;
+	}
 	const bool PositionJump = m_LastTime >= 0 && Dist > 48.0 + std::max(Speed, m_LastSpeed) * std::max(Dt, 0.0) * 2.5;
 	// 长帧间隔不猜测漏掉的运动；正常高速位移由速度预算区分，允许补齐多个中间点。
-	if(Mode == EUpdateMode::RESET || Dt < 0 || Dt > 12.5 || (PositionJump && Mode != EUpdateMode::KEEP_HISTORY))
+	if(ResetHistory || (PositionJump && Mode != EUpdateMode::KEEP_HISTORY))
 		Reset();
 	while(m_Count > 0 && Time - m_aPoints[m_First].m_Time >= m_aPoints[m_First].m_Life)
 	{
@@ -136,7 +159,7 @@ void qm_tee_trail::CTrailState::Update(vec2 Position, double Time, float Speed, 
 		m_Head = CTrailPart();
 		m_Head.m_Pos = Position;
 		m_Head.m_Time = Time;
-		m_Head.m_Tick = int(Time);
+		m_Head.m_Tick = *Tick;
 		m_Head.m_Life = Life;
 		m_Head.m_Speed = Speed;
 		m_Head.m_Segment = Segment;
@@ -152,23 +175,37 @@ void qm_tee_trail::CTrailState::Update(vec2 Position, double Time, float Speed, 
 		// 极端速度也只保留最后一个容量窗口，不为将被覆盖的点做无用循环。
 		if((Dist - Along) / SAMPLE_SPACING > MAX_POINTS)
 			Along += std::floor((Dist - Along) / SAMPLE_SPACING - MAX_POINTS) * SAMPLE_SPACING;
-		for(; Along <= Dist + 0.00001; Along += SAMPLE_SPACING)
+		for(; Along <= Dist + 0.00001;)
 		{
 			const float T = std::clamp(float(Along / Dist), 0.0f, 1.0f);
 			CTrailPart Point;
 			Point.m_Pos = mix(m_LastPos, Position, T);
 			Point.m_Time = m_LastTime + Dt * T;
-			Point.m_Tick = int(Point.m_Time);
+			const auto PointTick = TickFromTime(Point.m_Time);
+			if(!PointTick)
+			{
+				Reset();
+				return;
+			}
+			Point.m_Tick = *PointTick;
 			Point.m_Distance = StartDistance + Along;
 			Point.m_Speed = mix(m_LastSpeed, Speed, T);
 			Point.m_Life = mix(m_Head.m_Life, Life, T);
 			Point.m_Segment = m_Head.m_Segment;
 			Push(Point);
+			const double NextAlong = Along + SAMPLE_SPACING;
+			if(NextAlong <= Along)
+			{
+				// 极大距离的double步长可能已大于采样间距，不能停在同一位置循环。
+				Reset();
+				return;
+			}
+			Along = NextAlong;
 		}
 		m_Carry = std::max(0.0, std::fmod(m_Carry + Dist + 0.00001, double(SAMPLE_SPACING)) - 0.00001);
 		m_Head.m_Pos = Position;
 		m_Head.m_Time = Time;
-		m_Head.m_Tick = int(Time);
+		m_Head.m_Tick = *Tick;
 		m_Head.m_Distance = EndDistance;
 		m_Head.m_Speed = Speed;
 		m_Head.m_Life = Life;
@@ -259,7 +296,7 @@ namespace
 				S.m_Age = std::max(0.0f, float(CurTime - Birth));
 				const float Life = mix(A.m_Life > 0 ? A.m_Life : 25.0f * s_aLifeFactors[Style], B.m_Life > 0 ? B.m_Life : 25.0f * s_aLifeFactors[Style], T);
 				const float Remaining = std::clamp(1.0f - S.m_Age / Life, 0.0f, 1.0f);
-				const float Speed = A.m_Speed >= 0 && B.m_Speed >= 0 ? mix(A.m_Speed, B.m_Speed, T) : Segment / std::max(0.01f, float(std::abs(A.m_Tick - B.m_Tick)));
+				const float Speed = A.m_Speed >= 0 && B.m_Speed >= 0 ? mix(A.m_Speed, B.m_Speed, T) : LegacySpeed(Segment, A.m_Tick, B.m_Tick);
 				S.m_Energy = std::clamp(Speed / 30.0f, 0.0f, 1.0f);
 				S.m_Head = mix(aLengths[i], aLengths[i + 1], T);
 				S.m_Distance = A.m_Time >= 0 ? mix(A.m_Distance, B.m_Distance, double(T)) : -double(S.m_Head);
