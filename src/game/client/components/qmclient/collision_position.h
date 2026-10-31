@@ -27,7 +27,21 @@ namespace QmCollision
 		const float Steps = distance(From, To) + 1.0f;
 		return std::isfinite(Steps) && static_cast<double>(Steps) < std::numeric_limits<int>::max();
 	}
-
+	inline bool CanQueryHookLine(vec2 From, vec2 To)
+	{
+		if(!CanQueryLine(From, To))
+			return false;
+		// 钩子碰撞的 ThroughOffset 还会对取整坐标加减32，需给该整数运算留余量。
+		const auto HasOffsetMargin = [](vec2 Pos) {
+			const auto Fits = [](float Value) {
+				const float Rounded = Value > 0.0f ? Value + 0.5f : Value - 0.5f;
+				return static_cast<double>(Rounded) >= static_cast<double>(std::numeric_limits<int>::min()) + 32 &&
+				       static_cast<double>(Rounded) <= static_cast<double>(std::numeric_limits<int>::max()) - 32;
+			};
+			return Fits(Pos.x) && Fits(Pos.y);
+		};
+		return HasOffsetMargin(From) && HasOffsetMargin(To) && HasOffsetMargin(mix(From, To, 1.0f));
+	}
 }
 
 #endif

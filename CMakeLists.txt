@@ -3579,6 +3579,7 @@ if(CLIENT)
     components/qmclient/emoticon_commands.h
     components/qmclient/hammer_hit_detection.cpp
     components/qmclient/hammer_hit_detection.h
+    components/qmclient/qm_hook_coll_tuning.h
     components/qmclient/hook_countdown.h
     components/qmclient/hud_notifications/hud_notification_catalog.cpp
     components/qmclient/hud_notifications/hud_notification_catalog.h
@@ -5597,6 +5598,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/glyph_lookup_cache_test.cpp
     src/test/unit/engine/graphics/font_size_cache_test.cpp
     src/test/unit/qmclient/client/qm_hook_coll_intersection_test.cpp
+    src/test/unit/qmclient/client/qm_hook_coll_tuning_test.cpp
     src/test/unit/qmclient/client/qm_chat_avatar_test.cpp
     src/test/unit/qmclient/client/qm_chat_export_test.cpp
     src/test/unit/qmclient/client/qm_chat_log_jobs_test.cpp

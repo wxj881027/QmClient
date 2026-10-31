@@ -22,8 +22,10 @@
 #include <game/client/components/effects.h>
 #include <game/client/components/flow.h>
 #include <game/client/components/qmclient/afk_presentation.h>
+#include <game/client/components/qmclient/collision_position.h>
 #include <game/client/components/qmclient/jelly_tee.h>
 #include <game/client/components/qmclient/modes.h>
+#include <game/client/components/qmclient/qm_hook_coll_tuning.h>
 #include <game/client/components/qmclient/qm_skin_outline.h>
 #include <game/client/components/qmclient/team_tee_glow.h>
 #include <game/client/components/qmclient/tee_hue_cycle.h>
@@ -422,9 +424,10 @@ void CPlayers::RenderHookCollLine(
 
 	// When the other player isn't predicted, we don't know their tunes.
 	// Use our own tunes instead. This is wrong, but a good heuristic.
-	const CCharacterCore &PlayerCore = GameClient()->m_aClients[ClientId].m_IsPredicted ? GameClient()->m_aClients[ClientId].m_Predicted : GameClient()->m_aClients[GameClient()->m_aLocalIds[g_Config.m_ClDummy]].m_Predicted;
-	float HookLength = PlayerCore.m_Tuning.m_HookLength;
-	float HookFireSpeed = PlayerCore.m_Tuning.m_HookFireSpeed;
+	const auto TuningClient = QmHookCollTuningClient(GameClient()->m_aClients[ClientId].m_IsPredicted, ClientId, GameClient()->m_aLocalIds[g_Config.m_ClDummy]);
+	const CTuningParams &Tuning = TuningClient ? GameClient()->m_aClients[*TuningClient].m_Predicted.m_Tuning : GameClient()->m_aTuning[g_Config.m_ClDummy];
+	float HookLength = Tuning.m_HookLength;
+	float HookFireSpeed = Tuning.m_HookFireSpeed;
 
 	// TClient: Hook collision line length follows cursor distance
 	// 有问题,暂定改回原版
@@ -499,6 +502,8 @@ void CPlayers::RenderHookCollLine(
 			{
 				vec2 RetractingHookEndPos = BasePos + normalize(SegmentEndPos - BasePos) * HookLength;
 				// you can't hook a player, if the hook is behind solids, however you miss the solids as well
+				if(!QmCollision::CanQueryHookLine(SegmentStartPos, RetractingHookEndPos))
+					return;
 				int Hit = Collision()->IntersectLineTeleHook(SegmentStartPos, RetractingHookEndPos, &HitPos, nullptr, &Tele);
 
 				if(GameClient()->IntersectCharacter(SegmentStartPos, HitPos, RetractingHookEndPos, ClientId, &IntersectedPlayerPosition) != -1)
@@ -529,6 +534,8 @@ void CPlayers::RenderHookCollLine(
 		}
 
 		// check for map collisions
+		if(!QmCollision::CanQueryHookLine(SegmentStartPos, SegmentEndPos))
+			return;
 		int Hit = Collision()->IntersectLineTeleHook(SegmentStartPos, SegmentEndPos, &HitPos, nullptr, &Tele);
 
 		// check if we intersect a player
@@ -586,6 +593,8 @@ void CPlayers::RenderHookCollLine(
 		BasePos = vTeleOuts[0];
 		LineStartPos = BasePos; // make the line start in the teleporter to prevent a gap
 		SegmentStartPos = BasePos + Direction * HOOK_START_DISTANCE;
+		if(!QmCollision::CanRoundPosition(SegmentStartPos))
+			return;
 		SegmentStartPos.x = round_to_int(SegmentStartPos.x);
 		SegmentStartPos.y = round_to_int(SegmentStartPos.y);
 

@@ -45,3 +45,33 @@ TEST(CollisionLineDomain, RejectsRoundedMixEndpointEvenWhenBothInputsAreValid)
 	ASSERT_FALSE(QmCollision::CanRoundPosition(mix(From, To, 1.0f)));
 	EXPECT_FALSE(QmCollision::CanQueryLine(From, To));
 }
+
+TEST(CollisionLineDomain, DecodedMaximumPositionRejectsHookQueriesBeforeTraversal)
+{
+	const vec2 Origin(static_cast<float>(std::numeric_limits<int>::max()), 0);
+	EXPECT_FALSE(QmCollision::CanQueryHookLine(Origin, Origin + vec2(80, 0)));
+	EXPECT_FALSE(QmCollision::CanQueryHookLine(Origin, Origin + vec2(-380, 0)));
+}
+
+TEST(CollisionLineDomain, NormalHookFireStepCanLeaveRepresentablePositionDomain)
+{
+	const vec2 Start(std::nextafter(2147483648.0f, 0.0f), 0);
+	ASSERT_TRUE(QmCollision::CanRoundPosition(Start));
+	const vec2 End = Start + vec2(80, 0);
+	EXPECT_FALSE(QmCollision::CanQueryHookLine(Start, End));
+}
+
+TEST(CollisionLineDomain, HookThroughOffsetRejectsIntegerMinimumWhileOrdinaryLineKeepsIt)
+{
+	const vec2 Start(-2147483648.0f, 0), End(-2147483520.0f, 0);
+	ASSERT_TRUE(QmCollision::CanQueryLine(Start, End));
+	EXPECT_FALSE(QmCollision::CanQueryHookLine(Start, End));
+	EXPECT_FALSE(QmCollision::CanQueryHookLine(vec2(0, Start.x), vec2(0, End.x)));
+}
+
+TEST(CollisionLineDomain, HookThroughOffsetKeepsSafeOffMapAndBoundaryLines)
+{
+	EXPECT_TRUE(QmCollision::CanQueryHookLine(vec2(-100000, 0), vec2(-99000, 0)));
+	EXPECT_TRUE(QmCollision::CanQueryHookLine(vec2(-2147483520.0f, 0), vec2(-2147483392.0f, 0)));
+	EXPECT_TRUE(QmCollision::CanQueryHookLine(vec2(2147483520.0f, 0), vec2(2147483264.0f, 0)));
+}
