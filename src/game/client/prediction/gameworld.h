@@ -143,6 +143,8 @@ public:
 
 	std::vector<CPredictedEvent> m_PredictedEvents;
 
+	// 原样登记事件，不执行去重或配置门禁；失败不改已有队列。
+	[[nodiscard]] bool TryAppendPredictedEvent(const CPredictedEvent &Event) noexcept;
 	void CreatePredictedEvent(const CPredictedEvent &NewEvent);
 	// pUnplayedMatch（可空）：确认命中"尚未被预测侧播放"的事件时置 true，
 	// 调用方应当场代播，避免预测与快照都不播（声音/特效丢失）。

@@ -923,6 +923,22 @@ bool CGameWorld::EmulateBug(int Bug) const
 	return m_pMapBugs->Contains(Bug);
 }
 
+bool CGameWorld::TryAppendPredictedEvent(const CPredictedEvent &Event) noexcept
+{
+	if(!Event.HasValidPosition())
+		return false;
+	try
+	{
+		m_PredictedEvents.push_back(Event);
+		return true;
+	}
+	catch(...)
+	{
+		// 事件是值数据；扩容失败只丢弃本次记录，保留已有队列供后续帧使用。
+		return false;
+	}
+}
+
 void CGameWorld::CreatePredictedEvent(const CPredictedEvent &NewEvent)
 {
 	if(!NewEvent.HasValidPosition() || !g_Config.m_ClPredictEvents || !m_WorldConfig.m_PredictEvents)
@@ -936,7 +952,7 @@ void CGameWorld::CreatePredictedEvent(const CPredictedEvent &NewEvent)
 
 	if(It == m_PredictedEvents.end())
 	{
-		m_PredictedEvents.push_back(NewEvent);
+		(void)TryAppendPredictedEvent(NewEvent);
 	}
 	else if(NewEvent.m_EventId == NETEVENTTYPE_SOUNDWORLD && !It->m_Handled)
 	{
@@ -992,7 +1008,7 @@ void CGameWorld::CreateHandledPredictedSound(vec2 Pos, int SoundId, int Id)
 		m_PredictedEvents.end(),
 		[Event](const CPredictedEvent &Existing) { return QmPredictedEventMatchesForCreation(Existing, Event); });
 	if(It == m_PredictedEvents.end())
-		m_PredictedEvents.push_back(Event);
+		(void)TryAppendPredictedEvent(Event);
 }
 
 void CGameWorld::CreatePredictedExplosionEvent(vec2 Pos, int Id)

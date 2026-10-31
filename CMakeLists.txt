@@ -6148,6 +6148,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/client/prediction_dragger_geometry_test.cpp
       src/test/unit/client/prediction_door_geometry_test.cpp
       src/test/integration/client/prediction_door_rebuild_test.cpp
+      src/test/integration/client/prediction_event_allocation_test.cpp
       src/game/client/components/qmclient/practice_tick_shift.cpp
       src/test/integration/client/prediction_entity_copy_test.cpp
       src/test/integration/client/prediction_world_copy_test.cpp

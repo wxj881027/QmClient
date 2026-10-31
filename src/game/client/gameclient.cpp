@@ -3250,7 +3250,7 @@ void CGameClient::ProcessEvents()
 			return;
 		Event.m_Handled = true;
 		Event.m_ServerConfirmed = true;
-		m_PredictedWorld.m_PredictedEvents.push_back(Event);
+		(void)m_PredictedWorld.TryAppendPredictedEvent(Event);
 	};
 
 	int SnapType = IClient::SNAP_CURRENT;
@@ -3411,7 +3411,7 @@ void CGameClient::FinalizeHammerHitEvents()
 			return;
 		Event.m_Handled = true;
 		Event.m_ServerConfirmed = true;
-		m_PredictedWorld.m_PredictedEvents.push_back(Event);
+		(void)m_PredictedWorld.TryAppendPredictedEvent(Event);
 	};
 
 	for(const SPendingHammerHitEvent &Event : m_vPendingHammerHitEvents)
