@@ -3192,6 +3192,8 @@ if(CLIENT)
     QmUi/QmBadgeGeometry.h
     QmUi/QmChatBubble.cpp
     QmUi/QmChatBubble.h
+    QmUi/QmCloudBubble.cpp
+    QmUi/QmCloudBubble.h
     QmUi/QmBadgeGeometryData.h
     QmUi/QmAuthorName.cpp
     QmUi/QmAuthorName.h

@@ -736,7 +736,7 @@ Chat bubble background color
 Chat bubble disappear animation (0=Fade, 1=Shrink, 2=Slide up)
 Chat bubble display duration (seconds)
 Chat bubble font size
-Chat bubble style (0=Comic dialogue, 1=Candy gradient)
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
 Chat bubble text color
 Chat bubble transparency (0-100)
 Chat command
@@ -896,6 +896,7 @@ Client-side self-kill protection
 Close
 Close the demo player
 Close window after changing settings
+Cloud bubble
 Collapse console
 Collects the remaining DDNet client preferences that do not belong to other cards.
 Collision hitbox
@@ -2041,6 +2042,7 @@ Gameplay
 Gap aim rescue
 Gap between statusbar items
 Gap between tee and nametag
+Gather and disperse
 Gaussian
 General
 Generated skin outline color

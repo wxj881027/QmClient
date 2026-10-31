@@ -7911,6 +7911,7 @@ void CGameClient::OnGraphicsResourcesReset()
 	LoadInitialGraphicsAssets();
 
 	log_info("gfx", "game assets reloaded after graphics resources reset");
+	m_NamePlates.OnGraphicsResourcesReset();
 }
 
 void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)

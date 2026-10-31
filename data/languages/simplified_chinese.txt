@@ -2213,8 +2213,8 @@ Chat bubble display duration (seconds)
 Chat bubble font size
 == 聊天气泡字体大小
 
-Chat bubble style (0=Comic dialogue, 1=Candy gradient)
-== 消息气泡样式（0=漫画对白，1=糖果渐变）
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
+== 消息气泡样式（0=漫画对白，1=糖果渐变，2=云朵气泡）
 
 Chat bubble text color
 == 聊天气泡文字颜色
@@ -2692,6 +2692,9 @@ Close the demo player
 
 Close window after changing settings
 == 更改设置后关闭窗口
+
+Cloud bubble
+== 云朵气泡
 
 Collapse console
 == 收起控制台
@@ -6127,6 +6130,9 @@ Gap between statusbar items
 
 Gap between tee and nametag
 == Tee 与铭牌之间的间距
+
+Gather and disperse
+== 聚集与散开
 
 Gaussian
 == 高斯

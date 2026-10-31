@@ -1,4 +1,5 @@
 #include <game/client/QmUi/QmChatBubble.h>
+#include <game/client/QmUi/QmCloudBubble.h>
 
 #include <gtest/gtest.h>
 
@@ -46,9 +47,9 @@ TEST(QmChatBubble, ShrinkingKeepsTextAndTailInTheSameCoordinateSystem)
 	EXPECT_FLOAT_EQ(Small.m_Stroke, Full.m_Stroke * 0.2f);
 }
 
-TEST(QmChatBubble, AllStylesKeepContoursWoundAndAnchoredAtFontAndAnimationExtremes)
+TEST(QmChatBubble, OutlinedStylesKeepContoursWoundAndAnchoredAtFontAndAnimationExtremes)
 {
-	for(int StyleIndex = 0; StyleIndex < qm_chat_bubble::STYLE_COUNT; ++StyleIndex)
+	for(int StyleIndex = 0; StyleIndex < 2; ++StyleIndex)
 		for(const float FontSize : {8.0f, 20.0f, 32.0f})
 			for(const float Scale : {0.2f, 1.0f, 1.05f})
 				for(const vec2 TextSize : {vec2(0, 0), vec2(230, 200)})
@@ -121,12 +122,61 @@ TEST(QmChatBubble, PresetsSupplyTheirOwnReadableTextAndGradientColors)
 TEST(QmChatBubble, InvalidStyleValuesStayWithinAvailablePresets)
 {
 	EXPECT_EQ(qm_chat_bubble::StyleFromConfig(-1), qm_chat_bubble::EStyle::COMIC);
-	EXPECT_EQ(qm_chat_bubble::StyleFromConfig(2), qm_chat_bubble::EStyle::CANDY);
+	EXPECT_EQ(qm_chat_bubble::StyleFromConfig(999), qm_chat_bubble::EStyle::CLOUD);
 }
 
-TEST(QmChatBubble, MultilineTextCornersStayInsideEveryStyle)
+TEST(QmChatBubble, ProceduralCloudHasDenseCenterSoftEdgesAndTransparentTileBoundary)
 {
-	for(int StyleIndex = 0; StyleIndex < qm_chat_bubble::STYLE_COUNT; ++StyleIndex)
+	for(int Variant = 0; Variant < 4; ++Variant)
+	{
+		SCOPED_TRACE(Variant);
+		EXPECT_GT(qm_chat_bubble::CloudTexel(vec2(0, 0), Variant).a, 0.9f);
+		bool HasSoftEdge = false;
+		for(int Sample = 0; Sample <= 24; ++Sample)
+		{
+			const auto Color = qm_chat_bubble::CloudTexel(vec2(Sample * 0.05f, 0), Variant);
+			EXPECT_GE(Color.a, 0.0f);
+			EXPECT_LE(Color.a, 1.0f);
+			HasSoftEdge |= Color.a > 0.02f && Color.a < 0.95f;
+			EXPECT_GE(Color.r, 0.7f);
+			EXPECT_LE(Color.b, 1.0f);
+		}
+		EXPECT_TRUE(HasSoftEdge);
+		for(const vec2 Edge : {vec2(-1.2f, 0), vec2(1.2f, 0), vec2(0, -1.2f), vec2(0, 1.2f)})
+			EXPECT_FLOAT_EQ(qm_chat_bubble::CloudTexel(Edge, Variant).a, 0.0f);
+	}
+}
+
+TEST(QmChatBubble, CloudGatheringConvergesAndDispersalKeepsBoundedWork)
+{
+	const auto Layout = qm_chat_bubble::Layout(vec2(0, 0), vec2(230, 60), 20, 1, qm_chat_bubble::EStyle::CLOUD);
+	const auto Gathered = qm_chat_bubble::CloudPuffs(Layout, 1);
+	const auto Halfway = qm_chat_bubble::CloudPuffs(Layout, 0.5f);
+	const auto Dispersed = qm_chat_bubble::CloudPuffs(Layout, 0);
+	const auto Clamped = qm_chat_bubble::CloudPuffs(Layout, 2);
+	ASSERT_EQ(Gathered.size(), 9u);
+	for(size_t i = 0; i < Gathered.size(); ++i)
+	{
+		EXPECT_GT(distance(Dispersed[i].m_Center, Gathered[i].m_Center), distance(Halfway[i].m_Center, Gathered[i].m_Center));
+		EXPECT_LT(Dispersed[i].m_Size.x, Gathered[i].m_Size.x);
+		EXPECT_EQ(Clamped[i].m_Center, Gathered[i].m_Center);
+		EXPECT_GE(Gathered[i].m_Variant, 0);
+		EXPECT_LT(Gathered[i].m_Variant, 4);
+	}
+}
+
+TEST(QmChatBubble, CloudTextAppearsAfterGatheringAndShortMessagesRetainReadingTime)
+{
+	EXPECT_FLOAT_EQ(qm_chat_bubble::CloudTextOpacity(0.1f), 0.0f);
+	EXPECT_GT(qm_chat_bubble::CloudTextOpacity(0.6f), qm_chat_bubble::CloudTextOpacity(0.4f));
+	EXPECT_FLOAT_EQ(qm_chat_bubble::CloudTextOpacity(1.0f), 1.0f);
+	EXPECT_LT(qm_chat_bubble::CloudExitDuration(1), 0.5f);
+	EXPECT_LE(qm_chat_bubble::CloudExitDuration(30), 1.0f);
+}
+
+TEST(QmChatBubble, MultilineTextCornersStayInsideOutlinedStyles)
+{
+	for(int StyleIndex = 0; StyleIndex < 2; ++StyleIndex)
 		for(const vec2 TextSize : {vec2(230, 20), vec2(230, 200), vec2(20, 200)})
 		{
 			SCOPED_TRACE(::testing::Message() << "style=" << StyleIndex << " text=" << TextSize.x << "," << TextSize.y);

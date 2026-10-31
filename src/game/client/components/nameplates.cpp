@@ -15,6 +15,7 @@
 
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmChatBubble.h>
+#include <game/client/QmUi/QmCloudBubble.h>
 #include <game/client/animstate.h>
 #include <game/client/components/nameplate_text_effects.h>
 #include <game/client/components/qmclient/chat_emoji.h>
@@ -1818,6 +1819,7 @@ public:
 	CNamePlate m_aPreviewNamePlates[2];
 	CNamePlate m_aPreviewFrameReferences[2];
 	SChatBubbleAnimState m_aChatBubbleAnim[MAX_CLIENTS];
+	qm_chat_bubble::CCloudRenderer m_CloudRenderer;
 	SCoordXAlignState m_aCoordXAlign[MAX_CLIENTS];
 	SCoordXAlignFrameState m_CoordXAlignFrame;
 	ENameplateCoreRow m_FreeMoveDragRow = ENameplateCoreRow::NUM_ROWS;
@@ -2614,13 +2616,17 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 		return;
 	}
 
-	const bool TimedDisappearWindow = HasSourceText && !IsTyping && (ClientData.m_ChatBubbleExpireTick - Now <= time_freq());
+	const auto BubbleStyle = qm_chat_bubble::StyleFromConfig(g_Config.m_QmChatBubbleStyle);
+	const bool IsCloud = BubbleStyle == qm_chat_bubble::EStyle::CLOUD;
+	const float ExitDuration = IsCloud ? qm_chat_bubble::CloudExitDuration(static_cast<float>(ClientData.m_ChatBubbleExpireTick - ClientData.m_ChatBubbleStartTick) / time_freq()) : 1.0f;
+	const bool TimedDisappearWindow = HasSourceText && !IsTyping && (ClientData.m_ChatBubbleExpireTick - Now <= time_freq() * ExitDuration);
 	const bool NewTimedBubble = HasSourceText && !IsTyping && ClientData.m_ChatBubbleStartTick != AnimState.m_LastChatBubbleStartTick;
 	if(NewTimedBubble)
 		AnimState.m_LastChatBubbleStartTick = ClientData.m_ChatBubbleStartTick;
 
 	const bool BecameVisible = HasSourceText && !AnimState.m_LastVisible;
-	if(BecameVisible || NewTimedBubble)
+	// 云团沿当前聚散进度接续，连续输入或退场中收到消息时不跳回初始位置。
+	if((BecameVisible || NewTimedBubble) && !IsCloud)
 	{
 		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, 0.0f);
 		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, 0.82f);
@@ -2636,15 +2642,15 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 	float TargetAlpha = HasSourceText ? Alpha : 0.0f;
 	float TargetScale = 1.0f;
 	float TargetSlideOffset = 0.0f;
-	float AlphaDuration = HasSourceText ? 0.20f : 0.16f;
+	float AlphaDuration = IsCloud ? 0.48f : (HasSourceText ? 0.20f : 0.16f);
 	float TransformDuration = HasSourceText ? 0.24f : 0.16f;
 
 	if(TimedDisappearWindow)
 	{
 		TargetAlpha = 0.0f;
-		AlphaDuration = 1.0f;
-		TransformDuration = 1.0f;
-		int AnimationType = g_Config.m_QmChatBubbleAnimation;
+		AlphaDuration = ExitDuration;
+		TransformDuration = ExitDuration;
+		int AnimationType = IsCloud ? 0 : g_Config.m_QmChatBubbleAnimation;
 		switch(AnimationType)
 		{
 		case 1:
@@ -2662,8 +2668,9 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 	const float BubbleAlpha = std::clamp(ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, TargetAlpha, AlphaDuration, EEasing::EASE_OUT, AnimState.m_LastTargetAlpha), 0.0f, Alpha);
 	// 出现时轻微回弹；收起仍遵循玩家选择的淡出、缩小或位移动画。
 	const EEasing ScaleEasing = HasSourceText && !TimedDisappearWindow ? EEasing::EASE_OUT_BACK : EEasing::EASE_OUT;
-	const float AnimScale = std::max(0.0f, ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, TargetScale, TransformDuration, ScaleEasing, AnimState.m_LastTargetScale));
-	const float AnimSlideOffset = ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, TargetSlideOffset, TransformDuration, EEasing::EASE_OUT, AnimState.m_LastTargetSlide);
+	const float AnimScale = IsCloud ? 1.0f : std::max(0.0f, ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, TargetScale, TransformDuration, ScaleEasing, AnimState.m_LastTargetScale));
+	const float AnimSlideOffset = IsCloud ? 0.0f : ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, TargetSlideOffset, TransformDuration, EEasing::EASE_OUT, AnimState.m_LastTargetSlide);
+	const float CloudAssembly = Alpha > 0.0f ? BubbleAlpha / Alpha : 0.0f;
 
 	AnimState.m_LastVisible = HasSourceText;
 	AnimState.m_LastTyping = IsTyping;
@@ -2817,15 +2824,20 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 		TextWidth = AnimState.m_CachedTextWidth;
 	}
 
-	const auto BubbleStyle = qm_chat_bubble::StyleFromConfig(g_Config.m_QmChatBubbleStyle);
 	const qm_chat_bubble::SLayout Bubble = qm_chat_bubble::Layout(
 		vec2(InterfaceX, InterfaceNameplateTopY - DEFAULT_PADDING + AnimSlideOffset),
 		vec2(TextWidth, TextHeight), FontSize, AnimScale, BubbleStyle);
 	const float ConfigAlpha = g_Config.m_QmChatBubbleAlpha / 100.0f;
 	const ColorRGBA BgColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmChatBubbleBgColor, true));
-	const auto BubbleColors = qm_chat_bubble::Palette(BubbleStyle, g_Config.m_QmChatBubbleCustomColors != 0, BgColor,
-		color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmChatBubbleTextColor, false)), BubbleAlpha * ConfigAlpha);
-	qm_chat_bubble::Render(Graphics(), Bubble, BubbleColors);
+	auto BubbleColors = qm_chat_bubble::Palette(BubbleStyle, g_Config.m_QmChatBubbleCustomColors != 0, BgColor,
+		color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmChatBubbleTextColor, false)), (IsCloud ? Alpha : BubbleAlpha) * ConfigAlpha);
+	if(IsCloud)
+	{
+		RenderCloudBubble(Bubble, BubbleColors, CloudAssembly);
+		BubbleColors.m_Text.a *= qm_chat_bubble::CloudTextOpacity(CloudAssembly);
+	}
+	else
+		qm_chat_bubble::Render(Graphics(), Bubble, BubbleColors);
 
 	if(RenderChatEmoji)
 	{
@@ -2837,7 +2849,7 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 			Bubble.m_TextPosition.y,
 			EmojiWidth,
 			EmojiHeight,
-			BubbleAlpha * ConfigAlpha);
+			BubbleColors.m_Text.a);
 	}
 	else
 	{
@@ -2984,8 +2996,24 @@ void CNamePlates::OnWindowResize()
 		ResetChatBubbleAnimState(i);
 }
 
+void CNamePlates::OnInit()
+{
+	m_pData->m_CloudRenderer.Init(Graphics());
+}
+
+void CNamePlates::OnGraphicsResourcesReset()
+{
+	m_pData->m_CloudRenderer.Init(Graphics());
+}
+
+void CNamePlates::RenderCloudBubble(const qm_chat_bubble::SLayout &Layout, const qm_chat_bubble::SPalette &Colors, float Assembly)
+{
+	m_pData->m_CloudRenderer.Render(Graphics(), Layout, Colors, Assembly);
+}
+
 void CNamePlates::OnShutdown()
 {
+	m_pData->m_CloudRenderer.Shutdown(Graphics());
 	ResetNamePlates();
 	for(int i = 0; i < MAX_CLIENTS; ++i)
 		ResetChatBubbleAnimState(i, true);

@@ -18,9 +18,10 @@ namespace qm_chat_bubble
 	enum class EStyle
 	{
 		COMIC,
-		CANDY
+		CANDY,
+		CLOUD
 	};
-	constexpr int STYLE_COUNT = 2;
+	constexpr int STYLE_COUNT = 3;
 	constexpr float MAX_TEXT_WIDTH = 230.0f;
 	constexpr int CORNER_SEGMENTS = 16;
 	constexpr int MAX_CONTOUR_POINTS = 4 * (CORNER_SEGMENTS + 1) + 3;
@@ -77,6 +78,13 @@ namespace qm_chat_bubble
 			TailWidth = 6.0f;
 			TailLean = -3.0f;
 		}
+		else if(Style == EStyle::CLOUD)
+		{
+			Width *= 1.18f;
+			Height *= 1.45f;
+			Radius = std::min(Width, Height) * 0.4f;
+			Stroke = TailHeight = TailWidth = TailLean = 0.0f;
+		}
 		const vec2 Size(Width, Height);
 		const vec2 Position(Anchor.x - Width * Scale * 0.5f, Anchor.y - (Height + TailHeight) * Scale);
 		return {Position, Size * Scale, Position + (Size - TextSize) * (Scale * 0.5f), Radius * Scale,
@@ -132,6 +140,7 @@ namespace qm_chat_bubble
 		SPalette Result;
 		switch(Style)
 		{
+		case EStyle::CLOUD: Result = {{1.0f, 1.0f, 1.0f}, {0.92f, 0.95f, 1.0f}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0.13f, 0.18f, 0.25f}}; break;
 		case EStyle::CANDY: Result = {{0.66f, 0.94f, 1.0f}, {0.78f, 0.70f, 1.0f}, {0.96f, 0.98f, 1.0f, 0.9f}, {0.28f, 0.22f, 0.53f, 0.25f}, {0.15f, 0.17f, 0.35f}}; break;
 		default: Result = {{1.0f, 0.99f, 0.94f}, {1.0f, 0.99f, 0.94f}, {0.16f, 0.13f, 0.17f}, {0.16f, 0.13f, 0.17f, 0.35f}, {0.16f, 0.13f, 0.17f}}; break;
 		}
