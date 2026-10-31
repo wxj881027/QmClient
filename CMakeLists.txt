@@ -5158,6 +5158,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/contract/qmclient/client/qm_axiom_scores_contract_test.cpp
     src/test/unit/qmclient/client/qm_chat_emoji_test.cpp
     src/test/unit/qmclient/client/qm_chat_emoji_render_test.cpp
+    src/test/unit/qmclient/client/qm_pet_frame_test.cpp
     src/test/unit/qmclient/client/qm_chat_interactions_test.cpp
     src/test/unit/qmclient/client/qm_chat_message_filter_test.cpp
     src/test/unit/qmclient/client/qm_chat_command_policy_test.cpp

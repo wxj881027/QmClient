@@ -91,11 +91,15 @@ void CPet::OnRender()
 	m_Dir = (DirTarget + m_Dir) / 2.0f; // TODO: stop being lazy
 
 	CTeeRenderInfo TeeRenderInfo;
-	TeeRenderInfo.Apply(GameClient()->m_Skins.Find(g_Config.m_QmPetSkin));
-	// TeeRenderInfo.ApplyColors(g_Config.m_ClPlayerUseCustomColor, g_Config.m_ClPlayerColorBody, g_Config.m_ClPlayerColorFeet);
-	TeeRenderInfo.m_Size = 64.0f * Scale;
-	TeeRenderInfo.m_GotAirJump = m_Velocity.y > -10.0f;
-	RenderTools()->RenderTee(CAnimState::GetIdle(), &TeeRenderInfo, Emote, m_Dir, m_Position, m_Alpha * (float)g_Config.m_QmPetAlpha / 100.0f);
+	const auto Prepare = [&] {
+		TeeRenderInfo.Apply(GameClient()->m_Skins.Find(g_Config.m_QmPetSkin));
+		TeeRenderInfo.m_Size = 64.0f * Scale;
+		TeeRenderInfo.m_GotAirJump = m_Velocity.y > -10.0f;
+	};
+	const auto Draw = [&] {
+		RenderTools()->RenderTee(CAnimState::GetIdle(), &TeeRenderInfo, Emote, m_Dir, m_Position, m_Alpha * (float)g_Config.m_QmPetAlpha / 100.0f);
+	};
+	QmTClientPetRenderFrame(m_FollowedClientId, Prepare, Draw);
 }
 
 void CPet::OnMapLoad()
