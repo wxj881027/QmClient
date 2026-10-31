@@ -5093,6 +5093,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/map_render_screen_test.cpp
     src/test/unit/client/map_group_clip_test.cpp
     src/test/integration/client/map_group_clip_test.cpp
+    src/test/integration/client/map_world_screen_test.cpp
     src/test/integration/client/map_render_screen_test.cpp
     src/test/unit/engine/map_load_test.cpp
     src/test/unit/engine/map_tileskip_test.cpp

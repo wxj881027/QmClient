@@ -9,6 +9,16 @@
 
 namespace MapRenderScreen
 {
+	inline bool IsValidScreen(const std::array<float, 4> &aScreen)
+	{
+		for(float Value : aScreen)
+			if(!std::isfinite(Value))
+				return false;
+		const float Width = aScreen[2] - aScreen[0];
+		const float Height = aScreen[3] - aScreen[1];
+		return Width > 0.0f && Height > 0.0f && std::isfinite(Width) && std::isfinite(Height);
+	}
+
 	enum class ETileRangeMode
 	{
 		BUFFERED,
@@ -57,13 +67,11 @@ namespace MapRenderScreen
 
 	inline std::optional<SClipRect> GroupClip(const std::array<float, 4> &aScreen, int PixelWidth, int PixelHeight, const SClipRect &WorldClip)
 	{
-		for(float Value : aScreen)
-			if(!std::isfinite(Value))
-				return std::nullopt;
+		if(!IsValidScreen(aScreen))
+			return std::nullopt;
 		const float Width = aScreen[2] - aScreen[0];
 		const float Height = aScreen[3] - aScreen[1];
-		if(!std::isfinite(Width) || !std::isfinite(Height) || !(Width > 0.0f) || !(Height > 0.0f) ||
-			PixelWidth <= 0 || PixelHeight <= 0 || WorldClip.m_Width < 0 || WorldClip.m_Height < 0)
+		if(PixelWidth <= 0 || PixelHeight <= 0 || WorldClip.m_Width < 0 || WorldClip.m_Height < 0)
 			return std::nullopt;
 		const float Left = WorldClip.m_X - aScreen[0];
 		const float Top = WorldClip.m_Y - aScreen[1];

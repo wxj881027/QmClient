@@ -124,3 +124,48 @@ TEST(MapRenderScreen, ARejectedRangeDoesNotPreventPreparingTheNextFrame)
 	EXPECT_FALSE(TileRange(0, 0, std::numeric_limits<float>::infinity(), 32, 32, ETileRangeMode::BUFFERED));
 	EXPECT_TRUE(TileRange(0, 0, 64, 64, 32, ETileRangeMode::BUFFERED));
 }
+
+TEST(MapWorldScreenValidation, PositiveFiniteViewIsAccepted)
+{
+	EXPECT_TRUE(MapRenderScreen::IsValidScreen({-750, -375, 750, 375}));
+}
+
+TEST(MapWorldScreenValidation, NonFiniteEndpointIsRejectedOnEveryAxis)
+{
+	for(float Bad : {std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity()})
+	{
+		for(int Axis = 0; Axis < 4; ++Axis)
+		{
+			SCOPED_TRACE(Axis);
+			std::array<float, 4> Screen{0, 0, 100, 100};
+			Screen[Axis] = Bad;
+			EXPECT_FALSE(MapRenderScreen::IsValidScreen(Screen));
+		}
+	}
+}
+
+TEST(MapWorldScreenValidation, CollapsedOrInvertedViewIsRejected)
+{
+	EXPECT_FALSE(MapRenderScreen::IsValidScreen({0, 0, 0, 100}));
+	EXPECT_FALSE(MapRenderScreen::IsValidScreen({0, 0, 100, 0}));
+	EXPECT_FALSE(MapRenderScreen::IsValidScreen({100, 0, 0, 100}));
+	EXPECT_FALSE(MapRenderScreen::IsValidScreen({0, 100, 100, 0}));
+}
+
+TEST(MapWorldScreenValidation, ExtentOverflowIsRejectedEvenWhenEndpointsAreFinite)
+{
+	constexpr float Max = std::numeric_limits<float>::max();
+	EXPECT_FALSE(MapRenderScreen::IsValidScreen({-Max, 0, Max, 100}));
+	EXPECT_FALSE(MapRenderScreen::IsValidScreen({0, -Max, 100, Max}));
+}
+
+TEST(MapWorldScreenValidation, SmallPositiveViewHasNoArbitraryMinimumExtent)
+{
+	EXPECT_TRUE(MapRenderScreen::IsValidScreen({0, 0, 1.0e-10f, 1.0e-10f}));
+}
+
+TEST(MapWorldScreenValidation, LargeFiniteViewHasNoArbitraryMaximumExtent)
+{
+	constexpr float Max = std::numeric_limits<float>::max();
+	EXPECT_TRUE(MapRenderScreen::IsValidScreen({0, 0, Max * 0.5f, Max * 0.5f}));
+}

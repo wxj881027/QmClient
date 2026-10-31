@@ -249,8 +249,24 @@ void CRenderLayerGroup::Init()
 {
 }
 
+std::optional<std::array<float, 4>> CRenderLayerGroup::ScreenForGroup(const CRenderLayerParams &Params) const
+{
+	const int ParallaxZoom = std::clamp(maximum(m_pGroup->m_ParallaxX, m_pGroup->m_ParallaxY), 0, 100);
+	std::array<float, 4> aPoints;
+	Graphics()->MapScreenToWorld(Params.m_Center.x, Params.m_Center.y, m_pGroup->m_ParallaxX, m_pGroup->m_ParallaxY, static_cast<float>(ParallaxZoom),
+		m_pGroup->m_OffsetX, m_pGroup->m_OffsetY, Graphics()->GameScreenAspect(), Params.m_Zoom, aPoints.data());
+	return MapRenderScreen::IsValidScreen(aPoints) ? std::make_optional(aPoints) : std::nullopt;
+}
+
 bool CRenderLayerGroup::DoRender(const CRenderLayerParams &Params)
 {
+	// 组没有 clip 时也不能发布坏投影；失败关闭旧裁剪并跳过组成员。
+	if(!ScreenForGroup(Params))
+	{
+		Graphics()->ClipDisable();
+		return false;
+	}
+
 	if(!g_Config.m_GfxNoclip || Params.m_RenderType == ERenderType::RENDERTYPE_FULL_DESIGN)
 	{
 		Graphics()->ClipDisable();
@@ -281,11 +297,13 @@ bool CRenderLayerGroup::DoRender(const CRenderLayerParams &Params)
 
 void CRenderLayerGroup::Render(const CRenderLayerParams &Params)
 {
-	int ParallaxZoom = std::clamp((maximum(m_pGroup->m_ParallaxX, m_pGroup->m_ParallaxY)), 0, 100);
-	float aPoints[4];
-	Graphics()->MapScreenToWorld(Params.m_Center.x, Params.m_Center.y, m_pGroup->m_ParallaxX, m_pGroup->m_ParallaxY, (float)ParallaxZoom,
-		m_pGroup->m_OffsetX, m_pGroup->m_OffsetY, Graphics()->GameScreenAspect(), Params.m_Zoom, aPoints);
-	Graphics()->MapScreen(aPoints[0], aPoints[1], aPoints[2], aPoints[3]);
+	const auto Screen = ScreenForGroup(Params);
+	if(!Screen)
+	{
+		Graphics()->ClipDisable();
+		return;
+	}
+	Graphics()->MapScreen((*Screen)[0], (*Screen)[1], (*Screen)[2], (*Screen)[3]);
 }
 
 /**************

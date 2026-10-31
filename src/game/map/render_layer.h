@@ -1,6 +1,7 @@
 #ifndef GAME_MAP_RENDER_LAYER_H
 #define GAME_MAP_RENDER_LAYER_H
 
+#include <array>
 #include <cstdint>
 
 using offset_ptr_size = char *;
@@ -106,6 +107,7 @@ public:
 protected:
 	IGraphics::CTextureHandle GetTexture() const override { return IGraphics::CTextureHandle(); }
 
+	std::optional<std::array<float, 4>> ScreenForGroup(const CRenderLayerParams &Params) const;
 	CMapItemGroup *m_pGroup;
 };
 
