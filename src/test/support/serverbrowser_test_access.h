@@ -38,6 +38,14 @@ public:
 		Browser.m_ServerlistType = IServerBrowser::TYPE_INTERNET;
 		Browser.m_RefreshingHttp = false;
 	}
+	static void SetLan(CServerBrowser &Browser, CNetClient *pNetClient, int64_t BroadcastTime)
+	{
+		Browser.m_pNetClient = pNetClient;
+		Browser.m_ServerlistType = IServerBrowser::TYPE_LAN;
+		Browser.m_BroadcastTime = BroadcastTime;
+	}
+	static int GenerateToken(const CServerBrowser &Browser, const NETADDR &Address) { return Browser.GenerateToken(Address); }
+	static int BasicToken(int Token) { return CServerBrowser::GetBasicToken(Token); }
 	static void Sort(CServerBrowser &Browser) { Browser.Sort(); }
 	static void CleanUp(CServerBrowser &Browser) { Browser.CleanUp(); }
 	static bool NeedsResort(const CServerBrowser &Browser) { return Browser.m_NeedResort; }

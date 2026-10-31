@@ -1373,6 +1373,18 @@ void CServerBrowser::OnServerInfoUpdate(const NETADDR &Addr, int Token, const CS
 
 	if(m_ServerlistType == IServerBrowser::TYPE_LAN)
 	{
+		// 先校验广播令牌，再允许替换已有的 0.7 地址或新增条目。
+		NETADDR Broadcast = NETADDR_ZEROED;
+		Broadcast.type = (m_pNetClient->NetType() & ~(NETTYPE_WEBSOCKET_IPV4 | NETTYPE_WEBSOCKET_IPV6)) | NETTYPE_LINK_BROADCAST;
+		int TokenBC = GenerateToken(Broadcast);
+		bool Drop = false;
+		Drop = Drop || BasicToken != GetBasicToken(TokenBC);
+		Drop = Drop || (pInfo->m_Type == SERVERINFO_EXTENDED && ExtraToken != GetExtraToken(TokenBC));
+		if(Drop)
+		{
+			return;
+		}
+
 		if(!pEntry)
 		{
 			NETADDR LookupAddr = Addr;
@@ -1392,17 +1404,6 @@ void CServerBrowser::OnServerInfoUpdate(const NETADDR &Addr, int Token, const CS
 				if(pEntry)
 					pEntry = ReplaceEntry(pEntry, &Addr, 1);
 			}
-		}
-
-		NETADDR Broadcast = NETADDR_ZEROED;
-		Broadcast.type = (m_pNetClient->NetType() & ~(NETTYPE_WEBSOCKET_IPV4 | NETTYPE_WEBSOCKET_IPV6)) | NETTYPE_LINK_BROADCAST;
-		int TokenBC = GenerateToken(Broadcast);
-		bool Drop = false;
-		Drop = Drop || BasicToken != GetBasicToken(TokenBC);
-		Drop = Drop || (pInfo->m_Type == SERVERINFO_EXTENDED && ExtraToken != GetExtraToken(TokenBC));
-		if(Drop)
-		{
-			return;
 		}
 
 		if(!pEntry)
