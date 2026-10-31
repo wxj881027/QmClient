@@ -10,6 +10,9 @@ class CLaserData;
 
 class CDoor : public CEntity
 {
+	friend class CGameWorld;
+	// 重建时临时借用，不参与实体主链，复制时重新清空。
+	CDoor *m_pCollisionNext = nullptr;
 	vec2 m_To;
 	vec2 m_Direction;
 	int m_Length;
@@ -28,6 +31,7 @@ public:
 	static std::optional<SCollisionGeometry> CalcCollisionGeometry(vec2 Pos, vec2 To, int Side, int ConfiguredLength, ivec2 MapSize);
 
 	CDoor(CGameWorld *pGameWorld, int Id, const CLaserData *pData);
+	CDoor(const CDoor &Other);
 	void ResetCollision();
 	bool Match(const CDoor *pDoor) const;
 	void Read(const CLaserData *pData);

@@ -24,6 +24,16 @@ CDoor::CDoor(CGameWorld *pGameWorld, int Id, const CLaserData *pData) :
 	Read(pData);
 }
 
+CDoor::CDoor(const CDoor &Other) :
+	CEntity(Other),
+	m_pCollisionNext(nullptr),
+	m_To(Other.m_To),
+	m_Direction(Other.m_Direction),
+	m_Length(Other.m_Length),
+	m_Active(Other.m_Active)
+{
+}
+
 // OnEntity 按这个顺序检查八个相邻 tile 来确定激光门长度。
 static const int s_aSideOffsetX[8] = {0, 1, 1, 1, 0, -1, -1, -1};
 static const int s_aSideOffsetY[8] = {1, 1, 0, -1, -1, -1, 0, 1};

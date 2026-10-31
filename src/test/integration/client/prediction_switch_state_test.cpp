@@ -155,7 +155,7 @@ TEST_F(PredictionSwitchState, InvalidNumbersDoNotWriteAnyEntry)
 TEST_F(PredictionSwitchState, InvalidTeamDoesNotWriteAnyEntry)
 {
 	const auto Before = m_World.Switchers();
-	for(const int Team : {-1, NUM_DDRACE_TEAMS, std::numeric_limits<int>::max()})
+	for(const int Team : {-1, static_cast<int>(NUM_DDRACE_TEAMS), std::numeric_limits<int>::max()})
 	{
 		EXPECT_FALSE(m_World.TrySetSwitchState(1, Team, TILE_SWITCHOPEN, 0));
 		ExpectUnchanged(Before);

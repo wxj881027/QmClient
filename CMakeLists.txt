@@ -6138,6 +6138,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     add_executable(qm-prediction-tests EXCLUDE_FROM_ALL
       src/test/support/prediction_allocation_main.cpp
       src/test/support/prediction_allocation_failure.h
+      src/test/support/prediction_collision_map.h
       src/test/integration/client/prediction_world_copy_failure_test.cpp
       src/test/integration/client/prediction_entity_numeric_test.cpp
       src/test/integration/client/practice_tick_shift_test.cpp
@@ -6146,6 +6147,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/client/prediction_switch_state_test.cpp
       src/test/integration/client/prediction_dragger_geometry_test.cpp
       src/test/unit/client/prediction_door_geometry_test.cpp
+      src/test/integration/client/prediction_door_rebuild_test.cpp
       src/game/client/components/qmclient/practice_tick_shift.cpp
       src/test/integration/client/prediction_entity_copy_test.cpp
       src/test/integration/client/prediction_world_copy_test.cpp

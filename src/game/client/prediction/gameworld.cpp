@@ -624,19 +624,58 @@ void CGameWorld::NetObjAdd(int ObjId, int ObjType, const void *pObjData, const C
 
 void CGameWorld::ResetDoorCollision()
 {
-	// 移除旧实体后重建门碰撞，使重叠门按服务端地图实体的创建顺序生效。
-	std::vector<CDoor *> vpDoors;
+	// 只使用门的临时借用链，保留实体主链与原并列顺序，不在快照收尾分配内存。
+	CDoor *pHead = nullptr;
+	CDoor **ppTail = &pHead;
 	for(CEntity *pEnt = FindFirst(ENTTYPE_DOOR); pEnt; pEnt = pEnt->TypeNext())
-		vpDoors.push_back(static_cast<CDoor *>(pEnt));
-	std::stable_sort(vpDoors.begin(), vpDoors.end(), [this](const CDoor *pLeft, const CDoor *pRight) {
-		const int LeftIndex = Collision()->GetPureMapIndex(pLeft->m_Pos);
-		const int RightIndex = Collision()->GetPureMapIndex(pRight->m_Pos);
+	{
+		auto *pDoor = static_cast<CDoor *>(pEnt);
+		*ppTail = pDoor;
+		ppTail = &pDoor->m_pCollisionNext;
+		*ppTail = nullptr;
+	}
+	const auto Less = [this](const CDoor *pLeft, const CDoor *pRight) {
+		const int LeftIndex = QmCollision::CanRoundPosition(pLeft->m_Pos) ? Collision()->GetPureMapIndex(pLeft->m_Pos) : -1;
+		const int RightIndex = QmCollision::CanRoundPosition(pRight->m_Pos) ? Collision()->GetPureMapIndex(pRight->m_Pos) : -1;
 		if(LeftIndex != RightIndex)
 			return LeftIndex < RightIndex;
 		return (pLeft->m_Number > 0) < (pRight->m_Number > 0);
-	});
-	for(CDoor *pDoor : vpDoors)
-		pDoor->ResetCollision();
+	};
+	const auto Sort = [&Less](auto &&Self, CDoor *pList) -> CDoor * {
+		if(!pList || !pList->m_pCollisionNext)
+			return pList;
+		CDoor *pSlow = pList;
+		CDoor *pFast = pList->m_pCollisionNext;
+		while(pFast && pFast->m_pCollisionNext)
+		{
+			pSlow = pSlow->m_pCollisionNext;
+			pFast = pFast->m_pCollisionNext->m_pCollisionNext;
+		}
+		CDoor *pRight = pSlow->m_pCollisionNext;
+		pSlow->m_pCollisionNext = nullptr;
+		CDoor *pLeft = Self(Self, pList);
+		pRight = Self(Self, pRight);
+		CDoor *pMerged = nullptr;
+		CDoor **ppNext = &pMerged;
+		while(pLeft && pRight)
+		{
+			// 相同键先取左侧，维持原 stable_sort 的稳定性。
+			CDoor *&pChosen = !Less(pRight, pLeft) ? pLeft : pRight;
+			*ppNext = pChosen;
+			pChosen = pChosen->m_pCollisionNext;
+			ppNext = &(*ppNext)->m_pCollisionNext;
+		}
+		*ppNext = pLeft ? pLeft : pRight;
+		return pMerged;
+	};
+	pHead = Sort(Sort, pHead);
+	while(pHead)
+	{
+		CDoor *pNext = pHead->m_pCollisionNext;
+		pHead->m_pCollisionNext = nullptr;
+		pHead->ResetCollision();
+		pHead = pNext;
+	}
 }
 
 void CGameWorld::NetObjEnd()
