@@ -341,9 +341,65 @@ namespace qm_card_registry
 
 	namespace
 	{
-		bool SearchTextMatches(const char *pText, const char *pQuery)
+		constexpr int SEARCH_MAX_MATCHES = 3;
+		// 字段权重只影响排序：标题精确命中 > 关键词 > 设置标签 > 配置名 > 描述 > 别名。
+		constexpr int SEARCH_WEIGHT_TITLE = 20;
+		constexpr int SEARCH_WEIGHT_KEYWORDS = 12;
+		constexpr int SEARCH_WEIGHT_LABEL = 10;
+		constexpr int SEARCH_WEIGHT_CONFIG = 8;
+		constexpr int SEARCH_WEIGHT_DESCRIPTION = 6;
+		constexpr int SEARCH_WEIGHT_ALIAS = 5;
+
+		// 空格、制表符与全角空格分隔查询词；每个词都必须命中同一张卡片的任一字段。
+		std::vector<std::string> SplitSearchQuery(const char *pQuery)
 		{
-			return pText != nullptr && pText[0] != '\0' && str_utf8_find_nocase(pText, pQuery) != nullptr;
+			std::vector<std::string> vTokens;
+			std::string Token;
+			const auto Flush = [&]() {
+				if(!Token.empty())
+				{
+					vTokens.push_back(Token);
+					Token.clear();
+				}
+			};
+			for(const char *p = pQuery; p != nullptr && p[0] != '\0';)
+			{
+				const unsigned char c = (unsigned char)p[0];
+				if(c == ' ' || c == '\t' || c == '\n' || c == '\r')
+				{
+					Flush();
+					++p;
+					continue;
+				}
+				if(c == 0xE3 && (unsigned char)p[1] == 0x80 && (unsigned char)p[2] == 0x80)
+				{
+					Flush();
+					p += 3;
+					continue;
+				}
+				Token.push_back(*p);
+				++p;
+			}
+			Flush();
+			return vTokens;
+		}
+
+		int SearchMatchScore(const char *pText, const std::string &Token, const int Weight)
+		{
+			if(pText == nullptr || pText[0] == '\0')
+				return 0;
+			if(str_utf8_find_nocase(pText, Token.c_str()) == nullptr)
+				return 0;
+			return str_comp_nocase(pText, Token.c_str()) == 0 ? Weight * 2 : Weight;
+		}
+
+		void AddSearchMatch(std::vector<std::string> &vMatches, const char *pText)
+		{
+			if(pText == nullptr || pText[0] == '\0' || vMatches.size() >= SEARCH_MAX_MATCHES)
+				return;
+			if(std::any_of(vMatches.begin(), vMatches.end(), [pText](const std::string &Existing) { return Existing == pText; }))
+				return;
+			vMatches.emplace_back(pText);
 		}
 	}
 
@@ -370,44 +426,104 @@ namespace qm_card_registry
 	std::vector<SCardSearchResult> SearchCards(const char *pQuery, const qm_card_order::CModel &Model)
 	{
 		std::vector<SCardSearchResult> vResults;
-		if(pQuery == nullptr || pQuery[0] == '\0')
+		const std::vector<std::string> vTokens = SplitSearchQuery(pQuery);
+		if(vTokens.empty())
 			return vResults;
 
+		struct SCandidate
+		{
+			SCardSearchResult m_Result;
+			int m_Score = 0;
+		};
+		std::vector<SCandidate> vCandidates;
 		const std::vector<SCardDefault> &vDefaults = DefaultsTable();
-		vResults.reserve(vDefaults.size());
+		vCandidates.reserve(vDefaults.size());
 		for(const SCardDefault &Default : vDefaults)
 		{
 			if(Default.m_pStableId == nullptr)
 				continue;
 			const char *pLocalizedTitle = Default.m_pTitle != nullptr ? Localize(Default.m_pTitle) : "";
 			const char *pLocalizedDescription = Default.m_pDescription != nullptr ? Localize(Default.m_pDescription) : "";
-			bool Matches = SearchTextMatches(pLocalizedTitle, pQuery) || SearchTextMatches(Default.m_pTitle, pQuery) ||
-				       SearchTextMatches(pLocalizedDescription, pQuery) || SearchTextMatches(Default.m_pDescription, pQuery) ||
-				       SearchTextMatches(Default.m_pSearchKeywords, pQuery);
-			for(size_t Index = 0; !Matches && Index < Default.m_SettingCount; ++Index)
+			SCandidate Candidate;
+			int Score = 0;
+			bool MatchesAllTokens = true;
+			for(const std::string &Token : vTokens)
+			{
+				int TokenScore = std::max(SearchMatchScore(pLocalizedTitle, Token, SEARCH_WEIGHT_TITLE), SearchMatchScore(Default.m_pTitle, Token, SEARCH_WEIGHT_TITLE));
+				TokenScore = std::max(TokenScore, SearchMatchScore(Default.m_pSearchKeywords, Token, SEARCH_WEIGHT_KEYWORDS));
+				TokenScore = std::max(TokenScore, SearchMatchScore(pLocalizedDescription, Token, SEARCH_WEIGHT_DESCRIPTION));
+				TokenScore = std::max(TokenScore, SearchMatchScore(Default.m_pDescription, Token, SEARCH_WEIGHT_DESCRIPTION));
+				for(size_t Index = 0; Index < Default.m_SettingCount; ++Index)
+				{
+					const SCardSettingSearch &Setting = Default.m_pSettings[Index];
+					const char *pLocalizedLabel = Setting.m_pLabel != nullptr ? Localize(Setting.m_pLabel, Setting.m_pContext) : nullptr;
+					const int LabelScore = std::max(SearchMatchScore(Setting.m_pLabel, Token, SEARCH_WEIGHT_LABEL), SearchMatchScore(pLocalizedLabel, Token, SEARCH_WEIGHT_LABEL));
+					const int ConfigScore = SearchMatchScore(Setting.m_pConfigName, Token, SEARCH_WEIGHT_CONFIG);
+					TokenScore = std::max(TokenScore, LabelScore);
+					TokenScore = std::max(TokenScore, ConfigScore);
+					TokenScore = std::max(TokenScore, SearchMatchScore(Setting.m_pAliases, Token, SEARCH_WEIGHT_ALIAS));
+				}
+				if(TokenScore == 0)
+				{
+					MatchesAllTokens = false;
+					break;
+				}
+				Score += TokenScore;
+			}
+			if(!MatchesAllTokens)
+				continue;
+
+			// 命中项按设置项累计分数：同时命中多个查询词的标签优先展示，最多保留前几条。
+			std::vector<std::pair<int, std::string>> vSettingMatches;
+			for(size_t Index = 0; Index < Default.m_SettingCount; ++Index)
 			{
 				const SCardSettingSearch &Setting = Default.m_pSettings[Index];
-				Matches = SearchTextMatches(Setting.m_pConfigName, pQuery) || SearchTextMatches(Setting.m_pAliases, pQuery) || SearchTextMatches(Setting.m_pLabel, pQuery) ||
-					  (Setting.m_pLabel != nullptr && SearchTextMatches(Localize(Setting.m_pLabel, Setting.m_pContext), pQuery));
+				int SettingScore = 0;
+				const char *pDisplay = nullptr;
+				for(const std::string &Token : vTokens)
+				{
+					const char *pLocalizedLabel = Setting.m_pLabel != nullptr ? Localize(Setting.m_pLabel, Setting.m_pContext) : nullptr;
+					const int LabelScore = std::max(SearchMatchScore(Setting.m_pLabel, Token, SEARCH_WEIGHT_LABEL), SearchMatchScore(pLocalizedLabel, Token, SEARCH_WEIGHT_LABEL));
+					const int ConfigScore = SearchMatchScore(Setting.m_pConfigName, Token, SEARCH_WEIGHT_CONFIG);
+					SettingScore += std::max({LabelScore, ConfigScore, SearchMatchScore(Setting.m_pAliases, Token, SEARCH_WEIGHT_ALIAS)});
+					if(LabelScore > 0)
+						pDisplay = pLocalizedLabel != nullptr && pLocalizedLabel[0] != '\0' ? pLocalizedLabel : Setting.m_pLabel;
+					else if(ConfigScore > 0 && pDisplay == nullptr)
+						pDisplay = Setting.m_pConfigName;
+				}
+				if(SettingScore > 0 && pDisplay != nullptr)
+					vSettingMatches.emplace_back(SettingScore, pDisplay);
 			}
-			if(!Matches)
-				continue;
+			std::stable_sort(vSettingMatches.begin(), vSettingMatches.end(), [](const auto &Left, const auto &Right) { return Left.first > Right.first; });
+			for(const auto &Match : vSettingMatches)
+				AddSearchMatch(Candidate.m_Result.m_vMatches, Match.second.c_str());
 
 			// 旧入口只贡献检索词；命中后展示实际承载设置的卡片，并按该 ID 去重。
 			const SCardDefault *pCard = Default.m_pNavigationStableId != nullptr ? FindByStableId(Default.m_pNavigationStableId) : &Default;
 			if(pCard == nullptr)
 				pCard = &Default;
-			if(std::any_of(vResults.begin(), vResults.end(), [pCard](const SCardSearchResult &Result) {
-				   return str_comp(Result.m_pStableId, pCard->m_pStableId) == 0;
-			   }))
+			Candidate.m_Score = Score;
+			Candidate.m_Result.m_pStableId = pCard->m_pStableId;
+			Candidate.m_Result.m_Title = pCard->m_pTitle != nullptr ? Localize(pCard->m_pTitle) : "";
+			Candidate.m_Result.m_Description = ResolveLocalizedDescription(*pCard);
+			Candidate.m_Result.m_Target = ResolveCardNavigationTarget(*pCard, Model);
+			const auto Existing = std::find_if(vCandidates.begin(), vCandidates.end(), [pCard](const SCandidate &Other) {
+				return str_comp(Other.m_Result.m_pStableId, pCard->m_pStableId) == 0;
+			});
+			if(Existing != vCandidates.end())
+			{
+				// 同一张承载卡被多个旧入口命中时，保留分数更高、命中项更贴切的那条。
+				if(Candidate.m_Score > Existing->m_Score)
+					*Existing = std::move(Candidate);
 				continue;
-			SCardSearchResult Result;
-			Result.m_pStableId = pCard->m_pStableId;
-			Result.m_Title = pCard->m_pTitle != nullptr ? Localize(pCard->m_pTitle) : "";
-			Result.m_Description = ResolveLocalizedDescription(*pCard);
-			Result.m_Target = ResolveCardNavigationTarget(*pCard, Model);
-			vResults.push_back(std::move(Result));
+			}
+			vCandidates.push_back(std::move(Candidate));
 		}
+
+		std::stable_sort(vCandidates.begin(), vCandidates.end(), [](const SCandidate &Left, const SCandidate &Right) { return Left.m_Score > Right.m_Score; });
+		vResults.reserve(vCandidates.size());
+		for(SCandidate &Candidate : vCandidates)
+			vResults.push_back(std::move(Candidate.m_Result));
 		return vResults;
 	}
 

@@ -115,6 +115,8 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	static qm_card_catalog::SQmCardBuildContext s_GlobalSearchCardBuild;
 	static qm_card_catalog::SQmFunctionCardLayoutState s_GlobalSearchFunctionCardLayout;
 	static std::unordered_map<std::string, CButtonContainer> s_GlobalSearchActionButtons;
+	// 命中项副标题按卡片缓存；unordered_map 节点地址稳定，卡片定义可直接持有 c_str()。
+	static std::unordered_map<std::string, std::string> s_GlobalSearchMatchSubtitles;
 	// 分类布局只用于解析搜索和导航；以下两个模型仅属于搜索页，不持久化。
 	const qm_card_order::CModel &CardOrderModel = SettingsCardOrderModel();
 	qm_card_order::CModel &DeckOrderModel = Ui()->MeasurementOnly() ? s_GlobalSearchPrewarmOrderModel : s_GlobalSearchCache.m_Model;
@@ -216,10 +218,25 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 		for(const SQmGlobalSearchCard &Card : SearchVisibleGlobalCards)
 		{
 			SSettingsCardDefinition Definition;
+			const char *pMatchSubtitle = nullptr;
+			if(!Card.m_vMatches.empty())
+			{
+				std::string &Subtitle = s_GlobalSearchMatchSubtitles[Card.m_pStableId];
+				Subtitle.clear();
+				for(size_t Index = 0; Index < Card.m_vMatches.size() && Index < 2; ++Index)
+				{
+					if(!Subtitle.empty())
+						Subtitle += " · ";
+					Subtitle += Card.m_vMatches[Index];
+				}
+				pMatchSubtitle = Subtitle.c_str();
+			}
 			if(!qm_card_catalog::BuildCard(s_GlobalSearchCardBuild, Card.m_pStableId, Definition))
 			{
 				const qm_card_registry::SCardDefault *pDefault = qm_card_registry::FindByStableId(Card.m_pStableId);
 				Definition.m_Spec = {Card.m_pStableId, pDefault != nullptr && pDefault->m_pTitle != nullptr ? Localize(pDefault->m_pTitle) : Localize("Global card"), qm_card_registry::ResolveLocalizedDescription(Card.m_pStableId)};
+				if(pMatchSubtitle != nullptr)
+					Definition.m_Spec.m_pSubtitle = pMatchSubtitle;
 				// 兜底卡无法复用原页面的卡片构建器（构建闭包绑定在各自页面），
 				// 退化为「描述 + 定位按钮」的导航卡，而不是只有一行定位。
 				CButtonContainer *pOpenButton = &s_GlobalSearchActionButtons[std::string("open:") + Card.m_pStableId];
@@ -252,6 +269,8 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 				vCards.push_back(std::move(Definition));
 				continue;
 			}
+			if(pMatchSubtitle != nullptr)
+				Definition.m_Spec.m_pSubtitle = pMatchSubtitle;
 			CButtonContainer *pLocateButton = &s_GlobalSearchActionButtons[std::string("locate:") + Card.m_pStableId];
 			Definition.m_LeadingHeaderActionWidth = TextRender()->TextWidth(SmallSize, Localize("Locate")) + 16.0f * UiScale;
 			Definition.m_LeadingHeaderAction = [this, Target = Card.m_Target, pLocateButton, ReadOnly, UiScale, SmallSize, SearchCtx](const SSettingsCardFrame &Frame, bool) {

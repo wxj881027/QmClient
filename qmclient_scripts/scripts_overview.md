@@ -61,6 +61,7 @@
 - `qmclient_scripts/check_config_variables.py`
 - `qmclient_scripts/check_header_guards.py`
 - `qmclient_scripts/check_ci_deps.py` — CI Linux 依赖单一来源守卫：所有 Linux 构建作业的 apt 依赖统一走 `.github/actions/linux-deps` 复合 action；残留 apt 步骤的包、各 workflow 的 `extra` 包、可选特性（MYSQL/WEBSOCKETS/UPNP）与对应系统包的对应关系都在其注册表核对，curl share API 编译探针也在守卫范围内。已在 gate `quick/default/full` 注册为「CI 依赖单一来源守卫」。
+- `qmclient_scripts/check_card_search_index.py` — 设置搜索索引缺口报告：解析 `QmCardCatalogSearch.cpp` 的表与卡片登记，从卡片渲染函数收集 `Localize` 文案，列出未进索引的标签和失效索引条目；默认只报告，`--strict` 才在索引漂移/登记不一致时失败。CI style 作业以非阻断步骤运行并写入 step summary。
 - `qmclient_scripts/bump_version.py`
 - `qmclient_scripts/fix_style.py`
 - `qmclient_scripts/export_settings_commands_table.py`

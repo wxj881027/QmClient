@@ -1,5 +1,6 @@
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
+#include <game/localization.h>
 
 #include <gtest/gtest.h>
 
@@ -62,6 +63,55 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		EXPECT_TRUE(qm_card_catalog::HasCardModule(It->m_pStableId));
 		EXPECT_STREQ(It->m_Target.m_pStableId, Case.m_pCard);
 	}
+}
+
+TEST(QmCatalogSearch, EveryQueryTokenMustMatchTheSameCard)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	const auto Multi = qm_card_registry::SearchCards("console font", Model);
+	EXPECT_TRUE(std::any_of(Multi.begin(), Multi.end(), [](const auto &Result) {
+		return std::string(Result.m_pStableId) == "qm:console";
+	}));
+	// 全角空格与半角空格同义。
+	const auto FullWidth = qm_card_registry::SearchCards("console　font", Model);
+	EXPECT_TRUE(std::any_of(FullWidth.begin(), FullWidth.end(), [](const auto &Result) {
+		return std::string(Result.m_pStableId) == "qm:console";
+	}));
+	// 任一查询词没有命中时整张卡不返回。
+	EXPECT_TRUE(qm_card_registry::SearchCards("console zzzznotfound", Model).empty());
+}
+
+TEST(QmCatalogSearch, TitleMatchesRankAheadOfSettingText)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	const auto Results = qm_card_registry::SearchCards("Voice", Model);
+	ASSERT_FALSE(Results.empty());
+	EXPECT_STREQ(Results.front().m_pStableId, "qm:voice");
+}
+
+TEST(QmCatalogSearch, ResultCarriesMatchedSettingText)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	const auto LabelResults = qm_card_registry::SearchCards("Lyrics language", Model);
+	const auto LabelIt = std::find_if(LabelResults.begin(), LabelResults.end(), [](const auto &Result) {
+		return std::string(Result.m_pStableId) == "qm:lyrics";
+	});
+	ASSERT_NE(LabelIt, LabelResults.end());
+	ASSERT_FALSE(LabelIt->m_vMatches.empty());
+	const char *pExpectedLabel = Localize("Lyrics language");
+	EXPECT_NE(std::find(LabelIt->m_vMatches.begin(), LabelIt->m_vMatches.end(), pExpectedLabel), LabelIt->m_vMatches.end());
+
+	const auto ConfigResults = qm_card_registry::SearchCards("qm_lyrics_language", Model);
+	const auto ConfigIt = std::find_if(ConfigResults.begin(), ConfigResults.end(), [](const auto &Result) {
+		return std::string(Result.m_pStableId) == "qm:lyrics";
+	});
+	ASSERT_NE(ConfigIt, ConfigResults.end());
+	ASSERT_FALSE(ConfigIt->m_vMatches.empty());
+	EXPECT_NE(std::find(ConfigIt->m_vMatches.begin(), ConfigIt->m_vMatches.end(), "qm_lyrics_language"), ConfigIt->m_vMatches.end());
+	EXPECT_LE(ConfigIt->m_vMatches.size(), 3u);
 }
 
 TEST(QmCatalogSearch, AliasesAndCardLabelsProduceOneEditableResult)

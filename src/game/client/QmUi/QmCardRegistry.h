@@ -85,6 +85,8 @@ namespace qm_card_registry
 		std::string m_Title;
 		std::string m_Description;
 		SCardNavigationTarget m_Target;
+		// 命中的设置项文案（本地化标签优先，其次是配置名），最多保留前几条。
+		std::vector<std::string> m_vMatches;
 	};
 
 	// 焦点只消费本帧按下沿，不持有鼠标按下状态，外部释放或输入隔离不会卡住后续点击。
