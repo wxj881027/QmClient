@@ -3664,6 +3664,7 @@ if(CLIENT)
     components/qmclient/nameplate_text_build.h
     components/qmclient/nameplate_update.h
     components/qmclient/chat_bubble_state.h
+    components/qmclient/chat_bubble_geometry.h
     components/qmclient/pie_menu_actions.cpp
     components/qmclient/pie_menu_follow.cpp
     components/qmclient/pie_menu_points.h
@@ -6111,6 +6112,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/client/qm_nameplate_text_build_test.cpp
       src/test/integration/qmclient/client/qm_nameplate_update_test.cpp
       src/test/integration/qmclient/client/qm_chat_bubble_state_test.cpp
+      src/test/integration/qmclient/client/qm_chat_bubble_geometry_test.cpp
       src/test/integration/client/graph_rendering_test.cpp
       src/test/integration/qmclient/ui/qm_popup_blur_scope_test.cpp
       src/test/integration/qmclient/ui/qm_settings_search_session_test.cpp
@@ -6236,6 +6238,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_nameplate_text_build_test.cpp
       src/test/unit/qmclient/client/qm_nameplate_update_test.cpp
       src/test/unit/qmclient/client/qm_chat_bubble_state_test.cpp
+      src/test/unit/qmclient/client/qm_chat_bubble_geometry_test.cpp
       src/test/unit/qmclient/client/qm_chat_emoji_load_state_test.cpp
       src/test/unit/qmclient/ui/ui_cache_quantization_test.cpp
       src/test/integration/qmclient/ui/qm_tree_allocation_failure_test.cpp

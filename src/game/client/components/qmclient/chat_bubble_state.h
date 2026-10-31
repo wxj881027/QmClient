@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_CHAT_BUBBLE_STATE_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_CHAT_BUBBLE_STATE_H
 
+#include "chat_bubble_geometry.h"
 #include "nameplate_text_build.h"
 
 #include <base/str.h>
@@ -69,7 +70,8 @@ public:
 		m_Initialized = true;
 	}
 
-	void PrepareLayout(ITextRender &Text, float FontSize, float LineWidth, const char *pText)
+	template<typename TText>
+	void PrepareLayout(TText &Text, float FontSize, float LineWidth, const char *pText)
 	{
 		Cleanup(Text);
 		const bool Dirty = !m_TextContainerIndex.Valid() || str_comp(m_aLayoutText, pText) != 0 ||
@@ -85,6 +87,8 @@ public:
 			STextBoundingBox Bounds{};
 			if(Created)
 				Bounds = Text.GetBoundingBoxTextContainer(m_TextContainerIndex);
+			if(Created && !QmChatBubbleValidTextSize(vec2(Bounds.m_W, Bounds.m_H)))
+				throw std::length_error("invalid chat bubble text metrics");
 			m_CachedTextWidth = Created ? Bounds.m_W : 0.0f;
 			m_CachedTextHeight = Created ? Bounds.m_H : 0.0f;
 			m_CachedFontSize = FontSize;

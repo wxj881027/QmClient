@@ -18,6 +18,66 @@ namespace
 			Index.Reset();
 		}
 	};
+	struct SLayoutText : SText
+	{
+		vec2 m_Size = vec2(40, 10);
+		int m_Created = 0;
+		bool CreateTextContainer(STextContainerIndex &Index, CTextCursor *, const char *)
+		{
+			Index.m_UseCount = std::make_shared<STextContainerUsages>();
+			Index.m_Index = ++m_Created;
+			return true;
+		}
+		STextBoundingBox GetBoundingBoxTextContainer(STextContainerIndex)
+		{
+			STextBoundingBox Result{};
+			Result.m_W = m_Size.x;
+			Result.m_H = m_Size.y;
+			return Result;
+		}
+		uint64_t GlyphAtlasRevision() const { return 7; }
+	};
+}
+
+TEST(QmChatBubbleState, InvalidInitialMetricsRemainOwnedAndRetryable)
+{
+	SLayoutText Text;
+	CQmChatBubbleState State;
+	Text.m_Size.x = std::numeric_limits<float>::infinity();
+	EXPECT_THROW(State.PrepareLayout(Text, 14, 230, "message"), std::length_error);
+	EXPECT_FALSE(State.m_TextContainerIndex.Valid());
+	EXPECT_TRUE(State.HasTextResources());
+	EXPECT_STREQ(State.m_aLayoutText, "");
+	EXPECT_EQ(State.m_CachedTextWidth, 0);
+	Text.m_Size = vec2(40, 10);
+	State.PrepareLayout(Text, 14, 230, "message");
+	EXPECT_TRUE(State.m_TextContainerIndex.Valid());
+	EXPECT_EQ(Text.m_Created, 2);
+	EXPECT_EQ(State.m_CachedTextWidth, 40);
+	EXPECT_STREQ(State.m_aLayoutText, "message");
+	State.Reset(Text);
+	EXPECT_FALSE(State.HasTextResources());
+}
+
+TEST(QmChatBubbleState, InvalidRefreshDoesNotPublishItsMetricsAndCanRecover)
+{
+	SLayoutText Text;
+	CQmChatBubbleState State;
+	State.PrepareLayout(Text, 14, 230, "old");
+	Text.m_Size.y = -1;
+	EXPECT_THROW(State.PrepareLayout(Text, 16, 230, "new"), std::length_error);
+	EXPECT_FALSE(State.m_TextContainerIndex.Valid());
+	EXPECT_TRUE(State.HasTextResources());
+	EXPECT_EQ(State.m_CachedFontSize, 14);
+	EXPECT_EQ(State.m_CachedTextHeight, 10);
+	EXPECT_STREQ(State.m_aLayoutText, "old");
+	Text.m_Size = vec2(60, 12);
+	State.PrepareLayout(Text, 16, 230, "new");
+	EXPECT_TRUE(State.m_TextContainerIndex.Valid());
+	EXPECT_EQ(State.m_CachedFontSize, 16);
+	EXPECT_EQ(State.m_CachedTextHeight, 12);
+	EXPECT_STREQ(State.m_aLayoutText, "new");
+	State.Reset(Text);
 }
 
 TEST(QmChatBubbleState, RepeatedResetDoesNotAllocateANewUsageIdentity)
