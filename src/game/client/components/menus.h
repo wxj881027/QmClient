@@ -2808,8 +2808,8 @@ public:
 	void BuildSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems);
 	void BuildSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);
 	void BuildVisibleSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);
-	void PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOverride);
-	void CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollectionUnit &Unit, CUIRect Screen, CUIRect SettingsMainView);
+	bool PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOverride);
+	void CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollectionUnit &Unit, CUIRect Screen, CUIRect SettingsMainView, std::vector<SMenuTextPlanItem> &vItems);
 	bool AdvanceSettingsMenuTextPlanCollection(int Budget, const char *pOperationOverride);
 	bool PrebuildSettingsTextPlanItem(const SMenuTextPlanItem &Item, int &RemainingBudget);
 	int CountMissingSettingsMenuTextPlanItems() const;

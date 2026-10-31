@@ -40,6 +40,7 @@
 #include <game/client/QmUi/SettingsCard.h>
 #include <game/client/QmUi/SettingsLabelMetadata.h>
 #include <game/client/QmUi/SettingsMenuPrewarmScope.h>
+#include <game/client/QmUi/SettingsTextPlanCommit.h>
 #include <game/client/QmUi/ThemeSelectionLayout.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiContainers.h>
@@ -7184,86 +7185,97 @@ void CMenus::BuildSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, C
 	BuildBaseSettingsMenuTextPlan(vItems, MainView);
 }
 
-void CMenus::PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOverride)
+bool CMenus::PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOverride)
 {
-	const char *pOperation = pOperationOverride != nullptr ? pOperationOverride : SettingsPerfActiveOperation();
-	const std::string Operation = pOperation != nullptr ? pOperation : "";
-	const bool IngameEscOperation = str_comp(pOperation, "ingame_esc_open") == 0;
-	if(!m_SettingsMenuTextPlanCollectionDirty &&
-		m_SettingsMenuTextPlanCollectionGeneration == m_MenuTextPoolGeneration &&
-		m_SettingsMenuTextPlanCollectionOperation == Operation &&
-		!m_vSettingsMenuTextPlanCollectionUnits.empty())
-		return;
+	try
+	{
+		const char *pOperation = pOperationOverride != nullptr ? pOperationOverride : SettingsPerfActiveOperation();
+		std::string Operation = pOperation != nullptr ? pOperation : "";
+		const bool IngameEscOperation = str_comp(Operation.c_str(), "ingame_esc_open") == 0;
+		if(!m_SettingsMenuTextPlanCollectionDirty &&
+			m_SettingsMenuTextPlanCollectionGeneration == m_MenuTextPoolGeneration &&
+			m_SettingsMenuTextPlanCollectionOperation == Operation &&
+			!m_vSettingsMenuTextPlanCollectionUnits.empty())
+			return true;
 
-	m_vSettingsMenuTextPrebuildPlan.clear();
-	m_vSettingsMenuTextPlanCollectionUnits.clear();
-	m_SettingsMenuTextPlannedDescriptors.clear();
-	m_SettingsMenuTextPlannedKeys.clear();
-	m_SettingsMenuTextPlanCursor = 0;
-	m_SettingsMenuTextPlanCollectionCursor = 0;
-	m_SettingsMenuTextPlanGeneration = m_MenuTextPoolGeneration;
-	m_SettingsMenuTextPlanCollectionGeneration = m_MenuTextPoolGeneration;
-	m_SettingsMenuTextPlanCollectionOperation = Operation;
-	m_SettingsMenuTextPlanMetadataDirty = false;
-	m_SettingsMenuTextPlanCollectionDirty = false;
-	m_SettingsMenuTextPlanCollectionComplete = false;
-	// plan 重建后此前的字形预热队列已失效
-	m_vMenuTextGlyphPrewarmQueue.clear();
-	m_MenuTextGlyphPrewarmCursor = 0;
-	m_MenuTextGlyphPrewarmPlanCursor = static_cast<size_t>(-1);
+		const int CurrentPage = SettingsCanonicalPage(g_Config.m_UiSettingsPage);
+		int CurrentTab = -1;
+		if(CurrentPage == SETTINGS_TCLIENT)
+			CurrentTab = m_TClientSettingsTab;
+		else if(CurrentPage == SETTINGS_QMCLIENT)
+			CurrentTab = m_QmClientSettingsTab;
 
-	const int CurrentPage = SettingsCanonicalPage(g_Config.m_UiSettingsPage);
-	int CurrentTab = -1;
-	if(CurrentPage == SETTINGS_TCLIENT)
-		CurrentTab = m_TClientSettingsTab;
-	else if(CurrentPage == SETTINGS_QMCLIENT)
-		CurrentTab = m_QmClientSettingsTab;
+		const bool PreferQmClient = SettingsCanonicalPage(m_SettingsRuntimeMetadata.m_LastPage) == SETTINGS_QMCLIENT;
+		const int LastTClientTab = CanonicalizeTClientCacheTab(m_SettingsRuntimeMetadata.m_LastTClientTab);
+		int LastQmClientTab = std::clamp(m_SettingsRuntimeMetadata.m_LastQmTab, 0, NUMBER_OF_QMCLIENT_SETTINGS_TABS - 1);
+		// 贡献者页签的枚举值只是持久化占位，回落到首个子页签。
+		if(LastQmClientTab == QMCLIENT_SETTINGS_TAB_CONTRIBUTORS)
+			LastQmClientTab = QMCLIENT_SETTINGS_TAB_VISUAL;
+		static constexpr int s_aBaseSettingsPages[] = {
+			SETTINGS_GENERAL,
+			SETTINGS_TEE,
+			SETTINGS_APPEARANCE,
+			SETTINGS_CONTROLS,
+			SETTINGS_GRAPHICS,
+			SETTINGS_SOUND,
+			SETTINGS_ASSETS,
+			SETTINGS_DDNET,
+		};
+		auto vUnits = QmSettingsTextPlanUnits(IngameEscOperation, CurrentPage, CurrentTab,
+			PreferQmClient, SETTINGS_TCLIENT, SETTINGS_QMCLIENT, LastTClientTab, LastQmClientTab,
+			5, NUMBER_OF_QMCLIENT_SETTINGS_TABS, QMCLIENT_SETTINGS_TAB_CONTRIBUTORS, s_aBaseSettingsPages);
 
-	const bool PreferQmClient = SettingsCanonicalPage(m_SettingsRuntimeMetadata.m_LastPage) == SETTINGS_QMCLIENT;
-	const int LastTClientTab = CanonicalizeTClientCacheTab(m_SettingsRuntimeMetadata.m_LastTClientTab);
-	int LastQmClientTab = std::clamp(m_SettingsRuntimeMetadata.m_LastQmTab, 0, NUMBER_OF_QMCLIENT_SETTINGS_TABS - 1);
-	// 贡献者页签的枚举值只是持久化占位，回落到首个子页签。
-	if(LastQmClientTab == QMCLIENT_SETTINGS_TAB_CONTRIBUTORS)
-		LastQmClientTab = QMCLIENT_SETTINGS_TAB_VISUAL;
-	static constexpr int s_aBaseSettingsPages[] = {
-		SETTINGS_GENERAL,
-		SETTINGS_TEE,
-		SETTINGS_APPEARANCE,
-		SETTINGS_CONTROLS,
-		SETTINGS_GRAPHICS,
-		SETTINGS_SOUND,
-		SETTINGS_ASSETS,
-		SETTINGS_DDNET,
-	};
-	m_vSettingsMenuTextPlanCollectionUnits = QmSettingsTextPlanUnits(IngameEscOperation, CurrentPage, CurrentTab,
-		PreferQmClient, SETTINGS_TCLIENT, SETTINGS_QMCLIENT, LastTClientTab, LastQmClientTab,
-		5, NUMBER_OF_QMCLIENT_SETTINGS_TABS, QMCLIENT_SETTINGS_TAB_CONTRIBUTORS, s_aBaseSettingsPages);
+		m_vSettingsMenuTextPrebuildPlan.clear();
+		m_SettingsMenuTextPlannedDescriptors.clear();
+		m_SettingsMenuTextPlannedKeys.clear();
+		m_SettingsMenuTextPlanCursor = 0;
+		m_SettingsMenuTextPlanCollectionCursor = 0;
+		m_SettingsMenuTextPlanGeneration = m_MenuTextPoolGeneration;
+		m_SettingsMenuTextPlanCollectionGeneration = m_MenuTextPoolGeneration;
+		m_SettingsMenuTextPlanCollectionOperation.swap(Operation);
+		m_vSettingsMenuTextPlanCollectionUnits.swap(vUnits);
+		m_SettingsMenuTextPlanMetadataDirty = false;
+		m_SettingsMenuTextPlanCollectionDirty = false;
+		m_SettingsMenuTextPlanCollectionComplete = false;
+		// plan 重建后此前的字形预热队列已失效
+		m_vMenuTextGlyphPrewarmQueue.clear();
+		m_MenuTextGlyphPrewarmCursor = 0;
+		m_MenuTextGlyphPrewarmPlanCursor = static_cast<size_t>(-1);
+
+		return true;
+	}
+	catch(...)
+	{
+		m_SettingsMenuTextPlanCollectionDirty = true;
+		m_SettingsMenuTextPlanCollectionComplete = false;
+		return false;
+	}
 }
 
-void CMenus::CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollectionUnit &Unit, CUIRect Screen, CUIRect SettingsMainView)
+void CMenus::CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollectionUnit &Unit, CUIRect Screen, CUIRect SettingsMainView, std::vector<SMenuTextPlanItem> &vItems)
 {
 	switch(Unit.m_Kind)
 	{
 	case MENU_TEXT_PLAN_UNIT_VISIBLE_SETTINGS:
-		BuildVisibleSettingsMenuTextPlan(m_vSettingsMenuTextPrebuildPlan, SettingsMainView);
+		BuildVisibleSettingsMenuTextPlan(vItems, SettingsMainView);
 		break;
 	case MENU_TEXT_PLAN_UNIT_TCLIENT_TAB:
-		BuildTClientSettingsMenuTextPlan(m_vSettingsMenuTextPrebuildPlan, SettingsMainView, Unit.m_Tab);
+		BuildTClientSettingsMenuTextPlan(vItems, SettingsMainView, Unit.m_Tab);
 		break;
 	case MENU_TEXT_PLAN_UNIT_QMCLIENT_TAB:
-		BuildQmClientSettingsMenuTextPlan(m_vSettingsMenuTextPrebuildPlan, SettingsMainView, Unit.m_Tab);
+		BuildQmClientSettingsMenuTextPlan(vItems, SettingsMainView, Unit.m_Tab);
 		break;
 	case MENU_TEXT_PLAN_UNIT_BASE_PAGE:
 	{
 		const CSettingsTextPlanValueRestore SettingsPageRestore(g_Config.m_UiSettingsPage);
-		const CSettingsTextPlanCollectionScope CollectionScope(m_MenuTextPlanCollecting, m_pMenuTextPlanCollection, m_MenuTextPlanPendingActive, m_MenuTextPlanPendingItem, m_vSettingsMenuTextPrebuildPlan);
+		const CSettingsTextPlanCollectionScope CollectionScope(m_MenuTextPlanCollecting, m_pMenuTextPlanCollection, m_MenuTextPlanPendingActive, m_MenuTextPlanPendingItem, vItems);
 		g_Config.m_UiSettingsPage = Unit.m_Page;
 		Ui()->MapScreen();
 		RunSettingsTextPlanMeasurement(Ui(), [&] { RenderSettings(SettingsMainView); });
 		break;
 	}
 	case MENU_TEXT_PLAN_UNIT_INGAME_ESC:
-		BuildIngameMenuTextPlan(m_vSettingsMenuTextPrebuildPlan, Screen);
+		BuildIngameMenuTextPlan(vItems, Screen);
 		break;
 	}
 }
@@ -7279,32 +7291,34 @@ bool CMenus::AdvanceSettingsMenuTextPlanCollection(int Budget, const char *pOper
 			m_SettingsMenuTextPlanCollectionDirty = true;
 		s_LastPlanCollectionScreenBucket = CurrentScreenBucket;
 	}
-	PrepareSettingsMenuTextPlanCollectionUnits(pOperationOverride);
+	const bool Prepared = PrepareSettingsMenuTextPlanCollectionUnits(pOperationOverride);
 	m_SettingsMenuTextLastCollectionStats.m_UnitsTotal = (int)m_vSettingsMenuTextPlanCollectionUnits.size();
-	if(Budget <= 0 || Ui()->Screen() == nullptr)
+	if(!Prepared || Budget <= 0 || Ui()->Screen() == nullptr)
 	{
 		m_SettingsMenuTextLastCollectionStats.m_UnitsDone = (int)m_SettingsMenuTextPlanCollectionCursor;
 		m_SettingsMenuTextLastCollectionStats.m_Remaining = maximum(0, (int)m_vSettingsMenuTextPlanCollectionUnits.size() - (int)m_SettingsMenuTextPlanCollectionCursor);
-		m_SettingsMenuTextLastCollectionStats.m_Complete = m_SettingsMenuTextPlanCollectionComplete;
-		m_SettingsMenuTextLastCollectionStats.m_Dirty = m_SettingsMenuTextPlanCollectionDirty;
-		return m_SettingsMenuTextPlanCollectionComplete;
+		m_SettingsMenuTextLastCollectionStats.m_Complete = Prepared && m_SettingsMenuTextPlanCollectionComplete;
+		m_SettingsMenuTextLastCollectionStats.m_Dirty = !Prepared || m_SettingsMenuTextPlanCollectionDirty;
+		if(!Prepared)
+			m_SettingsMenuTextLastCollectionStats.m_Remaining = maximum(1, m_SettingsMenuTextLastCollectionStats.m_Remaining);
+		return Prepared && m_SettingsMenuTextPlanCollectionComplete;
 	}
 
 	const CUIRect Screen = *Ui()->Screen();
 	CUIRect SettingsMainView = MenuTextSettingsContentView(Screen);
 	int RemainingBudget = Budget;
+	bool CollectionFailed = false;
 	while(RemainingBudget > 0 && m_SettingsMenuTextPlanCollectionCursor < m_vSettingsMenuTextPlanCollectionUnits.size())
 	{
-		const size_t PreviousItemCount = m_vSettingsMenuTextPrebuildPlan.size();
-		CollectSettingsMenuTextPlanUnit(m_vSettingsMenuTextPlanCollectionUnits[m_SettingsMenuTextPlanCollectionCursor], Screen, SettingsMainView);
-		for(size_t ItemIndex = PreviousItemCount; ItemIndex < m_vSettingsMenuTextPrebuildPlan.size(); ++ItemIndex)
+		const bool Committed = TryCollectSettingsTextPlan(m_vSettingsMenuTextPrebuildPlan, m_SettingsMenuTextPlannedDescriptors, m_SettingsMenuTextPlannedKeys, [&](std::vector<SMenuTextPlanItem> &vItems) { CollectSettingsMenuTextPlanUnit(m_vSettingsMenuTextPlanCollectionUnits[m_SettingsMenuTextPlanCollectionCursor], Screen, SettingsMainView, vItems); }, [&](const SMenuTextPlanItem &Item) -> std::optional<std::pair<std::string, std::string>> {
+				if(!SettingsMenuTextPlanItemBuildable(Item))
+					return std::nullopt;
+				const SMenuTextStyleKey StyleKey = SettingsMenuTextPlanStyleKey(Item);
+				return std::make_pair(MenuTextDescriptorKey(Item.m_Scope, Item.m_Page, Item.m_Tab, Item.m_Subtab, Item.m_TextId.c_str()), MenuTextCacheKey(Item.m_Scope, Item.m_Page, Item.m_Tab, Item.m_Subtab, Item.m_TextId.c_str(), StyleKey)); });
+		if(!Committed)
 		{
-			const SMenuTextPlanItem &Item = m_vSettingsMenuTextPrebuildPlan[ItemIndex];
-			if(!SettingsMenuTextPlanItemBuildable(Item))
-				continue;
-			const SMenuTextStyleKey StyleKey = SettingsMenuTextPlanStyleKey(Item);
-			m_SettingsMenuTextPlannedDescriptors.insert(MenuTextDescriptorKey(Item.m_Scope, Item.m_Page, Item.m_Tab, Item.m_Subtab, Item.m_TextId.c_str()));
-			m_SettingsMenuTextPlannedKeys.insert(MenuTextCacheKey(Item.m_Scope, Item.m_Page, Item.m_Tab, Item.m_Subtab, Item.m_TextId.c_str(), StyleKey));
+			CollectionFailed = true;
+			break;
 		}
 		++m_SettingsMenuTextPlanCollectionCursor;
 		--RemainingBudget;
@@ -7313,7 +7327,7 @@ bool CMenus::AdvanceSettingsMenuTextPlanCollection(int Budget, const char *pOper
 	m_SettingsMenuTextLastCollectionStats.m_UnitsDone = (int)m_SettingsMenuTextPlanCollectionCursor;
 	m_SettingsMenuTextLastCollectionStats.m_Remaining = maximum(0, (int)m_vSettingsMenuTextPlanCollectionUnits.size() - (int)m_SettingsMenuTextPlanCollectionCursor);
 	m_SettingsMenuTextLastCollectionStats.m_Complete = m_SettingsMenuTextPlanCollectionComplete;
-	m_SettingsMenuTextLastCollectionStats.m_Dirty = m_SettingsMenuTextPlanCollectionDirty;
+	m_SettingsMenuTextLastCollectionStats.m_Dirty = CollectionFailed || m_SettingsMenuTextPlanCollectionDirty;
 	return m_SettingsMenuTextPlanCollectionComplete;
 }
 
@@ -7394,30 +7408,26 @@ void CMenus::EnsureSettingsMenuTextPlanReadyForVisible()
 	if(!m_SettingsMenuTextPlanMetadataDirty && m_SettingsMenuTextPlanGeneration == m_MenuTextPoolGeneration && !m_vSettingsMenuTextPrebuildPlan.empty() && !m_SettingsMenuTextPlannedDescriptors.empty())
 		return;
 
-	// InvalidateMenuTextPool 在 visible guard 激活时不会 clear 这些容器，
-	// rebuild 前必须先清空，否则会在旧数据上 append 导致 plan items 重复
-	// （内存增长 + prebuild remaining telemetry 偏差）。
-	m_vSettingsMenuTextPrebuildPlan.clear();
-	m_SettingsMenuTextPlannedDescriptors.clear();
-	m_SettingsMenuTextPlannedKeys.clear();
-	const CUiRenderOnlyScope RenderOnly(Ui());
-	std::vector<SMenuTextPlanItem> vVisibleItems;
-	const CUIRect Screen = *Ui()->Screen();
-	CUIRect SettingsMainView = MenuTextSettingsContentView(Screen);
-	if(str_comp(SettingsPerfActiveOperation(), "ingame_esc_open") == 0)
-		BuildIngameMenuTextPlan(vVisibleItems, Screen);
-	else
-		BuildVisibleSettingsMenuTextPlan(vVisibleItems, SettingsMainView);
+	std::vector<SMenuTextPlanItem> vPlan;
+	std::unordered_set<std::string> Descriptors, Keys;
+	const bool Prepared = TryCollectSettingsTextPlan(vPlan, Descriptors, Keys, [&](std::vector<SMenuTextPlanItem> &vVisibleItems) {
+			RunSettingsTextPlanMeasurement(Ui(), [&] {
+				const CUIRect Screen = *Ui()->Screen();
+				const CUIRect SettingsMainView = MenuTextSettingsContentView(Screen);
+				if(str_comp(SettingsPerfActiveOperation(), "ingame_esc_open") == 0)
+					BuildIngameMenuTextPlan(vVisibleItems, Screen);
+				else
+					BuildVisibleSettingsMenuTextPlan(vVisibleItems, SettingsMainView);
+			});
+			std::erase_if(vVisibleItems, [](const SMenuTextPlanItem &Item) { return !SettingsMenuTextPlanItemBuildable(Item); }); }, [&](const SMenuTextPlanItem &Item) -> std::optional<std::pair<std::string, std::string>> {
+			const SMenuTextStyleKey StyleKey = SettingsMenuTextPlanStyleKey(Item);
+			return std::make_pair(MenuTextDescriptorKey(Item.m_Scope, Item.m_Page, Item.m_Tab, Item.m_Subtab, Item.m_TextId.c_str()), MenuTextCacheKey(Item.m_Scope, Item.m_Page, Item.m_Tab, Item.m_Subtab, Item.m_TextId.c_str(), StyleKey)); });
+	if(!Prepared)
+		return;
+	m_vSettingsMenuTextPrebuildPlan.swap(vPlan);
+	m_SettingsMenuTextPlannedDescriptors.swap(Descriptors);
+	m_SettingsMenuTextPlannedKeys.swap(Keys);
 	m_SettingsMenuTextPlanGeneration = m_MenuTextPoolGeneration;
-	for(const SMenuTextPlanItem &Item : vVisibleItems)
-	{
-		if(!SettingsMenuTextPlanItemBuildable(Item))
-			continue;
-		const SMenuTextStyleKey StyleKey = SettingsMenuTextPlanStyleKey(Item);
-		m_SettingsMenuTextPlannedDescriptors.insert(MenuTextDescriptorKey(Item.m_Scope, Item.m_Page, Item.m_Tab, Item.m_Subtab, Item.m_TextId.c_str()));
-		m_SettingsMenuTextPlannedKeys.insert(MenuTextCacheKey(Item.m_Scope, Item.m_Page, Item.m_Tab, Item.m_Subtab, Item.m_TextId.c_str(), StyleKey));
-		m_vSettingsMenuTextPrebuildPlan.push_back(Item);
-	}
 	m_SettingsMenuTextPlanMetadataDirty = false;
 }
 
@@ -7465,6 +7475,11 @@ int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperatio
 	const CUiRenderOnlyScope RenderOnly(Ui());
 	const int PlanCollectionBudget = maximum(1, minimum(Budget, AdaptiveBudget.m_TextPrebuildTokens));
 	AdvanceSettingsMenuTextPlanCollection(PlanCollectionBudget, pOperationOverride);
+	if(m_SettingsMenuTextLastCollectionStats.m_Dirty)
+	{
+		m_SettingsMenuTextLastPrebuildStats.m_Remaining = maximum(1, m_SettingsMenuTextLastCollectionStats.m_Remaining);
+		return Budget;
+	}
 	int RemainingBudget = minimum(Budget, maximum(1, AdaptiveBudget.m_TextPrebuildTokens));
 	if(m_SettingsMenuTextPlanGeneration != m_MenuTextPoolGeneration)
 	{
