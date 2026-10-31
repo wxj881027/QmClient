@@ -10082,6 +10082,9 @@ Permanent access; up to 4 online IP addresses
 Permanent sponsor verified
 == Soutien permanent vérifié
 
+Personal adjustments
+== Réglages personnalisés
+
 Personal best:
 == Meilleur personnel :
 

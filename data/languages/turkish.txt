@@ -10082,6 +10082,9 @@ Permanent access; up to 4 online IP addresses
 Permanent sponsor verified
 == Kalıcı destekçi durumu doğrulandı
 
+Personal adjustments
+== Kişisel ayarlar
+
 Personal best:
 == Kişisel en iyi:
 
