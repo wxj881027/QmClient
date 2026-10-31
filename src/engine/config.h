@@ -68,6 +68,8 @@ public:
 	virtual void RegisterCallback(SAVECALLBACKFUNC pfnFunc, void *pUserData, ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) = 0;
 
 	virtual void WriteLine(const char *pLine, ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) = 0;
+	// 仅在本次保存回调内报告准备失败，沿正常失败收尾保留正式配置。
+	virtual void MarkSaveFailed(ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) = 0;
 
 	virtual void StoreUnknownCommand(const char *pCommand, ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) = 0;
 

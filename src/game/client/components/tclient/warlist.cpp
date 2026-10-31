@@ -9,22 +9,6 @@
 
 #include <algorithm>
 
-namespace
-{
-	void ResetWarPlayerData(CWarDataCache &WarData, int WarTypeCount)
-	{
-		WarData.m_WarName = false;
-		WarData.m_WarClan = false;
-		WarData.m_aReason[0] = '\0';
-		WarData.m_NameColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
-		WarData.m_ClanColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
-		if(static_cast<int>(WarData.m_WarGroupMatches.size()) != WarTypeCount)
-			WarData.m_WarGroupMatches.assign(WarTypeCount, false);
-		else
-			std::fill(WarData.m_WarGroupMatches.begin(), WarData.m_WarGroupMatches.end(), false);
-	}
-}
-
 void CWarList::OnNewSnapshot()
 {
 	UpdateWarPlayers();
@@ -130,7 +114,7 @@ void CWarList::ConAddWarEntry(IConsole::IResult *pResult, void *pUserData)
 	const char *pClan = pResult->GetString(2);
 	const char *pReason = pResult->GetString(3);
 	CWarList *pThis = static_cast<CWarList *>(pUserData);
-	pThis->AddWarEntry(pName, pClan, pReason, pType);
+	pThis->LoadWarEntry(pName, pClan, pReason, pType);
 }
 void CWarList::ConUpsertWarType(IConsole::IResult *pResult, void *pUserData)
 {
@@ -139,7 +123,7 @@ void CWarList::ConUpsertWarType(IConsole::IResult *pResult, void *pUserData)
 	unsigned int ColorInt = pResult->GetInteger(2);
 	ColorRGBA Color = color_cast<ColorRGBA>(ColorHSLA(ColorInt));
 	CWarList *pThis = static_cast<CWarList *>(pUserData);
-	pThis->UpsertWarType(Index, pType, Color);
+	pThis->LoadWarType(Index, pType, Color);
 }
 
 void CWarList::AddWarEntryInGame(int WarType, const char *pName, const char *pReason, bool IsClan)
@@ -299,37 +283,12 @@ void CWarList::UpdateWarPlayers()
 			continue;
 
 		CWarDataCache &WarData = m_WarPlayers[i];
-		ResetWarPlayerData(WarData, WarTypeCount);
-
-		const auto NameIt = m_WarEntriesByName.find(std::string_view(GameClient()->m_aClients[i].m_aName));
-		if(NameIt != m_WarEntriesByName.end())
-		{
-			for(const CWarEntry *pEntry : NameIt->second)
-			{
-				str_copy(WarData.m_aReason, pEntry->m_aReason);
-				WarData.m_WarName = true;
-				WarData.m_NameColor = pEntry->m_pWarType->m_Color;
-				WarData.m_WarGroupMatches[pEntry->m_pWarType->m_Index] = true;
-			}
-		}
-
-		if(GameClient()->m_aClients[i].m_aClan[0] == '\0')
+		if(!WarData.Reset(WarTypeCount))
 			continue;
-
-		const auto ClanIt = m_WarEntriesByClan.find(std::string_view(GameClient()->m_aClients[i].m_aClan));
-		if(ClanIt == m_WarEntriesByClan.end())
-			continue;
-
-		for(const CWarEntry *pEntry : ClanIt->second)
-		{
-			// Name war reason has priority over clan war reason.
-			if(!WarData.m_WarName)
-				str_copy(WarData.m_aReason, pEntry->m_aReason);
-
-			WarData.m_WarClan = true;
-			WarData.m_ClanColor = pEntry->m_pWarType->m_Color;
-			WarData.m_WarGroupMatches[pEntry->m_pWarType->m_Index] = true;
-		}
+		VisitMatches(GameClient()->m_aClients[i].m_aName, GameClient()->m_aClients[i].m_aClan, [&](const CWarEntry &Entry, bool ByName) {
+			WarData.ApplyMatch(Entry, ByName);
+			return true;
+		});
 	}
 }
 
@@ -341,6 +300,11 @@ static inline void EscapeParam(char *pDst, const char *pSrc, int Size)
 void CWarList::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData)
 {
 	CWarList *pThis = (CWarList *)pUserData;
+	if(pThis->ConfigIncomplete())
+	{
+		pConfigManager->MarkSaveFailed(ConfigDomain::TCLIENTWARLIST);
+		return;
+	}
 
 	char aBuf[1024];
 	for(int i = 0; i < static_cast<int>(pThis->m_WarTypes.size()); i++)

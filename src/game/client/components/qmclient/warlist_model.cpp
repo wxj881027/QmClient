@@ -3,11 +3,39 @@
 #include <engine/shared/config.h>
 
 #include <algorithm>
+#include <new>
 
-CQmWarListModel::~CQmWarListModel()
+namespace
 {
-	for(CWarType *pType : m_WarTypes)
-		delete pType;
+	template<typename T>
+	void ReserveAppend(T &Values)
+	{
+		if(Values.size() < Values.capacity())
+			return;
+		if(Values.size() == Values.max_size())
+			throw std::bad_alloc();
+		// 提前准备提交槽位，仍按几何级数扩容，避免逐项reserve造成平方复制。
+		const size_t Capacity = Values.size() > Values.max_size() / 2 ? Values.max_size() : std::max(size_t{1}, Values.size() * 2);
+		Values.reserve(Capacity);
+	}
+}
+
+CQmWarListModel::~CQmWarListModel() = default;
+
+std::unique_ptr<CWarType> CQmWarListModel::PrepareWarType(const char *pType, ColorRGBA Color)
+{
+	auto pNewType = std::make_unique<CWarType>(pType, Color);
+	ReserveAppend(m_vOwnedTypes);
+	ReserveAppend(m_WarTypes);
+	return pNewType;
+}
+
+void CQmWarListModel::PublishWarType(std::unique_ptr<CWarType> pType) noexcept
+{
+	CWarType *pBorrowed = pType.get();
+	m_vOwnedTypes.push_back(std::move(pType));
+	m_WarTypes.push_back(pBorrowed);
+	MarkWarTypesDirty();
 }
 
 void CQmWarListModel::UpdateWarEntry(int Index, const char *pName, const char *pClan, const char *pReason, CWarType *pType)
@@ -22,50 +50,88 @@ void CQmWarListModel::UpdateWarEntry(int Index, const char *pName, const char *p
 	}
 }
 
-void CQmWarListModel::UpsertWarType(int Index, const char *pType, ColorRGBA Color)
+bool CQmWarListModel::UpsertWarType(int Index, const char *pType, ColorRGBA Color) noexcept
 {
 	if(str_comp(pType, "none") == 0)
-		return;
+		return true;
 
 	if(Index >= 0 && Index < static_cast<int>(m_WarTypes.size()))
 	{
 		CWarType *pExisting = FindWarType(pType);
 		if(pExisting != m_pWarTypeNone && pExisting != m_WarTypes[Index])
-			return;
+			return true;
 		str_copy(m_WarTypes[Index]->m_aWarName, pType);
 		m_WarTypes[Index]->m_Color = Color;
 		MarkWarEntriesDirty();
 	}
 	else
 	{
-		AddWarType(pType, Color);
+		return AddWarType(pType, Color);
+	}
+	return true;
+}
+
+bool CQmWarListModel::AddWarEntry(const char *pName, const char *pClan, const char *pReason, const char *pType) noexcept
+{
+	if(pName[0] == '\0' && pClan[0] == '\0')
+		return true;
+	// 输入可能借用现有条目，先复制固定值，再准备任何可重分配的容器。
+	CWarEntry Entry(nullptr);
+	str_copy(Entry.m_aReason, pReason);
+	if(pClan[0] != '\0')
+		str_copy(Entry.m_aClan, pClan);
+	else
+		str_copy(Entry.m_aName, pName);
+	CWarType TypeName(pType);
+	const bool HasDuplicates = !g_Config.m_QmWarListAllowDuplicates && std::any_of(m_vWarEntries.begin(), m_vWarEntries.end(), [&](const CWarEntry &Old) {
+		return str_comp(Old.m_aName, pName) == 0 && str_comp(Old.m_aClan, pClan) == 0;
+	});
+	char aDuplicateName[MAX_NAME_LENGTH] = "";
+	char aDuplicateClan[MAX_CLAN_LENGTH] = "";
+	if(HasDuplicates)
+	{
+		str_copy(aDuplicateName, pName);
+		str_copy(aDuplicateClan, pClan);
+	}
+	try
+	{
+		CWarType *pWarType = FindWarType(TypeName.m_aWarName);
+		std::unique_ptr<CWarType> pNewType;
+		if(pWarType == m_pWarTypeNone && str_comp(TypeName.m_aWarName, "none") != 0)
+			pNewType = PrepareWarType(TypeName.m_aWarName, ColorRGBA(0, 0, 0, 1));
+		// 条目扩容是最后一个可能失败的准备，失败时旧条目地址和索引仍有效。
+		if(!HasDuplicates)
+			ReserveAppend(m_vWarEntries);
+		if(pNewType)
+		{
+			PublishWarType(std::move(pNewType));
+			pWarType = FindWarType(TypeName.m_aWarName);
+		}
+		Entry.m_pWarType = pWarType;
+		if(HasDuplicates)
+			RemoveWarEntryDuplicates(aDuplicateName, aDuplicateClan);
+		m_vWarEntries.push_back(Entry);
+		MarkWarEntriesDirty();
+		return true;
+	}
+	catch(...)
+	{
+		return false;
 	}
 }
 
-void CQmWarListModel::AddWarEntry(const char *pName, const char *pClan, const char *pReason, const char *pType)
+bool CQmWarListModel::LoadWarEntry(const char *pName, const char *pClan, const char *pReason, const char *pType) noexcept
 {
-	if(str_comp(pName, "") == 0 && str_comp(pClan, "") == 0)
-		return;
+	const bool Prepared = AddWarEntry(pName, pClan, pReason, pType);
+	m_ConfigIncomplete |= !Prepared;
+	return Prepared;
+}
 
-	CWarType *WarType = FindWarType(pType);
-	if(WarType == m_pWarTypeNone)
-	{
-		AddWarType(pType, ColorRGBA(0.0f, 0.0f, 0.0f, 1.0f));
-		WarType = FindWarType(pType);
-	}
-
-	CWarEntry Entry(WarType);
-	str_copy(Entry.m_aReason, pReason);
-
-	if(str_comp(pClan, "") != 0)
-		str_copy(Entry.m_aClan, pClan);
-	else if(str_comp(pName, "") != 0)
-		str_copy(Entry.m_aName, pName);
-
-	if(!g_Config.m_QmWarListAllowDuplicates)
-		RemoveWarEntryDuplicates(pName, pClan);
-	m_vWarEntries.push_back(Entry);
-	MarkWarEntriesDirty();
+bool CQmWarListModel::LoadWarType(int Index, const char *pType, ColorRGBA Color) noexcept
+{
+	const bool Prepared = UpsertWarType(Index, pType, Color);
+	m_ConfigIncomplete |= !Prepared;
+	return Prepared;
 }
 
 void CQmWarListModel::RemoveWarEntryDuplicates(const char *pName, const char *pClan)
@@ -95,22 +161,25 @@ void CQmWarListModel::RemoveWarEntryDuplicates(const char *pName, const char *pC
 		MarkWarEntriesDirty();
 }
 
-void CQmWarListModel::AddWarType(const char *pType, ColorRGBA Color)
+bool CQmWarListModel::AddWarType(const char *pType, ColorRGBA Color) noexcept
 {
 	if(str_comp(pType, "none") == 0)
-		return;
-
-	CWarType *Type = FindWarType(pType);
-	if(Type == m_pWarTypeNone)
+		return true;
+	CWarType *pExisting = FindWarType(pType);
+	if(pExisting != m_pWarTypeNone)
 	{
-		CWarType *NewType = new CWarType(pType, Color);
-		m_WarTypes.push_back(NewType);
-		MarkWarTypesDirty();
-	}
-	else
-	{
-		Type->m_Color = Color;
+		pExisting->m_Color = Color;
 		MarkWarEntriesDirty();
+		return true;
+	}
+	try
+	{
+		PublishWarType(PrepareWarType(pType, Color));
+		return true;
+	}
+	catch(...)
+	{
+		return false;
 	}
 }
 
@@ -157,8 +226,11 @@ void CQmWarListModel::RemoveWarType(const char *pType)
 				Entry.m_pWarType = m_pWarTypeNone;
 			}
 		}
-		delete *Iter;
+		CWarType *pRemoved = *Iter;
 		m_WarTypes.erase(Iter);
+		const auto Owner = std::find_if(m_vOwnedTypes.begin(), m_vOwnedTypes.end(), [pRemoved](const auto &pOwned) { return pOwned.get() == pRemoved; });
+		if(Owner != m_vOwnedTypes.end())
+			m_vOwnedTypes.erase(Owner);
 		MarkWarTypesDirty();
 	}
 }
@@ -209,39 +281,45 @@ void CQmWarListModel::RefreshWarTypeIndices()
 	m_WarTypeIndicesDirty = false;
 }
 
-void CQmWarListModel::RebuildWarEntryLookup() const
+bool CQmWarListModel::RebuildWarEntryLookup() const noexcept
 {
 	if(!m_WarEntryLookupDirty)
-		return;
+		return true;
 
-	m_WarEntriesByName.clear();
-	m_WarEntriesByClan.clear();
-	m_WarEntriesByName.reserve(m_vWarEntries.size());
-	m_WarEntriesByClan.reserve(m_vWarEntries.size());
-
-	for(const CWarEntry &Entry : m_vWarEntries)
+	try
 	{
-		if(Entry.m_aName[0] != '\0')
-			m_WarEntriesByName[std::string_view(Entry.m_aName)].push_back(&Entry);
-		else if(Entry.m_aClan[0] != '\0')
-			m_WarEntriesByClan[std::string_view(Entry.m_aClan)].push_back(&Entry);
-	}
+		m_WarEntriesByName.clear();
+		m_WarEntriesByClan.clear();
+		m_WarEntriesByName.reserve(m_vWarEntries.size());
+		m_WarEntriesByClan.reserve(m_vWarEntries.size());
 
-	m_WarEntryLookupDirty = false;
+		for(const CWarEntry &Entry : m_vWarEntries)
+		{
+			if(Entry.m_aName[0] != '\0')
+				m_WarEntriesByName[Entry.m_aName].push_back(&Entry);
+			else if(Entry.m_aClan[0] != '\0')
+				m_WarEntriesByClan[Entry.m_aClan].push_back(&Entry);
+		}
+
+		m_WarEntryLookupDirty = false;
+		return true;
+	}
+	catch(...)
+	{
+		m_WarEntriesByName.clear();
+		m_WarEntriesByClan.clear();
+		return false;
+	}
 }
 
 bool CQmWarListModel::MatchesEnemy(const char *pName, const char *pClan) const
 {
-	// 按当前身份查询，名单编辑和玩家改名不必等下一次快照才能生效。
 	RebuildWarEntryLookup();
 	const CWarType *pEnemyType = m_WarTypes[WARLIST_BUILTIN_GROUP_ENEMY];
-	const auto Matches = [pEnemyType](const TWarEntryLookup &Lookup, const char *pValue) {
-		if(pValue[0] == '\0')
-			return false;
-		const auto It = Lookup.find(std::string_view(pValue));
-		return It != Lookup.end() && std::any_of(It->second.begin(), It->second.end(), [pEnemyType](const CWarEntry *pEntry) {
-			return pEntry->m_pWarType == pEnemyType;
-		});
-	};
-	return Matches(m_WarEntriesByName, pName) || Matches(m_WarEntriesByClan, pClan);
+	bool Matched = false;
+	VisitMatches(pName, pClan, [&](const CWarEntry &Entry, bool) {
+		Matched = Entry.m_pWarType == pEnemyType;
+		return !Matched;
+	});
+	return Matched;
 }

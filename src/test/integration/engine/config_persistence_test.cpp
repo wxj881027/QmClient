@@ -22,6 +22,19 @@
 namespace
 {
 	constexpr const char *SETTINGS_PATH = "qmclient/settings.cfg";
+	struct SWarListSaveState
+	{
+		bool m_Failed = false;
+		const char *m_pLine = "# original warlist";
+		static void Save(IConfigManager *pConfig, void *pUser)
+		{
+			const auto &State = *static_cast<SWarListSaveState *>(pUser);
+			if(State.m_Failed)
+				pConfig->MarkSaveFailed(ConfigDomain::TCLIENTWARLIST);
+			else
+				pConfig->WriteLine(State.m_pLine, ConfigDomain::TCLIENTWARLIST);
+		}
+	};
 
 	class CConfigSession
 	{
@@ -82,6 +95,40 @@ namespace
 			return Success ? std::string(static_cast<const char *>(pData), Length) : std::string();
 		}
 	};
+}
+
+TEST_F(CConfigPersistence, CallbackReportedFailurePreservesSettingsAndWarListEvenWithForce)
+{
+	CConfigSession Session(m_pStorage.get());
+	SWarListSaveState State;
+	Session.Config()->RegisterCallback(SWarListSaveState::Save, &State, ConfigDomain::TCLIENTWARLIST);
+	ASSERT_TRUE(Session.Config()->Save());
+	const char *pWarPath = s_aConfigDomains[ConfigDomain::TCLIENTWARLIST].m_aConfigPath;
+	const std::string OldSettings = Read();
+	const std::string OldWarList = Read(pWarPath);
+	g_Config.m_ClShowhud = !g_Config.m_ClShowhud;
+	State.m_Failed = true;
+	State.m_pLine = "# new warlist";
+	EXPECT_FALSE(Session.Config()->Save());
+	EXPECT_EQ(Read(), OldSettings);
+	EXPECT_EQ(Read(pWarPath), OldWarList);
+	EXPECT_FALSE(Session.Config()->Save(true));
+	EXPECT_EQ(Read(), OldSettings);
+	EXPECT_EQ(Read(pWarPath), OldWarList);
+}
+
+TEST_F(CConfigPersistence, CallbackFailureIsScopedToTheAttemptAndASuccessfulRetryCanPublish)
+{
+	CConfigSession Session(m_pStorage.get());
+	SWarListSaveState State;
+	State.m_Failed = true;
+	Session.Config()->RegisterCallback(SWarListSaveState::Save, &State, ConfigDomain::TCLIENTWARLIST);
+	EXPECT_FALSE(Session.Config()->Save());
+	State.m_Failed = false;
+	State.m_pLine = "# retry warlist";
+	ASSERT_TRUE(Session.Config()->Save());
+	const char *pWarPath = s_aConfigDomains[ConfigDomain::TCLIENTWARLIST].m_aConfigPath;
+	EXPECT_NE(Read(pWarPath).find("# retry warlist"), std::string::npos);
 }
 
 TEST_F(CConfigPersistence, RepeatedSaveUpdatesOwnBaselineAndReloadsSettings)

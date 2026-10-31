@@ -26,6 +26,7 @@ public:
 	CConfig *Values() override { return nullptr; }
 	void RegisterCallback(SAVECALLBACKFUNC, void *, ConfigDomain) override {}
 	void WriteLine(const char *, ConfigDomain) override {}
+	void MarkSaveFailed(ConfigDomain) override {}
 	void StoreUnknownCommand(const char *, ConfigDomain) override {}
 	EColorInputAlphaMode ColorValueInputAlphaMode(const char *) const override { return EColorInputAlphaMode::PACKED; }
 

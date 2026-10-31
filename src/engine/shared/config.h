@@ -398,6 +398,7 @@ public:
 	void RegisterCallback(SAVECALLBACKFUNC pfnFunc, void *pUserData, ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) override;
 
 	void WriteLine(const char *pLine, ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) override;
+	void MarkSaveFailed(ConfigDomain Domain = ConfigDomain::QMCLIENT) override { m_aFailed[Domain] = true; }
 
 	void StoreUnknownCommand(const char *pCommand, ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) override;
 
