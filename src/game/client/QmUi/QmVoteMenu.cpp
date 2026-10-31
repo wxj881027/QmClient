@@ -33,6 +33,8 @@ namespace
 
 	const char *CategoryLabel(const char *pKey)
 	{
+		// 目录数据可能写 DDmaX.Next，界面文案统一按空格写法匹配。
+		pKey = QmVoteMaps::CategoryKey(pKey);
 		if(str_comp(pKey, "DDmaX Easy") == 0)
 			return Localize("Classic Easy");
 		if(str_comp(pKey, "DDmaX Next") == 0)
@@ -285,6 +287,8 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		State.m_Dirty = true;
 	}
 
+	// 目录未到时列表只有服务器当前批次的选项，不把它的数量冒充完整地图库。
+	const bool CatalogPending = State.m_Loader.Loading() && State.m_Loader.Revision() == 0;
 	const bool ShowSidebar = MainView.w >= 500.0f;
 	List = MainView;
 	if(ShowSidebar)
@@ -299,7 +303,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		for(size_t i = 0; i < std::size(s_apCategories); ++i)
 			if(State.m_Filter.m_Category == s_apCategories[i])
 				SelectedCategory = (int)i + 1;
-		s_Categories.SetActive(!Ui()->IsPopupOpen() && Ui()->MouseInside(&Sidebar) && !m_FilterInput.IsActive() && !m_ExcludeInput.IsActive() && !m_CallvoteReasonInput.IsActive());
+		s_Categories.SetActive(!CatalogPending && !Ui()->IsPopupOpen() && Ui()->MouseInside(&Sidebar) && !m_FilterInput.IsActive() && !m_ExcludeInput.IsActive() && !m_CallvoteReasonInput.IsActive());
 		s_Categories.DoStart(22.0f, (int)std::size(s_apCategories) + 1, 1, 3, SelectedCategory, &Sidebar, false);
 		static int s_AllCategory;
 		for(size_t i = 0; i <= std::size(s_apCategories); ++i)
@@ -315,7 +319,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 			}
 		}
 		const int NewCategory = s_Categories.DoEnd();
-		if(NewCategory >= 0 && NewCategory != SelectedCategory)
+		if(!CatalogPending && NewCategory >= 0 && NewCategory != SelectedCategory)
 		{
 			State.m_Filter.m_Category = NewCategory == 0 ? "" : s_apCategories[NewCategory - 1];
 			State.m_Dirty = true;
@@ -337,7 +341,10 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 				Category = (int)i + 1;
 		}
 		static CUi::SDropDownState s_Category;
+		// 目录未到时分类筛选没有可匹配的数据，禁用直到目录到达。
+		DropDownProps.m_Enabled = !CatalogPending;
 		const int NewCategory = Ui()->DoDropDown(&CategoryRow, Category, apCategories.data(), apCategories.size(), s_Category, DropDownProps);
+		DropDownProps.m_Enabled = true;
 		if(NewCategory != Category)
 		{
 			State.m_Filter.m_Category = NewCategory == 0 ? "" : s_apCategories[NewCategory - 1];
@@ -360,11 +367,16 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	List.HSplitTop(24.0f, &Count, &List);
 	Count.VSplitRight(112.0f, &Count, &Random);
 	char aCount[128];
-	str_format(aCount, sizeof(aCount), Localize("%d / %d maps"), (int)State.m_vVisible.size(), (int)State.m_vMaps.size());
+	if(CatalogPending)
+		str_format(aCount, sizeof(aCount), "%d / %s", (int)State.m_vVisible.size(), Localize("Loading…"));
+	else
+		str_format(aCount, sizeof(aCount), Localize("%d / %d maps"), (int)State.m_vVisible.size(), (int)State.m_vMaps.size());
 	Label(Count, State.m_Loader.Error() ? Localize("Map data unavailable; server votes remain available") : aCount, 12.0f, TEXTALIGN_ML, true);
 	static int s_CountTooltip;
 	if(State.m_Loader.Error())
 		GameClient()->m_Tooltips.DoToolTipForRect(&s_CountTooltip, &Count, Localize("Map data unavailable; server votes remain available"));
+	// 目录未到时分数/日期列是“还没拿到”，不是“没有这项数据”。
+	const char *pUnknownValue = CatalogPending ? "…" : "—";
 	static CButtonContainer s_Random;
 	bool ScrollToSelection = false;
 	if(CompactButton(s_Random, Localize("Random pick"), State.m_vVisible.empty() ? -1 : 0, Random))
@@ -395,18 +407,6 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	CUIRect TableHeader;
 	List.HSplitTop(20.0f, &TableHeader, &List);
 	TableHeader.Draw(Ink.WithAlpha(0.06f), IGraphics::CORNER_ALL, 4.0f);
-	const auto aHead = Columns(TableHeader);
-	CUIRect MapHeading = aHead[0];
-	MapHeading.VSplitLeft(36.0f, nullptr, &MapHeading);
-	Label(MapHeading, Localize("Map"), 12.0f, TEXTALIGN_ML, true);
-	if(HasMapper)
-		Label(aHead[1], Localize("Mapper"), 12.0f, TEXTALIGN_ML, true);
-	Label(aHead[2], Localize("Difficulty"), 12.0f, TEXTALIGN_ML, true);
-	if(Wide)
-	{
-		Label(aHead[3], Localize("Points"), 12.0f, TEXTALIGN_ML, true);
-		Label(aHead[4], Localize("Release date"), 12.0f, TEXTALIGN_ML, true);
-	}
 	int Selected = -1;
 	for(size_t i = 0; i < State.m_vVisible.size(); ++i)
 		if(State.m_vMaps[State.m_vVisible[i]].m_Name == State.m_SelectedName)
@@ -418,6 +418,22 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		s_Maps.ScrollToSelected();
 	constexpr float RowHeight = 24.0f;
 	s_Maps.DoStart(RowHeight, (int)State.m_vVisible.size(), 1, 3, Selected, &List, false);
+	// 列表出现滚动条时行宽会扣掉滚动条宽度；表头按同一宽度排版，避免列整体错位。
+	CUIRect HeaderColumns = TableHeader;
+	const bool HeaderScrolls = (float)State.m_vVisible.size() * RowHeight > List.h;
+	HeaderColumns.VSplitRight(HeaderScrolls ? s_Maps.ScrollbarWidthMax() : 0.0f, &HeaderColumns, nullptr);
+	const auto aHead = Columns(HeaderColumns);
+	CUIRect MapHeading = aHead[0];
+	MapHeading.VSplitLeft(36.0f, nullptr, &MapHeading);
+	Label(MapHeading, Localize("Map"), 12.0f, TEXTALIGN_ML, true);
+	if(HasMapper)
+		Label(aHead[1], Localize("Mapper"), 12.0f, TEXTALIGN_ML, true);
+	Label(aHead[2], Localize("Difficulty"), 12.0f, TEXTALIGN_ML, true);
+	if(Wide)
+	{
+		Label(aHead[3], Localize("Points"), 12.0f, TEXTALIGN_ML, true);
+		Label(aHead[4], Localize("Release date"), 12.0f, TEXTALIGN_ML, true);
+	}
 	const int ItemCount = (int)State.m_vVisible.size();
 	const float ScrollY = std::max(0.0f, s_Maps.ScrollOffsetY());
 	const int FirstVisible = ScrollToSelection ? 0 : std::clamp((int)std::floor(ScrollY / RowHeight) - 1, 0, ItemCount);
@@ -471,8 +487,8 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		if(Wide)
 		{
 			str_format(aValue, sizeof(aValue), "%d", Map.m_Points);
-			Label(aRow[3], Map.m_Points < 0 ? "—" : aValue, 12.0f, TEXTALIGN_ML, true);
-			Label(aRow[4], Map.m_Release.empty() ? "—" : Map.m_Release.substr(0, 10).c_str(), 12.0f, TEXTALIGN_ML, true);
+			Label(aRow[3], Map.m_Points < 0 ? pUnknownValue : aValue, 12.0f, TEXTALIGN_ML, true);
+			Label(aRow[4], Map.m_Release.empty() ? pUnknownValue : Map.m_Release.substr(0, 10).c_str(), 12.0f, TEXTALIGN_ML, true);
 		}
 	}
 	s_Maps.SkipItems(ItemCount - EndVisible);

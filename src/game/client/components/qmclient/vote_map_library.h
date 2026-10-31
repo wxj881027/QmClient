@@ -65,6 +65,13 @@ namespace QmVoteMaps
 	EVoteResult ServerVoteResult(int ClientId, int Team, const char *pMessage);
 	std::vector<SMap> MergeCatalog(const std::vector<SMap> &vCatalog, const CVoteOptionClient *pFirst);
 	bool Matches(const SMap &Map, const SFilter &Filter, bool Favorite, ECompletion Completion);
+	// ddnet.org 目录把 DDmaX 子类写成 DDmaX.Next 等点号形式，界面与侧栏用空格写法；
+	// 归一化只用于比较和展示，SMap::m_Category 仍保存接口原文，避免详情接口校验失配。
+	const char *CategoryKey(const char *pType);
+	bool CategoryMatches(const char *pFilter, const char *pType);
+	// 官方 DDNet 服务器的分类切换选项带装饰符号与小型大写字母（☐ DDᴍᴀX.Nᴇxᴛ Mᴀᴘs），
+	// 与界面键名写法不同；按归一化骨架匹配，并保留同形字兼容。
+	bool TypeVoteOptionMatches(const char *pDescription, const char *pTypeKey, const char *pTypeLabel);
 	void Sort(std::vector<int> &vIndices, const std::vector<SMap> &vMaps, ESort SortMode);
 	int Pick(const std::vector<int> &vIndices, unsigned Ticket);
 }

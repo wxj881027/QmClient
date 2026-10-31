@@ -191,3 +191,80 @@ TEST(VoteMapLibrary, RandomCandidateStaysInFilteredSetAndHandlesEmptySet)
 		EXPECT_TRUE(Result == 2 || Result == 9 || Result == 17);
 	}
 }
+
+TEST(VoteMapLibrary, CategoryKeyNormalizesCatalogDotNotation)
+{
+	EXPECT_STREQ(CategoryKey("DDmaX.Easy"), "DDmaX Easy");
+	EXPECT_STREQ(CategoryKey("DDmaX.Next"), "DDmaX Next");
+	EXPECT_STREQ(CategoryKey("ddmax.pro"), "DDmaX Pro");
+	EXPECT_STREQ(CategoryKey("DDmaX Nut"), "DDmaX Nut");
+	EXPECT_STREQ(CategoryKey("DDmaX"), "DDmaX");
+	EXPECT_STREQ(CategoryKey("Novice"), "Novice");
+	EXPECT_STREQ(CategoryKey("New category"), "New category");
+	EXPECT_STREQ(CategoryKey(""), "");
+	EXPECT_STREQ(CategoryKey(nullptr), "");
+}
+
+TEST(VoteMapLibrary, DdmaxParentFilterGroupsEverySubcategory)
+{
+	// 目录没有裸 DDmaX 类型：父项按四个子类归组，而不是永远空列表。
+	SFilter Filter;
+	Filter.m_Category = "DDmaX";
+	const auto MatchesType = [&](const char *pType) {
+		return Matches(SMap{"Map", "", pType}, Filter, false, ECompletion::UNKNOWN);
+	};
+	for(const char *pType : {"DDmaX.Easy", "DDmaX.Next", "DDmaX.Pro", "DDmaX.Nut", "DDmaX Easy"})
+		EXPECT_TRUE(MatchesType(pType)) << pType;
+	for(const char *pType : {"Novice", "", "New category"})
+		EXPECT_FALSE(MatchesType(pType)) << pType;
+}
+
+TEST(VoteMapLibrary, CatalogDotNotationMatchesSpacedSidebarFilters)
+{
+	// ddnet.org 目录把 DDmaX 子类写成点号，侧栏键是空格写法；筛选必须按类出结果。
+	const char *pJson = R"([
+		{"name":"Easy A","type":"DDmaX.Easy","difficulty":2},
+		{"name":"Next A","type":"DDmaX.Next","difficulty":2},
+		{"name":"Next B","type":"DDmaX.Next","difficulty":3},
+		{"name":"Pro A","type":"DDmaX.Pro","difficulty":4},
+		{"name":"Nut A","type":"DDmaX.Nut","difficulty":5},
+		{"name":"Novice A","type":"Novice","difficulty":1}
+	])";
+	std::vector<SMap> vMaps;
+	ASSERT_TRUE(ParseCatalog(pJson, str_length(pJson), vMaps));
+	ASSERT_EQ(vMaps.size(), 6u);
+	// 目录保留接口原文写法，详情接口仍按同一字符串校验。
+	EXPECT_EQ(vMaps[0].m_Category, "DDmaX.Easy");
+	const auto Count = [&](const char *pCategory) {
+		SFilter Filter;
+		Filter.m_Category = pCategory;
+		int Result = 0;
+		for(const auto &Map : vMaps)
+			Result += Matches(Map, Filter, false, ECompletion::UNKNOWN) ? 1 : 0;
+		return Result;
+	};
+	EXPECT_EQ(Count("DDmaX Easy"), 1);
+	EXPECT_EQ(Count("DDmaX Next"), 2);
+	EXPECT_EQ(Count("DDmaX Pro"), 1);
+	EXPECT_EQ(Count("DDmaX Nut"), 1);
+	EXPECT_EQ(Count("DDmaX"), 5);
+	EXPECT_EQ(Count("Novice"), 1);
+}
+
+TEST(VoteMapLibrary, TypeVoteOptionMatchesOfficialFlexVoteLabels)
+{
+	// 官方 ddnet-maps 的切换选项用装饰符号与小型大写字母排版，界面键名是普通写法。
+	EXPECT_TRUE(TypeVoteOptionMatches("☐ DDᴍᴀX.Nᴇxᴛ Mᴀᴘs", "DDmaX.Next", "经典 Next"));
+	EXPECT_TRUE(TypeVoteOptionMatches("☐ Nᴏᴠɪᴄᴇ Mᴀᴘs", "Novice", "简单"));
+	EXPECT_TRUE(TypeVoteOptionMatches("☐ Oʟᴅsᴄʜᴏᴏʟ Mᴀᴘs", "Oldschool", "传统"));
+	EXPECT_TRUE(TypeVoteOptionMatches("☐ DDᴍᴀX.Eᴀsʏ Mᴀᴘs", "DDmaX Easy", "经典 Easy"));
+	// 当前分类的 info 头不是切换项，选中的正是它时也不能投它。
+	EXPECT_FALSE(TypeVoteOptionMatches("☒ DDᴍᴀX.Eᴀsʏ Mᴀᴘs", "DDmaX.Next", "经典 Next"));
+	EXPECT_FALSE(TypeVoteOptionMatches("☒ DDᴍᴀX.Eᴀsʏ Mᴀᴘs", "DDmaX Easy", "经典 Easy"));
+	EXPECT_FALSE(TypeVoteOptionMatches("Make sure no one is racing before voting!", "Novice", "简单"));
+	EXPECT_FALSE(TypeVoteOptionMatches("", "Novice", "简单"));
+	EXPECT_FALSE(TypeVoteOptionMatches("☐ Nᴏᴠɪᴄᴇ Mᴀᴘs", "", ""));
+	// 纯文本与小写写法继续兼容。
+	EXPECT_TRUE(TypeVoteOptionMatches("DDmaX Next Maps", "DDmaX.Next", "经典 Next"));
+	EXPECT_TRUE(TypeVoteOptionMatches("ddmax next maps", "DDmaX Next", "经典 Next"));
+}
