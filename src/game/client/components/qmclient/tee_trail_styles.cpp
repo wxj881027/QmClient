@@ -11,6 +11,22 @@
 #include <cstdint>
 #include <limits>
 
+std::optional<uint32_t> qm_tee_trail::StyleCellId(double Distance)
+{
+	if(!std::isfinite(Distance))
+		return std::nullopt;
+	const double Cell = std::floor(Distance);
+	const double SignedUpper = -static_cast<double>(std::numeric_limits<int64_t>::min());
+	if(Cell >= -SignedUpper && Cell < SignedUpper)
+		return static_cast<uint32_t>(static_cast<int64_t>(Cell));
+	// 普通距离保留原转换；超出int64时先取模，避免浮点到整数的越界转换。
+	constexpr double Period = 4294967296.0;
+	double Wrapped = std::fmod(Cell, Period);
+	if(Wrapped < 0)
+		Wrapped += Period;
+	return static_cast<uint32_t>(Wrapped);
+}
+
 namespace
 {
 	using namespace qm_tee_trail;
@@ -42,16 +58,13 @@ namespace
 		return (Hash(X) & 0xffffffu) / float(0xffffffu);
 	}
 
-	unsigned CellId(double Distance)
-	{
-		return static_cast<unsigned>(static_cast<int64_t>(std::floor(Distance)));
-	}
-
 	float Noise(double Distance, unsigned Seed)
 	{
 		const double Cell = std::floor(Distance);
-		const unsigned Id = CellId(Cell);
-		return mix(Random(Id + Seed), Random(Id + 1u + Seed), float(Distance - Cell)) * 2.0f - 1.0f;
+		const auto Id = StyleCellId(Cell);
+		if(!Id)
+			return 0.0f;
+		return mix(Random(*Id + Seed), Random(*Id + 1u + Seed), float(Distance - Cell)) * 2.0f - 1.0f;
 	}
 
 	vec2 Unit(vec2 V, vec2 Fallback)
@@ -132,6 +145,8 @@ namespace
 	void Anchors(const SStyleSample *pSamples, size_t Count, float Spacing, float Offset, size_t Limit, F Emit)
 	{
 		const double First = std::floor((pSamples[0].m_Distance - Offset) / Spacing) * Spacing + Offset;
+		if(!std::isfinite(First))
+			return;
 		size_t Segment = 0;
 		for(size_t Index = 0; Index < Limit; ++Index)
 		{
@@ -149,7 +164,11 @@ namespace
 			SStyleSample S = Interpolate(A, B, std::clamp(float((A.m_Distance - Distance) / Span), 0.0f, 1.0f));
 			S.m_Distance = Distance;
 			if(S.m_Alpha >= 0.001f && S.m_Width > 0.001f)
-				Emit(S, CellId((Distance - Offset) / Spacing));
+			{
+				const auto Id = StyleCellId((Distance - Offset) / Spacing);
+				if(Id)
+					Emit(S, *Id);
+			}
 		}
 	}
 

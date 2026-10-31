@@ -5390,6 +5390,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_tee_hue_cycle_test.cpp
     src/test/unit/qmclient/client/qm_tee_trail_test.cpp
     src/test/unit/qmclient/client/qm_tee_trail_time_test.cpp
+    src/test/unit/qmclient/client/qm_tee_trail_style_index_test.cpp
     src/test/unit/qmclient/client/qm_sponsor_authors_test.cpp
     src/test/unit/qmclient/client/qm_sponsors_test.cpp
     src/test/unit/qmclient/client/qm_solo_split_test.cpp
