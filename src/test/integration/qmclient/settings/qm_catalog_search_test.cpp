@@ -1,4 +1,5 @@
 #include <game/client/QmUi/QmCardRegistry.h>
+#include <game/client/QmUi/SettingsSearchReveal.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/localization.h>
 
@@ -103,6 +104,15 @@ TEST(QmCatalogSearch, ResultCarriesMatchedSettingText)
 	ASSERT_FALSE(LabelIt->m_vMatches.empty());
 	const char *pExpectedLabel = Localize("Lyrics language");
 	EXPECT_NE(std::find(LabelIt->m_vMatches.begin(), LabelIt->m_vMatches.end(), pExpectedLabel), LabelIt->m_vMatches.end());
+	EXPECT_NE(std::find(LabelIt->m_vMatchKeys.begin(), LabelIt->m_vMatchKeys.end(), std::string("Lyrics language")), LabelIt->m_vMatchKeys.end());
+	EXPECT_NE(std::find(LabelIt->m_vMatchKeys.begin(), LabelIt->m_vMatchKeys.end(), std::string(pExpectedLabel)), LabelIt->m_vMatchKeys.end());
+
+	// 预计算小写预筛不能改变大小写不敏感的匹配。
+	const auto UpperResults = qm_card_registry::SearchCards("LYRICS LANGUAGE", Model);
+	EXPECT_NE(std::find_if(UpperResults.begin(), UpperResults.end(), [](const auto &Result) {
+		return std::string(Result.m_pStableId) == "qm:lyrics";
+	}),
+		UpperResults.end());
 
 	const auto ConfigResults = qm_card_registry::SearchCards("qm_lyrics_language", Model);
 	const auto ConfigIt = std::find_if(ConfigResults.begin(), ConfigResults.end(), [](const auto &Result) {
@@ -111,7 +121,17 @@ TEST(QmCatalogSearch, ResultCarriesMatchedSettingText)
 	ASSERT_NE(ConfigIt, ConfigResults.end());
 	ASSERT_FALSE(ConfigIt->m_vMatches.empty());
 	EXPECT_NE(std::find(ConfigIt->m_vMatches.begin(), ConfigIt->m_vMatches.end(), "qm_lyrics_language"), ConfigIt->m_vMatches.end());
+	EXPECT_NE(std::find(ConfigIt->m_vMatchKeys.begin(), ConfigIt->m_vMatchKeys.end(), std::string("qm_lyrics_language")), ConfigIt->m_vMatchKeys.end());
 	EXPECT_LE(ConfigIt->m_vMatches.size(), 3u);
+}
+
+TEST(QmCatalogSearch, RevealKeysMatchLabelOrLocalizedText)
+{
+	const std::vector<std::string> vKeys = {"Lyrics language", "qm_lyrics_language", "歌词语言"};
+	EXPECT_TRUE(qm_settings_reveal::KeyMatches(vKeys, "qm_lyrics_language", nullptr));
+	EXPECT_TRUE(qm_settings_reveal::KeyMatches(vKeys, nullptr, "歌词语言"));
+	EXPECT_FALSE(qm_settings_reveal::KeyMatches(vKeys, "other-config", "其他文案"));
+	EXPECT_FALSE(qm_settings_reveal::KeyMatches({}, "qm_lyrics_language", nullptr));
 }
 
 TEST(QmCatalogSearch, AliasesAndCardLabelsProduceOneEditableResult)

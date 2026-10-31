@@ -87,6 +87,8 @@ namespace qm_card_registry
 		SCardNavigationTarget m_Target;
 		// 命中的设置项文案（本地化标签优先，其次是配置名），最多保留前几条。
 		std::vector<std::string> m_vMatches;
+		// 命中项的原文键（标签键/配置名/本地化文案），供逐行定位匹配。
+		std::vector<std::string> m_vMatchKeys;
 	};
 
 	// 焦点只消费本帧按下沿，不持有鼠标按下状态，外部释放或输入隔离不会卡住后续点击。

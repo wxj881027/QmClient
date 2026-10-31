@@ -12,6 +12,7 @@
 #include <game/client/QmUi/SettingsCardCollapseState.h>
 #include <game/client/QmUi/SettingsCardContentBridge.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
+#include <game/client/QmUi/SettingsSearchReveal.h>
 #include <game/client/QmUi/SettingsSearchSession.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
@@ -240,7 +241,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 				// 兜底卡无法复用原页面的卡片构建器（构建闭包绑定在各自页面），
 				// 退化为「描述 + 定位按钮」的导航卡，而不是只有一行定位。
 				CButtonContainer *pOpenButton = &s_GlobalSearchActionButtons[std::string("open:") + Card.m_pStableId];
-				Definition.m_RenderMeasured = [this, Description = Card.m_Description, Target = Card.m_Target, pOpenButton, ReadOnly, LineHeight, LineSpacing, SmallSize, Metrics](CUIRect &Content) {
+				Definition.m_RenderMeasured = [this, Description = Card.m_Description, Target = Card.m_Target, StableId = Card.m_pStableId, Keys = Card.m_vMatchKeys, pOpenButton, ReadOnly, LineHeight, LineSpacing, SmallSize, Metrics](CUIRect &Content) {
 					CSettingsContentLayoutFlow Flow(Content);
 					CUIRect Row;
 					Flow.Text("search-description", Description.c_str(), 0, SmallSize, LineSpacing * 0.65f, {}, [this, SmallSize](const CUIRect &DescriptionRow, const char *pText) {
@@ -256,6 +257,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 						return;
 					if(!ReadOnly && Ui()->DoButtonLogic(pOpenButton, 0, &LocateButton, BUTTONFLAG_LEFT))
 					{
+						qm_settings_reveal::Request(StableId, Keys);
 						NavigateToSettingsCard(Target);
 						Ui()->ReleaseActiveTextInput(&m_GlobalCardSearchInput);
 						m_GlobalCardSearchInput.Deactivate();
@@ -273,7 +275,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 				Definition.m_Spec.m_pSubtitle = pMatchSubtitle;
 			CButtonContainer *pLocateButton = &s_GlobalSearchActionButtons[std::string("locate:") + Card.m_pStableId];
 			Definition.m_LeadingHeaderActionWidth = TextRender()->TextWidth(SmallSize, Localize("Locate")) + 16.0f * UiScale;
-			Definition.m_LeadingHeaderAction = [this, Target = Card.m_Target, pLocateButton, ReadOnly, UiScale, SmallSize, SearchCtx](const SSettingsCardFrame &Frame, bool) {
+			Definition.m_LeadingHeaderAction = [this, Target = Card.m_Target, StableId = Card.m_pStableId, Keys = Card.m_vMatchKeys, pLocateButton, ReadOnly, UiScale, SmallSize, SearchCtx](const SSettingsCardFrame &Frame, bool) {
 				if(ReadOnly)
 					return;
 				// 定位使用 Deck 预留的最左操作区，不再覆盖宽度或说明按钮。
@@ -283,6 +285,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 					return;
 				if(Ui()->DoButtonLogic(pLocateButton, 0, &LocateButton, BUTTONFLAG_LEFT))
 				{
+					qm_settings_reveal::Request(StableId, Keys);
 					NavigateToSettingsCard(Target);
 					Ui()->ReleaseActiveTextInput(&m_GlobalCardSearchInput);
 					m_GlobalCardSearchInput.Deactivate();
