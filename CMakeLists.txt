@@ -6230,6 +6230,16 @@ if(CLIENT AND DMGBUILD_FOUND)
   configure_file(other/bundle/server/Info.plist.in bundle/server/Info.plist)
 
   set(DMG_TMPDIR pack_${CPACK_PACKAGE_FILE_NAME}_dmg)
+  # SDL3 以 framework 形式随包分发；静态链接时期这段为空。
+  if(SDL3_COPY_DIRS)
+    set(DMG_SDL3_FRAMEWORK_COPY_COMMANDS
+      COMMAND ${CMAKE_COMMAND} -E copy_directory ${EXTRA_SDL3_LIBDIR}/SDL3.framework ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/SDL3.framework)
+    set(DMG_SDL3_FRAMEWORK_SIGN_COMMANDS
+      COMMAND codesign --force --sign - ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/SDL3.framework)
+  else()
+    set(DMG_SDL3_FRAMEWORK_COPY_COMMANDS)
+    set(DMG_SDL3_FRAMEWORK_SIGN_COMMANDS)
+  endif()
   set(DMG_MKDIRS
     ${CLIENT_EXECUTABLE}.app
     ${CLIENT_EXECUTABLE}.app/Contents
@@ -6368,12 +6378,14 @@ if(CLIENT AND DMGBUILD_FOUND)
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/freetype/${LIB_DIR}/libfreetype.6.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/png/${LIB_DIR}/libpng16.16.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
     ${DMG_FFMPEG_COPY_COMMANDS}
+    ${DMG_SDL3_FRAMEWORK_COPY_COMMANDS}
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/libsteam_api.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
 	${DMG_WEBP_COPY_COMMANDS}
 	${DMG_VULKAN_RUNTIME_COPY_COMMANDS}
     COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/darwin_strip_rpath.py ${CMAKE_OTOOL} ${CMAKE_INSTALL_NAME_TOOL} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
     COMMAND ${CMAKE_INSTALL_NAME_TOOL} -add_rpath @loader_path/../Frameworks ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
     COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/qmclient_scripts/darwin_fix_install_names.py ${CMAKE_OTOOL} ${CMAKE_INSTALL_NAME_TOOL} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks --executable ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
+    ${DMG_SDL3_FRAMEWORK_SIGN_COMMANDS}
     COMMAND codesign --force --sign - ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/*.dylib
     COMMAND codesign --force --sign - ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
 

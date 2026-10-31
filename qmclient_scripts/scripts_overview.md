@@ -16,7 +16,7 @@
 
 根目录 `scripts/` 视为 DDNet 上游同步目录。QmClient 自有逻辑、gate 入口、生成脚本和检查脚本都放在 `qmclient_scripts/`，不要在 gate 或 GitHub workflow 中直接调用 QmClient 修改过的 `scripts/` 文件。
 
-需要复用上游脚本时，先把脚本复制到 `qmclient_scripts/`，在复制件上做 QmClient 适配；不要让 `qmclient_scripts/` 里的脚本反向依赖根目录 `scripts/` 的 QmClient 特化行为。允许引用明确保持上游原样的通用辅助文件，例如 `scripts/compile_libs/_build_common.sh`。Android 平台构建入口使用 `qmclient_scripts/android/cmake_android.sh`，从当前 CMake 下载的 SDL3 源码同步 Java 绑定。
+需要复用上游脚本时，先把脚本复制到 `qmclient_scripts/`，在复制件上做 QmClient 适配；不要让 `qmclient_scripts/` 里的脚本反向依赖根目录 `scripts/` 的 QmClient 特化行为。允许引用明确保持上游原样的通用辅助文件，例如 `scripts/compile_libs/_build_common.sh`。Android 平台构建入口使用 `qmclient_scripts/android/cmake_android.sh`，Java 绑定从 `ddnet-libs/sdl/java` 同步；SDL3 预编译库由 `qmclient_scripts/build_sdl3_prebuilt.sh` 生成。
 
 ### 1. `gate/`
 

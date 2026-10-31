@@ -176,7 +176,8 @@ function build_for_type() {
 		-DTOOLS=OFF \
 		-DCMAKE_CROSSCOMPILING=ON \
 		-DVULKAN=ON \
-		-DVIDEORECORDER=OFF
+		-DVIDEORECORDER=OFF \
+		-DSECURITY_COMPILER_FLAGS=OFF
 	(
 		cd "${BUILD_FOLDER}/$ANDROID_SUB_BUILD_DIR/$1" || exit 1
 		# We want word splitting
@@ -291,7 +292,7 @@ log_info "Preparing gradle build..."
 rm -R -f src/main/java/org
 mkdir -p src/main/java
 cp -R "${REPO_ROOT}/scripts/android/files/java/org/." src/main/java/org/
-# Java 与当前 ABI 使用同一份固定版本的 SDL3 源码。
+# Java 绑定取自 ddnet-libs 的 SDL3 预编译包。
 SDL3_JAVA_DIR=$(cat "$ANDROID_SUB_BUILD_DIR/$ANDROID_BUILD_DUMMY/qm_sdl3_java_dir.txt")
 if [ ! -d "$SDL3_JAVA_DIR/org/libsdl/app" ]; then
 	log_error "SDL3 Java source directory missing: $SDL3_JAVA_DIR"
