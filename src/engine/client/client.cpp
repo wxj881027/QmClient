@@ -1891,6 +1891,7 @@ const char *CClient::LoadMap(const char *pName, const char *pFilename, const std
 	static char s_aErrorMsg[128];
 
 	SetState(IClient::STATE_LOADING);
+	GameClient()->OnMapLoadStart();
 	SetLoadingStateDetail(IClient::LOADING_STATE_DETAIL_LOADING_MAP);
 	if((bool)m_LoadingCallback)
 		m_LoadingCallback(IClient::LOADING_CALLBACK_DETAIL_MAP);
