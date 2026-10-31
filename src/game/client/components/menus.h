@@ -1573,6 +1573,7 @@ protected:
 	// 切到浏览器页时递增；各列表（服务器列表、社区/国家/类型过滤）比对
 	// 序号重启入场动画（渲染间隙启发在背景趟持续渲染下永不触发）。
 	int m_BrowserListEntryRestartSeq = 0;
+	bool m_BrowserColumnResizeCursor = false;
 	// 设置分类切换时递增；主题列表/语言列表比对序号重启入场动画，
 	// 机制与浏览器列表同款（间隙启发在设置页同样不可靠）。
 	int m_SettingsListEntryRestartSeq = 0;

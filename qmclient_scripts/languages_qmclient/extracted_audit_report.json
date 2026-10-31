@@ -3202,7 +3202,7 @@
     {
       "file": "src/engine/shared/config_variables.h",
       "line": 407,
-      "text": "Minimum width for name column in server browser",
+      "text": "Width of name column in server browser",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
@@ -46944,21 +46944,21 @@
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8348,
+      "line": 8349,
       "text": "The server is running a non-standard tuning on a pure game type.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8634,
+      "line": 8640,
       "text": "Loading DDNet Client",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8634,
+      "line": 8640,
       "text": "Loading menu images",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -47854,1071 +47854,1071 @@
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1121,
+      "line": 1134,
       "text": "Reset column widths",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1180,
+      "line": 1193,
       "text": "Name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1181,
+      "line": 1194,
       "text": "Map",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1182,
+      "line": 1195,
       "text": "Difficulty",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1183,
+      "line": 1196,
       "text": "Type",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1185,
+      "line": 1198,
       "text": "Players",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1187,
+      "line": 1200,
       "text": "Ping",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1493,
+      "line": 1540,
       "text": "Sort by number of friends",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1502,
+      "line": 1549,
       "text": "Sort by favorites",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1511,
+      "line": 1558,
       "text": "Sort by number of QmClient players",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1641,
+      "line": 1672,
       "text": "Getting server list from master server",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1654,
+      "line": 1685,
       "text": "No local servers found (ports %d-%d)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1657,
+      "line": 1688,
       "text": "Start and connect to local server",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1672,
+      "line": 1703,
       "text": "Could not get server list from master server",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1676,
+      "line": 1707,
       "text": "No servers found",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1686,
+      "line": 1717,
       "text": "No servers match your filter criteria",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1688,
+      "line": 1719,
       "text": "Reset filter",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1962,
+      "line": 1997,
       "text": "Toggle map preview",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1999,
+      "line": 2034,
       "text": "Note",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2135,
+      "line": 2171,
       "text": "Favorite maps",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2139,
+      "line": 2175,
       "text": "Server filter",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2155,
+      "line": 2191,
       "text": "Custom",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2158,
+      "line": 2194,
       "text": "No filter",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2160,
+      "line": 2196,
       "text": "Players",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2180,
+      "line": 2216,
       "text": "Favorite maps",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2196,
+      "line": 2232,
       "text": "Difficulty stars",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2196,
+      "line": 2232,
       "text": "Filter empty servers in browser",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2196,
+      "line": 2232,
       "text": "No filter",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2198,
+      "line": 2234,
       "text": "Favorite maps",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2241,
+      "line": 2277,
       "text": "Server list is more than five minutes old",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2241,
+      "line": 2277,
       "text": "Server list refresh failed; showing the previous list",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2269,
+      "line": 2305,
       "text": "Search",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2274,
+      "line": 2310,
       "text": "Example of usage",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2297,
+      "line": 2333,
       "text": "Exclude",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2302,
-      "text": "Example of usage",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2316,
-      "text": "Exclude",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2336,
-      "text": "%d of %d servers",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
       "line": 2338,
+      "text": "Example of usage",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2352,
+      "text": "Exclude",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2372,
+      "text": "%d of %d servers",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_browser.cpp",
+      "line": 2374,
       "text": "%d of %d server",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2342,
+      "line": 2378,
       "text": "%d players",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2344,
+      "line": 2380,
       "text": "%d player",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2351,
+      "line": 2387,
       "text": "Server address:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2422,
+      "line": 2458,
       "text": "Are you sure that you want to disconnect and switch to a different server?",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2487,
+      "line": 2523,
       "text": "Countries",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2490,
+      "line": 2526,
       "text": "Types",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2529,
+      "line": 2565,
       "text": "Reset filter",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2722,
+      "line": 2758,
       "text": "Communities",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2733,
+      "line": 2769,
       "text": "Error loading communities",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2793,
+      "line": 2829,
       "text": "Click to add this community to favorites",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2793,
+      "line": 2829,
       "text": "Click to remove this community from favorites",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2883,
+      "line": 2919,
       "text": "Choose country flag",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2898,
+      "line": 2934,
       "text": "Search country flag…",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3018,
+      "line": 3054,
       "text": "Copy info",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3042,
+      "line": 3078,
       "text": "Favorite",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3061,
+      "line": 3097,
       "text": "Leak IP",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3073,
+      "line": 3109,
       "text": "Version",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3079,
+      "line": 3115,
       "text": "Game type",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3090,
+      "line": 3126,
       "text": "Ping",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3106,
+      "line": 3142,
       "text": "No server selected",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3278,
+      "line": 3314,
       "text": "Follow",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3508,
+      "line": 3544,
       "text": "Manage categories",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3509,
+      "line": 3545,
       "text": "Drag to reorder; right-click or use the gear to manage",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3573,
+      "line": 3609,
       "text": "Click to select server. Double click to join your friend.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3575,
+      "line": 3611,
       "text": "Note:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3581,
+      "line": 3617,
       "text": "Click to select server. Double click to join your friend.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3585,
+      "line": 3621,
       "text": "Note:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3593,
+      "line": 3629,
       "text": "Drag to another category to move this friend.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3599,
+      "line": 3635,
       "text": "DDStats shows UTC dates, updates daily and matches players by name only.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3657,
+      "line": 3693,
       "text": "Follow",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3782,
+      "line": 3818,
       "text": "No record",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3788,
+      "line": 3824,
       "text": "Querying...",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3790,
+      "line": 3826,
       "text": "Unavailable",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3792,
+      "line": 3828,
       "text": "Last seen (DDStats): %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3815,
+      "line": 3851,
       "text": "Pin friend",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3815,
+      "line": 3851,
       "text": "Unpin friend",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3837,
+      "line": 3873,
       "text": "Click to copy this clan's name to clipboard",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3837,
+      "line": 3873,
       "text": "Click to copy this player's name to clipboard",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3853,
+      "line": 3889,
       "text": "Follow this friend across servers",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3853,
+      "line": 3889,
       "text": "Stop following this friend",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3863,
+      "line": 3899,
       "text": "Click to remove this clan from your friends list.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3863,
+      "line": 3899,
       "text": "Click to remove this player from your friends list.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3891,
+      "line": 3927,
       "text": "Move to category",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3897,
+      "line": 3933,
       "text": "Edit note",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3901,
+      "line": 3937,
       "text": "Clear note",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3908,
+      "line": 3944,
       "text": "Follow this friend across servers",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3908,
+      "line": 3944,
       "text": "Stop following this friend",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3912,
+      "line": 3948,
       "text": "Remove friend",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3942,
+      "line": 3978,
       "text": "Add friends by entering their name below or by clicking their name in the player list.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4095,
+      "line": 4131,
       "text": "Move to category",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4142,
+      "line": 4178,
       "text": "Move to category",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4239,
+      "line": 4275,
       "text": "Are you sure that you want to remove the clan '%s' from your friends list?",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4239,
+      "line": 4275,
       "text": "Are you sure that you want to remove the player '%s' from your friends list?",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4271,
+      "line": 4307,
       "text": "Name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4282,
+      "line": 4318,
       "text": "Clan",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4290,
+      "line": 4326,
       "text": "Add to category",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4348,
+      "line": 4384,
       "text": "Create category",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4356,
+      "line": 4392,
       "text": "Add clan",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4358,
+      "line": 4394,
       "text": "Add to %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4404,
+      "line": 4440,
       "text": "Add category",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4416,
+      "line": 4452,
       "text": "Rename",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4426,
+      "line": 4462,
       "text": "Delete category",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4439,
+      "line": 4475,
       "text": "Category name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4439,
+      "line": 4475,
       "text": "New category name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4452,
+      "line": 4488,
       "text": "Cancel",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4456,
+      "line": 4492,
       "text": "Add",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4456,
+      "line": 4492,
       "text": "Rename",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4498,
+      "line": 4534,
       "text": "Friend note",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4511,
+      "line": 4547,
       "text": "Cancel",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4515,
+      "line": 4551,
       "text": "Save",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4693,
+      "line": 4729,
       "text": "Favorite map",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4694,
+      "line": 4730,
       "text": "Map play history",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4695,
+      "line": 4731,
       "text": "Local saves",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4696,
+      "line": 4732,
       "text": "Statistics",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4737,
+      "line": 4773,
       "text": "Favorite map",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4738,
+      "line": 4774,
       "text": "Map play history",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4739,
+      "line": 4775,
       "text": "Local saves",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4742,
+      "line": 4778,
       "text": "Your favorite maps appear here",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4743,
+      "line": 4779,
       "text": "Unfinished maps are shown first",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4814,
+      "line": 4850,
       "text": "Unknown",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4821,
+      "line": 4857,
       "text": "Unknown",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4829,
+      "line": 4865,
       "text": "Unknown",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4866,
+      "line": 4902,
       "text": "No favorite maps yet",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4876,
+      "line": 4912,
       "text": "Map",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4877,
+      "line": 4913,
       "text": "Category",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4878,
+      "line": 4914,
       "text": "Difficulty stars",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4879,
+      "line": 4915,
       "text": "Note",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4880,
+      "line": 4916,
       "text": "Has save",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4905,
+      "line": 4941,
       "text": "Loading",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4905,
+      "line": 4941,
       "text": "No",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4905,
+      "line": 4941,
       "text": "Yes",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4912,
+      "line": 4948,
       "text": "None",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4962,
+      "line": 4998,
       "text": "Unfinished",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4963,
+      "line": 4999,
       "text": "Finished",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4964,
+      "line": 5000,
       "text": "Recent",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4979,
+      "line": 5015,
       "text": "Clear finished",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4979,
+      "line": 5015,
       "text": "Confirm clear finished",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4992,
+      "line": 5028,
       "text": "Clear all history",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4992,
+      "line": 5028,
       "text": "Confirm clear all",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5017,
+      "line": 5053,
       "text": "No map play history yet",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5017,
+      "line": 5053,
       "text": "No results",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5056,
+      "line": 5092,
       "text": "Unknown",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5085,
+      "line": 5121,
       "text": "Finished",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5085,
+      "line": 5121,
       "text": "Unfinished",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5102,
+      "line": 5138,
       "text": "Time",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5103,
+      "line": 5139,
       "text": "Deaths",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5104,
+      "line": 5140,
       "text": "Last entered",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5109,
+      "line": 5145,
       "text": "Remove from history",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5120,
+      "line": 5156,
       "text": "Loading",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5125,
+      "line": 5161,
       "text": "ddnet-saves.txt not found",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5130,
+      "line": 5166,
       "text": "ddnet-saves.txt is empty",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5162,
+      "line": 5198,
       "text": "Used",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5235,
+      "line": 5271,
       "text": "Server filter",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5239,
+      "line": 5275,
       "text": "Server info",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5243,
+      "line": 5279,
       "text": "Friends",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -122063,266 +122063,266 @@
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8358,
+      "line": 8359,
       "text": "ingame_esc_open",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8394,
+      "line": 8395,
       "text": "ui_update",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8403,
+      "line": 8404,
       "text": "render_body",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8409,
+      "line": 8410,
       "text": "menu_text_runtime_drain",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8424,
+      "line": 8425,
       "text": "ingame_server_info_prepare",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8430,
+      "line": 8431,
       "text": "ingame_snapshot_text_drain",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8436,
+      "line": 8437,
       "text": "ingame_ui_text_drain",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8447,
+      "line": 8448,
       "text": "ingame_text_runtime_drain",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8458,
+      "line": 8464,
       "text": "cursor_render",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8476,
+      "line": 8482,
       "text": "state=%s active=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8477,
+      "line": 8483,
       "text": "menus_onrender_total",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8481,
+      "line": 8487,
       "text": "telemetry_flush",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8588,
+      "line": 8594,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8594,
+      "line": 8600,
       "text": "Invalid tristate. Checked: %d",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8600,
+      "line": 8606,
       "text": ".png",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8607,
+      "line": 8613,
       "text": "menuimages/%s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8613,
+      "line": 8619,
       "text": "Failed to load menu image from '%s'",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8614,
+      "line": 8620,
       "text": "%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8614,
+      "line": 8620,
       "text": "menus",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8621,
+      "line": 8627,
       "text": "Failed to load menu image from '%s': must be an RGBA image",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8622,
+      "line": 8628,
       "text": "%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8622,
+      "line": 8628,
       "text": "menus",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8661,
+      "line": 8667,
       "text": "event=page_switch from=%s to=%s dur_ms=%.3f source=menu_page_switch",
       "category": "business_data",
       "reason": "log or telemetry payload"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8662,
+      "line": 8668,
       "text": "perf/interaction",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8691,
+      "line": 8697,
       "text": "browser_page_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8692,
+      "line": 8698,
       "text": "browser_page_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8700,
+      "line": 8706,
       "text": "menu_page_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8701,
+      "line": 8707,
       "text": "menu_page_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8737,
+      "line": 8743,
       "text": "settings_open",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/menus.cpp",
-      "line": 8759,
-      "text": "event=page_switch from=%s to=%s dur_ms=%.3f source=game_page_switch",
-      "category": "business_data",
-      "reason": "log or telemetry payload"
-    },
-    {
-      "file": "src/game/client/components/menus.cpp",
-      "line": 8760,
-      "text": "perf/interaction",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
       "line": 8765,
-      "text": "game_page_switch",
+      "text": "event=page_switch from=%s to=%s dur_ms=%.3f source=game_page_switch",
       "category": "business_data",
-      "reason": "command, config, or machine token"
+      "reason": "log or telemetry payload"
     },
     {
       "file": "src/game/client/components/menus.cpp",
       "line": 8766,
+      "text": "perf/interaction",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/menus.cpp",
+      "line": 8771,
       "text": "game_page_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8778,
+      "line": 8772,
+      "text": "game_page_switch",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/menus.cpp",
+      "line": 8784,
       "text": "settings_open",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8783,
+      "line": 8789,
       "text": "ingame_server_info",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8783,
+      "line": 8789,
       "text": "server_info",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8848,
+      "line": 8854,
       "text": "page=%s force=%d current_type=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/menus.cpp",
-      "line": 8849,
+      "line": 8855,
       "text": "refresh_browser_tab",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -123687,42 +123687,35 @@
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1728,
+      "line": 1729,
       "text": ".demo",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1733,
+      "line": 1734,
       "text": ".poses",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1758,
+      "line": 1759,
       "text": "..",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1760,
+      "line": 1761,
       "text": "..",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1813,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 1856,
+      "line": 1814,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -123743,28 +123736,28 @@
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1874,
+      "line": 1859,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1894,
+      "line": 1875,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1900,
+      "line": 1895,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1902,
+      "line": 1901,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -123778,7 +123771,7 @@
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1968,
+      "line": 1904,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -123799,21 +123792,21 @@
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 1972,
+      "line": 1971,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2376,
+      "line": 1973,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2385,
+      "line": 2377,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -123827,28 +123820,28 @@
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2519,
+      "line": 2387,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2553,
+      "line": 2520,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2560,
+      "line": 2554,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2562,
+      "line": 2561,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -123876,28 +123869,28 @@
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2576,
-      "text": "..",
-      "category": "business_data",
-      "reason": "HTML or CSS template fragment"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 2578,
-      "text": "..",
-      "category": "business_data",
-      "reason": "HTML or CSS template fragment"
-    },
-    {
-      "file": "src/game/client/components/menus.h",
-      "line": 2827,
+      "line": 2566,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2955,
+      "line": 2577,
+      "text": "..",
+      "category": "business_data",
+      "reason": "HTML or CSS template fragment"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 2579,
+      "text": "..",
+      "category": "business_data",
+      "reason": "HTML or CSS template fragment"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 2828,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -123911,14 +123904,21 @@
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2976,
+      "line": 2957,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/components/menus.h",
+      "line": 2977,
       "text": "settings_open",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus.h",
-      "line": 2976,
+      "line": 2977,
       "text": "target_settings",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -124919,560 +124919,560 @@
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1177,
+      "line": 1190,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1178,
+      "line": 1191,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1179,
+      "line": 1192,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1184,
+      "line": 1197,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1218,
+      "line": 1231,
       "text": ",",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1249,
+      "line": 1262,
       "text": ",",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1641,
+      "line": 1672,
       "text": "%s%.*s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1641,
+      "line": 1672,
       "text": "......",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1812,
+      "line": 1843,
       "text": "chn",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1813,
+      "line": 1844,
       "text": "CHN",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1921,
+      "line": 1956,
       "text": "--",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 1999,
+      "line": 2034,
       "text": "%s: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2016,
+      "line": 2051,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2025,
+      "line": 2060,
       "text": "%i/%i",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2039,
+      "line": 2074,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2072,
+      "line": 2108,
       "text": "event=list_frame page=server_browser items_total=%d rows_visible=%d rows_rendered=%d rows_iterated=%d rows_skipped=%d dur_ms=%.3f source=server_browser",
       "category": "business_data",
       "reason": "log or telemetry payload"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2074,
+      "line": 2110,
       "text": "perf/interaction",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2074,
+      "line": 2110,
       "text": "server_browser",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2079,
+      "line": 2115,
       "text": "server_browser",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2079,
+      "line": 2115,
       "text": "server_browser_scroll",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2081,
+      "line": 2117,
       "text": "server_browser",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2082,
+      "line": 2118,
       "text": "server_browser_scroll",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2131,
+      "line": 2167,
       "text": "server_browser_map_filter",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2160,
+      "line": 2196,
       "text": "0 %s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2196,
+      "line": 2232,
       "text": "%s → %s → %s",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2269,
+      "line": 2305,
       "text": "%s:",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2274,
+      "line": 2310,
       "text": "%s: \"solo; nameless tee; kobra 2\"",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2283,
+      "line": 2319,
       "text": "server_browser_search",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2297,
+      "line": 2333,
       "text": "%s:",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2302,
+      "line": 2338,
       "text": "%s: \"CHN; [A]\"",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2311,
+      "line": 2347,
       "text": "server_browser_exclude",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2355,
+      "line": 2391,
       "text": "server_browser_address",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2373,
+      "line": 2409,
       "text": "%s%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2494,
+      "line": 2530,
       "text": "browser_filter_tab_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2495,
+      "line": 2531,
       "text": "browser_filter_tab_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2498,
+      "line": 2534,
       "text": "browser_filter_tab_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2773,
+      "line": 2809,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 2894,
+      "line": 2930,
       "text": "browser_country_flag_popup_search",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3025,
+      "line": 3061,
       "text": "Address: ddnet://%s\\n",
       "category": "business_data",
       "reason": "server browser category, rating, clipboard, or source expression data"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3026,
+      "line": 3062,
       "text": "Map: %s\\n",
       "category": "business_data",
       "reason": "server browser category, rating, clipboard, or source expression data"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3147,
+      "line": 3183,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3297,
+      "line": 3333,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3491,
+      "line": 3527,
       "text": "%s (%d)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3539,
+      "line": 3575,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3576,
+      "line": 3612,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3586,
+      "line": 3622,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3614,
+      "line": 3650,
       "text": "browser_friend_follow_tag",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3615,
+      "line": 3651,
       "text": "browser_friend_action_fade",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3775,
+      "line": 3811,
       "text": "%s | %s | %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3777,
+      "line": 3813,
       "text": "%s | %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3853,
+      "line": 3889,
       "text": "Friend auto follow",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3908,
+      "line": 3944,
       "text": "Friend auto follow",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 3919,
+      "line": 3955,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4120,
+      "line": 4156,
       "text": "friends_scroll",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4123,
+      "line": 4159,
       "text": "friends_scroll",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4271,
+      "line": 4307,
       "text": "%s:",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4275,
+      "line": 4311,
       "text": "server_browser_add_friend_text_inputs",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4282,
+      "line": 4318,
       "text": "%s:",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4290,
+      "line": 4326,
       "text": "%s:",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4443,
+      "line": 4479,
       "text": "server_browser_friends_category_text_input",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4502,
+      "line": 4538,
       "text": "server_browser_friend_note_text_input",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4662,
+      "line": 4698,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4693,
+      "line": 4729,
       "text": "%s (%d)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4694,
+      "line": 4730,
       "text": "%s (%d)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4695,
+      "line": 4731,
       "text": "%s (%d)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4696,
+      "line": 4732,
       "text": "%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4827,
+      "line": 4863,
       "text": "%d/5 ★",
       "category": "business_data",
       "reason": "server browser category, rating, clipboard, or source expression data"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4962,
+      "line": 4998,
       "text": "%s (%d)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4963,
+      "line": 4999,
       "text": "%s (%d)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 4964,
+      "line": 5000,
       "text": "%s (%d)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5049,
+      "line": 5085,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5173,
+      "line": 5209,
       "text": "[%s] %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5178,
+      "line": 5214,
       "text": "-",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5226,
+      "line": 5262,
       "text": "browser_toolbox_tabs_capsule",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5256,
+      "line": 5292,
       "text": "browser_toolbox_tab_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5257,
+      "line": 5293,
       "text": "browser_toolbox_tab_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5261,
+      "line": 5297,
       "text": "browser_toolbox_tab_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5343,
+      "line": 5379,
       "text": "ui_page invalid for RenderServerbrowser: %d",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5380,
+      "line": 5416,
       "text": "browser_page_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_browser.cpp",
-      "line": 5460,
+      "line": 5496,
       "text": "' && aFilterStrTrimmed[FilterLen - 1] == '",
       "category": "business_data",
       "reason": "server browser category, rating, clipboard, or source expression data"
@@ -199219,329 +199219,329 @@
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 437,
-      "text": "Three clients",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 444,
-      "text": "Three clients",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 448,
-      "text": "Three clients",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 454,
-      "text": "Three clients",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 461,
-      "text": "Few friends",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 462,
-      "text": "More friends",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 463,
-      "text": "Tie with more players",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 467,
-      "text": "More friends",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 468,
-      "text": "Tie with more players",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 469,
-      "text": "Few friends",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 473,
-      "text": "Tie with more players",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 474,
-      "text": "More friends",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
       "line": 516,
-      "text": "One Star",
+      "text": "Three clients",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 518,
-      "text": "Three Stars",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 520,
-      "text": "Five Stars",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 524,
-      "text": "Unknown Map",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 525,
-      "text": "Five Stars",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 526,
-      "text": "One Star",
+      "line": 523,
+      "text": "Three clients",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
       "line": 527,
-      "text": "Three Stars",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 531,
-      "text": "One Star",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 532,
-      "text": "Three Stars",
+      "text": "Three clients",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
       "line": 533,
-      "text": "Five Stars",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 534,
-      "text": "Unknown Map",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 538,
-      "text": "Unknown Map",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 539,
-      "text": "Five Stars",
+      "text": "Three clients",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
       "line": 540,
-      "text": "Three Stars",
+      "text": "Few friends",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
       "line": 541,
-      "text": "One Star",
+      "text": "More friends",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 542,
+      "text": "Tie with more players",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 546,
+      "text": "More friends",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
       "line": 547,
-      "text": "Unknown Map",
+      "text": "Tie with more players",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
       "line": 548,
-      "text": "Five Stars",
+      "text": "Few friends",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 549,
+      "line": 552,
+      "text": "Tie with more players",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 553,
+      "text": "More friends",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 595,
       "text": "One Star",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 550,
+      "line": 597,
       "text": "Three Stars",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 632,
+      "line": 599,
+      "text": "Five Stars",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 603,
+      "text": "Unknown Map",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 604,
+      "text": "Five Stars",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 605,
+      "text": "One Star",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 606,
+      "text": "Three Stars",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 610,
+      "text": "One Star",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 611,
+      "text": "Three Stars",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 612,
+      "text": "Five Stars",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 613,
+      "text": "Unknown Map",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 617,
+      "text": "Unknown Map",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 618,
+      "text": "Five Stars",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 619,
+      "text": "Three Stars",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 620,
+      "text": "One Star",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 626,
+      "text": "Unknown Map",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 627,
+      "text": "Five Stars",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 628,
+      "text": "One Star",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 629,
+      "text": "Three Stars",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/client/serverbrowser_test.cpp",
+      "line": 711,
       "text": "Old server",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 640,
+      "line": 719,
       "text": "Old server",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 648,
+      "line": 727,
       "text": "New server",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 650,
+      "line": 729,
       "text": "Old server",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 653,
+      "line": 732,
       "text": "New server",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 760,
+      "line": 839,
       "text": "Updated server",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 763,
+      "line": 842,
       "text": "Updated server",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 773,
+      "line": 852,
       "text": "Error creating test storage",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 871,
+      "line": 950,
       "text": "Error creating test storage",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 880,
+      "line": 959,
       "text": "Error opening ping cache database",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 881,
+      "line": 960,
       "text": "CREATE TABLE IF NOT EXISTS server_pings (ip_address TEXT PRIMARY KEY NOT NULL, ping INTEGER NOT NULL, utc_timestamp TEXT NOT NULL)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 882,
+      "line": 961,
       "text": "INSERT OR REPLACE INTO server_pings (ip_address, ping, utc_timestamp) VALUES ('127.0.0.1', 171, datetime('now', '-30 days')), ('127.0.0.2', 123, datetime('now'))",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 905,
+      "line": 984,
       "text": " + pName + R",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 936,
+      "line": 1015,
       "text": "Old list",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 937,
+      "line": 1016,
       "text": "not json",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/client/serverbrowser_test.cpp",
-      "line": 942,
+      "line": 1021,
       "text": "Old list",
       "category": "test_only",
       "reason": "test fixture or assertion text"

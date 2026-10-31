@@ -8699,9 +8699,6 @@ Minimum time between kills (in seconds)
 Minimum time between map votes (in seconds)
 == マップ投票間の最小時間（秒）
 
-Minimum width for name column in server browser
-== サーバーブラウザの名前列の最小幅
-
 Minutes on server before a player can call a map change vote (0 = disabled)
 == プレイヤーがマップ変更投票を呼び出せるまでのサーバー滞在時間（分）（0 = 無効）
 
@@ -17410,6 +17407,9 @@ Width of latency column in server browser
 
 Width of map column in server browser
 == サーバーブラウザのマップ列の幅
+
+Width of name column in server browser
+== サーバーブラウザの名前列の幅
 
 Width of others' hook collision line
 == 他のプレイヤーのフック衝突線の幅

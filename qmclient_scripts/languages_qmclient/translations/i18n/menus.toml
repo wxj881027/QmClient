@@ -9759,22 +9759,6 @@ turkish = "Harita oylamaları arasındaki minimum süre (saniye cinsinden)"
 polish = "Minimalny czas między głosowaniami nad mapą (w sekundach)"
 
 [[message]]
-key = "Minimum width for name column in server browser"
-[message.translations]
-simplified_chinese = "服务器浏览器中名称列的最小宽度"
-traditional_chinese = "伺服器瀏覽器中名稱列的最小寬度"
-japanese = "サーバーブラウザの名前列の最小幅"
-korean = "서버 브라우저에서 이름 열의 최소 너비"
-russian = "Минимальная ширина столбца имени в браузере серверов"
-german = "Minimale Breite für die Namensspalte im Server-Browser"
-spanish = "Ancho mínimo para la columna de nombre en el navegador de servidores"
-french = "Largeur minimale pour la colonne du nom dans le navigateur de serveurs"
-brazilian_portuguese = "Largura mínima para a coluna de nome no navegador de servidores"
-portuguese = "Largura mínima para a coluna de nome no navegador de servidores"
-turkish = "Sunucu tarayıcısında isim sütunu için minimum genişlik"
-polish = "Minimalna szerokość kolumny nazwy w przeglądarce serwerów"
-
-[[message]]
 key = "Minutes on server before a player can call a map change vote (0 = disabled)"
 [message.translations]
 simplified_chinese = "玩家发起地图更改投票前必须在服务器上游玩的分钟数（0=禁用）"
@@ -23115,3 +23099,19 @@ brazilian_portuguese = "Baixando…"
 portuguese = "A transferir…"
 turkish = "İndiriliyor…"
 polish = "Pobieranie…"
+
+[[message]]
+key = "Width of name column in server browser"
+[message.translations]
+simplified_chinese = "服务器浏览器中名称列的宽度"
+traditional_chinese = "伺服器瀏覽器中名稱列的寬度"
+japanese = "サーバーブラウザの名前列の幅"
+korean = "서버 브라우저에서 이름 열의 너비"
+russian = "Ширина столбца имени в браузере серверов"
+german = "Breite der Namensspalte im Server-Browser"
+spanish = "Ancho de la columna de nombre en el navegador de servidores"
+french = "Largeur de la colonne du nom dans le navigateur de serveurs"
+brazilian_portuguese = "Largura da coluna de nome no navegador de servidores"
+portuguese = "Largura da coluna de nome no navegador de servidores"
+turkish = "Sunucu tarayıcısında isim sütununun genişliği"
+polish = "Szerokość kolumny nazwy w przeglądarce serwerów"

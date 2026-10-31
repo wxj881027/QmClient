@@ -8699,9 +8699,6 @@ Minimum time between kills (in seconds)
 Minimum time between map votes (in seconds)
 == Temps minimum entre les votes de carte (en secondes)
 
-Minimum width for name column in server browser
-== Largeur minimale pour la colonne du nom dans le navigateur de serveurs
-
 Minutes on server before a player can call a map change vote (0 = disabled)
 == Minutes sur le serveur avant qu'un joueur puisse demander un vote de changement de carte (0 = désactivé)
 
@@ -17410,6 +17407,9 @@ Width of latency column in server browser
 
 Width of map column in server browser
 == Largeur de la colonne Carte dans le navigateur de serveurs
+
+Width of name column in server browser
+== Largeur de la colonne du nom dans le navigateur de serveurs
 
 Width of others' hook collision line
 == Largeur de la ligne de collision du grappin des autres
