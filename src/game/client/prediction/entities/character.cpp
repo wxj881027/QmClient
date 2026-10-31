@@ -968,33 +968,11 @@ void CCharacter::HandleTiles(int Index)
 	const int SwitchType = Collision()->GetSwitchType(MapIndex);
 	const int SwitchNumber = Collision()->GetSwitchNumber(MapIndex);
 	const int SwitchDelay = Collision()->GetSwitchDelay(MapIndex);
-	if(SwitchType == TILE_SWITCHOPEN && Team() != TeamsCore()->TeamSuper() && SwitchNumber > 0)
+	if((SwitchType == TILE_SWITCHOPEN || SwitchType == TILE_SWITCHCLOSE || SwitchType == TILE_SWITCHTIMEDOPEN || SwitchType == TILE_SWITCHTIMEDCLOSE) &&
+		Team() != TeamsCore()->TeamSuper() && SwitchNumber > 0)
 	{
-		Switchers()[SwitchNumber].m_aStatus[Team()] = true;
-		Switchers()[SwitchNumber].m_aEndTick[Team()] = 0;
-		Switchers()[SwitchNumber].m_aType[Team()] = TILE_SWITCHOPEN;
-		Switchers()[SwitchNumber].m_aLastUpdateTick[Team()] = GameWorld()->GameTick();
-	}
-	else if(SwitchType == TILE_SWITCHTIMEDOPEN && Team() != TeamsCore()->TeamSuper() && SwitchNumber > 0)
-	{
-		Switchers()[SwitchNumber].m_aStatus[Team()] = true;
-		Switchers()[SwitchNumber].m_aEndTick[Team()] = GameWorld()->GameTick() + 1 + SwitchDelay * GameWorld()->GameTickSpeed();
-		Switchers()[SwitchNumber].m_aType[Team()] = TILE_SWITCHTIMEDOPEN;
-		Switchers()[SwitchNumber].m_aLastUpdateTick[Team()] = GameWorld()->GameTick();
-	}
-	else if(SwitchType == TILE_SWITCHTIMEDCLOSE && Team() != TeamsCore()->TeamSuper() && SwitchNumber > 0)
-	{
-		Switchers()[SwitchNumber].m_aStatus[Team()] = false;
-		Switchers()[SwitchNumber].m_aEndTick[Team()] = GameWorld()->GameTick() + 1 + SwitchDelay * GameWorld()->GameTickSpeed();
-		Switchers()[SwitchNumber].m_aType[Team()] = TILE_SWITCHTIMEDCLOSE;
-		Switchers()[SwitchNumber].m_aLastUpdateTick[Team()] = GameWorld()->GameTick();
-	}
-	else if(SwitchType == TILE_SWITCHCLOSE && Team() != TeamsCore()->TeamSuper() && SwitchNumber > 0)
-	{
-		Switchers()[SwitchNumber].m_aStatus[Team()] = false;
-		Switchers()[SwitchNumber].m_aEndTick[Team()] = 0;
-		Switchers()[SwitchNumber].m_aType[Team()] = TILE_SWITCHCLOSE;
-		Switchers()[SwitchNumber].m_aLastUpdateTick[Team()] = GameWorld()->GameTick();
+		// 无效更新保留旧开关，后续其它 tile 处理继续。
+		(void)GameWorld()->TrySetSwitchState(SwitchNumber, Team(), SwitchType, SwitchDelay);
 	}
 	else if(SwitchType == TILE_FREEZE && Team() != TeamsCore()->TeamSuper() && !m_Core.m_Invincible)
 	{

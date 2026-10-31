@@ -23,6 +23,7 @@
 #include <game/mapitems.h>
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <utility>
 
@@ -189,6 +190,32 @@ void CGameWorld::RemoveEntities()
 			}
 			pEnt = m_pNextTraverseEntity;
 		}
+}
+
+bool CGameWorld::TrySetSwitchState(int Number, int Team, int Type, int Delay)
+{
+	if(Number <= 0 || static_cast<size_t>(Number) >= Switchers().size() || Team < 0 || Team >= NUM_DDRACE_TEAMS)
+		return false;
+	const bool Timed = Type == TILE_SWITCHTIMEDOPEN || Type == TILE_SWITCHTIMEDCLOSE;
+	if(!Timed && Type != TILE_SWITCHOPEN && Type != TILE_SWITCHCLOSE)
+		return false;
+	int EndTick = 0;
+	if(Timed)
+	{
+		if(Delay < 0)
+			return false;
+		const int64_t Deadline = static_cast<int64_t>(GameTick()) + 1 + static_cast<int64_t>(Delay) * GameTickSpeed();
+		if(Deadline < std::numeric_limits<int>::min() || Deadline > std::numeric_limits<int>::max())
+			return false;
+		EndTick = static_cast<int>(Deadline);
+	}
+	// 完整期限与索引检查后才发布，失败不留下仅改变开闭状态的半次更新。
+	auto &Switcher = Switchers()[Number];
+	Switcher.m_aStatus[Team] = Type == TILE_SWITCHOPEN || Type == TILE_SWITCHTIMEDOPEN;
+	Switcher.m_aEndTick[Team] = EndTick;
+	Switcher.m_aType[Team] = Type;
+	Switcher.m_aLastUpdateTick[Team] = GameTick();
+	return true;
 }
 
 void CGameWorld::Tick()
