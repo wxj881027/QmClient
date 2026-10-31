@@ -47,7 +47,13 @@ public:
 	}
 	SQmClientUsersParseResult Result() const;
 	void Reset();
-	bool NeedsFull() const { return m_NeedsFull; }
+	// 已发布的现代名单租约过期时请求刷新，保留旧名单及可验证增量。
+	void RequestExpiredLeaseRefresh(const SQmClientDistributionSnapshot &Snapshot, int64_t NowTick)
+	{
+		if(m_Revision > 0 && Snapshot.IsStale(NowTick))
+			m_LeaseRefreshRequested = true;
+	}
+	bool NeedsFull() const { return m_NeedsFull || m_LeaseRefreshRequested; }
 	int LeaseSeconds() const { return m_LeaseSeconds; }
 	int64_t Revision() const { return m_Revision; }
 
@@ -62,6 +68,7 @@ private:
 	int64_t m_Revision = 0;
 	int m_LeaseSeconds = 0;
 	bool m_NeedsFull = false;
+	bool m_LeaseRefreshRequested = false;
 };
 
 #endif

@@ -5334,6 +5334,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_users_sync_text_test.cpp
     src/test/integration/qmclient/client/qm_realtime_service_data_test.cpp
     src/test/integration/qmclient/client/qm_realtime_budget_test.cpp
+    src/test/integration/qmclient/client/qm_realtime_users_lease_test.cpp
     src/test/integration/qmclient/client/qm_users_legacy_text_test.cpp
     src/test/unit/qmclient/music/qm_prepared_media_art_test.cpp
     src/test/unit/engine/websocket_client_test.cpp

@@ -2049,6 +2049,7 @@ void CQmClient::UpdateQmRealtime()
 	}
 
 	const int64_t Tick = time_get();
+	m_QmRealtimeUsersState.RequestExpiredLeaseRefresh(m_QmClientDistribution, Tick);
 	if(m_QmRealtimeUsersState.NeedsFull() && Tick >= m_QmRealtimeNextUsersResync)
 	{
 		static constexpr char aRequest[] = "{\"type\":\"subscribe_users\"}";

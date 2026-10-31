@@ -109,7 +109,7 @@ CQmRealtimeUsersState::EApplyResult CQmRealtimeUsersState::ApplyCandidate(const 
 	{
 		if(Base != 0)
 			return Invalid();
-		if(m_ServerAddress == Address && (Revision < m_Revision || (Revision == m_Revision && !m_NeedsFull)))
+		if(m_ServerAddress == Address && (Revision < m_Revision || (Revision == m_Revision && !NeedsFull())))
 			return EApplyResult::IGNORED;
 	}
 	else if(m_Revision == 0 || m_ServerAddress != Address || m_NeedsFull || Base != m_Revision || (Revision != Base && Revision != Base + 1))
@@ -130,6 +130,7 @@ CQmRealtimeUsersState::EApplyResult CQmRealtimeUsersState::ApplyCandidate(const 
 			return Invalid();
 		m_Revision = Revision;
 		m_LeaseSeconds = static_cast<int>(Lease);
+		m_LeaseRefreshRequested = false;
 		return EApplyResult::APPLIED;
 	}
 
@@ -193,6 +194,7 @@ CQmRealtimeUsersState::EApplyResult CQmRealtimeUsersState::ApplyCandidate(const 
 	m_Revision = Revision;
 	m_LeaseSeconds = static_cast<int>(Lease);
 	m_NeedsFull = false;
+	m_LeaseRefreshRequested = false;
 	return EApplyResult::APPLIED;
 }
 
@@ -231,4 +233,5 @@ void CQmRealtimeUsersState::Reset()
 	m_Revision = 0;
 	m_LeaseSeconds = 0;
 	m_NeedsFull = false;
+	m_LeaseRefreshRequested = false;
 }
