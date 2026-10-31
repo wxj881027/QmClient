@@ -204,6 +204,13 @@ public:
 	virtual int GetCandidatePageStart() const = 0;
 	virtual int GetCandidatePageSize() const = 0;
 	virtual int GetCandidateTotalCount() const = 0;
+	virtual int GetCandidatePageIndex() const { return GetCandidatePageSize() > 0 ? GetCandidatePageStart() / GetCandidatePageSize() : 0; }
+	virtual int GetCandidatePageCount() const
+	{
+		const int PageSize = GetCandidatePageSize();
+		const int Total = GetCandidateTotalCount();
+		return PageSize > 0 && Total > 0 ? 1 + (Total - 1) / PageSize : 0;
+	}
 	virtual void SetCompositionWindowPosition(float X, float Y, float H) = 0;
 
 	virtual bool GetDropFile(char *aBuf, int Len) = 0;

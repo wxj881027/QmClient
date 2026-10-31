@@ -3,6 +3,8 @@
 #ifndef ENGINE_CLIENT_INPUT_H
 #define ENGINE_CLIENT_INPUT_H
 
+#include "input_tsf.h"
+
 #include <engine/console.h>
 #include <engine/input.h>
 #include <engine/keys.h>
@@ -137,6 +139,7 @@ private:
 	};
 	std::deque<SWindowsMessage> m_QueuedWindowsMessages;
 	uint32_t m_WindowsMessageEvent = 0;
+	CQmTsfUiLess m_TsfUiLess;
 	std::optional<SQmImeCandidateList> ReadWindowsImeCandidates(void *pWindow, unsigned CandidateListFlags, bool *pHasActiveComposition = nullptr);
 	void ProcessSystemMessage(tagMSG *pMsg);
 	static bool SDLCALL WindowsMessageHook(void *pUser, tagMSG *pMsg);
@@ -199,6 +202,8 @@ public:
 	int GetCandidatePageStart() const override { return m_ImeCandidates.Candidates().m_PageStart; }
 	int GetCandidatePageSize() const override { return m_ImeCandidates.Candidates().m_PageSize; }
 	int GetCandidateTotalCount() const override { return m_ImeCandidates.Candidates().m_TotalCount; }
+	int GetCandidatePageIndex() const override { return m_ImeCandidates.Candidates().m_PageIndex >= 0 ? m_ImeCandidates.Candidates().m_PageIndex : IInput::GetCandidatePageIndex(); }
+	int GetCandidatePageCount() const override { return m_ImeCandidates.Candidates().m_PageCount > 0 ? m_ImeCandidates.Candidates().m_PageCount : IInput::GetCandidatePageCount(); }
 	void SetCompositionWindowPosition(float X, float Y, float H) override;
 
 	bool GetDropFile(char *aBuf, int Len) override;

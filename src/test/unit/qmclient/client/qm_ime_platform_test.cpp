@@ -584,3 +584,270 @@ TEST(QmImeCandidateState, ClearingPageDoesNotResumeEndedComposition)
 	State.UpdateFromSdl(apCandidates, 1, 0, true);
 	EXPECT_TRUE(State.Candidates().m_vCandidates.empty());
 }
+
+TEST(QmImeTsfCandidateState, BeginOwnsDisplayBeforeFirstSnapshot)
+{
+	CQmImeCandidateState State;
+	const char *apOldCandidates[] = {"1 旧词"};
+	State.UpdateFromSdl(apOldCandidates, 1, 0, true);
+
+	State.BeginTsfCandidates(1);
+
+	EXPECT_TRUE(State.Candidates().m_vCandidates.empty());
+	EXPECT_FALSE(State.AcceptsSdlCandidates());
+	State.ResumeComposition();
+	EXPECT_FALSE(State.AcceptsSdlCandidates());
+	State.UpdateFromSdl(apOldCandidates, 1, 0, true);
+	EXPECT_TRUE(State.Candidates().m_vCandidates.empty());
+}
+
+TEST(QmImeTsfCandidateState, SnapshotPreservesSelectionAndUnevenPageWithoutImm)
+{
+	CQmImeCandidateState State;
+	SQmImeCandidateList Candidates;
+	Candidates.m_vCandidates = {"最后一页", "末项"};
+	Candidates.m_SelectedIndex = 1;
+	Candidates.m_PageStart = 10;
+	Candidates.m_PageSize = 2;
+	Candidates.m_TotalCount = 12;
+	Candidates.m_PageIndex = 2;
+	Candidates.m_PageCount = 3;
+	State.BeginTsfCandidates(1);
+
+	State.UpdateTsfCandidates(1, Candidates);
+
+	const auto &Snapshot = State.Candidates();
+	EXPECT_EQ(Snapshot.m_vCandidates, Candidates.m_vCandidates);
+	EXPECT_EQ(Snapshot.m_SelectedIndex, 1);
+	EXPECT_EQ(Snapshot.m_PageStart, 10);
+	EXPECT_EQ(Snapshot.m_PageSize, 2);
+	EXPECT_EQ(Snapshot.m_TotalCount, 12);
+	EXPECT_EQ(Snapshot.m_PageIndex, 2);
+	EXPECT_EQ(Snapshot.m_PageCount, 3);
+	EXPECT_TRUE(QmImePopupShouldBeVisible(Snapshot.m_vCandidates.size()));
+}
+
+TEST(QmImeTsfCandidateState, NativeOpenAndChangeCannotOverwriteActiveSnapshot)
+{
+	CQmImeCandidateState State;
+	SQmImeCandidateList Candidates;
+	Candidates.m_vCandidates = {"TSF 候选"};
+	State.BeginTsfCandidates(1);
+	State.UpdateTsfCandidates(1, Candidates);
+	SQmImeCandidateList OldCandidates;
+	OldCandidates.m_vCandidates = {"旧 IMM 候选"};
+
+	for(bool IsOpenNotify : {false, true})
+	{
+		SCOPED_TRACE(IsOpenNotify);
+		State.UpdateFromNative(OldCandidates, IsOpenNotify, true);
+		EXPECT_EQ(State.Candidates().m_vCandidates, Candidates.m_vCandidates);
+		State.UpdateFromNative(std::nullopt, IsOpenNotify, true);
+		EXPECT_EQ(State.Candidates().m_vCandidates, Candidates.m_vCandidates);
+		State.UpdateFromNative(SQmImeCandidateList{}, IsOpenNotify, true);
+		EXPECT_EQ(State.Candidates().m_vCandidates, Candidates.m_vCandidates);
+	}
+}
+
+TEST(QmImeTsfCandidateState, SdlEmptyAndLateSnapshotsCannotOverwriteActiveSnapshot)
+{
+	CQmImeCandidateState State;
+	SQmImeCandidateList Candidates;
+	Candidates.m_vCandidates = {"TSF 候选"};
+	State.BeginTsfCandidates(1);
+	State.UpdateTsfCandidates(1, Candidates);
+	const char *apOldCandidates[] = {"1 旧 SDL 候选"};
+	SQmImeCandidateList OldCandidates;
+	OldCandidates.m_vCandidates = {"旧 IMM 候选"};
+
+	State.UpdateFromSdl(nullptr, 0, -1, true);
+	EXPECT_EQ(State.Candidates().m_vCandidates, Candidates.m_vCandidates);
+	State.UpdateFromSdl(apOldCandidates, 1, 0, true, OldCandidates, true);
+	EXPECT_EQ(State.Candidates().m_vCandidates, Candidates.m_vCandidates);
+	EXPECT_FALSE(State.AcceptsSdlCandidates());
+}
+
+TEST(QmImeTsfCandidateState, QueuedCleanupKeepsNewSnapshotUntilItsOwnEnd)
+{
+	CQmImeCandidateState State;
+	SQmImeCandidateList Candidates;
+	Candidates.m_vCandidates = {"下一轮组合"};
+	State.BeginTsfCandidates(2);
+	State.UpdateTsfCandidates(2, Candidates);
+
+	State.Clear();
+	EXPECT_EQ(State.Candidates().m_vCandidates, Candidates.m_vCandidates);
+	State.EndComposition();
+	EXPECT_EQ(State.Candidates().m_vCandidates, Candidates.m_vCandidates);
+	State.EndTsfCandidates(2);
+	EXPECT_TRUE(State.Candidates().m_vCandidates.empty());
+}
+
+TEST(QmImeTsfCandidateState, SystemFallbackOwnsEmptyDisplayUntilElementEnds)
+{
+	CQmImeCandidateState State;
+	SQmImeCandidateList Candidates;
+	Candidates.m_vCandidates = {"客户端候选"};
+	State.BeginTsfCandidates(1);
+	State.UpdateTsfCandidates(1, Candidates);
+
+	State.UpdateTsfCandidates(1, std::nullopt);
+
+	EXPECT_TRUE(State.Candidates().m_vCandidates.empty());
+	EXPECT_EQ(State.Candidates().m_SelectedIndex, -1);
+	EXPECT_EQ(State.Candidates().m_PageIndex, -1);
+	EXPECT_EQ(State.Candidates().m_PageCount, 0);
+	State.UpdateFromNative(Candidates, true, true);
+	const char *apCandidates[] = {"1 系统窗口也有此词"};
+	State.UpdateFromSdl(apCandidates, 1, 0, true, Candidates, true);
+	EXPECT_TRUE(State.Candidates().m_vCandidates.empty());
+	EXPECT_FALSE(State.AcceptsSdlCandidates());
+	State.EndTsfCandidates(1);
+	State.UpdateFromNative(Candidates, true);
+	EXPECT_EQ(State.Candidates().m_vCandidates, Candidates.m_vCandidates);
+}
+
+TEST(QmImeTsfCandidateState, OldElementUpdatesAndEndDoNotClearNewElement)
+{
+	CQmImeCandidateState State;
+	SQmImeCandidateList FirstCandidates;
+	FirstCandidates.m_vCandidates = {"旧元素"};
+	State.BeginTsfCandidates(1);
+	State.UpdateTsfCandidates(1, FirstCandidates);
+	SQmImeCandidateList SecondCandidates;
+	SecondCandidates.m_vCandidates = {"新元素"};
+	State.BeginTsfCandidates(2);
+	State.UpdateTsfCandidates(2, SecondCandidates);
+
+	State.UpdateTsfCandidates(1, std::nullopt);
+	EXPECT_EQ(State.Candidates().m_vCandidates, SecondCandidates.m_vCandidates);
+	State.EndTsfCandidates(1);
+	EXPECT_EQ(State.Candidates().m_vCandidates, SecondCandidates.m_vCandidates);
+	State.EndTsfCandidates(1);
+	EXPECT_EQ(State.Candidates().m_vCandidates, SecondCandidates.m_vCandidates);
+	EXPECT_FALSE(State.AcceptsSdlCandidates());
+}
+
+TEST(QmImeTsfCandidateState, EndingLatestElementRestoresPreviousActiveSnapshot)
+{
+	CQmImeCandidateState State;
+	SQmImeCandidateList FirstCandidates;
+	FirstCandidates.m_vCandidates = {"第一元素"};
+	State.BeginTsfCandidates(1);
+	State.UpdateTsfCandidates(1, FirstCandidates);
+	State.BeginTsfCandidates(2);
+	ASSERT_TRUE(State.Candidates().m_vCandidates.empty());
+	FirstCandidates.m_vCandidates = {"第一元素已更新"};
+	State.UpdateTsfCandidates(1, FirstCandidates);
+	ASSERT_TRUE(State.Candidates().m_vCandidates.empty());
+
+	State.EndTsfCandidates(2);
+
+	EXPECT_EQ(State.Candidates().m_vCandidates, FirstCandidates.m_vCandidates);
+	EXPECT_FALSE(State.AcceptsSdlCandidates());
+}
+
+TEST(QmImeTsfCandidateState, DuplicateBeginPreservesSnapshotAndElementOrder)
+{
+	CQmImeCandidateState State;
+	SQmImeCandidateList FirstCandidates;
+	FirstCandidates.m_vCandidates = {"第一元素"};
+	State.BeginTsfCandidates(1);
+	State.UpdateTsfCandidates(1, FirstCandidates);
+	SQmImeCandidateList SecondCandidates;
+	SecondCandidates.m_vCandidates = {"第二元素"};
+	State.BeginTsfCandidates(2);
+	State.UpdateTsfCandidates(2, SecondCandidates);
+
+	State.BeginTsfCandidates(1);
+	State.BeginTsfCandidates(2);
+	EXPECT_EQ(State.Candidates().m_vCandidates, SecondCandidates.m_vCandidates);
+	State.EndTsfCandidates(2);
+	EXPECT_EQ(State.Candidates().m_vCandidates, FirstCandidates.m_vCandidates);
+	State.EndTsfCandidates(1);
+	EXPECT_TRUE(State.Candidates().m_vCandidates.empty());
+}
+
+TEST(QmImeTsfCandidateState, UnknownUpdateAndEndLeaveActiveSnapshotUntouched)
+{
+	CQmImeCandidateState State;
+	SQmImeCandidateList Candidates;
+	Candidates.m_vCandidates = {"当前元素"};
+	State.UpdateTsfCandidates(99, Candidates);
+	State.EndTsfCandidates(99);
+	EXPECT_TRUE(State.Candidates().m_vCandidates.empty());
+	EXPECT_TRUE(State.AcceptsSdlCandidates());
+	State.BeginTsfCandidates(1);
+	State.UpdateTsfCandidates(1, Candidates);
+
+	State.UpdateTsfCandidates(99, std::nullopt);
+	State.EndTsfCandidates(99);
+
+	EXPECT_EQ(State.Candidates().m_vCandidates, Candidates.m_vCandidates);
+	EXPECT_FALSE(State.AcceptsSdlCandidates());
+}
+
+TEST(QmImeTsfCandidateState, LastEndDiscardsOldImmCacheAndRejectsLateSnapshots)
+{
+	CQmImeCandidateState State;
+	SQmImeCandidateList OldCandidates;
+	OldCandidates.m_vCandidates = {"旧 IMM 缓存"};
+	State.UpdateFromNative(OldCandidates, true);
+	State.BeginTsfCandidates(1);
+	State.UpdateTsfCandidates(1, OldCandidates);
+
+	State.EndTsfCandidates(1);
+
+	EXPECT_TRUE(State.Candidates().m_vCandidates.empty());
+	EXPECT_FALSE(State.AcceptsSdlCandidates());
+	State.UpdateTsfCandidates(1, OldCandidates);
+	State.UpdateFromNative(OldCandidates, false);
+	const char *apOldCandidates[] = {"1 迟到候选"};
+	State.UpdateFromSdl(apOldCandidates, 1, 0, true);
+	EXPECT_TRUE(State.Candidates().m_vCandidates.empty());
+}
+
+TEST(QmImeTsfCandidateState, ReopeningSameElementStartsEmptyAndAcceptsNewSnapshot)
+{
+	CQmImeCandidateState State;
+	SQmImeCandidateList Candidates;
+	Candidates.m_vCandidates = {"旧组合"};
+	State.BeginTsfCandidates(1);
+	State.UpdateTsfCandidates(1, Candidates);
+	State.EndTsfCandidates(1);
+
+	State.BeginTsfCandidates(1);
+
+	ASSERT_TRUE(State.Candidates().m_vCandidates.empty());
+	Candidates.m_vCandidates = {"新组合"};
+	State.UpdateTsfCandidates(1, Candidates);
+	EXPECT_EQ(State.Candidates().m_vCandidates, Candidates.m_vCandidates);
+}
+
+TEST(QmImeTsfCandidateState, ResetDropsAllElementsAndBlocksTheirLateCallbacks)
+{
+	CQmImeCandidateState State;
+	SQmImeCandidateList Candidates;
+	Candidates.m_vCandidates = {"旧候选"};
+	Candidates.m_PageIndex = 2;
+	Candidates.m_PageCount = 3;
+	State.UpdateFromNative(Candidates, true);
+	State.BeginTsfCandidates(1);
+	State.UpdateTsfCandidates(1, Candidates);
+	State.BeginTsfCandidates(2);
+	State.UpdateTsfCandidates(2, Candidates);
+
+	State.ResetTsfCandidates();
+	State.ResetTsfCandidates();
+	State.UpdateTsfCandidates(1, Candidates);
+	State.EndTsfCandidates(2);
+
+	EXPECT_TRUE(State.Candidates().m_vCandidates.empty());
+	EXPECT_FALSE(State.AcceptsSdlCandidates());
+	State.ResumeComposition();
+	const char *apNewCandidates[] = {"1 新 SDL 候选"};
+	State.UpdateFromSdl(apNewCandidates, 1, 0, true);
+	EXPECT_EQ(State.Candidates().m_vCandidates, (std::vector<std::string>{"新 SDL 候选"}));
+	EXPECT_EQ(State.Candidates().m_PageIndex, -1);
+	EXPECT_EQ(State.Candidates().m_PageCount, 0);
+}
