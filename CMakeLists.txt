@@ -5168,6 +5168,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_hammer_hit_detection_test.cpp
     src/test/unit/qmclient/client/qm_hammer_hit_boundaries_test.cpp
     src/test/unit/qmclient/client/qm_water_hammer_indicator_test.cpp
+    src/test/unit/qmclient/client/qm_water_hammer_sampling_test.cpp
+    src/test/integration/client/water_hammer_collision_sampling_test.cpp
     src/test/unit/qmclient/client/qm_demo_display_test.cpp
     src/test/unit/qmclient/client/qm_demo_ui_test.cpp
     src/test/unit/client/online_replay_player_test.cpp
@@ -5491,6 +5493,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/settings/settings_card_width_test.cpp
     src/test/unit/qmclient/client/qm_weapon_trajectory_test.cpp
     src/test/unit/qmclient/client/qm_weapon_trajectory_geometry_test.cpp
+    src/test/unit/qmclient/client/qm_weapon_animation_tune_zone_test.cpp
+    src/test/unit/qmclient/client/qm_snapshot_sample_position_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_watermark_test.cpp
     src/test/unit/qmclient/client/qm_config_package_test.cpp
     src/test/integration/qmclient/client/qm_config_package_storage_test.cpp

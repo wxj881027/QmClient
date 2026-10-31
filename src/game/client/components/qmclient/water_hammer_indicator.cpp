@@ -35,28 +35,7 @@ void CQmWaterHammerIndicator::OnPreInput(const CNetMsg_Sv_PreInput &Message)
 
 bool CQmWaterHammerIndicator::IsInPenaltyArea(const vec2 Position) const
 {
-	const CCollision *pCollision = Collision();
-	const float SampleRadius = CCharacterCore::PhysicalSize() / 3.0f;
-	const vec2 aSamples[] = {
-		vec2(0.0f, 0.0f),
-		vec2(-SampleRadius, -SampleRadius),
-		vec2(SampleRadius, -SampleRadius),
-		vec2(-SampleRadius, SampleRadius),
-		vec2(SampleRadius, SampleRadius),
-	};
-
-	for(const vec2 Sample : aSamples)
-	{
-		const int MapIndex = pCollision->GetPureMapIndex(Position + Sample);
-		if(QmIsWaterHammerPenaltyTile(pCollision->GetTileIndex(MapIndex)) ||
-			QmIsWaterHammerPenaltyTile(pCollision->GetFrontTileIndex(MapIndex)) ||
-			QmIsWaterHammerPenaltyTile(pCollision->GetSwitchType(MapIndex)))
-		{
-			return true;
-		}
-	}
-
-	return false;
+	return QmIsWaterHammerPenaltyArea(*Collision(), Position);
 }
 
 bool CQmWaterHammerIndicator::IsMarked(const int ClientId) const

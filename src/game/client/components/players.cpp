@@ -89,18 +89,23 @@ static bool HasQmJellyHammerImpact(const CGameClient *pGameClient, int ClientId)
 
 static int QmWeaponAnimationTuneZone(const CGameClient *pGameClient, const CCollision *pCollision, int ClientId, const CNetObj_Character &Player)
 {
+	bool HasExtendedData = false;
+	int TuneZoneOverride = -1;
 	if(ClientId >= 0 && ClientId < MAX_CLIENTS)
 	{
-		const CGameClient::CSnapState::CCharacterInfo &Character = pGameClient->m_Snap.m_aCharacters[ClientId];
-		if(Character.m_HasExtendedData && Character.m_ExtendedData.m_TuneZoneOverride >= 0)
-			return std::clamp(Character.m_ExtendedData.m_TuneZoneOverride, 0, NUM_TUNEZONES - 1);
+		const auto &Character = pGameClient->m_Snap.m_aCharacters[ClientId];
+		HasExtendedData = Character.m_HasExtendedData;
+		if(HasExtendedData)
+			TuneZoneOverride = Character.m_ExtendedData.m_TuneZoneOverride;
 	}
-	return std::clamp(pCollision->IsTune(pCollision->GetMapIndex(vec2(Player.m_X, Player.m_Y))), 0, NUM_TUNEZONES - 1);
+	return QmResolveWeaponAnimationTuneZone(HasExtendedData, TuneZoneOverride, vec2(Player.m_X, Player.m_Y), [pCollision](vec2 Position) {
+		return pCollision->IsTune(pCollision->GetMapIndex(Position));
+	});
 }
 
 static bool IsSolidAt(const CCollision *pCollision, vec2 Pos)
 {
-	if(pCollision == nullptr)
+	if(pCollision == nullptr || !QmCollision::CanRoundPosition(Pos))
 		return false;
 	return pCollision->CheckPoint(Pos.x, Pos.y);
 }
@@ -934,9 +939,10 @@ void CPlayers::RenderPlayer(
 	RenderInfo.m_FeetFlipped = false;
 
 	bool Stationary = Player.m_VelX <= 1 && Player.m_VelX >= -1;
-	bool InAir = !Collision()->CheckPoint(Player.m_X, Player.m_Y + 16);
+	const auto GroundSample = QmCollision::OffsetSnapshotPosition(ivec2(Player.m_X, Player.m_Y), ivec2(0, 16));
+	bool InAir = !GroundSample || !IsSolidAt(Collision(), *GroundSample);
 	if(g_Config.m_QmAntiPingImproved && !Local)
-		InAir = !Collision()->CheckPoint(Position.x, Position.y + 16);
+		InAir = !IsSolidAt(Collision(), Position + vec2(0, 16));
 	bool Running = Player.m_VelX >= 5000 || Player.m_VelX <= -5000;
 	bool WantOtherDir = (Player.m_Direction == -1 && Vel.x > 0) || (Player.m_Direction == 1 && Vel.x < 0);
 	bool Inactive = ClientId >= 0 && (Afk || GameClient()->m_aClients[ClientId].m_Paused);
@@ -1585,7 +1591,8 @@ void CPlayers::RenderPlayerGhost(
 	RenderInfo.m_FeetFlipped = false;
 
 	bool Stationary = Player.m_VelX <= 1 && Player.m_VelX >= -1;
-	bool InAir = !Collision()->CheckPoint(Player.m_X, Player.m_Y + 16);
+	const auto GroundSample = QmCollision::OffsetSnapshotPosition(ivec2(Player.m_X, Player.m_Y), ivec2(0, 16));
+	bool InAir = !GroundSample || !IsSolidAt(Collision(), *GroundSample);
 	bool Running = Player.m_VelX >= 5000 || Player.m_VelX <= -5000;
 	bool WantOtherDir = (Player.m_Direction == -1 && Vel.x > 0) || (Player.m_Direction == 1 && Vel.x < 0);
 	bool Inactive = Afk || GameClient()->m_aClients[ClientId].m_Paused;

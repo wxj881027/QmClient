@@ -4,7 +4,9 @@
 #include <base/vmath.h>
 
 #include <cmath>
+#include <cstdint>
 #include <limits>
+#include <optional>
 
 namespace QmCollision
 {
@@ -18,6 +20,17 @@ namespace QmCollision
 			       static_cast<double>(Rounded) <= std::numeric_limits<int>::max();
 		};
 		return CanRound(Pos.x) && CanRound(Pos.y);
+	}
+	inline std::optional<vec2> OffsetSnapshotPosition(ivec2 Position, ivec2 Offset)
+	{
+		// 显示采样先用宽整数加偏移，再转float，保留原整数量化顺序。
+		const int64_t X = static_cast<int64_t>(Position.x) + Offset.x;
+		const int64_t Y = static_cast<int64_t>(Position.y) + Offset.y;
+		if(X < std::numeric_limits<int>::min() || X > std::numeric_limits<int>::max() ||
+			Y < std::numeric_limits<int>::min() || Y > std::numeric_limits<int>::max())
+			return std::nullopt;
+		const vec2 Sample(static_cast<float>(X), static_cast<float>(Y));
+		return CanRoundPosition(Sample) ? std::optional<vec2>(Sample) : std::nullopt;
 	}
 	inline bool CanQueryLine(vec2 From, vec2 To)
 	{
