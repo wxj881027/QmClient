@@ -11,7 +11,6 @@
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_joystick.h>
 
-#include <array>
 #include <deque>
 #include <string>
 #include <vector>
@@ -93,12 +92,6 @@ private:
 	std::string m_CompositionString;
 	int m_CompositionCursor;
 	CQmImeCandidateState m_ImeCandidates;
-	CQmImeProviderSession m_ImeProvider;
-	bool m_EmbeddedTextInputActive = false;
-	std::array<int, 7> m_aImeTraceState{{-1}};
-	void SyncImeProviderState();
-	void StartSystemTextInput();
-	void TraceImeState(const char *pEvent);
 
 	// events
 	std::vector<CEvent> m_vInputEvents;
@@ -141,14 +134,11 @@ private:
 		uint32_t m_Message;
 		uintptr_t m_WParam;
 		intptr_t m_LParam;
-		int m_ImeKey = KEY_UNKNOWN;
-		int m_ImeModifiers = 0;
-		bool m_ImeRepeat = false;
 	};
 	std::deque<SWindowsMessage> m_QueuedWindowsMessages;
 	uint32_t m_WindowsMessageEvent = 0;
 	std::optional<SQmImeCandidateList> ReadWindowsImeCandidates(void *pWindow, unsigned CandidateListFlags, bool *pHasActiveComposition = nullptr);
-	void ProcessSystemMessage(tagMSG *pMsg, int ImeKey = KEY_UNKNOWN, int ImeModifiers = 0, bool ImeRepeat = false);
+	void ProcessSystemMessage(tagMSG *pMsg);
 	static bool SDLCALL WindowsMessageHook(void *pUser, tagMSG *pMsg);
 #endif
 
@@ -198,8 +188,6 @@ public:
 
 	void StartTextInput() override;
 	void StopTextInput() override;
-	void SetImeProvider(IImeProvider *pProvider) override;
-	void SetImeEngineEnabled(bool Enabled) override;
 	void EnsureScreenKeyboardShown() override;
 	const char *GetComposition() const override { return m_CompositionString.c_str(); }
 	bool HasComposition() const override { return QmImeCompositionIsActive(!m_CompositionString.empty(), GetCandidateCount()); }

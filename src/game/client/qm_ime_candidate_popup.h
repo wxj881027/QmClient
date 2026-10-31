@@ -6,7 +6,6 @@
 
 #include <base/vmath.h>
 
-#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -63,8 +62,6 @@ private:
 	int m_CandidateStart = 0;
 	bool m_WasVisible = false;
 	uint64_t m_PresenceGeneration = 1;
-	std::array<int, 7> m_aTraceState{{-1}};
-	void TraceState(const SQmImePopupState &State, bool Render, float PresenceAlpha, float PanelAlpha, float CandidateAlpha);
 };
 
 #endif

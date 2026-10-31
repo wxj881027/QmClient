@@ -14,8 +14,6 @@
 #include <string>
 #include <vector>
 
-class IImeProvider;
-
 class IInput : public IInterface
 {
 	MACRO_INTERFACE("input")
@@ -195,8 +193,6 @@ public:
 	// text editing
 	virtual void StartTextInput() = 0;
 	virtual void StopTextInput() = 0;
-	virtual void SetImeProvider(IImeProvider *pProvider) = 0;
-	virtual void SetImeEngineEnabled(bool Enabled) = 0;
 	virtual void EnsureScreenKeyboardShown() = 0;
 	virtual const char *GetComposition() const = 0;
 	virtual bool HasComposition() const = 0;

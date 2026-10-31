@@ -823,7 +823,6 @@ if(CLIENT)
     enable_language(OBJC OBJCXX)
   endif()
   find_package(SDL3 REQUIRED)
-  find_package(Rime)
 endif()
 find_package(SQLite3)
 if(DISCORD)
@@ -1987,15 +1986,6 @@ set(EXPECTED_DATA
   gui_icons.png
   gui_logo.png
   hud.png
-  ime/LICENSES.txt
-  ime/README.md
-  ime/default.yaml
-  ime/qm_english_words.tsv
-  ime/qm_game_aliases.dict.yaml
-  ime/qm_game_aliases.schema.yaml
-  ime/qm_pinyin.dict.yaml
-  ime/qm_pinyin.schema.yaml
-  ime/qm_pinyin_chars.txt
   "input overlay-Zac/mouse-no-movement.json"
   "input overlay-Zac/mouse.json"
   "input overlay-Zac/mouse.png"
@@ -2545,7 +2535,7 @@ set(EXPECTED_DATA
   wordlist.txt
 )
 
-set_glob(DATA GLOB_RECURSE "cfg;chai;frag;html;json;map;md;mp3;opus;otf;OTF;png;rules;sql;tsv;ttc;TTC;ttf;TTF;txt;vert;webp;wv;yaml" data ${EXPECTED_DATA})
+set_glob(DATA GLOB_RECURSE "cfg;chai;frag;html;json;map;md;mp3;opus;otf;OTF;png;rules;sql;ttc;TTC;ttf;TTF;txt;vert;webp;wv" data ${EXPECTED_DATA})
 
 ########################################################################
 # COPY DATA AND SHARED LIBS
@@ -2576,7 +2566,6 @@ set(COPY_FILES
   ${OPUSFILE_COPY_FILES}
   ${PNG_COPY_FILES}
   ${SDL3_COPY_FILES}
-  ${Rime_COPY_FILES}
   ${SQLite3_COPY_FILES}
   ${FFMPEG_COPY_FILES}
   ${WAVPACK_COPY_FILES}
@@ -2808,9 +2797,6 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   config_variables_qmclient.h
   config_variables_tclient.h
   qm_legacy_config.cpp
-  qm_ime_provider.cpp
-  qm_ime_provider.h
-  qm_ime_policy.h
   qm_default_profile.h
   qm_legacy_config.h
   qm_legacy_config_aliases.h
@@ -3923,17 +3909,6 @@ if(CLIENT)
     qm_ime_candidate_popup.h
     qm_ime_manager.cpp
     qm_ime_manager.h
-    components/qmclient/ime/qm_ime_engine.cpp
-    components/qmclient/ime/qm_ime_engine.h
-    components/qmclient/ime/qm_ime_runtime.cpp
-    components/qmclient/ime/qm_ime_runtime.h
-    components/qmclient/ime/qm_ime_lexicon.cpp
-    components/qmclient/ime/qm_ime_lexicon.h
-    components/qmclient/ime/qm_ime_merge.cpp
-    components/qmclient/ime/qm_ime_merge.h
-    components/qmclient/ime/qm_ime_sources.cpp
-    components/qmclient/ime/qm_ime_sources.h
-    components/qmclient/ime/qm_ime_typing.h
     race.cpp
     race.h
     race_parse.cpp
@@ -4084,7 +4059,6 @@ if(CLIENT)
     ${GLEW_LIBRARIES}
     ${PNG_LIBRARIES}
     ${SDL3_LIBRARIES}
-    ${Rime_LIBRARIES}
     ${WAVPACK_LIBRARIES}
     ${FFMPEG_LIBRARIES}
     ${WebP_LIBRARIES}
@@ -4725,10 +4699,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/qm_list_entry_animation_test.cpp
     src/test/unit/qmclient/ui/qm_localized_labels_test.cpp
     src/test/unit/engine/steam_client_path_test.cpp
-    src/test/unit/engine/qm_ime_provider_test.cpp
-    src/test/unit/qmclient/ime/qm_ime_runtime_shutdown_test.cpp
-    src/test/unit/qmclient/ime/qm_ime_lexicon_test.cpp
-    src/test/unit/qmclient/ime/qm_ime_merge_test.cpp
     src/test/unit/qmclient/ui/settings_toggle_grid_test.cpp
     src/test/unit/qmclient/ui/settings_choice_grid_test.cpp
     src/test/unit/qmclient/ui/QmAnimTest.cpp
@@ -5317,9 +5287,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/client/voice_spatial_utils_test.cpp
   )
   set(TESTS_EXTRA
-    src/game/client/components/qmclient/ime/qm_ime_runtime.cpp
-    src/game/client/components/qmclient/ime/qm_ime_lexicon.cpp
-    src/game/client/components/qmclient/ime/qm_ime_merge.cpp
     src/game/editor/collab_camera.cpp
     src/game/editor/mapitems/envelope.cpp
     src/game/map/envelope_eval.cpp
@@ -5664,7 +5631,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_discrete_slider_spring_test.cpp
       src/test/integration/qmclient/ui/qm_numeric_field_enter_test.cpp
       src/test/integration/qmclient/ui/qm_ime_menu_input_test.cpp
-      src/test/integration/qmclient/ui/qm_ime_engine_input_test.cpp
       src/test/integration/qmclient/ui/qm_font_combobox_test.cpp
       src/test/integration/qmclient/ui/qm_color_picker_text_input_test.cpp
       src/test/integration/qmclient/client/qm_font_loading_test.cpp

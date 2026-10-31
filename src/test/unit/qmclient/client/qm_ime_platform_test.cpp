@@ -420,54 +420,6 @@ TEST(QmImeCandidateState, ResumingCompositionAcceptsSdlWithoutNativeOpenNotify)
 	EXPECT_EQ(State.Candidates().m_vCandidates, (std::vector<std::string>{"新词"}));
 }
 
-TEST(QmImeCandidateState, FreshSystemLetterRestoresCandidatesWithoutOpenOrEditingNotify)
-{
-	const int aModifiers[] = {0, QM_IME_KEYMASK_SHIFT, QM_IME_KEYMASK_LOCK};
-	for(const int Modifiers : aModifiers)
-	{
-		SCOPED_TRACE(Modifiers);
-		CQmImeCandidateState State;
-		State.EndComposition();
-		SQmImeCandidateList Current;
-		Current.m_vCandidates = {"新组合", "候选"};
-		Current.m_SelectedIndex = 1;
-		State.UpdateFromNative(Current, false);
-		ASSERT_TRUE(State.Candidates().m_vCandidates.empty());
-		ASSERT_TRUE(State.ResumeAfterSystemKey(KEY_A, Modifiers, false));
-		State.UpdateFromNative(Current, false);
-		EXPECT_TRUE(State.AcceptsSdlCandidates());
-		EXPECT_EQ(State.Candidates().m_vCandidates, Current.m_vCandidates);
-		EXPECT_EQ(State.Candidates().m_SelectedIndex, 1);
-		EXPECT_FALSE(State.ResumeAfterSystemKey(KEY_B, Modifiers, false));
-	}
-}
-
-TEST(QmImeCandidateState, SelectionShortcutsAndRepeatsKeepLateCandidatesSuppressed)
-{
-	struct SCase
-	{
-		int m_Key;
-		int m_Modifiers;
-		bool m_Repeat;
-	};
-	const SCase aCases[] = {
-		{KEY_SPACE, 0, false}, {KEY_1, 0, false}, {KEY_RETURN, 0, false}, {KEY_BACKSPACE, 0, false},
-		{KEY_LSHIFT, 0, false}, {KEY_A, QM_IME_KEYMASK_CONTROL, false}, {KEY_A, QM_IME_KEYMASK_ALT, false},
-		{KEY_A, QM_IME_KEYMASK_GUI, false}, {KEY_A, 0, true},
-	};
-	for(const auto &Case : aCases)
-	{
-		SCOPED_TRACE(::testing::Message() << Case.m_Key << '/' << Case.m_Modifiers << '/' << Case.m_Repeat);
-		CQmImeCandidateState State;
-		State.EndComposition();
-		EXPECT_FALSE(State.ResumeAfterSystemKey(Case.m_Key, Case.m_Modifiers, Case.m_Repeat));
-		const char *apLate[] = {"1 迟到候选"};
-		State.UpdateFromSdl(apLate, 1, 0, true);
-		EXPECT_FALSE(State.AcceptsSdlCandidates());
-		EXPECT_TRUE(State.Candidates().m_vCandidates.empty());
-	}
-}
-
 TEST(QmImeCandidateState, ActiveNativeCompositionResumesSdlCandidatesAfterCommit)
 {
 	CQmImeCandidateState State;

@@ -5,7 +5,6 @@
 #include <base/detect.h>
 
 #include <engine/keys.h>
-#include <engine/shared/qm_ime_provider.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -13,15 +12,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-inline bool QmImeEmbeddedEngineAllowed()
-{
-#if defined(CONF_FAMILY_WINDOWS)
-	return true;
-#else
-	return false;
-#endif
-}
 
 inline bool QmImeShouldUseSystemCandidateUi()
 {
@@ -140,28 +130,6 @@ public:
 	const SQmImeCandidateList &Candidates() const { return m_Candidates; }
 	bool AcceptsSdlCandidates() const { return !m_SuppressStaleReload; }
 	void ResumeComposition() { m_SuppressStaleReload = false; }
-	bool ResumeAfterSystemKey(int Key, int Modifiers, bool Repeat)
-	{
-		if(!m_SuppressStaleReload || Key < KEY_A || Key > KEY_Z || Repeat ||
-			(Modifiers & (QM_IME_KEYMASK_CONTROL | QM_IME_KEYMASK_ALT | QM_IME_KEYMASK_GUI)) != 0)
-			return false;
-		ResumeComposition();
-		return true;
-	}
-
-	void UpdateFromEngine(const SQmImeProviderState &State)
-	{
-		Clear();
-		m_SuppressStaleReload = false;
-		if(!State.m_Active)
-			return;
-		m_Candidates.m_vCandidates = State.m_vCandidates;
-		const int Count = static_cast<int>(m_Candidates.m_vCandidates.size());
-		m_Candidates.m_SelectedIndex = State.m_Selected >= 0 && State.m_Selected < Count ? State.m_Selected : -1;
-		m_Candidates.m_PageStart = State.m_PageStart > 0 ? State.m_PageStart : 0;
-		m_Candidates.m_PageSize = State.m_PageSize > 0 ? State.m_PageSize : Count;
-		m_Candidates.m_TotalCount = State.m_TotalCount >= Count ? State.m_TotalCount : Count;
-	}
 
 	void Clear()
 	{

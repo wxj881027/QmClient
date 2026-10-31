@@ -1,5 +1,0 @@
-config_version: "1"
-schema_list:
-  - schema: qm_pinyin
-menu:
-  page_size: 9

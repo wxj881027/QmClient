@@ -1967,21 +1967,6 @@ Bubble opacity
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
-Built-in IME language switch key (SDL key code, 0=disabled)
-== 内蔵入力の言語切替キー（SDLキーコード、0=無効）
-
-Built-in IME switch modifiers (Shift=1, Ctrl=4, Alt=8, GUI=64); default Ctrl+Space
-== 内蔵入力切替の修飾キー（Shift=1、Ctrl=4、Alt=8、GUI=64）；既定はCtrl+Space
-
-Built-in input supports Chinese Pinyin and English suggestions with a US keyboard layout on Windows. Use system input for other layouts or input methods.
-== 内蔵入力はWindowsのUS配列で中国語ピンインと英単語候補に対応します。他の配列や入力方式はシステム入力を使用してください。
-
-Built-in Pinyin
-== 内蔵ピンイン
-
-Built-in Pinyin is only available on Windows. This platform uses system input.
-== 内蔵ピンインはWindowsでのみ利用できます。このプラットフォームではシステム入力を使用します。
-
 Button - Disabled
 == ボタン - 無効
 
@@ -2557,12 +2542,6 @@ Clear finished
 
 Clear friend note
 == フレンドメモをクリア
-
-Clear learned built-in pinyin words
-== 内蔵ピンインの学習履歴を消去
-
-Clear learned words
-== 学習履歴を消去
 
 Clear local console
 == ローカルコンソールをクリア
@@ -3884,9 +3863,6 @@ Delete
 Delete "%s"?
 == 「%s」を削除しますか？
 
-Delete all locally learned input words? Current game words will remain available.
-== ローカルに学習した入力単語をすべて削除しますか？現在のゲーム用語は引き続き利用できます。
-
 Delete category
 == カテゴリを削除
 
@@ -4195,9 +4171,6 @@ Do not use it to spam: servers may punish repeated automatic messages.
 
 Document too large for the editor (%d of %d bytes)
 == ドキュメントが大きすぎてクライアントのエディターで編集できません（%d / %d バイト）
-
-Domain candidates per page
-== 1ページあたりの固有用語候補数
 
 Done
 == 完了
@@ -5219,12 +5192,6 @@ Endpoint (optional)
 English font:
 == 英語フォント：
 
-English word suggestions
-== 英単語の候補
-
-English: Tab accepts the selected suggestion; Space keeps your typed text.
-== 英語入力：Tabで選択中の候補を確定し、Spaceで入力した文字をそのまま確定します。
-
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == /practice モードに入るか再起動してください。そうしないと 60 秒後にチーム全員が処刑されます
 
@@ -6088,9 +6055,6 @@ Game
 
 Game assets
 == ゲームアセット
-
-Game domain words
-== ゲーム固有用語
 
 Game graphics assets not from Teeworlds
 == Teeworlds 以外のゲームグラフィックアセット
@@ -6986,12 +6950,6 @@ IME appearance
 IME background color
 == IME 背景色
 
-IME engine
-== IMEエンジン
-
-IME engine (0=system, 1=built-in pinyin, Windows US layout only)
-== IMEエンジン（0=システム入力、1=内蔵ピンイン、Windows US配列のみ）
-
 IME font size
 == IME の文字サイズ
 
@@ -7015,9 +6973,6 @@ IME gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
 
 IME gradient vertical position percentage
 == グラデーションの垂直位置 (IME, %)
-
-IME language switch key
-== 入力言語の切替キー
 
 IME selected text color
 == IME の選択文字色
@@ -7075,9 +7030,6 @@ Include emoticon when saving/loading config preset
 
 Include game audio in the recording.
 == 録画にゲーム音声を含めます。
-
-Include game words in built-in pinyin candidates
-== 内蔵ピンイン候補にゲーム固有用語を含める
 
 Include name when saving/loading config preset
 == 設定プリセットの保存/読み込み時に名前を含める
@@ -7792,12 +7744,6 @@ Learn
 
 Learn "Toggle dummy" first; the other dummy keys only help once you already play with a second tee.
 == まずダミー切り替えを覚えましょう。ほかのダミー用キーは、二つ目の tee で走れてから役に立ちます。
-
-Learn committed words
-== 確定した単語を自動学習
-
-Learn committed words in built-in pinyin
-== 内蔵ピンインで確定した単語を自動学習
 
 Leave "Automatic updates" off if you update by hand: it can restart the client to install a build.
 == 手動で更新するなら「自動更新」はオフのままにしてください。ビルドのインストール時にクライアントを再起動することがあります。
@@ -8527,9 +8473,6 @@ Maximum dynamic camera cursor distance
 
 Maximum framerate for entity layer video background
 == エンティティレイヤービデオ背景の最大フレームレート
-
-Maximum game words on the first pinyin candidate page
-== ピンイン候補の最初のページに表示するゲーム固有用語の最大数
 
 Maximum notification count
 == 通知バーの最大表示数
@@ -14867,9 +14810,6 @@ Successfully saved the replay!
 Sudden Death
 == サドンデス
 
-Suggest English words in built-in IME English mode; Tab accepts, Space keeps typed text
-== 内蔵入力の英語モードで単語候補を表示；Tabで補完、Spaceで入力文字を維持
-
 Suicides
 == 自殺数
 
@@ -14905,9 +14845,6 @@ Swap option color
 
 Swaps the active action (fire and hook) for direct touch input and virtual joysticks.
 == ダイレクトタッチ入力とバーチャルジョイスティックのアクティブアクション（発射とフック）を切り替えます。
-
-Switch built-in IME language by tapping Shift
-== Shift単押しで内蔵入力の言語を切り替え
 
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 == スイッチカウントダウンの位置（0 = Tee に追従、1 = ダイナミックアイランド、2 = 両方）
@@ -15002,9 +14939,6 @@ System default
 System graphics settings
 == システムのグラフィックス設定
 
-System input
-== システム入力
-
 System media controls
 == システムメディアコントロール
 
@@ -15028,9 +14962,6 @@ Take a screenshot
 
 Take photo
 == 撮影
-
-Tap Shift to switch language
-== Shift単押しで言語を切り替え
 
 Taper trail ends
 == トレイルの先端を細くする
