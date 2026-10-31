@@ -4,6 +4,8 @@
 
 #include <game/client/prediction/entity.h>
 
+#include <optional>
+
 class CLaserData;
 
 class CDoor : public CEntity
@@ -13,10 +15,18 @@ class CDoor : public CEntity
 	int m_Length;
 	bool m_Active;
 
-	int MapSide() const;
+	static int MapSide(vec2 Direction);
 	int MapLength(int Side);
 
 public:
+	struct SCollisionGeometry
+	{
+		vec2 m_Direction{0.0f, 0.0f};
+		int m_Length = 0;
+	};
+	// 仅准备数值合法的写入几何，不执行逐像素遍历或证明帧预算。
+	static std::optional<SCollisionGeometry> CalcCollisionGeometry(vec2 Pos, vec2 To, int Side, int ConfiguredLength, ivec2 MapSize);
+
 	CDoor(CGameWorld *pGameWorld, int Id, const CLaserData *pData);
 	void ResetCollision();
 	bool Match(const CDoor *pDoor) const;

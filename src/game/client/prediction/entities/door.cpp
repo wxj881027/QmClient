@@ -3,6 +3,7 @@
 
 #include "character.h"
 
+#include <game/client/components/qmclient/collision_position.h>
 #include <game/client/laser_data.h>
 #include <game/collision.h>
 #include <game/mapitems.h>
@@ -10,10 +11,12 @@
 #include <cmath>
 
 CDoor::CDoor(CGameWorld *pGameWorld, int Id, const CLaserData *pData) :
-	CEntity(pGameWorld, CGameWorld::ENTTYPE_DOOR)
+	CEntity(pGameWorld, CGameWorld::ENTTYPE_DOOR),
+	m_Direction(0.0f, 0.0f),
+	m_Length(0),
+	m_Active(false)
 {
 	m_Id = Id;
-	m_Active = false;
 
 	m_Number = pData->m_SwitchNumber;
 	m_Layer = m_Number > 0 ? LAYER_SWITCH : LAYER_GAME;
@@ -25,10 +28,10 @@ CDoor::CDoor(CGameWorld *pGameWorld, int Id, const CLaserData *pData) :
 static const int s_aSideOffsetX[8] = {0, 1, 1, 1, 0, -1, -1, -1};
 static const int s_aSideOffsetY[8] = {1, 1, 0, -1, -1, -1, 0, 1};
 
-int CDoor::MapSide() const
+int CDoor::MapSide(vec2 Direction)
 {
-	const int OffsetX = round_to_int(m_Direction.x);
-	const int OffsetY = round_to_int(m_Direction.y);
+	const int OffsetX = round_to_int(Direction.x);
+	const int OffsetY = round_to_int(Direction.y);
 	for(int Side = 0; Side < 8; Side++)
 	{
 		if(s_aSideOffsetX[Side] == OffsetX && s_aSideOffsetY[Side] == OffsetY)
@@ -61,37 +64,60 @@ int CDoor::MapLength(int Side)
 	return Length;
 }
 
-void CDoor::ResetCollision()
+std::optional<CDoor::SCollisionGeometry> CDoor::CalcCollisionGeometry(vec2 Pos, vec2 To, int Side, int ConfiguredLength, ivec2 MapSize)
 {
-	if(Collision()->GetTile(m_Pos.x, m_Pos.y) || Collision()->GetFrontTile(m_Pos.x, m_Pos.y))
-		return;
-
-	m_Active = true;
-
-	const vec2 Dir = m_To - m_Pos;
+	if(MapSize.x <= 0 || MapSize.y <= 0 || !QmCollision::CanRoundPosition(Pos) || !QmCollision::CanRoundPosition(To))
+		return std::nullopt;
+	const vec2 Dir = To - Pos;
 	const float DirLength = length(Dir);
-	m_Direction = DirLength > 0.0f ? normalize_pre_length(Dir, DirLength) : vec2(0.0f, 0.0f);
-
-	// snapshot 端点可能被 no-laser tile 缩短，须恢复地图配置的长度，
-	// 使本地碰撞预测与服务端激光门几何保持一致。
-	const int Side = DirLength > 0.0f ? MapSide() : -1;
-	const int ConfiguredLength = Side == -1 ? -1 : MapLength(Side);
+	if(!(DirLength > 0.0f))
+		return std::nullopt;
+	SCollisionGeometry Geometry{normalize_pre_length(Dir, DirLength), 0};
 	if(ConfiguredLength != -1)
 	{
-		m_Length = ConfiguredLength;
-		m_Direction = vec2(std::sin(pi / 4 * Side), std::cos(pi / 4 * Side));
+		if(Side < 0 || Side >= 8 || ConfiguredLength <= 0)
+			return std::nullopt;
+		Geometry.m_Length = ConfiguredLength;
+		Geometry.m_Direction = vec2(std::sin(pi / 4 * Side), std::cos(pi / 4 * Side));
 	}
 	else
 	{
-		// 防止畸形或无界的网络数据使每个 snapshot 执行过长遍历。
-		const float MaxLength = (Collision()->GetWidth() + Collision()->GetHeight()) * 32.0f;
-		if(DirLength <= 0.0f || DirLength > MaxLength)
-		{
-			m_Active = false;
-			return;
-		}
-		m_Length = round_to_int(DirLength);
+		const float MaxLength = (static_cast<int64_t>(MapSize.x) + MapSize.y) * 32.0f;
+		if(DirLength > MaxLength || !QmCollision::CanRoundPosition(vec2(DirLength, 0.0f)))
+			return std::nullopt;
+		Geometry.m_Length = round_to_int(DirLength);
 	}
+	// 写入和清理都只采样 i < length - 1；检查同一浮点表达式的最后实际采样点。
+	const vec2 Last = Pos + Geometry.m_Direction * maximum(0, Geometry.m_Length - 2);
+	if(!QmCollision::CanRoundPosition(Last))
+		return std::nullopt;
+	return Geometry;
+}
+
+void CDoor::ResetCollision()
+{
+	if(!QmCollision::CanRoundPosition(m_Pos) || !QmCollision::CanRoundPosition(m_To))
+	{
+		m_Active = false;
+		return;
+	}
+	if(Collision()->GetTile(m_Pos.x, m_Pos.y) || Collision()->GetFrontTile(m_Pos.x, m_Pos.y))
+		return;
+	const vec2 Dir = m_To - m_Pos;
+	const float DirLength = length(Dir);
+	const vec2 Direction = DirLength > 0.0f ? normalize_pre_length(Dir, DirLength) : vec2(0.0f, 0.0f);
+	// snapshot 端点可能被 no-laser 缩短，仍按原地图方向与长度恢复。
+	const int Side = DirLength > 0.0f ? MapSide(Direction) : -1;
+	const int ConfiguredLength = Side == -1 ? -1 : MapLength(Side);
+	const auto Geometry = CalcCollisionGeometry(m_Pos, m_To, Side, ConfiguredLength, ivec2(Collision()->GetWidth(), Collision()->GetHeight()));
+	if(!Geometry)
+	{
+		m_Active = false;
+		return;
+	}
+	m_Direction = Geometry->m_Direction;
+	m_Length = Geometry->m_Length;
+	m_Active = true;
 
 	for(int i = 0; i < m_Length - 1; i++)
 	{
