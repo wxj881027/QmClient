@@ -16,6 +16,12 @@ void CMenus::RenderQmChatCompletionContent(CUIRect &Content, const SSettingsCont
 		Ui()->BeginRenderOnly();
 	const bool ReadOnly = Ui()->RenderOnly();
 	CSettingsContentLayoutFlow Flow(Content);
+	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:chat_completion", Metrics, ReadOnly))
+	{
+		if(StartedRenderOnly)
+			Ui()->EndRenderOnly();
+		return;
+	}
 	struct SControls
 	{
 		CButtonContainer m_Background;

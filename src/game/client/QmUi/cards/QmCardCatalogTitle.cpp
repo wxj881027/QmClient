@@ -302,10 +302,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 					*pValue ^= 1;
 			};
 			VisibilityToggle(&g_Config.m_QmShowNameplateTitle, "qm-title-show-nameplate", Localize("Show titles on nameplates"));
-			RowAction("title-nameplate-scale", [&](CUIRect Row) {
-				pMenus->DoSettingsScrollbarOption(Page, Tab, "qm-nameplate-title-scale", &g_Config.m_QmNameplateTitleScale, &g_Config.m_QmNameplateTitleScale, &Row, Localize("Nameplate title size"), 50, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
-			});
-			VisibilityToggle(&g_Config.m_QmNameplateTitleAboveName, "qm-title-above-name", Localize("Show titles above player names"));
+
 			VisibilityToggle(&g_Config.m_QmShowMainTitle, "qm-title-show-main", Localize("Show main tee title locally"));
 			VisibilityToggle(&g_Config.m_QmShowDummyTitle, "qm-title-show-dummy", Localize("Show dummy title locally"));
 
@@ -314,38 +311,45 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 					g_Config.m_QmSponsorChatEffects ^= 1;
 				Hint(&g_Config.m_QmSponsorChatEffects, Row, Localize("Turning this off only changes your display."));
 			});
-			RowAction("title-badge-style", [&](CUIRect Row) {
-				CUIRect Label, Control;
-				SplitSettingsControlRow(Row, Metrics, &Label, &Control, ESettingsControlWidth::LONG_CHOICE);
-				pMenus->Ui()->DoLabel(&Label, Localize("Title style"), BodySize, TEXTALIGN_ML);
-				static CUi::SDropDownState s_StyleState;
-				static CScrollRegion s_StyleScroll;
-				const std::array<const char *, 2> aNames{Localize("Moon"), Localize("Sun")};
-				s_StyleState.m_SelectionPopupContext.m_pScrollRegion = &s_StyleScroll;
-				const int Style = pMenus->DoSettingsDropDown(&Control, g_Config.m_QmTitleBadgeStyle, aNames.data(), aNames.size(), s_StyleState, {}, &g_Config.m_QmTitleBadgeStyle, nullptr, &Row);
-				if(!ReadOnly && Style != g_Config.m_QmTitleBadgeStyle)
-				{
-					// 默认配色跟随日月；用户自定义过的颜色在切换形状时保留。
-					const auto OldStyle = g_Config.m_QmTitleBadgeStyle == 1 ? EQmTitleBadgeStyle::SUN : EQmTitleBadgeStyle::MOON;
-					const unsigned OldDefault = color_cast<ColorHSLA>(ColorRGBA(QmTitleBadgeDefaultColor(OldStyle))).Pack(false);
-					g_Config.m_QmTitleBadgeStyle = Style;
-					if(g_Config.m_QmTitleBadgeColor == OldDefault)
+			if(Personalization(pMenus, Content, "deck:qmclient-contributors-title-display", Metrics, ReadOnly))
+			{
+				RowAction("title-nameplate-scale", [&](CUIRect Row) {
+					pMenus->DoSettingsScrollbarOption(Page, Tab, "qm-nameplate-title-scale", &g_Config.m_QmNameplateTitleScale, &g_Config.m_QmNameplateTitleScale, &Row, Localize("Nameplate title size"), 50, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
+				});
+				VisibilityToggle(&g_Config.m_QmNameplateTitleAboveName, "qm-title-above-name", Localize("Show titles above player names"));
+				RowAction("title-badge-style", [&](CUIRect Row) {
+					CUIRect Label, Control;
+					SplitSettingsControlRow(Row, Metrics, &Label, &Control, ESettingsControlWidth::LONG_CHOICE);
+					pMenus->Ui()->DoLabel(&Label, Localize("Title style"), BodySize, TEXTALIGN_ML);
+					static CUi::SDropDownState s_StyleState;
+					static CScrollRegion s_StyleScroll;
+					const std::array<const char *, 2> aNames{Localize("Moon"), Localize("Sun")};
+					s_StyleState.m_SelectionPopupContext.m_pScrollRegion = &s_StyleScroll;
+					const int Style = pMenus->DoSettingsDropDown(&Control, g_Config.m_QmTitleBadgeStyle, aNames.data(), aNames.size(), s_StyleState, {}, &g_Config.m_QmTitleBadgeStyle, nullptr, &Row);
+					if(!ReadOnly && Style != g_Config.m_QmTitleBadgeStyle)
 					{
-						const auto NewStyle = Style == 1 ? EQmTitleBadgeStyle::SUN : EQmTitleBadgeStyle::MOON;
-						g_Config.m_QmTitleBadgeColor = color_cast<ColorHSLA>(ColorRGBA(QmTitleBadgeDefaultColor(NewStyle))).Pack(false);
+						// 默认配色跟随日月；用户自定义过的颜色在切换形状时保留。
+						const auto OldStyle = g_Config.m_QmTitleBadgeStyle == 1 ? EQmTitleBadgeStyle::SUN : EQmTitleBadgeStyle::MOON;
+						const unsigned OldDefault = color_cast<ColorHSLA>(ColorRGBA(QmTitleBadgeDefaultColor(OldStyle))).Pack(false);
+						g_Config.m_QmTitleBadgeStyle = Style;
+						if(g_Config.m_QmTitleBadgeColor == OldDefault)
+						{
+							const auto NewStyle = Style == 1 ? EQmTitleBadgeStyle::SUN : EQmTitleBadgeStyle::MOON;
+							g_Config.m_QmTitleBadgeColor = color_cast<ColorHSLA>(ColorRGBA(QmTitleBadgeDefaultColor(NewStyle))).Pack(false);
+						}
 					}
-				}
-			});
-			RowAction("title-badge-color", [&](CUIRect Row) {
-				static CButtonContainer s_ColorReset;
-				SSettingsContentMetrics ColorMetrics = Metrics;
-				ColorMetrics.m_LineSpacing = 0.0f;
-				pMenus->DoLine_ColorPicker(&s_ColorReset, ColorMetrics, &Row, Localize("Title color"), &g_Config.m_QmTitleBadgeColor,
-					ColorRGBA(QmTitleBadgeDefaultColor(QmTitleDraftAppearance().m_Style)), false, nullptr, false, false);
-			});
-			RowAction("title-badge-opacity", [&](CUIRect Row) {
-				pMenus->DoSettingsScrollbarOption(Page, Tab, "qm-title-opacity", &g_Config.m_QmTitleOpacity, &g_Config.m_QmTitleOpacity, &Row, Localize("Title opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-			});
+				});
+				RowAction("title-badge-color", [&](CUIRect Row) {
+					static CButtonContainer s_ColorReset;
+					SSettingsContentMetrics ColorMetrics = Metrics;
+					ColorMetrics.m_LineSpacing = 0.0f;
+					pMenus->DoLine_ColorPicker(&s_ColorReset, ColorMetrics, &Row, Localize("Title color"), &g_Config.m_QmTitleBadgeColor,
+						ColorRGBA(QmTitleBadgeDefaultColor(QmTitleDraftAppearance().m_Style)), false, nullptr, false, false);
+				});
+				RowAction("title-badge-opacity", [&](CUIRect Row) {
+					pMenus->DoSettingsScrollbarOption(Page, Tab, "qm-title-opacity", &g_Config.m_QmTitleOpacity, &g_Config.m_QmTitleOpacity, &Row, Localize("Title opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+				});
+			}
 			RowAction("title-badge-save", [&](CUIRect Row) {
 				static CButtonContainer s_SaveAppearance;
 				if(pMenus->DoButton_Menu(&s_SaveAppearance, Localize("Save"), 0, &Row) && Enabled && Auth.TitleAuthenticated() && (!Draft.m_BindName || Draft.m_Name.GetString()[0]))

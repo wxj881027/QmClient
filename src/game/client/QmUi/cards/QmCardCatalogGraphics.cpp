@@ -719,6 +719,22 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			SSettingsContentMetrics ColorMetrics = GraphicsMetrics;
 			ColorMetrics.m_LineSpacing = 0.0f;
 
+			RowAction("graphics-backdrop-blur", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
+				const bool BlurSupported = Graphics()->IsBackbufferCaptureSupported() && Graphics()->IsRenderTargetGaussianBlurSupported();
+				char aBlurLabel[192];
+				str_format(aBlurLabel, sizeof(aBlurLabel), "%s%s%s%s", Localize("Enable backdrop blur"), BlurSupported ? "" : " (", BlurSupported ? "" : Localize("Unavailable"), BlurSupported ? "" : ")");
+				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmGaussianBlur, "enable-backdrop-blur", aBlurLabel, g_Config.m_QmGaussianBlur, &Button))
+					g_Config.m_QmGaussianBlur ^= 1;
+			});
+
+			RowAction("graphics-card-borders", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
+				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiCardBorders, "show-settings-card-borders", Localize("Show settings card borders"), g_Config.m_QmUiCardBorders, &Button))
+					g_Config.m_QmUiCardBorders ^= 1;
+			});
+
+			if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ContentRect, "deck:graphics-visual", GraphicsMetrics))
+				return;
+
 			RowAction("graphics-surface", GraphicsMetrics.m_ButtonHeight, [&](CUIRect UiColorRow) {
 static CButtonContainer s_UiColorResetId;
 
@@ -846,16 +862,6 @@ static CButtonContainer s_ScoreboardColorResetId;
 
 			});
 
-			RowAction("graphics-backdrop-blur", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
-			const bool BlurSupported = Graphics()->IsBackbufferCaptureSupported() && Graphics()->IsRenderTargetGaussianBlurSupported();
-			char aBlurLabel[192];
-			str_format(aBlurLabel, sizeof(aBlurLabel), "%s%s%s%s", Localize("Enable backdrop blur"), BlurSupported ? "" : " (", BlurSupported ? "" : Localize("Unavailable"), BlurSupported ? "" : ")");
-			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmGaussianBlur, "enable-backdrop-blur", aBlurLabel, g_Config.m_QmGaussianBlur, &Button))
-				g_Config.m_QmGaussianBlur ^= 1;
-
-
-			});
-
 			RowAction("graphics-blur-mode", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
 const char *apBlurModeLabels[] = {Localize("Gaussian"), Localize("Kawase"), Localize("Dual Kawase")};
 			const char *apBlurModeTooltips[] = {
@@ -872,14 +878,6 @@ const char *apBlurModeLabels[] = {Localize("Gaussian"), Localize("Kawase"), Loca
 				g_Config.m_QmBlurMode = NewBlurMode;
 			// 整行 tooltip 跟随当前模式，保留原先逐段的说明文案。
 			GameClient()->m_Tooltips.DoToolTip(&s_aGraphicsBlurModeButtons[0], &Button, apBlurModeTooltips[std::clamp(g_Config.m_QmBlurMode, 0, (int)std::size(apBlurModeTooltips) - 1)]);
-
-
-			});
-
-			RowAction("graphics-card-borders", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
-
-			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiCardBorders, "show-settings-card-borders", Localize("Show settings card borders"), g_Config.m_QmUiCardBorders, &Button))
-				g_Config.m_QmUiCardBorders ^= 1;
 
 
 			});
@@ -936,6 +934,9 @@ static CButtonContainer s_CardBorderColorResetId;
 					Client()->OnWindowResize();
 				}
 			});
+			if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ContentRect, "deck:graphics-icons", GraphicsMetrics))
+				return;
+
 			if(CustomColor)
 			{
 				SSettingsContentMetrics ColorMetrics = GraphicsMetrics;
@@ -1023,6 +1024,9 @@ static CButtonContainer s_CardBorderColorResetId;
 					Props.m_MaxWidth = Row.w;
 					Props.m_EnableWidthCheck = false;
 					Ui()->DoLabel(&Row, pText, GraphicsMetrics.m_SmallSize, TEXTALIGN_ML, Props); }, GraphicsMetrics.m_LineHeight);
+
+			if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ContentRect, "deck:graphics-interaction", GraphicsMetrics))
+				return;
 
 			RowAction("graphics-ListEntryAnimations", GraphicsMetrics.m_LineHeight, [&](CUIRect ListEntryAnimations) {
 				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiListEntryAnimations, "settings-card-list-entry-animations", Localize("Card list entry animation"), g_Config.m_QmUiListEntryAnimations, &ListEntryAnimations))
