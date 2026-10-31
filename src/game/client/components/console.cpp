@@ -2203,11 +2203,9 @@ void CGameConsole::OnRender()
 		{
 			pConsole->m_Input.Activate(EInputPriority::CONSOLE); // Ensure that the input is active
 		}
-		// 提示符与输入文字放在同一行里：两者行顶相同、行高相同，
-		// 提示符再按这一行垂直居中。原实现各用各的偏移
-		//（提示符 y + FontSize/2，输入 y + FontSize*1.5），行高一变就错开。
-		const float InputRowTop = y + FontSize * 1.5f;
-		const CUIRect InputCursorRect = {x, InputRowTop, 0.0f, 0.0f};
+		// 零高度锚点是输入块底边，TEXTALIGN_BL 会让多行输入向上扩展。
+		const float InputBottomY = y + FontSize * 1.5f;
+		const CUIRect InputCursorRect = {x, InputBottomY, 0.0f, 0.0f};
 		const bool WasChanged = pConsole->m_Input.WasChanged();
 		const bool WasCursorChanged = pConsole->m_Input.WasCursorChanged();
 		const bool Changed = WasChanged || WasCursorChanged || FontChanged;
@@ -2223,17 +2221,8 @@ void CGameConsole::OnRender()
 		if(pConsole->m_Input.HasSelection())
 			pConsole->m_Selection.Clear();
 
-		// 输入行已经交出真实行高，提示符按同一行垂直居中，两者基线一致。
-		{
-			const float RowHeight = pConsole->m_BoundingBox.m_H;
-			CTextCursor PromptCursor;
-			PromptCursor.m_FontSize = FontSize;
-			const STextBoundingBox PromptBox = TextRender()->TextBoundingBox(FontSize, aPrompt, -1, -1.0f, LINE_SPACING);
-			const float *pPromptCharHeight = PromptBox.m_MaxCharacterHeight > 0.0f ? &PromptBox.m_MaxCharacterHeight : nullptr;
-			const CUIRect PromptRect = {InitialX, InputRowTop, 0.0f, RowHeight};
-			PromptCursor.SetPosition(CUi::CalcAlignedCursorPos(&PromptRect, PromptBox.Size(), TEXTALIGN_ML, pPromptCharHeight));
-			TextRender()->TextEx(&PromptCursor, aPrompt);
-		}
+		// 按实际首行原点绘制提示符，避免把底边当行顶或对整个多行块居中。
+		QmConsoleUi::DrawInputPrompt(*TextRender(), pConsole->m_BoundingBox, InitialX, FontSize, aPrompt);
 
 		y -= pConsole->m_BoundingBox.m_H - FontSize;
 
@@ -2265,7 +2254,7 @@ void CGameConsole::OnRender()
 			// 那条算式落在输入行内部，补全项会和正在输入的文本叠在一起。
 			// 固定占位：输入行下方留出的一行就是提示区，
 			// 与上面的 SuggestionHeight 是同一份预算，二者不会互相压。
-			Info.m_Cursor.SetPosition(vec2(InitialX - Info.m_Offset, InputRowTop + pConsole->m_BoundingBox.m_H + 4.0f));
+			Info.m_Cursor.SetPosition(vec2(InitialX - Info.m_Offset, pConsole->m_BoundingBox.m_Y + pConsole->m_BoundingBox.m_H + 4.0f));
 			Info.m_Cursor.m_FontSize = FontSize;
 
 			for(size_t SuggestionId = 0; SuggestionId < pConsole->m_vpCommandSuggestions.size(); ++SuggestionId)
