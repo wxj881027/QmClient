@@ -4535,6 +4535,9 @@ Dynamic FOV smoothness
 Dynamic FOV smoothness (0=instant, 100=smoothest)
 == 动态视场角平滑度（0=瞬时，100=最平滑）
 
+Dynamic Island
+== 灵动岛
+
 Dynamic island
 == 灵动岛
 
@@ -4682,8 +4685,8 @@ enable
 Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
 == 只有想每次锤中都换皮肤时才开启锤中偷皮——别人也会看到你的皮肤在变。
 
-Enable "Show player stats HUD"; tick "Map progress bar", then pick "Use embedded HUD progress bar" or place the bar with the sliders.
-== 启用显示玩家统计 HUD；勾选地图进度条，然后选择使用内嵌 HUD 进度条，或用滑块自行摆放进度条。
+Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
+== 开启“地图进度条”，选择独立显示、玩家统计或灵动岛。选择玩家统计时，还需开启“显示玩家统计 HUD”。
 
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
 == 启用“显示其他玩家未预测的影子”，再调整预测影子和未预测影子的不透明度。
@@ -7556,6 +7559,9 @@ Keyword reply use Dummy
 Keyword rules
 == 关键词规则
 
+Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+== Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+
 Kick player
 == 踢出玩家
 
@@ -8315,8 +8321,8 @@ Map progress bar height
 Map progress bar horizontal position (center, % of screen width)
 == 地图进度条水平位置（中心点，占屏幕宽度百分比）
 
-Map progress bar style (0=bottom bar, 1=HUD overlay)
-== 地图进度条样式（0=底部横条，1=HUD 内嵌）
+Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)
+== 地图进度条位置（0=独立显示，1=玩家统计，2=灵动岛）
 
 Map progress bar vertical position (top edge, % of screen height)
 == 地图进度条垂直位置（顶边，占屏幕高度百分比）
@@ -10894,6 +10900,9 @@ Progress bar color
 
 Progress bar height
 == 进度条高度
+
+Progress bar location
+== 进度条位置
 
 Progress bar width
 == 进度条宽度
@@ -14573,6 +14582,9 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Q 弹 Tee 形变强度
 
+Standalone
+== 独立显示
+
 Star
 == 星形
 
@@ -16678,9 +16690,6 @@ Use default voice input device
 
 Use default voice output device
 == 使用默认语音输出设备
-
-Use embedded HUD progress bar
-== 使用 HUD 内嵌进度条
 
 Use emote
 == 使用表情

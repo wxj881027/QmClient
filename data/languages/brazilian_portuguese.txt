@@ -4535,6 +4535,9 @@ Dynamic FOV smoothness
 Dynamic FOV smoothness (0=instant, 100=smoothest)
 == Suavidade da visão dinâmica (0=instantâneo, 100=mais suave)
 
+Dynamic Island
+== Ilha Dinâmica
+
 Dynamic island
 == Ilha dinâmica
 
@@ -4682,8 +4685,8 @@ enable
 Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
 == Ative o roubo de skin com martelo só se quiser trocar de skin a cada acerto, porque os outros também veem.
 
-Enable "Show player stats HUD"; tick "Map progress bar", then pick "Use embedded HUD progress bar" or place the bar with the sliders.
-== Ative mostrar HUD de estatísticas, marque barra de progresso do mapa e escolha usar a barra de progresso do HUD integrado ou posicione a barra com os controles.
+Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
+== Ative a barra de progresso do mapa e escolha onde exibi-la: separada, nas estatísticas do jogador ou na Ilha Dinâmica. Para exibi-la nas estatísticas, ative também o HUD de estatísticas do jogador.
 
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
 == Ative «Mostrar fantasmas não previstos de outros jogadores» e ajuste a opacidade dos fantasmas previstos e não previstos.
@@ -7553,6 +7556,9 @@ Keyword reply use Dummy
 Keyword rules
 == Regras de palavra-chave
 
+Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+== Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+
 Kick player
 == Expulsar jogador
 
@@ -8312,8 +8318,8 @@ Map progress bar height
 Map progress bar horizontal position (center, % of screen width)
 == Posição horizontal da barra de progresso do mapa (centro, porcentagem da largura da tela)
 
-Map progress bar style (0=bottom bar, 1=HUD overlay)
-== Estilo da barra de progresso do mapa (0=barra inferior, 1=embutido no HUD)
+Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)
+== Local da barra de progresso do mapa (0=separada, 1=estatísticas do jogador, 2=Ilha Dinâmica)
 
 Map progress bar vertical position (top edge, % of screen height)
 == Posição vertical da barra de progresso do mapa (borda superior, porcentagem da altura da tela)
@@ -10891,6 +10897,9 @@ Progress bar color
 
 Progress bar height
 == Altura da barra de progresso
+
+Progress bar location
+== Local da barra de progresso
 
 Progress bar width
 == Largura da barra de progresso
@@ -14570,6 +14579,9 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Intensidade da deformação do Tee elástico
 
+Standalone
+== Separada
+
 Star
 == Estrela
 
@@ -16675,9 +16687,6 @@ Use default voice input device
 
 Use default voice output device
 == Usar dispositivo de saída de voz padrão
-
-Use embedded HUD progress bar
-== Usar barra de progresso HUD embutida
 
 Use emote
 == Usar emote

@@ -15,6 +15,7 @@
 #include <game/client/component.h>
 #include <game/client/components/hud_media_island_logic.h>
 #include <game/client/components/qmclient/hook_countdown.h>
+#include <game/client/components/qmclient/hud_map_progress.h>
 #include <game/client/components/system_media_controls.h>
 #include <game/client/ui_rect.h>
 #include <game/teamscore.h>
@@ -463,6 +464,7 @@ class CHud : public CComponent
 	void RenderMovementInformation();
 	void RenderJumpHint();
 	void RenderMapProgressBar();
+	QmHudMapProgress::ESurface MapProgressSurface() const;
 
 	void UpdateMovementInformationTextContainer(STextContainerIndex &TextContainer, float FontSize, float Value, float &PrevValue);
 	void RenderMovementInformationTextContainer(STextContainerIndex &TextContainer, const ColorRGBA &Color, float X, float Y);
@@ -569,6 +571,7 @@ private:
 	bool m_MediaIslandLastVisibleRectValid = false;
 	bool m_LegacyMediaInfoRendered = false;
 	CQmLegacyMediaHudLyricState m_LegacyMediaLyricState;
+	std::array<QmHudMapProgress::CProgressState, NUM_DUMMIES> m_aIslandMapProgress;
 	float m_aMapProgressDisplayed[NUM_DUMMIES] = {0.0f, 0.0f};
 	bool m_aMapProgressInitialized[NUM_DUMMIES] = {false, false};
 };
