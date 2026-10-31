@@ -1457,19 +1457,13 @@ void CQmClient::ApplyQmRealtimeUsers(const SQmRealtimeMessage &Message)
 	if(!Message.m_pPayload)
 		return;
 	const json_value *pPayload = Message.m_pPayload.get();
-	const json_value *pAddress = JsonObjectField(pPayload, "server_address");
 	char aServer[NETADDR_MAXSTRSIZE] = "";
 	if(Client()->State() == IClient::STATE_ONLINE && Client()->ServerAddress())
 		net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
 	// 接收两种快照（梦 列与本地玩家识别的数据源）：
 	// - 全局广播：server_address=="users"，任意客户端状态（菜单态靠它显示梦数量）；
 	// - 按服定向：server_address==当前游戏服，仅游戏态（兼容后端定向推送）。
-	const bool GlobalSnapshot = pAddress->type == json_string &&
-				    str_comp(pAddress->u.string.ptr, QMCLIENT_REALTIME_USERS_GLOBAL) == 0;
-	if(!GlobalSnapshot &&
-		(aServer[0] == '\0' || pAddress->type != json_string || str_comp(pAddress->u.string.ptr, aServer) != 0))
-		return;
-	if(JsonObjectField(pPayload, "users")->type != json_array)
+	if(!IsQmClientUsersSnapshotForContext(pPayload, aServer))
 		return;
 	m_pQmRealtimeUsersPayload = Message.m_pPayload;
 	// 存本地上下文服地址（解析任务用于标记本服玩家与过期校验）：游戏态存当前服，
