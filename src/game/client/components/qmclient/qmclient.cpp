@@ -2,6 +2,7 @@
 #include "qmclient.h"
 
 #include "bounded_file_reader.h"
+#include "qm_identity_file.h"
 #include "qm_json_fields.h"
 #include "qm_json_send.h"
 #include "qm_presence_send.h"
@@ -114,8 +115,8 @@ static void LogQmClientDistributionFailureEvent(const char *pStage, const char *
 static constexpr const char *QMCLIENT_DEVELOPER_TOKEN_FILE = "qmclient/developer_token.txt";
 static constexpr int QMCLIENT_DEVELOPER_SYNC_INTERVAL_SECONDS = 5;
 static constexpr const char *QMCLIENT_LIFECYCLE_MARKER_FILE = "qmclient/lifecycle_pending.marker";
-static constexpr const char *QMCLIENT_PLAYTIME_CLIENT_ID_FILE = "qmclient/playtime_client_id.txt";
-static constexpr const char *QMCLIENT_MACHINE_ID_FALLBACK_FILE = "qmclient/voice_machine_id.txt";
+static constexpr const char *QMCLIENT_PLAYTIME_CLIENT_ID_FILE = qm_identity_file::CLIENT_ID_FILE;
+static constexpr const char *QMCLIENT_MACHINE_ID_FALLBACK_FILE = qm_identity_file::MACHINE_ID_FILE;
 // 广播 markdown 的磁盘缓存：界面立即生效，落盘只保留最新完整快照（交给作业完成）。
 static constexpr const char *QMCLIENT_MARKDOWN_BROADCAST_CACHE_FILE = "qmclient/markdown_broadcast.json";
 static constexpr int QMCLIENT_MARKDOWN_BROADCAST_CACHE_VERSION = 1;
@@ -1983,9 +1984,8 @@ void CQmClient::UpdateQmRealtime()
 		m_QmRealtimeUsersState.Reset();
 		m_QmRealtimeNextUsersResync = 0;
 	}
-	if(!m_QmRealtimeHelloSent && EnsureQmClientMachineHash())
+	if(!m_QmRealtimeHelloSent && EnsureQmClientMachineHash() && EnsureQmClientPlaytimeClientId())
 	{
-		EnsureQmClientPlaytimeClientId();
 		m_QmRealtimeHelloSent = SendQmRealtimePresence(true, true);
 		if(m_QmRealtimeHelloSent)
 			m_QmRealtimeLastPresence = time_get();
@@ -2482,56 +2482,58 @@ void CQmClient::ClearQmClientLifecycleMarker()
 	Storage()->RemoveFile(QMCLIENT_LIFECYCLE_MARKER_FILE, IStorage::TYPE_SAVE);
 }
 
-void CQmClient::EnsureQmClientPlaytimeClientId()
+bool CQmClient::EnsureQmClientPlaytimeClientId()
 {
 	if(m_aQmClientPlaytimeClientId[0] != '\0')
-		return;
+		return true;
 
-	char aLoaded[128] = "";
-	IOHANDLE File = Storage()->OpenFile(QMCLIENT_PLAYTIME_CLIENT_ID_FILE, IOFLAG_READ, IStorage::TYPE_SAVE);
-	if(File)
+	try
 	{
-		const int Read = io_read(File, aLoaded, sizeof(aLoaded) - 1);
-		io_close(File);
-		if(Read > 0)
+		char aLoaded[128] = "";
+		IOHANDLE File = Storage()->OpenFile(QMCLIENT_PLAYTIME_CLIENT_ID_FILE, IOFLAG_READ, IStorage::TYPE_SAVE);
+		if(File)
 		{
-			aLoaded[Read] = '\0';
-			char *pTrimmed = (char *)str_utf8_skip_whitespaces(aLoaded);
-			str_utf8_trim_right(pTrimmed);
-			if(IsValidQmClientPlaytimeId(pTrimmed))
-				str_copy(m_aQmClientPlaytimeClientId, pTrimmed, sizeof(m_aQmClientPlaytimeClientId));
+			const int Read = io_read(File, aLoaded, sizeof(aLoaded) - 1);
+			io_close(File);
+			if(Read > 0)
+			{
+				aLoaded[Read] = '\0';
+				char *pTrimmed = (char *)str_utf8_skip_whitespaces(aLoaded);
+				str_utf8_trim_right(pTrimmed);
+				if(IsValidQmClientPlaytimeId(pTrimmed))
+					str_copy(m_aQmClientPlaytimeClientId, pTrimmed, sizeof(m_aQmClientPlaytimeClientId));
+			}
 		}
-	}
 
-	if(m_aQmClientPlaytimeClientId[0] == '\0')
-	{
-		unsigned char aRandom[16];
-		secure_random_fill(aRandom, sizeof(aRandom));
-
-		static constexpr const char HEX[] = "0123456789abcdef";
-		char aHex[sizeof(aRandom) * 2 + 1];
-		for(size_t i = 0; i < sizeof(aRandom); ++i)
+		if(m_aQmClientPlaytimeClientId[0] == '\0')
 		{
-			aHex[i * 2] = HEX[aRandom[i] >> 4];
-			aHex[i * 2 + 1] = HEX[aRandom[i] & 0x0f];
+			unsigned char aRandom[16];
+			secure_random_fill(aRandom, sizeof(aRandom));
+
+			static constexpr const char HEX[] = "0123456789abcdef";
+			char aHex[sizeof(aRandom) * 2 + 1];
+			for(size_t i = 0; i < sizeof(aRandom); ++i)
+			{
+				aHex[i * 2] = HEX[aRandom[i] >> 4];
+				aHex[i * 2 + 1] = HEX[aRandom[i] & 0x0f];
+			}
+			aHex[sizeof(aHex) - 1] = '\0';
+			str_format(m_aQmClientPlaytimeClientId, sizeof(m_aQmClientPlaytimeClientId), "qm%s", aHex);
 		}
-		aHex[sizeof(aHex) - 1] = '\0';
-		str_format(m_aQmClientPlaytimeClientId, sizeof(m_aQmClientPlaytimeClientId), "qm%s", aHex);
-	}
 
-	if(!IsValidQmClientPlaytimeId(m_aQmClientPlaytimeClientId))
-	{
-		m_aQmClientPlaytimeClientId[0] = '\0';
-		return;
-	}
+		if(!IsValidQmClientPlaytimeId(m_aQmClientPlaytimeClientId))
+		{
+			m_aQmClientPlaytimeClientId[0] = '\0';
+			return false;
+		}
 
-	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-	IOHANDLE OutFile = Storage()->OpenFile(QMCLIENT_PLAYTIME_CLIENT_ID_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(OutFile)
+		if(!qm_identity_file::Save(Storage(), qm_identity_file::EFile::CLIENT_ID, m_aQmClientPlaytimeClientId))
+			log_warn("qmclient", "failed to save client identity; keeping the current session value");
+		return true;
+	}
+	catch(const std::bad_alloc &)
 	{
-		io_write(OutFile, m_aQmClientPlaytimeClientId, str_length(m_aQmClientPlaytimeClientId));
-		io_write(OutFile, "\n", 1);
-		io_close(OutFile);
+		return false;
 	}
 }
 
@@ -2864,14 +2866,8 @@ bool CQmClient::EnsureQmClientMachineHash()
 				aHex[sizeof(aHex) - 1] = '\0';
 				Identity = aHex;
 
-				Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-				IOHANDLE OutFile = Storage()->OpenFile(QMCLIENT_MACHINE_ID_FALLBACK_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-				if(OutFile)
-				{
-					io_write(OutFile, Identity.c_str(), Identity.size());
-					io_write(OutFile, "\n", 1);
-					io_close(OutFile);
-				}
+				if(!qm_identity_file::Save(Storage(), qm_identity_file::EFile::MACHINE_ID, Identity))
+					log_warn("qmclient", "failed to save fallback machine identity; keeping the current session value");
 			}
 		}
 

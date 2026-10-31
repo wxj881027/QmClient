@@ -3684,6 +3684,7 @@ if(CLIENT)
     components/qmclient/qm_realtime_users.cpp
     components/qmclient/qm_realtime_users.h
     components/qmclient/qm_json_fields.h
+    components/qmclient/qm_identity_file.h
     components/qmclient/qm_json_send.h
     components/qmclient/qmclient.cpp
     components/qmclient/qmclient.h
@@ -5341,6 +5342,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_presence_send_test.cpp
     src/test/unit/qmclient/client/qm_json_send_test.cpp
     src/test/integration/qmclient/client/qm_json_send_roundtrip_test.cpp
+    src/test/integration/qmclient/client/qm_identity_file_test.cpp
     src/test/integration/qmclient/client/qm_users_sync_text_test.cpp
     src/test/integration/qmclient/client/qm_realtime_service_data_test.cpp
     src/test/integration/qmclient/client/qm_realtime_budget_test.cpp
