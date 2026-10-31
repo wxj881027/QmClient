@@ -5094,6 +5094,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/map_group_clip_test.cpp
     src/test/integration/client/map_group_clip_test.cpp
     src/test/integration/client/map_world_screen_test.cpp
+    src/test/unit/engine/graphics/viewport_geometry_test.cpp
+    src/test/integration/client/graphics_viewport_test.cpp
     src/test/integration/client/map_render_screen_test.cpp
     src/test/unit/engine/map_load_test.cpp
     src/test/unit/engine/map_tileskip_test.cpp
@@ -5260,7 +5262,6 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/ui/qm_tooltip_ownership_test.cpp
     src/test/contract/qmclient/client/qm_camera_effects_contract_test.cpp
     src/test/contract/qmclient/ui/qm_ui_scale_contract_test.cpp
-    src/test/contract/qmclient/client/qm_camera_aspect_ratio_contract_test.cpp
     src/test/contract/qmclient/settings/settings_card_translation_contract_test.cpp
     src/test/unit/qmclient/settings/settings_font_selection_test.cpp
     src/test/unit/qmclient/settings/settings_icon_options_test.cpp
