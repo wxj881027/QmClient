@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <optional>
 
 namespace QmCameraEffects
 {
@@ -66,6 +67,50 @@ namespace QmCameraEffects
 	{
 		return AppliedFactor > 0.0f ? EffectiveZoom / AppliedFactor : EffectiveZoom;
 	}
+
+	// 输入为已移除上一帧效果的 base；普通范围保持原 float 乘除。
+	class CDynamicFovZoom
+	{
+		float m_AppliedFactor = 1.0f;
+		std::optional<float> m_ClippedBaseZoom;
+
+	public:
+		void Reset()
+		{
+			m_AppliedFactor = 1.0f;
+			m_ClippedBaseZoom.reset();
+		}
+		bool Active() const { return m_AppliedFactor != 1.0f || m_ClippedBaseZoom.has_value(); }
+		float Apply(float Base, float Factor)
+		{
+			Reset();
+			if(!std::isfinite(Base) || !(Base > 0.0f) || !std::isfinite(Factor) || !(Factor > 1.0f))
+				return Base;
+			constexpr float Max = std::numeric_limits<float>::max();
+			if(static_cast<double>(Base) * Factor > Max)
+			{
+				// 有效镜头值已无法表示完整乘积，单独保留可精确还原的原始 base。
+				m_ClippedBaseZoom = Base;
+				return Max;
+			}
+			m_AppliedFactor = Factor;
+			return Base * Factor;
+		}
+		float BaseZoom(float EffectiveZoom) const
+		{
+			if(m_ClippedBaseZoom)
+				return *m_ClippedBaseZoom;
+			return ZoomWithoutDynamicFov(EffectiveZoom, m_AppliedFactor);
+		}
+		float Remove(float EffectiveZoom)
+		{
+			if(!Active())
+				return EffectiveZoom;
+			const float Base = BaseZoom(EffectiveZoom);
+			Reset();
+			return Base;
+		}
+	};
 
 	// 帧率无关指数阻尼：FrameTime 为本帧时长（秒），HalfLife 为逼近目标剩余一半所需的秒数。
 	inline vec2 SmoothPosition(vec2 Current, vec2 Target, float FrameTime, float HalfLife)
@@ -234,7 +279,7 @@ private:
 	vec2 m_DriftCurrentOffset;
 	float m_DynamicFovTarget;
 	float m_DynamicFovCurrent;
-	float m_DynamicFovAppliedFactor;
+	QmCameraEffects::CDynamicFovZoom m_DynamicFovZoom;
 	QmCameraEffects::CFreeviewCameraSmoothing m_FreeviewCameraSmoothing;
 
 	void RemoveDynamicFovZoom();
@@ -281,7 +326,7 @@ public:
 	void SpectatorTeleportToHoveredTele();
 
 	void SetZoom(float Target, int Smoothness, bool IsUser);
-	float BaseZoom() const { return QmCameraEffects::ZoomWithoutDynamicFov(m_Zoom, m_DynamicFovAppliedFactor); }
+	float BaseZoom() const { return m_DynamicFovZoom.BaseZoom(m_Zoom); }
 	bool ZoomAllowed() const;
 
 	int Deadzone() const;

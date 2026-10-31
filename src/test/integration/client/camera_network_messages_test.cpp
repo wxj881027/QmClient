@@ -110,3 +110,33 @@ TEST(CameraNetworkMessages, InvalidShowDistanceAxisIsIsolatedThroughPacking)
 		EXPECT_EQ(Decoded.m_Y, 1000);
 	});
 }
+
+TEST(CameraNetworkMessages, DynamicFovBaseBelowWireLimitIsNotClippedByTheEffectiveZoom)
+{
+	QmCameraEffects::CDynamicFovZoom Zoom;
+	const float Effective = Zoom.Apply(2000000.0f, 2.0f);
+	ASSERT_FLOAT_EQ(Effective, 4000000.0f);
+	CheckPacket(QmCameraNetwork::CameraInfo(Zoom.BaseZoom(Effective), 300, 60), [](const auto &Decoded) {
+		EXPECT_EQ(Decoded.m_Zoom, 2000000000);
+		EXPECT_EQ(Decoded.m_Deadzone, 300);
+		EXPECT_EQ(Decoded.m_FollowFactor, 60);
+	});
+}
+
+TEST(CameraNetworkMessages, DynamicFovResetAllowsAFreshDemoCameraObject)
+{
+	QmCameraEffects::CDynamicFovZoom Zoom;
+	Zoom.Apply(std::numeric_limits<float>::max(), 5.0f);
+	Zoom.Reset();
+	CNetObj_DDNetSpectatorInfo Input{};
+	Input.m_HasCameraInfo = true;
+	Input.m_Zoom = QmCameraEffects::EncodeZoom(Zoom.BaseZoom(2.5f));
+	CUnpacker Unpacker;
+	Unpacker.Reset(&Input, sizeof(Input));
+	CNetObjHandler Handler;
+	const auto *pDecoded = static_cast<const CNetObj_DDNetSpectatorInfo *>(Handler.SecureUnpackObj(NETOBJTYPE_DDNETSPECTATORINFO, &Unpacker));
+	ASSERT_NE(pDecoded, nullptr);
+	ASSERT_FALSE(Unpacker.Error());
+	EXPECT_TRUE(pDecoded->m_HasCameraInfo);
+	EXPECT_EQ(pDecoded->m_Zoom, 2500);
+}

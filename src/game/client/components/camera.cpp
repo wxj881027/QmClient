@@ -104,7 +104,7 @@ CCamera::CCamera()
 	m_DriftCurrentOffset = vec2(0.0f, 0.0f);
 	m_DynamicFovTarget = 1.0f;
 	m_DynamicFovCurrent = 1.0f;
-	m_DynamicFovAppliedFactor = 1.0f;
+	m_DynamicFovZoom.Reset();
 	m_FreeviewCameraSmoothing.Reset();
 
 	m_AutoSpecCamera = true;
@@ -191,11 +191,7 @@ void CCamera::ChangeZoom(float Target, int Smoothness, bool IsUser, bool IsReset
 
 void CCamera::RemoveDynamicFovZoom()
 {
-	if(m_DynamicFovAppliedFactor == 1.0f)
-		return;
-
-	m_Zoom = QmCameraEffects::ZoomWithoutDynamicFov(m_Zoom, m_DynamicFovAppliedFactor);
-	m_DynamicFovAppliedFactor = 1.0f;
+	m_Zoom = m_DynamicFovZoom.Remove(m_Zoom);
 }
 
 void CCamera::ResetAutoSpecCamera()
@@ -436,8 +432,7 @@ void CCamera::UpdateCamera()
 	}
 
 	m_DynamicFovCurrent = maximum(1.0f, m_DynamicFovCurrent);
-	m_Zoom *= m_DynamicFovCurrent;
-	m_DynamicFovAppliedFactor = m_DynamicFovCurrent;
+	m_Zoom = m_DynamicFovZoom.Apply(m_Zoom, m_DynamicFovCurrent);
 }
 
 void CCamera::OnRender()
@@ -640,7 +635,7 @@ void CCamera::OnReset()
 	m_DriftCurrentOffset = vec2(0.0f, 0.0f);
 	m_DynamicFovTarget = 1.0f;
 	m_DynamicFovCurrent = 1.0f;
-	m_DynamicFovAppliedFactor = 1.0f;
+	m_DynamicFovZoom.Reset();
 
 	m_Zoom = CCamera::ZoomStepsToValue(g_Config.m_ClDefaultZoom - 10);
 	m_Zooming = false;
@@ -777,7 +772,7 @@ void CCamera::SetDemoView(vec2 Center, float Zoom)
 	m_Zooming = false;
 	m_ZoomSmoothingIsReset = false;
 	m_AutoSpecCameraZooming = false;
-	m_DynamicFovAppliedFactor = 1.0f;
+	m_DynamicFovZoom.Reset();
 	m_DynamicFovCurrent = m_DynamicFovTarget = 1.0f;
 	m_DriftCurrentOffset = m_DriftTargetOffset = vec2(0.0f, 0.0f);
 	m_CameraSmoothing = false;
