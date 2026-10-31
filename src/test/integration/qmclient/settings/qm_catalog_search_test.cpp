@@ -2,6 +2,7 @@
 
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmCardSearchRegistry.h>
+#include <game/client/QmUi/SettingsSearchHighlight.h>
 #include <game/client/QmUi/SettingsSearchReveal.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/client/QmUi/cards/QmCardCatalogSearch.h>
@@ -114,6 +115,26 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		EXPECT_TRUE(qm_card_catalog::HasCardModule(It->m_pStableId));
 		EXPECT_STREQ(It->m_Target.m_pStableId, Case.m_pCard);
 	}
+}
+
+TEST(QmCatalogSearch, HighlightStyleUsesThemeAccentAndClampsRadius)
+{
+	SUiTheme Theme;
+	Theme.m_Accent = ColorRGBA(0.2f, 0.4f, 0.6f, 1.0f);
+	CUIRect Row;
+	Row.w = 200.0f;
+	Row.h = 20.0f;
+	qm_settings_highlight::SStyle Style = qm_settings_highlight::Resolve(Theme, Row);
+	EXPECT_FLOAT_EQ(Style.m_Text.r, 0.2f);
+	EXPECT_FLOAT_EQ(Style.m_Text.g, 0.4f);
+	EXPECT_FLOAT_EQ(Style.m_Text.b, 0.6f);
+	EXPECT_FLOAT_EQ(Style.m_Fill.a, Theme.m_Selected.a);
+	EXPECT_FLOAT_EQ(Style.m_Border.r, Theme.m_Accent.r);
+	EXPECT_FLOAT_EQ(Style.m_Radius, ui_token::radius::BASE);
+
+	Row.h = 6.0f;
+	Style = qm_settings_highlight::Resolve(Theme, Row);
+	EXPECT_FLOAT_EQ(Style.m_Radius, 3.0f);
 }
 
 TEST(QmCatalogSearch, RevealRequestMatchesOnlyTargetRowAndExpires)

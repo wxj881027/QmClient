@@ -40,6 +40,7 @@
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SettingsCard.h>
 #include <game/client/QmUi/SettingsLabelMetadata.h>
+#include <game/client/QmUi/SettingsSearchHighlight.h>
 #include <game/client/QmUi/SettingsSearchReveal.h>
 #include <game/client/QmUi/ThemeSelectionLayout.h>
 #include <game/client/QmUi/UiButtons.h>
@@ -1728,6 +1729,12 @@ int CMenus::DoButton_CheckBox_Common_WithLabelElement(const void *pId, const cha
 	return ProcessInput ? Ui()->DoButtonLogic(pId, 0, pRect, Flags) : 0;
 }
 
+static void DrawSettingsSearchHighlight(CUi *pUi, const CUIRect &Rect)
+{
+	const qm_settings_highlight::SStyle Style = qm_settings_highlight::Resolve(pUi->QmControlTheme(), Rect);
+	DrawRoundedSurface(pUi, Rect, Style.m_Fill, Style.m_Border, Style.m_Radius, 1.0f);
+}
+
 int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect)
 {
 	return DoSettingsButton_CheckBox(Page, Tab, -1, pId, pTextId, pText, Checked, pRect);
@@ -1751,7 +1758,7 @@ int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void 
 	// 搜索结果逐行定位：命中行先铺一层浅色底，再按普通控件绘制，文字与开关保持可读。
 	const bool SearchReveal = !m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(pTextId, pText, *pRect);
 	if(SearchReveal)
-		DrawRoundedSurface(Ui(), *pRect, ColorRGBA(0.30f, 0.60f, 1.0f, 0.10f), ColorRGBA(0.40f, 0.70f, 1.0f, 0.55f), ui_token::radius::BASE, 1.0f);
+		DrawSettingsSearchHighlight(Ui(), *pRect);
 	if(pTextId == nullptr)
 	{
 		return DoButton_CheckBox_Common_WithLabelElement(pId, pText, Checked ? "X" : "", pRect, BUTTONFLAG_LEFT, nullptr, ProcessInput, BodySize);
@@ -1813,8 +1820,8 @@ void CMenus::DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRe
 		GameClient()->m_Tooltips.DoSmallToolTip(Presentation.m_pTipId, pRect, Presentation.m_pTip, CurrentSettingsContentMetrics().m_SmallSize);
 	pText = Ui()->PrepareCardLabel(pRect, pText, Render && !m_MenuTextPlanCollecting);
 	SLabelProperties EffectiveProps = LabelProps;
-	if(Render && !m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(pTextId, pText, *pRect))
-		EffectiveProps.SetColor(ColorRGBA(0.55f, 0.78f, 1.0f, 1.0f));
+	if(Render && !m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(pTextId, pText, *pRect) && LabelProps.m_vColorSplits.empty())
+		EffectiveProps.SetColor(Ui()->QmControlTheme().m_Accent);
 	if(Page == SETTINGS_TCLIENT && Size > 0.0f)
 	{
 		EffectiveProps.m_MaxWidth = EffectiveProps.m_MaxWidth >= 0.0f ? EffectiveProps.m_MaxWidth : pRect->w;
@@ -1845,8 +1852,8 @@ void CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTex
 		GameClient()->m_Tooltips.DoSmallToolTip(Presentation.m_pTipId, pRect, Presentation.m_pTip, CurrentSettingsContentMetrics().m_SmallSize);
 	pText = Ui()->PrepareCardLabel(pRect, pText, !m_MenuTextPlanCollecting);
 	SLabelProperties EffectiveProps = Props;
-	if(!m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(pTextId, pText, *pRect))
-		EffectiveProps.SetColor(ColorRGBA(0.55f, 0.78f, 1.0f, 1.0f));
+	if(!m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(pTextId, pText, *pRect) && Props.m_vColorSplits.empty())
+		EffectiveProps.SetColor(Ui()->QmControlTheme().m_Accent);
 	if(Page == SETTINGS_TCLIENT && Size > 0.0f)
 	{
 		EffectiveProps.m_MaxWidth = EffectiveProps.m_MaxWidth >= 0.0f ? EffectiveProps.m_MaxWidth : (MaxWidth >= 0 ? (float)MaxWidth : pRect->w);
