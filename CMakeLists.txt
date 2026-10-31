@@ -3567,6 +3567,7 @@ if(CLIENT)
     components/qmclient/chat_command_hud.h
     components/qmclient/chat_command_hud_render.h
     components/qmclient/chat_emoji.cpp
+    components/qmclient/chat_emoji_load.cpp
     components/qmclient/chat_translate_button.h
     components/qmclient/chat_emoji.h
     components/qmclient/collision_hitbox.cpp
@@ -4892,6 +4893,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_trail_geometry_test.cpp
     src/test/integration/qmclient/client/qm_map_upload_lifecycle_test.cpp
     src/test/integration/qmclient/client/qm_chat_emoji_resource_test.cpp
+    src/test/integration/qmclient/client/qm_chat_emoji_load_test.cpp
+    src/game/client/components/qmclient/chat_emoji_load.cpp
     src/test/integration/qmclient/client/qm_chat_post_send_failure_test.cpp
     src/test/integration/qmclient/client/qm_skin_download_session_test.cpp
     src/test/integration/qmclient/client/qm_skin_outline_render_test.cpp
@@ -6230,6 +6233,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_nameplate_text_build_test.cpp
       src/test/unit/qmclient/client/qm_nameplate_update_test.cpp
       src/test/unit/qmclient/client/qm_chat_bubble_state_test.cpp
+      src/test/unit/qmclient/client/qm_chat_emoji_load_state_test.cpp
       src/test/unit/qmclient/ui/ui_cache_quantization_test.cpp
       src/test/integration/qmclient/ui/qm_tree_allocation_failure_test.cpp
       src/game/client/QmUi/QmTree.cpp

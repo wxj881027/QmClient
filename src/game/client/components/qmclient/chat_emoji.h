@@ -11,9 +11,10 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
-#include <deque>
 #include <functional>
 #include <memory>
+#include <new>
+#include <stdexcept>
 #include <utility>
 
 enum class EQmChatEmoji
@@ -232,22 +233,154 @@ class CQmChatEmojiLoadJob : public IJob
 {
 	std::function<void(CImageInfo &)> m_Load;
 	CImageInfo m_Image;
-	void Run() override { m_Load(m_Image); }
+	bool m_Retry = false;
+	void Run() override
+	{
+		try
+		{
+			m_Load(m_Image);
+		}
+		catch(const std::bad_alloc &)
+		{
+			m_Image.Free();
+			m_Retry = true;
+		}
+		catch(const std::length_error &)
+		{
+			m_Image.Free();
+			m_Retry = true;
+		}
+		catch(...)
+		{
+			// 未知解码失败沿原文字回退，不把部分图像发布给主线程。
+			m_Image.Free();
+		}
+	}
 
 public:
 	explicit CQmChatEmojiLoadJob(std::function<void(CImageInfo &)> Load) :
 		m_Load(std::move(Load)) {}
 	~CQmChatEmojiLoadJob() override { m_Image.Free(); }
 	CImageInfo *Image() { return State() == STATE_DONE ? &m_Image : nullptr; }
+	bool RetryableFailure() const { return State() == STATE_DONE && m_Retry; }
+};
+
+class IStorage;
+void QmLoadChatEmojiImage(IStorage *pStorage, const char *pPath, CImageInfo &Image);
+std::shared_ptr<CQmChatEmojiLoadJob> QmCreateChatEmojiLoadJob(IStorage *pStorage, EQmChatEmoji Emoji);
+
+// 每个已知表情最多一个请求，固定队列容量由枚举域推导，保留原串行加载顺序。
+// 主线程串行使用，factory/submit/upload回调不重入本状态；submit的false/异常表示未准入。
+class CQmChatEmojiLoadState
+{
+	std::array<bool, QM_CHAT_EMOJI_COUNT> m_aRequested{};
+	std::array<EQmChatEmoji, QM_CHAT_EMOJI_COUNT> m_aQueue{};
+	size_t m_Begin = 0, m_Count = 0;
+	std::shared_ptr<CQmChatEmojiLoadJob> m_pJob;
+	EQmChatEmoji m_Loading = EQmChatEmoji::NONE;
+
+	void Finish(bool Retry)
+	{
+		if(Retry)
+		{
+			m_aQueue[(m_Begin + m_Count) % QM_CHAT_EMOJI_COUNT] = m_Loading;
+			++m_Count;
+		}
+		m_pJob.reset();
+		m_Loading = EQmChatEmoji::NONE;
+	}
+
+public:
+	CQmChatEmojiLoadState() = default;
+	CQmChatEmojiLoadState(const CQmChatEmojiLoadState &) = delete;
+	CQmChatEmojiLoadState &operator=(const CQmChatEmojiLoadState &) = delete;
+	size_t PendingCount() const { return m_Count; }
+	EQmChatEmoji Loading() const { return m_Loading; }
+	const std::shared_ptr<CQmChatEmojiLoadJob> &Job() const { return m_pJob; }
+	bool Request(EQmChatEmoji Emoji)
+	{
+		if(!QmChatEmojiIsKnown(Emoji))
+			return false;
+		const size_t Index = static_cast<size_t>(Emoji) - 1;
+		if(m_aRequested[Index])
+			return false;
+		m_aQueue[(m_Begin + m_Count) % QM_CHAT_EMOJI_COUNT] = Emoji;
+		++m_Count;
+		m_aRequested[Index] = true;
+		return true;
+	}
+	template<typename TCreate, typename TSubmit>
+	bool TryStart(TCreate &&Create, TSubmit &&Submit)
+	{
+		if(m_pJob || m_Count == 0)
+			return false;
+		const EQmChatEmoji Emoji = m_aQueue[m_Begin];
+		try
+		{
+			std::shared_ptr<CQmChatEmojiLoadJob> pCandidate = std::forward<TCreate>(Create)(Emoji);
+			if(!pCandidate || !std::forward<TSubmit>(Submit)(pCandidate))
+				return false;
+			// shared_ptr移动和队列推进不分配，准入后不再经过可失败的准备。
+			m_pJob = std::move(pCandidate);
+			m_Loading = Emoji;
+			m_Begin = (m_Begin + 1) % QM_CHAT_EMOJI_COUNT;
+			--m_Count;
+			return true;
+		}
+		catch(...)
+		{
+			return false;
+		}
+	}
+	template<typename TCanUpload, typename TUpload>
+	void Poll(TCanUpload &&CanUpload, TUpload &&Upload)
+	{
+		if(!m_pJob || m_pJob->State() != IJob::STATE_DONE)
+			return;
+		if(m_pJob->RetryableFailure())
+		{
+			Finish(true);
+			return;
+		}
+		CImageInfo &Image = *m_pJob->Image();
+		if(!Image.m_pData)
+		{
+			Finish(false);
+			return;
+		}
+		try
+		{
+			if(!std::forward<TCanUpload>(CanUpload)())
+				return;
+			if(std::forward<TUpload>(Upload)(Image, m_Loading))
+			{
+				Finish(false);
+				return;
+			}
+		}
+		catch(const std::bad_alloc &)
+		{
+		}
+		catch(const std::length_error &)
+		{
+		}
+		// 未移动的图像留在已完成任务里重试上传；已消费则排回队尾重新加载。
+		if(!Image.m_pData)
+			Finish(true);
+	}
+	void Clear()
+	{
+		m_pJob.reset();
+		m_Loading = EQmChatEmoji::NONE;
+		m_Begin = m_Count = 0;
+		m_aRequested.fill(false);
+	}
 };
 
 class CQmChatEmoji : public CComponent
 {
 	mutable std::array<IGraphics::CTextureHandle, QM_CHAT_EMOJI_COUNT> m_aTextures;
-	mutable std::array<bool, QM_CHAT_EMOJI_COUNT> m_aLoadAttempted{};
-	mutable std::deque<EQmChatEmoji> m_LoadQueue;
-	mutable std::shared_ptr<CQmChatEmojiLoadJob> m_pLoadJob;
-	mutable EQmChatEmoji m_LoadingEmoji = EQmChatEmoji::NONE;
+	mutable CQmChatEmojiLoadState m_LoadState;
 
 	void EnsureTextureLoaded(EQmChatEmoji Emoji) const;
 	void StartNextLoad() const;
