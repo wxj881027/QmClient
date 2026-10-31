@@ -122,22 +122,70 @@ struct SQmImeCandidateList
 	int m_PageStart = 0;
 	int m_PageSize = 0;
 	int m_TotalCount = 0;
+	// TSF 可提供不等长分页；默认值表示从 IMM 页起点和页大小推导。
+	int m_PageIndex = -1;
+	int m_PageCount = 0;
 };
 
 class CQmImeCandidateState
 {
 public:
-	const SQmImeCandidateList &Candidates() const { return m_Candidates; }
-	bool AcceptsSdlCandidates() const { return !m_SuppressStaleReload; }
+	const SQmImeCandidateList &Candidates() const { return m_vTsfElements.empty() ? m_Candidates : m_vTsfElements.back().m_Candidates; }
+	bool AcceptsSdlCandidates() const { return m_vTsfElements.empty() && !m_SuppressStaleReload; }
 	void ResumeComposition() { m_SuppressStaleReload = false; }
+
+	void BeginTsfCandidates(uint32_t ElementId)
+	{
+		for(const auto &Element : m_vTsfElements)
+		{
+			if(Element.m_Id == ElementId)
+				return;
+		}
+		// Begin 时内容可能尚未就绪，空快照也必须阻止旧 IMM 候选重新出现。
+		m_vTsfElements.push_back({ElementId, {}});
+	}
+
+	void UpdateTsfCandidates(uint32_t ElementId, std::optional<SQmImeCandidateList> Candidates)
+	{
+		for(auto &Element : m_vTsfElements)
+		{
+			if(Element.m_Id != ElementId)
+				continue;
+			// 回退系统窗口后保留元素所有权，直到 End，避免再次显示自绘候选。
+			Element.m_Candidates = Candidates.has_value() ? std::move(*Candidates) : SQmImeCandidateList{};
+			return;
+		}
+	}
+
+	void EndTsfCandidates(uint32_t ElementId)
+	{
+		for(auto It = m_vTsfElements.begin(); It != m_vTsfElements.end(); ++It)
+		{
+			if(It->m_Id != ElementId)
+				continue;
+			m_vTsfElements.erase(It);
+			if(m_vTsfElements.empty())
+				EndComposition();
+			return;
+		}
+	}
+
+	void ResetTsfCandidates()
+	{
+		m_vTsfElements.clear();
+		EndComposition();
+	}
 
 	void Clear()
 	{
+		// SDL 队列中的旧提交/关闭通知不能清掉已同步到达的新 TSF 快照。
 		m_Candidates.m_vCandidates.clear();
 		m_Candidates.m_SelectedIndex = -1;
 		m_Candidates.m_PageStart = 0;
 		m_Candidates.m_PageSize = 0;
 		m_Candidates.m_TotalCount = 0;
+		m_Candidates.m_PageIndex = -1;
+		m_Candidates.m_PageCount = 0;
 	}
 
 	void EndComposition()
@@ -148,6 +196,8 @@ public:
 
 	void UpdateFromNative(std::optional<SQmImeCandidateList> List, bool IsOpenNotify, bool HasActiveComposition = false)
 	{
+		if(!m_vTsfElements.empty())
+			return;
 		// 提交后可能漏收下一轮打开/编辑通知；仅由当前 IMM 组合串确认恢复。
 		if(HasActiveComposition)
 			ResumeComposition();
@@ -169,6 +219,8 @@ public:
 
 	void UpdateFromSdl(const char *const *ppCandidates, int Count, int SelectedIndex, bool WindowsNumberedCandidates, std::optional<SQmImeCandidateList> NativeCandidates = std::nullopt, bool HasActiveComposition = false)
 	{
+		if(!m_vTsfElements.empty())
+			return;
 		if(Count <= 0 || ppCandidates == nullptr)
 		{
 			Clear();
@@ -200,6 +252,12 @@ public:
 	}
 
 private:
+	struct STsfCandidateElement
+	{
+		uint32_t m_Id;
+		SQmImeCandidateList m_Candidates;
+	};
+	std::vector<STsfCandidateElement> m_vTsfElements;
 	SQmImeCandidateList m_Candidates;
 	bool m_SuppressStaleReload = false;
 };

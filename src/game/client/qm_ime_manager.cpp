@@ -128,13 +128,11 @@ SQmImePopupState CQmImeManager::BuildPopupState() const
 		State.m_vCandidates.emplace_back(pInput->GetCandidate(i));
 	State.m_SelectedIndex = qm_ime_overlay::NormalizeSelectedCandidateIndex(pInput->GetCandidateSelectedIndex(), CopyCount);
 
-	const int PageSize = pInput->GetCandidatePageSize();
-	const int PageStart = pInput->GetCandidatePageStart();
-	const int TotalCount = pInput->GetCandidateTotalCount();
-	if(PageSize > 0 && TotalCount > PageSize)
+	const int PageCount = pInput->GetCandidatePageCount();
+	if(PageCount > 1)
 	{
-		State.m_PageCount = (TotalCount + PageSize - 1) / PageSize;
-		State.m_PageIndex = std::clamp(PageStart / PageSize, 0, State.m_PageCount - 1);
+		State.m_PageCount = PageCount;
+		State.m_PageIndex = std::clamp(pInput->GetCandidatePageIndex(), 0, PageCount - 1);
 	}
 
 	State.m_AnchorScreen = CLineInput::GetCompositionWindowPosition();
