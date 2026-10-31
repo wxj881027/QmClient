@@ -100,3 +100,17 @@ TEST(TextGradientGeometry, InvalidGridDimensionsAreClampedToTheMinimumAndMaximum
 	ForEachTextGradientCell(vec2(0, 0), vec2(16, 8), vec2(0, 0), vec2(1, 1), SamplePosition, &Alpha, -1, 100, [&](const STextGradientCell &) { ++Count; });
 	EXPECT_EQ(Count, 8);
 }
+
+TEST(TextGradientGeometry, AnimatedFillSamplesEachSharedGridPointOnlyOnce)
+{
+	int Calls = 0;
+	const auto Sample = [](vec2 Position, const void *pContext) {
+		++*static_cast<int *>(const_cast<void *>(pContext));
+		return ColorRGBA(Position.x, Position.y, 0, 1);
+	};
+	int Cells = 0;
+	ForEachTextGradientCell(vec2(0, 0), vec2(1, 1), vec2(0, 0), vec2(1, 1), Sample, &Calls, 4, 4,
+		[&](const STextGradientCell &) { ++Cells; });
+	EXPECT_EQ(Cells, 16);
+	EXPECT_EQ(Calls, 25);
+}

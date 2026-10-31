@@ -28340,22 +28340,6 @@ turkish = "Ana/kukla karakteri iki boş takıma böler; takım 0'a dönmek için
 polish = "Dzieli główną postać/dummy na dwie wolne drużyny; ponowne naciśnięcie wraca do drużyny 0"
 
 [[message]]
-key = "Sponsor chat style draft: 0=Normal, 1=Platinum highlight"
-[message.translations]
-simplified_chinese = "赞助者发言样式草稿：0=普通，1=铂金高光"
-traditional_chinese = "贊助者發言樣式草稿：0=普通，1=鉑金高光"
-japanese = "支援者チャットのスタイル下書き：0=通常、1=プラチナの輝き"
-korean = "후원자 채팅 스타일 초안: 0=보통, 1=백금 하이라이트"
-russian = "Черновик стиля чата спонсора: 0=Обычный, 1=Платиновый блеск"
-german = "Entwurf des Unterstützer-Chatstils: 0=Normal, 1=Platin-Glanz"
-spanish = "Borrador del estilo de chat de patrocinador: 0=Normal, 1=Brillo de platino"
-french = "Brouillon du style de chat de soutien : 0=Normal, 1=Éclat de platine"
-brazilian_portuguese = "Rascunho do estilo de chat de apoiador: 0=Normal, 1=Reflexo de platina"
-portuguese = "Rascunho do estilo de chat de apoiante: 0=Normal, 1=Reflexo de platina"
-turkish = "Destekçi sohbet stili taslağı: 0=Normal, 1=Platin ışıltısı"
-polish = "Szkic stylu czatu wspierającego: 0=Normalny, 1=Platynowy połysk"
-
-[[message]]
 key = "Sponsor code"
 [message.translations]
 simplified_chinese = "认证码"
@@ -39706,3 +39690,19 @@ key = "Gather and disperse"
 [message.translations]
 simplified_chinese = "聚集与散开"
 traditional_chinese = "聚集與散開"
+
+[[message]]
+key = "Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid"
+[message.translations]
+simplified_chinese = "赞助者发言样式草稿：0=普通，1=铂金高光，2=流体"
+traditional_chinese = "贊助者發言樣式草稿：0=普通，1=鉑金高光，2=流體"
+japanese = "支援者チャットのスタイル下書き：0=通常、1=プラチナの輝き、2=流体"
+korean = "후원자 채팅 스타일 초안: 0=보통, 1=백금 하이라이트, 2=유체"
+russian = "Черновик стиля чата спонсора: 0=Обычный, 1=Платиновый блеск, 2=Жидкость"
+german = "Entwurf des Unterstützer-Chatstils: 0=Normal, 1=Platin-Glanz, 2=Flüssigkeit"
+spanish = "Borrador del estilo de chat de patrocinador: 0=Normal, 1=Brillo de platino, 2=Fluido"
+french = "Brouillon du style de chat de soutien : 0=Normal, 1=Éclat de platine, 2=Fluide"
+brazilian_portuguese = "Rascunho do estilo de chat de apoiador: 0=Normal, 1=Reflexo de platina, 2=Fluido"
+portuguese = "Rascunho do estilo de chat de apoiante: 0=Normal, 1=Reflexo de platina, 2=Fluido"
+turkish = "Destekçi sohbet stili taslağı: 0=Normal, 1=Platin ışıltısı, 2=Akışkan"
+polish = "Szkic stylu czatu wspierającego: 0=Normalny, 1=Platynowy połysk, 2=Płyn"

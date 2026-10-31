@@ -5771,6 +5771,9 @@ Flags are cosmetic and can be hidden by other clients.
 Flip:
 == Отразить:
 
+Fluid
+== Жидкость
+
 Folder
 == Папка
 
@@ -12938,6 +12941,9 @@ Settings card states: stableId for collapsed, !stableId for expanded, separated 
 Settings card titles use rainbow colors
 == Радужный цвет заголовков карточек настроек
 
+Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+== Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+
 Settings file
 == Файл настроек
 
@@ -14537,8 +14543,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == Распределяет основного и двойника по разным командам для синхронизации соло-забегов
 
-Sponsor chat style draft: 0=Normal, 1=Platinum highlight
-== Черновик стиля чата спонсора: 0=Обычный, 1=Платиновый блеск
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid
+== Черновик стиля чата спонсора: 0=Обычный, 1=Платиновый блеск, 2=Жидкость
 
 Sponsor code
 == Код спонсора

@@ -1608,7 +1608,7 @@ void CMenus::PrepareSettingsTabLabelCache(float MainViewWidth, float TabBarWidth
 	}
 }
 
-int CMenus::DoButton_GridHeader(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Align)
+int CMenus::DoButton_GridHeader(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Align, const SLabelProperties &Props)
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 	const float SortedAlpha = std::clamp(0.34f + g_Config.m_QmUiOpacity / 100.0f * 0.6f, 0.0f, 0.55f);
@@ -1619,7 +1619,12 @@ int CMenus::DoButton_GridHeader(const void *pId, const char *pText, int Checked,
 
 	CUIRect Temp;
 	pRect->VMargin(5.0f, &Temp);
-	Ui()->DoLabel(&Temp, pText, pRect->h * CUi::ms_FontmodHeight, Align);
+	SLabelProperties HeaderProps = Props;
+	if(HeaderProps.m_MaxWidth >= 0.0f)
+		HeaderProps.m_MaxWidth = std::min(HeaderProps.m_MaxWidth, std::max(0.0f, Temp.w));
+	// 文字引擎把零行宽视作不限制宽度，空的表头文字区直接跳过绘制。
+	if(HeaderProps.m_MaxWidth != 0.0f)
+		Ui()->DoLabel(&Temp, pText, pRect->h * CUi::ms_FontmodHeight, Align, HeaderProps);
 	return Ui()->DoButtonLogic(pId, Checked, pRect, BUTTONFLAG_LEFT);
 }
 

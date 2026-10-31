@@ -5771,6 +5771,9 @@ Flags are cosmetic and can be hidden by other clients.
 Flip:
 == Çevir:
 
+Fluid
+== Akışkan
+
 Folder
 == Klasör
 
@@ -12938,6 +12941,9 @@ Settings card states: stableId for collapsed, !stableId for expanded, separated 
 Settings card titles use rainbow colors
 == Kart başlıkları için gökkuşağı rengi kullan
 
+Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+== Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+
 Settings file
 == Ayarlar dosyası
 
@@ -14537,8 +14543,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == Ana karakter ve kuklayı solo koşu senkronizasyonu için farklı takımlara dağıtır
 
-Sponsor chat style draft: 0=Normal, 1=Platinum highlight
-== Destekçi sohbet stili taslağı: 0=Normal, 1=Platin ışıltısı
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid
+== Destekçi sohbet stili taslağı: 0=Normal, 1=Platin ışıltısı, 2=Akışkan
 
 Sponsor code
 == Destekçi kodu

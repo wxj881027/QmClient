@@ -1926,6 +1926,7 @@ Flag grab: player side
 Flag returned
 Flags are cosmetic and can be hidden by other clients.
 Flip:
+Fluid
 Folder
 Folder Link
 Follow
@@ -4852,7 +4853,7 @@ Speed:
 Sphere
 Spin pop
 Split main and dummy into different teams for solo-run sync
-Sponsor chat style draft: 0=Normal, 1=Platinum highlight
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid
 Sponsor code
 Sponsor code already claimed
 Sponsor reminder
