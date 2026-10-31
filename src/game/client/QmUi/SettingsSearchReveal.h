@@ -74,6 +74,13 @@ namespace qm_settings_reveal
 		S.m_ExpireSeconds = NowSeconds() + 5.0;
 	}
 
+	// 搜索结果卡预览：只铺底色，不主动滚动；由搜索页每帧刷新，离开后 5 秒自然过期。
+	inline void RequestPreview(const char *pCardStableId, const std::vector<std::string> &vKeys)
+	{
+		Request(pCardStableId, vKeys);
+		State().m_Scrolled = true;
+	}
+
 	inline bool Pending()
 	{
 		SState &S = State();

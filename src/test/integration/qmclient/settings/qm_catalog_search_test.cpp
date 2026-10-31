@@ -162,6 +162,21 @@ TEST(QmCatalogSearch, RevealRequestMatchesOnlyTargetRowAndExpires)
 	EXPECT_FALSE(qm_settings_reveal::Pending());
 }
 
+TEST(QmCatalogSearch, LongHelpEntryDoesNotBecomeRowMatch)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	const auto Results = qm_card_registry::SearchCards("fallback", Model);
+	const auto It = std::find_if(Results.begin(), Results.end(), [](const auto &Result) {
+		return std::string(Result.m_pStableId) == "qm:mini_features";
+	});
+	ASSERT_NE(It, Results.end());
+	EXPECT_NE(std::find(It->m_vMatchKeys.begin(), It->m_vMatchKeys.end(), "Blank asset auto fallback"), It->m_vMatchKeys.end());
+	EXPECT_TRUE(std::none_of(It->m_vMatchKeys.begin(), It->m_vMatchKeys.end(), [](const std::string &Key) {
+		return Key.find("Automatically fall back") != std::string::npos;
+	}));
+}
+
 TEST(QmCatalogSearch, MatchKeysCoverDisplayedMatches)
 {
 	qm_card_order::CModel Model;

@@ -2897,9 +2897,6 @@ Configure DDNet gameplay preferences
 Configure display and rendering
 == Configurar visualização e renderização
 
-Configure Dream-only convenience features
-== Configure Dream-only convenience features
-
 Configure game and client preferences
 == Configurar preferências do jogo e do cliente
 
@@ -16732,6 +16729,9 @@ Variable custom font weight for Chinese/CJK text
 
 Variable custom font weight for Latin text
 == Espessura variável do tipo de letra personalizado para texto latino
+
+Various small features
+== Várias pequenas funcionalidades
 
 Velocity
 == Velocidade

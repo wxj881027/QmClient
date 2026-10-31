@@ -964,7 +964,6 @@ Configure controls and key bindings
 Configure DDNet demo recording behavior
 Configure DDNet gameplay preferences
 Configure display and rendering
-Configure Dream-only convenience features
 Configure game and client preferences
 Configure ghost recording and playback tools
 Configure hammer skin steal and skin transition animations
@@ -5577,6 +5576,7 @@ VAD threshold (percent)
 Vanilla skins only
 Variable custom font weight for Chinese/CJK text
 Variable custom font weight for Latin text
+Various small features
 Velocity
 Verifying downloaded update...
 Version
