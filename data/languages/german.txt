@@ -10085,6 +10085,9 @@ Permanent access; up to 4 online IP addresses
 Permanent sponsor verified
 == Dauerhafter Unterstützerstatus bestätigt
 
+Personal adjustments
+== Individuelle Anpassungen
+
 Personal best:
 == Persönliche Bestzeit:
 

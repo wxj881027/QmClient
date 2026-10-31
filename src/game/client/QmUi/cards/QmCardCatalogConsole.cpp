@@ -122,100 +122,110 @@ void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetr
 			DrawRoundedSurface(Ui(), Dot, AccentColor, ColorRGBA(), ui_token::radius::PILL);
 		}
 	};
-	Numeric(Controls.m_FontSize, &g_Config.m_QmConsoleFontSize, "console-font-size", Localize("Console font size"), 1, 24, "");
-	Numeric(Controls.m_Opacity, &g_Config.m_QmConsoleOpacity, "console-opacity", Localize("Console background opacity"), 20, 100, "%");
-	if(TakeRow("console-highlight", Metrics.m_LineHeight) && DoButton_CheckBox(&Controls.m_Highlight, Localize("Highlight console commands"), g_Config.m_QmConsoleHighlightCommands, &Row, Metrics.m_BodySize))
-		g_Config.m_QmConsoleHighlightCommands ^= 1;
-	// 配色方案只有一个选择集合：历史三项（现代终端 / 经典 PowerShell / 自定义）
-	// 与 Windows Terminal 内置配色同属一个列表，选中任意一行都能再切回其它行。
-	// 原先拆成"分段选择器 + 独立列表"，选中内置配色后上半部分就再也点不动了。
-	// 配色标题与重置按钮同一行：重置是整份外观的兜底动作，放在标题右侧
-	// 比单独吊在列表最底部更顺，也不用为它多占一行高度。
-	if(TakeRow("console-scheme-label", Metrics.m_LineHeight))
+	const auto RenderHighlight = [&] {
+		if(TakeRow("console-highlight", Metrics.m_LineHeight) && DoButton_CheckBox(&Controls.m_Highlight, Localize("Highlight console commands"), g_Config.m_QmConsoleHighlightCommands, &Row, Metrics.m_BodySize))
+			g_Config.m_QmConsoleHighlightCommands ^= 1;
+	};
+	if(RenderContext == 0)
+		RenderHighlight();
+	// F1 弹层保持原有完整内容与高度；卡片和搜索页共用个性调整状态。
+	if(RenderContext != 0 || qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:console", Metrics, PrewarmOnly || Ui()->RenderOnly()))
 	{
-		CUIRect LabelRow = Row;
-		CUIRect ButtonRect;
-		const float ButtonWidth = std::min(LabelRow.w * 0.42f, 132.0f * Metrics.m_UiScale);
-		LabelRow.VSplitRight(ButtonWidth, &LabelRow, &ButtonRect);
-		Ui()->DoLabel(&LabelRow, Localize("Console color scheme"), Metrics.m_BodySize, TEXTALIGN_ML);
-		ButtonRect.HMargin(std::max(0.0f, (ButtonRect.h - Metrics.m_ListRowHeight) * 0.5f), &ButtonRect);
-		if(ui_widget::SecondaryButton(Ctx, &Controls.m_Reset, Localize("Reset console appearance"), ButtonRect, PrewarmOnly) && Flow.Input() && !Ui()->RenderOnly())
-			QmConsoleAppearance::Reset(g_Config);
-	}
-	if(TakeRow("console-scheme-list", QmConsoleSettingsLayout::SchemeListHeight(Metrics)))
-	{
-		CUIRect List = Row;
-		vec2 Offset(0.0f, 0.0f);
-		static CScrollRegion s_aSchemeScrollRegions[2];
-		CScrollRegion &SchemeScrollRegion = s_aSchemeScrollRegions[RenderContext];
-		// 轨道尺寸与设置页其它卡片内列表一致（SMALL 紧凑轨道）。
-		// 滑块颜色必须和其它滚动条同源：CScrollRegionParams 的默认滑块色是写死的
-		// 0.8 灰（m_SliderColor），只有在带动画运行时才走主题强调色那条分支；
-		// 这里把主题指针和旧字段都按同一个强调色填上，两条分支都不会掉成灰条。
-		auto ScrollParams = QmScrollRegionParamsForSize(EQmScrollSize::SMALL, Metrics.m_UiScale);
-		ScrollParams.m_Interactive = !PrewarmOnly && Flow.Input();
-		ScrollParams.m_WheelOwnerPriority = EUiWheelOwnerPriority::COMPOSITE_CONTROL;
-		// 强调色本身带设置里的不透明度（默认 24%），直接拿去画滑块会淡到看不见；
-		// 滑块是前景反馈，这里按不透明强调色画，轨道保持低调。
-		static ColorRGBA s_SliderAccent;
-		s_SliderAccent = Ctx.m_pTheme->m_Accent.WithAlpha(1.0f);
-		ScrollParams.m_pSliderThemeColor = &s_SliderAccent;
-		ScrollParams.m_SliderColor = s_SliderAccent;
-		ScrollParams.m_SliderColorHover = s_SliderAccent;
-		ScrollParams.m_SliderColorGrabbed = s_SliderAccent;
-		SchemeScrollRegion.Begin(&List, &Offset, &ScrollParams);
-		CUIRect Content = List;
-		Content.y += Offset.y;
-		// 选中行滚进可见区域只在选中项变化时做一次；每帧都请求会把玩家人工
-		// 滚动的位置一直拽回去，列表就再也翻不动了。
-		const int SelectedIndex = qm_console_scheme_list::IndexOf(g_Config.m_QmConsoleColorScheme);
-		static int s_aLastScrolledIndex[2] = {-1, -1};
-		const bool ScrollToSelected = SelectedIndex >= 0 && SelectedIndex != s_aLastScrolledIndex[RenderContext];
-		if(SelectedIndex >= 0)
-			s_aLastScrolledIndex[RenderContext] = SelectedIndex;
-		for(int Index = 0; Index < qm_console_scheme_list::Count(); ++Index)
+		Numeric(Controls.m_FontSize, &g_Config.m_QmConsoleFontSize, "console-font-size", Localize("Console font size"), 1, 24, "");
+		Numeric(Controls.m_Opacity, &g_Config.m_QmConsoleOpacity, "console-opacity", Localize("Console background opacity"), 20, 100, "%");
+		if(RenderContext != 0)
+			RenderHighlight();
+		// 配色方案只有一个选择集合：历史三项（现代终端 / 经典 PowerShell / 自定义）
+		// 与 Windows Terminal 内置配色同属一个列表，选中任意一行都能再切回其它行。
+		// 原先拆成"分段选择器 + 独立列表"，选中内置配色后上半部分就再也点不动了。
+		// 配色标题与重置按钮同一行：重置是整份外观的兜底动作，放在标题右侧
+		// 比单独吊在列表最底部更顺，也不用为它多占一行高度。
+		if(TakeRow("console-scheme-label", Metrics.m_LineHeight))
 		{
-			CUIRect ItemRect;
-			Content.HSplitTop(QmConsoleSettingsLayout::SchemeRowHeight(Metrics), &ItemRect, &Content);
-			ItemRect.HMargin(Metrics.m_LineSpacing * 0.5f, &ItemRect);
-			if(!SchemeScrollRegion.AddRect(ItemRect, ScrollToSelected && Index == SelectedIndex))
-				continue;
-			RenderConsoleSchemeRow(Controls.m_aSchemeRows[Index], qm_console_scheme_list::All()[Index], ItemRect);
+			CUIRect LabelRow = Row;
+			CUIRect ButtonRect;
+			const float ButtonWidth = std::min(LabelRow.w * 0.42f, 132.0f * Metrics.m_UiScale);
+			LabelRow.VSplitRight(ButtonWidth, &LabelRow, &ButtonRect);
+			Ui()->DoLabel(&LabelRow, Localize("Console color scheme"), Metrics.m_BodySize, TEXTALIGN_ML);
+			ButtonRect.HMargin(std::max(0.0f, (ButtonRect.h - Metrics.m_ListRowHeight) * 0.5f), &ButtonRect);
+			if(ui_widget::SecondaryButton(Ctx, &Controls.m_Reset, Localize("Reset console appearance"), ButtonRect, PrewarmOnly) && Flow.Input() && !Ui()->RenderOnly())
+				QmConsoleAppearance::Reset(g_Config);
 		}
-		CUIRect EndRect = {List.x, Content.y, List.w, 0.0f};
-		SchemeScrollRegion.AddRect(EndRect);
-		SchemeScrollRegion.End();
-		Row = List;
-	}
-	// 选中「自定义」时的九项取色。放在列表之后：列表是滚动区，
-	// 行内控件不能塞进滚动内容里，否则会被滚动裁剪、点不到。
-	if(QmConsoleAppearance::IsCustomScheme(g_Config.m_QmConsoleColorScheme))
-	{
-		struct SColorSetting
+		if(TakeRow("console-scheme-list", QmConsoleSettingsLayout::SchemeListHeight(Metrics)))
 		{
-			const char *m_pLabel;
-			unsigned *m_pValue;
-			unsigned m_Default;
-		};
-		const SColorSetting aColors[] = {
-			{Localize("Console background color"), &g_Config.m_QmConsoleBackgroundColor, DefaultConfig::QmConsoleBackgroundColor},
-			{Localize("Console text color"), &g_Config.m_QmConsoleTextColor, DefaultConfig::QmConsoleTextColor},
-			{Localize("Console command color"), &g_Config.m_QmConsoleCommandColor, DefaultConfig::QmConsoleCommandColor},
-			{Localize("Console parameter color"), &g_Config.m_QmConsoleParameterColor, DefaultConfig::QmConsoleParameterColor},
-			{Localize("Console string color"), &g_Config.m_QmConsoleStringColor, DefaultConfig::QmConsoleStringColor},
-			{Localize("Console number color"), &g_Config.m_QmConsoleNumberColor, DefaultConfig::QmConsoleNumberColor},
-			{Localize("Console link color"), &g_Config.m_QmConsoleLinkColor, DefaultConfig::QmConsoleLinkColor},
-			{Localize("Console search match color"), &g_Config.m_QmConsoleSearchColor, DefaultConfig::QmConsoleSearchColor},
-			{Localize("Console selected search match color"), &g_Config.m_QmConsoleSearchSelectedColor, DefaultConfig::QmConsoleSearchSelectedColor}};
-		for(size_t i = 0; i < std::size(aColors); ++i)
-		{
-			char aId[32];
-			str_format(aId, sizeof(aId), "console-color-%zu", i);
-			if(Flow.Control(aId, ResolveSettingsColorRowLayout({}, Metrics, false).m_ConsumedHeight, Row))
+			CUIRect List = Row;
+			vec2 Offset(0.0f, 0.0f);
+			static CScrollRegion s_aSchemeScrollRegions[2];
+			CScrollRegion &SchemeScrollRegion = s_aSchemeScrollRegions[RenderContext];
+			// 轨道尺寸与设置页其它卡片内列表一致（SMALL 紧凑轨道）。
+			// 滑块颜色必须和其它滚动条同源：CScrollRegionParams 的默认滑块色是写死的
+			// 0.8 灰（m_SliderColor），只有在带动画运行时才走主题强调色那条分支；
+			// 这里把主题指针和旧字段都按同一个强调色填上，两条分支都不会掉成灰条。
+			auto ScrollParams = QmScrollRegionParamsForSize(EQmScrollSize::SMALL, Metrics.m_UiScale);
+			ScrollParams.m_Interactive = !PrewarmOnly && Flow.Input();
+			ScrollParams.m_WheelOwnerPriority = EUiWheelOwnerPriority::COMPOSITE_CONTROL;
+			// 强调色本身带设置里的不透明度（默认 24%），直接拿去画滑块会淡到看不见；
+			// 滑块是前景反馈，这里按不透明强调色画，轨道保持低调。
+			static ColorRGBA s_SliderAccent;
+			s_SliderAccent = Ctx.m_pTheme->m_Accent.WithAlpha(1.0f);
+			ScrollParams.m_pSliderThemeColor = &s_SliderAccent;
+			ScrollParams.m_SliderColor = s_SliderAccent;
+			ScrollParams.m_SliderColorHover = s_SliderAccent;
+			ScrollParams.m_SliderColorGrabbed = s_SliderAccent;
+			SchemeScrollRegion.Begin(&List, &Offset, &ScrollParams);
+			CUIRect Content = List;
+			Content.y += Offset.y;
+			// 选中行滚进可见区域只在选中项变化时做一次；每帧都请求会把玩家人工
+			// 滚动的位置一直拽回去，列表就再也翻不动了。
+			const int SelectedIndex = qm_console_scheme_list::IndexOf(g_Config.m_QmConsoleColorScheme);
+			static int s_aLastScrolledIndex[2] = {-1, -1};
+			const bool ScrollToSelected = SelectedIndex >= 0 && SelectedIndex != s_aLastScrolledIndex[RenderContext];
+			if(SelectedIndex >= 0)
+				s_aLastScrolledIndex[RenderContext] = SelectedIndex;
+			for(int Index = 0; Index < qm_console_scheme_list::Count(); ++Index)
 			{
-				CUIRect ColorRow = Row;
-				DoLine_ColorPicker(&Controls.m_aColorReset[i], Metrics, &ColorRow, aColors[i].m_pLabel, aColors[i].m_pValue,
-					color_cast<ColorRGBA>(ColorHSLA(aColors[i].m_Default)), false, nullptr, false, true);
+				CUIRect ItemRect;
+				Content.HSplitTop(QmConsoleSettingsLayout::SchemeRowHeight(Metrics), &ItemRect, &Content);
+				ItemRect.HMargin(Metrics.m_LineSpacing * 0.5f, &ItemRect);
+				if(!SchemeScrollRegion.AddRect(ItemRect, ScrollToSelected && Index == SelectedIndex))
+					continue;
+				RenderConsoleSchemeRow(Controls.m_aSchemeRows[Index], qm_console_scheme_list::All()[Index], ItemRect);
+			}
+			CUIRect EndRect = {List.x, Content.y, List.w, 0.0f};
+			SchemeScrollRegion.AddRect(EndRect);
+			SchemeScrollRegion.End();
+			Row = List;
+		}
+		// 选中「自定义」时的九项取色。放在列表之后：列表是滚动区，
+		// 行内控件不能塞进滚动内容里，否则会被滚动裁剪、点不到。
+		if(QmConsoleAppearance::IsCustomScheme(g_Config.m_QmConsoleColorScheme))
+		{
+			struct SColorSetting
+			{
+				const char *m_pLabel;
+				unsigned *m_pValue;
+				unsigned m_Default;
+			};
+			const SColorSetting aColors[] = {
+				{Localize("Console background color"), &g_Config.m_QmConsoleBackgroundColor, DefaultConfig::QmConsoleBackgroundColor},
+				{Localize("Console text color"), &g_Config.m_QmConsoleTextColor, DefaultConfig::QmConsoleTextColor},
+				{Localize("Console command color"), &g_Config.m_QmConsoleCommandColor, DefaultConfig::QmConsoleCommandColor},
+				{Localize("Console parameter color"), &g_Config.m_QmConsoleParameterColor, DefaultConfig::QmConsoleParameterColor},
+				{Localize("Console string color"), &g_Config.m_QmConsoleStringColor, DefaultConfig::QmConsoleStringColor},
+				{Localize("Console number color"), &g_Config.m_QmConsoleNumberColor, DefaultConfig::QmConsoleNumberColor},
+				{Localize("Console link color"), &g_Config.m_QmConsoleLinkColor, DefaultConfig::QmConsoleLinkColor},
+				{Localize("Console search match color"), &g_Config.m_QmConsoleSearchColor, DefaultConfig::QmConsoleSearchColor},
+				{Localize("Console selected search match color"), &g_Config.m_QmConsoleSearchSelectedColor, DefaultConfig::QmConsoleSearchSelectedColor}};
+			for(size_t i = 0; i < std::size(aColors); ++i)
+			{
+				char aId[32];
+				str_format(aId, sizeof(aId), "console-color-%zu", i);
+				if(Flow.Control(aId, ResolveSettingsColorRowLayout({}, Metrics, false).m_ConsumedHeight, Row))
+				{
+					CUIRect ColorRow = Row;
+					DoLine_ColorPicker(&Controls.m_aColorReset[i], Metrics, &ColorRow, aColors[i].m_pLabel, aColors[i].m_pValue,
+						color_cast<ColorRGBA>(ColorHSLA(aColors[i].m_Default)), false, nullptr, false, true);
+				}
 			}
 		}
 	}

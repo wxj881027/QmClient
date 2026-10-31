@@ -42,7 +42,7 @@ namespace qm_card_catalog
 				"Configure Tee appearance and skins",
 				[pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { QmCardRenderHook::RenderQmVisualSkinAppearanceContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); },
 				Out);
-			qm_settings_content::UseDeclaredBlockContent(Out, Ctx.m_UiContext.m_pUi, QmCardRenderHook::TextRenderer(pMenus), [Metrics](float Width) { return ResolveQmVisualSkinAppearanceHeight(Metrics, Width); });
+			UseDeclaredModuleContent(Ctx, Out);
 			return true;
 		case EQmModuleId::SkinTransition:
 			MakeModuleCard(
@@ -65,7 +65,29 @@ namespace qm_card_catalog
 void CMenus::RenderQmVisualSkinAppearanceContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	const SSettingsContentMetrics Metrics = CurrentSettingsContentMetrics();
-	const SSettingsSkinAppearanceLayout Layout = ResolveSettingsSkinAppearanceLayout(Content, Metrics);
+	CSettingsContentLayoutFlow Flow(Content);
+	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmSkinOutlineLocal, "Skin outline for self and dummy", Localize("Skin outline for self and dummy"), &g_Config.m_QmSkinOutlineLocal);
+	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmSkinOutlineOthers, "Skin outline for other players", Localize("Skin outline for other players"), &g_Config.m_QmSkinOutlineOthers);
+	CUIRect HueToggle;
+	if(Flow.Control("Cycle custom Tee hue", LineHeight, HueToggle))
+	{
+		if(DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, &g_Config.m_QmCycleTeeHue, "Cycle custom Tee hue", Localize("Cycle custom Tee hue"), g_Config.m_QmCycleTeeHue, &HueToggle) && Flow.Input() && !Ui()->RenderOnly())
+			g_Config.m_QmCycleTeeHue ^= 1;
+		char aHueTooltip[512];
+		str_format(aHueTooltip, sizeof(aHueTooltip), "%s\n%s", Localize("Only affects custom Tee colors."), Localize("When TClient rainbow Tee is enabled, this feature has no effect."));
+		GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmCycleTeeHue, &HueToggle, aHueTooltip);
+	}
+	Flow.Space(LineSpacing);
+	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmCycleTeeHueDummy, "Also apply to dummy", Localize("Also apply to dummy"), &g_Config.m_QmCycleTeeHueDummy);
+	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmEmoticonShadow, "Emoticon shadow", Localize("Emoticon shadow"), &g_Config.m_QmEmoticonShadow);
+	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:skin_appearance", Metrics, PrewarmOnly))
+		return;
+
+	CUIRect Details;
+	if(!Flow.Control("skin-appearance-details", ResolveQmVisualSkinAppearanceHeight(Metrics, Content.w), Details))
+		return;
+	const CSettingsContentLayoutScope InternalGeometry;
+	const SSettingsSkinAppearanceLayout Layout = ResolveSettingsSkinAppearanceLayout(Details, Metrics);
 	CUIRect Outline = Layout.m_Outline;
 	CUIRect Hue = Layout.m_Hue;
 	CUIRect Shadow = Layout.m_Shadow;
@@ -83,30 +105,20 @@ void CMenus::RenderQmVisualSkinAppearanceContent(CUIRect &Content, float LineHei
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pSliderId, &Row, pValue, &Label);
 		RenderQmSettingsSliderWithValueInput(pSliderId, Control, pValue, Min, Max, pSuffix, PrewarmOnly);
 	};
-	RenderQmVisualCheckbox(Outline, LineHeight, LineSpacing, &g_Config.m_QmSkinOutlineLocal, "Skin outline for self and dummy", Localize("Skin outline for self and dummy"), &g_Config.m_QmSkinOutlineLocal);
-	RenderQmVisualCheckbox(Outline, LineHeight, LineSpacing, &g_Config.m_QmSkinOutlineOthers, "Skin outline for other players", Localize("Skin outline for other players"), &g_Config.m_QmSkinOutlineOthers);
 	static CButtonContainer s_OutlineColor;
 	DoLine_ColorPicker(&s_OutlineColor, Metrics, &Outline, Localize("Skin outline color"), &g_Config.m_QmSkinOutlineColor, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmSkinOutlineColor)), false);
 	static int s_WidthId, s_AlphaId;
 	Slider(Outline, "qmclient-skin-outline-width", Localize("Skin outline width"), &s_WidthId, &g_Config.m_QmSkinOutlineWidth, 1, 6, "");
 	Slider(Outline, "qmclient-skin-outline-opacity", Localize("Skin outline opacity"), &s_AlphaId, &g_Config.m_QmSkinOutlineAlpha, 0, 100, "%");
 
-	const CUIRect HueToggle{Hue.x, Hue.y, Hue.w, LineHeight};
-	RenderQmVisualCheckbox(Hue, LineHeight, LineSpacing, &g_Config.m_QmCycleTeeHue, "Cycle custom Tee hue", Localize("Cycle custom Tee hue"), &g_Config.m_QmCycleTeeHue);
-	char aHueTooltip[512];
-	str_format(aHueTooltip, sizeof(aHueTooltip), "%s\n%s", Localize("Only affects custom Tee colors."), Localize("When TClient rainbow Tee is enabled, this feature has no effect."));
-	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmCycleTeeHue, &HueToggle, aHueTooltip);
-	RenderQmVisualCheckbox(Hue, LineHeight, LineSpacing, &g_Config.m_QmCycleTeeHueDummy, "Also apply to dummy", Localize("Also apply to dummy"), &g_Config.m_QmCycleTeeHueDummy);
 	static int s_HueSpeedId;
 	int DisabledSpeed = g_Config.m_QmCycleTeeHueSpeed;
 	if(!g_Config.m_QmCycleTeeHue)
 		TextRender()->TextColor(ColorRGBA(0.8f, 0.8f, 0.8f, 0.55f));
 	Slider(Hue, "qmclient-cycle-tee-hue-speed", Localize("Hue speed"), &s_HueSpeedId, g_Config.m_QmCycleTeeHue ? &g_Config.m_QmCycleTeeHueSpeed : &DisabledSpeed, 0, 360, "°/s");
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
-	RenderQmVisualCheckbox(Shadow, LineHeight, LineSpacing, &g_Config.m_QmEmoticonShadow, "Emoticon shadow", Localize("Emoticon shadow"), &g_Config.m_QmEmoticonShadow);
 	static int s_ProjectileDurationId;
 	Slider(Shadow, "qmclient-emoticon-projectile-duration", Localize("Emoticon projectile duration"), &s_ProjectileDurationId, &g_Config.m_QmEmoticonProjectileDuration, 1, 10, " s");
-	Content.HSplitTop(Layout.m_Height, nullptr, &Content);
 }
 void CMenus::RenderQmVisualSkinTransitionContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
@@ -120,6 +132,9 @@ void CMenus::RenderQmVisualSkinTransitionContent(CUIRect &Content, float LineHei
 		g_Config.m_QmSkinChangeTransition ^= 1;
 
 	if(!g_Config.m_QmSkinChangeTransition)
+		return;
+
+	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:skin_transition", CurrentSettingsContentMetrics(), PrewarmOnly))
 		return;
 
 	auto RenderDropDown = [&](const char *pTextId, const char *pText, int *pValue, int MaxValue, const char **ppNames, int NumNames, CUi::SDropDownState &State, CScrollRegion &ScrollRegion) {

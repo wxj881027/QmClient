@@ -1,6 +1,7 @@
 // 公共内容声明、不可变行布局与输入回放；不复制页面行数或测量算法。
 #include <game/client/QmUi/SettingsCardDeck.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
+#include <game/client/QmUi/SettingsPersonalization.h>
 
 #include <gtest/gtest.h>
 
@@ -267,4 +268,130 @@ TEST(SettingsContentLayout, MultilineControlCachesTextMetricsAndPublishesTheFull
 	EXPECT_FLOAT_EQ(Row.w, 200);
 	EXPECT_FLOAT_EQ(Row.h, 40);
 	EXPECT_EQ(Measures, 2);
+}
+
+namespace
+{
+	class CPersonalizationCard
+	{
+		CSettingsPersonalizationState &m_State;
+		const char *m_pStableId;
+		CSettingsContentLayoutCache m_Cache;
+
+		void Content(CUIRect &Rect, bool Clicked, bool ReadOnly)
+		{
+			CSettingsContentLayoutFlow Flow(Rect);
+			CUIRect Row;
+			Flow.Control("basic", 20, Row);
+			Flow.Space(4);
+			if(SettingsPersonalizationSection(m_State, Rect, m_pStableId, 20, 4, ReadOnly,
+				[&](const void *pId, const CUIRect &, bool) {
+					m_pButtonId = pId;
+					++m_ButtonCalls;
+					return Clicked;
+				}))
+			{
+				if(Flow.Control("detail", 30, Row) && Flow.Input())
+					++m_DetailInputs;
+			}
+		}
+
+	public:
+		int m_ButtonCalls = 0;
+		int m_DetailInputs = 0;
+		const void *m_pButtonId = nullptr;
+
+		CPersonalizationCard(CSettingsPersonalizationState &State, const char *pStableId) : m_State(State), m_pStableId(pStableId) {}
+
+		std::shared_ptr<const CSettingsContentLayout> Resolve()
+		{
+			std::vector<SSettingsContentRowDeclaration> vRows;
+			{
+				CSettingsContentLayoutScope Scope(vRows);
+				CUIRect Rect{0, 0, 320, 0};
+				Content(Rect, true, false);
+			}
+			return m_Cache.Resolve(vRows, 320, 0, {});
+		}
+
+		void Replay(const CSettingsContentLayout &Layout, ESettingsContentPass Pass, bool Clicked, bool ReadOnly = false)
+		{
+			CSettingsContentLayoutScope Scope(Layout, Pass);
+			CUIRect Rect{0, 0, Layout.Width(), Layout.Height()};
+			Content(Rect, Clicked, ReadOnly);
+		}
+	};
+}
+
+TEST(SettingsPersonalization, NewCardsAreCollapsedAndDeclarationDoesNotProcessInput)
+{
+	CSettingsPersonalizationState State;
+	CPersonalizationCard Card(State, "card-a");
+	const auto pLayout = Card.Resolve();
+	EXPECT_FALSE(State.Expanded("card-a"));
+	EXPECT_FALSE(State.Expanded("card-b"));
+	EXPECT_NE(pLayout->Find("basic"), nullptr);
+	EXPECT_NE(pLayout->Find("personalization"), nullptr);
+	EXPECT_EQ(pLayout->Find("detail"), nullptr);
+	EXPECT_FLOAT_EQ(pLayout->Height(), 48);
+	EXPECT_EQ(Card.m_ButtonCalls, 0);
+	EXPECT_EQ(Card.m_DetailInputs, 0);
+}
+
+TEST(SettingsPersonalization, ToggleRebuildsHeightWithoutProcessingHiddenControls)
+{
+	CSettingsPersonalizationState State;
+	CPersonalizationCard Card(State, "card-a");
+	const auto pClosed = Card.Resolve();
+	std::shared_ptr<const CSettingsContentLayout> pOpened;
+	EXPECT_TRUE(ExecuteSettingsContentInputThenResolve(pClosed, {},
+		[&](const auto &Layout, auto) { Card.Replay(Layout, ESettingsContentPass::INPUT, true); },
+		[&](float) { pOpened = Card.Resolve(); return pOpened; }));
+	ASSERT_NE(pOpened, nullptr);
+	EXPECT_TRUE(State.Expanded("card-a"));
+	EXPECT_NE(pOpened->Find("detail"), nullptr);
+	EXPECT_FLOAT_EQ(pOpened->Height(), 78);
+	EXPECT_EQ(Card.m_DetailInputs, 0);
+	Card.Replay(*pOpened, ESettingsContentPass::INPUT, false);
+	EXPECT_EQ(Card.m_DetailInputs, 1);
+	Card.Replay(*pOpened, ESettingsContentPass::INPUT, true);
+	const auto pClosedAgain = Card.Resolve();
+	EXPECT_FALSE(State.Expanded("card-a"));
+	EXPECT_EQ(pClosedAgain->Find("detail"), nullptr);
+	EXPECT_FLOAT_EQ(pClosedAgain->Height(), pClosed->Height());
+	EXPECT_EQ(Card.m_DetailInputs, 1);
+	Card.Replay(*pClosedAgain, ESettingsContentPass::INPUT, true);
+	EXPECT_TRUE(State.Expanded("card-a"));
+	EXPECT_FLOAT_EQ(Card.Resolve()->Height(), pOpened->Height());
+}
+
+TEST(SettingsPersonalization, SameCardSharesStateAcrossPagesAndOtherCardsStayCollapsed)
+{
+	CSettingsPersonalizationState State;
+	CPersonalizationCard Page(State, "card-a"), Search(State, "card-a"), Other(State, "card-b");
+	Page.Replay(*Page.Resolve(), ESettingsContentPass::INPUT, true);
+	const auto pSearch = Search.Resolve();
+	EXPECT_NE(pSearch->Find("detail"), nullptr);
+	EXPECT_EQ(Other.Resolve()->Find("detail"), nullptr);
+	Search.Replay(*pSearch, ESettingsContentPass::INPUT, true);
+	EXPECT_EQ(Page.m_pButtonId, Search.m_pButtonId);
+	EXPECT_EQ(Page.Resolve()->Find("detail"), nullptr);
+	EXPECT_FALSE(State.Expanded("card-b"));
+}
+
+TEST(SettingsPersonalization, DrawAndReadOnlyInputCannotChangeExpansion)
+{
+	CSettingsPersonalizationState State;
+	CPersonalizationCard Card(State, "card-a");
+	const auto pClosed = Card.Resolve();
+	Card.Replay(*pClosed, ESettingsContentPass::DRAW, true);
+	EXPECT_FALSE(State.Expanded("card-a"));
+	Card.Replay(*pClosed, ESettingsContentPass::INPUT, true, true);
+	EXPECT_FALSE(State.Expanded("card-a"));
+	Card.Replay(*pClosed, ESettingsContentPass::INPUT, true);
+	const auto pOpened = Card.Resolve();
+	Card.Replay(*pOpened, ESettingsContentPass::DRAW, true);
+	Card.Replay(*pOpened, ESettingsContentPass::INPUT, true, true);
+	EXPECT_TRUE(State.Expanded("card-a"));
+	EXPECT_NE(Card.Resolve()->Find("detail"), nullptr);
 }

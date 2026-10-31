@@ -3361,6 +3361,7 @@ Performance mode
 Performance points
 Permanent access; up to 4 online IP addresses
 Permanent sponsor verified
+Personal adjustments
 Personal best:
 Personal Setting of showing time in either broadcast or game/round timer, timer s, where s = broadcast for broadcast, gametimer for game/round timer, cycle for cycle, both for both, none for no timer and nothing to show current status
 Pet
@@ -4311,6 +4312,7 @@ Settings card border color
 Settings card default layout migration version
 Settings card states: stableId for collapsed, !stableId for expanded, separated by semicolons
 Settings card titles use rainbow colors
+Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
 Settings file
 Settings page opacity
 Settings page right panel opacity

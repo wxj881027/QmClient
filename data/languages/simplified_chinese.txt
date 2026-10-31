@@ -10088,6 +10088,9 @@ Permanent access; up to 4 online IP addresses
 Permanent sponsor verified
 == 已认证：永久赞助资格
 
+Personal adjustments
+== 个性调整
+
 Personal best:
 == 个人最佳：
 

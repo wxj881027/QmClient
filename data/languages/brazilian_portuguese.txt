@@ -10085,6 +10085,9 @@ Permanent access; up to 4 online IP addresses
 Permanent sponsor verified
 == Apoio permanente verificado
 
+Personal adjustments
+== Ajustes personalizados
+
 Personal best:
 == Melhor pessoal:
 

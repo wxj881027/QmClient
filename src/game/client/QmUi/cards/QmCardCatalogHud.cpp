@@ -147,6 +147,9 @@ void CMenus::RenderQmHudInputOverlayContent(CUIRect &Content, const SSettingsCon
 	}
 	Flow.Space(LineSpacing);
 
+	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:input_overlay", Metrics, PrewarmOnly || Ui()->RenderOnly()))
+		return;
+
 	CUIRect Row, LabelColumn, ControlColumn;
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int MinValue, int MaxValue) {
 		if(Flow.Control(pTextId, CurrentSettingsContentMetrics().m_LineHeight, Row))
@@ -211,6 +214,7 @@ void CMenus::RenderQmHudPlayerStatsContent(CUIRect &Content, float LineHeight, f
 	};
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmPlayerStatsHud, "Show player stats HUD", Localize("Show player stats HUD"), &g_Config.m_QmPlayerStatsHud);
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmPlayerStatsMapProgress, "Map progress bar", Localize("Map progress bar"), &g_Config.m_QmPlayerStatsMapProgress);
+	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmPlayerStatsResetOnJoin, "Reset stats when joining a server", Localize("Reset stats when joining a server"), &g_Config.m_QmPlayerStatsResetOnJoin);
 	if(g_Config.m_QmPlayerStatsMapProgress)
 	{
 		CUIRect LocationRow, LocationLabel, LocationControl;
@@ -228,6 +232,9 @@ void CMenus::RenderQmHudPlayerStatsContent(CUIRect &Content, float LineHeight, f
 				g_Config.m_QmPlayerStatsMapProgressStyle = Selection;
 		}
 		Flow.Space(LineSpacing);
+		if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:player_stats", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
+			return;
+
 		{
 			static CButtonContainer s_MapProgressColorId;
 			{
@@ -262,5 +269,4 @@ void CMenus::RenderQmHudPlayerStatsContent(CUIRect &Content, float LineHeight, f
 		}
 		DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmPlayerStatsMapProgressDbgRoute, "Show dotted map route debug", Localize("Show dotted map route debug"), &g_Config.m_QmPlayerStatsMapProgressDbgRoute);
 	}
-	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmPlayerStatsResetOnJoin, "Reset stats when joining a server", Localize("Reset stats when joining a server"), &g_Config.m_QmPlayerStatsResetOnJoin);
 }

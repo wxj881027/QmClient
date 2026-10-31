@@ -10085,6 +10085,9 @@ Permanent access; up to 4 online IP addresses
 Permanent sponsor verified
 == 영구 후원 자격 인증 완료
 
+Personal adjustments
+== 개인 설정
+
 Personal best:
 == 개인 최고 기록:
 

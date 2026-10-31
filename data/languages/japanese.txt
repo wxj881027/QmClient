@@ -10085,6 +10085,9 @@ Permanent access; up to 4 online IP addresses
 Permanent sponsor verified
 == 永久支援資格を認証済み
 
+Personal adjustments
+== カスタマイズ
+
 Personal best:
 == 自己ベスト：
 

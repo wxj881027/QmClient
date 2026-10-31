@@ -10085,6 +10085,9 @@ Permanent access; up to 4 online IP addresses
 Permanent sponsor verified
 == Постоянный статус спонсора подтверждён
 
+Personal adjustments
+== Индивидуальные настройки
+
 Personal best:
 == Личный рекорд:
 
