@@ -6189,6 +6189,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/client/prediction_switch_state_test.cpp
       src/test/integration/client/prediction_dragger_geometry_test.cpp
       src/test/unit/client/prediction_door_geometry_test.cpp
+      src/test/unit/client/version_compare_test.cpp
+      src/game/client/components/tclient/version_compare.cpp
       src/test/integration/client/prediction_door_rebuild_test.cpp
       src/test/integration/client/prediction_event_allocation_test.cpp
       src/test/unit/qmclient/client/qm_pending_hammer_hits_test.cpp
