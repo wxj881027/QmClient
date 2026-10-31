@@ -3570,6 +3570,7 @@ if(CLIENT)
     components/qmclient/chat_emoji_load.cpp
     components/qmclient/chat_translate_button.h
     components/qmclient/chat_emoji.h
+    components/qmclient/chat_emoji_render.h
     components/qmclient/collision_hitbox.cpp
     components/qmclient/collision_hitbox.h
     components/qmclient/collision_hitbox_projectile_logic.h
@@ -5155,6 +5156,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_axiom_scores_test.cpp
     src/test/contract/qmclient/client/qm_axiom_scores_contract_test.cpp
     src/test/unit/qmclient/client/qm_chat_emoji_test.cpp
+    src/test/unit/qmclient/client/qm_chat_emoji_render_test.cpp
     src/test/unit/qmclient/client/qm_chat_interactions_test.cpp
     src/test/unit/qmclient/client/qm_chat_message_filter_test.cpp
     src/test/unit/qmclient/client/qm_chat_command_policy_test.cpp

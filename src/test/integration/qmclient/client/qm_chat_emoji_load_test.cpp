@@ -31,6 +31,17 @@ namespace
 		}
 		return true;
 	}
+	struct SDecodeGate
+	{
+		std::atomic<bool> m_Started{false}, m_Release{false}, m_Completed{false}, m_TimedOut{false};
+	};
+	bool AwaitDecodeRelease(const std::shared_ptr<SDecodeGate> &pGate)
+	{
+		pGate->m_Started = true;
+		const bool Released = WaitFor([&] { return pGate->m_Release.load(); });
+		pGate->m_TimedOut = !Released;
+		return Released;
+	}
 	class QmChatEmojiLoadIntegration : public ::testing::Test
 	{
 	protected:
@@ -66,6 +77,45 @@ namespace
 				return true; });
 		}
 	};
+}
+
+TEST_F(QmChatEmojiLoadIntegration, BackgroundImageIsVisibleOnlyAfterDecodeCompletes)
+{
+	auto pGate = std::make_shared<SDecodeGate>();
+	auto pJob = std::make_shared<CQmChatEmojiLoadJob>([pGate](CImageInfo &Image) {
+		Image.m_Width = 1260;
+		if(AwaitDecodeRelease(pGate))
+			Image.m_Height = 1244;
+	});
+	EXPECT_EQ(pJob->Image(), nullptr);
+	ASSERT_TRUE(m_Pool.TryAdd(pJob));
+	const bool Started = WaitFor([&] { return pGate->m_Started.load(); });
+	EXPECT_TRUE(Started);
+	EXPECT_EQ(pJob->Image(), nullptr);
+	pGate->m_Release = true;
+	ASSERT_TRUE(WaitFor([&] { return pJob->State() == IJob::STATE_DONE; }));
+	EXPECT_FALSE(pGate->m_TimedOut);
+	ASSERT_NE(pJob->Image(), nullptr);
+	EXPECT_EQ(pJob->Image()->m_Width, 1260u);
+	EXPECT_EQ(pJob->Image()->m_Height, 1244u);
+}
+
+TEST_F(QmChatEmojiLoadIntegration, ReleasingComponentReferenceDoesNotInvalidateTheLoad)
+{
+	auto pGate = std::make_shared<SDecodeGate>();
+	auto pJob = std::make_shared<CQmChatEmojiLoadJob>([pGate](CImageInfo &) {
+		if(AwaitDecodeRelease(pGate))
+			pGate->m_Completed = true;
+	});
+	ASSERT_TRUE(m_Pool.TryAdd(pJob));
+	const bool Started = WaitFor([&] { return pGate->m_Started.load(); });
+	EXPECT_TRUE(Started);
+	std::weak_ptr<CQmChatEmojiLoadJob> WeakJob = pJob;
+	pJob.reset();
+	EXPECT_FALSE(WeakJob.expired());
+	pGate->m_Release = true;
+	EXPECT_TRUE(WaitFor([&] { return pGate->m_Completed.load(); }));
+	EXPECT_FALSE(pGate->m_TimedOut);
 }
 
 TEST_F(QmChatEmojiLoadIntegration, RealJobsKeepFifoOrderAndDeduplicateRequests)
