@@ -75,7 +75,7 @@ public:
 	bool CanCollide(int ClientId) override;
 	bool SameTeam(int ClientId);
 	bool m_NinjaJetpack;
-	int m_FreezeTime;
+	int64_t m_FreezeTime;
 	bool m_FrozenLastTick;
 	vec2 m_PrevPos;
 	vec2 m_PrevPrevPos;
@@ -164,7 +164,7 @@ private:
 	int m_LastWeapon;
 	int m_QueuedWeapon;
 
-	int m_ReloadTimer;
+	int64_t m_ReloadTimer;
 	int m_AttackTick;
 	int m_LastDamageTick;
 	int m_LastDamageFrom;

@@ -7333,7 +7333,7 @@ vec2 CGameClient::GetFreezePos(int ClientId)
 
 	int AdjustTicks = 0;
 	int DelayTicks = g_Config.m_QmUnfreezeLagDelayTicks;
-	int FreezeTime = 0;
+	int64_t FreezeTime = 0;
 	if(pExtraChar && pChar)
 	{
 		AdjustTicks = pChar->m_FreezeAccumulation;
@@ -7343,7 +7343,7 @@ vec2 CGameClient::GetFreezePos(int ClientId)
 		AdjustTicks = std::max(AdjustTicks, 0);
 		FreezeTime = pChar->m_FreezeTime;
 
-		AdjustTicks = std::min(FreezeTime, AdjustTicks);
+		AdjustTicks = static_cast<int>(std::min<int64_t>(FreezeTime, AdjustTicks));
 	}
 	if(g_Config.m_QmRemoveAnti && pChar && AdjustTicks > 0 && FreezeTime > 0)
 		MixAmount = mix(0.0f, 1.0f, 1.0f - AdjustTicks / (float)DelayTicks);

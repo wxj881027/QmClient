@@ -108,7 +108,7 @@ void CCharacter::HandleNinja()
 	if(m_Core.m_ActiveWeapon != WEAPON_NINJA)
 		return;
 
-	if((GameWorld()->GameTick() - m_Core.m_Ninja.m_ActivationTick) > (g_pData->m_Weapons.m_Ninja.m_Duration * GameWorld()->GameTickSpeed() / 1000))
+	if((static_cast<int64_t>(GameWorld()->GameTick()) - m_Core.m_Ninja.m_ActivationTick) > (g_pData->m_Weapons.m_Ninja.m_Duration * GameWorld()->GameTickSpeed() / 1000))
 	{
 		// time's up, return
 		RemoveNinja();
@@ -1219,7 +1219,7 @@ void CCharacter::DDRaceTick()
 	}
 	else
 	{
-		m_FreezeAccumulation = std::min(m_FreezeAccumulation, m_FreezeTime);
+		m_FreezeAccumulation = static_cast<int>(std::min<int64_t>(m_FreezeAccumulation, m_FreezeTime));
 	}
 	m_Core.m_IsInFreeze |= (Collision()->GetCollisionAt(m_Pos.x + GetProximityRadius() / 3.f, m_Pos.y - GetProximityRadius() / 3.f) == TILE_DEATH ||
 				Collision()->GetCollisionAt(m_Pos.x + GetProximityRadius() / 3.f, m_Pos.y + GetProximityRadius() / 3.f) == TILE_DEATH ||
@@ -1292,16 +1292,18 @@ bool CCharacter::Freeze(int Seconds)
 {
 	if(!GameWorld()->m_WorldConfig.m_PredictFreeze)
 		return false;
-	if(Seconds <= 0 || m_Core.m_Super || m_Core.m_Invincible || m_FreezeTime > Seconds * GameWorld()->GameTickSpeed())
+	const int64_t FreezeTicks = static_cast<int64_t>(Seconds) * GameWorld()->GameTickSpeed();
+	if(Seconds <= 0 || m_Core.m_Super || m_Core.m_Invincible || m_FreezeTime > FreezeTicks)
 		return false;
-	if(m_Core.m_FreezeStart < GameWorld()->GameTick() - GameWorld()->GameTickSpeed())
-	{
-		m_FreezeTime = Seconds * GameWorld()->GameTickSpeed();
-		m_Core.m_FreezeStart = GameWorld()->GameTick();
-		m_Core.m_FreezeEnd = m_Core.m_DeepFrozen ? -1 : (m_FreezeTime == 0 ? 0 : GameWorld()->GameTick() + m_FreezeTime);
-		return true;
-	}
-	return false;
+	if(m_Core.m_FreezeStart >= static_cast<int64_t>(GameWorld()->GameTick()) - GameWorld()->GameTickSpeed())
+		return false;
+	// 核心结束 tick 保持原 int 字段，无法表示时不发布半份冻结状态。
+	if(!m_Core.m_DeepFrozen && !QmTickShift::CanShift(GameWorld()->GameTick(), FreezeTicks))
+		return false;
+	m_FreezeTime = FreezeTicks;
+	m_Core.m_FreezeStart = GameWorld()->GameTick();
+	m_Core.m_FreezeEnd = m_Core.m_DeepFrozen ? -1 : static_cast<int>(static_cast<int64_t>(GameWorld()->GameTick()) + FreezeTicks);
+	return true;
 }
 
 bool CCharacter::Freeze()
@@ -1539,7 +1541,7 @@ void CCharacter::Read(CNetObj_Character *pChar, CNetObj_DDNetCharacter *pExtende
 			{
 				if(m_FreezeTime == 0)
 					Freeze();
-				m_FreezeTime = maximum(1, pExtended->m_FreezeEnd - GameWorld()->GameTick());
+				m_FreezeTime = maximum<int64_t>(1, static_cast<int64_t>(pExtended->m_FreezeEnd) - GameWorld()->GameTick());
 			}
 			else if(pExtended->m_FreezeEnd == -1)
 			{
@@ -1701,10 +1703,10 @@ void CCharacter::Read(CNetObj_Character *pChar, CNetObj_DDNetCharacter *pExtende
 	// (this is only needed for autofire weapons to prevent the predicted reload timer from desyncing)
 	if(IsLocal && m_Core.m_ActiveWeapon != -1 && m_Core.m_ActiveWeapon != WEAPON_HAMMER && !m_Core.m_aWeapons[WEAPON_NINJA].m_Got)
 	{
-		if(maximum(m_LastTuneZoneTick, m_LastWeaponSwitchTick) + GameWorld()->GameTickSpeed() < GameWorld()->GameTick())
+		if(static_cast<int64_t>(maximum(m_LastTuneZoneTick, m_LastWeaponSwitchTick)) + GameWorld()->GameTickSpeed() < GameWorld()->GameTick())
 		{
 			const int FireDelayTicks = GetTuning(GetOverriddenTuneZone())->GetWeaponFireDelay(m_Core.m_ActiveWeapon) * GameWorld()->GameTickSpeed();
-			m_ReloadTimer = maximum(0, m_AttackTick + FireDelayTicks - GameWorld()->GameTick());
+			m_ReloadTimer = maximum<int64_t>(0, static_cast<int64_t>(m_AttackTick) + FireDelayTicks - GameWorld()->GameTick());
 		}
 	}
 }
