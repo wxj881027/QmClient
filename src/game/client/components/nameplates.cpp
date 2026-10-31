@@ -14,6 +14,7 @@
 #include <generated/client_data.h>
 
 #include <game/client/QmUi/QmAnimResolve.h>
+#include <game/client/QmUi/QmChatBubble.h>
 #include <game/client/animstate.h>
 #include <game/client/components/nameplate_text_effects.h>
 #include <game/client/components/qmclient/chat_emoji.h>
@@ -2618,8 +2619,8 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 	if(BecameVisible || NewTimedBubble)
 	{
 		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, 0.0f);
-		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, 0.92f);
-		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, 12.0f);
+		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, 0.82f);
+		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, 8.0f);
 		if(IsTyping)
 			SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, 0.0f);
 		AnimState.m_LastTargetAlpha = std::numeric_limits<float>::quiet_NaN();
@@ -2632,7 +2633,7 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 	float TargetScale = 1.0f;
 	float TargetSlideOffset = 0.0f;
 	float AlphaDuration = HasSourceText ? 0.20f : 0.16f;
-	float TransformDuration = HasSourceText ? 0.20f : 0.16f;
+	float TransformDuration = HasSourceText ? 0.24f : 0.16f;
 
 	if(TimedDisappearWindow)
 	{
@@ -2655,7 +2656,9 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 	}
 
 	const float BubbleAlpha = std::clamp(ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, TargetAlpha, AlphaDuration, EEasing::EASE_OUT, AnimState.m_LastTargetAlpha), 0.0f, Alpha);
-	const float AnimScale = std::max(0.0f, ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, TargetScale, TransformDuration, EEasing::EASE_OUT, AnimState.m_LastTargetScale));
+	// 出现时轻微回弹；收起仍遵循玩家选择的淡出、缩小或位移动画。
+	const EEasing ScaleEasing = HasSourceText && !TimedDisappearWindow ? EEasing::EASE_OUT_BACK : EEasing::EASE_OUT;
+	const float AnimScale = std::max(0.0f, ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, TargetScale, TransformDuration, ScaleEasing, AnimState.m_LastTargetScale));
 	const float AnimSlideOffset = ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, TargetSlideOffset, TransformDuration, EEasing::EASE_OUT, AnimState.m_LastTargetSlide);
 
 	AnimState.m_LastVisible = HasSourceText;
@@ -2727,15 +2730,8 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 
 	// Keep bubble sizing in screen space so rapid camera zoom does not force
 	// a full text relayout every frame.
-	constexpr float kBubblePadding = 12.0f;
-	constexpr float kBubbleRounding = 10.0f;
-	constexpr float kBubbleMaxWidth = 230.0f;
-	const float BaseFontSize = (float)g_Config.m_QmChatBubbleFontSize;
-
-	const float FontSize = BaseFontSize;
-	const float Padding = kBubblePadding;
-	const float Rounding = kBubbleRounding;
-	const float MaxWidth = kBubbleMaxWidth;
+	const float FontSize = static_cast<float>(g_Config.m_QmChatBubbleFontSize);
+	const float MaxWidth = qm_chat_bubble::MAX_TEXT_WIDTH;
 
 	// Anchor bubble to the top of the nameplate plus default nameplate spacing.
 	float NameplateTopWorldY = Position.y - (float)g_Config.m_ClNamePlatesOffset;
@@ -2809,29 +2805,12 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 		TextWidth = AnimState.m_CachedTextWidth;
 	}
 
-	// Calculate bubble dimensions and position (with scale animation)
-	float BubbleWidth = (TextWidth + Padding * 2.0f) * AnimScale;
-	float BubbleHeight = (TextHeight + Padding * 2.0f) * AnimScale;
-
-	// Position bubble above the nameplate with built-in nameplate spacing.
-	float AnimOffset = AnimSlideOffset;
-	const float BubbleGap = DEFAULT_PADDING;
-	float BubbleX = InterfaceX - BubbleWidth / 2.0f;
-	float BubbleY = InterfaceNameplateTopY - BubbleGap - BubbleHeight + AnimOffset;
-
-	float ConfigAlpha = g_Config.m_QmChatBubbleAlpha / 100.0f;
-
-	ColorHSLA BgHSLA(g_Config.m_QmChatBubbleBgColor, true);
-	ColorRGBA BgColor = color_cast<ColorRGBA>(BgHSLA);
-	BgColor.a *= BubbleAlpha * ConfigAlpha;
-
-	Graphics()->TextureClear();
-	Graphics()->DrawRect(
-		BubbleX, BubbleY,
-		BubbleWidth, BubbleHeight,
-		BgColor,
-		IGraphics::CORNER_ALL,
-		Rounding);
+	const qm_chat_bubble::SLayout Bubble = qm_chat_bubble::Layout(
+		vec2(InterfaceX, InterfaceNameplateTopY - DEFAULT_PADDING + AnimSlideOffset),
+		vec2(TextWidth, TextHeight), FontSize, AnimScale);
+	const float ConfigAlpha = g_Config.m_QmChatBubbleAlpha / 100.0f;
+	const ColorRGBA BgColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmChatBubbleBgColor, true));
+	qm_chat_bubble::Render(Graphics(), Bubble, BgColor, BubbleAlpha * ConfigAlpha);
 
 	if(RenderChatEmoji)
 	{
@@ -2839,8 +2818,8 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 		const float EmojiHeight = TextHeight * AnimScale;
 		GameClient()->m_QmChatEmoji.Render(
 			ChatEmoji,
-			BubbleX + (BubbleWidth - EmojiWidth) / 2.0f,
-			BubbleY + (BubbleHeight - EmojiHeight) / 2.0f,
+			Bubble.m_TextPosition.x,
+			Bubble.m_TextPosition.y,
 			EmojiWidth,
 			EmojiHeight,
 			BubbleAlpha * ConfigAlpha);
@@ -2859,22 +2838,17 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 
 		if(UseTextContainer && AnimState.m_TextContainerIndex.Valid())
 		{
-			const float TextX = BubbleX + (BubbleWidth - TextWidth) / 2.0f;
-			const float TextY = BubbleY + (BubbleHeight - TextHeight) / 2.0f;
+			const float TextX = Bubble.m_Position.x + (Bubble.m_Size.x - TextWidth) / 2.0f;
+			const float TextY = Bubble.m_Position.y + (Bubble.m_Size.y - TextHeight) / 2.0f;
 			TextRender()->RenderTextContainer(AnimState.m_TextContainerIndex, TextColor, OutlineColor, TextX, TextY);
 		}
 		else
 		{
-			const float ScaledTextWidth = TextWidth * AnimScale;
-			const float ScaledTextHeight = TextHeight * AnimScale;
-			const float TextX = BubbleX + (BubbleWidth - ScaledTextWidth) / 2.0f;
-			const float TextY = BubbleY + (BubbleHeight - ScaledTextHeight) / 2.0f;
-
 			CTextCursor Cursor;
 			Cursor.m_FontSize = FontSize * AnimScale;
 			Cursor.m_LineWidth = MaxWidth * AnimScale;
 			Cursor.m_Flags = TEXTFLAG_RENDER;
-			Cursor.SetPosition(vec2(TextX, TextY));
+			Cursor.SetPosition(Bubble.m_TextPosition);
 			TextRender()->TextEx(&Cursor, pDisplayText);
 		}
 	}

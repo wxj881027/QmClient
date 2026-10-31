@@ -3190,6 +3190,8 @@ if(CLIENT)
     QmUi/QmSeasonalSidebar.h
     QmUi/QmBadgeGeometry.cpp
     QmUi/QmBadgeGeometry.h
+    QmUi/QmChatBubble.cpp
+    QmUi/QmChatBubble.h
     QmUi/QmBadgeGeometryData.h
     QmUi/QmAuthorName.cpp
     QmUi/QmAuthorName.h
@@ -5096,6 +5098,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_title_badge_test.cpp
     src/test/unit/qmclient/client/qm_title_badge_render_test.cpp
     src/test/unit/qmclient/client/qm_title_style_test.cpp
+    src/test/unit/qmclient/ui/qm_chat_bubble_test.cpp
     src/test/unit/qmclient/client/qm_sponsor_chat_style_test.cpp
     src/test/unit/qmclient/client/qm_skin_outline_test.cpp
     src/test/unit/qmclient/client/qm_scoreboard_skin_test.cpp
