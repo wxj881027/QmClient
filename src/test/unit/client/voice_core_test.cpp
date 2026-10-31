@@ -579,14 +579,14 @@ TEST(QmClient, CustomTitleLengthAndPresenceValidation)
 	EXPECT_FALSE(IsValidQmTitle("a\nb"));
 	EXPECT_FALSE(IsValidQmTitle(""));
 	const char *pJsonText = R"({"server_time":1000,"presences":[{"server_address":"a","player_id":3,"player_name":"Twen","title":"小猫","issued_at":1000,"expires_at":1015},{"server_address":"b","player_id":4,"player_name":"Twen","title":"小猫","issued_at":1000,"expires_at":1015},{"server_address":"a","player_id":5,"player_name":"Twen","title":"小猫","issued_at":900,"expires_at":999}]})";
-	json_value *pJson = json_parse(pJsonText, str_length(pJsonText));
+	const std::unique_ptr<json_value, decltype(&json_value_free)> pJson(json_parse(pJsonText, str_length(pJsonText)), json_value_free);
 	ASSERT_NE(pJson, nullptr);
-	int64_t ServerTime = 0;
-	const auto Presences = ParseQmTitlePresences(pJson, "a", &ServerTime);
+	SQmTitlePresenceParseResult Result;
+	ASSERT_TRUE(ParseQmTitlePresencesJson(pJson.get(), "a", Result));
+	const auto &Presences = Result.m_vPresences;
 	ASSERT_EQ(Presences.size(), 1u);
-	EXPECT_EQ(ServerTime, 1000);
+	EXPECT_EQ(Result.m_ServerTime, 1000);
 	EXPECT_EQ(Presences[0].m_PlayerId, 3);
 	EXPECT_EQ(Presences[0].m_Title, "小猫");
 	EXPECT_EQ(Presences[0].m_RemainingSeconds, 15);
-	json_value_free(pJson);
 }

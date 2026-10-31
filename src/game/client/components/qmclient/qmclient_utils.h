@@ -30,7 +30,15 @@ struct SQmTitlePresence
 	SQmTitleAppearance m_Appearance;
 };
 
-std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, const char *pServerAddress, int64_t *pServerTime = nullptr);
+struct SQmTitlePresenceParseResult
+{
+	bool m_Parsed = false;
+	int64_t m_ServerTime = 0;
+	std::vector<SQmTitlePresence> m_vPresences;
+};
+
+// 成功空快照与解析失败分开；失败不发布时间或部分记录。
+bool ParseQmTitlePresencesJson(const json_value *pRoot, const char *pServerAddress, SQmTitlePresenceParseResult &OutResult);
 bool IsValidQmTitle(const char *pTitle);
 // 缺字段兼容旧服务；不完整或非法的新外观整体回退，避免半份资料。
 bool ParseQmTitleAppearance(const json_value *pValue, SQmTitleAppearance &Out);

@@ -7,6 +7,7 @@
 
 #include <limits>
 #include <memory>
+#include <utility>
 
 TEST(QmSponsorChatStyle, StableIdsRoundTripAndUnknownIdsUseNormalText)
 {
@@ -206,7 +207,9 @@ namespace
 	{
 		const std::unique_ptr<json_value, decltype(&json_value_free)> pJson(json_parse(pText, str_length(pText)), json_value_free);
 		EXPECT_NE(pJson, nullptr);
-		return ParseQmTitlePresences(pJson.get(), "test:8303", nullptr);
+		SQmTitlePresenceParseResult Result;
+		EXPECT_TRUE(ParseQmTitlePresencesJson(pJson.get(), "test:8303", Result));
+		return std::move(Result.m_vPresences);
 	}
 }
 

@@ -2,6 +2,7 @@
 #include "qmclient.h"
 
 #include "bounded_file_reader.h"
+#include "qm_json_fields.h"
 #include "qm_realtime_service_data.h"
 #include "qm_title_style.h"
 #include "qmclient_users_parse_job.h"
@@ -1473,8 +1474,8 @@ void CQmClient::ApplyQmRealtimeDevelopers(const SQmRealtimeMessage &Message)
 	char aServer[NETADDR_MAXSTRSIZE] = "";
 	net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
 	const json_value *pPayload = Message.m_pPayload.get();
-	const json_value *pAddress = JsonObjectField(pPayload, "server_address");
-	if(pAddress->type != json_string || str_comp(pAddress->u.string.ptr, aServer) != 0)
+	const json_value *pAddress = qm_json::Field(pPayload, "server_address");
+	if(!qm_json::TextEquals(pAddress, aServer))
 		return;
 	SQmDeveloperPresenceParseResult Result;
 	if(!ParseQmDeveloperPresencesJson(pPayload, aServer, Result))
@@ -1514,16 +1515,15 @@ void CQmClient::ApplyQmRealtimeTitles(const SQmRealtimeMessage &Message)
 
 	char aServer[NETADDR_MAXSTRSIZE] = "";
 	net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
-	const json_value *pAddress = JsonObjectField(Message.m_pTitlePayload.get(), "server_address");
-	if(pAddress->type != json_string || str_comp(pAddress->u.string.ptr, aServer) != 0)
+	const json_value *pAddress = qm_json::Field(Message.m_pTitlePayload.get(), "server_address");
+	if(!qm_json::TextEquals(pAddress, aServer))
 		return;
 
-	int64_t ServerTime = 0;
-	const auto vPresences = ParseQmTitlePresences(Message.m_pTitlePayload.get(), aServer, &ServerTime);
-	if(ServerTime <= 0)
+	SQmTitlePresenceParseResult Result;
+	if(!ParseQmTitlePresencesJson(Message.m_pTitlePayload.get(), aServer, Result))
 		return;
 	mem_zero(m_aTitleExpires, sizeof(m_aTitleExpires));
-	for(const auto &Presence : vPresences)
+	for(const auto &Presence : Result.m_vPresences)
 	{
 		str_copy(m_aaTitleNames[Presence.m_PlayerId], Presence.m_PlayerName.c_str());
 		str_format(m_aaPlayerTitles[Presence.m_PlayerId], sizeof(m_aaPlayerTitles[Presence.m_PlayerId]), "[%s]", Presence.m_Title.c_str());
@@ -1532,7 +1532,7 @@ void CQmClient::ApplyQmRealtimeTitles(const SQmRealtimeMessage &Message)
 		m_aPlayerTitleAppearances[Presence.m_PlayerId] = Presence.m_Appearance;
 		m_aTitleExpires[Presence.m_PlayerId] = time_get() + Presence.m_RemainingSeconds * time_freq();
 	}
-	const double Measured = static_cast<double>(ServerTime) - Client()->GlobalTime();
+	const double Measured = static_cast<double>(Result.m_ServerTime) - Client()->GlobalTime();
 	m_TitleServerTimeOffset = m_TitleServerTimeOffsetValid ? (m_TitleServerTimeOffset * 0.75 + Measured * 0.25) : Measured;
 	m_TitleServerTimeOffsetValid = true;
 }

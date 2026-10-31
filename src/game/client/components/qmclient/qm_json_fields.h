@@ -36,6 +36,15 @@ namespace qm_json
 		       str_utf8_check(pValue->u.string.ptr);
 	}
 
+	inline bool TextEquals(const json_value *pValue, const char *pExpected)
+	{
+		if(!pExpected || !pValue || pValue->type != json_string)
+			return false;
+		const size_t Length = std::strlen(pExpected);
+		return pValue->u.string.length == Length && Text(pValue) &&
+		       std::memcmp(pValue->u.string.ptr, pExpected, Length) == 0;
+	}
+
 	// 沿用统计字段的非负数规则；有限小数向零截断，失败保留输出。
 	inline bool NonNegativeInt64(const json_value *pValue, int64_t &Out)
 	{
