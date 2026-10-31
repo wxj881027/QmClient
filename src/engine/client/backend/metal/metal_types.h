@@ -8,7 +8,6 @@ using SMetalFloat4x4 = metal::float4x4;
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <vector>
 
 enum class EMetalTextureFormat
 {
@@ -48,20 +47,6 @@ inline SMetalBlendState MetalBlendState(EMetalBlendMode Mode)
 	}
 	return {};
 }
-
-struct SMetalPipelineKey
-{
-	uint8_t m_PixelFormat = 0;
-	uint8_t m_SampleCount = 1;
-	uint8_t m_BlendMode = 0;
-	bool m_Textured = false;
-	bool m_Text = false;
-
-	bool operator==(const SMetalPipelineKey &Other) const
-	{
-		return m_PixelFormat == Other.m_PixelFormat && m_SampleCount == Other.m_SampleCount && m_BlendMode == Other.m_BlendMode && m_Textured == Other.m_Textured && m_Text == Other.m_Text;
-	}
-};
 
 struct SMetalTextureLayout
 {
@@ -188,14 +173,6 @@ inline bool MetalValidateSubregion(size_t TextureWidth, size_t TextureHeight, si
 	return Width > 0 && Height > 0 && X <= TextureWidth && Y <= TextureHeight && Width <= TextureWidth - X && Height <= TextureHeight - Y;
 }
 
-struct SMetalTextureHandle
-{
-	size_t m_Slot = std::numeric_limits<size_t>::max();
-	uint32_t m_Generation = 0;
-
-	bool IsValid() const { return m_Generation != 0 && m_Slot != std::numeric_limits<size_t>::max(); }
-};
-
 struct SMetalBufferLayout
 {
 	size_t m_DataBytes = 0;
@@ -216,14 +193,6 @@ inline bool MetalValidateBufferRange(size_t BufferBytes, size_t Offset, size_t C
 {
 	return CopyBytes > 0 && Offset <= BufferBytes && CopyBytes <= BufferBytes - Offset;
 }
-
-struct SMetalBufferHandle
-{
-	size_t m_Slot = std::numeric_limits<size_t>::max();
-	uint32_t m_Generation = 0;
-
-	bool IsValid() const { return m_Generation != 0 && m_Slot != std::numeric_limits<size_t>::max(); }
-};
 
 enum : uint32_t
 {
@@ -270,94 +239,6 @@ inline bool MetalVertexAttributeEquals(const SMetalVertexAttribute &Attribute, u
 {
 	return Attribute.m_DataTypeCount == DataTypeCount && Attribute.m_Type == Type && Attribute.m_Normalized == Normalized && Attribute.m_Offset == Offset && Attribute.m_FuncType == FuncType;
 }
-
-class CMetalBufferRegistry
-{
-	struct SEntry
-	{
-		uint32_t m_Generation = 0;
-		size_t m_DataBytes = 0;
-		bool m_Allocated = false;
-		bool m_OneTimeUse = false;
-	};
-	std::vector<SEntry> m_vEntries;
-
-public:
-	SMetalBufferHandle Allocate(size_t Slot, size_t DataBytes, bool OneTimeUse)
-	{
-		SMetalBufferLayout Layout;
-		if(!MetalBufferLayout(DataBytes, OneTimeUse, Layout))
-			return {};
-		if(Slot >= m_vEntries.size())
-			m_vEntries.resize(Slot + 1);
-		SEntry &Entry = m_vEntries[Slot];
-		if(Entry.m_Allocated)
-			return {};
-		Entry.m_Generation = Entry.m_Generation == std::numeric_limits<uint32_t>::max() ? 1 : Entry.m_Generation + 1;
-		Entry.m_DataBytes = DataBytes;
-		Entry.m_OneTimeUse = OneTimeUse;
-		Entry.m_Allocated = true;
-		return {Slot, Entry.m_Generation};
-	}
-
-	bool Release(SMetalBufferHandle Handle)
-	{
-		if(!IsValid(Handle))
-			return false;
-		m_vEntries[Handle.m_Slot].m_Allocated = false;
-		return true;
-	}
-
-	bool IsValid(SMetalBufferHandle Handle) const
-	{
-		return Handle.IsValid() && Handle.m_Slot < m_vEntries.size() && m_vEntries[Handle.m_Slot].m_Allocated && m_vEntries[Handle.m_Slot].m_Generation == Handle.m_Generation;
-	}
-
-	size_t DataBytes(SMetalBufferHandle Handle) const
-	{
-		return IsValid(Handle) ? m_vEntries[Handle.m_Slot].m_DataBytes : 0;
-	}
-
-	bool IsOneTimeUse(SMetalBufferHandle Handle) const
-	{
-		return IsValid(Handle) && m_vEntries[Handle.m_Slot].m_OneTimeUse;
-	}
-};
-
-class CMetalTextureRegistry
-{
-	std::vector<uint32_t> m_vGenerations;
-	std::vector<bool> m_vAllocated;
-
-public:
-	SMetalTextureHandle Allocate(size_t Slot)
-	{
-		if(Slot >= m_vGenerations.size())
-		{
-			m_vGenerations.resize(Slot + 1, 0);
-			m_vAllocated.resize(Slot + 1, false);
-		}
-		if(m_vAllocated[Slot])
-			return {};
-		uint32_t &Generation = m_vGenerations[Slot];
-		Generation = Generation == std::numeric_limits<uint32_t>::max() ? 1 : Generation + 1;
-		m_vAllocated[Slot] = true;
-		return {Slot, Generation};
-	}
-
-	bool Release(SMetalTextureHandle Handle)
-	{
-		if(!IsValid(Handle))
-			return false;
-		m_vAllocated[Handle.m_Slot] = false;
-		return true;
-	}
-
-	bool IsValid(SMetalTextureHandle Handle) const
-	{
-		return Handle.IsValid() && Handle.m_Slot < m_vGenerations.size() && m_vAllocated[Handle.m_Slot] && m_vGenerations[Handle.m_Slot] == Handle.m_Generation;
-	}
-};
 
 struct SMetalFloat4
 {
