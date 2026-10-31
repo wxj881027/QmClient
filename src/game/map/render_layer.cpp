@@ -1,5 +1,7 @@
 #include "render_layer.h"
 
+#include "render_screen.h"
+
 #include <base/log.h>
 
 #include <engine/graphics.h>
@@ -320,10 +322,13 @@ void CRenderLayerTile::RenderTileLayer(const ColorRGBA &Color, const CRenderLaye
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 
-	int ScreenRectY0 = std::floor(ScreenY0 / 32);
-	int ScreenRectX0 = std::floor(ScreenX0 / 32);
-	int ScreenRectY1 = std::ceil(ScreenY1 / 32);
-	int ScreenRectX1 = std::ceil(ScreenX1 / 32);
+	const auto ScreenRectRange = MapRenderScreen::TileRange(ScreenX0, ScreenY0, ScreenX1, ScreenY1, 32.0f, MapRenderScreen::ETileRangeMode::BUFFERED);
+	if(!ScreenRectRange)
+		return;
+	int ScreenRectY0 = ScreenRectRange->m_Y0;
+	int ScreenRectX0 = ScreenRectRange->m_X0;
+	int ScreenRectY1 = ScreenRectRange->m_Y1;
+	int ScreenRectX1 = ScreenRectRange->m_X1;
 
 	if(IsVisibleInClipRegion(m_LayerClip))
 	{
@@ -344,58 +349,61 @@ void CRenderLayerTile::RenderTileLayer(const ColorRGBA &Color, const CRenderLaye
 		m_vpRenderTileLayerIndexOffsets.clear();
 		m_vRenderTileLayerDrawCounts.clear();
 
-		int VisibleRectY0 = std::floor(VisibleY0 / 32);
-		int VisibleRectX0 = std::floor(VisibleX0 / 32);
-		int VisibleRectY1 = std::ceil(VisibleY1 / 32);
-		int VisibleRectX1 = std::ceil(VisibleX1 / 32);
-
-		int X0 = std::max(VisibleRectX0, 0);
-		int X1 = std::min(VisibleRectX1, (int)Visuals.m_Width);
-		int XR = X1 == std::numeric_limits<int>::min() ? X1 : X1 - 1;
-		if(X0 <= XR)
+		const auto VisibleRectRange = MapRenderScreen::TileRange(VisibleX0, VisibleY0, VisibleX1, VisibleY1, 32.0f, MapRenderScreen::ETileRangeMode::BUFFERED);
+		if(VisibleRectRange)
 		{
+			int VisibleRectY0 = VisibleRectRange->m_Y0;
+			int VisibleRectX0 = VisibleRectRange->m_X0;
+			int VisibleRectY1 = VisibleRectRange->m_Y1;
+			int VisibleRectX1 = VisibleRectRange->m_X1;
+
+			int X0 = std::max(VisibleRectX0, 0);
+			int X1 = std::min(VisibleRectX1, (int)Visuals.m_Width);
+			int XR = X1 == std::numeric_limits<int>::min() ? X1 : X1 - 1;
 			int Y0 = std::max(VisibleRectY0, 0);
 			int Y1 = std::min(VisibleRectY1, (int)Visuals.m_Height);
-
-			unsigned long long Reserve = absolute(Y1 - Y0) + 1;
-			m_vpRenderTileLayerIndexOffsets.reserve(Reserve);
-			m_vRenderTileLayerDrawCounts.reserve(Reserve);
-
-			for(int y = Y0; y < Y1; ++y)
+			if(X0 <= XR && Y0 < Y1)
 			{
-				const auto &StartTileVisual = Visuals.m_vTilesOfLayer[y * Visuals.m_Width + X0];
-				const auto &EndTileVisual = Visuals.m_vTilesOfLayer[y * Visuals.m_Width + XR];
-				const offset_ptr RowStartOffset = StartTileVisual.IndexBufferByteOffset();
-				const offset_ptr RowEndOffset = EndTileVisual.IndexBufferByteOffset();
-				dbg_assert(RowEndOffset >= RowStartOffset, "Tile offsets are not monotone.");
-				unsigned int NumVertices = ((RowEndOffset - RowStartOffset) / sizeof(unsigned int)) + (EndTileVisual.DoDraw() ? 6lu : 0lu);
+				const size_t Reserve = static_cast<size_t>(Y1 - Y0) + 1;
+				m_vpRenderTileLayerIndexOffsets.reserve(Reserve);
+				m_vRenderTileLayerDrawCounts.reserve(Reserve);
 
-				if(NumVertices)
+				for(int y = Y0; y < Y1; ++y)
 				{
-					if(!m_vpRenderTileLayerIndexOffsets.empty())
+					const auto &StartTileVisual = Visuals.m_vTilesOfLayer[y * Visuals.m_Width + X0];
+					const auto &EndTileVisual = Visuals.m_vTilesOfLayer[y * Visuals.m_Width + XR];
+					const offset_ptr RowStartOffset = StartTileVisual.IndexBufferByteOffset();
+					const offset_ptr RowEndOffset = EndTileVisual.IndexBufferByteOffset();
+					dbg_assert(RowEndOffset >= RowStartOffset, "Tile offsets are not monotone.");
+					unsigned int NumVertices = ((RowEndOffset - RowStartOffset) / sizeof(unsigned int)) + (EndTileVisual.DoDraw() ? 6lu : 0lu);
+
+					if(NumVertices)
 					{
-						const offset_ptr LastOffset = (offset_ptr)m_vpRenderTileLayerIndexOffsets.back();
-						const offset_ptr LastEndOffset = LastOffset + (offset_ptr)m_vRenderTileLayerDrawCounts.back() * sizeof(unsigned int);
-						if(LastEndOffset == RowStartOffset)
+						if(!m_vpRenderTileLayerIndexOffsets.empty())
 						{
-							unsigned int &MergedDrawCount = m_vRenderTileLayerDrawCounts.back();
-							if(std::numeric_limits<unsigned int>::max() - MergedDrawCount >= NumVertices)
+							const offset_ptr LastOffset = (offset_ptr)m_vpRenderTileLayerIndexOffsets.back();
+							const offset_ptr LastEndOffset = LastOffset + (offset_ptr)m_vRenderTileLayerDrawCounts.back() * sizeof(unsigned int);
+							if(LastEndOffset == RowStartOffset)
 							{
-								MergedDrawCount += NumVertices;
-								continue;
+								unsigned int &MergedDrawCount = m_vRenderTileLayerDrawCounts.back();
+								if(std::numeric_limits<unsigned int>::max() - MergedDrawCount >= NumVertices)
+								{
+									MergedDrawCount += NumVertices;
+									continue;
+								}
 							}
 						}
+
+						m_vpRenderTileLayerIndexOffsets.push_back((offset_ptr_size)RowStartOffset);
+						m_vRenderTileLayerDrawCounts.push_back(NumVertices);
 					}
-
-					m_vpRenderTileLayerIndexOffsets.push_back((offset_ptr_size)RowStartOffset);
-					m_vRenderTileLayerDrawCounts.push_back(NumVertices);
 				}
-			}
 
-			int DrawCount = m_vpRenderTileLayerIndexOffsets.size();
-			if(DrawCount != 0)
-			{
-				Graphics()->RenderTileLayer(Visuals.m_BufferContainerIndex, Color, m_vpRenderTileLayerIndexOffsets.data(), m_vRenderTileLayerDrawCounts.data(), DrawCount);
+				int DrawCount = m_vpRenderTileLayerIndexOffsets.size();
+				if(DrawCount != 0)
+				{
+					Graphics()->RenderTileLayer(Visuals.m_BufferContainerIndex, Color, m_vpRenderTileLayerIndexOffsets.data(), m_vRenderTileLayerDrawCounts.data(), DrawCount);
+				}
 			}
 		}
 	}
@@ -516,10 +524,13 @@ void CRenderLayerTile::RenderKillTileBorder(const ColorRGBA &Color)
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 
-	int BorderY0 = std::floor(ScreenY0 / 32);
-	int BorderX0 = std::floor(ScreenX0 / 32);
-	int BorderY1 = std::ceil(ScreenY1 / 32);
-	int BorderX1 = std::ceil(ScreenX1 / 32);
+	const auto BorderRange = MapRenderScreen::TileRange(ScreenX0, ScreenY0, ScreenX1, ScreenY1, 32.0f, MapRenderScreen::ETileRangeMode::BUFFERED);
+	if(!BorderRange)
+		return;
+	int BorderY0 = BorderRange->m_Y0;
+	int BorderX0 = BorderRange->m_X0;
+	int BorderY1 = BorderRange->m_Y1;
+	int BorderX1 = BorderRange->m_X1;
 
 	if(BorderX0 >= -BorderRenderDistance && BorderY0 >= -BorderRenderDistance && BorderX1 <= (int)Visuals.m_Width + BorderRenderDistance && BorderY1 <= (int)Visuals.m_Height + BorderRenderDistance)
 		return;

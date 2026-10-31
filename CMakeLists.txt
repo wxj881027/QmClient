@@ -5090,6 +5090,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/ui/vote_map_loader_test.cpp
     src/test/unit/client/map_history_test.cpp
     src/test/unit/client/map_tile_border_test.cpp
+    src/test/unit/client/map_render_screen_test.cpp
+    src/test/integration/client/map_render_screen_test.cpp
     src/test/unit/engine/map_load_test.cpp
     src/test/unit/engine/map_tileskip_test.cpp
     src/test/integration/engine/map_tileskip_test.cpp
