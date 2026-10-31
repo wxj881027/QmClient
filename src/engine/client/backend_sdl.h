@@ -181,8 +181,8 @@ struct SBackendCapabilities
 	bool m_2DArrayTextures = false;
 	bool m_2DArrayTexturesAsExtension = false;
 	bool m_ShaderSupport = false;
-	bool m_MediaIslandSdf = false;
-	bool m_RoundedRectSdf = false;
+	std::atomic<bool> m_MediaIslandSdf{false};
+	std::atomic<bool> m_RoundedRectSdf{false};
 	std::atomic<bool> m_ProceduralRing{false};
 	bool m_RenderTargets = false;
 	bool m_RenderTargetGaussianBlur = false;
@@ -215,8 +215,8 @@ struct SBackendCapabilities
 		m_2DArrayTextures = false;
 		m_2DArrayTexturesAsExtension = false;
 		m_ShaderSupport = false;
-		m_MediaIslandSdf = false;
-		m_RoundedRectSdf = false;
+		m_MediaIslandSdf.store(false, std::memory_order_release);
+		m_RoundedRectSdf.store(false, std::memory_order_release);
 		m_ProceduralRing.store(false, std::memory_order_relaxed);
 		m_RenderTargets = false;
 		m_RenderTargetGaussianBlur = false;
@@ -392,8 +392,8 @@ public:
 		}
 		return IsModernAPI(m_BackendType);
 	}
-	bool HasMediaIslandSdf() override { return m_Capabilities.m_MediaIslandSdf; }
-	bool HasRoundedRectSdf() override { return m_Capabilities.m_RoundedRectSdf; }
+	bool HasMediaIslandSdf() override { return m_Capabilities.m_MediaIslandSdf.load(std::memory_order_acquire); }
+	bool HasRoundedRectSdf() override { return m_Capabilities.m_RoundedRectSdf.load(std::memory_order_acquire); }
 	bool HasProceduralRing() override { return m_Capabilities.m_ProceduralRing.load(std::memory_order_acquire); }
 	bool UseTrianglesAsQuad() override { return m_Capabilities.m_TrianglesAsQuads; }
 	bool HasTileBuffering() override { return m_Capabilities.m_TileBuffering; }

@@ -5010,6 +5010,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/graphics_backend_policy_test.cpp
     src/test/unit/engine/graphics/graphics_diagnostic_transfer_test.cpp
     src/test/unit/engine/graphics/vulkan_diagnostics_test.cpp
+    src/test/unit/engine/graphics/vulkan_deferred_device_loss_test.cpp
     src/test/unit/engine/graphics/vulkan_recording_batch_test.cpp
     src/test/unit/engine/graphics/vulkan_render_workers_test.cpp
     src/test/unit/engine/graphics/readback_image_test.cpp
@@ -5028,6 +5029,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/graphics_command_exception_test.cpp
     src/test/integration/client/graphics_processor_preparation_test.cpp
     src/test/integration/client/metal_gpu_completion_test.cpp
+    src/test/integration/client/vulkan_deferred_device_loss_test.cpp
     src/test/integration/client/graphics_diagnostic_failure_test.cpp
     src/test/integration/client/graphics_thread_startup_test.cpp
     src/test/integration/client/graphics_thread_shutdown_test.cpp

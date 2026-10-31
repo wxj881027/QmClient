@@ -13,7 +13,7 @@ inline bool CCommandProcessorFragment_Vulkan::QmEnhancedShouldLoad() const
 	return qm_vulkan_ext::ShouldLoadEnhancedPipelines(QmEnhancedMode(), m_QmEnhancedSessionDisabled);
 }
 
-inline void CCommandProcessorFragment_Vulkan::QmEnhancedMarkDisabled(const qm_vulkan_ext::EDisableReason Reason)
+inline void CCommandProcessorFragment_Vulkan::QmEnhancedMarkDisabled(const qm_vulkan_ext::EDisableReason Reason) noexcept
 {
 	m_QmEnhancedSessionDisabled = true;
 	m_QmEnhancedDisableReason = Reason;
@@ -23,10 +23,22 @@ inline void CCommandProcessorFragment_Vulkan::QmEnhancedMarkDisabled(const qm_vu
 	SyncProceduralRingCapability();
 	if(m_pBackendCapabilities != nullptr)
 	{
-		m_pBackendCapabilities->m_MediaIslandSdf = false;
-		m_pBackendCapabilities->m_RoundedRectSdf = false;
+		m_pBackendCapabilities->m_MediaIslandSdf.store(false, std::memory_order_release);
+		m_pBackendCapabilities->m_RoundedRectSdf.store(false, std::memory_order_release);
 	}
-	log_info("vulkan", "Qm enhanced rendering disabled: %s", qm_vulkan_ext::DisableReasonLabel(Reason));
+	try
+	{
+		log_info("vulkan", "Qm enhanced rendering disabled: %s", qm_vulkan_ext::DisableReasonLabel(Reason));
+	}
+	catch(...)
+	{
+		// 诊断失败不能打断已经发布的禁用状态或异常收尾。
+	}
+}
+
+inline void CCommandProcessorFragment_Vulkan::ApplyDeferredQmDeviceLoss() noexcept
+{
+	m_QmDeferredDeviceLoss.ConsumeAfterRecording(m_QmEnhancedSessionDisabled, [this]() noexcept { return QmEnhancedMode(); }, [this](qm_vulkan_ext::EDisableReason Reason) noexcept { QmEnhancedMarkDisabled(Reason); });
 }
 
 inline void CCommandProcessorFragment_Vulkan::SyncProceduralRingCapability()

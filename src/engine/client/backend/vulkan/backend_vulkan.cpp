@@ -1300,12 +1300,14 @@ private:
 	bool m_QmRoundedRectSdfPipelineValid = false;
 	bool m_QmEnhancedSessionDisabled = false;
 	qm_vulkan_ext::EDisableReason m_QmEnhancedDisableReason = qm_vulkan_ext::EDisableReason::NONE;
+	qm_vulkan_ext::CDeferredDeviceLoss m_QmDeferredDeviceLoss;
 
 	[[nodiscard]] qm_vulkan_ext::EEnhancedMode QmEnhancedMode() const;
 
 	[[nodiscard]] bool QmEnhancedShouldLoad() const;
 
-	void QmEnhancedMarkDisabled(const qm_vulkan_ext::EDisableReason Reason);
+	void QmEnhancedMarkDisabled(const qm_vulkan_ext::EDisableReason Reason) noexcept;
+	void ApplyDeferredQmDeviceLoss() noexcept;
 
 	void SyncProceduralRingCapability();
 
@@ -2052,8 +2054,8 @@ protected:
 					ShrinkUnusedCaches(); }, [&] { return vkAllocateMemory(m_VKDevice, pAllocateInfo, nullptr, pMemory); });
 			if(Res != VK_SUCCESS)
 			{
-				if(Res == VK_ERROR_DEVICE_LOST && QmEnhancedShouldLoad() && QmEnhancedMode() == qm_vulkan_ext::EEnhancedMode::AUTO)
-					QmEnhancedMarkDisabled(qm_vulkan_ext::EDisableReason::DEVICE_LOST);
+				if(Res == VK_ERROR_DEVICE_LOST)
+					m_QmDeferredDeviceLoss.Report();
 				(void)CheckVulkanResult(Res, GFX_ERROR_TYPE_OUT_OF_MEMORY_BUFFER, RecoveryWaitFailed ? "Waiting for device idle during memory recovery failed." : "vkAllocateMemory failed.");
 				char aAllocation[192];
 				str_format(aAllocation, sizeof(aAllocation), "vkAllocateMemory request: bytes=%" PRIu64 " memory_type=%u recording_worker=%d", (uint64_t)pAllocateInfo->allocationSize, pAllocateInfo->memoryTypeIndex, s_ThreadIsRenderWorker ? 1 : 0);
@@ -2697,6 +2699,7 @@ protected:
 				}
 			}
 		}
+		ApplyDeferredQmDeviceLoss();
 	}
 
 	[[nodiscard]] bool ExecuteMemoryCommandBuffer()
@@ -2891,8 +2894,8 @@ protected:
 				(int)QueueSubmitRes, m_CurImageIndex, m_SwapChainImageCount, SubmitInfo.commandBufferCount, SubmitInfo.waitSemaphoreCount, SubmitInfo.signalSemaphoreCount,
 				m_FrameProfileStats.m_RenderCommands, m_FrameProfileStats.m_EstimatedRenderCallCount, m_FrameProfileStats.m_CommandCount);
 			const char *pCritErrorMsg = CheckVulkanCriticalError(QueueSubmitRes);
-			if(QueueSubmitRes == VK_ERROR_DEVICE_LOST && QmEnhancedShouldLoad() && QmEnhancedMode() == qm_vulkan_ext::EEnhancedMode::AUTO)
-				QmEnhancedMarkDisabled(qm_vulkan_ext::EDisableReason::DEVICE_LOST);
+			if(QueueSubmitRes == VK_ERROR_DEVICE_LOST)
+				m_QmDeferredDeviceLoss.Report();
 			if(pCritErrorMsg != nullptr)
 			{
 				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED, "vkQueueSubmit (frame) failed.", pCritErrorMsg);
@@ -6799,10 +6802,10 @@ public:
 		VkResult WaitIdleResult = DeviceWaitIdle();
 		if(WaitIdleResult != VK_SUCCESS)
 		{
-			// 与 QueueSubmit 路径一致：AUTO 模式下设备丢失时按会话禁用增强管线；
+			// 与 QueueSubmit 路径一致：录制线程空闲后按 AUTO 策略禁用增强管线；
 			// 配置持久化与自动重启由客户端收口（CClient::HandleQmGraphicsFatalError）完成。
-			if(WaitIdleResult == VK_ERROR_DEVICE_LOST && QmEnhancedShouldLoad() && QmEnhancedMode() == qm_vulkan_ext::EEnhancedMode::AUTO)
-				QmEnhancedMarkDisabled(qm_vulkan_ext::EDisableReason::DEVICE_LOST);
+			if(WaitIdleResult == VK_ERROR_DEVICE_LOST)
+				m_QmDeferredDeviceLoss.Report();
 			const char *pCritErrorMsg = CheckVulkanCriticalError(WaitIdleResult);
 			if(pCritErrorMsg != nullptr)
 				SetError(EGfxErrorType::GFX_ERROR_TYPE_SWAP_FAILED, "Waiting for device idle before recreating swap chain failed.", pCritErrorMsg);
@@ -8435,8 +8438,8 @@ public:
 		pCommand->m_pCapabilities->m_DetectedContextMinor = pCommand->m_pCapabilities->m_ContextMinor;
 		pCommand->m_pCapabilities->m_DetectedContextPatch = pCommand->m_pCapabilities->m_ContextPatch;
 		// QmVulkan 扩展能力仅在对应管线真实可用时暴露；关闭扩展时保持纯净化。
-		pCommand->m_pCapabilities->m_MediaIslandSdf = m_QmMediaIslandSdfPipelineValid;
-		pCommand->m_pCapabilities->m_RoundedRectSdf = m_QmRoundedRectSdfPipelineValid;
+		pCommand->m_pCapabilities->m_MediaIslandSdf.store(m_QmMediaIslandSdfPipelineValid, std::memory_order_release);
+		pCommand->m_pCapabilities->m_RoundedRectSdf.store(m_QmRoundedRectSdfPipelineValid, std::memory_order_release);
 		SyncProceduralRingCapability();
 		pCommand->m_pCapabilities->m_RenderTargets = SupportsRenderTargetReadback();
 		pCommand->m_pCapabilities->m_RenderTargetGaussianBlur = SupportsRenderTargetGaussianBlur();
@@ -9538,6 +9541,7 @@ public:
 	[[nodiscard]] bool Cmd_PostShutdown(const CCommandProcessorFragment_GLBase::SCommand_PostShutdown *pCommand)
 	{
 		m_RenderWorkers.Stop();
+		ApplyDeferredQmDeviceLoss();
 		m_vvThreadCommandLists.clear();
 		m_vThreadHelperHadCommands.clear();
 
@@ -9558,6 +9562,7 @@ public:
 			SetError(GFX_ERROR_TYPE_RENDER_CMD_FAILED, "Unexpected exception while executing Vulkan commands.");
 		m_HasError.store(true, std::memory_order_release);
 		m_RenderWorkers.Stop();
+		ApplyDeferredQmDeviceLoss();
 		m_vvThreadCommandLists.clear();
 		m_vThreadHelperHadCommands.clear();
 		m_ThreadCount = 1;
