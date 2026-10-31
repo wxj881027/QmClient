@@ -1459,7 +1459,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			for(const auto &Col : s_aCols)
 			{
 				const char *pCaption = Col.m_Id == COL_QM_CLIENTS ? Col.m_pCaption : Localize(Col.m_pCaption);
-				aContentWidths[Col.m_Id] = TextRender()->TextWidth(Headers.h * CUi::ms_FontmodHeight, pCaption) + 10.0f;
+				aContentWidths[Col.m_Id] = Col.m_Id == COL_FRIENDS ? 14.0f : TextRender()->TextWidth(Headers.h * CUi::ms_FontmodHeight, pCaption) + 10.0f;
 			}
 			Ui()->SetActiveItem(&s_aCols[ResizeIndex].m_Width);
 		}

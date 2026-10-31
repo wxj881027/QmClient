@@ -144,10 +144,14 @@ inline std::array<SQmBrowserColumnSizing, NumColumns> QmBrowserFitColumns(std::a
 // 每一帧从按下时的有效列宽快照与累计鼠标位移计算，不累计上一帧的舍入。
 // 只有右侧可调列参与补偿，左侧宽度和总预算保持不变；最右列没有调宽边界。
 template<size_t NumColumns>
-inline std::array<SQmBrowserColumnSizing, NumColumns> QmBrowserResizeColumns(std::array<SQmBrowserColumnSizing, NumColumns> aColumns, size_t ColumnIndex, float Delta)
+inline std::array<SQmBrowserColumnSizing, NumColumns> QmBrowserResizeColumns(const std::array<SQmBrowserColumnSizing, NumColumns> &aStart, size_t ColumnIndex, float Delta)
 {
+	auto aColumns = aStart;
 	if(ColumnIndex >= NumColumns || ColumnIndex + 1 >= NumColumns || Delta == 0.0f)
 		return aColumns;
+	// 拖动只让出内容之外的空白；原本显示不全的列停在按下时的宽度。
+	for(size_t i = ColumnIndex; i < NumColumns; ++i)
+		aColumns[i].m_MinWidth = std::max(aStart[i].m_MinWidth, std::min(aStart[i].m_Width, aStart[i].m_PreferredWidth));
 	auto &Column = aColumns[ColumnIndex];
 	const double Change = std::clamp((double)Delta, (double)Column.m_MinWidth - Column.m_Width, (double)Column.m_MaxWidth - Column.m_Width);
 	const double RightBefore = qm_browser_column_detail::TotalWidth(aColumns, ColumnIndex + 1);
@@ -155,6 +159,9 @@ inline std::array<SQmBrowserColumnSizing, NumColumns> QmBrowserResizeColumns(std
 	qm_browser_column_detail::Distribute(aColumns, ColumnIndex + 1, -Change);
 	Column.m_Width = (float)std::clamp(Total - qm_browser_column_detail::TotalWidth(aColumns, ColumnIndex + 1), (double)Column.m_MinWidth, (double)Column.m_MaxWidth);
 	qm_browser_column_detail::CorrectRounding(aColumns, ColumnIndex + 1, Total - Column.m_Width);
+	// 内容下限只属于本次按压，不能写入布局缓存后限制下一次内容测量。
+	for(size_t i = ColumnIndex; i < NumColumns; ++i)
+		aColumns[i].m_MinWidth = aStart[i].m_MinWidth;
 	return aColumns;
 }
 
