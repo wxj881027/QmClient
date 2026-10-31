@@ -5771,6 +5771,9 @@ Flags are cosmetic and can be hidden by other clients.
 Flip:
 == Spiegeln:
 
+Fluid
+== Flüssigkeit
+
 Folder
 == Ordner
 
@@ -12938,6 +12941,9 @@ Settings card states: stableId for collapsed, !stableId for expanded, separated 
 Settings card titles use rainbow colors
 == Titel der Einstellungskarten in Regenbogenfarben
 
+Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+== Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+
 Settings file
 == Einstellungsdatei
 
@@ -14537,8 +14543,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == Verteilt Haupt- und Dummy-Tee auf verschiedene Teams zur Solo-Run-Synchronisation
 
-Sponsor chat style draft: 0=Normal, 1=Platinum highlight
-== Entwurf des Unterstützer-Chatstils: 0=Normal, 1=Platin-Glanz
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid
+== Entwurf des Unterstützer-Chatstils: 0=Normal, 1=Platin-Glanz, 2=Flüssigkeit
 
 Sponsor code
 == Unterstützercode

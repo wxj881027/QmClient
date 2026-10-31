@@ -89,4 +89,8 @@
 
 本轮补充样式解析、色域、循环连续性、消息语义优先级、在线资料与卡片搜索测试，以及动态填充的布局复用、设备恢复、旧后端 RGB 和透明度测试；另补充 CPU 取色与细分基准。均未执行。仅完成静态审阅及差异空白检查，未编译、未运行 gate、未启动客户端，视觉与帧耗时仍待验收。服务端尚未部署。
 
-服务端代码见 [中心服务 PR #8](https://github.com/wxj881027/qmclient-center-server/pull/8)。新增选项及配置说明共两个翻译键，本轮尚未同步翻译，界面暂用英文 Fluid 回退。
+客户端代码见 [PR #538](https://github.com/wxj881027/QmClient/pull/538)，服务端代码见 [中心服务 PR #8](https://github.com/wxj881027/qmclient-center-server/pull/8)。
+
+用户随后确认本次同步翻译。新增选项及配置说明两个键已补齐现有 12 种语言，简体显示「流体」，繁体显示「流體」；维护源和运行时语言文件一起更新。源码已全量重新提取，两条文案在 12 个生成文件中逐项核对，翻译质量、格式、TOML 完整性及重复键检查通过。
+
+完整语言校验仍被两条既有缺译阻塞：`Keyword rules are too long. Changes were not saved; shorten or remove a rule.` 与 `Settings card widths: stableId for full width, !stableId for half width, separated by semicolons`。它们不属于本次翻译范围，没有顺带补译；生成器为此前尚未写入语言文件的卡片宽度说明补出了英文回退。代码测试、基准和客户端视觉验收仍未执行。

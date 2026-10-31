@@ -5771,6 +5771,9 @@ Flags are cosmetic and can be hidden by other clients.
 Flip:
 == Voltear:
 
+Fluid
+== Fluido
+
 Folder
 == Carpeta
 
@@ -12938,6 +12941,9 @@ Settings card states: stableId for collapsed, !stableId for expanded, separated 
 Settings card titles use rainbow colors
 == Usar colores arcoíris en los títulos de las tarjetas de configuración
 
+Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+== Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+
 Settings file
 == Archivo de configuración
 
@@ -14537,8 +14543,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == Reparte el personaje principal y el clon en equipos distintos para sincronizar carreras en solitario
 
-Sponsor chat style draft: 0=Normal, 1=Platinum highlight
-== Borrador del estilo de chat de patrocinador: 0=Normal, 1=Brillo de platino
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid
+== Borrador del estilo de chat de patrocinador: 0=Normal, 1=Brillo de platino, 2=Fluido
 
 Sponsor code
 == Código de patrocinador

@@ -5771,6 +5771,9 @@ Flags are cosmetic and can be hidden by other clients.
 Flip:
 == 翻转：
 
+Fluid
+== 流体
+
 Folder
 == 文件夹
 
@@ -12941,6 +12944,9 @@ Settings card states: stableId for collapsed, !stableId for expanded, separated 
 Settings card titles use rainbow colors
 == 设置卡片标题使用彩虹色
 
+Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+== Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+
 Settings file
 == 设置文件
 
@@ -14540,8 +14546,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == 本体和分身分别进队，方便开局 solo 同步（部分地图不好同步时使用）
 
-Sponsor chat style draft: 0=Normal, 1=Platinum highlight
-== 赞助者发言样式草稿：0=普通，1=铂金高光
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid
+== 赞助者发言样式草稿：0=普通，1=铂金高光，2=流体
 
 Sponsor code
 == 认证码

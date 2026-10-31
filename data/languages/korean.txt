@@ -5771,6 +5771,9 @@ Flags are cosmetic and can be hidden by other clients.
 Flip:
 == 뒤집기:
 
+Fluid
+== 유체
+
 Folder
 == 폴더
 
@@ -12938,6 +12941,9 @@ Settings card states: stableId for collapsed, !stableId for expanded, separated 
 Settings card titles use rainbow colors
 == 설정 카드 제목에 무지개색 사용
 
+Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+== Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+
 Settings file
 == 설정 파일
 
@@ -14537,8 +14543,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == 본체와 분신을 서로 다른 팀에 넣어 solo 런 시작을 동기화합니다（team-0 동기화가 어려운 맵용）
 
-Sponsor chat style draft: 0=Normal, 1=Platinum highlight
-== 후원자 채팅 스타일 초안: 0=보통, 1=백금 하이라이트
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid
+== 후원자 채팅 스타일 초안: 0=보통, 1=백금 하이라이트, 2=유체
 
 Sponsor code
 == 인증 코드

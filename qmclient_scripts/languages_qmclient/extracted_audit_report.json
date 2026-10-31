@@ -1,8 +1,8 @@
 {
   "summary": {
-    "must_i18n": 10712,
-    "business_data": 14393,
-    "test_only": 6227,
+    "must_i18n": 10715,
+    "business_data": 14396,
+    "test_only": 6229,
     "needs_review": 2532,
     "violation": 0
   },
@@ -744,7 +744,7 @@
     },
     {
       "file": "src/engine/client/text.cpp",
-      "line": 2273,
+      "line": 2333,
       "text": "Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
@@ -8102,7 +8102,7 @@
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 412,
-      "text": "Sponsor chat style draft: 0=Normal, 1=Platinum highlight",
+      "text": "Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
@@ -36165,853 +36165,867 @@
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2980,
-      "text": "Polished",
+      "text": "Fluid",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2981,
-      "text": "Rainbow",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2982,
-      "text": "Redeem",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2983,
-      "text": "Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2984,
-      "text": "Refresh",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2985,
-      "text": "Save",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2986,
-      "text": "Saved with your title and shared with other QmClient players.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2987,
-      "text": "See you at the next checkpoint.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2988,
-      "text": "Server-assigned style",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2989,
-      "text": "Shimmer speed",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2990,
-      "text": "Show dummy title locally",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2991,
-      "text": "Show main tee title locally",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2992,
-      "text": "Show sponsor chat effects locally",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2993,
-      "text": "Show titles above player names",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2994,
-      "text": "Show titles on nameplates",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2995,
-      "text": "Single color",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2996,
-      "text": "Single color and Rainbow override the color of animated styles; the style keeps its motion",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2997,
-      "text": "Snap wave to pixels",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2998,
-      "text": "Solid",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2999,
-      "text": "Sponsor code",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3000,
-      "text": "Sponsor title",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3001,
-      "text": "Subtle",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3002,
-      "text": "Text effect",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3003,
-      "text": "Title color",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3004,
-      "text": "Title opacity",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3005,
-      "text": "Title preview",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3006,
-      "text": "Title style",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3007,
-      "text": "Turning this off only changes your display.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3008,
-      "text": "Up to 6 Chinese or 12 ASCII characters",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3009,
-      "text": "Use style colors",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3010,
-      "text": "Strength of the vertical or pop wave. Zero keeps the title still.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3011,
-      "text": "Title motion",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3012,
-      "text": "Vertical wave",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3013,
-      "text": "Pop wave",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3014,
-      "text": "Wave amount",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3015,
-      "text": "Wave spacing",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3016,
-      "text": "Wave speed",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3017,
-      "text": "Zero uses the style default. Higher values make color bands narrower.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3042,
-      "text": "Advanced mode",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3043,
-      "text": "Applies to single-color and rainbow overrides.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3044,
-      "text": "Chat message preview",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3045,
-      "text": "Chat message style",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3046,
-      "text": "Classic",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3047,
-      "text": "Classic title glow",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3048,
-      "text": "Custom title",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3049,
-      "text": "Exact bound nickname",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3050,
-      "text": "Full",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3051,
-      "text": "Higher values make the wave move faster. Zero stops the movement.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3052,
-      "text": "Highlight movement in Polished mode. Zero turns it off.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3053,
-      "text": "Instant compact hints",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3054,
-      "text": "Light band",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3055,
-      "text": "Limit the title to the exact nickname below.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3056,
-      "text": "Normal",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3057,
-      "text": "Off",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3058,
-      "text": "Only show with this nickname",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3059,
-      "text": "Permanent access; up to 4 online IP addresses",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3060,
-      "text": "Platinum highlight",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3061,
       "text": "Polished",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3062,
+      "line": 2982,
       "text": "Rainbow",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3063,
+      "line": 2983,
       "text": "Redeem",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3064,
+      "line": 2984,
       "text": "Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3065,
+      "line": 2985,
       "text": "Refresh",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3066,
+      "line": 2986,
       "text": "Save",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3067,
+      "line": 2987,
       "text": "Saved with your title and shared with other QmClient players.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3068,
+      "line": 2988,
       "text": "See you at the next checkpoint.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3069,
+      "line": 2989,
       "text": "Server-assigned style",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3070,
+      "line": 2990,
       "text": "Shimmer speed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3071,
+      "line": 2991,
       "text": "Show dummy title locally",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3072,
+      "line": 2992,
       "text": "Show main tee title locally",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3073,
+      "line": 2993,
       "text": "Show sponsor chat effects locally",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3074,
+      "line": 2994,
       "text": "Show titles above player names",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3075,
+      "line": 2995,
       "text": "Show titles on nameplates",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3076,
+      "line": 2996,
       "text": "Single color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3077,
+      "line": 2997,
       "text": "Single color and Rainbow override the color of animated styles; the style keeps its motion",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3078,
+      "line": 2998,
       "text": "Snap wave to pixels",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3079,
+      "line": 2999,
       "text": "Solid",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3080,
+      "line": 3000,
       "text": "Sponsor code",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3081,
+      "line": 3001,
       "text": "Sponsor title",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3082,
+      "line": 3002,
       "text": "Subtle",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3083,
+      "line": 3003,
       "text": "Text effect",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3084,
+      "line": 3004,
       "text": "Title color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3085,
+      "line": 3005,
       "text": "Title opacity",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3086,
+      "line": 3006,
       "text": "Title preview",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3087,
+      "line": 3007,
       "text": "Title style",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3088,
+      "line": 3008,
       "text": "Turning this off only changes your display.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3089,
+      "line": 3009,
       "text": "Up to 6 Chinese or 12 ASCII characters",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3090,
+      "line": 3010,
       "text": "Use style colors",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3091,
+      "line": 3011,
       "text": "Strength of the vertical or pop wave. Zero keeps the title still.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3092,
+      "line": 3012,
       "text": "Title motion",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3093,
+      "line": 3013,
       "text": "Vertical wave",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3094,
+      "line": 3014,
       "text": "Pop wave",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3095,
+      "line": 3015,
       "text": "Wave amount",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3096,
+      "line": 3016,
       "text": "Wave spacing",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3097,
+      "line": 3017,
       "text": "Wave speed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3098,
+      "line": 3018,
       "text": "Zero uses the style default. Higher values make color bands narrower.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3123,
-      "text": "Cute:",
+      "line": 3043,
+      "text": "Advanced mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3124,
-      "text": "Flip:",
+      "line": 3044,
+      "text": "Applies to single-color and rainbow overrides.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3045,
+      "text": "Chat message preview",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3046,
+      "text": "Chat message style",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3047,
+      "text": "Classic",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3048,
+      "text": "Classic title glow",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3049,
+      "text": "Custom title",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3050,
+      "text": "Exact bound nickname",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3051,
+      "text": "Full",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3052,
+      "text": "Higher values make the wave move faster. Zero stops the movement.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3053,
+      "text": "Highlight movement in Polished mode. Zero turns it off.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3054,
+      "text": "Instant compact hints",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3055,
+      "text": "Light band",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3056,
+      "text": "Limit the title to the exact nickname below.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3057,
+      "text": "Normal",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3058,
+      "text": "Off",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3059,
+      "text": "Only show with this nickname",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3060,
+      "text": "Permanent access; up to 4 online IP addresses",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3061,
+      "text": "Platinum highlight",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3062,
+      "text": "Fluid",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3063,
+      "text": "Polished",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3064,
+      "text": "Rainbow",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3065,
+      "text": "Redeem",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3066,
+      "text": "Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3067,
+      "text": "Refresh",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3068,
+      "text": "Save",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3069,
+      "text": "Saved with your title and shared with other QmClient players.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3070,
+      "text": "See you at the next checkpoint.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3071,
+      "text": "Server-assigned style",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3072,
+      "text": "Shimmer speed",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3073,
+      "text": "Show dummy title locally",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3074,
+      "text": "Show main tee title locally",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3075,
+      "text": "Show sponsor chat effects locally",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3076,
+      "text": "Show titles above player names",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3077,
+      "text": "Show titles on nameplates",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3078,
+      "text": "Single color",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3079,
+      "text": "Single color and Rainbow override the color of animated styles; the style keeps its motion",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3080,
+      "text": "Snap wave to pixels",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3081,
+      "text": "Solid",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3082,
+      "text": "Sponsor code",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3083,
+      "text": "Sponsor title",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3084,
+      "text": "Subtle",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3085,
+      "text": "Text effect",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3086,
+      "text": "Title color",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3087,
+      "text": "Title opacity",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3088,
+      "text": "Title preview",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3089,
+      "text": "Title style",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3090,
+      "text": "Turning this off only changes your display.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3091,
+      "text": "Up to 6 Chinese or 12 ASCII characters",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3092,
+      "text": "Use style colors",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3093,
+      "text": "Strength of the vertical or pop wave. Zero keeps the title still.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3094,
+      "text": "Title motion",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3095,
+      "text": "Vertical wave",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3096,
+      "text": "Pop wave",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3097,
+      "text": "Wave amount",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3098,
+      "text": "Wave spacing",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3099,
+      "text": "Wave speed",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3100,
+      "text": "Zero uses the style default. Higher values make color bands narrower.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3125,
-      "text": "Kaomoji",
+      "text": "Cute:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3126,
-      "text": "Lenny:",
+      "text": "Flip:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3127,
-      "text": "Shrug:",
+      "text": "Kaomoji",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3128,
+      "text": "Lenny:",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3129,
+      "text": "Shrug:",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3130,
       "text": "Unflip:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3132,
+      "line": 3134,
       "text": "Add [group] [clan] [reason]:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3133,
+      "line": 3135,
       "text": "Add [group] [name] [reason]:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3134,
+      "line": 3136,
       "text": "Add team clan:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3135,
+      "line": 3137,
       "text": "Add team name:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3136,
+      "line": 3138,
       "text": "Add war clan:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3137,
+      "line": 3139,
       "text": "Add war name:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3138,
+      "line": 3140,
       "text": "Remove [group] [clan]:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3139,
+      "line": 3141,
       "text": "Remove [group] [name]:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3140,
+      "line": 3142,
       "text": "Remove team clan:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3141,
+      "line": 3143,
       "text": "Remove team name:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3142,
+      "line": 3144,
       "text": "Remove war clan:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3143,
+      "line": 3145,
       "text": "Remove war name:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3144,
+      "line": 3146,
       "text": "Warlist",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3148,
+      "line": 3150,
       "text": "Mute:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3149,
+      "line": 3151,
       "text": "Other",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3150,
+      "line": 3152,
       "text": "Translate ID:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3151,
+      "line": 3153,
       "text": "Translate:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3152,
+      "line": 3154,
       "text": "Unmute:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3156,
+      "line": 3158,
       "text": "Command",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3157,
+      "line": 3159,
       "text": "Custom",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3158,
+      "line": 3160,
       "text": "Key",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -40562,6 +40576,13 @@
       "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
       "line": 243,
       "text": "Chat message style",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogTitle.cpp",
+      "line": 247,
+      "text": "Fluid",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
@@ -44207,91 +44228,91 @@
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3214,
+      "line": 3216,
       "text": "All",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3214,
+      "line": 3216,
       "text": "Chat",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3214,
+      "line": 3216,
       "text": "Team",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4039,
+      "line": 4041,
       "text": "Right-click to disable auto-translate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4039,
+      "line": 4041,
       "text": "Right-click to enable auto-translate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4239,
+      "line": 4241,
       "text": "Chat",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4286,
+      "line": 4288,
       "text": "Copy",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4291,
+      "line": 4293,
       "text": "Add one",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4296,
+      "line": 4298,
       "text": "Reply",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4301,
+      "line": 4303,
       "text": "Spectate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4312,
+      "line": 4314,
       "text": "Mute player",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4317,
+      "line": 4319,
       "text": "Add to blocked words",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4322,
+      "line": 4324,
       "text": "Copy name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -77292,7 +77313,7 @@
     {
       "file": "src/game/client/QmUi/QmCardRegistry.cpp",
       "line": 200,
-      "text": "sponsor title code authentication nickname redeem chat platinum 赞助头衔 兑换 绑定 昵称 发言 柔光 铂金",
+      "text": "sponsor title code authentication nickname redeem chat platinum fluid 赞助头衔 兑换 绑定 昵称 发言 柔光 铂金 流体 液体",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
@@ -103710,2071 +103731,2085 @@
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2980,
-      "text": "抛光",
+      "text": "流体 液体 蓝青",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 2981,
-      "text": "彩虹",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2982,
-      "text": "领取",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2983,
-      "text": "使用赞助兑换码解锁自定义称号，称号会显示在聊天与名牌上。",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2984,
-      "text": "刷新",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2985,
-      "text": "保存",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2986,
-      "text": "随头衔一起保存，并同步给其他 QmClient 玩家。",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2987,
-      "text": "下个检查点见。",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2988,
-      "text": "服务器分配风格",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2989,
-      "text": "流光速度",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2990,
-      "text": "本机显示分身头衔",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2991,
-      "text": "本机显示本体头衔",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2992,
-      "text": "本机显示赞助者发言特效",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2993,
-      "text": "头衔显示在名字上方",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2994,
-      "text": "显示名牌头衔",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2995,
-      "text": "单色",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2996,
-      "text": "单色与彩虹档会覆盖动态风格自带的颜色；风格只保留浮动与掠光",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2997,
-      "text": "波浪位移对齐整数像素",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2998,
-      "text": "纯色",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 2999,
-      "text": "认证码",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3000,
-      "text": "赞助头衔",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3001,
-      "text": "柔和",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3002,
-      "text": "文字效果",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3003,
-      "text": "头衔颜色",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3004,
-      "text": "头衔不透明度",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3005,
-      "text": "头衔成品预览",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3006,
-      "text": "头衔风格",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3007,
-      "text": "关闭后仅影响本机显示。",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3008,
-      "text": "最多 6 个中文或 12 个英文字符",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3009,
-      "text": "Title color mode",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3009,
-      "text": "使用风格颜色",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3010,
-      "text": "调整上下波动或放大凸起的强度，设为零时保持静止。",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3011,
-      "text": "头衔动画",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3012,
-      "text": "上下波动",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3013,
-      "text": "放大凸起",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3014,
-      "text": "波浪幅度",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3015,
-      "text": "波浪间距",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3016,
-      "text": "波浪速度",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3017,
-      "text": "设为零时使用样式默认值；数值越大，色带越窄。",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3018,
-      "text": "cl_message_color",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3019,
-      "text": "cl_message_gradient",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3020,
-      "text": "qm_nameplate_title_above_name",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3021,
-      "text": "qm_show_dummy_title",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3022,
-      "text": "qm_show_main_title",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3023,
-      "text": "qm_show_nameplate_title",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3024,
-      "text": "qm_sponsor_chat_effects",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3025,
-      "text": "qm_sponsor_chat_style",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3026,
-      "text": "qm_title_motion_mode",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3027,
-      "text": "qm_title_bob_amplitude",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3028,
-      "text": "qm_title_bob_pixel_snap",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3029,
-      "text": "qm_title_bob_speed",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3030,
-      "text": "qm_title_bob_wavelength",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3031,
-      "text": "qm_title_color_mode",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3032,
-      "text": "qm_title_effect",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3033,
-      "text": "qm_title_instant_hints",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3034,
-      "text": "qm_title_opacity",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3035,
-      "text": "qm_title_phase",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3036,
-      "text": "qm_title_shimmer_speed",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3037,
-      "text": "qm_title_style",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3038,
-      "text": "qm_title_style_enabled",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3042,
-      "text": "高级模式",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3043,
-      "text": "用于单色和彩虹配色。",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3044,
-      "text": "发言预览",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3045,
-      "text": "发言样式",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3046,
-      "text": "古典",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3047,
-      "text": "经典效果光晕",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3048,
-      "text": "自定义头衔",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3049,
-      "text": "要绑定的完整昵称",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3050,
-      "text": "完整",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3051,
-      "text": "数值越大，波浪越快；设为零时停止运动。",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3052,
-      "text": "调整精致模式中的流光速度，设为零时关闭。",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3053,
-      "text": "即时小字提示",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3054,
-      "text": "色带宽度",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3055,
-      "text": "仅在使用下方昵称时显示头衔。",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3056,
-      "text": "正常",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3057,
-      "text": "关",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3058,
-      "text": "仅在使用此昵称时显示",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3059,
-      "text": "永久资格，最多 4 个 IP 同时在线",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3060,
-      "text": "铂金高光",
-      "category": "business_data",
-      "reason": "settings card registry metadata or search keyword data"
-    },
-    {
-      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3061,
       "text": "抛光",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3062,
+      "line": 2982,
       "text": "彩虹",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3063,
+      "line": 2983,
       "text": "领取",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3064,
+      "line": 2984,
       "text": "使用赞助兑换码解锁自定义称号，称号会显示在聊天与名牌上。",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3065,
+      "line": 2985,
       "text": "刷新",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3066,
+      "line": 2986,
       "text": "保存",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3067,
+      "line": 2987,
       "text": "随头衔一起保存，并同步给其他 QmClient 玩家。",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3068,
+      "line": 2988,
       "text": "下个检查点见。",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3069,
+      "line": 2989,
       "text": "服务器分配风格",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3070,
+      "line": 2990,
       "text": "流光速度",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3071,
+      "line": 2991,
       "text": "本机显示分身头衔",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3072,
+      "line": 2992,
       "text": "本机显示本体头衔",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3073,
+      "line": 2993,
       "text": "本机显示赞助者发言特效",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3074,
+      "line": 2994,
       "text": "头衔显示在名字上方",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3075,
+      "line": 2995,
       "text": "显示名牌头衔",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3076,
+      "line": 2996,
       "text": "单色",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3077,
+      "line": 2997,
       "text": "单色与彩虹档会覆盖动态风格自带的颜色；风格只保留浮动与掠光",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3078,
+      "line": 2998,
       "text": "波浪位移对齐整数像素",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3079,
+      "line": 2999,
       "text": "纯色",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3080,
+      "line": 3000,
       "text": "认证码",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3081,
+      "line": 3001,
       "text": "赞助头衔",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3082,
+      "line": 3002,
       "text": "柔和",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3083,
+      "line": 3003,
       "text": "文字效果",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3084,
+      "line": 3004,
       "text": "头衔颜色",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3085,
+      "line": 3005,
       "text": "头衔不透明度",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3086,
+      "line": 3006,
       "text": "头衔成品预览",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3087,
+      "line": 3007,
       "text": "头衔风格",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3088,
+      "line": 3008,
       "text": "关闭后仅影响本机显示。",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3089,
+      "line": 3009,
       "text": "最多 6 个中文或 12 个英文字符",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3090,
+      "line": 3010,
       "text": "Title color mode",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3090,
+      "line": 3010,
       "text": "使用风格颜色",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3091,
+      "line": 3011,
       "text": "调整上下波动或放大凸起的强度，设为零时保持静止。",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3092,
+      "line": 3012,
       "text": "头衔动画",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3093,
+      "line": 3013,
       "text": "上下波动",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3094,
+      "line": 3014,
       "text": "放大凸起",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3095,
+      "line": 3015,
       "text": "波浪幅度",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3096,
+      "line": 3016,
       "text": "波浪间距",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3097,
+      "line": 3017,
       "text": "波浪速度",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3098,
+      "line": 3018,
       "text": "设为零时使用样式默认值；数值越大，色带越窄。",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3099,
+      "line": 3019,
       "text": "cl_message_color",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3100,
+      "line": 3020,
       "text": "cl_message_gradient",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3101,
+      "line": 3021,
       "text": "qm_nameplate_title_above_name",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3102,
+      "line": 3022,
       "text": "qm_show_dummy_title",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3103,
+      "line": 3023,
       "text": "qm_show_main_title",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3104,
+      "line": 3024,
       "text": "qm_show_nameplate_title",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3105,
+      "line": 3025,
       "text": "qm_sponsor_chat_effects",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3106,
+      "line": 3026,
       "text": "qm_sponsor_chat_style",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3107,
+      "line": 3027,
       "text": "qm_title_motion_mode",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3108,
+      "line": 3028,
       "text": "qm_title_bob_amplitude",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3109,
+      "line": 3029,
       "text": "qm_title_bob_pixel_snap",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3110,
+      "line": 3030,
       "text": "qm_title_bob_speed",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3111,
+      "line": 3031,
       "text": "qm_title_bob_wavelength",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3112,
+      "line": 3032,
       "text": "qm_title_color_mode",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3113,
+      "line": 3033,
       "text": "qm_title_effect",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3114,
+      "line": 3034,
       "text": "qm_title_instant_hints",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3115,
+      "line": 3035,
       "text": "qm_title_opacity",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3116,
+      "line": 3036,
       "text": "qm_title_phase",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3117,
+      "line": 3037,
       "text": "qm_title_shimmer_speed",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3118,
+      "line": 3038,
       "text": "qm_title_style",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3119,
+      "line": 3039,
       "text": "qm_title_style_enabled",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3123,
-      "text": "可爱：",
+      "line": 3043,
+      "text": "高级模式",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3124,
-      "text": "翻转：",
+      "line": 3044,
+      "text": "用于单色和彩虹配色。",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3045,
+      "text": "发言预览",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3046,
+      "text": "发言样式",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3047,
+      "text": "古典",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3048,
+      "text": "经典效果光晕",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3049,
+      "text": "自定义头衔",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3050,
+      "text": "要绑定的完整昵称",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3051,
+      "text": "完整",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3052,
+      "text": "数值越大，波浪越快；设为零时停止运动。",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3053,
+      "text": "调整精致模式中的流光速度，设为零时关闭。",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3054,
+      "text": "即时小字提示",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3055,
+      "text": "色带宽度",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3056,
+      "text": "仅在使用下方昵称时显示头衔。",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3057,
+      "text": "正常",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3058,
+      "text": "关",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3059,
+      "text": "仅在使用此昵称时显示",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3060,
+      "text": "永久资格，最多 4 个 IP 同时在线",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3061,
+      "text": "铂金高光",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3062,
+      "text": "流体 液体 蓝青",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3063,
+      "text": "抛光",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3064,
+      "text": "彩虹",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3065,
+      "text": "领取",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3066,
+      "text": "使用赞助兑换码解锁自定义称号，称号会显示在聊天与名牌上。",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3067,
+      "text": "刷新",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3068,
+      "text": "保存",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3069,
+      "text": "随头衔一起保存，并同步给其他 QmClient 玩家。",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3070,
+      "text": "下个检查点见。",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3071,
+      "text": "服务器分配风格",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3072,
+      "text": "流光速度",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3073,
+      "text": "本机显示分身头衔",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3074,
+      "text": "本机显示本体头衔",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3075,
+      "text": "本机显示赞助者发言特效",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3076,
+      "text": "头衔显示在名字上方",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3077,
+      "text": "显示名牌头衔",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3078,
+      "text": "单色",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3079,
+      "text": "单色与彩虹档会覆盖动态风格自带的颜色；风格只保留浮动与掠光",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3080,
+      "text": "波浪位移对齐整数像素",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3081,
+      "text": "纯色",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3082,
+      "text": "认证码",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3083,
+      "text": "赞助头衔",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3084,
+      "text": "柔和",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3085,
+      "text": "文字效果",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3086,
+      "text": "头衔颜色",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3087,
+      "text": "头衔不透明度",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3088,
+      "text": "头衔成品预览",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3089,
+      "text": "头衔风格",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3090,
+      "text": "关闭后仅影响本机显示。",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3091,
+      "text": "最多 6 个中文或 12 个英文字符",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3092,
+      "text": "Title color mode",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3092,
+      "text": "使用风格颜色",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3093,
+      "text": "调整上下波动或放大凸起的强度，设为零时保持静止。",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3094,
+      "text": "头衔动画",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3095,
+      "text": "上下波动",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3096,
+      "text": "放大凸起",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3097,
+      "text": "波浪幅度",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3098,
+      "text": "波浪间距",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3099,
+      "text": "波浪速度",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3100,
+      "text": "设为零时使用样式默认值；数值越大，色带越窄。",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3101,
+      "text": "cl_message_color",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3102,
+      "text": "cl_message_gradient",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3103,
+      "text": "qm_nameplate_title_above_name",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3104,
+      "text": "qm_show_dummy_title",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3105,
+      "text": "qm_show_main_title",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3106,
+      "text": "qm_show_nameplate_title",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3107,
+      "text": "qm_sponsor_chat_effects",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3108,
+      "text": "qm_sponsor_chat_style",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3109,
+      "text": "qm_title_motion_mode",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3110,
+      "text": "qm_title_bob_amplitude",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3111,
+      "text": "qm_title_bob_pixel_snap",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3112,
+      "text": "qm_title_bob_speed",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3113,
+      "text": "qm_title_bob_wavelength",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3114,
+      "text": "qm_title_color_mode",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3115,
+      "text": "qm_title_effect",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3116,
+      "text": "qm_title_instant_hints",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3117,
+      "text": "qm_title_opacity",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3118,
+      "text": "qm_title_phase",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3119,
+      "text": "qm_title_shimmer_speed",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3120,
+      "text": "qm_title_style",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3121,
+      "text": "qm_title_style_enabled",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3125,
-      "text": "表情符号",
+      "text": "可爱：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3126,
-      "text": "Lenny ͡° ͜ʖ ͡°:",
+      "text": "翻转：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3127,
-      "text": "耸肩：",
+      "text": "表情符号",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 3128,
+      "text": "Lenny ͡° ͜ʖ ͡°:",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3129,
+      "text": "耸肩：",
+      "category": "business_data",
+      "reason": "settings card registry metadata or search keyword data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "line": 3130,
       "text": "取消翻转：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3132,
+      "line": 3134,
       "text": "添加 [组名] [战队名] [原因]",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3133,
+      "line": 3135,
       "text": "添加 [组名] [玩家名] [原因]",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3134,
+      "line": 3136,
       "text": "添加友好战队：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3135,
+      "line": 3137,
       "text": "添加友好玩家：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3136,
+      "line": 3138,
       "text": "添加敌对战队：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3137,
+      "line": 3139,
       "text": "添加敌对玩家：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3138,
+      "line": 3140,
       "text": "删除 [组名] [战队名]：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3139,
+      "line": 3141,
       "text": "删除 [组名] [玩家名]：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3140,
+      "line": 3142,
       "text": "删除友好战队：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3141,
+      "line": 3143,
       "text": "删除友好玩家：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3142,
+      "line": 3144,
       "text": "删除敌对战队",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3143,
+      "line": 3145,
       "text": "删除敌对玩家：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3144,
+      "line": 3146,
       "text": "敌对列表",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3148,
+      "line": 3150,
       "text": "禁言：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3149,
+      "line": 3151,
       "text": "其他",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3150,
+      "line": 3152,
       "text": "翻译 ID：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3151,
+      "line": 3153,
       "text": "翻译：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3152,
+      "line": 3154,
       "text": "取消禁言：",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3156,
+      "line": 3158,
       "text": "命令",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3157,
+      "line": 3159,
       "text": "自定义",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3169,
+      "line": 3171,
       "text": "deck:controls-mouse",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3170,
+      "line": 3172,
       "text": "deck:controls-controller",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3171,
+      "line": 3173,
       "text": "qm:gores_actor",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3172,
+      "line": 3174,
       "text": "qm:gores",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3173,
+      "line": 3175,
       "text": "qm:key_binds",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3174,
+      "line": 3176,
       "text": "qm:emoticons",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3175,
+      "line": 3177,
       "text": "qm:ime",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3176,
+      "line": 3178,
       "text": "qm:better_scoreboard",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3177,
+      "line": 3179,
       "text": "qm:block_words",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3178,
+      "line": 3180,
       "text": "qm:translate",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3179,
+      "line": 3181,
       "text": "qm:translate_ui",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3180,
+      "line": 3182,
       "text": "qm:qiafen",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3181,
+      "line": 3183,
       "text": "qm:pie_menu",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3182,
+      "line": 3184,
       "text": "qm:map_upload",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3183,
+      "line": 3185,
       "text": "qm:favorite_maps",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3184,
+      "line": 3186,
       "text": "deck:general-game",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3185,
+      "line": 3187,
       "text": "deck:general-language",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3186,
+      "line": 3188,
       "text": "deck:general-client",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3187,
+      "line": 3189,
       "text": "deck:general-recording",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3188,
+      "line": 3190,
       "text": "deck:tclient-info-files",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3189,
+      "line": 3191,
       "text": "qm:dummy_miniview",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3190,
+      "line": 3192,
       "text": "qm:coords",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3191,
+      "line": 3193,
       "text": "qm:player_stats",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3192,
+      "line": 3194,
       "text": "qm:debug_graph",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3193,
+      "line": 3195,
       "text": "qm:debug_mode",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3194,
+      "line": 3196,
       "text": "qm:input_overlay",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3195,
+      "line": 3197,
       "text": "qm:hud_notifications",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3196,
+      "line": 3198,
       "text": "qm:voice",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3197,
+      "line": 3199,
       "text": "qm:dynamic_island",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3198,
+      "line": 3200,
       "text": "qm:system_media_controls",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3199,
+      "line": 3201,
       "text": "qm:lyrics",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3200,
+      "line": 3202,
       "text": "qm:background_3d",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3201,
+      "line": 3203,
       "text": "qm:bind_status_hud",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3202,
+      "line": 3204,
       "text": "qm:gores_drown_board",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3203,
+      "line": 3205,
       "text": "deck:appearance-name-plate-settings",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3204,
+      "line": 3206,
       "text": "deck:appearance-name-plate-text",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3205,
+      "line": 3207,
       "text": "deck:appearance-name-plate-hook-strength",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3206,
+      "line": 3208,
       "text": "deck:appearance-name-plate-key-presses",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3207,
+      "line": 3209,
       "text": "deck:tclient-bind-wheel-editor",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3208,
+      "line": 3210,
       "text": "deck:tclient-configs-actions",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3209,
+      "line": 3211,
       "text": "deck:tclient-profiles",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3210,
+      "line": 3212,
       "text": "deck:tclient-status-bar-settings",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3211,
+      "line": 3213,
       "text": "deck:tclient-status-bar-preview",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3212,
+      "line": 3214,
       "text": "deck:tclient-warlist",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3213,
+      "line": 3215,
       "text": "deck:tee-identity",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3214,
+      "line": 3216,
       "text": "deck:tee-skin-options",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3215,
+      "line": 3217,
       "text": "deck:tee-skin-list",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3216,
+      "line": 3218,
       "text": "deck:tee-skin-queue",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3217,
+      "line": 3219,
       "text": "deck:tee-glow",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3218,
+      "line": 3220,
       "text": "qm:chat_bubble",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3219,
+      "line": 3221,
       "text": "qm:camera_view",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3220,
+      "line": 3222,
       "text": "qm:spectator_mode",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3221,
+      "line": 3223,
       "text": "qm:weapon_animation",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3222,
+      "line": 3224,
       "text": "qm:streamer",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3223,
+      "line": 3225,
       "text": "qm:focus_mode",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3224,
+      "line": 3226,
       "text": "qm:entity_overlay",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3225,
+      "line": 3227,
       "text": "qm:collision_hitbox",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3226,
+      "line": 3228,
       "text": "deck:player-identity",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3227,
+      "line": 3229,
       "text": "deck:player-country",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3228,
+      "line": 3230,
       "text": "deck:graphics-modes",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3229,
+      "line": 3231,
       "text": "deck:graphics-display",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3230,
+      "line": 3232,
       "text": "deck:graphics-visual",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3231,
+      "line": 3233,
       "text": "deck:graphics-icons",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3232,
+      "line": 3234,
       "text": "deck:graphics-interaction",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3233,
+      "line": 3235,
       "text": "deck:sound-toggle",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3234,
+      "line": 3236,
       "text": "deck:sound-volume",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3235,
+      "line": 3237,
       "text": "deck:sound-audio-pack",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3236,
+      "line": 3238,
       "text": "deck:ddnet-demo",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3237,
+      "line": 3239,
       "text": "deck:ddnet-gameplay",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3238,
+      "line": 3240,
       "text": "deck:ddnet-background",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3239,
+      "line": 3241,
       "text": "deck:ddnet-miscellaneous",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3240,
+      "line": 3242,
       "text": "deck:appearance-hud-main",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3241,
+      "line": 3243,
       "text": "deck:appearance-hud-ddrace",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3242,
+      "line": 3244,
       "text": "deck:appearance-chat-messages",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3243,
+      "line": 3245,
       "text": "deck:appearance-chat-preview",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3244,
+      "line": 3246,
       "text": "deck:appearance-name-plate-preview",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3245,
+      "line": 3247,
       "text": "deck:appearance-hook-collision-main",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3246,
+      "line": 3248,
       "text": "deck:appearance-hook-collision-preview",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3247,
+      "line": 3249,
       "text": "deck:appearance-info-messages",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3248,
+      "line": 3250,
       "text": "deck:appearance-laser-enhanced",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3249,
+      "line": 3251,
       "text": "deck:appearance-laser-colors",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3250,
+      "line": 3252,
       "text": "deck:appearance-laser-preview",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3251,
+      "line": 3253,
       "text": "deck:appearance-chat-settings",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3252,
+      "line": 3254,
       "text": "tclient:visual-nameplates",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3253,
+      "line": 3255,
       "text": "tclient:visual-effects",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3254,
+      "line": 3256,
       "text": "tclient:input",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3255,
+      "line": 3257,
       "text": "tclient:anti-latency-tools",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3256,
+      "line": 3258,
       "text": "tclient:improved-anti-ping",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3257,
+      "line": 3259,
       "text": "tclient:execute-on-join",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3258,
+      "line": 3260,
       "text": "tclient:voting",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3259,
+      "line": 3261,
       "text": "tclient:player-indicator",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3260,
+      "line": 3262,
       "text": "tclient:tee-status-bar",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3261,
+      "line": 3263,
       "text": "tclient:tile-outlines",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3262,
+      "line": 3264,
       "text": "tclient:ghost-tools",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3263,
+      "line": 3265,
       "text": "tclient:rainbow",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3264,
+      "line": 3266,
       "text": "tclient:tee-trails",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3265,
+      "line": 3267,
       "text": "tclient:background-draw",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3266,
+      "line": 3268,
       "text": "tclient:finish-name",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3267,
+      "line": 3269,
       "text": "tclient:font",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3268,
+      "line": 3270,
       "text": "tclient:auto-reply",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3269,
+      "line": 3271,
       "text": "tclient:pet",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3270,
+      "line": 3272,
       "text": "tclient:hud",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3271,
+      "line": 3273,
       "text": "tclient:cursor",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3272,
+      "line": 3274,
       "text": "deck:tee7-editor",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3273,
+      "line": 3275,
       "text": "qm:steam",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3274,
+      "line": 3276,
       "text": "qm:appearance_preset",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3275,
+      "line": 3277,
       "text": "deck:controls-movement",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3276,
+      "line": 3278,
       "text": "deck:controls-weapon",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3277,
+      "line": 3279,
       "text": "deck:controls-voting",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3278,
+      "line": 3280,
       "text": "deck:controls-chat",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3279,
+      "line": 3281,
       "text": "deck:controls-dummy",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3280,
+      "line": 3282,
       "text": "deck:controls-miscellaneous",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3281,
+      "line": 3283,
       "text": "qm:skin_appearance",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3282,
+      "line": 3284,
       "text": "qm:solo_split",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3283,
+      "line": 3285,
       "text": "qm:self_kill_protection",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3284,
+      "line": 3286,
       "text": "qm:mini_features",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3285,
+      "line": 3287,
       "text": "qm:jump_hint",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3286,
+      "line": 3288,
       "text": "qm:weapon_trajectory",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3287,
+      "line": 3289,
       "text": "qm:friend_notify",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3288,
+      "line": 3290,
       "text": "qm:hj_assist",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3289,
+      "line": 3291,
       "text": "qm:skin_transition",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3290,
+      "line": 3292,
       "text": "qm:tooltip",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3291,
+      "line": 3293,
       "text": "qm:water_hammer",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3292,
+      "line": 3294,
       "text": "qm:bind_editor",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3293,
+      "line": 3295,
       "text": "qm:bind_overview",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3294,
+      "line": 3296,
       "text": "deck:qmclient-contributors-title",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3295,
+      "line": 3297,
       "text": "deck:qmclient-contributors-title-display",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3296,
+      "line": 3298,
       "text": "deck:tclient-chat-binds-kaomoji",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3297,
+      "line": 3299,
       "text": "deck:tclient-chat-binds-warlist",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3298,
+      "line": 3300,
       "text": "deck:tclient-chat-binds-other",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "line": 3299,
+      "line": 3301,
       "text": "deck:controls-custom",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
@@ -116106,91 +116141,91 @@
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3003,
+      "line": 3005,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3102,
+      "line": 3104,
       "text": "event=server_message_upload_requested class=%d text_container=%d text_buffering=%d",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3104,
+      "line": 3106,
       "text": "perf/autodiag_chat",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3215,
+      "line": 3217,
       "text": ": ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3241,
+      "line": 3243,
       "text": ": ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3641,
+      "line": 3643,
       "text": "event=server_message_render_skip reason=invalid_text_container class=%d text_container=%d",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3642,
+      "line": 3644,
       "text": "perf/autodiag_chat",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3736,
+      "line": 3738,
       "text": "Welcome to QmClient",
       "category": "business_data",
       "reason": "chat command preview, preview fixture, or streamer mask data"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3738,
+      "line": 3740,
       "text": "Let's go!",
       "category": "business_data",
       "reason": "chat command preview, preview fixture, or streamer mask data"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3747,
+      "line": 3749,
       "text": "%s: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 3925,
+      "line": 3927,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4164,
+      "line": 4166,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/chat.cpp",
-      "line": 4173,
+      "line": 4175,
       "text": "%s: ",
       "category": "business_data",
       "reason": "display formatting template"
@@ -150021,14 +150056,21 @@
     },
     {
       "file": "src/game/client/components/qmclient/sponsor_chat_style.h",
-      "line": 19,
+      "line": 21,
       "text": "platinum",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/sponsor_chat_style.h",
-      "line": 29,
+      "line": 23,
+      "text": "fluid",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/sponsor_chat_style.h",
+      "line": 34,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -180263,21 +180305,21 @@
     },
     {
       "file": "src/test/benchmark/qm_text_benchmark.cpp",
-      "line": 75,
+      "line": 77,
       "text": "QmClient 中文界面渲染 Benchmark ★ UTF-8 解码路径测试 42",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/benchmark/qm_text_benchmark.cpp",
-      "line": 97,
+      "line": 99,
       "text": "QmClient 输入框 ★ 光标导航 😀 测试 path 42",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/benchmark/qm_text_benchmark.cpp",
-      "line": 122,
+      "line": 124,
       "text": "QmClient 中文界面渲染 Benchmark ★ UTF-8 校验路径测试 42 😀",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -194214,14 +194256,14 @@
     },
     {
       "file": "src/test/integration/qmclient/client/qm_text_device_recovery_test.cpp",
-      "line": 304,
+      "line": 318,
       "text": "Cached label",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/client/qm_text_device_recovery_test.cpp",
-      "line": 311,
+      "line": 325,
       "text": "Cached label",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -194657,6 +194699,20 @@
       "file": "src/test/integration/qmclient/settings/qm_title_cards_test.cpp",
       "line": 39,
       "text": "月亮",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/integration/qmclient/settings/qm_title_cards_test.cpp",
+      "line": 151,
+      "text": "流体",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/integration/qmclient/settings/qm_title_cards_test.cpp",
+      "line": 151,
+      "text": "液体",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
@@ -211539,7 +211595,7 @@
     },
     {
       "file": "src/test/unit/qmclient/client/qm_sponsor_chat_style_test.cpp",
-      "line": 78,
+      "line": 80,
       "text": "A中\\n文",
       "category": "test_only",
       "reason": "test fixture or assertion text"
