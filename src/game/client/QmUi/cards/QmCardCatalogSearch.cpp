@@ -1322,6 +1322,12 @@ namespace qm_card_catalog
 		};
 
 		static constexpr SCardSettingSearch s_aqm_chat_bubble[] = {
+			{Localizable("Comic dialogue"), nullptr, "漫画对白"},
+			{Localizable("Candy gradient"), nullptr, "QQ 糖果渐变"},
+			{Localizable("Cloud bubble"), nullptr, "云朵 拟真 聚集 散开"},
+			{Localizable("Use custom colors"), nullptr, "自定义颜色"},
+			{nullptr, "qm_chat_bubble_style", nullptr},
+			{nullptr, "qm_chat_bubble_custom_colors", nullptr},
 			{Localizable("Animation"), nullptr, "动画效果"},
 			{Localizable("Background color"), nullptr, "背景颜色"},
 			{Localizable("Bounce"), nullptr, "弹跳"},

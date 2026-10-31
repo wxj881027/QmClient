@@ -13,6 +13,11 @@ inline bool QmNameplateUsesPhysicalPixelAlignment(const float HiDpiScale, const 
 
 struct CNetObj_PlayerInfo;
 class CUIRect;
+namespace qm_chat_bubble
+{
+	struct SLayout;
+	struct SPalette;
+}
 
 class CNamePlates : public CComponent
 {
@@ -27,8 +32,11 @@ public:
 	float MeasurePreviewAreaHeight() const;
 	void RenderNamePlatePreview(const CUIRect &PreviewArea, int Dummy);
 	void RenderChatBubble(vec2 Position, int ClientId, float Alpha);
+	void RenderCloudBubble(const qm_chat_bubble::SLayout &Layout, const qm_chat_bubble::SPalette &Colors, float Assembly = 1.0f);
 	void ResetNamePlates();
 	int Sizeof() const override { return sizeof(*this); }
+	void OnInit() override;
+	void OnGraphicsResourcesReset();
 	void OnShutdown() override;
 	void OnWindowResize() override;
 	void OnRender() override;

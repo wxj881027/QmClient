@@ -39638,6 +39638,60 @@ turkish = "Harita ilerleme çubuğu konumu (0=ayrı göster, 1=oyuncu istatistik
 polish = "Położenie paska postępu mapy (0=osobno, 1=statystyki gracza, 2=Dynamiczna Wyspa)"
 
 [[message]]
+key = "Comic dialogue"
+[message.translations]
+simplified_chinese = "漫画对白"
+traditional_chinese = "漫畫對白"
+
+[[message]]
+key = "Candy gradient"
+[message.translations]
+simplified_chinese = "糖果渐变"
+traditional_chinese = "糖果漸層"
+
+[[message]]
+key = "Let's play together!"
+[message.translations]
+simplified_chinese = "一起玩吧！"
+traditional_chinese = "一起玩吧！"
+
+[[message]]
+key = "Use custom colors"
+[message.translations]
+simplified_chinese = "使用自定义颜色"
+traditional_chinese = "使用自訂顏色"
+
+[[message]]
+key = "Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)"
+[message.translations]
+simplified_chinese = "消息气泡样式（0=漫画对白，1=糖果渐变，2=云朵气泡）"
+traditional_chinese = "訊息氣泡樣式（0=漫畫對白，1=糖果漸層，2=雲朵氣泡）"
+
+[[message]]
+key = "Use custom chat bubble colors"
+[message.translations]
+simplified_chinese = "使用自定义消息气泡颜色"
+traditional_chinese = "使用自訂訊息氣泡顏色"
+
+[[message]]
+key = "Style"
+[message.translations]
+simplified_chinese = "样式"
+traditional_chinese = "樣式"
+
+[[message]]
+key = "Cloud bubble"
+[message.translations]
+simplified_chinese = "云朵气泡"
+traditional_chinese = "雲朵氣泡"
+
+[[message]]
+key = "Gather and disperse"
+[message.translations]
+simplified_chinese = "聚集与散开"
+traditional_chinese = "聚集與散開"
+
+[[message]]
 key = "Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid"
 [message.translations]
 simplified_chinese = "赞助者发言样式草稿：0=普通，1=铂金高光，2=流体"

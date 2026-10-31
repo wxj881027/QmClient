@@ -18,6 +18,7 @@
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/QmChatBubble.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiButtons.h>
@@ -302,6 +303,69 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 	if(!g_Config.m_QmChatBubble)
 		return;
 
+	CUIRect StyleRow, StyleLabel, StyleControl;
+	if(Flow.Control("qm-chat-bubble-style", LineHeight, StyleRow))
+	{
+		SplitSettingsControlRow(StyleRow, CurrentSettingsContentMetrics(), &StyleLabel, &StyleControl);
+		RenderQmVisualLabel("qm-chat-bubble-style-label", &StyleLabel, Localize("Style"), BodySize);
+		const char *apStyles[] = {Localize("Comic dialogue"), Localize("Candy gradient"), Localize("Cloud bubble")};
+		static CUi::SDropDownState s_StyleState;
+		static CScrollRegion s_StyleScroll;
+		s_StyleState.m_SelectionPopupContext.m_pScrollRegion = &s_StyleScroll;
+		const int Selected = DoSettingsDropDown(&StyleControl, std::clamp(g_Config.m_QmChatBubbleStyle, 0, qm_chat_bubble::STYLE_COUNT - 1), apStyles, std::size(apStyles), s_StyleState, {}, &g_Config.m_QmChatBubbleStyle, nullptr, &StyleRow);
+		if(Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly())
+			g_Config.m_QmChatBubbleStyle = Selected;
+	}
+	Flow.Space(LineSpacing);
+
+	CUIRect PreviewRow;
+	if(Flow.Control("qm-chat-bubble-preview", LineHeight * 5.0f, PreviewRow) && Flow.Drawing() && !Ui()->DrawingSuppressed())
+	{
+		CUIRect PreviewLabel, Preview;
+		PreviewRow.HSplitTop(LineHeight, &PreviewLabel, &Preview);
+		Ui()->DoLabel(&PreviewLabel, Localize("Preview"), BodySize, TEXTALIGN_ML);
+		const auto Style = qm_chat_bubble::StyleFromConfig(g_Config.m_QmChatBubbleStyle);
+		const float FontSize = static_cast<float>(g_Config.m_QmChatBubbleFontSize);
+		const char *pText = Localize("Let's play together!");
+		const unsigned int PreviousFlags = TextRender()->GetRenderFlags();
+		const ColorRGBA PreviousColor = TextRender()->GetTextColor();
+		const ColorRGBA PreviousOutline = TextRender()->GetTextOutlineColor();
+		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
+		CTextCursor Measure;
+		Measure.m_FontSize = FontSize;
+		Measure.m_LineWidth = std::max(40.0f, std::min(qm_chat_bubble::MAX_TEXT_WIDTH, Preview.w - 40.0f));
+		Measure.m_Flags = 0;
+		TextRender()->TextEx(&Measure, pText);
+		const vec2 TextSize(Measure.m_LongestLineWidth, Measure.Height());
+		const auto Natural = qm_chat_bubble::Layout(vec2(0, 0), TextSize, FontSize, 1.0f, Style);
+		const float FullHeight = Natural.m_Size.y * (Style == qm_chat_bubble::EStyle::CLOUD ? 1.25f : 1.0f) + Natural.m_TailHeight + 5.0f;
+		const float Scale = std::max(0.0f, std::min({1.0f, (Preview.w - 12.0f) / (Natural.m_Size.x + 8.0f), (Preview.h - 8.0f) / FullHeight}));
+		const vec2 Anchor(Preview.x + Preview.w * 0.5f, Preview.y + (Preview.h - FullHeight * Scale) * 0.5f + (FullHeight - 4.0f) * Scale);
+		const auto Bubble = qm_chat_bubble::Layout(Anchor, TextSize, FontSize, Scale, Style);
+		const auto Colors = qm_chat_bubble::Palette(Style, g_Config.m_QmChatBubbleCustomColors != 0,
+			color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmChatBubbleBgColor, true)), color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmChatBubbleTextColor, false)), g_Config.m_QmChatBubbleAlpha / 100.0f);
+		if(Scale > 0.0f)
+		{
+			if(Style == qm_chat_bubble::EStyle::CLOUD)
+				GameClient()->m_NamePlates.RenderCloudBubble(Bubble, Colors);
+			else
+				qm_chat_bubble::Render(Graphics(), Bubble, Colors);
+			TextRender()->TextColor(Colors.m_Text);
+			TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(g_Config.m_QmChatBubbleCustomColors ? Colors.m_Text.a : 0.0f));
+			CTextCursor Cursor;
+			Cursor.m_FontSize = FontSize * Scale;
+			Cursor.m_LineWidth = Measure.m_LineWidth * Scale;
+			Cursor.m_Flags = TEXTFLAG_RENDER;
+			Cursor.SetPosition(Bubble.m_TextPosition);
+			qm_chat_bubble::RenderText(TextRender(), Cursor, pText, Colors.m_Text,
+				TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(g_Config.m_QmChatBubbleCustomColors ? Colors.m_Text.a : 0.0f));
+		}
+		TextRender()->SetRenderFlags(PreviousFlags);
+		TextRender()->TextColor(PreviousColor);
+		TextRender()->TextOutlineColor(PreviousOutline);
+	}
+	Flow.Space(LineSpacing);
+
 	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:chat_bubble", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
 		return;
 
@@ -328,16 +392,25 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 	{
 		SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 		RenderQmVisualLabel("qmclient-chat-bubble-animation", &LabelColumn, Localize("Animation"), BodySize);
-		static std::vector<const char *> s_ChatBubbleAnimDropDownNames;
-		s_ChatBubbleAnimDropDownNames = {Localize("Dissolve"), Localize("Shrink"), Localize("Bounce")};
-		static CUi::SDropDownState s_ChatBubbleAnimDropDownState;
-		static CScrollRegion s_ChatBubbleAnimDropDownScrollRegion;
-		s_ChatBubbleAnimDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_ChatBubbleAnimDropDownScrollRegion;
-		const int Animation = DoSettingsDropDown(&ControlColumn, g_Config.m_QmChatBubbleAnimation, s_ChatBubbleAnimDropDownNames.data(), s_ChatBubbleAnimDropDownNames.size(), s_ChatBubbleAnimDropDownState, {}, &g_Config.m_QmChatBubbleAnimation, nullptr, &Row);
-		if(g_Config.m_QmChatBubbleAnimation != Animation)
-			g_Config.m_QmChatBubbleAnimation = Animation;
+		if(qm_chat_bubble::StyleFromConfig(g_Config.m_QmChatBubbleStyle) == qm_chat_bubble::EStyle::CLOUD)
+			RenderQmVisualLabel("qm-chat-bubble-cloud-motion", &ControlColumn, Localize("Gather and disperse"), BodySize);
+		else
+		{
+			static std::vector<const char *> s_ChatBubbleAnimDropDownNames;
+			s_ChatBubbleAnimDropDownNames = {Localize("Dissolve"), Localize("Shrink"), Localize("Bounce")};
+			static CUi::SDropDownState s_ChatBubbleAnimDropDownState;
+			static CScrollRegion s_ChatBubbleAnimDropDownScrollRegion;
+			s_ChatBubbleAnimDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_ChatBubbleAnimDropDownScrollRegion;
+			const int Animation = DoSettingsDropDown(&ControlColumn, g_Config.m_QmChatBubbleAnimation, s_ChatBubbleAnimDropDownNames.data(), s_ChatBubbleAnimDropDownNames.size(), s_ChatBubbleAnimDropDownState, {}, &g_Config.m_QmChatBubbleAnimation, nullptr, &Row);
+			if(g_Config.m_QmChatBubbleAnimation != Animation)
+				g_Config.m_QmChatBubbleAnimation = Animation;
+		}
 	}
 	Flow.Space(LineSpacing);
+
+	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmChatBubbleCustomColors, "qm-chat-bubble-custom-colors", Localize("Use custom colors"), &g_Config.m_QmChatBubbleCustomColors);
+	if(!g_Config.m_QmChatBubbleCustomColors)
+		return;
 
 	static CButtonContainer s_ChatBubbleBgColorId;
 	static CButtonContainer s_ChatBubbleTextColorId;

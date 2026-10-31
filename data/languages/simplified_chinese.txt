@@ -2075,6 +2075,9 @@ Cancel your swap request
 Candidate files
 == 候选文件
 
+Candy gradient
+== 糖果渐变
+
 Cannot join the target player's team
 == 无法加入目标玩家的队伍
 
@@ -2209,6 +2212,9 @@ Chat bubble display duration (seconds)
 
 Chat bubble font size
 == 聊天气泡字体大小
+
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
+== 消息气泡样式（0=漫画对白，1=糖果渐变，2=云朵气泡）
 
 Chat bubble text color
 == 聊天气泡文字颜色
@@ -2687,6 +2693,9 @@ Close the demo player
 Close window after changing settings
 == 更改设置后关闭窗口
 
+Cloud bubble
+== 云朵气泡
+
 Collapse console
 == 收起控制台
 
@@ -2764,6 +2773,9 @@ Colors too close to the map background are hard to read while moving.
 
 Combo
 == 连击
+
+Comic dialogue
+== 漫画对白
 
 Comma-separated list of banned clients to be kicked on join
 == 加入时将被踢出的以逗号分隔的被禁止客户端列表
@@ -6122,6 +6134,9 @@ Gap between statusbar items
 Gap between tee and nametag
 == Tee 与铭牌之间的间距
 
+Gather and disperse
+== 聚集与散开
+
 Gaussian
 == 高斯
 
@@ -7822,6 +7837,9 @@ Let server start ghost
 
 Let server start race recorder
 == 让服务器启动比赛记录器
+
+Let's play together!
+== 一起玩吧！
 
 Lets you join team i (shows your team if left blank)
 == 让你加入队伍 i（留空则显示你的队伍）
@@ -14804,6 +14822,9 @@ Strong hook color
 Strong Weak Hook
 == 强弱钩
 
+Style
+== 样式
+
 Style chat names, text, and message colors
 == 设置聊天名称、文本和消息颜色样式
 
@@ -16672,6 +16693,12 @@ Use current name
 
 Use current settings
 == 读取当前设置
+
+Use custom chat bubble colors
+== 使用自定义消息气泡颜色
+
+Use custom colors
+== 使用自定义颜色
 
 Use custom colors for the pressed hook collision line (0 = always invert)
 == 按下钩键时使用自定义钩子辅助线颜色（0 = 始终反色）
