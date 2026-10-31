@@ -3922,6 +3922,7 @@ if(CLIENT)
     prediction/entities/plasma.h
     prediction/entities/projectile.cpp
     prediction/entities/projectile.h
+    prediction/copy_links.h
     prediction/entity.cpp
     prediction/entity.h
     prediction/gameworld.cpp
@@ -5328,6 +5329,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/console_script_storage_test.cpp
     src/test/contract/qmclient/client/qm_prediction_contract_test.cpp
     src/test/unit/qmclient/client/qm_predicted_event_queue_test.cpp
+    src/test/unit/client/prediction_copy_links_test.cpp
     src/test/unit/qmclient/client/qm_predicted_event_positions_test.cpp
     src/test/unit/qmclient/client/qm_predicted_event_matching_test.cpp
     src/test/integration/client/predicted_event_inputs_test.cpp

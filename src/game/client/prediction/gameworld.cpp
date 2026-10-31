@@ -3,6 +3,7 @@
 
 #include "gameworld.h"
 
+#include "copy_links.h"
 #include "entities/character.h"
 #include "entities/door.h"
 #include "entities/dragger.h"
@@ -37,18 +38,14 @@ CGameWorld::CGameWorld()
 	m_GameTick = 0;
 	m_pParent = nullptr;
 	m_pChild = nullptr;
+	m_IsValidCopy = false;
 }
 
 CGameWorld::~CGameWorld()
 {
 	Clear();
-	if(m_pChild && m_pChild->m_pParent == this)
-	{
-		OnModified();
-		m_pChild->m_pParent = nullptr;
-	}
-	if(m_pParent && m_pParent->m_pChild == this)
-		m_pParent->m_pChild = nullptr;
+	OnModified();
+	QmCopyLinks::Unlink(*this);
 }
 
 void CGameWorld::Init(CCollision *pCollision, CTuningParams *pTuningList, const CMapBugs *pMapBugs)
@@ -160,18 +157,9 @@ void CGameWorld::RemoveEntity(CEntity *pEnt)
 	pEnt->m_pNextTypeEntity = nullptr;
 	pEnt->m_pPrevTypeEntity = nullptr;
 
-	if(pEnt->m_pParent)
-	{
-		if(m_IsValidCopy && m_pParent && m_pParent->m_pChild == this)
-			pEnt->m_pParent->m_DestroyTick = GameTick();
-		pEnt->m_pParent->m_pChild = nullptr;
-		pEnt->m_pParent = nullptr;
-	}
-	if(pEnt->m_pChild)
-	{
-		pEnt->m_pChild->m_pParent = nullptr;
-		pEnt->m_pChild = nullptr;
-	}
+	if(pEnt->m_pParent && pEnt->m_pParent->m_pChild == pEnt && m_IsValidCopy && m_pParent && m_pParent->m_pChild == this)
+		pEnt->m_pParent->m_DestroyTick = GameTick();
+	QmCopyLinks::Unlink(*pEnt);
 }
 
 void CGameWorld::RemoveCharacter(CCharacter *pChar)
@@ -660,6 +648,8 @@ void CGameWorld::CopyWorldClean(CGameWorld *pFrom)
 	if(pFrom == this || !pFrom)
 		return;
 	m_IsValidCopy = false;
+	OnModified();
+	QmCopyLinks::Unlink(*this);
 
 	m_GameTick = pFrom->m_GameTick;
 	m_pCollision = pFrom->m_pCollision;
@@ -696,8 +686,7 @@ void CGameWorld::CopyWorldClean(CGameWorld *pFrom)
 				pCopy = new CPlasma(*((CPlasma *)pEnt));
 			if(pCopy)
 			{
-				pCopy->m_pParent = nullptr;
-				pCopy->m_pChild = nullptr;
+				QmCopyLinks::ResetCopied(*pCopy);
 				this->InsertEntity(pCopy);
 			}
 		}
@@ -709,10 +698,11 @@ void CGameWorld::CopyWorld(CGameWorld *pFrom)
 	if(pFrom == this || !pFrom)
 		return;
 	m_IsValidCopy = false;
-	m_pParent = pFrom;
-	if(m_pParent->m_pChild && m_pParent->m_pChild != this)
-		m_pParent->m_pChild->m_IsValidCopy = false;
-	pFrom->m_pChild = this;
+	OnModified();
+	QmCopyLinks::Unlink(*this);
+	if(pFrom->m_pChild)
+		pFrom->m_pChild->m_IsValidCopy = false;
+	QmCopyLinks::Attach(*pFrom, *this);
 
 	m_GameTick = pFrom->m_GameTick;
 	m_pCollision = pFrom->m_pCollision;
@@ -749,8 +739,8 @@ void CGameWorld::CopyWorld(CGameWorld *pFrom)
 				pCopy = new CPlasma(*((CPlasma *)pEnt));
 			if(pCopy)
 			{
-				pCopy->m_pParent = pEnt;
-				pEnt->m_pChild = pCopy;
+				QmCopyLinks::ResetCopied(*pCopy);
+				QmCopyLinks::Attach(*pEnt, *pCopy);
 				this->InsertEntity(pCopy);
 			}
 		}
