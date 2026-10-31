@@ -373,6 +373,7 @@ class CConfigManager : public IConfigManager
 	std::vector<const char *> m_avpUnknownCommands[ConfigDomain::NUM];
 	CHeap m_ConfigHeap;
 	bool m_Initialized = false;
+	bool m_SaveInProgress = false;
 	bool m_UnknownCommandsIncomplete = false;
 
 	static void Con_Reset(IConsole::IResult *pResult, void *pUserData);

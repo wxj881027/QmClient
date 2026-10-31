@@ -114,3 +114,68 @@ TEST(QmWordFilterAllocation, FailureToPrepareAValidationErrorDoesNotReplaceTheCa
 	EXPECT_EQ(Words, (std::vector<std::string>{"new"}));
 	EXPECT_TRUE(Error.empty());
 }
+
+namespace
+{
+	void CheckSerializationFailures(const std::string &Text)
+	{
+		std::vector<std::string> Expected;
+		ASSERT_TRUE(QmWordFilterList::SerializeInline(Text.c_str(), Expected));
+		bool ReachedSuccess = false;
+		int Failures = 0;
+		for(int Allocation = 0; Allocation < 128; ++Allocation)
+		{
+			std::vector<std::string> Lines{"old output"};
+			bool Serialized, Triggered;
+			{
+				CPredictionAllocationFailure Failure(Allocation);
+				Serialized = QmWordFilterList::SerializeInline(Text.c_str(), Lines);
+				Triggered = Failure.Triggered();
+			}
+			if(!Triggered)
+			{
+				EXPECT_TRUE(Serialized);
+				EXPECT_EQ(Lines, Expected);
+				ReachedSuccess = Serialized;
+				break;
+			}
+			++Failures;
+			EXPECT_FALSE(Serialized);
+			EXPECT_EQ(Lines, (std::vector<std::string>{"old output"}));
+			ASSERT_TRUE(QmWordFilterList::SerializeInline(Text.c_str(), Lines));
+			EXPECT_EQ(Lines, Expected);
+		}
+		EXPECT_GT(Failures, 0);
+		EXPECT_TRUE(ReachedSuccess);
+	}
+}
+
+TEST(QmWordFilterAllocation, EverySegmentPreparationFailurePreservesThePreviousOutputAndAllowsRetry)
+{
+	CheckSerializationFailures(std::string(5000, 'a') + "\n尾部");
+}
+
+TEST(QmWordFilterAllocation, EveryQuotedPreparationFailurePreservesThePreviousOutputAndAllowsRetry)
+{
+	CheckSerializationFailures(std::string(100, 'a') + "\\\"尾部");
+}
+
+TEST(QmWordFilterAllocation, InvalidUtf8AndOversizedListsDoNotPublishAClearPrefix)
+{
+	std::vector<std::string> Lines{"old output"};
+	const std::string Invalid(4096, static_cast<char>(0x80));
+	EXPECT_FALSE(QmWordFilterList::SerializeInline(Invalid.c_str(), Lines));
+	EXPECT_EQ(Lines, (std::vector<std::string>{"old output"}));
+	const std::string Oversized(QmWordFilterList::INLINE_CAPACITY, 'a');
+	EXPECT_FALSE(QmWordFilterList::SerializeInline(Oversized.c_str(), Lines));
+	EXPECT_EQ(Lines, (std::vector<std::string>{"old output"}));
+	ASSERT_TRUE(QmWordFilterList::SerializeInline("recovered", Lines));
+	EXPECT_EQ(Lines, (std::vector<std::string>{"qm_block_words_list \"recovered\""}));
+}
+
+TEST(QmWordFilterAllocation, EmptyListStillSerializesAnExplicitClearCommand)
+{
+	std::vector<std::string> Lines{"old output"};
+	ASSERT_TRUE(QmWordFilterList::SerializeInline("", Lines));
+	EXPECT_EQ(Lines, (std::vector<std::string>{"qm_block_words_list \"\""}));
+}

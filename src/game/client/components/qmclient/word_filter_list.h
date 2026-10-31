@@ -21,7 +21,7 @@ namespace QmWordFilterList
 	bool AppendInlineChunk(char *pList, size_t Capacity, const char *pChunk);
 	bool AppendInlineHexChunk(char *pList, size_t Capacity, const char *pChunk) noexcept;
 	// 使用现有 cfg 命令格式分段保存，避免超过控制台单行解析容量。
-	std::vector<std::string> SerializeInline(const char *pList);
+	bool SerializeInline(const char *pList, std::vector<std::string> &vLines) noexcept;
 
 	class CFileList
 	{

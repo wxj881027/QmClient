@@ -177,29 +177,43 @@ bool QmWordFilterList::AppendInlineHexChunk(char *pList, size_t Capacity, const 
 	}
 }
 
-std::vector<std::string> QmWordFilterList::SerializeInline(const char *pList)
+bool QmWordFilterList::SerializeInline(const char *pList, std::vector<std::string> &vLines) noexcept
 {
-	std::string_view Remaining(pList);
-	if(Remaining.size() <= 2048 && Remaining.find_first_of("\r\n") == std::string_view::npos)
-		return {"qm_block_words_list " + Quote(Remaining)};
-	// 大列表用十六进制分段保留换行、引号和反斜杠，不改变 cfg 的命令格式。
-	std::vector<std::string> vLines{"qm_block_words_list \"\""};
-	constexpr char HEX[] = "0123456789abcdef";
-	while(!Remaining.empty())
+	try
 	{
-		size_t Length = std::min(Remaining.size(), size_t{2048});
-		while(Length < Remaining.size() && (static_cast<unsigned char>(Remaining[Length]) & 0xc0) == 0x80)
-			--Length;
-		std::string Line = "qm_block_words_list_append ";
-		for(unsigned char Byte : Remaining.substr(0, Length))
+		std::string_view Remaining(pList);
+		if(Remaining.size() >= INLINE_CAPACITY || !str_utf8_check(pList))
+			return false;
+		std::vector<std::string> vPrepared;
+		if(Remaining.size() <= 2048 && Remaining.find_first_of("\r\n") == std::string_view::npos)
+			vPrepared.push_back("qm_block_words_list " + Quote(Remaining));
+		else
 		{
-			Line += HEX[Byte >> 4];
-			Line += HEX[Byte & 15];
+			// 大列表用十六进制分段保留换行、引号和反斜杠，不改变 cfg 的命令格式。
+			vPrepared.emplace_back("qm_block_words_list \"\"");
+			constexpr char HEX[] = "0123456789abcdef";
+			while(!Remaining.empty())
+			{
+				size_t Length = std::min(Remaining.size(), size_t{2048});
+				while(Length < Remaining.size() && (static_cast<unsigned char>(Remaining[Length]) & 0xc0) == 0x80)
+					--Length;
+				std::string Line = "qm_block_words_list_append ";
+				for(unsigned char Byte : Remaining.substr(0, Length))
+				{
+					Line += HEX[Byte >> 4];
+					Line += HEX[Byte & 15];
+				}
+				vPrepared.push_back(std::move(Line));
+				Remaining.remove_prefix(Length);
+			}
 		}
-		vLines.push_back(std::move(Line));
-		Remaining.remove_prefix(Length);
+		vLines.swap(vPrepared);
+		return true;
 	}
-	return vLines;
+	catch(...)
+	{
+		return false;
+	}
 }
 
 bool QmWordFilterList::CFileList::UpdateFromText(std::string_view Content) noexcept

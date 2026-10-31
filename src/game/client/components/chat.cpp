@@ -1026,7 +1026,13 @@ void CChat::Echo(const char *pString, bool ForceVisible)
 void CChat::SaveBlockWords(IConfigManager *pConfig, void *)
 {
 	static_assert(sizeof(g_Config.m_QmBlockWordsList) == QmWordFilterList::INLINE_CAPACITY);
-	for(const std::string &Line : QmWordFilterList::SerializeInline(g_Config.m_QmBlockWordsList))
+	std::vector<std::string> vLines;
+	if(!QmWordFilterList::SerializeInline(g_Config.m_QmBlockWordsList, vLines))
+	{
+		pConfig->MarkSaveFailed();
+		return;
+	}
+	for(const std::string &Line : vLines)
 		pConfig->WriteLine(Line.c_str());
 }
 

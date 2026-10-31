@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <iterator>
 #include <memory>
+#include <new>
 #include <string>
 #include <string_view>
 
@@ -33,6 +34,26 @@ namespace
 				pConfig->MarkSaveFailed(ConfigDomain::TCLIENTWARLIST);
 			else
 				pConfig->WriteLine(State.m_pLine, ConfigDomain::TCLIENTWARLIST);
+		}
+	};
+
+	struct SThrowingSaveState
+	{
+		bool m_Throw = false;
+		bool m_WritePrefix = true;
+		bool m_StandardException = true;
+		static void Save(IConfigManager *pConfig, void *pUser)
+		{
+			const auto &State = *static_cast<SThrowingSaveState *>(pUser);
+			if(State.m_WritePrefix)
+				pConfig->WriteLine("# callback prefix");
+			if(State.m_Throw)
+			{
+				if(State.m_StandardException)
+					throw std::bad_alloc();
+				throw 1;
+			}
+			pConfig->WriteLine("# callback complete");
 		}
 	};
 
@@ -455,3 +476,78 @@ TEST_F(CConfigPersistence, ExclusiveExternalReaderCausesLoadAndSaveFailureWithou
 	EXPECT_TRUE(Reloaded.Config()->Save());
 }
 #endif
+
+TEST_F(CConfigPersistence, CallbackAllocationExceptionPreservesBothFilesAndAllowsSameSessionRetry)
+{
+	CConfigSession Session(m_pStorage.get());
+	SThrowingSaveState State;
+	SWarListSaveState WarList;
+	Session.Config()->RegisterCallback(SThrowingSaveState::Save, &State);
+	Session.Config()->RegisterCallback(SWarListSaveState::Save, &WarList, ConfigDomain::TCLIENTWARLIST);
+	ASSERT_TRUE(Session.Config()->Save());
+	const char *pWarPath = s_aConfigDomains[ConfigDomain::TCLIENTWARLIST].m_aConfigPath;
+	const std::string OldSettings = Read();
+	const std::string OldWarList = Read(pWarPath);
+	g_Config.m_ClShowhud = !g_Config.m_ClShowhud;
+	WarList.m_pLine = "# changed warlist";
+	State.m_Throw = true;
+	for(bool Prefix : {false, true})
+	{
+		State.m_WritePrefix = Prefix;
+		EXPECT_FALSE(Session.Config()->Save(true));
+		EXPECT_EQ(Read(), OldSettings);
+		EXPECT_EQ(Read(pWarPath), OldWarList);
+	}
+	State.m_Throw = false;
+	ASSERT_TRUE(Session.Config()->Save());
+	EXPECT_NE(Read().find("# callback complete"), std::string::npos);
+	EXPECT_NE(Read(pWarPath).find("# changed warlist"), std::string::npos);
+}
+
+TEST_F(CConfigPersistence, NonStandardCallbackExceptionDoesNotPublishItsPrefix)
+{
+	CConfigSession Session(m_pStorage.get());
+	SThrowingSaveState State;
+	Session.Config()->RegisterCallback(SThrowingSaveState::Save, &State);
+	ASSERT_TRUE(Session.Config()->Save());
+	const std::string Before = Read();
+	State.m_Throw = true;
+	State.m_StandardException = false;
+	EXPECT_FALSE(Session.Config()->Save());
+	EXPECT_EQ(Read(), Before);
+	State.m_Throw = false;
+	ASSERT_TRUE(Session.Config()->Save());
+}
+
+TEST_F(CConfigPersistence, CallbackExceptionReleasesTheSaveLockForAnotherSession)
+{
+	CConfigSession First(m_pStorage.get());
+	SThrowingSaveState State;
+	State.m_Throw = true;
+	First.Config()->RegisterCallback(SThrowingSaveState::Save, &State);
+	EXPECT_FALSE(First.Config()->Save());
+	CConfigSession Second(m_pStorage.get());
+	g_Config.m_ClShowhud = 0;
+	ASSERT_TRUE(Second.Config()->Save());
+	EXPECT_NE(Read().find("cl_showhud 0"), std::string::npos);
+	State.m_Throw = false;
+	ASSERT_TRUE(First.Config()->Save());
+}
+
+TEST_F(CConfigPersistence, NestedSaveIsRejectedWithoutDisturbingTheOuterCandidate)
+{
+	CConfigSession Session(m_pStorage.get());
+	bool NestedResult = true;
+	Session.Config()->RegisterCallback([](IConfigManager *pConfig, void *pUser) {
+		pConfig->WriteLine("# before nested save");
+		*static_cast<bool *>(pUser) = pConfig->Save(true);
+		pConfig->WriteLine("# after nested save");
+	},
+		&NestedResult);
+	ASSERT_TRUE(Session.Config()->Save());
+	EXPECT_FALSE(NestedResult);
+	const std::string Content = Read();
+	EXPECT_NE(Content.find("# before nested save"), std::string::npos);
+	EXPECT_NE(Content.find("# after nested save"), std::string::npos);
+	EXPECT_TRUE(Session.Config()->Save());
+}

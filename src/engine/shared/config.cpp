@@ -86,6 +86,31 @@ namespace
 #endif
 		}
 	};
+	// 此守卫在磁盘锁之后创建，异常退出先关闭候选，再释放锁。
+	class CConfigSaveFiles
+	{
+		IOHANDLE *m_pFiles;
+
+	public:
+		explicit CConfigSaveFiles(IOHANDLE *pFiles) :
+			m_pFiles(pFiles) {}
+		~CConfigSaveFiles()
+		{
+			for(ConfigDomain Domain = ConfigDomain::START; Domain < ConfigDomain::NUM; ++Domain)
+				if(m_pFiles[Domain])
+					io_close(std::exchange(m_pFiles[Domain], nullptr));
+		}
+	};
+
+	class CConfigSaveFlag
+	{
+		bool &m_InProgress;
+
+	public:
+		explicit CConfigSaveFlag(bool &InProgress) :
+			m_InProgress(InProgress) { m_InProgress = true; }
+		~CConfigSaveFlag() { m_InProgress = false; }
+	};
 	// v3 迁移需要删除的历史残留：
 	// - v2 时代 qmclient/ 下的两个旧变量文件（已合并进 settings.cfg）
 	// - v1 时代的大写 QmClient/ 目录（含 4 个旧文件）
@@ -755,11 +780,13 @@ bool CConfigManager::CheckConfigFiles(bool RefreshBaseline)
 }
 
 bool CConfigManager::Save(bool Force)
+try
 {
-	if(!m_pStorage || !m_Initialized || m_UnknownCommandsIncomplete)
+	if(m_SaveInProgress || !m_pStorage || !m_Initialized || m_UnknownCommandsIncomplete)
 		return false;
 	if(!Force && !g_Config.m_ClSaveSettings)
 		return true;
+	const CConfigSaveFlag SaveFlag(m_SaveInProgress);
 	if(!EnsureConfigPathFolder(m_pStorage, QM_CONFIG_MAIN_PATH))
 	{
 		log_error("config", "ERROR: creating config folder for %s failed", QM_CONFIG_MAIN_PATH);
@@ -773,6 +800,7 @@ bool CConfigManager::Save(bool Force)
 		log_error("config", "ERROR: could not lock client configs for saving");
 		return false;
 	}
+	const CConfigSaveFiles SaveFiles(m_aConfigFile);
 	// 锁内以最新磁盘内容为本次保存基线，允许多个实例依次保存，最后成功保存者生效。
 	// 序列化期间仍检查外部修改；不可读文件和实际写盘错误继续返回失败。
 	if(!CheckConfigFiles(true))
@@ -858,12 +886,11 @@ bool CConfigManager::Save(bool Force)
 			log_error("config", "ERROR: synchronizing %s failed", aaConfigFileTmp[ConfigDomain]);
 			aFailedError[ConfigDomain] = m_aFailed[ConfigDomain] = true;
 		}
-		if(io_close(m_aConfigFile[ConfigDomain]) != 0)
+		if(io_close(std::exchange(m_aConfigFile[ConfigDomain], nullptr)) != 0)
 		{
 			log_error("config", "ERROR: closing %s failed", aaConfigFileTmp[ConfigDomain]);
 			aFailedError[ConfigDomain] = m_aFailed[ConfigDomain] = true;
 		}
-		m_aConfigFile[ConfigDomain] = nullptr;
 		if(!m_aFailed[ConfigDomain] && !ReadConfigFileState(aaConfigFileTmp[ConfigDomain], aWrittenState[ConfigDomain]))
 		{
 			log_error("config", "ERROR: reading completed temporary config %s failed", aaConfigFileTmp[ConfigDomain]);
@@ -898,6 +925,11 @@ bool CConfigManager::Save(bool Force)
 	}
 
 	return !Failed;
+}
+catch(...)
+{
+	// 候选句柄已在锁内关闭；不在资源不足的异常出口继续分配诊断文本。
+	return false;
 }
 
 void CConfigManager::RegisterCallback(SAVECALLBACKFUNC pfnFunc, void *pUserData, ConfigDomain ConfigDomain)
