@@ -8699,9 +8699,6 @@ Minimum time between kills (in seconds)
 Minimum time between map votes (in seconds)
 == Harita oylamaları arasındaki minimum süre (saniye cinsinden)
 
-Minimum width for name column in server browser
-== Sunucu tarayıcısında isim sütunu için minimum genişlik
-
 Minutes on server before a player can call a map change vote (0 = disabled)
 == Bir oyuncunun harita değiştirme oylaması çağırmadan önce sunucuda geçirmesi gereken dakika (0 = devre dışı)
 
@@ -17410,6 +17407,9 @@ Width of latency column in server browser
 
 Width of map column in server browser
 == Sunucu tarayıcısında harita sütununun genişliği
+
+Width of name column in server browser
+== Sunucu tarayıcısında isim sütununun genişliği
 
 Width of others' hook collision line
 == Başkalarının kanca çarpışma çizgisi genişliği

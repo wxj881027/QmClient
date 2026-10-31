@@ -2899,7 +2899,6 @@ Minimum time
 Minimum time between kick votes (in seconds)
 Minimum time between kills (in seconds)
 Minimum time between map votes (in seconds)
-Minimum width for name column in server browser
 Minutes on server before a player can call a map change vote (0 = disabled)
 Minutes to save replay on ESC menu
 Misc
@@ -5803,6 +5802,7 @@ Width of difficulty column in server browser
 Width of friends column in server browser
 Width of latency column in server browser
 Width of map column in server browser
+Width of name column in server browser
 Width of others' hook collision line
 Width of players column in server browser
 Width of Qm clients column in server browser

@@ -8699,9 +8699,6 @@ Minimum time between kills (in seconds)
 Minimum time between map votes (in seconds)
 == 맵 투표 사이의 최소 시간 (초)
 
-Minimum width for name column in server browser
-== 서버 브라우저에서 이름 열의 최소 너비
-
 Minutes on server before a player can call a map change vote (0 = disabled)
 == 플레이어가 맵 변경 투표를 요청할 수 있기까지 서버에서 보내야 하는 시간 (분) (0 = 비활성화)
 
@@ -17410,6 +17407,9 @@ Width of latency column in server browser
 
 Width of map column in server browser
 == 서버 브라우저에서 맵 열의 너비
+
+Width of name column in server browser
+== 서버 브라우저에서 이름 열의 너비
 
 Width of others' hook collision line
 == 다른 플레이어의 갈고리 충돌선 너비

@@ -8699,9 +8699,6 @@ Minimum time between kills (in seconds)
 Minimum time between map votes (in seconds)
 == Minimalny czas między głosowaniami nad mapą (w sekundach)
 
-Minimum width for name column in server browser
-== Minimalna szerokość kolumny nazwy w przeglądarce serwerów
-
 Minutes on server before a player can call a map change vote (0 = disabled)
 == Minuty na serwerze, zanim gracz może wezwać głosowanie nad zmianą mapy (0 = wyłączone)
 
@@ -17410,6 +17407,9 @@ Width of latency column in server browser
 
 Width of map column in server browser
 == Szerokość kolumny mapy w przeglądarce serwerów
+
+Width of name column in server browser
+== Szerokość kolumny nazwy w przeglądarce serwerów
 
 Width of others' hook collision line
 == Szerokość linii kolizji haka innych graczy

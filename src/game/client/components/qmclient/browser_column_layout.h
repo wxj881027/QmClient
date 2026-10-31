@@ -2,37 +2,38 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_BROWSER_COLUMN_LAYOUT_H
 
 #include <algorithm>
+#include <array>
+#include <cstddef>
 
+// 列宽始终保持配置值；只平移内容，不用名称列或缩放抵消拖动量。
+template<size_t NumColumns>
 struct SQmBrowserColumnLayout
 {
-	float m_Scale; // 1 = 各列按配置宽度原样渲染；<1 = 溢出，等比收缩
-	float m_NameWidth; // 弹性列（名称）最终宽度
+	std::array<float, NumColumns> m_aLeft{};
+	float m_ContentWidth = 0.0f;
+	float m_MaxScrollOffset = 0.0f;
+	float m_ScrollOffset = 0.0f;
 };
 
-// 列布局（2026-10-14 重构）：内容列一律按配置的绝对宽度渲染，名称列弹性
-// 吸收剩余空间；没有组缩放——拖某一条宽度柄只影响该列与名称列。仅当
-// 全部列宽（配置宽 + 名称最小宽）超出可用宽度时整体等比收缩（scale < 1）。
-// FixedSum：除名称外全部内容列的配置宽度之和（不含间隙与钉住列）；
-inline SQmBrowserColumnLayout QmBrowserColumnLayout(float Available, float FixedSum, float NameMinWidth)
+template<size_t NumColumns>
+inline SQmBrowserColumnLayout<NumColumns> QmBrowserColumnLayout(const std::array<float, NumColumns> &aWidths, float Gap, float ViewportWidth, float ScrollOffset, float MinimumContentWidth = 0.0f)
 {
-	Available = std::max(0.0f, Available);
-	FixedSum = std::max(0.0f, FixedSum);
-	NameMinWidth = std::max(0.0f, NameMinWidth);
-
-	// 宽裕：固定列原样，名称吸收剩余。
-	if(Available >= FixedSum + NameMinWidth)
-		return {1.0f, Available - FixedSum};
-
-	// 溢出：全部列使用同一比例，配置下限只约束保存值。
-	// 显示时再次逐列钳制下限会突破预算，让末尾列跑出列表。
-	const float Budget = FixedSum + NameMinWidth;
-	const float Scale = Budget > 0.0f ? std::clamp(Available / Budget, 0.0f, 1.0f) : 1.0f;
-	return {Scale, NameMinWidth * Scale};
-}
-
-inline float QmBrowserColumnSqueezedWidth(float ConfiguredWidth, float Scale)
-{
-	return std::max(0.0f, ConfiguredWidth) * Scale;
+	SQmBrowserColumnLayout<NumColumns> Layout;
+	Gap = std::max(0.0f, Gap);
+	for(size_t i = 0; i < NumColumns; ++i)
+	{
+		Layout.m_aLeft[i] = Layout.m_ContentWidth;
+		Layout.m_ContentWidth += std::max(0.0f, aWidths[i]);
+		if(i + 1 < NumColumns)
+			Layout.m_ContentWidth += Gap;
+	}
+	// 调宽期间可保留尾部空白，避免缩窄末列时滚动钳制把抓住的边缘移走。
+	Layout.m_ContentWidth = std::max(Layout.m_ContentWidth, MinimumContentWidth);
+	Layout.m_MaxScrollOffset = std::max(0.0f, Layout.m_ContentWidth - std::max(0.0f, ViewportWidth));
+	Layout.m_ScrollOffset = std::clamp(ScrollOffset, 0.0f, Layout.m_MaxScrollOffset);
+	for(float &Left : Layout.m_aLeft)
+		Left -= Layout.m_ScrollOffset;
+	return Layout;
 }
 
 // 表头共享一次按压的所有权；列边缘命中时调宽优先，直到释放不能换成另一种手势。
@@ -41,15 +42,26 @@ class CQmBrowserHeaderGesture
 	int m_ReorderColumn = -1;
 	int m_ResizeColumn = -1;
 	bool m_ReorderDragged = false;
+	float m_ResizeStartX = 0.0f;
+	float m_ResizeStartWidth = 0.0f;
+	float m_ResizeScrollOffset = 0.0f;
 
 public:
-	void Begin(int HeaderColumn, int ResizeColumn)
+	void Begin(int HeaderColumn, int ResizeColumn, float MouseX = 0.0f, float Width = 0.0f, float ScrollOffset = 0.0f)
 	{
 		if(m_ReorderColumn >= 0 || m_ResizeColumn >= 0)
 			return;
 		m_ReorderDragged = false;
 		m_ResizeColumn = ResizeColumn;
+		m_ResizeStartX = MouseX;
+		m_ResizeScrollOffset = ScrollOffset;
+		m_ResizeStartWidth = Width;
 		m_ReorderColumn = ResizeColumn >= 0 ? -1 : HeaderColumn;
+	}
+	int ResizeWidth(float MouseX, int MinWidth, int MaxWidth) const
+	{
+		const float Width = std::clamp(m_ResizeStartWidth + MouseX - m_ResizeStartX, (float)MinWidth, (float)MaxWidth);
+		return (int)(Width + 0.5f);
 	}
 	void End()
 	{
@@ -62,6 +74,7 @@ public:
 	bool AllowsSort() const { return !m_ReorderDragged && m_ResizeColumn < 0; }
 	int ReorderColumn() const { return m_ReorderColumn; }
 	int ResizeColumn() const { return m_ResizeColumn; }
+	float ResizeScrollOffset() const { return m_ResizeScrollOffset; }
 };
 
 #endif
