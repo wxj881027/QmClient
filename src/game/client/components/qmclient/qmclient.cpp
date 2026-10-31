@@ -2317,12 +2317,14 @@ void CQmClient::QueueQmAnonymousEmoticonEvent(SQmRealtimeMessage Message)
 	}
 	Message.m_PlayerId = PlayerId;
 	Message.m_EmoticonPlayerId = PlayerId;
-	if(m_QmRealtimeEmoticonEvents.size() >= 64)
+	const bool WasFull = m_QmRealtimeEmoticonEvents.size() >= 64;
+	if(!TryQueueQmRealtimeMessage(m_QmRealtimeEmoticonEvents, std::move(Message), 64))
 	{
-		LogQmWebSocketEvent("anonymous_emote", "event_dropped: queue_full");
-		m_QmRealtimeEmoticonEvents.pop_front();
+		LogQmWebSocketEvent("anonymous_emote", "event_dropped: queue_prepare_failed");
+		return;
 	}
-	m_QmRealtimeEmoticonEvents.push_back(std::move(Message));
+	if(WasFull)
+		LogQmWebSocketEvent("anonymous_emote", "event_dropped: queue_full");
 	LogQmWebSocketEvent("anonymous_emote", "emoticon_received");
 }
 

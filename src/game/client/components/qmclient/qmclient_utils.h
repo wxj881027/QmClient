@@ -17,6 +17,7 @@
 
 typedef struct _json_value json_value;
 
+// 地址标准化失败或分配失败返回空串。
 std::string NormalizeQmServerAddress(const char *pServerAddress);
 
 struct SQmTitlePresence

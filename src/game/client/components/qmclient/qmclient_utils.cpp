@@ -11,7 +11,9 @@
 
 #include <algorithm>
 #include <cctype>
+#include <new>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
@@ -78,55 +80,63 @@ namespace
 
 std::string NormalizeQmServerAddress(const char *pServerAddress)
 {
-	std::string Address = pServerAddress ? pServerAddress : "";
-	while(!Address.empty() && std::isspace((unsigned char)Address.front()))
-		Address.erase(Address.begin());
-	while(!Address.empty() && std::isspace((unsigned char)Address.back()))
-		Address.pop_back();
-	std::transform(Address.begin(), Address.end(), Address.begin(), [](unsigned char Character) { return (char)std::tolower(Character); });
-	const size_t Scheme = Address.find("://");
-	if(Scheme != std::string::npos)
-		Address.erase(0, Scheme + 3);
-	while(!Address.empty() && Address.back() == '/')
-		Address.pop_back();
-	if(Address.empty())
-		return {};
-	std::string Host = Address;
-	std::string Port;
-	if(Address.front() == '[')
+	try
 	{
-		const size_t Close = Address.find(']');
-		if(Close == std::string::npos)
+		std::string_view Input = pServerAddress ? pServerAddress : "";
+		while(!Input.empty() && std::isspace(static_cast<unsigned char>(Input.front())))
+			Input.remove_prefix(1);
+		while(!Input.empty() && std::isspace(static_cast<unsigned char>(Input.back())))
+			Input.remove_suffix(1);
+		std::string Address(Input);
+		std::transform(Address.begin(), Address.end(), Address.begin(), [](unsigned char Character) { return (char)std::tolower(Character); });
+		const size_t Scheme = Address.find("://");
+		if(Scheme != std::string::npos)
+			Address.erase(0, Scheme + 3);
+		while(!Address.empty() && Address.back() == '/')
+			Address.pop_back();
+		if(Address.empty())
 			return {};
-		Host = Address.substr(1, Close - 1);
-		if(Close + 1 < Address.size() && Address[Close + 1] == ':')
-			Port = Address.substr(Close + 2);
-	}
-	else if(std::count(Address.begin(), Address.end(), ':') == 1)
-	{
-		const size_t Separator = Address.rfind(':');
-		Host = Address.substr(0, Separator);
-		Port = Address.substr(Separator + 1);
-	}
-	while(!Host.empty() && Host.back() == '.')
-		Host.pop_back();
-	if(Host.empty() || (!Port.empty() && !std::all_of(Port.begin(), Port.end(), [](unsigned char Character) { return std::isdigit(Character) != 0; })))
-		return {};
-	if(!Port.empty())
-	{
-		try
+		std::string Host = Address;
+		std::string Port;
+		if(Address.front() == '[')
 		{
-			const unsigned long NumericPort = std::stoul(Port);
-			if(NumericPort < 1 || NumericPort > 65535)
+			const size_t Close = Address.find(']');
+			if(Close == std::string::npos)
 				return {};
-			Port = std::to_string(NumericPort);
+			Host = Address.substr(1, Close - 1);
+			if(Close + 1 < Address.size() && Address[Close + 1] == ':')
+				Port = Address.substr(Close + 2);
 		}
-		catch(...)
+		else if(std::count(Address.begin(), Address.end(), ':') == 1)
 		{
-			return {};
+			const size_t Separator = Address.rfind(':');
+			Host = Address.substr(0, Separator);
+			Port = Address.substr(Separator + 1);
 		}
+		while(!Host.empty() && Host.back() == '.')
+			Host.pop_back();
+		if(Host.empty() || (!Port.empty() && !std::all_of(Port.begin(), Port.end(), [](unsigned char Character) { return std::isdigit(Character) != 0; })))
+			return {};
+		if(!Port.empty())
+		{
+			try
+			{
+				const unsigned long NumericPort = std::stoul(Port);
+				if(NumericPort < 1 || NumericPort > 65535)
+					return {};
+				Port = std::to_string(NumericPort);
+			}
+			catch(...)
+			{
+				return {};
+			}
+		}
+		return Host.find(':') != std::string::npos ? "[" + Host + "]" + (Port.empty() ? "" : ":" + Port) : Host + (Port.empty() ? "" : ":" + Port);
 	}
-	return Host.find(':') != std::string::npos ? "[" + Host + "]" + (Port.empty() ? "" : ":" + Port) : Host + (Port.empty() ? "" : ":" + Port);
+	catch(const std::bad_alloc &)
+	{
+		return {};
+	}
 }
 
 bool SQmClientDistributionSnapshot::Apply(SQmClientUsersParseResult &Result, int64_t ExpireTick)

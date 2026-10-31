@@ -87,10 +87,12 @@ struct SQmRealtimeMessage
 // 输入/JSON分配超限或准备失败返回false并清空输出；payload共享整棵JSON树的所有权。
 bool ParseQmRealtimeMessage(const char *pData, size_t Size, SQmRealtimeMessage &OutMessage);
 
-// 保持最近128条；新消息准备失败时，原队列及输入消息仍归原所有者持有。
+// 保持最近 MaxEvents 条（默认128）；上限为0或准备失败时保留原队列和输入。
 template<typename TAllocator>
-bool TryQueueQmRealtimeMessage(std::deque<SQmRealtimeMessage, TAllocator> &Events, SQmRealtimeMessage &&Message)
+bool TryQueueQmRealtimeMessage(std::deque<SQmRealtimeMessage, TAllocator> &Events, SQmRealtimeMessage &&Message, size_t MaxEvents = 128)
 {
+	if(MaxEvents == 0)
+		return false;
 	try
 	{
 		Events.push_back(std::move(Message));
@@ -99,7 +101,7 @@ bool TryQueueQmRealtimeMessage(std::deque<SQmRealtimeMessage, TAllocator> &Event
 	{
 		return false;
 	}
-	if(Events.size() > 128)
+	while(Events.size() > MaxEvents)
 		Events.pop_front();
 	return true;
 }
