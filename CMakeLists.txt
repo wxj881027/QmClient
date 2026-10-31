@@ -3195,6 +3195,7 @@ if(CLIENT)
     sixup_connless.h
     sixup_server_info.h
     server_info_client.h
+    server_info_update.h
     sixup_system_messages.h
     sixup_translate_system.cpp
     smooth_time.cpp
@@ -4750,6 +4751,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/unpacker_boundary_test.cpp
     src/test/integration/engine/sixup_server_info_test.cpp
     src/test/unit/engine/unpacker_remaining_test.cpp
+    src/test/unit/engine/server_info_update_test.cpp
     src/test/integration/engine/server_info_client_test.cpp
     src/test/integration/engine/sixup_connless_test.cpp
     src/test/integration/engine/stun_controller_test.cpp
@@ -5407,6 +5409,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/serverbrowser_test.cpp
     src/test/integration/client/serverbrowser_ping_cache_test.cpp
     src/test/integration/client/serverbrowser_publication_test.cpp
+    src/test/integration/client/serverbrowser_entry_update_test.cpp
     src/test/integration/client/serverbrowser_sort_recovery_test.cpp
     src/test/integration/client/serverbrowser_community_load_test.cpp
     src/test/integration/client/serverbrowser_metadata_recovery_test.cpp

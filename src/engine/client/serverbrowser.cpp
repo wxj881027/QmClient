@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "serverbrowser.h"
 
+#include "server_info_update.h"
 #include "serverbrowser_addresses.h"
 #include "serverbrowser_http.h"
 #include "serverbrowser_ping_cache.h"
@@ -1162,94 +1163,82 @@ void CServerBrowser::QueueRequest(CServerEntry *pEntry)
 
 void CServerBrowser::SetInfo(CServerEntry *pEntry, const CServerInfo &Info)
 {
-	++m_FriendListRevision;
-	const TRISTATE Favorite = pEntry->m_Info.m_Favorite;
-	const TRISTATE FavoriteAllowPing = pEntry->m_Info.m_FavoriteAllowPing;
-	const int ServerIndex = pEntry->m_Info.m_ServerIndex;
-	const int QmClientCount = pEntry->m_Info.m_QmClientCount;
-	const int NumAddresses = pEntry->m_Info.m_NumAddresses;
-	NETADDR aAddresses[MAX_SERVER_ADDRESSES];
-	mem_copy(aAddresses, pEntry->m_Info.m_aAddresses, sizeof(aAddresses));
-	char aCommunityId[CServerInfo::MAX_COMMUNITY_ID_LENGTH];
-	char aCommunityCountry[CServerInfo::MAX_COMMUNITY_COUNTRY_LENGTH];
-	char aCommunityType[CServerInfo::MAX_COMMUNITY_TYPE_LENGTH];
-	str_copy(aCommunityId, pEntry->m_Info.m_aCommunityId);
-	str_copy(aCommunityCountry, pEntry->m_Info.m_aCommunityCountry);
-	str_copy(aCommunityType, pEntry->m_Info.m_aCommunityType);
-	pEntry->m_Info = Info;
-	pEntry->m_Info.m_Favorite = Favorite;
-	pEntry->m_Info.m_FavoriteAllowPing = FavoriteAllowPing;
-	pEntry->m_Info.m_ServerIndex = ServerIndex;
-	pEntry->m_Info.m_QmClientCount = QmClientCount;
-	mem_copy(pEntry->m_Info.m_aAddresses, aAddresses, sizeof(aAddresses));
-	pEntry->m_Info.m_NumAddresses = NumAddresses;
-	ServerBrowserFormatAddresses(pEntry->m_Info.m_aAddress, sizeof(pEntry->m_Info.m_aAddress), pEntry->m_Info.m_aAddresses, pEntry->m_Info.m_NumAddresses);
-	str_copy(pEntry->m_Info.m_aCommunityId, aCommunityId);
-	str_copy(pEntry->m_Info.m_aCommunityCountry, aCommunityCountry);
-	str_copy(pEntry->m_Info.m_aCommunityType, aCommunityType);
-	pEntry->m_FriendStateValid = false;
-	UpdateServerRank(&pEntry->m_Info);
-	pEntry->m_Info.m_GametypeColor = CServerInfo::GametypeColor(pEntry->m_Info.m_aGameType);
+	server_info::Update(pEntry->m_Info, Info, [this, pEntry](CServerInfo &Candidate) {
+		const CServerInfo &Previous = pEntry->m_Info;
+		Candidate.m_Favorite = Previous.m_Favorite;
+		Candidate.m_FavoriteAllowPing = Previous.m_FavoriteAllowPing;
+		Candidate.m_ServerIndex = Previous.m_ServerIndex;
+		Candidate.m_QmClientCount = Previous.m_QmClientCount;
+		mem_copy(Candidate.m_aAddresses, Previous.m_aAddresses, sizeof(Candidate.m_aAddresses));
+		Candidate.m_NumAddresses = Previous.m_NumAddresses;
+		ServerBrowserFormatAddresses(Candidate.m_aAddress, sizeof(Candidate.m_aAddress), Candidate.m_aAddresses, Candidate.m_NumAddresses);
+		str_copy(Candidate.m_aCommunityId, Previous.m_aCommunityId);
+		str_copy(Candidate.m_aCommunityCountry, Previous.m_aCommunityCountry);
+		str_copy(Candidate.m_aCommunityType, Previous.m_aCommunityType);
+		UpdateServerRank(&Candidate);
+		Candidate.m_GametypeColor = CServerInfo::GametypeColor(Candidate.m_aGameType);
 
-	if(pEntry->m_Info.m_ClientScoreKind == CServerInfo::CLIENT_SCORE_KIND_UNSPECIFIED)
-	{
-		if(str_find_nocase(pEntry->m_Info.m_aGameType, "race") || str_find_nocase(pEntry->m_Info.m_aGameType, "fastcap"))
+		if(Candidate.m_ClientScoreKind == CServerInfo::CLIENT_SCORE_KIND_UNSPECIFIED)
 		{
-			pEntry->m_Info.m_ClientScoreKind = CServerInfo::CLIENT_SCORE_KIND_TIME_BACKCOMPAT;
-		}
-		else
-		{
-			pEntry->m_Info.m_ClientScoreKind = CServerInfo::CLIENT_SCORE_KIND_POINTS;
-		}
-	}
-
-	class CPlayerScoreNameLess
-	{
-		const int m_ScoreKind;
-
-	public:
-		CPlayerScoreNameLess(int ClientScoreKind) :
-			m_ScoreKind(ClientScoreKind)
-		{
-		}
-
-		bool operator()(const CServerInfo::CClient &Client0, const CServerInfo::CClient &Client1) const
-		{
-			// Sort players before non players
-			if(Client0.m_Player && !Client1.m_Player)
-				return true;
-			if(!Client0.m_Player && Client1.m_Player)
-				return false;
-
-			int Score0 = Client0.m_Score;
-			int Score1 = Client1.m_Score;
-
-			if(m_ScoreKind == CServerInfo::CLIENT_SCORE_KIND_TIME || m_ScoreKind == CServerInfo::CLIENT_SCORE_KIND_TIME_BACKCOMPAT)
+			if(str_find_nocase(Candidate.m_aGameType, "race") || str_find_nocase(Candidate.m_aGameType, "fastcap"))
 			{
-				// Sort unfinished (-9999) and still connecting players (-1) after others
-				if(Score0 < 0 && Score1 >= 0)
-					return false;
-				if(Score0 >= 0 && Score1 < 0)
+				Candidate.m_ClientScoreKind = CServerInfo::CLIENT_SCORE_KIND_TIME_BACKCOMPAT;
+			}
+			else
+			{
+				Candidate.m_ClientScoreKind = CServerInfo::CLIENT_SCORE_KIND_POINTS;
+			}
+		}
+
+		class CPlayerScoreNameLess
+		{
+			const int m_ScoreKind;
+
+		public:
+			CPlayerScoreNameLess(int ClientScoreKind) :
+				m_ScoreKind(ClientScoreKind)
+			{
+			}
+
+			bool operator()(const CServerInfo::CClient &Client0, const CServerInfo::CClient &Client1) const
+			{
+				// Sort players before non players
+				if(Client0.m_Player && !Client1.m_Player)
 					return true;
+				if(!Client0.m_Player && Client1.m_Player)
+					return false;
+
+				int Score0 = Client0.m_Score;
+				int Score1 = Client1.m_Score;
+
+				if(m_ScoreKind == CServerInfo::CLIENT_SCORE_KIND_TIME || m_ScoreKind == CServerInfo::CLIENT_SCORE_KIND_TIME_BACKCOMPAT)
+				{
+					// Sort unfinished (-9999) and still connecting players (-1) after others
+					if(Score0 < 0 && Score1 >= 0)
+						return false;
+					if(Score0 >= 0 && Score1 < 0)
+						return true;
+				}
+
+				if(Score0 != Score1)
+				{
+					// Handle the sign change introduced with CLIENT_SCORE_KIND_TIME
+					if(m_ScoreKind == CServerInfo::CLIENT_SCORE_KIND_TIME)
+						return Score0 < Score1;
+					else
+						return Score0 > Score1;
+				}
+
+				return str_comp_nocase(Client0.m_aName, Client1.m_aName) < 0;
 			}
+		};
 
-			if(Score0 != Score1)
-			{
-				// Handle the sign change introduced with CLIENT_SCORE_KIND_TIME
-				if(m_ScoreKind == CServerInfo::CLIENT_SCORE_KIND_TIME)
-					return Score0 < Score1;
-				else
-					return Score0 > Score1;
-			}
-
-			return str_comp_nocase(Client0.m_aName, Client1.m_aName) < 0;
-		}
-	};
-
-	std::sort(pEntry->m_Info.m_vClients.begin(), pEntry->m_Info.m_vClients.end(), CPlayerScoreNameLess(pEntry->m_Info.m_ClientScoreKind));
-
+		std::sort(Candidate.m_vClients.begin(), Candidate.m_vClients.end(), CPlayerScoreNameLess(Candidate.m_ClientScoreKind));
+	});
+	pEntry->m_FriendStateValid = false;
 	pEntry->m_GotInfo = 1;
-	++m_FriendListRevision;
+	// 保留成功更新原有的两次修订增量，失败准备不触碰真实条目和缓存标志。
+	m_FriendListRevision += 2;
 }
 
 // 可用延迟：未测量（-1）或触到 1 秒测量上限的值都不能当作实测延迟使用。

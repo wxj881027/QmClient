@@ -15,6 +15,7 @@
 #include "qm_storage_mode.h"
 #include "replay_save.h"
 #include "server_info_client.h"
+#include "server_info_update.h"
 #include "serverbrowser.h"
 #include "snapshot_ticks.h"
 
@@ -1400,11 +1401,12 @@ void CClient::GetServerInfo(CServerInfo *pServerInfo) const
 
 void CClient::SetCurrentServerInfo(const CServerInfo &ServerInfo)
 {
-	m_CurrentServerInfo = ServerInfo;
+	server_info::Update(m_CurrentServerInfo, ServerInfo, [this](CServerInfo &Candidate) {
+		str_copy(Candidate.m_aMap, GetCurrentMap());
+		Candidate.m_MapCrc = m_pMap->Crc();
+		Candidate.m_MapSize = m_pMap->Size();
+	});
 	m_CurrentServerInfoRequestTime = -1;
-	str_copy(m_CurrentServerInfo.m_aMap, GetCurrentMap());
-	m_CurrentServerInfo.m_MapCrc = m_pMap->Crc();
-	m_CurrentServerInfo.m_MapSize = m_pMap->Size();
 }
 
 void CClient::ServerInfoRequest()
