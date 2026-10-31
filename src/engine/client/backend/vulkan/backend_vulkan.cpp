@@ -5682,11 +5682,12 @@ public:
 			unsigned FileSize;
 			if(!m_pStorage->ReadFile(pFilename, IStorage::TYPE_ALL, &pShaderBuff, &FileSize))
 				return false;
+			std::unique_ptr<void, decltype(&std::free)> pShaderData(pShaderBuff, &std::free);
 
 			std::vector<uint8_t> vShaderBuff;
 			vShaderBuff.resize(FileSize);
-			mem_copy(vShaderBuff.data(), pShaderBuff, FileSize);
-			free(pShaderBuff);
+			mem_copy(vShaderBuff.data(), pShaderData.get(), FileSize);
+			pShaderData.reset();
 
 			ShaderFileIterator = m_ShaderFiles.insert({pFilename, {std::move(vShaderBuff)}}).first;
 		}

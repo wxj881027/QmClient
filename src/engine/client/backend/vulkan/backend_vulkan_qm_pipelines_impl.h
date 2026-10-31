@@ -349,6 +349,8 @@ inline void CCommandProcessorFragment_Vulkan::CleanupQmPipelines()
 {
 	m_MediaIslandSdfPipeline.Destroy(m_VKDevice);
 	m_RoundedRectSdfPipeline.Destroy(m_VKDevice);
+	m_QmMediaIslandSdfPipelineValid = false;
+	m_QmRoundedRectSdfPipelineValid = false;
 	m_ProceduralRingPipeline.Destroy(m_VKDevice);
 	m_ProceduralRingPipelineValid = false;
 	SyncProceduralRingCapability();
