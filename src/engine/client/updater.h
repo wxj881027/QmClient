@@ -39,27 +39,23 @@
 #define PLAT_CLIENT_EXEC CLIENT_EXEC PLAT_EXT
 #define PLAT_SERVER_EXEC SERVER_EXEC PLAT_EXT
 
-class CUpdaterFetchTask;
+class IHttpRequest;
 
 class CUpdater : public IUpdater
 {
-	friend class CUpdaterFetchTask;
-
 	class IClient *m_pClient;
 	class IStorage *m_pStorage;
-	class IEngine *m_pEngine;
 	class IHttp *m_pHttp;
 
 	CLock m_Lock;
 
 	EUpdaterState m_State GUARDED_BY(m_Lock);
 	char m_aStatus[256] GUARDED_BY(m_Lock);
-	int m_Percent GUARDED_BY(m_Lock);
 	char m_aClientExecTmp[64];
 	char m_aServerExecTmp[64];
 
 	std::forward_list<std::pair<std::string, bool>> m_FileJobs;
-	std::shared_ptr<CUpdaterFetchTask> m_pCurrentTask;
+	std::shared_ptr<IHttpRequest> m_pCurrentTask;
 	decltype(m_FileJobs)::iterator m_CurrentJob;
 
 	bool m_ClientUpdate;
@@ -69,10 +65,11 @@ class CUpdater : public IUpdater
 	bool m_ServerFetched;
 
 	void AddFileJob(const char *pFile, bool Job);
-	void FetchFile(const char *pFile, const char *pDestPath = nullptr) REQUIRES(!m_Lock);
+	bool FetchFile(const char *pFile, const char *pDestPath = nullptr) noexcept REQUIRES(!m_Lock);
 	bool MoveFile(const char *pFile);
+	bool ReplaceBinaryFile(const char *pCandidate, const char *pDestination, const char *pBackup, bool Executable);
 
-	void ParseUpdate() REQUIRES(!m_Lock);
+	bool ParseUpdate() REQUIRES(!m_Lock);
 	void PerformUpdate() REQUIRES(!m_Lock);
 	void RunningUpdate() REQUIRES(!m_Lock);
 	void CommitUpdate() REQUIRES(!m_Lock);

@@ -3228,6 +3228,7 @@ if(CLIENT)
     texture_slot_pool.h
     updater.cpp
     updater.h
+    updater_file.h
     video.cpp
     video.h
     video_frame_capture.h
@@ -5339,6 +5340,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_removed_ui_config_test.cpp
     src/test/integration/qmclient/client/qm_legacy_config_load_test.cpp
     src/test/integration/engine/config_persistence_test.cpp
+    src/test/integration/engine/legacy_updater_file_test.cpp
     src/test/integration/engine/console_script_storage_test.cpp
     src/test/contract/qmclient/client/qm_prediction_contract_test.cpp
     src/test/unit/qmclient/client/qm_predicted_event_queue_test.cpp
@@ -5450,6 +5452,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/server/score_test.cpp
     src/test/unit/engine/image_decode_budget_test.cpp
     src/test/unit/engine/storage_replace_test.cpp
+    src/test/unit/engine/legacy_updater_test.cpp
+    src/engine/client/updater.cpp
     src/test/unit/client/section_loader_test.cpp
     src/test/contract/qmclient/settings/section_loader_cleanup_contract_test.cpp
     src/test/unit/client/swap_countdown_message_test.cpp
