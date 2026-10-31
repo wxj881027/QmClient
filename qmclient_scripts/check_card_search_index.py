@@ -146,6 +146,42 @@ def parse_metadata(text: str) -> dict[str, str]:
 	return {match.group(1): match.group(2) for match in METADATA_RE.finditer(text)}
 
 
+DECLARATION_RE = re.compile(r'QM_CARD_SEARCH_TABLE\(\s*"((?:qm|deck|tclient):[^"]+)"\s*,\s*(\w+)\s*,')
+
+
+ARRAY_RE = re.compile(r"constexpr qm_card_registry::SCardSettingSearch (s_aQmSearch_\w+)\[\] = \{")
+REGISTER_RE = re.compile(r'QM_CARD_SEARCH_REGISTER\(\s*"((?:qm|deck|tclient):[^"]+)"\s*,\s*(\w+)\s*\)')
+
+
+def parse_declared_entries(text: str) -> dict[str, set[str]]:
+	"""解析卡片声明文件里的搜索表与注册调用。"""
+	arrays: dict[str, set[str]] = {}
+	for match in ARRAY_RE.finditer(text):
+		open_brace = text.find("{", match.end() - 1)
+		if open_brace < 0:
+			continue
+		close_brace = find_matching(text, open_brace)
+		if close_brace < 0:
+			continue
+		arrays[match.group(1)] = set(LABEL_RE.findall(text[open_brace : close_brace + 1]))
+	declared: dict[str, set[str]] = {}
+	for match in REGISTER_RE.finditer(text):
+		symbol = "s_aQmSearch_" + match.group(2)
+		labels = arrays.get(symbol)
+		if labels is not None:
+			declared.setdefault(match.group(1), set()).update(labels)
+	# 兼容旧的 QM_CARD_SEARCH_TABLE 宏形式。
+	for match in DECLARATION_RE.finditer(text):
+		open_paren = text.find("(", match.start())
+		if open_paren < 0:
+			continue
+		close_paren = find_matching(text, open_paren)
+		if close_paren < 0:
+			continue
+		declared.setdefault(match.group(1), set()).update(LABEL_RE.findall(text[match.end() : close_paren]))
+	return declared
+
+
 def parse_add_mappings(text: str) -> dict[str, str]:
 	"""stableId -> Render 函数名（仅 Add(...) 形式的卡片模块）。"""
 	mappings: dict[str, str] = {}
@@ -314,7 +350,7 @@ def extract_localize_labels(text: str) -> set[str]:
 def read_sources(root: Path, relative: Path) -> dict[Path, str]:
 	sources: dict[Path, str] = {}
 	for path in (root / relative).rglob("*"):
-		if path.suffix in {".cpp", ".h"}:
+		if path.suffix in {".cpp", ".h", ".inc"}:
 			sources[path] = path.read_text(encoding="utf-8", errors="replace")
 	return sources
 
@@ -345,7 +381,14 @@ def analyze(root: Path) -> dict:
 	card_sources.pop(root / INDEX_RELATIVE, None)
 	corpus = "\n".join(client_sources.values()).lower()
 
+	declared: dict[str, set[str]] = {}
+	for text in client_sources.values():
+		for stable_id, labels in parse_declared_entries(text).items():
+			declared.setdefault(stable_id, set()).update(labels)
+
 	all_index_labels: set[str] = set()
+	for labels in declared.values():
+		all_index_labels |= labels
 	for table in tables.values():
 		all_index_labels |= table["labels"]
 
@@ -354,10 +397,20 @@ def analyze(root: Path) -> dict:
 		card_labels |= extract_localize_labels(text)
 	global_unindexed = sorted(label for label in card_labels if label not in all_index_labels and label not in IGNORED_SOURCE_LABELS)
 
-	tables_by_card = {stable_id: table for stable_id, table in metadata.items() if table in tables}
-	registered_tables = set(tables_by_card.values())
+	tables_by_card: dict[str, set[str]] = {stable_id: labels for stable_id, labels in declared.items()}
+	missing_tables = []
+	for stable_id, table_name in metadata.items():
+		if table_name not in tables:
+			missing_tables.append(stable_id)
+			continue
+		tables_by_card.setdefault(stable_id, set()).update(tables[table_name]["labels"])
+	registered_tables = set(metadata.values())
 
 	drifted = []
+	for stable_id, labels in sorted(declared.items()):
+		for label in sorted(labels):
+			if label.lower() not in corpus:
+				drifted.append({"table": stable_id, "label": label})
 	for table_name, table in sorted(tables.items()):
 		for label in sorted(table["labels"]):
 			if label.lower() not in corpus:
@@ -384,8 +437,7 @@ def analyze(root: Path) -> dict:
 	cards = []
 	unmapped = []
 	exact_cards = 0
-	for stable_id, table_name in sorted(tables_by_card.items()):
-		table_labels = tables[table_name]["labels"]
+	for stable_id, table_labels in sorted(tables_by_card.items()):
 		source_labels: set[str] = set()
 		origin = ""
 		confidence = ""
@@ -428,10 +480,10 @@ def analyze(root: Path) -> dict:
 		})
 
 	return {
-		"tables": len(tables),
-		"registered_cards": len(metadata),
+		"tables": len(declared) + len(tables),
+		"registered_cards": len(tables_by_card),
 		"unregistered_tables": sorted(set(tables) - registered_tables),
-		"missing_tables": sorted(stable_id for stable_id, table in metadata.items() if table not in tables),
+		"missing_tables": sorted(missing_tables),
 		"index_labels": len(all_index_labels),
 		"drifted_labels": drifted,
 		"mapped_cards": exact_cards,

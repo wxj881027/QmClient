@@ -1,4 +1,5 @@
 #include <game/client/QmUi/QmCardRegistry.h>
+#include <game/client/QmUi/QmCardSearchRegistry.h>
 #include <game/client/QmUi/SettingsSearchReveal.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/localization.h>
@@ -8,6 +9,14 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+
+TEST(QmCatalogSearch, DeclaredSearchTablesRegisterBeforeSearch)
+{
+	EXPECT_FALSE(qm_card_search::Registrations().empty());
+	const qm_card_search::SRegistration *pRegistration = qm_card_search::Find("qm:lyrics");
+	ASSERT_NE(pRegistration, nullptr);
+	EXPECT_GT(pRegistration->m_Count, 0u);
+}
 
 TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirPages)
 {

@@ -111,6 +111,32 @@ class ParserTest(unittest.TestCase):
 		self.assertIn('Localize("Beta")', branches["deck:beta"])
 
 
+DECLARED_SOURCE = """namespace
+{
+	void Register()
+	{
+		Add(Id, "qm:alpha", "Alpha", "desc", [](CUIRect &Content) {
+			QmCardRenderHook::RenderAlpha(Content);
+		});
+	}
+}
+
+namespace
+{
+constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_alpha[] = {
+	{Localizable("Alpha label"), nullptr, "别名"},
+	{nullptr, "qm_alpha", nullptr},
+};
+QM_CARD_SEARCH_REGISTER("qm:alpha", qm_alpha);
+}
+
+void CMenus::RenderAlpha(CUIRect &Content)
+{
+	Localize("Alpha label");
+}
+"""
+
+
 class AnalyzeTest(unittest.TestCase):
 	def _write_repo(self, root: Path, index_text: str, card_text: str) -> None:
 		index_path = root / checker.INDEX_RELATIVE
@@ -166,6 +192,14 @@ class AnalyzeTest(unittest.TestCase):
 		self.assertEqual(report["no_source_cards"], ["qm:alpha"])
 		self.assertEqual(report["mapped_cards"], 0)
 		self.assertEqual(report["unindexed_labels"], ["Alpha label", "Beta", "Delta", "Gamma", "ShouldNotBeCollected"])
+
+	def test_reads_declared_tables_from_card_sources(self) -> None:
+		report = self._analyze("", DECLARED_SOURCE)
+		self.assertEqual(report["tables"], 1)
+		self.assertEqual(report["registered_cards"], 1)
+		self.assertEqual(report["index_labels"], 1)
+		self.assertEqual(report["drifted_labels"], [])
+		self.assertEqual(report["mapped_cards"], 1)
 
 	def test_counts_registration_problems(self) -> None:
 		index_text = INDEX_SAMPLE.replace(

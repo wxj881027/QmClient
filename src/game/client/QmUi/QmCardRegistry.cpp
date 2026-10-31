@@ -268,7 +268,6 @@ namespace qm_card_registry
 			{"deck:controls-custom", "controls", ECardColumn::Right, 4, "Custom", "controls custom binds", "Review and edit custom key bindings"},
 		};
 			// clang-format on
-			qm_card_catalog::FillCardSearchMetadata(Cards);
 			return Cards;
 		}();
 		return s_aDefaults;
@@ -478,15 +477,18 @@ namespace qm_card_registry
 		for(size_t CardIndex = 0; CardIndex < vDefaults.size(); ++CardIndex)
 		{
 			const SCardDefault &Default = vDefaults[CardIndex];
+			const qm_card_registry::SCardSettingSearch *pSettings = nullptr;
+			size_t SettingCount = 0;
+			qm_card_catalog::FindSearchMetadata(Default.m_pStableId, &pSettings, &SettingCount);
 			std::string &Haystack = s_vHaystacks[CardIndex];
 			AppendLowerUtf8(Haystack, Default.m_pTitle);
 			AppendLowerUtf8(Haystack, Default.m_pTitle != nullptr ? Localize(Default.m_pTitle) : nullptr);
 			AppendLowerUtf8(Haystack, Default.m_pSearchKeywords);
 			AppendLowerUtf8(Haystack, Default.m_pDescription);
 			AppendLowerUtf8(Haystack, Default.m_pDescription != nullptr ? Localize(Default.m_pDescription) : nullptr);
-			for(size_t SettingIndex = 0; SettingIndex < Default.m_SettingCount; ++SettingIndex)
+			for(size_t SettingIndex = 0; SettingIndex < SettingCount; ++SettingIndex)
 			{
-				const SCardSettingSearch &Setting = Default.m_pSettings[SettingIndex];
+				const SCardSettingSearch &Setting = pSettings[SettingIndex];
 				AppendLowerUtf8(Haystack, Setting.m_pLabel);
 				AppendLowerUtf8(Haystack, Setting.m_pLabel != nullptr ? Localize(Setting.m_pLabel, Setting.m_pContext) : nullptr);
 				AppendLowerUtf8(Haystack, Setting.m_pConfigName);
@@ -535,6 +537,10 @@ namespace qm_card_registry
 			}
 			if(HaystackMiss)
 				continue;
+			// 搜索时才解析设置表：静态注册器可能晚于 DefaultsTable 的首次构建。
+			const qm_card_registry::SCardSettingSearch *pSettings = nullptr;
+			size_t SettingCount = 0;
+			qm_card_catalog::FindSearchMetadata(Default.m_pStableId, &pSettings, &SettingCount);
 			const char *pLocalizedTitle = Default.m_pTitle != nullptr ? Localize(Default.m_pTitle) : "";
 			const char *pLocalizedDescription = Default.m_pDescription != nullptr ? Localize(Default.m_pDescription) : "";
 			SCandidate Candidate;
@@ -546,9 +552,9 @@ namespace qm_card_registry
 				TokenScore = std::max(TokenScore, SearchMatchScore(Default.m_pSearchKeywords, Token, SEARCH_WEIGHT_KEYWORDS));
 				TokenScore = std::max(TokenScore, SearchMatchScore(pLocalizedDescription, Token, SEARCH_WEIGHT_DESCRIPTION));
 				TokenScore = std::max(TokenScore, SearchMatchScore(Default.m_pDescription, Token, SEARCH_WEIGHT_DESCRIPTION));
-				for(size_t Index = 0; Index < Default.m_SettingCount; ++Index)
+				for(size_t Index = 0; Index < SettingCount; ++Index)
 				{
-					const SCardSettingSearch &Setting = Default.m_pSettings[Index];
+					const SCardSettingSearch &Setting = pSettings[Index];
 					const char *pLocalizedLabel = Setting.m_pLabel != nullptr ? Localize(Setting.m_pLabel, Setting.m_pContext) : nullptr;
 					const int LabelScore = std::max(SearchMatchScore(Setting.m_pLabel, Token, SEARCH_WEIGHT_LABEL), SearchMatchScore(pLocalizedLabel, Token, SEARCH_WEIGHT_LABEL));
 					const int ConfigScore = SearchMatchScore(Setting.m_pConfigName, Token, SEARCH_WEIGHT_CONFIG);
@@ -568,9 +574,9 @@ namespace qm_card_registry
 
 			// 命中项按设置项累计分数：同时命中多个查询词的标签优先展示，最多保留前几条。
 			std::vector<std::pair<int, std::string>> vSettingMatches;
-			for(size_t Index = 0; Index < Default.m_SettingCount; ++Index)
+			for(size_t Index = 0; Index < SettingCount; ++Index)
 			{
-				const SCardSettingSearch &Setting = Default.m_pSettings[Index];
+				const SCardSettingSearch &Setting = pSettings[Index];
 				int SettingScore = 0;
 				const char *pDisplay = nullptr;
 				for(const std::string &Token : vTokens)
