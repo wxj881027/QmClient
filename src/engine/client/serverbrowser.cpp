@@ -4,6 +4,7 @@
 
 #include "server_info_update.h"
 #include "serverbrowser_addresses.h"
+#include "serverbrowser_entry.h"
 #include "serverbrowser_http.h"
 #include "serverbrowser_ping_cache.h"
 
@@ -1292,39 +1293,17 @@ void CServerBrowser::SetLatency(NETADDR Addr, int Latency)
 
 CServerBrowser::CServerEntry *CServerBrowser::Add(const NETADDR *pAddrs, int NumAddrs)
 {
+	CServerEntry *pEntry = server_browser::AddEntry(m_ServerlistStorage, m_vpServerlist, m_ByAddr, pAddrs, NumAddrs, [this](CServerInfo &Info) {
+		Info.m_QmClientCount = QmClientCountForServer(Info);
+		Info.m_Latency = 999;
+		Info.m_HasRank = CServerInfo::RANK_UNAVAILABLE;
+		ServerBrowserFormatAddresses(Info.m_aAddress, sizeof(Info.m_aAddress), Info.m_aAddresses, Info.m_NumAddresses);
+		UpdateServerCommunity(&Info);
+		str_copy(Info.m_aName, Info.m_aAddress, sizeof(Info.m_aName));
+		Info.m_Favorite = m_pFavorites->IsFavorite(Info.m_aAddresses, Info.m_NumAddresses);
+		Info.m_FavoriteAllowPing = m_pFavorites->IsPingAllowed(Info.m_aAddresses, Info.m_NumAddresses);
+	});
 	++m_FriendListRevision;
-	// create new pEntry
-	CServerEntry *pEntry = &m_ServerlistStorage.emplace_back();
-
-	// set the info
-	mem_copy(pEntry->m_Info.m_aAddresses, pAddrs, NumAddrs * sizeof(pAddrs[0]));
-	pEntry->m_Info.m_NumAddresses = NumAddrs;
-	pEntry->m_Info.m_QmClientCount = QmClientCountForServer(pEntry->m_Info);
-
-	pEntry->m_Info.m_Latency = 999;
-	pEntry->m_Info.m_HasRank = CServerInfo::RANK_UNAVAILABLE;
-	ServerBrowserFormatAddresses(pEntry->m_Info.m_aAddress, sizeof(pEntry->m_Info.m_aAddress), pEntry->m_Info.m_aAddresses, pEntry->m_Info.m_NumAddresses);
-	UpdateServerCommunity(&pEntry->m_Info);
-	str_copy(pEntry->m_Info.m_aName, pEntry->m_Info.m_aAddress, sizeof(pEntry->m_Info.m_aName));
-
-	// check if it's a favorite
-	pEntry->m_Info.m_Favorite = m_pFavorites->IsFavorite(pEntry->m_Info.m_aAddresses, pEntry->m_Info.m_NumAddresses);
-	pEntry->m_Info.m_FavoriteAllowPing = m_pFavorites->IsPingAllowed(pEntry->m_Info.m_aAddresses, pEntry->m_Info.m_NumAddresses);
-
-	int ServerIndex = m_vpServerlist.size();
-	for(int i = 0; i < NumAddrs; i++)
-	{
-		m_ByAddr[pAddrs[i]] = ServerIndex;
-	}
-
-	// add to list
-	pEntry->m_Info.m_ServerIndex = ServerIndex;
-	if(m_vpServerlist.capacity() == 0)
-	{
-		m_vpServerlist.reserve(128);
-	}
-	m_vpServerlist.push_back(pEntry);
-
 	return pEntry;
 }
 

@@ -3182,6 +3182,7 @@ if(CLIENT)
     serverbrowser.cpp
     serverbrowser.h
     serverbrowser_addresses.h
+    serverbrowser_entry.h
     qm_serverlist_cache.h
     serverbrowser_http.cpp
     serverbrowser_http.h
@@ -5410,6 +5411,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/serverbrowser_ping_cache_test.cpp
     src/test/integration/client/serverbrowser_publication_test.cpp
     src/test/integration/client/serverbrowser_entry_update_test.cpp
+    src/test/integration/client/serverbrowser_entry_publication_test.cpp
+    src/test/integration/client/serverbrowser_add_recovery_test.cpp
     src/test/integration/client/serverbrowser_lan_response_test.cpp
     src/test/integration/client/serverbrowser_sort_recovery_test.cpp
     src/test/integration/client/serverbrowser_community_load_test.cpp

@@ -24,6 +24,8 @@ public:
 	{
 		Browser.SetInfo(Browser.Add(&Address, 1), Info);
 	}
+	static CServerBrowser::CServerEntry *AddEntry(CServerBrowser &Browser, const NETADDR *pAddresses, int Count) { return Browser.Add(pAddresses, Count); }
+	static size_t StorageSize(const CServerBrowser &Browser) { return Browser.m_ServerlistStorage.size(); }
 	static void ReplaceFirstAddress(CServerBrowser &Browser, const NETADDR &Address)
 	{
 		Browser.ReplaceEntry(Browser.m_vpServerlist[0], &Address, 1);
