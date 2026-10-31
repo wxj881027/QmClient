@@ -6128,9 +6128,12 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     add_test(NAME qm-script-allocation-tests COMMAND $<TARGET_FILE:qm-script-allocation-tests>)
   endif()
 
-  if(CLIENT AND QM_GTEST_MAIN_TARGET)
+  if(CLIENT)
     # 客户端与服务端有同名的预测/实体类，独立目标只链接客户端实现。
     add_executable(qm-prediction-tests EXCLUDE_FROM_ALL
+      src/test/support/prediction_allocation_main.cpp
+      src/test/support/prediction_allocation_failure.h
+      src/test/integration/client/prediction_world_copy_failure_test.cpp
       src/test/integration/client/prediction_entity_copy_test.cpp
       src/test/integration/client/prediction_world_copy_test.cpp
       src/game/client/prediction/entity.cpp
@@ -6153,7 +6156,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     )
     add_dependencies(qm-prediction-tests generate_protocol)
     target_include_directories(qm-prediction-tests SYSTEM PRIVATE ${GTEST_INCLUDE_DIRS})
-    target_link_libraries(qm-prediction-tests ${QM_GTEST_MAIN_TARGET} ${LIBS})
+    target_link_libraries(qm-prediction-tests ${QM_GTEST_LIBRARIES} ${LIBS})
     if(TARGET_OS STREQUAL "windows")
       target_link_libraries(qm-prediction-tests bcrypt winhttp ws2_32)
     endif()

@@ -1795,10 +1795,34 @@ void CGameClient::OnReset()
 	m_GameWorld.Clear();
 	m_GameWorld.m_PredictedEvents.clear();
 	m_GameWorld.m_WorldConfig.m_InfiniteAmmo = true;
-	m_PredictedWorld.CopyWorld(&m_GameWorld);
-	m_PrevPredictedWorld.CopyWorld(&m_PredictedWorld);
-	m_RegularPredictedWorld.CopyWorldClean(&m_PredictedWorld);
-	m_PrevRegularPredictedWorld.CopyWorldClean(&m_PredictedWorld);
+	if(!m_PredictedWorld.CopyWorld(&m_GameWorld))
+	{
+		m_PredictedWorld.Clear();
+		m_PredictedWorld.m_PredictedEvents.clear();
+		m_PredictedWorld.m_IsValidCopy = false;
+		m_PredictedWorld.OnModified();
+	}
+	if(!m_PrevPredictedWorld.CopyWorld(&m_PredictedWorld))
+	{
+		m_PrevPredictedWorld.Clear();
+		m_PrevPredictedWorld.m_PredictedEvents.clear();
+		m_PrevPredictedWorld.m_IsValidCopy = false;
+		m_PrevPredictedWorld.OnModified();
+	}
+	if(!m_RegularPredictedWorld.CopyWorldClean(&m_PredictedWorld))
+	{
+		m_RegularPredictedWorld.Clear();
+		m_RegularPredictedWorld.m_PredictedEvents.clear();
+		m_RegularPredictedWorld.m_IsValidCopy = false;
+		m_RegularPredictedWorld.OnModified();
+	}
+	if(!m_PrevRegularPredictedWorld.CopyWorldClean(&m_PredictedWorld))
+	{
+		m_PrevRegularPredictedWorld.Clear();
+		m_PrevRegularPredictedWorld.m_PredictedEvents.clear();
+		m_PrevRegularPredictedWorld.m_IsValidCopy = false;
+		m_PrevRegularPredictedWorld.OnModified();
+	}
 
 	m_vSnapEntities.clear();
 
@@ -4980,8 +5004,16 @@ void CGameClient::OnPredict()
 	bool Dummy = g_Config.m_ClDummy ^ m_IsDummySwapping;
 
 	// PredictedEvents are only handled in predicted world, so update them here
-	m_GameWorld.m_PredictedEvents = m_PredictedWorld.m_PredictedEvents;
-	m_PredictedWorld.CopyWorld(&m_GameWorld);
+	try
+	{
+		m_GameWorld.m_PredictedEvents = m_PredictedWorld.m_PredictedEvents;
+	}
+	catch(...)
+	{
+		return;
+	}
+	if(!m_PredictedWorld.CopyWorld(&m_GameWorld))
+		return;
 
 	// don't predict inactive players, or entities from other teams
 	for(int i = 0; i < MAX_CLIENTS; i++)
@@ -5027,7 +5059,8 @@ void CGameClient::OnPredict()
 		// fetch the previous characters
 		if(Tick == FinalTickSelf)
 		{
-			m_PrevPredictedWorld.CopyWorld(&m_PredictedWorld);
+			if(!m_PrevPredictedWorld.CopyWorld(&m_PredictedWorld))
+				return;
 			m_PredictedPrevChar = pLocalChar->GetCore();
 			m_aClients[m_Snap.m_LocalClientId].m_PrevPredicted = pLocalChar->GetCore();
 		}
@@ -5048,7 +5081,8 @@ void CGameClient::OnPredict()
 		}
 
 		if(Tick == FinalTickRegular)
-			m_PrevRegularPredictedWorld.CopyWorldClean(&m_PredictedWorld);
+			if(!m_PrevRegularPredictedWorld.CopyWorldClean(&m_PredictedWorld))
+				return;
 
 		// optionally allow some movement in freeze by not predicting freeze the last one to two ticks
 		if(g_Config.m_ClPredictFreeze == 2 && Client()->PredGameTick(g_Config.m_ClDummy) - 1 - Client()->PredGameTick(g_Config.m_ClDummy) % 2 <= Tick)
@@ -5111,7 +5145,8 @@ void CGameClient::OnPredict()
 		}
 		if(Tick == FinalTickRegular)
 		{
-			m_RegularPredictedWorld.CopyWorldClean(&m_PredictedWorld);
+			if(!m_RegularPredictedWorld.CopyWorldClean(&m_PredictedWorld))
+				return;
 			for(int i = 0; i < MAX_CLIENTS; i++)
 				if(CCharacter *pChar = m_PredictedWorld.GetCharacterById(i))
 					m_aClients[i].m_RegularPredicted = pChar->GetCore();
@@ -5197,11 +5232,13 @@ void CGameClient::OnPredict()
 	}
 
 	if(FastInputTicks > 0)
-		m_PredictedWorld.CopyWorld(&m_RegularPredictedWorld);
+		if(!m_PredictedWorld.CopyWorld(&m_RegularPredictedWorld))
+			return;
 
 	if(g_Config.m_QmRemoveAnti)
 	{
-		m_ExtraPredictedWorld.CopyWorldClean(&m_PredictedWorld);
+		if(!m_ExtraPredictedWorld.CopyWorldClean(&m_PredictedWorld))
+			return;
 
 		// Remove other tees to reduce lag and because they aren't really important in this case
 		for(int i = 0; i < MAX_CLIENTS; i++)
@@ -5520,7 +5557,8 @@ void CGameClient::OnPredict()
 	}
 	// Copy the current pred world so on the next tick we have the "previous" pred world to advance and test against
 	if(m_NewPredictedTick && g_Config.m_QmAntiPingImproved)
-		m_PredSmoothingWorld.CopyWorldClean(&m_RegularPredictedWorld);
+		if(!m_PredSmoothingWorld.CopyWorldClean(&m_RegularPredictedWorld))
+			return;
 
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{

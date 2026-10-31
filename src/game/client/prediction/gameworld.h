@@ -103,8 +103,8 @@ public:
 	void NetObjAdd(int ObjId, int ObjType, const void *pObjData, const CNetObj_EntityEx *pDataEx);
 	void ResetDoorCollision();
 	void NetObjEnd();
-	void CopyWorld(CGameWorld *pFrom);
-	void CopyWorldClean(CGameWorld *pFrom); // TClient
+	[[nodiscard]] bool CopyWorld(CGameWorld *pFrom) noexcept;
+	[[nodiscard]] bool CopyWorldClean(CGameWorld *pFrom) noexcept; // TClient
 	CEntity *FindMatch(int ObjId, int ObjType, const void *pObjData);
 	void Clear();
 
@@ -165,6 +165,7 @@ public:
 
 private:
 	void RemoveEntities();
+	bool TryCopyWorld(CGameWorld *pFrom, bool LinkCopy) noexcept;
 
 	CEntity *m_pNextTraverseEntity = nullptr;
 	CEntity *m_apFirstEntityTypes[NUM_ENTTYPES];

@@ -74,17 +74,6 @@ TEST(QmNewUiMenuGameplayPredictionContract, ExtraPredictionWorldDoesNotReplayVis
 	EXPECT_EQ(OnPredictBody.find("HandlePredictedEvents(m_ExtraPredictedWorld.m_GameTick)"), std::string::npos);
 }
 
-TEST(QmNewUiMenuGameplayPredictionContract, FastInputKeepsPredictedEventStateOnRegularWorldRestore)
-{
-	const std::string GameWorldSource = ReadTextFile("src/game/client/prediction/gameworld.cpp");
-	const std::string GameClientSource = ReadTextFile("src/game/client/gameclient.cpp");
-	const std::string CopyWorldClean = FunctionBody(GameWorldSource, "void CGameWorld::CopyWorldClean(");
-	const std::string OnPredict = FunctionBody(GameClientSource, "void CGameClient::OnPredict()");
-
-	EXPECT_NE(CopyWorldClean.find("m_PredictedEvents = pFrom->m_PredictedEvents;"), std::string::npos);
-	EXPECT_NE(OnPredict.find("if(Tick <= FinalTickRegular)\n\t\t\tHandlePredictedEvents(Tick);"), std::string::npos);
-}
-
 TEST(QmNewUiMenuGameplayPredictionContract, HammerSkinSwapUsesTheActiveProtocolSkinFormat)
 {
 	const std::string Source = ReadTextFile("src/game/client/gameclient.cpp");

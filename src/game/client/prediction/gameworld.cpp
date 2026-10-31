@@ -23,6 +23,7 @@
 #include <game/mapitems.h>
 
 #include <algorithm>
+#include <memory>
 #include <utility>
 
 //////////////////////////////////////////////////
@@ -646,109 +647,104 @@ void CGameWorld::NetObjEnd()
 	}
 }
 
-void CGameWorld::CopyWorldClean(CGameWorld *pFrom)
+bool CGameWorld::CopyWorldClean(CGameWorld *pFrom) noexcept
 {
-	if(pFrom == this || !pFrom)
-		return;
-	m_IsValidCopy = false;
-	OnModified();
-	QmCopyLinks::Unlink(*this);
-
-	m_GameTick = pFrom->m_GameTick;
-	m_pCollision = pFrom->m_pCollision;
-	m_WorldConfig = pFrom->m_WorldConfig;
-	m_pTuningList = pFrom->m_pTuningList;
-	m_pMapBugs = pFrom->m_pMapBugs;
-	m_Teams = pFrom->m_Teams;
-	m_Core.m_vSwitchers = pFrom->m_Core.m_vSwitchers;
-	m_PredictedEvents = pFrom->m_PredictedEvents;
-	// delete the previous entities
-	Clear();
-	for(int i = 0; i < MAX_CLIENTS; i++)
-	{
-		m_apCharacters[i] = 0;
-		m_Core.m_apCharacters[i] = 0;
-	}
-	// copy and add the new entities
-	for(int Type = 0; Type < NUM_ENTTYPES; Type++)
-	{
-		for(CEntity *pEnt = pFrom->FindLast(Type); pEnt; pEnt = pEnt->TypePrev())
-		{
-			CEntity *pCopy = nullptr;
-			if(Type == ENTTYPE_PROJECTILE)
-				pCopy = new CProjectile(*((CProjectile *)pEnt));
-			else if(Type == ENTTYPE_LASER)
-				pCopy = new CLaser(*((CLaser *)pEnt));
-			else if(Type == ENTTYPE_DRAGGER)
-				pCopy = new CDragger(*((CDragger *)pEnt));
-			else if(Type == ENTTYPE_CHARACTER)
-				pCopy = new CCharacter(*((CCharacter *)pEnt));
-			else if(Type == ENTTYPE_PICKUP)
-				pCopy = new CPickup(*((CPickup *)pEnt));
-			else if(Type == ENTTYPE_PLASMA)
-				pCopy = new CPlasma(*((CPlasma *)pEnt));
-			if(pCopy)
-			{
-				QmCopyLinks::ResetCopied(*pCopy);
-				this->InsertEntity(pCopy);
-			}
-		}
-	}
+	return TryCopyWorld(pFrom, false);
 }
 
-void CGameWorld::CopyWorld(CGameWorld *pFrom)
+bool CGameWorld::CopyWorld(CGameWorld *pFrom) noexcept
+{
+	return TryCopyWorld(pFrom, true);
+}
+
+bool CGameWorld::TryCopyWorld(CGameWorld *pFrom, bool LinkCopy) noexcept
 {
 	if(pFrom == this || !pFrom)
-		return;
-	m_IsValidCopy = false;
-	OnModified();
-	QmCopyLinks::Unlink(*this);
-	if(pFrom->m_pChild)
-		pFrom->m_pChild->m_IsValidCopy = false;
-	QmCopyLinks::Attach(*pFrom, *this);
-
-	m_GameTick = pFrom->m_GameTick;
-	m_pCollision = pFrom->m_pCollision;
-	m_WorldConfig = pFrom->m_WorldConfig;
-	m_pTuningList = pFrom->m_pTuningList;
-	m_pMapBugs = pFrom->m_pMapBugs;
-	m_Teams = pFrom->m_Teams;
-	m_Core.m_vSwitchers = pFrom->m_Core.m_vSwitchers;
-	m_PredictedEvents = pFrom->m_PredictedEvents;
-	// delete the previous entities
-	Clear();
-	for(int i = 0; i < MAX_CLIENTS; i++)
+		return true;
+	try
 	{
-		m_apCharacters[i] = nullptr;
-		m_Core.m_apCharacters[i] = nullptr;
-	}
-	// copy and add the new entities
-	for(int Type = 0; Type < NUM_ENTTYPES; Type++)
-	{
-		for(CEntity *pEnt = pFrom->FindLast(Type); pEnt; pEnt = pEnt->TypePrev())
+		CGameWorld Candidate;
+		Candidate.m_GameTick = pFrom->m_GameTick;
+		Candidate.m_pCollision = pFrom->m_pCollision;
+		Candidate.m_WorldConfig = pFrom->m_WorldConfig;
+		Candidate.m_pTuningList = pFrom->m_pTuningList;
+		Candidate.m_pMapBugs = pFrom->m_pMapBugs;
+		Candidate.m_Teams = pFrom->m_Teams;
+		Candidate.m_Core.m_vSwitchers = pFrom->m_Core.m_vSwitchers;
+		Candidate.m_PredictedEvents = pFrom->m_PredictedEvents;
+		for(int Type = 0; Type < NUM_ENTTYPES; Type++)
 		{
-			CEntity *pCopy = nullptr;
-			if(Type == ENTTYPE_PROJECTILE)
-				pCopy = new CProjectile(*((CProjectile *)pEnt));
-			else if(Type == ENTTYPE_LASER)
-				pCopy = new CLaser(*((CLaser *)pEnt));
-			else if(Type == ENTTYPE_DRAGGER)
-				pCopy = new CDragger(*((CDragger *)pEnt));
-			else if(Type == ENTTYPE_CHARACTER)
-				pCopy = new CCharacter(*((CCharacter *)pEnt));
-			else if(Type == ENTTYPE_PICKUP)
-				pCopy = new CPickup(*((CPickup *)pEnt));
-			else if(Type == ENTTYPE_PLASMA)
-				pCopy = new CPlasma(*((CPlasma *)pEnt));
-			if(pCopy)
+			for(CEntity *pEnt = pFrom->FindLast(Type); pEnt; pEnt = pEnt->TypePrev())
 			{
-				QmCopyLinks::ResetCopied(*pCopy);
-				QmCopyLinks::Attach(*pEnt, *pCopy);
-				this->InsertEntity(pCopy);
+				std::unique_ptr<CEntity> pCopy;
+				if(Type == ENTTYPE_PROJECTILE)
+					pCopy.reset(new CProjectile(*static_cast<CProjectile *>(pEnt)));
+				else if(Type == ENTTYPE_LASER)
+					pCopy.reset(new CLaser(*static_cast<CLaser *>(pEnt)));
+				else if(Type == ENTTYPE_DRAGGER)
+					pCopy.reset(new CDragger(*static_cast<CDragger *>(pEnt)));
+				else if(Type == ENTTYPE_CHARACTER)
+					pCopy.reset(new CCharacter(*static_cast<CCharacter *>(pEnt)));
+				else if(Type == ENTTYPE_PICKUP)
+					pCopy.reset(new CPickup(*static_cast<CPickup *>(pEnt)));
+				else if(Type == ENTTYPE_PLASMA)
+					pCopy.reset(new CPlasma(*static_cast<CPlasma *>(pEnt)));
+				if(pCopy)
+				{
+					// 只暂存源身份，准备阶段不建立源对象的反向引用。
+					if(LinkCopy)
+						pCopy->m_pParent = pEnt;
+					Candidate.InsertEntity(pCopy.get());
+					pCopy.release();
+				}
 			}
 		}
+
+		// 所有容器、实体及角色回调均已准备；此后只清理、交换和重定借用指针。
+		m_IsValidCopy = false;
+		OnModified();
+		QmCopyLinks::Unlink(*this);
+		Clear();
+		m_GameTick = Candidate.m_GameTick;
+		m_pCollision = Candidate.m_pCollision;
+		m_WorldConfig = Candidate.m_WorldConfig;
+		m_pTuningList = Candidate.m_pTuningList;
+		m_pMapBugs = Candidate.m_pMapBugs;
+		m_Teams = Candidate.m_Teams;
+		m_Core.m_vSwitchers.swap(Candidate.m_Core.m_vSwitchers);
+		m_PredictedEvents.swap(Candidate.m_PredictedEvents);
+		for(int Type = 0; Type < NUM_ENTTYPES; Type++)
+			m_apFirstEntityTypes[Type] = std::exchange(Candidate.m_apFirstEntityTypes[Type], nullptr);
+		for(int Id = 0; Id < MAX_CLIENTS; Id++)
+		{
+			m_apCharacters[Id] = std::exchange(Candidate.m_apCharacters[Id], nullptr);
+			m_Core.m_apCharacters[Id] = std::exchange(Candidate.m_Core.m_apCharacters[Id], nullptr);
+		}
+		if(LinkCopy)
+		{
+			if(pFrom->m_pChild)
+				pFrom->m_pChild->m_IsValidCopy = false;
+			QmCopyLinks::Attach(*pFrom, *this);
+		}
+		for(int Type = 0; Type < NUM_ENTTYPES; Type++)
+			for(CEntity *pEnt = FindFirst(Type); pEnt; pEnt = pEnt->TypeNext())
+			{
+				pEnt->m_pGameWorld = this;
+				if(Type == ENTTYPE_CHARACTER)
+				{
+					// 回调已捕获该角色；这里只重定核心所属，不再分配回调对象。
+					static_cast<CCharacter *>(pEnt)->m_Core.SetCoreWorld(&m_Core, m_pCollision, &m_Teams);
+				}
+				if(LinkCopy && pEnt->m_pParent)
+					QmCopyLinks::Attach(*pEnt->m_pParent, *pEnt);
+			}
+		m_IsValidCopy = LinkCopy;
+		return true;
 	}
-	m_IsValidCopy = true;
+	catch(...)
+	{
+		return false;
+	}
 }
 
 CEntity *CGameWorld::FindMatch(int ObjId, int ObjType, const void *pObjData)

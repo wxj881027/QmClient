@@ -38,13 +38,6 @@ namespace QmCopyLinks
 		Child.m_pParent = &Parent;
 	}
 
-	// 新复制对象里的指针属于源对象，尚未建立本对象关系，不能沿指针解除源关系。
-	template<typename T>
-	void ResetCopied(T &Node)
-	{
-		Node.m_pParent = nullptr;
-		Node.m_pChild = nullptr;
-	}
 }
 
 #endif

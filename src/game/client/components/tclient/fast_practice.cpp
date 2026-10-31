@@ -574,7 +574,8 @@ void CFastPractice::SyncPracticeWorldConfig()
 
 bool CFastPractice::InitPracticeWorld()
 {
-	m_PracticeBaseWorld.CopyWorldClean(&GameClient()->m_GameWorld);
+	if(!m_PracticeBaseWorld.CopyWorldClean(&GameClient()->m_GameWorld))
+		return false;
 	PrunePracticeWorld(m_PracticeBaseWorld);
 	SyncPracticeWorldConfig();
 	m_PracticeWorldInitialized = true;
@@ -909,8 +910,10 @@ void CFastPractice::Enable(bool PreserveHeldInput)
 	m_InputSuppressTicks = std::max(m_InputSuppressTicks, 2);
 
 	// Snap renderer/camera prediction state to the local practice world immediately.
-	GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
-	GameClient()->m_PrevPredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
+	if(!GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld))
+		return;
+	if(!GameClient()->m_PrevPredictedWorld.CopyWorldClean(&m_PracticeBaseWorld))
+		return;
 	if(CCharacter *pPredChar = GameClient()->m_PredictedWorld.GetCharacterById(m_EnableLocalClientId))
 	{
 		GameClient()->m_PredictedChar = pPredChar->GetCore();
@@ -990,8 +993,10 @@ bool CFastPractice::TryAttachDummyFromSnapshot()
 	m_InputSuppressTicks = std::max(m_InputSuppressTicks, 2);
 	GameClient()->m_PredictedDummyId = CurrentPracticeDummyId();
 
-	GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
-	GameClient()->m_PrevPredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
+	if(!GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld))
+		return false;
+	if(!GameClient()->m_PrevPredictedWorld.CopyWorldClean(&m_PracticeBaseWorld))
+		return false;
 	if(CCharacter *pPredChar = GameClient()->m_PredictedWorld.GetCharacterById(m_EnableLocalClientId))
 	{
 		GameClient()->m_PredictedChar = pPredChar->GetCore();
@@ -1098,8 +1103,10 @@ void CFastPractice::PrepareForSpectating()
 	m_SuppressFireOnNextPredictTick = true;
 	m_InputSuppressTicks = std::max(m_InputSuppressTicks, 2);
 
-	GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
-	GameClient()->m_PrevPredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
+	if(!GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld))
+		return;
+	if(!GameClient()->m_PrevPredictedWorld.CopyWorldClean(&m_PracticeBaseWorld))
+		return;
 	if(CCharacter *pPredChar = GameClient()->m_PredictedWorld.GetCharacterById(LocalClientId))
 	{
 		GameClient()->m_PredictedChar = pPredChar->GetCore();
@@ -1172,8 +1179,10 @@ void CFastPractice::ResetPracticeToAnchor()
 	ReleaseBufferedActionInputState();
 
 	// Keep camera interpolation coherent after hard reset.
-	GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
-	GameClient()->m_PrevPredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
+	if(!GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld))
+		return;
+	if(!GameClient()->m_PrevPredictedWorld.CopyWorldClean(&m_PracticeBaseWorld))
+		return;
 	if(CCharacter *pPredChar = GameClient()->m_PredictedWorld.GetCharacterById(m_EnableLocalClientId))
 	{
 		GameClient()->m_PredictedChar = pPredChar->GetCore();
@@ -1422,7 +1431,8 @@ bool CFastPractice::OverridePredict()
 
 	SyncPracticeWorldConfig();
 
-	GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
+	if(!GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld))
+		return true;
 
 	CCharacter *pLocalChar = GameClient()->m_PredictedWorld.GetCharacterById(LocalClientId);
 	CCharacter *pDummyChar = m_RequireDummy ? GameClient()->m_PredictedWorld.GetCharacterById(DummyClientId) : nullptr;
@@ -1468,7 +1478,8 @@ bool CFastPractice::OverridePredict()
 
 		if(Tick == FinalTickSelf)
 		{
-			GameClient()->m_PrevPredictedWorld.CopyWorldClean(&GameClient()->m_PredictedWorld);
+			if(!GameClient()->m_PrevPredictedWorld.CopyWorldClean(&GameClient()->m_PredictedWorld))
+				return true;
 			GameClient()->m_PredictedPrevChar = pLocalChar->GetCore();
 			GameClient()->m_aClients[LocalClientId].m_PrevPredicted = pLocalChar->GetCore();
 		}
@@ -1681,7 +1692,8 @@ bool CFastPractice::OverridePredict()
 		}
 	}
 
-	m_PracticeBaseWorld.CopyWorldClean(&GameClient()->m_PredictedWorld);
+	if(!m_PracticeBaseWorld.CopyWorldClean(&GameClient()->m_PredictedWorld))
+		return true;
 	GameClient()->m_PredictedTick = ApplyVisualFastInputPrediction(FinalTickRegular, LocalClientId, DummyClientId, LocalInputConn, DummyInputConn);
 	if(GameClient()->m_NewPredictedTick)
 		GameClient()->m_Ghost.OnNewPredictedSnapshot();
@@ -1701,7 +1713,8 @@ int CFastPractice::ApplyVisualFastInputPrediction(int FinalTickRegular, int Loca
 		return FinalTickRegular;
 
 	CGameWorld VisualWorld;
-	VisualWorld.CopyWorldClean(&m_PracticeBaseWorld);
+	if(!VisualWorld.CopyWorldClean(&m_PracticeBaseWorld))
+		return FinalTickRegular;
 
 	CCharacter *pLocalChar = VisualWorld.GetCharacterById(LocalClientId);
 	CCharacter *pDummyChar = m_RequireDummy ? VisualWorld.GetCharacterById(DummyClientId) : nullptr;
@@ -1733,8 +1746,10 @@ int CFastPractice::ApplyVisualFastInputPrediction(int FinalTickRegular, int Loca
 
 		if(Tick == FinalTickSelf)
 		{
-			GameClient()->m_PredictedWorld.CopyWorldClean(&VisualWorld);
-			GameClient()->m_PrevPredictedWorld.CopyWorldClean(&VisualWorld);
+			if(!GameClient()->m_PredictedWorld.CopyWorldClean(&VisualWorld))
+				return FinalTickRegular;
+			if(!GameClient()->m_PrevPredictedWorld.CopyWorldClean(&VisualWorld))
+				return FinalTickRegular;
 			GameClient()->m_PredictedPrevChar = pLocalChar->GetCore();
 			GameClient()->m_aClients[LocalClientId].m_PrevPredicted = pLocalChar->GetCore();
 		}
@@ -2853,8 +2868,10 @@ bool CFastPractice::ConsumePracticeChatCommand(int Team, const char *pLine)
 			NormalizeWeaponSelectionInput(m_PracticeBaseWorld.GetCharacterById(DummyClientId));
 	}
 
-	GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
-	GameClient()->m_PrevPredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
+	if(!GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld))
+		return true;
+	if(!GameClient()->m_PrevPredictedWorld.CopyWorldClean(&m_PracticeBaseWorld))
+		return true;
 	if(CCharacter *pPredChar = GameClient()->m_PredictedWorld.GetCharacterById(LocalClientId))
 	{
 		GameClient()->m_PredictedChar = pPredChar->GetCore();

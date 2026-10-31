@@ -133,36 +133,6 @@ TEST(PredictionCopyLinks, DestroyingChildClearsSurvivingParent)
 	EXPECT_EQ(Parent.m_pChild, nullptr);
 }
 
-TEST(PredictionCopyLinks, ResettingNewlyCopiedPointersDoesNotDetachSourcesRelationships)
-{
-	CNode Parent, Source, ExistingChild;
-	QmCopyLinks::Attach(Parent, Source);
-	QmCopyLinks::Attach(Source, ExistingChild);
-	CNode Copy = Source;
-	QmCopyLinks::ResetCopied(Copy);
-	EXPECT_EQ(Copy.m_pParent, nullptr);
-	EXPECT_EQ(Copy.m_pChild, nullptr);
-	EXPECT_EQ(Parent.m_pChild, &Source);
-	EXPECT_EQ(Source.m_pParent, &Parent);
-	EXPECT_EQ(Source.m_pChild, &ExistingChild);
-	EXPECT_EQ(ExistingChild.m_pParent, &Source);
-}
-
-TEST(PredictionCopyLinks, AttachingNewlyCopiedNodeCannotKeepSourcesOldChild)
-{
-	CNode Source, OldCopy;
-	QmCopyLinks::Attach(Source, OldCopy);
-	CNode NewCopy = Source;
-	QmCopyLinks::ResetCopied(NewCopy);
-	QmCopyLinks::Attach(Source, NewCopy);
-	EXPECT_EQ(OldCopy.m_pParent, nullptr);
-	EXPECT_EQ(NewCopy.m_pChild, nullptr);
-	EXPECT_EQ(Source.m_pChild, &NewCopy);
-	EXPECT_EQ(NewCopy.m_pParent, &Source);
-	QmCopyLinks::Unlink(OldCopy);
-	EXPECT_EQ(NewCopy.m_pParent, &Source);
-}
-
 TEST(PredictionCopyLinks, SelfAttachDoesNotChangeAnExistingChain)
 {
 	CNode Parent, Middle, Child;

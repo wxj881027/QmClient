@@ -5,13 +5,22 @@
 
 #include "gameworld.h"
 
+#include <base/system.h>
 #include <base/vmath.h>
 
-#include <game/alloc.h>
+#include <new>
 
 class CEntity
 {
-	MACRO_ALLOC_HEAP()
+public:
+	// 保留实体堆分配清零约定，标准分配失败由调用边界捕获。
+	void *operator new(size_t Size)
+	{
+		void *pMemory = ::operator new(Size);
+		mem_zero(pMemory, Size);
+		return pMemory;
+	}
+	void operator delete(void *pMemory) noexcept { ::operator delete(pMemory); }
 
 private:
 	friend CGameWorld; // entity list handling

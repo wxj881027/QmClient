@@ -28,7 +28,7 @@ TEST(PredictionWorldCopy, NativeCopyKeepsEntityOrderDataAndReciprocalLinks)
 	const auto *pFirst = AddPickup(Source, 1, vec2(100, 200), PICKUPFLAG_NO_PREDICT);
 	AddPickup(Source, 2, vec2(-30, 50));
 	Source.m_GameTick = 123;
-	Copy.CopyWorld(&Source);
+	ASSERT_TRUE(Copy.CopyWorld(&Source));
 	auto *pCopy = static_cast<CPickup *>(Copy.FindFirst(CGameWorld::ENTTYPE_PICKUP));
 	ASSERT_NE(pCopy, nullptr);
 	EXPECT_NE(pCopy, pFirst);
@@ -51,10 +51,10 @@ TEST(PredictionWorldCopy, ReplacingNativeChildThenDestroyingOldCopyKeepsCurrentL
 	CPredictionTestWorld Source, Current;
 	auto Old = std::make_unique<CPredictionTestWorld>();
 	auto *pSource = AddPickup(Source, 1);
-	Old->CopyWorld(&Source);
+	ASSERT_TRUE(Old->CopyWorld(&Source));
 	auto *pOld = Old->FindFirst(CGameWorld::ENTTYPE_PICKUP);
 	ASSERT_NE(pOld, nullptr);
-	Current.CopyWorld(&Source);
+	ASSERT_TRUE(Current.CopyWorld(&Source));
 	auto *pCurrent = Current.FindFirst(CGameWorld::ENTTYPE_PICKUP);
 	ASSERT_NE(pCurrent, nullptr);
 	EXPECT_EQ(Old->m_pParent, nullptr);
@@ -73,8 +73,8 @@ TEST(PredictionWorldCopy, ReparentedNativeWorldSurvivesOldParentDestruction)
 	auto OldParent = std::make_unique<CPredictionTestWorld>();
 	AddPickup(*OldParent, 1);
 	auto *pNew = AddPickup(NewParent, 2);
-	Copy.CopyWorld(OldParent.get());
-	Copy.CopyWorld(&NewParent);
+	ASSERT_TRUE(Copy.CopyWorld(OldParent.get()));
+	ASSERT_TRUE(Copy.CopyWorld(&NewParent));
 	EXPECT_EQ(OldParent->m_pChild, nullptr);
 	OldParent.reset();
 	auto *pCopy = Copy.FindFirst(CGameWorld::ENTTYPE_PICKUP);
@@ -91,11 +91,11 @@ TEST(PredictionWorldCopy, CleanCopyDetachesFormerParentsAndChildren)
 	CPredictionTestWorld Source, Destination, Child, Independent;
 	auto *pSource = AddPickup(Source, 1);
 	AddPickup(Independent, 2);
-	Destination.CopyWorld(&Source);
-	Child.CopyWorld(&Destination);
+	ASSERT_TRUE(Destination.CopyWorld(&Source));
+	ASSERT_TRUE(Child.CopyWorld(&Destination));
 	auto *pChild = Child.FindFirst(CGameWorld::ENTTYPE_PICKUP);
 	ASSERT_NE(pChild, nullptr);
-	Destination.CopyWorldClean(&Independent);
+	ASSERT_TRUE(Destination.CopyWorldClean(&Independent));
 	auto *pDestination = Destination.FindFirst(CGameWorld::ENTTYPE_PICKUP);
 	ASSERT_NE(pDestination, nullptr);
 	EXPECT_EQ(Destination.m_pParent, nullptr);
@@ -116,13 +116,13 @@ TEST(PredictionWorldCopy, ReplacingSourceCopyDoesNotInheritOrBreakOldCopiesChild
 {
 	CPredictionTestWorld Source, OldCopy, GrandChild, Replacement;
 	AddPickup(Source, 1);
-	OldCopy.CopyWorld(&Source);
-	GrandChild.CopyWorld(&OldCopy);
+	ASSERT_TRUE(OldCopy.CopyWorld(&Source));
+	ASSERT_TRUE(GrandChild.CopyWorld(&OldCopy));
 	auto *pOld = OldCopy.FindFirst(CGameWorld::ENTTYPE_PICKUP);
 	auto *pGrandChild = GrandChild.FindFirst(CGameWorld::ENTTYPE_PICKUP);
 	ASSERT_NE(pOld, nullptr);
 	ASSERT_NE(pGrandChild, nullptr);
-	Replacement.CopyWorld(&Source);
+	ASSERT_TRUE(Replacement.CopyWorld(&Source));
 	auto *pReplacement = Replacement.FindFirst(CGameWorld::ENTTYPE_PICKUP);
 	ASSERT_NE(pReplacement, nullptr);
 	EXPECT_EQ(pReplacement->m_pChild, nullptr);
@@ -137,7 +137,7 @@ TEST(PredictionWorldCopy, DestroyingNativeParentClearsEntityAndWorldBorrowedRefe
 	CPredictionTestWorld Copy;
 	auto Source = std::make_unique<CPredictionTestWorld>();
 	AddPickup(*Source, 1);
-	Copy.CopyWorld(Source.get());
+	ASSERT_TRUE(Copy.CopyWorld(Source.get()));
 	auto *pCopy = Copy.FindFirst(CGameWorld::ENTTYPE_PICKUP);
 	ASSERT_NE(pCopy, nullptr);
 	Source.reset();
@@ -152,7 +152,7 @@ TEST(PredictionWorldCopy, RemovingCurrentCopyEntityKeepsOriginalDestroyTickPropa
 {
 	CPredictionTestWorld Source, Copy;
 	auto *pSource = AddPickup(Source, 1);
-	Copy.CopyWorld(&Source);
+	ASSERT_TRUE(Copy.CopyWorld(&Source));
 	auto *pCopy = Copy.FindFirst(CGameWorld::ENTTYPE_PICKUP);
 	ASSERT_NE(pCopy, nullptr);
 	Copy.m_GameTick = 150;
@@ -166,7 +166,7 @@ TEST(PredictionWorldCopy, CleanCopyRemovalDoesNotPropagateDestroyTick)
 {
 	CPredictionTestWorld Source, Copy;
 	auto *pSource = AddPickup(Source, 1);
-	Copy.CopyWorldClean(&Source);
+	ASSERT_TRUE(Copy.CopyWorldClean(&Source));
 	auto *pCopy = Copy.FindFirst(CGameWorld::ENTTYPE_PICKUP);
 	ASSERT_NE(pCopy, nullptr);
 	Copy.m_GameTick = 150;
@@ -179,10 +179,10 @@ TEST(PredictionWorldCopy, NullAndSelfCopyRemainNoOps)
 {
 	CPredictionTestWorld World;
 	auto *pEntity = AddPickup(World, 1);
-	World.CopyWorld(&World);
-	World.CopyWorldClean(&World);
-	World.CopyWorld(nullptr);
-	World.CopyWorldClean(nullptr);
+	ASSERT_TRUE(World.CopyWorld(&World));
+	ASSERT_TRUE(World.CopyWorldClean(&World));
+	ASSERT_TRUE(World.CopyWorld(nullptr));
+	ASSERT_TRUE(World.CopyWorldClean(nullptr));
 	EXPECT_EQ(World.FindFirst(CGameWorld::ENTTYPE_PICKUP), pEntity);
 	EXPECT_EQ(pEntity->GetId(), 1);
 	EXPECT_EQ(World.m_GameTick, 100);
