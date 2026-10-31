@@ -126,6 +126,13 @@ TEST(GraphicsBackendContract, MetalInitializationIsNotAnOpenGLVersionFailure)
 	EXPECT_TRUE(IsGraphicsBackendOpenGLRetryableError(GRAPHICS_BACKEND_ERROR_CODE_GL_VERSION_FAILED));
 }
 
+TEST(GraphicsBackendContract, ResourcePreparationFailureIsNotClassifiedAsVersionOrMetalInitFailure)
+{
+	EXPECT_NE(GRAPHICS_BACKEND_ERROR_CODE_RESOURCE_INIT_FAILED, GRAPHICS_BACKEND_ERROR_CODE_NONE);
+	EXPECT_FALSE(IsGraphicsBackendOpenGLRetryableError(GRAPHICS_BACKEND_ERROR_CODE_RESOURCE_INIT_FAILED));
+	EXPECT_FALSE(IsGraphicsBackendMetalInitError(GRAPHICS_BACKEND_ERROR_CODE_RESOURCE_INIT_FAILED));
+}
+
 TEST(GraphicsBackendContract, MetalFactoryRejectsUnimplementedCommandsWithoutStickyInitError)
 {
 #if (defined(CONF_PLATFORM_MACOS) || defined(CONF_PLATFORM_IOS)) && defined(CONF_BACKEND_METAL) && defined(CONF_BACKEND_METAL_READY)

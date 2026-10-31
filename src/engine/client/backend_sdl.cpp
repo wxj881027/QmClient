@@ -1373,11 +1373,22 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 
 	// start the command processor
 	dbg_assert(m_pProcessor == nullptr, "Processor was not cleaned up properly.");
-	m_pProcessor = new CCommandProcessor_SDL_GL(m_BackendType, EffectiveGLMajor, EffectiveGLMinor, EffectiveGLPatch);
+	m_pProcessor = PrepareProcessor([&] { return new CCommandProcessor_SDL_GL(m_BackendType, EffectiveGLMajor, EffectiveGLMinor, EffectiveGLPatch); });
+	if(m_pProcessor == nullptr)
+	{
+		if(m_GLContext)
+			SDL_GL_DestroyContext(m_GLContext);
+		m_GLContext = nullptr;
+		SDL_DestroyWindow(m_pWindow);
+		m_pWindow = nullptr;
+		log_error("gfx", "Failed to prepare graphics processor resources");
+		return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_RESOURCE_INIT_FAILED;
+	}
 	if(!StartProcessor(m_pProcessor))
 	{
 		delete m_pProcessor;
 		m_pProcessor = nullptr;
+		ReleaseLifecycleCommands();
 		if(m_GLContext)
 			SDL_GL_DestroyContext(m_GLContext);
 		m_GLContext = nullptr;
@@ -1388,7 +1399,7 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	}
 
 	// issue init commands for OpenGL and SDL
-	CCommandBuffer CmdBuffer(1024, 512);
+	CCommandBuffer &CmdBuffer = *LifecycleCommands();
 	const char *pErrorStr = nullptr;
 	CCommandProcessorFragment_GLBase::SCommand_PreInit CmdPre;
 	CmdPre.m_pWindow = m_pWindow;
@@ -1481,6 +1492,7 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		StopProcessor();
 		delete m_pProcessor;
 		m_pProcessor = nullptr;
+		ReleaseLifecycleCommands();
 
 		if(m_GLContext)
 			SDL_GL_DestroyContext(m_GLContext);
@@ -1531,7 +1543,7 @@ int CGraphicsBackend_SDL_GL::Shutdown()
 	if(m_pProcessor != nullptr)
 	{
 		// issue a shutdown command
-		CCommandBuffer CmdBuffer(1024, 512);
+		CCommandBuffer &CmdBuffer = *LifecycleCommands();
 		CCommandProcessorFragment_GLBase::SCommand_Shutdown CmdGL;
 		CmdBuffer.AddCommandUnsafe(CmdGL);
 		RunBuffer(&CmdBuffer);
@@ -1554,6 +1566,7 @@ int CGraphicsBackend_SDL_GL::Shutdown()
 		delete m_pProcessor;
 		m_pProcessor = nullptr;
 	}
+	ReleaseLifecycleCommands();
 
 	if(m_GLContext != nullptr)
 		SDL_GL_DestroyContext(m_GLContext);

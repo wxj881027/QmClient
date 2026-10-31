@@ -14,6 +14,10 @@ class CTestGraphicsBackend : public CGraphicsBackend_Threaded
 	bool m_Running = false;
 
 public:
+	using CGraphicsBackend_Threaded::LifecycleCommands;
+	using CGraphicsBackend_Threaded::PrepareProcessor;
+	using CGraphicsBackend_Threaded::ReleaseLifecycleCommands;
+
 	CTestGraphicsBackend() :
 		CGraphicsBackend_Threaded([](const char *, const char *) { return "translated driver advice"; }) {}
 	explicit CTestGraphicsBackend(TTranslateFunc Translate) :

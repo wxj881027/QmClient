@@ -1,6 +1,7 @@
 #ifndef ENGINE_CLIENT_BACKEND_SDL_H
 #define ENGINE_CLIENT_BACKEND_SDL_H
 
+#include <base/dbg.h>
 #include <base/detect.h>
 #include <base/thread.h>
 
@@ -21,7 +22,9 @@ typedef uint32_t SDL_DisplayID;
 #include <cstddef>
 #include <cstdint>
 #include <mutex>
+#include <optional>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #if defined(CONF_PLATFORM_MACOS) || defined(CONF_PLATFORM_IOS)
@@ -59,6 +62,7 @@ private:
 	bool m_FatalErrorTextUnavailable = false;
 	SGfxWarningContainer m_Warning;
 	std::atomic_bool m_SubmissionStopped = false;
+	std::optional<CCommandBuffer> m_LifecycleCommands;
 
 public:
 	// constructed on the main thread, the rest of the functions is run on the render thread
@@ -88,6 +92,35 @@ public:
 	void ProcessError(const SGfxErrorContainer &Error) noexcept;
 
 protected:
+	// 主线程先准备初始化和关闭共用的缓冲，再创建处理器；返回指针由派生后端持有。
+	template<typename TCreate>
+	auto PrepareProcessor(TCreate &&Create) noexcept -> std::invoke_result_t<TCreate &>
+	{
+		using TResult = std::invoke_result_t<TCreate &>;
+		static_assert(std::is_pointer_v<TResult> && std::is_base_of_v<ICommandProcessor, std::remove_pointer_t<TResult>>);
+		if(m_LifecycleCommands || !m_Shutdown)
+			return nullptr;
+		try
+		{
+			m_LifecycleCommands.emplace(1024, 512);
+			auto *pProcessor = Create();
+			if(pProcessor != nullptr)
+				return pProcessor;
+		}
+		catch(...)
+		{
+		}
+		m_LifecycleCommands.reset();
+		return nullptr;
+	}
+
+	CCommandBuffer *LifecycleCommands() noexcept { return m_LifecycleCommands ? &*m_LifecycleCommands : nullptr; }
+	void ReleaseLifecycleCommands() noexcept
+	{
+		dbg_assert(m_Shutdown, "Lifecycle commands are still borrowed by the processor.");
+		m_LifecycleCommands.reset();
+	}
+
 	bool StartProcessor(ICommandProcessor *pProcessor, THREAD_CREATE pfnCreate = thread_try_init);
 	void StopProcessor();
 	void ResetSubmissionStopForCleanup()

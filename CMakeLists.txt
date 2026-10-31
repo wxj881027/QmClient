@@ -5026,6 +5026,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/graphics_vulkan_scheduler_test.cpp
     src/test/integration/client/graphics_fatal_error_test.cpp
     src/test/integration/client/graphics_command_exception_test.cpp
+    src/test/integration/client/graphics_processor_preparation_test.cpp
     src/test/integration/client/metal_gpu_completion_test.cpp
     src/test/integration/client/graphics_diagnostic_failure_test.cpp
     src/test/integration/client/graphics_thread_startup_test.cpp
