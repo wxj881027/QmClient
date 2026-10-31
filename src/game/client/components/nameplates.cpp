@@ -16,6 +16,7 @@
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/animstate.h>
 #include <game/client/components/nameplate_text_effects.h>
+#include <game/client/components/qmclient/chat_bubble_state.h>
 #include <game/client/components/qmclient/chat_emoji.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/friend_heart_icon.h>
@@ -74,24 +75,7 @@ static bool FocusModeHidesChat()
 	return GetQmFocusModeDecisions().m_HidePlayerMessages;
 }
 
-struct SChatBubbleAnimState
-{
-	bool m_Initialized = false;
-	bool m_LastVisible = false;
-	bool m_LastTyping = false;
-	int64_t m_LastChatBubbleStartTick = 0;
-	float m_LastTargetAlpha = std::numeric_limits<float>::quiet_NaN();
-	float m_LastTargetScale = std::numeric_limits<float>::quiet_NaN();
-	float m_LastTargetSlide = std::numeric_limits<float>::quiet_NaN();
-	float m_LastTargetFillChars = std::numeric_limits<float>::quiet_NaN();
-	STextContainerIndex m_TextContainerIndex;
-	float m_CachedTextWidth = 0.0f;
-	float m_CachedTextHeight = 0.0f;
-	float m_CachedFontSize = -INFINITY;
-	float m_CachedLineWidth = -INFINITY;
-	char m_aCachedText[256] = "";
-	char m_aLayoutText[256] = "";
-};
+using SChatBubbleAnimState = CQmChatBubbleState;
 
 struct SCoordXAlignState
 {
@@ -2528,22 +2512,23 @@ void CNamePlates::ResetChatBubbleAnimState(int ClientId, bool IsDestructing)
 	SChatBubbleAnimState &AnimState = m_pData->m_aChatBubbleAnim[ClientId];
 	if(IsDestructing)
 	{
-		TextRender()->DeleteTextContainer(AnimState.m_TextContainerIndex);
-		AnimState = SChatBubbleAnimState();
+		AnimState.Reset(*TextRender());
 		return;
 	}
-	CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
-	const uint64_t NodeKey = ChatBubbleAnimNodeKey(ClientId);
-	const bool RuntimeInitialized = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::ALPHA, -1.0f) >= -0.5f;
-	if(!AnimState.m_Initialized && AnimState.m_aCachedText[0] == '\0' && !RuntimeInitialized)
-		return;
+	CQmChatBubbleFrame Frame;
+	Frame.Run([&] {
+		CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
+		const uint64_t NodeKey = ChatBubbleAnimNodeKey(ClientId);
+		const bool RuntimeInitialized = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::ALPHA, -1.0f) >= -0.5f;
+		if(!AnimState.m_Initialized && AnimState.m_aCachedText[0] == '\0' && !RuntimeInitialized && !AnimState.HasTextResources())
+			return;
 
-	TextRender()->DeleteTextContainer(AnimState.m_TextContainerIndex);
-	AnimState = SChatBubbleAnimState();
-	SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, 0.0f);
-	SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, 1.0f);
-	SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, 0.0f);
-	SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, 0.0f);
+		AnimState.Reset(*TextRender());
+		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, 0.0f);
+		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, 1.0f);
+		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, 0.0f);
+		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, 0.0f);
+	});
 }
 
 void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
@@ -2557,332 +2542,299 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
 		return;
 
-	auto &ClientData = GameClient()->m_aClients[ClientId];
-	CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
-	SChatBubbleAnimState &AnimState = m_pData->m_aChatBubbleAnim[ClientId];
-	const uint64_t NodeKey = ChatBubbleAnimNodeKey(ClientId);
-	const bool RuntimeNeedsInit = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::ALPHA, -1.0f) < -0.5f;
-	if(!AnimState.m_Initialized || RuntimeNeedsInit)
-	{
-		TextRender()->DeleteTextContainer(AnimState.m_TextContainerIndex);
-		AnimState = SChatBubbleAnimState();
-		AnimState.m_Initialized = true;
-		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, 0.0f);
-		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, 1.0f);
-		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, 0.0f);
-		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, 0.0f);
-	}
-
-	// Determine what text to show
-	const char *pBubbleText = nullptr;
-	bool IsTyping = false;
-	int64_t Now = time();
-
-	// Check if this is local player who is currently typing
-	const bool IsLocalPlayer = (GameClient()->m_Snap.m_LocalClientId == ClientId);
-	if(IsLocalPlayer && GameClient()->m_Chat.IsActive())
-	{
-		const char *pInputText = GameClient()->m_Chat.GetInputText();
-		if(pInputText && pInputText[0] != '\0')
+	CQmChatBubbleFrame Frame;
+	Frame.Run([&] {
+		auto &ClientData = GameClient()->m_aClients[ClientId];
+		CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
+		SChatBubbleAnimState &AnimState = m_pData->m_aChatBubbleAnim[ClientId];
+		AnimState.Cleanup(*TextRender());
+		const uint64_t NodeKey = ChatBubbleAnimNodeKey(ClientId);
+		const bool RuntimeNeedsInit = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::ALPHA, -1.0f) < -0.5f;
+		if(!AnimState.m_Initialized || RuntimeNeedsInit)
 		{
-			pBubbleText = pInputText;
-			IsTyping = true;
+			AnimState.Initialize(*TextRender(), [&] {
+				SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, 0.0f);
+				SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, 1.0f);
+				SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, 0.0f);
+				SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, 0.0f);
+			});
 		}
-	}
 
-	// If not typing, check for existing chat bubble
-	if(!pBubbleText)
-	{
-		if(ClientData.m_aChatBubbleText[0] != '\0' && Now < ClientData.m_ChatBubbleExpireTick)
-			pBubbleText = ClientData.m_aChatBubbleText;
-	}
+		// Determine what text to show
+		const char *pBubbleText = nullptr;
+		bool IsTyping = false;
+		int64_t Now = time();
 
-	const bool HasSourceText = pBubbleText && pBubbleText[0] != '\0';
-	if(HasSourceText)
-		str_copy(AnimState.m_aCachedText, pBubbleText, sizeof(AnimState.m_aCachedText));
-
-	if(!HasSourceText && AnimState.m_aCachedText[0] == '\0')
-	{
-		AnimState.m_LastVisible = false;
-		AnimState.m_LastTyping = false;
-		return;
-	}
-
-	const bool TimedDisappearWindow = HasSourceText && !IsTyping && (ClientData.m_ChatBubbleExpireTick - Now <= time_freq());
-	const bool NewTimedBubble = HasSourceText && !IsTyping && ClientData.m_ChatBubbleStartTick != AnimState.m_LastChatBubbleStartTick;
-	if(NewTimedBubble)
-		AnimState.m_LastChatBubbleStartTick = ClientData.m_ChatBubbleStartTick;
-
-	const bool BecameVisible = HasSourceText && !AnimState.m_LastVisible;
-	if(BecameVisible || NewTimedBubble)
-	{
-		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, 0.0f);
-		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, 0.92f);
-		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, 12.0f);
-		if(IsTyping)
-			SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, 0.0f);
-		AnimState.m_LastTargetAlpha = std::numeric_limits<float>::quiet_NaN();
-		AnimState.m_LastTargetScale = std::numeric_limits<float>::quiet_NaN();
-		AnimState.m_LastTargetSlide = std::numeric_limits<float>::quiet_NaN();
-		AnimState.m_LastTargetFillChars = std::numeric_limits<float>::quiet_NaN();
-	}
-
-	float TargetAlpha = HasSourceText ? Alpha : 0.0f;
-	float TargetScale = 1.0f;
-	float TargetSlideOffset = 0.0f;
-	float AlphaDuration = HasSourceText ? 0.20f : 0.16f;
-	float TransformDuration = HasSourceText ? 0.20f : 0.16f;
-
-	if(TimedDisappearWindow)
-	{
-		TargetAlpha = 0.0f;
-		AlphaDuration = 1.0f;
-		TransformDuration = 1.0f;
-		int AnimationType = g_Config.m_QmChatBubbleAnimation;
-		switch(AnimationType)
+		// Check if this is local player who is currently typing
+		const bool IsLocalPlayer = (GameClient()->m_Snap.m_LocalClientId == ClientId);
+		if(IsLocalPlayer && GameClient()->m_Chat.IsActive())
 		{
-		case 1:
-			TargetScale = 0.2f;
-			break;
-		case 2:
-			TargetSlideOffset = 50.0f;
-			break;
-		case 0:
-		default:
-			break;
+			const char *pInputText = GameClient()->m_Chat.GetInputText();
+			if(pInputText && pInputText[0] != '\0')
+			{
+				pBubbleText = pInputText;
+				IsTyping = true;
+			}
 		}
-	}
 
-	const float BubbleAlpha = std::clamp(ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, TargetAlpha, AlphaDuration, EEasing::EASE_OUT, AnimState.m_LastTargetAlpha), 0.0f, Alpha);
-	const float AnimScale = std::max(0.0f, ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, TargetScale, TransformDuration, EEasing::EASE_OUT, AnimState.m_LastTargetScale));
-	const float AnimSlideOffset = ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, TargetSlideOffset, TransformDuration, EEasing::EASE_OUT, AnimState.m_LastTargetSlide);
-
-	AnimState.m_LastVisible = HasSourceText;
-	AnimState.m_LastTyping = IsTyping;
-
-	const char *pRenderText = HasSourceText ? pBubbleText : AnimState.m_aCachedText;
-	const EQmChatEmoji ChatEmoji = QmChatEmojiFromText(pRenderText);
-	const bool RenderChatEmoji = GameClient()->m_QmChatEmoji.CanRender(ChatEmoji);
-	char aAnimatedText[sizeof(AnimState.m_aCachedText)];
-	aAnimatedText[0] = '\0';
-	const char *pDisplayText = pRenderText;
-
-	size_t RenderBytes = 0;
-	size_t RenderCharCountSize = 0;
-	str_utf8_stats(pRenderText, std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max(), &RenderBytes, &RenderCharCountSize);
-	(void)RenderBytes;
-	const int RenderCharCount = static_cast<int>(RenderCharCountSize);
-
-	if(IsTyping && !RenderChatEmoji)
-	{
-		const float TargetFillChars = static_cast<float>(RenderCharCount);
-		const float CurrentFillChars = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::WIDTH, TargetFillChars);
-		const float DeltaChars = std::abs(TargetFillChars - CurrentFillChars);
-		float FillDuration = std::clamp(DeltaChars * 0.035f, 0.05f, 0.25f);
-		if(TargetFillChars < CurrentFillChars)
-			FillDuration = 0.08f;
-		const float AnimatedFillChars = ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, TargetFillChars, FillDuration, EEasing::EASE_OUT, AnimState.m_LastTargetFillChars);
-		const int VisibleChars = std::clamp(round_to_int(AnimatedFillChars), 0, RenderCharCount);
-		str_utf8_copy_num(aAnimatedText, pRenderText, sizeof(aAnimatedText), VisibleChars);
-		pDisplayText = aAnimatedText;
-	}
-	else
-	{
-		SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, static_cast<float>(RenderCharCount));
-		AnimState.m_LastTargetFillChars = std::numeric_limits<float>::quiet_NaN();
-	}
-
-	if(BubbleAlpha <= 0.001f)
-	{
-		if(!HasSourceText)
-			AnimState.m_aCachedText[0] = '\0';
-		return;
-	}
-
-	// Get current screen bounds (world coordinates with current zoom)
-	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-
-	// Check if position is on screen
-	if(!(in_range(Position.x, ScreenX0 - 400, ScreenX1 + 400) && in_range(Position.y, ScreenY0 - 400, ScreenY1 + 400)))
-		return;
-
-	// Calculate screen-space position (0-1 range) for zoom independence
-	float ScreenWidth = ScreenX1 - ScreenX0;
-	float ScreenHeight = ScreenY1 - ScreenY0;
-	float ScreenPosX = (Position.x - ScreenX0) / ScreenWidth;
-
-	// Map to interface coordinates for text rendering (fixed zoom)
-	Graphics()->MapScreenToInterface(GameClient()->m_Camera.m_Center.x, GameClient()->m_Camera.m_Center.y);
-
-	// Get interface screen bounds (fixed regardless of zoom)
-	float InterfaceX0, InterfaceY0, InterfaceX1, InterfaceY1;
-	Graphics()->GetScreen(&InterfaceX0, &InterfaceY0, &InterfaceX1, &InterfaceY1);
-	float InterfaceWidth = InterfaceX1 - InterfaceX0;
-	float InterfaceHeight = InterfaceY1 - InterfaceY0;
-
-	// Convert screen-space position to interface coordinates
-	float InterfaceX = InterfaceX0 + ScreenPosX * InterfaceWidth;
-
-	// Keep bubble sizing in screen space so rapid camera zoom does not force
-	// a full text relayout every frame.
-	constexpr float kBubblePadding = 12.0f;
-	constexpr float kBubbleRounding = 10.0f;
-	constexpr float kBubbleMaxWidth = 230.0f;
-	const float BaseFontSize = (float)g_Config.m_QmChatBubbleFontSize;
-
-	const float FontSize = BaseFontSize;
-	const float Padding = kBubblePadding;
-	const float Rounding = kBubbleRounding;
-	const float MaxWidth = kBubbleMaxWidth;
-
-	// Anchor bubble to the top of the nameplate plus default nameplate spacing.
-	float NameplateTopWorldY = Position.y - (float)g_Config.m_ClNamePlatesOffset;
-	const vec2 NameplateBottomMiddleWorld = Position - vec2(0.0f, (float)g_Config.m_ClNamePlatesOffset);
-	const CNamePlate &NamePlate = m_pData->m_aNamePlates[ClientId];
-	if(NamePlate.IsInitialized())
-		NameplateTopWorldY = NamePlate.TopY(NameplateBottomMiddleWorld);
-	const float ScreenPosNameplateTopY = (NameplateTopWorldY - ScreenY0) / ScreenHeight;
-	const float InterfaceNameplateTopY = InterfaceY0 + ScreenPosNameplateTopY * InterfaceHeight;
-
-	unsigned int PrevFlags = TextRender()->GetRenderFlags();
-	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
-
-	const bool UseTextContainer = !RenderChatEmoji && !IsTyping && std::abs(AnimScale - 1.0f) <= 0.001f;
-	const bool LayoutDirty = !AnimState.m_TextContainerIndex.Valid() ||
-				 str_comp(AnimState.m_aLayoutText, pDisplayText) != 0 ||
-				 AnimState.m_CachedFontSize != FontSize ||
-				 AnimState.m_CachedLineWidth != MaxWidth;
-
-	if(RenderChatEmoji && AnimState.m_TextContainerIndex.Valid())
-	{
-		TextRender()->DeleteTextContainer(AnimState.m_TextContainerIndex);
-		AnimState.m_aLayoutText[0] = '\0';
-	}
-	else if(!RenderChatEmoji && !IsTyping && LayoutDirty)
-	{
-		TextRender()->DeleteTextContainer(AnimState.m_TextContainerIndex);
-
-		CTextCursor LayoutCursor;
-		LayoutCursor.m_FontSize = FontSize;
-		LayoutCursor.m_LineWidth = MaxWidth;
-		if(TextRender()->CreateTextContainer(AnimState.m_TextContainerIndex, &LayoutCursor, pDisplayText))
+		// If not typing, check for existing chat bubble
+		if(!pBubbleText)
 		{
-			const STextBoundingBox BoundingBox = TextRender()->GetBoundingBoxTextContainer(AnimState.m_TextContainerIndex);
-			AnimState.m_CachedTextWidth = BoundingBox.m_W;
-			AnimState.m_CachedTextHeight = BoundingBox.m_H;
-			AnimState.m_CachedFontSize = FontSize;
-			AnimState.m_CachedLineWidth = MaxWidth;
-			str_copy(AnimState.m_aLayoutText, pDisplayText, sizeof(AnimState.m_aLayoutText));
+			if(ClientData.m_aChatBubbleText[0] != '\0' && Now < ClientData.m_ChatBubbleExpireTick)
+				pBubbleText = ClientData.m_aChatBubbleText;
+		}
+
+		const bool HasSourceText = pBubbleText && pBubbleText[0] != '\0';
+		if(HasSourceText)
+			str_copy(AnimState.m_aCachedText, pBubbleText, sizeof(AnimState.m_aCachedText));
+
+		if(!HasSourceText && AnimState.m_aCachedText[0] == '\0')
+		{
+			AnimState.m_LastVisible = false;
+			AnimState.m_LastTyping = false;
+			return;
+		}
+
+		const bool TimedDisappearWindow = HasSourceText && !IsTyping && (ClientData.m_ChatBubbleExpireTick - Now <= time_freq());
+		const bool NewTimedBubble = HasSourceText && !IsTyping && ClientData.m_ChatBubbleStartTick != AnimState.m_LastChatBubbleStartTick;
+
+		const bool BecameVisible = HasSourceText && !AnimState.m_LastVisible;
+		if(BecameVisible || NewTimedBubble)
+		{
+			SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, 0.0f);
+			SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, 0.92f);
+			SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, 12.0f);
+			if(IsTyping)
+				SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, 0.0f);
+			AnimState.m_LastTargetAlpha = std::numeric_limits<float>::quiet_NaN();
+			AnimState.m_LastTargetScale = std::numeric_limits<float>::quiet_NaN();
+			AnimState.m_LastTargetSlide = std::numeric_limits<float>::quiet_NaN();
+			AnimState.m_LastTargetFillChars = std::numeric_limits<float>::quiet_NaN();
+		}
+
+		float TargetAlpha = HasSourceText ? Alpha : 0.0f;
+		float TargetScale = 1.0f;
+		float TargetSlideOffset = 0.0f;
+		float AlphaDuration = HasSourceText ? 0.20f : 0.16f;
+		float TransformDuration = HasSourceText ? 0.20f : 0.16f;
+
+		if(TimedDisappearWindow)
+		{
+			TargetAlpha = 0.0f;
+			AlphaDuration = 1.0f;
+			TransformDuration = 1.0f;
+			int AnimationType = g_Config.m_QmChatBubbleAnimation;
+			switch(AnimationType)
+			{
+			case 1:
+				TargetScale = 0.2f;
+				break;
+			case 2:
+				TargetSlideOffset = 50.0f;
+				break;
+			case 0:
+			default:
+				break;
+			}
+		}
+
+		const float BubbleAlpha = std::clamp(ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, TargetAlpha, AlphaDuration, EEasing::EASE_OUT, AnimState.m_LastTargetAlpha), 0.0f, Alpha);
+		const float AnimScale = std::max(0.0f, ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, TargetScale, TransformDuration, EEasing::EASE_OUT, AnimState.m_LastTargetScale));
+		const float AnimSlideOffset = ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, TargetSlideOffset, TransformDuration, EEasing::EASE_OUT, AnimState.m_LastTargetSlide);
+
+		const char *pRenderText = HasSourceText ? pBubbleText : AnimState.m_aCachedText;
+		const EQmChatEmoji ChatEmoji = QmChatEmojiFromText(pRenderText);
+		const bool RenderChatEmoji = GameClient()->m_QmChatEmoji.CanRender(ChatEmoji);
+		char aAnimatedText[sizeof(AnimState.m_aCachedText)];
+		aAnimatedText[0] = '\0';
+		const char *pDisplayText = pRenderText;
+
+		size_t RenderBytes = 0;
+		size_t RenderCharCountSize = 0;
+		str_utf8_stats(pRenderText, std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max(), &RenderBytes, &RenderCharCountSize);
+		(void)RenderBytes;
+		const int RenderCharCount = static_cast<int>(RenderCharCountSize);
+
+		if(IsTyping && !RenderChatEmoji)
+		{
+			const float TargetFillChars = static_cast<float>(RenderCharCount);
+			const float CurrentFillChars = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::WIDTH, TargetFillChars);
+			const float DeltaChars = std::abs(TargetFillChars - CurrentFillChars);
+			float FillDuration = std::clamp(DeltaChars * 0.035f, 0.05f, 0.25f);
+			if(TargetFillChars < CurrentFillChars)
+				FillDuration = 0.08f;
+			const float AnimatedFillChars = ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, TargetFillChars, FillDuration, EEasing::EASE_OUT, AnimState.m_LastTargetFillChars);
+			const int VisibleChars = std::clamp(round_to_int(AnimatedFillChars), 0, RenderCharCount);
+			str_utf8_copy_num(aAnimatedText, pRenderText, sizeof(aAnimatedText), VisibleChars);
+			pDisplayText = aAnimatedText;
 		}
 		else
 		{
-			AnimState.m_CachedTextWidth = 0.0f;
-			AnimState.m_CachedTextHeight = 0.0f;
-			AnimState.m_CachedFontSize = FontSize;
-			AnimState.m_CachedLineWidth = MaxWidth;
-			AnimState.m_aLayoutText[0] = '\0';
+			SetUiPresentationStateValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, static_cast<float>(RenderCharCount));
+			AnimState.m_LastTargetFillChars = std::numeric_limits<float>::quiet_NaN();
 		}
-	}
 
-	float TextHeight = 0.0f;
-	float TextWidth = 0.0f;
-	if(RenderChatEmoji)
-	{
-		TextHeight = QmChatEmojiBubbleDisplaySize(FontSize);
-		TextWidth = TextHeight;
-	}
-	else if(IsTyping)
-	{
-		CTextCursor MeasureCursor;
-		MeasureCursor.m_FontSize = FontSize;
-		MeasureCursor.m_LineWidth = MaxWidth;
-		MeasureCursor.m_Flags = 0;
-		TextRender()->TextEx(&MeasureCursor, pDisplayText);
-		TextHeight = MeasureCursor.Height();
-		TextWidth = MeasureCursor.m_LongestLineWidth;
-	}
-	else
-	{
-		TextHeight = AnimState.m_CachedTextHeight;
-		TextWidth = AnimState.m_CachedTextWidth;
-	}
-
-	// Calculate bubble dimensions and position (with scale animation)
-	float BubbleWidth = (TextWidth + Padding * 2.0f) * AnimScale;
-	float BubbleHeight = (TextHeight + Padding * 2.0f) * AnimScale;
-
-	// Position bubble above the nameplate with built-in nameplate spacing.
-	float AnimOffset = AnimSlideOffset;
-	const float BubbleGap = DEFAULT_PADDING;
-	float BubbleX = InterfaceX - BubbleWidth / 2.0f;
-	float BubbleY = InterfaceNameplateTopY - BubbleGap - BubbleHeight + AnimOffset;
-
-	float ConfigAlpha = g_Config.m_QmChatBubbleAlpha / 100.0f;
-
-	ColorHSLA BgHSLA(g_Config.m_QmChatBubbleBgColor, true);
-	ColorRGBA BgColor = color_cast<ColorRGBA>(BgHSLA);
-	BgColor.a *= BubbleAlpha * ConfigAlpha;
-
-	Graphics()->TextureClear();
-	Graphics()->DrawRect(
-		BubbleX, BubbleY,
-		BubbleWidth, BubbleHeight,
-		BgColor,
-		IGraphics::CORNER_ALL,
-		Rounding);
-
-	if(RenderChatEmoji)
-	{
-		const float EmojiWidth = TextWidth * AnimScale;
-		const float EmojiHeight = TextHeight * AnimScale;
-		GameClient()->m_QmChatEmoji.Render(
-			ChatEmoji,
-			BubbleX + (BubbleWidth - EmojiWidth) / 2.0f,
-			BubbleY + (BubbleHeight - EmojiHeight) / 2.0f,
-			EmojiWidth,
-			EmojiHeight,
-			BubbleAlpha * ConfigAlpha);
-	}
-	else
-	{
-		ColorHSLA TextHSLA(g_Config.m_QmChatBubbleTextColor, false);
-		ColorRGBA TextColor = color_cast<ColorRGBA>(TextHSLA);
-		TextColor.a *= BubbleAlpha * ConfigAlpha;
-
-		ColorRGBA OutlineColor = TextRender()->DefaultTextOutlineColor();
-		OutlineColor.a *= TextColor.a;
-
-		TextRender()->TextColor(TextColor);
-		TextRender()->TextOutlineColor(OutlineColor);
-
-		if(UseTextContainer && AnimState.m_TextContainerIndex.Valid())
+		// 动画请求全部准备成功后再推进这些标记，失败仍能重试入场初始化。
+		if(NewTimedBubble)
+			AnimState.m_LastChatBubbleStartTick = ClientData.m_ChatBubbleStartTick;
+		AnimState.m_LastVisible = HasSourceText;
+		AnimState.m_LastTyping = IsTyping;
+		if(BubbleAlpha <= 0.001f)
 		{
-			const float TextX = BubbleX + (BubbleWidth - TextWidth) / 2.0f;
-			const float TextY = BubbleY + (BubbleHeight - TextHeight) / 2.0f;
-			TextRender()->RenderTextContainer(AnimState.m_TextContainerIndex, TextColor, OutlineColor, TextX, TextY);
+			if(!HasSourceText)
+				AnimState.m_aCachedText[0] = '\0';
+			return;
+		}
+
+		// Get current screen bounds (world coordinates with current zoom)
+		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+
+		// Check if position is on screen
+		if(!(in_range(Position.x, ScreenX0 - 400, ScreenX1 + 400) && in_range(Position.y, ScreenY0 - 400, ScreenY1 + 400)))
+			return;
+
+		// Calculate screen-space position (0-1 range) for zoom independence
+		float ScreenWidth = ScreenX1 - ScreenX0;
+		float ScreenHeight = ScreenY1 - ScreenY0;
+		float ScreenPosX = (Position.x - ScreenX0) / ScreenWidth;
+
+		// Map to interface coordinates for text rendering (fixed zoom)
+		CQmChatBubbleRenderContext Context(*TextRender(), *Graphics());
+		Context.Apply([&] { Graphics()->MapScreenToInterface(GameClient()->m_Camera.m_Center.x, GameClient()->m_Camera.m_Center.y); });
+
+		// Get interface screen bounds (fixed regardless of zoom)
+		float InterfaceX0, InterfaceY0, InterfaceX1, InterfaceY1;
+		Graphics()->GetScreen(&InterfaceX0, &InterfaceY0, &InterfaceX1, &InterfaceY1);
+		float InterfaceWidth = InterfaceX1 - InterfaceX0;
+		float InterfaceHeight = InterfaceY1 - InterfaceY0;
+
+		// Convert screen-space position to interface coordinates
+		float InterfaceX = InterfaceX0 + ScreenPosX * InterfaceWidth;
+
+		// Keep bubble sizing in screen space so rapid camera zoom does not force
+		// a full text relayout every frame.
+		constexpr float kBubblePadding = 12.0f;
+		constexpr float kBubbleRounding = 10.0f;
+		constexpr float kBubbleMaxWidth = 230.0f;
+		const float BaseFontSize = (float)g_Config.m_QmChatBubbleFontSize;
+
+		const float FontSize = BaseFontSize;
+		const float Padding = kBubblePadding;
+		const float Rounding = kBubbleRounding;
+		const float MaxWidth = kBubbleMaxWidth;
+
+		// Anchor bubble to the top of the nameplate plus default nameplate spacing.
+		float NameplateTopWorldY = Position.y - (float)g_Config.m_ClNamePlatesOffset;
+		const vec2 NameplateBottomMiddleWorld = Position - vec2(0.0f, (float)g_Config.m_ClNamePlatesOffset);
+		const CNamePlate &NamePlate = m_pData->m_aNamePlates[ClientId];
+		if(NamePlate.IsInitialized())
+			NameplateTopWorldY = NamePlate.TopY(NameplateBottomMiddleWorld);
+		const float ScreenPosNameplateTopY = (NameplateTopWorldY - ScreenY0) / ScreenHeight;
+		const float InterfaceNameplateTopY = InterfaceY0 + ScreenPosNameplateTopY * InterfaceHeight;
+
+		const bool UseTextContainer = !RenderChatEmoji && !IsTyping && std::abs(AnimScale - 1.0f) <= 0.001f;
+		if(RenderChatEmoji)
+			AnimState.ClearLayout(*TextRender());
+		else if(!IsTyping)
+			AnimState.PrepareLayout(*TextRender(), FontSize, MaxWidth, pDisplayText);
+
+		float TextHeight = 0.0f;
+		float TextWidth = 0.0f;
+		if(RenderChatEmoji)
+		{
+			TextHeight = QmChatEmojiBubbleDisplaySize(FontSize);
+			TextWidth = TextHeight;
+		}
+		else if(IsTyping)
+		{
+			CTextCursor MeasureCursor;
+			MeasureCursor.m_FontSize = FontSize;
+			MeasureCursor.m_LineWidth = MaxWidth;
+			MeasureCursor.m_Flags = 0;
+			TextRender()->TextEx(&MeasureCursor, pDisplayText);
+			TextHeight = MeasureCursor.Height();
+			TextWidth = MeasureCursor.m_LongestLineWidth;
 		}
 		else
 		{
-			const float ScaledTextWidth = TextWidth * AnimScale;
-			const float ScaledTextHeight = TextHeight * AnimScale;
-			const float TextX = BubbleX + (BubbleWidth - ScaledTextWidth) / 2.0f;
-			const float TextY = BubbleY + (BubbleHeight - ScaledTextHeight) / 2.0f;
-
-			CTextCursor Cursor;
-			Cursor.m_FontSize = FontSize * AnimScale;
-			Cursor.m_LineWidth = MaxWidth * AnimScale;
-			Cursor.m_Flags = TEXTFLAG_RENDER;
-			Cursor.SetPosition(vec2(TextX, TextY));
-			TextRender()->TextEx(&Cursor, pDisplayText);
+			TextHeight = AnimState.m_CachedTextHeight;
+			TextWidth = AnimState.m_CachedTextWidth;
 		}
-	}
 
-	TextRender()->TextColor(TextRender()->DefaultTextColor());
-	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
-	TextRender()->SetRenderFlags(PrevFlags);
+		// Calculate bubble dimensions and position (with scale animation)
+		float BubbleWidth = (TextWidth + Padding * 2.0f) * AnimScale;
+		float BubbleHeight = (TextHeight + Padding * 2.0f) * AnimScale;
 
-	Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+		// Position bubble above the nameplate with built-in nameplate spacing.
+		float AnimOffset = AnimSlideOffset;
+		const float BubbleGap = DEFAULT_PADDING;
+		float BubbleX = InterfaceX - BubbleWidth / 2.0f;
+		float BubbleY = InterfaceNameplateTopY - BubbleGap - BubbleHeight + AnimOffset;
+
+		float ConfigAlpha = g_Config.m_QmChatBubbleAlpha / 100.0f;
+
+		ColorHSLA BgHSLA(g_Config.m_QmChatBubbleBgColor, true);
+		ColorRGBA BgColor = color_cast<ColorRGBA>(BgHSLA);
+		BgColor.a *= BubbleAlpha * ConfigAlpha;
+
+		Frame.BeginDrawing();
+		Graphics()->TextureClear();
+		Graphics()->DrawRect(
+			BubbleX, BubbleY,
+			BubbleWidth, BubbleHeight,
+			BgColor,
+			IGraphics::CORNER_ALL,
+			Rounding);
+
+		if(RenderChatEmoji)
+		{
+			const float EmojiWidth = TextWidth * AnimScale;
+			const float EmojiHeight = TextHeight * AnimScale;
+			GameClient()->m_QmChatEmoji.Render(
+				ChatEmoji,
+				BubbleX + (BubbleWidth - EmojiWidth) / 2.0f,
+				BubbleY + (BubbleHeight - EmojiHeight) / 2.0f,
+				EmojiWidth,
+				EmojiHeight,
+				BubbleAlpha * ConfigAlpha);
+		}
+		else
+		{
+			ColorHSLA TextHSLA(g_Config.m_QmChatBubbleTextColor, false);
+			ColorRGBA TextColor = color_cast<ColorRGBA>(TextHSLA);
+			TextColor.a *= BubbleAlpha * ConfigAlpha;
+
+			ColorRGBA OutlineColor = TextRender()->DefaultTextOutlineColor();
+			OutlineColor.a *= TextColor.a;
+
+			TextRender()->TextColor(TextColor);
+			TextRender()->TextOutlineColor(OutlineColor);
+
+			if(UseTextContainer && AnimState.m_TextContainerIndex.Valid())
+			{
+				const float TextX = BubbleX + (BubbleWidth - TextWidth) / 2.0f;
+				const float TextY = BubbleY + (BubbleHeight - TextHeight) / 2.0f;
+				TextRender()->RenderTextContainer(AnimState.m_TextContainerIndex, TextColor, OutlineColor, TextX, TextY);
+			}
+			else
+			{
+				const float ScaledTextWidth = TextWidth * AnimScale;
+				const float ScaledTextHeight = TextHeight * AnimScale;
+				const float TextX = BubbleX + (BubbleWidth - ScaledTextWidth) / 2.0f;
+				const float TextY = BubbleY + (BubbleHeight - ScaledTextHeight) / 2.0f;
+
+				CTextCursor Cursor;
+				Cursor.m_FontSize = FontSize * AnimScale;
+				Cursor.m_LineWidth = MaxWidth * AnimScale;
+				Cursor.m_Flags = TEXTFLAG_RENDER;
+				Cursor.SetPosition(vec2(TextX, TextY));
+				TextRender()->TextEx(&Cursor, pDisplayText);
+			}
+		}
+
+		Context.Finish();
+	});
 }
 
 void CNamePlates::OnRender()

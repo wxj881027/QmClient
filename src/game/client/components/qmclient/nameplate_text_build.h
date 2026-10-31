@@ -93,6 +93,7 @@ public:
 	CQmNameplateTextBuild() = default;
 	CQmNameplateTextBuild(const CQmNameplateTextBuild &) = delete;
 	CQmNameplateTextBuild &operator=(const CQmNameplateTextBuild &) = delete;
+	bool HasPendingCleanup() const { return m_Pending.has_value(); }
 	template<typename TTextRender>
 	void Cleanup(TTextRender &Text)
 	{
