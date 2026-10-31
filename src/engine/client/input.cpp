@@ -67,7 +67,8 @@ void CInput::AddTextEvent(const char *pText)
 	AppendSdlTextEvents(m_vInputEvents, pText, m_InputCounter);
 }
 
-CInput::CInput()
+CInput::CInput() :
+	m_ImeProvider([this](const char *pText) { AddTextEvent(pText); })
 {
 	std::fill(std::begin(m_aCurrentKeyStates), std::end(m_aCurrentKeyStates), false);
 	std::fill(std::begin(m_aFrameKeyStates), std::end(m_aFrameKeyStates), false);
@@ -117,6 +118,7 @@ SDL_Window *CInput::Window() const
 void CInput::Shutdown()
 {
 	StopTextInput();
+	m_ImeProvider.SetProvider(nullptr);
 	CloseJoysticks();
 	// 关闭后仍可能收到输入法析构触发的清理，此时图形对象可能已销毁。
 	m_pGraphics = nullptr;
@@ -409,16 +411,40 @@ void CInput::ClearImeState()
 
 void CInput::StartTextInput()
 {
+	m_ImeProvider.Start();
+	if(m_ImeProvider.IsActive())
+	{
+#if defined(CONF_FAMILY_WINDOWS)
+		SDL_SetWindowsMessageHook(nullptr, nullptr);
+		if(m_WindowsMessageEvent != 0)
+			SDL_FlushEvent(m_WindowsMessageEvent);
+		m_QueuedWindowsMessages.clear();
+#endif
+		if(Window() != nullptr)
+			SDL_StopTextInput(Window());
+		m_EmbeddedTextInputActive = true;
+		SyncImeProviderState();
+		return;
+	}
+	StartSystemTextInput();
+}
+
+void CInput::StartSystemTextInput()
+{
+	m_EmbeddedTextInputActive = false;
 #if defined(CONF_FAMILY_WINDOWS)
 	SDL_SetWindowsMessageHook(WindowsMessageHook, this);
 #endif
 	if(Window() != nullptr)
 		SDL_StartTextInput(Window());
 	m_ImeCandidates.ResumeComposition();
+	TraceImeState("system_start");
 }
 
 void CInput::StopTextInput()
 {
+	m_ImeProvider.Stop();
+	m_EmbeddedTextInputActive = false;
 #if defined(CONF_FAMILY_WINDOWS)
 	SDL_SetWindowsMessageHook(nullptr, nullptr);
 	// 清掉旧标记，避免重新启用后由旧事件提前消费新的 IME 通知。
@@ -429,11 +455,62 @@ void CInput::StopTextInput()
 	if(Window() != nullptr)
 		SDL_StopTextInput(Window());
 	ClearImeState();
+	TraceImeState("stop");
+}
+
+void CInput::SetImeProvider(IImeProvider *pProvider)
+{
+	const bool Requested = m_ImeProvider.TextInputRequested();
+	StopTextInput();
+	m_ImeProvider.SetProvider(pProvider);
+	if(Requested)
+		StartTextInput();
+}
+
+void CInput::SetImeEngineEnabled(bool Enabled)
+{
+	Enabled = Enabled && QmImeEmbeddedEngineAllowed();
+	if(Enabled == m_ImeProvider.Enabled())
+		return;
+	// 两种文本来源互斥；初始化失败时也必须取消旧系统组合。
+	const bool Requested = m_ImeProvider.TextInputRequested();
+	StopTextInput();
+	m_ImeProvider.SetEnabled(Enabled);
+	if(Requested)
+		StartTextInput();
+}
+
+void CInput::SyncImeProviderState()
+{
+	const auto &State = m_ImeProvider.State();
+	m_CompositionString = State.m_Active ? State.m_Preedit : "";
+	m_CompositionCursor = std::clamp(State.m_Cursor, 0, static_cast<int>(m_CompositionString.size()));
+	while(m_CompositionCursor > 0 && (static_cast<unsigned char>(m_CompositionString[m_CompositionCursor]) & 0xc0) == 0x80)
+		--m_CompositionCursor;
+	m_ImeCandidates.UpdateFromEngine(State);
+	TraceImeState("provider_sync");
+}
+
+void CInput::TraceImeState(const char *pEvent)
+{
+	if(!g_Config.m_QmImeTrace)
+	{
+		m_aImeTraceState[0] = -1;
+		return;
+	}
+	const std::array<int, 7> Snapshot{{m_ImeProvider.Enabled(), m_ImeProvider.TextInputRequested(), m_ImeProvider.IsActive(),
+		m_EmbeddedTextInputActive, HasComposition(), GetCandidateCount(), m_ImeCandidates.AcceptsSdlCandidates()}};
+	if(Snapshot == m_aImeTraceState)
+		return;
+	m_aImeTraceState = Snapshot;
+	const char *pHint = SDL_GetHint(SDL_HINT_IME_IMPLEMENTED_UI);
+	dbg_msg("ime/trace", "layer=input event=%s enabled=%d requested=%d active=%d embedded=%d composing=%d candidates=%d accepts_system_candidates=%d preedit_bytes=%zu sdl_ui_hint=%s",
+		pEvent, Snapshot[0], Snapshot[1], Snapshot[2], Snapshot[3], Snapshot[4], Snapshot[5], Snapshot[6], m_CompositionString.size(), pHint != nullptr ? pHint : "unset");
 }
 
 void CInput::EnsureScreenKeyboardShown()
 {
-	if(Window() == nullptr || !SDL_HasScreenKeyboardSupport() ||
+	if(m_ImeProvider.IsActive() || Window() == nullptr || !SDL_HasScreenKeyboardSupport() ||
 		Graphics()->IsScreenKeyboardShown())
 	{
 		return;
@@ -822,15 +899,59 @@ int CInput::Update()
 	CPerfTimer EventPumpTimer;
 	int EventCount = 0;
 	const bool TrackPerf = QmPerfEnabled();
+	m_ImeProvider.OnFrame();
+	if(m_ImeProvider.IsActive())
+	{
+		if(!m_EmbeddedTextInputActive)
+			StartTextInput();
+		else
+			SyncImeProviderState();
+	}
+	else if(m_EmbeddedTextInputActive)
+	{
+		ClearImeState();
+		if(m_ImeProvider.TextInputRequested())
+			StartSystemTextInput();
+	}
+	TraceImeState("frame");
 
 	const auto &&AddKeyEventChecked = [&](int Key, int Flags) {
-		if(Key != KEY_UNKNOWN && !IgnoreKeys && (!(Flags & IInput::FLAG_PRESS) || !QmImeShouldSuppressPress(Key, HasComposition())))
+		if(Key != KEY_UNKNOWN && !IgnoreKeys && (m_ImeProvider.IsActive() || !(Flags & IInput::FLAG_PRESS) || !QmImeShouldSuppressPress(Key, HasComposition())))
 		{
 			AddKeyEvent(Key, Flags);
 			// SDL3 合并了两个静音扫描码，继续接受旧配置中的两种键名。
 			if(Key == KEY_MUTE)
 				AddKeyEvent(KEY_AUDIOMUTE, Flags);
 		}
+	};
+	const auto HandleProviderKey = [&](const SDL_KeyboardEvent &KeyEvent, bool Press) {
+		if(IgnoreKeys)
+			return true;
+		const int Key = TranslateKeyEventKey(KeyEvent);
+		int Modifiers = 0;
+		if(KeyEvent.mod & SDL_KMOD_SHIFT)
+			Modifiers |= QM_IME_KEYMASK_SHIFT;
+		if(KeyEvent.mod & SDL_KMOD_CAPS)
+			Modifiers |= QM_IME_KEYMASK_LOCK;
+		if(KeyEvent.mod & SDL_KMOD_CTRL)
+			Modifiers |= QM_IME_KEYMASK_CONTROL;
+		if(KeyEvent.mod & SDL_KMOD_ALT)
+			Modifiers |= QM_IME_KEYMASK_ALT;
+		if(KeyEvent.mod & SDL_KMOD_GUI)
+			Modifiers |= QM_IME_KEYMASK_GUI;
+		const bool Consumed = m_ImeProvider.OnKey(Key, Modifiers, Press, KeyEvent.repeat);
+		if(m_ImeProvider.IsActive())
+			SyncImeProviderState();
+		else if(m_EmbeddedTextInputActive)
+		{
+			ClearImeState();
+			if(m_ImeProvider.TextInputRequested())
+				StartSystemTextInput();
+		}
+		// 激活前已交给客户端的按下事件，必须仍收到对应松键。
+		if(!Press && Key > KEY_UNKNOWN && Key < KEY_LAST && m_aCurrentKeyStates[Key])
+			return false;
+		return Consumed;
 	};
 
 #if defined(CONF_PLATFORM_EMSCRIPTEN)
@@ -871,7 +992,7 @@ int CInput::Update()
 				NativeMessage.wParam = Message.m_WParam;
 				NativeMessage.lParam = Message.m_LParam;
 				CPerfTimer Timer;
-				ProcessSystemMessage(&NativeMessage);
+				ProcessSystemMessage(&NativeMessage, Message.m_ImeKey, Message.m_ImeModifiers, Message.m_ImeRepeat);
 				LogPerfStage(m_pClient, "process_system_message", Timer.ElapsedMs());
 			}
 			continue;
@@ -883,11 +1004,16 @@ int CInput::Update()
 		switch(Event.type)
 		{
 		case SDL_EVENT_TEXT_EDITING:
+			if(m_ImeProvider.IsActive())
+				break;
 			HandleTextEditingEvent(Event.edit.text, Event.edit.start, Event.edit.length);
+			TraceImeState("system_editing");
 			break;
 
 		case SDL_EVENT_TEXT_EDITING_CANDIDATES:
 		{
+			if(m_ImeProvider.IsActive())
+				break;
 			std::optional<SQmImeCandidateList> NativeCandidates;
 			bool HasActiveComposition = false;
 #if defined(CONF_FAMILY_WINDOWS)
@@ -905,22 +1031,33 @@ int CInput::Update()
 #endif
 			m_ImeCandidates.UpdateFromSdl(Event.edit_candidates.candidates, Event.edit_candidates.num_candidates,
 				Event.edit_candidates.selected_candidate, WindowsNumberedCandidates, std::move(NativeCandidates), HasActiveComposition);
+			if(g_Config.m_QmImeTrace)
+				dbg_msg("ime/trace", "layer=input event=system_candidates received=%d active_composition=%d accepts=%d exposed=%d", Event.edit_candidates.num_candidates, HasActiveComposition, m_ImeCandidates.AcceptsSdlCandidates(), GetCandidateCount());
 			break;
 		}
 
 		case SDL_EVENT_TEXT_INPUT:
+			if(m_ImeProvider.IsActive())
+				break;
 			ClearImeState();
 			// 提交后抑制迟到候选，新的组合串或打开通知恢复接收。
 			m_ImeCandidates.EndComposition();
 			AddTextEvent(Event.text.text);
+			if(g_Config.m_QmImeTrace)
+				dbg_msg("ime/trace", "layer=input event=system_commit bytes=%zu active=%d", static_cast<size_t>(str_length(Event.text.text)), m_ImeProvider.IsActive());
+			TraceImeState("system_commit");
 			break;
 
 		// handle keys
 		case SDL_EVENT_KEY_DOWN:
+			if(HandleProviderKey(Event.key, true))
+				break;
 			AddKeyEventChecked(TranslateKeyEventKey(Event.key), IInput::FLAG_PRESS | (Event.key.repeat != 0 ? FLAG_REPEAT : 0));
 			break;
 
 		case SDL_EVENT_KEY_UP:
+			if(HandleProviderKey(Event.key, false))
+				break;
 			if(g_Config.m_QmGraphicsTrace > 0 && !Graphics()->WindowActive())
 			{
 				// 截图工具抢焦点时记录 SDL 松键事件，区分修饰键冲突与失焦重置。
@@ -1006,6 +1143,11 @@ int CInput::Update()
 			IgnoreKeys = true;
 			break;
 		case SDL_EVENT_WINDOW_FOCUS_LOST:
+			m_ImeProvider.OnFocusLost();
+			if(m_ImeProvider.IsActive())
+			{
+				SyncImeProviderState();
+			}
 			if(g_Config.m_QmGraphicsTrace > 0)
 				dbg_msg("input/focus", "event=focus_lost tab=%d left_shift=%d right_shift=%d left_ctrl=%d right_ctrl=%d queued_events=%zu", m_aCurrentKeyStates[KEY_TAB], m_aCurrentKeyStates[KEY_LSHIFT], m_aCurrentKeyStates[KEY_RSHIFT], m_aCurrentKeyStates[KEY_LCTRL], m_aCurrentKeyStates[KEY_RCTRL], m_vInputEvents.size());
 			std::fill(std::begin(m_aCurrentKeyStates), std::end(m_aCurrentKeyStates), false);
@@ -1100,12 +1242,31 @@ void CInput::UpdateGlobalInputState()
 bool SDLCALL CInput::WindowsMessageHook(void *pUser, MSG *pMsg)
 {
 	auto *pInput = static_cast<CInput *>(pUser);
-	if(pMsg == nullptr || (pMsg->message != WM_IME_NOTIFY && pMsg->message != WM_IME_STARTCOMPOSITION && pMsg->message != WM_IME_ENDCOMPOSITION) || pInput->m_WindowsMessageEvent == 0)
+	if(pMsg == nullptr || pInput->m_WindowsMessageEvent == 0)
+		return true;
+	const bool KeyDown = pMsg->message == WM_KEYDOWN || pMsg->message == WM_SYSKEYDOWN;
+	if(!KeyDown && pMsg->message != WM_IME_NOTIFY && pMsg->message != WM_IME_STARTCOMPOSITION && pMsg->message != WM_IME_ENDCOMPOSITION)
 		return true;
 	SDL_Window *pWindow = pInput->Window();
 	if(pWindow == nullptr || pMsg->hwnd != SDL_GetPointerProperty(SDL_GetWindowProperties(pWindow), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr))
 		return true;
-	pInput->m_QueuedWindowsMessages.push_back({pMsg->hwnd, pMsg->message, pMsg->wParam, pMsg->lParam});
+	SWindowsMessage Message{pMsg->hwnd, pMsg->message, pMsg->wParam, pMsg->lParam};
+	if(KeyDown)
+	{
+		// SDL 的钩子在 TranslateMessage 前调用，须在这里恢复被 IME 吃掉的原始键。
+		const UINT VirtualKey = pMsg->wParam == VK_PROCESSKEY ? ImmGetVirtualKey(pMsg->hwnd) : static_cast<UINT>(pMsg->wParam);
+		if(VirtualKey < 'A' || VirtualKey > 'Z')
+			return true;
+		Message.m_ImeKey = KEY_A + VirtualKey - 'A';
+		if(GetKeyState(VK_CONTROL) & 0x8000)
+			Message.m_ImeModifiers |= QM_IME_KEYMASK_CONTROL;
+		if(GetKeyState(VK_MENU) & 0x8000)
+			Message.m_ImeModifiers |= QM_IME_KEYMASK_ALT;
+		if((GetKeyState(VK_LWIN) | GetKeyState(VK_RWIN)) & 0x8000)
+			Message.m_ImeModifiers |= QM_IME_KEYMASK_GUI;
+		Message.m_ImeRepeat = (pMsg->lParam & (1u << 30)) != 0;
+	}
+	pInput->m_QueuedWindowsMessages.push_back(Message);
 	SDL_Event Event{};
 	Event.type = pInput->m_WindowsMessageEvent;
 	Event.user.data1 = pInput;
@@ -1246,14 +1407,29 @@ std::optional<SQmImeCandidateList> CInput::ReadWindowsImeCandidates(void *pWindo
 	return std::nullopt;
 }
 
-void CInput::ProcessSystemMessage(MSG *pMsg)
+void CInput::ProcessSystemMessage(MSG *pMsg, int ImeKey, int ImeModifiers, bool ImeRepeat)
 {
-	if(pMsg == nullptr)
+	if(pMsg == nullptr || m_ImeProvider.IsActive())
 		return;
+
+	if(ImeKey != KEY_UNKNOWN)
+	{
+		const bool Resumed = m_ImeCandidates.ResumeAfterSystemKey(ImeKey, ImeModifiers, ImeRepeat);
+		if(Resumed)
+		{
+			// 新按键已证明开始下一轮；补读当前列表，兼容候选通知先于按键入队。
+			m_ImeCandidates.UpdateFromNative(ReadWindowsImeCandidates(pMsg->hwnd, 0), false);
+		}
+		if(g_Config.m_QmImeTrace)
+			dbg_msg("ime/trace", "layer=input event=native_composition_key key=%d modifiers=%d repeat=%d resumed=%d exposed=%d", ImeKey, ImeModifiers, ImeRepeat, Resumed, GetCandidateCount());
+		TraceImeState("native_composition_key");
+		return;
+	}
 
 	if(pMsg->message == WM_IME_STARTCOMPOSITION)
 	{
 		m_ImeCandidates.ResumeComposition();
+		TraceImeState("native_start_composition");
 		return;
 	}
 
@@ -1276,7 +1452,10 @@ void CInput::ProcessSystemMessage(MSG *pMsg)
 			bool HasActiveComposition = false;
 			auto Candidates = ReadWindowsImeCandidates(pMsg->hwnd, (unsigned)pMsg->lParam,
 				!IsOpenNotify && !m_ImeCandidates.AcceptsSdlCandidates() ? &HasActiveComposition : nullptr);
+			const int Received = Candidates.has_value() ? static_cast<int>(Candidates->m_vCandidates.size()) : -1;
 			m_ImeCandidates.UpdateFromNative(std::move(Candidates), IsOpenNotify, HasActiveComposition);
+			if(g_Config.m_QmImeTrace)
+				dbg_msg("ime/trace", "layer=input event=native_candidates open=%d received=%d active_composition=%d accepts=%d exposed=%d", IsOpenNotify, Received, HasActiveComposition, m_ImeCandidates.AcceptsSdlCandidates(), GetCandidateCount());
 			break;
 		}
 		case IMN_CLOSECANDIDATE:

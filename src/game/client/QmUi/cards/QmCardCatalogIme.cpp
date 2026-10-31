@@ -1,13 +1,18 @@
 #include "QmCardCatalog.h"
 #include "QmColorGradientEditor.h"
 
+#include <engine/console.h>
 #include <engine/shared/config.h>
+#include <engine/textrender.h>
 
 #include <game/client/QmUi/QmImeAppearance.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/components/key_binder.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/ime/qm_ime_typing.h>
+#include <game/client/gameclient.h>
 #include <game/client/qm_ime_candidate_popup.h>
 #include <game/client/ui.h>
 #include <game/client/ui_scrollregion.h>
@@ -36,7 +41,8 @@ namespace
 		CUi *m_pUi;
 
 	public:
-		CImePrewarmScope(CUi *pUi, bool Prewarm) : m_pUi(Prewarm && pUi != nullptr && !pUi->RenderOnly() ? pUi : nullptr)
+		CImePrewarmScope(CUi *pUi, bool Prewarm) :
+			m_pUi(Prewarm && pUi != nullptr && !pUi->RenderOnly() ? pUi : nullptr)
 		{
 			if(m_pUi != nullptr)
 				m_pUi->BeginRenderOnly();
@@ -52,8 +58,8 @@ namespace
 void CMenus::RenderQmFunctionImeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	CSettingsContentLayoutFlow Flow(Content);
-	const CImePrewarmScope Prewarm(Ui(), PrewarmOnly);
-	const bool ReadOnly = Ui()->RenderOnly();
+	const CImePrewarmScope Prewarm(Ui(), PrewarmOnly || !Flow.Input());
+	const bool ReadOnly = Ui()->RenderOnly() || !Flow.Input();
 	const auto &Metrics = CurrentSettingsContentMetrics();
 	const float RowHeight = std::max(LineHeight, Metrics.m_ButtonHeight);
 	{
@@ -82,6 +88,101 @@ void CMenus::RenderQmFunctionImeContent(CUIRect &Content, float LineHeight, floa
 		Props.m_EllipsisAtEnd = true;
 		Ui()->DoLabel(&Label, pText, BodySize, TEXTALIGN_ML, Props);
 	};
+	if(NextRow("ime-engine"))
+	{
+		DrawLabel(Localize("IME engine"));
+#if defined(CONF_FAMILY_WINDOWS)
+		static std::array<CButtonContainer, 2> s_aEngineButtons;
+		const char *apEngines[] = {Localize("System input"), Localize("Built-in Pinyin")};
+		const int Engine = DoSegmentedChoice(s_aEngineButtons.data(), apEngines, 2, std::clamp(g_Config.m_QmImeEngine, 0, 1), Control, 5.0f, nullptr, BodySize, &g_Config.m_QmImeEngine);
+		if(!ReadOnly)
+			g_Config.m_QmImeEngine = Engine;
+#else
+		Ui()->DoLabel(&Control, Localize("System input"), BodySize, TEXTALIGN_ML);
+#endif
+	}
+#if defined(CONF_FAMILY_WINDOWS)
+	const char *pEngineHelp = Localize("Built-in input supports Chinese Pinyin and English suggestions with a US keyboard layout on Windows. Use system input for other layouts or input methods.");
+#else
+	const char *pEngineHelp = Localize("Built-in Pinyin is only available on Windows. This platform uses system input.");
+#endif
+	Flow.Text("ime-engine-help", pEngineHelp, 0.0f, Metrics.m_SmallSize, LineSpacing, [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H + Size * 0.25f; }, [this, &Metrics](const CUIRect &Help, const char *pText) {
+			SLabelProperties Props;
+			Props.m_MaxWidth = Help.w;
+			Ui()->DoLabel(&Help, pText, Metrics.m_SmallSize, TEXTALIGN_ML, Props); }, LineHeight);
+#if defined(CONF_FAMILY_WINDOWS)
+	if(g_Config.m_QmImeEngine != 0)
+	{
+		DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
+			{
+				{&g_Config.m_QmImeDomainWords, "Game domain words", Localize("Game domain words")},
+				{&g_Config.m_QmImeLearning, "Learn committed words", Localize("Learn committed words")},
+				{&g_Config.m_QmImeEnglishCompletion, "English word suggestions", Localize("English word suggestions")},
+				{&g_Config.m_QmImeShiftSwitch, "Tap Shift to switch language", Localize("Tap Shift to switch language")},
+			},
+			Metrics, !ReadOnly);
+		Flow.Text("ime-english-help", Localize("English: Tab accepts the selected suggestion; Space keeps your typed text."), 0.0f, Metrics.m_SmallSize, LineSpacing, [this](const char *pText, float Width, float Size) { return TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H + Size * 0.25f; }, [this, &Metrics](const CUIRect &Help, const char *pText) {
+				SLabelProperties Props;
+				Props.m_MaxWidth = Help.w;
+				Ui()->DoLabel(&Help, pText, Metrics.m_SmallSize, TEXTALIGN_ML, Props); }, LineHeight);
+		if(NextRow("ime-switch-shortcut"))
+		{
+			DrawLabel(Localize("IME language switch key"));
+			const auto ToBindModifiers = [](int Mask) {
+				return ((Mask & QM_IME_KEYMASK_CONTROL) ? 1 << KeyModifier::CTRL : 0) |
+				       ((Mask & QM_IME_KEYMASK_ALT) ? 1 << KeyModifier::ALT : 0) |
+				       ((Mask & QM_IME_KEYMASK_SHIFT) ? 1 << KeyModifier::SHIFT : 0) |
+				       ((Mask & QM_IME_KEYMASK_GUI) ? 1 << KeyModifier::GUI : 0);
+			};
+			static CButtonContainer s_SwitchReader, s_SwitchClear;
+			const CBindSlot Current(g_Config.m_QmImeSwitchKey, ToBindModifiers(g_Config.m_QmImeSwitchModifiers));
+			const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&s_SwitchReader, &s_SwitchClear, &Control, Current, false, BodySize);
+			if(!ReadOnly && !Result.m_Aborted && Result.m_Bind != Current)
+			{
+				const int Mask = Result.m_Bind.m_ModifierMask;
+				int Modifiers = ((Mask & (1 << KeyModifier::CTRL)) ? QM_IME_KEYMASK_CONTROL : 0) |
+						((Mask & (1 << KeyModifier::ALT)) ? QM_IME_KEYMASK_ALT : 0) |
+						((Mask & (1 << KeyModifier::SHIFT)) ? QM_IME_KEYMASK_SHIFT : 0) |
+						((Mask & (1 << KeyModifier::GUI)) ? QM_IME_KEYMASK_GUI : 0);
+				Modifiers &= ~CQmImeModeShortcut::ModifierOf(Result.m_Bind.m_Key);
+				g_Config.m_QmImeSwitchKey = Result.m_Bind.m_Key;
+				g_Config.m_QmImeSwitchModifiers = Modifiers;
+			}
+		}
+		if(NextRow("ime-domain-max"))
+		{
+			DrawLabel(Localize("Domain candidates per page"));
+			RenderQmSettingsSliderWithValueInput(&g_Config.m_QmImeDomainMax, Control, &g_Config.m_QmImeDomainMax, 0, 5, "", ReadOnly);
+		}
+	}
+#endif
+	// 确认状态属于卡片，分类页与搜索页共用；只在输入轮消费结果。
+	static CUi::SConfirmPopupContext s_ClearLearnedConfirm;
+	static bool s_ClearLearnedPending = false;
+	if(!ReadOnly && s_ClearLearnedPending)
+	{
+		if(s_ClearLearnedConfirm.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
+		{
+			s_ClearLearnedPending = false;
+			Console()->ExecuteLine("qm_ime_clear_learned");
+		}
+		else if(s_ClearLearnedConfirm.m_Result == CUi::SConfirmPopupContext::CANCELED)
+			s_ClearLearnedPending = false;
+	}
+	if(NextRow("ime-clear-learned"))
+	{
+		static CButtonContainer s_ClearLearned;
+		if(DoButton_Menu(&s_ClearLearned, Localize("Clear learned words"), 0, &Row) && !ReadOnly)
+		{
+			s_ClearLearnedConfirm.Reset();
+			s_ClearLearnedConfirm.DefaultButtons();
+			s_ClearLearnedConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
+			str_copy(s_ClearLearnedConfirm.m_aTitle, Localize("Clear learned words"));
+			str_copy(s_ClearLearnedConfirm.m_aMessage, Localize("Delete all locally learned input words? Current game words will remain available."));
+			Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_ClearLearnedConfirm);
+			s_ClearLearnedPending = true;
+		}
+	}
 	if(NextRow("ime-appearance-title"))
 	{
 		Ui()->DoLabel(&Row, Localize("IME appearance"), BodySize, TEXTALIGN_ML);

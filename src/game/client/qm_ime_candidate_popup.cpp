@@ -265,12 +265,31 @@ namespace
 	}
 } // namespace
 
+void CQmImeCandidatePopup::TraceState(const SQmImePopupState &State, bool Render, float PresenceAlpha, float PanelAlpha, float CandidateAlpha)
+{
+	if(!g_Config.m_QmImeTrace)
+	{
+		m_aTraceState[0] = -1;
+		return;
+	}
+	const bool Target = HasPopupContent(State);
+	const std::array<int, 7> Snapshot{{Target, State.m_Disabled, Render, static_cast<int>(PresenceAlpha * 10.0f),
+		static_cast<int>(PanelAlpha * CandidateAlpha * 10.0f), static_cast<int>(State.m_vCandidates.size()), static_cast<int>(State.m_Composition.size())}};
+	if(Snapshot == m_aTraceState)
+		return;
+	m_aTraceState = Snapshot;
+	dbg_msg("ime/trace", "layer=popup target=%d disabled=%d render=%d was_visible=%d visible=%d generation=%llu candidates=%zu preedit_bytes=%zu presence_alpha=%.4f panel_alpha=%.4f candidate_alpha=%.4f anchor_x=%.2f anchor_y=%.2f line_height=%.2f",
+		Target, State.m_Disabled, Render, m_WasVisible, Render && minimum(PresenceAlpha, PanelAlpha) * CandidateAlpha > 0.001f,
+		static_cast<unsigned long long>(m_PresenceGeneration), State.m_vCandidates.size(), State.m_Composition.size(), PresenceAlpha, PanelAlpha, CandidateAlpha, State.m_AnchorScreen.x, State.m_AnchorScreen.y, State.m_LineHeightScreen);
+}
+
 void CQmImeCandidatePopup::Reset()
 {
 	m_LastState = {};
 	m_Presentation = {};
 	m_CandidateStart = 0;
 	m_WasVisible = false;
+	m_aTraceState.fill(-1);
 	++m_PresenceGeneration;
 	if(m_PresenceGeneration == 0)
 		m_PresenceGeneration = 1;
@@ -279,13 +298,19 @@ void CQmImeCandidatePopup::Reset()
 void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupState &State)
 {
 	if(pGameClient == nullptr || pGameClient->Graphics() == nullptr || pGameClient->TextRender() == nullptr)
+	{
+		TraceState(State, false, 0.0f, 0.0f, 0.0f);
 		return;
+	}
 
 	const bool TargetVisible = HasPopupContent(State);
 	if(TargetVisible)
 		m_LastState = State;
 	if(!TargetVisible && !m_WasVisible)
+	{
+		TraceState(State, false, 0.0f, 0.0f, 0.0f);
 		return;
+	}
 
 	const SQmImePopupState &DrawState = TargetVisible ? State : m_LastState;
 	if(!HasPopupContent(DrawState))
@@ -407,6 +432,7 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 
 	if(!Presence.m_Render)
 	{
+		TraceState(State, false, Presence.m_Alpha, Presentation.m_Alpha, Presentation.m_CandidateAlpha);
 		m_WasVisible = false;
 		m_Presentation = {};
 		m_CandidateStart = 0;
@@ -419,6 +445,7 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 	const float CandidateAlpha = Presentation.m_CandidateAlpha;
 	const float Alpha = minimum(Presence.m_Alpha, PresentationAlpha);
 	const float CandidateDrawAlpha = Alpha * CandidateAlpha;
+	TraceState(State, true, Presence.m_Alpha, PresentationAlpha, CandidateAlpha);
 
 	const CUIRect Panel = qm_ime_overlay::FitCandidatePanel(Presentation.m_Rect,
 		{Margin, Margin, ScreenMaxPanelWidth, Height - 2.0f * Margin});

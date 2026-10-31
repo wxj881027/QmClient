@@ -7,7 +7,13 @@
 #include "lineinput.h"
 #include "qm_ime_candidate_popup.h"
 
+#include <cstdint>
+#include <memory>
+
 class CGameClient;
+class CQmImeDomainLexicon;
+class CQmImeSources;
+class CQmImeEngine;
 
 // 输入框残留的活动标记不能替代所属界面的存活状态。
 inline bool QmImeHasLiveInputOwner(EInputPriority Priority, bool MenuActive, bool ChatActive, bool ConsoleActive, bool HudEditorActive, bool ChatPopupOpen)
@@ -96,10 +102,13 @@ private:
 class CQmImeManager
 {
 public:
+	CQmImeManager();
+	~CQmImeManager();
 	void Init(CGameClient *pGameClient);
 	void SetClientOwnership(bool OwnsInput);
 	void OnFrame();
 	void Reset();
+	void ClearLearned();
 
 private:
 	void RenderCandidatePopup();
@@ -109,6 +118,14 @@ private:
 	CQmImeBlocker m_Blocker;
 	CQmImeCandidatePopup m_CandidatePopup;
 	CQmImeTextInputSession m_TextInputSession;
+	std::unique_ptr<CQmImeDomainLexicon> m_pLexicon;
+	std::unique_ptr<CQmImeSources> m_pSources;
+	std::unique_ptr<CQmImeEngine> m_pEngine;
+	bool m_LexiconLoaded = false;
+	uint64_t m_LexiconRevision = 0;
+	int m_TraceWanted = -1;
+	int m_TraceEngineWanted = -1;
+	int m_TraceRenderAction = -1;
 };
 
 #endif

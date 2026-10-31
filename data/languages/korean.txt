@@ -1967,6 +1967,21 @@ Bubble opacity
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
+Built-in IME language switch key (SDL key code, 0=disabled)
+== 내장 입력기 언어 전환 키(SDL 키 코드, 0=사용 안 함)
+
+Built-in IME switch modifiers (Shift=1, Ctrl=4, Alt=8, GUI=64); default Ctrl+Space
+== 내장 입력기 전환 보조 키(Shift=1, Ctrl=4, Alt=8, GUI=64); 기본값 Ctrl+Space
+
+Built-in input supports Chinese Pinyin and English suggestions with a US keyboard layout on Windows. Use system input for other layouts or input methods.
+== 내장 입력은 Windows US 키보드 배열에서 중국어 병음과 영어 추천 단어를 지원합니다. 다른 배열이나 입력 방식은 시스템 입력을 사용하세요.
+
+Built-in Pinyin
+== 내장 병음
+
+Built-in Pinyin is only available on Windows. This platform uses system input.
+== 내장 병음은 Windows에서만 사용할 수 있습니다. 이 플랫폼에서는 시스템 입력을 사용합니다.
+
 Button - Disabled
 == 버튼 - 비활성화
 
@@ -2542,6 +2557,12 @@ Clear finished
 
 Clear friend note
 == 친구 메모 지우기
+
+Clear learned built-in pinyin words
+== 내장 병음 학습 기록 지우기
+
+Clear learned words
+== 학습 기록 지우기
 
 Clear local console
 == 로컬 콘솔 지우기
@@ -3863,6 +3884,9 @@ Delete
 Delete "%s"?
 == "%s"을(를) 삭제할까요?
 
+Delete all locally learned input words? Current game words will remain available.
+== 로컬에 학습된 입력 단어를 모두 삭제할까요? 현재 게임 단어는 계속 사용할 수 있습니다.
+
 Delete category
 == 카테고리 삭제
 
@@ -4171,6 +4195,9 @@ Do not use it to spam: servers may punish repeated automatic messages.
 
 Document too large for the editor (%d of %d bytes)
 == 문서가 너무 커서 클라이언트 편집기에서 수정할 수 없습니다(%d / %d바이트)
+
+Domain candidates per page
+== 페이지당 고유 단어 수
 
 Done
 == 완료
@@ -5192,6 +5219,12 @@ Endpoint (optional)
 English font:
 == 영어 글꼴:
 
+English word suggestions
+== 영어 단어 추천
+
+English: Tab accepts the selected suggestion; Space keeps your typed text.
+== 영어 입력: Tab은 선택한 추천 단어를 적용하고, Space는 입력한 원문을 유지합니다.
+
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == /practice 모드를 입력하거나 재시작하세요. 그렇지 않으면 60초 후에 팀 전체가 사망합니다
 
@@ -6055,6 +6088,9 @@ Game
 
 Game assets
 == 게임 에셋
+
+Game domain words
+== 게임 고유 단어
 
 Game graphics assets not from Teeworlds
 == Teeworlds 외 게임 그래픽 에셋
@@ -6950,6 +6986,12 @@ IME appearance
 IME background color
 == IME 배경 색상
 
+IME engine
+== IME 엔진
+
+IME engine (0=system, 1=built-in pinyin, Windows US layout only)
+== IME 엔진 (0=시스템 입력, 1=내장 병음, Windows US 배열만)
+
 IME font size
 == IME 글꼴 크기
 
@@ -6973,6 +7015,9 @@ IME gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
 
 IME gradient vertical position percentage
 == 그라데이션 세로 위치 (IME, %)
+
+IME language switch key
+== 입력 언어 전환 키
 
 IME selected text color
 == IME 선택 글자색
@@ -7030,6 +7075,9 @@ Include emoticon when saving/loading config preset
 
 Include game audio in the recording.
 == 녹화에 게임 오디오를 포함합니다.
+
+Include game words in built-in pinyin candidates
+== 내장 병음 후보에 게임 고유 단어 포함
 
 Include name when saving/loading config preset
 == 설정 프리셋 저장/불러오기 시 이름 포함
@@ -7744,6 +7792,12 @@ Learn
 
 Learn "Toggle dummy" first; the other dummy keys only help once you already play with a second tee.
 == 더미 전환부터 익히세요. 나머지 더미 키는 두 번째 tee로 플레이하기 시작해야 쓸모가 있습니다.
+
+Learn committed words
+== 입력한 단어 자동 학습
+
+Learn committed words in built-in pinyin
+== 내장 병음에서 입력한 단어 자동 학습
 
 Leave "Automatic updates" off if you update by hand: it can restart the client to install a build.
 == 직접 업데이트한다면 "자동 업데이트"는 꺼 두세요. 새 빌드를 설치하려고 클라이언트를 다시 시작할 수 있습니다.
@@ -8473,6 +8527,9 @@ Maximum dynamic camera cursor distance
 
 Maximum framerate for entity layer video background
 == 엔티티 레이어 비디오 배경의 최대 프레임률
+
+Maximum game words on the first pinyin candidate page
+== 병음 후보 첫 페이지에 표시할 게임 고유 단어 최대 수
 
 Maximum notification count
 == 알림바 최대 표시 개수
@@ -14810,6 +14867,9 @@ Successfully saved the replay!
 Sudden Death
 == 서든 데스
 
+Suggest English words in built-in IME English mode; Tab accepts, Space keeps typed text
+== 내장 입력기 영어 모드에서 단어 추천; Tab은 완성 적용, Space는 원문 유지
+
 Suicides
 == 자살 횟수
 
@@ -14845,6 +14905,9 @@ Swap option color
 
 Swaps the active action (fire and hook) for direct touch input and virtual joysticks.
 == 직접 터치 입력 및 가상 조이스틱의 활성 작업 (발사 및 훅) 을 전환합니다.
+
+Switch built-in IME language by tapping Shift
+== Shift 한 번 눌러 내장 입력기 언어 전환
 
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 == 스위치 카운트다운 위치(0 = Tee 따라가기, 1 = 다이내믹 아일랜드, 2 = 둘 다)
@@ -14939,6 +15002,9 @@ System default
 System graphics settings
 == 시스템 그래픽 설정
 
+System input
+== 시스템 입력
+
 System media controls
 == 시스템 미디어 컨트롤
 
@@ -14962,6 +15028,9 @@ Take a screenshot
 
 Take photo
 == 사진 찍기
+
+Tap Shift to switch language
+== Shift 한 번 눌러 언어 전환
 
 Taper trail ends
 == 궤적 끝부분 가늘게 하기

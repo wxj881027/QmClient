@@ -1967,6 +1967,21 @@ Bubble opacity
 Build the status text shown above Tees
 == Build the status text shown above Tees
 
+Built-in IME language switch key (SDL key code, 0=disabled)
+== Tecla de idioma da introdução integrada (código SDL, 0=desativada)
+
+Built-in IME switch modifiers (Shift=1, Ctrl=4, Alt=8, GUI=64); default Ctrl+Space
+== Modificadores de mudança de idioma (Shift=1, Ctrl=4, Alt=8, GUI=64); predefinição Ctrl+Space
+
+Built-in input supports Chinese Pinyin and English suggestions with a US keyboard layout on Windows. Use system input for other layouts or input methods.
+== A introdução integrada suporta pinyin chinês e sugestões em inglês com teclado US no Windows. Para outras disposições ou métodos, utilize a entrada do sistema.
+
+Built-in Pinyin
+== Pinyin integrado
+
+Built-in Pinyin is only available on Windows. This platform uses system input.
+== O pinyin integrado só está disponível no Windows. Esta plataforma utiliza a entrada do sistema.
+
 Button - Disabled
 == Botão - Desativado
 
@@ -2542,6 +2557,12 @@ Clear finished
 
 Clear friend note
 == Limpar nota de amigo
+
+Clear learned built-in pinyin words
+== Limpar o histórico de aprendizagem do pinyin integrado
+
+Clear learned words
+== Limpar histórico de aprendizagem
 
 Clear local console
 == Limpar consola local
@@ -3863,6 +3884,9 @@ Delete
 Delete "%s"?
 == Eliminar "%s"?
 
+Delete all locally learned input words? Current game words will remain available.
+== Eliminar todas as palavras introduzidas aprendidas localmente? As palavras atuais do jogo continuam disponíveis.
+
 Delete category
 == Eliminar categoria
 
@@ -4171,6 +4195,9 @@ Do not use it to spam: servers may punish repeated automatic messages.
 
 Document too large for the editor (%d of %d bytes)
 == Documento demasiado grande para o editor (%d de %d bytes)
+
+Domain candidates per page
+== Palavras do jogo por página
 
 Done
 == Concluído
@@ -5192,6 +5219,12 @@ Endpoint (optional)
 English font:
 == Tipo de letra inglês:
 
+English word suggestions
+== Sugestões de palavras em inglês
+
+English: Tab accepts the selected suggestion; Space keeps your typed text.
+== Inglês: Tab aceita a sugestão selecionada; Espaço mantém o texto introduzido.
+
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == Entre em modo /practice ou reinicie para evitar que toda a equipa seja morta em 60 segundos
 
@@ -6055,6 +6088,9 @@ Game
 
 Game assets
 == Recursos do jogo
+
+Game domain words
+== Palavras do jogo
 
 Game graphics assets not from Teeworlds
 == Recursos gráficos do jogo que não são do Teeworlds
@@ -6950,6 +6986,12 @@ IME appearance
 IME background color
 == Cor de fundo do IME
 
+IME engine
+== Motor de IME
+
+IME engine (0=system, 1=built-in pinyin, Windows US layout only)
+== Motor de IME (0=sistema, 1=pinyin integrado, apenas layout US do Windows)
+
 IME font size
 == Tamanho da letra do IME
 
@@ -6973,6 +7015,9 @@ IME gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
 
 IME gradient vertical position percentage
 == Posição vertical do gradiente (IME, %)
+
+IME language switch key
+== Tecla para mudar o idioma de introdução
 
 IME selected text color
 == Cor do texto selecionado do IME
@@ -7030,6 +7075,9 @@ Include emoticon when saving/loading config preset
 
 Include game audio in the recording.
 == Incluir o áudio do jogo na gravação.
+
+Include game words in built-in pinyin candidates
+== Incluir palavras do jogo nos candidatos do pinyin integrado
 
 Include name when saving/loading config preset
 == Incluir nome ao salvar/carregar predefinição de configuração
@@ -7744,6 +7792,12 @@ Learn
 
 Learn "Toggle dummy" first; the other dummy keys only help once you already play with a second tee.
 == Aprende primeiro Alternar Dummy; as outras teclas do dummy só ajudam quando já jogas com um segundo tee.
+
+Learn committed words
+== Aprender palavras introduzidas
+
+Learn committed words in built-in pinyin
+== Aprender palavras introduzidas no pinyin integrado
 
 Leave "Automatic updates" off if you update by hand: it can restart the client to install a build.
 == Se atualizas manualmente, deixa "Atualizações automáticas" desligado: pode reiniciar o cliente para instalar uma versão.
@@ -8473,6 +8527,9 @@ Maximum dynamic camera cursor distance
 
 Maximum framerate for entity layer video background
 == Taxa de fotogramas máxima para fundo de vídeo da camada de entidades
+
+Maximum game words on the first pinyin candidate page
+== Máximo de palavras do jogo na primeira página de candidatos de pinyin
 
 Maximum notification count
 == Número máximo de itens na barra de notificações
@@ -14810,6 +14867,9 @@ Successfully saved the replay!
 Sudden Death
 == Morte Súbita
 
+Suggest English words in built-in IME English mode; Tab accepts, Space keeps typed text
+== Sugerir palavras no modo inglês integrado; Tab aceita, Espaço mantém o texto introduzido
+
 Suicides
 == Suicídios
 
@@ -14845,6 +14905,9 @@ Swap option color
 
 Swaps the active action (fire and hook) for direct touch input and virtual joysticks.
 == Troca a ação ativa (fogo e gancho) para entrada tátil direta e joysticks virtuais.
+
+Switch built-in IME language by tapping Shift
+== Mudar o idioma de introdução integrado com um toque em Shift
 
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 == Posição da contagem decrescente do interruptor (0 = seguir o Tee, 1 = ilha dinâmica, 2 = ambos)
@@ -14939,6 +15002,9 @@ System default
 System graphics settings
 == Definições gráficas do sistema
 
+System input
+== Entrada do sistema
+
 System media controls
 == Controlos de multimédia do sistema
 
@@ -14962,6 +15028,9 @@ Take a screenshot
 
 Take photo
 == Tirar fotografia
+
+Tap Shift to switch language
+== Toque em Shift para mudar de idioma
 
 Taper trail ends
 == Pontas do rastro em cone

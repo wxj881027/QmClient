@@ -1967,6 +1967,21 @@ Bubble opacity
 Build the status text shown above Tees
 == 构建显示在 Tee 头顶的状态文本
 
+Built-in IME language switch key (SDL key code, 0=disabled)
+== 内置输入法中英切换键（SDL 按键码，0=禁用）
+
+Built-in IME switch modifiers (Shift=1, Ctrl=4, Alt=8, GUI=64); default Ctrl+Space
+== 内置输入法切换修饰键（Shift=1、Ctrl=4、Alt=8、GUI=64）；默认 Ctrl+Space
+
+Built-in input supports Chinese Pinyin and English suggestions with a US keyboard layout on Windows. Use system input for other layouts or input methods.
+== 内置输入支持 Windows 美式键盘布局下的中文拼音和英文联想。其他键盘布局或输入方式请使用系统直通。
+
+Built-in Pinyin
+== 内置拼音
+
+Built-in Pinyin is only available on Windows. This platform uses system input.
+== 内置拼音仅支持 Windows，当前平台使用系统直通。
+
 Button - Disabled
 == 按钮 - 未启用
 
@@ -2542,6 +2557,12 @@ Clear finished
 
 Clear friend note
 == 清除好友备注
+
+Clear learned built-in pinyin words
+== 清除内置拼音的学习记录
+
+Clear learned words
+== 清除学习记录
 
 Clear local console
 == 清空本地控制台
@@ -3863,6 +3884,9 @@ Delete
 Delete "%s"?
 == 删除"%s"？
 
+Delete all locally learned input words? Current game words will remain available.
+== 确定删除本地学习的全部输入词条吗？当前游戏的会话词仍可使用。
+
 Delete category
 == 删除分类
 
@@ -4171,6 +4195,9 @@ Do not use it to spam: servers may punish repeated automatic messages.
 
 Document too large for the editor (%d of %d bytes)
 == 文档过大，无法在客户端编辑器内修改（%d / %d 字节）
+
+Domain candidates per page
+== 每页领域词上限
 
 Done
 == 完成
@@ -5192,6 +5219,12 @@ Endpoint (optional)
 English font:
 == 英文字体：
 
+English word suggestions
+== 英文单词联想
+
+English: Tab accepts the selected suggestion; Space keeps your typed text.
+== 英文模式：Tab 接受选中的联想词，空格保留已输入的原文。
+
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == 请输入 /practice 或重新开始，否则整队将在 60 秒后被处死
 
@@ -6058,6 +6091,9 @@ Game
 
 Game assets
 == 游戏资源
+
+Game domain words
+== 游戏领域词
 
 Game graphics assets not from Teeworlds
 == 非 Teeworlds 的游戏图形资源
@@ -6953,6 +6989,12 @@ IME appearance
 IME background color
 == IME 背景颜色
 
+IME engine
+== 输入法引擎
+
+IME engine (0=system, 1=built-in pinyin, Windows US layout only)
+== 输入法引擎（0=系统直通，1=内置拼音，仅支持 Windows 和美式键盘布局）
+
 IME font size
 == 输入法字号
 
@@ -6976,6 +7018,9 @@ IME gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
 
 IME gradient vertical position percentage
 == 渐变垂直位置 (IME, %)
+
+IME language switch key
+== 输入法中英切换键
 
 IME selected text color
 == 输入法选中文字颜色
@@ -7033,6 +7078,9 @@ Include emoticon when saving/loading config preset
 
 Include game audio in the recording.
 == 录制时包含游戏声音。
+
+Include game words in built-in pinyin candidates
+== 在内置拼音候选中加入游戏领域词
 
 Include name when saving/loading config preset
 == 保存/加载配置方案时包含昵称
@@ -7747,6 +7795,12 @@ Learn
 
 Learn "Toggle dummy" first; the other dummy keys only help once you already play with a second tee.
 == 先学会切换分身；其他分身按键只有在你已经开始用第二个 tee 跑图时才有用。
+
+Learn committed words
+== 自动学习已提交的词条
+
+Learn committed words in built-in pinyin
+== 在内置拼音中自动学习已提交的词条
 
 Leave "Automatic updates" off if you update by hand: it can restart the client to install a build.
 == 如果你习惯手动更新，就把自动更新留着关闭：它可能会重启客户端来安装新版本。
@@ -8476,6 +8530,9 @@ Maximum dynamic camera cursor distance
 
 Maximum framerate for entity layer video background
 == 实体层视频背景的最大帧率
+
+Maximum game words on the first pinyin candidate page
+== 拼音候选首页最多显示的游戏领域词数量
 
 Maximum notification count
 == 通知栏最大显示数量
@@ -14813,6 +14870,9 @@ Successfully saved the replay!
 Sudden Death
 == 决胜
 
+Suggest English words in built-in IME English mode; Tab accepts, Space keeps typed text
+== 内置输入法英文模式提供单词联想；Tab 接受补全，空格保留原文
+
 Suicides
 == 自杀数
 
@@ -14848,6 +14908,9 @@ Swap option color
 
 Swaps the active action (fire and hook) for direct touch input and virtual joysticks.
 == 切换触控输入和虚拟摇杆的当前动作（开火和钩索）。
+
+Switch built-in IME language by tapping Shift
+== 单击 Shift 切换内置输入法的中英文模式
 
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 == 开关倒计时位置（0 = 跟随 Tee，1 = 灵动岛，2 = 两者）
@@ -14942,6 +15005,9 @@ System default
 System graphics settings
 == 系统图形设置
 
+System input
+== 系统直通
+
 System media controls
 == 系统媒体控制
 
@@ -14965,6 +15031,9 @@ Take a screenshot
 
 Take photo
 == 拍一张
+
+Tap Shift to switch language
+== 单击 Shift 切换中英文
 
 Taper trail ends
 == 轨迹末端渐细
