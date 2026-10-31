@@ -3,6 +3,7 @@
 
 #include "bounded_file_reader.h"
 #include "qm_json_fields.h"
+#include "qm_presence_send.h"
 #include "qm_realtime_service_data.h"
 #include "qm_title_style.h"
 #include "qmclient_users_parse_job.h"
@@ -1606,6 +1607,13 @@ std::string CQmClient::BuildQmRealtimePresence(bool Hello) const
 	return Writer.GetOutputString();
 }
 
+bool CQmClient::SendQmRealtimePresence(bool Hello, bool ForceSend)
+{
+	if(!m_pQmRealtimeTransport || m_pQmRealtimeTransport->State() != EQmWebSocketState::CONNECTED)
+		return false;
+	return TrySendQmPresence(m_QmRealtimePresenceBody, Hello, ForceSend, [this](bool BuildHello) { return BuildQmRealtimePresence(BuildHello); }, [this](const char *pData, size_t Size) { return m_pQmRealtimeTransport->SendText(pData, Size); });
+}
+
 bool CQmClient::RequestQmRealtimeTitleRefresh()
 {
 	if(!m_pQmRealtimeTransport || m_pQmRealtimeTransport->State() != EQmWebSocketState::CONNECTED)
@@ -1981,13 +1989,9 @@ void CQmClient::UpdateQmRealtime()
 	if(!m_QmRealtimeHelloSent && EnsureQmClientMachineHash())
 	{
 		EnsureQmClientPlaytimeClientId();
-		const std::string Body = BuildQmRealtimePresence(true);
-		m_QmRealtimeHelloSent = m_pQmRealtimeTransport->SendText(Body.c_str(), Body.size());
+		m_QmRealtimeHelloSent = SendQmRealtimePresence(true, true);
 		if(m_QmRealtimeHelloSent)
-		{
-			m_QmRealtimePresenceBody = BuildQmRealtimePresence(false);
 			m_QmRealtimeLastPresence = time_get();
-		}
 	}
 
 	SQmWebSocketMessage Incoming;
@@ -2064,15 +2068,8 @@ void CQmClient::UpdateQmRealtime()
 	if(m_QmRealtimeHelloSent && Tick >= m_QmRealtimeNextPresenceCheck)
 	{
 		m_QmRealtimeNextPresenceCheck = Tick + time_freq() / 4;
-		const std::string Body = BuildQmRealtimePresence(false);
-		if(Body != m_QmRealtimePresenceBody || Tick - m_QmRealtimeLastPresence >= 5 * time_freq())
-		{
-			if(m_pQmRealtimeTransport->SendText(Body.c_str(), Body.size()))
-			{
-				m_QmRealtimePresenceBody = Body;
-				m_QmRealtimeLastPresence = Tick;
-			}
-		}
+		if(SendQmRealtimePresence(false, Tick - m_QmRealtimeLastPresence >= 5 * time_freq()))
+			m_QmRealtimeLastPresence = Tick;
 	}
 	if(m_QmRealtimeHelloSent && m_QmRealtimeTitleRevision != m_TitleRevision)
 		RequestQmRealtimeTitleRefresh();
@@ -2712,8 +2709,7 @@ void CQmClient::RefreshQmClientPlaytime()
 	}
 	m_QmClientPlaytimeManualRefreshActive = true;
 	m_QmClientPlaytimeManualRefreshFailed = false;
-	const std::string Body = BuildQmRealtimePresence(false);
-	if(!m_pQmRealtimeTransport->SendText(Body.c_str(), Body.size()))
+	if(!SendQmRealtimePresence(false, true))
 	{
 		m_QmClientPlaytimeManualRefreshActive = false;
 		m_QmClientPlaytimeManualRefreshFailed = true;
@@ -2721,7 +2717,6 @@ void CQmClient::RefreshQmClientPlaytime()
 	else
 	{
 		m_QmClientPlaytimeManualRefreshTick = time_get();
-		m_QmRealtimePresenceBody = Body;
 		m_QmRealtimeLastPresence = m_QmClientPlaytimeManualRefreshTick;
 	}
 }

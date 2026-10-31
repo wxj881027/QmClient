@@ -238,6 +238,7 @@ class CQmClient : public CComponent
 	void ApplyQmRealtimeUsers(const SQmRealtimeMessage &Message);
 	void ApplyQmRealtimeDevelopers(const SQmRealtimeMessage &Message);
 	std::string BuildQmRealtimePresence(bool Hello) const;
+	bool SendQmRealtimePresence(bool Hello, bool ForceSend);
 	bool RequestQmRealtimeTitleRefresh();
 	void SendQmRealtimeStop();
 	// 广播 markdown 的磁盘缓存：Apply 成功后落盘（交给作业），启动时读回上次内容。
