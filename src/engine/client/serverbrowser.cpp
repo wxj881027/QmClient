@@ -1291,17 +1291,22 @@ void CServerBrowser::SetLatency(NETADDR Addr, int Latency)
 	}
 }
 
+void CServerBrowser::PrepareEntryInfo(CServerInfo &Info) const
+{
+	Info.m_QmClientCount = QmClientCountForServer(Info);
+	Info.m_Latency = 999;
+	Info.m_HasRank = CServerInfo::RANK_UNAVAILABLE;
+	ServerBrowserFormatAddresses(Info.m_aAddress, sizeof(Info.m_aAddress), Info.m_aAddresses, Info.m_NumAddresses);
+	UpdateServerCommunity(&Info);
+	str_copy(Info.m_aName, Info.m_aAddress, sizeof(Info.m_aName));
+	Info.m_Favorite = m_pFavorites->IsFavorite(Info.m_aAddresses, Info.m_NumAddresses);
+	Info.m_FavoriteAllowPing = m_pFavorites->IsPingAllowed(Info.m_aAddresses, Info.m_NumAddresses);
+}
+
 CServerBrowser::CServerEntry *CServerBrowser::Add(const NETADDR *pAddrs, int NumAddrs)
 {
 	CServerEntry *pEntry = server_browser::AddEntry(m_ServerlistStorage, m_vpServerlist, m_ByAddr, pAddrs, NumAddrs, [this](CServerInfo &Info) {
-		Info.m_QmClientCount = QmClientCountForServer(Info);
-		Info.m_Latency = 999;
-		Info.m_HasRank = CServerInfo::RANK_UNAVAILABLE;
-		ServerBrowserFormatAddresses(Info.m_aAddress, sizeof(Info.m_aAddress), Info.m_aAddresses, Info.m_NumAddresses);
-		UpdateServerCommunity(&Info);
-		str_copy(Info.m_aName, Info.m_aAddress, sizeof(Info.m_aName));
-		Info.m_Favorite = m_pFavorites->IsFavorite(Info.m_aAddresses, Info.m_NumAddresses);
-		Info.m_FavoriteAllowPing = m_pFavorites->IsPingAllowed(Info.m_aAddresses, Info.m_NumAddresses);
+		PrepareEntryInfo(Info);
 	});
 	++m_FriendListRevision;
 	return pEntry;
@@ -1309,32 +1314,10 @@ CServerBrowser::CServerEntry *CServerBrowser::Add(const NETADDR *pAddrs, int Num
 
 CServerBrowser::CServerEntry *CServerBrowser::ReplaceEntry(CServerEntry *pEntry, const NETADDR *pAddrs, int NumAddrs)
 {
+	server_browser::ReplaceEntry(*pEntry, m_ByAddr, pAddrs, NumAddrs, [this](CServerInfo &Info) {
+		PrepareEntryInfo(Info);
+	});
 	++m_FriendListRevision;
-	pEntry->m_FriendStateValid = false;
-	for(int i = 0; i < pEntry->m_Info.m_NumAddresses; i++)
-	{
-		m_ByAddr.erase(pEntry->m_Info.m_aAddresses[i]);
-	}
-
-	// set the info
-	mem_copy(pEntry->m_Info.m_aAddresses, pAddrs, NumAddrs * sizeof(pAddrs[0]));
-	pEntry->m_Info.m_NumAddresses = NumAddrs;
-	pEntry->m_Info.m_QmClientCount = QmClientCountForServer(pEntry->m_Info);
-
-	pEntry->m_Info.m_Latency = 999;
-	pEntry->m_Info.m_HasRank = CServerInfo::RANK_UNAVAILABLE;
-	ServerBrowserFormatAddresses(pEntry->m_Info.m_aAddress, sizeof(pEntry->m_Info.m_aAddress), pEntry->m_Info.m_aAddresses, pEntry->m_Info.m_NumAddresses);
-	UpdateServerCommunity(&pEntry->m_Info);
-	str_copy(pEntry->m_Info.m_aName, pEntry->m_Info.m_aAddress, sizeof(pEntry->m_Info.m_aName));
-
-	pEntry->m_Info.m_Favorite = m_pFavorites->IsFavorite(pEntry->m_Info.m_aAddresses, pEntry->m_Info.m_NumAddresses);
-	pEntry->m_Info.m_FavoriteAllowPing = m_pFavorites->IsPingAllowed(pEntry->m_Info.m_aAddresses, pEntry->m_Info.m_NumAddresses);
-
-	for(int i = 0; i < NumAddrs; i++)
-	{
-		m_ByAddr[pAddrs[i]] = pEntry->m_Info.m_ServerIndex;
-	}
-
 	return pEntry;
 }
 

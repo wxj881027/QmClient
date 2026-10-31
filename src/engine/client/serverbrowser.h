@@ -499,6 +499,7 @@ private:
 	bool ValidateCountryName(const char *pCountryName) const;
 	bool ValidateTypeName(const char *pTypeName) const;
 
+	void PrepareEntryInfo(CServerInfo &Info) const;
 	void SetInfo(CServerEntry *pEntry, const CServerInfo &Info);
 	void SetLatency(NETADDR Addr, int Latency);
 

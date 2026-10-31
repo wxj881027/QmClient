@@ -26,6 +26,7 @@ public:
 	}
 	static CServerBrowser::CServerEntry *AddEntry(CServerBrowser &Browser, const NETADDR *pAddresses, int Count) { return Browser.Add(pAddresses, Count); }
 	static size_t StorageSize(const CServerBrowser &Browser) { return Browser.m_ServerlistStorage.size(); }
+	static CServerBrowser::CServerEntry *ReplaceEntry(CServerBrowser &Browser, CServerBrowser::CServerEntry *pEntry, const NETADDR *pAddresses, int Count) { return Browser.ReplaceEntry(pEntry, pAddresses, Count); }
 	static void ReplaceFirstAddress(CServerBrowser &Browser, const NETADDR &Address)
 	{
 		Browser.ReplaceEntry(Browser.m_vpServerlist[0], &Address, 1);

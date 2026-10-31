@@ -5413,6 +5413,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/client/serverbrowser_entry_update_test.cpp
     src/test/integration/client/serverbrowser_entry_publication_test.cpp
     src/test/integration/client/serverbrowser_add_recovery_test.cpp
+    src/test/integration/client/serverbrowser_entry_replace_test.cpp
+    src/test/integration/client/serverbrowser_replace_recovery_test.cpp
     src/test/integration/client/serverbrowser_lan_response_test.cpp
     src/test/integration/client/serverbrowser_sort_recovery_test.cpp
     src/test/integration/client/serverbrowser_community_load_test.cpp
