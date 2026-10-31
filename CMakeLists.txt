@@ -3218,6 +3218,7 @@ if(CLIENT)
     qm_font_collection.h
     qm_font_face_registry.h
     qm_font_file_probe.h
+    qm_recent_glyphs.h
     qm_font_restore.h
     qm_font_scan_job.h
     qm_system_fonts.h
@@ -6092,6 +6093,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/client/qm_text_bitmap_test.cpp
       src/test/integration/qmclient/client/qm_text_initialization_test.cpp
       src/test/integration/qmclient/client/qm_text_device_recovery_test.cpp
+      src/test/integration/engine/recent_glyph_file_test.cpp
       src/test/integration/qmclient/client/qm_text_temporary_lifetime_test.cpp
       src/test/integration/client/graph_rendering_test.cpp
       src/test/integration/qmclient/ui/qm_popup_blur_scope_test.cpp
@@ -6215,6 +6217,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/settings/settings_text_plan_commit_test.cpp
       src/test/unit/qmclient/settings/settings_text_plan_progress_test.cpp
       src/test/unit/qmclient/settings/settings_glyph_prewarm_test.cpp
+      src/test/unit/engine/recent_glyph_cache_test.cpp
       src/test/integration/qmclient/client/qm_warlist_cache_prepare_test.cpp
       src/game/client/components/qmclient/warlist_model.cpp
       src/game/client/components/qmclient/practice_tick_shift.cpp

@@ -17,6 +17,7 @@
 #include "qm_font_resource_policy.h"
 #include "qm_font_restore.h"
 #include "qm_font_scan_job.h"
+#include "qm_recent_glyphs.h"
 #include "qm_system_fonts.h"
 #include "text_container_pool.h"
 #include "text_gradient.h"
@@ -217,13 +218,7 @@ private:
 	// QmClient: 最近缓存未命中（需要光栅化）的字形 (Chr, FontSize)，供菜单在关闭时的
 	// 空闲帧分帧预热，避免下次打开菜单时一次性光栅化上百个字形造成掉帧；集合会持久化，
 	// 使重启客户端后的第一次打开也能命中缓存。
-	static constexpr size_t QM_MAX_RECENT_GLYPH_MISSES = 4096;
-	std::vector<std::pair<int, int>> m_vQmRecentGlyphMisses;
-	std::unordered_set<uint64_t> m_QmRecentGlyphMissKeys;
-	// 预热进度游标：集合本身保留（供退出时持久化），游标只前进不回退；
-	// 游标之后新增的缺失字形会被继续预热。
-	size_t m_QmRecentGlyphPrewarmCursor = 0;
-	bool m_QmRecordGlyphMisses = true;
+	QmRecentGlyphs::CCollection m_RecentGlyphs;
 	bool m_QmTraceFirstCjkGlyph = true;
 
 	// Font faces
@@ -1190,43 +1185,14 @@ public:
 
 	// QmClient: 记录/消费“最近缺失字形”。预热集合与缓存无关，字体图集重建（语言切换）
 	// 后正好需要重新预热，因此这里不清空集合。
-	static uint64_t QmRecentGlyphMissKey(int Chr, int FontSize)
-	{
-		return ((uint64_t)(uint32_t)Chr << 32) | (uint32_t)FontSize;
-	}
+	void QmRecordRecentGlyphMiss(int Chr, int FontSize) { m_RecentGlyphs.Record(Chr, FontSize); }
+	size_t QmRecentGlyphMissCount() const { return m_RecentGlyphs.Items().size(); }
+	bool QmLoadRecentGlyphs(IStorage *pStorage, const char *pPath) { return QmRecentGlyphs::LoadFile(pStorage, pPath, m_RecentGlyphs); }
+	bool QmSaveRecentGlyphs(IStorage *pStorage, const char *pPath) const { return QmRecentGlyphs::SaveFile(pStorage, pPath, m_RecentGlyphs); }
 
-	void QmRecordRecentGlyphMiss(int Chr, int FontSize)
-	{
-		if(Chr <= 0 || m_vQmRecentGlyphMisses.size() >= QM_MAX_RECENT_GLYPH_MISSES)
-			return;
-		if(m_QmRecentGlyphMissKeys.insert(QmRecentGlyphMissKey(Chr, FontSize)).second)
-			m_vQmRecentGlyphMisses.emplace_back(Chr, FontSize);
-	}
-
-	size_t QmRecentGlyphMissCount() const
-	{
-		return m_vQmRecentGlyphMisses.size();
-	}
-
-	const std::vector<std::pair<int, int>> &QmRecentGlyphMisses() const
-	{
-		return m_vQmRecentGlyphMisses;
-	}
-
-	// 按游标预热缺失字形（集合保留，供持久化）；已缓存时 GetGlyph 几乎零成本。
 	int QmPrewarmRecentGlyphMisses(int MaxCount)
 	{
-		const bool PreviousRecording = m_QmRecordGlyphMisses;
-		m_QmRecordGlyphMisses = false;
-		int Prewarmed = 0;
-		while(Prewarmed < MaxCount && m_QmRecentGlyphPrewarmCursor < m_vQmRecentGlyphMisses.size())
-		{
-			const std::pair<int, int> Miss = m_vQmRecentGlyphMisses[m_QmRecentGlyphPrewarmCursor++];
-			if(GetGlyph(Miss.first, Miss.second) != nullptr)
-				++Prewarmed;
-		}
-		m_QmRecordGlyphMisses = PreviousRecording;
-		return Prewarmed;
+		return m_RecentGlyphs.Prewarm(MaxCount, [this](int Chr, int Size) { return GetGlyph(Chr, Size) != nullptr; });
 	}
 
 	void RetryFailedGlyphs()
@@ -1273,7 +1239,7 @@ public:
 			Glyph.m_Chr = Chr;
 			Glyph.m_GlyphIndex = GlyphIndex;
 			const SGlyph *pGlyph = m_GlyphRenderRetry.Resolve(Glyph, time_get_nanoseconds(), [&]() {
-				if(m_QmRecordGlyphMisses && !Nameplate)
+				if(!Nameplate)
 					QmRecordRecentGlyphMiss(Chr, FontSize);
 				return RenderGlyph(Glyph); }, Replacement);
 			// 暂时失败的替代字符不能进入原字符的快速成功缓存。
@@ -1791,72 +1757,22 @@ class CTextRender : public IEngineTextRender
 	// QmClient: 跨会话持久化缺失字形集合（文本格式，每行 "Chr Size"）。
 	void QmLoadRecentGlyphs(IStorage *pStorage, const char *pPath) override
 	{
-		if(m_pGlyphMap == nullptr || pStorage == nullptr || pPath == nullptr)
-			return;
-		void *pData = nullptr;
-		unsigned DataSize = 0;
-		if(!pStorage->ReadFile(pPath, IStorage::TYPE_SAVE, &pData, &DataSize) || pData == nullptr || DataSize == 0)
-			return;
-		const char *pCursor = (const char *)pData;
-		const char *pEnd = pCursor + DataSize;
-		while(pCursor < pEnd)
-		{
-			const char *pLineEnd = pCursor;
-			while(pLineEnd < pEnd && *pLineEnd != '\n' && *pLineEnd != '\r')
-				++pLineEnd;
-			int Chr = -1;
-			int Size = -1;
-			bool HasSize = false;
-			const char *pParse = pCursor;
-			while(pParse < pLineEnd)
-			{
-				while(pParse < pLineEnd && (*pParse < '0' || *pParse > '9'))
-					++pParse;
-				int Value = 0;
-				bool HasValue = false;
-				while(pParse < pLineEnd && *pParse >= '0' && *pParse <= '9')
-				{
-					Value = Value * 10 + (*pParse - '0');
-					++pParse;
-					HasValue = true;
-				}
-				if(!HasValue)
-					break;
-				if(Chr < 0)
-					Chr = Value;
-				else
-				{
-					Size = Value;
-					HasSize = true;
-					break;
-				}
-			}
-			if(Chr > 0 && HasSize && Size > 0)
-				m_pGlyphMap->QmRecordRecentGlyphMiss(Chr, Size);
-			pCursor = pLineEnd;
-			while(pCursor < pEnd && (*pCursor == '\n' || *pCursor == '\r'))
-				++pCursor;
-		}
-		free(pData);
+		if(m_pGlyphMap != nullptr)
+			m_pGlyphMap->QmLoadRecentGlyphs(pStorage, pPath);
 	}
 
 	void QmSaveRecentGlyphs(IStorage *pStorage, const char *pPath) override
 	{
-		if(m_pGlyphMap == nullptr || pStorage == nullptr || pPath == nullptr)
-			return;
-		const std::vector<std::pair<int, int>> &vMisses = m_pGlyphMap->QmRecentGlyphMisses();
-		if(vMisses.empty())
-			return;
-		IOHANDLE File = pStorage->OpenFile(pPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-		if(!File)
-			return;
-		for(const std::pair<int, int> &Miss : vMisses)
+		if(m_pGlyphMap != nullptr && !m_pGlyphMap->QmSaveRecentGlyphs(pStorage, pPath))
 		{
-			char aBuf[48];
-			str_format(aBuf, sizeof(aBuf), "%d %d\n", Miss.first, Miss.second);
-			io_write(File, aBuf, str_length(aBuf));
+			try
+			{
+				log_warn("text", "Could not save recent glyph cache");
+			}
+			catch(...)
+			{
+			}
 		}
-		io_close(File);
 	}
 
 	void DetachPendingTextContainer(int Index) noexcept
