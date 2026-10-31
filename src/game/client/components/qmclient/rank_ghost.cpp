@@ -2,6 +2,7 @@
 
 #include "media_paths.h"
 #include "rank_demo_manifest.h"
+#include "rank_view_camera.h"
 
 #include <base/log.h>
 #include <base/str.h>
@@ -2746,8 +2747,7 @@ void CRankGhost::ViewFreeCameraPan(float Dx, float Dy)
 	// 那套走的是菜单灵敏度（默认 ui_mousesens=200，等于双倍），会明显过快。
 	float WorldWidth, WorldHeight;
 	Graphics()->CalcScreenParams(Graphics()->GameScreenAspect(), GameClient()->m_Camera.m_Zoom, &WorldWidth, &WorldHeight);
-	const float WindowWidth = maximum(1.0f, (float)Graphics()->WindowWidth());
-	m_ViewFreeCameraCenter += vec2(Dx, Dy) * (WorldWidth / WindowWidth);
+	qmclient::rank_ghost::PanFreeCamera(m_ViewFreeCameraCenter, vec2(Dx, Dy), WorldWidth, Graphics()->WindowWidth());
 }
 
 bool CRankGhost::ViewFocusAllMembers(vec2 *pCenter, vec2 *pSize) const
