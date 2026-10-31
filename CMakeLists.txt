@@ -5163,6 +5163,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/contract/qmclient/client/qm_chat_message_merge_contract_test.cpp
     src/test/unit/qmclient/client/qm_gores_mode_test.cpp
     src/test/unit/qmclient/client/qm_hammer_hit_detection_test.cpp
+    src/test/unit/qmclient/client/qm_hammer_hit_boundaries_test.cpp
     src/test/unit/qmclient/client/qm_water_hammer_indicator_test.cpp
     src/test/unit/qmclient/client/qm_demo_display_test.cpp
     src/test/unit/qmclient/client/qm_demo_ui_test.cpp
