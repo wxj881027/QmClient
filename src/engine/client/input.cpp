@@ -101,6 +101,11 @@ void CInput::Init()
 #endif
 
 	SDL_SetHint(SDL_HINT_IME_IMPLEMENTED_UI, QmImeShouldUseSystemCandidateUi() ? "none" : "composition,candidates");
+#if defined(CONF_FAMILY_WINDOWS)
+	// 上面的提示只对 IMM32 输入法生效，TSF 输入法需要 UILess 模式才会隐藏自带候选窗。
+	if(QmImeShouldRenderCustomCandidateUi())
+		m_TsfUiLess.Activate();
+#endif
 	StopTextInput();
 	if(Window() != nullptr)
 		MouseModeRelative();
@@ -117,6 +122,9 @@ SDL_Window *CInput::Window() const
 void CInput::Shutdown()
 {
 	StopTextInput();
+#if defined(CONF_FAMILY_WINDOWS)
+	m_TsfUiLess.Deactivate();
+#endif
 	CloseJoysticks();
 	// 关闭后仍可能收到输入法析构触发的清理，此时图形对象可能已销毁。
 	m_pGraphics = nullptr;

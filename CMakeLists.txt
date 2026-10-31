@@ -3121,6 +3121,8 @@ if(CLIENT)
     input.cpp
     input.h
     input_sdl3.h
+    input_tsf.cpp
+    input_tsf.h
     audio_sdl3.h
     sound_buffer.h
     keynames.cpp

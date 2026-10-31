@@ -3,6 +3,8 @@
 #ifndef ENGINE_CLIENT_INPUT_H
 #define ENGINE_CLIENT_INPUT_H
 
+#include "input_tsf.h"
+
 #include <engine/console.h>
 #include <engine/input.h>
 #include <engine/keys.h>
@@ -137,6 +139,7 @@ private:
 	};
 	std::deque<SWindowsMessage> m_QueuedWindowsMessages;
 	uint32_t m_WindowsMessageEvent = 0;
+	CQmTsfUiLess m_TsfUiLess;
 	std::optional<SQmImeCandidateList> ReadWindowsImeCandidates(void *pWindow, unsigned CandidateListFlags, bool *pHasActiveComposition = nullptr);
 	void ProcessSystemMessage(tagMSG *pMsg);
 	static bool SDLCALL WindowsMessageHook(void *pUser, tagMSG *pMsg);
