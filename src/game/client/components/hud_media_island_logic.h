@@ -6,9 +6,11 @@
 
 #include <base/system.h>
 
+#include <engine/client/enums.h>
 #include <engine/graphics.h>
 
 #include <game/client/QmUi/QmAnimResolve.h>
+#include <game/client/components/qmclient/collision_position.h>
 #include <game/client/ui_rect.h>
 #include <game/teamscore.h>
 
@@ -18,37 +20,29 @@
 #include <cstddef>
 #include <cstdint>
 
-// 只维护本次连接中实际触发过开关的队伍；保留每队 256 槽的直接索引。
+// HUD实际持有的本地显示状态；不改变碰撞层或服务器的开关计时。
 struct SHudSwitchCountdownTracker
 {
-	int m_aaEndTick[NUM_DDRACE_TEAMS][256] = {};
+	int64_t m_aaEndTick[NUM_DDRACE_TEAMS][256] = {};
 	int m_aaTouchTick[NUM_DDRACE_TEAMS][256] = {};
 	int m_aaClientId[NUM_DDRACE_TEAMS][256] = {};
 	int m_aaConnection[NUM_DDRACE_TEAMS][256] = {};
-	std::array<bool, NUM_DDRACE_TEAMS> m_aTouchedTeams{};
-
-	SHudSwitchCountdownTracker()
+	bool Track(int Team, int Number, int CurrentTick, int Delay, int TickSpeed, int ClientId, int Connection)
 	{
-		// 首次初始化所有槽位；后续 Reset 只需要清空写入过的队伍。
-		m_aTouchedTeams.fill(true);
-		Reset();
-	}
-
-	void Track(int Team, int Number, int EndTick, int TouchTick, int ClientId, int Connection)
-	{
-		m_aTouchedTeams[Team] = true;
-		m_aaEndTick[Team][Number] = EndTick;
-		m_aaTouchTick[Team][Number] = TouchTick;
+		if(Team < 0 || Team >= NUM_DDRACE_TEAMS || Number <= 0 || Number >= 256 || ClientId < 0 || ClientId >= MAX_CLIENTS ||
+			Connection < 0 || Connection >= NUM_DUMMIES || Delay < 0 || TickSpeed <= 0)
+			return false;
+		m_aaEndTick[Team][Number] = static_cast<int64_t>(CurrentTick) + 1 + static_cast<int64_t>(Delay) * TickSpeed;
+		m_aaTouchTick[Team][Number] = CurrentTick;
 		m_aaClientId[Team][Number] = ClientId;
 		m_aaConnection[Team][Number] = Connection;
+		return true;
 	}
 
 	void Reset()
 	{
 		for(int Team = 0; Team < NUM_DDRACE_TEAMS; ++Team)
 		{
-			if(!m_aTouchedTeams[Team])
-				continue;
 			for(int Number = 0; Number < 256; ++Number)
 			{
 				m_aaEndTick[Team][Number] = 0;
@@ -56,10 +50,23 @@ struct SHudSwitchCountdownTracker
 				m_aaClientId[Team][Number] = -1;
 				m_aaConnection[Team][Number] = -1;
 			}
-			m_aTouchedTeams[Team] = false;
 		}
 	}
 };
+
+template<typename TCollision>
+int QmHudSwitchCountdownMapIndex(TCollision &Collision, vec2 Position)
+{
+	return QmCollision::CanRoundPosition(Position) ? Collision.GetPureMapIndex(Position) : -1;
+}
+
+inline uint64_t QmHudSwitchCountdownSecondsLeft(int64_t EndTick, int CurrentTick, int TickSpeed)
+{
+	if(TickSpeed <= 0 || EndTick <= CurrentTick)
+		return 0;
+	const uint64_t Remaining = static_cast<uint64_t>(EndTick) - static_cast<uint64_t>(CurrentTick);
+	return Remaining / TickSpeed + (Remaining % TickSpeed != 0);
+}
 constexpr float QmHudMediaIslandDesignScale = 0.7f;
 
 // 灵动岛基础胶囊高度（设计单位，未乘 DesignScale）。
@@ -356,7 +363,7 @@ struct SHudSwitchCountdownEntry
 	int m_ClientId = -1;
 	int m_Connection = 0;
 	int m_TriggerTick = 0;
-	int m_EndTick = 0;
+	int64_t m_EndTick = 0;
 	int m_CurrentTick = 0;
 };
 

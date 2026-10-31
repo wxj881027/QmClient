@@ -4917,6 +4917,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_nameplate_layout_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_coordinates_test.cpp
     src/test/integration/qmclient/client/qm_nameplate_coordinates_test.cpp
+    src/test/integration/qmclient/client/qm_switch_countdown_timing_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_effects_test.cpp
     src/test/unit/qmclient/client/qm_route_visited_test.cpp
     src/test/unit/qmclient/client/qm_route_render_cache_test.cpp
@@ -5217,6 +5218,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_media_island_render_params_test.cpp
     src/test/unit/qmclient/client/qm_media_island_content_test.cpp
     src/test/unit/qmclient/client/qm_media_island_satellite_test.cpp
+    src/test/unit/qmclient/client/qm_switch_countdown_timing_test.cpp
     src/test/unit/qmclient/client/qm_media_island_motion_test.cpp
     src/test/unit/qmclient/client/qm_media_island_track_state_test.cpp
     src/test/unit/qmclient/client/qm_media_volume_test.cpp

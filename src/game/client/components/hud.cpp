@@ -45,6 +45,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cinttypes>
 #include <cmath>
 #include <cstdint>
 #include <vector>
@@ -2733,7 +2734,7 @@ void CHud::UpdateSwitchCountdownTracker()
 		if(Team < 0 || Team >= NUM_DDRACE_TEAMS)
 			return;
 
-		const int MapIndex = Collision()->GetPureMapIndex(Pos);
+		const int MapIndex = QmHudSwitchCountdownMapIndex(*Collision(), Pos);
 		if(MapIndex < 0)
 			return;
 
@@ -2747,10 +2748,7 @@ void CHud::UpdateSwitchCountdownTracker()
 
 		const int CurTick = Client()->GameTick(Connection);
 		const int Delay = Collision()->GetSwitchDelay(MapIndex);
-		m_SwitchCountdownTracker.m_aaEndTick[Team][SwitchNumber] = CurTick + 1 + Delay * TickSpeed;
-		m_SwitchCountdownTracker.m_aaTouchTick[Team][SwitchNumber] = CurTick;
-		m_SwitchCountdownTracker.m_aaClientId[Team][SwitchNumber] = ClientId;
-		m_SwitchCountdownTracker.m_aaConnection[Team][SwitchNumber] = Connection;
+		m_SwitchCountdownTracker.Track(Team, SwitchNumber, CurTick, Delay, TickSpeed, ClientId, Connection);
 	};
 
 	UpdateSwitchCountdownFromClient(GameClient()->m_aLocalIds[0], 0, GameClient()->Predict());
@@ -2809,7 +2807,7 @@ bool CHud::BuildSwitchCountdownSummary(char *pBuf, const size_t BufSize) const
 	struct SSwitchCountdownEntry
 	{
 		int m_Number = 0;
-		int m_EndTick = 0;
+		int64_t m_EndTick = 0;
 		int m_LastTouchTick = 0;
 	};
 
@@ -2819,7 +2817,7 @@ bool CHud::BuildSwitchCountdownSummary(char *pBuf, const size_t BufSize) const
 
 	for(int i = 1; i < 256; ++i)
 	{
-		const int EndTick = m_SwitchCountdownTracker.m_aaEndTick[Team][i];
+		const int64_t EndTick = m_SwitchCountdownTracker.m_aaEndTick[Team][i];
 		const int TouchTick = m_SwitchCountdownTracker.m_aaTouchTick[Team][i];
 		if(EndTick <= CurTick || TouchTick <= 0)
 			continue;
@@ -2843,13 +2841,11 @@ bool CHud::BuildSwitchCountdownSummary(char *pBuf, const size_t BufSize) const
 	const int RenderCount = minimum(EntryCount, SWITCH_COUNTDOWN_MAX_LINES);
 	for(int i = 0; i < RenderCount; ++i)
 	{
-		const int RemainingTicks = aEntries[i].m_EndTick - CurTick;
-		if(RemainingTicks <= 0)
+		const uint64_t SecondsLeft = QmHudSwitchCountdownSecondsLeft(aEntries[i].m_EndTick, CurTick, TickSpeed);
+		if(SecondsLeft == 0)
 			continue;
-
-		const int SecondsLeft = (RemainingTicks + TickSpeed - 1) / TickSpeed;
 		char aItemBuf[64];
-		str_format(aItemBuf, sizeof(aItemBuf), "开关#%d:%d秒", aEntries[i].m_Number, SecondsLeft);
+		str_format(aItemBuf, sizeof(aItemBuf), "开关#%d:%" PRIu64 "秒", aEntries[i].m_Number, SecondsLeft);
 		if(pBuf[0] != '\0')
 			str_append(pBuf, "  ", BufSize);
 		str_append(pBuf, aItemBuf, BufSize);
@@ -2871,7 +2867,7 @@ void CHud::RenderSwitchCountdowns()
 	struct SSwitchCountdownEntry
 	{
 		int m_Number;
-		int m_EndTick;
+		int64_t m_EndTick;
 		int m_LastTouchTick;
 	};
 
@@ -2884,7 +2880,7 @@ void CHud::RenderSwitchCountdowns()
 
 	for(int i = 1; i < 256; ++i)
 	{
-		const int EndTick = m_SwitchCountdownTracker.m_aaEndTick[Team][i];
+		const int64_t EndTick = m_SwitchCountdownTracker.m_aaEndTick[Team][i];
 		if(EndTick <= CurTick)
 		{
 			m_SwitchCountdownTracker.m_aaEndTick[Team][i] = 0;
@@ -2940,13 +2936,10 @@ void CHud::RenderSwitchCountdowns()
 
 	for(int i = 0; i < RenderCount; ++i)
 	{
-		const int EndTick = aEntries[i].m_EndTick;
-		const int RemainingTicks = EndTick - CurTick;
-		if(RemainingTicks <= 0)
+		const uint64_t SecondsLeft = QmHudSwitchCountdownSecondsLeft(aEntries[i].m_EndTick, CurTick, TickSpeed);
+		if(SecondsLeft == 0)
 			continue;
-
-		const int SecondsLeft = (RemainingTicks + TickSpeed - 1) / TickSpeed;
-		str_format(aCurrentText[i], sizeof(aCurrentText[i]), "开关#%d:%d秒", aEntries[i].m_Number, SecondsLeft);
+		str_format(aCurrentText[i], sizeof(aCurrentText[i]), "开关#%d:%" PRIu64 "秒", aEntries[i].m_Number, SecondsLeft);
 		aCurrentWidth[i] = TextRender()->TextWidth(FontSize, aCurrentText[i], -1, -1.0f);
 		aCurrentNumber[i] = aEntries[i].m_Number;
 		aShouldShow[i] = true;
@@ -3100,7 +3093,7 @@ void CHud::RenderFollowSwitchCountdowns()
 		const int CurTick = Client()->GameTick(Connection);
 		for(int Number = 1; Number < 256; ++Number)
 		{
-			const int EndTick = m_SwitchCountdownTracker.m_aaEndTick[Team][Number];
+			const int64_t EndTick = m_SwitchCountdownTracker.m_aaEndTick[Team][Number];
 			const int TriggerTick = m_SwitchCountdownTracker.m_aaTouchTick[Team][Number];
 			if(EndTick <= CurTick || TriggerTick <= 0 ||
 				m_SwitchCountdownTracker.m_aaClientId[Team][Number] != ClientId ||
@@ -3220,7 +3213,7 @@ void CHud::RenderFollowSwitchCountdowns()
 			continue;
 
 		const int CurTick = Client()->GameTick(std::clamp(Ring.m_Connection, 0, NUM_DUMMIES - 1));
-		const int DurationTicks = Ring.m_EndTick - Ring.m_TriggerTick;
+		const int64_t DurationTicks = Ring.m_EndTick - Ring.m_TriggerTick;
 		const float Progress = DurationTicks > 0 ? std::clamp((Ring.m_EndTick - CurTick) / static_cast<float>(DurationTicks), 0.0f, 1.0f) : 0.0f;
 		DrawMediaIslandCountdownSatellite(
 			Graphics(),
@@ -3886,7 +3879,7 @@ void CHud::RenderMediaIsland()
 		int SwitchInputCount = 0;
 		for(int Number = 1; Number < 256; ++Number)
 		{
-			const int EndTick = m_SwitchCountdownTracker.m_aaEndTick[Team][Number];
+			const int64_t EndTick = m_SwitchCountdownTracker.m_aaEndTick[Team][Number];
 			const int TouchTick = m_SwitchCountdownTracker.m_aaTouchTick[Team][Number];
 			if(EndTick <= SwitchNow || TouchTick <= 0)
 				continue;
