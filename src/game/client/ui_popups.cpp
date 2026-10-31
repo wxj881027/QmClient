@@ -31,6 +31,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
+#include <type_traits>
 
 namespace
 {
@@ -52,6 +54,66 @@ const CUIRect *CUi::GetPopupMenuRect(const SPopupMenuId *pId) const
 {
 	const auto PopupMenuIt = std::find_if(m_vPopupMenus.begin(), m_vPopupMenus.end(), [pId](const SPopupMenu &PopupMenu) { return !PopupMenu.m_Closing && PopupMenu.m_pId == pId; });
 	return PopupMenuIt == m_vPopupMenus.end() ? nullptr : &PopupMenuIt->m_Rect;
+}
+
+void CUi::ReservePopupCloseCallbacks(size_t PopupCount)
+{
+	const size_t Limit = m_vPopupCloseCallbacks.max_size();
+	if(PopupCount > Limit - m_vPopupCloseCallbacks.size())
+		throw std::length_error("popup close callbacks");
+	const size_t Required = m_vPopupCloseCallbacks.size() + PopupCount;
+	if(Required > m_vPopupCloseCallbacks.capacity())
+	{
+		const size_t Capacity = m_vPopupCloseCallbacks.capacity();
+		m_vPopupCloseCallbacks.reserve(std::max(Required, Capacity > Limit / 2 ? Limit : Capacity * 2));
+	}
+}
+
+size_t CUi::QueuePopupCloseCallbacks(size_t FirstPopup) noexcept
+{
+	const size_t FirstCallback = m_vPopupCloseCallbacks.size();
+	dbg_assert(m_vPopupCloseCallbacks.capacity() - FirstCallback >= m_vPopupMenus.size() - FirstPopup, "popup close storage was not prepared");
+	for(size_t Index = FirstPopup; Index < m_vPopupMenus.size(); ++Index)
+	{
+		auto &Popup = m_vPopupMenus[Index];
+		if(!Popup.m_Closing && Popup.m_pOnClosed)
+			m_vPopupCloseCallbacks.emplace_back(std::move(Popup.m_pOnClosed));
+	}
+	return FirstCallback;
+}
+
+void CUi::InvokePopupCloseCallbacks(size_t FirstCallback) noexcept
+{
+	const size_t End = m_vPopupCloseCallbacks.size();
+	for(size_t Index = FirstCallback; Index < End; ++Index)
+	{
+		// 句柄固定目标寿命，回调重入打开/关闭导致队列扩容也不会使正在执行的函数失效。
+		const auto pCallback = m_vPopupCloseCallbacks[Index];
+		try
+		{
+			(*pCallback)();
+		}
+		catch(...)
+		{
+			// 已逻辑关闭的批次仍需通知其余owner，失败回调不重放。
+		}
+	}
+	const auto pClosedCallback = m_pPopupMenuClosedCallback;
+	try
+	{
+		if(pClosedCallback)
+			(*pClosedCallback)();
+	}
+	catch(...)
+	{
+	}
+	// 全批回调及全局通知结束后才释放捕获对象；先移出再释放，析构重入时队列仍有效。
+	while(m_vPopupCloseCallbacks.size() > FirstCallback)
+	{
+		auto pCallback = std::move(m_vPopupCloseCallbacks.back());
+		m_vPopupCloseCallbacks.pop_back();
+		pCallback.reset();
+	}
 }
 
 void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, float Height, void *pContext, FPopupMenuFunction pfnFunc, const SPopupMenuProperties &Props)
@@ -85,94 +147,124 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 		SetActiveItem(nullptr);
 		m_ActiveButtonLogicButton = -1;
 	};
-	SPopupMenuProperties ResolvedProps = Props;
-	// 三组件规约之「popup（动作展开菜单）」：调用方未显式配色（仍是旧默认
-	// 黑底灰边）时，解析为统一下拉列表主题色——编辑器与客户端的裸
-	// DoPopupMenu 调用点一次性接入设计语言；显式配色（二级面板、好友主题、
-	// 下拉框等）不受影响。
-	if(ResolvedProps.m_BackgroundColor == SPopupMenuProperties{}.m_BackgroundColor && ResolvedProps.m_BorderColor == SPopupMenuProperties{}.m_BorderColor)
+	FPopupMenuClosedCallback PreviousCallback;
+	bool SuspendPopupFocus = false;
+	bool NewPopup = false;
+	// 回调复制、存储和动画准备失败时，不发布半初始化弹层或修改旧焦点。
+	try
 	{
-		const SUiTheme Theme = ResolveConfiguredDropdownListTheme();
-		ResolvedProps.m_BackgroundColor = Theme.m_Surface;
-		ResolvedProps.m_BorderColor = Theme.m_Border;
-	}
-	// 转场连续性默认启用，但受两重资格门控：
-	// 1. 动效等级 qm_ui_motion_level == 0 时全局硬切（分级动效规约，
-	//    各封装弹窗的局部门控同义，统一收口到此裁决）；
-	// 2. 无动画运行时的环境（部分 UI 单测）没有轨道时钟，静默退化为硬切
-	//    （转场已由引擎 ALPHA 轨道驱动，依赖运行时而非 IClient 时钟）。
-	if(g_Config.m_QmUiMotionLevel <= 0 || QmAnimationRuntime() == nullptr)
-		ResolvedProps.m_Animate = false;
-	if(ResolvedProps.m_CenterInViewport)
-	{
-		// 居中模态弹层阻断底层滚动，动画开关保留调用方配置。
-		ResolvedProps.m_BlockUnderlyingScroll = true;
-	}
-	if(ResolvedProps.m_CenterInViewport)
-	{
-		// 二级界面弹窗：在当前视口内居中，忽略调用点传入的锚定坐标；
-		// 之后的 AutoReposition 仍兜底弹窗超出视口的情形。
-		X = Screen()->x + (Screen()->w - Width) / 2.0f;
-		Y = Screen()->y + (Screen()->h - Height) / 2.0f;
-	}
-	if(ResolvedProps.m_AutoReposition)
-	{
-		constexpr float Margin = SPopupMenu::POPUP_BORDER + SPopupMenu::POPUP_MARGIN;
-		if(X + Width > Screen()->w - Margin)
-			X = maximum<float>(X - Width, Margin);
-		if(Y + Height > Screen()->h - Margin)
-			Y = maximum<float>(Y - Height, Margin);
-	}
-
-	auto ExistingPopupMenu = std::find_if(m_vPopupMenus.begin(), m_vPopupMenus.end(), [pId](const SPopupMenu &PopupMenu) { return PopupMenu.m_pId == pId; });
-	if(ExistingPopupMenu != m_vPopupMenus.end())
-	{
-		ExistingPopupMenu->m_Props = ResolvedProps;
-		ExistingPopupMenu->m_Source.Assign(m_pInteractionContext, m_pInteractionCardId, PopupSourceFrame());
-		ExistingPopupMenu->m_Rect.x = X;
-		ExistingPopupMenu->m_Rect.y = Y;
-		ExistingPopupMenu->m_Rect.w = Width;
-		ExistingPopupMenu->m_Rect.h = Height;
-		ExistingPopupMenu->m_pContext = pContext;
-		ExistingPopupMenu->m_pfnFunc = pfnFunc;
-		// 出场动画期间被重新打开：取消关闭状态即可——引擎 ALPHA 轨道按
-		// MERGE_TARGET 从当前值带速度继续回到展开态，天然无跳变
-		//（旧「等效进度反推」数学已随引擎迁移删除）。
-		if(ExistingPopupMenu->m_Closing)
+		SPopupMenuProperties ResolvedProps = Props;
+		// 三组件规约之「popup（动作展开菜单）」：调用方未显式配色（仍是旧默认
+		// 黑底灰边）时，解析为统一下拉列表主题色——编辑器与客户端的裸
+		// DoPopupMenu 调用点一次性接入设计语言；显式配色（二级面板、好友主题、
+		// 下拉框等）不受影响。
+		if(ResolvedProps.m_BackgroundColor == SPopupMenuProperties{}.m_BackgroundColor && ResolvedProps.m_BorderColor == SPopupMenuProperties{}.m_BorderColor)
 		{
-			SPopupFocus Focus = CaptureFocus();
-			// 来源尚未重绘时立即重开，沿用这一面板原来的返回目标；新点击焦点优先。
-			if(m_KeyboardFocus.m_pItem == nullptr && CLineInput::GetActiveInput() == nullptr)
-				Focus = ExistingPopupMenu->m_ReturnFocus;
-			ExistingPopupMenu->m_ReturnFocus = ResolvedProps.m_ReturnFocus ? Focus : SPopupFocus{};
-			ExistingPopupMenu->m_OpenedFrame = PopupSourceFrame();
-			ExistingPopupMenu->m_Closing = false;
-			if(ResolvedProps.m_BlockUnderlyingPointerInput)
-				SuspendFocus();
+			const SUiTheme Theme = ResolveConfiguredDropdownListTheme();
+			ResolvedProps.m_BackgroundColor = Theme.m_Surface;
+			ResolvedProps.m_BorderColor = Theme.m_Border;
 		}
+		// 转场连续性默认启用，但受两重资格门控：
+		// 1. 动效等级 qm_ui_motion_level == 0 时全局硬切（分级动效规约，
+		//    各封装弹窗的局部门控同义，统一收口到此裁决）；
+		// 2. 无动画运行时的环境（部分 UI 单测）没有轨道时钟，静默退化为硬切
+		//    （转场已由引擎 ALPHA 轨道驱动，依赖运行时而非 IClient 时钟）。
+		if(g_Config.m_QmUiMotionLevel <= 0 || QmAnimationRuntime() == nullptr)
+			ResolvedProps.m_Animate = false;
+		if(ResolvedProps.m_CenterInViewport)
+		{
+			// 居中模态弹层阻断底层滚动，动画开关保留调用方配置。
+			ResolvedProps.m_BlockUnderlyingScroll = true;
+		}
+		if(ResolvedProps.m_CenterInViewport)
+		{
+			// 二级界面弹窗：在当前视口内居中，忽略调用点传入的锚定坐标；
+			// 之后的 AutoReposition 仍兜底弹窗超出视口的情形。
+			X = Screen()->x + (Screen()->w - Width) / 2.0f;
+			Y = Screen()->y + (Screen()->h - Height) / 2.0f;
+		}
+		if(ResolvedProps.m_AutoReposition)
+		{
+			constexpr float Margin = SPopupMenu::POPUP_BORDER + SPopupMenu::POPUP_MARGIN;
+			if(X + Width > Screen()->w - Margin)
+				X = maximum<float>(X - Width, Margin);
+			if(Y + Height > Screen()->h - Margin)
+				Y = maximum<float>(Y - Height, Margin);
+		}
+
+		auto ExistingPopupMenu = std::find_if(m_vPopupMenus.begin(), m_vPopupMenus.end(), [pId](const SPopupMenu &PopupMenu) { return PopupMenu.m_pId == pId; });
+		const bool Existing = ExistingPopupMenu != m_vPopupMenus.end();
+		ReservePopupCloseCallbacks(m_vPopupMenus.size() + (Existing ? 0 : 1));
+		std::shared_ptr<FPopupMenuClosedCallback> pOnClosed;
+		if(ResolvedProps.m_OnClosed)
+		{
+			pOnClosed = Existing ? ExistingPopupMenu->m_pOnClosed : nullptr;
+			if(!pOnClosed)
+				pOnClosed = std::allocate_shared<FPopupMenuClosedCallback>(CBorrowedAllocator<FPopupMenuClosedCallback>(m_vPopupCloseCallbacks.get_allocator().Resource()));
+		}
+		static_assert(std::is_nothrow_move_constructible_v<SPopupMenu> && std::is_nothrow_move_assignable_v<SPopupMenu>);
+		static_assert(std::is_nothrow_move_assignable_v<SPopupMenuProperties>);
+		// 旧目标的析构可能重入UI；留到本次发布及焦点更新结束后再释放。
+		if(Existing)
+		{
+			if(ExistingPopupMenu->m_pOnClosed)
+				PreviousCallback = std::move(*ExistingPopupMenu->m_pOnClosed);
+			if(pOnClosed)
+			{
+				*pOnClosed = std::move(ResolvedProps.m_OnClosed);
+				ResolvedProps.m_OnClosed = nullptr;
+			}
+			ExistingPopupMenu->m_pOnClosed = std::move(pOnClosed);
+			ExistingPopupMenu->m_Props = std::move(ResolvedProps);
+			ExistingPopupMenu->m_Source.Assign(m_pInteractionContext, m_pInteractionCardId, PopupSourceFrame());
+			ExistingPopupMenu->m_Rect = {X, Y, Width, Height};
+			ExistingPopupMenu->m_pContext = pContext;
+			ExistingPopupMenu->m_pfnFunc = pfnFunc;
+			if(ExistingPopupMenu->m_Closing)
+			{
+				SPopupFocus Focus = CaptureFocus();
+				if(m_KeyboardFocus.m_pItem == nullptr && CLineInput::GetActiveInput() == nullptr)
+					Focus = ExistingPopupMenu->m_ReturnFocus;
+				ExistingPopupMenu->m_ReturnFocus = ExistingPopupMenu->m_Props.m_ReturnFocus ? Focus : SPopupFocus{};
+				ExistingPopupMenu->m_OpenedFrame = PopupSourceFrame();
+				ExistingPopupMenu->m_Closing = false;
+				SuspendPopupFocus = ExistingPopupMenu->m_Props.m_BlockUnderlyingPointerInput;
+			}
+		}
+		else
+		{
+			SPopupMenu Candidate{};
+			if(pOnClosed)
+			{
+				*pOnClosed = std::move(ResolvedProps.m_OnClosed);
+				ResolvedProps.m_OnClosed = nullptr;
+			}
+			Candidate.m_pOnClosed = std::move(pOnClosed);
+			Candidate.m_pId = pId;
+			Candidate.m_Props = std::move(ResolvedProps);
+			Candidate.m_Source.Assign(m_pInteractionContext, m_pInteractionCardId, PopupSourceFrame());
+			Candidate.m_ReturnFocus = Candidate.m_Props.m_ReturnFocus ? CaptureFocus() : SPopupFocus{};
+			Candidate.m_OpenedFrame = PopupSourceFrame();
+			Candidate.m_Rect = {X, Y, Width, Height};
+			Candidate.m_pContext = pContext;
+			Candidate.m_pfnFunc = pfnFunc;
+			const bool BlockPointer = Candidate.m_Props.m_BlockUnderlyingPointerInput;
+			if(Candidate.m_Props.m_Animate && QmAnimationRuntime() != nullptr)
+				QmAnimationRuntime()->SetValue(PopupAnimKey(pId), EUiAnimProperty::ALPHA, 0.0f);
+			m_vPopupMenus.push_back(std::move(Candidate));
+			SuspendPopupFocus = BlockPointer;
+			NewPopup = true;
+		}
+	}
+	catch(...)
+	{
 		return;
 	}
-
-	m_vPopupMenus.emplace_back();
-	SPopupMenu *pNewMenu = &m_vPopupMenus.back();
-	pNewMenu->m_pId = pId;
-	pNewMenu->m_Props = ResolvedProps;
-	pNewMenu->m_Source.Assign(m_pInteractionContext, m_pInteractionCardId, PopupSourceFrame());
-	pNewMenu->m_ReturnFocus = ResolvedProps.m_ReturnFocus ? CaptureFocus() : SPopupFocus{};
-	pNewMenu->m_OpenedFrame = PopupSourceFrame();
-	pNewMenu->m_Rect.x = X;
-	pNewMenu->m_Rect.y = Y;
-	pNewMenu->m_Rect.w = Width;
-	pNewMenu->m_Rect.h = Height;
-	pNewMenu->m_pContext = pContext;
-	pNewMenu->m_pfnFunc = pfnFunc;
-	// 引擎轨道预置 0：首帧渲染从全透明展开，且地址复用不会继承旧轨道值。
-	if(ResolvedProps.m_Animate && QmAnimationRuntime() != nullptr)
-		QmAnimationRuntime()->SetValue(PopupAnimKey(pId), EUiAnimProperty::ALPHA, 0.0f);
-	if(ResolvedProps.m_BlockUnderlyingPointerInput)
+	if(SuspendPopupFocus)
 	{
 		SuspendFocus();
-		SetHotItem(pId);
+		if(NewPopup)
+			SetHotItem(pId);
 	}
 }
 
@@ -524,11 +616,8 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants, bool 
 		if(!IncludeDescendants && PopupMenuToClose->m_Closing)
 			return;
 		const SPopupFocus ReturnFocus = PopupMenuToClose->m_Closing ? SPopupFocus{} : PopupMenuToClose->m_ReturnFocus;
-		std::vector<std::function<void()>> vClosedCallbacks;
 		for(auto It = PopupMenuToClose; It != m_vPopupMenus.end(); ++It)
 		{
-			if(!It->m_Closing && It->m_Props.m_OnClosed)
-				vClosedCallbacks.push_back(It->m_Props.m_OnClosed);
 			if(m_KeyboardFocus.m_pPopupId == It->m_pId)
 				m_KeyboardFocus = {};
 		}
@@ -536,6 +625,7 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants, bool 
 			   return Popup.m_pId == m_pTrackedTextPopupId;
 		   }))
 			ReleaseTrackedTextInput();
+		const size_t FirstCallback = QueuePopupCloseCallbacks(PopupMenuToClose - m_vPopupMenus.begin());
 		// 带出场动画的弹窗（仅二级界面大弹窗启用）：后代立即移除，自身标记
 		// closing 播放收缩渐隐后由渲染循环移除；逻辑关闭（输入解除、关闭回调）
 		// 在标记瞬间完成，与立即关闭语义一致。
@@ -548,10 +638,7 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants, bool 
 			SetActiveItem(nullptr);
 			if(RestoreFocus)
 				QueuePopupFocusRestore(ReturnFocus);
-			for(const auto &Callback : vClosedCallbacks)
-				Callback();
-			if(m_pfnPopupMenuClosedCallback)
-				m_pfnPopupMenuClosedCallback();
+			InvokePopupCloseCallbacks(FirstCallback);
 			return;
 		}
 		if(IncludeDescendants)
@@ -574,10 +661,7 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants, bool 
 		SetActiveItem(nullptr);
 		if(RestoreFocus)
 			QueuePopupFocusRestore(ReturnFocus);
-		for(const auto &Callback : vClosedCallbacks)
-			Callback();
-		if(m_pfnPopupMenuClosedCallback)
-			m_pfnPopupMenuClosedCallback();
+		InvokePopupCloseCallbacks(FirstCallback);
 	}
 }
 
@@ -684,12 +768,7 @@ void CUi::ClosePopupMenus(bool RestoreFocus)
 	if(m_pTrackedTextPopupId != nullptr)
 		ReleaseTrackedTextInput();
 	const SPopupFocus ReturnFocus = m_vPopupMenus.front().m_Closing ? SPopupFocus{} : m_vPopupMenus.front().m_ReturnFocus;
-	std::vector<std::function<void()>> vClosedCallbacks;
-	for(const auto &Popup : m_vPopupMenus)
-	{
-		if(!Popup.m_Closing && Popup.m_Props.m_OnClosed)
-			vClosedCallbacks.push_back(Popup.m_Props.m_OnClosed);
-	}
+	const size_t FirstCallback = QueuePopupCloseCallbacks(0);
 	m_vPopupMenus.clear();
 	m_KeyboardFocus = {};
 	SetActiveItem(nullptr);
@@ -697,10 +776,7 @@ void CUi::ClosePopupMenus(bool RestoreFocus)
 		QueuePopupFocusRestore(ReturnFocus);
 	else
 		m_PendingPopupFocus = {};
-	for(const auto &Callback : vClosedCallbacks)
-		Callback();
-	if(m_pfnPopupMenuClosedCallback)
-		m_pfnPopupMenuClosedCallback();
+	InvokePopupCloseCallbacks(FirstCallback);
 }
 
 bool CUi::IsPopupOpen() const
@@ -725,7 +801,7 @@ bool CUi::IsPopupHovered() const
 
 void CUi::SetPopupMenuClosedCallback(FPopupMenuClosedCallback pfnCallback)
 {
-	m_pfnPopupMenuClosedCallback = std::move(pfnCallback);
+	m_pPopupMenuClosedCallback = pfnCallback ? std::allocate_shared<FPopupMenuClosedCallback>(CBorrowedAllocator<FPopupMenuClosedCallback>(m_vPopupCloseCallbacks.get_allocator().Resource()), std::move(pfnCallback)) : nullptr;
 }
 
 void CUi::SMessagePopupContext::DefaultColor(ITextRender *pTextRender)

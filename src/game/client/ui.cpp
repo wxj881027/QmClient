@@ -221,7 +221,13 @@ void CUi::Init(IKernel *pKernel)
 	CUIElementBase::Init(this);
 }
 
-CUi::CUi()
+CUi::CUi() :
+	CUi(nullptr)
+{
+}
+
+CUi::CUi(IAllocationResource *pPopupCallbackMemory) :
+	m_vPopupCloseCallbacks(CBorrowedAllocator<std::shared_ptr<FPopupMenuClosedCallback>>(pPopupCallbackMemory))
 {
 	m_Enabled = true;
 

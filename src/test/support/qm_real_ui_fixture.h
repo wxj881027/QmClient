@@ -289,6 +289,8 @@ namespace qm_ui_test
 
 	protected:
 		CUi m_Ui;
+		explicit CRealUiFixture(IAllocationResource *pPopupCallbackMemory = nullptr) :
+			m_Ui(pPopupCallbackMemory) {}
 		CRealUiTestGraphics &Graphics() { return m_Graphics; }
 		// 真实 UI 环境默认挂动画运行时（生产 gameclient 恒挂）；动效等级
 		// 默认 0 时资格门仍禁动画，需要动画的测试显式开 FullMotion 并用

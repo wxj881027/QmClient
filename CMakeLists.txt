@@ -6103,6 +6103,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_tooltip_text_layout_test.cpp
       src/test/integration/qmclient/ui/qm_card_summary_layout_test.cpp
       src/test/integration/qmclient/ui/qm_secondary_panel_actions_test.cpp
+      src/test/integration/qmclient/ui/qm_popup_callback_lifetime_test.cpp
       src/test/integration/qmclient/ui/qm_browser_map_preview_input_test.cpp
       src/test/integration/qmclient/ui/qm_settings_action_group_test.cpp
       src/test/integration/qmclient/ui/qm_settings_text_columns_test.cpp
