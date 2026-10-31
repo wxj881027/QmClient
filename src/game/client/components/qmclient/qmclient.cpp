@@ -2,6 +2,7 @@
 #include "qmclient.h"
 
 #include "bounded_file_reader.h"
+#include "qm_realtime_service_data.h"
 #include "qm_title_style.h"
 #include "qmclient_users_parse_job.h"
 #include "statistics_file.h"
@@ -690,25 +691,7 @@ static const json_value *JsonObjectField(const json_value *pObject, const char *
 
 static bool JsonReadNonNegativeInt64(const json_value *pValue, int64_t &OutValue)
 {
-	if(!pValue)
-		return false;
-
-	if(pValue->type == json_integer)
-	{
-		if(pValue->u.integer < 0)
-			return false;
-		OutValue = pValue->u.integer;
-		return true;
-	}
-	if(pValue->type == json_double)
-	{
-		// `double(INT64_MAX)` rounds to 2^63, which is already outside int64_t.
-		if(!std::isfinite(pValue->u.dbl) || pValue->u.dbl < 0.0 || pValue->u.dbl >= static_cast<double>(std::numeric_limits<int64_t>::max()))
-			return false;
-		OutValue = (int64_t)pValue->u.dbl;
-		return true;
-	}
-	return false;
+	return qm_json::NonNegativeInt64(pValue, OutValue);
 }
 
 static bool IsValidQmClientPlaytimeId(const char *pClientId)
@@ -1362,27 +1345,26 @@ void CQmClient::ApplyQmRealtimeServiceData(const SQmRealtimeMessage &Message)
 	const json_value *pPayload = Message.m_pPayload.get();
 	if(!pPayload)
 		return;
-	int64_t Value = 0;
-	if((Message.m_Event == EQmRealtimeEvent::TIME || Message.m_Event == EQmRealtimeEvent::PLAYTIME) &&
-		JsonReadNonNegativeInt64(JsonObjectField(pPayload, "ts"), Value) && Value > 0)
+	const auto Data = ReadQmRealtimeServiceData(Message);
+	if(Data.m_HasServerTime)
 	{
-		m_QmClientServerNow = Value;
+		m_QmClientServerNow = Data.m_ServerTime;
 		m_QmClientServerTimeLastSync = time_get();
-		const double Measured = static_cast<double>(Value) - Client()->GlobalTime();
+		const double Measured = static_cast<double>(Data.m_ServerTime) - Client()->GlobalTime();
 		m_TitleServerTimeOffset = m_TitleServerTimeOffsetValid ? (m_TitleServerTimeOffset * 0.75 + Measured * 0.25) : Measured;
 		m_TitleServerTimeOffsetValid = true;
 	}
 	if(Message.m_Event == EQmRealtimeEvent::PLAYTIME)
 	{
-		if(JsonReadNonNegativeInt64(JsonObjectField(pPayload, "total_seconds"), Value))
-			m_QmClientServerPlaytimeSeconds = Value;
-		if(JsonReadNonNegativeInt64(JsonObjectField(pPayload, "last_start_at"), Value) && Value > 0)
-			m_QmClientServerSessionStart = Value;
+		if(Data.m_HasPlaytimeSeconds)
+			m_QmClientServerPlaytimeSeconds = Data.m_PlaytimeSeconds;
+		if(Data.m_HasSessionStart)
+			m_QmClientServerSessionStart = Data.m_SessionStart;
 		m_QmClientPlaytimeLastSync = time_get();
 		m_QmClientPlaytimeLastSuccessfulSyncTimestamp = time_timestamp();
 		m_QmClientPlaytimeManualRefreshActive = false;
 		m_QmClientPlaytimeManualRefreshFailed = false;
-		if(str_comp(TitleJsonString(pPayload, "action"), "start") == 0 && !m_QmClientStartupSent)
+		if(Data.m_PlaytimeAction == EQmRealtimePlaytimeAction::START && !m_QmClientStartupSent)
 		{
 			m_QmClientMarkerStartedAt = time_timestamp();
 			m_QmClientMarkerLastSeenAt = m_QmClientMarkerStartedAt;
@@ -1390,20 +1372,19 @@ void CQmClient::ApplyQmRealtimeServiceData(const SQmRealtimeMessage &Message)
 			m_QmClientAwaitingRecoveryStop = false;
 			WriteQmClientLifecycleMarker();
 		}
-		else if(str_comp(TitleJsonString(pPayload, "action"), "stop") == 0)
+		else if(Data.m_PlaytimeAction == EQmRealtimePlaytimeAction::STOP)
 			ClearQmClientLifecycleMarker();
 	}
 	if(Message.m_Event == EQmRealtimeEvent::TITLE_PROFILE && !TitleBusy())
 	{
-		const char *pTitle = TitleJsonString(pPayload, "title");
-		const char *pName = TitleJsonString(pPayload, "bound_name");
-		const char *pStyle = TitleJsonString(pPayload, "style");
-		const EQmSponsorChatStyle ChatStyle = QmSponsorChatStyleFromId(TitleJsonString(pPayload, "chat_style"));
-		const bool ChatStyleSupported = JsonObjectField(pPayload, "chat_style")->type == json_string;
-		SQmTitleAppearance Appearance;
-		const bool AppearanceSupported = ParseQmTitleAppearance(JsonObjectField(pPayload, "appearance"), Appearance);
-		const json_value *pStatus = JsonObjectField(pPayload, "status");
-		const bool Authenticated = pStatus->type == json_integer && pStatus->u.integer == 200 && IsValidQmTitle(pTitle);
+		const char *pTitle = Data.m_pTitle;
+		const char *pName = Data.m_pBoundName;
+		const char *pStyle = Data.m_pStyle;
+		const EQmSponsorChatStyle ChatStyle = Data.m_ChatStyle;
+		const bool ChatStyleSupported = Data.m_ChatStyleSupported;
+		const auto &Appearance = Data.m_Appearance;
+		const bool AppearanceSupported = Data.m_AppearanceSupported;
+		const bool Authenticated = Data.m_TitleAuthenticated;
 		const bool Changed = m_TitleAuthenticated != Authenticated ||
 				     str_comp(m_aTitleText, pTitle) || str_comp(m_aTitleBoundName, pName) || str_comp(m_aTitleProfileStyle, pStyle) ||
 				     m_TitleProfileChatStyle != ChatStyle || m_TitleChatStyleSupported != ChatStyleSupported ||
@@ -1422,8 +1403,7 @@ void CQmClient::ApplyQmRealtimeServiceData(const SQmRealtimeMessage &Message)
 	}
 	if(Message.m_Event == EQmRealtimeEvent::TITLE_STATUS)
 	{
-		const json_value *pStatus = JsonObjectField(pPayload, "status");
-		if(pStatus->type == json_integer && pStatus->u.integer == 409)
+		if(Data.m_TitleAddressLimitReached)
 		{
 			m_pTitleStatus = Localizable("Four IP addresses are already online");
 		}

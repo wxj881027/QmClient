@@ -5,7 +5,10 @@
 
 #include <engine/shared/json.h>
 
+#include <cmath>
+#include <cstdint>
 #include <cstring>
+#include <limits>
 
 namespace qm_json
 {
@@ -31,6 +34,29 @@ namespace qm_json
 		       (AllowEmpty || pValue->u.string.length != 0) &&
 		       !std::memchr(pValue->u.string.ptr, '\0', pValue->u.string.length) &&
 		       str_utf8_check(pValue->u.string.ptr);
+	}
+
+	// 沿用统计字段的非负数规则；有限小数向零截断，失败保留输出。
+	inline bool NonNegativeInt64(const json_value *pValue, int64_t &Out)
+	{
+		if(!pValue)
+			return false;
+		if(pValue->type == json_integer)
+		{
+			if(pValue->u.integer < 0)
+				return false;
+			Out = pValue->u.integer;
+			return true;
+		}
+		if(pValue->type == json_double)
+		{
+			// INT64_MAX 转为 double 会舍入到 2^63，不能再转回 int64_t。
+			if(!std::isfinite(pValue->u.dbl) || pValue->u.dbl < 0.0 || pValue->u.dbl >= static_cast<double>(std::numeric_limits<int64_t>::max()))
+				return false;
+			Out = static_cast<int64_t>(pValue->u.dbl);
+			return true;
+		}
+		return false;
 	}
 }
 
