@@ -21,7 +21,7 @@
 #include <game/client/components/qmclient/friend_heart_icon.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/nameplate_layout.h>
-#include <game/client/components/qmclient/nameplate_text_cache.h>
+#include <game/client/components/qmclient/nameplate_text_build.h>
 #include <game/client/components/qmclient/qm_title_badge.h>
 #include <game/client/components/qmclient/qmclient_utils.h>
 #include <game/client/gameclient.h>
@@ -479,6 +479,7 @@ protected:
 	// 空文字也可能渲染出无效容器，故「是否已算过」必须用显式标志记录，
 	// 不能拿容器是否存在来推断（否则空文字部件每帧重跑整条文字更新路径）。
 	CQmNameplateTextCache m_TextCache;
+	CQmNameplateTextBuild m_TextBuild;
 	vec2 m_RenderSize = vec2(0.0f, 0.0f);
 	uint64_t m_BakedDensityRevision = 0;
 	virtual bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) = 0;
@@ -498,7 +499,9 @@ protected:
 
 public:
 	void Update(CGameClient &This, const CNamePlateData &Data) override
+	try
 	{
+		m_TextBuild.Cleanup(*This.TextRender());
 		// 字体或字重设置可能清空字体图集：旧索引仍有效，但 UV 已指向其他字形。
 		// 图集代际变化先释放旧容器；单纯密度换代则在下面完成候选容器交换。
 		if(m_TextCache.ResourcesChanged(This.TextRender()->GlyphAtlasRevision()))
@@ -519,7 +522,6 @@ public:
 		}
 
 		// Set flags
-		const unsigned PreviousFlags = This.TextRender()->GetRenderFlags();
 		unsigned int Flags = ETextRenderFlags::TEXT_RENDER_FLAG_QM_NAMEPLATE | ETextRenderFlags::TEXT_RENDER_FLAG_NO_FIRST_CHARACTER_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_LAST_CHARACTER_ADVANCE;
 		bool UsePhysicalPixelAlignment = false;
 #if defined(CONF_PLATFORM_MACOS)
@@ -527,51 +529,19 @@ public:
 #endif
 		if(Data.m_InGame && !UsePhysicalPixelAlignment)
 			Flags |= ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT; // Prevent jittering from rounding
-		This.TextRender()->SetRenderFlags(Flags);
-
 		// 切到整块名牌共同选定的烘焙密度，保留有限采样余量，
 		// 且同帧所有部件使用同一密度，布局不会因各部件重建时机不同而互相错位。
-		float ScreenX0 = 0.0f, ScreenY0 = 0.0f, ScreenX1 = 0.0f, ScreenY1 = 0.0f;
-		if(Data.m_InGame && BakeDensity > 0.0f)
-		{
-			This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-			This.Graphics()->MapScreenToGameInterface(This.m_Camera.m_Center.x, This.m_Camera.m_Center.y, 1.0f / BakeDensity);
-		}
+		const bool MapBakedScreen = Data.m_InGame && BakeDensity > 0.0f;
+		CQmNameplateTextContext Context(*This.TextRender(), *This.Graphics(), MapBakedScreen);
 		// 密度换代时先在旧容器旁边创建候选容器，成功后再交换，避免玩家看到空帧。
 		const bool KeepPreviousContainer = DensityChanged && m_TextContainerIndex.Valid();
-		STextContainerIndex PreviousTextContainer;
-		const bool PreviousReuseTextContainer = m_ReuseTextContainer;
-		if(KeepPreviousContainer)
-		{
-			PreviousTextContainer = m_TextContainerIndex;
-			m_TextContainerIndex.Reset();
-			m_ReuseTextContainer = false;
-		}
-		else if(!m_ReuseTextContainer)
-			This.TextRender()->DeleteTextContainer(m_TextContainerIndex);
-		UpdateText(This, Data);
-		if(Data.m_InGame && BakeDensity > 0.0f)
-			This.Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
-
-		This.TextRender()->SetRenderFlags(PreviousFlags);
-
-		if(KeepPreviousContainer)
-		{
-			STextContainerIndex CandidateTextContainer = m_TextContainerIndex;
-			m_TextContainerIndex.Reset();
-			m_ReuseTextContainer = PreviousReuseTextContainer;
-			if(CandidateTextContainer.Valid())
-			{
-				This.TextRender()->DeleteTextContainer(PreviousTextContainer);
-				m_TextContainerIndex = CandidateTextContainer;
-			}
-			else
-			{
-				// 新密度暂时无法创建时继续显示上一代，并保留本次更新以便下一帧重试。
-				m_TextContainerIndex = PreviousTextContainer;
-				return;
-			}
-		}
+		Context.Apply(Flags, [&] { This.Graphics()->MapScreenToGameInterface(This.m_Camera.m_Center.x, This.m_Camera.m_Center.y, 1.0f / BakeDensity); });
+		const bool Completed = m_TextBuild.Run(*This.TextRender(), m_TextContainerIndex, m_ReuseTextContainer, KeepPreviousContainer, m_TextCache, [&] {
+			UpdateText(This, Data);
+			Context.Finish();
+		});
+		if(!Completed)
+			return;
 
 		if(!m_TextContainerIndex.Valid())
 		{
@@ -583,21 +553,26 @@ public:
 			return;
 		}
 
-		// 同一代密度在整块名牌内同时生效。
-		m_BakedDensityRevision = Data.m_DensityRevision;
-
 		const STextBoundingBox Container = This.TextRender()->GetBoundingBoxTextContainer(m_TextContainerIndex);
 		m_RenderSize = vec2(Container.m_W, Container.m_H);
 		const float EffectPadding = m_UseTextEffects ? QmNameplateTextEffectPadding(g_Config.m_QmNameplateTextEffects, g_Config.m_QmNameplateTextBorderRange, g_Config.m_QmNameplateTextGlowRange) : 0.0f;
 		m_Size = m_RenderSize + vec2(EffectPadding * 2.0f, EffectPadding * 2.0f + ExtraVerticalPadding() * 2.0f);
+		// 测量和尺寸也成功后才发布本部件的密度与缓存代际。
+		m_BakedDensityRevision = Data.m_DensityRevision;
 		m_TextCache.OnUpdate(This.TextRender()->GlyphAtlasRevision());
+	}
+	catch(...)
+	{
+		// UpdateText可能已改写子类字段；即使下帧内容相同也必须重试。
+		m_TextCache.Reset();
+		throw;
 	}
 	int TextRebuildCost() const override { return m_Visible && m_TextContainerIndex.Valid() ? 1 : 0; }
 	void Reset(CGameClient &This) override
 	{
-		This.TextRender()->DeleteTextContainer(m_TextContainerIndex);
 		m_TextCache.Reset();
 		m_BakedDensityRevision = 0;
+		m_TextBuild.Reset(*This.TextRender(), m_TextContainerIndex);
 	}
 	void Render(CGameClient &This, vec2 Pos) const override
 	{

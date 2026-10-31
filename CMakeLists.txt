@@ -3659,6 +3659,7 @@ if(CLIENT)
     ../../qm/hooks/soda/qm_soda_protocol.cpp
     components/qmclient/nameplate_density.h
     components/qmclient/nameplate_text_cache.h
+    components/qmclient/nameplate_text_build.h
     components/qmclient/pie_menu_actions.cpp
     components/qmclient/pie_menu_follow.cpp
     components/qmclient/pie_menu_points.h
@@ -6099,6 +6100,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/components/qmclient/map_difficulty_catalog.cpp
       src/engine/client/sqlite.cpp
       src/test/integration/qmclient/client/qm_text_temporary_lifetime_test.cpp
+      src/test/integration/qmclient/client/qm_nameplate_text_build_test.cpp
       src/test/integration/client/graph_rendering_test.cpp
       src/test/integration/qmclient/ui/qm_popup_blur_scope_test.cpp
       src/test/integration/qmclient/ui/qm_settings_search_session_test.cpp
@@ -6221,6 +6223,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/settings/settings_text_plan_commit_test.cpp
       src/test/unit/qmclient/settings/settings_text_plan_progress_test.cpp
       src/test/unit/qmclient/settings/settings_glyph_prewarm_test.cpp
+      src/test/unit/qmclient/client/qm_nameplate_text_build_test.cpp
       src/test/unit/qmclient/ui/ui_cache_quantization_test.cpp
       src/test/integration/qmclient/ui/qm_tree_allocation_failure_test.cpp
       src/game/client/QmUi/QmTree.cpp
