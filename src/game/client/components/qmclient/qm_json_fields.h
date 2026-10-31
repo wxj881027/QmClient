@@ -1,5 +1,5 @@
-#ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_QM_USERS_JSON_H
-#define GAME_CLIENT_COMPONENTS_QMCLIENT_QM_USERS_JSON_H
+#ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_QM_JSON_FIELDS_H
+#define GAME_CLIENT_COMPONENTS_QMCLIENT_QM_JSON_FIELDS_H
 
 #include <base/str.h>
 
@@ -7,9 +7,9 @@
 
 #include <cstring>
 
-namespace qm_users_json
+namespace qm_json
 {
-	// 名单字段按完整成员名匹配，未知字段的 NUL 前缀不参与协议解释。
+	// 字段按完整成员名匹配，未知字段的 NUL 前缀不参与协议解释。
 	inline const json_value *Field(const json_value *pObject, const char *pName)
 	{
 		if(!pObject || pObject->type != json_object)

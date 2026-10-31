@@ -1,7 +1,7 @@
 #include "qm_realtime_users.h"
 
+#include "qm_json_fields.h"
 #include "qm_realtime.h"
-#include "qm_users_json.h"
 
 #include <engine/shared/json.h>
 
@@ -23,7 +23,7 @@ namespace
 
 	bool Text(const json_value *pValue, std::string &Out, size_t Max, bool Empty = false)
 	{
-		if(!pValue || pValue->type != json_string || pValue->u.string.length > Max || !qm_users_json::Text(pValue, Empty))
+		if(!pValue || pValue->type != json_string || pValue->u.string.length > Max || !qm_json::Text(pValue, Empty))
 			return false;
 		for(unsigned i = 0; i < pValue->u.string.length; ++i)
 			if(static_cast<unsigned char>(pValue->u.string.ptr[i]) < 0x20 || pValue->u.string.ptr[i] == 0x7f)
@@ -94,15 +94,15 @@ CQmRealtimeUsersState::EApplyResult CQmRealtimeUsersState::ApplyCandidate(const 
 		return EApplyResult::RESYNC;
 	};
 	std::string Address;
-	if(!Text(qm_users_json::Field(pData, "server_address"), Address, 128, true))
+	if(!Text(qm_json::Field(pData, "server_address"), Address, 128, true))
 		return Invalid();
 	if(Address != (pExpectedServer ? pExpectedServer : ""))
 		return EApplyResult::IGNORED;
 	int64_t Revision, Base, Lease;
-	const json_value *pFull = qm_users_json::Field(pData, "full");
-	if(!Integer(qm_users_json::Field(pData, "revision"), Revision, 1, MAX_REVISION) ||
-		!Integer(qm_users_json::Field(pData, "base_revision"), Base, 0, MAX_REVISION) ||
-		!Integer(qm_users_json::Field(pData, "lease_seconds"), Lease, 1, 20) || !pFull || pFull->type != json_boolean)
+	const json_value *pFull = qm_json::Field(pData, "full");
+	if(!Integer(qm_json::Field(pData, "revision"), Revision, 1, MAX_REVISION) ||
+		!Integer(qm_json::Field(pData, "base_revision"), Base, 0, MAX_REVISION) ||
+		!Integer(qm_json::Field(pData, "lease_seconds"), Lease, 1, 20) || !pFull || pFull->type != json_boolean)
 		return Invalid();
 	const bool Full = pFull->u.boolean;
 	if(Full)
@@ -115,10 +115,10 @@ CQmRealtimeUsersState::EApplyResult CQmRealtimeUsersState::ApplyCandidate(const 
 	else if(m_Revision == 0 || m_ServerAddress != Address || m_NeedsFull || Base != m_Revision || (Revision != Base && Revision != Base + 1))
 		return Invalid();
 
-	const json_value *pServers = qm_users_json::Field(pData, "servers");
-	const json_value *pPlayers = qm_users_json::Field(pData, "players");
-	const json_value *pRemovedServers = qm_users_json::Field(pData, "removed_servers");
-	const json_value *pRemovedPlayers = qm_users_json::Field(pData, "removed_players");
+	const json_value *pServers = qm_json::Field(pData, "servers");
+	const json_value *pPlayers = qm_json::Field(pData, "players");
+	const json_value *pRemovedServers = qm_json::Field(pData, "removed_servers");
+	const json_value *pRemovedPlayers = qm_json::Field(pData, "removed_players");
 	if(!Array(pServers, MAX_SERVERS) || !Array(pPlayers, MAX_PLAYERS) || !Array(pRemovedServers, MAX_SERVERS) || !Array(pRemovedPlayers, MAX_PLAYERS))
 		return Invalid();
 	const bool HasChanges = pServers->u.array.length || pPlayers->u.array.length || pRemovedServers->u.array.length || pRemovedPlayers->u.array.length;

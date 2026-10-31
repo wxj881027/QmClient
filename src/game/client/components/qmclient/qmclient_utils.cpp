@@ -1,7 +1,7 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include "qmclient_utils.h"
 
-#include "qm_users_json.h"
+#include "qm_json_fields.h"
 
 #include <base/str.h>
 
@@ -66,10 +66,10 @@ namespace
 	}
 	EClientBrand JsonReadClientBrand(const json_value *pEntry)
 	{
-		const json_value *pClientType = qm_users_json::Field(pEntry, "client_type");
+		const json_value *pClientType = qm_json::Field(pEntry, "client_type");
 		if(pClientType == &json_value_none)
-			pClientType = qm_users_json::Field(pEntry, "type");
-		if(!qm_users_json::Text(pClientType))
+			pClientType = qm_json::Field(pEntry, "type");
+		if(!qm_json::Text(pClientType))
 			return EClientBrand::QM;
 
 		const char *pType = pClientType->u.string.ptr;
@@ -150,9 +150,9 @@ bool IsQmClientUsersSnapshotForContext(const json_value *pRoot, const char *pCur
 	if(!pRoot || pRoot->type != json_object)
 		return false;
 
-	const json_value *pAddress = qm_users_json::Field(pRoot, "server_address");
-	const json_value *pUsers = qm_users_json::Field(pRoot, "users");
-	if(!qm_users_json::Text(pAddress) || pUsers->type != json_array)
+	const json_value *pAddress = qm_json::Field(pRoot, "server_address");
+	const json_value *pUsers = qm_json::Field(pRoot, "users");
+	if(!qm_json::Text(pAddress) || pUsers->type != json_array)
 		return false;
 
 	if(str_comp(pAddress->u.string.ptr, QMCLIENT_REALTIME_USERS_GLOBAL) == 0)
@@ -171,7 +171,7 @@ bool ParseQmClientUsersJson(const json_value *pRoot, const char *pServerAddress,
 	const json_value *pUsers = pRoot;
 	if(pUsers->type == json_object)
 	{
-		const json_value *pUsersField = qm_users_json::Field(pUsers, "users");
+		const json_value *pUsersField = qm_json::Field(pUsers, "users");
 		if(pUsersField != &json_value_none)
 			pUsers = pUsersField;
 	}
@@ -191,20 +191,20 @@ bool ParseQmClientUsersJson(const json_value *pRoot, const char *pServerAddress,
 		if(!pEntry || pEntry->type != json_object)
 			continue;
 
-		const json_value *pServerAddressField = qm_users_json::Field(pEntry, "server_address");
+		const json_value *pServerAddressField = qm_json::Field(pEntry, "server_address");
 		if(pServerAddressField == &json_value_none)
-			pServerAddressField = qm_users_json::Field(pEntry, "server");
-		if(!qm_users_json::Text(pServerAddressField))
+			pServerAddressField = qm_json::Field(pEntry, "server");
+		if(!qm_json::Text(pServerAddressField))
 			continue;
 
-		const json_value *pPlayerName = qm_users_json::Field(pEntry, "player_name");
+		const json_value *pPlayerName = qm_json::Field(pEntry, "player_name");
 		if(pPlayerName == &json_value_none)
-			pPlayerName = qm_users_json::Field(pEntry, "name");
-		if(!qm_users_json::Text(pPlayerName, false))
+			pPlayerName = qm_json::Field(pEntry, "name");
+		if(!qm_json::Text(pPlayerName, false))
 			continue;
 
 		bool Dummy = false;
-		const json_value *pDummy = qm_users_json::Field(pEntry, "dummy");
+		const json_value *pDummy = qm_json::Field(pEntry, "dummy");
 		if(pDummy != &json_value_none)
 			JsonReadBoolean(pDummy, Dummy);
 
@@ -234,18 +234,18 @@ bool ParseQmClientUsersJson(const json_value *pRoot, const char *pServerAddress,
 		Mark.m_Name.assign(pPlayerName->u.string.ptr, pPlayerName->u.string.length);
 		Mark.m_ClientBrand = JsonReadClientBrand(pEntry);
 
-		const json_value *pQidField = qm_users_json::Field(pEntry, "qid");
-		if(qm_users_json::Text(pQidField))
+		const json_value *pQidField = qm_json::Field(pEntry, "qid");
+		if(qm_json::Text(pQidField))
 			Mark.m_Qid.assign(pQidField->u.string.ptr, pQidField->u.string.length);
 
-		const json_value *pFootParticlesEnabled = qm_users_json::Field(pEntry, "foot_particles_enabled");
+		const json_value *pFootParticlesEnabled = qm_json::Field(pEntry, "foot_particles_enabled");
 		JsonReadBoolean(pFootParticlesEnabled, Mark.m_FootParticlesEnabled);
 
-		const json_value *pRemoteParticlesEnabled = qm_users_json::Field(pEntry, "remote_particles_enabled");
+		const json_value *pRemoteParticlesEnabled = qm_json::Field(pEntry, "remote_particles_enabled");
 		JsonReadBoolean(pRemoteParticlesEnabled, Mark.m_RemoteParticlesEnabled);
 
 		Mark.m_VoiceSupported = true;
-		const json_value *pVoiceSupported = qm_users_json::Field(pEntry, "voice_supported");
+		const json_value *pVoiceSupported = qm_json::Field(pEntry, "voice_supported");
 		if(pVoiceSupported != &json_value_none)
 			JsonReadBoolean(pVoiceSupported, Mark.m_VoiceSupported);
 	}
