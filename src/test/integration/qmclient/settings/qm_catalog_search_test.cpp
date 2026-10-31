@@ -39,6 +39,17 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		{"qm_cycle_tee_hue_dummy", "deck:tee7-editor"},
 		{"地图点状调试路径", "qm:player_stats"},
 		{"qm_player_stats_map_progress_dbg_route", "qm:player_stats"},
+		// 四张曾缺索引/索引措辞过期的卡片：界面上的原文必须能直接命中。
+		{"Lyrics language", "qm:lyrics"},
+		{"Separate Dynamic Island", "qm:lyrics"},
+		{"Show lyrics in Dynamic Island", "qm:lyrics"},
+		{"Enable Netease music Hook", "qm:lyrics"},
+		{"Infinity symbol", "qm:dynamic_island"},
+		{"Hook countdown size", "qm:dynamic_island"},
+		{"Console color scheme", "qm:console"},
+		{"Console font size", "qm:console"},
+		{"Selection background color", "qm:chat_completion"},
+		{"Reset chat completion appearance", "qm:chat_completion"},
 	};
 	for(const auto &Case : aCases)
 	{
