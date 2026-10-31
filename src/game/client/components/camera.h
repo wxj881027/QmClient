@@ -31,17 +31,24 @@ namespace QmCameraEffects
 		return vec2(ClampViewAxis(Desired.x, MapWidth), ClampViewAxis(Desired.y, MapHeight));
 	}
 
-	inline int EncodeDemoZoom(float Zoom)
+	inline int EncodeNonNegativeInt(float Value)
 	{
-		// 仅限制录像整数参数；游戏内仍允许无限缩放。
+		if(!(Value > 0.0f))
+			return 0;
+		constexpr int Max = std::numeric_limits<int>::max();
+		return static_cast<double>(Value) >= Max ? Max : static_cast<int>(Value);
+	}
+
+	inline int EncodeZoom(float Zoom)
+	{
+		// 仅限制在线/录像整数参数；游戏内仍允许无限缩放。
 		if(!(Zoom > 0.0f))
 			return 0;
 		constexpr int Max = std::numeric_limits<int>::max();
 		if(static_cast<double>(Zoom) >= static_cast<double>(Max) / 1000.0)
 			return Max;
 		// 正常范围保持原float乘法及向零截断，避免量化精度变化。
-		const float Scaled = Zoom * 1000.0f;
-		return static_cast<double>(Scaled) >= Max ? Max : static_cast<int>(Scaled);
+		return EncodeNonNegativeInt(Zoom * 1000.0f);
 	}
 
 	inline bool IsValidZoom(float Value, float MinZoom, float MaxZoom)

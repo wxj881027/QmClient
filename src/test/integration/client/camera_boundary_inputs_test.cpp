@@ -53,7 +53,7 @@ TEST(CameraBoundaryInputs, QuantizedZoomKeepsValidSpectatorCameraObject)
 		SCOPED_TRACE(Case.m_Zoom);
 		CNetObj_DDNetSpectatorInfo Input{};
 		Input.m_HasCameraInfo = true;
-		Input.m_Zoom = QmCameraEffects::EncodeDemoZoom(Case.m_Zoom);
+		Input.m_Zoom = QmCameraEffects::EncodeZoom(Case.m_Zoom);
 		CUnpacker Unpacker;
 		Unpacker.Reset(&Input, sizeof(Input));
 		CNetObjHandler Handler;

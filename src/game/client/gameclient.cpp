@@ -32,6 +32,7 @@
 #include "components/nameplates.h"
 #include "components/particles.h"
 #include "components/players.h"
+#include "components/qmclient/camera_network.h"
 #include "components/qmclient/collision_position.h"
 #include "components/qmclient/item_render_math.h"
 #include "components/qmclient/jelly_tee.h"
@@ -1860,8 +1861,8 @@ void CGameClient::OnReset()
 	m_LastShowDistanceZoom = 0.0f;
 	m_LastZoom = 0.0f;
 	m_LastScreenAspect = 0.0f;
-	m_LastDeadzone = 0.0f;
-	m_LastFollowFactor = 0.0f;
+	m_LastDeadzone = 0;
+	m_LastFollowFactor = 0;
 	m_LastDummyConnected = false;
 
 	m_MultiViewPersonalZoom = 0.0f;
@@ -3211,7 +3212,7 @@ void CGameClient::ProcessDemoSnapshot(CSnapshot *pSnap)
 			// always record local camera info as follow mode
 			CNetObj_DDNetSpectatorInfo *pDDNetSpectatorInfo = (CNetObj_DDNetSpectatorInfo *)((void *)pItem->Data());
 			pDDNetSpectatorInfo->m_HasCameraInfo = true;
-			pDDNetSpectatorInfo->m_Zoom = QmCameraEffects::EncodeDemoZoom(m_Camera.m_Zooming ? m_Camera.m_ZoomSmoothingTarget : m_Camera.BaseZoom());
+			pDDNetSpectatorInfo->m_Zoom = QmCameraEffects::EncodeZoom(m_Camera.m_Zooming ? m_Camera.m_ZoomSmoothingTarget : m_Camera.BaseZoom());
 			pDDNetSpectatorInfo->m_Deadzone = m_Camera.Deadzone();
 			pDDNetSpectatorInfo->m_FollowFactor = m_Camera.FollowFactor();
 		}
@@ -4396,8 +4397,8 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 			Zoom = m_Camera.m_ZoomSmoothingTarget;
 		}
 
-		float Deadzone = m_Camera.Deadzone();
-		float FollowFactor = m_Camera.FollowFactor();
+		int Deadzone = m_Camera.Deadzone();
+		int FollowFactor = m_Camera.FollowFactor();
 
 		if(m_Snap.m_SpecInfo.m_Active)
 		{
@@ -4411,20 +4412,15 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		if(Client()->DummyConnected() && !m_LastDummyConnected)
 		{
 			{
-				CNetMsg_Cl_ShowDistance Msg;
 				float x, y;
 				Graphics()->CalcScreenParams(Graphics()->GameScreenAspect(), ShowDistanceZoom, &x, &y);
-				Msg.m_X = x;
-				Msg.m_Y = y;
+				auto Msg = QmCameraNetwork::ShowDistance(x, y);
 				CMsgPacker Packer(&Msg);
 				Msg.Pack(&Packer);
 				Client()->SendMsg(IClient::CONN_DUMMY, &Packer, MSGFLAG_VITAL);
 			}
 			{
-				CNetMsg_Cl_CameraInfo Msg;
-				Msg.m_Zoom = round_truncate(Zoom * 1000.f);
-				Msg.m_Deadzone = Deadzone;
-				Msg.m_FollowFactor = FollowFactor;
+				auto Msg = QmCameraNetwork::CameraInfo(Zoom, Deadzone, FollowFactor);
 				CMsgPacker Packer(&Msg);
 				Msg.Pack(&Packer);
 				Client()->SendMsg(IClient::CONN_DUMMY, &Packer, MSGFLAG_VITAL);
@@ -4434,11 +4430,9 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		// send show distance
 		if(ShowDistanceZoom != m_LastShowDistanceZoom || Graphics()->GameScreenAspect() != m_LastScreenAspect)
 		{
-			CNetMsg_Cl_ShowDistance Msg;
 			float x, y;
 			Graphics()->CalcScreenParams(Graphics()->GameScreenAspect(), ShowDistanceZoom, &x, &y);
-			Msg.m_X = x;
-			Msg.m_Y = y;
+			auto Msg = QmCameraNetwork::ShowDistance(x, y);
 			Client()->ChecksumData()->m_Zoom = ShowDistanceZoom;
 			CMsgPacker Packer(&Msg);
 			Msg.Pack(&Packer);
@@ -4451,10 +4445,7 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		// send camera info
 		if(Zoom != m_LastZoom || Deadzone != m_LastDeadzone || FollowFactor != m_LastFollowFactor)
 		{
-			CNetMsg_Cl_CameraInfo Msg;
-			Msg.m_Zoom = round_truncate(Zoom * 1000.f);
-			Msg.m_Deadzone = Deadzone;
-			Msg.m_FollowFactor = FollowFactor;
+			auto Msg = QmCameraNetwork::CameraInfo(Zoom, Deadzone, FollowFactor);
 			CMsgPacker Packer(&Msg);
 			Msg.Pack(&Packer);
 

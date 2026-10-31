@@ -3442,6 +3442,7 @@ if(CLIENT)
     components/qmclient/ghost_render.h
     components/camera.cpp
     components/camera.h
+    components/qmclient/camera_network.h
     components/censor.cpp
     components/censor.h
     components/chat.cpp
@@ -5241,6 +5242,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_demo_camera_storage_test.cpp
     src/test/unit/qmclient/client/qm_camera_effects_test.cpp
     src/test/unit/qmclient/client/qm_camera_boundaries_test.cpp
+    src/test/unit/qmclient/client/qm_camera_network_test.cpp
+    src/test/integration/client/camera_network_messages_test.cpp
     src/test/integration/client/camera_boundary_inputs_test.cpp
     src/test/contract/qmclient/ui/qm_capsule_tab_wiring_contract_test.cpp
     src/test/unit/qmclient/ui/qm_capsule_tab_geometry_test.cpp
