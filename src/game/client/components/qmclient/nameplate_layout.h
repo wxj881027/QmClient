@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <limits>
 
 // 隐私屏蔽只停止绘制，布局继续使用当前内容的尺寸。
 class CQmNameplatePartLayout
@@ -24,6 +25,11 @@ public:
 	vec2 Size() const { return m_Size; }
 	vec2 Padding() const { return m_Padding; }
 	bool Visible() const { return m_Visible && !m_HiddenForPrivacy; }
+	float VisibleTop(float LineBottomY, float LineHeight) const
+	{
+		// 与 RenderLine 的居中位置一致；隐藏的占位只参与排版，不抬高气泡。
+		return Visible() ? LineBottomY - (std::max(LineHeight, m_Padding.y + m_Size.y) + m_Size.y) * 0.5f : std::numeric_limits<float>::infinity();
+	}
 	bool ShiftOnInvis() const { return m_ShiftOnInvis || (m_Visible && m_HiddenForPrivacy); }
 	bool HasLayout() const { return m_Visible || m_ShiftOnInvis || m_ReserveLineHeight; }
 	vec2 LayoutSize() const

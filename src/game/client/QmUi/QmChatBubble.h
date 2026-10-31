@@ -9,6 +9,8 @@
 #include <cmath>
 
 class IGraphics;
+class ITextRender;
+class CTextCursor;
 
 namespace qm_chat_bubble
 {
@@ -16,15 +18,18 @@ namespace qm_chat_bubble
 	enum class EStyle
 	{
 		COMIC,
-		CLOUD,
-		CANDY,
-		STICKER
+		CANDY
 	};
-	constexpr int STYLE_COUNT = 4;
+	constexpr int STYLE_COUNT = 2;
 	constexpr float MAX_TEXT_WIDTH = 230.0f;
-	constexpr int CORNER_SEGMENTS = 8;
-	constexpr int CLOUD_SEGMENTS = 64;
-	constexpr int MAX_CONTOUR_POINTS = CLOUD_SEGMENTS;
+	constexpr int CORNER_SEGMENTS = 16;
+	constexpr int MAX_CONTOUR_POINTS = 4 * (CORNER_SEGMENTS + 1) + 3;
+
+	inline float AntialiasWidth(vec2 MappedSize, vec2 ScreenSize)
+	{
+		// 羽化始终覆盖实际像素，不随出现/收起动画缩成不足一个像素。
+		return 1.25f * std::max(std::abs(MappedSize.x) / std::max(1.0f, ScreenSize.x), std::abs(MappedSize.y) / std::max(1.0f, ScreenSize.y));
+	}
 
 	inline EStyle StyleFromConfig(int Value)
 	{
@@ -63,16 +68,7 @@ namespace qm_chat_bubble
 		float TailHeight = 11.0f;
 		float TailWidth = 9.0f;
 		float TailLean = 3.0f;
-		if(Style == EStyle::CLOUD)
-		{
-			// 云边内凹处之外留出安全区，长消息的四角始终落在正文区域。
-			Width = (std::max(TextSize.x, FontSize) + PaddingX * 2.0f) * 1.65f;
-			Height *= 1.65f;
-			Radius = 0.0f;
-			TailHeight = 0.0f;
-			Stroke = 1.6f;
-		}
-		else if(Style == EStyle::CANDY)
+		if(Style == EStyle::CANDY)
 		{
 			Radius = Height * 0.5f;
 			Width = std::max(Width, Radius * 2.0f + 24.0f);
@@ -80,13 +76,6 @@ namespace qm_chat_bubble
 			TailHeight = 7.0f;
 			TailWidth = 6.0f;
 			TailLean = -3.0f;
-		}
-		else if(Style == EStyle::STICKER)
-		{
-			Radius = std::min(14.0f, Height * 0.35f);
-			Width = std::max(Width, Radius * 2.0f + 48.0f);
-			Stroke = 2.0f;
-			TailHeight = 9.0f;
 		}
 		const vec2 Size(Width, Height);
 		const vec2 Position(Anchor.x - Width * Scale * 0.5f, Anchor.y - (Height + TailHeight) * Scale);
@@ -98,30 +87,6 @@ namespace qm_chat_bubble
 	{
 		SContour Result;
 		const vec2 Center = Layout.m_Position + Layout.m_Size * 0.5f;
-		if(Layout.m_Style == EStyle::CLOUD)
-		{
-			struct SCloudSample
-			{
-				vec2 m_Direction;
-				float m_RadiusFactor;
-			};
-			// 每团云边连续起伏；圆周采样只初始化一次，避免逐帧计算三角函数。
-			static const auto s_aCloudSamples = [] {
-				std::array<SCloudSample, CLOUD_SEGMENTS> aSamples;
-				for(int i = 0; i < CLOUD_SEGMENTS; ++i)
-				{
-					const float Angle = -pi * 0.5f + i * 2.0f * pi / CLOUD_SEGMENTS;
-					aSamples[i] = {vec2(std::cos(Angle), std::sin(Angle)), 0.94f + 0.06f * std::cos(Angle * 8.0f)};
-				}
-				return aSamples;
-			}();
-			for(const SCloudSample &Sample : s_aCloudSamples)
-			{
-				const vec2 Radius = Layout.m_Size * (0.5f * Sample.m_RadiusFactor) - vec2(Inset, Inset);
-				Result.m_aPoints[Result.m_Count++] = Center + vec2(Sample.m_Direction.x * Radius.x, Sample.m_Direction.y * Radius.y);
-			}
-			return Result;
-		}
 		const vec2 TopLeft = Layout.m_Position + vec2(Inset, Inset);
 		const vec2 BottomRight = Layout.m_Position + Layout.m_Size - vec2(Inset, Inset);
 		const float Radius = Layout.m_Radius - Inset;
@@ -149,18 +114,6 @@ namespace qm_chat_bubble
 				Result.m_aPoints[Result.m_Count++] = vec2(Center.x, BottomY + Layout.m_TailHeight - Inset * 2.0f);
 				Result.m_aPoints[Result.m_Count++] = vec2(Center.x + Layout.m_TailLean - HalfWidth, BottomRight.y);
 			}
-			if(Corner == 3 && Layout.m_Style == EStyle::STICKER)
-			{
-				// 两只小耳朵属于同一轮廓，透明填充不会在耳根处叠色。
-				for(float Side : {-1.0f, 1.0f})
-				{
-					const float EarX = Center.x + Side * 14.0f * Layout.m_Scale;
-					const float EarWidth = 6.0f * Layout.m_Scale - Inset;
-					Result.m_aPoints[Result.m_Count++] = vec2(EarX - EarWidth, TopLeft.y);
-					Result.m_aPoints[Result.m_Count++] = vec2(EarX + Side * 4.0f * Layout.m_Scale, Layout.m_Position.y - 9.0f * Layout.m_Scale + Inset * 2.0f);
-					Result.m_aPoints[Result.m_Count++] = vec2(EarX + EarWidth, TopLeft.y);
-				}
-			}
 		}
 		return Result;
 	}
@@ -179,9 +132,7 @@ namespace qm_chat_bubble
 		SPalette Result;
 		switch(Style)
 		{
-		case EStyle::CLOUD: Result = {{0.98f, 0.995f, 1.0f}, {0.79f, 0.92f, 1.0f}, {0.42f, 0.65f, 0.84f}, {0.20f, 0.42f, 0.58f, 0.22f}, {0.15f, 0.27f, 0.37f}}; break;
 		case EStyle::CANDY: Result = {{0.66f, 0.94f, 1.0f}, {0.78f, 0.70f, 1.0f}, {0.96f, 0.98f, 1.0f, 0.9f}, {0.28f, 0.22f, 0.53f, 0.25f}, {0.15f, 0.17f, 0.35f}}; break;
-		case EStyle::STICKER: Result = {{1.0f, 0.92f, 0.96f}, {1.0f, 0.78f, 0.86f}, {0.60f, 0.30f, 0.46f}, {0.45f, 0.22f, 0.34f, 0.28f}, {0.35f, 0.17f, 0.28f}}; break;
 		default: Result = {{1.0f, 0.99f, 0.94f}, {1.0f, 0.99f, 0.94f}, {0.16f, 0.13f, 0.17f}, {0.16f, 0.13f, 0.17f, 0.35f}, {0.16f, 0.13f, 0.17f}}; break;
 		}
 		if(CustomColors)
@@ -204,6 +155,7 @@ namespace qm_chat_bubble
 	}
 
 	void Render(IGraphics *pGraphics, const SLayout &Layout, const SPalette &Colors);
+	void RenderText(ITextRender *pTextRender, CTextCursor &Cursor, const char *pText, ColorRGBA Color, ColorRGBA Outline);
 
 }
 #endif

@@ -1451,29 +1451,31 @@ private:
 	{
 		vec2 Position = PositionBottomMiddle;
 		vec2 LineSize = vec2(0.0f, 0.0f);
-		bool Empty = true;
-		float Top = Position.y;
+		float Top = std::numeric_limits<float>::infinity();
+		size_t LineStart = StartIndex;
+		auto IncludeLine = [&](size_t End) {
+			for(size_t i = LineStart; i < End; ++i)
+				Top = std::min(Top, m_vpParts[i]->VisibleTop(Position.y, LineSize.y));
+		};
 		for(size_t PartIndex = StartIndex; PartIndex < EndIndex; ++PartIndex)
 		{
 			const CNamePlatePart &Part = *m_vpParts[PartIndex];
 			if(Part.NewLine())
 			{
-				if(!Empty)
-				{
-					Top = std::min(Top, Position.y - LineSize.y / 2.0f);
-					Position.y -= LineSize.y;
-				}
+				IncludeLine(PartIndex);
+				Position.y -= LineSize.y;
+				LineStart = PartIndex + 1;
 				LineSize = vec2(0.0f, 0.0f);
 			}
 			else if(Part.HasLayout())
 			{
-				Empty = false;
 				const vec2 PartSize = Part.LayoutSize();
 				LineSize.x += PartSize.x;
 				LineSize.y = std::max(LineSize.y, PartSize.y);
 			}
 		}
-		return std::min(Top, Position.y - LineSize.y / 2.0f);
+		IncludeLine(EndIndex);
+		return Top;
 	}
 	void RenderRange(CGameClient &This, vec2 PositionBottomMiddle, size_t StartIndex, size_t EndIndex)
 	{
@@ -1751,21 +1753,23 @@ public:
 	{
 		return m_Inited;
 	}
-	float TopY(const vec2 &PositionBottomMiddle) const
+	float TopY(const vec2 &PositionBottomMiddle, const CNamePlate *pLayoutReference = nullptr) const
 	{
 		dbg_assert(m_Inited, "Tried to get top of uninited nameplate");
+		float Top = std::numeric_limits<float>::infinity();
 		if(NameplateFreeMoveEnabled())
 		{
-			// Use the baseline frame top so chat bubbles etc. anchor to a
-			// stable, drag-independent position for layout neighbors.
-			bool HasFrame = false;
-			vec2 FrameMin = vec2(0.0f, 0.0f);
-			vec2 FrameMax = vec2(0.0f, 0.0f);
-			ComputeBaselineFrame(PositionBottomMiddle, HasFrame, FrameMin, FrameMax);
-			return HasFrame ? FrameMin.y : PositionBottomMiddle.y;
+			// 气泡跟随实际绘制的行位置，不使用拖动前的预览边框。
+			vec2 BaselinePos = PositionBottomMiddle;
+			for(const SCoreRowParts &CoreRow : m_vCoreRows)
+			{
+				Top = std::min(Top, RangeTopY(BaselinePos + NameplateCoreRowOffset(CoreRow.m_Row), CoreRow.m_Start, CoreRow.m_End));
+				BaselinePos.y -= LayoutCoreRowSize(CoreRow, pLayoutReference).y;
+			}
 		}
-
-		return RangeTopY(PositionBottomMiddle, 0, m_vpParts.size());
+		else
+			Top = RangeTopY(PositionBottomMiddle, 0, m_vpParts.size());
+		return std::isfinite(Top) ? Top : PositionBottomMiddle.y;
 	}
 	vec2 Size() const
 	{
@@ -2738,12 +2742,20 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 	const vec2 NameplateBottomMiddleWorld = Position - vec2(0.0f, (float)g_Config.m_ClNamePlatesOffset);
 	const CNamePlate &NamePlate = m_pData->m_aNamePlates[ClientId];
 	if(NamePlate.IsInitialized())
-		NameplateTopWorldY = NamePlate.TopY(NameplateBottomMiddleWorld);
+	{
+		const CNamePlate &Frame = m_pData->m_aNamePlateFrameReferences[ClientId];
+		const bool UseFrame = NameplateFreeMoveEnabled() && NameplateRenderValue(ConfigManager(), &g_Config.m_QmNameplateShowScope) != QM_NAMEPLATE_SHOW_SCOPE_ALL && Frame.IsInitialized();
+		NameplateTopWorldY = NamePlate.TopY(NameplateBottomMiddleWorld, UseFrame ? &Frame : nullptr);
+	}
 	const float ScreenPosNameplateTopY = (NameplateTopWorldY - ScreenY0) / ScreenHeight;
 	const float InterfaceNameplateTopY = InterfaceY0 + ScreenPosNameplateTopY * InterfaceHeight;
 
 	unsigned int PrevFlags = TextRender()->GetRenderFlags();
+	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
+	const ColorRGBA PreviousOutlineColor = TextRender()->GetTextOutlineColor();
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
+	// 缓存只保存白色字形，最终颜色在绘制时应用，避免继承名牌颜色后再次相乘。
+	TextRender()->TextColor(ColorRGBA(1, 1, 1, 1));
 
 	const bool UseTextContainer = !RenderChatEmoji && !IsTyping && std::abs(AnimScale - 1.0f) <= 0.001f;
 	const bool LayoutDirty = !AnimState.m_TextContainerIndex.Valid() ||
@@ -2851,12 +2863,12 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 			Cursor.m_LineWidth = MaxWidth * AnimScale;
 			Cursor.m_Flags = TEXTFLAG_RENDER;
 			Cursor.SetPosition(Bubble.m_TextPosition);
-			TextRender()->TextEx(&Cursor, pDisplayText);
+			qm_chat_bubble::RenderText(TextRender(), Cursor, pDisplayText, TextColor, OutlineColor);
 		}
 	}
 
-	TextRender()->TextColor(TextRender()->DefaultTextColor());
-	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
+	TextRender()->TextColor(PreviousTextColor);
+	TextRender()->TextOutlineColor(PreviousOutlineColor);
 	TextRender()->SetRenderFlags(PrevFlags);
 
 	Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);

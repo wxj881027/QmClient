@@ -308,7 +308,7 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 	{
 		SplitSettingsControlRow(StyleRow, CurrentSettingsContentMetrics(), &StyleLabel, &StyleControl);
 		RenderQmVisualLabel("qm-chat-bubble-style-label", &StyleLabel, Localize("Style"), BodySize);
-		const char *apStyles[] = {Localize("Comic dialogue"), Localize("Cloud bubble"), Localize("Candy gradient"), Localize("Sticker")};
+		const char *apStyles[] = {Localize("Comic dialogue"), Localize("Candy gradient")};
 		static CUi::SDropDownState s_StyleState;
 		static CScrollRegion s_StyleScroll;
 		s_StyleState.m_SelectionPopupContext.m_pScrollRegion = &s_StyleScroll;
@@ -333,13 +333,12 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
 		CTextCursor Measure;
 		Measure.m_FontSize = FontSize;
-		Measure.m_LineWidth = std::max(40.0f, std::min(qm_chat_bubble::MAX_TEXT_WIDTH, Preview.w / 1.65f - 40.0f));
+		Measure.m_LineWidth = std::max(40.0f, std::min(qm_chat_bubble::MAX_TEXT_WIDTH, Preview.w - 40.0f));
 		Measure.m_Flags = 0;
 		TextRender()->TextEx(&Measure, pText);
 		const vec2 TextSize(Measure.m_LongestLineWidth, Measure.Height());
 		const auto Natural = qm_chat_bubble::Layout(vec2(0, 0), TextSize, FontSize, 1.0f, Style);
-		const float TopExtra = Style == qm_chat_bubble::EStyle::STICKER ? 13.0f : 1.0f;
-		const float FullHeight = Natural.m_Size.y + Natural.m_TailHeight + TopExtra + 4.0f;
+		const float FullHeight = Natural.m_Size.y + Natural.m_TailHeight + 5.0f;
 		const float Scale = std::max(0.0f, std::min({1.0f, (Preview.w - 12.0f) / (Natural.m_Size.x + 8.0f), (Preview.h - 8.0f) / FullHeight}));
 		const vec2 Anchor(Preview.x + Preview.w * 0.5f, Preview.y + (Preview.h - FullHeight * Scale) * 0.5f + (FullHeight - 4.0f) * Scale);
 		const auto Bubble = qm_chat_bubble::Layout(Anchor, TextSize, FontSize, Scale, Style);
@@ -355,7 +354,8 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 			Cursor.m_LineWidth = Measure.m_LineWidth * Scale;
 			Cursor.m_Flags = TEXTFLAG_RENDER;
 			Cursor.SetPosition(Bubble.m_TextPosition);
-			TextRender()->TextEx(&Cursor, pText);
+			qm_chat_bubble::RenderText(TextRender(), Cursor, pText, Colors.m_Text,
+				TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(g_Config.m_QmChatBubbleCustomColors ? Colors.m_Text.a : 0.0f));
 		}
 		TextRender()->SetRenderFlags(PreviousFlags);
 		TextRender()->TextColor(PreviousColor);

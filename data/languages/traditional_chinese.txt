@@ -2213,8 +2213,8 @@ Chat bubble display duration (seconds)
 Chat bubble font size
 == 聊天氣泡字體大小
 
-Chat bubble style (0=Comic dialogue, 1=Cloud bubble, 2=Candy gradient, 3=Sticker)
-== 訊息氣泡樣式（0=漫畫對白，1=雲朵氣泡，2=糖果漸層，3=貓耳貼紙）
+Chat bubble style (0=Comic dialogue, 1=Candy gradient)
+== 訊息氣泡樣式（0=漫畫對白，1=糖果漸層）
 
 Chat bubble text color
 == 聊天氣泡文字顏色
@@ -2692,9 +2692,6 @@ Close the demo player
 
 Close window after changing settings
 == 更改設置後關閉窗口
-
-Cloud bubble
-== 雲朵氣泡
 
 Collapse console
 == 收起控制台
@@ -14722,9 +14719,6 @@ Steam not found
 
 Steam profile name
 ==  Steam 個人資料名稱
-
-Sticker
-== 貓耳貼紙
 
 Still free after %d sponsors. Take a look?
 == 已經靠 %d 位贊助者撐到現在，要看看嗎？
