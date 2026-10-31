@@ -3,6 +3,7 @@
 
 #include "bounded_file_reader.h"
 #include "qm_json_fields.h"
+#include "qm_json_send.h"
 #include "qm_presence_send.h"
 #include "qm_realtime_service_data.h"
 #include "qm_title_style.h"
@@ -1611,25 +1612,23 @@ bool CQmClient::SendQmRealtimePresence(bool Hello, bool ForceSend)
 {
 	if(!m_pQmRealtimeTransport || m_pQmRealtimeTransport->State() != EQmWebSocketState::CONNECTED)
 		return false;
-	return TrySendQmPresence(m_QmRealtimePresenceBody, Hello, ForceSend, [this](bool BuildHello) { return BuildQmRealtimePresence(BuildHello); }, [this](const char *pData, size_t Size) { return m_pQmRealtimeTransport->SendText(pData, Size); });
+	return TrySendQmPresence(m_QmRealtimePresenceBody, Hello, ForceSend, [this](bool BuildHello) { return BuildQmRealtimePresence(BuildHello); }, [this](const char *pData, size_t Size) { return m_pQmRealtimeTransport->SendText(pData, Size); }) == EQmPresenceSendResult::SENT;
 }
 
 bool CQmClient::RequestQmRealtimeTitleRefresh()
 {
 	if(!m_pQmRealtimeTransport || m_pQmRealtimeTransport->State() != EQmWebSocketState::CONNECTED)
 		return false;
-	CJsonStringWriter Writer;
-	Writer.BeginObject();
-	Writer.WriteAttribute("type");
-	Writer.WriteStrValue("subscribe_titles");
-	if(QmRealtimeAllowsCredentials(m_aQmRealtimeUrl))
-	{
-		Writer.WriteAttribute("title_token");
-		Writer.WriteStrValue(m_aTitleToken);
-	}
-	Writer.EndObject();
-	const std::string Body = Writer.GetOutputString();
-	if(!m_pQmRealtimeTransport->SendText(Body.c_str(), Body.size()))
+	if(!TrySendQmJsonMessage([this](CJsonStringWriter &Writer) {
+		Writer.BeginObject();
+		Writer.WriteAttribute("type");
+		Writer.WriteStrValue("subscribe_titles");
+		if(QmRealtimeAllowsCredentials(m_aQmRealtimeUrl))
+		{
+			Writer.WriteAttribute("title_token");
+			Writer.WriteStrValue(m_aTitleToken);
+		}
+		Writer.EndObject(); }, [this](const char *pData, size_t Size) { return m_pQmRealtimeTransport->SendText(pData, Size); }))
 		return false;
 	m_QmRealtimeTitleRevision = m_TitleRevision;
 	m_QmRealtimePresenceBody.clear();
@@ -1641,15 +1640,13 @@ void CQmClient::SendQmRealtimeStop()
 {
 	if(!m_pQmRealtimeTransport || m_pQmRealtimeTransport->State() != EQmWebSocketState::CONNECTED)
 		return;
-	CJsonStringWriter Writer;
-	Writer.BeginObject();
-	Writer.WriteAttribute("type");
-	Writer.WriteStrValue("stop");
-	Writer.WriteAttribute("stop_at");
-	Writer.WriteIntValue((int)std::clamp<int64_t>(time_timestamp(), 0, std::numeric_limits<int>::max()));
-	Writer.EndObject();
-	const std::string Body = Writer.GetOutputString();
-	m_pQmRealtimeTransport->SendText(Body.c_str(), Body.size());
+	TrySendQmJsonMessage([](CJsonStringWriter &Writer) {
+		Writer.BeginObject();
+		Writer.WriteAttribute("type");
+		Writer.WriteStrValue("stop");
+		Writer.WriteAttribute("stop_at");
+		Writer.WriteIntValue((int)std::clamp<int64_t>(time_timestamp(), 0, std::numeric_limits<int>::max()));
+		Writer.EndObject(); }, [this](const char *pData, size_t Size) { return m_pQmRealtimeTransport->SendText(pData, Size); });
 }
 
 bool CQmClient::HasUnreadQmNews() const
@@ -2136,18 +2133,17 @@ std::string CQmClient::BuildQmAnonymousEmoteHello() const
 	return Writer.GetOutputString();
 }
 
-void CQmClient::SendQmAnonymousEmoteHello()
+void CQmClient::SendQmAnonymousEmoteHello(bool ForceSend)
 {
 	if(!m_pQmAnonymousEmote || m_pQmAnonymousEmote->State() != EQmWebSocketState::CONNECTED ||
 		Client()->State() != IClient::STATE_ONLINE || !Client()->ServerAddress())
 		return;
-	const std::string Body = BuildQmAnonymousEmoteHello();
-	if(m_pQmAnonymousEmote->SendText(Body.c_str(), Body.size()))
-	{
-		m_QmAnonymousHelloBody = Body;
+	const auto Result = TrySendQmPresence(m_QmAnonymousHelloBody, false, ForceSend, [this](bool) { return BuildQmAnonymousEmoteHello(); }, [this](const char *pData, size_t Size) {
+			m_QmRealtimeEmoticonEvents.clear();
+			return m_pQmAnonymousEmote->SendText(pData, Size); });
+	if(Result == EQmPresenceSendResult::SENT)
 		LogQmWebSocketEvent("anonymous_emote", "hello_sent");
-	}
-	else
+	else if(Result == EQmPresenceSendResult::FAILED)
 		LogQmWebSocketEvent("anonymous_emote", "hello_send_failed");
 }
 
@@ -2215,7 +2211,7 @@ void CQmClient::UpdateQmAnonymousEmotes()
 		m_QmRealtimeEmoticonEvents.clear();
 		secure_random_password(m_aQmAnonymousClientId, sizeof(m_aQmAnonymousClientId), sizeof(m_aQmAnonymousClientId) - 1);
 		secure_random_password(m_aQmAnonymousSessionId, sizeof(m_aQmAnonymousSessionId), sizeof(m_aQmAnonymousSessionId) - 1);
-		SendQmAnonymousEmoteHello();
+		SendQmAnonymousEmoteHello(true);
 	}
 	SQmWebSocketMessage Incoming;
 	for(int Count = 0; Count < 8 && m_pQmAnonymousEmote->PollMessage(Incoming); ++Count)
@@ -2248,11 +2244,7 @@ void CQmClient::UpdateQmAnonymousEmotes()
 	if(Now >= m_QmAnonymousNextHelloCheck)
 	{
 		m_QmAnonymousNextHelloCheck = Now + time_freq() / 4;
-		if(BuildQmAnonymousEmoteHello() != m_QmAnonymousHelloBody)
-		{
-			m_QmRealtimeEmoticonEvents.clear();
-			SendQmAnonymousEmoteHello();
-		}
+		SendQmAnonymousEmoteHello(false);
 	}
 }
 
@@ -2350,21 +2342,19 @@ void CQmClient::SendQmAnonymousEmoticon(int Emoticon, int PlayerId, bool LaunchM
 		Emoticon < 0 || Emoticon >= NUM_EMOTICONS ||
 		PlayerId < 0 || PlayerId >= MAX_CLIENTS || (!LaunchMode && !SuperLaunch))
 		return;
-	CJsonStringWriter Writer;
-	Writer.BeginObject();
-	Writer.WriteAttribute("type");
-	Writer.WriteStrValue("emoticon");
-	Writer.WriteAttribute("emoticon");
-	Writer.WriteIntValue(Emoticon);
-	Writer.WriteAttribute("player_id");
-	Writer.WriteIntValue(PlayerId);
-	Writer.WriteAttribute("launch_mode");
-	Writer.WriteBoolValue(LaunchMode);
-	Writer.WriteAttribute("super_launch");
-	Writer.WriteBoolValue(SuperLaunch);
-	Writer.EndObject();
-	const std::string Body = Writer.GetOutputString();
-	if(m_pQmAnonymousEmote->SendText(Body.c_str(), Body.size()))
+	if(TrySendQmJsonMessage([=](CJsonStringWriter &Writer) {
+		Writer.BeginObject();
+		Writer.WriteAttribute("type");
+		Writer.WriteStrValue("emoticon");
+		Writer.WriteAttribute("emoticon");
+		Writer.WriteIntValue(Emoticon);
+		Writer.WriteAttribute("player_id");
+		Writer.WriteIntValue(PlayerId);
+		Writer.WriteAttribute("launch_mode");
+		Writer.WriteBoolValue(LaunchMode);
+		Writer.WriteAttribute("super_launch");
+		Writer.WriteBoolValue(SuperLaunch);
+		Writer.EndObject(); }, [this](const char *pData, size_t Size) { return m_pQmAnonymousEmote->SendText(pData, Size); }))
 		LogQmWebSocketEvent("anonymous_emote", "emoticon_sent");
 	else
 		LogQmWebSocketEvent("anonymous_emote", "emoticon_send_failed");

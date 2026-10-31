@@ -26,7 +26,7 @@ namespace
 				throw std::bad_alloc();
 			return BuildHello ? std::string("hello") : m_Presence; }, [&](const char *pData, size_t Size) {
 				m_vSent.emplace_back(pData, Size);
-				return m_Accept; });
+				return m_Accept; }) == EQmPresenceSendResult::SENT;
 		}
 	};
 }
@@ -117,7 +117,7 @@ TEST(QmPresenceSend, AdmissionObservesOldCacheAndAllPreparationFinished)
 {
 	std::string LastBody = "old";
 	int Builds = 0;
-	ASSERT_TRUE(TrySendQmPresence(LastBody, true, true, [&](bool Hello) {
+	ASSERT_EQ(EQmPresenceSendResult::SENT, TrySendQmPresence(LastBody, true, true, [&](bool Hello) {
 		++Builds;
 		return std::string(Hello ? "hello" : "presence"); }, [&](const char *, size_t) {
 			EXPECT_EQ(Builds, 2);
@@ -131,7 +131,7 @@ TEST(QmPresenceSend, PresenceCacheTakesOwnershipOfPreparedLongBuffer)
 {
 	std::string LastBody = "old";
 	const char *pSent = nullptr;
-	ASSERT_TRUE(TrySendQmPresence(LastBody, false, true, [](bool) { return std::string(4096, 'x'); }, [&](const char *pData, size_t Size) {
+	ASSERT_EQ(EQmPresenceSendResult::SENT, TrySendQmPresence(LastBody, false, true, [](bool) { return std::string(4096, 'x'); }, [&](const char *pData, size_t Size) {
 			pSent = pData;
 			EXPECT_EQ(Size, 4096u);
 			return true; }));
@@ -148,4 +148,37 @@ TEST(QmPresenceSend, UnexpectedPreparationExceptionsRemainVisible)
 			return true; }), std::logic_error);
 	EXPECT_FALSE(Sent);
 	EXPECT_EQ(LastBody, "old");
+}
+
+TEST(QmPresenceSend, UnchangedAndFailedPreparationHaveDifferentResults)
+{
+	std::string LastBody = "old";
+	int Sends = 0;
+	auto Send = [&](const char *, size_t) { ++Sends; return true; };
+	EXPECT_EQ(TrySendQmPresence(LastBody, false, false, [](bool) { return std::string("old"); }, Send), EQmPresenceSendResult::UNCHANGED);
+	EXPECT_EQ(TrySendQmPresence(LastBody, false, false, [](bool) -> std::string { throw std::bad_alloc(); }, Send), EQmPresenceSendResult::FAILED);
+	EXPECT_EQ(Sends, 0);
+	EXPECT_EQ(LastBody, "old");
+}
+
+TEST(QmPresenceSend, HelloSendsEvenWithoutForceWhenRegularCacheMatches)
+{
+	std::string LastBody = "presence";
+	std::string Sent;
+	EXPECT_EQ(TrySendQmPresence(LastBody, true, false, [](bool Hello) { return std::string(Hello ? "hello" : "presence"); }, [&](const char *pData, size_t Size) { Sent.assign(pData, Size); return true; }), EQmPresenceSendResult::SENT);
+	EXPECT_EQ(Sent, "hello");
+	EXPECT_EQ(LastBody, "presence");
+}
+
+TEST(QmPresenceSend, HelloCacheTakesOwnershipOfPreparedRegularBuffer)
+{
+	std::string LastBody = "old";
+	const char *pPrepared = nullptr;
+	EXPECT_EQ(TrySendQmPresence(LastBody, true, true, [&](bool Hello) {
+		std::string Body(Hello ? 2048 : 4096, Hello ? 'h' : 'p');
+		if(!Hello)
+			pPrepared = Body.data();
+		return Body; }, [](const char *, size_t) { return true; }), EQmPresenceSendResult::SENT);
+	EXPECT_EQ(LastBody.size(), 4096u);
+	EXPECT_EQ(LastBody.data(), pPrepared);
 }

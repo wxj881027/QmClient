@@ -5,10 +5,17 @@
 #include <string>
 #include <utility>
 
+enum class EQmPresenceSendResult
+{
+	FAILED,
+	UNCHANGED,
+	SENT,
+};
+
 // 先准备线上消息及握手后的常规缓存；发送拒收或准备失败均保留旧缓存。
 // Send 负责将自身失败转为 false；成功后仅移动已备好的字符串，不再分配。
 template<typename TBuild, typename TSend>
-bool TrySendQmPresence(std::string &LastBody, bool Hello, bool ForceSend, TBuild &&Build, TSend &&Send)
+EQmPresenceSendResult TrySendQmPresence(std::string &LastBody, bool Hello, bool ForceSend, TBuild &&Build, TSend &&Send)
 {
 	std::string Body;
 	std::string PresenceBody;
@@ -16,18 +23,18 @@ bool TrySendQmPresence(std::string &LastBody, bool Hello, bool ForceSend, TBuild
 	{
 		Body = Build(Hello);
 		if(!Hello && !ForceSend && Body == LastBody)
-			return false;
+			return EQmPresenceSendResult::UNCHANGED;
 		if(Hello)
 			PresenceBody = Build(false);
 	}
 	catch(const std::bad_alloc &)
 	{
-		return false;
+		return EQmPresenceSendResult::FAILED;
 	}
 	if(!Send(Body.data(), Body.size()))
-		return false;
+		return EQmPresenceSendResult::FAILED;
 	LastBody = Hello ? std::move(PresenceBody) : std::move(Body);
-	return true;
+	return EQmPresenceSendResult::SENT;
 }
 
 #endif

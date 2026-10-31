@@ -230,7 +230,7 @@ class CQmClient : public CComponent
 	void UpdateQmAnonymousEmotes();
 	void StopQmAnonymousEmotes();
 	std::string BuildQmAnonymousEmoteHello() const;
-	void SendQmAnonymousEmoteHello();
+	void SendQmAnonymousEmoteHello(bool ForceSend);
 	void QueueQmAnonymousEmoticonEvent(SQmRealtimeMessage Message);
 	void ApplyQmRealtimeServiceData(const SQmRealtimeMessage &Message);
 	void ApplyQmRealtimeBroadcast(const SQmRealtimeMessage &Message);
