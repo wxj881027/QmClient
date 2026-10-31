@@ -10816,6 +10816,24 @@ portuguese = "Olhos"
 turkish = "Gözler"
 polish = "Oczy"
 
+# 绑定轮盘的眼睛图标没有 skins 上下文，单独保留一条无上下文文案。
+
+[[message]]
+key = "Eyes"
+[message.translations]
+simplified_chinese = "眼睛"
+traditional_chinese = "眼睛"
+japanese = "目"
+korean = "눈"
+russian = "Глаза"
+german = "Augen"
+spanish = "Ojos"
+french = "Yeux"
+brazilian_portuguese = "Olhos"
+portuguese = "Olhos"
+turkish = "Gözler"
+polish = "Oczy"
+
 [[message]]
 key = "Feet"
 context = "skins"

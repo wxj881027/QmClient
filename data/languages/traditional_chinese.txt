@@ -728,9 +728,6 @@ Adjust TClient heads-up display elements
 Adjust the display options; open a vote to check the layout before joining a busy server.
 == 調整顯示選項；在加入熱鬧的伺服器前，先開啟一項投票確認版面。
 
-Adjust the opacity of entities belonging to other teams, such as tees and name plates
-== 調整其他隊伍實體（如 Tee 與名牌）的不透明度
-
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
 
@@ -748,9 +745,6 @@ Adjusts TClient-specific HUD elements that are not part of the standard DDNet HU
 
 Advanced
 == 高階
-
-Advanced mode
-== 進階模式
 
 Advanced options
 == 高級選項
@@ -977,9 +971,6 @@ Anti Latency Tools
 Anti latency tools
 == 反延遲工具
 
-Anti Ping Smoothing
-== 平滑預測
-
 Anti-aliasing for the exported video only, independent of the graphics setting. Explicit levels render each frame into a multisampled offscreen target, so the game itself can stay at a lower setting for performance. Supersampling (output smaller than the window) already reduces jagged edges, so prefer one or the other.
 == 只影響匯出成片的抗鋸齒，與全域圖形設定相互獨立。選明確檔位時每一幀會繪製進多取樣離屏目標，遊戲本體可以保持低檔位省效能。超取樣（輸出小於視窗）本身已經能減輕鋸齒，兩者二選一即可。
 
@@ -1040,9 +1031,6 @@ Applied to %d same-family part(s).
 Applies an animated rainbow color to selected elements such as nameplates or the hook.
 == 為名牌或鉤子等選定元素套用動畫彩虹色彩。
 
-Applies to single-color and rainbow overrides.
-== 用於單色和彩虹配色。
-
 Apply
 == 應用
 
@@ -1075,9 +1063,6 @@ Apply quick input to other Tees as well
 
 Apply squishy Tee deformation to other players
 == 將 Q 彈 Tee 形變應用到其他玩家
-
-Apply this preset
-== 應用此預設
 
 Apply to
 == 套用至
@@ -1276,9 +1261,6 @@ Auto enable in Gores mode
 
 Auto enable/disable IME on text focus
 == 根據文本輸入焦點自動啟用或關閉 IME
-
-Auto execute
-== 自動執行
 
 Auto fetch replay info on refresh
 == 刷新時是否自動獲取回放信息
@@ -2435,9 +2417,6 @@ Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher
 Chroma sampling. 4:2:0 is smallest and most compatible; 4:4:4 keeps full color detail for thin lines and small colored text. Rendering is 8-bit, so 10-bit formats do not add detail by themselves.
 == 色度取樣。4:2:0 體積最小、相容性最好；4:4:4 保留完整色度，細線與彩色小字最清楚。算繪本身是 8 位元，因此 10 位元格式不會自行增加細節。
 
-Cinematic camera
-== 電影鏡頭
-
 Cinematic camera smoothness (0=instant, 100=smoothest)
 == 電影鏡頭平滑度（0=瞬時，100=最平滑）
 
@@ -2512,9 +2491,6 @@ Classic Pro
 
 Classic pro
 == 古典 pro
-
-Classic title glow
-== 經典效果光暈
 
 Clear
 == 清空
@@ -3776,9 +3752,6 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 DeepL API
 == DeepL API
 
-DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
-== DeepL API Free：每月 50 萬字元（在 deepl.com 註冊；免費金鑰以 :fx 結尾）
-
 DeepL API Key (free keys end with :fx)
 == DeepL API 金鑰（免費金鑰以 :fx 結尾）
 
@@ -3880,9 +3853,6 @@ Delete screenshot
 
 Delete selected items
 == 刪除選中項
-
-Delete skin
-== 刪除皮膚
 
 Delete this preset
 == 刪除該預設
@@ -5432,6 +5402,9 @@ Extreme values make movement feel wrong, so change one step at a time.
 Extremely slow, for testing only
 == 極慢，僅測試用
 
+Eyes
+== 眼睛
+
 f = Frame rate
 == f = 幀率
 
@@ -5542,9 +5515,6 @@ Fairly fast encode
 
 Fake CTF flags
 == 偽 CTF 旗幟
-
-Fallback simple noise reduction strength
-== 回退後的簡單降噪強度
 
 Fast encode
 == 編碼快
@@ -6647,9 +6617,6 @@ High quality, slow
 Higher input latency
 == 輸入延遲較高
 
-Higher values make the wave move faster. Zero stops the movement.
-== 數值越大，波浪越快；設為零時停止運動。
-
 Highlight Color
 == 相關信息顏色
 
@@ -6661,9 +6628,6 @@ Highlight game type
 
 Highlight message text gradient color
 == 提及訊息文字漸變色
-
-Highlight movement in Polished mode. Zero turns it off.
-== 調整精緻模式中的流光速度，設為零時關閉。
 
 Highlight ping value
 == 高亮顯示 ping 值
@@ -7196,9 +7160,6 @@ Installed
 Installing update. Please wait...
 == 正在安裝更新，請稍等...
 
-Instant compact hints
-== 即時小字提示
-
 Instant zoom reverse
 == 反向縮放立即生效
 
@@ -7352,9 +7313,6 @@ It's recommended that you check the settings to adjust them to your liking befor
 Item
 == 項目
 
-Item type
-== 物品類型
-
 Its use depends on the server or game mode.
 == 具體用途取決於伺服器或遊戲模式。
 
@@ -7477,9 +7435,6 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == 投票後不關閉投票窗口
-
-Key
-== 按鍵
 
 Key binds
 == 按鍵綁定
@@ -7828,9 +7783,6 @@ LibreTranslate endpoint
 
 Light
 == 輕體
-
-Light band
-== 色帶寬度
 
 Limit information in spectator mode
 == 限制觀戰模式中的信息
@@ -9821,9 +9773,6 @@ Original
 Original and translation
 == 原文＋譯文
 
-Original language for both received and outgoing messages. Use Auto to detect each message.
-== 收發訊息均使用原文語言。使用「自動」可逐條偵測。
-
 Original language for incoming and outgoing text
 == 收到與發出文字的原始語言
 
@@ -10552,12 +10501,6 @@ Points
 
 Points unavailable
 == 積分暫不可用
-
-Polished
-== 拋光
-
-Pop wave
-== 放大凸起
 
 Popup animation
 == 彈出動畫
@@ -11615,9 +11558,6 @@ Remove team name:
 Remove war clan:
 == 刪除敵對戰隊
 
-Remove War Group
-== 刪除敵對群組
-
 Remove war name:
 == 刪除敵對玩家：
 
@@ -12079,18 +12019,6 @@ Right-click to enable auto-translate
 
 Ring
 == 圓環
-
-RNNoise noise reduction
-== RNNoise 降噪
-
-RNNoise noise reduction (unavailable in this build)
-== RNNoise 降噪（當前構建不可用）
-
-RNNoise noise reduction strength
-== RNNoise 降噪強度
-
-RNNoise not integrated in current build, will fallback to simple noise reduction
-== 當前建置未整合 RNNoise，自動回退簡單降噪
 
 Room
 == 房間
@@ -12794,9 +12722,6 @@ Server URL
 Server votes
 == 伺服器投票
 
-Server-assigned style
-== 伺服器分配風格
-
 Server-dependent
 == 取決於伺服器
 
@@ -12964,9 +12889,6 @@ Share of the server browser name/map split given to the name column (per mille)
 
 Sharpen
 == 銳利化
-
-Shimmer speed
-== 流光速度
 
 Short pain voice
 == 短促受傷叫聲
@@ -13516,9 +13438,6 @@ Show lyrics in a separate island below Dynamic Island
 
 Show lyrics in Dynamic Island
 == 在靈動島顯示歌詞
-
-Show lyrics inside Dynamic Island
-== 將歌詞顯示在靈動島內
 
 Show main tee title locally
 == 本機顯示本體頭銜
@@ -14117,12 +14036,6 @@ Simple noise reduction
 Simple noise reduction strength
 == 簡單降噪強度
 
-Single color
-== 單色
-
-Single color and Rainbow override the color of animated styles; the style keeps its motion
-== 單色與彩虹檔會覆蓋動態風格自帶的顏色；風格只保留浮動與掠光
-
 Size
 == 大小
 
@@ -14329,9 +14242,6 @@ Smooths the camera while you free-spectate with the mouse in live games and demo
 
 Snap title bob offset to whole pixels (sharper glyphs, choppier motion)
 == 浮動偏移吸附到整數像素（字體更銳利，但更頓挫）
-
-Snap wave to pixels
-== 波浪位移對齊整數像素
 
 Snapshot Age
 == 快照年齡
@@ -14597,9 +14507,6 @@ Start at a random queue position on every map join
 Start dummy skin queue from a random position when entering a map
 == 進入地圖時從分身皮膚佇列隨機位置開始
 
-Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
-== 每次進圖都從隨機佇列位置開始（連接分身或重新啟用輪換時也一樣）。將切換間隔設為 0 可停用定時輪換，僅進圖時切換。
-
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 == 從預設值開始；其他玩家看起來一跳一跳時稍微調高，覺得自己比他們慢半拍時調低。
 
@@ -14759,9 +14666,6 @@ Streamer word list file
 Strength icons assets
 == 強弱圖標資源
 
-Strength of the vertical or pop wave. Zero keeps the title still.
-== 調整上下波動或放大凸起的強度，設為零時保持靜止。
-
 Stress system (debug builds only).
 == 壓力系統（僅限調試版本）
 
@@ -14809,9 +14713,6 @@ Styles kill, finish and system messages in the chat area.
 
 Sub-Tick aiming
 == Sub-Tick 瞄準
-
-Subtle
-== 柔和
 
 Success
 == 成功
@@ -14965,9 +14866,6 @@ System message text gradient color
 
 System prompt text color
 == 系統提示文字顏色
-
-Tags
-== 標籤
 
 Take a screenshot
 == 截圖
@@ -15322,9 +15220,6 @@ Text color mode
 
 Text color mode: 0 automatic, 1 white, 2 black, 3 custom
 == 文字顏色模式: 0 自動, 1 白色, 2 黑色, 3 自訂
-
-Text effect
-== 文字效果
 
 Text input focus ring color
 == 文字輸入焦點環顏色
@@ -15739,9 +15634,6 @@ Title display
 
 Title light sweep speed in 1/100 row per second (0 = off)
 == 頭銜掠光速度（每秒 1/100 行，0 = 關閉）
-
-Title motion
-== 頭銜動畫
 
 Title motion: 0 = vertical wave, 1 = pop wave
 == 頭銜動畫：0 = 上下波動，1 = 放大凸起
@@ -16781,9 +16673,6 @@ Use team colors for name plates
 Use Tee icons instead of circles
 == 用 Tee 圖標代替圓圈
 
-Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== 按住鉤鍵顯示鉤子輔助線時使用下方自訂顏色；關閉時自動反色使用未按下配色
-
 Use the custom colors below while the hook key is held
 == 按住鉤索鍵時使用下方的自訂顏色
 
@@ -16861,9 +16750,6 @@ Vertical position
 
 Vertical sync (may cause lag)
 == 垂直同步（可能會導致延遲）
-
-Vertical wave
-== 上下波動
 
 Very fast encode
 == 編碼非常快
@@ -16975,12 +16861,6 @@ Visual effects
 
 Visual: Cursor
 == 視覺：光標
-
-Visual: Effects
-== 視覺：特效
-
-Visual: Nameplates
-== 視覺：名牌
 
 Visuals
 == 視覺
@@ -17171,15 +17051,6 @@ Water hammer highlight
 Watermark
 == 浮水印
 
-Wave amount
-== 波浪幅度
-
-Wave spacing
-== 波浪間距
-
-Wave speed
-== 波浪速度
-
 Weak hook
 == 弱鉤
 
@@ -17293,9 +17164,6 @@ Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per
 
 When TClient rainbow Tee is enabled, this feature has no effect.
 == 已啟用 TClient 彩虹 Tee 時，本功能不會生效。
-
-When you cross the start line, show a ghost tee replicating the movements of your best time
-== 越過起點線時顯示一個重播你最好成績動作的幽靈角色
 
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 == 你的頭銜出現在哪裡、長什麼樣：名牌、風格、動畫、顏色和光暈。
@@ -17846,9 +17714,6 @@ Zen mode hides chat bubbles even when this is on, and a long "Duration" leaves o
 Zen mode key
 == 禪模式按鍵
 
-Zero uses the style default. Higher values make color bands narrower.
-== 設為零時使用樣式預設值；數值越大，色帶越窄。
-
 Zhipu AI
 == 智譜清言
 
@@ -18302,10 +18167,6 @@ required
 [Team status]
 solo
 == 單人
-
-[Title color mode]
-Use style colors
-== 使用風格顏色
 
 [Touch button behavior]
 Bind

@@ -728,9 +728,6 @@ Adjust TClient heads-up display elements
 Adjust the display options; open a vote to check the layout before joining a busy server.
 == Ajusta las opciones de visualización; abre una votación para comprobar el diseño antes de entrar en un servidor concurrido.
 
-Adjust the opacity of entities belonging to other teams, such as tees and name plates
-== Ajusta la opacidad de las entidades de otros equipos, como los tees y las placas de nombre
-
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
 
@@ -748,9 +745,6 @@ Adjusts TClient-specific HUD elements that are not part of the standard DDNet HU
 
 Advanced
 == Avanzado
-
-Advanced mode
-== Modo avanzado
 
 Advanced options
 == Opciones avanzadas
@@ -977,9 +971,6 @@ Anti Latency Tools
 Anti latency tools
 == Herramientas antilatencia
 
-Anti Ping Smoothing
-== Suavizado Anti Ping
-
 Anti-aliasing for the exported video only, independent of the graphics setting. Explicit levels render each frame into a multisampled offscreen target, so the game itself can stay at a lower setting for performance. Supersampling (output smaller than the window) already reduces jagged edges, so prefer one or the other.
 == Antialiasing solo para el vídeo exportado, independiente del ajuste de gráficos. Con un nivel explícito, cada fotograma se dibuja en un destino fuera de pantalla con muestreo múltiple, de modo que el juego puede quedarse en un ajuste más bajo por rendimiento. El supermuestreo (salida menor que la ventana) ya reduce los bordes dentados, así que conviene elegir solo uno.
 
@@ -1040,9 +1031,6 @@ Applied to %d same-family part(s).
 Applies an animated rainbow color to selected elements such as nameplates or the hook.
 == Aplica un color arcoíris animado a los elementos elegidos, como los nombres o el gancho.
 
-Applies to single-color and rainbow overrides.
-== Se aplica a los colores personalizados de un solo color y arcoíris.
-
 Apply
 == Aplicar
 
@@ -1075,9 +1063,6 @@ Apply quick input to other Tees as well
 
 Apply squishy Tee deformation to other players
 == Aplicar deformación de Tee elástico a otros jugadores
-
-Apply this preset
-== Aplicar este preset
 
 Apply to
 == Aplicar a
@@ -1276,9 +1261,6 @@ Auto enable in Gores mode
 
 Auto enable/disable IME on text focus
 == Habilitar o deshabilitar IME automáticamente según el foco de entrada de texto
-
-Auto execute
-== Ejecución automática
 
 Auto fetch replay info on refresh
 == Obtener automáticamente información de la repetición al actualizar
@@ -2435,9 +2417,6 @@ Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher
 Chroma sampling. 4:2:0 is smallest and most compatible; 4:4:4 keeps full color detail for thin lines and small colored text. Rendering is 8-bit, so 10-bit formats do not add detail by themselves.
 == Muestreo de croma. 4:2:0 ocupa menos y es más compatible; 4:4:4 conserva todo el color y mantiene nítidas las líneas finas y el texto pequeño en color. El renderizado es de 8 bits, así que un formato de 10 bits no añade detalle por sí mismo.
 
-Cinematic camera
-== Cámara cinematográfica
-
 Cinematic camera smoothness (0=instant, 100=smoothest)
 == Suavizado de la cámara cinematográfica (0=instantáneo, 100=más suave)
 
@@ -2512,9 +2491,6 @@ Classic Pro
 
 Classic pro
 == Clásico pro
-
-Classic title glow
-== Resplandor clásico
 
 Clear
 == Limpiar
@@ -3776,9 +3752,6 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 DeepL API
 == API de DeepL
 
-DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
-== DeepL API Free: 500.000 caracteres al mes (regístrate en deepl.com; las claves gratuitas terminan en :fx)
-
 DeepL API Key (free keys end with :fx)
 == Clave de API de DeepL (las claves gratuitas terminan en :fx)
 
@@ -3880,9 +3853,6 @@ Delete screenshot
 
 Delete selected items
 == Eliminar elementos seleccionados
-
-Delete skin
-== Eliminar skin
 
 Delete this preset
 == Eliminar esta preconfiguración
@@ -5432,6 +5402,9 @@ Extreme values make movement feel wrong, so change one step at a time.
 Extremely slow, for testing only
 == Extremadamente lento, solo para pruebas
 
+Eyes
+== Ojos
+
 f = Frame rate
 == f = Fotogramas por segundo
 
@@ -5542,9 +5515,6 @@ Fairly fast encode
 
 Fake CTF flags
 == Banderas falsas de CTF
-
-Fallback simple noise reduction strength
-== Fuerza de reducción de ruido simple de respaldo
 
 Fast encode
 == Codificación rápida
@@ -6647,9 +6617,6 @@ High quality, slow
 Higher input latency
 == mayor latencia de entrada
 
-Higher values make the wave move faster. Zero stops the movement.
-== Los valores altos aceleran la onda. Cero detiene el movimiento.
-
 Highlight Color
 == Color de resaltado
 
@@ -6661,9 +6628,6 @@ Highlight game type
 
 Highlight message text gradient color
 == Color degradado del texto de mensajes destacados
-
-Highlight movement in Polished mode. Zero turns it off.
-== Movimiento del brillo en modo Pulido. Cero lo desactiva.
 
 Highlight ping value
 == Resaltar valor de ping
@@ -7196,9 +7160,6 @@ Installed
 Installing update. Please wait...
 == Instalando la actualización. Espera...
 
-Instant compact hints
-== Consejos compactos al instante
-
 Instant zoom reverse
 == Inversión de zoom inmediata
 
@@ -7352,9 +7313,6 @@ It's recommended that you check the settings to adjust them to your liking befor
 Item
 == Elemento
 
-Item type
-== Tipo de objeto
-
 Its use depends on the server or game mode.
 == Su uso depende del servidor o del modo de juego.
 
@@ -7477,9 +7435,6 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == Mantener la ventana de votación abierta después de votar
-
-Key
-== Tecla
 
 Key binds
 == Atajos de teclas
@@ -7828,9 +7783,6 @@ LibreTranslate endpoint
 
 Light
 == Ligera
-
-Light band
-== Banda de luz
 
 Limit information in spectator mode
 == Limitar la información en modo espectador
@@ -9821,9 +9773,6 @@ Original
 Original and translation
 == Original y traducción
 
-Original language for both received and outgoing messages. Use Auto to detect each message.
-== Idioma original tanto para los mensajes recibidos como para los enviados. Usa Auto para detectar cada mensaje.
-
 Original language for incoming and outgoing text
 == Idioma original del texto entrante y saliente
 
@@ -10552,12 +10501,6 @@ Points
 
 Points unavailable
 == Puntos no disponibles
-
-Polished
-== Pulido
-
-Pop wave
-== Onda de ampliación
 
 Popup animation
 == Animación emergente
@@ -11615,9 +11558,6 @@ Remove team name:
 Remove war clan:
 == Eliminar clan enemigo:
 
-Remove War Group
-== Eliminar Grupo de Guerra
-
 Remove war name:
 == Eliminar nombre enemigo:
 
@@ -12079,18 +12019,6 @@ Right-click to enable auto-translate
 
 Ring
 == Anillo
-
-RNNoise noise reduction
-== Reducción de ruido RNNoise
-
-RNNoise noise reduction (unavailable in this build)
-== Reducción de ruido RNNoise (no disponible en esta compilación)
-
-RNNoise noise reduction strength
-== Fuerza de reducción de ruido RNNoise
-
-RNNoise not integrated in current build, will fallback to simple noise reduction
-== RNNoise no está integrado en la compilación actual, se usará la reducción de ruido simple como respaldo
 
 Room
 == Sala
@@ -12794,9 +12722,6 @@ Server URL
 Server votes
 == Votaciones del servidor
 
-Server-assigned style
-== Estilo asignado por el servidor
-
 Server-dependent
 == Depende del servidor
 
@@ -12964,9 +12889,6 @@ Share of the server browser name/map split given to the name column (per mille)
 
 Sharpen
 == Enfocar
-
-Shimmer speed
-== Velocidad del brillo
 
 Short pain voice
 == Quejido corto de dolor
@@ -13516,9 +13438,6 @@ Show lyrics in a separate island below Dynamic Island
 
 Show lyrics in Dynamic Island
 == Mostrar letra en Dynamic Island
-
-Show lyrics inside Dynamic Island
-== Show lyrics in Dynamic Island
 
 Show main tee title locally
 == Mostrar título del tee principal localmente
@@ -14117,12 +14036,6 @@ Simple noise reduction
 Simple noise reduction strength
 == Intensidad de reducción de ruido simple
 
-Single color
-== Color único
-
-Single color and Rainbow override the color of animated styles; the style keeps its motion
-== Color único y arcoíris anulan los colores de los estilos animados; el movimiento del estilo se mantiene
-
 Size
 == Tamaño
 
@@ -14329,9 +14242,6 @@ Smooths the camera while you free-spectate with the mouse in live games and demo
 
 Snap title bob offset to whole pixels (sharper glyphs, choppier motion)
 == Ajustar el desplazamiento del balanceo a píxeles enteros (glifos más nítidos, movimiento más brusco)
-
-Snap wave to pixels
-== Ajustar la onda a píxeles enteros
 
 Snapshot Age
 == Antigüedad de la instantánea
@@ -14597,9 +14507,6 @@ Start at a random queue position on every map join
 Start dummy skin queue from a random position when entering a map
 == Iniciar la cola de skins del Dummy desde una posición aleatoria al entrar al mapa
 
-Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
-== Comienza en una posición aleatoria de la cola en cada entrada al mapa (también al conectar el dummy o reactivar la cola). Establece el intervalo de cambio en 0 para desactivar la rotación temporizada y cambiar solo al entrar en el mapa.
-
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 == Empieza con el valor por defecto: súbelo un poco si otros jugadores se ven a saltos y bájalo si parece que vas por detrás de ellos.
 
@@ -14759,9 +14666,6 @@ Streamer word list file
 Strength icons assets
 == Recursos de iconos de fuerza
 
-Strength of the vertical or pop wave. Zero keeps the title still.
-== Intensidad de la onda vertical o de ampliación. Cero deja el título quieto.
-
 Stress system (debug builds only).
 == Sistema de estrés (solo compilaciones de depuración).
 
@@ -14809,9 +14713,6 @@ Styles kill, finish and system messages in the chat area.
 
 Sub-Tick aiming
 == Apuntado Sub-Tick
-
-Subtle
-== Sutil
 
 Success
 == Éxito
@@ -14965,9 +14866,6 @@ System message text gradient color
 
 System prompt text color
 == Color del texto de aviso del sistema
-
-Tags
-== Etiquetas
 
 Take a screenshot
 == Tomar una captura de pantalla
@@ -15322,9 +15220,6 @@ Text color mode
 
 Text color mode: 0 automatic, 1 white, 2 black, 3 custom
 == Modo de color del texto: 0 automático, 1 blanco, 2 negro, 3 personalizado
-
-Text effect
-== Efecto de texto
 
 Text input focus ring color
 == Color del anillo de enfoque de entrada de texto
@@ -15739,9 +15634,6 @@ Title display
 
 Title light sweep speed in 1/100 row per second (0 = off)
 == Velocidad del barrido de luz del título en 1/100 de fila por segundo (0 = desactivado)
-
-Title motion
-== Animación del título
 
 Title motion: 0 = vertical wave, 1 = pop wave
 == Animación del título: 0 = onda vertical, 1 = onda de ampliación
@@ -16781,9 +16673,6 @@ Use team colors for name plates
 Use Tee icons instead of circles
 == Usar iconos de Tee en lugar de círculos
 
-Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== Usa los colores personalizados de abajo cuando la línea de gancho se muestre con la tecla de gancho presionada; si se desactiva, los colores sin presionar se invierten automáticamente
-
 Use the custom colors below while the hook key is held
 == Usa los colores personalizados de abajo mientras se mantiene la tecla de gancho
 
@@ -16861,9 +16750,6 @@ Vertical position
 
 Vertical sync (may cause lag)
 == Sincronización vertical (puede causar retraso)
-
-Vertical wave
-== Onda vertical
 
 Very fast encode
 == Codificación muy rápida
@@ -16975,12 +16861,6 @@ Visual effects
 
 Visual: Cursor
 == Visual: cursor
-
-Visual: Effects
-== Visual: Efectos
-
-Visual: Nameplates
-== Visual: Placas de Nombre
 
 Visuals
 == Visuales
@@ -17171,15 +17051,6 @@ Water hammer highlight
 Watermark
 == Marca de agua
 
-Wave amount
-== Amplitud de onda
-
-Wave spacing
-== Separación de ondas
-
-Wave speed
-== Velocidad de las ondas
-
 Weak hook
 == Gancho débil
 
@@ -17293,9 +17164,6 @@ Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per
 
 When TClient rainbow Tee is enabled, this feature has no effect.
 == Cuando el Tee arcoíris de TClient está activado, esta función no tiene efecto.
-
-When you cross the start line, show a ghost tee replicating the movements of your best time
-== Al cruzar la línea de salida muestra un tee fantasma que replica los movimientos de tu mejor tiempo
 
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 == Dónde aparece tu título y cómo se ve: placa de nombre, estilo, animación, colores y brillo.
@@ -17846,9 +17714,6 @@ Zen mode hides chat bubbles even when this is on, and a long "Duration" leaves o
 Zen mode key
 == Tecla del modo Zen
 
-Zero uses the style default. Higher values make color bands narrower.
-== Cero usa el valor predeterminado del estilo. Los valores altos estrechan las bandas de color.
-
 Zhipu AI
 == Zhipu AI
 
@@ -18302,10 +18167,6 @@ required
 [Team status]
 solo
 == solo
-
-[Title color mode]
-Use style colors
-== Usar los colores del estilo
 
 [Touch button behavior]
 Bind
