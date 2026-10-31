@@ -3272,6 +3272,8 @@ if(CLIENT)
     QmUi/SettingsCardMeasure.h
     QmUi/SettingsCardCollapseState.cpp
     QmUi/SettingsCardCollapseState.h
+    QmUi/SettingsCardWidthState.cpp
+    QmUi/SettingsCardWidthState.h
     QmUi/SettingsCardWidth.h
     QmUi/SettingsCardGeometry.cpp
     QmUi/SettingsCardGeometry.h
@@ -5156,6 +5158,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/serverinfo_test.cpp
     src/test/unit/qmclient/settings/settings_card_collapse_state_test.cpp
     src/test/unit/qmclient/settings/settings_card_collapse_config_test.cpp
+    src/test/unit/qmclient/settings/settings_card_width_state_test.cpp
     src/test/unit/client/pie_menu_logic_test.cpp
     src/test/unit/client/pie_menu_geometry_test.cpp
     src/test/unit/client/pie_menu_points_test.cpp
@@ -5348,6 +5351,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/QmUi/cards/QmCardCatalogSearch.cpp
     src/game/client/QmUi/SettingsCardDeckLogic.cpp
     src/game/client/QmUi/SettingsCardCollapseState.cpp
+    src/game/client/QmUi/SettingsCardWidthState.cpp
     src/game/client/QmUi/QmModuleLayoutAdapter.cpp
     src/game/client/QmUi/SettingsCardGeometry.cpp
     src/game/client/components/assets_resource_registry.cpp

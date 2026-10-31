@@ -80,6 +80,7 @@ MACRO_CONFIG_INT(QmUiColorInterpolation, qm_ui_color_interpolation, 0, 0, 1, CFG
 MACRO_CONFIG_INT(QmRectCornerSegments, qm_rect_corner_segments, 16, 8, 48, CFGFLAG_CLIENT | CFGFLAG_SAVE, "UI rounded corner segments (even numbers recommended)")
 MACRO_CONFIG_STR(QmGlobalCardOrder, qm_global_card_order, 8000, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Global card ordering (format: stableId|tab|col|order; semicolon-separated)")
 MACRO_CONFIG_STR(QmSettingsCardCollapsed, qm_settings_card_collapsed, 8000, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings card states: stableId for collapsed, !stableId for expanded, separated by semicolons")
+MACRO_CONFIG_STR(QmSettingsCardWidths, qm_settings_card_widths, 8000, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings card widths: stableId for full width, !stableId for half width, separated by semicolons")
 MACRO_CONFIG_INT(QmSettingsCardCollapseMigrated, qm_settings_card_collapse_migrated, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Legacy settings card collapse states migrated")
 MACRO_CONFIG_INT(QmCardOrderMigrated, qm_card_order_migrated, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Global card ordering old config migration completed flag")
 MACRO_CONFIG_INT(QmCardLayoutVersion, qm_card_layout_version, 0, 0, 13, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings card default layout migration version")
