@@ -10475,7 +10475,7 @@
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 808,
-      "text": "Chat bubble style (0=Comic dialogue, 1=Comic burst, 2=Candy gradient, 3=Sticker)",
+      "text": "Chat bubble style (0=Comic dialogue, 1=Cloud bubble, 2=Candy gradient, 3=Sticker)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
@@ -30593,7 +30593,7 @@
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 1326,
-      "text": "Comic burst",
+      "text": "Cloud bubble",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
@@ -41758,7 +41758,7 @@
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogVisualContent.cpp",
       "line": 311,
-      "text": "Comic burst",
+      "text": "Cloud bubble",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
@@ -75794,7 +75794,7 @@
     {
       "file": "src/game/client/QmUi/QmCardRegistry.cpp",
       "line": 121,
-      "text": "消息气泡 漫画 对白 爆炸 QQ 糖果 渐变 贴纸 猫耳 liaotian qipao chat bubble typing 预览 yulan 镜头缩放 suofang 持续时间 chixu 透明度 touming 字体大小 ziti 最大宽度 kuandu 垂直偏移 pianyi 圆角 yuanjiao visual",
+      "text": "消息气泡 漫画 对白 云朵 QQ 糖果 渐变 贴纸 猫耳 liaotian qipao chat bubble typing 预览 yulan 镜头缩放 suofang 持续时间 chixu 透明度 touming 字体大小 ziti 最大宽度 kuandu 垂直偏移 pianyi 圆角 yuanjiao visual",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
@@ -93805,7 +93805,7 @@
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "line": 1326,
-      "text": "漫画爆炸框",
+      "text": "云朵气泡",
       "category": "business_data",
       "reason": "settings card registry metadata or search keyword data"
     },
@@ -217055,7 +217055,7 @@
     },
     {
       "file": "src/test/unit/qmclient/ui/qm_chat_bubble_test.cpp",
-      "line": 138,
+      "line": 141,
       "text": " text=",
       "category": "test_only",
       "reason": "test fixture or assertion text"

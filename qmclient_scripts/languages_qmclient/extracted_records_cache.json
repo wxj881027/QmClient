@@ -9290,7 +9290,7 @@
       "line": 812
     },
     {
-      "key": "Chat bubble style (0=Comic dialogue, 1=Comic burst, 2=Candy gradient, 3=Sticker)",
+      "key": "Chat bubble style (0=Comic dialogue, 1=Cloud bubble, 2=Candy gradient, 3=Sticker)",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_qmclient.h",
       "context": "",
@@ -11292,6 +11292,20 @@
       "line": 254
     },
     {
+      "key": "Cloud bubble",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+      "context": "",
+      "line": 1326
+    },
+    {
+      "key": "Cloud bubble",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/cards/QmCardCatalogVisualContent.cpp",
+      "context": "",
+      "line": 311
+    },
+    {
       "key": "Collaboration",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
@@ -11759,20 +11773,6 @@
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
       "context": "",
       "line": 2732
-    },
-    {
-      "key": "Comic burst",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
-      "context": "",
-      "line": 1326
-    },
-    {
-      "key": "Comic burst",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/cards/QmCardCatalogVisualContent.cpp",
-      "context": "",
-      "line": 311
     },
     {
       "key": "Comic dialogue",

@@ -1323,7 +1323,7 @@ namespace qm_card_catalog
 
 		static constexpr SCardSettingSearch s_aqm_chat_bubble[] = {
 			{Localizable("Comic dialogue"), nullptr, "漫画对白"},
-			{Localizable("Comic burst"), nullptr, "漫画爆炸框"},
+			{Localizable("Cloud bubble"), nullptr, "云朵气泡"},
 			{Localizable("Candy gradient"), nullptr, "QQ 糖果渐变"},
 			{Localizable("Sticker"), nullptr, "QQ 贴纸 猫耳"},
 			{Localizable("Use custom colors"), nullptr, "自定义颜色"},

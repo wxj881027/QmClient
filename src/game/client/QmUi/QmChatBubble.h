@@ -16,14 +16,15 @@ namespace qm_chat_bubble
 	enum class EStyle
 	{
 		COMIC,
-		BURST,
+		CLOUD,
 		CANDY,
 		STICKER
 	};
 	constexpr int STYLE_COUNT = 4;
 	constexpr float MAX_TEXT_WIDTH = 230.0f;
 	constexpr int CORNER_SEGMENTS = 8;
-	constexpr int MAX_CONTOUR_POINTS = 48;
+	constexpr int CLOUD_SEGMENTS = 64;
+	constexpr int MAX_CONTOUR_POINTS = CLOUD_SEGMENTS;
 
 	inline EStyle StyleFromConfig(int Value)
 	{
@@ -62,14 +63,14 @@ namespace qm_chat_bubble
 		float TailHeight = 11.0f;
 		float TailWidth = 9.0f;
 		float TailLean = 3.0f;
-		if(Style == EStyle::BURST)
+		if(Style == EStyle::CLOUD)
 		{
-			// 锯齿谷底之外再留安全区，长消息的四角不会伸入尖角。
+			// 云边内凹处之外留出安全区，长消息的四角始终落在正文区域。
 			Width = (std::max(TextSize.x, FontSize) + PaddingX * 2.0f) * 1.65f;
 			Height *= 1.65f;
 			Radius = 0.0f;
 			TailHeight = 0.0f;
-			Stroke = 2.5f;
+			Stroke = 1.6f;
 		}
 		else if(Style == EStyle::CANDY)
 		{
@@ -97,22 +98,27 @@ namespace qm_chat_bubble
 	{
 		SContour Result;
 		const vec2 Center = Layout.m_Position + Layout.m_Size * 0.5f;
-		if(Layout.m_Style == EStyle::BURST)
+		if(Layout.m_Style == EStyle::CLOUD)
 		{
-			static const auto s_aDirections = [] {
-				std::array<vec2, 32> aDirections;
-				for(int i = 0; i < 32; ++i)
-				{
-					const float Angle = -pi * 0.5f + i * pi / 16.0f;
-					aDirections[i] = vec2(std::cos(Angle), std::sin(Angle));
-				}
-				return aDirections;
-			}();
-			for(int i = 0; i < 32; ++i)
+			struct SCloudSample
 			{
-				const float Factor = i % 2 == 0 ? 1.0f : 0.84f;
-				const vec2 Radius = Layout.m_Size * (0.5f * Factor) - vec2(Inset, Inset);
-				Result.m_aPoints[Result.m_Count++] = Center + vec2(s_aDirections[i].x * Radius.x, s_aDirections[i].y * Radius.y);
+				vec2 m_Direction;
+				float m_RadiusFactor;
+			};
+			// 每团云边连续起伏；圆周采样只初始化一次，避免逐帧计算三角函数。
+			static const auto s_aCloudSamples = [] {
+				std::array<SCloudSample, CLOUD_SEGMENTS> aSamples;
+				for(int i = 0; i < CLOUD_SEGMENTS; ++i)
+				{
+					const float Angle = -pi * 0.5f + i * 2.0f * pi / CLOUD_SEGMENTS;
+					aSamples[i] = {vec2(std::cos(Angle), std::sin(Angle)), 0.94f + 0.06f * std::cos(Angle * 8.0f)};
+				}
+				return aSamples;
+			}();
+			for(const SCloudSample &Sample : s_aCloudSamples)
+			{
+				const vec2 Radius = Layout.m_Size * (0.5f * Sample.m_RadiusFactor) - vec2(Inset, Inset);
+				Result.m_aPoints[Result.m_Count++] = Center + vec2(Sample.m_Direction.x * Radius.x, Sample.m_Direction.y * Radius.y);
 			}
 			return Result;
 		}
@@ -173,7 +179,7 @@ namespace qm_chat_bubble
 		SPalette Result;
 		switch(Style)
 		{
-		case EStyle::BURST: Result = {{1.0f, 0.96f, 0.54f}, {1.0f, 0.76f, 0.26f}, {0.20f, 0.12f, 0.08f}, {0.80f, 0.26f, 0.12f, 0.4f}, {0.22f, 0.12f, 0.08f}}; break;
+		case EStyle::CLOUD: Result = {{0.98f, 0.995f, 1.0f}, {0.79f, 0.92f, 1.0f}, {0.42f, 0.65f, 0.84f}, {0.20f, 0.42f, 0.58f, 0.22f}, {0.15f, 0.27f, 0.37f}}; break;
 		case EStyle::CANDY: Result = {{0.66f, 0.94f, 1.0f}, {0.78f, 0.70f, 1.0f}, {0.96f, 0.98f, 1.0f, 0.9f}, {0.28f, 0.22f, 0.53f, 0.25f}, {0.15f, 0.17f, 0.35f}}; break;
 		case EStyle::STICKER: Result = {{1.0f, 0.92f, 0.96f}, {1.0f, 0.78f, 0.86f}, {0.60f, 0.30f, 0.46f}, {0.45f, 0.22f, 0.34f, 0.28f}, {0.35f, 0.17f, 0.28f}}; break;
 		default: Result = {{1.0f, 0.99f, 0.94f}, {1.0f, 0.99f, 0.94f}, {0.16f, 0.13f, 0.17f}, {0.16f, 0.13f, 0.17f, 0.35f}, {0.16f, 0.13f, 0.17f}}; break;

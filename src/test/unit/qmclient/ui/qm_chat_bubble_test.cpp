@@ -101,6 +101,7 @@ TEST(QmChatBubble, PresetsSupplyTheirOwnReadableTextAndGradientColors)
 {
 	using qm_chat_bubble::EStyle;
 	const auto Comic = qm_chat_bubble::Palette(EStyle::COMIC, false, {}, {}, 1.0f);
+	const auto Cloud = qm_chat_bubble::Palette(EStyle::CLOUD, false, {}, {}, 1.0f);
 	const auto Candy = qm_chat_bubble::Palette(EStyle::CANDY, false, {}, {}, 1.0f);
 	const auto Sticker = qm_chat_bubble::Palette(EStyle::STICKER, false, {}, {}, 1.0f);
 	EXPECT_EQ(Comic.m_Fill, Comic.m_FillBottom);
@@ -108,20 +109,22 @@ TEST(QmChatBubble, PresetsSupplyTheirOwnReadableTextAndGradientColors)
 	EXPECT_NE(Candy.m_Fill, Candy.m_FillBottom);
 	EXPECT_GT(Candy.m_Fill.b - Candy.m_Text.b, 0.5f);
 	EXPECT_NE(Sticker.m_Fill, Candy.m_Fill);
+	EXPECT_GT(Cloud.m_Fill.b - Cloud.m_Text.b, 0.5f);
+	EXPECT_GT(Cloud.m_FillBottom.b, Cloud.m_FillBottom.r);
 }
 
-TEST(QmChatBubble, StickerEarsAndBurstOutlineAreDifferentSilhouettes)
+TEST(QmChatBubble, StickerEarsAndCloudOutlineAreDifferentSilhouettes)
 {
 	using qm_chat_bubble::EStyle;
 	const auto Sticker = qm_chat_bubble::Layout(vec2(0, 0), vec2(80, 20), 20, 1, EStyle::STICKER);
-	const auto Burst = qm_chat_bubble::Layout(vec2(0, 0), vec2(80, 20), 20, 1, EStyle::BURST);
+	const auto Cloud = qm_chat_bubble::Layout(vec2(0, 0), vec2(80, 20), 20, 1, EStyle::CLOUD);
 	const auto Ears = qm_chat_bubble::Contour(Sticker);
 	float Top = Sticker.m_Position.y;
 	for(int i = 0; i < Ears.m_Count; ++i)
 		Top = std::min(Top, Ears.m_aPoints[i].y);
 	EXPECT_LT(Top, Sticker.m_Position.y);
-	EXPECT_EQ(Burst.m_TailHeight, 0.0f);
-	EXPECT_NE(qm_chat_bubble::Contour(Burst).m_Count, Ears.m_Count);
+	EXPECT_EQ(Cloud.m_TailHeight, 0.0f);
+	EXPECT_NE(qm_chat_bubble::Contour(Cloud).m_Count, Ears.m_Count);
 }
 
 TEST(QmChatBubble, InvalidStyleValuesStayWithinAvailablePresets)

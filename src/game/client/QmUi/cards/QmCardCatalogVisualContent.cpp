@@ -308,7 +308,7 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 	{
 		SplitSettingsControlRow(StyleRow, CurrentSettingsContentMetrics(), &StyleLabel, &StyleControl);
 		RenderQmVisualLabel("qm-chat-bubble-style-label", &StyleLabel, Localize("Style"), BodySize);
-		const char *apStyles[] = {Localize("Comic dialogue"), Localize("Comic burst"), Localize("Candy gradient"), Localize("Sticker")};
+		const char *apStyles[] = {Localize("Comic dialogue"), Localize("Cloud bubble"), Localize("Candy gradient"), Localize("Sticker")};
 		static CUi::SDropDownState s_StyleState;
 		static CScrollRegion s_StyleScroll;
 		s_StyleState.m_SelectionPopupContext.m_pScrollRegion = &s_StyleScroll;

@@ -805,7 +805,7 @@ MACRO_CONFIG_INT(QmChatAnimSlideOut, qm_chat_anim_slide_out, 0, 0, 1, CFGFLAG_CL
 MACRO_CONFIG_INT(QmChatAnimFadeDurationMs, qm_chat_anim_fade_duration_ms, 300, 0, 2000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat fade smooth time (milliseconds)")
 MACRO_CONFIG_INT(QmHideChatBubbles, qm_hide_chat_bubbles, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hide own chat bubble (only when authenticated in remote console)")
 MACRO_CONFIG_INT(QmChatBubble, qm_chat_bubble, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show chat bubbles above players")
-MACRO_CONFIG_INT(QmChatBubbleStyle, qm_chat_bubble_style, 0, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat bubble style (0=Comic dialogue, 1=Comic burst, 2=Candy gradient, 3=Sticker)")
+MACRO_CONFIG_INT(QmChatBubbleStyle, qm_chat_bubble_style, 0, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat bubble style (0=Comic dialogue, 1=Cloud bubble, 2=Candy gradient, 3=Sticker)")
 MACRO_CONFIG_INT(QmChatBubbleCustomColors, qm_chat_bubble_custom_colors, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use custom chat bubble colors")
 MACRO_CONFIG_INT(QmChatBubbleDuration, qm_chat_bubble_duration, 10, 1, 30, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat bubble display duration (seconds)")
 MACRO_CONFIG_INT(QmChatBubbleAlpha, qm_chat_bubble_alpha, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat bubble transparency (0-100)")

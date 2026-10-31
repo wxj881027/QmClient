@@ -39660,10 +39660,10 @@ simplified_chinese = "漫画对白"
 traditional_chinese = "漫畫對白"
 
 [[message]]
-key = "Comic burst"
+key = "Cloud bubble"
 [message.translations]
-simplified_chinese = "漫画爆炸框"
-traditional_chinese = "漫畫爆炸框"
+simplified_chinese = "云朵气泡"
+traditional_chinese = "雲朵氣泡"
 
 [[message]]
 key = "Candy gradient"
@@ -39690,10 +39690,10 @@ simplified_chinese = "使用自定义颜色"
 traditional_chinese = "使用自訂顏色"
 
 [[message]]
-key = "Chat bubble style (0=Comic dialogue, 1=Comic burst, 2=Candy gradient, 3=Sticker)"
+key = "Chat bubble style (0=Comic dialogue, 1=Cloud bubble, 2=Candy gradient, 3=Sticker)"
 [message.translations]
-simplified_chinese = "消息气泡样式（0=漫画对白，1=漫画爆炸框，2=糖果渐变，3=猫耳贴纸）"
-traditional_chinese = "訊息氣泡樣式（0=漫畫對白，1=漫畫爆炸框，2=糖果漸層，3=貓耳貼紙）"
+simplified_chinese = "消息气泡样式（0=漫画对白，1=云朵气泡，2=糖果渐变，3=猫耳贴纸）"
+traditional_chinese = "訊息氣泡樣式（0=漫畫對白，1=雲朵氣泡，2=糖果漸層，3=貓耳貼紙）"
 
 [[message]]
 key = "Use custom chat bubble colors"

@@ -2213,8 +2213,8 @@ Chat bubble display duration (seconds)
 Chat bubble font size
 == 聊天氣泡字體大小
 
-Chat bubble style (0=Comic dialogue, 1=Comic burst, 2=Candy gradient, 3=Sticker)
-== 訊息氣泡樣式（0=漫畫對白，1=漫畫爆炸框，2=糖果漸層，3=貓耳貼紙）
+Chat bubble style (0=Comic dialogue, 1=Cloud bubble, 2=Candy gradient, 3=Sticker)
+== 訊息氣泡樣式（0=漫畫對白，1=雲朵氣泡，2=糖果漸層，3=貓耳貼紙）
 
 Chat bubble text color
 == 聊天氣泡文字顏色
@@ -2693,6 +2693,9 @@ Close the demo player
 Close window after changing settings
 == 更改設置後關閉窗口
 
+Cloud bubble
+== 雲朵氣泡
+
 Collapse console
 == 收起控制台
 
@@ -2770,9 +2773,6 @@ Colors too close to the map background are hard to read while moving.
 
 Combo
 == 連擊
-
-Comic burst
-== 漫畫爆炸框
 
 Comic dialogue
 == 漫畫對白
