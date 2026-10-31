@@ -12,6 +12,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/components/effects.h>
+#include <game/client/components/qmclient/collision_position.h>
 #include <game/client/components/qmclient/item_render_math.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/gameclient.h>
@@ -30,6 +31,8 @@
 
 void CItems::RenderProjectile(const CProjectileData *pCurrent, int ItemId, const CScreenRect &ScreenRect)
 {
+	if(!pCurrent->HasValidStart())
+		return;
 	int CurWeapon = std::clamp(pCurrent->m_Type, 0, NUM_WEAPONS - 1);
 	const bool AllowEffects = !GameClient()->IsRenderingDummyMiniMap();
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
@@ -96,9 +99,11 @@ void CItems::RenderProjectile(const CProjectileData *pCurrent, int ItemId, const
 	}
 
 	vec2 Pos = CalcPos(pCurrent->m_StartPos, pCurrent->m_StartVel, Curvature, Speed, Ct);
-	if(!ScreenRect.Inside(Pos))
+	if(!QmCollision::CanRoundPosition(Pos) || !ScreenRect.Inside(Pos))
 		return;
 	vec2 PrevPos = CalcPos(pCurrent->m_StartPos, pCurrent->m_StartVel, Curvature, Speed, Ct - 0.001f);
+	if(!QmCollision::CanRoundPosition(PrevPos))
+		return;
 
 	float Alpha = 1.0f;
 	if(IsOtherTeam)
@@ -141,6 +146,8 @@ void CItems::RenderProjectile(const CProjectileData *pCurrent, int ItemId, const
 
 void CItems::RenderPickup(const CNetObj_Pickup *pPrev, const CNetObj_Pickup *pCurrent, bool IsPredicted, int Flags)
 {
+	if(!QmCollision::CanRoundPosition(vec2(pPrev->m_X, pPrev->m_Y)) || !QmCollision::CanRoundPosition(vec2(pCurrent->m_X, pCurrent->m_Y)))
+		return;
 	int CurWeapon = std::clamp(pCurrent->m_Subtype, 0, NUM_WEAPONS - 1);
 	const bool AllowEffects = !GameClient()->IsRenderingDummyMiniMap();
 	int QuadOffset = 2;
@@ -653,8 +660,8 @@ void CItems::OnRender()
 				if(auto *pPrev = (CPickup *)GameClient()->m_PrevPredictedWorld.GetEntity(pPickup->GetId(), CGameWorld::ENTTYPE_PICKUP))
 				{
 					CNetObj_Pickup Data, Prev;
-					pPickup->FillInfo(&Data);
-					pPrev->FillInfo(&Prev);
+					if(!pPickup->FillInfo(&Data) || !pPrev->FillInfo(&Prev))
+						continue;
 					RenderPickup(&Prev, &Data, true, pPickup->Flags());
 				}
 			}
@@ -670,6 +677,8 @@ void CItems::OnRender()
 		if(Item.m_Type == NETOBJTYPE_PROJECTILE || Item.m_Type == NETOBJTYPE_DDRACEPROJECTILE || Item.m_Type == NETOBJTYPE_DDNETPROJECTILE)
 		{
 			CProjectileData Data = ExtractProjectileInfo(Item.m_Type, pData, &GameClient()->m_GameWorld, pEntEx);
+			if(!Data.HasValidStart())
+				continue;
 			bool Inactive = !IsSuper && Data.m_SwitchNumber > 0 && Data.m_SwitchNumber < (int)aSwitchers.size() && !aSwitchers[Data.m_SwitchNumber].m_aStatus[SwitcherTeam];
 			if(Inactive && (Data.m_Explosive ? BlinkingProjEx : BlinkingProj))
 				continue;
@@ -696,6 +705,8 @@ void CItems::OnRender()
 		else if(Item.m_Type == NETOBJTYPE_PICKUP || Item.m_Type == NETOBJTYPE_DDNETPICKUP)
 		{
 			CPickupData Data = ExtractPickupInfo(Item.m_Type, pData, pEntEx);
+			if(!Data.HasValidPosition())
+				continue;
 			bool Inactive = !IsSuper && Data.m_SwitchNumber > 0 && Data.m_SwitchNumber < (int)aSwitchers.size() && !aSwitchers[Data.m_SwitchNumber].m_aStatus[SwitcherTeam];
 
 			if(Inactive && BlinkingPickup)
@@ -846,6 +857,8 @@ void CItems::OnInit()
 
 void CItems::ReconstructSmokeTrail(const CProjectileData *pCurrent, int DestroyTick)
 {
+	if(!pCurrent->HasValidStart())
+		return;
 	if(GameClient()->IsRenderingDummyMiniMap())
 		return;
 

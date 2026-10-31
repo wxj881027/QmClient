@@ -4836,6 +4836,11 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_particle_position_test.cpp
     src/test/integration/client/item_render_inputs_test.cpp
     src/test/unit/client/laser_positions_test.cpp
+    src/test/unit/client/projectile_positions_test.cpp
+    src/test/unit/client/pickup_positions_test.cpp
+    src/test/unit/client/plasma_movement_test.cpp
+    src/test/integration/client/projectile_position_inputs_test.cpp
+    src/test/integration/client/pickup_position_inputs_test.cpp
     src/test/integration/client/laser_position_inputs_test.cpp
     src/test/integration/client/camera_zoom_inputs_test.cpp
     src/test/unit/qmclient/client/qm_spectator_selection_test.cpp
@@ -5645,6 +5650,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
   set(TESTS_EXTRA
     src/game/client/laser_data.cpp
     src/game/client/projectile_data.cpp
+    src/game/client/pickup_data.cpp
     src/game/client/components/countryflags_load_job.cpp
     src/engine/client/demoedit.cpp
     src/engine/client/ghost.cpp

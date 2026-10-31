@@ -2,6 +2,7 @@
 #include "collision_hitbox.h"
 
 #include "collision_hitbox_projectile_logic.h"
+#include "item_render_math.h"
 
 #include <base/log.h>
 #include <base/math.h>
@@ -264,6 +265,8 @@ void CCollisionHitbox::DrawCapsuleOutline(vec2 From, vec2 To, float Radius, Colo
 
 bool CCollisionHitbox::GetProjectileRenderPosition(const CProjectileData &Projectile, vec2 &Position, vec2 &PreviousPosition) const
 {
+	if(!Projectile.HasValidStart())
+		return false;
 	const int Weapon = std::clamp(Projectile.m_Type, 0, NUM_WEAPONS - 1);
 	float Curvature = 0.0f;
 	float Speed = 0.0f;
@@ -302,9 +305,9 @@ bool CCollisionHitbox::GetProjectileRenderPosition(const CProjectileData &Projec
 
 	float CurrentTime;
 	if(GameClient()->Predict() && GameClient()->AntiPingGrenade() && LocalPlayerInGame && !IsOtherTeam)
-		CurrentTime = ((float)(PredictionTick - 1 - Projectile.m_StartTick) + Client()->PredIntraGameTick(g_Config.m_ClDummy)) / (float)Client()->GameTickSpeed();
+		CurrentTime = (QmItemTickDelta(PredictionTick, Projectile.m_StartTick, -1) + Client()->PredIntraGameTick(g_Config.m_ClDummy)) / (float)Client()->GameTickSpeed();
 	else
-		CurrentTime = (Client()->PrevGameTick(g_Config.m_ClDummy) - Projectile.m_StartTick) / (float)Client()->GameTickSpeed() + s_LastGameTickTime;
+		CurrentTime = QmItemTickDelta(Client()->PrevGameTick(g_Config.m_ClDummy), Projectile.m_StartTick) / (float)Client()->GameTickSpeed() + s_LastGameTickTime;
 
 	if(CurrentTime < 0.0f)
 	{
@@ -314,9 +317,7 @@ bool CCollisionHitbox::GetProjectileRenderPosition(const CProjectileData &Projec
 			return false;
 	}
 
-	Position = CalcPos(Projectile.m_StartPos, Projectile.m_StartVel, Curvature, Speed, CurrentTime);
-	PreviousPosition = CalcPos(Projectile.m_StartPos, Projectile.m_StartVel, Curvature, Speed, CurrentTime - 0.001f);
-	return true;
+	return Projectile.TryCalcPositions(Curvature, Speed, CurrentTime, CurrentTime - 0.001f, Position, PreviousPosition);
 }
 
 void CCollisionHitbox::OnMapLoad()
@@ -583,6 +584,8 @@ void CCollisionHitbox::RenderPickupHitboxes()
 			continue;
 
 		const CPickupData Data = ExtractPickupInfo(Item.m_Type, Item.m_pData, Ent.m_pDataEx);
+		if(!Data.HasValidPosition())
+			continue;
 		if(Data.m_Type != POWERUP_ARMOR)
 			continue;
 

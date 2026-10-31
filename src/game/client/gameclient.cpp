@@ -32,6 +32,7 @@
 #include "components/nameplates.h"
 #include "components/particles.h"
 #include "components/players.h"
+#include "components/qmclient/item_render_math.h"
 #include "components/qmclient/jelly_tee.h"
 #include "components/qmclient/modes.h"
 #include "components/qmclient/perf_logging.h"
@@ -267,7 +268,7 @@ namespace
 
 	void QmAddExplosionProjectileCandidate(CGameClient *pGameClient, int &Owner, bool &Ambiguous, const CProjectileData &Projectile, vec2 Pos)
 	{
-		if(!Projectile.m_ExtraInfo || !Projectile.m_Explosive || Projectile.m_Owner < 0 || Projectile.m_Owner >= MAX_CLIENTS)
+		if(!Projectile.HasValidStart() || !Projectile.m_ExtraInfo || !Projectile.m_Explosive || Projectile.m_Owner < 0 || Projectile.m_Owner >= MAX_CLIENTS)
 			return;
 
 		float Curvature = 0.0f;
@@ -276,13 +277,14 @@ namespace
 		if(!QmProjectileMotion(Projectile, pGameClient->GetTuning(TuneZone), Curvature, Speed))
 			return;
 
-		const float FromTime = std::max(0.0f, (pGameClient->Client()->PrevGameTick(g_Config.m_ClDummy) - Projectile.m_StartTick) / (float)pGameClient->Client()->GameTickSpeed());
-		const float ToTime = std::max(0.0f, (pGameClient->Client()->GameTick(g_Config.m_ClDummy) - Projectile.m_StartTick) / (float)pGameClient->Client()->GameTickSpeed());
+		const float FromTime = std::max(0.0f, QmItemTickDelta(pGameClient->Client()->PrevGameTick(g_Config.m_ClDummy), Projectile.m_StartTick) / (float)pGameClient->Client()->GameTickSpeed());
+		const float ToTime = std::max(0.0f, QmItemTickDelta(pGameClient->Client()->GameTick(g_Config.m_ClDummy), Projectile.m_StartTick) / (float)pGameClient->Client()->GameTickSpeed());
 		if(ToTime <= 0.0f && Projectile.m_StartTick > pGameClient->Client()->GameTick(g_Config.m_ClDummy))
 			return;
 
-		const vec2 From = CalcPos(Projectile.m_StartPos, Projectile.m_StartVel, Curvature, Speed, FromTime);
-		const vec2 To = CalcPos(Projectile.m_StartPos, Projectile.m_StartVel, Curvature, Speed, ToTime);
+		vec2 From, To;
+		if(!Projectile.TryCalcPositions(Curvature, Speed, FromTime, ToTime, From, To))
+			return;
 		constexpr float MaxExplosionOwnerDistance = 96.0f;
 		if(QmDistancePointSegment(Pos, From, To) <= MaxExplosionOwnerDistance)
 			QmAddUniqueOwnerCandidate(Owner, Ambiguous, Projectile.m_Owner);

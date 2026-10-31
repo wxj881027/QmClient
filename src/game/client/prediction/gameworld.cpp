@@ -441,7 +441,7 @@ void CGameWorld::NetObjAdd(int ObjId, int ObjType, const void *pObjData, const C
 	if((ObjType == NETOBJTYPE_PROJECTILE || ObjType == NETOBJTYPE_DDRACEPROJECTILE || ObjType == NETOBJTYPE_DDNETPROJECTILE) && m_WorldConfig.m_PredictWeapons)
 	{
 		CProjectileData Data = ExtractProjectileInfo(ObjType, pObjData, this, pDataEx);
-		if(!IsLocalTeam(Data.m_Owner))
+		if(!Data.HasValidStart() || !IsLocalTeam(Data.m_Owner))
 			return;
 
 		CProjectile NetProj = CProjectile(this, ObjId, &Data);
@@ -501,7 +501,7 @@ void CGameWorld::NetObjAdd(int ObjId, int ObjType, const void *pObjData, const C
 	else if((ObjType == NETOBJTYPE_PICKUP || ObjType == NETOBJTYPE_DDNETPICKUP) && m_WorldConfig.m_PredictWeapons)
 	{
 		CPickupData Data = ExtractPickupInfo(ObjType, pObjData, pDataEx);
-		if(Data.m_Flags & PICKUPFLAG_NO_PREDICT)
+		if(!Data.HasValidPosition() || (Data.m_Flags & PICKUPFLAG_NO_PREDICT))
 			return;
 		CPickup NetPickup = CPickup(this, ObjId, &Data);
 		if(CPickup *pPickup = (CPickup *)GetEntity(ObjId, ENTTYPE_PICKUP))
@@ -776,6 +776,8 @@ CEntity *CGameWorld::FindMatch(int ObjId, int ObjType, const void *pObjData)
 	case NETOBJTYPE_DDNETPROJECTILE:
 	{
 		CProjectileData Data = ExtractProjectileInfo(ObjType, pObjData, this, nullptr);
+		if(!Data.HasValidStart())
+			return nullptr;
 		CProjectile *pEnt = (CProjectile *)GetEntity(ObjId, ENTTYPE_PROJECTILE);
 		if(pEnt && CProjectile(this, ObjId, &Data).Match(pEnt))
 		{
@@ -827,6 +829,8 @@ CEntity *CGameWorld::FindMatch(int ObjId, int ObjType, const void *pObjData)
 	case NETOBJTYPE_DDNETPICKUP:
 	{
 		CPickupData Data = ExtractPickupInfo(ObjType, pObjData, nullptr);
+		if(!Data.HasValidPosition())
+			return nullptr;
 		CPickup *pEnt = (CPickup *)GetEntity(ObjId, ENTTYPE_PICKUP);
 		if(pEnt && CPickup(this, ObjId, &Data).Match(pEnt))
 		{
