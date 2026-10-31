@@ -132,6 +132,7 @@ namespace qm_card_catalog
 	// 这里显式列出“卡片可以调用哪些渲染/输入助手”，避免把整类成员公开出去。
 	struct QmCardRenderHook
 	{
+		static bool Personalization(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, bool ReadOnly = false);
 		static STClientCardResult RunTClientCard(const SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, ETClientCardPass Pass);
 		static uint64_t PrepareTClientCards(const SQmCardBuildContext &Ctx, const std::vector<const char *> &vIds);
 		static bool BuildTClientCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
@@ -140,7 +141,7 @@ namespace qm_card_catalog
 		static bool BuildStandardCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static uint64_t PrepareControlsCards(CMenus *pMenus, float ContentWidth, bool ReadOnly, CScrollRegion *pScrollRegion);
 		static bool BuildControlsCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
-		static void RenderScreenshotWatermarkSettings(const SQmCardBuildContext &Ctx, CUIRect Content);
+		static void RenderScreenshotWatermarkSettings(const SQmCardBuildContext &Ctx, CUIRect Content, bool ShowEnable = true);
 		static bool BuildGeneralCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool BuildConfigFilesCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
 		static bool BuildNameplateCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);

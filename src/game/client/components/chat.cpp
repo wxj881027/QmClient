@@ -553,7 +553,7 @@ bool CChat::HandleCommandHudInput(const IInput::CEvent &Event)
 	if(Event.m_Flags & IInput::FLAG_PRESS)
 	{
 		if(Event.m_Key == KEY_UP || Event.m_Key == KEY_DOWN)
-			return m_CommandHud.MoveSelection(Event.m_Key == KEY_UP ? -1 : 1, m_Input.GetString(), m_Input.GetCursorOffset());
+			return m_CommandHud.MoveSelection(Event.m_Key == KEY_UP ? -1 : 1, m_Input.GetString(), m_Input.GetCursorOffset(), m_pHistoryEntry != nullptr);
 		if(Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER)
 		{
 			std::string Completion;

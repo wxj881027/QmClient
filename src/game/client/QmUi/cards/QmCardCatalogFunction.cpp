@@ -161,6 +161,12 @@ void CMenus::RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight,
 			{&g_Config.m_QmAutoTeamLock, Localizable("Auto team lock"), Localize("Auto team lock")},
 		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
+	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
+		{{&g_Config.m_QmPausedSpectatorFade, "Fade spectators in water", Localize("Fade spectators in water")}},
+		CurrentSettingsContentMetrics(), !PrewarmOnly);
+	if(!(g_Config.m_QmAutoTeamLock || g_Config.m_QmPausedSpectatorFade) || !qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:hj_assist", CurrentSettingsContentMetrics(), PrewarmOnly))
+		return;
+
 	if(g_Config.m_QmAutoTeamLock)
 	{
 		if(Flow.Control("hj-assist-1", LineHeight, Row))
@@ -172,9 +178,6 @@ void CMenus::RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight,
 		}
 		Flow.Space(LineSpacing);
 	}
-	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
-		{{&g_Config.m_QmPausedSpectatorFade, "Fade spectators in water", Localize("Fade spectators in water")}},
-		CurrentSettingsContentMetrics(), !PrewarmOnly);
 	if(g_Config.m_QmPausedSpectatorFade)
 	{
 		if(Flow.Control("hj-assist-2", LineHeight, Row))

@@ -68,6 +68,9 @@ void CMenus::RenderQmFunctionImeContent(CUIRect &Content, float LineHeight, floa
 			RenderQmFunctionCheckbox(&g_Config.m_QmNewIme, "New IME", Localize("New IME"), &g_Config.m_QmNewIme, &ToggleRow, ReadOnly);
 		Flow.Space(LineSpacing);
 	}
+	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:ime", CurrentSettingsContentMetrics(), ReadOnly))
+		return;
+
 	CUIRect Row, Label, Control;
 	const auto NextRow = [&](const char *pId) {
 		const bool HasRow = Flow.Control(pId, RowHeight, Row);

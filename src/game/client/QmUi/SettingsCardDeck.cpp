@@ -6,6 +6,7 @@
 #include "SettingsCardContentBridge.h"
 #include "SettingsCardInfo.h"
 #include "SettingsCardWidth.h"
+#include "SettingsCardWidthState.h"
 #include "UiContext.h"
 
 #include <base/system.h>
@@ -73,6 +74,9 @@ void CSettingsCardDeck::ResetDefinitionViewState()
 	m_Drag.Reset();
 	m_HasScrollOffset = false;
 	m_LastScrollOffsetY = 0.0f;
+	m_WidthScrollFloor = 0.0f;
+	m_WidthAnchorStateIndex = -1;
+	m_LastEntryOffsetY = 0.0f;
 	m_LastViewportHeight = -1.0f;
 	m_PreparedDefinitionModelCount = -1;
 	m_PreparedDefinitionStateIndexRevision = UINT64_MAX;
@@ -138,6 +142,9 @@ void CSettingsCardDeck::BeginDisplayCycle(uint64_t DisplayCycle, bool AnimateEnt
 		m_Drag.Reset();
 		m_SuppressHoverFeedbackOnce = true;
 		m_HasScrollOffset = false;
+		m_WidthScrollFloor = 0.0f;
+		m_WidthAnchorStateIndex = -1;
+		m_LastEntryOffsetY = 0.0f;
 		m_vLastRenderedActiveStateIndices.clear();
 		m_FrameRuntime.SetEntryActive(false);
 		for(SRuntimeState &Runtime : m_vRuntimeStates)
@@ -147,6 +154,7 @@ void CSettingsCardDeck::BeginDisplayCycle(uint64_t DisplayCycle, bool AnimateEnt
 			Runtime.m_ContentHeightInitialized = false;
 			Runtime.m_ContentHeightWasActive = false;
 			Runtime.m_CollapsedInitialized = false;
+			Runtime.m_HasLayoutReference = false;
 			Runtime.m_PointerInsideLastFrame = false;
 			Runtime.m_LastDrawOffsetX = 0.0f;
 			Runtime.m_LastDrawOffsetY = 0.0f;
@@ -271,6 +279,14 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 		m_LastViewportHeight = ScrollViewport.h;
 		std::fill(m_vContentHeights.begin(), m_vContentHeights.end(), -1.0f);
 	}
+	if(std::abs(m_LastWidthViewport - ScrollViewport.w) > 0.01f || m_WidthLayoutRevision != Model.LayoutRevision())
+	{
+		m_LastWidthViewport = ScrollViewport.w;
+		m_WidthLayoutRevision = Model.LayoutRevision();
+		m_WidthAnchorStateIndex = -1;
+		for(auto &Runtime : m_vRuntimeStates)
+			Runtime.m_HasLayoutReference = false;
+	}
 	bool ScrollMovedThisFrame = false;
 	if(pScrollRegion != nullptr)
 	{
@@ -284,6 +300,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	OffsetRectY(DrawLayout.m_aColumns[0], ScrollOffset.y);
 	OffsetRectY(DrawLayout.m_aColumns[1], ScrollOffset.y);
 
+	const qm_card_width::CState &WidthState = qm_card_width::CurrentState();
 	bool MeasuredGeometryChanged = m_ObservedContentChanged;
 	m_ObservedContentChanged = false;
 	bool ContentHeightTargetChanged = false;
@@ -299,6 +316,17 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			const SSettingsCardDefinition *pDefinition = m_vDefinitionsByState[StateIndex];
 			if(pDefinition == nullptr)
 				return;
+			const bool FullWidth = WidthState.IsFullWidth(pDefinition->m_Spec.m_pStableId, Column == 0);
+			if(DrawLayout.m_TwoColumns)
+			{
+				if(FullWidth)
+					ColumnRect = DrawLayout.m_ContentViewport;
+				else if(Column == 0)
+				{
+					const auto *pDefault = qm_card_registry::FindByStableId(pDefinition->m_Spec.m_pStableId);
+					ColumnRect = DrawLayout.m_aColumns[pDefault && pDefault->m_DefaultColumn == qm_card_registry::ECardColumn::Right ? 1 : 0];
+				}
+			}
 			CUIRect Slot{ColumnRect.x, ColumnRect.y, ColumnRect.w, 0.0f};
 			float &CachedContentHeight = m_vContentHeights[StateIndex];
 			float &CachedContentWidth = m_vContentWidths[StateIndex];
@@ -376,7 +404,9 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 				pDefinition->m_LeadingHeaderActionWidth, HasSettingsCardInfo(pDefinition->m_Spec));
 			const SSettingsCardColumnFrame Placement = DrawLayout.m_TwoColumns ? m_PackingPlan.Append(Column, Frame.m_Rect.h, LeadingFullWidth) : SingleColumnPlan.Append(Frame.m_Rect.h);
 			Frame = ResolveSettingsCardDrawFrame(Frame, 0.0f, Placement.m_Y - Frame.m_Rect.y);
-			m_vPreparedCards.push_back({pDefinition, StateIndex, Column, Frame, TargetContentHeight, HeightInitializedThisFrame, Runtime.m_ContentHeightWasActive, m_vContentLayouts[StateIndex]});
+			if(StateIndex == m_WidthAnchorStateIndex)
+				Frame = ResolveSettingsCardDrawFrame(Frame, 0.0f, m_WidthAnchorY + ScrollOffset.y - Frame.m_Rect.y);
+			m_vPreparedCards.push_back({pDefinition, StateIndex, Column, FullWidth, Frame, TargetContentHeight, HeightInitializedThisFrame, Runtime.m_ContentHeightWasActive, m_vContentLayouts[StateIndex]});
 		};
 		auto AppendColumn = [&](const std::vector<int> &vStateIndices, int Column, CUIRect ColumnRect) {
 			for(const int StateIndex : vStateIndices)
@@ -405,6 +435,24 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 		else
 		{
 			ForEachSettingsCardDeckVisualOrder(aDisplayColumns, [&](int StateIndex, int Column) { AppendCard(StateIndex, Column, DrawLayout.m_ContentViewport); }, VisualOptions.m_LeadingFullWidthCards);
+		}
+		if(DrawLayout.m_TwoColumns && (m_WidthAnchorStateIndex >= 0 || std::any_of(m_vPreparedCards.begin(), m_vPreparedCards.end(), [](const SPreparedCard &Card) { return Card.m_FullWidth && Card.m_Column != 0; })))
+		{
+			m_vWidthPlacements.clear();
+			m_vWidthPlacements.reserve(m_vPreparedCards.size());
+			for(const auto &Card : m_vPreparedCards)
+			{
+				const auto &Runtime = m_vRuntimeStates[Card.m_StateIndex];
+				CUIRect Reference = Runtime.m_LayoutReference;
+				Reference.y += ScrollOffset.y;
+				m_vWidthPlacements.push_back({Card.m_Column, Card.m_FullWidth, Card.m_Frame.m_Rect, Reference, Runtime.m_HasLayoutReference && !m_Drag.Active()});
+			}
+			m_WidthLayout.Arrange(m_vWidthPlacements, DrawLayout.m_CardGap);
+			for(size_t i = 0; i < m_vPreparedCards.size(); ++i)
+			{
+				auto &Frame = m_vPreparedCards[i].m_Frame;
+				Frame = ResolveSettingsCardDrawFrame(Frame, 0.0f, m_vWidthPlacements[i].m_Rect.y - Frame.m_Rect.y);
+			}
 		}
 	};
 
@@ -435,12 +483,16 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			bool CardGeometryChanged = false;
 			const CUIRect WidthButton = SettingsCardWidthButtonRect(PreLayoutFrame);
 			if(ControllerVisible && WidthButton.w > 0.0f && WidthButton.h > 0.0f && Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly() && !m_Drag.Active() &&
-				Ctx.m_pUi->DoButtonLogic(&Runtime.m_WidthButtonId, Card.m_Column == 0, &WidthButton, BUTTONFLAG_LEFT))
+				Ctx.m_pUi->DoButtonLogic(&Runtime.m_WidthButtonId, Card.m_FullWidth, &WidthButton, BUTTONFLAG_LEFT))
 			{
-				const auto *pDefault = qm_card_registry::FindByStableId(Card.m_pDefinition->m_Spec.m_pStableId);
-				const int DefaultColumn = pDefault && pDefault->m_DefaultColumn == qm_card_registry::ECardColumn::Right ? 2 : 1;
-				CardGeometryChanged = ToggleSettingsCardWidth(Model, Card.m_pDefinition->m_Spec.m_pStableId, DefaultColumn, Runtime.m_RestoreColumn, Runtime.m_RestoreOrder);
-				Result.m_OrderChanged = Result.m_OrderChanged || CardGeometryChanged;
+				CardGeometryChanged = qm_card_width::SetFullWidth(Card.m_pDefinition->m_Spec.m_pStableId, !Card.m_FullWidth);
+				if(CardGeometryChanged)
+				{
+					m_WidthAnchorStateIndex = Card.m_StateIndex;
+					// 接续点击处的重排位置；整页入场偏移仍由共享动画推进。
+					m_WidthAnchorY = PreLayoutFrame.m_Rect.y - ScrollOffset.y - m_LastEntryOffsetY;
+					m_WidthScrollFloor = std::max(m_WidthScrollFloor, -ScrollOffset.y);
+				}
 				Ctx.m_pUi->CloseInteractionSource(this, Card.m_pDefinition->m_Spec.m_pStableId);
 			}
 			const bool HasCustomCollapsedState = static_cast<bool>(Card.m_pDefinition->m_IsCollapsed);
@@ -566,6 +618,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			}
 		}
 	}
+	m_LastEntryOffsetY = DeckEntryOffsetY;
 	if(!m_Drag.Active() && SettingsCardDeckAllowsDragStart(EntryPending, EntryPositionActive, ReflowTargetChanged, ReflowPositionActive || ContentHeightAnimationActive) && (Input.m_CtrlPressed || Input.m_AllowHeaderDrag) && Input.m_MousePressed)
 	{
 		for(const SPreparedCard &Card : m_vPreparedCards)
@@ -576,6 +629,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 						    (HasSettingsCardInfo(Card.m_pDefinition->m_Spec) && PointInRect(ResolveSettingsCardInfoRect(Card.m_Frame), Input.m_MouseX, Input.m_MouseY));
 			if(InHeader && !InHeaderAction)
 			{
+				m_WidthAnchorStateIndex = -1;
 				m_Drag.m_StateIndex = Card.m_StateIndex;
 				m_Drag.m_SourceColumn = Card.m_Column;
 				m_Drag.m_TargetColumn = Card.m_Column;
@@ -671,6 +725,9 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 				Ctx.m_pUi->RefreshInteractionSource(this, pStableId);
 			}
 		}
+		Runtime.m_LayoutReference = Card.m_Frame.m_Rect;
+		Runtime.m_LayoutReference.y -= ScrollOffset.y;
+		Runtime.m_HasLayoutReference = true;
 		SSettingsCardVisualState State;
 		State.m_DrawOffsetY = DeckEntryOffsetY;
 		State.m_DrawAlpha = DeckEntryAlpha;
@@ -764,9 +821,9 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 				const CUIRect Button = SettingsCardWidthButtonRect(DrawFrame);
 				if(Ctx.m_pTextRender != nullptr && Ctx.m_pUi != nullptr)
 				{
-					RenderSettingsCardHeaderIcon(InputCtx, Button, Card.m_Column == 0 ? EQmIcon::BORDER_ALL : EQmIcon::ARROWS_LEFT_RIGHT, Card.m_Column == 0 ? FontIcons::FONT_ICON_BORDER_ALL : FontIcons::FONT_ICON_ARROWS_LEFT_RIGHT, State.m_DrawAlpha, &Runtime.m_WidthButtonId);
+					RenderSettingsCardHeaderIcon(InputCtx, Button, Card.m_FullWidth ? EQmIcon::BORDER_ALL : EQmIcon::ARROWS_LEFT_RIGHT, Card.m_FullWidth ? FontIcons::FONT_ICON_BORDER_ALL : FontIcons::FONT_ICON_ARROWS_LEFT_RIGHT, State.m_DrawAlpha, &Runtime.m_WidthButtonId);
 					if(Ctx.m_pTooltips != nullptr)
-						Ctx.m_pTooltips->DoSmallToolTip(&Runtime.m_WidthButtonId, &Button, Card.m_Column == 0 ? Localize("Default width") : Localize("Full width"), 10.0f * Ctx.m_UiScale);
+						Ctx.m_pTooltips->DoSmallToolTip(&Runtime.m_WidthButtonId, &Button, Card.m_FullWidth ? Localize("Default width") : Localize("Full width"), 10.0f * Ctx.m_UiScale);
 				}
 			};
 			float ObservedHeight = -1.0f;
@@ -807,7 +864,14 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	}
 
 	if(pScrollRegion != nullptr)
+	{
+		// 变窄可能缩短整页；保留当前视口需要的尾部空间，避免滚动边界把卡头挪走。
+		// 玩家向上滚动时同步回收这段空白，不扩大可滚动范围。
+		m_WidthScrollFloor = std::min(m_WidthScrollFloor, std::max(0.0f, -ScrollOffset.y));
+		if(m_WidthScrollFloor > 0.0f)
+			pScrollRegion->AddRect({ScrollViewport.x, ScrollViewport.y + ScrollOffset.y, 0.0f, ScrollViewport.h + m_WidthScrollFloor});
 		pScrollRegion->End();
+	}
 	for(SRuntimeState &Runtime : m_vRuntimeStates)
 	{
 		Runtime.m_DropFeedbackRemaining = std::max(0.0f, Runtime.m_DropFeedbackRemaining - std::max(0.0f, Input.m_FrameDt));

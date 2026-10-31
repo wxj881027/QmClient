@@ -145,17 +145,20 @@ float CMenus::LayoutTClientPetCacheSection(CUIRect &CurrentColumn, bool Render)
 	CUIRect ShowPetRow;
 	if(Flow.Control("tclient-show-pet", LineSize, ShowPetRow, MarginSmall))
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmPetShow, "tclient-show-pet", Localize("Show the pet"), &g_Config.m_QmPetShow, &ShowPetRow, LineSize);
-	if(Flow.Control("tclient-pet-size", LineSize, Button, MarginSmall))
-		DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-pet-size", &g_Config.m_QmPetSize, &g_Config.m_QmPetSize, &Button, Localize("Pet size"), 10, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
-	if(Flow.Control("tclient-pet-alpha", LineSize, Button, MarginSmall))
-		DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-pet-alpha", &g_Config.m_QmPetAlpha, &g_Config.m_QmPetAlpha, &Button, Localize("Pet alpha"), 10, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-	if(Flow.Control("tclient-pet-skin", LineSize, PetSkinBox, MarginSmall))
+	if(qm_card_catalog::QmCardRenderHook::Personalization(this, CurrentColumn, "tclient:pet", CurrentSettingsContentMetrics(), !Render))
 	{
-		SplitSettingsControlRow(PetSkinBox, CurrentSettingsContentMetrics(), &Label, &Button);
-		DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("Pet Skin:"), FontSize, TEXTALIGN_ML);
-		static CLineInput s_PetSkin(g_Config.m_QmPetSkin, sizeof(g_Config.m_QmPetSkin));
-		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_PetSkin, &PetSkinBox, g_Config.m_QmPetSkin, &Label);
-		ui_widget::InputField(TClientPetTextInputCtx, &s_PetSkin, Button, nullptr, EditBoxFontSize);
+		if(Flow.Control("tclient-pet-size", LineSize, Button, MarginSmall))
+			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-pet-size", &g_Config.m_QmPetSize, &g_Config.m_QmPetSize, &Button, Localize("Pet size"), 10, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
+		if(Flow.Control("tclient-pet-alpha", LineSize, Button, MarginSmall))
+			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-pet-alpha", &g_Config.m_QmPetAlpha, &g_Config.m_QmPetAlpha, &Button, Localize("Pet alpha"), 10, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+		if(Flow.Control("tclient-pet-skin", LineSize, PetSkinBox, MarginSmall))
+		{
+			SplitSettingsControlRow(PetSkinBox, CurrentSettingsContentMetrics(), &Label, &Button);
+			DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("Pet Skin:"), FontSize, TEXTALIGN_ML);
+			static CLineInput s_PetSkin(g_Config.m_QmPetSkin, sizeof(g_Config.m_QmPetSkin));
+			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_PetSkin, &PetSkinBox, g_Config.m_QmPetSkin, &Label);
+			ui_widget::InputField(TClientPetTextInputCtx, &s_PetSkin, Button, nullptr, EditBoxFontSize);
+		}
 	}
 	return CurrentColumn.y - SavedY;
 }
@@ -177,43 +180,46 @@ float CMenus::LayoutTClientHudCacheSection(CUIRect &CurrentColumn, bool Render)
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmMiniDebug, "tclient-mini-debug", Localize("Show position and angle (mini debug)"), &g_Config.m_QmMiniDebug, &Row, LineSize);
 	if(Flow.Control("tclient-render-cursor-spec", LineSize, Row, MarginSmall))
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRenderCursorSpec, "tclient-render-cursor-spec", Localize("Show the cursor while free spectating"), &g_Config.m_QmRenderCursorSpec, &Row, LineSize);
-	if(g_Config.m_QmRenderCursorSpec)
-	{
-		if(Flow.Control("tclient-freeview-cursor-opacity", LineSize, Button, MarginSmall))
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-freeview-cursor-opacity", &g_Config.m_QmRenderCursorSpecAlpha, &g_Config.m_QmRenderCursorSpecAlpha, &Button, Localize("Freeview cursor opacity"), 0, 100);
-	}
 	if(Flow.Control("tclient-notify-when-last", LineSize, Row, MarginSmall))
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNotifyWhenLast, "tclient-notify-when-last", Localize("Notify when only one tee is still alive:"), &g_Config.m_QmNotifyWhenLast, &Row, LineSize);
-	if(g_Config.m_QmNotifyWhenLast)
-	{
-		if(Flow.Control("tclient-notify-last-text-color", LineSize, NotificationConfig, MarginSmall))
-		{
-			NotificationConfig.VSplitMid(&Button, &NotificationConfig);
-			static CLineInput s_LastInput(g_Config.m_QmNotifyWhenLastText, sizeof(g_Config.m_QmNotifyWhenLastText));
-			s_LastInput.SetEmptyText(Localize("You're the last one!"));
-			ui_widget::InputField(TClientHudTextInputCtx, &s_LastInput, Button, nullptr, EditBoxFontSize);
-			static CButtonContainer s_ClientNotifyWhenLastColor;
-			DoLine_ColorPicker(&s_ClientNotifyWhenLastColor, CurrentSettingsContentMetrics(), &NotificationConfig, "", &g_Config.m_QmNotifyWhenLastColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
-		}
-		if(Flow.Control("tclient-notify-last-x", LineSize, Button, MarginSmall))
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-x", &g_Config.m_QmNotifyWhenLastX, &g_Config.m_QmNotifyWhenLastX, &Button, Localize("Horizontal position"), 1, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-		if(Flow.Control("tclient-notify-last-y", LineSize, Button, MarginSmall))
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-y", &g_Config.m_QmNotifyWhenLastY, &g_Config.m_QmNotifyWhenLastY, &Button, Localize("Vertical position"), 1, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-		if(Flow.Control("tclient-notify-last-size", LineSize, Button, MarginSmall))
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-size", &g_Config.m_QmNotifyWhenLastSize, &g_Config.m_QmNotifyWhenLastSize, &Button, Localize("Font size"), 1, 50);
-	}
 	if(Flow.Control("tclient-show-center-line", LineSize, Row, MarginSmall))
 		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmShowCenter, "tclient-show-center-line", Localize("Show the screen center line"), &g_Config.m_QmShowCenter, &Row, LineSize);
-	if(g_Config.m_QmShowCenter)
+	if((g_Config.m_QmRenderCursorSpec || g_Config.m_QmNotifyWhenLast || g_Config.m_QmShowCenter) && qm_card_catalog::QmCardRenderHook::Personalization(this, CurrentColumn, "tclient:hud", CurrentSettingsContentMetrics(), !Render))
 	{
-		CUIRect CenterColor;
-		if(Flow.Control("tclient-center-line-color", CurrentSettingsContentMetrics().m_ButtonHeight, CenterColor, MarginSmall))
+		if(g_Config.m_QmRenderCursorSpec)
 		{
-			static CButtonContainer s_ShowCenterLineColor;
-			DoLine_ColorPicker(&s_ShowCenterLineColor, CurrentSettingsContentMetrics(), &CenterColor, Localize("Screen center line color"), &g_Config.m_QmShowCenterColor, DefaultConfig::QmShowCenterColor, false, nullptr, true);
+			if(Flow.Control("tclient-freeview-cursor-opacity", LineSize, Button, MarginSmall))
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-freeview-cursor-opacity", &g_Config.m_QmRenderCursorSpecAlpha, &g_Config.m_QmRenderCursorSpecAlpha, &Button, Localize("Freeview cursor opacity"), 0, 100);
 		}
-		if(Flow.Control("tclient-center-line-width", LineSize, Button, MarginSmall))
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-center-line-width", &g_Config.m_QmShowCenterWidth, &g_Config.m_QmShowCenterWidth, &Button, Localize("Screen center line width"), 0, 20);
+		if(g_Config.m_QmNotifyWhenLast)
+		{
+			if(Flow.Control("tclient-notify-last-text-color", LineSize, NotificationConfig, MarginSmall))
+			{
+				NotificationConfig.VSplitMid(&Button, &NotificationConfig);
+				static CLineInput s_LastInput(g_Config.m_QmNotifyWhenLastText, sizeof(g_Config.m_QmNotifyWhenLastText));
+				s_LastInput.SetEmptyText(Localize("You're the last one!"));
+				ui_widget::InputField(TClientHudTextInputCtx, &s_LastInput, Button, nullptr, EditBoxFontSize);
+				static CButtonContainer s_ClientNotifyWhenLastColor;
+				DoLine_ColorPicker(&s_ClientNotifyWhenLastColor, CurrentSettingsContentMetrics(), &NotificationConfig, "", &g_Config.m_QmNotifyWhenLastColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
+			}
+			if(Flow.Control("tclient-notify-last-x", LineSize, Button, MarginSmall))
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-x", &g_Config.m_QmNotifyWhenLastX, &g_Config.m_QmNotifyWhenLastX, &Button, Localize("Horizontal position"), 1, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+			if(Flow.Control("tclient-notify-last-y", LineSize, Button, MarginSmall))
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-y", &g_Config.m_QmNotifyWhenLastY, &g_Config.m_QmNotifyWhenLastY, &Button, Localize("Vertical position"), 1, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+			if(Flow.Control("tclient-notify-last-size", LineSize, Button, MarginSmall))
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-size", &g_Config.m_QmNotifyWhenLastSize, &g_Config.m_QmNotifyWhenLastSize, &Button, Localize("Font size"), 1, 50);
+		}
+		if(g_Config.m_QmShowCenter)
+		{
+			CUIRect CenterColor;
+			if(Flow.Control("tclient-center-line-color", CurrentSettingsContentMetrics().m_ButtonHeight, CenterColor, MarginSmall))
+			{
+				static CButtonContainer s_ShowCenterLineColor;
+				DoLine_ColorPicker(&s_ShowCenterLineColor, CurrentSettingsContentMetrics(), &CenterColor, Localize("Screen center line color"), &g_Config.m_QmShowCenterColor, DefaultConfig::QmShowCenterColor, false, nullptr, true);
+			}
+			if(Flow.Control("tclient-center-line-width", LineSize, Button, MarginSmall))
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-center-line-width", &g_Config.m_QmShowCenterWidth, &g_Config.m_QmShowCenterWidth, &Button, Localize("Screen center line width"), 0, 20);
+		}
 	}
 	return CurrentColumn.y - SavedY;
 }

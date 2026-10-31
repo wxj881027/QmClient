@@ -2754,6 +2754,10 @@ void CMenus::RenderSettingsTeeGlow(CUIRect Content, const SSettingsContentMetric
 		if(Flow.Input() && !Ui()->RenderOnly() && Team0ModeNew != g_Config.m_QmTeamTeeGlowTeam0Mode)
 			g_Config.m_QmTeamTeeGlowTeam0Mode = Team0ModeNew;
 	}
+	Flow.Space(TeeMetrics.m_LineSpacing);
+	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "deck:tee-glow", TeeMetrics))
+		return;
+
 	const auto Slider = [&](const char *pId, const char *pLabel, int *pValue) {
 		if(Flow.Control(pId, TeeMetrics.m_LineHeight, TeeGlowRow, TeeMetrics.m_LineSpacing))
 			DoSettingsScrollbarOption(SETTINGS_TEE, -1, pId, pValue, pValue, &TeeGlowRow, pLabel, 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");

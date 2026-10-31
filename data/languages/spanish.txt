@@ -4535,6 +4535,9 @@ Dynamic FOV smoothness
 Dynamic FOV smoothness (0=instant, 100=smoothest)
 == Suavidad de vista dinámica (0 = instantáneo, 100 = más suave)
 
+Dynamic Island
+== Isla dinámica
+
 Dynamic island
 == Isla dinámica
 
@@ -4682,8 +4685,8 @@ enable
 Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
 == Activa el robo de skin con martillo solo si quieres cambiar de skin con cada golpe, porque los demás también lo ven.
 
-Enable "Show player stats HUD"; tick "Map progress bar", then pick "Use embedded HUD progress bar" or place the bar with the sliders.
-== Activa mostrar HUD de estadísticas y marca barra de progreso del mapa; luego elige usar la barra de progreso del HUD integrado o colócala con los deslizadores.
+Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
+== Activa la barra de progreso del mapa y elige su ubicación: por separado, en las estadísticas del jugador o en la Isla dinámica. Para mostrarla en las estadísticas, activa también el HUD de estadísticas del jugador.
 
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
 == Activa «Mostrar fantasmas no predichos de otros jugadores» y ajusta la opacidad del fantasma predicho y del no predicho.
@@ -7553,6 +7556,9 @@ Keyword reply use Dummy
 Keyword rules
 == Reglas de palabras clave
 
+Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+== Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+
 Kick player
 == Expulsar jugador
 
@@ -8312,8 +8318,8 @@ Map progress bar height
 Map progress bar horizontal position (center, % of screen width)
 == Posición horizontal de la barra de progreso del mapa (centro, porcentaje del ancho de pantalla)
 
-Map progress bar style (0=bottom bar, 1=HUD overlay)
-== Estilo de la barra de progreso del mapa (0=barra inferior, 1=incrustada en HUD)
+Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)
+== Ubicación de la barra de progreso del mapa (0=por separado, 1=estadísticas del jugador, 2=Isla dinámica)
 
 Map progress bar vertical position (top edge, % of screen height)
 == Posición vertical de la barra de progreso del mapa (borde superior, porcentaje de la altura de pantalla)
@@ -8698,9 +8704,6 @@ Minimum time between kills (in seconds)
 
 Minimum time between map votes (in seconds)
 == Tiempo mínimo entre votaciones de mapa (en segundos)
-
-Minimum width for name column in server browser
-== Ancho mínimo para la columna de nombre en el navegador de servidores
 
 Minutes on server before a player can call a map change vote (0 = disabled)
 == Minutos en el servidor antes de que un jugador pueda solicitar un cambio de mapa (0 = deshabilitado)
@@ -10082,6 +10085,9 @@ Permanent access; up to 4 online IP addresses
 Permanent sponsor verified
 == Patrocinio permanente verificado
 
+Personal adjustments
+== Ajustes personalizados
+
 Personal best:
 == Mejor personal:
 
@@ -10891,6 +10897,9 @@ Progress bar color
 
 Progress bar height
 == Altura de la barra de progreso
+
+Progress bar location
+== Ubicación de la barra de progreso
 
 Progress bar width
 == Ancho de la barra de progreso
@@ -14570,6 +14579,9 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Intensidad de deformación de Tee elástico
 
+Standalone
+== Por separado
+
 Star
 == Estrella
 
@@ -16676,9 +16688,6 @@ Use default voice input device
 Use default voice output device
 == Usar dispositivo de salida de voz predeterminado
 
-Use embedded HUD progress bar
-== Usar barra de progreso integrada en HUD
-
 Use emote
 == Usar emoción
 
@@ -17410,6 +17419,9 @@ Width of latency column in server browser
 
 Width of map column in server browser
 == Ancho de la columna de mapa en el navegador de servidores
+
+Width of name column in server browser
+== Ancho de la columna de nombre en el navegador de servidores
 
 Width of others' hook collision line
 == Ancho de la línea de colisión del gancho de otros
