@@ -44,6 +44,7 @@
 #include <game/client/QmUi/SettingsTextPlanCommit.h>
 #include <game/client/QmUi/ThemeSelectionLayout.h>
 #include <game/client/QmUi/UiButtons.h>
+#include <game/client/QmUi/UiCacheQuantization.h>
 #include <game/client/QmUi/UiContainers.h>
 #include <game/client/QmUi/UiContext.h>
 #include <game/client/QmUi/UiForms.h>
@@ -333,7 +334,7 @@ namespace
 
 	int MenuTextBucket(float Value)
 	{
-		return round_to_int(Value * 10.0f);
+		return UiCacheRoundedBucket(Value, 10.0f);
 	}
 
 	std::string MenuTextCacheKey(CMenus::EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const CMenus::SMenuTextStyleKey &StyleKey)
@@ -451,10 +452,10 @@ CMenus::SMenuTextStyleKey CMenus::BuildMenuTextStyleKey(const CUIRect *pRect, fl
 	StyleKey.m_FontSize = FontSize;
 	StyleKey.m_Align = Align;
 	const float MaxWidth = LabelProps.m_MaxWidth >= 0.0f ? LabelProps.m_MaxWidth : (pRect != nullptr ? pRect->w : -1.0f);
-	StyleKey.m_MaxWidthBucket = MaxWidth >= 0.0f && std::isfinite(MaxWidth) ? (round_to_int(MaxWidth / 4.0f) * 4) : -1;
+	StyleKey.m_MaxWidthBucket = UiTextWidthBucket(MaxWidth);
 	StyleKey.m_UiScaleBucket = std::clamp(g_Config.m_QmUiScale, 50, 200);
 	const float HiDpiScale = Graphics() != nullptr ? Graphics()->ScreenHiDPIScale() : 1.0f;
-	StyleKey.m_HiDpiScaleBucket = HiDpiScale >= 0.0f && std::isfinite(HiDpiScale) ? round_to_int(HiDpiScale * 100.0f) : 100;
+	StyleKey.m_HiDpiScaleBucket = UiTextHiDpiBucket(HiDpiScale);
 	StyleKey.m_CompactMode = 1;
 	return StyleKey;
 }

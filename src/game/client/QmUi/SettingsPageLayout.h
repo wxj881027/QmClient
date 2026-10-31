@@ -3,6 +3,7 @@
 #ifndef GAME_CLIENT_QMUI_SETTINGSPAGELAYOUT_H
 #define GAME_CLIENT_QMUI_SETTINGSPAGELAYOUT_H
 
+#include "UiCacheQuantization.h"
 #include "UiTokens.h"
 
 #include <base/color.h>
@@ -157,7 +158,7 @@ inline uint64_t ResolveSettingsCardDisplayViewKey(const int Page, const int Play
 {
 	uint64_t Key = 1469598103934665603ULL;
 	const auto Mix = [&Key](const int Value) {
-		Key ^= (uint32_t)(Value + 1);
+		Key ^= static_cast<uint32_t>(Value) + 1u;
 		Key *= 1099511628211ULL;
 	};
 	Mix(Page);
@@ -171,7 +172,7 @@ inline uint64_t ResolveSettingsCardDisplayViewKey(const int Page, const int Play
 
 inline uint64_t ResolveSettingsCardDefinitionsRevision(uint64_t DisplayCycle, uint64_t TextGeneration, float ContentWidth, uint64_t LayoutRevision = 0)
 {
-	const uint64_t QuantizedWidth = (uint64_t)std::max(0, (int)(ContentWidth * 100.0f + 0.5f));
+	const uint64_t QuantizedWidth = static_cast<uint64_t>(UiCacheNonnegativeBucket(ContentWidth, 100.0f));
 	uint64_t Revision = 1469598103934665603ULL;
 	const auto Mix = [&Revision](uint64_t Value) {
 		Revision ^= Value;

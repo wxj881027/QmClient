@@ -3304,6 +3304,7 @@ if(CLIENT)
     QmUi/SettingsMenuPrewarmScope.h
     QmUi/SettingsTextPlanCommit.h
     QmUi/SettingsGlyphPrewarm.h
+    QmUi/UiCacheQuantization.h
     QmUi/SettingsRuntimeCache.cpp
     QmUi/SettingsCard.cpp
     QmUi/SettingsCardInfo.cpp
@@ -6217,6 +6218,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/settings/settings_text_plan_commit_test.cpp
       src/test/unit/qmclient/settings/settings_text_plan_progress_test.cpp
       src/test/unit/qmclient/settings/settings_glyph_prewarm_test.cpp
+      src/test/unit/qmclient/ui/ui_cache_quantization_test.cpp
       src/test/unit/engine/recent_glyph_cache_test.cpp
       src/test/integration/qmclient/client/qm_warlist_cache_prepare_test.cpp
       src/game/client/components/qmclient/warlist_model.cpp
