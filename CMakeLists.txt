@@ -3818,6 +3818,7 @@ if(CLIENT)
     components/qmclient/water_hammer_indicator.h
     components/qmclient/weapon_trajectory.cpp
     components/qmclient/weapon_trajectory.h
+    components/qmclient/weapon_trajectory_geometry.h
     components/qmclient/friend_heart_icon.h
     components/race_demo.cpp
     components/race_demo.h
@@ -5489,6 +5490,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/settings/settings_card_placement_test.cpp
     src/test/unit/qmclient/settings/settings_card_width_test.cpp
     src/test/unit/qmclient/client/qm_weapon_trajectory_test.cpp
+    src/test/unit/qmclient/client/qm_weapon_trajectory_geometry_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_watermark_test.cpp
     src/test/unit/qmclient/client/qm_config_package_test.cpp
     src/test/integration/qmclient/client/qm_config_package_storage_test.cpp
@@ -6158,6 +6160,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_pending_hammer_hits_test.cpp
       src/test/unit/qmclient/client/qm_hook_coll_geometry_test.cpp
       src/test/integration/client/hook_coll_prepare_test.cpp
+      src/test/integration/client/weapon_trajectory_preparation_test.cpp
       src/game/client/components/qmclient/practice_tick_shift.cpp
       src/test/integration/client/prediction_entity_copy_test.cpp
       src/test/integration/client/prediction_world_copy_test.cpp
