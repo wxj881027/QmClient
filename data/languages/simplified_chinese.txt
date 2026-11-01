@@ -2493,19 +2493,19 @@ Classic
 == 古典
 
 Classic Easy
-== 经典 Easy
+== 古典 Easy
 
 Classic easy
 == 古典 easy
 
 Classic Next
-== 经典 Next
+== 古典 Next
 
 Classic next
 == 古典 next
 
 Classic Nut
-== 经典 Nut
+== 古典 Nut
 
 Classic nut
 == 古典 nut
@@ -2514,7 +2514,7 @@ Classic PowerShell
 == 经典 PowerShell
 
 Classic Pro
-== 经典 Pro
+== 古典 Pro
 
 Classic pro
 == 古典 pro
