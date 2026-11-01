@@ -3761,6 +3761,7 @@ if(CLIENT)
     components/qmclient/skin_download_session.h
     components/qmclient/skin_prepared_textures.h
     components/qmclient/skin_prepared_visuals.h
+    components/qmclient/sixup_damage_display.h
     components/qmclient/snapshot_entities.h
     components/qmclient/spectator_selector_layout.h
     components/qmclient/spectator_selection.h
@@ -4863,6 +4864,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_player_points_cache_test.cpp
     src/test/integration/client/player_points_controller_test.cpp
     src/test/unit/qmclient/client/qm_item_render_math_test.cpp
+    src/test/unit/qmclient/client/qm_sixup_damage_display_test.cpp
     src/test/unit/qmclient/client/qm_particle_position_test.cpp
     src/test/integration/client/item_render_inputs_test.cpp
     src/test/unit/client/laser_positions_test.cpp

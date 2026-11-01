@@ -5,6 +5,7 @@
 #include <generated/protocol7.h>
 
 #include <game/client/components/countryflags.h>
+#include <game/client/components/qmclient/sixup_damage_display.h>
 #include <game/client/gameclient.h>
 
 int CGameClient::TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrcSeven, int Conn, bool Dummy)
@@ -355,38 +356,16 @@ int CGameClient::TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrc
 				continue;
 
 			int ClientId = pDmg7->m_ClientId;
-			TranslationContext.m_aDamageTaken[ClientId]++;
-
-			float Angle;
-			// create healthmod indicator
-			if(LocalTime < TranslationContext.m_aDamageTakenTick[ClientId] + 0.5f)
-			{
-				// make sure that the damage indicators don't group together
-				Angle = TranslationContext.m_aDamageTaken[ClientId] * 0.25f;
-			}
-			else
-			{
-				TranslationContext.m_aDamageTaken[ClientId] = 0;
-				Angle = 0;
-			}
-
-			TranslationContext.m_aDamageTakenTick[ClientId] = LocalTime;
-
-			float a = 3 * pi / 2 + Angle;
-			float s = a - pi / 3;
-			float e = a + pi / 3;
-			for(int k = 0; k < Amount; k++)
-			{
+			QmForEachSixupDamageAngle(Amount, TranslationContext.m_aDamageTaken[ClientId], TranslationContext.m_aDamageTakenTick[ClientId], LocalTime, [&](int Angle) {
 				CNetEvent_DamageInd Dmg6 = {};
 				Dmg6.m_X = pDmg7->m_X;
 				Dmg6.m_Y = pDmg7->m_Y;
-				float f = mix(s, e, float(k + 1) / float(Amount + 2));
-				Dmg6.m_Angle = (int)(f * 256.0f);
+				Dmg6.m_Angle = Angle;
 				// pItem7->Id() is reused that is technically wrong
 				// but the client implementation does not look at the ids
 				// and renders the damage indicators just fine
 				pBuilder->NewItem(NETEVENTTYPE_DAMAGEIND, pItem7->Id(), Dmg6.AsSlice());
-			}
+			});
 		}
 		else if(ItemType == protocol7::NETOBJTYPE_DE_CLIENTINFO)
 		{
