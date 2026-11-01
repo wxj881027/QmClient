@@ -186,10 +186,10 @@ void CQmMobileSpectator::OnRender()
 		// 轻点地图以画面中央准星选人，摇杆移动和捏合不会移动该选人基准。
 		const vec2 Center = Screen * 0.5f;
 		const ColorRGBA Color = ui_token::color::TEXT_SECONDARY;
-		Graphics()->DrawRect(Center.x - 5.0f, Center.y - 0.5f, 3.0f, 1.0f, Color);
-		Graphics()->DrawRect(Center.x + 2.0f, Center.y - 0.5f, 3.0f, 1.0f, Color);
-		Graphics()->DrawRect(Center.x - 0.5f, Center.y - 5.0f, 1.0f, 3.0f, Color);
-		Graphics()->DrawRect(Center.x - 0.5f, Center.y + 2.0f, 1.0f, 3.0f, Color);
+		Graphics()->DrawRect(Center.x - 5.0f, Center.y - 0.5f, 3.0f, 1.0f, Color, 0, 0.0f);
+		Graphics()->DrawRect(Center.x + 2.0f, Center.y - 0.5f, 3.0f, 1.0f, Color, 0, 0.0f);
+		Graphics()->DrawRect(Center.x - 0.5f, Center.y - 5.0f, 1.0f, 3.0f, Color, 0, 0.0f);
+		Graphics()->DrawRect(Center.x - 0.5f, Center.y + 2.0f, 1.0f, 3.0f, Color, 0, 0.0f);
 	}
 	Geometry.m_Joystick.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.18f), IGraphics::CORNER_ALL, 52.0f);
 	const vec2 Knob = Geometry.m_Joystick.Center() + m_Touch.JoystickDirection() * 34.0f;
