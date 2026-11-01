@@ -6227,6 +6227,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/components/tclient/version_compare.cpp
       src/test/unit/client/swap_countdown_tracker_failure_test.cpp
       src/test/unit/qmclient/client/qm_bindwheel_mutation_test.cpp
+      src/test/unit/qmclient/client/qm_chatbind_mutation_test.cpp
       src/test/unit/qmclient/client/qm_tee_trail_frame_test.cpp
       src/game/client/components/tclient/swap_countdown_message.cpp
       src/test/integration/client/prediction_door_rebuild_test.cpp

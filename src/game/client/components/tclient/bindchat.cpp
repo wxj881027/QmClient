@@ -111,13 +111,13 @@ void CBindChat::ConBindchatDefaults(IConsole::IResult *pResult, void *pUserData)
 
 	for(const auto &[_, vBindDefaults] : CBindChat::BIND_DEFAULTS)
 		for(const CBindChat::CBindDefault &BindDefault : vBindDefaults)
-			pThis->AddBind(BindDefault.m_Bind);
+			if(!pThis->AddBind(BindDefault.m_Bind))
+				return;
 }
 
-void CBindChat::AddBind(const CBind &Bind)
+bool CBindChat::AddBind(const CBind &Bind)
 {
-	RemoveBind(Bind.m_aName); // Prevent duplicates
-	m_vBinds.push_back(Bind);
+	return QmPublishChatBind(m_vBinds, Bind);
 }
 
 bool CBindChat::RemoveBind(const char *pName)

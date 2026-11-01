@@ -102,25 +102,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientChatBindsCard(const qm_car
 		CUIElement &TitleElement = SettingsTextElement(SETTINGS_TCLIENT, TCLIENT_TAB_BINDCHAT, BindDefault.m_pTitle);
 		DoSettingsLabelStreamed(TitleElement, &Title, Localize(BindDefault.m_pTitle), FontSize, TEXTALIGN_ML, TClientFixedLabelProperties(FontSize, Title.w));
 		BindDefault.m_LineInput.SetEmptyText(BindDefault.m_Bind.m_aName);
-		if(ui_widget::InputField(TClientChatBindsTextInputCtx, &BindDefault.m_LineInput, Input, BindDefault.m_Bind.m_aName, EditBoxFontSize) && !ReadOnly && !Ui()->RenderOnly())
-		{
-			const char *pName = BindDefault.m_LineInput.GetString();
-			pOldBind = GameClient()->m_BindChat.GetBind(BindDefault.m_Bind.m_aCommand);
-			if(pOldBind)
-			{
-				if(pName[0] == '\0')
-					GameClient()->m_BindChat.RemoveBind(pOldBind->m_aName);
-				else
-					str_copy(pOldBind->m_aName, pName);
-			}
-			else if(pName[0] != '\0')
-			{
-				auto BindNew = BindDefault.m_Bind;
-				str_copy(BindNew.m_aName, pName);
-				GameClient()->m_BindChat.RemoveBind(pName);
-				GameClient()->m_BindChat.AddBind(BindNew);
-			}
-		}
+		if((ui_widget::InputField(TClientChatBindsTextInputCtx, &BindDefault.m_LineInput, Input, BindDefault.m_Bind.m_aName, EditBoxFontSize) || BindDefault.m_NameCommitPending) && !ReadOnly && !Ui()->RenderOnly())
+			BindDefault.CommitName(GameClient()->m_BindChat.m_vBinds);
 	};
 
 	constexpr const char *apStableIds[] = {

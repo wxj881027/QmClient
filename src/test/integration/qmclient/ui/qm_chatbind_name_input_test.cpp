@@ -162,3 +162,58 @@ TEST_F(QmChatBindNameInput, FocusLossDoesNotDiscardAnEditWaitingForItsCard)
 	m_First.PrepareNameInput("!external");
 	EXPECT_STREQ(m_First.m_LineInput.GetString(), "!external");
 }
+
+TEST_F(QmChatBindNameInput, ANewDefaultNamePublishesFromOwnedInput)
+{
+	m_First.m_Bind = Binding("!default");
+	m_First.PrepareNameInput("");
+	Focus(m_First);
+	ASSERT_TRUE(Text("!new"));
+	std::vector<CBindChat::CBind> vBinds;
+	ASSERT_TRUE(m_First.CommitName(vBinds));
+	ASSERT_EQ(vBinds.size(), 1u);
+	EXPECT_STREQ(vBinds[0].m_aName, "!new");
+	EXPECT_STREQ(vBinds[0].m_aCommand, "echo bind");
+	EXPECT_NE(m_First.m_LineInput.GetString(), vBinds[0].m_aName);
+	EXPECT_FALSE(m_First.m_NameCommitPending);
+}
+
+TEST_F(QmChatBindNameInput, PendingPublicationRetainsAnUnfocusedDraftAndStopsAfterSuccess)
+{
+	m_First.m_Bind = Binding("!default");
+	m_First.PrepareNameInput("!draft");
+	// 安排已确认失败后的待发布状态；原生分配失败由独立容器测试注入。
+	m_First.m_NameCommitPending = true;
+	m_First.PrepareNameInput("!external");
+	EXPECT_STREQ(m_First.m_LineInput.GetString(), "!draft");
+	std::vector<CBindChat::CBind> vBinds;
+	ASSERT_TRUE(m_First.CommitName(vBinds));
+	EXPECT_FALSE(m_First.m_NameCommitPending);
+	ASSERT_EQ(vBinds.size(), 1u);
+	EXPECT_STREQ(vBinds[0].m_aName, "!draft");
+	m_First.PrepareNameInput("!external");
+	EXPECT_STREQ(m_First.m_LineInput.GetString(), "!external");
+}
+
+TEST_F(QmChatBindNameInput, ClearingAPendingMissingNameCancelsItsPublication)
+{
+	m_First.m_Bind = Binding("!default");
+	m_First.PrepareNameInput("");
+	m_First.m_NameCommitPending = true;
+	std::vector<CBindChat::CBind> vBinds;
+	ASSERT_TRUE(m_First.CommitName(vBinds));
+	EXPECT_TRUE(vBinds.empty());
+	EXPECT_FALSE(m_First.m_NameCommitPending);
+}
+
+TEST_F(QmChatBindNameInput, ClearingADefaultDoesNotDeleteAnotherCommandWithTheSameName)
+{
+	m_First.m_Bind = Binding("!default");
+	m_First.PrepareNameInput("");
+	auto Other = Binding("!same"), Target = Binding("!same");
+	str_copy(Other.m_aCommand, "echo other");
+	std::vector<CBindChat::CBind> vBinds{Other, Target};
+	ASSERT_TRUE(m_First.CommitName(vBinds));
+	ASSERT_EQ(vBinds.size(), 1u);
+	EXPECT_STREQ(vBinds[0].m_aCommand, "echo other");
+}
