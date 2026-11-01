@@ -2,6 +2,7 @@
 #define GAME_CLIENT_COMPONENTS_TCLIENT_QM_OUTLINE_NEIGHBORS_H
 
 // 低三位保留地图类型，高位缓存静态邻接关系；新地图写入类型时自然失效。
+// 地图尺寸须为正，X/Y及其相邻坐标须可表示，回调返回未带缓存的类型。
 template<typename F>
 int QmOutlineCachedNeighbors(int &Tile, int X, int Y, int Width, int Height, F &&GetTile)
 {

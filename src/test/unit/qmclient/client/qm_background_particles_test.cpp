@@ -1,6 +1,5 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include <game/client/components/tclient/background_particles.h>
-#include <game/client/components/tclient/qm_outline_neighbors.h>
 
 #include <gtest/gtest.h>
 
@@ -203,39 +202,6 @@ TEST(QmBackgroundParticlesMesh, FaceTriangulationDoesNotBecomeWireframeDiagonals
 
 	const SBackgroundParticleMesh &Torus = BackgroundParticleTorusMesh();
 	EXPECT_FALSE(HasEdge(Torus, 0, 7));
-}
-
-TEST(QmOutlineNeighbors, CachePreservesPriorityAndVirtualMapEdges)
-{
-	std::array<int, 9> aTiles = {1, 2, 7, 3, 4, 5, 7, 6, 0};
-	int Reads = 0;
-	const auto GetTile = [&](int X, int Y) {
-		++Reads;
-		return aTiles[std::clamp(Y, 0, 2) * 3 + std::clamp(X, 0, 2)] & 7;
-	};
-	EXPECT_EQ(QmOutlineCachedNeighbors(aTiles[4], 1, 1, 3, 3, GetTile), 116);
-	EXPECT_EQ(Reads, 8);
-	for(int Frame = 0; Frame < 240; ++Frame)
-		EXPECT_EQ(QmOutlineCachedNeighbors(aTiles[4], 1, 1, 3, 3, GetTile), 116);
-	EXPECT_EQ(Reads, 8);
-	// 缓存位不参与类型比较；地图外必须按原坐标夹取邻居。
-	for(int Y = -2; Y <= 4; ++Y)
-	{
-		for(int X = -2; X <= 4; ++X)
-		{
-			int &Tile = aTiles[std::clamp(Y, 0, 2) * 3 + std::clamp(X, 0, 2)];
-			const int Type = Tile & 7;
-			const int aDx[] = {-1, 0, 1, -1, 1, -1, 0, 1};
-			const int aDy[] = {-1, -1, -1, 0, 0, 1, 1, 1};
-			int Expected = 0;
-			for(int i = 0; i < 8; ++i)
-				Expected |= (GetTile(X + aDx[i], Y + aDy[i]) >= Type) << i;
-			EXPECT_EQ(QmOutlineCachedNeighbors(Tile, X, Y, 3, 3, GetTile), Expected);
-		}
-	}
-	// 新地图覆盖原数组后，不能沿用旧地图的边界缓存。
-	aTiles.fill(4);
-	EXPECT_EQ(QmOutlineCachedNeighbors(aTiles[4], 1, 1, 3, 3, GetTile), 255);
 }
 
 TEST(QmBackgroundParticles, PreparedRotationPreservesAxisOrder)

@@ -5167,6 +5167,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_bind_editor_console_test.cpp
     src/test/unit/qmclient/client/qm_bind_editor_test.cpp
     src/test/unit/qmclient/client/qm_background_particles_test.cpp
+    src/test/unit/qmclient/client/qm_outline_neighbors_test.cpp
+    src/test/unit/qmclient/client/qm_outline_viewport_test.cpp
     src/test/unit/qmclient/client/qm_axiom_scores_test.cpp
     src/test/contract/qmclient/client/qm_axiom_scores_contract_test.cpp
     src/test/unit/qmclient/client/qm_chat_emoji_test.cpp
@@ -5428,6 +5430,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_identity_file_test.cpp
     src/test/integration/qmclient/client/qm_bg_draw_persistence_test.cpp
     src/test/integration/qmclient/client/qm_bg_draw_camera_geometry_test.cpp
+    src/test/integration/qmclient/client/qm_outline_viewport_test.cpp
     src/test/integration/qmclient/client/qm_users_sync_text_test.cpp
     src/test/integration/qmclient/client/qm_realtime_service_data_test.cpp
     src/test/integration/qmclient/client/qm_realtime_budget_test.cpp

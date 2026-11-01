@@ -7,6 +7,7 @@
 
 #include <game/client/animstate.h>
 #include <game/client/components/tclient/qm_outline_neighbors.h>
+#include <game/client/components/tclient/qm_outline_viewport.h>
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
 #include <game/mapitems.h>
@@ -186,20 +187,9 @@ void COutlines::OnRender()
 
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-	int StartY = (int)(ScreenY0 / Scale) - 1;
-	int StartX = (int)(ScreenX0 / Scale) - 1;
-	int EndY = (int)(ScreenY1 / Scale) + 1;
-	int EndX = (int)(ScreenX1 / Scale) + 1;
-	int MaxScale = 12;
-	if(EndX - StartX > Graphics()->ScreenWidth() / MaxScale || EndY - StartY > Graphics()->ScreenHeight() / MaxScale)
-	{
-		int EdgeX = (EndX - StartX) - (Graphics()->ScreenWidth() / MaxScale);
-		StartX += EdgeX / 2;
-		EndX -= EdgeX / 2;
-		int EdgeY = (EndY - StartY) - (Graphics()->ScreenHeight() / MaxScale);
-		StartY += EdgeY / 2;
-		EndY -= EdgeY / 2;
-	}
+	const auto Range = QmCalcOutlineTileRange(vec2(ScreenX0, ScreenY0), vec2(ScreenX1, ScreenY1), ivec2(Graphics()->ScreenWidth(), Graphics()->ScreenHeight()));
+	if(!Range)
+		return;
 
 	auto GetTile = [&](int x, int y) {
 		x = std::clamp(x, 0, m_MapDataSize.x - 1);
@@ -237,9 +227,9 @@ void COutlines::OnRender()
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
 
-	for(int y = StartY; y < EndY; y++)
+	for(int y = Range->m_Begin.y; y < Range->m_End.y; y++)
 	{
-		for(int x = StartX; x < EndX; x++)
+		for(int x = Range->m_Begin.x; x < Range->m_End.x; x++)
 		{
 			const int Type = GetTile(x, y);
 			if(Type == OUTLINE_NONE)

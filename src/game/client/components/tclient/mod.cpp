@@ -187,7 +187,10 @@ void CMod::OnFire(bool Pressed)
 		return;
 	if(!Client()->RconAuthed())
 		return;
-	const auto &Player = GameClient()->m_aClients[GameClient()->m_Snap.m_LocalClientId];
+	const int LocalClientId = GameClient()->m_Snap.m_LocalClientId;
+	if(LocalClientId < 0 || LocalClientId >= MAX_CLIENTS)
+		return;
+	const auto &Player = GameClient()->m_aClients[LocalClientId];
 	if(!Player.m_Active)
 		return;
 	// Find person who we have shot
