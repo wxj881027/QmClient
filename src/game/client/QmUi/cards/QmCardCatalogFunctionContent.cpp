@@ -226,13 +226,8 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 	const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&s_ReaderButtonGoresToggle, &s_ClearButtonGoresToggle, &BindKey, GoresBind, false);
 	if(!Flow.Input() || PrewarmOnly || Ui()->RenderOnly() || Result.m_Bind == GoresBind)
 		return;
-	if(GoresBind.m_Key != KEY_UNKNOWN)
-		GameClient()->m_Binds.Bind(GoresBind.m_Key, "", false, GoresBind.m_ModifierMask);
-	if(Result.m_Bind.m_Key != KEY_UNKNOWN)
-	{
-		GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, "toggle qm_gores 0 1", false, Result.m_Bind.m_ModifierMask);
-	}
-	g_CommandBindCache.Invalidate();
+	if(GameClient()->m_Binds.Rebind(GoresBind, Result.m_Bind, "toggle qm_gores 0 1"))
+		g_CommandBindCache.Invalidate();
 	(void)PrewarmOnly;
 }
 
@@ -272,13 +267,8 @@ void CMenus::RenderQmFunctionSoloSplitContent(CUIRect &Content, float LineHeight
 		const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&s_ReaderButtonSoloSplit, &s_ClearButtonSoloSplit, &BindKey, SoloSplitBind, false);
 		if(Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly() && Result.m_Bind != SoloSplitBind)
 		{
-			if(SoloSplitBind.m_Key != KEY_UNKNOWN)
-				GameClient()->m_Binds.Bind(SoloSplitBind.m_Key, "", false, SoloSplitBind.m_ModifierMask);
-			if(Result.m_Bind.m_Key != KEY_UNKNOWN)
-			{
-				GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, "qm_solo_split", false, Result.m_Bind.m_ModifierMask);
-			}
-			g_CommandBindCache.Invalidate();
+			if(GameClient()->m_Binds.Rebind(SoloSplitBind, Result.m_Bind, "qm_solo_split"))
+				g_CommandBindCache.Invalidate();
 		}
 	}
 	Flow.Space(LineSpacing);
@@ -294,13 +284,8 @@ void CMenus::RenderQmFunctionSoloSplitContent(CUIRect &Content, float LineHeight
 		const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&Reader, &Clear, &BindKey, Bind, false);
 		if(Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly() && Result.m_Bind != Bind)
 		{
-			if(Bind.m_Key != KEY_UNKNOWN)
-				GameClient()->m_Binds.Bind(Bind.m_Key, "", false, Bind.m_ModifierMask);
-			if(Result.m_Bind.m_Key != KEY_UNKNOWN)
-			{
-				GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, pCommand, false, Result.m_Bind.m_ModifierMask);
-			}
-			g_CommandBindCache.Invalidate();
+			if(GameClient()->m_Binds.Rebind(Bind, Result.m_Bind, pCommand))
+				g_CommandBindCache.Invalidate();
 		}
 		Flow.Space(LineSpacing);
 	};

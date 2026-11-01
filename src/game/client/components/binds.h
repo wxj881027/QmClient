@@ -18,6 +18,7 @@
 #include <new>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -58,6 +59,47 @@ class CBindStorage
 	friend class CBinds;
 	char *m_aapKeyBindings[KeyModifier::COMBINATION_COUNT][KEY_LAST]{};
 	uint64_t m_Revision = 0;
+	struct CFreeCommand
+	{
+		void operator()(char *pCommand) const noexcept { std::free(pCommand); }
+	};
+	using CCommand = std::unique_ptr<char, CFreeCommand>;
+
+	static bool PrepareCommand(const char *pCommand, CCommand &Out, void *(*pAllocate)(size_t))
+	{
+		CCommand Candidate;
+		if(pCommand[0])
+		{
+			try
+			{
+				const std::string Migrated = QmLegacyConfig::MigrateBindCommand(pCommand);
+				if(Migrated.size() >= static_cast<size_t>(std::numeric_limits<int>::max()))
+					return false;
+				const int Size = static_cast<int>(Migrated.size()) + 1;
+				Candidate.reset(static_cast<char *>(pAllocate(static_cast<size_t>(Size))));
+				if(Candidate == nullptr)
+					return false;
+				str_copy(Candidate.get(), Migrated.c_str(), Size);
+			}
+			catch(const std::bad_alloc &)
+			{
+				return false;
+			}
+			catch(const std::length_error &)
+			{
+				return false;
+			}
+		}
+		Out.swap(Candidate);
+		return true;
+	}
+
+	void Commit(int Key, int Modifiers, CCommand Command) noexcept
+	{
+		free(m_aapKeyBindings[Modifiers][Key]);
+		m_aapKeyBindings[Modifiers][Key] = Command.release();
+		++m_Revision;
+	}
 
 public:
 	CBindStorage() = default;
@@ -77,33 +119,35 @@ public:
 		if(FreeOnly && Get(Key, Modifiers)[0])
 			return false;
 		Get(Key, Modifiers);
-		// 先复制后释放，允许用同一槽位的当前值覆盖自身。
-		char *pCopy = nullptr;
-		if(pCommand[0])
+		CCommand Command;
+		if(!PrepareCommand(pCommand, Command, pAllocate))
+			return false;
+		Commit(Key, Modifiers, std::move(Command));
+		return true;
+	}
+
+	// 先准备新命令，再保留原来的解绑/写入与通知阶段；通知不能中断提交。
+	template<typename F>
+	bool Rebind(CBindSlot Old, CBindSlot Target, const char *pCommand, F &&OnChanged, void *(*pAllocate)(size_t) = std::malloc)
+	{
+		static_assert(std::is_nothrow_invocable_v<F &, const CBindSlot &>);
+		if(Old.m_Key != KEY_UNKNOWN)
+			Get(Old.m_Key, Old.m_ModifierMask);
+		if(Target.m_Key != KEY_UNKNOWN)
+			Get(Target.m_Key, Target.m_ModifierMask);
+		CCommand Command;
+		if(Target.m_Key != KEY_UNKNOWN && !PrepareCommand(pCommand, Command, pAllocate))
+			return false;
+		if(Old.m_Key != KEY_UNKNOWN)
 		{
-			try
-			{
-				const std::string Migrated = QmLegacyConfig::MigrateBindCommand(pCommand);
-				if(Migrated.size() >= static_cast<size_t>(std::numeric_limits<int>::max()))
-					return false;
-				const int Size = static_cast<int>(Migrated.size()) + 1;
-				pCopy = static_cast<char *>(pAllocate(static_cast<size_t>(Size)));
-				if(pCopy == nullptr)
-					return false;
-				str_copy(pCopy, Migrated.c_str(), Size);
-			}
-			catch(const std::bad_alloc &)
-			{
-				return false;
-			}
-			catch(const std::length_error &)
-			{
-				return false;
-			}
+			Commit(Old.m_Key, Old.m_ModifierMask, {});
+			OnChanged(Old);
 		}
-		free(m_aapKeyBindings[Modifiers][Key]);
-		m_aapKeyBindings[Modifiers][Key] = pCopy;
-		++m_Revision;
+		if(Target.m_Key != KEY_UNKNOWN)
+		{
+			Commit(Target.m_Key, Target.m_ModifierMask, std::move(Command));
+			OnChanged(Target);
+		}
 		return true;
 	}
 	void UnbindAll()
@@ -242,6 +286,7 @@ class CBinds : public CComponent
 
 	CBindSlot GetBindSlot(const char *pBindString) const;
 	int DetectDeepflyModeFromAllBinds() const;
+	void OnBindChanged(int Key, int Modifiers) const noexcept;
 
 	// free buffer after use
 	char *GetKeyBindCommand(int ModifierCombination, int Key) const;
@@ -264,6 +309,7 @@ public:
 	CBindsSpecial m_SpecialBinds;
 
 	void Bind(int KeyId, const char *pStr, bool FreeOnly = false, int ModifierCombination = KeyModifier::NONE);
+	bool Rebind(const CBindSlot &Old, const CBindSlot &Target, const char *pCommand);
 	void SetDefaults();
 	void UnbindAll();
 	uint64_t Revision() const { return m_Storage.Revision(); }

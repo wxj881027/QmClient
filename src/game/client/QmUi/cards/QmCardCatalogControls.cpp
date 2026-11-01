@@ -188,16 +188,11 @@ void CMenusSettingsControls::RenderSettingsBinds(EBindOptionGroup Group, CUIRect
 			}
 			else if(KeyReaderResult.m_Bind != CurrentBind.m_Bind)
 			{
-				BindOption.m_AddNewBind = false;
-				if(CurrentBind.m_Bind.m_Key != KEY_UNKNOWN || KeyReaderResult.m_Bind.m_Key == KEY_UNKNOWN)
+				if(GameClient()->m_Binds.Rebind(CurrentBind.m_Bind, KeyReaderResult.m_Bind, BindOption.m_Command.c_str()))
 				{
-					GameClient()->m_Binds.Bind(CurrentBind.m_Bind.m_Key, "", false, CurrentBind.m_Bind.m_ModifierMask);
+					BindOption.m_AddNewBind = false;
+					m_BindOptionsDirty = true;
 				}
-				if(KeyReaderResult.m_Bind.m_Key != KEY_UNKNOWN)
-				{
-					GameClient()->m_Binds.Bind(KeyReaderResult.m_Bind.m_Key, BindOption.m_Command.c_str(), false, KeyReaderResult.m_Bind.m_ModifierMask);
-				}
-				m_BindOptionsDirty = true;
 			}
 		}
 	}

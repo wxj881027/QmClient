@@ -96,6 +96,18 @@ void CBinds::Bind(int KeyId, const char *pStr, bool FreeOnly, int ModifierCombin
 {
 	if(!m_Storage.Bind(KeyId, pStr, FreeOnly, ModifierCombination))
 		return;
+	OnBindChanged(KeyId, ModifierCombination);
+}
+
+bool CBinds::Rebind(const CBindSlot &Old, const CBindSlot &Target, const char *pCommand)
+{
+	return m_Storage.Rebind(Old, Target, pCommand, [this](const CBindSlot &Slot) noexcept {
+		OnBindChanged(Slot.m_Key, Slot.m_ModifierMask);
+	});
+}
+
+void CBinds::OnBindChanged(int KeyId, int ModifierCombination) const noexcept
+{
 	char aBindName[128];
 	GetKeyBindName(KeyId, ModifierCombination, aBindName, sizeof(aBindName));
 	const char *pStored = m_Storage.Get(KeyId, ModifierCombination);

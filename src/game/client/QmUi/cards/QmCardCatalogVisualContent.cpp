@@ -420,13 +420,8 @@ void CMenus::RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, 
 	const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&s_ReaderButtonFocusToggle, &s_ClearButtonFocusToggle, &BindKey, FocusBind, false);
 	if(Flow.Input() && !Ui()->RenderOnly() && Result.m_Bind != FocusBind)
 	{
-		if(FocusBind.m_Key != KEY_UNKNOWN)
-			GameClient()->m_Binds.Bind(FocusBind.m_Key, "", false, FocusBind.m_ModifierMask);
-		if(Result.m_Bind.m_Key != KEY_UNKNOWN)
-		{
-			GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, "toggle qm_focus_mode 0 1", false, Result.m_Bind.m_ModifierMask);
-		}
-		g_CommandBindCache.Invalidate();
+		if(GameClient()->m_Binds.Rebind(FocusBind, Result.m_Bind, "toggle qm_focus_mode 0 1"))
+			g_CommandBindCache.Invalidate();
 	}
 }
 

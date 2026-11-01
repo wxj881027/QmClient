@@ -4971,6 +4971,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/audio_pack_editor_test.cpp
     src/test/unit/base/bezier_test.cpp
     src/test/unit/client/binds_test.cpp
+    src/test/unit/client/binds_rebind_test.cpp
+    src/test/integration/client/binds_rebind_test.cpp
     src/test/unit/client/binds_active_test.cpp
     src/test/unit/client/countryflags_load_test.cpp
     src/test/integration/client/countryflags_load_job_test.cpp
@@ -6309,6 +6311,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/settings/settings_choice_width_failure_test.cpp
       src/test/unit/qmclient/settings/settings_card_collapse_allocation_test.cpp
       src/test/unit/qmclient/settings/settings_bind_cache_allocation_test.cpp
+      src/test/unit/client/binds_rebind_allocation_test.cpp
       src/test/integration/qmclient/settings/settings_bind_cache_allocation_test.cpp
       src/test/integration/qmclient/settings/settings_card_collapse_allocation_test.cpp
       src/game/client/QmUi/SettingsCardCollapseState.cpp

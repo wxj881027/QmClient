@@ -169,13 +169,8 @@ void CMenus::RenderQmHudKeyBindRow(CUIRect &Content, CButtonContainer &ReaderBut
 	const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&ReaderButton, &ClearButton, &BindKey, Bind, false);
 	if(Result.m_Bind != Bind)
 	{
-		if(Bind.m_Key != KEY_UNKNOWN)
-			GameClient()->m_Binds.Bind(Bind.m_Key, "", false, Bind.m_ModifierMask);
-		if(Result.m_Bind.m_Key != KEY_UNKNOWN)
-		{
-			GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, pCommand, false, Result.m_Bind.m_ModifierMask);
-		}
-		g_CommandBindCache.Invalidate();
+		if(GameClient()->m_Binds.Rebind(Bind, Result.m_Bind, pCommand))
+			g_CommandBindCache.Invalidate();
 	}
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 }
@@ -231,10 +226,8 @@ bool CMenus::DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CBu
 	const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&ReaderButton, &ClearButton, &KeyButton, Bind, false, TCLIENT_BODY_FONT_SIZE);
 	if(Result.m_Bind != Bind)
 	{
-		if(Bind.m_Key != KEY_UNKNOWN)
-			GameClient()->m_Binds.Bind(Bind.m_Key, "", false, Bind.m_ModifierMask);
-		if(Result.m_Bind.m_Key != KEY_UNKNOWN)
-			GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, pCommand, false, Result.m_Bind.m_ModifierMask);
+		if(!GameClient()->m_Binds.Rebind(Bind, Result.m_Bind, pCommand))
+			return false;
 		g_CommandBindCache.Invalidate();
 		return true;
 	}
