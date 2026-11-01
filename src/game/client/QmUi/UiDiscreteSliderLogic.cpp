@@ -64,7 +64,8 @@ namespace ui_widget
 	{
 		if(Max <= Min)
 			return 0.0f;
-		return std::clamp((static_cast<float>(Value) - Min) / (static_cast<float>(Max) - Min), 0.0f, 1.0f);
+		// 先扩宽再求差，避免相邻的大整数在 float 中合并，产生零分母。
+		return static_cast<float>(std::clamp((static_cast<double>(Value) - Min) / (static_cast<double>(Max) - Min), 0.0, 1.0));
 	}
 
 	SDiscreteSliderStyle ResolveDiscreteSliderStyle(int Value, int Min, int Max)
