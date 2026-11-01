@@ -6243,6 +6243,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_console_input_colors_test.cpp
       src/test/unit/qmclient/client/qm_console_selection_copy_test.cpp
       src/test/unit/qmclient/ui/qm_line_input_motion_allocation_test.cpp
+      src/test/unit/qmclient/ui/qm_selection_commit_allocation_test.cpp
       src/game/client/QmUi/QmLineInputMotion.cpp
       src/test/integration/qmclient/client/qm_markdown_broadcast_payload_test.cpp
       src/game/client/components/qmclient/qm_realtime.cpp

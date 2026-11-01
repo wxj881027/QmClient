@@ -678,13 +678,9 @@ void CUi::RefreshInteractionSource(const void *pContext, const char *pCardId)
 			pCommit->m_Source.Refresh(pContext, pCardId, Frame);
 }
 
-void CUi::RegisterSelectionCommit(std::shared_ptr<SQmUiSelectionCommit> &pCommit)
+bool CUi::RegisterSelectionCommit(std::shared_ptr<SQmUiSelectionCommit> &pCommit)
 {
-	if(m_pInteractionContext == nullptr || m_pInteractionCardId == nullptr || pCommit)
-		return;
-	pCommit = std::make_shared<SQmUiSelectionCommit>();
-	pCommit->m_Source.Assign(m_pInteractionContext, m_pInteractionCardId, PopupSourceFrame());
-	m_vPendingSelections.emplace_back(pCommit);
+	return QmTryRegisterSelectionCommit(m_pInteractionContext, m_pInteractionCardId, PopupSourceFrame(), m_vPendingSelections, pCommit);
 }
 
 bool CUi::HasPendingInteractionSelection() const
@@ -1010,9 +1006,10 @@ CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, 
 	const SQmDropdownUpdateResult KeyboardResult = QmUpdateDropdownPopupSelection(KeyboardInput, vVisible.size(), Active, pSelectionPopup->m_ActiveIndex);
 	if(KeyboardResult.m_Selected)
 	{
+		if(!pUI->RegisterSelectionCommit(pSelectionPopup->m_pCommit))
+			return CUi::POPUP_KEEP_OPEN;
 		pSelectionPopup->m_SelectionIndex = pSelectionPopup->m_Search.SourceIndex(KeyboardResult.m_SelectedIndex);
 		pSelectionPopup->m_pSelection = &pSelectionPopup->m_vEntries[pSelectionPopup->m_SelectionIndex];
-		pUI->RegisterSelectionCommit(pSelectionPopup->m_pCommit);
 	}
 	if(KeyboardResult.m_Closed)
 		return CUi::POPUP_CLOSE_CURRENT;
@@ -1077,9 +1074,11 @@ CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, 
 																			    std::nullopt;
 			if(pUI->DoButton_PopupMenu(pButton, Entry.c_str(), &Slot, pSelectionPopup->m_FontSize, TEXTALIGN_ML, pSelectionPopup->m_EntryPadding, pSelectionPopup->m_TransparentButtons, true, EntryColor, pSelectionPopup->m_MinimumFontSize))
 			{
-				pSelectionPopup->m_pSelection = &Entry;
-				pSelectionPopup->m_SelectionIndex = SourceIndex;
-				pUI->RegisterSelectionCommit(pSelectionPopup->m_pCommit);
+				if(pUI->RegisterSelectionCommit(pSelectionPopup->m_pCommit))
+				{
+					pSelectionPopup->m_pSelection = &Entry;
+					pSelectionPopup->m_SelectionIndex = SourceIndex;
+				}
 			}
 		}
 		++Index;

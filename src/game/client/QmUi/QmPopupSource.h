@@ -2,7 +2,12 @@
 #define GAME_CLIENT_QMUI_QMPOPUPSOURCE_H
 
 #include <cstdint>
+#include <memory>
+#include <new>
+#include <stdexcept>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 class CQmPopupSourceClock
 {
@@ -64,6 +69,30 @@ struct SQmUiSelectionCommit
 	CQmUiInteractionSource m_Source;
 	bool m_Cancelled = false;
 };
+
+// 先完成来源跟踪，再发布控件句柄；失败时调用方不提交本次选择。
+inline bool QmTryRegisterSelectionCommit(const void *pContext, const char *pCardId, uint64_t Frame,
+	std::vector<std::weak_ptr<SQmUiSelectionCommit>> &vPending, std::shared_ptr<SQmUiSelectionCommit> &pCommit)
+{
+	if(pContext == nullptr || pCardId == nullptr || pCommit)
+		return true;
+	try
+	{
+		auto pCandidate = std::make_shared<SQmUiSelectionCommit>();
+		pCandidate->m_Source.Assign(pContext, pCardId, Frame);
+		vPending.emplace_back(pCandidate);
+		pCommit = std::move(pCandidate);
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
+}
 
 // 刷新弹窗栈实际持有的来源信息，而非控件中打开弹窗时的属性副本。
 // 不重开弹层，不覆盖已选择的条目、几何或入场动画。

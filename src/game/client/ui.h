@@ -871,7 +871,7 @@ private:
 	size_t QueuePopupCloseCallbacks(size_t FirstPopup) noexcept;
 	void InvokePopupCloseCallbacks(size_t FirstCallback) noexcept;
 	std::vector<std::weak_ptr<SQmUiSelectionCommit>> m_vPendingSelections;
-	void RegisterSelectionCommit(std::shared_ptr<SQmUiSelectionCommit> &pCommit);
+	bool RegisterSelectionCommit(std::shared_ptr<SQmUiSelectionCommit> &pCommit);
 	CQmPopupSourceClock m_PopupSourceClock;
 	std::shared_ptr<FPopupMenuClosedCallback> m_pPopupMenuClosedCallback;
 	int m_PopupInputDepth = 0;
