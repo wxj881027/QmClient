@@ -2,7 +2,6 @@
 
 #include "QmTree.h"
 #include "UiButtons.h"
-#include <game/client/QmUi/QmIconSwap.h>
 #include "UiForms.h"
 #include "UiSurface.h"
 
@@ -16,6 +15,7 @@
 #include <engine/shared/localization.h>
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/QmIconSwap.h>
 #include <game/client/animstate.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/voting.h>
