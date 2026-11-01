@@ -1,7 +1,9 @@
-#include <engine/shared/config.h>
+/* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
+/* If you are missing that file, acquire a complete release at teeworlds.com.                */
+#include "animstate.h"
+#include "render.h"
 
-#include <game/client/animstate.h>
-#include <game/client/render.h>
+#include <engine/shared/config.h>
 
 void CRenderTools::GetRenderTeeAnimScaleAndBaseSize(const CTeeRenderInfo *pInfo, float &AnimScale, float &BaseSize)
 {

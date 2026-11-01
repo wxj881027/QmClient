@@ -3973,6 +3973,7 @@ if(CLIENT)
     race.h
     race_parse.cpp
     render.cpp
+    render_tee_geometry.cpp
     render.h
     sixup_translate_connless.cpp
     sixup_translate_game.cpp
@@ -5601,6 +5602,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/skins/skin_download_registration_test.cpp
     src/test/unit/client/skins/skin_usage_tracking_test.cpp
     src/test/unit/client/skins/skins_test.cpp
+    src/test/unit/client/skins/tee_render_geometry_test.cpp
     src/test/integration/client/skins/skin_source_job_test.cpp
     src/test/integration/client/skins/skin7_info_job_test.cpp
     src/test/integration/client/skins/skin7_part_load_job_test.cpp
@@ -5768,7 +5770,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/game/client/components/qmclient/scripting/impl.cpp
     src/game/client/components/qmclient/config_package.cpp
     src/game/client/components/jump_hint_utils.cpp
-    src/test/support/render_tee_offset_helpers.cpp
+    src/game/client/render_tee_geometry.cpp
     src/game/client/components/section_loader.cpp
     src/game/client/components/settings_runtime_cache.cpp
     src/game/client/components/settings_resource_jobs.cpp
