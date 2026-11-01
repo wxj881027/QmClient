@@ -1,6 +1,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_TCLIENT_BINDCHAT_H
 #define GAME_CLIENT_COMPONENTS_TCLIENT_BINDCHAT_H
 
+#include <base/str.h>
+
 #include <engine/console.h>
 
 #include <game/client/component.h>
@@ -33,6 +35,15 @@ public:
 		const char *m_pTitle;
 		CBind m_Bind;
 		CLineInput m_LineInput;
+		char m_aEditName[BINDCHAT_MAX_NAME] = "";
+
+		// 默认集合初始化后不再移动；活动输入始终借用本条目的缓冲，不借用动态绑定。
+		void PrepareNameInput(const char *pCurrentName)
+		{
+			m_LineInput.SetBuffer(m_aEditName, sizeof(m_aEditName));
+			if(!m_LineInput.IsActive() && !m_LineInput.HasPendingChanges() && str_comp(m_LineInput.GetString(), pCurrentName) != 0)
+				m_LineInput.Set(pCurrentName);
+		}
 	};
 	static std::vector<std::pair<const char *, std::vector<CBindDefault>>> BIND_DEFAULTS;
 
