@@ -6,6 +6,7 @@
 #include "QmUi/QmAnimResolve.h"
 #include "QmUi/QmImeAppearance.h"
 #include "QmUi/QmImeCandidateLayout.h"
+#include "QmUi/QmImeRenderState.h"
 #include "QmUi/QmInputMotion.h"
 #include "QmUi/QmTheme.h"
 #include "QmUi/QmTree.h"
@@ -296,11 +297,9 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, std::optional<SQmIme
 	ITextRender *pTextRender = pGameClient->TextRender();
 	const SQmImeAppearance Appearance = QmImeAppearance(g_Config);
 	const auto &Ime = Appearance.m_Theme;
+	const CQmImeScreenState ScreenState(*pGraphics, *pTextRender);
 	const unsigned OldRenderFlags = pTextRender->GetRenderFlags();
 	pTextRender->SetRenderFlags(OldRenderFlags | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
-
-	float OldScreenX0, OldScreenY0, OldScreenX1, OldScreenY1;
-	pGraphics->GetScreen(&OldScreenX0, &OldScreenY0, &OldScreenX1, &OldScreenY1);
 
 	const float Height = Ime.m_ScreenHeight;
 	const float Width = Height * pGraphics->ScreenAspect();
@@ -411,8 +410,6 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, std::optional<SQmIme
 		m_WasVisible = false;
 		m_Presentation = {};
 		m_CandidateStart = 0;
-		pTextRender->SetRenderFlags(OldRenderFlags);
-		pGraphics->MapScreen(OldScreenX0, OldScreenY0, OldScreenX1, OldScreenY1);
 		return;
 	}
 	m_WasVisible = TargetVisible || Presence.m_Render;
@@ -426,8 +423,7 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, std::optional<SQmIme
 	const qm_ime_overlay::SCandidateRowLayout CandidateLayout = qm_ime_overlay::BuildCandidateRowLayoutForPanel(CandidateRow.m_aMeasures, CandidateRow.m_Viewport.m_Count, CandidateRow.m_LayoutConfig, Panel);
 	DrawImePanelSurface(pGameClient, Panel, Appearance, Presentation.m_Radius, Alpha, PixelSize);
 
-	const ColorRGBA OldTextColor = pTextRender->GetTextColor();
-	const ColorRGBA OldOutlineColor = pTextRender->GetTextOutlineColor();
+	const CQmImeTextColorState TextColorState(*pTextRender);
 	pTextRender->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.0f);
 
 	if(CandidateLayout.m_Count > 0)
@@ -471,10 +467,6 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, std::optional<SQmIme
 		// 打字和翻页直接显示最新候选；外框伸缩和选中背景继续使用各自的动画。
 		DrawCandidateRow(pTextRender, DrawState, CandidateRow, Panel, Appearance, CandidateDrawAlpha, Presentation.m_CandidateScale);
 	}
-	pTextRender->TextColor(OldTextColor);
-	pTextRender->TextOutlineColor(OldOutlineColor);
-	pTextRender->SetRenderFlags(OldRenderFlags);
-	pGraphics->MapScreen(OldScreenX0, OldScreenY0, OldScreenX1, OldScreenY1);
 }
 
 void QmImeRenderStylePreview(CGameClient *pGameClient, const CUIRect &Rect)
@@ -501,9 +493,9 @@ void QmImeRenderStylePreview(CGameClient *pGameClient, const CUIRect &Rect)
 		    &Ime.m_SelectedPaddingX, &Ime.m_CandidateNumPaddingX, &Ime.m_CompositionTextPaddingX,
 		    &Ime.m_TextSafePaddingX, &Ime.m_TextSafePaddingY, &Ime.m_ShadowX, &Ime.m_ShadowY, &Ime.m_BorderInset})
 		*pValue *= Scale;
+	const CQmImeScreenState ScreenState(*pGraphics, *pTextRender);
+	const CQmImeTextColorState TextColorState(*pTextRender);
 	const unsigned OldFlags = pTextRender->GetRenderFlags();
-	const ColorRGBA OldColor = pTextRender->GetTextColor();
-	const ColorRGBA OldOutline = pTextRender->GetTextOutlineColor();
 	pTextRender->SetRenderFlags(OldFlags | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
 	pTextRender->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.0f);
 	const auto Row = MeasureCandidateRow(pTextRender, State, 0, Ime, Rect.w);
@@ -526,7 +518,4 @@ void QmImeRenderStylePreview(CGameClient *pGameClient, const CUIRect &Rect)
 		DrawRoundedGradientSurface(pGraphics, Selection, Appearance.m_Selection, 1.0f, ColorRGBA(), Params);
 	}
 	DrawCandidateRow(pTextRender, State, Row, Panel, Appearance, 1.0f, 1.0f);
-	pTextRender->TextColor(OldColor);
-	pTextRender->TextOutlineColor(OldOutline);
-	pTextRender->SetRenderFlags(OldFlags);
 }
