@@ -1333,24 +1333,32 @@ inline SSettingsPageLayoutFrame ResolveSettingsPageLayoutForScrollViewport(const
 	return Frame;
 }
 
+// 设置页壳层（页签条 + 内容面板）的宽度公式同时被其它菜单页用来对齐左右边界，
+// 两处必须共用同一份常量，避免某天调整设置页宽度后其它页面重新错位。
+inline constexpr float SETTINGS_SHELL_GAP = 10.0f;
+inline constexpr float SETTINGS_PANEL_MARGIN = 10.0f;
+
+inline float ResolveSettingsShellTabBarWidth(float AvailableWidth)
+{
+	return std::clamp(AvailableWidth * 0.16f, 132.0f, 168.0f);
+}
+
 inline SSettingsShellLayoutFrame ResolveSettingsShellLayout(const CUIRect &AvailableRect, const float BottomReservedHeight = 0.0f)
 {
-	constexpr float ShellGap = 10.0f;
-	constexpr float PanelMargin = 10.0f;
 	constexpr float RestartBarHeight = 20.0f;
 	SSettingsShellLayoutFrame Frame;
 	CUIRect ShellAvailable = AvailableRect;
 	ShellAvailable.h = std::max(0.0f, ShellAvailable.h - std::max(0.0f, BottomReservedHeight));
-	Frame.m_TabBarWidth = std::clamp(AvailableRect.w * 0.16f, 132.0f, 168.0f);
-	const float AvailablePanelWidth = std::max(0.0f, ShellAvailable.w - Frame.m_TabBarWidth - ShellGap);
-	const float MaxPanelWidth = ui_token::settings::MAX_CONTENT_WIDTH + PanelMargin * 2.0f;
+	Frame.m_TabBarWidth = ResolveSettingsShellTabBarWidth(AvailableRect.w);
+	const float AvailablePanelWidth = std::max(0.0f, ShellAvailable.w - Frame.m_TabBarWidth - SETTINGS_SHELL_GAP);
+	const float MaxPanelWidth = ui_token::settings::MAX_CONTENT_WIDTH + SETTINGS_PANEL_MARGIN * 2.0f;
 	const float PanelWidth = std::min(AvailablePanelWidth, MaxPanelWidth);
-	const float ShellWidth = PanelWidth + ShellGap + Frame.m_TabBarWidth;
+	const float ShellWidth = PanelWidth + SETTINGS_SHELL_GAP + Frame.m_TabBarWidth;
 	ShellAvailable.VMargin(std::max(0.0f, (ShellAvailable.w - ShellWidth) * 0.5f), &Frame.m_ShellRect);
 	Frame.m_ShellRect.VSplitRight(Frame.m_TabBarWidth, &Frame.m_ContentPanelRect, &Frame.m_TabBarRect);
-	Frame.m_ContentPanelRect.VSplitRight(ShellGap, &Frame.m_ContentPanelRect, nullptr);
+	Frame.m_ContentPanelRect.VSplitRight(SETTINGS_SHELL_GAP, &Frame.m_ContentPanelRect, nullptr);
 	Frame.m_ContentRect = Frame.m_ContentPanelRect;
-	Frame.m_ContentRect.Margin(PanelMargin, &Frame.m_ContentRect);
+	Frame.m_ContentRect.Margin(SETTINGS_PANEL_MARGIN, &Frame.m_ContentRect);
 	if(BottomReservedHeight >= RestartBarHeight)
 		Frame.m_RestartBarRect = {Frame.m_ContentPanelRect.x, AvailableRect.y + AvailableRect.h - RestartBarHeight, Frame.m_ContentPanelRect.w, RestartBarHeight};
 
