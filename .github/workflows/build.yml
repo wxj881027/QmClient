@@ -7,6 +7,14 @@ on:
       - "v*"
   workflow_dispatch:
     inputs:
+      target_platform:
+        description: "Build platforms (publishing always builds all)"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - android
       build_type:
         description: "Build type"
         required: true
@@ -44,6 +52,7 @@ concurrency:
 jobs:
   build:
     name: ${{ matrix.name }}
+    if: github.event_name != 'workflow_dispatch' || inputs.target_platform != 'android' || inputs.release_tag != ''
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     env:

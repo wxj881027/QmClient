@@ -5854,6 +5854,7 @@ void CClient::Con_PosesClose(IConsole::IResult *pResult, void *pUserData)
 	static_cast<CClient *>(pUserData)->LeavePoseSession();
 }
 
+#if defined(CONF_VIDEORECORDER)
 void CClient::Con_PosesVideo(IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = static_cast<CClient *>(pUserData);
@@ -5901,6 +5902,7 @@ void CClient::Con_PosesVideo(IConsole::IResult *pResult, void *pUserData)
 		qm_pose::VideoFrameCount(Seconds, maximum(g_Config.m_ClVideoRecorderFPS, 1)), pVideoName);
 	pSelf->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
 }
+#endif
 
 void CClient::Con_RenderPoses(IConsole::IResult *pResult, void *pUserData)
 {
@@ -7514,14 +7516,14 @@ void CClient::RegisterCommands()
 	// 与 demo 一致的两条路径：游戏内观看 / 导出。poses_render 是第三种（静态截图）。
 	m_pConsole->Register("poses_open", "s[poses] ?s[map]", CFGFLAG_CLIENT, Con_PosesOpen, this, "Show a MomentCap .poses file in game (no export)");
 	m_pConsole->Register("poses_close", "", CFGFLAG_CLIENT, &CClient::Con_PosesClose, this, "Leave the pose session");
-	m_pConsole->Register("poses_video", "s[poses] s[name] ?f[seconds] ?s[map]", CFGFLAG_CLIENT, Con_PosesVideo, this, "Record a MomentCap .poses scene to a video");
 	// 无下划线别名，与 posesrender 一致。
 	m_pConsole->Register("posesopen", "s[poses] ?s[map]", CFGFLAG_CLIENT, Con_PosesOpen, this, "Alias of poses_open");
 	m_pConsole->Register("posesclose", "", CFGFLAG_CLIENT, &CClient::Con_PosesClose, this, "Alias of poses_close");
-	m_pConsole->Register("posesvideo", "s[poses] s[name] ?f[seconds] ?s[map]", CFGFLAG_CLIENT, Con_PosesVideo, this, "Alias of poses_video");
 	m_pConsole->Register("net_reset", "", CFGFLAG_CLIENT, ConNetReset, this, "Rebinds the client's listening address and port");
 
 #if defined(CONF_VIDEORECORDER)
+	m_pConsole->Register("poses_video", "s[poses] s[name] ?f[seconds] ?s[map]", CFGFLAG_CLIENT, Con_PosesVideo, this, "Record a MomentCap .poses scene to a video");
+	m_pConsole->Register("posesvideo", "s[poses] s[name] ?f[seconds] ?s[map]", CFGFLAG_CLIENT, Con_PosesVideo, this, "Alias of poses_video");
 	// 第一个参数必须是 s 而不是 r：r 会吞掉整行剩余内容，后面的 start/end 永远收不到。
 	// 文件名含空格时用引号包裹（"my demo"）。
 	m_pConsole->Register("start_video", "?s[file] ?f[start_sec] ?f[end_sec]", CFGFLAG_CLIENT, Con_StartVideo, this, "Start recording a video");
