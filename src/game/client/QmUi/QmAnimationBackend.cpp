@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <unordered_set>
+#include <utility>
 
 namespace qm_animation
 {
@@ -379,7 +380,7 @@ void CQmAnimationBackend::CompleteAwaitedTrack(uint32_t TrackId)
 	auto ItTrackGroup = m_TrackAwaitGroups.find(TrackId);
 	if(ItTrackGroup != m_TrackAwaitGroups.end())
 	{
-		const std::vector<uint32_t> vGroupIds = ItTrackGroup->second;
+		const std::vector<uint32_t> vGroupIds = std::move(ItTrackGroup->second);
 		m_TrackAwaitGroups.erase(ItTrackGroup);
 		for(const uint32_t GroupId : vGroupIds)
 		{
@@ -402,7 +403,9 @@ void CQmAnimationBackend::CancelAwaitedTrack(uint32_t TrackId)
 	auto ItTrackGroup = m_TrackAwaitGroups.find(TrackId);
 	if(ItTrackGroup == m_TrackAwaitGroups.end())
 		return;
-	const std::vector<uint32_t> vGroupIds = ItTrackGroup->second;
+	// 接管已有列表，取消本身不再为成员快照申请内存。
+	const std::vector<uint32_t> vGroupIds = std::move(ItTrackGroup->second);
+	m_TrackAwaitGroups.erase(ItTrackGroup);
 	for(const uint32_t GroupId : vGroupIds)
 		CancelAwaitGroup(GroupId);
 }
