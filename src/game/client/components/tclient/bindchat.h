@@ -33,7 +33,7 @@ public:
 		char m_aCommand[BINDCHAT_MAX_CMD];
 		CBind() = default;
 		CBind(const char *pName, const char *pCommand);
-		bool CompContent(const CBind &Other) const;
+		bool CompContent(const CBind &Other) const { return str_comp(m_aCommand, Other.m_aCommand) == 0; }
 	};
 	class CBindDefault
 	{

@@ -3552,6 +3552,7 @@ if(CLIENT)
     components/qmclient/axiom_scores_parse_job.h
     components/qmclient/bind_editor.cpp
     components/qmclient/bind_editor.h
+    components/qmclient/chat_bind_config.h
     components/qmclient/bind_settings.cpp
     components/qmclient/browser_score.h
     components/qmclient/browser_status_layout.h
@@ -4901,6 +4902,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/game/client/components/qmclient/chat_emoji_load.cpp
     src/test/integration/qmclient/client/qm_chat_post_send_failure_test.cpp
     src/test/integration/qmclient/client/qm_chat_history_test.cpp
+    src/test/integration/qmclient/client/qm_chatbind_config_console_test.cpp
     src/test/integration/qmclient/client/qm_skin_download_session_test.cpp
     src/test/integration/qmclient/client/qm_skin_outline_render_test.cpp
     src/test/integration/qmclient/client/qm_font_download_storage_test.cpp
@@ -6229,6 +6231,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/client/swap_countdown_tracker_failure_test.cpp
       src/test/unit/qmclient/client/qm_bindwheel_mutation_test.cpp
       src/test/unit/qmclient/client/qm_chatbind_mutation_test.cpp
+      src/test/unit/qmclient/client/qm_chatbind_config_test.cpp
+      src/game/client/components/qmclient/bind_editor.cpp
       src/test/unit/qmclient/client/qm_tee_trail_frame_test.cpp
       src/game/client/components/tclient/swap_countdown_message.cpp
       src/test/integration/client/prediction_door_rebuild_test.cpp
