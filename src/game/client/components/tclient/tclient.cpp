@@ -5065,7 +5065,8 @@ int64_t CTClient::CurrentMapHistoryPlayTimeMs() const
 	const int64_t Elapsed = time_get() - m_MapHistorySessionStart;
 	if(Elapsed <= 0)
 		return 0;
-	return Elapsed * 1000 / time_freq();
+	// 时间源固定为纳秒，先约去换算因子，避免长期会话先乘1000溢出。
+	return Elapsed / (time_freq() / 1000);
 }
 
 void CTClient::TouchMapHistoryPlayTime()

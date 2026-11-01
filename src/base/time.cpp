@@ -10,6 +10,7 @@
 #include <cmath>
 #include <iomanip> // std::get_time
 #include <sstream> // std::istringstream
+#include <utility>
 
 static int new_tick = -1;
 
@@ -169,6 +170,32 @@ void str_timestamp_ex(time_t time_data, char *buffer, int buffer_size, const cha
 	const tm time_info = time_localtime_threadlocal(&time_data);
 	strftime(buffer, buffer_size, format, &time_info);
 	buffer[buffer_size - 1] = 0; /* assure null termination */
+}
+
+bool str_timestamp_ex_try(int64_t timestamp, char *buffer, int buffer_size, const char *format)
+{
+	if(buffer == nullptr || buffer_size <= 0)
+		return false;
+	buffer[0] = '\0';
+	if(format == nullptr || !std::in_range<time_t>(timestamp))
+		return false;
+	const time_t time_data = static_cast<time_t>(timestamp);
+	tm time_info{};
+#if defined(CONF_FAMILY_WINDOWS)
+	// 有效指针配合超范围时间只返回错误码，不触发CRT的无效参数处理器。
+	if(localtime_s(&time_info, &time_data) != 0)
+		return false;
+#else
+	if(localtime_r(&time_data, &time_info) == nullptr)
+		return false;
+#endif
+	if(strftime(buffer, buffer_size, format, &time_info) == 0)
+	{
+		buffer[0] = '\0';
+		return false;
+	}
+	buffer[buffer_size - 1] = '\0';
+	return true;
 }
 
 bool timestamp_from_str(const char *string, const char *format, time_t *timestamp)

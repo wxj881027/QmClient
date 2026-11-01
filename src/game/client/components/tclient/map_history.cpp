@@ -6,7 +6,11 @@
 
 #include <algorithm>
 #include <cinttypes>
+#include <cmath>
 #include <limits>
+#include <memory>
+#include <new>
+#include <stdexcept>
 #include <utility>
 
 namespace QmMapHistory
@@ -64,7 +68,14 @@ namespace QmMapHistory
 			if(pVal->type == json_integer)
 				return pVal->u.integer;
 			if(pVal->type == json_double)
-				return (int64_t)pVal->u.dbl;
+			{
+				const double Value = pVal->u.dbl;
+				// INT64_MAX转double会舍入到2^63，正边界必须排除等号。
+				constexpr double LIMIT = 9223372036854775808.0;
+				if(!std::isfinite(Value) || Value < -LIMIT || Value >= LIMIT)
+					return Default;
+				return static_cast<int64_t>(Value);
+			}
 			return Default;
 		}
 
@@ -287,63 +298,69 @@ namespace QmMapHistory
 
 	bool CMapHistory::FromJson(std::string_view Json, char *pErr, size_t ErrSize)
 	{
-		json_settings Settings{};
-		char aJsonErr[json_error_max];
-		json_value *pRoot = json_parse_ex(&Settings, Json.data(), Json.size(), aJsonErr);
-		if(pRoot == nullptr)
+		try
 		{
-			SetError(pErr, ErrSize, aJsonErr);
-			return false;
-		}
-		if(pRoot->type != json_object)
-		{
-			json_value_free(pRoot);
-			SetError(pErr, ErrSize, "root is not an object");
-			return false;
-		}
+			json_settings Settings{};
+			char aJsonErr[json_error_max];
+			const std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(json_parse_ex(&Settings, Json.data(), Json.size(), aJsonErr), json_value_free);
+			if(pRoot == nullptr)
+			{
+				SetError(pErr, ErrSize, aJsonErr);
+				return false;
+			}
+			if(pRoot->type != json_object)
+			{
+				SetError(pErr, ErrSize, "root is not an object");
+				return false;
+			}
 
-		std::vector<SMapHistoryRecord> vOldEntries;
-		vOldEntries.swap(m_vEntries);
+			const json_value &Entries = (*pRoot)["entries"];
+			if(Entries.type != json_none && Entries.type != json_array)
+			{
+				SetError(pErr, ErrSize, "entries is not an array");
+				return false;
+			}
 
-		const json_value &Entries = (*pRoot)["entries"];
-		if(Entries.type == json_none)
-		{
-			json_value_free(pRoot);
+			// 全部记录和重复项合并完成后才发布；失败保留原名单及其借用。
+			CMapHistory Loaded;
+			if(Entries.type == json_array)
+			{
+				for(unsigned i = 0; i < Entries.u.array.length; ++i)
+				{
+					const json_value *pItem = Entries.u.array.values[i];
+					if(pItem == nullptr || pItem->type != json_object)
+						continue;
+					SMapHistoryRecord Record;
+					Record.m_MapName = JsonString(&(*pItem)["map_name"]);
+					Record.m_MapId = JsonString(&(*pItem)["map_id"]);
+					if(Record.m_MapId.empty())
+						Record.m_MapId = Record.m_MapName;
+					if(Record.m_MapName.empty() || Record.m_MapId.empty())
+						continue;
+					Record.m_LastEnteredAt = std::max<int64_t>(0, JsonInt(&(*pItem)["last_entered"]));
+					Record.m_LastPlayedDate = JsonString(&(*pItem)["last_played_date"]);
+					Record.m_DeathCount = (int)std::clamp<int64_t>(JsonInt(&(*pItem)["deaths"]), 0, std::numeric_limits<int>::max());
+					Record.m_Finished = JsonBool(&(*pItem)["finished"]);
+					Record.m_FinishTimeMs = std::max<int64_t>(0, JsonInt(&(*pItem)["finish_time_ms"]));
+					Record.m_PlayTimeMs = std::max<int64_t>(0, JsonInt(&(*pItem)["play_time_ms"]));
+					if(!Record.m_Finished)
+						Record.m_FinishTimeMs = 0;
+					Loaded.MergeLoadedRecord(Record);
+				}
+			}
+			m_vEntries.swap(Loaded.m_vEntries);
 			return true;
 		}
-		if(Entries.type != json_array)
+		catch(const std::bad_alloc &)
 		{
-			m_vEntries.swap(vOldEntries);
-			json_value_free(pRoot);
-			SetError(pErr, ErrSize, "entries is not an array");
+			SetError(pErr, ErrSize, "map history memory allocation failed");
 			return false;
 		}
-
-		for(unsigned i = 0; i < Entries.u.array.length; ++i)
+		catch(const std::length_error &)
 		{
-			const json_value *pItem = Entries.u.array.values[i];
-			if(pItem == nullptr || pItem->type != json_object)
-				continue;
-			SMapHistoryRecord Record;
-			Record.m_MapName = JsonString(&(*pItem)["map_name"]);
-			Record.m_MapId = JsonString(&(*pItem)["map_id"]);
-			if(Record.m_MapId.empty())
-				Record.m_MapId = Record.m_MapName;
-			if(Record.m_MapName.empty() || Record.m_MapId.empty())
-				continue;
-			Record.m_LastEnteredAt = std::max<int64_t>(0, JsonInt(&(*pItem)["last_entered"]));
-			Record.m_LastPlayedDate = JsonString(&(*pItem)["last_played_date"]);
-			Record.m_DeathCount = (int)std::clamp<int64_t>(JsonInt(&(*pItem)["deaths"]), 0, std::numeric_limits<int>::max());
-			Record.m_Finished = JsonBool(&(*pItem)["finished"]);
-			Record.m_FinishTimeMs = std::max<int64_t>(0, JsonInt(&(*pItem)["finish_time_ms"]));
-			Record.m_PlayTimeMs = std::max<int64_t>(0, JsonInt(&(*pItem)["play_time_ms"]));
-			if(!Record.m_Finished)
-				Record.m_FinishTimeMs = 0;
-			MergeLoadedRecord(Record);
+			SetError(pErr, ErrSize, "map history entry capacity exceeded");
+			return false;
 		}
-
-		json_value_free(pRoot);
-		return true;
 	}
 
 	void CMapHistory::MergeLoadedRecord(const SMapHistoryRecord &Record)

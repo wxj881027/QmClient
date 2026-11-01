@@ -4583,12 +4583,14 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 				char aDeaths[32];
 				str_format(aDeaths, sizeof(aDeaths), "%d", Record.m_DeathCount);
 				char aLastEntered[64];
-				if(Record.m_LastEnteredAt > 0)
-					str_timestamp_ex((time_t)Record.m_LastEnteredAt, aLastEntered, sizeof(aLastEntered), FORMAT_SPACE);
-				else if(!Record.m_LastPlayedDate.empty())
-					str_copy(aLastEntered, Record.m_LastPlayedDate.c_str(), sizeof(aLastEntered));
-				else
-					str_copy(aLastEntered, Localize("Unknown"), sizeof(aLastEntered));
+				const bool LastEnteredFormatted = Record.m_LastEnteredAt > 0 && str_timestamp_ex_try(Record.m_LastEnteredAt, aLastEntered, sizeof(aLastEntered), FORMAT_SPACE);
+				if(!LastEnteredFormatted)
+				{
+					if(!Record.m_LastPlayedDate.empty())
+						str_copy(aLastEntered, Record.m_LastPlayedDate.c_str(), sizeof(aLastEntered));
+					else
+						str_copy(aLastEntered, Localize("Unknown"), sizeof(aLastEntered));
+				}
 
 				char aTime[64];
 				const int64_t TimeMs = Record.m_Finished ? Record.m_FinishTimeMs : Record.m_PlayTimeMs;
