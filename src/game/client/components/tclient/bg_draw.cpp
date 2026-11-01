@@ -9,6 +9,7 @@
 #include <engine/shared/config.h>
 
 #include <game/client/animstate.h>
+#include <game/client/components/qmclient/bg_draw_quad_containers.h>
 #include <game/client/components/qmclient/bg_draw_state.h>
 #include <game/client/components/tclient/bg_draw_file.h>
 #include <game/client/gameclient.h>
@@ -48,16 +49,12 @@ static bool line_intersects(vec2 A, vec2 B, vec2 C, vec2 D)
 class CPathContainer
 {
 private:
-	static constexpr int MAX_QUADS_PER_CONTAINER = 512; // Don't crash on OGL
 	std::vector<int> m_vQuadContainerIndexes;
 	int m_QuadCount = 0;
 	IGraphics &m_Graphics;
 	void Clear()
 	{
-		for(int QuadContainerIndex : m_vQuadContainerIndexes)
-			m_Graphics.DeleteQuadContainer(QuadContainerIndex);
-		m_vQuadContainerIndexes.clear();
-		m_QuadCount = 0;
+		QmBgDrawClearQuadContainers(m_Graphics, m_vQuadContainerIndexes, m_QuadCount);
 	}
 	void Upload()
 	{
@@ -66,21 +63,7 @@ private:
 	}
 	void AddQuads(IGraphics::CFreeformItem *pFreeformItem, int Count, ColorRGBA Color)
 	{
-		m_QuadCount += Count;
-		if(m_vQuadContainerIndexes.size() == 0)
-		{
-			m_vQuadContainerIndexes.push_back(m_Graphics.CreateQuadContainer(false));
-		}
-		else if(m_QuadCount > MAX_QUADS_PER_CONTAINER)
-		{
-			int &QuadContainerIndex = *(m_vQuadContainerIndexes.end() - 1);
-			m_Graphics.QuadContainerUpload(QuadContainerIndex);
-			m_vQuadContainerIndexes.push_back(m_Graphics.CreateQuadContainer(false));
-			m_QuadCount = Count;
-		}
-		int &QuadContainerIndex = *(m_vQuadContainerIndexes.end() - 1);
-		m_Graphics.SetColor(Color);
-		m_Graphics.QuadContainerAddQuads(QuadContainerIndex, pFreeformItem, Count);
+		QmBgDrawAppendQuads(m_Graphics, m_vQuadContainerIndexes, m_QuadCount, pFreeformItem, Count, Color);
 	}
 	void AddCircle(vec2 Pos, float Angle1, float Angle2, float Width, ColorRGBA Color)
 	{
