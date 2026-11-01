@@ -1,8 +1,8 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
-#ifndef GAME_CLIENT_QMUI_QM_PASSWORD_ICON_H
-#define GAME_CLIENT_QMUI_QM_PASSWORD_ICON_H
+#ifndef GAME_CLIENT_QMUI_QMPASSWORDICON_H
+#define GAME_CLIENT_QMUI_QMPASSWORDICON_H
 
 #include <algorithm>
 #include <cmath>

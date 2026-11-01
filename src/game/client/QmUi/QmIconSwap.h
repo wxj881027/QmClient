@@ -44,21 +44,27 @@ namespace ui_widget
 			switch(Pair)
 			{
 			case EQmIconSwapPair::CHEVRON:
-				return Bold ? "qmclient/ui/chevron_swap_bold.png" : Regular ? "qmclient/ui/chevron_swap_regular.png" : "qmclient/ui/chevron_swap_light.png";
+				return Bold ? "qmclient/ui/chevron_swap_bold.png" : Regular ? "qmclient/ui/chevron_swap_regular.png" :
+											      "qmclient/ui/chevron_swap_light.png";
 			case EQmIconSwapPair::PLAY_PAUSE:
 				// play/pause 轮廓配对形变：三角形顶点分裂成双杠；Fill 是实心形，跳过。
-				return Bold ? "qmclient/ui/play_pause_swap_bold.png" : Regular ? "qmclient/ui/play_pause_swap_regular.png" : "qmclient/ui/play_pause_swap_light.png";
+				return Bold ? "qmclient/ui/play_pause_swap_bold.png" : Regular ? "qmclient/ui/play_pause_swap_regular.png" :
+												 "qmclient/ui/play_pause_swap_light.png";
 			case EQmIconSwapPair::PLAY_STOP:
 				// play/stop：三角形 ↔ 圆角方块，整字形配对（顶点展开成方块右缘）。
-				return Bold ? "qmclient/ui/play_stop_swap_bold.png" : Regular ? "qmclient/ui/play_stop_swap_regular.png" : "qmclient/ui/play_stop_swap_light.png";
+				return Bold ? "qmclient/ui/play_stop_swap_bold.png" : Regular ? "qmclient/ui/play_stop_swap_regular.png" :
+												"qmclient/ui/play_stop_swap_light.png";
 			case EQmIconSwapPair::SQUARE_PLUS_MINUS:
 				// 加/减方框：外框常量，加号竖臂压平进横臂。
-				return Bold ? "qmclient/ui/plus_minus_swap_bold.png" : Regular ? "qmclient/ui/plus_minus_swap_regular.png" : "qmclient/ui/plus_minus_swap_light.png";
+				return Bold ? "qmclient/ui/plus_minus_swap_bold.png" : Regular ? "qmclient/ui/plus_minus_swap_regular.png" :
+												 "qmclient/ui/plus_minus_swap_light.png";
 			case EQmIconSwapPair::STAR_FAVORITE:
 				// 收藏点亮：描边星 ↔ Fill 字面实心星（跨字面配对）；Fill 字重恒实心无切换。
-				return Bold ? "qmclient/ui/star_favorite_swap_bold.png" : Regular ? "qmclient/ui/star_favorite_swap_regular.png" : "qmclient/ui/star_favorite_swap_light.png";
+				return Bold ? "qmclient/ui/star_favorite_swap_bold.png" : Regular ? "qmclient/ui/star_favorite_swap_regular.png" :
+												    "qmclient/ui/star_favorite_swap_light.png";
 			case EQmIconSwapPair::EYE:
-				return Bold ? "qmclient/ui/password_icon_bold.png" : Regular ? "qmclient/ui/password_icon_regular.png" : "qmclient/ui/password_icon_light.png";
+				return Bold ? "qmclient/ui/password_icon_bold.png" : Regular ? "qmclient/ui/password_icon_regular.png" :
+											       "qmclient/ui/password_icon_light.png";
 			default:
 				return nullptr;
 			}
