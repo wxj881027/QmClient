@@ -191,6 +191,19 @@ class AnalyzeTest(unittest.TestCase):
 		self.assertEqual(card["confidence"], "function")
 		self.assertEqual(card["missing"], ["Delta", "Gamma"])
 
+	def test_action_button_labels_are_rejected_from_tables(self) -> None:
+		index_text = INDEX_SAMPLE.replace('Localizable("Alpha label")', 'Localizable("Frobnicate")')
+		card_text = CARD_SOURCE + '''
+
+void CMenus::RenderButtons(CUIRect &Content)
+{
+	if(DoButton_Menu(&id, Localize("Frobnicate"), 0, &Button)) {}
+}
+'''
+		report = self._analyze(index_text, card_text)
+		self.assertIn("Frobnicate", report["detected_button_labels"])
+		self.assertEqual(report["indexed_action_labels"], ["Frobnicate"])
+
 	def test_ignores_shared_dialog_and_status_labels(self) -> None:
 		card_text = CARD_SOURCE.replace('Localize("Gamma");', 'Localize("Gamma");\n\tLocalize("Loading…");')
 		report = self._analyze(INDEX_SAMPLE, card_text)
