@@ -24,6 +24,10 @@
 #include <engine/shared/localization.h>
 #include <engine/storage.h>
 
+#if defined(CONF_PLATFORM_ANDROID)
+#include <SDL3/SDL_misc.h>
+#endif
+
 #include <game/client/lineinput.h>
 #include <game/client/ui.h>
 #include <game/client/ui_scrollregion.h>
@@ -92,7 +96,11 @@ namespace
 		const bool IsCard = str_startswith(pTarget, "qm:") != nullptr || str_startswith(pTarget, "tclient:") != nullptr || str_startswith(pTarget, "deck:") != nullptr;
 		if(!IsCard)
 		{
+#if defined(CONF_PLATFORM_ANDROID)
+			SDL_OpenURL(pTarget);
+#else
 			open_link(pTarget);
+#endif
 			return;
 		}
 		const SCardWikiCopy *pCopy = FindCardWikiCopy(pTarget);
