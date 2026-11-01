@@ -1462,11 +1462,13 @@ void CGameConsole::CInstance::SetSearching(bool Searching)
 {
 	if(Searching)
 	{
-		if(!m_SearchInput.Begin(m_Input.GetString()))
+		if(m_SearchInput.IsSearching())
 		{
 			m_Input.SelectAll();
 			return;
 		}
+		if(!m_SearchInput.Begin(m_Input.GetString()))
+			return;
 		m_Selection.Clear();
 		m_Input.SetClipboardLineCallback(nullptr); // 搜索粘贴按普通文本处理，不执行命令。
 		m_Input.Set(m_SearchResults.RequestedQuery());
@@ -2148,10 +2150,8 @@ void CGameConsole::OnRender()
 		std::vector<STextColorSplit> vInputColors;
 		if(LocalConsole && !pConsole->m_SearchInput.IsSearching() && g_Config.m_QmConsoleHighlightCommands)
 		{
-			std::string DisplayText = pConsole->m_Input.GetString();
-			if(pConsole->m_Input.IsActive() && Input()->HasComposition())
-				DisplayText.insert(pConsole->m_Input.GetCursorOffset(), Input()->GetComposition());
-			QmConsoleSyntax::AppendColors(DisplayText.c_str(), Palette, vInputColors);
+			const char *pComposition = pConsole->m_Input.IsActive() && Input()->HasComposition() ? Input()->GetComposition() : nullptr;
+			QmConsoleSyntax::PrepareInputColors(pConsole->m_Input.GetString(), pConsole->m_Input.GetCursorOffset(), pComposition, Palette, vInputColors);
 		}
 		pConsole->m_BoundingBox = pConsole->m_Input.Render(&InputCursorRect, FontSize, TEXTALIGN_BL, Changed, Screen.w - 10.0f - x, LINE_SPACING, vInputColors);
 		if(pConsole->m_Input.HasSelection())

@@ -1,7 +1,9 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_CONSOLE_SEARCH_INPUT_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_CONSOLE_SEARCH_INPUT_H
 
+#include <new>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -17,8 +19,19 @@ public:
 	{
 		if(IsSearching())
 			return false;
-		m_CommandDraft = pCommand;
-		return true;
+		try
+		{
+			m_CommandDraft.emplace(pCommand);
+			return true;
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
 	}
 
 	std::optional<std::string> End()

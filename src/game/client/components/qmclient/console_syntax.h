@@ -7,6 +7,9 @@
 
 #include <engine/textrender.h>
 
+#include <new>
+#include <stdexcept>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -98,6 +101,33 @@ namespace QmConsoleSyntax
 			}
 			vColors.emplace_back(Offset + static_cast<int>(Start), static_cast<int>(Position - Start), Color);
 		}
+	}
+
+	// 输入行高亮是可选装饰；完整准备失败时清空颜色，不留下半份字节范围。
+	inline bool PrepareInputColors(const char *pText, int CursorOffset, const char *pComposition,
+		const QmConsoleAppearance::SPalette &Palette, std::vector<STextColorSplit> &vColors)
+	{
+		vColors.clear();
+		try
+		{
+			std::string DisplayText(pText);
+			if(pComposition != nullptr)
+			{
+				if(CursorOffset < 0 || static_cast<size_t>(CursorOffset) > DisplayText.size())
+					return false;
+				DisplayText.insert(static_cast<size_t>(CursorOffset), pComposition);
+			}
+			AppendColors(DisplayText.c_str(), Palette, vColors);
+			return true;
+		}
+		catch(const std::bad_alloc &)
+		{
+		}
+		catch(const std::length_error &)
+		{
+		}
+		vColors.clear();
+		return false;
 	}
 }
 
