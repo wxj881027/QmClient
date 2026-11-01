@@ -576,6 +576,8 @@ public:
 	virtual void RecreateTextContainer(STextContainerIndex &TextContainerIndex, CTextCursor *pCursor, const char *pText, int Length = -1) = 0;
 	virtual void RecreateTextContainerSoft(STextContainerIndex &TextContainerIndex, CTextCursor *pCursor, const char *pText, int Length = -1) = 0;
 	virtual void DeleteTextContainer(STextContainerIndex &TextContainerIndex) = 0;
+	// 仅接管未发布的独占临时句柄；不申请或提交 GPU，沿已有队列延期回收并清空句柄。
+	virtual void ReleaseTemporaryTextContainer(STextContainerIndex &TextContainerIndex) noexcept = 0;
 
 	virtual void UploadTextContainer(STextContainerIndex TextContainerIndex) = 0;
 	virtual void FlushQmTextRuntimeBudgetLog() {}

@@ -3867,6 +3867,12 @@ public:
 		FreeTextContainer(TextContainerIndex);
 	}
 
+	void ReleaseTemporaryTextContainer(STextContainerIndex &TextContainerIndex) noexcept override
+	{
+		QueueTextContainerDeletion(TextContainerIndex);
+		TextContainerIndex.Reset();
+	}
+
 	void UploadTextContainer(STextContainerIndex TextContainerIndex) override
 	{
 		if(!TextContainerIndex.Valid() || !m_pGlyphMap->TexturesReady())

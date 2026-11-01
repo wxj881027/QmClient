@@ -6127,6 +6127,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/components/qmclient/map_difficulty_catalog.cpp
       src/engine/client/sqlite.cpp
       src/test/integration/qmclient/client/qm_text_temporary_lifetime_test.cpp
+      src/test/integration/qmclient/client/qm_icon_font_lifetime_test.cpp
       src/test/integration/qmclient/client/qm_nameplate_text_build_test.cpp
       src/test/integration/qmclient/client/qm_nameplate_update_test.cpp
       src/test/integration/qmclient/client/qm_chat_bubble_state_test.cpp
@@ -6249,6 +6250,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/ui/qm_selection_commit_allocation_test.cpp
       src/test/unit/qmclient/ui/qm_animation_cancel_allocation_test.cpp
       src/test/unit/qmclient/ui/settings_icon_feedback_allocation_test.cpp
+      src/test/unit/qmclient/ui/qm_icon_font_failure_test.cpp
       src/game/client/QmUi/QmLineInputMotion.cpp
       src/test/integration/qmclient/client/qm_markdown_broadcast_payload_test.cpp
       src/game/client/components/qmclient/qm_realtime.cpp
