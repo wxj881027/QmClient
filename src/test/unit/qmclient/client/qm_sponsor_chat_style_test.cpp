@@ -253,7 +253,7 @@ TEST(QmSponsorChatStyle, FluidMergesOnlyWithTheSameStyle)
 
 TEST(QmSponsorChatFluid, FixedPaletteStaysBlueCyanAndOpaque)
 {
-	for(double Time : {0.0, 1.7, 5.0, 11.9, 120000.0})
+	for(double Time : {0.0, 1.7, 5.0, 23.9, 120000.0})
 	{
 		SCOPED_TRACE(Time);
 		const CQmSponsorChatFluid Fluid(Time);
@@ -286,13 +286,57 @@ TEST(QmSponsorChatFluid, LoopBoundaryAndLongRunningClocksRemainContinuous)
 {
 	const vec2 Position(2.25f, 0.6f);
 	const auto Start = CQmSponsorChatFluid(0).Sample(Position);
-	const auto Before = CQmSponsorChatFluid(11.99999).Sample(Position);
+	const auto Before = CQmSponsorChatFluid(CQmSponsorChatFluid::LOOP_SECONDS - 0.00001).Sample(Position);
 	EXPECT_NEAR(Before.r, Start.r, 0.0001f);
 	EXPECT_NEAR(Before.g, Start.g, 0.0001f);
 	EXPECT_NEAR(Before.b, Start.b, 0.0001f);
 	EXPECT_EQ(CQmSponsorChatFluid(120000.25).Sample(Position), CQmSponsorChatFluid(0.25).Sample(Position));
 	for(double Time : {-1.0, std::numeric_limits<double>::infinity(), std::numeric_limits<double>::quiet_NaN()})
 		EXPECT_EQ(CQmSponsorChatFluid(Time).Sample(Position), Start);
+}
+
+TEST(QmSponsorChatFluid, WholePatternMovesRightWithoutCounterflow)
+{
+	// 跟随流动方向前进时应始终取到同一颜色，跨越周期边界也不改变流纹。
+	const double StepSeconds = 0.5;
+	const float StepWidth = CQmSponsorChatFluid::LOOP_WIDTH * static_cast<float>(StepSeconds / CQmSponsorChatFluid::LOOP_SECONDS);
+	for(double Time : {0.0, 7.25, CQmSponsorChatFluid::LOOP_SECONDS - 0.25})
+	{
+		SCOPED_TRACE(Time);
+		for(const vec2 Position : {vec2(0.0f, 0.0f), vec2(2.25f, 0.6f), vec2(9.5f, 1.2f), vec2(23.75f, 0.4f)})
+		{
+			const auto Before = CQmSponsorChatFluid(Time).Sample(Position);
+			const auto After = CQmSponsorChatFluid(Time + StepSeconds).Sample(Position + vec2(StepWidth, 0.0f));
+			EXPECT_NEAR(Before.r, After.r, 0.00002f);
+			EXPECT_NEAR(Before.g, After.g, 0.00002f);
+			EXPECT_NEAR(Before.b, After.b, 0.00002f);
+		}
+	}
+}
+
+TEST(QmSponsorChatFluid, WidePatternJoinsAtBothEndsWithoutRepeatingEveryGlyph)
+{
+	for(double Time : {0.0, 8.0, 23.75})
+	{
+		SCOPED_TRACE(Time);
+		const CQmSponsorChatFluid Fluid(Time);
+		float NeighborDifference = 0.0f;
+		float HalfLoopDifference = 0.0f;
+		for(const vec2 Position : {vec2(-0.01f, 0.0f), vec2(0.0f, 0.5f), vec2(0.01f, 1.0f), vec2(5.5f, 1.5f)})
+		{
+			const auto Start = Fluid.Sample(Position);
+			const auto End = Fluid.Sample(Position + vec2(CQmSponsorChatFluid::LOOP_WIDTH, 0.0f));
+			EXPECT_NEAR(Start.r, End.r, 0.00002f);
+			EXPECT_NEAR(Start.g, End.g, 0.00002f);
+			EXPECT_NEAR(Start.b, End.b, 0.00002f);
+			const auto Neighbor = Fluid.Sample(Position + vec2(1.0f, 0.0f));
+			const auto HalfLoop = Fluid.Sample(Position + vec2(CQmSponsorChatFluid::LOOP_WIDTH / 2.0f, 0.0f));
+			NeighborDifference += std::abs(Start.r - Neighbor.r) + std::abs(Start.g - Neighbor.g) + std::abs(Start.b - Neighbor.b);
+			HalfLoopDifference += std::abs(Start.r - HalfLoop.r) + std::abs(Start.g - HalfLoop.g) + std::abs(Start.b - HalfLoop.b);
+		}
+		EXPECT_GT(NeighborDifference, 0.01f);
+		EXPECT_GT(HalfLoopDifference, 0.01f);
+	}
 }
 
 TEST(QmSponsorChatPresence, FluidSurvivesPresenceParsingForMainAndDummy)
