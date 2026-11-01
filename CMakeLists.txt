@@ -6139,6 +6139,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/engine/client/sqlite.cpp
       src/test/integration/qmclient/client/qm_text_temporary_lifetime_test.cpp
       src/test/integration/qmclient/client/qm_mod_weapon_text_test.cpp
+      src/test/integration/qmclient/client/qm_text_screen_mapping_test.cpp
       src/test/integration/qmclient/client/qm_icon_font_lifetime_test.cpp
       src/test/integration/qmclient/client/qm_nameplate_text_build_test.cpp
       src/test/integration/qmclient/client/qm_nameplate_update_test.cpp

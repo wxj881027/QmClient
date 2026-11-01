@@ -1550,6 +1550,20 @@ class CTextRender : public IEngineTextRender
 		m_vTextSweepQuads.clear();
 	}
 
+	// MapScreen只写现有坐标；正常返回和异常展开都恢复，不在析构中提交GPU命令。
+	class CScreenMappingScope
+	{
+		IGraphics &m_Graphics;
+		CScreenRect m_Screen;
+
+	public:
+		CScreenMappingScope(IGraphics &Graphics, float X0, float Y0, float X1, float Y1) :
+			m_Graphics(Graphics), m_Screen(vec2(X0, Y0), vec2(X1, Y1)) {}
+		~CScreenMappingScope() { m_Graphics.MapScreen(m_Screen); }
+		CScreenMappingScope(const CScreenMappingScope &) = delete;
+		CScreenMappingScope &operator=(const CScreenMappingScope &) = delete;
+	};
+
 	vec2 AlignTextContainerOffset(const STextContainer &TextContainer, vec2 Offset, float ScreenWidth, float ScreenHeight)
 	{
 		if((TextContainer.m_RenderFlags & TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT) != 0)
@@ -4062,9 +4076,9 @@ public:
 		TextContainer.m_BoundingBox.m_X = X;
 		TextContainer.m_BoundingBox.m_Y = Y;
 
+		const CScreenMappingScope ScreenMapping(*Graphics(), ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 		Graphics()->MapScreen(ScreenX0 - X, ScreenY0 - Y, ScreenX1 - X, ScreenY1 - Y);
 		RenderTextContainer(TextContainerIndex, TextColor, TextOutlineColor);
-		Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 	}
 
 	void RenderTextContainerSweep(STextContainerIndex TextContainerIndex, const STextSweepParams &Params, float X, float Y) override
@@ -4125,6 +4139,7 @@ public:
 		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 		const vec2 Offset = AlignTextContainerOffset(TextContainer, vec2(X, Y), ScreenX1 - ScreenX0, ScreenY1 - ScreenY0);
+		const CScreenMappingScope ScreenMapping(*Graphics(), ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 		Graphics()->MapScreen(ScreenX0 - Offset.x, ScreenY0 - Offset.y, ScreenX1 - Offset.x, ScreenY1 - Offset.y);
 		if(Graphics()->IsTextBufferingEnabled())
 		{
@@ -4170,7 +4185,6 @@ public:
 			Graphics()->QuadsEnd();
 			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 		}
-		Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 	}
 
 	int GetTextContainerRenderedLineCount(STextContainerIndex TextContainerIndex) override

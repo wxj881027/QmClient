@@ -53,13 +53,16 @@ TEST_F(QmModWeaponTextLifetime, PartialUploadKeepsItsBufferUntilExistingFrameCle
 TEST_F(QmModWeaponTextLifetime, DrawingFailureTransfersBothBuffersWithoutChangingFlags)
 {
 	Text().SetRenderFlags(TEXT_RENDER_FLAG_NO_X_BEARING);
+	const auto ScreenBefore = static_cast<IGraphics &>(Graphics()).GetScreen();
 	const size_t Buffers = Graphics().m_Buffers.size(), Containers = Graphics().m_Containers.size();
 	Graphics().m_FailTextDraw = true;
 	EXPECT_THROW(Draw(), std::bad_alloc);
 	EXPECT_EQ(Text().GetRenderFlags(), TEXT_RENDER_FLAG_NO_X_BEARING);
 	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers + 1);
 	EXPECT_EQ(Graphics().m_Containers.size(), Containers + 1);
-	// 本项只检查句柄和flags；带偏移文字的MapScreen异常收尾仍是独立缺口。
+	const auto ScreenAfter = static_cast<IGraphics &>(Graphics()).GetScreen();
+	EXPECT_EQ(ScreenAfter.m_TopLeft, ScreenBefore.m_TopLeft);
+	EXPECT_EQ(ScreenAfter.m_BottomRight, ScreenBefore.m_BottomRight);
 	EXPECT_NO_THROW(Text().QmTextFrameEnd());
 	EXPECT_EQ(Graphics().m_Buffers.size(), Buffers);
 	EXPECT_EQ(Graphics().m_Containers.size(), Containers);
