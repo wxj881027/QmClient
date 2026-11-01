@@ -10,7 +10,6 @@
 
 #include <game/client/components/emoticon.h>
 #include <game/client/components/qmclient/emoticon_commands.h>
-#include <game/client/components/qmclient/markdown_cache_writer.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/route_start_index.h>
 #include <game/client/components/qmclient/statistics_ring_geometry.h>
@@ -1307,76 +1306,6 @@ TEST(QmRouteStartIndex, ChecksOnlyStartsAndKeepsFirstOnEqualDistance)
 	const auto PositionOf = [](int Index) { return vec2(Index == 7 ? -10.0f : 10.0f, 0.0f); };
 	EXPECT_EQ(Starts.FindClosest(vec2(0.0f, 0.0f), -1, Eligible, PositionOf), 7);
 	EXPECT_EQ(Checks, 2);
-}
-
-TEST(QmMarkdownCache, DeferredWriteKeepsNewestSnapshotAfterOwnerDestruction)
-{
-	CTestInfo Info;
-	auto pStorage = Info.CreateTestStorage();
-	ASSERT_NE(pStorage, nullptr);
-	char aPath[IO_MAX_PATH_LENGTH];
-	pStorage->GetCompletePath(IStorage::TYPE_SAVE, "qmclient/news_cache.json", aPath, sizeof(aPath));
-	const std::string Expected = "公告\n\"引号\" 与 \\ 路径";
-	std::shared_ptr<IJob> pJob;
-	{
-		CQmMarkdownCacheWriter Writer;
-		pJob = Writer.Enqueue(aPath, 1, 10, "old");
-		ASSERT_NE(pJob, nullptr);
-		std::string Markdown = Expected;
-		EXPECT_EQ(Writer.Enqueue(aPath, 1, 11, Markdown), nullptr);
-		Markdown = "changed after enqueue";
-		EXPECT_FALSE(pStorage->FileExists("qmclient/news_cache.json", IStorage::TYPE_SAVE));
-	}
-	CJobPool Pool;
-	Pool.Init(1);
-	Pool.Add(pJob);
-	Pool.Shutdown();
-	void *pData = nullptr;
-	unsigned Size = 0;
-	ASSERT_TRUE(pStorage->ReadFile("qmclient/news_cache.json", IStorage::TYPE_SAVE, &pData, &Size));
-	json_value *pRoot = json_parse(static_cast<const char *>(pData), Size);
-	free(pData);
-	ASSERT_NE(pRoot, nullptr);
-	EXPECT_EQ(pRoot->type, json_object);
-	EXPECT_EQ(json_int_get(json_object_get(pRoot, "cache_version")), 1);
-	EXPECT_EQ(json_int_get(json_object_get(pRoot, "version")), 11);
-	EXPECT_STREQ(json_string_get(json_object_get(pRoot, "markdown")), Expected.c_str());
-	json_value_free(pRoot);
-}
-
-TEST(QmMarkdownCache, FailedWriteAndCompletedWriteAcceptNewRequests)
-{
-	CTestInfo Info;
-	auto pStorage = Info.CreateTestStorage();
-	ASSERT_NE(pStorage, nullptr);
-	char aDirectory[IO_MAX_PATH_LENGTH];
-	char aPath[IO_MAX_PATH_LENGTH];
-	pStorage->GetCompletePath(IStorage::TYPE_SAVE, "", aDirectory, sizeof(aDirectory));
-	pStorage->GetCompletePath(IStorage::TYPE_SAVE, "qmclient/sponsors_cache.json", aPath, sizeof(aPath));
-	CQmMarkdownCacheWriter Writer;
-	CJobPool Pool;
-	auto pJob = Writer.Enqueue(aDirectory, 1, 2, "unwritable");
-	ASSERT_NE(pJob, nullptr);
-	Pool.Init(1);
-	Pool.Add(pJob);
-	Pool.Shutdown();
-	for(int Version : {3, 4})
-	{
-		pJob = Writer.Enqueue(aPath, 1, Version, "");
-		ASSERT_NE(pJob, nullptr);
-		Pool.Init(1);
-		Pool.Add(pJob);
-		Pool.Shutdown();
-		void *pData = nullptr;
-		unsigned Size = 0;
-		ASSERT_TRUE(pStorage->ReadFile("qmclient/sponsors_cache.json", IStorage::TYPE_SAVE, &pData, &Size));
-		json_value *pRoot = json_parse(static_cast<const char *>(pData), Size);
-		free(pData);
-		ASSERT_NE(pRoot, nullptr);
-		EXPECT_EQ(json_int_get(json_object_get(pRoot, "version")), Version);
-		EXPECT_STREQ(json_string_get(json_object_get(pRoot, "markdown")), "");
-		json_value_free(pRoot);
-	}
 }
 
 TEST(QmStatisticsRingGeometry, TrianglesCoverSectorWithoutCrossingForEveryQuadrant)

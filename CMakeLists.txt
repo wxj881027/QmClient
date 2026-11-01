@@ -4903,6 +4903,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_chat_post_send_failure_test.cpp
     src/test/integration/qmclient/client/qm_chat_history_test.cpp
     src/test/integration/qmclient/client/qm_chatbind_config_console_test.cpp
+    src/test/integration/qmclient/client/qm_markdown_cache_writer_test.cpp
     src/test/integration/qmclient/client/qm_skin_download_session_test.cpp
     src/test/integration/qmclient/client/qm_skin_outline_render_test.cpp
     src/test/integration/qmclient/client/qm_font_download_storage_test.cpp
@@ -6233,6 +6234,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_chatbind_mutation_test.cpp
       src/test/unit/qmclient/client/qm_chatbind_config_test.cpp
       src/test/unit/qmclient/client/qm_markdown_allocation_test.cpp
+      src/test/unit/qmclient/client/qm_markdown_cache_allocation_test.cpp
       src/game/client/components/qmclient/qm_markdown.cpp
       src/game/client/components/qmclient/bind_editor.cpp
       src/test/unit/qmclient/client/qm_tee_trail_frame_test.cpp

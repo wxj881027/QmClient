@@ -1302,6 +1302,20 @@ void CQmClient::OnUpdate()
 		FinishQmNewsPublish();
 	if(m_pQmSponsorsPublishTask && m_pQmSponsorsPublishTask->Done())
 		FinishQmSponsorsPublish();
+	const int64_t CacheNow = time_get();
+	if(CacheNow >= m_QmMarkdownCacheNextRetryTick)
+	{
+		// 只重试缓存失败，避免持续磁盘故障每帧重新提交任务。
+		m_QmMarkdownCacheNextRetryTick = CacheNow + 5 * time_freq();
+		if(m_QmMarkdownBroadcastCacheDirty)
+			SaveQmMarkdownBroadcastCache();
+		else if(m_QmMarkdownBroadcastCacheWriter.NeedsRetry())
+			m_QmMarkdownBroadcastCacheWriter.TryFlush([this](std::shared_ptr<IJob> pJob) { return Engine()->TryAddJob(std::move(pJob)); });
+		if(m_QmSponsorsCacheDirty)
+			SaveQmSponsorsCache();
+		else if(m_QmSponsorsCacheWriter.NeedsRetry())
+			m_QmSponsorsCacheWriter.TryFlush([this](std::shared_ptr<IJob> pJob) { return Engine()->TryAddJob(std::move(pJob)); });
+	}
 	// 主线程创建一致快照，后台完成写入、刷盘和替换；不在游玩帧等待磁盘。
 	const int64_t StatisticsNow = time_get();
 	if(m_pQmStatisticsSaveJob && m_pQmStatisticsSaveJob->Done())
@@ -1670,8 +1684,10 @@ void CQmClient::SaveQmMarkdownBroadcastCache()
 	char aPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, QMCLIENT_MARKDOWN_BROADCAST_CACHE_FILE, aPath, sizeof(aPath));
 	// 序列化与文件操作在作业里完成，不占用主线程，也不访问组件与配置。
-	if(auto pJob = m_QmMarkdownBroadcastCacheWriter.Enqueue(aPath, QMCLIENT_MARKDOWN_BROADCAST_CACHE_VERSION, m_QmMarkdownBroadcast.Version(), m_QmMarkdownBroadcast.Markdown()))
-		Engine()->AddJob(pJob);
+	m_QmMarkdownBroadcastCacheDirty = true;
+	if(m_QmMarkdownBroadcastCacheWriter.TryEnqueue(aPath, QMCLIENT_MARKDOWN_BROADCAST_CACHE_VERSION, m_QmMarkdownBroadcast.Version(), m_QmMarkdownBroadcast.Markdown(),
+		   [this](std::shared_ptr<IJob> pJob) { return Engine()->TryAddJob(std::move(pJob)); }))
+		m_QmMarkdownBroadcastCacheDirty = false;
 }
 
 void CQmClient::QmNewsReloadDraft()
@@ -1769,8 +1785,10 @@ void CQmClient::SaveQmSponsorsCache()
 {
 	char aPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, QMCLIENT_SPONSORS_CACHE_FILE, aPath, sizeof(aPath));
-	if(auto pJob = m_QmSponsorsCacheWriter.Enqueue(aPath, QMCLIENT_MARKDOWN_BROADCAST_CACHE_VERSION, m_QmSponsors.Version(), m_QmSponsors.Markdown()))
-		Engine()->AddJob(pJob);
+	m_QmSponsorsCacheDirty = true;
+	if(m_QmSponsorsCacheWriter.TryEnqueue(aPath, QMCLIENT_MARKDOWN_BROADCAST_CACHE_VERSION, m_QmSponsors.Version(), m_QmSponsors.Markdown(),
+		   [this](std::shared_ptr<IJob> pJob) { return Engine()->TryAddJob(std::move(pJob)); }))
+		m_QmSponsorsCacheDirty = false;
 }
 
 bool CQmClient::ApplyQmSponsorsPayload(const json_value *pPayload, bool SaveCache)

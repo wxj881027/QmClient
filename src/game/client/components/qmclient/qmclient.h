@@ -88,6 +88,8 @@ class CQmClient : public CComponent
 	CQmMarkdownBroadcast m_QmMarkdownBroadcast;
 	// 每个缓存文件一个写作业实例：界面立即更新，磁盘只保留最新完整快照。
 	CQmMarkdownCacheWriter m_QmMarkdownBroadcastCacheWriter;
+	bool m_QmMarkdownBroadcastCacheDirty = false;
+	int64_t m_QmMarkdownCacheNextRetryTick = 0;
 	std::string m_QmNewsDraft;
 	std::shared_ptr<IHttpRequest> m_pQmNewsPublishTask;
 	enum class EQmNewsStatus
@@ -101,6 +103,7 @@ class CQmClient : public CComponent
 	};
 	EQmNewsStatus m_QmNewsStatus = EQmNewsStatus::IDLE;
 	CQmMarkdownCacheWriter m_QmSponsorsCacheWriter;
+	bool m_QmSponsorsCacheDirty = false;
 	qm_sponsors::CSnapshot m_QmSponsors;
 	std::string m_QmSponsorsDraft;
 	std::vector<std::string> m_vQmSponsorDraftNames;
