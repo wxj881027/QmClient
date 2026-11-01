@@ -5123,6 +5123,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/ui/vote_map_loader_test.cpp
     src/test/unit/client/map_history_test.cpp
     src/test/unit/client/map_history_json_test.cpp
+    src/test/unit/client/map_history_merge_test.cpp
     src/test/unit/client/map_history_text_test.cpp
     src/test/unit/client/map_history_id_test.cpp
     src/test/integration/qmclient/client/qm_map_history_session_test.cpp

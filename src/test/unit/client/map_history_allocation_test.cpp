@@ -15,7 +15,7 @@ namespace
 	constexpr const char *JSON = R"({"entries":[
 		{"map_name":"First map name longer than small string capacity","map_id":"first-map-identity-longer-than-small-string-capacity","last_entered":100,"last_played_date":"a long saved date string that needs its own allocation","deaths":10},
 		{"map_name":"Newer map name longer than small string capacity","map_id":"first-map-identity-longer-than-small-string-capacity","last_entered":200,"last_played_date":"a newer long saved date string that needs its own allocation","deaths":2},
-		{"map_name":"Second map name longer than small string capacity","map_id":"second-map-identity-longer-than-small-string-capacity","last_entered":300}
+		{"map_name":"Second map name longer than small string capacity","last_entered":300}
 	]})";
 }
 
@@ -81,6 +81,7 @@ TEST(MapHistoryAllocation, SuccessfulRetryCanReplaceTheCollectionAfterAllocation
 	ASSERT_NE(History.Find("keep"), nullptr);
 	ASSERT_TRUE(History.FromJson(JSON));
 	EXPECT_EQ(History.Size(), 2u);
+	EXPECT_NE(History.Find("Second map name longer than small string capacity"), nullptr);
 	EXPECT_EQ(History.Find("keep"), nullptr);
 	const auto *pFirst = History.Find("first-map-identity-longer-than-small-string-capacity");
 	ASSERT_NE(pFirst, nullptr);

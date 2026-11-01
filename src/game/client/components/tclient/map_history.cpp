@@ -10,9 +10,11 @@
 #include <cinttypes>
 #include <cmath>
 #include <limits>
+#include <map>
 #include <memory>
 #include <new>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 
 namespace QmMapHistory
@@ -330,17 +332,20 @@ namespace QmMapHistory
 			CMapHistory Loaded;
 			if(Entries.type == json_array)
 			{
+				// 键只借用解析树；索引先于pRoot销毁，不借用临时记录或vector中的字符串。
+				std::map<std::string_view, size_t> Indices;
 				for(unsigned i = 0; i < Entries.u.array.length; ++i)
 				{
 					const json_value *pItem = Entries.u.array.values[i];
 					if(pItem == nullptr || pItem->type != json_object)
 						continue;
 					SMapHistoryRecord Record;
+					const json_value *pMapName = qm_json::Field(pItem, "map_name");
 					const json_value *pMapId = qm_json::Field(pItem, "map_id");
 					// 异常ID不能截断或回退成名称，否则会与正常记录错误合并。
 					if(pMapId->type == json_string && !qm_json::Text(pMapId))
 						continue;
-					Record.m_MapName = JsonString(qm_json::Field(pItem, "map_name"));
+					Record.m_MapName = JsonString(pMapName);
 					Record.m_MapId = JsonString(pMapId);
 					if(Record.m_MapId.empty())
 						Record.m_MapId = Record.m_MapName;
@@ -354,7 +359,22 @@ namespace QmMapHistory
 					Record.m_PlayTimeMs = std::max<int64_t>(0, JsonInt(qm_json::Field(pItem, "play_time_ms")));
 					if(!Record.m_Finished)
 						Record.m_FinishTimeMs = 0;
-					Loaded.MergeLoadedRecord(Record);
+					const json_value *pIdentity = pMapId->type == json_string && pMapId->u.string.length ? pMapId : pMapName;
+					const std::string_view Identity(pIdentity->u.string.ptr, pIdentity->u.string.length);
+					const auto [It, Inserted] = Indices.try_emplace(Identity, Loaded.m_vEntries.size());
+					if(Inserted)
+						Loaded.m_vEntries.push_back(std::move(Record));
+					else
+					{
+						auto &Existing = Loaded.m_vEntries[It->second];
+						const int DeathCount = std::max(Existing.m_DeathCount, Record.m_DeathCount);
+						if(Record.m_LastEnteredAt >= Existing.m_LastEnteredAt)
+						{
+							static_assert(std::is_nothrow_move_assignable_v<SMapHistoryRecord>);
+							Existing = std::move(Record);
+						}
+						Existing.m_DeathCount = DeathCount;
+					}
 				}
 			}
 			m_vEntries.swap(Loaded.m_vEntries);
@@ -371,23 +391,4 @@ namespace QmMapHistory
 			return false;
 		}
 	}
-
-	void CMapHistory::MergeLoadedRecord(const SMapHistoryRecord &Record)
-	{
-		SMapHistoryRecord *pExisting = Find(Record.m_MapId);
-		if(pExisting == nullptr)
-		{
-			m_vEntries.push_back(Record);
-			return;
-		}
-
-		pExisting->m_DeathCount = std::max(pExisting->m_DeathCount, Record.m_DeathCount);
-		if(Record.m_LastEnteredAt >= pExisting->m_LastEnteredAt)
-		{
-			const int DeathCount = pExisting->m_DeathCount;
-			*pExisting = Record;
-			pExisting->m_DeathCount = std::max(DeathCount, Record.m_DeathCount);
-		}
-	}
-
 } // namespace QmMapHistory
