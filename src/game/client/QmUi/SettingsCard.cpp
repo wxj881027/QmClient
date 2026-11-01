@@ -280,12 +280,11 @@ bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect
 	{
 		CUIRect Indicator = ResolveSettingsToggleButtonLabel(Button, PaddingX, PaddingY);
 		Indicator.w = std::min(Metrics.m_BodySize, Indicator.w);
-		const EFontPreset PreviousFont = TextRender()->GetFontPreset();
+		const CUiScopedTextRenderState IconTextState(*TextRender());
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		char aCheck[8] = {};
 		str_utf8_encode(aCheck, CQmIconRegistry::Codepoint(EQmIcon::CHECK));
 		Ui()->DoLabel(&Indicator, aCheck, Metrics.m_BodySize, TEXTALIGN_MC);
-		TextRender()->SetFontPreset(PreviousFont);
 	}
 	SLabelProperties Props;
 	Props.m_MaxWidth = Label.w;
