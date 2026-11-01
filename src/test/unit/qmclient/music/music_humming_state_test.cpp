@@ -147,6 +147,43 @@ TEST(QmHummingState, EmptyLinesDoNotBreakTheSequenceOfSungLines)
 	EXPECT_EQ(*State.PendingLine(33000), "♪ three");
 }
 
+TEST(QmHummingState, CreditsAndColonLinesAreSkippedBeforeChoosingAGroup)
+{
+	NeteaseLyrics::STimeline Timeline;
+	ASSERT_TRUE(NeteaseLyrics::ParseLrc(
+		"[00:00]作词 张三\n[00:01]one\n[00:02]角色: 台词\n"
+		"[00:03]two\n[00:04]编曲 / 李四\n[00:05]three\n"
+		"[00:06]提示：内容\n[00:07]four\n[00:08]Produced by Someone",
+		&Timeline));
+	auto State = DueState();
+	ASSERT_TRUE(State.BeginGroup(Timeline, 1, 30000));
+	const char *apExpected[] = {"♪ two", "♪ three", "♪ four"};
+	for(size_t Index = 0; Index < std::size(apExpected); ++Index)
+	{
+		SCOPED_TRACE(Index);
+		const int64_t NowMs = 30000 + static_cast<int64_t>(Index) * 3000;
+		ASSERT_NE(State.PendingLine(NowMs), nullptr);
+		EXPECT_EQ(*State.PendingLine(NowMs), apExpected[Index]);
+		State.FinishLine(true, NowMs, 60000);
+	}
+	EXPECT_EQ(State.PendingLine(39000), nullptr);
+}
+
+TEST(QmHummingState, FilteringBelowThreeSungLinesLeavesNoPendingMessage)
+{
+	NeteaseLyrics::STimeline Timeline;
+	ASSERT_TRUE(NeteaseLyrics::ParseLrc(
+		"[00:00]作词 张三\n[00:01]one\n[00:02]作曲：李四\n[00:03]two", &Timeline));
+	auto State = DueState();
+	EXPECT_FALSE(State.BeginGroup(Timeline, 0, 30000));
+	EXPECT_EQ(State.PendingLine(30000), nullptr);
+	State.Schedule(30000, 60000);
+	EXPECT_FALSE(State.GroupDue(89999));
+	ASSERT_TRUE(State.BeginGroup(Song(), 0, 90000));
+	ASSERT_NE(State.PendingLine(90000), nullptr);
+	EXPECT_EQ(*State.PendingLine(90000), "♪ one");
+}
+
 TEST(QmHummingState, GroupIntervalsStayWithinConfirmedRange)
 {
 	for(const auto [Requested, Expected] : {std::pair{-1, 30000}, std::pair{100000, 90000}})
@@ -179,4 +216,40 @@ TEST(QmHummingMessage, LongUtf8TextKeepsCompleteCharactersWithinMessageLimit)
 TEST(QmHummingMessage, InvalidUtf8IsNotSent)
 {
 	EXPECT_TRUE(HummingMessage(std::string("\xff", 1)).empty());
+}
+
+TEST(QmHummingMessage, ColonAnywhereRejectsTheWholeLineBeforeTruncation)
+{
+	for(const char *pText : {"作词: 张三", "角色：歌词", ":", "：", "歌词里也有:冒号"})
+	{
+		SCOPED_TRACE(pText);
+		EXPECT_TRUE(HummingMessage(pText).empty());
+	}
+	const std::string Long(300, 'a');
+	EXPECT_TRUE(HummingMessage(Long + ": credit").empty());
+	EXPECT_TRUE(HummingMessage(Long + "：署名").empty());
+}
+
+TEST(QmHummingMessage, CommonCreditsWithoutColonsAreNotSent)
+{
+	const char *apCredits[] = {
+		"作词 张三", "作曲/李四", "编曲 - 王五", "词曲 张三", "填詞 張三",
+		"制作人 王五", "監製 / 李四", "录音 张三", "混音 张三", "母帶 / 李四",
+		"和声 李四", "吉他 王五", "演唱 张三", "发行 某公司",
+		"作词", "\t【作詞】 張三", "　（編曲） 李四", "[作词] 张三",
+		"Lyrics by Someone", "MUSIC BY Someone", "Produced by Someone", "Mixed by Someone"};
+	for(const char *pText : apCredits)
+	{
+		SCOPED_TRACE(pText);
+		EXPECT_TRUE(HummingMessage(pText).empty());
+	}
+}
+
+TEST(QmHummingMessage, OrdinaryLyricsAndNonCreditBracketsArePreserved)
+{
+	for(const char *pText : {"我想为你作词", "录音机里的旧旋律", "吉他声还在回响", "和声伴着你的歌声", "Music brings us together", "[", "（", "【["})
+	{
+		SCOPED_TRACE(pText);
+		EXPECT_EQ(HummingMessage(pText), std::string("♪ ") + pText);
+	}
 }
