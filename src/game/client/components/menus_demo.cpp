@@ -1231,6 +1231,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		g_Config.m_ClDemoSliceEnd = -1;
 		m_PrevSeekAmount = -1.0f;
 		m_PausedBeforeSeeking = true;
+		m_DemoTouchSeeking = false;
 		Ui()->SetActiveItem(nullptr);
 	}
 	const IDemoPlayer::CInfo *pInfo = PlaybackPlayer()->BaseInfo();
@@ -1728,6 +1729,16 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			return ClosestDistance <= SnapPixels ? ClosestAmount : AmountSeek;
 		};
 
+		const bool TouchSeeking = Ui()->CaptureTouchDrag(&m_DemoSeekBarId, &SeekBar);
+		if(TouchSeeking && !Ui()->IsActiveItem(&m_DemoSeekBarId))
+		{
+			m_DemoTouchSeeking = true;
+			m_PrevSeekAmount = -1.0f;
+			m_PausedBeforeSeeking = pInfo->m_Paused;
+			if(!pInfo->m_Paused)
+				PlaybackPlayer()->Pause();
+			Ui()->SetActiveItem(&m_DemoSeekBarId);
+		}
 		if(Ui()->CheckActiveItem(&m_DemoSeekBarId))
 		{
 			if(!Ui()->MouseButton(0))

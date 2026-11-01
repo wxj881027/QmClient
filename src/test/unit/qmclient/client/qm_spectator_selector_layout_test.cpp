@@ -78,3 +78,15 @@ TEST(QmSpectatorSelectorLayout, ReplayWithoutSearchKeepsOriginalPlayerArea)
 	const vec2 Clamped = qm_spectator_layout::ClampMouse(Layout, Center, vec2(0.0f, 1000.0f));
 	EXPECT_FLOAT_EQ(Clamped.y, 280.0f);
 }
+
+TEST(QmSpectatorSelectorLayout, TouchStaysUnderFingerWhilePanelMoves)
+{
+	const vec2 ScreenSize(1920.0f, 1200.0f);
+	const vec2 Position(0.25f, 0.75f);
+	for(float Offset : {-10.0f, 0.0f, 30.0f})
+	{
+		const vec2 Center(960.0f, 600.0f + Offset);
+		const vec2 Relative = qm_spectator_layout::TouchPosition(Position, ScreenSize, Center);
+		EXPECT_EQ(Relative + Center, Position * ScreenSize);
+	}
+}

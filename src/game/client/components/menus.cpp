@@ -6131,6 +6131,7 @@ void CMenus::SetActive(bool Active)
 		m_QmVoteMenu.m_Loader.Suspend();
 	if(Active != m_MenuActive)
 	{
+		Ui()->CancelTouchInput();
 		if(Active)
 		{
 			m_MenuOpenFrame = 0;
@@ -8214,6 +8215,8 @@ bool CMenus::OnInput(const IInput::CEvent &Event)
 
 void CMenus::OnStateChange(int NewState, int OldState)
 {
+	Ui()->CancelTouchInput();
+	m_DemoTouchSeeking = false;
 	m_QmVoteMenu.m_Loader.Suspend();
 	m_QmVoteMenu.m_SelectedName.clear();
 	m_QmVoteMenu.m_Status.clear();
@@ -8398,6 +8401,15 @@ void CMenus::OnRender()
 		if(!ConsoleOwnsUi)
 			Ui()->Update();
 		LogPerfStage(Client(), "ui_update", StageTimer.ElapsedMs());
+	}
+	if(m_DemoTouchSeeking && (!Ui()->IsActiveItem(&m_DemoSeekBarId) || !Ui()->MouseButton(0) || ConsoleOwnsUi || !Ui()->Enabled()))
+	{
+		// 中断会先清除 UI active；独立结束拖动会话，恢复拖动前的播放状态。
+		m_DemoTouchSeeking = false;
+		if((Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive()) && !m_PausedBeforeSeeking)
+			PlaybackPlayer()->Unpause();
+		if(Ui()->IsActiveItem(&m_DemoSeekBarId))
+			Ui()->SetActiveItem(nullptr);
 	}
 
 	if(IsActive())
@@ -8661,7 +8673,10 @@ void CMenus::SetMenuPage(int NewPage)
 		m_pScreenshotWatermarkJob->Cancel();
 	const int OldPage = m_MenuPage;
 	if(OldPage != NewPage)
+	{
+		Ui()->CancelTouchInput();
 		MarkMenuInteraction();
+	}
 	if(OldPage == PAGE_SETTINGS && NewPage != PAGE_SETTINGS)
 	{
 		ReleaseQmClientSettingsSearchInput();

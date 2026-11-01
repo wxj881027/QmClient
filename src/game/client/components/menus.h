@@ -2219,6 +2219,7 @@ protected:
 	vec2 m_DemoControlsDragInitialMouse = vec2(0.0f, 0.0f);
 	vec2 m_DemoControlsPositionOffset = vec2(0.0f, 0.0f);
 	bool m_PausedBeforeSeeking;
+	bool m_DemoTouchSeeking = false;
 	float m_PrevSeekAmount;
 	float m_LastPauseChange = -1.0f;
 	float m_LastSpeedChange = -1.0f;

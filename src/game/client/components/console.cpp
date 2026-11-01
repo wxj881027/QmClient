@@ -2102,7 +2102,7 @@ void CGameConsole::OnRender()
 		vec2 ChatExportClickPos = vec2(0.0f, 0.0f);
 		const bool CtrlPressed = Input()->ModifierIsPressed();
 		const bool WasMousePressed = pConsole->m_MouseIsPress;
-		Ui()->UpdateTouchState(m_TouchState);
+		Ui()->UpdateTouchState(m_TouchState, false);
 		if(SettingsOpen)
 			m_TouchState.m_ScrollAmount = vec2(0.0f, 0.0f);
 		const auto &&GetMousePosition = [&]() -> vec2 {
