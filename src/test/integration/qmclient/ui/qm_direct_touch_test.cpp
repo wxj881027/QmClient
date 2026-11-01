@@ -1,4 +1,5 @@
 // 真实 CUi 与滚动容器协作；只替换输入设备、时钟和 GPU 提交。
+#include <game/client/components/qmclient/demo_ui.h>
 #include <game/client/ui_scrollregion.h>
 
 #include <test/support/qm_real_ui_fixture.h>
@@ -180,6 +181,27 @@ TEST_F(QmDirectTouch, CapturedTimelineKeepsDragOutsideRectAndPreventsListScroll)
 	Release();
 	EXPECT_FALSE(m_Ui.CaptureTouchDrag(&m_DragId, &m_Button));
 	EXPECT_FALSE(m_Ui.MouseButton(0));
+}
+
+TEST_F(QmDirectTouch, DemoPanelTitleLeavesTimelineDragToItsOwnControl)
+{
+	const CUIRect Panel{0.0f, 0.0f, 300.0f, 220.0f};
+	const CUIRect Title{8.0f, 8.0f, 284.0f, 20.0f};
+	const CUIRect Timeline{8.0f, 32.0f, 284.0f, 12.0f};
+	const CUIRect DragRect = qm_demo_ui::PanelDragRect(Panel, Title, true);
+	bool Clicked = false, Abrupted = false;
+	int PanelId = 0;
+	Touch(70.0f, 38.0f);
+	EXPECT_EQ(m_Ui.DoDraggableButtonLogic(&PanelId, 8, &DragRect, &Clicked, &Abrupted), 0);
+	ASSERT_TRUE(m_Ui.CaptureTouchDrag(&m_DragId, &Timeline));
+	m_Ui.SetActiveItem(&m_DragId);
+	Touch(220.0f, 38.0f);
+	EXPECT_EQ(m_Ui.DoDraggableButtonLogic(&PanelId, 8, &DragRect, &Clicked, &Abrupted), 0);
+	EXPECT_TRUE(m_Ui.CaptureTouchDrag(&m_DragId, &Timeline));
+	EXPECT_EQ(m_Ui.ActiveItem(), &m_DragId);
+	EXPECT_NEAR(m_Ui.MouseX(), 220.0f, 0.001f);
+	Release();
+	EXPECT_FALSE(m_Ui.CaptureTouchDrag(&m_DragId, &Timeline));
 }
 
 TEST_F(QmDirectTouch, SettingsSliderStartsOnFirstTouchAndWinsOverList)
