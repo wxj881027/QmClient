@@ -14,12 +14,12 @@
 #include "UiSurfaceText.h"
 #include "UiTheme.h"
 
+#include <base/log.h>
+
 #include <engine/graphics.h>
 #include <engine/keys.h>
 #include <engine/shared/config.h>
 #include <engine/storage.h>
-
-#include <base/log.h>
 
 #include <game/client/components/tooltips.h>
 #include <game/client/lineinput.h>
@@ -154,11 +154,11 @@ namespace ui_widget
 				// 每次都必须拿到同一个进度，否则两层会停在相邻的两帧上。
 				const bool DrawPass = !Ctx.m_pUi->AnimationsBlocked();
 				const float Progress = pAnim == nullptr ? Target :
-											!DrawPass ?
-											std::clamp(pAnim->GetValue(NodeKey, EUiAnimProperty::SCALE, Target), 0.0f, 1.0f) :
-											WantMorph ?
-											std::clamp(ResolveUiAnimSpringValue(*pAnim, NodeKey, EUiAnimProperty::SCALE, Target, PASSWORD_ICON_SPRING, 2), 0.0f, 1.0f) :
-											std::clamp(ResolveUiAnimValue(*pAnim, NodeKey, EUiAnimProperty::SCALE, Target, PASSWORD_ICON_FADE_SEC, EEasing::EASE_IN_OUT), 0.0f, 1.0f);
+						       !DrawPass ?
+									  std::clamp(pAnim->GetValue(NodeKey, EUiAnimProperty::SCALE, Target), 0.0f, 1.0f) :
+						       WantMorph ?
+									  std::clamp(ResolveUiAnimSpringValue(*pAnim, NodeKey, EUiAnimProperty::SCALE, Target, PASSWORD_ICON_SPRING, 2), 0.0f, 1.0f) :
+									  std::clamp(ResolveUiAnimValue(*pAnim, NodeKey, EUiAnimProperty::SCALE, Target, PASSWORD_ICON_FADE_SEC, EEasing::EASE_IN_OUT), 0.0f, 1.0f);
 				// 形态只由「样式 + 轨道是否活跃」决定，不看这是第几趟绘制：卡片内容会被
 				// 画进多个渲染目标，只要两层画的不是同一种图，就必然叠出重影。两趟共用
 				// IconFontSize，所以即便重复绘制也完全重合。
