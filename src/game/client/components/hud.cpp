@@ -22,6 +22,7 @@
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmHookCountdownRender.h>
 #include <game/client/QmUi/QmLayout.h>
+#include <game/client/QmUi/UiTextRenderState.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
 #include <game/client/components/qmclient/demo_display.h>
@@ -4811,7 +4812,7 @@ void CHud::RenderMediaIsland()
 		const auto RenderTextEye = [&](const char *pGlyph, const CUIRect &Rect, float Alpha) {
 			if(Alpha <= 0.001f)
 				return;
-			const EFontPreset PreviousPreset = TextRender()->GetFontPreset();
+			const CUiScopedTextRenderState TextState(*TextRender());
 			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 			const float GlyphSize = Rect.h;
 			const float GlyphWidth = TextRender()->TextWidth(GlyphSize, pGlyph);
@@ -4821,7 +4822,6 @@ void CHud::RenderMediaIsland()
 			Cursor.m_FontSize = GlyphSize;
 			Cursor.m_LineWidth = -1.0f;
 			QmRenderImmediateFontIcon(*TextRender(), &Cursor, pGlyph, -1, IconColor, ConfiguredQmUiIconContrastColor(IconColor));
-			TextRender()->SetFontPreset(PreviousPreset);
 		};
 		const CUIRect ClosedRect = IconRect(SpectatorIconPose.m_ClosedScale, SpectatorIconPose.m_ClosedScale);
 		const CUIRect OpenRect = IconRect(SpectatorIconPose.m_OpenScaleX, SpectatorIconPose.m_OpenScaleY);

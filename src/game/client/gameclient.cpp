@@ -5,6 +5,7 @@
 
 #include "gameclient.h"
 
+#include "QmUi/UiTextRenderState.h"
 #include "components/assets_resource_registry.h"
 #include "components/background.h"
 #include "components/binds.h"
@@ -1294,7 +1295,7 @@ void CGameClient::PrewarmQmIconGlyphs(int MaxGlyphs, int64_t BudgetTicks)
 	m_QmIconPrewarm.Configure(Graphics()->ScreenHeight() / ScreenHeight, g_Config.m_QmUiIconWeight);
 	if(m_QmIconPrewarm.Complete())
 		return;
-	const EFontPreset PreviousPreset = TextRender()->GetFontPreset();
+	const CUiScopedTextRenderState TextState(*TextRender());
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 	const int64_t Start = time_get();
 	int Codepoint, PixelSize;
@@ -1304,7 +1305,6 @@ void CGameClient::PrewarmQmIconGlyphs(int MaxGlyphs, int64_t BudgetTicks)
 		if(time_get() - Start >= BudgetTicks)
 			break;
 	}
-	TextRender()->SetFontPreset(PreviousPreset);
 }
 
 void CGameClient::SyncQmUiIconWeight()

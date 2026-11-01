@@ -8,6 +8,7 @@
 #include "QmUi/UiForms.h"
 #include "QmUi/UiSurface.h"
 #include "QmUi/UiSurfaceText.h"
+#include "QmUi/UiTextRenderState.h"
 #include "components/qmclient/perf_logging.h"
 #include "components/tooltips.h"
 #include "qm_icon.h"
@@ -2297,9 +2298,7 @@ bool CUi::DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIco
 		return false;
 
 	ITextRender *pTextRender = TextRender();
-	const ColorRGBA PreviousColor = pTextRender->GetTextColor();
-	const unsigned PreviousFlags = pTextRender->GetRenderFlags();
-	const EFontPreset PreviousPreset = pTextRender->GetFontPreset();
+	const CUiScopedTextRenderState TextState(*pTextRender);
 	// 连接质量图标的颜色由调用方按"档位/全局/自定义"三模式算好传入
 	//（ConfiguredQmSignalIconColor），这里不再叠加全局图标色，否则档位色
 	// 与自定义色会被内部策略覆盖回全局色（用户实测自定义不生效）。
@@ -2311,9 +2310,6 @@ bool CUi::DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIco
 	// 信号柱家族按 bbox 占比补足字号，四档可视尺寸趋近常规图标；其余图标走通用字号。
 	const float FontSize = QmSignalIconFamily(Icon) ? QmSignalIconFontSize(Rect, Icon) : QmIconFontSize(Rect);
 	DoLabel(&Rect, pFallbackIcon, FontSize, TEXTALIGN_MC);
-	pTextRender->SetRenderFlags(PreviousFlags);
-	pTextRender->SetFontPreset(PreviousPreset);
-	pTextRender->TextColor(PreviousColor);
 	return true;
 }
 

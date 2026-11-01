@@ -12,6 +12,7 @@
 #include <engine/shared/jsonwriter.h>
 #include <engine/shared/localization.h>
 
+#include <game/client/QmUi/UiTextRenderState.h>
 #include <game/client/components/camera.h>
 #include <game/client/components/chat.h>
 #include <game/client/components/console.h>
@@ -283,7 +284,7 @@ void CTouchControls::RenderButtonLabel(const CButtonLabel &Label, const CUIRect 
 	if(Label.m_pLabel == nullptr || Rect.w <= 0.0f || Rect.h <= 0.0f || FontSize <= 0.0f)
 		return;
 
-	const EFontPreset PreviousPreset = TextRender()->GetFontPreset();
+	const CUiScopedTextRenderState TextState(*TextRender());
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	// 两次调用无分配分段器完成测量和绘制，正文与图标共享布局尺寸。
 	float Width = 0.0f;
@@ -323,7 +324,6 @@ void CTouchControls::RenderButtonLabel(const CButtonLabel &Label, const CUIRect 
 			}
 		});
 	}
-	TextRender()->SetFontPreset(PreviousPreset);
 }
 
 // TODO: Optimization: Use text and quad containers for rendering
