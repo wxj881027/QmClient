@@ -5430,6 +5430,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_json_send_test.cpp
     src/test/integration/qmclient/client/qm_json_send_roundtrip_test.cpp
     src/test/integration/qmclient/client/qm_identity_file_test.cpp
+    src/test/integration/qmclient/client/qm_map_history_storage_test.cpp
     src/test/integration/qmclient/client/qm_bg_draw_persistence_test.cpp
     src/test/integration/qmclient/client/qm_bg_draw_camera_geometry_test.cpp
     src/test/integration/qmclient/client/qm_outline_viewport_test.cpp

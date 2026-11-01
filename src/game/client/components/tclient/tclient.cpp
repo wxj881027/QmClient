@@ -31,6 +31,7 @@
 #include <game/client/components/qmclient/auto_vote.h>
 #include <game/client/components/qmclient/data_version.h>
 #include <game/client/components/qmclient/keyword_reply_rules.h>
+#include <game/client/components/qmclient/map_history_storage.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/weapon_animation.h>
 #include <game/client/gameclient.h>
@@ -66,7 +67,6 @@ static constexpr const char *MAP_CATEGORY_CACHE_FILE = "qmclient/map_categories.
 static constexpr int64_t MAP_CATEGORY_CACHE_SAVE_DELAY_SEC = 5;
 static constexpr const char *MAP_NOTES_FILE = "qmclient/map_notes.json";
 static constexpr int64_t MAP_NOTES_SAVE_DELAY_SEC = 5;
-static constexpr const char *MAP_HISTORY_FILE = "qmclient/map_history.json";
 static constexpr const char *QMCLIENT_FREEZE_WAKEUP_TEXT = "快醒醒!";
 static constexpr int LOCAL_SAVE_JOIN_HINT_MAX_ITEMS = 12;
 static constexpr int GORES_DISTANCE_FIELD_TILE_SCAN_BUDGET = 4096;
@@ -4990,7 +4990,7 @@ void CTClient::SetMapNote(const char *pMapName, const char *pNote)
 
 void CTClient::LoadMapHistory()
 {
-	char *pJson = Storage()->ReadFileStr(MAP_HISTORY_FILE, IStorage::TYPE_SAVE);
+	char *pJson = Storage()->ReadFileStr(qm_map_history_storage::FILE_PATH, IStorage::TYPE_SAVE);
 	if(pJson == nullptr)
 		return;
 
@@ -5008,34 +5008,8 @@ void CTClient::LoadMapHistory()
 
 void CTClient::SaveMapHistory()
 {
-	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-
-	char aTempFilename[IO_MAX_PATH_LENGTH];
-	IStorage::FormatTmpPath(aTempFilename, sizeof(aTempFilename), MAP_HISTORY_FILE);
-	IOHANDLE File = Storage()->OpenFile(aTempFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
-	{
-		log_error("qmclient", "map history temp file open failed");
-		return;
-	}
-
-	const std::string Json = m_MapHistory.ToJson();
-	const bool Written = io_write(File, Json.data(), (unsigned)Json.size()) == Json.size();
-	io_close(File);
-	if(!Written)
-	{
-		Storage()->RemoveFile(aTempFilename, IStorage::TYPE_SAVE);
-		log_error("qmclient", "map history temp file write failed");
-		return;
-	}
-
-	char aBackupFilename[2 * IO_MAX_PATH_LENGTH];
-	if(!IStorage::ReplaceFileSafely(Storage(), aTempFilename, MAP_HISTORY_FILE, aBackupFilename, sizeof(aBackupFilename)))
-	{
-		log_error("qmclient", "map history replacement failed; previous history was restored or remains at %s", aBackupFilename[0] != '\0' ? aBackupFilename : MAP_HISTORY_FILE);
-		return;
-	}
-	m_MapHistoryDirty = false;
+	if(!qm_map_history_storage::Save(Storage(), m_MapHistory, m_MapHistoryDirty))
+		log_error("qmclient", "map history save failed; previous history and pending changes retained");
 }
 void CTClient::MarkMapHistoryDirty()
 {
