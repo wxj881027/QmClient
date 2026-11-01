@@ -245,13 +245,16 @@ const char *InitAndroid()
 	return nullptr;
 }
 
-// See ClientActivity.java
-constexpr uint32_t COMMAND_USER = 0x8000;
-constexpr uint32_t COMMAND_RESTART_APP = COMMAND_USER + 1;
-
 void RestartAndroidApp()
 {
-	SDL_SendAndroidMessage(COMMAND_RESTART_APP, 0);
+	// 等待启动请求提交后再结束进程，避免 UI 消息队列中的重启请求随进程一起丢失。
+	JNIEnv *pEnv = static_cast<JNIEnv *>(SDL_GetAndroidJNIEnv());
+	jobject Activity = (jobject)SDL_GetAndroidActivity();
+	jclass ActivityClass = pEnv->GetObjectClass(Activity);
+	jmethodID MethodId = pEnv->GetMethodID(ActivityClass, "restartApp", "()V");
+	pEnv->CallVoidMethod(Activity, MethodId);
+	pEnv->DeleteLocalRef(ActivityClass);
+	pEnv->DeleteLocalRef(Activity);
 }
 
 bool StartAndroidServer(const char **ppArguments, size_t NumArguments)

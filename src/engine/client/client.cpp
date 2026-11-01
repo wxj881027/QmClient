@@ -7927,18 +7927,11 @@ int main(int argc, const char **argv)
 	};
 	std::function<void()> PerformFinalCleanup = []() {
 #if defined(CONF_PLATFORM_ANDROID)
-		// Forcefully terminate the entire process, to ensure that static variables
-		// will be initialized correctly when the app is started again after quitting.
-		// Returning from the main function is not enough, as this only results in the
-		// native thread terminating, but the Java thread will continue. Java does not
-		// support unloading libraries once they have been loaded, so all static
-		// variables will not have their expected initial values anymore when the app
-		// is started again after quitting. The variable gs_AndroidStarted above is
-		// used to check that static variables have been initialized properly.
-		// TODO: This is not the correct way to close an activity on Android, as it
-		//       ignores the activity lifecycle entirely, which may cause issues if
-		//       we ever used any global resources like the camera.
-		std::exit(0);
+		// 客户端与 SDL 已完成显式清理。只结束原生主线程会留下 Java 进程和旧静态状态，
+		// 继续执行进程级静态析构又会破坏仍在运行的 Android HWUI 线程所用的锁。
+		// 先完成日志写入，再直接结束进程，保持下次启动与重启时的全新状态。
+		log_global_logger_finish();
+		std::_Exit(0);
 #elif defined(CONF_PLATFORM_EMSCRIPTEN)
 		// We cannot use atexit with Emscripten so we finish the global logger here.
 		// See comment in the log_set_global_logger function for details.
