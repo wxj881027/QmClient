@@ -4,6 +4,8 @@
 
 #include <engine/external/json-parser/json.h>
 
+#include <game/client/components/qmclient/qm_json_fields.h>
+
 #include <algorithm>
 #include <cinttypes>
 #include <cmath>
@@ -56,7 +58,7 @@ namespace QmMapHistory
 
 		const char *JsonString(const json_value *pVal, const char *pDefault = "")
 		{
-			if(pVal == nullptr || pVal->type != json_string)
+			if(!qm_json::Text(pVal))
 				return pDefault;
 			return pVal->u.string.ptr;
 		}
@@ -317,7 +319,7 @@ namespace QmMapHistory
 				return false;
 			}
 
-			const json_value &Entries = (*pRoot)["entries"];
+			const json_value &Entries = *qm_json::Field(pRoot.get(), "entries");
 			if(Entries.type != json_none && Entries.type != json_array)
 			{
 				SetError(pErr, ErrSize, "entries is not an array");
@@ -334,18 +336,22 @@ namespace QmMapHistory
 					if(pItem == nullptr || pItem->type != json_object)
 						continue;
 					SMapHistoryRecord Record;
-					Record.m_MapName = JsonString(&(*pItem)["map_name"]);
-					Record.m_MapId = JsonString(&(*pItem)["map_id"]);
+					const json_value *pMapId = qm_json::Field(pItem, "map_id");
+					// 异常ID不能截断或回退成名称，否则会与正常记录错误合并。
+					if(pMapId->type == json_string && !qm_json::Text(pMapId))
+						continue;
+					Record.m_MapName = JsonString(qm_json::Field(pItem, "map_name"));
+					Record.m_MapId = JsonString(pMapId);
 					if(Record.m_MapId.empty())
 						Record.m_MapId = Record.m_MapName;
 					if(Record.m_MapName.empty() || Record.m_MapId.empty())
 						continue;
-					Record.m_LastEnteredAt = std::max<int64_t>(0, JsonInt(&(*pItem)["last_entered"]));
-					Record.m_LastPlayedDate = JsonString(&(*pItem)["last_played_date"]);
-					Record.m_DeathCount = (int)std::clamp<int64_t>(JsonInt(&(*pItem)["deaths"]), 0, std::numeric_limits<int>::max());
-					Record.m_Finished = JsonBool(&(*pItem)["finished"]);
-					Record.m_FinishTimeMs = std::max<int64_t>(0, JsonInt(&(*pItem)["finish_time_ms"]));
-					Record.m_PlayTimeMs = std::max<int64_t>(0, JsonInt(&(*pItem)["play_time_ms"]));
+					Record.m_LastEnteredAt = std::max<int64_t>(0, JsonInt(qm_json::Field(pItem, "last_entered")));
+					Record.m_LastPlayedDate = JsonString(qm_json::Field(pItem, "last_played_date"));
+					Record.m_DeathCount = (int)std::clamp<int64_t>(JsonInt(qm_json::Field(pItem, "deaths")), 0, std::numeric_limits<int>::max());
+					Record.m_Finished = JsonBool(qm_json::Field(pItem, "finished"));
+					Record.m_FinishTimeMs = std::max<int64_t>(0, JsonInt(qm_json::Field(pItem, "finish_time_ms")));
+					Record.m_PlayTimeMs = std::max<int64_t>(0, JsonInt(qm_json::Field(pItem, "play_time_ms")));
 					if(!Record.m_Finished)
 						Record.m_FinishTimeMs = 0;
 					Loaded.MergeLoadedRecord(Record);

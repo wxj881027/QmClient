@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_MAP_HISTORY_STORAGE_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_MAP_HISTORY_STORAGE_H
 
+#include <base/mem.h>
 #include <base/str.h>
 #include <base/system.h>
 
@@ -8,9 +9,11 @@
 
 #include <game/client/components/tclient/map_history.h>
 
+#include <cstdlib>
 #include <limits>
 #include <memory>
 #include <string>
+#include <string_view>
 
 namespace qm_map_history_storage
 {
@@ -20,6 +23,10 @@ namespace qm_map_history_storage
 	{
 	public:
 		virtual ~CFileOperations() = default;
+		virtual IStorage::EReadFileResult Read(IStorage &Storage, void **ppData, unsigned *pSize)
+		{
+			return Storage.ReadFileChecked(FILE_PATH, IStorage::TYPE_SAVE, ppData, pSize);
+		}
 		virtual std::string Serialize(const QmMapHistory::CMapHistory &History) { return History.ToJson(); }
 		virtual IOHANDLE Open(IStorage &Storage, const char *pPath) { return Storage.OpenFile(pPath, IOFLAG_WRITE, IStorage::TYPE_SAVE); }
 		virtual unsigned Write(IOHANDLE File, const void *pData, unsigned Size) { return io_write(File, pData, Size); }
@@ -33,6 +40,54 @@ namespace qm_map_history_storage
 			return Storage.RenameFile(pTemporary, FILE_PATH, IStorage::TYPE_SAVE, false);
 		}
 	};
+
+	enum class ELoadResult
+	{
+		SUCCESS,
+		NOT_FOUND,
+		READ_FAILED,
+		PARSE_FAILED,
+	};
+
+	struct SReadBuffer
+	{
+		void *m_pData = nullptr;
+		SReadBuffer() = default;
+		SReadBuffer(const SReadBuffer &) = delete;
+		SReadBuffer &operator=(const SReadBuffer &) = delete;
+		~SReadBuffer() { free(m_pData); }
+	};
+
+	inline ELoadResult Load(IStorage *pStorage, QmMapHistory::CMapHistory &History, int Limit, bool &Dirty, char *pError, size_t ErrorSize, CFileOperations *pOperations = nullptr) noexcept
+	{
+		if(pError && ErrorSize)
+			pError[0] = '\0';
+		try
+		{
+			if(!pStorage)
+				return ELoadResult::READ_FAILED;
+			CFileOperations Default;
+			auto &Operations = pOperations ? *pOperations : Default;
+			SReadBuffer Buffer;
+			unsigned Size = 0;
+			const auto Result = Operations.Read(*pStorage, &Buffer.m_pData, &Size);
+			if(Result == IStorage::EReadFileResult::NOT_FOUND)
+				return ELoadResult::NOT_FOUND;
+			// 沿用旧文本读取的原始NUL拒绝政策，解码后的字段由模型校验。
+			if(Result != IStorage::EReadFileResult::SUCCESS || !Buffer.m_pData || mem_has_null(Buffer.m_pData, Size))
+				return ELoadResult::READ_FAILED;
+			if(!History.FromJson(std::string_view(static_cast<const char *>(Buffer.m_pData), Size), pError, ErrorSize))
+				return ELoadResult::PARSE_FAILED;
+			const size_t OldSize = History.Size();
+			History.ApplyLimit(Limit);
+			Dirty = History.Size() != OldSize;
+			return ELoadResult::SUCCESS;
+		}
+		catch(...)
+		{
+			return ELoadResult::READ_FAILED;
+		}
+	}
 
 	struct SFileCloser
 	{

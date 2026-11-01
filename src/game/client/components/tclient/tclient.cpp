@@ -4990,20 +4990,18 @@ void CTClient::SetMapNote(const char *pMapName, const char *pNote)
 
 void CTClient::LoadMapHistory()
 {
-	char *pJson = Storage()->ReadFileStr(qm_map_history_storage::FILE_PATH, IStorage::TYPE_SAVE);
-	if(pJson == nullptr)
-		return;
-
 	char aError[256] = "";
-	if(!m_MapHistory.FromJson(pJson, aError, sizeof(aError)))
+	switch(qm_map_history_storage::Load(Storage(), m_MapHistory, g_Config.m_QmAutoSaveHistoryCount, m_MapHistoryDirty, aError, sizeof(aError)))
 	{
+	case qm_map_history_storage::ELoadResult::READ_FAILED:
+		log_error("qmclient", "map history read failed; previous history retained");
+		break;
+	case qm_map_history_storage::ELoadResult::PARSE_FAILED:
 		log_error("qmclient", "map history json parse error: %s", aError);
+		break;
+	default:
+		break;
 	}
-	free(pJson);
-
-	const size_t OldSize = m_MapHistory.Size();
-	m_MapHistory.ApplyLimit(g_Config.m_QmAutoSaveHistoryCount);
-	m_MapHistoryDirty = m_MapHistory.Size() != OldSize;
 }
 
 void CTClient::SaveMapHistory()
