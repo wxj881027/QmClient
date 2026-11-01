@@ -124,9 +124,12 @@ namespace QmMapHistory
 		const std::string StableId = MapId.empty() ? std::string(MapName) : std::string(MapId);
 		if(SMapHistoryRecord *pRecord = Find(StableId))
 		{
-			pRecord->m_MapName = std::string(MapName);
+			// 字符串都准备成功后再发布，也允许输入借用旧记录自身。
+			std::string NewName(MapName);
+			std::string NewDate(Date);
+			pRecord->m_MapName.swap(NewName);
+			pRecord->m_LastPlayedDate.swap(NewDate);
 			pRecord->m_LastEnteredAt = NowUnix;
-			pRecord->m_LastPlayedDate = std::string(Date);
 			pRecord->m_Finished = false;
 			pRecord->m_FinishTimeMs = 0;
 			pRecord->m_PlayTimeMs = 0;

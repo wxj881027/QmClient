@@ -4,7 +4,9 @@
 #include <test/support/prediction_allocation_failure.h>
 
 #include <limits>
+#include <new>
 #include <string>
+#include <string_view>
 
 using namespace QmMapHistory;
 
@@ -84,4 +86,65 @@ TEST(MapHistoryAllocation, SuccessfulRetryCanReplaceTheCollectionAfterAllocation
 	ASSERT_NE(pFirst, nullptr);
 	EXPECT_EQ(pFirst->m_MapName, "Newer map name longer than small string capacity");
 	EXPECT_EQ(pFirst->m_DeathCount, 10);
+}
+
+TEST(MapHistoryAllocation, ExistingVisitStringPreparationFailuresPreserveTheCompleteOldRecord)
+{
+	constexpr const char *NAME = "New map name longer than small string capacity";
+	// RecordVisit接口允许string_view；长日期验证接口合同，非当前组件的固定日期输入。
+	constexpr const char *DATE = "A caller supplied date longer than small string capacity";
+	size_t Allocations = 0;
+	{
+		CMapHistory Probe;
+		Probe.RecordVisit("Prior map", "map", 17, "2026-10-31");
+		CPredictionAllocationFailure Count(std::numeric_limits<size_t>::max());
+		Probe.RecordVisit(NAME, "map", 100, DATE);
+		Allocations = Count.Attempts();
+	}
+	ASSERT_GT(Allocations, 0u);
+	for(size_t BeforeFailure = 0; BeforeFailure < Allocations; ++BeforeFailure)
+	{
+		SCOPED_TRACE(BeforeFailure);
+		CMapHistory History;
+		History.RecordVisit("Prior map", "map", 17, "2026-10-31");
+		History.AddDeath("map", 3);
+		History.MarkFinished("map", 1000, 2000);
+		const auto *pOriginal = History.Find("map");
+		const std::string Before = History.ToJson();
+		bool Triggered = false, Threw = false;
+		size_t Attempts = 0;
+		{
+			CPredictionAllocationFailure Failure(BeforeFailure);
+			try
+			{
+				History.RecordVisit(NAME, "map", 100, DATE);
+			}
+			catch(const std::bad_alloc &)
+			{
+				Threw = true;
+			}
+			Triggered = Failure.Triggered();
+			Attempts = Failure.Attempts();
+		}
+		EXPECT_TRUE(Triggered);
+		EXPECT_TRUE(Threw);
+		EXPECT_EQ(Attempts, BeforeFailure + 1);
+		EXPECT_EQ(History.Find("map"), pOriginal);
+		EXPECT_EQ(History.ToJson(), Before);
+		const auto &Record = History.RecordVisit(NAME, "map", 100, DATE);
+		EXPECT_EQ(Record.m_MapName, NAME);
+		EXPECT_EQ(Record.m_LastPlayedDate, DATE);
+		EXPECT_EQ(Record.m_DeathCount, 3);
+	}
+}
+
+TEST(MapHistoryAllocation, ExistingVisitCanReadDateFromTheNameItReplaces)
+{
+	CMapHistory History;
+	auto &Record = History.RecordVisit("Prior name longer than small string capacity", "map", 17, "2026-10-31");
+	const std::string ExpectedDate = Record.m_MapName;
+	const std::string_view Date = Record.m_MapName;
+	History.RecordVisit("Replacement name longer than small string capacity", "map", 100, Date);
+	EXPECT_EQ(Record.m_LastPlayedDate, ExpectedDate);
+	EXPECT_EQ(Record.m_MapName, "Replacement name longer than small string capacity");
 }

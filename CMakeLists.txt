@@ -5123,6 +5123,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/ui/vote_map_loader_test.cpp
     src/test/unit/client/map_history_test.cpp
     src/test/unit/client/map_history_json_test.cpp
+    src/test/unit/client/map_history_id_test.cpp
+    src/test/integration/qmclient/client/qm_map_history_session_test.cpp
     src/test/unit/client/map_tile_border_test.cpp
     src/test/unit/client/map_render_screen_test.cpp
     src/test/unit/client/map_group_clip_test.cpp
@@ -6270,6 +6272,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_bg_draw_quad_containers_test.cpp
       src/test/unit/qmclient/client/qm_outline_cache_test.cpp
       src/test/unit/client/map_history_allocation_test.cpp
+      src/test/unit/client/map_history_id_allocation_test.cpp
+      src/test/integration/qmclient/client/qm_map_history_session_allocation_test.cpp
       src/game/client/components/tclient/map_history.cpp
       src/test/unit/qmclient/client/qm_bg_draw_publication_test.cpp
       src/game/client/QmUi/QmLineInputMotion.cpp

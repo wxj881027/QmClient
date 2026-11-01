@@ -22,6 +22,7 @@
 #include <game/client/components/qmclient/gores_drown_tracker.h>
 #include <game/client/components/qmclient/hammer_hit_detection.h>
 #include <game/client/components/qmclient/local_saves.h>
+#include <game/client/components/qmclient/map_history_session.h>
 #include <game/client/components/qmclient/map_progress.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/red_packet_auto_claim.h>
@@ -378,10 +379,7 @@ class CTClient : public CComponent
 	// Map play history
 	QmMapHistory::CMapHistory m_MapHistory;
 	bool m_MapHistoryDirty = false;
-	bool m_MapHistorySessionActive = false;
-	int64_t m_MapHistorySessionStart = 0;
-	std::string m_MapHistoryActiveMapId;
-	std::string m_MapHistoryActiveMapName;
+	QmMapHistory::CSession m_MapHistorySession;
 	std::string m_MapHistorySuppressedMapId;
 	void LoadMapHistory();
 	void SaveMapHistory();
@@ -390,7 +388,7 @@ class CTClient : public CComponent
 	void EndMapHistorySession(bool SaveNow);
 	void UpdateMapHistorySession();
 	void TouchMapHistoryPlayTime();
-	std::string CurrentMapHistoryId() const;
+	bool TryCurrentMapHistoryId(std::string &Output) const;
 	int64_t CurrentMapHistoryPlayTimeMs() const;
 	void HandleMapHistoryDeath(int ClientId);
 	void HandleMapHistoryTeamDeath(int Team);

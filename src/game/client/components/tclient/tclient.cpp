@@ -5020,23 +5020,18 @@ void CTClient::MarkMapHistoryDirty()
 		log_info("qmclient", "Trimmed map history to %d entries", g_Config.m_QmAutoSaveHistoryCount);
 }
 
-std::string CTClient::CurrentMapHistoryId() const
+bool CTClient::TryCurrentMapHistoryId(std::string &Output) const
 {
 	const char *pMapName = Client()->GetCurrentMap();
-	if(pMapName == nullptr || pMapName[0] == '\0')
-		return {};
-
-	const char *pMapPath = Client()->GetCurrentMapPath();
-	if(pMapPath != nullptr && pMapPath[0] != '\0')
-		return std::string("path:") + pMapPath;
-	return std::string("name:") + pMapName;
+	const char *pMapPath = pMapName && pMapName[0] ? Client()->GetCurrentMapPath() : nullptr;
+	return QmMapHistory::TrySessionMapId(pMapName, pMapPath, Output);
 }
 
 int64_t CTClient::CurrentMapHistoryPlayTimeMs() const
 {
-	if(!m_MapHistorySessionActive || m_MapHistorySessionStart <= 0)
+	if(!m_MapHistorySession.Active() || m_MapHistorySession.StartTime() <= 0)
 		return 0;
-	const int64_t Elapsed = time_get() - m_MapHistorySessionStart;
+	const int64_t Elapsed = time_get() - m_MapHistorySession.StartTime();
 	if(Elapsed <= 0)
 		return 0;
 	// 时间源固定为纳秒，先约去换算因子，避免长期会话先乘1000溢出。
@@ -5045,9 +5040,9 @@ int64_t CTClient::CurrentMapHistoryPlayTimeMs() const
 
 void CTClient::TouchMapHistoryPlayTime()
 {
-	if(!m_MapHistorySessionActive || m_MapHistoryActiveMapId.empty())
+	if(!m_MapHistorySession.Active() || m_MapHistorySession.MapId().empty())
 		return;
-	m_MapHistory.UpdatePlayTime(m_MapHistoryActiveMapId, CurrentMapHistoryPlayTimeMs());
+	m_MapHistory.UpdatePlayTime(m_MapHistorySession.MapId(), CurrentMapHistoryPlayTimeMs());
 }
 
 void CTClient::StartMapHistorySession()
@@ -5059,13 +5054,18 @@ void CTClient::StartMapHistorySession()
 	if(pMapName == nullptr || pMapName[0] == '\0')
 		return;
 
-	const std::string MapId = CurrentMapHistoryId();
+	std::string MapId;
+	if(!TryCurrentMapHistoryId(MapId))
+	{
+		EndMapHistorySession(true);
+		return;
+	}
 	if(MapId.empty())
 		return;
 	if(m_MapHistorySuppressedMapId == MapId)
 		return;
 
-	if(m_MapHistorySessionActive && m_MapHistoryActiveMapId == MapId)
+	if(m_MapHistorySession.Active() && m_MapHistorySession.MapId() == MapId)
 	{
 		TouchMapHistoryPlayTime();
 		return;
@@ -5075,23 +5075,16 @@ void CTClient::StartMapHistorySession()
 
 	char aDate[32];
 	str_timestamp_format(aDate, sizeof(aDate), "%Y-%m-%d");
-	m_MapHistory.RecordVisit(pMapName, MapId, time_timestamp(), aDate);
-	m_MapHistorySessionActive = true;
-	m_MapHistorySessionStart = time_get();
-	m_MapHistoryActiveMapId = MapId;
-	m_MapHistoryActiveMapName = pMapName;
-	MarkMapHistoryDirty();
+	if(m_MapHistorySession.TryStart(m_MapHistory, pMapName, std::move(MapId), time_timestamp(), aDate, []() noexcept { return time_get(); }))
+		MarkMapHistoryDirty();
 }
 
 void CTClient::EndMapHistorySession(bool SaveNow)
 {
-	if(!m_MapHistorySessionActive)
+	if(!m_MapHistorySession.Active())
 		return;
 	TouchMapHistoryPlayTime();
-	m_MapHistorySessionActive = false;
-	m_MapHistorySessionStart = 0;
-	m_MapHistoryActiveMapId.clear();
-	m_MapHistoryActiveMapName.clear();
+	m_MapHistorySession.Reset();
 	MarkMapHistoryDirty();
 	if(SaveNow)
 		SaveMapHistory();
@@ -5105,7 +5098,12 @@ void CTClient::UpdateMapHistorySession()
 		return;
 	}
 
-	const std::string MapId = CurrentMapHistoryId();
+	std::string MapId;
+	if(!TryCurrentMapHistoryId(MapId))
+	{
+		EndMapHistorySession(true);
+		return;
+	}
 	if(MapId.empty())
 	{
 		EndMapHistorySession(true);
@@ -5116,14 +5114,14 @@ void CTClient::UpdateMapHistorySession()
 	if(m_MapHistorySuppressedMapId == MapId)
 		return;
 
-	if(m_MapHistorySessionActive && m_MapHistoryActiveMapId != MapId)
+	if(m_MapHistorySession.Active() && m_MapHistorySession.MapId() != MapId)
 		EndMapHistorySession(true);
 	StartMapHistorySession();
 }
 
 void CTClient::HandleMapHistoryDeath(int ClientId)
 {
-	if(g_Config.m_QmAutoSaveHistoryCount <= 0 || !m_MapHistorySessionActive || ClientId < 0)
+	if(g_Config.m_QmAutoSaveHistoryCount <= 0 || !m_MapHistorySession.Active() || ClientId < 0)
 		return;
 
 	const bool OwnMain = ClientId == GameClient()->m_aLocalIds[0];
@@ -5131,13 +5129,13 @@ void CTClient::HandleMapHistoryDeath(int ClientId)
 	if(!OwnMain && !OwnDummy)
 		return;
 
-	if(m_MapHistory.AddDeath(m_MapHistoryActiveMapId))
+	if(m_MapHistory.AddDeath(m_MapHistorySession.MapId()))
 		MarkMapHistoryDirty();
 }
 
 void CTClient::HandleMapHistoryTeamDeath(int Team)
 {
-	if(g_Config.m_QmAutoSaveHistoryCount <= 0 || !m_MapHistorySessionActive)
+	if(g_Config.m_QmAutoSaveHistoryCount <= 0 || !m_MapHistorySession.Active())
 		return;
 
 	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
@@ -5147,7 +5145,7 @@ void CTClient::HandleMapHistoryTeamDeath(int Team)
 		const int ClientId = GameClient()->m_aLocalIds[Dummy];
 		if(ClientId >= 0 && GameClient()->m_Teams.Team(ClientId) == Team)
 		{
-			if(m_MapHistory.AddDeath(m_MapHistoryActiveMapId))
+			if(m_MapHistory.AddDeath(m_MapHistorySession.MapId()))
 				MarkMapHistoryDirty();
 			return;
 		}
@@ -5156,7 +5154,7 @@ void CTClient::HandleMapHistoryTeamDeath(int Team)
 
 void CTClient::HandleMapHistoryFinish(int ClientId, int FinishTimeMs)
 {
-	if(g_Config.m_QmAutoSaveHistoryCount <= 0 || !m_MapHistorySessionActive || ClientId < 0 || ClientId >= MAX_CLIENTS)
+	if(g_Config.m_QmAutoSaveHistoryCount <= 0 || !m_MapHistorySession.Active() || ClientId < 0 || ClientId >= MAX_CLIENTS)
 		return;
 
 	bool OwnFinish = false;
@@ -5183,7 +5181,7 @@ void CTClient::HandleMapHistoryFinish(int ClientId, int FinishTimeMs)
 	if(!OwnFinish)
 		return;
 
-	m_MapHistory.MarkFinished(m_MapHistoryActiveMapId, FinishTimeMs, CurrentMapHistoryPlayTimeMs());
+	m_MapHistory.MarkFinished(m_MapHistorySession.MapId(), FinishTimeMs, CurrentMapHistoryPlayTimeMs());
 	MarkMapHistoryDirty();
 	SaveMapHistory();
 }
@@ -5192,20 +5190,18 @@ void CTClient::RemoveMapHistoryRecord(const char *pMapId)
 {
 	if(pMapId == nullptr || pMapId[0] == '\0')
 		return;
+	std::string CurrentMapId;
+	if(Client()->State() == IClient::STATE_ONLINE && !TryCurrentMapHistoryId(CurrentMapId))
+		return;
+	// pMapId可能借用待删除的记录，删除后不再读取它。
+	const bool SuppressCurrent = !CurrentMapId.empty() && CurrentMapId == pMapId;
+	const bool EndSession = m_MapHistorySession.MapId() == pMapId;
 	if(m_MapHistory.Remove(pMapId))
 	{
-		std::string CurrentMapId;
-		if(Client()->State() == IClient::STATE_ONLINE)
-			CurrentMapId = CurrentMapHistoryId();
-		if(!CurrentMapId.empty() && CurrentMapId == pMapId)
-			m_MapHistorySuppressedMapId = CurrentMapId;
-		if(m_MapHistoryActiveMapId == pMapId)
-		{
-			m_MapHistorySessionActive = false;
-			m_MapHistorySessionStart = 0;
-			m_MapHistoryActiveMapId.clear();
-			m_MapHistoryActiveMapName.clear();
-		}
+		if(SuppressCurrent)
+			m_MapHistorySuppressedMapId.swap(CurrentMapId);
+		if(EndSession)
+			m_MapHistorySession.Reset();
 		m_MapHistoryDirty = true;
 		SaveMapHistory();
 	}
@@ -5222,14 +5218,12 @@ void CTClient::ClearFinishedMapHistory()
 
 void CTClient::ClearAllMapHistory()
 {
+	std::string SuppressedMapId;
+	if(Client()->State() == IClient::STATE_ONLINE && !TryCurrentMapHistoryId(SuppressedMapId))
+		return;
 	m_MapHistory.Clear();
-	m_MapHistorySessionActive = false;
-	m_MapHistorySessionStart = 0;
-	m_MapHistorySuppressedMapId.clear();
-	if(Client()->State() == IClient::STATE_ONLINE)
-		m_MapHistorySuppressedMapId = CurrentMapHistoryId();
-	m_MapHistoryActiveMapId.clear();
-	m_MapHistoryActiveMapName.clear();
+	m_MapHistorySession.Reset();
+	m_MapHistorySuppressedMapId.swap(SuppressedMapId);
 	m_MapHistoryDirty = true;
 	SaveMapHistory();
 }
