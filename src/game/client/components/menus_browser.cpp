@@ -39,6 +39,7 @@
 #include <game/client/components/qmclient/dummy_mini_view_layout.h>
 #include <game/client/components/qmclient/friends_category_drag.h>
 #include <game/client/components/qmclient/local_save_display.h>
+#include <game/client/components/qmclient/map_history_rows.h>
 #include <game/client/components/qmclient/map_history_ui.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/gameclient.h>
@@ -4546,18 +4547,21 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 		else if(s_MapHistoryFilter == 2)
 			Filter = QmMapHistory::EMapHistoryFilter::RECENT;
 		static std::vector<size_t> s_vHistoryRecordIndices;
-		GameClient()->m_TClient.GetMapHistory().SortedIndices(Filter, s_vHistoryRecordIndices);
-		if(s_vHistoryRecordIndices.empty())
+		static std::vector<int> s_vMapHistoryItemIds;
+		static std::vector<CButtonContainer> s_vMapHistoryRemoveButtons;
+		const bool RowsReady = QmMapHistoryUi::PrepareRows(GameClient()->m_TClient.GetMapHistory(), Filter,
+			s_vHistoryRecordIndices, s_vMapHistoryItemIds, s_vMapHistoryRemoveButtons);
+		if(!RowsReady)
+		{
+			Ui()->DoLabel(&HistoryPanel, Localize("Loading"), 13.0f, TEXTALIGN_MC);
+		}
+		else if(s_vHistoryRecordIndices.empty())
 		{
 			Ui()->DoLabel(&HistoryPanel, HistoryEntries.empty() ? Localize("No map play history yet") : Localize("No results"), 13.0f, TEXTALIGN_MC);
 		}
 		else
 		{
 			static CListBox s_MapHistoryListBox;
-			static std::vector<int> s_vMapHistoryItemIds;
-			static std::vector<CButtonContainer> s_vMapHistoryRemoveButtons;
-			s_vMapHistoryItemIds.resize(s_vHistoryRecordIndices.size());
-			s_vMapHistoryRemoveButtons.resize(s_vHistoryRecordIndices.size());
 			const float CardRowHeight = QmMapHistoryUi::CardRowHeight(HistoryPanel.h);
 			const int HistoryGridColumns = QmMapHistoryUi::GridColumns(HistoryPanel.w - QmMapHistoryUi::LIST_SCROLLBAR_WIDTH, CardRowHeight);
 			s_MapHistoryListBox.SetScrollbarAlwaysReserved(true);
@@ -4571,7 +4575,8 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 				Ui()->DoLabel(&Rect, pText, FontSize, Align, Props);
 			};
 
-			std::string RemoveMapId;
+			// 仅借用到列表结束后的同步删除；删除入口已保证erase后不再读取目标ID。
+			const std::string *pRemoveMapId = nullptr;
 			for(size_t HistoryIndex = 0; HistoryIndex < s_vHistoryRecordIndices.size(); ++HistoryIndex)
 			{
 				const QmMapHistory::SMapHistoryRecord &Record = HistoryEntries[s_vHistoryRecordIndices[HistoryIndex]];
@@ -4641,13 +4646,13 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 				RenderMetric(LastEnteredMetric, Localize("Last entered"), aLastEntered, TEXTALIGN_MR);
 
 				if(Ui()->DoButton_QmIcon(&s_vMapHistoryRemoveButtons[HistoryIndex], EQmIcon::CLOSE, FONT_ICON_XMARK, 0, &RemoveButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL))
-					RemoveMapId = Record.m_MapId;
+					pRemoveMapId = &Record.m_MapId;
 				if(Ui()->HotItem() == &s_vMapHistoryRemoveButtons[HistoryIndex])
 					GameClient()->m_Tooltips.DoToolTip(&s_vMapHistoryRemoveButtons[HistoryIndex], &RemoveButton, Localize("Remove from history"));
 			}
 			s_MapHistoryListBox.DoEnd();
-			if(!RemoveMapId.empty())
-				GameClient()->m_TClient.RemoveMapHistoryRecord(RemoveMapId.c_str());
+			if(pRemoveMapId && !pRemoveMapId->empty())
+				GameClient()->m_TClient.RemoveMapHistoryRecord(pRemoveMapId->c_str());
 		}
 		return;
 	}

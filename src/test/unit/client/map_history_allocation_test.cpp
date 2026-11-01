@@ -149,3 +149,30 @@ TEST(MapHistoryAllocation, ExistingVisitCanReadDateFromTheNameItReplaces)
 	EXPECT_EQ(Record.m_LastPlayedDate, ExpectedDate);
 	EXPECT_EQ(Record.m_MapName, "Replacement name longer than small string capacity");
 }
+
+TEST(MapHistoryAllocation, RemovalCanConsumeTheErasedRecordsBorrowedIdentityWithoutAllocation)
+{
+	constexpr const char *ID = "path:maps/a-map-identity-longer-than-small-string-capacity.map";
+	CMapHistory History;
+	History.RecordVisit("A", ID, 1, "2026-11-01");
+	History.RecordVisit("B", "b", 2, "2026-11-01");
+	History.RecordVisit("C", "c", 3, "2026-11-01");
+	const auto *pRecord = History.Find(ID);
+	ASSERT_NE(pRecord, nullptr);
+	const std::string_view BorrowedId = pRecord->m_MapId;
+	bool Removed = false, Triggered = false;
+	size_t Attempts = 0;
+	{
+		CPredictionAllocationFailure Failure;
+		Removed = History.Remove(BorrowedId);
+		Triggered = Failure.Triggered();
+		Attempts = Failure.Attempts();
+	}
+	EXPECT_TRUE(Removed);
+	EXPECT_FALSE(Triggered);
+	EXPECT_EQ(Attempts, 0u);
+	EXPECT_EQ(History.Size(), 2u);
+	EXPECT_EQ(History.Find(ID), nullptr);
+	EXPECT_NE(History.Find("b"), nullptr);
+	EXPECT_NE(History.Find("c"), nullptr);
+}

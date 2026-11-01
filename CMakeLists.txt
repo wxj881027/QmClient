@@ -5436,6 +5436,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_identity_file_test.cpp
     src/test/integration/qmclient/client/qm_map_history_storage_test.cpp
     src/test/integration/qmclient/client/qm_map_history_load_test.cpp
+    src/test/integration/qmclient/client/qm_map_history_rows_test.cpp
     src/test/integration/qmclient/client/qm_bg_draw_persistence_test.cpp
     src/test/integration/qmclient/client/qm_bg_draw_camera_geometry_test.cpp
     src/test/integration/qmclient/client/qm_outline_viewport_test.cpp
@@ -6277,6 +6278,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/client/map_history_allocation_test.cpp
       src/test/unit/client/map_history_id_allocation_test.cpp
       src/test/integration/qmclient/client/qm_map_history_session_allocation_test.cpp
+      src/test/integration/qmclient/client/qm_map_history_rows_allocation_test.cpp
       src/game/client/components/tclient/map_history.cpp
       src/test/unit/qmclient/client/qm_bg_draw_publication_test.cpp
       src/game/client/QmUi/QmLineInputMotion.cpp
