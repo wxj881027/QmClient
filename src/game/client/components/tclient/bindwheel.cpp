@@ -49,12 +49,14 @@ void CBindWheel::ConAddBindwheelLegacy(IConsole::IResult *pResult, void *pUserDa
 	const char *aCommand = pResult->GetString(2);
 
 	CBindWheel *pThis = static_cast<CBindWheel *>(pUserData);
-	if(pThis->m_vBinds.size() <= (size_t)BindPos)
-		pThis->m_vBinds.resize((size_t)BindPos + 1);
-
-	str_copy(pThis->m_vBinds[BindPos].m_aName, aName);
-	str_copy(pThis->m_vBinds[BindPos].m_aCommand, aCommand);
-	pThis->m_State.InvalidateSelection();
+	CBind Bind;
+	str_copy(Bind.m_aName, aName);
+	str_copy(Bind.m_aCommand, aCommand);
+	pThis->m_State.TryChangeBinds([&] {
+		if(pThis->m_vBinds.size() <= (size_t)BindPos)
+			pThis->m_vBinds.resize((size_t)BindPos + 1);
+		pThis->m_vBinds[BindPos] = Bind;
+	});
 }
 
 void CBindWheel::ConAddBindwheel(IConsole::IResult *pResult, void *pUserData)
@@ -81,16 +83,15 @@ void CBindWheel::ConRemoveAllBindwheelBinds(IConsole::IResult *pResult, void *pU
 	pThis->RemoveAllBinds();
 }
 
-void CBindWheel::AddBind(const char *pName, const char *pCommand)
+bool CBindWheel::AddBind(const char *pName, const char *pCommand)
 {
 	if((pName[0] == '\0' && pCommand[0] == '\0') || m_vBinds.size() >= BINDWHEEL_MAX_BINDS)
-		return;
+		return false;
 
 	CBind Bind;
 	str_copy(Bind.m_aName, pName);
 	str_copy(Bind.m_aCommand, pCommand);
-	m_vBinds.push_back(Bind);
-	m_State.InvalidateSelection();
+	return m_State.TryChangeBinds([&] { m_vBinds.push_back(Bind); });
 }
 
 void CBindWheel::RemoveBind(const char *pName, const char *pCommand)
@@ -115,12 +116,12 @@ bool CBindWheel::SetBind(int Index, const char *pName, const char *pCommand)
 	CBind Bind;
 	str_copy(Bind.m_aName, pName);
 	str_copy(Bind.m_aCommand, pCommand);
-	if(Index == -1)
-		m_vBinds.push_back(Bind);
-	else
-		m_vBinds[Index] = Bind;
-	m_State.InvalidateSelection();
-	return true;
+	return m_State.TryChangeBinds([&] {
+		if(Index == -1)
+			m_vBinds.push_back(Bind);
+		else
+			m_vBinds[Index] = Bind;
+	});
 }
 
 void CBindWheel::RemoveBind(int Index)

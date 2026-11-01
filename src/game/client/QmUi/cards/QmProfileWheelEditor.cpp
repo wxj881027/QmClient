@@ -245,9 +245,16 @@ void CMenus::RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext
 			}
 			if(Valid && Wheel.m_vBinds.size() + vMissing.size() <= BINDWHEEL_MAX_BINDS)
 			{
+				bool Saved = true;
 				for(const auto &[Label, Command] : vMissing)
-					Wheel.SetBind(-1, Label.c_str(), Command.c_str());
-				State.m_pStatus = Localizable("Saved to the bind wheel.");
+				{
+					if(!Wheel.SetBind(-1, Label.c_str(), Command.c_str()))
+					{
+						Saved = false;
+						break;
+					}
+				}
+				State.m_pStatus = Saved ? Localizable("Saved to the bind wheel.") : Localizable("Check the preset fields, label, and wheel capacity (64 entries).");
 			}
 			else
 				State.m_pStatus = Localizable("Check the preset fields, label, and wheel capacity (64 entries).");
