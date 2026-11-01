@@ -2369,8 +2369,8 @@ polish = "Rozmiar tabliczek klanu"
 [[message]]
 key = "Classic Easy"
 [message.translations]
-simplified_chinese = "经典 Easy"
-traditional_chinese = "經典 Easy"
+simplified_chinese = "古典 Easy"
+traditional_chinese = "古典 Easy"
 japanese = "クラシック Easy"
 korean = "클래식 Easy"
 russian = "Классический Easy"
@@ -2385,8 +2385,8 @@ polish = "Klasyczny Easy"
 [[message]]
 key = "Classic Next"
 [message.translations]
-simplified_chinese = "经典 Next"
-traditional_chinese = "經典 Next"
+simplified_chinese = "古典 Next"
+traditional_chinese = "古典 Next"
 japanese = "クラシック Next"
 korean = "클래식 Next"
 russian = "Классический Next"
@@ -2401,8 +2401,8 @@ polish = "Klasyczny Next"
 [[message]]
 key = "Classic Nut"
 [message.translations]
-simplified_chinese = "经典 Nut"
-traditional_chinese = "經典 Nut"
+simplified_chinese = "古典 Nut"
+traditional_chinese = "古典 Nut"
 japanese = "クラシック Nut"
 korean = "클래식 Nut"
 russian = "Классический Nut"
@@ -2417,8 +2417,8 @@ polish = "Klasyczny Nut"
 [[message]]
 key = "Classic Pro"
 [message.translations]
-simplified_chinese = "经典 Pro"
-traditional_chinese = "經典 Pro"
+simplified_chinese = "古典 Pro"
+traditional_chinese = "古典 Pro"
 japanese = "クラシック Pro"
 korean = "클래식 Pro"
 russian = "Классический Pro"
