@@ -37,6 +37,7 @@
 #include <game/client/QmUi/QmModuleLayoutAdapter.h>
 #include <game/client/QmUi/QmTree.h>
 #include <game/client/QmUi/QmUiPerf.h>
+#include <game/client/QmUi/SettingsBindCache.h>
 #include <game/client/QmUi/SettingsCard.h>
 #include <game/client/QmUi/SettingsGlyphPrewarm.h>
 #include <game/client/QmUi/SettingsLabelMetadata.h>
@@ -3873,27 +3874,7 @@ void CMenus::OnInit()
 
 void CMenus::EnsureSettingsBindCache()
 {
-	// NOLINTNEXTLINE(readability-identifier-naming)
-	extern std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
-	// NOLINTNEXTLINE(readability-identifier-naming)
-	extern bool g_CommandBindCacheInitialized;
-
-	if(g_CommandBindCacheInitialized)
-		return;
-
-	g_CommandBindCache.clear();
-	g_CommandBindCache.reserve(64);
-	for(int Mod = 0; Mod < KeyModifier::COMBINATION_COUNT; ++Mod)
-	{
-		for(int KeyId = 0; KeyId < KEY_LAST; ++KeyId)
-		{
-			const char *pBind = GameClient()->m_Binds.Get(KeyId, Mod);
-			if(!pBind[0])
-				continue;
-			g_CommandBindCache.try_emplace(pBind, KeyId, Mod);
-		}
-	}
-	g_CommandBindCacheInitialized = true;
+	g_CommandBindCache.Ensure(GameClient()->m_Binds);
 }
 
 void CMenus::PrewarmSettingsPages()

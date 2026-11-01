@@ -49,8 +49,6 @@
 
 using namespace FontIcons;
 
-extern std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
-
 void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float, bool PrewarmOnly)
 {
 	// 标签宽度必须按当前卡片内容计算；沿用整页宽度会把端点和模型输入框压缩到不可读。

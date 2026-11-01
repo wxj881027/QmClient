@@ -49,8 +49,6 @@
 
 using namespace FontIcons;
 
-extern std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
-
 void CMenus::RenderQmFunctionFavoriteMapsContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly)
 {
 	CSettingsContentLayoutFlow Flow(Content);
