@@ -15,6 +15,7 @@
 #include <engine/shared/config.h>
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
@@ -46,6 +47,18 @@ bool CQmMobileSpectator::ControlsAvailable() const
 	       !GameClient()->m_Emoticon.IsActive() && !GameClient()->m_HudEditor.IsActive() &&
 	       !GameClient()->m_Scoreboard.IsActive() && !GameClient()->m_Motd.IsActive() &&
 	       !GameClient()->m_ImportantAlert.IsActive() && !GameClient()->m_PieMenu.IsActive() && !Ui()->IsPopupOpen();
+}
+
+bool CQmMobileSpectator::FreeViewActive() const
+{
+	if(GameClient()->m_RankGhost.IsViewModeActive())
+		return GameClient()->m_RankGhost.ViewCameraMode() == CRankGhost::EViewCameraMode::FREE;
+	if(GameClient()->m_MultiViewActivated)
+		return false;
+	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
+		return GameClient()->m_DemoSpecId == SPEC_FREEVIEW;
+	const auto &SpecInfo = GameClient()->m_Snap.m_SpecInfo;
+	return SpecInfo.m_Active && SpecInfo.m_SpectatorId == SPEC_FREEVIEW && !SpecInfo.m_UsePosition;
 }
 
 void CQmMobileSpectator::OnNewSnapshot()
@@ -93,10 +106,12 @@ bool CQmMobileSpectator::OnTouchState(std::vector<IInput::CTouchFingerState> &vF
 	}
 	const vec2 Screen = ScreenSize();
 	const bool WasMoving = m_Touch.JoystickDirection() != vec2(0.0f, 0.0f);
-	const unsigned Actions = m_Touch.Update(vFingers, Layout(Screen), Screen);
+	const unsigned Actions = m_Touch.Update(vFingers, Layout(Screen, Client()->State() == IClient::STATE_DEMOPLAYBACK), Screen, Client()->GlobalTime());
 	for(int i = 0; i < NUM_ACTIONS; ++i)
 		if((Actions & (1U << i)) != 0)
 			PerformAction(i);
+	if(m_Touch.MapTapped() && FreeViewActive() && ControlsAvailable())
+		GameClient()->m_Spectator.SpectateClosest();
 	if(m_Touch.ZoomFactor() != 1.0f)
 	{
 		// 连续倍率转为现有缩放命令的档位，复用自动旁观、多人取景和缩放限制。
@@ -164,8 +179,18 @@ void CQmMobileSpectator::OnRender()
 		return;
 	}
 	const vec2 Screen = ScreenSize();
-	const auto Geometry = Layout(Screen);
+	const auto Geometry = Layout(Screen, Client()->State() == IClient::STATE_DEMOPLAYBACK);
 	Graphics()->MapScreen(0.0f, 0.0f, Screen.x, Screen.y);
+	if(FreeViewActive() && !g_Config.m_QmRenderCursorSpec)
+	{
+		// 轻点地图以画面中央准星选人，摇杆移动和捏合不会移动该选人基准。
+		const vec2 Center = Screen * 0.5f;
+		const ColorRGBA Color = ui_token::color::TEXT_SECONDARY;
+		Graphics()->DrawRect(Center.x - 5.0f, Center.y - 0.5f, 3.0f, 1.0f, Color);
+		Graphics()->DrawRect(Center.x + 2.0f, Center.y - 0.5f, 3.0f, 1.0f, Color);
+		Graphics()->DrawRect(Center.x - 0.5f, Center.y - 5.0f, 1.0f, 3.0f, Color);
+		Graphics()->DrawRect(Center.x - 0.5f, Center.y + 2.0f, 1.0f, 3.0f, Color);
+	}
 	Geometry.m_Joystick.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.18f), IGraphics::CORNER_ALL, 52.0f);
 	const vec2 Knob = Geometry.m_Joystick.Center() + m_Touch.JoystickDirection() * 34.0f;
 	const CUIRect KnobRect = {Knob.x - 18.0f, Knob.y - 18.0f, 36.0f, 36.0f};

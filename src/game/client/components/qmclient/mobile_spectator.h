@@ -10,6 +10,7 @@ class CQmMobileSpectator : public CComponent
 	qm_mobile_spectator::CTouchState m_Touch;
 	qm_mobile_spectator::CJoinState m_Join;
 	bool ControlsAvailable() const;
+	bool FreeViewActive() const;
 	vec2 ScreenSize() const;
 	void PerformAction(int Action);
 

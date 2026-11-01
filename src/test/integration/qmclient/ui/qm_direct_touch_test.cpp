@@ -75,7 +75,7 @@ namespace
 			vec2 Offset;
 			Region.Begin(&View, &Offset, &Params);
 			Region.AddRect({View.x + Offset.x, View.y + Offset.y, Horizontal ? 500.0f : View.w, Horizontal ? View.h : 500.0f});
-			const int Click = Button ? m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button) : 0;
+			const int Click = Button ? m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT) : 0;
 			Region.End();
 			return Click;
 		}
@@ -88,12 +88,12 @@ TEST_F(QmDirectTouch, FirstPressUsesAbsolutePositionAndTapClicksOnlyOnRelease)
 	EXPECT_NEAR(m_Ui.MouseX(), 70.0f, 0.001f);
 	EXPECT_NEAR(m_Ui.MouseY(), 60.0f, 0.001f);
 	EXPECT_TRUE(m_Ui.MouseButtonClicked(0));
-	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button), 0);
+	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT), 0);
 	EXPECT_EQ(m_Ui.ActiveItem(), &m_ButtonId);
 	Release();
-	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button), 1);
+	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT), 1);
 	Frame();
-	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button), 0);
+	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT), 0);
 }
 
 TEST_F(QmDirectTouch, SmallMotionKeepsTapWithoutScrolling)
@@ -203,19 +203,19 @@ TEST_F(QmDirectTouch, SettingsSliderStartsOnFirstTouchAndWinsOverList)
 TEST_F(QmDirectTouch, SecondFingerCancelsPressUntilEveryFingerIsReleased)
 {
 	Touch(70.0f, 60.0f);
-	m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button);
+	m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT);
 	m_Input.SetTouchFingers({Finger(70.0f, 60.0f), Finger(90.0f, 60.0f, 2)});
 	Frame();
-	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button), 0);
+	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT), 0);
 	EXPECT_EQ(m_Ui.ActiveItem(), nullptr);
 	Touch(70.0f, 60.0f);
 	EXPECT_FALSE(m_Ui.MouseButton(0));
 	Release();
-	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button), 0);
+	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT), 0);
 	Touch(70.0f, 60.0f, 3);
-	m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button);
+	m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT);
 	Release();
-	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button), 1);
+	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT), 1);
 }
 
 TEST_F(QmDirectTouch, ReplacedFingerCannotContinueCapturedDrag)
@@ -234,43 +234,43 @@ TEST_F(QmDirectTouch, ReplacedFingerCannotContinueCapturedDrag)
 TEST_F(QmDirectTouch, DisableAndResumeRequiresReleaseBeforeNextPress)
 {
 	Touch(70.0f, 60.0f);
-	m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button);
+	m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT);
 	m_Ui.SetEnabled(false);
 	Frame();
 	m_Ui.SetEnabled(true);
 	Frame();
 	EXPECT_FALSE(m_Ui.MouseButton(0));
 	Release();
-	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button), 0);
+	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT), 0);
 	Touch(70.0f, 60.0f, 2);
-	m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button);
+	m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT);
 	Release();
-	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button), 1);
+	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT), 1);
 }
 
 TEST_F(QmDirectTouch, ResizeCancelsGestureWithoutSynthesizingReleaseClick)
 {
 	Touch(70.0f, 60.0f);
-	m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button);
+	m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT);
 	m_Graphics.SetFramebufferSize(1280, 720);
 	Frame();
 	EXPECT_FALSE(m_Ui.MouseButton(0));
-	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button), 0);
+	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT), 0);
 	Release();
-	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button), 0);
+	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT), 0);
 }
 
 TEST_F(QmDirectTouch, ExplicitInterruptionClearsPressAndRequiresAllFingersReleased)
 {
 	Touch(70.0f, 60.0f);
-	m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button);
+	m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT);
 	m_Ui.CancelTouchInput();
 	EXPECT_FALSE(m_Ui.MouseButton(0));
 	EXPECT_EQ(m_Ui.ActiveItem(), nullptr);
 	Frame();
 	EXPECT_FALSE(m_Ui.MouseButtonClicked(0));
 	Release();
-	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button), 0);
+	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT), 0);
 }
 
 TEST_F(QmDirectTouch, RemovedListCannotTransferHeldFingerToNewPageButton)
@@ -281,22 +281,22 @@ TEST_F(QmDirectTouch, RemovedListCannotTransferHeldFingerToNewPageButton)
 	// 原列表本帧不再渲染；下一帧必须取消其仍按住的手势。
 	Frame();
 	EXPECT_FALSE(m_Ui.MouseButton(0));
-	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button), 0);
+	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT), 0);
 	Release();
-	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button), 0);
+	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT), 0);
 }
 
 TEST_F(QmDirectTouch, LongPressCancelsLeftClickBeforeStartingRightClick)
 {
 	Touch(70.0f, 60.0f);
-	m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button);
+	m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT);
 	for(int FrameIndex = 0; FrameIndex < 40; ++FrameIndex)
 		Frame();
 	EXPECT_FALSE(m_Ui.MouseButton(0));
 	EXPECT_TRUE(m_Ui.MouseButton(1));
-	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button), 0);
+	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT), 0);
 	Release();
-	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button), 0);
+	EXPECT_EQ(m_Ui.DoButtonLogic(&m_ButtonId, 0, &m_Button, BUTTONFLAG_LEFT), 0);
 }
 
 TEST_F(QmDirectTouch, IndependentTouchStateReportsOnlyValidTapRelease)
