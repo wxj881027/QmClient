@@ -6255,6 +6255,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/ui/qm_animation_cancel_allocation_test.cpp
       src/test/unit/qmclient/ui/settings_icon_feedback_allocation_test.cpp
       src/test/unit/qmclient/ui/qm_icon_font_failure_test.cpp
+      src/test/unit/engine/graphics/quad_container_append_failure_test.cpp
       src/game/client/QmUi/QmLineInputMotion.cpp
       src/test/integration/qmclient/client/qm_markdown_broadcast_payload_test.cpp
       src/game/client/components/qmclient/qm_realtime.cpp

@@ -2867,16 +2867,10 @@ int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CQuadItem *pAr
 
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 
-	if(!GraphicsCanAppendQuads(Container.m_vQuads.size(), Num) || (Num > 0 && pArray == nullptr))
+	if(Num > 0 && pArray == nullptr)
 		return -1;
 
-	const int RetOff = static_cast<int>(Container.m_vQuads.size());
-
-	for(int i = 0; i < Num; ++i)
-	{
-		Container.m_vQuads.emplace_back();
-		SQuadContainer::SQuad &Quad = Container.m_vQuads.back();
-
+	const int RetOff = AppendGraphicsQuads(Container.m_vQuads, Num, [&](SQuadContainer::SQuad &Quad, int i) {
 		Quad.m_aVertices[0].m_Pos.x = pArray[i].m_X;
 		Quad.m_aVertices[0].m_Pos.y = pArray[i].m_Y;
 		Quad.m_aVertices[0].m_Tex = m_aTexture[0];
@@ -2905,7 +2899,9 @@ int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CQuadItem *pAr
 
 			Rotate(Center, Quad.m_aVertices, 4);
 		}
-	}
+	});
+	if(RetOff < 0)
+		return -1;
 
 	if(Container.m_AutomaticUpload)
 		QuadContainerUpload(ContainerIndex);
@@ -2920,16 +2916,10 @@ int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CFreeformItem 
 
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 
-	if(!GraphicsCanAppendQuads(Container.m_vQuads.size(), Num) || (Num > 0 && pArray == nullptr))
+	if(Num > 0 && pArray == nullptr)
 		return -1;
 
-	const int RetOff = static_cast<int>(Container.m_vQuads.size());
-
-	for(int i = 0; i < Num; ++i)
-	{
-		Container.m_vQuads.emplace_back();
-		SQuadContainer::SQuad &Quad = Container.m_vQuads.back();
-
+	const int RetOff = AppendGraphicsQuads(Container.m_vQuads, Num, [&](SQuadContainer::SQuad &Quad, int i) {
 		Quad.m_aVertices[0].m_Pos.x = pArray[i].m_X0;
 		Quad.m_aVertices[0].m_Pos.y = pArray[i].m_Y0;
 		Quad.m_aVertices[0].m_Tex = m_aTexture[0];
@@ -2949,7 +2939,9 @@ int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CFreeformItem 
 		Quad.m_aVertices[3].m_Pos.y = pArray[i].m_Y2;
 		Quad.m_aVertices[3].m_Tex = m_aTexture[2];
 		Quad.m_aVertices[3].m_Color = m_aColor[2];
-	}
+	});
+	if(RetOff < 0)
+		return -1;
 
 	if(Container.m_AutomaticUpload)
 		QuadContainerUpload(ContainerIndex);

@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <cstddef>
 #include <limits>
+#include <type_traits>
+#include <vector>
 
 // 六个索引的后端有符号绘制计数及字节偏移都必须可表示；这不是一次CPU暂存的容量。
 inline constexpr size_t GRAPHICS_MAX_CONTAINER_QUADS = std::min(
@@ -14,6 +16,30 @@ inline bool GraphicsCanAppendQuads(size_t Current, int Count)
 {
 	return Count >= 0 && Current <= GRAPHICS_MAX_CONTAINER_QUADS &&
 	       static_cast<size_t>(Count) <= GRAPHICS_MAX_CONTAINER_QUADS - Current;
+}
+
+// 先准备整批空间；回调只能填写给定的新项，不能修改容器或旧前缀。
+template<typename TQuad, typename TFill>
+int AppendGraphicsQuads(std::vector<TQuad> &Quads, int Count, TFill &&Fill)
+{
+	static_assert(std::is_nothrow_move_constructible_v<TQuad> && std::is_nothrow_destructible_v<TQuad>);
+	if(!GraphicsCanAppendQuads(Quads.size(), Count))
+		return -1;
+
+	const size_t Start = Quads.size();
+	Quads.resize(Start + static_cast<size_t>(Count));
+	try
+	{
+		for(int i = 0; i < Count; ++i)
+			Fill(Quads[Start + static_cast<size_t>(i)], i);
+	}
+	catch(...)
+	{
+		// 只缩短失败批次，不申请空间或触碰设备，保留原异常。
+		Quads.resize(Start);
+		throw;
+	}
+	return static_cast<int>(Start);
 }
 
 inline bool GraphicsResolveQuadRange(size_t Available, int Offset, int &Count)
