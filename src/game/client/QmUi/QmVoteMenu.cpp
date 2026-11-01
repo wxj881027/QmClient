@@ -404,21 +404,14 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		aRects[0] = Row;
 		return aRects;
 	};
+	static CListBox s_Maps;
+	constexpr float RowHeight = 24.0f;
 	CUIRect TableHeader;
 	List.HSplitTop(20.0f, &TableHeader, &List);
 	TableHeader.Draw(Ink.WithAlpha(0.06f), IGraphics::CORNER_ALL, 4.0f);
-	int Selected = -1;
-	for(size_t i = 0; i < State.m_vVisible.size(); ++i)
-		if(State.m_vMaps[State.m_vVisible[i]].m_Name == State.m_SelectedName)
-			Selected = (int)i;
-	static CListBox s_Maps;
-	s_Maps.SetItemColors(Ink.WithAlpha(0.12f), Ink.WithAlpha(0.08f), Ink.WithAlpha(0.05f));
-	s_Maps.SetActive(!Ui()->IsPopupOpen() && !m_FilterInput.IsActive() && !m_ExcludeInput.IsActive() && !m_CallvoteReasonInput.IsActive());
-	if(ScrollToSelection)
-		s_Maps.ScrollToSelected();
-	constexpr float RowHeight = 24.0f;
-	s_Maps.DoStart(RowHeight, (int)State.m_vVisible.size(), 1, 3, Selected, &List, false);
-	// 列表出现滚动条时行宽会扣掉滚动条宽度；表头按同一宽度排版，避免列整体错位。
+	// 表头必须画在列表滚动区之外：DoStart 会把 UI 裁剪压到列表可视区，
+	// 之后再画表头文字会被整行裁掉。滚动条宽度沿用上一帧 DoStart 记录的
+	// 策略宽度（与服务器列表表头同一做法），列宽仍按滚动条占用扣除。
 	CUIRect HeaderColumns = TableHeader;
 	const bool HeaderScrolls = (float)State.m_vVisible.size() * RowHeight > List.h;
 	HeaderColumns.VSplitRight(HeaderScrolls ? s_Maps.ScrollbarWidthMax() : 0.0f, &HeaderColumns, nullptr);
@@ -434,6 +427,15 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		Label(aHead[3], Localize("Points"), 12.0f, TEXTALIGN_ML, true);
 		Label(aHead[4], Localize("Release date"), 12.0f, TEXTALIGN_ML, true);
 	}
+	int Selected = -1;
+	for(size_t i = 0; i < State.m_vVisible.size(); ++i)
+		if(State.m_vMaps[State.m_vVisible[i]].m_Name == State.m_SelectedName)
+			Selected = (int)i;
+	s_Maps.SetItemColors(Ink.WithAlpha(0.12f), Ink.WithAlpha(0.08f), Ink.WithAlpha(0.05f));
+	s_Maps.SetActive(!Ui()->IsPopupOpen() && !m_FilterInput.IsActive() && !m_ExcludeInput.IsActive() && !m_CallvoteReasonInput.IsActive());
+	if(ScrollToSelection)
+		s_Maps.ScrollToSelected();
+	s_Maps.DoStart(RowHeight, (int)State.m_vVisible.size(), 1, 3, Selected, &List, false);
 	const int ItemCount = (int)State.m_vVisible.size();
 	const float ScrollY = std::max(0.0f, s_Maps.ScrollOffsetY());
 	const int FirstVisible = ScrollToSelection ? 0 : std::clamp((int)std::floor(ScrollY / RowHeight) - 1, 0, ItemCount);
