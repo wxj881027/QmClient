@@ -4,6 +4,7 @@
 #include <base/color.h>
 #include <base/vmath.h>
 
+#include <game/client/components/qmclient/bg_draw_geometry.h>
 #include <game/client/components/tclient/bg_draw_file.h>
 
 #include <algorithm>
@@ -50,7 +51,7 @@ public:
 	void PenUp() { m_Drawing = false; }
 	bool MoveTo(const CBgDrawItemDataPoint &Point)
 	{
-		if(!m_Drawing)
+		if(!m_Drawing || !QmBgDrawPointIsFinite(Point))
 			return false;
 		const auto &Last = m_vData.back();
 		if(Point.x == Last.x && Point.y == Last.y && Point.w == Last.w &&

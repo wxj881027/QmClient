@@ -3,6 +3,8 @@
 
 #include <engine/graphics.h>
 
+#include <game/client/components/qmclient/bg_draw_geometry.h>
+
 #include <vector>
 
 // 沿用画笔原有的OpenGL单容器分组上限。
@@ -14,8 +16,11 @@ template<typename TGraphics>
 void QmBgDrawAppendQuads(TGraphics &Graphics, std::vector<int> &vIndexes, int &QuadCount,
 	IGraphics::CFreeformItem *pQuads, int Count, ColorRGBA Color)
 {
-	if(Count <= 0 || Count > QM_BG_DRAW_MAX_QUADS_PER_CONTAINER || pQuads == nullptr)
+	if(Count <= 0 || Count > QM_BG_DRAW_MAX_QUADS_PER_CONTAINER || pQuads == nullptr || !QmBgDrawColorIsFinite(Color))
 		return;
+	for(int i = 0; i < Count; ++i)
+		if(!QmBgDrawQuadIsFinite(pQuads[i]))
+			return;
 
 	if(vIndexes.empty() || Count > QM_BG_DRAW_MAX_QUADS_PER_CONTAINER - QuadCount)
 	{

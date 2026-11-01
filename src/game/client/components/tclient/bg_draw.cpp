@@ -67,19 +67,10 @@ private:
 	}
 	void AddCircle(vec2 Pos, float Angle1, float Angle2, float Width, ColorRGBA Color)
 	{
-		const float Radius = Width / 2.0f;
-		const int Segments = std::clamp((int)(std::fabs(Angle2 - Angle1) / (pi / 8.0f)), 1, 20);
-		const float SegmentAngle = (Angle2 - Angle1) / Segments;
-		IGraphics::CFreeformItem FreeformItems[20];
-		for(int i = 0; i < Segments; ++i)
-		{
-			const float A1 = Angle1 + (float)i * SegmentAngle;
-			const float A2 = A1 + SegmentAngle;
-			const vec2 P1 = Pos + direction(A1) * Radius;
-			const vec2 P2 = Pos + direction(A2) * Radius;
-			FreeformItems[i] = IGraphics::CFreeformItem(P1.x, P1.y, P2.x, P2.y, Pos.x, Pos.y, Pos.x, Pos.y);
-		}
-		AddQuads(FreeformItems, Segments, Color);
+		std::array<IGraphics::CFreeformItem, QM_BG_DRAW_ARC_QUADS> aQuads;
+		const int Count = QmBgDrawBuildArc(Pos, Angle1, Angle2, Width, aQuads);
+		if(Count > 0)
+			AddQuads(aQuads.data(), Count, Color);
 	}
 
 public:
@@ -132,19 +123,8 @@ public:
 class CBgDrawItem
 {
 private:
-	CGameClient &m_This;
-
 	CPathContainer m_PathContainer;
 	CQmBgDrawStroke m_Stroke;
-
-	float CurrentWidth() const
-	{
-		return (float)g_Config.m_QmBgDrawWidth * m_This.m_Camera.m_Zoom;
-	}
-	ColorRGBA CurrentColor() const
-	{
-		return color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmBgDrawColor));
-	}
 
 public:
 	bool m_Killed = false;
@@ -155,9 +135,9 @@ public:
 	vec2 Max() const { return m_Stroke.Max(); }
 
 	void PenUp() { m_Stroke.PenUp(); }
-	bool MoveTo(vec2 Pos)
+	bool MoveTo(const CBgDrawItemDataPoint &Point)
 	{
-		if(!m_Stroke.MoveTo({Pos, CurrentWidth(), CurrentColor()}))
+		if(!m_Stroke.MoveTo(Point))
 			return false;
 		m_PathContainer.Update(Data());
 		return true;
@@ -213,13 +193,13 @@ public:
 	}
 
 	CBgDrawItem() = delete;
-	CBgDrawItem(CGameClient &This, vec2 StartPos) :
-		m_This(This), m_PathContainer(*This.Graphics()), m_Stroke(CBgDrawItemDataPoint(StartPos, CurrentWidth(), CurrentColor()))
+	CBgDrawItem(CGameClient &This, const CBgDrawItemDataPoint &Point) :
+		m_PathContainer(*This.Graphics()), m_Stroke(Point)
 	{
 		m_PathContainer.Update(Data());
 	}
 	CBgDrawItem(CGameClient &This, const CBgDrawItemData &Data) :
-		m_This(This), m_PathContainer(*This.Graphics()), m_Stroke(Data)
+		m_PathContainer(*This.Graphics()), m_Stroke(Data)
 	{
 		m_PathContainer.Update(this->Data());
 	}
@@ -400,17 +380,19 @@ void CBgDraw::OnRender()
 		// Handle updating active item
 		const InputMode Input = m_aInputData[Dummy];
 		CBgDrawItem *&ActiveItem = m_apActiveItems[Dummy];
-		vec2 Pos;
-		if(GameClient()->m_Snap.m_SpecInfo.m_Active && Dummy == g_Config.m_ClDummy)
-			Pos = GameClient()->m_Camera.m_Center;
-		else
-			Pos = (GameClient()->m_Controls.m_aTargetPos[Dummy] - GameClient()->m_Camera.m_Center) * GameClient()->m_Camera.m_Zoom + GameClient()->m_Camera.m_Center;
+		const vec2 Pos = QmBgDrawWorldPosition(GameClient()->m_Controls.m_aTargetPos[Dummy], GameClient()->m_Camera.m_Center,
+			GameClient()->m_Camera.m_Zoom, GameClient()->m_Snap.m_SpecInfo.m_Active && Dummy == g_Config.m_ClDummy);
 		if(Input == InputMode::DRAW)
 		{
-			if(ActiveItem != nullptr)
-				m_Dirty |= ActiveItem->MoveTo(Pos);
-			else
-				ActiveItem = AddItem(*GameClient(), Pos);
+			const auto Point = QmBgDrawMakePoint(Pos, GameClient()->m_Camera.m_Zoom, g_Config.m_QmBgDrawWidth,
+				color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmBgDrawColor)));
+			if(QmBgDrawPointIsFinite(Point))
+			{
+				if(ActiveItem != nullptr)
+					m_Dirty |= ActiveItem->MoveTo(Point);
+				else
+					ActiveItem = AddItem(*GameClient(), Point);
+			}
 		}
 		else if(ActiveItem != nullptr)
 		{

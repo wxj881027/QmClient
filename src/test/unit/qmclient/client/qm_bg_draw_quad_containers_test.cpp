@@ -245,3 +245,45 @@ TEST(QmBgDrawQuadContainers, InvalidBatchesAreRejectedBeforeCreatingOrChangingOw
 	EXPECT_EQ(Graphics.m_Creates, 0);
 	EXPECT_EQ(Graphics.m_Appends, 0);
 }
+
+TEST(QmBgDrawQuadContainers, InvalidQuadAfterAValidPrefixDoesNotAllocateOrCreateAnOwner)
+{
+	SGraphics Graphics;
+	std::vector<int> vIndexes;
+	int QuadCount = 0;
+	IGraphics::CFreeformItem aQuads[2]{};
+	aQuads[1].m_X2 = std::numeric_limits<float>::quiet_NaN();
+	bool Triggered = false;
+	size_t Attempts = 0;
+	{
+		CPredictionAllocationFailure Failure;
+		QmBgDrawAppendQuads(Graphics, vIndexes, QuadCount, aQuads, 2, gs_Color);
+		Triggered = Failure.Triggered();
+		Attempts = Failure.Attempts();
+	}
+	EXPECT_FALSE(Triggered);
+	EXPECT_EQ(Attempts, 0u);
+	EXPECT_TRUE(vIndexes.empty());
+	EXPECT_EQ(QuadCount, 0);
+	EXPECT_EQ(Graphics.m_Creates, 0);
+	EXPECT_EQ(Graphics.m_Appends, 0);
+	EXPECT_EQ(Graphics.m_Uploads, 0);
+	EXPECT_EQ(Graphics.m_Color, ColorRGBA(1, 1, 1, 1));
+}
+
+TEST(QmBgDrawQuadContainers, InvalidColorKeepsTheExistingOwnerCountAndGraphicsState)
+{
+	SGraphics Graphics;
+	std::vector<int> vIndexes{0};
+	int QuadCount = 5;
+	IGraphics::CFreeformItem Quad{};
+	auto Color = gs_Color;
+	Color.r = std::numeric_limits<float>::infinity();
+	QmBgDrawAppendQuads(Graphics, vIndexes, QuadCount, &Quad, 1, Color);
+	EXPECT_EQ(vIndexes, (std::vector<int>{0}));
+	EXPECT_EQ(QuadCount, 5);
+	EXPECT_EQ(Graphics.m_Creates, 0);
+	EXPECT_EQ(Graphics.m_Appends, 0);
+	EXPECT_EQ(Graphics.m_Uploads, 0);
+	EXPECT_EQ(Graphics.m_Color, ColorRGBA(1, 1, 1, 1));
+}

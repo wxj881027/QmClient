@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <limits>
+
 namespace
 {
 	CBgDrawItemDataPoint Point(float X, float Y, float Width = 2.0f)
@@ -61,6 +63,52 @@ TEST(QmBgDrawStroke, StopsAtPointLimit)
 		ASSERT_TRUE(Stroke.MoveTo(Point(static_cast<float>(i) * 10.0f, 0)));
 	EXPECT_FALSE(Stroke.MoveTo(Point(20000, 0)));
 	EXPECT_EQ(Stroke.Data().size(), CQmBgDrawStroke::MAX_POINTS);
+}
+
+TEST(QmBgDrawStroke, InvalidPointKeepsDataBoundsAndTheAbilityToResume)
+{
+	for(float Bad : {std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity()})
+	{
+		SCOPED_TRACE(Bad);
+		for(int Field = 0; Field < 7; ++Field)
+		{
+			SCOPED_TRACE(Field);
+			CQmBgDrawStroke Stroke(Point(10, 20));
+			auto Invalid = Point(100, 200);
+			float *apFields[]{&Invalid.x, &Invalid.y, &Invalid.w, &Invalid.r, &Invalid.g, &Invalid.b, &Invalid.a};
+			*apFields[Field] = Bad;
+			EXPECT_FALSE(Stroke.MoveTo(Invalid));
+			ASSERT_EQ(Stroke.Data().size(), 1u);
+			EXPECT_EQ(Stroke.Data().front().Pos(), vec2(10, 20));
+			EXPECT_EQ(Stroke.Min(), vec2(8, 18));
+			EXPECT_EQ(Stroke.Max(), vec2(12, 22));
+			EXPECT_TRUE(Stroke.MoveTo(Point(100, 200)));
+		}
+	}
+}
+
+TEST(QmBgDrawStroke, InvalidColorDoesNotOverwriteTheLastShortSegment)
+{
+	CQmBgDrawStroke Stroke(Point(0, 0, 10));
+	ASSERT_TRUE(Stroke.MoveTo(Point(1, 0, 10)));
+	auto Invalid = Point(2, 1, 10);
+	Invalid.r = std::numeric_limits<float>::quiet_NaN();
+	EXPECT_FALSE(Stroke.MoveTo(Invalid));
+	ASSERT_EQ(Stroke.Data().size(), 2u);
+	EXPECT_EQ(Stroke.Data().back().Pos(), vec2(1, 0));
+	EXPECT_TRUE(Stroke.MoveTo(Point(2, 1, 10)));
+	ASSERT_EQ(Stroke.Data().size(), 2u);
+	EXPECT_EQ(Stroke.Data().back().Pos(), vec2(2, 1));
+}
+
+TEST(QmBgDrawStroke, FiniteSavedWidthsKeepTheirExistingValues)
+{
+	const CQmBgDrawStroke Stroke(CBgDrawItemData{Point(10, 20, -4), Point(30, 40, 0)});
+	ASSERT_EQ(Stroke.Data().size(), 2u);
+	EXPECT_TRUE(QmBgDrawPointIsFinite(Stroke.Data()[0]));
+	EXPECT_TRUE(QmBgDrawPointIsFinite(Stroke.Data()[1]));
+	EXPECT_FLOAT_EQ(Stroke.Data()[0].w, -4);
+	EXPECT_FLOAT_EQ(Stroke.Data()[1].w, 0);
 }
 
 TEST(QmBgDrawStore, ZeroCapacityReleasesEveryActiveBorrow)

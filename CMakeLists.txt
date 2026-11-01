@@ -5201,6 +5201,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_tclient_warlist_test.cpp
     src/test/unit/qmclient/client/qm_auto_vote_test.cpp
     src/test/unit/qmclient/client/qm_bg_draw_state_test.cpp
+    src/test/unit/qmclient/client/qm_bg_draw_geometry_test.cpp
     src/test/unit/qmclient/client/qm_bg_draw_file_test.cpp
     src/test/unit/qmclient/client/qm_bindwheel_state_test.cpp
     src/test/unit/qmclient/client/qm_bindwheel_geometry_test.cpp
@@ -5426,6 +5427,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_json_send_roundtrip_test.cpp
     src/test/integration/qmclient/client/qm_identity_file_test.cpp
     src/test/integration/qmclient/client/qm_bg_draw_persistence_test.cpp
+    src/test/integration/qmclient/client/qm_bg_draw_camera_geometry_test.cpp
     src/test/integration/qmclient/client/qm_users_sync_text_test.cpp
     src/test/integration/qmclient/client/qm_realtime_service_data_test.cpp
     src/test/integration/qmclient/client/qm_realtime_budget_test.cpp
