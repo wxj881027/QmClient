@@ -73,17 +73,16 @@ TEST(SettingsMobilePages, FontCardBelongsToGraphicsPage)
 	EXPECT_TRUE(InGraphics);
 	EXPECT_FALSE(InTClient);
 }
-// 手机端字号与行高整体放大；桌面保持 1.0，指标与旧行为一致。
-TEST(SettingsMobilePages, MobileTextScaleEnlargesMetrics)
+// 当前移动端只改单列排版，字号与行高保持桌面基线；等排版允许再整体放大。
+TEST(SettingsMobilePages, MobileTextScaleMatchesDesktopBaseline)
 {
 	const SSettingsContentMetrics Desktop = ResolveSettingsContentMetrics(900.0f, ResolveSettingsTextScale(false));
 	const SSettingsContentMetrics Mobile = ResolveSettingsContentMetrics(900.0f, ResolveSettingsTextScale(true));
-	EXPECT_GT(Mobile.m_BodySize, Desktop.m_BodySize);
-	EXPECT_GT(Mobile.m_HeadlineSize, Desktop.m_HeadlineSize);
-	EXPECT_GT(Mobile.m_LineHeight, Desktop.m_LineHeight);
-	EXPECT_GT(Mobile.m_RowStep, Desktop.m_RowStep);
-	// 放大后仍要保持可读下限，不能因为夹取把字号退回原值。
-	EXPECT_GT(Mobile.m_SmallSize, Desktop.m_SmallSize);
+	EXPECT_FLOAT_EQ(Mobile.m_BodySize, Desktop.m_BodySize);
+	EXPECT_FLOAT_EQ(Mobile.m_HeadlineSize, Desktop.m_HeadlineSize);
+	EXPECT_FLOAT_EQ(Mobile.m_LineHeight, Desktop.m_LineHeight);
+	EXPECT_FLOAT_EQ(Mobile.m_RowStep, Desktop.m_RowStep);
+	EXPECT_FLOAT_EQ(Mobile.m_SmallSize, Desktop.m_SmallSize);
 }
 
 // 桌面缩放系数必须是恒等变换，否则桌面设置页会跟着手机一起变大。
