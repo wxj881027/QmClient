@@ -3923,14 +3923,7 @@ CChat::EChatSendResult CChat::SendChatQueued(int Team, const char *pLine, bool A
 
 		if(Result != EChatSendResult::REJECTED)
 		{
-			const int Length = str_length(pLine);
-			const int OriginalLength = pLocalOriginal != nullptr ? str_length(pLocalOriginal) : 0;
-			CHistoryEntry *pEntry = m_History.Allocate(sizeof(CHistoryEntry) + Length + (OriginalLength > 0 ? OriginalLength + 1 : 0));
-			pEntry->m_Team = Team;
-			pEntry->m_OriginalOffset = OriginalLength > 0 ? Length + 1 : 0;
-			str_copy(pEntry->m_aText, pLine, Length + 1);
-			if(OriginalLength > 0)
-				str_copy(pEntry->m_aText + pEntry->m_OriginalOffset, pLocalOriginal, OriginalLength + 1);
+			QmAppendChatHistory(m_History, Team, pLine, pLocalOriginal != nullptr ? std::string_view(pLocalOriginal) : std::string_view{});
 		}
 		return Result;
 	};

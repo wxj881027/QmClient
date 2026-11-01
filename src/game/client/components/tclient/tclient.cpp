@@ -1495,10 +1495,7 @@ bool CTClient::ChatDoSpecId(const char *pInput)
 	if(!pNumber)
 		return false;
 
-	const int Length = str_length(pInput);
-	CChat::CHistoryEntry *pEntry = GameClient()->m_Chat.m_History.Allocate(sizeof(CChat::CHistoryEntry) + Length);
-	pEntry->m_Team = 0;
-	str_copy(pEntry->m_aText, pInput, Length + 1);
+	QmAppendChatHistory(GameClient()->m_Chat.m_History, 0, pInput);
 
 	int ClientId = 0;
 	if(!str_toint(pNumber, &ClientId))

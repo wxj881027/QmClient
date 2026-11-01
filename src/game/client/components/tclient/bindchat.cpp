@@ -205,10 +205,7 @@ bool CBindChat::ChatDoBinds(const char *pText)
 		{
 			ExecuteBind(Bind, pSpace ? pSpace + 1 : nullptr);
 			// Add to history (see CChat::SendChatQueued)
-			const int Length = str_length(pText);
-			CChat::CHistoryEntry *pEntry = Chat.m_History.Allocate(sizeof(CChat::CHistoryEntry) + Length);
-			pEntry->m_Team = 0; // All
-			str_copy(pEntry->m_aText, pText, Length + 1);
+			QmAppendChatHistory(Chat.m_History, 0, pText);
 			return true;
 		}
 	}

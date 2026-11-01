@@ -3570,6 +3570,7 @@ if(CLIENT)
     components/qmclient/chat_emoji_load.cpp
     components/qmclient/chat_translate_button.h
     components/qmclient/chat_emoji.h
+    components/qmclient/chat_history.h
     components/qmclient/chat_emoji_render.h
     components/qmclient/collision_hitbox.cpp
     components/qmclient/collision_hitbox.h
@@ -4899,6 +4900,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_chat_emoji_load_test.cpp
     src/game/client/components/qmclient/chat_emoji_load.cpp
     src/test/integration/qmclient/client/qm_chat_post_send_failure_test.cpp
+    src/test/integration/qmclient/client/qm_chat_history_test.cpp
     src/test/integration/qmclient/client/qm_skin_download_session_test.cpp
     src/test/integration/qmclient/client/qm_skin_outline_render_test.cpp
     src/test/integration/qmclient/client/qm_font_download_storage_test.cpp
