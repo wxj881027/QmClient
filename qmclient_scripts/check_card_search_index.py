@@ -21,9 +21,9 @@ import sys
 from pathlib import Path
 
 try:
-	from card_search_action_labels import ACTION_BUTTON_LABELS
+	from card_search_action_labels import ACTION_BUTTON_LABELS, NON_ACTION_BUTTON_LABELS
 except ImportError:
-	from qmclient_scripts.card_search_action_labels import ACTION_BUTTON_LABELS
+	from qmclient_scripts.card_search_action_labels import ACTION_BUTTON_LABELS, NON_ACTION_BUTTON_LABELS
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INDEX_RELATIVE = Path("src/game/client/QmUi/cards/QmCardCatalogSearch.cpp")
@@ -83,6 +83,25 @@ CARDS_WITHOUT_SEARCH_TABLE = {
 	"qm:nameplate_text",
 	"tclient:visual-font-cursor",
 }
+
+# 按钮 API 里直接出现的 Localize/Localizable 文案。只做行级识别，变量传参和仅
+# 出现在 tooltip 里的文案仍由 ACTION_BUTTON_LABELS 人工清单补充。
+BUTTON_CALL_RE = re.compile(
+	r"(?:\bDo(?:Settings|TClient)?Button(?:_Menu|LineSize_Menu)?|\bSecondaryButton|\bButton)\s*\("
+)
+BUTTON_ROW_RE = re.compile(r"CheckBox\(|Checkbox\(|_MenuTab|DoSettingsMenuLabel|DoSettingsLabel")
+BUTTON_LABEL_RE = re.compile(r'\b(?:Localize|Localizable)\("((?:[^"\\]|\\.)*)"\)')
+
+
+def extract_button_labels(sources: list[str]) -> set[str]:
+	labels: set[str] = set()
+	for source in sources:
+		for line in source.splitlines():
+			if not BUTTON_CALL_RE.search(line) or BUTTON_ROW_RE.search(line):
+				continue
+			labels.update(BUTTON_LABEL_RE.findall(line))
+	return labels
+
 
 SEARCH_ONLY_LABELS = {
 	"Anti Latency Tools",
@@ -468,6 +487,7 @@ def analyze(root: Path) -> dict:
 		for stable_id in sorted(defaults - known_cards - CARDS_WITHOUT_SEARCH_TABLE):
 			declaration_problems.append({"kind": "unregistered_default_card", "stable_id": stable_id})
 
+	detected_button_labels = sorted(extract_button_labels(list(card_sources.values())) - NON_ACTION_BUTTON_LABELS)
 	all_index_labels: set[str] = set()
 	for labels in declared.values():
 		all_index_labels |= labels
@@ -477,7 +497,7 @@ def analyze(root: Path) -> dict:
 	card_labels: set[str] = set()
 	for text in card_sources.values():
 		card_labels |= extract_localize_labels(text)
-	global_unindexed = sorted(label for label in card_labels if label not in all_index_labels and label not in IGNORED_SOURCE_LABELS and label not in ACTION_BUTTON_LABELS)
+	global_unindexed = sorted(label for label in card_labels if label not in all_index_labels and label not in IGNORED_SOURCE_LABELS and label not in ACTION_BUTTON_LABELS and label not in detected_button_labels)
 
 	tables_by_card: dict[str, set[str]] = {stable_id: labels for stable_id, labels in declared.items()}
 	missing_tables = []
@@ -576,7 +596,8 @@ def analyze(root: Path) -> dict:
 		"missing_total": sum(len(card["missing"]) for card in cards),
 		"unindexed_labels": global_unindexed,
 		"ignored_labels": sorted(IGNORED_SOURCE_LABELS),
-		"indexed_action_labels": sorted(ACTION_BUTTON_LABELS & all_index_labels),
+		"detected_button_labels": detected_button_labels,
+		"indexed_action_labels": sorted((ACTION_BUTTON_LABELS | set(detected_button_labels)) & all_index_labels),
 	}
 
 

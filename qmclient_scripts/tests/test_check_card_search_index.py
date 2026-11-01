@@ -105,6 +105,14 @@ class ParserTest(unittest.TestCase):
 		self.assertEqual(checker.parse_add_mappings(text), {"qm:alpha": "RenderAlpha"})
 		self.assertEqual(checker.parse_make_module_mappings(text), {"qm:beta": "RenderBeta"})
 
+	def test_detects_button_labels_but_not_checkbox_rows(self) -> None:
+		source = '''
+		if(DoButton_Menu(&id, Localize("Apply"), 0, &Button)) {}
+		if(DoSettingsButton_CheckBox(..., Localize("Save ghost"), ...)) {}
+		if(ui_widget::SecondaryButton(..., Localize("Reset"), ...)) {}
+		'''
+		self.assertEqual(checker.extract_button_labels([source]), {"Apply", "Reset"})
+
 	def test_resolves_spec_vars_and_stable_id_branches(self) -> None:
 		text = """void Build()
 {

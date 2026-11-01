@@ -106,3 +106,15 @@ ACTION_BUTTON_LABELS = frozenset({
 	"Unregister protocol and file extensions",
 	"Upload map",
 })
+
+# 按钮 API 也确实会绘制这些文案，但它们不是“动作入口”：它们是分类行、目录入口、
+# 选项标签或页签。checker 检测到这些精确文案时不按动作文案处理。
+NON_ACTION_BUTTON_LABELS = frozenset({
+	"Configuration packages",
+	"Demos directory",
+	"Dummy",
+	"Infinity symbol",
+	"Player",
+	"Rainbow ring",
+	"Videos directory",
+})
