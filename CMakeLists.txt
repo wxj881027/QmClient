@@ -3340,6 +3340,7 @@ if(CLIENT)
     QmUi/UiOverlays.h
     QmUi/UiSurface.cpp
     QmUi/UiSurface.h
+    QmUi/UiTextRenderState.h
     QmUi/UiTokens.h
     QmUi/QmCardOrderModel.cpp
     QmUi/QmCardOrderModel.h
@@ -4762,6 +4763,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
   # 测试显式注册；目录递归发现和遗漏清单由 test_inventory.py 核对。
   set(TESTS
     src/test/unit/qmclient/ui/settings_card_info_test.cpp
+    src/test/unit/qmclient/ui/settings_card_text_state_test.cpp
     src/test/unit/qmclient/ui/qm_list_entry_animation_test.cpp
     src/test/unit/engine/steam_client_path_test.cpp
     src/test/unit/client/android_asset_unpack_test.cpp
