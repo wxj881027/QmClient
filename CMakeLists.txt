@@ -6305,6 +6305,13 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_warlist_allocation_test.cpp
       src/test/unit/qmclient/settings/settings_font_selection_allocation_test.cpp
       src/test/unit/qmclient/settings/settings_choice_width_failure_test.cpp
+      src/test/unit/qmclient/settings/settings_card_collapse_allocation_test.cpp
+      src/test/integration/qmclient/settings/settings_card_collapse_allocation_test.cpp
+      src/game/client/QmUi/SettingsCardCollapseState.cpp
+      src/game/client/QmUi/QmModuleLayoutAdapter.cpp
+      src/game/client/QmUi/QmCardOrderModel.cpp
+      src/game/client/QmUi/QmCardRegistry.cpp
+      src/game/client/QmUi/cards/QmCardCatalogSearch.cpp
       src/test/unit/qmclient/settings/settings_text_plan_scope_test.cpp
       src/test/unit/qmclient/settings/settings_text_plan_commit_test.cpp
       src/test/unit/qmclient/settings/settings_text_plan_progress_test.cpp
