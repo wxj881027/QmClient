@@ -102,6 +102,7 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	else
 	{
 		State.m_Loader.Suspend();
+		State.m_Covers.Release();
 		if(State.m_Page == EQmVoteMenuPage::OPTIONS)
 			RenderServerVoteList(MainView);
 		else
@@ -115,6 +116,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	auto &Voting = GameClient()->m_Voting;
 	const CCommunity *pCommunity = ServerBrowser()->Community(IServerBrowser::COMMUNITY_DDNET);
 	State.m_Loader.Update(Http(), Engine(), Client()->LocalTime());
+	State.m_Covers.Update(Http(), Engine(), Graphics(), Storage(), Client()->LocalTime());
 	if((State.m_OptionsRevision != Voting.OptionsRevision() && !Voting.IsReceivingOptions()) || State.m_CatalogRevision != State.m_Loader.Revision())
 	{
 		// 仅清理即将失效的行 ID，后台刷新不能打断搜索框输入。
@@ -184,6 +186,30 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		const bool Clicked = ui_widget::SecondaryButton(ui_widget::ControlContext(Ui()), &Button, pText, Rect, Checked < 0, EUiButtonGeometry::CONTROL, Checked > 0);
 		GameClient()->m_Tooltips.DoToolTip(&Button, &Rect, pText);
 		return Clicked;
+	};
+	// 封面按目标矩形的物理像素合成（高 DPI 下边缘不糊），但最多放大到逻辑尺寸的 2 倍，
+	// 避免 4K 窗口把每行纹理撑到几 MB。尾部参差渐隐已经烘进纹理 alpha。
+	const float CoverPixelRatio = std::clamp(1.0f / std::max(Ui()->PixelSize(), 0.0001f), 1.0f, 2.0f);
+	auto DrawMapCover = [&](const CUIRect &Rect, const std::string &Thumbnail) {
+		if(Thumbnail.empty() || Rect.w <= 0.0f || Rect.h <= 0.0f)
+			return;
+		CQmMapCovers::SImage Image;
+		const int PixelWidth = std::max(1, (int)std::lround(Rect.w * CoverPixelRatio));
+		const int PixelHeight = std::max(1, (int)std::lround(Rect.h * CoverPixelRatio));
+		if(!State.m_Covers.Get(Thumbnail.c_str(), PixelWidth, PixelHeight, &Image))
+			return;
+		const float Alpha = std::clamp(Image.m_Opacity * Ui()->ControlAlphaScale(), 0.0f, 1.0f);
+		if(Alpha <= 0.001f)
+			return;
+		Graphics()->TextureSet(Image.m_Texture);
+		Graphics()->QuadsBegin();
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
+		Graphics()->QuadsSetSubset(0.0f, 0.0f, 1.0f, 1.0f);
+		const IGraphics::CQuadItem Quad(Rect.x, Rect.y, Rect.w, Rect.h);
+		Graphics()->QuadsDrawTL(&Quad, 1);
+		Graphics()->QuadsEnd();
+		Graphics()->TextureClear();
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	};
 	CUIRect Refresh, Search, Exclude;
 	Header.VSplitRight(28.0f, &Header, &Refresh);
@@ -431,7 +457,8 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	for(size_t i = 0; i < State.m_vVisible.size(); ++i)
 		if(State.m_vMaps[State.m_vVisible[i]].m_Name == State.m_SelectedName)
 			Selected = (int)i;
-	s_Maps.SetItemColors(Ink.WithAlpha(0.12f), Ink.WithAlpha(0.08f), Ink.WithAlpha(0.05f));
+	// 行的选中/悬停底色改由下面自己画：封面背景必须压在底色之上、文字之下。
+	s_Maps.SetItemColors(ui_token::color::COLOR_TRANSPARENT, ui_token::color::COLOR_TRANSPARENT, ui_token::color::COLOR_TRANSPARENT);
 	s_Maps.SetActive(!Ui()->IsPopupOpen() && !m_FilterInput.IsActive() && !m_ExcludeInput.IsActive() && !m_CallvoteReasonInput.IsActive());
 	if(ScrollToSelection)
 		s_Maps.ScrollToSelected();
@@ -450,6 +477,13 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		if(!Item.m_Visible)
 			continue;
 		auto Blur = Item.SuppressGaussianBlur();
+		// 每行用该地图自己的封面做背景，尾部在列宽中段参差渐隐。
+		DrawMapCover(Item.m_Rect, Map.m_Thumbnail);
+		const float SelectionAlpha = s_Maps.SelectionFeedbackAlpha(Row);
+		if(SelectionAlpha > 0.001f)
+			DrawRoundedSurface(Ui(), Item.m_Rect, Ui()->ScaleBackgroundAlpha(Ink.WithAlpha(s_Maps.Active() ? 0.12f : 0.08f)).WithMultipliedAlpha(SelectionAlpha), ColorRGBA(), 5.0f);
+		if(Ui()->HotItem() == &Map)
+			DrawRoundedSurface(Ui(), Item.m_Rect, Ui()->ScaleBackgroundAlpha(Ink.WithAlpha(0.05f)), ColorRGBA(), 5.0f);
 		if(Item.m_Selected)
 			CUIRect{Item.m_Rect.x, Item.m_Rect.y + 4.0f, 2.0f, Item.m_Rect.h - 8.0f}.Draw(Ink.WithAlpha(0.55f), IGraphics::CORNER_ALL, 1.0f);
 		const auto aRow = Columns(Item.m_Rect);
@@ -508,6 +542,8 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		Label(List, State.m_Loader.Loading() ? Localize("Loading…") : Localize("No maps match these filters"), 14.0f, TEXTALIGN_MC);
 	if(ShowDetails)
 	{
+		// 展开的详情条也用选中地图的封面做背景，尾部与列表行同样的参差渐隐。
+		DrawMapCover(Details, pSelected != nullptr ? pSelected->m_Thumbnail : std::string());
 		DrawRoundedSurface(Ui(), Details, Ink.WithAlpha(0.025f), Ink.WithAlpha(0.10f), 8.0f, 1.0f);
 		Details.Margin(8.0f, &Details);
 		CUIRect Name, Metadata, Statistics, Favorite;

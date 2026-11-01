@@ -15,6 +15,8 @@ namespace QmVoteMaps
 		std::string m_Mapper;
 		std::string m_Category;
 		std::string m_Release;
+		// ddnet.org 的官方封面地址；服务器投票选项合并出来的条目可能为空。
+		std::string m_Thumbnail;
 		int m_Stars = -1;
 		int m_Points = -1;
 	};
