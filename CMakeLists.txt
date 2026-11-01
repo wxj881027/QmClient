@@ -5240,6 +5240,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_map_render_pass_test.cpp
     src/test/integration/qmclient/client/qm_browser_map_preview_loader_test.cpp
     src/test/unit/qmclient/client/qm_hud_editor_visible_bounds_test.cpp
+    src/test/unit/qmclient/client/qm_hud_editor_visible_frame_test.cpp
     src/test/unit/qmclient/client/qm_hud_hook_countdown_test.cpp
     src/test/contract/qmclient/ui/qm_media_island_shader_contract_test.cpp
     src/test/unit/qmclient/client/qm_media_island_render_params_test.cpp
@@ -6312,6 +6313,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/settings/settings_card_collapse_allocation_test.cpp
       src/test/unit/qmclient/settings/settings_bind_cache_allocation_test.cpp
       src/test/unit/client/binds_rebind_allocation_test.cpp
+      src/test/unit/qmclient/client/qm_hud_editor_visible_frame_allocation_test.cpp
       src/test/integration/qmclient/settings/settings_bind_cache_allocation_test.cpp
       src/test/integration/qmclient/settings/settings_card_collapse_allocation_test.cpp
       src/game/client/QmUi/SettingsCardCollapseState.cpp

@@ -39,7 +39,8 @@ void CHudEditor::ResetRuntimeState()
 {
 	m_DraggingElement = -1;
 	m_DragGrabOffset = vec2(0.0f, 0.0f);
-	m_vVisibleElements.clear();
+	m_VisibleFrame.BeginFrame();
+	m_InteractionFrameSkipped = false;
 	m_aVisibleBounds = {};
 }
 
@@ -67,7 +68,7 @@ void CHudEditor::BeginRenderFrame()
 {
 	for(QmHudEditor::CVisibleBounds &Bounds : m_aVisibleBounds)
 		Bounds.BeginRenderFrame();
-	m_vVisibleElements.clear();
+	m_VisibleFrame.BeginFrame();
 }
 
 bool CHudEditor::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
@@ -152,7 +153,7 @@ void CHudEditor::UpdateVisibleRect(EHudEditorElement Element, const CUIRect &Ren
 	if(pUiScreen == nullptr || pUiScreen->w <= 0.0f || pUiScreen->h <= 0.0f)
 		return;
 
-	SVisibleElement &Visible = m_vVisibleElements[VisibleIndex];
+	SVisibleElement &Visible = m_VisibleFrame.Elements()[VisibleIndex];
 	Visible.m_Rect = {
 		pUiScreen->x + (RenderedRect.x - ScreenX0) * pUiScreen->w / ScreenW,
 		pUiScreen->y + (RenderedRect.y - ScreenY0) * pUiScreen->h / ScreenH,
@@ -461,7 +462,7 @@ CHudEditor::STransformScope CHudEditor::BeginTransform(EHudEditorElement Element
 	SVisibleElement Visible;
 	if(!ComputeTransformPlacement(Element, TransformRect, VisibleRect, Scalable, Scope, &Visible, EdgeMargin))
 		return Scope;
-	m_vVisibleElements.push_back(Visible);
+	m_VisibleFrame.Register(Visible);
 
 	const float Scale = TransformRect.w > EPSILON ? Scope.m_TargetRect.w / TransformRect.w : 1.0f;
 	const bool Transformed =
@@ -491,9 +492,9 @@ void CHudEditor::EndTransform(const STransformScope &Scope)
 
 int CHudEditor::FindVisibleElementIndex(EHudEditorElement Element) const
 {
-	for(size_t i = 0; i < m_vVisibleElements.size(); ++i)
+	for(size_t i = 0; i < m_VisibleFrame.Elements().size(); ++i)
 	{
-		if(m_vVisibleElements[i].m_Element == Element)
+		if(m_VisibleFrame.Elements()[i].m_Element == Element)
 			return static_cast<int>(i);
 	}
 	return -1;
@@ -502,9 +503,9 @@ int CHudEditor::FindVisibleElementIndex(EHudEditorElement Element) const
 int CHudEditor::FindHoveredVisibleElement() const
 {
 	const vec2 Mouse(Ui()->MouseX(), Ui()->MouseY());
-	for(int i = (int)m_vVisibleElements.size() - 1; i >= 0; --i)
+	for(int i = (int)m_VisibleFrame.Elements().size() - 1; i >= 0; --i)
 	{
-		if(m_vVisibleElements[i].m_Rect.Inside(Mouse))
+		if(m_VisibleFrame.Elements()[i].m_Rect.Inside(Mouse))
 			return i;
 	}
 	return -1;
@@ -513,7 +514,7 @@ int CHudEditor::FindHoveredVisibleElement() const
 CHudEditor::SAlignmentReferences CHudEditor::BuildAlignmentReferences(EHudEditorElement DraggingElement) const
 {
 	SAlignmentReferences References;
-	for(const SVisibleElement &Visible : m_vVisibleElements)
+	for(const SVisibleElement &Visible : m_VisibleFrame.Elements())
 	{
 		if(Visible.m_Element == DraggingElement || Visible.m_Rect.w <= 0.0f || Visible.m_Rect.h <= 0.0f)
 			continue;
@@ -735,12 +736,19 @@ void CHudEditor::OnRender()
 {
 	if(!m_Active)
 		return;
+	if(!m_VisibleFrame.Complete() && !m_JumpHintTextEditorActive)
+	{
+		m_InteractionFrameSkipped = true;
+		return;
+	}
 
 	const CUIRect *pUiScreen = Ui()->Screen();
 	if(pUiScreen == nullptr)
 		return;
 
 	UpdateInteractionUi();
+	const bool InteractionFrameSkipped = m_InteractionFrameSkipped;
+	m_InteractionFrameSkipped = false;
 
 	if(m_JumpHintTextEditorActive)
 	{
@@ -780,7 +788,7 @@ void CHudEditor::OnRender()
 	if(m_DraggingElement >= 0)
 	{
 		const bool MouseReleased = !Ui()->MouseButton(0) && Ui()->LastMouseButton(0);
-		if(MouseReleased || FindVisibleElementIndex(static_cast<EHudEditorElement>(m_DraggingElement)) < 0)
+		if(MouseReleased || InteractionFrameSkipped || FindVisibleElementIndex(static_cast<EHudEditorElement>(m_DraggingElement)) < 0)
 		{
 			m_DraggingElement = -1;
 			m_DragGrabOffset = vec2(0.0f, 0.0f);
@@ -791,11 +799,11 @@ void CHudEditor::OnRender()
 
 	if(HoveredIndex >= 0 && m_DraggingElement < 0 && Ui()->MouseButtonClicked(0) && Ui()->ActiveItem() == nullptr)
 	{
-		const EHudEditorElement Element = m_vVisibleElements[HoveredIndex].m_Element;
+		const EHudEditorElement Element = m_VisibleFrame.Elements()[HoveredIndex].m_Element;
 		if(!HandleElementDoubleClick(Element))
 		{
 			m_DraggingElement = static_cast<int>(Element);
-			m_DragGrabOffset = vec2(Ui()->MouseX() - m_vVisibleElements[HoveredIndex].m_Rect.x, Ui()->MouseY() - m_vVisibleElements[HoveredIndex].m_Rect.y);
+			m_DragGrabOffset = vec2(Ui()->MouseX() - m_VisibleFrame.Elements()[HoveredIndex].m_Rect.x, Ui()->MouseY() - m_VisibleFrame.Elements()[HoveredIndex].m_Rect.y);
 		}
 	}
 
@@ -804,7 +812,7 @@ void CHudEditor::OnRender()
 		const int VisibleIndex = FindVisibleElementIndex(static_cast<EHudEditorElement>(m_DraggingElement));
 		if(VisibleIndex >= 0)
 		{
-			const SVisibleElement &Visible = m_vVisibleElements[VisibleIndex];
+			const SVisibleElement &Visible = m_VisibleFrame.Elements()[VisibleIndex];
 			SElementState &State = EnsureState(Visible.m_Element);
 			State.m_HasCustom = true;
 			const float Scale = std::clamp(State.m_ScalePercent / 100.0f, MIN_SCALE_PERCENT / 100.0f, MAX_SCALE_PERCENT / 100.0f);
@@ -830,7 +838,7 @@ void CHudEditor::OnRender()
 
 	if(HoveredIndex >= 0)
 	{
-		const SVisibleElement &Visible = m_vVisibleElements[HoveredIndex];
+		const SVisibleElement &Visible = m_VisibleFrame.Elements()[HoveredIndex];
 		SElementState &State = EnsureState(Visible.m_Element);
 		int DeltaScale = 0;
 		if(Visible.m_Scalable && Input()->KeyPress(KEY_MOUSE_WHEEL_UP))
@@ -863,28 +871,28 @@ void CHudEditor::OnRender()
 			Graphics()->DrawRect(pUiScreen->x, DragGuideY - 0.5f, pUiScreen->w, 1.0f, GuideColor, IGraphics::CORNER_NONE, 0.0f);
 	}
 
-	for(size_t i = 0; i < m_vVisibleElements.size(); ++i)
+	for(size_t i = 0; i < m_VisibleFrame.Elements().size(); ++i)
 	{
 		const bool Hovered = static_cast<int>(i) == HoveredIndex;
-		const bool Dragging = m_DraggingElement >= 0 && static_cast<int>(m_vVisibleElements[i].m_Element) == m_DraggingElement;
+		const bool Dragging = m_DraggingElement >= 0 && static_cast<int>(m_VisibleFrame.Elements()[i].m_Element) == m_DraggingElement;
 		if(!Hovered && !Dragging)
 			continue;
 
 		const ColorRGBA FillColor = Dragging ? ColorRGBA(1.0f, 0.75f, 0.15f, 0.10f) : (Hovered ? ColorRGBA(0.35f, 0.75f, 1.0f, 0.10f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.04f));
 		const ColorRGBA BorderColor = Dragging ? ColorRGBA(1.0f, 0.82f, 0.20f, 0.95f) : (Hovered ? ColorRGBA(0.35f, 0.80f, 1.0f, 0.90f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.55f));
 		const float BorderSize = Dragging ? 2.5f : 1.5f;
-		m_vVisibleElements[i].m_Rect.Draw(FillColor, IGraphics::CORNER_ALL, 6.0f);
+		m_VisibleFrame.Elements()[i].m_Rect.Draw(FillColor, IGraphics::CORNER_ALL, 6.0f);
 
-		CUIRect Line = m_vVisibleElements[i].m_Rect;
+		CUIRect Line = m_VisibleFrame.Elements()[i].m_Rect;
 		Line.HSplitTop(BorderSize, &Line, nullptr);
 		Line.Draw(BorderColor, IGraphics::CORNER_NONE, 0.0f);
-		Line = m_vVisibleElements[i].m_Rect;
+		Line = m_VisibleFrame.Elements()[i].m_Rect;
 		Line.HSplitBottom(BorderSize, nullptr, &Line);
 		Line.Draw(BorderColor, IGraphics::CORNER_NONE, 0.0f);
-		Line = m_vVisibleElements[i].m_Rect;
+		Line = m_VisibleFrame.Elements()[i].m_Rect;
 		Line.VSplitLeft(BorderSize, &Line, nullptr);
 		Line.Draw(BorderColor, IGraphics::CORNER_NONE, 0.0f);
-		Line = m_vVisibleElements[i].m_Rect;
+		Line = m_VisibleFrame.Elements()[i].m_Rect;
 		Line.VSplitRight(BorderSize, nullptr, &Line);
 		Line.Draw(BorderColor, IGraphics::CORNER_NONE, 0.0f);
 	}
