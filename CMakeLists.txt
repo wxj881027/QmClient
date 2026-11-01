@@ -3697,6 +3697,7 @@ if(CLIENT)
     components/qmclient/qm_markdown.h
     components/qmclient/qm_markdown_broadcast.cpp
     components/qmclient/qm_markdown_broadcast.h
+    components/qmclient/qm_markdown_broadcast_payload.h
     components/qmclient/qm_realtime.cpp
     components/qmclient/qm_realtime.h
     components/qmclient/qm_realtime_service_data.h
@@ -6235,6 +6236,10 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_chatbind_config_test.cpp
       src/test/unit/qmclient/client/qm_markdown_allocation_test.cpp
       src/test/unit/qmclient/client/qm_markdown_cache_allocation_test.cpp
+      src/test/unit/qmclient/client/qm_markdown_broadcast_allocation_test.cpp
+      src/test/integration/qmclient/client/qm_markdown_broadcast_payload_test.cpp
+      src/game/client/components/qmclient/qm_realtime.cpp
+      src/game/client/components/qmclient/qm_markdown_broadcast.cpp
       src/game/client/components/qmclient/qm_markdown.cpp
       src/game/client/components/qmclient/bind_editor.cpp
       src/test/unit/qmclient/client/qm_tee_trail_frame_test.cpp

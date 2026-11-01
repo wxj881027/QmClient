@@ -6,6 +6,7 @@
 #include "markdown_cache_writer.h"
 #include "qm_developer_badge.h"
 #include "qm_markdown_broadcast.h"
+#include "qm_markdown_broadcast_payload.h"
 #include "qm_realtime.h"
 #include "qm_realtime_users.h"
 #include "qm_sponsors.h"
@@ -86,6 +87,7 @@ class CQmClient : public CComponent
 	std::shared_ptr<IJob> m_pQmDdnetPlayerParseJob = nullptr;
 	CQmDdnetPlayerStatsState m_QmDdnetPlayerState;
 	CQmMarkdownBroadcast m_QmMarkdownBroadcast;
+	qm_news::CReceiver m_QmMarkdownBroadcastReceiver;
 	// 每个缓存文件一个写作业实例：界面立即更新，磁盘只保留最新完整快照。
 	CQmMarkdownCacheWriter m_QmMarkdownBroadcastCacheWriter;
 	bool m_QmMarkdownBroadcastCacheDirty = false;
@@ -236,7 +238,7 @@ class CQmClient : public CComponent
 	void SendQmAnonymousEmoteHello(bool ForceSend);
 	void QueueQmAnonymousEmoticonEvent(SQmRealtimeMessage Message);
 	void ApplyQmRealtimeServiceData(const SQmRealtimeMessage &Message);
-	void ApplyQmRealtimeBroadcast(const SQmRealtimeMessage &Message);
+	void ApplyQmRealtimeBroadcast(SQmRealtimeMessage &Message);
 	void ApplyQmRealtimeTitles(const SQmRealtimeMessage &Message);
 	void ApplyQmRealtimeUsers(const SQmRealtimeMessage &Message);
 	void ApplyQmRealtimeDevelopers(const SQmRealtimeMessage &Message);

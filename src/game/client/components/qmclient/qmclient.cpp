@@ -1292,6 +1292,7 @@ void CQmClient::OnShutdown()
 void CQmClient::OnUpdate()
 {
 	UpdateQmRealtime();
+	m_QmMarkdownBroadcastReceiver.RetryCache(m_QmMarkdownBroadcast);
 	UpdateQmAnonymousEmotes();
 	UpdateQmClientLocalModePlaytime();
 	UpdateQmClientRecognition();
@@ -1517,10 +1518,10 @@ void CQmClient::ApplyQmRealtimeDevelopers(const SQmRealtimeMessage &Message)
 	}
 }
 
-void CQmClient::ApplyQmRealtimeBroadcast(const SQmRealtimeMessage &Message)
+void CQmClient::ApplyQmRealtimeBroadcast(SQmRealtimeMessage &Message)
 {
 	// 只有内容真的变化时才落盘（Apply 内部已做版本单调与去重判断）。
-	if(Message.m_HasBroadcast && m_QmMarkdownBroadcast.Apply(Message.m_BroadcastMarkdown, Message.m_BroadcastVersion))
+	if(Message.m_HasBroadcast && m_QmMarkdownBroadcastReceiver.ApplyOwned(m_QmMarkdownBroadcast, std::move(Message.m_BroadcastMarkdown), Message.m_BroadcastVersion) == CQmMarkdownBroadcast::EApplyResult::APPLIED)
 		SaveQmMarkdownBroadcastCache();
 }
 
@@ -1740,17 +1741,12 @@ void CQmClient::FinishQmNewsPublish()
 	const int StatusCode = m_pQmNewsPublishTask->State() == EHttpState::DONE ? m_pQmNewsPublishTask->StatusCode() : 0;
 	if(StatusCode == 200)
 	{
-		json_value *pRoot = m_pQmNewsPublishTask->ResultJson();
-		if(pRoot && pRoot->type == json_object)
-		{
-			const json_value *pMarkdown = json_object_get(pRoot, "markdown");
-			const json_value *pVersion = json_object_get(pRoot, "version");
-			if(pMarkdown && pMarkdown->type == json_string && pMarkdown->u.string.length <= QMCLIENT_NEWS_MAX_BYTES &&
-				pVersion && pVersion->type == json_integer && pVersion->u.integer >= 0 && pVersion->u.integer <= std::numeric_limits<int>::max() &&
-				m_QmMarkdownBroadcast.Apply(std::string(pMarkdown->u.string.ptr, pMarkdown->u.string.length), (int)pVersion->u.integer))
-				SaveQmMarkdownBroadcastCache();
-		}
-		json_value_free(pRoot);
+		const qm_news::TPayload Root(m_pQmNewsPublishTask->ResultJson());
+		const auto Result = m_QmMarkdownBroadcastReceiver.ApplyResponse(m_QmMarkdownBroadcast, Root.get());
+		if(Result == CQmMarkdownBroadcast::EApplyResult::RETRY)
+			return;
+		if(Result == CQmMarkdownBroadcast::EApplyResult::APPLIED)
+			SaveQmMarkdownBroadcastCache();
 		if(m_pQmRealtimeTransport && m_pQmRealtimeTransport->State() == EQmWebSocketState::CONNECTED)
 		{
 			static constexpr const char *pRefresh = "{\"type\":\"news\"}";
@@ -1884,21 +1880,7 @@ void CQmClient::LoadQmMarkdownBroadcastCache()
 	std::string Data;
 	if(!QmReadFileBounded(io_open(aPath, IOFLAG_READ), 6 * QMCLIENT_NEWS_MAX_BYTES + 1024, Data))
 		return;
-	json_value *pRoot = json_parse(Data.data(), Data.size());
-	if(pRoot == nullptr)
-		return;
-	const json_value *pCacheVersion = json_object_get(pRoot, "cache_version");
-	const json_value *pVersion = json_object_get(pRoot, "version");
-	const json_value *pMarkdown = json_object_get(pRoot, "markdown");
-	// 缓存格式版本不符时直接丢弃：宁可本次会话没有内容，也不用旧格式喂给解析器。
-	if(pCacheVersion != nullptr && pCacheVersion->type == json_integer &&
-		pCacheVersion->u.integer == QMCLIENT_MARKDOWN_BROADCAST_CACHE_VERSION &&
-		pVersion != nullptr && pVersion->type == json_integer &&
-		pMarkdown != nullptr && pMarkdown->type == json_string && pMarkdown->u.string.length <= QMCLIENT_NEWS_MAX_BYTES)
-	{
-		m_QmMarkdownBroadcast.Apply(std::string(pMarkdown->u.string.ptr, pMarkdown->u.string.length), (int)pVersion->u.integer);
-	}
-	json_value_free(pRoot);
+	m_QmMarkdownBroadcastReceiver.LoadCache(m_QmMarkdownBroadcast, qm_news::TPayload(json_parse(Data.data(), Data.size())), QMCLIENT_MARKDOWN_BROADCAST_CACHE_VERSION);
 }
 
 void CQmClient::UpdateQmRealtime()
