@@ -9,6 +9,7 @@
 #include <engine/shared/config.h>
 
 #include <game/client/animstate.h>
+#include <game/client/components/qmclient/bg_draw_persistence.h>
 #include <game/client/components/qmclient/bg_draw_quad_containers.h>
 #include <game/client/components/qmclient/bg_draw_state.h>
 #include <game/client/components/tclient/bg_draw_file.h>
@@ -18,10 +19,9 @@
 
 #include <algorithm>
 #include <array>
-#include <deque>
+#include <new>
+#include <stdexcept>
 #include <vector>
-
-#define MAX_ITEMS_TO_LOAD 65536
 
 constexpr float AUTO_SAVE_INTERVAL = 60.0f;
 
@@ -262,9 +262,8 @@ void CBgDraw::ConBgDrawLoad(IConsole::IResult *pResult, void *pUserData)
 	pThis->Load(pResult->GetString(0), true);
 }
 
-static IOHANDLE BgDrawOpenFile(CGameClient &This, const char *pFilename, int Flags)
+static void BgDrawFilename(CGameClient &This, const char *pFilename, char (&aFilename)[IO_MAX_PATH_LENGTH])
 {
-	char aFilename[IO_MAX_PATH_LENGTH];
 	if(pFilename && pFilename[0] != '\0')
 	{
 		if(str_endswith_nocase(pFilename, ".csv"))
@@ -279,14 +278,6 @@ static IOHANDLE BgDrawOpenFile(CGameClient &This, const char *pFilename, int Fla
 		sha256_str(Sha256, aSha256, sizeof(aSha256));
 		str_format(aFilename, sizeof(aFilename), "bgdraw/%s_%s.csv", This.Client()->GetCurrentMap(), aSha256);
 	}
-	dbg_assert(Flags == IOFLAG_WRITE || Flags == IOFLAG_READ, "Flags must be either read or write");
-	if(Flags == IOFLAG_WRITE)
-	{
-		// Create folder
-		if(!This.Storage()->CreateFolder("bgdraw", IStorage::TYPE_SAVE))
-			This.Echo(Localize("Failed to create bgdraw folder"));
-	}
-	return This.Storage()->OpenFile(aFilename, Flags, IStorage::TYPE_SAVE);
 }
 
 bool CBgDraw::Save(const char *pFilename, bool Verbose)
@@ -300,66 +291,59 @@ bool CBgDraw::Save(const char *pFilename, bool Verbose)
 			GameClient()->Echo(Localize("No changes since last save"));
 		return false;
 	}
-	IOHANDLE Handle = BgDrawOpenFile(*GameClient(), pFilename, IOFLAG_WRITE);
-	if(!Handle)
-		return false;
-	int Written = 0;
-	bool Success = true;
+	char aFilename[IO_MAX_PATH_LENGTH];
+	BgDrawFilename(*GameClient(), pFilename, aFilename);
+	const auto Result = qm_bg_draw_persistence::Save(Storage(), aFilename, *m_pvItems);
+	if(Result.m_Success)
+		m_Dirty = false;
 	char aMsg[256];
-	for(const CBgDrawItem &Item : *m_pvItems)
+	if(Result.m_FolderFailed)
+		GameClient()->Echo(Localize("Failed to create bgdraw folder"));
+	else if(Result.m_WriteFailed)
 	{
-		if(!BgDrawFile::Write(Handle, Item.Data()))
-		{
-			str_format(aMsg, sizeof(aMsg), Localize("Writing item %d failed"), Written);
-			GameClient()->Echo(aMsg);
-			Success = false;
-			break;
-		}
-		Written += 1;
-	}
-	if(Verbose || !Success)
-	{
-		str_format(aMsg, sizeof(aMsg), Localize("Written %d items"), Written);
+		str_format(aMsg, sizeof(aMsg), Localize("Writing item %d failed"), Result.m_Written);
 		GameClient()->Echo(aMsg);
 	}
-	Success = io_close(Handle) == 0 && Success;
-	if(Success)
-		m_Dirty = false;
-	return Success;
+	else if(!Result.m_Success)
+	{
+		str_format(aMsg, sizeof(aMsg), "%s: %s", Localize("Error"), aFilename);
+		GameClient()->Echo(aMsg);
+	}
+	if((Result.m_Success && Verbose) || Result.m_WriteFailed)
+	{
+		str_format(aMsg, sizeof(aMsg), Localize("Written %d items"), Result.m_Written);
+		GameClient()->Echo(aMsg);
+	}
+	return Result.m_Success;
 }
 
 bool CBgDraw::Load(const char *pFilename, bool Verbose)
 {
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return false;
-	IOHANDLE Handle = BgDrawOpenFile(*GameClient(), pFilename, IOFLAG_READ);
-	if(!Handle)
-		return false;
-	std::deque<CBgDrawItemData> Queue;
 	int ItemsLoaded = 0;
 	int ItemsDiscarded = 0;
+	try
 	{
-		CBgDrawItemData Data;
-		while(ItemsLoaded < MAX_ITEMS_TO_LOAD && BgDrawFile::Read(Handle, Data))
-		{
-			++ItemsLoaded;
-			if(g_Config.m_QmBgDrawMaxItems == 0)
-			{
-				++ItemsDiscarded;
-				continue;
-			}
-			if((int)Queue.size() >= g_Config.m_QmBgDrawMaxItems)
-			{
-				ItemsDiscarded += 1;
-				Queue.pop_front();
-			}
-			Queue.push_back(Data);
-		}
+		char aFilename[IO_MAX_PATH_LENGTH];
+		BgDrawFilename(*GameClient(), pFilename, aFilename);
+		qm_bg_draw_persistence::SLoadedData Loaded;
+		if(!qm_bg_draw_persistence::Read(Storage(), aFilename, g_Config.m_QmBgDrawMaxItems, Loaded))
+			return false;
+		m_Dirty |= QmBgDrawAppendLoaded(*m_pvItems, m_apActiveItems, g_Config.m_QmBgDrawMaxItems, Loaded.m_Queue, [&](auto &Candidate, const auto &Data) {
+			Candidate.emplace_back(*GameClient(), Data);
+		});
+		ItemsLoaded = Loaded.m_Loaded;
+		ItemsDiscarded = Loaded.m_Discarded;
 	}
-	io_close(Handle);
-	MakeSpaceFor(Queue.size());
-	for(const CBgDrawItemData &Data : Queue)
-		AddItem(*GameClient(), Data);
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
 	if(Verbose)
 	{
 		char aInfo[256];
@@ -376,12 +360,7 @@ bool CBgDraw::Load(const char *pFilename, bool Verbose)
 template<typename... T>
 CBgDrawItem *CBgDraw::AddItem(T &&...Aargs)
 {
-	MakeSpaceFor(1);
-	if(g_Config.m_QmBgDrawMaxItems == 0)
-		return nullptr;
-	m_pvItems->emplace_back(std::forward<T>(Aargs)...);
-	m_Dirty = true;
-	return &m_pvItems->back();
+	return QmBgDrawAddItem(*m_pvItems, m_apActiveItems, g_Config.m_QmBgDrawMaxItems, m_Dirty, std::forward<T>(Aargs)...);
 }
 
 void CBgDraw::MakeSpaceFor(int Count)

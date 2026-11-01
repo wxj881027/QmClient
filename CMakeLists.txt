@@ -5425,6 +5425,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_json_send_test.cpp
     src/test/integration/qmclient/client/qm_json_send_roundtrip_test.cpp
     src/test/integration/qmclient/client/qm_identity_file_test.cpp
+    src/test/integration/qmclient/client/qm_bg_draw_persistence_test.cpp
     src/test/integration/qmclient/client/qm_users_sync_text_test.cpp
     src/test/integration/qmclient/client/qm_realtime_service_data_test.cpp
     src/test/integration/qmclient/client/qm_realtime_budget_test.cpp
@@ -6257,6 +6258,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/ui/qm_icon_font_failure_test.cpp
       src/test/unit/engine/graphics/quad_container_append_failure_test.cpp
       src/test/unit/qmclient/client/qm_bg_draw_quad_containers_test.cpp
+      src/test/unit/qmclient/client/qm_bg_draw_publication_test.cpp
       src/game/client/QmUi/QmLineInputMotion.cpp
       src/test/integration/qmclient/client/qm_markdown_broadcast_payload_test.cpp
       src/game/client/components/qmclient/qm_realtime.cpp
