@@ -4,6 +4,7 @@
 
 #include <engine/shared/config.h>
 
+#include <game/client/components/tclient/qm_mod_weapon_text.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
@@ -59,41 +60,12 @@ void CMod::OnRender()
 			{
 				char aBuf[32];
 				str_format(aBuf, sizeof(aBuf), "%.2f", m_ModWeaponActiveTimeLeft);
-				STextContainerIndex TextContainer;
-				TextContainer.Reset();
-				CTextCursor Cursor;
-				Cursor.m_FontSize = 25.0f;
-				TextRender()->SetRenderFlags(TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | TEXT_RENDER_FLAG_ONE_TIME_USE);
-				TextRender()->CreateTextContainer(TextContainer, &Cursor, aBuf);
-				TextRender()->SetRenderFlags(0);
-				if(TextContainer.Valid())
-				{
-					const auto Color = color_cast<ColorRGBA>(ColorHSLA(m_ModWeaponActiveTimeLeft / MOD_WEAPON_TIME, 0.5f, 0.5f, 1.0f));
-					const auto BoundingBox = TextRender()->GetBoundingBoxTextContainer(TextContainer);
-					TextRender()->RenderTextContainer(TextContainer,
-						Color, TextRender()->DefaultTextOutlineColor(),
-						Player.m_RenderPos.x - BoundingBox.m_W / 2.0f, Y);
-					Y += BoundingBox.m_H + 15.0f;
-				}
-				TextRender()->DeleteTextContainer(TextContainer);
+				const auto Color = color_cast<ColorRGBA>(ColorHSLA(m_ModWeaponActiveTimeLeft / MOD_WEAPON_TIME, 0.5f, 0.5f, 1.0f));
+				const auto Height = QmRenderModWeaponText(*TextRender(), aBuf, 25.0f, {Player.m_RenderPos.x, Y}, Color);
+				if(Height)
+					Y += *Height + 15.0f;
 			}
-			{
-				STextContainerIndex TextContainer;
-				TextContainer.Reset();
-				CTextCursor Cursor;
-				Cursor.m_FontSize = 15.0f;
-				TextRender()->SetRenderFlags(TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | TEXT_RENDER_FLAG_ONE_TIME_USE);
-				TextRender()->CreateTextContainer(TextContainer, &Cursor, g_Config.m_QmModWeaponCommand);
-				TextRender()->SetRenderFlags(0);
-				if(TextContainer.Valid())
-				{
-					const auto BoundingBox = TextRender()->GetBoundingBoxTextContainer(TextContainer);
-					TextRender()->RenderTextContainer(TextContainer,
-						ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), TextRender()->DefaultTextOutlineColor(),
-						Player.m_RenderPos.x - BoundingBox.m_W / 2.0f, Y);
-				}
-				TextRender()->DeleteTextContainer(TextContainer);
-			}
+			QmRenderModWeaponText(*TextRender(), g_Config.m_QmModWeaponCommand, 15.0f, {Player.m_RenderPos.x, Y}, {1, 1, 1, 1});
 		}
 	}
 

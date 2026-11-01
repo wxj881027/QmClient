@@ -12,6 +12,8 @@
 #include <game/client/render.h>
 #include <game/mapitems.h>
 
+#include <array>
+#include <iterator>
 #include <limits>
 
 // The order of this is the order of priority for outlines
@@ -129,47 +131,43 @@ static constexpr size_t MAX_OUTLINE_MAP_TILES = 4096 * 4096;
 
 void COutlines::OnMapLoad()
 {
-	m_vMapData.clear();
+	QmPrepareOutlineMapCache(m_MapDataSize, m_vMapData, [&] {
+		// 图层集合固定，保留原筛选及覆盖顺序，无需为三个借用指针申请内存。
+		std::array<const COutLineLayer *, std::size(OUTLINE_LAYERS)> apValidLayers{};
+		size_t NumValidLayers = 0;
+		for(const auto &Layer : OUTLINE_LAYERS)
+		{
+			ivec2 LayerSize;
+			Layer.GetMeta(GameClient(), LayerSize);
+			if(LayerSize.x <= 0 || LayerSize.y <= 0)
+				continue;
+			m_MapDataSize.x = std::max(m_MapDataSize.x, LayerSize.x);
+			m_MapDataSize.y = std::max(m_MapDataSize.y, LayerSize.y);
+			apValidLayers[NumValidLayers++] = &Layer;
+		}
+		if(m_MapDataSize.x <= 0 || m_MapDataSize.y <= 0)
+			return;
 
-	// Find valid layers and size
-	std::vector<const COutLineLayer *> vValidOutlineLayers;
-	m_MapDataSize = {0, 0};
-	for(const auto &Layer : OUTLINE_LAYERS)
-	{
-		ivec2 LayerSize;
-		Layer.GetMeta(GameClient(), LayerSize);
-		if(LayerSize.x <= 0 || LayerSize.y <= 0)
-			continue;
-		m_MapDataSize.x = std::max(m_MapDataSize.x, LayerSize.x);
-		m_MapDataSize.y = std::max(m_MapDataSize.y, LayerSize.y);
-		vValidOutlineLayers.push_back(&Layer);
-	}
-	if(m_MapDataSize.x <= 0 || m_MapDataSize.y <= 0)
-		return;
+		const size_t MapWidth = (size_t)m_MapDataSize.x;
+		const size_t MapHeight = (size_t)m_MapDataSize.y;
+		if(MapWidth > std::numeric_limits<size_t>::max() / MapHeight)
+		{
+			log_warn("outlines", "Map size overflow for outline cache: %dx%d", m_MapDataSize.x, m_MapDataSize.y);
+			m_MapDataSize = {0, 0};
+			return;
+		}
+		const size_t NumTiles = MapWidth * MapHeight;
+		if(NumTiles > MAX_OUTLINE_MAP_TILES)
+		{
+			log_warn("outlines", "Map too large for outline cache: %dx%d", m_MapDataSize.x, m_MapDataSize.y);
+			m_MapDataSize = {0, 0};
+			return;
+		}
 
-	const size_t MapWidth = (size_t)m_MapDataSize.x;
-	const size_t MapHeight = (size_t)m_MapDataSize.y;
-	if(MapWidth > std::numeric_limits<size_t>::max() / MapHeight)
-	{
-		log_warn("outlines", "Map size overflow for outline cache: %dx%d", m_MapDataSize.x, m_MapDataSize.y);
-		m_MapDataSize = {0, 0};
-		return;
-	}
-	const size_t NumTiles = MapWidth * MapHeight;
-	if(NumTiles > MAX_OUTLINE_MAP_TILES)
-	{
-		log_warn("outlines", "Map too large for outline cache: %dx%d", m_MapDataSize.x, m_MapDataSize.y);
-		m_MapDataSize = {0, 0};
-		return;
-	}
-
-	m_vMapData.assign(NumTiles, OUTLINE_NONE);
-
-	// Do it
-	for(const auto *pLayer : vValidOutlineLayers)
-	{
-		pLayer->SetData(GameClient(), m_vMapData.data(), m_MapDataSize);
-	}
+		m_vMapData.assign(NumTiles, OUTLINE_NONE);
+		for(size_t i = 0; i < NumValidLayers; ++i)
+			apValidLayers[i]->SetData(GameClient(), m_vMapData.data(), m_MapDataSize);
+	});
 }
 
 void COutlines::OnRender()

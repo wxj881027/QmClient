@@ -5169,6 +5169,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_background_particles_test.cpp
     src/test/unit/qmclient/client/qm_outline_neighbors_test.cpp
     src/test/unit/qmclient/client/qm_outline_viewport_test.cpp
+    src/test/unit/qmclient/client/qm_mod_weapon_text_test.cpp
     src/test/unit/qmclient/client/qm_axiom_scores_test.cpp
     src/test/contract/qmclient/client/qm_axiom_scores_contract_test.cpp
     src/test/unit/qmclient/client/qm_chat_emoji_test.cpp
@@ -6137,6 +6138,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/game/client/components/qmclient/map_difficulty_catalog.cpp
       src/engine/client/sqlite.cpp
       src/test/integration/qmclient/client/qm_text_temporary_lifetime_test.cpp
+      src/test/integration/qmclient/client/qm_mod_weapon_text_test.cpp
       src/test/integration/qmclient/client/qm_icon_font_lifetime_test.cpp
       src/test/integration/qmclient/client/qm_nameplate_text_build_test.cpp
       src/test/integration/qmclient/client/qm_nameplate_update_test.cpp
@@ -6263,6 +6265,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/ui/qm_icon_font_failure_test.cpp
       src/test/unit/engine/graphics/quad_container_append_failure_test.cpp
       src/test/unit/qmclient/client/qm_bg_draw_quad_containers_test.cpp
+      src/test/unit/qmclient/client/qm_outline_cache_test.cpp
       src/test/unit/qmclient/client/qm_bg_draw_publication_test.cpp
       src/game/client/QmUi/QmLineInputMotion.cpp
       src/test/integration/qmclient/client/qm_markdown_broadcast_payload_test.cpp
