@@ -5192,6 +5192,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_bg_draw_state_test.cpp
     src/test/unit/qmclient/client/qm_bg_draw_file_test.cpp
     src/test/unit/qmclient/client/qm_bindwheel_state_test.cpp
+    src/test/unit/qmclient/client/qm_bindwheel_geometry_test.cpp
     src/test/unit/qmclient/client/qm_wheel_presets_test.cpp
     src/test/unit/qmclient/ui/qm_profile_card_test.cpp
     src/test/integration/qmclient/client/qm_wheel_presets_console_test.cpp

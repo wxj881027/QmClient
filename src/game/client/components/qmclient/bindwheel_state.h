@@ -4,6 +4,7 @@
 #include <base/vmath.h>
 
 #include <cmath>
+#include <limits>
 #include <new>
 #include <optional>
 #include <stdexcept>
@@ -55,12 +56,26 @@ public:
 		return true;
 	}
 
+	static vec2 AdvanceCursor(vec2 Cursor, vec2 Offset)
+	{
+		if(!std::isfinite(Cursor.x) || !std::isfinite(Cursor.y))
+			return vec2(0, 0);
+		if(!std::isfinite(Offset.x) || !std::isfinite(Offset.y))
+			return Cursor;
+		const double X = double(Cursor.x) + Offset.x, Y = double(Cursor.y) + Offset.y;
+		constexpr double Limit = std::numeric_limits<float>::max();
+		if(std::abs(X) > Limit || std::abs(Y) > Limit)
+			return Cursor;
+		return Cursor + Offset;
+	}
+
 	static int SelectedBind(vec2 Mouse, int Count)
 	{
-		if(Count <= 0 || length(Mouse) <= 110.0f)
+		if(Count <= 0 || !std::isfinite(Mouse.x) || !std::isfinite(Mouse.y) || length(Mouse) <= 110.0f)
 			return -1;
 		const int Segment = static_cast<int>(std::round(angle(Mouse) / (2.0f * pi) * Count));
-		return (Segment % Count + Count) % Count;
+		const int Index = Segment % Count;
+		return Index < 0 ? Index + Count : Index;
 	}
 };
 

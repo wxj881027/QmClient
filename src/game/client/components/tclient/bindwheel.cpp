@@ -9,6 +9,8 @@
 #include <game/client/render.h>
 #include <game/client/ui.h>
 
+#include <cmath>
+
 CBindWheel::CBindWheel()
 {
 	OnReset();
@@ -175,7 +177,7 @@ bool CBindWheel::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 		return false;
 
 	Ui()->ConvertMouseMove(&x, &y, CursorType);
-	GameClient()->m_Emoticon.m_SelectorMouse += vec2(x, y);
+	GameClient()->m_Emoticon.m_SelectorMouse = CQmBindWheelState::AdvanceCursor(GameClient()->m_Emoticon.m_SelectorMouse, vec2(x, y));
 	return true;
 }
 
@@ -292,6 +294,8 @@ void CBindWheel::OnRender()
 		aAnimationPhase[1] = aAnimationPhase[0] * aAnimationPhase[0];
 	}
 
+	if(!std::isfinite(GameClient()->m_Emoticon.m_SelectorMouse.x) || !std::isfinite(GameClient()->m_Emoticon.m_SelectorMouse.y))
+		GameClient()->m_Emoticon.m_SelectorMouse = vec2(0, 0);
 	if(length(GameClient()->m_Emoticon.m_SelectorMouse) > s_OuterMouseLimitRadius)
 		GameClient()->m_Emoticon.m_SelectorMouse = normalize(GameClient()->m_Emoticon.m_SelectorMouse) * s_OuterMouseLimitRadius;
 
