@@ -2,6 +2,8 @@
 #include "qm_markdown.h"
 
 #include <cstring>
+#include <new>
+#include <stdexcept>
 #include <utility>
 
 namespace qm_md
@@ -198,14 +200,16 @@ namespace qm_md
 		return vResult;
 	}
 
-	std::vector<SBlock> Parse(const char *pMarkdown, const SParseLimits &Limits)
+	static std::vector<SBlock> ParseImpl(const char *pMarkdown, const SParseLimits &Limits)
 	{
 		std::vector<SBlock> vBlocks;
 		if(pMarkdown == nullptr)
 			return vBlocks;
-		std::string Text(pMarkdown);
-		if(Text.size() > Limits.m_MaxBytes)
-			Text.resize(Limits.m_MaxBytes);
+		// 先限制读取和复制，避免完整输入分配后才截断。
+		size_t Length = 0;
+		while(Length < Limits.m_MaxBytes && pMarkdown[Length] != '\0')
+			++Length;
+		const std::string Text(pMarkdown, Length);
 		size_t SpanCount = 0;
 		int NumberedIndex = 0;
 		for(size_t Begin = 0; Begin <= Text.size() && vBlocks.size() < Limits.m_MaxBlocks;)
@@ -281,5 +285,30 @@ namespace qm_md
 			}
 		}
 		return vBlocks;
+	}
+
+	bool TryParse(const char *pMarkdown, std::vector<SBlock> &vOutput, const SParseLimits &Limits)
+	{
+		try
+		{
+			auto vCandidate = ParseImpl(pMarkdown, Limits);
+			vOutput.swap(vCandidate);
+			return true;
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
+	}
+
+	std::vector<SBlock> Parse(const char *pMarkdown, const SParseLimits &Limits)
+	{
+		std::vector<SBlock> vResult;
+		TryParse(pMarkdown, vResult, Limits);
+		return vResult;
 	}
 }

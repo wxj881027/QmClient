@@ -300,9 +300,9 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 	{
 		static std::vector<qm_md::SBlock> s_vBroadcastBlocks;
 		static int s_BroadcastRevision = -1;
-		if(s_BroadcastRevision != QmClient.QmMarkdownBroadcastRevision())
+		if(s_BroadcastRevision != QmClient.QmMarkdownBroadcastRevision() &&
+			qm_md::TryParse(QmClient.QmMarkdownBroadcast(), s_vBroadcastBlocks))
 		{
-			s_vBroadcastBlocks = qm_md::Parse(QmClient.QmMarkdownBroadcast());
 			s_BroadcastRevision = QmClient.QmMarkdownBroadcastRevision();
 		}
 		static CButtonContainer s_aBroadcastButtons[16] = {};

@@ -6232,6 +6232,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_bindwheel_mutation_test.cpp
       src/test/unit/qmclient/client/qm_chatbind_mutation_test.cpp
       src/test/unit/qmclient/client/qm_chatbind_config_test.cpp
+      src/test/unit/qmclient/client/qm_markdown_allocation_test.cpp
+      src/game/client/components/qmclient/qm_markdown.cpp
       src/game/client/components/qmclient/bind_editor.cpp
       src/test/unit/qmclient/client/qm_tee_trail_frame_test.cpp
       src/game/client/components/tclient/swap_countdown_message.cpp
