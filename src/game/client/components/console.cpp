@@ -1415,17 +1415,18 @@ CQmConsoleSelection::CPosition CGameConsole::CInstance::SelectionPositionAt(vec2
 	return pOldestEntry ? CQmConsoleSelection::CPosition{pOldestEntry->m_ExportId, 0} : CQmConsoleSelection::CPosition{};
 }
 
-std::string CGameConsole::CInstance::SelectionText()
+bool CGameConsole::CInstance::BuildSelectionText(std::string &Result)
 {
-	std::string Result;
 	for(CBacklogEntry *pEntry = m_Backlog.First(); pEntry; pEntry = m_Backlog.Next(pEntry))
 	{
 		if(!MatchesLogFilter(pEntry) || !m_Selection.ContainsEntry(pEntry->m_ExportId))
 			continue;
 		CColoredParts Text = CColoredParts::ParseOrBorrow(pEntry->m_aText, ParseEntryColors(pEntry));
+		if(Text.ParseFailed())
+			return false;
 		m_Selection.AppendText(pEntry->m_ExportId, Text.Text(), Result);
 	}
-	return Result;
+	return true;
 }
 
 void CGameConsole::CInstance::UpdateEntryTextAttributes(CBacklogEntry *pEntry) const
@@ -2611,10 +2612,9 @@ void CGameConsole::OnRender()
 
 		if(m_WantsSelectionCopy)
 		{
-			const std::string SelectionString = pConsole->SelectionText();
-			if(!SelectionString.empty())
-				Input()->SetClipboardText(SelectionString.c_str());
 			m_WantsSelectionCopy = false;
+			QmTryCopyConsoleSelection([&](std::string &Result) { return pConsole->BuildSelectionText(Result); },
+				[this](const char *pText) { Input()->SetClipboardText(pText); });
 		}
 
 		TextRender()->TextColor(LocalConsole ? Palette.m_aColors[QmConsoleAppearance::TEXT] : TextRender()->DefaultTextColor());

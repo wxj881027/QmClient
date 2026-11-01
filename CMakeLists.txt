@@ -6239,6 +6239,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_markdown_broadcast_allocation_test.cpp
       src/test/unit/qmclient/client/qm_console_search_input_allocation_test.cpp
       src/test/unit/qmclient/client/qm_console_input_colors_test.cpp
+      src/test/unit/qmclient/client/qm_console_selection_copy_test.cpp
       src/test/integration/qmclient/client/qm_markdown_broadcast_payload_test.cpp
       src/game/client/components/qmclient/qm_realtime.cpp
       src/game/client/components/qmclient/qm_markdown_broadcast.cpp

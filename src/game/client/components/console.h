@@ -186,7 +186,7 @@ private:
 		float FontSize() const;
 		bool ParseEntryColors(const CBacklogEntry *pEntry) const;
 		CQmConsoleSelection::CPosition SelectionPositionAt(vec2 Position, float LogBottom, float LineHeight);
-		std::string SelectionText();
+		bool BuildSelectionText(std::string &Result);
 
 		bool IsInputHidden() const;
 		void UpdateCompletionSuggestions();
