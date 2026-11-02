@@ -15362,3 +15362,197 @@ brazilian_portuguese = "Fluido"
 portuguese = "Fluido"
 turkish = "Akışkan"
 polish = "Płyn"
+
+[[message]]
+key = "Aurora: Polar Veil"
+[message.translations]
+simplified_chinese = "极光：极夜光幕"
+traditional_chinese = "極光：極夜光幕"
+japanese = "オーロラ：極夜の帳"
+korean = "오로라: 극야의 장막"
+russian = "Полярное сияние: полярная вуаль"
+german = "Polarlicht: Polarschleier"
+spanish = "Aurora: velo polar"
+french = "Aurore : voile polaire"
+brazilian_portuguese = "Aurora: véu polar"
+portuguese = "Aurora: véu polar"
+turkish = "Kutup ışığı: kutup örtüsü"
+polish = "Zorza: polarna zasłona"
+
+[[message]]
+key = "Black Flash: Void Rift"
+[message.translations]
+simplified_chinese = "黑闪：虚空裂隙"
+traditional_chinese = "黑閃：虛空裂隙"
+japanese = "黒閃：虚空の裂け目"
+korean = "흑섬: 공허의 균열"
+russian = "Чёрная вспышка: разлом пустоты"
+german = "Schwarzer Blitz: Leerenriss"
+spanish = "Destello negro: grieta del vacío"
+french = "Éclair noir : faille du néant"
+brazilian_portuguese = "Clarão negro: fenda do vazio"
+portuguese = "Clarão negro: fenda do vazio"
+turkish = "Kara parıltı: boşluk yarığı"
+polish = "Czarny błysk: szczelina pustki"
+
+[[message]]
+key = "Ignis: Ember Spirit"
+[message.translations]
+simplified_chinese = "焰灵：余烬之灵"
+traditional_chinese = "焰靈：餘燼之靈"
+japanese = "焔：残り火の精霊"
+korean = "불꽃: 잔불의 정령"
+russian = "Пламя: дух углей"
+german = "Flamme: Glutgeist"
+spanish = "Llama: espíritu de las brasas"
+french = "Flamme : esprit des braises"
+brazilian_portuguese = "Chama: espírito das brasas"
+portuguese = "Chama: espírito das brasas"
+turkish = "Alev: köz ruhu"
+polish = "Płomień: duch żaru"
+
+[[message]]
+key = "Ink: Paper Bloom"
+[message.translations]
+simplified_chinese = "水墨：宣纸漾墨"
+traditional_chinese = "水墨：宣紙漾墨"
+japanese = "墨：和紙のにじみ"
+korean = "수묵: 종이 위의 번짐"
+russian = "Тушь: цветение на бумаге"
+german = "Tusche: Blüte auf Papier"
+spanish = "Tinta: floración sobre papel"
+french = "Encre : floraison sur papier"
+brazilian_portuguese = "Tinta: florescer no papel"
+portuguese = "Tinta: florescer no papel"
+turkish = "Mürekkep: kâğıtta çiçeklenme"
+polish = "Tusz: rozkwit na papierze"
+
+[[message]]
+key = "Stardust: Constellation"
+[message.translations]
+simplified_chinese = "星链：星海连线"
+traditional_chinese = "星鏈：星海連線"
+japanese = "星屑：星座"
+korean = "별가루: 별자리"
+russian = "Звёздная пыль: созвездие"
+german = "Sternenstaub: Sternbild"
+spanish = "Polvo estelar: constelación"
+french = "Poussière d’étoiles : constellation"
+brazilian_portuguese = "Poeira estelar: constelação"
+portuguese = "Poeira estelar: constelação"
+turkish = "Yıldız tozu: takımyıldız"
+polish = "Gwiezdny pył: konstelacja"
+
+[[message]]
+key = "Keyword rules are too long. Changes were not saved; shorten or remove a rule."
+[message.translations]
+simplified_chinese = "关键词规则过长，未保存更改；请缩短或删除部分规则。"
+traditional_chinese = "關鍵字規則過長，未儲存變更；請縮短或刪除部分規則。"
+japanese = "キーワードルールが長すぎるため、変更を保存できませんでした。ルールを短くするか削除してください。"
+korean = "키워드 규칙이 너무 길어 변경 사항을 저장하지 못했습니다. 규칙을 줄이거나 삭제하세요."
+russian = "Правила ключевых слов слишком длинные. Изменения не сохранены; сократите или удалите правило."
+german = "Die Schlüsselwortregeln sind zu lang. Änderungen wurden nicht gespeichert; kürze oder entferne eine Regel."
+spanish = "Las reglas de palabras clave son demasiado largas. No se guardaron los cambios; acorta o elimina una regla."
+french = "Les règles de mots-clés sont trop longues. Les modifications n’ont pas été enregistrées ; raccourcissez ou supprimez une règle."
+brazilian_portuguese = "As regras de palavras-chave são longas demais. As alterações não foram salvas; encurte ou remova uma regra."
+portuguese = "As regras de palavras-chave são demasiado longas. As alterações não foram guardadas; encurte ou remova uma regra."
+turkish = "Anahtar kelime kuralları çok uzun. Değişiklikler kaydedilmedi; bir kuralı kısaltın veya kaldırın."
+polish = "Reguły słów kluczowych są zbyt długie. Zmiany nie zostały zapisane; skróć lub usuń regułę."
+
+[[message]]
+key = "Candy gradient"
+[message.translations]
+japanese = "キャンディグラデーション"
+korean = "캔디 그라데이션"
+russian = "Конфетный градиент"
+german = "Bonbon-Farbverlauf"
+spanish = "Degradado de caramelo"
+french = "Dégradé de bonbons"
+brazilian_portuguese = "Gradiente de doces"
+portuguese = "Gradiente de rebuçados"
+turkish = "Şeker renk geçişi"
+polish = "Cukierkowy gradient"
+
+[[message]]
+key = "Cloud bubble"
+[message.translations]
+japanese = "雲の吹き出し"
+korean = "구름 말풍선"
+russian = "Облачный пузырь"
+german = "Wolkenblase"
+spanish = "Burbuja de nube"
+french = "Bulle nuage"
+brazilian_portuguese = "Balão de nuvem"
+portuguese = "Balão de nuvem"
+turkish = "Bulut balonu"
+polish = "Dymek w kształcie chmury"
+
+[[message]]
+key = "Comic dialogue"
+[message.translations]
+japanese = "漫画風会話"
+korean = "만화 대화"
+russian = "Диалог комикса"
+german = "Comic-Dialog"
+spanish = "Diálogo de cómic"
+french = "Dialogue de BD"
+brazilian_portuguese = "Diálogo de quadrinhos"
+portuguese = "Diálogo de banda desenhada"
+turkish = "Çizgi roman diyaloğu"
+polish = "Dialog komiksowy"
+
+[[message]]
+key = "Gather and disperse"
+[message.translations]
+japanese = "集合と拡散"
+korean = "모임과 흩어짐"
+russian = "Сбор и рассеивание"
+german = "Sammeln und Zerstreuen"
+spanish = "Agruparse y dispersarse"
+french = "Rassemblement et dispersion"
+brazilian_portuguese = "Agrupar e dispersar"
+portuguese = "Agrupar e dispersar"
+turkish = "Toplanma ve dağılma"
+polish = "Gromadzenie i rozpraszanie"
+
+[[message]]
+key = "Let's play together!"
+[message.translations]
+japanese = "一緒に遊ぼう！"
+korean = "함께 놀아요!"
+russian = "Давайте играть вместе!"
+german = "Lasst uns zusammen spielen!"
+spanish = "¡Juguemos juntos!"
+french = "Jouons ensemble !"
+brazilian_portuguese = "Vamos jogar juntos!"
+portuguese = "Vamos jogar juntos!"
+turkish = "Birlikte oynayalım!"
+polish = "Zagrajmy razem!"
+
+[[message]]
+key = "Style"
+[message.translations]
+japanese = "スタイル"
+korean = "스타일"
+russian = "Стиль"
+german = "Stil"
+spanish = "Estilo"
+french = "Apparence"
+brazilian_portuguese = "Estilo"
+portuguese = "Estilo"
+turkish = "Stil"
+polish = "Styl"
+
+[[message]]
+key = "Use custom colors"
+[message.translations]
+japanese = "カスタムカラーを使用"
+korean = "사용자 지정 색상 사용"
+russian = "Использовать свои цвета"
+german = "Eigene Farben verwenden"
+spanish = "Usar colores personalizados"
+french = "Utiliser des couleurs personnalisées"
+brazilian_portuguese = "Usar cores personalizadas"
+portuguese = "Usar cores personalizadas"
+turkish = "Özel renkler kullan"
+polish = "Użyj własnych kolorów"

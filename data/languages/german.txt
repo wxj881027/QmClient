@@ -1232,6 +1232,9 @@ Audio packets
 Audio packs
 == Audio-Pakete
 
+Aurora: Polar Veil
+== Polarlicht: Polarschleier
+
 AUS
 == AUS
 
@@ -1841,6 +1844,9 @@ Binds that use commands the client does not recognize, listed by their raw comma
 Black
 == Schwarz
 
+Black Flash: Void Rift
+== Schwarzer Blitz: Leerenriss
+
 Blank asset auto fallback
 == Automatischer Fallback für leere Assets
 
@@ -2075,6 +2081,9 @@ Cancel your swap request
 Candidate files
 == Kandidatendateien
 
+Candy gradient
+== Bonbon-Farbverlauf
+
 Cannot join the target player's team
 == Dem Team dieses Spielers kann nicht beigetreten werden
 
@@ -2209,6 +2218,9 @@ Chat bubble display duration (seconds)
 
 Chat bubble font size
 == Schriftgröße der Chat-Blasen
+
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
+== Chat-Blasen-Stil (0=Comic-Dialog, 1=Bonbon-Farbverlauf, 2=Wolkenblase)
 
 Chat bubble text color
 == Textfarbe der Chat-Blasen
@@ -2687,6 +2699,9 @@ Close the demo player
 Close window after changing settings
 == Fenster nach Änderung der Einstellungen schließen
 
+Cloud bubble
+== Wolkenblase
+
 Collapse console
 == Konsole verkleinern
 
@@ -2764,6 +2779,9 @@ Colors too close to the map background are hard to read while moving.
 
 Combo
 == Combo
+
+Comic dialogue
+== Comic-Dialog
 
 Comma-separated list of banned clients to be kicked on join
 == Kommaseparierte Liste gebannter Clients, die beim Beitritt gekickt werden
@@ -6119,6 +6137,9 @@ Gap between statusbar items
 Gap between tee and nametag
 == Abstand zwischen Tee und Namensschild
 
+Gather and disperse
+== Sammeln und Zerstreuen
+
 Gaussian
 == Gauß
 
@@ -6932,6 +6953,9 @@ If the bar covers your chat, lower "Opacity" or "IME font size" first; "Reset IM
 If the wheel feels crowded, remove unused slots in the editor card.
 == Wenn das Rad voll wirkt, entferne ungenutzte Plätze in der Editor-Karte.
 
+Ignis: Ember Spirit
+== Flamme: Glutgeist
+
 Ignore clan tag when searching friends
 == Clan-Tag bei der Freundessuche ignorieren
 
@@ -7147,6 +7171,9 @@ Initializing map layers
 
 Initializing map logic
 == Initialisiere Kartenlogik
+
+Ink: Paper Bloom
+== Tusche: Blüte auf Papier
 
 Input
 == Eingabe
@@ -7560,7 +7587,7 @@ Keyword rules
 == Schlüsselwortregeln
 
 Keyword rules are too long. Changes were not saved; shorten or remove a rule.
-== Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+== Die Schlüsselwortregeln sind zu lang. Änderungen wurden nicht gespeichert; kürze oder entferne eine Regel.
 
 Kick player
 == Spieler kicken
@@ -7819,6 +7846,9 @@ Let server start ghost
 
 Let server start race recorder
 == Server Rennrekorder starten lassen
+
+Let's play together!
+== Lasst uns zusammen spielen!
 
 Lets you join team i (shows your team if left blank)
 == Lässt dich Team i beitreten (zeigt dein Team an, wenn leer gelassen)
@@ -12942,7 +12972,7 @@ Settings card titles use rainbow colors
 == Titel der Einstellungskarten in Regenbogenfarben
 
 Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
-== Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+== Breiten der Einstellungskarten: stableId für volle Breite, !stableId für halbe Breite, durch Semikolons getrennt
 
 Settings file
 == Einstellungsdatei
@@ -14591,6 +14621,9 @@ Standalone
 Star
 == Stern
 
+Stardust: Constellation
+== Sternenstaub: Sternbild
+
 Start (s)
 == Beginn (s)
 
@@ -14800,6 +14833,9 @@ Strong hook color
 
 Strong Weak Hook
 == Starker Schwacher Haken
+
+Style
+== Stil
 
 Style chat names, text, and message colors
 == Style chat names, text, and message colors
@@ -15197,8 +15233,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Tee-Spur-Farbmodus (1=Einfarbig, 2=Aktuelle Tee-Farbe, 3=Regenbogen, 4=Tee-Geschwindigkeit, 5=Zufällig)
 
-Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
-== Tee-Spur-Stil (0=Originalstil, 1=Manga, 2=Magie, 3=Pixel, 4=Alte Manga-Nummer, 5=Alte Magie-Nummer)
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic, 6=Aurora, 7=Ink, 8=Ignis, 9=Stardust, 10=Black Flash)
+== Tee-Spur-Stil (0=Originalstil, 1=Manga, 2=Magie, 3=Pixel, 4=Alte Manga-Nummer, 5=Alte Magie-Nummer, 6=Polarlicht, 7=Tusche, 8=Flamme, 9=Sternenstaub, 10=Schwarzer Blitz)
 
 Tee Trails
 == Tee-Spuren
@@ -16669,6 +16705,12 @@ Use current name
 
 Use current settings
 == Aktuelle Einstellungen übernehmen
+
+Use custom chat bubble colors
+== Eigene Farben für Chat-Blasen verwenden
+
+Use custom colors
+== Eigene Farben verwenden
 
 Use custom colors for the pressed hook collision line (0 = always invert)
 == Eigene Farben für die Haken-Hilfslinie bei gedrückter Taste verwenden (0 = immer invertieren)

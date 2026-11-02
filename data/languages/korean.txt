@@ -1232,6 +1232,9 @@ Audio packets
 Audio packs
 == 오디오 팩
 
+Aurora: Polar Veil
+== 오로라: 극야의 장막
+
 AUS
 == 호주
 
@@ -1841,6 +1844,9 @@ Binds that use commands the client does not recognize, listed by their raw comma
 Black
 == 검정
 
+Black Flash: Void Rift
+== 흑섬: 공허의 균열
+
 Blank asset auto fallback
 == 빈 자산 자동 대체
 
@@ -2075,6 +2081,9 @@ Cancel your swap request
 Candidate files
 == 후보 파일
 
+Candy gradient
+== 캔디 그라데이션
+
 Cannot join the target player's team
 == 대상 플레이어의 팀에 참가할 수 없습니다
 
@@ -2209,6 +2218,9 @@ Chat bubble display duration (seconds)
 
 Chat bubble font size
 == 말풍선 글꼴 크기
+
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
+== 채팅 말풍선 스타일(0=만화 대화, 1=캔디 그라데이션, 2=구름 말풍선)
 
 Chat bubble text color
 == 말풍선 텍스트 색상
@@ -2687,6 +2699,9 @@ Close the demo player
 Close window after changing settings
 == 설정 변경 후 창 닫기
 
+Cloud bubble
+== 구름 말풍선
+
 Collapse console
 == 콘솔 축소
 
@@ -2764,6 +2779,9 @@ Colors too close to the map background are hard to read while moving.
 
 Combo
 == 콤보
+
+Comic dialogue
+== 만화 대화
 
 Comma-separated list of banned clients to be kicked on join
 == 입장 시 추방될 금지 클라이언트의 쉼표로 구분된 목록
@@ -6119,6 +6137,9 @@ Gap between statusbar items
 Gap between tee and nametag
 == 티와 이름표 사이 간격
 
+Gather and disperse
+== 모임과 흩어짐
+
 Gaussian
 == 가우시안
 
@@ -6932,6 +6953,9 @@ If the bar covers your chat, lower "Opacity" or "IME font size" first; "Reset IM
 If the wheel feels crowded, remove unused slots in the editor card.
 == 휠이 너무 빽빽하면 편집기 카드에서 쓰지 않는 슬롯을 지우세요.
 
+Ignis: Ember Spirit
+== 불꽃: 잔불의 정령
+
 Ignore clan tag when searching friends
 == 친구 검색 시 클랜 태그 무시
 
@@ -7147,6 +7171,9 @@ Initializing map layers
 
 Initializing map logic
 == 맵 로직 초기화 중
+
+Ink: Paper Bloom
+== 수묵: 종이 위의 번짐
 
 Input
 == 입력
@@ -7560,7 +7587,7 @@ Keyword rules
 == 키워드 규칙
 
 Keyword rules are too long. Changes were not saved; shorten or remove a rule.
-== Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+== 키워드 규칙이 너무 길어 변경 사항을 저장하지 못했습니다. 규칙을 줄이거나 삭제하세요.
 
 Kick player
 == 플레이어 추방
@@ -7819,6 +7846,9 @@ Let server start ghost
 
 Let server start race recorder
 == 서버가 레이스 리코더를 시작하도록 함
+
+Let's play together!
+== 함께 놀아요!
 
 Lets you join team i (shows your team if left blank)
 == 팀 i에 가입할 수 있게 합니다 (비워두면 현재 팀을 표시)
@@ -12942,7 +12972,7 @@ Settings card titles use rainbow colors
 == 설정 카드 제목에 무지개색 사용
 
 Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
-== Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+== 설정 카드 너비: stableId는 전체 너비, !stableId는 절반 너비이며 세미콜론으로 구분
 
 Settings file
 == 설정 파일
@@ -14591,6 +14621,9 @@ Standalone
 Star
 == 별
 
+Stardust: Constellation
+== 별가루: 별자리
+
 Start (s)
 == 시작 (초)
 
@@ -14800,6 +14833,9 @@ Strong hook color
 
 Strong Weak Hook
 == 강약 갈고리
+
+Style
+== 스타일
 
 Style chat names, text, and message colors
 == Style chat names, text, and message colors
@@ -15197,8 +15233,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Tee 궤적 색상 모드 (1=단색, 2=현재 Tee 색상, 3=무지개, 4=Tee 속도, 5=무작위)
 
-Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
-== Tee 트레일 스타일(0=기본, 1=만화, 2=마법, 3=픽셀, 4=이전 번호의 만화, 5=이전 번호의 마법)
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic, 6=Aurora, 7=Ink, 8=Ignis, 9=Stardust, 10=Black Flash)
+== Tee 트레일 스타일(0=기본, 1=만화, 2=마법, 3=픽셀, 4=이전 번호의 만화, 5=이전 번호의 마법, 6=오로라, 7=수묵, 8=불꽃, 9=별가루, 10=흑섬)
 
 Tee Trails
 == Tee 궤적
@@ -16669,6 +16705,12 @@ Use current name
 
 Use current settings
 == 현재 설정 가져오기
+
+Use custom chat bubble colors
+== 사용자 지정 채팅 말풍선 색상 사용
+
+Use custom colors
+== 사용자 지정 색상 사용
 
 Use custom colors for the pressed hook collision line (0 = always invert)
 == 훅 키를 누를 때 사용자 지정 색상 사용 (0 = 항상 반전)

@@ -39666,12 +39666,32 @@ key = "Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)"
 [message.translations]
 simplified_chinese = "消息气泡样式（0=漫画对白，1=糖果渐变，2=云朵气泡）"
 traditional_chinese = "訊息氣泡樣式（0=漫畫對白，1=糖果漸層，2=雲朵氣泡）"
+japanese = "チャット吹き出しのスタイル（0=漫画風会話、1=キャンディグラデーション、2=雲の吹き出し）"
+korean = "채팅 말풍선 스타일(0=만화 대화, 1=캔디 그라데이션, 2=구름 말풍선)"
+russian = "Стиль пузыря чата (0=Диалог комикса, 1=Конфетный градиент, 2=Облачный пузырь)"
+german = "Chat-Blasen-Stil (0=Comic-Dialog, 1=Bonbon-Farbverlauf, 2=Wolkenblase)"
+spanish = "Estilo de burbuja del chat (0=Diálogo de cómic, 1=Degradado de caramelo, 2=Burbuja de nube)"
+french = "Style des bulles de discussion (0=Dialogue de BD, 1=Dégradé de bonbons, 2=Bulle nuage)"
+brazilian_portuguese = "Estilo do balão de chat (0=Diálogo de quadrinhos, 1=Gradiente de doces, 2=Balão de nuvem)"
+portuguese = "Estilo do balão de conversa (0=Diálogo de banda desenhada, 1=Gradiente de rebuçados, 2=Balão de nuvem)"
+turkish = "Sohbet balonu stili (0=Çizgi roman diyaloğu, 1=Şeker renk geçişi, 2=Bulut balonu)"
+polish = "Styl dymka czatu (0=Dialog komiksowy, 1=Cukierkowy gradient, 2=Dymek w kształcie chmury)"
 
 [[message]]
 key = "Use custom chat bubble colors"
 [message.translations]
 simplified_chinese = "使用自定义消息气泡颜色"
 traditional_chinese = "使用自訂訊息氣泡顏色"
+japanese = "チャット吹き出しにカスタムカラーを使用"
+korean = "사용자 지정 채팅 말풍선 색상 사용"
+russian = "Использовать свои цвета пузырей чата"
+german = "Eigene Farben für Chat-Blasen verwenden"
+spanish = "Usar colores personalizados para las burbujas del chat"
+french = "Utiliser des couleurs personnalisées pour les bulles de discussion"
+brazilian_portuguese = "Usar cores personalizadas nos balões de chat"
+portuguese = "Usar cores personalizadas nos balões de conversa"
+turkish = "Özel sohbet balonu renkleri kullan"
+polish = "Użyj własnych kolorów dymków czatu"
 
 [[message]]
 key = "Style"
@@ -39706,3 +39726,19 @@ brazilian_portuguese = "Rascunho do estilo de chat de apoiador: 0=Normal, 1=Refl
 portuguese = "Rascunho do estilo de chat de apoiante: 0=Normal, 1=Reflexo de platina, 2=Fluido"
 turkish = "Destekçi sohbet stili taslağı: 0=Normal, 1=Platin ışıltısı, 2=Akışkan"
 polish = "Szkic stylu czatu wspierającego: 0=Normalny, 1=Platynowy połysk, 2=Płyn"
+
+[[message]]
+key = "Settings card widths: stableId for full width, !stableId for half width, separated by semicolons"
+[message.translations]
+simplified_chinese = "设置卡片宽度：stableId 表示整行宽度，！stableId 表示半行宽度，多项用分号分隔"
+traditional_chinese = "設定卡片寬度：stableId 表示整行寬度，!stableId 表示半行寬度，多項以分號分隔"
+japanese = "設定カードの幅：stableId は全幅、!stableId は半幅。複数の項目はセミコロンで区切ります"
+korean = "설정 카드 너비: stableId는 전체 너비, !stableId는 절반 너비이며 세미콜론으로 구분"
+russian = "Ширина карточек настроек: stableId — полная ширина, !stableId — половина ширины; разделитель — точка с запятой"
+german = "Breiten der Einstellungskarten: stableId für volle Breite, !stableId für halbe Breite, durch Semikolons getrennt"
+spanish = "Anchos de las tarjetas de ajustes: stableId para ancho completo, !stableId para medio ancho, separados por punto y coma"
+french = "Largeur des cartes de réglages : stableId pour la pleine largeur, !stableId pour la demi-largeur, séparés par des points-virgules"
+brazilian_portuguese = "Larguras dos cartões de configurações: stableId para largura total, !stableId para meia largura, separados por ponto e vírgula"
+portuguese = "Larguras dos cartões de definições: stableId para largura total, !stableId para meia largura, separados por ponto e vírgula"
+turkish = "Ayar kartı genişlikleri: tam genişlik için stableId, yarım genişlik için !stableId; noktalı virgülle ayrılır"
+polish = "Szerokości kart ustawień: stableId oznacza pełną szerokość, !stableId połowę szerokości; wpisy oddzielaj średnikami"
