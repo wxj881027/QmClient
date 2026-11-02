@@ -12692,8 +12692,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == 지정된 명령을 rcon 으로 전송
 
-Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
-== 30~90초의 무작위 간격으로 연속 세 줄의 가사를 전체 채팅에 보내며 줄 사이에 3초 대기
+Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
+== 90~270초의 무작위 간격으로 연속 세 줄의 가사를 전체 채팅에 보내며 줄 사이에 3초 대기
 
 Send translation method
 == 번역 방식 보내기

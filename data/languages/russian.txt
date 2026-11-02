@@ -12692,8 +12692,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == Отправить указанную команду в rcon
 
-Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
-== Отправлять три последовательные строки песни в общий чат через случайные интервалы от 30 до 90 секунд, с паузой 3 секунды между строками
+Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
+== Отправлять три последовательные строки песни в общий чат через случайные интервалы от 90 до 270 секунд, с паузой 3 секунды между строками
 
 Send translation method
 == Способ отправки перевода

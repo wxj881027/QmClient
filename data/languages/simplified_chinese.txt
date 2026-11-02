@@ -12695,8 +12695,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == 向 rcon 发送指定命令
 
-Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
-== 每隔随机 30 到 90 秒向公共聊天逐句发送连续三句歌词，句间隔 3 秒
+Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
+== 每隔随机 90 到 270 秒向公共聊天逐句发送连续三句歌词，句间隔 3 秒
 
 Send translation method
 == 发送翻译方式
