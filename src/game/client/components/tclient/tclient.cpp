@@ -2859,11 +2859,34 @@ int CTClient::GoresMapProgressSlot(int Dummy) const
 	return Idx == g_Config.m_ClDummy && GoresMapProgressClientId(NUM_DUMMIES) >= 0 ? NUM_DUMMIES : Idx;
 }
 
+std::optional<vec2> CTClient::GoresMapProgressPosition(int ClientId) const
+{
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return std::nullopt;
+	std::optional<vec2> CharacterPosition;
+	std::optional<vec2> SpecCharacterPosition;
+	std::optional<vec2> SpectatorPosition;
+	const auto &Character = GameClient()->m_Snap.m_aCharacters[ClientId];
+	if(Character.m_Active)
+		CharacterPosition = vec2((float)Character.m_Cur.m_X, (float)Character.m_Cur.m_Y);
+	if(ClientId == GoresMapProgressClientId(NUM_DUMMIES))
+	{
+		const auto &Client = GameClient()->m_aClients[ClientId];
+		if(Client.m_SpecCharPresent)
+			SpecCharacterPosition = Client.m_SpecChar;
+		const auto *pSpectator = GameClient()->m_Snap.m_pSpectatorInfo;
+		// 跟随坐标必须属于当前目标，切换目标时不能沿用上一人的位置。
+		if(pSpectator && pSpectator->m_SpectatorId == ClientId)
+			SpectatorPosition = vec2((float)pSpectator->m_X, (float)pSpectator->m_Y);
+	}
+	return QmMapProgress::ResolvePosition(CharacterPosition, SpecCharacterPosition, SpectatorPosition);
+}
+
 bool CTClient::HasGoresMapProgress(int Dummy) const
 {
 	const int Slot = GoresMapProgressSlot(Dummy);
 	const int ClientId = GoresMapProgressClientId(Slot);
-	return ClientId >= 0 && ClientId < MAX_CLIENTS && GameClient()->m_Snap.m_aCharacters[ClientId].m_Active &&
+	return GoresMapProgressPosition(ClientId).has_value() &&
 	       m_aMapProgressClientId[Slot] == ClientId && m_aGoresMapProgressValid[Slot];
 }
 
@@ -3615,16 +3638,12 @@ int CTClient::FindGoresDebugRouteStart(int Dummy) const
 		m_vGoresDistanceToFinish.size() != (size_t)MapCellCount)
 		return -1;
 
-	const int DummyIndex = Dummy < 0 ? 0 : (Dummy >= NUM_DUMMIES ? NUM_DUMMIES - 1 : Dummy);
-	if(DummyIndex == 1 && !Client()->DummyConnected())
+	const int Slot = GoresMapProgressSlot(Dummy);
+	if(Slot == 1 && !Client()->DummyConnected())
 		return -1;
 
-	const int ClientId = GameClient()->m_aLocalIds[DummyIndex];
-	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
-		return -1;
-
-	const auto &Char = GameClient()->m_Snap.m_aCharacters[ClientId];
-	if(!Char.m_Active)
+	const auto Position = GoresMapProgressPosition(GoresMapProgressClientId(Slot));
+	if(!Position)
 		return -1;
 
 	const CTile *pGame = pCollision->GameLayer();
@@ -3632,7 +3651,7 @@ int CTClient::FindGoresDebugRouteStart(int Dummy) const
 		return -1;
 	const CTile *pFront = pCollision->FrontLayer();
 
-	const vec2 RefPos = GameClient()->m_aClients[ClientId].m_RenderPos;
+	const vec2 RefPos = *Position;
 	const auto IsReachableIndex = [&](int Index) {
 		return Index >= 0 && Index < MapCellCount &&
 		       m_vGoresDistanceToFinish[(size_t)Index].m_Length != DISTANCE_INF;
@@ -3666,7 +3685,7 @@ bool CTClient::BuildGoresDebugRoute(std::vector<vec2> &vRoutePoints, int Dummy, 
 	{
 		if(!pCollision)
 			return false;
-		if(!m_aQmDDraceProgress[std::clamp(Dummy, 0, NUM_DUMMIES - 1)].BuildRoute(m_vDDraceDebugRouteIndices))
+		if(!m_aQmDDraceProgress[GoresMapProgressSlot(Dummy)].BuildRoute(m_vDDraceDebugRouteIndices))
 			return false;
 		for(const int Index : m_vDDraceDebugRouteIndices)
 			vRoutePoints.push_back(pCollision->GetPos(Index));
@@ -3708,11 +3727,12 @@ void CTClient::RenderGoresDebugRoute()
 	EnsureGoresDistanceField();
 	CQmRouteRenderCache::SKey Key;
 	Key.m_Dummy = std::clamp(g_Config.m_ClDummy, 0, NUM_DUMMIES - 1);
-	Key.m_ClientId = GameClient()->m_aLocalIds[Key.m_Dummy];
+	const int Slot = GoresMapProgressSlot(Key.m_Dummy);
+	Key.m_ClientId = GoresMapProgressClientId(Slot);
 	Key.m_DDrace = IsDDraceMapProgressMap();
 	if(Key.m_DDrace)
 	{
-		const auto &Progress = m_aQmDDraceProgress[Key.m_Dummy];
+		const auto &Progress = m_aQmDDraceProgress[Slot];
 		Key.m_StartIndex = Progress.RouteIndex();
 		Key.m_Revision = Progress.RouteRevision();
 		Key.m_Segment = Progress.UsesSegmentRoute();
@@ -3856,8 +3876,8 @@ void CTClient::UpdateDDraceMapProgress()
 	{
 		auto &Progress = m_aQmDDraceProgress[Dummy];
 		const int ClientId = GoresMapProgressClientId(Dummy);
-		if((Dummy == 1 && !Client()->DummyConnected()) || ClientId < 0 || ClientId >= MAX_CLIENTS ||
-			!GameClient()->m_Snap.m_aCharacters[ClientId].m_Active)
+		const auto Position = GoresMapProgressPosition(ClientId);
+		if((Dummy == 1 && !Client()->DummyConnected()) || !Position)
 		{
 			if(m_aMapProgressClientId[Dummy] >= 0)
 			{
@@ -3878,13 +3898,13 @@ void CTClient::UpdateDDraceMapProgress()
 			m_aMapProgressClientId[Dummy] = ClientId;
 		}
 		const auto &Character = GameClient()->m_Snap.m_aCharacters[ClientId];
-		const vec2 Pos((float)Character.m_Cur.m_X, (float)Character.m_Cur.m_Y);
+		const vec2 Pos = *Position;
 		const int Index = pCollision->GetPureMapIndex(Pos);
 		if(Index < 0 || Index >= Size)
 			continue;
 		const auto Observe = [&](int TileIndex) {
 			Progress.Observe(ReadTile(TileIndex), TileIndex);
-			if(!Character.m_HasExtendedData && pTele && pTele[TileIndex].m_Type == TILE_TELECHECK)
+			if((!Character.m_Active || !Character.m_HasExtendedData) && pTele && pTele[TileIndex].m_Type == TILE_TELECHECK)
 				m_aQmDDraceTeleCheckpoint[Dummy] = pTele[TileIndex].m_Number;
 		};
 		if(m_aQmDDraceProgressHasPreviousPos[Dummy])
@@ -3902,7 +3922,7 @@ void CTClient::UpdateDDraceMapProgress()
 			}
 		}
 		Observe(Index);
-		if(Character.m_HasExtendedData)
+		if(Character.m_Active && Character.m_HasExtendedData)
 			m_aQmDDraceTeleCheckpoint[Dummy] = Character.m_ExtendedData.m_TeleCheckpoint;
 		m_aQmDDraceProgressPreviousPos[Dummy] = Pos;
 		m_aQmDDraceProgressHasPreviousPos[Dummy] = true;
@@ -3966,10 +3986,9 @@ void CTClient::UpdateGoresMapProgress()
 	m_aMapProgressClientId[NUM_DUMMIES] = SpectatorId;
 	m_aGoresMapProgressValid[NUM_DUMMIES] = false;
 	m_aGoresMapProgress[NUM_DUMMIES] = 0.0f;
-	if(SpectatorId >= 0 && GameClient()->m_Snap.m_aCharacters[SpectatorId].m_Active)
+	if(const auto Position = GoresMapProgressPosition(SpectatorId))
 	{
-		const auto &Character = GameClient()->m_Snap.m_aCharacters[SpectatorId].m_Cur;
-		const int Index = pCollision->GetPureMapIndex(vec2((float)Character.m_X, (float)Character.m_Y));
+		const int Index = pCollision->GetPureMapIndex(*Position);
 		if(Index >= 0 && Index < MapCellCount)
 		{
 			const auto Estimate = QmMapProgress::EstimateDistance(m_vGoresDistanceToFinish[(size_t)Index].m_Length, m_GoresStartDistanceToFinish);
