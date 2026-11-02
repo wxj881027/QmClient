@@ -3,7 +3,7 @@
 
 #include <cstddef>
 
-// 只由独立客户端预测测试程序使用；每个作用域仅使指定的一次分配失败。
+// 由独立客户端预测与真实 UI 测试程序共用；每个作用域仅使指定的一次分配失败。
 class CPredictionAllocationFailure
 {
 	inline static thread_local CPredictionAllocationFailure *s_pActive = nullptr;

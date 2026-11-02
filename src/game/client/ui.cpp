@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <memory>
 
 using namespace FontIcons;
 
@@ -52,11 +53,21 @@ namespace
 void CUIElement::Init(CUi *pUI, int RequestedRectCount)
 {
 	dbg_assert(m_pUI == nullptr, "UI element can only be registered once.");
-	m_pUI = pUI;
+	const bool InitializeRects = RequestedRectCount > 0 && !AreRectsInit();
+	std::vector<SUIElementRect> vNewRects;
+	if(InitializeRects)
+		vNewRects.resize(RequestedRectCount);
+	dbg_assert(RequestedRectCount <= 0 || (InitializeRects ? vNewRects.size() : m_vUIRects.size()) == (size_t)RequestedRectCount, "UI element rect count changed.");
+
+	// 矩形和注册表均准备成功后再发布，构造失败时不留下登记。
 	pUI->AddUIElement(this);
-	if(RequestedRectCount > 0 && !AreRectsInit())
-		InitRects(RequestedRectCount);
-	dbg_assert(RequestedRectCount <= 0 || m_vUIRects.size() == (size_t)RequestedRectCount, "UI element rect count changed.");
+	if(InitializeRects)
+	{
+		m_vUIRects.swap(vNewRects);
+		for(auto &Rect : m_vUIRects)
+			Rect.m_pParent = this;
+	}
+	m_pUI = pUI;
 }
 
 CUIElement::~CUIElement()
@@ -271,11 +282,11 @@ void CUi::OnShutdown()
 
 CUIElement *CUi::GetNewUIElement(int RequestedRectCount)
 {
-	CUIElement *pNewEl = new CUIElement(this, RequestedRectCount);
+	std::unique_ptr<CUIElement> pNewEl(new CUIElement(this, RequestedRectCount));
 
-	m_vpOwnUIElements.push_back(pNewEl);
+	m_vpOwnUIElements.push_back(pNewEl.get());
 
-	return pNewEl;
+	return pNewEl.release();
 }
 
 void CUi::AddUIElement(CUIElement *pElement)

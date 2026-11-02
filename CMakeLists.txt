@@ -6186,6 +6186,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_surface_text_test.cpp
       src/test/integration/qmclient/ui/qm_theme_selection_test.cpp
       src/test/integration/qmclient/ui/qm_ui_element_lifetime_test.cpp
+      src/test/integration/qmclient/ui/qm_ui_element_allocation_test.cpp
+      src/test/support/allocation_failure_new.cpp
       src/engine/client/text.cpp
       src/engine/client/graph.cpp
       src/game/client/ui.cpp
@@ -6250,6 +6252,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     # 客户端与服务端有同名的预测/实体类，独立目标只链接客户端实现。
     add_executable(qm-prediction-tests EXCLUDE_FROM_ALL
       src/test/support/prediction_allocation_main.cpp
+      src/test/support/allocation_failure_new.cpp
       src/test/support/prediction_allocation_failure.h
       src/test/support/prediction_collision_map.h
       src/test/integration/client/prediction_world_copy_failure_test.cpp
