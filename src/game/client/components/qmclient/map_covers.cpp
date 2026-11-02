@@ -23,7 +23,7 @@ namespace
 	}
 } // namespace
 
-// 工作线程只做解码、缩放与遮罩；主线程负责纹理上传。
+// 工作线程只做解码、缩放与拖尾；主线程负责纹理上传。
 class CQmMapCovers::CComposeJob : public IJob
 {
 public:
@@ -65,14 +65,38 @@ CQmMapCovers::~CQmMapCovers()
 
 std::string CQmMapCovers::MakeKeyString(const SKey &Key)
 {
-	return Key.m_Url + '|' + std::to_string(Key.m_Width) + 'x' + std::to_string(Key.m_Height);
+	return Key.m_Url + (Key.m_Role == ERole::DETAILS ? "|details" : "|row");
 }
 
-QmMapCover::SArt CQmMapCovers::StyleForUrl(const char *pUrl)
+QmMapCover::SArt CQmMapCovers::StyleForUrl(const char *pUrl, ERole Role)
 {
 	QmMapCover::SArt Art;
-	Art.m_Dissolve.m_Seed = QmMapCover::SeedForUrl(pUrl);
+	Art.m_Seed = QmMapCover::SeedForUrl(pUrl);
+	if(Role == ERole::DETAILS)
+	{
+		Art.m_Shade = 0.88f;
+		Art.m_CornerRadius = 9.0f;
+	}
+	else
+	{
+		Art.m_Shade = 0.84f;
+		Art.m_CornerRadius = 7.0f;
+	}
 	return Art;
+}
+
+void CQmMapCovers::ComposeSize(ERole Role, int *pWidth, int *pHeight)
+{
+	if(Role == ERole::DETAILS)
+	{
+		*pWidth = DETAILS_WIDTH;
+		*pHeight = DETAILS_HEIGHT;
+	}
+	else
+	{
+		*pWidth = ROW_WIDTH;
+		*pHeight = ROW_HEIGHT;
+	}
 }
 
 void CQmMapCovers::Update(IHttp *pHttp, IEngine *pEngine, IGraphics *pGraphics, IStorage *pStorage, float Now)
@@ -91,29 +115,19 @@ void CQmMapCovers::Update(IHttp *pHttp, IEngine *pEngine, IGraphics *pGraphics, 
 	StartQueued();
 }
 
-bool CQmMapCovers::Get(const char *pUrl, int PixelWidth, int PixelHeight, SImage *pOut)
+bool CQmMapCovers::Get(const char *pUrl, ERole Role, SImage *pOut)
 {
 	if(pOut == nullptr)
 		return false;
 	*pOut = {};
-	if(!QmMapCover::ValidThumbnailUrl(pUrl) || PixelWidth <= 0 || PixelHeight <= 0)
+	if(!QmMapCover::ValidThumbnailUrl(pUrl))
 		return false;
 
-	// 大窗口下按比例收窄到上限，行条目与详情面板各自得到自己的目标尺寸。
-	int Width = PixelWidth;
-	int Height = PixelHeight;
-	while(Width > QmMapCover::MAX_WIDTH || Height > QmMapCover::MAX_HEIGHT)
-	{
-		Width = std::max(1, Width / 2);
-		Height = std::max(1, Height / 2);
-	}
-
-	const SKey Key{pUrl, Width, Height};
+	const SKey Key{pUrl, Role};
 	if(SEntry *pEntry = FindEntry(Key))
 	{
 		pEntry->m_LastUsedFrame = m_Frame;
 		pOut->m_Texture = pEntry->m_Texture;
-		pOut->m_Opacity = std::clamp((m_Now - pEntry->m_LoadedAt) / FADE_SECONDS, 0.0f, 1.0f);
 		return pOut->m_Texture.IsValid();
 	}
 
@@ -193,7 +207,7 @@ void CQmMapCovers::MarkFailed(const SKey &Key, const char *pReason)
 	log_debug("map_covers", "failed to prepare cover (%s): %s", pReason != nullptr ? pReason : "unknown", Key.m_Url.c_str());
 	m_vFailedUntil[Key.m_Url] = m_Now + FAILURE_RETRY_SECONDS;
 	m_PendingKeys.erase(MakeKeyString(Key));
-	// 同一地图的其它尺寸也一并冷却，避免一个坏 URL 被每个可见行反复排队。
+	// 同一地图的其它用途也一并冷却，避免一个坏 URL 被每个可见行反复排队。
 	for(auto It = m_vQueue.begin(); It != m_vQueue.end();)
 	{
 		if(It->m_Key.m_Url != Key.m_Url)
@@ -294,7 +308,7 @@ void CQmMapCovers::StartQueued()
 		unsigned FileSize = 0;
 		if(m_pStorage != nullptr && m_pStorage->ReadFile(Task.m_CachePath.c_str(), IStorage::TYPE_SAVE, &pFileData, &FileSize))
 		{
-			if(Reads >= 4)
+			if(Reads >= MAX_READS_PER_FRAME)
 				return;
 			++Reads;
 			const bool Valid = pFileData != nullptr && FileSize >= 8 && FileSize <= static_cast<size_t>(MAX_RESPONSE_BYTES) &&
@@ -350,8 +364,11 @@ void CQmMapCovers::StartComposeJob(const STask &Task, const unsigned char *pPngD
 		MarkFailed(Task.m_Key, "empty response");
 		return;
 	}
+	int Width = 0;
+	int Height = 0;
+	ComposeSize(Task.m_Key.m_Role, &Width, &Height);
 	std::vector<unsigned char> Data(pPngData, pPngData + PngSize);
-	auto pJob = std::make_shared<CComposeJob>(std::move(Data), Task.m_Key.m_Width, Task.m_Key.m_Height, StyleForUrl(Task.m_Key.m_Url.c_str()));
+	auto pJob = std::make_shared<CComposeJob>(std::move(Data), Width, Height, StyleForUrl(Task.m_Key.m_Url.c_str(), Task.m_Key.m_Role));
 	m_vJobs.push_back(SJob{Task.m_Key, Task.m_CachePath, pJob});
 	m_PendingKeys.insert(MakeKeyString(Task.m_Key));
 	m_pEngine->AddJob(pJob);
@@ -370,16 +387,9 @@ void CQmMapCovers::AddTexture(SJob &Job)
 		MarkFailed(Job.m_Key, "upload");
 		return;
 	}
-	// 尺寸变化后旧纹理可能还挂着同一个 key 的前一版，先释放。
-	if(SEntry *pOld = FindEntry(Job.m_Key))
-	{
-		m_pGraphics->UnloadTexture(&pOld->m_Texture);
-		m_vEntries.erase(std::remove_if(m_vEntries.begin(), m_vEntries.end(), [&](const SEntry &Entry) { return Entry.m_Key == Job.m_Key; }), m_vEntries.end());
-	}
 	SEntry Entry;
 	Entry.m_Key = Job.m_Key;
 	Entry.m_Texture = Texture;
-	Entry.m_LoadedAt = m_Now;
 	Entry.m_LastUsedFrame = m_Frame;
 	m_vEntries.push_back(std::move(Entry));
 	EvictTextures();

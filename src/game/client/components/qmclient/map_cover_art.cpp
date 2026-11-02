@@ -39,7 +39,7 @@ namespace
 		return Value * Value * (3.0f - 2.0f * Value);
 	}
 
-	// 左侧两个圆角；右侧尾部已经渐隐到 0，不需要额外遮罩。
+	// 左侧两个圆角；右侧拖尾渐隐到 0，不需要额外遮罩。
 	float CornerCoverage(float LocalX, float LocalY, float Radius)
 	{
 		if(Radius <= 0.0f)
@@ -55,6 +55,19 @@ namespace
 	{
 		const size_t Index = (static_cast<size_t>(Y) * Image.m_Width + X) * ChannelCount + Channel;
 		return static_cast<float>(Image.m_pData[Index]) / 255.0f;
+	}
+
+	float BilinearChannel(const CImageInfo &Image, int ChannelCount, float X, float Y, int Channel)
+	{
+		const int X0 = std::clamp(static_cast<int>(X), 0, static_cast<int>(Image.m_Width) - 1);
+		const int Y0 = std::clamp(static_cast<int>(Y), 0, static_cast<int>(Image.m_Height) - 1);
+		const int X1 = std::min(X0 + 1, static_cast<int>(Image.m_Width) - 1);
+		const int Y1 = std::min(Y0 + 1, static_cast<int>(Image.m_Height) - 1);
+		const float FractionX = std::clamp(X - static_cast<float>(X0), 0.0f, 1.0f);
+		const float FractionY = std::clamp(Y - static_cast<float>(Y0), 0.0f, 1.0f);
+		const float Top = SampleChannel(Image, ChannelCount, X0, Y0, Channel) + (SampleChannel(Image, ChannelCount, X1, Y0, Channel) - SampleChannel(Image, ChannelCount, X0, Y0, Channel)) * FractionX;
+		const float Bottom = SampleChannel(Image, ChannelCount, X0, Y1, Channel) + (SampleChannel(Image, ChannelCount, X1, Y1, Channel) - SampleChannel(Image, ChannelCount, X0, Y1, Channel)) * FractionX;
+		return Top + (Bottom - Top) * FractionY;
 	}
 } // namespace
 
@@ -121,64 +134,9 @@ float QmMapCover::ValueNoise(float X, float Y, uint32_t Seed)
 	return Top + (Bottom - Top) * WeightY;
 }
 
-float QmMapCover::DissolveAlpha(const SDissolve &Style, int X, int Y, int Width, int Height)
-{
-	if(Width <= 0 || Height <= 0)
-		return 0.0f;
-	const float U = (static_cast<float>(X) + 0.5f) / static_cast<float>(Width);
-	const float V = (static_cast<float>(Y) + 0.5f) / static_cast<float>(Height);
-	const uint32_t Seed = Style.m_Seed;
-	const float Ragged = std::max(0.0f, Style.m_Ragged);
-	const float Start = std::clamp(Style.m_Start, 0.0f, 0.99f);
-	const float End = std::clamp(Style.m_End, Start + 0.01f, 1.5f);
-	const float SecondStart = Start + 0.08f;
-	const float SecondEnd = std::max(SecondStart + 0.02f, End - 0.05f);
-	const float MainBase = (U - Start) / (End - Start);
-	const float SecondBase = (U - SecondStart) / (SecondEnd - SecondStart);
-
-	// 噪声对渐隐边界的最大错切约 ±0.25（归一化 t）：完全在边界之外时直接返回，
-	// 大段不透明/透明的像素不必参与 5 次 value noise 采样。
-	const float WarpMargin = 0.26f * Ragged;
-	float Alpha;
-	if(MainBase < -WarpMargin && SecondBase < -WarpMargin)
-		Alpha = 1.0f;
-	else if(MainBase > 1.0f + WarpMargin && SecondBase > 1.0f + WarpMargin)
-		Alpha = 0.0f;
-	else
-	{
-		// 主层：三档频率的噪声错切同一渐变边界，形成参差的尾部。
-		const float WarpMain =
-			(ValueNoise(U * 5.0f, V * 2.0f, Seed) - 0.5f) * 0.30f +
-			(ValueNoise(U * 13.0f, V * 4.5f, Seed + 1) - 0.5f) * 0.13f +
-			(ValueNoise(U * 37.0f, V * 11.0f, Seed + 2) - 0.5f) * 0.05f;
-		const float AlphaMain = 1.0f - SmoothStep(MainBase + WarpMain * Ragged);
-
-		// 第二层起点更靠后、峰值只有 70%：叠出「层」的层次，而不是一条均匀渐变带。
-		const float WarpSecond =
-			(ValueNoise(U * 9.0f + 7.3f, V * 3.0f + 11.1f, Seed + 3) - 0.5f) * 0.26f +
-			(ValueNoise(U * 23.0f, V * 7.0f, Seed + 4) - 0.5f) * 0.10f;
-		const float AlphaSecond = (1.0f - SmoothStep(SecondBase + WarpSecond * Ragged)) * 0.70f;
-
-		Alpha = std::max(AlphaMain, AlphaSecond);
-	}
-
-	// 左侧圆角：只处理两个左角，尾部为 0 的位置不需要。
-	const float Radius = std::clamp(Style.m_CornerRadius, 0.0f, std::min(Width, Height) * 0.5f);
-	if(Radius > 0.0f)
-	{
-		const float PixelX = static_cast<float>(X) + 0.5f;
-		const float PixelY = static_cast<float>(Y) + 0.5f;
-		const float TopCoverage = PixelY < Radius ? CornerCoverage(PixelX, PixelY, Radius) : 1.0f;
-		const float BottomCoverage = PixelY > static_cast<float>(Height) - Radius ? CornerCoverage(PixelX, static_cast<float>(Height) - PixelY, Radius) : 1.0f;
-		Alpha *= std::min(TopCoverage, BottomCoverage);
-	}
-
-	return std::clamp(Alpha, 0.0f, 1.0f);
-}
-
 uint32_t QmMapCover::SeedForUrl(const char *pUrl)
 {
-	// FNV-1a：同一 URL 在行条目与详情面板得到同一个尾部走向。
+	// FNV-1a：同一 URL 在行条目与详情条得到同一个拖尾走向。
 	uint32_t Hash = 2166136261u;
 	if(pUrl != nullptr)
 	{
@@ -188,58 +146,95 @@ uint32_t QmMapCover::SeedForUrl(const char *pUrl)
 	return Hash;
 }
 
+float QmMapCover::TailAlpha(const SArt &Art, int X, int Y, int Width, int Height, int ImageWidth)
+{
+	const int TailWidth = Width - ImageWidth;
+	if(TailWidth <= 0 || Height <= 0 || X < ImageWidth || X >= Width)
+		return 0.0f;
+	const float T = (static_cast<float>(X - ImageWidth) + 0.5f) / static_cast<float>(TailWidth);
+	const float V = (static_cast<float>(Y) + 0.5f) / static_cast<float>(Height);
+	const uint32_t Seed = Art.m_Seed;
+	const float Ragged = std::max(0.0f, Art.m_Ragged);
+	// 噪声在 T=0 处权重为 0，保证缩略图右边缘与拖尾起点无缝衔接。
+	const float Ramp = std::min(1.0f, T * 5.0f);
+
+	// 主层最长，第二层更短、更虚，第三层再短一些：叠加后就是层次不齐的尾巴。
+	const float WarpMain = ((ValueNoise(V * 2.5f, T * 3.0f, Seed) - 0.5f) * 0.34f +
+				       (ValueNoise(V * 6.0f, T * 9.0f, Seed + 1) - 0.5f) * 0.14f) *
+			       Ragged * Ramp;
+	const float WarpSecond = ((ValueNoise(V * 4.0f + 5.0f, T * 5.0f + 3.0f, Seed + 2) - 0.5f) * 0.30f +
+					 (ValueNoise(V * 11.0f, T * 17.0f, Seed + 3) - 0.5f) * 0.10f) *
+				 Ragged * Ramp;
+	const float WarpThird = (ValueNoise(V * 7.0f + 11.0f, T * 9.0f + 7.0f, Seed + 4) - 0.5f) * 0.30f * Ragged * Ramp;
+
+	const float Main = 1.0f - SmoothStep(T * 1.05f - 0.02f + WarpMain);
+	const float Second = (1.0f - SmoothStep(T / 0.66f + WarpSecond)) * 0.62f;
+	const float Third = (1.0f - SmoothStep(T / 0.42f + WarpThird)) * 0.30f;
+	return std::clamp(std::max({Main, Second, Third}), 0.0f, 1.0f);
+}
+
 bool QmMapCover::Compose(const CImageInfo &Source, int OutWidth, int OutHeight, const SArt &Art, CImageInfo &Out)
 {
 	if(Source.m_pData == nullptr || Source.m_Width == 0 || Source.m_Height == 0)
 		return false;
 	if(Source.m_Format != CImageInfo::FORMAT_RGB && Source.m_Format != CImageInfo::FORMAT_RGBA)
 		return false;
-	if(OutWidth <= 0 || OutHeight <= 0 || OutWidth > MAX_WIDTH || OutHeight > MAX_HEIGHT)
+	if(OutWidth <= 0 || OutHeight <= 0 || OutWidth > MAX_WIDTH || OutHeight > MAX_HEIGHT || OutWidth < 2)
 		return false;
 
+	const int ImageWidth = std::clamp(static_cast<int>(std::lround(static_cast<float>(OutWidth) * std::clamp(Art.m_ImageFraction, 0.3f, 0.95f))), 1, OutWidth - 1);
 	const int ChannelCount = Source.m_Format == CImageInfo::FORMAT_RGBA ? 4 : 3;
-	const float Scale = std::max(static_cast<float>(OutWidth) / static_cast<float>(Source.m_Width),
+	const float Shade = std::clamp(Art.m_Shade, 0.0f, 1.0f);
+
+	// 缩略图区域按目标高度等比缩放并居中裁切。
+	const float Scale = std::max(static_cast<float>(ImageWidth) / static_cast<float>(Source.m_Width),
 		static_cast<float>(OutHeight) / static_cast<float>(Source.m_Height));
 	const float SourcePerPixel = 1.0f / Scale;
-	// 居中裁切：缩放后超出目标矩形的部分平均分到两侧。
-	const float OffsetX = (static_cast<float>(Source.m_Width) - static_cast<float>(OutWidth) * SourcePerPixel) * 0.5f;
+	const float OffsetX = (static_cast<float>(Source.m_Width) - static_cast<float>(ImageWidth) * SourcePerPixel) * 0.5f;
 	const float OffsetY = (static_cast<float>(Source.m_Height) - static_cast<float>(OutHeight) * SourcePerPixel) * 0.5f;
+	const float MaxSourceX = static_cast<float>(Source.m_Width) - 1.0f;
+	const float MaxSourceY = static_cast<float>(Source.m_Height) - 1.0f;
+	const float Radius = std::clamp(Art.m_CornerRadius, 0.0f, static_cast<float>(std::min(ImageWidth, OutHeight)) * 0.5f);
 
 	const size_t OutputSize = static_cast<size_t>(OutWidth) * static_cast<size_t>(OutHeight) * 4;
 	auto *pOutput = static_cast<uint8_t *>(malloc(OutputSize));
 	if(pOutput == nullptr)
 		return false;
 
-	const float Shade = std::clamp(Art.m_Shade, 0.0f, 1.0f);
-	const float MaxSourceX = static_cast<float>(Source.m_Width) - 1.0f;
-	const float MaxSourceY = static_cast<float>(Source.m_Height) - 1.0f;
-
 	for(int Y = 0; Y < OutHeight; ++Y)
 	{
 		const float SourceY = std::clamp(OffsetY + (static_cast<float>(Y) + 0.5f) * SourcePerPixel - 0.5f, 0.0f, MaxSourceY);
-		const int Y0 = static_cast<int>(SourceY);
-		const int Y1 = std::min(Y0 + 1, static_cast<int>(Source.m_Height) - 1);
-		const float FractionY = SourceY - static_cast<float>(Y0);
 		uint8_t *pRow = pOutput + static_cast<size_t>(Y) * static_cast<size_t>(OutWidth) * 4;
 		for(int X = 0; X < OutWidth; ++X)
 		{
-			const float SourceX = std::clamp(OffsetX + (static_cast<float>(X) + 0.5f) * SourcePerPixel - 0.5f, 0.0f, MaxSourceX);
-			const int X0 = static_cast<int>(SourceX);
-			const int X1 = std::min(X0 + 1, static_cast<int>(Source.m_Width) - 1);
-			const float FractionX = SourceX - static_cast<float>(X0);
 			uint8_t *pPixel = pRow + static_cast<size_t>(X) * 4;
+			float Alpha = 1.0f;
+			float SourceX;
+			if(X < ImageWidth)
+			{
+				SourceX = std::clamp(OffsetX + (static_cast<float>(X) + 0.5f) * SourcePerPixel - 0.5f, 0.0f, MaxSourceX);
+				if(Radius > 0.0f)
+				{
+					const float PixelX = static_cast<float>(X) + 0.5f;
+					const float PixelY = static_cast<float>(Y) + 0.5f;
+					const float TopCoverage = PixelY < Radius ? CornerCoverage(PixelX, PixelY, Radius) : 1.0f;
+					const float BottomCoverage = PixelY > static_cast<float>(OutHeight) - Radius ? CornerCoverage(PixelX, static_cast<float>(OutHeight) - PixelY, Radius) : 1.0f;
+					Alpha = std::min(TopCoverage, BottomCoverage);
+				}
+			}
+			else
+			{
+				// 拖尾采样缩略图右边缘的列：T=0 从最右列开始，越往右缓慢向内扩，
+				// 这样拖尾和缩略图边缘严格连续，看起来像画面被拉出的残影。
+				const float T = (static_cast<float>(X - ImageWidth) + 0.5f) / static_cast<float>(OutWidth - ImageWidth);
+				SourceX = (1.0f - 0.10f * T * T) * MaxSourceX;
+				Alpha = TailAlpha(Art, X, Y, OutWidth, OutHeight, ImageWidth);
+			}
 			for(int Channel = 0; Channel < 3; ++Channel)
 			{
-				const float TopLeft = SampleChannel(Source, ChannelCount, X0, Y0, Channel);
-				const float TopRight = SampleChannel(Source, ChannelCount, X1, Y0, Channel);
-				const float BottomLeft = SampleChannel(Source, ChannelCount, X0, Y1, Channel);
-				const float BottomRight = SampleChannel(Source, ChannelCount, X1, Y1, Channel);
-				const float Top = TopLeft + (TopRight - TopLeft) * FractionX;
-				const float Bottom = BottomLeft + (BottomRight - BottomLeft) * FractionX;
-				const float Value = (Top + (Bottom - Top) * FractionY) * Shade;
+				const float Value = BilinearChannel(Source, ChannelCount, SourceX, SourceY, Channel) * Shade;
 				pPixel[Channel] = static_cast<uint8_t>(std::clamp(Value, 0.0f, 1.0f) * 255.0f + 0.5f);
 			}
-			const float Alpha = DissolveAlpha(Art.m_Dissolve, X, Y, OutWidth, OutHeight);
 			pPixel[3] = static_cast<uint8_t>(std::clamp(Alpha, 0.0f, 1.0f) * 255.0f + 0.5f);
 		}
 	}

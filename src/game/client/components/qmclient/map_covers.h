@@ -19,19 +19,25 @@ class IHttp;
 class IHttpRequest;
 class IStorage;
 
-// 地图库条目的封面背景缓存。
+// 地图库条目的封面图缓存。
 //
-// 数据流：官方缩略图 URL → 磁盘缓存（qmclient/mapcovers）→ 工作线程解码/裁切/遮罩
-// → 主线程上传纹理。同一 (URL, 目标像素尺寸) 只做一次；行条目与详情面板各自取自己
-// 尺寸的纹理。页面退出只取消未完成的请求，已下载的磁盘缓存和已生成的纹理继续复用。
+// 数据流：官方缩略图 URL → 磁盘缓存（qmclient/mapcovers）→ 工作线程解码/缩放/拖尾
+// → 主线程上传纹理。纹理按「地图 + 用途（列表行 / 详情条）」缓存：尺寸是固定值，
+// 不随窗口宽度和滚动条动画变化，所以来回滚动不会反复重合成。页面退出只取消未完成
+// 的请求，已下载的磁盘缓存和已生成的纹理继续复用。
 class CQmMapCovers
 {
 public:
-	// 可直接绘制的一张封面：纹理 + 淡入系数（0..1）。
+	enum class ERole
+	{
+		ROW,
+		DETAILS,
+	};
+
+	// 可直接绘制的一张封面图（纹理本身已含拖尾 alpha 与压暗）。
 	struct SImage
 	{
 		IGraphics::CTextureHandle m_Texture{};
-		float m_Opacity = 0.0f;
 	};
 
 	using TRequestFactory = std::unique_ptr<IHttpRequest> (*)(const char *pUrl);
@@ -41,10 +47,10 @@ public:
 	CQmMapCovers(const CQmMapCovers &) = delete;
 	CQmMapCovers &operator=(const CQmMapCovers &) = delete;
 
-	// 每帧调用一次（地图库页面渲染入口）：处理下载完成、上传纹理、推进淡入。
+	// 每帧调用一次（地图库页面渲染入口）：处理下载完成、上传纹理。
 	void Update(IHttp *pHttp, IEngine *pEngine, IGraphics *pGraphics, IStorage *pStorage, float Now);
-	// 取指定 UI 目标像素尺寸的封面；未就绪时返回 false 并排队生成。
-	bool Get(const char *pUrl, int PixelWidth, int PixelHeight, SImage *pOut);
+	// 取某张地图在指定用途下的封面图；未就绪时返回 false 并排队生成。
+	bool Get(const char *pUrl, ERole Role, SImage *pOut);
 	// 离开地图库页面：取消排队与进行中的下载/任务；保留磁盘缓存与已生成的纹理。
 	void Release();
 	// 客户端关闭：释放全部 GPU 纹理（图形接口此刻仍存活）。
@@ -52,16 +58,22 @@ public:
 	// 还有封面在排队/下载/合成（供性能日志与调试使用）。
 	bool Loading() const;
 
+	// 两种用途的固定输出尺寸（像素）。列表行缩略图约等于绘制高度的 2.4 倍，
+	// 详情条约 2.5 倍，够清楚又不会让纹理缓存吃内存。
+	static constexpr int ROW_WIDTH = 167;
+	static constexpr int ROW_HEIGHT = 72;
+	static constexpr int DETAILS_WIDTH = 278;
+	static constexpr int DETAILS_HEIGHT = 120;
+
 private:
 	struct SKey
 	{
 		std::string m_Url;
-		int m_Width = 0;
-		int m_Height = 0;
+		ERole m_Role = ERole::ROW;
 
 		bool operator==(const SKey &Other) const
 		{
-			return m_Width == Other.m_Width && m_Height == Other.m_Height && m_Url == Other.m_Url;
+			return m_Role == Other.m_Role && m_Url == Other.m_Url;
 		}
 	};
 
@@ -69,7 +81,6 @@ private:
 	{
 		SKey m_Key;
 		IGraphics::CTextureHandle m_Texture;
-		float m_LoadedAt = 0.0f;
 		int64_t m_LastUsedFrame = 0;
 	};
 
@@ -94,18 +105,20 @@ private:
 		std::shared_ptr<CComposeJob> m_pJob;
 	};
 
-	// 每帧/总量预算：地图库一屏约二十行，超出部分分帧补齐，避免打开页面时卡顿。
+	// 每帧/总量预算：打开页面时一屏十几行，分帧补齐避免卡顿；纹理缓存要足够大，
+	// 来回滚动时命中已有纹理而不是重新解码。
 	inline static constexpr int MAX_DOWNLOADS = 2;
-	inline static constexpr int MAX_JOBS = 4;
-	inline static constexpr int MAX_QUEUED = 64;
-	inline static constexpr int MAX_TEXTURES = 40;
-	inline static constexpr int MAX_UPLOADS_PER_FRAME = 2;
-	inline static constexpr float FADE_SECONDS = 0.18f;
+	inline static constexpr int MAX_JOBS = 6;
+	inline static constexpr int MAX_QUEUED = 96;
+	inline static constexpr int MAX_TEXTURES = 192;
+	inline static constexpr int MAX_UPLOADS_PER_FRAME = 4;
+	inline static constexpr int MAX_READS_PER_FRAME = 8;
 	inline static constexpr float FAILURE_RETRY_SECONDS = 120.0f;
 	inline static constexpr int MAX_RESPONSE_BYTES = 512 * 1024;
 
 	static std::string MakeKeyString(const SKey &Key);
-	static QmMapCover::SArt StyleForUrl(const char *pUrl);
+	static QmMapCover::SArt StyleForUrl(const char *pUrl, ERole Role);
+	static void ComposeSize(ERole Role, int *pWidth, int *pHeight);
 
 	void PollJobs();
 	void PollDownloads();

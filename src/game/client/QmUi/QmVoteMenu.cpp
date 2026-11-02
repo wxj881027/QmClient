@@ -187,18 +187,20 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		GameClient()->m_Tooltips.DoToolTip(&Button, &Rect, pText);
 		return Clicked;
 	};
-	// 封面按目标矩形的物理像素合成（高 DPI 下边缘不糊），但最多放大到逻辑尺寸的 2 倍，
-	// 避免 4K 窗口把每行纹理撑到几 MB。尾部参差渐隐已经烘进纹理 alpha。
-	const float CoverPixelRatio = std::clamp(1.0f / std::max(Ui()->PixelSize(), 0.0001f), 1.0f, 2.0f);
-	auto DrawMapCover = [&](const CUIRect &Rect, const std::string &Thumbnail) {
+	// 列表行比旧版高一点：条目左侧要放得下正常比例的地图缩略图，否则只能看到
+	// 缩略图里的一条横线，玩家认不出是哪张图。封面图尺寸固定，与窗口宽度无关。
+	constexpr float RowHeight = 32.0f;
+	const float RowCoverHeight = RowHeight - 2.0f;
+	const float RowCoverWidth = RowCoverHeight * (float)CQmMapCovers::ROW_WIDTH / (float)CQmMapCovers::ROW_HEIGHT;
+	const float RowNameInset = 20.0f + 16.0f + 4.0f + RowCoverWidth + 6.0f;
+	// 封面图（含压暗和参差拖尾）已经烘进纹理，这里只负责贴在目标矩形上。
+	auto DrawMapPatch = [&](const CUIRect &Rect, const std::string &Thumbnail, CQmMapCovers::ERole Role) {
 		if(Thumbnail.empty() || Rect.w <= 0.0f || Rect.h <= 0.0f)
 			return;
 		CQmMapCovers::SImage Image;
-		const int PixelWidth = std::max(1, (int)std::lround(Rect.w * CoverPixelRatio));
-		const int PixelHeight = std::max(1, (int)std::lround(Rect.h * CoverPixelRatio));
-		if(!State.m_Covers.Get(Thumbnail.c_str(), PixelWidth, PixelHeight, &Image))
+		if(!State.m_Covers.Get(Thumbnail.c_str(), Role, &Image))
 			return;
-		const float Alpha = std::clamp(Image.m_Opacity * Ui()->ControlAlphaScale(), 0.0f, 1.0f);
+		const float Alpha = Ui()->ControlAlphaScale();
 		if(Alpha <= 0.001f)
 			return;
 		Graphics()->TextureSet(Image.m_Texture);
@@ -210,6 +212,14 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		Graphics()->QuadsEnd();
 		Graphics()->TextureClear();
 		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+	};
+	// 提前生成视口外一小段行的封面，滚动时纹理已就绪，不会一出现就从头加载。
+	auto PrefetchRowCover = [&](int Row) {
+		if(Row < 0 || Row >= (int)State.m_vVisible.size())
+			return;
+		const auto &Map = State.m_vMaps[State.m_vVisible[Row]];
+		CQmMapCovers::SImage Image;
+		State.m_Covers.Get(Map.m_Thumbnail.c_str(), CQmMapCovers::ERole::ROW, &Image);
 	};
 	CUIRect Refresh, Search, Exclude;
 	Header.VSplitRight(28.0f, &Header, &Refresh);
@@ -431,7 +441,6 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		return aRects;
 	};
 	static CListBox s_Maps;
-	constexpr float RowHeight = 24.0f;
 	CUIRect TableHeader;
 	List.HSplitTop(20.0f, &TableHeader, &List);
 	TableHeader.Draw(Ink.WithAlpha(0.06f), IGraphics::CORNER_ALL, 4.0f);
@@ -443,7 +452,8 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	HeaderColumns.VSplitRight(HeaderScrolls ? s_Maps.ScrollbarWidthMax() : 0.0f, &HeaderColumns, nullptr);
 	const auto aHead = Columns(HeaderColumns);
 	CUIRect MapHeading = aHead[0];
-	MapHeading.VSplitLeft(36.0f, nullptr, &MapHeading);
+	// 表头“地图”与行内名称对齐：前面是收藏星标、完成标记和缩略图。
+	MapHeading.VSplitLeft(RowNameInset, nullptr, &MapHeading);
 	Label(MapHeading, Localize("Map"), 12.0f, TEXTALIGN_ML, true);
 	if(HasMapper)
 		Label(aHead[1], Localize("Mapper"), 12.0f, TEXTALIGN_ML, true);
@@ -477,8 +487,6 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		if(!Item.m_Visible)
 			continue;
 		auto Blur = Item.SuppressGaussianBlur();
-		// 每行用该地图自己的封面做背景，尾部在列宽中段参差渐隐。
-		DrawMapCover(Item.m_Rect, Map.m_Thumbnail);
 		const float SelectionAlpha = s_Maps.SelectionFeedbackAlpha(Row);
 		if(SelectionAlpha > 0.001f)
 			DrawRoundedSurface(Ui(), Item.m_Rect, Ui()->ScaleBackgroundAlpha(Ink.WithAlpha(s_Maps.Active() ? 0.12f : 0.08f)).WithMultipliedAlpha(SelectionAlpha), ColorRGBA(), 5.0f);
@@ -514,6 +522,14 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 			Ui()->DoLabel_QmIcon(&Marker, EQmIcon::CHECK, "\xEE\x86\x82", 11.0f, TEXTALIGN_MC);
 			TextRender()->TextColor(PreviousText);
 		}
+		// 该地图自己的封面缩略图：正常比例，右侧接参差拖尾渐隐。
+		MapLabel.VSplitLeft(4.0f, nullptr, &MapLabel);
+		CUIRect Cover;
+		MapLabel.VSplitLeft(RowCoverWidth, &Cover, &MapLabel);
+		Cover.y = Item.m_Rect.y + 1.0f;
+		Cover.h = RowCoverHeight;
+		DrawMapPatch(Cover, Map.m_Thumbnail, CQmMapCovers::ERole::ROW);
+		MapLabel.VSplitLeft(6.0f, nullptr, &MapLabel);
 		Label(MapLabel, Map.m_Name.c_str(), 13.0f);
 		if(HasMapper)
 			Label(aRow[1], Map.m_Mapper.empty() ? "—" : Map.m_Mapper.c_str(), 12.0f, TEXTALIGN_ML, true);
@@ -527,6 +543,11 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 			Label(aRow[4], Map.m_Release.empty() ? pUnknownValue : Map.m_Release.substr(0, 10).c_str(), 12.0f, TEXTALIGN_ML, true);
 		}
 	}
+	// 视口上下各预取一小段：滚动时行一出现就直接有封面，不再等到可见才开始生成。
+	for(int Row = EndVisible; Row < std::min(ItemCount, EndVisible + 12); ++Row)
+		PrefetchRowCover(Row);
+	for(int Row = FirstVisible - 1; Row >= std::max(0, FirstVisible - 8); --Row)
+		PrefetchRowCover(Row);
 	s_Maps.SkipItems(ItemCount - EndVisible);
 	Selected = s_Maps.DoEnd();
 	const bool Activated = s_Maps.WasItemActivated();
@@ -542,18 +563,25 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		Label(List, State.m_Loader.Loading() ? Localize("Loading…") : Localize("No maps match these filters"), 14.0f, TEXTALIGN_MC);
 	if(ShowDetails)
 	{
-		// 展开的详情条也用选中地图的封面做背景，尾部与列表行同样的参差渐隐。
-		DrawMapCover(Details, pSelected != nullptr ? pSelected->m_Thumbnail : std::string());
 		DrawRoundedSurface(Ui(), Details, Ink.WithAlpha(0.025f), Ink.WithAlpha(0.10f), 8.0f, 1.0f);
-		Details.Margin(8.0f, &Details);
+		// 左侧是选中地图的封面缩略图（含参差拖尾），右侧排名称、作者与分数。
+		const float CoverHeight = std::max(16.0f, Details.h - 8.0f);
+		const float CoverWidth = CoverHeight * (float)CQmMapCovers::DETAILS_WIDTH / (float)CQmMapCovers::DETAILS_HEIGHT;
+		const CUIRect Cover{Details.x + 4.0f, Details.y + 4.0f, CoverWidth, CoverHeight};
+		if(pSelected != nullptr)
+			DrawMapPatch(Cover, pSelected->m_Thumbnail, CQmMapCovers::ERole::DETAILS);
+		CUIRect Content = Details;
+		Content.Margin(8.0f, &Content);
+		Content.x = Cover.x + Cover.w + 8.0f;
+		Content.w = std::max(24.0f, Details.x + Details.w - 8.0f - Content.x);
 		CUIRect Name, Metadata, Statistics, Favorite;
-		Details.HSplitTop(20.0f, &Name, &Details);
+		Content.HSplitTop(20.0f, &Name, &Content);
 		Name.VSplitRight(24.0f, &Name, &Favorite);
 		Name.VSplitRight(8.0f, &Name, nullptr);
 		if(CompactFilters)
 		{
-			Details.HSplitTop(4.0f, nullptr, &Details);
-			Details.HSplitTop(16.0f, &Metadata, &Details);
+			Content.HSplitTop(4.0f, nullptr, &Content);
+			Content.HSplitTop(16.0f, &Metadata, &Content);
 		}
 		else
 		{
@@ -582,7 +610,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 			State.m_Dirty = true;
 		}
 		GameClient()->m_Tooltips.DoToolTip(&s_Favorite, &Favorite, Localize("Favorite map"));
-		Details.HSplitTop(4.0f, nullptr, &Statistics);
+		Content.HSplitTop(4.0f, nullptr, &Statistics);
 		if(pSelected != nullptr)
 		{
 			static int s_NameTooltip, s_MetadataTooltip, s_StatisticsTooltip;

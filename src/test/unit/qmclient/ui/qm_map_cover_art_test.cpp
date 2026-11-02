@@ -17,7 +17,7 @@ namespace
 	QmMapCover::SArt DefaultArt(uint32_t Seed = 1234)
 	{
 		QmMapCover::SArt Art;
-		Art.m_Dissolve.m_Seed = Seed;
+		Art.m_Seed = Seed;
 		return Art;
 	}
 
@@ -82,48 +82,55 @@ TEST(QmMapCoverArt, CacheFileNameMirrorsOfficialLeaf)
 	EXPECT_FALSE(QmMapCover::ThumbnailCacheFileName("https://example.com/maps/Map.png", aPath, sizeof(aPath)));
 }
 
-TEST(QmMapCoverArt, DissolveTailFadesToNothing)
+TEST(QmMapCoverArt, TailStartsOpaqueAndFadesToNothing)
 {
 	const QmMapCover::SArt Art = DefaultArt();
-	const QmMapCover::SDissolve &Style = Art.m_Dissolve;
-	constexpr int Width = 96;
-	constexpr int Height = 24;
-	// 左端远离圆角的像素完全不透明。
-	EXPECT_FLOAT_EQ(QmMapCover::DissolveAlpha(Style, 4, Height / 2, Width, Height), 1.0f);
-	// 尾部末端完全透明。
-	EXPECT_LT(QmMapCover::DissolveAlpha(Style, Width - 1, Height / 2, Width, Height), 0.02f);
-	// 左侧圆角被裁掉。
-	EXPECT_LT(QmMapCover::DissolveAlpha(Style, 0, 0, Width, Height), 0.01f);
-	// 结果确定性：同一输入重复调用不变，换种子改变形状。
-	for(int X = 0; X < Width; X += 7)
-		EXPECT_FLOAT_EQ(QmMapCover::DissolveAlpha(Style, X, Height / 2, Width, Height), QmMapCover::DissolveAlpha(Style, X, Height / 2, Width, Height));
-	float aFirst[Width / 7 + 1];
-	const QmMapCover::SArt Other = DefaultArt(987654);
-	for(int X = 0; X < Width; X += 7)
-		aFirst[X / 7] = QmMapCover::DissolveAlpha(Other.m_Dissolve, X, Height / 2, Width, Height);
-	bool Different = false;
-	for(int X = 0; X < Width; X += 7)
-		Different |= std::abs(aFirst[X / 7] - QmMapCover::DissolveAlpha(Style, X, Height / 2, Width, Height)) > 0.01f;
-	EXPECT_TRUE(Different);
+	constexpr int Width = 167;
+	constexpr int Height = 72;
+	constexpr int ImageWidth = 115;
+	// 缩略图最右一列仍然完全不透明；拖尾第一列亮度接近，尾巴末端落到 0。
+	EXPECT_FLOAT_EQ(QmMapCover::TailAlpha(Art, ImageWidth, Height / 2, Width, Height, ImageWidth), 1.0f);
+	EXPECT_GT(QmMapCover::TailAlpha(Art, ImageWidth + 1, Height / 2, Width, Height, ImageWidth), 0.5f);
+	EXPECT_LT(QmMapCover::TailAlpha(Art, Width - 1, Height / 2, Width, Height, ImageWidth), 0.05f);
+	// 拖尾之外的列不参与遮罩。
+	EXPECT_FLOAT_EQ(QmMapCover::TailAlpha(Art, ImageWidth - 1, Height / 2, Width, Height, ImageWidth), 0.0f);
 }
 
-TEST(QmMapCoverArt, DissolveTailIsRaggedAcrossRows)
+TEST(QmMapCoverArt, TailIsRaggedAcrossRows)
 {
 	const QmMapCover::SArt Art = DefaultArt();
-	const QmMapCover::SDissolve &Style = Art.m_Dissolve;
-	constexpr int Width = 128;
-	constexpr int Height = 32;
-	constexpr int ProbeX = 80; // 落在默认渐隐区间内
+	constexpr int Width = 167;
+	constexpr int Height = 72;
+	constexpr int ImageWidth = 115;
+	constexpr int ProbeX = ImageWidth + 26; // 拖尾中段
 	float Min = 1.0f;
 	float Max = 0.0f;
 	for(int Y = 1; Y + 1 < Height; ++Y)
 	{
-		const float Alpha = QmMapCover::DissolveAlpha(Style, ProbeX, Y, Width, Height);
+		const float Alpha = QmMapCover::TailAlpha(Art, ProbeX, Y, Width, Height, ImageWidth);
 		Min = std::min(Min, Alpha);
 		Max = std::max(Max, Alpha);
 	}
 	// 参差边界必须让同一列在不同行上取到明显不同的覆盖度；平直渐隐会得到接近 0 的跨度。
 	EXPECT_GT(Max - Min, 0.15f);
+}
+
+TEST(QmMapCoverArt, TailIsDeterministicAndDependsOnSeed)
+{
+	constexpr int Width = 167;
+	constexpr int Height = 72;
+	constexpr int ImageWidth = 115;
+	const QmMapCover::SArt Art = DefaultArt();
+	const QmMapCover::SArt Other = DefaultArt(987654);
+	const int ProbeX = ImageWidth + 20;
+	bool Different = false;
+	for(int Y = 0; Y < Height; ++Y)
+	{
+		const float Alpha = QmMapCover::TailAlpha(Art, ProbeX, Y, Width, Height, ImageWidth);
+		EXPECT_FLOAT_EQ(Alpha, QmMapCover::TailAlpha(Art, ProbeX, Y, Width, Height, ImageWidth));
+		Different |= std::abs(Alpha - QmMapCover::TailAlpha(Other, ProbeX, Y, Width, Height, ImageWidth)) > 0.02f;
+	}
+	EXPECT_TRUE(Different);
 }
 
 TEST(QmMapCoverArt, ValueNoiseIsDeterministicAndBounded)
@@ -141,32 +148,40 @@ TEST(QmMapCoverArt, ValueNoiseIsDeterministicAndBounded)
 	EXPECT_NE(QmMapCover::ValueNoise(1.3f, 0.7f, 1), QmMapCover::ValueNoise(1.3f, 0.7f, 2));
 }
 
-TEST(QmMapCoverArt, ComposeShadesAndMasksCover)
+TEST(QmMapCoverArt, SeedForUrlIsStableAndDistinct)
+{
+	EXPECT_EQ(QmMapCover::SeedForUrl("https://ddnet.org/ranks/maps/A.png"), QmMapCover::SeedForUrl("https://ddnet.org/ranks/maps/A.png"));
+	EXPECT_NE(QmMapCover::SeedForUrl("https://ddnet.org/ranks/maps/A.png"), QmMapCover::SeedForUrl("https://ddnet.org/ranks/maps/B.png"));
+}
+
+TEST(QmMapCoverArt, ComposeShowsShadedThumbnailAndTransparentTail)
 {
 	CImageInfo Source = SolidImage(4, 2, 200, 100, 50);
 	CImageInfo Output;
 	const QmMapCover::SArt Art = DefaultArt();
-	ASSERT_TRUE(QmMapCover::Compose(Source, 64, 16, Art, Output));
+	ASSERT_TRUE(QmMapCover::Compose(Source, 167, 72, Art, Output));
 	Source.Free();
-	ASSERT_EQ(Output.m_Width, 64u);
-	ASSERT_EQ(Output.m_Height, 16u);
+	ASSERT_EQ(Output.m_Width, 167u);
+	ASSERT_EQ(Output.m_Height, 72u);
 	ASSERT_EQ(Output.m_Format, CImageInfo::FORMAT_RGBA);
 
-	// 左端不透明且按 m_Shade 压暗（±1 吸收浮点舍入）。
-	const uint8_t *pLeft = PixelAt(Output, 2, 8);
-	EXPECT_EQ(pLeft[3], 255);
-	EXPECT_NEAR(pLeft[0], 200 * Art.m_Shade, 1.5f);
-	EXPECT_NEAR(pLeft[1], 100 * Art.m_Shade, 1.5f);
-	EXPECT_NEAR(pLeft[2], 50 * Art.m_Shade, 1.5f);
-	// 右端尾部透明，左上角圆角被裁掉。
-	EXPECT_EQ(PixelAt(Output, 63, 8)[3], 0);
+	// 缩略图区域不透明且按 m_Shade 压暗（±2 吸收浮点舍入）。
+	const uint8_t *pThumb = PixelAt(Output, 5, 36);
+	EXPECT_EQ(pThumb[3], 255);
+	EXPECT_NEAR(pThumb[0], 200 * Art.m_Shade, 2.0f);
+	EXPECT_NEAR(pThumb[1], 100 * Art.m_Shade, 2.0f);
+	EXPECT_NEAR(pThumb[2], 50 * Art.m_Shade, 2.0f);
+	// 缩略图与拖尾交界保持不透明，拖尾末端透明；左上角圆角被裁掉。
+	EXPECT_EQ(PixelAt(Output, 114, 36)[3], 255);
+	EXPECT_GE(PixelAt(Output, 115, 36)[3], 200);
+	EXPECT_LT(PixelAt(Output, 166, 36)[3], 20);
 	EXPECT_EQ(PixelAt(Output, 0, 0)[3], 0);
 	Output.Free();
 }
 
-TEST(QmMapCoverArt, ComposeCropsToFillTargetAspect)
+TEST(QmMapCoverArt, ComposeCropsToFillThumbnailAspect)
 {
-	// 高窄源图进方形目标：按宽度放大后上下居中裁切，顶行应来自源图中间部分而不是第 0 行。
+	// 高窄源图进缩略图区域：按宽度放大后上下居中裁切，顶行应来自源图中间部分而不是第 0 行。
 	CImageInfo Source;
 	Source.m_Width = 2;
 	Source.m_Height = 8;
@@ -183,12 +198,13 @@ TEST(QmMapCoverArt, ComposeCropsToFillTargetAspect)
 		}
 	}
 	CImageInfo Output;
-	ASSERT_TRUE(QmMapCover::Compose(Source, 8, 8, DefaultArt(), Output));
+	const QmMapCover::SArt Art = DefaultArt();
+	ASSERT_TRUE(QmMapCover::Compose(Source, 64, 32, Art, Output));
 	Source.Free();
-	const uint8_t *pTopLeft = PixelAt(Output, 1, 0);
 	// 源行 0 是 0、源行 7 是 210；裁切后顶行取自源图中段，既不是最上一行也不是最下一行。
-	EXPECT_GT(pTopLeft[0], 20);
-	EXPECT_LT(pTopLeft[0], 45);
+	const uint8_t *pTopLeft = PixelAt(Output, 2, 0);
+	EXPECT_GT(pTopLeft[0], 20 * Art.m_Shade);
+	EXPECT_LT(pTopLeft[0], 60 * Art.m_Shade);
 	Output.Free();
 }
 
@@ -199,13 +215,16 @@ TEST(QmMapCoverArt, ComposeRejectsInvalidInput)
 	CImageInfo Source = SolidImage(2, 2, 10, 20, 30);
 	CImageInfo Output;
 	EXPECT_FALSE(QmMapCover::Compose(Source, 0, 8, DefaultArt(), Output));
+	EXPECT_FALSE(QmMapCover::Compose(Source, 1, 8, DefaultArt(), Output));
 	EXPECT_FALSE(QmMapCover::Compose(Source, 16, 0, DefaultArt(), Output));
 	EXPECT_FALSE(QmMapCover::Compose(Source, QmMapCover::MAX_WIDTH + 1, 8, DefaultArt(), Output));
 	Source.m_Format = CImageInfo::FORMAT_UNDEFINED;
 	EXPECT_FALSE(QmMapCover::Compose(Source, 16, 8, DefaultArt(), Output));
 	Source.m_Format = CImageInfo::FORMAT_RGB;
 	Source.Free();
-	ASSERT_TRUE(QmMapCover::Compose(SolidImage(2, 2, 10, 20, 30), 16, 8, DefaultArt(), Output));
+	CImageInfo Solid = SolidImage(2, 2, 10, 20, 30);
+	ASSERT_TRUE(QmMapCover::Compose(Solid, 16, 8, DefaultArt(), Output));
+	Solid.Free();
 	Output.Free();
 }
 
@@ -217,14 +236,14 @@ TEST(QmMapCoverArt, DecodeAndComposeDecodesPngBytes)
 	Source.Free();
 
 	CImageInfo Output;
-	ASSERT_TRUE(QmMapCover::DecodeAndCompose(Writer.Data(), Writer.Size(), "test_cover", 32, 8, DefaultArt(), Output));
-	ASSERT_EQ(Output.m_Width, 32u);
-	ASSERT_EQ(Output.m_Height, 8u);
-	EXPECT_EQ(PixelAt(Output, 2, 4)[3], 255);
-	EXPECT_EQ(PixelAt(Output, 31, 4)[3], 0);
+	ASSERT_TRUE(QmMapCover::DecodeAndCompose(Writer.Data(), Writer.Size(), "test_cover", 64, 32, DefaultArt(), Output));
+	ASSERT_EQ(Output.m_Width, 64u);
+	ASSERT_EQ(Output.m_Height, 32u);
+	EXPECT_EQ(PixelAt(Output, 4, 16)[3], 255);
+	EXPECT_LT(PixelAt(Output, 63, 16)[3], 20);
 	Output.Free();
 
 	const uint8_t aNotPng[16] = {};
-	EXPECT_FALSE(QmMapCover::DecodeAndCompose(aNotPng, sizeof(aNotPng), "test_cover", 32, 8, DefaultArt(), Output));
-	EXPECT_FALSE(QmMapCover::DecodeAndCompose(nullptr, 0, "test_cover", 32, 8, DefaultArt(), Output));
+	EXPECT_FALSE(QmMapCover::DecodeAndCompose(aNotPng, sizeof(aNotPng), "test_cover", 64, 32, DefaultArt(), Output));
+	EXPECT_FALSE(QmMapCover::DecodeAndCompose(nullptr, 0, "test_cover", 64, 32, DefaultArt(), Output));
 }
