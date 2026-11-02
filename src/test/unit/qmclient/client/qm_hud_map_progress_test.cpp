@@ -123,3 +123,26 @@ TEST(QmHudMapProgressState, DummyAndMainCharacterKeepIndependentDisplayedProgres
 	EXPECT_FLOAT_EQ(aState[1].Update(true, 0.8f, 0.0f), 0.8f);
 	EXPECT_FLOAT_EQ(aState[0].Update(true, 0.2f, 0.0f), 0.2f);
 }
+
+TEST(QmHudMapProgressState, SwitchingSpectatorTargetDiscardsPreviousPlayersSmoothedValue)
+{
+	QmHudMapProgress::CProgressState State;
+	EXPECT_FLOAT_EQ(State.Update(true, 0.9f, 0.0f, 17), 0.9f);
+	EXPECT_FLOAT_EQ(State.Update(true, 0.2f, 0.0f, 18), 0.2f);
+	EXPECT_TRUE(State.IsTracking(18));
+	EXPECT_FALSE(State.IsTracking(17));
+	const float Smoothed = State.Update(true, 0.4f, 0.05f, 18);
+	EXPECT_GT(Smoothed, 0.2f);
+	EXPECT_LT(Smoothed, 0.4f);
+	EXPECT_FLOAT_EQ(State.Update(true, 0.7f, 0.0f, 3), 0.7f);
+}
+
+TEST(QmHudMapProgressState, MissingSpectatorCharacterClearsProgressBeforeSameTargetReturns)
+{
+	QmHudMapProgress::CProgressState State;
+	State.Update(true, 0.9f, 0.0f, 17);
+	EXPECT_FLOAT_EQ(State.Update(false, 0.9f, 0.0f, 17), 0.0f);
+	EXPECT_FALSE(State.IsTracking(17));
+	EXPECT_FLOAT_EQ(State.Displayed(), 0.0f);
+	EXPECT_FLOAT_EQ(State.Update(true, 0.2f, 0.0f, 17), 0.2f);
+}

@@ -261,16 +261,19 @@ class CTClient : public CComponent
 
 	// 地图进度：保留 Gores 距离场，DDRace 使用计时 CP 分段路径场。
 	QmMapProgress::CMap m_QmDDraceProgressMap;
-	QmMapProgress::CPlayer m_aQmDDraceProgress[NUM_DUMMIES];
+	// 最后一个槽位独立跟踪当前观战对象，不覆盖本体和分身的路径状态。
+	QmMapProgress::CPlayer m_aQmDDraceProgress[NUM_DUMMIES + 1];
 	const void *m_pQmDDraceProgressGame = nullptr;
 	const void *m_pQmDDraceProgressFront = nullptr;
 	const void *m_pQmDDraceProgressTele = nullptr;
 	int m_QmDDraceProgressWidth = 0;
 	int m_QmDDraceProgressScanCursor = 0;
-	int m_aQmDDraceProgressClientId[NUM_DUMMIES] = {-1, -1};
-	int m_aQmDDraceTeleCheckpoint[NUM_DUMMIES] = {0, 0};
-	vec2 m_aQmDDraceProgressPreviousPos[NUM_DUMMIES] = {};
-	bool m_aQmDDraceProgressHasPreviousPos[NUM_DUMMIES] = {false, false};
+	int m_aMapProgressClientId[NUM_DUMMIES + 1] = {-1, -1, -1};
+	int m_aQmDDraceTeleCheckpoint[NUM_DUMMIES + 1] = {};
+	vec2 m_aQmDDraceProgressPreviousPos[NUM_DUMMIES + 1] = {};
+	bool m_aQmDDraceProgressHasPreviousPos[NUM_DUMMIES + 1] = {};
+	int GoresMapProgressSlot(int Dummy) const;
+	int GoresMapProgressClientId(int Slot) const;
 	bool IsDDraceMapProgressMap() const;
 	void ResetDDraceMapProgress();
 	void UpdateDDraceMapProgress();
@@ -290,6 +293,7 @@ class CTClient : public CComponent
 	char m_aGoresDistanceFieldMap[128] = "";
 	int m_GoresDistanceFieldWidth = 0;
 	int m_GoresDistanceFieldHeight = 0;
+	int m_GoresStartDistanceToFinish = -1;
 	std::vector<unsigned char> m_vGoresCMap;
 	std::vector<QmMapProgress::SRouteCost> m_vGoresDistanceToFinish;
 	std::vector<int> m_vGoresRouteNext;
@@ -324,8 +328,8 @@ class CTClient : public CComponent
 	bool m_aGoresWasOnStartLastTick[NUM_DUMMIES] = {false, false};
 	bool m_aGoresRunStarted[NUM_DUMMIES] = {false, false};
 	int m_aGoresRunStartDistanceToFinish[NUM_DUMMIES] = {0, 0};
-	bool m_aGoresMapProgressValid[NUM_DUMMIES] = {false, false};
-	float m_aGoresMapProgress[NUM_DUMMIES] = {0.0f, 0.0f};
+	bool m_aGoresMapProgressValid[NUM_DUMMIES + 1] = {};
+	float m_aGoresMapProgress[NUM_DUMMIES + 1] = {};
 	int m_aGoresPreHammerWeapon[NUM_DUMMIES] = {WEAPON_GUN, WEAPON_GUN};
 	bool m_aGoresHasPreHammerWeapon[NUM_DUMMIES] = {false, false};
 	bool m_aPrevFireForGores[NUM_DUMMIES] = {false, false};
@@ -620,15 +624,11 @@ public:
 	void HandleLocalSaveMessage(const CNetMsg_Sv_Chat *pMsg, int Conn);
 	bool IsGoresMapProgressEnabled() const;
 	bool ShouldHideGoresGuides(bool ManualGuideVisible = false) const;
-	bool HasGoresMapProgress(int Dummy = 0) const
-	{
-		const int Idx = Dummy < 0 ? 0 : (Dummy >= NUM_DUMMIES ? NUM_DUMMIES - 1 : Dummy);
-		return m_aGoresMapProgressValid[Idx];
-	}
+	int GetGoresMapProgressClientId(int Dummy = 0) const { return GoresMapProgressClientId(GoresMapProgressSlot(Dummy)); }
+	bool HasGoresMapProgress(int Dummy = 0) const;
 	float GetGoresMapProgress(int Dummy = 0) const
 	{
-		const int Idx = Dummy < 0 ? 0 : (Dummy >= NUM_DUMMIES ? NUM_DUMMIES - 1 : Dummy);
-		return m_aGoresMapProgress[Idx];
+		return HasGoresMapProgress(Dummy) ? m_aGoresMapProgress[GoresMapProgressSlot(Dummy)] : 0.0f;
 	}
 
 	// Focus Mode (Zen Mode)

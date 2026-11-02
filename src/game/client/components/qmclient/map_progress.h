@@ -1,6 +1,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_MAP_PROGRESS_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_MAP_PROGRESS_H
 
+#include <engine/shared/protocol.h>
+
 #include <game/collision.h>
 #include <game/mapitems.h>
 
@@ -400,6 +402,18 @@ namespace QmMapProgress
 		float m_Progress = 0.0f;
 	};
 
+	inline int ResolveClientId(int LocalClientId, bool Spectating, int SpectatorId)
+	{
+		return Spectating && SpectatorId >= 0 && SpectatorId < MAX_CLIENTS ? SpectatorId : LocalClientId;
+	}
+
+	inline SEstimate EstimateDistance(int RemainingDistance, int StartDistance)
+	{
+		if(RemainingDistance < 0 || RemainingDistance == INF || StartDistance <= 0 || StartDistance == INF)
+			return {};
+		return {true, std::clamp(1.0f - (float)RemainingDistance / StartDistance, 0.0f, 1.0f)};
+	}
+
 	class CPlayer
 	{
 		CField m_Global;
@@ -443,7 +457,7 @@ namespace QmMapProgress
 			m_OnFinish = Tile.m_Finish;
 		}
 
-		void Update(const CMap &Map, int Index, int TeleCheckpoint, int Budget)
+		void Update(const CMap &Map, int Index, int TeleCheckpoint, int Budget, bool UseTimeCheckpoints = true)
 		{
 			m_CurrentIndex = Index;
 			if(!Map.Ready() || Index < 0 || Index >= Map.Size())
@@ -459,7 +473,7 @@ namespace QmMapProgress
 			}
 			if(!m_Global.Matches(TeleCheckpoint, -1))
 				m_Global.Start(Map, TeleCheckpoint);
-			const bool UseSegments = !m_SegmentsRejected && Map.CheckpointCount() > 0 && m_Stage >= 0 && m_Stage <= Map.CheckpointCount();
+			const bool UseSegments = UseTimeCheckpoints && !m_SegmentsRejected && Map.CheckpointCount() > 0 && m_Stage >= 0 && m_Stage <= Map.CheckpointCount();
 			const int GlobalBudget = UseSegments ? Budget / 2 : Budget;
 			m_Global.Step(Map, GlobalBudget);
 			m_UseSegmentForRoute = false;
