@@ -527,7 +527,17 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		Label(Name, pSelected != nullptr ? pSelected->m_Name.c_str() : Localize("Select a map"), 15.0f);
 		static CButtonContainer s_Favorite;
 		const bool IsFavorite = pSelected != nullptr && GameClient()->m_TClient.IsFavoriteMap(pSelected->m_Name.c_str());
-		if(Ui()->DoButton_QmIcon(&s_Favorite, EQmIcon::STAR, FontIcons::FONT_ICON_STAR, IsFavorite, &Favorite, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, pSelected != nullptr))
+		// 收藏开关靠字形区分状态：未收藏空心中性星标，已收藏实心收藏色星标。
+		// 全局「实心收藏图标」只负责徽标外观，不能让开关两态画成同形。
+		const ColorRGBA PreviousFavoriteColor = TextRender()->GetTextColor();
+		if(!IsFavorite)
+			TextRender()->TextColor(Ink.WithMultipliedAlpha(0.55f));
+		// 未收藏时保留中性前景，避免收藏语义色把空心星标染成「已收藏」。
+		const CQmIconSemanticColorScope FavoriteIconColorScope(!IsFavorite);
+		const CQmFavoriteStarFillScope FavoriteFillScope(IsFavorite);
+		const bool FavoriteClicked = Ui()->DoButton_QmIcon(&s_Favorite, EQmIcon::STAR, FontIcons::FONT_ICON_STAR, IsFavorite, &Favorite, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, pSelected != nullptr) != 0;
+		TextRender()->TextColor(PreviousFavoriteColor);
+		if(FavoriteClicked)
 		{
 			if(IsFavorite)
 				GameClient()->m_TClient.RemoveFavoriteMap(pSelected->m_Name.c_str());

@@ -330,6 +330,32 @@ TEST_F(CQmConfiguredIconColorTest, FilledStylesStayIndependentPerSemanticIcon)
 	EXPECT_FALSE(QmUiIconFilledStyle(EQmIcon::COUNT));
 }
 
+TEST_F(CQmConfiguredIconColorTest, FavoriteToggleFillScopeOverridesPreferenceAndRestores)
+{
+	g_Config.m_QmUiFriendIconFilled = 0;
+	g_Config.m_QmUiFavoriteIconFilled = 0;
+	{
+		// 收藏开关：已收藏强制实心，不受全局「实心收藏图标」偏好影响。
+		const CQmFavoriteStarFillScope FilledStar(true);
+		EXPECT_TRUE(QmUiIconFilledStyle(EQmIcon::STAR));
+		// 覆盖只作用于收藏星标，好友心形仍读自己的配置。
+		EXPECT_FALSE(QmUiIconFilledStyle(EQmIcon::HEART));
+		EXPECT_FALSE(QmUiIconFilledStyle(EQmIcon::GEAR));
+		{
+			// 未收藏强制空心，即使全局偏好是实心。
+			g_Config.m_QmUiFavoriteIconFilled = 1;
+			const CQmFavoriteStarFillScope HollowStar(false);
+			EXPECT_FALSE(QmUiIconFilledStyle(EQmIcon::STAR));
+		}
+		// 内层作用域退出后恢复外层覆盖，而不是全局偏好。
+		EXPECT_TRUE(QmUiIconFilledStyle(EQmIcon::STAR));
+	}
+	// 全部作用域退出后恢复全局偏好。
+	EXPECT_TRUE(QmUiIconFilledStyle(EQmIcon::STAR));
+	g_Config.m_QmUiFavoriteIconFilled = 0;
+	EXPECT_FALSE(QmUiIconFilledStyle(EQmIcon::STAR));
+}
+
 TEST_F(CQmConfiguredIconColorTest, ChangingOneSemanticColorImmediatelyUpdatesOnlyItsIcon)
 {
 	g_Config.m_QmUiFriendIconColor = 0x00D1AB;
