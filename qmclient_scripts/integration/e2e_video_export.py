@@ -594,6 +594,63 @@ def scenario_video_export_audio_failure_keeps_segment_pending(env: ProcessEnviro
 	assert_video(env.path("videos", f"{name}.mkv"), 2)
 
 
+def scenario_video_export_conversion_failure_keeps_segment_pending(env: ProcessEnvironment) -> None:
+	"""转换线程失败可退出，旧成片保留；取消故障后从待渲段重试。"""
+	# 新场景只接受显式 fixture，不回退读取真实用户目录。
+	fixture = os.environ.get("QM_E2E_DEMO")
+	if not fixture or not Path(fixture).is_file():
+		raise SkipTest("缺少隔离 demo fixture：设置 QM_E2E_DEMO")
+	demo = Path(fixture).resolve()
+	name = "qme2e_convert_fail"
+	video = env.path("videos", f"{name}.mkv")
+	video.parent.mkdir(parents=True, exist_ok=True)
+	previous = b"previous export must survive failed frame conversion"
+	video.write_bytes(previous)
+	config = [
+		"demo_speed 1",
+		"qm_video_segment_seconds 0",
+		"qm_video_encoder libx264",
+		"qm_video_container mkv",
+		"qm_video_convert_threads 3",
+		"qm_video_queue_frames 2",
+		f"qm_video_width {OUTPUT_WIDTH}",
+		f"qm_video_height {OUTPUT_HEIGHT}",
+	]
+	client = start_demo_client(env, config, extra_env={"QMCLIENT_TEST_VIDEO_CONVERSION_FAIL": "1"})
+	try:
+		client.command(f'play "{demo}"')
+		client.wait_for(lambda line: "demo_player" in line and "loading demo" in line.lower(), "demo 开始播放", 60)
+		client.command(f"start_video {name} 2 4")
+		client.wait_for(lambda line: "Could not convert video frame:" in line, "注入视频转换失败", 60)
+		client.wait_for(lambda line: "Segment 1 recording failed" in line, "失败段保持待渲且工作线程已回收", 60)
+		client.command("quit")
+		if client.wait_for_exit(30) != 0:
+			raise AssertionError("转换失败后客户端未正常退出")
+	finally:
+		client.stop()
+	if video.read_bytes() != previous:
+		raise AssertionError("视频转换失败改写了同名旧成片")
+	if list(video.parent.glob(f"{name}*.recording")):
+		raise AssertionError("视频转换失败遗留临时输出")
+	progress = env.path("videos", f"{name}.progress")
+	if progress.exists() and "segment_0_done=1" in progress.read_text(encoding="utf-8"):
+		raise AssertionError("视频转换失败仍把该段标记为完成")
+
+	client = start_demo_client(env, config)
+	try:
+		client.command(f'play "{demo}"')
+		client.wait_for(lambda line: "demo_player" in line and "loading demo" in line.lower(), "demo 开始播放", 60)
+		client.command(f"start_video {name} 2 4")
+		client.wait_for(lambda line: "starting at segment 1/1" in line, "失败段从头重试", 60)
+		client.wait_for(lambda line: "Concatenated" in line and f"{name}.mkv" in line, "重试导出完成", 180)
+		client.command("quit")
+		if client.wait_for_exit(30) != 0:
+			raise AssertionError("重试后客户端未正常退出")
+	finally:
+		client.stop()
+	assert_video(video, 2)
+
+
 def probe_video_dimensions(video: Path) -> tuple[int, int]:
 	"""读取成片的像素尺寸，用于验证输出分辨率（离屏超采样导出）。"""
 	ffprobe = shutil.which("ffprobe")
@@ -721,6 +778,7 @@ E2E_TESTS = {
 	"video_export_noninteger_fps_audio_sync": scenario_video_export_noninteger_fps_audio_sync,
 	"video_export_display_snapshot_and_resume": scenario_video_export_display_snapshot_and_resume,
 	"video_export_audio_failure_keeps_segment_pending": scenario_video_export_audio_failure_keeps_segment_pending,
+	"video_export_conversion_failure_keeps_segment_pending": scenario_video_export_conversion_failure_keeps_segment_pending,
 	"video_export_offscreen_fsaa": scenario_video_export_offscreen_fsaa,
 	"video_export_range": scenario_video_export_range,
 	"video_export_segmented_range": scenario_video_export_segmented_range,

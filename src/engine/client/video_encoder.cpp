@@ -176,7 +176,7 @@ namespace video_encoder
 		const SEncoderFamily s_aEncoderFamilies[] = {
 			{"h264", {"h264_nvenc", "h264_qsv", "h264_amf", "h264_videotoolbox", "libx264"}},
 			{"hevc", {"hevc_nvenc", "hevc_qsv", "hevc_amf", "hevc_videotoolbox", nullptr}},
-			{"av1", {"av1_nvenc", "av1_qsv", "av1_amf", nullptr, "libsvtav1"}},
+			{"av1", {"av1_nvenc", "av1_qsv", "av1_amf", "libsvtav1", nullptr}},
 		};
 
 		const SEncoderFamily *FindFamily(const char *pName)
@@ -199,6 +199,13 @@ namespace video_encoder
 
 	const char *PreferredEncoderForFamily(const char *pFamily)
 	{
+		if(!FindFamily(pFamily))
+			return "";
+		return PreferredEncoderForFamily(pFamily, ProbeEncoders());
+	}
+
+	const char *PreferredEncoderForFamily(const char *pFamily, const std::vector<SProbeResult> &vProbes)
+	{
 		const SEncoderFamily *pFound = FindFamily(pFamily);
 		if(!pFound)
 			return "";
@@ -206,9 +213,9 @@ namespace video_encoder
 		{
 			if(!pCandidate)
 				break;
-			const SProbeResult *pProbe = FindProbed(pCandidate);
-			if(pProbe && pProbe->m_Available)
-				return pProbe->m_aName;
+			for(const SProbeResult &Probe : vProbes)
+				if(Probe.m_Available && str_comp(Probe.m_aName, pCandidate) == 0)
+					return Probe.m_aName;
 		}
 		return "";
 	}

@@ -59,6 +59,8 @@ namespace video_encoder
 
 	// 给 UI/预设用：返回本机该家族实际会选中的编码器名；不可用时返回空串。
 	const char *PreferredEncoderForFamily(const char *pFamily);
+	// 以调用方持有的探测快照选择；返回字符串借用 vProbes，不能超过其生命周期。
+	const char *PreferredEncoderForFamily(const char *pFamily, const std::vector<SProbeResult> &vProbes);
 
 	// 4K 及以上是否应自动改用硬件编码器：软件 x264 在 4K60 实测只有约 38 fps，
 	// 达不到录制帧率，导出会被编码拖成瓶颈。只在用户没有显式指定编码器、

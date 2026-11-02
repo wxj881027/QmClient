@@ -4,6 +4,7 @@
 #include <base/lock.h>
 
 #include <engine/client/video_frame_capture.h>
+#include <engine/client/video_frame_index_queue.h>
 #include <engine/client/video_recorder_lifecycle.h>
 
 extern "C" {
@@ -15,7 +16,6 @@ extern "C" {
 
 #include <atomic>
 #include <condition_variable>
-#include <deque>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -75,7 +75,7 @@ public:
 
 private:
 	void RunVideoConvertThread(size_t ThreadIndex) REQUIRES(!m_WriteLock);
-	void FillVideoFrame(size_t ThreadIndex, size_t SlotIndex) REQUIRES(!m_WriteLock);
+	bool FillVideoFrame(size_t ThreadIndex, size_t SlotIndex) REQUIRES(!m_WriteLock);
 	bool UpdateVideoBufferFromGraphics(size_t SlotIndex);
 	// 捕获槽的公共收尾：反压等待空闲槽、失败归还、就绪发布。
 	// 窗口路径（NextVideoFrameThread）与离屏路径（SubmitOffscreenFrame）共用，
@@ -157,7 +157,7 @@ private:
 	std::condition_variable m_VideoSlotFreeCond; // 生产端等待空闲槽
 	std::condition_variable m_VideoSlotReadyCond; // 转换线程等待就绪帧
 	std::condition_variable m_VideoSubmitCond; // 按序提交等待
-	std::deque<size_t> m_vPendingSlots; // 就绪队列（槽索引，FIFO）
+	CVideoFrameIndexQueue<> m_PendingSlots; // 预分配的就绪槽索引 FIFO
 	std::vector<size_t> m_vFreeSlots; // 空闲槽索引栈
 	uint64_t m_NextVideoFrameToCapture = 0; // 渲染线程下一个捕获帧号（仅渲染线程访问）
 	uint64_t m_NextVideoFrameToSubmit = 0; // 下一个允许提交编码的帧号

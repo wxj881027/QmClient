@@ -3239,6 +3239,7 @@ if(CLIENT)
     updater_data.cpp
     updater_data.h
     video_frame_capture.h
+    video_frame_index_queue.h
     video_recorder_lifecycle.h
     warning.cpp
   )
@@ -3249,6 +3250,7 @@ if(CLIENT)
     list(APPEND ENGINE_CLIENT
       src/engine/client/video.cpp
       src/engine/client/video.h
+      src/engine/client/video_frame_convert.h
       src/engine/client/video_encoder.cpp
       src/engine/client/video_encoder.h
       src/engine/client/video_export.cpp
@@ -5144,6 +5146,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/replay_save_submission_test.cpp
     src/test/unit/engine/replay_save_test.cpp
     src/test/unit/engine/video_frame_capture_test.cpp
+    src/test/unit/engine/video_frame_index_queue_test.cpp
     src/test/unit/engine/editor_test.cpp
     src/test/unit/client/editor_collab_camera_test.cpp
     src/test/unit/client/editor_quad_slice_test.cpp
@@ -6107,6 +6110,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/engine/video_offscreen_plan_test.cpp
       src/test/integration/engine/video_export_storage_test.cpp
       src/test/integration/engine/video_audio_test.cpp
+      src/test/integration/engine/video_frame_conversion_test.cpp
       src/test/unit/engine/video_encoder_test.cpp
     )
     list(APPEND TESTS_EXTRA

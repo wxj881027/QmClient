@@ -5,6 +5,7 @@
 #include "video_audio.h"
 #include "video_encoder.h"
 #include "video_export.h"
+#include "video_frame_convert.h"
 
 #include <base/log.h>
 
@@ -35,6 +36,15 @@ using namespace std::chrono_literals;
 static bool QmVideoTestAudioFailureRequested()
 {
 	static const bool s_Requested = std::getenv("QMCLIENT_TEST_VIDEO_AUDIO_FAIL") != nullptr;
+	return s_Requested;
+}
+#endif
+
+#if defined(CONF_QMCLIENT_TEST_STORAGE)
+// 只在隔离测试构建里拒绝真实工作线程的可写申请，验证错误扩散和退出。
+static bool QmVideoTestFrameFailureRequested()
+{
+	static const bool s_Requested = std::getenv("QMCLIENT_TEST_VIDEO_CONVERSION_FAIL") != nullptr;
 	return s_Requested;
 }
 #endif
@@ -151,6 +161,9 @@ bool CVideo::Start()
 	char aWholePath[IO_MAX_PATH_LENGTH];
 	char aTemporaryPath[IO_MAX_PATH_LENGTH];
 	const std::string TemporaryName = std::string(m_aName) + ".recording";
+	// 先完成可能分配的输出 owner；打开句柄后只标记拥有并立即关闭。
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE_OR_ABSOLUTE, m_aName, aWholePath, sizeof(aWholePath));
+	m_pOutput = std::make_unique<CVideoExportOutput>(aWholePath, ".recording");
 	// 仍经 Storage 校验路径；前置可写检查只打开临时文件，绝不截断旧成片。
 	IOHANDLE File = m_pStorage->OpenFile(TemporaryName.c_str(), IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE, aTemporaryPath, sizeof(aTemporaryPath));
 	if(!File)
@@ -158,8 +171,6 @@ bool CVideo::Start()
 		log_error("videorecorder", "Could not open temporary file for '%s'", m_aName);
 		return false;
 	}
-	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE_OR_ABSOLUTE, m_aName, aWholePath, sizeof(aWholePath));
-	m_pOutput = std::make_unique<CVideoExportOutput>(aWholePath, ".recording");
 	m_pOutput->Opened();
 	if(io_close(File) != 0)
 		return false;
@@ -203,7 +214,8 @@ bool CVideo::Start()
 	{
 		m_vFreeSlots[i] = QueueFrames - 1 - i; // 栈：先归还后复用，降低读写冲突
 	}
-	m_vPendingSlots.clear();
+	if(!m_PendingSlots.TryInit(QueueFrames))
+		return false;
 	m_NextVideoFrameToCapture = 0;
 	m_NextVideoFrameToSubmit = 0;
 	m_VideoStop = false;
@@ -455,12 +467,28 @@ void CVideo::ReturnCaptureSlot(size_t SlotIndex)
 
 void CVideo::PublishCaptureSlot(size_t SlotIndex)
 {
+	bool Published;
 	{
 		std::unique_lock<std::mutex> Lock(m_VideoQueueMutex);
-		m_vVideoSlots[SlotIndex].m_FrameNumber = m_NextVideoFrameToCapture++;
-		m_vPendingSlots.push_back(SlotIndex);
+		Published = m_PendingSlots.Push(SlotIndex);
+		if(!Published)
+		{
+			// 槽位数量与队列容量应一致；异常状态不发布缺帧序号，也不遗留等待者。
+			m_vFreeSlots.push_back(SlotIndex);
+			m_EncodeError.store(true, std::memory_order_release);
+			m_VideoPipelineError = true;
+		}
+		else
+			m_vVideoSlots[SlotIndex].m_FrameNumber = m_NextVideoFrameToCapture++;
 	}
-	m_VideoSlotReadyCond.notify_one();
+	if(Published)
+		m_VideoSlotReadyCond.notify_one();
+	else
+	{
+		m_VideoSlotReadyCond.notify_all();
+		m_VideoSlotFreeCond.notify_all();
+		m_VideoSubmitCond.notify_all();
+	}
 }
 
 void CVideo::NextVideoFrameThread()
@@ -705,22 +733,26 @@ void CVideo::RunVideoConvertThread(size_t ThreadIndex)
 		uint64_t FrameNumber;
 		{
 			std::unique_lock<std::mutex> Lock(m_VideoQueueMutex);
-			m_VideoSlotReadyCond.wait(Lock, [this]() -> bool { return !m_vPendingSlots.empty() || m_VideoStop || m_VideoPipelineError; });
+			m_VideoSlotReadyCond.wait(Lock, [this]() -> bool { return !m_PendingSlots.Empty() || m_VideoStop || m_VideoPipelineError; });
 
-			if(m_vPendingSlots.empty())
+			if(!m_PendingSlots.Pop(SlotIndex))
 			{
 				if(m_VideoStop || m_VideoPipelineError)
 					return;
 				continue; // 虚假唤醒
 			}
 
-			SlotIndex = m_vPendingSlots.front();
-			m_vPendingSlots.pop_front();
+			if(m_VideoPipelineError)
+			{
+				m_vFreeSlots.push_back(SlotIndex);
+				m_VideoSlotFreeCond.notify_one();
+				continue;
+			}
 			FrameNumber = m_vVideoSlots[SlotIndex].m_FrameNumber;
 		}
 
 		// 像素转换在队列锁外执行（sws 上下文与编码目标帧均为线程私有）
-		FillVideoFrame(ThreadIndex, SlotIndex);
+		const bool Converted = FillVideoFrame(ThreadIndex, SlotIndex);
 
 		{
 			std::unique_lock<std::mutex> Lock(m_VideoQueueMutex);
@@ -728,6 +760,14 @@ void CVideo::RunVideoConvertThread(size_t ThreadIndex)
 			// 转换完成，槽内 RGBA 数据已消费，归还空闲栈供渲染端复用
 			m_vFreeSlots.push_back(SlotIndex);
 			m_VideoSlotFreeCond.notify_one();
+			if(!Converted)
+			{
+				m_VideoPipelineError = true;
+				m_VideoSubmitCond.notify_all();
+				m_VideoSlotFreeCond.notify_all();
+				m_VideoSlotReadyCond.notify_all();
+				continue;
+			}
 
 			// 按帧号严格按序提交；编码错误置位后全部等待者丢弃退出（Stop 亦兜底唤醒）
 			m_VideoSubmitCond.wait(Lock, [this, FrameNumber]() -> bool { return m_NextVideoFrameToSubmit == FrameNumber || m_VideoPipelineError; });
@@ -759,13 +799,24 @@ void CVideo::RunVideoConvertThread(size_t ThreadIndex)
 	}
 }
 
-void CVideo::FillVideoFrame(size_t ThreadIndex, size_t SlotIndex)
+bool CVideo::FillVideoFrame(size_t ThreadIndex, size_t SlotIndex)
 {
-	// 输入行长与行数来自渲染（readback）尺寸（M7 超采样下大于编码输出尺寸，由 swscale 缩小）。
-	const int InLineSize = 4 * m_Width;
-	auto *pRGBAData = m_vVideoSlots[SlotIndex].m_vRGBA.data();
-	sws_scale(m_VideoStream.m_vpSwsContexts[ThreadIndex], (const uint8_t *const *)&pRGBAData, &InLineSize, 0,
-		m_Height, m_VideoStream.m_vpFrames[ThreadIndex]->data, m_VideoStream.m_vpFrames[ThreadIndex]->linesize);
+	SVideoFrameConversionApi Api;
+#if defined(CONF_QMCLIENT_TEST_STORAGE)
+	if(QmVideoTestFrameFailureRequested())
+		Api.m_pMakeWritable = [](AVFrame *) { return AVERROR(ENOMEM); };
+#endif
+	const int Result = ConvertVideoFrame(m_VideoStream.m_vpSwsContexts[ThreadIndex], m_VideoStream.m_vpFrames[ThreadIndex],
+		m_vVideoSlots[SlotIndex].m_vRGBA, m_Width, m_Height, Api);
+	if(Result < 0)
+	{
+		m_EncodeError.store(true, std::memory_order_release);
+		char aError[AV_ERROR_MAX_STRING_SIZE];
+		av_strerror(Result, aError, sizeof(aError));
+		log_error("videorecorder", "Could not convert video frame: %s", aError);
+		return false;
+	}
+	return true;
 }
 
 bool CVideo::UpdateVideoBufferFromGraphics(size_t SlotIndex)
