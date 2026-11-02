@@ -102,17 +102,19 @@ public:
 	}
 };
 
-// 保持原正常出口的默认文字颜色，异常也恢复映射、flags和这两个默认颜色。
+// 正常及异常出口均恢复调用前的颜色、映射和 flags。
 template<typename TText, typename TGraphics>
 class CQmChatBubbleRenderContext
 {
 	TText &m_Text;
+	ColorRGBA m_PreviousColor;
+	ColorRGBA m_PreviousOutline;
 	CQmNameplateTextContext<TText, TGraphics> m_Context;
 	bool m_Active = false;
 
 public:
 	CQmChatBubbleRenderContext(TText &Text, TGraphics &Graphics) :
-		m_Text(Text), m_Context(Text, Graphics, true) {}
+		m_Text(Text), m_PreviousColor(Text.GetTextColor()), m_PreviousOutline(Text.GetTextOutlineColor()), m_Context(Text, Graphics, true) {}
 	CQmChatBubbleRenderContext(const CQmChatBubbleRenderContext &) = delete;
 	CQmChatBubbleRenderContext &operator=(const CQmChatBubbleRenderContext &) = delete;
 	~CQmChatBubbleRenderContext()
@@ -135,8 +137,8 @@ public:
 	{
 		if(std::exchange(m_Active, false))
 		{
-			m_Text.TextColor(m_Text.DefaultTextColor());
-			m_Text.TextOutlineColor(m_Text.DefaultTextOutlineColor());
+			m_Text.TextColor(m_PreviousColor);
+			m_Text.TextOutlineColor(m_PreviousOutline);
 			m_Context.Finish();
 		}
 	}

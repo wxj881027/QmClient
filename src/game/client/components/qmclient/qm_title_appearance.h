@@ -51,6 +51,11 @@ inline std::string QmTitleBadgeText(const char *pTitle)
 constexpr float QM_TITLE_BADGE_HEIGHT = 24.0f;
 constexpr float QM_TITLE_BADGE_LABEL_FONT_SIZE = 16.0f;
 
+inline float QmNameplateTitleHeight(float NameFontSize, int ScalePercent)
+{
+	return std::max(0.0f, NameFontSize) * 0.8f * std::clamp(ScalePercent, 50, 200) / 100.0f;
+}
+
 inline float QmTitleBadgeLabelFontSize(float Height)
 {
 	return std::max(0.0f, Height) * QM_TITLE_BADGE_LABEL_FONT_SIZE / QM_TITLE_BADGE_HEIGHT;

@@ -243,3 +243,38 @@ TEST(VideoRecorderWorkers, PartialStartupJoinsRunningWorkersBeforeDestroyingThei
 	EXPECT_EQ(State.m_Destroyed, 3);
 	EXPECT_FALSE(State.m_TimedOut);
 }
+
+TEST(VideoRecorderWorkers, DependentAudioWaitIsWokenBeforeTakingTheWorkersControlMutex)
+{
+	struct CWorker : CVideoRecorderWorker
+	{
+		std::mutex m_FillMutex;
+		std::condition_variable m_FillCondition;
+	};
+	std::vector<std::unique_ptr<CWorker>> vpWorkers;
+	vpWorkers.push_back(std::make_unique<CWorker>());
+	vpWorkers.push_back(std::make_unique<CWorker>());
+	std::atomic_bool Waiting{false}, TimedOut{false};
+	auto &Worker = *vpWorkers[0];
+	auto &Parent = *vpWorkers[1];
+	Worker.m_Thread = std::thread([&] {
+		std::unique_lock<std::mutex> Control(Worker.m_Mutex);
+		std::unique_lock<std::mutex> Fill(Parent.m_FillMutex);
+		Waiting = true;
+		TimedOut = !Parent.m_FillCondition.wait_for(Fill, std::chrono::seconds(2), [&] { return Worker.m_Finished.load(); });
+	});
+	const auto Deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+	while(!Waiting && std::chrono::steady_clock::now() < Deadline)
+		std::this_thread::yield();
+	EXPECT_TRUE(Waiting);
+	{
+		// 取得此锁说明 wait 已释放父线程填充锁，避免靠 sleep 猜等待状态。
+		const std::lock_guard<std::mutex> Fill(Parent.m_FillMutex);
+	}
+	StopVideoRecorderThreads(vpWorkers, [](CWorker &Item) {
+		const std::lock_guard<std::mutex> Fill(Item.m_FillMutex);
+		Item.m_FillCondition.notify_all();
+	});
+	EXPECT_FALSE(TimedOut);
+	EXPECT_TRUE(vpWorkers.empty());
+}

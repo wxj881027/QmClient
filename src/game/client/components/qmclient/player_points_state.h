@@ -20,6 +20,12 @@ struct SPlayerPointsResult
 	int m_Points;
 };
 
+struct SPlayerPlaytimeResult
+{
+	EPointsStatus m_Status;
+	int64_t m_Hours;
+};
+
 class CQmPlayerPointsCache
 {
 public:
@@ -34,6 +40,8 @@ private:
 	{
 		int m_Points = 0;
 		EPointsStatus m_Status = EPointsStatus::NOT_REQUESTED;
+		int64_t m_PlaytimeHours = -1;
+		EPointsStatus m_PlaytimeStatus = EPointsStatus::NOT_REQUESTED;
 		int64_t m_LastSuccessTick = 0;
 		int64_t m_LastFailureTick = 0;
 		uint64_t m_PendingRequestId = 0;
@@ -67,6 +75,12 @@ public:
 		return It == m_Entries.end() ? SPlayerPointsResult{EPointsStatus::NOT_REQUESTED, 0} : SPlayerPointsResult{It->second.m_Status, It->second.m_Points};
 	}
 
+	SPlayerPlaytimeResult GetPlaytime(std::string_view Name) const
+	{
+		const auto It = m_Entries.find(Name);
+		return It == m_Entries.end() ? SPlayerPlaytimeResult{EPointsStatus::NOT_REQUESTED, -1} : SPlayerPlaytimeResult{It->second.m_PlaytimeStatus, It->second.m_PlaytimeHours};
+	}
+
 	bool ShouldQuery(std::string_view Name, int64_t Now, int64_t Frequency) const
 	{
 		const auto It = m_Entries.find(Name);
@@ -83,11 +97,13 @@ public:
 		SEntry &Entry = m_Entries[Name];
 		if(Entry.m_Status != EPointsStatus::READY)
 			Entry.m_Status = EPointsStatus::FETCHING;
+		if(Entry.m_PlaytimeStatus != EPointsStatus::READY)
+			Entry.m_PlaytimeStatus = EPointsStatus::FETCHING;
 		Entry.m_PendingRequestId = ++m_RequestId;
 		return {m_Generation, Entry.m_PendingRequestId};
 	}
 
-	bool CompleteSuccess(const std::string &Name, SRequestToken Token, int Points, int64_t Now)
+	bool CompleteSuccess(const std::string &Name, SRequestToken Token, int Points, int64_t Now, int64_t PlaytimeHours = -1)
 	{
 		auto It = m_Entries.find(Name);
 		if(It == m_Entries.end() || !IsCurrent(It->second, Token))
@@ -95,6 +111,8 @@ public:
 		SEntry &Entry = It->second;
 		Entry.m_Points = Points;
 		Entry.m_Status = EPointsStatus::READY;
+		Entry.m_PlaytimeHours = PlaytimeHours;
+		Entry.m_PlaytimeStatus = PlaytimeHours >= 0 ? EPointsStatus::READY : EPointsStatus::FAILED;
 		Entry.m_LastSuccessTick = Now;
 		Entry.m_LastFailureTick = 0;
 		Entry.m_PendingRequestId = 0;
@@ -109,6 +127,8 @@ public:
 		SEntry &Entry = It->second;
 		if(Entry.m_Status != EPointsStatus::READY)
 			Entry.m_Status = EPointsStatus::FAILED;
+		if(Entry.m_PlaytimeStatus != EPointsStatus::READY)
+			Entry.m_PlaytimeStatus = EPointsStatus::FAILED;
 		Entry.m_LastFailureTick = Now;
 		Entry.m_PendingRequestId = 0;
 		return true;
@@ -122,6 +142,8 @@ public:
 			Entry.m_PendingRequestId = 0;
 			if(Entry.m_Status == EPointsStatus::FETCHING)
 				Entry.m_Status = EPointsStatus::NOT_REQUESTED;
+			if(Entry.m_PlaytimeStatus == EPointsStatus::FETCHING)
+				Entry.m_PlaytimeStatus = EPointsStatus::NOT_REQUESTED;
 		}
 	}
 

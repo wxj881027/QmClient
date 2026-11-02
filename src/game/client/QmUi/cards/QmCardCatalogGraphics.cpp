@@ -19,6 +19,7 @@
 
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmCardRegistry.h>
+#include <game/client/QmUi/QmToast.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/SettingsCard.h>
@@ -694,8 +695,10 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 
 					if(DoSettingsButton_Menu(SETTINGS_GRAPHICS, -1, -1, &s_SystemGraphicsSettings, "graphics-system-gpu-settings", Localize("System graphics settings"), 0, &SystemSettingsRow) && !Ui()->RenderOnly())
 					{
+						// 打不开系统设置页只影响这一次点击，不是需要阅读详情的错误：
+						// 用非阻断失败提示，用户再点一次就是重试。
 						if(!open_link("ms-settings:display-advancedgraphics"))
-							PopupMessage(Localize("Error"), Localize("Could not open system graphics settings."), Localize("Ok"));
+							qm_ui::Toast(EQmToastKind::FAILED, Localize("Could not open system graphics settings."));
 					}
 				});
 
@@ -715,6 +718,22 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			const bool TextCustomColorVisible = g_Config.m_QmUiTextColorMode == 3;
 			SSettingsContentMetrics ColorMetrics = GraphicsMetrics;
 			ColorMetrics.m_LineSpacing = 0.0f;
+
+			RowAction("graphics-backdrop-blur", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
+				const bool BlurSupported = Graphics()->IsBackbufferCaptureSupported() && Graphics()->IsRenderTargetGaussianBlurSupported();
+				char aBlurLabel[192];
+				str_format(aBlurLabel, sizeof(aBlurLabel), "%s%s%s%s", Localize("Enable backdrop blur"), BlurSupported ? "" : " (", BlurSupported ? "" : Localize("Unavailable"), BlurSupported ? "" : ")");
+				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmGaussianBlur, "enable-backdrop-blur", aBlurLabel, g_Config.m_QmGaussianBlur, &Button))
+					g_Config.m_QmGaussianBlur ^= 1;
+			});
+
+			RowAction("graphics-card-borders", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
+				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiCardBorders, "show-settings-card-borders", Localize("Show settings card borders"), g_Config.m_QmUiCardBorders, &Button))
+					g_Config.m_QmUiCardBorders ^= 1;
+			});
+
+			if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ContentRect, "deck:graphics-visual", GraphicsMetrics))
+				return;
 
 			RowAction("graphics-surface", GraphicsMetrics.m_ButtonHeight, [&](CUIRect UiColorRow) {
 static CButtonContainer s_UiColorResetId;
@@ -843,16 +862,6 @@ static CButtonContainer s_ScoreboardColorResetId;
 
 			});
 
-			RowAction("graphics-backdrop-blur", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
-			const bool BlurSupported = Graphics()->IsBackbufferCaptureSupported() && Graphics()->IsRenderTargetGaussianBlurSupported();
-			char aBlurLabel[192];
-			str_format(aBlurLabel, sizeof(aBlurLabel), "%s%s%s%s", Localize("Enable backdrop blur"), BlurSupported ? "" : " (", BlurSupported ? "" : Localize("Unavailable"), BlurSupported ? "" : ")");
-			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmGaussianBlur, "enable-backdrop-blur", aBlurLabel, g_Config.m_QmGaussianBlur, &Button))
-				g_Config.m_QmGaussianBlur ^= 1;
-
-
-			});
-
 			RowAction("graphics-blur-mode", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
 const char *apBlurModeLabels[] = {Localize("Gaussian"), Localize("Kawase"), Localize("Dual Kawase")};
 			const char *apBlurModeTooltips[] = {
@@ -869,14 +878,6 @@ const char *apBlurModeLabels[] = {Localize("Gaussian"), Localize("Kawase"), Loca
 				g_Config.m_QmBlurMode = NewBlurMode;
 			// 整行 tooltip 跟随当前模式，保留原先逐段的说明文案。
 			GameClient()->m_Tooltips.DoToolTip(&s_aGraphicsBlurModeButtons[0], &Button, apBlurModeTooltips[std::clamp(g_Config.m_QmBlurMode, 0, (int)std::size(apBlurModeTooltips) - 1)]);
-
-
-			});
-
-			RowAction("graphics-card-borders", GraphicsMetrics.m_LineHeight, [&](CUIRect Button) {
-
-			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiCardBorders, "show-settings-card-borders", Localize("Show settings card borders"), g_Config.m_QmUiCardBorders, &Button))
-				g_Config.m_QmUiCardBorders ^= 1;
 
 
 			});
@@ -933,6 +934,9 @@ static CButtonContainer s_CardBorderColorResetId;
 					Client()->OnWindowResize();
 				}
 			});
+			if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ContentRect, "deck:graphics-icons", GraphicsMetrics))
+				return;
+
 			if(CustomColor)
 			{
 				SSettingsContentMetrics ColorMetrics = GraphicsMetrics;
@@ -1021,6 +1025,9 @@ static CButtonContainer s_CardBorderColorResetId;
 					Props.m_EnableWidthCheck = false;
 					Ui()->DoLabel(&Row, pText, GraphicsMetrics.m_SmallSize, TEXTALIGN_ML, Props); }, GraphicsMetrics.m_LineHeight);
 
+			if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ContentRect, "deck:graphics-interaction", GraphicsMetrics))
+				return;
+
 			RowAction("graphics-ListEntryAnimations", GraphicsMetrics.m_LineHeight, [&](CUIRect ListEntryAnimations) {
 				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiListEntryAnimations, "settings-card-list-entry-animations", Localize("Card list entry animation"), g_Config.m_QmUiListEntryAnimations, &ListEntryAnimations))
 					g_Config.m_QmUiListEntryAnimations ^= 1;
@@ -1048,12 +1055,12 @@ static CButtonContainer s_CardBorderColorResetId;
 			RowAction("graphics-ScrollLegacyWheel", GraphicsMetrics.m_LineHeight, [&](CUIRect ScrollLegacyWheel) {
 				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiScrollLegacyWheel, "graphics-scroll-legacy-wheel", Localize("Original scroll feel"), g_Config.m_QmUiScrollLegacyWheel, &ScrollLegacyWheel))
 					g_Config.m_QmUiScrollLegacyWheel ^= 1;
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollLegacyWheel, &ScrollLegacyWheel, Localize("Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity"));
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollLegacyWheel, &ScrollLegacyWheel, Localize("Restart smooth scrolling on every wheel tick"));
 			});
 
 			RowAction("graphics-ScrollStep", GraphicsMetrics.m_LineHeight, [&](CUIRect ScrollStepRow) {
 				DoGraphicsNumericField("graphics-scroll-step", &g_Config.m_QmUiScrollStep, &g_Config.m_QmUiScrollStep, ScrollStepRow, Localize("Scroll step"), 2, 100);
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollStep, &ScrollStepRow, Localize("Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step"));
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollStep, &ScrollStepRow, Localize("Wheel distance per tick; hold Alt for 3x"));
 			});
 		});
 	};

@@ -4,6 +4,8 @@
 
 #include "perf_logging.h"
 
+#include <engine/shared/packer.h>
+
 #include <array>
 #include <cmath>
 #include <limits>
@@ -14,6 +16,25 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
+struct SQmPerfWireMessage
+{
+	int m_Id = -1;
+	int m_System = -1;
+};
+
+// 只读取线上的消息编号，不保留包体；未知或损坏的包头保持 unavailable。
+inline SQmPerfWireMessage QmPerfWireMessage(const void *pData, int Size)
+{
+	if(pData == nullptr || Size <= 0)
+		return {};
+	CUnpacker Unpacker;
+	Unpacker.Reset(pData, Size);
+	const int Header = Unpacker.GetInt();
+	if(Unpacker.Error() || Header < 0)
+		return {};
+	return {Header >> 1, Header & 1};
+}
 
 inline bool QmPerfSensitiveConfig(const char *pName)
 {

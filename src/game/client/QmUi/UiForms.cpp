@@ -52,7 +52,7 @@ namespace ui_widget
 
 		SInputFieldResult BuildInputFieldResult(const IUiContext &Ctx, CLineInput *pInput, bool Changed, bool WasActive, bool WasEmpty, bool Clearable)
 		{
-			const bool SubmitPressed = Ctx.m_pUi != nullptr && (Ctx.m_pUi->Input()->KeyPress(KEY_RETURN) || Ctx.m_pUi->Input()->KeyPress(KEY_KP_ENTER));
+			const bool SubmitPressed = Ctx.m_pUi != nullptr && Ctx.m_pUi->HotkeyPressed(CUi::HOTKEY_ENTER);
 			return ui_widget::BuildInputFieldResult(WasActive, pInput->IsActive(), Changed, SubmitPressed, WasEmpty, pInput->IsEmpty(), Clearable);
 		}
 
@@ -96,7 +96,7 @@ namespace ui_widget
 			if(Ctx.m_pAnim == nullptr)
 				return;
 			const float TargetAlpha = InputFieldFocusActive(Ctx, pInput, Rect, Multiline) ? 1.0f : 0.0f;
-			const float Alpha = AnimateStateValue(Ctx, pInput, EUiAnimProperty::ALPHA, TargetAlpha, ui_curve::DECELERATE);
+			const float Alpha = AnimateStateValue(Ctx, pInput, EUiAnimProperty::ALPHA, TargetAlpha, ui_token::motion::INPUT_FOCUS_RING);
 			DrawTextFieldFocusBorder(Ctx, Rect, Alpha);
 		}
 
@@ -111,7 +111,7 @@ namespace ui_widget
 				Active = false;
 			if(!Active && Ctx.m_pUi->HotItem() == pInput && Ctx.m_pUi->MouseButton(0))
 				Active = true;
-			if(!Multiline && (Ctx.m_pUi->Input()->KeyPress(KEY_RETURN) || Ctx.m_pUi->Input()->KeyPress(KEY_KP_ENTER)))
+			if(!Multiline && Ctx.m_pUi->HotkeyPressed(CUi::HOTKEY_ENTER))
 				Active = false;
 			return Active;
 		}
@@ -172,6 +172,8 @@ namespace ui_widget
 		const bool InlineTrailingText = Options.m_InlineTrailingText && Options.m_pTrailingText != nullptr && Options.m_pTrailingText[0] != '\0';
 		const float TrailingWidth = HasTrailingAction ? std::max(Options.m_TrailingWidth, Rect.h) : Options.m_TrailingWidth;
 		const SInputFieldLayout Layout = ResolveInputFieldLayout(Rect, HasIcon, Options.m_Clearable, Ctx.m_UiScale, InlineTrailingText ? 0.0f : TrailingWidth);
+		const bool ShowClear = Options.m_Clearable && QmInputFieldClearVisible(pInput->IsEmpty(), WasActive, WasEmpty);
+		const float ClearAlpha = Options.m_Clearable ? AnimateStateValue(Ctx, pInput->GetClearButtonId(), EUiAnimProperty::ALPHA, ShowClear ? 1.0f : 0.0f, ui_token::motion::HOVER_FADE) : 0.0f;
 		const float FontSize = std::min(Options.m_FontSize, Layout.m_ContentRect.h * CUi::ms_FontmodHeight * 0.8f);
 		CUIRect TextRect = Layout.m_ContentRect;
 		CUIRect TrailingRect = Layout.m_TrailingRect;
@@ -195,7 +197,7 @@ namespace ui_widget
 		if(ProcessInput && Ctx.m_pAnim != nullptr)
 		{
 			const bool FocusActive = InputFieldFocusActive(Ctx, pInput, Layout.m_ShellRect, Options.m_Mode == EInputFieldMode::MULTILINE);
-			FocusAlpha = AnimateStateValue(Ctx, pInput, EUiAnimProperty::ALPHA, FocusActive ? 1.0f : 0.0f, ui_curve::DECELERATE);
+			FocusAlpha = AnimateStateValue(Ctx, pInput, EUiAnimProperty::ALPHA, FocusActive ? 1.0f : 0.0f, ui_token::motion::INPUT_FOCUS_RING);
 		}
 		if(!Ctx.m_pUi->MeasurementOnly() && FocusAlpha > 0.01f)
 		{
@@ -235,7 +237,7 @@ namespace ui_widget
 		RenderOptions.m_DrawBackground = false;
 		RenderOptions.m_ProcessInput = ProcessInput;
 		CUIRect InputHitRect = Layout.m_ShellRect;
-		if(Options.m_Clearable && Layout.m_ClearRect.w > 0.0f)
+		if(Options.m_Clearable && ShowClear && Layout.m_ClearRect.w > 0.0f)
 			InputHitRect.VSplitRight(Layout.m_ClearRect.w, &InputHitRect, nullptr);
 		if(HasTrailingAction && TrailingRect.w > 0.0f)
 			InputHitRect.VSplitRight(TrailingRect.w, &InputHitRect, nullptr);
@@ -249,32 +251,22 @@ namespace ui_widget
 			else
 				Changed = Ctx.m_pUi->DoEditBox(pInput, &TextRect, FontSize, Options.m_Corners, {}, TextAlign, RenderOptions);
 		}
-		// 单行输入：Enter = 确认并退出编辑态（多行保留换行语义）。此前没有任何
-		// 路径在回车时失焦，Result.m_Submitted（依赖 Deactivated+SubmitPressed）
-		// 永远不成立——数值框的提交分支随之失效，输入后一直停在编辑态。
-		// IME 组词中的回车是候选确认，不退出编辑态（见 QmEditorTextInput 合同）。
-		// 必须走 ReleaseActiveTextInput 而非 Deactivate+SetActiveItem(nullptr)：
-		// SetActiveItem 对空指针不清 m_pLastActiveItem，下一帧 DoEditBox 会凭
-		// m_pLastActiveItem 重新 Activate，输入框复活（实测回归，见
-		// QmNumericFieldEnter.EnterDeactivatesInputAndSubmits）。
-		if(ProcessInput && Options.m_Mode != EInputFieldMode::MULTILINE && pInput->IsActive() && !Ctx.m_pUi->Input()->HasComposition() &&
-			(Ctx.m_pUi->Input()->KeyPress(KEY_RETURN) || Ctx.m_pUi->Input()->KeyPress(KEY_KP_ENTER)))
-		{
-			Ctx.m_pUi->ReleaseActiveTextInput(pInput);
-		}
+		// 确认与失焦统一由 DoEditBox 的路由热键处理，避免 IME 已消费的原始按键再次生效。
 		if(RenderOnly)
 			pInput->SetEmptyText(pPreviousPlaceholder);
 
-		if(Options.m_Clearable && !Ctx.m_pUi->MeasurementOnly())
+		if(Options.m_Clearable && !Ctx.m_pUi->MeasurementOnly() && ClearAlpha > 0.01f)
 		{
 			const CUIRect &ClearRect = Layout.m_ClearRect;
+			// 清除按钮跟随内容出现/消失；槽位始终保留，文字不因 × 出现而重排。
+			CUiScopedControlAlphaScale ClearFade(Ctx.m_pUi, ClearAlpha);
 			SButtonSurfaceOptions ActionOptions;
 			ActionOptions.m_Role = EUiButtonRole::ICON;
 			ActionOptions.m_TransparentInactive = true;
 			ActionOptions.m_Corners = IGraphics::CORNER_R;
 			DrawButtonSurface(Ctx, pInput->GetClearButtonId(), ClearRect, ActionOptions);
-			DrawInputFieldIcon(Ctx, ClearRect, FontIcons::FONT_ICON_XMARK, InputIconColor, static_cast<int>(EQmIcon::CLOSE));
-			if(ProcessInput && Ctx.m_pUi->DoButtonLogic(pInput->GetClearButtonId(), 0, &ClearRect, BUTTONFLAG_LEFT))
+			DrawInputFieldIcon(Ctx, ClearRect, FontIcons::FONT_ICON_XMARK, InputIconColor.WithMultipliedAlpha(ClearAlpha), static_cast<int>(EQmIcon::CLOSE));
+			if(ShowClear && ProcessInput && Ctx.m_pUi->DoButtonLogic(pInput->GetClearButtonId(), 0, &ClearRect, BUTTONFLAG_LEFT))
 			{
 				pInput->Clear();
 				Ctx.m_pUi->SetActiveItem(pInput);

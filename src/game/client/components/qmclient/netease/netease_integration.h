@@ -3,6 +3,9 @@
 
 #include "netease_lyric_state.h"
 
+#include <game/client/components/qmclient/music_lyrics/music_lyrics_display.h>
+#include <game/client/components/qmclient/netease_hook/qm_netease_lyrics_channel.h>
+
 #include <game/client/component.h>
 #include <game/client/components/qmclient/netease_hook/qm_netease_hook_protocol.h>
 
@@ -30,12 +33,24 @@ public:
 	bool GetCurrentLyric(char *pBuffer, size_t BufferSize, ColorRGBA *pColor = nullptr) const;
 	bool HasCurrentLyric() const;
 	bool HasActiveLyrics() const;
+	QmMusicLyrics::SSourceSnapshot LyricsSnapshot() const;
 	uint64_t CurrentSongId() const;
 	uint64_t CurrentGeneration() const;
 	const NeteaseLyrics::SCurrentState &Snapshot() const { return m_LyricState.Snapshot(); }
 
 private:
 	void ClearForStaleMedia();
+	void UpdateLyricsData(const QmNeteaseHook::SSnapshotV5 &Snapshot);
+	void ResetLyricsData();
+	class CLyricsParseJob;
+	std::shared_ptr<CLyricsParseJob> m_pLyricsParseJob;
+	QmNeteaseHook::CLyricsChannel m_LyricsChannel;
+	QmMusicLyrics::SLyricsData m_LyricsData;
+	uint64_t m_DataSongId = 0;
+	uint64_t m_DataGeneration = 0;
+	uint32_t m_DataPid = 0;
+	uint64_t m_DataRevision = 0;
+	uint64_t m_NextLyricsReadTick = 0;
 
 	NeteaseLyrics::CLyricState m_LyricState;
 	uint64_t m_LastBridgeSequence = 0;

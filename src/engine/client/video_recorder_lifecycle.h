@@ -5,6 +5,7 @@
 
 #include <engine/shared/video.h>
 
+#include <atomic>
 #include <condition_variable>
 #include <exception>
 #include <memory>
@@ -58,26 +59,39 @@ public:
 	std::mutex m_Mutex;
 	std::condition_variable m_Cond;
 	bool m_Started = false;
-	bool m_Finished = false;
+	std::atomic<bool> m_Finished{false};
 };
 
-template<typename TWorker>
-void StopVideoRecorderThreads(std::vector<std::unique_ptr<TWorker>> &vpWorkers)
+template<typename TWorker, typename TNotify>
+void StopVideoRecorderThreads(std::vector<std::unique_ptr<TWorker>> &vpWorkers, TNotify NotifyStopped)
 {
-	// 分配失败会留下空槽位，线程创建失败会留下尚不可 join 的对象。
+	// 先标记全部线程，父子等待才能在任意启动阶段退出。
+	for(auto &pWorker : vpWorkers)
+		if(pWorker)
+			pWorker->m_Finished.store(true, std::memory_order_release);
 	for(auto &pWorker : vpWorkers)
 	{
 		if(!pWorker)
 			continue;
-		{
-			std::unique_lock<std::mutex> Lock(pWorker->m_Mutex);
-			pWorker->m_Finished = true;
-			pWorker->m_Cond.notify_all();
-		}
-		if(pWorker->m_Thread.joinable())
-			pWorker->m_Thread.join();
+		NotifyStopped(*pWorker);
 	}
+	for(auto &pWorker : vpWorkers)
+	{
+		if(!pWorker)
+			continue;
+		std::unique_lock<std::mutex> Lock(pWorker->m_Mutex);
+		pWorker->m_Cond.notify_all();
+	}
+	for(auto &pWorker : vpWorkers)
+		if(pWorker && pWorker->m_Thread.joinable())
+			pWorker->m_Thread.join();
 	vpWorkers.clear();
+}
+
+template<typename TWorker>
+void StopVideoRecorderThreads(std::vector<std::unique_ptr<TWorker>> &vpWorkers)
+{
+	StopVideoRecorderThreads(vpWorkers, [](TWorker &) {});
 }
 
 #endif // ENGINE_CLIENT_VIDEO_RECORDER_LIFECYCLE_H

@@ -155,6 +155,12 @@ public:
 	[[nodiscard]] bool ShiftTickBase(int64_t TickDelta, QmTickShift::EMode Mode = QmTickShift::EMode::COMMIT);
 
 private:
+	void UpdateQmAxiomHook();
+	void HandleQmAxiomQuads();
+	int m_QmAxiomHookQuad = -1;
+	vec2 m_QmAxiomHookLocalPos = vec2(0, 0);
+	bool m_LastQmAxiomRefillJumps = false;
+
 	void BindAntiPingInterferenceCallback();
 
 	// weapon info

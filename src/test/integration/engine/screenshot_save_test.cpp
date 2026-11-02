@@ -70,6 +70,48 @@ TEST(ScreenshotSave, ActualStorageAndPngCodecPreservePixelsAndProcessorComment)
 	EXPECT_EQ(Comment, "screenshot test");
 }
 
+TEST(ScreenshotSave, DiskCompletionIsDeliveredOnlyWhenTheOwningQueueIsFlushed)
+{
+	CTestInfo Info;
+	auto pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	screenshot_save::CCompletionQueue Queue;
+	CImageInfo Image = MakeImage();
+	ASSERT_NE(Image.m_pData, nullptr);
+	int Completed = 0;
+	CInlineSaveJob Job(pStorage.get(), "nested/shot.png", std::move(Image), nullptr, [] { ADD_FAILURE(); }, [&](CImageInfo &&Saved, const char *pPath) { Queue.Enqueue(std::move(Saved), pPath, [&](CImageInfo &&Result, const char *pActualPath) {
+																				     ++Completed;
+																				     EXPECT_TRUE(pStorage->FileExists(pActualPath, IStorage::TYPE_ABSOLUTE));
+																				     EXPECT_NE(Result.m_pData, nullptr);
+																			     }); });
+	Job.Run();
+	EXPECT_EQ(Completed, 0);
+	EXPECT_TRUE(pStorage->FileExists("nested/shot.png", IStorage::TYPE_SAVE));
+	Queue.Flush();
+	EXPECT_EQ(Completed, 1);
+	Queue.Flush();
+	EXPECT_EQ(Completed, 1);
+}
+
+TEST(ScreenshotSave, FailedCompletionDoesNotDiscardLaterCallbacksInTheSameFlush)
+{
+	screenshot_save::CCompletionQueue Queue;
+	CImageInfo First = MakeImage(), Second = MakeImage();
+	ASSERT_NE(First.m_pData, nullptr);
+	ASSERT_NE(Second.m_pData, nullptr);
+	int Calls = 0;
+	Queue.Enqueue(std::move(First), "first.png", [&](CImageInfo &&, const char *) { ++Calls; throw std::bad_alloc(); });
+	Queue.Enqueue(std::move(Second), "second.png", [&](CImageInfo &&Image, const char *pPath) {
+		++Calls;
+		EXPECT_STREQ(pPath, "second.png");
+		EXPECT_NE(Image.m_pData, nullptr);
+	});
+	EXPECT_NO_THROW(Queue.Flush());
+	EXPECT_EQ(Calls, 2);
+	Queue.Flush();
+	EXPECT_EQ(Calls, 2);
+}
+
 TEST(ScreenshotSave, RejectedProcessorKeepsExistingDestinationBytes)
 {
 	CTestInfo Info;

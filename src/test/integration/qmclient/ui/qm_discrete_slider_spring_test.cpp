@@ -28,6 +28,7 @@ namespace
 		void WrapNormal() override {}
 		void WrapClamp() override {}
 		bool HasRoundedRectSdf() override { return true; }
+		bool HasRoundedRectSdfTexture() override { return false; }
 		void RenderRoundedRectSdf(const SRoundedRectSdfParams &) override {}
 		void DrawRect4(float, float, float, float, ColorRGBA, ColorRGBA, ColorRGBA, ColorRGBA, int, float) override {}
 	};

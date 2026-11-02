@@ -28,9 +28,9 @@ namespace
 				throw std::bad_alloc();
 			IHttpRequest::Abort();
 		}
-		void Finish(std::string_view Body, EHttpState State = EHttpState::DONE)
+		void Finish(std::string_view Body, EHttpState State = EHttpState::DONE, int StatusCode = 200)
 		{
-			m_StatusCode = 200;
+			m_StatusCode = StatusCode;
 			ASSERT_EQ(OnData(Body.data(), Body.size()), Body.size());
 			OnCompletionInternal(State);
 		}
@@ -59,13 +59,14 @@ namespace
 
 	protected:
 		// 只替换HTTP传输、时钟及磁盘边界；解析仍交给真实CJobPool和生产作业。
-		std::shared_ptr<IHttpRequest> CreateRequest(const char *) override
+		std::shared_ptr<IHttpRequest> CreateRequest(const char *, bool) override
 		{
 			++m_FactoryCalls;
 			if(m_FactoryThrows)
 				throw std::bad_alloc();
 			return m_FactoryReturnsNull ? nullptr : m_pNext;
 		}
+		std::shared_ptr<qm_update::CSystemProxyJob> CreateProxyJob(const std::shared_ptr<IHttpRequest> &) override { return nullptr; }
 		void SubmitRequest(const std::shared_ptr<IHttpRequest> &) override
 		{
 			++m_SubmitCalls;
@@ -142,6 +143,37 @@ TEST_F(PlayerPointsController, NullFactoryResultDoesNotLeaveFetchingSlot)
 	Query();
 	EXPECT_EQ(m_Points.GetPoints("player").m_Status, EPointsStatus::FAILED);
 	EXPECT_EQ(m_Points.m_SubmitCalls, 0);
+}
+
+TEST_F(PlayerPointsController, MissingPlaytimeRecordPublishesZeroWithoutStartingAParseJob)
+{
+	m_Points.m_pNext = std::make_shared<CResponse>();
+	m_Points.EnsurePlaytimeQueried("player");
+	ASSERT_EQ(m_Points.m_SubmitCalls, 1);
+	ASSERT_NO_FATAL_FAILURE(m_Points.m_pNext->Finish("", EHttpState::ERROR, 404));
+	m_Points.OnRender();
+	EXPECT_EQ(m_Points.GetPlaytime("player").m_Status, EPointsStatus::READY);
+	EXPECT_EQ(m_Points.GetPlaytime("player").m_Hours, 0);
+	EXPECT_EQ(m_Points.GetPoints("player").m_Status, EPointsStatus::NOT_REQUESTED);
+	EXPECT_EQ(m_Points.m_JobSubmitCalls, 0);
+	EXPECT_EQ(m_Points.m_StoreCalls, 0);
+}
+
+TEST_F(PlayerPointsController, PointsAndPlaytimeShareTheConcurrencyLimitWithoutSharingResultSlots)
+{
+	auto pPoints = Query();
+	m_Points.m_pNext = std::make_shared<CResponse>();
+	m_Points.EnsurePlaytimeQueried("player");
+	const auto pPlaytime = m_Points.m_pNext;
+	m_Points.EnsureQueried("another");
+	EXPECT_EQ(m_Points.m_FactoryCalls, 2);
+	EXPECT_EQ(m_Points.GetPoints("player").m_Status, EPointsStatus::FETCHING);
+	EXPECT_EQ(m_Points.GetPlaytime("player").m_Status, EPointsStatus::FETCHING);
+	m_Points.OnReset();
+	EXPECT_TRUE(pPoints->IsAbortRequested());
+	EXPECT_TRUE(pPlaytime->IsAbortRequested());
+	EXPECT_EQ(m_Points.GetPoints("player").m_Status, EPointsStatus::NOT_REQUESTED);
+	EXPECT_EQ(m_Points.GetPlaytime("player").m_Status, EPointsStatus::NOT_REQUESTED);
 }
 
 TEST_F(PlayerPointsController, SubmissionExceptionCancelsCandidateAndClearsPendingToken)

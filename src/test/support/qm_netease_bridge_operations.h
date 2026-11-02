@@ -22,6 +22,9 @@ namespace NeteaseBridgeTest
 		TReportCallback m_Report;
 		QmNeteaseHook::SSnapshotV5 m_Last{};
 		bool m_HasSnapshot = false;
+		NeteaseLyrics::SRawLyrics m_RawLyrics;
+		uint64_t m_RawSong = 0, m_RawGeneration = 0;
+		uint32_t m_RawPid = 0;
 		int m_TickPermits = 0;
 		int m_Order = 0;
 
@@ -49,7 +52,7 @@ namespace NeteaseBridgeTest
 		bool m_OpenResult = true, m_ReportResult = true, m_RealThread = false;
 		std::atomic_bool m_WriterOpen{false}, m_ReportsActive{false}, m_TickLive{false}, m_CloseAfterJoin{true};
 		std::atomic_int m_Opened{0}, m_Closed{0}, m_ReportStarts{0}, m_ReportStops{0}, m_ThreadCalls{0}, m_TickExits{0}, m_Waits{0}, m_Published{0};
-		std::atomic_int m_PublishFailures{0}, m_WaitFailures{0};
+		std::atomic_int m_PublishFailures{0}, m_WaitFailures{0}, m_RawFailures{0}, m_RawPublished{0};
 		mutable std::atomic_int m_ClockFailures{0};
 		std::atomic_uint64_t m_Now{1000};
 		int m_LastStopOrder = 0, m_LastCloseOrder = 0;
@@ -103,6 +106,26 @@ namespace NeteaseBridgeTest
 			}
 			m_Changed.notify_all();
 			return true;
+		}
+		bool PublishRawLyrics(uint32_t Pid, uint64_t SongId, uint64_t Generation, const NeteaseLyrics::SRawLyrics &Raw) override
+		{
+			if(TakeFailure(m_RawFailures))
+				return false;
+			const std::lock_guard<std::mutex> Lock(m_DataMutex);
+			m_RawLyrics = Raw;
+			m_RawPid = Pid;
+			m_RawSong = SongId;
+			m_RawGeneration = Generation;
+			++m_RawPublished;
+			return true;
+		}
+		NeteaseLyrics::SRawLyrics LatestRaw(uint32_t &Pid, uint64_t &SongId, uint64_t &Generation) const
+		{
+			const std::lock_guard<std::mutex> Lock(m_DataMutex);
+			Pid = m_RawPid;
+			SongId = m_RawSong;
+			Generation = m_RawGeneration;
+			return m_RawLyrics;
 		}
 		bool StartReports(uint32_t, const std::wstring &, TReportCallback Callback) override
 		{

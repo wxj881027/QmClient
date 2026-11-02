@@ -7,6 +7,7 @@
 #include <engine/client/qm_storage_mode.h>
 #include <engine/engine.h>
 #include <engine/shared/config.h>
+#include <engine/shared/localization.h>
 #include <engine/storage.h>
 
 #include <game/client/components/qmclient/update_package.h>
@@ -115,7 +116,7 @@ void CTClient::TickUpdateLifecycle()
 		else if(State == qm_update::CUpdateRequest::EState::FAILED)
 		{
 			const bool LocalError = m_UpdateMetadataRequest.LocalError();
-			FailUpdateMetadataCheck("Failed to check for updates", !LocalError && !m_UpdateMetadataRequest.RejectedContent());
+			FailUpdateMetadataCheck(Localizable("Failed to check for updates"), !LocalError && !m_UpdateMetadataRequest.RejectedContent());
 			try
 			{
 				log_error("qm-update", "%s", LocalError ? "Metadata check failed locally" : "All approved metadata sources failed");
@@ -296,7 +297,7 @@ try
 	{
 		m_UpdateCheckFailed = true;
 		m_UpdateNetworkError = true;
-		str_copy(m_aUpdateError, "Update sources are temporarily unavailable");
+		str_copy(m_aUpdateError, Localizable("Update sources are temporarily unavailable"));
 		return;
 	}
 	if(!NextSource)
@@ -318,7 +319,7 @@ try
 	if(!Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE) || !Storage()->CreateFolder(m_aUpdateAssetDirectory, IStorage::TYPE_SAVE))
 	{
 		m_UpdateCheckFailed = true;
-		str_copy(m_aUpdateError, "Failed to create the update working directory");
+		str_copy(m_aUpdateError, Localizable("Failed to create the update working directory"));
 		return;
 	}
 	const auto TempPath = [&](char *pDestination, size_t Size, const char *pUrl) {
@@ -506,7 +507,7 @@ try
 {
 	m_QmClientUpdateCheckAttempted = true;
 #if !defined(CONF_FAMILY_WINDOWS) || !defined(CONF_ARCH_AMD64)
-	FailUpdateMetadataCheck("Automatic updates require Windows x64", false);
+	FailUpdateMetadataCheck(Localizable("Automatic updates require Windows x64"), false);
 	return;
 #else
 	if(m_pQmClientUpdateInfoTask && !m_pQmClientUpdateInfoTask->Done())
@@ -532,7 +533,7 @@ try
 	if(m_UpdateMetadataRequest.State() == qm_update::CUpdateRequest::EState::FAILED || !m_pQmClientUpdateInfoTask)
 	{
 		const bool LocalError = m_UpdateMetadataRequest.LocalError();
-		FailUpdateMetadataCheck(LocalError ? "Failed to check for updates" : "Update sources are temporarily unavailable", !LocalError);
+		FailUpdateMetadataCheck(LocalError ? Localizable("Failed to check for updates") : Localizable("Update sources are temporarily unavailable"), !LocalError);
 	}
 #endif
 }
@@ -725,7 +726,7 @@ void CTClient::FinishUpdateDownloads()
 		m_UpdateCheckFailed = true;
 		m_UpdateNetworkError = NetworkError;
 		m_UpdateNextCheck = time_get() + time_freq() * QMCLIENT_UPDATE_RETRY_INTERVAL;
-		str_copy(m_aUpdateError, pMessage != nullptr && pMessage[0] != '\0' ? pMessage : "Update failed", sizeof(m_aUpdateError));
+		str_copy(m_aUpdateError, pMessage != nullptr && pMessage[0] != '\0' ? pMessage : Localizable("Update failed"), sizeof(m_aUpdateError));
 		log_error("qm-update", "update download or validation failed: %s", m_aUpdateError);
 		ResetUpdateDownloadTasks();
 		RemoveUpdateTempFiles();

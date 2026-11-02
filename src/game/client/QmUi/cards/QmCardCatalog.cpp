@@ -4,6 +4,7 @@
 
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/SettingsCardContentBridge.h>
+#include <game/client/QmUi/SettingsPersonalization.h>
 #include <game/client/components/menus.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
@@ -16,6 +17,8 @@ namespace qm_card_catalog
 {
 	namespace
 	{
+		CSettingsPersonalizationState s_Personalization;
+
 		bool ContainsStableId(const std::vector<const char *> &vStableIds, const char *pStableId)
 		{
 			if(pStableId == nullptr)
@@ -23,6 +26,15 @@ namespace qm_card_catalog
 			return std::any_of(vStableIds.begin(), vStableIds.end(), [pStableId](const char *pCandidate) { return str_comp(pCandidate, pStableId) == 0; });
 		}
 	} // namespace
+
+	bool QmCardRenderHook::Personalization(CMenus *pMenus, CUIRect &Content, const char *pStableId, const SSettingsContentMetrics &Metrics, bool ReadOnly)
+	{
+		return SettingsPersonalizationSection(s_Personalization, Content, pStableId, std::max(Metrics.m_LineHeight, Metrics.m_ButtonHeight), Metrics.m_LineSpacing,
+			ReadOnly || pMenus->Ui()->RenderOnly() || pMenus->m_MenuTextPlanCollecting,
+			[&](const void *pId, const CUIRect &Row, bool Expanded) {
+				return pMenus->DoButton_CheckBox(pId, Localize("Personal adjustments"), Expanded, &Row, Metrics.m_BodySize) != 0;
+			});
+	}
 
 	void UseDeclaredModuleContent(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out)
 	{
@@ -85,6 +97,10 @@ namespace qm_card_catalog
 			return QmCardRenderHook::BuildGeneralCard(Ctx, pStableId, Out);
 		if(str_comp(pStableId, "qm:bind_editor") == 0)
 			return BuildBindCard(Ctx, Out);
+		if(str_comp(pStableId, "qm:bind_overview") == 0)
+			return BuildBindOverviewCard(Ctx, Out);
+		if(str_comp(pStableId, "qm:self_kill_protection") == 0)
+			return BuildSelfKillProtectionCard(Ctx, Out);
 		if(ContainsStableId(TitleCardStableIds(), pStableId))
 			return QmCardRenderHook::BuildTitleCard(Ctx, pStableId, Out);
 		if(ContainsStableId(NameplateCardStableIds(), pStableId))

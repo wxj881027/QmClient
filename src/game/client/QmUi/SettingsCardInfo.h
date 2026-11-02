@@ -1,5 +1,6 @@
 #ifndef GAME_CLIENT_QMUI_SETTINGSCARDINFO_H
 #define GAME_CLIENT_QMUI_SETTINGSCARDINFO_H
+#include "QmCardWiki.h"
 #include "SettingsCardGeometry.h"
 #include "SettingsCardWidth.h"
 #include "UiTokens.h"
@@ -20,20 +21,30 @@ inline std::string SettingsCardTooltipText(const SSettingsCardSpec &Spec)
 	return Text;
 }
 
+// 说明入口的可见性：卡片自带说明文案，或 Wiki 表里有该卡条目。
+inline bool HasSettingsCardInfo(const SSettingsCardSpec &Spec)
+{
+	if(Spec.m_pStableId == nullptr || Spec.m_pStableId[0] == '\0')
+		return false;
+	return (Spec.m_pInfo != nullptr && Spec.m_pInfo[0] != '\0') || HasCardWikiCopy(Spec.m_pStableId);
+}
+
 // 说明入口与右侧宽度、折叠操作使用同一行和同一尺寸，窄卡片时不侵入标题区外。
-inline CUIRect ResolveSettingsCardInfoRect(const SSettingsCardFrame &Frame)
+// HasWidthButton=false 时（卡片没有宽度切换按钮）直接贴着折叠按钮排，不留空槽。
+inline CUIRect ResolveSettingsCardInfoRect(const SSettingsCardFrame &Frame, bool HasWidthButton = true)
 {
 	const float Gap = ui_token::spacing::XS;
-	const float Right = std::max(Frame.m_HeaderRect.x, SettingsCardWidthButtonRect(Frame).x - Gap);
+	const float AnchorLeft = HasWidthButton ? SettingsCardWidthButtonRect(Frame).x : Frame.m_HandleRect.x;
+	const float Right = std::max(Frame.m_HeaderRect.x, AnchorLeft - Gap);
 	const float Width = std::max(0.0f, std::min(Frame.m_HandleRect.w, Right - Frame.m_HeaderRect.x));
 	return {Right - Width, Frame.m_HandleRect.y, Width, Width > 0.0f ? Frame.m_HandleRect.h : 0.0f};
 }
 
 // 卡头从右向左分配折叠、宽度、说明及定位入口；所有文字使用剩余区域。
-inline SSettingsCardFrame ResolveSettingsCardHeaderActions(SSettingsCardFrame Frame, float LeadingWidth, bool HasInfo)
+inline SSettingsCardFrame ResolveSettingsCardHeaderActions(SSettingsCardFrame Frame, float LeadingWidth, bool HasInfo, bool HasWidthButton = true)
 {
 	const float Gap = ui_token::spacing::XS;
-	float ActionLeft = HasInfo ? ResolveSettingsCardInfoRect(Frame).x : SettingsCardWidthButtonRect(Frame).x;
+	float ActionLeft = HasInfo ? ResolveSettingsCardInfoRect(Frame, HasWidthButton).x : SettingsCardWidthButtonRect(Frame).x;
 	if(LeadingWidth > 0.0f)
 	{
 		const float Right = std::max(Frame.m_HeaderRect.x, ActionLeft - Gap);

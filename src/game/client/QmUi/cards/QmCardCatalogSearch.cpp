@@ -1,5 +1,6 @@
 #include "QmCardCatalogSearch.h"
 
+#include <base/detect.h>
 #include <base/str.h>
 
 #include <engine/shared/localization.h>
@@ -61,6 +62,10 @@ namespace qm_card_catalog
 		};
 
 		static constexpr SCardSettingSearch s_aqm_gores[] = {
+			{Localizable("Moving block and freeze prediction (experimental)"), nullptr, "移动方块预测 移动水预测 延迟补偿"},
+			{Localizable("Show moving tiles in entities"), nullptr, "在实体层显示移动方块 移动水"},
+			{nullptr, "qm_axiom_quad_prediction", nullptr},
+			{nullptr, "qm_moving_tiles_entities", nullptr},
 			{Localizable("Auto enable in Gores mode"), nullptr, "Gores 模式自动启用"},
 			{Localizable("Auto login Axiom server"), nullptr, "自动登录 Axiom 服务器账号"},
 			{Localizable("Auto weapon switch"), nullptr, "自动切锤"},
@@ -135,12 +140,14 @@ namespace qm_card_catalog
 			{Localizable("Leave empty to show everyone"), nullptr, "留空显示所有玩家"},
 			{Localizable("Scoreboard filter: only show players whose name or clan contains this text"), nullptr, "计分板筛选：匹配名字或战队"},
 			{Localizable("Scoreboard point check"), nullptr, "计分板积分检查"},
+			{Localizable("Scoreboard playtime"), nullptr, "计分板游玩时间 累计小时 DDStats"},
 			{Localizable("Show scoreboard after death"), nullptr, "死亡后显示计分板"},
 			{Localizable("Use the scoreboard cursor mode to scroll the list"), nullptr, "使用计分板光标模式滚动查看列表"},
 			{nullptr, "qm_better_scoreboard", nullptr},
 			{nullptr, "qm_scoreboard_filter", nullptr},
 			{nullptr, "qm_scoreboard_on_death", nullptr},
 			{nullptr, "qm_scoreboard_points", nullptr},
+			{nullptr, "qm_scoreboard_playtime", nullptr},
 			{nullptr, "qm_scoreboard_scroll", nullptr},
 		};
 
@@ -159,6 +166,8 @@ namespace qm_card_catalog
 			{Localizable("Show blocked words in console"), nullptr, "在控制台中显示被屏蔽的词语"},
 			{Localizable("Use multi-char replacement based on word length"), nullptr, "根据词语长度使用多字符替换"},
 			{Localizable("Word Filter"), nullptr, "屏蔽词"},
+			{Localizable("Use public word filter"), nullptr, "公共屏蔽词 公共词库"},
+			{nullptr, "qm_public_block_words", nullptr},
 			{nullptr, "qm_block_words_action", nullptr},
 			{nullptr, "qm_block_words_console_color", nullptr},
 			{nullptr, "qm_block_words_enabled", nullptr},
@@ -452,6 +461,9 @@ namespace qm_card_catalog
 		};
 
 		static constexpr SCardSettingSearch s_adeck_general_recording[] = {
+#if defined(CONF_FAMILY_WINDOWS)
+			{Localizable("Automatically copy manual screenshots to clipboard"), "qm_screenshot_clipboard", "手动截图 自动复制 剪贴板 剪切板 F10 clipboard screenshot"},
+#endif
 			{Localizable("Automatically add a watermark to screenshots"), nullptr, "截图自动水印 时间戳 地图名 自定义文本"},
 			{Localizable("Custom watermark text"), nullptr, "截图水印文本"},
 			{Localizable("Timestamp"), nullptr, "截图时间戳"},
@@ -470,6 +482,12 @@ namespace qm_card_catalog
 			{Localizable("Max demos"), nullptr, "最大回放数"},
 			{Localizable("Demo directory"), "qm_demo_directory", "回放保存目录 路径 demos"},
 			{Localizable("Video directory"), "qm_video_directory", "视频导出目录 路径 videos"},
+			{Localizable("Video quality CRF"), nullptr, "渲染质量 画质 crf"},
+			{nullptr, "cl_video_crf", nullptr},
+			{Localizable("Recorder FPS"), nullptr, "录制帧率 录像帧率 帧率 fps"},
+			{nullptr, "cl_video_recorder_fps", nullptr},
+			{Localizable("Render preset"), nullptr, "渲染预设 编码预设 preset"},
+			{nullptr, "cl_video_x264_preset", nullptr},
 			{Localizable("Screenshot directory"), "qm_screenshot_directory", "截图保存目录 路径 screenshots"},
 			{nullptr, "cl_auto_csv", nullptr},
 			{nullptr, "cl_auto_csv_max", nullptr},
@@ -531,7 +549,8 @@ namespace qm_card_catalog
 			{Localizable("Reset stats when joining a server"), nullptr, "进入服务器时重置统计"},
 			{Localizable("Show dotted map route debug"), nullptr, "显示地图点状路线调试"},
 			{Localizable("Show player stats HUD"), nullptr, "显示玩家统计 HUD"},
-			{Localizable("Use embedded HUD progress bar"), nullptr, "使用 HUD 内嵌进度条"},
+			{Localizable("Progress bar location"), nullptr, "进度条位置 独立条 统计内嵌 灵动岛地图进度"},
+			{Localizable("Dynamic Island"), nullptr, "灵动岛地图进度"},
 			{Localizable("Vertical position"), nullptr, "垂直位置"},
 			{nullptr, "qm_player_stats_hud", nullptr},
 			{nullptr, "qm_player_stats_map_progress", nullptr},
@@ -788,6 +807,7 @@ namespace qm_card_catalog
 		};
 
 		static constexpr SCardSettingSearch s_aqm_lyrics[] = {
+			{Localizable("Follow main island width"), nullptr, "歌词岛跟随主岛宽度 灵动岛等宽 排除眼睛附岛"},
 			{Localizable("Enable lyrics"), nullptr, "启用歌词"},
 			{Localizable("Paste sp_dc from Spotify web cookies"), nullptr, "粘贴浏览器中的 sp_dc cookie"},
 			{Localizable("Restore Kugou files"), nullptr, "恢复酷狗原始文件"},
@@ -796,6 +816,7 @@ namespace qm_card_catalog
 			{nullptr, "qm_kugou_hook_enable", nullptr},
 			{nullptr, "qm_lyrics", nullptr},
 			{nullptr, "qm_lyrics_in_media_island", nullptr},
+			{nullptr, "qm_lyrics_island_follow_width", nullptr},
 			{nullptr, "qm_qqmusic_hook_enable", nullptr},
 			{nullptr, "qm_spotify_enable", nullptr},
 			{nullptr, "qm_spotify_sp_dc", nullptr},
@@ -1301,6 +1322,12 @@ namespace qm_card_catalog
 		};
 
 		static constexpr SCardSettingSearch s_aqm_chat_bubble[] = {
+			{Localizable("Comic dialogue"), nullptr, "漫画对白"},
+			{Localizable("Candy gradient"), nullptr, "QQ 糖果渐变"},
+			{Localizable("Cloud bubble"), nullptr, "云朵 拟真 聚集 散开"},
+			{Localizable("Use custom colors"), nullptr, "自定义颜色"},
+			{nullptr, "qm_chat_bubble_style", nullptr},
+			{nullptr, "qm_chat_bubble_custom_colors", nullptr},
 			{Localizable("Animation"), nullptr, "动画效果"},
 			{Localizable("Background color"), nullptr, "背景颜色"},
 			{Localizable("Bounce"), nullptr, "弹跳"},
@@ -1779,6 +1806,10 @@ namespace qm_card_catalog
 			{nullptr, "cl_antiping_weapons", nullptr},
 			{nullptr, "cl_default_zoom", nullptr},
 			{nullptr, "cl_overlay_entities", nullptr},
+			{Localizable("Upstream redundancy (experimental)"), nullptr, "上行冗余发送（实验性）"},
+			{Localizable("Maximum packet copies"), nullptr, "最大包份数"},
+			{nullptr, "qm_upstream_redundancy", nullptr},
+			{nullptr, "qm_upstream_redundancy_max_copies", nullptr},
 			{nullptr, "cl_predict_events", nullptr},
 			{nullptr, "cl_prediction_margin", nullptr},
 			{nullptr, "cl_show_others", nullptr},
@@ -1941,6 +1972,12 @@ namespace qm_card_catalog
 			{Localizable("Hook collision line opacity"), nullptr, "钩子辅助线不透明度"},
 			{Localizable("Hook line tip"), nullptr, "辅助线提示"},
 			{Localizable("Nothing hookable"), nullptr, "未瞄准可钩物体"},
+			{Localizable("Pressed hook line color; always used when custom pressed colors are enabled"), nullptr, "按下后颜色；开启自定义按下后颜色时始终生效"},
+			{Localizable("Pressed: A Tee"), nullptr, "按下后：其他玩家"},
+			{Localizable("Pressed: Hook line tip"), nullptr, "按下后：辅助线提示"},
+			{Localizable("Pressed: Nothing hookable"), nullptr, "按下后：未瞄准可钩物体"},
+			{Localizable("Pressed: Something hookable"), nullptr, "按下后：可钩物体"},
+			{Localizable("Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted"), nullptr, "按住显示钩索碰撞线时使用下方的自定义颜色；关闭=自动反色"},
 			{Localizable("Show other players' hook collision lines"), nullptr, "显示其他玩家的钩子辅助线"},
 			{Localizable("Show own player's hook collision line"), nullptr, "显示自己的钩子辅助线"},
 			{Localizable("Something hookable"), nullptr, "可钩物体"},
@@ -1956,6 +1993,11 @@ namespace qm_card_catalog
 			{nullptr, "cl_hook_coll_tip_color", nullptr},
 			{nullptr, "cl_show_hook_coll_other", nullptr},
 			{nullptr, "cl_show_hook_coll_own", nullptr},
+			{nullptr, "qm_hook_coll_pressed_custom", nullptr},
+			{nullptr, "qm_hook_coll_pressed_hookable", nullptr},
+			{nullptr, "qm_hook_coll_pressed_no_coll", nullptr},
+			{nullptr, "qm_hook_coll_pressed_tee", nullptr},
+			{nullptr, "qm_hook_coll_pressed_tip", nullptr},
 		};
 
 		static constexpr SCardSettingSearch s_adeck_appearance_hook_collision_preview[] = {
@@ -2050,12 +2092,14 @@ namespace qm_card_catalog
 			{Localizable("Auto save chat log"), nullptr, "自动保存聊天记录"},
 			{Localizable("Chat background color"), nullptr, "聊天背景色"},
 			{Localizable("Chat font size"), nullptr, "聊天字体大小"},
+			{Localizable("Chat line spacing"), nullptr, "聊天行间隔 聊天间隔"},
 			{Localizable("Chat log retention days"), nullptr, "聊天记录保留天数"},
 			{Localizable("Chat width"), nullptr, "聊天框宽度"},
 			{Localizable("Days"), nullptr, "天"},
 			{Localizable("Save unsent chat draft"), nullptr, "保存未发送的聊天草稿"},
 			{Localizable("Show chat"), nullptr, "显示聊天框"},
 			{Localizable("Show names in chat in team colors"), nullptr, "以队伍颜色显示玩家昵称"},
+			{Localizable("Show sponsor badges in chat"), "qm_chat_sponsor_badges", "显示聊天赞助徽章 赞助图标 头衔"},
 			{Localizable("Show only chat messages from friends"), nullptr, "只显示好友聊天消息"},
 			{Localizable("Show only chat messages from team members"), nullptr, "只显示队伍聊天消息"},
 			{Localizable("Only show messages related to me"), "qm_chat_related_only", "只显示与我相关的消息 提及 @ 私聊"},
@@ -2070,6 +2114,7 @@ namespace qm_card_catalog
 			{nullptr, "cl_show_chat_friends", nullptr},
 			{nullptr, "cl_show_chat_team_members_only", nullptr},
 			{nullptr, "cl_showchat", nullptr},
+			{nullptr, "qm_chat_line_spacing", nullptr},
 			{nullptr, "qm_chat_log_auto_save", nullptr},
 			{nullptr, "qm_chat_log_keep_days", nullptr},
 			{nullptr, "qm_chat_save_draft", nullptr},
@@ -2079,7 +2124,7 @@ namespace qm_card_catalog
 			{Localizable("Freeze stars"), nullptr, "显示冻结效果的星星动画"},
 			{Localizable("Render all custom colored feet as white feet skin"), nullptr, "将所有自定义脚部颜色渲染为白色"},
 			{Localizable("Show country flags in nameplates"), nullptr, "在玩家昵称旁显示国旗"},
-			{Localizable("Show katan on frozen players"), nullptr, "在被冻结的玩家身上显示武士刀"},
+			{Localizable("Show katana on frozen players"), nullptr, "在被冻结的玩家身上显示武士刀"},
 			{Localizable("Show ping colored circle in nameplates"), nullptr, "在玩家昵称旁显示延迟颜色圆圈"},
 			{Localizable("Show skin names in nameplate"), nullptr, "在玩家昵称旁显示皮肤名"},
 			{Localizable("Use colored skins for frozen tees"), nullptr, "冻结 Tee 使用彩色皮肤"},
@@ -2105,7 +2150,6 @@ namespace qm_card_catalog
 			{Localizable("None"), nullptr, "无"},
 			{Localizable("Red"), nullptr, "红色"},
 			{Localizable("Self"), nullptr, "自身"},
-			{Localizable("Show moving tiles in entities"), nullptr, "在实体层显示移动方块"},
 			{Localizable("Smaller tees"), nullptr, "小尺寸 Tee"},
 			{Localizable("Tiny Tee Size"), nullptr, "迷你 Tee 大小"},
 			{Localizable("Visual: Effects"), nullptr, "视觉：特效"},
@@ -2115,7 +2159,6 @@ namespace qm_card_catalog
 			{nullptr, "qm_jelly_tee_duration", nullptr},
 			{nullptr, "qm_jelly_tee_others", nullptr},
 			{nullptr, "qm_jelly_tee_strength", nullptr},
-			{nullptr, "qm_moving_tiles_entities", nullptr},
 			{nullptr, "qm_tiny_tees", nullptr},
 			{nullptr, "qm_tiny_tees_others", nullptr},
 		};
@@ -2689,10 +2732,8 @@ namespace qm_card_catalog
 			{Localizable("Enable repeat"), nullptr, "启用复读"},
 			{Localizable("Hide input emoticon"), nullptr, "隐藏输入表情"},
 			{Localizable("Hide server information on join"), nullptr, "进图时隐藏服务器信息"},
-			{Localizable("Local particle effects"), nullptr, "本地粒子效果"},
 			{Localizable("Message merging"), nullptr, "消息合并"},
 			{Localizable("Random emoticon"), nullptr, "随机表情"},
-			{Localizable("Remote particle effects"), nullptr, "远程粒子效果"},
 			{Localizable("Short server names"), nullptr, "短服务器名称"},
 			{Localizable("Show Qm badge"), nullptr, "显示 Qm 标识"},
 			{Localizable("Show outdated version warning"), nullptr, "显示版本过旧提示"},
@@ -2700,10 +2741,8 @@ namespace qm_card_catalog
 			{Localizable("Sponsor reminder"), nullptr, "赞助提醒"},
 			{nullptr, "qm_auto_update", nullptr},
 			{nullptr, "qm_blank_asset_fallback", nullptr},
-			{nullptr, "qm_client_mark_trail", nullptr},
 			{nullptr, "qm_client_show_badge", nullptr},
 			{nullptr, "qm_combo_popup", nullptr},
-			{nullptr, "qm_foot_particles", nullptr},
 			{nullptr, "qm_hide_join_server_info", nullptr},
 			{nullptr, "qm_message_merge", nullptr},
 			{nullptr, "qm_random_emote_on_hit", nullptr},
@@ -2713,6 +2752,19 @@ namespace qm_card_catalog
 			{nullptr, "qm_show_outdated_version_warning", nullptr},
 			{nullptr, "qm_show_tune_zone_colors", nullptr},
 			{nullptr, "qm_sponsor_nudge", nullptr},
+		};
+
+		static constexpr SCardSettingSearch s_aqm_self_kill_protection[] = {
+			{Localizable("Client-side self-kill protection"), nullptr, "客户端侧自杀保护 自杀保护 自杀开关"},
+			{Localizable("Enable self-kill protection"), nullptr, "自杀保护开关 拦截自杀 防止误触 K 键"},
+			{Localizable("Self-kill off"), nullptr, "关闭自杀 禁止自杀 防误触"},
+			{Localizable("Self-kill on"), nullptr, "开启自杀 允许自杀 解除"},
+			{Localizable("Auto-enable after"), nullptr, "自动开启 开局后 自动拦截 延迟 分钟"},
+			{Localizable("To prevent accidental kills while racing, toggle the switch above or use the two bind rows. To self-kill, enable first, then press K. Auto-enable counts from the moment you join a game; 0 minutes keeps it off. Server commands are not affected"), nullptr, "跑图 防误触 绑定按键 bind 按键开关"},
+			{nullptr, "qm_self_kill_auto_delay", nullptr},
+			{nullptr, "qm_self_kill_enabled", nullptr},
+			{nullptr, "qm_self_kill_off", nullptr},
+			{nullptr, "qm_self_kill_on", nullptr},
 		};
 
 		static constexpr SCardSettingSearch s_aqm_jump_hint[] = {
@@ -2757,6 +2809,8 @@ namespace qm_card_catalog
 			{Localizable("Notify when friends come online"), nullptr, "好友上线提醒"},
 			{Localizable("Please use %s as friend name"), nullptr, "请使用 %s 作为好友名称"},
 			{Localizable("Refresh interval"), nullptr, "刷新间隔"},
+			{Localizable("Show friends' last seen dates (DDStats)"), nullptr, "好友最近在线日期 DDStats 最后上号"},
+			{nullptr, "qm_friend_last_seen", nullptr},
 			{nullptr, "qm_friend_auto_follow_delay", nullptr},
 			{nullptr, "qm_friend_enter_auto_greet", nullptr},
 			{nullptr, "qm_friend_enter_broadcast", nullptr},
@@ -2835,6 +2889,14 @@ namespace qm_card_catalog
 		static constexpr SCardSettingSearch s_aqm_water_hammer[] = {
 			{Localizable("Highlight teammates hammering in death or freeze areas"), nullptr, "高亮在死亡或冻结区域卡锤的队友"},
 			{nullptr, "qm_water_hammer_highlight", nullptr},
+		};
+
+		static constexpr SCardSettingSearch s_aqm_bind_overview[] = {
+			{Localizable("Bind overview"), nullptr, "绑定一览"},
+			{Localizable("Browse all key bindings grouped by function"), nullptr, "按功能分组查看所有键位绑定"},
+			{Localizable("Copy all"), nullptr, "复制全部"},
+			{Localizable("Sort by command"), nullptr, "按命令排序"},
+			{Localizable("Sort by key"), nullptr, "按按键排序"},
 		};
 
 		static constexpr SCardSettingSearch s_aqm_bind_editor[] = {
@@ -2921,6 +2983,7 @@ namespace qm_card_catalog
 			{Localizable("Only show with this nickname"), nullptr, "仅在使用此昵称时显示"},
 			{Localizable("Permanent access; up to 4 online IP addresses"), nullptr, "永久资格，最多 4 个 IP 同时在线"},
 			{Localizable("Platinum highlight"), nullptr, "铂金高光"},
+			{Localizable("Fluid"), nullptr, "流体 液体 蓝青"},
 			{Localizable("Polished"), nullptr, "抛光"},
 			{Localizable("Rainbow"), nullptr, "彩虹"},
 			{Localizable("Redeem"), nullptr, "领取"},
@@ -2939,7 +3002,6 @@ namespace qm_card_catalog
 			{Localizable("Single color"), nullptr, "单色"},
 			{Localizable("Single color and Rainbow override the color of animated styles; the style keeps its motion"), nullptr, "单色与彩虹档会覆盖动态风格自带的颜色；风格只保留浮动与掠光"},
 			{Localizable("Snap wave to pixels"), nullptr, "波浪位移对齐整数像素"},
-			{Localizable("Soft glow"), nullptr, "柔光"},
 			{Localizable("Solid"), nullptr, "纯色"},
 			{Localizable("Sponsor code"), nullptr, "认证码"},
 			{Localizable("Sponsor title"), nullptr, "赞助头衔"},
@@ -2968,14 +3030,11 @@ namespace qm_card_catalog
 			{nullptr, "qm_show_nameplate_title", nullptr},
 			{nullptr, "qm_sponsor_chat_effects", nullptr},
 			{nullptr, "qm_sponsor_chat_style", nullptr},
-			{nullptr, "qm_title_advanced", nullptr},
-			{nullptr, "qm_title_bloom", nullptr},
 			{nullptr, "qm_title_motion_mode", nullptr},
 			{nullptr, "qm_title_bob_amplitude", nullptr},
 			{nullptr, "qm_title_bob_pixel_snap", nullptr},
 			{nullptr, "qm_title_bob_speed", nullptr},
 			{nullptr, "qm_title_bob_wavelength", nullptr},
-			{nullptr, "qm_title_color", nullptr},
 			{nullptr, "qm_title_color_mode", nullptr},
 			{nullptr, "qm_title_effect", nullptr},
 			{nullptr, "qm_title_instant_hints", nullptr},
@@ -3006,6 +3065,7 @@ namespace qm_card_catalog
 			{Localizable("Only show with this nickname"), nullptr, "仅在使用此昵称时显示"},
 			{Localizable("Permanent access; up to 4 online IP addresses"), nullptr, "永久资格，最多 4 个 IP 同时在线"},
 			{Localizable("Platinum highlight"), nullptr, "铂金高光"},
+			{Localizable("Fluid"), nullptr, "流体 液体 蓝青"},
 			{Localizable("Polished"), nullptr, "抛光"},
 			{Localizable("Rainbow"), nullptr, "彩虹"},
 			{Localizable("Redeem"), nullptr, "领取"},
@@ -3024,7 +3084,6 @@ namespace qm_card_catalog
 			{Localizable("Single color"), nullptr, "单色"},
 			{Localizable("Single color and Rainbow override the color of animated styles; the style keeps its motion"), nullptr, "单色与彩虹档会覆盖动态风格自带的颜色；风格只保留浮动与掠光"},
 			{Localizable("Snap wave to pixels"), nullptr, "波浪位移对齐整数像素"},
-			{Localizable("Soft glow"), nullptr, "柔光"},
 			{Localizable("Solid"), nullptr, "纯色"},
 			{Localizable("Sponsor code"), nullptr, "认证码"},
 			{Localizable("Sponsor title"), nullptr, "赞助头衔"},
@@ -3053,14 +3112,11 @@ namespace qm_card_catalog
 			{nullptr, "qm_show_nameplate_title", nullptr},
 			{nullptr, "qm_sponsor_chat_effects", nullptr},
 			{nullptr, "qm_sponsor_chat_style", nullptr},
-			{nullptr, "qm_title_advanced", nullptr},
-			{nullptr, "qm_title_bloom", nullptr},
 			{nullptr, "qm_title_motion_mode", nullptr},
 			{nullptr, "qm_title_bob_amplitude", nullptr},
 			{nullptr, "qm_title_bob_pixel_snap", nullptr},
 			{nullptr, "qm_title_bob_speed", nullptr},
 			{nullptr, "qm_title_bob_wavelength", nullptr},
-			{nullptr, "qm_title_color", nullptr},
 			{nullptr, "qm_title_color_mode", nullptr},
 			{nullptr, "qm_title_effect", nullptr},
 			{nullptr, "qm_title_instant_hints", nullptr},
@@ -3232,6 +3288,7 @@ namespace qm_card_catalog
 			{"deck:controls-miscellaneous", s_adeck_controls_miscellaneous, std::size(s_adeck_controls_miscellaneous)},
 			{"qm:skin_appearance", s_aqm_skin_appearance, std::size(s_aqm_skin_appearance)},
 			{"qm:solo_split", s_aqm_solo_split, std::size(s_aqm_solo_split)},
+			{"qm:self_kill_protection", s_aqm_self_kill_protection, std::size(s_aqm_self_kill_protection)},
 			{"qm:mini_features", s_aqm_mini_features, std::size(s_aqm_mini_features)},
 			{"qm:jump_hint", s_aqm_jump_hint, std::size(s_aqm_jump_hint)},
 			{"qm:weapon_trajectory", s_aqm_weapon_trajectory, std::size(s_aqm_weapon_trajectory)},
@@ -3241,6 +3298,7 @@ namespace qm_card_catalog
 			{"qm:tooltip", s_aqm_tooltip, std::size(s_aqm_tooltip)},
 			{"qm:water_hammer", s_aqm_water_hammer, std::size(s_aqm_water_hammer)},
 			{"qm:bind_editor", s_aqm_bind_editor, std::size(s_aqm_bind_editor)},
+			{"qm:bind_overview", s_aqm_bind_overview, std::size(s_aqm_bind_overview)},
 			{"deck:qmclient-contributors-title", s_adeck_qmclient_contributors_title, std::size(s_adeck_qmclient_contributors_title)},
 			{"deck:qmclient-contributors-title-display", s_adeck_qmclient_contributors_title_display, std::size(s_adeck_qmclient_contributors_title_display)},
 			{"deck:tclient-chat-binds-kaomoji", s_adeck_tclient_chat_binds_kaomoji, std::size(s_adeck_tclient_chat_binds_kaomoji)},

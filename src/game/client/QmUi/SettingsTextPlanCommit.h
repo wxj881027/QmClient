@@ -1,6 +1,8 @@
 #ifndef GAME_CLIENT_QMUI_SETTINGSTEXTPLANCOMMIT_H
 #define GAME_CLIENT_QMUI_SETTINGSTEXTPLANCOMMIT_H
 
+#include "SettingsTextPrewarm.h"
+
 #include <algorithm>
 #include <array>
 #include <limits>
@@ -16,9 +18,7 @@ struct SSettingsTextPlanProgressView
 {
 	size_t &m_TextCursor;
 	size_t &m_CollectionCursor;
-	std::vector<std::pair<int, int>> &m_vGlyphs;
-	size_t &m_GlyphCursor;
-	size_t &m_GlyphPlanCursor;
+	CSettingsTextPrewarm &m_GlyphPrewarm;
 	bool &m_CollectionDirty;
 	bool &m_CollectionComplete;
 	bool &m_VisiblePlanReady;
@@ -27,9 +27,7 @@ struct SSettingsTextPlanProgressView
 	void RestartConsumption() const noexcept
 	{
 		m_TextCursor = 0;
-		m_vGlyphs.clear();
-		m_GlyphCursor = 0;
-		m_GlyphPlanCursor = static_cast<size_t>(-1);
+		m_GlyphPrewarm.Reset();
 	}
 	// 已准备好新单元时Dirty为false；替换/失效后须重新准备时为true。
 	void RestartCollection(bool Dirty) const noexcept

@@ -605,8 +605,9 @@ void CMenus::RenderQmUpdatePopup(CUIRect Screen)
 	}
 	if(Update.m_UpdateCheckFailed && Update.m_aUpdateError[0])
 	{
-		Content.HSplitTop(QmWrappedLineCount(TextRender(), BodySize, Update.m_aUpdateError, std::max(1.0f, Content.w)) * BodySize * 1.6f + Gap, &Row, &Content);
-		Label(Row, Update.m_aUpdateError, BodySize, TEXTALIGN_TL);
+		const char *pErrorText = Localize(Update.m_aUpdateError);
+		Content.HSplitTop(QmWrappedLineCount(TextRender(), BodySize, pErrorText, std::max(1.0f, Content.w)) * BodySize * 1.6f + Gap, &Row, &Content);
+		Label(Row, pErrorText, BodySize, TEXTALIGN_TL);
 	}
 	if(Update.m_FetchedQmClientUpdateInfo)
 	{

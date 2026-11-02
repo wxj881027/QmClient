@@ -72,7 +72,7 @@ TEST_F(ScreenshotSubmit, PreviewReceivesACopyAndCannotModifySavedPixels)
 {
 	uint8_t *pOriginal = m_Image.m_pData;
 	int Previews = 0;
-	m_Preview = [&](CImageInfo &&Image) {
+	m_Preview = [&](CImageInfo &&Image, const char *) {
 		++Previews;
 		EXPECT_NE(Image.m_pData, pOriginal);
 		Image.m_pData[0] = 9;
@@ -87,7 +87,7 @@ TEST_F(ScreenshotSubmit, PreviewReceivesACopyAndCannotModifySavedPixels)
 
 TEST_F(ScreenshotSubmit, PreviewExceptionDoesNotPreventSaving)
 {
-	m_Preview = [](CImageInfo &&) { throw std::bad_alloc(); };
+	m_Preview = [](CImageInfo &&, const char *) { throw std::bad_alloc(); };
 	EXPECT_TRUE(Finish());
 	EXPECT_EQ(m_Submits, 1);
 	EXPECT_EQ(m_Reports, 0);
@@ -96,7 +96,7 @@ TEST_F(ScreenshotSubmit, PreviewExceptionDoesNotPreventSaving)
 TEST_F(ScreenshotSubmit, FactoryFailureConsumesRequestAndNextCaptureCanSave)
 {
 	int Previews = 0;
-	m_Preview = [&](CImageInfo &&) { ++Previews; };
+	m_Preview = [&](CImageInfo &&, const char *) { ++Previews; };
 	EXPECT_FALSE(screenshot_save::Finish(m_Image, m_Preview, m_Processor, [](CImageInfo &&, IGraphics::FScreenshotProcessor &&) -> std::shared_ptr<screenshot_save::CSaveJob> { throw std::bad_alloc(); }, [&](const auto &pJob) { return Queue(pJob); }, [&] { ++m_Reports; }));
 	EXPECT_EQ(m_Image.m_pData, nullptr);
 	EXPECT_FALSE(m_Preview);
@@ -151,7 +151,7 @@ TEST_F(ScreenshotSubmit, MissingPreviewAndProcessorStillAllowSaving)
 TEST_F(ScreenshotSubmit, ConsumedPreviewIsNotReplayedOnAnotherCapture)
 {
 	int Previews = 0;
-	m_Preview = [&](CImageInfo &&) { ++Previews; };
+	m_Preview = [&](CImageInfo &&, const char *) { ++Previews; };
 	ASSERT_TRUE(Finish());
 	m_Image = MakeImage();
 	ASSERT_NE(m_Image.m_pData, nullptr);

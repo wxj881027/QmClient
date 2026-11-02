@@ -11,9 +11,11 @@
 
 #include <game/client/QmUi/QmLayout.h>
 #include <game/client/QmUi/QmLegacyMediaHud.h>
+#include <game/client/QmUi/QmLyricsHud.h>
 #include <game/client/component.h>
 #include <game/client/components/hud_media_island_logic.h>
 #include <game/client/components/qmclient/hook_countdown.h>
+#include <game/client/components/qmclient/hud_map_progress.h>
 #include <game/client/components/system_media_controls.h>
 #include <game/client/ui_rect.h>
 #include <game/teamscore.h>
@@ -126,9 +128,6 @@ class CHud : public CComponent
 		int64_t m_ExpandUntilTick = 0;
 		int64_t m_TrackDetailsUntilTick = 0;
 		bool m_LyricsActive = false;
-		bool m_LyricsMarqueeInitialized = false;
-		int64_t m_LyricsMarqueeStartTick = 0;
-		char m_aLyricsMarquee[256] = {};
 		float m_TargetX = 0.0f;
 		float m_TargetWidth = 0.0f;
 		float m_TargetHeight = 0.0f;
@@ -148,6 +147,7 @@ class CHud : public CComponent
 		float m_TargetTrackMetaOutAlpha = 0.0f;
 		float m_TargetTrackMetaInOffset = 0.0f;
 		float m_TargetTrackMetaOutOffset = 0.0f;
+		SHudMediaIslandWaveformClock m_WaveformClock;
 		bool m_WaveformWasPlaying = false;
 		bool m_WaveformSettling = false;
 		int64_t m_WaveformSettleStartTick = 0;
@@ -233,9 +233,6 @@ class CHud : public CComponent
 			m_ExpandUntilTick = 0;
 			m_TrackDetailsUntilTick = 0;
 			m_LyricsActive = false;
-			m_LyricsMarqueeInitialized = false;
-			m_LyricsMarqueeStartTick = 0;
-			m_aLyricsMarquee[0] = '\0';
 			m_TargetX = 0.0f;
 			m_TargetWidth = 0.0f;
 			m_TargetHeight = 0.0f;
@@ -255,6 +252,7 @@ class CHud : public CComponent
 			m_TargetTrackMetaOutAlpha = 0.0f;
 			m_TargetTrackMetaInOffset = 0.0f;
 			m_TargetTrackMetaOutOffset = 0.0f;
+			m_WaveformClock.Reset();
 			m_WaveformWasPlaying = false;
 			m_WaveformSettling = false;
 			m_WaveformSettleStartTick = 0;
@@ -298,7 +296,9 @@ class CHud : public CComponent
 		CSystemMediaControls::SState m_MediaState{};
 		bool m_ShowLyrics = false;
 		bool m_LyricsActive = false;
-		char m_aLyrics[256] = {};
+		char m_aLyrics[1024] = {};
+		char m_aLyricsTranslation[1024] = {};
+		int m_LyricsRowCount = 0;
 		ColorRGBA m_LyricsColor = ColorRGBA(0.97f, 0.98f, 1.0f, 0.90f);
 		int m_SpectatorCount = 0;
 		bool m_HasVisible = false;
@@ -312,17 +312,6 @@ class CHud : public CComponent
 		}
 	};
 	mutable SHudMediaIslandFrameCache m_MediaIslandFrameCache;
-	IGraphics::CRenderTargetHandle m_MediaIslandBlurSource;
-	IGraphics::CRenderTargetHandle m_MediaIslandBlurDownsample;
-	IGraphics::CRenderTargetHandle m_MediaIslandBlurDownsampleTemporary;
-	IGraphics::CRenderTargetHandle m_MediaIslandBlurDownsampleTarget;
-	IGraphics::CRenderTargetHandle m_MediaIslandBlurTarget;
-	int m_MediaIslandBlurWidth = 0;
-	int m_MediaIslandBlurHeight = 0;
-	int m_MediaIslandBlurMode = -1;
-	bool m_MediaIslandBlurReady = false;
-	uint64_t m_MediaIslandBlurLastAttemptFrame = 0;
-	bool m_MediaIslandBlurAttemptInitialized = false;
 	IGraphics::CRenderTargetHandle m_DummyMiniViewRenderTarget;
 	int m_DummyMiniViewRenderTargetWidth = 0;
 	int m_DummyMiniViewRenderTargetHeight = 0;
@@ -440,9 +429,12 @@ class CHud : public CComponent
 	void EnsureMediaIslandFrameCache() const;
 	bool HasVisibleMediaIsland() const;
 	float GetTopIslandAvoidanceRight() const;
-	void DestroyMediaIslandBlurTargets();
 	IGraphics::CRenderTargetHandle MediaIslandBlurBackdrop();
 	void RenderMediaIsland();
+	void RenderLyricsIsland();
+	CQmLyricsMarqueeState m_LyricsMarquee;
+	CUIRect m_LyricsIslandAnchor{};
+	bool m_LyricsIslandAnchorValid = false;
 
 	int m_LastSpectatorCountTick;
 	void RenderSpectatorCount();
@@ -451,6 +443,7 @@ class CHud : public CComponent
 	void RenderMovementInformation();
 	void RenderJumpHint();
 	void RenderMapProgressBar();
+	QmHudMapProgress::ESurface MapProgressSurface() const;
 
 	void UpdateMovementInformationTextContainer(STextContainerIndex &TextContainer, float FontSize, float Value, float &PrevValue);
 	void RenderMovementInformationTextContainer(STextContainerIndex &TextContainer, const ColorRGBA &Color, float X, float Y);
@@ -557,8 +550,8 @@ private:
 	bool m_MediaIslandLastVisibleRectValid = false;
 	bool m_LegacyMediaInfoRendered = false;
 	CQmLegacyMediaHudLyricState m_LegacyMediaLyricState;
-	float m_aMapProgressDisplayed[NUM_DUMMIES] = {0.0f, 0.0f};
-	bool m_aMapProgressInitialized[NUM_DUMMIES] = {false, false};
+	std::array<QmHudMapProgress::CProgressState, NUM_DUMMIES> m_aIslandMapProgress;
+	std::array<QmHudMapProgress::CProgressState, NUM_DUMMIES> m_aMapProgress;
 };
 
 #endif

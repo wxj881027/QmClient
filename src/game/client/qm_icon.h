@@ -20,6 +20,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <optional>
 #include <utility>
 
 enum class EQmIcon
@@ -189,15 +190,37 @@ inline ColorRGBA ConfiguredQmSignalIconColor(const ColorRGBA &QualityColor, cons
 	}
 }
 
+// 收藏开关的星标必须靠字形本身表达状态：未收藏空心、已收藏实心。全局
+// 「实心收藏图标」只是收藏徽标的外观偏好，沿用到开关上会让两态同形、无法辨认，
+// 因此开关绘制期间用本作用域显式指定实心态，退出时恢复外层选择。
+class CQmFavoriteStarFillScope
+{
+	inline static thread_local std::optional<bool> s_Filled;
+	std::optional<bool> m_Previous;
+
+public:
+	explicit CQmFavoriteStarFillScope(bool Filled) :
+		m_Previous(s_Filled) { s_Filled = Filled; }
+	~CQmFavoriteStarFillScope() { s_Filled = m_Previous; }
+	CQmFavoriteStarFillScope(const CQmFavoriteStarFillScope &) = delete;
+	CQmFavoriteStarFillScope &operator=(const CQmFavoriteStarFillScope &) = delete;
+	static std::optional<bool> Override() { return s_Filled; }
+};
+
 // 语义图标实心态：两个开关彼此独立，互不影响；其余图标不受控。
 // 实心沿用同一 Phosphor 码位、仅切换到随包 Fill 字面（EFontPreset::ICON_FONT_FILL），
 // 字体实测：heart/star 在 Fill 字面为 1 轮廓实心，Regular/Bold/Light 为 2 轮廓空心。
 inline bool QmUiIconFilledStyle(EQmIcon Icon)
 {
+	if(Icon == EQmIcon::STAR)
+	{
+		// 收藏开关的临时字形覆盖优先于全局徽标偏好。
+		if(const std::optional<bool> Override = CQmFavoriteStarFillScope::Override(); Override.has_value())
+			return *Override;
+		return g_Config.m_QmUiFavoriteIconFilled != 0;
+	}
 	if(Icon == EQmIcon::HEART)
 		return g_Config.m_QmUiFriendIconFilled != 0;
-	if(Icon == EQmIcon::STAR)
-		return g_Config.m_QmUiFavoriteIconFilled != 0;
 	return false;
 }
 

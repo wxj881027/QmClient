@@ -148,6 +148,8 @@ public:
 
 	// Confirm, Cancel only decide if saving cached settings.
 	void DoPopupType(CTouchControls::CPopupParam PopupParam);
+	// 每帧轮询确认窗结果：确认/取消分别派发到对应的旧回调。
+	void PollConfirm();
 	void ChangeSelectedButtonWhileHavingUnsavedChanges() const;
 	void NoSpaceForOverlappingButton() const;
 	void SelectedButtonNotVisible();

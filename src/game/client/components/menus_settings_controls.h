@@ -6,6 +6,7 @@
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/component.h>
 #include <game/client/components/binds.h>
+#include <game/client/components/qmclient/bind_overview.h>
 #include <game/client/lineinput.h>
 #include <game/client/ui.h>
 #include <game/client/ui_scrollregion.h>
@@ -19,18 +20,6 @@ namespace qm_card_catalog
 	struct SQmCardBuildContext;
 	struct QmCardRenderHook;
 }
-
-enum class EBindOptionGroup
-{
-	MOVEMENT,
-	WEAPON,
-	VOTING,
-	CHAT,
-	DUMMY,
-	MISCELLANEOUS,
-	CUSTOM,
-	NUM,
-};
 
 class CBindSlotUiElement
 {

@@ -19,6 +19,7 @@
 #include <game/client/components/qmclient/chat_translation_notes.h>
 #include <game/client/components/qmclient/hud_notifications/hud_notifications.h>
 #include <game/client/components/qmclient/pending_chat_messages.h>
+#include <game/client/components/qmclient/public_word_filter.h>
 #include <game/client/components/qmclient/qm_chat_export_metadata.h>
 #include <game/client/components/qmclient/qm_chat_log_jobs.h>
 #include <game/client/components/qmclient/qm_chat_text_layout.h>
@@ -109,12 +110,17 @@ public:
 
 	static void ResetPresentationState(SPresentationState &Presentation);
 	static void BeginLinePresentation(SPresentationState &Presentation, int64_t Now, bool GentleRefresh);
-	static void UpdateLinePresentation(SPresentationState &Presentation, int64_t LineTime, int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ForceVisible, int64_t LargeAreaOpenTick, float RecallDelaySeconds, bool ExtraAnimations = true);
+	static void UpdateLinePresentation(SPresentationState &Presentation, int64_t LineTime, int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ForceVisible, int64_t LargeAreaOpenTick, float RecallDelaySeconds, bool ExtraAnimations = true, int ClientId = SERVER_MSG);
 	static float SmoothPresentationY(float CurrentY, float TargetY, float DeltaSeconds);
 	static bool CanMergePlayerMessages(int PreviousClientId, int PreviousTeam, const char *pPreviousText, int64_t PreviousTime, int ClientId, int Team, const char *pText, int64_t Now, bool Highlighted = false);
 	// echo 合并的窗口判定：上一次同文本 echo 发生在 LastTime，当前时间为 Now，
 	// 窗口为 WindowMs 毫秒（0 表示关闭合并）。时间倒流或超出窗口都返回 false。
 	static bool EchoRepeatWithinWindow(int64_t Now, int64_t LastTime, int WindowMs);
+	// 行堆叠公式：在当前 y 基础上消耗本行高度与额外行间隔，随 LayoutVisibility 同步缩放。
+	static float AdvanceChatLineStack(float Y, float LineHeight, float ExtraLineSpacing, float LayoutVisibility)
+	{
+		return Y - (LineHeight + ExtraLineSpacing) * LayoutVisibility;
+	}
 	static bool IsSensitiveChatCommand(const char *pLine)
 	{
 		if(pLine == nullptr)
@@ -200,7 +206,6 @@ private:
 
 		STextContainerIndex m_TextContainerIndex;
 		STextContainerIndex m_BodyTextContainerIndex;
-		CUIRect m_SponsorTextBounds = {};
 		int m_QuadContainerIndex;
 		CUIRect m_BackgroundRect = {};
 		float m_BackgroundRounding = 0.0f;
@@ -234,15 +239,15 @@ private:
 
 	bool m_PrevScoreBoardShowed;
 	bool m_PrevShowChat;
-	std::array<int, 4> m_aPrevTitleVisibility = {};
+	std::array<int, 5> m_aPrevTitleVisibility = {};
 	bool m_PrevSponsorChatEffects = true;
 	int m_LastStreamerFilterWords = -1;
 	uint64_t m_LastStreamerFilterRevision = 0;
+	QmPublicWordFilter::CClient m_PublicWords;
 	QmWordFilterList::CFileList m_BlockWordsFile;
 	QmWordFilterList::CFileList m_StreamerWordsFile;
 	uint64_t m_PreparedGlyphAtlasRevision = 0;
 	std::array<int, 5> m_aPreparedChatTextSettings = {-1, -1, -1, -1, -1};
-	CQmSponsorChatRenderer m_SponsorChatRenderer;
 	int64_t m_LastPresentationUpdateTime;
 	int64_t m_LargeAreaOpenTick;
 	bool m_LastPresentationShowLargeArea;
@@ -576,6 +581,7 @@ public:
 	void OnInit() override;
 	void OnShutdown() override;
 
+	const QmPublicWordFilter::CState &PublicWordFilter() const { return m_PublicWords.State(); }
 	void ReloadWordFilterFile(bool Streamer, bool Force = true);
 	const QmWordFilterList::CFileList &WordFilterFile(bool Streamer) const { return Streamer ? m_StreamerWordsFile : m_BlockWordsFile; }
 	void RebuildChat();
@@ -640,6 +646,7 @@ public:
 	// @param pLine the chat message
 	// 返回是否已发送或由本地命令处理，失败时调用方可保留消息。
 	bool SendChat(int Team, const char *pLine, const char *pLocalOriginal = nullptr, int Connection = -1);
+	bool SendAutomaticChat(int Connection, const char *pLine);
 	void InvalidateOutgoingConnection(int Connection)
 	{
 		m_PendingChatMessages.InvalidateConnection(Connection);
@@ -757,8 +764,11 @@ inline void CChat::UpdateLinePresentation(
 	bool ForceVisible,
 	int64_t LargeAreaOpenTick,
 	float RecallDelaySeconds,
-	bool ExtraAnimations)
+	bool ExtraAnimations,
+	int ClientId)
 {
+	// 强制显示仍可绕过专注模式过滤；客户端 echo 的展示时长保持有限。
+	ForceVisible = ForceVisible && ClientId != CLIENT_MSG;
 	DeltaSeconds = std::clamp(DeltaSeconds, 0.0f, CHAT_PRESENTATION_MAX_DELTA_SECONDS);
 	(void)DeltaSeconds;
 
@@ -826,7 +836,7 @@ inline void CChat::UpdateLinePresentation(
 		return;
 	}
 
-	// 强制显示消息不参与普通聊天超时逻辑。
+	// 强制显示的非客户端消息不参与普通聊天超时逻辑。
 	if(ForceVisible)
 	{
 		Presentation.m_LayoutVisibility = 1.0f;

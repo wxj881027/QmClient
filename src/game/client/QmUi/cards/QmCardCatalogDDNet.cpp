@@ -217,7 +217,7 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				{
 					g_Config.m_ClRaceGhost ^= 1;
 				}
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClRaceGhost, &Button, Localize("When you cross the start line, show a ghost tee replicating the movements of your best time"));
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClRaceGhost, &Button, Localize("Show a ghost of your best time after crossing the start line"));
 			}
 			Flow.Space(DDNetMetrics.m_LineSpacing);
 			if(g_Config.m_ClRaceGhost)
@@ -296,7 +296,7 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 
 				DoDDNetNumericField("ddnet-show-others-opacity", &g_Config.m_ClShowOthersAlpha, &g_Config.m_ClShowOthersAlpha, Button, Localize("Opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0u, "%");
 
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClShowOthersAlpha, &Button, Localize("Adjust the opacity of entities belonging to other teams, such as tees and name plates"));
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClShowOthersAlpha, &Button, Localize("Opacity of other teams' tees and name plates"));
 			}
 			Flow.Space(DDNetMetrics.m_LineSpacing);
 			if(Flow.Control("own-team", DDNetMetrics.m_LineHeight, Button))
@@ -337,6 +337,19 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 				}
 			}
 			Flow.Space(DDNetMetrics.m_LineSpacing);
+			if(Flow.Control("upstream-redundancy", DDNetMetrics.m_LineHeight, Button))
+			{
+				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_QmUpstreamRedundancy, "Upstream redundancy (experimental)", Localize("Upstream redundancy (experimental)"), g_Config.m_QmUpstreamRedundancy, &Button) && CanCommit)
+					g_Config.m_QmUpstreamRedundancy ^= 1;
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUpstreamRedundancy, &Button, Localize("Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP."));
+			}
+			Flow.Space(DDNetMetrics.m_LineSpacing);
+			if(g_Config.m_QmUpstreamRedundancy)
+			{
+				if(Flow.Control("upstream-redundancy-copies", DDNetMetrics.m_LineHeight, Button))
+					DoDDNetNumericField("ddnet-upstream-redundancy-copies", &g_Config.m_QmUpstreamRedundancyMaxCopies, &g_Config.m_QmUpstreamRedundancyMaxCopies, Button, Localize("Maximum packet copies"), 2, 3);
+				Flow.Space(DDNetMetrics.m_LineSpacing);
+			}
 			if(Flow.Control("anti-ping", DDNetMetrics.m_LineHeight, Button))
 			{
 				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClAntiPing, "AntiPing (latency compensation)", Localize("AntiPing (latency compensation)"), g_Config.m_ClAntiPing, &Button) && CanCommit)

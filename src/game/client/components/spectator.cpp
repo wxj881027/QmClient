@@ -699,9 +699,14 @@ void CSpectator::OnRender()
 	const bool WasTouchPressed = m_TouchState.m_AnyPressed;
 	if(WantActive)
 		Ui()->UpdateTouchState(m_TouchState);
-	if(WantActive && m_TouchState.m_AnyPressed)
+	if(WantActive && (m_TouchState.m_AnyPressed || m_TouchState.m_TapReleased))
 	{
-		const vec2 TouchPos = (m_TouchState.m_PrimaryPosition - vec2(0.5f, 0.5f)) * ScreenSize;
+		const vec2 TouchPos = qm_spectator_layout::TouchPosition(m_TouchState.m_PrimaryPosition, ScreenSize, ScreenCenter);
+		if(m_TouchState.m_TapReleased && !SpectatorRect.Inside(ScreenCenter + TouchPos))
+		{
+			OnRelease();
+			return;
+		}
 		if(SpectatorMouseRect.Inside(ScreenCenter + TouchPos))
 		{
 			m_SelectorMouse = TouchPos;
@@ -709,7 +714,7 @@ void CSpectator::OnRender()
 	}
 	else if(WantActive && WasTouchPressed)
 	{
-		const vec2 TouchPos = (m_TouchState.m_PrimaryPosition - vec2(0.5f, 0.5f)) * ScreenSize;
+		const vec2 TouchPos = qm_spectator_layout::TouchPosition(m_TouchState.m_PrimaryPosition, ScreenSize, ScreenCenter);
 		if(!SpectatorRect.Inside(ScreenCenter + TouchPos))
 		{
 			OnRelease();
@@ -725,7 +730,11 @@ void CSpectator::OnRender()
 	// clamp mouse position to selector area
 	m_SelectorMouse = qm_spectator_layout::ClampMouse(SelectorLayout, ScreenCenter, m_SelectorMouse);
 
-	const bool MousePressed = WantActive && (Input()->KeyPress(KEY_MOUSE_1) || m_TouchState.m_PrimaryPressed);
+	const bool TouchTap = WantActive && Ui()->DirectTouchInput() && m_TouchState.m_TapReleased;
+	const bool TouchInside = SpectatorMouseRect.Inside(m_TouchState.m_PrimaryPosition * ScreenSize);
+	const bool MousePressed = WantActive && (Input()->KeyPress(KEY_MOUSE_1) ||
+							(Ui()->DirectTouchInput() ? TouchTap && TouchInside : m_TouchState.m_PrimaryPressed));
+	bool CloseTouchSelection = false;
 
 	// draw selections
 	if(SelectedId() == SPEC_FREEVIEW)
@@ -754,6 +763,7 @@ void CSpectator::OnRender()
 			if(!ViewModeActive)
 				GameClient()->m_MultiViewActivated = false;
 			Spectate(m_SelectedSpectatorId);
+			CloseTouchSelection = TouchTap;
 		}
 	}
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, (FreeViewSelected ? 1.0f : 0.5f) * ContentAlpha);
@@ -788,6 +798,7 @@ void CSpectator::OnRender()
 				if(!ViewModeActive)
 					GameClient()->m_MultiViewActivated = false;
 				Spectate(m_SelectedSpectatorId);
+				CloseTouchSelection = TouchTap;
 			}
 		}
 		TextRender()->TextColor(1.0f, 1.0f, 1.0f, (FollowSelected ? 1.0f : 0.5f) * ContentAlpha);
@@ -859,7 +870,10 @@ void CSpectator::OnRender()
 					if(MultiViewActive())
 						GameClient()->m_RankGhost.ViewToggleMultiMember(m_SelectedSpectatorId);
 					else
+					{
 						Spectate(m_SelectedSpectatorId);
+						CloseTouchSelection = TouchTap;
+					}
 				}
 				else if(GameClient()->m_MultiViewActivated)
 				{
@@ -887,6 +901,7 @@ void CSpectator::OnRender()
 				else
 				{
 					Spectate(m_SelectedSpectatorId);
+					CloseTouchSelection = TouchTap;
 				}
 			}
 		}
@@ -1042,6 +1057,8 @@ void CSpectator::OnRender()
 	if(!ViewModeActive)
 		RenderTeleSearch(ScreenCenter, SelectorLayout.m_SearchRow, SelectorLayout.m_Status, ContentAlpha, MousePressed);
 	RenderTools()->RenderCursor(ScreenCenter + m_SelectorMouse, 48.0f, ContentAlpha);
+	if(CloseTouchSelection)
+		OnRelease();
 }
 
 void CSpectator::FindTele()
@@ -1188,7 +1205,11 @@ void CSpectator::Spectate(int SpectatorId)
 		m_TeleSearchPending = false;
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
 	{
-		GameClient()->m_DemoSpecId = std::clamp(SpectatorId, (int)SPEC_FOLLOW, MAX_CLIENTS - 1);
+		// 合影预览没有真实的 demo 流，相机脱离角色的唯一入口就是「自由视角」。
+		// 这里如果照旧夹到 SPEC_FOLLOW，玩家点了自由视角也只会跟随某个 Tee，
+		// 鼠标永远推不动镜头。
+		const int MinSpecId = Client()->PoseSessionActive() ? (int)SPEC_FREEVIEW : (int)SPEC_FOLLOW;
+		GameClient()->m_DemoSpecId = std::clamp(SpectatorId, MinSpecId, MAX_CLIENTS - 1);
 		// The tick must be rendered for the spectator mode to be updated, so we do it manually when demo playback is paused
 		// TODO: https://github.com/ddnet/ddnet/issues/11681
 		if(DemoPlayer()->BaseInfo()->m_Paused)

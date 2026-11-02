@@ -156,6 +156,8 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 		Flow.Space(LineSpacing);
 	};
 	RenderCheckbox(&g_Config.m_QmGores, "qmclient-gores-enable", "Enable Gores mode", &g_Config.m_QmGores);
+	RenderCheckbox(&g_Config.m_QmAxiomQuadPrediction, "qmclient-gores-axiom-quad-prediction", "Moving block and freeze prediction (experimental)", &g_Config.m_QmAxiomQuadPrediction);
+	RenderCheckbox(&g_Config.m_QmMovingTilesEntities, "qmclient-gores-moving-tiles-entities", "Show moving tiles in entities", &g_Config.m_QmMovingTilesEntities);
 	RenderCheckbox(&g_Config.m_QmAxiomAutoLogin, "qmclient-gores-axiom-auto-login", "Auto login Axiom server", &g_Config.m_QmAxiomAutoLogin);
 	const char *pAxiomHelp = Localize("Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.");
 	if(!Flow.Declaring())
@@ -304,6 +306,9 @@ void CMenus::RenderQmFunctionJumpHintContent(CUIRect &Content, float LineHeight,
 	}
 	Flow.Space(LineSpacing);
 
+	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:jump_hint", CurrentSettingsContentMetrics(), PrewarmOnly))
+		return;
+
 	static CButtonContainer s_QmJumpHintColorId;
 	if(Flow.Control("color", ResolveSettingsColorRowLayout(Content, CurrentSettingsContentMetrics(), false).m_ConsumedHeight, Row))
 		DoLine_ColorPicker(&s_QmJumpHintColorId, CurrentSettingsContentMetrics(), &Row, Localize("Text color"), &g_Config.m_QmJumpHintColor, ui_token::color::NEUTRAL_WHITE, false);
@@ -358,6 +363,9 @@ void CMenus::RenderQmFunctionWeaponTrajectoryContent(CUIRect &Content, float Lin
 		RenderQmFunctionCheckbox(&g_Config.m_QmWeaponTrajectoryNinja, "qmclient-weapon-trajectory-ninja", Localize("Predict ninja path"), &g_Config.m_QmWeaponTrajectoryNinja, &Row, PrewarmOnly);
 	}
 	Flow.Space(LineSpacing);
+
+	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:weapon_trajectory", CurrentSettingsContentMetrics(), PrewarmOnly))
+		return;
 
 	static CButtonContainer s_WeaponTrajectoryColorId;
 	if(Flow.Control("color", ResolveSettingsColorRowLayout(Content, CurrentSettingsContentMetrics(), false).m_ConsumedHeight, Row))
@@ -415,13 +423,11 @@ void CMenus::RenderQmFunctionFriendNotifyContent(CUIRect &Content, float LineHei
 	static int s_QmFriendOnlineRefreshSecondsInputId;
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
 		{
+			{&g_Config.m_QmFriendLastSeen, "Show friends' last seen dates (DDStats)", Localize("Show friends' last seen dates (DDStats)")},
 			{&g_Config.m_QmFriendOnlineNotify, "Notify when friends come online", Localize("Notify when friends come online")},
 			{&g_Config.m_QmFriendOnlineAutoRefresh, "Auto refresh server list", Localize("Auto refresh server list")},
 		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
-	RenderValue("qmclient-friend-auto-follow-delay", "Auto-follow delay", &s_QmFriendAutoFollowDelayInputId, &g_Config.m_QmFriendAutoFollowDelay, 0, 30, "s");
-	if(g_Config.m_QmFriendOnlineAutoRefresh)
-		RenderValue("qmclient-friend-notifications-refresh-interval", "Refresh interval", &s_QmFriendOnlineRefreshSecondsInputId, &g_Config.m_QmFriendOnlineRefreshSeconds, 5, 300, "s");
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
 		{
 			{&g_Config.m_QmFriendEnterAutoGreet, "Auto greet friends entering map", Localize("Auto greet friends entering map")},
@@ -437,6 +443,12 @@ void CMenus::RenderQmFunctionFriendNotifyContent(CUIRect &Content, float LineHei
 	{
 		static CLineInput s_FriendEnterGreetText(g_Config.m_QmFriendEnterGreetText, sizeof(g_Config.m_QmFriendEnterGreetText));
 		RenderText("qmclient-friend-notifications-greeting-text", "Greeting text", &s_FriendEnterGreetText, "Leave empty to disable");
+	}
+	if(qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:friend_notify", CurrentSettingsContentMetrics(), PrewarmOnly))
+	{
+		RenderValue("qmclient-friend-auto-follow-delay", "Auto-follow delay", &s_QmFriendAutoFollowDelayInputId, &g_Config.m_QmFriendAutoFollowDelay, 0, 30, "s");
+		if(g_Config.m_QmFriendOnlineAutoRefresh)
+			RenderValue("qmclient-friend-notifications-refresh-interval", "Refresh interval", &s_QmFriendOnlineRefreshSecondsInputId, &g_Config.m_QmFriendOnlineRefreshSeconds, 5, 300, "s");
 	}
 }
 
@@ -470,8 +482,6 @@ void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHei
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
 		{
-			{&g_Config.m_QmFootParticles, "Local particle effects", Localize("Local particle effects")},
-			{&g_Config.m_QmClientMarkTrail, "Remote particle effects", Localize("Remote particle effects")},
 			{&g_Config.m_QmClientShowBadge, "Show Qm badge", Localize("Show Qm badge")},
 		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);
@@ -499,6 +509,7 @@ void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHei
 	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
 		{
 			{&g_Config.m_QmRepeatEnabled, "Enable repeat", Localize("Enable repeat")},
+			{&g_Config.m_QmHumming, "Humming", Localize("Humming"), nullptr, 0, Localize("Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines")},
 			{&g_Config.m_QmRandomEmoteOnHit, "Random emoticon", Localize("Random emoticon")},
 		},
 		CurrentSettingsContentMetrics(), !PrewarmOnly);

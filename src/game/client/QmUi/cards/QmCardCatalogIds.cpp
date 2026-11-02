@@ -41,6 +41,7 @@ namespace qm_card_catalog
 			"qm:emoticons",
 			"qm:better_scoreboard",
 			"qm:mini_features",
+			"qm:self_kill_protection",
 			"qm:ime",
 			"qm:jump_hint",
 			"qm:weapon_trajectory",
@@ -76,6 +77,7 @@ namespace qm_card_catalog
 
 		const std::vector<const char *> s_vBindCards = {
 			"qm:bind_editor",
+			"qm:bind_overview",
 		};
 
 		const std::vector<const char *> s_vNameplateCards = {

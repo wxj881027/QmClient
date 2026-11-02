@@ -15,6 +15,7 @@ class CRenderTargetPool
 	struct SSlot
 	{
 		ivec2 m_Size = ivec2(0, 0);
+		int m_SampleCount = 1;
 		int m_NextFree = 0;
 	};
 	std::vector<SSlot> m_vSlots;
@@ -24,14 +25,15 @@ class CRenderTargetPool
 	void Recycle(int Id)
 	{
 		m_vSlots[Id].m_Size = ivec2(0, 0);
+		m_vSlots[Id].m_SampleCount = 1;
 		m_vSlots[Id].m_NextFree = static_cast<int>(m_FirstFree);
 		m_FirstFree = Id;
 	}
 
 public:
-	int Allocate(int Width, int Height)
+	int Allocate(int Width, int Height, int SampleCount = 1)
 	{
-		if(Width <= 0 || Height <= 0)
+		if(Width <= 0 || Height <= 0 || SampleCount <= 0)
 			return -1;
 		if(m_FirstFree == m_vSlots.size())
 		{
@@ -48,6 +50,7 @@ public:
 		m_FirstFree = m_vSlots[Id].m_NextFree;
 		m_vSlots[Id].m_NextFree = LIVE;
 		m_vSlots[Id].m_Size = ivec2(Width, Height);
+		m_vSlots[Id].m_SampleCount = SampleCount;
 		return Id;
 	}
 
@@ -59,6 +62,11 @@ public:
 	ivec2 Size(int Id) const
 	{
 		return IsLive(Id) ? m_vSlots[Id].m_Size : ivec2(0, 0);
+	}
+
+	int SampleCount(int Id) const
+	{
+		return IsLive(Id) ? m_vSlots[Id].m_SampleCount : 1;
 	}
 
 	template<typename TDestroy>

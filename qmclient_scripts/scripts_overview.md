@@ -65,10 +65,14 @@
 - `qmclient_scripts/fix_style.py`
 - `qmclient_scripts/export_settings_commands_table.py`
 - `qmclient_scripts/generate_release_notes.py`
+- `qmclient_scripts/generate_title_logo_sdf.cjs` — 从 `data/qmclient/title_badges/logo.svg` 离线生成 `logo_sdf.png`。需要 Node.js 和 `sharp` 模块，运行 `node qmclient_scripts/generate_title_logo_sdf.cjs`；客户端和正常构建只读取已生成的纹理。生成器回归测试入口为 `node --test qmclient_scripts/test_generate_title_logo_sdf.cjs`。
+- `qmclient_scripts/generate_developer_badge_sdf.cjs` — 从 `developer_badge.svg` 标记的原始路径生成 `developer_wordmark_sdf.png` 和 `developer_code_sdf.png`；共用 Logo 距离场编码，需要同样的 Node.js / `sharp` 环境。正常构建只打包生成的纹理。对应测试入口为 `node --test qmclient_scripts/test_generate_developer_badge_sdf.cjs`。
 
 ### 4. 其他专用脚本
 
 与门禁主链无直接关系，按各自职责独立存在：
+
+- `qmclient_scripts/tests/test_netease_frontend.cjs`：使用 Node.js 隔离执行 helper 的同源注入脚本，检查网易云原文、翻译轨及刷新状态转换。运行 `node --test qmclient_scripts/tests/test_netease_frontend.cjs`；不连接实际播放器。
 
 - `qmclient_scripts/integration/`：QmClient 自有客户端/服务端进程级集成与冒烟测试；不得把 QmClient 特化场景加入根目录上游 `scripts/`
 - `qmclient_scripts/coverage/`：使用独立 clang/Ninja 构建采集 C++ LLVM line/function/region/branch coverage
@@ -116,6 +120,16 @@ python qmclient_scripts/integration/e2e_qmclient.py <build-dir> [connection_fail
 ```
 
 gate 使用 `--run-qm-smoke` 时会在同一进程测试 check 中顺序执行 smoke 与 E2E。
+
+Demo 视频导出的画质/速度基准（手动入口，不计入 gate 与测试库存；阈值来自 2026-10-24 实测基线，见 `docs/规格/2026-10-16-Demo视频导出现代化实施方案.md` 补充 26/27）：
+
+```text
+python qmclient_scripts/integration/perf_video_export.py <build-dir> [speed_hd|quality_codec|quality_aa]
+```
+
+- `speed_hd`：1080p/4K 两档预设的真实客户端导出吞吐（帧/秒，只报告并校验成片帧数）。
+- `quality_codec`：同一批无损帧重编码的确定性画质门（PSNR-Y/VMAF 阈值断言，跨机器稳定）。
+- `quality_aa`：导出 FSAA 生效性门（机制断言：采样数声明 + 无窗口路径回退；像素 Δ 因跨运行特效随机地板 ±1.5dB 仅作参考输出）。
 
 - `source_keys.py`：共享源码 key 提取器，支持全量扫描与 Git diff 增量合并，提取 `Localize` / `Localizable`、`Register` help 和 QmClient 间接 key
 - `extract_strings.py`：默认按 Git diff 增量更新完整 `extracted_strings.txt`、`extracted_records_cache.json` 和 `extracted_audit_report.json`；传 `--full` 时重扫源码并重建缓存；active key 清单继续只承载 i18n 主链 source key，审计报告另外输出 `must_i18n`、`business_data`、`test_only`、`needs_review`、`violation`

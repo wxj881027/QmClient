@@ -266,6 +266,9 @@ CUi::CUi(IAllocationResource *pPopupCallbackMemory, IAllocationResource *pClipMe
 	m_vPopupCloseCallbacks(CBorrowedAllocator<std::shared_ptr<FPopupMenuClosedCallback>>(pPopupCallbackMemory))
 {
 	m_Enabled = true;
+#if defined(CONF_PLATFORM_ANDROID)
+	m_DirectTouchInput = true;
+#endif
 
 	m_Screen.x = 0.0f;
 	m_Screen.y = 0.0f;
@@ -354,8 +357,135 @@ void CUi::OnElementsReset()
 
 void CUi::OnWindowResize()
 {
+	CancelTouchInput();
 	DestroyGaussianBlurTargets();
+	DestroyBackgroundLayerTarget();
 	OnElementsReset();
+}
+
+void CUi::DestroyBackgroundLayerTarget()
+{
+	if(m_BackgroundLayerActive)
+		return;
+	if(m_pGraphics == nullptr)
+	{
+		m_BackgroundLayerTarget.Invalidate();
+	}
+	else if(m_BackgroundLayerTarget.IsValid())
+	{
+		Graphics()->DestroyRenderTarget(&m_BackgroundLayerTarget);
+	}
+	m_BackgroundLayerWidth = 0;
+	m_BackgroundLayerHeight = 0;
+	m_BackgroundLayerSamples = 0;
+}
+
+bool CUi::BeginBackgroundLayer(ColorRGBA ClearColor)
+{
+	if(m_BackgroundLayerActive)
+	{
+		// 上一帧异常路径未结束离屏层：先收口，避免第二帧嵌套 Begin 被后端忽略。
+		Graphics()->EndRenderTarget();
+		m_BackgroundLayerActive = false;
+	}
+	if(Graphics()->IsBackbufferCaptureSupported())
+	{
+		// 交换链捕获会在背景边界处冻结完整背景；离屏层在部分多采样驱动上
+		// resolve 后内容不完整，先优先走捕获路径，离屏层仅作不支持捕获时的回退。
+		return false;
+	}
+	if(!g_Config.m_QmGaussianBlur || !Graphics()->IsRenderTargetSupported() || !Graphics()->IsRenderTargetGaussianBlurSupported() || !Graphics()->IsMultisampleRenderTargetSupported())
+	{
+		DestroyBackgroundLayerTarget();
+		return false;
+	}
+
+	const int Width = Graphics()->ScreenWidth();
+	const int Height = Graphics()->ScreenHeight();
+	const int Samples = Graphics()->MultiSamplingCount();
+	if(Width <= 0 || Height <= 0 || Samples <= 1)
+	{
+		DestroyBackgroundLayerTarget();
+		return false;
+	}
+
+	if(Width != m_BackgroundLayerWidth || Height != m_BackgroundLayerHeight || Samples != m_BackgroundLayerSamples || !m_BackgroundLayerTarget.IsValid())
+	{
+		DestroyBackgroundLayerTarget();
+		m_BackgroundLayerTarget = Graphics()->CreateRenderTarget(Width, Height, Samples);
+		if(!m_BackgroundLayerTarget.IsValid())
+			return false;
+		m_BackgroundLayerWidth = Width;
+		m_BackgroundLayerHeight = Height;
+		m_BackgroundLayerSamples = Samples;
+	}
+
+	if(!Graphics()->BeginRenderTarget(m_BackgroundLayerTarget, ColorRGBA(ClearColor.r, ClearColor.g, ClearColor.b, 1.0f)))
+	{
+		DestroyBackgroundLayerTarget();
+		return false;
+	}
+	m_BackgroundLayerActive = true;
+	return true;
+}
+
+void CUi::EndBackgroundLayer()
+{
+	if(!m_BackgroundLayerActive)
+		return;
+	Graphics()->EndRenderTarget();
+	m_BackgroundLayerActive = false;
+	if(!m_BackgroundLayerTarget.IsValid())
+		return;
+
+	// EndRenderTarget 会恢复进入背景层前的裁剪状态；上一帧 UI 可能留下窄裁剪区，
+	// 若不清除，全屏背景合成只会画在该区域，表现为背景图只剩左侧一条。
+	Graphics()->ClipDisable();
+	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+	const int Width = Graphics()->ScreenWidth();
+	const int Height = Graphics()->ScreenHeight();
+	Graphics()->MapScreen(0.0f, 0.0f, (float)Width, (float)Height);
+	IGraphics::SRenderTargetDrawParams Params;
+	Params.m_X = 0.0f;
+	Params.m_Y = 0.0f;
+	Params.m_W = (float)Width;
+	Params.m_H = (float)Height;
+	Params.m_Opaque = true;
+	Graphics()->DrawRenderTarget(m_BackgroundLayerTarget, Params);
+	Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+}
+
+void CUi::BeginBackgroundFrame()
+{
+	const uint64_t Frame = Client()->PerfFrame();
+	if(m_BackgroundFrame == Frame)
+		return;
+	// 背景层仍处于活动状态时不能降采样（会嵌套 BeginRenderTarget）；
+	// 正常调用顺序保证先 EndBackgroundLayer。
+	if(m_BackgroundLayerActive)
+		return;
+	m_BackgroundFrame = Frame;
+	m_BackgroundBlurFrame = 0;
+	m_GaussianBlurPrepared = false;
+	m_GaussianBlurPreparedFrame = 0;
+	m_GaussianBlurFailedFrame = 0;
+	if(!g_Config.m_QmGaussianBlur)
+	{
+		m_BackgroundBlurFrame = Frame;
+		DestroyBackgroundLayerTarget();
+		return;
+	}
+	// 离屏背景层已经冻结了本帧背景，模糊可延迟到第一个消费者出现时再做；
+	// 没有离屏层（FSAA 关闭/后端不支持）才必须在此刻、文字之前捕获交换链。
+	if(m_BackgroundLayerTarget.IsValid())
+		return;
+	PrepareGaussianBlur();
+}
+
+bool CUi::BackgroundFrameBegun() const
+{
+	return Client() != nullptr && m_BackgroundFrame == Client()->PerfFrame();
 }
 
 void CUi::BeginGaussianBlurScope(float Alpha)
@@ -364,6 +494,8 @@ void CUi::BeginGaussianBlurScope(float Alpha)
 	const bool HasTemporaryTarget = std::any_of(m_aGaussianBlurTemporary.begin(), m_aGaussianBlurTemporary.end(), [](const auto &Target) { return Target.IsValid(); });
 	if(!g_Config.m_QmGaussianBlur && (m_GaussianBlurSource.IsValid() || HasTemporaryTarget || m_GaussianBlurTarget.IsValid()))
 		DestroyGaussianBlurTargets();
+	if(!g_Config.m_QmGaussianBlur)
+		DestroyBackgroundLayerTarget();
 }
 
 void CUi::EndGaussianBlurScope()
@@ -396,19 +528,33 @@ void CUi::DestroyGaussianBlurTargets()
 
 bool CUi::PrepareGaussianBlur()
 {
+	const uint64_t PerfFrame = Client()->PerfFrame();
+	if(m_BackgroundBlurFrame == PerfFrame)
+		return g_Config.m_QmGaussianBlur != 0 && m_GaussianBlurPrepared;
 	if(!g_Config.m_QmGaussianBlur)
 	{
 		m_GaussianBlurPrepared = false;
 		return false;
 	}
-	if(!Graphics()->IsBackbufferCaptureSupported() || !Graphics()->IsRenderTargetGaussianBlurSupported())
+	if(m_BackgroundFrame != PerfFrame || (!m_BackgroundLayerTarget.IsValid() && !Graphics()->IsBackbufferCaptureSupported()))
 	{
+		// 没有背景层也没有帧边界时，宁可不模糊，也不能把已经画出的文字捕获进背板。
 		m_GaussianBlurPrepared = false;
 		const bool HasTemporaryTarget = std::any_of(m_aGaussianBlurTemporary.begin(), m_aGaussianBlurTemporary.end(), [](const auto &Target) { return Target.IsValid(); });
 		if(m_GaussianBlurSource.IsValid() || HasTemporaryTarget || m_GaussianBlurTarget.IsValid())
 			DestroyGaussianBlurTargets();
 		return false;
 	}
+	if(!Graphics()->IsRenderTargetGaussianBlurSupported())
+	{
+		m_BackgroundBlurFrame = PerfFrame;
+		m_GaussianBlurPrepared = false;
+		const bool HasTemporaryTarget = std::any_of(m_aGaussianBlurTemporary.begin(), m_aGaussianBlurTemporary.end(), [](const auto &Target) { return Target.IsValid(); });
+		if(m_GaussianBlurSource.IsValid() || HasTemporaryTarget || m_GaussianBlurTarget.IsValid())
+			DestroyGaussianBlurTargets();
+		return false;
+	}
+	m_BackgroundBlurFrame = PerfFrame;
 
 	const int BlurWidth = UiGaussianBlurTargetDimension(Graphics()->ScreenWidth());
 	const int BlurHeight = UiGaussianBlurTargetDimension(Graphics()->ScreenHeight());
@@ -444,7 +590,6 @@ bool CUi::PrepareGaussianBlur()
 		m_GaussianBlurMode = BlurMode;
 	}
 
-	const uint64_t PerfFrame = Client()->PerfFrame();
 	if(m_GaussianBlurPrepared && m_GaussianBlurPreparedFrame == PerfFrame)
 		return true;
 	// 同帧失败闩：GPU 侧失败在帧内不会自行恢复，后续矩形重试只会重复
@@ -454,7 +599,26 @@ bool CUi::PrepareGaussianBlur()
 
 	FlushQuadBatch();
 	Graphics()->FlushVertices();
-	if(!Graphics()->CaptureBackbufferToRenderTarget(m_GaussianBlurSource))
+	if(m_BackgroundLayerTarget.IsValid())
+	{
+		// 背景层已经 resolve 成单采样纹理；这里只做 1/4 降采样，不读取交换链。
+		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+		if(!Graphics()->BeginRenderTarget(m_GaussianBlurSource, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)))
+		{
+			m_GaussianBlurFailedFrame = PerfFrame;
+			m_GaussianBlurPrepared = false;
+			return false;
+		}
+		Graphics()->MapScreen(0.0f, 0.0f, (float)BlurWidth, (float)BlurHeight);
+		IGraphics::SRenderTargetDrawParams DownsampleParams;
+		DownsampleParams.m_W = (float)BlurWidth;
+		DownsampleParams.m_H = (float)BlurHeight;
+		Graphics()->DrawRenderTarget(m_BackgroundLayerTarget, DownsampleParams);
+		Graphics()->EndRenderTarget();
+		Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+	}
+	else if(!Graphics()->CaptureBackbufferToRenderTarget(m_GaussianBlurSource))
 	{
 		m_GaussianBlurFailedFrame = PerfFrame;
 		m_GaussianBlurPrepared = false;
@@ -617,8 +781,10 @@ void CUi::RestorePopupFocus(const void *pId, CLineInput *pLineInput)
 				m_pInteractionCardId != nullptr))
 		return;
 	const bool RestoreText = pLineInput != nullptr && m_PendingPopupFocus.m_pTextInput == pLineInput;
+	const bool FromKeyboard = m_PendingPopupFocus.m_FromKeyboard;
 	m_PendingPopupFocus = {};
 	SetKeyboardFocus(pId);
+	m_KeyboardFocus.m_FromKeyboard = FromKeyboard;
 	if(RestoreText)
 	{
 		// 只在真实控件确认存活后解引用，保留其光标与选择，不模拟鼠标按下。
@@ -658,6 +824,7 @@ int CUi::DoButtonGroupKeyboard(const void *const *ppIds, const bool *pEnabled, i
 			}
 		}
 		SetKeyboardFocus(Focused >= 0 ? ppIds[Focused] : nullptr);
+		m_KeyboardFocus.m_FromKeyboard = Focused >= 0;
 	}
 	if(Focused >= 0)
 	{
@@ -734,6 +901,10 @@ void CUi::Update()
 	const CUIRect *pScreen = Screen();
 
 	unsigned UpdatedMouseButtonsNext = 0;
+	if(m_DirectTouchInput && m_pTouchScrollRegion != nullptr && !m_TouchScrollRegionSeen)
+		CancelTouchInput();
+	m_TouchScrollRegionSeen = false;
+	m_TouchScrollDelta = vec2(0.0f, 0.0f);
 	if(Enabled())
 	{
 		// Update mouse buttons based on mouse keys
@@ -744,9 +915,35 @@ void CUi::Update()
 				m_UpdatedMouseButtons |= 1 << (MouseKey - KEY_MOUSE_1);
 			}
 		}
-
+	}
+	if(Enabled() || m_DirectTouchInput)
+	{
 		// Update mouse position and buttons based on touch finger state
 		UpdateTouchState(m_TouchState);
+		if(m_DirectTouchInput)
+		{
+			if(m_TouchState.m_DirectStarted || !m_TouchState.m_AnyPressed || m_TouchState.m_DirectCancelled)
+			{
+				m_pTouchDragId = nullptr;
+				if(!m_TouchState.m_AnyPressed || !m_TouchState.m_DirectTracking || !m_TouchState.m_DirectMoved)
+					m_pTouchScrollRegion = nullptr;
+			}
+			if(m_TouchState.m_DirectCancelled)
+				CancelTouchItem();
+			if(m_TouchState.m_DirectTracking && m_TouchState.m_DirectMoved && !m_TouchState.m_DirectDragging &&
+				!m_TouchState.m_DirectLongPress && m_pTouchScrollRegion != nullptr)
+			{
+				const vec2 Movement = (m_TouchState.m_PrimaryPosition - m_TouchState.m_DirectStartPosition) * pScreen->Size();
+				const float AxisMovement = m_TouchScrollHorizontal ? Movement.x : Movement.y;
+				if(m_TouchState.m_DirectScrolling || absolute(AxisMovement) > 8.0f)
+				{
+					m_TouchScrollDelta = m_TouchState.m_DirectScrolling ? m_TouchState.m_PrimaryDelta * pScreen->Size() : Movement;
+					m_TouchState.m_DirectScrolling = true;
+					m_TouchState.m_PrimaryPressed = false;
+					CancelTouchItem();
+				}
+			}
+		}
 		if(m_TouchState.m_AnyPressed)
 		{
 			if(!CheckMouseLock())
@@ -769,11 +966,16 @@ void CUi::Update()
 
 			// We need to delay the click until the next update or it's not possible to use UI
 			// elements because click and hover would happen at the same time for touch events.
-			if(m_TouchState.m_PrimaryPressed)
+			if(m_DirectTouchInput)
+			{
+				// 直接触控按当前坐标命中；不把按下延迟到下一帧或移交给后到的手指。
+				m_UpdatedMouseButtons = (m_TouchState.m_PrimaryPressed ? 1u : 0u) | (m_TouchState.m_SecondaryPressed ? 2u : 0u);
+			}
+			else if(m_TouchState.m_PrimaryPressed)
 			{
 				UpdatedMouseButtonsNext |= 1;
 			}
-			if(m_TouchState.m_SecondaryPressed)
+			if(!m_DirectTouchInput && m_TouchState.m_SecondaryPressed)
 			{
 				UpdatedMouseButtonsNext |= 2;
 			}
@@ -880,8 +1082,165 @@ void CUi::ConvertMouseMove(float *pX, float *pY, IInput::ECursorType CursorType)
 	*pY *= Factor;
 }
 
-void CUi::UpdateTouchState(CTouchState &State) const
+void CUi::SetDirectTouchInput(bool Enabled)
 {
+	if(m_DirectTouchInput == Enabled)
+		return;
+	CancelTouchInput();
+	m_DirectTouchInput = Enabled;
+	m_TouchState = CTouchState();
+	// 模式切换时已按下的手指必须松开，不能把旧手势当成新点击。
+	m_TouchState.m_DirectBlocked = m_pInput != nullptr && !Input()->TouchFingerStates().empty();
+}
+
+void CUi::CancelTouchItem()
+{
+	const void *pCancelledItem = m_pActiveItem;
+	// 输入框按下当帧可能尚未 Activate；同时撤销它的待激活焦点，避免滑动后弹出键盘。
+	if(m_pTrackedTextInput != nullptr && pCancelledItem == m_pTrackedTextInput)
+		ReleaseActiveTextInput(m_pTrackedTextInput);
+	if(m_pLastActiveItem == pCancelledItem)
+		m_pLastActiveItem = nullptr;
+	m_pActiveItem = nullptr;
+	m_pHotItem = nullptr;
+	m_pBecomingHotItem = nullptr;
+	m_ActiveButtonLogicButton = -1;
+	m_ActiveDraggableButtonLogicButton = -1;
+	DisableMouseLock();
+}
+
+void CUi::CancelTouchInput()
+{
+	if(!m_DirectTouchInput)
+		return;
+	if(m_TouchState.m_DirectTracking || m_TouchState.m_DirectBlocked)
+	{
+		CancelTouchItem();
+		m_UpdatedMouseButtons = m_MouseButtons = m_LastMouseButtons = 0;
+	}
+	m_TouchState = CTouchState();
+	m_TouchState.m_DirectBlocked = m_pInput != nullptr && !Input()->TouchFingerStates().empty();
+	m_pTouchDragId = nullptr;
+	m_pTouchScrollRegion = nullptr;
+	m_TouchScrollDelta = vec2(0.0f, 0.0f);
+	m_TouchScrollRegionSeen = false;
+}
+
+bool CUi::CaptureTouchDrag(const void *pId, const CUIRect *pRect)
+{
+	if(!m_DirectTouchInput || !m_TouchState.m_PrimaryPressed || RenderOnly() || UnderlyingPointerInputBlocked())
+		return false;
+	if(m_pTouchDragId == pId)
+		return true;
+	if(m_pTouchDragId != nullptr || !m_TouchState.m_DirectStarted || !MouseHovered(pRect))
+		return false;
+	m_pTouchDragId = pId;
+	m_TouchState.m_DirectDragging = true;
+	m_pTouchScrollRegion = nullptr;
+	return true;
+}
+
+void CUi::RegisterTouchScrollRegion(CScrollRegion *pRegion, const CUIRect *pRect, bool Horizontal, EUiWheelOwnerPriority Priority, bool Eligible)
+{
+	if(!m_DirectTouchInput || RenderOnly())
+		return;
+	if(m_pTouchScrollRegion == pRegion)
+	{
+		m_TouchScrollRegionSeen = true;
+		if(!Eligible || UnderlyingPointerInputBlocked())
+			CancelTouchInput();
+	}
+	if(!Eligible || !m_TouchState.m_DirectStarted || m_pTouchDragId != nullptr || !MouseHovered(pRect))
+		return;
+	if(m_pTouchScrollRegion == nullptr || QmHotScrollRegionPriorityWins(m_TouchScrollPriority, Priority))
+	{
+		m_pTouchScrollRegion = pRegion;
+		m_TouchScrollPriority = Priority;
+		m_TouchScrollHorizontal = Horizontal;
+		m_TouchScrollRegionSeen = true;
+	}
+}
+
+vec2 CUi::ConsumeTouchScroll(CScrollRegion *pRegion)
+{
+	if(RenderOnly() || !m_DirectTouchInput || !m_TouchState.m_DirectScrolling || m_pTouchScrollRegion != pRegion)
+		return vec2(0.0f, 0.0f);
+	const vec2 Delta = m_TouchScrollDelta;
+	m_TouchScrollDelta = vec2(0.0f, 0.0f);
+	return Delta;
+}
+
+void CUi::UpdateDirectTouchState(CTouchState &State) const
+{
+	const auto &vFingers = Input()->TouchFingerStates();
+	State.m_TapReleased = State.m_DirectStarted = State.m_DirectCancelled = false;
+	State.m_PrimaryDelta = State.m_ScrollAmount = vec2(0.0f, 0.0f);
+	State.m_AnyPressed = !vFingers.empty();
+	State.m_PrimaryPressed = State.m_SecondaryPressed = false;
+	auto *pEngineGraphics = dynamic_cast<IEngineGraphics *>(Graphics());
+	const bool Focused = pEngineGraphics == nullptr || pEngineGraphics->WindowActive() != 0;
+	const vec2 WindowSize(Graphics()->WindowWidth(), Graphics()->WindowHeight());
+	const bool ContextValid = Enabled() && Focused && (!State.m_DirectTracking || State.m_DirectWindowSize == WindowSize);
+	if(vFingers.empty())
+	{
+		State.m_TapReleased = ContextValid && State.m_DirectTracking && !State.m_DirectMoved && !State.m_DirectLongPress &&
+				      !State.m_DirectDragging && !State.m_DirectScrolling;
+		State.m_DirectCancelled = !ContextValid && State.m_DirectTracking;
+		State.m_DirectTracking = State.m_DirectBlocked = State.m_DirectDragging = State.m_DirectScrolling = false;
+		return;
+	}
+	const auto &Finger = vFingers.front();
+	const bool Interrupted = !ContextValid || vFingers.size() != 1 ||
+				 (State.m_DirectTracking && (State.m_DirectWindowSize != WindowSize || State.m_DirectFinger != Finger.m_Finger || State.m_DirectPressTime != Finger.m_PressTime));
+	if(Interrupted)
+	{
+		State.m_DirectCancelled = State.m_DirectTracking;
+		State.m_DirectTracking = State.m_DirectDragging = State.m_DirectScrolling = false;
+		State.m_DirectBlocked = true;
+		return;
+	}
+	if(State.m_DirectBlocked)
+		return;
+	if(!State.m_DirectTracking)
+	{
+		State.m_DirectTracking = State.m_DirectStarted = true;
+		State.m_DirectMoved = State.m_DirectLongPress = false;
+		State.m_DirectFinger = Finger.m_Finger;
+		State.m_DirectPressTime = Finger.m_PressTime;
+		State.m_DirectWindowSize = WindowSize;
+		State.m_DirectStartPosition = Finger.m_Position;
+		State.m_SecondaryActivationTime = Client()->GlobalTime();
+	}
+	else
+	{
+		State.m_PrimaryDelta = Finger.m_Position - State.m_PrimaryPosition;
+	}
+	State.m_PrimaryPosition = Finger.m_Position;
+	const float ScreenHeight = QmUiVirtualScreenHeight(g_Config.m_QmUiScale);
+	const vec2 Movement = (State.m_PrimaryPosition - State.m_DirectStartPosition) * vec2(Graphics()->ScreenAspect() * ScreenHeight, ScreenHeight);
+	if(!State.m_DirectMoved && length(Movement) > 8.0f)
+	{
+		State.m_DirectMoved = true;
+		State.m_DirectCancelled = !State.m_DirectDragging;
+	}
+	if(!State.m_DirectMoved && !State.m_DirectDragging && !State.m_DirectScrolling && !State.m_DirectLongPress &&
+		Client()->GlobalTime() - State.m_SecondaryActivationTime >= 0.5f)
+	{
+		// 长按接管前先撤销左键 active，避免右键菜单打开时额外点击原按钮。
+		State.m_DirectLongPress = State.m_DirectCancelled = true;
+	}
+	State.m_PrimaryPressed = !State.m_DirectLongPress && !State.m_DirectScrolling && (!State.m_DirectMoved || State.m_DirectDragging);
+	State.m_SecondaryPressed = State.m_DirectLongPress;
+}
+
+void CUi::UpdateTouchState(CTouchState &State, bool AllowDirectTouch) const
+{
+	if(m_DirectTouchInput && AllowDirectTouch)
+	{
+		UpdateDirectTouchState(State);
+		return;
+	}
+	State.m_TapReleased = false;
 	const std::vector<IInput::CTouchFingerState> &vTouchFingerStates = Input()->TouchFingerStates();
 
 	// Updated touch position as long as any finger is beinged pressed.
@@ -1095,6 +1454,13 @@ void CUi::ClipDisable()
 	UpdateClipping();
 }
 
+void CUi::ResetClipState()
+{
+	while(IsClipped())
+		ClipDisable();
+	Graphics()->ClipDisable();
+}
+
 const CUIRect *CUi::ClipArea() const
 {
 	dbg_assert(IsClipped(), "no clip region");
@@ -1229,7 +1595,7 @@ int CUi::DoButtonLogic(const void *pId, int Checked, const CUIRect *pRect, const
 
 	int ReturnValue = 0;
 	const bool Inside = MouseHovered(pRect);
-	const bool UseCurrentHit = (Flags & BUTTONFLAG_CURRENT_HIT) != 0;
+	const bool UseCurrentHit = m_DirectTouchInput || (Flags & BUTTONFLAG_CURRENT_HIT) != 0;
 	const bool AllowCurrentPress = UseCurrentHit || (PreLayoutInput() && !IsPopupOpen());
 	const int CurrentPress = AllowCurrentPress ? QmButtonCurrentPress(QmResolvePointerButtons(m_MouseButtons, m_LastMouseButtons, UnderlyingPointerInputBlocked()), Flags, Inside) : -1;
 	// 预布局及显式启用的下拉触发器按当前矩形接管新按下；释放仍由原状态机处理。
@@ -1303,6 +1669,7 @@ int CUi::DoDraggableButtonLogic(const void *pId, int Checked, const CUIRect *pRe
 	if(pAbrupted != nullptr)
 		*pAbrupted = false;
 
+	CaptureTouchDrag(pId, pRect);
 	if(CheckActiveItem(pId))
 	{
 		dbg_assert(m_ActiveDraggableButtonLogicButton >= 0, "m_ActiveDraggableButtonLogicButton invalid");
@@ -1335,7 +1702,7 @@ int CUi::DoDraggableButtonLogic(const void *pId, int Checked, const CUIRect *pRe
 			m_ActiveDraggableButtonLogicButton = -1;
 		}
 	}
-	else if(HotItem() == pId)
+	else if(HotItem() == pId || (m_DirectTouchInput && Inside && MouseButtonClicked(0)))
 	{
 		for(int i = 0; i < 3; ++i)
 		{
@@ -1377,6 +1744,7 @@ EEditState CUi::DoPickerLogic(const void *pId, const CUIRect *pRect, float *pX, 
 		return EEditState::NONE;
 
 	const bool Inside = MouseHovered(pRect);
+	CaptureTouchDrag(pId, pRect);
 	if(Inside)
 		SetHotItem(pId);
 
@@ -1815,6 +2183,8 @@ bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 
 bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners, const std::vector<STextColorSplit> &vColorSplits, int Align, const SEditBoxRenderOptions &RenderOptions)
 {
+	// 单行输入：回车不进入缓冲区（同一控件复用时关掉多行标记）。
+	pLineInput->SetMultiline(false);
 	DoConfigTooltip(pLineInput, RenderOptions.m_pHitRect != nullptr ? RenderOptions.m_pHitRect : pRect, pLineInput->GetString());
 	CUiScopedSurfaceText SurfaceText(TextRender(), ResolveConfiguredInputSurface(), RenderOptions.m_DrawBackground);
 	const float VSpacing = 2.0f;
@@ -1844,22 +2214,19 @@ bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 	const bool Changed = pLineInput->WasChanged();
 	const bool CursorChanged = pLineInput->WasCursorChanged();
 	// 只查看已路由的确认事件，保留给外层提交；IME 已消费的 Enter 不应从原始按键状态绕回来。
-	const bool SubmitPressed = Active && RenderOptions.m_ReleaseFocusOnEnter && (m_HotkeysPressed & HOTKEY_ENTER) != 0;
+	const bool SubmitPressed = Active && RenderOptions.m_ReleaseFocusOnEnter && HotkeyPressed(HOTKEY_ENTER);
 	const bool ClickedOutside = (MouseButtonClicked(0) || MouseButtonClicked(1)) && !Inside;
 
+	if(Inside && MouseButtonClicked(0) && pLineInput->IsActive() && (Input()->HasComposition() || Input()->GetCandidateCount()))
+	{
+		// 点击当帧取消组合，不依赖按住鼠标进入下一帧。
+		Input()->StopTextInput();
+		Input()->StartTextInput();
+	}
 	bool JustGotActive = false;
 	if(CheckActiveItem(pLineInput))
 	{
-		if(MouseButton(0))
-		{
-			if(pLineInput->IsActive() && (Input()->HasComposition() || Input()->GetCandidateCount()))
-			{
-				// Clear IME composition/candidates on mouse press
-				Input()->StopTextInput();
-				Input()->StartTextInput();
-			}
-		}
-		else
+		if(!MouseButton(0))
 		{
 			SetActiveItem(nullptr);
 		}
@@ -1953,6 +2320,8 @@ bool CUi::DoEditBoxMultiLine(CLineInput *pLineInput, const CUIRect *pRect, float
 {
 	if(pLineInput == nullptr || pRect == nullptr)
 		return false;
+	// 多行输入：回车换行、粘贴保留换行（见 CLineInput::SetMultiline）。
+	pLineInput->SetMultiline(true);
 	DoConfigTooltip(pLineInput, RenderOptions.m_pHitRect != nullptr ? RenderOptions.m_pHitRect : pRect, pLineInput->GetString());
 	CUiScopedSurfaceText SurfaceText(TextRender(), ResolveConfiguredInputSurface(), RenderOptions.m_DrawBackground);
 
@@ -1982,18 +2351,16 @@ bool CUi::DoEditBoxMultiLine(CLineInput *pLineInput, const CUIRect *pRect, float
 	const bool Changed = pLineInput->WasChanged();
 	const bool CursorChanged = pLineInput->WasCursorChanged();
 
+	if(Inside && MouseButtonClicked(0) && pLineInput->IsActive() && (Input()->HasComposition() || Input()->GetCandidateCount()))
+	{
+		// 多行输入与单行输入使用相同的点击取消时机。
+		Input()->StopTextInput();
+		Input()->StartTextInput();
+	}
 	bool JustGotActive = false;
 	if(CheckActiveItem(pLineInput))
 	{
-		if(MouseButton(0))
-		{
-			if(pLineInput->IsActive() && (Input()->HasComposition() || Input()->GetCandidateCount()))
-			{
-				Input()->StopTextInput();
-				Input()->StartTextInput();
-			}
-		}
-		else
+		if(!MouseButton(0))
 		{
 			SetActiveItem(nullptr);
 		}
@@ -2043,9 +2410,40 @@ bool CUi::DoEditBoxMultiLine(CLineInput *pLineInput, const CUIRect *pRect, float
 
 	if(RenderOptions.m_DrawBackground)
 		DrawRoundedSurface(this, *pRect, ResolveConfiguredInputSurface(), ColorRGBA(), ui_token::radius::TIGHT);
+	// 可视带保持排版区本身，滚动只移动带内的文字，不移动带的边界。
+	// 纵向偏移由 CLineInput::Render 自己应用（它决定文字排版起点），这里不能再平移一次。
+	const CUIRect VisibleBand = Textbox;
+	float ScrollOffsetY = pLineInput->GetScrollOffsetY();
+	float ScrollOffsetYChange = pLineInput->GetScrollOffsetYChange();
 	ClipEnable(pRect);
-	pLineInput->Render(&Textbox, FontSize, TextAlign, Changed || CursorChanged, LineWidth, LineSpacing, {}, PreLayoutInput() ? CLineInput::ERenderMode::GEOMETRY : CLineInput::ERenderMode::DRAW);
+	const STextBoundingBox BoundingBox = pLineInput->Render(&Textbox, FontSize, TextAlign, Changed || CursorChanged, LineWidth, LineSpacing, {}, PreLayoutInput() ? CLineInput::ERenderMode::GEOMETRY : CLineInput::ERenderMode::DRAW);
 	ClipDisable();
+
+	// 滚动到光标：沿用单行输入「本帧定位、平滑逼近」的做法。只有光标真的离开
+	// 可视带才追加位移，否则每敲一个字都会把整段文本顶到最上面。
+	if(Active && !JustGotActive && (Changed || CursorChanged || Input()->HasComposition()))
+	{
+		const float CaretBand = std::max(FontSize, LineSpacing);
+		const float CaretTop = pLineInput->GetCaretPosition().y;
+		const float CaretBottom = CaretTop + CaretBand;
+		if(CaretTop < VisibleBand.y)
+			ScrollOffsetYChange += CaretTop - VisibleBand.y;
+		else if(CaretBottom > VisibleBand.y + VisibleBand.h)
+			ScrollOffsetYChange += CaretBottom - (VisibleBand.y + VisibleBand.h);
+	}
+	// 滚轮：固定高度的多行输入框没有外层滚动区可借，滚轮必须自己消费，
+	// 否则回顾上文只能靠光标跟随被动移动，往上翻根本没人接手。
+	if(!MeasurementOnly() && Active)
+	{
+		const bool ContentOverflows = BoundingBox.m_H > VisibleBand.h;
+		RegisterWheelOwner(pLineInput, EUiWheelOwnerPriority::POPUP, VisibleBand, ContentOverflows);
+		float WheelDelta = 0.0f;
+		if(ContentOverflows && TryConsumeWheel(pLineInput, &WheelDelta))
+			ScrollOffsetYChange += WheelDelta * FontSize * 1.5f;
+	}
+	DoSmoothScrollLogic(&ScrollOffsetY, &ScrollOffsetYChange, VisibleBand.h, BoundingBox.m_H, true);
+	pLineInput->SetScrollOffsetY(ScrollOffsetY);
+	pLineInput->SetScrollOffsetYChange(ScrollOffsetYChange);
 
 	pLineInput->SetScrollOffset(0.0f);
 	pLineInput->SetScrollOffsetChange(0.0f);
@@ -2434,6 +2832,10 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 		}
 	};
 
+	if(m_DirectTouchInput && Inside && (MouseButtonClicked(0) || MouseButtonClicked(1)))
+		m_pHotItem = pId;
+	if(Props.m_UseScroll)
+		CaptureTouchDrag(pId, pRect);
 	if(CheckActiveItem(pId))
 	{
 		if(m_ActiveValueSelectorState.m_Button < 0)
@@ -2509,7 +2911,7 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 		m_ActiveValueSelectorState.m_NumberInput.Render(&Textbox, EditFontSize, Props.m_TextAlign, false, -1.0f, 0.0f, {});
 		TextRender()->TextColor(PreviousTextColor);
 
-		if(Input()->KeyPress(KEY_RETURN) || Input()->KeyPress(KEY_KP_ENTER) || ConsumeHotkey(HOTKEY_ENTER) || ((MouseButtonClicked(1) || MouseButtonClicked(0)) && !Inside))
+		if(ConsumeHotkey(HOTKEY_ENTER) || ((MouseButtonClicked(1) || MouseButtonClicked(0)) && !Inside))
 		{
 			int64_t ParsedValue = 0;
 			if(Props.m_pfnParseValue != nullptr)
@@ -2616,6 +3018,11 @@ float CUi::DoScrollbarV(const void *pId, const CUIRect *pRect, float Current)
 	const bool InsideRail = MouseHovered(&Rail);
 	const bool InsideHandle = MouseHovered(&Handle);
 	bool Grabbed = false; // whether to apply the offset
+	if(CaptureTouchDrag(pId, &Rail) && !IsActiveItem(pId))
+	{
+		SetActiveItem(pId);
+		m_ActiveScrollbarOffset = InsideHandle ? MouseY() - Handle.y : Handle.h / 2.0f;
+	}
 
 	if(CheckActiveItem(pId))
 	{
@@ -2744,6 +3151,12 @@ float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, co
 	const bool InsideRail = MouseHovered(&Rail);
 	const bool InsideHandle = MouseHovered(&HandleArea);
 	bool Grabbed = false;
+	if(CaptureTouchDrag(pId, &Rail) && !IsActiveItem(pId))
+	{
+		SetActiveItem(pId);
+		m_pLastActiveScrollbar = pId;
+		m_ActiveScrollbarOffset = InsideHandle ? MouseX() - Handle.x : Handle.w / 2.0f;
+	}
 	if(CheckActiveItem(pId))
 	{
 		if(MouseButton(0))

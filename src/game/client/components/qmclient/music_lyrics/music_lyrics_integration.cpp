@@ -443,3 +443,15 @@ bool CMusicLyricsIntegration::RunKugouSetup(bool Restore)
 	m_pImpl->m_SetupError = m_pImpl->m_Provider.GetStatus(aError, sizeof(aError)) ? aError : "无法启动酷狗接入程序，请检查 qm-music-helper.exe";
 	return false;
 }
+
+QmMusicLyrics::SSourceSnapshot CMusicLyricsIntegration::LyricsSnapshot() const
+{
+	if(!m_pImpl->m_HasSong || !m_pImpl->m_HasLyrics)
+		return {};
+	const auto Selected = (m_pImpl->m_Source == 2 || m_pImpl->m_Source == 3) ?
+		NeteaseLyrics::SelectLatestStartedLine(m_pImpl->m_Lyrics.m_Timeline, m_pImpl->m_PositionMs) :
+		NeteaseLyrics::SelectCurrentLine(m_pImpl->m_Lyrics.m_Timeline, m_pImpl->m_PositionMs);
+	return {m_pImpl->m_SongId, m_pImpl->m_LoadedGeneration, m_pImpl->m_SongProcessId,
+		m_pImpl->m_ActiveLyrics, &m_pImpl->m_Lyrics, m_pImpl->m_CurrentLyric,
+		m_pImpl->m_PositionValid ? QmMusicLyrics::TranslationAt(m_pImpl->m_Lyrics, Selected.m_Index) : std::string_view()};
+}

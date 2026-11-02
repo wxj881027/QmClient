@@ -897,12 +897,8 @@ static LONG WINAPI FallbackUnhandledExceptionFilter(EXCEPTION_POINTERS *pExcepti
 {
 	HandleFatalCrash("Unhandled structured exception", pExceptionPointers, 0);
 	LaunchFatalCrashReporter();
-	if(gs_pPreviousUnhandledExceptionFilter != nullptr && gs_pPreviousUnhandledExceptionFilter != FallbackUnhandledExceptionFilter)
-	{
-		const LONG PreviousFilterResult = gs_pPreviousUnhandledExceptionFilter(pExceptionPointers);
-		if(PreviousFilterResult != EXCEPTION_CONTINUE_SEARCH)
-			return PreviousFilterResult;
-	}
+	// 本地报告完成后结束异常处理。继续调用旧处理器会进入 exchndl 的在线符号
+	// 下载，使已经崩溃的主线程再次阻塞并触发误导性的 hang 报告。
 	return EXCEPTION_EXECUTE_HANDLER;
 }
 
@@ -973,9 +969,7 @@ static void InstallFallbackHandlersIfNeeded()
 
 static void InstallUnhandledExceptionFilter()
 {
-	const LPTOP_LEVEL_EXCEPTION_FILTER pPrevious = SetUnhandledExceptionFilter(FallbackUnhandledExceptionFilter);
-	if(pPrevious != FallbackUnhandledExceptionFilter)
-		gs_pPreviousUnhandledExceptionFilter = pPrevious;
+	SetUnhandledExceptionFilter(FallbackUnhandledExceptionFilter);
 }
 
 void crashdump_init_if_available(const char *log_file_path)

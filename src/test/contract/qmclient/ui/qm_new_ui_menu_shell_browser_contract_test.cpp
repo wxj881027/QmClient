@@ -58,7 +58,9 @@ TEST(QmNewUiMenuShellBrowserContract, MapHistoryUsesFullHeightTabbedResponsiveCa
 
 	EXPECT_EQ(RenderFavoriteMaps.find("SplitHistoryPanel"), std::string::npos);
 	EXPECT_EQ(RenderFavoriteMaps.find("SplitHistoryColumns"), std::string::npos);
-	EXPECT_NE(RenderFavoriteMaps.find("s_aFavoriteMapsWorkspaceTabButtons"), std::string::npos);
+	// 页签条已抽成与统计页共用的 DoMapWorkspaceTabs，槽位按钮表挂在它下面。
+	EXPECT_NE(RenderFavoriteMaps.find("DoMapWorkspaceTabs("), std::string::npos);
+	EXPECT_NE(Source.find("s_aFavoriteMapsWorkspaceTabButtons"), std::string::npos);
 	EXPECT_NE(RenderFavoriteMaps.find("QmMapHistoryUi::GridColumns(HistoryPanel.w - QmMapHistoryUi::LIST_SCROLLBAR_WIDTH, CardRowHeight)"), std::string::npos);
 	EXPECT_NE(RenderFavoriteMaps.find("QmMapHistoryUi::StackControls(HistoryPanel.w, Layout.m_ControlHeight)"), std::string::npos);
 	EXPECT_NE(RenderFavoriteMaps.find("s_MapHistoryListBox.SetScrollbarAlwaysReserved(true);"), std::string::npos);

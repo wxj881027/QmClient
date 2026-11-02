@@ -1163,3 +1163,14 @@ TEST(QmCardRegistry, TimeoutDisconnectSearchPointsToControls)
 		}
 	}
 }
+
+TEST(QmCardRegistry, BindOverviewCardRegisteredOnBindPage)
+{
+	const auto &vDefaults = qm_card_registry::Defaults();
+	const auto It = std::find_if(vDefaults.begin(), vDefaults.end(), [](const qm_card_registry::SCardDefault &Entry) { return str_comp(Entry.m_pStableId, "qm:bind_overview") == 0; });
+	ASSERT_NE(It, vDefaults.end());
+	EXPECT_EQ(str_comp(It->m_pDefaultTab, "bind"), 0);
+
+	const auto &vBindCards = qm_card_catalog::BindCardStableIds();
+	EXPECT_TRUE(std::any_of(vBindCards.begin(), vBindCards.end(), [](const char *pStableId) { return str_comp(pStableId, "qm:bind_overview") == 0; }));
+}

@@ -1,110 +1,48 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_SCREENSHOT_VIEWER_VIEWPORT_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_SCREENSHOT_VIEWER_VIEWPORT_H
 
-#include <algorithm>
+#include <game/client/QmUi/QmImageView.h>
+
 #include <cmath>
 
-// 独立看图窗口的视口；坐标使用渲染像素，100% 时一个图片像素对应一个屏幕像素。
+// 独立看图窗口的视口：保留原有类名和调用方式，几何与采样策略已并入共享的 CQmImageView。
+// 新代码直接用 CQmImageView；这里只维持既有公开 API（含 12 项视口单测）不变。
 class CQmScreenshotViewerViewport
 {
 public:
-	struct SRect
-	{
-		float m_X;
-		float m_Y;
-		float m_Width;
-		float m_Height;
-	};
+	// 旧类型名继续可用：现有调用点按 SRect 读取图片矩形。
+	using SRect = CQmImageView::SRect;
+
+	void SetImageSize(int Width, int Height) { m_View.SetImageSize(Width, Height); }
+	void Resize(int Width, int Height) { m_View.SetViewportSize(Width, Height); }
+	void Fit() { m_View.Fit(); }
+	void ActualSize() { m_View.ActualSize(); }
+	void ToggleFit() { m_View.ToggleFit(); }
+	void ZoomAt(float Factor, float X, float Y) { m_View.ZoomAt(Factor, X, Y); }
+	void Pan(float X, float Y) { m_View.Pan(X, Y); }
+	float Scale() const { return m_View.Scale(); }
+	SRect ImageRect() const { return m_View.ImageRect(); }
 
 private:
-	int m_ImageWidth = 0;
-	int m_ImageHeight = 0;
-	int m_Width = 0;
-	int m_Height = 0;
-	float m_Scale = 1.0f;
-	float m_OffsetX = 0.0f;
-	float m_OffsetY = 0.0f;
-	bool m_Fit = true;
-
-	bool Valid() const { return m_ImageWidth > 0 && m_ImageHeight > 0 && m_Width > 0 && m_Height > 0; }
-	float FitScale() const
-	{
-		return Valid() ? std::min({1.0f, (float)m_Width / m_ImageWidth, (float)m_Height / m_ImageHeight}) : 1.0f;
-	}
-	void ClampOffsets()
-	{
-		const float MaxX = std::max(0.0f, (m_ImageWidth * m_Scale - m_Width) * 0.5f);
-		const float MaxY = std::max(0.0f, (m_ImageHeight * m_Scale - m_Height) * 0.5f);
-		m_OffsetX = std::clamp(m_OffsetX, -MaxX, MaxX);
-		m_OffsetY = std::clamp(m_OffsetY, -MaxY, MaxY);
-	}
-
-public:
-	void SetImageSize(int Width, int Height)
-	{
-		m_ImageWidth = std::max(0, Width);
-		m_ImageHeight = std::max(0, Height);
-		Fit();
-	}
-	void Resize(int Width, int Height)
-	{
-		m_Width = std::max(0, Width);
-		m_Height = std::max(0, Height);
-		if(m_Fit)
-			Fit();
-		else
-			ClampOffsets();
-	}
-	void Fit()
-	{
-		m_Fit = true;
-		m_Scale = FitScale();
-		m_OffsetX = m_OffsetY = 0.0f;
-	}
-	void ActualSize()
-	{
-		m_Fit = false;
-		m_Scale = 1.0f;
-		m_OffsetX = m_OffsetY = 0.0f;
-	}
-	void ToggleFit()
-	{
-		if(m_Fit)
-			ActualSize();
-		else
-			Fit();
-	}
-	void ZoomAt(float Factor, float X, float Y)
-	{
-		if(!Valid() || !std::isfinite(Factor) || Factor <= 0.0f || !std::isfinite(X) || !std::isfinite(Y))
-			return;
-		const float Scale = std::clamp(m_Scale * Factor, std::min(0.01f, FitScale()), 32.0f);
-		if(Scale == m_Scale)
-			return;
-		const float Ratio = Scale / m_Scale;
-		m_OffsetX = (X - m_Width * 0.5f) * (1.0f - Ratio) + m_OffsetX * Ratio;
-		m_OffsetY = (Y - m_Height * 0.5f) * (1.0f - Ratio) + m_OffsetY * Ratio;
-		m_Scale = Scale;
-		m_Fit = false;
-		ClampOffsets();
-	}
-	void Pan(float X, float Y)
-	{
-		if(!Valid() || !std::isfinite(X) || !std::isfinite(Y))
-			return;
-		m_OffsetX += X;
-		m_OffsetY += Y;
-		ClampOffsets();
-	}
-	float Scale() const { return m_Scale; }
-	SRect ImageRect() const
-	{
-		if(!Valid())
-			return {};
-		const float Width = m_ImageWidth * m_Scale;
-		const float Height = m_ImageHeight * m_Scale;
-		return {(m_Width - Width) * 0.5f + m_OffsetX, (m_Height - Height) * 0.5f + m_OffsetY, Width, Height};
-	}
+	CQmImageView m_View;
 };
+
+namespace qm_screenshot_viewer
+{
+	// 圆角裁剪的内缩量：Row 是距矩形上（或下）边缘的纵向偏移，
+	// 返回该行在圆角内需要从左右各切掉多少像素。
+	// 抽成纯函数是为了让「圆角是不是真的收圆」能被单测覆盖——
+	// 看图窗口是独立进程，抓图不可靠，不能只靠肉眼。
+	inline float RoundedCornerInset(float Radius, float Row)
+	{
+		if(Radius <= 0.0f || Row >= Radius)
+			return 0.0f;
+		const float Dy = Radius - Row;
+		const float dx2 = Radius * Radius - Dy * Dy;
+		if(dx2 <= 0.0f)
+			return Radius;
+		return Radius - std::sqrt(dx2);
+	}
+}
 
 #endif

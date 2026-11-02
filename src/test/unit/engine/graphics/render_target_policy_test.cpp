@@ -72,3 +72,31 @@ TEST(GraphicsRenderTarget, CommandConstructorsSelectTheirDispatcherOpcodes)
 	EXPECT_EQ(CCommandBuffer::SCommand_RenderTarget_Readback().m_Cmd, CCommandBuffer::CMD_RENDER_TARGET_READBACK);
 	EXPECT_EQ(CCommandBuffer::SCommand_RenderTarget_GaussianBlurPass().m_Cmd, CCommandBuffer::CMD_RENDER_TARGET_GAUSSIAN_BLUR_PASS);
 }
+
+TEST(GraphicsRenderTarget, OpenGlPreviewSamplesTheTopAtVOne)
+{
+	for(const auto Backend : {BACKEND_TYPE_OPENGL, BACKEND_TYPE_OPENGL_ES})
+	{
+		SCOPED_TRACE(Backend);
+		IGraphics::SRenderTargetDrawParams Params;
+		Params.SetNativeTextureCoordinates(Backend);
+		EXPECT_FLOAT_EQ(Params.m_U0, 0.0f);
+		EXPECT_FLOAT_EQ(Params.m_U1, 1.0f);
+		EXPECT_FLOAT_EQ(Params.m_V0, 1.0f);
+		EXPECT_FLOAT_EQ(Params.m_V1, 0.0f);
+	}
+}
+
+TEST(GraphicsRenderTarget, VulkanAndMetalPreviewSampleTheTopAtVZero)
+{
+	for(const auto Backend : {BACKEND_TYPE_VULKAN, BACKEND_TYPE_METAL})
+	{
+		SCOPED_TRACE(Backend);
+		IGraphics::SRenderTargetDrawParams Params;
+		Params.SetNativeTextureCoordinates(Backend);
+		EXPECT_FLOAT_EQ(Params.m_U0, 0.0f);
+		EXPECT_FLOAT_EQ(Params.m_U1, 1.0f);
+		EXPECT_FLOAT_EQ(Params.m_V0, 0.0f);
+		EXPECT_FLOAT_EQ(Params.m_V1, 1.0f);
+	}
+}

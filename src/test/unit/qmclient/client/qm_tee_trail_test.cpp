@@ -117,6 +117,27 @@ namespace
 		return Area;
 	}
 
+	// 全部程序化艺术样式：通用约束（混合批次、上限、透明度）用它统一覆盖新增样式。
+	constexpr int s_aStyledTrailStyles[] = {
+		qm_tee_trail::STYLE_MANGA,
+		qm_tee_trail::STYLE_MAGIC,
+		qm_tee_trail::STYLE_PIXEL,
+		qm_tee_trail::STYLE_AURORA,
+		qm_tee_trail::STYLE_INK,
+		qm_tee_trail::STYLE_IGNIS,
+		qm_tee_trail::STYLE_STARDUST,
+		qm_tee_trail::STYLE_BLACKFLASH,
+	};
+
+	// 与旧样式分开的专项集合：只覆盖本次新增的五款，避免把旧样式的历史行为混进来。
+	constexpr int s_aNewArtStyles[] = {
+		qm_tee_trail::STYLE_AURORA,
+		qm_tee_trail::STYLE_INK,
+		qm_tee_trail::STYLE_IGNIS,
+		qm_tee_trail::STYLE_STARDUST,
+		qm_tee_trail::STYLE_BLACKFLASH,
+	};
+
 } // namespace
 
 TEST(QmTeeTrailStyle, UnknownStyleValuesFallBackToOriginal)
@@ -125,8 +146,19 @@ TEST(QmTeeTrailStyle, UnknownStyleValuesFallBackToOriginal)
 	EXPECT_EQ(qm_tee_trail::ResolveStyle(qm_tee_trail::STYLE_PIXEL), qm_tee_trail::STYLE_PIXEL);
 	// 配置里可能残留越界或负数：必须退回原版，而不是索引到样式表之外。
 	EXPECT_EQ(qm_tee_trail::ResolveStyle(-1), qm_tee_trail::STYLE_ORIGINAL);
-	EXPECT_EQ(qm_tee_trail::ResolveStyle(6), qm_tee_trail::STYLE_ORIGINAL);
+	EXPECT_EQ(qm_tee_trail::ResolveStyle(qm_tee_trail::STYLE_COUNT), qm_tee_trail::STYLE_ORIGINAL);
 	EXPECT_EQ(qm_tee_trail::ResolveStyle(99), qm_tee_trail::STYLE_ORIGINAL);
+}
+
+TEST(QmTeeTrailStyle, ArtStylesKeepTheirConfiguredNumbers)
+{
+	// 新艺术样式的编号由已保存配置使用：只允许追加，不允许重排或复用。
+	EXPECT_EQ(qm_tee_trail::ResolveStyle(6), qm_tee_trail::STYLE_AURORA);
+	EXPECT_EQ(qm_tee_trail::ResolveStyle(7), qm_tee_trail::STYLE_INK);
+	EXPECT_EQ(qm_tee_trail::ResolveStyle(8), qm_tee_trail::STYLE_IGNIS);
+	EXPECT_EQ(qm_tee_trail::ResolveStyle(9), qm_tee_trail::STYLE_STARDUST);
+	EXPECT_EQ(qm_tee_trail::ResolveStyle(10), qm_tee_trail::STYLE_BLACKFLASH);
+	EXPECT_EQ(qm_tee_trail::STYLE_COUNT, 11);
 }
 
 TEST(QmTeeTrailStyle, LifetimeClampsLengthAndGrowsWithSpeed)
@@ -240,7 +272,7 @@ TEST(QmTeeTrailBuild, PresetPaletteAndTrailColorsDiffer)
 TEST(QmTeeTrailBuild, StyledEffectsBatchNormalLayersBeforeAdditiveAccents)
 {
 	const std::vector<CTrailPart> vTrail = MakeTrail();
-	for(const int Style : {qm_tee_trail::STYLE_MANGA, qm_tee_trail::STYLE_MAGIC, qm_tee_trail::STYLE_PIXEL})
+	for(const int Style : s_aStyledTrailStyles)
 	{
 		std::vector<qm_tee_trail::SQuad> vQuads;
 		qm_tee_trail::BuildEffect(vTrail, Style, true, 40.0, 12.0f, 9, vQuads);
@@ -277,7 +309,7 @@ TEST(QmTeeTrailBuild, SeparatedSegmentsKeepAllBodiesBeforeTheGlow)
 		vTrail[i].m_Segment = 1;
 		vTrail[i].m_Pos.x += 1000.0f;
 	}
-	for(const int Style : {qm_tee_trail::STYLE_MANGA, qm_tee_trail::STYLE_MAGIC, qm_tee_trail::STYLE_PIXEL})
+	for(const int Style : s_aStyledTrailStyles)
 	{
 		std::vector<qm_tee_trail::SQuad> vQuads;
 		qm_tee_trail::BuildEffect(vTrail, Style, true, 40.0, 12.0f, 9, vQuads);
@@ -1092,7 +1124,7 @@ TEST(QmTeeTrailBuild, SamplingRateDoesNotReseedStyledGeometry)
 {
 	const auto vSlow = SampleMovement(1);
 	const auto vFast = SampleMovement(4);
-	for(const int Style : {qm_tee_trail::STYLE_MANGA, qm_tee_trail::STYLE_MAGIC, qm_tee_trail::STYLE_PIXEL})
+	for(const int Style : s_aStyledTrailStyles)
 	{
 		std::vector<qm_tee_trail::SQuad> vA, vB;
 		qm_tee_trail::BuildEffect(vSlow, Style, true, 40.0, 12.0f, 9, vA);
@@ -1105,6 +1137,121 @@ TEST(QmTeeTrailBuild, SamplingRateDoesNotReseedStyledGeometry)
 				EXPECT_NEAR(vA[i].m_aPos[Vertex].x, vB[i].m_aPos[Vertex].x, 0.002f) << Style;
 				EXPECT_NEAR(vA[i].m_aPos[Vertex].y, vB[i].m_aPos[Vertex].y, 0.002f) << Style;
 				EXPECT_NEAR(vA[i].m_aColor[Vertex].a, vB[i].m_aColor[Vertex].a, 0.0001f) << Style;
+			}
+	}
+}
+
+// 新增五款艺术样式的专项行为：几何差异、确定性与预算边界。
+// 混合批次、透明度开关与上限等通用约束由 QmTeeTrailBuild 的样式循环覆盖。
+TEST(QmTeeTrailArtStyles, EveryArtStyleIsWiredToItsOwnGeometry)
+{
+	const std::vector<CTrailPart> vTrail = MakeTrail();
+	std::vector<std::vector<qm_tee_trail::SQuad>> vvGeometries;
+	for(const int Style : s_aNewArtStyles)
+	{
+		std::vector<qm_tee_trail::SQuad> vQuads;
+		qm_tee_trail::BuildEffect(vTrail, Style, true, 40.0, 12.0f, 9, vQuads);
+		ASSERT_FALSE(vQuads.empty()) << "style " << Style;
+		EXPECT_TRUE(AllFinite(vQuads)) << "style " << Style;
+		EXPECT_LE(vQuads.size(), qm_tee_trail::MAX_QUADS) << "style " << Style;
+		vvGeometries.push_back(vQuads);
+	}
+	// 调度分支接错或两个样式文件写了同一实现时，几何会逐四边形完全一致。
+	for(size_t i = 0; i < vvGeometries.size(); ++i)
+		for(size_t j = i + 1; j < vvGeometries.size(); ++j)
+		{
+			bool Same = vvGeometries[i].size() == vvGeometries[j].size();
+			for(size_t k = 0; Same && k < vvGeometries[i].size(); ++k)
+				Same = SameQuad(vvGeometries[i][k], vvGeometries[j][k]);
+			EXPECT_FALSE(Same) << "style " << s_aNewArtStyles[i] << " and " << s_aNewArtStyles[j];
+		}
+}
+
+TEST(QmTeeTrailArtStyles, EveryArtStyleRepeatsExactlyForTheSameInputAndSeed)
+{
+	const std::vector<CTrailPart> vTrail = MakeTrail();
+	for(const int Style : s_aNewArtStyles)
+	{
+		std::vector<qm_tee_trail::SQuad> vFirst, vSecond;
+		qm_tee_trail::BuildEffect(vTrail, Style, false, 40.0, 12.0f, 77, vFirst);
+		qm_tee_trail::BuildEffect(vTrail, Style, false, 40.0, 12.0f, 77, vSecond);
+		ASSERT_FALSE(vFirst.empty()) << "style " << Style;
+		ASSERT_EQ(vFirst.size(), vSecond.size()) << "style " << Style;
+		for(size_t i = 0; i < vFirst.size(); ++i)
+			EXPECT_TRUE(SameQuad(vFirst[i], vSecond[i])) << "style " << Style << " quad " << i;
+	}
+}
+
+TEST(QmTeeTrailArtStyles, SourceOpacityScalesEveryArtStyle)
+{
+	const std::vector<CTrailPart> vTrail = MakeTrail();
+	for(const int Style : s_aNewArtStyles)
+	{
+		std::vector<qm_tee_trail::SQuad> vOpaque, vFaint;
+		qm_tee_trail::BuildEffect(vTrail, Style, true, 40.0, 12.0f, 9, vOpaque);
+		auto vFaintTrail = vTrail;
+		for(auto &Part : vFaintTrail)
+			Part.m_Col.a *= 0.5f;
+		qm_tee_trail::BuildEffect(vFaintTrail, Style, true, 40.0, 12.0f, 9, vFaint);
+		ASSERT_FALSE(vOpaque.empty()) << "style " << Style;
+		// 源透明度必须线性进入每个顶点，否则地图上的"拖尾透明度"设置对这款样式无效。
+		EXPECT_GT(WeightedArea(vFaint), 0.0) << "style " << Style;
+		EXPECT_LT(WeightedArea(vFaint), WeightedArea(vOpaque)) << "style " << Style;
+	}
+}
+
+TEST(QmTeeTrailArtStyles, FullHistoryAndSharpReversalsStayWithinBudget)
+{
+	auto vTrail = MakeTrail(qm_tee_trail::MAX_POINTS + 1, 250.0);
+	for(size_t i = 0; i < vTrail.size(); ++i)
+	{
+		const float Along = float(i) * 6.0f;
+		vTrail[i].m_Pos = vec2(Along, (i % 2 == 0 ? 1.0f : -1.0f) * float(i % 7) * 12.0f);
+		vTrail[i].m_Distance = double(vTrail.size() - 1 - i) * 6.0;
+		vTrail[i].m_Time = 250.0 - double(i) * 0.1;
+		vTrail[i].m_Life = 300.0f;
+		vTrail[i].m_Speed = 30.0f;
+	}
+	for(const int Style : s_aNewArtStyles)
+		for(const float Width : {0.0f, 20.0f})
+			for(const float PixelSize : {0.025f, 1.0f})
+			{
+				std::vector<qm_tee_trail::SQuad> vQuads;
+				qm_tee_trail::BuildEffect(vTrail, Style, true, 250.0, Width, 9, vQuads, PixelSize);
+				EXPECT_FALSE(vQuads.empty()) << "style " << Style;
+				EXPECT_TRUE(AllFinite(vQuads)) << "style " << Style;
+				EXPECT_LE(vQuads.size(), qm_tee_trail::MAX_QUADS) << "style " << Style;
+				// 新样式不得依赖"逼近上限再被静默截断"来收尾，尾部必须确实被画出来。
+				EXPECT_LE(vQuads.size(), 3600u) << "style " << Style;
+			}
+}
+
+TEST(QmTeeTrailArtStyles, DecorationGeometryStaysNearTheTrail)
+{
+	const std::vector<CTrailPart> vTrail = MakeTrail();
+	float MinX = vTrail[0].m_Pos.x, MaxX = MinX;
+	float MinY = vTrail[0].m_Pos.y, MaxY = MinY;
+	for(const auto &Part : vTrail)
+	{
+		MinX = std::min(MinX, Part.m_Pos.x);
+		MaxX = std::max(MaxX, Part.m_Pos.x);
+		MinY = std::min(MinY, Part.m_Pos.y);
+		MaxY = std::max(MaxY, Part.m_Pos.y);
+	}
+	// 装饰可以有外扩（火焰、闪电、碎片），但必须锚在轨迹附近而不是漂到极远处。
+	constexpr float Margin = 220.0f;
+	for(const int Style : s_aNewArtStyles)
+	{
+		std::vector<qm_tee_trail::SQuad> vQuads;
+		qm_tee_trail::BuildEffect(vTrail, Style, true, 40.0, 20.0f, 9, vQuads);
+		ASSERT_FALSE(vQuads.empty()) << "style " << Style;
+		for(const auto &Quad : vQuads)
+			for(const auto &Pos : Quad.m_aPos)
+			{
+				EXPECT_GE(Pos.x, MinX - Margin) << "style " << Style;
+				EXPECT_LE(Pos.x, MaxX + Margin) << "style " << Style;
+				EXPECT_GE(Pos.y, MinY - Margin) << "style " << Style;
+				EXPECT_LE(Pos.y, MaxY + Margin) << "style " << Style;
 			}
 	}
 }

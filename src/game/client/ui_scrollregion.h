@@ -30,6 +30,8 @@ struct CScrollRegionParams
 	float m_ScrollbarThickness;
 	float m_ScrollbarMargin;
 	bool m_ScrollbarAlwaysReserved;
+	// 滚动条出现/消失时让内容宽度随占位一起过渡，避免列表卡片硬跳。
+	bool m_AnimateScrollbarReserve;
 	bool m_ScrollbarNoOuterMargin;
 	float m_SliderMinSize;
 	float m_ScrollUnit;
@@ -71,7 +73,11 @@ inline CScrollRegionParams QmScrollRegionParamsForSize(EQmScrollSize Size, float
 	Params.m_ScrollbarThickness = Style.m_ScrollbarWidth;
 	Params.m_ScrollbarMargin = Style.m_ScrollbarMargin;
 	Params.m_SliderMinSize = Style.m_MinThumbHeight;
-	Params.m_ScrollUnit = Config.m_WheelScale;
+	// 整面板级滚动面（wiki 弹窗、统计页、音频包编辑器、控制台卡等）与设置主区
+	// 同口径：每档 = qm_ui_scroll_step × QmPanelWheelStepMultiplier()。此前直接
+	// 取 step 基准值（默认 10px），只有设置页的 1/12，二级面板的滚轮手感因此
+	// 明显脱节。
+	Params.m_ScrollUnit = Config.m_WheelScale * QmPanelWheelStepMultiplier();
 	Params.m_ScrollHorizontal = Axis == EQmScrollAxis::HORIZONTAL;
 	return Params;
 }
@@ -96,6 +102,7 @@ inline CScrollRegionParams::CScrollRegionParams()
 	m_ScrollbarThickness = Style.m_ScrollbarWidth;
 	m_ScrollbarMargin = Style.m_ScrollbarMargin;
 	m_ScrollbarAlwaysReserved = false;
+	m_AnimateScrollbarReserve = false;
 	m_ScrollbarNoOuterMargin = false;
 	m_SliderMinSize = 25.0f;
 	m_ScrollUnit = Config.m_WheelScale;
@@ -192,6 +199,8 @@ private:
 
 	CUIRect m_ClipRect;
 	CUIRect m_RailRect;
+	float m_ScrollbarReserveWidth;
+	bool m_ScrollbarReserveInitialized;
 	CUIRect m_LastAddedRect; // saved for ScrollHere()
 	char m_SliderId = 0;
 	CScrollRegionParams m_Params;

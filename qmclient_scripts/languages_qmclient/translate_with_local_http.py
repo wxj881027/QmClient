@@ -144,6 +144,7 @@ SAME_SOURCE_ALLOWED_BY_LANGUAGE = {
         "Visual",
         "z = Zoom",
         "Clan: %s",
+        "Poses",
     },
     "french": {
         " min",
@@ -205,6 +206,7 @@ SAME_SOURCE_ALLOWED_BY_LANGUAGE = {
         "Rectangle",
         "solo",
         "z = Zoom",
+        "Poses",
     },
     "brazilian_portuguese": {
         " min",
@@ -250,6 +252,7 @@ SAME_SOURCE_ALLOWED_BY_LANGUAGE = {
         "Ohhhhhhhhhhhhhhhh",
         "tile",
         "z = Zoom",
+        "Poses",
     },
     "portuguese": {
         " min",
@@ -295,6 +298,7 @@ SAME_SOURCE_ALLOWED_BY_LANGUAGE = {
         "Ohhhhhhhhhhhhhhhh",
         "tile",
         "z = Zoom",
+        "Poses",
     },
     "turkish": {
         "Dummy",

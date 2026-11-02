@@ -107,4 +107,22 @@ TEST(QmMediaPaths, DriveRelativeDirectoryIsRejected)
 	EXPECT_TRUE(qmclient::media_paths::Resolve(nullptr, Config, "demos/run.demo").empty());
 	EXPECT_STREQ(Config.m_QmDemoDirectory, "D:captures");
 }
+
+TEST(QmMediaPaths, RenameTargetKeepsSupportedExtension)
+{
+	using qmclient::media_paths::RenameTargetName;
+	// 新名字以 "demo" 结尾时不能被判成「已有扩展名」，否则产物没有 .demo，
+	// 会被演示浏览器的扩展名过滤挡掉（重命名后从列表消失）。
+	EXPECT_EQ(RenameTargetName("q出场demo", "Lost Story 2_2026-10-08_demo.demo", false), "q出场demo.demo");
+	// 补扩展名时点号不能丢。
+	EXPECT_EQ(RenameTargetName("abc", "Foo.demo", false), "abc.demo");
+	EXPECT_EQ(RenameTargetName("abc.DEMO", "Foo.demo", false), "abc.DEMO");
+	EXPECT_EQ(RenameTargetName("abc.demo.demo", "Foo.demo", false), "abc.demo.demo");
+	// 已经被旧逻辑改成无扩展名的文件，再改名时能补回来。
+	EXPECT_EQ(RenameTargetName("q出场demo", "Lost Story 2_2026-10-08_demo", false), "q出场demo.demo");
+	EXPECT_EQ(RenameTargetName("abc", "run.poses", false), "abc.poses");
+	EXPECT_EQ(RenameTargetName("abc", "shot.png", true), "abc.png");
+	EXPECT_EQ(RenameTargetName("abc", "no_ext", true), "abc.png");
+	EXPECT_EQ(RenameTargetName("", "Foo.demo", false), "");
+}
 #endif

@@ -220,6 +220,7 @@ bool CGameWorld::TrySetSwitchState(int Number, int Team, int Type, int Delay)
 
 void CGameWorld::Tick()
 {
+	CQmAxiomQuadTimeScope QuadTime(m_pCollision, GameTick(), GameTickSpeed());
 	// update all objects
 	for(int i = 0; i < NUM_ENTTYPES; i++)
 	{

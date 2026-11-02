@@ -601,6 +601,22 @@ public:
 	void PrewarmByNames(const std::vector<std::string> &vNames, bool Immediate = false);
 	bool PrewarmPlayerPreviewReady(int Dummy, int MaxEntries, bool ProgressiveListReady = false);
 
+	// 合影准备度：合成快照引用的皮肤是否都已可绘制。
+	// 合影会话没有 demo 播放，皮肤只能靠这里主动预热；否则预览时还在
+	// PENDING 的社区皮肤会让 CPlayers 回退 default，成片与预览对不上。
+	// 返回 true 表示全部就绪（或已确定不可用），调用方可以开拍。
+	bool PoseSkinsReady(const std::vector<std::string> &vNames, std::string *pOutPendingName = nullptr);
+
+	// 某个容器状态是否算"等下去也没意义"：ERROR/NOT_FOUND 是终态，
+	// 再等不会变成 LOADED，闸门必须提前放行，否则渲染会被拖到超时。
+	// inline 在头里：testrunner 不编译 skins.cpp，纯判断放在这里才能被单测覆盖。
+	static bool PoseSkinWaitIsFutile(CSkinContainer::EState State)
+	{
+		// PENDING/LOADING/BACKGROUND_REQUESTED 都还会前进，必须继续等；
+		// UNLOADED 会因为下一帧的 RequestLoad 重新进入队列，同样不能提前放行。
+		return State == CSkinContainer::EState::ERROR || State == CSkinContainer::EState::NOT_FOUND;
+	}
+
 	const CSkinContainer *FindContainerOrNullptr(const char *pName, bool RequestLoad = true);
 	const CSkin *FindOrNullptr(const char *pName);
 	const CSkin *Find(const char *pName);

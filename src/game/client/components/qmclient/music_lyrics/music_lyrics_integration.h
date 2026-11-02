@@ -3,6 +3,8 @@
 
 #include "qm_soda_hook_provider.h"
 
+#include "music_lyrics_display.h"
+
 #include <game/client/component.h>
 
 #include <qm/hooks/soda/qm_soda_protocol.h>
@@ -31,6 +33,7 @@ public:
 	bool GetCurrentLyric(char *pBuffer, size_t BufferSize) const;
 	bool HasCurrentLyric() const;
 	bool HasActiveLyrics() const;
+	QmMusicLyrics::SSourceSnapshot LyricsSnapshot() const;
 	// 当前歌曲身份的稳定数字标记；内部切歌以完整文本和版本判断。
 	uint64_t CurrentSongId() const;
 	bool GetStatus(char *pBuffer, size_t BufferSize) const;

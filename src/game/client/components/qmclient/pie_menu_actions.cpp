@@ -53,7 +53,7 @@ void CPieMenu::RequestTargetPoints()
 	{
 		char aMessage[192];
 		str_format(aMessage, sizeof(aMessage), Localize("Querying points for %s..."), m_PointsRequest.Name().c_str());
-		GameClient()->Echo(aMessage, true);
+		GameClient()->Echo(aMessage);
 	}
 }
 
@@ -72,7 +72,7 @@ void CPieMenu::UpdatePointsRequest()
 		str_format(aMessage, sizeof(aMessage), Localize("%s: %d points"), Notification->m_Name.c_str(), Notification->m_Result.m_Points);
 	else
 		str_format(aMessage, sizeof(aMessage), Localize("Could not query points for %s"), Notification->m_Name.c_str());
-	GameClient()->Echo(aMessage, true);
+	GameClient()->Echo(aMessage);
 }
 
 bool CPieMenu::FormatTargetScore(char *pBuffer, size_t BufferSize) const

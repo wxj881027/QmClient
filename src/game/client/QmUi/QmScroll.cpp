@@ -161,9 +161,9 @@ SQmScrollConfig QmNativeWheelScrollConfig(float UiScale, float SmoothScrollTimeS
 SQmScrollConfig QmSettingsScrollConfig(float UiScale, float SmoothScrollTimeSec)
 {
 	SQmScrollConfig Config = QmNativeWheelScrollConfig(UiScale, SmoothScrollTimeSec);
-	// 设置卡片行高远大于普通列表行，每档步距按 12 倍保持与原版相当的单屏节奏。
+	// 设置卡片行高远大于普通列表行，每档按面板级倍率保持与原版相当的单屏节奏。
 	const float StepPixels = g_Config.m_QmUiScrollStep > 0.0f ? static_cast<float>(g_Config.m_QmUiScrollStep) : 10.0f;
-	Config.m_WheelScale = StepPixels * 12.0f;
+	Config.m_WheelScale = StepPixels * QmPanelWheelStepMultiplier();
 	return Config;
 }
 

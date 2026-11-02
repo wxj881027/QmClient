@@ -7,6 +7,7 @@
 
 #include <engine/engine.h>
 
+#include <game/client/QmUi/QmToast.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/client/components/qmclient/screenshot_viewer.h>
 #include <game/client/gameclient.h>
@@ -94,8 +95,9 @@ void CMenus::OpenDemoScreenshotViewer(const CDemoItem &Item)
 	str_format(aPath, sizeof(aPath), "%s/%s", m_aCurrentDemoFolder, Item.m_aFilename);
 	char aFullPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(Item.m_StorageType, aPath, aFullPath, sizeof(aFullPath));
+	// 外部查看器起不来只影响这一次点击，再点一次就是重试：用非阻断失败提示。
 	if(!OpenQmScreenshotViewer(Client(), aFullPath, Localize("Error opening screenshot"), Localize("Unable to open the screenshot file")))
-		PopupMessage(Localize("Error opening screenshot"), Localize("Unable to open the screenshot file"), Localize("Ok"));
+		qm_ui::Toast(EQmToastKind::FAILED, Localize("Unable to open the screenshot file"));
 }
 
 void CMenus::RenderDemoScreenshotWatermarkPreview(CUIRect PreviewRect, const CDemoItem &Item)
@@ -240,7 +242,7 @@ bool CMenus::ApplyDemoScreenshotWatermark(const CDemoItem &Item)
 		pExtension = aTargetPath + str_length(aTargetPath);
 	if(static_cast<size_t>(pExtension - aTargetPath) + str_length("_watermarked.png") >= sizeof(aTargetPath))
 	{
-		PopupMessage(Localize("Screenshot error"), Localize("Unable to save the watermarked screenshot"), Localize("Ok"));
+		qm_ui::Toast(EQmToastKind::FAILED, Localize("Unable to save the watermarked screenshot"));
 		return false;
 	}
 	str_copy(pExtension, "_watermarked.png", sizeof(aTargetPath) - (pExtension - aTargetPath));
@@ -283,10 +285,11 @@ void CMenus::PumpDemoScreenshotWatermark()
 		ResetDemoScreenshotPreview();
 		DemolistPopulate();
 		DemolistOnUpdate(false);
-		PopupMessage(Localize("Screenshot saved"), Localize("The watermarked screenshot was saved next to the original"), Localize("Ok"));
+		// 成功不打断：结果 Toast 只报「存到哪了」，不占焦点。
+		qm_ui::Toast(EQmToastKind::SUCCESS, Localize("The watermarked screenshot was saved next to the original"));
 	}
 	else
-		PopupMessage(Localize("Screenshot error"), Localize("Unable to save the watermarked screenshot"), Localize("Ok"));
+		qm_ui::Toast(EQmToastKind::FAILED, Localize("Unable to save the watermarked screenshot"));
 }
 
 void CMenus::RenderDemoScreenshotGallery(CUIRect ListBox, bool &WasListboxItemActivated)

@@ -31,7 +31,7 @@
 namespace qm_ui_test
 {
 	// 只替换 GPU 提交；文字、控件绘制与公共下拉入口仍执行生产实现。
-	class CRealUiTestGraphics final : public CIconBenchmarkGraphics
+	class CRealUiTestGraphics : public CIconBenchmarkGraphics
 	{
 		std::unordered_map<int, int> m_QuadCounts;
 		CUIRect m_MapRect{0, 0, 1920, 1080};
@@ -39,6 +39,15 @@ namespace qm_ui_test
 	public:
 		std::vector<IGraphics::SRoundedRectSdfParams> m_vRoundedSubmissions;
 		std::vector<CUIRect> m_vRectSubmissions;
+		// 纹理圆角是设备能力；fixture 默认按 CPU 预烘焙回退，保持既有断言不变。
+		bool m_HasSdfTexture = false;
+		struct STextSubmission
+		{
+			CUIRect m_Screen;
+			ColorRGBA m_TextColor;
+			ColorRGBA m_OutlineColor;
+		};
+		std::vector<STextSubmission> m_vTextSubmissions;
 		// 只在设备调用前注入一次失败，文字创建/删除仍由真实引擎执行。
 		bool m_FailBufferObjectCreate = false;
 		bool m_FailBufferContainerCreate = false;
@@ -106,6 +115,7 @@ namespace qm_ui_test
 			if(std::exchange(m_FailTextDraw, false))
 				throw std::bad_alloc();
 			CIconBenchmarkGraphics::RenderText(Container, Quads, TextureSize, Texture, Outline, Color, OutlineColor);
+			m_vTextSubmissions.push_back({m_MapRect, Color, OutlineColor});
 		}
 		int CreateBufferObject(size_t Size, void *pData, int Flags, bool Moved = false) override
 		{
@@ -162,6 +172,7 @@ namespace qm_ui_test
 			m_vRectSubmissions.push_back({X, Y, W, H});
 		}
 		bool HasRoundedRectSdf() override { return true; }
+		bool HasRoundedRectSdfTexture() override { return m_HasSdfTexture; }
 		void DestroyRenderTarget(CRenderTargetHandle *pTarget) override
 		{
 			// 设备接口允许销毁空句柄；这个 fixture 不创建离屏目标。
@@ -314,6 +325,7 @@ namespace qm_ui_test
 		void AdvanceAnimFrame(float Dt = 1.0f / 60.0f) { m_AnimRuntime.Advance(Dt); }
 		virtual IInput *UiInput() { return nullptr; }
 		virtual IClient *UiClient() { return nullptr; }
+		virtual CRealUiTestGraphics *UiGraphics() { return &m_Graphics; }
 
 		void SetUp() override
 		{
@@ -328,16 +340,17 @@ namespace qm_ui_test
 			ASSERT_NE(m_pStorage, nullptr);
 			m_pEngineKernel.reset(IKernel::Create());
 			m_pConsole = CreateConsole(CFGFLAG_CLIENT);
-			m_Graphics.m_pStorage = m_pStorage.get();
+			auto *pGraphics = UiGraphics();
+			pGraphics->m_pStorage = m_pStorage.get();
 			m_pEngineKernel->RegisterInterface<IConsole>(m_pConsole.get(), false);
 			m_pEngineKernel->RegisterInterface<IStorage>(m_pStorage.get(), false);
-			m_pEngineKernel->RegisterInterface<IGraphics>(&m_Graphics, false);
+			m_pEngineKernel->RegisterInterface<IGraphics>(pGraphics, false);
 			m_pText.reset(CreateEngineTextRender());
 			m_pEngineKernel->RegisterInterface<IEngineTextRender>(m_pText.get(), false);
 			ASSERT_TRUE(m_pText->Init());
 			m_TextInitialized = true;
 			ASSERT_TRUE(m_pText->LoadFonts());
-			m_pUiKernel = std::make_unique<CRealUiTestKernel>(&m_Graphics, m_pText.get(), UiInput(), UiClient());
+			m_pUiKernel = std::make_unique<CRealUiTestKernel>(pGraphics, m_pText.get(), UiInput(), UiClient());
 			m_Ui.Init(m_pUiKernel.get());
 			m_Ui.SetQmAnimationRuntime(&m_AnimRuntime);
 			if(auto *pTestClient = dynamic_cast<qm_ui_test::CTestUiClient *>(UiClient()))

@@ -248,6 +248,7 @@ TEST(GraphicsBackendContract, BackendCapabilitiesDefaultToUnsupported)
 	EXPECT_FALSE(Capabilities.m_RenderTargets);
 	EXPECT_FALSE(Capabilities.m_RenderTargetGaussianBlur);
 	EXPECT_FALSE(Capabilities.m_BackbufferCapture);
+	EXPECT_FALSE(Capabilities.m_RenderTargetMSAA);
 	EXPECT_FALSE(Capabilities.m_RenderTargetExternalPassRequiresSingleSample);
 	EXPECT_STREQ(Capabilities.m_pRenderTargetSupportReason, "not_initialized");
 	EXPECT_FALSE(Capabilities.m_TrianglesAsQuads);
@@ -278,6 +279,7 @@ TEST(GraphicsBackendContract, BackendCapabilitiesResetClearsPreviousBackendState
 	Capabilities.m_RenderTargets = true;
 	Capabilities.m_RenderTargetGaussianBlur = true;
 	Capabilities.m_BackbufferCapture = true;
+	Capabilities.m_RenderTargetMSAA = true;
 	Capabilities.m_RenderTargetExternalPassRequiresSingleSample = true;
 	Capabilities.m_pRenderTargetSupportReason = "supported";
 	Capabilities.m_TrianglesAsQuads = true;
@@ -306,6 +308,7 @@ TEST(GraphicsBackendContract, BackendCapabilitiesResetClearsPreviousBackendState
 	EXPECT_FALSE(Capabilities.m_RenderTargets);
 	EXPECT_FALSE(Capabilities.m_RenderTargetGaussianBlur);
 	EXPECT_FALSE(Capabilities.m_BackbufferCapture);
+	EXPECT_FALSE(Capabilities.m_RenderTargetMSAA);
 	EXPECT_FALSE(Capabilities.m_RenderTargetExternalPassRequiresSingleSample);
 	EXPECT_STREQ(Capabilities.m_pRenderTargetSupportReason, "not_initialized");
 	EXPECT_FALSE(Capabilities.m_TrianglesAsQuads);

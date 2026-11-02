@@ -8,6 +8,7 @@
 #include <engine/shared/protocol.h>
 
 #include <map>
+#include <memory>
 #include <vector>
 
 class CTile;
@@ -17,6 +18,7 @@ class CSpeedupTile;
 class CSwitchTile;
 class CTuneTile;
 class CDoorTile;
+class CQmAxiomQuadCollision;
 
 enum
 {
@@ -41,9 +43,13 @@ public:
 	void Unload();
 	void FillAntibot(CAntibotMapData *pMapData) const;
 
-	bool CheckPoint(float x, float y) const { return IsSolid(round_to_int(x), round_to_int(y)); }
+	bool CheckPoint(float x, float y) const { return IsSolid(round_to_int(x), round_to_int(y)) || (m_pQmAxiomQuads && CheckQmAxiomQuadPoint(vec2(x, y))); }
 	bool CheckPoint(vec2 Pos) const { return CheckPoint(Pos.x, Pos.y); }
-	int GetCollisionAt(float x, float y) const { return GetTile(round_to_int(x), round_to_int(y)); }
+	int GetCollisionAt(float x, float y) const
+	{
+		const int Tile = GetTile(round_to_int(x), round_to_int(y));
+		return Tile ? Tile : (m_pQmAxiomQuads ? GetQmAxiomQuadTile(vec2(x, y)) : 0);
+	}
 	int GetWidth() const { return m_Width; }
 	int GetHeight() const { return m_Height; }
 	int IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision) const;
@@ -53,6 +59,19 @@ public:
 	void MoveBox(vec2 *pInoutPos, vec2 *pInoutVel, vec2 Size, vec2 Elasticity, bool *pGrounded = nullptr) const;
 	bool TestBox(vec2 Pos, vec2 Size) const;
 	bool IsOnGround(vec2 Pos, float Size) const;
+
+	void SetQmAxiomQuadCollision(bool Enabled);
+	bool QmAxiomQuadCollisionEnabled() const { return m_pQmAxiomQuads != nullptr; }
+	void SetQmAxiomQuadRoundStartTick(int Tick) { m_QmAxiomRoundStartTick = Tick; }
+	void SetQmAxiomQuadTick(int Tick, int TickSpeed);
+	void SetQmAxiomQuadTime(double Seconds);
+	double QmAxiomQuadTime() const { return m_QmAxiomQuadTime; }
+	int GetQmAxiomQuadTile(vec2 Pos) const;
+	bool HasQmAxiomQuadTile(vec2 Pos, int Tile) const;
+	std::vector<int> GetQmAxiomQuadTiles(vec2 Pos) const;
+	int GetQmAxiomQuadTuneZone(vec2 Pos) const;
+	bool FindQmAxiomHookAnchor(vec2 Pos, int *pQuadIndex, vec2 *pLocalPos) const;
+	bool GetQmAxiomHookAnchor(int QuadIndex, vec2 LocalPos, vec2 *pWorldPos) const;
 
 	// DDRace
 	void SetCollisionAt(float x, float y, int Index);
@@ -148,6 +167,13 @@ public:
 	const std::vector<vec2> &TeleOthers(int Number) { return m_TeleOthers[Number]; }
 
 private:
+	bool CheckQmAxiomQuadPoint(vec2 Pos) const;
+	bool TestTileBox(vec2 Pos, vec2 Size) const;
+	void PushBoxOutsideQmAxiomQuads(vec2 *pPos, vec2 *pVel, vec2 Size, vec2 Elasticity, bool *pGrounded) const;
+	std::unique_ptr<CQmAxiomQuadCollision> m_pQmAxiomQuads;
+	int m_QmAxiomRoundStartTick = 0;
+	double m_QmAxiomQuadTime = 0;
+
 	CLayers *m_pLayers;
 
 	int m_Width;
@@ -173,4 +199,29 @@ private:
 };
 
 void ThroughOffset(vec2 Pos0, vec2 Pos1, int *pOffsetX, int *pOffsetY);
+
+// 各预测世界共用地图碰撞，临时推进结束后恢复调用方的时间。
+class CQmAxiomQuadTimeScope
+{
+	CCollision *m_pCollision;
+	double m_PreviousTime;
+
+public:
+	CQmAxiomQuadTimeScope(CCollision *pCollision, int Tick, int TickSpeed) :
+		m_pCollision(pCollision && pCollision->QmAxiomQuadCollisionEnabled() ? pCollision : nullptr),
+		m_PreviousTime(m_pCollision ? m_pCollision->QmAxiomQuadTime() : 0.0)
+	{
+		if(m_pCollision)
+			m_pCollision->SetQmAxiomQuadTick(Tick, TickSpeed);
+	}
+	CQmAxiomQuadTimeScope(CCollision &Collision, int Tick, int TickSpeed) :
+		CQmAxiomQuadTimeScope(&Collision, Tick, TickSpeed) {}
+	~CQmAxiomQuadTimeScope()
+	{
+		if(m_pCollision)
+			m_pCollision->SetQmAxiomQuadTime(m_PreviousTime);
+	}
+	CQmAxiomQuadTimeScope(const CQmAxiomQuadTimeScope &) = delete;
+	CQmAxiomQuadTimeScope &operator=(const CQmAxiomQuadTimeScope &) = delete;
+};
 #endif

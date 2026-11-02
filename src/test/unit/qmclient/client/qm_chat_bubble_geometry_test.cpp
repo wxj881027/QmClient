@@ -62,13 +62,13 @@ TEST(QmChatBubbleGeometry, VisibleCountRejectsNonfiniteValuesAndNegativeCount)
 	EXPECT_FALSE(QmChatBubbleVisibleCharacters(2, -1));
 }
 
-TEST(QmChatBubbleGeometry, NormalLayoutKeepsPaddingGapAndCentering)
+TEST(QmChatBubbleGeometry, NormalLayoutUsesComicPaddingGapAndCentering)
 {
 	const auto Geometry = QmChatBubbleGeometry(vec2(100, 80), vec2(40, 10), 1, 0, 5, true);
 	ASSERT_TRUE(Geometry);
-	EXPECT_EQ(Geometry->m_Position, vec2(68, 41));
-	EXPECT_EQ(Geometry->m_Size, vec2(64, 34));
-	EXPECT_EQ(Geometry->m_ContentPosition, vec2(80, 53));
+	EXPECT_EQ(Geometry->m_Position, vec2(68, 34));
+	EXPECT_EQ(Geometry->m_Size, vec2(64, 30));
+	EXPECT_EQ(Geometry->m_ContentPosition, vec2(80, 44));
 	EXPECT_EQ(Geometry->m_ContentSize, vec2(40, 10));
 }
 
@@ -76,9 +76,9 @@ TEST(QmChatBubbleGeometry, AnimatedLayoutScalesContentAndAppliesSlide)
 {
 	const auto Geometry = QmChatBubbleGeometry(vec2(100, 80), vec2(40, 10), 0.5f, 12, 5, false);
 	ASSERT_TRUE(Geometry);
-	EXPECT_EQ(Geometry->m_Position, vec2(84, 70));
-	EXPECT_EQ(Geometry->m_Size, vec2(32, 17));
-	EXPECT_EQ(Geometry->m_ContentPosition, vec2(90, 76));
+	EXPECT_EQ(Geometry->m_Position, vec2(84, 66.5f));
+	EXPECT_EQ(Geometry->m_Size, vec2(32, 15));
+	EXPECT_EQ(Geometry->m_ContentPosition, vec2(90, 71.5f));
 	EXPECT_EQ(Geometry->m_ContentSize, vec2(20, 5));
 }
 

@@ -7,6 +7,7 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cstring>
 #include <memory>
 #include <new>
@@ -50,6 +51,38 @@ TEST(QmRealtime, CredentialsAreOnlyAllowedOnDedicatedEncryptedEndpoint)
 	EXPECT_FALSE(QmRealtimeAllowsCredentials("ws://qmclient.icu/ws"));
 	EXPECT_FALSE(QmRealtimeAllowsCredentials("wss://qmclient.icu/ws/other"));
 	EXPECT_FALSE(QmRealtimeAllowsCredentials("wss://example.test/ws"));
+}
+
+TEST(QmTitleProfileRefresh, RequestsAnAuthenticatedProfileOnTheExistingWebSocketChannel)
+{
+	const std::string Token(64, 'a');
+	const std::string Request = QmRealtimeTitleRefreshRequest(QmRealtimeEffectiveUrl(""), Token.c_str());
+	const std::unique_ptr<json_value, decltype(&json_value_free)> pJson(json_parse(Request.c_str(), Request.size()), json_value_free);
+	ASSERT_NE(pJson, nullptr);
+	ASSERT_EQ(pJson->type, json_object);
+	// 直接用引擎的只读访问器：缺失键返回空指针，先在断言里挡掉再解引用。
+	const json_value *pType = json_object_get(pJson.get(), "type");
+	ASSERT_NE(pType, nullptr);
+	ASSERT_EQ(pType->type, json_string);
+	EXPECT_STREQ(pType->u.string.ptr, "subscribe_titles");
+	const json_value *pToken = json_object_get(pJson.get(), "title_token");
+	ASSERT_NE(pToken, nullptr);
+	ASSERT_EQ(pToken->type, json_string);
+	EXPECT_EQ(pToken->u.string.ptr, Token);
+	EXPECT_EQ(pJson->u.object.length, 2u);
+}
+
+TEST(QmTitleProfileRefresh, RejectsInsecureOrUntrustedEndpointsBeforeBuildingACredentialRequest)
+{
+	const std::string Token(64, 'b');
+	for(const char *pUrl : std::array<const char *, 4>{nullptr, "ws://qmclient.icu/ws", "wss://qmclient.icu/ws/other", "wss://example.test/ws"})
+		EXPECT_TRUE(QmRealtimeTitleRefreshRequest(pUrl, Token.c_str()).empty());
+}
+
+TEST(QmTitleProfileRefresh, DoesNotRequestAProfileWithoutACredential)
+{
+	for(const char *pToken : std::array<const char *, 2>{nullptr, ""})
+		EXPECT_TRUE(QmRealtimeTitleRefreshRequest(QmRealtimeEffectiveUrl(""), pToken).empty());
 }
 
 TEST(QmRealtime, RejectsOversizedBroadcastPayload)

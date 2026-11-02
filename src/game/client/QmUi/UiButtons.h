@@ -36,6 +36,8 @@ namespace ui_widget
 		float m_Radius = ui_token::radius::BASE;
 		float m_BorderWidth = ui_token::feedback::ICON_BORDER_WIDTH;
 		std::optional<ColorRGBA> m_Color;
+		// 选中态可显式指定描边，避免浅色选中底把默认反馈描边压成深色。
+		std::optional<ColorRGBA> m_BorderOverride;
 		const CUIRect *m_pHitRect = nullptr;
 	};
 

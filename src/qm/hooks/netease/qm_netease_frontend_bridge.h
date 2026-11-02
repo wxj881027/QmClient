@@ -5,6 +5,7 @@
 #include <game/client/components/qmclient/netease/netease_lyric_state.h>
 #include <game/client/components/qmclient/netease/netease_lyric_timeline.h>
 #include <game/client/components/qmclient/netease_hook/qm_netease_hook_v5_writer.h>
+#include <game/client/components/qmclient/netease_hook/qm_netease_lyrics_channel.h>
 
 #include <atomic>
 #include <cstdint>
@@ -33,6 +34,7 @@ namespace QmNeteaseBridge
 			virtual void CloseWriter() noexcept = 0;
 			virtual bool ReadSnapshot(QmNeteaseHook::SSnapshotV5 &Snapshot) = 0;
 			virtual bool PublishSnapshot(QmNeteaseHook::SSnapshotV5 Snapshot) = 0;
+			virtual bool PublishRawLyrics(uint32_t Pid, uint64_t SongId, uint64_t Generation, const NeteaseLyrics::SRawLyrics &Raw) = 0;
 			virtual bool StartReports(uint32_t Pid, const std::wstring &CommandLine, TReportCallback Callback) = 0;
 			// 返回前所有报告回调必须结束，后续不能再调用借用的 owner。
 			virtual void StopReports() noexcept = 0;
@@ -70,6 +72,9 @@ namespace QmNeteaseBridge
 		std::thread m_TickThread;
 		std::unique_ptr<COperations> m_pOwnedOperations;
 		COperations *m_pOperations = nullptr;
+		NeteaseLyrics::SRawLyrics m_RawLyrics;
+		NeteaseLyrics::SRawLyrics m_PendingRawLyrics;
+		bool m_RawLyricsDirty = false;
 		mutable std::mutex m_Mutex;
 		uint32_t m_CloudMusicPid = 0;
 		uint64_t m_SongId = 0;

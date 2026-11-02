@@ -286,6 +286,12 @@ void qm_card_catalog::QmCardRenderHook::RenderQmBindEditorContent(CMenus *pMenus
 		pMenus->RenderSettingsQmClientBindCard(Content, ReadOnly);
 }
 
+void qm_card_catalog::QmCardRenderHook::RenderQmBindOverviewContent(CMenus *pMenus, CUIRect &Content, const bool ReadOnly)
+{
+	if(pMenus != nullptr)
+		pMenus->RenderQmBindOverviewContent(Content, ReadOnly);
+}
+
 void qm_card_catalog::QmCardRenderHook::RenderQmSteamContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly)
 {
 	pMenus->RenderQmSteamContent(Content, Metrics, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
@@ -309,4 +315,9 @@ void qm_card_catalog::QmCardRenderHook::RenderQmTooltipContent(CMenus *pMenus, C
 void qm_card_catalog::QmCardRenderHook::RenderQmChatCompletionContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly)
 {
 	pMenus->RenderQmChatCompletionContent(Content, Metrics, PrewarmOnly);
+}
+
+void qm_card_catalog::QmCardRenderHook::RenderQmSelfKillProtectionContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
+{
+	pMenus->RenderQmSelfKillProtectionContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
 }

@@ -818,3 +818,12 @@ uint64_t CSpotifyIntegration::CurrentSongId() const
 {
 	return m_pImpl->m_SongId;
 }
+
+QmMusicLyrics::SSourceSnapshot CSpotifyIntegration::LyricsSnapshot() const
+{
+	if(!m_pImpl->m_HasIdentity || !m_pImpl->m_HasLyrics)
+		return {};
+	const auto Selected = NeteaseLyrics::SelectCurrentLine(m_pImpl->m_Lyrics.m_Timeline, m_pImpl->m_PositionMs);
+	return {m_pImpl->m_SongId, 0, 0, m_pImpl->m_ActiveLyrics, &m_pImpl->m_Lyrics,
+		m_pImpl->m_CurrentLyric, QmMusicLyrics::TranslationAt(m_pImpl->m_Lyrics, Selected.m_Index)};
+}

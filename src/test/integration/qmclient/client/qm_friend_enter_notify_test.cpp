@@ -42,6 +42,7 @@ namespace
 		int m_BroadcastAttempts = 0;
 		int m_GreetAttempts = 0;
 		bool m_ResetDuringBroadcast = false;
+		bool m_GreetAccepted = true;
 		EFailure m_CollectFailure = EFailure::NONE;
 		EFailure m_PrepareFailure = EFailure::NONE;
 		EFailure m_BroadcastFailure = EFailure::NONE;
@@ -68,27 +69,28 @@ namespace
 					++m_GreetAttempts;
 					m_vOrder.emplace_back("greet");
 					FailIfRequested(m_GreetFailure);
-					m_vGreets.push_back(Names + m_GreetText); });
+					if(!m_GreetAccepted)
+						return false;
+					m_vGreets.push_back(Names + m_GreetText);
+					return true; });
 		}
 	};
 }
 
-TEST_F(QmFriendEnterNotifyIntegration, InitialRosterIsSilentAndArrivalsShareOriginalGreetDeadline)
+TEST_F(QmFriendEnterNotifyIntegration, InitialRosterIsSilentAndEachArrivalAttemptsImmediateGreet)
 {
 	m_vClients = {m_Existing};
 	ASSERT_TRUE(Step(0.0f));
 	EXPECT_TRUE(m_vBroadcasts.empty());
 	m_vClients = {m_Existing, m_Alice};
 	ASSERT_TRUE(Step(0.25f));
+	EXPECT_EQ(m_vGreets, std::vector<std::string>{"Alice: hi"});
 	m_vClients = {m_Existing, m_Alice, m_Bob};
 	ASSERT_TRUE(Step(0.5f));
 	EXPECT_EQ(m_vBroadcasts, (std::vector<std::string>{"notice:Alice", "notice:Bob"}));
-	EXPECT_TRUE(m_vGreets.empty());
-	ASSERT_TRUE(Step(3.24f));
-	EXPECT_FALSE(Step(3.25f));
-	EXPECT_EQ(m_vGreets, std::vector<std::string>{"Alice Bob: hi"});
+	EXPECT_EQ(m_vGreets, (std::vector<std::string>{"Alice: hi", "Bob: hi"}));
 	ASSERT_TRUE(Step(3.5f));
-	EXPECT_EQ(m_GreetAttempts, 1);
+	EXPECT_EQ(m_GreetAttempts, 2);
 }
 
 TEST_F(QmFriendEnterNotifyIntegration, MultipleArrivalsInOneRosterUseOneJoinedNotification)
@@ -115,9 +117,11 @@ TEST_F(QmFriendEnterNotifyIntegration, CollectionRunsAtTheOriginalTwoHundredMill
 
 TEST_F(QmFriendEnterNotifyIntegration, DisabledModesCancelPendingAndReenableSilently)
 {
+	m_GreetAccepted = false;
 	ASSERT_TRUE(Step(0.0f));
 	m_vClients = {m_Alice};
 	ASSERT_TRUE(Step(0.25f));
+	m_GreetAccepted = true;
 	const int Collections = m_Collections;
 	m_Settings.m_GreetEnabled = m_Settings.m_BroadcastEnabled = false;
 	EXPECT_FALSE(Step(0.3f));
@@ -168,24 +172,28 @@ TEST_F(QmFriendEnterNotifyIntegration, EmptyGreetTextDoesNotQueueNamesForLaterEn
 	EXPECT_EQ(m_vGreets, std::vector<std::string>{"Bob: hi"});
 }
 
-TEST_F(QmFriendEnterNotifyIntegration, ClearingTextConsumesDueBatchWithoutSending)
+TEST_F(QmFriendEnterNotifyIntegration, ClearingTextCancelsTheDeniedBatch)
 {
+	m_GreetAccepted = false;
 	ASSERT_TRUE(Step(0.0f));
 	m_vClients = {m_Alice};
 	ASSERT_TRUE(Step(0.25f));
+	m_GreetAccepted = true;
 	m_Settings.m_GreetTextConfigured = false;
 	ASSERT_TRUE(Step(3.25f));
 	m_Settings.m_GreetTextConfigured = true;
 	ASSERT_TRUE(Step(3.5f));
-	EXPECT_EQ(m_GreetAttempts, 0);
+	EXPECT_EQ(m_GreetAttempts, 1);
 	EXPECT_TRUE(m_vGreets.empty());
 }
 
-TEST_F(QmFriendEnterNotifyIntegration, GreetUsesCurrentTextWhenTheBatchBecomesDue)
+TEST_F(QmFriendEnterNotifyIntegration, DeniedGreetUsesCurrentTextWhenAdmissionRecovers)
 {
+	m_GreetAccepted = false;
 	ASSERT_TRUE(Step(0.0f));
 	m_vClients = {m_Alice};
 	ASSERT_TRUE(Step(0.25f));
+	m_GreetAccepted = true;
 	m_GreetText = ": changed";
 	ASSERT_TRUE(Step(3.25f));
 	EXPECT_EQ(m_vGreets, std::vector<std::string>{"Alice: changed"});
@@ -203,9 +211,6 @@ TEST_F(QmFriendEnterNotifyIntegration, CollectionFailureRetainsBaselineAndWaitsF
 	EXPECT_EQ(m_Collections, Collections);
 	ASSERT_TRUE(Step(0.5f));
 	EXPECT_EQ(m_vBroadcasts, std::vector<std::string>{"notice:Alice"});
-	ASSERT_TRUE(Step(3.25f));
-	EXPECT_TRUE(m_vGreets.empty());
-	ASSERT_TRUE(Step(3.5f));
 	EXPECT_EQ(m_vGreets, std::vector<std::string>{"Alice: hi"});
 }
 
@@ -221,22 +226,22 @@ TEST_F(QmFriendEnterNotifyIntegration, FailedFirstCollectionDoesNotInitializeSil
 	EXPECT_TRUE(m_vGreets.empty());
 }
 
-TEST_F(QmFriendEnterNotifyIntegration, PreparationFailureRetainsExistingNamesAndDeadline)
+TEST_F(QmFriendEnterNotifyIntegration, PreparationFailureRetainsDeniedNamesUntilTheArrivalCanBeCommitted)
 {
 	ASSERT_TRUE(Step(0.0f));
+	m_GreetAccepted = false;
 	m_vClients = {m_Alice};
 	ASSERT_TRUE(Step(0.25f));
 	m_vClients = {m_Alice, m_Bob};
 	m_PrepareFailure = EFailure::ALLOCATION;
 	EXPECT_FALSE(Step(0.5f));
-	EXPECT_FALSE(Step(3.25f));
-	EXPECT_EQ(m_vGreets, std::vector<std::string>{"Alice: hi"});
+	EXPECT_TRUE(m_vGreets.empty());
 	EXPECT_EQ(m_vBroadcasts, std::vector<std::string>{"notice:Alice"});
 	m_PrepareFailure = EFailure::NONE;
-	ASSERT_TRUE(Step(3.5f));
-	ASSERT_TRUE(Step(6.5f));
+	m_GreetAccepted = true;
+	ASSERT_TRUE(Step(0.75f));
 	EXPECT_EQ(m_vBroadcasts, (std::vector<std::string>{"notice:Alice", "notice:Bob"}));
-	EXPECT_EQ(m_vGreets, (std::vector<std::string>{"Alice: hi", "Bob: hi"}));
+	EXPECT_EQ(m_vGreets, std::vector<std::string>{"Alice Bob: hi"});
 }
 
 TEST_F(QmFriendEnterNotifyIntegration, UnknownPreparationFailureAllowsSameArrivalToRetry)
@@ -267,15 +272,20 @@ TEST_F(QmFriendEnterNotifyIntegration, FailedObservationDoesNotStartMissingGrace
 	EXPECT_TRUE(m_vGreets.empty());
 }
 
-TEST_F(QmFriendEnterNotifyIntegration, DueGreetRunsBeforeCollectionFailure)
+TEST_F(QmFriendEnterNotifyIntegration, CollectionFailureDefersDeniedGreetWithoutLosingItsNames)
 {
 	ASSERT_TRUE(Step(0.0f));
+	m_GreetAccepted = false;
 	m_vClients = {m_Alice};
 	ASSERT_TRUE(Step(0.25f));
 	m_CollectFailure = EFailure::ALLOCATION;
 	m_vOrder.clear();
-	EXPECT_FALSE(Step(3.25f));
-	EXPECT_EQ(m_vOrder, (std::vector<std::string>{"greet", "collect"}));
+	EXPECT_FALSE(Step(0.5f));
+	EXPECT_EQ(m_vOrder, std::vector<std::string>{"collect"});
+	EXPECT_TRUE(m_vGreets.empty());
+	m_CollectFailure = EFailure::NONE;
+	m_GreetAccepted = true;
+	ASSERT_TRUE(Step(0.75f));
 	EXPECT_EQ(m_vGreets, std::vector<std::string>{"Alice: hi"});
 }
 
@@ -291,16 +301,15 @@ TEST_F(QmFriendEnterNotifyIntegration, GreetFailureIsNotRepeatedAndLaterArrivals
 		m_GreetAttempts = 0;
 		ASSERT_TRUE(Step(0.0f));
 		m_vClients = {m_Alice};
-		ASSERT_TRUE(Step(0.25f));
-		m_vClients = {m_Alice, m_Bob};
 		m_GreetFailure = Failure;
-		ASSERT_TRUE(Step(3.25f));
+		ASSERT_TRUE(Step(0.25f));
 		EXPECT_EQ(m_GreetAttempts, 1);
 		EXPECT_TRUE(m_vGreets.empty());
 		m_GreetFailure = EFailure::NONE;
-		ASSERT_TRUE(Step(3.5f));
+		ASSERT_TRUE(Step(0.5f));
 		EXPECT_EQ(m_GreetAttempts, 1);
-		ASSERT_TRUE(Step(6.25f));
+		m_vClients = {m_Alice, m_Bob};
+		ASSERT_TRUE(Step(0.75f));
 		EXPECT_EQ(m_GreetAttempts, 2);
 		EXPECT_EQ(m_vGreets, std::vector<std::string>{"Bob: hi"});
 	}
@@ -323,9 +332,11 @@ TEST_F(QmFriendEnterNotifyIntegration, BroadcastFailureDoesNotReplayOrPreventQue
 
 TEST_F(QmFriendEnterNotifyIntegration, ResetCancelsPendingAndStartsAnotherSilentRoster)
 {
+	m_GreetAccepted = false;
 	ASSERT_TRUE(Step(0.0f));
 	m_vClients = {m_Alice};
 	ASSERT_TRUE(Step(0.25f));
+	m_GreetAccepted = true;
 	m_Notifier.Reset();
 	m_vClients = {m_Bob};
 	ASSERT_TRUE(Step(0.375f));
@@ -336,10 +347,12 @@ TEST_F(QmFriendEnterNotifyIntegration, ResetCancelsPendingAndStartsAnotherSilent
 
 TEST_F(QmFriendEnterNotifyIntegration, ResetFromBroadcastKeepsPendingBatchCancelled)
 {
+	m_GreetAccepted = false;
 	ASSERT_TRUE(Step(0.0f));
 	m_vClients = {m_Alice};
 	m_ResetDuringBroadcast = true;
 	ASSERT_TRUE(Step(0.25f));
+	m_GreetAccepted = true;
 	m_ResetDuringBroadcast = false;
 	ASSERT_TRUE(Step(0.375f));
 	ASSERT_TRUE(Step(4.0f));

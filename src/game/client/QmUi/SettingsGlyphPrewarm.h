@@ -53,15 +53,16 @@ inline bool PrepareSettingsGlyphQueue(std::vector<std::pair<int, int>> &vQueue, 
 }
 
 // 这里只确认void预热接口已返回；引擎内部的替代字形/重试仍由引擎管理。
-template<typename FPrewarm>
-bool AdvanceSettingsGlyphQueue(const std::vector<std::pair<int, int>> &vQueue, size_t &Cursor, int Budget, FPrewarm &&Prewarm) noexcept
+template<typename FContinue, typename FPrewarm>
+bool AdvanceSettingsGlyphQueueWhile(const std::vector<std::pair<int, int>> &vQueue, size_t &Cursor, FContinue &&Continue, FPrewarm &&Prewarm) noexcept
 {
-	int Done = 0;
-	while(Cursor < vQueue.size() && Done < Budget)
+	while(Cursor < vQueue.size())
 	{
 		const auto Glyph = vQueue[Cursor];
 		try
 		{
+			if(!Continue())
+				return false;
 			Prewarm(Glyph.first, Glyph.second);
 		}
 		catch(...)
@@ -69,9 +70,15 @@ bool AdvanceSettingsGlyphQueue(const std::vector<std::pair<int, int>> &vQueue, s
 			return false;
 		}
 		++Cursor;
-		++Done;
 	}
-	return Cursor >= vQueue.size();
+	return true;
+}
+
+template<typename FPrewarm>
+bool AdvanceSettingsGlyphQueue(const std::vector<std::pair<int, int>> &vQueue, size_t &Cursor, int Budget, FPrewarm &&Prewarm) noexcept
+{
+	int Done = 0;
+	return AdvanceSettingsGlyphQueueWhile(vQueue, Cursor, [&] { return Done++ < Budget; }, std::forward<FPrewarm>(Prewarm));
 }
 
 #endif

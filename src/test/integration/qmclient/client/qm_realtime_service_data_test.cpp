@@ -150,6 +150,20 @@ TEST(QmRealtimeServiceData, ProfileAuthenticationStillRequiresInteger200AndValid
 	}
 }
 
+TEST(QmRealtimeServiceData, ProfilePublicationAcceptsOnlyAValidSuccessOrExplicitUnauthorizedResponse)
+{
+	for(const auto &[Status, Accepted] : {std::pair{"200", true}, std::pair{"401", true}, std::pair{"200.0", false}, std::pair{"500", false}, std::pair{"null", false}})
+	{
+		SCOPED_TRACE(Status);
+		const auto Input = Message("title_profile", std::string(R"("title":"Title","status":)") + Status);
+		EXPECT_EQ(ReadQmRealtimeServiceData(Input).m_TitleProfileAccepted, Accepted);
+	}
+	const auto InvalidTitle = Message("title_profile", R"("title":"bad\u0000title","status":200)");
+	EXPECT_FALSE(ReadQmRealtimeServiceData(InvalidTitle).m_TitleProfileAccepted);
+	const auto ShadowedStatus = Message("title_profile", R"("title":"Title","status\u0000extra":401)");
+	EXPECT_FALSE(ReadQmRealtimeServiceData(ShadowedStatus).m_TitleProfileAccepted);
+}
+
 TEST(QmRealtimeServiceData, UnknownStatusCannotAuthenticateOrShadowAnExactStatus)
 {
 	const auto Missing = Message("title_profile", R"("title":"Title","status\u0000extra":200,"authenticated":true)");

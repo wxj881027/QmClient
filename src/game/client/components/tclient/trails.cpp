@@ -147,7 +147,7 @@ void CTrails::RenderTeeTrails()
 				}
 				Part.m_Col.a = Alpha;
 			}
-			qm_tee_trail::BuildEffect(m_vTrail, Style, g_Config.m_QmTeeTrailStyleColors != 0, Time, g_Config.m_QmTeeTrailWidth, ClientId * 131 + 17, m_vQuads, PixelSize, g_Config.m_QmTeeTrailTaper != 0, g_Config.m_QmTeeTrailFade != 0);
+			qm_tee_trail::BuildEffect(m_vTrail, Style, g_Config.m_QmTeeTrailStyleColors != 0, Time, g_Config.m_QmTeeTrailWidth, ClientId * 131 + 17, m_vQuads, PixelSize, g_Config.m_QmTeeTrailTaper != 0, g_Config.m_QmTeeTrailFade != 0, &m_PixelNoiseCache);
 			vFrame.insert(vFrame.end(), m_vQuads.begin(), m_vQuads.end());
 		}
 	};

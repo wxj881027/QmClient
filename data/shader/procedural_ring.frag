@@ -19,8 +19,9 @@ void main()
 	float RelativeAngle = mod(Angle - gRingParams.z, 6.28318530718);
 	if(RelativeAngle < 0.0)
 		RelativeAngle += 6.28318530718;
-	float AngularFeather = max(fwidth(Angle), 0.0015);
+	// atan 在 ±π 处不连续，fwidth 会突然飙到 2π 并沿整条轴线压暗一圈；
+	// 夹住上限既保留角度边缘的抗锯齿，又不会把整圈扫成一条缝。
+	float AngularFeather = clamp(fwidth(Angle), 0.0015, 0.02);
 	float AngularCoverage = Sweep >= 6.2830 ? 1.0 : smoothstep(0.0, AngularFeather, RelativeAngle) * smoothstep(0.0, AngularFeather, Sweep - RelativeAngle);
 	FragClr = vec4(Tint.rgb, Tint.a * RadialCoverage * AngularCoverage);
-
 }

@@ -26,6 +26,7 @@ struct SQmRealtimeServiceDataView
 	const char *m_pBoundName = "";
 	const char *m_pStyle = "";
 	bool m_TitleAuthenticated = false;
+	bool m_TitleProfileAccepted = false;
 	EQmSponsorChatStyle m_ChatStyle = EQmSponsorChatStyle::NONE;
 	bool m_ChatStyleSupported = false;
 	SQmTitleAppearance m_Appearance;
@@ -63,6 +64,8 @@ inline SQmRealtimeServiceDataView ReadQmRealtimeServiceData(const SQmRealtimeMes
 		Data.m_pBoundName = Text("bound_name");
 		Data.m_pStyle = Text("style");
 		const json_value *pStatus = qm_json::Field(pPayload, "status");
+		Data.m_TitleProfileAccepted = pStatus->type == json_integer &&
+					      (pStatus->u.integer == 401 || (pStatus->u.integer == 200 && IsValidQmTitle(Data.m_pTitle)));
 		Data.m_TitleAuthenticated = pStatus->type == json_integer && pStatus->u.integer == 200 && IsValidQmTitle(Data.m_pTitle);
 		const json_value *pChatStyle = qm_json::Field(pPayload, "chat_style");
 		Data.m_ChatStyleSupported = qm_json::Text(pChatStyle);

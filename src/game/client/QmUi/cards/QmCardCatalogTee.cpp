@@ -2269,7 +2269,7 @@ void CMenus::RenderSettingsTeeSkinQueue(CUIRect Content, const SSettingsContentM
 	{
 		QueueRandomJoin ^= 1;
 	}
-	GameClient()->m_Tooltips.DoToolTip(&QueueRandomJoin, &RandomJoinRow, Localize("Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join."));
+	GameClient()->m_Tooltips.DoToolTip(&QueueRandomJoin, &RandomJoinRow, Localize("Start at a random queue position on every map join"));
 
 	QueueSection.HSplitTop(TeeMetrics.m_LineSpacing, nullptr, &QueueSection);
 	QueueSection.HSplitTop(minimum(QueueSection.h, QueueGeometry.m_QueueListSurfaceHeight), &QueueList, &QueueSection);
@@ -2712,6 +2712,10 @@ void CMenus::RenderSettingsTeeGlow(CUIRect Content, const SSettingsContentMetric
 		if(Flow.Input() && !Ui()->RenderOnly() && Team0ModeNew != g_Config.m_QmTeamTeeGlowTeam0Mode)
 			g_Config.m_QmTeamTeeGlowTeam0Mode = Team0ModeNew;
 	}
+	Flow.Space(TeeMetrics.m_LineSpacing);
+	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "deck:tee-glow", TeeMetrics))
+		return;
+
 	const auto Slider = [&](const char *pId, const char *pLabel, int *pValue) {
 		if(Flow.Control(pId, TeeMetrics.m_LineHeight, TeeGlowRow, TeeMetrics.m_LineSpacing))
 			DoSettingsScrollbarOption(SETTINGS_TEE, -1, pId, pValue, pValue, &TeeGlowRow, pLabel, 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");

@@ -87,6 +87,7 @@ namespace FontIcons
 	[[maybe_unused]] static const char *FONT_ICON_FLAG_CHECKERED = "\xEE\xA8\xB8";
 	[[maybe_unused]] static const char *FONT_ICON_BAN = "\xEE\x8F\x9E";
 	[[maybe_unused]] static const char *FONT_ICON_CIRCLE_CHEVRON_DOWN = "\xEE\x84\x9E";
+	[[maybe_unused]] static const char *FONT_ICON_DOWNLOAD_SIMPLE = "\xEE\x88\x8C";
 	[[maybe_unused]] static const char *FONT_ICON_KEY = "\xEE\x8B\x96";
 	[[maybe_unused]] static const char *FONT_ICON_LANGUAGE = "\xEE\x92\xA2";
 	[[maybe_unused]] static const char *FONT_ICON_SQUARE_MINUS = "\xEE\xB5\x8C";
@@ -97,6 +98,8 @@ namespace FontIcons
 
 	[[maybe_unused]] static const char *FONT_ICON_HOUSE = "\xEE\x8B\x82";
 	[[maybe_unused]] static const char *FONT_ICON_BOOKMARK = "\xEE\x83\xA8";
+	// 置顶：Phosphor arrow-line-up（箭头 + 上方一横），U+E066。
+	[[maybe_unused]] static const char *FONT_ICON_ARROW_LINE_UP = "\xEE\x81\xA6";
 	[[maybe_unused]] static const char *FONT_ICON_NEWSPAPER = "\xEE\x8D\x84";
 	[[maybe_unused]] static const char *FONT_ICON_POWER_OFF = "\xEE\x8F\x9A";
 	[[maybe_unused]] static const char *FONT_ICON_GEAR = "\xEE\x89\xB0";
@@ -201,6 +204,7 @@ namespace FontIcons
 		FONT_ICON_FLAG_CHECKERED,
 		FONT_ICON_BAN,
 		FONT_ICON_CIRCLE_CHEVRON_DOWN,
+		FONT_ICON_DOWNLOAD_SIMPLE,
 		FONT_ICON_KEY,
 		FONT_ICON_LANGUAGE,
 		FONT_ICON_SQUARE_MINUS,
@@ -210,6 +214,7 @@ namespace FontIcons
 		FONT_ICON_TRIANGLE_EXCLAMATION,
 		FONT_ICON_HOUSE,
 		FONT_ICON_BOOKMARK,
+		FONT_ICON_ARROW_LINE_UP,
 		FONT_ICON_NEWSPAPER,
 		FONT_ICON_POWER_OFF,
 		FONT_ICON_GEAR,
@@ -440,6 +445,7 @@ public:
 	// 否则游标推进方式（顺序消费）会与字符错位。
 	std::vector<STextCharOffset> m_vCharOffsets;
 
+	// 内联定义：测试目标不链 text.cpp，但 qm_title_badge.h 等内联路径会引用本方法。
 	float Height() const
 	{
 		return m_LineCount * (m_AlignedFontSize + m_AlignedLineSpacing);
@@ -601,6 +607,11 @@ public:
 	virtual void RenderTextContainer(STextContainerIndex TextContainerIndex, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor, float X, float Y) = 0;
 	// 扫光只覆盖字形填充，复用容器布局和当前裁剪区域。
 	virtual void RenderTextContainerSweep(STextContainerIndex TextContainerIndex, const STextSweepParams &Params, float X, float Y) {}
+	// 同步取色并绘制已有布局的字形填充；采样坐标相对容器起点，不保存回调上下文。
+	virtual void RenderTextContainerFill(STextContainerIndex Index, CTextCursor::FColorSampler pfnSample, const void *pContext, int Columns, int Rows, const ColorRGBA &Tint, float X, float Y)
+	{
+		RenderTextContainer(Index, Tint, ColorRGBA(0, 0, 0, 0), X, Y);
+	}
 	// 排版时启用 m_TrackLineRanges 后，返回包含绘制字形的行数。
 	virtual int GetTextContainerRenderedLineCount(STextContainerIndex TextContainerIndex) { return 0; }
 

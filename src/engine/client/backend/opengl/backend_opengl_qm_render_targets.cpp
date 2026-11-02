@@ -39,13 +39,16 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Create(const CCommandBuf
 	public:
 		GLenum m_Status = 0;
 		bool m_FramebufferChecked = false;
+		bool m_MultisampleFailed = false;
+		GLenum m_MultisampleStatus = 0;
 		explicit COperations(bool SeparateBindings) :
 			m_SeparateBindings(SeparateBindings) {}
 		opengl_render_target::SBindings GetBindings() noexcept override
 		{
-			GLint Draw = 0, Read = 0, Texture = 0;
+			GLint Draw = 0, Read = 0, Texture = 0, Renderbuffer = 0;
 			if(m_SeparateBindings)
 			{
+				glGetIntegerv(GL_RENDERBUFFER_BINDING, &Renderbuffer);
 				glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &Draw);
 				glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &Read);
 			}
@@ -55,7 +58,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Create(const CCommandBuf
 				Read = Draw;
 			}
 			glGetIntegerv(GL_TEXTURE_BINDING_2D, &Texture);
-			return {static_cast<TWGLuint>(Draw), static_cast<TWGLuint>(Read), static_cast<TWGLuint>(Texture)};
+			return {static_cast<TWGLuint>(Draw), static_cast<TWGLuint>(Read), static_cast<TWGLuint>(Texture), static_cast<TWGLuint>(Renderbuffer)};
 		}
 		TWGLuint CreateTexture(int Width, int Height) noexcept override
 		{
@@ -95,6 +98,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Create(const CCommandBuf
 		{
 			if(m_SeparateBindings)
 			{
+				glBindRenderbuffer(GL_RENDERBUFFER, Bindings.m_Renderbuffer);
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, Bindings.m_DrawFramebuffer);
 				glBindFramebuffer(GL_READ_FRAMEBUFFER, Bindings.m_ReadFramebuffer);
 			}
@@ -102,14 +106,34 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Create(const CCommandBuf
 				glBindFramebuffer(GL_FRAMEBUFFER, Bindings.m_DrawFramebuffer);
 			glBindTexture(GL_TEXTURE_2D, Bindings.m_Texture);
 		}
+		bool CreateMultisample(opengl_render_target::STarget &Target, int Samples) noexcept override
+		{
+			m_MultisampleFailed = true;
+			if(!m_SeparateBindings)
+				return false;
+			glGenFramebuffers(1, &Target.m_MultisampleFramebuffer);
+			glGenRenderbuffers(1, &Target.m_MultisampleRenderbuffer);
+			if(Target.m_MultisampleFramebuffer == 0 || Target.m_MultisampleRenderbuffer == 0)
+				return false;
+			glBindRenderbuffer(GL_RENDERBUFFER, Target.m_MultisampleRenderbuffer);
+			glRenderbufferStorageMultisample(GL_RENDERBUFFER, Samples, GL_RGBA8, Target.m_Width, Target.m_Height);
+			glBindFramebuffer(GL_FRAMEBUFFER, Target.m_MultisampleFramebuffer);
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, Target.m_MultisampleRenderbuffer);
+			m_MultisampleStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+			m_MultisampleFailed = m_MultisampleStatus != GL_FRAMEBUFFER_COMPLETE;
+			return !m_MultisampleFailed;
+		}
+		void DeleteRenderbuffer(TWGLuint Renderbuffer) noexcept override { glDeleteRenderbuffers(1, &Renderbuffer); }
 		void DeleteFramebuffer(TWGLuint Framebuffer) noexcept override { glDeleteFramebuffers(1, &Framebuffer); }
 		void DeleteTexture(TWGLuint Texture) noexcept override { glDeleteTextures(1, &Texture); }
 	};
 
 	COperations Operations(IsNewApi());
-	if(!opengl_render_target::Create(m_vRenderTargets, pCommand->m_TargetId, pCommand->m_Width, pCommand->m_Height, Operations) &&
+	if(!opengl_render_target::Create(m_vRenderTargets, pCommand->m_TargetId, pCommand->m_Width, pCommand->m_Height, Operations, pCommand->m_SampleCount) &&
 		Operations.m_FramebufferChecked && Operations.m_Status != GL_FRAMEBUFFER_COMPLETE)
 		dbg_msg("opengl", "render target %d incomplete: 0x%x", pCommand->m_TargetId, Operations.m_Status);
+	if(Operations.m_MultisampleFailed)
+		dbg_msg("opengl", "multisample render target %d incomplete: 0x%x; falling back to single sample", pCommand->m_TargetId, Operations.m_MultisampleStatus);
 }
 
 void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Destroy(const CCommandBuffer::SCommand_RenderTarget_Destroy *pCommand)
@@ -117,6 +141,10 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Destroy(const CCommandBu
 	if(pCommand->m_TargetId < 0 || (size_t)pCommand->m_TargetId >= m_vRenderTargets.size())
 		return;
 	SOpenGLRenderTarget &Target = m_vRenderTargets[pCommand->m_TargetId];
+	if(Target.m_MultisampleFramebuffer != 0)
+		glDeleteFramebuffers(1, &Target.m_MultisampleFramebuffer);
+	if(Target.m_MultisampleRenderbuffer != 0)
+		glDeleteRenderbuffers(1, &Target.m_MultisampleRenderbuffer);
 	if(Target.m_Framebuffer != 0)
 		glDeleteFramebuffers(1, &Target.m_Framebuffer);
 	if(Target.m_Texture != 0)
@@ -143,7 +171,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Begin(const CCommandBuff
 	glGetFloatv(GL_COLOR_CLEAR_VALUE, m_aRenderTargetPreviousClearColor);
 	m_RenderTargetActive = true;
 	m_ActiveRenderTargetId = pCommand->m_TargetId;
-	glBindFramebuffer(GL_FRAMEBUFFER, Target.m_Framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, Target.m_SampleCount > 1 && Target.m_MultisampleFramebuffer != 0 ? Target.m_MultisampleFramebuffer : Target.m_Framebuffer);
 	glViewport(0, 0, Target.m_Width, Target.m_Height);
 	glDisable(GL_SCISSOR_TEST);
 	m_LastClipEnable = false;
@@ -155,6 +183,17 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_End(const CCommandBuffer
 {
 	if(!m_RenderTargetActive)
 		return;
+	if(m_ActiveRenderTargetId >= 0 && (size_t)m_ActiveRenderTargetId < m_vRenderTargets.size())
+	{
+		const SOpenGLRenderTarget &Target = m_vRenderTargets[m_ActiveRenderTargetId];
+		if(Target.m_SampleCount > 1 && Target.m_MultisampleFramebuffer != 0)
+		{
+			// 多采样 renderbuffer 不能直接采样；结束前一次性 resolve 到单采样纹理。
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, Target.m_MultisampleFramebuffer);
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, Target.m_Framebuffer);
+			glBlitFramebuffer(0, 0, Target.m_Width, Target.m_Height, 0, 0, Target.m_Width, Target.m_Height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+		}
+	}
 	glBindFramebuffer(GL_FRAMEBUFFER, m_RenderTargetPreviousFramebuffer);
 	glViewport(m_aRenderTargetPreviousViewport[0], m_aRenderTargetPreviousViewport[1], m_aRenderTargetPreviousViewport[2], m_aRenderTargetPreviousViewport[3]);
 	m_RenderTargetActive = false;
@@ -206,8 +245,60 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Draw(const CCommandBuffe
 #endif
 }
 
+void CCommandProcessorFragment_OpenGL::FinishPendingReadbackPbo()
+{
+	if(!m_ReadbackPboPending)
+		return;
+	m_ReadbackPboPending = false;
+	// 先取走并复位在途状态：结算路径里不再触碰成员，避免嵌套读回时状态错乱。
+	const TWGLuint PendingPbo = m_aReadbackPbos[m_ReadbackPboFlip ^ 1];
+	auto *pImage = m_pPendingReadbackImage;
+	auto *pCompletion = m_pPendingReadbackCompletion;
+	m_pPendingReadbackImage = nullptr;
+	m_pPendingReadbackCompletion = nullptr;
+	if(pImage == nullptr)
+	{
+		if(pCompletion != nullptr)
+			pCompletion->Signal();
+		return;
+	}
+
+	const size_t PendingSize = m_ReadbackPboPendingSize;
+	m_ReadbackPboPendingSize = 0;
+	const size_t Width = pImage->m_Width, Height = pImage->m_Height;
+	const auto CopyMapped = [&](uint8_t *pData, size_t DataSize) {
+		if(DataSize > PendingSize)
+			return false;
+		GLint PreviousPixelBuffer = 0;
+		glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &PreviousPixelBuffer);
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, PendingPbo);
+		void *pMapped = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, PendingSize, GL_MAP_READ_BIT);
+		bool Copied = false;
+		if(pMapped != nullptr)
+		{
+			mem_copy(pData, pMapped, DataSize);
+			Copied = glUnmapBuffer(GL_PIXEL_PACK_BUFFER) == GL_TRUE;
+		}
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, PreviousPixelBuffer);
+		return Copied;
+	};
+	screenshot_image::CaptureRgba(*pImage, Width, Height, screenshot_image::ERowOrder::BOTTOM_UP,
+		CopyMapped, std::malloc, screenshot_image::EAlphaMode::PRESERVE);
+	if(pCompletion != nullptr)
+		pCompletion->Signal();
+}
+
 void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Readback(const CCommandBuffer::SCommand_RenderTarget_Readback *pCommand)
 {
+	struct SCompletionScope
+	{
+		CSemaphore *m_pCompletion;
+		~SCompletionScope()
+		{
+			if(m_pCompletion)
+				m_pCompletion->Signal();
+		}
+	} Completion{pCommand->m_pCompletion};
 	if(pCommand->m_TargetId < 0 || (size_t)pCommand->m_TargetId >= m_vRenderTargets.size() || pCommand->m_pImage == nullptr)
 		return;
 
@@ -218,21 +309,109 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Readback(const CCommandB
 	const int w = Target.m_Width;
 	const int h = Target.m_Height;
 
-	// 先校验/分配完整缓冲，失败时不触碰 GL 状态；离屏纹理须保留透明度。
-	const auto ReadPixels = [&](uint8_t *pData, size_t) {
-		GLint Alignment;
-		GLint PreviousFramebuffer;
-		glGetIntegerv(GL_PACK_ALIGNMENT, &Alignment);
-		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &PreviousFramebuffer);
-		glBindFramebuffer(GL_FRAMEBUFFER, Target.m_Framebuffer);
-		glPixelStorei(GL_PACK_ALIGNMENT, 1);
-		glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, pData);
-		glPixelStorei(GL_PACK_ALIGNMENT, Alignment);
-		glBindFramebuffer(GL_FRAMEBUFFER, PreviousFramebuffer);
-		return true;
+	// PBO 双缓冲需要缓冲对象与异步 map；不可用（老 GL/ES2）时退回同步读回，行为与旧版一致。
+	const bool PboSupported = glGenBuffers != nullptr && glMapBufferRange != nullptr;
+	CImageInfo Dimensions;
+	Dimensions.m_Width = w;
+	Dimensions.m_Height = h;
+	Dimensions.m_Format = CImageInfo::FORMAT_RGBA;
+	size_t DataSize = 0;
+	if(!Dimensions.DataSize(DataSize) || DataSize > static_cast<size_t>(std::numeric_limits<ptrdiff_t>::max()))
+		return;
+	const bool PboPath = PboSupported && DataSize <= static_cast<size_t>(std::numeric_limits<GLint>::max());
+	const auto CaptureSynchronously = [&] {
+		// 先校验/分配完整缓冲，失败时不触碰 GL 状态；离屏纹理须保留透明度。
+		const auto ReadPixels = [&](uint8_t *pData, size_t) {
+			GLint Alignment;
+			GLint PreviousFramebuffer;
+			GLint PreviousPixelBuffer = 0;
+			glGetIntegerv(GL_PACK_ALIGNMENT, &Alignment);
+			glGetIntegerv(GL_FRAMEBUFFER_BINDING, &PreviousFramebuffer);
+			if(PboSupported)
+			{
+				glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &PreviousPixelBuffer);
+				glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+			}
+			glBindFramebuffer(GL_FRAMEBUFFER, Target.m_Framebuffer);
+			glPixelStorei(GL_PACK_ALIGNMENT, 1);
+			glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, pData);
+			glPixelStorei(GL_PACK_ALIGNMENT, Alignment);
+			glBindFramebuffer(GL_FRAMEBUFFER, PreviousFramebuffer);
+			if(PboSupported)
+				glBindBuffer(GL_PIXEL_PACK_BUFFER, PreviousPixelBuffer);
+			return true;
+		};
+		screenshot_image::CaptureRgba(*pCommand->m_pImage, static_cast<size_t>(w), static_cast<size_t>(h),
+			screenshot_image::ERowOrder::BOTTOM_UP, ReadPixels, std::malloc, screenshot_image::EAlphaMode::PRESERVE);
 	};
-	screenshot_image::CaptureRgba(*pCommand->m_pImage, static_cast<size_t>(w), static_cast<size_t>(h),
-		screenshot_image::ERowOrder::BOTTOM_UP, ReadPixels, std::malloc, screenshot_image::EAlphaMode::PRESERVE);
+	// 同步回退同样先结算旧请求，不能让较早的等待者悬空。
+	FinishPendingReadbackPbo();
+	if(!PboPath)
+	{
+		CaptureSynchronously();
+		return;
+	}
+
+	// 先结算上一笔在途 DMA（其像素在上一帧排队，此刻早已传完，map 基本不等待），
+	// 再把本次读回排进另一个 PBO——DMA 与调用方的下一帧渲染重叠。
+	GLint PreviousPixelBuffer = 0;
+	glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &PreviousPixelBuffer);
+	if(m_aReadbackPbos[0] == 0)
+		glGenBuffers(2, m_aReadbackPbos);
+	const int PboIndex = m_ReadbackPboFlip;
+	const TWGLuint Pbo = m_aReadbackPbos[PboIndex];
+	if(Pbo == 0)
+	{
+		CaptureSynchronously();
+		return;
+	}
+	// 每个 PBO 各自记录容量：两块交替使用且读回尺寸可能变化（静帧与视频混用），
+	// 只扩当前这一块，另一块保持自己的容量，避免向小缓冲排队越界 DMA。
+	if(DataSize > m_aReadbackPboSizes[PboIndex])
+	{
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, Pbo);
+		glBufferData(GL_PIXEL_PACK_BUFFER, DataSize, nullptr, GL_STREAM_READ);
+		GLint AllocatedSize = 0;
+		glGetBufferParameteriv(GL_PIXEL_PACK_BUFFER, GL_BUFFER_SIZE, &AllocatedSize);
+		if(AllocatedSize < 0 || static_cast<size_t>(AllocatedSize) < DataSize)
+		{
+			m_aReadbackPboSizes[PboIndex] = AllocatedSize > 0 ? static_cast<size_t>(AllocatedSize) : 0;
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, PreviousPixelBuffer);
+			CaptureSynchronously();
+			return;
+		}
+		m_aReadbackPboSizes[PboIndex] = DataSize;
+	}
+
+	GLint Alignment = 0;
+	GLint PreviousFramebuffer = 0;
+	glGetIntegerv(GL_PACK_ALIGNMENT, &Alignment);
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &PreviousFramebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, Target.m_Framebuffer);
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, Pbo);
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+	// 目标为 nullptr 时 glReadPixels 只启动 DMA 立即返回；像素由 FinishPendingReadbackPbo 拷出。
+	glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, PreviousPixelBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, PreviousFramebuffer);
+	glPixelStorei(GL_PACK_ALIGNMENT, Alignment);
+
+	// 尺寸与格式在排队时就记录（结算时只填像素），主线程据此校验。
+	pCommand->m_pImage->m_Width = w;
+	pCommand->m_pImage->m_Height = h;
+	pCommand->m_pImage->m_Format = CImageInfo::FORMAT_RGBA;
+	m_pPendingReadbackImage = pCommand->m_pImage;
+	m_pPendingReadbackCompletion = pCommand->m_pCompletion;
+	m_ReadbackPboPendingSize = DataSize;
+	m_ReadbackPboFlip ^= 1;
+	m_ReadbackPboPending = true;
+	Completion.m_pCompletion = nullptr;
+}
+
+void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_ReadbackFlush(const CCommandBuffer::SCommand_RenderTarget_ReadbackFlush *pCommand)
+{
+	(void)pCommand;
+	FinishPendingReadbackPbo();
 }
 
 #endif

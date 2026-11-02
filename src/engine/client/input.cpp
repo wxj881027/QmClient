@@ -104,6 +104,8 @@ void CInput::Shutdown()
 {
 	StopTextInput();
 	CloseJoysticks();
+	// 关闭后仍可能收到输入法析构触发的清理，此时图形对象可能已销毁。
+	m_pGraphics = nullptr;
 }
 
 void CInput::InitJoysticks()
@@ -802,7 +804,7 @@ int CInput::Update()
 	const bool TrackPerf = QmPerfEnabled();
 
 	const auto &&AddKeyEventChecked = [&](int Key, int Flags) {
-		if(Key != KEY_UNKNOWN && !IgnoreKeys && (!(Flags & IInput::FLAG_PRESS) || !HasComposition()))
+		if(Key != KEY_UNKNOWN && !IgnoreKeys && (!(Flags & IInput::FLAG_PRESS) || !QmImeShouldSuppressPress(Key, HasComposition())))
 		{
 			// SDL3 合并了两个静音扫描码，两个旧键名必须成组提交。
 			const SSdlKeyEvent aKeys[] = {{Key, Flags}, {KEY_AUDIOMUTE, Flags}};
@@ -866,20 +868,22 @@ int CInput::Update()
 		case SDL_EVENT_TEXT_EDITING_CANDIDATES:
 		{
 			std::optional<SQmImeCandidateList> NativeCandidates;
+			bool HasActiveComposition = false;
 #if defined(CONF_FAMILY_WINDOWS)
 			// SDL 的窗口过程也能收到同步 IME 通知，消息循环钩子可能收不到。
 			// 优先补读 IMM 分页；尚无列表时直接使用本次 SDL 候选快照。
-			if(Event.edit_candidates.num_candidates > 0 && m_ImeCandidates.AcceptsSdlCandidates() && Window() != nullptr)
+			if(Event.edit_candidates.num_candidates > 0 && Window() != nullptr)
 			{
 				void *pWindow = SDL_GetPointerProperty(SDL_GetWindowProperties(Window()), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
-				NativeCandidates = ReadWindowsImeCandidates(pWindow, 0);
+				// 搜狗等 IME 下一轮候选可能先于编辑通知到达，抑制状态也要检查当前组合。
+				NativeCandidates = ReadWindowsImeCandidates(pWindow, 0, m_ImeCandidates.AcceptsSdlCandidates() ? nullptr : &HasActiveComposition);
 			}
 			constexpr bool WindowsNumberedCandidates = true;
 #else
 			constexpr bool WindowsNumberedCandidates = false;
 #endif
 			m_ImeCandidates.UpdateFromSdl(Event.edit_candidates.candidates, Event.edit_candidates.num_candidates,
-				Event.edit_candidates.selected_candidate, WindowsNumberedCandidates, std::move(NativeCandidates));
+				Event.edit_candidates.selected_candidate, WindowsNumberedCandidates, std::move(NativeCandidates), HasActiveComposition);
 			break;
 		}
 
@@ -1075,7 +1079,7 @@ void CInput::UpdateGlobalInputState()
 bool SDLCALL CInput::WindowsMessageHook(void *pUser, MSG *pMsg)
 {
 	auto *pInput = static_cast<CInput *>(pUser);
-	if(pMsg == nullptr || (pMsg->message != WM_IME_NOTIFY && pMsg->message != WM_IME_ENDCOMPOSITION) || pInput->m_WindowsMessageEvent == 0)
+	if(pMsg == nullptr || (pMsg->message != WM_IME_NOTIFY && pMsg->message != WM_IME_STARTCOMPOSITION && pMsg->message != WM_IME_ENDCOMPOSITION) || pInput->m_WindowsMessageEvent == 0)
 		return true;
 	SDL_Window *pWindow = pInput->Window();
 	if(pWindow == nullptr || pMsg->hwnd != SDL_GetPointerProperty(SDL_GetWindowProperties(pWindow), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr))
@@ -1089,8 +1093,10 @@ bool SDLCALL CInput::WindowsMessageHook(void *pUser, MSG *pMsg)
 	return true;
 }
 
-std::optional<SQmImeCandidateList> CInput::ReadWindowsImeCandidates(void *pWindow, unsigned CandidateListFlags)
+std::optional<SQmImeCandidateList> CInput::ReadWindowsImeCandidates(void *pWindow, unsigned CandidateListFlags, bool *pHasActiveComposition)
 {
+	if(pHasActiveComposition != nullptr)
+		*pHasActiveComposition = false;
 	if(pWindow == nullptr)
 		return std::nullopt;
 	HWND WindowHandle = static_cast<HWND>(pWindow);
@@ -1130,6 +1136,9 @@ std::optional<SQmImeCandidateList> CInput::ReadWindowsImeCandidates(void *pWindo
 		}
 		if(ImeContext == nullptr)
 			return std::nullopt;
+		// 仅在提交后恢复判断时查询，且上下文由外层持有并统一释放。
+		if(pHasActiveComposition != nullptr)
+			*pHasActiveComposition = ImmGetCompositionStringW(ImeContext, GCS_COMPSTR, nullptr, 0) > 0;
 
 		using TCandidateList = std::unique_ptr<CANDIDATELIST, decltype(&std::free)>;
 		TCandidateList pCandidateList(nullptr, std::free);
@@ -1227,6 +1236,12 @@ void CInput::ProcessSystemMessage(MSG *pMsg)
 	if(pMsg == nullptr)
 		return;
 
+	if(pMsg->message == WM_IME_STARTCOMPOSITION)
+	{
+		m_ImeCandidates.ResumeComposition();
+		return;
+	}
+
 	if(pMsg->message == WM_IME_ENDCOMPOSITION)
 	{
 		// 删除或取消组合输入时也要清理旧候选，不能只依赖文本提交或关闭候选通知。
@@ -1241,8 +1256,14 @@ void CInput::ProcessSystemMessage(MSG *pMsg)
 		{
 		case IMN_OPENCANDIDATE:
 		case IMN_CHANGECANDIDATE:
-			m_ImeCandidates.UpdateFromNative(ReadWindowsImeCandidates(pMsg->hwnd, (unsigned)pMsg->lParam), pMsg->wParam == IMN_OPENCANDIDATE);
+		{
+			const bool IsOpenNotify = pMsg->wParam == IMN_OPENCANDIDATE;
+			bool HasActiveComposition = false;
+			auto Candidates = ReadWindowsImeCandidates(pMsg->hwnd, (unsigned)pMsg->lParam,
+				!IsOpenNotify && !m_ImeCandidates.AcceptsSdlCandidates() ? &HasActiveComposition : nullptr);
+			m_ImeCandidates.UpdateFromNative(std::move(Candidates), IsOpenNotify, HasActiveComposition);
 			break;
+		}
 		case IMN_CLOSECANDIDATE:
 			ClearImeCandidates();
 			break;

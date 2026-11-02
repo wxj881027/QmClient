@@ -316,7 +316,10 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	}
 	// 进入「搜索」页第一帧自动聚焦输入框：同时建立 ActiveItem 与 CLineInput 激活态，
 	// 之后由 DoEditBox 的激活维持逻辑接管；一次性消费，点击其他控件可正常移走焦点。
-	if(!ReadOnly && m_FocusSettingsSearchOnEntry && !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive() && !s_GlobalSearchInputCollapsed)
+	// 页签在按下帧切换页面，同一帧的这次按下会让 DoEditBox 判成「点击输入框外部」并
+	// 立刻释放刚建立的焦点；推迟到按下事件已消费的下一帧再聚焦，避免聚焦被同一次点击撤销。
+	if(!ReadOnly && m_FocusSettingsSearchOnEntry && !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive() &&
+		!s_GlobalSearchInputCollapsed && !Ui()->MouseButtonClicked(0))
 	{
 		m_FocusSettingsSearchOnEntry = false;
 		Ui()->SetActiveItem(&m_GlobalCardSearchInput);
@@ -355,7 +358,12 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 				s_GlobalSearchInputCollapsed = !s_GlobalSearchInputCollapsed;
 			RenderSettingsCardCollapseButton(SearchCtx, Frame.m_HandleRect, s_GlobalSearchInputCollapsed, 1.0f, &s_GlobalSearchInputCollapseButton);
 		};
-		SettingsCard(SearchCtx, InputSlot, InputSpec, InputVisualState, SettingsCardDeckVisualOptions(), [InputContentHeight](float) { return InputContentHeight; }, RenderInputContent, InputHeaderAction);
+		// 搜索输入卡只有折叠按钮、没有宽度切换：ⓘ 直接占宽度按钮的位置，紧贴折叠按钮。
+		// 视觉选项必须从卡片配置构造：手搓空对象会丢掉卡片背景色、透明度、边框与彩虹标题，
+		// 退回主题面板色，卡片看起来和同一页的其它卡片不是一套配色。
+		SSettingsCardDeckVisualOptions InputVisualOptions = SettingsCardDeckVisualOptions();
+		InputVisualOptions.m_HasWidthButton = false;
+		SettingsCard(SearchCtx, InputSlot, InputSpec, InputVisualState, InputVisualOptions, [InputContentHeight](float) { return InputContentHeight; }, RenderInputContent, InputHeaderAction);
 	}
 
 	// 结果卡组从输入卡片底部（含动画中的位置）开始，让位动画期间跟随卡片一起上移。

@@ -529,7 +529,8 @@ void CFastPractice::FreezePracticeWorldForServerPause()
 	}
 
 	CaptureServerReleasedFireStates();
-	CapturePracticeInputFilterStates();
+	// 临时自由旁观保留练习世界中的钩子，不重新要求松开钩子键。
+	CapturePracticeInputFilterStates(true);
 	ReleaseBufferedActionInputState();
 	m_SuppressFireOnNextPredictTick = true;
 	m_InputSuppressTicks = std::max(m_InputSuppressTicks, 2);
@@ -685,7 +686,7 @@ void CFastPractice::ReleaseBufferedActionInputState()
 	GameClient()->m_DummyFire = 0;
 }
 
-void CFastPractice::CapturePracticeInputFilterStates()
+void CFastPractice::CapturePracticeInputFilterStates(bool PreserveHeldHook)
 {
 	for(int Slot = 0; Slot < NUM_DUMMIES; Slot++)
 	{
@@ -712,7 +713,10 @@ void CFastPractice::CapturePracticeInputFilterStates()
 		State.m_RightHeld = Right != 0;
 		State.m_RightReleased = !State.m_RightHeld;
 		State.m_JumpReleased = Input.m_Jump == 0;
-		State.m_HookReleased = Input.m_Hook == 0;
+		const int ClientId = GameClient()->m_aLocalIds[Slot];
+		CCharacter *pCharacter = ClientId >= 0 ? m_PracticeBaseWorld.GetCharacterById(ClientId) : nullptr;
+		const bool KeepAttachedHook = PreserveHeldHook && pCharacter && pCharacter->Core()->m_HookState == HOOK_GRABBED;
+		State.m_Hook.Capture(Input.m_Hook, KeepAttachedHook);
 		m_aPracticeInputFilterStates[Slot] = State;
 	}
 }
@@ -724,7 +728,7 @@ void CFastPractice::PreserveCurrentPracticeInputFilterStates()
 		State.m_LeftReleased = true;
 		State.m_RightReleased = true;
 		State.m_JumpReleased = true;
-		State.m_HookReleased = true;
+		State.m_Hook.Reset();
 	}
 }
 
@@ -778,16 +782,7 @@ void CFastPractice::FilterPracticeInput(CNetObj_PlayerInput &Input, int InputCon
 		if(Input.m_Jump != 0)
 			Input.m_Jump = 0;
 	}
-	if(!State.m_HookReleased)
-	{
-		if(GameClient()->m_Controls.m_aInputData[Slot].m_Hook == 0)
-			State.m_HookReleased = true;
-	}
-	if(!State.m_HookReleased)
-	{
-		if(Input.m_Hook != 0)
-			Input.m_Hook = 0;
-	}
+	Input.m_Hook = State.m_Hook.Filter(Input.m_Hook, GameClient()->m_Controls.m_aInputData[Slot].m_Hook);
 
 	if(Commit)
 		m_aPracticeInputFilterStates[Slot] = State;
@@ -1242,8 +1237,10 @@ bool CFastPractice::AdvanceBaseWorldToTick(int TargetTick, int LocalClientId, in
 		return false;
 
 	const int FirstBaseTick = m_PracticeBaseWorld.GameTick() + 1;
+	CQmAxiomQuadTimeScope BaseQuadTime(Collision(), m_PracticeBaseWorld.GameTick(), Client()->GameTickSpeed());
 	for(int Tick = m_PracticeBaseWorld.GameTick() + 1; Tick <= TargetTick; Tick++)
 	{
+		Collision()->SetQmAxiomQuadTick(Tick, Client()->GameTickSpeed());
 		CCharacter *pLocalChar = m_PracticeBaseWorld.GetCharacterById(LocalClientId);
 		CCharacter *pDummyChar = m_RequireDummy ? m_PracticeBaseWorld.GetCharacterById(DummyClientId) : nullptr;
 		if(!pLocalChar || (m_RequireDummy && !pDummyChar))
@@ -1438,8 +1435,10 @@ bool CFastPractice::OverridePredict()
 		return true;
 	}
 
+	CQmAxiomQuadTimeScope PredictedQuadTime(Collision(), BaseGameTick, Client()->GameTickSpeed());
 	for(int Tick = BaseGameTick + 1; Tick <= FinalTickSelf; Tick++)
 	{
+		Collision()->SetQmAxiomQuadTick(Tick, Client()->GameTickSpeed());
 		std::vector<STrackedProjectile> vTrackedProjectilesBefore;
 		std::vector<STrackedProjectile> vTrackedProjectilesAfter;
 
@@ -1712,8 +1711,10 @@ int CFastPractice::ApplyVisualFastInputPrediction(int FinalTickRegular, int Loca
 	const int LocalTee = ResolveInputSlotByClientId(LocalClientId, g_Config.m_ClDummy);
 	const int DummyTee = ResolveInputSlotByClientId(DummyClientId, LocalTee ^ 1);
 
+	CQmAxiomQuadTimeScope VisualQuadTime(Collision(), FinalTickRegular, Client()->GameTickSpeed());
 	for(int Tick = FinalTickRegular + 1; Tick <= FinalTickSelf; Tick++)
 	{
+		Collision()->SetQmAxiomQuadTick(Tick, Client()->GameTickSpeed());
 		pLocalChar = VisualWorld.GetCharacterById(LocalClientId);
 		pDummyChar = m_RequireDummy ? VisualWorld.GetCharacterById(DummyClientId) : nullptr;
 		if(!pLocalChar || (m_RequireDummy && !pDummyChar))

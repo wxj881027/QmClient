@@ -18,8 +18,10 @@
 #include "server_info_update.h"
 #include "serverbrowser.h"
 #include "snapshot_ticks.h"
+#include "video_export.h"
 
 #include <base/crashdump.h>
+#include <base/fs.h>
 #include <base/hash.h>
 #include <base/hash_ctxt.h>
 #include <base/lock.h>
@@ -77,8 +79,13 @@
 #include <generated/protocol7.h>
 #include <generated/protocolglue.h>
 
+#include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/media_paths.h>
 #include <game/client/components/qmclient/perf_logging.h>
+#include <game/client/components/qmclient/pose_capture.h>
+#include <game/client/components/qmclient/pose_file.h>
+#include <game/client/components/qmclient/pose_scene.h>
+#include <game/client/components/qmclient/screenshot_clipboard.h>
 #include <game/client/components/qmclient/screenshot_viewer.h>
 #include <game/client/frame_scheduler.h>
 #include <game/localization.h>
@@ -142,6 +149,10 @@ static bool gs_QmTestMainThreadAssert = false;
 // QmClient: 测试专用注入开关（--qm-test-main-thread-stall），供进程级回归测试在
 // 主循环内模拟一次长时间阻塞，验证看门狗使用单调时钟后能真实报告卡死。
 static bool gs_QmTestMainThreadStall = false;
+#if defined(CONF_FAMILY_WINDOWS)
+// 进程回归注入真实结构化异常，验证本地报告完成后不会阻塞在旧处理器中。
+static bool gs_QmTestMainThreadException = false;
+#endif
 // 进程回归注入最终清理卡死，验证隐藏窗口后的强制退出。
 static bool gs_QmTestShutdownCleanupStall = false;
 static constexpr const char *gs_pQmCrashDumpDir = "dumps/QmClient_Crash";
@@ -439,6 +450,15 @@ CClient::CClient() :
 
 	m_Sixup = false;
 }
+
+#if defined(CONF_VIDEORECORDER)
+// 等待拼接线程完成：防止静态对象销毁撕裂正在写的输出文件（缺 trailer）
+CClient::~CClient()
+{
+	if(m_ConcatThread.joinable())
+		m_ConcatThread.join();
+}
+#endif
 
 // ----- send functions -----
 int CClient::SendMsg(int Conn, CMsgPacker *pMsg, int Flags)
@@ -1203,6 +1223,10 @@ void CClient::DisconnectWithReason(const char *pReason)
 {
 	if(pReason != nullptr && pReason[0] == '\0')
 		pReason = nullptr;
+	// 合影会话复用了 demo snapshot 槽位。断开或退出时先撤掉合成快照，
+	// 再卸载地图，避免离线渲染帧继续访问已关闭的 datafile。
+	if(m_PoseSessionActive)
+		LeavePoseSession();
 
 	DummyDisconnect(pReason);
 
@@ -1213,6 +1237,10 @@ void CClient::DisconnectWithReason(const char *pReason)
 	// stop demo playback and recorder
 	// make sure to remove replay tmp demo
 	m_DemoPlayer.Stop();
+#if defined(CONF_VIDEORECORDER)
+	// 断开即中断分段导出：进度文件已保存，续渲时跳过已完成片段
+	CancelSegmentedVideoExport();
+#endif
 	for(int Recorder = 0; Recorder < RECORDER_MAX; Recorder++)
 	{
 		DemoRecorder(Recorder)->Stop(Recorder == RECORDER_REPLAYS ? IDemoRecorder::EStopMode::REMOVE_FILE : IDemoRecorder::EStopMode::KEEP_FILE);
@@ -1245,6 +1273,9 @@ void CClient::DisconnectWithReason(const char *pReason)
 	mem_zero(&m_CurrentServerPingUuid, sizeof(m_CurrentServerPingUuid));
 	m_CurrentServerCurrentPingTime = -1;
 	m_CurrentServerNextPingTime = -1;
+	m_LinkProbeTracker.Reset(time_get());
+	m_UpstreamProbeEnabled = false;
+	m_NextUpstreamProbeTime = 0;
 	m_ManualPingProbe.Reset();
 	for(int Conn = 0; Conn < NUM_DUMMIES; ++Conn)
 		m_aGamePingProbes[Conn].Reset();
@@ -1786,6 +1817,7 @@ const char *CClient::LoadMap(const char *pName, const char *pFilename, const std
 	static char s_aErrorMsg[128];
 
 	SetState(IClient::STATE_LOADING);
+	GameClient()->OnMapLoadStart();
 	SetLoadingStateDetail(IClient::LOADING_STATE_DETAIL_LOADING_MAP);
 	if((bool)m_LoadingCallback)
 		m_LoadingCallback(IClient::LOADING_CALLBACK_DETAIL_MAP);
@@ -1832,7 +1864,10 @@ const char *CClient::LoadMap(const char *pName, const char *pFilename, const std
 	}
 
 	// Only check CRC if we don't have the secure SHA256.
-	if(!WantedSha256.has_value() && m_pMap->Crc() != WantedCrc)
+	// A local pose fallback has no server-provided CRC. Keep the historical
+	// zero sentinel as "no CRC constraint"; network/demo callers always pass
+	// a non-zero CRC or a SHA-256 digest.
+	if(!WantedSha256.has_value() && WantedCrc != 0 && m_pMap->Crc() != WantedCrc)
 	{
 		str_format(s_aErrorMsg, sizeof(s_aErrorMsg), "map differs from the server. %08x != %08x", m_pMap->Crc(), WantedCrc);
 		m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", s_aErrorMsg);
@@ -2568,6 +2603,8 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 			{
 				return;
 			}
+			if(Conn == CONN_MAIN && m_LinkProbeTracker.Confirm(*pId))
+				return;
 			const int64_t Now = time_get();
 			m_aGamePingProbes[Conn].HandlePong(*pId, Now, time_freq());
 			if(Conn == CONN_MAIN && m_ServerCapabilities.m_PingEx && m_CurrentServerCurrentPingTime >= 0 && *pId == m_CurrentServerPingUuid)
@@ -3465,6 +3502,9 @@ void CClient::PumpNetwork()
 	double MaxNetworkProcessMs = 0.0;
 	int MaxNetworkProcessConn = -1;
 	int MaxNetworkPacketBytes = 0;
+	int SlowestNetworkPacketBytes = 0;
+	SQmPerfWireMessage SlowestNetworkMessage;
+	int SlowestNetworkSixup = -1;
 	int NetworkChunksProcessed = 0;
 	const int FirstConn = m_NetworkPumpFirstConn;
 	m_NetworkPumpFirstConn = (FirstConn + 1) % NUM_CONNS;
@@ -3506,6 +3546,9 @@ void CClient::PumpNetwork()
 					{
 						MaxNetworkProcessMs = ProcessMs;
 						MaxNetworkProcessConn = Conn;
+						SlowestNetworkPacketBytes = Packet.m_DataSize;
+						SlowestNetworkMessage = {};
+						SlowestNetworkSixup = -1;
 					}
 				}
 				else
@@ -3518,6 +3561,10 @@ void CClient::PumpNetwork()
 			{
 				if(PerfEnabled)
 				{
+					// 包处理可能切换连接状态，在调用前保留标量包头，避免依赖包体的后续生命周期。
+					const SQmPerfWireMessage Message = QmPerfWireMessage(Packet.m_pData, Packet.m_DataSize);
+					const int PacketBytes = Packet.m_DataSize;
+					const int PacketSixup = IsSixup() ? 1 : 0;
 					CPerfTimer ProcessTimer;
 					ProcessServerPacket(&Packet, Conn, g_Config.m_ClDummy ^ Conn);
 					const double ProcessMs = ProcessTimer.ElapsedMs();
@@ -3526,6 +3573,9 @@ void CClient::PumpNetwork()
 					{
 						MaxNetworkProcessMs = ProcessMs;
 						MaxNetworkProcessConn = Conn;
+						SlowestNetworkPacketBytes = PacketBytes;
+						SlowestNetworkMessage = Message;
+						SlowestNetworkSixup = PacketSixup;
 					}
 				}
 				else
@@ -3543,11 +3593,12 @@ void CClient::PumpNetwork()
 		{
 			char aPayload[768];
 			str_format(aPayload, sizeof(aPayload),
-				"event=network_pump_detail state=%d chunks=%d conn0_chunks=%d conn0_recv_ms=%.3f conn0_process_ms=%.3f conn1_chunks=%d conn1_recv_ms=%.3f conn1_process_ms=%.3f max_process_ms=%.3f max_process_conn=%d max_packet_bytes=%d",
+				"event=network_pump_detail state=%d chunks=%d conn0_chunks=%d conn0_recv_ms=%.3f conn0_process_ms=%.3f conn1_chunks=%d conn1_recv_ms=%.3f conn1_process_ms=%.3f max_process_ms=%.3f max_process_conn=%d max_packet_bytes=%d slowest_packet_bytes=%d slowest_wire_msg=%d slowest_wire_sys=%d sixup=%d",
 				State(), NetworkChunksProcessed,
 				aNetworkChunks[0], aNetworkRecvMs[0], aNetworkProcessMs[0],
 				aNetworkChunks[1], aNetworkRecvMs[1], aNetworkProcessMs[1],
-				MaxNetworkProcessMs, MaxNetworkProcessConn, MaxNetworkPacketBytes);
+				MaxNetworkProcessMs, MaxNetworkProcessConn, MaxNetworkPacketBytes,
+				SlowestNetworkPacketBytes, SlowestNetworkMessage.m_Id, SlowestNetworkMessage.m_System, SlowestNetworkSixup);
 			QmPerfLogPayloadForce("perf/main_thread", aPayload, this);
 		}
 	}
@@ -3591,6 +3642,194 @@ void CClient::OnDemoPlayerSnapshot(void *pData, int Size)
 	GameClient()->OnNewSnapshot(false);
 }
 
+bool CClient::ApplySyntheticSnapshot(const void *pData, int Size, int Tick)
+{
+	// 合影渲染路径：外部把一份完整快照交进来（由 qm_pose::BuildSnapshot 合成），
+	// 这里只负责「像收到一份演示快照那样」把它装进当前槽，之后所有解析与绘制
+	// 都走既有管线——皮肤、表情、武器、钩子、名字牌全部复用，不另写渲染。
+	if(!pData || Size <= 0 || (size_t)Size > sizeof(CSnapshotBuffer))
+		return false;
+	if(!m_aapSnapshots[0][SNAP_CURRENT] || !m_aapSnapshots[0][SNAP_PREV])
+		return false;
+	if(!((const CSnapshot *)pData)->IsValid((size_t)Size))
+		return false;
+
+	// alt 快照按原样展开：合成快照本身就是完整快照，没有 delta 需要叠加。
+	CSnapshotBuffer AltSnapBuffer;
+	const int AltSnapSize = UnpackAndValidateSnapshot((CSnapshot *)pData, &AltSnapBuffer);
+	if(AltSnapSize < 0)
+		return false;
+
+	m_aCurGameTick[0] = Tick;
+	// 前一 tick 留出间隔：角色需要 SNAP_PREV 里也存在同一 id 才会被标记为 Active，
+	// 由调用方连续应用两次来满足；Prev 用 Tick-1 保证插值不会反向。
+	m_aPrevGameTick[0] = Tick - 1;
+
+	std::swap(m_aapSnapshots[0][SNAP_PREV], m_aapSnapshots[0][SNAP_CURRENT]);
+	mem_copy(m_aapSnapshots[0][SNAP_CURRENT]->m_pSnap, pData, (size_t)Size);
+	mem_copy(m_aapSnapshots[0][SNAP_CURRENT]->m_pAltSnap, &AltSnapBuffer, (size_t)AltSnapSize);
+	m_aapSnapshots[0][SNAP_CURRENT]->m_Tick = Tick;
+	m_aapSnapshots[0][SNAP_PREV]->m_Tick = Tick - 1;
+
+	GameClient()->OnNewSnapshot(false);
+	log_info("poses", "applied synthetic snapshot tick=%d size=%d", Tick, Size);
+	return true;
+}
+
+void CClient::ClearSyntheticSnapshot()
+{
+	// 异常路径：会话在离屏帧中途被收掉（例如渲染期间执行了 poses_close）时，
+	// 也要把离屏目标收口，否则 ScreenWidth 会停在目标尺寸，之后所有界面排版都会错位。
+	if(m_PoseOffscreenActive)
+	{
+		CImageInfo Discarded;
+		m_pGraphics->EndOffscreenFrame(Discarded);
+		Discarded.Free();
+		m_PoseOffscreenActive = false;
+	}
+	// 清空两个槽：之后普通渲染不会再看到合影里的假角色。
+	m_aapSnapshots[0][SNAP_CURRENT] = nullptr;
+	m_aapSnapshots[0][SNAP_PREV] = nullptr;
+	m_aReceivedSnapshots[0] = 0;
+	// GameClient caches pointers into the current snapshot while rendering.
+	// Invalidate those pointers before the map or snapshot storage is reused.
+	GameClient()->InvalidateSnapshot();
+	m_PoseScreenshotPending = false;
+	m_PoseScreenshotHandled = false;
+	m_PoseScreenshotScale = 1;
+	m_PoseOffscreenActive = false;
+	m_PoseSkinsGatePassed = false;
+	m_PoseSkinWaitStart = 0;
+	m_aPoseScreenshotPath[0] = '\0';
+}
+
+bool CClient::RequestPoseScreenshot(const char *pFilename, int Scale, bool KeepSession)
+{
+	if(!pFilename || pFilename[0] == '\0')
+		return false;
+	// 只在合成快照生效时有意义：普通游戏画面截图走既有 screenshot 命令。
+	if(!m_aapSnapshots[0][SNAP_CURRENT])
+		return false;
+	// 截图管线自己会写进 screenshots/ 并补时间戳：调用方带上的前缀要去掉，
+	// 否则会落成 screenshots/screenshots/<名字>.png_<时间>.png。
+	const char *pName = str_startswith_nocase(pFilename, "screenshots/") ? pFilename + str_length("screenshots/") : pFilename;
+	str_copy(m_aPoseScreenshotPath, pName);
+	m_PoseScreenshotScale = qm_pose::NormalizeCaptureScale(Scale);
+	// 上一帧若还挂着离屏帧（异常路径，例如 UI 在渲染中途又发起一次抓帧），
+	// 必须先收口：这个标志被清掉而目标还活动的话，之后每次 Begin 都会失败，
+	// 而且会带着活动渲染目标 Swap——Vulkan 下就是死锁。
+	if(m_PoseOffscreenActive)
+	{
+		CImageInfo Discarded;
+		m_pGraphics->EndOffscreenFrame(Discarded);
+		Discarded.Free();
+		m_PoseOffscreenActive = false;
+	}
+	m_PoseScreenshotPending = true;
+	// 预览 HUD 的「拍一张」看完还要继续看，拍完不撤会话；渲染则出图即收尾。
+	m_PoseCaptureKeepSession = KeepSession;
+	// 命令通常在菜单的渲染过程中执行：本帧画出来的是回放列表，不是合影。
+	// 等合影真正画过两帧再抓，否则拿到的是一张黑图或菜单截图。
+	m_PoseScreenshotWarmupFrames = 2;
+	// 新请求重新武装皮肤闸门：上一次抓帧的判定结果不能沿用。
+	m_PoseSkinsGatePassed = false;
+	m_PoseSkinWaitStart = 0;
+	return true;
+}
+
+// 离屏帧从「开始」到「读回」之间是真正的渲染耗时（含界面按目标像素重排）。
+// 和建目标、读回分开计，才能在变慢时判断是渲染本身慢还是同步等待久。
+static std::chrono::nanoseconds s_PoseOffscreenFrameStart{};
+
+bool CClient::BeginPoseOffscreenCapture()
+{
+	// 输出尺寸 = 窗口渲染尺寸 × N；超出后端上限时 ComputeCaptureSize 会逐级下调，
+	// 下调到 1 倍就不再走离屏（和普通截图完全一致，只少了放大）。
+	// 像素预算跟尺寸上限一起判：4K 窗口 4 倍会顶到 1.5 亿像素，显存与编码都会把主线程拖死。
+	// 像素预算可由 qm_pose_capture_max_megapixels 调整（0 = 不限）：上限取决于显存与
+	// 编码耗时，不同机器差别很大，写死一个值要么浪费高端机、要么拖死低端机。
+	// 按「百万像素」换算：这里用 1000*1000，和配置项的说明一致。
+	const int64_t MaxPixels = g_Config.m_QmPoseCaptureMaxMegapixels > 0 ? (int64_t)g_Config.m_QmPoseCaptureMaxMegapixels * 1000 * 1000 : 0;
+	const qm_pose::SCaptureSize Size = qm_pose::ComputeCaptureSize(
+		m_pGraphics->ScreenWidth(), m_pGraphics->ScreenHeight(), m_PoseScreenshotScale,
+		qm_pose::MAX_CAPTURE_DIMENSION, MaxPixels);
+	// 1 倍必须走窗口截图：让 1 倍也建离屏目标会在 Vulkan 后端触发驱动层访问违例
+	// （实测崩溃在 CCommandProcessorFragment_Vulkan 的渲染命令里），原因未查清，
+	// 因此恢复成「1 倍 = 窗口截图」的原有行为。窗口没焦点时由 ScreenshotDirect
+	// 重试并最终报错，不再静默丢图。
+	if(Size.m_Width <= 0 || Size.m_Height <= 0 || Size.m_Scale <= 1)
+		return false;
+	if(Size.m_Clamped)
+	{
+		char aBuf[192];
+		str_format(aBuf, sizeof(aBuf), "supersampling clamped to %dx from %dx (target %dx%d)", Size.m_Scale, m_PoseScreenshotScale, Size.m_Width, Size.m_Height);
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+	}
+	// 4 倍 4K 是 1.3 亿像素：建目标与读回都可能卡住主线程。这里量出各段耗时，
+	// 卡死时日志能直接指出是哪一段，不必靠猜。
+	// 必须用 CPerfTimer（纳秒时钟）：time_get() 在同一帧内返回缓存值，段内耗时
+	// 永远量成 0.0 ms——之前这两个计时器就是这样失效的，看起来像"不耗时"。
+	CPerfTimer TargetTimer;
+	if(!m_pGraphics->BeginOffscreenFrame(Size.m_Width, Size.m_Height))
+	{
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "the graphics backend could not start an offscreen frame; falling back to the window resolution");
+		return false;
+	}
+	char aBuf[192];
+	str_format(aBuf, sizeof(aBuf), "offscreen target %dx%d ready in %.2f ms", Size.m_Width, Size.m_Height, TargetTimer.ElapsedMs());
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+	str_format(aBuf, sizeof(aBuf), "rendering the pose still at %dx%d (%dx supersampling)", Size.m_Width, Size.m_Height, Size.m_Scale);
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+	s_PoseOffscreenFrameStart = time_get_nanoseconds();
+	return true;
+}
+
+void CClient::FinishPoseOffscreenCapture()
+{
+	CImageInfo Image;
+	// 这一帧离屏画面的实际渲染耗时：从开目标之后算到读回之前。
+	const double FrameMs = s_PoseOffscreenFrameStart.count() != 0 ?
+				       std::chrono::duration<double, std::milli>(time_get_nanoseconds() - s_PoseOffscreenFrameStart).count() :
+				       0.0;
+	s_PoseOffscreenFrameStart = std::chrono::nanoseconds::zero();
+	CPerfTimer ReadTimer;
+	const bool Read = m_pGraphics->EndOffscreenFrame(Image);
+	m_PoseOffscreenActive = false;
+	{
+		char aBuf[192];
+		str_format(aBuf, sizeof(aBuf), "supersampled frame rendered in %.2f ms, offscreen readback finished in %.2f ms (ok=%d)", FrameMs, ReadTimer.ElapsedMs(), Read ? 1 : 0);
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+	}
+	// 锐化在编码之前就地做：此时像素已经读回 CPU，改动不会影响任何渲染状态。
+	if(Read && Image.m_pData != nullptr && m_PoseSharpenAmount > 0)
+	{
+		CPerfTimer SharpenTimer;
+		qm_pose::ApplyUnsharpMask(Image.m_pData, (int)Image.m_Width, (int)Image.m_Height, m_PoseSharpenAmount);
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), "pose sharpen (%.0f%%) took %.2f ms", (double)m_PoseSharpenAmount, SharpenTimer.ElapsedMs());
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+	}
+	// 落盘复用截图管线：同一套 screenshots/ 命名、媒体目录解析、水印与 png/webp 选择。
+	CPerfTimer HandoffTimer;
+	if(Read && m_pGraphics->TakeScreenshotFromImage(std::move(Image), m_aPoseScreenshotPath, [this](CImageInfo &&TakenImage, const char *pPath) { GameClient()->OnScreenshotTaken(std::move(TakenImage), pPath); }, GameClient()->ScreenshotProcessor()))
+	{
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), "screenshot handoff (texture upload + queue) took %.2f ms", HandoffTimer.ElapsedMs());
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+		return;
+	}
+
+	// 读回失败时不能在本帧退回窗口截图：这一帧整幅画面已经画进离屏目标，
+	// 窗口帧缓冲里没有可用内容（会得到一张空白图）。把请求降级成 1 倍并重新排队，
+	// 下一帧照常画进窗口后再抓，至少保证这次渲染有产物。
+	Image.Free();
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "supersampled capture failed; retrying once at the window resolution");
+	m_PoseScreenshotScale = 1;
+	m_PoseScreenshotPending = true;
+	m_PoseScreenshotHandled = false;
+	m_PoseScreenshotWarmupFrames = 1;
+}
+
 void CClient::OnDemoPlayerMessage(void *pData, int Size)
 {
 	CUnpacker Unpacker;
@@ -3626,8 +3865,53 @@ void CClient::UpdateDemoIntraTimers()
 	m_aGameIntraTickSincePrev[0] = pInfo->m_IntraTickSincePrev;
 }
 
+void CClient::UpdateUpstreamRedundancy()
+{
+	const bool MainOnline = State() == IClient::STATE_ONLINE && m_aNetClient[CONN_MAIN].State() == NETSTATE_ONLINE;
+	// KCP 已有自己的输入冗余和重传，避免在现有发送策略上再次叠加。
+	const bool ProbeEnabled = MainOnline && g_Config.m_QmUpstreamRedundancy && m_ServerCapabilities.m_PingEx && !m_aNetClient[CONN_MAIN].IsKcpActive();
+	const int64_t Now = time_get();
+	if(ProbeEnabled != m_UpstreamProbeEnabled)
+	{
+		m_LinkProbeTracker.Reset(Now);
+		m_UpstreamProbeEnabled = ProbeEnabled;
+		m_NextUpstreamProbeTime = ProbeEnabled ? Now : 0;
+	}
+
+	if(ProbeEnabled)
+		m_LinkProbeTracker.Update(Now, time_freq());
+	const int Copies = ProbeEnabled ? m_LinkProbeTracker.Copies(g_Config.m_QmUpstreamRedundancyMaxCopies) : 1;
+	for(int Conn = 0; Conn < NUM_DUMMIES; ++Conn)
+		m_aNetClient[Conn].SetQmUpstreamCopies(m_aNetClient[Conn].State() == NETSTATE_ONLINE ? Copies : 1);
+
+	if(ProbeEnabled && Now >= m_NextUpstreamProbeTime)
+	{
+		// 先发送已排队的游戏数据，再单发独立探针；不补发暂停期间错过的探针。
+		m_NextUpstreamProbeTime = Now + time_freq() / 2;
+		m_aNetClient[CONN_MAIN].Flush();
+		m_aNetClient[CONN_MAIN].SetQmUpstreamCopies(1);
+		const CUuid Id = RandomUuid();
+		CMsgPacker Probe(NETMSG_PINGEX, true);
+		Probe.AddRaw(&Id, sizeof(Id));
+		if(SendMsg(CONN_MAIN, &Probe, MSGFLAG_FLUSH) == 0)
+			m_LinkProbeTracker.RecordSent(Id, Now);
+		m_aNetClient[CONN_MAIN].SetQmUpstreamCopies(Copies);
+	}
+
+	static int64_t s_LastLogTime = 0;
+	if(g_Config.m_Debug && g_Config.m_QmUpstreamRedundancy && MainOnline && Now - s_LastLogTime >= time_freq())
+	{
+		s_LastLogTime = Now;
+		dbg_msg("upstream-redundancy", "copies=%d probe_enabled=%d estimated=%d round_trip_unconfirmed=%.1f%% samples=%llu ignored=%llu",
+			Copies, (int)ProbeEnabled, (int)m_LinkProbeTracker.HasEstimate(), m_LinkProbeTracker.UnconfirmedPercent(),
+			(unsigned long long)m_LinkProbeTracker.WindowSamples(), (unsigned long long)m_LinkProbeTracker.TotalIgnored());
+	}
+}
+
 void CClient::Update()
 {
+	m_LinkProbeTracker.OnFrame(time_get(), time_freq());
+
 	const bool GraphicsTrace = QmGraphicsTraceEnabled(2);
 	const bool PerfRuntime = QmPerfEnabled();
 	// GraphicsTrace 走原有 perf/graphics 通道；常规性能/卡顿诊断下把 client_update 的子阶段
@@ -3661,6 +3945,8 @@ void CClient::Update()
 	}
 	else
 		PumpNetwork();
+
+	UpdateUpstreamRedundancy();
 
 	GameClient()->OnConnectionResourceUpdate();
 	// 官方 178da1ead：在采集/发送输入之前先更新 editor/gameclient，
@@ -3711,9 +3997,27 @@ void CClient::Update()
 #if defined(CONF_VIDEORECORDER)
 		// 图形线程仅发布录制失败，主线程在推进回放前完成停止与清理。
 		if(IVideo::Current() && IVideo::Current()->HasError())
+		{
+			// 先给任务打标记：错误段的容器可能仍是可打开的文件（mkv 无 trailer 亦然），
+			// 只有录制侧知道本次是以错误终止，不能让收尾阶段把它记成"已完成"。
+			if(m_pVideoExportTask)
+				m_pVideoExportTask->MarkSegmentRecordingFailed();
 			m_DemoPlayer.Stop(Localize("Failed to record video. See local console for details."));
+		}
 #endif
-		if(m_DemoPlayer.IsPlaying())
+		// 合影会话没有 demo 时间轴：合成快照就是唯一画面来源，进度由合影自己推进。
+		// 这条分支必须排在 demo 之前——否则 demo 没在播放时会掉进下面的收尾分支，
+		// 进入会话的下一帧就被 DisconnectWithReason 拆掉地图和快照（结果是黑图、被踢回菜单）。
+		if(m_PoseSessionActive)
+		{
+#if defined(CONF_VIDEORECORDER)
+			// 录制时每帧重新应用合成快照并提交一帧给编码器，直到设定的秒数用完；
+			// 只观看时不推进任何时间轴。
+			if(IVideo::Current())
+				AdvancePoseVideo();
+#endif
+		}
+		else if(m_DemoPlayer.IsPlaying())
 		{
 #if defined(CONF_VIDEORECORDER)
 			if(IVideo::Current())
@@ -3733,9 +4037,25 @@ void CClient::Update()
 			m_aPrevGameTick[0] = pInfo->m_PreviousTick;
 			m_aGameIntraTick[0] = pInfo->m_IntraTick;
 			m_aGameTickTime[0] = pInfo->m_TickTime;
+
+#if defined(CONF_VIDEORECORDER)
+			// 分段导出状态机：预热到段起点开录、到段末停录收尾
+			DriveSegmentedExport(pInfo->m_Info.m_CurrentTick);
+#endif
 		}
 		else
 		{
+#if defined(CONF_VIDEORECORDER)
+			// demo 自然结束路径的停录发生在 CDemoPlayer::Stop 内部（同样走 IVideo::Stop）：
+			// 闭锁同样被置位，这里消费掉并把结果传给任务，防止错误段被记成已完成。
+			if(m_pVideoExportTask && m_pVideoExportTask->Active())
+			{
+				if(IVideo::TakeStopResult())
+					m_pVideoExportTask->MarkSegmentRecordingFailed();
+				FinishSegmentedExport();
+			}
+			CancelSegmentedVideoExport();
+#endif
 			// Disconnect when demo playback stopped, either due to playback error
 			// or because the end of the demo was reached when rendering it.
 			DisconnectWithReason(m_DemoPlayer.ErrorMessage());
@@ -4269,6 +4589,14 @@ void CClient::Run()
 	// 此时看门狗时钟仍在推进，可验证弹窗期间不会误报“客户端卡死”。
 	if(gs_QmTestMainThreadAssert)
 		dbg_assert_failed("qm test main thread assertion (--qm-test-main-thread-assert)");
+#if defined(CONF_FAMILY_WINDOWS)
+	if(gs_QmTestMainThreadException)
+	{
+		log_info("test/crashdump", "raising_noncontinuable_access_violation");
+		const ULONG_PTR aParameters[] = {0, 1};
+		RaiseException(EXCEPTION_ACCESS_VIOLATION, EXCEPTION_NONCONTINUABLE, 2, aParameters);
+	}
+#endif
 
 	bool LastD = false;
 	bool LastE = false;
@@ -4337,6 +4665,14 @@ void CClient::Run()
 			m_aCmdPlayDemo[0] = 0;
 		}
 
+		if(m_aCmdOpenPoses[0])
+		{
+			char aCommand[IO_MAX_PATH_LENGTH * 2 + 32];
+			str_format(aCommand, sizeof(aCommand), "poses_open \"%s\"", m_aCmdOpenPoses);
+			m_pConsole->ExecuteLine(aCommand, IConsole::CLIENT_ID_UNSPECIFIED, false);
+			m_aCmdOpenPoses[0] = 0;
+		}
+
 		// handle pending map edits
 		if(m_aCmdEditMap[0])
 		{
@@ -4378,6 +4714,8 @@ void CClient::Run()
 				HandleConnectLink(aFile);
 			else if(str_endswith(aFile, ".demo"))
 				HandleDemoPath(aFile);
+			else if(str_endswith_nocase(aFile, ".poses"))
+				HandlePosesPath(aFile);
 			else if(str_endswith(aFile, ".map"))
 				HandleMapPath(aFile);
 		}
@@ -4528,6 +4866,73 @@ void CClient::Run()
 					NextRenderTime = std::max(NextRenderTime + time_freq() / GfxRefreshRate, Now);
 				m_LastRenderTime = Now;
 
+				// 合影超采样静帧：抓帧那一帧整幅画面改画到 N 倍离屏目标。
+				// 必须在 Render() 之前开始——世界取景只由宽高比与相机缩放决定，
+				// 换目标尺寸不会改变构图，但几何、皮肤与文字会按目标像素重新光栅化。
+				// 皮肤闸门必须在离屏帧开始之前完成：闸门没放行就整帧跳过拍摄，
+				// 等下一帧再试。否则这一帧已经把 default 皮肤画进离屏目标了。
+				// 本帧是否走过「开离屏帧」这一步：闸门可能直到渲染后那次检查才放行，
+				// 那一帧根本没有离屏目标，不能拿窗口帧缓冲冒充超采样成片。
+				bool PoseOffscreenAttempted = false;
+				if(m_PoseScreenshotPending && m_PoseScreenshotWarmupFrames == 0 && !PoseSkinsReadyForCapture())
+				{
+					// 本帧不进入离屏，也不提交截图；继续渲染窗口画面等待加载完成。
+					// 上一帧若留下了活动离屏目标，必须先收口：离屏帧不允许跨帧存在。
+					if(m_PoseOffscreenActive)
+					{
+						CImageInfo Discarded;
+						m_pGraphics->EndOffscreenFrame(Discarded);
+						Discarded.Free();
+						m_PoseOffscreenActive = false;
+					}
+				}
+				else if(m_PoseScreenshotPending && m_PoseScreenshotWarmupFrames == 0)
+				{
+					m_PoseOffscreenActive = BeginPoseOffscreenCapture();
+					PoseOffscreenAttempted = true;
+				}
+#if defined(CONF_VIDEORECORDER)
+				// 视频导出离屏帧：整幅画面画进跨帧复用的离屏目标（可选多采样），窗口照常回绘预览。
+				// 必须在 Render() 之前开始（与静帧离屏同因：几何与文字按导出尺寸光栅化）。
+				// Begin 失败分两种：超采样导出没有降级余地（窗口帧缓冲只有窗口大），直接让录制
+				// 报错终止；纯 FSAA 导出本帧退回读窗口帧缓冲（丢一帧 AA，画面仍正确）。
+				bool VideoOffscreenThisFrame = false;
+				if(IVideo::Current() != nullptr)
+				{
+					if(m_VideoOffscreenPlan.m_Offscreen)
+					{
+						if(Graphics()->BeginVideoFrame(m_VideoOffscreenPlan.m_RenderWidth, m_VideoOffscreenPlan.m_RenderHeight, m_VideoOffscreenPlan.m_SampleCount))
+						{
+							VideoOffscreenThisFrame = true;
+							IVideo::Current()->SetOffscreenCapture(true);
+						}
+						else if(m_VideoOffscreenPlan.m_Upscale)
+						{
+							log_error("videorecorder", "offscreen export target could not be created at %dx%d; stopping the recording",
+								m_VideoOffscreenPlan.m_RenderWidth, m_VideoOffscreenPlan.m_RenderHeight);
+							IVideo::Current()->FailCapture();
+						}
+						else
+						{
+							// 本帧由窗口路径接管（帧计数与队列语义两条路径一致）；
+							// 下一帧继续尝试离屏，瞬时冲突（如静帧离屏）不会永久降级。
+							if(!m_VideoOffscreenFailed)
+							{
+								m_VideoOffscreenFailed = true;
+								log_warn("videorecorder", "offscreen video frame unavailable this pass; capturing from the window framebuffer");
+							}
+							IVideo::Current()->SetOffscreenCapture(false);
+						}
+					}
+				}
+				else
+				{
+					// 录制已结束：销毁复用的离屏目标并复位计划（幂等，未创建时无操作）。
+					Graphics()->StopVideoFrame();
+					m_VideoOffscreenPlan = SVideoOffscreenPlan{};
+					m_VideoOffscreenFailed = false;
+				}
+#endif
 				if(PerfEnabled)
 				{
 					CPerfTimer StageTimer;
@@ -4538,6 +4943,71 @@ void CClient::Run()
 				}
 				else
 					Render();
+#if defined(CONF_VIDEORECORDER)
+				// 离屏帧收尾：结束目标（含 MSAA resolve）、回绘窗口保持预览；读回是
+				// 异步的（一帧延迟），这里拿到的是上一帧的像素——首帧没有在途读回，
+				// 空图像不提交（Submit 会按读回失败终止录制），最后一帧由 CVideo::Stop 结算。
+				if(VideoOffscreenThisFrame && IVideo::Current() != nullptr)
+				{
+					CImageInfo FrameImage;
+					Graphics()->EndVideoFrame(FrameImage);
+					if(FrameImage.m_pData != nullptr)
+						IVideo::Current()->SubmitOffscreenFrame(std::move(FrameImage));
+					else
+						FrameImage.Free();
+				}
+#endif
+				// 合影截图：请求必须在 Swap() 之前提交——ScreenshotDirect 在 Swap 开头
+				// 消费该标志，之后提交就要等下一帧；demo 暂停时根本没有下一帧。
+				if(m_PoseScreenshotPending)
+				{
+					// 皮肤闸门已在渲染之前判定过；这里只需要确认它仍放行。
+					if(m_PoseScreenshotWarmupFrames > 0)
+						m_PoseScreenshotWarmupFrames--;
+					else
+						switch(qm_pose::DecideCaptureSubmit(m_PoseScreenshotScale, PoseOffscreenAttempted, m_PoseOffscreenActive, PoseSkinsReadyForCapture()))
+						{
+						case qm_pose::ECaptureSubmit::WAIT_FOR_SKINS:
+							// 仍未就绪：本帧不提交截图，下一帧重试。
+							// 闸门通过后不会再走这里；万一走到，也不能带着活动离屏目标
+							// Swap——Vulkan 的渲染通道没结束就 Present 会卡死图形线程。
+							if(m_PoseOffscreenActive)
+							{
+								CImageInfo Discarded;
+								m_pGraphics->EndOffscreenFrame(Discarded);
+								Discarded.Free();
+								m_PoseOffscreenActive = false;
+							}
+							break;
+						case qm_pose::ECaptureSubmit::DEFER_TO_NEXT_FRAME:
+							// 闸门直到这次渲染之后才放行：本帧没开离屏帧，下一帧再拍。
+							// 直接走窗口截图会让超采样请求静默降级成 1 倍（实测 4 倍
+							// 在皮肤加载较慢时会掉成 1280x720，且日志里没有任何提示）。
+							break;
+						case qm_pose::ECaptureSubmit::SUBMIT_OFFSCREEN:
+						case qm_pose::ECaptureSubmit::SUBMIT_WINDOW:
+						{
+							const bool Offscreen = m_PoseOffscreenActive;
+							m_PoseScreenshotPending = false;
+							m_PoseScreenshotHandled = true;
+							// 超采样帧已经在离屏目标里画完，这里只负责读回并落盘；
+							// 其余情况沿用原来的窗口帧缓冲截图。
+							if(Offscreen)
+								FinishPoseOffscreenCapture();
+							else
+							{
+								// 1 倍走窗口截图：锐化必须在这里也生效，否则玩家把滑条拉到
+								// 60% 却看不到任何变化（只有 2 倍以上才经过离屏的锐化）。
+								const int SharpenAmount = m_PoseSharpenAmount;
+								m_pGraphics->TakeScreenshot(m_aPoseScreenshotPath, [this, SharpenAmount](CImageInfo &&Image, const char *pPath) {
+								if(SharpenAmount > 0 && Image.m_pData != nullptr)
+									qm_pose::ApplyUnsharpMask(Image.m_pData, (int)Image.m_Width, (int)Image.m_Height, SharpenAmount);
+								GameClient()->OnScreenshotTaken(std::move(Image), pPath); }, GameClient()->ScreenshotProcessor());
+							}
+							break;
+						}
+						}
+				}
 				if(PerfEnabled)
 				{
 					CPerfTimer StageTimer;
@@ -4548,6 +5018,32 @@ void CClient::Run()
 				}
 				else
 					m_pGraphics->Swap();
+				// 合影截图：TakeScreenshot 请求已在 Swap 之前提交，由本帧的 ScreenshotDirect
+				// 消费；这里只负责撤掉合成快照，避免假角色留在之后的正常渲染里。
+				if(m_PoseScreenshotHandled)
+				{
+					m_PoseScreenshotHandled = false;
+					if(m_PoseCaptureKeepSession)
+					{
+						// 预览里的「拍一张」：照片已经在落盘路上，会话和取景都留着，
+						// 玩家可以接着调整构图再拍，或者当场切去渲染。
+						m_PoseCaptureKeepSession = false;
+					}
+					else
+					{
+						// 实体层覆盖只属于这次拍摄，拍完立刻还原玩家的背景设置。
+						if(m_PoseEntityOverlayPrevious >= 0)
+						{
+							g_Config.m_ClOverlayEntities = m_PoseEntityOverlayPrevious;
+							m_PoseEntityOverlayPrevious = -1;
+						}
+						ClearSyntheticSnapshot();
+						// 静帧已经落盘：把合影会话一起收掉，别留下一个没有合影的回放态。
+						// 退出后回放态会被上游收尾逻辑判为结束，玩家回到回放列表，照片残影停在屏幕中间。
+						if(!IVideo::Current())
+							LeavePoseSession();
+					}
+				}
 				// 逐帧阶段日志按「容量或耗时」攒批落盘：帧统计不参与明细限流，
 				// 这里把帧号与帧耗时压成一条 frame_batch 事件，避免逐帧刷屏。
 				if(PerfEnabled && QmPerfEnabled() && m_QmPerfFileLoggerActive)
@@ -4960,10 +5456,417 @@ void CClient::AutoCSV_Cleanup()
 	}
 }
 
+bool CClient::EnterPoseSession(const char *pPosesPath, int &TeeCountOut, const char *pMapPath)
+{
+	// 三条入口共用的准备逻辑：读文件 → 解析 → 合成快照 → 应用两次 → 记住会话状态。
+	// 合影与 demo 同构：先建立「当前画面」的数据源，再由调用方决定是观看还是导出。
+	const std::string WholePath = qmclient::media_paths::CompletePath(Storage(),
+		qmclient::media_paths::Resolve(Storage(), g_Config, pPosesPath));
+	IOHANDLE File = io_open(WholePath.c_str(), IOFLAG_READ);
+	if(!File)
+	{
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "could not open the .poses file");
+		return false;
+	}
+	const int64_t Size = io_length(File);
+	if(Size <= 0 || Size > 64 * 1024 * 1024)
+	{
+		io_close(File);
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "the .poses file is empty or too large");
+		return false;
+	}
+	std::vector<unsigned char> vData((size_t)Size);
+	io_read(File, vData.data(), vData.size());
+	io_close(File);
+
+	std::vector<SPoseTee> vPoses;
+	const qm_pose::ELoadResult Result = qm_pose::Load(vData.data(), vData.size(), vPoses);
+	if(Result != qm_pose::ELoadResult::OK)
+	{
+		char aBuf[160];
+		str_format(aBuf, sizeof(aBuf), "could not parse the .poses file: %s", qm_pose::LoadResultName(Result));
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+		return false;
+	}
+
+	// demo 播放中必须先暂停：播放器每 tick 都会推送新快照，会把合成快照整体覆盖掉。
+	m_DemoPlayer.Pause();
+	if(!EnsurePosePlaybackContext(pMapPath))
+	{
+		// 没有地图时不静默失败，也不退回 dm1：把这份合影交给界面，
+		// 由玩家选好地图后再走同一条 poses_open（Windows 双击 .poses 也在这里）。
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "no map is loaded for this .poses file; waiting for a map selection");
+		str_copy(m_aPendingPoseMapPath, pPosesPath, sizeof(m_aPendingPoseMapPath));
+		return false;
+	}
+
+	qm_pose::SSceneStats Stats{};
+	m_PoseSnapshotSize = qm_pose::BuildSnapshot(vPoses, {}, m_PoseSnapshot.m_aData, sizeof(m_PoseSnapshot.m_aData), &Stats);
+	if(m_PoseSnapshotSize <= 0)
+	{
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "could not build the pose snapshot");
+		return false;
+	}
+	m_PoseSnapshotTick = GameTick(CONN_MAIN);
+
+	// 连续应用两次：客户端要求同一角色在 SNAP_PREV 与 SNAP_CURRENT 都存在才会激活。
+	// 两次用不同 tick，避免被时间轴判定为重复快照而丢弃。
+	for(int Pass = 0; Pass < 2; ++Pass)
+	{
+		// 每次递增 tick：客户端要求 PREV/CURRENT 形成有效的新旧对才会激活角色。
+		if(!ApplySyntheticSnapshot(m_PoseSnapshot.m_aData, m_PoseSnapshotSize, m_PoseSnapshotTick + Pass))
+		{
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "could not apply the pose snapshot (load a map first)");
+			return false;
+		}
+		m_PoseSnapshotTick++;
+	}
+
+	// 合影首次打开时自动取景：把所有 Tee 的包围盒放进当前画面，并保留
+	// 足够的边距给 Tee 的身体、脚和名字。之后用户仍可自由拖动和缩放。
+	float BaseWidth = 0.0f;
+	float BaseHeight = 0.0f;
+	Graphics()->CalcScreenParams(Graphics()->GameScreenAspect(), 1.0f, &BaseWidth, &BaseHeight);
+	const float FitZoom = qm_pose::ComputeFitZoom(vPoses, BaseWidth, BaseHeight);
+	GameClient()->SetPoseCamera(vec2(Stats.m_CenterX, Stats.m_CenterY), FitZoom);
+	// 取景归会话持有：相机每帧从这里取，预览 HUD 改的也是这一份。
+	m_PoseFitCenter = m_PoseCameraCenter = vec2(Stats.m_CenterX, Stats.m_CenterY);
+	m_PoseFitZoom = m_PoseCameraZoom = FitZoom;
+	m_PoseViewBaseWidth = BaseWidth;
+	m_PoseViewBaseHeight = BaseHeight;
+	str_copy(m_aPoseSource, pPosesPath != nullptr ? pPosesPath : "");
+	m_PoseCaptureKeepSession = false;
+
+	m_PoseSessionActive = true;
+	TeeCountOut = Stats.m_Tees;
+
+	char aBuf[192];
+	str_format(aBuf, sizeof(aBuf), "%d poses centered at (%d, %d)", Stats.m_Tees, Stats.m_CenterX, Stats.m_CenterY);
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+	return true;
+}
+
+bool CClient::EnsurePosePlaybackContext(const char *pMapPath)
+{
+	// 已经在 demo/合影上下文中时直接复用地图和 snapshot 槽位。
+	if(m_aapSnapshots[0][SNAP_CURRENT] && m_aapSnapshots[0][SNAP_PREV])
+		return true;
+
+	// .poses 本身没有地图字段。只有显式给出地图路径时才加载地图，
+	// 不猜测 dm1 或其它地图，避免把错误的地图上下文交给渲染器。
+	if((m_aCurrentMap[0] == '\0' || !m_pMap->IsLoaded()) && (!pMapPath || pMapPath[0] == '\0'))
+	{
+		constexpr const char *pMessage = "No map is loaded for this .poses file. Use poses_open <poses> <map> or load the matching demo first.";
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", pMessage);
+		AddWarning(SWarning("Pose file", pMessage));
+		return false;
+	}
+	if(pMapPath && pMapPath[0] != '\0')
+	{
+		const char *pError = LoadMap("poses", pMapPath, std::nullopt, 0);
+		if(pError)
+		{
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", pError);
+			return false;
+		}
+	}
+	if(!m_pMap->IsLoaded())
+	{
+		constexpr const char *pMessage = "The selected map could not be loaded for this .poses file.";
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", pMessage);
+		AddWarning(SWarning("Pose file", pMessage));
+		return false;
+	}
+
+	SetState(IClient::STATE_DEMOPLAYBACK);
+	GameClient()->OnConnected();
+	mem_zero(m_aaDemorecSnapshotData, sizeof(m_aaDemorecSnapshotData));
+	for(int SnapshotType = 0; SnapshotType < NUM_SNAPSHOT_TYPES; SnapshotType++)
+	{
+		m_aapSnapshots[0][SnapshotType] = &m_aDemorecSnapshotHolders[SnapshotType];
+		m_aapSnapshots[0][SnapshotType]->m_pSnap = m_aaDemorecSnapshotData[SnapshotType][0].AsSnapshot();
+		m_aapSnapshots[0][SnapshotType]->m_pAltSnap = m_aaDemorecSnapshotData[SnapshotType][1].AsSnapshot();
+		m_aapSnapshots[0][SnapshotType]->m_SnapSize = 0;
+		m_aapSnapshots[0][SnapshotType]->m_AltSnapSize = 0;
+		m_aapSnapshots[0][SnapshotType]->m_Tick = -1;
+	}
+	GameClient()->OnEnterGame();
+	return true;
+}
+
+void CClient::LeavePoseSession()
+{
+	if(!m_PoseSessionActive)
+		return;
+	m_PoseSessionActive = false;
+	m_PoseSnapshotSize = 0;
+	m_PoseCaptureKeepSession = false;
+	m_aPoseSource[0] = '\0';
+	ClearSyntheticSnapshot();
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "left the pose session");
+}
+
+bool CClient::PoseCameraView(vec2 *pCenter, float *pZoom) const
+{
+	if(!m_PoseSessionActive)
+		return false;
+	if(pCenter != nullptr)
+		*pCenter = m_PoseCameraCenter;
+	if(pZoom != nullptr)
+		*pZoom = m_PoseCameraZoom;
+	return true;
+}
+
+void CClient::PoseCameraZoomBy(float Factor)
+{
+	if(!m_PoseSessionActive || Factor <= 0.0f)
+		return;
+	// Zoom 是「一屏看多少世界单位」，所以放大是除法。上下限按自动适配的倍数给：
+	// 最远退到适配的 1.5 倍（还看得见全部 Tee 周边），最近推到适配的 1/8（看脸）。
+	const float MinZoom = m_PoseFitZoom / 8.0f;
+	const float MaxZoom = m_PoseFitZoom * 1.5f;
+	m_PoseCameraZoom = std::clamp(m_PoseCameraZoom / Factor, MinZoom, MaxZoom);
+}
+
+void CClient::PoseCameraPanFraction(float FracX, float FracY)
+{
+	if(!m_PoseSessionActive)
+		return;
+	// 位移按屏幕比例给：UI 缩放与窗口分辨率都不影响手感，拖多少像素就走多少像素。
+	// 手抓着画面拖的方向与相机相反，所以这里取负号。
+	m_PoseCameraCenter.x -= FracX * m_PoseViewBaseWidth * m_PoseCameraZoom;
+	m_PoseCameraCenter.y -= FracY * m_PoseViewBaseHeight * m_PoseCameraZoom;
+	GameClient()->SetPoseCamera(m_PoseCameraCenter, m_PoseCameraZoom);
+}
+
+float CClient::PoseCameraZoomLevel() const
+{
+	// 1.0 = 自动适配（全部 Tee 在画面内），2.0 = 放大到两倍。
+	return m_PoseCameraZoom > 0.0f ? m_PoseFitZoom / m_PoseCameraZoom : 1.0f;
+}
+
+void CClient::PoseCameraFit()
+{
+	if(!m_PoseSessionActive)
+		return;
+	m_PoseCameraCenter = m_PoseFitCenter;
+	m_PoseCameraZoom = m_PoseFitZoom;
+	GameClient()->SetPoseCamera(m_PoseCameraCenter, m_PoseCameraZoom);
+}
+
+bool CClient::RequestPoseCapture(const char *pFilename, int Scale, bool KeepSession, int Sharpen, bool EntityLayer)
+{
+	// 只服务预览 HUD：会话不在就什么都不做，避免外部在普通游戏里排一张合影静帧。
+	if(!m_PoseSessionActive)
+		return false;
+	// 锐化跟着请求走：HUD 的滑条改这里，控制台的 poses_render 走它自己的参数，
+	// 两边互不残留。
+	m_PoseSharpenAmount = minimum(maximum(Sharpen, 0), 100);
+	// 实体层同样跟着请求走。以前只靠预览开关改 g_Config 的副作用，
+	// 开关状态与实际出图会不一致（玩家关掉实体层，成片仍然带实体）。
+	// 这里按请求强制设定，拍完由收尾逻辑还原成玩家原来的设置。
+	if(m_PoseEntityOverlayPrevious < 0)
+		m_PoseEntityOverlayPrevious = g_Config.m_ClOverlayEntities;
+	g_Config.m_ClOverlayEntities = EntityLayer ? 100 : 0;
+	return RequestPoseScreenshot(pFilename, Scale, KeepSession);
+}
+
+bool CClient::PoseSkinsReadyForCapture()
+{
+	// 合成快照里的皮肤由 CSkins 按名字异步加载，而抓帧只等两帧就会发生。
+	// 不等的话，社区皮肤在成片里会退回 default（预览看得到、成片没有）。
+	// 一次抓帧只判定一次：放行后渲染前/渲染后的两次检查都直接通过。
+	// 之前每次放行都把 m_PoseSkinWaitStart 清零，导致渲染后那次重新开始等 5 秒，
+	// 离屏帧在这 5 秒里跨帧保持活动——Vulkan 下带着活动渲染目标 Swap 会卡死图形线程。
+	if(m_PoseSkinsGatePassed)
+		return true;
+	if(GameClient()->PoseSkinsReady())
+	{
+		m_PoseSkinsGatePassed = true;
+		return true;
+	}
+	const int64_t Now = time_get();
+	if(m_PoseSkinWaitStart == 0)
+	{
+		m_PoseSkinWaitStart = Now;
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "waiting for pose skins to finish loading");
+		return false;
+	}
+	// 硬超时：断网或下载失败的皮肤永远等不到 LOADED，不能让渲染卡死。
+	constexpr int64_t MAX_SKIN_WAIT_SECONDS = 5;
+	if(Now - m_PoseSkinWaitStart < MAX_SKIN_WAIT_SECONDS * time_freq())
+		return false;
+	// 超时同样只放行这一次抓帧；新的请求会重新武装等待。
+	m_PoseSkinWaitStart = 0;
+	m_PoseSkinsGatePassed = true;
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "pose skins did not finish loading in time; capturing anyway");
+	return true;
+}
+
+void CClient::AdvancePoseVideo()
+{
+#if defined(CONF_VIDEORECORDER)
+	if(!IVideo::Current() || m_PoseSnapshotSize <= 0)
+		return;
+
+	// 起步跳过菜单帧：命令是在回放列表里执行的，先写进去的两帧会是菜单。
+	if(m_PoseVideoWarmupFrames > 0)
+	{
+		m_PoseVideoWarmupFrames--;
+		m_PoseSnapshotTick++;
+		ApplySyntheticSnapshot(m_PoseSnapshot.m_aData, m_PoseSnapshotSize, m_PoseSnapshotTick);
+		return;
+	}
+
+	// demo 已暂停，时间轴不会自己走：每帧固定推进 1/fps 秒。
+	const float FrameSeconds = 1.0f / (float)maximum(g_Config.m_ClVideoRecorderFPS, 1);
+	m_PoseVideoSecondsLeft -= FrameSeconds;
+	const int TotalFrames = qm_pose::VideoFrameCount(m_PoseVideoTotalSeconds, maximum(g_Config.m_ClVideoRecorderFPS, 1));
+	m_PoseVideoFramesWritten++;
+
+	// 重新应用合成快照：录制的每一帧都必须基于合影数据。tick 递增让客户端看到
+	// 「新快照」，PREV/CURRENT 才会形成有效的角色对。
+	m_PoseSnapshotTick++;
+	ApplySyntheticSnapshot(m_PoseSnapshot.m_aData, m_PoseSnapshotSize, m_PoseSnapshotTick);
+
+	IVideo::Current()->NextVideoFrame();
+	IVideo::Current()->NextAudioFrameTimeline([this](short *pFinalOut, unsigned Frames) {
+		Sound()->Mix(pFinalOut, Frames);
+	});
+
+	if(m_PoseVideoFramesWritten >= TotalFrames || m_PoseVideoSecondsLeft <= 0.0f)
+	{
+		// 收尾：先撤合影会话再停录，确保成片最后一帧仍是合影画面。
+		m_PoseVideoTotalSeconds = 0.0f;
+		m_PoseVideoFramesWritten = 0;
+		LeavePoseSession();
+		IVideo::Current()->Stop();
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), "pose video finished after %d frames", TotalFrames);
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+	}
+#endif
+}
+
+void CClient::Con_PosesOpen(IConsole::IResult *pResult, void *pUserData)
+{
+	// 游戏内观看：与 demo 回放同一条路径——建立画面数据源后不做任何导出，
+	// 相机可以自由移动、缩放，随时用 poses_close 退出。
+	CClient *pSelf = static_cast<CClient *>(pUserData);
+	int TeeCount = 0;
+	const char *pMapPath = pResult->NumArguments() > 1 ? pResult->GetString(1) : nullptr;
+	if(!pSelf->EnterPoseSession(pResult->GetString(0), TeeCount, pMapPath))
+		return;
+
+	char aBuf[160];
+	str_format(aBuf, sizeof(aBuf), "viewing %d poses; move the camera freely, poses_close to exit", TeeCount);
+	pSelf->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+}
+
+void CClient::Con_PosesClose(IConsole::IResult *pResult, void *pUserData)
+{
+	// 退出合影会话：清空合成快照，恢复正常渲染。
+	static_cast<CClient *>(pUserData)->LeavePoseSession();
+}
+
+#if defined(CONF_VIDEORECORDER)
+void CClient::Con_PosesVideo(IConsole::IResult *pResult, void *pUserData)
+{
+	CClient *pSelf = static_cast<CClient *>(pUserData);
+
+	// 用法：poses_video <poses 文件> <视频名> [秒数]
+	// 与 demo 导出同一条管线：建立合影会话后按真实时间推进指定秒数并录制。
+	// 相机可以在这段时间里自由移动（和录制 demo 时的运镜一致）。
+	const char *pPosesPath = pResult->GetString(0);
+	const char *pVideoName = pResult->GetString(1);
+	const float Seconds = pResult->NumArguments() > 2 ? pResult->GetFloat(2) : 5.0f;
+
+	if(Seconds <= 0.0f || Seconds > 600.0f)
+	{
+		pSelf->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "duration must be between 0 and 600 seconds");
+		return;
+	}
+
+	int TeeCount = 0;
+	const char *pMapPath = pResult->NumArguments() > 3 ? pResult->GetString(3) : nullptr;
+	if(!pSelf->EnterPoseSession(pPosesPath, TeeCount, pMapPath))
+		return;
+
+	// 合影会话本身就处在 demo 回放态（EnsurePosePlaybackContext 负责切入），
+	// 不再要求「先放一个 demo」：没有 demo 时由 AdvancePoseVideo 按帧推进录制。
+	if(pSelf->State() != IClient::STATE_DEMOPLAYBACK)
+		pSelf->SetState(IClient::STATE_DEMOPLAYBACK);
+
+	pSelf->StartVideo(pVideoName, false);
+	if(!IVideo::Current())
+	{
+		pSelf->LeavePoseSession();
+		return;
+	}
+	// demo 播放器在合影会话里是暂停的，StartVideo 会顺手把录制器也暂停；
+	// 合影的时间轴由 AdvancePoseVideo 手动推进，这里必须立刻恢复，否则一帧都写不出来。
+	IVideo::Current()->Pause(false);
+
+	pSelf->m_PoseVideoSecondsLeft = Seconds;
+	pSelf->m_PoseVideoTotalSeconds = Seconds;
+	pSelf->m_PoseVideoFramesWritten = 0;
+	// 菜单帧不进成片（见 AdvancePoseVideo）。
+	pSelf->m_PoseVideoWarmupFrames = 2;
+	char aBuf[192];
+	str_format(aBuf, sizeof(aBuf), "recording %d poses for %.1f seconds (%d frames) to '%s'", TeeCount, Seconds,
+		qm_pose::VideoFrameCount(Seconds, maximum(g_Config.m_ClVideoRecorderFPS, 1)), pVideoName);
+	pSelf->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+}
+#endif
+
+void CClient::Con_RenderPoses(IConsole::IResult *pResult, void *pUserData)
+{
+	CClient *pSelf = static_cast<CClient *>(pUserData);
+
+	// 用法：poses_render <poses 文件> [<输出 png|webp>] [<地图>] [<分辨率倍数 1-4>]
+	// 地图用当前已加载的地图（合影通常配固定背景图，先手动进入那张图再调用）。
+	// 倍数是可选的第 4 个参数，缺省 1：旧调用不带它，行为与以前完全一致。
+	const char *pPosesPath = pResult->GetString(0);
+	const char *pOutPath = pResult->NumArguments() > 1 ? pResult->GetString(1) : "poses_capture.png";
+	const char *pMapPath = pResult->NumArguments() > 2 ? pResult->GetString(2) : nullptr;
+	const int RequestedScale = pResult->NumArguments() > 3 ? pResult->GetInteger(3) : 1;
+	const int Scale = qm_pose::NormalizeCaptureScale(RequestedScale);
+
+	// 第 5 个参数：实体层。1 = 这次拍摄用实体铺满背景（盖掉地图方块），拍完立即还原。
+	const bool EntityLayer = pResult->NumArguments() > 4 && pResult->GetInteger(4) != 0;
+	// 第 6 个参数：成片锐化强度 0-100，缺省 0（不改动成片）。
+	pSelf->m_PoseSharpenAmount = pResult->NumArguments() > 5 ? minimum(maximum(pResult->GetInteger(5), 0), 100) : 0;
+
+	int TeeCount = 0;
+	if(!pSelf->EnterPoseSession(pPosesPath, TeeCount, pMapPath))
+		return;
+	if(EntityLayer)
+	{
+		if(pSelf->m_PoseEntityOverlayPrevious < 0)
+			pSelf->m_PoseEntityOverlayPrevious = g_Config.m_ClOverlayEntities;
+		g_Config.m_ClOverlayEntities = 100;
+	}
+
+	if(!pSelf->RequestPoseScreenshot(pOutPath, Scale))
+	{
+		pSelf->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "could not queue the screenshot");
+		return;
+	}
+
+	char aBuf[192];
+	if(Scale != RequestedScale)
+		str_format(aBuf, sizeof(aBuf), "supersampling %dx is out of range; using %dx", RequestedScale, Scale);
+	else
+		str_format(aBuf, sizeof(aBuf), "rendering %d poses to '%s' at %dx", TeeCount, pOutPath, Scale);
+	pSelf->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+}
+
 void CClient::Con_Screenshot(IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = (CClient *)pUserData;
-	pSelf->Graphics()->TakeScreenshot(nullptr, [pSelf](CImageInfo &&Image) { pSelf->GameClient()->OnScreenshotTaken(std::move(Image)); }, pSelf->GameClient()->ScreenshotProcessor());
+	auto Callback = qm_screenshot_clipboard::CaptureCallback(g_Config.m_QmScreenshotClipboard != 0 && qm_screenshot_clipboard::Supported(),
+		[pSelf](CImageInfo &&Image, const char *pPath) { pSelf->GameClient()->OnScreenshotTaken(std::move(Image), pPath); });
+	pSelf->Graphics()->TakeScreenshot(nullptr, std::move(Callback), pSelf->GameClient()->ScreenshotProcessor());
 }
 
 #if defined(CONF_VIDEORECORDER)
@@ -4971,6 +5874,17 @@ void CClient::Con_Screenshot(IConsole::IResult *pResult, void *pUserData)
 void CClient::Con_StartVideo(IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = static_cast<CClient *>(pUserData);
+
+	// 选区与断点续渲共用任务入口；失败时不能回退为整段录制。
+	const int NumArgs = pResult->NumArguments();
+	const float RangeStartSec = NumArgs >= 2 ? pResult->GetFloat(1) : -1.0f;
+	const float RangeEndSec = NumArgs >= 3 ? pResult->GetFloat(2) : -1.0f;
+	if(g_Config.m_QmVideoSegmentSeconds > 0 || CVideoExportTask::HasRange(RangeStartSec, RangeEndSec))
+	{
+		const auto Result = pSelf->StartSegmentedVideoExport(NumArgs ? pResult->GetString(0) : "video", !NumArgs, RangeStartSec, RangeEndSec);
+		if(Result != EVideoExportStartResult::FALLBACK)
+			return;
+	}
 
 	if(pResult->NumArguments())
 	{
@@ -4982,8 +5896,345 @@ void CClient::Con_StartVideo(IConsole::IResult *pResult, void *pUserData)
 	}
 }
 
+// —— 分段渲染与断点续渲（M3）——
+// 区分无需分段与启动失败，只有前者允许调用方回退整段导出。
+CClient::EVideoExportStartResult CClient::StartSegmentedVideoExport(const char *pName, bool AppendTimestamp, float RangeStartSec, float RangeEndSec)
+{
+	if(State() != IClient::STATE_DEMOPLAYBACK || !m_DemoPlayer.IsPlaying())
+	{
+		log_error("video_export", "Segmented export can only be started in demo player.");
+		return EVideoExportStartResult::FAILED;
+	}
+	if(m_pVideoExportTask)
+	{
+		log_error("video_export", "A segmented export is already running ('%s').", m_pVideoExportTask->Name());
+		return EVideoExportStartResult::FAILED;
+	}
+	// 上一次导出的拼接线程仍在读段文件：此时开始新导出会重写同名段文件
+	// （<name>_p%03d）并可能与 <output>.part 替换目标并发，撕裂成片。
+	// 返回启动失败，避免调用方回退整段导出与拼接并发写同名输出。
+	if(VideoExportConcatPending())
+	{
+		log_error("video_export", "The previous export is still concatenating; wait for it to finish before starting a new export.");
+		return EVideoExportStartResult::FAILED;
+	}
+
+	// 新一轮导出：重置上一次的拼接结果，避免 UI 沿用旧的"完成/失败"状态。
+	m_ConcatAttempted.store(false);
+	m_ConcatLastSucceeded.store(false);
+
+	char aName[IO_MAX_PATH_LENGTH];
+	str_copy(aName, pName);
+	if(AppendTimestamp)
+	{
+		char aTimestamp[20];
+		str_timestamp(aTimestamp, sizeof(aTimestamp));
+		str_format(aName, sizeof(aName), "%s_%s", pName, aTimestamp);
+	}
+
+	const CDemoPlayer::CPlaybackInfo *pInfo = m_DemoPlayer.Info();
+	int FirstTick = pInfo->m_Info.m_FirstTick;
+	int LastTick = pInfo->m_Info.m_LastTick;
+
+	const bool HasRange = CVideoExportTask::HasRange(RangeStartSec, RangeEndSec);
+	if(!CVideoExportTask::ResolveRange(FirstTick, LastTick, RangeStartSec, RangeEndSec))
+	{
+		log_error("video_export", "Invalid export range [%.3fs, %.3fs]; export was not started.", RangeStartSec, RangeEndSec);
+		return EVideoExportStartResult::FAILED;
+	}
+
+	// demo 文件属性（任务指纹）。Resolve 的默认配置结果可能是相对路径（锚定 IStorage 语义），
+	// 而此处用裸 io_open 读取，必须再经 CompletePath 锚定为绝对路径才能与写入方一致。
+	char aDemoWhole[IO_MAX_PATH_LENGTH];
+	const std::string DemoResolved = qmclient::media_paths::CompletePath(Storage(),
+		qmclient::media_paths::Resolve(Storage(), g_Config, m_DemoPlayer.Filename()));
+	str_copy(aDemoWhole, !DemoResolved.empty() ? DemoResolved.c_str() : m_DemoPlayer.Filename());
+	uint64_t DemoSize = 0;
+	int64_t DemoMtime = 0;
+	if(IOHANDLE DemoFile = io_open(aDemoWhole, IOFLAG_READ))
+	{
+		DemoSize = (uint64_t)io_length(DemoFile);
+		io_close(DemoFile);
+	}
+	time_t Created = 0, Modified = 0;
+	if(fs_file_time(aDemoWhole, &Created, &Modified) == 0)
+		DemoMtime = (int64_t)Modified;
+
+	std::unique_ptr<CVideoExportTask> pTask = std::make_unique<CVideoExportTask>(
+		aName, m_DemoPlayer.Filename(), FirstTick, LastTick,
+		g_Config.m_QmVideoSegmentSeconds, g_Config.m_ClVideoRecorderFPS,
+		Graphics()->ScreenWidth(), Graphics()->ScreenHeight(),
+		g_Config.m_ClVideoX264Crf, g_Config.m_ClVideoX264Preset, g_Config.m_QmVideoSegmentWarmup);
+	// 导出启动时冻结显示配置：所有段都用这一份渲染，指纹也用它判断旧段是否仍适用。
+	const SVideoDisplaySnapshot DisplaySnapshot = qm_demo_display::Capture(g_Config);
+	pTask->SetDisplaySnapshot(DisplaySnapshot);
+	// 指纹附加参数：只影响产物、不影响段切分的导出设置。任一变化都必须让旧段失效，
+	// 否则续渲会把不同编码器/质量/容器/尺寸的旧段拼进同一个文件。
+	const std::string FingerprintParams = VideoExportConfigParams(g_Config, DisplaySnapshot);
+	pTask->ComputeFingerprint(DemoSize, DemoMtime, FingerprintParams.c_str());
+
+	// 未指定 Range 且只有一段：走原有整段导出，省去分段任务与流复制拼接的开销。
+	// 指定了 Range 时必须留在任务里，否则选区会被 StartVideo 的整段导出静默丢弃。
+	if(pTask->Segments().size() <= 1 && !HasRange)
+		return EVideoExportStartResult::FALLBACK;
+
+	// 复用已有进度：进度文件损坏或指纹不匹配时整单从头渲染（新任务段默认未完成）
+	char aProgress[IO_MAX_PATH_LENGTH];
+	str_format(aProgress, sizeof(aProgress), "videos/%s.progress", aName);
+	const std::string ProgressPath = qmclient::media_paths::CompletePath(Storage(),
+		qmclient::media_paths::Resolve(Storage(), g_Config, aProgress));
+	pTask->LoadProgress(ProgressPath.c_str()); // 失败/不匹配时保留默认（全部未完成）
+
+	// 已完成段逐一核对段文件：进度只是记录，文件可能被用户删除或损坏；
+	// 缺失/无效的段重置为待渲染，避免同名续渲永远跳过缺失段后在拼接时报错。
+	// 回调把无扩展名的段逻辑路径锚定为绝对路径并补上容器扩展名。
+	pTask->RestoreMissingDoneSegments([this](const char *pLogicalPath) -> const char * {
+		static char aWhole[IO_MAX_PATH_LENGTH];
+		char aWithExt[IO_MAX_PATH_LENGTH];
+		str_format(aWithExt, sizeof(aWithExt), "%s.%s", pLogicalPath, ContainerName());
+		const std::string Whole = qmclient::media_paths::CompletePath(Storage(),
+			qmclient::media_paths::Resolve(Storage(), g_Config, aWithExt));
+		str_copy(aWhole, Whole.c_str(), sizeof(aWhole));
+		return Whole.empty() ? nullptr : aWhole;
+	});
+
+	const int Pending = pTask->NextPendingSegment();
+	if(Pending < 0)
+	{
+		// 全部段已渲染：不重渲，直接重建拼接输出（拼接文件可能缺失或损坏）
+		log_info("video_export", "All segments of '%s' are already done; rebuilding concat output.", aName);
+		m_pVideoExportTask = std::move(pTask);
+		StartSegmentConcat(m_pVideoExportTask.get());
+		m_pVideoExportTask.reset();
+		return EVideoExportStartResult::STARTED;
+	}
+
+	m_pVideoExportTask = std::move(pTask);
+	m_pVideoExportTask->BeginSegment(Pending);
+
+	// 定位到段起点前的预热区，由状态机在到达段起点时开始录制
+	const int StartTick = m_pVideoExportTask->Segments()[Pending].m_StartTick;
+	m_DemoPlayer.SetPos(StartTick - m_pVideoExportTask->WarmupTicks());
+	log_info("video_export", "Segmented export '%s': ticks [%d..%d] (%.1fs), %d segment(s) x %ds, warmup %d ticks.",
+		aName, FirstTick, LastTick, (LastTick - FirstTick) / (float)SERVER_TICK_SPEED,
+		(int)m_pVideoExportTask->Segments().size(), g_Config.m_QmVideoSegmentSeconds, m_pVideoExportTask->WarmupTicks());
+	log_info("video_export", "Segmented export '%s' starting at segment %d/%d.", aName, Pending + 1, (int)m_pVideoExportTask->Segments().size());
+	return EVideoExportStartResult::STARTED;
+}
+
+void CClient::CancelSegmentedVideoExport()
+{
+	if(!m_pVideoExportTask)
+		return;
+	log_info("video_export", "Segmented export '%s' cancelled; progress kept.", m_pVideoExportTask->Name());
+	m_pVideoExportTask.reset();
+}
+
+// 导出容器扩展名（M6）：仅允许 mp4/mov/mkv（libavformat 按文件名匹配的容器），
+// 其余值一律回退 mp4，避免拼出无法推断容器的文件名。
+const char *CClient::ContainerName() const
+{
+	if(str_comp(g_Config.m_QmVideoContainer, "mp4") == 0 ||
+		str_comp(g_Config.m_QmVideoContainer, "mov") == 0 ||
+		str_comp(g_Config.m_QmVideoContainer, "mkv") == 0)
+		return g_Config.m_QmVideoContainer;
+	return "mp4";
+}
+
+// 拼接 muxer 格式名：mkv 容器的 libavformat 名是 "matroska"（非 "mkv"），mp4/mov 同名。
+const char *CClient::ConcatFormatName() const
+{
+	return str_comp(ContainerName(), "mkv") == 0 ? "matroska" : ContainerName();
+}
+
+void CClient::FinishSegmentedExport()
+{
+	CVideoExportTask *pTask = m_pVideoExportTask.get();
+	if(!pTask)
+		return;
+
+	const int SegmentIndex = pTask->CurrentSegment();
+	if(SegmentIndex < 0)
+		return;
+
+	// 录制以错误终止：不标记完成、不写进度，保留该段为待渲状态，下次续渲重做。
+	// 容器是否"能打开"不足以判断内容完整（mkv 截断文件同样可打开）。
+	if(pTask->SegmentRecordingFailed())
+	{
+		log_error("video_export", "Segment %d recording failed; keeping it pending for the next run.", SegmentIndex + 1);
+		// 本次导出失败：让 UI 不弹"渲染完成"。
+		m_ConcatAttempted.store(true);
+		m_ConcatLastSucceeded.store(false);
+		pTask->ResetToIdle();
+		m_pVideoExportTask.reset();
+		return;
+	}
+
+	char aSegmentName[IO_MAX_PATH_LENGTH];
+	pTask->SegmentFilename(SegmentIndex, aSegmentName, sizeof(aSegmentName));
+	char aLogical[IO_MAX_PATH_LENGTH];
+	str_format(aLogical, sizeof(aLogical), "videos/%s.%s", aSegmentName, ContainerName());
+	// VerifySegmentFile 走 libavformat 的裸文件 IO（不经 IStorage），必须用绝对路径
+	const std::string WholePath = qmclient::media_paths::CompletePath(Storage(),
+		qmclient::media_paths::Resolve(Storage(), g_Config, aLogical));
+	if(WholePath.empty() || !pTask->CompleteSegmentFile(SegmentIndex, WholePath.c_str()))
+	{
+		// 段文件不完整：终止任务（进度文件保留，续渲时将重渲该段），避免状态滞留被误判为外部停录
+		log_error("video_export", "Segment file '%s' is incomplete; segmented export cancelled (will re-render on resume).", aSegmentName);
+		m_ConcatAttempted.store(true);
+		m_ConcatLastSucceeded.store(false);
+		pTask->ResetToIdle();
+		m_pVideoExportTask.reset();
+		return;
+	}
+
+	char aProgress[IO_MAX_PATH_LENGTH];
+	str_format(aProgress, sizeof(aProgress), "videos/%s.progress", pTask->Name());
+	const std::string ProgressPath = qmclient::media_paths::CompletePath(Storage(),
+		qmclient::media_paths::Resolve(Storage(), g_Config, aProgress));
+	// 写失败时续渲会重渲本段（安全但耗时），必须让用户知道原因。
+	if(!pTask->SaveProgress(ProgressPath.c_str()))
+		log_warn("video_export", "Could not write progress file '%s'; the next resume will re-render this segment.", ProgressPath.c_str());
+
+	// 推进到下一段或收尾
+	const bool WasLast = pTask->NextPendingSegment() < 0;
+	pTask->OnRecordingStopped();
+
+	if(pTask->State() == CVideoExportTask::EState::WARMING_UP)
+	{
+		const int NextStart = pTask->Segments()[pTask->CurrentSegment()].m_StartTick;
+		m_DemoPlayer.SetPos(NextStart - pTask->WarmupTicks());
+		log_info("video_export", "Segment %d done; resuming at segment %d/%d.", SegmentIndex + 1, pTask->CurrentSegment() + 1, (int)pTask->Segments().size());
+	}
+	else if(WasLast)
+	{
+		// 全部完成：流复制拼接为最终文件（后台线程，避免阻塞主循环）
+		StartSegmentConcat(pTask);
+		// 拼接线程已持有自己的文件列表，释放任务以允许拼接完成后再次导出。
+		m_pVideoExportTask.reset();
+	}
+}
+
+// 收尾拼接：检查全部段文件在位后在后台线程流复制拼接（libavformat 裸 IO，用绝对路径）。
+void CClient::StartSegmentConcat(const CVideoExportTask *pTask)
+{
+	// 上一次拼接仍在进行：拒绝新请求（同输出文件并发写会撕裂）；已跑完则回收线程句柄后继续。
+	if(m_ConcatThread.joinable())
+	{
+		if(!m_ConcatThreadFinished.load())
+		{
+			log_info("video_export", "A previous concat is still running; skipping the new concat request.");
+			return;
+		}
+		m_ConcatThread.join();
+	}
+
+	std::vector<std::string> vFiles;
+	for(int i = 0; i < (int)pTask->Segments().size(); ++i)
+	{
+		char aName[IO_MAX_PATH_LENGTH];
+		pTask->SegmentFilename(i, aName, sizeof(aName));
+		char aSegLogical[IO_MAX_PATH_LENGTH];
+		str_format(aSegLogical, sizeof(aSegLogical), "videos/%s.%s", aName, ContainerName());
+		// 拼接线程用 libavformat 裸 IO 读写，需要绝对路径
+		std::string WholePath = qmclient::media_paths::CompletePath(Storage(),
+			qmclient::media_paths::Resolve(Storage(), g_Config, aSegLogical));
+		if(WholePath.empty() || !CVideoExportTask::VerifySegmentFile(WholePath.c_str()))
+		{
+			log_error("video_export", "Segment '%s' missing or unreadable; skipping concat.", aSegLogical);
+			// 记下"已尝试但失败"，让 UI 不把本次导出当成已完成。
+			m_ConcatAttempted.store(true);
+			m_ConcatLastSucceeded.store(false);
+			return;
+		}
+		vFiles.push_back(std::move(WholePath));
+	}
+
+	char aOutName[IO_MAX_PATH_LENGTH];
+	pTask->FinalOutputName(aOutName, sizeof(aOutName));
+	char aOutFull[IO_MAX_PATH_LENGTH];
+	str_format(aOutFull, sizeof(aOutFull), "videos/%s.%s", aOutName, ContainerName());
+	const std::string OutputPath = qmclient::media_paths::CompletePath(Storage(),
+		qmclient::media_paths::Resolve(Storage(), g_Config, aOutFull));
+
+	// muxer 格式名跟随容器（mkv → "matroska"），避免容器与后缀不一致
+	const std::string FormatName = ConcatFormatName();
+	m_ConcatAttempted.store(true);
+	m_ConcatLastSucceeded.store(false);
+	m_ConcatThreadFinished.store(false);
+	m_ConcatThread = std::thread([this, vFiles = std::move(vFiles), OutputPath, FormatName]() {
+		m_ConcatLastSucceeded.store(ConcatVideoFiles(vFiles, OutputPath.c_str(), FormatName.c_str()));
+		// 无论成功失败都要复位，保证下一次导出的拼接请求不会被永久拒绝。
+		m_ConcatThreadFinished.store(true);
+	});
+}
+
+void CClient::DriveSegmentedExport(int CurrentTick)
+{
+	CVideoExportTask *pTask = m_pVideoExportTask.get();
+	if(!pTask || pTask->State() == CVideoExportTask::EState::IDLE)
+		return;
+
+	// 录制态但录像器已不存在：段末自动停录（demo 播完经 CDemoPlayer::Stop）属正常路径，
+	// 继续走段末收尾；段末之前消失则是用户手动停录或错误 → 取消任务（进度保留）。
+	if(pTask->State() == CVideoExportTask::EState::RECORDING && !IVideo::Current())
+	{
+		const int SegmentEnd = pTask->Segments()[pTask->CurrentSegment()].m_EndTick;
+		if(CurrentTick < SegmentEnd)
+		{
+			log_info("video_export", "Recording stopped externally; segmented export '%s' cancelled.", pTask->Name());
+			pTask->ResetToIdle();
+			m_pVideoExportTask.reset();
+			return;
+		}
+	}
+
+	switch(pTask->UpdatePlayback(CurrentTick))
+	{
+	case CVideoExportTask::ACT_START_RECORD:
+	{
+		char aSegmentName[IO_MAX_PATH_LENGTH];
+		pTask->SegmentFilename(pTask->CurrentSegment(), aSegmentName, sizeof(aSegmentName));
+		// 起点追赶：主循环卡顿（如后端首帧编译）会让一次 Update 越过段起始 tick，
+		// 高 demo_speed 下一次能跳几十 tick；从越过后的位置开录会静默截掉段头
+		//（时长不足、帧网格仍均匀）。预热态里任何「已越过」都是超调，回 seek 到
+		// 起始 tick 再开录，保证录制区间与任务声明一致。
+		const int SegmentStart = pTask->Segments()[pTask->CurrentSegment()].m_StartTick;
+		if(CurrentTick > SegmentStart)
+		{
+			log_info("video_export", "Passed segment start tick %d during a stall (now at %d); seeking back before recording.", SegmentStart, CurrentTick);
+			m_DemoPlayer.SetPos(SegmentStart);
+		}
+		StartVideo(aSegmentName, false);
+		if(IVideo::Current())
+			pTask->OnRecordingStarted();
+		break;
+	}
+	case CVideoExportTask::ACT_STOP_RECORD:
+	{
+		// 停止录像收尾；若 demo 恰好自然结束，CDemoPlayer::Stop 已停录，此处跳过。
+		// Stop() 内部才排空编码器并写 trailer，且会自删除对象：最终结果只能经静态
+		// 闭锁读取（TakeStopResult 消费一次），否则错误段会被收尾记成已完成。
+		if(IVideo::Current())
+			IVideo::Current()->Stop();
+		if(IVideo::TakeStopResult())
+			pTask->MarkSegmentRecordingFailed();
+		FinishSegmentedExport();
+		break;
+	}
+	default:
+		break;
+	}
+}
+
 void CClient::StartVideo(const char *pFilename, bool WithTimestamp)
 {
+	// 整段直录入口也必须等待拼接，避免绕过任务入口覆盖正在生成的同名成片。
+	if(VideoExportConcatPending())
+	{
+		log_error("videorecorder", "The previous export is still concatenating; wait for it to finish before recording.");
+		return;
+	}
 	if(State() != IClient::STATE_DEMOPLAYBACK)
 	{
 		log_error("videorecorder", "Video can only be recorded in demo player.");
@@ -5001,11 +6252,11 @@ void CClient::StartVideo(const char *pFilename, bool WithTimestamp)
 	{
 		char aTimestamp[20];
 		str_timestamp(aTimestamp, sizeof(aTimestamp));
-		str_format(aFilename, sizeof(aFilename), "videos/%s_%s.mp4", pFilename, aTimestamp);
+		str_format(aFilename, sizeof(aFilename), "videos/%s_%s.%s", pFilename, aTimestamp, ContainerName());
 	}
 	else
 	{
-		str_format(aFilename, sizeof(aFilename), "videos/%s.mp4", pFilename);
+		str_format(aFilename, sizeof(aFilename), "videos/%s.%s", pFilename, ContainerName());
 	}
 
 	const std::string Path = qmclient::media_paths::Resolve(Storage(), g_Config, aFilename);
@@ -5019,18 +6270,43 @@ void CClient::StartVideo(const char *pFilename, bool WithTimestamp)
 	// wait for idle, so there is no data race
 	Graphics()->WaitForIdle();
 	if(!StartVideoRecorder(*Sound(), [&] {
-		   return new CVideo(Graphics(), Sound(), Storage(), Graphics()->ScreenWidth(), Graphics()->ScreenHeight(), aFilename);
+		   // 输出分辨率（M7 超采样）：qm_video_width/height 为 0 时跟随渲染分辨率；
+		   // 分段导出使用任务启动时冻结的显示配置；整段直录在开始时捕获一份。
+		   const SVideoDisplaySnapshot DisplaySnapshot = m_pVideoExportTask ? m_pVideoExportTask->DisplaySnapshot() : qm_demo_display::Capture(g_Config);
+		   // 离屏导出计划（导出 FSAA / 输出大于窗口）：离屏时 CVideo 的读回尺寸按目标尺寸
+		   // 建立（输出可大于窗口，M7 的"防上采样回退"由目标尺寸天然满足）；
+		   // 降级回窗口路径时按窗口读回，行为与旧实现一致。
+		   m_VideoOffscreenPlan = PlanVideoOffscreenFrame(
+			   Graphics()->ScreenWidth(), Graphics()->ScreenHeight(),
+			   g_Config.m_QmVideoWidth, g_Config.m_QmVideoHeight,
+			   g_Config.m_QmVideoFsaa, g_Config.m_GfxFsaaSamples,
+			   Graphics()->MaxMultisampleRenderTargetSamples());
+		   m_VideoOffscreenFailed = false;
+		   const int RenderWidth = m_VideoOffscreenPlan.m_Offscreen ? m_VideoOffscreenPlan.m_RenderWidth : Graphics()->ScreenWidth();
+		   const int RenderHeight = m_VideoOffscreenPlan.m_Offscreen ? m_VideoOffscreenPlan.m_RenderHeight : Graphics()->ScreenHeight();
+		   return new CVideo(Graphics(), Sound(), Storage(), RenderWidth, RenderHeight, aFilename, g_Config.m_QmVideoWidth, g_Config.m_QmVideoHeight, &DisplaySnapshot);
 	   }))
 	{
 		log_error("videorecorder", "Failed to start recording to '%s'", aFilename);
 		m_DemoPlayer.Stop("Failed to start video recording. See local console for details.");
 		return;
 	}
+	if(m_VideoOffscreenPlan.m_Offscreen)
+	{
+		IVideo::Current()->SetOffscreenCapture(true);
+		log_info("videorecorder", "Offscreen export: rendering %dx%d (%dx multisampling) into an offscreen target%s",
+			m_VideoOffscreenPlan.m_RenderWidth, m_VideoOffscreenPlan.m_RenderHeight, m_VideoOffscreenPlan.m_SampleCount,
+			m_VideoOffscreenPlan.m_SampleCount < 2 && g_Config.m_QmVideoFsaa > 1 ? "; multisampling unsupported by the backend, using 1x" : "");
+	}
 	if(m_DemoPlayer.Info()->m_Info.m_Paused)
 	{
 		IVideo::Current()->Pause(true);
 	}
-	log_info("videorecorder", "Recording to '%s'", aFilename);
+	// 段启动时记录冻结的显示快照：E2E 用它证明导出中改配置不会影响已启动的段，
+	// 同时便于定位"同一任务不同段画面不一致"的报告。
+	log_info("videorecorder", "Recording to '%s' (display snapshot: hud=%d chat=%d direction=%d strong_weak=%d strong_scope=%d strong_size=%d)",
+		aFilename, DisplaySnapshot.m_Hud, DisplaySnapshot.m_Chat, DisplaySnapshot.m_Direction,
+		DisplaySnapshot.m_StrongWeak, DisplaySnapshot.m_StrongWeakScope, DisplaySnapshot.m_StrongWeakSize);
 }
 
 void CClient::Con_StopVideo(IConsole::IResult *pResult, void *pUserData)
@@ -5364,11 +6640,26 @@ const char *CClient::DemoPlayer_Play(const char *pFilename, int StorageType)
 }
 
 #if defined(CONF_VIDEORECORDER)
-const char *CClient::DemoPlayer_Render(const char *pFilename, int StorageType, const char *pVideoName, int SpeedIndex, bool StartPaused)
+const char *CClient::DemoPlayer_Render(const char *pFilename, int StorageType, const char *pVideoName, int SpeedIndex, bool StartPaused, float RangeStartSec, float RangeEndSec)
 {
 	const char *pError = DemoPlayer_Play(pFilename, StorageType);
 	if(pError)
 		return pError;
+
+	// 两个入口共享选区校验；启动失败返回错误，不能把非法选区变成整段录像。
+	if(g_Config.m_QmVideoSegmentSeconds > 0 || CVideoExportTask::HasRange(RangeStartSec, RangeEndSec))
+	{
+		const auto Result = StartSegmentedVideoExport(pVideoName, false, RangeStartSec, RangeEndSec);
+		if(Result == EVideoExportStartResult::FAILED)
+			return Localize("Failed to save video");
+		if(Result == EVideoExportStartResult::STARTED)
+		{
+			m_DemoPlayer.SetSpeedIndex(SpeedIndex);
+			if(StartPaused)
+				m_DemoPlayer.Pause();
+			return nullptr;
+		}
+	}
 
 	StartVideo(pVideoName, false);
 	if(!IVideo::Current())
@@ -5723,29 +7014,17 @@ bool CClient::HandleQmGraphicsFatalError()
 {
 	// 图形后端已经记录了致命错误（例如 Vulkan VK_ERROR_DEVICE_LOST）。
 	// TakeFatalError 已保存第一份诊断并停止提交；这里写诊断报告再干净退出。
-	// 用户的渲染后端与窗口
-	// 模式等显式设置保持原样。
-	// 例外（qm_vulkan_ext 的设计语义）：device lost 且 qm_enhanced_rendering
-	// 处于 AUTO 时，把配置持久化写回 0（纯净 Vulkan）并自动重启一次。AUTO
-	// 的含义就是「自动回退」，后端运行期已按会话禁用增强管线，这里完成持久
-	// 化。下一次会话已是 OFF，不会再进入本分支，因此重启有界、无循环风险。
+	// 用户的渲染后端与窗口模式等显式设置保持原样。
+	// qm_enhanced_rendering 已移除：SDF 常驻，设备丢失不再持久化改写渲染开关，
+	// 避免自动重启循环；下一次会话由 SDF 管线重新尝试创建。
 	if(m_QmGraphicsFatalErrorHandled)
 		return false;
 	m_QmGraphicsFatalErrorHandled = true;
 
 	const char *pFatalError = Graphics()->GetFatalError();
 
-	bool QmEnhancedAutoFallback = false;
-	const int EnhancedRenderingMode = g_Config.m_QmEnhancedRendering;
-	char aQmFallbackInfo[256] = "none";
-	if(pFatalError[0] != '\0' && str_find(pFatalError, "device lost") != nullptr && g_Config.m_QmEnhancedRendering == 1)
-	{
-		g_Config.m_QmEnhancedRendering = 0;
-		g_Config.m_QmGaussianBlur = 0;
-		QmEnhancedAutoFallback = true;
-		str_copy(aQmFallbackInfo, "device lost with qm_enhanced_rendering=AUTO; disabled enhanced rendering and backdrop blur, requested auto-restart");
-		log_error("gfx", "device lost while qm_enhanced_rendering=AUTO; disabling enhanced rendering and backdrop blur before auto-restart");
-	}
+	const int EnhancedRenderingMode = 0; // 配置已移除；保留报告字段兼容旧日志格式
+	char aQmFallbackInfo[256] = "none (qm_enhanced_rendering removed)";
 
 	char aGpuInfo[512];
 	GetGpuInfoString(aGpuInfo);
@@ -5798,17 +7077,7 @@ bool CClient::HandleQmGraphicsFatalError()
 
 	log_error("gfx", "graphics backend reported a fatal error, stopping the client: %s",
 		pFatalError[0] != '\0' ? pFatalError : "(no details)");
-	if(QmEnhancedAutoFallback)
-	{
-		// 配置会在 Run() 主循环结束后的正常保存流程里落盘；
-		// 下一次启动关闭增强绘制与模糊提交，不再进入本分支。
-		log_info("gfx", "auto-restarting client to finish the enhanced-rendering fallback");
-		SetState(IClient::STATE_RESTARTING);
-	}
-	else
-	{
-		SetState(IClient::STATE_QUITTING);
-	}
+	SetState(IClient::STATE_QUITTING);
 	return true;
 }
 
@@ -6145,10 +7414,23 @@ void CClient::RegisterCommands()
 	m_pConsole->Register("qm_net_qos_status", "", CFGFLAG_CLIENT, Con_QmNetQosStatus, this, "Show outgoing game traffic QoS status");
 	m_pConsole->Register("ping", "", CFGFLAG_CLIENT, Con_Ping, this, "Ping the current server");
 	m_pConsole->Register("screenshot", "", CFGFLAG_CLIENT | CFGFLAG_STORE, Con_Screenshot, this, "Take a screenshot");
+	m_pConsole->Register("poses_render", "s[poses] ?s[output] ?s[map] ?i[scale] ?i[entities] ?i[sharpen]", CFGFLAG_CLIENT, Con_RenderPoses, this, "Render a MomentCap .poses file as a screenshot (optional 1-4x supersampling, entity overlay, sharpen 0-100)");
+	// 无下划线别名：部分键盘布局/输入注入方式打不出下划线，留一个同样可用的短名。
+	m_pConsole->Register("posesrender", "s[poses] ?s[output] ?s[map] ?i[scale]", CFGFLAG_CLIENT, Con_RenderPoses, this, "Alias of poses_render");
+	// 与 demo 一致的两条路径：游戏内观看 / 导出。poses_render 是第三种（静态截图）。
+	m_pConsole->Register("poses_open", "s[poses] ?s[map]", CFGFLAG_CLIENT, Con_PosesOpen, this, "Show a MomentCap .poses file in game (no export)");
+	m_pConsole->Register("poses_close", "", CFGFLAG_CLIENT, &CClient::Con_PosesClose, this, "Leave the pose session");
+	// 无下划线别名，与 posesrender 一致。
+	m_pConsole->Register("posesopen", "s[poses] ?s[map]", CFGFLAG_CLIENT, Con_PosesOpen, this, "Alias of poses_open");
+	m_pConsole->Register("posesclose", "", CFGFLAG_CLIENT, &CClient::Con_PosesClose, this, "Alias of poses_close");
 	m_pConsole->Register("net_reset", "", CFGFLAG_CLIENT, ConNetReset, this, "Rebinds the client's listening address and port");
 
 #if defined(CONF_VIDEORECORDER)
-	m_pConsole->Register("start_video", "?r[file]", CFGFLAG_CLIENT, Con_StartVideo, this, "Start recording a video");
+	m_pConsole->Register("poses_video", "s[poses] s[name] ?f[seconds] ?s[map]", CFGFLAG_CLIENT, Con_PosesVideo, this, "Record a MomentCap .poses scene to a video");
+	m_pConsole->Register("posesvideo", "s[poses] s[name] ?f[seconds] ?s[map]", CFGFLAG_CLIENT, Con_PosesVideo, this, "Alias of poses_video");
+	// 第一个参数必须是 s 而不是 r：r 会吞掉整行剩余内容，后面的 start/end 永远收不到。
+	// 文件名含空格时用引号包裹（"my demo"）。
+	m_pConsole->Register("start_video", "?s[file] ?f[start_sec] ?f[end_sec]", CFGFLAG_CLIENT, Con_StartVideo, this, "Start recording a video");
 	m_pConsole->Register("stop_video", "", CFGFLAG_CLIENT, Con_StopVideo, this, "Stop recording a video");
 #endif
 
@@ -6257,6 +7539,11 @@ void CClient::HandleDemoPath(const char *pPath)
 	str_copy(m_aCmdPlayDemo, pPath);
 }
 
+void CClient::HandlePosesPath(const char *pPath)
+{
+	str_copy(m_aCmdOpenPoses, pPath);
+}
+
 void CClient::HandleMapPath(const char *pPath)
 {
 	str_copy(m_aCmdEditMap, pPath);
@@ -6270,9 +7557,14 @@ static bool UnknownArgumentCallback(const char *pCommand, void *pUser)
 		pClient->HandleConnectLink(pCommand);
 		return true;
 	}
-	else if(str_endswith(pCommand, ".demo"))
+	else if(str_endswith_nocase(pCommand, ".demo"))
 	{
 		pClient->HandleDemoPath(pCommand);
+		return true;
+	}
+	else if(str_endswith_nocase(pCommand, ".poses"))
+	{
+		pClient->HandlePosesPath(pCommand);
 		return true;
 	}
 	else if(str_endswith(pCommand, ".map"))
@@ -6384,6 +7676,10 @@ int main(int argc, const char **argv)
 			gs_QmTestMainThreadAssert = true;
 		if(str_comp(argv[i], "--qm-test-main-thread-stall") == 0)
 			gs_QmTestMainThreadStall = true;
+#if defined(CONF_FAMILY_WINDOWS)
+		if(str_comp(argv[i], "--qm-test-main-thread-exception") == 0)
+			gs_QmTestMainThreadException = true;
+#endif
 		if(str_comp(argv[i], "--qm-test-shutdown-cleanup-stall") == 0)
 			gs_QmTestShutdownCleanupStall = true;
 	}
@@ -6547,18 +7843,11 @@ int main(int argc, const char **argv)
 	};
 	std::function<void()> PerformFinalCleanup = []() {
 #if defined(CONF_PLATFORM_ANDROID)
-		// Forcefully terminate the entire process, to ensure that static variables
-		// will be initialized correctly when the app is started again after quitting.
-		// Returning from the main function is not enough, as this only results in the
-		// native thread terminating, but the Java thread will continue. Java does not
-		// support unloading libraries once they have been loaded, so all static
-		// variables will not have their expected initial values anymore when the app
-		// is started again after quitting. The variable gs_AndroidStarted above is
-		// used to check that static variables have been initialized properly.
-		// TODO: This is not the correct way to close an activity on Android, as it
-		//       ignores the activity lifecycle entirely, which may cause issues if
-		//       we ever used any global resources like the camera.
-		std::exit(0);
+		// 客户端与 SDL 已完成显式清理。只结束原生主线程会留下 Java 进程和旧静态状态，
+		// 继续执行进程级静态析构又会破坏仍在运行的 Android HWUI 线程所用的锁。
+		// 先完成日志写入，再直接结束进程，保持下次启动与重启时的全新状态。
+		log_global_logger_finish();
+		std::_Exit(0);
 #elif defined(CONF_PLATFORM_EMSCRIPTEN)
 		// We cannot use atexit with Emscripten so we finish the global logger here.
 		// See comment in the log_set_global_logger function for details.
@@ -7432,6 +8721,8 @@ void CClient::ShellRegister()
 		log_error("client", "Failed to register .map file extension");
 	if(!windows_shell_register_extension(".demo", "Demo File", GAME_NAME, aFullPath, &Updated))
 		log_error("client", "Failed to register .demo file extension");
+	if(!windows_shell_register_extension(".poses", "Pose File", GAME_NAME, aFullPath, &Updated))
+		log_error("client", "Failed to register .poses file extension");
 	if(!windows_shell_register_application(GAME_NAME, aFullPath, &Updated))
 		log_error("client", "Failed to register application");
 	if(Updated)
@@ -7455,6 +8746,8 @@ void CClient::ShellUnregister()
 		log_error("client", "Failed to unregister .map file extension");
 	if(!windows_shell_unregister_class(GAME_NAME ".demo", &Updated))
 		log_error("client", "Failed to unregister .demo file extension");
+	if(!windows_shell_unregister_class(GAME_NAME ".poses", &Updated))
+		log_error("client", "Failed to unregister .poses file extension");
 	if(!windows_shell_unregister_application(aFullPath, &Updated))
 		log_error("client", "Failed to unregister application");
 	if(Updated)
@@ -7616,7 +8909,7 @@ void CClient::UpdateQmPerfFileLogger()
 		m_QmPerfFrameBatch = CQmPerfFrameBatch();
 		try
 		{
-			QmPerfLogFields("perf/session", "\"event\":\"session_start\",\"schema\":2,\"sampling\":\"automatic\",\"frame_samples\":\"all\",\"target_fps\":300,\"version\":" + QmPerfJsonString(CLIENT_RELEASE_VERSION), this);
+			QmPerfLogFields("perf/session", "\"event\":\"session_start\",\"schema\":2,\"sampling\":\"automatic\",\"frame_samples\":\"all\",\"target_fps\":300,\"version\":" + QmPerfJsonString(CLIENT_RELEASE_VERSION) + ",\"revision\":" + QmPerfJsonString(GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "unknown"), this);
 		}
 		catch(...)
 		{

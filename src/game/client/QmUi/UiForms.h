@@ -172,6 +172,13 @@ namespace ui_widget
 		return Layout;
 	}
 
+	// 清除按钮只在有内容时出现；刚清空的那一帧仍保留旧状态，让 × 随内容
+	// 淡出，而不是在空态常显成一个“关闭输入框”的按钮。
+	inline bool QmInputFieldClearVisible(bool Empty, bool Active, bool WasEmpty)
+	{
+		return !Empty || (Active && !WasEmpty);
+	}
+
 	inline SInputFieldLayout ResolveInputFieldLayout(const CUIRect &Rect, bool HasIcon, bool Clearable, float UiScale = 1.0f, float TrailingWidth = 0.0f)
 	{
 		SInputFieldLayout Layout{};

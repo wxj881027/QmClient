@@ -14,6 +14,9 @@ namespace opengl_render_target
 		TWGLuint m_Texture = 0;
 		int m_Width = 0;
 		int m_Height = 0;
+		TWGLuint m_MultisampleFramebuffer = 0;
+		TWGLuint m_MultisampleRenderbuffer = 0;
+		int m_SampleCount = 1;
 	};
 
 	struct SBindings
@@ -21,6 +24,7 @@ namespace opengl_render_target
 		TWGLuint m_DrawFramebuffer = 0;
 		TWGLuint m_ReadFramebuffer = 0;
 		TWGLuint m_Texture = 0;
+		TWGLuint m_Renderbuffer = 0;
 	};
 
 	// 只替换设备边界；操作不得抛异常，创建返回 0 表示未取得资源。
@@ -32,13 +36,15 @@ namespace opengl_render_target
 		virtual TWGLuint CreateTexture(int Width, int Height) noexcept = 0;
 		virtual TWGLuint CreateFramebuffer(TWGLuint Texture) noexcept = 0;
 		virtual bool IsFramebufferComplete() noexcept = 0;
+		virtual bool CreateMultisample(STarget &Target, int Samples) noexcept = 0;
+		virtual void DeleteRenderbuffer(TWGLuint Renderbuffer) noexcept = 0;
 		virtual void RestoreBindings(const SBindings &Bindings) noexcept = 0;
 		virtual void DeleteFramebuffer(TWGLuint Framebuffer) noexcept = 0;
 		virtual void DeleteTexture(TWGLuint Texture) noexcept = 0;
 	};
 
 	template<typename TAllocator>
-	bool Create(std::vector<STarget, TAllocator> &vTargets, int Id, int Width, int Height, IOperations &Operations) noexcept
+	bool Create(std::vector<STarget, TAllocator> &vTargets, int Id, int Width, int Height, IOperations &Operations, int Samples = 1) noexcept
 	{
 		if(Id < 0 || Width <= 0 || Height <= 0)
 			return false;
@@ -57,7 +63,8 @@ namespace opengl_render_target
 		const STarget Previous = vTargets[Index];
 		const SBindings Saved = Operations.GetBindings();
 		// 不能替换仍在绘制或读取的同一目标，避免删除当前 pass 所依赖的 FBO。
-		if(Previous.m_Framebuffer != 0 && (Saved.m_DrawFramebuffer == Previous.m_Framebuffer || Saved.m_ReadFramebuffer == Previous.m_Framebuffer))
+		if((Previous.m_Framebuffer != 0 && (Saved.m_DrawFramebuffer == Previous.m_Framebuffer || Saved.m_ReadFramebuffer == Previous.m_Framebuffer)) ||
+			(Previous.m_MultisampleFramebuffer != 0 && (Saved.m_DrawFramebuffer == Previous.m_MultisampleFramebuffer || Saved.m_ReadFramebuffer == Previous.m_MultisampleFramebuffer)))
 			return false;
 
 		STarget Candidate;
@@ -81,12 +88,32 @@ namespace opengl_render_target
 
 		Candidate.m_Width = Width;
 		Candidate.m_Height = Height;
+		// 多采样附件失败时保留已完成的单采样目标，沿主分支既有回退。
+		if(Samples > 1)
+		{
+			if(Operations.CreateMultisample(Candidate, Samples))
+				Candidate.m_SampleCount = Samples;
+			else
+			{
+				if(Candidate.m_MultisampleFramebuffer != 0)
+					Operations.DeleteFramebuffer(Candidate.m_MultisampleFramebuffer);
+				if(Candidate.m_MultisampleRenderbuffer != 0)
+					Operations.DeleteRenderbuffer(Candidate.m_MultisampleRenderbuffer);
+				Candidate.m_MultisampleFramebuffer = Candidate.m_MultisampleRenderbuffer = 0;
+			}
+		}
 		SBindings Restored = Saved;
 		// 已绑定的旧纹理被同一逻辑目标替换后，绑定新纹理，不能恢复随后要删除的 ID。
 		if(Previous.m_Texture != 0 && Saved.m_Texture == Previous.m_Texture)
 			Restored.m_Texture = Candidate.m_Texture;
+		if(Previous.m_MultisampleRenderbuffer != 0 && Saved.m_Renderbuffer == Previous.m_MultisampleRenderbuffer)
+			Restored.m_Renderbuffer = Candidate.m_MultisampleRenderbuffer;
 		Operations.RestoreBindings(Restored);
 		vTargets[Index] = Candidate;
+		if(Previous.m_MultisampleFramebuffer != 0)
+			Operations.DeleteFramebuffer(Previous.m_MultisampleFramebuffer);
+		if(Previous.m_MultisampleRenderbuffer != 0)
+			Operations.DeleteRenderbuffer(Previous.m_MultisampleRenderbuffer);
 		if(Previous.m_Framebuffer != 0)
 			Operations.DeleteFramebuffer(Previous.m_Framebuffer);
 		if(Previous.m_Texture != 0)

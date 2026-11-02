@@ -10,13 +10,25 @@ namespace
 	struct SProgress
 	{
 		size_t m_Text = 7, m_Collection = 5;
-		std::vector<std::pair<int, int>> m_vGlyphs{{65, 14}, {66, 14}};
-		size_t m_Glyph = 1, m_GlyphPlan = 6;
+		CSettingsTextPrewarm m_Prewarm;
+		SProgress()
+		{
+			EXPECT_TRUE(m_Prewarm.Prepare("AB", 14));
+			SSettingsTextPrewarmBudget Budget{1, 100};
+			EXPECT_FALSE(m_Prewarm.Advance(Budget, [] { return int64_t{0}; }, [](int, int) {}));
+		}
+		void ExpectNoPendingGlyphs()
+		{
+			SSettingsTextPrewarmBudget Budget{10, 100};
+			int Calls = 0;
+			EXPECT_TRUE(m_Prewarm.Advance(Budget, [] { return int64_t{0}; }, [&](int, int) { ++Calls; }));
+			EXPECT_EQ(Calls, 0);
+		}
 		bool m_Dirty = false, m_Complete = true, m_VisibleReady = true;
 		std::array<int, 3> m_Context{0, 3, 1};
 		SSettingsTextPlanProgressView View()
 		{
-			return {m_Text, m_Collection, m_vGlyphs, m_Glyph, m_GlyphPlan, m_Dirty, m_Complete, m_VisibleReady, m_Context};
+			return {m_Text, m_Collection, m_Prewarm, m_Dirty, m_Complete, m_VisibleReady, m_Context};
 		}
 	};
 }
@@ -27,9 +39,7 @@ TEST(SettingsTextPlanProgress, VisibleReplacementRestartsConsumptionAndCollectio
 	State.View().ReplaceVisiblePlan({0, 3, 1});
 	EXPECT_EQ(State.m_Text, 0u);
 	EXPECT_EQ(State.m_Collection, 0u);
-	EXPECT_TRUE(State.m_vGlyphs.empty());
-	EXPECT_EQ(State.m_Glyph, 0u);
-	EXPECT_EQ(State.m_GlyphPlan, static_cast<size_t>(-1));
+	State.ExpectNoPendingGlyphs();
 	EXPECT_TRUE(State.m_Dirty);
 	EXPECT_FALSE(State.m_Complete);
 	EXPECT_TRUE(State.m_VisibleReady);
@@ -46,7 +56,7 @@ TEST(SettingsTextPlanProgress, BeginningPreparedCollectionClearsDirtyAndVisibleR
 	EXPECT_FALSE(State.m_VisibleReady);
 	EXPECT_EQ(State.m_Text, 0u);
 	EXPECT_EQ(State.m_Collection, 0u);
-	EXPECT_TRUE(State.m_vGlyphs.empty());
+	State.ExpectNoPendingGlyphs();
 }
 
 TEST(SettingsTextPlanProgress, ConsumptionRestartPreservesTheCollectionPrefixAndVisibleReadiness)
@@ -55,9 +65,7 @@ TEST(SettingsTextPlanProgress, ConsumptionRestartPreservesTheCollectionPrefixAnd
 	State.m_Complete = false;
 	State.View().RestartConsumption();
 	EXPECT_EQ(State.m_Text, 0u);
-	EXPECT_TRUE(State.m_vGlyphs.empty());
-	EXPECT_EQ(State.m_Glyph, 0u);
-	EXPECT_EQ(State.m_GlyphPlan, static_cast<size_t>(-1));
+	State.ExpectNoPendingGlyphs();
 	EXPECT_EQ(State.m_Collection, 5u);
 	EXPECT_FALSE(State.m_Dirty);
 	EXPECT_FALSE(State.m_Complete);
@@ -70,9 +78,7 @@ TEST(SettingsTextPlanProgress, InvalidationDiscardsOldGlyphWorkAndVisibleReadine
 	State.View().RestartCollection(true);
 	EXPECT_EQ(State.m_Text, 0u);
 	EXPECT_EQ(State.m_Collection, 0u);
-	EXPECT_TRUE(State.m_vGlyphs.empty());
-	EXPECT_EQ(State.m_Glyph, 0u);
-	EXPECT_EQ(State.m_GlyphPlan, static_cast<size_t>(-1));
+	State.ExpectNoPendingGlyphs();
 	EXPECT_TRUE(State.m_Dirty);
 	EXPECT_FALSE(State.m_Complete);
 	EXPECT_FALSE(State.m_VisibleReady);
@@ -93,7 +99,7 @@ TEST(SettingsTextPlanProgress, VisibleReplacementDoesNotAllocateDuringPublicatio
 	EXPECT_EQ(Attempts, 0u);
 	EXPECT_TRUE(State.m_Dirty);
 	EXPECT_FALSE(State.m_Complete);
-	EXPECT_TRUE(State.m_vGlyphs.empty());
+	State.ExpectNoPendingGlyphs();
 }
 
 TEST(SettingsTextPlanProgress, RepeatedVisibleReplacementKeepsARebuildPendingEvenForAnEmptyPage)

@@ -145,7 +145,7 @@ public class ClientActivity extends SDLActivity {
 		return false;
 	}
 
-	private void restartApp() {
+	public void restartApp() {
 		Intent restartIntent =
 			Intent.makeRestartActivityTask(
 				getPackageManager().getLaunchIntentForPackage(

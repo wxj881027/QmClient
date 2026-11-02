@@ -16,6 +16,8 @@ namespace
 				return;
 			Text().SetFontPreset(EFontPreset::DEFAULT_FONT);
 			Text().SetRenderFlags(TEXT_RENDER_FLAG_KERNING);
+			Text().TextColor(ColorRGBA(0.6f, 0.5f, 0.4f, 0.8f));
+			Text().TextOutlineColor(ColorRGBA(0.2f, 0.3f, 0.4f, 0.7f));
 			Graphics().MapScreen(1, 2, 301, 202);
 		}
 		void TearDown() override
@@ -48,8 +50,8 @@ namespace
 		void ExpectContextRestored()
 		{
 			EXPECT_EQ(Text().GetRenderFlags(), unsigned(TEXT_RENDER_FLAG_KERNING));
-			EXPECT_EQ(Text().GetTextColor(), Text().DefaultTextColor());
-			EXPECT_EQ(Text().GetTextOutlineColor(), Text().DefaultTextOutlineColor());
+			EXPECT_EQ(Text().GetTextColor(), ColorRGBA(0.6f, 0.5f, 0.4f, 0.8f));
+			EXPECT_EQ(Text().GetTextOutlineColor(), ColorRGBA(0.2f, 0.3f, 0.4f, 0.7f));
 			float X0, Y0, X1, Y1;
 			Graphics().GetScreen(&X0, &Y0, &X1, &Y1);
 			EXPECT_EQ(X0, 1);
@@ -118,7 +120,7 @@ TEST_F(QmChatBubbleStateIntegration, PendingDeletionFailurePreventsAnotherLayout
 	EXPECT_TRUE(m_State.m_TextContainerIndex.Valid());
 }
 
-TEST_F(QmChatBubbleStateIntegration, NormalContextFinishRestoresTheExistingDefaultColorContract)
+TEST_F(QmChatBubbleStateIntegration, NormalContextFinishRestoresTheCallingColorsRepeatedly)
 {
 	CQmChatBubbleRenderContext Context(Text(), Graphics());
 	Context.Apply([&] { Graphics().MapScreen(10, 20, 310, 220); });

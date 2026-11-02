@@ -31,7 +31,7 @@ void CLayerSoundEnvelopeReference::SetEnvelope(const std::shared_ptr<CEnvelope> 
 {
 	for(auto &SoundSourceIndex : m_vSoundSourceIndices)
 	{
-		if(SoundSourceIndex >= 0 && SoundSourceIndex <= (int)m_pLayerSounds->m_vSources.size())
+		if(SoundSourceIndex >= 0 && SoundSourceIndex < (int)m_pLayerSounds->m_vSources.size())
 		{
 			if(pEnvelope->Type() == CEnvelope::EType::SOUND)
 				m_pLayerSounds->m_vSources[SoundSourceIndex].m_SoundEnv = EnvelopeIndex;

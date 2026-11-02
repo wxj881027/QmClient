@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -68,6 +69,18 @@ inline std::optional<size_t> QmImeBoundedUtf16Length(const unsigned char *pBuffe
 inline bool QmImePopupShouldBeVisible(int CandidateCount)
 {
 	return CandidateCount > 0;
+}
+
+// 部分 IME 在翻页或选词时短暂清空组合串，仍有效的候选也属于组合输入。
+inline bool QmImeCompositionIsActive(bool HasCompositionText, int CandidateCount)
+{
+	return HasCompositionText || CandidateCount > 0;
+}
+
+// 组合输入期间键盘由 IME 处理，鼠标仍须能切换输入框、清除组合或操作页面。
+inline bool QmImeShouldSuppressPress(int Key, bool CompositionActive)
+{
+	return CompositionActive && !(Key >= KEY_MOUSE_1 && Key <= KEY_MOUSE_WHEEL_RIGHT);
 }
 
 // 空 TEXTEDITING 不应清空候选：搜狗等 IME 在页边界/高亮时会短暂发空串
@@ -134,8 +147,11 @@ public:
 		m_SuppressStaleReload = true;
 	}
 
-	void UpdateFromNative(std::optional<SQmImeCandidateList> List, bool IsOpenNotify)
+	void UpdateFromNative(std::optional<SQmImeCandidateList> List, bool IsOpenNotify, bool HasActiveComposition = false)
 	{
+		// 提交后可能漏收下一轮打开/编辑通知；仅由当前 IMM 组合串确认恢复。
+		if(HasActiveComposition)
+			ResumeComposition();
 		const bool Suppress = QmImeShouldSuppressStaleCandidateReload(m_SuppressStaleReload, IsOpenNotify);
 		if(IsOpenNotify)
 			ResumeComposition();
@@ -152,19 +168,22 @@ public:
 		}
 	}
 
-	void UpdateFromSdl(const char *const *ppCandidates, int Count, int SelectedIndex, bool WindowsNumberedCandidates, std::optional<SQmImeCandidateList> NativeCandidates = std::nullopt) noexcept
+	void UpdateFromSdl(const char *const *ppCandidates, int Count, int SelectedIndex, bool WindowsNumberedCandidates, std::optional<SQmImeCandidateList> NativeCandidates = std::nullopt, bool HasActiveComposition = false) noexcept
 	{
-		UpdateFromSdl(ppCandidates, Count, SelectedIndex, WindowsNumberedCandidates, std::move(NativeCandidates), [](const char *pText) { return std::string(pText); });
+		UpdateFromSdl(ppCandidates, Count, SelectedIndex, WindowsNumberedCandidates, std::move(NativeCandidates), [](const char *pText) { return std::string(pText); }, HasActiveComposition);
 	}
 
 	template<typename TCopy>
-	void UpdateFromSdl(const char *const *ppCandidates, int Count, int SelectedIndex, bool WindowsNumberedCandidates, std::optional<SQmImeCandidateList> NativeCandidates, TCopy &&Copy) noexcept
+		requires std::is_invocable_v<TCopy &, const char *>
+	void UpdateFromSdl(const char *const *ppCandidates, int Count, int SelectedIndex, bool WindowsNumberedCandidates, std::optional<SQmImeCandidateList> NativeCandidates, TCopy &&Copy, bool HasActiveComposition = false) noexcept
 	{
 		if(Count <= 0 || ppCandidates == nullptr)
 		{
 			Clear();
 			return;
 		}
+		if(HasActiveComposition)
+			ResumeComposition();
 		if(!AcceptsSdlCandidates())
 			return;
 

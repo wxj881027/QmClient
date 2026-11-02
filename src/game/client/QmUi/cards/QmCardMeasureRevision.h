@@ -5,6 +5,8 @@
 
 #include <engine/shared/config.h>
 
+#include <game/client/components/qmclient/console_appearance.h>
+
 #include <algorithm>
 
 namespace qm_card_catalog
@@ -61,7 +63,7 @@ namespace qm_card_catalog
 		case EQmModuleId::FavoriteMaps: return Layout.m_FavoriteMapsRevision;
 		case EQmModuleId::MapUpload: return 1u;
 		case EQmModuleId::HJAssist: return (g_Config.m_QmAutoTeamLock ? 1u : 0u) | (g_Config.m_QmPausedSpectatorFade ? 2u : 0u);
-		case EQmModuleId::ChatBubble: return g_Config.m_QmChatBubble ? 1u : 0u;
+		case EQmModuleId::ChatBubble: return (g_Config.m_QmChatBubble ? 1u : 0u) | (g_Config.m_QmChatBubbleCustomColors ? 2u : 0u);
 		case EQmModuleId::CameraView:
 			return (g_Config.m_QmCameraDrift ? 1u : 0u) |
 			       (g_Config.m_QmDynamicFov ? 2u : 0u) |
@@ -85,9 +87,9 @@ namespace qm_card_catalog
 			       (g_Config.m_QmHitboxShowFreezeProjectiles ? 1u << 11 : 0u);
 		case EQmModuleId::DummyMiniView: return DummyMiniViewExpanded ? 1u : 0u;
 		case EQmModuleId::Ime: return (g_Config.m_QmNewIme != 0 ? 1u : 0u) | (g_Config.m_QmImeAutoManage != 0 ? 2u : 0u);
-		case EQmModuleId::PlayerStats: return (g_Config.m_QmPlayerStatsMapProgress ? 1u : 0u) | (g_Config.m_QmPlayerStatsMapProgressStyle ? 2u : 0u);
+		case EQmModuleId::PlayerStats: return (g_Config.m_QmPlayerStatsMapProgress ? 1u : 0u) | (static_cast<uint64_t>(g_Config.m_QmPlayerStatsMapProgressStyle) << 1);
 		case EQmModuleId::InputOverlay: return g_Config.m_QmInputOverlay ? 1u : 0u;
-		case EQmModuleId::Console: return static_cast<uint64_t>(g_Config.m_QmConsoleFontSize) | (static_cast<uint64_t>(g_Config.m_QmConsoleColorScheme == 2) << 8);
+		case EQmModuleId::Console: return static_cast<uint64_t>(g_Config.m_QmConsoleFontSize) | (static_cast<uint64_t>(QmConsoleAppearance::IsCustomScheme(g_Config.m_QmConsoleColorScheme)) << 8);
 		case EQmModuleId::Tooltip: return static_cast<uint64_t>(g_Config.m_QmTooltipFontSize);
 		case EQmModuleId::HudNotifications:
 		{

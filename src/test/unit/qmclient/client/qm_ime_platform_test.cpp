@@ -4,6 +4,7 @@
 #include <game/client/qm_ime_manager.h>
 
 #include <gtest/gtest.h>
+#include <test/support/qm_ui_test_input.h>
 
 #include <string>
 #include <vector>
@@ -34,42 +35,82 @@ TEST(QmImeFocus, ChatPopupInputExpiresWithChatOwner)
 TEST(QmImeTextInputSession, FocusStartsOnceAndStopsOnRelease)
 {
 	CQmImeTextInputSession Session;
+	qm_ui_test::CTestInput Input;
+	int Field = 0;
 	using EAction = CQmImeTextInputSession::EAction;
-	EXPECT_EQ(Session.UpdateFocus(false), EAction::NONE);
-	EXPECT_EQ(Session.UpdateFocus(true), EAction::START);
-	EXPECT_EQ(Session.UpdateFocus(true), EAction::NONE);
-	EXPECT_EQ(Session.UpdateFocus(false), EAction::STOP);
-	EXPECT_EQ(Session.UpdateFocus(false), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(Input, nullptr), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::START);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(Input, nullptr), EAction::STOP);
+	EXPECT_EQ(Session.UpdateFocus(Input, nullptr), EAction::NONE);
+	EXPECT_EQ(Input.m_TextInputStarts, 1);
+	EXPECT_EQ(Input.m_TextInputStops, 1);
+}
+
+TEST(QmImeTextInputSession, SwitchingFieldsRestartsAndClearsPreviousComposition)
+{
+	CQmImeTextInputSession Session;
+	qm_ui_test::CTestInput Input;
+	int First = 0, Second = 0;
+	using EAction = CQmImeTextInputSession::EAction;
+	ASSERT_EQ(Session.UpdateFocus(Input, &First), EAction::START);
+	Input.m_Composing = true;
+	Input.m_CandidateCount = 3;
+	EXPECT_EQ(Session.UpdateFocus(Input, &Second), EAction::RESTART);
+	EXPECT_FALSE(Input.HasComposition());
+	EXPECT_EQ(Input.m_TextInputStops, 1);
+	EXPECT_EQ(Input.m_TextInputStarts, 2);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Second), EAction::NONE);
+	EXPECT_EQ(Input.m_TextInputStarts, 2);
+}
+
+TEST(QmImeTextInputSession, ReopeningSameFieldStartsANewSession)
+{
+	CQmImeTextInputSession Session;
+	qm_ui_test::CTestInput Input;
+	int Field = 0;
+	using EAction = CQmImeTextInputSession::EAction;
+	ASSERT_EQ(Session.UpdateFocus(Input, &Field), EAction::START);
+	ASSERT_EQ(Session.UpdateFocus(Input, nullptr), EAction::STOP);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::START);
+	EXPECT_EQ(Input.m_TextInputStarts, 2);
+	EXPECT_EQ(Input.m_TextInputStops, 1);
 }
 
 TEST(QmImeTextInputSession, EditorOwnsInputUntilClientReturns)
 {
 	CQmImeTextInputSession Session;
+	qm_ui_test::CTestInput Input;
+	int Field = 0;
 	using EAction = CQmImeTextInputSession::EAction;
-	EXPECT_EQ(Session.UpdateFocus(true), EAction::START);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::START);
 	EXPECT_TRUE(Session.SetClientOwnership(false));
 	EXPECT_FALSE(Session.ClientOwnsInput());
-	EXPECT_EQ(Session.UpdateFocus(true), EAction::NONE);
-	EXPECT_EQ(Session.UpdateFocus(false), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(Input, nullptr), EAction::NONE);
+	EXPECT_EQ(Input.m_TextInputStarts, 1);
+	EXPECT_EQ(Input.m_TextInputStops, 0);
 
 	EXPECT_TRUE(Session.SetClientOwnership(true));
-	EXPECT_EQ(Session.UpdateFocus(false), EAction::NONE);
-	EXPECT_EQ(Session.UpdateFocus(true), EAction::START);
+	EXPECT_EQ(Session.UpdateFocus(Input, nullptr), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::START);
 }
 
 TEST(QmImeTextInputSession, RepeatedOwnershipDoesNotRestartComposition)
 {
 	CQmImeTextInputSession Session;
+	qm_ui_test::CTestInput Input;
+	int Field = 0;
 	using EAction = CQmImeTextInputSession::EAction;
-	EXPECT_EQ(Session.UpdateFocus(true), EAction::START);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::START);
 	EXPECT_FALSE(Session.SetClientOwnership(true));
-	EXPECT_EQ(Session.UpdateFocus(true), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::NONE);
 	Session.ResetFocus();
-	EXPECT_EQ(Session.UpdateFocus(true), EAction::START);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::START);
 	EXPECT_TRUE(Session.SetClientOwnership(false));
 	Session.ResetFocus();
 	EXPECT_FALSE(Session.SetClientOwnership(false));
-	EXPECT_EQ(Session.UpdateFocus(true), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(Input, &Field), EAction::NONE);
 }
 
 TEST(QmImePlatform, SystemCandidateUiPolicyMatchesPlatform)
@@ -144,6 +185,32 @@ TEST(QmImePlatform, PopupVisibilityDrivenByCandidateCount)
 	EXPECT_FALSE(QmImePopupShouldBeVisible(0));
 	EXPECT_TRUE(QmImePopupShouldBeVisible(1));
 	EXPECT_TRUE(QmImePopupShouldBeVisible(5));
+}
+
+TEST(QmImePlatform, CandidateOnlyCompositionRetainsKeyboardUntilCandidatesClose)
+{
+	CQmImeCandidateState State;
+	const char *apCandidates[] = {"1 候选"};
+	State.UpdateFromSdl(apCandidates, 1, 0, true);
+	EXPECT_TRUE(QmImeCompositionIsActive(false, static_cast<int>(State.Candidates().m_vCandidates.size())));
+	State.Clear();
+	EXPECT_FALSE(QmImeCompositionIsActive(false, static_cast<int>(State.Candidates().m_vCandidates.size())));
+	EXPECT_TRUE(QmImeCompositionIsActive(true, 0));
+}
+
+TEST(QmImePlatform, CompositionAllowsPointerFocusChangesButSuppressesKeyboardPresses)
+{
+	for(const int Key : {KEY_MOUSE_1, KEY_MOUSE_2, KEY_MOUSE_9, KEY_MOUSE_WHEEL_UP, KEY_MOUSE_WHEEL_RIGHT})
+	{
+		SCOPED_TRACE(Key);
+		EXPECT_FALSE(QmImeShouldSuppressPress(Key, true));
+	}
+	for(const int Key : {KEY_RETURN, KEY_KP_ENTER, KEY_BACKSPACE, KEY_ESCAPE, KEY_A})
+	{
+		SCOPED_TRACE(Key);
+		EXPECT_TRUE(QmImeShouldSuppressPress(Key, true));
+		EXPECT_FALSE(QmImeShouldSuppressPress(Key, false));
+	}
 }
 
 TEST(QmImePlatform, FailedCandidateReloadKeepsPreviousOnChangeNotify)
@@ -351,6 +418,86 @@ TEST(QmImeCandidateState, ResumingCompositionAcceptsSdlWithoutNativeOpenNotify)
 	State.UpdateFromSdl(apCandidates, 1, 0, true);
 
 	EXPECT_EQ(State.Candidates().m_vCandidates, (std::vector<std::string>{"新词"}));
+}
+
+TEST(QmImeCandidateState, ActiveNativeCompositionResumesSdlCandidatesAfterCommit)
+{
+	CQmImeCandidateState State;
+	const char *apSdlCandidates[] = {"1 上次候选"};
+	State.UpdateFromSdl(apSdlCandidates, 1, 0, true);
+	State.EndComposition();
+	SQmImeCandidateList NativeCandidates;
+	NativeCandidates.m_vCandidates = {"当前候选", "下一候选"};
+	NativeCandidates.m_SelectedIndex = 1;
+	NativeCandidates.m_PageStart = 5;
+	NativeCandidates.m_PageSize = 5;
+	NativeCandidates.m_TotalCount = 12;
+
+	// 未收到新的打开通知或非空 TEXTEDITING，仅由 IMM 确认当前仍在组合输入。
+	State.UpdateFromSdl(apSdlCandidates, 1, 0, true, NativeCandidates, true);
+
+	EXPECT_TRUE(State.AcceptsSdlCandidates());
+	EXPECT_EQ(State.Candidates().m_vCandidates, NativeCandidates.m_vCandidates);
+	EXPECT_EQ(State.Candidates().m_SelectedIndex, 1);
+	EXPECT_EQ(State.Candidates().m_PageStart, 5);
+	EXPECT_TRUE(QmImePopupShouldBeVisible(State.Candidates().m_vCandidates.size()));
+}
+
+TEST(QmImeCandidateState, ActiveNativeCompositionResumesChangeWithoutOpenNotify)
+{
+	CQmImeCandidateState State;
+	State.EndComposition();
+	SQmImeCandidateList NativeCandidates;
+	NativeCandidates.m_vCandidates = {"新的组合"};
+	NativeCandidates.m_SelectedIndex = 0;
+
+	State.UpdateFromNative(NativeCandidates, false, true);
+
+	EXPECT_TRUE(State.AcceptsSdlCandidates());
+	EXPECT_EQ(State.Candidates().m_vCandidates, NativeCandidates.m_vCandidates);
+}
+
+TEST(QmImeCandidateState, ActiveCompositionAllowsSdlFallbackWhenNativeListIsUnavailable)
+{
+	CQmImeCandidateState State;
+	State.EndComposition();
+	State.UpdateFromNative(std::nullopt, false, true);
+	const char *apCandidates[] = {"1 当前候选"};
+
+	State.UpdateFromSdl(apCandidates, 1, 0, true);
+
+	EXPECT_EQ(State.Candidates().m_vCandidates, (std::vector<std::string>{"当前候选"}));
+}
+
+TEST(QmImeCandidateState, ConsecutiveCommitsRecoverWithoutRestartingTextInput)
+{
+	CQmImeCandidateState State;
+	for(const char *pCandidate : {"第一词", "第二词", "第三词"})
+	{
+		SCOPED_TRACE(pCandidate);
+		State.EndComposition();
+		const char *apLateCandidates[] = {"1 上次候选"};
+		State.UpdateFromSdl(apLateCandidates, 1, 0, true);
+		ASSERT_TRUE(State.Candidates().m_vCandidates.empty());
+		const char *apCurrentCandidates[] = {pCandidate};
+
+		State.UpdateFromSdl(apCurrentCandidates, 1, 0, true, std::nullopt, true);
+
+		EXPECT_EQ(State.Candidates().m_vCandidates, (std::vector<std::string>{pCandidate}));
+	}
+}
+
+TEST(QmImeCandidateState, EmptySdlSnapshotCannotResumeEndedComposition)
+{
+	CQmImeCandidateState State;
+	State.EndComposition();
+	SQmImeCandidateList NativeCandidates;
+	NativeCandidates.m_vCandidates = {"残留候选"};
+
+	State.UpdateFromSdl(nullptr, 0, -1, true, NativeCandidates, true);
+
+	EXPECT_FALSE(State.AcceptsSdlCandidates());
+	EXPECT_TRUE(State.Candidates().m_vCandidates.empty());
 }
 
 TEST(QmImeCandidateState, NativeOpenAcceptsCandidatesAfterCompositionEnded)

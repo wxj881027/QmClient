@@ -1,6 +1,9 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include "player_points.h"
 
+#include "qmclient/update_proxy.h"
+
+#include <base/detect.h>
 #include <base/log.h>
 #include <base/system.h>
 
@@ -28,6 +31,8 @@ namespace
 
 	private:
 		std::shared_ptr<IHttpRequest> m_pRequest;
+		std::string m_PlayerName;
+		bool m_Playtime;
 		SResult m_Result;
 
 	protected:
@@ -35,6 +40,15 @@ namespace
 		{
 			if(!m_pRequest || m_pRequest->State() != EHttpState::DONE || m_pRequest->StatusCode() != 200)
 				return;
+			if(m_Playtime)
+			{
+				unsigned char *pData = nullptr;
+				size_t Size = 0;
+				m_pRequest->Result(&pData, &Size);
+				m_Result.m_PlaytimeHours = ExtractPlayerDdStatsHours(reinterpret_cast<const char *>(pData), Size, m_PlayerName.c_str());
+				m_Result.m_JsonParsed = m_Result.m_PlaytimeHours >= 0;
+				return;
+			}
 
 			// ResultJson 每次调用新建解析树，所有权在本函数。
 			json_value *pRoot = m_pRequest->ResultJson();
@@ -46,8 +60,10 @@ namespace
 		}
 
 	public:
-		explicit CPlayerPointsParseJob(std::shared_ptr<IHttpRequest> pRequest) :
-			m_pRequest(std::move(pRequest))
+		CPlayerPointsParseJob(std::shared_ptr<IHttpRequest> pRequest, const std::string &PlayerName, bool Playtime) :
+			m_pRequest(std::move(pRequest)),
+			m_PlayerName(PlayerName),
+			m_Playtime(Playtime)
 		{
 		}
 
@@ -136,7 +152,8 @@ bool CPlayerPoints::SubmitParseJob(const std::shared_ptr<IJob> &pJob)
 
 void CPlayerPoints::OnRender()
 {
-	ProcessCompletedRequests();
+	ProcessCompletedRequests(m_ActiveRequests, m_Cache, false);
+	ProcessCompletedRequests(m_PlaytimeRequests, m_PlaytimeCache, true);
 }
 
 void CPlayerPoints::StoreToDb(const char *pPlayerName, int Points)
@@ -155,31 +172,39 @@ void CPlayerPoints::StoreToDb(const char *pPlayerName, int Points)
 
 void CPlayerPoints::CancelRequests(bool NewServer) noexcept
 {
-	for(auto &[Name, Slot] : m_ActiveRequests)
+	for(auto *pRequests : {&m_ActiveRequests, &m_PlaytimeRequests})
 	{
-		try
+		for(auto &[Name, Slot] : *pRequests)
 		{
-			if(Slot.m_pRequest && !Slot.m_pRequest->Done())
-				Slot.m_pRequest->Abort();
+			try
+			{
+				Slot.m_Request.CancelWithSubmit([this](const auto &pRequest) { SubmitRequest(pRequest); });
+			}
+			catch(...)
+			{
+				// 单个外部取消失败不能阻止其余槽位和代际失效。
+			}
 		}
-		catch(...)
-		{
-			// 单个外部取消失败不能阻止其余槽位失效。
-		}
+		// 清掉槽位后，仍在后台解析的旧响应不会再发布。
+		pRequests->clear();
 	}
-	m_ActiveRequests.clear();
-	// 后台任务只拥有响应体；移除槽位后，旧解析结果不会再发布到缓存。
-	m_ParseJobs.clear();
 	if(NewServer)
+	{
 		m_Cache.BeginServerSession();
+		m_PlaytimeCache.BeginServerSession();
+	}
 	else
+	{
 		m_Cache.CancelPendingRequests();
+		m_PlaytimeCache.CancelPendingRequests();
+	}
 }
 
 void CPlayerPoints::OnShutdown()
 {
 	CancelRequests();
 	m_Cache.Clear();
+	m_PlaytimeCache.Clear();
 }
 
 void CPlayerPoints::OnReset()
@@ -197,14 +222,25 @@ void CPlayerPoints::OnStateChange(int NewState, int OldState)
 
 void CPlayerPoints::EnsureQueried(const char *pPlayerName)
 {
+	EnsureRequest(pPlayerName, false);
+}
+
+void CPlayerPoints::EnsurePlaytimeQueried(const char *pPlayerName)
+{
+	EnsureRequest(pPlayerName, true);
+}
+
+void CPlayerPoints::EnsureRequest(const char *pPlayerName, bool Playtime)
+{
 	if(!pPlayerName || pPlayerName[0] == '\0')
 		return;
-	// 绘制和排序只借用名字查表，命中缓存不再临时分配字符串。
 	const std::string_view Name(pPlayerName);
-	if(m_ActiveRequests.size() >= MAX_CONCURRENT_REQUESTS || m_ActiveRequests.contains(Name) ||
-		!m_Cache.ShouldQuery(Name, Now(), time_freq()))
+	const auto &Cache = Playtime ? m_PlaytimeCache : m_Cache;
+	const auto &Requests = Playtime ? m_PlaytimeRequests : m_ActiveRequests;
+	if(!Cache.ShouldQuery(Name, Now(), time_freq()) ||
+		m_ActiveRequests.size() + m_PlaytimeRequests.size() >= MAX_CONCURRENT_REQUESTS || Requests.contains(Name))
 		return;
-	StartRequest(pPlayerName);
+	StartRequest(pPlayerName, Playtime);
 }
 
 SPlayerPointsResult CPlayerPoints::GetPoints(const char *pPlayerName)
@@ -214,74 +250,137 @@ SPlayerPointsResult CPlayerPoints::GetPoints(const char *pPlayerName)
 	return m_Cache.Get(pPlayerName);
 }
 
-std::shared_ptr<IHttpRequest> CPlayerPoints::CreateRequest(const char *pPlayerName)
+SPlayerPlaytimeResult CPlayerPoints::GetPlaytime(const char *pPlayerName) const
 {
+	if(!pPlayerName || pPlayerName[0] == '\0')
+		return {EPointsStatus::NOT_REQUESTED, -1};
+	return m_PlaytimeCache.GetPlaytime(pPlayerName);
+}
+
+std::shared_ptr<IHttpRequest> CPlayerPoints::CreateRequest(const char *pPlayerName, bool Playtime)
+{
+	// 玩家名先做 URL 编码。
 	char aEncodedName[256];
 	EscapeUrl(aEncodedName, sizeof(aEncodedName), pPlayerName);
+
+	// 拼接查询 URL。
 	char aUrl[512];
 	str_format(aUrl, sizeof(aUrl), "https://ddnet.org/players/?json2=%s", aEncodedName);
+	if(Playtime)
+		str_copy(aUrl, QmBuildDdStatsPlayerUrl(pPlayerName).c_str(), sizeof(aUrl));
+
+	// 创建并配置 HTTP 请求。
 	std::shared_ptr<IHttpRequest> pRequest = HttpGet(aUrl);
-	pRequest->MaxResponseSize(1024 * 1000);
-	pRequest->Timeout(CTimeout{10000, 30000, 100, 10});
+	pRequest->MaxResponseSize(Playtime ? 8 * 1024 * 1024 : 1024 * 1000);
+	if(Playtime)
+	{
+		// DDStats 现算历史数据，沿用现有采集器的慢响应及 IPv4 策略。
+		pRequest->Timeout(CTimeout{5000, 90000, 0, 0});
+		pRequest->IpResolve(IPRESOLVE::V4);
+	}
+	else
+		pRequest->Timeout(CTimeout{10000, 30000, 100, 10});
 	pRequest->LogProgress(HTTPLOG::FAILURE);
+
 	return pRequest;
 }
 
-void CPlayerPoints::StartRequest(const char *pPlayerName)
+std::shared_ptr<qm_update::CSystemProxyJob> CPlayerPoints::CreateProxyJob(const std::shared_ptr<IHttpRequest> &pRequest)
 {
-	auto Slot = m_ActiveRequests.end();
+#if defined(CONF_FAMILY_WINDOWS)
+	if(!qm_update::HasEnvironmentProxy())
+		return std::make_shared<qm_update::CSystemProxyJob>(pRequest->Url());
+#endif
+	return nullptr;
+}
+
+void CPlayerPoints::StartRequest(const char *pPlayerName, bool Playtime)
+{
+	auto &Cache = Playtime ? m_PlaytimeCache : m_Cache;
+	auto &Requests = Playtime ? m_PlaytimeRequests : m_ActiveRequests;
+	auto It = Requests.end();
 	try
 	{
-		// 先准备拥有名字的槽位，再发布FETCHING令牌和交给外部启动。
-		const auto [It, Inserted] = m_ActiveRequests.try_emplace(pPlayerName);
+		const auto [Candidate, Inserted] = Requests.try_emplace(pPlayerName);
 		if(!Inserted)
 			return;
-		Slot = It;
-		Slot->second.m_Token = m_Cache.BeginRequest(Slot->first);
-		Slot->second.m_pRequest = CreateRequest(Slot->first.c_str());
-		if(!Slot->second.m_pRequest)
+		It = Candidate;
+		auto &Slot = It->second;
+		Slot.m_Token = Cache.BeginRequest(It->first);
+		auto pRequest = CreateRequest(It->first.c_str(), Playtime);
+		if(!pRequest)
 		{
-			m_Cache.CompleteFailure(Slot->first, Slot->second.m_Token, Now());
-			m_ActiveRequests.erase(Slot);
+			Cache.CompleteFailure(It->first, Slot.m_Token, Now());
+			Requests.erase(It);
 			return;
 		}
-		SubmitRequest(Slot->second.m_pRequest);
+		const double CurrentTime = Now() / static_cast<double>(time_freq());
+		Slot.m_Request = CQmPlayerPointsRequest(pRequest, CurrentTime);
+		Slot.m_pProxyJob = CreateProxyJob(pRequest);
+		// 作业池关闭时沿原代理超时路径回退直连，不保留永远无法完成的作业。
+		if(Slot.m_pProxyJob && !SubmitParseJob(Slot.m_pProxyJob))
+			Slot.m_pProxyJob.reset();
+		if(!Slot.m_pProxyJob)
+			Slot.m_Request.PollWithSubmit([this](const auto &pPending) { SubmitRequest(pPending); }, CurrentTime, true, nullptr);
 	}
 	catch(...)
 	{
-		if(Slot != m_ActiveRequests.end())
+		if(It != Requests.end())
 		{
 			try
 			{
-				if(Slot->second.m_pRequest && !Slot->second.m_pRequest->Done())
-					Slot->second.m_pRequest->Abort();
+				It->second.m_Request.CancelWithSubmit([this](const auto &pRequest) { SubmitRequest(pRequest); });
 			}
 			catch(...)
 			{
 			}
-			m_Cache.CompleteFailure(Slot->first, Slot->second.m_Token, Now());
-			m_ActiveRequests.erase(Slot);
+			Cache.CompleteFailure(It->first, It->second.m_Token, Now());
+			Requests.erase(It);
 		}
 	}
 }
 
-void CPlayerPoints::ProcessCompletedRequests()
+void CPlayerPoints::ProcessCompletedRequests(TRequests &Requests, CQmPlayerPointsCache &Cache, bool Playtime)
 {
-	auto Iter = m_ActiveRequests.begin();
-	while(Iter != m_ActiveRequests.end())
+	auto Iter = Requests.begin();
+	while(Iter != Requests.end())
 	{
 		const std::string &Name = Iter->first;
-		std::shared_ptr<IHttpRequest> pRequest = Iter->second.m_pRequest;
-		const CQmPlayerPointsCache::SRequestToken Token = Iter->second.m_Token;
-
-		if(!pRequest->Done())
-		{
-			++Iter;
-			continue;
-		}
+		SRequestSlot &Slot = Iter->second;
+		std::shared_ptr<IHttpRequest> pRequest = Slot.m_Request.Request();
+		const CQmPlayerPointsCache::SRequestToken Token = Slot.m_Token;
 
 		try
 		{
+			if(!Slot.m_Request.Submitted())
+			{
+				const bool ProxyReady = !Slot.m_pProxyJob || Slot.m_pProxyJob->State() == IJob::STATE_DONE;
+				const char *pProxy = ProxyReady && Slot.m_pProxyJob && Slot.m_pProxyJob->HasDecision() ? Slot.m_pProxyJob->Proxy().c_str() : nullptr;
+				if(!Slot.m_Request.PollWithSubmit([this](const auto &pPending) { SubmitRequest(pPending); }, Now() / static_cast<double>(time_freq()), ProxyReady, pProxy))
+				{
+					++Iter;
+					continue;
+				}
+				// 超时或取消后丢弃作业槽位，迟到的代理结果不能再次发起请求。
+				Slot.m_pProxyJob.reset();
+			}
+
+			if(!pRequest->Done())
+			{
+				++Iter;
+				continue;
+			}
+
+			// DDStats 用 404 表示没有该玩家的记录：时长按 0 小时记入成功结果，
+			// 计分板显示 0，不再把"查无此人"当成查询失败显示问号并按失败反复重试。
+			if(QmDdStatsPlaytimeMissingRecord(Playtime, pRequest->CompletedStatusCode()))
+			{
+				Cache.CompleteSuccess(Name, Token, 0, Now(), 0);
+				Slot.m_pParseJob.reset();
+				Iter = Requests.erase(Iter);
+				continue;
+			}
+
 			EHttpState State = pRequest->State();
 
 			if(State == EHttpState::DONE)
@@ -295,67 +394,65 @@ void CPlayerPoints::ProcessCompletedRequests()
 					pRequest->Result(&pData, &DataSize);
 					// 仅失败时记录详细日志。
 					dbg_msg("player_points", "Response for '%s': %zu bytes, status=%d (failed)", Name.c_str(), DataSize, Code);
-					m_Cache.CompleteFailure(Name, Token, Now());
-					m_ParseJobs.erase(Name);
-					Iter = m_ActiveRequests.erase(Iter);
+					Cache.CompleteFailure(Name, Token, Now());
+					Slot.m_pParseJob.reset();
+					Iter = Requests.erase(Iter);
 					continue;
 				}
 
-				// 解析下放到后台任务；每个玩家同时只跑一个解析任务。
-				auto ParseIter = m_ParseJobs.find(Name);
-				if(ParseIter == m_ParseJobs.end())
+				// 解析下放到后台任务；同一来源的每个玩家同时只跑一个解析任务。
+				if(!Slot.m_pParseJob)
 				{
-					auto pParseJob = std::make_shared<CPlayerPointsParseJob>(pRequest);
-					m_ParseJobs.emplace(Name, pParseJob);
-					if(SubmitParseJob(pParseJob))
+					auto pParseJob = std::make_shared<CPlayerPointsParseJob>(pRequest, Name, Playtime);
+					Slot.m_pParseJob = pParseJob;
+					if(!SubmitParseJob(pParseJob))
 					{
-						++Iter;
+						Cache.CompleteFailure(Name, Token, Now());
+						Iter = Requests.erase(Iter);
 						continue;
 					}
-					m_ParseJobs.erase(Name);
-					m_Cache.CompleteFailure(Name, Token, Now());
-					Iter = m_ActiveRequests.erase(Iter);
+					++Iter;
 					continue;
 				}
 
-				const IJob::EJobState ParseState = ParseIter->second->State();
+				const auto ParseState = Slot.m_pParseJob->State();
 				if(ParseState == IJob::STATE_QUEUED || ParseState == IJob::STATE_RUNNING)
 				{
 					++Iter;
 					continue;
 				}
+
 				if(ParseState != IJob::STATE_DONE)
 				{
-					m_ParseJobs.erase(ParseIter);
-					m_Cache.CompleteFailure(Name, Token, Now());
-					Iter = m_ActiveRequests.erase(Iter);
+					Cache.CompleteFailure(Name, Token, Now());
+					Iter = Requests.erase(Iter);
 					continue;
 				}
 
-				auto pParseJob = std::static_pointer_cast<CPlayerPointsParseJob>(ParseIter->second);
+				auto pParseJob = std::static_pointer_cast<CPlayerPointsParseJob>(Slot.m_pParseJob);
 				const SPlayerPointsParseResult Result = pParseJob->TakeResult();
-				m_ParseJobs.erase(ParseIter);
+				Slot.m_pParseJob.reset();
 				if(!Result.m_JsonParsed)
 				{
-					m_Cache.CompleteFailure(Name, Token, Now());
+					Cache.CompleteFailure(Name, Token, Now());
 					dbg_msg("player_points", "'%s' -> JSON parse failed", Name.c_str());
 				}
-				else if(!Result.m_PointsFound)
+				else if(!Playtime && !Result.m_PointsFound)
 				{
 					// 常见情况：玩家不存在时 DDNet 会返回 {}。
-					m_Cache.CompleteFailure(Name, Token, Now());
+					Cache.CompleteFailure(Name, Token, Now());
 					dbg_msg("player_points", "'%s' -> points missing (maybe player not found)", Name.c_str());
 				}
 				else
 				{
-					if(m_Cache.CompleteSuccess(Name, Token, Result.m_Points, Now()))
+					if(Cache.CompleteSuccess(Name, Token, Result.m_Points, Now(), Result.m_PlaytimeHours) && !Playtime)
 						StoreToDb(Name.c_str(), Result.m_Points);
 					// 成功路径默认不打日志，避免刷屏。
 				}
 			}
 			else
 			{
-				m_Cache.CompleteFailure(Name, Token, Now());
+				Cache.CompleteFailure(Name, Token, Now());
 				const char *pStateStr = nullptr;
 				switch(State)
 				{
@@ -370,10 +467,9 @@ void CPlayerPoints::ProcessCompletedRequests()
 		}
 		catch(...)
 		{
-			m_Cache.CompleteFailure(Name, Token, Now());
-			m_ParseJobs.erase(Name);
+			Cache.CompleteFailure(Name, Token, Now());
 		}
 
-		Iter = m_ActiveRequests.erase(Iter);
+		Iter = Requests.erase(Iter);
 	}
 }

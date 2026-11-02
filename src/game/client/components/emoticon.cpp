@@ -333,7 +333,7 @@ void CEmoticon::OnRender()
 	if(m_Active)
 	{
 		const bool WasTouchPressed = m_TouchState.m_AnyPressed;
-		Ui()->UpdateTouchState(m_TouchState);
+		Ui()->UpdateTouchState(m_TouchState, false);
 		if(m_TouchState.m_AnyPressed)
 		{
 			const vec2 TouchPos = (m_TouchState.m_PrimaryPosition - vec2(0.5f, 0.5f)) * Screen.Size();

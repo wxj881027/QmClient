@@ -3,6 +3,7 @@
 
 #include <base/color.h>
 #include <base/str.h>
+#include <base/vmath.h>
 
 #include <algorithm>
 #include <array>
@@ -11,16 +12,16 @@
 enum class EQmSponsorChatStyle
 {
 	NONE = 0,
-	SOFT_GLOW,
 	PLATINUM,
+	FLUID,
 };
 
 inline EQmSponsorChatStyle QmSponsorChatStyleFromId(const char *pId)
 {
-	if(pId != nullptr && str_comp(pId, "soft_glow") == 0)
-		return EQmSponsorChatStyle::SOFT_GLOW;
 	if(pId != nullptr && str_comp(pId, "platinum") == 0)
 		return EQmSponsorChatStyle::PLATINUM;
+	if(pId != nullptr && str_comp(pId, "fluid") == 0)
+		return EQmSponsorChatStyle::FLUID;
 	return EQmSponsorChatStyle::NONE;
 }
 
@@ -28,8 +29,8 @@ inline const char *QmSponsorChatStyleId(EQmSponsorChatStyle Style)
 {
 	switch(Style)
 	{
-	case EQmSponsorChatStyle::SOFT_GLOW: return "soft_glow";
 	case EQmSponsorChatStyle::PLATINUM: return "platinum";
+	case EQmSponsorChatStyle::FLUID: return "fluid";
 	default: return "";
 	}
 }
@@ -42,11 +43,6 @@ inline EQmSponsorChatStyle QmSponsorChatMessageStyle(EQmSponsorChatStyle Style, 
 inline EQmSponsorChatStyle QmSponsorChatMergedStyle(EQmSponsorChatStyle Previous, EQmSponsorChatStyle Incoming)
 {
 	return Previous == Incoming ? Previous : EQmSponsorChatStyle::NONE;
-}
-
-inline float QmSponsorChatGlowRadius(float FontSizePx)
-{
-	return std::isfinite(FontSizePx) && FontSizePx > 0.0f ? std::clamp(FontSizePx * 0.1f, 1.0f, 2.5f) : 0.0f;
 }
 
 struct SQmSponsorChatSweep
@@ -88,5 +84,40 @@ inline ColorRGBA QmSponsorChatPlatinumColor(float Position, float Alpha)
 	return ColorRGBA(From.r + (To.r - From.r) * Amount, From.g + (To.g - From.g) * Amount,
 		From.b + (To.b - From.b) * Amount, Alpha);
 }
+
+// 坐标以字号为单位，整段文字共享向右平移的大幅流纹，空间和时间都首尾相接。
+class CQmSponsorChatFluid
+{
+	float m_Phase;
+
+public:
+	static constexpr float LOOP_WIDTH = 24.0f;
+	static constexpr double LOOP_SECONDS = 24.0;
+
+	explicit CQmSponsorChatFluid(double TimeSeconds) :
+		m_Phase(std::isfinite(TimeSeconds) && TimeSeconds >= 0.0 ? static_cast<float>(std::fmod(TimeSeconds, LOOP_SECONDS) / LOOP_SECONDS) * 2.0f * pi : 0.0f)
+	{
+	}
+
+	ColorRGBA Sample(vec2 Position) const
+	{
+		// 所有纹理共用同一平移坐标，仅使用整数倍谐波，避免反向漂移和循环接缝。
+		const float Flow = Position.x * (2.0f * pi / LOOP_WIDTH) - m_Phase;
+		const float Warp = 0.35f * std::sin(Flow + Position.y * 1.7f) +
+			0.18f * std::sin(2.0f * Flow - Position.y * 0.8f);
+		const float Wave = 0.5f + 0.5f * std::sin(Position.y * 4.2f + Flow + Warp * 2.8f);
+		float Crest = 0.5f + 0.5f * std::sin(Position.y * 5.8f + 2.0f * Flow + Warp * 3.0f);
+		Crest *= Crest;
+		Crest *= Crest;
+		Crest *= Crest;
+		const ColorRGBA Deep(0.025f, 0.32f, 0.70f, 1.0f);
+		const ColorRGBA Cyan(0.08f, 0.78f, 0.98f, 1.0f);
+		const ColorRGBA Foam(0.80f, 0.97f, 1.0f, 1.0f);
+		const float Blend = Wave * Wave * (3.0f - 2.0f * Wave);
+		return ColorRGBA(mix(mix(Deep.r, Cyan.r, Blend), Foam.r, Crest * 0.75f),
+			mix(mix(Deep.g, Cyan.g, Blend), Foam.g, Crest * 0.75f),
+			mix(mix(Deep.b, Cyan.b, Blend), Foam.b, Crest * 0.75f), 1.0f);
+	}
+};
 
 #endif

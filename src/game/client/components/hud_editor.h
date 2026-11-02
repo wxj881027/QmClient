@@ -25,6 +25,16 @@ namespace QmHudEditor
 	// 屏幕边吸附没有邻近半径：只有 HUD 边与窗口边真正重合时才吸附，
 	// 未重合时保留拖拽后的原始位置与样式。容差只用于吸收浮点误差。
 	inline constexpr float EDGE_COINCIDENCE_DISTANCE = EPSILON;
+	// 不启用纵向落点下限时的哨兵值：正常 HUD 坐标远大于该值，比较时恒不生效。
+	inline constexpr float NO_MINIMUM_ANCHOR_Y = -1.0e9f;
+	inline constexpr int MIN_SCALE_PERCENT = 25;
+	inline constexpr int MAX_SCALE_PERCENT = 400;
+
+	inline float ResolveScale(int ScalePercent, bool Scalable = true)
+	{
+		// 禁用缩放的元素只恢复位置，旧布局里的缩放值也不能改变尺寸。
+		return Scalable ? std::clamp(ScalePercent, MIN_SCALE_PERCENT, MAX_SCALE_PERCENT) / 100.0f : 1.0f;
+	}
 
 	// 绘制后报告的可见范围可能小于预估范围（例如聊天只显示底部几行）。
 	// 保存源坐标中的实际范围，让下一帧恢复、缩放和拖动使用同一个边界。
@@ -123,6 +133,17 @@ namespace QmHudEditor
 		return SnapAxisToScreenEdgesEx(Position, Size, ScreenStart, ScreenSize);
 	}
 
+	// 附岛纵向落点下限：跟随宿主的附岛不得高于宿主当前帧底边，
+	// 宿主因内容行数增加而变高时附岛随之下移，避免遮挡宿主内容。
+	// 下限与屏幕底边冲突时屏幕约束优先，仍保证元素留在可见范围内。
+	inline float ClampAnchorYBelowMinimum(float AnchorY, float MinimumAnchorY, float VisibleHeight, float ScreenStart, float ScreenHeight, float VisibleEdgeOffset = 0.0f)
+	{
+		if(MinimumAnchorY <= AnchorY)
+			return AnchorY;
+		const float MaxAnchorY = ScreenStart + std::max(0.0f, ScreenHeight - VisibleHeight) - VisibleEdgeOffset;
+		return std::min(MinimumAnchorY, MaxAnchorY);
+	}
+
 	// 沿用布局字段：0/1 表示可见边贴边，旧的正值仍保存变换锚点比例。
 	// 锚点越出屏幕时，以 [-2,-1] 保存可见边比例，避免把合法内容位置误当成贴边。
 	inline float ClampStoredAxisPosition(float Position)
@@ -153,6 +174,43 @@ namespace QmHudEditor
 		if(AnchorFraction <= 0.0001f || AnchorFraction >= 0.9999f)
 			return -1.0f - std::clamp((Position + VisibleEdgeOffset - ScreenStart) / ScreenSize, 0.0f, 1.0f);
 		return AnchorFraction;
+	}
+
+	enum class EHorizontalPlacement
+	{
+		VisibleBounds,
+		// 仅约束变换原点，可见内容的宽度和偏移不参与定位。
+		TransformOrigin,
+		// 横向完全使用调用方位置，忽略独立位置和屏幕边界约束。
+		DefaultPosition,
+	};
+
+	struct SHorizontalPlacement
+	{
+		float m_Position;
+		// 保存、吸附和拖动的参考范围，与实际绘制及命中范围分开。
+		float m_Width;
+		float m_Offset;
+	};
+
+	inline SHorizontalPlacement ResolveHorizontalPlacement(EHorizontalPlacement Mode, bool HasCustom, float StoredPosition,
+		float DefaultPosition, float VisibleWidth, float VisibleOffset, float ScreenStart, float ScreenWidth,
+		float LeftMargin = 0.0f, float RightMargin = 0.0f)
+	{
+		SHorizontalPlacement Result{DefaultPosition, VisibleWidth, VisibleOffset};
+		if(Mode == EHorizontalPlacement::DefaultPosition)
+			return Result;
+		if(Mode == EHorizontalPlacement::TransformOrigin)
+		{
+			// 点锚定不随可见内容或缩放改变保存、吸附和边界约束的基准。
+			Result.m_Width = 0.0f;
+			Result.m_Offset = 0.0f;
+		}
+		Result.m_Position = HasCustom ?
+					    RestoreAxisAnchor(ClampStoredAxisPosition(StoredPosition), Result.m_Width, ScreenStart, ScreenWidth, Result.m_Offset) :
+					    SnapAxisToScreenEdgesEx(std::clamp(DefaultPosition, ScreenStart, ScreenStart + ScreenWidth), Result.m_Width,
+						    ScreenStart + LeftMargin, std::max(EPSILON, ScreenWidth - LeftMargin - RightMargin), Result.m_Offset);
+		return Result;
 	}
 
 	// 一个轴上的最终落点：先试屏幕边重合吸附，再试屏幕中线与其它 HUD 模块的对齐参考线。
@@ -320,6 +378,7 @@ namespace QmHudEditor
 		float m_BaseHeight = 0.0f;
 		float m_StateOffsetX = 0.0f;
 		float m_StateOffsetY = 0.0f;
+		EHorizontalPlacement m_HorizontalPlacement = EHorizontalPlacement::VisibleBounds;
 		bool m_Scalable = true;
 	};
 
@@ -445,7 +504,8 @@ public:
 	STransformScope PreviewTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, const QmHudEditor::SEdgeMargin &EdgeMargin, bool Scalable = true);
 	STransformScope BeginTransform(EHudEditorElement Element, const CUIRect &DefaultRect, bool Scalable = true, bool ApplyMapScreen = true);
 	STransformScope BeginTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, bool Scalable = true, bool ApplyMapScreen = true);
-	STransformScope BeginTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, const QmHudEditor::SEdgeMargin &EdgeMargin, bool Scalable = true, bool ApplyMapScreen = true);
+	STransformScope BeginTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, QmHudEditor::EHorizontalPlacement HorizontalPlacement, bool Scalable = true, bool ApplyMapScreen = true, float MinimumAnchorY = QmHudEditor::NO_MINIMUM_ANCHOR_Y);
+	STransformScope BeginTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, const QmHudEditor::SEdgeMargin &EdgeMargin, bool Scalable = true, bool ApplyMapScreen = true, QmHudEditor::EHorizontalPlacement HorizontalPlacement = QmHudEditor::EHorizontalPlacement::VisibleBounds, float MinimumAnchorY = QmHudEditor::NO_MINIMUM_ANCHOR_Y);
 	void EndTransform(const STransformScope &Scope);
 
 private:
@@ -469,8 +529,8 @@ private:
 
 	static constexpr int ELEMENT_COUNT = static_cast<int>(EHudEditorElement::Count);
 	static constexpr int POSITION_SCALE = 10000;
-	static constexpr int MIN_SCALE_PERCENT = 25;
-	static constexpr int MAX_SCALE_PERCENT = 400;
+	static constexpr int MIN_SCALE_PERCENT = QmHudEditor::MIN_SCALE_PERCENT;
+	static constexpr int MAX_SCALE_PERCENT = QmHudEditor::MAX_SCALE_PERCENT;
 
 	bool m_Active = false;
 	bool m_DirtyLayout = false;
@@ -493,6 +553,7 @@ private:
 	void SaveLayoutConfig();
 	void ResetLayoutConfig();
 	void ClampStateToScreen(SElementState &State, float BaseWidth, float BaseHeight, float StateOffsetX, float StateOffsetY) const;
+	void BeginCustomPosition(SElementState &State, const SVisibleElement &Visible, const CUIRect &Screen) const;
 	SElementState &EnsureState(EHudEditorElement Element);
 	const SElementState &State(EHudEditorElement Element) const;
 	int FindHoveredVisibleElement() const;
@@ -505,7 +566,7 @@ private:
 	bool DoJumpHintTextArea(CLineInput *pLineInput, const CUIRect *pRect, float FontSize);
 	void RenderJumpHintTextEditor(const CUIRect &Screen);
 	SAlignmentReferences BuildAlignmentReferences(EHudEditorElement DraggingElement) const;
-	bool ComputeTransformPlacement(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, bool Scalable, STransformScope &Scope, SVisibleElement *pVisible, const QmHudEditor::SEdgeMargin &EdgeMargin);
+	bool ComputeTransformPlacement(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, bool Scalable, STransformScope &Scope, SVisibleElement *pVisible, const QmHudEditor::SEdgeMargin &EdgeMargin, QmHudEditor::EHorizontalPlacement HorizontalPlacement = QmHudEditor::EHorizontalPlacement::VisibleBounds, float MinimumAnchorY = QmHudEditor::NO_MINIMUM_ANCHOR_Y);
 	static const char *ElementToken(EHudEditorElement Element);
 	static int ElementFromToken(const char *pToken);
 };

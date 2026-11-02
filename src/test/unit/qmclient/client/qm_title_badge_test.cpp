@@ -34,6 +34,27 @@ TEST(QmTitleBadge, LargerLabelKeepsTheCapsuleHeight)
 	EXPECT_FLOAT_EQ(Large.y, 72.0f);
 }
 
+TEST(QmTitleBadge, NameplateScaleChangesTheWholeCapsuleAndCanReturnToDefault)
+{
+	const float NameFontSize = 30.0f;
+	for(const int Scale : {100, 50, 200, 125, 100})
+	{
+		SCOPED_TRACE(Scale);
+		const float Height = QmNameplateTitleHeight(NameFontSize, Scale);
+		const float LabelFontSize = QmTitleBadgeLabelFontSize(Height);
+		const vec2 Size = QmTitleBadgeSize(LabelFontSize * 4.0f, LabelFontSize);
+		EXPECT_FLOAT_EQ(Size.y, 24.0f * Scale / 100.0f);
+		EXPECT_FLOAT_EQ(Size.x, 103.0f * Scale / 100.0f);
+	}
+}
+
+TEST(QmTitleBadge, NameplateScaleClampsToSupportedRange)
+{
+	EXPECT_FLOAT_EQ(QmNameplateTitleHeight(30.0f, 0), 12.0f);
+	EXPECT_FLOAT_EQ(QmNameplateTitleHeight(30.0f, 300), 48.0f);
+	EXPECT_FLOAT_EQ(QmNameplateTitleHeight(-1.0f, 100), 0.0f);
+}
+
 TEST(QmTitleBadge, ShortTextKeepsTheIconAndPadding)
 {
 	EXPECT_FLOAT_EQ(QmTitleBadgeSize(8.0f, 16.0f).x, 47.0f);

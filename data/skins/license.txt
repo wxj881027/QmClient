@@ -45,3 +45,7 @@ zlib license
 
 All other skins:
 All content is released under CC-BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0/).
+
+Vaporeon:
+原始文件来自 DDNet 社区皮肤库，保留原文件内容。
+https://skins.ddnet.org/skin/community/Vaporeon.png

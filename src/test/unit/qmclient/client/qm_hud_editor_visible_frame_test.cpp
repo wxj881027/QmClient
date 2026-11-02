@@ -14,6 +14,7 @@ TEST(QmHudVisibleFrame, RegistrationOwnsTheElementGeometry)
 	Element.m_BaseHeight = 18;
 	Element.m_StateOffsetX = 19;
 	Element.m_StateOffsetY = 20;
+	Element.m_HorizontalPlacement = QmHudEditor::EHorizontalPlacement::TransformOrigin;
 	Element.m_Scalable = false;
 	QmHudEditor::CVisibleFrame Frame;
 	ASSERT_TRUE(Frame.Register(Element));
@@ -32,6 +33,7 @@ TEST(QmHudVisibleFrame, RegistrationOwnsTheElementGeometry)
 	EXPECT_FLOAT_EQ(Registered.m_BaseHeight, 18);
 	EXPECT_FLOAT_EQ(Registered.m_StateOffsetX, 19);
 	EXPECT_FLOAT_EQ(Registered.m_StateOffsetY, 20);
+	EXPECT_EQ(Registered.m_HorizontalPlacement, QmHudEditor::EHorizontalPlacement::TransformOrigin);
 	EXPECT_FALSE(Registered.m_Scalable);
 	EXPECT_TRUE(Frame.Complete());
 }

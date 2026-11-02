@@ -258,7 +258,7 @@ void CTooltips::OnRender()
 		ResetPresentation();
 		m_Context = Context;
 	}
-	if(!Ui()->Enabled() || Ui()->PointerInputBlocked())
+	if(!Ui()->Enabled() || Ui()->PointerInputBlocked() || (Ui()->DirectTouchInput() && !Ui()->TouchInputActive()))
 	{
 		ClearActiveTooltip();
 		return;

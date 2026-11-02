@@ -20,6 +20,11 @@ void ForEachTextGradientCell(vec2 TopLeft, vec2 BottomRight, vec2 UvTopLeft, vec
 {
 	Columns = std::clamp(Columns, 1, 8);
 	Rows = std::clamp(Rows, 1, 8);
+	// 动态填充每帧调用；共享角点只取色一次，缓存固定大小且不分配堆内存。
+	std::array<ColorRGBA, 9 * 9> aColors;
+	for(int Row = 0; Row <= Rows; ++Row)
+		for(int Column = 0; Column <= Columns; ++Column)
+			aColors[Row * 9 + Column] = pfnSample(TopLeft + (BottomRight - TopLeft) * vec2(Column / static_cast<float>(Columns), Row / static_cast<float>(Rows)), pContext);
 	for(int Row = 0; Row < Rows; ++Row)
 	{
 		for(int Column = 0; Column < Columns; ++Column)
@@ -32,7 +37,7 @@ void ForEachTextGradientCell(vec2 TopLeft, vec2 BottomRight, vec2 UvTopLeft, vec
 			{
 				Cell.m_aPositions[i] = TopLeft + (BottomRight - TopLeft) * aFractions[i];
 				Cell.m_aUvs[i] = UvTopLeft + (UvBottomRight - UvTopLeft) * aFractions[i];
-				Cell.m_aColors[i] = pfnSample(Cell.m_aPositions[i], pContext);
+				Cell.m_aColors[i] = aColors[(Row + i / 2) * 9 + Column + i % 2];
 			}
 			Emit(Cell);
 		}

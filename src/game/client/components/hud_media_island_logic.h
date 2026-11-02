@@ -495,6 +495,13 @@ inline SHudMediaIslandTimerAnchor QmHudMediaIslandAnchorTimer(float CenterX, flo
 	return {TimerX, TimerX - MainWidth - MainGap};
 }
 
+inline CUIRect QmHudMediaIslandEditorTransformRect(const CUIRect &AnchorRect)
+{
+	// 变换原点位于时间中心；无时间时使用主胶囊中心，附岛不参与定位。
+	constexpr float AnchorSize = QmHudMediaIslandScaled(QmHudMediaIslandBaseHeight);
+	return {AnchorRect.x + AnchorRect.w * 0.5f, AnchorRect.y, AnchorSize, AnchorSize};
+}
+
 struct SHudMediaIslandTimerRowLayout
 {
 	float m_RaceY = 0.0f;
@@ -524,14 +531,14 @@ struct SHudMediaIslandSwapRows
 	int m_LyricsLineIndex = -1;
 };
 
-inline SHudMediaIslandSwapRows QmHudMediaIslandSwapRows(int IncomingSwapCount, bool HasRaceTimer, bool ShowLyrics)
+inline SHudMediaIslandSwapRows QmHudMediaIslandSwapRows(int IncomingSwapCount, bool HasRaceTimer, bool ShowLyrics, int LyricsLineCount = 1)
 {
 	SHudMediaIslandSwapRows Result;
 	IncomingSwapCount = std::max(0, IncomingSwapCount);
 	Result.m_InlineSwapCount = HasRaceTimer && IncomingSwapCount > 0 ? 1 : 0;
 	Result.m_BottomSwapCount = IncomingSwapCount - Result.m_InlineSwapCount;
 	Result.m_LyricsLineIndex = ShowLyrics ? Result.m_BottomSwapCount : -1;
-	Result.m_BottomLineCount = Result.m_BottomSwapCount + (ShowLyrics ? 1 : 0);
+	Result.m_BottomLineCount = Result.m_BottomSwapCount + (ShowLyrics ? std::clamp(LyricsLineCount, 1, 2) : 0);
 	return Result;
 }
 
@@ -547,6 +554,34 @@ inline SHudMediaIslandInfoStackLayout QmHudMediaIslandMirroredInfoStack(float Is
 	const float CenterOffset = (std::max(0.0f, TextHeight) + std::max(0.0f, TextGap)) * 0.5f;
 	return {MidY - CenterOffset, MidY + CenterOffset};
 }
+
+struct SHudMediaIslandWaveformClock
+{
+	int64_t m_LastTick = 0;
+	int64_t m_Tick = 0;
+	bool m_Initialized = false;
+	bool m_UsesVideoClock = false;
+
+	int64_t Update(int64_t RealTick, int64_t VideoTick, bool UseVideoClock)
+	{
+		const int64_t Now = UseVideoClock ? VideoTick : RealTick;
+		if(!m_Initialized)
+			m_Tick = Now;
+		else if(m_UsesVideoClock == UseVideoClock && Now >= m_LastTick)
+			m_Tick += Now - m_LastTick;
+
+		// 切换时间源时只重设采样基准，保留波形相位与暂停收拢的进度。
+		m_LastTick = Now;
+		m_UsesVideoClock = UseVideoClock;
+		m_Initialized = true;
+		return m_Tick;
+	}
+
+	void Reset()
+	{
+		*this = {};
+	}
+};
 
 inline float QmHudMediaIslandWaveBarHeight(int BarIndex, float TimeSeconds, float Activity)
 {
@@ -1051,20 +1086,11 @@ struct SHudMediaIslandSdfCapsule
 	float m_SmoothUnion = 0.0f;
 };
 
-constexpr uint64_t QmHudMediaIslandBlurRefreshIntervalFrames = 1;
-
 // 背景色不透明度低于 100% 时准备模糊底图，0% 时保留纯模糊。
 // 着色器独立合成模糊底图，Background.a 只控制背景染色。
 inline bool QmHudMediaIslandShouldPrepareBackdropBlur(int BackgroundOpacity, bool GaussianBlurEnabled)
 {
 	return GaussianBlurEnabled && BackgroundOpacity < 100;
-}
-
-inline bool QmHudMediaIslandShouldRefreshBackdropBlur(uint64_t CurrentFrame, uint64_t LastAttemptFrame, bool HasAttempt)
-{
-	if(!HasAttempt || CurrentFrame < LastAttemptFrame)
-		return true;
-	return CurrentFrame - LastAttemptFrame >= QmHudMediaIslandBlurRefreshIntervalFrames;
 }
 
 inline vec4 QmHudMediaIslandBackdropUv(const CUIRect &OuterRect, const CUIRect &ScreenRect)

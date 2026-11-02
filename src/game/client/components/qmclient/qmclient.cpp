@@ -2,6 +2,7 @@
 #include "qmclient.h"
 
 #include "bounded_file_reader.h"
+#include "ddnet_activity.h"
 #include "qm_identity_file.h"
 #include "qm_json_fields.h"
 #include "qm_json_send.h"
@@ -339,35 +340,8 @@ namespace
 						Result.m_TotalFinishes = (int)TotalFinishes;
 					}
 
-					// 官方 json2 直接提供两种口径的游玩小时数：
-					//   activity[] 逐日 hours_played 求和 = 生涯累计；
-					//   hours_played_past_365_days        = 最近一年。
-					// 两者都只作为显示用的可选数据，缺失时不置 m_Parsed，避免影响既有解析成功判定。
-					const json_value *pActivity = JsonObjectField(pRoot, "activity");
-					if(pActivity->type == json_array)
-					{
-						int64_t TotalHours = 0;
-						bool AnyEntry = false;
-						bool Overflow = false;
-						for(unsigned i = 0; i < pActivity->u.array.length; ++i)
-						{
-							const json_value &Entry = (*pActivity)[i];
-							if(Entry.type != json_object)
-								continue;
-							const json_value *pHours = JsonObjectField(&Entry, "hours_played");
-							if(pHours->type != json_integer || pHours->u.integer < 0)
-								continue;
-							AnyEntry = true;
-							if(TotalHours > std::numeric_limits<int64_t>::max() - pHours->u.integer)
-							{
-								Overflow = true;
-								break;
-							}
-							TotalHours += pHours->u.integer;
-						}
-						if(AnyEntry && !Overflow)
-							Result.m_PlaytimeHours = TotalHours;
-					}
+					// 生涯累计与计分板共用 activity 口径；可选小时数不影响既有解析成功判定。
+					Result.m_PlaytimeHours = QmDdnetActivityHours(pRoot);
 					const json_value *pPastYearHours = JsonObjectField(pRoot, "hours_played_past_365_days");
 					if(pPastYearHours->type == json_integer && pPastYearHours->u.integer >= 0)
 						Result.m_PlaytimeHoursPastYear = pPastYearHours->u.integer;
@@ -729,8 +703,8 @@ void CQmClient::OnInit()
 	QmSponsorsReloadDraft();
 	if(!m_QmStatisticsFileExists)
 		SaveQmClientStatistics();
-	m_DeveloperBadge.Init(Graphics());
 	m_TitleBadge.Init(Graphics());
+	m_DeveloperBadge.Init(Graphics(), m_TitleBadge);
 	InitQmDeveloperAuthentication();
 	InitTitleAuthentication();
 }
@@ -1281,6 +1255,7 @@ void CQmClient::OnShutdown()
 
 	AbortTask(m_pQmDdnetPlayerTask);
 	AbortTask(m_pTitleOperation);
+	m_TitleProfileRefreshStarted = -1;
 	AbortTask(m_pQmNewsPublishTask);
 	AbortTask(m_pQmSponsorsPublishTask);
 	ResetTitlePresences();
@@ -1394,8 +1369,15 @@ void CQmClient::ApplyQmRealtimeServiceData(const SQmRealtimeMessage &Message)
 		else if(Data.m_PlaytimeAction == EQmRealtimePlaytimeAction::STOP)
 			ClearQmClientLifecycleMarker();
 	}
-	if(Message.m_Event == EQmRealtimeEvent::TITLE_PROFILE && !TitleBusy())
+	if(Message.m_Event == EQmRealtimeEvent::TITLE_PROFILE && !m_pTitleOperation)
 	{
+		const bool Refreshed = m_TitleProfileRefreshStarted >= 0;
+		m_TitleProfileRefreshStarted = -1;
+		if(!Data.m_TitleProfileAccepted)
+		{
+			m_pTitleStatus = Localizable("Title server unavailable; retry");
+			return;
+		}
 		const char *pTitle = Data.m_pTitle;
 		const char *pName = Data.m_pBoundName;
 		const char *pStyle = Data.m_pStyle;
@@ -1417,7 +1399,7 @@ void CQmClient::ApplyQmRealtimeServiceData(const SQmRealtimeMessage &Message)
 		str_copy(m_aTitleBoundName, pName);
 		str_copy(m_aTitleProfileStyle, pStyle);
 		m_pTitleStatus = Authenticated ? Localizable("Permanent sponsor verified") : Localizable("Enter your sponsor code");
-		if(Changed)
+		if(Changed || Refreshed)
 			++m_TitleRevision;
 	}
 	if(Message.m_Event == EQmRealtimeEvent::TITLE_STATUS)
@@ -1633,7 +1615,7 @@ bool CQmClient::SendQmRealtimePresence(bool Hello, bool ForceSend)
 
 bool CQmClient::RequestQmRealtimeTitleRefresh()
 {
-	if(!m_pQmRealtimeTransport || m_pQmRealtimeTransport->State() != EQmWebSocketState::CONNECTED)
+	if(!m_pQmRealtimeTransport || m_pQmRealtimeTransport->State() != EQmWebSocketState::CONNECTED || !m_QmRealtimeHelloSent)
 		return false;
 	if(!TrySendQmJsonMessage([this](CJsonStringWriter &Writer) {
 		Writer.BeginObject();
@@ -2068,7 +2050,7 @@ void CQmClient::UpdateQmRealtime()
 		if(SendQmRealtimePresence(false, Tick - m_QmRealtimeLastPresence >= 5 * time_freq()))
 			m_QmRealtimeLastPresence = Tick;
 	}
-	if(m_QmRealtimeHelloSent && m_QmRealtimeTitleRevision != m_TitleRevision)
+	if(m_QmRealtimeHelloSent && m_aTitleToken[0] && QmRealtimeAllowsCredentials(m_aQmRealtimeUrl) && m_QmRealtimeTitleRevision != m_TitleRevision)
 		RequestQmRealtimeTitleRefresh();
 }
 
@@ -3002,7 +2984,7 @@ void CQmClient::StartTitleRequest(const char *pPath, const char *pBody, std::sha
 {
 	char aUrl[512];
 	str_format(aUrl, sizeof(aUrl), "https://qmclient.icu/api/v1/titles/%s", pPath);
-	pTask = pBody ? HttpPostJson(aUrl, pBody) : HttpGet(aUrl);
+	pTask = HttpPostJson(aUrl, pBody);
 	pTask->MaxResponseSize(128 * 1024);
 	pTask->Timeout(CTimeout{3000, 5000, 500, 5});
 	// 标题接口用 4xx 携带 error JSON，不能让 FAILONERROR 把响应变成 ERROR
@@ -3067,8 +3049,14 @@ void CQmClient::RefreshTitleProfile()
 {
 	if(TitleBusy() || !m_aTitleToken[0])
 		return;
-	StartTitleRequest("profile", nullptr, m_pTitleOperation);
-	m_pTitleStatus = Localizable("Contacting title server");
+	// 资料读取复用已认证的实时通道，公网 HTTP GET 已由服务器隐私规则关闭。
+	if(RequestQmRealtimeTitleRefresh())
+	{
+		m_TitleProfileRefreshStarted = time_get();
+		m_pTitleStatus = Localizable("Contacting title server");
+	}
+	else
+		m_pTitleStatus = Localizable("Title server unavailable; retry");
 }
 
 void CQmClient::SaveTitleProfile(const char *pTitle, const char *pBoundName, const char *pStyle, EQmSponsorChatStyle ChatStyle, const SQmTitleAppearance &Appearance)
@@ -3179,6 +3167,14 @@ double CQmClient::TitleAnimationTime() const
 
 void CQmClient::UpdateTitleAuthentication()
 {
+	if(m_TitleProfileRefreshStarted >= 0 &&
+		(time_get() - m_TitleProfileRefreshStarted >= 5 * time_freq() || !m_pQmRealtimeTransport ||
+			m_pQmRealtimeTransport->State() != EQmWebSocketState::CONNECTED || !m_QmRealtimeHelloSent ||
+			!QmRealtimeAllowsCredentials(m_aQmRealtimeUrl)))
+	{
+		m_TitleProfileRefreshStarted = -1;
+		m_pTitleStatus = Localizable("Title server unavailable; retry");
+	}
 	if(m_pTitleOperation && m_pTitleOperation->Done())
 	{
 		// libcurl failures also make Done() true, but they do not produce a

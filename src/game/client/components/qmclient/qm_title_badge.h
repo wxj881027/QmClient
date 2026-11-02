@@ -5,7 +5,11 @@
 
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/QmBadgeGeometry.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/ui_rect.h>
+
+#include <cstdint>
 
 // 聊天测量和绘制共用整块胶囊的推进，保持与普通行相同的高度。
 inline CUIRect QmLayoutTitleBadge(CTextCursor &Cursor, float LabelWidth)
@@ -54,16 +58,53 @@ struct SQmTitleBadgePlacement
 {
 	CUIRect m_Rect;
 	SQmTitleAppearance m_Appearance;
+	STextContainerIndex m_TextContainerIndex;
+	CUIRect m_TextVisualBounds{};
+
+	// 用实际生成的独立容器取得边界，聊天正文的基线和像素取整不再改变胶囊内的对齐。
+	void PrepareText(ITextRender *pTextRender, const char *pText)
+	{
+		CTextCursor Cursor;
+		Cursor.m_FontSize = QmTitleBadgeLabelFontSize(m_Rect.h);
+		Cursor.m_CalculateVisualBoundingBox = true;
+		const unsigned PreviousFlags = pTextRender->GetRenderFlags();
+		const ColorRGBA PreviousColor = pTextRender->GetTextColor();
+		pTextRender->SetRenderFlags((PreviousFlags | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT) & ~TEXT_RENDER_FLAG_NO_AUTOMATIC_QUAD_UPLOAD);
+		pTextRender->TextColor(ui_token::color::NEUTRAL_WHITE);
+		pTextRender->RecreateTextContainerSoft(m_TextContainerIndex, &Cursor, pText);
+		m_TextVisualBounds = QmTitleBadgeVisualBounds(Cursor);
+		pTextRender->TextColor(PreviousColor);
+		pTextRender->SetRenderFlags(PreviousFlags);
+	}
+
+	void RenderText(ITextRender *pTextRender, float Alpha, vec2 Offset) const
+	{
+		const vec2 Position = QmTitleBadgeTextPosition(m_Rect, m_TextVisualBounds) + Offset;
+		pTextRender->RenderTextContainer(m_TextContainerIndex, QmTitleBadgePalette(m_Appearance, Alpha).m_Text,
+			ui_token::color::COLOR_TRANSPARENT, Position.x, Position.y);
+	}
+
+	void DeleteText(ITextRender *pTextRender)
+	{
+		pTextRender->DeleteTextContainer(m_TextContainerIndex);
+	}
 };
 
 class CQmTitleBadge
 {
-	IGraphics::CTextureHandle m_Logo;
-	IGraphics::CTextureHandle m_aPatterns[2];
+	CQmBadgeGeometry m_Logo{EQmBadgeGeometry::LOGO};
+	IGraphics::CTextureHandle m_LogoDistance;
+	uint32_t m_LogoGraphicsVersion = 0;
+	CQmBadgeGeometry m_aPatterns[6] = {
+		CQmBadgeGeometry{EQmBadgeGeometry::MOON_LEFT}, CQmBadgeGeometry{EQmBadgeGeometry::MOON_MIDDLE}, CQmBadgeGeometry{EQmBadgeGeometry::MOON_RIGHT},
+		CQmBadgeGeometry{EQmBadgeGeometry::SUN_LEFT}, CQmBadgeGeometry{EQmBadgeGeometry::SUN_MIDDLE}, CQmBadgeGeometry{EQmBadgeGeometry::SUN_RIGHT}};
+
+	bool RenderDistanceLogo(IGraphics *pGraphics, const CUIRect &Rect, ColorRGBA Color) const;
 
 public:
 	void Init(IGraphics *pGraphics);
 	void Shutdown(IGraphics *pGraphics);
+	void RenderLogo(IGraphics *pGraphics, const CUIRect &Rect, ColorRGBA Color) const;
 	void RenderSurface(IGraphics *pGraphics, const CUIRect &Rect, const SQmTitleAppearance &Appearance, float Alpha) const;
 };
 

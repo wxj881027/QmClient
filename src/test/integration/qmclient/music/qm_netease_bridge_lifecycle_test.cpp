@@ -69,6 +69,30 @@ TEST(QmNeteaseBridgeLifecycleIntegration, MalformedReportKeepsThePreviouslyPubli
 	EXPECT_TRUE(Bridge.IsRunning());
 }
 
+TEST(QmNeteaseBridgeLifecycleIntegration, FailedRawLyricsPublicationRetriesWithTheSameSongIdentity)
+{
+	COperations Operations;
+	Operations.m_RealThread = true;
+	CFrontendLyricBridge Bridge(Operations);
+	ASSERT_TRUE(Bridge.Start(42, L""));
+	ASSERT_TRUE(Operations.Wait([&] { return Operations.m_Waits >= 1; }));
+	Operations.Emit(R"({"kind":"progress","songId":"42","positionMs":1500,"playing":false})");
+	Operations.m_RawFailures = 1;
+	const int Before = Operations.m_RawPublished;
+	Operations.Emit(R"({"kind":"lyrics","songId":"42","rawLyrics":{"lrc":"[00:01.00]hello\n[00:02.00]world","tlyric":"[00:01.00]译文"}})");
+	EXPECT_EQ(Operations.m_RawPublished, Before);
+	Operations.Advance();
+	ASSERT_TRUE(Operations.Wait([&] { return Operations.m_RawPublished > Before; }));
+	uint32_t Pid;
+	uint64_t Song, Generation;
+	const auto Raw = Operations.LatestRaw(Pid, Song, Generation);
+	EXPECT_EQ(Pid, 42u);
+	EXPECT_EQ(Song, 42u);
+	EXPECT_EQ(Generation, Operations.Latest().m_Generation);
+	EXPECT_EQ(Raw.m_Lrc, "[00:01.00]hello\n[00:02.00]world");
+	EXPECT_EQ(Raw.m_TranslationLrc, "[00:01.00]译文");
+}
+
 TEST(QmNeteaseBridgeLifecycleIntegration, ReportPublishExceptionDoesNotEscapeAndLaterTickRecovers)
 {
 	COperations Operations;

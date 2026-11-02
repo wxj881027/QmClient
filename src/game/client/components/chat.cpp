@@ -388,6 +388,8 @@ void CChat::CLine::DeleteTextContainers(ITextRender *pTextRender)
 {
 	pTextRender->DeleteTextContainer(m_TextContainerIndex);
 	pTextRender->DeleteTextContainer(m_BodyTextContainerIndex);
+	for(auto &Badge : m_vTitleBadges)
+		Badge.DeleteText(pTextRender);
 	m_vDeveloperBadgeRects.clear();
 	m_vTitleBadges.clear();
 }
@@ -410,7 +412,6 @@ void CChat::CLine::Reset(CChat &This)
 	m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
 	m_RenderSponsorChatStyle = EQmSponsorChatStyle::NONE;
 	m_ColorPreparationPending = false;
-	m_SponsorTextBounds = {};
 	m_QmTitleBobPadding = 0.0f;
 	m_aYOffset[0] = -1.0f;
 	m_aYOffset[1] = -1.0f;
@@ -553,7 +554,7 @@ bool CChat::HandleCommandHudInput(const IInput::CEvent &Event)
 	if(Event.m_Flags & IInput::FLAG_PRESS)
 	{
 		if(Event.m_Key == KEY_UP || Event.m_Key == KEY_DOWN)
-			return m_CommandHud.MoveSelection(Event.m_Key == KEY_UP ? -1 : 1, m_Input.GetString(), m_Input.GetCursorOffset());
+			return m_CommandHud.MoveSelection(Event.m_Key == KEY_UP ? -1 : 1, m_Input.GetString(), m_Input.GetCursorOffset(), m_pHistoryEntry != nullptr);
 		if(Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER)
 		{
 			std::string Completion;
@@ -660,7 +661,6 @@ void CChat::ClearLines()
 	FlushPendingConsoleLine(true);
 	for(auto &Line : m_aLines)
 		Line.Reset(*this);
-	m_SponsorChatRenderer.Reset(Graphics());
 	m_BacklogCurLine = 0;
 	m_ScrollbarDragging = false;
 	m_ScrollbarDragOffset = 0.0f;
@@ -760,7 +760,8 @@ void CChat::UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowL
 			Line.m_ForceVisible,
 			m_LargeAreaOpenTick,
 			RecallDelaySeconds,
-			ExtraAnimations);
+			ExtraAnimations,
+			Line.m_ClientId);
 
 		if(Line.m_ClientId == SERVER_MSG && QmMacosGraphicsDiagnosticsEnabled())
 		{
@@ -790,14 +791,13 @@ void CChat::OnWindowResize()
 {
 	m_CommandHud.Hide();
 	RebuildChat();
-	m_SponsorChatRenderer.Reset(Graphics());
 }
 
 void CChat::OnShutdown()
 {
+	m_PublicWords.Shutdown();
 	for(auto &Line : m_aLines)
 		Line.DeleteTextContainers(TextRender());
-	m_SponsorChatRenderer.Reset(Graphics());
 }
 
 void CChat::Reset()
@@ -1073,6 +1073,7 @@ void CChat::OnConsoleInit()
 void CChat::OnInit()
 {
 	Reset();
+	m_PublicWords.Initialize(Storage(), g_Config.m_QmPublicBlockWords != 0);
 	ReloadWordFilterFile(false);
 	ReloadWordFilterFile(true);
 	Console()->Chain("cl_chat_old", ConchainChatOld, this);
@@ -1114,6 +1115,11 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			return true;
 	}
 	const bool IsWheelEvent = Event.m_Key == KEY_MOUSE_WHEEL_UP || Event.m_Key == KEY_MOUSE_WHEEL_DOWN;
+	// 聊天弹层由公共弹层栈绘制，滚轮增量只在 CUi 的滚轮归属帧里从 CUi 热键取；
+	// 聊天组件不向 CUi 转发按键，弹层里的列表因此只能拖动滚动条。只转发滚轮，
+	// 方向键、回车、Esc 仍走聊天原有路径；弹层关闭时滚轮继续滚聊天记录。
+	if(AnyChatPopupOpen && (Event.m_Flags & IInput::FLAG_PRESS) && IsWheelEvent)
+		Ui()->OnInput(Event);
 	if(!AnyChatPopupOpen && (Event.m_Flags & IInput::FLAG_PRESS) && IsWheelEvent)
 	{
 		const float Height = 300.0f;
@@ -2092,8 +2098,8 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 				    (!Message.m_CurrentLocal && (Author.m_Foe || (g_Config.m_QmWarListBlockEnemyChat && GameClient()->m_WarList.IsEnemy(ClientId))));
 		Message.m_Friend = Author.m_Friend;
 		Message.m_OtherTeam = !Message.m_Blocked && !FilterSettings.m_RelatedOnly && !Message.m_CurrentLocal &&
-			(!FilterSettings.m_FriendsOnly || Message.m_Friend) && FilterSettings.m_TeamOnly &&
-			GameClient()->IsOtherTeam(ClientId) && GameClient()->m_Teams.Team(GameClient()->m_Snap.m_LocalClientId) != TEAM_FLOCK;
+				      (!FilterSettings.m_FriendsOnly || Message.m_Friend) && FilterSettings.m_TeamOnly &&
+				      GameClient()->IsOtherTeam(ClientId) && GameClient()->m_Teams.Team(GameClient()->m_Snap.m_LocalClientId) != TEAM_FLOCK;
 		if(FilterSettings.m_RelatedOnly && !Message.m_Blocked && !Message.m_Local && Team != TEAM_WHISPER_SEND && Team != TEAM_WHISPER_RECV)
 		{
 			// 先按原文判断提及，避免后续显示遮蔽把自己的名字替换掉。
@@ -2132,12 +2138,16 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 	const bool CanHideBlockWordsMessage = ShouldHideBlockWordsMessage(BlockWordsAction, true, ClientId, IsLocalBlockWordsClient, Team);
 	ReloadWordFilterFile(false, false);
 	ReloadWordFilterFile(true, false);
-	if(g_Config.m_QmBlockWordsEnabled && (g_Config.m_QmBlockWordsList[0] != '\0' || !m_BlockWordsFile.Words().empty()) &&
+	const bool UsePublicWords = g_Config.m_QmPublicBlockWords && !m_PublicWords.State().Words().empty() &&
+				    QmPublicWordFilter::IsIncomingPlayerChat(ClientId, IsLocalBlockWordsClient, Team == TEAM_WHISPER_SEND, Client()->State() == IClient::STATE_DEMOPLAYBACK);
+	if((UsePublicWords || (g_Config.m_QmBlockWordsEnabled && (g_Config.m_QmBlockWordsList[0] != '\0' || !m_BlockWordsFile.Words().empty()))) &&
 		(BlockWordsAction == EBlockWordsAction::REPLACE || CanHideBlockWordsMessage))
 	{
 		std::string Text = pLine;
 		std::vector<std::string> *pMatched = g_Config.m_QmBlockWordsShowConsole ? &BlockedWords : nullptr;
-		if(ApplyBlockWords(Text, pMatched, m_BlockWordsFile))
+		bool Matched = UsePublicWords && m_PublicWords.State().Filter(Text, g_Config.m_QmBlockWordsReplacementChar, g_Config.m_QmBlockWordsMultiReplace != 0, pMatched);
+		Matched |= ApplyBlockWords(Text, pMatched, m_BlockWordsFile);
+		if(Matched)
 		{
 			FlushPendingConsoleLine(true);
 			if(g_Config.m_QmBlockWordsShowConsole && !BlockedWords.empty())
@@ -2489,7 +2499,7 @@ bool CChat::OnPrepareLines(float y)
 
 	const bool IsScoreBoardOpen = GameClient()->m_Scoreboard.IsActive();
 	const bool ShowLargeArea = m_Show || (m_Mode != MODE_NONE && g_Config.m_ClShowChat == 1) || g_Config.m_ClShowChat == 2;
-	const std::array<int, 4> aTitleVisibility = {g_Config.m_QmShowMainTitle, g_Config.m_QmShowDummyTitle,
+	const std::array<int, 5> aTitleVisibility = {g_Config.m_QmShowMainTitle, g_Config.m_QmShowDummyTitle, g_Config.m_QmChatSponsorBadges,
 		GameClient()->m_aLocalIds[IClient::CONN_MAIN], GameClient()->m_aLocalIds[IClient::CONN_DUMMY]};
 	const bool ForceRecreate = IsScoreBoardOpen != m_PrevScoreBoardShowed || ShowLargeArea != m_PrevShowChat;
 	m_PrevScoreBoardShowed = IsScoreBoardOpen;
@@ -2503,13 +2513,11 @@ bool CChat::OnPrepareLines(float y)
 	{
 		m_PrevSponsorChatEffects = g_Config.m_QmSponsorChatEffects != 0;
 		RebuildChat();
-		if(!m_PrevSponsorChatEffects)
-			m_SponsorChatRenderer.Reset(Graphics());
 	}
 	const bool DeveloperBadgeAvailable = GameClient()->m_QmClient.DeveloperBadge().Available();
 	// 保留消息原始头衔，重新开启本地显示后可以恢复历史消息。
 	const auto VisibleTitle = [this](const char *pTitle, int ClientId) {
-		return GameClient()->m_QmClient.ShouldShowPlayerTitle(ClientId) ? pTitle : "";
+		return g_Config.m_QmChatSponsorBadges && GameClient()->m_QmClient.ShouldShowPlayerTitle(ClientId) ? pTitle : "";
 	};
 
 	const int TeeSize = MessageTeeSize();
@@ -2534,6 +2542,11 @@ bool CChat::OnPrepareLines(float y)
 	float Begin = x;
 	float TextBegin = Begin + RealMsgPaddingX / 2.0f;
 	int OffsetType = IsScoreBoardOpen ? 1 : 0;
+	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+	const float PixelSize = (ScreenY1 - ScreenY0) / Graphics()->ScreenHeight();
+	// 行间隔按配置像素换算到聊天虚拟坐标，0 保持默认行距。
+	const float ExtraLineSpacing = (float)g_Config.m_QmChatLineSpacing * PixelSize;
 
 	for(int i = m_BacklogCurLine; i < MAX_LINES; i++)
 	{
@@ -2545,7 +2558,7 @@ bool CChat::OnPrepareLines(float y)
 		{
 			continue;
 		}
-		if(!ShowLargeArea && !Line.m_ForceVisible && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
+		if(!ShowLargeArea && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
 		{
 			if(Line.m_ClientId == SERVER_MSG && QmMacosGraphicsDiagnosticsEnabled() && !Line.m_DiagnosticCollapsedSkipLogged)
 			{
@@ -2610,7 +2623,7 @@ bool CChat::OnPrepareLines(float y)
 			// 否则只有“首次创建”时受高度限制，后续帧又会溢出。
 			if(Line.m_aYOffset[OffsetType] >= 0.0f)
 			{
-				y -= Line.m_aYOffset[OffsetType] * ClampPresentationProgress(Line.m_Presentation.m_LayoutVisibility);
+				y = AdvanceChatLineStack(y, Line.m_aYOffset[OffsetType], ExtraLineSpacing, ClampPresentationProgress(Line.m_Presentation.m_LayoutVisibility));
 
 				if(y < HeightLimit)
 					break;
@@ -2833,11 +2846,12 @@ bool CChat::OnPrepareLines(float y)
 		const float LineHeight = Line.m_aYOffset[OffsetType];
 		const float LayoutVisibility = ClampPresentationProgress(Line.m_Presentation.m_LayoutVisibility);
 		const float LayoutBottom = y;
-		y -= LineHeight * LayoutVisibility;
+		y = AdvanceChatLineStack(y, LineHeight, ExtraLineSpacing, LayoutVisibility);
 		// 超出 HUD 的聊天高度预算：停止准备更旧消息。
 		if(y < HeightLimit)
 			break;
-		const float TargetY = LayoutBottom - LineHeight;
+		// 渲染落点必须与上面的堆叠游标同口径减去额外行间隔，否则行距只减少可视行数、不改变行位置。
+		const float TargetY = LayoutBottom - (LineHeight + ExtraLineSpacing);
 
 		const float TextYOffset = TargetY + RealMsgPaddingY / 2.0f;
 		if(Line.m_TextYOffset != TextYOffset)
@@ -2886,7 +2900,7 @@ bool CChat::OnPrepareLines(float y)
 		else
 			NameColor = PlayerNameColor(Line.m_ClientId, Line.m_NameColor, Line.m_Team);
 
-		const auto AppendQmTitle = [&](const char *pTitle, const ColorRGBA &FallbackColor, int AuthorId, bool DeveloperBadge, const SQmTitleAppearance &Appearance) {
+		const auto AppendQmTitle = [&](const char *pTitle, int AuthorId, bool DeveloperBadge, const SQmTitleAppearance &Appearance) {
 			pTitle = VisibleTitle(pTitle, AuthorId);
 			if(!pTitle[0])
 				return;
@@ -2896,30 +2910,12 @@ bool CChat::OnPrepareLines(float y)
 				return;
 			}
 			const std::string Text = QmTitleBadgeText(pTitle);
-			const auto MeasureLabel = [&](float FontSize) {
-				CTextCursor Cursor;
-				Cursor.m_FontSize = FontSize;
-				Cursor.m_Flags = 0;
-				Cursor.m_CalculateVisualBoundingBox = true;
-				TextRender()->TextEx(&Cursor, Text.c_str());
-				return Cursor;
-			};
-			CTextCursor LabelMetrics = MeasureLabel(QmTitleBadgeLabelFontSize(LineCursor.m_FontSize));
-			const CUIRect Rect = QmLayoutTitleBadge(LineCursor, LabelMetrics.m_LongestLineWidth);
-			const float LabelFontSize = QmTitleBadgeLabelFontSize(Rect.h);
-			if(LabelMetrics.m_FontSize != LabelFontSize)
-				LabelMetrics = MeasureLabel(LabelFontSize);
-			Line.m_vTitleBadges.push_back({Rect, Appearance});
-			CTextCursor TitleCursor;
-			TitleCursor.SetPosition(QmTitleBadgeTextPosition(Rect, QmTitleBadgeVisualBounds(LabelMetrics)));
-			TitleCursor.m_FontSize = LabelFontSize;
-			TitleCursor.m_CharCount = LineCursor.m_CharCount;
-			TitleCursor.m_GlyphCount = LineCursor.m_GlyphCount;
-			TextRender()->TextColor(QmTitleBadgePalette(Appearance).m_Text);
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &TitleCursor, Text.c_str());
-			LineCursor.m_CharCount = TitleCursor.m_CharCount;
-			LineCursor.m_GlyphCount = TitleCursor.m_GlyphCount;
-			TextRender()->TextColor(FallbackColor);
+			const float LabelWidth = TextRender()->TextWidth(QmTitleBadgeLabelFontSize(LineCursor.m_FontSize), Text.c_str());
+			const CUIRect Rect = QmLayoutTitleBadge(LineCursor, LabelWidth);
+			auto &Badge = Line.m_vTitleBadges.emplace_back();
+			Badge.m_Rect = Rect;
+			Badge.m_Appearance = Appearance;
+			Badge.PrepareText(TextRender(), Text.c_str());
 		};
 
 		if(MergedPlayerMessages)
@@ -2931,7 +2927,7 @@ bool CChat::OnPrepareLines(float y)
 				TextRender()->TextColor(Line.m_vMergedAuthors[i].m_NameColor);
 				if(i > 0)
 					TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, ",");
-				AppendQmTitle(Line.m_vMergedAuthors[i].m_aQmTitle, Line.m_vMergedAuthors[i].m_NameColor, Line.m_vMergedAuthors[i].m_ClientId, Line.m_vMergedAuthors[i].m_DeveloperBadge, Line.m_vMergedAuthors[i].m_TitleAppearance);
+				AppendQmTitle(Line.m_vMergedAuthors[i].m_aQmTitle, Line.m_vMergedAuthors[i].m_ClientId, Line.m_vMergedAuthors[i].m_DeveloperBadge, Line.m_vMergedAuthors[i].m_TitleAppearance);
 				TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, Line.m_vMergedAuthors[i].m_aName);
 			}
 			NameColor = Line.m_vMergedAuthors.back().m_NameColor;
@@ -2940,7 +2936,7 @@ bool CChat::OnPrepareLines(float y)
 		{
 			TextRender()->TextColor(NameColor);
 			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, aClientId);
-			AppendQmTitle(Line.m_aQmTitle, NameColor, Line.m_ClientId, Line.m_DeveloperBadge, Line.m_TitleAppearance);
+			AppendQmTitle(Line.m_aQmTitle, Line.m_ClientId, Line.m_DeveloperBadge, Line.m_TitleAppearance);
 			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, Line.m_aName);
 		}
 
@@ -2994,6 +2990,8 @@ bool CChat::OnPrepareLines(float y)
 		}
 		if(Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM)
 			Color = QmSponsorChatPlatinumColor(0.0f, Color.a);
+		else if(Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::FLUID)
+			Color = ColorRGBA(1, 1, 1, Color.a);
 		TextRender()->TextColor(Color);
 
 		CTextCursor AppendCursor = LineCursor;
@@ -3025,7 +3023,7 @@ bool CChat::OnPrepareLines(float y)
 				QmSponsorChatAddPlatinumSplits(Cursor, pMessage, Color.a);
 			if(UseColoredParts && !FilteredAfterColors && !ColoredParts.TryAddSplitsToCursor(Cursor))
 				Line.m_ColorPreparationPending = true;
-			const bool SpatialGradient = UseGradient && !Platinum && Line.m_CustomColor == std::nullopt && ColoredParts.Colors().empty();
+			const bool SpatialGradient = UseGradient && Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::NONE && Line.m_CustomColor == std::nullopt && ColoredParts.Colors().empty();
 			const auto Gradient = QmChatGradientStyle(g_Config, GradientRole, Color);
 			const CQmChatGradientPaint Paint(TextRender(), Cursor, pMessage, SpatialGradient ? &Gradient : nullptr);
 			TextRender()->CreateOrAppendTextContainer(BodyContainer, &Cursor, pMessage);
@@ -3091,7 +3089,6 @@ bool CChat::OnPrepareLines(float y)
 				FullWidth += maximum(LineCursor.m_LongestLineWidth, AppendCursor.m_LongestLineWidth);
 			}
 			Line.m_ContentWidth = maximum(0.0f, FullWidth);
-			Line.m_SponsorTextBounds = {Begin, TargetY, FullWidth, LineHeight};
 			if(!g_Config.m_ClChatOld)
 			{
 				const CUIRect Rect = {Begin, TargetY, FullWidth, LineHeight};
@@ -3128,6 +3125,7 @@ bool CChat::OnPrepareLines(float y)
 
 void CChat::OnRender()
 {
+	m_PublicWords.Update(Http(), Storage(), g_Config.m_QmPublicBlockWords != 0, time_get() / time_freq());
 	m_TranslateButton.m_RectValid = false;
 	ReloadWordFilterFile(false, false);
 	ReloadWordFilterFile(true, false);
@@ -3154,6 +3152,13 @@ void CChat::OnRender()
 	}
 	FlushPendingConsoleLine(false);
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	{
+		m_CommandHud.Hide();
+		return;
+	}
+	// 合影超采样静帧：抓帧那一帧聊天不进成片。开关是 IClient::PoseCaptureActive，
+	// 只在抓帧的几帧为真，观看模式（poses_open）仍照常显示聊天。
+	if(Client()->PoseCaptureActive())
 	{
 		m_CommandHud.Hide();
 		return;
@@ -3413,12 +3418,21 @@ void CChat::OnRender()
 		RealMsgPaddingY = 0;
 	}
 
+	// 行间隔按配置像素换算到聊天虚拟坐标，0 保持默认行距。
+	float ExtraLineSpacing = 0.0f;
+	{
+		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+		const float PixelSize = (ScreenY1 - ScreenY0) / Graphics()->ScreenHeight();
+		ExtraLineSpacing = (float)g_Config.m_QmChatLineSpacing * PixelSize;
+	}
+
 	const float HistoryBottom = y;
 	const vec2 CommandHudMousePos = GetChatMousePos();
 	const bool InsideCommandHud = m_CommandHud.Contains(CommandHudMousePos.x, CommandHudMousePos.y);
 	const float HistoryHeight = maximum(0.0f, HistoryBottom - HeightLimit);
 	const int TotalVisibleLines = CountVisibleLinesFrom(0);
-	const int VisibleLineCapacity = maximum(1, (int)std::floor(HistoryHeight / maximum(RowHeight, 1.0f)));
+	const int VisibleLineCapacity = maximum(1, (int)std::floor(HistoryHeight / maximum(RowHeight + ExtraLineSpacing, 1.0f)));
 	const int MaxScroll = maximum(0, TotalVisibleLines - VisibleLineCapacity);
 	if(!InputActive)
 		m_BacklogCurLine = 0;
@@ -3544,7 +3558,7 @@ void CChat::OnRender()
 		{
 			continue;
 		}
-		if(!ShowLargeArea && !Line.m_ForceVisible && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
+		if(!ShowLargeArea && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
 		{
 			continue;
 		}
@@ -3553,10 +3567,10 @@ void CChat::OnRender()
 		const float LineHeight = LineHeightValid ? Line.m_aYOffset[OffsetType] : FontSize() + RealMsgPaddingY;
 		const float LayoutVisibility = ClampPresentationProgress(Line.m_Presentation.m_LayoutVisibility);
 		const float LayoutBottom = y;
-		y -= LineHeight * LayoutVisibility;
+		y = AdvanceChatLineStack(y, LineHeight, ExtraLineSpacing, LayoutVisibility);
 		if(y < HeightLimit)
 			break;
-		Line.m_Presentation.m_TargetY = LayoutBottom - LineHeight;
+		Line.m_Presentation.m_TargetY = LayoutBottom - (LineHeight + ExtraLineSpacing);
 
 		// Don't abort the full render pass on a single malformed line.
 		if(!LineHeightValid)
@@ -3673,12 +3687,15 @@ void CChat::OnRender()
 			}
 
 			for(const auto &Badge : Line.m_vTitleBadges)
+			{
 				GameClient()->m_QmClient.TitleBadge().RenderSurface(Graphics(),
 					{Badge.m_Rect.x + AnimOffsetX, Badge.m_Rect.y + AnimOffsetY, Badge.m_Rect.w, Badge.m_Rect.h}, Badge.m_Appearance, AnimAlpha * DefaultTextColor.a);
+				Badge.RenderText(TextRender(), AnimAlpha * DefaultTextColor.a, vec2(AnimOffsetX, AnimOffsetY));
+			}
 
 			for(const CUIRect &Rect : Line.m_vDeveloperBadgeRects)
 				GameClient()->m_QmClient.DeveloperBadge().Render(Graphics(),
-					{Rect.x + AnimOffsetX, Rect.y + AnimOffsetY, Rect.w, Rect.h}, AnimAlpha * DefaultTextColor.a);
+					{Rect.x + AnimOffsetX, Rect.y + AnimOffsetY, Rect.w, Rect.h}, AnimAlpha * DefaultTextColor.a, GameClient()->m_QmClient.TitleAnimationTime());
 
 			if(Line.m_BodyTextContainerIndex.Valid())
 			{
@@ -3689,8 +3706,8 @@ void CChat::OnRender()
 				SQmSponsorChatSweep SweepState;
 				if(!HudEditorPreview && Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM)
 					SweepState = QmSponsorChatSweepState(AgeSeconds, TextRender()->GetTextContainerRenderedLineCount(Line.m_BodyTextContainerIndex), LatestVisibleSponsor);
-				m_SponsorChatRenderer.Render(Graphics(), TextRender(), Line.m_BodyTextContainerIndex,
-					Line.m_RenderSponsorChatStyle, Line.m_SponsorTextBounds, FontSize(), AnimAlpha, AnimOffsetX, AnimOffsetY, SweepState);
+				QmRenderSponsorChatText(Graphics(), TextRender(), Line.m_BodyTextContainerIndex,
+					Line.m_RenderSponsorChatStyle, AnimAlpha, AnimOffsetX, AnimOffsetY, FontSize(), SweepState, HudEditorPreview ? 0.0 : AgeSeconds);
 			}
 
 			if(Line.m_TextContainerIndex.Valid())
@@ -3819,6 +3836,15 @@ void CChat::EnsureCoherentWidth() const
 static bool ShouldSyncDummyCommandToOther(const char *pLine)
 {
 	return g_Config.m_ClDummyCopyMoves && CChat::ShouldSyncDummyCommand(pLine);
+}
+
+bool CChat::SendAutomaticChat(int Connection, const char *pLine)
+{
+	int PendingCount = static_cast<int>(m_PendingChatMessages.Size());
+	if(Client()->State() != IClient::STATE_ONLINE ||
+		CPendingChatMessages::Reserve(m_LastChatSend, time(), time_freq(), PendingCount) != CPendingChatMessages::EAdmission::SENT)
+		return false;
+	return SendChatOnConn(Connection, 0, pLine, false, false);
 }
 
 bool CChat::SendChat(int Team, const char *pLine, const char *pLocalOriginal, int Connection)
@@ -4052,7 +4078,7 @@ bool CChat::TranslateVisibleChatLines()
 		const bool ServerMessageIsBasicInfo = Line.m_ServerMessageClass == QmHudNotifications::EServerMessageClass::BasicInfo;
 		if(!ShouldRenderFocusFilteredChatLine(FocusHideChat, FocusHideSystemInfoMessages, FocusHideSystemPromptMessages, FocusHideEcho, Line.m_ClientId, Line.m_ForceVisible, ServerMessageIsBasicInfo))
 			continue;
-		if(!ShowLargeArea && !Line.m_ForceVisible && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
+		if(!ShowLargeArea && Line.m_Presentation.m_State == EPresentationState::COLLAPSED)
 			continue;
 		if(!ShowLargeArea && Line.m_Presentation.m_LayoutVisibility <= 0.001f && Line.m_Presentation.m_RenderAlpha <= 0.001f)
 			continue;

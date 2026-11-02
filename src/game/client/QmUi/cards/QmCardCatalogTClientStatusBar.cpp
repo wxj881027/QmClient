@@ -200,52 +200,55 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 			else if(pStatusBarOverrideTooltip != nullptr)
 				DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-show", &CheckBoxRect, Localize("Show status bar"), FontSize, TEXTALIGN_ML, StatusBarLabelProps);
 		}
-		if(Flow.Control("tclient-statusbar-show-labels", LineSize, CheckBoxRect, MarginSmall))
+		if(qm_card_catalog::QmCardRenderHook::Personalization(this, View, "deck:tclient-status-bar-settings", CurrentSettingsContentMetrics(), ReadOnly))
 		{
-			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_QmStatusBarLabels, "tclient-statusbar-show-labels", Localize("Show labels on status bar items"), g_Config.m_QmStatusBarLabels, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
-				g_Config.m_QmStatusBarLabels ^= 1;
-		}
-		if(Flow.Control("tclient-statusbar-height", LineSize, Button, MarginSmall))
-		{
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-height", &g_Config.m_QmStatusBarHeight, &g_Config.m_QmStatusBarHeight, &Button, Localize("Status bar height"), 1, 16);
-		}
-		if(Flow.Control("tclient-statusbar-local-time-title", HeadlineHeight, Label, MarginSmall))
-		{
-			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-local-time-title", &Label, Localize("Local Time"), HeadlineFontSize, TEXTALIGN_ML);
-		}
-		if(Flow.Control("tclient-statusbar-12-hour-clock", LineSize, CheckBoxRect, MarginSmall))
-		{
-			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_QmStatusBar12HourClock, "tclient-statusbar-12-hour-clock", Localize("Use 12 hour clock"), g_Config.m_QmStatusBar12HourClock, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
-				g_Config.m_QmStatusBar12HourClock ^= 1;
-		}
-		if(Flow.Control("tclient-statusbar-seconds", LineSize, CheckBoxRect, MarginSmall))
-		{
-			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_QmStatusBarLocalTimeSeconds, "tclient-statusbar-seconds", Localize("Show seconds on clock"), g_Config.m_QmStatusBarLocalTimeSeconds, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
-				g_Config.m_QmStatusBarLocalTimeSeconds ^= 1;
-		}
-		if(Flow.Control("tclient-statusbar-colors-title", HeadlineHeight, Label, MarginSmall))
-		{
-			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-colors-title", &Label, Localize("Colors"), HeadlineFontSize, TEXTALIGN_ML);
-		}
+			if(Flow.Control("tclient-statusbar-show-labels", LineSize, CheckBoxRect, MarginSmall))
+			{
+				if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_QmStatusBarLabels, "tclient-statusbar-show-labels", Localize("Show labels on status bar items"), g_Config.m_QmStatusBarLabels, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
+					g_Config.m_QmStatusBarLabels ^= 1;
+			}
+			if(Flow.Control("tclient-statusbar-height", LineSize, Button, MarginSmall))
+			{
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-height", &g_Config.m_QmStatusBarHeight, &g_Config.m_QmStatusBarHeight, &Button, Localize("Status bar height"), 1, 16);
+			}
+			if(Flow.Control("tclient-statusbar-local-time-title", HeadlineHeight, Label, MarginSmall))
+			{
+				DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-local-time-title", &Label, Localize("Local Time"), HeadlineFontSize, TEXTALIGN_ML);
+			}
+			if(Flow.Control("tclient-statusbar-12-hour-clock", LineSize, CheckBoxRect, MarginSmall))
+			{
+				if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_QmStatusBar12HourClock, "tclient-statusbar-12-hour-clock", Localize("Use 12 hour clock"), g_Config.m_QmStatusBar12HourClock, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
+					g_Config.m_QmStatusBar12HourClock ^= 1;
+			}
+			if(Flow.Control("tclient-statusbar-seconds", LineSize, CheckBoxRect, MarginSmall))
+			{
+				if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_QmStatusBarLocalTimeSeconds, "tclient-statusbar-seconds", Localize("Show seconds on clock"), g_Config.m_QmStatusBarLocalTimeSeconds, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
+					g_Config.m_QmStatusBarLocalTimeSeconds ^= 1;
+			}
+			if(Flow.Control("tclient-statusbar-colors-title", HeadlineHeight, Label, MarginSmall))
+			{
+				DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-colors-title", &Label, Localize("Colors"), HeadlineFontSize, TEXTALIGN_ML);
+			}
 
-		static CButtonContainer s_StatusbarColor, s_StatusbarTextColor;
-		CUIRect ColorRow;
-		if(Flow.Control("tclient-statusbar-color", ColorPickerLineSize, ColorRow, MarginSmall))
-		{
-			DoLine_ColorPicker(&s_StatusbarColor, CurrentSettingsContentMetrics(), &ColorRow, Localize("Status bar color"), &g_Config.m_QmStatusBarColor, ColorRGBA(0.0f, 0.0f, 0.0f), false);
-		}
-		if(Flow.Control("tclient-statusbar-text-color", ColorPickerLineSize, ColorRow, MarginSmall))
-		{
-			DoLine_ColorPicker(&s_StatusbarTextColor, CurrentSettingsContentMetrics(), &ColorRow, Localize("Text color"), &g_Config.m_QmStatusBarTextColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
-		}
+			static CButtonContainer s_StatusbarColor, s_StatusbarTextColor;
+			CUIRect ColorRow;
+			if(Flow.Control("tclient-statusbar-color", ColorPickerLineSize, ColorRow, MarginSmall))
+			{
+				DoLine_ColorPicker(&s_StatusbarColor, CurrentSettingsContentMetrics(), &ColorRow, Localize("Status bar color"), &g_Config.m_QmStatusBarColor, ColorRGBA(0.0f, 0.0f, 0.0f), false);
+			}
+			if(Flow.Control("tclient-statusbar-text-color", ColorPickerLineSize, ColorRow, MarginSmall))
+			{
+				DoLine_ColorPicker(&s_StatusbarTextColor, CurrentSettingsContentMetrics(), &ColorRow, Localize("Text color"), &g_Config.m_QmStatusBarTextColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
+			}
 
-		if(Flow.Control("tclient-statusbar-alpha", LineSize, Button, MarginSmall))
-		{
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-alpha", &g_Config.m_QmStatusBarAlpha, &g_Config.m_QmStatusBarAlpha, &Button, Localize("Status bar alpha"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-		}
-		if(Flow.Control("tclient-statusbar-text-alpha", LineSize, Button, MarginSmall))
-		{
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-text-alpha", &g_Config.m_QmStatusBarTextAlpha, &g_Config.m_QmStatusBarTextAlpha, &Button, Localize("Text alpha"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+			if(Flow.Control("tclient-statusbar-alpha", LineSize, Button, MarginSmall))
+			{
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-alpha", &g_Config.m_QmStatusBarAlpha, &g_Config.m_QmStatusBarAlpha, &Button, Localize("Status bar alpha"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+			}
+			if(Flow.Control("tclient-statusbar-text-alpha", LineSize, Button, MarginSmall))
+			{
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-text-alpha", &g_Config.m_QmStatusBarTextAlpha, &g_Config.m_QmStatusBarTextAlpha, &Button, Localize("Text alpha"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+			}
 		}
 
 		LogTClientPerfStageEx("tclient_statusbar", "sections", ETClientSettingsPerfStage::INTERACTIVE_LAYER, SectionsTimer.ElapsedMs());

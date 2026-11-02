@@ -5,6 +5,8 @@
 
 #include <engine/gfx/viewport.h>
 
+#include <game/client/QmUi/QmChatBubble.h>
+
 #include <array>
 #include <cmath>
 #include <limits>
@@ -59,25 +61,28 @@ inline bool QmChatBubbleTextSizeSafe(float FontSize, float ViewHeight, int Pixel
 
 struct SQmChatBubbleGeometry
 {
+	qm_chat_bubble::SLayout m_Layout;
 	vec2 m_Position;
 	vec2 m_Size;
 	vec2 m_ContentPosition;
 	vec2 m_ContentSize;
 };
 
-inline std::optional<SQmChatBubbleGeometry> QmChatBubbleGeometry(vec2 Anchor, vec2 TextSize, float Scale, float Slide, float Gap, bool UnscaledContent)
+inline std::optional<SQmChatBubbleGeometry> QmChatBubbleGeometry(vec2 Anchor, vec2 TextSize, float Scale, float Slide, float Gap, bool UnscaledContent, float FontSize = 14.0f, qm_chat_bubble::EStyle Style = qm_chat_bubble::EStyle::COMIC)
 {
-	if(!QmChatBubbleFinite(Anchor) || !QmChatBubbleValidTextSize(TextSize) || !std::isfinite(Scale) || Scale <= 0.0f || !std::isfinite(Slide) || !std::isfinite(Gap))
+	if(!QmChatBubbleFinite(Anchor) || !QmChatBubbleValidTextSize(TextSize) || !std::isfinite(Scale) || Scale <= 0.0f || !std::isfinite(Slide) || !std::isfinite(Gap) || !std::isfinite(FontSize) || FontSize < 0.0f)
 		return std::nullopt;
-	constexpr float Padding = 12.0f;
 	SQmChatBubbleGeometry Result;
-	Result.m_Size = vec2((TextSize.x + Padding * 2.0f) * Scale, (TextSize.y + Padding * 2.0f) * Scale);
-	Result.m_Position = vec2(Anchor.x - Result.m_Size.x / 2.0f, Anchor.y - Gap - Result.m_Size.y + Slide);
+	Result.m_Layout = qm_chat_bubble::Layout(vec2(Anchor.x, Anchor.y - Gap + Slide), TextSize, FontSize, Scale, Style);
+	Result.m_Size = Result.m_Layout.m_Size;
+	Result.m_Position = Result.m_Layout.m_Position;
 	Result.m_ContentSize = UnscaledContent ? TextSize : TextSize * Scale;
-	Result.m_ContentPosition = Result.m_Position + (Result.m_Size - Result.m_ContentSize) / 2.0f;
+	Result.m_ContentPosition = UnscaledContent ? Result.m_Position + (Result.m_Size - TextSize) / 2.0f : Result.m_Layout.m_TextPosition;
 	if(!QmChatBubbleFinite(Result.m_Size) || !QmChatBubbleFinite(Result.m_Position) || !QmChatBubbleFinite(Result.m_ContentSize) ||
 		!QmChatBubbleFinite(Result.m_ContentPosition) || !QmChatBubbleFinite(Result.m_Position + Result.m_Size) ||
-		!QmChatBubbleFinite(Result.m_ContentPosition + Result.m_ContentSize))
+		!QmChatBubbleFinite(Result.m_ContentPosition + Result.m_ContentSize) ||
+		!QmChatBubbleFinite(Result.m_Position + Result.m_Size + vec2(0.0f, Result.m_Layout.m_TailHeight)) ||
+		!std::isfinite(Result.m_Layout.m_Radius) || !std::isfinite(Result.m_Layout.m_Stroke))
 		return std::nullopt;
 	return Result;
 }

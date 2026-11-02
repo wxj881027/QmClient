@@ -183,10 +183,19 @@ struct SBackendCapabilities
 	bool m_ShaderSupport = false;
 	std::atomic<bool> m_MediaIslandSdf{false};
 	std::atomic<bool> m_RoundedRectSdf{false};
+	// 圆角容器采样纹理的能力由后端发布。
+	std::atomic<bool> m_RoundedRectSdfTexture{false};
 	std::atomic<bool> m_ProceduralRing{false};
 	bool m_RenderTargets = false;
 	bool m_RenderTargetGaussianBlur = false;
 	bool m_BackbufferCapture = false;
+	bool m_RenderTargetMSAA = false;
+	// 离屏渲染目标真正可用的最大采样数（来自设备上限，与窗口 FSAA 配置无关）。
+	// 视频导出在窗口不开 AA 的机器上也要能请求离屏多采样；1 表示只支持单采样目标。
+	int m_RenderTargetMaxSamples = 1;
+	// 读回命令是否保证点亮完成信号（GL 的 PBO 与同步回退都点亮；无信号后端
+	// 只能整体空闲定序）。视频离屏导出据此选择阻塞结算或逐帧等待。
+	bool m_ReadbackCompletionSignal = false;
 	bool m_RenderTargetExternalPassRequiresSingleSample = false;
 	const char *m_pRenderTargetSupportReason = "not_initialized";
 
@@ -217,10 +226,14 @@ struct SBackendCapabilities
 		m_ShaderSupport = false;
 		m_MediaIslandSdf.store(false, std::memory_order_release);
 		m_RoundedRectSdf.store(false, std::memory_order_release);
+		m_RoundedRectSdfTexture.store(false, std::memory_order_release);
 		m_ProceduralRing.store(false, std::memory_order_relaxed);
 		m_RenderTargets = false;
 		m_RenderTargetGaussianBlur = false;
 		m_BackbufferCapture = false;
+		m_RenderTargetMSAA = false;
+		m_RenderTargetMaxSamples = 1;
+		m_ReadbackCompletionSignal = false;
 		m_RenderTargetExternalPassRequiresSingleSample = false;
 		m_pRenderTargetSupportReason = "not_initialized";
 		m_TrianglesAsQuads = false;
@@ -394,6 +407,7 @@ public:
 	}
 	bool HasMediaIslandSdf() override { return m_Capabilities.m_MediaIslandSdf.load(std::memory_order_acquire); }
 	bool HasRoundedRectSdf() override { return m_Capabilities.m_RoundedRectSdf.load(std::memory_order_acquire); }
+	bool HasRoundedRectSdfTexture() override { return m_Capabilities.m_RoundedRectSdfTexture.load(std::memory_order_acquire); }
 	bool HasProceduralRing() override { return m_Capabilities.m_ProceduralRing.load(std::memory_order_acquire); }
 	bool UseTrianglesAsQuad() override { return m_Capabilities.m_TrianglesAsQuads; }
 	bool HasTileBuffering() override { return m_Capabilities.m_TileBuffering; }
@@ -403,6 +417,9 @@ public:
 	bool HasRenderTargets() override { return m_Capabilities.m_RenderTargets; }
 	bool HasRenderTargetGaussianBlur() override { return m_Capabilities.m_RenderTargetGaussianBlur; }
 	bool HasBackbufferCapture() override { return m_Capabilities.m_BackbufferCapture; }
+	bool HasRenderTargetMSAA() override { return m_Capabilities.m_RenderTargetMSAA; }
+	int RenderTargetMaxSamples() override { return m_Capabilities.m_RenderTargetMaxSamples; }
+	bool ReadbackCompletionSignal() const override { return m_Capabilities.m_ReadbackCompletionSignal; }
 	bool RenderTargetExternalPassRequiresSingleSample() override { return m_Capabilities.m_RenderTargetExternalPassRequiresSingleSample; }
 	const char *RenderTargetSupportReason() override { return m_Capabilities.m_RenderTargets ? "supported" : m_Capabilities.m_pRenderTargetSupportReason; }
 	bool Uses2DTextureArrays() override { return m_Capabilities.m_2DArrayTextures; }

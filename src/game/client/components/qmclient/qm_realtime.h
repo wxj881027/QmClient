@@ -109,5 +109,6 @@ bool TryQueueQmRealtimeMessage(std::deque<SQmRealtimeMessage, TAllocator> &Event
 // 空配置使用中心服；只有固定加密入口允许发送认证凭据。
 const char *QmRealtimeEffectiveUrl(const char *pConfiguredUrl);
 bool QmRealtimeAllowsCredentials(const char *pUrl);
+std::string QmRealtimeTitleRefreshRequest(const char *pUrl, const char *pToken);
 
 #endif

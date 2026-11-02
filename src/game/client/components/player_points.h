@@ -9,17 +9,26 @@
 #include <engine/sqlite.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/axiom_scores_data.h>
+#include <game/client/components/qmclient/player_points_request.h>
 #include <game/client/components/qmclient/player_points_state.h>
 
+#include <limits>
 #include <map>
 #include <memory>
 #include <string>
+
+namespace qm_update
+{
+	class CSystemProxyJob;
+}
 
 struct SPlayerPointsParseResult
 {
 	bool m_JsonParsed = false;
 	bool m_PointsFound = false;
 	int m_Points = 0;
+	int64_t m_PlaytimeHours = -1;
 };
 
 inline SPlayerPointsParseResult ExtractPlayerPointsJson(const json_value *pRoot)
@@ -38,19 +47,47 @@ inline SPlayerPointsParseResult ExtractPlayerPointsJson(const json_value *pRoot)
 	}
 	return Result;
 }
+
+// DDStats 用 404 表示没有该玩家的记录：时长查询把这当成 0 小时的成功结果，
+// 计分板显示 0；查分列以及其他状态码（超时、5xx 等）仍按查询失败处理。
+inline bool QmDdStatsPlaytimeMissingRecord(bool Playtime, int CompletedStatusCode)
+{
+	return Playtime && CompletedStatusCode == 404;
+}
+
+inline int64_t ExtractPlayerDdStatsHours(const char *pData, size_t Size, const char *pPlayerName)
+{
+	if(!pData || Size == 0)
+		return -1;
+	std::vector<SQmDdStatsGameType> vGameTypes;
+	if(QmParseDdStatsPlayerResponse(pData, Size, pPlayerName, vGameTypes) != EQmAxiomParseResult::SUCCESS)
+		return -1;
+	int64_t Seconds = 0;
+	for(const auto &GameType : vGameTypes)
+	{
+		if(GameType.m_PlayTimeSeconds > std::numeric_limits<int64_t>::max() - Seconds)
+			return -1;
+		Seconds += GameType.m_PlayTimeSeconds;
+	}
+	return Seconds / 3600;
+}
+
 class CPlayerPoints : public CComponent
 {
 private:
 	CQmPlayerPointsCache m_Cache;
+	CQmPlayerPointsCache m_PlaytimeCache;
 
 	struct SRequestSlot
 	{
-		std::shared_ptr<IHttpRequest> m_pRequest;
+		CQmPlayerPointsRequest m_Request{nullptr, 0.0};
 		CQmPlayerPointsCache::SRequestToken m_Token;
+		std::shared_ptr<qm_update::CSystemProxyJob> m_pProxyJob;
+		std::shared_ptr<IJob> m_pParseJob;
 	};
-	std::map<std::string, SRequestSlot, std::less<>> m_ActiveRequests;
-	// 已完成的 HTTP 响应每个玩家最多交给一个后台任务解析。
-	std::map<std::string, std::shared_ptr<IJob>> m_ParseJobs;
+	using TRequests = std::map<std::string, SRequestSlot, std::less<>>;
+	TRequests m_ActiveRequests;
+	TRequests m_PlaytimeRequests;
 
 	// Constants
 	static constexpr int MAX_CONCURRENT_REQUESTS = 2;
@@ -60,13 +97,15 @@ private:
 	CSqliteStmt m_pStoreStmt;
 
 	// Helper functions
-	void StartRequest(const char *pPlayerName);
-	void ProcessCompletedRequests();
+	void EnsureRequest(const char *pPlayerName, bool Playtime);
+	void StartRequest(const char *pPlayerName, bool Playtime);
+	void ProcessCompletedRequests(TRequests &Requests, CQmPlayerPointsCache &Cache, bool Playtime);
 	void CancelRequests(bool NewServer = false) noexcept;
 
 protected:
-	// 只分离外部HTTP、作业、时钟和持久化边界，状态与所有权仍归组件。
-	virtual std::shared_ptr<IHttpRequest> CreateRequest(const char *pPlayerName);
+	// 外部 HTTP、代理作业、时钟和持久化边界；请求状态与所有权仍归组件。
+	virtual std::shared_ptr<IHttpRequest> CreateRequest(const char *pPlayerName, bool Playtime);
+	virtual std::shared_ptr<qm_update::CSystemProxyJob> CreateProxyJob(const std::shared_ptr<IHttpRequest> &pRequest);
 	virtual void SubmitRequest(const std::shared_ptr<IHttpRequest> &pRequest);
 	virtual bool SubmitParseJob(const std::shared_ptr<IJob> &pJob);
 	virtual int64_t Now() const noexcept;
@@ -82,7 +121,9 @@ public:
 
 	// Public interface
 	void EnsureQueried(const char *pPlayerName);
+	void EnsurePlaytimeQueried(const char *pPlayerName);
 	SPlayerPointsResult GetPoints(const char *pPlayerName);
+	SPlayerPlaytimeResult GetPlaytime(const char *pPlayerName) const;
 };
 
 #endif

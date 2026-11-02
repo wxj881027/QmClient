@@ -51,6 +51,24 @@ namespace
 			++m_Checks;
 			return m_Complete;
 		}
+		bool m_MultisampleComplete = true;
+		int m_RenderbufferDeletes = 0;
+		TWGLuint m_LastDeletedRenderbuffer = 0;
+		bool CreateMultisample(STarget &Target, int) noexcept override
+		{
+			Target.m_MultisampleFramebuffer = 23;
+			Target.m_MultisampleRenderbuffer = 24;
+			m_Bindings.m_DrawFramebuffer = m_Bindings.m_ReadFramebuffer = 23;
+			m_Bindings.m_Renderbuffer = 24;
+			return m_MultisampleComplete;
+		}
+		void DeleteRenderbuffer(TWGLuint Id) noexcept override
+		{
+			++m_RenderbufferDeletes;
+			m_LastDeletedRenderbuffer = Id;
+			if(m_Bindings.m_Renderbuffer == Id)
+				m_Bindings.m_Renderbuffer = 0;
+		}
 		void RestoreBindings(const SBindings &Bindings) noexcept override
 		{
 			++m_Restores;
@@ -144,6 +162,56 @@ TEST_F(OpenGLRenderTargetCreate, SuccessfulReplacementReleasesOnlyThePreviousNat
 	EXPECT_EQ(m_Operations.m_aDeletedFramebuffers[0], OLD.m_Framebuffer);
 	EXPECT_EQ(m_Operations.m_aDeletedTextures[0], OLD.m_Texture);
 	ExpectOriginalBindings();
+}
+
+TEST_F(OpenGLRenderTargetCreate, MultisampleTargetPreservesThePreviousRenderbufferBinding)
+{
+	m_Operations.m_Bindings.m_Renderbuffer = 43;
+	ASSERT_TRUE(opengl_render_target::Create(m_vTargets, 1, 64, 48, m_Operations, 4));
+	EXPECT_EQ(m_vTargets[1].m_SampleCount, 4);
+	EXPECT_EQ(m_vTargets[1].m_MultisampleFramebuffer, 23u);
+	EXPECT_EQ(m_vTargets[1].m_MultisampleRenderbuffer, 24u);
+	EXPECT_EQ(m_Operations.m_Bindings.m_Renderbuffer, 43u);
+	ExpectOriginalBindings();
+}
+
+TEST_F(OpenGLRenderTargetCreate, FailedMultisampleAttachmentFallsBackAndReleasesBothCandidates)
+{
+	m_Operations.m_Bindings.m_Renderbuffer = 43;
+	m_Operations.m_MultisampleComplete = false;
+	ASSERT_TRUE(opengl_render_target::Create(m_vTargets, 1, 64, 48, m_Operations, 4));
+	EXPECT_EQ(m_vTargets[1].m_SampleCount, 1);
+	EXPECT_EQ(m_vTargets[1].m_MultisampleFramebuffer, 0u);
+	EXPECT_EQ(m_vTargets[1].m_MultisampleRenderbuffer, 0u);
+	ASSERT_EQ(m_Operations.m_FramebufferDeletes, 1);
+	EXPECT_EQ(m_Operations.m_aDeletedFramebuffers[0], 23u);
+	EXPECT_EQ(m_Operations.m_RenderbufferDeletes, 1);
+	EXPECT_EQ(m_Operations.m_LastDeletedRenderbuffer, 24u);
+	EXPECT_EQ(m_Operations.m_Bindings.m_Renderbuffer, 43u);
+	ExpectOriginalBindings();
+}
+
+TEST_F(OpenGLRenderTargetCreate, BoundMultisampleFramebufferCannotBeReplaced)
+{
+	m_vTargets[0].m_MultisampleFramebuffer = 8;
+	m_vTargets[0].m_MultisampleRenderbuffer = 9;
+	m_Operations.m_Bindings.m_ReadFramebuffer = 8;
+	EXPECT_FALSE(opengl_render_target::Create(m_vTargets, 0, 64, 48, m_Operations, 4));
+	EXPECT_EQ(m_vTargets[0].m_MultisampleFramebuffer, 8u);
+	EXPECT_EQ(m_Operations.m_TextureCreates, 0);
+	EXPECT_EQ(m_Operations.m_FramebufferDeletes, 0);
+}
+
+TEST_F(OpenGLRenderTargetCreate, ReplacingMultisampleTargetReleasesOldAttachmentsAndRemapsBoundRenderbuffer)
+{
+	m_vTargets[0].m_MultisampleFramebuffer = 8;
+	m_vTargets[0].m_MultisampleRenderbuffer = 9;
+	m_Operations.m_Bindings.m_Renderbuffer = 9;
+	ASSERT_TRUE(opengl_render_target::Create(m_vTargets, 0, 64, 48, m_Operations, 4));
+	EXPECT_EQ(m_Operations.m_Bindings.m_Renderbuffer, 24u);
+	EXPECT_EQ(m_Operations.m_RenderbufferDeletes, 1);
+	EXPECT_EQ(m_Operations.m_LastDeletedRenderbuffer, 9u);
+	EXPECT_EQ(m_Operations.m_FramebufferDeletes, 2);
 }
 
 TEST_F(OpenGLRenderTargetCreate, ZeroTextureKeepsThePreviousTargetWithoutCreatingAFramebuffer)
