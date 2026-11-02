@@ -76,8 +76,12 @@ void QmRenderLyricsIsland(IGraphics &Graphics, ITextRender &TextRender, CHudEdit
 	if(Panel.w <= 0.0f || Panel.h <= 0.0f)
 		return;
 	// 跟随时横向边界完全取自主岛，旧横向位置和缩放只在关闭跟随后恢复。
+	// 纵向同样跟随主岛底边：主岛因地图进度等底部行变高时，旧布局保存的屏幕绝对
+	// 纵坐标会落进主岛内部并遮挡其内容，因此以附岛默认落点（主岛底边下方留白）
+	// 作为纵向下限，保留向下拖动但不再允许盖住主岛。
 	const auto Placement = FollowWidth ? QmHudEditor::EHorizontalPlacement::DefaultPosition : QmHudEditor::EHorizontalPlacement::VisibleBounds;
-	const auto Scope = Editor.BeginTransform(EHudEditorElement::Lyrics, Panel, Panel, Placement, !FollowWidth);
+	const float MinimumAnchorY = FollowWidth ? Panel.y : QmHudEditor::NO_MINIMUM_ANCHOR_Y;
+	const auto Scope = Editor.BeginTransform(EHudEditorElement::Lyrics, Panel, Panel, Placement, !FollowWidth, true, MinimumAnchorY);
 	const auto PreviousPreset = TextRender.GetFontPreset();
 	const auto PreviousFlags = TextRender.GetRenderFlags();
 	const auto PreviousOutline = TextRender.GetTextOutlineColor();
