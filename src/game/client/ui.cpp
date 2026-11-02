@@ -53,19 +53,19 @@ namespace
 void CUIElement::Init(CUi *pUI, int RequestedRectCount)
 {
 	dbg_assert(m_pUI == nullptr, "UI element can only be registered once.");
-	const bool InitializeRects = RequestedRectCount > 0 && !AreRectsInit();
-	std::vector<SUIElementRect> vNewRects;
-	if(InitializeRects)
-		vNewRects.resize(RequestedRectCount);
-	dbg_assert(RequestedRectCount <= 0 || (InitializeRects ? vNewRects.size() : m_vUIRects.size()) == (size_t)RequestedRectCount, "UI element rect count changed.");
-
 	// 矩形和注册表均准备成功后再发布，构造失败时不留下登记。
-	pUI->AddUIElement(this);
-	if(InitializeRects)
+	if(RequestedRectCount > 0 && !AreRectsInit())
 	{
+		std::vector<SUIElementRect> vNewRects(RequestedRectCount);
+		pUI->AddUIElement(this);
 		m_vUIRects.swap(vNewRects);
 		for(auto &Rect : m_vUIRects)
 			Rect.m_pParent = this;
+	}
+	else
+	{
+		dbg_assert(RequestedRectCount <= 0 || m_vUIRects.size() == (size_t)RequestedRectCount, "UI element rect count changed.");
+		pUI->AddUIElement(this);
 	}
 	m_pUI = pUI;
 }

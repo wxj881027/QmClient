@@ -2,9 +2,7 @@
 #include <test/support/qm_real_ui_fixture.h>
 
 #include <limits>
-#include <memory>
 #include <new>
-#include <vector>
 
 namespace
 {
@@ -19,6 +17,19 @@ namespace
 	};
 
 	// 只计量生产创建操作；UI、Google Test 和断言均在故障域之外。
+	size_t ColdInitializationAllocations()
+	{
+		CUi Ui;
+		CUIElement Element;
+		size_t Attempts = 0;
+		{
+			CPredictionAllocationFailure Count(std::numeric_limits<size_t>::max());
+			Element.Init(&Ui, 1);
+			Attempts = Count.Attempts();
+		}
+		return Attempts;
+	}
+
 	size_t OwnedCreationAllocations(int RectCount)
 	{
 		CUi Ui;
@@ -65,80 +76,62 @@ TEST_F(QmUiElementAllocation, ColdFailureLeavesTheElementUnregisteredAndCanRetry
 
 TEST_F(QmUiElementAllocation, RegistryGrowthFailureDoesNotPublishNewRects)
 {
-	std::vector<std::unique_ptr<CUIElement>> vKeep;
-	vKeep.reserve(128);
-	std::unique_ptr<CUIElement> pRejected;
-	for(int Index = 0; Index < 128 && !pRejected; ++Index)
+	const size_t Allocations = ColdInitializationAllocations();
+	ASSERT_GT(Allocations, 0u);
+	CUIElement Element;
+	bool Threw = false, Triggered = false;
 	{
-		auto pElement = std::make_unique<CUIElement>();
-		bool Threw = false, Triggered = false;
+		CPredictionAllocationFailure Fault(Allocations - 1);
+		try
 		{
-			CPredictionAllocationFailure Fault(1);
-			try
-			{
-				pElement->Init(&m_Ui, 1);
-			}
-			catch(const std::bad_alloc &)
-			{
-				Threw = true;
-			}
-			Triggered = Fault.Triggered();
+			Element.Init(&m_Ui, 1);
 		}
-		ASSERT_EQ(Threw, Triggered);
-		if(Triggered)
-			pRejected = std::move(pElement);
-		else
-			vKeep.push_back(std::move(pElement));
+		catch(const std::bad_alloc &)
+		{
+			Threw = true;
+		}
+		Triggered = Fault.Triggered();
 	}
-	ASSERT_NE(pRejected, nullptr);
-	ASSERT_FALSE(pRejected->IsRegistered());
-	ASSERT_FALSE(pRejected->AreRectsInit());
-	pRejected->Init(&m_Ui, 1);
-	EXPECT_TRUE(pRejected->IsRegistered());
-	EXPECT_EQ(pRejected->Rect(0)->m_pParent, pRejected.get());
-	Populate(*pRejected);
-	EXPECT_TRUE(pRejected->Rect(0)->m_UITextContainer.Valid());
+	ASSERT_TRUE(Triggered);
+	ASSERT_TRUE(Threw);
+	ASSERT_FALSE(Element.IsRegistered());
+	ASSERT_FALSE(Element.AreRectsInit());
+	Element.Init(&m_Ui, 1);
+	EXPECT_TRUE(Element.IsRegistered());
+	EXPECT_EQ(Element.Rect(0)->m_pParent, &Element);
+	Populate(Element);
+	EXPECT_TRUE(Element.Rect(0)->m_UITextContainer.Valid());
 }
 
 TEST_F(QmUiElementAllocation, RegistryFailurePreservesPreinitializedRectsForRetry)
 {
-	std::vector<std::unique_ptr<CUIElement>> vKeep;
-	vKeep.reserve(128);
-	std::unique_ptr<CUIElement> pRejected;
-	for(int Index = 0; Index < 128 && !pRejected; ++Index)
+	CUIElement Element;
+	Element.InitRects(1);
+	Element.Rect(0)->m_Text = "Prepared";
+	auto *pRect = Element.Rect(0);
+	bool Threw = false, Triggered = false;
 	{
-		auto pElement = std::make_unique<CUIElement>();
-		pElement->InitRects(1);
-		pElement->Rect(0)->m_Text = "Prepared";
-		auto *pRect = pElement->Rect(0);
-		bool Threw = false, Triggered = false;
+		CPredictionAllocationFailure Fault;
+		try
 		{
-			CPredictionAllocationFailure Fault;
-			try
-			{
-				pElement->Init(&m_Ui, 1);
-			}
-			catch(const std::bad_alloc &)
-			{
-				Threw = true;
-			}
-			Triggered = Fault.Triggered();
+			Element.Init(&m_Ui, 1);
 		}
-		ASSERT_EQ(Threw, Triggered);
-		EXPECT_EQ(pElement->Rect(0), pRect);
-		if(Triggered)
-			pRejected = std::move(pElement);
-		else
-			vKeep.push_back(std::move(pElement));
+		catch(const std::bad_alloc &)
+		{
+			Threw = true;
+		}
+		Triggered = Fault.Triggered();
 	}
-	ASSERT_NE(pRejected, nullptr);
-	ASSERT_FALSE(pRejected->IsRegistered());
-	ASSERT_TRUE(pRejected->AreRectsInit());
-	EXPECT_EQ(pRejected->Rect(0)->m_Text, "Prepared");
-	EXPECT_EQ(pRejected->Rect(0)->m_pParent, pRejected.get());
-	pRejected->Init(&m_Ui, 1);
-	EXPECT_TRUE(pRejected->IsRegistered());
-	EXPECT_EQ(pRejected->Rect(0)->m_Text, "Prepared");
+	ASSERT_TRUE(Triggered);
+	ASSERT_TRUE(Threw);
+	ASSERT_FALSE(Element.IsRegistered());
+	ASSERT_TRUE(Element.AreRectsInit());
+	EXPECT_EQ(Element.Rect(0), pRect);
+	EXPECT_EQ(Element.Rect(0)->m_Text, "Prepared");
+	EXPECT_EQ(Element.Rect(0)->m_pParent, &Element);
+	Element.Init(&m_Ui, 1);
+	EXPECT_TRUE(Element.IsRegistered());
+	EXPECT_EQ(Element.Rect(0)->m_Text, "Prepared");
 }
 
 TEST(QmUiOwnedElementAllocation, EveryCreationAllocationCanFailAndRetryWithinTheSameUi)
