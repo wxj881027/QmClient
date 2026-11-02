@@ -85,10 +85,13 @@ namespace QmHudMapProgress
 	{
 		bool m_Initialized = false;
 		float m_Displayed = 0.0f;
+		int m_ClientId = -1;
 
 	public:
 		void Reset() { *this = {}; }
-		float Update(bool HasProgress, float Progress, float DeltaSeconds)
+		bool IsTracking(int ClientId) const { return m_Initialized && m_ClientId == ClientId; }
+		float Displayed() const { return m_Displayed; }
+		float Update(bool HasProgress, float Progress, float DeltaSeconds, int ClientId = -1)
 		{
 			if(!HasProgress)
 			{
@@ -96,11 +99,12 @@ namespace QmHudMapProgress
 				return 0.0f;
 			}
 			const float Target = std::clamp(Progress, 0.0f, 1.0f);
-			if(!m_Initialized)
+			if(!IsTracking(ClientId))
 				m_Displayed = Target;
 			else
 				m_Displayed += (Target - m_Displayed) * std::clamp(DeltaSeconds * 8.0f, 0.0f, 1.0f);
 			m_Initialized = true;
+			m_ClientId = ClientId;
 			return m_Displayed;
 		}
 	};

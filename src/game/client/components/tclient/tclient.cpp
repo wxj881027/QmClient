@@ -2927,6 +2927,28 @@ bool CTClient::IsGoresMapProgressEnabled() const
 	return IsGoresMapProgressMap() && g_Config.m_QmPlayerStatsMapProgress;
 }
 
+int CTClient::GoresMapProgressClientId(int Slot) const
+{
+	if(Slot < NUM_DUMMIES)
+		return GameClient()->m_aLocalIds[Slot];
+	const auto &Spec = GameClient()->m_Snap.m_SpecInfo;
+	return QmMapProgress::ResolveClientId(-1, Spec.m_Active, Spec.m_SpectatorId);
+}
+
+int CTClient::GoresMapProgressSlot(int Dummy) const
+{
+	const int Idx = std::clamp(Dummy, 0, NUM_DUMMIES - 1);
+	return Idx == g_Config.m_ClDummy && GoresMapProgressClientId(NUM_DUMMIES) >= 0 ? NUM_DUMMIES : Idx;
+}
+
+bool CTClient::HasGoresMapProgress(int Dummy) const
+{
+	const int Slot = GoresMapProgressSlot(Dummy);
+	const int ClientId = GoresMapProgressClientId(Slot);
+	return ClientId >= 0 && ClientId < MAX_CLIENTS && GameClient()->m_Snap.m_aCharacters[ClientId].m_Active &&
+	       m_aMapProgressClientId[Slot] == ClientId && m_aGoresMapProgressValid[Slot];
+}
+
 bool CTClient::IsGoresMapProgressDebugRouteEnabled() const
 {
 	return IsGoresMapProgressMap() && g_Config.m_QmPlayerStatsMapProgressDbgRoute != 0;
@@ -2940,6 +2962,7 @@ void CTClient::InvalidateGoresDistanceField()
 	m_GoresDistanceFieldNextBuildTryTick = 0;
 	m_GoresDistanceFieldWidth = 0;
 	m_GoresDistanceFieldHeight = 0;
+	m_GoresStartDistanceToFinish = -1;
 	m_vGoresCMap.clear();
 	m_vvGoresDirectTeleOuts.clear();
 	m_vGoresDistanceToFinish.clear();
@@ -2953,6 +2976,8 @@ void CTClient::InvalidateGoresDistanceField()
 		m_aGoresMapProgressValid[i] = false;
 		m_aGoresMapProgress[i] = 0.0f;
 	}
+	m_aGoresMapProgressValid[NUM_DUMMIES] = false;
+	m_aGoresMapProgress[NUM_DUMMIES] = 0.0f;
 }
 
 void CTClient::EnsureGoresDistanceField()
@@ -3126,6 +3151,7 @@ void CTClient::FailGoresDistanceFieldBuild()
 	m_GoresDistanceFieldValid = false;
 	m_GoresDistanceFieldWidth = 0;
 	m_GoresDistanceFieldHeight = 0;
+	m_GoresStartDistanceToFinish = -1;
 	m_vGoresCMap.clear();
 	m_vvGoresDirectTeleOuts.clear();
 	m_vGoresDistanceToFinish.clear();
@@ -3486,6 +3512,7 @@ void CTClient::StepGoresDistanceFieldReachableStartCheck(int Budget)
 		const bool IsStart = Tile == TILE_START || FrontTile == TILE_START;
 		if(IsStart && m_vGoresDistanceToFinish[(size_t)Index] != DISTANCE_INF)
 		{
+			m_GoresStartDistanceToFinish = m_vGoresDistanceToFinish[(size_t)Index];
 			CompleteGoresDistanceFieldBuild();
 			return;
 		}
@@ -3943,10 +3970,10 @@ void CTClient::ResetDDraceMapProgress()
 	m_GoresDebugRouteCache.Invalidate();
 	m_vDDraceDebugRouteIndices.clear();
 	m_vGoresDebugRouteDots.clear();
-	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+	for(int Dummy = 0; Dummy <= NUM_DUMMIES; ++Dummy)
 	{
 		m_aQmDDraceProgress[Dummy].Reset();
-		m_aQmDDraceProgressClientId[Dummy] = -1;
+		m_aMapProgressClientId[Dummy] = -1;
 		m_aQmDDraceTeleCheckpoint[Dummy] = 0;
 		m_aQmDDraceProgressHasPreviousPos[Dummy] = false;
 	}
@@ -4004,30 +4031,30 @@ void CTClient::UpdateDDraceMapProgress()
 	else if(!m_QmDDraceProgressMap.Finalized())
 		m_QmDDraceProgressMap.FinalizeStep(GORES_DISTANCE_FIELD_TILE_SCAN_BUDGET);
 
-	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+	for(int Dummy = 0; Dummy <= NUM_DUMMIES; ++Dummy)
 	{
 		auto &Progress = m_aQmDDraceProgress[Dummy];
-		const int ClientId = GameClient()->m_aLocalIds[Dummy];
+		const int ClientId = GoresMapProgressClientId(Dummy);
 		if((Dummy == 1 && !Client()->DummyConnected()) || ClientId < 0 || ClientId >= MAX_CLIENTS ||
 			!GameClient()->m_Snap.m_aCharacters[ClientId].m_Active)
 		{
-			if(m_aQmDDraceProgressClientId[Dummy] >= 0)
+			if(m_aMapProgressClientId[Dummy] >= 0)
 			{
 				Progress.Reset();
 				m_GoresDebugRouteCache.Invalidate();
 			}
-			m_aQmDDraceProgressClientId[Dummy] = -1;
+			m_aMapProgressClientId[Dummy] = -1;
 			m_aQmDDraceProgressHasPreviousPos[Dummy] = false;
 			m_aQmDDraceTeleCheckpoint[Dummy] = 0;
 			continue;
 		}
-		if(m_aQmDDraceProgressClientId[Dummy] != ClientId)
+		if(m_aMapProgressClientId[Dummy] != ClientId)
 		{
 			Progress.Reset();
 			m_GoresDebugRouteCache.Invalidate();
 			m_aQmDDraceProgressHasPreviousPos[Dummy] = false;
 			m_aQmDDraceTeleCheckpoint[Dummy] = 0;
-			m_aQmDDraceProgressClientId[Dummy] = ClientId;
+			m_aMapProgressClientId[Dummy] = ClientId;
 		}
 		const auto &Character = GameClient()->m_Snap.m_aCharacters[ClientId];
 		const vec2 Pos((float)Character.m_Cur.m_X, (float)Character.m_Cur.m_Y);
@@ -4058,7 +4085,8 @@ void CTClient::UpdateDDraceMapProgress()
 			m_aQmDDraceTeleCheckpoint[Dummy] = Character.m_ExtendedData.m_TeleCheckpoint;
 		m_aQmDDraceProgressPreviousPos[Dummy] = Pos;
 		m_aQmDDraceProgressHasPreviousPos[Dummy] = true;
-		Progress.Update(m_QmDDraceProgressMap, Index, m_aQmDDraceTeleCheckpoint[Dummy], GORES_DISTANCE_FIELD_DIJKSTRA_BUDGET);
+		// 观战只按当前位置到终点估算，不把已观察到的计时 CP 当作进度依据。
+		Progress.Update(m_QmDDraceProgressMap, Index, m_aQmDDraceTeleCheckpoint[Dummy], GORES_DISTANCE_FIELD_DIJKSTRA_BUDGET, Dummy < NUM_DUMMIES);
 		m_aGoresMapProgressValid[Dummy] = Progress.Estimate().m_Valid;
 		m_aGoresMapProgress[Dummy] = Progress.Estimate().m_Progress;
 	}
@@ -4075,6 +4103,9 @@ void CTClient::UpdateGoresMapProgress()
 			m_aGoresMapProgressValid[i] = false;
 			m_aGoresMapProgress[i] = 0.0f;
 		}
+		m_aMapProgressClientId[NUM_DUMMIES] = -1;
+		m_aGoresMapProgressValid[NUM_DUMMIES] = false;
+		m_aGoresMapProgress[NUM_DUMMIES] = 0.0f;
 	};
 
 	if(Client()->State() != IClient::STATE_ONLINE || !IsGoresMapProgressEnabled())
@@ -4110,9 +4141,26 @@ void CTClient::UpdateGoresMapProgress()
 		return;
 	}
 
+	const int SpectatorId = GoresMapProgressClientId(NUM_DUMMIES);
+	m_aMapProgressClientId[NUM_DUMMIES] = SpectatorId;
+	m_aGoresMapProgressValid[NUM_DUMMIES] = false;
+	m_aGoresMapProgress[NUM_DUMMIES] = 0.0f;
+	if(SpectatorId >= 0 && GameClient()->m_Snap.m_aCharacters[SpectatorId].m_Active)
+	{
+		const auto &Character = GameClient()->m_Snap.m_aCharacters[SpectatorId].m_Cur;
+		const int Index = pCollision->GetPureMapIndex(vec2((float)Character.m_X, (float)Character.m_Y));
+		if(Index >= 0 && Index < MapCellCount)
+		{
+			const auto Estimate = QmMapProgress::EstimateDistance(m_vGoresDistanceToFinish[(size_t)Index], m_GoresStartDistanceToFinish);
+			m_aGoresMapProgressValid[NUM_DUMMIES] = Estimate.m_Valid;
+			m_aGoresMapProgress[NUM_DUMMIES] = Estimate.m_Progress;
+		}
+	}
+
 	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
 	{
 		m_aGoresMapProgressValid[Dummy] = false;
+		m_aMapProgressClientId[Dummy] = GoresMapProgressClientId(Dummy);
 
 		if(Dummy == 1 && !Client()->DummyConnected())
 			continue;

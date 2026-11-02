@@ -13,14 +13,68 @@ namespace
 		return Map;
 	}
 
-	QmMapProgress::SEstimate MoveProgressPlayer(QmMapProgress::CPlayer &Player, const QmMapProgress::CMap &Map, int Index, int TeleCheckpoint = 0)
+	QmMapProgress::SEstimate MoveProgressPlayer(QmMapProgress::CPlayer &Player, const QmMapProgress::CMap &Map, int Index, int TeleCheckpoint = 0, bool UseTimeCheckpoints = true)
 	{
 		Player.Observe(Map.Tile(Index), Index);
 		// 小地图也分多次推进，以覆盖换段和回传后重建距离场的行为。
 		for(int Step = 0; Step < 128; ++Step)
-			Player.Update(Map, Index, TeleCheckpoint, 128);
+			Player.Update(Map, Index, TeleCheckpoint, 128, UseTimeCheckpoints);
 		return Player.Estimate();
 	}
+}
+
+TEST(QmMapProgressTarget, ExplicitSpectatorTargetTakesPriorityOverLocalPlayer)
+{
+	EXPECT_EQ(QmMapProgress::ResolveClientId(3, true, 17), 17);
+	EXPECT_EQ(QmMapProgress::ResolveClientId(-1, true, 17), 17);
+	EXPECT_EQ(QmMapProgress::ResolveClientId(3, true, 18), 18);
+}
+
+TEST(QmMapProgressTarget, FreeviewAndInvalidTargetsKeepTheLocalPlayer)
+{
+	for(const int SpectatorId : std::array<int, 3>{-1, MAX_CLIENTS, MAX_CLIENTS + 1})
+	{
+		SCOPED_TRACE(SpectatorId);
+		EXPECT_EQ(QmMapProgress::ResolveClientId(3, true, SpectatorId), 3);
+	}
+	EXPECT_EQ(QmMapProgress::ResolveClientId(3, false, 17), 3);
+}
+
+TEST(QmMapProgressDistance, MidRunObservationUsesRemainingDistanceAndCanMoveBackwards)
+{
+	const auto MidRun = QmMapProgress::EstimateDistance(40, 100);
+	ASSERT_TRUE(MidRun.m_Valid);
+	EXPECT_FLOAT_EQ(MidRun.m_Progress, 0.6f);
+	EXPECT_FLOAT_EQ(QmMapProgress::EstimateDistance(70, 100).m_Progress, 0.3f);
+	EXPECT_FLOAT_EQ(QmMapProgress::EstimateDistance(0, 100).m_Progress, 1.0f);
+	EXPECT_FLOAT_EQ(QmMapProgress::EstimateDistance(100, 100).m_Progress, 0.0f);
+	EXPECT_FLOAT_EQ(QmMapProgress::EstimateDistance(150, 100).m_Progress, 0.0f);
+}
+
+TEST(QmMapProgressDistance, MissingRouteOrStartDistanceStaysUnknown)
+{
+	EXPECT_FALSE(QmMapProgress::EstimateDistance(QmMapProgress::INF, 100).m_Valid);
+	EXPECT_FALSE(QmMapProgress::EstimateDistance(-1, 100).m_Valid);
+	EXPECT_FALSE(QmMapProgress::EstimateDistance(40, -1).m_Valid);
+	EXPECT_FALSE(QmMapProgress::EstimateDistance(40, 0).m_Valid);
+	EXPECT_FALSE(QmMapProgress::EstimateDistance(40, QmMapProgress::INF).m_Valid);
+}
+
+TEST(QmMapProgress, SpectatorUsesDistanceToFinishWithoutCheckpointHistory)
+{
+	auto Map = MakeProgressLine(11);
+	Map.SetTile(2, QmMapProgress::MakeTile(TILE_TIME_CHECKPOINT_FIRST));
+	Map.SetTile(8, QmMapProgress::MakeTile(TILE_TIME_CHECKPOINT_FIRST + 1));
+	Map.Finalize();
+	QmMapProgress::CPlayer Player;
+	const auto MidRun = MoveProgressPlayer(Player, Map, 6, 0, false);
+	ASSERT_TRUE(MidRun.m_Valid);
+	EXPECT_FLOAT_EQ(MidRun.m_Progress, 0.6f);
+	MoveProgressPlayer(Player, Map, 8, 0, false);
+	EXPECT_FLOAT_EQ(MoveProgressPlayer(Player, Map, 5, 0, false).m_Progress, 0.5f);
+	EXPECT_FLOAT_EQ(MoveProgressPlayer(Player, Map, 2, 0, false).m_Progress, 0.2f);
+	EXPECT_FLOAT_EQ(MoveProgressPlayer(Player, Map, 1, 0, false).m_Progress, 0.1f);
+	EXPECT_FALSE(Player.UsesSegmentRoute());
 }
 
 TEST(QmMapProgress, DragThroughFreezeUsesRouteLengthAndCanGoBack)

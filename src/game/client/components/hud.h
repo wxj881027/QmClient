@@ -572,8 +572,7 @@ private:
 	bool m_LegacyMediaInfoRendered = false;
 	CQmLegacyMediaHudLyricState m_LegacyMediaLyricState;
 	std::array<QmHudMapProgress::CProgressState, NUM_DUMMIES> m_aIslandMapProgress;
-	float m_aMapProgressDisplayed[NUM_DUMMIES] = {0.0f, 0.0f};
-	bool m_aMapProgressInitialized[NUM_DUMMIES] = {false, false};
+	std::array<QmHudMapProgress::CProgressState, NUM_DUMMIES> m_aMapProgress;
 };
 
 #endif

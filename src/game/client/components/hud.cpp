@@ -1274,10 +1274,8 @@ void CHud::OnReset()
 	m_LastSpectatorCountTick = 0;
 	for(auto &Progress : m_aIslandMapProgress)
 		Progress.Reset();
-	m_aMapProgressDisplayed[0] = 0.0f;
-	m_aMapProgressDisplayed[1] = 0.0f;
-	m_aMapProgressInitialized[0] = false;
-	m_aMapProgressInitialized[1] = false;
+	for(auto &Progress : m_aMapProgress)
+		Progress.Reset();
 	m_MediaIslandAnimState.Reset();
 	m_MediaIslandFrameCache.Reset();
 	m_LegacyMediaLyricState.Reset();
@@ -5109,7 +5107,8 @@ void CHud::RenderMediaIsland()
 		const bool Preview = GameClient()->m_HudEditor.IsActive();
 		const bool HasProgress = Preview || GameClient()->m_TClient.HasGoresMapProgress(DummyIndex);
 		const float TargetProgress = Preview ? 0.426f : GameClient()->m_TClient.GetGoresMapProgress(DummyIndex);
-		const float Progress = m_aIslandMapProgress[DummyIndex].Update(HasProgress, TargetProgress, Client()->RenderFrameTime());
+		const int ProgressClientId = Preview ? -1 : GameClient()->m_TClient.GetGoresMapProgressClientId(DummyIndex);
+		const float Progress = m_aIslandMapProgress[DummyIndex].Update(HasProgress, TargetProgress, Client()->RenderFrameTime(), ProgressClientId);
 		const float RowY = IslandY + ProgressRows.m_ProgressY;
 		const float RowHeight = std::min(BottomRowLineHeight, std::max(0.0f, IslandY + AnimatedIslandHeight - BottomRowPaddingY - RowY));
 		const float ProgressAlpha = EntranceContentAlpha * (ProgressRows.m_ProgressInHeader ? 1.0f : BottomAlpha);
@@ -6580,20 +6579,11 @@ void CHud::RenderMapProgressBar()
 	const int DummyIndex = g_Config.m_ClDummy ? 1 : 0;
 	const bool HasProgress = Preview || GameClient()->m_TClient.HasGoresMapProgress(DummyIndex);
 	const float TargetProgress = Preview ? 0.426f : (HasProgress ? std::clamp(GameClient()->m_TClient.GetGoresMapProgress(DummyIndex), 0.0f, 1.0f) : 0.0f);
-	const bool ProgressWasInitialized = m_aMapProgressInitialized[DummyIndex];
-	const float PreviousDisplayedProgress = std::clamp(m_aMapProgressDisplayed[DummyIndex], 0.0f, 1.0f);
-	if(!m_aMapProgressInitialized[DummyIndex])
-	{
-		m_aMapProgressDisplayed[DummyIndex] = TargetProgress;
-		m_aMapProgressInitialized[DummyIndex] = true;
-	}
-	else
-	{
-		const float Blend = std::clamp(Client()->RenderFrameTime() * 8.0f, 0.0f, 1.0f);
-		m_aMapProgressDisplayed[DummyIndex] = mix(m_aMapProgressDisplayed[DummyIndex], TargetProgress, Blend);
-	}
-
-	const float DisplayedProgress = std::clamp(m_aMapProgressDisplayed[DummyIndex], 0.0f, 1.0f);
+	const int ProgressClientId = Preview ? -1 : GameClient()->m_TClient.GetGoresMapProgressClientId(DummyIndex);
+	auto &ProgressState = m_aMapProgress[DummyIndex];
+	const bool ProgressWasInitialized = ProgressState.IsTracking(ProgressClientId);
+	const float PreviousDisplayedProgress = ProgressState.Displayed();
+	const float DisplayedProgress = ProgressState.Update(HasProgress, TargetProgress, Client()->RenderFrameTime(), ProgressClientId);
 	const bool ProgressIncreased = ProgressWasInitialized && DisplayedProgress > PreviousDisplayedProgress + 0.000001f;
 	const ColorRGBA ConfiguredColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmPlayerStatsMapProgressColor, true));
 	const ColorRGBA FillColor = ColorRGBA(ConfiguredColor.r, ConfiguredColor.g, ConfiguredColor.b, std::clamp(maximum(ConfiguredColor.a, 0.65f), 0.0f, 1.0f));
