@@ -109,9 +109,7 @@ void CMenus::RenderQmHudDebugModeContent(CUIRect &Content, float LineHeight, flo
 	}
 	Flow.Space(LineSpacing);
 
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:debug_mode", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
-		return;
-
+	// 调试模式卡片不放个性调整收起区：细调项本身就是排障入口，直接全部可见才能一眼核对状态。
 	auto RenderCheckbox = [this, &Flow, &Row, LineSpacing](const void *pId, const char *pText, int *pValue) {
 		if(Flow.Control(pText, CurrentSettingsContentMetrics().m_LineHeight, Row))
 		{
