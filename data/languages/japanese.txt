@@ -1232,6 +1232,9 @@ Audio packets
 Audio packs
 == オーディオパック
 
+Aurora: Polar Veil
+== オーロラ：極夜の帳
+
 AUS
 == オーストラリア
 
@@ -1841,6 +1844,9 @@ Binds that use commands the client does not recognize, listed by their raw comma
 Black
 == 黒
 
+Black Flash: Void Rift
+== 黒閃：虚空の裂け目
+
 Blank asset auto fallback
 == 空白アセットの自動フォールバック
 
@@ -2075,6 +2081,9 @@ Cancel your swap request
 Candidate files
 == 候補ファイル
 
+Candy gradient
+== キャンディグラデーション
+
 Cannot join the target player's team
 == 対象プレイヤーのチームには参加できません
 
@@ -2209,6 +2218,9 @@ Chat bubble display duration (seconds)
 
 Chat bubble font size
 == チャットバブルのフォントサイズ
+
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
+== チャット吹き出しのスタイル（0=漫画風会話、1=キャンディグラデーション、2=雲の吹き出し）
 
 Chat bubble text color
 == チャットバブルの文字色
@@ -2687,6 +2699,9 @@ Close the demo player
 Close window after changing settings
 == 設定変更後にウィンドウを閉じる
 
+Cloud bubble
+== 雲の吹き出し
+
 Collapse console
 == コンソールを縮小
 
@@ -2764,6 +2779,9 @@ Colors too close to the map background are hard to read while moving.
 
 Combo
 == コンボ
+
+Comic dialogue
+== 漫画風会話
 
 Comma-separated list of banned clients to be kicked on join
 == 参加時にキックされる禁止クライアントのカンマ区切りリスト
@@ -6119,6 +6137,9 @@ Gap between statusbar items
 Gap between tee and nametag
 == Tee とネームタグの間のギャップ
 
+Gather and disperse
+== 集合と拡散
+
 Gaussian
 == ガウス
 
@@ -6932,6 +6953,9 @@ If the bar covers your chat, lower "Opacity" or "IME font size" first; "Reset IM
 If the wheel feels crowded, remove unused slots in the editor card.
 == ホイールが混み合って見えるなら、エディターカードで使っていないスロットを削除してください。
 
+Ignis: Ember Spirit
+== 焔：残り火の精霊
+
 Ignore clan tag when searching friends
 == フレンド検索時にクランタグを無視する
 
@@ -7147,6 +7171,9 @@ Initializing map layers
 
 Initializing map logic
 == マップロジックを初期化中
+
+Ink: Paper Bloom
+== 墨：和紙のにじみ
 
 Input
 == 入力
@@ -7560,7 +7587,7 @@ Keyword rules
 == キワードルール
 
 Keyword rules are too long. Changes were not saved; shorten or remove a rule.
-== Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+== キーワードルールが長すぎるため、変更を保存できませんでした。ルールを短くするか削除してください。
 
 Kick player
 == プレイヤーをキック
@@ -7819,6 +7846,9 @@ Let server start ghost
 
 Let server start race recorder
 == サーバーにレースレコーダーを開始させる
+
+Let's play together!
+== 一緒に遊ぼう！
 
 Lets you join team i (shows your team if left blank)
 == チーム i に参加できます（空白の場合は自分のチームを表示）
@@ -12942,7 +12972,7 @@ Settings card titles use rainbow colors
 == 設定カードタイトルに虹色を使用
 
 Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
-== Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+== 設定カードの幅：stableId は全幅、!stableId は半幅。複数の項目はセミコロンで区切ります
 
 Settings file
 == 設定ファイル
@@ -14591,6 +14621,9 @@ Standalone
 Star
 == 星形
 
+Stardust: Constellation
+== 星屑：星座
+
 Start (s)
 == 開始 (秒)
 
@@ -14800,6 +14833,9 @@ Strong hook color
 
 Strong Weak Hook
 == 強弱フック
+
+Style
+== スタイル
 
 Style chat names, text, and message colors
 == Style chat names, text, and message colors
@@ -15197,8 +15233,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Tee トレイルの色モード（1=単色、2=現在の Tee 色、3=虹色、4=Tee 速度、5=ランダム）
 
-Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
-== Tee トレイルスタイル（0=オリジナル、1=漫画、2=魔法、3=ピクセル、4=旧番号の漫画、5=旧番号の魔法）
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic, 6=Aurora, 7=Ink, 8=Ignis, 9=Stardust, 10=Black Flash)
+== Tee トレイルスタイル（0=オリジナル、1=漫画、2=魔法、3=ピクセル、4=旧番号の漫画、5=旧番号の魔法、6=オーロラ、7=墨、8=焔、9=星屑、10=黒閃）
 
 Tee Trails
 == Tee トレイル
@@ -16669,6 +16705,12 @@ Use current name
 
 Use current settings
 == 現在の設定を使用
+
+Use custom chat bubble colors
+== チャット吹き出しにカスタムカラーを使用
+
+Use custom colors
+== カスタムカラーを使用
 
 Use custom colors for the pressed hook collision line (0 = always invert)
 == フックキー押下時にカスタムカラーを使用（0 = 常に反転）

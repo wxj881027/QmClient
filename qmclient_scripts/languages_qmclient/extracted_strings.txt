@@ -409,6 +409,7 @@ Audio pack directory
 Audio pack exported.
 Audio packets
 Audio packs
+Aurora: Polar Veil
 AUS
 Authed name color in scoreboard
 Authenticate to rcon
@@ -612,6 +613,7 @@ Binds
 Binds any command to a key, mouse button or wheel direction, including combinations with Ctrl, Alt, Shift and Win.
 Binds that use commands the client does not recognize, listed by their raw command text.
 Black
+Black Flash: Void Rift
 Blank asset auto fallback
 Blank material
 Blank: hides this asset
@@ -2315,6 +2317,7 @@ If exclusive fullscreen fails, switch back to windowed or borderless first.
 If lasers can hit you when shot and pull you to bounce origin (0 for all new maps), or lasers cannot hit you and pull others to shooter.
 If the bar covers your chat, lower "Opacity" or "IME font size" first; "Reset IME appearance" brings back the defaults.
 If the wheel feels crowded, remove unused slots in the editor card.
+Ignis: Ember Spirit
 Ignore clan tag when searching friends
 Ignore keyboard modifier mask
 Ignore voice distance attenuation
@@ -2387,6 +2390,7 @@ Initializing components
 Initializing layers
 Initializing map layers
 Initializing map logic
+Ink: Paper Bloom
 Input
 Input background color
 Input background opacity percentage
@@ -4869,6 +4873,7 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 Standalone
 Star
+Stardust: Constellation
 Start (s)
 Start and connect to local server
 Start at a random queue position on every map join
@@ -5072,7 +5077,7 @@ Tee to Freeze
 Tee to Tee
 Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
-Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic, 6=Aurora, 7=Ink, 8=Ignis, 9=Stardust, 10=Black Flash)
 Tee Trails
 Tee trails
 Teeworlds 0.7 difficulty level (0 = Casual, 1 = Normal, 2 = Competitive).

@@ -1232,6 +1232,9 @@ Audio packets
 Audio packs
 == Аудиопакеты
 
+Aurora: Polar Veil
+== Полярное сияние: полярная вуаль
+
 AUS
 == Австралия
 
@@ -1841,6 +1844,9 @@ Binds that use commands the client does not recognize, listed by their raw comma
 Black
 == Чёрный
 
+Black Flash: Void Rift
+== Чёрная вспышка: разлом пустоты
+
 Blank asset auto fallback
 == Автоматический откат пустого ресурса
 
@@ -2075,6 +2081,9 @@ Cancel your swap request
 Candidate files
 == Файлы-кандидаты
 
+Candy gradient
+== Конфетный градиент
+
 Cannot join the target player's team
 == Нельзя вступить в команду выбранного игрока
 
@@ -2209,6 +2218,9 @@ Chat bubble display duration (seconds)
 
 Chat bubble font size
 == Размер шрифта пузырьков чата
+
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
+== Стиль пузыря чата (0=Диалог комикса, 1=Конфетный градиент, 2=Облачный пузырь)
 
 Chat bubble text color
 == Цвет текста пузырьков чата
@@ -2687,6 +2699,9 @@ Close the demo player
 Close window after changing settings
 == Закрыть окно после изменения настроек
 
+Cloud bubble
+== Облачный пузырь
+
 Collapse console
 == Уменьшить консоль
 
@@ -2764,6 +2779,9 @@ Colors too close to the map background are hard to read while moving.
 
 Combo
 == Комбо
+
+Comic dialogue
+== Диалог комикса
 
 Comma-separated list of banned clients to be kicked on join
 == Список забаненных клиентов через запятую, которые будут кикнуты при подключении
@@ -6119,6 +6137,9 @@ Gap between statusbar items
 Gap between tee and nametag
 == Расстояние между ти и табличкой с именем
 
+Gather and disperse
+== Сбор и рассеивание
+
 Gaussian
 == Гаусс
 
@@ -6932,6 +6953,9 @@ If the bar covers your chat, lower "Opacity" or "IME font size" first; "Reset IM
 If the wheel feels crowded, remove unused slots in the editor card.
 == Если колесо кажется перегруженным, уберите лишние ячейки в карточке редактора.
 
+Ignis: Ember Spirit
+== Пламя: дух углей
+
 Ignore clan tag when searching friends
 == Игнорировать тег клана при поиске друзей
 
@@ -7147,6 +7171,9 @@ Initializing map layers
 
 Initializing map logic
 == Инициализация логики карты
+
+Ink: Paper Bloom
+== Тушь: цветение на бумаге
 
 Input
 == Ввод
@@ -7560,7 +7587,7 @@ Keyword rules
 == Правила ключевых слов
 
 Keyword rules are too long. Changes were not saved; shorten or remove a rule.
-== Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+== Правила ключевых слов слишком длинные. Изменения не сохранены; сократите или удалите правило.
 
 Kick player
 == Кикнуть игрока
@@ -7819,6 +7846,9 @@ Let server start ghost
 
 Let server start race recorder
 == Разрешить серверу запускать рекордер гонки
+
+Let's play together!
+== Давайте играть вместе!
 
 Lets you join team i (shows your team if left blank)
 == Позволяет присоединиться к команде i (оставьте пустым, чтобы показать вашу команду)
@@ -12942,7 +12972,7 @@ Settings card titles use rainbow colors
 == Радужный цвет заголовков карточек настроек
 
 Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
-== Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+== Ширина карточек настроек: stableId — полная ширина, !stableId — половина ширины; разделитель — точка с запятой
 
 Settings file
 == Файл настроек
@@ -14591,6 +14621,9 @@ Standalone
 Star
 == Звезда
 
+Stardust: Constellation
+== Звёздная пыль: созвездие
+
 Start (s)
 == Начало (с)
 
@@ -14800,6 +14833,9 @@ Strong hook color
 
 Strong Weak Hook
 == Сильный/Слабый крюк
+
+Style
+== Стиль
 
 Style chat names, text, and message colors
 == Style chat names, text, and message colors
@@ -15197,8 +15233,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Режим цвета следа Tee (1=Сплошной, 2=Текущий цвет Tee, 3=Радуга, 4=Скорость Tee, 5=Случайный)
 
-Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
-== Стиль следа Tee (0=Оригинал, 1=Манга, 2=Магия, 3=Пиксели, 4=Старый номер манги, 5=Старый номер магии)
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic, 6=Aurora, 7=Ink, 8=Ignis, 9=Stardust, 10=Black Flash)
+== Стиль следа Tee (0=Оригинал, 1=Манга, 2=Магия, 3=Пиксели, 4=Старый номер манги, 5=Старый номер магии, 6=Полярное сияние, 7=Тушь, 8=Пламя, 9=Звёздная пыль, 10=Чёрная вспышка)
 
 Tee Trails
 == Следы ти
@@ -16669,6 +16705,12 @@ Use current name
 
 Use current settings
 == Использовать текущие настройки
+
+Use custom chat bubble colors
+== Использовать свои цвета пузырей чата
+
+Use custom colors
+== Использовать свои цвета
 
 Use custom colors for the pressed hook collision line (0 = always invert)
 == Использовать свои цвета линии зацепа при нажатой клавише (0 = всегда инвертировать)

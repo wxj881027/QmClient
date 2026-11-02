@@ -1232,6 +1232,9 @@ Audio packets
 Audio packs
 == 音頻包
 
+Aurora: Polar Veil
+== 極光：極夜光幕
+
 AUS
 == 澳洲
 
@@ -1840,6 +1843,9 @@ Binds that use commands the client does not recognize, listed by their raw comma
 
 Black
 == 黑色
+
+Black Flash: Void Rift
+== 黑閃：虛空裂隙
 
 Blank asset auto fallback
 == 空白資源自動回退
@@ -6947,6 +6953,9 @@ If the bar covers your chat, lower "Opacity" or "IME font size" first; "Reset IM
 If the wheel feels crowded, remove unused slots in the editor card.
 == 覺得輪盤太擠的話，到編輯器卡片裡移除用不到的槽位。
 
+Ignis: Ember Spirit
+== 焰靈：餘燼之靈
+
 Ignore clan tag when searching friends
 == 搜索好友時忽略戰隊標籤
 
@@ -7162,6 +7171,9 @@ Initializing map layers
 
 Initializing map logic
 == 正在初始化地圖邏輯
+
+Ink: Paper Bloom
+== 水墨：宣紙漾墨
 
 Input
 == 輸入
@@ -7575,7 +7587,7 @@ Keyword rules
 == 關鍵詞規則
 
 Keyword rules are too long. Changes were not saved; shorten or remove a rule.
-== Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+== 關鍵字規則過長，未儲存變更；請縮短或刪除部分規則。
 
 Kick player
 == 踢出玩家
@@ -12960,7 +12972,7 @@ Settings card titles use rainbow colors
 == 設定卡片標題使用彩虹色
 
 Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
-== Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+== 設定卡片寬度：stableId 表示整行寬度，!stableId 表示半行寬度，多項以分號分隔
 
 Settings file
 == 設置文件
@@ -14609,6 +14621,9 @@ Standalone
 Star
 == 星形
 
+Stardust: Constellation
+== 星鏈：星海連線
+
 Start (s)
 == 開始 (秒)
 
@@ -15218,8 +15233,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Tee 軌跡顏色模式（1=純色，2=當前 Tee 顏色，3=彩虹，4=按 Tee 速度著色，5=隨機）
 
-Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
-== Tee 拖尾樣式（0=原版，1=漫畫，2=魔法，3=像素，4=舊編號漫畫，5=舊編號魔法）
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic, 6=Aurora, 7=Ink, 8=Ignis, 9=Stardust, 10=Black Flash)
+== Tee 拖尾樣式（0=原版，1=漫畫，2=魔法，3=像素，4=舊編號漫畫，5=舊編號魔法，6=極光，7=水墨，8=焰靈，9=星鏈，10=黑閃）
 
 Tee Trails
 == Tee 拖尾
