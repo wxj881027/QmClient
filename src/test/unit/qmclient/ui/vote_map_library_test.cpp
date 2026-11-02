@@ -10,15 +10,17 @@ using namespace QmVoteMaps;
 
 TEST(VoteMapLibrary, CatalogKeepsOfficialMetadataAndZeroStarMaps)
 {
-	const char *pJson = R"([{"name":"Zero","type":"Race","mapper":"作者","difficulty":0,"points":0,"release":"2026-10-01 12:00"},{"name":"Alpha","type":"Novice","difficulty":2,"points":3}])";
+	const char *pJson = R"([{"name":"Zero","type":"Race","mapper":"作者","difficulty":0,"points":0,"release":"2026-10-01 12:00","thumbnail":"https://ddnet.org/ranks/maps/Zero.png"},{"name":"Alpha","type":"Novice","difficulty":2,"points":3}])";
 	std::vector<SMap> vMaps;
 	ASSERT_TRUE(ParseCatalog(pJson, str_length(pJson), vMaps));
 	ASSERT_EQ(vMaps.size(), 2u);
 	EXPECT_EQ(vMaps[0].m_Name, "Alpha");
+	EXPECT_TRUE(vMaps[0].m_Thumbnail.empty());
 	EXPECT_EQ(vMaps[1].m_Stars, 0);
 	EXPECT_EQ(vMaps[1].m_Points, 0);
 	EXPECT_EQ(vMaps[1].m_Mapper, "作者");
 	EXPECT_EQ(vMaps[1].m_Release, "2026-10-01 12:00");
+	EXPECT_EQ(vMaps[1].m_Thumbnail, "https://ddnet.org/ranks/maps/Zero.png");
 }
 
 TEST(VoteMapLibrary, MalformedRefreshPreservesLastValidCatalog)
@@ -136,7 +138,7 @@ TEST(VoteMapLibrary, MergePreservesCatalogMetadataAndServerOnlyMaps)
 	str_copy(aOptions[2].m_aDescription, "Restart server");
 	aOptions[0].m_pNext = &aOptions[1];
 	aOptions[1].m_pNext = &aOptions[2];
-	const auto vMerged = MergeCatalog({{"Alpha", "Author", "Novice", "", 2, 3}}, aOptions);
+	const auto vMerged = MergeCatalog({{"Alpha", "Author", "Novice", "", "", 2, 3}}, aOptions);
 	ASSERT_EQ(vMerged.size(), 2u);
 	EXPECT_EQ(vMerged[0].m_Mapper, "Author");
 	EXPECT_EQ(vMerged[1].m_Name, "Custom");
@@ -146,7 +148,7 @@ TEST(VoteMapLibrary, MergePreservesCatalogMetadataAndServerOnlyMaps)
 
 TEST(VoteMapLibrary, CombinesCategoryStarsFavoritesSearchAndCompletion)
 {
-	const SMap Map{"森林", "作者", "Novice", "", 2, 3};
+	const SMap Map{"森林", "作者", "Novice", "", "", 2, 3};
 	SFilter Filter;
 	Filter.m_Category = "Novice";
 	Filter.m_StarMask = (1 << 2) | (1 << 3);
@@ -168,12 +170,12 @@ TEST(VoteMapLibrary, UnfilteredViewIncludesUnknownCompletionAndDifficulty)
 	EXPECT_TRUE(Matches(Map, Filter, false, ECompletion::UNKNOWN));
 	Filter.m_StarMask = 1;
 	EXPECT_FALSE(Matches(Map, Filter, false, ECompletion::UNKNOWN));
-	EXPECT_TRUE(Matches({"Zero", "", "Race", "", 0}, Filter, false, ECompletion::UNKNOWN));
+	EXPECT_TRUE(Matches({"Zero", "", "Race", "", "", 0}, Filter, false, ECompletion::UNKNOWN));
 }
 
 TEST(VoteMapLibrary, SortingUsesMetadataAndKeepsUnknownDifficultyLast)
 {
-	const std::vector<SMap> vMaps = {{"B", "", "", "2026-10-01", 3}, {"A", "", "", "2025-01-01", 0}, {"Custom"}};
+	const std::vector<SMap> vMaps = {{"B", "", "", "2026-10-01", "", 3}, {"A", "", "", "2025-01-01", "", 0}, {"Custom"}};
 	std::vector<int> vIndices{0, 1, 2};
 	Sort(vIndices, vMaps, ESort::DIFFICULTY);
 	EXPECT_EQ(vIndices, (std::vector<int>{1, 0, 2}));

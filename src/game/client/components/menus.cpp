@@ -4582,7 +4582,10 @@ void CMenus::Render()
 			if(CanPrewarmSettings && MenuOpenFrame > 0)
 				PrewarmVisibleSettingsResources(MainView);
 			if(m_GamePage != PAGE_CALLVOTE)
+			{
 				m_QmVoteMenu.m_Loader.Suspend();
+				m_QmVoteMenu.m_Covers.Release();
+			}
 			if(m_GamePage == PAGE_GAME)
 			{
 				CPerfTimer StageTimer;
@@ -6132,7 +6135,10 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 void CMenus::SetActive(bool Active)
 {
 	if(!Active)
+	{
 		m_QmVoteMenu.m_Loader.Suspend();
+		m_QmVoteMenu.m_Covers.Release();
+	}
 	if(Active != m_MenuActive)
 	{
 		Ui()->CancelTouchInput();
@@ -6613,6 +6619,8 @@ void CMenus::OnReset()
 void CMenus::OnShutdown()
 {
 	m_QmVoteMenu.m_Loader.Suspend();
+	// 图形接口此刻仍存活，地图库封面的 GPU 纹理必须在这一步释放。
+	m_QmVoteMenu.m_Covers.Shutdown(Graphics());
 	if(m_pScreenshotWatermarkJob)
 		m_pScreenshotWatermarkJob->Cancel();
 	m_pScreenshotWatermarkJob.reset();
@@ -8222,6 +8230,7 @@ void CMenus::OnStateChange(int NewState, int OldState)
 	Ui()->CancelTouchInput();
 	m_DemoTouchSeeking = false;
 	m_QmVoteMenu.m_Loader.Suspend();
+	m_QmVoteMenu.m_Covers.Release();
 	m_QmVoteMenu.m_SelectedName.clear();
 	m_QmVoteMenu.m_Status.clear();
 	m_QmVoteMenu.m_Dirty = true;
