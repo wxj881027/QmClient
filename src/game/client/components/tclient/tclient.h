@@ -274,6 +274,7 @@ class CTClient : public CComponent
 	bool m_aQmDDraceProgressHasPreviousPos[NUM_DUMMIES + 1] = {};
 	int GoresMapProgressSlot(int Dummy) const;
 	int GoresMapProgressClientId(int Slot) const;
+	std::optional<vec2> GoresMapProgressPosition(int ClientId) const;
 	bool IsDDraceMapProgressMap() const;
 	void ResetDDraceMapProgress();
 	void UpdateDDraceMapProgress();

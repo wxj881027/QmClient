@@ -40,6 +40,49 @@ TEST(QmMapProgressTarget, FreeviewAndInvalidTargetsKeepTheLocalPlayer)
 	EXPECT_EQ(QmMapProgress::ResolveClientId(3, false, 17), 3);
 }
 
+TEST(QmMapProgressPosition, FullCharacterTakesPriorityOverSpectatorCoordinates)
+{
+	const auto Position = QmMapProgress::ResolvePosition(vec2(16, 32), vec2(48, 64), vec2(80, 96));
+	ASSERT_TRUE(Position);
+	EXPECT_EQ(*Position, vec2(16, 32));
+}
+
+TEST(QmMapProgressPosition, MissingFullCharacterUsesSpecCharacter)
+{
+	const auto Position = QmMapProgress::ResolvePosition(std::nullopt, vec2(48, 64), vec2(80, 96));
+	ASSERT_TRUE(Position);
+	EXPECT_EQ(*Position, vec2(48, 64));
+}
+
+TEST(QmMapProgressPosition, SpectatorCoordinatesRemainUsableWithoutCharacterSnapshots)
+{
+	const auto Position = QmMapProgress::ResolvePosition(std::nullopt, std::nullopt, vec2(0, 0));
+	ASSERT_TRUE(Position);
+	EXPECT_EQ(*Position, vec2(0, 0));
+}
+
+TEST(QmMapProgressPosition, MissingAllSourcesStaysUnknown)
+{
+	EXPECT_FALSE(QmMapProgress::ResolvePosition(std::nullopt, std::nullopt, std::nullopt));
+}
+
+TEST(QmMapProgressPosition, SpectatorCoordinatesDriveProgressAndRouteFromTheSameTile)
+{
+	auto Map = MakeProgressLine(11);
+	Map.Finalize();
+	const auto Position = QmMapProgress::ResolvePosition(std::nullopt, std::nullopt, vec2(6 * 32 + 16, 16));
+	ASSERT_TRUE(Position);
+	QmMapProgress::CPlayer Player;
+	const auto Estimate = MoveProgressPlayer(Player, Map, (int)(Position->x / 32), 0, false);
+	ASSERT_TRUE(Estimate.m_Valid);
+	EXPECT_FLOAT_EQ(Estimate.m_Progress, 0.6f);
+	std::vector<int> vRoute;
+	ASSERT_TRUE(Player.BuildRoute(vRoute));
+	ASSERT_FALSE(vRoute.empty());
+	EXPECT_EQ(vRoute.front(), 6);
+	EXPECT_EQ(vRoute.back(), 10);
+}
+
 TEST(QmMapProgressDistance, MidRunObservationUsesRemainingDistanceAndCanMoveBackwards)
 {
 	const auto MidRun = QmMapProgress::EstimateDistance(40, 100);

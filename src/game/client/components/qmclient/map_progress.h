@@ -10,6 +10,7 @@
 #include <array>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <queue>
 #include <tuple>
 #include <utility>
@@ -405,6 +406,13 @@ namespace QmMapProgress
 	inline int ResolveClientId(int LocalClientId, bool Spectating, int SpectatorId)
 	{
 		return Spectating && SpectatorId >= 0 && SpectatorId < MAX_CLIENTS ? SpectatorId : LocalClientId;
+	}
+
+	inline std::optional<vec2> ResolvePosition(std::optional<vec2> Character, std::optional<vec2> SpecCharacter, std::optional<vec2> Spectator)
+	{
+		if(Character)
+			return Character;
+		return SpecCharacter ? SpecCharacter : Spectator;
 	}
 
 	inline SEstimate EstimateDistance(int RemainingDistance, int StartDistance)
