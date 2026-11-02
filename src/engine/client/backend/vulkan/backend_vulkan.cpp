@@ -1603,11 +1603,13 @@ protected:
 		case VK_SUCCESS:
 			break;
 		case VK_SUBOPTIMAL_KHR:
+			// 只记录，不重建交换链。部分驱动（实测 Android Adreno）会持续返回
+			// SUBOPTIMAL_KHR，若每次呈现都排队重建，交换链会被反复销毁重建，
+			// 帧率掉到个位数并持续发烫。
 			if(IsVerbose())
 			{
-				dbg_msg("vulkan", "queueing swap chain recreation because the current is sub optimal");
+				dbg_msg("vulkan", "swap chain is sub optimal (ignored)");
 			}
-			m_RecreateSwapChain = true;
 			break;
 		default:
 			pCriticalError = "unknown error";
@@ -4429,7 +4431,24 @@ public:
 		}
 
 #ifdef VK_KHR_portability_enumeration
-		vVKExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+		// 这个扩展是 macOS/iOS 上 MoltenVK 需要的，Android 的 Adreno/Mali 驱动并不提供。
+		// 无条件追加会让 vkCreateInstance 返回 VK_ERROR_EXTENSION_NOT_PRESENT，
+		// 整条 Vulkan 路径直接初始化失败（手机上表现为无法初始化 Vulkan）。
+		// 这里只在实际支持时才请求。
+		bool PortabilityEnumerationSupported = false;
+		uint32_t AvailableCount = 0;
+		if(vkEnumerateInstanceExtensionProperties(nullptr, &AvailableCount, nullptr) == VK_SUCCESS && AvailableCount > 0)
+		{
+			std::vector<VkExtensionProperties> vAvailable(AvailableCount);
+			if(vkEnumerateInstanceExtensionProperties(nullptr, &AvailableCount, vAvailable.data()) == VK_SUCCESS)
+			{
+				PortabilityEnumerationSupported = std::any_of(vAvailable.begin(), vAvailable.end(), [](const VkExtensionProperties &Props) {
+					return str_comp(Props.extensionName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) == 0;
+				});
+			}
+		}
+		if(PortabilityEnumerationSupported)
+			vVKExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 #endif
 
 		return true;
@@ -5324,6 +5343,13 @@ public:
 
 	[[nodiscard]] bool CreateSwapChain(VkSwapchainKHR &OldSwapChain)
 	{
+		// 设备或函数指针已失效（窗口销毁后设备被清理、又走到重建 swapchain）时直接失败，
+		// 交给上层报图形错误：继续调用驱动会拿空句柄进 vkGetSwapchainImagesKHR 段错误。
+		if(m_VKDevice == VK_NULL_HANDLE || m_pfnCreateSwapchainKHR == nullptr || m_VKPresentSurface == VK_NULL_HANDLE)
+		{
+			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating the swap chain failed, the Vulkan device or surface is gone.");
+			return false;
+		}
 		VkSurfaceCapabilitiesKHR VKSurfCap;
 		if(!GetSurfaceProperties(VKSurfCap))
 			return false;
@@ -5385,6 +5411,13 @@ public:
 		}
 		else if(SwapchainCreateRes == VK_ERROR_NATIVE_WINDOW_IN_USE_KHR)
 			return false;
+		else if(SwapchainCreateRes != VK_SUCCESS)
+		{
+			// 非致命但也没成功（例如窗口正在重建时的 VK_ERROR_INITIALIZATION_FAILED）：
+			// 句柄仍是空的，继续取图像同样会崩，这里按失败返回。
+			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating the swap chain failed.");
+			return false;
+		}
 
 		return true;
 	}
@@ -5401,6 +5434,11 @@ public:
 
 	[[nodiscard]] bool GetSwapChainImageHandles()
 	{
+		if(m_VKDevice == VK_NULL_HANDLE || m_VKSwapChain == VK_NULL_HANDLE || m_pfnGetSwapchainImagesKHR == nullptr)
+		{
+			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Could not get swap chain images, the swap chain is gone.");
+			return false;
+		}
 		uint32_t ImgCount = 0;
 		if(m_pfnGetSwapchainImagesKHR(m_VKDevice, m_VKSwapChain, &ImgCount, nullptr) != VK_SUCCESS)
 		{
@@ -6934,6 +6972,21 @@ public:
 		if(!m_SwapchainCreated)
 			Ret = InitVulkanSwapChain(OldSwapChain);
 
+		// 安卓切后台回来：ANativeWindow 换了，旧 Surface 已经失效（VK_ERROR_SURFACE_LOST_KHR），
+		// 拿着旧表面怎么重建 swapchain 都不会成功。这里按当前窗口重建 Surface 再试一次，
+		// 否则会一路落到“图形错误”对话框（之前是直接段错误）。
+		if(Ret != 0 && m_pWindow != nullptr && m_VKInstance != VK_NULL_HANDLE && m_VKDevice != VK_NULL_HANDLE)
+		{
+			DestroySurface();
+			if(CreateSurface(m_pWindow))
+			{
+				if(IsVerbose())
+					dbg_msg("vulkan", "recreating swap chain on a fresh surface.");
+				OldSwapChain = VK_NULL_HANDLE;
+				Ret = InitVulkanSwapChain(OldSwapChain);
+			}
+		}
+
 		Ret = ReinitializeQmVulkanFrameResources(Ret, OldSwapChainImageCount != m_SwapChainImageCount, [this] { CleanupVulkan<false>(); }, [this] { return InitVulkan<false>(); });
 		if(Ret != 0)
 		{
@@ -8330,6 +8383,9 @@ public:
 
 	VkResult DeviceWaitIdle()
 	{
+		// 设备已被销毁时不能再进驱动，按设备丢失处理，让上层走重建/报错路径。
+		if(m_VKDevice == VK_NULL_HANDLE)
+			return VK_ERROR_DEVICE_LOST;
 		const auto StartTime = m_FrameProfilingActive ? time_get_nanoseconds() : 0ns;
 		VkResult Result = vkDeviceWaitIdle(m_VKDevice);
 		if(m_FrameProfilingActive)

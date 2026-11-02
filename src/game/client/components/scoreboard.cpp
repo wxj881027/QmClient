@@ -204,20 +204,64 @@ void CScoreboard::SetUiMousePos(vec2 Pos)
 void CScoreboard::ConKeyScoreboard(IConsole::IResult *pResult, void *pUserData)
 {
 	CScoreboard *pSelf = static_cast<CScoreboard *>(pUserData);
+	pSelf->SetActive(pResult->GetInteger(0) != 0);
+}
 
-	pSelf->GameClient()->m_Spectator.OnRelease();
-	pSelf->GameClient()->m_Emoticon.OnRelease();
+void CScoreboard::SetActive(bool Active)
+{
+	GameClient()->m_Spectator.OnRelease();
+	GameClient()->m_Emoticon.OnRelease();
 
-	pSelf->m_Active = pResult->GetInteger(0) != 0;
+	m_Active = Active;
 
-	if(!pSelf->IsActive() && pSelf->m_MouseUnlocked)
+	if(!IsActive() && m_MouseUnlocked)
 	{
-		pSelf->Ui()->ClosePopupMenus();
-		pSelf->m_MouseUnlocked = false;
-		if(pSelf->m_LastMousePos.has_value())
-			pSelf->SetUiMousePos(pSelf->m_LastMousePos.value());
-		pSelf->m_LastMousePos = pSelf->Ui()->MousePos();
+		Ui()->ClosePopupMenus();
+		m_MouseUnlocked = false;
+		if(m_LastMousePos.has_value())
+			SetUiMousePos(m_LastMousePos.value());
+		m_LastMousePos = Ui()->MousePos();
 	}
+}
+
+bool CScoreboard::MobilePanelContains(vec2 NdcPos) const
+{
+	const CUIRect &Panel = m_LastPanelNdc;
+	return Panel.w > 0.0f && Panel.h > 0.0f && Panel.Inside(NdcPos);
+}
+
+bool CScoreboard::MobileRowTapActive() const
+{
+	// 手机端点整行是“跟随”，玩家卡走行尾的「…」；桌面保持整行点开玩家卡。
+	return QmUiMobilePlatform();
+}
+
+void CScoreboard::SpectatePlayer(int ClientId)
+{
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return;
+	const bool IsSpectating = GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == ClientId;
+	if(IsSpectating)
+	{
+		GameClient()->m_Spectator.Spectate(SPEC_FREEVIEW);
+		Console()->ExecuteLine("say /spec");
+		return;
+	}
+	if(GameClient()->m_Snap.m_SpecInfo.m_Active)
+	{
+		GameClient()->m_Spectator.Spectate(ClientId);
+		return;
+	}
+	// 非旁观时由服务器把客户端切进旁观：/spec "名字"。
+	const char *pName = GameClient()->m_aClients[ClientId].m_aName;
+	if(pName[0] == '\0')
+		return;
+	char aCommand[2 * MAX_NAME_LENGTH + 32];
+	str_copy(aCommand, "say /spec \"");
+	char *pDst = aCommand + str_length(aCommand);
+	str_escape(&pDst, pName, aCommand + sizeof(aCommand));
+	str_append(aCommand, "\"");
+	Console()->ExecuteLine(aCommand);
 }
 
 void CScoreboard::UpdateQmAxiomScoreMode()
@@ -385,6 +429,12 @@ bool CScoreboard::OnInput(const IInput::CEvent &Event)
 {
 	if(m_MouseUnlocked && Event.m_Key == KEY_ESCAPE && (Event.m_Flags & IInput::FLAG_PRESS))
 	{
+		// 手机上的返回键等价于关掉面板；桌面解锁后 ESC 仍然只是把光标锁回去。
+		if(QmUiMobilePlatform() && IsActive())
+		{
+			SetActive(false);
+			return true;
+		}
 		Ui()->ClosePopupMenus();
 		m_MouseUnlocked = false;
 		if(m_LastMousePos.has_value())
@@ -426,10 +476,19 @@ void CScoreboard::RenderTitle(CUIRect TitleLabel, int Team, const char *pTitle, 
 		}
 	}
 
+	// 地图名不省略：宽度不够就等比缩字号（最小 10），标题保持单行。
+	float FontSize = TitleFontSize;
 	SLabelProperties Props;
 	Props.m_MaxWidth = TitleLabel.w;
 	Props.m_EllipsisAtEnd = true;
-	Ui()->DoLabel(&TitleLabel, pTitle, TitleFontSize, Team == TEAM_RED ? TEXTALIGN_ML : TEXTALIGN_MR, Props);
+	const float TextWidth = TextRender()->TextWidth(FontSize, pTitle);
+	if(TextWidth > TitleLabel.w && TextWidth > 0.0f)
+	{
+		// 先缩字号；缩到下限还放不下就退回省略号，绝不越过自己的框去压右侧时间。
+		FontSize = maximum(10.0f, FontSize * TitleLabel.w / TextWidth);
+		Props.m_EllipsisAtEnd = TextRender()->TextWidth(FontSize, pTitle) > TitleLabel.w;
+	}
+	Ui()->DoLabel(&TitleLabel, pTitle, FontSize, Team == TEAM_RED ? TEXTALIGN_ML : TEXTALIGN_MR, Props);
 }
 
 void CScoreboard::RenderTitleScore(CUIRect ScoreLabel, int Team, float TitleFontSize)
@@ -486,6 +545,7 @@ void CScoreboard::RenderTitleBar(CUIRect TitleBar, int Team, const char *pTitle)
 {
 	dbg_assert(Team == TEAM_RED || Team == TEAM_BLUE || Team == TEAM_GAME, "Team invalid");
 
+	// 标题与 rank1 时间共用同一字号：手机不再单独放大，否则时间会压过地图名。
 	const float TitleFontSize = 20.0f;
 	const float ScoreTextWidth = TextRender()->TextWidth(TitleFontSize, "00:00:00");
 
@@ -1339,8 +1399,40 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		if(m_MouseUnlocked && m_RenderInteractions)
 		{
 			CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
-			const int ButtonResult = Ui()->DoButtonLogic(&ClientData, 0, &Row, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
-			if(ButtonResult != 0)
+			// 手机上没有悬停也没有右键：点整行直接跟随，玩家卡交给行尾的「…」按钮。
+			const bool MobileRow = MobileRowTapActive();
+			CUIRect RowHit = Row;
+			CUIRect CardButton = Row;
+			if(MobileRow)
+			{
+				const float CardButtonWidth = minimum(LineHeight, Row.w * 0.5f);
+				RowHit.VSplitRight(CardButtonWidth, &RowHit, &CardButton);
+				CardButton.HMargin(minimum(2.0f, CardButton.h * 0.2f), &CardButton);
+			}
+
+			const int ButtonResult = Ui()->DoButtonLogic(&ClientData, 0, &RowHit, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
+			bool OpenCard = ButtonResult != 0 && !MobileRow;
+			if(ButtonResult != 0 && MobileRow)
+			{
+				// 拖动列表后的松手是滚动，不是点行跟随。
+				if(!m_MobileRowDragScroll)
+				{
+					SpectatePlayer(ClientId);
+					SetActive(false);
+				}
+			}
+			if(MobileRow)
+			{
+				const bool HoveredCard = Ui()->MouseHovered(&CardButton);
+				const bool CardActive = Ui()->IsPopupOpen(&m_ScoreboardPopupContext) && m_ScoreboardPopupContext.m_ClientId == ClientId;
+				CardButton.Draw(HoveredCard || CardActive ? ScoreboardDecorationColor(ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(4.0f * ItemAlpha)) : ScoreboardDecorationColor(ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(ItemAlpha)), IGraphics::CORNER_ALL, RoundRadius);
+				TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(ItemAlpha));
+				Ui()->DoLabel(&CardButton, FontIcons::FONT_ICON_ELLIPSIS, minimum(LineHeight * 0.7f, 10.0f), TEXTALIGN_MC);
+				TextRender()->TextColor(TextRender()->DefaultTextColor());
+				if(Ui()->DoButtonLogic(&m_aRowCardButtons[ClientId], 0, &CardButton, BUTTONFLAG_LEFT) && !m_MobileRowDragScroll)
+					OpenCard = true;
+			}
+			if(OpenCard)
 			{
 				m_ScoreboardPopupContext.m_pScoreboard = this;
 				m_ScoreboardPopupContext.m_ClientId = ClientId;
@@ -1756,6 +1848,12 @@ void CScoreboard::OnRender()
 	}
 
 	const bool WantActive = IsActive();
+	// 手机上没有“锁定光标”这一步：计分板一打开就按已解锁处理，玩家行和「…」按钮直接可点。
+	if(QmUiMobilePlatform() && WantActive && !m_MouseUnlocked)
+	{
+		m_MouseUnlocked = true;
+		m_LastMousePos = std::nullopt;
+	}
 	// 显示状态转换检测：每次由隐藏转为显示（Tab 开合、死亡自动弹出、游戏结束）都重置
 	// 行内国旗的入场动画起点，保证每次打开计分板国旗都重放入场动画。
 	if(WantActive && !m_WasActive)
@@ -1859,12 +1957,35 @@ void CScoreboard::OnRender()
 	const float ScoreboardWidth = minimum(BaseScoreboardWidth, MaxScoreboardWidth);
 	const float TitleHeight = 30.0f;
 
-	const float ScoreboardTop = 75.0f;
-	CUIRect Scoreboard = {(Screen.w - ScoreboardWidth) / 2.0f, ScoreboardTop, ScoreboardWidth, QmScoreboardPanelHeight(Screen.h, ScoreboardTop)};
+	// 手机：面板顶到更高、整体加高，列表能看到更多行（桌面维持原高度）。
+	const float ScoreboardTop = QmUiMobilePlatform() ? 40.0f : 75.0f;
+	const float ScoreboardHeight = QmUiMobilePlatform() ? QmScoreboardScrollPanelHeight(Screen.h, ScoreboardTop) : QmScoreboardPanelHeight(Screen.h, ScoreboardTop);
+	CUIRect Scoreboard = {(Screen.w - ScoreboardWidth) / 2.0f, ScoreboardTop, ScoreboardWidth, ScoreboardHeight};
 	if(ExtraAnimations)
 	{
 		Scoreboard = ScaleRectAroundCenter(Scoreboard, PanelScale);
 		Scoreboard.y += PanelOffsetY;
+	}
+	if(Screen.w > 0.0f && Screen.h > 0.0f)
+		m_LastPanelNdc = {Scoreboard.x / Screen.w, Scoreboard.y / Screen.h, Scoreboard.w / Screen.w, Scoreboard.h / Screen.h};
+	// 手机：同一根手指拖动列表时，DoButtonLogic 仍会把它判成"点中某行"，
+	// 于是滚动过程中视角被切走。按下后位移超过阈值就按拖动处理，松手不触发跟随。
+	if(MobileRowTapActive())
+	{
+		const vec2 MobileMouse = Ui()->MousePos();
+		if(Ui()->MouseButton(0))
+		{
+			if(!m_MobileRowPressActive)
+			{
+				m_MobileRowPressActive = true;
+				m_MobileRowDragScroll = false;
+				m_MobileRowPressPos = MobileMouse;
+			}
+			else if(distance(MobileMouse, m_MobileRowPressPos) > 8.0f)
+				m_MobileRowDragScroll = true;
+		}
+		else
+			m_MobileRowPressActive = false;
 	}
 	CUIRect ScoreboardContent = Scoreboard;
 	ScoreboardContent.y += ContentOffset;
@@ -2061,6 +2182,9 @@ void CScoreboard::OnRender()
 		CUIRect Title;
 		CUIRect ScoreboardContentBody = ScoreboardContent;
 		ScoreboardContentBody.HSplitTop(TitleHeight, &Title, &ScoreboardContentBody);
+		// 标题保持单行：地图名宽度不够时由 RenderTitle 自动缩字号，不再拆行。
+		const bool StackedTitle = false;
+		CUIRect ControlsRow{};
 		CUIRect SortButton;
 		CUIRect ServerPlayers;
 		CUIRect ScrollButton;
@@ -2076,7 +2200,7 @@ void CScoreboard::OnRender()
 			TitleSplitStyle.m_JustifyContent = EUiAlign::START;
 			static thread_local std::vector<SUiLayoutChild> s_vTitleChildren;
 			std::vector<SUiLayoutChild> &vTitleChildren = s_vTitleChildren;
-			int ChildCount = 1;
+			int ChildCount = StackedTitle ? 0 : 1;
 			if(ShowServerPlayers)
 				++ChildCount;
 			if(ShowScrollButton)
@@ -2085,7 +2209,8 @@ void CScoreboard::OnRender()
 			++ChildCount; // 统计列切换按钮
 			vTitleChildren.assign(ChildCount, SUiLayoutChild{});
 			int ChildIndex = 0;
-			vTitleChildren[ChildIndex++].m_Style.m_Width = SUiLength::Flex(1.0f);
+			if(!StackedTitle)
+				vTitleChildren[ChildIndex++].m_Style.m_Width = SUiLength::Flex(1.0f);
 			if(ShowServerPlayers)
 				vTitleChildren[ChildIndex++].m_Style.m_Width = SUiLength::Px(ServerPlayersWidth);
 			const int ScrollButtonIndex = ShowScrollButton ? ChildIndex++ : -1;
@@ -2095,10 +2220,13 @@ void CScoreboard::OnRender()
 			vTitleChildren[StatisticsButtonIndex].m_Style.m_Width = SUiLength::Px(StatisticsButtonWidth);
 			const int SortButtonIndex = ChildIndex++;
 			vTitleChildren[SortButtonIndex].m_Style.m_Width = SUiLength::Px(SortButtonWidth);
-			LayoutEngine.ComputeChildren(TitleSplitStyle, CUiV2LegacyAdapter::FromCUIRect(Title), vTitleChildren);
-			Title = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[0].m_Box);
+			const CUIRect &SplitRect = StackedTitle ? ControlsRow : Title;
+			LayoutEngine.ComputeChildren(TitleSplitStyle, CUiV2LegacyAdapter::FromCUIRect(SplitRect), vTitleChildren);
+			int BoxIndex = 0;
+			if(!StackedTitle)
+				Title = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[BoxIndex++].m_Box);
 			if(ShowServerPlayers)
-				ServerPlayers = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[1].m_Box);
+				ServerPlayers = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[BoxIndex++].m_Box);
 			if(ShowScrollButton)
 				ScrollButton = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[ScrollButtonIndex].m_Box);
 			StatisticsButton = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[StatisticsButtonIndex].m_Box);
@@ -2221,7 +2349,7 @@ void CScoreboard::OnRender()
 	{
 		Ui()->RenderPopupMenus();
 
-		if(m_MouseUnlocked)
+		if(m_MouseUnlocked && !QmUiMobilePlatform())
 			RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
 
 		Ui()->FinishCheck();
@@ -2468,29 +2596,8 @@ CUi::EPopupMenuFunctionResult CScoreboard::PopupScoreboard(void *pContext, CUIRe
 	ColorRGBA SpectateButtonColor = ColorRGBA(1.0f, 1.0f, 1.0f, (IsSpectating ? 0.25f : 0.5f) * pUi->ButtonColorMul(&pPopupContext->m_SpectateButton));
 	if(pUi->DoButton_PopupMenu(&pPopupContext->m_SpectateButton, Localize("Spectate"), &Container, FontSize, TEXTALIGN_MC, 0.0f, false, true, SpectateButtonColor))
 	{
-		if(IsSpectating)
-		{
-			pScoreboard->GameClient()->m_Spectator.Spectate(SPEC_FREEVIEW);
-			pScoreboard->Console()->ExecuteLine("say /spec");
-		}
-		else
-		{
-			if(pScoreboard->GameClient()->m_Snap.m_SpecInfo.m_Active)
-			{
-				pScoreboard->GameClient()->m_Spectator.Spectate(pPopupContext->m_ClientId);
-			}
-			else
-			{
-				// escape the name
-				char aEscapedCommand[2 * MAX_NAME_LENGTH + 32];
-				str_copy(aEscapedCommand, "say /spec \"");
-				char *pDst = aEscapedCommand + str_length(aEscapedCommand);
-				str_escape(&pDst, Client.m_aName, aEscapedCommand + sizeof(aEscapedCommand));
-				str_append(aEscapedCommand, "\"");
-
-				pScoreboard->Console()->ExecuteLine(aEscapedCommand);
-			}
-		}
+		// 与手机端点整行跟随共用同一套逻辑（切自由视角 / 客户端旁观 / 服务器 /spec）。
+		pScoreboard->SpectatePlayer(pPopupContext->m_ClientId);
 	}
 
 	return CUi::POPUP_KEEP_OPEN;

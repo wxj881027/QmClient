@@ -771,8 +771,9 @@ void CHudEditor::OnRender()
 		Graphics()->GetScreen(&PrevX0, &PrevY0, &PrevX1, &PrevY1);
 		Graphics()->MapScreen(pUiScreen->x, pUiScreen->y, pUiScreen->x + pUiScreen->w, pUiScreen->y + pUiScreen->h);
 		RenderJumpHintTextEditor(*pUiScreen);
-		RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
-		Graphics()->MapScreen(PrevX0, PrevY0, PrevX1, PrevY1);
+		// 手机上是手指直接点，不画鼠标箭头。
+		if(!QmUiMobilePlatform())
+			Graphics()->MapScreen(PrevX0, PrevY0, PrevX1, PrevY1);
 		Ui()->FinishCheck();
 		m_InteractionUiActive = false;
 		return;
@@ -792,7 +793,37 @@ void CHudEditor::OnRender()
 	if(ResetDefaultClicked)
 		ResetLayoutConfig();
 
+	// 手机上必须有一个看得见的出口：HUD 编辑器原来只能靠 ESC（手机即返回手势）退出。
+	if(QmUiMobilePlatform())
+	{
+		CUIRect DoneButton{ResetButton.x - ResetButtonWidth - ResetButtonMargin, ResetButton.y, ResetButtonWidth, ResetButtonHeight};
+		static CButtonContainer s_DoneButton;
+		DoneButton.Draw(ColorRGBA(0.25f, 0.62f, 1.0f, 0.85f), IGraphics::CORNER_ALL, 4.0f);
+		Ui()->DoLabel(&DoneButton, Localize("Done"), ResetButtonHeight * 0.6f, TEXTALIGN_MC);
+		if(Ui()->DoButtonLogic(&s_DoneButton, 0, &DoneButton, BUTTONFLAG_LEFT) != 0)
+			SetActive(false);
+	}
+
 	const int HoveredIndex = ResetButtonHovered ? -1 : FindHoveredVisibleElement();
+
+	// 手机：没有滚轮，元素缩放改为「点一下选中 + 拖右下角把手」。
+	// 选中后右下角画一个把手指示；拖它按中心距比例改 m_ScalePercent。
+	int MobileSelectedIndex = -1;
+	CUIRect MobileScaleHandle{};
+	bool MobileHandleHovered = false;
+	if(QmUiMobilePlatform())
+	{
+		if(m_MobileSelectedElement >= 0)
+			MobileSelectedIndex = FindVisibleElementIndex(static_cast<EHudEditorElement>(m_MobileSelectedElement));
+		if(MobileSelectedIndex >= 0)
+		{
+			const SVisibleElement &Selected = m_vVisibleElements[MobileSelectedIndex];
+			const float HandleSize = 22.0f;
+			MobileScaleHandle = {Selected.m_Rect.x + Selected.m_Rect.w - HandleSize * 0.5f, Selected.m_Rect.y + Selected.m_Rect.h - HandleSize * 0.5f, HandleSize, HandleSize};
+			MobileHandleHovered = MobileScaleHandle.Inside(vec2(Ui()->MouseX(), Ui()->MouseY()));
+		}
+	}
+
 	bool ShowDragGuideX = false;
 	bool ShowDragGuideY = false;
 	float DragGuideX = 0.0f;
@@ -809,7 +840,44 @@ void CHudEditor::OnRender()
 		}
 	}
 
-	if(HoveredIndex >= 0 && m_DraggingElement < 0 && Ui()->MouseButtonClicked(0) && Ui()->ActiveItem() == nullptr)
+	// 手机：先处理缩放把手，再处理拖动/选中。拖把手时不允许同时拖动元素。
+	if(QmUiMobilePlatform())
+	{
+		if(m_MobileScaling && MobileSelectedIndex >= 0)
+		{
+			const SVisibleElement &Selected = m_vVisibleElements[MobileSelectedIndex];
+			SElementState &State = EnsureState(Selected.m_Element);
+			const vec2 Center = {Selected.m_Rect.x + Selected.m_Rect.w * 0.5f, Selected.m_Rect.y + Selected.m_Rect.h * 0.5f};
+			const float Distance = maximum(1.0f, length(vec2(Ui()->MouseX(), Ui()->MouseY()) - Center));
+			BeginCustomPosition(State, Selected, *pUiScreen);
+			const float Ratio = Distance / maximum(1.0f, m_MobileScaleStartDistance);
+			State.m_ScalePercent = std::clamp(round_to_int(m_MobileScaleStartPercent * Ratio), MIN_SCALE_PERCENT, MAX_SCALE_PERCENT);
+			ClampStateToScreen(State, Selected.m_BaseWidth, Selected.m_BaseHeight, Selected.m_StateOffsetX, Selected.m_StateOffsetY);
+			m_DirtyLayout = true;
+			if(!Ui()->MouseButton(0))
+			{
+				m_MobileScaling = false;
+				if(m_DirtyLayout)
+					SaveLayoutConfig();
+			}
+		}
+		else if(MobileHandleHovered && Ui()->MouseButtonClicked(0))
+		{
+			const SVisibleElement &Selected = m_vVisibleElements[MobileSelectedIndex];
+			SElementState &State = EnsureState(Selected.m_Element);
+			const vec2 Center = {Selected.m_Rect.x + Selected.m_Rect.w * 0.5f, Selected.m_Rect.y + Selected.m_Rect.h * 0.5f};
+			m_MobileScaling = true;
+			m_MobileScaleStartPercent = static_cast<float>(State.m_HasCustom ? State.m_ScalePercent : 100);
+			m_MobileScaleStartDistance = maximum(1.0f, length(vec2(Ui()->MouseX(), Ui()->MouseY()) - Center));
+			m_DraggingElement = -1;
+		}
+		else if(HoveredIndex >= 0 && Ui()->MouseButtonClicked(0) && Ui()->ActiveItem() == nullptr)
+		{
+			m_MobileSelectedElement = static_cast<int>(m_vVisibleElements[HoveredIndex].m_Element);
+		}
+	}
+
+	if(HoveredIndex >= 0 && m_DraggingElement < 0 && !m_MobileScaling && Ui()->MouseButtonClicked(0) && Ui()->ActiveItem() == nullptr)
 	{
 		const EHudEditorElement Element = m_vVisibleElements[HoveredIndex].m_Element;
 		if(!HandleElementDoubleClick(Element))
@@ -942,7 +1010,19 @@ void CHudEditor::OnRender()
 		Ui()->DoLabel(&ResetButton, Localize("Reset default"), 8.0f, TEXTALIGN_MC);
 	}
 
-	RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
+	// 手机：选中的元素右下角画缩放把手，指示这里可以拖。
+	if(QmUiMobilePlatform() && MobileSelectedIndex >= 0)
+	{
+		const SVisibleElement &Selected = m_vVisibleElements[MobileSelectedIndex];
+		const CUIRect Outline = {Selected.m_Rect.x - 1.0f, Selected.m_Rect.y - 1.0f, Selected.m_Rect.w + 2.0f, Selected.m_Rect.h + 2.0f};
+		Outline.Draw(ColorRGBA(0.25f, 0.62f, 1.0f, 0.18f), IGraphics::CORNER_ALL, 4.0f);
+		MobileScaleHandle.Draw(ColorRGBA(0.25f, 0.62f, 1.0f, 0.9f), IGraphics::CORNER_ALL, 6.0f);
+		Ui()->DoLabel(&MobileScaleHandle, FontIcons::FONT_ICON_ARROW_UP_RIGHT_FROM_SQUARE, 9.0f, TEXTALIGN_MC);
+	}
+
+	// 手机上是手指直接点，不画鼠标箭头。
+	if(!QmUiMobilePlatform())
+		RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
 
 	Graphics()->MapScreen(PrevX0, PrevY0, PrevX1, PrevY1);
 	Ui()->FinishCheck();

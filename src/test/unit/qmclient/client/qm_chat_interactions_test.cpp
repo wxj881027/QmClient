@@ -9,6 +9,7 @@
 #include <game/client/components/qmclient/chat_input_layout.h>
 #include <game/client/components/qmclient/chat_scrollbar.h>
 #include <game/client/components/qmclient/chat_translate_button.h>
+#include <game/client/components/qmclient/chat_whisper_targets.h>
 #include <game/client/components/qmclient/red_packet_auto_claim.h>
 #include <game/client/components/tclient/fast_practice.h>
 #include <game/client/components/tclient/warlist.h>
@@ -582,3 +583,63 @@ TEST(QmChatInputLayout, FarOffscreenClipClampsBeforeIntegerConversion)
 		EXPECT_EQ(Clip.m_H, 80);
 	}
 }
+
+namespace
+{
+	SQmChatWhisperCandidate WhisperCandidate(int ClientId, const char *pName, bool Active = true, bool Local = false)
+	{
+		SQmChatWhisperCandidate Candidate;
+		Candidate.m_ClientId = ClientId;
+		Candidate.m_pName = pName;
+		Candidate.m_Active = Active;
+		Candidate.m_Local = Local;
+		return Candidate;
+	}
+}
+
+TEST(QmChatWhisperTargets, SkipsLocalConnectionsAndUnusableEntries)
+{
+	// 服务器按名字排序返回玩家；自己（主/副连接）与空名、离线条目都不能进入私聊列表。
+	const SQmChatWhisperCandidate aCandidates[] = {
+		WhisperCandidate(3, "alice"),
+		WhisperCandidate(1, "self", true, true),
+		WhisperCandidate(2, "dummy", true, true),
+		WhisperCandidate(4, "", true, false),
+		WhisperCandidate(5, "bob", false, false),
+		WhisperCandidate(6, nullptr, true, false),
+		WhisperCandidate(7, "carol"),
+	};
+	SQmChatWhisperTarget aTargets[8];
+	const int NumTargets = QmChatCollectWhisperTargets(aCandidates, (int)std::size(aCandidates), aTargets, (int)std::size(aTargets));
+
+	ASSERT_EQ(NumTargets, 2);
+	EXPECT_EQ(aTargets[0].m_ClientId, 3);
+	EXPECT_STREQ(aTargets[0].m_pName, "alice");
+	EXPECT_EQ(aTargets[1].m_ClientId, 7);
+	EXPECT_STREQ(aTargets[1].m_pName, "carol");
+}
+
+TEST(QmChatWhisperTargets, RespectsCapacityAndEmptyInput)
+{
+	const SQmChatWhisperCandidate aCandidates[] = {
+		WhisperCandidate(0, "a"),
+		WhisperCandidate(1, "b"),
+		WhisperCandidate(2, "c"),
+	};
+	SQmChatWhisperTarget aTargets[2];
+	EXPECT_EQ(QmChatCollectWhisperTargets(aCandidates, (int)std::size(aCandidates), aTargets, 2), 2);
+	EXPECT_EQ(QmChatCollectWhisperTargets(aCandidates, (int)std::size(aCandidates), aTargets, 0), 0);
+	EXPECT_EQ(QmChatCollectWhisperTargets(aCandidates, 0, aTargets, (int)std::size(aTargets)), 0);
+	EXPECT_EQ(QmChatCollectWhisperTargets(nullptr, 3, aTargets, (int)std::size(aTargets)), 0);
+	EXPECT_EQ(QmChatCollectWhisperTargets(aCandidates, (int)std::size(aCandidates), nullptr, 3), 0);
+}
+
+TEST(QmChatWhisperTargets, BuildWhisperCommandKeepsQuotedNameAndMessage)
+{
+	char aCommand[256];
+	ASSERT_TRUE(CChat::BuildWhisperCommand(aCommand, sizeof(aCommand), "alice", "hello there"));
+	EXPECT_STREQ(aCommand, "/w \"alice\" hello there");
+	EXPECT_FALSE(CChat::BuildWhisperCommand(aCommand, sizeof(aCommand), "", "hello"));
+	EXPECT_FALSE(CChat::BuildWhisperCommand(aCommand, sizeof(aCommand), "alice", nullptr));
+}
+

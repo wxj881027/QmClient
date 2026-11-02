@@ -580,6 +580,12 @@ private:
 	std::vector<IInput::CTouchFinger> m_vStaleFingers;
 
 	/**
+	 * 聊天按钮最近一次打开聊天的时间。同一根手指按住打开聊天时不能立刻又被
+	 * “聊天按钮关闭聊天”的例外逻辑关掉，只有之后的新按下才算关闭手势。
+	 */
+	std::chrono::nanoseconds m_ChatToggleActivationTime{};
+
+	/**
 	 * Whether editing mode is currently active.
 	 */
 	bool m_EditingActive = false;
@@ -593,6 +599,10 @@ private:
 	int NextActiveAction(int Action) const;
 	int NextDirectTouchAction() const;
 	void UpdateButtonsGame(const std::vector<IInput::CTouchFingerState> &vTouchFingerStates);
+	// 聊天激活时触摸层整体停用，但原聊天按钮要能再按一次关闭聊天（等价 Esc）。
+	bool IsChatToggleButton(const CTouchButton &Button) const;
+	void CloseChatFromTouch(std::vector<IInput::CTouchFingerState> &vTouchFingerStates);
+	void RenderChatCloseButtons();
 	void ResetButtons();
 	void RenderButtonsGame();
 	vec2 CalculateScreenSize() const;

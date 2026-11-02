@@ -888,15 +888,16 @@ void CUi::Update()
 				m_TouchState.m_ScrollAmount = vec2(0.0f, 0.0f);
 			}
 
-			// We need to delay the click until the next update or it's not possible to use UI
-			// elements because click and hover would happen at the same time for touch events.
-			if(m_TouchState.m_PrimaryPressed)
+			// 触摸按下必须在本帧就参与按钮判定。延迟到下一帧会让第一次点击只移动
+			// 光标、第二次才命中（手机菜单和聊天翻译按钮实测都是两下）。
+			// 按住期间也要保持左键为按下，否则滚动条/滑块的拖拽只持续一帧。
+			if(m_TouchState.m_AnyPressed)
 			{
-				UpdatedMouseButtonsNext |= 1;
+				m_UpdatedMouseButtons |= 1;
 			}
 			if(m_TouchState.m_SecondaryPressed)
 			{
-				UpdatedMouseButtonsNext |= 2;
+				m_UpdatedMouseButtons |= 2;
 			}
 		}
 	}
@@ -907,6 +908,8 @@ void CUi::Update()
 	m_LastMouseButtons = m_MouseButtons;
 	m_MouseButtons = m_UpdatedMouseButtons;
 	m_UpdatedMouseButtons = UpdatedMouseButtonsNext;
+	// 新的一帧允许按钮再次激活。
+	m_ButtonActivatedThisFrame = false;
 
 	m_pHotItem = m_pBecomingHotItem;
 	if(m_pActiveItem)
@@ -1351,6 +1354,11 @@ int CUi::DoButtonLogic(const void *pId, int Checked, const CUIRect *pRect, const
 {
 	if(RenderOnly())
 		return 0;
+	// 同一帧内只允许一个按钮激活。触摸按下后页面立刻切换时（例如游戏内点「设置」
+	// 打开设置页），原位置下方的另一个按钮会在同一帧读到同一次按下/抬起，
+	// 造成「点设置却退出游戏」这类双重点击。
+	if(m_ButtonActivatedThisFrame)
+		return 0;
 	RestorePopupFocus(pId);
 
 	int ReturnValue = 0;
@@ -1381,19 +1389,26 @@ int CUi::DoButtonLogic(const void *pId, int Checked, const CUIRect *pRect, const
 		if(!MouseButton(m_ActiveButtonLogicButton))
 		{
 			if(Inside && Checked >= 0)
+			{
 				ReturnValue = 1 + m_ActiveButtonLogicButton;
+				m_ButtonActivatedThisFrame = true;
+			}
 			SetActiveItem(nullptr);
 			m_ActiveButtonLogicButton = -1;
 		}
 	}
 
+	// 触摸没有 hover：第一次按下的位置就是当前指针位置，不能再依赖上一帧的
+	// HotItem（否则第一次只点亮、第二次才激活）。鼠标仍走原来的 HotItem 路径，
+	// 避免多控件重叠时按下未悬停的控件。
+	const bool TouchInputActive = !Input()->TouchFingerStates().empty();
 	bool NoRelevantButtonsPressed = true;
 	for(int Button = 0; Button < 3; ++Button)
 	{
 		if((Flags & (BUTTONFLAG_LEFT << Button)) && MouseButton(Button))
 		{
 			NoRelevantButtonsPressed = false;
-			if(UseCurrentHit ? CurrentPress == Button : HotItem() == pId)
+			if(UseCurrentHit ? CurrentPress == Button : (TouchInputActive ? Inside : HotItem() == pId))
 			{
 				SetActiveItem(pId);
 				m_ActiveButtonLogicButton = Button;
@@ -1461,7 +1476,8 @@ int CUi::DoDraggableButtonLogic(const void *pId, int Checked, const CUIRect *pRe
 			m_ActiveDraggableButtonLogicButton = -1;
 		}
 	}
-	else if(HotItem() == pId)
+	// 触摸没有 hover：第一下按在控件上就要能开始拖动，不依赖上一帧的 HotItem。
+	else if(HotItem() == pId || (!Input()->TouchFingerStates().empty() && Inside))
 	{
 		for(int i = 0; i < 3; ++i)
 		{
@@ -2717,7 +2733,8 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 				}
 			}
 		}
-		else if(HotItem() == pId)
+		// 触摸没有 hover：第一下按在数值框上就要进入拖动/滚轮状态。
+		else if(HotItem() == pId || (!Input()->TouchFingerStates().empty() && Inside))
 		{
 			if(MouseButton(0))
 			{
@@ -2791,7 +2808,7 @@ float CUi::DoScrollbarV(const void *pId, const CUIRect *pRect, float Current)
 			SetActiveItem(nullptr);
 		}
 	}
-	else if(HotItem() == pId)
+	else if(HotItem() == pId || (!Input()->TouchFingerStates().empty() && InsideRail))
 	{
 		if(InsideHandle)
 		{
@@ -2918,7 +2935,7 @@ float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, co
 			SetActiveItem(nullptr);
 		}
 	}
-	else if(HotItem() == pId)
+	else if(HotItem() == pId || (!Input()->TouchFingerStates().empty() && InsideRail))
 	{
 		if(InsideHandle)
 		{

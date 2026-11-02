@@ -50,9 +50,9 @@ public class ClientActivity extends SDLActivity {
 			String gfxBackend = intent.getStringExtra("gfx-backend");
 			if(gfxBackend != null) {
 				if(gfxBackend.equals("Vulkan")) {
-					launchArguments = new String[] {"gfx_backend Vulkan"};
+					launchArguments = new String[] {"gfx_backend", "Vulkan"};
 				} else if(gfxBackend.equals("GLES")) {
-					launchArguments = new String[] {"gfx_backend GLES"};
+					launchArguments = new String[] {"gfx_backend", "GLES"};
 				}
 			}
 		}
