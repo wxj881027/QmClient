@@ -1028,6 +1028,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		}
 		else if(g_Config.m_UiSettingsPage != s_PrevSettingsPage)
 		{
+			Ui()->CancelTouchInput();
 			CommitSettingsTeeSkinEdits();
 			// 分类切换序号：主题/语言列表据此重放入场动画。
 			m_SettingsListEntryRestartSeq++;

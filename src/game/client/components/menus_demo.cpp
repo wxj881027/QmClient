@@ -1231,6 +1231,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		g_Config.m_ClDemoSliceEnd = -1;
 		m_PrevSeekAmount = -1.0f;
 		m_PausedBeforeSeeking = true;
+		m_DemoTouchSeeking = false;
 		Ui()->SetActiveItem(nullptr);
 	}
 	const IDemoPlayer::CInfo *pInfo = PlaybackPlayer()->BaseInfo();
@@ -1522,11 +1523,12 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	CUIRect DemoControls = qm_demo_ui::DraggedPlayerRect(MainView, DemoControlsOriginal, m_DemoControlsPositionOffset.x, m_DemoControlsPositionOffset.y);
 	RenderDemoCard(DemoControls);
 	std::optional<CUiScopedGaussianBlurSuppression> DemoControlsBlurSuppression(std::in_place, Ui());
-	const CUIRect DemoControlsDragRect = DemoControls;
+	const CUIRect DemoControlsPanel = DemoControls;
 
 	CUIRect SeekBar, TimeBar, ButtonBar, NameBar, SpeedBar, CutBar, DisplayBar, CameraBar;
 	DemoControls.Margin(8.0f, &DemoControls);
 	DemoControls.HSplitTop(NameBarHeight, &NameBar, &DemoControls);
+	const CUIRect DemoControlsDragRect = qm_demo_ui::PanelDragRect(DemoControlsPanel, NameBar, Ui()->DirectTouchInput());
 	DemoControls.HSplitTop(4.0f, nullptr, &DemoControls);
 	DemoControls.HSplitTop(SeekBarHeight, &SeekBar, &DemoControls);
 	DemoControls.HSplitTop(14.0f, &TimeBar, &DemoControls);
@@ -1728,6 +1730,16 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			return ClosestDistance <= SnapPixels ? ClosestAmount : AmountSeek;
 		};
 
+		const bool TouchSeeking = Ui()->CaptureTouchDrag(&m_DemoSeekBarId, &SeekBar);
+		if(TouchSeeking && !Ui()->IsActiveItem(&m_DemoSeekBarId))
+		{
+			m_DemoTouchSeeking = true;
+			m_PrevSeekAmount = -1.0f;
+			m_PausedBeforeSeeking = pInfo->m_Paused;
+			if(!pInfo->m_Paused)
+				PlaybackPlayer()->Pause();
+			Ui()->SetActiveItem(&m_DemoSeekBarId);
+		}
 		if(Ui()->CheckActiveItem(&m_DemoSeekBarId))
 		{
 			if(!Ui()->MouseButton(0))
@@ -4646,12 +4658,12 @@ void CMenus::RenderQmPoseHud(CUIRect MainView)
 	RenderDemoCard(Card);
 	CUiScopedGaussianBlurSuppression BlurSuppression(Ui());
 	State.m_CardRect = Card;
-	const CUIRect DragRect = Card;
 
 	CUIRect Content = Card;
 	Content.Margin(8.0f, &Content);
 	CUIRect NameBar, InfoBar, ControlsBar, ActionBar;
 	Content.HSplitTop(18.0f, &NameBar, &Content);
+	const CUIRect DragRect = qm_demo_ui::PanelDragRect(Card, NameBar, Ui()->DirectTouchInput());
 	Content.HSplitTop(4.0f, nullptr, &Content);
 	Content.HSplitTop(14.0f, &InfoBar, &Content);
 	Content.HSplitTop(6.0f, nullptr, &Content);

@@ -143,6 +143,10 @@ void CRenderTools::Init(IGraphics *pGraphics, ITextRender *pTextRender, CGameCli
 
 void CRenderTools::RenderCursor(vec2 Center, float Size, float Alpha) const
 {
+#if defined(CONF_PLATFORM_ANDROID)
+	// 移动端直接操作触点，不绘制桌面鼠标指针。
+	return;
+#endif
 	Graphics()->WrapClamp();
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_CURSOR].m_Id);
 	Graphics()->QuadsBegin();
@@ -155,6 +159,9 @@ void CRenderTools::RenderCursor(vec2 Center, float Size, float Alpha) const
 
 void CRenderTools::RenderResizeCursor(vec2 Center, float Size, float Alpha) const
 {
+#if defined(CONF_PLATFORM_ANDROID)
+	return;
+#endif
 	// 左右箭头以鼠标位置为中心，热点始终落在所拖动的列边界上。
 	const float Scale = Size / 24.0f;
 	auto DrawArrow = [&](float Tip, float Shoulder, float HeadHeight, float ShaftHeight) {

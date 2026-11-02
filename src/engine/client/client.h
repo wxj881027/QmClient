@@ -282,25 +282,19 @@ class CClient : public IClient, public CDemoPlayer::IListener
 public:
 	bool ServerCapAnyPlayerFlag() const override { return m_ServerCapabilities.m_AnyPlayerFlag; }
 
+#if defined(CONF_VIDEORECORDER)
 	// 分段导出的后台拼接是否仍未结束。UI 用它推迟"渲染完成"弹窗，
 	// 否则用户在成片写出前点"Videos directory"会看到文件不存在或不可播放。
 	bool VideoExportConcatPending() const override
 	{
-#if defined(CONF_VIDEORECORDER)
 		return m_ConcatThread.joinable() && !m_ConcatThreadFinished.load();
-#else
-		return false;
-#endif
 	}
 	// 最近一次拼接是否失败（有尝试且未成功）。失败时 UI 不应宣称渲染完成。
 	bool VideoExportConcatFailed() const override
 	{
-#if defined(CONF_VIDEORECORDER)
 		return m_ConcatAttempted.load() && !m_ConcatLastSucceeded.load();
-#else
-		return false;
-#endif
 	}
+#endif
 
 private:
 	CServerInfo m_CurrentServerInfo;
@@ -584,7 +578,9 @@ public:
 	//   poses_video   导出视频（走与 demo 导出相同的录制管线）
 	static void Con_RenderPoses(IConsole::IResult *pResult, void *pUserData);
 	static void Con_PosesOpen(IConsole::IResult *pResult, void *pUserData);
+#if defined(CONF_VIDEORECORDER)
 	static void Con_PosesVideo(IConsole::IResult *pResult, void *pUserData);
+#endif
 	static void Con_PosesClose(IConsole::IResult *pResult, void *pUserData);
 
 	// 读文件 + 解析 + 合成快照 + 应用两次。失败返回 false 并打印原因。
