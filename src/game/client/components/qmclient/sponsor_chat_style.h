@@ -85,23 +85,28 @@ inline ColorRGBA QmSponsorChatPlatinumColor(float Position, float Alpha)
 		From.b + (To.b - From.b) * Amount, Alpha);
 }
 
-// 坐标以字号为单位，整段文字共享流场；周期回绕保持连续，避免长时间运行损失精度。
+// 坐标以字号为单位，整段文字共享向右平移的大幅流纹，空间和时间都首尾相接。
 class CQmSponsorChatFluid
 {
 	float m_Phase;
 
 public:
+	static constexpr float LOOP_WIDTH = 24.0f;
+	static constexpr double LOOP_SECONDS = 24.0;
+
 	explicit CQmSponsorChatFluid(double TimeSeconds) :
-		m_Phase(std::isfinite(TimeSeconds) && TimeSeconds >= 0.0 ? static_cast<float>(std::fmod(TimeSeconds, 12.0) / 12.0) * 2.0f * pi : 0.0f)
+		m_Phase(std::isfinite(TimeSeconds) && TimeSeconds >= 0.0 ? static_cast<float>(std::fmod(TimeSeconds, LOOP_SECONDS) / LOOP_SECONDS) * 2.0f * pi : 0.0f)
 	{
 	}
 
 	ColorRGBA Sample(vec2 Position) const
 	{
-		const float Warp = 0.35f * std::sin(Position.x * 0.9f + Position.y * 1.7f - m_Phase) +
-			0.18f * std::sin(Position.x * 1.9f - Position.y * 0.8f + 2.0f * m_Phase);
-		const float Wave = 0.5f + 0.5f * std::sin(Position.y * 4.2f + Position.x * 0.7f + Warp * 2.8f - m_Phase);
-		float Crest = 0.5f + 0.5f * std::sin(Position.y * 5.8f - Position.x * 1.1f + Warp * 3.0f + 2.0f * m_Phase);
+		// 所有纹理共用同一平移坐标，仅使用整数倍谐波，避免反向漂移和循环接缝。
+		const float Flow = Position.x * (2.0f * pi / LOOP_WIDTH) - m_Phase;
+		const float Warp = 0.35f * std::sin(Flow + Position.y * 1.7f) +
+			0.18f * std::sin(2.0f * Flow - Position.y * 0.8f);
+		const float Wave = 0.5f + 0.5f * std::sin(Position.y * 4.2f + Flow + Warp * 2.8f);
+		float Crest = 0.5f + 0.5f * std::sin(Position.y * 5.8f + 2.0f * Flow + Warp * 3.0f);
 		Crest *= Crest;
 		Crest *= Crest;
 		Crest *= Crest;
