@@ -37,6 +37,7 @@
 #include <game/client/components/tclient/map_history.h>
 #include <game/client/components/tclient/swap_countdown_message.h>
 
+#include <array>
 #include <deque>
 #include <queue>
 #include <set>
@@ -289,13 +290,11 @@ class CTClient : public CComponent
 	char m_aGoresDistanceFieldMap[128] = "";
 	int m_GoresDistanceFieldWidth = 0;
 	int m_GoresDistanceFieldHeight = 0;
-	std::vector<unsigned char> m_vGoresCMap; // 0=normal 1=blocked 2=tele 3=penalty 4=reward
-	std::vector<std::vector<int>> m_vvGoresDirectTeleOuts;
-	std::vector<int> m_vGoresDistanceToFinish;
-	// 路线显示的两处每帧开销：起点靠扫描全图、访问位图整张分配并清零。
-	// 前者沿用距离场已有的递增地图扫描记录潜在起点，后者只清理上一条路径触及的位图字。
+	std::vector<unsigned char> m_vGoresCMap;
+	std::vector<QmMapProgress::SRouteCost> m_vGoresDistanceToFinish;
+	std::vector<int> m_vGoresRouteNext;
 	CQmRouteStartIndex m_GoresRouteStartIndex;
-	mutable CQmRouteVisited m_GoresDebugRouteVisited;
+	CQmRouteVisited m_GoresDebugRouteVisited;
 	CQmRouteRenderCache m_GoresDebugRouteCache;
 	uint64_t m_GoresDebugRouteRevision = 0;
 	std::vector<int> m_vDDraceDebugRouteIndices;
@@ -313,12 +312,14 @@ class CTClient : public CComponent
 	const void *m_pGoresDistanceFieldBuildTeleLayer = nullptr;
 	int m_GoresDistanceFieldBuildPendingTeleNumber = 0;
 	int m_GoresDistanceFieldBuildPendingTeleCursor = 0;
-	int m_GoresDistanceFieldBuildPendingTeleDistance = 0;
-	std::vector<unsigned char> m_vGoresDistanceFieldBuildPassable;
-	std::vector<unsigned char> m_vGoresDistanceFieldBuildImageSemantics;
+	int m_GoresDistanceFieldBuildPendingTeleOut = -1;
+	QmMapProgress::SRouteCost m_GoresDistanceFieldBuildPendingTeleCost;
+	std::array<bool, 256> m_aGoresDistanceFieldBuildHasTeleOut = {};
+	std::vector<unsigned char> m_vGoresDistanceFieldBuildRestrictions;
+	std::vector<unsigned char> m_vGoresDistanceFieldBuildWaterImages;
 	std::vector<int> m_vGoresDistanceFieldBuildFinishIndices;
 	std::vector<std::vector<int>> m_vvGoresDistanceFieldBuildDirectTeleInputs;
-	using TGoresDistanceNode = std::pair<int, int>;
+	using TGoresDistanceNode = std::pair<QmMapProgress::SRouteCost, int>;
 	std::priority_queue<TGoresDistanceNode, std::vector<TGoresDistanceNode>, std::greater<TGoresDistanceNode>> m_GoresDistanceFieldBuildQueue;
 	bool m_aGoresWasOnStartLastTick[NUM_DUMMIES] = {false, false};
 	bool m_aGoresRunStarted[NUM_DUMMIES] = {false, false};
