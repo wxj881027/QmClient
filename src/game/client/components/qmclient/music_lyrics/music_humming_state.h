@@ -98,7 +98,7 @@ namespace QmMusicLyrics
 			m_aMessages = {};
 			m_LineCount = 0;
 			m_NextLine = 0;
-			m_NextMs = NowMs + std::clamp(DelayMs, 30000, 90000);
+			m_NextMs = NowMs + std::clamp(DelayMs, 90000, 270000);
 			m_Scheduled = m_Available;
 		}
 

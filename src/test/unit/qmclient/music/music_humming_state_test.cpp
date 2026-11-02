@@ -22,7 +22,7 @@ namespace
 	{
 		CHummingState State;
 		State.Synchronize(true, Identity());
-		State.Schedule(0, 30000);
+		State.Schedule(0, 90000);
 		return State;
 	}
 }
@@ -30,76 +30,76 @@ namespace
 TEST(QmHummingState, EnablingWaitsBeforeFirstGroup)
 {
 	auto State = DueState();
-	EXPECT_FALSE(State.GroupDue(29999));
-	EXPECT_TRUE(State.GroupDue(30000));
+	EXPECT_FALSE(State.GroupDue(89999));
+	EXPECT_TRUE(State.GroupDue(90000));
 }
 
 TEST(QmHummingState, RandomChoiceSelectsAConsecutiveGroup)
 {
 	auto State = DueState();
-	ASSERT_TRUE(State.BeginGroup(Song(), 1, 30000));
-	ASSERT_NE(State.PendingLine(30000), nullptr);
-	EXPECT_EQ(*State.PendingLine(30000), "♪ two");
-	State.FinishLine(true, 30000, 60000);
-	ASSERT_NE(State.PendingLine(33000), nullptr);
-	EXPECT_EQ(*State.PendingLine(33000), "♪ three");
-	State.FinishLine(true, 33000, 60000);
-	ASSERT_NE(State.PendingLine(36000), nullptr);
-	EXPECT_EQ(*State.PendingLine(36000), "♪ four");
+	ASSERT_TRUE(State.BeginGroup(Song(), 1, 90000));
+	ASSERT_NE(State.PendingLine(90000), nullptr);
+	EXPECT_EQ(*State.PendingLine(90000), "♪ two");
+	State.FinishLine(true, 90000, 180000);
+	ASSERT_NE(State.PendingLine(93000), nullptr);
+	EXPECT_EQ(*State.PendingLine(93000), "♪ three");
+	State.FinishLine(true, 93000, 180000);
+	ASSERT_NE(State.PendingLine(96000), nullptr);
+	EXPECT_EQ(*State.PendingLine(96000), "♪ four");
 }
 
 TEST(QmHummingState, LinesWaitThreeSecondsAfterSuccessfulSend)
 {
 	auto State = DueState();
-	ASSERT_TRUE(State.BeginGroup(Song(), 0, 30000));
-	State.FinishLine(true, 30000, 60000);
-	EXPECT_EQ(State.PendingLine(32999), nullptr);
-	EXPECT_NE(State.PendingLine(33000), nullptr);
+	ASSERT_TRUE(State.BeginGroup(Song(), 0, 90000));
+	State.FinishLine(true, 90000, 180000);
+	EXPECT_EQ(State.PendingLine(92999), nullptr);
+	EXPECT_NE(State.PendingLine(93000), nullptr);
 }
 
 TEST(QmHummingState, LongFrameDoesNotBurstRemainingLines)
 {
 	auto State = DueState();
-	ASSERT_TRUE(State.BeginGroup(Song(), 0, 30000));
-	State.FinishLine(true, 30000, 60000);
-	ASSERT_NE(State.PendingLine(90000), nullptr);
-	State.FinishLine(true, 90000, 60000);
-	EXPECT_EQ(State.PendingLine(90000), nullptr);
-	EXPECT_NE(State.PendingLine(93000), nullptr);
+	ASSERT_TRUE(State.BeginGroup(Song(), 0, 90000));
+	State.FinishLine(true, 90000, 180000);
+	ASSERT_NE(State.PendingLine(150000), nullptr);
+	State.FinishLine(true, 150000, 180000);
+	EXPECT_EQ(State.PendingLine(150000), nullptr);
+	EXPECT_NE(State.PendingLine(153000), nullptr);
 }
 
 TEST(QmHummingState, CompletedGroupWaitsForTheNextInterval)
 {
 	auto State = DueState();
-	ASSERT_TRUE(State.BeginGroup(Song(), 0, 30000));
-	State.FinishLine(true, 30000, 60000);
-	State.FinishLine(true, 33000, 60000);
-	State.FinishLine(true, 36000, 60000);
-	EXPECT_EQ(State.PendingLine(96000), nullptr);
-	EXPECT_FALSE(State.GroupDue(95999));
-	EXPECT_TRUE(State.GroupDue(96000));
+	ASSERT_TRUE(State.BeginGroup(Song(), 0, 90000));
+	State.FinishLine(true, 90000, 180000);
+	State.FinishLine(true, 93000, 180000);
+	State.FinishLine(true, 96000, 180000);
+	EXPECT_EQ(State.PendingLine(276000), nullptr);
+	EXPECT_FALSE(State.GroupDue(275999));
+	EXPECT_TRUE(State.GroupDue(276000));
 }
 
 TEST(QmHummingState, FailedSendCancelsTheRestOfTheGroup)
 {
 	auto State = DueState();
-	ASSERT_TRUE(State.BeginGroup(Song(), 0, 30000));
-	State.FinishLine(false, 30000, 60000);
-	EXPECT_EQ(State.PendingLine(33000), nullptr);
-	EXPECT_FALSE(State.GroupDue(89999));
-	EXPECT_TRUE(State.GroupDue(90000));
+	ASSERT_TRUE(State.BeginGroup(Song(), 0, 90000));
+	State.FinishLine(false, 90000, 180000);
+	EXPECT_EQ(State.PendingLine(93000), nullptr);
+	EXPECT_FALSE(State.GroupDue(269999));
+	EXPECT_TRUE(State.GroupDue(270000));
 }
 
 TEST(QmHummingState, DisableOrUnavailableSongCancelsPendingLines)
 {
 	auto State = DueState();
-	ASSERT_TRUE(State.BeginGroup(Song(), 0, 30000));
+	ASSERT_TRUE(State.BeginGroup(Song(), 0, 90000));
 	State.Synchronize(false, Identity());
-	EXPECT_EQ(State.PendingLine(30000), nullptr);
-	EXPECT_FALSE(State.GroupDue(90000));
+	EXPECT_EQ(State.PendingLine(90000), nullptr);
+	EXPECT_FALSE(State.GroupDue(270000));
 	State.Synchronize(true, Identity());
 	EXPECT_TRUE(State.NeedsSchedule());
-	EXPECT_EQ(State.PendingLine(90000), nullptr);
+	EXPECT_EQ(State.PendingLine(270000), nullptr);
 }
 
 TEST(QmHummingState, SourceSongGenerationProcessAndConnectionChangesCancelTheGroup)
@@ -111,9 +111,9 @@ TEST(QmHummingState, SourceSongGenerationProcessAndConnectionChangesCancelTheGro
 	{
 		SCOPED_TRACE(Index);
 		auto State = DueState();
-		ASSERT_TRUE(State.BeginGroup(Song(), 0, 30000));
+		ASSERT_TRUE(State.BeginGroup(Song(), 0, 90000));
 		State.Synchronize(true, Variants[Index]);
-		EXPECT_EQ(State.PendingLine(33000), nullptr);
+		EXPECT_EQ(State.PendingLine(93000), nullptr);
 		EXPECT_TRUE(State.NeedsSchedule());
 	}
 }
@@ -121,10 +121,10 @@ TEST(QmHummingState, SourceSongGenerationProcessAndConnectionChangesCancelTheGro
 TEST(QmHummingState, RepeatedUpdatesOfTheSameSongPreservePendingLines)
 {
 	auto State = DueState();
-	ASSERT_TRUE(State.BeginGroup(Song(), 0, 30000));
+	ASSERT_TRUE(State.BeginGroup(Song(), 0, 90000));
 	State.Synchronize(true, Identity());
 	EXPECT_FALSE(State.NeedsSchedule());
-	EXPECT_NE(State.PendingLine(30000), nullptr);
+	EXPECT_NE(State.PendingLine(90000), nullptr);
 }
 
 TEST(QmHummingState, FewerThanThreeSungLinesCannotStartAGroup)
@@ -132,8 +132,8 @@ TEST(QmHummingState, FewerThanThreeSungLinesCannotStartAGroup)
 	auto State = DueState();
 	auto Timeline = Song();
 	Timeline.m_vLines.resize(2);
-	EXPECT_FALSE(State.BeginGroup(Timeline, 0, 30000));
-	EXPECT_EQ(State.PendingLine(30000), nullptr);
+	EXPECT_FALSE(State.BeginGroup(Timeline, 0, 90000));
+	EXPECT_EQ(State.PendingLine(90000), nullptr);
 }
 
 TEST(QmHummingState, EmptyLinesDoNotBreakTheSequenceOfSungLines)
@@ -141,10 +141,10 @@ TEST(QmHummingState, EmptyLinesDoNotBreakTheSequenceOfSungLines)
 	auto State = DueState();
 	auto Timeline = Song();
 	Timeline.m_vLines[1].m_Text = " \n ";
-	ASSERT_TRUE(State.BeginGroup(Timeline, 0, 30000));
-	EXPECT_EQ(*State.PendingLine(30000), "♪ one");
-	State.FinishLine(true, 30000, 60000);
-	EXPECT_EQ(*State.PendingLine(33000), "♪ three");
+	ASSERT_TRUE(State.BeginGroup(Timeline, 0, 90000));
+	EXPECT_EQ(*State.PendingLine(90000), "♪ one");
+	State.FinishLine(true, 90000, 180000);
+	EXPECT_EQ(*State.PendingLine(93000), "♪ three");
 }
 
 TEST(QmHummingState, CreditsAndColonLinesAreSkippedBeforeChoosingAGroup)
@@ -156,17 +156,17 @@ TEST(QmHummingState, CreditsAndColonLinesAreSkippedBeforeChoosingAGroup)
 		"[00:06]提示：内容\n[00:07]four\n[00:08]Produced by Someone",
 		&Timeline));
 	auto State = DueState();
-	ASSERT_TRUE(State.BeginGroup(Timeline, 1, 30000));
+	ASSERT_TRUE(State.BeginGroup(Timeline, 1, 90000));
 	const char *apExpected[] = {"♪ two", "♪ three", "♪ four"};
 	for(size_t Index = 0; Index < std::size(apExpected); ++Index)
 	{
 		SCOPED_TRACE(Index);
-		const int64_t NowMs = 30000 + static_cast<int64_t>(Index) * 3000;
+		const int64_t NowMs = 90000 + static_cast<int64_t>(Index) * 3000;
 		ASSERT_NE(State.PendingLine(NowMs), nullptr);
 		EXPECT_EQ(*State.PendingLine(NowMs), apExpected[Index]);
-		State.FinishLine(true, NowMs, 60000);
+		State.FinishLine(true, NowMs, 180000);
 	}
-	EXPECT_EQ(State.PendingLine(39000), nullptr);
+	EXPECT_EQ(State.PendingLine(99000), nullptr);
 }
 
 TEST(QmHummingState, FilteringBelowThreeSungLinesLeavesNoPendingMessage)
@@ -175,18 +175,24 @@ TEST(QmHummingState, FilteringBelowThreeSungLinesLeavesNoPendingMessage)
 	ASSERT_TRUE(NeteaseLyrics::ParseLrc(
 		"[00:00]作词 张三\n[00:01]one\n[00:02]作曲：李四\n[00:03]two", &Timeline));
 	auto State = DueState();
-	EXPECT_FALSE(State.BeginGroup(Timeline, 0, 30000));
-	EXPECT_EQ(State.PendingLine(30000), nullptr);
-	State.Schedule(30000, 60000);
-	EXPECT_FALSE(State.GroupDue(89999));
-	ASSERT_TRUE(State.BeginGroup(Song(), 0, 90000));
-	ASSERT_NE(State.PendingLine(90000), nullptr);
-	EXPECT_EQ(*State.PendingLine(90000), "♪ one");
+	EXPECT_FALSE(State.BeginGroup(Timeline, 0, 90000));
+	EXPECT_EQ(State.PendingLine(90000), nullptr);
+	State.Schedule(90000, 180000);
+	EXPECT_FALSE(State.GroupDue(269999));
+	ASSERT_TRUE(State.BeginGroup(Song(), 0, 270000));
+	ASSERT_NE(State.PendingLine(270000), nullptr);
+	EXPECT_EQ(*State.PendingLine(270000), "♪ one");
 }
 
 TEST(QmHummingState, GroupIntervalsStayWithinConfirmedRange)
 {
-	for(const auto [Requested, Expected] : {std::pair{-1, 30000}, std::pair{100000, 90000}})
+	const std::pair<int, int> aIntervals[] = {
+		{-1, 90000},
+		{90000, 90000},
+		{180000, 180000},
+		{270000, 270000},
+		{300000, 270000}};
+	for(const auto [Requested, Expected] : aIntervals)
 	{
 		SCOPED_TRACE(Requested);
 		auto State = DueState();
