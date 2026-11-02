@@ -351,6 +351,8 @@ public:
 	~CUIElement();
 
 	void Init(CUi *pUI, int RequestedRectCount);
+	// 仅将资源分配失败转换为 false；其它异常与 Init 的前置条件保持。
+	bool TryInit(CUi *pUI, int RequestedRectCount);
 
 	SUIElementRect *Rect(size_t Index)
 	{

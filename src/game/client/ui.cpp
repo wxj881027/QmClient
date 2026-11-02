@@ -33,6 +33,8 @@
 #include <cmath>
 #include <limits>
 #include <memory>
+#include <new>
+#include <stdexcept>
 
 using namespace FontIcons;
 
@@ -68,6 +70,22 @@ void CUIElement::Init(CUi *pUI, int RequestedRectCount)
 		pUI->AddUIElement(this);
 	}
 	m_pUI = pUI;
+}
+
+bool CUIElement::TryInit(CUi *pUI, int RequestedRectCount)
+{
+	try
+	{
+		Init(pUI, RequestedRectCount);
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+	}
+	catch(const std::length_error &)
+	{
+	}
+	return false;
 }
 
 CUIElement::~CUIElement()

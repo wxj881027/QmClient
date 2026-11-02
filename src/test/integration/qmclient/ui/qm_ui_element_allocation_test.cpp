@@ -254,3 +254,46 @@ TEST(QmUiOwnedElementAllocation, PreinitializedRectsReuseTheWarmRegistryWithoutA
 	EXPECT_EQ(pRect->m_Text, "Prepared");
 	EXPECT_EQ(pRect->m_pParent, &Element);
 }
+
+TEST(QmUiElementTryInit, ColdAllocationFailureReturnsFalseAndTheSameElementCanRetry)
+{
+	CUi Ui;
+	CUIElement Element;
+	bool Accepted = true, Triggered = false;
+	{
+		CPredictionAllocationFailure Fault;
+		Accepted = Element.TryInit(&Ui, 1);
+		Triggered = Fault.Triggered();
+	}
+	ASSERT_TRUE(Triggered);
+	EXPECT_FALSE(Accepted);
+	ASSERT_FALSE(Element.IsRegistered());
+	ASSERT_FALSE(Element.AreRectsInit());
+	ASSERT_TRUE(Element.TryInit(&Ui, 1));
+	EXPECT_TRUE(Element.IsRegistered());
+	EXPECT_EQ(Element.Rect(0)->m_pParent, &Element);
+}
+
+TEST(QmUiElementTryInit, RegistryFailureKeepsPreparedRectsAndReturnsFalse)
+{
+	CUi Ui;
+	CUIElement Element;
+	Element.InitRects(1);
+	auto *pRect = Element.Rect(0);
+	pRect->m_Text = "Prepared";
+	bool Accepted = true, Triggered = false;
+	{
+		CPredictionAllocationFailure Fault;
+		Accepted = Element.TryInit(&Ui, 1);
+		Triggered = Fault.Triggered();
+	}
+	ASSERT_TRUE(Triggered);
+	EXPECT_FALSE(Accepted);
+	ASSERT_FALSE(Element.IsRegistered());
+	EXPECT_EQ(Element.Rect(0), pRect);
+	EXPECT_EQ(pRect->m_Text, "Prepared");
+	ASSERT_TRUE(Element.TryInit(&Ui, 1));
+	EXPECT_EQ(Element.Rect(0), pRect);
+	EXPECT_EQ(pRect->m_Text, "Prepared");
+	EXPECT_EQ(pRect->m_pParent, &Element);
+}
