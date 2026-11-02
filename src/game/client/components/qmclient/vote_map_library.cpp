@@ -198,6 +198,8 @@ bool QmVoteMaps::ParseCatalog(const char *pJson, size_t Length, std::vector<SMap
 		Map.m_Category = StringField(pEntry, "type", 64);
 		Map.m_Mapper = StringField(pEntry, "mapper", 512);
 		Map.m_Release = StringField(pEntry, "release", 32);
+		// 封面地址只作为下载线索保存，合法性由封面缓存按 ddnet.org 前缀再校验一次。
+		Map.m_Thumbnail = StringField(pEntry, "thumbnail", 256);
 		Map.m_Stars = IntField(pEntry, "difficulty", 5);
 		Map.m_Points = IntField(pEntry, "points", 10000);
 		if(Map.m_Name.empty() || Map.m_Category.empty() || Map.m_Stars < 0)

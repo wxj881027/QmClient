@@ -3577,6 +3577,10 @@ if(CLIENT)
     components/qmclient/keyword_reply_rules.h
     components/qmclient/recent_tee_skins.cpp
     components/qmclient/recent_tee_skins.h
+    components/qmclient/map_cover_art.cpp
+    components/qmclient/map_cover_art.h
+    components/qmclient/map_covers.cpp
+    components/qmclient/map_covers.h
     components/qmclient/map_difficulty_catalog.cpp
     components/qmclient/map_difficulty_catalog.h
     components/qmclient/vote_map_library.cpp
@@ -4864,6 +4868,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/client/qm_friend_greet_flow_test.cpp
     src/test/unit/engine/logger_test.cpp
     src/test/unit/client/map_difficulty_catalog_test.cpp
+    src/test/unit/qmclient/ui/qm_map_cover_art_test.cpp
     src/test/unit/qmclient/ui/vote_map_library_test.cpp
     src/test/unit/qmclient/ui/server_vote_list_test.cpp
     src/test/unit/qmclient/ui/vote_menu_mode_test.cpp
@@ -5379,6 +5384,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/generated/client_data7.h
     src/game/client/components/qmclient/hud_notifications/hud_notification_catalog.cpp
     src/game/client/components/qmclient/hud_notifications/hud_notification_rules.cpp
+    src/game/client/components/qmclient/map_cover_art.cpp
     src/game/client/components/qmclient/map_difficulty_catalog.cpp
     src/game/client/components/qmclient/vote_map_library.cpp
     src/game/client/components/qmclient/vote_map_loader.cpp
