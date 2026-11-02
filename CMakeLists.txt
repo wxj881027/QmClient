@@ -3732,6 +3732,12 @@ if(CLIENT)
     components/qmclient/tee_hue_cycle.h
     components/qmclient/tee_trail_styles.cpp
     components/qmclient/tee_trail_styles.h
+    components/qmclient/tee_trail_style_common.h
+    components/qmclient/tee_trail_style_aurora.cpp
+    components/qmclient/tee_trail_style_ink.cpp
+    components/qmclient/tee_trail_style_ignis.cpp
+    components/qmclient/tee_trail_style_stardust.cpp
+    components/qmclient/tee_trail_style_blackflash.cpp
     components/qmclient/scripting/impl.cpp
     components/qmclient/scripting/impl.h
     components/qmclient/scripting/state.h
@@ -5320,6 +5326,11 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/tclient/swap_countdown_message.cpp
     src/game/client/components/tclient/qm_tee_trail.cpp
     src/game/client/components/qmclient/tee_trail_styles.cpp
+    src/game/client/components/qmclient/tee_trail_style_aurora.cpp
+    src/game/client/components/qmclient/tee_trail_style_ink.cpp
+    src/game/client/components/qmclient/tee_trail_style_ignis.cpp
+    src/game/client/components/qmclient/tee_trail_style_stardust.cpp
+    src/game/client/components/qmclient/tee_trail_style_blackflash.cpp
     src/game/client/components/qmclient/qm_developer_badge.cpp
     src/game/client/components/qmclient/qm_title_badge.cpp
     src/game/client/components/qmclient/screenshot_clipboard.cpp
@@ -5811,6 +5822,15 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/game/client/QmUi/QmDropdown.cpp
     src/test/benchmark/qm_icon_render_benchmark.cpp
     src/engine/client/text.cpp
+    # 拖尾几何构建（BuildEffect 与样式分派的生产实现；每帧每玩家热路径）
+    src/test/benchmark/qm_trail_style_benchmark.cpp
+    src/game/client/components/tclient/qm_tee_trail.cpp
+    src/game/client/components/qmclient/tee_trail_styles.cpp
+    src/game/client/components/qmclient/tee_trail_style_aurora.cpp
+    src/game/client/components/qmclient/tee_trail_style_ink.cpp
+    src/game/client/components/qmclient/tee_trail_style_ignis.cpp
+    src/game/client/components/qmclient/tee_trail_style_stardust.cpp
+    src/game/client/components/qmclient/tee_trail_style_blackflash.cpp
     src/test/benchmark/qm_steam_benchmark.cpp
     # Steam 客户端探测链（SteamFindClient 基准；依赖 steam_api 的链接桩）
     src/engine/client/steam.cpp

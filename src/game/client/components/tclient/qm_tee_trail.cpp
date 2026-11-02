@@ -16,7 +16,22 @@ namespace
 	using namespace qm_tee_trail;
 	using SSample = SStyleSample;
 
-	constexpr float s_aLifeFactors[STYLE_COUNT] = {1.0f, 0.9f, 1.25f, 1.0f};
+	constexpr float s_aLifeFactors[STYLE_COUNT] = {
+		// 原版与三种旧艺术样式
+		1.0f,
+		0.9f,
+		1.25f,
+		1.0f,
+		// 4、5 是旧配置编号，不会作为已解析样式传入
+		1.0f,
+		1.0f,
+		// 极光、水墨、焰灵、星链、黑闪
+		1.15f,
+		1.35f,
+		1.25f,
+		1.45f,
+		1.2f,
+	};
 
 	float Smooth(float X)
 	{

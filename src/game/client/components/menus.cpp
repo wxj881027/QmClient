@@ -1652,6 +1652,10 @@ int CMenus::DoButton_Favorite(const void *pButtonId, const void *pParentId, bool
 		TextRender()->TextColor(Checked ? ColorRGBA(1.0f, 0.85f, 0.3f, BaseAlpha * ShowAlpha) : ColorRGBA(0.5f, 0.5f, 0.5f, BaseAlpha * ShowAlpha));
 		SLabelProperties Props;
 		Props.m_MaxWidth = pRect->w;
+		// 收藏开关靠字形本身区分状态：未收藏空心中性星标，已收藏实心收藏色星标。
+		// 全局「实心收藏图标」只决定收藏徽标外观，沿用到开关上会让悬停预览与已收藏同形。
+		const CQmIconSemanticColorScope FavoriteIconColorScope(!Checked);
+		const CQmFavoriteStarFillScope FavoriteStarFillScope(Checked);
 		Ui()->DoLabel_QmIcon(pRect, EQmIcon::STAR, FONT_ICON_STAR, 12.0f + HoverStrength, TEXTALIGN_MC, Props);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 		TextRender()->SetRenderFlags(0);

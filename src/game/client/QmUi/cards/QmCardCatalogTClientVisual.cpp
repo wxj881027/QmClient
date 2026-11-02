@@ -597,12 +597,39 @@ float CMenus::LayoutTClientTeeTrailsCard(const qm_card_catalog::SQmCardBuildCont
 		}
 		if(Flow.Control("trail-style", LineSize, Row, MarginSmall))
 		{
-			const char *apNames[] = {Localize("Original"), Localize("Manga: Ink Slash"), Localize("Magic: Spirit Script"), Localize("Pixel: Layer Shift")};
+			const char *apNames[] = {
+				Localize("Original"),
+				Localize("Manga: Ink Slash"),
+				Localize("Magic: Spirit Script"),
+				Localize("Pixel: Layer Shift"),
+				Localize("Aurora: Polar Veil"),
+				Localize("Ink: Paper Bloom"),
+				Localize("Ignis: Ember Spirit"),
+				Localize("Stardust: Constellation"),
+				Localize("Black Flash: Void Rift"),
+			};
+			// 下拉框按艺术样式顺序显示；4、5 是旧配置编号，不进入列表，保存值仍写样式编号。
+			const int aStyleIds[] = {
+				qm_tee_trail::STYLE_ORIGINAL,
+				qm_tee_trail::STYLE_MANGA,
+				qm_tee_trail::STYLE_MAGIC,
+				qm_tee_trail::STYLE_PIXEL,
+				qm_tee_trail::STYLE_AURORA,
+				qm_tee_trail::STYLE_INK,
+				qm_tee_trail::STYLE_IGNIS,
+				qm_tee_trail::STYLE_STARDUST,
+				qm_tee_trail::STYLE_BLACKFLASH,
+			};
+			static_assert(std::size(apNames) == std::size(aStyleIds), "trail style names must match ids");
 			s_TrailStyleDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_TrailStyleDropDownScrollRegion;
-			const int Old = qm_tee_trail::ResolveStyle(g_Config.m_QmTeeTrailStyle);
+			const int Current = qm_tee_trail::ResolveStyle(g_Config.m_QmTeeTrailStyle);
+			int Old = 0;
+			for(size_t i = 0; i < std::size(aStyleIds); ++i)
+				if(aStyleIds[i] == Current)
+					Old = int(i);
 			const int New = DoSettingsDropDown(&Row, Old, apNames, std::size(apNames), s_TrailStyleDropDownState, {}, &g_Config.m_QmTeeTrailStyle);
-			if(Flow.Input() && !Ui()->RenderOnly() && New != Old)
-				g_Config.m_QmTeeTrailStyle = New;
+			if(Flow.Input() && !Ui()->RenderOnly() && New != Old && New >= 0 && New < int(std::size(aStyleIds)))
+				g_Config.m_QmTeeTrailStyle = aStyleIds[New];
 		}
 		if(g_Config.m_QmTeeTrailColorMode == CTrails::COLORMODE_SOLID)
 		{
