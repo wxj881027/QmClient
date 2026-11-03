@@ -25,7 +25,8 @@
 #endif
 
 #include <SDL3/SDL.h>
-#include <opus/opus.h>
+// FindOpus 导出的包含目录本身就是 opus 子目录（与 <opusfile.h> 同一惯例）。
+#include <opus.h>
 
 #include <algorithm>
 #include <array>
