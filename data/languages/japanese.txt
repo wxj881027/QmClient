@@ -728,9 +728,6 @@ Adjust TClient heads-up display elements
 Adjust the display options; open a vote to check the layout before joining a busy server.
 == 表示オプションを調整します。混雑したサーバーに入る前に、投票を開いてレイアウトを確認してください。
 
-Adjust the opacity of entities belonging to other teams, such as tees and name plates
-== Tee やネームプレートなど、他チームのエンティティの不透明度を調整します
-
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
 
@@ -748,9 +745,6 @@ Adjusts TClient-specific HUD elements that are not part of the standard DDNet HU
 
 Advanced
 == 詳細設定
-
-Advanced mode
-== 詳細モード
 
 Advanced options
 == 詳細オプション
@@ -977,9 +971,6 @@ Anti Latency Tools
 Anti latency tools
 == アンチレイテンシーツール
 
-Anti Ping Smoothing
-== アンチピングスムージング
-
 Anti-aliasing for the exported video only, independent of the graphics setting. Explicit levels render each frame into a multisampled offscreen target, so the game itself can stay at a lower setting for performance. Supersampling (output smaller than the window) already reduces jagged edges, so prefer one or the other.
 == 書き出した動画にのみ適用されるアンチエイリアスで、グラフィック設定とは独立しています。明示的な倍率を選ぶと各フレームをマルチサンプルのオフスクリーンターゲットに描画するため、ゲーム本体は負荷軽減のために低めの設定のままにできます。スーパーサンプリング（出力がウィンドウより小さい場合）だけでもギザギザは軽減されるため、どちらか一方を選んでください。
 
@@ -1040,9 +1031,6 @@ Applied to %d same-family part(s).
 Applies an animated rainbow color to selected elements such as nameplates or the hook.
 == ネームプレートやフックなどの選択した要素に、アニメーションする虹色を適用します。
 
-Applies to single-color and rainbow overrides.
-== 単色と虹色の上書きに適用されます。
-
 Apply
 == 適用
 
@@ -1075,9 +1063,6 @@ Apply quick input to other Tees as well
 
 Apply squishy Tee deformation to other players
 == Q 弾 Tee 変形を他のプレイヤーに適用
-
-Apply this preset
-== このプリセットを適用
 
 Apply to
 == 適用先
@@ -1279,9 +1264,6 @@ Auto enable in Gores mode
 
 Auto enable/disable IME on text focus
 == テキスト入力フォーカスに応じて IME を自動的に有効化または無効化
-
-Auto execute
-== 自動実行
 
 Auto fetch replay info on refresh
 == リフレッシュ時にリプレイ情報を自動取得
@@ -2447,9 +2429,6 @@ Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher
 Chroma sampling. 4:2:0 is smallest and most compatible; 4:4:4 keeps full color detail for thin lines and small colored text. Rendering is 8-bit, so 10-bit formats do not add detail by themselves.
 == 色度サンプリング。4:2:0 は最も小さく互換性も高い設定です。4:4:4 は色度を完全に保持するため、細い線や小さな色文字が最も鮮明になります。描画自体は 8 ビットなので、10 ビット形式にしても情報量は増えません。
 
-Cinematic camera
-== シネマティックカメラ
-
 Cinematic camera smoothness (0=instant, 100=smoothest)
 == シネマティックカメラのスムーズさ (0=瞬時, 100=最もスムーズ)
 
@@ -2524,9 +2503,6 @@ Classic Pro
 
 Classic pro
 == クラシック pro
-
-Classic title glow
-== クラシックの光彩
 
 Clear
 == クリア
@@ -2701,6 +2677,9 @@ Close window after changing settings
 
 Cloud bubble
 == 雲の吹き出し
+
+Collapse
+== 折りたたむ
 
 Collapse console
 == コンソールを縮小
@@ -2938,9 +2917,6 @@ Configure DDNet gameplay preferences
 
 Configure display and rendering
 == 表示とレンダリングを設定
-
-Configure Dream-only convenience features
-== Configure Dream-only convenience features
 
 Configure game and client preferences
 == ゲームとクライアントの設定を構成
@@ -3794,9 +3770,6 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 DeepL API
 == DeepL API
 
-DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
-== DeepL API Free：月間50万文字（deepl.comで登録；無料キーは :fx で終わります）
-
 DeepL API Key (free keys end with :fx)
 == DeepL API キー（無料キーは :fx で終わります）
 
@@ -3898,9 +3871,6 @@ Delete screenshot
 
 Delete selected items
 == 選択したアイテムを削除
-
-Delete skin
-== スキンを削除
 
 Delete this preset
 == このプリセットを削除
@@ -4276,6 +4246,9 @@ Downscaled (0.78)
 
 Draft file is empty
 == 下書きファイルが空です
+
+Drag
+== ドラッグ
 
 Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
 == 死亡の不透明度やテレポートの不透明度などのスライダーを 0〜100% で動かすか、レイヤーの不透明度を調整でエンティティ層全体を薄くします。
@@ -5249,6 +5222,9 @@ Entity assets
 Entity Background Image
 == エンティティ背景画像
 
+Entity layer
+== エンティティ層
+
 Entity overlay
 == エンティティオーバーレイ
 
@@ -5360,6 +5336,9 @@ Exit replay view
 Exit spectating on both tees when either is hammered awake by another player
 == どちらかが他のプレイヤーのハンマーで解凍されたら両方の Tee の観戦を解除
 
+Expand
+== 展開する
+
 Expand console
 == コンソールを展開
 
@@ -5386,6 +5365,9 @@ Export cut as a separate demo
 
 Export demo cut
 == デモカットをエクスポート
+
+Export failed
+== エクスポートに失敗しました
 
 Export name contains invalid characters.
 == エクスポート名に無効な文字が含まれています。
@@ -5420,6 +5402,9 @@ Export selected
 Export to clipboard
 == クリップボードにエクスポート
 
+Export to downloads
+== ダウンロードに書き出す
+
 Exported %d chat messages
 == %d 件のチャットメッセージをエクスポートしました
 
@@ -5453,8 +5438,14 @@ Extreme values make movement feel wrong, so change one step at a time.
 Extremely slow, for testing only
 == 極めて遅い、テスト用
 
+Eyes
+== 目
+
 f = Frame rate
 == f = フレームレート
+
+Fade
+== フェード
 
 Fade and slide
 == フェード＆スライド
@@ -5560,9 +5551,6 @@ Fairly fast encode
 
 Fake CTF flags
 == 偽の CTF フラッグ
-
-Fallback simple noise reduction strength
-== フォールバック簡易ノイズ低減強度
 
 Fast encode
 == 速いエンコード
@@ -5920,6 +5908,9 @@ Frankenstein (drop parts on right)
 
 Free move
 == 自由移動
+
+Free view
+== フリービュー
 
 Free-View
 == フリービュー
@@ -6671,9 +6662,6 @@ High quality, slow
 Higher input latency
 == 入力遅延増加
 
-Higher values make the wave move faster. Zero stops the movement.
-== 値が大きいほど波が速く動きます。ゼロで動きが止まります。
-
 Highlight Color
 == ハイライト色
 
@@ -6685,9 +6673,6 @@ Highlight game type
 
 Highlight message text gradient color
 == ハイライトメッセージ文字のグラデーション色
-
-Highlight movement in Polished mode. Zero turns it off.
-== Polished モードのハイライトの動き。ゼロで無効になります。
 
 Highlight ping value
 == Ping 値をハイライト
@@ -7226,9 +7211,6 @@ Installed
 Installing update. Please wait...
 == アップデートをインストールしています。お待ちください...
 
-Instant compact hints
-== 小さなヒントを即時表示
-
 Instant zoom reverse
 == ズームの逆方向操作を即時反映
 
@@ -7382,9 +7364,6 @@ It's recommended that you check the settings to adjust them to your liking befor
 Item
 == アイテム
 
-Item type
-== アイテムタイプ
-
 Its use depends on the server or game mode.
 == 用途はサーバーやゲームモードによって異なります。
 
@@ -7448,6 +7427,9 @@ Join, version, rules, and help messages stay in chat instead of popups
 Joining Tutorial server
 == チュートリアルサーバーに参加中
 
+Joystick
+== ジョイスティック
+
 Jump
 == ジャンプ
 
@@ -7507,9 +7489,6 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == 投票後も投票ウィンドウを開いたままにする
-
-Key
-== キー
 
 Key binds
 == キーバインド
@@ -7864,9 +7843,6 @@ LibreTranslate endpoint
 
 Light
 == ライト
-
-Light band
-== 光の帯
 
 Limit information in spectator mode
 == 観戦モードの情報を制限する
@@ -8756,6 +8732,9 @@ Mix rate
 Mixed
 == 混合
 
+Mobile spectator camera: 0=joystick pad, 1=drag the view
+== モバイル観戦のカメラ操作：0=ジョイスティック、1=画面ドラッグ
+
 Mode
 == モード
 
@@ -8788,6 +8767,9 @@ More optimistic prediction along Tee's stable direction, reduces delay to stabil
 
 More teammates...
 == さらにチームメイト…
+
+Morph
+== モーフ
 
 MOTD
 == MOTD
@@ -9446,6 +9428,9 @@ No status bar items
 No such savegame for this map
 == このマップに対応するセーブがありません
 
+No tee nearby
+== 近くに Tee がいません
+
 No unfinished maps available
 == 未完了のマップはありません
 
@@ -9686,6 +9671,9 @@ Only show with this nickname
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 == 変更は選択中の Tee にだけ効くので、dummy の色を変える前に Dummy へ切り替えてください。
 
+Only what you can't imagine, nothing Dream can't do
+== 想像できないことだけが、Dreamにできないことです
+
 Opacity
 == 不透明度
 
@@ -9715,6 +9703,9 @@ Open bindwheel selector
 
 Open DDNet Wiki
 == DDNet Wiki を開く
+
+Open downloads folder
+== ダウンロードフォルダーを開く
 
 Open emote selector
 == 絵文字セレクターを開く
@@ -9850,9 +9841,6 @@ Original
 
 Original and translation
 == 原文と翻訳
-
-Original language for both received and outgoing messages. Use Auto to detect each message.
-== 受信・送信メッセージとも原文の言語を使用します。各メッセージの検出には「自動」を使用。
 
 Original language for incoming and outgoing text
 == 受信・送信テキストの原文言語
@@ -10061,11 +10049,17 @@ Password for Axiom alt account auto-login
 Password for Axiom main account auto-login
 == Axiom メインアカウント自動ログインパスワード
 
+Password icon animation
+== パスワードアイコンのアニメーション
+
 Password incorrect
 == パスワードが間違っています
 
 Password required to use reserved slots.
 == 予約スロットを使用するために必要なパスワード
+
+Password visibility icon animation: 0=Fade, 1=Morph
+== パスワード表示アイコンのアニメーション：0=フェード、1=モーフ
 
 Past year
 == 過去1年間
@@ -10579,12 +10573,6 @@ Points
 
 Points unavailable
 == ポイントを取得できません
-
-Polished
-== 光沢
-
-Pop wave
-== 拡大の波
 
 Popup animation
 == ポップアップアニメーション
@@ -11645,9 +11633,6 @@ Remove team name:
 Remove war clan:
 == 敵対クランを削除
 
-Remove War Group
-== 敵対グループを削除
-
 Remove war name:
 == 敵対プレイヤー名を削除：
 
@@ -12110,18 +12095,6 @@ Right-click to enable auto-translate
 Ring
 == リング
 
-RNNoise noise reduction
-== RNNoise ノイズリダクション
-
-RNNoise noise reduction (unavailable in this build)
-== RNNoise ノイズリダクション（このビルドでは利用不可）
-
-RNNoise noise reduction strength
-== RNNoise ノイズリダクション強度
-
-RNNoise not integrated in current build, will fallback to simple noise reduction
-== 現在のビルドに RNNoise が統合されていません。簡易ノイズリダクションにフォールバックします
-
 Room
 == ルーム
 
@@ -12343,6 +12316,9 @@ Save/Load Skin
 
 Saved
 == 保存しました
+
+Saved to Downloads/QmClient
+== ダウンロード/QmClient に保存しました
 
 Saved to the bind wheel.
 == バインドホイールに保存しました。
@@ -12695,6 +12671,9 @@ Send specified command to rcon
 Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
 == 90～270秒のランダムな間隔で連続する三行の歌詞を全体チャットに送り、各行の間隔を3秒にする
 
+Send to
+== 送信先
+
 Send translation method
 == 翻訳方式を送信
 
@@ -12823,9 +12802,6 @@ Server URL
 
 Server votes
 == サーバー投票
-
-Server-assigned style
-== サーバー指定のスタイル
 
 Server-dependent
 == サーバー依存
@@ -12997,9 +12973,6 @@ Share of the server browser name/map split given to the name column (per mille)
 
 Sharpen
 == シャープン
-
-Shimmer speed
-== きらめきの速度
 
 Short pain voice
 == 短い被ダメージボイス
@@ -13549,9 +13522,6 @@ Show lyrics in a separate island below Dynamic Island
 
 Show lyrics in Dynamic Island
 == Dynamic Island に歌詞を表示
-
-Show lyrics inside Dynamic Island
-== Dynamic Island 内に歌詞を表示
 
 Show main tee title locally
 == メインTeeの称号をローカル表示
@@ -14150,12 +14120,6 @@ Simple noise reduction
 Simple noise reduction strength
 == 簡易ノイズリダクション強度
 
-Single color
-== 単色
-
-Single color and Rainbow override the color of animated styles; the style keeps its motion
-== 単色とレインボーはアニメーションスタイルの色を上書きします（スタイルの動きは残ります）
-
 Size
 == サイズ
 
@@ -14362,9 +14326,6 @@ Smooths the camera while you free-spectate with the mouse in live games and demo
 
 Snap title bob offset to whole pixels (sharper glyphs, choppier motion)
 == 揺れのオフセットを整数ピクセルに合わせる（字形は鮮明、動きはぎこちない）
-
-Snap wave to pixels
-== 波の変位を整数ピクセルに合わせる
 
 Snapshot Age
 == スナップショット経過時間
@@ -14636,9 +14597,6 @@ Start at a random queue position on every map join
 Start dummy skin queue from a random position when entering a map
 == マップ参加時にダミーのスキンキューをランダムな位置から開始
 
-Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
-== マップに参加するたびにランダムなキュー位置から開始します（ダミー接続時やキューの再有効化時も含む）。切り替え間隔を 0 にすると時間によるローテーションが無効になり、マップ参加時のみ切り替えます。
-
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 == デフォルト値から始め、他のプレイヤーの動きが飛んで見えるなら少し上げ、自分が遅れて見えるなら下げます。
 
@@ -14798,9 +14756,6 @@ Streamer word list file
 Strength icons assets
 == 強さアイコンアセット
 
-Strength of the vertical or pop wave. Zero keeps the title still.
-== 上下または拡大の波の強さ。ゼロにすると称号が静止します。
-
 Stress system (debug builds only).
 == ストレスシステム（デバッグビルドのみ）
 
@@ -14851,9 +14806,6 @@ Styles kill, finish and system messages in the chat area.
 
 Sub-Tick aiming
 == Sub-Tick エイミング
-
-Subtle
-== 控えめ
 
 Success
 == 成功
@@ -15007,9 +14959,6 @@ System message text gradient color
 
 System prompt text color
 == システムプロンプトテキスト色
-
-Tags
-== タグ
 
 Take a screenshot
 == スクリーンショットを撮影
@@ -15365,9 +15314,6 @@ Text color mode
 Text color mode: 0 automatic, 1 white, 2 black, 3 custom
 == 文字色モード: 0 自動, 1 白, 2 黒, 3 カスタム
 
-Text effect
-== 文字効果
-
 Text input focus ring color
 == テキスト入力フォーカスリングの色
 
@@ -15617,6 +15563,9 @@ This team started already
 This team was disbanded because there are more players than allowed in the team.
 == チームの許容人数を超えたため、このチームは解散されました
 
+This text is already in the target language.
+== このテキストは既に目標の言語です。
+
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == このツールチップは ui_widget::Tooltip が提供しています。CTooltips の薄いラッパーです。
 
@@ -15778,9 +15727,6 @@ Title display
 
 Title light sweep speed in 1/100 row per second (0 = off)
 == タイトルの光の走査速度（毎秒 1/100 行、0 = 無効）
-
-Title motion
-== 称号アニメーション
 
 Title motion: 0 = vertical wave, 1 = pop wave
 == 称号アニメーション：0 = 上下の波、1 = 拡大の波
@@ -16823,9 +16769,6 @@ Use team colors for name plates
 Use Tee icons instead of circles
 == 円の代わりに Tee アイコンを使用
 
-Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== フックキー押下中にフック補助線を表示するときは下のカスタムカラーを使用します。無効の場合は非押下時の色を自動反転します。
-
 Use the custom colors below while the hook key is held
 == フックキー押下中は下のカスタムカラーを使用
 
@@ -16903,9 +16846,6 @@ Vertical position
 
 Vertical sync (may cause lag)
 == 垂直同期（ラグの原因になる可能性あり）
-
-Vertical wave
-== 上下の波
 
 Very fast encode
 == 非常に速いエンコード
@@ -17017,12 +16957,6 @@ Visual effects
 
 Visual: Cursor
 == ビジュアル: カーソル
-
-Visual: Effects
-== ビジュアル: エフェクト
-
-Visual: Nameplates
-== ビジュアル：ネームプレート
 
 Visuals
 == ビジュアル
@@ -17213,15 +17147,6 @@ Water hammer highlight
 Watermark
 == ウォーターマーク
 
-Wave amount
-== 波の振幅
-
-Wave spacing
-== 波の間隔
-
-Wave speed
-== 波の速度
-
 Weak hook
 == 弱いフック
 
@@ -17336,9 +17261,6 @@ Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per
 When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient のレインボー Tee が有効な場合、この機能は効果がありません。
 
-When you cross the start line, show a ghost tee replicating the movements of your best time
-== スタートラインを通過すると、ベストタイムの動きを再現するゴーストTeeを表示します
-
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 == 称号をどこに出すか、どう見せるか。ネームプレート、スタイル、アニメーション、色、発光です。
 
@@ -17422,6 +17344,9 @@ Whisper option color
 
 Whisper something to someone (private message)
 == 誰かにささやく（プライベートメッセージ）
+
+Whisper target left the game
+== ささやき相手がゲームを離れました
 
 Whisper to %s
 == %s にささやく
@@ -17891,9 +17816,6 @@ Zen mode hides chat bubbles even when this is on, and a long "Duration" leaves o
 Zen mode key
 == 禅モードキー
 
-Zero uses the style default. Higher values make color bands narrower.
-== ゼロでスタイルの既定値を使用します。値が大きいほど色の帯が狭くなります。
-
 Zhipu AI
 == Zhipu AI
 
@@ -18347,10 +18269,6 @@ required
 [Team status]
 solo
 == ソロ
-
-[Title color mode]
-Use style colors
-== スタイルの色を使用
 
 [Touch button behavior]
 Bind

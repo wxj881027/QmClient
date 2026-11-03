@@ -44,7 +44,18 @@ namespace ui_widget
 	// 旧菜单入口和新控件共用绘制、主题及动画；上下文由所属 CUi 提供。
 	IUiContext ControlContext(CUi *pUi);
 	ColorRGBA DrawButtonSurface(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, const SButtonSurfaceOptions &Options = {});
-	int DoIconButton(const IUiContext &Ctx, const void *pId, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect &Rect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> Color = std::nullopt, bool ShowSlash = false, bool TransparentInactive = false, const CUIRect *pHitRect = nullptr);
+
+	// 图标按钮的自定义图标绘制：底色、hover 缩放、命中判定仍归 DoIconButton，图标本身
+	// 交给回调画（形变帧条、双图标过渡等）。Rect 是按钮内部收敛后的图标方框，Color 是
+	// 按钮已算好的前景色——与静止态 DrawQmIcon 拿到的两个入参完全一致。
+	// 用函数指针而不是 std::function：这个回调每帧每按钮都要走一次，不能带分配。
+	struct SIconButtonIconDraw
+	{
+		void (*m_pfnDraw)(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Color, const void *pUser) = nullptr;
+		const void *m_pUser = nullptr;
+	};
+
+	int DoIconButton(const IUiContext &Ctx, const void *pId, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect &Rect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> Color = std::nullopt, bool ShowSlash = false, bool TransparentInactive = false, const CUIRect *pHitRect = nullptr, const SIconButtonIconDraw *pIconDraw = nullptr);
 
 	// 主按钮使用主题强调色；禁用时保留外形并停止交互。
 	bool PrimaryButton(const IUiContext &Ctx, CButtonContainer *pBtn, const char *pText, const CUIRect &Rect, bool Disabled = false, EUiButtonGeometry Geometry = EUiButtonGeometry::CONTROL);

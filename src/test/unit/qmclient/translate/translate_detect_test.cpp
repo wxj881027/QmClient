@@ -227,3 +227,23 @@ TEST(TranslateOutgoingDetect, PreferredModeRetainsOtherLanguagesAndMixedThreshol
 	EXPECT_FALSE(qm_translate::ShouldTranslateOutgoing(Mixed, "ja", "auto", 3, 75, false));
 	EXPECT_TRUE(qm_translate::ShouldTranslateOutgoing(Mixed, "ja", "auto", 3, 75, true));
 }
+
+TEST(TranslateSourceGuess, DominantForeignScriptBecomesSource)
+{
+	// 汉字与拉丁字母混排时取多数字形；英文部分才会被翻译，也不会凑出两端相同的语言对
+	EXPECT_STREQ(qm_translate::SelectExplicitSourceLanguage(qm_translate::AnalyzeLanguage("快说bye"), "zh-CN"), "en");
+	EXPECT_STREQ(qm_translate::SelectExplicitSourceLanguage(qm_translate::AnalyzeLanguage("我快说bye"), "zh"), "en");
+	EXPECT_STREQ(qm_translate::SelectExplicitSourceLanguage(qm_translate::AnalyzeLanguage("gg 好厉害"), "zh"), "en");
+	EXPECT_STREQ(qm_translate::SelectExplicitSourceLanguage(qm_translate::AnalyzeLanguage("hello 你好"), "en"), "zh");
+	EXPECT_STREQ(qm_translate::SelectExplicitSourceLanguage(qm_translate::AnalyzeLanguage("こんにちは"), "zh"), "ja");
+}
+
+TEST(TranslateSourceGuess, TargetOnlyTextHasNoSourceLanguage)
+{
+	EXPECT_EQ(qm_translate::SelectExplicitSourceLanguage(qm_translate::AnalyzeLanguage("你好世界"), "zh"), nullptr);
+	EXPECT_EQ(qm_translate::SelectExplicitSourceLanguage(qm_translate::AnalyzeLanguage("你好世界"), "zh-CN"), nullptr);
+	EXPECT_EQ(qm_translate::SelectExplicitSourceLanguage(qm_translate::AnalyzeLanguage("hello"), "en"), nullptr);
+	EXPECT_EQ(qm_translate::SelectExplicitSourceLanguage(qm_translate::AnalyzeLanguage(""), "zh"), nullptr);
+	// 简体转繁体仍是有效请求
+	EXPECT_STREQ(qm_translate::SelectExplicitSourceLanguage(qm_translate::AnalyzeLanguage("你好世界"), "zh-TW"), "zh");
+}

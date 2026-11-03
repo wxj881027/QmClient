@@ -746,8 +746,9 @@ void CMenus::RenderGame(CUIRect MainView)
 	if(g_Config.m_ClTouchControls)
 	{
 		ButtonBar2.VSplitLeft(200.0f, &Button, &ButtonBar2);
-		static char s_TouchControlsEditCheckbox;
-		if(DoIngameMenuCheckBox(PAGE_GAME, "ingame-game-edit-touch-controls", &s_TouchControlsEditCheckbox, Localize("Edit touch controls"), GameClient()->m_TouchControls.IsEditingActive(), &Button))
+		static CButtonContainer s_TouchControlsEditButton;
+		// 这是进入触控编辑器的动作，不是开关状态：用按钮，编辑中时只做选中高亮。
+		if(DoIngameMenuButton(PAGE_GAME, "ingame-game-edit-touch-controls", &s_TouchControlsEditButton, Localize("Edit touch controls"), GameClient()->m_TouchControls.IsEditingActive() ? 1 : 0, &Button))
 		{
 			if(GameClient()->m_TouchControls.IsEditingActive() && m_MenusIngameTouchControls.UnsavedChanges())
 			{

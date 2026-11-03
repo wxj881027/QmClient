@@ -204,9 +204,9 @@ namespace QmHudEditor
 			Result.m_Offset = 0.0f;
 		}
 		Result.m_Position = HasCustom ?
-			RestoreAxisAnchor(ClampStoredAxisPosition(StoredPosition), Result.m_Width, ScreenStart, ScreenWidth, Result.m_Offset) :
-			SnapAxisToScreenEdgesEx(std::clamp(DefaultPosition, ScreenStart, ScreenStart + ScreenWidth), Result.m_Width,
-				ScreenStart + LeftMargin, std::max(EPSILON, ScreenWidth - LeftMargin - RightMargin), Result.m_Offset);
+					    RestoreAxisAnchor(ClampStoredAxisPosition(StoredPosition), Result.m_Width, ScreenStart, ScreenWidth, Result.m_Offset) :
+					    SnapAxisToScreenEdgesEx(std::clamp(DefaultPosition, ScreenStart, ScreenStart + ScreenWidth), Result.m_Width,
+						    ScreenStart + LeftMargin, std::max(EPSILON, ScreenWidth - LeftMargin - RightMargin), Result.m_Offset);
 		return Result;
 	}
 
@@ -358,6 +358,8 @@ enum class EHudEditorElement
 	InputOverlay,
 	HudNotifications,
 	GoresDrownBoard,
+	// 手机端：底部观战灵动岛（自由视角/跟随对象）。
+	MobileIsland,
 
 	Count,
 };
@@ -393,6 +395,7 @@ namespace QmHudEditor
 		case EHudEditorElement::InputOverlay: return "input_overlay";
 		case EHudEditorElement::HudNotifications: return "hud_notifications";
 		case EHudEditorElement::GoresDrownBoard: return "gores_drown_board";
+		case EHudEditorElement::MobileIsland: return "mobile_island";
 		case EHudEditorElement::Count: break;
 		}
 		return "";
@@ -496,6 +499,11 @@ private:
 	bool m_LayoutLoaded = false;
 	int m_DraggingElement = -1;
 	vec2 m_DragGrabOffset = vec2(0.0f, 0.0f);
+	// 手机：点选元素后右下角出现缩放把手，拖把手按中心距比例改缩放。
+	int m_MobileSelectedElement = -1;
+	bool m_MobileScaling = false;
+	float m_MobileScaleStartPercent = 100.0f;
+	float m_MobileScaleStartDistance = 1.0f;
 	char m_aLayoutCache[2048] = {};
 	std::array<SElementState, ELEMENT_COUNT> m_aElementStates{};
 	std::array<QmHudEditor::CVisibleBounds, ELEMENT_COUNT> m_aVisibleBounds{};

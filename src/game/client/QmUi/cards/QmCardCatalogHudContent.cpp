@@ -393,9 +393,12 @@ void CMenus::RenderQmHudLyricsContent(CUIRect &Content, float LineHeight, float 
 		{
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &InputColumn);
 			RenderQmHudLabel("qmclient-lyrics-spotify-sp-dc", &LabelColumn, "spotify_ck", ui_token::font::BODY);
-			s_SpotifySpDc.SetHidden(true);
+			static ui_widget::SPasswordFieldState s_SpotifySpDcState;
 			IUiContext TextInputCtx = SettingsUiContext("settings_qmclient_lyrics_spotify_text_inputs");
-			ui_widget::InputField(TextInputCtx, &s_SpotifySpDc, InputColumn, Localize("Paste sp_dc from Spotify web cookies"), ui_token::font::BODY);
+			ui_widget::SPasswordFieldOptions SpDcOptions;
+			SpDcOptions.m_pPlaceholder = Localize("Paste sp_dc from Spotify web cookies");
+			SpDcOptions.m_FontSize = ui_token::font::BODY;
+			ui_widget::PasswordField(TextInputCtx, &s_SpotifySpDc, InputColumn, &s_SpotifySpDcState, SpDcOptions);
 		}
 		Flow.Space(LineSpacing);
 	}

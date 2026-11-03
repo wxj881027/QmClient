@@ -75,7 +75,7 @@ const char *CTooltips::PrepareCardLabel(const CUIRect *pRect, const char *pText,
 		m_CardLabelHint.m_HoverByRect = true;
 		m_CardLabelHint.m_Immediate = true;
 		m_CardLabelHint.m_OnScreen = true;
-		m_CardLabelHint.m_FontSize = ResolveSettingsSmallFontSize(g_Config.m_QmUiScale / 100.0f);
+		m_CardLabelHint.m_FontSize = ResolveSettingsSmallFontSize(QmUiScaleFactor(g_Config.m_QmUiScale));
 		m_CardLabelHint.m_RegisteredFrame = m_Frame;
 		m_CardLabelHint.m_RegisteredContext = GameClient()->m_Menus.TooltipContext();
 		QmTooltipRecordSource(m_CardLabelHint, m_Frame, *pRect, Ui()->IsClipped() ? Ui()->ClipArea() : nullptr, Ui()->MousePos());
@@ -97,19 +97,27 @@ void CTooltips::SetFadeTime(const void *pId, float Time)
 void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint)
 {
 	const bool Small = GameClient()->m_Menus.IsSettingsPageActive();
-	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? ResolveSettingsSmallFontSize(g_Config.m_QmUiScale / 100.0f) : 14.0f, Small, Small);
+	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? ResolveSettingsSmallFontSize(QmUiScaleFactor(g_Config.m_QmUiScale)) : 14.0f, Small, Small);
 }
 
 void CTooltips::DoToolTipForRect(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint)
 {
 	const bool Small = GameClient()->m_Menus.IsSettingsPageActive();
-	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? ResolveSettingsSmallFontSize(g_Config.m_QmUiScale / 100.0f) : 14.0f, Small, true);
+	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? ResolveSettingsSmallFontSize(QmUiScaleFactor(g_Config.m_QmUiScale)) : 14.0f, Small, true);
+}
+
+void CTooltips::DoToolTipFromSide(const void *pId, const CUIRect *pNearRect, const char *pText, EQmTooltipPlacement Placement, float WidthHint)
+{
+	// 侧向布局只用于普通气泡；设置页的紧凑提示保持即时小字，不引入方向差异。
+	const bool Small = GameClient()->m_Menus.IsSettingsPageActive();
+	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? ResolveSettingsSmallFontSize(QmUiScaleFactor(g_Config.m_QmUiScale)) : 14.0f,
+		Small, Small, false, false, nullptr, Small ? EQmTooltipPlacement::AUTO : Placement);
 }
 
 void CTooltips::DoInfoToolTipForRect(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, float FontSize)
 {
 	const bool Small = GameClient()->m_Menus.IsSettingsPageActive();
-	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? ResolveSettingsSmallFontSize(g_Config.m_QmUiScale / 100.0f) : FontSize, Small, true, true);
+	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? ResolveSettingsSmallFontSize(QmUiScaleFactor(g_Config.m_QmUiScale)) : FontSize, Small, true, true);
 }
 
 void CTooltips::DoSmallToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float FontSize, float WidthHint)
@@ -183,13 +191,17 @@ void CTooltips::DoSettingsToolTipForConfig(const void *pId, const CUIRect *pRect
 		const SConfigVariable &Variable = *Iter->second;
 		pKey = Variable.m_pHelpLocalizeKey != nullptr ? Variable.m_pHelpLocalizeKey : Variable.m_pHelp;
 	}
-	const float FontSize = ResolveSettingsSmallFontSize(g_Config.m_QmUiScale / 100.0f);
+	const float FontSize = ResolveSettingsSmallFontSize(QmUiScaleFactor(g_Config.m_QmUiScale));
 	DoToolTip(pId, pRect, pKey != nullptr ? Localize(pKey) : nullptr, -1.0f, FontSize, true, true, true, true, pAnchor);
 }
 
-void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, const float FontSize, const bool SmallInstant, const bool HoverByRect, const bool Immediate, const bool Fallback, const CUIRect *pAnchor)
+void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, const float FontSize, const bool SmallInstant, const bool HoverByRect, const bool Immediate, const bool Fallback, const CUIRect *pAnchor, const EQmTooltipPlacement Placement)
 {
 	if(Ui()->RenderOnly())
+		return;
+	// 手机触控没有 hover，触摸点停在哪都会让“悬浮提示”变成一块常驻黑框；
+	// 触控界面的信息应直接写在控件上，不在移动端渲染 tooltip。
+	if(QmUiMobilePlatform())
 		return;
 	const uintptr_t Id = reinterpret_cast<uintptr_t>(pId);
 	const auto [Entry, WasInserted] = m_Tooltips.try_emplace(Id);
@@ -240,6 +252,7 @@ void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char 
 	Tooltip.m_Immediate = Immediate;
 	Tooltip.m_SmallInstant = SmallInstant;
 	Tooltip.m_Fallback = Fallback;
+	Tooltip.m_Placement = Placement;
 	Tooltip.m_RegisteredFrame = m_Frame;
 	Tooltip.m_RegisteredContext = GameClient()->m_Menus.TooltipContext();
 	Tooltip.m_OnScreen = QmTooltipHovered(Tooltip, *Ui());
@@ -315,11 +328,16 @@ void CTooltips::OnRender()
 		vec2(std::max(0.0f, pScreen->w - 2.0f * Margin), std::max(0.0f, pScreen->h - 2.0f * Margin)), BasePadding);
 	if(Layout.m_VisibleLines <= 0)
 		return;
-	const CUIRect FixedRect = QmTooltipRect(Tooltip.m_Anchor, *pScreen, Layout.m_Size, Margin);
+	const CUIRect FixedRect = QmTooltipRect(Tooltip.m_Anchor, *pScreen, Layout.m_Size, Margin, Tooltip.m_Placement);
 	if(FixedRect.w <= 0.0f || FixedRect.h <= 0.0f)
 		return;
 	const CUIRect MovingRect = m_MotionState.Update(FixedRect, Now, MotionEnabled);
-	const CUIRect Rect = QmTooltipAnimatedRect(MovingRect, *pScreen, QmTooltipScale(VisibleSeconds, Animate));
+	// 贴在卡片左侧时，缩放支点落在贴卡片的一边，入场再向离开卡片的方向滑出一小段。
+	const bool SidePlaced = QmTooltipSidePlaced(Tooltip, FixedRect);
+	const vec2 ScalePivot = SidePlaced ? vec2(1.0f, 0.5f) : vec2(0.5f, 0.5f);
+	CUIRect Rect = QmTooltipAnimatedRect(MovingRect, *pScreen, QmTooltipScale(VisibleSeconds, Animate), ScalePivot);
+	if(SidePlaced)
+		Rect.x += QmTooltipSidePopOffset(VisibleSeconds, Animate);
 	const float Scale = QmTooltipTextScale(FixedRect, Rect);
 	if(Scale <= 0.0f)
 		return;

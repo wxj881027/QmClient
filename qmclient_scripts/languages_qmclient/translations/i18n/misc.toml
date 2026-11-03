@@ -10816,6 +10816,24 @@ portuguese = "Olhos"
 turkish = "Gözler"
 polish = "Oczy"
 
+# 绑定轮盘的眼睛图标没有 skins 上下文，单独保留一条无上下文文案。
+
+[[message]]
+key = "Eyes"
+[message.translations]
+simplified_chinese = "眼睛"
+traditional_chinese = "眼睛"
+japanese = "目"
+korean = "눈"
+russian = "Глаза"
+german = "Augen"
+spanish = "Ojos"
+french = "Yeux"
+brazilian_portuguese = "Olhos"
+portuguese = "Olhos"
+turkish = "Gözler"
+polish = "Oczy"
+
 [[message]]
 key = "Feet"
 context = "skins"
@@ -15314,6 +15332,38 @@ brazilian_portuguese = "Atualizando a lista pública de palavras..."
 portuguese = "A atualizar a lista pública de palavras..."
 turkish = "Ortak kelime listesi güncelleniyor..."
 polish = "Aktualizowanie publicznej listy słów..."
+
+[[message]]
+key = "Collapse"
+[message.translations]
+simplified_chinese = "折叠"
+traditional_chinese = "摺疊"
+japanese = "折りたたむ"
+korean = "접기"
+russian = "Свернуть"
+german = "Einklappen"
+spanish = "Contraer"
+french = "Réduire"
+brazilian_portuguese = "Recolher"
+portuguese = "Recolher"
+turkish = "Daralt"
+polish = "Zwiń"
+
+[[message]]
+key = "Expand"
+[message.translations]
+simplified_chinese = "展开"
+traditional_chinese = "展開"
+japanese = "展開する"
+korean = "펼치기"
+russian = "Развернуть"
+german = "Erweitern"
+spanish = "Expandir"
+french = "Développer"
+brazilian_portuguese = "Expandir"
+portuguese = "Expandir"
+turkish = "Genişlet"
+polish = "Rozwiń"
 
 [[message]]
 key = "Progress bar location"

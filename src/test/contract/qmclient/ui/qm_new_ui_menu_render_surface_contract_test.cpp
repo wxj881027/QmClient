@@ -138,7 +138,10 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 		EXPECT_NE(MetalShader.find("float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);"), std::string::npos);
 		EXPECT_NE(MetalShader.find("const bool BorderOnly = Params[14].y > 0.5;"), std::string::npos);
 		EXPECT_NE(MetalShader.find("const float OuterCoverage = RoundedRectCoverage(OuterDistance, RenderParams.y);"), std::string::npos);
-		EXPECT_NE(MetalShader.find("const float InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? RoundedRectCoverage(InnerDistance, RenderParams.y) : 0.0;"), std::string::npos);
+		// InnerCoverage 必须可变：只描边模式要在算完边框环带后把它清零，写成 const 时
+		// Metal 编译器直接报 cannot assign to variable，两份 GLSL 后端本来就不是 const。
+		EXPECT_NE(MetalSdfFragment.find("float InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? RoundedRectCoverage(InnerDistance, RenderParams.y) : 0.0;"), std::string::npos);
+		EXPECT_EQ(MetalSdfFragment.find("const float InnerCoverage = BorderWidth"), std::string::npos);
 		EXPECT_NE(MetalShader.find("Rect.zw + float2(RenderParams.z * 2.0)"), std::string::npos);
 		EXPECT_NE(MetalShader.find("const float OutputAlpha = FillAlpha + BorderAlpha;"), std::string::npos);
 		// 与 GLSL 一致：边框颜色经 BorderTint 中转，RenderParams.w 控制是否沿用渐变色。

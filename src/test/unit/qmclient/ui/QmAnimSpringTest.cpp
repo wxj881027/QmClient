@@ -173,3 +173,45 @@ TEST(UiV2AnimSpring, CardReorderFlipKeepsReleaseMotionVisible)
 	EXPECT_NEAR(Runtime.GetValue(NodeKey, EUiAnimProperty::POS_X), NextTarget.x, 1.0f);
 	EXPECT_NEAR(Runtime.GetValue(NodeKey, EUiAnimProperty::POS_Y), NextTarget.y, 1.0f);
 }
+
+// 关闭动效时两条驱动必须同语义：补间也要立刻落到目标并停掉旧轨道，
+// 否则设置卡片折叠箭头、密码图标淡化档会在 motion_level 0 下照样播完整段过渡。
+TEST(UiV2AnimMotionLevel, TweenSnapsToTargetWhenMotionDisabled)
+{
+	CUiV2AnimationRuntime Runtime;
+	const uint64_t NodeKey = 301;
+	Runtime.SetValue(NodeKey, EUiAnimProperty::SCALE, 0.0f);
+
+	g_Config.m_QmUiMotionLevel = 0;
+	const float Resolved = ResolveUiAnimValue(Runtime, NodeKey, EUiAnimProperty::SCALE, 1.0f, 0.26f, EEasing::EASE_IN_OUT);
+	EXPECT_FLOAT_EQ(Resolved, 1.0f);
+	EXPECT_FLOAT_EQ(Runtime.GetValue(NodeKey, EUiAnimProperty::SCALE, -1.0f), 1.0f);
+	EXPECT_FALSE(Runtime.HasActiveAnimation(NodeKey, EUiAnimProperty::SCALE));
+
+	// 反向也要立即生效，不能留着上一段轨道的中间值。
+	const float Back = ResolveUiAnimValue(Runtime, NodeKey, EUiAnimProperty::SCALE, 0.0f, 0.26f, EEasing::EASE_IN_OUT);
+	EXPECT_FLOAT_EQ(Back, 0.0f);
+	EXPECT_FLOAT_EQ(Runtime.GetValue(NodeKey, EUiAnimProperty::SCALE, -1.0f), 0.0f);
+	EXPECT_FALSE(Runtime.HasActiveAnimation(NodeKey, EUiAnimProperty::SCALE));
+
+	g_Config.m_QmUiMotionLevel = 2;
+}
+
+TEST(UiV2AnimMotionLevel, TweenStillInterpolatesWhenMotionEnabled)
+{
+	CUiV2AnimationRuntime Runtime;
+	const uint64_t NodeKey = 302;
+	Runtime.SetValue(NodeKey, EUiAnimProperty::SCALE, 0.0f);
+
+	g_Config.m_QmUiMotionLevel = 2;
+	ResolveUiAnimValue(Runtime, NodeKey, EUiAnimProperty::SCALE, 1.0f, 0.26f, EEasing::EASE_IN_OUT);
+	AdvanceFor(Runtime, 0.05f);
+	const float Mid = Runtime.GetValue(NodeKey, EUiAnimProperty::SCALE, -1.0f);
+	EXPECT_GT(Mid, 0.0f);
+	EXPECT_LT(Mid, 1.0f);
+	EXPECT_TRUE(Runtime.HasActiveAnimation(NodeKey, EUiAnimProperty::SCALE));
+
+	AdvanceFor(Runtime, 2.0f);
+	EXPECT_NEAR(Runtime.GetValue(NodeKey, EUiAnimProperty::SCALE), 1.0f, 0.01f);
+	EXPECT_FALSE(Runtime.HasActiveAnimation(NodeKey, EUiAnimProperty::SCALE));
+}

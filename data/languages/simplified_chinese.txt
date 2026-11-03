@@ -728,9 +728,6 @@ Adjust TClient heads-up display elements
 Adjust the display options; open a vote to check the layout before joining a busy server.
 == 调整显示选项，进拥挤的服务器前先开一个投票查看布局。
 
-Adjust the opacity of entities belonging to other teams, such as tees and name plates
-== 调整其他队伍实体（如 Tee 和名牌）的不透明度
-
 Adjust trails rendered behind Tees
 == 调整 Tee 身后的轨迹效果
 
@@ -748,9 +745,6 @@ Adjusts TClient-specific HUD elements that are not part of the standard DDNet HU
 
 Advanced
 == 高阶
-
-Advanced mode
-== 高级模式
 
 Advanced options
 == 高级选项
@@ -977,9 +971,6 @@ Anti Latency Tools
 Anti latency tools
 == 延迟补偿工具
 
-Anti Ping Smoothing
-== 平滑预测
-
 Anti-aliasing for the exported video only, independent of the graphics setting. Explicit levels render each frame into a multisampled offscreen target, so the game itself can stay at a lower setting for performance. Supersampling (output smaller than the window) already reduces jagged edges, so prefer one or the other.
 == 只影响导出成片的抗锯齿，与全局图形设置相互独立。选显式档位时每一帧会画进多采样离屏目标，游戏本体可以保持低档位省性能。超采样（输出小于窗口）本身已经能减轻锯齿，两者二选一即可。
 
@@ -1040,9 +1031,6 @@ Applied to %d same-family part(s).
 Applies an animated rainbow color to selected elements such as nameplates or the hook.
 == 为名牌、钩索等选定元素加上流动的彩虹色。
 
-Applies to single-color and rainbow overrides.
-== 用于单色和彩虹配色。
-
 Apply
 == 应用
 
@@ -1075,9 +1063,6 @@ Apply quick input to other Tees as well
 
 Apply squishy Tee deformation to other players
 == 将 Q 弹 Tee 形变应用到其他玩家
-
-Apply this preset
-== 应用此预设
 
 Apply to
 == 应用到
@@ -1279,9 +1264,6 @@ Auto enable in Gores mode
 
 Auto enable/disable IME on text focus
 == 根据文本输入焦点自动启用或关闭 IME
-
-Auto execute
-== 自动执行
 
 Auto fetch replay info on refresh
 == 刷新时是否自动获取回放信息
@@ -2447,9 +2429,6 @@ Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher
 Chroma sampling. 4:2:0 is smallest and most compatible; 4:4:4 keeps full color detail for thin lines and small colored text. Rendering is 8-bit, so 10-bit formats do not add detail by themselves.
 == 色度采样。4:2:0 体积最小、兼容性最好；4:4:4 保留完整色度，细线和彩色小字最清楚。渲染本身是 8 位，所以 10 位格式并不会自己增加细节。
 
-Cinematic camera
-== 电影镜头
-
 Cinematic camera smoothness (0=instant, 100=smoothest)
 == 电影镜头平滑度（0=瞬时，100=最平滑）
 
@@ -2524,9 +2503,6 @@ Classic Pro
 
 Classic pro
 == 古典 pro
-
-Classic title glow
-== 经典效果光晕
 
 Clear
 == 清空
@@ -2701,6 +2677,9 @@ Close window after changing settings
 
 Cloud bubble
 == 云朵气泡
+
+Collapse
+== 折叠
 
 Collapse console
 == 收起控制台
@@ -2938,9 +2917,6 @@ Configure DDNet gameplay preferences
 
 Configure display and rendering
 == 配置显示与渲染选项
-
-Configure Dream-only convenience features
-== 配置栖梦专属便利功能
 
 Configure game and client preferences
 == 配置游戏与客户端偏好
@@ -3794,9 +3770,6 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 DeepL API
 == DeepL API
 
-DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
-== DeepL API Free：每月 50 万字符（在 deepl.com 注册；免费密钥以 :fx 结尾）
-
 DeepL API Key (free keys end with :fx)
 == DeepL API 密钥（免费密钥以 :fx 结尾）
 
@@ -3898,9 +3871,6 @@ Delete screenshot
 
 Delete selected items
 == 删除选中项
-
-Delete skin
-== 删除皮肤
 
 Delete this preset
 == 删除该预设
@@ -4276,6 +4246,9 @@ Downscaled (0.78)
 
 Draft file is empty
 == 草稿文件为空
+
+Drag
+== 拖动
 
 Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
 == 拖动死亡透明度或传送透明度这类滑块，范围 0 到 100%，或用调整图层透明度把整个实体层调淡。
@@ -5249,6 +5222,9 @@ Entity assets
 Entity Background Image
 == 实体层背景图
 
+Entity layer
+== 实体层
+
 Entity overlay
 == 实体层叠加
 
@@ -5360,6 +5336,9 @@ Exit replay view
 Exit spectating on both tees when either is hammered awake by another player
 == 任一方被其他玩家锤醒时，自动让两个 Tee 退出旁观
 
+Expand
+== 展开
+
 Expand console
 == 展开控制台
 
@@ -5386,6 +5365,9 @@ Export cut as a separate demo
 
 Export demo cut
 == 另存裁剪部分
+
+Export failed
+== 导出失败
 
 Export name contains invalid characters.
 == 导出名称包含无效字符。
@@ -5420,6 +5402,9 @@ Export selected
 Export to clipboard
 == 导出到剪贴板
 
+Export to downloads
+== 导出到下载目录
+
 Exported %d chat messages
 == 已导出 %d 条聊天消息
 
@@ -5453,8 +5438,14 @@ Extreme values make movement feel wrong, so change one step at a time.
 Extremely slow, for testing only
 == 极慢，仅测试用
 
+Eyes
+== 眼睛
+
 f = Frame rate
 == f = 帧率
+
+Fade
+== 渐变
 
 Fade and slide
 == 淡入并滑入
@@ -5560,9 +5551,6 @@ Fairly fast encode
 
 Fake CTF flags
 == 伪 CTF 旗帜
-
-Fallback simple noise reduction strength
-== 回退后的简单降噪强度
 
 Fast encode
 == 编码快
@@ -5923,6 +5911,9 @@ Frankenstein (drop parts on right)
 
 Free move
 == 自由移动
+
+Free view
+== 自由视角
 
 Free-View
 == 自由视角
@@ -6674,9 +6665,6 @@ High quality, slow
 Higher input latency
 == 增加输入延迟
 
-Higher values make the wave move faster. Zero stops the movement.
-== 数值越大，波浪越快；设为零时停止运动。
-
 Highlight Color
 == 相关信息颜色
 
@@ -6688,9 +6676,6 @@ Highlight game type
 
 Highlight message text gradient color
 == 提及消息文字渐变色
-
-Highlight movement in Polished mode. Zero turns it off.
-== 调整精致模式中的流光速度，设为零时关闭。
 
 Highlight ping value
 == 高亮显示 ping 值
@@ -7229,9 +7214,6 @@ Installed
 Installing update. Please wait...
 == 正在安装更新，请稍等……
 
-Instant compact hints
-== 即时小字提示
-
 Instant zoom reverse
 == 反向缩放立即生效
 
@@ -7385,9 +7367,6 @@ It's recommended that you check the settings to adjust them to your liking befor
 Item
 == 物品
 
-Item type
-== 物品类型
-
 Its use depends on the server or game mode.
 == 具体用途取决于服务端或游戏模式。
 
@@ -7451,6 +7430,9 @@ Join, version, rules, and help messages stay in chat instead of popups
 Joining Tutorial server
 == 正在加入教程服务器
 
+Joystick
+== 摇杆
+
 Jump
 == 跳跃
 
@@ -7510,9 +7492,6 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == 投票后不关闭投票窗口
-
-Key
-== 按键
 
 Key binds
 == 按键绑定
@@ -7867,9 +7846,6 @@ LibreTranslate endpoint
 
 Light
 == 轻体
-
-Light band
-== 色带宽度
 
 Limit information in spectator mode
 == 限制观战模式中的信息
@@ -8759,6 +8735,9 @@ Mix rate
 Mixed
 == 混合
 
+Mobile spectator camera: 0=joystick pad, 1=drag the view
+== 手机观战取景方式：0=摇杆，1=拖动画面
+
 Mode
 == 模式
 
@@ -8791,6 +8770,9 @@ More optimistic prediction along Tee's stable direction, reduces delay to stabil
 
 More teammates...
 == 更多队友……
+
+Morph
+== 形变
 
 MOTD
 == 公告
@@ -9449,6 +9431,9 @@ No status bar items
 No such savegame for this map
 == 这张地图没有对应的存档
 
+No tee nearby
+== 附近没有 Tee
+
 No unfinished maps available
 == 没有可抽取的未完成图
 
@@ -9689,6 +9674,9 @@ Only show with this nickname
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 == 改动只作用于选中的 Tee，想改 dummy 的颜色要先切到 Dummy。
 
+Only what you can't imagine, nothing Dream can't do
+== 只有你想不到，没有梦做不到
+
 Opacity
 == 不透明度
 
@@ -9718,6 +9706,9 @@ Open bindwheel selector
 
 Open DDNet Wiki
 == 打开 DDNet Wiki
+
+Open downloads folder
+== 打开下载目录
 
 Open emote selector
 == 打开表情选择器
@@ -9853,9 +9844,6 @@ Original
 
 Original and translation
 == 原文＋译文
-
-Original language for both received and outgoing messages. Use Auto to detect each message.
-== 收发消息均使用原文语言。使用“自动”可逐条检测。
 
 Original language for incoming and outgoing text
 == 收到与发出文本的原始语言
@@ -10064,11 +10052,17 @@ Password for Axiom alt account auto-login
 Password for Axiom main account auto-login
 == Axiom 主号自动登录密码
 
+Password icon animation
+== 密码图标动画
+
 Password incorrect
 == 密码错误
 
 Password required to use reserved slots.
 == 使用预留插槽所需的密码
+
+Password visibility icon animation: 0=Fade, 1=Morph
+== 密码显隐图标动画：0=渐变，1=形变
 
 Past year
 == 最近一年
@@ -10582,12 +10576,6 @@ Points
 
 Points unavailable
 == 积分暂不可用
-
-Polished
-== 抛光
-
-Pop wave
-== 放大凸起
 
 Popup animation
 == 弹出动画
@@ -11648,9 +11636,6 @@ Remove team name:
 Remove war clan:
 == 删除敌对战队
 
-Remove War Group
-== 删除敌对群组
-
 Remove war name:
 == 删除敌对玩家：
 
@@ -12113,18 +12098,6 @@ Right-click to enable auto-translate
 Ring
 == 圆环
 
-RNNoise noise reduction
-== RNNoise 降噪
-
-RNNoise noise reduction (unavailable in this build)
-== RNNoise 降噪（当前构建不可用）
-
-RNNoise noise reduction strength
-== RNNoise 降噪强度
-
-RNNoise not integrated in current build, will fallback to simple noise reduction
-== 当前构建未集成 RNNoise，自动回退简单降噪
-
 Room
 == 房间
 
@@ -12346,6 +12319,9 @@ Save/Load Skin
 
 Saved
 == 已保存
+
+Saved to Downloads/QmClient
+== 已保存到 下载 /QmClient
 
 Saved to the bind wheel.
 == 已保存到 Bind 轮盘。
@@ -12698,6 +12674,9 @@ Send specified command to rcon
 Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
 == 每隔随机 90 到 270 秒向公共聊天逐句发送连续三句歌词，句间隔 3 秒
 
+Send to
+== 发送给
+
 Send translation method
 == 发送翻译方式
 
@@ -12826,9 +12805,6 @@ Server URL
 
 Server votes
 == 服务器投票
-
-Server-assigned style
-== 服务器分配风格
 
 Server-dependent
 == 取决于服务端
@@ -13000,9 +12976,6 @@ Share of the server browser name/map split given to the name column (per mille)
 
 Sharpen
 == 锐化
-
-Shimmer speed
-== 流光速度
 
 Short pain voice
 == 短促受伤叫声
@@ -13552,9 +13525,6 @@ Show lyrics in a separate island below Dynamic Island
 
 Show lyrics in Dynamic Island
 == 在灵动岛显示歌词
-
-Show lyrics inside Dynamic Island
-== 将歌词显示在灵动岛内
 
 Show main tee title locally
 == 本机显示本体头衔
@@ -14153,12 +14123,6 @@ Simple noise reduction
 Simple noise reduction strength
 == 简单降噪强度
 
-Single color
-== 单色
-
-Single color and Rainbow override the color of animated styles; the style keeps its motion
-== 单色与彩虹档会覆盖动态风格自带的颜色；风格只保留浮动与掠光
-
 Size
 == 大小
 
@@ -14365,9 +14329,6 @@ Smooths the camera while you free-spectate with the mouse in live games and demo
 
 Snap title bob offset to whole pixels (sharper glyphs, choppier motion)
 == 浮动偏移吸附到整数像素（字体更锐利，但更顿挫）
-
-Snap wave to pixels
-== 波浪位移对齐整数像素
 
 Snapshot Age
 == 快照年龄
@@ -14639,9 +14600,6 @@ Start at a random queue position on every map join
 Start dummy skin queue from a random position when entering a map
 == 进入地图时从分身皮肤队列随机位置开始
 
-Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
-== 每次进图都从随机队列位置开始（连接分身或重新启用轮换时也一样）。将切换间隔设为 0 可禁用定时轮换，仅进图时切换。
-
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 == 先保持默认值；其他玩家看起来跳动就稍微调高，感觉自己落后于他们就调低。
 
@@ -14801,9 +14759,6 @@ Streamer word list file
 Strength icons assets
 == 强弱图标资源
 
-Strength of the vertical or pop wave. Zero keeps the title still.
-== 调整上下波动或放大凸起的强度，设为零时保持静止。
-
 Stress system (debug builds only).
 == 压力系统（仅限调试版本）
 
@@ -14854,9 +14809,6 @@ Styles kill, finish and system messages in the chat area.
 
 Sub-Tick aiming
 == Sub-Tick 瞄准
-
-Subtle
-== 柔和
 
 Success
 == 成功
@@ -15010,9 +14962,6 @@ System message text gradient color
 
 System prompt text color
 == 系统提示文字颜色
-
-Tags
-== 标签
 
 Take a screenshot
 == 截图
@@ -15368,9 +15317,6 @@ Text color mode
 Text color mode: 0 automatic, 1 white, 2 black, 3 custom
 == 文本颜色模式：0 自动，1 白色，2 黑色，3 自定义
 
-Text effect
-== 文字效果
-
 Text input focus ring color
 == 文本输入焦点环颜色
 
@@ -15620,6 +15566,9 @@ This team started already
 This team was disbanded because there are more players than allowed in the team.
 == 该队伍因人数超过允许上限而被解散
 
+This text is already in the target language.
+== 这段文本已经是目标语言。
+
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == 此提示由 ui_widget::Tooltip 提供——一个基于 CTooltips 的薄层封装。
 
@@ -15781,9 +15730,6 @@ Title display
 
 Title light sweep speed in 1/100 row per second (0 = off)
 == 头衔掠光速度（每秒 1/100 行，0 = 关闭）
-
-Title motion
-== 头衔动画
 
 Title motion: 0 = vertical wave, 1 = pop wave
 == 头衔动画：0 = 上下波动，1 = 放大凸起
@@ -16826,9 +16772,6 @@ Use team colors for name plates
 Use Tee icons instead of circles
 == 用 Tee 图标代替圆圈
 
-Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== 按住钩键显示钩子辅助线时使用下方自定义颜色；关闭时自动反色使用未按下配色
-
 Use the custom colors below while the hook key is held
 == 按住钩索键时使用下方的自定义颜色
 
@@ -16906,9 +16849,6 @@ Vertical position
 
 Vertical sync (may cause lag)
 == 垂直同步（可能会导致延迟）
-
-Vertical wave
-== 上下波动
 
 Very fast encode
 == 编码非常快
@@ -17020,12 +16960,6 @@ Visual effects
 
 Visual: Cursor
 == 视觉：光标
-
-Visual: Effects
-== 视觉：特效
-
-Visual: Nameplates
-== 视觉：名牌
 
 Visuals
 == 视觉
@@ -17216,15 +17150,6 @@ Water hammer highlight
 Watermark
 == 水印
 
-Wave amount
-== 波浪幅度
-
-Wave spacing
-== 波浪间距
-
-Wave speed
-== 波浪速度
-
 Weak hook
 == 弱钩
 
@@ -17339,9 +17264,6 @@ Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per
 When TClient rainbow Tee is enabled, this feature has no effect.
 == 已启用 TClient 彩虹 Tee 时，本功能不会生效。
 
-When you cross the start line, show a ghost tee replicating the movements of your best time
-== 越过起点线时显示一个重放你最好成绩动作的幽灵角色
-
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 == 你的头衔出现在哪里、长什么样：名牌、风格、动画、颜色和光晕。
 
@@ -17425,6 +17347,9 @@ Whisper option color
 
 Whisper something to someone (private message)
 == 向某人发送私聊消息
+
+Whisper target left the game
+== 私聊对象已离开游戏
 
 Whisper to %s
 == 对 %s 说悄悄话
@@ -17893,9 +17818,6 @@ Zen mode hides chat bubbles even when this is on, and a long "Duration" leaves o
 
 Zen mode key
 == 禅模式按键
-
-Zero uses the style default. Higher values make color bands narrower.
-== 设为零时使用样式默认值；数值越大，色带越窄。
 
 Zhipu AI
 == 智谱清言
@@ -22282,10 +22204,6 @@ required
 [Team status]
 solo
 == 单人
-
-[Title color mode]
-Use style colors
-== 使用风格颜色
 
 [Touch button behavior]
 Bind

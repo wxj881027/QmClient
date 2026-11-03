@@ -19,6 +19,7 @@
 
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmCardRegistry.h>
+#include <game/client/QmUi/QmPasswordIcon.h>
 #include <game/client/QmUi/QmToast.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SecondaryPanel.h>
@@ -311,6 +312,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 	const uint64_t GraphicsVisualMeasureRevision = static_cast<uint64_t>(GraphicsVisualTextCustomVisible);
 	static CButtonContainer s_aGraphicsIconColorButtons[3];
 	static CButtonContainer s_aGraphicsIconWeightButtons[4];
+	static CButtonContainer s_aGraphicsPasswordIconButtons[2];
 	static CButtonContainer s_aGraphicsBlurModeButtons[3];
 	static CButtonContainer s_aGraphicsSignalColorModeButtons[3];
 	static CButtonContainer s_GraphicsIconCustomColorResetId;
@@ -986,6 +988,13 @@ static CButtonContainer s_CardBorderColorResetId;
 						return;
 					g_Config.m_QmUiIconWeight = NewWeight;
 					GameClient()->SyncQmUiIconWeight();
+				});
+			});
+			// 密码显隐图标的切换动画：淡化沿用旧的双字形交叉，形变走成对烘焙帧条。
+			RowAction("graphics-password-icon-animation", GraphicsMetrics.m_LineHeight, [&](CUIRect Row) {
+				const char *apPasswordIconLabels[] = {Localize("Fade"), Localize("Morph")};
+				DoIconChoiceRow(Row, Localize("Password icon animation"), apPasswordIconLabels, std::size(apPasswordIconLabels), qm_password_icon::ResolveStyle(g_Config.m_QmUiPasswordIconStyle), s_aGraphicsPasswordIconButtons, [](int NewValue) {
+					g_Config.m_QmUiPasswordIconStyle = NewValue;
 				});
 			});
 		});
