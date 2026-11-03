@@ -1,6 +1,9 @@
 #ifndef BASE_CRASHDUMP_H
 #define BASE_CRASHDUMP_H
 
+#include <cstddef>
+#include <cstdint>
+
 /**
  * @defgroup Crash-Dumping Crash Dumping
  */
@@ -84,5 +87,86 @@ void crashdump_mark_shutdown_end();
  * @ingroup Crash-Dumping
  */
 bool crashdump_is_ignorable_shutdown_driver_module(const char *p_module_name);
+
+/**
+ * 一次致命信号的己方报告内容。
+ *
+ * 结构体与平台无关，便于在任意平台验证文本格式与栈回溯逻辑；Android 的
+ * signal handler 只在里面填充现场寄存器，不做额外的字符串处理。
+ */
+struct SCrashFatalReport
+{
+	const char *m_pProgramName;
+	/** 版本字符串；为 nullptr 时省略该行。 */
+	const char *m_pVersion;
+	const char *m_pPlatform;
+	/** 进程启动时间，由初始化阶段预先格式化，避免在 handler 内做时区换算。 */
+	const char *m_pStartTime;
+	/** 图形后端名称；为 nullptr 时省略该行。 */
+	const char *m_pGraphicsBackend;
+	int m_Pid;
+	int m_Signal;
+	int m_SignalCode;
+	uintptr_t m_FaultAddress;
+	uintptr_t m_Pc;
+	uintptr_t m_Sp;
+	uintptr_t m_Fp;
+	uintptr_t m_Lr;
+};
+
+/**
+ * 信号编号转可读名称，未知信号返回 "SIG?"。
+ *
+ * @ingroup Crash-Dumping
+ */
+const char *crashdump_signal_name(int Signal);
+
+/**
+ * 把致命信号现场格式化为报告正文（不含栈回溯）。
+ *
+ * 返回值不含结尾 '\0'；缓冲区不足时返回实际写入长度。
+ *
+ * @ingroup Crash-Dumping
+ */
+size_t crashdump_format_fatal_report(char *pBuffer, size_t BufferSize, const SCrashFatalReport &Report);
+
+/**
+ * 读取一帧调用栈所需的内存访问回调。
+ *
+ * 真实实现直接解引用地址，非法地址会触发二次崩溃，由调用方的重入保护兜底；
+ * 测试实现可以返回构造好的假栈。
+ *
+ * @ingroup Crash-Dumping
+ */
+typedef bool (*FS_CRASH_READ_MEMORY)(uintptr_t Address, uintptr_t *pValue, void *pUser);
+
+/**
+ * 沿 frame pointer 链收集返回地址，第一帧固定为当前 pc。
+ *
+ * 遇到不可读帧、空返回地址或不再增长的 frame pointer 时停止，避免死循环。
+ *
+ * @param pReadMemory 内存读回调，不得为 nullptr。
+ * @param Pc          崩溃时的程序计数器。
+ * @param Fp          崩溃时的 frame pointer。
+ * @param Sp          崩溃时的栈指针；为 0 时跳过有效性检查。
+ * @param pFrames     输出数组。
+ * @param MaxFrames   输出数组容量。
+ *
+ * @return 实际写入的帧数（含首帧）。
+ *
+ * @ingroup Crash-Dumping
+ */
+size_t crashdump_walk_frame_chain(FS_CRASH_READ_MEMORY pReadMemory, void *pUser, uintptr_t Pc, uintptr_t Fp, uintptr_t Sp, uintptr_t *pFrames, size_t MaxFrames);
+
+/**
+ * 把栈帧列表追加为报告末尾的多行文本。
+ *
+ * @param Length 缓冲区中已有内容的长度，新内容紧跟其后。
+ *
+ * @return 追加后的总长度。
+ *
+ * @ingroup Crash-Dumping
+ */
+size_t crashdump_append_frame_lines(char *pBuffer, size_t BufferSize, size_t Length, const uintptr_t *pFrames, size_t NumFrames);
 
 #endif
