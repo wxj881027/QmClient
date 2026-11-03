@@ -32,7 +32,7 @@ static qm_card_order::CModel RegistryModelAfterRoundTrip()
 TEST(QmCardRegistrySearch, MapRouteSettingFindsItsPlayerStatsCardBeforeOpeningIt)
 {
 	const auto Model = RegistryModelAfterRoundTrip();
-	for(const char *pQuery : {"地图", "地图点状调试路径", "Show dotted map route debug", "Use embedded HUD progress bar", "qm_player_stats_map_progress_dbg_route"})
+	for(const char *pQuery : {"地图", "地图点状调试路径", "Show dotted map route debug", "Progress bar location", "qm_player_stats_map_progress_dbg_route"})
 	{
 		SCOPED_TRACE(pQuery);
 		const auto Results = qm_card_registry::SearchCards(pQuery, Model);

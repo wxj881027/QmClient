@@ -421,7 +421,8 @@ TEST(QmMobileSpectator, ButtonPressNeverPansTheCamera)
 TEST(QmMobileSpectator, DragModeHandsTheJoystickAreaOverToPanning)
 {
 	// 拖动模式下摇杆不再绘制，也不能继续吞掉左下的拖动起手。
-	const auto DragLayout = Layout(Screen, false);
+	// Layout 第二参是 Demo（决定暂停键），第三参才是摇杆是否参与命中。
+	const auto DragLayout = Layout(Screen, true, false);
 	EXPECT_FALSE(InsideControl(DragLayout, DragLayout.m_Joystick.Center()));
 
 	CTouchState Touch;
