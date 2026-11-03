@@ -178,7 +178,8 @@ fragment float4 qmclient_rounded_rect_sdf_fragment(SMetalVertexOut Input [[stage
 	const float4 InnerCornerRadii = max(CornerRadii - float4(BorderWidth), float4(0.0));
 	const float InnerRadius = clamp(RoundedRectCornerRadius(Point, InnerCornerRadii), 0.0, min(InnerHalfSize.x, InnerHalfSize.y));
 	const float InnerDistance = RoundedRectDistance(Point, InnerHalfSize, InnerRadius);
-	const float InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? RoundedRectCoverage(InnerDistance, RenderParams.y) : 0.0;
+	// 与 rounded_rect_sdf.frag 保持一致：只描边时这里要被清零，不能是 const。
+	float InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? RoundedRectCoverage(InnerDistance, RenderParams.y) : 0.0;
 	if(BorderWidth <= 0.0)
 		return float4(FillColor.rgb, FillColor.a * OuterCoverage) * Input.m_Color;
 	float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);
