@@ -14,6 +14,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
+#if defined(__APPLE__) || defined(__linux__)
+#include <dlfcn.h>
+#include <execinfo.h>
+#endif
 #include <fstream>
 #include <functional>
 #include <sstream>
@@ -238,6 +242,19 @@ int main(int argc, const char **argv)
 				std::fprintf(stderr, "FATAL: non-std exception\n");
 			}
 		}
+#if defined(__APPLE__) || defined(__linux__)
+		// CI 的 stdout 是块缓冲，帧地址 + dladdr 名字是唯一能落到具体语句的线索。
+		void *aFrames[40];
+		const int NumFrames = backtrace(aFrames, 40);
+		for(int i = 0; i < NumFrames; ++i)
+		{
+			Dl_info Info;
+			if(dladdr(aFrames[i], &Info) != 0 && Info.dli_sname != nullptr)
+				std::fprintf(stderr, "  #%d %s (%s)\n", i, Info.dli_sname, Info.dli_fname != nullptr ? Info.dli_fname : "?");
+			else
+				std::fprintf(stderr, "  #%d %p\n", i, aFrames[i]);
+		}
+#endif
 		std::fflush(stderr);
 		std::abort();
 	});
