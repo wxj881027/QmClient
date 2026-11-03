@@ -18,6 +18,7 @@
 #if defined(__APPLE__) || defined(__linux__)
 #include <dlfcn.h>
 #include <execinfo.h>
+#include <ucontext.h>
 #endif
 #include <fstream>
 #include <functional>
@@ -260,10 +261,38 @@ int main(int argc, const char **argv)
 		std::abort();
 	});
 #if defined(__APPLE__) || defined(__linux__)
-	// 信号型崩溃（如 dbg_break 的 SIGTRAP）在 CI 上只留下退出码；打印栈帧后恢复默认
-	// 处理并重新抛出同一信号，death test 仍然能看到原来的信号。
-	std::signal(SIGTRAP, [](int Sig) {
-		std::fprintf(stderr, "FATAL: signal %d\n", Sig);
+	// 信号型崩溃（如 dbg_break 的 SIGTRAP）在 CI 上只留下退出码；打印出错 PC 与栈帧后
+	// 恢复默认处理并重新抛出同一信号，death test 仍然能看到原来的信号。
+	// 出错 PC 比栈帧更关键：栈帧里的叶子函数常被尾调用掉，只有 PC 能直接指到出错函数。
+	struct sigaction Action = {};
+	Action.sa_sigaction = [](int Sig, siginfo_t *pInfo, void *pContext) {
+		(void)pInfo;
+		const char *pSuite = "unknown";
+		const char *pTest = "unknown";
+		if(const auto *pT = ::testing::UnitTest::GetInstance()->current_test_info())
+		{
+			pSuite = pT->test_suite_name();
+			pTest = pT->name();
+		}
+		std::fprintf(stderr, "FATAL: signal %d while running %s.%s\n", Sig, pSuite, pTest);
+		if(auto *pUContext = static_cast<ucontext_t *>(pContext))
+		{
+			const uintptr_t Pc =
+#if defined(__APPLE__)
+				(uintptr_t)pUContext->uc_mcontext->__ss.__pc;
+#elif defined(REG_RIP)
+				(uintptr_t)pUContext->uc_mcontext.gregs[REG_RIP];
+#elif defined(REG_PC)
+				(uintptr_t)pUContext->uc_mcontext.gregs[REG_PC];
+#else
+				(uintptr_t)0;
+#endif
+			Dl_info Info;
+			if(dladdr((void *)Pc, &Info) != 0 && Info.dli_sname != nullptr)
+				std::fprintf(stderr, "FATAL: at %s+0x%lx\n", Info.dli_sname, (unsigned long)(Pc - (uintptr_t)Info.dli_saddr));
+			else
+				std::fprintf(stderr, "FATAL: at %p\n", (void *)Pc);
+		}
 		void *aFrames[40];
 		const int NumFrames = backtrace(aFrames, 40);
 		for(int i = 0; i < NumFrames; ++i)
@@ -277,7 +306,10 @@ int main(int argc, const char **argv)
 		std::fflush(stderr);
 		std::signal(Sig, SIG_DFL);
 		std::raise(Sig);
-	});
+	};
+	Action.sa_flags = SA_SIGINFO;
+	sigemptyset(&Action.sa_mask);
+	sigaction(SIGTRAP, &Action, nullptr);
 #endif
 	net_init();
 	return RUN_ALL_TESTS();
