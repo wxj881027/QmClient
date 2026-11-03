@@ -300,13 +300,18 @@ if [ ! -d "$SDL3_JAVA_DIR/org/libsdl/app" ]; then
 fi
 cp -R "$SDL3_JAVA_DIR/org/." src/main/java/org/
 
-# JNI 按固定类名和方法签名查找回调，必须使用同一份 SDL 的完整保留规则。
-SDL3_PROGUARD_RULES="$SDL3_JAVA_DIR/../../../proguard-rules.pro"
+# JNI 按固定类名和方法签名查找回调。project 模板里的
+# `-keepclassmembers class org.libsdl.app.*` 与 `org.ddnet.client.*` 已覆盖所有
+# JNI 成员，因此 SDL 官方规则是可选的：预编译包附带时追加精确签名，缺失不阻断。
+SDL3_PROGUARD_RULES="$SDL3_JAVA_DIR/../proguard-rules.pro"
 if [ ! -f "$SDL3_PROGUARD_RULES" ]; then
-	log_error "SDL3 ProGuard rules missing: $SDL3_PROGUARD_RULES"
-	exit 1
+	SDL3_PROGUARD_RULES="$ANDROID_SUB_BUILD_DIR/$ANDROID_BUILD_DUMMY/_deps/sdl3-src/android-project/app/proguard-rules.pro"
 fi
-cat "$SDL3_PROGUARD_RULES" >> proguard-rules.pro
+if [ -f "$SDL3_PROGUARD_RULES" ]; then
+	cat "$SDL3_PROGUARD_RULES" >> proguard-rules.pro
+else
+	log_warn "SDL3 bundled ProGuard rules not found, relying on the project template keep rules"
+fi
 
 # shellcheck disable=SC1091
 source ./build.sh "$GAME_NAME" "$PACKAGE_NAME" "$BUILD_TYPE"

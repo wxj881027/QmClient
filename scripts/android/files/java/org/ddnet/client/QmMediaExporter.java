@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -164,9 +165,10 @@ public final class QmMediaExporter {
 	// 复制到公共下载目录：Android 10+ 用 MediaStore.Downloads（不需要存储权限、
 	// 文件管理器和「下载」应用都能看到），旧版本退回公共 Downloads 直写。
 	// 返回最终文件名，失败抛 IOException。
+	// 崩溃报告是纯文本，用 text/plain 才能被文件管理器直接预览；其余保持二进制类型。
 	public static String copyToDownloads(Activity activity, File source) throws IOException {
 		final String displayName = source.getName();
-		final String mime = "application/octet-stream";
+		final String mime = displayName.toLowerCase(Locale.ROOT).endsWith(".txt") ? "text/plain" : "application/octet-stream";
 		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 			ContentValues values = new ContentValues();
 			values.put(MediaStore.MediaColumns.DISPLAY_NAME, displayName);
