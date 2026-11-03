@@ -480,14 +480,23 @@ struct SQmMobileCrashPruneSearch
 	int m_NumEntries = 0;
 };
 
+// 崩溃与卡死报告都落在这个目录；长期使用（尤其崩溃循环）会持续累积，
+// 因此按同一份上限统一清理。
+static bool IsQmMobileCrashReportName(const char *pName)
+{
+	if(pName == nullptr)
+		return false;
+	if(str_endswith_nocase(pName, "_fatal_report.txt") != nullptr || str_endswith_nocase(pName, "_exit_report.txt") != nullptr)
+		return true;
+	return str_find_nocase(pName, "_hang_report_") != nullptr && str_endswith_nocase(pName, ".txt") != nullptr;
+}
+
 static int FindQmMobileCrashReportCallback(const CFsFileInfo *pInfo, int IsDir, int Type, void *pUser)
 {
 	(void)Type;
 	if(IsDir || pInfo == nullptr || pUser == nullptr)
 		return 0;
-	// 己方信号处理器的报告与系统退出记录都算，两者共用同一套导出流程。
-	if(str_endswith_nocase(pInfo->m_pName, "_fatal_report.txt") == nullptr &&
-		str_endswith_nocase(pInfo->m_pName, "_exit_report.txt") == nullptr)
+	if(!IsQmMobileCrashReportName(pInfo->m_pName))
 		return 0;
 
 	SQmMobileCrashPruneSearch *pSearch = static_cast<SQmMobileCrashPruneSearch *>(pUser);

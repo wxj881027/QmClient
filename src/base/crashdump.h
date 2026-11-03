@@ -182,7 +182,15 @@ struct SCrashModuleRange
 {
 	uintptr_t m_Start;
 	uintptr_t m_End;
+	/** 显示用短名（basename）。 */
 	char m_aName[64];
+	/**
+	 * 合并键：完整路径。
+	 *
+	 * 不能按 basename 合并——同一进程里可能有多个同名库（/system/lib64 与
+	 * APEX 各一份），合并后范围会横跨数个 GB，把小地址误判进该模块。
+	 */
+	char m_aPath[96];
 };
 
 /**
@@ -195,6 +203,23 @@ struct SCrashModuleRange
  * @ingroup Crash-Dumping
  */
 const char *crashdump_find_module(const SCrashModuleRange *pModules, size_t NumModules, uintptr_t Address, uintptr_t *pOffset);
+
+/**
+ * 登记一段已加载模块映射，同路径的多个段合并成一个范围。
+ *
+ * 合并键必须是完整路径：不同目录下的同名库（/system/lib64 与 APEX 各一份）
+ * 若按 basename 合并，范围会横跨数个 GB，把小地址误判进该模块。
+ *
+ * @param pModules    模块表。
+ * @param pNumModules 当前条目数，新增时递增。
+ * @param MaxModules  模块表容量。
+ * @param pPath       /proc/self/maps 中的完整路径。
+ *
+ * @return 是否写入了新条目；同路径合并或容量不足时返回 false。
+ *
+ * @ingroup Crash-Dumping
+ */
+bool crashdump_add_module_range(SCrashModuleRange *pModules, size_t *pNumModules, size_t MaxModules, uintptr_t Start, uintptr_t End, const char *pPath);
 
 /**
  * 选出超出保留数量的最旧报告，供移动端限制沙盒内的报告总量。

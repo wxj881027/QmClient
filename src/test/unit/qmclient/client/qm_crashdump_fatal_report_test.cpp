@@ -369,3 +369,63 @@ TEST(QmCrashdumpStaleReports, MissingInputsAreHandled)
 	EXPECT_EQ(crashdump_select_stale_reports(aTimes, 2, 0, nullptr, 2), 0u);
 	EXPECT_EQ(crashdump_select_stale_reports(aTimes, 2, 0, aIndices, 0), 0u);
 }
+
+TEST(QmCrashdumpModuleTable, SamePathMergesIntoSingleRange)
+{
+	SCrashModuleRange aModules[4] = {};
+	size_t NumModules = 0;
+
+	ASSERT_TRUE(crashdump_add_module_range(aModules, &NumModules, 4, 0x2000, 0x3000, "/system/lib64/libfoo.so"));
+	EXPECT_FALSE(crashdump_add_module_range(aModules, &NumModules, 4, 0x5000, 0x6000, "/system/lib64/libfoo.so"));
+
+	ASSERT_EQ(NumModules, 1u);
+	EXPECT_EQ(aModules[0].m_Start, 0x2000u);
+	EXPECT_EQ(aModules[0].m_End, 0x6000u);
+	EXPECT_STREQ(aModules[0].m_aName, "libfoo.so");
+	EXPECT_STREQ(aModules[0].m_aPath, "/system/lib64/libfoo.so");
+}
+
+// 真机回归：基址不同但 basename 相同的库必须各自成条，否则合并出的范围会
+// 横跨数 GB，把不相干的地址算成 giant offset（曾出现 liblzma.so+0x1207FC3CC）。
+TEST(QmCrashdumpModuleTable, SameNameFromDifferentPathsStaysSeparate)
+{
+	SCrashModuleRange aModules[4] = {};
+	size_t NumModules = 0;
+
+	ASSERT_TRUE(crashdump_add_module_range(aModules, &NumModules, 4, 0x1000, 0x2000, "/system/lib64/liblzma.so"));
+	ASSERT_TRUE(crashdump_add_module_range(aModules, &NumModules, 4, 0x70000000, 0x70001000, "/apex/com.android.runtime/liblzma.so"));
+
+	ASSERT_EQ(NumModules, 2u);
+	EXPECT_STREQ(aModules[0].m_aName, "liblzma.so");
+	EXPECT_STREQ(aModules[1].m_aName, "liblzma.so");
+
+	uintptr_t Offset = 0;
+	ASSERT_NE(crashdump_find_module(aModules, NumModules, 0x1500, &Offset), nullptr);
+	EXPECT_EQ(Offset, 0x500u);
+	ASSERT_NE(crashdump_find_module(aModules, NumModules, 0x70000100, &Offset), nullptr);
+	EXPECT_EQ(Offset, 0x100u);
+}
+
+TEST(QmCrashdumpModuleTable, FullTableRejectsNewPathsButStillMergesKnownOnes)
+{
+	SCrashModuleRange aModules[1] = {};
+	size_t NumModules = 0;
+
+	ASSERT_TRUE(crashdump_add_module_range(aModules, &NumModules, 1, 0x1000, 0x2000, "/a/libx.so"));
+	EXPECT_FALSE(crashdump_add_module_range(aModules, &NumModules, 1, 0x3000, 0x4000, "/b/liby.so"));
+	ASSERT_EQ(NumModules, 1u);
+
+	EXPECT_FALSE(crashdump_add_module_range(aModules, &NumModules, 1, 0x1800, 0x2800, "/a/libx.so"));
+	EXPECT_EQ(aModules[0].m_End, 0x2800u);
+}
+
+TEST(QmCrashdumpModuleTable, InvalidInputsAreRejected)
+{
+	SCrashModuleRange aModules[2] = {};
+	size_t NumModules = 0;
+	EXPECT_FALSE(crashdump_add_module_range(nullptr, &NumModules, 2, 0x1000, 0x2000, "/a/libx.so"));
+	EXPECT_FALSE(crashdump_add_module_range(aModules, nullptr, 2, 0x1000, 0x2000, "/a/libx.so"));
+	EXPECT_FALSE(crashdump_add_module_range(aModules, &NumModules, 2, 0x1000, 0x2000, nullptr));
+	EXPECT_FALSE(crashdump_add_module_range(aModules, &NumModules, 2, 0x1000, 0x2000, ""));
+	EXPECT_EQ(NumModules, 0u);
+}

@@ -161,6 +161,40 @@ const char *crashdump_find_module(const SCrashModuleRange *pModules, size_t NumM
 	return nullptr;
 }
 
+bool crashdump_add_module_range(SCrashModuleRange *pModules, size_t *pNumModules, size_t MaxModules, uintptr_t Start, uintptr_t End, const char *pPath)
+{
+	if(pModules == nullptr || pNumModules == nullptr || pPath == nullptr || pPath[0] == '\0')
+		return false;
+
+	// 按完整路径合并同一模块的多个映射，基址取最小值即 ELF 装载基址。
+	for(size_t i = 0; i < *pNumModules; i++)
+	{
+		if(str_comp(pModules[i].m_aPath, pPath) == 0)
+		{
+			if(Start < pModules[i].m_Start)
+				pModules[i].m_Start = Start;
+			if(End > pModules[i].m_End)
+				pModules[i].m_End = End;
+			return false;
+		}
+	}
+
+	if(*pNumModules >= MaxModules)
+		return false;
+
+	const char *pName = str_rchr(pPath, '/');
+	pName = pName != nullptr ? pName + 1 : pPath;
+	if(pName[0] == '\0')
+		return false;
+
+	SCrashModuleRange &Range = pModules[(*pNumModules)++];
+	Range.m_Start = Start;
+	Range.m_End = End;
+	str_copy(Range.m_aName, pName, sizeof(Range.m_aName));
+	str_copy(Range.m_aPath, pPath, sizeof(Range.m_aPath));
+	return true;
+}
+
 size_t crashdump_select_stale_reports(const time_t *pTimes, size_t NumReports, size_t MaxKeep, size_t *pIndices, size_t MaxIndices)
 {
 	if(pTimes == nullptr || pIndices == nullptr || MaxIndices == 0 || NumReports <= MaxKeep)
@@ -388,30 +422,7 @@ static size_t gs_NumAndroidModules = 0;
 
 static void AndroidAddModule(uintptr_t Start, uintptr_t End, const char *pPath)
 {
-	const char *pName = str_rchr(pPath, '/');
-	pName = pName != nullptr ? pName + 1 : pPath;
-	if(pName[0] == '\0')
-		return;
-
-	// 同一模块有多个映射，合并成一个范围，基址取最小值即 ELF 装载基址。
-	for(size_t i = 0; i < gs_NumAndroidModules; i++)
-	{
-		if(str_comp(gs_aAndroidModules[i].m_aName, pName) == 0)
-		{
-			if(Start < gs_aAndroidModules[i].m_Start)
-				gs_aAndroidModules[i].m_Start = Start;
-			if(End > gs_aAndroidModules[i].m_End)
-				gs_aAndroidModules[i].m_End = End;
-			return;
-		}
-	}
-	if(gs_NumAndroidModules >= std::size(gs_aAndroidModules))
-		return;
-
-	SCrashModuleRange &Range = gs_aAndroidModules[gs_NumAndroidModules++];
-	Range.m_Start = Start;
-	Range.m_End = End;
-	str_copy(Range.m_aName, pName, sizeof(Range.m_aName));
+	crashdump_add_module_range(gs_aAndroidModules, &gs_NumAndroidModules, std::size(gs_aAndroidModules), Start, End, pPath);
 }
 
 static void AndroidLoadModuleRanges()
