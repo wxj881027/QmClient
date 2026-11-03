@@ -4229,6 +4229,9 @@ Downscaled (0.78)
 Draft file is empty
 == 草稿文件为空
 
+Drag
+== 拖动
+
 Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
 == 拖动死亡透明度或传送透明度这类滑块，范围 0 到 100%，或用调整图层透明度把整个实体层调淡。
 
@@ -5198,6 +5201,9 @@ Entity assets
 Entity Background Image
 == 实体层背景图
 
+Entity layer
+== 实体层
+
 Entity overlay
 == 实体层叠加
 
@@ -5339,6 +5345,9 @@ Export cut as a separate demo
 Export demo cut
 == 另存裁剪部分
 
+Export failed
+== 导出失败
+
 Export name contains invalid characters.
 == 导出名称包含无效字符。
 
@@ -5371,6 +5380,9 @@ Export selected
 
 Export to clipboard
 == 导出到剪贴板
+
+Export to downloads
+== 导出到下载目录
 
 Exported %d chat messages
 == 已导出 %d 条聊天消息
@@ -5875,6 +5887,9 @@ Frankenstein (drop parts on right)
 
 Free move
 == 自由移动
+
+Free view
+== 自由视角
 
 Free-View
 == 自由视角
@@ -7382,6 +7397,9 @@ Join, version, rules, and help messages stay in chat instead of popups
 Joining Tutorial server
 == 正在加入教程服务器
 
+Joystick
+== 摇杆
+
 Jump
 == 跳跃
 
@@ -8681,6 +8699,9 @@ Mix rate
 Mixed
 == 混合
 
+Mobile spectator camera: 0=joystick pad, 1=drag the view
+== 手机观战取景方式：0=摇杆，1=拖动画面
+
 Mode
 == 模式
 
@@ -9374,6 +9395,9 @@ No status bar items
 No such savegame for this map
 == 这张地图没有对应的存档
 
+No tee nearby
+== 附近没有 Tee
+
 No unfinished maps available
 == 没有可抽取的未完成图
 
@@ -9646,6 +9670,9 @@ Open bindwheel selector
 
 Open DDNet Wiki
 == 打开 DDNet Wiki
+
+Open downloads folder
+== 打开下载目录
 
 Open emote selector
 == 打开表情选择器
@@ -12251,6 +12278,9 @@ Save/Load Skin
 Saved
 == 已保存
 
+Saved to Downloads/QmClient
+== 已保存到 下载 /QmClient
+
 Saved to the bind wheel.
 == 已保存到 Bind 轮盘。
 
@@ -12601,6 +12631,9 @@ Send specified command to rcon
 
 Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
 == 每隔随机 30 到 90 秒向公共聊天逐句发送连续三句歌词，句间隔 3 秒
+
+Send to
+== 发送给
 
 Send translation method
 == 发送翻译方式
@@ -17257,6 +17290,9 @@ Whisper option color
 
 Whisper something to someone (private message)
 == 向某人发送私聊消息
+
+Whisper target left the game
+== 私聊对象已离开游戏
 
 Whisper to %s
 == 对 %s 说悄悄话

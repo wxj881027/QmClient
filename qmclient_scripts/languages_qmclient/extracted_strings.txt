@@ -1408,6 +1408,7 @@ Downloading update...
 Downloading…
 Downscaled (0.78)
 Draft file is empty
+Drag
 Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
 Drag HUD modules with the left mouse button
 Drag the three sliders; master scales the other two.
@@ -1731,6 +1732,7 @@ Entities
 Entities background color
 Entity assets
 Entity Background Image
+Entity layer
 Entity overlay
 Entity Preview
 Entity wall outline opacity
@@ -1778,6 +1780,7 @@ Export
 Export configuration package
 Export cut as a separate demo
 Export demo cut
+Export failed
 Export name contains invalid characters.
 Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
 Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
@@ -1789,6 +1792,7 @@ Export range
 Export range (seconds):
 Export selected
 Export to clipboard
+Export to downloads
 Exported %d chat messages
 Exported to %s
 Exporting chat images: %d
@@ -1957,6 +1961,7 @@ Frame time p99
 Framebuffer color bits (only fullscreen)
 Frankenstein (drop parts on right)
 Free move
+Free view
 Free-View
 Freeview cursor opacity
 Freeze
@@ -2459,6 +2464,7 @@ Join the team of the specified player
 Join Tutorial Server
 Join, version, rules, and help messages stay in chat instead of popups
 Joining Tutorial server
+Joystick
 Jump
 Jump hint
 Jump hint color
@@ -2892,6 +2898,7 @@ Misc
 Miscellaneous
 Mix rate
 Mixed
+Mobile spectator camera: 0=joystick pad, 1=drag the view
 Mode
 Model
 Moderate
@@ -3123,6 +3130,7 @@ No skins match your filter criteria
 No sounds match this search.
 No status bar items
 No such savegame for this map
+No tee nearby
 No unfinished maps available
 Noise reduction mode
 Noise suppression mode (0=off 1=simple 2=RNNoise)
@@ -3214,6 +3222,7 @@ Open a link to visit the site.
 Open a matching settings card directly
 Open bindwheel selector
 Open DDNet Wiki
+Open downloads folder
 Open emote selector
 Open folder
 Open map editor
@@ -4082,6 +4091,7 @@ Save/Load Flag
 Save/Load Name
 Save/Load Skin
 Saved
+Saved to Downloads/QmClient
 Saved to the bind wheel.
 Saved with your title and shared with other QmClient players.
 Saves and loads complete client profiles, including name, chat settings and bind wheel presets.
@@ -4199,6 +4209,7 @@ Send Rate
 Send sampling and token limit parameters
 Send specified command to rcon
 Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
+Send to
 Send translation method
 Sending and receiving
 Sending initial client info
@@ -5751,6 +5762,7 @@ Which message to display on zone leave; use 0 for normal area
 Whisper
 Whisper option color
 Whisper something to someone (private message)
+Whisper target left the game
 Whisper to %s
 Whisper to %s: %s
 Whisper: /w player message

@@ -4229,6 +4229,9 @@ Downscaled (0.78)
 Draft file is empty
 == Файл черновика пуст
 
+Drag
+== Перетаскивание
+
 Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
 == Двигайте ползунок вроде непрозрачности смерти или непрозрачности телепорта от 0 до 100% или используйте настройку прозрачности слоя, чтобы приглушить весь слой объектов.
 
@@ -5198,6 +5201,9 @@ Entity assets
 Entity Background Image
 == Фоновое изображение сущностей
 
+Entity layer
+== Слой сущностей
+
 Entity overlay
 == Наложение сущностей
 
@@ -5339,6 +5345,9 @@ Export cut as a separate demo
 Export demo cut
 == Экспорт обрезки демо
 
+Export failed
+== Не удалось экспортировать
+
 Export name contains invalid characters.
 == Имя экспорта содержит недопустимые символы.
 
@@ -5371,6 +5380,9 @@ Export selected
 
 Export to clipboard
 == Экспорт в буфер обмена
+
+Export to downloads
+== Экспортировать в «Загрузки»
 
 Exported %d chat messages
 == Экспортировано %d сообщений чата
@@ -5872,6 +5884,9 @@ Frankenstein (drop parts on right)
 
 Free move
 == Свободное движение
+
+Free view
+== Свободный обзор
 
 Free-View
 == Свободный обзор
@@ -7379,6 +7394,9 @@ Join, version, rules, and help messages stay in chat instead of popups
 Joining Tutorial server
 == Подключение к учебному серверу
 
+Joystick
+== Джойстик
+
 Jump
 == Прыжок
 
@@ -8678,6 +8696,9 @@ Mix rate
 Mixed
 == Смешанный
 
+Mobile spectator camera: 0=joystick pad, 1=drag the view
+== Камера мобильного наблюдателя: 0=джойстик, 1=перетаскивание
+
 Mode
 == Режим
 
@@ -9371,6 +9392,9 @@ No status bar items
 No such savegame for this map
 == Для этой карты нет такого сохранения
 
+No tee nearby
+== Рядом нет ти
+
 No unfinished maps available
 == Нет доступных незавершенных карт
 
@@ -9643,6 +9667,9 @@ Open bindwheel selector
 
 Open DDNet Wiki
 == Открыть DDNet Wiki
+
+Open downloads folder
+== Открыть папку «Загрузки»
 
 Open emote selector
 == Открыть выбор эмоций
@@ -12248,6 +12275,9 @@ Save/Load Skin
 Saved
 == Сохранено
 
+Saved to Downloads/QmClient
+== Сохранено в «Загрузки/QmClient»
+
 Saved to the bind wheel.
 == Сохранено в колесо команд.
 
@@ -12598,6 +12628,9 @@ Send specified command to rcon
 
 Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
 == Отправлять три последовательные строки песни в общий чат через случайные интервалы от 30 до 90 секунд, с паузой 3 секунды между строками
+
+Send to
+== Отправить
 
 Send translation method
 == Способ отправки перевода
@@ -17254,6 +17287,9 @@ Whisper option color
 
 Whisper something to someone (private message)
 == Шепнуть что-то кому-то (личное сообщение)
+
+Whisper target left the game
+== Собеседник вышел из игры
 
 Whisper to %s
 == Шепнуть %s

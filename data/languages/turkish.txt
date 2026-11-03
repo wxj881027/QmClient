@@ -4229,6 +4229,9 @@ Downscaled (0.78)
 Draft file is empty
 == Taslak dosyası boş
 
+Drag
+== Sürükle
+
 Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
 == Ölüm saydamlığı veya ışınlanma saydamlığı gibi bir kaydırıcıyı %0 ile %100 arasında sürükleyin ya da katman saydamlığını ayarla ile tüm varlık katmanını soluklaştırın.
 
@@ -5198,6 +5201,9 @@ Entity assets
 Entity Background Image
 == Varlık Arka Plan Görüntüsü
 
+Entity layer
+== Varlık katmanı
+
 Entity overlay
 == Varlık kaplaması
 
@@ -5339,6 +5345,9 @@ Export cut as a separate demo
 Export demo cut
 == Demo kesimini dışa aktar
 
+Export failed
+== Dışa aktarma başarısız
+
 Export name contains invalid characters.
 == Dışa aktarma adı geçersiz karakterler içeriyor.
 
@@ -5371,6 +5380,9 @@ Export selected
 
 Export to clipboard
 == Panoya dışa aktar
+
+Export to downloads
+== İndirilenler'e aktar
 
 Exported %d chat messages
 == %d sohbet mesajı dışa aktarıldı
@@ -5872,6 +5884,9 @@ Frankenstein (drop parts on right)
 
 Free move
 == Serbest hareket
+
+Free view
+== Serbest görünüm
 
 Free-View
 == Serbest Görüş
@@ -7379,6 +7394,9 @@ Join, version, rules, and help messages stay in chat instead of popups
 Joining Tutorial server
 == Eğitim sunucusuna katılıyor
 
+Joystick
+== Joystick
+
 Jump
 == Zıpla
 
@@ -8678,6 +8696,9 @@ Mix rate
 Mixed
 == Karışık
 
+Mobile spectator camera: 0=joystick pad, 1=drag the view
+== Mobil izleyici kamerası: 0=joystick, 1=görünümü sürükle
+
 Mode
 == Mod
 
@@ -9371,6 +9392,9 @@ No status bar items
 No such savegame for this map
 == Bu harita için böyle bir kayıt yok
 
+No tee nearby
+== Yakında tee yok
+
 No unfinished maps available
 == Mevcut bitmemiş harita yok
 
@@ -9643,6 +9667,9 @@ Open bindwheel selector
 
 Open DDNet Wiki
 == DDNet Wiki'yi aç
+
+Open downloads folder
+== İndirilenler klasörünü aç
 
 Open emote selector
 == İfade seçiciyi aç
@@ -12248,6 +12275,9 @@ Save/Load Skin
 Saved
 == Kaydedildi
 
+Saved to Downloads/QmClient
+== İndirilenler/QmClient konumuna kaydedildi
+
 Saved to the bind wheel.
 == Komut çarkına kaydedildi.
 
@@ -12598,6 +12628,9 @@ Send specified command to rcon
 
 Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
 == 30 ile 90 saniye arasında rastgele aralıklarla genel sohbete art arda üç şarkı sözü satırı gönder, satırlar arasında 3 saniye bekle
+
+Send to
+== Şuna gönder
 
 Send translation method
 == Çeviri yöntemini gönder
@@ -17254,6 +17287,9 @@ Whisper option color
 
 Whisper something to someone (private message)
 == Birine bir şey fısılda (özel mesaj)
+
+Whisper target left the game
+== Fısıldama hedefi oyundan ayrıldı
 
 Whisper to %s
 == %s kişisine fısılda

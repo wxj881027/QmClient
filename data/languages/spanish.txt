@@ -4229,6 +4229,9 @@ Downscaled (0.78)
 Draft file is empty
 == El archivo borrador está vacío
 
+Drag
+== Arrastrar
+
 Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
 == Arrastra un control como opacidad de muerte u opacidad de teletransporte de 0 a 100%, o usa ajustar la opacidad de la capa para atenuar toda la capa de entidades.
 
@@ -5198,6 +5201,9 @@ Entity assets
 Entity Background Image
 == Imagen de fondo de entidades
 
+Entity layer
+== Capa de entidades
+
 Entity overlay
 == Superposición de entidades
 
@@ -5339,6 +5345,9 @@ Export cut as a separate demo
 Export demo cut
 == Exportar corte de demo
 
+Export failed
+== Error al exportar
+
 Export name contains invalid characters.
 == El nombre de exportación contiene caracteres no válidos.
 
@@ -5371,6 +5380,9 @@ Export selected
 
 Export to clipboard
 == Exportar al portapapeles
+
+Export to downloads
+== Exportar a Descargas
 
 Exported %d chat messages
 == Se exportaron %d mensajes de chat
@@ -5872,6 +5884,9 @@ Frankenstein (drop parts on right)
 
 Free move
 == Movimiento libre
+
+Free view
+== Vista libre
 
 Free-View
 == Vista libre
@@ -7379,6 +7394,9 @@ Join, version, rules, and help messages stay in chat instead of popups
 Joining Tutorial server
 == Uniéndose al servidor de Tutorial
 
+Joystick
+== Joystick
+
 Jump
 == Saltar
 
@@ -8678,6 +8696,9 @@ Mix rate
 Mixed
 == Mixto
 
+Mobile spectator camera: 0=joystick pad, 1=drag the view
+== Cámara de espectador móvil: 0=joystick, 1=arrastrar la vista
+
 Mode
 == Modo
 
@@ -9371,6 +9392,9 @@ No status bar items
 No such savegame for this map
 == No existe esa partida guardada para este mapa
 
+No tee nearby
+== No hay ningún tee cerca
+
 No unfinished maps available
 == No hay mapas no terminados disponibles
 
@@ -9643,6 +9667,9 @@ Open bindwheel selector
 
 Open DDNet Wiki
 == Abrir DDNet Wiki
+
+Open downloads folder
+== Abrir carpeta de Descargas
 
 Open emote selector
 == Abrir selector de emotes
@@ -12248,6 +12275,9 @@ Save/Load Skin
 Saved
 == Guardado
 
+Saved to Downloads/QmClient
+== Guardado en Descargas/QmClient
+
 Saved to the bind wheel.
 == Guardado en la rueda de comandos.
 
@@ -12598,6 +12628,9 @@ Send specified command to rcon
 
 Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
 == Enviar tres líneas consecutivas de la letra al chat público a intervalos aleatorios de 30 a 90 segundos, con 3 segundos entre líneas
+
+Send to
+== Enviar a
 
 Send translation method
 == Método de envío de traducción
@@ -17254,6 +17287,9 @@ Whisper option color
 
 Whisper something to someone (private message)
 == Susurrar algo a alguien (mensaje privado)
+
+Whisper target left the game
+== El destinatario del susurro salió del juego
 
 Whisper to %s
 == Susurrar a %s
