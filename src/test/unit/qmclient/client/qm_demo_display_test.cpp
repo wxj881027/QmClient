@@ -5,8 +5,6 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
-#include <cstdio>
-
 // 回放显示与强弱钩绘制的只读判定，直接调用名牌绘制使用的配置与显示判断。
 
 namespace
@@ -46,15 +44,10 @@ TEST(QmDemoDisplay, DemoPlaybackReadsTheDemoSpecificOptions)
 	EXPECT_FALSE(Settings.m_Chat);
 }
 
-// 临时诊断：macOS 上该用例在入口处触发 SIGTRAP，用无缓冲 stderr 标记逐步定位。
-#define QM_DEMO_MARK(msg) std::fprintf(stderr, "DBG %s\n", msg)
 TEST(QmDemoDisplay, CaptureFreezesTheSameOptionsUsedForRendering)
 {
-	QM_DEMO_MARK("enter");
 	CConfig Config = MakeConfig();
-	QM_DEMO_MARK("made");
 	const SVideoDisplaySnapshot Snapshot = qm_demo_display::Capture(Config);
-	QM_DEMO_MARK("captured");
 	EXPECT_EQ(Snapshot.m_Direction, Config.m_QmDemoShowDirection);
 	EXPECT_EQ(Snapshot.m_StrongWeak, Config.m_QmDemoShowStrongWeak);
 	EXPECT_EQ(Snapshot.m_StrongWeakScope, Config.m_QmDemoStrongWeakScope);
@@ -67,19 +60,12 @@ TEST(QmDemoDisplay, CaptureFreezesTheSameOptionsUsedForRendering)
 	Config.m_QmDemoShowHud = 0;
 	Config.m_QmDemoShowChat = 1;
 	Config.m_QmDemoShowDirection = 0;
-	QM_DEMO_MARK("mutated");
 	const auto Settings = qm_demo_display::FromSnapshot(Snapshot);
-	QM_DEMO_MARK("snapshotted");
 	EXPECT_EQ(Settings.m_Direction, 2);
 	EXPECT_TRUE(Settings.m_Hud);
 	EXPECT_FALSE(Settings.m_Chat);
-	QM_DEMO_MARK("asserts-done");
-	const float ResolvedRowHeight = qm_demo_display::Resolve(Config, true, false).m_StrongWeakRowHeight;
-	QM_DEMO_MARK("resolved");
-	EXPECT_FLOAT_EQ(Settings.m_StrongWeakRowHeight, ResolvedRowHeight);
-	QM_DEMO_MARK("done");
+	EXPECT_FLOAT_EQ(Settings.m_StrongWeakRowHeight, qm_demo_display::Resolve(Config, true, false).m_StrongWeakRowHeight);
 }
-#undef QM_DEMO_MARK
 
 namespace
 {
