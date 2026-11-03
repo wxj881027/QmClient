@@ -642,4 +642,3 @@ TEST(QmChatWhisperTargets, BuildWhisperCommandKeepsQuotedNameAndMessage)
 	EXPECT_FALSE(CChat::BuildWhisperCommand(aCommand, sizeof(aCommand), "", "hello"));
 	EXPECT_FALSE(CChat::BuildWhisperCommand(aCommand, sizeof(aCommand), "alice", nullptr));
 }
-
