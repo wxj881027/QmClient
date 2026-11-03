@@ -2276,6 +2276,8 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 	}
 	else
 	{
+		// 与投票页的收藏开关同源：开启实心、关闭空心，字形由填充作用域决定。
+		const CQmFavoriteStarFillScope FavoriteStarFillScope(FavoriteOnly);
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 		TextRender()->TextColor(FavoriteOnly ? ColorRGBA(1.0f, 0.85f, 0.2f, 1.0f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.62f));

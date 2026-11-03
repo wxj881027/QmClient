@@ -592,11 +592,12 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		Label(Name, pSelected != nullptr ? pSelected->m_Name.c_str() : Localize("Select a map"), 15.0f);
 		static CButtonContainer s_Favorite;
 		const bool IsFavorite = pSelected != nullptr && GameClient()->m_TClient.IsFavoriteMap(pSelected->m_Name.c_str());
-		// 收藏点亮：实心样式开着时未收藏=描边、已收藏=实心，形态切换走帧条形变；
-		// 关着时两端同形（只靠语义色区分），形变没有意义，保持原绘制。
-		const bool FavoriteMorph = g_Config.m_QmUiFavoriteIconFilled != 0;
 		// 收藏开关靠字形区分状态：未收藏空心中性星标，已收藏实心收藏色星标。
-		// 全局「实心收藏图标」只负责徽标外观，不能让开关两态画成同形。
+		// 这一层的字形由下方 CQmFavoriteStarFillScope 决定，全局「实心收藏图标」只影响
+		// 徽标外观，不能让开关两态画成同形。
+		// 形变只在实心样式开启时播放：此时两态字形本就不同，帧条切换才有意义；
+		// 关着时两端同形，直接走原绘制。
+		const bool FavoriteMorph = g_Config.m_QmUiFavoriteIconFilled != 0;
 		const ColorRGBA PreviousFavoriteColor = TextRender()->GetTextColor();
 		if(!IsFavorite)
 			TextRender()->TextColor(Ink.WithMultipliedAlpha(0.55f));
