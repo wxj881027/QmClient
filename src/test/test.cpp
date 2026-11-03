@@ -11,6 +11,7 @@
 #include <test/support/qm_open_link_probe.h>
 
 #include <algorithm>
+#include <csignal>
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
@@ -258,6 +259,26 @@ int main(int argc, const char **argv)
 		std::fflush(stderr);
 		std::abort();
 	});
+#if defined(__APPLE__) || defined(__linux__)
+	// 信号型崩溃（如 dbg_break 的 SIGTRAP）在 CI 上只留下退出码；打印栈帧后恢复默认
+	// 处理并重新抛出同一信号，death test 仍然能看到原来的信号。
+	std::signal(SIGTRAP, [](int Sig) {
+		std::fprintf(stderr, "FATAL: signal %d\n", Sig);
+		void *aFrames[40];
+		const int NumFrames = backtrace(aFrames, 40);
+		for(int i = 0; i < NumFrames; ++i)
+		{
+			Dl_info Info;
+			if(dladdr(aFrames[i], &Info) != 0 && Info.dli_sname != nullptr)
+				std::fprintf(stderr, "  #%d %s (%s)\n", i, Info.dli_sname, Info.dli_fname != nullptr ? Info.dli_fname : "?");
+			else
+				std::fprintf(stderr, "  #%d %p\n", i, aFrames[i]);
+		}
+		std::fflush(stderr);
+		std::signal(Sig, SIG_DFL);
+		std::raise(Sig);
+	});
+#endif
 	net_init();
 	return RUN_ALL_TESTS();
 }
