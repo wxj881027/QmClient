@@ -1,0 +1,32 @@
+name: Build SDL3 prebuilt slice (temporary)
+on:
+  push:
+    paths:
+      - '.github/workflows/sdl3-libs-temp.yml'
+  workflow_dispatch:
+jobs:
+  linux:
+    # 切片必须建在比 CI runner 更老的 glibc 上，否则 .so 会引用新版 libm 符号。
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake ninja-build build-essential pkg-config \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev \
+            libxss-dev libxinerama-dev libasound2-dev libpulse-dev libdbus-1-dev \
+            libwayland-dev libdecor-0-dev libdrm-dev libgbm-dev
+      - name: Fetch SDL3 source
+        run: git clone --depth 1 -b release-3.4.18 https://github.com/libsdl-org/SDL.git "$RUNNER_TEMP/sdl3-src"
+      - name: Build linux slice
+        run: bash qmclient_scripts/build_sdl3_prebuilt.sh "$RUNNER_TEMP/sdl3-src" linux
+      - name: Verify glibc ceiling
+        run: |
+          readelf --version-info ddnet-libs/sdl/linux/lib64/libSDL3.so.0 | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdl3-linux
+          path: ddnet-libs/sdl/linux/lib64/libSDL3.so*
