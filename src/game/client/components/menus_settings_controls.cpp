@@ -17,6 +17,7 @@
 #include <game/client/QmUi/SettingsCardDeck.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiForms.h>
+#include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
@@ -95,6 +96,32 @@ void CMenusSettingsControls::Render(CUIRect MainView)
 	CPerfTimer ShellTimer;
 	PrepareSettingsCards(ResolveSettingsContentMetrics(MainView.w), ReadOnly, Ui()->MeasurementOnly() ? nullptr : &m_SettingsScrollRegion);
 	LogControlsPerfStage(GameClient()->Client(), "controls_tab_shell", ShellTimer.ElapsedMs(), false, "page=controls");
+
+	// 控制页把“指令工坊”作为同级页签承载，复用绑定编辑卡的键盘、参数和
+	// 配置持久化逻辑，避免在标准控制卡片中再复制一套绑定状态。
+	// 控制页的子页签必须和其他设置页共用同一套高度与上下间距，避免按按钮高度
+	// 自行切分后胶囊过高、内容卡片整体下移。
+	const SSettingsSubTabLayoutFrame SubTabs = ResolveSettingsSubTabLayout(MainView, m_CardMetrics.m_UiScale);
+	CUIRect TabBar = SubTabs.m_TabBarRect;
+	MainView = SubTabs.m_ContentRect;
+	CUIRect aTabSlots[static_cast<size_t>(ETab::NUM)];
+	CUIRect TabRemainder = TabBar;
+	const float TabWidth = TabBar.w / static_cast<float>(ETab::NUM);
+	for(size_t Index = 0; Index < static_cast<size_t>(ETab::NUM); ++Index)
+		TabRemainder.VSplitLeft(TabWidth, &aTabSlots[Index], &TabRemainder);
+	const int ActiveTab = static_cast<int>(m_Tab);
+	const int SelectedTab = ui_widget::CapsuleTabBar(GameClient()->m_Menus.TabBarUiContext(), MakeUiScopeHash("settings_controls_tabs_capsule"), aTabSlots, static_cast<int>(ETab::NUM), ActiveTab, GameClient()->m_Menus.SettingsCapsuleTabBarStyle());
+	if(!ReadOnly && SelectedTab >= 0)
+		m_Tab = static_cast<ETab>(SelectedTab);
+	static CButtonContainer s_aControlsTabs[static_cast<size_t>(ETab::NUM)] = {};
+	const char *const apTabLabels[] = {Localize("Controls"), Localize("Bind")};
+	for(size_t Index = 0; Index < static_cast<size_t>(ETab::NUM); ++Index)
+		GameClient()->m_Menus.DoButton_MenuTab(&s_aControlsTabs[Index], apTabLabels[Index], m_Tab == static_cast<ETab>(Index), &aTabSlots[Index], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
+	if(m_Tab == ETab::BIND_WORKSHOP)
+	{
+		GameClient()->m_Menus.RenderSettingsQmClientBindDeck(MainView, ReadOnly);
+		return;
+	}
 
 	CPerfTimer InteractiveTimer;
 	CUIRect QuickSearch, SearchMatches, ResetToDefault;

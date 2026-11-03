@@ -55,12 +55,21 @@ public:
 class CMenusSettingsControls : public CComponentInterfaces
 {
 public:
+	enum class ETab
+	{
+		CONTROLS,
+		BIND_WORKSHOP,
+		NUM,
+	};
+
 	void OnInterfacesInit(CGameClient *pClient) override;
 	void Render(CUIRect MainView);
+	void SetTab(ETab Tab) { m_Tab = Tab; }
 
 private:
 	friend struct qm_card_catalog::QmCardRenderHook;
 	SSettingsContentMetrics m_CardMetrics{};
+	ETab m_Tab = ETab::CONTROLS;
 	CScrollRegion *m_pCardScrollRegion = nullptr;
 	void PrepareSettingsCards(const SSettingsContentMetrics &Metrics, bool ReadOnly, CScrollRegion *pScrollRegion);
 	uint64_t SettingsCardsRevision(bool ReadOnly) const;
