@@ -404,6 +404,7 @@ Audio pack directory
 Audio pack exported.
 Audio packets
 Audio packs
+Aurora: Polar Veil
 AUS
 Authed name color in scoreboard
 Authenticate to rcon
@@ -606,6 +607,7 @@ Binds
 Binds any command to a key, mouse button or wheel direction, including combinations with Ctrl, Alt, Shift and Win.
 Binds that use commands the client does not recognize, listed by their raw command text.
 Black
+Black Flash: Void Rift
 Blank asset auto fallback
 Blank material
 Blank: hides this asset
@@ -684,6 +686,7 @@ Cancel
 Cancel translation test
 Cancel your swap request
 Candidate files
+Candy gradient
 Cannot join the target player's team
 Cannot open word list file. Previous words remain active.
 Cannot read complete word list file. Previous words remain active.
@@ -729,6 +732,7 @@ Chat bubble background color
 Chat bubble disappear animation (0=Fade, 1=Shrink, 2=Slide up)
 Chat bubble display duration (seconds)
 Chat bubble font size
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
 Chat bubble text color
 Chat bubble transparency (0-100)
 Chat command
@@ -886,6 +890,7 @@ Client-side self-kill protection
 Close
 Close the demo player
 Close window after changing settings
+Cloud bubble
 Collapse
 Collapse console
 Collects the remaining DDNet client preferences that do not belong to other cards.
@@ -913,6 +918,7 @@ Colors of the hook collision line, in case of a possible collision with:
 Colors of the translate button in the chat input and of the language menu that button opens.
 Colors too close to the map background are hard to read while moving.
 Combo
+Comic dialogue
 Comma-separated list of banned clients to be kicked on join
 Command
 Command completion
@@ -1501,6 +1507,7 @@ Dynamic FOV intensity
 Dynamic FOV intensity (0-200)
 Dynamic FOV smoothness
 Dynamic FOV smoothness (0=instant, 100=smoothest)
+Dynamic Island
 Dynamic island
 Dynamic Island background alpha
 Dynamic Island background color
@@ -1550,7 +1557,7 @@ Emoticons
 Empty slots still take space, so clear the ones you no longer use.
 enable
 Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
-Enable "Show player stats HUD"; tick "Map progress bar", then pick "Use embedded HUD progress bar" or place the bar with the sliders.
+Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
 Enable "Try to rename before finishing", then fill in the finishing name and run to the finish to test it.
 Enable /swap
@@ -1917,6 +1924,7 @@ Flag grab: player side
 Flag returned
 Flags are cosmetic and can be hidden by other clients.
 Flip:
+Fluid
 Folder
 Folder Link
 Follow
@@ -2034,6 +2042,7 @@ Gameplay
 Gap aim rescue
 Gap between statusbar items
 Gap between tee and nametag
+Gather and disperse
 Gaussian
 General
 Generated skin outline color
@@ -2303,6 +2312,7 @@ If exclusive fullscreen fails, switch back to windowed or borderless first.
 If lasers can hit you when shot and pull you to bounce origin (0 for all new maps), or lasers cannot hit you and pull others to shooter.
 If the bar covers your chat, lower "Opacity" or "IME font size" first; "Reset IME appearance" brings back the defaults.
 If the wheel feels crowded, remove unused slots in the editor card.
+Ignis: Ember Spirit
 Ignore clan tag when searching friends
 Ignore keyboard modifier mask
 Ignore voice distance attenuation
@@ -2375,6 +2385,7 @@ Initializing components
 Initializing layers
 Initializing map layers
 Initializing map logic
+Ink: Paper Bloom
 Input
 Input background color
 Input background opacity percentage
@@ -2510,6 +2521,7 @@ Keyword reply
 Keyword reply rules (each line: [rename] [regex] keyword=>reply)
 Keyword reply use Dummy
 Keyword rules
+Keyword rules are too long. Changes were not saved; shorten or remove a rule.
 Kick player
 Kick player with specified id for any reason
 Kick voting requires %s players
@@ -2596,6 +2608,7 @@ Length
 Lenny:
 Let server start ghost
 Let server start race recorder
+Let's play together!
 Lets you join team i (shows your team if left blank)
 Lht.
 LibreTranslate API Key
@@ -2762,7 +2775,7 @@ Map progress bar
 Map progress bar color
 Map progress bar height
 Map progress bar horizontal position (center, % of screen width)
-Map progress bar style (0=bottom bar, 1=HUD overlay)
+Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)
 Map progress bar vertical position (top edge, % of screen height)
 Map progress bar width (percentage of screen width)
 Map Progress: %.1f%%
@@ -2891,7 +2904,6 @@ Minimum time
 Minimum time between kick votes (in seconds)
 Minimum time between kills (in seconds)
 Minimum time between map votes (in seconds)
-Minimum width for name column in server browser
 Minutes on server before a player can call a map change vote (0 = disabled)
 Minutes to save replay on ESC menu
 Misc
@@ -3358,6 +3370,7 @@ Performance mode
 Performance points
 Permanent access; up to 4 online IP addresses
 Permanent sponsor verified
+Personal adjustments
 Personal best:
 Personal Setting of showing time in either broadcast or game/round timer, timer s, where s = broadcast for broadcast, gametimer for game/round timer, cycle for cycle, both for both, none for no timer and nothing to show current status
 Pet
@@ -3626,6 +3639,7 @@ Profiles
 Profiles file
 Progress bar color
 Progress bar height
+Progress bar location
 Progress bar width
 Project and community websites
 Projectile / explosion range
@@ -4208,7 +4222,7 @@ Send probability
 Send Rate
 Send sampling and token limit parameters
 Send specified command to rcon
-Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
+Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
 Send to
 Send translation method
 Sending and receiving
@@ -4301,6 +4315,7 @@ Settings card border color
 Settings card default layout migration version
 Settings card states: stableId for collapsed, !stableId for expanded, separated by semicolons
 Settings card titles use rainbow colors
+Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
 Settings file
 Settings page opacity
 Settings page right panel opacity
@@ -4829,7 +4844,7 @@ Speed:
 Sphere
 Spin pop
 Split main and dummy into different teams for solo-run sync
-Sponsor chat style draft: 0=Normal, 1=Platinum highlight
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid
 Sponsor code
 Sponsor code already claimed
 Sponsor reminder
@@ -4843,7 +4858,9 @@ Spree
 SQL Server name for record table
 Squishy Tee deformation duration
 Squishy Tee deformation intensity
+Standalone
 Star
+Stardust: Constellation
 Start (s)
 Start and connect to local server
 Start at a random queue position on every map join
@@ -4912,6 +4929,7 @@ Strong / Weak
 Strong hook
 Strong hook color
 Strong Weak Hook
+Style
 Style chat names, text, and message colors
 Style kill, finish, and system messages
 Styles chat names and message colors, including gradients.
@@ -5042,7 +5060,7 @@ Tee to Freeze
 Tee to Tee
 Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
-Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic, 6=Aurora, 7=Ink, 8=Ignis, 9=Stardust, 10=Black Flash)
 Tee Trails
 Tee trails
 Teeworlds 0.7 difficulty level (0 = Casual, 1 = Normal, 2 = Competitive).
@@ -5532,6 +5550,8 @@ Use compact list view for config variables
 Use current map as background
 Use current name
 Use current settings
+Use custom chat bubble colors
+Use custom colors
 Use custom colors for the pressed hook collision line (0 = always invert)
 Use custom skins instead of the ninja tee
 Use custom UI icon color
@@ -5540,7 +5560,6 @@ Use default input
 Use default output
 Use default voice input device
 Use default voice output device
-Use embedded HUD progress bar
 Use emote
 Use enemy color instead of frozen color
 Use enemy list to drive player indicators
@@ -5778,6 +5797,7 @@ Width of difficulty column in server browser
 Width of friends column in server browser
 Width of latency column in server browser
 Width of map column in server browser
+Width of name column in server browser
 Width of others' hook collision line
 Width of players column in server browser
 Width of Qm clients column in server browser

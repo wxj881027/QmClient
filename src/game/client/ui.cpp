@@ -224,6 +224,9 @@ void CUi::Init(IKernel *pKernel)
 CUi::CUi()
 {
 	m_Enabled = true;
+#if defined(CONF_PLATFORM_ANDROID)
+	m_DirectTouchInput = true;
+#endif
 
 	m_Screen.x = 0.0f;
 	m_Screen.y = 0.0f;
@@ -312,6 +315,7 @@ void CUi::OnElementsReset()
 
 void CUi::OnWindowResize()
 {
+	CancelTouchInput();
 	DestroyGaussianBlurTargets();
 	DestroyBackgroundLayerTarget();
 	OnElementsReset();
@@ -855,6 +859,10 @@ void CUi::Update()
 	const CUIRect *pScreen = Screen();
 
 	unsigned UpdatedMouseButtonsNext = 0;
+	if(m_DirectTouchInput && m_pTouchScrollRegion != nullptr && !m_TouchScrollRegionSeen)
+		CancelTouchInput();
+	m_TouchScrollRegionSeen = false;
+	m_TouchScrollDelta = vec2(0.0f, 0.0f);
 	if(Enabled())
 	{
 		// Update mouse buttons based on mouse keys
@@ -865,9 +873,35 @@ void CUi::Update()
 				m_UpdatedMouseButtons |= 1 << (MouseKey - KEY_MOUSE_1);
 			}
 		}
-
+	}
+	if(Enabled() || m_DirectTouchInput)
+	{
 		// Update mouse position and buttons based on touch finger state
 		UpdateTouchState(m_TouchState);
+		if(m_DirectTouchInput)
+		{
+			if(m_TouchState.m_DirectStarted || !m_TouchState.m_AnyPressed || m_TouchState.m_DirectCancelled)
+			{
+				m_pTouchDragId = nullptr;
+				if(!m_TouchState.m_AnyPressed || !m_TouchState.m_DirectTracking || !m_TouchState.m_DirectMoved)
+					m_pTouchScrollRegion = nullptr;
+			}
+			if(m_TouchState.m_DirectCancelled)
+				CancelTouchItem();
+			if(m_TouchState.m_DirectTracking && m_TouchState.m_DirectMoved && !m_TouchState.m_DirectDragging &&
+				!m_TouchState.m_DirectLongPress && m_pTouchScrollRegion != nullptr)
+			{
+				const vec2 Movement = (m_TouchState.m_PrimaryPosition - m_TouchState.m_DirectStartPosition) * pScreen->Size();
+				const float AxisMovement = m_TouchScrollHorizontal ? Movement.x : Movement.y;
+				if(m_TouchState.m_DirectScrolling || absolute(AxisMovement) > 8.0f)
+				{
+					m_TouchScrollDelta = m_TouchState.m_DirectScrolling ? m_TouchState.m_PrimaryDelta * pScreen->Size() : Movement;
+					m_TouchState.m_DirectScrolling = true;
+					m_TouchState.m_PrimaryPressed = false;
+					CancelTouchItem();
+				}
+			}
+		}
 		if(m_TouchState.m_AnyPressed)
 		{
 			if(!CheckMouseLock())
@@ -888,17 +922,18 @@ void CUi::Update()
 				m_TouchState.m_ScrollAmount = vec2(0.0f, 0.0f);
 			}
 
-			// 触摸按下必须在本帧就参与按钮判定。延迟到下一帧会让第一次点击只移动
-			// 光标、第二次才命中（手机菜单和聊天翻译按钮实测都是两下）。
-			// 按住期间也要保持左键为按下，否则滚动条/滑块的拖拽只持续一帧。
-			// 但多指手势（双指滚动、三指截图）不能算「按住左键」：否则滚动全程
-			// MouseButton(0) 为真，DoButtonLogic 会把手指下的控件记成 ActiveItem，
-			// 松手就顺手激活了被滚过去的卡片。
-			if(m_TouchState.m_PrimaryPressed || (m_TouchState.m_AnyPressed && Input()->TouchFingerStates().size() <= 1))
+			// We need to delay the click until the next update or it's not possible to use UI
+			// elements because click and hover would happen at the same time for touch events.
+			if(m_DirectTouchInput)
+			{
+				// 直接触控按当前坐标命中；不把按下延迟到下一帧或移交给后到的手指。
+				m_UpdatedMouseButtons = (m_TouchState.m_PrimaryPressed ? 1u : 0u) | (m_TouchState.m_SecondaryPressed ? 2u : 0u);
+			}
+			else if(m_TouchState.m_PrimaryPressed)
 			{
 				m_UpdatedMouseButtons |= 1;
 			}
-			if(m_TouchState.m_SecondaryPressed)
+			if(!m_DirectTouchInput && m_TouchState.m_SecondaryPressed)
 			{
 				m_UpdatedMouseButtons |= 2;
 			}
@@ -1007,8 +1042,165 @@ void CUi::ConvertMouseMove(float *pX, float *pY, IInput::ECursorType CursorType)
 	*pY *= Factor;
 }
 
-void CUi::UpdateTouchState(CTouchState &State) const
+void CUi::SetDirectTouchInput(bool Enabled)
 {
+	if(m_DirectTouchInput == Enabled)
+		return;
+	CancelTouchInput();
+	m_DirectTouchInput = Enabled;
+	m_TouchState = CTouchState();
+	// 模式切换时已按下的手指必须松开，不能把旧手势当成新点击。
+	m_TouchState.m_DirectBlocked = m_pInput != nullptr && !Input()->TouchFingerStates().empty();
+}
+
+void CUi::CancelTouchItem()
+{
+	const void *pCancelledItem = m_pActiveItem;
+	// 输入框按下当帧可能尚未 Activate；同时撤销它的待激活焦点，避免滑动后弹出键盘。
+	if(m_pTrackedTextInput != nullptr && pCancelledItem == m_pTrackedTextInput)
+		ReleaseActiveTextInput(m_pTrackedTextInput);
+	if(m_pLastActiveItem == pCancelledItem)
+		m_pLastActiveItem = nullptr;
+	m_pActiveItem = nullptr;
+	m_pHotItem = nullptr;
+	m_pBecomingHotItem = nullptr;
+	m_ActiveButtonLogicButton = -1;
+	m_ActiveDraggableButtonLogicButton = -1;
+	DisableMouseLock();
+}
+
+void CUi::CancelTouchInput()
+{
+	if(!m_DirectTouchInput)
+		return;
+	if(m_TouchState.m_DirectTracking || m_TouchState.m_DirectBlocked)
+	{
+		CancelTouchItem();
+		m_UpdatedMouseButtons = m_MouseButtons = m_LastMouseButtons = 0;
+	}
+	m_TouchState = CTouchState();
+	m_TouchState.m_DirectBlocked = m_pInput != nullptr && !Input()->TouchFingerStates().empty();
+	m_pTouchDragId = nullptr;
+	m_pTouchScrollRegion = nullptr;
+	m_TouchScrollDelta = vec2(0.0f, 0.0f);
+	m_TouchScrollRegionSeen = false;
+}
+
+bool CUi::CaptureTouchDrag(const void *pId, const CUIRect *pRect)
+{
+	if(!m_DirectTouchInput || !m_TouchState.m_PrimaryPressed || RenderOnly() || UnderlyingPointerInputBlocked())
+		return false;
+	if(m_pTouchDragId == pId)
+		return true;
+	if(m_pTouchDragId != nullptr || !m_TouchState.m_DirectStarted || !MouseHovered(pRect))
+		return false;
+	m_pTouchDragId = pId;
+	m_TouchState.m_DirectDragging = true;
+	m_pTouchScrollRegion = nullptr;
+	return true;
+}
+
+void CUi::RegisterTouchScrollRegion(CScrollRegion *pRegion, const CUIRect *pRect, bool Horizontal, EUiWheelOwnerPriority Priority, bool Eligible)
+{
+	if(!m_DirectTouchInput || RenderOnly())
+		return;
+	if(m_pTouchScrollRegion == pRegion)
+	{
+		m_TouchScrollRegionSeen = true;
+		if(!Eligible || UnderlyingPointerInputBlocked())
+			CancelTouchInput();
+	}
+	if(!Eligible || !m_TouchState.m_DirectStarted || m_pTouchDragId != nullptr || !MouseHovered(pRect))
+		return;
+	if(m_pTouchScrollRegion == nullptr || QmHotScrollRegionPriorityWins(m_TouchScrollPriority, Priority))
+	{
+		m_pTouchScrollRegion = pRegion;
+		m_TouchScrollPriority = Priority;
+		m_TouchScrollHorizontal = Horizontal;
+		m_TouchScrollRegionSeen = true;
+	}
+}
+
+vec2 CUi::ConsumeTouchScroll(CScrollRegion *pRegion)
+{
+	if(RenderOnly() || !m_DirectTouchInput || !m_TouchState.m_DirectScrolling || m_pTouchScrollRegion != pRegion)
+		return vec2(0.0f, 0.0f);
+	const vec2 Delta = m_TouchScrollDelta;
+	m_TouchScrollDelta = vec2(0.0f, 0.0f);
+	return Delta;
+}
+
+void CUi::UpdateDirectTouchState(CTouchState &State) const
+{
+	const auto &vFingers = Input()->TouchFingerStates();
+	State.m_TapReleased = State.m_DirectStarted = State.m_DirectCancelled = false;
+	State.m_PrimaryDelta = State.m_ScrollAmount = vec2(0.0f, 0.0f);
+	State.m_AnyPressed = !vFingers.empty();
+	State.m_PrimaryPressed = State.m_SecondaryPressed = false;
+	auto *pEngineGraphics = dynamic_cast<IEngineGraphics *>(Graphics());
+	const bool Focused = pEngineGraphics == nullptr || pEngineGraphics->WindowActive() != 0;
+	const vec2 WindowSize(Graphics()->WindowWidth(), Graphics()->WindowHeight());
+	const bool ContextValid = Enabled() && Focused && (!State.m_DirectTracking || State.m_DirectWindowSize == WindowSize);
+	if(vFingers.empty())
+	{
+		State.m_TapReleased = ContextValid && State.m_DirectTracking && !State.m_DirectMoved && !State.m_DirectLongPress &&
+				      !State.m_DirectDragging && !State.m_DirectScrolling;
+		State.m_DirectCancelled = !ContextValid && State.m_DirectTracking;
+		State.m_DirectTracking = State.m_DirectBlocked = State.m_DirectDragging = State.m_DirectScrolling = false;
+		return;
+	}
+	const auto &Finger = vFingers.front();
+	const bool Interrupted = !ContextValid || vFingers.size() != 1 ||
+				 (State.m_DirectTracking && (State.m_DirectWindowSize != WindowSize || State.m_DirectFinger != Finger.m_Finger || State.m_DirectPressTime != Finger.m_PressTime));
+	if(Interrupted)
+	{
+		State.m_DirectCancelled = State.m_DirectTracking;
+		State.m_DirectTracking = State.m_DirectDragging = State.m_DirectScrolling = false;
+		State.m_DirectBlocked = true;
+		return;
+	}
+	if(State.m_DirectBlocked)
+		return;
+	if(!State.m_DirectTracking)
+	{
+		State.m_DirectTracking = State.m_DirectStarted = true;
+		State.m_DirectMoved = State.m_DirectLongPress = false;
+		State.m_DirectFinger = Finger.m_Finger;
+		State.m_DirectPressTime = Finger.m_PressTime;
+		State.m_DirectWindowSize = WindowSize;
+		State.m_DirectStartPosition = Finger.m_Position;
+		State.m_SecondaryActivationTime = Client()->GlobalTime();
+	}
+	else
+	{
+		State.m_PrimaryDelta = Finger.m_Position - State.m_PrimaryPosition;
+	}
+	State.m_PrimaryPosition = Finger.m_Position;
+	const float ScreenHeight = QmUiVirtualScreenHeight(g_Config.m_QmUiScale);
+	const vec2 Movement = (State.m_PrimaryPosition - State.m_DirectStartPosition) * vec2(Graphics()->ScreenAspect() * ScreenHeight, ScreenHeight);
+	if(!State.m_DirectMoved && length(Movement) > 8.0f)
+	{
+		State.m_DirectMoved = true;
+		State.m_DirectCancelled = !State.m_DirectDragging;
+	}
+	if(!State.m_DirectMoved && !State.m_DirectDragging && !State.m_DirectScrolling && !State.m_DirectLongPress &&
+		Client()->GlobalTime() - State.m_SecondaryActivationTime >= 0.5f)
+	{
+		// 长按接管前先撤销左键 active，避免右键菜单打开时额外点击原按钮。
+		State.m_DirectLongPress = State.m_DirectCancelled = true;
+	}
+	State.m_PrimaryPressed = !State.m_DirectLongPress && !State.m_DirectScrolling && (!State.m_DirectMoved || State.m_DirectDragging);
+	State.m_SecondaryPressed = State.m_DirectLongPress;
+}
+
+void CUi::UpdateTouchState(CTouchState &State, bool AllowDirectTouch) const
+{
+	if(m_DirectTouchInput && AllowDirectTouch)
+	{
+		UpdateDirectTouchState(State);
+		return;
+	}
+	State.m_TapReleased = false;
 	const std::vector<IInput::CTouchFingerState> &vTouchFingerStates = Input()->TouchFingerStates();
 
 	// Updated touch position as long as any finger is beinged pressed.
@@ -1366,7 +1558,7 @@ int CUi::DoButtonLogic(const void *pId, int Checked, const CUIRect *pRect, const
 
 	int ReturnValue = 0;
 	const bool Inside = MouseHovered(pRect);
-	const bool UseCurrentHit = (Flags & BUTTONFLAG_CURRENT_HIT) != 0;
+	const bool UseCurrentHit = m_DirectTouchInput || (Flags & BUTTONFLAG_CURRENT_HIT) != 0;
 	const bool AllowCurrentPress = UseCurrentHit || (PreLayoutInput() && !IsPopupOpen());
 	const int CurrentPress = AllowCurrentPress ? QmButtonCurrentPress(QmResolvePointerButtons(m_MouseButtons, m_LastMouseButtons, UnderlyingPointerInputBlocked()), Flags, Inside) : -1;
 	// 预布局及显式启用的下拉触发器按当前矩形接管新按下；释放仍由原状态机处理。
@@ -1447,6 +1639,7 @@ int CUi::DoDraggableButtonLogic(const void *pId, int Checked, const CUIRect *pRe
 	if(pAbrupted != nullptr)
 		*pAbrupted = false;
 
+	CaptureTouchDrag(pId, pRect);
 	if(CheckActiveItem(pId))
 	{
 		dbg_assert(m_ActiveDraggableButtonLogicButton >= 0, "m_ActiveDraggableButtonLogicButton invalid");
@@ -1479,8 +1672,8 @@ int CUi::DoDraggableButtonLogic(const void *pId, int Checked, const CUIRect *pRe
 			m_ActiveDraggableButtonLogicButton = -1;
 		}
 	}
-	// 触摸没有 hover：第一下按在控件上就要能开始拖动，不依赖上一帧的 HotItem。
-	else if(HotItem() == pId || (!Input()->TouchFingerStates().empty() && Inside))
+	// 直接触控没有 hover：第一下按在控件上就要能开始拖动，不依赖上一帧的 HotItem。
+	else if(HotItem() == pId || (m_DirectTouchInput && Inside && MouseButtonClicked(0)))
 	{
 		for(int i = 0; i < 3; ++i)
 		{
@@ -1522,6 +1715,7 @@ EEditState CUi::DoPickerLogic(const void *pId, const CUIRect *pRect, float *pX, 
 		return EEditState::NONE;
 
 	const bool Inside = MouseHovered(pRect);
+	CaptureTouchDrag(pId, pRect);
 	if(Inside)
 		SetHotItem(pId);
 
@@ -2511,7 +2705,8 @@ bool CUi::DrawQmIcon(const CUIRect &Rect, const EQmIcon Icon, const char *pFallb
 	pTextRender->TextColor(QmSignalIconFamily(Icon) ? Color : ConfiguredQmUiIconColor(Color, Icon));
 	const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
 	// 实心态切换 Fill 字面渲染同一码位；字形文本与度量不变，缓存按预设自然隔离。
-	pTextRender->SetFontPreset(ForceOutlineStyle ? EFontPreset::ICON_FONT : QmUiIconFilledStyle(Icon) ? EFontPreset::ICON_FONT_FILL : EFontPreset::ICON_FONT);
+	pTextRender->SetFontPreset(ForceOutlineStyle ? EFontPreset::ICON_FONT : QmUiIconFilledStyle(Icon) ? EFontPreset::ICON_FONT_FILL :
+													    EFontPreset::ICON_FONT);
 	pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
 	// 信号柱家族按 bbox 占比补足字号，四档可视尺寸趋近常规图标；其余图标走通用字号。
 	const float FontSize = QmSignalIconFamily(Icon) ? QmSignalIconFontSize(Rect, Icon) : QmIconFontSize(Rect);
@@ -2614,6 +2809,10 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 		}
 	};
 
+	if(m_DirectTouchInput && Inside && (MouseButtonClicked(0) || MouseButtonClicked(1)))
+		m_pHotItem = pId;
+	if(Props.m_UseScroll)
+		CaptureTouchDrag(pId, pRect);
 	if(CheckActiveItem(pId))
 	{
 		if(m_ActiveValueSelectorState.m_Button < 0)
@@ -2797,6 +2996,11 @@ float CUi::DoScrollbarV(const void *pId, const CUIRect *pRect, float Current)
 	const bool InsideRail = MouseHovered(&Rail);
 	const bool InsideHandle = MouseHovered(&Handle);
 	bool Grabbed = false; // whether to apply the offset
+	if(CaptureTouchDrag(pId, &Rail) && !IsActiveItem(pId))
+	{
+		SetActiveItem(pId);
+		m_ActiveScrollbarOffset = InsideHandle ? MouseY() - Handle.y : Handle.h / 2.0f;
+	}
 
 	if(CheckActiveItem(pId))
 	{
@@ -2925,6 +3129,12 @@ float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, co
 	const bool InsideRail = MouseHovered(&Rail);
 	const bool InsideHandle = MouseHovered(&HandleArea);
 	bool Grabbed = false;
+	if(CaptureTouchDrag(pId, &Rail) && !IsActiveItem(pId))
+	{
+		SetActiveItem(pId);
+		m_pLastActiveScrollbar = pId;
+		m_ActiveScrollbarOffset = InsideHandle ? MouseX() - Handle.x : Handle.w / 2.0f;
+	}
 	if(CheckActiveItem(pId))
 	{
 		if(MouseButton(0))

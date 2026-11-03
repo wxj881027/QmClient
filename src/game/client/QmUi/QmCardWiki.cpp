@@ -643,7 +643,7 @@ namespace
 		{
 			"qm:player_stats",
 			Localizable("Adds HUD lines for alive time, rescue and freeze counts and hook left/right ratio, plus a map progress bar."),
-			Localizable("Enable \"Show player stats HUD\"; tick \"Map progress bar\", then pick \"Use embedded HUD progress bar\" or place the bar with the sliders."),
+			Localizable("Enable \"Map progress bar\" and choose its location: Standalone, Player stats or Dynamic Island. Enable \"Show player stats HUD\" for the Player stats location."),
 			Localizable("The map progress bar only fills on Gores maps; the other three lines work on any server."),
 		},
 		{

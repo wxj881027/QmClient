@@ -80,12 +80,7 @@ namespace qm_card_catalog
 					g_Config.m_QmNameplateShowScope = ShowScope;
 				Flow.Space(Metrics.m_LineSpacing);
 
-				NumericField(Content, "appearance-name-plates-size", Localize("Name plates size"), &g_Config.m_ClNamePlatesSize, -50, 100);
-				NumericField(Content, "appearance-name-plates-offset", Localize("Name plates offset"), &g_Config.m_ClNamePlatesOffset, 10, 50);
 				CheckBox(Content, "appearance-show-clan-above-name-plates", Localize("Show clan above name plates"), &g_Config.m_ClNamePlatesClan);
-				if(g_Config.m_ClNamePlatesClan)
-					NumericField(Content, "appearance-clan-plates-size", Localize("Clan plates size"), &g_Config.m_ClNamePlatesClanSize, -50, 100);
-				NumericField(Content, "appearance-coords-size", Localize("Coords size"), &g_Config.m_ClNamePlatesCoordsSize, -50, 100);
 				pMenus->DoSettingsToggleGroup(Page, Tab, Tab, Content,
 					{
 						{&g_Config.m_ClNamePlatesTeamcolors, "appearance-name-plates-team-colors", Localize("Use team colors for name plates")},
@@ -93,6 +88,15 @@ namespace qm_card_catalog
 					},
 					Metrics, Flow.Input());
 				CheckBox(Content, "appearance-show-client-ids-name-plates", Localize("Show client IDs in name plates"), &g_Config.m_ClNamePlatesIds);
+
+				if(!qm_card_catalog::QmCardRenderHook::Personalization(pMenus, Content, "deck:appearance-name-plate-settings", Metrics, Ctx.m_ReadOnly))
+					return;
+
+				NumericField(Content, "appearance-name-plates-size", Localize("Name plates size"), &g_Config.m_ClNamePlatesSize, -50, 100);
+				NumericField(Content, "appearance-name-plates-offset", Localize("Name plates offset"), &g_Config.m_ClNamePlatesOffset, 10, 50);
+				if(g_Config.m_ClNamePlatesClan)
+					NumericField(Content, "appearance-clan-plates-size", Localize("Clan plates size"), &g_Config.m_ClNamePlatesClanSize, -50, 100);
+				NumericField(Content, "appearance-coords-size", Localize("Coords size"), &g_Config.m_ClNamePlatesCoordsSize, -50, 100);
 				if(g_Config.m_ClNamePlatesIds)
 				{
 					CheckBox(Content, "appearance-client-ids-separate-line", Localize("Show client IDs on a separate line"), &g_Config.m_ClNamePlatesIdsSeparateLine);
@@ -257,6 +261,9 @@ namespace qm_card_catalog
 						g_Config.m_QmNameplateHookStrongWeakScope, Metrics);
 				}
 				Flow.Space(Metrics.m_LineSpacing);
+				if(!qm_card_catalog::QmCardRenderHook::Personalization(pMenus, Content, "deck:appearance-name-plate-hook-strength", Metrics, Ctx.m_ReadOnly))
+					return;
+
 				static CButtonContainer s_StrongColor, s_WeakColor;
 				CUIRect s_StrongColorRow;
 				if(Flow.Control("s_StrongColor", Metrics.m_LineHeight, s_StrongColorRow))
@@ -287,7 +294,7 @@ namespace qm_card_catalog
 						{0, 3, 1, 2}, g_Config.m_ClShowDirection, Metrics, &g_Config.m_ClShowDirection);
 				}
 				Flow.Space(Metrics.m_LineSpacing);
-				if(g_Config.m_ClShowDirection > 0)
+				if(g_Config.m_ClShowDirection > 0 && QmCardRenderHook::Personalization(pMenus, Content, "deck:appearance-name-plate-key-presses", Metrics, Ctx.m_ReadOnly))
 					NumericField(Content, "appearance-key-press-icons-size", Localize("Size of key press icons"), &g_Config.m_ClDirectionSize, -50, 100);
 			};
 		}

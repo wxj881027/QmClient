@@ -400,6 +400,7 @@ namespace
 		{Localizable("Only show with this nickname"), nullptr, "仅在使用此昵称时显示"},
 		{Localizable("Permanent access; up to 4 online IP addresses"), nullptr, "永久资格，最多 4 个 IP 同时在线"},
 		{Localizable("Platinum highlight"), nullptr, "铂金高光"},
+		{Localizable("Fluid"), nullptr, "流体 液体 蓝青"},
 		{Localizable("Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate."), nullptr, "使用赞助兑换码解锁自定义称号，称号会显示在聊天与名牌上。"},
 		{Localizable("Saved with your title and shared with other QmClient players."), nullptr, "随头衔一起保存，并同步给其他 QmClient 玩家。"},
 		{Localizable("See you at the next checkpoint."), nullptr, "下个检查点见。"},

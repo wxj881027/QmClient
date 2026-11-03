@@ -250,6 +250,9 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 						{&g_Config.m_ClShowVotesAfterVoting, "appearance-show-votes-after-voting", Localize("Show votes window after voting")},
 					},
 					AppearanceMetrics, !RenderOnly);
+				if(!qm_card_catalog::QmCardRenderHook::Personalization(this, LeftView, "deck:appearance-hud-main", AppearanceMetrics, RenderOnly))
+					return;
+
 				Flow.Space(MarginBetweenViews);
 				CUIRect ScoreboardTitle;
 				if(Flow.Control("appearance-scoreboard-title", HeadlineHeight, ScoreboardTitle))
@@ -320,7 +323,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				CPerfTimer HudFreezeBarsTimer;
 				Flow.Space(MarginSmall);
 				DeclaredCheckbox(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowFreezeBars, "appearance-show-freeze-bars", Localize("Show freeze bars"), &g_Config.m_ClShowFreezeBars, &RightView, LineSize, MarginSmall, AppearanceBodySize);
-				if(g_Config.m_ClShowFreezeBars)
+				if(g_Config.m_ClShowFreezeBars && qm_card_catalog::QmCardRenderHook::Personalization(this, RightView, "deck:appearance-hud-ddrace", AppearanceMetrics, RenderOnly))
 				{
 					if(Flow.Control("appearance-freeze-bars-alpha-inside-freeze", LineSize, Button))
 					{
@@ -395,6 +398,9 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 					Flow.Space(MarginSmall);
 				}
 
+				if(!qm_card_catalog::QmCardRenderHook::Personalization(this, LeftView, "deck:appearance-chat-settings", AppearanceMetrics, RenderOnly))
+					return;
+
 				if(DeclaredCheckbox(SETTINGS_APPEARANCE, APPEARANCE_TAB_CHAT, &g_Config.m_ClChatOld, "appearance-use-old-chat-style", Localize("Use old chat style"), &g_Config.m_ClChatOld, &LeftView, LineSize, 0.0f, AppearanceBodySize))
 					GameClient()->m_Chat.RebuildChat();
 				Flow.Space(MarginSmall);
@@ -442,17 +448,29 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				char aBuf[128];
 				CUIRect RightView = ContentRect;
 				CSettingsContentLayoutFlow Flow(RightView);
-				// ***** Messages ***** //
-				// Message Colors and extra settings
-				static CButtonContainer s_SystemMessageReset, s_SystemMessageAdd, s_SystemMessageRemove;
-				static unsigned s_aSystemMessageColorValues[CMessageGradient::MAX_COLORS];
-				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-system-message", Localize("System message"), &g_Config.m_ClMessageSystemColor, g_Config.m_ClMessageSystemGradient, sizeof(g_Config.m_ClMessageSystemGradient), ColorRGBA(1.0f, 1.0f, 0.5f), &s_SystemMessageReset, &s_SystemMessageAdd, &s_SystemMessageRemove, s_aSystemMessageColorValues, EQmChatGradientRole::SYSTEM, true, &g_Config.m_ClShowChatSystem, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
+				bool VisibilityChanged = DeclaredCheckbox(SETTINGS_APPEARANCE, APPEARANCE_TAB_CHAT, &g_Config.m_ClShowChatSystem, "appearance-chat-show-system", Localize("System message"), &g_Config.m_ClShowChatSystem, &RightView, LineSize, MarginSmall, AppearanceBodySize);
+				VisibilityChanged |= DeclaredCheckbox(SETTINGS_APPEARANCE, APPEARANCE_TAB_CHAT, &g_Config.m_ClMessageFriend, "appearance-chat-show-friend", Localize("Friend message"), &g_Config.m_ClMessageFriend, &RightView, LineSize, MarginSmall, AppearanceBodySize);
+				str_format(aBuf, sizeof(aBuf), "%s (echo)", Localize("Client message"));
+				VisibilityChanged |= DeclaredCheckbox(SETTINGS_APPEARANCE, APPEARANCE_TAB_CHAT, &g_Config.m_QmShowChatClient, "appearance-chat-show-client", aBuf, &g_Config.m_QmShowChatClient, &RightView, LineSize, MarginSmall, AppearanceBodySize);
+				if(VisibilityChanged)
+				{
+					pChat->RebuildChat();
+					ConfigManager()->Save();
+				}
 				if(DeclaredCheckbox(SETTINGS_APPEARANCE, APPEARANCE_TAB_CHAT, &g_Config.m_QmChatHideSystemPrefix, "appearance-chat-hide-system-prefix", Localize("Hide system message prefix"), &g_Config.m_QmChatHideSystemPrefix, &RightView, LineSize, MarginSmall, AppearanceBodySize))
 				{
 					pChat->RebuildChat();
 					ConfigManager()->Save();
 				}
 
+				if(!qm_card_catalog::QmCardRenderHook::Personalization(this, RightView, "deck:appearance-chat-messages", AppearanceMetrics, RenderOnly))
+					return;
+
+				// ***** Messages ***** //
+				// Message Colors and extra settings
+				static CButtonContainer s_SystemMessageReset, s_SystemMessageAdd, s_SystemMessageRemove;
+				static unsigned s_aSystemMessageColorValues[CMessageGradient::MAX_COLORS];
+				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-system-message", Localize("System message"), &g_Config.m_ClMessageSystemColor, g_Config.m_ClMessageSystemGradient, sizeof(g_Config.m_ClMessageSystemGradient), ColorRGBA(1.0f, 1.0f, 0.5f), &s_SystemMessageReset, &s_SystemMessageAdd, &s_SystemMessageRemove, s_aSystemMessageColorValues, EQmChatGradientRole::SYSTEM, true, nullptr, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
 				static CButtonContainer s_HighlightedMessageReset, s_HighlightedMessageAdd, s_HighlightedMessageRemove;
 				static unsigned s_aHighlightedMessageColorValues[CMessageGradient::MAX_COLORS];
 				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-highlighted-message", Localize("Highlighted message"), &g_Config.m_ClMessageHighlightColor, g_Config.m_ClMessageHighlightGradient, sizeof(g_Config.m_ClMessageHighlightGradient), ColorRGBA(1.0f, 0.5f, 0.5f), &s_HighlightedMessageReset, &s_HighlightedMessageAdd, &s_HighlightedMessageRemove, s_aHighlightedMessageColorValues, EQmChatGradientRole::HIGHLIGHT, true, nullptr, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
@@ -463,7 +481,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 
 				static CButtonContainer s_FriendMessageReset, s_FriendMessageAdd, s_FriendMessageRemove;
 				static unsigned s_aFriendMessageColorValues[CMessageGradient::MAX_COLORS];
-				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-friend-message", Localize("Friend message"), &g_Config.m_ClMessageFriendColor, g_Config.m_ClMessageFriendGradient, sizeof(g_Config.m_ClMessageFriendGradient), ColorRGBA(1.0f, 0.137f, 0.137f), &s_FriendMessageReset, &s_FriendMessageAdd, &s_FriendMessageRemove, s_aFriendMessageColorValues, EQmChatGradientRole::FRIEND, true, &g_Config.m_ClMessageFriend, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
+				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-friend-message", Localize("Friend message"), &g_Config.m_ClMessageFriendColor, g_Config.m_ClMessageFriendGradient, sizeof(g_Config.m_ClMessageFriendGradient), ColorRGBA(1.0f, 0.137f, 0.137f), &s_FriendMessageReset, &s_FriendMessageAdd, &s_FriendMessageRemove, s_aFriendMessageColorValues, EQmChatGradientRole::FRIEND, true, nullptr, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
 
 				static CButtonContainer s_NormalMessageReset, s_NormalMessageAdd, s_NormalMessageRemove;
 				static unsigned s_aNormalMessageColorValues[CMessageGradient::MAX_COLORS];
@@ -473,7 +491,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				static CButtonContainer s_ClientMessageReset, s_ClientMessageAdd, s_ClientMessageRemove;
 				static unsigned s_aClientMessageColorValues[CMessageGradient::MAX_COLORS];
 				// TClient
-				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-client-message", aBuf, &g_Config.m_ClMessageClientColor, g_Config.m_ClMessageClientGradient, sizeof(g_Config.m_ClMessageClientGradient), ColorRGBA(0.5f, 0.78f, 1.0f), &s_ClientMessageReset, &s_ClientMessageAdd, &s_ClientMessageRemove, s_aClientMessageColorValues, EQmChatGradientRole::CLIENT, true, &g_Config.m_QmShowChatClient, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
+				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-client-message", aBuf, &g_Config.m_ClMessageClientColor, g_Config.m_ClMessageClientGradient, sizeof(g_Config.m_ClMessageClientGradient), ColorRGBA(0.5f, 0.78f, 1.0f), &s_ClientMessageReset, &s_ClientMessageAdd, &s_ClientMessageRemove, s_aClientMessageColorValues, EQmChatGradientRole::CLIENT, true, nullptr, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
 
 				static CButtonContainer s_FriendMessageHeartReset;
 				const unsigned OldFriendMessageHeartColor = g_Config.m_ClMessageFriendHeartColor;
@@ -955,6 +973,9 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 					Flow.Space(MarginSmall);
 				}
 
+				if(!qm_card_catalog::QmCardRenderHook::Personalization(this, LeftView, "deck:appearance-hook-collision-main", AppearanceMetrics, RenderOnly))
+					return;
+
 				if(Flow.Control("appearance-hook-collision-own-width", LineSize, Button))
 				{
 					DoAppearanceNumericField(APPEARANCE_TAB_HOOK_COLLISION, "appearance-hook-collision-own-width", &g_Config.m_ClHookCollSize, &g_Config.m_ClHookCollSize, Button, Localize("Width of your own hook collision line"), 0, 20, &CUi::ms_LinearScrollbarScale);
@@ -1262,6 +1283,9 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				}
 				Flow.Space(MarginSmall);
 
+				if(!qm_card_catalog::QmCardRenderHook::Personalization(this, LeftView, "deck:appearance-info-messages", AppearanceMetrics, RenderOnly))
+					return;
+
 				static CButtonContainer s_KillMessageNormalColorId, s_KillMessageHighlightColorId;
 				{
 					CUIRect ColorRow;
@@ -1286,6 +1310,9 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				CSettingsContentLayoutFlow Flow(EnhancedCardContent);
 
 				DeclaredCheckbox(SETTINGS_APPEARANCE, APPEARANCE_TAB_LASER, &g_Config.m_QmLaserEnhanced, "appearance-laser-effect-enhancement", Localize("Laser effect enhancement"), &g_Config.m_QmLaserEnhanced, &EnhancedCardContent, LineSize, 0.0f, AppearanceBodySize);
+				Flow.Space(MarginSmall);
+				if(!qm_card_catalog::QmCardRenderHook::Personalization(this, EnhancedCardContent, "deck:appearance-laser-enhanced", AppearanceMetrics, RenderOnly))
+					return;
 				Flow.Space(MarginSmall);
 				if(Flow.Control("appearance-laser-glow-intensity", LineSize, Button))
 				{
@@ -1322,6 +1349,9 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				CUIRect ColorCardContent = ContentRect;
 				CSettingsContentLayoutFlow Flow(ColorCardContent);
 				// ***** Weapons ***** //
+				if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ColorCardContent, "deck:appearance-laser-colors", AppearanceMetrics, RenderOnly))
+					return;
+
 				DoAppearanceHeading(ColorCardContent, "appearance-weapons-title", Localize("Weapons"), HeadlineFontSize, HeadlineHeight);
 				Flow.Space(MarginSmall);
 

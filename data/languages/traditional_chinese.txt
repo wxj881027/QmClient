@@ -1217,6 +1217,9 @@ Audio packets
 Audio packs
 == 音頻包
 
+Aurora: Polar Veil
+== 極光：極夜光幕
+
 AUS
 == 澳洲
 
@@ -1823,6 +1826,9 @@ Binds that use commands the client does not recognize, listed by their raw comma
 Black
 == 黑色
 
+Black Flash: Void Rift
+== 黑閃：虛空裂隙
+
 Blank asset auto fallback
 == 空白資源自動回退
 
@@ -2057,6 +2063,9 @@ Cancel your swap request
 Candidate files
 == 候選文件
 
+Candy gradient
+== 糖果漸層
+
 Cannot join the target player's team
 == 無法加入目標玩家的隊伍
 
@@ -2191,6 +2200,9 @@ Chat bubble display duration (seconds)
 
 Chat bubble font size
 == 聊天氣泡字體大小
+
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
+== 訊息氣泡樣式（0=漫畫對白，1=糖果漸層，2=雲朵氣泡）
 
 Chat bubble text color
 == 聊天氣泡文字顏色
@@ -2466,19 +2478,19 @@ Classic
 == 古典
 
 Classic Easy
-== 經典 Easy
+== 古典 Easy
 
 Classic easy
 == 古典 easy
 
 Classic Next
-== 經典 Next
+== 古典 Next
 
 Classic next
 == 古典 next
 
 Classic Nut
-== 經典 Nut
+== 古典 Nut
 
 Classic nut
 == 古典 nut
@@ -2487,7 +2499,7 @@ Classic PowerShell
 == 經典 PowerShell
 
 Classic Pro
-== 經典 Pro
+== 古典 Pro
 
 Classic pro
 == 古典 pro
@@ -2663,6 +2675,9 @@ Close the demo player
 Close window after changing settings
 == 更改設置後關閉窗口
 
+Cloud bubble
+== 雲朵氣泡
+
 Collapse
 == 摺疊
 
@@ -2743,6 +2758,9 @@ Colors too close to the map background are hard to read while moving.
 
 Combo
 == 連擊
+
+Comic dialogue
+== 漫畫對白
 
 Comma-separated list of banned clients to be kicked on join
 == 加入時將被踢出的以逗號分隔的被禁止客戶端列表
@@ -4508,6 +4526,9 @@ Dynamic FOV smoothness
 Dynamic FOV smoothness (0=instant, 100=smoothest)
 == 動態視野平滑度（0 = 瞬時，100 = 最平滑）
 
+Dynamic Island
+== 靈動島
+
 Dynamic island
 == 靈動島
 
@@ -4655,8 +4676,8 @@ enable
 Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
 == 只有想每次錘中都換皮膚時才開啟錘中偷皮——別人也會看到你的皮膚在變。
 
-Enable "Show player stats HUD"; tick "Map progress bar", then pick "Use embedded HUD progress bar" or place the bar with the sliders.
-== 啟用顯示玩家統計 HUD；勾選地圖進度條，然後選擇使用內嵌 HUD 進度條，或用滑桿自行擺放進度條。
+Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
+== 開啟「地圖進度條」，選擇獨立顯示、玩家統計或靈動島。選擇玩家統計時，還需開啟「顯示玩家統計 HUD」。
 
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
 == 打開「顯示其他玩家未預測的影子」，再調整預測影子和未預測影子的不透明度。
@@ -5756,6 +5777,9 @@ Flags are cosmetic and can be hidden by other clients.
 Flip:
 == 翻轉：
 
+Fluid
+== 流體
+
 Folder
 == 文件夾
 
@@ -6103,6 +6127,9 @@ Gap between statusbar items
 
 Gap between tee and nametag
 == 三通與銘牌間隙尺寸
+
+Gather and disperse
+== 聚集與散開
 
 Gaussian
 == 高斯
@@ -6911,6 +6938,9 @@ If the bar covers your chat, lower "Opacity" or "IME font size" first; "Reset IM
 If the wheel feels crowded, remove unused slots in the editor card.
 == 覺得輪盤太擠的話，到編輯器卡片裡移除用不到的槽位。
 
+Ignis: Ember Spirit
+== 焰靈：餘燼之靈
+
 Ignore clan tag when searching friends
 == 搜索好友時忽略戰隊標籤
 
@@ -7126,6 +7156,9 @@ Initializing map layers
 
 Initializing map logic
 == 正在初始化地圖邏輯
+
+Ink: Paper Bloom
+== 水墨：宣紙漾墨
 
 Input
 == 輸入
@@ -7532,6 +7565,9 @@ Keyword reply use Dummy
 Keyword rules
 == 關鍵詞規則
 
+Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+== 關鍵字規則過長，未儲存變更；請縮短或刪除部分規則。
+
 Kick player
 == 踢出玩家
 
@@ -7789,6 +7825,9 @@ Let server start ghost
 
 Let server start race recorder
 == 讓伺服器啟動比賽記錄器
+
+Let's play together!
+== 一起玩吧！
 
 Lets you join team i (shows your team if left blank)
 == 讓你加入隊伍 i（留空則顯示你的隊伍）
@@ -8288,8 +8327,8 @@ Map progress bar height
 Map progress bar horizontal position (center, % of screen width)
 == 地圖進度條水平位置（中心點，佔屏幕寬度百分比）
 
-Map progress bar style (0=bottom bar, 1=HUD overlay)
-== 地圖進度條樣式（0=底部橫條，1=HUD 內嵌）
+Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)
+== 地圖進度條位置（0=獨立顯示，1=玩家統計，2=靈動島）
 
 Map progress bar vertical position (top edge, % of screen height)
 == 地圖進度條垂直位置（頂邊，佔屏幕高度百分比）
@@ -8674,9 +8713,6 @@ Minimum time between kills (in seconds)
 
 Minimum time between map votes (in seconds)
 == 地圖投票之間的最短時間（秒）
-
-Minimum width for name column in server browser
-== 伺服器瀏覽器中名稱列的最小寬度
 
 Minutes on server before a player can call a map change vote (0 = disabled)
 == 玩家可以否決地圖更改投票之前伺服器上的時間分鐘數（0 = 禁用）
@@ -10076,6 +10112,9 @@ Permanent access; up to 4 online IP addresses
 Permanent sponsor verified
 == 已認證：永久贊助資格
 
+Personal adjustments
+== 個性調整
+
 Personal best:
 == 個人最佳：
 
@@ -10879,6 +10918,9 @@ Progress bar color
 
 Progress bar height
 == 進度條高度
+
+Progress bar location
+== 進度條位置
 
 Progress bar width
 == 進度條寬度
@@ -12626,8 +12668,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == 向 rcon 發送指定命令
 
-Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
-== 每隔隨機30到90秒向公共聊天逐句傳送連續三句歌詞，句間隔3秒
+Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
+== 每隔隨機90到270秒向公共聊天逐句傳送連續三句歌詞，句間隔3秒
 
 Send to
 == 傳送給
@@ -12904,6 +12946,9 @@ Settings card states: stableId for collapsed, !stableId for expanded, separated 
 
 Settings card titles use rainbow colors
 == 設定卡片標題使用彩虹色
+
+Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+== 設定卡片寬度：stableId 表示整行寬度，!stableId 表示半行寬度，多項以分號分隔
 
 Settings file
 == 設置文件
@@ -14489,8 +14534,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == 本體和分身分別進隊，方便開局 solo 同步（部分地圖不好同步時使用）
 
-Sponsor chat style draft: 0=Normal, 1=Platinum highlight
-== 贊助者發言樣式草稿：0=普通，1=鉑金高光
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid
+== 贊助者發言樣式草稿：0=普通，1=鉑金高光，2=流體
 
 Sponsor code
 == 認證碼
@@ -14531,8 +14576,14 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Q 彈 Tee 形變強度
 
+Standalone
+== 獨立顯示
+
 Star
 == 星形
+
+Stardust: Constellation
+== 星鏈：星海連線
 
 Start (s)
 == 開始 (秒)
@@ -14737,6 +14788,9 @@ Strong hook color
 
 Strong Weak Hook
 == 強弱鉤
+
+Style
+== 樣式
 
 Style chat names, text, and message colors
 == Style chat names, text, and message colors
@@ -15128,8 +15182,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Tee 軌跡顏色模式（1=純色，2=當前 Tee 顏色，3=彩虹，4=按 Tee 速度著色，5=隨機）
 
-Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
-== Tee 拖尾樣式（0=原版，1=漫畫，2=魔法，3=像素，4=舊編號漫畫，5=舊編號魔法）
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic, 6=Aurora, 7=Ink, 8=Ignis, 9=Stardust, 10=Black Flash)
+== Tee 拖尾樣式（0=原版，1=漫畫，2=魔法，3=像素，4=舊編號漫畫，5=舊編號魔法，6=極光，7=水墨，8=焰靈，9=星鏈，10=黑閃）
 
 Tee Trails
 == Tee 拖尾
@@ -16598,6 +16652,12 @@ Use current name
 Use current settings
 == 讀取目前設定
 
+Use custom chat bubble colors
+== 使用自訂訊息氣泡顏色
+
+Use custom colors
+== 使用自訂顏色
+
 Use custom colors for the pressed hook collision line (0 = always invert)
 == 按下鉤鍵時使用自訂鉤子輔助線顏色（0 = 始終反色）
 
@@ -16621,9 +16681,6 @@ Use default voice input device
 
 Use default voice output device
 == 使用默認語音輸出設備
-
-Use embedded HUD progress bar
-== 使用 HUD 內嵌進度條
 
 Use emote
 == 使用表情
@@ -17335,6 +17392,9 @@ Width of latency column in server browser
 
 Width of map column in server browser
 == 伺服器瀏覽器中地圖列的寬度
+
+Width of name column in server browser
+== 伺服器瀏覽器中名稱列的寬度
 
 Width of others' hook collision line
 == 其他玩家的鉤子輔助線線寬度

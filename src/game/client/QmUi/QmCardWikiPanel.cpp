@@ -24,6 +24,10 @@
 #include <engine/shared/localization.h>
 #include <engine/storage.h>
 
+#if defined(CONF_PLATFORM_ANDROID)
+#include <SDL3/SDL_misc.h>
+#endif
+
 #include <game/client/lineinput.h>
 #include <game/client/ui.h>
 #include <game/client/ui_scrollregion.h>
@@ -93,8 +97,9 @@ namespace
 		if(!IsCard)
 		{
 #if defined(CONF_PLATFORM_ANDROID)
-			// Android 上 base 层不提供 open_link（system.h 在 Android 下隐藏该声明），
-			// 外部链接的打开入口由平台侧负责；这里先不处理，避免当作卡片跳转。
+			// Android 上 base 层不提供 open_link（system.h 在该平台隐藏声明），
+			// 外部链接交给 SDL 转交系统浏览器。
+			SDL_OpenURL(pTarget);
 #else
 			open_link(pTarget);
 #endif

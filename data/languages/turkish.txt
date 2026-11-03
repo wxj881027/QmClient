@@ -1217,6 +1217,9 @@ Audio packets
 Audio packs
 == Ses paketleri
 
+Aurora: Polar Veil
+== Kutup ışığı: kutup örtüsü
+
 AUS
 == Avustralya
 
@@ -1823,6 +1826,9 @@ Binds that use commands the client does not recognize, listed by their raw comma
 Black
 == Siyah
 
+Black Flash: Void Rift
+== Kara parıltı: boşluk yarığı
+
 Blank asset auto fallback
 == Boş varlık için otomatik geri dönüş
 
@@ -2057,6 +2063,9 @@ Cancel your swap request
 Candidate files
 == Aday dosyalar
 
+Candy gradient
+== Şeker renk geçişi
+
 Cannot join the target player's team
 == Bu oyuncunun takımına katılınamıyor
 
@@ -2191,6 +2200,9 @@ Chat bubble display duration (seconds)
 
 Chat bubble font size
 == Sohbet balonu yazı boyutu
+
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
+== Sohbet balonu stili (0=Çizgi roman diyaloğu, 1=Şeker renk geçişi, 2=Bulut balonu)
 
 Chat bubble text color
 == Sohbet balonu metin rengi
@@ -2663,6 +2675,9 @@ Close the demo player
 Close window after changing settings
 == Ayarları değiştirdikten sonra pencereyi kapat
 
+Cloud bubble
+== Bulut balonu
+
 Collapse
 == Daralt
 
@@ -2743,6 +2758,9 @@ Colors too close to the map background are hard to read while moving.
 
 Combo
 == Kombo
+
+Comic dialogue
+== Çizgi roman diyaloğu
 
 Comma-separated list of banned clients to be kicked on join
 == Katılımda atılacak, virgülle ayrılmış yasaklı istemci listesi
@@ -4508,6 +4526,9 @@ Dynamic FOV smoothness
 Dynamic FOV smoothness (0=instant, 100=smoothest)
 == Dinamik görüş alanı düzgünlüğü (0=anlık, 100=en düzgün)
 
+Dynamic Island
+== Dinamik Ada
+
 Dynamic island
 == Dinamik ada
 
@@ -4655,8 +4676,8 @@ enable
 Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
 == Çekiçle skin çalmayı yalnızca her vuruşta skinin değişmesini istiyorsan aç; diğer oyuncular da görür.
 
-Enable "Show player stats HUD"; tick "Map progress bar", then pick "Use embedded HUD progress bar" or place the bar with the sliders.
-== Oyuncu istatistikleri HUD'unu göster seçeneğini etkinleştir; harita ilerleme çubuğunu işaretle, sonra gömülü HUD ilerleme çubuğunu kullan seçeneğini seç ya da çubuğu kaydırıcılarla yerleştir.
+Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
+== Harita ilerleme çubuğunu açın ve konumunu seçin: ayrı göster, oyuncu istatistikleri veya Dinamik Ada. Oyuncu istatistiklerini seçerseniz oyuncu istatistikleri HUD’unu da açın.
 
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
 == "Diğer oyuncuların tahmin edilmemiş hayaletlerini göster" seçeneğini açın, sonra tahmin edilen ve edilmeyen hayalet opaklığını ayarlayın.
@@ -5756,6 +5777,9 @@ Flags are cosmetic and can be hidden by other clients.
 Flip:
 == Çevir:
 
+Fluid
+== Akışkan
+
 Folder
 == Klasör
 
@@ -6103,6 +6127,9 @@ Gap between statusbar items
 
 Gap between tee and nametag
 == Tee ile isim etiketi arasındaki boşluk
+
+Gather and disperse
+== Toplanma ve dağılma
 
 Gaussian
 == Gauss
@@ -6911,6 +6938,9 @@ If the bar covers your chat, lower "Opacity" or "IME font size" first; "Reset IM
 If the wheel feels crowded, remove unused slots in the editor card.
 == Çark kalabalık görünüyorsa düzenleyici kartından kullanılmayan dilimleri kaldır.
 
+Ignis: Ember Spirit
+== Alev: köz ruhu
+
 Ignore clan tag when searching friends
 == Arkadaş ararken klan etiketini yoksay
 
@@ -7126,6 +7156,9 @@ Initializing map layers
 
 Initializing map logic
 == Harita mantığı başlatılıyor
+
+Ink: Paper Bloom
+== Mürekkep: kâğıtta çiçeklenme
 
 Input
 == Giriş
@@ -7532,6 +7565,9 @@ Keyword reply use Dummy
 Keyword rules
 == Anahtar kelime kuralları
 
+Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+== Anahtar kelime kuralları çok uzun. Değişiklikler kaydedilmedi; bir kuralı kısaltın veya kaldırın.
+
 Kick player
 == Oyuncuyu at
 
@@ -7789,6 +7825,9 @@ Let server start ghost
 
 Let server start race recorder
 == Sunucunun yarış kaydedicisini başlatmasına izin ver
+
+Let's play together!
+== Birlikte oynayalım!
 
 Lets you join team i (shows your team if left blank)
 == i takımına katılmanı sağlar (boş bırakılırsa takımını gösterir)
@@ -8288,8 +8327,8 @@ Map progress bar height
 Map progress bar horizontal position (center, % of screen width)
 == Harita ilerleme çubuğu yatay konumu (merkez, ekran genişliğinin yüzdesi)
 
-Map progress bar style (0=bottom bar, 1=HUD overlay)
-== Harita ilerleme çubuğu stili (0=alt çubuk, 1=HUD içine gömülü)
+Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)
+== Harita ilerleme çubuğu konumu (0=ayrı göster, 1=oyuncu istatistikleri, 2=Dinamik Ada)
 
 Map progress bar vertical position (top edge, % of screen height)
 == Harita ilerleme çubuğu dikey konumu (üst kenar, ekran yüksekliğinin yüzdesi)
@@ -8674,9 +8713,6 @@ Minimum time between kills (in seconds)
 
 Minimum time between map votes (in seconds)
 == Harita oylamaları arasındaki minimum süre (saniye cinsinden)
-
-Minimum width for name column in server browser
-== Sunucu tarayıcısında isim sütunu için minimum genişlik
 
 Minutes on server before a player can call a map change vote (0 = disabled)
 == Bir oyuncunun harita değiştirme oylaması çağırmadan önce sunucuda geçirmesi gereken dakika (0 = devre dışı)
@@ -10076,6 +10112,9 @@ Permanent access; up to 4 online IP addresses
 Permanent sponsor verified
 == Kalıcı destekçi durumu doğrulandı
 
+Personal adjustments
+== Kişisel ayarlar
+
 Personal best:
 == Kişisel en iyi:
 
@@ -10879,6 +10918,9 @@ Progress bar color
 
 Progress bar height
 == İlerleme çubuğu yüksekliği
+
+Progress bar location
+== İlerleme çubuğu konumu
 
 Progress bar width
 == İlerleme çubuğu genişliği
@@ -12626,8 +12668,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == Belirtilen komutu rcon'a gönder
 
-Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
-== 30 ile 90 saniye arasında rastgele aralıklarla genel sohbete art arda üç şarkı sözü satırı gönder, satırlar arasında 3 saniye bekle
+Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
+== 90 ile 270 saniye arasında rastgele aralıklarla genel sohbete art arda üç şarkı sözü satırı gönder, satırlar arasında 3 saniye bekle
 
 Send to
 == Şuna gönder
@@ -12904,6 +12946,9 @@ Settings card states: stableId for collapsed, !stableId for expanded, separated 
 
 Settings card titles use rainbow colors
 == Kart başlıkları için gökkuşağı rengi kullan
+
+Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+== Ayar kartı genişlikleri: tam genişlik için stableId, yarım genişlik için !stableId; noktalı virgülle ayrılır
 
 Settings file
 == Ayarlar dosyası
@@ -14489,8 +14534,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == Ana karakter ve kuklayı solo koşu senkronizasyonu için farklı takımlara dağıtır
 
-Sponsor chat style draft: 0=Normal, 1=Platinum highlight
-== Destekçi sohbet stili taslağı: 0=Normal, 1=Platin ışıltısı
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid
+== Destekçi sohbet stili taslağı: 0=Normal, 1=Platin ışıltısı, 2=Akışkan
 
 Sponsor code
 == Destekçi kodu
@@ -14531,8 +14576,14 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Zıpzıp Tee deformasyon şiddeti
 
+Standalone
+== Ayrı göster
+
 Star
 == Yıldız
+
+Stardust: Constellation
+== Yıldız tozu: takımyıldız
 
 Start (s)
 == Başlangıç (sn)
@@ -14737,6 +14788,9 @@ Strong hook color
 
 Strong Weak Hook
 == Güçlü Zayıf Kanca
+
+Style
+== Stil
 
 Style chat names, text, and message colors
 == Style chat names, text, and message colors
@@ -15128,8 +15182,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Tee izi renk modu (1=Düz, 2=Geçerli Tee rengi, 3=Gökkuşağı, 4=Tee hızı, 5=Rastgele)
 
-Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
-== Tee iz stili (0=Özgün, 1=Manga, 2=Büyü, 3=Piksel, 4=Eski manga numarası, 5=Eski büyü numarası)
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic, 6=Aurora, 7=Ink, 8=Ignis, 9=Stardust, 10=Black Flash)
+== Tee iz stili (0=Özgün, 1=Manga, 2=Büyü, 3=Piksel, 4=Eski manga numarası, 5=Eski büyü numarası, 6=Kutup ışığı, 7=Mürekkep, 8=Alev, 9=Yıldız tozu, 10=Kara parıltı)
 
 Tee Trails
 == Tee İzleri
@@ -16598,6 +16652,12 @@ Use current name
 Use current settings
 == Geçerli ayarları kullan
 
+Use custom chat bubble colors
+== Özel sohbet balonu renkleri kullan
+
+Use custom colors
+== Özel renkler kullan
+
 Use custom colors for the pressed hook collision line (0 = always invert)
 == Basılı kanca yardımcı çizgisi için özel renkler kullan (0 = her zaman ters çevir)
 
@@ -16621,9 +16681,6 @@ Use default voice input device
 
 Use default voice output device
 == Varsayılan ses çıkış cihazını kullan
-
-Use embedded HUD progress bar
-== Gömülü HUD ilerleme çubuğunu kullan
 
 Use emote
 == Emoji kullan
@@ -17335,6 +17392,9 @@ Width of latency column in server browser
 
 Width of map column in server browser
 == Sunucu tarayıcısında harita sütununun genişliği
+
+Width of name column in server browser
+== Sunucu tarayıcısında isim sütununun genişliği
 
 Width of others' hook collision line
 == Başkalarının kanca çarpışma çizgisi genişliği

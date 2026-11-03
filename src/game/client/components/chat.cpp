@@ -556,7 +556,7 @@ bool CChat::HandleCommandHudInput(const IInput::CEvent &Event)
 	if(Event.m_Flags & IInput::FLAG_PRESS)
 	{
 		if(Event.m_Key == KEY_UP || Event.m_Key == KEY_DOWN)
-			return m_CommandHud.MoveSelection(Event.m_Key == KEY_UP ? -1 : 1, m_Input.GetString(), m_Input.GetCursorOffset());
+			return m_CommandHud.MoveSelection(Event.m_Key == KEY_UP ? -1 : 1, m_Input.GetString(), m_Input.GetCursorOffset(), m_pHistoryEntry != nullptr);
 		if(Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER)
 		{
 			std::string Completion;
@@ -2491,7 +2491,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 	ReloadWordFilterFile(false, false);
 	ReloadWordFilterFile(true, false);
 	const bool UsePublicWords = g_Config.m_QmPublicBlockWords && !m_PublicWords.State().Words().empty() &&
-		QmPublicWordFilter::IsIncomingPlayerChat(ClientId, IsLocalBlockWordsClient, Team == TEAM_WHISPER_SEND, Client()->State() == IClient::STATE_DEMOPLAYBACK);
+				    QmPublicWordFilter::IsIncomingPlayerChat(ClientId, IsLocalBlockWordsClient, Team == TEAM_WHISPER_SEND, Client()->State() == IClient::STATE_DEMOPLAYBACK);
 	if((UsePublicWords || (g_Config.m_QmBlockWordsEnabled && (g_Config.m_QmBlockWordsList[0] != '\0' || !m_BlockWordsFile.Words().empty()))) &&
 		(BlockWordsAction == EBlockWordsAction::REPLACE || CanHideBlockWordsMessage))
 	{
@@ -3336,6 +3336,8 @@ bool CChat::OnPrepareLines(float y)
 		}
 		if(Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM)
 			Color = QmSponsorChatPlatinumColor(0.0f, Color.a);
+		else if(Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::FLUID)
+			Color = ColorRGBA(1, 1, 1, Color.a);
 		TextRender()->TextColor(Color);
 
 		CTextCursor AppendCursor = LineCursor;
@@ -3367,7 +3369,7 @@ bool CChat::OnPrepareLines(float y)
 				QmSponsorChatAddPlatinumSplits(Cursor, pMessage, Color.a);
 			if(UseColoredParts && !FilteredAfterColors)
 				ColoredParts.AddSplitsToCursor(Cursor);
-			const bool SpatialGradient = UseGradient && !Platinum && Line.m_CustomColor == std::nullopt && ColoredParts.Colors().empty();
+			const bool SpatialGradient = UseGradient && Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::NONE && Line.m_CustomColor == std::nullopt && ColoredParts.Colors().empty();
 			const auto Gradient = QmChatGradientStyle(g_Config, GradientRole, Color);
 			const CQmChatGradientPaint Paint(TextRender(), Cursor, pMessage, SpatialGradient ? &Gradient : nullptr);
 			TextRender()->CreateOrAppendTextContainer(BodyContainer, &Cursor, pMessage);
@@ -4188,7 +4190,7 @@ void CChat::OnRender()
 				if(!HudEditorPreview && Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM)
 					SweepState = QmSponsorChatSweepState(AgeSeconds, TextRender()->GetTextContainerRenderedLineCount(Line.m_BodyTextContainerIndex), LatestVisibleSponsor);
 				QmRenderSponsorChatText(Graphics(), TextRender(), Line.m_BodyTextContainerIndex,
-					Line.m_RenderSponsorChatStyle, AnimAlpha, AnimOffsetX, AnimOffsetY, FontSize(), SweepState);
+					Line.m_RenderSponsorChatStyle, AnimAlpha, AnimOffsetX, AnimOffsetY, FontSize(), SweepState, HudEditorPreview ? 0.0 : AgeSeconds);
 			}
 
 			if(Line.m_TextContainerIndex.Valid())

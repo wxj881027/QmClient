@@ -53,6 +53,8 @@ class CQmMobileSpectator : public CComponent
 	std::optional<IInput::CTouchFinger> m_IslandFinger;
 	// 上一帧按文字量出来的岛体矩形：宽度自适应，两侧不留空白。
 	CUIRect m_IslandRect{};
+
+	bool FreeViewActive() const;
 	vec2 ScreenSize() const;
 	void PerformAction(int Action);
 

@@ -185,6 +185,15 @@ namespace qm_demo_ui
 		return Controls;
 	}
 
+	inline CUIRect PanelDragRect(const CUIRect &Panel, CUIRect Title, bool DirectTouch)
+	{
+		if(!DirectTouch)
+			return Panel;
+		// 触屏仅用标题左侧挪动面板，内容控件保留自己的拖动归属。
+		Title.w = std::clamp(Title.w, 0.0f, 120.0f);
+		return Title;
+	}
+
 	inline CUIRect DraggedPlayerRect(const CUIRect &Screen, const CUIRect &Base, float OffsetX, float OffsetY)
 	{
 		return {

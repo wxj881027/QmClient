@@ -43,12 +43,25 @@ TEST(QmMobileSpectator, InvalidFrameTimeStopsAndLongFrameIsBounded)
 namespace
 {
 	const vec2 Screen(720.0f, 400.0f);
-	std::vector<IInput::CTouchFingerState> FingerAt(vec2 Position)
+	std::vector<IInput::CTouchFingerState> FingerAt(vec2 Position, int Press = 0)
 	{
 		IInput::CTouchFingerState Finger{};
 		Finger.m_Position = Position / Screen;
+		Finger.m_PressTime = std::chrono::nanoseconds(Press);
 		return {Finger};
 	}
+}
+
+TEST(QmMobileSpectator, HiddenPauseButtonAreaIsAvailableForOnlineMapTap)
+{
+	CTouchState Touch;
+	const auto DemoGeometry = Layout(Screen);
+	const auto OnlineGeometry = Layout(Screen, false);
+	const auto Fingers = FingerAt(DemoGeometry.m_aButtons[PAUSE].Center());
+	EXPECT_EQ(Touch.Update(Fingers, OnlineGeometry, Screen, 1.0), 0U);
+	EXPECT_FALSE(Touch.MapTapped());
+	EXPECT_EQ(Touch.Update({}, OnlineGeometry, Screen, 1.1), 0U);
+	EXPECT_TRUE(Touch.MapTapped());
 }
 
 TEST(QmMobileSpectator, HeldJoystickMovesWithoutFurtherFingerDelta)
@@ -104,6 +117,137 @@ TEST(QmMobileSpectator, ControlsAreExcludedFromMapGestureStarts)
 	for(const auto &Button : Geometry.m_aButtons)
 		EXPECT_TRUE(InsideControl(Geometry, Button.Center()));
 	EXPECT_FALSE(InsideControl(Geometry, Screen * 0.5f));
+}
+
+TEST(QmMobileSpectator, MapTapFiresOnlyOnReleaseAndCanBePressedAgain)
+{
+	CTouchState Touch;
+	const auto Geometry = Layout(Screen);
+	const auto Fingers = FingerAt(Screen * 0.5f);
+	Touch.Update(Fingers, Geometry, Screen, 1.0);
+	EXPECT_FALSE(Touch.MapTapped());
+	Touch.Update(Fingers, Geometry, Screen, 1.1);
+	EXPECT_FALSE(Touch.MapTapped());
+	Touch.Update({}, Geometry, Screen, 1.2);
+	EXPECT_TRUE(Touch.MapTapped());
+	Touch.Update({}, Geometry, Screen, 1.3);
+	EXPECT_FALSE(Touch.MapTapped());
+	Touch.Update(Fingers, Geometry, Screen, 2.0);
+	Touch.Update({}, Geometry, Screen, 2.1);
+	EXPECT_TRUE(Touch.MapTapped());
+}
+
+TEST(QmMobileSpectator, SmallMapTapMotionIsAllowed)
+{
+	CTouchState Touch;
+	const auto Geometry = Layout(Screen);
+	const vec2 Start = Screen * 0.5f;
+	Touch.Update(FingerAt(Start), Geometry, Screen, 1.0);
+	Touch.Update(FingerAt(Start + vec2(3.0f, 4.0f)), Geometry, Screen, 1.1);
+	Touch.Update({}, Geometry, Screen, 1.2);
+	EXPECT_TRUE(Touch.MapTapped());
+}
+
+TEST(QmMobileSpectator, MapDragCannotTurnBackIntoTap)
+{
+	CTouchState Touch;
+	const auto Geometry = Layout(Screen);
+	const vec2 Start = Screen * 0.5f;
+	Touch.Update(FingerAt(Start), Geometry, Screen, 1.0);
+	Touch.Update(FingerAt(Start + vec2(20.0f, 0.0f)), Geometry, Screen, 1.1);
+	Touch.Update(FingerAt(Start), Geometry, Screen, 1.2);
+	Touch.Update({}, Geometry, Screen, 1.3);
+	EXPECT_FALSE(Touch.MapTapped());
+}
+
+TEST(QmMobileSpectator, LongMapPressDoesNotTapEvenWithoutIntermediateUpdates)
+{
+	CTouchState Touch;
+	const auto Geometry = Layout(Screen);
+	Touch.Update(FingerAt(Screen * 0.5f), Geometry, Screen, 1.0);
+	Touch.Update({}, Geometry, Screen, 1.5);
+	EXPECT_FALSE(Touch.MapTapped());
+	Touch.Update(FingerAt(Screen * 0.5f), Geometry, Screen, 2.0);
+	Touch.Update(FingerAt(Screen * 0.5f), Geometry, Screen, 2.6);
+	Touch.Update({}, Geometry, Screen, 2.7);
+	EXPECT_FALSE(Touch.MapTapped());
+}
+
+TEST(QmMobileSpectator, JoystickAndEveryButtonAreExcludedFromMapTaps)
+{
+	CTouchState Touch;
+	const auto Geometry = Layout(Screen);
+	Touch.Update(FingerAt(Geometry.m_Joystick.Center()), Geometry, Screen, 1.0);
+	Touch.Update({}, Geometry, Screen, 1.1);
+	EXPECT_FALSE(Touch.MapTapped());
+	for(const auto &Button : Geometry.m_aButtons)
+	{
+		Touch.Update(FingerAt(Button.Center()), Geometry, Screen, 2.0);
+		Touch.Update({}, Geometry, Screen, 2.1);
+		EXPECT_FALSE(Touch.MapTapped());
+	}
+}
+
+TEST(QmMobileSpectator, PinchAndRemainingFingerNeverProduceMapTap)
+{
+	CTouchState Touch;
+	const auto Geometry = Layout(Screen);
+	auto Fingers = FingerAt(vec2(280.0f, 200.0f));
+	Touch.Update(Fingers, Geometry, Screen, 1.0);
+	Fingers.push_back(FingerAt(vec2(380.0f, 200.0f), 1).front());
+	Touch.Update(Fingers, Geometry, Screen, 1.1);
+	Fingers.back().m_Position = vec2(480.0f, 200.0f) / Screen;
+	Touch.Update(Fingers, Geometry, Screen, 1.2);
+	EXPECT_LT(Touch.ZoomFactor(), 1.0f);
+	Fingers.pop_back();
+	Touch.Update(Fingers, Geometry, Screen, 1.3);
+	EXPECT_FALSE(Touch.MapTapped());
+	Touch.Update({}, Geometry, Screen, 1.4);
+	EXPECT_FALSE(Touch.MapTapped());
+	Touch.Update(Fingers, Geometry, Screen, 2.0);
+	Touch.Update({}, Geometry, Screen, 2.1);
+	EXPECT_TRUE(Touch.MapTapped());
+}
+
+TEST(QmMobileSpectator, AdditionalControlFingerCancelsMapTapWithoutPinch)
+{
+	CTouchState Touch;
+	const auto Geometry = Layout(Screen);
+	auto Fingers = FingerAt(Screen * 0.5f);
+	Touch.Update(Fingers, Geometry, Screen, 1.0);
+	Fingers.push_back(FingerAt(Geometry.m_Joystick.Center(), 1).front());
+	Touch.Update(Fingers, Geometry, Screen, 1.1);
+	Fingers.pop_back();
+	Touch.Update(Fingers, Geometry, Screen, 1.2);
+	Touch.Update({}, Geometry, Screen, 1.3);
+	EXPECT_FALSE(Touch.MapTapped());
+}
+
+TEST(QmMobileSpectator, ReplacedMapFingerCannotFinishOriginalTap)
+{
+	CTouchState Touch;
+	const auto Geometry = Layout(Screen);
+	Touch.Update(FingerAt(Screen * 0.5f, 1), Geometry, Screen, 1.0);
+	Touch.Update(FingerAt(Screen * 0.5f, 2), Geometry, Screen, 1.1);
+	Touch.Update({}, Geometry, Screen, 1.2);
+	EXPECT_FALSE(Touch.MapTapped());
+}
+
+TEST(QmMobileSpectator, CancelClearsMapTapAndRequiresReleaseBeforeNewTap)
+{
+	CTouchState Touch;
+	const auto Geometry = Layout(Screen);
+	const auto Fingers = FingerAt(Screen * 0.5f);
+	Touch.Update(Fingers, Geometry, Screen, 1.0);
+	Touch.Cancel();
+	Touch.Update(Fingers, Geometry, Screen, 1.1);
+	Touch.Update({}, Geometry, Screen, 1.2);
+	EXPECT_FALSE(Touch.MapTapped());
+	Touch.Update(Fingers, Geometry, Screen, 2.0);
+	Touch.Update({}, Geometry, Screen, 2.1);
+	EXPECT_TRUE(Touch.MapTapped());
+	Touch.Cancel();
+	EXPECT_FALSE(Touch.MapTapped());
 }
 
 TEST(QmMobileSpectator, FirstPinchFrameOnlyEstablishesDistance)
@@ -221,7 +365,6 @@ TEST(QmMobileSpectator, SpectatorAcknowledgementAndReconnectResetRetryState)
 	EXPECT_TRUE(Join.Update(true, true, false, 2.3));
 }
 
-
 TEST(QmMobileSpectator, EntityLayerButtonCyclesBackgroundOverlayAndGameTiles)
 {
 	// 0 = 只看地图背景，100 = 实体层铺满，50 = 两者叠加；三个档位循环。
@@ -275,7 +418,6 @@ TEST(QmMobileSpectator, ButtonPressNeverPansTheCamera)
 	EXPECT_EQ(Touch.PanDelta(), vec2(0.0f, 0.0f));
 }
 
-
 TEST(QmMobileSpectator, DragModeHandsTheJoystickAreaOverToPanning)
 {
 	// 拖动模式下摇杆不再绘制，也不能继续吞掉左下的拖动起手。
@@ -290,7 +432,6 @@ TEST(QmMobileSpectator, DragModeHandsTheJoystickAreaOverToPanning)
 	Touch.Update(Fingers, DragLayout, Screen);
 	EXPECT_NEAR(Touch.PanDelta().x, -0.05f, 0.00001f);
 }
-
 
 TEST(QmMobileSpectator, NearestTeePicksClosestVisiblePlayerAndSkipsSelf)
 {
@@ -344,9 +485,7 @@ TEST(QmMobileSpectator, SpectatorButtonsStayOnScreenAndApart)
 	EXPECT_FALSE(Overlaps(Geometry.m_Island, Geometry.m_Joystick));
 	for(int i = 0; i < NUM_ACTIONS; ++i)
 		EXPECT_FALSE(Overlaps(Geometry.m_Island, Geometry.m_aButtons[i])) << i;
-
 }
-
 
 TEST(QmMobileVoteBar, LayoutKeepsButtonsInsideTheBannerAndBigEnoughForFingers)
 {
@@ -420,7 +559,6 @@ TEST(QmMobileSpectator, GameplayInputIsReleasedWithoutLosingCameraAndChatFlags)
 	NeutralizeGameplayInput(Input);
 	EXPECT_EQ(Input.m_Fire, 0);
 }
-
 
 TEST(QmMobileTouchRules, OutsideTapOnlyClosesForShortStillTap)
 {

@@ -208,6 +208,61 @@ TEST(QmChatCommandHud, FirstDownSelectsFirstCandidateAndFirstUpSelectsLast)
 	EXPECT_EQ(Hud.Selected(), Hud.Count() - 1);
 }
 
+TEST(QmChatCommandHud, RecalledCommandLeavesBothDirectionsToHistory)
+{
+	CQmChatCommandHud Hud;
+	AddServerCandidates(Hud, "/r", 2);
+	ASSERT_EQ(Hud.Count(), 2);
+
+	EXPECT_FALSE(Hud.MoveSelection(-1, "/r", 2, true));
+	EXPECT_FALSE(Hud.MoveSelection(-1, "/r", 2, true));
+	EXPECT_FALSE(Hud.MoveSelection(1, "/r", 2, true));
+	EXPECT_EQ(Hud.Selected(), -1);
+	std::string Completion;
+	size_t Cursor = 0;
+	EXPECT_FALSE(Hud.CompleteSelected("/r", 2, Completion, Cursor));
+}
+
+TEST(QmChatCommandHud, LeavingHistoryRestoresCandidateNavigationForSameText)
+{
+	CQmChatCommandHud Hud;
+	AddServerCandidates(Hud, "/r", 2);
+	EXPECT_FALSE(Hud.MoveSelection(-1, "/r", 2, true));
+
+	// 草稿可以与最后一条历史相同，退出历史后无需改变文本即可恢复候选导航。
+	ASSERT_TRUE(Hud.MoveSelection(1, "/r", 2, false));
+	EXPECT_EQ(Hud.Selected(), 0);
+	std::string Completion;
+	size_t Cursor = 0;
+	ASSERT_TRUE(Hud.CompleteSelected("/r", 2, Completion, Cursor));
+	EXPECT_EQ(Completion, "/race");
+}
+
+TEST(QmChatCommandHud, RecalledEmojiLeavesBothDirectionsToHistory)
+{
+	CQmChatCommandHud Hud;
+	AddEmojiCandidates(Hud, ":", 1);
+	ASSERT_EQ(Hud.Count(), 3);
+
+	EXPECT_FALSE(Hud.MoveSelection(-1, ":", 1, true));
+	EXPECT_FALSE(Hud.MoveSelection(1, ":", 1, true));
+	EXPECT_EQ(Hud.Selected(), -1);
+}
+
+TEST(QmChatCommandHud, RecalledCommandStillAllowsExplicitMouseCompletion)
+{
+	CQmChatCommandHud Hud;
+	AddServerCandidates(Hud, "/r", 2);
+	EXPECT_FALSE(Hud.MoveSelection(-1, "/r", 2, true));
+
+	const float Y = RowCenterY(Hud, 0);
+	ASSERT_TRUE(Hud.Press(20.0f, Y, "/r", 2));
+	std::string Completion;
+	size_t Cursor = 0;
+	ASSERT_TRUE(Hud.Release(20.0f, Y, "/r", 2, Completion, Cursor));
+	EXPECT_EQ(Completion, "/race");
+}
+
 TEST(QmChatCommandHud, DirectionSelectionWrapsAtBothEnds)
 {
 	CQmChatCommandHud Hud;

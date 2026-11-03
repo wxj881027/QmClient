@@ -1624,7 +1624,7 @@ void CMenus::PrepareSettingsTabLabelCache(float MainViewWidth, float TabBarWidth
 	}
 }
 
-int CMenus::DoButton_GridHeader(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Align)
+int CMenus::DoButton_GridHeader(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Align, const SLabelProperties &Props)
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 	const float SortedAlpha = std::clamp(0.34f + g_Config.m_QmUiOpacity / 100.0f * 0.6f, 0.0f, 0.55f);
@@ -1635,7 +1635,12 @@ int CMenus::DoButton_GridHeader(const void *pId, const char *pText, int Checked,
 
 	CUIRect Temp;
 	pRect->VMargin(5.0f, &Temp);
-	Ui()->DoLabel(&Temp, pText, pRect->h * CUi::ms_FontmodHeight, Align);
+	SLabelProperties HeaderProps = Props;
+	if(HeaderProps.m_MaxWidth >= 0.0f)
+		HeaderProps.m_MaxWidth = std::min(HeaderProps.m_MaxWidth, std::max(0.0f, Temp.w));
+	// 文字引擎把零行宽视作不限制宽度，空的表头文字区直接跳过绘制。
+	if(HeaderProps.m_MaxWidth != 0.0f)
+		Ui()->DoLabel(&Temp, pText, pRect->h * CUi::ms_FontmodHeight, Align, HeaderProps);
 	return Ui()->DoButtonLogic(pId, Checked, pRect, BUTTONFLAG_LEFT);
 }
 
@@ -1663,6 +1668,10 @@ int CMenus::DoButton_Favorite(const void *pButtonId, const void *pParentId, bool
 		TextRender()->TextColor(Checked ? ColorRGBA(1.0f, 0.85f, 0.3f, BaseAlpha * ShowAlpha) : ColorRGBA(0.5f, 0.5f, 0.5f, BaseAlpha * ShowAlpha));
 		SLabelProperties Props;
 		Props.m_MaxWidth = pRect->w;
+		// 收藏开关靠字形本身区分状态：未收藏空心中性星标，已收藏实心收藏色星标。
+		// 全局「实心收藏图标」只决定收藏徽标外观，沿用到开关上会让悬停预览与已收藏同形。
+		const CQmIconSemanticColorScope FavoriteIconColorScope(!Checked);
+		const CQmFavoriteStarFillScope FavoriteStarFillScope(Checked);
 		Ui()->DoLabel_QmIcon(pRect, EQmIcon::STAR, FONT_ICON_STAR, 12.0f + HoverStrength, TEXTALIGN_MC, Props);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 		TextRender()->SetRenderFlags(0);
@@ -4624,7 +4633,10 @@ void CMenus::Render()
 			if(CanPrewarmSettings && MenuOpenFrame > 0)
 				PrewarmVisibleSettingsResources(MainView);
 			if(m_GamePage != PAGE_CALLVOTE)
+			{
 				m_QmVoteMenu.m_Loader.Suspend();
+				m_QmVoteMenu.m_Covers.Release();
+			}
 			if(m_GamePage == PAGE_GAME)
 			{
 				CPerfTimer StageTimer;
@@ -6174,9 +6186,13 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 void CMenus::SetActive(bool Active)
 {
 	if(!Active)
+	{
 		m_QmVoteMenu.m_Loader.Suspend();
+		m_QmVoteMenu.m_Covers.Release();
+	}
 	if(Active != m_MenuActive)
 	{
+		Ui()->CancelTouchInput();
 		if(Active)
 		{
 			m_MenuOpenFrame = 0;
@@ -6654,6 +6670,8 @@ void CMenus::OnReset()
 void CMenus::OnShutdown()
 {
 	m_QmVoteMenu.m_Loader.Suspend();
+	// 图形接口此刻仍存活，地图库封面的 GPU 纹理必须在这一步释放。
+	m_QmVoteMenu.m_Covers.Shutdown(Graphics());
 	if(m_pScreenshotWatermarkJob)
 		m_pScreenshotWatermarkJob->Cancel();
 	m_pScreenshotWatermarkJob.reset();
@@ -8260,7 +8278,10 @@ bool CMenus::OnInput(const IInput::CEvent &Event)
 
 void CMenus::OnStateChange(int NewState, int OldState)
 {
+	Ui()->CancelTouchInput();
+	m_DemoTouchSeeking = false;
 	m_QmVoteMenu.m_Loader.Suspend();
+	m_QmVoteMenu.m_Covers.Release();
 	m_QmVoteMenu.m_SelectedName.clear();
 	m_QmVoteMenu.m_Status.clear();
 	m_QmVoteMenu.m_Dirty = true;
@@ -8364,6 +8385,7 @@ void CMenus::OnUpdate()
 
 void CMenus::OnRender()
 {
+	m_BrowserColumnResizeCursor = false;
 	PumpDemoScreenshotWatermark();
 	// 引擎侧（Windows 双击 .poses、poses_open 命令）缺少地图时留下的请求：
 	// 转成地图选择弹窗，玩家选好地图后再走同一条 poses_open。
@@ -8444,6 +8466,15 @@ void CMenus::OnRender()
 			Ui()->Update();
 		LogPerfStage(Client(), "ui_update", StageTimer.ElapsedMs());
 	}
+	if(m_DemoTouchSeeking && (!Ui()->IsActiveItem(&m_DemoSeekBarId) || !Ui()->MouseButton(0) || ConsoleOwnsUi || !Ui()->Enabled()))
+	{
+		// 中断会先清除 UI active；独立结束拖动会话，恢复拖动前的播放状态。
+		m_DemoTouchSeeking = false;
+		if((Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive()) && !m_PausedBeforeSeeking)
+			PlaybackPlayer()->Unpause();
+		if(Ui()->IsActiveItem(&m_DemoSeekBarId))
+			Ui()->SetActiveItem(nullptr);
+	}
 
 	if(IsActive())
 		Ui()->DoBackButton();
@@ -8505,7 +8536,12 @@ void CMenus::OnRender()
 		if(IsActive())
 			Ui()->RenderBackButton();
 		if(!QmUiMobilePlatform() && !GameClient()->m_GameConsole.IsActive() && (IsActive() || GameClient()->m_Spectator.PlaybackControlsActive() || QmPoseMapPopupOpen() || QmPoseHudActive()))
-			RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
+		{
+			if(m_BrowserColumnResizeCursor && !Ui()->IsPopupOpen())
+				RenderTools()->RenderResizeCursor(Ui()->MousePos(), 24.0f);
+			else
+				RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
+		}
 		LogPerfStage(Client(), "cursor_render", StageTimer.ElapsedMs());
 	}
 
@@ -8701,7 +8737,10 @@ void CMenus::SetMenuPage(int NewPage)
 		m_pScreenshotWatermarkJob->Cancel();
 	const int OldPage = m_MenuPage;
 	if(OldPage != NewPage)
+	{
+		Ui()->CancelTouchInput();
 		MarkMenuInteraction();
+	}
 	if(OldPage == PAGE_SETTINGS && NewPage != PAGE_SETTINGS)
 	{
 		ReleaseQmClientSettingsSearchInput();

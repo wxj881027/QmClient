@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <optional>
 #include <vector>
@@ -113,7 +114,8 @@ namespace qm_mobile_spectator
 		std::array<CUIRect, NUM_ACTIONS> m_aButtons;
 	};
 
-	inline SLayout Layout(vec2 Screen, bool JoystickActive = true)
+	// Demo=true 才有暂停键（回放/录像需要），JoystickActive=false 时摇杆区域不抢触摸。
+	inline SLayout Layout(vec2 Screen, bool Demo = true, bool JoystickActive = true)
 	{
 		SLayout Result{};
 		Result.m_JoystickActive = JoystickActive;
@@ -127,7 +129,8 @@ namespace qm_mobile_spectator
 		Result.m_aButtons[CAMERA_MODE] = {Screen.x - 212.0f, 16.0f, 44.0f, 34.0f};
 		Result.m_aButtons[MENU] = {Screen.x - 62.0f, 16.0f, 44.0f, 34.0f};
 		Result.m_aButtons[CHAT] = {Screen.x - 112.0f, 16.0f, 44.0f, 34.0f};
-		Result.m_aButtons[PAUSE] = {Screen.x - 162.0f, 16.0f, 44.0f, 34.0f};
+		if(Demo)
+			Result.m_aButtons[PAUSE] = {Screen.x - 162.0f, 16.0f, 44.0f, 34.0f};
 		const float IslandWidth = std::min(Screen.x * 0.5f, 360.0f);
 		Result.m_Island = {(Screen.x - IslandWidth) * 0.5f, Screen.y - 46.0f, IslandWidth, 32.0f};
 		return Result;
@@ -214,6 +217,44 @@ namespace qm_mobile_spectator
 		vec2 m_PanDelta = vec2(0.0f, 0.0f);
 		bool m_WaitForRelease = false;
 		bool m_OpenSelectorOnRelease = false;
+		struct SMapTap
+		{
+			IInput::CTouchFinger m_Finger;
+			std::chrono::nanoseconds m_PressTime;
+			vec2 m_Position;
+			double m_Time;
+		};
+		std::optional<SMapTap> m_MapTap;
+		bool m_MapTapped = false;
+
+		void UpdateMapTap(const std::vector<IInput::CTouchFingerState> &vFingers, const SLayout &Layout, vec2 Screen, double Now)
+		{
+			const bool WithinTapTime = m_MapTap.has_value() && std::isfinite(Now) && Now >= m_MapTap->m_Time && Now - m_MapTap->m_Time < 0.5;
+			if(vFingers.empty())
+			{
+				m_MapTapped = WithinTapTime;
+				m_MapTap.reset();
+				return;
+			}
+			if(vFingers.size() != 1)
+			{
+				m_MapTap.reset();
+				return;
+			}
+			const auto &Finger = vFingers.front();
+			const vec2 Position = Finger.m_Position * Screen;
+			const bool MapPosition = std::isfinite(Position.x) && std::isfinite(Position.y) &&
+						 Position.x >= 0.0f && Position.x < Screen.x && Position.y >= 0.0f && Position.y < Screen.y && !InsideControl(Layout, Position);
+			if(m_MapTap.has_value())
+			{
+				if(WithinTapTime && MapPosition && m_MapTap->m_Finger == Finger.m_Finger && m_MapTap->m_PressTime == Finger.m_PressTime && distance(m_MapTap->m_Position, Position) <= 8.0f)
+					return;
+				m_MapTap.reset();
+			}
+			// 只有全松开后的新单指可建立候选；拖动、多指或换指中途不能重新变成轻点。
+			if(m_vPrevious.empty() && MapPosition && std::isfinite(Now))
+				m_MapTap = SMapTap{Finger.m_Finger, Finger.m_PressTime, Position, Now};
+		}
 
 		void RememberFingers(const std::vector<IInput::CTouchFingerState> &vFingers)
 		{
@@ -233,15 +274,19 @@ namespace qm_mobile_spectator
 			m_PanDelta = vec2(0.0f, 0.0f);
 			m_WaitForRelease = true;
 			m_OpenSelectorOnRelease = false;
+			m_MapTap.reset();
+			m_MapTapped = false;
 		}
 
 		vec2 JoystickDirection() const { return m_Direction; }
 		vec2 PanDelta() const { return m_PanDelta; }
 		float ZoomFactor() const { return m_ZoomFactor; }
+		bool MapTapped() const { return m_MapTapped; }
 
-		unsigned Update(const std::vector<IInput::CTouchFingerState> &vFingers, const SLayout &Layout, vec2 Screen)
+		unsigned Update(const std::vector<IInput::CTouchFingerState> &vFingers, const SLayout &Layout, vec2 Screen, double Now = 0.0)
 		{
 			unsigned Actions = 0;
+			m_MapTapped = false;
 			m_Direction = vec2(0.0f, 0.0f);
 			m_PanDelta = vec2(0.0f, 0.0f);
 			m_ZoomFactor = 1.0f;
@@ -251,6 +296,7 @@ namespace qm_mobile_spectator
 					return 0;
 				m_WaitForRelease = false;
 			}
+			UpdateMapTap(vFingers, Layout, Screen, Now);
 			m_vMapFingers.erase(std::remove_if(m_vMapFingers.begin(), m_vMapFingers.end(), [&](const auto &Identity) {
 				return std::none_of(vFingers.begin(), vFingers.end(), [&](const auto &Finger) { return Finger.m_Finger == Identity; });
 			}),

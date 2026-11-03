@@ -17,12 +17,13 @@
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/BrowserTableLabel.h>
 #include <game/client/QmUi/QmColorGradient.h>
 #include <game/client/QmUi/QmDropdown.h>
+#include <game/client/QmUi/QmIconSwap.h>
 #include <game/client/QmUi/QmNeonRainbow.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/UiButtons.h>
-#include <game/client/QmUi/QmIconSwap.h>
 #include <game/client/QmUi/UiDiscreteSlider.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiMotion.h>
@@ -1069,6 +1070,15 @@ void CMenus::OpenMapPreviewPopup(const CServerInfo *pItem)
 void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemActivated)
 {
 	static CListBox s_ListBox;
+	static CQmBrowserHeaderGesture s_HeaderGesture;
+	static int s_ReorderColIndex = -1;
+	static int s_ReorderInsertSlot = -1;
+	static float s_ReorderPressX = 0.0f;
+	static uint64_t s_LastHeaderFrame = 0;
+	static int s_LastHeaderRestartSeq = -1;
+	static bool s_WidthsChanged = false;
+	const bool HeaderInteractive = Ui()->Enabled() && !Ui()->RenderOnly() && !Ui()->PointerInputBlocked();
+	bool ResetColumnWidths = false;
 	// 上次保存的服务器地址只用于高亮，启动后保持顶部；用户选择和键盘导航再显式定位。
 	s_ListBox.SuppressInitialSelectionScroll();
 	static int s_LastRestartSeq = -1;
@@ -1098,7 +1108,6 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 
 	CUIRect Headers;
 	View.HSplitTop(ms_ListheaderHeight, &Headers, &View);
-	const CUIRect ListView = View;
 	Headers.VSplitRight(s_ListBox.ScrollbarWidthMax(), &Headers, nullptr);
 
 	{
@@ -1108,6 +1117,11 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		static CButtonContainer s_ResetColsButton;
 		if(Ui()->DoButton_QmIcon(&s_ResetColsButton, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ResetBtn, BUTTONFLAG_LEFT))
 		{
+			ResetColumnWidths = true;
+			s_HeaderGesture.End();
+			s_ReorderColIndex = -1;
+			s_ReorderInsertSlot = -1;
+			s_WidthsChanged = false;
 			g_Config.m_BrColWidthName = 120;
 			g_Config.m_BrColWidthGametype = 68;
 			g_Config.m_BrColWidthMap = 120;
@@ -1174,7 +1188,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 
 	// 钉住列（锁/收藏图标）+ 内容列。内容列的**数组序 = 默认视觉序**；
 	// 实际每帧按 br_col_order 重排进 s_aCols（地址稳定，供 hot item 使用）。
-	// 名称列是弹性列，吸收剩余宽度（自身无宽度柄），其余内容列全部绝对宽度。
+	// 内容列共享窗口宽度预算；拖动一列时只在其右侧重新分配空间。
 	static const SColumn s_aBaseCols[] = {
 		{COL_FLAG_LOCK, -1, "", 0, 14.0f, {0}},
 		{COL_FLAG_FAV, IServerBrowser::SORT_FAVORITES, "", 0, ClickableIconSpace, {0}},
@@ -1187,10 +1201,6 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		{COL_PLAYERS, IServerBrowser::SORT_NUMPLAYERS, Localizable("Players"), 0, 60.0f, {0}},
 		{COL_QM_CLIENTS, IServerBrowser::SORT_QM_CLIENTS, "梦", 0, 24.0f, {0}},
 		{COL_PING, IServerBrowser::SORT_PING, Localizable("Ping"), 0, 30.0f, {0}},
-	};
-
-	auto ClampConfigWidth = [](int Value, int MinWidth, int MaxWidth) {
-		return std::clamp(Value, MinWidth, MaxWidth);
 	};
 
 	// 每帧按配置顺序重排（地址稳定的静态工作数组，热项/激活项指针不悬空）。
@@ -1265,28 +1275,20 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			s_aCols[i] = aOrdered[i];
 	}
 
-	// 可配置宽列按存档取宽（拖拽柄直接改写这些配置）。
-	for(auto &Col : s_aCols)
-	{
-		switch(Col.m_Id)
-		{
-		case COL_GAMETYPE: Col.m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthGametype, 62, 300); break;
-		case COL_MAP: Col.m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthMap, 90, 800); break;
-		case COL_DIFFICULTY: Col.m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthDifficulty, 44, 300); break;
-		case COL_FRIENDS: Col.m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthFriends, 12, 120); break;
-		case COL_PLAYERS: Col.m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthPlayers, 34, 240); break;
-		case COL_QM_CLIENTS: Col.m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthQmClients, 20, 120); break;
-		case COL_PING: Col.m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthPing, 26, 180); break;
-		default: break;
-		}
-	}
-	const float MinNameWidth = (float)ClampConfigWidth(g_Config.m_BrColWidthName, 60, 1000);
-
-	const int NumCols = std::size(s_aCols);
+	constexpr int NumCols = std::size(s_aCols);
+	static std::array<SQmBrowserColumnSizing, NumCols> s_aResizeStart;
+	std::array<float, NumCols> aContentWidths{};
+	static std::array<SQmBrowserColumnSizing, NumCols> s_aLayoutById;
+	static std::array<int, NumCols> s_aLayoutConfigById{};
+	static float s_LayoutViewportWidth = -1.0f;
+	static float s_ResizePressX = 0.0f;
+	static float s_ResizeViewportWidth = 0.0f;
+	bool MeasureColumnContent = false;
 
 	auto GetColWidthConfig = [](int ColId) -> int * {
 		switch(ColId)
 		{
+		case COL_NAME: return &g_Config.m_BrColWidthName;
 		case COL_GAMETYPE: return &g_Config.m_BrColWidthGametype;
 		case COL_MAP: return &g_Config.m_BrColWidthMap;
 		case COL_DIFFICULTY: return &g_Config.m_BrColWidthDifficulty;
@@ -1301,6 +1303,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	auto GetColMinWidth = [](int ColId) {
 		switch(ColId)
 		{
+		case COL_NAME: return 60.0f;
 		case COL_GAMETYPE: return 62.0f;
 		case COL_MAP: return 90.0f;
 		case COL_DIFFICULTY: return 44.0f;
@@ -1326,59 +1329,104 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		}
 	};
 
-	auto SetColWidthConfig = [](int *pConfig, float Width, float MinWidth, float MaxWidth) {
-		*pConfig = std::clamp((int)(Width + 0.5f), (int)MinWidth, (int)MaxWidth);
-	};
+	// 输入归属或页面失效后取消旧按压；只释放自己的控件，不清掉弹窗的 active item。
+	const int ResizeColumn = s_HeaderGesture.ResizeColumn();
+	const void *pResizeId = ResizeColumn >= 0 ? &s_aCols[ResizeColumn].m_Width : nullptr;
+	if(!HeaderInteractive || s_LastHeaderRestartSeq != m_BrowserListEntryRestartSeq ||
+		Client()->PerfFrame() > s_LastHeaderFrame + 1 ||
+		(ResizeColumn >= 0 && (!Ui()->IsActiveItem(pResizeId) || s_ResizeViewportWidth != Headers.w)))
+	{
+		if(pResizeId != nullptr && Ui()->IsActiveItem(pResizeId))
+			Ui()->SetActiveItem(nullptr);
+		s_HeaderGesture.End();
+		s_ReorderColIndex = -1;
+		s_ReorderInsertSlot = -1;
+	}
+	s_LastHeaderFrame = Client()->PerfFrame();
+	s_LastHeaderRestartSeq = m_BrowserListEntryRestartSeq;
+
+	// 可用宽度包含所有列与间隙；窗口过窄时仅裁剪文字，字号保持不变。
+	Headers.w = std::max(0.0f, Headers.w);
+	const float ColGap = std::min(2.0f, Headers.w / (NumCols - 1));
+	const float ColumnBudget = std::max(0.0f, Headers.w - ColGap * (NumCols - 1));
+	std::array<SQmBrowserColumnSizing, NumCols> aSizing;
+	bool ConfigChanged = false;
+	for(int i = 0; i < NumCols; ++i)
+	{
+		const SColumn &Col = s_aCols[i];
+		const int *pConfig = GetColWidthConfig(Col.m_Id);
+		const float MinWidth = pConfig != nullptr ? GetColMinWidth(Col.m_Id) : Col.m_Width;
+		const float MaxWidth = pConfig != nullptr ? GetColMaxWidth(Col.m_Id) : Col.m_Width;
+		const float Width = pConfig != nullptr ? std::clamp((float)*pConfig, MinWidth, MaxWidth) : Col.m_Width;
+		aSizing[i] = {Width, MinWidth, MaxWidth, Width};
+		ConfigChanged |= pConfig != nullptr && s_aLayoutConfigById[Col.m_Id] != *pConfig;
+	}
+	// 配置命令覆盖用户旧拖动，不能再用按下快照把新值写回去。
+	if(ConfigChanged && s_HeaderGesture.ResizeColumn() >= 0)
+	{
+		if(Ui()->IsActiveItem(pResizeId))
+			Ui()->SetActiveItem(nullptr);
+		s_HeaderGesture.End();
+	}
+	if(ResetColumnWidths || ConfigChanged || s_LayoutViewportWidth != Headers.w)
+		aSizing = QmBrowserFitColumns(aSizing, ColumnBudget);
+	else
+		for(int i = 0; i < NumCols; ++i)
+			aSizing[i] = s_aLayoutById[s_aCols[i].m_Id];
+	if(HeaderInteractive && s_HeaderGesture.ResizeColumn() >= 0 && Ui()->CheckActiveItem(pResizeId))
+	{
+		aSizing = QmBrowserResizeColumns(s_aResizeStart, s_HeaderGesture.ResizeColumn(), Ui()->MouseX() - s_ResizePressX);
+		// 所有受影响的列一起保存；取整只影响存档，当前拖动继续使用按下时的浮点快照。
+		for(int i = 0; i < NumCols; ++i)
+		{
+			int *pConfig = GetColWidthConfig(s_aCols[i].m_Id);
+			if(pConfig == nullptr)
+				continue;
+			const int Width = std::clamp((int)(aSizing[i].m_Width + 0.5f), (int)GetColMinWidth(s_aCols[i].m_Id), (int)GetColMaxWidth(s_aCols[i].m_Id));
+			s_WidthsChanged |= *pConfig != Width;
+			*pConfig = Width;
+		}
+	}
+	// 保留精确显示宽度；松手后不因整数存档重新分配，内容测量也只影响本次按压。
+	s_LayoutViewportWidth = Headers.w;
+	float ColumnX = Headers.x;
+	for(int i = 0; i < NumCols; ++i)
+	{
+		const int Id = s_aCols[i].m_Id;
+		s_aLayoutById[Id] = aSizing[i];
+		const int *pConfig = GetColWidthConfig(Id);
+		s_aLayoutConfigById[Id] = pConfig != nullptr ? *pConfig : 0;
+		s_aCols[i].m_Width = aSizing[i].m_Width;
+		s_aCols[i].m_Rect = {ColumnX, Headers.y, aSizing[i].m_Width, Headers.h};
+		ColumnX += aSizing[i].m_Width + ColGap;
+	}
+	const CUIRect ListView = View;
 
 	struct SResizeHandle
 	{
 		CUIRect m_Rect;
 		int m_ColIndex;
-		int *m_pWidthConfig;
-		float m_MinWidth;
-		float m_MaxWidth;
 	};
-
 	static std::vector<SResizeHandle> s_vResizeHandles;
 	s_vResizeHandles.clear();
 
-	// 布局（2026-10-14 重构）：钉住列 + 内容列按 br_col_order 从左到右排布，
-	// 全部绝对宽度；名称列为弹性列吸收剩余空间。没有组缩放——拖某列宽度柄
-	// 只影响该列与名称列；配置列宽与名称最小宽之和超出可用宽度时整体等比收缩。
-	constexpr float ColGap = 2.0f;
-	const float TotalGaps = ColGap * (NumCols - 1);
-	{
-		float FixedSum = 0.0f;
-		for(int i = 0; i < NumCols; i++)
-			if(s_aCols[i].m_Id != COL_NAME)
-				FixedSum += s_aCols[i].m_Width;
-		const SQmBrowserColumnLayout ColLayout = QmBrowserColumnLayout(Headers.w - TotalGaps, FixedSum, MinNameWidth);
-		float X = Headers.x;
-		for(int i = 0; i < NumCols; i++)
-		{
-			SColumn &Col = s_aCols[i];
-			const float Width = Col.m_Id == COL_NAME ?
-						    ColLayout.m_NameWidth :
-						    QmBrowserColumnSqueezedWidth(Col.m_Width, ColLayout.m_Scale);
-			Col.m_Rect = CUIRect{X, Headers.y, std::max(0.0f, Width), Headers.h};
-			X += Col.m_Rect.w + ColGap;
-		}
-	}
+	Ui()->ClipEnable(&Headers);
 
-	// 每个可调宽列的右缘一条独立宽度柄（名称列弹性、社区列图标固定，皆无柄）。
-	for(int i = NumPinnedCols; i < NumCols; i++)
+	// 每个可调宽列的右缘提供同一条可见分隔线和命中区；图标列保持固定宽度。
+	for(int i = NumPinnedCols; i + 1 < NumCols; i++)
 	{
 		const SColumn &Col = s_aCols[i];
-		int *pConfig = GetColWidthConfig(Col.m_Id);
-		if(pConfig == nullptr)
+		if(GetColWidthConfig(Col.m_Id) == nullptr)
 			continue;
-		CUIRect Gap{Col.m_Rect.x + Col.m_Rect.w - 2.0f, Col.m_Rect.y, 6.0f, Col.m_Rect.h};
-		s_vResizeHandles.push_back({Gap, i, pConfig, GetColMinWidth(Col.m_Id), GetColMaxWidth(Col.m_Id)});
+		bool CanResize = false;
+		for(int Right = i + 1; Right < NumCols; ++Right)
+			CanResize |= (aSizing[i].m_Width < aSizing[i].m_MaxWidth && aSizing[Right].m_Width > aSizing[Right].m_MinWidth) ||
+				     (aSizing[i].m_Width > aSizing[i].m_MinWidth && aSizing[Right].m_Width < aSizing[Right].m_MaxWidth);
+		if(!CanResize)
+			continue;
+		CUIRect Gap{Col.m_Rect.x + Col.m_Rect.w + ColGap * 0.5f - 4.0f, Col.m_Rect.y, 8.0f, Col.m_Rect.h};
+		s_vResizeHandles.push_back({Gap, i});
 	}
-
-	static int s_ResizeDragColIndex = -1;
-	static float s_ResizeDragStartMouseX = 0.0f;
-	static float s_ResizeDragStartWidth = 0.0f;
 
 	int HoveredHandle = -1;
 	float HoverDistance = std::numeric_limits<float>::max();
@@ -1396,23 +1444,33 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		}
 	}
 
-	static CQmBrowserHeaderGesture s_HeaderGesture;
-	if(Ui()->MouseButtonClicked(0))
+	if(HeaderInteractive && Ui()->MouseButtonClicked(0) && Ui()->ActiveItem() == nullptr)
 	{
 		int HeaderColumn = -1;
 		for(int Index = NumPinnedCols; Index < NumCols; ++Index)
 			if(Ui()->MouseHovered(&s_aCols[Index].m_Rect))
 				HeaderColumn = Index;
-		s_HeaderGesture.Begin(HeaderColumn, HoveredHandle >= 0 ? s_vResizeHandles[HoveredHandle].m_ColIndex : -1);
+		const int ResizeIndex = HoveredHandle >= 0 ? s_vResizeHandles[HoveredHandle].m_ColIndex : -1;
+		s_HeaderGesture.Begin(HeaderColumn, ResizeIndex);
+		if(ResizeIndex >= 0)
+		{
+			s_aResizeStart = aSizing;
+			s_ResizePressX = Ui()->MouseX();
+			s_ResizeViewportWidth = Headers.w;
+			MeasureColumnContent = true;
+			for(const auto &Col : s_aCols)
+			{
+				const char *pCaption = Col.m_Id == COL_QM_CLIENTS ? Col.m_pCaption : Localize(Col.m_pCaption);
+				aContentWidths[Col.m_Id] = Col.m_Id == COL_FRIENDS ? 14.0f : TextRender()->TextWidth(Headers.h * CUi::ms_FontmodHeight, pCaption) + 10.0f;
+			}
+			Ui()->SetActiveItem(&s_aCols[ResizeIndex].m_Width);
+		}
 	}
 
 	const bool PlayersOrPing = (g_Config.m_BrSort == IServerBrowser::SORT_NUMPLAYERS || g_Config.m_BrSort == IServerBrowser::SORT_PING);
 
 	// 表头拖拽换列：按住内容列表头横移超过阈值进入换列（竖线指示落点），
 	// 松开提交并持久化 br_col_order；未超过阈值的按压仍走普通的点击排序。
-	static int s_ReorderColIndex = -1; // 拖拽中的 s_aCols 索引
-	static int s_ReorderInsertSlot = -1; // 落点槽位（不含被拖列计数）
-	static float s_ReorderPressX = 0.0f;
 	constexpr float ReorderActivateDistance = 6.0f;
 
 	auto ContentSlotFromMouseX = [&](float MouseXPos) {
@@ -1471,12 +1529,19 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			s_ReorderInsertSlot = ContentSlotFromMouseX(Ui()->MouseX());
 		}
 
+		Ui()->ClipEnable(&Col.m_Rect);
 		int Checked = g_Config.m_BrSort == Col.m_Sort;
 		if(PlayersOrPing && g_Config.m_BrSortOrder == 2 && (Col.m_Sort == IServerBrowser::SORT_NUMPLAYERS || Col.m_Sort == IServerBrowser::SORT_PING))
 			Checked = 2;
 
 		const char *pCaption = Col.m_Id == COL_QM_CLIENTS ? Col.m_pCaption : Localize(Col.m_pCaption);
-		if(DoButton_GridHeader(&Col.m_Id, pCaption, Checked, &Col.m_Rect))
+		const bool BlockHeaderButton = s_HeaderGesture.ResizeColumn() >= 0 || (HoveredHandle >= 0 && s_HeaderGesture.ReorderColumn() < 0);
+		if(BlockHeaderButton)
+			Ui()->BeginBackgroundRender(true);
+		const bool HeaderClicked = DoButton_GridHeader(&Col.m_Id, pCaption, Checked, &Col.m_Rect, TEXTALIGN_ML, QmBrowserTableLabelProperties(Col.m_Rect.w));
+		if(BlockHeaderButton)
+			Ui()->EndBackgroundRender(true);
+		if(HeaderClicked)
 		{
 			// 这次按压演变成了拖拽换列：吞掉点击，不触发排序。
 			if(Col.m_Sort != -1 && s_HeaderGesture.AllowsSort())
@@ -1512,6 +1577,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		{
 			GameClient()->m_Tooltips.DoToolTip(&Col.m_Id, &Col.m_Rect, Localize("Sort by number of QmClient players"));
 		}
+		Ui()->ClipDisable();
 	}
 
 	// 换列落点指示：亮色竖线标出松开后的插入边界；虚影标题跟随鼠标，
@@ -1534,6 +1600,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		CUIRect Indicator{LineX - 1.0f, Headers.y, 3.0f, Headers.h};
 		Indicator.Draw(BrowserOpacityColor(ColorRGBA(1.0f, 0.85f, 0.35f, 0.9f)), IGraphics::CORNER_NONE, 0.0f);
 
+		Ui()->ClipDisable();
 		const SColumn &DragCol = s_aCols[s_ReorderColIndex];
 		const char *pDragCaption = DragCol.m_Id == COL_QM_CLIENTS ? DragCol.m_pCaption : Localize(DragCol.m_pCaption);
 		const float GhostFontSize = Headers.h * CUi::ms_FontmodHeight;
@@ -1546,54 +1613,35 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		TextRender()->TextColor(BrowserOpacityColor(ColorRGBA(0.95f, 0.96f, 0.98f, 1.0f)));
 		Ui()->DoLabel(&Ghost, pDragCaption, GhostFontSize, TEXTALIGN_ML);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
+		Ui()->ClipEnable(&Headers);
 	}
 
-	for(int HandleIndex = 0; HandleIndex < (int)s_vResizeHandles.size(); ++HandleIndex)
+	const bool Resizing = s_HeaderGesture.ResizeColumn() >= 0;
+	const bool ResizeHover = HoveredHandle >= 0 && s_HeaderGesture.ReorderColumn() < 0 && Ui()->ActiveItem() == nullptr;
+	m_BrowserColumnResizeCursor = HeaderInteractive && (Resizing || ResizeHover);
+	if(ResizeHover)
+		Ui()->SetHotItem(&s_aCols[s_vResizeHandles[HoveredHandle].m_ColIndex].m_Width);
+
+	if(HeaderInteractive && !Ui()->MouseButton(0))
 	{
-		const SResizeHandle &Handle = s_vResizeHandles[HandleIndex];
-		const void *pHandleId = &s_aCols[Handle.m_ColIndex].m_Width;
-		const int ColIdx = Handle.m_ColIndex;
-
-		if(s_ResizeDragColIndex == ColIdx)
+		if(Resizing && Ui()->IsActiveItem(&s_aCols[s_HeaderGesture.ResizeColumn()].m_Width))
+			Ui()->SetActiveItem(nullptr);
+		// 所有表头消费完松开帧后再结束，调宽和换列都不会误触排序。
+		s_HeaderGesture.End();
+		if(s_WidthsChanged)
 		{
-			if(!Ui()->MouseButton(0))
-			{
-				s_ResizeDragColIndex = -1;
-				Ui()->SetActiveItem(nullptr);
-				ConfigManager()->Save();
-			}
-			else
-			{
-				// 绝对宽度直调：该列变宽/变窄，名称列（弹性）吸收差额，
-				// 其他列纹丝不动——这正是移除组缩放后想要的独立行为。
-				const float NewWidth = std::clamp(s_ResizeDragStartWidth + Ui()->MouseX() - s_ResizeDragStartMouseX, Handle.m_MinWidth, Handle.m_MaxWidth);
-				SetColWidthConfig(Handle.m_pWidthConfig, NewWidth, Handle.m_MinWidth, Handle.m_MaxWidth);
-			}
-		}
-		else if(HandleIndex == HoveredHandle && s_HeaderGesture.ReorderColumn() < 0)
-		{
-			Ui()->SetHotItem(pHandleId);
-			if(Ui()->MouseButtonClicked(0) && s_HeaderGesture.ResizeColumn() == ColIdx)
-			{
-				s_ResizeDragColIndex = ColIdx;
-				s_ResizeDragStartMouseX = Ui()->MouseX();
-				s_ResizeDragStartWidth = s_aCols[ColIdx].m_Width;
-				Ui()->SetActiveItem(pHandleId);
-			}
+			ConfigManager()->Save();
+			s_WidthsChanged = false;
 		}
 	}
-
-	if(!Ui()->MouseButton(0))
-		// 所有表头已消费松开帧，拖动的排序抑制不能泄漏到下一次固定列表头点击。
-		s_HeaderGesture.End();
 
 	for(const auto &Handle : s_vResizeHandles)
 	{
 		const int ColIdx = Handle.m_ColIndex;
-		bool Hovered = Ui()->HotItem() == &s_aCols[ColIdx].m_Width;
-		bool Dragging = s_ResizeDragColIndex == ColIdx;
+		bool Hovered = ResizeHover && s_vResizeHandles[HoveredHandle].m_ColIndex == ColIdx;
+		bool Dragging = s_HeaderGesture.ResizeColumn() == ColIdx;
 
-		float LineX = s_aCols[ColIdx].m_Rect.x + s_aCols[ColIdx].m_Rect.w - 1.0f;
+		float LineX = Handle.m_Rect.x + Handle.m_Rect.w * 0.5f;
 
 		float Alpha = 0.15f;
 		float LineW = 1.0f;
@@ -1609,12 +1657,14 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		}
 
 		CUIRect Line;
-		Line.x = LineX;
+		Line.x = LineX - LineW * 0.5f;
 		Line.y = s_aCols[ColIdx].m_Rect.y;
 		Line.w = LineW;
 		Line.h = s_aCols[ColIdx].m_Rect.h;
 		Line.Draw(BrowserOpacityColor(ColorRGBA(1.0f, 1.0f, 1.0f, Alpha)), IGraphics::CORNER_NONE, 0.0f);
 	}
+
+	Ui()->ClipDisable();
 
 	std::vector<int> vVisibleServerIndices;
 	vVisibleServerIndices.reserve(ServerBrowser()->NumSortedServers());
@@ -1768,6 +1818,11 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	if(vpServerBrowserUiElements.size() < (size_t)ServerCacheSize)
 		vpServerBrowserUiElements.resize(ServerCacheSize, nullptr);
 
+	const auto MeasureColumn = [&](int ColumnId, const char *pText, float FontSize, float Padding = 0.0f) {
+		if(MeasureColumnContent)
+			aContentWidths[ColumnId] = std::max(aContentWidths[ColumnId], TextRender()->TextWidth(FontSize, pText) + Padding);
+	};
+
 	int RowsVisible = 0;
 	int RowsRendered = 0;
 	int RowsIterated = 0;
@@ -1835,13 +1890,20 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			if(SegmentBlank)
 				pDisplayServerName = pItem->m_aName;
 		}
+		const CUIRect RowClip{Headers.x, ListItem.m_Rect.y, Headers.w, ListItem.m_Rect.h};
+		Ui()->ClipEnable(&RowClip);
 		for(const auto &Col : s_aCols)
 		{
+			if(Col.m_Rect.x + Col.m_Rect.w <= Headers.x || Col.m_Rect.x >= Headers.x + Headers.w)
+				continue;
 			CUIRect Button;
 			Button.x = Col.m_Rect.x;
 			Button.y = ListItem.m_Rect.y;
 			Button.h = ListItem.m_Rect.h;
 			Button.w = Col.m_Rect.w;
+			if(Button.w <= 0.0f)
+				continue;
+			Ui()->ClipEnable(&Button);
 
 			const int Id = Col.m_Id;
 			if(Id == COL_FLAG_LOCK)
@@ -1879,6 +1941,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_NAME)
 			{
+				MeasureColumn(Id, pDisplayServerName, FontSize);
 				SLabelProperties Props;
 				Props.m_MaxWidth = Button.w;
 				Props.m_StopAtEnd = true;
@@ -1902,6 +1965,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 				const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.FindForServer(*pItem, MapCategoryHintFromServer(pItem));
 				char aDifficulty[64];
 				FormatMapDifficultyText(pDifficulty, aDifficulty, sizeof(aDifficulty));
+				MeasureColumn(Id, aDifficulty[0] != '\0' ? aDifficulty : "--", FontSize);
 				if(aDifficulty[0] != '\0')
 				{
 					SLabelProperties Props;
@@ -1926,6 +1990,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_GAMETYPE)
 			{
+				MeasureColumn(Id, pItem->m_aGameType, FontSize);
 				SLabelProperties Props;
 				Props.m_MaxWidth = Button.w;
 				Props.m_StopAtEnd = true;
@@ -1939,6 +2004,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_MAP)
 			{
+				MeasureColumn(Id, pItem->m_aMap, FontSize, 8.0f + 2.0f * Button.h);
 				{
 					CUIRect Icon;
 					Button.VMargin(std::min(4.0f, std::max(0.0f, Button.w) * 0.5f), &Button);
@@ -2017,7 +2083,8 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 					{
 						str_format(aTemp, sizeof(aTemp), "%d", pItem->m_FriendNum);
 						TextRender()->TextColor(0.94f, 0.8f, 0.8f, 1.0f);
-						Ui()->DoLabel(&Button, aTemp, 9.0f, TEXTALIGN_MC);
+						MeasureColumn(Id, aTemp, 9.0f);
+						Ui()->DoLabel(&Button, aTemp, 9.0f, TEXTALIGN_MC, QmBrowserTableLabelProperties(Button.w));
 						TextRender()->TextColor(TextRender()->DefaultTextColor());
 					}
 				}
@@ -2029,7 +2096,8 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 				{
 					TextRender()->TextColor(gs_HighlightedTextColor);
 				}
-				Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_PLAYERS), &Button, aTemp, FontSize, TEXTALIGN_MR);
+				MeasureColumn(Id, aTemp, FontSize);
+				Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_PLAYERS), &Button, aTemp, FontSize, TEXTALIGN_MR, QmBrowserTableLabelProperties(Button.w));
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
 			}
 			else if(Id == COL_QM_CLIENTS)
@@ -2040,7 +2108,8 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 					Button.VMargin(2.0f, &Button);
 					str_format(aTemp, sizeof(aTemp), "%d", QmClients);
 					TextRender()->TextColor(gs_QmClientCountColor);
-					Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_QM_CLIENTS), &Button, aTemp, FontSize, TEXTALIGN_MR);
+					MeasureColumn(Id, aTemp, FontSize, 4.0f);
+					Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_QM_CLIENTS), &Button, aTemp, FontSize, TEXTALIGN_MR, QmBrowserTableLabelProperties(Button.w));
 					TextRender()->TextColor(TextRender()->DefaultTextColor());
 				}
 			}
@@ -2052,11 +2121,18 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 				{
 					TextRender()->TextColor(GetServerListPingColor(pItem, ServerBrowser()->GetCurrentClientLocation()));
 				}
-				Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_PING), &Button, aTemp, FontSize, TEXTALIGN_MR);
+				MeasureColumn(Id, aTemp, FontSize, 8.0f);
+				Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_PING), &Button, aTemp, FontSize, TEXTALIGN_MR, QmBrowserTableLabelProperties(Button.w));
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
 			}
+			Ui()->ClipDisable();
 		}
+		Ui()->ClipDisable();
 	}
+	// 一次按压只测量一次可见内容，拖动时复用同一组期望宽度，避免列表刷新使边界跳动。
+	if(MeasureColumnContent)
+		for(int i = 0; i < NumCols; ++i)
+			s_aResizeStart[i].m_PreferredWidth = std::max(s_aResizeStart[i].m_MinWidth, aContentWidths[s_aCols[i].m_Id]);
 	if(EndVisibleItem < NumServers)
 		s_ListBox.SkipItems(NumServers - EndVisibleItem);
 

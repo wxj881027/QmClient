@@ -1217,6 +1217,9 @@ Audio packets
 Audio packs
 == Paquetes de audio
 
+Aurora: Polar Veil
+== Aurora: velo polar
+
 AUS
 == Australia
 
@@ -1823,6 +1826,9 @@ Binds that use commands the client does not recognize, listed by their raw comma
 Black
 == Negro
 
+Black Flash: Void Rift
+== Destello negro: grieta del vacío
+
 Blank asset auto fallback
 == Fallback automático de recursos vacíos
 
@@ -2057,6 +2063,9 @@ Cancel your swap request
 Candidate files
 == Archivos candidatos
 
+Candy gradient
+== Degradado de caramelo
+
 Cannot join the target player's team
 == No puedes unirte al equipo de este jugador
 
@@ -2191,6 +2200,9 @@ Chat bubble display duration (seconds)
 
 Chat bubble font size
 == Tamaño de fuente de las burbujas de chat
+
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
+== Estilo de burbuja del chat (0=Diálogo de cómic, 1=Degradado de caramelo, 2=Burbuja de nube)
 
 Chat bubble text color
 == Color del texto de las burbujas de chat
@@ -2663,6 +2675,9 @@ Close the demo player
 Close window after changing settings
 == Cerrar ventana después de cambiar ajustes
 
+Cloud bubble
+== Burbuja de nube
+
 Collapse
 == Contraer
 
@@ -2743,6 +2758,9 @@ Colors too close to the map background are hard to read while moving.
 
 Combo
 == Combo
+
+Comic dialogue
+== Diálogo de cómic
 
 Comma-separated list of banned clients to be kicked on join
 == Lista separada por comas de clientes baneados a expulsar al unirse
@@ -4508,6 +4526,9 @@ Dynamic FOV smoothness
 Dynamic FOV smoothness (0=instant, 100=smoothest)
 == Suavidad de vista dinámica (0 = instantáneo, 100 = más suave)
 
+Dynamic Island
+== Isla dinámica
+
 Dynamic island
 == Isla dinámica
 
@@ -4655,8 +4676,8 @@ enable
 Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
 == Activa el robo de skin con martillo solo si quieres cambiar de skin con cada golpe, porque los demás también lo ven.
 
-Enable "Show player stats HUD"; tick "Map progress bar", then pick "Use embedded HUD progress bar" or place the bar with the sliders.
-== Activa mostrar HUD de estadísticas y marca barra de progreso del mapa; luego elige usar la barra de progreso del HUD integrado o colócala con los deslizadores.
+Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
+== Activa la barra de progreso del mapa y elige su ubicación: por separado, en las estadísticas del jugador o en la Isla dinámica. Para mostrarla en las estadísticas, activa también el HUD de estadísticas del jugador.
 
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
 == Activa «Mostrar fantasmas no predichos de otros jugadores» y ajusta la opacidad del fantasma predicho y del no predicho.
@@ -5756,6 +5777,9 @@ Flags are cosmetic and can be hidden by other clients.
 Flip:
 == Voltear:
 
+Fluid
+== Fluido
+
 Folder
 == Carpeta
 
@@ -6103,6 +6127,9 @@ Gap between statusbar items
 
 Gap between tee and nametag
 == Espacio entre el tee y la etiqueta de nombre
+
+Gather and disperse
+== Agruparse y dispersarse
 
 Gaussian
 == Gaussiano
@@ -6911,6 +6938,9 @@ If the bar covers your chat, lower "Opacity" or "IME font size" first; "Reset IM
 If the wheel feels crowded, remove unused slots in the editor card.
 == Si la rueda se ve saturada, quita las casillas sin usar en la tarjeta del editor.
 
+Ignis: Ember Spirit
+== Llama: espíritu de las brasas
+
 Ignore clan tag when searching friends
 == Ignorar la etiqueta de Clan al buscar amigos
 
@@ -7126,6 +7156,9 @@ Initializing map layers
 
 Initializing map logic
 == Inicializando lógica del mapa
+
+Ink: Paper Bloom
+== Tinta: floración sobre papel
 
 Input
 == Entrada
@@ -7532,6 +7565,9 @@ Keyword reply use Dummy
 Keyword rules
 == Reglas de palabras clave
 
+Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+== Las reglas de palabras clave son demasiado largas. No se guardaron los cambios; acorta o elimina una regla.
+
 Kick player
 == Expulsar jugador
 
@@ -7789,6 +7825,9 @@ Let server start ghost
 
 Let server start race recorder
 == Dejar que el servidor inicie el grabador de carrera
+
+Let's play together!
+== ¡Juguemos juntos!
 
 Lets you join team i (shows your team if left blank)
 == Te permite unirte al equipo i (muestra tu equipo si se deja en blanco)
@@ -8288,8 +8327,8 @@ Map progress bar height
 Map progress bar horizontal position (center, % of screen width)
 == Posición horizontal de la barra de progreso del mapa (centro, porcentaje del ancho de pantalla)
 
-Map progress bar style (0=bottom bar, 1=HUD overlay)
-== Estilo de la barra de progreso del mapa (0=barra inferior, 1=incrustada en HUD)
+Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)
+== Ubicación de la barra de progreso del mapa (0=por separado, 1=estadísticas del jugador, 2=Isla dinámica)
 
 Map progress bar vertical position (top edge, % of screen height)
 == Posición vertical de la barra de progreso del mapa (borde superior, porcentaje de la altura de pantalla)
@@ -8674,9 +8713,6 @@ Minimum time between kills (in seconds)
 
 Minimum time between map votes (in seconds)
 == Tiempo mínimo entre votaciones de mapa (en segundos)
-
-Minimum width for name column in server browser
-== Ancho mínimo para la columna de nombre en el navegador de servidores
 
 Minutes on server before a player can call a map change vote (0 = disabled)
 == Minutos en el servidor antes de que un jugador pueda solicitar un cambio de mapa (0 = deshabilitado)
@@ -10076,6 +10112,9 @@ Permanent access; up to 4 online IP addresses
 Permanent sponsor verified
 == Patrocinio permanente verificado
 
+Personal adjustments
+== Ajustes personalizados
+
 Personal best:
 == Mejor personal:
 
@@ -10879,6 +10918,9 @@ Progress bar color
 
 Progress bar height
 == Altura de la barra de progreso
+
+Progress bar location
+== Ubicación de la barra de progreso
 
 Progress bar width
 == Ancho de la barra de progreso
@@ -12626,8 +12668,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == Enviar comando especificado a rcon
 
-Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
-== Enviar tres líneas consecutivas de la letra al chat público a intervalos aleatorios de 30 a 90 segundos, con 3 segundos entre líneas
+Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
+== Enviar tres líneas consecutivas de la letra al chat público a intervalos aleatorios de 90 a 270 segundos, con 3 segundos entre líneas
 
 Send to
 == Enviar a
@@ -12904,6 +12946,9 @@ Settings card states: stableId for collapsed, !stableId for expanded, separated 
 
 Settings card titles use rainbow colors
 == Usar colores arcoíris en los títulos de las tarjetas de configuración
+
+Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+== Anchos de las tarjetas de ajustes: stableId para ancho completo, !stableId para medio ancho, separados por punto y coma
 
 Settings file
 == Archivo de configuración
@@ -14489,8 +14534,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == Reparte el personaje principal y el clon en equipos distintos para sincronizar carreras en solitario
 
-Sponsor chat style draft: 0=Normal, 1=Platinum highlight
-== Borrador del estilo de chat de patrocinador: 0=Normal, 1=Brillo de platino
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid
+== Borrador del estilo de chat de patrocinador: 0=Normal, 1=Brillo de platino, 2=Fluido
 
 Sponsor code
 == Código de patrocinador
@@ -14531,8 +14576,14 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Intensidad de deformación de Tee elástico
 
+Standalone
+== Por separado
+
 Star
 == Estrella
+
+Stardust: Constellation
+== Polvo estelar: constelación
 
 Start (s)
 == Inicio (s)
@@ -14737,6 +14788,9 @@ Strong hook color
 
 Strong Weak Hook
 == Gancho fuerte/débil
+
+Style
+== Estilo
 
 Style chat names, text, and message colors
 == Style chat names, text, and message colors
@@ -15128,8 +15182,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Modo de color del rastro de Tee (1=Sólido, 2=Color actual del Tee, 3=Arcoíris, 4=Velocidad del Tee, 5=Aleatorio)
 
-Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
-== Estilo de estela del Tee (0=Original, 1=Manga, 2=Magia, 3=Píxeles, 4=Número antiguo de manga, 5=Número antiguo de magia)
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic, 6=Aurora, 7=Ink, 8=Ignis, 9=Stardust, 10=Black Flash)
+== Estilo de estela del Tee (0=Original, 1=Manga, 2=Magia, 3=Píxeles, 4=Número antiguo de manga, 5=Número antiguo de magia, 6=Aurora, 7=Tinta, 8=Llama, 9=Polvo estelar, 10=Destello negro)
 
 Tee Trails
 == Estelas de Tee
@@ -16598,6 +16652,12 @@ Use current name
 Use current settings
 == Usar ajustes actuales
 
+Use custom chat bubble colors
+== Usar colores personalizados para las burbujas del chat
+
+Use custom colors
+== Usar colores personalizados
+
 Use custom colors for the pressed hook collision line (0 = always invert)
 == Usa colores personalizados para la línea de gancho al presionar (0 = invertir siempre)
 
@@ -16621,9 +16681,6 @@ Use default voice input device
 
 Use default voice output device
 == Usar dispositivo de salida de voz predeterminado
-
-Use embedded HUD progress bar
-== Usar barra de progreso integrada en HUD
 
 Use emote
 == Usar emoción
@@ -17335,6 +17392,9 @@ Width of latency column in server browser
 
 Width of map column in server browser
 == Ancho de la columna de mapa en el navegador de servidores
+
+Width of name column in server browser
+== Ancho de la columna de nombre en el navegador de servidores
 
 Width of others' hook collision line
 == Ancho de la línea de colisión del gancho de otros

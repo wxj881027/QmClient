@@ -177,6 +177,7 @@ TEST_F(SettingsCardMeasureRevision, DynamicHudTogglesInvalidatePageAndSearchMeas
 		int *m_pToggle;
 	};
 	const SBranch aBranches[] = {
+		{EQmModuleId::ChatBubble, &g_Config.m_QmChatBubbleCustomColors},
 		{EQmModuleId::WeaponAnimation, &g_Config.m_QmWeaponReloadAnim},
 		{EQmModuleId::DynamicIsland, &g_Config.m_QmSwitchCountdown},
 		{EQmModuleId::Lyrics, &g_Config.m_QmSpotifyEnable},

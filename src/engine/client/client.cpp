@@ -1941,6 +1941,7 @@ const char *CClient::LoadMap(const char *pName, const char *pFilename, const std
 	static char s_aErrorMsg[128];
 
 	SetState(IClient::STATE_LOADING);
+	GameClient()->OnMapLoadStart();
 	SetLoadingStateDetail(IClient::LOADING_STATE_DETAIL_LOADING_MAP);
 	if((bool)m_LoadingCallback)
 		m_LoadingCallback(IClient::LOADING_CALLBACK_DETAIL_MAP);
@@ -5940,6 +5941,7 @@ void CClient::Con_PosesClose(IConsole::IResult *pResult, void *pUserData)
 	static_cast<CClient *>(pUserData)->LeavePoseSession();
 }
 
+#if defined(CONF_VIDEORECORDER)
 void CClient::Con_PosesVideo(IConsole::IResult *pResult, void *pUserData)
 {
 #if defined(CONF_VIDEORECORDER)
@@ -5993,6 +5995,7 @@ void CClient::Con_PosesVideo(IConsole::IResult *pResult, void *pUserData)
 	static_cast<CClient *>(pUserData)->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "video recording is not available in this build");
 #endif
 }
+#endif
 
 void CClient::Con_RenderPoses(IConsole::IResult *pResult, void *pUserData)
 {
@@ -7606,14 +7609,14 @@ void CClient::RegisterCommands()
 	// 与 demo 一致的两条路径：游戏内观看 / 导出。poses_render 是第三种（静态截图）。
 	m_pConsole->Register("poses_open", "s[poses] ?s[map]", CFGFLAG_CLIENT, Con_PosesOpen, this, "Show a MomentCap .poses file in game (no export)");
 	m_pConsole->Register("poses_close", "", CFGFLAG_CLIENT, &CClient::Con_PosesClose, this, "Leave the pose session");
-	m_pConsole->Register("poses_video", "s[poses] s[name] ?f[seconds] ?s[map]", CFGFLAG_CLIENT, Con_PosesVideo, this, "Record a MomentCap .poses scene to a video");
 	// 无下划线别名，与 posesrender 一致。
 	m_pConsole->Register("posesopen", "s[poses] ?s[map]", CFGFLAG_CLIENT, Con_PosesOpen, this, "Alias of poses_open");
 	m_pConsole->Register("posesclose", "", CFGFLAG_CLIENT, &CClient::Con_PosesClose, this, "Alias of poses_close");
-	m_pConsole->Register("posesvideo", "s[poses] s[name] ?f[seconds] ?s[map]", CFGFLAG_CLIENT, Con_PosesVideo, this, "Alias of poses_video");
 	m_pConsole->Register("net_reset", "", CFGFLAG_CLIENT, ConNetReset, this, "Rebinds the client's listening address and port");
 
 #if defined(CONF_VIDEORECORDER)
+	m_pConsole->Register("poses_video", "s[poses] s[name] ?f[seconds] ?s[map]", CFGFLAG_CLIENT, Con_PosesVideo, this, "Record a MomentCap .poses scene to a video");
+	m_pConsole->Register("posesvideo", "s[poses] s[name] ?f[seconds] ?s[map]", CFGFLAG_CLIENT, Con_PosesVideo, this, "Alias of poses_video");
 	// 第一个参数必须是 s 而不是 r：r 会吞掉整行剩余内容，后面的 start/end 永远收不到。
 	// 文件名含空格时用引号包裹（"my demo"）。
 	m_pConsole->Register("start_video", "?s[file] ?f[start_sec] ?f[end_sec]", CFGFLAG_CLIENT, Con_StartVideo, this, "Start recording a video");
@@ -8017,18 +8020,11 @@ int main(int argc, const char **argv)
 	};
 	std::function<void()> PerformFinalCleanup = []() {
 #if defined(CONF_PLATFORM_ANDROID)
-		// Forcefully terminate the entire process, to ensure that static variables
-		// will be initialized correctly when the app is started again after quitting.
-		// Returning from the main function is not enough, as this only results in the
-		// native thread terminating, but the Java thread will continue. Java does not
-		// support unloading libraries once they have been loaded, so all static
-		// variables will not have their expected initial values anymore when the app
-		// is started again after quitting. The variable gs_AndroidStarted above is
-		// used to check that static variables have been initialized properly.
-		// TODO: This is not the correct way to close an activity on Android, as it
-		//       ignores the activity lifecycle entirely, which may cause issues if
-		//       we ever used any global resources like the camera.
-		std::exit(0);
+		// 客户端与 SDL 已完成显式清理。只结束原生主线程会留下 Java 进程和旧静态状态，
+		// 继续执行进程级静态析构又会破坏仍在运行的 Android HWUI 线程所用的锁。
+		// 先完成日志写入，再直接结束进程，保持下次启动与重启时的全新状态。
+		log_global_logger_finish();
+		std::_Exit(0);
 #elif defined(CONF_PLATFORM_EMSCRIPTEN)
 		// We cannot use atexit with Emscripten so we finish the global logger here.
 		// See comment in the log_set_global_logger function for details.

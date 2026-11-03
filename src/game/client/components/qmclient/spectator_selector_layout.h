@@ -39,6 +39,12 @@ namespace qm_spectator_layout
 		return vec2(std::clamp(Mouse.x, Layout.m_Mouse.x - Center.x, Layout.m_Mouse.x + Layout.m_Mouse.w - Center.x),
 			std::clamp(Mouse.y, Layout.m_Mouse.y - Center.y, Layout.m_Mouse.y + Layout.m_Mouse.h - Center.y));
 	}
+
+	inline vec2 TouchPosition(vec2 Position, vec2 ScreenSize, vec2 Center)
+	{
+		// 面板动画会改变中心；触点仍对应原始屏幕位置。
+		return Position * ScreenSize - Center;
+	}
 }
 
 #endif

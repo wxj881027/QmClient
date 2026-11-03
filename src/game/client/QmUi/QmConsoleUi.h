@@ -11,6 +11,16 @@
 
 namespace QmConsoleUi
 {
+	// 输入框可能从底部向上换行，提示符必须沿用排版后的首行原点。
+	inline CTextCursor DrawInputPrompt(ITextRender &TextRender, const STextBoundingBox &InputBounds, float X, float FontSize, const char *pPrompt)
+	{
+		CTextCursor Cursor;
+		Cursor.m_FontSize = FontSize;
+		Cursor.SetPosition({X, InputBounds.m_Y});
+		TextRender.TextEx(&Cursor, pPrompt);
+		return Cursor;
+	}
+
 	struct SToolbarLayout
 	{
 		bool m_SplitRows;

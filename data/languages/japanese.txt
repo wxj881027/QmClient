@@ -1217,6 +1217,9 @@ Audio packets
 Audio packs
 == オーディオパック
 
+Aurora: Polar Veil
+== オーロラ：極夜の帳
+
 AUS
 == オーストラリア
 
@@ -1823,6 +1826,9 @@ Binds that use commands the client does not recognize, listed by their raw comma
 Black
 == 黒
 
+Black Flash: Void Rift
+== 黒閃：虚空の裂け目
+
 Blank asset auto fallback
 == 空白アセットの自動フォールバック
 
@@ -2057,6 +2063,9 @@ Cancel your swap request
 Candidate files
 == 候補ファイル
 
+Candy gradient
+== キャンディグラデーション
+
 Cannot join the target player's team
 == 対象プレイヤーのチームには参加できません
 
@@ -2191,6 +2200,9 @@ Chat bubble display duration (seconds)
 
 Chat bubble font size
 == チャットバブルのフォントサイズ
+
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
+== チャット吹き出しのスタイル（0=漫画風会話、1=キャンディグラデーション、2=雲の吹き出し）
 
 Chat bubble text color
 == チャットバブルの文字色
@@ -2663,6 +2675,9 @@ Close the demo player
 Close window after changing settings
 == 設定変更後にウィンドウを閉じる
 
+Cloud bubble
+== 雲の吹き出し
+
 Collapse
 == 折りたたむ
 
@@ -2743,6 +2758,9 @@ Colors too close to the map background are hard to read while moving.
 
 Combo
 == コンボ
+
+Comic dialogue
+== 漫画風会話
 
 Comma-separated list of banned clients to be kicked on join
 == 参加時にキックされる禁止クライアントのカンマ区切りリスト
@@ -4508,6 +4526,9 @@ Dynamic FOV smoothness
 Dynamic FOV smoothness (0=instant, 100=smoothest)
 == 動的視野の滑らかさ（0=瞬時、100=最も滑らか）
 
+Dynamic Island
+== ダイナミックアイランド
+
 Dynamic island
 == ダイナミックアイランド
 
@@ -4655,8 +4676,8 @@ enable
 Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
 == ハンマーで叩くたびにスキンを変えたいときだけ、ハンマースキン強奪をオンにしてください。相手にも見えます。
 
-Enable "Show player stats HUD"; tick "Map progress bar", then pick "Use embedded HUD progress bar" or place the bar with the sliders.
-== プレイヤー統計 HUD を表示を有効にし、マップ進行バーをオンにしてから、内蔵 HUD 進行バーを使うを選ぶか、スライダーでバーを配置します。
+Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
+== 「マップ進行バー」を有効にし、表示位置を単独表示、プレイヤー統計、ダイナミックアイランドから選びます。プレイヤー統計を選ぶ場合は「プレイヤー統計 HUD を表示」も有効にしてください。
 
 Enable "Show unpredicted ghosts of other players", then tune the predicted and unpredicted ghost opacity.
 == 「他のプレイヤーの未予測ゴーストを表示」をオンにし、予測ゴーストと未予測ゴーストの不透明度を調整します。
@@ -5756,6 +5777,9 @@ Flags are cosmetic and can be hidden by other clients.
 Flip:
 == 反転：
 
+Fluid
+== 流体
+
 Folder
 == フォルダ
 
@@ -6103,6 +6127,9 @@ Gap between statusbar items
 
 Gap between tee and nametag
 == Tee とネームタグの間のギャップ
+
+Gather and disperse
+== 集合と拡散
 
 Gaussian
 == ガウス
@@ -6911,6 +6938,9 @@ If the bar covers your chat, lower "Opacity" or "IME font size" first; "Reset IM
 If the wheel feels crowded, remove unused slots in the editor card.
 == ホイールが混み合って見えるなら、エディターカードで使っていないスロットを削除してください。
 
+Ignis: Ember Spirit
+== 焔：残り火の精霊
+
 Ignore clan tag when searching friends
 == フレンド検索時にクランタグを無視する
 
@@ -7126,6 +7156,9 @@ Initializing map layers
 
 Initializing map logic
 == マップロジックを初期化中
+
+Ink: Paper Bloom
+== 墨：和紙のにじみ
 
 Input
 == 入力
@@ -7532,6 +7565,9 @@ Keyword reply use Dummy
 Keyword rules
 == キワードルール
 
+Keyword rules are too long. Changes were not saved; shorten or remove a rule.
+== キーワードルールが長すぎるため、変更を保存できませんでした。ルールを短くするか削除してください。
+
 Kick player
 == プレイヤーをキック
 
@@ -7789,6 +7825,9 @@ Let server start ghost
 
 Let server start race recorder
 == サーバーにレースレコーダーを開始させる
+
+Let's play together!
+== 一緒に遊ぼう！
 
 Lets you join team i (shows your team if left blank)
 == チーム i に参加できます（空白の場合は自分のチームを表示）
@@ -8288,8 +8327,8 @@ Map progress bar height
 Map progress bar horizontal position (center, % of screen width)
 == マップ進行バーの水平位置（中心点、画面幅に対するパーセント）
 
-Map progress bar style (0=bottom bar, 1=HUD overlay)
-== マップ進行バーのスタイル（0=下部横バー、1=HUD 内蔵）
+Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)
+== マップ進行バーの表示位置（0=単独表示、1=プレイヤー統計、2=ダイナミックアイランド）
 
 Map progress bar vertical position (top edge, % of screen height)
 == マップ進行バーの垂直位置（上端、画面高さに対するパーセント）
@@ -8674,9 +8713,6 @@ Minimum time between kills (in seconds)
 
 Minimum time between map votes (in seconds)
 == マップ投票間の最小時間（秒）
-
-Minimum width for name column in server browser
-== サーバーブラウザの名前列の最小幅
 
 Minutes on server before a player can call a map change vote (0 = disabled)
 == プレイヤーがマップ変更投票を呼び出せるまでのサーバー滞在時間（分）（0 = 無効）
@@ -10076,6 +10112,9 @@ Permanent access; up to 4 online IP addresses
 Permanent sponsor verified
 == 永久支援資格を認証済み
 
+Personal adjustments
+== カスタマイズ
+
 Personal best:
 == 自己ベスト：
 
@@ -10879,6 +10918,9 @@ Progress bar color
 
 Progress bar height
 == プログレスバーの高さ
+
+Progress bar location
+== 進行バーの表示位置
 
 Progress bar width
 == プログレスバーの幅
@@ -12626,8 +12668,8 @@ Send sampling and token limit parameters
 Send specified command to rcon
 == rcon に指定コマンドを送信
 
-Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines
-== 30～90秒のランダムな間隔で連続する三行の歌詞を全体チャットに送り、各行の間隔を3秒にする
+Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
+== 90～270秒のランダムな間隔で連続する三行の歌詞を全体チャットに送り、各行の間隔を3秒にする
 
 Send to
 == 送信先
@@ -12904,6 +12946,9 @@ Settings card states: stableId for collapsed, !stableId for expanded, separated 
 
 Settings card titles use rainbow colors
 == 設定カードタイトルに虹色を使用
+
+Settings card widths: stableId for full width, !stableId for half width, separated by semicolons
+== 設定カードの幅：stableId は全幅、!stableId は半幅。複数の項目はセミコロンで区切ります
 
 Settings file
 == 設定ファイル
@@ -14489,8 +14534,8 @@ Spin pop
 Split main and dummy into different teams for solo-run sync
 == 本体と分身を別々のチームに入れ、solo ランの開始を同期します（team-0 で同期しにくいマップ向け）
 
-Sponsor chat style draft: 0=Normal, 1=Platinum highlight
-== 支援者チャットのスタイル下書き：0=通常、1=プラチナの輝き
+Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid
+== 支援者チャットのスタイル下書き：0=通常、1=プラチナの輝き、2=流体
 
 Sponsor code
 == 認証コード
@@ -14531,8 +14576,14 @@ Squishy Tee deformation duration
 Squishy Tee deformation intensity
 == Q 弾 Tee 変形強度
 
+Standalone
+== 単独表示
+
 Star
 == 星形
+
+Stardust: Constellation
+== 星屑：星座
 
 Start (s)
 == 開始 (秒)
@@ -14737,6 +14788,9 @@ Strong hook color
 
 Strong Weak Hook
 == 強弱フック
+
+Style
+== スタイル
 
 Style chat names, text, and message colors
 == Style chat names, text, and message colors
@@ -15128,8 +15182,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Tee トレイルの色モード（1=単色、2=現在の Tee 色、3=虹色、4=Tee 速度、5=ランダム）
 
-Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
-== Tee トレイルスタイル（0=オリジナル、1=漫画、2=魔法、3=ピクセル、4=旧番号の漫画、5=旧番号の魔法）
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic, 6=Aurora, 7=Ink, 8=Ignis, 9=Stardust, 10=Black Flash)
+== Tee トレイルスタイル（0=オリジナル、1=漫画、2=魔法、3=ピクセル、4=旧番号の漫画、5=旧番号の魔法、6=オーロラ、7=墨、8=焔、9=星屑、10=黒閃）
 
 Tee Trails
 == Tee トレイル
@@ -16598,6 +16652,12 @@ Use current name
 Use current settings
 == 現在の設定を使用
 
+Use custom chat bubble colors
+== チャット吹き出しにカスタムカラーを使用
+
+Use custom colors
+== カスタムカラーを使用
+
 Use custom colors for the pressed hook collision line (0 = always invert)
 == フックキー押下時にカスタムカラーを使用（0 = 常に反転）
 
@@ -16621,9 +16681,6 @@ Use default voice input device
 
 Use default voice output device
 == デフォルトの音声出力デバイスを使用
-
-Use embedded HUD progress bar
-== HUD 埋め込みプログレスバーを使用
 
 Use emote
 == エモートを使用
@@ -17335,6 +17392,9 @@ Width of latency column in server browser
 
 Width of map column in server browser
 == サーバーブラウザのマップ列の幅
+
+Width of name column in server browser
+== サーバーブラウザの名前列の幅
 
 Width of others' hook collision line
 == 他のプレイヤーのフック衝突線の幅

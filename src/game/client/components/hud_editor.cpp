@@ -353,7 +353,7 @@ CHudEditor::STransformScope CHudEditor::BeginTransform(EHudEditorElement Element
 	return BeginTransform(Element, TransformRect, VisibleRect, QmHudEditor::SEdgeMargin{}, Scalable, ApplyMapScreen);
 }
 
-bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, bool Scalable, STransformScope &Scope, SVisibleElement *pVisible, const QmHudEditor::SEdgeMargin &EdgeMargin, QmHudEditor::EHorizontalPlacement HorizontalPlacement)
+bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, bool Scalable, STransformScope &Scope, SVisibleElement *pVisible, const QmHudEditor::SEdgeMargin &EdgeMargin, QmHudEditor::EHorizontalPlacement HorizontalPlacement, float MinimumAnchorY)
 {
 	const CUIRect EffectiveVisibleRect = m_aVisibleBounds[static_cast<int>(Element)].Resolve(TransformRect, VisibleRect);
 	if(TransformRect.w <= 0.0f || TransformRect.h <= 0.0f || EffectiveVisibleRect.w <= 0.0f || EffectiveVisibleRect.h <= 0.0f)
@@ -399,9 +399,13 @@ bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIR
 	const auto Horizontal = QmHudEditor::ResolveHorizontalPlacement(HorizontalPlacement, SavedState.m_HasCustom,
 		SavedState.m_PosXPermille / (float)POSITION_SCALE, TransformRect.x, VisibleWidth, VisibleOffsetX, ScreenX0, ScreenW, SafeLeft, SafeRight);
 	const float AnchorX = Horizontal.m_Position;
-	const float AnchorY = SavedState.m_HasCustom ?
-				      QmHudEditor::RestoreAxisAnchor(NormY, VisibleHeight, ScreenY0, ScreenH, VisibleOffsetY) :
-				      QmHudEditor::SnapAxisToScreenEdgesEx(ScreenY0 + NormY * ScreenH, VisibleHeight, EffScreenY0, EffScreenH, VisibleOffsetY);
+	float AnchorY = SavedState.m_HasCustom ?
+				QmHudEditor::RestoreAxisAnchor(NormY, VisibleHeight, ScreenY0, ScreenH, VisibleOffsetY) :
+				QmHudEditor::SnapAxisToScreenEdgesEx(ScreenY0 + NormY * ScreenH, VisibleHeight, EffScreenY0, EffScreenH, VisibleOffsetY);
+
+	// 跟随宿主的附岛（如分离歌词岛）以宿主当前底边为纵向下限：
+	// 旧布局保存的屏幕绝对位置在宿主变高后会落进宿主内部，必须抬回下限。
+	AnchorY = QmHudEditor::ClampAnchorYBelowMinimum(AnchorY, MinimumAnchorY, VisibleHeight, ScreenY0, ScreenH, VisibleOffsetY);
 
 	Scope.m_TargetRect = {AnchorX, AnchorY, TransformWidth, TransformHeight};
 	Scope.m_VisibleRect = {AnchorX + VisibleOffsetX, AnchorY + VisibleOffsetY, VisibleWidth, VisibleHeight};
@@ -473,16 +477,16 @@ CHudEditor::STransformScope CHudEditor::PreviewTransform(EHudEditorElement Eleme
 	return Scope;
 }
 
-CHudEditor::STransformScope CHudEditor::BeginTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, QmHudEditor::EHorizontalPlacement HorizontalPlacement, bool Scalable, bool ApplyMapScreen)
+CHudEditor::STransformScope CHudEditor::BeginTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, QmHudEditor::EHorizontalPlacement HorizontalPlacement, bool Scalable, bool ApplyMapScreen, float MinimumAnchorY)
 {
-	return BeginTransform(Element, TransformRect, VisibleRect, QmHudEditor::SEdgeMargin{}, Scalable, ApplyMapScreen, HorizontalPlacement);
+	return BeginTransform(Element, TransformRect, VisibleRect, QmHudEditor::SEdgeMargin{}, Scalable, ApplyMapScreen, HorizontalPlacement, MinimumAnchorY);
 }
 
-CHudEditor::STransformScope CHudEditor::BeginTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, const QmHudEditor::SEdgeMargin &EdgeMargin, bool Scalable, bool ApplyMapScreen, QmHudEditor::EHorizontalPlacement HorizontalPlacement)
+CHudEditor::STransformScope CHudEditor::BeginTransform(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, const QmHudEditor::SEdgeMargin &EdgeMargin, bool Scalable, bool ApplyMapScreen, QmHudEditor::EHorizontalPlacement HorizontalPlacement, float MinimumAnchorY)
 {
 	STransformScope Scope;
 	SVisibleElement Visible;
-	if(!ComputeTransformPlacement(Element, TransformRect, VisibleRect, Scalable, Scope, &Visible, EdgeMargin, HorizontalPlacement))
+	if(!ComputeTransformPlacement(Element, TransformRect, VisibleRect, Scalable, Scope, &Visible, EdgeMargin, HorizontalPlacement, MinimumAnchorY))
 		return Scope;
 	m_vVisibleElements.push_back(Visible);
 

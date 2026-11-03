@@ -325,7 +325,7 @@ namespace
 		{Localizable("Show command completion in chat"), nullptr, "聊天中显示命令补全"},
 		{Localizable("Chat emoji completion"), nullptr, "聊天表情补全"},
 		{Localizable("Humming"), nullptr, "哼歌"},
-		{Localizable("Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines"), nullptr, "随机间隔向公共聊天发送三句歌词，行间间隔 3 秒"},
+		{Localizable("Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines"), nullptr, "随机间隔向公共聊天发送三句歌词，行间间隔 3 秒"},
 		{nullptr, "qm_auto_update", nullptr},
 		{nullptr, "qm_blank_asset_fallback", nullptr},
 		{nullptr, "qm_client_show_badge", nullptr},

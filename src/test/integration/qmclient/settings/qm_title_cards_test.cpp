@@ -143,3 +143,15 @@ TEST(QmTitleCards, CollapseStateIsIndependentAfterReload)
 	EXPECT_FALSE(Reloaded.IsCollapsed(SPONSOR_CARD, true));
 	EXPECT_TRUE(Reloaded.IsCollapsed(DISPLAY_CARD, false));
 }
+
+TEST(QmTitleCards, FluidSearchFindsTheSponsorCard)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	for(const char *pQuery : {"Fluid", "流体", "液体"})
+	{
+		SCOPED_TRACE(pQuery);
+		const auto vResults = qm_card_registry::SearchCards(pQuery, Model);
+		EXPECT_TRUE(std::any_of(vResults.begin(), vResults.end(), [](const auto &Result) { return std::string(Result.m_pStableId) == SPONSOR_CARD; }));
+	}
+}

@@ -584,7 +584,9 @@ public:
 	//   poses_video   导出视频（走与 demo 导出相同的录制管线）
 	static void Con_RenderPoses(IConsole::IResult *pResult, void *pUserData);
 	static void Con_PosesOpen(IConsole::IResult *pResult, void *pUserData);
+#if defined(CONF_VIDEORECORDER)
 	static void Con_PosesVideo(IConsole::IResult *pResult, void *pUserData);
+#endif
 	static void Con_PosesClose(IConsole::IResult *pResult, void *pUserData);
 
 	// 读文件 + 解析 + 合成快照 + 应用两次。失败返回 false 并打印原因。

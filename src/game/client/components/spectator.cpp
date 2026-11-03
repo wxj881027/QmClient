@@ -724,9 +724,14 @@ void CSpectator::OnRender()
 	const bool WasTouchPressed = m_TouchState.m_AnyPressed;
 	if(WantActive)
 		Ui()->UpdateTouchState(m_TouchState);
-	if(WantActive && m_TouchState.m_AnyPressed)
+	if(WantActive && (m_TouchState.m_AnyPressed || m_TouchState.m_TapReleased))
 	{
-		const vec2 TouchPos = (m_TouchState.m_PrimaryPosition - vec2(0.5f, 0.5f)) * ScreenSize;
+		const vec2 TouchPos = qm_spectator_layout::TouchPosition(m_TouchState.m_PrimaryPosition, ScreenSize, ScreenCenter);
+		if(m_TouchState.m_TapReleased && !SpectatorRect.Inside(ScreenCenter + TouchPos))
+		{
+			OnRelease();
+			return;
+		}
 		if(SpectatorMouseRect.Inside(ScreenCenter + TouchPos))
 		{
 			m_SelectorMouse = TouchPos;
@@ -734,7 +739,7 @@ void CSpectator::OnRender()
 	}
 	else if(WantActive && WasTouchPressed)
 	{
-		const vec2 TouchPos = (m_TouchState.m_PrimaryPosition - vec2(0.5f, 0.5f)) * ScreenSize;
+		const vec2 TouchPos = qm_spectator_layout::TouchPosition(m_TouchState.m_PrimaryPosition, ScreenSize, ScreenCenter);
 		if(!SpectatorRect.Inside(ScreenCenter + TouchPos))
 		{
 			OnRelease();
@@ -752,10 +757,11 @@ void CSpectator::OnRender()
 	// clamp mouse position to selector area
 	m_SelectorMouse = qm_spectator_layout::ClampMouse(SelectorLayout, ScreenCenter, m_SelectorMouse);
 
-	// 触摸主键是电平信号，只取按下沿当一次点击；鼠标本来就只在按下那一帧为 true。
-	const bool TouchPressedEdge = WantActive && m_TouchState.m_PrimaryPressed && !m_TouchPressedLast;
-	m_TouchPressedLast = WantActive && m_TouchState.m_PrimaryPressed;
-	const bool MousePressed = WantActive && (Input()->KeyPress(KEY_MOUSE_1) || TouchPressedEdge);
+	const bool TouchTap = WantActive && Ui()->DirectTouchInput() && m_TouchState.m_TapReleased;
+	const bool TouchInside = SpectatorMouseRect.Inside(m_TouchState.m_PrimaryPosition * ScreenSize);
+	const bool MousePressed = WantActive && (Input()->KeyPress(KEY_MOUSE_1) ||
+							(Ui()->DirectTouchInput() ? TouchTap && TouchInside : m_TouchState.m_PrimaryPressed));
+	bool CloseTouchSelection = false;
 
 	// 顶部三个标签（自由视角 / 多人同框 / 跟随）跟面板同一套缩放，否则放大面板后这一行会
 	// 顶到边框外面、看起来像掉出了背景板。
@@ -792,6 +798,7 @@ void CSpectator::OnRender()
 			if(!ViewModeActive)
 				GameClient()->m_MultiViewActivated = false;
 			Spectate(m_SelectedSpectatorId);
+			CloseTouchSelection = TouchTap;
 		}
 	}
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, (FreeViewSelected ? 1.0f : 0.5f) * ContentAlpha);
@@ -826,6 +833,7 @@ void CSpectator::OnRender()
 				if(!ViewModeActive)
 					GameClient()->m_MultiViewActivated = false;
 				Spectate(m_SelectedSpectatorId);
+				CloseTouchSelection = TouchTap;
 			}
 		}
 		TextRender()->TextColor(1.0f, 1.0f, 1.0f, (FollowSelected ? 1.0f : 0.5f) * ContentAlpha);
@@ -897,7 +905,10 @@ void CSpectator::OnRender()
 					if(MultiViewActive())
 						GameClient()->m_RankGhost.ViewToggleMultiMember(m_SelectedSpectatorId);
 					else
+					{
 						Spectate(m_SelectedSpectatorId);
+						CloseTouchSelection = TouchTap;
+					}
 				}
 				else if(GameClient()->m_MultiViewActivated)
 				{
@@ -925,6 +936,7 @@ void CSpectator::OnRender()
 				else
 				{
 					Spectate(m_SelectedSpectatorId);
+					CloseTouchSelection = TouchTap;
 				}
 			}
 		}
@@ -1082,6 +1094,8 @@ void CSpectator::OnRender()
 	// 手机是手指直接点，不画鼠标箭头；桌面上高亮框仍跟着光标走。
 	if(!QmUiMobilePlatform())
 		RenderTools()->RenderCursor(ScreenCenter + m_SelectorMouse, 48.0f, ContentAlpha);
+	if(CloseTouchSelection)
+		OnRelease();
 }
 
 void CSpectator::FindTele()
@@ -1198,7 +1212,6 @@ void CSpectator::OnReset()
 	m_SelectedSpectatorId = NO_SELECTION;
 	m_MultiViewActivateDelay = 0.0f;
 	m_TouchState = {};
-	m_TouchPressedLast = false;
 	m_ReplayUi.Reset();
 	m_TeleNumberInput.Deactivate();
 	m_TeleNumberInput.Set("1");

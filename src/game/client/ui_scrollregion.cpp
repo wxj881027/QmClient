@@ -81,6 +81,11 @@ void CScrollRegion::Begin(CUIRect *pClipRect, vec2 *pOutOffset, const CScrollReg
 	CUIRect ScrollbarBg = SplitContentArea();
 	DrawBackground(ScrollbarBg);
 	ClampBackgroundScrollOffset();
+	Ui()->RegisterTouchScrollRegion(this, &m_ClipRect, m_Params.m_ScrollHorizontal, m_Params.m_WheelOwnerPriority, m_Params.m_Interactive && ContentOverflows());
+	const vec2 TouchScroll = Ui()->ConsumeTouchScroll(this);
+	const float TouchAxis = m_Params.m_ScrollHorizontal ? TouchScroll.x : TouchScroll.y;
+	if(TouchAxis != 0.0f)
+		m_ScrollState.SetOffset(m_ScrollState.Offset() - TouchAxis, ScrollMetrics(), ScrollConfig());
 
 	if(!ContentOverflows() && !Ui()->RenderOnly())
 		m_ScrollState.ResetForNonScrollableContent(Ui()->IsActiveItem(&m_SliderId) && Ui()->MouseButton(0));
@@ -560,6 +565,8 @@ void CScrollRegion::DoSlider()
 
 	const float MousePos = m_Params.m_ScrollHorizontal ? Ui()->MouseX() : Ui()->MouseY();
 	const bool WasActive = Ui()->ActiveItem() == pId;
+	if(m_Params.m_Interactive && !Ui()->RenderOnly())
+		Ui()->CaptureTouchDrag(pId, &m_RailRect);
 	if(m_Params.m_Interactive && !Ui()->RenderOnly())
 		Ui()->DoButtonLogic(pId, 0, &m_RailRect, BUTTONFLAG_LEFT); // Result ignored, we only care about the button becoming and being active
 	if(m_Params.m_Interactive && !Ui()->RenderOnly() && Ui()->CheckActiveItem(pId))

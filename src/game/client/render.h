@@ -661,6 +661,7 @@ public:
 	void Init(class IGraphics *pGraphics, class ITextRender *pTextRender, class CGameClient *pGameClient);
 
 	void RenderCursor(vec2 Center, float Size, float Alpha = 1.0f) const;
+	void RenderResizeCursor(vec2 Center, float Size, float Alpha = 1.0f) const;
 	void RenderIcon(int ImageId, int SpriteId, const CUIRect *pRect, const ColorRGBA *pColor = nullptr) const;
 	void RenderTextContainerWithEffects(STextContainerIndex TextContainerIndex, const SQmTextEffectRenderStyle &Style, float X, float Y) const;
 	void RenderTitleContainerWithPolishedEffects(STextContainerIndex TextContainerIndex, const SQmTitlePolishStyle &Style, float X, float Y) const;

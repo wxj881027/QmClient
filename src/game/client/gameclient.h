@@ -931,6 +931,7 @@ public:
 	// hooks
 	void OnConnected() override;
 	void OnConnectionResourceUpdate() override;
+	void OnMapLoadStart() override;
 	void OnRender() override;
 	void OnUpdate() override;
 	int RenderThrottleRefreshRate() const override;

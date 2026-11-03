@@ -300,7 +300,16 @@ if [ ! -d "$SDL3_JAVA_DIR/org/libsdl/app" ]; then
 fi
 cp -R "$SDL3_JAVA_DIR/org/." src/main/java/org/
 
+# JNI 按固定类名和方法签名查找回调，必须使用同一份 SDL 的完整保留规则。
+SDL3_PROGUARD_RULES="$SDL3_JAVA_DIR/../../../proguard-rules.pro"
+if [ ! -f "$SDL3_PROGUARD_RULES" ]; then
+	log_error "SDL3 ProGuard rules missing: $SDL3_PROGUARD_RULES"
+	exit 1
+fi
+cat "$SDL3_PROGUARD_RULES" >> proguard-rules.pro
+
 # shellcheck disable=SC1091
 source ./build.sh "$GAME_NAME" "$PACKAGE_NAME" "$BUILD_TYPE"
+python3 ../qmclient_scripts/android/check_jni_contract.py "$GAME_NAME.apk" "$SDL3_JAVA_DIR/../../../../.."
 
 cd ..

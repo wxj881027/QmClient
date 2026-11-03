@@ -18,6 +18,7 @@
 #include <engine/shared/config.h>
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
@@ -179,8 +180,8 @@ bool CQmMobileSpectator::MobileVoteBarVisible() const
 {
 	// 计分板打开时投票面板由计分板自己画（且那一层本来就可交互），不重复叠一条。
 	return QmMobileVoteBarVisible(QmUiMobilePlatform(), Client()->State() == IClient::STATE_ONLINE,
-		GameClient()->m_Voting.IsVoting(), GameClient()->m_Menus.IsActive(), GameClient()->m_GameConsole.IsActive(),
-		GameClient()->m_HudEditor.IsActive()) &&
+		       GameClient()->m_Voting.IsVoting(), GameClient()->m_Menus.IsActive(), GameClient()->m_GameConsole.IsActive(),
+		       GameClient()->m_HudEditor.IsActive()) &&
 	       !GameClient()->m_Chat.IsActive() && !GameClient()->m_Scoreboard.IsActive() && !GameClient()->m_Spectator.IsActive();
 }
 
@@ -241,6 +242,18 @@ bool CQmMobileSpectator::ScoreboardOnlyControls() const
 {
 	// 计分板是自己打开的底部面板，触控层这时只留关闭按钮，别的按钮不再叠在面板上。
 	return BaseControlsAvailable() && GameClient()->m_Scoreboard.IsActive() && !GameClient()->m_Chat.IsActive();
+}
+
+bool CQmMobileSpectator::FreeViewActive() const
+{
+	if(GameClient()->m_RankGhost.IsViewModeActive())
+		return GameClient()->m_RankGhost.ViewCameraMode() == CRankGhost::EViewCameraMode::FREE;
+	if(GameClient()->m_MultiViewActivated)
+		return false;
+	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
+		return GameClient()->m_DemoSpecId == SPEC_FREEVIEW;
+	const auto &SpecInfo = GameClient()->m_Snap.m_SpecInfo;
+	return SpecInfo.m_Active && SpecInfo.m_SpectatorId == SPEC_FREEVIEW && !SpecInfo.m_UsePosition;
 }
 
 void CQmMobileSpectator::OnNewSnapshot()
@@ -491,7 +504,8 @@ bool CQmMobileSpectator::OnTouchState(std::vector<IInput::CTouchFingerState> &vF
 	// 不再参与镜头拖动；只在新按下那一帧投票，长按不会连发。
 	m_vVoteBarFingers.erase(std::remove_if(m_vVoteBarFingers.begin(), m_vVoteBarFingers.end(), [&](const IInput::CTouchFinger &Finger) {
 		return std::none_of(vFingers.begin(), vFingers.end(), [&](const IInput::CTouchFingerState &State) { return State.m_Finger == Finger; });
-	}), m_vVoteBarFingers.end());
+	}),
+		m_vVoteBarFingers.end());
 	if(MobileVoteBarVisible())
 	{
 		const SQmMobileVoteBarLayout VoteLayout = QmMobileVoteBarLayout(Screen);
@@ -519,10 +533,12 @@ bool CQmMobileSpectator::OnTouchState(std::vector<IInput::CTouchFingerState> &vF
 	const bool WasMoving = m_Touch.JoystickDirection() != vec2(0.0f, 0.0f);
 	// 拖动取景时摇杆不参与命中：左上/左下的大片空白都应该是可以拖画面的地方。
 	const bool DragCameraActive = g_Config.m_QmMobileCameraMode == CAMERA_MODE_DRAG;
-	const unsigned Actions = m_Touch.Update(vFingers, Layout(Screen, !DragCameraActive), Screen);
+	const unsigned Actions = m_Touch.Update(vFingers, Layout(Screen, Client()->State() == IClient::STATE_DEMOPLAYBACK, !DragCameraActive), Screen, Client()->GlobalTime());
 	for(int i = 0; i < NUM_ACTIONS; ++i)
 		if((Actions & (1U << i)) != 0)
 			PerformAction(i);
+	if(m_Touch.MapTapped() && FreeViewActive() && ControlsAvailable())
+		GameClient()->m_Spectator.SpectateClosest();
 	if(m_Touch.ZoomFactor() != 1.0f)
 	{
 		// 连续倍率转为现有缩放命令的档位，复用自动旁观、多人取景和缩放限制。
@@ -658,9 +674,19 @@ void CQmMobileSpectator::OnRender()
 		return;
 	}
 	const vec2 Screen = ScreenSize();
-	const auto Geometry = Layout(Screen);
+	const auto Geometry = Layout(Screen, Client()->State() == IClient::STATE_DEMOPLAYBACK);
 	Graphics()->MapScreen(0.0f, 0.0f, Screen.x, Screen.y);
 	const bool DragCamera = g_Config.m_QmMobileCameraMode == CAMERA_MODE_DRAG;
+	if(FreeViewActive() && !g_Config.m_QmRenderCursorSpec)
+	{
+		// 轻点地图以画面中央准星选人，摇杆移动和捏合不会移动该选人基准。
+		const vec2 Center = Screen * 0.5f;
+		const ColorRGBA Color = ui_token::color::TEXT_SECONDARY;
+		Graphics()->DrawRect(Center.x - 5.0f, Center.y - 0.5f, 3.0f, 1.0f, Color, 0, 0.0f);
+		Graphics()->DrawRect(Center.x + 2.0f, Center.y - 0.5f, 3.0f, 1.0f, Color, 0, 0.0f);
+		Graphics()->DrawRect(Center.x - 0.5f, Center.y - 5.0f, 1.0f, 3.0f, Color, 0, 0.0f);
+		Graphics()->DrawRect(Center.x - 0.5f, Center.y + 2.0f, 1.0f, 3.0f, Color, 0, 0.0f);
+	}
 	// 拖动取景时整块画面都是操作面，摇杆不再绘制，也避免误以为只能推摇杆。
 	if(!DragCamera)
 	{
@@ -674,7 +700,6 @@ void CQmMobileSpectator::OnRender()
 		RenderMobileVoteBar(QmMobileVoteBarLayout(Screen));
 
 	RenderIsland(Screen);
-
 	using namespace FontIcons;
 	const char *apLabels[NUM_ACTIONS] = {
 		FONT_ICON_BACKWARD_STEP, FONT_ICON_USERS, FONT_ICON_FORWARD_STEP, FONT_ICON_EYE,

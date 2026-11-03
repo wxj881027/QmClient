@@ -7,6 +7,22 @@ on:
       - "v*"
   workflow_dispatch:
     inputs:
+      target_platform:
+        description: "Build platforms (publishing always builds all)"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - android
+      android_arch:
+        description: "Android architectures (publishing always builds all)"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - arm64
       build_type:
         description: "Build type"
         required: true
@@ -44,6 +60,7 @@ concurrency:
 jobs:
   build:
     name: ${{ matrix.name }}
+    if: github.event_name != 'workflow_dispatch' || inputs.target_platform != 'android' || inputs.release_tag != ''
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     env:
@@ -418,6 +435,7 @@ jobs:
     timeout-minutes: 180
     env:
       ANDROID_APP_NAME: QmClient
+      ANDROID_BUILD_ARCH: ${{ (startsWith(github.ref, 'refs/tags/') || inputs.release_tag != '') && 'all' || inputs.android_arch || 'all' }}
       ANDROID_PACKAGE_NAME: com.qmclient.client
       ANDROID_BUILD_DIR: build-android-release
       ANDROID_NDK_VERSION: "27.3.13750724"
@@ -562,7 +580,7 @@ jobs:
         shell: bash
         run: |
           chmod +x qmclient_scripts/android/cmake_android.sh
-          qmclient_scripts/android/cmake_android.sh all "${ANDROID_APP_NAME}" "${ANDROID_PACKAGE_NAME}" Release "${ANDROID_BUILD_DIR}"
+          qmclient_scripts/android/cmake_android.sh "${ANDROID_BUILD_ARCH}" "${ANDROID_APP_NAME}" "${ANDROID_PACKAGE_NAME}" Release "${ANDROID_BUILD_DIR}"
 
       - name: Collect Android package
         run: |

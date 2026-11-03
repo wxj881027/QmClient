@@ -3208,6 +3208,10 @@ if(CLIENT)
     QmUi/QmSeasonalSidebar.h
     QmUi/QmBadgeGeometry.cpp
     QmUi/QmBadgeGeometry.h
+    QmUi/QmChatBubble.cpp
+    QmUi/QmChatBubble.h
+    QmUi/QmCloudBubble.cpp
+    QmUi/QmCloudBubble.h
     QmUi/QmBadgeGeometryData.h
     QmUi/QmAuthorName.cpp
     QmUi/QmAuthorName.h
@@ -3290,6 +3294,8 @@ if(CLIENT)
     QmUi/SettingsCardMeasure.h
     QmUi/SettingsCardCollapseState.cpp
     QmUi/SettingsCardCollapseState.h
+    QmUi/SettingsCardWidthState.cpp
+    QmUi/SettingsCardWidthState.h
     QmUi/SettingsCardWidth.h
     QmUi/SettingsCardGeometry.cpp
     QmUi/SettingsCardGeometry.h
@@ -3587,9 +3593,14 @@ if(CLIENT)
     components/qmclient/input_overlay.h
     components/qmclient/jelly_tee.cpp
     components/qmclient/jelly_tee.h
+    components/qmclient/auto_reply.h
     components/qmclient/keyword_reply_rules.h
     components/qmclient/recent_tee_skins.cpp
     components/qmclient/recent_tee_skins.h
+    components/qmclient/map_cover_art.cpp
+    components/qmclient/map_cover_art.h
+    components/qmclient/map_covers.cpp
+    components/qmclient/map_covers.h
     components/qmclient/map_difficulty_catalog.cpp
     components/qmclient/map_difficulty_catalog.h
     components/qmclient/vote_map_library.cpp
@@ -3612,6 +3623,8 @@ if(CLIENT)
     components/qmclient/menus_qmclient_internal.h
     components/qmclient/menus_qmclient_popups.cpp
     components/qmclient/menus_qmclient_search.cpp
+    components/qmclient/hud_map_progress.cpp
+    components/qmclient/hud_map_progress.h
     components/qmclient/modes.cpp
     components/qmclient/modes.h
     components/qmclient/nameplate_layout.h
@@ -3743,6 +3756,12 @@ if(CLIENT)
     components/qmclient/tee_hue_cycle.h
     components/qmclient/tee_trail_styles.cpp
     components/qmclient/tee_trail_styles.h
+    components/qmclient/tee_trail_style_common.h
+    components/qmclient/tee_trail_style_aurora.cpp
+    components/qmclient/tee_trail_style_ink.cpp
+    components/qmclient/tee_trail_style_ignis.cpp
+    components/qmclient/tee_trail_style_stardust.cpp
+    components/qmclient/tee_trail_style_blackflash.cpp
     components/qmclient/scripting/impl.cpp
     components/qmclient/scripting/impl.h
     components/qmclient/scripting/state.h
@@ -4867,8 +4886,11 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/jsonwriter_test.cpp
     src/test/unit/engine/link_probe_test.cpp
     src/test/unit/client/keyword_reply_rules_test.cpp
+    src/test/unit/qmclient/client/qm_auto_reply_test.cpp
+    src/test/integration/qmclient/client/qm_friend_greet_flow_test.cpp
     src/test/unit/engine/logger_test.cpp
     src/test/unit/client/map_difficulty_catalog_test.cpp
+    src/test/unit/qmclient/ui/qm_map_cover_art_test.cpp
     src/test/unit/qmclient/ui/vote_map_library_test.cpp
     src/test/unit/qmclient/ui/server_vote_list_test.cpp
     src/test/unit/qmclient/ui/vote_menu_mode_test.cpp
@@ -5089,6 +5111,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/music/qm_spotify_parser_test.cpp
     src/test/unit/qmclient/client/qm_modes_test.cpp
     src/test/unit/qmclient/client/qm_map_progress_test.cpp
+    src/test/unit/qmclient/client/qm_hud_map_progress_test.cpp
     src/test/unit/qmclient/client/qm_config_save_value_override_test.cpp
     src/test/integration/qmclient/client/qm_removed_ui_config_test.cpp
     src/test/integration/qmclient/client/qm_legacy_config_load_test.cpp
@@ -5117,6 +5140,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_title_badge_test.cpp
     src/test/unit/qmclient/client/qm_title_badge_render_test.cpp
     src/test/unit/qmclient/client/qm_title_style_test.cpp
+    src/test/unit/qmclient/ui/qm_chat_bubble_test.cpp
     src/test/unit/qmclient/client/qm_sponsor_chat_style_test.cpp
     src/test/unit/qmclient/client/qm_skin_outline_test.cpp
     src/test/unit/qmclient/client/qm_scoreboard_skin_test.cpp
@@ -5177,6 +5201,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/serverinfo_test.cpp
     src/test/unit/qmclient/settings/settings_card_collapse_state_test.cpp
     src/test/unit/qmclient/settings/settings_card_collapse_config_test.cpp
+    src/test/unit/qmclient/settings/settings_card_width_state_test.cpp
     src/test/unit/client/pie_menu_logic_test.cpp
     src/test/unit/client/pie_menu_geometry_test.cpp
     src/test/unit/client/pie_menu_points_test.cpp
@@ -5330,6 +5355,11 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/tclient/swap_countdown_message.cpp
     src/game/client/components/tclient/qm_tee_trail.cpp
     src/game/client/components/qmclient/tee_trail_styles.cpp
+    src/game/client/components/qmclient/tee_trail_style_aurora.cpp
+    src/game/client/components/qmclient/tee_trail_style_ink.cpp
+    src/game/client/components/qmclient/tee_trail_style_ignis.cpp
+    src/game/client/components/qmclient/tee_trail_style_stardust.cpp
+    src/game/client/components/qmclient/tee_trail_style_blackflash.cpp
     src/game/client/components/qmclient/qm_developer_badge.cpp
     src/game/client/components/qmclient/qm_title_badge.cpp
     src/game/client/components/qmclient/screenshot_clipboard.cpp
@@ -5369,6 +5399,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/QmUi/cards/QmCardCatalogSearch.cpp
     src/game/client/QmUi/SettingsCardDeckLogic.cpp
     src/game/client/QmUi/SettingsCardCollapseState.cpp
+    src/game/client/QmUi/SettingsCardWidthState.cpp
     src/game/client/QmUi/QmModuleLayoutAdapter.cpp
     src/game/client/QmUi/SettingsCardGeometry.cpp
     src/game/client/components/assets_resource_registry.cpp
@@ -5377,6 +5408,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/generated/client_data7.h
     src/game/client/components/qmclient/hud_notifications/hud_notification_catalog.cpp
     src/game/client/components/qmclient/hud_notifications/hud_notification_rules.cpp
+    src/game/client/components/qmclient/map_cover_art.cpp
     src/game/client/components/qmclient/map_difficulty_catalog.cpp
     src/game/client/components/qmclient/vote_map_library.cpp
     src/game/client/components/qmclient/vote_map_loader.cpp
@@ -5673,6 +5705,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_console_settings_scroll_test.cpp
       src/test/integration/qmclient/ui/qm_scrollbar_color_submission_test.cpp
       src/test/integration/qmclient/ui/qm_scrollbar_reserve_transition_test.cpp
+      src/test/integration/qmclient/ui/qm_direct_touch_test.cpp
       src/test/integration/qmclient/ui/qm_background_controls_test.cpp
       src/test/integration/qmclient/ui/qm_navigation_selection_test.cpp
       src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp
@@ -5820,6 +5853,15 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/game/client/QmUi/QmDropdown.cpp
     src/test/benchmark/qm_icon_render_benchmark.cpp
     src/engine/client/text.cpp
+    # 拖尾几何构建（BuildEffect 与样式分派的生产实现；每帧每玩家热路径）
+    src/test/benchmark/qm_trail_style_benchmark.cpp
+    src/game/client/components/tclient/qm_tee_trail.cpp
+    src/game/client/components/qmclient/tee_trail_styles.cpp
+    src/game/client/components/qmclient/tee_trail_style_aurora.cpp
+    src/game/client/components/qmclient/tee_trail_style_ink.cpp
+    src/game/client/components/qmclient/tee_trail_style_ignis.cpp
+    src/game/client/components/qmclient/tee_trail_style_stardust.cpp
+    src/game/client/components/qmclient/tee_trail_style_blackflash.cpp
     src/test/benchmark/qm_steam_benchmark.cpp
     # Steam 客户端探测链（SteamFindClient 基准；依赖 steam_api 的链接桩）
     src/engine/client/steam.cpp

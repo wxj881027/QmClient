@@ -48,6 +48,13 @@ inline SPlayerPointsParseResult ExtractPlayerPointsJson(const json_value *pRoot)
 	return Result;
 }
 
+// DDStats 用 404 表示没有该玩家的记录：时长查询把这当成 0 小时的成功结果，
+// 计分板显示 0；查分列以及其他状态码（超时、5xx 等）仍按查询失败处理。
+inline bool QmDdStatsPlaytimeMissingRecord(bool Playtime, int CompletedStatusCode)
+{
+	return Playtime && CompletedStatusCode == 404;
+}
+
 inline int64_t ExtractPlayerDdStatsHours(const char *pData, size_t Size, const char *pPlayerName)
 {
 	if(!pData || Size == 0)

@@ -1684,6 +1684,18 @@ bool CGameClient::GetDummyFastInput(CNetObj_PlayerInput &DummyFastInput, const C
 	return false;
 }
 
+void CGameClient::OnMapLoadStart()
+{
+	if(m_ConnectionResourcePreparation.Pending())
+		dbg_msg("client/map", "canceled pending resource preparation for '%s'", Client()->GetCurrentMap());
+	// 取消旧任务并先释放借用地图数据的渲染资源，再让引擎替换地图文件。
+	m_ConnectionResourcePreparation.Cancel();
+	m_MapLayersBackground.UnloadMap();
+	m_MapLayersForeground.UnloadMap();
+	Collision()->Unload();
+	Layers()->Unload();
+}
+
 void CGameClient::OnConnected()
 {
 	const bool PerfEnabled = QmPerfEnabled();
@@ -2962,6 +2974,7 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 	if(MsgId == NETMSGTYPE_SV_CHAT)
 	{
 		CNetMsg_Sv_Chat *pMsg = (CNetMsg_Sv_Chat *)pRawMsg;
+		m_TClient.OnChatMessage(pMsg, Conn);
 		if(pMsg->m_ClientId < 0 && pMsg->m_pMessage != nullptr)
 		{
 			m_TClient.HandleLocalSaveMessage(pMsg, Conn);
@@ -7900,6 +7913,7 @@ void CGameClient::OnGraphicsResourcesReset()
 	LoadInitialGraphicsAssets();
 
 	log_info("gfx", "game assets reloaded after graphics resources reset");
+	m_NamePlates.OnGraphicsResourcesReset();
 }
 
 void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)

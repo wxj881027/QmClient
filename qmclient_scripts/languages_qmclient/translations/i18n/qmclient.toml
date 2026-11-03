@@ -28340,22 +28340,6 @@ turkish = "Ana/kukla karakteri iki boş takıma böler; takım 0'a dönmek için
 polish = "Dzieli główną postać/dummy na dwie wolne drużyny; ponowne naciśnięcie wraca do drużyny 0"
 
 [[message]]
-key = "Sponsor chat style draft: 0=Normal, 1=Platinum highlight"
-[message.translations]
-simplified_chinese = "赞助者发言样式草稿：0=普通，1=铂金高光"
-traditional_chinese = "贊助者發言樣式草稿：0=普通，1=鉑金高光"
-japanese = "支援者チャットのスタイル下書き：0=通常、1=プラチナの輝き"
-korean = "후원자 채팅 스타일 초안: 0=보통, 1=백금 하이라이트"
-russian = "Черновик стиля чата спонсора: 0=Обычный, 1=Платиновый блеск"
-german = "Entwurf des Unterstützer-Chatstils: 0=Normal, 1=Platin-Glanz"
-spanish = "Borrador del estilo de chat de patrocinador: 0=Normal, 1=Brillo de platino"
-french = "Brouillon du style de chat de soutien : 0=Normal, 1=Éclat de platine"
-brazilian_portuguese = "Rascunho do estilo de chat de apoiador: 0=Normal, 1=Reflexo de platina"
-portuguese = "Rascunho do estilo de chat de apoiante: 0=Normal, 1=Reflexo de platina"
-turkish = "Destekçi sohbet stili taslağı: 0=Normal, 1=Platin ışıltısı"
-polish = "Szkic stylu czatu wspierającego: 0=Normalny, 1=Platynowy połysk"
-
-[[message]]
 key = "Sponsor code"
 [message.translations]
 simplified_chinese = "认证码"
@@ -39462,20 +39446,20 @@ turkish = "Şarkı sözlerini Dynamic Island altında ayrı bir adada göster"
 polish = "Pokaż tekst na oddzielnej wyspie pod Dynamic Island"
 
 [[message]]
-key = "Send three consecutive lyrics to public chat at random intervals of 30 to 90 seconds, with 3 seconds between lines"
+key = "Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines"
 [message.translations]
-simplified_chinese = "每隔随机 30 到 90 秒向公共聊天逐句发送连续三句歌词，句间隔 3 秒"
-traditional_chinese = "每隔隨機30到90秒向公共聊天逐句傳送連續三句歌詞，句間隔3秒"
-japanese = "30～90秒のランダムな間隔で連続する三行の歌詞を全体チャットに送り、各行の間隔を3秒にする"
-korean = "30~90초의 무작위 간격으로 연속 세 줄의 가사를 전체 채팅에 보내며 줄 사이에 3초 대기"
-russian = "Отправлять три последовательные строки песни в общий чат через случайные интервалы от 30 до 90 секунд, с паузой 3 секунды между строками"
-german = "Drei aufeinanderfolgende Liedtextzeilen in zufälligen Abständen von 30 bis 90 Sekunden im öffentlichen Chat senden, mit 3 Sekunden zwischen den Zeilen"
-spanish = "Enviar tres líneas consecutivas de la letra al chat público a intervalos aleatorios de 30 a 90 segundos, con 3 segundos entre líneas"
-french = "Envoyer trois lignes consécutives des paroles dans le chat public à des intervalles aléatoires de 30 à 90 secondes, avec 3 secondes entre les lignes"
-brazilian_portuguese = "Enviar três linhas consecutivas da letra no chat público em intervalos aleatórios de 30 a 90 segundos, com 3 segundos entre linhas"
-portuguese = "Enviar três linhas consecutivas da letra no chat público em intervalos aleatórios de 30 a 90 segundos, com 3 segundos entre linhas"
-turkish = "30 ile 90 saniye arasında rastgele aralıklarla genel sohbete art arda üç şarkı sözü satırı gönder, satırlar arasında 3 saniye bekle"
-polish = "Wysyłaj trzy kolejne wersy do czatu publicznego w losowych odstępach od 30 do 90 sekund, z przerwą 3 sekund między wersami"
+simplified_chinese = "每隔随机 90 到 270 秒向公共聊天逐句发送连续三句歌词，句间隔 3 秒"
+traditional_chinese = "每隔隨機90到270秒向公共聊天逐句傳送連續三句歌詞，句間隔3秒"
+japanese = "90～270秒のランダムな間隔で連続する三行の歌詞を全体チャットに送り、各行の間隔を3秒にする"
+korean = "90~270초의 무작위 간격으로 연속 세 줄의 가사를 전체 채팅에 보내며 줄 사이에 3초 대기"
+russian = "Отправлять три последовательные строки песни в общий чат через случайные интервалы от 90 до 270 секунд, с паузой 3 секунды между строками"
+german = "Drei aufeinanderfolgende Liedtextzeilen in zufälligen Abständen von 90 bis 270 Sekunden im öffentlichen Chat senden, mit 3 Sekunden zwischen den Zeilen"
+spanish = "Enviar tres líneas consecutivas de la letra al chat público a intervalos aleatorios de 90 a 270 segundos, con 3 segundos entre líneas"
+french = "Envoyer trois lignes consécutives des paroles dans le chat public à des intervalles aléatoires de 90 à 270 secondes, avec 3 secondes entre les lignes"
+brazilian_portuguese = "Enviar três linhas consecutivas da letra no chat público em intervalos aleatórios de 90 a 270 segundos, com 3 segundos entre linhas"
+portuguese = "Enviar três linhas consecutivas da letra no chat público em intervalos aleatórios de 90 a 270 segundos, com 3 segundos entre linhas"
+turkish = "90 ile 270 saniye arasında rastgele aralıklarla genel sohbete art arda üç şarkı sözü satırı gönder, satırlar arasında 3 saniye bekle"
+polish = "Wysyłaj trzy kolejne wersy do czatu publicznego w losowych odstępach od 90 do 270 sekund, z przerwą 3 sekund między wersami"
 
 [[message]]
 key = "Follow main island width"
@@ -39813,3 +39797,124 @@ portuguese = "Nenhum tee por perto"
 turkish = "Yakında tee yok"
 polish = "Brak tee w pobliżu"
 
+[[message]]
+key = "Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)"
+[message.translations]
+simplified_chinese = "地图进度条位置（0=独立显示，1=玩家统计，2=灵动岛）"
+traditional_chinese = "地圖進度條位置（0=獨立顯示，1=玩家統計，2=靈動島）"
+japanese = "マップ進行バーの表示位置（0=単独表示、1=プレイヤー統計、2=ダイナミックアイランド）"
+korean = "맵 진행률 바 위치(0=별도 표시, 1=플레이어 통계, 2=다이내믹 아일랜드)"
+russian = "Расположение полосы прогресса карты (0=отдельно, 1=статистика игрока, 2=Динамический остров)"
+german = "Position des Kartenfortschrittsbalkens (0=separat, 1=Spielerstatistik, 2=Dynamische Insel)"
+spanish = "Ubicación de la barra de progreso del mapa (0=por separado, 1=estadísticas del jugador, 2=Isla dinámica)"
+french = "Emplacement de la barre de progression de la carte (0=séparée, 1=statistiques du joueur, 2=Île dynamique)"
+brazilian_portuguese = "Local da barra de progresso do mapa (0=separada, 1=estatísticas do jogador, 2=Ilha Dinâmica)"
+portuguese = "Localização da barra de progresso do mapa (0=separada, 1=estatísticas do jogador, 2=Ilha Dinâmica)"
+turkish = "Harita ilerleme çubuğu konumu (0=ayrı göster, 1=oyuncu istatistikleri, 2=Dinamik Ada)"
+polish = "Położenie paska postępu mapy (0=osobno, 1=statystyki gracza, 2=Dynamiczna Wyspa)"
+
+[[message]]
+key = "Comic dialogue"
+[message.translations]
+simplified_chinese = "漫画对白"
+traditional_chinese = "漫畫對白"
+
+[[message]]
+key = "Candy gradient"
+[message.translations]
+simplified_chinese = "糖果渐变"
+traditional_chinese = "糖果漸層"
+
+[[message]]
+key = "Let's play together!"
+[message.translations]
+simplified_chinese = "一起玩吧！"
+traditional_chinese = "一起玩吧！"
+
+[[message]]
+key = "Use custom colors"
+[message.translations]
+simplified_chinese = "使用自定义颜色"
+traditional_chinese = "使用自訂顏色"
+
+[[message]]
+key = "Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)"
+[message.translations]
+simplified_chinese = "消息气泡样式（0=漫画对白，1=糖果渐变，2=云朵气泡）"
+traditional_chinese = "訊息氣泡樣式（0=漫畫對白，1=糖果漸層，2=雲朵氣泡）"
+japanese = "チャット吹き出しのスタイル（0=漫画風会話、1=キャンディグラデーション、2=雲の吹き出し）"
+korean = "채팅 말풍선 스타일(0=만화 대화, 1=캔디 그라데이션, 2=구름 말풍선)"
+russian = "Стиль пузыря чата (0=Диалог комикса, 1=Конфетный градиент, 2=Облачный пузырь)"
+german = "Chat-Blasen-Stil (0=Comic-Dialog, 1=Bonbon-Farbverlauf, 2=Wolkenblase)"
+spanish = "Estilo de burbuja del chat (0=Diálogo de cómic, 1=Degradado de caramelo, 2=Burbuja de nube)"
+french = "Style des bulles de discussion (0=Dialogue de BD, 1=Dégradé de bonbons, 2=Bulle nuage)"
+brazilian_portuguese = "Estilo do balão de chat (0=Diálogo de quadrinhos, 1=Gradiente de doces, 2=Balão de nuvem)"
+portuguese = "Estilo do balão de conversa (0=Diálogo de banda desenhada, 1=Gradiente de rebuçados, 2=Balão de nuvem)"
+turkish = "Sohbet balonu stili (0=Çizgi roman diyaloğu, 1=Şeker renk geçişi, 2=Bulut balonu)"
+polish = "Styl dymka czatu (0=Dialog komiksowy, 1=Cukierkowy gradient, 2=Dymek w kształcie chmury)"
+
+[[message]]
+key = "Use custom chat bubble colors"
+[message.translations]
+simplified_chinese = "使用自定义消息气泡颜色"
+traditional_chinese = "使用自訂訊息氣泡顏色"
+japanese = "チャット吹き出しにカスタムカラーを使用"
+korean = "사용자 지정 채팅 말풍선 색상 사용"
+russian = "Использовать свои цвета пузырей чата"
+german = "Eigene Farben für Chat-Blasen verwenden"
+spanish = "Usar colores personalizados para las burbujas del chat"
+french = "Utiliser des couleurs personnalisées pour les bulles de discussion"
+brazilian_portuguese = "Usar cores personalizadas nos balões de chat"
+portuguese = "Usar cores personalizadas nos balões de conversa"
+turkish = "Özel sohbet balonu renkleri kullan"
+polish = "Użyj własnych kolorów dymków czatu"
+
+[[message]]
+key = "Style"
+[message.translations]
+simplified_chinese = "样式"
+traditional_chinese = "樣式"
+
+[[message]]
+key = "Cloud bubble"
+[message.translations]
+simplified_chinese = "云朵气泡"
+traditional_chinese = "雲朵氣泡"
+
+[[message]]
+key = "Gather and disperse"
+[message.translations]
+simplified_chinese = "聚集与散开"
+traditional_chinese = "聚集與散開"
+
+[[message]]
+key = "Sponsor chat style draft: 0=Normal, 1=Platinum highlight, 2=Fluid"
+[message.translations]
+simplified_chinese = "赞助者发言样式草稿：0=普通，1=铂金高光，2=流体"
+traditional_chinese = "贊助者發言樣式草稿：0=普通，1=鉑金高光，2=流體"
+japanese = "支援者チャットのスタイル下書き：0=通常、1=プラチナの輝き、2=流体"
+korean = "후원자 채팅 스타일 초안: 0=보통, 1=백금 하이라이트, 2=유체"
+russian = "Черновик стиля чата спонсора: 0=Обычный, 1=Платиновый блеск, 2=Жидкость"
+german = "Entwurf des Unterstützer-Chatstils: 0=Normal, 1=Platin-Glanz, 2=Flüssigkeit"
+spanish = "Borrador del estilo de chat de patrocinador: 0=Normal, 1=Brillo de platino, 2=Fluido"
+french = "Brouillon du style de chat de soutien : 0=Normal, 1=Éclat de platine, 2=Fluide"
+brazilian_portuguese = "Rascunho do estilo de chat de apoiador: 0=Normal, 1=Reflexo de platina, 2=Fluido"
+portuguese = "Rascunho do estilo de chat de apoiante: 0=Normal, 1=Reflexo de platina, 2=Fluido"
+turkish = "Destekçi sohbet stili taslağı: 0=Normal, 1=Platin ışıltısı, 2=Akışkan"
+polish = "Szkic stylu czatu wspierającego: 0=Normalny, 1=Platynowy połysk, 2=Płyn"
+
+[[message]]
+key = "Settings card widths: stableId for full width, !stableId for half width, separated by semicolons"
+[message.translations]
+simplified_chinese = "设置卡片宽度：stableId 表示整行宽度，！stableId 表示半行宽度，多项用分号分隔"
+traditional_chinese = "設定卡片寬度：stableId 表示整行寬度，!stableId 表示半行寬度，多項以分號分隔"
+japanese = "設定カードの幅：stableId は全幅、!stableId は半幅。複数の項目はセミコロンで区切ります"
+korean = "설정 카드 너비: stableId는 전체 너비, !stableId는 절반 너비이며 세미콜론으로 구분"
+russian = "Ширина карточек настроек: stableId — полная ширина, !stableId — половина ширины; разделитель — точка с запятой"
+german = "Breiten der Einstellungskarten: stableId für volle Breite, !stableId für halbe Breite, durch Semikolons getrennt"
+spanish = "Anchos de las tarjetas de ajustes: stableId para ancho completo, !stableId para medio ancho, separados por punto y coma"
+french = "Largeur des cartes de réglages : stableId pour la pleine largeur, !stableId pour la demi-largeur, séparés par des points-virgules"
+brazilian_portuguese = "Larguras dos cartões de configurações: stableId para largura total, !stableId para meia largura, separados por ponto e vírgula"
+portuguese = "Larguras dos cartões de definições: stableId para largura total, !stableId para meia largura, separados por ponto e vírgula"
+turkish = "Ayar kartı genişlikleri: tam genişlik için stableId, yarım genişlik için !stableId; noktalı virgülle ayrılır"
+polish = "Szerokości kart ustawień: stableId oznacza pełną szerokość, !stableId połowę szerokości; wpisy oddzielaj średnikami"

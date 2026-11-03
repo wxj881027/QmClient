@@ -89,7 +89,7 @@ static void RenderQmSponsorChatPreview(IGraphics *pGraphics, ITextRender *pTextR
 	const char *pText = Localize("See you at the next checkpoint.");
 	const ColorRGBA Color = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageColor));
 	const ColorRGBA PreviousColor = pTextRender->GetTextColor();
-	pTextRender->TextColor(Color);
+	pTextRender->TextColor(Style == EQmSponsorChatStyle::FLUID ? ColorRGBA(1, 1, 1, Color.a) : Color);
 	CTextCursor Cursor;
 	Cursor.SetPosition(vec2(Rect.x, Rect.y + (Rect.h - FontSize) / 2.0f));
 	Cursor.m_FontSize = FontSize;
@@ -100,14 +100,14 @@ static void RenderQmSponsorChatPreview(IGraphics *pGraphics, ITextRender *pTextR
 	if(Style == EQmSponsorChatStyle::PLATINUM)
 		QmSponsorChatAddPlatinumSplits(Cursor, pText, Color.a);
 	const auto Gradient = QmChatGradientStyle(g_Config, EQmChatGradientRole::NORMAL, Color);
-	const CQmChatGradientPaint Paint(pTextRender, Cursor, pText, Style != EQmSponsorChatStyle::PLATINUM ? &Gradient : nullptr);
+	const CQmChatGradientPaint Paint(pTextRender, Cursor, pText, Style == EQmSponsorChatStyle::NONE ? &Gradient : nullptr);
 	if(s_SponsorChatPreviewContainer.Valid())
 		pTextRender->RecreateTextContainerSoft(s_SponsorChatPreviewContainer, &Cursor, pText);
 	else
 		pTextRender->CreateOrAppendTextContainer(s_SponsorChatPreviewContainer, &Cursor, pText);
 	pTextRender->TextColor(PreviousColor);
 	const SQmSponsorChatSweep SweepState = QmSponsorChatSweepState(TimeSeconds - s_StartTime, pTextRender->GetTextContainerRenderedLineCount(s_SponsorChatPreviewContainer), true);
-	QmRenderSponsorChatText(pGraphics, pTextRender, s_SponsorChatPreviewContainer, Style, 1.0f, 0.0f, 0.0f, FontSize, SweepState);
+	QmRenderSponsorChatText(pGraphics, pTextRender, s_SponsorChatPreviewContainer, Style, 1.0f, 0.0f, 0.0f, FontSize, SweepState, TimeSeconds - s_StartTime);
 }
 
 namespace
@@ -247,8 +247,8 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 				pMenus->DoSettingsMenuLabel(Page, Tab, -1, "qm-sponsor-chat-style", &ChatStyleLabel, Localize("Chat message style"), BodySize, TEXTALIGN_ML);
 				static CUi::SDropDownState s_ChatStyleState;
 				static CScrollRegion s_ChatStyleScroll;
-				static std::array<const char *, 2> s_apChatStyleNames;
-				s_apChatStyleNames = {Localize("Normal"), Localize("Platinum highlight")};
+				static std::array<const char *, 3> s_apChatStyleNames;
+				s_apChatStyleNames = {Localize("Normal"), Localize("Platinum highlight"), Localize("Fluid")};
 				s_ChatStyleState.m_SelectionPopupContext.m_pScrollRegion = &s_ChatStyleScroll;
 				CUi::SDropDownProperties ChatStyleProperties;
 				ChatStyleProperties.m_Enabled = Auth.TitleAuthenticated() && !Auth.TitleBusy() && !pMenus->GameClient()->m_GameConsole.IsActive();
@@ -306,10 +306,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 					*pValue ^= 1;
 			};
 			VisibilityToggle(&g_Config.m_QmShowNameplateTitle, "qm-title-show-nameplate", Localize("Show titles on nameplates"));
-			RowAction("title-nameplate-scale", [&](CUIRect Row) {
-				pMenus->DoSettingsScrollbarOption(Page, Tab, "qm-nameplate-title-scale", &g_Config.m_QmNameplateTitleScale, &g_Config.m_QmNameplateTitleScale, &Row, Localize("Nameplate title size"), 50, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
-			});
-			VisibilityToggle(&g_Config.m_QmNameplateTitleAboveName, "qm-title-above-name", Localize("Show titles above player names"));
+
 			VisibilityToggle(&g_Config.m_QmShowMainTitle, "qm-title-show-main", Localize("Show main tee title locally"));
 			VisibilityToggle(&g_Config.m_QmShowDummyTitle, "qm-title-show-dummy", Localize("Show dummy title locally"));
 
@@ -318,38 +315,45 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 					g_Config.m_QmSponsorChatEffects ^= 1;
 				Hint(&g_Config.m_QmSponsorChatEffects, Row, Localize("Turning this off only changes your display."));
 			});
-			RowAction("title-badge-style", [&](CUIRect Row) {
-				CUIRect Label, Control;
-				SplitSettingsControlRow(Row, Metrics, &Label, &Control, ESettingsControlWidth::LONG_CHOICE);
-				pMenus->Ui()->DoLabel(&Label, Localize("Title style"), BodySize, TEXTALIGN_ML);
-				static CUi::SDropDownState s_StyleState;
-				static CScrollRegion s_StyleScroll;
-				const std::array<const char *, 2> aNames{Localize("Moon"), Localize("Sun")};
-				s_StyleState.m_SelectionPopupContext.m_pScrollRegion = &s_StyleScroll;
-				const int Style = pMenus->DoSettingsDropDown(&Control, g_Config.m_QmTitleBadgeStyle, aNames.data(), aNames.size(), s_StyleState, {}, &g_Config.m_QmTitleBadgeStyle, nullptr, &Row);
-				if(!ReadOnly && Style != g_Config.m_QmTitleBadgeStyle)
-				{
-					// 默认配色跟随日月；用户自定义过的颜色在切换形状时保留。
-					const auto OldStyle = g_Config.m_QmTitleBadgeStyle == 1 ? EQmTitleBadgeStyle::SUN : EQmTitleBadgeStyle::MOON;
-					const unsigned OldDefault = color_cast<ColorHSLA>(ColorRGBA(QmTitleBadgeDefaultColor(OldStyle))).Pack(false);
-					g_Config.m_QmTitleBadgeStyle = Style;
-					if(g_Config.m_QmTitleBadgeColor == OldDefault)
+			if(Personalization(pMenus, Content, "deck:qmclient-contributors-title-display", Metrics, ReadOnly))
+			{
+				RowAction("title-nameplate-scale", [&](CUIRect Row) {
+					pMenus->DoSettingsScrollbarOption(Page, Tab, "qm-nameplate-title-scale", &g_Config.m_QmNameplateTitleScale, &g_Config.m_QmNameplateTitleScale, &Row, Localize("Nameplate title size"), 50, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
+				});
+				VisibilityToggle(&g_Config.m_QmNameplateTitleAboveName, "qm-title-above-name", Localize("Show titles above player names"));
+				RowAction("title-badge-style", [&](CUIRect Row) {
+					CUIRect Label, Control;
+					SplitSettingsControlRow(Row, Metrics, &Label, &Control, ESettingsControlWidth::LONG_CHOICE);
+					pMenus->Ui()->DoLabel(&Label, Localize("Title style"), BodySize, TEXTALIGN_ML);
+					static CUi::SDropDownState s_StyleState;
+					static CScrollRegion s_StyleScroll;
+					const std::array<const char *, 2> aNames{Localize("Moon"), Localize("Sun")};
+					s_StyleState.m_SelectionPopupContext.m_pScrollRegion = &s_StyleScroll;
+					const int Style = pMenus->DoSettingsDropDown(&Control, g_Config.m_QmTitleBadgeStyle, aNames.data(), aNames.size(), s_StyleState, {}, &g_Config.m_QmTitleBadgeStyle, nullptr, &Row);
+					if(!ReadOnly && Style != g_Config.m_QmTitleBadgeStyle)
 					{
-						const auto NewStyle = Style == 1 ? EQmTitleBadgeStyle::SUN : EQmTitleBadgeStyle::MOON;
-						g_Config.m_QmTitleBadgeColor = color_cast<ColorHSLA>(ColorRGBA(QmTitleBadgeDefaultColor(NewStyle))).Pack(false);
+						// 默认配色跟随日月；用户自定义过的颜色在切换形状时保留。
+						const auto OldStyle = g_Config.m_QmTitleBadgeStyle == 1 ? EQmTitleBadgeStyle::SUN : EQmTitleBadgeStyle::MOON;
+						const unsigned OldDefault = color_cast<ColorHSLA>(ColorRGBA(QmTitleBadgeDefaultColor(OldStyle))).Pack(false);
+						g_Config.m_QmTitleBadgeStyle = Style;
+						if(g_Config.m_QmTitleBadgeColor == OldDefault)
+						{
+							const auto NewStyle = Style == 1 ? EQmTitleBadgeStyle::SUN : EQmTitleBadgeStyle::MOON;
+							g_Config.m_QmTitleBadgeColor = color_cast<ColorHSLA>(ColorRGBA(QmTitleBadgeDefaultColor(NewStyle))).Pack(false);
+						}
 					}
-				}
-			});
-			RowAction("title-badge-color", [&](CUIRect Row) {
-				static CButtonContainer s_ColorReset;
-				SSettingsContentMetrics ColorMetrics = Metrics;
-				ColorMetrics.m_LineSpacing = 0.0f;
-				pMenus->DoLine_ColorPicker(&s_ColorReset, ColorMetrics, &Row, Localize("Title color"), &g_Config.m_QmTitleBadgeColor,
-					ColorRGBA(QmTitleBadgeDefaultColor(QmTitleDraftAppearance().m_Style)), false, nullptr, false, false);
-			});
-			RowAction("title-badge-opacity", [&](CUIRect Row) {
-				pMenus->DoSettingsScrollbarOption(Page, Tab, "qm-title-opacity", &g_Config.m_QmTitleOpacity, &g_Config.m_QmTitleOpacity, &Row, Localize("Title opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-			});
+				});
+				RowAction("title-badge-color", [&](CUIRect Row) {
+					static CButtonContainer s_ColorReset;
+					SSettingsContentMetrics ColorMetrics = Metrics;
+					ColorMetrics.m_LineSpacing = 0.0f;
+					pMenus->DoLine_ColorPicker(&s_ColorReset, ColorMetrics, &Row, Localize("Title color"), &g_Config.m_QmTitleBadgeColor,
+						ColorRGBA(QmTitleBadgeDefaultColor(QmTitleDraftAppearance().m_Style)), false, nullptr, false, false);
+				});
+				RowAction("title-badge-opacity", [&](CUIRect Row) {
+					pMenus->DoSettingsScrollbarOption(Page, Tab, "qm-title-opacity", &g_Config.m_QmTitleOpacity, &g_Config.m_QmTitleOpacity, &Row, Localize("Title opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+				});
+			}
 			RowAction("title-badge-save", [&](CUIRect Row) {
 				static CButtonContainer s_SaveAppearance;
 				if(pMenus->DoButton_Menu(&s_SaveAppearance, Localize("Save"), 0, &Row) && Enabled && Auth.TitleAuthenticated() && (!Draft.m_BindName || Draft.m_Name.GetString()[0]))

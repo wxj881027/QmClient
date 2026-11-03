@@ -75,6 +75,16 @@ TEST(StrCopy, CopyUnterminatedSource)
 	EXPECT_STREQ(aExactBuf, "aaaaaaaa");
 }
 
+TEST(StrCopy, ShortSourceStopsAtTerminatorInLargerDestination)
+{
+	const char aSource[] = {'o', 'k', '\0'};
+	std::array<char, 64> aDestination;
+	aDestination.fill('!');
+	EXPECT_EQ(str_copy(aDestination.data(), aSource, aDestination.size()), 2);
+	EXPECT_STREQ(aDestination.data(), "ok");
+	EXPECT_EQ(aDestination[3], '!');
+}
+
 TEST(StrCopy, CopyArray)
 {
 	std::array<char, 512> aBuf;

@@ -15,7 +15,8 @@ namespace
 {
 	int NextGroupDelayMs()
 	{
-		return (30 + secure_rand_below(61)) * 1000;
+		// 组间随机等待放大三倍，组内句间隔仍由状态机保持 3 秒。
+		return (30 + secure_rand_below(61)) * 3000;
 	}
 }
 

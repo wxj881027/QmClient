@@ -89,3 +89,33 @@ TEST(QmNameplatePartLayout, HookPlaceholderReservesOnlyVerticalSpace)
 	EXPECT_FALSE(Part.ShiftOnInvis());
 	EXPECT_EQ(Part.LayoutSize(), vec2(0.0f, 33.0f));
 }
+
+TEST(QmNameplatePartLayout, VisibleTopFollowsTheRenderedLineCenter)
+{
+	CPartLayout Part;
+	EXPECT_FLOAT_EQ(Part.VisibleTop(100.0f, 33.0f), 69.5f);
+	// 同行有更高的部件时，文字依旧按整行高度居中。
+	EXPECT_FLOAT_EQ(Part.VisibleTop(100.0f, 60.0f), 56.0f);
+}
+
+TEST(QmNameplatePartLayout, MovingTheRowMovesItsVisibleTopByTheSameDistance)
+{
+	CPartLayout Part;
+	const float OriginalTop = Part.VisibleTop(100.0f, 33.0f);
+	EXPECT_FLOAT_EQ(Part.VisibleTop(140.0f, 33.0f), OriginalTop + 40.0f);
+	EXPECT_FLOAT_EQ(Part.VisibleTop(80.0f, 33.0f), OriginalTop - 20.0f);
+}
+
+TEST(QmNameplatePartLayout, HiddenPlaceholdersDoNotRaiseTheVisibleTop)
+{
+	CPartLayout Part;
+	Part.SetPrivacyHidden(true);
+	EXPECT_EQ(Part.VisibleTop(100.0f, 33.0f), std::numeric_limits<float>::infinity());
+	Part.SetPrivacyHidden(false);
+	Part.SetEnabled(false);
+	Part.SetReserveLineHeight(true);
+	EXPECT_TRUE(Part.HasLayout());
+	EXPECT_EQ(Part.VisibleTop(100.0f, 33.0f), std::numeric_limits<float>::infinity());
+	Part.SetEnabled(true);
+	EXPECT_FLOAT_EQ(Part.VisibleTop(100.0f, 33.0f), 69.5f);
+}

@@ -727,11 +727,24 @@ public:
 		bool m_SecondaryPressedNext = false;
 		float m_SecondaryActivationTime = 0.0f;
 		vec2 m_SecondaryActivationDelta = vec2(0.0f, 0.0f);
+		bool m_DirectTracking = false;
+		bool m_DirectBlocked = false;
+		bool m_DirectStarted = false;
+		bool m_DirectCancelled = false;
+		bool m_DirectMoved = false;
+		bool m_DirectLongPress = false;
+		bool m_DirectDragging = false;
+		bool m_DirectScrolling = false;
+		IInput::CTouchFinger m_DirectFinger{};
+		std::chrono::nanoseconds m_DirectPressTime{};
+		vec2 m_DirectStartPosition = vec2(0.0f, 0.0f);
+		vec2 m_DirectWindowSize = vec2(0.0f, 0.0f);
 
 	public:
 		bool m_AnyPressed = false;
 		bool m_PrimaryPressed = false;
 		bool m_SecondaryPressed = false;
+		bool m_TapReleased = false;
 		vec2 m_PrimaryPosition = vec2(-1.0f, -1.0f);
 		vec2 m_PrimaryDelta = vec2(0.0f, 0.0f);
 		vec2 m_ScrollAmount = vec2(0.0f, 0.0f);
@@ -862,6 +875,15 @@ private:
 	// 会在同一帧读到同一次按下/抬起，产生双重点击。
 	bool m_ButtonActivatedThisFrame = false;
 	CTouchState m_TouchState;
+	bool m_DirectTouchInput = false;
+	const void *m_pTouchDragId = nullptr;
+	CScrollRegion *m_pTouchScrollRegion = nullptr;
+	EUiWheelOwnerPriority m_TouchScrollPriority = EUiWheelOwnerPriority::PAGE;
+	bool m_TouchScrollHorizontal = false;
+	bool m_TouchScrollRegionSeen = false;
+	vec2 m_TouchScrollDelta = vec2(0.0f, 0.0f);
+	void UpdateDirectTouchState(CTouchState &State) const;
+	void CancelTouchItem();
 	bool m_MouseSlow = false;
 	bool m_MouseLock = false;
 	const void *m_pMouseLockId = nullptr;
@@ -1047,7 +1069,12 @@ public:
 	bool GaussianBlurTargetReady() const { return m_GaussianBlurPrepared && m_GaussianBlurTarget.IsValid(); }
 	IGraphics::CRenderTargetHandle GaussianBlurTarget() const { return m_GaussianBlurTarget; }
 
-	void SetEnabled(bool Enabled) { m_Enabled = Enabled; }
+	void SetEnabled(bool Enabled)
+	{
+		if(m_Enabled && !Enabled)
+			CancelTouchInput();
+		m_Enabled = Enabled;
+	}
 	bool Enabled() const { return m_Enabled; }
 	void BeginRenderOnly();
 	void EndRenderOnly();
@@ -1230,7 +1257,15 @@ public:
 	bool MouseHovered(const CUIRect *pRect) const;
 	void RegisterPassiveHotItem(const void *pId, const CUIRect *pRect);
 	void ConvertMouseMove(float *pX, float *pY, IInput::ECursorType CursorType) const;
-	void UpdateTouchState(CTouchState &State) const;
+	void UpdateTouchState(CTouchState &State, bool AllowDirectTouch = true) const;
+	void SetDirectTouchInput(bool Enabled);
+	bool DirectTouchInput() const { return m_DirectTouchInput; }
+	bool TouchInputActive() const { return m_DirectTouchInput && m_TouchState.m_AnyPressed; }
+	// 拖动控件在处理新按下前认领；同一手指离开矩形后仍归原控件，直到松手或中断。
+	bool CaptureTouchDrag(const void *pId, const CUIRect *pRect);
+	void CancelTouchInput();
+	void RegisterTouchScrollRegion(CScrollRegion *pRegion, const CUIRect *pRect, bool Horizontal, EUiWheelOwnerPriority Priority, bool Eligible);
+	vec2 ConsumeTouchScroll(CScrollRegion *pRegion);
 	void SetMouseSlow(bool MouseSlow) { m_MouseSlow = MouseSlow; }
 
 	bool ConsumeHotkey(EHotkey Hotkey);
@@ -1646,7 +1681,8 @@ class CUiScopedMeasurement
 	CUi *m_pUi;
 
 public:
-	explicit CUiScopedMeasurement(CUi *pUi, bool Enabled = true) : m_pUi(Enabled ? pUi : nullptr)
+	explicit CUiScopedMeasurement(CUi *pUi, bool Enabled = true) :
+		m_pUi(Enabled ? pUi : nullptr)
 	{
 		if(m_pUi != nullptr)
 			m_pUi->BeginRenderOnly();
@@ -1666,7 +1702,8 @@ class CUiScopedBackgroundRender
 	bool m_ContentDraw;
 
 public:
-	explicit CUiScopedBackgroundRender(CUi *pUi, bool ContentDraw = false) : m_pUi(pUi), m_ContentDraw(ContentDraw) { m_pUi->BeginBackgroundRender(m_ContentDraw); }
+	explicit CUiScopedBackgroundRender(CUi *pUi, bool ContentDraw = false) :
+		m_pUi(pUi), m_ContentDraw(ContentDraw) { m_pUi->BeginBackgroundRender(m_ContentDraw); }
 	~CUiScopedBackgroundRender() { m_pUi->EndBackgroundRender(m_ContentDraw); }
 	CUiScopedBackgroundRender(const CUiScopedBackgroundRender &) = delete;
 	CUiScopedBackgroundRender &operator=(const CUiScopedBackgroundRender &) = delete;
