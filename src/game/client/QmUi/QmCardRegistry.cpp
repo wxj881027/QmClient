@@ -720,7 +720,9 @@ namespace qm_card_registry
 			const auto *pDefault = FindByStableId(pStableId);
 			if(pDefault == nullptr)
 				continue;
-			Model.MoveToTab(pStableId, pDefault->m_pDefaultTab, pDefault->m_DefaultColumn == ECardColumn::Full ? 0 : pDefault->m_DefaultColumn == ECardColumn::Right ? 2 : 1, pDefault->m_DefaultOrder);
+			Model.MoveToTab(pStableId, pDefault->m_pDefaultTab, pDefault->m_DefaultColumn == ECardColumn::Full ? 0 : pDefault->m_DefaultColumn == ECardColumn::Right ? 2 :
+																						   1,
+				pDefault->m_DefaultOrder);
 			Changed = true;
 		}
 		return Changed;

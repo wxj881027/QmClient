@@ -381,10 +381,10 @@ bool crashdump_launch_reporter_if_available(const char *report_path)
 #include "log.h"
 
 #include <fcntl.h>
-#include <signal.h>
-#include <unistd.h>
 #include <ucontext.h>
+#include <unistd.h>
 
+#include <csignal>
 #include <cstdio>
 #include <iterator>
 

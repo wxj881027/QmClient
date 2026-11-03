@@ -12,46 +12,46 @@
 
 namespace
 {
-struct SFakeStack
-{
-	std::map<uintptr_t, uintptr_t> m_Values;
-};
+	struct SFakeStack
+	{
+		std::map<uintptr_t, uintptr_t> m_Values;
+	};
 
-bool FakeReadMemory(uintptr_t Address, uintptr_t *pValue, void *pUser)
-{
-	SFakeStack *pStack = static_cast<SFakeStack *>(pUser);
-	const auto It = pStack->m_Values.find(Address);
-	if(It == pStack->m_Values.end())
-		return false;
-	*pValue = It->second;
-	return true;
-}
+	bool FakeReadMemory(uintptr_t Address, uintptr_t *pValue, void *pUser)
+	{
+		SFakeStack *pStack = static_cast<SFakeStack *>(pUser);
+		const auto It = pStack->m_Values.find(Address);
+		if(It == pStack->m_Values.end())
+			return false;
+		*pValue = It->second;
+		return true;
+	}
 
-// 每层 frame pointer 记录上一层的 frame pointer 与返回地址，与 AAPCS64/x86-64 一致。
-void PushFrame(SFakeStack &Stack, uintptr_t Frame, uintptr_t NextFrame, uintptr_t ReturnAddress)
-{
-	Stack.m_Values[Frame] = NextFrame;
-	Stack.m_Values[Frame + sizeof(uintptr_t)] = ReturnAddress;
-}
+	// 每层 frame pointer 记录上一层的 frame pointer 与返回地址，与 AAPCS64/x86-64 一致。
+	void PushFrame(SFakeStack &Stack, uintptr_t Frame, uintptr_t NextFrame, uintptr_t ReturnAddress)
+	{
+		Stack.m_Values[Frame] = NextFrame;
+		Stack.m_Values[Frame + sizeof(uintptr_t)] = ReturnAddress;
+	}
 
-SCrashFatalReport MakeReport()
-{
-	SCrashFatalReport Report = {};
-	Report.m_pProgramName = "QmClient";
-	Report.m_pVersion = "3.13.0";
-	Report.m_pPlatform = "android arm64";
-	Report.m_pStartTime = "2026-11-03 19-12-00";
-	Report.m_pGraphicsBackend = "Vulkan";
-	Report.m_Pid = 4242;
-	Report.m_Signal = SIGSEGV;
-	Report.m_SignalCode = 1;
-	Report.m_FaultAddress = 0x1234;
-	Report.m_Pc = 0xabcdef;
-	Report.m_Sp = 0x7000;
-	Report.m_Fp = 0x8000;
-	Report.m_Lr = 0x9999;
-	return Report;
-}
+	SCrashFatalReport MakeReport()
+	{
+		SCrashFatalReport Report = {};
+		Report.m_pProgramName = "QmClient";
+		Report.m_pVersion = "3.13.0";
+		Report.m_pPlatform = "android arm64";
+		Report.m_pStartTime = "2026-11-03 19-12-00";
+		Report.m_pGraphicsBackend = "Vulkan";
+		Report.m_Pid = 4242;
+		Report.m_Signal = SIGSEGV;
+		Report.m_SignalCode = 1;
+		Report.m_FaultAddress = 0x1234;
+		Report.m_Pc = 0xabcdef;
+		Report.m_Sp = 0x7000;
+		Report.m_Fp = 0x8000;
+		Report.m_Lr = 0x9999;
+		return Report;
+	}
 } // namespace
 
 TEST(QmCrashdumpSignalName, KnownSignalsUseTheirCanonicalName)
