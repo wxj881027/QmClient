@@ -135,7 +135,7 @@ void CQmMobileSpectator::RenderIsland(const vec2 &Screen)
 	const CUIRect Nominal = {(Screen.x - IslandWidth) * 0.5f, Screen.y - 46.0f, IslandWidth, 32.0f};
 
 	const auto Scope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::MobileIsland, Nominal);
-	DrawButtonSurface(Nominal, ColorRGBA(0.0f, 0.0f, 0.0f, 0.40f), Nominal.h * 0.5f);
+	DrawButtonSurface(Nominal, ui_token::color::SURFACE_OVERLAY, Nominal.h * 0.5f);
 	SLabelProperties IslandProps;
 	IslandProps.m_EllipsisAtEnd = true;
 	IslandProps.m_MaxWidth = Nominal.w - 16.0f;
@@ -188,7 +188,7 @@ bool CQmMobileSpectator::MobileVoteBarVisible() const
 void CQmMobileSpectator::RenderMobileVoteBar(const SQmMobileVoteBarLayout &Layout)
 {
 	CVoting &Voting = GameClient()->m_Voting;
-	DrawButtonSurface(Layout.m_Panel, ColorRGBA(0.0f, 0.0f, 0.0f, 0.45f), 10.0f);
+	DrawButtonSurface(Layout.m_Panel, ui_token::color::NEUTRAL_BLACK.WithMultipliedAlpha(0.45f), 10.0f);
 
 	char aBuf[256];
 	str_format(aBuf, sizeof(aBuf), Localize("%ds left"), maximum(0, Voting.SecondsLeft()));
@@ -639,7 +639,7 @@ void CQmMobileSpectator::OnRender()
 		Graphics()->MapScreen(0.0f, 0.0f, Screen.x, Screen.y);
 		const auto Geometry = Layout(Screen);
 		const CUIRect &ChatButton = Geometry.m_aButtons[CHAT];
-		DrawButtonSurface(ChatButton, ColorRGBA(0.0f, 0.0f, 0.0f, 0.32f), 12.0f);
+		DrawButtonSurface(ChatButton, ui_token::color::NEUTRAL_BLACK.WithMultipliedAlpha(0.32f), 12.0f);
 		SLabelProperties Props;
 		Props.m_StopAtEnd = true;
 		Props.m_MinimumFontSize = 6.0f;
@@ -690,10 +690,10 @@ void CQmMobileSpectator::OnRender()
 	// 拖动取景时整块画面都是操作面，摇杆不再绘制，也避免误以为只能推摇杆。
 	if(!DragCamera)
 	{
-		DrawButtonSurface(Geometry.m_Joystick, ColorRGBA(0.0f, 0.0f, 0.0f, 0.18f), 52.0f);
+		DrawButtonSurface(Geometry.m_Joystick, ui_token::color::NEUTRAL_BLACK.WithMultipliedAlpha(0.18f), 52.0f);
 		const vec2 Knob = Geometry.m_Joystick.Center() + m_Touch.JoystickDirection() * 34.0f;
 		const CUIRect KnobRect = {Knob.x - 18.0f, Knob.y - 18.0f, 36.0f, 36.0f};
-		KnobRect.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.32f), IGraphics::CORNER_ALL, 18.0f);
+		KnobRect.Draw(ui_token::color::NEUTRAL_WHITE.WithMultipliedAlpha(0.32f), IGraphics::CORNER_ALL, 18.0f);
 	}
 	// 顶部投票条压在触控按钮下方、不抢按钮位置（横幅居中偏上）。
 	if(MobileVoteBarVisible())
@@ -714,7 +714,7 @@ void CQmMobileSpectator::OnRender()
 		const auto &Rect = Geometry.m_aButtons[i];
 		// 取景按钮在拖动模式下点亮，等同于“当前状态”指示，不额外加文案。
 		const bool ActiveButton = i == CAMERA_MODE && DragCamera;
-		DrawButtonSurface(Rect, ActiveButton ? Accent.WithAlpha(0.45f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), 12.0f);
+		DrawButtonSurface(Rect, ActiveButton ? Accent.WithAlpha(0.45f) : ui_token::color::NEUTRAL_BLACK.WithMultipliedAlpha(0.25f), 12.0f);
 		SLabelProperties Props;
 		Props.m_StopAtEnd = true;
 		Props.m_MinimumFontSize = 6.0f;
