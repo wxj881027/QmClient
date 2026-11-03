@@ -11,6 +11,9 @@
 #include <test/support/qm_open_link_probe.h>
 
 #include <algorithm>
+#include <cstdio>
+#include <cstdlib>
+#include <exception>
 #include <fstream>
 #include <functional>
 #include <sstream>
@@ -210,6 +213,34 @@ int main(int argc, const char **argv)
 		return *Result;
 	::testing::InitGoogleTest(&argc, const_cast<char **>(argv));
 	GTEST_FLAG_SET(death_test_style, "threadsafe");
+	// terminate 兜底：异常漏出测试体时把当前用例名打到 stderr（无缓冲）。
+	std::set_terminate([] {  // NOLINT
+		const char *pSuite = "unknown";
+		const char *pTest = "unknown";
+		if(const auto *pInfo = ::testing::UnitTest::GetInstance()->current_test_info())
+		{
+			pSuite = pInfo->test_suite_name();
+			pTest = pInfo->name();
+		}
+		std::fprintf(stderr, "FATAL: uncaught exception while running %s.%s\n", pSuite, pTest);
+		if(auto pCurrent = std::current_exception())
+		{
+			try
+			{
+				std::rethrow_exception(pCurrent);
+			}
+			catch(const std::exception &e)
+			{
+				std::fprintf(stderr, "FATAL: what(): %s\n", e.what());
+			}
+			catch(...)
+			{
+				std::fprintf(stderr, "FATAL: non-std exception\n");
+			}
+		}
+		std::fflush(stderr);
+		std::abort();
+	});
 	net_init();
 	return RUN_ALL_TESTS();
 }
