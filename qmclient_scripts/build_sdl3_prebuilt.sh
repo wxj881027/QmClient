@@ -5,6 +5,10 @@
 # 平台取值：windows linux macos ios android webasm
 # 说明：
 #   * Linux 切片建库前会先打 cmake/PatchSDL3X11.cmake 的修复（预编译后没有源码可改）。
+#   * Linux 切片必须在 glibc <= 2.35 的环境里构建（例如 ubuntu-22.04 容器）。在更新的
+#     glibc 上构建会把 asinf/atan2f/log10f/acosf/sqrtf 记成新版本符号，CI runner
+#     （ubuntu-24.04 / glibc 2.39）链接期就会 undefined reference；用
+#     readelf --version-info 复核最高依赖应不超过 2.35。
 #   * macOS/iOS 需要 Xcode；webasm 需要 emsdk；Android 需要 NDK。
 #   * 产物直接写进 ddnet-libs/sdl/<平台>/...
 set -euo pipefail

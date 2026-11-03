@@ -81,7 +81,7 @@ namespace qm_chat_bubble
 			const float VerticalSlack = Height * 0.5f - TextSize.y * 0.5f - InnerInset;
 			if(SideSlack > 0.0f && VerticalSlack > 0.0f)
 				Radius = std::min(Radius, SideSlack + VerticalSlack + InnerInset +
-							 std::sqrt(2.0f * SideSlack * VerticalSlack));
+								  std::sqrt(2.0f * SideSlack * VerticalSlack));
 			Stroke = 1.2f;
 			TailHeight = 7.0f;
 			TailWidth = 6.0f;
