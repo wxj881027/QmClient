@@ -458,15 +458,14 @@ class CTClient : public CComponent
 	int m_FriendAutoRefreshPrevEnabled = -1;
 	int m_FriendAutoRefreshPrevSeconds = -1;
 	void CheckFriendOnline();
-	// 本服进服通知和自动问候共享同一份出入状态。
+	// 本服进服通知和自动问候共享服务端提示的出入状态。
 	qm_friend_notify::CEnterTracker m_FriendEnterTracker;
 	int m_FriendEnterPrevEnabled = -1;
-	int m_FriendEnterPrevIgnoreClan = -1;
 	int m_FriendEnterPrevDummy = -1;
 	uint64_t m_FriendEnterPrevRevision = 0;
-	float m_FriendEnterNextCheck = 0.0f;
 	qm_friend_notify::CGreetQueue m_FriendEnterPending;
 	void ResetFriendEnter();
+	bool SyncFriendEnterSettings();
 	void CheckFriendEnterGreet();
 
 	bool m_QmAspectApplyPending = false;
@@ -487,6 +486,7 @@ public:
 	void OnWindowResize() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
 	void OnChatMessage(const CNetMsg_Sv_Chat *pMsg, int Connection);
+	void HandleFriendEnterMessage(int Sender, int Team, const char *pMessage);
 	void OnConsoleInit() override;
 	void OnUpdate() override;
 	void OnRender() override;
