@@ -67,6 +67,8 @@ public class ClientActivity extends SDLActivity {
 		}
 
 		super.onCreate(savedInstanceState);
+		// 先落系统退出记录：原生搬运逻辑随后就要扫描报告目录，晚于它就得等下次启动。
+		QmCrashExitInfo.collect(this);
 		mediaExporter = new QmMediaExporter(this, savedInstanceState);
 	}
 

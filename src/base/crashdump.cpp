@@ -144,7 +144,64 @@ size_t crashdump_walk_frame_chain(FS_CRASH_READ_MEMORY pReadMemory, void *pUser,
 	return Count;
 }
 
+const char *crashdump_find_module(const SCrashModuleRange *pModules, size_t NumModules, uintptr_t Address, uintptr_t *pOffset)
+{
+	if(pModules == nullptr || Address == 0)
+		return nullptr;
+
+	for(size_t i = 0; i < NumModules; i++)
+	{
+		if(Address >= pModules[i].m_Start && Address < pModules[i].m_End)
+		{
+			if(pOffset != nullptr)
+				*pOffset = Address - pModules[i].m_Start;
+			return pModules[i].m_aName;
+		}
+	}
+	return nullptr;
+}
+
+size_t crashdump_select_stale_reports(const time_t *pTimes, size_t NumReports, size_t MaxKeep, size_t *pIndices, size_t MaxIndices)
+{
+	if(pTimes == nullptr || pIndices == nullptr || MaxIndices == 0 || NumReports <= MaxKeep)
+		return 0;
+
+	const size_t StaleCount = NumReports - MaxKeep;
+	const size_t Count = StaleCount < MaxIndices ? StaleCount : MaxIndices;
+
+	// 移动端报告数量在十位数，直接逐个挑最旧的，避免在崩溃路径引入额外内存。
+	for(size_t i = 0; i < Count; i++)
+	{
+		size_t Best = NumReports;
+		for(size_t j = 0; j < NumReports; j++)
+		{
+			bool AlreadyPicked = false;
+			for(size_t k = 0; k < i; k++)
+			{
+				if(pIndices[k] == j)
+				{
+					AlreadyPicked = true;
+					break;
+				}
+			}
+			if(AlreadyPicked)
+				continue;
+			if(Best == NumReports || pTimes[j] < pTimes[Best])
+				Best = j;
+		}
+		if(Best == NumReports)
+			break;
+		pIndices[i] = Best;
+	}
+	return Count;
+}
+
 size_t crashdump_append_frame_lines(char *pBuffer, size_t BufferSize, size_t Length, const uintptr_t *pFrames, size_t NumFrames)
+{
+	return crashdump_append_frame_lines(pBuffer, BufferSize, Length, pFrames, NumFrames, nullptr, 0);
+}
+
+size_t crashdump_append_frame_lines(char *pBuffer, size_t BufferSize, size_t Length, const uintptr_t *pFrames, size_t NumFrames, const SCrashModuleRange *pModules, size_t NumModules)
 {
 	if(pBuffer == nullptr || BufferSize == 0)
 		return 0;
@@ -161,7 +218,12 @@ size_t crashdump_append_frame_lines(char *pBuffer, size_t BufferSize, size_t Len
 
 	for(size_t i = 0; i < NumFrames && Length < BufferSize - 1; i++)
 	{
-		Written = str_format(pBuffer + Length, (int)(BufferSize - Length), "  #%02zu 0x%016llX\n", i, (unsigned long long)pFrames[i]);
+		uintptr_t Offset = 0;
+		const char *pModule = crashdump_find_module(pModules, NumModules, pFrames[i], &Offset);
+		if(pModule != nullptr)
+			Written = str_format(pBuffer + Length, (int)(BufferSize - Length), "  #%02zu 0x%016llX %s+0x%llX\n", i, (unsigned long long)pFrames[i], pModule, (unsigned long long)Offset);
+		else
+			Written = str_format(pBuffer + Length, (int)(BufferSize - Length), "  #%02zu 0x%016llX\n", i, (unsigned long long)pFrames[i]);
 		if(Written <= 0)
 			break;
 		Length += (size_t)Written;
@@ -289,6 +351,7 @@ bool crashdump_launch_reporter_if_available(const char *report_path)
 #include <unistd.h>
 #include <ucontext.h>
 
+#include <cstdio>
 #include <iterator>
 
 static char gs_aAndroidReportPath[IO_MAX_PATH_LENGTH] = "";
@@ -319,6 +382,65 @@ static void AndroidBuildReportPath(const char *pLogPath, char *pBuffer, size_t B
 	str_append(pBuffer, "_fatal_report.txt", (int)BufferSize);
 }
 
+// 模块表在初始化阶段（进程健康）填充，信号处理器只做纯内存查表。
+static SCrashModuleRange gs_aAndroidModules[64];
+static size_t gs_NumAndroidModules = 0;
+
+static void AndroidAddModule(uintptr_t Start, uintptr_t End, const char *pPath)
+{
+	const char *pName = str_rchr(pPath, '/');
+	pName = pName != nullptr ? pName + 1 : pPath;
+	if(pName[0] == '\0')
+		return;
+
+	// 同一模块有多个映射，合并成一个范围，基址取最小值即 ELF 装载基址。
+	for(size_t i = 0; i < gs_NumAndroidModules; i++)
+	{
+		if(str_comp(gs_aAndroidModules[i].m_aName, pName) == 0)
+		{
+			if(Start < gs_aAndroidModules[i].m_Start)
+				gs_aAndroidModules[i].m_Start = Start;
+			if(End > gs_aAndroidModules[i].m_End)
+				gs_aAndroidModules[i].m_End = End;
+			return;
+		}
+	}
+	if(gs_NumAndroidModules >= std::size(gs_aAndroidModules))
+		return;
+
+	SCrashModuleRange &Range = gs_aAndroidModules[gs_NumAndroidModules++];
+	Range.m_Start = Start;
+	Range.m_End = End;
+	str_copy(Range.m_aName, pName, sizeof(Range.m_aName));
+}
+
+static void AndroidLoadModuleRanges()
+{
+	gs_NumAndroidModules = 0;
+	FILE *pFile = fopen("/proc/self/maps", "r");
+	if(pFile == nullptr)
+		return;
+
+	char aLine[512];
+	while(fgets(aLine, sizeof(aLine), pFile) != nullptr)
+	{
+		unsigned long long Start = 0;
+		unsigned long long End = 0;
+		char aPermissions[8] = "";
+		char aPath[384] = "";
+		// 行格式："start-end perms offset dev inode pathname"，路径是最后一个字段。
+		if(sscanf(aLine, "%llx-%llx %7s %*s %*s %*s %383s", &Start, &End, aPermissions, aPath) != 4)
+			continue;
+		// 只有可执行映射才可能出现在栈帧里。
+		if(aPermissions[2] != 'x')
+			continue;
+		if(str_find(aPath, ".so") == nullptr)
+			continue;
+		AndroidAddModule((uintptr_t)Start, (uintptr_t)End, aPath);
+	}
+	fclose(pFile);
+}
+
 static void AndroidWriteAll(int File, const char *pData, size_t Size)
 {
 	while(Size > 0)
@@ -331,6 +453,7 @@ static void AndroidWriteAll(int File, const char *pData, size_t Size)
 	}
 }
 
+#if !defined(__arm__)
 static bool AndroidReadMemory(uintptr_t Address, uintptr_t *pValue, void *pUser)
 {
 	(void)pUser;
@@ -340,6 +463,7 @@ static bool AndroidReadMemory(uintptr_t Address, uintptr_t *pValue, void *pUser)
 	*pValue = *reinterpret_cast<const uintptr_t *>(Address);
 	return true;
 }
+#endif
 
 static void AndroidFatalSignalHandler(int Signal, siginfo_t *pInfo, void *pContext)
 {
@@ -408,20 +532,25 @@ static void AndroidFatalSignalHandler(int Signal, siginfo_t *pInfo, void *pConte
 		}
 	}
 
+	size_t AppendedLength = 0;
+#if defined(__arm__)
+	// 32 位 ARM 的 frame pointer 布局随编译选项变化，宁可明确说明也不给错栈。
+	str_copy(aBuffer, "Backtrace not collected: 32-bit ARM frame pointer layout is not reliable.\n");
+	AppendedLength = (size_t)str_length(aBuffer);
+#else
 	uintptr_t aFrames[32];
 	const size_t NumFrames = crashdump_walk_frame_chain(AndroidReadMemory, nullptr, Pc, Fp, Sp, aFrames, std::size(aFrames));
 	if(NumFrames > 0)
+		AppendedLength = crashdump_append_frame_lines(aBuffer, sizeof(aBuffer), 0, aFrames, NumFrames, gs_aAndroidModules, gs_NumAndroidModules);
+#endif
+	if(AppendedLength > 0)
 	{
-		const size_t FramesLength = crashdump_append_frame_lines(aBuffer, sizeof(aBuffer), 0, aFrames, NumFrames);
-		if(FramesLength > 0)
+		const int File = open(gs_aAndroidReportPath, O_WRONLY | O_APPEND);
+		if(File >= 0)
 		{
-			const int File = open(gs_aAndroidReportPath, O_WRONLY | O_APPEND);
-			if(File >= 0)
-			{
-				AndroidWriteAll(File, aBuffer, FramesLength);
-				fsync(File);
-				close(File);
-			}
+			AndroidWriteAll(File, aBuffer, AppendedLength);
+			fsync(File);
+			close(File);
 		}
 	}
 
@@ -449,6 +578,7 @@ void crashdump_init_if_available(const char *log_file_path)
 	AndroidBuildReportPath(log_file_path, gs_aAndroidReportPath, sizeof(gs_aAndroidReportPath));
 	str_timestamp(gs_aAndroidStartTime, sizeof(gs_aAndroidStartTime));
 	gs_AndroidPid = pid();
+	AndroidLoadModuleRanges();
 	if(gs_AndroidHandlersInstalled)
 		return;
 

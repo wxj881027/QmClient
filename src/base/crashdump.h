@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <ctime>
 
 /**
  * @defgroup Crash-Dumping Crash Dumping
@@ -168,5 +169,53 @@ size_t crashdump_walk_frame_chain(FS_CRASH_READ_MEMORY pReadMemory, void *pUser,
  * @ingroup Crash-Dumping
  */
 size_t crashdump_append_frame_lines(char *pBuffer, size_t BufferSize, size_t Length, const uintptr_t *pFrames, size_t NumFrames);
+
+/**
+ * 一个已加载模块的地址范围。
+ *
+ * 移动端在初始化阶段（进程健康时）读取 /proc/self/maps 缓存，崩溃处理器只做
+ * 纯内存查表，把裸地址换算成「模块名+偏移」，回报问题时可直接 addr2line。
+ *
+ * @ingroup Crash-Dumping
+ */
+struct SCrashModuleRange
+{
+	uintptr_t m_Start;
+	uintptr_t m_End;
+	char m_aName[64];
+};
+
+/**
+ * 查找包含指定地址的模块。
+ *
+ * @param pOffset 输出相对模块基址的偏移；未命中时不写入。
+ *
+ * @return 模块名；未命中返回 nullptr。
+ *
+ * @ingroup Crash-Dumping
+ */
+const char *crashdump_find_module(const SCrashModuleRange *pModules, size_t NumModules, uintptr_t Address, uintptr_t *pOffset);
+
+/**
+ * 选出超出保留数量的最旧报告，供移动端限制沙盒内的报告总量。
+ *
+ * @param pTimes     每个报告的修改时间。
+ * @param NumReports 报告数量。
+ * @param MaxKeep    保留数量。
+ * @param pIndices   输出待删除索引，按时间从旧到新。
+ * @param MaxIndices 输出容量。
+ *
+ * @return 实际写入的索引数量。
+ *
+ * @ingroup Crash-Dumping
+ */
+size_t crashdump_select_stale_reports(const time_t *pTimes, size_t NumReports, size_t MaxKeep, size_t *pIndices, size_t MaxIndices);
+
+/**
+ * 带模块信息的栈帧输出；未命中模块的地址只输出裸地址。
+ *
+ * @ingroup Crash-Dumping
+ */
+size_t crashdump_append_frame_lines(char *pBuffer, size_t BufferSize, size_t Length, const uintptr_t *pFrames, size_t NumFrames, const SCrashModuleRange *pModules, size_t NumModules);
 
 #endif

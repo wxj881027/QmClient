@@ -273,3 +273,99 @@ TEST(QmCrashdumpFrameLines, FullBufferIsNotOverrun)
 	EXPECT_LE(Length, sizeof(aBuffer));
 	EXPECT_EQ(aBuffer[Length], '\0');
 }
+
+TEST(QmCrashdumpModules, FindsTheModuleContainingTheAddress)
+{
+	SCrashModuleRange aModules[2] = {};
+	aModules[0].m_Start = 0x1000;
+	aModules[0].m_End = 0x2000;
+	str_copy(aModules[0].m_aName, "libfoo.so");
+	aModules[1].m_Start = 0x8000;
+	aModules[1].m_End = 0x9000;
+	str_copy(aModules[1].m_aName, "libDDNet.so");
+
+	uintptr_t Offset = 0;
+	const char *pName = crashdump_find_module(aModules, 2, 0x8fff, &Offset);
+	ASSERT_NE(pName, nullptr);
+	EXPECT_STREQ(pName, "libDDNet.so");
+	EXPECT_EQ(Offset, 0xfffu);
+
+	// 范围是左闭右开，正好落在 end 上的地址不属于该模块。
+	EXPECT_EQ(crashdump_find_module(aModules, 2, 0x9000, &Offset), nullptr);
+	EXPECT_EQ(crashdump_find_module(aModules, 2, 0xfff, &Offset), nullptr);
+	EXPECT_EQ(crashdump_find_module(aModules, 2, 0, &Offset), nullptr);
+	EXPECT_EQ(crashdump_find_module(nullptr, 2, 0x1500, &Offset), nullptr);
+}
+
+TEST(QmCrashdumpModules, ModuleOffsetIsRelativeToTheModuleBase)
+{
+	SCrashModuleRange Module = {};
+	Module.m_Start = 0x400000;
+	Module.m_End = 0x500000;
+	str_copy(Module.m_aName, "libbar.so");
+
+	uintptr_t Offset = 1;
+	ASSERT_NE(crashdump_find_module(&Module, 1, 0x400000, &Offset), nullptr);
+	EXPECT_EQ(Offset, 0u);
+
+	// 不关心偏移时仍然返回模块名。
+	EXPECT_STREQ(crashdump_find_module(&Module, 1, 0x400100, nullptr), "libbar.so");
+}
+
+TEST(QmCrashdumpFrameLines, FrameLinesCarryModuleAndOffsetWhenKnown)
+{
+	SCrashModuleRange Module = {};
+	Module.m_Start = 0x100000;
+	Module.m_End = 0x200000;
+	str_copy(Module.m_aName, "libDDNet.so");
+
+	const uintptr_t aFrames[] = {0x100040, 0x900000};
+	char aBuffer[512];
+	const size_t Length = crashdump_append_frame_lines(aBuffer, sizeof(aBuffer), 0, aFrames, 2, &Module, 1);
+
+	ASSERT_LT(Length, sizeof(aBuffer));
+	const std::string Text(aBuffer);
+	EXPECT_NE(Text.find("#00 0x0000000000100040 libDDNet.so+0x40"), std::string::npos);
+	// 未命中模块的地址只输出裸地址，不编造模块名。
+	EXPECT_NE(Text.find("#01 0x0000000000900000\n"), std::string::npos);
+	EXPECT_EQ(Text.find("#01 0x0000000000900000 libDDNet.so"), std::string::npos);
+}
+
+TEST(QmCrashdumpStaleReports, KeepsTheNewestEntriesWithinTheLimit)
+{
+	const time_t aTimes[] = {100, 500, 300, 200, 400};
+	size_t aIndices[8] = {};
+	const size_t Count = crashdump_select_stale_reports(aTimes, 5, 3, aIndices, 8);
+
+	ASSERT_EQ(Count, 2u);
+	// 最旧的两份是 100 和 200。
+	EXPECT_EQ(aIndices[0], 0u);
+	EXPECT_EQ(aIndices[1], 3u);
+}
+
+TEST(QmCrashdumpStaleReports, NothingIsSelectedWhenTheLimitIsNotExceeded)
+{
+	const time_t aTimes[] = {100, 200};
+	size_t aIndices[4] = {};
+	EXPECT_EQ(crashdump_select_stale_reports(aTimes, 2, 3, aIndices, 4), 0u);
+	EXPECT_EQ(crashdump_select_stale_reports(aTimes, 2, 2, aIndices, 4), 0u);
+}
+
+TEST(QmCrashdumpStaleReports, OutputIsCappedByTheProvidedBuffer)
+{
+	const time_t aTimes[] = {10, 20, 30, 40};
+	size_t aIndices[1] = {};
+	const size_t Count = crashdump_select_stale_reports(aTimes, 4, 1, aIndices, 1);
+
+	ASSERT_EQ(Count, 1u);
+	EXPECT_EQ(aIndices[0], 0u);
+}
+
+TEST(QmCrashdumpStaleReports, MissingInputsAreHandled)
+{
+	time_t aTimes[2] = {};
+	size_t aIndices[2] = {};
+	EXPECT_EQ(crashdump_select_stale_reports(nullptr, 2, 0, aIndices, 2), 0u);
+	EXPECT_EQ(crashdump_select_stale_reports(aTimes, 2, 0, nullptr, 2), 0u);
+	EXPECT_EQ(crashdump_select_stale_reports(aTimes, 2, 0, aIndices, 0), 0u);
+}

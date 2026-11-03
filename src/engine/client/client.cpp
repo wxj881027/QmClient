@@ -464,6 +464,77 @@ static void ExportPendingQmMobileCrashReports(IStorage *pStorage)
 	if(Exported > 0)
 		log_info("crash_reporter", "exported %d mobile crash report(s) to Downloads/QmClient", Exported);
 }
+
+// 崩溃循环会不断产生新报告，沙盒目录需要自我约束；公共目录由用户自行管理。
+static constexpr int QM_MOBILE_CRASH_REPORT_MAX_KEEP = 10;
+
+struct SQmMobileCrashPruneSearch
+{
+	struct SEntry
+	{
+		char m_aPath[IO_MAX_PATH_LENGTH] = "";
+		time_t m_TimeModified = 0;
+	};
+
+	SEntry m_aEntries[32];
+	int m_NumEntries = 0;
+};
+
+static int FindQmMobileCrashReportCallback(const CFsFileInfo *pInfo, int IsDir, int Type, void *pUser)
+{
+	(void)Type;
+	if(IsDir || pInfo == nullptr || pUser == nullptr)
+		return 0;
+	// 己方信号处理器的报告与系统退出记录都算，两者共用同一套导出流程。
+	if(str_endswith_nocase(pInfo->m_pName, "_fatal_report.txt") == nullptr &&
+		str_endswith_nocase(pInfo->m_pName, "_exit_report.txt") == nullptr)
+		return 0;
+
+	SQmMobileCrashPruneSearch *pSearch = static_cast<SQmMobileCrashPruneSearch *>(pUser);
+	constexpr int NumSlots = (int)(sizeof(pSearch->m_aEntries) / sizeof(pSearch->m_aEntries[0]));
+	if(pSearch->m_NumEntries >= NumSlots)
+		return 0;
+
+	SQmMobileCrashPruneSearch::SEntry &Entry = pSearch->m_aEntries[pSearch->m_NumEntries];
+	str_format(Entry.m_aPath, (int)sizeof(Entry.m_aPath), "%s/%s", gs_pQmCrashDumpDir, pInfo->m_pName);
+	Entry.m_TimeModified = pInfo->m_TimeModified;
+	pSearch->m_NumEntries++;
+	return 0;
+}
+
+static void PruneQmMobileCrashReports(IStorage *pStorage)
+{
+	if(pStorage == nullptr)
+		return;
+
+	SQmMobileCrashPruneSearch Search;
+	pStorage->ListDirectoryInfo(IStorage::TYPE_SAVE, gs_pQmCrashDumpDir, FindQmMobileCrashReportCallback, &Search);
+	if(Search.m_NumEntries <= QM_MOBILE_CRASH_REPORT_MAX_KEEP)
+		return;
+
+	time_t aTimes[32];
+	for(int i = 0; i < Search.m_NumEntries; i++)
+		aTimes[i] = Search.m_aEntries[i].m_TimeModified;
+
+	size_t aIndices[32];
+	const size_t StaleCount = crashdump_select_stale_reports(aTimes, (size_t)Search.m_NumEntries, QM_MOBILE_CRASH_REPORT_MAX_KEEP, aIndices, sizeof(aIndices) / sizeof(aIndices[0]));
+	int Removed = 0;
+	for(size_t i = 0; i < StaleCount; i++)
+	{
+		const char *pPath = Search.m_aEntries[aIndices[i]].m_aPath;
+		// 标记一并删除，避免留下指向已删报告的 .pending。
+		char aMarker[IO_MAX_PATH_LENGTH + 16];
+		str_format(aMarker, sizeof(aMarker), "%s.pending", pPath);
+		pStorage->RemoveFile(aMarker, IStorage::TYPE_SAVE);
+		str_format(aMarker, sizeof(aMarker), "%s.exported", pPath);
+		pStorage->RemoveFile(aMarker, IStorage::TYPE_SAVE);
+		if(pStorage->RemoveFile(pPath, IStorage::TYPE_SAVE))
+			Removed++;
+	}
+
+	if(Removed > 0)
+		log_info("crash_reporter", "pruned %d old mobile crash report(s), keeping the newest %d", Removed, QM_MOBILE_CRASH_REPORT_MAX_KEEP);
+}
 #endif
 
 static bool ReadQmLifecycleMarkerStartedAt(IStorage *pStorage, int64_t &StartedAt)
@@ -4648,6 +4719,7 @@ void CClient::Run()
 {
 #if defined(CONF_PLATFORM_ANDROID)
 	ExportPendingQmMobileCrashReports(Storage());
+	PruneQmMobileCrashReports(Storage());
 #endif
 	QmProbeSaveDirectory();
 	m_LocalStartTime = m_GlobalStartTime = time_get();
