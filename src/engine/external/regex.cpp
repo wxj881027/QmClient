@@ -16,7 +16,54 @@ Regex::Regex(Regex&& Other) : data(Other.data) {
 
 Regex::Regex() : data(new Data{{}, "Empty"}) {}
 
+// 低成本结构检查：把明显非法的 pattern 挡在 std::regex 构造之前。
+// 原因不是“不想 catch”，而是部分标准库（实测 macOS/libc++）在构造非法 pattern 时
+// 直接终止进程，栈帧完好但没有 handler 被找到，调用方与包装器内部的 catch 都拿不到
+// 控制权；libstdc++ 则正常抛出 regex_error。与其依赖标准库错误通道，不如自己先拦。
+static bool PatternIsStructurallyValid(const std::string& Pattern) {
+	bool Escaped = false;
+	bool InClass = false;
+	int ParenDepth = 0;
+	for(size_t i = 0; i < Pattern.size(); ++i) {
+		const char C = Pattern[i];
+		if(Escaped) {
+			Escaped = false;
+			continue;
+		}
+		if(C == '\\') {
+			Escaped = true;
+			continue;
+		}
+		if(InClass) {
+			if(C == ']')
+				InClass = false;
+			continue;
+		}
+		if(C == '[')
+			InClass = true;
+		else if(C == '(')
+			++ParenDepth;
+		else if(C == ')' && --ParenDepth < 0)
+			return false;
+		else if(C == '{') {
+			// {n,m} 之外的花括号在 ECMAScript 里非法，部分标准库直接抛/终止。
+			const size_t Close = Pattern.find('}', i + 1);
+			if(Close == std::string::npos)
+				return false;
+			for(size_t k = i + 1; k < Close; ++k)
+				if((Pattern[k] < '0' || Pattern[k] > '9') && Pattern[k] != ',')
+					return false;
+			i = Close;
+		}
+	}
+	return !Escaped && !InClass && ParenDepth == 0;
+}
+
 Regex::Regex(const std::string& pattern, bool caseInsensitive) : data(new Data) {
+	if(!PatternIsStructurallyValid(pattern)) {
+		data->error = "Unsupported pattern";
+		return;
+	}
 	try {
 		std::regex_constants::syntax_option_type Flags = std::regex::ECMAScript;
 		if(caseInsensitive)
