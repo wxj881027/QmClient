@@ -4449,6 +4449,32 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 			SetIconMode(false);
 		}
 
+#if !defined(CONF_VIDEORECORDER)
+		// 手机端没有视频渲染（Android 的 VIDEORECORDER 关闭），但必须有导出入口：
+		// 打开系统文件对话框，把选中的 demo 另存到手机可见的位置。
+		if(qm_mobile_spectator::Enabled() && pSelectedItem != nullptr && !pSelectedItem->m_IsDir)
+		{
+			CUIRect ExportButton;
+			RightGroup.VSplitRight(ButtonWidth, &RightGroup, &ExportButton);
+			if(RightGroup.w > TightSpacing)
+				RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
+			SetIconMode(true);
+			static CButtonContainer s_ExportDemoButton;
+			if(DoButton_Menu_QmIcon(&s_ExportDemoButton, EQmIcon::DOWNLOAD_SIMPLE, FONT_ICON_DOWNLOAD_SIMPLE, 0, &ExportButton))
+			{
+				SetIconMode(false);
+				// 只导出当前选中的这个文件，直接落进系统下载目录，不弹目录浏览。
+				char aDir[IO_MAX_PATH_LENGTH];
+				Storage()->GetCompletePath(pSelectedItem->m_StorageType, m_aCurrentDemoFolder[0] == '\0' ? pBaseFolder : m_aCurrentDemoFolder, aDir, sizeof(aDir));
+				char aPath[IO_MAX_PATH_LENGTH];
+				str_format(aPath, sizeof(aPath), "%s/%s", aDir, pSelectedItem->m_aFilename);
+				GameClient()->m_QmMobileSpectator.ExportFile(aPath);
+				return;
+			}
+			GameClient()->m_Tooltips.DoToolTip(&s_ExportDemoButton, &ExportButton, Localize("Export to downloads"));
+			SetIconMode(false);
+		}
+#endif
 #if defined(CONF_VIDEORECORDER)
 		// render demo / pose button
 		if(CanRenderDemo)

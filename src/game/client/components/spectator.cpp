@@ -744,8 +744,10 @@ void CSpectator::OnRender()
 
 	Graphics()->MapScreen(0, 0, Width, Height);
 
-	Ui()->RenderGaussianBlur(SpectatorRect, PanelAlpha, IGraphics::CORNER_ALL, 20.0f);
-	SpectatorRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f * PanelAlpha), IGraphics::CORNER_ALL, 20.0f);
+	// 圆角跟面板一起放大：手机上面板本身就放大了一圈，20 单位看着几乎是直角。
+	const float PanelRadius = QmUiMobilePlatform() ? ui_token::radius::CARD * 2.0f : 20.0f;
+	Ui()->RenderGaussianBlur(SpectatorRect, PanelAlpha, IGraphics::CORNER_ALL, PanelRadius);
+	SpectatorRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f * PanelAlpha), IGraphics::CORNER_ALL, PanelRadius);
 
 	// clamp mouse position to selector area
 	m_SelectorMouse = qm_spectator_layout::ClampMouse(SelectorLayout, ScreenCenter, m_SelectorMouse);
@@ -1077,7 +1079,9 @@ void CSpectator::OnRender()
 	// QmClient：按编号查找传送点的输入行（与远程一致，画在选择器内容之上、光标之下）。
 	if(!ViewModeActive)
 		RenderTeleSearch(ScreenCenter, SelectorLayout.m_SearchRow, SelectorLayout.m_Status, ContentAlpha, MousePressed);
-	RenderTools()->RenderCursor(ScreenCenter + m_SelectorMouse, 48.0f, ContentAlpha);
+	// 手机是手指直接点，不画鼠标箭头；桌面上高亮框仍跟着光标走。
+	if(!QmUiMobilePlatform())
+		RenderTools()->RenderCursor(ScreenCenter + m_SelectorMouse, 48.0f, ContentAlpha);
 }
 
 void CSpectator::FindTele()

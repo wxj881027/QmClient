@@ -21,6 +21,7 @@
 #include <engine/shared/video.h>
 #endif
 
+#include <SDL3/SDL_timer.h>
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_vulkan.h>
 #include <vulkan/vk_platform.h>
@@ -5123,9 +5124,25 @@ public:
 
 	[[nodiscard]] bool CreateSurface(SDL_Window *pWindow)
 	{
-		if(!SDL_Vulkan_CreateSurface(pWindow, m_VKInstance, nullptr, &m_VKPresentSurface))
+		// 安卓的 ANativeWindow 是异步挂到窗口上的：应用刚启动、刚回到前台，或刚
+		// 重建 Activity 时 SDL 还拿不到有效窗口，这里一失败就直接判致命错误会让
+		// 整个客户端弹「Graphics Error」退出。短暂重试几次把这个抖动吃掉。
+		// 冷启动时窗口表面可能要等到应用真正可见才就绪（锁屏、后台启动、动画期间），
+		// 最多等 ~3 秒；这段时间足够覆盖系统把 ANativeWindow 挂上来的抖动。
+		constexpr int MAX_SURFACE_ATTEMPTS = 60;
+		bool Created = false;
+		for(int Attempt = 0; Attempt < MAX_SURFACE_ATTEMPTS && !Created; ++Attempt)
 		{
-			dbg_msg("vulkan", "error from sdl: %s", SDL_GetError());
+			Created = SDL_Vulkan_CreateSurface(pWindow, m_VKInstance, nullptr, &m_VKPresentSurface);
+			if(!Created)
+			{
+				dbg_msg("vulkan", "creating vulkan surface failed (attempt %d): %s", Attempt + 1, SDL_GetError());
+				if(Attempt + 1 < MAX_SURFACE_ATTEMPTS)
+					SDL_Delay(50);
+			}
+		}
+		if(!Created)
+		{
 			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating a vulkan surface for the SDL window failed.");
 			return false;
 		}

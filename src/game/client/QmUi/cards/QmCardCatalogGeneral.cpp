@@ -286,13 +286,10 @@ namespace qm_card_catalog
 					CUIRect MediaRow;
 					if(Flow.Control("general-mobile-media", GeneralMetrics.m_ButtonHeight, MediaRow))
 					{
-						CUIRect Demos, Videos;
-						MediaRow.VSplitMid(&Demos, &Videos, GeneralMetrics.m_LineSpacing);
-						static CButtonContainer s_Demos, s_Videos;
-						if(pMenus->DoButton_Menu(&s_Demos, Localize("Demos directory"), 0, &Demos))
+						// 手机上的文件位置交给系统文件管理器；导出的文件统一在「下载/QmClient」。
+						static CButtonContainer s_Downloads;
+						if(pMenus->DoButton_Menu(&s_Downloads, Localize("Open downloads folder"), 0, &MediaRow))
 							pMenus->GameClient()->m_QmMobileSpectator.ShowMediaFiles(false);
-						if(pMenus->DoButton_Menu(&s_Videos, Localize("Videos directory"), 0, &Videos))
-							pMenus->GameClient()->m_QmMobileSpectator.ShowMediaFiles(true);
 					}
 					Flow.Space(GeneralMetrics.m_SectionGap);
 				}

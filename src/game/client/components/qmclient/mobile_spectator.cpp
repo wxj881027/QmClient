@@ -563,8 +563,30 @@ bool CQmMobileSpectator::OnTouchState(std::vector<IInput::CTouchFingerState> &vF
 	return true;
 }
 
+void CQmMobileSpectator::ExportFile(const char *pPath)
+{
+#if defined(CONF_PLATFORM_ANDROID)
+	if(pPath == nullptr || pPath[0] == '\0')
+		return;
+	if(!ExportAndroidMediaFile(pPath))
+		ShowToast(Localize("Export failed"));
+	else
+		ShowToast(Localize("Saved to Downloads/QmClient"));
+#else
+	(void)pPath;
+#endif
+}
+
 void CQmMobileSpectator::ShowMediaFiles(bool Videos)
 {
+#if defined(CONF_PLATFORM_ANDROID)
+	// 现代路径：目录浏览交给系统文件管理器，不再自绘文件列表对话框。
+	(void)Videos;
+	if(!OpenAndroidDownloadsFolder())
+		ShowToast(Localize("Export failed"));
+	return;
+#endif
+
 #if defined(CONF_PLATFORM_ANDROID)
 	using namespace qmclient::media_paths;
 	const auto Kind = Videos ? EKind::VIDEOS : EKind::DEMOS;

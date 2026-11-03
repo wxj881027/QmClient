@@ -1027,7 +1027,19 @@ void CHudEditor::OnRender()
 		const CUIRect Outline = {Selected.m_Rect.x - 1.0f, Selected.m_Rect.y - 1.0f, Selected.m_Rect.w + 2.0f, Selected.m_Rect.h + 2.0f};
 		Outline.Draw(ColorRGBA(0.25f, 0.62f, 1.0f, 0.18f), IGraphics::CORNER_ALL, 4.0f);
 		MobileScaleHandle.Draw(ColorRGBA(0.25f, 0.62f, 1.0f, 0.9f), IGraphics::CORNER_ALL, 6.0f);
-		Ui()->DoLabel(&MobileScaleHandle, FontIcons::FONT_ICON_ARROW_UP_RIGHT_FROM_SQUARE, 9.0f, TEXTALIGN_MC);
+		// 右下角三根斜线：各平台通用的「拖这里缩放」角标，不依赖某个图标语义。
+		{
+			Graphics()->LinesBegin();
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.95f);
+			const vec2 Corner = {MobileScaleHandle.x + MobileScaleHandle.w - 5.0f, MobileScaleHandle.y + MobileScaleHandle.h - 5.0f};
+			for(int i = 0; i < 3; i++)
+			{
+				const float Offset = 4.5f * i;
+				const IGraphics::CLineItem Grip(Corner.x - 6.0f - Offset, Corner.y, Corner.x, Corner.y - 6.0f - Offset);
+				Graphics()->LinesDraw(&Grip, 1);
+			}
+			Graphics()->LinesEnd();
+		}
 	}
 
 	// 手机上是手指直接点，不画鼠标箭头。

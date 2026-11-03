@@ -66,6 +66,8 @@ public:
 	bool OnTouchState(std::vector<IInput::CTouchFingerState> &vFingers) override;
 	void OnRender() override;
 	void ShowMediaFiles(bool Videos);
+	// 把单个 demo 直接导出到系统「下载/QmClient」，不走目录浏览。
+	void ExportFile(const char *pPath);
 };
 
 #endif
