@@ -97,6 +97,20 @@ namespace
 	constexpr float MENU_MENUBAR_GAP_NEW = 8.0f; // 导航→内容间隙（统一边距基准）
 	constexpr float MENU_MENUBAR_HEIGHT_NEW = MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW + MENU_MENUBAR_GAP_NEW;
 
+	// 手机端菜单页的左右安全区：取整屏宽度的 4%（2640 宽下约 106px），
+	// 设置页壳层也落在同一个矩形里，因此导航栏和所有页面共用这条竖线。
+	// 只缩页面布局矩形，不动 CUi::Screen()，触摸输入仍按整屏坐标换算。
+	void QmApplyMenuPageSideInset(CUIRect *pRect, float FullWidth)
+	{
+		if(!QmUiMobilePlatform())
+			return;
+		const float Left = std::clamp(FullWidth * 0.04f, 0.0f, FullWidth * 0.5f);
+		const float Right = std::max(Left, FullWidth - Left);
+		const float OldRight = pRect->x + pRect->w;
+		pRect->x = std::max(pRect->x, Left);
+		pRect->w = std::max(0.0f, std::min(OldRight, Right) - pRect->x);
+	}
+
 	void FormatStatsPlaytime(int64_t Seconds, bool TotalHours, char *pBuf, size_t BufSize)
 	{
 		Seconds = std::max<int64_t>(0, Seconds);
@@ -2920,7 +2934,12 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	// 与下方内容的间距都和其它页签页一致，卡片也铺到同一条内容线上。
 	const QmMapHistoryUi::SWorkspaceMetrics StatisticsWorkspace = QmMapHistoryUi::WorkspaceMetrics(MainView.h);
 	CUIRect Window = MainView;
-	Window.Margin(StatisticsWorkspace.m_OuterMargin, &Window);
+	// 手机端工作区不再水平内缩：MainView 已对齐设置页壳层，额外缩进会让统计页
+	// 比导航栏窄一圈。只保留上下留白，左右与其它菜单页同线。
+	if(QmUiMobilePlatform())
+		Window.HMargin(StatisticsWorkspace.m_OuterMargin, &Window);
+	else
+		Window.Margin(StatisticsWorkspace.m_OuterMargin, &Window);
 
 	// 与收藏地图页共用的工作区页签：贴在内容顶端、离顶部导航和其它页面同一条基线，
 	// 且不随统计内容滚动；统计数据是第 4 个页签，点其它页签直接跳回收藏地图。
@@ -4297,8 +4316,10 @@ void CMenus::Render()
 	CUIRect Screen = *Ui()->Screen();
 	if((Client()->State() != IClient::STATE_DEMOPLAYBACK && !(GameClient()->m_RankGhost.IsViewModeActive() && !IsActive())) || m_Popup != POPUP_NONE)
 	{
-		// 全局安全区 = 统一边距基准（8px）：菜单内所有页面到窗口四边的基础距离，
+		// 全局安全区 = 统一边距基准：菜单内所有页面到窗口四边的基础距离，
 		// 内部元素（导航胶囊/内容面板）直接对齐安全区边缘，不再叠加额外内缩。
+		// 手机端的额外左右留白由各页面布局矩形处理（见 QmApplyMenuPageSideInset），
+		// 不要改 Screen()/这里：触摸映射按整屏换算，内缩 Screen 会让点击错位。
 		Screen.Margin(8.0f, &Screen);
 	}
 
@@ -4334,7 +4355,7 @@ void CMenus::Render()
 					if(RequestedPopup == POPUP_QM_UPDATE)
 						GameClient()->m_TClient.m_UpdatePopupRequested = false;
 				};
-				const float Scale = std::clamp(g_Config.m_QmUiScale / 100.0f, 0.5f, 2.0f);
+				const float Scale = std::clamp(QmUiScaleFactor(g_Config.m_QmUiScale), 0.5f, 2.0f);
 				const auto Kind = RequestedPopup == POPUP_QM_NEW_FEATURES ? ESettingsSecondaryPanelKind::NEWS : ESettingsSecondaryPanelKind::UPDATE;
 				const CUIRect Panel = ResolveSettingsSecondaryPanelRect(Screen, Kind, Scale);
 				Ui()->DoPopupMenu(pId, Panel.x, Panel.y, Panel.w, Panel.h, this, RequestedPopup == POPUP_QM_NEW_FEATURES ? +[](void *pContext, CUIRect View, bool Active) {
@@ -4406,6 +4427,10 @@ void CMenus::Render()
 			CPerfTimer ShellTimer;
 			CUIRect TabBar, MainView;
 			Screen.HSplitTop(MENU_MENUBAR_HEIGHT_NEW, &TabBar, &MainView);
+			// 手机端所有菜单页统一对齐设置页壳层：导航栏与内容区一起内缩，
+			// 只动布局矩形，触摸映射仍按整屏换算。
+			QmApplyMenuPageSideInset(&TabBar, Screen.w + 16.0f);
+			QmApplyMenuPageSideInset(&MainView, Screen.w + 16.0f);
 			bool NavigationHandedOff;
 			{
 				CPerfTimer StageTimer;
@@ -4530,6 +4555,10 @@ void CMenus::Render()
 			CPerfTimer ShellTimer;
 			CUIRect TabBar, MainView;
 			Screen.HSplitTop(MENU_MENUBAR_HEIGHT_NEW, &TabBar, &MainView);
+			// 手机端所有菜单页统一对齐设置页壳层：导航栏与内容区一起内缩，
+			// 只动布局矩形，触摸映射仍按整屏换算。
+			QmApplyMenuPageSideInset(&TabBar, Screen.w + 16.0f);
+			QmApplyMenuPageSideInset(&MainView, Screen.w + 16.0f);
 			bool NavigationHandedOff;
 			{
 				CPerfTimer StageTimer;
@@ -8475,7 +8504,7 @@ void CMenus::OnRender()
 		CPerfTimer StageTimer;
 		if(IsActive())
 			Ui()->RenderBackButton();
-		if(!GameClient()->m_GameConsole.IsActive() && (IsActive() || GameClient()->m_Spectator.PlaybackControlsActive() || QmPoseMapPopupOpen() || QmPoseHudActive()))
+		if(!QmUiMobilePlatform() && !GameClient()->m_GameConsole.IsActive() && (IsActive() || GameClient()->m_Spectator.PlaybackControlsActive() || QmPoseMapPopupOpen() || QmPoseHudActive()))
 			RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
 		LogPerfStage(Client(), "cursor_render", StageTimer.ElapsedMs());
 	}

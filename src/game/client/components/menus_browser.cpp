@@ -4747,7 +4747,11 @@ int CMenus::MapWorkspaceTab()
 void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 {
 	const QmMapHistoryUi::SWorkspaceMetrics Layout = QmMapHistoryUi::WorkspaceMetrics(View.h);
-	View.Margin(Layout.m_OuterMargin, &View);
+	// 手机端左右不留额外外缩：面板直接对齐导航栏，上下留白保持不变。
+	if(QmUiMobilePlatform())
+		View.HMargin(Layout.m_OuterMargin, &View);
+	else
+		View.Margin(Layout.m_OuterMargin, &View);
 
 	char aSavesPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, SAVES_FILE, aSavesPath, sizeof(aSavesPath));

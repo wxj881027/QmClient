@@ -6615,6 +6615,13 @@ foreach(target ${TARGETS})
   if(OUR_FLAGS)
     target_compile_options(${target} PRIVATE ${OUR_FLAGS})
   endif()
+  # Android 17 的 bionic 对 strlen/memchr 做运行期 FORTIFY 检查，会和字符串工具
+  # （str_length / str_utf8_*）在 -O2 下的对象大小推导打架：启动即在 CFriends
+  # 构造函数里 abort（FORTIFY: memchr: prevented 63-byte read from 8-byte buffer）。
+  # NDK 工具链默认往 FLAGS 注入 -D_FORTIFY_SOURCE=2，这里用 -U 抵消（后者生效）。
+  if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    target_compile_options(${target} PRIVATE -U_FORTIFY_SOURCE)
+  endif()
   if(DEFINE_FORTIFY_SOURCE_3 OR DEFINE_FORTIFY_SOURCE)
     if(MINGW)
       target_compile_definitions(${target} PRIVATE $<$<NOT:$<CONFIG:Debug>>:_FORTIFY_SOURCE=0>) # Currently broken in MinGW, see https://sourceforge.net/p/mingw-w64/discussion/723798/thread/b9d24f041f/

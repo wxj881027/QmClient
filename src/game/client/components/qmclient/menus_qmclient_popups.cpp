@@ -42,7 +42,7 @@ void CMenus::RenderSponsorNudge(CUIRect Screen)
 		return;
 	}
 	const float DeltaSeconds = GameClient()->UiRuntimeV2()->FrameDt();
-	const float UiScale = g_Config.m_QmUiScale / 100.0f;
+	const float UiScale = QmUiScaleFactor(g_Config.m_QmUiScale);
 	// 顶部居中；主体高度取 HUD 动态岛同一档设计高度的量级，保证「一眼是灵动岛」。
 	// 倒计时环整条都在主体外轮廓外侧，所以外边距还要留出环的宽度。
 	const float BodyH = 26.0f * UiScale;
@@ -186,7 +186,7 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 	Ctx.m_pTheme = &PanelTheme;
 	CUiScopedSurfaceText PanelText(TextRender(), PanelTheme.m_Surface);
 	const ColorRGBA PanelForeground = ResolveConfiguredTextColor(PanelText.Surface());
-	const float UiScale = std::clamp(g_Config.m_QmUiScale / 100.0f, 0.5f, 2.0f);
+	const float UiScale = std::clamp(QmUiScaleFactor(g_Config.m_QmUiScale), 0.5f, 2.0f);
 	const float HeadlineSize = ui_token::font::HEADLINE * UiScale;
 	const float BodySize = ui_token::font::BODY * UiScale;
 	const float TipSize = ui_token::font::TIP * UiScale;
@@ -498,7 +498,7 @@ void CMenus::RenderQmUpdatePopup(CUIRect Screen)
 	IUiContext Ctx = SettingsUiContext("qm_update_popup");
 	Ctx.m_pTheme = &PanelTheme;
 	CUiScopedSurfaceText PanelText(TextRender(), PanelTheme.m_Surface);
-	const float RequestedScale = std::clamp(g_Config.m_QmUiScale / 100.0f, 0.5f, 2.0f);
+	const float RequestedScale = std::clamp(QmUiScaleFactor(g_Config.m_QmUiScale), 0.5f, 2.0f);
 	const float ViewportWidth = std::max(0.0f, Ui()->Screen()->w - 16.0f);
 	const CUIRect Panel = Screen;
 	static ui_widget::SSecondaryPanelLabel s_Title, s_TitleCaption;

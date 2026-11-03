@@ -346,9 +346,20 @@ void CScrollRegion::DrawBackground(const CUIRect &ScrollbarBg)
 	}
 }
 
+// 同一次按下只允许一个滚动区域接管内容拖动：嵌套时内层先于外层 End，
+// 于是内层列表能滑动、外层页面不会被带着一起滚。
+static const CScrollRegion *s_pContentDragOwner = nullptr;
+
 void CScrollRegion::DoContentDrag()
 {
 	SQmScrollContentDragState &Drag = m_ScrollState.ContentDragState();
+	if(s_pContentDragOwner != nullptr && s_pContentDragOwner != this)
+	{
+		Drag = {};
+		m_ContentDragVelocity = 0.0f;
+		m_ContentDragLastMoveTime = 0;
+		return;
+	}
 	// 手机以外的平台没有内容拖动语义：这里必须清空，避免旧候选状态在新一帧继续生效。
 	if(!QmScrollRegionContentDragEnabled())
 	{
@@ -359,6 +370,8 @@ void CScrollRegion::DoContentDrag()
 	}
 	if(!Ui()->MouseButton(0))
 	{
+		if(s_pContentDragOwner == this)
+			s_pContentDragOwner = nullptr;
 		// 松手：刚拖过且速度够快就交给滚动状态做惯性衰减。
 		const bool MovedRecently = m_ContentDragLastMoveTime != 0 && (time_get() - m_ContentDragLastMoveTime) <= time_freq() / 10;
 		if(Drag.m_Active && MovedRecently && std::abs(m_ContentDragVelocity) >= QM_SCROLL_FLING_MIN_VELOCITY)
@@ -404,6 +417,7 @@ void CScrollRegion::DoContentDrag()
 		if(Ui()->ActiveItem() != nullptr)
 			Ui()->SetActiveItem(nullptr);
 		Drag.m_Active = true;
+		s_pContentDragOwner = this;
 	}
 	// 内容跟手：向上滑动内容即增大滚动偏移，允许越界以便松手后回弹。
 	m_ScrollState.SetOffset(Drag.m_PressOffset - DragDistance * QM_SCROLL_TOUCH_DRAG_GAIN, ScrollMetrics(), ScrollConfig(), true);
