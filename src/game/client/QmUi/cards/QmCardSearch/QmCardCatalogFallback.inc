@@ -395,12 +395,12 @@ namespace
 		{Localizable("Chat message style"), nullptr, "发言样式"},
 		{Localizable("Custom title"), nullptr, "自定义头衔"},
 		{Localizable("Exact bound nickname"), nullptr, "要绑定的完整昵称"},
+		{Localizable("Fluid"), nullptr, "流体 液体 蓝青"},
 		{Localizable("Limit the title to the exact nickname below."), nullptr, "仅在使用下方昵称时显示头衔。"},
 		{Localizable("Normal"), nullptr, "正常"},
 		{Localizable("Only show with this nickname"), nullptr, "仅在使用此昵称时显示"},
 		{Localizable("Permanent access; up to 4 online IP addresses"), nullptr, "永久资格，最多 4 个 IP 同时在线"},
 		{Localizable("Platinum highlight"), nullptr, "铂金高光"},
-		{Localizable("Fluid"), nullptr, "流体 液体 蓝青"},
 		{Localizable("Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate."), nullptr, "使用赞助兑换码解锁自定义称号，称号会显示在聊天与名牌上。"},
 		{Localizable("Saved with your title and shared with other QmClient players."), nullptr, "随头衔一起保存，并同步给其他 QmClient 玩家。"},
 		{Localizable("See you at the next checkpoint."), nullptr, "下个检查点见。"},
@@ -415,8 +415,11 @@ namespace
 namespace
 {
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_deck_qmclient_contributors_title_display[] = {
+		{Localizable("Fluid"), nullptr, "流体 液体 蓝青"},
 		{Localizable("Moon"), nullptr, "月亮"},
 		{Localizable("Nameplate title size"), nullptr, "名牌头衔大小"},
+		{Localizable("Normal"), nullptr, "正常"},
+		{Localizable("Platinum highlight"), nullptr, "铂金高光"},
 		{Localizable("Show dummy title locally"), nullptr, "本机显示分身头衔"},
 		{Localizable("Show main tee title locally"), nullptr, "本机显示本体头衔"},
 		{Localizable("Show sponsor chat effects locally"), nullptr, "本机显示赞助者发言特效"},

@@ -330,6 +330,8 @@ namespace
 		{Localizable("Show player stats HUD"), nullptr, "显示玩家统计 HUD"},
 		{Localizable("Progress bar location"), nullptr, "进度条位置 独立条 统计内嵌 灵动岛地图进度"},
 		{Localizable("Dynamic Island"), nullptr, "灵动岛地图进度"},
+		{Localizable("Standalone"), nullptr, "独立条 独立显示"},
+		{Localizable("Player stats"), nullptr, "玩家统计 统计内嵌"},
 		{Localizable("Vertical position"), nullptr, "垂直位置"},
 		{nullptr, "qm_player_stats_hud", nullptr},
 		{nullptr, "qm_player_stats_map_progress", nullptr},
