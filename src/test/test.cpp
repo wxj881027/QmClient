@@ -214,7 +214,7 @@ int main(int argc, const char **argv)
 	::testing::InitGoogleTest(&argc, const_cast<char **>(argv));
 	GTEST_FLAG_SET(death_test_style, "threadsafe");
 	// terminate 兜底：异常漏出测试体时把当前用例名打到 stderr（无缓冲）。
-	std::set_terminate([] {  // NOLINT
+	std::set_terminate([] { // NOLINT
 		const char *pSuite = "unknown";
 		const char *pTest = "unknown";
 		if(const auto *pInfo = ::testing::UnitTest::GetInstance()->current_test_info())
