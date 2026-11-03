@@ -6977,6 +6977,9 @@ public:
 		// 否则会一路落到“图形错误”对话框（之前是直接段错误）。
 		if(Ret != 0 && m_pWindow != nullptr && m_VKInstance != VK_NULL_HANDLE && m_VKDevice != VK_NULL_HANDLE)
 		{
+			// 旧 swapchain 可能还挂在失效的 surface 上：先把它真正销毁，再销毁 surface，
+			// 否则既违反 VUID-vkDestroySurfaceKHR-surface-01266，也会让第二次尝试拿到旧句柄。
+			DestroySwapChain(true);
 			DestroySurface();
 			if(CreateSurface(m_pWindow))
 			{
@@ -6984,6 +6987,13 @@ public:
 					dbg_msg("vulkan", "recreating swap chain on a fresh surface.");
 				OldSwapChain = VK_NULL_HANDLE;
 				Ret = InitVulkanSwapChain(OldSwapChain);
+				if(Ret == 0)
+				{
+					// 第一次失败时 InitVulkanSwapChain 已经把 GFX_ERROR_TYPE_INIT 记成致命错误，
+					// 运行期不会再复位；这里重建成功后必须清掉，否则下一条命令直接早退退出进程。
+					ResetInitializationDiagnostics();
+					dbg_msg("vulkan", "swap chain recreated after surface loss, rendering resumed.");
+				}
 			}
 		}
 

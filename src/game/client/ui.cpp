@@ -891,7 +891,10 @@ void CUi::Update()
 			// 触摸按下必须在本帧就参与按钮判定。延迟到下一帧会让第一次点击只移动
 			// 光标、第二次才命中（手机菜单和聊天翻译按钮实测都是两下）。
 			// 按住期间也要保持左键为按下，否则滚动条/滑块的拖拽只持续一帧。
-			if(m_TouchState.m_AnyPressed)
+			// 但多指手势（双指滚动、三指截图）不能算「按住左键」：否则滚动全程
+			// MouseButton(0) 为真，DoButtonLogic 会把手指下的控件记成 ActiveItem，
+			// 松手就顺手激活了被滚过去的卡片。
+			if(m_TouchState.m_PrimaryPressed || (m_TouchState.m_AnyPressed && Input()->TouchFingerStates().size() <= 1))
 			{
 				m_UpdatedMouseButtons |= 1;
 			}

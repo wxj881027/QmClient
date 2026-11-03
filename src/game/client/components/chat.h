@@ -736,7 +736,7 @@ public:
 		m_PendingChatMessages.InvalidateConnection(Connection);
 		m_OutgoingAnnotations.InvalidateConnection(Connection);
 	}
-	EChatSendResult SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation, const char *pLocalOriginal = nullptr, int Connection = -1);
+	EChatSendResult SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation, const char *pLocalOriginal = nullptr, int Connection = -1, bool ManualInput = false);
 	// Sends a chat message using the specified connection (main/dummy).
 	bool SendChatOnConn(int Conn, int Team, const char *pLine, bool AllowWhitespaceOnly = false, bool HandleLocalSaveForLoadCommand = true, const char *pLocalOriginal = nullptr);
 

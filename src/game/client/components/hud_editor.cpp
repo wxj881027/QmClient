@@ -12,6 +12,7 @@
 
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/components/controls.h>
+#include <game/client/components/qmclient/mobile_touch_rules.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
@@ -39,6 +40,12 @@ void CHudEditor::ResetRuntimeState()
 {
 	m_DraggingElement = -1;
 	m_DragGrabOffset = vec2(0.0f, 0.0f);
+	// 手机缩放状态一并复位：否则中途退出编辑器会带着上次的起始距离，
+	// 下次进来第一帧就把元素缩放改成一个随机值并落盘。
+	m_MobileSelectedElement = -1;
+	m_MobileScaling = false;
+	m_MobileScaleStartPercent = 100.0f;
+	m_MobileScaleStartDistance = 1.0f;
 	m_vVisibleElements.clear();
 	m_aVisibleBounds = {};
 }
@@ -771,9 +778,8 @@ void CHudEditor::OnRender()
 		Graphics()->GetScreen(&PrevX0, &PrevY0, &PrevX1, &PrevY1);
 		Graphics()->MapScreen(pUiScreen->x, pUiScreen->y, pUiScreen->x + pUiScreen->w, pUiScreen->y + pUiScreen->h);
 		RenderJumpHintTextEditor(*pUiScreen);
-		// 手机上是手指直接点，不画鼠标箭头。
-		if(!QmUiMobilePlatform())
-			Graphics()->MapScreen(PrevX0, PrevY0, PrevX1, PrevY1);
+		// 屏幕映射必须无条件归位：漏掉这一句会把坐标系留在 UI 空间，污染后续帧。
+		Graphics()->MapScreen(PrevX0, PrevY0, PrevX1, PrevY1);
 		Ui()->FinishCheck();
 		m_InteractionUiActive = false;
 		return;
@@ -843,15 +849,19 @@ void CHudEditor::OnRender()
 	// 手机：先处理缩放把手，再处理拖动/选中。拖把手时不允许同时拖动元素。
 	if(QmUiMobilePlatform())
 	{
-		if(m_MobileScaling && MobileSelectedIndex >= 0)
+		if(m_MobileScaling && MobileSelectedIndex < 0)
+		{
+			// 选中的元素中途消失（切 Spectate/换层）：必须退出缩放，否则永远挡住拖动。
+			m_MobileScaling = false;
+		}
+		else if(m_MobileScaling && MobileSelectedIndex >= 0)
 		{
 			const SVisibleElement &Selected = m_vVisibleElements[MobileSelectedIndex];
 			SElementState &State = EnsureState(Selected.m_Element);
 			const vec2 Center = {Selected.m_Rect.x + Selected.m_Rect.w * 0.5f, Selected.m_Rect.y + Selected.m_Rect.h * 0.5f};
 			const float Distance = maximum(1.0f, length(vec2(Ui()->MouseX(), Ui()->MouseY()) - Center));
 			BeginCustomPosition(State, Selected, *pUiScreen);
-			const float Ratio = Distance / maximum(1.0f, m_MobileScaleStartDistance);
-			State.m_ScalePercent = std::clamp(round_to_int(m_MobileScaleStartPercent * Ratio), MIN_SCALE_PERCENT, MAX_SCALE_PERCENT);
+			State.m_ScalePercent = qm_mobile_touch::ScaledPercentByDistance(round_to_int(m_MobileScaleStartPercent), m_MobileScaleStartDistance, Distance, MIN_SCALE_PERCENT, MAX_SCALE_PERCENT);
 			ClampStateToScreen(State, Selected.m_BaseWidth, Selected.m_BaseHeight, Selected.m_StateOffsetX, Selected.m_StateOffsetY);
 			m_DirtyLayout = true;
 			if(!Ui()->MouseButton(0))

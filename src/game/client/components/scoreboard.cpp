@@ -2183,8 +2183,6 @@ void CScoreboard::OnRender()
 		CUIRect ScoreboardContentBody = ScoreboardContent;
 		ScoreboardContentBody.HSplitTop(TitleHeight, &Title, &ScoreboardContentBody);
 		// 标题保持单行：地图名宽度不够时由 RenderTitle 自动缩字号，不再拆行。
-		const bool StackedTitle = false;
-		CUIRect ControlsRow{};
 		CUIRect SortButton;
 		CUIRect ServerPlayers;
 		CUIRect ScrollButton;
@@ -2200,7 +2198,7 @@ void CScoreboard::OnRender()
 			TitleSplitStyle.m_JustifyContent = EUiAlign::START;
 			static thread_local std::vector<SUiLayoutChild> s_vTitleChildren;
 			std::vector<SUiLayoutChild> &vTitleChildren = s_vTitleChildren;
-			int ChildCount = StackedTitle ? 0 : 1;
+			int ChildCount = 1;
 			if(ShowServerPlayers)
 				++ChildCount;
 			if(ShowScrollButton)
@@ -2209,8 +2207,7 @@ void CScoreboard::OnRender()
 			++ChildCount; // 统计列切换按钮
 			vTitleChildren.assign(ChildCount, SUiLayoutChild{});
 			int ChildIndex = 0;
-			if(!StackedTitle)
-				vTitleChildren[ChildIndex++].m_Style.m_Width = SUiLength::Flex(1.0f);
+			vTitleChildren[ChildIndex++].m_Style.m_Width = SUiLength::Flex(1.0f);
 			if(ShowServerPlayers)
 				vTitleChildren[ChildIndex++].m_Style.m_Width = SUiLength::Px(ServerPlayersWidth);
 			const int ScrollButtonIndex = ShowScrollButton ? ChildIndex++ : -1;
@@ -2220,11 +2217,9 @@ void CScoreboard::OnRender()
 			vTitleChildren[StatisticsButtonIndex].m_Style.m_Width = SUiLength::Px(StatisticsButtonWidth);
 			const int SortButtonIndex = ChildIndex++;
 			vTitleChildren[SortButtonIndex].m_Style.m_Width = SUiLength::Px(SortButtonWidth);
-			const CUIRect &SplitRect = StackedTitle ? ControlsRow : Title;
-			LayoutEngine.ComputeChildren(TitleSplitStyle, CUiV2LegacyAdapter::FromCUIRect(SplitRect), vTitleChildren);
+			LayoutEngine.ComputeChildren(TitleSplitStyle, CUiV2LegacyAdapter::FromCUIRect(Title), vTitleChildren);
 			int BoxIndex = 0;
-			if(!StackedTitle)
-				Title = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[BoxIndex++].m_Box);
+			Title = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[BoxIndex++].m_Box);
 			if(ShowServerPlayers)
 				ServerPlayers = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[BoxIndex++].m_Box);
 			if(ShowScrollButton)

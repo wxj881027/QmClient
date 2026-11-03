@@ -1,5 +1,6 @@
 #include <game/client/components/qmclient/mobile_back.h>
 #include <game/client/components/qmclient/mobile_spectator_controls.h>
+#include <game/client/components/qmclient/mobile_touch_rules.h>
 #include <game/client/components/qmclient/mobile_vote_bar.h>
 
 #include <gtest/gtest.h>
@@ -418,4 +419,40 @@ TEST(QmMobileSpectator, GameplayInputIsReleasedWithoutLosingCameraAndChatFlags)
 	EXPECT_EQ(Input.m_PlayerFlags, PLAYERFLAG_CHATTING | PLAYERFLAG_SPEC_CAM);
 	NeutralizeGameplayInput(Input);
 	EXPECT_EQ(Input.m_Fire, 0);
+}
+
+
+TEST(QmMobileTouchRules, OutsideTapOnlyClosesForShortStillTap)
+{
+	EXPECT_TRUE(qm_mobile_touch::OutsideTapClosesPanel(0.0f, 80));
+	EXPECT_TRUE(qm_mobile_touch::OutsideTapClosesPanel(0.019f, 399));
+	// 滑动（三指截图、边缘起手）不关闭
+	EXPECT_FALSE(qm_mobile_touch::OutsideTapClosesPanel(0.05f, 100));
+	// 长按不关闭
+	EXPECT_FALSE(qm_mobile_touch::OutsideTapClosesPanel(0.0f, 400));
+	// 恰好到阈值也不算点击
+	EXPECT_FALSE(qm_mobile_touch::OutsideTapClosesPanel(0.02f, 100));
+}
+
+TEST(QmMobileTouchRules, OutsideTapArmsOnlyForSingleFingerOutsidePanel)
+{
+	EXPECT_TRUE(qm_mobile_touch::ShouldArmOutsideTap(1, false));
+	// 多指手势（双指滚动、三指截图）不记候选
+	EXPECT_FALSE(qm_mobile_touch::ShouldArmOutsideTap(2, false));
+	EXPECT_FALSE(qm_mobile_touch::ShouldArmOutsideTap(3, false));
+	// 面板内的点击是选择玩家，不是关闭
+	EXPECT_FALSE(qm_mobile_touch::ShouldArmOutsideTap(1, true));
+}
+
+TEST(QmMobileTouchRules, ScalePercentFollowsPointerDistanceAndClamps)
+{
+	// 起始 100%、距离翻倍 -> 200%
+	EXPECT_EQ(qm_mobile_touch::ScaledPercentByDistance(100, 100.0f, 200.0f, 50, 200), 200);
+	// 距离减半 -> 50%
+	EXPECT_EQ(qm_mobile_touch::ScaledPercentByDistance(100, 100.0f, 50.0f, 50, 200), 50);
+	// 超出区间被夹住
+	EXPECT_EQ(qm_mobile_touch::ScaledPercentByDistance(150, 100.0f, 1000.0f, 50, 200), 200);
+	EXPECT_EQ(qm_mobile_touch::ScaledPercentByDistance(150, 100.0f, 0.0f, 50, 200), 50);
+	// 起始距离非法时返回起始值本身
+	EXPECT_EQ(qm_mobile_touch::ScaledPercentByDistance(120, 0.0f, 50.0f, 50, 200), 120);
 }

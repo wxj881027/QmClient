@@ -713,7 +713,8 @@ void CSpectator::OnRender()
 	const float CenterX = Width / 2.0f;
 	const float CenterY = Height / 2.0f + PanelOffsetY;
 	const vec2 ScreenCenter = vec2(CenterX, CenterY);
-	const float TitleHeight = std::clamp(LineHeight * 0.5f, 12.0f, 15.0f);
+	// 分组标题高度也随行高走：上限跟着 LayoutScale 放大，否则手机上标题永远卡在 15。
+	const float TitleHeight = std::clamp(LineHeight * 0.5f, 12.0f * LayoutScale, 15.0f * LayoutScale);
 	const float TitleFontSize = TitleHeight * 0.8f;
 	const float PlayersBottom = StartY + BoxMove + qm_spectator_friends::MaxColumnHeight(DisplayCount, FriendCount, PerLine, LineHeight, TitleHeight);
 	const auto SelectorLayout = qm_spectator_layout::Build(ScreenCenter, ObjWidth, !ViewModeActive, PlayersBottom, 300.0f * LayoutScale);
@@ -829,14 +830,14 @@ void CSpectator::OnRender()
 		TextRender()->Text(CenterX - (ObjWidth - TabInner) + (ObjWidth * 2.0f * 2.0f / 3.0f), TabTop + (TabHeight - BigFontSize) / 2.f, BigFontSize, Localize("Follow"), -1.0f);
 	}
 
-	float x = -(ObjWidth - 35.0f), y = StartY;
+	float x = -(ObjWidth - 35.0f * LayoutScale), y = StartY;
 
 	const auto DrawGroupTitle = [&](const char *pTitle, const ColorRGBA &TitleColor) {
 		const float TitleLeft = CenterX + x - 10.0f + BoxOffset;
 		const float TitleTop = CenterY + y + BoxMove;
 		TextRender()->TextColor(TitleColor.WithMultipliedAlpha(ContentAlpha));
 		TextRender()->Text(TitleLeft, TitleTop + (TitleHeight - TitleFontSize) / 2.0f, TitleFontSize, pTitle, -1.0f);
-		Graphics()->DrawRect(TitleLeft, TitleTop + TitleHeight - 1.0f, 270.0f - BoxOffset, 1.0f,
+		Graphics()->DrawRect(TitleLeft, TitleTop + TitleHeight - 1.0f, RowWidth - BoxOffset, 1.0f,
 			ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * ContentAlpha), IGraphics::CORNER_NONE, 0.0f);
 		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 		y += TitleHeight;
@@ -944,7 +945,7 @@ void CSpectator::OnRender()
 		NameCursor.SetPosition(vec2(CenterX + x + NameOffsetX, CenterY + y + BoxMove + (LineHeight - FontSize) / 2.f));
 		NameCursor.m_FontSize = FontSize;
 		NameCursor.m_Flags |= TEXTFLAG_ELLIPSIS_AT_END;
-		NameCursor.m_LineWidth = 180.0f;
+		NameCursor.m_LineWidth = 180.0f * LayoutScale;
 		const int ClientId = pInfo->m_Id;
 		const bool HideIdentity = !ViewModeActive && GameClient()->ShouldHideStreamerIdentity(ClientId);
 		const bool IsFriend = pInfo->m_Friend;

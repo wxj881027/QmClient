@@ -2,6 +2,7 @@
 
 #include "media_paths.h"
 #include "mobile_back.h"
+#include "mobile_touch_rules.h"
 #include "mobile_vote_bar.h"
 
 #if defined(CONF_PLATFORM_ANDROID)
@@ -376,7 +377,7 @@ bool CQmMobileSpectator::OnTouchState(std::vector<IInput::CTouchFingerState> &vF
 				for(const auto &State : vFingers)
 					MaxMove = maximum(MaxMove, distance(State.m_Position, m_ScoreboardOutsideStart));
 				m_ScoreboardOutsideFinger.reset();
-				if(MaxMove < 0.02f && Held < std::chrono::milliseconds(400))
+				if(qm_mobile_touch::OutsideTapClosesPanel(MaxMove, std::chrono::duration_cast<std::chrono::milliseconds>(Held).count()))
 					GameClient()->m_Scoreboard.SetActive(false);
 			}
 		}
@@ -390,7 +391,7 @@ bool CQmMobileSpectator::OnTouchState(std::vector<IInput::CTouchFingerState> &vF
 			const vec2 Position = It->m_Position * Screen;
 			// 点在面板外 = 关掉计分板，但必须是一次「轻点」：按下就关会让三指下滑截图、
 			// 从边缘起手的手势全部误触发。这里只记录候选，等它抬起时再判断位移与时长。
-			if(Fresh && !GameClient()->m_Scoreboard.MobilePanelContains(It->m_Position) && !m_ScoreboardOutsideFinger.has_value() && vFingers.size() == 1)
+			if(Fresh && !m_ScoreboardOutsideFinger.has_value() && qm_mobile_touch::ShouldArmOutsideTap(static_cast<int>(vFingers.size()), GameClient()->m_Scoreboard.MobilePanelContains(It->m_Position)))
 			{
 				m_ScoreboardOutsideFinger = It->m_Finger;
 				m_ScoreboardOutsideStart = It->m_Position;

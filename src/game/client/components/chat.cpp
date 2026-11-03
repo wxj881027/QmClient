@@ -1806,6 +1806,8 @@ void CChat::CloseChatTargetMenu()
 	if(Ui()->IsPopupOpen(&m_TargetPopupContext))
 		Ui()->ClosePopupMenu(&m_TargetPopupContext, true);
 	m_TargetMenuOpen = false;
+	// 关掉之后这根手指不能再把列表弹回来。
+	m_TouchTargetPressed = false;
 }
 
 CUi::EPopupMenuFunctionResult CChat::PopupChatTargetMenu(void *pContext, CUIRect View, bool Active)
@@ -3628,10 +3630,18 @@ void CChat::OnRender()
 		InputBlockRectValid = true;
 		// 输入行分三段：翻译按钮、发送对象前缀、正文。手机上一个输入行要同时承担
 		// 「切换全体/私聊」和「拉起软键盘」，只有正文区才唤起输入法，点前缀弹出发送对象。
-		// 两个按钮：模式块 + 发送对象块。两块的并集就是原来的前缀区，正文从其后开始。
-		m_InputModeRect = {InputLayout.m_TextStartX - 2.0f, InputContentRect.y, maximum(1.0f, InputModeLabelWidth + 4.0f), InputContentRect.h};
-		m_InputTargetRect = {m_InputModeRect.x + m_InputModeRect.w + 2.0f, InputContentRect.y, InputChannelChipWidth, InputContentRect.h};
-		m_InputPrefixRect = {m_InputModeRect.x, InputContentRect.y, m_InputTargetRect.x + m_InputTargetRect.w - m_InputModeRect.x, InputContentRect.h};
+		// 两个按钮只在手机端存在：桌面保留「全体: 」整块前缀，不能留下隐形热区。
+		if(MobileChannelChips)
+		{
+			m_InputModeRect = {InputLayout.m_TextStartX - 2.0f, InputContentRect.y, maximum(1.0f, InputModeLabelWidth + 4.0f), InputContentRect.h};
+			m_InputTargetRect = {m_InputModeRect.x + m_InputModeRect.w + 2.0f, InputContentRect.y, InputChannelChipWidth, InputContentRect.h};
+		}
+		else
+		{
+			m_InputModeRect = {};
+			m_InputTargetRect = {};
+		}
+		m_InputPrefixRect = {InputLayout.m_TextStartX, InputContentRect.y, maximum(1.0f, InputPrefixWidth), InputContentRect.h};
 		m_InputTextRect = {InputContentRect.x, InputContentRect.y, maximum(1.0f, x + InputLineWidth - InputContentRect.x), InputContentRect.h};
 
 		// 触摸点输入行：正文区移动光标并拉起软键盘；前缀打开发送对象；松手补一次软键盘。
@@ -3668,12 +3678,12 @@ void CChat::OnRender()
 				pMouseSelection->m_ReleaseMouse = vec2(0, 0);
 			}
 		}
-		else if(!AnyChatPopupOpenNow && !HudEditorPreview && PointerPressed() && m_InputModeRect.Inside(InputMousePos))
+		else if(MobileChannelChips && !AnyChatPopupOpenNow && !HudEditorPreview && PointerPressed() && m_InputModeRect.Inside(InputMousePos))
 		{
 			// 点模式块：全体 ↔ 队伍。
 			ToggleChannelMode();
 		}
-		else if(!AnyChatPopupOpenNow && !HudEditorPreview && PointerPressed() && m_InputTargetRect.Inside(InputMousePos))
+		else if(MobileChannelChips && !AnyChatPopupOpenNow && !HudEditorPreview && PointerPressed() && m_InputTargetRect.Inside(InputMousePos))
 		{
 			// 点 ▾ 块：只记一笔，抬手再弹列表（见上面的抬起处理）。
 			m_TouchTargetPressed = true;
@@ -4437,7 +4447,7 @@ bool CChat::TryHandleWhisperCommand(const char *pLine)
 	return true;
 }
 
-CChat::EChatSendResult CChat::SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation, const char *pLocalOriginal, int Connection)
+CChat::EChatSendResult CChat::SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation, const char *pLocalOriginal, int Connection, bool ManualInput)
 {
 	if(Connection < -1 || Connection > IClient::CONN_DUMMY || (Connection >= 0 && (GameClient()->m_aLocalIds[Connection] < 0 || (Connection == IClient::CONN_DUMMY && !Client()->DummyConnected()))))
 		return EChatSendResult::REJECTED;
@@ -4445,7 +4455,9 @@ CChat::EChatSendResult CChat::SendChatQueued(int Team, const char *pLine, bool A
 		return EChatSendResult::HANDLED;
 	if(pLine == nullptr || *str_utf8_skip_whitespaces(pLine) == '\0')
 		return EChatSendResult::REJECTED;
-	if(TryHandleWhisperCommand(pLine))
+	// /w 名字 只在用户手打回车时本地解析：翻译回填、bind、队友频道等自动路径
+	// 直接交给服务器，避免绕过服务端的 whispers 开关与会话记录。
+	if(ManualInput && Team == 0 && TryHandleWhisperCommand(pLine))
 		return EChatSendResult::HANDLED;
 
 	const auto SendSensitive = [&] { return SendChat(Team, pLine, nullptr, Connection); };
@@ -4487,7 +4499,7 @@ CChat::EChatSendResult CChat::SendChatQueued(const char *pLine)
 	{
 		// 自己输入的斜杠指令原样发送，不能再包一层 /w（否则变成 /w "名字" /w ...）。
 		if(pLine != nullptr && pLine[0] == '/')
-			return SendChatQueued(0, pLine, true);
+			return SendChatQueued(0, pLine, true, nullptr, -1, true);
 		if(!WhisperTargetValid())
 		{
 			// 目标已离开时必须丢弃这一条：退回公开频道会把私聊内容发给所有人。
@@ -4497,11 +4509,14 @@ CChat::EChatSendResult CChat::SendChatQueued(const char *pLine)
 			Input()->EnsureScreenKeyboardShown();
 			return EChatSendResult::REJECTED;
 		}
+		// 私聊模式下空输入直接丢弃：否则会向服务器发一条只有目标的空 /w 命令。
+		if(*str_utf8_skip_whitespaces(pLine) == '\0')
+			return EChatSendResult::REJECTED;
 		char aLine[MAX_LINE_LENGTH];
 		if(BuildWhisperCommand(aLine, sizeof(aLine), WhisperTargetName(), pLine))
 			return SendChatQueued(0, aLine, true);
 	}
-	return SendChatQueued(m_Mode == MODE_ALL ? 0 : 1, pLine, true);
+	return SendChatQueued(m_Mode == MODE_ALL ? 0 : 1, pLine, true, nullptr, -1, true);
 }
 
 // ===== 翻译按钮相关方法 =====
@@ -4655,6 +4670,10 @@ void CChat::OpenLanguageMenu()
 		return;
 	}
 	m_LanguageMenuOpen = true;
+	// 打开/关闭都会走这里：先把「按下翻译按钮」的候选状态清掉，
+	// 否则关掉菜单后同一根手指的抬起会把菜单又弹回来。
+	m_TouchTranslatePressed = false;
+	m_TouchTargetPressed = false;
 	// 翻译二级菜单是纯触控操作：弹出时必须收掉软键盘，否则菜单被键盘顶掉一半。
 	Input()->StopTextInput();
 	const SQmChatViewport Viewport{m_ChatInputMapRect, vec2(maximum(1, Graphics()->WindowWidth()), maximum(1, Graphics()->WindowHeight()))};
@@ -4668,6 +4687,9 @@ void CChat::CloseLanguageMenu()
 		Ui()->ClosePopupMenu(&m_LanguagePopupContext, true);
 	m_LanguageMenuOpen = false;
 	m_TranslateButton.m_Input.Reset();
+	// 关掉之后这根手指不能再把菜单弹回来。
+	m_TouchTranslatePressed = false;
+	m_TouchTargetPressed = false;
 }
 
 void CChat::OpenChatLineMenu(const CLine &Line, vec2 UiMousePos)
