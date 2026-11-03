@@ -18,8 +18,12 @@
 #if defined(__APPLE__) || defined(__linux__)
 #include <dlfcn.h>
 #include <execinfo.h>
+#if defined(__APPLE__) && !defined(_XOPEN_SOURCE)
+#define _XOPEN_SOURCE 600 // macOS 的 <ucontext.h> 只在 _XOPEN_SOURCE 下可用
+#endif
 #include <ucontext.h>
 #endif
+#include <cstdint>
 #include <fstream>
 #include <functional>
 #include <sstream>
@@ -266,7 +270,6 @@ int main(int argc, const char **argv)
 	// 出错 PC 比栈帧更关键：栈帧里的叶子函数常被尾调用掉，只有 PC 能直接指到出错函数。
 	struct sigaction Action = {};
 	Action.sa_sigaction = [](int Sig, siginfo_t *pInfo, void *pContext) {
-		(void)pInfo;
 		const char *pSuite = "unknown";
 		const char *pTest = "unknown";
 		if(const auto *pT = ::testing::UnitTest::GetInstance()->current_test_info())
@@ -274,7 +277,7 @@ int main(int argc, const char **argv)
 			pSuite = pT->test_suite_name();
 			pTest = pT->name();
 		}
-		std::fprintf(stderr, "FATAL: signal %d while running %s.%s\n", Sig, pSuite, pTest);
+		std::fprintf(stderr, "FATAL: signal %d (code %d) while running %s.%s\n", Sig, pInfo != nullptr ? pInfo->si_code : -1, pSuite, pTest);
 		if(auto *pUContext = static_cast<ucontext_t *>(pContext))
 		{
 			const uintptr_t Pc =
