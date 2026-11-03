@@ -25,6 +25,10 @@ Regex::Regex(const std::string& pattern, bool caseInsensitive) : data(new Data) 
 		data->error = "";
 	} catch (const std::regex_error& e) {
 		data->error = e.what();
+	} catch (...) {
+		// 合同是「包装器不向调用方抛」：不同标准库对非法 pattern 抛的类型不止
+		// regex_error（libc++ 与 libstdc++ 的处理就有差异），这里统一兜住。
+		data->error = "Unsupported pattern";
 	}
 }
 
@@ -55,7 +59,12 @@ std::string Regex::error() const {
 
 bool Regex::test(const std::string &str) {
 	if (!data || !data->error.empty()) return false;
-	return std::regex_search(str, data->regex);
+	try {
+		return std::regex_search(str, data->regex);
+	} catch (...) {
+		// 运行期异常同样降级为不匹配，调用方仍能继续处理聊天消息。
+		return false;
+	}
 }
 
 void Regex::match(const std::string &str, bool global, std::function<void(const std::string &str, int match, int group)> func) {
