@@ -2,10 +2,12 @@
 #include <engine/shared/config.h>
 
 #include <game/client/components/qmclient/bind_editor.h>
+#include <game/client/components/qmclient/bind_overview.h>
 
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -76,7 +78,7 @@ TEST(QmBindEditorConsole, PresetCatalogKeepsKnownActionsInTheirPlayerCategories)
 		{ECommandCategory::VOTING, {"vote yes", "vote no"}},
 		{ECommandCategory::MISCELLANEOUS, {"say /pause", "kill", "qm_timeout_disconnect", "toggle_local_console", "screenshot", "+scoreboard", "+statboard", "+pie_menu"}},
 	};
-	EXPECT_EQ(std::count_if(Options.begin(), Options.end(), [](const auto &Option) { return Option.m_Preset && !Option.m_Command.m_Name.empty(); }), 48);
+	EXPECT_EQ(std::count_if(Options.begin(), Options.end(), [](const auto &Option) { return Option.m_Preset && !Option.m_Command.m_Name.empty(); }), std::size(s_aKnownBindActions));
 	for(const auto &Category : aExpected)
 	{
 		for(const char *pCommand : Category.m_vCommands)
@@ -86,6 +88,19 @@ TEST(QmBindEditorConsole, PresetCatalogKeepsKnownActionsInTheirPlayerCategories)
 			ASSERT_NE(Preset, Options.end());
 			EXPECT_EQ(Preset->m_Category, Category.m_Category);
 		}
+	}
+}
+
+TEST(QmBindEditorConsole, PresetCatalogUsesTheSharedControlsActionTable)
+{
+	auto pConsole = CreateConsole(CFGFLAG_CLIENT);
+	const auto Options = qm_bind_editor::CommandOptions(*pConsole);
+	for(const SKnownBindAction &Action : s_aKnownBindActions)
+	{
+		const auto Matches = std::count_if(Options.begin(), Options.end(), [&Action](const auto &Option) {
+			return Option.m_Preset && Option.m_Command.m_Name == Action.m_pCommand;
+		});
+		EXPECT_EQ(Matches, 1) << Action.m_pCommand;
 	}
 }
 

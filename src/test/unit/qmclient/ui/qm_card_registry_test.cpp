@@ -1164,13 +1164,35 @@ TEST(QmCardRegistry, TimeoutDisconnectSearchPointsToControls)
 	}
 }
 
-TEST(QmCardRegistry, BindOverviewCardRegisteredOnBindPage)
+TEST(QmCardRegistry, BindCardsNavigateToControlsBindTab)
 {
 	const auto &vDefaults = qm_card_registry::Defaults();
-	const auto It = std::find_if(vDefaults.begin(), vDefaults.end(), [](const qm_card_registry::SCardDefault &Entry) { return str_comp(Entry.m_pStableId, "qm:bind_overview") == 0; });
-	ASSERT_NE(It, vDefaults.end());
-	EXPECT_EQ(str_comp(It->m_pDefaultTab, "bind"), 0);
+	const auto Model = RegistryModelAfterRoundTrip();
+	for(const char *pStableId : {"qm:bind_editor", "qm:bind_overview"})
+	{
+		const auto It = std::find_if(vDefaults.begin(), vDefaults.end(), [pStableId](const qm_card_registry::SCardDefault &Entry) { return str_comp(Entry.m_pStableId, pStableId) == 0; });
+		ASSERT_NE(It, vDefaults.end());
+		EXPECT_EQ(str_comp(It->m_pDefaultTab, "controls"), 0);
+		EXPECT_EQ(str_comp(It->m_pNavigationTab, "bind"), 0);
+		const auto Target = qm_card_registry::ResolveCardNavigationTarget(*It, Model);
+		EXPECT_STREQ(Target.m_pTab, "bind");
+		EXPECT_STREQ(Target.m_pStableId, pStableId);
+	}
 
 	const auto &vBindCards = qm_card_catalog::BindCardStableIds();
 	EXPECT_TRUE(std::any_of(vBindCards.begin(), vBindCards.end(), [](const char *pStableId) { return str_comp(pStableId, "qm:bind_overview") == 0; }));
+}
+
+TEST(QmCardRegistry, LegacyBindTabMovesCardsIntoControls)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries({
+		{"qm:bind_editor", "bind", 0, 0},
+		{"qm:bind_overview", "bind", 0, 1},
+	});
+
+	EXPECT_TRUE(qm_card_registry::RepairLegacyBindTab(Model));
+	EXPECT_STREQ(Model.Entry(Model.FindByStableId("qm:bind_editor")).m_pDefaultTab, "controls");
+	EXPECT_STREQ(Model.Entry(Model.FindByStableId("qm:bind_overview")).m_pDefaultTab, "controls");
+	EXPECT_FALSE(qm_card_registry::RepairLegacyBindTab(Model));
 }

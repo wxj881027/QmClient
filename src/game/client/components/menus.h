@@ -141,6 +141,7 @@ struct SQmGradientGeometryBinding;
 struct SQmGradientGeometryState;
 
 class CMenus;
+class CMenusSettingsControls;
 
 namespace NTranslateUiSettings
 {
@@ -150,6 +151,7 @@ namespace NTranslateUiSettings
 class CMenus : public CComponent
 {
 	friend void NTranslateUiSettings::RenderTranslateUiModule(CMenus *pMenus, CUIRect &CardContent, float LineHeight, float BodySize, float LineSpacing);
+	friend class CMenusSettingsControls;
 	static ColorRGBA ms_GuiColor;
 	static ColorRGBA ms_ColorTabbarInactiveOutgame;
 	static ColorRGBA ms_ColorTabbarActiveOutgame;
@@ -2701,9 +2703,6 @@ public:
 		//（旧配置可能仍是 3；直接删掉会让 CONFIG 前移，落到别人的页签上）。
 		QMCLIENT_SETTINGS_TAB_CONTRIBUTORS,
 		QMCLIENT_SETTINGS_TAB_CONFIG,
-		// 新增页签追加到末尾，避免旧配置中的 tab 索引改变含义。
-		QMCLIENT_SETTINGS_TAB_BIND,
-
 		NUMBER_OF_QMCLIENT_SETTINGS_TABS,
 	};
 

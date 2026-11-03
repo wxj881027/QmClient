@@ -812,6 +812,7 @@ qm_card_order::CModel &CMenus::SettingsCardOrderModelForRenderPass()
 	{
 		m_SettingsCardRenderOnlyOrderModel.LoadMerged(g_Config.m_QmGlobalCardOrder, qm_card_registry::BuildDefaultEntries());
 		qm_card_registry::RepairRemovedModernTabs(m_SettingsCardRenderOnlyOrderModel);
+		qm_card_registry::RepairLegacyBindTab(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyCreditsTabs(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyNameplateTitleLayout(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyTeeLayout(m_SettingsCardRenderOnlyOrderModel);
@@ -874,10 +875,11 @@ void CMenus::LoadSettingsCardOrderModel()
 	// 归属修复不依赖布局版本，也不能被较早的可选布局迁移阻断。
 	// 写回失败时仍保留可显示的内存布局，下次加载会再次尝试修复。
 	const bool ModernTabsChanged = qm_card_registry::RepairRemovedModernTabs(m_SettingsCardOrderModel);
+	const bool LegacyBindTabChanged = qm_card_registry::RepairLegacyBindTab(m_SettingsCardOrderModel);
 	const bool CreditsLayoutChanged = qm_card_registry::RepairLegacyCreditsTabs(m_SettingsCardOrderModel);
 	const bool NameplateTitleLayoutChanged = qm_card_registry::RepairLegacyNameplateTitleLayout(m_SettingsCardOrderModel);
 	const bool TeeLayoutChanged = qm_card_registry::RepairLegacyTeeLayout(m_SettingsCardOrderModel);
-	if((ModernTabsChanged || CreditsLayoutChanged || NameplateTitleLayoutChanged || TeeLayoutChanged) && !PersistCurrentLayout())
+	if((ModernTabsChanged || LegacyBindTabChanged || CreditsLayoutChanged || NameplateTitleLayoutChanged || TeeLayoutChanged) && !PersistCurrentLayout())
 	{
 		m_SettingsCardOrderLoaded = true;
 		return;
@@ -6467,8 +6469,8 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 	}
 	else if(str_comp(pTab, "bind") == 0 || str_comp(pTab, "qmclient-bind") == 0)
 	{
-		g_Config.m_UiSettingsPage = SETTINGS_QMCLIENT;
-		m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_BIND;
+		g_Config.m_UiSettingsPage = SETTINGS_CONTROLS;
+		m_MenusSettingsControls.SetTab(CMenusSettingsControls::ETab::BIND_WORKSHOP);
 	}
 	else if(str_comp(pTab, "tclient-bind-wheel") == 0)
 	{

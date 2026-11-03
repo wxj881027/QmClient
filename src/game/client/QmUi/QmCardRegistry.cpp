@@ -168,8 +168,8 @@ namespace qm_card_registry
 			{"qm:gores_drown_board", "hud", ECardColumn::Right, 23, "Gores drown board", "Gores Kog 落水 luoshui 冻结 dongjie 死亡 siwang 排行 paixing 榜单 bangdan 队伍 duiwu Tee 透明度 toumingdu 人数 renshu hud", "Configure the Gores team drown board"},
 			{"qm:nameplate_text", "hud", ECardColumn::Right, 18, "Nameplate text", "nameplate text hud 名字 mingzi 名牌 mingpai 文字 wenzi", "Customize additional nameplate text", "appearance-name-plate", "deck:appearance-name-plate-text"}, // 旧模块入口继续定位到外观页的文字卡片。
 			{"qm:laser", "visual", ECardColumn::Right, 3, "Laser", "激光设置 jiguang laser 增强特效 zengqiang texiao 辉光强度 huiguang qiangdu 激光大小 daxiao 半透明 bantouming 圆角端点 yuanjiao duandian 脉冲速度 maichong sudu 脉冲幅度 maichong fudu visual", "Customize laser shape and effects", "appearance-laser", "deck:appearance-laser-enhanced"}, // 数据债：原无 tab 归属，B1 补 visual；功能由外观页承载
-			{"qm:bind_editor", "bind", ECardColumn::Full, 0, Localizable("Bind"), "绑定 bangding bind keyboard 键盘 anjian 按键 mouse 鼠标 wheel 滚轮 modifier 修饰键 command 命令", Localizable("Configure keyboard, mouse, wheel, and modifier bindings")},
-			{"qm:bind_overview", "bind", ECardColumn::Full, 1, Localizable("Bind overview"), "绑定一览 bangding yilan bind overview 所有按键 suoyou anjian key bindings 键位列表 jianwei liebiao 分组展示 fenzu zhanshi 复制全部 fuzhi quanbu copy all", Localizable("Browse all key bindings grouped by function")},
+			{"qm:bind_editor", "controls", ECardColumn::Full, 0, Localizable("Bind"), "绑定 bangding bind keyboard 键盘 anjian 按键 mouse 鼠标 wheel 滚轮 modifier 修饰键 command 命令", Localizable("Configure keyboard, mouse, wheel, and modifier bindings"), "bind"},
+			{"qm:bind_overview", "controls", ECardColumn::Full, 1, Localizable("Bind overview"), "绑定一览 bangding yilan bind overview 所有按键 suoyou anjian key bindings 键位列表 jianwei liebiao 分组展示 fenzu zhanshi 复制全部 fuzhi quanbu copy all", Localizable("Browse all key bindings grouped by function"), "bind"},
 
 			// === Tclient section（19）· tclient:<name>（id 不变；column/order 按当前 section 顺序显式化）===
 			{"tclient:visual-font-cursor", "tclient", ECardColumn::Left, 0, "Font cursor", "font cursor tclient visual", "Choose the menu font and cursor appearance", "tclient", "tclient:font"},
@@ -424,12 +424,15 @@ namespace qm_card_registry
 			pCurrentTab = Default.m_pDefaultTab;
 		// 没有 deck 渲染器的条目把功能放在别处：按声明的目标跳转，
 		// 否则会落在自己那个空 tab 上（搜索可见但点了没反应）。
+		// 指向另一张卡（别名入口）时跟随该卡在用户布局里的保存位置，
+		// 用户把承载卡拖到别的 tab 后仍能定位；只声明子页签目标
+		// （控制页的 Bind 子页签）时保持声明值，否则会被卡片自身归属覆盖。
 		if(Default.m_pNavigationTab != nullptr || Default.m_pNavigationStableId != nullptr)
 		{
 			const char *pStableId = Default.m_pNavigationStableId != nullptr ? Default.m_pNavigationStableId : Default.m_pStableId;
 			const int TargetIndex = pStableId != nullptr ? Model.FindByStableId(pStableId) : -1;
 			const char *pTab = Default.m_pNavigationTab != nullptr ? Default.m_pNavigationTab : pCurrentTab;
-			if(TargetIndex >= 0 && Model.Entry(TargetIndex).m_pDefaultTab != nullptr)
+			if(Default.m_pNavigationStableId != nullptr && TargetIndex >= 0 && Model.Entry(TargetIndex).m_pDefaultTab != nullptr)
 				pTab = Model.Entry(TargetIndex).m_pDefaultTab;
 			return {pTab, pStableId};
 		}
@@ -704,6 +707,23 @@ namespace qm_card_registry
 			Model.MoveToTab(Move.m_pStableId, Move.m_pTargetTab, Move.m_Column, Order);
 		}
 		return !vMoves.empty();
+	}
+
+	bool RepairLegacyBindTab(qm_card_order::CModel &Model)
+	{
+		bool Changed = false;
+		for(const char *pStableId : {"qm:bind_editor", "qm:bind_overview"})
+		{
+			const int Index = Model.FindByStableId(pStableId);
+			if(Index < 0 || Model.Entry(Index).m_pDefaultTab == nullptr || str_comp(Model.Entry(Index).m_pDefaultTab, "bind") != 0)
+				continue;
+			const auto *pDefault = FindByStableId(pStableId);
+			if(pDefault == nullptr)
+				continue;
+			Model.MoveToTab(pStableId, pDefault->m_pDefaultTab, pDefault->m_DefaultColumn == ECardColumn::Full ? 0 : pDefault->m_DefaultColumn == ECardColumn::Right ? 2 : 1, pDefault->m_DefaultOrder);
+			Changed = true;
+		}
+		return Changed;
 	}
 
 	bool RepairLegacyCreditsTabs(qm_card_order::CModel &Model)
