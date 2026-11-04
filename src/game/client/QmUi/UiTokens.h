@@ -195,6 +195,24 @@ namespace ui_token::secondary_panel
 	inline constexpr float UPDATE_ACTION_LINE_FACTOR = 2.4f;
 } // namespace ui_token::secondary_panel
 
+// 服务器信息页的键值行：三行信息（版本 / 游戏模式 / 延迟）与收藏 / 暴露 IP
+// 开关行共用同一套行高与行距，步长只在这里定义，调用点不再各写 15 / 18 / 2。
+namespace ui_token::server_info
+{
+	inline constexpr float ROW_HEIGHT = 15.0f;
+	inline constexpr float ROW_GAP = 2.0f;
+	inline constexpr float MIN_ROW_HEIGHT = 11.0f;
+	inline constexpr float BLOCK_PADDING = 5.0f;
+	inline constexpr float COPY_BUTTON_HEIGHT = 15.0f;
+	inline constexpr float LABEL_COLUMN_WIDTH = 80.0f;
+	inline constexpr float TOGGLE_WIDTH = 30.0f;
+	inline constexpr float TOGGLE_LABEL_GAP = 6.0f;
+	inline constexpr float LABEL_FONT_INSET = 4.0f;
+	inline constexpr float EXPOSE_APPEAR_DURATION = 0.15f;
+	inline constexpr float EXPOSE_SLIDE = 4.0f;
+	inline constexpr float EXPOSE_SCALE_FROM = 0.85f;
+} // namespace ui_token::server_info
+
 namespace ui_token::confirm_dialog
 {
 	inline constexpr float MIN_WIDTH = 300.0f;

@@ -3187,8 +3187,13 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 {
 	const CServerInfo *pSelectedServer = ServerBrowser()->SortedGet(m_SelectedIndex);
 
-	const float RowHeight = 18.0f;
-	const float FontSize = (RowHeight - 4.0f) * CUi::ms_FontmodHeight; // based on DoButton_CheckBox
+	// 行高、行距、内边距一律来自 ui_token::server_info：三行信息与两个开关行
+	// 共用同一个步长，行距不再散落在调用点的 15 / 18 / 2 字面量里。
+	const float MaxRowHeight = ui_token::server_info::ROW_HEIGHT;
+	const float RowGap = ui_token::server_info::ROW_GAP;
+	const float BlockPadding = ui_token::server_info::BLOCK_PADDING;
+	const float CopyButtonHeight = ui_token::server_info::COPY_BUTTON_HEIGHT;
+	const float FontSize = (MaxRowHeight - ui_token::server_info::LABEL_FONT_INSET) * CUi::ms_FontmodHeight; // based on DoButton_CheckBox
 
 	CUIRect ServerDetails, Scoreboard;
 	// 暴露 IP 行的高度由动画进度驱动：0 → RowHeight 时信息块整体长高，
@@ -3202,23 +3207,34 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 		const float ExposeDt = s_ExposeLastTick == 0 ? 0.0f : std::clamp((float)(ExposeNow - s_ExposeLastTick) / (float)ExposeFreq, 0.0f, 0.1f);
 		s_ExposeLastTick = ExposeNow;
 		const float Target = FavoritedNow ? 1.0f : 0.0f;
-		const float Step = (g_Config.m_QmUiMotionLevel > 0 ? 1.0f / 0.15f : 1000.0f) * ExposeDt;
+		const float Step = (g_Config.m_QmUiMotionLevel > 0 ? 1.0f / ui_token::server_info::EXPOSE_APPEAR_DURATION : 1000.0f) * ExposeDt;
 		s_ExposeRowAnim = std::clamp(s_ExposeRowAnim + std::clamp(Target - s_ExposeRowAnim, -Step, Step), 0.0f, 1.0f);
 	}
-	const float InfoBlockHeight = 4.0f * 15.0f + RowHeight * (1.0f + s_ExposeRowAnim) + 2.0f * 5.0f + 2.0f * 2.0f;
+	// 可见行数：三行信息 + 收藏行 + 暴露 IP 行（按动画进度占位）。
+	const float VisibleRows = 4.0f + s_ExposeRowAnim;
+	const float InfoBlockHeight = 2.0f * BlockPadding + CopyButtonHeight + VisibleRows * (MaxRowHeight + RowGap);
 	View.HSplitTop(InfoBlockHeight, &ServerDetails, &Scoreboard);
 
 	if(pSelectedServer)
 	{
-		ServerDetails.Margin(5.0f, &ServerDetails);
+		ServerDetails.Margin(BlockPadding, &ServerDetails);
 
-		// 三行信息（版本/游戏模式/延迟）的高度：块内剩余空间不足时按均分收缩，避免压行。
-		const float InfoRowHeight = std::max(11.0f, std::min(15.0f, std::max(0.0f, ServerDetails.h - RowHeight * (1.0f + s_ExposeRowAnim) - 19.0f) / 3.0f));
+		// 所有行同一个行高：空间不足时一起缩，绝不单独缩某一行。
+		// 之前三行信息取 15、开关行取 18，行距看起来忽宽忽窄就是这个混搭。
+		const float RowHeight = std::clamp((ServerDetails.h - CopyButtonHeight) / maximum(1.0f, VisibleRows) - RowGap, ui_token::server_info::MIN_ROW_HEIGHT, MaxRowHeight);
+		const float RowPitch = RowHeight + RowGap;
+		// 取一行：前进一个步长，绘制高度只用 RowHeight，差值是行距。
+		auto TakeRow = [&](CUIRect &Column) {
+			CUIRect Row;
+			Column.HSplitTop(RowPitch, &Row, &Column);
+			Row.h = minimum(Row.h, RowHeight);
+			return Row;
+		};
 
 		// copy info button
 		{
 			CUIRect Button;
-			ServerDetails.HSplitBottom(15.0f, &ServerDetails, &Button);
+			ServerDetails.HSplitBottom(CopyButtonHeight, &ServerDetails, &Button);
 			static CButtonContainer s_CopyButton;
 			if(DoButton_Menu(&s_CopyButton, Localize("Copy info"), 0, &Button))
 			{
@@ -3243,23 +3259,23 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 			static int s_LeakIpButton = 0;
 			// 收藏行固定在 3 行信息之下，不随暴露 IP 行出现而上移；
 			// 让位方向是向下：复制按钮与服务器列表跟着块高增长一起下移。
-			CUIRect ButtonAddFav = ServerDetails;
-			ButtonAddFav.y += 3.0f * InfoRowHeight + 2.0f;
-			ButtonAddFav.h = RowHeight;
+			// 开关行与信息行共用步长：前三行让位，收藏行紧接其后。
+			CUIRect RowColumn = ServerDetails;
+			RowColumn.HSplitTop(3.0f * RowPitch, nullptr, &RowColumn);
+			const CUIRect ButtonAddFav = TakeRow(RowColumn);
 			CUIRect ButtonExpose{};
 			if(s_ExposeRowAnim > 0.01f)
 			{
-				ButtonExpose = ButtonAddFav;
-				ButtonExpose.y += RowHeight + 2.0f;
+				ButtonExpose = TakeRow(RowColumn);
 				ButtonExpose.h = RowHeight * s_ExposeRowAnim;
 			}
 			CUIRect Row = ButtonAddFav;
 			static int s_AddFavButton = 0;
 			bool Favorite = pSelectedServer->m_Favorite != TRISTATE::NONE;
 			CUIRect Toggle;
-			const float ToggleWidth = std::min(30.0f, Row.w * 0.3f);
+			const float ToggleWidth = std::min(ui_token::server_info::TOGGLE_WIDTH, Row.w * 0.3f);
 			Row.VSplitRight(ToggleWidth, &Row, &Toggle);
-			Row.VSplitRight(6.0f, &Row, nullptr);
+			Row.VSplitRight(ui_token::server_info::TOGGLE_LABEL_GAP, &Row, nullptr);
 			CUIRect Label = Row;
 			SLabelProperties FavLabelProps;
 			FavLabelProps.m_MaxWidth = Label.w;
@@ -3293,18 +3309,18 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 			{
 				// 缩放 0.85→1、下移 4px→0、淡入，配合信息块长高一起出现。
 				const float Eased = s_ExposeRowAnim * s_ExposeRowAnim * (3.0f - 2.0f * s_ExposeRowAnim);
-				const float AppearScale = 0.85f + 0.15f * Eased;
+				const float AppearScale = ui_token::server_info::EXPOSE_SCALE_FROM + (1.0f - ui_token::server_info::EXPOSE_SCALE_FROM) * Eased;
 				const float AppearW = ButtonExpose.w * AppearScale, AppearH = ButtonExpose.h * AppearScale;
 				ButtonExpose = CUIRect{
 					ButtonExpose.x + (ButtonExpose.w - AppearW) * 0.5f,
-					ButtonExpose.y + (ButtonExpose.h - AppearH) * 0.5f + (1.0f - Eased) * 4.0f,
+					ButtonExpose.y + (ButtonExpose.h - AppearH) * 0.5f + (1.0f - Eased) * ui_token::server_info::EXPOSE_SLIDE,
 					AppearW,
 					AppearH};
 				CUiScopedControlAlphaScale ExposeAlpha(Ui(), Eased);
 				CUIRect Label = ButtonExpose, ExposeToggle;
-				const float ToggleWidth = std::min(30.0f, ButtonExpose.w * 0.3f);
+				const float ToggleWidth = std::min(ui_token::server_info::TOGGLE_WIDTH, ButtonExpose.w * 0.3f);
 				Label.VSplitRight(ToggleWidth, &Label, &ExposeToggle);
-				Label.VSplitRight(6.0f, &Label, nullptr);
+				Label.VSplitRight(ui_token::server_info::TOGGLE_LABEL_GAP, &Label, nullptr);
 				SLabelProperties ExposeLabelProps;
 				ExposeLabelProps.m_MaxWidth = Label.w;
 				ExposeLabelProps.m_EllipsisAtEnd = true;
@@ -3320,28 +3336,35 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 			}
 		}
 
-		CUIRect LeftColumn, RightColumn, Row;
-		ServerDetails.VSplitLeft(80.0f, &LeftColumn, &RightColumn);
+		CUIRect LeftColumn, RightColumn;
+		ServerDetails.VSplitLeft(ui_token::server_info::LABEL_COLUMN_WIDTH, &LeftColumn, &RightColumn);
 
-		LeftColumn.HSplitTop(InfoRowHeight, &Row, &LeftColumn);
-		Ui()->DoLabel(&Row, Localize("Version"), FontSize, TEXTALIGN_ML);
-
-		RightColumn.HSplitTop(InfoRowHeight, &Row, &RightColumn);
-		Ui()->DoLabel(&Row, pSelectedServer->m_aVersion, FontSize, TEXTALIGN_ML);
-
-		LeftColumn.HSplitTop(InfoRowHeight, &Row, &LeftColumn);
-		Ui()->DoLabel(&Row, Localize("Game type"), FontSize, TEXTALIGN_ML);
+		{
+			const CUIRect Row = TakeRow(LeftColumn);
+			Ui()->DoLabel(&Row, Localize("Version"), FontSize, TEXTALIGN_ML);
+		}
+		{
+			const CUIRect Row = TakeRow(RightColumn);
+			Ui()->DoLabel(&Row, pSelectedServer->m_aVersion, FontSize, TEXTALIGN_ML);
+		}
+		{
+			const CUIRect Row = TakeRow(LeftColumn);
+			Ui()->DoLabel(&Row, Localize("Game type"), FontSize, TEXTALIGN_ML);
+		}
 
 		SLabelProperties GameTypeLabelProps;
 		if(g_Config.m_UiColorizeGametype)
 		{
 			GameTypeLabelProps.SetColor(pSelectedServer->m_GametypeColor);
 		}
-		RightColumn.HSplitTop(InfoRowHeight, &Row, &RightColumn);
-		Ui()->DoLabel(&Row, pSelectedServer->m_aGameType, FontSize, TEXTALIGN_ML, GameTypeLabelProps);
-
-		LeftColumn.HSplitTop(InfoRowHeight, &Row, &LeftColumn);
-		Ui()->DoLabel(&Row, Localize("Ping"), FontSize, TEXTALIGN_ML);
+		{
+			const CUIRect Row = TakeRow(RightColumn);
+			Ui()->DoLabel(&Row, pSelectedServer->m_aGameType, FontSize, TEXTALIGN_ML, GameTypeLabelProps);
+		}
+		{
+			const CUIRect Row = TakeRow(LeftColumn);
+			Ui()->DoLabel(&Row, Localize("Ping"), FontSize, TEXTALIGN_ML);
+		}
 
 		SLabelProperties PingLabelProps;
 		if(g_Config.m_UiColorizePing)
@@ -3350,8 +3373,10 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 		}
 		char aPingLabel[8];
 		FormatServerbrowserPing(aPingLabel, pSelectedServer);
-		RightColumn.HSplitTop(InfoRowHeight, &Row, &RightColumn);
-		Ui()->DoLabel(&Row, aPingLabel, FontSize, TEXTALIGN_ML, PingLabelProps);
+		{
+			const CUIRect Row = TakeRow(RightColumn);
+			Ui()->DoLabel(&Row, aPingLabel, FontSize, TEXTALIGN_ML, PingLabelProps);
+		}
 
 		RenderServerbrowserInfoScoreboard(Scoreboard, pSelectedServer);
 	}
