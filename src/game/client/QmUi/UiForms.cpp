@@ -3,6 +3,8 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "UiForms.h"
 
+#include "QmIconSwap.h"
+#include "QmPasswordIcon.h"
 #include "SettingsPageLayout.h"
 #include "UiButtons.h"
 #include "UiDiscreteSliderStyle.h"
@@ -12,9 +14,12 @@
 #include "UiSurfaceText.h"
 #include "UiTheme.h"
 
+#include <base/log.h>
+
 #include <engine/graphics.h>
 #include <engine/keys.h>
 #include <engine/shared/config.h>
+#include <engine/storage.h>
 
 #include <game/client/components/tooltips.h>
 #include <game/client/lineinput.h>
@@ -116,27 +121,65 @@ namespace ui_widget
 			return Active;
 		}
 
+		// 显隐过渡的两套驱动：
+		// - 形变档用弹簧（300/32，ζ≈0.92，稳定约 0.26s），帧条本身有"呼吸"感，弹性合适；
+		// - 淡化档改用 EASE_IN_OUT 补间：弹簧是快起步，交叉淡化在头几帧就把两个字形
+		//   同时推上台，观感就是"突兀地糊一下"；补间两头慢、中间快，起步不动声色。
+		constexpr SUiSpringConfig PASSWORD_ICON_SPRING{1.0f, 300.0f, 32.0f, 0.01f, 0.05f};
+		constexpr float PASSWORD_ICON_FADE_SEC = 0.24f;
+
+		void DrawInputFieldIconGlyph(const IUiContext &Ctx, const CUIRect &Rect, const char *pIcon, float FontSize, const ColorRGBA &Color);
+
 		void DrawInputFieldIcon(const IUiContext &Ctx, const CUIRect &Rect, const char *pIcon, const ColorRGBA &Color, const int QmIcon = -1, const void *pAnimationId = nullptr)
 		{
 			const bool HasQmIcon = QmIcon >= 0 && QmIcon < static_cast<int>(EQmIcon::COUNT);
-			if((pIcon == nullptr && !HasQmIcon) || Rect.w <= 0.0f || Rect.h <= 0.0f)
+			if((pIcon == nullptr && !HasQmIcon) || Rect.w <= 0.0f || Rect.h <= 0.0f || Ctx.m_pUi == nullptr)
 				return;
-			const float IconSide = minimum(Rect.w, Rect.h) * 0.58f;
+			// 输入框图标的两档字号：带语义图标沿用 0.58×0.8 倍方框，纯字形图标用 0.65。
+			// 静止态、交叉淡化、形变帧条三条路径必须共用同一个值——字号不一致时，
+			// 同一帧里重复绘制的第二层会变成「大一圈的影子」。
+			const float IconFontSize = HasQmIcon ? minimum(Rect.w, Rect.h) * 0.58f * 0.8f : minimum(Rect.w, Rect.h) * 0.65f;
 			const bool IsEyeMorphIcon = QmIcon == static_cast<int>(EQmIcon::EYE) || QmIcon == static_cast<int>(EQmIcon::EYE_OFF);
-			if(IsEyeMorphIcon && pAnimationId != nullptr && Ctx.m_pAnim != nullptr && Ctx.m_pUi != nullptr && g_Config.m_QmUiMotionLevel > 0 && !Ctx.m_pUi->AnimationsBlocked())
+			if(IsEyeMorphIcon && pAnimationId != nullptr && Ctx.m_pUi != nullptr && g_Config.m_QmUiMotionLevel > 0)
 			{
+				// 设置卡片的内容趟是在 BeginBackgroundRender(true) 里画的，而
+				// SettingsUiContext 见到 RenderOnly() 就会把 m_pAnim 置空——照字面用
+				// Ctx.m_pAnim 会让这段动画在设置页永远不执行（点一下只看到瞬切）。
+				// 与 DrawToggle/DrawButtonSurface 一致：回退到 CUi 的全局运行时。
+				CUiV2AnimationRuntime *pAnim = Ctx.m_pAnim != nullptr ? Ctx.m_pAnim : Ctx.m_pUi->QmAnimationRuntime();
 				const uint64_t NodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0xE1E0A11ull, reinterpret_cast<uint64_t>(pAnimationId));
 				const float Target = QmIcon == static_cast<int>(EQmIcon::EYE_OFF) ? 1.0f : 0.0f;
-				const float Progress = std::clamp(ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::SCALE, Target, ui_token::motion::TOGGLE, 2), 0.0f, 1.0f);
-				if(Ctx.m_pAnim->HasActiveAnimation(NodeKey, EUiAnimProperty::SCALE))
+				const bool WantMorph = qm_password_icon::ResolveStyle(g_Config.m_QmUiPasswordIconStyle) == qm_password_icon::STYLE_MORPH;
+				// 只有真实出图趟推进轨道，测量/纯背景趟只读当前值：一帧内被画多次时，
+				// 每次都必须拿到同一个进度，否则两层会停在相邻的两帧上。
+				const bool DrawPass = !Ctx.m_pUi->AnimationsBlocked();
+				const float Progress = pAnim == nullptr ? Target :
+						       !DrawPass ?
+									  std::clamp(pAnim->GetValue(NodeKey, EUiAnimProperty::SCALE, Target), 0.0f, 1.0f) :
+						       WantMorph ?
+									  std::clamp(ResolveUiAnimSpringValue(*pAnim, NodeKey, EUiAnimProperty::SCALE, Target, PASSWORD_ICON_SPRING, 2), 0.0f, 1.0f) :
+									  std::clamp(ResolveUiAnimValue(*pAnim, NodeKey, EUiAnimProperty::SCALE, Target, PASSWORD_ICON_FADE_SEC, EEasing::EASE_IN_OUT), 0.0f, 1.0f);
+				// 形态只由「样式 + 轨道是否活跃」决定，不看这是第几趟绘制：卡片内容会被
+				// 画进多个渲染目标，只要两层画的不是同一种图，就必然叠出重影。两趟共用
+				// IconFontSize，所以即便重复绘制也完全重合。
+				if(pAnim != nullptr && pAnim->HasActiveAnimation(NodeKey, EUiAnimProperty::SCALE))
 				{
-					const CUIRect IconRect{Rect.x + (Rect.w - IconSide) * 0.5f, Rect.y + (Rect.h - IconSide) * 0.5f, IconSide, IconSide};
-					Ctx.m_pUi->DrawQmIcon(IconRect, EQmIcon::EYE, FontIcons::FONT_ICON_EYE, Color.WithMultipliedAlpha(1.0f - Progress));
-					Ctx.m_pUi->DrawQmIcon(IconRect, EQmIcon::EYE_OFF, FontIcons::FONT_ICON_EYE_SLASH, Color.WithMultipliedAlpha(Progress));
+					// 有资产走烘焙帧条，否则回落交叉淡化；与设置卡片折叠箭头共用
+					// ui_widget::DrawIconSwap，避免两处各写一套过渡。
+					ui_widget::DrawIconSwap(Ctx, Rect, EQmIconSwapPair::EYE, IconFontSize, Progress, Color);
 					return;
 				}
 			}
 			if(pIcon == nullptr)
+				return;
+			DrawInputFieldIconGlyph(Ctx, Rect, pIcon, IconFontSize, Color);
+		}
+
+		// 统一用 DoLabel 画输入框内图标：字号由调用方给定，取色直接用调用方颜色，
+		// 与 DrawQmIcon 的全局图标色管线隔离——输入框里的图标应与框内文字同色。
+		void DrawInputFieldIconGlyph(const IUiContext &Ctx, const CUIRect &Rect, const char *pIcon, const float FontSize, const ColorRGBA &Color)
+		{
+			if(Ctx.m_pUi == nullptr || pIcon == nullptr)
 				return;
 			ITextRender *pTextRender = Ctx.m_pUi->TextRender();
 			const ColorRGBA PreviousColor = pTextRender->GetTextColor();
@@ -147,8 +190,7 @@ namespace ui_widget
 			pTextRender->TextColor(Color);
 			pTextRender->SetFontPreset(EFontPreset::ICON_FONT);
 			pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-			const float FallbackFontSize = HasQmIcon ? IconSide * 0.8f : std::min(Rect.w, Rect.h) * 0.65f;
-			Ctx.m_pUi->DoLabel(&Rect, pIcon, FallbackFontSize, TEXTALIGN_MC);
+			Ctx.m_pUi->DoLabel(&Rect, pIcon, FontSize, TEXTALIGN_MC);
 			pTextRender->SetRenderFlags(PreviousFlags);
 			pTextRender->SetFontPreset(PreviousPreset);
 			pTextRender->TextOutlineColor(PreviousOutlineColor);
@@ -281,7 +323,8 @@ namespace ui_widget
 			ActionOptions.m_TransparentInactive = true;
 			ActionOptions.m_Corners = Options.m_Clearable ? IGraphics::CORNER_NONE : IGraphics::CORNER_R;
 			DrawButtonSurface(Ctx, Options.m_pTrailingActionId, TrailingRect, ActionOptions);
-			DrawInputFieldIcon(Ctx, TrailingRect, Options.m_pTrailingActionIcon, InputIconColor, Options.m_TrailingActionQmIcon);
+			// 尾部图标必须带上动作 id：它是显隐动画的节点键，缺了就一直走静态字形。
+			DrawInputFieldIcon(Ctx, TrailingRect, Options.m_pTrailingActionIcon, InputIconColor, Options.m_TrailingActionQmIcon, Options.m_pTrailingActionId);
 			TrailingAction = ProcessInput && Ctx.m_pUi->DoButtonLogic(Options.m_pTrailingActionId, 0, &TrailingRect, BUTTONFLAG_LEFT) != 0;
 		}
 		if(Options.m_pTrailingText != nullptr && TrailingRect.w > 0.0f)
@@ -329,6 +372,29 @@ namespace ui_widget
 		InputOptions.m_TextAlign = Options.m_TextAlign;
 		return InputField(Ctx, pInput, Rect, InputOptions).m_Changed;
 	}
+	SInputFieldResult PasswordField(const IUiContext &Ctx, CLineInput *pInput, const CUIRect &Rect, SPasswordFieldState *pState, const SPasswordFieldOptions &Options)
+	{
+		if(Ctx.m_pUi == nullptr || pInput == nullptr || pState == nullptr)
+			return {};
+
+		// 隐藏状态先落到输入框，再交给统一的输入框实现；显隐按钮由尾部动作槽位承担。
+		pInput->SetHidden(!pState->m_Visible);
+		SInputFieldOptions FieldOptions;
+		FieldOptions.m_pPlaceholder = Options.m_pPlaceholder;
+		FieldOptions.m_FontSize = Options.m_FontSize;
+		FieldOptions.m_Corners = Options.m_Corners;
+		FieldOptions.m_pTrailingActionId = &pState->m_Toggle;
+		FieldOptions.m_pTrailingActionIcon = pState->m_Visible ? FontIcons::FONT_ICON_EYE_SLASH : FontIcons::FONT_ICON_EYE;
+		FieldOptions.m_TrailingActionQmIcon = static_cast<int>(pState->m_Visible ? EQmIcon::EYE_OFF : EQmIcon::EYE);
+		FieldOptions.m_TrailingWidth = Options.m_TrailingWidth > 0.0f ? Options.m_TrailingWidth : std::max(Rect.h, 18.0f * std::max(Ctx.m_UiScale, 0.1f));
+		FieldOptions.m_Clearable = Options.m_Clearable;
+
+		const SInputFieldResult Result = InputField(Ctx, pInput, Rect, FieldOptions);
+		if(Result.m_TrailingAction)
+			pState->m_Visible = !pState->m_Visible;
+		return Result;
+	}
+
 	void ReadOnlyTextField(const IUiContext &Ctx, CLineInput *pInput, const CUIRect &Rect, const char *pPlaceholder, float FontSize)
 	{
 		if(Ctx.m_pUi == nullptr || pInput == nullptr)

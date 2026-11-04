@@ -20,6 +20,7 @@
 #include <game/client/QmUi/BrowserTableLabel.h>
 #include <game/client/QmUi/QmColorGradient.h>
 #include <game/client/QmUi/QmDropdown.h>
+#include <game/client/QmUi/QmIconSwap.h>
 #include <game/client/QmUi/QmNeonRainbow.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/UiButtons.h>
@@ -43,6 +44,7 @@
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
+#include <game/client/qm_icon_label.h>
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
 #include <game/client/ui_scrollregion.h>
@@ -1419,7 +1421,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		bool CanResize = false;
 		for(int Right = i + 1; Right < NumCols; ++Right)
 			CanResize |= (aSizing[i].m_Width < aSizing[i].m_MaxWidth && aSizing[Right].m_Width > aSizing[Right].m_MinWidth) ||
-				(aSizing[i].m_Width > aSizing[i].m_MinWidth && aSizing[Right].m_Width < aSizing[Right].m_MaxWidth);
+				     (aSizing[i].m_Width > aSizing[i].m_MinWidth && aSizing[Right].m_Width < aSizing[Right].m_MaxWidth);
 		if(!CanResize)
 			continue;
 		CUIRect Gap{Col.m_Rect.x + Col.m_Rect.w + ColGap * 0.5f - 4.0f, Col.m_Rect.y, 8.0f, Col.m_Rect.h};
@@ -2260,13 +2262,30 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 		Client()->ServerBrowserUpdate();
 	}
 	FavoriteIcon.VMargin(std::min(1.0f, FavoriteIcon.w * 0.25f), &FavoriteIcon);
-	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-	TextRender()->TextColor(FavoriteOnly ? ColorRGBA(1.0f, 0.85f, 0.2f, 1.0f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.62f));
-	Ui()->DoLabel_QmIcon(&FavoriteIcon, EQmIcon::STAR, FONT_ICON_STAR, 13.0f, TEXTALIGN_MC);
-	TextRender()->TextColor(TextRender()->DefaultTextColor());
-	TextRender()->SetRenderFlags(0);
-	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	if(g_Config.m_QmUiFavoriteIconFilled != 0)
+	{
+		// 收藏点亮：开关拨动时描边 ↔ 实心形变（实心样式关着时两端同形，走下方原绘制）。
+		// 染色与静止态同源：DrawIconSwapBinding 内部走 ConfiguredQmUiIconColor 的收藏语义色。
+		IUiContext FavoriteSwapCtx = ui_widget::ControlContext(Ui());
+		ui_widget::SIconSwapBinding FavoriteSwap = ui_widget::ResolveIconSwapBinding(
+			FavoriteSwapCtx, EQmIconSwapPair::STAR_FAVORITE,
+			EQmIcon::STAR, FontIcons::FONT_ICON_STAR,
+			EQmIcon::STAR, FontIcons::FONT_ICON_STAR,
+			FavoriteOnly ? 1.0f : 0.0f, str_quickhash("map-filter-favorite-star"), &s_MapFilterFavoriteId, 0.26f, true);
+		ui_widget::DrawIconSwapBinding(FavoriteSwapCtx, FavoriteIcon, TextRender()->GetTextColor(), &FavoriteSwap);
+	}
+	else
+	{
+		// 与投票页的收藏开关同源：开启实心、关闭空心，字形由填充作用域决定。
+		const CQmFavoriteStarFillScope FavoriteStarFillScope(FavoriteOnly);
+		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+		TextRender()->TextColor(FavoriteOnly ? ColorRGBA(1.0f, 0.85f, 0.2f, 1.0f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.62f));
+		Ui()->DoLabel_QmIcon(&FavoriteIcon, EQmIcon::STAR, FONT_ICON_STAR, 13.0f, TEXTALIGN_MC);
+		TextRender()->TextColor(TextRender()->DefaultTextColor());
+		TextRender()->SetRenderFlags(0);
+		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	}
 
 	char aTooltip[192];
 	str_format(aTooltip, sizeof(aTooltip), "%s → %s → %s", Localize("No filter"), Localize("Filter empty servers in browser"), Localize("Difficulty stars"));
@@ -3559,7 +3578,15 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		GroupIcon.Margin(2.0f, &GroupIcon);
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->TextColor(HeaderHovered ? TextRender()->DefaultTextColor() : ColorRGBA(0.6f, 0.6f, 0.6f, 1.0f));
-		Ui()->DoLabel_QmIcon(&GroupIcon, m_vFriendsCategoryExpanded[CategoryIndex] && !DraggingAnyHeader && !DraggingFriend ? EQmIcon::SQUARE_MINUS : EQmIcon::SQUARE_PLUS, m_vFriendsCategoryExpanded[CategoryIndex] && !DraggingAnyHeader && !DraggingFriend ? FONT_ICON_SQUARE_MINUS : FONT_ICON_SQUARE_PLUS, GroupIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+		// 分组展开 ⇄ 折叠：加/减方框形变（外框常量、加号竖臂压平），拖拽表头时按折叠显示。
+		const bool GroupExpanded = m_vFriendsCategoryExpanded[CategoryIndex] && !DraggingAnyHeader && !DraggingFriend;
+		IUiContext GroupIconCtx = ui_widget::ControlContext(Ui());
+		ui_widget::SIconSwapBinding GroupIconBinding = ui_widget::ResolveIconSwapBinding(
+			GroupIconCtx, EQmIconSwapPair::SQUARE_PLUS_MINUS,
+			EQmIcon::SQUARE_PLUS, FONT_ICON_SQUARE_PLUS,
+			EQmIcon::SQUARE_MINUS, FONT_ICON_SQUARE_MINUS,
+			GroupExpanded ? 1.0f : 0.0f, str_quickhash("friends-category-icon"), pCategoryName);
+		ui_widget::DrawIconSwapBinding(GroupIconCtx, QmIconLabelRect(GroupIcon, GroupIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MC), TextRender()->GetTextColor(), &GroupIconBinding);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		SplitFriendsCategoryHeaderRects(Header, nullptr, &ManageButton);
@@ -3674,7 +3701,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 							TooltipText.append("\n");
 						TooltipText.append(Localize("DDStats shows UTC dates, updates daily and matches players by name only."));
 					}
-					GameClient()->m_Tooltips.DoToolTip(pListItemId, &Rect, TooltipText.c_str(), 320.0f);
+					// 好友卡片在右栏，提示贴卡片左侧向左弹出，避免盖住卡片本身与右侧动作区。
+					GameClient()->m_Tooltips.DoToolTipFromSide(pListItemId, &Rect, TooltipText.c_str(), EQmTooltipPlacement::LEFT, 320.0f);
 				}
 				++FriendTooltipIndex;
 				const bool IsOffline = Friend.ServerInfo() == nullptr;
@@ -3900,7 +3928,15 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					const CUIRect FollowHit = FriendActionHitRect(FollowButton);
 					const CUIRect CopyHit = FriendActionHitRect(CopyButton);
 					const CUIRect RemoveHit = FriendActionHitRect(RemoveButton);
-					const bool FollowPressed = Friend.ServerInfo() && ui_widget::DoIconButton(Context, pFollowButtonId, FollowingThisFriend ? EQmIcon::STOP : EQmIcon::PLAY, FollowingThisFriend ? FONT_ICON_STOP : FONT_ICON_PLAY, FollowingThisFriend ? 1 : 0, FollowButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside, std::nullopt, false, true, &FollowHit) != 0;
+					// 关注 ⇄ 取消关注是同位置双态：play ↔ stop 形变帧条，Fill 字重回交叉淡化。
+					IUiContext FollowCtx = ui_widget::ControlContext(Ui());
+					ui_widget::SIconSwapBinding FollowBinding = ui_widget::ResolveIconSwapBinding(
+						FollowCtx, EQmIconSwapPair::PLAY_STOP,
+						EQmIcon::PLAY, FONT_ICON_PLAY,
+						EQmIcon::STOP, FONT_ICON_STOP,
+						FollowingThisFriend ? 1.0f : 0.0f, str_quickhash("friend-follow-icon"), pFollowButtonId, 0.24f, true);
+					ui_widget::SIconButtonIconDraw FollowDraw{&ui_widget::DrawIconSwapBinding, &FollowBinding};
+					const bool FollowPressed = Friend.ServerInfo() && ui_widget::DoIconButton(Context, pFollowButtonId, EQmIcon::COUNT, nullptr, FollowingThisFriend ? 1 : 0, FollowButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside, std::nullopt, false, true, &FollowHit, &FollowDraw) != 0;
 					const bool CopyPressed = ui_widget::DoIconButton(Context, pCopyButtonId, EQmIcon::COPY, FONT_ICON_COPY, 0, CopyButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside, std::nullopt, false, true, &CopyHit) != 0;
 					const bool RemovePressed = ui_widget::DoIconButton(Context, pRemoveButtonId, EQmIcon::TRASH, FONT_ICON_TRASH, 0, RemoveButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside, std::nullopt, false, true, &RemoveHit) != 0;
 					if(Inside)
@@ -4789,7 +4825,11 @@ int CMenus::MapWorkspaceTab()
 void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 {
 	const QmMapHistoryUi::SWorkspaceMetrics Layout = QmMapHistoryUi::WorkspaceMetrics(View.h);
-	View.Margin(Layout.m_OuterMargin, &View);
+	// 手机端左右不留额外外缩：面板直接对齐导航栏，上下留白保持不变。
+	if(QmUiMobilePlatform())
+		View.HMargin(Layout.m_OuterMargin, &View);
+	else
+		View.Margin(Layout.m_OuterMargin, &View);
 
 	char aSavesPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, SAVES_FILE, aSavesPath, sizeof(aSavesPath));

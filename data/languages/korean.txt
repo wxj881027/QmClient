@@ -728,9 +728,6 @@ Adjust TClient heads-up display elements
 Adjust the display options; open a vote to check the layout before joining a busy server.
 == 표시 옵션을 조정하세요. 붐비는 서버에 접속하기 전에 투표를 열어 배치를 확인하세요.
 
-Adjust the opacity of entities belonging to other teams, such as tees and name plates
-== Tee와 이름표 등 다른 팀 엔티티의 불투명도를 조정합니다
-
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
 
@@ -748,9 +745,6 @@ Adjusts TClient-specific HUD elements that are not part of the standard DDNet HU
 
 Advanced
 == 고급
-
-Advanced mode
-== 고급 모드
 
 Advanced options
 == 고급 옵션
@@ -977,9 +971,6 @@ Anti Latency Tools
 Anti latency tools
 == 지연 방지 도구
 
-Anti Ping Smoothing
-== 핑 스무딩
-
 Anti-aliasing for the exported video only, independent of the graphics setting. Explicit levels render each frame into a multisampled offscreen target, so the game itself can stay at a lower setting for performance. Supersampling (output smaller than the window) already reduces jagged edges, so prefer one or the other.
 == 내보낸 영상에만 적용되는 안티앨리어싱이며 그래픽 설정과 독립적입니다. 명시적 단계를 선택하면 매 프레임을 멀티샘플 오프스크린 대상에 렌더링하므로, 게임 자체는 성능을 위해 낮은 설정을 유지할 수 있습니다. 슈퍼샘플링(출력이 창보다 작은 경우)만으로도 계단 현상이 줄어들므로 둘 중 하나만 사용하세요.
 
@@ -1040,9 +1031,6 @@ Applied to %d same-family part(s).
 Applies an animated rainbow color to selected elements such as nameplates or the hook.
 == 이름표나 훅 같은 선택한 요소에 움직이는 무지개 색을 적용합니다.
 
-Applies to single-color and rainbow overrides.
-== 단색 및 무지개색 덮어쓰기에 적용됩니다.
-
 Apply
 == 적용
 
@@ -1075,9 +1063,6 @@ Apply quick input to other Tees as well
 
 Apply squishy Tee deformation to other players
 == Q弹 Tee 변형을 다른 플레이어에 적용
-
-Apply this preset
-== 이 프리셋 적용
 
 Apply to
 == 적용 대상
@@ -1279,9 +1264,6 @@ Auto enable in Gores mode
 
 Auto enable/disable IME on text focus
 == 텍스트 입력 포커스에 따라 IME 자동 활성화 또는 비활성화
-
-Auto execute
-== 자동 실행
 
 Auto fetch replay info on refresh
 == 새로고침 시 리플레이 정보 자동 가져오기
@@ -2447,9 +2429,6 @@ Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher
 Chroma sampling. 4:2:0 is smallest and most compatible; 4:4:4 keeps full color detail for thin lines and small colored text. Rendering is 8-bit, so 10-bit formats do not add detail by themselves.
 == 색상 샘플링. 4:2:0은 가장 작고 호환성이 좋습니다. 4:4:4는 색차를 전부 보존해 얇은 선과 작은 색상 글자가 가장 선명합니다. 렌더링 자체가 8비트이므로 10비트 형식이 세부 정보를 늘려 주지는 않습니다.
 
-Cinematic camera
-== 시네마틱 카메라
-
 Cinematic camera smoothness (0=instant, 100=smoothest)
 == 시네마틱 카메라 부드러움 (0=즉시, 100=가장 부드러움)
 
@@ -2524,9 +2503,6 @@ Classic Pro
 
 Classic pro
 == 클래식 pro
-
-Classic title glow
-== 클래식 칭호 광채
 
 Clear
 == 지우기
@@ -2701,6 +2677,9 @@ Close window after changing settings
 
 Cloud bubble
 == 구름 말풍선
+
+Collapse
+== 접기
 
 Collapse console
 == 콘솔 축소
@@ -2938,9 +2917,6 @@ Configure DDNet gameplay preferences
 
 Configure display and rendering
 == 디스플레이 및 렌더링 구성
-
-Configure Dream-only convenience features
-== Configure Dream-only convenience features
 
 Configure game and client preferences
 == 게임 및 클라이언트 환경 설정 구성
@@ -3794,9 +3770,6 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 DeepL API
 == DeepL API
 
-DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
-== DeepL API Free: 매월 50만 자(deepl.com에서 등록; 무료 키는 :fx로 끝남)
-
 DeepL API Key (free keys end with :fx)
 == DeepL API 키(무료 키는 :fx로 끝남)
 
@@ -3898,9 +3871,6 @@ Delete screenshot
 
 Delete selected items
 == 선택된 항목 삭제
-
-Delete skin
-== 스킨 삭제
 
 Delete this preset
 == 이 프리셋 삭제
@@ -4276,6 +4246,9 @@ Downscaled (0.78)
 
 Draft file is empty
 == 초안 파일이 비어 있습니다
+
+Drag
+== 드래그
 
 Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
 == 사망 불투명도나 텔레포트 불투명도 같은 슬라이더를 0~100%에서 움직이거나, 레이어 불투명도 조정으로 엔티티 레이어 전체를 흐리게 합니다.
@@ -5249,6 +5222,9 @@ Entity assets
 Entity Background Image
 == 엔티티 배경 이미지
 
+Entity layer
+== 엔티티 레이어
+
 Entity overlay
 == 엔티티 오버레이
 
@@ -5360,6 +5336,9 @@ Exit replay view
 Exit spectating on both tees when either is hammered awake by another player
 == 어느 한 Tee가 다른 플레이어의 망치로 해동되면 두 Tee 모두 관전 해제
 
+Expand
+== 펼치기
+
 Expand console
 == 콘솔 확장
 
@@ -5386,6 +5365,9 @@ Export cut as a separate demo
 
 Export demo cut
 == 데모 잘라낸 구간 내보내기
+
+Export failed
+== 내보내기 실패
 
 Export name contains invalid characters.
 == 내보내기 이름에 유효하지 않은 문자가 포함되어 있습니다.
@@ -5420,6 +5402,9 @@ Export selected
 Export to clipboard
 == 클립보드로 내보내기
 
+Export to downloads
+== 다운로드로 내보내기
+
 Exported %d chat messages
 == %d 개의 채팅 메시지 내보냄
 
@@ -5453,8 +5438,14 @@ Extreme values make movement feel wrong, so change one step at a time.
 Extremely slow, for testing only
 == 극도로 느림, 테스트 전용
 
+Eyes
+== 눈
+
 f = Frame rate
 == f = 프레임 속도
+
+Fade
+== 페이드
 
 Fade and slide
 == 페이드 및 슬라이드
@@ -5560,9 +5551,6 @@ Fairly fast encode
 
 Fake CTF flags
 == 가짜 CTF 깃발
-
-Fallback simple noise reduction strength
-== 대체 단순 노이즈 감소 강도
 
 Fast encode
 == 빠른 인코딩
@@ -5920,6 +5908,9 @@ Frankenstein (drop parts on right)
 
 Free move
 == 자유 이동
+
+Free view
+== 자유 시점
 
 Free-View
 == 자유 시점
@@ -6671,9 +6662,6 @@ High quality, slow
 Higher input latency
 == 입력 지연 증가
 
-Higher values make the wave move faster. Zero stops the movement.
-== 값이 클수록 물결이 빨리 움직입니다. 영으로 설정하면 멈춥니다.
-
 Highlight Color
 == 강조 색상
 
@@ -6685,9 +6673,6 @@ Highlight game type
 
 Highlight message text gradient color
 == 강조 메시지 텍스트 그라데이션 색상
-
-Highlight movement in Polished mode. Zero turns it off.
-== 광택 모드의 하이라이트 움직임입니다. 영으로 설정하면 꺼집니다.
 
 Highlight ping value
 == 핑 값 강조
@@ -7226,9 +7211,6 @@ Installed
 Installing update. Please wait...
 == 업데이트 설치 중입니다. 잠시 기다려 주세요...
 
-Instant compact hints
-== 작은 도움말 즉시 표시
-
 Instant zoom reverse
 == 줌 반전 즉시 적용
 
@@ -7382,9 +7364,6 @@ It's recommended that you check the settings to adjust them to your liking befor
 Item
 == 아이템
 
-Item type
-== 아이템 유형
-
 Its use depends on the server or game mode.
 == 구체적인 용도는 서버나 게임 모드에 따라 다릅니다.
 
@@ -7448,6 +7427,9 @@ Join, version, rules, and help messages stay in chat instead of popups
 Joining Tutorial server
 == 튜토리얼 서버에 연결 중
 
+Joystick
+== 조이스틱
+
 Jump
 == 점프
 
@@ -7507,9 +7489,6 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == 투표 후 투표 창 유지
-
-Key
-== 키
 
 Key binds
 == 키 바인드
@@ -7864,9 +7843,6 @@ LibreTranslate endpoint
 
 Light
 == 라이트
-
-Light band
-== 빛 띠
 
 Limit information in spectator mode
 == 관전자 모드에서 정보 제한
@@ -8756,6 +8732,9 @@ Mix rate
 Mixed
 == 혼합
 
+Mobile spectator camera: 0=joystick pad, 1=drag the view
+== 모바일 관전 카메라: 0=조이스틱, 1=화면 드래그
+
 Mode
 == 모드
 
@@ -8788,6 +8767,9 @@ More optimistic prediction along Tee's stable direction, reduces delay to stabil
 
 More teammates...
 == 팀원이 더 있습니다...
+
+Morph
+== 변형
 
 MOTD
 == 공지
@@ -9446,6 +9428,9 @@ No status bar items
 No such savegame for this map
 == 이 맵에 해당하는 저장 기록이 없습니다
 
+No tee nearby
+== 근처에 Tee 없음
+
 No unfinished maps available
 == 사용 가능한 미완성 맵이 없습니다
 
@@ -9686,6 +9671,9 @@ Only show with this nickname
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 == 변경은 선택한 Tee에만 적용되니, dummy 색을 바꾸려면 먼저 Dummy로 전환하세요.
 
+Only what you can't imagine, nothing Dream can't do
+== 상상할 수 없는 것만 있을 뿐, Dream 이 할 수 없는 것은 없습니다
+
 Opacity
 == 불투명도
 
@@ -9715,6 +9703,9 @@ Open bindwheel selector
 
 Open DDNet Wiki
 == DDNet Wiki 열기
+
+Open downloads folder
+== 다운로드 폴더 열기
 
 Open emote selector
 == 이모트 선택기 열기
@@ -9850,9 +9841,6 @@ Original
 
 Original and translation
 == 원문 및 번역
-
-Original language for both received and outgoing messages. Use Auto to detect each message.
-== 받은 메시지와 보낸 메시지 모두 원래 언어를 사용합니다. 각 메시지 감지에는 자동을 사용하세요.
 
 Original language for incoming and outgoing text
 == 받은 텍스트와 보낸 텍스트의 원래 언어
@@ -10061,11 +10049,17 @@ Password for Axiom alt account auto-login
 Password for Axiom main account auto-login
 == Axiom 메인 계정 자동 로그인 비밀번호
 
+Password icon animation
+== 비밀번호 아이콘 애니메이션
+
 Password incorrect
 == 비밀번호가 틀렸습니다
 
 Password required to use reserved slots.
 == 예약된 슬롯을 사용하는 데 필요한 비밀번호
+
+Password visibility icon animation: 0=Fade, 1=Morph
+== 비밀번호 표시 아이콘 애니메이션: 0=페이드, 1=변형
 
 Past year
 == 지난 1년
@@ -10579,12 +10573,6 @@ Points
 
 Points unavailable
 == 포인트를 조회할 수 없음
-
-Polished
-== 광택
-
-Pop wave
-== 확대 물결
 
 Popup animation
 == 팝업 애니메이션
@@ -11645,9 +11633,6 @@ Remove team name:
 Remove war clan:
 == 전쟁 클랜 제거:
 
-Remove War Group
-== 전쟁 그룹 제거
-
 Remove war name:
 == 전쟁 이름 제거:
 
@@ -12110,18 +12095,6 @@ Right-click to enable auto-translate
 Ring
 == 링
 
-RNNoise noise reduction
-== RNNoise 노이즈 감소
-
-RNNoise noise reduction (unavailable in this build)
-== RNNoise 노이즈 감소 (이 빌드에서는 사용 불가)
-
-RNNoise noise reduction strength
-== RNNoise 노이즈 감소 강도
-
-RNNoise not integrated in current build, will fallback to simple noise reduction
-== 현재 빌드에 RNNoise 가 통합되지 않아 기본 노이즈 감소로 대체됩니다
-
 Room
 == 방
 
@@ -12343,6 +12316,9 @@ Save/Load Skin
 
 Saved
 == 저장했습니다
+
+Saved to Downloads/QmClient
+== 다운로드/QmClient에 저장됨
 
 Saved to the bind wheel.
 == 바인드 휠에 저장했습니다.
@@ -12695,6 +12671,9 @@ Send specified command to rcon
 Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
 == 90~270초의 무작위 간격으로 연속 세 줄의 가사를 전체 채팅에 보내며 줄 사이에 3초 대기
 
+Send to
+== 보낼 대상
+
 Send translation method
 == 번역 방식 보내기
 
@@ -12823,9 +12802,6 @@ Server URL
 
 Server votes
 == 서버 투표
-
-Server-assigned style
-== 서버 지정 스타일
 
 Server-dependent
 == 서버에 따라 다름
@@ -12997,9 +12973,6 @@ Share of the server browser name/map split given to the name column (per mille)
 
 Sharpen
 == 샤픈
-
-Shimmer speed
-== 반짝임 속도
 
 Short pain voice
 == 짧은 피격 신음
@@ -13548,9 +13521,6 @@ Show lyrics in a separate island below Dynamic Island
 == 다이나믹 아일랜드 아래의 별도 아일랜드에 가사 표시
 
 Show lyrics in Dynamic Island
-== 다이나믹 아일랜드에 가사 표시
-
-Show lyrics inside Dynamic Island
 == 다이나믹 아일랜드에 가사 표시
 
 Show main tee title locally
@@ -14150,12 +14120,6 @@ Simple noise reduction
 Simple noise reduction strength
 == 간단한 노이즈 감소 강도
 
-Single color
-== 단색
-
-Single color and Rainbow override the color of animated styles; the style keeps its motion
-== 단색과 무지개는 애니메이션 스타일의 색상을 덮어씁니다. 스타일의 움직임은 그대로 유지됩니다
-
 Size
 == 크기
 
@@ -14362,9 +14326,6 @@ Smooths the camera while you free-spectate with the mouse in live games and demo
 
 Snap title bob offset to whole pixels (sharper glyphs, choppier motion)
 == 흔들림 오프셋을 정수 픽셀에 맞춤 (글자는 선명, 움직임은 끊김)
-
-Snap wave to pixels
-== 물결 변위를 정수 픽셀에 맞추기
 
 Snapshot Age
 == 스냅샷 경과 시간
@@ -14636,9 +14597,6 @@ Start at a random queue position on every map join
 Start dummy skin queue from a random position when entering a map
 == 맵 입장 시 더미 스킨 큐를 무작위 위치에서 시작
 
-Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
-== 매번 맵에 참여할 때 무작위 대기열 위치에서 시작합니다 (더미 연결 또는 대기열 다시 활성화 시에도 포함). 전환 간격을 0으로 설정하면 시간제 로테이션이 꺼지고 맵 참여 시에만 전환됩니다.
-
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 == 기본값에서 시작하세요. 다른 플레이어가 튀어 보이면 조금 올리고, 내가 뒤처져 보이면 낮추세요.
 
@@ -14798,9 +14756,6 @@ Streamer word list file
 Strength icons assets
 == 강도 아이콘 에셋
 
-Strength of the vertical or pop wave. Zero keeps the title still.
-== 상하 또는 확대 물결의 강도입니다. 영으로 설정하면 칭호가 움직이지 않습니다.
-
 Stress system (debug builds only).
 == 스트레스 시스템 (디버그 빌드 전용)
 
@@ -14851,9 +14806,6 @@ Styles kill, finish and system messages in the chat area.
 
 Sub-Tick aiming
 == Sub-Tick 조준
-
-Subtle
-== 은은함
 
 Success
 == 성공
@@ -15007,9 +14959,6 @@ System message text gradient color
 
 System prompt text color
 == 시스템 프롬프트 텍스트 색상
-
-Tags
-== 태그
 
 Take a screenshot
 == 스크린샷 찍기
@@ -15365,9 +15314,6 @@ Text color mode
 Text color mode: 0 automatic, 1 white, 2 black, 3 custom
 == 텍스트 색상 모드: 0 자동, 1 흰색, 2 검정, 3 사용자 지정
 
-Text effect
-== 글자 효과
-
 Text input focus ring color
 == 텍스트 입력 포커스 링 색상
 
@@ -15617,6 +15563,9 @@ This team started already
 This team was disbanded because there are more players than allowed in the team.
 == 허용된 인원보다 많은 플레이어가 있어 이 팀이 해체되었습니다
 
+This text is already in the target language.
+== 이 텍스트는 이미 대상 언어입니다.
+
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == 이 툴팁은 ui_widget::Tooltip — CTooltips 위의 얇은 레이어에 의해 제공됩니다.
 
@@ -15778,9 +15727,6 @@ Title display
 
 Title light sweep speed in 1/100 row per second (0 = off)
 == 칭호 빛 이동 속도 (초당 1/100줄, 0 = 끔)
-
-Title motion
-== 칭호 애니메이션
 
 Title motion: 0 = vertical wave, 1 = pop wave
 == 칭호 애니메이션: 0 = 상하 물결, 1 = 확대 물결
@@ -16823,9 +16769,6 @@ Use team colors for name plates
 Use Tee icons instead of circles
 == 원 대신 Tee 아이콘 사용
 
-Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== 훅 키를 누르고 있는 동안 훅 보조선이 표시될 때 아래의 사용자 지정 색상을 사용합니다. 비활성화하면 누르지 않은 색상이 자동으로 반전됩니다.
-
 Use the custom colors below while the hook key is held
 == 훅 키를 누르고 있는 동안 아래의 사용자 지정 색상 사용
 
@@ -16903,9 +16846,6 @@ Vertical position
 
 Vertical sync (may cause lag)
 == 수직 동기화 (지연 발생 가능)
-
-Vertical wave
-== 상하 물결
 
 Very fast encode
 == 매우 빠른 인코딩
@@ -17017,12 +16957,6 @@ Visual effects
 
 Visual: Cursor
 == 시각: 커서
-
-Visual: Effects
-== 시각: 효과
-
-Visual: Nameplates
-== 시각: 이름표
 
 Visuals
 == 시각 효과
@@ -17213,15 +17147,6 @@ Water hammer highlight
 Watermark
 == 워터마크
 
-Wave amount
-== 파도 크기
-
-Wave spacing
-== 물결 간격
-
-Wave speed
-== 물결 속도
-
 Weak hook
 == 약한 갈고리
 
@@ -17336,9 +17261,6 @@ Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per
 When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient 무지개 Tee가 켜져 있으면 이 기능은 적용되지 않습니다.
 
-When you cross the start line, show a ghost tee replicating the movements of your best time
-== 시작선을 통과하면 최고 기록의 움직임을 재현하는 고스트 Tee를 표시합니다
-
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 == 칭호가 어디에 나타나고 어떻게 보일지를 정합니다. 이름표, 스타일, 애니메이션, 색상, 발광입니다.
 
@@ -17422,6 +17344,9 @@ Whisper option color
 
 Whisper something to someone (private message)
 == 누군가에게 귓속말 보내기 (개인 메시지)
+
+Whisper target left the game
+== 귓속말 대상이 게임을 떠났습니다
 
 Whisper to %s
 == %s 님에게 귓속말
@@ -17891,9 +17816,6 @@ Zen mode hides chat bubbles even when this is on, and a long "Duration" leaves o
 Zen mode key
 == 선 모드 키
 
-Zero uses the style default. Higher values make color bands narrower.
-== 영으로 설정하면 스타일 기본값을 사용합니다. 값이 클수록 색 띠가 좁아집니다.
-
 Zhipu AI
 == 지푸 AI
 
@@ -18347,10 +18269,6 @@ required
 [Team status]
 solo
 == 솔로
-
-[Title color mode]
-Use style colors
-== 스타일 색상 사용
 
 [Touch button behavior]
 Bind

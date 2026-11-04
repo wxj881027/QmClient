@@ -15,6 +15,7 @@
 #include <engine/shared/localization.h>
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/QmIconSwap.h>
 #include <game/client/animstate.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/voting.h>
@@ -592,14 +593,30 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		static CButtonContainer s_Favorite;
 		const bool IsFavorite = pSelected != nullptr && GameClient()->m_TClient.IsFavoriteMap(pSelected->m_Name.c_str());
 		// 收藏开关靠字形区分状态：未收藏空心中性星标，已收藏实心收藏色星标。
-		// 全局「实心收藏图标」只负责徽标外观，不能让开关两态画成同形。
+		// 这一层的字形由下方 CQmFavoriteStarFillScope 决定，全局「实心收藏图标」只影响
+		// 徽标外观，不能让开关两态画成同形。
+		// 形变只在实心样式开启时播放：此时两态字形本就不同，帧条切换才有意义；
+		// 关着时两端同形，直接走原绘制。
+		const bool FavoriteMorph = g_Config.m_QmUiFavoriteIconFilled != 0;
 		const ColorRGBA PreviousFavoriteColor = TextRender()->GetTextColor();
 		if(!IsFavorite)
 			TextRender()->TextColor(Ink.WithMultipliedAlpha(0.55f));
 		// 未收藏时保留中性前景，避免收藏语义色把空心星标染成「已收藏」。
 		const CQmIconSemanticColorScope FavoriteIconColorScope(!IsFavorite);
 		const CQmFavoriteStarFillScope FavoriteFillScope(IsFavorite);
-		const bool FavoriteClicked = Ui()->DoButton_QmIcon(&s_Favorite, EQmIcon::STAR, FontIcons::FONT_ICON_STAR, IsFavorite, &Favorite, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, pSelected != nullptr) != 0;
+		ui_widget::SIconSwapBinding FavoriteBinding;
+		ui_widget::SIconButtonIconDraw FavoriteDraw;
+		if(FavoriteMorph)
+		{
+			IUiContext FavoriteCtx = ui_widget::ControlContext(Ui());
+			FavoriteBinding = ui_widget::ResolveIconSwapBinding(
+				FavoriteCtx, EQmIconSwapPair::STAR_FAVORITE,
+				EQmIcon::STAR, FontIcons::FONT_ICON_STAR,
+				EQmIcon::STAR, FontIcons::FONT_ICON_STAR,
+				IsFavorite ? 1.0f : 0.0f, str_quickhash("vote-favorite-star"), &s_Favorite, 0.26f, true);
+			FavoriteDraw = {&ui_widget::DrawIconSwapBinding, &FavoriteBinding};
+		}
+		const bool FavoriteClicked = Ui()->DoButton_QmIcon(&s_Favorite, FavoriteMorph ? EQmIcon::COUNT : EQmIcon::STAR, FavoriteMorph ? nullptr : FontIcons::FONT_ICON_STAR, IsFavorite, &Favorite, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, pSelected != nullptr, std::nullopt, false, false, FavoriteMorph ? &FavoriteDraw : nullptr) != 0;
 		TextRender()->TextColor(PreviousFavoriteColor);
 		if(FavoriteClicked)
 		{

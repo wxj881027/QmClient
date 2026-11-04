@@ -433,11 +433,12 @@ void CInput::StopTextInput()
 
 void CInput::EnsureScreenKeyboardShown()
 {
-	if(Window() == nullptr || !SDL_HasScreenKeyboardSupport() ||
-		Graphics()->IsScreenKeyboardShown())
-	{
+	if(Window() == nullptr || !SDL_HasScreenKeyboardSupport())
 		return;
-	}
+	// 键盘已经显示时不要再 Stop/Start：那会让输入法先收起再弹出，表现为
+	// “点一下弹出又消失”。只有确实隐藏时才重新拉起。
+	if(Graphics()->IsScreenKeyboardShown())
+		return;
 	SDL_StopTextInput(Window());
 	SDL_StartTextInput(Window());
 }

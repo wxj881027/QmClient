@@ -104,7 +104,7 @@ public:
 		// 所有纹理共用同一平移坐标，仅使用整数倍谐波，避免反向漂移和循环接缝。
 		const float Flow = Position.x * (2.0f * pi / LOOP_WIDTH) - m_Phase;
 		const float Warp = 0.35f * std::sin(Flow + Position.y * 1.7f) +
-			0.18f * std::sin(2.0f * Flow - Position.y * 0.8f);
+				   0.18f * std::sin(2.0f * Flow - Position.y * 0.8f);
 		const float Wave = 0.5f + 0.5f * std::sin(Position.y * 4.2f + Flow + Warp * 2.8f);
 		float Crest = 0.5f + 0.5f * std::sin(Position.y * 5.8f + 2.0f * Flow + Warp * 3.0f);
 		Crest *= Crest;

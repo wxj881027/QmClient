@@ -324,6 +324,11 @@ private:
 	std::vector<SWarning> m_vWarnings;
 	std::vector<SWarning> m_vQuittingWarnings;
 
+	// QmClient: 启动时对存档目录做一次写探针，并记录进程完整性/受限令牌，
+	// 供保存失败提示直接说明"写到哪里、以什么令牌写、哪一步被拒"。
+	char m_aQmSaveDiagnostics[768] = "";
+	bool m_QmSaveDirectoryWritable = true;
+
 	CFifo m_Fifo;
 
 	IOHANDLE m_BenchmarkFile = nullptr;
@@ -409,6 +414,7 @@ public:
 	// 性能日志文件运行时开/关（供 client.cpp 启动与主循环调用）。
 	void SetQmPerfFileSwitch(std::shared_ptr<CQmPerfFileSwitchLogger> pSwitch);
 	void UpdateQmPerfFileLogger();
+	void QmProbeSaveDirectory();
 
 	// ----- send functions -----
 	int SendMsg(int Conn, CMsgPacker *pMsg, int Flags) override;

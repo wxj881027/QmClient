@@ -47,57 +47,49 @@ namespace
 
 TEST(ServerBrowserColumnLayout, GrowingTakesWidthFromLargestRightSpareFirst)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aColumns{{
-		{100, 40, 300, 100}, {180, 40, 300, 100}, {120, 40, 300, 100}}};
+	const std::array<SQmBrowserColumnSizing, 3> aColumns{{{100, 40, 300, 100}, {180, 40, 300, 100}, {120, 40, 300, 100}}};
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aColumns, 0, 40), std::array{140.0f, 140.0f, 120.0f});
 }
 
 TEST(ServerBrowserColumnLayout, GrowingSharesAfterRightColumnsReachSameSpare)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aColumns{{
-		{100, 40, 300, 100}, {180, 40, 300, 100}, {120, 40, 300, 100}}};
+	const std::array<SQmBrowserColumnSizing, 3> aColumns{{{100, 40, 300, 100}, {180, 40, 300, 100}, {120, 40, 300, 100}}};
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aColumns, 0, 80), std::array{180.0f, 110.0f, 110.0f});
 }
 
 TEST(ServerBrowserColumnLayout, EqualSpareSharesEvenWhenAbsoluteWidthsDiffer)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aColumns{{
-		{100, 40, 300, 100}, {160, 40, 300, 100}, {110, 40, 300, 50}}};
+	const std::array<SQmBrowserColumnSizing, 3> aColumns{{{100, 40, 300, 100}, {160, 40, 300, 100}, {110, 40, 300, 50}}};
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aColumns, 0, 20), std::array{120.0f, 150.0f, 100.0f});
 }
 
 TEST(ServerBrowserColumnLayout, GrowingSkipsRightColumnAfterItReachesMinimum)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aColumns{{
-		{100, 40, 300, 100}, {120, 110, 300, 40}, {100, 40, 300, 80}}};
+	const std::array<SQmBrowserColumnSizing, 3> aColumns{{{100, 40, 300, 100}, {120, 110, 300, 40}, {100, 40, 300, 80}}};
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aColumns, 0, 50), std::array{130.0f, 110.0f, 80.0f});
 }
 
 TEST(ServerBrowserColumnLayout, GrowingStopsAtSelectedColumnMaximum)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aColumns{{
-		{100, 40, 120, 100}, {180, 40, 300, 100}, {120, 40, 300, 100}}};
+	const std::array<SQmBrowserColumnSizing, 3> aColumns{{{100, 40, 120, 100}, {180, 40, 300, 100}, {120, 40, 300, 100}}};
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aColumns, 0, 100), std::array{120.0f, 160.0f, 120.0f});
 }
 
 TEST(ServerBrowserColumnLayout, GrowingStopsWhenRightColumnsHaveNoRemainingWidth)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aColumns{{
-		{100, 40, 300, 100}, {110, 100, 300, 100}, {90, 80, 300, 100}}};
+	const std::array<SQmBrowserColumnSizing, 3> aColumns{{{100, 40, 300, 100}, {110, 100, 300, 100}, {90, 80, 300, 100}}};
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aColumns, 0, 100), std::array{110.0f, 100.0f, 90.0f});
 }
 
 TEST(ServerBrowserColumnLayout, GrowingUsesOnlyBlankSpaceWithinFixedTotal)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aColumns{{
-		{4, 2, 20, 4}, {8, 2, 20, 6}, {8, 2, 20, 8}}};
+	const std::array<SQmBrowserColumnSizing, 3> aColumns{{{4, 2, 20, 4}, {8, 2, 20, 6}, {8, 2, 20, 8}}};
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aColumns, 0, 4), std::array{6.0f, 6.0f, 8.0f});
 }
 
 TEST(ServerBrowserColumnLayout, GrowingStopsWhenRightColumnsOnlyFitOrAlreadyClipContent)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aColumns{{
-		{100, 40, 300, 100}, {80, 40, 300, 80}, {90, 40, 300, 120}}};
+	const std::array<SQmBrowserColumnSizing, 3> aColumns{{{100, 40, 300, 100}, {80, 40, 300, 80}, {90, 40, 300, 120}}};
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aColumns, 0, 50), std::array{100.0f, 80.0f, 90.0f});
 }
 
@@ -111,36 +103,31 @@ TEST(ServerBrowserColumnLayout, AlreadyClippedSelectedColumnCanGrowButCannotShri
 
 TEST(ServerBrowserColumnLayout, ShrinkingFillsMostCrowdedRightColumnFirst)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aColumns{{
-		{100, 10, 300, 60}, {80, 40, 300, 140}, {100, 40, 300, 100}}};
+	const std::array<SQmBrowserColumnSizing, 3> aColumns{{{100, 10, 300, 60}, {80, 40, 300, 140}, {100, 40, 300, 100}}};
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aColumns, 0, -40), std::array{60.0f, 120.0f, 100.0f});
 }
 
 TEST(ServerBrowserColumnLayout, ShrinkingFillsNegativeSpareBeforeSharingPositiveSpare)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aColumns{{
-		{100, 10, 300, 20}, {80, 40, 300, 140}, {100, 40, 300, 100}}};
+	const std::array<SQmBrowserColumnSizing, 3> aColumns{{{100, 10, 300, 20}, {80, 40, 300, 140}, {100, 40, 300, 100}}};
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aColumns, 0, -80), std::array{20.0f, 150.0f, 110.0f});
 }
 
 TEST(ServerBrowserColumnLayout, EquallyCrowdedColumnsShareReleasedWidth)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aColumns{{
-		{100, 10, 300, 80}, {80, 40, 300, 120}, {50, 40, 300, 90}}};
+	const std::array<SQmBrowserColumnSizing, 3> aColumns{{{100, 10, 300, 80}, {80, 40, 300, 120}, {50, 40, 300, 90}}};
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aColumns, 0, -20), std::array{80.0f, 90.0f, 60.0f});
 }
 
 TEST(ServerBrowserColumnLayout, ShrinkingContinuesAfterCrowdedColumnReachesMaximum)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aColumns{{
-		{100, 10, 300, 60}, {80, 40, 90, 140}, {100, 40, 300, 100}}};
+	const std::array<SQmBrowserColumnSizing, 3> aColumns{{{100, 10, 300, 60}, {80, 40, 90, 140}, {100, 40, 300, 100}}};
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aColumns, 0, -40), std::array{60.0f, 90.0f, 130.0f});
 }
 
 TEST(ServerBrowserColumnLayout, ShrinkingStopsAtSelectedColumnMinimum)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aColumns{{
-		{100, 80, 300, 60}, {80, 40, 300, 140}, {100, 40, 300, 100}}};
+	const std::array<SQmBrowserColumnSizing, 3> aColumns{{{100, 80, 300, 60}, {80, 40, 300, 140}, {100, 40, 300, 100}}};
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aColumns, 0, -100), std::array{80.0f, 100.0f, 100.0f});
 }
 
@@ -163,22 +150,19 @@ TEST(ServerBrowserColumnLayout, NextPressCanUseSpaceReleasedByShorterContent)
 
 TEST(ServerBrowserColumnLayout, ShrinkingStopsWhenAllRightColumnsReachMaximum)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aColumns{{
-		{100, 10, 300, 40}, {80, 40, 90, 140}, {100, 40, 110, 100}}};
+	const std::array<SQmBrowserColumnSizing, 3> aColumns{{{100, 10, 300, 40}, {80, 40, 90, 140}, {100, 40, 110, 100}}};
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aColumns, 0, -100), std::array{80.0f, 90.0f, 110.0f});
 }
 
 TEST(ServerBrowserColumnLayout, DraggingKeepsColumnsToLeftUnchanged)
 {
-	const std::array<SQmBrowserColumnSizing, 4> aColumns{{
-		{77, 20, 300, 100}, {100, 40, 300, 100}, {180, 40, 300, 100}, {120, 40, 300, 100}}};
+	const std::array<SQmBrowserColumnSizing, 4> aColumns{{{77, 20, 300, 100}, {100, 40, 300, 100}, {180, 40, 300, 100}, {120, 40, 300, 100}}};
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aColumns, 1, 40), std::array{77.0f, 140.0f, 140.0f, 120.0f});
 }
 
 TEST(ServerBrowserColumnLayout, FixedIconIsSkippedInBothDirections)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aColumns{{
-		{100, 40, 300, 40}, {20, 20, 20, 200}, {100, 50, 200, 50}}};
+	const std::array<SQmBrowserColumnSizing, 3> aColumns{{{100, 40, 300, 40}, {20, 20, 20, 200}, {100, 50, 200, 50}}};
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aColumns, 0, 40), std::array{140.0f, 20.0f, 60.0f});
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aColumns, 0, -40), std::array{60.0f, 20.0f, 140.0f});
 }
@@ -207,15 +191,13 @@ TEST(ServerBrowserColumnLayout, LastColumnHasNoResizableOuterBoundary)
 
 TEST(ServerBrowserColumnLayout, FittingExactBudgetPreservesConfiguredWidths)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aColumns{{
-		{100, 40, 300, 100}, {180, 40, 300, 100}, {120, 40, 300, 100}}};
+	const std::array<SQmBrowserColumnSizing, 3> aColumns{{{100, 40, 300, 100}, {180, 40, 300, 100}, {120, 40, 300, 100}}};
 	ExpectBrowserColumnWidths(QmBrowserFitColumns(aColumns, 400), std::array{100.0f, 180.0f, 120.0f});
 }
 
 TEST(ServerBrowserColumnLayout, FittingNarrowerViewportTakesLargestSpareFirst)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aColumns{{
-		{100, 40, 300, 100}, {180, 40, 300, 100}, {120, 40, 300, 100}}};
+	const std::array<SQmBrowserColumnSizing, 3> aColumns{{{100, 40, 300, 100}, {180, 40, 300, 100}, {120, 40, 300, 100}}};
 	ExpectBrowserColumnWidths(QmBrowserFitColumns(aColumns, 360), std::array{100.0f, 140.0f, 120.0f});
 }
 
@@ -227,8 +209,7 @@ TEST(ServerBrowserColumnLayout, FittingWiderViewportFillsMostCrowdedColumnFirst)
 
 TEST(ServerBrowserColumnLayout, BelowMinimumBudgetUsesEffectiveMinimumsAndStopsDragging)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aColumns{{
-		{20, 20, 20, 20}, {100, 60, 300, 100}, {80, 40, 200, 80}}};
+	const std::array<SQmBrowserColumnSizing, 3> aColumns{{{20, 20, 20, 20}, {100, 60, 300, 100}, {80, 40, 200, 80}}};
 	const auto Fitted = QmBrowserFitColumns(aColumns, 60);
 	ExpectBrowserColumnWidths(Fitted, std::array{10.0f, 30.0f, 20.0f});
 	EXPECT_FLOAT_EQ(Fitted[0].m_MaxWidth, 10.0f);
@@ -241,8 +222,7 @@ TEST(ServerBrowserColumnLayout, BelowMinimumBudgetUsesEffectiveMinimumsAndStopsD
 
 TEST(ServerBrowserColumnLayout, BeyondMaximumBudgetExpandsOnlyFlexibleColumns)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aColumns{{
-		{20, 20, 20, 20}, {80, 40, 100, 140}, {80, 40, 100, 100}}};
+	const std::array<SQmBrowserColumnSizing, 3> aColumns{{{20, 20, 20, 20}, {80, 40, 100, 140}, {80, 40, 100, 100}}};
 	const auto Fitted = QmBrowserFitColumns(aColumns, 300);
 	ExpectBrowserColumnWidths(Fitted, std::array{20.0f, 160.0f, 120.0f});
 	EXPECT_FLOAT_EQ(Fitted[0].m_MaxWidth, 20.0f);
@@ -268,8 +248,7 @@ TEST(ServerBrowserColumnLayout, EmptyAndZeroWidthViewportsRemainBounded)
 
 TEST(ServerBrowserColumnLayout, PressSnapshotAllowsReversingAndRepeatingDeltaWithoutDrift)
 {
-	const std::array<SQmBrowserColumnSizing, 3> aSnapshot{{
-		{100, 40, 300, 40}, {180, 40, 300, 100}, {120, 40, 300, 100}}};
+	const std::array<SQmBrowserColumnSizing, 3> aSnapshot{{{100, 40, 300, 40}, {180, 40, 300, 100}, {120, 40, 300, 100}}};
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aSnapshot, 0, 40), std::array{140.0f, 140.0f, 120.0f});
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aSnapshot, 0, -20), std::array{80.0f, 180.0f, 140.0f});
 	ExpectBrowserColumnWidths(QmBrowserResizeColumns(aSnapshot, 0, 40), std::array{140.0f, 140.0f, 120.0f});
@@ -278,8 +257,7 @@ TEST(ServerBrowserColumnLayout, PressSnapshotAllowsReversingAndRepeatingDeltaWit
 
 TEST(ServerBrowserColumnLayout, FractionalResizePreservesTotalBudgetAndLeftColumns)
 {
-	const std::array<SQmBrowserColumnSizing, 4> aSnapshot{{
-		{17.3f, 10, 30, 20}, {100.1f, 40, 300, 80}, {80.2f, 40, 300, 140}, {140.3f, 40, 300, 100}}};
+	const std::array<SQmBrowserColumnSizing, 4> aSnapshot{{{17.3f, 10, 30, 20}, {100.1f, 40, 300, 80}, {80.2f, 40, 300, 140}, {140.3f, 40, 300, 100}}};
 	double TotalBefore = 0.0;
 	for(const auto &Column : aSnapshot)
 		TotalBefore += Column.m_Width;

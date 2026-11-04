@@ -38,7 +38,32 @@ int SettingsCanonicalPage(int Page)
 	}
 }
 
-bool SettingsPageVisibleInRightTabBar(int Page)
+bool SettingsMobilePlatform()
+{
+#if defined(CONF_PLATFORM_ANDROID) || defined(CONF_PLATFORM_IOS)
+	return true;
+#else
+	return false;
+#endif
+}
+
+bool SettingsPageHiddenForMobile(int Page, bool MobilePlatform)
+{
+	if(!MobilePlatform)
+		return false;
+	switch(Page)
+	{
+	// 手机端是观战/回放端。绑键页要保留（手机没有键盘，绑定是独立入口），
+	// 资源页要保留（游戏内录制与观战片段都在那里取），DDNet 页也要保留（官方设置）。
+	// 只有 TClient 的兼容页在手机端整体不呈现；其中的字体卡片移到画面页。
+	case CMenus::SETTINGS_TCLIENT:
+		return true;
+	default:
+		return false;
+	}
+}
+
+bool SettingsPageVisibleForPlatform(int Page, bool MobilePlatform)
 {
 	switch(Page)
 	{
@@ -48,8 +73,13 @@ bool SettingsPageVisibleInRightTabBar(int Page)
 	case CMenus::SETTINGS_CONFIGS:
 		return false;
 	default:
-		return Page >= 0 && Page < CMenus::SETTINGS_LENGTH;
+		return Page >= 0 && Page < CMenus::SETTINGS_LENGTH && !SettingsPageHiddenForMobile(Page, MobilePlatform);
 	}
+}
+
+bool SettingsPageVisibleInRightTabBar(int Page)
+{
+	return SettingsPageVisibleForPlatform(Page, SettingsMobilePlatform());
 }
 
 bool SettingsRuntimeCacheKeyMatches(const SSettingsRuntimeCacheKey &A, const SSettingsRuntimeCacheKey &B)

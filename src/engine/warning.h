@@ -11,7 +11,7 @@ struct SWarning
 	SWarning &operator=(const SWarning &Other);
 
 	char m_aWarningTitle[128] = "";
-	char m_aWarningMsg[256] = "";
+	char m_aWarningMsg[768] = "";
 	bool m_AutoHide = true;
 };
 

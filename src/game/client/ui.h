@@ -35,10 +35,41 @@ class CUiScopedQuadBatch;
 class CUiScopedGaussianBlur;
 class CUiScopedGaussianBlurSuppression;
 
+namespace ui_widget
+{
+	struct SIconButtonIconDraw;
+}
+
+// 手机屏幕物理尺寸小，同一套虚拟尺寸看着明显偏小；这里给移动端一个固定放大系数，
+// 作用在虚拟屏幕高度上，菜单、服务器列表、卡片等按虚拟单位布局的界面会一起等比放大
+// （不是单独放大字号，避免只放大文字把排版挤坏）。
+// 桌面端保持 1.0，只由 qm_ui_scale 控制，不能被手机端默认值连带放大。
+inline float QmUiMobileScaleBoost()
+{
+#if defined(CONF_PLATFORM_ANDROID) || defined(CONF_PLATFORM_IOS)
+	return 1.3f;
+#else
+	return 1.0f;
+#endif
+}
+
+inline bool QmUiMobilePlatform()
+{
+#if defined(CONF_PLATFORM_ANDROID) || defined(CONF_PLATFORM_IOS)
+	return true;
+#else
+	return false;
+#endif
+}
+
+inline float QmUiScaleFactor(int ScalePercent)
+{
+	return std::clamp(ScalePercent, 50, 200) / 100.0f * QmUiMobileScaleBoost();
+}
+
 inline float QmUiVirtualScreenHeight(int ScalePercent)
 {
-	const float Scale = std::clamp(ScalePercent, 50, 200) / 100.0f;
-	return 600.0f / Scale;
+	return 600.0f / QmUiScaleFactor(ScalePercent);
 }
 
 inline float QmUiCenteredMargin(const CUIRect &Rect, float PreferredMargin, float MinimumWidth, float MinimumHeight)
@@ -840,6 +871,9 @@ private:
 	unsigned m_UpdatedMouseButtons = 0;
 	unsigned m_MouseButtons = 0;
 	unsigned m_LastMouseButtons = 0;
+	// 每帧最多激活一个按钮：触摸按下导致页面切换后，原位置的另一个按钮
+	// 会在同一帧读到同一次按下/抬起，产生双重点击。
+	bool m_ButtonActivatedThisFrame = false;
 	CTouchState m_TouchState;
 	bool m_DirectTouchInput = false;
 	const void *m_pTouchDragId = nullptr;
@@ -1359,7 +1393,9 @@ public:
 	void DrawButton_FontIcon(const char *pText, const CUIRect *pRect, ColorRGBA Color, int Corners = IGraphics::CORNER_ALL, bool Enabled = true);
 	int DoButton_FontIcon(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt);
 	// 图集优先、字形回退的图标绘制：pFallbackIcon 为 FontIcons::FONT_ICON_* 字形。
-	bool DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f)) const;
+	// ForceOutlineStyle 强制描边字面（忽略实心态配置）——图标交换的 A 端静止态必须
+	// 与帧条第 0 帧同形，实心配置开着时也要画描边星。
+	bool DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), bool ForceOutlineStyle = false) const;
 	bool DrawQmIconAt(float x, float y, float Size, EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f)) const
 	{
 		CUIRect Rect;
@@ -1370,7 +1406,7 @@ public:
 		return DrawQmIcon(Rect, Icon, pFallbackIcon, Color);
 	}
 	CLabelResult DoLabel_QmIcon(const CUIRect *pRect, EQmIcon Icon, const char *pFallbackIcon, float Size, int Align, const SLabelProperties &LabelProps = {}) const;
-	int DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt, bool ShowSlash = false, bool TransparentInactive = false);
+	int DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt, bool ShowSlash = false, bool TransparentInactive = false, const ui_widget::SIconButtonIconDraw *pIconDraw = nullptr);
 	// only used for popup menus
 	int DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding = 0.0f, bool TransparentInactive = false, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt, float MinimumFontSize = -1.0f);
 

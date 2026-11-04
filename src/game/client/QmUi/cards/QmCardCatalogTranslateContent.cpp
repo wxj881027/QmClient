@@ -88,6 +88,15 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pInput, &Row, pInput->GetString(), &LabelCol);
 		return ui_widget::InputField(TextInputCtx, pInput, Rect, std::forward<decltype(Arguments)>(Arguments)...);
 	};
+	// 密码类输入统一走组件：隐藏状态、尾部眼睛按钮与切换动画都由 UiForms 定义。
+	const auto RenderPasswordInput = [this, &TextInputCtx, &Row, &LabelCol](CLineInput *pInput, const CUIRect &Rect, ui_widget::SPasswordFieldState *pState, float FontSize, const char *pPlaceholder = nullptr) {
+		if(pInput != nullptr)
+			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pInput, &Row, pInput->GetString(), &LabelCol);
+		ui_widget::SPasswordFieldOptions Options;
+		Options.m_pPlaceholder = pPlaceholder;
+		Options.m_FontSize = FontSize;
+		return ui_widget::PasswordField(TextInputCtx, pInput, Rect, pState, Options);
+	};
 	if(Flow.Control("translate-row-1", LineHeight, Row))
 	{
 		RenderCheckbox(&g_Config.m_QmTranslateAuto, "Auto translate received messages", Localize("Auto translate received messages"), &g_Config.m_QmTranslateAuto, &Row, LineHeight);
@@ -158,8 +167,8 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
 			RenderLabel("qmclient-translate-deepl-key", &LabelCol, Localize("API key"), BodySize);
 			static CLineInput s_TranslateDeeplKey(g_Config.m_QmTranslateDeeplKey, sizeof(g_Config.m_QmTranslateDeeplKey));
-			s_TranslateDeeplKey.SetHidden(true);
-			RenderTextInput(&s_TranslateDeeplKey, ControlCol, "", BodySize);
+			static ui_widget::SPasswordFieldState s_TranslateDeeplKeyState;
+			RenderPasswordInput(&s_TranslateDeeplKey, ControlCol, &s_TranslateDeeplKeyState, BodySize);
 		}
 		Flow.Space(LineSpacing);
 	}
@@ -179,8 +188,8 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
 			RenderLabel("qmclient-translate-baidu-key", &LabelCol, Localize("API key"), BodySize);
 			static CLineInput s_TranslateBaiduKey(g_Config.m_QmTranslateBaiduKey, sizeof(g_Config.m_QmTranslateBaiduKey));
-			s_TranslateBaiduKey.SetHidden(true);
-			RenderTextInput(&s_TranslateBaiduKey, ControlCol, "", BodySize);
+			static ui_widget::SPasswordFieldState s_TranslateBaiduKeyState;
+			RenderPasswordInput(&s_TranslateBaiduKey, ControlCol, &s_TranslateBaiduKeyState, BodySize);
 		}
 		Flow.Space(LineSpacing);
 	}
@@ -371,9 +380,8 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
 			RenderLabel("qmclient-translate-secret-key", &LabelCol, Localize("SecretKey"), BodySize);
 			static CLineInput s_TranslateSecretKey(g_Config.m_QmTranslateTcSecretKey, sizeof(g_Config.m_QmTranslateTcSecretKey));
-			s_TranslateSecretKey.SetEmptyText(Localize("Tencent Cloud SecretKey"));
-			s_TranslateSecretKey.SetHidden(true);
-			RenderTextInput(&s_TranslateSecretKey, ControlCol, Localize("Tencent Cloud SecretKey"), BodySize);
+			static ui_widget::SPasswordFieldState s_TranslateSecretKeyState;
+			RenderPasswordInput(&s_TranslateSecretKey, ControlCol, &s_TranslateSecretKeyState, BodySize, Localize("Tencent Cloud SecretKey"));
 		}
 		Flow.Space(LineSpacing);
 	}
@@ -384,8 +392,8 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
 			RenderLabel("qmclient-translate-api-key", &LabelCol, Localize("API key"), BodySize);
 			static CLineInput s_TranslateKey(g_Config.m_QmTranslateLibreKey, sizeof(g_Config.m_QmTranslateLibreKey));
-			s_TranslateKey.SetHidden(true);
-			RenderTextInput(&s_TranslateKey, ControlCol, "", BodySize);
+			static ui_widget::SPasswordFieldState s_TranslateKeyState;
+			RenderPasswordInput(&s_TranslateKey, ControlCol, &s_TranslateKeyState, BodySize);
 		}
 		Flow.Space(LineSpacing);
 	}
@@ -460,40 +468,43 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			SplitSettingsControlRow(Row, Metrics, &LabelCol, &ControlCol);
 
 			CLineInput *pActiveKeyInput = nullptr;
+			ui_widget::SPasswordFieldState *pActiveKeyState = nullptr;
+			static ui_widget::SPasswordFieldState s_aLlmApiKeyStates[4];
 			// 各分支都会赋值，默认分支覆盖其余取值，无需初始值。
 			const char *pKeyLabel;
+			const char *pKeyPlaceholder;
 			switch(g_Config.m_QmTranslateLlmProvider)
 			{
 			case 0: // Zhipu AI
 				pKeyLabel = Localize("Zhipu API key");
-				s_LlmApiKeyZhipu.SetEmptyText("ZHIPU_API_KEY");
-				s_LlmApiKeyZhipu.SetHidden(true);
+				pKeyPlaceholder = "ZHIPU_API_KEY";
 				pActiveKeyInput = &s_LlmApiKeyZhipu;
+				pActiveKeyState = &s_aLlmApiKeyStates[0];
 				break;
 			case 1: // DeepSeek
 				pKeyLabel = Localize("DeepSeek API key");
-				s_LlmApiKeyDeepseek.SetEmptyText("DEEPSEEK_API_KEY");
-				s_LlmApiKeyDeepseek.SetHidden(true);
+				pKeyPlaceholder = "DEEPSEEK_API_KEY";
 				pActiveKeyInput = &s_LlmApiKeyDeepseek;
+				pActiveKeyState = &s_aLlmApiKeyStates[1];
 				break;
 			case 2: // OpenAI
 				pKeyLabel = Localize("OpenAI API key");
-				s_LlmApiKeyOpenai.SetEmptyText("OPENAI_API_KEY");
-				s_LlmApiKeyOpenai.SetHidden(true);
+				pKeyPlaceholder = "OPENAI_API_KEY";
 				pActiveKeyInput = &s_LlmApiKeyOpenai;
+				pActiveKeyState = &s_aLlmApiKeyStates[2];
 				break;
 			case 3: // Custom
 			default:
 				pKeyLabel = Localize("Custom API key");
-				s_LlmApiKeyCustom.SetEmptyText("API_KEY");
-				s_LlmApiKeyCustom.SetHidden(true);
+				pKeyPlaceholder = "API_KEY";
 				pActiveKeyInput = &s_LlmApiKeyCustom;
+				pActiveKeyState = &s_aLlmApiKeyStates[3];
 				break;
 			}
 
 			Ui()->DoLabel(&LabelCol, pKeyLabel, BodySize, TEXTALIGN_ML);
-			if(pActiveKeyInput)
-				RenderTextInput(pActiveKeyInput, ControlCol, pActiveKeyInput->GetEmptyText(), BodySize);
+			if(pActiveKeyInput != nullptr && pActiveKeyState != nullptr)
+				RenderPasswordInput(pActiveKeyInput, ControlCol, pActiveKeyState, BodySize, pKeyPlaceholder);
 		}
 		Flow.Space(LineSpacing);
 

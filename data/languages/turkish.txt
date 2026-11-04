@@ -728,9 +728,6 @@ Adjust TClient heads-up display elements
 Adjust the display options; open a vote to check the layout before joining a busy server.
 == Görünüm seçeneklerini ayarlayın; kalabalık bir sunucuya katılmadan önce bir oylama açıp yerleşimi kontrol edin.
 
-Adjust the opacity of entities belonging to other teams, such as tees and name plates
-== Tee'ler ve isim etiketleri gibi diğer takımların varlıklarının opaklığını ayarlar
-
 Adjust trails rendered behind Tees
 == Adjust trails rendered behind Tees
 
@@ -748,9 +745,6 @@ Adjusts TClient-specific HUD elements that are not part of the standard DDNet HU
 
 Advanced
 == Gelişmiş
-
-Advanced mode
-== Gelişmiş mod
 
 Advanced options
 == Gelişmiş seçenekler
@@ -977,9 +971,6 @@ Anti Latency Tools
 Anti latency tools
 == Gecikme önleyici araçlar
 
-Anti Ping Smoothing
-== Anti Ping Düzeltme
-
 Anti-aliasing for the exported video only, independent of the graphics setting. Explicit levels render each frame into a multisampled offscreen target, so the game itself can stay at a lower setting for performance. Supersampling (output smaller than the window) already reduces jagged edges, so prefer one or the other.
 == Yalnızca dışa aktarılan video için kenar yumuşatma; grafik ayarından bağımsızdır. Açık bir düzey seçildiğinde her kare çok örneklemeli ekran dışı hedefe çizilir, böylece oyun performans için daha düşük ayarda kalabilir. Süper örnekleme (çıktının pencereden küçük olması) zaten testere dişlerini azaltır; ikisinden birini tercih edin.
 
@@ -1040,9 +1031,6 @@ Applied to %d same-family part(s).
 Applies an animated rainbow color to selected elements such as nameplates or the hook.
 == İsim etiketleri veya kanca gibi seçili öğelere hareketli gökkuşağı rengi uygular.
 
-Applies to single-color and rainbow overrides.
-== Tek renk ve gökkuşağı renk geçersiz kılmalarına uygulanır.
-
 Apply
 == Uygula
 
@@ -1075,9 +1063,6 @@ Apply quick input to other Tees as well
 
 Apply squishy Tee deformation to other players
 == Q弹 Tee deformasyonunu diğer oyunculara uygula
-
-Apply this preset
-== Bu ön ayarı uygula
 
 Apply to
 == Uygulama hedefi
@@ -1279,9 +1264,6 @@ Auto enable in Gores mode
 
 Auto enable/disable IME on text focus
 == Metin girişi odağına göre IME’yi otomatik aç veya kapat
-
-Auto execute
-== Otomatik çalıştır
 
 Auto fetch replay info on refresh
 == Yenilemede tekrar bilgilerini otomatik getir
@@ -2447,9 +2429,6 @@ Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher
 Chroma sampling. 4:2:0 is smallest and most compatible; 4:4:4 keeps full color detail for thin lines and small colored text. Rendering is 8-bit, so 10-bit formats do not add detail by themselves.
 == Renk örnekleme. 4:2:0 en küçük ve en uyumlu seçenektir; 4:4:4 rengi tam koruduğu için ince çizgiler ve küçük renkli yazılar en net görünür. Görüntü 8 bit oluşturulduğundan 10 bit biçim tek başına ayrıntı eklemez.
 
-Cinematic camera
-== Sinematik kamera
-
 Cinematic camera smoothness (0=instant, 100=smoothest)
 == Sinematik kamera yumuşaklığı (0=Anlık, 100=En yumuşak)
 
@@ -2524,9 +2503,6 @@ Classic Pro
 
 Classic pro
 == Klasik profesyonel
-
-Classic title glow
-== Klasik unvan parıltısı
 
 Clear
 == Temizle
@@ -2701,6 +2677,9 @@ Close window after changing settings
 
 Cloud bubble
 == Bulut balonu
+
+Collapse
+== Daralt
 
 Collapse console
 == Konsolu daralt
@@ -2938,9 +2917,6 @@ Configure DDNet gameplay preferences
 
 Configure display and rendering
 == Görüntü ve işlemeyi yapılandır
-
-Configure Dream-only convenience features
-== Configure Dream-only convenience features
 
 Configure game and client preferences
 == Oyun ve istemci tercihlerini yapılandır
@@ -3794,9 +3770,6 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 DeepL API
 == DeepL API
 
-DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
-== DeepL API Free: Ayda 500.000 karakter (deepl.com'da kaydolun; ücretsiz anahtarlar :fx ile biter)
-
 DeepL API Key (free keys end with :fx)
 == DeepL API Anahtarı (ücretsiz anahtarlar :fx ile biter)
 
@@ -3898,9 +3871,6 @@ Delete screenshot
 
 Delete selected items
 == Seçili öğeleri sil
-
-Delete skin
-== Skini sil
 
 Delete this preset
 == Bu ön ayarı sil
@@ -4276,6 +4246,9 @@ Downscaled (0.78)
 
 Draft file is empty
 == Taslak dosyası boş
+
+Drag
+== Sürükle
 
 Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
 == Ölüm saydamlığı veya ışınlanma saydamlığı gibi bir kaydırıcıyı %0 ile %100 arasında sürükleyin ya da katman saydamlığını ayarla ile tüm varlık katmanını soluklaştırın.
@@ -5249,6 +5222,9 @@ Entity assets
 Entity Background Image
 == Varlık Arka Plan Görüntüsü
 
+Entity layer
+== Varlık katmanı
+
 Entity overlay
 == Varlık kaplaması
 
@@ -5360,6 +5336,9 @@ Exit replay view
 Exit spectating on both tees when either is hammered awake by another player
 == Başka bir oyuncu birini çekiçle çözdüğünde iki Tee de seyirci modundan çıksın
 
+Expand
+== Genişlet
+
 Expand console
 == Konsolu genişlet
 
@@ -5386,6 +5365,9 @@ Export cut as a separate demo
 
 Export demo cut
 == Demo kesimini dışa aktar
+
+Export failed
+== Dışa aktarma başarısız
 
 Export name contains invalid characters.
 == Dışa aktarma adı geçersiz karakterler içeriyor.
@@ -5420,6 +5402,9 @@ Export selected
 Export to clipboard
 == Panoya dışa aktar
 
+Export to downloads
+== İndirilenler'e aktar
+
 Exported %d chat messages
 == %d sohbet mesajı dışa aktarıldı
 
@@ -5453,8 +5438,14 @@ Extreme values make movement feel wrong, so change one step at a time.
 Extremely slow, for testing only
 == Son derece yavaş, yalnızca test için
 
+Eyes
+== Gözler
+
 f = Frame rate
 == f = Kare hızı
+
+Fade
+== Solma
 
 Fade and slide
 == Soldur ve kaydır
@@ -5560,9 +5551,6 @@ Fairly fast encode
 
 Fake CTF flags
 == Sahte CTF bayrakları
-
-Fallback simple noise reduction strength
-== Yedek basit gürültü azaltma gücü
 
 Fast encode
 == Hızlı kodlama
@@ -5920,6 +5908,9 @@ Frankenstein (drop parts on right)
 
 Free move
 == Serbest hareket
+
+Free view
+== Serbest görünüm
 
 Free-View
 == Serbest Görüş
@@ -6671,9 +6662,6 @@ High quality, slow
 Higher input latency
 == daha yüksek giriş gecikmesi
 
-Higher values make the wave move faster. Zero stops the movement.
-== Yüksek değerler dalgayı hızlandırır. Sıfır hareketi durdurur.
-
 Highlight Color
 == Vurgu Rengi
 
@@ -6685,9 +6673,6 @@ Highlight game type
 
 Highlight message text gradient color
 == Vurgulanan mesaj metni gradyan rengi
-
-Highlight movement in Polished mode. Zero turns it off.
-== Cilalı modda parlak alanın hareketi. Sıfır kapatır.
 
 Highlight ping value
 == Ping değerini vurgula
@@ -7226,9 +7211,6 @@ Installed
 Installing update. Please wait...
 == Güncelleme yükleniyor. Lütfen bekleyin...
 
-Instant compact hints
-== Anında küçük ipuçları
-
 Instant zoom reverse
 == Zoom yönünü anında çevir
 
@@ -7382,9 +7364,6 @@ It's recommended that you check the settings to adjust them to your liking befor
 Item
 == Öğe
 
-Item type
-== Öğe türü
-
 Its use depends on the server or game mode.
 == Kullanımı sunucuya veya oyun moduna bağlıdır.
 
@@ -7448,6 +7427,9 @@ Join, version, rules, and help messages stay in chat instead of popups
 Joining Tutorial server
 == Eğitim sunucusuna katılıyor
 
+Joystick
+== Joystick
+
 Jump
 == Zıpla
 
@@ -7507,9 +7489,6 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == Oylamadan sonra oylama penceresini açık tut
-
-Key
-== Tuş
 
 Key binds
 == Tuş atamaları
@@ -7864,9 +7843,6 @@ LibreTranslate endpoint
 
 Light
 == Hafif
-
-Light band
-== Işık bandı
 
 Limit information in spectator mode
 == Seyirci modunda bilgiyi sınırla
@@ -8756,6 +8732,9 @@ Mix rate
 Mixed
 == Karışık
 
+Mobile spectator camera: 0=joystick pad, 1=drag the view
+== Mobil izleyici kamerası: 0=joystick, 1=görünümü sürükle
+
 Mode
 == Mod
 
@@ -8788,6 +8767,9 @@ More optimistic prediction along Tee's stable direction, reduces delay to stabil
 
 More teammates...
 == Daha fazla takım arkadaşı...
+
+Morph
+== Dönüşüm
 
 MOTD
 == MOTD
@@ -9446,6 +9428,9 @@ No status bar items
 No such savegame for this map
 == Bu harita için böyle bir kayıt yok
 
+No tee nearby
+== Yakında tee yok
+
 No unfinished maps available
 == Mevcut bitmemiş harita yok
 
@@ -9686,6 +9671,9 @@ Only show with this nickname
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
 == Yalnızca seçili Tee değişir; dummy'nin renklerini düzenlemeden önce Dummy'ye geç.
 
+Only what you can't imagine, nothing Dream can't do
+== Hayal edemediğin şeyler dışında, Dream'in yapamayacağı hiçbir şey yok
+
 Opacity
 == Opaklık
 
@@ -9715,6 +9703,9 @@ Open bindwheel selector
 
 Open DDNet Wiki
 == DDNet Wiki'yi aç
+
+Open downloads folder
+== İndirilenler klasörünü aç
 
 Open emote selector
 == İfade seçiciyi aç
@@ -9850,9 +9841,6 @@ Original
 
 Original and translation
 == Özgün metin ve çeviri
-
-Original language for both received and outgoing messages. Use Auto to detect each message.
-== Alınan ve gönderilen mesajlar için özgün dil. Her mesajı algılamak için Otomatik'i kullanın.
 
 Original language for incoming and outgoing text
 == Gelen ve giden metnin özgün dili
@@ -10061,11 +10049,17 @@ Password for Axiom alt account auto-login
 Password for Axiom main account auto-login
 == Axiom ana hesap otomatik giriş şifresi
 
+Password icon animation
+== Parola simgesi animasyonu
+
 Password incorrect
 == Parola yanlış
 
 Password required to use reserved slots.
 == Ayrılmış yuvaları kullanmak için gereken şifre.
+
+Password visibility icon animation: 0=Fade, 1=Morph
+== Parola görünürlüğü simgesi animasyonu: 0=Solma, 1=Dönüşüm
 
 Past year
 == Geçen yıl
@@ -10579,12 +10573,6 @@ Points
 
 Points unavailable
 == Puanlar kullanılamıyor
-
-Polished
-== Cilalı
-
-Pop wave
-== Büyütme dalgası
 
 Popup animation
 == Açılır animasyon
@@ -11645,9 +11633,6 @@ Remove team name:
 Remove war clan:
 == Savaş klanını kaldır:
 
-Remove War Group
-== Savaş Grubunu Kaldır
-
 Remove war name:
 == Savaş ismini kaldır:
 
@@ -12110,18 +12095,6 @@ Right-click to enable auto-translate
 Ring
 == Halka
 
-RNNoise noise reduction
-== RNNoise gürültü azaltma
-
-RNNoise noise reduction (unavailable in this build)
-== RNNoise gürültü azaltma (bu yapıda kullanılamaz)
-
-RNNoise noise reduction strength
-== RNNoise gürültü azaltma gücü
-
-RNNoise not integrated in current build, will fallback to simple noise reduction
-== RNNoise mevcut yapıya entegre edilmemiş, basit gürültü azaltmaya geri dönülecek
-
 Room
 == Oda
 
@@ -12343,6 +12316,9 @@ Save/Load Skin
 
 Saved
 == Kaydedildi
+
+Saved to Downloads/QmClient
+== İndirilenler/QmClient konumuna kaydedildi
 
 Saved to the bind wheel.
 == Komut çarkına kaydedildi.
@@ -12695,6 +12671,9 @@ Send specified command to rcon
 Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
 == 90 ile 270 saniye arasında rastgele aralıklarla genel sohbete art arda üç şarkı sözü satırı gönder, satırlar arasında 3 saniye bekle
 
+Send to
+== Şuna gönder
+
 Send translation method
 == Çeviri yöntemini gönder
 
@@ -12823,9 +12802,6 @@ Server URL
 
 Server votes
 == Sunucu oylamaları
-
-Server-assigned style
-== Sunucunun atadığı stil
 
 Server-dependent
 == Sunucuya bağlı
@@ -12997,9 +12973,6 @@ Share of the server browser name/map split given to the name column (per mille)
 
 Sharpen
 == Keskinleştirme
-
-Shimmer speed
-== Parıltı hızı
 
 Short pain voice
 == Kısa acı sesi
@@ -13549,9 +13522,6 @@ Show lyrics in a separate island below Dynamic Island
 
 Show lyrics in Dynamic Island
 == Şarkı sözlerini Dynamic Island içinde göster
-
-Show lyrics inside Dynamic Island
-== Show lyrics in Dynamic Island
 
 Show main tee title locally
 == Ana tee unvanını yerel olarak göster
@@ -14150,12 +14120,6 @@ Simple noise reduction
 Simple noise reduction strength
 == Basit gürültü azaltma gücü
 
-Single color
-== Tek renk
-
-Single color and Rainbow override the color of animated styles; the style keeps its motion
-== Tek renk ve gökkuşağı animasyonlu stillerin rengini geçersiz kılar; stilin hareketi korunur
-
 Size
 == Boyut
 
@@ -14362,9 +14326,6 @@ Smooths the camera while you free-spectate with the mouse in live games and demo
 
 Snap title bob offset to whole pixels (sharper glyphs, choppier motion)
 == Salınım kaymasını tam piksele hizala (daha keskin glifler, daha kesik hareket)
-
-Snap wave to pixels
-== Dalgayı tam piksellere hizala
 
 Snapshot Age
 == Anlık görüntü yaşı
@@ -14636,9 +14597,6 @@ Start at a random queue position on every map join
 Start dummy skin queue from a random position when entering a map
 == Haritaya girerken kukla skin kuyruğunu rastgele bir konumdan başlat
 
-Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
-== Her haritaya katıldığında rastgele kuyruk konumundan başlayın (dummy bağlanmasında ve kuyruğun yeniden etkinleştirilmesinde de geçerlidir). Zamanlanmış rotasyonu kapatmak için geçiş aralığını 0 yapın; böylece yalnızca haritaya girişte geçilir.
-
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 == Varsayılan değerle başlayın; diğer oyuncular sıçrıyormuş gibi görünüyorsa biraz artırın, onların gerisinde kaldığınızı düşünüyorsanız azaltın.
 
@@ -14798,9 +14756,6 @@ Streamer word list file
 Strength icons assets
 == Güç simgeleri varlıkları
 
-Strength of the vertical or pop wave. Zero keeps the title still.
-== Dikey veya büyütme dalgasının gücü. Sıfır, unvanı sabit tutar.
-
 Stress system (debug builds only).
 == Stres sistemi (yalnızca hata ayıklama yapıları).
 
@@ -14851,9 +14806,6 @@ Styles kill, finish and system messages in the chat area.
 
 Sub-Tick aiming
 == Alt-Tik nişan alma
-
-Subtle
-== Hafif
 
 Success
 == Başarılı
@@ -15007,9 +14959,6 @@ System message text gradient color
 
 System prompt text color
 == Sistem istemi metin rengi
-
-Tags
-== Etiketler
 
 Take a screenshot
 == Ekran görüntüsü al
@@ -15365,9 +15314,6 @@ Text color mode
 Text color mode: 0 automatic, 1 white, 2 black, 3 custom
 == Metin rengi modu: 0 otomatik, 1 beyaz, 2 siyah, 3 özel
 
-Text effect
-== Metin efekti
-
 Text input focus ring color
 == Metin girişi odak halkası rengi
 
@@ -15617,6 +15563,9 @@ This team started already
 This team was disbanded because there are more players than allowed in the team.
 == Bu takım, takımda izin verilenden daha fazla oyuncu olduğu için dağıtıldı.
 
+This text is already in the target language.
+== Bu metin zaten hedef dilde.
+
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == Bu ipucu ui_widget::Tooltip tarafından sağlanır; CTooltips üzerinde ince bir sarmalayıcıdır.
 
@@ -15778,9 +15727,6 @@ Title display
 
 Title light sweep speed in 1/100 row per second (0 = off)
 == Unvan ışık tarama hızı (saniyede 1/100 satır, 0 = kapalı)
-
-Title motion
-== Unvan animasyonu
 
 Title motion: 0 = vertical wave, 1 = pop wave
 == Unvan animasyonu: 0 = dikey dalga, 1 = büyütme dalgası
@@ -16823,9 +16769,6 @@ Use team colors for name plates
 Use Tee icons instead of circles
 == Daireler yerine Tee simgeleri kullan
 
-Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
-== Kanca tuşu basılıyken kanca yardımcı çizgisi gösterildiğinde aşağıdaki özel renkleri kullanın; devre dışı bırakıldığında basılı olmayan renkler otomatik olarak ters çevrilir
-
 Use the custom colors below while the hook key is held
 == Kanca tuşu basılı tutulurken aşağıdaki özel renkleri kullan
 
@@ -16903,9 +16846,6 @@ Vertical position
 
 Vertical sync (may cause lag)
 == Dikey senkronizasyon (gecikmeye neden olabilir)
-
-Vertical wave
-== Dikey dalga
 
 Very fast encode
 == Çok hızlı kodlama
@@ -17017,12 +16957,6 @@ Visual effects
 
 Visual: Cursor
 == Görsel: İmleç
-
-Visual: Effects
-== Görsel: Efektler
-
-Visual: Nameplates
-== Görsel: İsim Levhaları
 
 Visuals
 == Görseller
@@ -17213,15 +17147,6 @@ Water hammer highlight
 Watermark
 == Filigran
 
-Wave amount
-== Dalga miktarı
-
-Wave spacing
-== Dalga aralığı
-
-Wave speed
-== Dalga hızı
-
 Weak hook
 == Zayıf kanca
 
@@ -17336,9 +17261,6 @@ Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per
 When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient gökkuşağı Tee açıkken bu özellik etkili olmaz.
 
-When you cross the start line, show a ghost tee replicating the movements of your best time
-== Başlangıç çizgisini geçtiğinde en iyi sürenizin hareketlerini yineleyen hayalet bir Tee gösterir
-
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 == Unvanının nerede görüneceği ve nasıl duracağı: isim etiketi, stil, animasyon, renkler ve parıltı.
 
@@ -17422,6 +17344,9 @@ Whisper option color
 
 Whisper something to someone (private message)
 == Birine bir şey fısılda (özel mesaj)
+
+Whisper target left the game
+== Fısıldama hedefi oyundan ayrıldı
 
 Whisper to %s
 == %s kişisine fısılda
@@ -17891,9 +17816,6 @@ Zen mode hides chat bubbles even when this is on, and a long "Duration" leaves o
 Zen mode key
 == Zen modu tuşu
 
-Zero uses the style default. Higher values make color bands narrower.
-== Sıfır, stilin varsayılanını kullanır. Yüksek değerler renk bantlarını daraltır.
-
 Zhipu AI
 == Zhipu AI
 
@@ -18347,10 +18269,6 @@ required
 [Team status]
 solo
 == solo
-
-[Title color mode]
-Use style colors
-== Stilin renklerini kullan
 
 [Touch button behavior]
 Bind

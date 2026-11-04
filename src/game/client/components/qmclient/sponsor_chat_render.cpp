@@ -2,6 +2,8 @@
 
 #include <engine/graphics.h>
 
+#include <game/client/QmUi/UiTokens.h>
+
 void QmSponsorChatAddPlatinumSplits(CTextCursor &Cursor, const char *pText, float Alpha)
 {
 	int Count = 0;
@@ -38,7 +40,7 @@ void QmRenderSponsorChatText(IGraphics *pGraphics, ITextRender *pTextRender, STe
 	if(!Index.Valid() || Alpha <= 0.0f)
 		return;
 	const ColorRGBA Outline = Style == EQmSponsorChatStyle::NONE ? pTextRender->DefaultTextOutlineColor() :
-								       ColorRGBA(0.0f, 0.0f, 0.0f, 0.82f);
+								       ui_token::color::NEUTRAL_BLACK.WithMultipliedAlpha(0.82f);
 	if(Style == EQmSponsorChatStyle::FLUID)
 	{
 		struct SFluidPaint
@@ -51,8 +53,8 @@ void QmRenderSponsorChatText(IGraphics *pGraphics, ITextRender *pTextRender, STe
 			const auto &Context = *static_cast<const SFluidPaint *>(pContext);
 			return Context.m_Fluid.Sample(Position / Context.m_FontSize);
 		};
-		pTextRender->RenderTextContainer(Index, ColorRGBA(1, 1, 1, 0), Outline.WithMultipliedAlpha(Alpha), X, Y);
-		pTextRender->RenderTextContainerFill(Index, Sample, &Paint, 4, 4, ColorRGBA(1, 1, 1, Alpha), X, Y);
+		pTextRender->RenderTextContainer(Index, ui_token::color::NEUTRAL_WHITE.WithMultipliedAlpha(0.0f), Outline.WithMultipliedAlpha(Alpha), X, Y);
+		pTextRender->RenderTextContainerFill(Index, Sample, &Paint, 4, 4, ui_token::color::NEUTRAL_WHITE.WithMultipliedAlpha(Alpha), X, Y);
 		return;
 	}
 	pTextRender->RenderTextContainer(Index, ColorRGBA(1.0f, 1.0f, 1.0f, Alpha), Outline.WithMultipliedAlpha(Alpha), X, Y);

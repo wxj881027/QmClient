@@ -29,6 +29,8 @@ namespace qm_translate
 	bool PassLocalDetectThreshold(int Count, int Total, int Ratio);
 	bool IsPredominantlyNumeric(const SLanguageStats &Stats, int MinChars, int Ratio);
 	bool MatchesTargetLanguageHeuristically(const SLanguageStats &Stats, const char *pTarget, int MinChars, int Ratio);
+	// 给不支持自动检测的后端选来源语言；返回 nullptr 表示文本只有目标语言字形，发送同语言对没有意义。
+	const char *SelectExplicitSourceLanguage(const SLanguageStats &Stats, const char *pTarget);
 	bool ShouldTranslateIncoming(const SLanguageStats &Stats, const char *pTarget, int MinChars, int Ratio, bool Always);
 	bool ShouldTranslateOutgoing(const SLanguageStats &Stats, const char *pTarget, const char *pSource, int MinChars, int Ratio, bool Always);
 }

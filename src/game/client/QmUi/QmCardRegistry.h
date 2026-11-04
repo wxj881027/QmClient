@@ -69,8 +69,6 @@ namespace qm_card_registry
 		// 若按 m_pDefaultTab 跳转会落在空 tab 上。设置后搜索按此目标跳转。
 		const char *m_pNavigationTab = nullptr; // 覆盖导航 tab（可为旧设置页 key）
 		const char *m_pNavigationStableId = nullptr; // 实际承载该功能的卡（可为 nullptr）
-		const SCardSettingSearch *m_pSettings = nullptr;
-		size_t m_SettingCount = 0;
 	};
 
 	struct SCardNavigationTarget
@@ -85,6 +83,10 @@ namespace qm_card_registry
 		std::string m_Title;
 		std::string m_Description;
 		SCardNavigationTarget m_Target;
+		// 命中的设置项文案（本地化标签优先，其次是配置名），最多保留前几条。
+		std::vector<std::string> m_vMatches;
+		// 命中项的原文键（标签键/配置名/本地化文案），供逐行定位匹配。
+		std::vector<std::string> m_vMatchKeys;
 	};
 
 	// 焦点只消费本帧按下沿，不持有鼠标按下状态，外部释放或输入隔离不会卡住后续点击。
@@ -144,6 +146,8 @@ namespace qm_card_registry
 	std::vector<qm_card_order::SEntry> BuildDefaultEntries();
 	// 回退现代分类后恢复卡片归属，保留列位置和源分类内的相对顺序。
 	bool RepairRemovedModernTabs(qm_card_order::CModel &Model);
+	// Bind 编辑器从栖梦页迁入控制页后，把旧持久化 tab 归属迁到 controls。
+	bool RepairLegacyBindTab(qm_card_order::CModel &Model);
 	// 旧贡献者页已删除，加载时先修复归属，避免其它布局迁移提前返回后留下不可见卡片。
 	bool RepairLegacyCreditsTabs(qm_card_order::CModel &Model);
 	bool RepairLegacyTitleLayout(qm_card_order::CModel &Model);

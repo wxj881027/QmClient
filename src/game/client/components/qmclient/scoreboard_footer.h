@@ -9,6 +9,12 @@ inline float QmScoreboardPanelHeight(float ScreenHeight, float PanelTop)
 	return minimum(415.0f, maximum(0.0f, ScreenHeight - PanelTop - 110.0f));
 }
 
+// 手机滚动模式：面板高度吃满可视区，滚动列表不再挤在默认高度里。
+inline float QmScoreboardScrollPanelHeight(float ScreenHeight, float PanelTop)
+{
+	return minimum(520.0f, maximum(0.0f, ScreenHeight - PanelTop - 30.0f));
+}
+
 // 计分板底栏：整宽媒体信息条在上，旁观者列表在下。
 struct SQmScoreboardFooterLayout
 {

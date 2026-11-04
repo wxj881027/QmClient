@@ -308,6 +308,18 @@ namespace qm_card_catalog
 				DoDirectory(s_VideoDirectoryInput, "general-video-directory", Localize("Video directory"), "videos");
 				DoDirectory(s_ScreenshotDirectoryInput, "general-screenshot-directory", Localize("Screenshot directory"), "screenshots");
 				Flow.Text("general-directory-help", Localize("Leave empty to use the default directory. Relative paths use the config directory."), 0.0f, GeneralMetrics.m_BodySize, GeneralMetrics.m_SectionGap, [pMenus](const char *pText, float Width, float Size) { return pMenus->TextRender()->TextBoundingBox(Size, pText, -1, Width).m_H + Size * 0.25f; }, [pMenus, GeneralMetrics](const CUIRect &Row, const char *pText) { SLabelProperties Props; Props.m_MaxWidth = Row.w; pMenus->Ui()->DoLabel(&Row, pText, GeneralMetrics.m_BodySize, TEXTALIGN_ML, Props); }, GeneralMetrics.m_LineHeight);
+				if(qm_mobile_spectator::Enabled())
+				{
+					CUIRect MediaRow;
+					if(Flow.Control("general-mobile-media", GeneralMetrics.m_ButtonHeight, MediaRow))
+					{
+						// 手机上的文件位置交给系统文件管理器；导出的文件统一在「下载/QmClient」。
+						static CButtonContainer s_Downloads;
+						if(pMenus->DoButton_Menu(&s_Downloads, Localize("Open downloads folder"), 0, &MediaRow))
+							pMenus->GameClient()->m_QmMobileSpectator.ShowMediaFiles(false);
+					}
+					Flow.Space(GeneralMetrics.m_SectionGap);
+				}
 				SQmCardBuildContext WatermarkCtx;
 				WatermarkCtx.m_pMenus = pMenus;
 				WatermarkCtx.m_UiContext = GeneralCardCtx;

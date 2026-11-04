@@ -2523,7 +2523,8 @@ void CHud::RenderTextInfo()
 			TextRender()->Text(4.0f, OffsetY, FontSize, aBuf, -1.0f);
 		}
 	}
-	if(g_Config.m_QmRenderCursorSpec && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == SPEC_FREEVIEW)
+	// 手机上不画这个准星：它本来是给鼠标用户标示屏幕中心，触屏观战只会被当成多余的“光标”。
+	if(g_Config.m_QmRenderCursorSpec && !QmUiMobilePlatform() && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == SPEC_FREEVIEW)
 	{
 		int CurWeapon = 1;
 		Graphics()->SetColor(1.f, 1.f, 1.f, g_Config.m_QmRenderCursorSpecAlpha / 100.0f);
@@ -6634,7 +6635,10 @@ void CHud::RenderSpectatorHud()
 
 	// TClient
 	float AdjustedHeight = m_Height - (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f);
-	float BoundsTop = AdjustedHeight - 15.0f;
+	// 手机：底部还有灵动岛和状态区，观战条往上抬、加高，别贴着屏幕边。
+	// 高度给足，14 的卡片圆角才看得出来（太扁的条会被压成胶囊）。
+	const float SpectatorHudHeight = QmUiMobilePlatform() ? 28.0f : 15.0f;
+	float BoundsTop = AdjustedHeight - SpectatorHudHeight;
 	float BoundsBottom = AdjustedHeight;
 	const bool ShowAutoTag = !GameClient()->m_RankGhost.IsViewModeActive() && Client()->State() != IClient::STATE_DEMOPLAYBACK &&
 				 GameClient()->m_Camera.SpectatingPlayer() &&
@@ -6686,11 +6690,13 @@ void CHud::RenderSpectatorHud()
 	const float SpectatorTextWidth = TextRender()->TextWidth(8.0f, aBuf);
 	const auto Layout = QmSpectatorHudLayout(m_Width, SpectatorTextWidth, ShowAutoTag ? AutoTagWidth + 4.0f : 0.0f);
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::SpectatorHud, {Layout.m_Left, BoundsTop, Layout.m_Width, BoundsBottom - BoundsTop});
-	const CUIRect BackgroundRect = {Layout.m_Left, AdjustedHeight - 15.0f, Layout.m_Width, 15.0f};
+	const CUIRect BackgroundRect = {Layout.m_Left, AdjustedHeight - SpectatorHudHeight, Layout.m_Width, SpectatorHudHeight};
 	ColorRGBA BackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiColor));
 	BackgroundColor.a = std::clamp(g_Config.m_QmUiOpacity / 100.0f, 0.0f, 1.0f);
-	Ui()->RenderGaussianBlur(BackgroundRect, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
-	Graphics()->DrawRect(BackgroundRect.x, BackgroundRect.y, BackgroundRect.w, BackgroundRect.h, BackgroundColor, HudEditorScope.m_Corners, ui_token::radius::BASE);
+	// 手机：四角都要圆，跟计分板卡片同一档半径；编辑器里贴边时按编辑器给的角。
+	const int SpectatorHudCorners = QmUiMobilePlatform() ? IGraphics::CORNER_ALL : HudEditorScope.m_Corners;
+	Ui()->RenderGaussianBlur(BackgroundRect, 1.0f, SpectatorHudCorners, ui_token::radius::CARD);
+	Graphics()->DrawRect(BackgroundRect.x, BackgroundRect.y, BackgroundRect.w, BackgroundRect.h, BackgroundColor, SpectatorHudCorners, ui_token::radius::CARD);
 	if(Layout.m_TextWidth > 0.0f)
 	{
 		const CUIRect Label{Layout.m_Left + 6.0f, BackgroundRect.y, Layout.m_TextWidth, BackgroundRect.h};

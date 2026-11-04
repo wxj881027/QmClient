@@ -267,8 +267,14 @@ namespace qm_card_catalog
 		static const auto s_Cards = [] {
 			std::map<std::string, std::vector<const char *>> Cards;
 			for(const auto &Default : qm_card_registry::Defaults())
-				if(IsStandardCard(Default.m_pStableId) || IsTClientCard(Default.m_pStableId))
-					Cards[Default.m_pDefaultTab].push_back(Default.m_pStableId);
+			{
+				if(!IsStandardCard(Default.m_pStableId) && !IsTClientCard(Default.m_pStableId))
+					continue;
+				// 字体卡片是 TClient 的实现，但玩家找它的地方是画面页：按呈现位置归页，
+				// 卡片实现仍按 tclient 分派，不受影响。
+				const char *pPage = str_comp(Default.m_pStableId, "tclient:font") == 0 ? "graphics" : Default.m_pDefaultTab;
+				Cards[pPage].push_back(Default.m_pStableId);
+			}
 			return Cards;
 		}();
 		static const std::vector<const char *> s_Empty;

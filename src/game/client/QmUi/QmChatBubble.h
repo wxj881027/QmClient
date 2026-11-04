@@ -73,6 +73,15 @@ namespace qm_chat_bubble
 		{
 			Radius = Height * 0.5f;
 			Width = std::max(Width, Radius * 2.0f + 24.0f);
+			// 胶囊的左右圆帽会向内切：文字框越高，圆帽在文字上沿处内缩越多，高消息的
+			// 文字角会露到气泡外。把半径压到仍能包住文字四角的最大值。
+			// 内轮廓还要再内缩 描边+羽化（最多 1.5 倍描边），这里按最坏情况留出余量。
+			const float InnerInset = Stroke * 1.5f;
+			const float SideSlack = Width * 0.5f - TextSize.x * 0.5f - InnerInset;
+			const float VerticalSlack = Height * 0.5f - TextSize.y * 0.5f - InnerInset;
+			if(SideSlack > 0.0f && VerticalSlack > 0.0f)
+				Radius = std::min(Radius, SideSlack + VerticalSlack + InnerInset +
+								  std::sqrt(2.0f * SideSlack * VerticalSlack));
 			Stroke = 1.2f;
 			TailHeight = 7.0f;
 			TailWidth = 6.0f;

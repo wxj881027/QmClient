@@ -337,6 +337,43 @@ TEST_F(CTranslateBackendTest, MymemoryShortTranslationIsNotNotice)
 	EXPECT_EQ(Response.m_Notice, ETranslateNotice::NONE);
 }
 
+TEST_F(CTranslateBackendTest, MymemoryMixedScriptRequestsForeignSourceInsteadOfSamePair)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "mymemory");
+	// 中文目标下的中英混排：来源改取英文，英文部分才会被翻译
+	auto pBackend = Create("快说bye", "zh", "auto");
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 1u);
+	const char *pUrl = m_Http.m_vSubmissions[0].m_pRequest->Url();
+	EXPECT_NE(str_find(pUrl, "langpair=en%7Czh-CN"), nullptr);
+	EXPECT_EQ(str_find(pUrl, "langpair=zh-CN%7Czh-CN"), nullptr);
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"responseData":{"translatedText":"快说再见"},"responseStatus":200})");
+	CTranslateResponse Response;
+	EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(true));
+	EXPECT_STREQ(Response.m_Text, "快说再见");
+}
+
+TEST_F(CTranslateBackendTest, MymemoryTargetOnlyTextSkipsRequest)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "mymemory");
+	auto pBackend = Create("你好世界", "zh", "auto");
+	EXPECT_TRUE(m_Http.m_vSubmissions.empty());
+	CTranslateResponse Response;
+	EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(false));
+	EXPECT_EQ(Response.m_Notice, ETranslateNotice::ALREADY_TARGET_LANGUAGE);
+}
+
+TEST_F(CTranslateBackendTest, MymemoryStringStatusErrorIsNotRenderedAsTranslation)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "mymemory");
+	auto pBackend = Create("hello", "zh", "en");
+	// 服务用字符串状态码返回失败，并把错误说明塞进 translatedText
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"responseData":{"translatedText":"PLEASE SELECT TWO DISTINCT LANGUAGES"},"responseDetails":"PLEASE SELECT TWO DISTINCT LANGUAGES","responseStatus":"403"})");
+	CTranslateResponse Response;
+	EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(false));
+	EXPECT_EQ(Response.m_Notice, ETranslateNotice::SERVICE_NOTICE);
+	EXPECT_EQ(str_find(Response.m_Text, "PLEASE SELECT"), nullptr);
+}
+
 TEST_F(CTranslateBackendTest, DeeplFreeKeyUsesFreeHostAndAuthHeader)
 {
 	str_copy(g_Config.m_QmTranslateBackend, "deepl");

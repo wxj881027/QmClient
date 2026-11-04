@@ -931,11 +931,11 @@ void CUi::Update()
 			}
 			else if(m_TouchState.m_PrimaryPressed)
 			{
-				UpdatedMouseButtonsNext |= 1;
+				m_UpdatedMouseButtons |= 1;
 			}
 			if(!m_DirectTouchInput && m_TouchState.m_SecondaryPressed)
 			{
-				UpdatedMouseButtonsNext |= 2;
+				m_UpdatedMouseButtons |= 2;
 			}
 		}
 	}
@@ -946,6 +946,8 @@ void CUi::Update()
 	m_LastMouseButtons = m_MouseButtons;
 	m_MouseButtons = m_UpdatedMouseButtons;
 	m_UpdatedMouseButtons = UpdatedMouseButtonsNext;
+	// 新的一帧允许按钮再次激活。
+	m_ButtonActivatedThisFrame = false;
 
 	m_pHotItem = m_pBecomingHotItem;
 	if(m_pActiveItem)
@@ -1547,6 +1549,11 @@ int CUi::DoButtonLogic(const void *pId, int Checked, const CUIRect *pRect, const
 {
 	if(RenderOnly())
 		return 0;
+	// 同一帧内只允许一个按钮激活。触摸按下后页面立刻切换时（例如游戏内点「设置」
+	// 打开设置页），原位置下方的另一个按钮会在同一帧读到同一次按下/抬起，
+	// 造成「点设置却退出游戏」这类双重点击。
+	if(m_ButtonActivatedThisFrame)
+		return 0;
 	RestorePopupFocus(pId);
 
 	int ReturnValue = 0;
@@ -1577,19 +1584,26 @@ int CUi::DoButtonLogic(const void *pId, int Checked, const CUIRect *pRect, const
 		if(!MouseButton(m_ActiveButtonLogicButton))
 		{
 			if(Inside && Checked >= 0)
+			{
 				ReturnValue = 1 + m_ActiveButtonLogicButton;
+				m_ButtonActivatedThisFrame = true;
+			}
 			SetActiveItem(nullptr);
 			m_ActiveButtonLogicButton = -1;
 		}
 	}
 
+	// 触摸没有 hover：第一次按下的位置就是当前指针位置，不能再依赖上一帧的
+	// HotItem（否则第一次只点亮、第二次才激活）。鼠标仍走原来的 HotItem 路径，
+	// 避免多控件重叠时按下未悬停的控件。
+	const bool TouchInputActive = !Input()->TouchFingerStates().empty();
 	bool NoRelevantButtonsPressed = true;
 	for(int Button = 0; Button < 3; ++Button)
 	{
 		if((Flags & (BUTTONFLAG_LEFT << Button)) && MouseButton(Button))
 		{
 			NoRelevantButtonsPressed = false;
-			if(UseCurrentHit ? CurrentPress == Button : HotItem() == pId)
+			if(UseCurrentHit ? CurrentPress == Button : (TouchInputActive ? Inside : HotItem() == pId))
 			{
 				SetActiveItem(pId);
 				m_ActiveButtonLogicButton = Button;
@@ -1658,6 +1672,7 @@ int CUi::DoDraggableButtonLogic(const void *pId, int Checked, const CUIRect *pRe
 			m_ActiveDraggableButtonLogicButton = -1;
 		}
 	}
+	// 直接触控没有 hover：第一下按在控件上就要能开始拖动，不依赖上一帧的 HotItem。
 	else if(HotItem() == pId || (m_DirectTouchInput && Inside && MouseButtonClicked(0)))
 	{
 		for(int i = 0; i < 3; ++i)
@@ -2675,7 +2690,7 @@ int CUi::DoButton_FontIcon(CButtonContainer *pButtonContainer, const char *pText
 	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, EQmIcon::COUNT, pText, Checked, *pRect, Flags, Corners, Enabled, ButtonColor);
 }
 
-bool CUi::DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color) const
+bool CUi::DrawQmIcon(const CUIRect &Rect, const EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color, const bool ForceOutlineStyle) const
 {
 	if(pFallbackIcon == nullptr || pFallbackIcon[0] == '\0')
 		return false;
@@ -2690,7 +2705,8 @@ bool CUi::DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIco
 	pTextRender->TextColor(QmSignalIconFamily(Icon) ? Color : ConfiguredQmUiIconColor(Color, Icon));
 	const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
 	// 实心态切换 Fill 字面渲染同一码位；字形文本与度量不变，缓存按预设自然隔离。
-	pTextRender->SetFontPreset(QmUiIconFilledStyle(Icon) ? EFontPreset::ICON_FONT_FILL : EFontPreset::ICON_FONT);
+	pTextRender->SetFontPreset(ForceOutlineStyle ? EFontPreset::ICON_FONT : QmUiIconFilledStyle(Icon) ? EFontPreset::ICON_FONT_FILL :
+													    EFontPreset::ICON_FONT);
 	pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
 	// 信号柱家族按 bbox 占比补足字号，四档可视尺寸趋近常规图标；其余图标走通用字号。
 	const float FontSize = QmSignalIconFamily(Icon) ? QmSignalIconFontSize(Rect, Icon) : QmIconFontSize(Rect);
@@ -2711,9 +2727,9 @@ CLabelResult CUi::DoLabel_QmIcon(const CUIRect *pRect, EQmIcon Icon, const char 
 	return DoLabel(pRect, pFallbackIcon, Size, Align, LabelProps);
 }
 
-int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor, bool ShowSlash, bool TransparentInactive)
+int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor, bool ShowSlash, bool TransparentInactive, const ui_widget::SIconButtonIconDraw *pIconDraw)
 {
-	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, Enabled, ButtonColor, ShowSlash, TransparentInactive);
+	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, Enabled, ButtonColor, ShowSlash, TransparentInactive, nullptr, pIconDraw);
 }
 
 int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding, bool TransparentInactive, bool Enabled, const std::optional<ColorRGBA> ButtonColor, float MinimumFontSize)
@@ -2919,7 +2935,8 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 				}
 			}
 		}
-		else if(HotItem() == pId)
+		// 触摸没有 hover：第一下按在数值框上就要进入拖动/滚轮状态。
+		else if(HotItem() == pId || (!Input()->TouchFingerStates().empty() && Inside))
 		{
 			if(MouseButton(0))
 			{
@@ -2998,7 +3015,7 @@ float CUi::DoScrollbarV(const void *pId, const CUIRect *pRect, float Current)
 			SetActiveItem(nullptr);
 		}
 	}
-	else if(HotItem() == pId)
+	else if(HotItem() == pId || (!Input()->TouchFingerStates().empty() && InsideRail))
 	{
 		if(InsideHandle)
 		{
@@ -3131,7 +3148,7 @@ float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, co
 			SetActiveItem(nullptr);
 		}
 	}
-	else if(HotItem() == pId)
+	else if(HotItem() == pId || (!Input()->TouchFingerStates().empty() && InsideRail))
 	{
 		if(InsideHandle)
 		{

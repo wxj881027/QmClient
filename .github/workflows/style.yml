@@ -41,6 +41,13 @@ jobs:
       run: |
         python3 qmclient_scripts/gate/check_gate.py --mode quick --ci-mode --report-json-path tmp/check-gate-report.json
 
+    - name: Report card search index gaps
+      continue-on-error: true
+      run: |
+        mkdir -p tmp
+        python3 qmclient_scripts/check_card_search_index.py --format markdown --json tmp/card-search-index.json | tee tmp/card-search-index.md
+        cat tmp/card-search-index.md >> "$GITHUB_STEP_SUMMARY"
+
     - name: Build map_test tool
       run: |
         mkdir release

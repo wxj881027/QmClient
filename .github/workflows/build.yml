@@ -134,12 +134,6 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@23869a5bd66c73db3c0ac40331f3206eb23791dc  # v2.9.1
 
-      - name: Cache SDL3 download
-        uses: actions/cache@v5
-        with:
-          path: build/downloads/sdl3
-          key: sdl3-source-${{ hashFiles('cmake/FindSDL3.cmake') }}
-
       - name: Cache Homebrew packages
         if: runner.os == 'macOS'
         uses: actions/cache@v5

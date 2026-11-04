@@ -201,10 +201,11 @@ TEST(QmMapCoverArt, ComposeCropsToFillThumbnailAspect)
 	const QmMapCover::SArt Art = DefaultArt();
 	ASSERT_TRUE(QmMapCover::Compose(Source, 64, 32, Art, Output));
 	Source.Free();
-	// 源行 0 是 0、源行 7 是 210；裁切后顶行取自源图中段，既不是最上一行也不是最下一行。
+	// 源行 0 是 0、源行 7 是 210。按宽度放大到 44 宽后纵向只剩约 1.45 个源行，居中裁切
+	// 落在源行 2.8~4.2 之间：顶行既不能是第 0 行，也不能滑到底部几行。
 	const uint8_t *pTopLeft = PixelAt(Output, 2, 0);
-	EXPECT_GT(pTopLeft[0], 20 * Art.m_Shade);
-	EXPECT_LT(pTopLeft[0], 60 * Art.m_Shade);
+	EXPECT_GT(pTopLeft[0], 2 * 30 * Art.m_Shade);
+	EXPECT_LT(pTopLeft[0], 5 * 30 * Art.m_Shade);
 	Output.Free();
 }
 

@@ -3673,3 +3673,68 @@ brazilian_portuguese = "Nitidez"
 portuguese = "Nitidez"
 turkish = "Keskinleştirme"
 polish = "Wyostrzanie"
+
+[[message]]
+key = "Export failed"
+[message.translations]
+simplified_chinese = "导出失败"
+traditional_chinese = "匯出失敗"
+japanese = "エクスポートに失敗しました"
+korean = "내보내기 실패"
+russian = "Не удалось экспортировать"
+german = "Export fehlgeschlagen"
+spanish = "Error al exportar"
+french = "Échec de l'exportation"
+brazilian_portuguese = "Falha ao exportar"
+portuguese = "Falha ao exportar"
+turkish = "Dışa aktarma başarısız"
+polish = "Eksport nie powiódł się"
+
+[[message]]
+key = "Export to downloads"
+[message.translations]
+simplified_chinese = "导出到下载目录"
+traditional_chinese = "匯出到下載目錄"
+japanese = "ダウンロードに書き出す"
+korean = "다운로드로 내보내기"
+russian = "Экспортировать в «Загрузки»"
+german = "In „Downloads“ exportieren"
+spanish = "Exportar a Descargas"
+french = "Exporter vers Téléchargements"
+brazilian_portuguese = "Exportar para Downloads"
+portuguese = "Exportar para Transferências"
+turkish = "İndirilenler'e aktar"
+polish = "Eksportuj do Pobranych"
+
+[[message]]
+key = "Open downloads folder"
+[message.translations]
+simplified_chinese = "打开下载目录"
+traditional_chinese = "開啟下載目錄"
+japanese = "ダウンロードフォルダーを開く"
+korean = "다운로드 폴더 열기"
+russian = "Открыть папку «Загрузки»"
+german = "Downloads-Ordner öffnen"
+spanish = "Abrir carpeta de Descargas"
+french = "Ouvrir le dossier Téléchargements"
+brazilian_portuguese = "Abrir pasta Downloads"
+portuguese = "Abrir pasta Transferências"
+turkish = "İndirilenler klasörünü aç"
+polish = "Otwórz folder Pobrane"
+
+[[message]]
+key = "Saved to Downloads/QmClient"
+[message.translations]
+simplified_chinese = "已保存到 下载/QmClient"
+traditional_chinese = "已儲存到 下載/QmClient"
+japanese = "ダウンロード/QmClient に保存しました"
+korean = "다운로드/QmClient에 저장됨"
+russian = "Сохранено в «Загрузки/QmClient»"
+german = "Gespeichert in Downloads/QmClient"
+spanish = "Guardado en Descargas/QmClient"
+french = "Enregistré dans Téléchargements/QmClient"
+brazilian_portuguese = "Salvo em Downloads/QmClient"
+portuguese = "Guardado em Transferências/QmClient"
+turkish = "İndirilenler/QmClient konumuna kaydedildi"
+polish = "Zapisano w Pobrane/QmClient"
+

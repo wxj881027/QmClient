@@ -42,8 +42,15 @@ public:
 
 inline CUIRect QmChatScrollbarRail(const CUIRect &Bounds, float Top, float Height, bool OnRight, float Scale = 1.0f)
 {
+	// 手机上手指比鼠标粗：轨道要更宽、离屏边更远，否则根本按不到、拖不动。
+#if defined(CONF_PLATFORM_ANDROID) || defined(CONF_PLATFORM_IOS)
+	const float Width = std::min(std::max(0.0f, Bounds.w), QM_CHAT_SCROLLBAR_WIDTH * Scale * 2.5f);
+	const float MarginScale = OnRight ? 1.5f : 3.0f; // 靠左时再往内收，避开手机圆角
+	const float Margin = std::min(QM_CHAT_SCROLLBAR_MARGIN * Scale * MarginScale, std::max(0.0f, (Bounds.w - Width) * 0.5f));
+#else
 	const float Width = std::min(std::max(0.0f, Bounds.w), QM_CHAT_SCROLLBAR_WIDTH * Scale);
 	const float Margin = std::min(QM_CHAT_SCROLLBAR_MARGIN * Scale, std::max(0.0f, (Bounds.w - Width) * 0.5f));
+#endif
 	return {OnRight ? Bounds.x + Bounds.w - Margin - Width : Bounds.x + Margin, Top, Width, std::max(0.0f, Height)};
 }
 

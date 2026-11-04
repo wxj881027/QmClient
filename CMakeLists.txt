@@ -2243,6 +2243,24 @@ set(EXPECTED_DATA
   qmclient/gui_logo.png
   qmclient/map_difficulty.sql
   qmclient/title_badges/logo_sdf.png
+  qmclient/ui/password_icon_bold.png
+  qmclient/ui/password_icon_light.png
+  qmclient/ui/password_icon_regular.png
+  qmclient/ui/chevron_swap_bold.png
+  qmclient/ui/chevron_swap_light.png
+  qmclient/ui/chevron_swap_regular.png
+  qmclient/ui/play_pause_swap_bold.png
+  qmclient/ui/play_pause_swap_light.png
+  qmclient/ui/play_pause_swap_regular.png
+  qmclient/ui/play_stop_swap_bold.png
+  qmclient/ui/play_stop_swap_light.png
+  qmclient/ui/play_stop_swap_regular.png
+  qmclient/ui/star_favorite_swap_bold.png
+  qmclient/ui/star_favorite_swap_light.png
+  qmclient/ui/star_favorite_swap_regular.png
+  qmclient/ui/plus_minus_swap_bold.png
+  qmclient/ui/plus_minus_swap_light.png
+  qmclient/ui/plus_minus_swap_regular.png
   race_flag.png
   shader/gaussian_blur.frag
   shader/gaussian_blur.vert
@@ -3296,6 +3314,8 @@ if(CLIENT)
     QmUi/UiFormLogic.h
     QmUi/UiForms.cpp
     QmUi/UiForms.h
+    QmUi/QmIconSwap.cpp
+    QmUi/QmIconSwap.h
     QmUi/UiNavigation.cpp
     QmUi/UiNavigation.h
     QmUi/UiOverlays.h
@@ -4735,6 +4755,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/QmListRowFeedbackTest.cpp
     src/test/unit/qmclient/ui/QmAnimTreeTest.cpp
     src/test/unit/qmclient/ui/qm_icon_policy_test.cpp
+    src/test/unit/qmclient/ui/qm_password_icon_test.cpp
+    src/test/unit/qmclient/ui/qm_icon_swap_test.cpp
     src/test/unit/qmclient/ui/qm_icon_diagnostics_test.cpp
     src/test/unit/qmclient/ui/qm_signal_icon_font_size_test.cpp
     src/test/unit/qmclient/ui/qm_signal_icon_color_test.cpp
@@ -5015,6 +5037,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_camera_effects_test.cpp
     src/test/contract/qmclient/ui/qm_capsule_tab_wiring_contract_test.cpp
     src/test/unit/qmclient/ui/qm_capsule_tab_geometry_test.cpp
+    src/test/unit/qmclient/ui/qm_scroll_content_drag_test.cpp
     src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp
     src/test/unit/qmclient/ui/qm_tooltip_ownership_test.cpp
     src/test/contract/qmclient/client/qm_camera_effects_contract_test.cpp
@@ -5025,6 +5048,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/settings/settings_icon_options_test.cpp
     src/test/unit/qmclient/settings/settings_color_picker_test.cpp
     src/test/unit/qmclient/settings/settings_page_layout_test.cpp
+    src/test/unit/qmclient/settings/qm_settings_mobile_pages_test.cpp
     src/test/unit/qmclient/settings/settings_content_metrics_test.cpp
     src/test/unit/qmclient/settings/settings_label_metadata_test.cpp
     src/test/unit/qmclient/settings/settings_content_layout_test.cpp
@@ -5036,6 +5060,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_tclient_statusbar_score_contract_test.cpp
     src/test/contract/qmclient/client/qm_graphics_shutdown_contract_test.cpp
     src/test/unit/qmclient/client/qm_crashdump_shutdown_suppression_test.cpp
+    src/test/unit/qmclient/client/qm_crashdump_fatal_report_test.cpp
     src/test/unit/qmclient/client/qm_hang_watchdog_state_test.cpp
     src/test/contract/qmclient/client/qm_graphics_backend_fallback_contract_test.cpp
     src/test/unit/qmclient/client/qm_graphics_opengl_probe_contract_test.cpp
@@ -5723,6 +5748,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/game/client/QmUi/UiButtons.cpp
       src/game/client/QmUi/UiSurface.cpp
       src/game/client/QmUi/UiForms.cpp
+      src/game/client/QmUi/QmIconSwap.cpp
       src/game/client/QmUi/UiFormLogic.cpp
       src/game/client/QmUi/QmAnim.cpp
       src/game/client/QmUi/QmAnimationBackend.cpp
@@ -6254,6 +6280,16 @@ if(CLIENT AND DMGBUILD_FOUND)
   configure_file(other/bundle/server/Info.plist.in bundle/server/Info.plist)
 
   set(DMG_TMPDIR pack_${CPACK_PACKAGE_FILE_NAME}_dmg)
+  # SDL3 以 framework 形式随包分发；静态链接时期这段为空。
+  if(SDL3_COPY_DIRS)
+    set(DMG_SDL3_FRAMEWORK_COPY_COMMANDS
+      COMMAND ${CMAKE_COMMAND} -E copy_directory ${EXTRA_SDL3_LIBDIR}/SDL3.framework ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/SDL3.framework)
+    set(DMG_SDL3_FRAMEWORK_SIGN_COMMANDS
+      COMMAND codesign --force --sign - ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/SDL3.framework)
+  else()
+    set(DMG_SDL3_FRAMEWORK_COPY_COMMANDS)
+    set(DMG_SDL3_FRAMEWORK_SIGN_COMMANDS)
+  endif()
   set(DMG_MKDIRS
     ${CLIENT_EXECUTABLE}.app
     ${CLIENT_EXECUTABLE}.app/Contents
@@ -6392,12 +6428,14 @@ if(CLIENT AND DMGBUILD_FOUND)
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/freetype/${LIB_DIR}/libfreetype.6.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/png/${LIB_DIR}/libpng16.16.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
     ${DMG_FFMPEG_COPY_COMMANDS}
+    ${DMG_SDL3_FRAMEWORK_COPY_COMMANDS}
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/libsteam_api.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
 	${DMG_WEBP_COPY_COMMANDS}
 	${DMG_VULKAN_RUNTIME_COPY_COMMANDS}
     COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/darwin_strip_rpath.py ${CMAKE_OTOOL} ${CMAKE_INSTALL_NAME_TOOL} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
     COMMAND ${CMAKE_INSTALL_NAME_TOOL} -add_rpath @loader_path/../Frameworks ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
     COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/qmclient_scripts/darwin_fix_install_names.py ${CMAKE_OTOOL} ${CMAKE_INSTALL_NAME_TOOL} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks --executable ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
+    ${DMG_SDL3_FRAMEWORK_SIGN_COMMANDS}
     COMMAND codesign --force --sign - ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/*.dylib
     COMMAND codesign --force --sign - ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
 
@@ -6626,6 +6664,13 @@ foreach(target ${TARGETS})
 	endif()
   if(OUR_FLAGS)
     target_compile_options(${target} PRIVATE ${OUR_FLAGS})
+  endif()
+  # Android 17 的 bionic 对 strlen/memchr 做运行期 FORTIFY 检查，会和字符串工具
+  # （str_length / str_utf8_*）在 -O2 下的对象大小推导打架：启动即在 CFriends
+  # 构造函数里 abort（FORTIFY: memchr: prevented 63-byte read from 8-byte buffer）。
+  # NDK 工具链默认往 FLAGS 注入 -D_FORTIFY_SOURCE=2，这里用 -U 抵消（后者生效）。
+  if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    target_compile_options(${target} PRIVATE -U_FORTIFY_SOURCE)
   endif()
   if(DEFINE_FORTIFY_SOURCE_3 OR DEFINE_FORTIFY_SOURCE)
     if(MINGW)

@@ -501,6 +501,10 @@ void CVoting::Render()
 	const bool ScoreboardActive = GameClient()->m_Scoreboard.IsActive() && !GetQmFocusModeDecisions().m_HideScoreboard;
 	if(!ScoreboardActive || HudEditorPreview)
 		ResetScoreboardVoteInteraction();
+	// 手机端投票由顶部横幅承担（CQmMobileSpectator::RenderMobileVoteBar），
+	// 不再画左下角那个带按键提示的小 HUD，避免同一份票况出现两处。
+	if(QmUiMobilePlatform() && Client()->State() == IClient::STATE_ONLINE && !HudEditorPreview)
+		return;
 	if(!QmVoteHudVisible(IsVoting(), TakenChoice(), ScoreboardActive, g_Config.m_ClShowVotesAfterVoting != 0, HudEditorPreview))
 		return;
 	int Seconds = SecondsLeft();

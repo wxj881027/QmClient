@@ -241,14 +241,12 @@ Adjust status bar position and text style
 Adjust system console verbosity (-3=None, -2=Errors only, -1=Warning, 0=Info, 1=Debug, 2=Trace)
 Adjust TClient heads-up display elements
 Adjust the display options; open a vote to check the layout before joining a busy server.
-Adjust the opacity of entities belonging to other teams, such as tees and name plates
 Adjust trails rendered behind Tees
 Adjust verbosity in external console (-3 = none, -2 = errors only, -1 = warnings, 0 = info, 1 = debug, 2 = trace).
 Adjusts DDRace-specific HUD parts such as team state, freeze bars and race time.
 Adjusts helpers that hide latency, such as removing anti-ping and predicting margins inside freeze.
 Adjusts TClient-specific HUD elements that are not part of the standard DDNet HUD.
 Advanced
-Advanced mode
 Advanced options
 AFR
 After a successful upload, log in with F2 and run the change_map command; files must stay under 64 MiB.
@@ -324,7 +322,6 @@ Animation range
 Announcements sequential or random.
 Anti Latency Tools
 Anti latency tools
-Anti Ping Smoothing
 Anti-aliasing for the exported video only, independent of the graphics setting. Explicit levels render each frame into a multisampled offscreen target, so the game itself can stay at a lower setting for performance. Supersampling (output smaller than the window) already reduces jagged edges, so prefer one or the other.
 Anti-aliasing for video export: -1 = follow gfx_fsaa_samples, 0 = off, 2/4/8 = multisampled offscreen rendering
 Anti-aliasing:
@@ -345,7 +342,6 @@ Append saved word list chunk
 Append to log file instead of overwriting
 Applied to %d same-family part(s).
 Applies an animated rainbow color to selected elements such as nameplates or the hook.
-Applies to single-color and rainbow overrides.
 Apply
 Apply a preset first
 Apply a random skin from the dummy queue
@@ -357,7 +353,6 @@ Apply input early before next tick for prediction
 Apply Qm recommended appearance
 Apply quick input to other Tees as well
 Apply squishy Tee deformation to other players
-Apply this preset
 Apply to
 Apply to dummy
 Apply to player
@@ -425,7 +420,6 @@ Auto chat when dying in water
 Auto concurrency: %d (smart default)
 Auto enable in Gores mode
 Auto enable/disable IME on text focus
-Auto execute
 Auto fetch replay info on refresh
 Auto gain control for mic
 Auto gain control for mic (AGC, experimental)
@@ -816,7 +810,6 @@ Chooses windowed or fullscreen mode, the monitor and the resolution; switching r
 Chroma sampling
 Chroma sampling preference for export: 0=auto, 1=4:2:0, 2=4:2:2, 3=4:4:4 (higher keeps thin colored details)
 Chroma sampling. 4:2:0 is smallest and most compatible; 4:4:4 keeps full color detail for thin lines and small colored text. Rendering is 8-bit, so 10-bit formats do not add detail by themselves.
-Cinematic camera
 Cinematic camera smoothness (0=instant, 100=smoothest)
 Cinematic smoothness
 CJK font
@@ -842,7 +835,6 @@ Classic nut
 Classic PowerShell
 Classic Pro
 Classic pro
-Classic title glow
 Clear
 Clear all favorite maps
 Clear all history
@@ -901,6 +893,7 @@ Close
 Close the demo player
 Close window after changing settings
 Cloud bubble
+Collapse
 Collapse console
 Collects the remaining DDNet client preferences that do not belong to other cards.
 Collision hitbox
@@ -981,7 +974,6 @@ Configure controls and key bindings
 Configure DDNet demo recording behavior
 Configure DDNet gameplay preferences
 Configure display and rendering
-Configure Dream-only convenience features
 Configure game and client preferences
 Configure ghost recording and playback tools
 Configure hammer skin steal and skin transition animations
@@ -1266,7 +1258,6 @@ Deep unfreeze opacity
 Deep unfreeze tile outline color
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 DeepL API
-DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
 DeepL API Key (free keys end with :fx)
 DeepL API quota depends on your subscription. Get an API key at deepl.com.
 DeepSeek
@@ -1301,7 +1292,6 @@ Delete demo
 Delete folder
 Delete screenshot
 Delete selected items
-Delete skin
 Delete this preset
 Deleted "%s"
 Demo
@@ -1427,6 +1417,7 @@ Downloading update...
 Downloading…
 Downscaled (0.78)
 Draft file is empty
+Drag
 Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
 Drag HUD modules with the left mouse button
 Drag the three sliders; master scales the other two.
@@ -1751,6 +1742,7 @@ Entities
 Entities background color
 Entity assets
 Entity Background Image
+Entity layer
 Entity overlay
 Entity Preview
 Entity wall outline opacity
@@ -1788,6 +1780,7 @@ Existing Player
 Exit and install
 Exit replay view
 Exit spectating on both tees when either is hammered awake by another player
+Expand
 Expand console
 Expanded dropdown background color
 Expanded dropdown background opacity percentage
@@ -1797,6 +1790,7 @@ Export
 Export configuration package
 Export cut as a separate demo
 Export demo cut
+Export failed
 Export name contains invalid characters.
 Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)
 Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)
@@ -1808,6 +1802,7 @@ Export range
 Export range (seconds):
 Export selected
 Export to clipboard
+Export to downloads
 Exported %d chat messages
 Exported to %s
 Exporting chat images: %d
@@ -1819,7 +1814,9 @@ Extra vertical spacing between chat lines in pixels (0 = default)
 Extras
 Extreme values make movement feel wrong, so change one step at a time.
 Extremely slow, for testing only
+Eyes
 f = Frame rate
+Fade
 Fade and slide
 Fade in
 Fade only
@@ -1855,7 +1852,6 @@ Failed to save video. See local console for details.
 Failed to write PNG export.
 Fairly fast encode
 Fake CTF flags
-Fallback simple noise reduction strength
 Fast encode
 Fast flashing colors are hard to read, so keep the speed moderate.
 Fast input
@@ -1977,6 +1973,7 @@ Frame time p99
 Framebuffer color bits (only fullscreen)
 Frankenstein (drop parts on right)
 Free move
+Free view
 Free-View
 Freeview cursor opacity
 Freeze
@@ -2227,12 +2224,10 @@ High Detail
 High particle counts and trails cost frame rate; lower "Particle count" if your FPS drops.
 High quality, slow
 Higher input latency
-Higher values make the wave move faster. Zero stops the movement.
 Highlight Color
 Highlight console commands
 Highlight game type
 Highlight message text gradient color
-Highlight movement in Polished mode. Zero turns it off.
 Highlight ping value
 Highlight selected players in the game world
 Highlight teammates hammering in death or freeze areas
@@ -2412,7 +2407,6 @@ Input switch
 Insane
 Installed
 Installing update. Please wait...
-Instant compact hints
 Instant zoom reverse
 Interface
 Interface accent color
@@ -2464,7 +2458,6 @@ It only counts your own team and only appears on your screen; lower the icon siz
 It stays on for every match, so switch it off before real races to keep the screen and your aim clean.
 It's recommended that you check the settings to adjust them to your liking before joining a server.
 Item
-Item type
 Its use depends on the server or game mode.
 j = Latency jitter
 Japanese
@@ -2486,6 +2479,7 @@ Join the team of the specified player
 Join Tutorial Server
 Join, version, rules, and help messages stay in chat instead of popups
 Joining Tutorial server
+Joystick
 Jump
 Jump hint
 Jump hint color
@@ -2506,7 +2500,6 @@ Keep the defaults unless you play with high ping; then try one option at a time 
 Keep the text light on a dark background; press "Reset tooltip appearance" to return to the defaults.
 Keep unsent message on chat close
 Keep vote window open after voting
-Key
 Key binds
 Key press count color
 Key press count font size
@@ -2625,7 +2618,6 @@ Lht.
 LibreTranslate API Key
 LibreTranslate endpoint
 Light
-Light band
 Limit information in spectator mode
 Limit the title to the exact nickname below.
 Limiter threshold (percent)
@@ -2924,6 +2916,8 @@ Misc
 Miscellaneous
 Mix rate
 Mixed
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+Mobile spectator camera: 0=joystick pad, 1=drag the view
 Mode
 Model
 Moderate
@@ -2935,6 +2929,7 @@ Monospace
 Moon
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 More teammates...
+Morph
 MOTD
 Motion and focus feedback
 Mouse
@@ -3157,6 +3152,7 @@ No skins match your filter criteria
 No sounds match this search.
 No status bar items
 No such savegame for this map
+No tee nearby
 No unfinished maps available
 Noise reduction mode
 Noise suppression mode (0=off 1=simple 2=RNNoise)
@@ -3237,6 +3233,7 @@ Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
 Only show with this nickname
 Only the selected tee changes, so switch to "Dummy" before editing the colors you want on your dummy.
+Only what you can't imagine, nothing Dream can't do
 Opacity
 Opacity of entity layers on the map such as death, freeze, unfreeze, teleport, checkpoint and switch tiles.
 Opacity of freeze bars inside freeze
@@ -3247,6 +3244,7 @@ Open a link to visit the site.
 Open a matching settings card directly
 Open bindwheel selector
 Open DDNet Wiki
+Open downloads folder
 Open emote selector
 Open folder
 Open map editor
@@ -3292,7 +3290,6 @@ Options only exist within "Detection distance"; turn off the ones you never use 
 Or visit DDNet.org
 Original
 Original and translation
-Original language for both received and outgoing messages. Use Auto to detect each message.
 Original language for incoming and outgoing text
 Original message language
 Original only
@@ -3362,8 +3359,10 @@ Parts are stored in the skin file; unsaved changes are lost when leaving the pag
 Password
 Password for Axiom alt account auto-login
 Password for Axiom main account auto-login
+Password icon animation
 Password incorrect
 Password required to use reserved slots.
+Password visibility icon animation: 0=Fade, 1=Morph
 Past year
 Paste sp_dc from Spotify web cookies
 Path to CA certificate for verifying the MySQL/MariaDB server certificate
@@ -3535,8 +3534,6 @@ Please use a different filename
 Please wait…
 Points
 Points unavailable
-Polished
-Pop wave
 Popup animation
 Port for client to server connection (0=random, >=1024 sets manual port)
 Port for dummy connection to server (0=random, >=1024 sets manual port)
@@ -3890,7 +3887,6 @@ Remove shortcuts you no longer use to keep the list readable.
 Remove team clan:
 Remove team name:
 Remove war clan:
-Remove War Group
 Remove war name:
 Removed %s from friends
 Removes all bindwheel binds
@@ -4045,10 +4041,6 @@ Right jump
 Right-click to disable auto-translate
 Right-click to enable auto-translate
 Ring
-RNNoise noise reduction
-RNNoise noise reduction (unavailable in this build)
-RNNoise noise reduction strength
-RNNoise not integrated in current build, will fallback to simple noise reduction
 Room
 Room password
 Rotate all server player skins
@@ -4123,6 +4115,7 @@ Save/Load Flag
 Save/Load Name
 Save/Load Skin
 Saved
+Saved to Downloads/QmClient
 Saved to the bind wheel.
 Saved with your title and shared with other QmClient players.
 Saves and loads complete client profiles, including name, chat settings and bind wheel presets.
@@ -4240,6 +4233,7 @@ Send Rate
 Send sampling and token limit parameters
 Send specified command to rcon
 Send three consecutive lyrics to public chat at random intervals of 90 to 270 seconds, with 3 seconds between lines
+Send to
 Send translation method
 Sending and receiving
 Sending initial client info
@@ -4283,7 +4277,6 @@ Server stress (debug builds only).
 Server type (novice, moderate, etc.)
 Server URL
 Server votes
-Server-assigned style
 Server-dependent
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 Set "Button - Disabled" and "Button - Enabled" for the button, then "Menu background" and the two menu option rows for the popup.
@@ -4341,7 +4334,6 @@ Severe
 Shape
 Share of the server browser name/map split given to the name column (per mille)
 Sharpen
-Shimmer speed
 Short pain voice
 Short server names
 Shortcuts that open your QmClient settings, profiles, war list and chat binds, plus configuration packages.
@@ -4527,7 +4519,6 @@ Show local time seconds
 Show logs of the last i seconds
 Show lyrics in a separate island below Dynamic Island
 Show lyrics in Dynamic Island
-Show lyrics inside Dynamic Island
 Show main tee title locally
 Show map details
 Show map progress bar (beta)
@@ -4727,8 +4718,6 @@ Silently disconnect from the current server while keeping Tee timeout protection
 Simple
 Simple noise reduction
 Simple noise reduction strength
-Single color
-Single color and Rainbow override the color of animated styles; the style keeps its motion
 Size
 Size of entity text data (20% to 100%)
 Size of hook strength icon and number indicator
@@ -4798,7 +4787,6 @@ Smooth zoom animation time in editor (in ms, 0=off)
 Smoothness of multi-view zoom (in ms, higher = slower)
 Smooths the camera while you free-spectate with the mouse in live games and demos, so pans glide instead of snapping.
 Snap title bob offset to whole pixels (sharper glyphs, choppier motion)
-Snap wave to pixels
 Snapshot Age
 Snapshot age
 Snapshot Latency
@@ -4889,7 +4877,6 @@ Start (s)
 Start and connect to local server
 Start at a random queue position on every map join
 Start dummy skin queue from a random position when entering a map
-Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
 Start from the default value; raise it slightly if other players look jumpy, lower it if you seem behind them.
 Start here to quickly diagnose if the issue is with device, server, or room
 Start holding the hook before loading the savegame to keep the hook
@@ -4943,7 +4930,6 @@ Stop the current demo
 Streamer mode
 Streamer word list file
 Strength icons assets
-Strength of the vertical or pop wave. Zero keeps the title still.
 Stress system (debug builds only).
 Strict game type filter
 Strict gametype filter
@@ -4962,7 +4948,6 @@ Styles chat names and message colors, including gradients.
 Styles kill, finish and system messages in the chat area.
 Sub-Tick aiming
 Submit
-Subtle
 Success
 Successfully saved the replay!
 Sudden Death
@@ -5015,7 +5000,6 @@ System message color
 System message text gradient color
 System prompt text color
 Tag submitted for review.
-Tags
 Take a screenshot
 Take photo
 Taper trail ends
@@ -5134,7 +5118,6 @@ Text before each key press count
 Text color
 Text color mode
 Text color mode: 0 automatic, 1 white, 2 black, 3 custom
-Text effect
 Text input focus ring color
 Text is too long for the selected translation service.
 Thank you for your company and trust. This is what gives me the courage to keep going.
@@ -5219,6 +5202,7 @@ This team is locked using /lock. Only members of the team can invite you or unlo
 This team is locked using /lock. Only members of the team can unlock it using /lock.
 This team started already
 This team was disbanded because there are more players than allowed in the team.
+This text is already in the target language.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 Tick "Auto-connect dummy" to connect the dummy for you, then bind "Solo split key" to toggle, or use the enter and leave keys.
 Tick "Debug mode" to turn all options on, then set "Performance debug log threshold (ms)" to choose which frames get logged.
@@ -5273,7 +5257,6 @@ Title bob wavelength in pixels
 Title color
 Title display
 Title light sweep speed in 1/100 row per second (0 = off)
-Title motion
 Title motion: 0 = vertical wave, 1 = pop wave
 Title opacity
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
@@ -5621,7 +5604,6 @@ Use sounds
 Use style colors
 Use team colors for name plates
 Use Tee icons instead of circles
-Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
 Use the custom colors below while the hook key is held
 Use the mouse wheel on a hovered module to scale it by 5%
 Use the scoreboard cursor mode to scroll the list
@@ -5648,7 +5630,6 @@ Version
 Version performing the analysis
 Vertical position
 Vertical sync (may cause lag)
-Vertical wave
 Very fast encode
 Very high
 Very high quality, very slow
@@ -5686,8 +5667,6 @@ Visibility filter mode
 Visual
 Visual effects
 Visual: Cursor
-Visual: Effects
-Visual: Nameplates
 Visuals
 Vital Resend Queue
 Vital resend queue
@@ -5751,9 +5730,6 @@ Warning
 Watches your friend list and reports friends coming online or joining your map, with optional automatic greeting.
 Water hammer highlight
 Watermark
-Wave amount
-Wave spacing
-Wave speed
 Weak hook
 Weak hook color
 Weak network test: server receive extra reorder probability percentage
@@ -5792,7 +5768,6 @@ Wheel distance per tick; hold Alt for 3x
 Wheel label
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 When TClient rainbow Tee is enabled, this feature has no effect.
-When you cross the start line, show a ghost tee replicating the movements of your best time
 Where your title appears and how it looks: nameplate, style, motion, colors and glow.
 Whether a switch is deactivated by default (otherwise activated)
 Whether dummy copies your movement
@@ -5821,6 +5796,7 @@ Which message to display on zone leave; use 0 for normal area
 Whisper
 Whisper option color
 Whisper something to someone (private message)
+Whisper target left the game
 Whisper to %s
 Whisper to %s: %s
 Whisper: /w player message
@@ -5978,7 +5954,6 @@ z = Zoom
 Zen Mode
 Zen mode hides chat bubbles even when this is on, and a long "Duration" leaves old lines on screen.
 Zen mode key
-Zero uses the style default. Higher values make color bands narrower.
 Zhipu AI
 Zhipu API key
 Zhipu free models allow only 1 concurrent request
@@ -7079,7 +7054,6 @@ Zoom to current mouse target
 [Team status]	forbidden
 [Team status]	required
 [Team status]	solo
-[Title color mode]	Use style colors
 [Touch button behavior]	Bind
 [Touch button behavior]	Bind Toggle
 [Touch button behavior]	Predefined
