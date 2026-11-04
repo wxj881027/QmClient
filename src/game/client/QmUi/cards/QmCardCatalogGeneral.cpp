@@ -165,6 +165,9 @@ namespace qm_card_catalog
 				CSettingsContentLayoutFlow Flow(Content);
 				CUIRect Button;
 				char aBuf[128 + IO_MAX_PATH_LENGTH];
+				if(Flow.Control("general-map-tags", GeneralMetrics.m_LineHeight, Button) && pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_QmMapTags, "general-map-tags", Localize("Show community map tags"), g_Config.m_QmMapTags, &Button))
+					g_Config.m_QmMapTags ^= 1;
+				Flow.Space(GeneralMetrics.m_LineSpacing);
 				if(Flow.Control("general-skip-main-menu", GeneralMetrics.m_LineHeight, Button))
 				{
 					if(pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_ClSkipStartMenu, "general-skip-main-menu", Localize("Skip the main menu"), g_Config.m_ClSkipStartMenu, &Button))

@@ -91,7 +91,7 @@
 
 ### 5. 独立开源的服务仓库
 
-`qmclient_scripts/` 下另有一组**独立 Git 仓库**（各自有独立 remote，已被根 `.gitignore` 排除，不并入主仓库）：
+`qmclient_scripts/` 下另有独立服务源码目录（已被根 `.gitignore` 排除，不并入主仓库）。中心服与其他服务采用各自更新流程，统一见 `qmclient_scripts/SERVICES.md`：
 
 | 目录 | 仓库 | 语言 |
 |------|------|------|

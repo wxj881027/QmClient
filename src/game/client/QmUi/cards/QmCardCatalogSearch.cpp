@@ -443,6 +443,7 @@ namespace qm_card_catalog
 		};
 
 		static constexpr SCardSettingSearch s_adeck_general_client[] = {
+			{Localizable("Show community map tags"), "qm_map_tags", "地图标签 通关 Tag 审核"},
 			{Localizable("Config directory"), nullptr, "配置目录（cfg）"},
 			{Localizable("Hz", "Hertz"), nullptr, "Hz", "Hertz"},
 			{Localizable("Open the directory that contains the configuration and user files"), nullptr, "打开存有配置文件与用户文件的文件夹路径"},
