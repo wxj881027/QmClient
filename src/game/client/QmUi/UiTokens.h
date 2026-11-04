@@ -197,6 +197,24 @@ namespace ui_token::secondary_panel
 
 // 服务器信息页的键值行：三行信息（版本 / 游戏模式 / 延迟）与收藏 / 暴露 IP
 // 开关行共用同一套行高与行距，步长只在这里定义，调用点不再各写 15 / 18 / 2。
+// 右侧服务器筛选面板：行高、组间距与胶囊网格的度量集中在这里，
+// 底部快捷条与筛选面板共用同一套密度，避免两处各写 18 / 24 / 26。
+namespace ui_token::server_filter
+{
+	inline constexpr float LINE_HEIGHT = 18.0f;
+	inline constexpr float LINE_SPACING = 3.0f;
+	inline constexpr float BODY_FONT_SIZE = 14.0f;
+	inline constexpr float SECTION_GAP = 6.0f;
+	inline constexpr float SECTION_TITLE_SCALE = 1.15f;
+	inline constexpr float CHIP_MIN_WIDTH = 6.0f;
+	inline constexpr float CHIP_HEIGHT = 24.0f;
+	inline constexpr float CHIP_GAP = 4.0f;
+	inline constexpr float DIVIDER_HEIGHT = 2.0f;
+	inline constexpr float DIVIDER_THICKNESS = 1.0f;
+	inline constexpr float DIVIDER_INSET_RATIO = 0.1f;
+	inline constexpr float DIVIDER_INSET_MAX = 16.0f;
+} // namespace ui_token::server_filter
+
 namespace ui_token::server_info
 {
 	inline constexpr float ROW_HEIGHT = 15.0f;
