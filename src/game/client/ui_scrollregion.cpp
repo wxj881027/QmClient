@@ -76,7 +76,9 @@ void CScrollRegion::Begin(CUIRect *pClipRect, vec2 *pOutOffset, const CScrollReg
 	// 否则用户刚滚走就会被拉回选中项。
 	const int64_t Now = time_get();
 	const int64_t Frequency = maximum<int64_t>(1, time_freq());
-	m_ReScrollSelection = m_LastDrawTime != 0 && Now - m_LastDrawTime > Frequency / 20;
+	// 阈值按 250ms 而不是 50ms：单帧卡顿（换图、编译着色器）也常超过 50ms，
+	// 会被误判成「重新出现」而把用户滚走的视口拉回选中项。
+	m_ReScrollSelection = m_LastDrawTime != 0 && Now - m_LastDrawTime > Frequency / 4;
 	m_LastDrawTime = Now;
 	m_AddRectIndex = 0;
 	if(pParams)
@@ -169,7 +171,9 @@ bool CScrollRegion::AddRect(const CUIRect &Rect, bool ShouldScrollHere, bool IsS
 	// 重新出现的那一帧，选中项自动滚进视野，调用方不必自己记录「第一次渲染」。
 	const bool ScrollToThisRect = ShouldScrollHere || (m_ReScrollSelection && m_SelectionRectIndex == RectIndex);
 	m_LastAddedRect = Rect;
-	const vec2 ContentOffset = ContentScrollOffset();
+	// 内容尺寸与滚动计算一律用状态偏移：显示偏移只负责绘制平移，
+	// 混用会让缓动窗口内的内容高度和滑块位置互相打架。
+	const vec2 ContentOffset = m_Params.m_ScrollHorizontal ? vec2(-m_ScrollState.Offset(), 0.0f) : vec2(0.0f, -m_ScrollState.Offset());
 	if(m_Params.m_ScrollHorizontal)
 		m_ContentSize = maximum(std::ceil(Rect.x + Rect.w - (m_ClipRect.x + ContentOffset.x)), m_ContentSize);
 	else
@@ -185,7 +189,7 @@ void CScrollRegion::ScrollHere(EScrollOption Option)
 	const float ClipSize = m_Params.m_ScrollHorizontal ? m_ClipRect.w : m_ClipRect.h;
 	const float LastAddedPos = m_Params.m_ScrollHorizontal ? m_LastAddedRect.x : m_LastAddedRect.y;
 	const float LastAddedSize = m_Params.m_ScrollHorizontal ? m_LastAddedRect.w : m_LastAddedRect.h;
-	const vec2 ContentOffset = ContentScrollOffset();
+	const vec2 ContentOffset = m_Params.m_ScrollHorizontal ? vec2(-m_ScrollState.Offset(), 0.0f) : vec2(0.0f, -m_ScrollState.Offset());
 	const float ContentScrollOffset = m_Params.m_ScrollHorizontal ? ContentOffset.x : ContentOffset.y;
 	const float MinHeight = minimum(ClipSize, LastAddedSize);
 	const float TopScroll = LastAddedPos - (ClipPos + ContentScrollOffset);

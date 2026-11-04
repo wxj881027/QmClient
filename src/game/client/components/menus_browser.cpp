@@ -58,6 +58,7 @@
 #include <cmath>
 #include <ctime>
 #include <limits>
+#include <map>
 #include <unordered_map>
 #include <vector>
 
@@ -1922,23 +1923,23 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_FLAG_FAV)
 			{
-				// 收藏星标的进场进度：按地址串维护 0→1 的进度，逐帧推进，
-				// 不用时间差取整，避免键不稳定时进度永远停在 0 导致图标不画。
-				static std::unordered_map<std::string, float> s_StarGrow;
-				const std::string StarKey(pItem->m_aAddress);
+				// 进场进度表只保留收藏行：未收藏行不建条目，否则会随浏览过的服务器数无界增长；
+				// 键直接用 m_aAddress 做异质查找，不构造临时 std::string。
+				static std::map<std::string, float, std::less<>> s_StarGrow;
 				if(pItem->m_Favorite != TRISTATE::NONE)
 				{
-					auto StarIt = s_StarGrow.find(StarKey);
+					auto StarIt = s_StarGrow.find(pItem->m_aAddress);
 					if(StarIt == s_StarGrow.end())
 					{
 						// 首次见到就已经是收藏：直接按完成态绘制，不做进场。
-						s_StarGrow.emplace(StarKey, 1.0f);
-						StarIt = s_StarGrow.find(StarKey);
+						if(s_StarGrow.size() >= 4096)
+							s_StarGrow.clear();
+						StarIt = s_StarGrow.emplace(pItem->m_aAddress, 1.0f).first;
 					}
-					else if(StarIt->second < 1.0f)
+					else if(StarIt->second < 1.0f && !Ui()->MeasurementOnly())
 					{
-						// 按真实帧间隔推进（每帧只采样一次时钟），高帧率下不会因为
-						// 按帧计数而在 0.05s 内跑完；时钟异常时退化为 1/60 帧兜底。
+						// 按真实帧间隔推进（每帧只采样一次时钟）；测量通道不推进，
+						// 否则同帧多次遍历会把 0.35s 的进场压缩掉。
 						static int64_t s_StarDtTick = 0;
 						static float s_StarDt = 1.0f / 60.0f;
 						const int64_t StarNowTick = time_get();
@@ -1951,8 +1952,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 						StarIt->second = std::min(1.0f, StarIt->second + Step);
 					}
 					const float StarGrow = std::clamp(StarIt->second, 0.0f, 1.0f);
-					// 生长曲线必须铺满整段时长：上一版用的 2^(-10t)·cos(10t) 在头 10~20% 就冲到
-					// 满尺寸，看起来等于"直接出现"。这里改成三次缓出 + 中段轻微鼓起。
+					// 生长曲线必须铺满整段时长：三次缓出 + 中段轻微鼓起，落位回到 1.0。
 					const float StarEaseOut = 1.0f - std::pow(1.0f - StarGrow, 3.0f);
 					const float StarBulge = 1.0f + 0.10f * std::sin(3.14159265f * StarGrow);
 					const float StarScale = (0.25f + 0.75f * StarEaseOut) * StarBulge;
@@ -1964,18 +1964,21 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 					}
 					else
 					{
-						// 直接用图标字形做等比缩放（QmIconLabelRect 的 Side 由 Size 决定，
-						// 字体度量随盒尺寸走），这样才是"长大"而不是裁剪揭幕。
+						// 字形等比缩放：QmIconLabelRect 的边长由 Size 决定，字体度量跟着盒子走。
 						const float IconSize = std::clamp(14.0f * StarScale, 2.0f, 22.0f);
+						// 只改这一帧的文本色，退出时恢复进入前颜色，避免污染后续列。
+						const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
 						TextRender()->TextColor(ColorRGBA(1.0f, 0.85f, 0.3f, StarAlpha));
 						Ui()->DoLabel_QmIcon(&Button, EQmIcon::STAR, FONT_ICON_STAR, IconSize, TEXTALIGN_MC);
-						TextRender()->TextColor(TextRender()->DefaultTextColor());
+						TextRender()->TextColor(PreviousTextColor);
 					}
 				}
 				else
 				{
-					// 取消收藏：清零，下次收藏重新播放进场。
-					s_StarGrow[StarKey] = 0.0f;
+					// 取消收藏：已有条目清零以便下次重新进场，不新建条目。
+					auto StarIt = s_StarGrow.find(pItem->m_aAddress);
+					if(StarIt != s_StarGrow.end())
+						StarIt->second = 0.0f;
 				}
 			}
 			else if(Id == COL_COMMUNITY)
