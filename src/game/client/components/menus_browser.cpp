@@ -21,9 +21,9 @@
 #include <game/client/QmUi/QmColorGradient.h>
 #include <game/client/QmUi/QmDropdown.h>
 #include <game/client/QmUi/QmIconSwap.h>
+#include <game/client/QmUi/QmListEntryAnimation.h>
 #include <game/client/QmUi/QmNeonRainbow.h>
 #include <game/client/QmUi/SecondaryPanel.h>
-#include <game/client/QmUi/QmListEntryAnimation.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiDiscreteSlider.h>
 #include <game/client/QmUi/UiForms.h>
