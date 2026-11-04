@@ -4964,16 +4964,29 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		Box.HSplitBottom(24.f, &Box, &Part);
 
 		// additional info
-		Box.VMargin(20.f, &Box);
+		const char *pUnsavedInfo = nullptr;
 		if(GameClient()->Editor()->HasUnsavedData())
-		{
-			str_format(aBuf, sizeof(aBuf), "%s\n\n%s", Localize("There's an unsaved map in the editor, you might want to save it."), Localize("Continue anyway?"));
-			Ui()->DoLabel(&Box, aBuf, 20.0f, TEXTALIGN_ML, {.m_MaxWidth = Part.w - 20.0f});
-		}
+			pUnsavedInfo = Localize("There's an unsaved map in the editor, you might want to save it.");
 		else if(GameClient()->m_TouchControls.HasEditingChanges() || m_MenusIngameTouchControls.UnsavedChanges())
+			pUnsavedInfo = Localize("There's an unsaved change in the touch controls editor, you might want to save it.");
+		if(pUnsavedInfo != nullptr)
 		{
-			str_format(aBuf, sizeof(aBuf), "%s\n\n%s", Localize("There's an unsaved change in the touch controls editor, you might want to save it."), Localize("Continue anyway?"));
-			Ui()->DoLabel(&Box, aBuf, 20.0f, TEXTALIGN_ML, {.m_MaxWidth = Part.w - 20.0f});
+			// 与标题、问句保持同一水平居中。多行标签的对齐只作用于整个文本块，
+			// 逐行绘制才能让第二行也居中，否则它会贴在文本块的左边。
+			Box.VMargin(20.f, &Box);
+			constexpr float InfoFontSize = 20.0f;
+			constexpr float InfoLineHeight = 24.0f;
+			// 原来用 "\n\n" 空一行，逐行绘制时用同一行距保持节奏不变。
+			constexpr float InfoLineGap = 16.0f;
+			constexpr float InfoBlockHeight = InfoLineHeight * 2.0f + InfoLineGap;
+			CUIRect Info = Box;
+			Info.HSplitTop(maximum(0.0f, (Info.h - InfoBlockHeight) * 0.5f), nullptr, &Info);
+			CUIRect InfoLine;
+			Info.HSplitTop(InfoLineHeight, &InfoLine, &Info);
+			Ui()->DoLabel(&InfoLine, pUnsavedInfo, InfoFontSize, TEXTALIGN_MC, {.m_MaxWidth = InfoLine.w});
+			Info.HSplitTop(InfoLineGap, nullptr, &Info);
+			Info.HSplitTop(InfoLineHeight, &InfoLine, &Info);
+			Ui()->DoLabel(&InfoLine, Localize("Continue anyway?"), InfoFontSize, TEXTALIGN_MC);
 		}
 
 		// buttons
