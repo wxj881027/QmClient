@@ -1,0 +1,75 @@
+# 地图标签只维护简体中文，其余语言按本次确认使用英文回退。
+[[message]]
+key = "Cannot load map tags. Please retry."
+[message.translations]
+simplified_chinese = "无法加载地图标签，请重试。"
+
+[[message]]
+key = "Cannot submit this tag. Please retry later."
+[message.translations]
+simplified_chinese = "无法提交此标签，请稍后重试。"
+
+[[message]]
+key = "Completion records unavailable. Try refreshing."
+[message.translations]
+simplified_chinese = "通关记录暂不可用，请尝试刷新。"
+
+[[message]]
+key = "Finish this map before submitting tags."
+[message.translations]
+simplified_chinese = "通关此地图后才能提交标签。"
+
+[[message]]
+key = "Loading map tags…"
+[message.translations]
+simplified_chinese = "正在加载地图标签…"
+
+[[message]]
+key = "Map tags"
+[message.translations]
+simplified_chinese = "地图标签"
+
+[[message]]
+key = "New tag (up to 10 characters)"
+[message.translations]
+simplified_chinese = "新标签（最多 10 字）"
+
+[[message]]
+key = "New tags require review. Click a tag to support it."
+[message.translations]
+simplified_chinese = "新标签需要审核，点击已有标签可赞同。"
+
+[[message]]
+key = "No approved tags yet."
+[message.translations]
+simplified_chinese = "暂无已审核标签。"
+
+[[message]]
+key = "Show community map tags"
+[message.translations]
+simplified_chinese = "显示玩家地图标签"
+
+[[message]]
+key = "Show community map tags in server information"
+[message.translations]
+simplified_chinese = "在服务器信息页显示玩家地图标签"
+
+[[message]]
+key = "Submit"
+[message.translations]
+simplified_chinese = "提交"
+
+[[message]]
+key = "Tag submitted for review."
+[message.translations]
+simplified_chinese = "标签已提交审核。"
+
+[[message]]
+key = "This tag is not allowed."
+[message.translations]
+simplified_chinese = "该标签不可使用。"
+
+[[message]]
+key = "Your support has been recorded."
+[message.translations]
+simplified_chinese = "已记录你的赞同。"

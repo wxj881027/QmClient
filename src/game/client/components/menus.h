@@ -20,6 +20,7 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/MapTagsPanel.h>
 #include <game/client/QmUi/QmAuthorName.h>
 #include <game/client/QmUi/QmAuthorTee.h>
 #include <game/client/QmUi/QmIslandNotice.h>
@@ -2409,6 +2410,7 @@ protected:
 	void RenderPlayers(CUIRect MainView);
 	void RenderServerInfo(CUIRect MainView);
 	void RenderServerInfoMotd(CUIRect Motd);
+	CQmMapTagsPanel m_MapTagsPanel;
 	void PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView = nullptr);
 	void RenderIngameServerInfoValueCached(const char *pTextId, unsigned &TextHash, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {});
 	void RenderSnapshotTextContainer(CUIElement &Element, const CUIRect *pRect);

@@ -2069,6 +2069,9 @@ Candy gradient
 Cannot join the target player's team
 == 无法加入目标玩家的队伍
 
+Cannot load map tags. Please retry.
+== 无法加载地图标签，请重试。
+
 Cannot open word list file. Previous words remain active.
 == 无法打开词表文件，继续使用上次成功加载的词条。
 
@@ -2077,6 +2080,9 @@ Cannot read complete word list file. Previous words remain active.
 
 Cannot remove the wiki file
 == 无法删除 Wiki 文件
+
+Cannot submit this tag. Please retry later.
+== 无法提交此标签，请稍后重试。
 
 Cannot swap: the other player is not in your team
 == 无法交换：对方不在你的队伍中
@@ -2824,6 +2830,9 @@ Complete restore replaces the listed files. A backup is saved before importing. 
 
 Complete snapshots are arriving late or not arriving
 == 完整快照到达延迟或未到达
+
+Completion records unavailable. Try refreshing.
+== 通关记录暂不可用，请尝试刷新。
 
 Compressor attack time (ms)
 == 压缩器攻击时间（毫秒）
@@ -5738,6 +5747,9 @@ Finish Name:
 Finish or reset the current race before restoring a save.
 == 请先结束或重置当前比赛，再恢复存档。
 
+Finish this map before submitting tags.
+== 通关此地图后才能提交标签。
+
 Finished
 == 已完成
 
@@ -8036,6 +8048,9 @@ Loading map
 Loading map file from storage
 == 正在从硬盘中加载地图文件
 
+Loading map tags…
+== 正在加载地图标签…
+
 Loading maps…
 == 加载地图中…
 
@@ -8350,6 +8365,9 @@ Map size
 
 Map sound volume
 == 地图音效音量
+
+Map tags
+== 地图标签
 
 Map to use on server
 == 在服务器上使用的地图
@@ -9164,6 +9182,12 @@ New preset name
 New random timeout code
 == 随机生成新的超时代码
 
+New tag (up to 10 characters)
+== 新标签（最多 10 字）
+
+New tags require review. Click a tag to support it.
+== 新标签需要审核，点击已有标签可赞同。
+
 New version available
 == 有新版本可用
 
@@ -9211,6 +9235,9 @@ No animation
 
 No answer from server yet.
 == 服务器无响应
+
+No approved tags yet.
+== 暂无已审核标签。
 
 No assets
 == 没有资源
@@ -13145,6 +13172,12 @@ Show combo hint when hooking or hammering player within 2 seconds
 Show command completion in chat
 == 显示聊天指令补全
 
+Show community map tags
+== 显示玩家地图标签
+
+Show community map tags in server information
+== 在服务器信息页显示玩家地图标签
+
 Show compact vote HUD
 == 显示小型投票 HUD
 
@@ -14810,6 +14843,9 @@ Styles kill, finish and system messages in the chat area.
 Sub-Tick aiming
 == Sub-Tick 瞄准
 
+Submit
+== 提交
+
 Success
 == 成功
 
@@ -14962,6 +14998,9 @@ System message text gradient color
 
 System prompt text color
 == 系统提示文字颜色
+
+Tag submitted for review.
+== 标签已提交审核。
 
 Take a screenshot
 == 截图
@@ -15538,6 +15577,9 @@ This server has an initial chat delay, you will be able to talk in %s seconds.
 
 This skin name cannot be used.
 == 此皮肤名称不能使用。
+
+This tag is not allowed.
+== 该标签不可使用。
 
 This team already has the maximum allowed size of %s players
 == 这个队伍已经达到最大人数上限 %s
@@ -17779,6 +17821,9 @@ Your profile
 
 Your skin
 == 你的皮肤
+
+Your support has been recorded.
+== 已记录你的赞同。
 
 Your swap request timed out %s seconds ago, use /swap again to request
 == 你的交换请求已在 %s 秒前超时，请重新输入 /swap 发起

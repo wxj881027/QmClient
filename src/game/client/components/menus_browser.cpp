@@ -2334,6 +2334,7 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 	if(g_Config.m_QmUiFavoriteIconFilled != 0)
 	{
 		// 收藏点亮：开关拨动时描边 ↔ 实心形变（实心样式关着时两端同形，走下方原绘制）。
+		// 染色与静止态同源：DrawIconSwapBinding 内部走 ConfiguredQmUiIconColor 的收藏语义色。
 		IUiContext FavoriteSwapCtx = ui_widget::ControlContext(Ui());
 		ui_widget::SIconSwapBinding FavoriteSwap = ui_widget::ResolveIconSwapBinding(
 			FavoriteSwapCtx, EQmIconSwapPair::STAR_FAVORITE,

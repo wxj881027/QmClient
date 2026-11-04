@@ -234,7 +234,6 @@ void CQmScrollState::Reset()
 	m_AnimTargetOffset = 0.0f;
 	m_HasPendingScrollTarget = false;
 	m_PendingScrollTarget = 0.0f;
-	m_SettleAnimation = false;
 	m_ThumbDragActive = false;
 	m_ThumbDragGrabOffset = 0.0f;
 	m_ContentDragState = {};
@@ -376,32 +375,7 @@ void CQmScrollState::Advance(float Dt, const SQmScrollMetrics &Metrics, const SQ
 	const float MaxOffset = Metrics.MaxOffset();
 	if(MaxOffset <= 0.0f)
 	{
-		// 内容刚好处不再溢出（折叠分类、筛选变化）：剩余偏移滑回 0，
-		// 直接 Reset 会让整个视窗瞬移到顶部。
-		if(m_AnimTime <= 0.0f)
-		{
-			if(m_Offset <= 0.5f)
-			{
-				Reset();
-				return;
-			}
-			m_AnimStartOffset = m_Offset;
-			m_AnimTargetOffset = 0.0f;
-			m_AnimStartVelocity = 0.0f;
-			m_AnimTimeMax = 0.16f;
-			m_AnimTime = 0.16f;
-		}
-		if(!std::isfinite(Dt) || Dt <= 0.0f)
-			return;
-		m_AnimTime = std::max(0.0f, m_AnimTime - Dt);
-		const float Progress = m_AnimTimeMax > 0.0f ? 1.0f - m_AnimTime / m_AnimTimeMax : 1.0f;
-		const float Eased = Progress * Progress * (3.0f - 2.0f * Progress);
-		m_Offset = m_AnimStartOffset * (1.0f - Eased);
-		m_Velocity = 0.0f;
-		m_AnimStartVelocity = 0.0f;
-		m_LastMaxOffset = 0.0f;
-		if(m_AnimTime <= 0.0f)
-			m_Offset = 0.0f;
+		Reset();
 		return;
 	}
 	if(m_HasPendingScrollTarget)
@@ -412,29 +386,15 @@ void CQmScrollState::Advance(float Dt, const SQmScrollMetrics &Metrics, const SQ
 	}
 	if(m_LastMaxOffset > MaxOffset && m_Offset > MaxOffset)
 	{
-		// 内容收缩（折叠、筛选、列表变短）：用短时动画滑回新的底部，不瞬移。
-		const float Overshoot = m_Offset - MaxOffset;
-		if(m_AnimTime <= 0.0f && Overshoot > 24.0f)
+		m_Offset = MaxOffset;
+		if(m_Velocity > 0.0f)
+			m_Velocity = 0.0f;
+		if(m_AnimTargetOffset > MaxOffset)
 		{
-			m_AnimStartOffset = m_Offset;
+			m_AnimStartOffset = MaxOffset;
 			m_AnimTargetOffset = MaxOffset;
-			m_AnimStartVelocity = 0.0f;
-			m_AnimTimeMax = 0.18f;
-			m_AnimTime = 0.18f;
-			m_SettleAnimation = true;
-		}
-		else if(m_AnimTime <= 0.0f)
-		{
-			m_Offset = MaxOffset;
-			if(m_Velocity > 0.0f)
-				m_Velocity = 0.0f;
-			if(m_AnimTargetOffset > MaxOffset)
-			{
-				m_AnimStartOffset = MaxOffset;
-				m_AnimTargetOffset = MaxOffset;
-				m_AnimTime = 0.0f;
-				m_AnimTimeMax = 0.0f;
-			}
+			m_AnimTime = 0.0f;
+			m_AnimTimeMax = 0.0f;
 		}
 	}
 	else if(m_LastMaxOffset > MaxOffset && m_Offset < 0.0f)
@@ -449,13 +409,10 @@ void CQmScrollState::Advance(float Dt, const SQmScrollMetrics &Metrics, const SQ
 
 	const float ClampedDt = std::min(Dt, 1.0f / 15.0f);
 
-	if((Config.m_NativeWheelStep || m_SettleAnimation) && m_AnimTime > 0.0f)
+	if(Config.m_NativeWheelStep && m_AnimTime > 0.0f)
 	{
-		if(!m_SettleAnimation)
-		{
-			m_AnimTargetOffset = std::clamp(m_AnimTargetOffset, 0.0f, MaxOffset);
-			m_AnimStartOffset = std::clamp(m_AnimStartOffset, 0.0f, MaxOffset);
-		}
+		m_AnimTargetOffset = std::clamp(m_AnimTargetOffset, 0.0f, MaxOffset);
+		m_AnimStartOffset = std::clamp(m_AnimStartOffset, 0.0f, MaxOffset);
 		if(PauseNativeWheelAnimation)
 			return;
 		m_AnimTime -= Dt;
@@ -469,13 +426,11 @@ void CQmScrollState::Advance(float Dt, const SQmScrollMetrics &Metrics, const SQ
 		m_Velocity = Distance * 6.0f * Progress * Remaining / m_AnimTimeMax + m_AnimStartVelocity * (1.0f - 4.0f * Progress + 3.0f * Progress * Progress);
 		if(m_Offset < 0.0f || m_Offset > MaxOffset || (m_Offset == 0.0f && m_Velocity < 0.0f) || (m_Offset == MaxOffset && m_Velocity > 0.0f))
 			m_Velocity = 0.0f;
-		if(!m_SettleAnimation)
-			m_Offset = std::clamp(m_Offset, 0.0f, MaxOffset);
+		m_Offset = std::clamp(m_Offset, 0.0f, MaxOffset);
 		if(m_AnimTime <= 0.0f)
 		{
 			m_Offset = m_AnimTargetOffset;
 			m_Velocity = 0.0f;
-			m_SettleAnimation = false;
 		}
 		return;
 	}

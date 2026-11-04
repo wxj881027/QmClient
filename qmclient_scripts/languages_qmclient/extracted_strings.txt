@@ -688,9 +688,11 @@ Cancel your swap request
 Candidate files
 Candy gradient
 Cannot join the target player's team
+Cannot load map tags. Please retry.
 Cannot open word list file. Previous words remain active.
 Cannot read complete word list file. Previous words remain active.
 Cannot remove the wiki file
+Cannot submit this tag. Please retry later.
 Cannot swap: the other player is not in your team
 Cannot update public words. Previous words remain active.
 Cannot write the wiki file
@@ -940,6 +942,7 @@ Compatibility mode
 Compatible with single-player area hints from other servers
 Complete restore replaces the listed files. A backup is saved before importing. The client will restart.
 Complete snapshots are arriving late or not arriving
+Completion records unavailable. Try refreshing.
 Compressor attack time (ms)
 Compressor makeup gain (percent)
 Compressor ratio (x10)
@@ -1911,6 +1914,7 @@ Finish Name
 Finish name
 Finish Name:
 Finish or reset the current race before restoring a save.
+Finish this map before submitting tags.
 Finished
 Finished maps
 Fire
@@ -2677,6 +2681,7 @@ Loading demo info
 Loading ghost files
 Loading map
 Loading map file from storage
+Loading map tags…
 Loading maps…
 Loading menu images
 Loading race demo files
@@ -2782,6 +2787,7 @@ Map Progress: %.1f%%
 Map Progress: --
 Map size
 Map sound volume
+Map tags
 Map to use on server
 Map type:
 Map upload
@@ -2910,6 +2916,7 @@ Misc
 Miscellaneous
 Mix rate
 Mixed
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 Mode
 Model
@@ -3053,6 +3060,8 @@ New name:
 New preset
 New preset name
 New random timeout code
+New tag (up to 10 characters)
+New tags require review. Click a tag to support it.
 New version available
 Newest first
 News
@@ -3069,6 +3078,7 @@ No .map files in this folder
 No ammunition
 No animation
 No answer from server yet.
+No approved tags yet.
 No assets
 No assets available for composition.
 No assets found.
@@ -4380,6 +4390,8 @@ Show Collision Borders
 Show colors in spectator selection
 Show combo hint when hooking or hammering player within 2 seconds
 Show command completion in chat
+Show community map tags
+Show community map tags in server information
 Show compact vote HUD
 Show configurable outlines around map tiles
 Show coordinates above players
@@ -4935,6 +4947,7 @@ Style kill, finish, and system messages
 Styles chat names and message colors, including gradients.
 Styles kill, finish and system messages in the chat area.
 Sub-Tick aiming
+Submit
 Success
 Successfully saved the replay!
 Sudden Death
@@ -4986,6 +4999,7 @@ System message
 System message color
 System message text gradient color
 System prompt text color
+Tag submitted for review.
 Take a screenshot
 Take photo
 Taper trail ends
@@ -5178,6 +5192,7 @@ This save-code already exists
 This server does not support race teams
 This server has an initial chat delay, you will be able to talk in %s seconds.
 This skin name cannot be used.
+This tag is not allowed.
 This team already has the maximum allowed size of %s players
 This team can't be locked
 This team can't have the mode changed
@@ -5925,6 +5940,7 @@ Your nickname '%s' is already used (%d points). Do you still want to use it?
 Your own colors appear only under "Custom"; press "Reset console appearance" if the text becomes hard to read.
 Your profile
 Your skin
+Your support has been recorded.
 Your swap request timed out %s seconds ago, use /swap again to request
 Your team has been killed because it contains an invalid tee state
 Your team has not started yet

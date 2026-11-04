@@ -43,7 +43,8 @@ PENDING_TRANSLATION_RE = re.compile(
     r"^Pending ([a-z_]+) translation(?:\s+.+)?$"
 )
 
-BILINGUAL_FALLBACK_MODULES = frozenset({"editor"})
+# 地图标签按已确认需求只维护简中，其余语言使用英文源码回退。
+BILINGUAL_FALLBACK_MODULES = frozenset({"editor", "map_tags"})
 VERBATIM_TRANSLATION_MODULES = frozenset({"editor"})
 
 
@@ -78,6 +79,8 @@ def module_name_for_source(source: Path | None) -> str:
         return "misc"
 
     normalized = source.as_posix()
+    if normalized.endswith(("/components/qmclient/map_tags.cpp", "/QmUi/MapTagsPanel.cpp")):
+        return "map_tags"
     if normalized.endswith("src/engine/shared/config_variables.h"):
         return "menus"
     if normalized.endswith("src/engine/shared/config_variables_qmclient.h"):
