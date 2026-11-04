@@ -2468,39 +2468,6 @@ bool CUi::DoClearableEditBox(CLineInput *pLineInput, const CUIRect *pRect, float
 	return ReturnValue;
 }
 
-bool CUi::DoEditBox_Search(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, bool HotkeyEnabled)
-{
-	return DoEditBox_Search(pLineInput, pRect, FontSize, HotkeyEnabled, {});
-}
-
-bool CUi::DoEditBox_Search(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, bool HotkeyEnabled, const SEditBoxRenderOptions &RenderOptions)
-{
-	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
-	const ColorRGBA PreviousTextOutlineColor = TextRender()->GetTextOutlineColor();
-	const ColorRGBA PreviousTextSelectionColor = TextRender()->GetTextSelectionColor();
-	const unsigned PreviousRenderFlags = TextRender()->GetRenderFlags();
-	const EFontPreset PreviousFontPreset = TextRender()->GetFontPreset();
-
-	CUIRect QuickSearch = *pRect;
-	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-	DoLabel_QmIcon(&QuickSearch, EQmIcon::SEARCH, FONT_ICON_MAGNIFYING_GLASS, FontSize, TEXTALIGN_ML);
-	const float SearchWidth = TextRender()->TextWidth(FontSize, FONT_ICON_MAGNIFYING_GLASS);
-	TextRender()->SetRenderFlags(PreviousRenderFlags);
-	TextRender()->SetFontPreset(PreviousFontPreset);
-	TextRender()->TextOutlineColor(PreviousTextOutlineColor);
-	TextRender()->TextSelectionColor(PreviousTextSelectionColor);
-	TextRender()->TextColor(PreviousTextColor);
-	QuickSearch.VSplitLeft(SearchWidth + 5.0f, nullptr, &QuickSearch);
-	if(HotkeyEnabled && Input()->ModifierIsPressed() && Input()->KeyPress(KEY_F))
-	{
-		SetActiveItem(pLineInput);
-		pLineInput->SelectAll();
-	}
-	pLineInput->SetEmptyText(Localize("Search"));
-	return DoClearableEditBox(pLineInput, &QuickSearch, FontSize, IGraphics::CORNER_ALL, {}, RenderOptions);
-}
-
 void CUi::DoConfigTooltip(const void *pId, const CUIRect *pRect, const void *pValue, const void *pSecondValue)
 {
 	if(m_pQmTooltips != nullptr)
