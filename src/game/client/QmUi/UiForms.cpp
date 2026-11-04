@@ -738,9 +738,14 @@ namespace ui_widget
 			const uint64_t TrackKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0xA5A5ull, reinterpret_cast<uint64_t>(pId));
 			Track = ResolveUiAnimValueColor(*pAnim, TrackKey, Track, ui_token::motion::BTN_HOVER.m_DurationSec, ui_token::motion::BTN_HOVER.m_Easing);
 			const uint64_t KnobKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0x5A5Aull, reinterpret_cast<uint64_t>(pId));
+			// 开关首次出现时用当前状态初始化滑块，避免一露面就自己左右滑一段。
+			if(!pAnim->HasValue(KnobKey, EUiAnimProperty::COLOR_MIX))
+				SetUiPresentationStateValue(*pAnim, KnobKey, EUiAnimProperty::COLOR_MIX, Progress);
 			Progress = ResolveUiAnimSpringValue(*pAnim, KnobKey, EUiAnimProperty::COLOR_MIX, Progress, ui_token::motion::TOGGLE);
 		}
-		const SToggleLayout Layout = ResolveToggleLayout(Rect, Progress);
+		// 滑块离目标档位越远拉伸越多：中段最像液体，落位时随弹簧回弹收圆。
+		const float KnobStretch = Animate && Enabled && !Ctx.m_pUi->AnimationsBlocked() ? std::clamp(std::abs(Progress - (Value ? 1.0f : 0.0f)), 0.0f, 1.0f) * 2.0f : 0.0f;
+		const SToggleLayout Layout = ResolveToggleLayout(Rect, Progress, KnobStretch);
 		const bool Hovered = Enabled && Ctx.m_pUi->Enabled() && Ctx.m_pUi->VisualMouseHovered(pHitRect != nullptr ? pHitRect : &Rect);
 		const bool Pressed = Hovered && Ctx.m_pUi->CheckActiveItem(pId) && Ctx.m_pUi->MouseButton(0);
 		const auto Feedback = ResolveUiToggleFeedbackStyle(Style, Track, Backdrop, Enabled, Hovered, Pressed);
@@ -760,6 +765,30 @@ namespace ui_widget
 		CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), Fill);
 		if(pMark != nullptr && pMark[0] != '\0')
 			Ctx.m_pUi->DoLabel(&Rect, pMark, Rect.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+	}
+
+	bool FilterChip(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, const char *pLabel, bool Selected)
+	{
+		if(Ctx.m_pUi == nullptr || pId == nullptr)
+			return false;
+		const bool Pressed = !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->DoButtonLogic(pId, 0, &Rect, BUTTONFLAG_LEFT) != 0;
+		if(Ctx.m_pUi->MeasurementOnly() || Ctx.m_pUi->DrawingSuppressed())
+			return Pressed;
+		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ctx.m_pUi);
+		SButtonSurfaceOptions Options;
+		Options.m_Selected = Selected;
+		Options.m_Radius = ui_token::radius::PILL;
+		// 每个胶囊都带自己的胶囊底（静止态也画），只有选中态换成强调色；
+		// 透明底会让整排退化成纯文字，看不出可点区域。
+		const ColorRGBA Fill = DrawButtonSurface(Ctx, pId, Rect, Options);
+		CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), Fill);
+		SLabelProperties Props;
+		Props.m_MaxWidth = Rect.w;
+		Props.m_EllipsisAtEnd = true;
+		Props.m_MinimumFontSize = 9.0f;
+		CUIRect LabelRect = Rect;
+		Ctx.m_pUi->DoLabel(&LabelRect, pLabel, 11.0f, TEXTALIGN_MC, Props);
+		return Pressed;
 	}
 
 	bool Toggle(const IUiContext &Ctx, const void *pId, bool *pValue, const CUIRect &Rect, bool ProcessInput, bool Animate)

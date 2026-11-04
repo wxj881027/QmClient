@@ -172,6 +172,9 @@ private:
 	float m_AnimTargetOffset = 0.0f;
 	bool m_HasPendingScrollTarget = false;
 	float m_PendingScrollTarget = 0.0f;
+	// 内容收缩导致越界时用短时动画滑回边界：期间不夹取偏移与动画端点，
+	// 否则第一帧就被夹到新上限，等于瞬移。
+	bool m_SettleAnimation = false;
 	bool m_ThumbDragActive = false;
 	float m_ThumbDragGrabOffset = 0.0f;
 	SQmScrollContentDragState m_ContentDragState;
