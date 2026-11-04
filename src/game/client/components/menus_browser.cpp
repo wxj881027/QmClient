@@ -21,9 +21,9 @@
 #include <game/client/QmUi/QmColorGradient.h>
 #include <game/client/QmUi/QmDropdown.h>
 #include <game/client/QmUi/QmIconSwap.h>
+#include <game/client/QmUi/QmListEntryAnimation.h>
 #include <game/client/QmUi/QmNeonRainbow.h>
 #include <game/client/QmUi/SecondaryPanel.h>
-#include <game/client/QmUi/QmListEntryAnimation.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiDiscreteSlider.h>
 #include <game/client/QmUi/UiForms.h>
@@ -59,7 +59,15 @@
 #include <ctime>
 #include <limits>
 #include <map>
+#include <set>
 #include <unordered_map>
+
+namespace
+{
+	// 收藏切换时登记一次地址，供服务器列表的星标播一次进场动画。行渲染消费后立即移除，
+	// 因此表大小只与「正在进场的星标数」相关，不随浏览过的服务器数量增长。
+	std::set<std::string> gs_FavoriteStarGrowPending;
+}
 #include <vector>
 
 using namespace FontIcons;
@@ -1923,62 +1931,70 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_FLAG_FAV)
 			{
-				// 进场进度表只保留收藏行：未收藏行不建条目，否则会随浏览过的服务器数无界增长；
-				// 键直接用 m_aAddress 做异质查找，不构造临时 std::string。
+				// 进场表只在「刚点了收藏」时创建条目（由 gs_FavoriteStarGrowPending 登记），
+				// 落位后立即删除；因此表里只有正在进场的星标，不再有墓碑与无界增长。
 				static std::map<std::string, float, std::less<>> s_StarGrow;
 				if(pItem->m_Favorite != TRISTATE::NONE)
 				{
+					auto PendingIt = gs_FavoriteStarGrowPending.find(pItem->m_aAddress);
+					if(PendingIt != gs_FavoriteStarGrowPending.end())
+					{
+						s_StarGrow[pItem->m_aAddress] = 0.0f;
+						gs_FavoriteStarGrowPending.erase(PendingIt);
+					}
 					auto StarIt = s_StarGrow.find(pItem->m_aAddress);
 					if(StarIt == s_StarGrow.end())
 					{
-						// 首次见到就已经是收藏：直接按完成态绘制，不做进场。
-						if(s_StarGrow.size() >= 4096)
-							s_StarGrow.clear();
-						StarIt = s_StarGrow.emplace(pItem->m_aAddress, 1.0f).first;
-					}
-					else if(StarIt->second < 1.0f && !Ui()->MeasurementOnly())
-					{
-						// 按真实帧间隔推进（每帧只采样一次时钟）；测量通道不推进，
-						// 否则同帧多次遍历会把 0.35s 的进场压缩掉。
-						static int64_t s_StarDtTick = 0;
-						static float s_StarDt = 1.0f / 60.0f;
-						const int64_t StarNowTick = time_get();
-						if(StarNowTick != s_StarDtTick)
-						{
-							s_StarDt = s_StarDtTick == 0 ? 1.0f / 60.0f : std::clamp((float)(StarNowTick - s_StarDtTick) / (float)maximum<int64_t>(1, time_freq()), 1.0f / 1000.0f, 0.1f);
-							s_StarDtTick = StarNowTick;
-						}
-						const float Step = g_Config.m_QmUiMotionLevel > 0 ? s_StarDt / 0.35f : 1.0f;
-						StarIt->second = std::min(1.0f, StarIt->second + Step);
-					}
-					const float StarGrow = std::clamp(StarIt->second, 0.0f, 1.0f);
-					// 生长曲线必须铺满整段时长：三次缓出 + 中段轻微鼓起，落位回到 1.0。
-					const float StarEaseOut = 1.0f - std::pow(1.0f - StarGrow, 3.0f);
-					const float StarBulge = 1.0f + 0.10f * std::sin(3.14159265f * StarGrow);
-					const float StarScale = (0.25f + 0.75f * StarEaseOut) * StarBulge;
-					const float StarAlpha = std::clamp(0.15f + 0.85f * StarGrow, 0.0f, 1.0f);
-					if(StarGrow >= 1.0f)
-					{
-						// 落位后回到共享绘制路径，像素与静态状态完全一致。
+						// 没有进场请求（启动时就已收藏、或刚播完）：按完成态绘制。
 						RenderBrowserIcons(*pUiElement->Rect(UI_ELEM_FAVORITE_ICON), &Button, ColorRGBA(1.0f, 0.85f, 0.3f, 1.0f), TextRender()->DefaultTextOutlineColor(), EQmIcon::STAR, FONT_ICON_STAR, TEXTALIGN_MC);
 					}
 					else
 					{
-						// 字形等比缩放：QmIconLabelRect 的边长由 Size 决定，字体度量跟着盒子走。
-						const float IconSize = std::clamp(14.0f * StarScale, 2.0f, 22.0f);
-						// 只改这一帧的文本色，退出时恢复进入前颜色，避免污染后续列。
-						const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
-						TextRender()->TextColor(ColorRGBA(1.0f, 0.85f, 0.3f, StarAlpha));
-						Ui()->DoLabel_QmIcon(&Button, EQmIcon::STAR, FONT_ICON_STAR, IconSize, TEXTALIGN_MC);
-						TextRender()->TextColor(PreviousTextColor);
+						if(StarIt->second < 1.0f && !Ui()->MeasurementOnly())
+						{
+							// 按真实帧间隔推进（每帧只采样一次时钟）；测量通道不推进，
+							// 否则同帧多次遍历会把 0.35s 的进场压缩掉。
+							static int64_t s_StarDtTick = 0;
+							static float s_StarDt = 1.0f / 60.0f;
+							const int64_t StarNowTick = time_get();
+							if(StarNowTick != s_StarDtTick)
+							{
+								s_StarDt = s_StarDtTick == 0 ? 1.0f / 60.0f : std::clamp((float)(StarNowTick - s_StarDtTick) / (float)maximum<int64_t>(1, time_freq()), 1.0f / 1000.0f, 0.1f);
+								s_StarDtTick = StarNowTick;
+							}
+							const float Step = g_Config.m_QmUiMotionLevel > 0 ? s_StarDt / 0.35f : 1.0f;
+							StarIt->second = std::min(1.0f, StarIt->second + Step);
+						}
+						const float StarGrow = std::clamp(StarIt->second, 0.0f, 1.0f);
+						if(StarGrow >= 1.0f)
+						{
+							// 落位后回到共享绘制路径，像素与静态状态完全一致，并清掉条目。
+							RenderBrowserIcons(*pUiElement->Rect(UI_ELEM_FAVORITE_ICON), &Button, ColorRGBA(1.0f, 0.85f, 0.3f, 1.0f), TextRender()->DefaultTextOutlineColor(), EQmIcon::STAR, FONT_ICON_STAR, TEXTALIGN_MC);
+							s_StarGrow.erase(StarIt);
+						}
+						else
+						{
+							// 生长曲线铺满整段时长：三次缓出 + 中段轻微鼓起，落位回到 1.0。
+							const float StarEaseOut = 1.0f - std::pow(1.0f - StarGrow, 3.0f);
+							const float StarBulge = 1.0f + 0.10f * std::sin(3.14159265f * StarGrow);
+							const float StarScale = (0.25f + 0.75f * StarEaseOut) * StarBulge;
+							const float StarAlpha = std::clamp(0.15f + 0.85f * StarGrow, 0.0f, 1.0f);
+							// 字形等比缩放：QmIconLabelRect 的边长由 Size 决定，字体度量跟着盒子走。
+							const float IconSize = std::clamp(14.0f * StarScale, 2.0f, 22.0f);
+							// 只改这一帧的文本色，退出时恢复进入前颜色，避免污染后续列。
+							const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
+							TextRender()->TextColor(ColorRGBA(1.0f, 0.85f, 0.3f, StarAlpha));
+							Ui()->DoLabel_QmIcon(&Button, EQmIcon::STAR, FONT_ICON_STAR, IconSize, TEXTALIGN_MC);
+							TextRender()->TextColor(PreviousTextColor);
+						}
 					}
 				}
 				else
 				{
-					// 取消收藏：已有条目清零以便下次重新进场，不新建条目。
+					// 取消收藏：丢弃未完成的进场条目。
 					auto StarIt = s_StarGrow.find(pItem->m_aAddress);
 					if(StarIt != s_StarGrow.end())
-						StarIt->second = 0.0f;
+						s_StarGrow.erase(StarIt);
 				}
 			}
 			else if(Id == COL_COMMUNITY)
@@ -3257,6 +3273,10 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 				if(Favorite)
 				{
 					Favorites()->Add(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses);
+					// 列表星标据此播一次进场；表只活到那一行被渲染为止。
+					if(gs_FavoriteStarGrowPending.size() >= 64)
+						gs_FavoriteStarGrowPending.clear();
+					gs_FavoriteStarGrowPending.insert(pSelectedServer->m_aAddress);
 					if(g_Config.m_UiPage == PAGE_LAN)
 					{
 						Favorites()->AllowPing(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses, true);

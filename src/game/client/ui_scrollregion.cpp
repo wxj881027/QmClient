@@ -171,9 +171,9 @@ bool CScrollRegion::AddRect(const CUIRect &Rect, bool ShouldScrollHere, bool IsS
 	// 重新出现的那一帧，选中项自动滚进视野，调用方不必自己记录「第一次渲染」。
 	const bool ScrollToThisRect = ShouldScrollHere || (m_ReScrollSelection && m_SelectionRectIndex == RectIndex);
 	m_LastAddedRect = Rect;
-	// 内容尺寸与滚动计算一律用状态偏移：显示偏移只负责绘制平移，
-	// 混用会让缓动窗口内的内容高度和滑块位置互相打架。
-	const vec2 ContentOffset = m_Params.m_ScrollHorizontal ? vec2(-m_ScrollState.Offset(), 0.0f) : vec2(0.0f, -m_ScrollState.Offset());
+	// 测量必须与调用方布局同源：调用方拿到的偏移就是显示偏移，
+	// 两者都用它，缓动窗口内才能精确抵消。
+	const vec2 ContentOffset = ContentScrollOffset();
 	if(m_Params.m_ScrollHorizontal)
 		m_ContentSize = maximum(std::ceil(Rect.x + Rect.w - (m_ClipRect.x + ContentOffset.x)), m_ContentSize);
 	else
@@ -189,7 +189,7 @@ void CScrollRegion::ScrollHere(EScrollOption Option)
 	const float ClipSize = m_Params.m_ScrollHorizontal ? m_ClipRect.w : m_ClipRect.h;
 	const float LastAddedPos = m_Params.m_ScrollHorizontal ? m_LastAddedRect.x : m_LastAddedRect.y;
 	const float LastAddedSize = m_Params.m_ScrollHorizontal ? m_LastAddedRect.w : m_LastAddedRect.h;
-	const vec2 ContentOffset = m_Params.m_ScrollHorizontal ? vec2(-m_ScrollState.Offset(), 0.0f) : vec2(0.0f, -m_ScrollState.Offset());
+	const vec2 ContentOffset = ContentScrollOffset();
 	const float ContentScrollOffset = m_Params.m_ScrollHorizontal ? ContentOffset.x : ContentOffset.y;
 	const float MinHeight = minimum(ClipSize, LastAddedSize);
 	const float TopScroll = LastAddedPos - (ClipPos + ContentScrollOffset);
