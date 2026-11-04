@@ -54,7 +54,7 @@ SQmScrollConfig CScrollRegion::ScrollConfig() const
 
 vec2 CScrollRegion::ContentScrollOffset() const
 {
-	return m_Params.m_ScrollHorizontal ? vec2(-m_ScrollState.Offset(), 0.0f) : vec2(0.0f, -m_ScrollState.Offset());
+	return m_Params.m_ScrollHorizontal ? vec2(-m_DisplayOffset, 0.0f) : vec2(0.0f, -m_DisplayOffset);
 }
 
 void CScrollRegion::ClampBackgroundScrollOffset()
@@ -72,6 +72,15 @@ void CScrollRegion::ClampBackgroundScrollOffset()
 void CScrollRegion::Begin(CUIRect *pClipRect, vec2 *pOutOffset, const CScrollRegionParams *pParams)
 {
 	m_WheelConsumedThisFrame = false;
+	// 上一帧没有绘制（切页、关闭面板后重开）才算重新出现；连续渲染不重复滚动，
+	// 否则用户刚滚走就会被拉回选中项。
+	const int64_t Now = time_get();
+	const int64_t Frequency = maximum<int64_t>(1, time_freq());
+	// 阈值按 250ms 而不是 50ms：单帧卡顿（换图、编译着色器）也常超过 50ms，
+	// 会被误判成「重新出现」而把用户滚走的视口拉回选中项。
+	m_ReScrollSelection = m_LastDrawTime != 0 && Now - m_LastDrawTime > Frequency / 4;
+	m_LastDrawTime = Now;
+	m_AddRectIndex = 0;
 	if(pParams)
 		m_Params = *pParams;
 	m_ClipRect = *pClipRect;
@@ -87,19 +96,39 @@ void CScrollRegion::Begin(CUIRect *pClipRect, vec2 *pOutOffset, const CScrollReg
 	if(TouchAxis != 0.0f)
 		m_ScrollState.SetOffset(m_ScrollState.Offset() - TouchAxis, ScrollMetrics(), ScrollConfig());
 
-	if(!ContentOverflows() && !Ui()->RenderOnly())
+	// 偏移还在滑回顶部时不要硬重置，否则折叠后的过渡会被打断成瞬移。
+	if(!ContentOverflows() && !Ui()->RenderOnly() && m_ScrollState.Offset() <= 0.5f)
 		m_ScrollState.ResetForNonScrollableContent(Ui()->IsActiveItem(&m_SliderId) && Ui()->MouseButton(0));
 	m_ContentSize = 0.0f;
 
 	Ui()->ClipEnable(&m_ClipRect);
 
 	*pClipRect = m_ClipRect;
+	// 显示偏移缓动：内容高度骤减导致状态偏移被夹回去时，平滑滑过去而不是瞬移。
+	{
+		const float TargetOffset = m_ScrollState.Offset();
+		const int64_t Now = time_get();
+		const int64_t Freq = maximum<int64_t>(1, time_freq());
+		const float Dt = m_DisplayOffsetTick == 0 ? 0.0f : std::clamp((float)(Now - m_DisplayOffsetTick) / (float)Freq, 0.0f, 0.1f);
+		m_DisplayOffsetTick = Now;
+		if(!m_DisplayOffsetInit)
+		{
+			m_DisplayOffset = TargetOffset;
+			m_DisplayOffsetInit = true;
+		}
+		const float Delta = TargetOffset - m_DisplayOffset;
+		if(std::abs(Delta) > 24.0f && g_Config.m_QmUiMotionLevel > 0)
+			m_DisplayOffset += Delta * (1.0f - std::exp(-Dt * 16.0f));
+		else
+			m_DisplayOffset = TargetOffset;
+	}
 	*pOutOffset = ContentScrollOffset();
 }
 
 void CScrollRegion::End()
 {
 	Ui()->ClipDisable();
+	m_ReScrollSelection = false;
 
 	if(Ui()->RenderOnly())
 	{
@@ -134,15 +163,22 @@ void CScrollRegion::End()
 	DoSlider();
 }
 
-bool CScrollRegion::AddRect(const CUIRect &Rect, bool ShouldScrollHere)
+bool CScrollRegion::AddRect(const CUIRect &Rect, bool ShouldScrollHere, bool IsSelection)
 {
+	const int RectIndex = m_AddRectIndex++;
+	if(IsSelection)
+		m_SelectionRectIndex = RectIndex;
+	// 重新出现的那一帧，选中项自动滚进视野，调用方不必自己记录「第一次渲染」。
+	const bool ScrollToThisRect = ShouldScrollHere || (m_ReScrollSelection && m_SelectionRectIndex == RectIndex);
 	m_LastAddedRect = Rect;
-	const vec2 ContentOffset = ContentScrollOffset();
+	// 内容尺寸与滚动计算一律用状态偏移：显示偏移只负责绘制平移，
+	// 混用会让缓动窗口内的内容高度和滑块位置互相打架。
+	const vec2 ContentOffset = m_Params.m_ScrollHorizontal ? vec2(-m_ScrollState.Offset(), 0.0f) : vec2(0.0f, -m_ScrollState.Offset());
 	if(m_Params.m_ScrollHorizontal)
 		m_ContentSize = maximum(std::ceil(Rect.x + Rect.w - (m_ClipRect.x + ContentOffset.x)), m_ContentSize);
 	else
 		m_ContentSize = maximum(Rect.y + Rect.h - (m_ClipRect.y + ContentOffset.y), m_ContentSize);
-	if(ShouldScrollHere && !Ui()->RenderOnly())
+	if(ScrollToThisRect && !Ui()->RenderOnly())
 		ScrollHere();
 	return !RectClipped(Rect);
 }
@@ -153,7 +189,7 @@ void CScrollRegion::ScrollHere(EScrollOption Option)
 	const float ClipSize = m_Params.m_ScrollHorizontal ? m_ClipRect.w : m_ClipRect.h;
 	const float LastAddedPos = m_Params.m_ScrollHorizontal ? m_LastAddedRect.x : m_LastAddedRect.y;
 	const float LastAddedSize = m_Params.m_ScrollHorizontal ? m_LastAddedRect.w : m_LastAddedRect.h;
-	const vec2 ContentOffset = ContentScrollOffset();
+	const vec2 ContentOffset = m_Params.m_ScrollHorizontal ? vec2(-m_ScrollState.Offset(), 0.0f) : vec2(0.0f, -m_ScrollState.Offset());
 	const float ContentScrollOffset = m_Params.m_ScrollHorizontal ? ContentOffset.x : ContentOffset.y;
 	const float MinHeight = minimum(ClipSize, LastAddedSize);
 	const float TopScroll = LastAddedPos - (ClipPos + ContentScrollOffset);
@@ -544,6 +580,9 @@ void CScrollRegion::DoSlider()
 
 	const float MaxSlider = RailSize - SliderSize;
 	const void *pId = &m_SliderId;
+	// 滑块用主题强调色：此前取中性前景色，和设置页开关/滑条的红强调色脱节。
+	const ColorRGBA AccentHandle = Ui()->QmControlTheme().m_Accent;
+	const ColorRGBA *pHandleColor = m_Params.m_pSliderThemeColor != nullptr ? m_Params.m_pSliderThemeColor : &AccentHandle;
 
 	if(!CanScroll || MaxSlider <= 0.0f)
 	{
@@ -554,7 +593,7 @@ void CScrollRegion::DoSlider()
 		if(Ui()->QmAnimationRuntime() != nullptr)
 		{
 			CUiScopedControlAlphaScale SliderAlpha(Ui(), m_Params.m_SliderAlpha * RevealAlpha);
-			ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(Ui()), pId, Slider, m_Params.m_Interactive, nullptr, m_Params.m_pSliderThemeColor);
+			ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(Ui()), pId, Slider, m_Params.m_Interactive, nullptr, pHandleColor);
 		}
 		else
 			DrawRoundedSurface(Ui(), Slider, m_Params.SliderColor(Active, Ui()->HotItem() == pId), ColorRGBA(), Rounding);
@@ -587,7 +626,7 @@ void CScrollRegion::DoSlider()
 	if(Ui()->QmAnimationRuntime() != nullptr)
 	{
 		CUiScopedControlAlphaScale SliderAlpha(Ui(), m_Params.m_SliderAlpha * RevealAlpha);
-		ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(Ui()), pId, Slider, m_Params.m_Interactive, nullptr, m_Params.m_pSliderThemeColor);
+		ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(Ui()), pId, Slider, m_Params.m_Interactive, nullptr, pHandleColor);
 	}
 	else
 		DrawRoundedSurface(Ui(), Slider, m_Params.SliderColor(Ui()->CheckActiveItem(pId), Ui()->HotItem() == pId), ColorRGBA(), Rounding);

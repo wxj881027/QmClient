@@ -43,7 +43,7 @@ namespace ui_widget
 		CUIRect m_Knob;
 	};
 
-	inline SToggleLayout ResolveToggleLayout(const CUIRect &Rect, float Progress)
+	inline SToggleLayout ResolveToggleLayout(const CUIRect &Rect, float Progress, float Stretch = 0.0f)
 	{
 		SToggleLayout Layout{};
 		const float Width = std::max(0.0f, Rect.w);
@@ -52,7 +52,14 @@ namespace ui_widget
 		const float Padding = std::min(Height * 0.15f, 3.0f);
 		const float KnobSize = Height - Padding * 2.0f;
 		const float Travel = std::max(0.0f, Width - KnobSize - Padding * 2.0f);
-		Layout.m_Knob = {Rect.x + Padding + Travel * std::clamp(Progress, 0.0f, 1.0f), Layout.m_Track.y + Padding, KnobSize, KnobSize};
+		// 液体开关：移动途中滑块沿运动方向拉长（中间最宽、两端回弹收圆），
+		// 以原位置为中心扩展并夹在轨道内，不会顶出边框。
+		const float MaxKnobWidth = std::max(KnobSize, Width - Padding * 2.0f);
+		const float KnobWidth = std::clamp(KnobSize * (1.0f + 0.75f * std::clamp(Stretch, 0.0f, 1.0f)), KnobSize, MaxKnobWidth);
+		const float BaseX = Rect.x + Padding + Travel * std::clamp(Progress, 0.0f, 1.0f);
+		const float Center = BaseX + KnobSize * 0.5f;
+		const float KnobX = std::clamp(Center - KnobWidth * 0.5f, Rect.x + Padding, std::max(Rect.x + Padding, Rect.x + Width - Padding - KnobWidth));
+		Layout.m_Knob = {KnobX, Layout.m_Track.y + Padding, KnobWidth, KnobSize};
 		return Layout;
 	}
 
@@ -82,6 +89,8 @@ namespace ui_widget
 
 	void DrawToggle(const IUiContext &Ctx, const void *pId, bool Value, const CUIRect &Rect, bool Enabled = true, bool Animate = true, const CUIRect *pHitRect = nullptr);
 	void DrawMarkedControl(const IUiContext &Ctx, const void *pId, const char *pMark, const CUIRect &Rect, const CUIRect *pHitRect = nullptr);
+	// 多选筛选胶囊：选中态由调用方传入，返回是否被点击。标签按控件宽度省略，不换行。
+	bool FilterChip(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, const char *pLabel, bool Selected);
 	void DrawScrollbarHandle(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, bool Enabled = true, const ColorRGBA *pColorInner = nullptr, const ColorRGBA *pHandleColorOverride = nullptr);
 	void RenderHorizontalSlider(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, float Current, const ColorRGBA *pColorInner = nullptr);
 	enum class EInputFieldCapability : unsigned
