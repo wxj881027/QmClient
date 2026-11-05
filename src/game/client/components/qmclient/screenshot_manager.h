@@ -8,7 +8,9 @@
 #include <engine/storage.h>
 
 #include <game/client/components/qmclient/screenshot_image_job.h>
+#include <game/client/components/qmclient/watermark_compositor.h>
 
+#include <array>
 #include <cstdint>
 #include <ctime>
 #include <memory>
@@ -26,6 +28,7 @@ class CQmScreenshotExportControl
 {
 	mutable std::mutex m_Mutex;
 	bool m_Canceled = false;
+	bool m_Committed = false;
 
 public:
 	void Cancel();
@@ -60,6 +63,10 @@ public:
 		bool m_ShowMapName = true;
 		std::string m_CustomText;
 		EWatermarkPosition m_Position = EWatermarkPosition::BOTTOM_LEFT;
+		bool m_Editor = false;
+		SQmWatermarkLayer m_TextLayer;
+		SQmWatermarkLayer m_LogoLayer;
+		std::string m_LogoPath;
 	};
 
 	// 预览和导出共用同一套片段拼接规则，避免两条路径显示不同的水印内容。
@@ -112,7 +119,7 @@ public:
 
 	// 从指定存储路径读取图片，合成水印后写入用户保存目录。源文件不会被覆盖。
 	bool ApplyWatermark(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const char *pTargetPath, const SWatermarkOptions &Options) const;
-	std::shared_ptr<CQmScreenshotWatermarkJob> CreateWatermarkJob(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const char *pTargetPath, const SWatermarkOptions &Options) const;
+	std::shared_ptr<CQmScreenshotWatermarkJob> CreateWatermarkJob(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const char *pTargetPath, const SWatermarkOptions &Options, int PreviewMaxEdge = 0) const;
 	static bool SavePngAtomically(const std::string &TargetPath, const CImageInfo &Image, const char *pComment, CQmScreenshotExportControl *pControl = nullptr);
 
 private:
@@ -123,6 +130,7 @@ private:
 		std::string m_Comment;
 	};
 	const SCaptureMetadata &CaptureMetadata(IStorage *pStorage, const char *pPath, int StorageType) const;
+	static bool DrawEditorWatermark(IStorage *pStorage, CImageInfo &Image, const std::string &Text, const SWatermarkOptions &Options, const std::vector<std::string> &vFontPaths, std::array<SQmWatermarkBounds, 2> *pBounds = nullptr);
 	static bool DrawWatermark(IStorage *pStorage, CImageInfo &Image, const std::string &Text, EWatermarkPosition Position, const std::vector<std::string> &vFontPaths = {});
 
 	struct SScanContext
@@ -165,13 +173,19 @@ class CQmScreenshotWatermarkJob : public IJob
 	std::string m_Text;
 	std::string m_Comment;
 	std::vector<std::string> m_vFontPaths;
-	CQmScreenshotManager::EWatermarkPosition m_Position;
+	CQmScreenshotManager::SWatermarkOptions m_Options;
+	int m_PreviewMaxEdge;
+	CImageInfo m_Preview;
+	std::array<SQmWatermarkBounds, 2> m_aBounds{};
 	CQmScreenshotExportControl m_Control;
 	bool m_Saved = false;
 	void Run() override;
 
 public:
-	CQmScreenshotWatermarkJob(std::string SourcePath, std::string TargetPath, std::string Text, std::string Comment, std::vector<std::string> vFontPaths, CQmScreenshotManager::EWatermarkPosition Position);
+	CQmScreenshotWatermarkJob(std::string SourcePath, std::string TargetPath, std::string Text, std::string Comment, std::vector<std::string> vFontPaths, CQmScreenshotManager::SWatermarkOptions Options, int PreviewMaxEdge = 0);
+	~CQmScreenshotWatermarkJob() override { m_Preview.Free(); }
+	const CImageInfo *Preview() const { return State() == STATE_DONE && m_Preview.m_pData != nullptr ? &m_Preview : nullptr; }
+	const std::array<SQmWatermarkBounds, 2> &Bounds() const { return m_aBounds; }
 	void Cancel() { m_Control.Cancel(); }
 	bool Canceled() const { return m_Control.Canceled(); }
 	bool Saved() const { return State() == STATE_DONE && m_Saved; }

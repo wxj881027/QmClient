@@ -76,32 +76,6 @@ namespace
 // 声明式搜索索引：文案随所属卡片声明，静态初始化时自动注册。
 namespace
 {
-	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_favorite_maps[] = {
-		{Localizable("Brutal"), nullptr, "高阶"},
-		{Localizable("Classic"), nullptr, "古典"},
-		{Localizable("Classic easy"), nullptr, "古典 easy"},
-		{Localizable("Classic next"), nullptr, "古典 next"},
-		{Localizable("Classic nut"), nullptr, "古典 nut"},
-		{Localizable("Classic pro"), nullptr, "古典 pro"},
-		{Localizable("Copied"), nullptr, "已复制"},
-		{Localizable("Dummy"), nullptr, "分身"},
-		{Localizable("Event"), nullptr, "活动"},
-		{Localizable("Fun"), nullptr, "娱乐"},
-		{Localizable("Insane"), nullptr, "疯狂"},
-		{Localizable("Moderate"), nullptr, "中阶"},
-		{Localizable("No favorite maps yet"), nullptr, "暂无收藏地图"},
-		{Localizable("Novice"), nullptr, "简单"},
-		{Localizable("Oldschool"), nullptr, "传统"},
-		{Localizable("Race"), nullptr, "竞速"},
-		{Localizable("Solo"), nullptr, "单人"},
-		{Localizable("Unknown"), nullptr, "未知"},
-	};
-	QM_CARD_SEARCH_REGISTER("qm:favorite_maps", qm_favorite_maps);
-}
-
-// 声明式搜索索引：文案随所属卡片声明，静态初始化时自动注册。
-namespace
-{
 	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_friend_notify[] = {
 		{Localizable("Auto greet friends entering map"), nullptr, "自动问候进图的好友"},
 		{Localizable("Auto refresh server list"), nullptr, "自动刷新服务器列表"},

@@ -408,6 +408,7 @@ public:
 	bool m_DirJump;
 	bool m_DirRight;
 	float m_FontSizeDirection;
+	SQmWaterHeldState m_WaterHeld;
 	float m_HookStrongWeakRowHeight;
 	bool m_ShowHookStrongWeak;
 	EHookStrongWeakState m_HookStrongWeakState;
@@ -728,6 +729,25 @@ public:
 			break;
 		}
 		m_Color.a = Data.m_Color.a;
+	}
+};
+
+class CNamePlatePartWaterInput : public CNamePlatePartIcon
+{
+	bool m_Hammer;
+
+public:
+	CNamePlatePartWaterInput(CGameClient &This, bool Hammer) :
+		CNamePlatePartIcon(This), m_Hammer(Hammer) {}
+
+	void Update(CGameClient &This, const CNamePlateData &Data) override
+	{
+		m_Texture = g_pData->m_aImages[m_Hammer ? IMAGE_QM_WATER_HAMMER : IMAGE_QM_WATER_HOOK].m_Id;
+		m_ShiftOnInvis = Data.m_ShowDirection && g_Config.m_QmWaterHammerHighlight;
+		m_Visible = m_ShiftOnInvis && m_Texture.IsValid() && (m_Hammer ? Data.m_WaterHeld.m_Hammer : Data.m_WaterHeld.m_Hook);
+		m_Size = vec2(Data.m_FontSizeDirection, Data.m_FontSizeDirection);
+		m_Padding.y = m_Size.y / 2.0f;
+		m_Color = color_cast<ColorRGBA>(ColorHSLA(m_Hammer ? g_Config.m_QmWaterHammerColor : g_Config.m_QmWaterHookColor)).WithAlpha(Data.m_Color.a);
 	}
 };
 
@@ -1622,9 +1642,11 @@ private:
 
 	void AddKeysRow(CGameClient &This)
 	{
+		AddPart<CNamePlatePartWaterInput>(This, true);
 		AddPart<CNamePlatePartDirection>(This, DIRECTION_LEFT);
 		AddPart<CNamePlatePartDirection>(This, DIRECTION_UP);
 		AddPart<CNamePlatePartDirection>(This, DIRECTION_RIGHT);
+		AddPart<CNamePlatePartWaterInput>(This, false);
 		AddPart<CNamePlatePartNewLine>(This);
 	}
 
@@ -2076,6 +2098,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 #endif
 	const auto DisplaySettings = qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK, VideoRendering);
 	const int ShowDirectionConfig = DisplaySettings.m_Direction;
+	Data.m_WaterHeld = GameClient()->QmWaterHammerIndicator().MarkedInputs(ClientId);
 	Data.m_DirLeft = Data.m_DirJump = Data.m_DirRight = false;
 	switch(ShowDirectionConfig)
 	{
@@ -2277,6 +2300,7 @@ static void BuildNamePlatePreviewData(CGameClient &This, int DummyIdx, CNamePlat
 		Data.m_ShowDirection = false;
 		dbg_assert_failed("ShowDirectionConfig invalid");
 	}
+	Data.m_WaterHeld = {true, true};
 	Data.m_DirLeft = Data.m_DirJump = Data.m_DirRight = true;
 	Data.m_FontSizeDirection = FontSizeDirection;
 

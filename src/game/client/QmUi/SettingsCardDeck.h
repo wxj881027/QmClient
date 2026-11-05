@@ -115,6 +115,8 @@ private:
 		const SSettingsCardDefinition *m_pDefinition = nullptr;
 		int m_StateIndex = -1;
 		int m_Column = 0;
+		// 几何排布使用实际半宽列，拖拽与持久化仍使用上面的排序列。
+		int m_LayoutColumn = 0;
 		bool m_FullWidth = false;
 		SSettingsCardFrame m_Frame;
 		float m_TargetContentHeight = 0.0f;

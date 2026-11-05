@@ -16,7 +16,7 @@ MACRO_CONFIG_INT(QmAllowAnyRes, qm_allow_any_res, 1, 0, 1, CFGFLAG_CLIENT | CFGF
 MACRO_CONFIG_INT(QmShowChatClient, qm_show_chat_client, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show client-generated chat messages, e.g., echo")
 
 MACRO_CONFIG_INT(QmShowFrozenText, qm_frozen_tees_text, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show number of frozen Tees in team (0=Off, 1=Show active Tee, 2=Show frozen Tee)")
-MACRO_CONFIG_INT(QmShowFrozenHud, qm_frozen_tees_hud, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show frozen Tee HUD")
+MACRO_CONFIG_INT(QmShowFrozenHud, qm_frozen_tees_hud, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show frozen Tee HUD")
 MACRO_CONFIG_INT(QmShowFrozenHudSkins, qm_frozen_tees_hud_skins, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use ninja or dark skin in frozen Tee HUD")
 
 MACRO_CONFIG_INT(QmFrozenHudTeeSize, qm_frozen_tees_size, 15, 8, 20, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tee icon size in frozen Tee HUD (default 15)")
