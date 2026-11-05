@@ -94,8 +94,8 @@ public:
 	// duplicate war types are NOT allowed
 	std::vector<CWarType *> m_WarTypes = {
 		new CWarType("none", ui_token::color::NEUTRAL_WHITE, false),
-		new CWarType("enemy", ColorRGBA(1.0f, 0.2f, 0.2f, 1.0f), false),
-		new CWarType("team", ColorRGBA(0.0f, 0.9f, 0.2f, 1.0f), false),
+		new CWarType("enemy", ColorRGBA(1.0f, 0.2f, 0.2f, 1.0f), true),
+		new CWarType("team", ColorRGBA(0.0f, 0.9f, 0.2f, 1.0f), true),
 	};
 
 	// None type war entries will float to the top of the list, so they can be assigned a type

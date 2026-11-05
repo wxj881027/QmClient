@@ -109,8 +109,6 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 	static char s_aEntryName[MAX_NAME_LENGTH];
 	static char s_aEntryClan[MAX_CLAN_LENGTH];
 	static char s_aEntryReason[MAX_WARLIST_REASON_LENGTH];
-	static bool s_IsClan = false;
-	static bool s_IsName = true;
 	static CWarEntry *s_pSelectedEntry = nullptr;
 	static CWarType *s_pSelectedType = nullptr;
 	static char s_aTypeName[MAX_WARLIST_TYPE_LENGTH];
@@ -302,16 +300,6 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				str_copy(s_aEntryName, pSelectedEntry->m_aName);
 				str_copy(s_aEntryClan, pSelectedEntry->m_aClan);
 				str_copy(s_aEntryReason, pSelectedEntry->m_aReason);
-				if(str_comp(pSelectedEntry->m_aClan, "") != 0)
-				{
-					s_IsName = false;
-					s_IsClan = true;
-				}
-				else
-				{
-					s_IsName = true;
-					s_IsClan = false;
-				}
 				pSelectedType = pSelectedEntry->m_pWarType;
 			}
 		}
@@ -337,39 +325,17 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		CSettingsContentLayoutFlow Flow(Column);
 		// 识别方式和输入框合成一行：左边选「按名字还是按战队」，右边就是被编辑的那个字段。
 		// 原来两个输入框 + 一行胶囊分开画，玩家看不出胶囊到底在选什么。
+		// 名称和战队各占一个输入框并排：两样都是条目的身份，没必要先选一个再输入。
 		if(Flow.Control("tclient-warlist-entry-identity", LineSize, Button, MarginSmall))
 		{
-			CUIRect Choice, Field;
-			Button.VSplitLeft(Button.w * 0.42f, &Choice, &Field);
-			Field.VSplitLeft(MarginSmall, nullptr, &Field);
-			Choice.VSplitMid(&ButtonL, &ButtonR, MarginSmall);
-			static unsigned char s_NameRadio, s_ClanRadio;
-			if(ui_widget::FilterChip(TClientWarListTextInputCtx, &s_NameRadio, ButtonL, Localize("Name"), s_IsName) && !ReadOnly && !Ui()->RenderOnly())
-			{
-				s_IsName = true;
-				s_IsClan = false;
-			}
-			if(ui_widget::FilterChip(TClientWarListTextInputCtx, &s_ClanRadio, ButtonR, Localize("Clan"), s_IsClan) && !ReadOnly && !Ui()->RenderOnly())
-			{
-				s_IsName = false;
-				s_IsClan = true;
-			}
-			if(s_IsName)
-			{
-				s_NameInput.SetBuffer(s_aEntryName, sizeof(s_aEntryName));
-				s_NameInput.SetEmptyText(Localize("Name"));
-				ui_widget::InputField(TClientWarListTextInputCtx, &s_NameInput, Field, Localize("Name"), EditBoxFontSize);
-			}
-			else
-			{
-				s_ClanInput.SetBuffer(s_aEntryClan, sizeof(s_aEntryClan));
-				s_ClanInput.SetEmptyText(Localize("Clan"));
-				ui_widget::InputField(TClientWarListTextInputCtx, &s_ClanInput, Field, Localize("Clan"), EditBoxFontSize);
-			}
-			if(Flow.Input() && !ReadOnly && !Ui()->RenderOnly() && !s_IsName)
-				str_copy(s_aEntryName, "");
-			if(Flow.Input() && !ReadOnly && !Ui()->RenderOnly() && !s_IsClan)
-				str_copy(s_aEntryClan, "");
+			CUIRect NameField, ClanField;
+			Button.VSplitMid(&NameField, &ClanField, MarginSmall);
+			s_NameInput.SetBuffer(s_aEntryName, sizeof(s_aEntryName));
+			s_NameInput.SetEmptyText(Localize("Name"));
+			ui_widget::InputField(TClientWarListTextInputCtx, &s_NameInput, NameField, Localize("Name"), EditBoxFontSize);
+			s_ClanInput.SetBuffer(s_aEntryClan, sizeof(s_aEntryClan));
+			s_ClanInput.SetEmptyText(Localize("Clan"));
+			ui_widget::InputField(TClientWarListTextInputCtx, &s_ClanInput, ClanField, Localize("Clan"), EditBoxFontSize);
 		}
 		if(Flow.Control("tclient-warlist-reason", LineSize, Button, MarginSmall))
 		{
@@ -520,11 +486,13 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				g_Config.m_QmWarListBlockEnemyChat ^= 1;
 		}
 	};
+	// 0 = 只看，1 = 新增中，2 = 重命名中。
+	static int s_GroupEditMode = 0;
 	auto RenderGroups = [&](CUIRect &Column) {
 		CPerfTimer ActionsTimer;
 		CUIRect WarTypeList, Button, ButtonL, ButtonR;
 		CSettingsContentLayoutFlow Flow(Column);
-		static CButtonContainer s_AddGroupButton, s_OverrideGroupButton, s_GroupColorPicker;
+		static CButtonContainer s_GroupColorPicker;
 		if(Flow.Control("tclient-warlist-groups-list", std::clamp((int)GameClient()->m_WarList.m_WarTypes.size(), 2, WarListViewportRows) * ListRowHeight, WarTypeList))
 		{
 			m_pRemoveWarType = nullptr;
@@ -621,53 +589,147 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				s_RemoveWarTypePending = false;
 			}
 		}
-		if(Flow.Control("tclient-warlist-group-name", LineSize, Button, MarginSmall))
+		// 头部做成「标题 + 动作」：新增、重命名在头上，颜色跟着选中项走，形态对齐皮肤队列的预设栏。
+		if(Flow.Control("tclient-warlist-groups-header", LineSize, Button, MarginSmall))
 		{
+			CUIRect Label, AddButton, RenameButton;
+			char aGroupLabel[96];
+			str_format(aGroupLabel, sizeof(aGroupLabel), "%s (%d)", Localize("War Groups"), (int)GameClient()->m_WarList.m_WarTypes.size());
+			const float ActionWidth = WarListMetrics.m_ButtonHeight * 2.0f + MarginSmall;
+			Button.VSplitRight(ActionWidth, &Label, &Button);
+			Button.VSplitMid(&AddButton, &RenameButton, MarginSmall);
+			SLabelProperties LabelProps;
+			LabelProps.m_MaxWidth = Label.w;
+			LabelProps.m_EnableWidthCheck = false;
+			Ui()->DoLabel(&Label, aGroupLabel, StandardFontSize, TEXTALIGN_ML, LabelProps);
+			static CButtonContainer s_NewGroupButton, s_RenameGroupButton;
+			if(DoButtonLineSize_Menu(&s_NewGroupButton, Localize("New"), 0, &AddButton, LineSize) && !ReadOnly && !Ui()->RenderOnly())
+			{
+				s_GroupEditMode = 1;
+				str_copy(s_aTypeName, "");
+			}
+			const bool CanRename = pSelectedType != nullptr && pSelectedType->m_Removable;
+			if(DoButtonLineSize_Menu(&s_RenameGroupButton, Localize("Rename"), 0, &RenameButton, LineSize, !CanRename) && CanRename && !ReadOnly && !Ui()->RenderOnly())
+			{
+				s_GroupEditMode = 2;
+				str_copy(s_aTypeName, pSelectedType->m_aWarName, sizeof(s_aTypeName));
+				s_GroupColor = pSelectedType->m_Color;
+			}
+		}
+		// 只有新增或重命名时才出现输入行，确定后才落库，写错不会污染已有群组。
+		if(s_GroupEditMode != 0 && Flow.Control("tclient-warlist-group-name", LineSize, Button, MarginSmall))
+		{
+			CUIRect Field, ConfirmButton, CancelButton;
+			const float CommitWidth = WarListMetrics.m_ButtonHeight * 2.0f + MarginSmall;
+			Button.VSplitRight(CommitWidth, &Field, &Button);
+			Button.VSplitMid(&ConfirmButton, &CancelButton, MarginSmall);
 			s_TypeNameInput.SetBuffer(s_aTypeName, sizeof(s_aTypeName));
 			s_TypeNameInput.SetEmptyText(Localize("Group name"));
-			ui_widget::InputField(TClientWarListTextInputCtx, &s_TypeNameInput, Button, Localize("Group name"), EditBoxFontSize);
-		}
-		if(Flow.Control("tclient-warlist-group-color", ColorPickerLineSize, Button, MarginSmall))
-		{
-			static unsigned int s_ColorValue = 0;
-			s_ColorValue = color_cast<ColorHSLA>(s_GroupColor).Pack(false);
-			const ColorRGBA Color = color_cast<ColorRGBA>(DoLine_ColorPicker(&s_GroupColorPicker, CurrentSettingsContentMetrics(), &Button, Localize("Color"), &s_ColorValue, ColorRGBA(1.0f, 1.0f, 1.0f), true));
-			if(Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
-				s_GroupColor = Color;
-		}
-		Flow.Space(ColorPickerLineSpacing);
-		if(Flow.Control("tclient-warlist-group-actions", WarListMetrics.m_ButtonHeight, Button))
-		{
-			static ui_widget::SSettingsActionGroupState s_GroupActionWidths;
-			const char *apLabels[] = {Localize("Override Group"), Localize("Add Group")};
-			const auto Actions = ui_widget::PrepareSettingsActionGroup(*Ui(), s_GroupActionWidths, Button, apLabels, std::size(apLabels), WarListMetrics);
-			ButtonL = Actions.m_aButtons[0];
-			ButtonR = Actions.m_aButtons[1];
-			bool OverrideDisabled = !GameClient()->m_WarList.m_WarTypes.empty() && pSelectedType == GameClient()->m_WarList.m_WarTypes[0];
-			if(DoButtonLineSize_Menu(&s_OverrideGroupButton, Localize("Override Group"), 0, &ButtonL, LineSize, OverrideDisabled) && !ReadOnly && !Ui()->RenderOnly() && pSelectedType)
+			ui_widget::InputField(TClientWarListTextInputCtx, &s_TypeNameInput, Field, Localize("Group name"), EditBoxFontSize);
+			static CButtonContainer s_ConfirmGroupButton, s_CancelGroupButton;
+			if(DoButtonLineSize_Menu(&s_ConfirmGroupButton, Localize("Save"), 0, &ConfirmButton, LineSize) && !ReadOnly && !Ui()->RenderOnly() && str_comp(s_aTypeName, "") != 0)
 			{
-				if(pSelectedType && str_comp(s_aTypeName, "") != 0)
+				if(s_GroupEditMode == 1)
+				{
+					GameClient()->m_WarList.AddWarType(s_aTypeName, s_GroupColor);
+				}
+				else if(pSelectedType != nullptr)
 				{
 					const auto &vpTypes = GameClient()->m_WarList.m_WarTypes;
 					const int Index = static_cast<int>(std::find(vpTypes.begin(), vpTypes.end(), pSelectedType) - vpTypes.begin());
 					GameClient()->m_WarList.UpsertWarType(Index, s_aTypeName, s_GroupColor);
 				}
+				s_GroupEditMode = 0;
 			}
-			bool AddDisabled = str_comp(GameClient()->m_WarList.FindWarType(s_aTypeName)->m_aWarName, "none") != 0 || str_comp(s_aTypeName, "none") == 0;
-			if(DoButtonLineSize_Menu(&s_AddGroupButton, Localize("Add Group"), 0, &ButtonR, LineSize, AddDisabled) && !ReadOnly && !Ui()->RenderOnly())
+			if(DoButtonLineSize_Menu(&s_CancelGroupButton, Localize("Cancel"), 0, &CancelButton, LineSize) && !ReadOnly && !Ui()->RenderOnly())
+				s_GroupEditMode = 0;
+		}
+		// 颜色跟着选中群组走：点开色板改完立刻生效，不用再去按「覆盖群组」。
+		if(pSelectedType != nullptr && pSelectedType->m_Removable && Flow.Control("tclient-warlist-group-color", ColorPickerLineSize, Button, MarginSmall))
+		{
+			static unsigned int s_ColorValue = 0;
+			s_ColorValue = color_cast<ColorHSLA>(pSelectedType->m_Color).Pack(false);
+			const ColorRGBA Color = color_cast<ColorRGBA>(DoLine_ColorPicker(&s_GroupColorPicker, CurrentSettingsContentMetrics(), &Button, Localize("Color"), &s_ColorValue, ColorRGBA(1.0f, 1.0f, 1.0f), true));
+			if(Flow.Input() && !ReadOnly && !Ui()->RenderOnly() && Color != pSelectedType->m_Color)
 			{
-				GameClient()->m_WarList.AddWarType(s_aTypeName, s_GroupColor);
+				s_GroupColor = Color;
+				const auto &vpTypes = GameClient()->m_WarList.m_WarTypes;
+				const int Index = static_cast<int>(std::find(vpTypes.begin(), vpTypes.end(), pSelectedType) - vpTypes.begin());
+				GameClient()->m_WarList.UpsertWarType(Index, pSelectedType->m_aWarName, Color);
 			}
 		}
+		Flow.Space(ColorPickerLineSpacing);
 		char aExtra[96];
 		str_format(aExtra, sizeof(aExtra), "groups=%d", (int)GameClient()->m_WarList.m_WarTypes.size());
 		LogTClientPerfStageEx("tclient_warlist", "actions", ETClientSettingsPerfStage::RESOURCE_PRETRIGGER, ActionsTimer.ElapsedMs(), false, aExtra);
 	};
 
+	// 0 在线 / 1 好友 / 2 本体 / 3 分身；默认在线。
+	static int s_PlayerSource = 0;
+	static unsigned char s_aPlayerSourceIds[4];
 	auto RenderPlayers = [&](CUIRect &Column) {
 		CPerfTimer PlayersTimer;
-		CUIRect PlayerSearch, PlayerList;
+		CUIRect PlayerSearch, PlayerList, PlayerSourceRect;
 		CSettingsContentLayoutFlow Flow(Column);
+		// 来源切换：在线只认当前服务器，好友不在线也能选到；本体、分身是常在的两个自己。
+		if(Flow.Control("tclient-warlist-player-source", ui_token::server_filter::CHIP_HEIGHT, PlayerSourceRect))
+		{
+			const char *apSourceLabels[4] = {Localize("Online"), Localize("Friends"), Localize("Self"), Localize("Dummy")};
+			const float SourceGap = ui_token::server_filter::CHIP_GAP;
+			const float ChipWidth = std::max(0.0f, (PlayerSourceRect.w - SourceGap * 3.0f) / 4.0f);
+			for(int Index = 0; Index < 4; ++Index)
+			{
+				CUIRect Rect = PlayerSourceRect;
+				Rect.x = PlayerSourceRect.x + Index * (ChipWidth + SourceGap);
+				Rect.w = ChipWidth;
+				if(ui_widget::FilterChip(TClientWarListTextInputCtx, &s_aPlayerSourceIds[Index], Rect, apSourceLabels[Index], s_PlayerSource == Index) && !ReadOnly && !Ui()->RenderOnly())
+					s_PlayerSource = Index;
+			}
+		}
+		// 好友来源走自己的列表：好友不在本服也能选到，选中就是把名字和战队填进编辑区。
+		if(s_PlayerSource == 1)
+		{
+			const IFriends *pFriends = GameClient()->Friends();
+			const int FriendCount = pFriends != nullptr ? pFriends->NumFriends() : 0;
+			const int FriendRows = std::clamp(FriendCount, 2, WarListViewportRows);
+			if(!Flow.Control("tclient-warlist-friends-list", FriendRows * ListRowHeight, PlayerList, MarginSmall))
+				return;
+			static CListBox s_FriendListBox;
+			static std::vector<unsigned char> s_vFriendItemIds;
+			s_vFriendItemIds.resize(std::max(1, FriendCount));
+			s_FriendListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
+			s_FriendListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
+			s_FriendListBox.DoStart(ListRowHeight, FriendCount, 1, 2, -1, &PlayerList, true, IGraphics::CORNER_ALL);
+			for(int Index = 0; Index < FriendCount; ++Index)
+			{
+				const CFriendInfo *pFriend = pFriends->GetFriend(Index);
+				if(pFriend == nullptr)
+					continue;
+				const CListboxItem Item = s_FriendListBox.DoNextItem(&s_vFriendItemIds[Index], false);
+				if(!Item.m_Visible)
+					continue;
+				CUIRect RowRect = Item.m_Rect;
+				RowRect.Margin(MarginSmall, &RowRect);
+				CUIRect NameRect, ClanRect;
+				RowRect.VSplitMid(&NameRect, &ClanRect, MarginSmall);
+				DoTClientLabel(Ui(), &NameRect, pFriend->m_aName, StandardFontSize, TEXTALIGN_ML);
+				DoTClientLabel(Ui(), &ClanRect, pFriend->m_aClan, StandardFontSize, TEXTALIGN_ML);
+				if(Ui()->DoButtonLogic(&s_vFriendItemIds[Index], 0, &Item.m_Rect, BUTTONFLAG_LEFT) && !ReadOnly && !Ui()->RenderOnly())
+				{
+					str_copy(s_aEntryName, pFriend->m_aName, sizeof(s_aEntryName));
+					str_copy(s_aEntryClan, pFriend->m_aClan, sizeof(s_aEntryClan));
+				}
+			}
+			s_FriendListBox.DoEnd();
+			if(FriendCount == 0)
+			{
+				CUIRect Hint = PlayerList;
+				TextRender()->TextColor(ui_token::color::TEXT_SECONDARY);
+				Ui()->DoLabel(&Hint, Localize("No players match"), StandardFontSize, TEXTALIGN_MC);
+				TextRender()->TextColor(TextRender()->DefaultTextColor());
+			}
+			return;
+		}
 		if(Flow.Control("tclient-warlist-player-search", LineSize, PlayerSearch))
 		{
 			ui_widget::InputField(TClientWarListPlayerSearchCtx, &s_PlayerSearchInput, PlayerSearch, FontSize, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
@@ -684,6 +746,11 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
 		{
 			if(!GameClient()->m_Snap.m_apPlayerInfos[ClientId])
+				continue;
+			// 本体 / 分身只留本地那两个客户端，其余照常在「在线」里。
+			if(s_PlayerSource == 2 && ClientId != GameClient()->m_aLocalIds[0])
+				continue;
+			if(s_PlayerSource == 3 && ClientId != GameClient()->m_aLocalIds[1])
 				continue;
 			const auto &Client = GameClient()->m_aClients[ClientId];
 			if(str_find_nocase(Client.m_aName, s_PlayerSearchInput.GetString()) ||
@@ -734,8 +801,6 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			Ui()->DoLabel(&NameRect, Client.m_aName, StandardFontSize, TEXTALIGN_ML);
 			if(Ui()->DoButtonLogic(&s_vNameButtons[ClientId], false, &PlayerRect, BUTTONFLAG_LEFT) && !ReadOnly && !Ui()->RenderOnly())
 			{
-				s_IsName = true;
-				s_IsClan = false;
 				str_copy(s_aEntryName, Client.m_aName);
 			}
 
@@ -747,8 +812,6 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			Ui()->DoLabel(&ClanRect, Client.m_aClan, StandardFontSize, TEXTALIGN_ML);
 			if(Ui()->DoButtonLogic(&s_vClanButtons[ClientId], false, &ClanRect, BUTTONFLAG_LEFT) && !ReadOnly && !Ui()->RenderOnly())
 			{
-				s_IsName = false;
-				s_IsClan = true;
 				str_copy(s_aEntryClan, Client.m_aClan);
 			}
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
