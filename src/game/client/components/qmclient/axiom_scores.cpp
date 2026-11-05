@@ -46,6 +46,34 @@ namespace
 	// 放宽到 90 秒覆盖服务端慢响应，避免统计页抽风。
 	constexpr int AXIOM_INFO_TIMEOUT_MS = 90000;
 
+	template<typename TRequest>
+	void TryAbortRequest(const std::shared_ptr<TRequest> &pRequest) noexcept
+	{
+		if(!pRequest)
+			return;
+		try
+		{
+			pRequest->Abort();
+		}
+		catch(...)
+		{
+			// 单个外部取消失败不能中断其余请求回收和代际失效。
+		}
+	}
+
+	void SetErrorDetail(std::string &Detail, const char *pText) noexcept
+	{
+		try
+		{
+			Detail = pText;
+		}
+		catch(...)
+		{
+			// 错误状态仍然可见，不让可选说明文本妨碍失败收尾。
+			Detail.clear();
+		}
+	}
+
 	const json_value *JsonField(const json_value *pObject, const char *pName)
 	{
 		if(!pObject || pObject->type != json_object)
@@ -454,64 +482,112 @@ void CQmAxiomScores::ClearFailure(int &ConsecutiveFailures)
 	ConsecutiveFailures = 0;
 }
 
-int64_t CQmAxiomScores::CurrentTick() const
+int64_t CQmAxiomScores::CurrentTick() const noexcept
 {
 	return time_get();
 }
 
-std::shared_ptr<IQmAxiomHttpRequest> CQmAxiomScores::StartRequest(const char *pUrl, int TimeoutMs)
+std::shared_ptr<IHttpRequest> CQmAxiomScores::CreateNativeRequest(const char *pUrl)
 {
-	if(m_pHttpOverride != nullptr)
-		return m_pHttpOverride->Get(pUrl, AXIOM_CONNECT_TIMEOUT_MS, TimeoutMs, AXIOM_MAX_RESPONSE_BYTES);
 	if(Http() == nullptr)
 		return nullptr;
-
-	std::shared_ptr<IHttpRequest> pRequest = HttpGet(pUrl);
-	PrepareRequest(pRequest.get(), TimeoutMs);
-	Http()->Run(pRequest);
-	return std::make_shared<CNativeAxiomHttpRequest>(std::move(pRequest));
+	return HttpGet(pUrl);
 }
 
-void CQmAxiomScores::StartSearchRequest(const char *pPlayerName, SCacheEntry &Entry)
+void CQmAxiomScores::SubmitNativeRequest(const std::shared_ptr<IHttpRequest> &pRequest)
 {
+	Http()->Run(pRequest);
+}
+
+std::shared_ptr<IQmAxiomHttpRequest> CQmAxiomScores::StartRequest(const char *pUrl, int TimeoutMs) noexcept
+{
+	std::shared_ptr<IHttpRequest> pRequest;
+	try
+	{
+		if(m_pHttpOverride != nullptr)
+			return m_pHttpOverride->Get(pUrl, AXIOM_CONNECT_TIMEOUT_MS, TimeoutMs, AXIOM_MAX_RESPONSE_BYTES);
+		pRequest = CreateNativeRequest(pUrl);
+		if(!pRequest)
+			return nullptr;
+		PrepareRequest(pRequest.get(), TimeoutMs);
+		// 提交前准备完整owner；提交后不再为返回包装分配内存。
+		auto pWrapped = std::make_shared<CNativeAxiomHttpRequest>(pRequest);
+		SubmitNativeRequest(pRequest);
+		return pWrapped;
+	}
+	catch(...)
+	{
+		TryAbortRequest(pRequest);
+		return nullptr;
+	}
+}
+
+void CQmAxiomScores::FailSearchRequest(SCacheEntry &Entry, const char *pReason) noexcept
+{
+	if(Entry.m_Result.m_SearchStatus != EQmAxiomScoreStatus::READY)
+		Entry.m_Result.m_SearchStatus = EQmAxiomScoreStatus::HTTP_ERROR;
+	SetErrorDetail(Entry.m_Result.m_SearchErrorDetail, pReason);
+	RecordFailure(Entry.m_SearchFailureCount);
+	Entry.m_LastSearchFailureTick = CurrentTick();
+}
+
+void CQmAxiomScores::FailModeRequest(SCacheEntry &Entry, EQmAxiomMode Mode, const char *pReason) noexcept
+{
+	const int Index = ModeIndex(Mode);
+	auto &Result = Entry.m_Result.m_aModes[Index];
+	if(!Result.m_HasData)
+		Result.m_Status = EQmAxiomScoreStatus::HTTP_ERROR;
+	SetErrorDetail(Result.m_ErrorDetail, pReason);
+	RecordFailure(Entry.m_aModeFailureCount[Index]);
+	Entry.m_aLastModeFailureTick[Index] = CurrentTick();
+}
+
+void CQmAxiomScores::FailDdStatsRequest(SCacheEntry &Entry) noexcept
+{
+	RecordFailure(Entry.m_DdStatsFailureCount);
+	Entry.m_LastDdStatsFailureTick = CurrentTick();
+}
+
+void CQmAxiomScores::StartSearchRequest(const char *pPlayerName, SCacheEntry &Entry) noexcept
+try
+{
+	SRequestSlot Candidate;
+	Candidate.m_PlayerName = pPlayerName;
+	Candidate.m_Generation = m_Generation;
+	Candidate.m_Mode = m_Mode;
+	const std::string Url = QmBuildAxiomSearchUrl(pPlayerName);
 	if(m_SearchRequest.m_pRequest)
 	{
-		m_SearchRequest.m_pRequest->Abort();
+		TryAbortRequest(m_SearchRequest.m_pRequest);
 		m_SearchRequest.m_pRequest.reset();
 		m_SearchRequest.m_PlayerName.clear();
 	}
-	// 有持久化匹配时保持 READY，让后台刷新不遮挡旧数据；只有首次查询才显示加载态。
-	const bool HasVisibleSearch = Entry.m_Result.m_SearchStatus == EQmAxiomScoreStatus::READY && Entry.m_Result.m_Match.m_UserId > 0;
-	if(!HasVisibleSearch)
-		Entry.m_Result.m_SearchStatus = EQmAxiomScoreStatus::FETCHING;
-
-	const std::string Url = QmBuildAxiomSearchUrl(pPlayerName);
 	if(Url.empty())
 	{
-		if(!HasVisibleSearch)
+		FailSearchRequest(Entry, "invalid query name");
+		if(Entry.m_Result.m_SearchStatus != EQmAxiomScoreStatus::READY)
 			Entry.m_Result.m_SearchStatus = EQmAxiomScoreStatus::INVALID_RESPONSE;
-		Entry.m_Result.m_SearchErrorDetail = "invalid query name";
-		RecordFailure(Entry.m_SearchFailureCount);
-		Entry.m_LastSearchFailureTick = CurrentTick();
 		return;
 	}
 
-	m_SearchRequest.m_pRequest = StartRequest(Url.c_str(), AXIOM_SEARCH_TIMEOUT_MS);
-	if(!m_SearchRequest.m_pRequest)
+	Candidate.m_pRequest = StartRequest(Url.c_str(), AXIOM_SEARCH_TIMEOUT_MS);
+	if(!Candidate.m_pRequest)
 	{
-		if(!HasVisibleSearch)
-			Entry.m_Result.m_SearchStatus = EQmAxiomScoreStatus::HTTP_ERROR;
-		Entry.m_Result.m_SearchErrorDetail = "request could not start";
-		RecordFailure(Entry.m_SearchFailureCount);
-		Entry.m_LastSearchFailureTick = CurrentTick();
+		FailSearchRequest(Entry, "request could not start");
 		return;
 	}
-	m_SearchRequest.m_Generation = m_Generation;
-	m_SearchRequest.m_PlayerName = pPlayerName;
-	m_SearchRequest.m_Mode = m_Mode;
+	m_SearchRequest = std::move(Candidate);
+	// 有持久化匹配时保持 READY，只有首次查询才显示加载态。
+	if(Entry.m_Result.m_SearchStatus != EQmAxiomScoreStatus::READY || Entry.m_Result.m_Match.m_UserId <= 0)
+		Entry.m_Result.m_SearchStatus = EQmAxiomScoreStatus::FETCHING;
+}
+catch(...)
+{
+	FailSearchRequest(Entry, "request could not start");
 }
 
-void CQmAxiomScores::StartModeRequest(const char *pPlayerName, SCacheEntry &Entry, EQmAxiomMode Mode)
+void CQmAxiomScores::StartModeRequest(const char *pPlayerName, SCacheEntry &Entry, EQmAxiomMode Mode) noexcept
+try
 {
 	const int Index = ModeIndex(Mode);
 	SRequestSlot &Slot = m_aModeRequests[Index];
@@ -519,43 +595,39 @@ void CQmAxiomScores::StartModeRequest(const char *pPlayerName, SCacheEntry &Entr
 		return;
 
 	SQmAxiomModeResult &ModeResult = Entry.m_Result.m_aModes[Index];
-	const bool HasVisibleMode = ModeResult.m_HasData && ModeResult.m_Status == EQmAxiomScoreStatus::READY;
-	if(!HasVisibleMode)
-		ModeResult.m_Status = EQmAxiomScoreStatus::FETCHING;
-
 	if(Entry.m_Result.m_Match.m_UserId <= 0)
 	{
-		if(!HasVisibleMode)
-			ModeResult.m_Status = EQmAxiomScoreStatus::HTTP_ERROR;
-		ModeResult.m_ErrorDetail = "missing user id";
-		RecordFailure(Entry.m_aModeFailureCount[Index]);
-		Entry.m_aLastModeFailureTick[Index] = CurrentTick();
+		FailModeRequest(Entry, Mode, "missing user id");
 		return;
 	}
 
+	SRequestSlot Candidate;
+	Candidate.m_PlayerName = pPlayerName;
+	Candidate.m_Generation = m_Generation;
+	Candidate.m_Mode = Mode;
+	const std::string Url = QmBuildAxiomInfoUrl(Entry.m_Result.m_Match.m_UserId, Mode);
 	if(Slot.m_pRequest)
 	{
-		Slot.m_pRequest->Abort();
+		TryAbortRequest(Slot.m_pRequest);
 		Slot.m_pRequest.reset();
 		Slot.m_PlayerName.clear();
 	}
-	const std::string Url = QmBuildAxiomInfoUrl(Entry.m_Result.m_Match.m_UserId, Mode);
-	Slot.m_pRequest = StartRequest(Url.c_str(), AXIOM_INFO_TIMEOUT_MS);
-	if(!Slot.m_pRequest)
+	Candidate.m_pRequest = StartRequest(Url.c_str(), AXIOM_INFO_TIMEOUT_MS);
+	if(!Candidate.m_pRequest)
 	{
-		if(!HasVisibleMode)
-			ModeResult.m_Status = EQmAxiomScoreStatus::HTTP_ERROR;
-		ModeResult.m_ErrorDetail = "request could not start";
-		RecordFailure(Entry.m_aModeFailureCount[Index]);
-		Entry.m_aLastModeFailureTick[Index] = CurrentTick();
+		FailModeRequest(Entry, Mode, "request could not start");
 		return;
 	}
-	Slot.m_Generation = m_Generation;
-	Slot.m_PlayerName = pPlayerName;
-	Slot.m_Mode = Mode;
+	Slot = std::move(Candidate);
+	if(!ModeResult.m_HasData || ModeResult.m_Status != EQmAxiomScoreStatus::READY)
+		ModeResult.m_Status = EQmAxiomScoreStatus::FETCHING;
+}
+catch(...)
+{
+	FailModeRequest(Entry, Mode, "request could not start");
 }
 
-void CQmAxiomScores::AbortActiveRequests(bool ResetFetchingStates)
+void CQmAxiomScores::AbortActiveRequests(bool ResetFetchingStates) noexcept
 {
 	SCacheEntry *pEntry = nullptr;
 	const auto CacheIt = m_Cache.find(m_ActivePlayerName);
@@ -564,7 +636,7 @@ void CQmAxiomScores::AbortActiveRequests(bool ResetFetchingStates)
 
 	if(m_SearchRequest.m_pRequest)
 	{
-		m_SearchRequest.m_pRequest->Abort();
+		TryAbortRequest(m_SearchRequest.m_pRequest);
 		m_SearchRequest.m_pRequest.reset();
 		if(ResetFetchingStates && pEntry && pEntry->m_Result.m_SearchStatus == EQmAxiomScoreStatus::FETCHING)
 			pEntry->m_Result.m_SearchStatus = EQmAxiomScoreStatus::NOT_REQUESTED;
@@ -574,14 +646,14 @@ void CQmAxiomScores::AbortActiveRequests(bool ResetFetchingStates)
 		SRequestSlot &Slot = m_aModeRequests[Index];
 		if(!Slot.m_pRequest)
 			continue;
-		Slot.m_pRequest->Abort();
+		TryAbortRequest(Slot.m_pRequest);
 		Slot.m_pRequest.reset();
 		if(ResetFetchingStates && pEntry && pEntry->m_Result.m_aModes[Index].m_Status == EQmAxiomScoreStatus::FETCHING)
 			pEntry->m_Result.m_aModes[Index].m_Status = EQmAxiomScoreStatus::NOT_REQUESTED;
 	}
 	if(m_DdStatsRequest.m_pRequest)
 	{
-		m_DdStatsRequest.m_pRequest->Abort();
+		TryAbortRequest(m_DdStatsRequest.m_pRequest);
 		m_DdStatsRequest.m_pRequest.reset();
 	}
 	m_SearchRequest.m_PlayerName.clear();
@@ -601,11 +673,11 @@ void CQmAxiomScores::SetMode(EQmAxiomMode Mode)
 	m_Mode = Mode;
 }
 
-void CQmAxiomScores::AbortScoreboardRequests()
+void CQmAxiomScores::AbortScoreboardRequests() noexcept
 {
 	for(auto &[Name, Slot] : m_SearchRequests)
 	{
-		Slot.m_pRequest->Abort();
+		TryAbortRequest(Slot.m_pRequest);
 		auto It = m_Cache.find(Name);
 		if(It != m_Cache.end() && It->second.m_Result.m_SearchStatus == EQmAxiomScoreStatus::FETCHING)
 			It->second.m_Result.m_SearchStatus = EQmAxiomScoreStatus::NOT_REQUESTED;
@@ -613,7 +685,7 @@ void CQmAxiomScores::AbortScoreboardRequests()
 	m_SearchRequests.clear();
 	for(auto &[Name, Slot] : m_ModeRequests)
 	{
-		Slot.m_pRequest->Abort();
+		TryAbortRequest(Slot.m_pRequest);
 		auto It = m_Cache.find(Name);
 		if(It != m_Cache.end())
 		{
@@ -670,26 +742,32 @@ void CQmAxiomScores::EnsureScoreboardQueried(const char *pPlayerName)
 			m_SearchRequests.size() >= AXIOM_MAX_CONCURRENT_REQUESTS || m_SearchStartsThisFrame >= AXIOM_SEARCH_STARTS_PER_FRAME)
 			return;
 		const bool HasVisibleMatch = Entry.m_Result.m_SearchStatus == EQmAxiomScoreStatus::READY;
-		const std::string Url = QmBuildAxiomSearchUrl(pPlayerName);
-		SRequestSlot Slot;
-		if(!Url.empty())
-			Slot.m_pRequest = StartRequest(Url.c_str(), AXIOM_SEARCH_TIMEOUT_MS);
-		if(!Slot.m_pRequest)
-		{
-			if(!HasVisibleMatch)
-				Entry.m_Result.m_SearchStatus = EQmAxiomScoreStatus::HTTP_ERROR;
-			Entry.m_Result.m_SearchErrorDetail = "request could not start";
-			RecordFailure(Entry.m_SearchFailureCount);
-			Entry.m_LastSearchFailureTick = Now;
+		auto [RequestIt, Inserted] = m_SearchRequests.try_emplace(Name);
+		if(!Inserted)
 			return;
+		try
+		{
+			auto &Slot = RequestIt->second;
+			Slot.m_PlayerName = Name;
+			Slot.m_Generation = m_Generation;
+			Slot.m_Mode = m_Mode;
+			const std::string Url = QmBuildAxiomSearchUrl(pPlayerName);
+			if(!Url.empty())
+				Slot.m_pRequest = StartRequest(Url.c_str(), AXIOM_SEARCH_TIMEOUT_MS);
+			if(Slot.m_pRequest)
+			{
+				if(!HasVisibleMatch)
+					Entry.m_Result.m_SearchStatus = EQmAxiomScoreStatus::FETCHING;
+				++m_SearchStartsThisFrame;
+				return;
+			}
 		}
-		if(!HasVisibleMatch)
-			Entry.m_Result.m_SearchStatus = EQmAxiomScoreStatus::FETCHING;
-		Slot.m_Generation = m_Generation;
-		Slot.m_PlayerName = Name;
-		Slot.m_Mode = m_Mode;
-		m_SearchRequests.emplace(Name, std::move(Slot));
-		++m_SearchStartsThisFrame;
+		catch(...)
+		{
+			TryAbortRequest(RequestIt->second.m_pRequest);
+		}
+		m_SearchRequests.erase(RequestIt);
+		FailSearchRequest(Entry, "request could not start");
 		return;
 	}
 
@@ -698,24 +776,30 @@ void CQmAxiomScores::EnsureScoreboardQueried(const char *pPlayerName)
 		m_ModeRequests.contains(Name) || IsWithinWindow(Entry.m_aLastModeFailureTick[ModeIndex(m_Mode)], Now, FailureRetryWindowMs(Entry.m_aModeFailureCount[ModeIndex(m_Mode)])) ||
 		m_ModeRequests.size() >= AXIOM_MAX_CONCURRENT_REQUESTS)
 		return;
-	const std::string Url = QmBuildAxiomInfoUrl(Entry.m_Result.m_Match.m_UserId, m_Mode);
-	SRequestSlot Slot;
-	Slot.m_pRequest = StartRequest(Url.c_str(), AXIOM_INFO_TIMEOUT_MS);
-	if(!Slot.m_pRequest)
-	{
-		if(!Result.m_HasData)
-			Result.m_Status = EQmAxiomScoreStatus::HTTP_ERROR;
-		Result.m_ErrorDetail = "request could not start";
-		RecordFailure(Entry.m_aModeFailureCount[ModeIndex(m_Mode)]);
-		Entry.m_aLastModeFailureTick[ModeIndex(m_Mode)] = Now;
+	auto [RequestIt, Inserted] = m_ModeRequests.try_emplace(Name);
+	if(!Inserted)
 		return;
+	try
+	{
+		auto &Slot = RequestIt->second;
+		Slot.m_PlayerName = Name;
+		Slot.m_Generation = m_Generation;
+		Slot.m_Mode = m_Mode;
+		const std::string Url = QmBuildAxiomInfoUrl(Entry.m_Result.m_Match.m_UserId, m_Mode);
+		Slot.m_pRequest = StartRequest(Url.c_str(), AXIOM_INFO_TIMEOUT_MS);
+		if(Slot.m_pRequest)
+		{
+			if(!Result.m_HasData)
+				Result.m_Status = EQmAxiomScoreStatus::FETCHING;
+			return;
+		}
 	}
-	if(!Result.m_HasData)
-		Result.m_Status = EQmAxiomScoreStatus::FETCHING;
-	Slot.m_Generation = m_Generation;
-	Slot.m_PlayerName = Name;
-	Slot.m_Mode = m_Mode;
-	m_ModeRequests.emplace(Name, std::move(Slot));
+	catch(...)
+	{
+		TryAbortRequest(RequestIt->second.m_pRequest);
+	}
+	m_ModeRequests.erase(RequestIt);
+	FailModeRequest(Entry, m_Mode, "request could not start");
 }
 
 void CQmAxiomScores::ProcessScoreboardRequests()
@@ -727,11 +811,11 @@ void CQmAxiomScores::ProcessScoreboardRequests()
 			++It;
 			continue;
 		}
-		const std::string Name = It->first;
-		const uint64_t ResponseGeneration = It->second.m_Generation;
-		const EQmAxiomMode ResponseMode = It->second.m_Mode;
-		auto pRequest = std::move(It->second.m_pRequest);
-		It = m_SearchRequests.erase(It);
+		auto Node = m_SearchRequests.extract(It++);
+		const std::string &Name = Node.key();
+		const uint64_t ResponseGeneration = Node.mapped().m_Generation;
+		const EQmAxiomMode ResponseMode = Node.mapped().m_Mode;
+		auto pRequest = std::move(Node.mapped().m_pRequest);
 		if(!QmAxiomResponseIsCurrent(m_Generation, ResponseGeneration, m_Mode, ResponseMode))
 			continue;
 		auto CacheIt = m_Cache.find(Name);
@@ -744,7 +828,7 @@ void CQmAxiomScores::ProcessScoreboardRequests()
 		{
 			if(!HasVisibleMatch)
 				Entry.m_Result.m_SearchStatus = EQmAxiomScoreStatus::HTTP_ERROR;
-			Entry.m_Result.m_SearchErrorDetail = pRequest->ErrorDetail();
+			SetErrorDetail(Entry.m_Result.m_SearchErrorDetail, pRequest->ErrorDetail());
 			RecordFailure(Entry.m_SearchFailureCount);
 			Entry.m_LastSearchFailureTick = Now;
 			continue;
@@ -758,7 +842,7 @@ void CQmAxiomScores::ProcessScoreboardRequests()
 		{
 			if(!HasVisibleMatch)
 				Entry.m_Result.m_SearchStatus = ParseStatus(Parsed);
-			Entry.m_Result.m_SearchErrorDetail = QmAxiomParseResultLabel(Parsed);
+			SetErrorDetail(Entry.m_Result.m_SearchErrorDetail, QmAxiomParseResultLabel(Parsed));
 			RecordFailure(Entry.m_SearchFailureCount);
 			Entry.m_LastSearchFailureTick = Now;
 			continue;
@@ -768,7 +852,7 @@ void CQmAxiomScores::ProcessScoreboardRequests()
 			auto ModeIt = m_ModeRequests.find(Name);
 			if(ModeIt != m_ModeRequests.end())
 			{
-				ModeIt->second.m_pRequest->Abort();
+				TryAbortRequest(ModeIt->second.m_pRequest);
 				m_ModeRequests.erase(ModeIt);
 			}
 			Entry.m_Result.m_aModes = {};
@@ -796,11 +880,11 @@ void CQmAxiomScores::ProcessScoreboardRequests()
 			++It;
 			continue;
 		}
-		const std::string Name = It->first;
-		const EQmAxiomMode Mode = It->second.m_Mode;
-		const uint64_t ResponseGeneration = It->second.m_Generation;
-		auto pRequest = std::move(It->second.m_pRequest);
-		It = m_ModeRequests.erase(It);
+		auto Node = m_ModeRequests.extract(It++);
+		const std::string &Name = Node.key();
+		const EQmAxiomMode Mode = Node.mapped().m_Mode;
+		const uint64_t ResponseGeneration = Node.mapped().m_Generation;
+		auto pRequest = std::move(Node.mapped().m_pRequest);
 		if(!QmAxiomResponseIsCurrent(m_Generation, ResponseGeneration, m_Mode, Mode))
 			continue;
 		auto CacheIt = m_Cache.find(Name);
@@ -815,7 +899,7 @@ void CQmAxiomScores::ProcessScoreboardRequests()
 		{
 			if(!HasVisibleData)
 				Result.m_Status = EQmAxiomScoreStatus::HTTP_ERROR;
-			Result.m_ErrorDetail = pRequest->ErrorDetail();
+			SetErrorDetail(Result.m_ErrorDetail, pRequest->ErrorDetail());
 			RecordFailure(Entry.m_aModeFailureCount[Index]);
 			Entry.m_aLastModeFailureTick[Index] = Now;
 			continue;
@@ -829,7 +913,7 @@ void CQmAxiomScores::ProcessScoreboardRequests()
 		{
 			if(!HasVisibleData)
 				Result.m_Status = Parsed == EQmAxiomParseResult::SUCCESS ? EQmAxiomScoreStatus::INVALID_RESPONSE : ParseStatus(Parsed);
-			Result.m_ErrorDetail = Parsed == EQmAxiomParseResult::SUCCESS ? "player name mismatch" : QmAxiomParseResultLabel(Parsed);
+			SetErrorDetail(Result.m_ErrorDetail, Parsed == EQmAxiomParseResult::SUCCESS ? "player name mismatch" : QmAxiomParseResultLabel(Parsed));
 			RecordFailure(Entry.m_aModeFailureCount[Index]);
 			Entry.m_aLastModeFailureTick[Index] = Now;
 			continue;
@@ -850,30 +934,35 @@ void CQmAxiomScores::ProcessScoreboardRequests()
 	}
 }
 
-void CQmAxiomScores::StartDdStatsRequest(const char *pPlayerName, SCacheEntry &Entry)
+void CQmAxiomScores::StartDdStatsRequest(const char *pPlayerName, SCacheEntry &Entry) noexcept
+try
 {
 	if(!m_DdStatsEnabled || m_DdStatsRequest.m_pRequest)
 		return;
 	if(!pPlayerName || pPlayerName[0] == '\0')
 		return;
 
+	SRequestSlot Candidate;
+	Candidate.m_PlayerName = pPlayerName;
+	Candidate.m_Generation = m_Generation;
 	const std::string Url = QmBuildDdStatsPlayerUrl(pPlayerName);
 	if(Url.empty())
 	{
-		RecordFailure(Entry.m_DdStatsFailureCount);
-		Entry.m_LastDdStatsFailureTick = CurrentTick();
+		FailDdStatsRequest(Entry);
 		return;
 	}
 
-	m_DdStatsRequest.m_pRequest = StartRequest(Url.c_str(), DDSTATS_TIMEOUT_MS);
-	if(!m_DdStatsRequest.m_pRequest)
+	Candidate.m_pRequest = StartRequest(Url.c_str(), DDSTATS_TIMEOUT_MS);
+	if(!Candidate.m_pRequest)
 	{
-		RecordFailure(Entry.m_DdStatsFailureCount);
-		Entry.m_LastDdStatsFailureTick = CurrentTick();
+		FailDdStatsRequest(Entry);
 		return;
 	}
-	m_DdStatsRequest.m_Generation = m_Generation;
-	m_DdStatsRequest.m_PlayerName = pPlayerName;
+	m_DdStatsRequest = std::move(Candidate);
+}
+catch(...)
+{
+	FailDdStatsRequest(Entry);
 }
 
 void CQmAxiomScores::ProcessSearchRequest()
@@ -898,7 +987,7 @@ void CQmAxiomScores::ProcessSearchRequest()
 		const bool HadVisibleSearch = Entry.m_Result.m_SearchStatus == EQmAxiomScoreStatus::READY && Entry.m_Result.m_Match.m_UserId > 0;
 		if(!HadVisibleSearch)
 			Entry.m_Result.m_SearchStatus = EQmAxiomScoreStatus::HTTP_ERROR;
-		Entry.m_Result.m_SearchErrorDetail = pRequest->ErrorDetail();
+		SetErrorDetail(Entry.m_Result.m_SearchErrorDetail, pRequest->ErrorDetail());
 		RecordFailure(Entry.m_SearchFailureCount);
 		Entry.m_LastSearchFailureTick = Now;
 		return;
@@ -914,7 +1003,7 @@ void CQmAxiomScores::ProcessSearchRequest()
 		Entry.m_Result.m_SearchStatus = ParseStatus(ParseResult);
 	if(ParseResult != EQmAxiomParseResult::SUCCESS)
 	{
-		Entry.m_Result.m_SearchErrorDetail = QmAxiomParseResultLabel(ParseResult);
+		SetErrorDetail(Entry.m_Result.m_SearchErrorDetail, QmAxiomParseResultLabel(ParseResult));
 		RecordFailure(Entry.m_SearchFailureCount);
 		Entry.m_LastSearchFailureTick = Now;
 		return;
@@ -929,7 +1018,7 @@ void CQmAxiomScores::ProcessSearchRequest()
 		for(SRequestSlot &Slot : m_aModeRequests)
 		{
 			if(Slot.m_pRequest)
-				Slot.m_pRequest->Abort();
+				TryAbortRequest(Slot.m_pRequest);
 			Slot.m_pRequest.reset();
 			Slot.m_PlayerName.clear();
 		}
@@ -961,7 +1050,7 @@ void CQmAxiomScores::BeginActiveQuery(const char *pPlayerName)
 	auto SearchIt = m_SearchRequests.find(pPlayerName);
 	if(SearchIt != m_SearchRequests.end())
 	{
-		SearchIt->second.m_pRequest->Abort();
+		TryAbortRequest(SearchIt->second.m_pRequest);
 		m_SearchRequests.erase(SearchIt);
 		auto CacheIt = m_Cache.find(pPlayerName);
 		if(CacheIt != m_Cache.end() && CacheIt->second.m_Result.m_SearchStatus == EQmAxiomScoreStatus::FETCHING)
@@ -971,7 +1060,7 @@ void CQmAxiomScores::BeginActiveQuery(const char *pPlayerName)
 	if(ModeIt != m_ModeRequests.end())
 	{
 		const int Index = ModeIndex(ModeIt->second.m_Mode);
-		ModeIt->second.m_pRequest->Abort();
+		TryAbortRequest(ModeIt->second.m_pRequest);
 		m_ModeRequests.erase(ModeIt);
 		auto CacheIt = m_Cache.find(pPlayerName);
 		if(CacheIt != m_Cache.end() && CacheIt->second.m_Result.m_aModes[Index].m_Status == EQmAxiomScoreStatus::FETCHING)
@@ -1006,7 +1095,7 @@ void CQmAxiomScores::ProcessModeRequests()
 			const bool HadVisibleMode = ModeResult.m_HasData && ModeResult.m_Status == EQmAxiomScoreStatus::READY;
 			if(!HadVisibleMode)
 				ModeResult.m_Status = EQmAxiomScoreStatus::HTTP_ERROR;
-			ModeResult.m_ErrorDetail = pRequest->ErrorDetail();
+			SetErrorDetail(ModeResult.m_ErrorDetail, pRequest->ErrorDetail());
 			RecordFailure(Entry.m_aModeFailureCount[Index]);
 			Entry.m_aLastModeFailureTick[Index] = Now;
 			continue;
@@ -1024,7 +1113,7 @@ void CQmAxiomScores::ProcessModeRequests()
 		{
 			if(ParseResult == EQmAxiomParseResult::SUCCESS && !HadVisibleMode)
 				ModeResult.m_Status = EQmAxiomScoreStatus::INVALID_RESPONSE;
-			ModeResult.m_ErrorDetail = ParseResult == EQmAxiomParseResult::SUCCESS ? "player name mismatch" : QmAxiomParseResultLabel(ParseResult);
+			SetErrorDetail(ModeResult.m_ErrorDetail, ParseResult == EQmAxiomParseResult::SUCCESS ? "player name mismatch" : QmAxiomParseResultLabel(ParseResult));
 			RecordFailure(Entry.m_aModeFailureCount[Index]);
 			Entry.m_aLastModeFailureTick[Index] = Now;
 			continue;
@@ -1182,7 +1271,8 @@ void CQmAxiomScores::FinishActiveQueryIfIdle()
 	m_ActivePlayerName.clear();
 }
 
-void CQmAxiomScores::EnsureQueried(const char *pPlayerName)
+void CQmAxiomScores::EnsureQueried(const char *pPlayerName) noexcept
+try
 {
 	if(!pPlayerName || pPlayerName[0] == '\0' || static_cast<size_t>(str_length(pPlayerName)) > AXIOM_MAX_QUERY_NAME_BYTES || !str_utf8_check(pPlayerName))
 		return;
@@ -1259,6 +1349,11 @@ void CQmAxiomScores::EnsureQueried(const char *pPlayerName)
 	}
 	if(NeedDdStats)
 		StartDdStatsRequest(pPlayerName, Entry);
+	FinishActiveQueryIfIdle();
+}
+catch(...)
+{
+	// 查表/新键或缓存分配失败尚未启动传输，后续调用可以重新准备。
 	FinishActiveQueryIfIdle();
 }
 

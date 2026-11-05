@@ -120,7 +120,7 @@ namespace
 		int64_t m_Now = time_freq();
 
 	protected:
-		int64_t CurrentTick() const override { return m_Now; }
+		int64_t CurrentTick() const noexcept override { return m_Now; }
 		bool SubmitDdStatsParseJob(const std::shared_ptr<CQmAxiomDdStatsParseJob> &pJob) override
 		{
 			m_vParseJobs.push_back(pJob);

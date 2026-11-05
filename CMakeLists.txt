@@ -5354,6 +5354,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_mod_weapon_text_test.cpp
     src/test/unit/qmclient/client/qm_axiom_scores_test.cpp
     src/test/integration/qmclient/client/qm_axiom_parse_dispatch_test.cpp
+    src/test/integration/qmclient/client/qm_axiom_request_lifecycle_test.cpp
     src/test/integration/qmclient/client/qm_axiom_quad_collision_test.cpp
     src/test/contract/qmclient/client/qm_axiom_scores_contract_test.cpp
     src/test/unit/qmclient/client/qm_chat_emoji_test.cpp
