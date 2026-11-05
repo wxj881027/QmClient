@@ -5183,7 +5183,8 @@ void CClient::Run()
 				if(VideoOffscreenThisFrame && IVideo::Current() != nullptr)
 				{
 					CImageInfo FrameImage;
-					Graphics()->EndVideoFrame(FrameImage);
+					if(!Graphics()->EndVideoFrame(FrameImage))
+						IVideo::Current()->FailCapture();
 					if(FrameImage.m_pData != nullptr)
 						IVideo::Current()->SubmitOffscreenFrame(std::move(FrameImage));
 					else

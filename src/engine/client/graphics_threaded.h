@@ -14,6 +14,7 @@
 #include <engine/client/render_target_readback_queue.h>
 #include <engine/client/rounded_rect_directions.h>
 #include <engine/client/texture_slot_pool.h>
+#include <engine/client/video_frame_readbacks.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 
@@ -1163,8 +1164,7 @@ class CGraphics_Threaded : public IEngineGraphics
 	// 稳态一笔，逐帧整体等待后结算。录制收尾由 FlushVideoFrameReadbacks 排空全部在途。
 	CRenderTargetHandle m_VideoFrameTarget;
 	bool m_VideoFrameActive = false;
-	CRenderTargetReadbackHandle m_aVideoFramePendingReadbacks[2];
-	int m_VideoFramePendingReadbackCount = 0;
+	CVideoFrameReadbacks m_VideoFrameReadbacks;
 	bool m_ReadbackCompletionSignal = false;
 	int m_VideoFrameWidth = 0;
 	int m_VideoFrameHeight = 0;
@@ -1303,7 +1303,7 @@ class CGraphics_Threaded : public IEngineGraphics
 	bool BeginOffscreenTileFrame(int TileWidth, int TileHeight, int LogicalWidth, int LogicalHeight, int TileOriginX, int TileOriginY) override;
 	bool EndOffscreenFrame(CImageInfo &Image) override;
 	bool BeginVideoFrame(int Width, int Height, int SampleCount) override;
-	void EndVideoFrame(CImageInfo &Image) override;
+	bool EndVideoFrame(CImageInfo &Image) override;
 	int FlushVideoFrameReadbacks(CImageInfo *pOutImages, int MaxImages) override;
 	void StopVideoFrame() override;
 	bool FlushPendingRenderTargetReadback();

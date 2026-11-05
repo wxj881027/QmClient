@@ -1078,12 +1078,15 @@ public:
 	// 宽高比回绘到窗口（导出期间预览不冻结）。读回是 PBO 异步的：这里排队本帧 DMA；
 	// 有完成信号的后端维持两笔在途并返回「上上帧」的像素（主线程与渲染线程按帧重叠），
 	// 其余后端逐帧等待并返回「上一帧」。在途帧由 FlushVideoFrameReadbacks 收尾。
-	virtual void EndVideoFrame(CImageInfo &Image)
+	// true 且图像为空表示正常预热；false 表示本帧申请或较早帧读回失败。
+	virtual bool EndVideoFrame(CImageInfo &Image)
 	{
 		(void)Image;
+		return false;
 	}
 	// 结算离屏视频的全部在途读回（录制收尾时调用）：按序把成功帧写入 pOutImages
-	// （最多 MaxImages 帧），返回写入数；没有在途请求返回 0。
+	// （最多 MaxImages 帧），返回写入数；没有在途请求返回 0。失败返回 -1，
+	// 调用方仍需释放输出数组中已转移的图像。
 	virtual int FlushVideoFrameReadbacks(CImageInfo *pOutImages, int MaxImages)
 	{
 		(void)pOutImages;

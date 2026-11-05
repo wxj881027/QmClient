@@ -1394,10 +1394,10 @@ bool CGraphics_Threaded::BeginVideoFrame(int Width, int Height, int SampleCount)
 	return true;
 }
 
-void CGraphics_Threaded::EndVideoFrame(CImageInfo &Image)
+bool CGraphics_Threaded::EndVideoFrame(CImageInfo &Image)
 {
 	if(!m_VideoFrameTarget.IsValid() || !m_VideoFrameActive)
-		return;
+		return false;
 	m_VideoFrameActive = false;
 	// 先结束渲染目标（后端在这里 resolve 多采样并恢复视口）：读回接口要求当前没有活动目标。
 	EndRenderTarget();
@@ -1428,64 +1428,17 @@ void CGraphics_Threaded::EndVideoFrame(CImageInfo &Image)
 	{
 		log_error("graphics", "video frame readback could not be started (%dx%d)", m_VideoFrameWidth, m_VideoFrameHeight);
 	}
-	if(m_ReadbackCompletionSignal)
-	{
-		if(m_VideoFramePendingReadbackCount == 2)
-		{
-			CRenderTargetReadbackHandle &Oldest = m_aVideoFramePendingReadbacks[0];
-			m_RenderTargetReadbacks.ResolveBlocking(Oldest.Id(), Oldest.Generation(), Image);
-			m_aVideoFramePendingReadbacks[0] = m_aVideoFramePendingReadbacks[1];
-			m_aVideoFramePendingReadbacks[1] = Readback;
-		}
-		else
-		{
-			m_aVideoFramePendingReadbacks[m_VideoFramePendingReadbackCount++] = Readback;
-		}
-	}
-	else
-	{
-		// 无完成信号：唯一可靠的定序是整体等待；稳态在途一笔（上一帧）。
-		WaitForIdle();
-		for(int i = 0; i < m_VideoFramePendingReadbackCount; ++i)
-		{
-			CRenderTargetReadbackHandle &Pending = m_aVideoFramePendingReadbacks[i];
-			if(i == 0)
-				m_RenderTargetReadbacks.ResolveAfterIdle(Pending.Id(), Pending.Generation(), Image);
-			else
-			{
-				// 防御：正常不会走到第二笔，异常序列下丢弃多余像素。
-				CImageInfo Discard;
-				m_RenderTargetReadbacks.ResolveAfterIdle(Pending.Id(), Pending.Generation(), Discard);
-				Discard.Free();
-			}
-			Pending.Invalidate();
-		}
-		m_VideoFramePendingReadbackCount = 0;
-		m_aVideoFramePendingReadbacks[m_VideoFramePendingReadbackCount++] = Readback;
-	}
+	return m_VideoFrameReadbacks.Enqueue(m_RenderTargetReadbacks, Readback.Id(), Readback.Generation(),
+		m_ReadbackCompletionSignal, Image, [this] { WaitForIdle(); });
 }
 
 int CGraphics_Threaded::FlushVideoFrameReadbacks(CImageInfo *pOutImages, int MaxImages)
 {
-	if(m_VideoFramePendingReadbackCount == 0)
-		return 0;
-	// 最后一笔 DMA 仍在途：FLUSH 命令让渲染线程立即结算它并点亮完成信号；
-	// 随后的整体等待对无信号后端也是定序前提（其读回在命令内同步完成）。
-	FlushPendingRenderTargetReadback();
-	WaitForIdle();
-	int Written = 0;
-	for(int i = 0; i < m_VideoFramePendingReadbackCount && Written < MaxImages; ++i)
-	{
-		CRenderTargetReadbackHandle &Pending = m_aVideoFramePendingReadbacks[i];
-		const bool Resolved = m_ReadbackCompletionSignal ?
-					      m_RenderTargetReadbacks.ResolveBlocking(Pending.Id(), Pending.Generation(), pOutImages[Written]) :
-					      m_RenderTargetReadbacks.ResolveAfterIdle(Pending.Id(), Pending.Generation(), pOutImages[Written]);
-		if(Resolved)
-			++Written;
-		Pending.Invalidate();
-	}
-	m_VideoFramePendingReadbackCount = 0;
-	return Written;
+	return m_VideoFrameReadbacks.Flush(m_RenderTargetReadbacks, m_ReadbackCompletionSignal, pOutImages, MaxImages, [this] {
+		// 最后一笔 DMA 需要显式结算；无信号后端也要先等渲染线程空闲。
+		FlushPendingRenderTargetReadback();
+		WaitForIdle();
+	});
 }
 
 void CGraphics_Threaded::StopVideoFrame()
@@ -1493,7 +1446,7 @@ void CGraphics_Threaded::StopVideoFrame()
 	if(m_VideoFrameActive)
 		SetRenderScreenSize(0, 0);
 	m_VideoFrameActive = false;
-	if(m_VideoFramePendingReadbackCount > 0)
+	if(!m_VideoFrameReadbacks.Empty())
 	{
 		// 正常收尾在 CVideo::Stop 里经 FlushVideoFrameReadbacks 结算过；走到这里说明
 		// 录制以异常顺序结束——补一次结算并丢弃像素，不能带着在途请求销毁目标。
@@ -4227,9 +4180,7 @@ int CGraphics_Threaded::Init()
 	// 否则重建后第一帧会拿到悬挂句柄（后端槽位已全部回收）。
 	m_VideoFrameTarget = CRenderTargetHandle();
 	m_VideoFrameActive = false;
-	for(CRenderTargetReadbackHandle &Pending : m_aVideoFramePendingReadbacks)
-		Pending.Invalidate();
-	m_VideoFramePendingReadbackCount = 0;
+	m_VideoFrameReadbacks.Reset();
 	m_VideoFrameWidth = 0;
 	m_VideoFrameHeight = 0;
 	m_VideoFrameSampleCount = 1;

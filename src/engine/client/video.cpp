@@ -359,7 +359,12 @@ void CVideo::Stop()
 	{
 		CImageInfo aFinalFrames[2];
 		const int FinalCount = m_pGraphics->FlushVideoFrameReadbacks(aFinalFrames, 2);
-		for(int i = 0; i < FinalCount; ++i)
+		if(FinalCount < 0)
+		{
+			log_error("videorecorder", "Could not complete offscreen video frame readbacks");
+			FailCapture();
+		}
+		for(int i = 0; i < 2; ++i)
 		{
 			if(aFinalFrames[i].m_pData != nullptr && IsRecording())
 				SubmitOffscreenFrame(std::move(aFinalFrames[i]));
@@ -383,13 +388,15 @@ void CVideo::Stop()
 			pThread->join();
 	m_vpConvertThreads.clear();
 
+	// 主线程已停止接收音频帧；先让在途帧沿原父子顺序写完。
+	// 停止标志会解除父帧等待，提前置位可能把后面的 PTS 先提交给编码器。
+	while(m_ProcessingAudioFrame > 0)
+		std::this_thread::sleep_for(10us);
+
 	StopVideoRecorderThreads(m_vpAudioThreads, [](CAudioRecorderThread &Worker) {
 		std::unique_lock<std::mutex> Lock(Worker.m_AudioFillMutex);
 		Worker.m_AudioFillCond.notify_all();
 	});
-
-	while(m_ProcessingAudioFrame > 0)
-		std::this_thread::sleep_for(10us);
 
 	m_Recording = false;
 
