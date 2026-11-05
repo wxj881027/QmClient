@@ -3,6 +3,8 @@
 #include <engine/graphics.h>
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/UiTokens.h>
+
 namespace qm_chat_bubble
 {
 	void Render(IGraphics *pGraphics, const SLayout &Layout, const SPalette &Colors)
@@ -75,7 +77,7 @@ namespace qm_chat_bubble
 		const unsigned PreviousFlags = pTextRender->GetRenderFlags();
 		const ColorRGBA PreviousColor = pTextRender->GetTextColor();
 		pTextRender->SetRenderFlags(PreviousFlags | TEXT_RENDER_FLAG_ONE_TIME_USE);
-		pTextRender->TextColor(ColorRGBA(1, 1, 1, 1));
+		pTextRender->TextColor(ui_token::color::NEUTRAL_WHITE);
 		STextContainerIndex Container;
 		// TextEx 会在最终绘制时使用默认黑描边；气泡显式提交自己的文字与描边颜色。
 		if(pTextRender->CreateTextContainer(Container, &Cursor, pText))

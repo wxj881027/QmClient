@@ -339,12 +339,11 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelCol, &ControlCol);
 			DoQmSettingsLabel("qmclient-voice-room-password", &LabelCol, Localize("Room password"), BodySize);
 			static CLineInput s_VoiceToken(g_Config.m_QmVoiceToken, sizeof(g_Config.m_QmVoiceToken));
-			if(!PrewarmOnly && !Ui()->RenderOnly())
-			{
-				s_VoiceToken.SetEmptyText(Localize("Leave empty to join public room"));
-				s_VoiceToken.SetHidden(true);
-			}
-			ui_widget::InputField(QmClientVoiceTextInputCtx, &s_VoiceToken, ControlCol, Localize("Leave empty to join public room"), BodySize);
+			static ui_widget::SPasswordFieldState s_VoiceTokenState;
+			ui_widget::SPasswordFieldOptions VoiceTokenOptions;
+			VoiceTokenOptions.m_pPlaceholder = Localize("Leave empty to join public room");
+			VoiceTokenOptions.m_FontSize = BodySize;
+			ui_widget::PasswordField(QmClientVoiceTextInputCtx, &s_VoiceToken, ControlCol, &s_VoiceTokenState, VoiceTokenOptions);
 		}
 		Flow.Space(LineSpacing);
 

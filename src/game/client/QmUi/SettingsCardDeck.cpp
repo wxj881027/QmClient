@@ -7,6 +7,7 @@
 #include "SettingsCardInfo.h"
 #include "SettingsCardWidth.h"
 #include "SettingsCardWidthState.h"
+#include "SettingsSearchReveal.h"
 #include "UiContext.h"
 
 #include <base/system.h>
@@ -830,7 +831,9 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			FSettingsCardRenderMeasured ContentRender = Card.m_pDefinition->m_RenderMeasured;
 			if(Card.m_pContentLayout && Card.m_pDefinition->m_ContentLayoutDraw)
 			{
-				ContentRender = [pLayout = Card.m_pContentLayout, Draw = Card.m_pDefinition->m_ContentLayoutDraw, pUi = Ctx.m_pUi](CUIRect &Content) {
+				const bool RevealInteractive = Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly() && !Ctx.m_pUi->MeasurementOnly();
+				ContentRender = [pLayout = Card.m_pContentLayout, Draw = Card.m_pDefinition->m_ContentLayoutDraw, pUi = Ctx.m_pUi, pScrollRegion, RevealInteractive, pRevealStableId = Card.m_pDefinition->m_Spec.m_pStableId](CUIRect &Content) {
+					const qm_settings_reveal::CCardScope Reveal(pRevealStableId, pScrollRegion, RevealInteractive);
 					qm_settings_content::RenderLayoutContent(*pLayout, Content, pUi, Draw);
 				};
 			}

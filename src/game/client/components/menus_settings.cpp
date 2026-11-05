@@ -782,7 +782,7 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 		CUIRect ItemRect;
 		Content.HSplitTop(Metrics.m_ListRowHeight, &ItemRect, &Content);
 		const bool Selected = s_SelectedLanguage == (int)i;
-		const bool Visible = gs_LanguageScrollRegion.AddRect(ItemRect, gs_LanguageScrollToSelected && Selected);
+		const bool Visible = gs_LanguageScrollRegion.AddRect(ItemRect, gs_LanguageScrollToSelected && Selected, Selected);
 		if(!Visible)
 			continue;
 		++VisibleLanguages;
@@ -884,6 +884,9 @@ void CMenus::RenderSettings(CUIRect MainView)
 	}
 	if(g_Config.m_UiSettingsPage < 0 || g_Config.m_UiSettingsPage >= SETTINGS_LENGTH)
 		g_Config.m_UiSettingsPage = SETTINGS_GENERAL;
+	// 手机端不呈现的页签（键鼠绑键、资源包等）也不能成为落地页：旧配置或搜索跳转会回落到通用页。
+	if(SettingsPageHiddenForMobile(g_Config.m_UiSettingsPage, SettingsMobilePlatform()))
+		g_Config.m_UiSettingsPage = SETTINGS_GENERAL;
 	if(g_Config.m_UiSettingsPage == SETTINGS_CONFIGS)
 	{
 		g_Config.m_UiSettingsPage = SETTINGS_QMCLIENT;
@@ -970,13 +973,25 @@ void CMenus::RenderSettings(CUIRect MainView)
 		const ColorRGBA SettingsNavigationHover = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.20f);
 		std::array<CUIRect, SETTINGS_LENGTH> aSlots;
 		std::array<int, SETTINGS_LENGTH> aPages;
+		// 手机端虚拟高度更小（UI 缩放更大），固定的页签高度会把右侧目录撑出面板。
+		// 先算出可见页签需要的总高度，超出可用高度时按比例收缩行高与间距。
+		int VisibleTabCount = 0;
+		for(int i : s_aSettingsTabOrder)
+		{
+			if(SettingsPageVisibleInRightTabBar(i))
+				++VisibleTabCount;
+		}
+		const float TabSlotNeeded = VisibleTabCount * (ui_token::settings::TAB_HEIGHT + ui_token::settings::TAB_GAP);
+		const float TabSlotFit = (TabSlotNeeded > TabBar.h && TabSlotNeeded > 0.0f) ? TabBar.h / TabSlotNeeded : 1.0f;
+		const float TabSlotHeight = ui_token::settings::TAB_HEIGHT * TabSlotFit;
+		const float TabSlotGap = ui_token::settings::TAB_GAP * TabSlotFit;
 		int Count = 0;
 		for(int i : s_aSettingsTabOrder)
 		{
 			if(!SettingsPageVisibleInRightTabBar(i))
 				continue;
-			TabBar.HSplitTop(ui_token::settings::TAB_GAP, nullptr, &TabBar);
-			TabBar.HSplitTop(ui_token::settings::TAB_HEIGHT, &aSlots[Count], &TabBar);
+			TabBar.HSplitTop(TabSlotGap, nullptr, &TabBar);
+			TabBar.HSplitTop(TabSlotHeight, &aSlots[Count], &TabBar);
 			aPages[Count++] = i;
 		}
 		const int Pressed = ui_widget::CapsuleTabBarPressedIndex(TabBarUiContext(), aSlots.data(), Count, 0.0f);

@@ -521,7 +521,9 @@ void CEmoticon::OnRender()
 		m_SelectedEyeEmote = -1;
 	}
 
-	RenderTools()->RenderCursor(ScreenCenter + m_SelectorMouse * PresentationScale, 24.0f * PresentationScale, PresentationAlpha);
+	// 手机是手指直接点，不画鼠标箭头。
+	if(!QmUiMobilePlatform())
+		RenderTools()->RenderCursor(ScreenCenter + m_SelectorMouse * PresentationScale, 24.0f * PresentationScale, PresentationAlpha);
 }
 
 void CEmoticon::RenderProjectiles()

@@ -776,22 +776,17 @@ private:
 	}
 
 	// MyMemory 不支持源语言自动检测：优先用用户显式配置的来源语言，
-	// 否则按文字系统猜测（拉丁字母默认按英文处理）
-	const char *ResolveSource(const char *pSource, const char *pText) const
+	// 否则按文字系统占比猜测。两端语言相同时服务只回提示文案，因此猜到的语言
+	// 与目标相同时改选文本里的另一门语言，只有目标语言一种字形时返回 nullptr。
+	const char *ResolveSource(const char *pSource, const char *pText, const char *pTarget) const
 	{
 		if(HasExplicitTranslateSource(pSource))
-			return EncodeLangCode(NormalizeTranslateSource(pSource));
+		{
+			const char *pExplicit = EncodeLangCode(NormalizeTranslateSource(pSource));
+			return str_comp_nocase(pExplicit, EncodeTarget(pTarget)) == 0 ? nullptr : pExplicit;
+		}
 
-		const SLocalLanguageStats Stats = AnalyzeLocalLanguageStats(pText);
-		if(Stats.m_Kana > 0)
-			return "ja";
-		if(Stats.m_Hangul > 0)
-			return "ko";
-		if(Stats.m_Cyrillic > 0)
-			return "ru";
-		if(Stats.m_Han > 0)
-			return "zh-CN";
-		return "en";
+		return qm_translate::SelectExplicitSourceLanguage(AnalyzeLocalLanguageStats(pText), EncodeTarget(pTarget));
 	}
 
 	bool ParseResponseJson(const json_value *pObj, CTranslateResponse &Out)
@@ -811,7 +806,7 @@ private:
 		const json_value *pStatus = TranslateJsonObjectGet(pObj, "responseStatus");
 		if(pStatus != &json_value_none)
 		{
-			if((pStatus->type != json_integer && pStatus->type != json_double) || !TryParseTranslateServiceCode(pStatus, Status))
+			if((pStatus->type != json_integer && pStatus->type != json_double && pStatus->type != json_string) || !TryParseTranslateServiceCode(pStatus, Status))
 			{
 				str_copy(Out.m_Text, "Invalid MyMemory response status");
 				return false;
@@ -842,6 +837,14 @@ private:
 			}
 			else
 				str_format(Out.m_Text, sizeof(Out.m_Text), "MyMemory: %.120s", pTranslatedText->u.string.ptr);
+			return false;
+		}
+
+		// 语言对相同时服务以 200 + 固定英文提示代替译文，按服务提示处理，不能直出到聊天
+		if(str_find_nocase(pTranslatedText->u.string.ptr, "SELECT TWO DISTINCT LANGUAGES"))
+		{
+			Out.m_Notice = ETranslateNotice::SERVICE_NOTICE;
+			str_copy(Out.m_Text, "MyMemory rejected the language pair instead of translating");
 			return false;
 		}
 
@@ -899,7 +902,15 @@ public:
 		}
 		const char *aQuery = m_QueryText.c_str();
 
-		const std::string Url = "https://api.mymemory.translated.net/get?q=" + EncodeTranslateUrl(aQuery) + "&langpair=" + EncodeTranslateUrl(ResolveSource(pSource, pText)) + "%7C" + EncodeTranslateUrl(EncodeTarget(pTarget));
+		// 只有目标语言一种字形时不再发送：相同语言对只会换回服务的提示文案。
+		const char *pResolvedSource = ResolveSource(pSource, pText, pTarget);
+		if(pResolvedSource == nullptr)
+		{
+			SetInitError("Input is already in the target language", ETranslateNotice::ALREADY_TARGET_LANGUAGE);
+			return;
+		}
+
+		const std::string Url = "https://api.mymemory.translated.net/get?q=" + EncodeTranslateUrl(aQuery) + "&langpair=" + EncodeTranslateUrl(pResolvedSource) + "%7C" + EncodeTranslateUrl(EncodeTarget(pTarget));
 		PrepareHttpRequest(Url.c_str());
 		if(m_pHttpRequest)
 			Http.Run(m_pHttpRequest);
@@ -1595,6 +1606,8 @@ const char *TranslateNoticeSource(ETranslateNotice Notice)
 		return Localizable("Text is too long for the selected translation service.");
 	case ETranslateNotice::MODEL_NOT_FOUND:
 		return Localizable("Translation model was not found. Check the model name.");
+	case ETranslateNotice::ALREADY_TARGET_LANGUAGE:
+		return Localizable("This text is already in the target language.");
 	case ETranslateNotice::NONE:
 		return nullptr;
 	}

@@ -15,9 +15,12 @@
 #include <engine/shared/qm_removed_config.h>
 #include <engine/storage.h>
 
+#include <cerrno>
+#include <chrono>
 #include <cstdlib>
 #include <memory>
 #include <string_view>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 
@@ -38,6 +41,28 @@ namespace
 	// 不再需要额外的迁移标记文件。
 	constexpr const char *QM_CONFIG_MAIN_PATH = "qmclient/settings.cfg";
 
+#if !defined(CONF_FAMILY_WINDOWS)
+	// Android 的模拟存储（/sdcard，含应用外部 files 目录）不支持 flock，调用返回 ENOSYS；
+	// 同一路径上 POSIX 记录锁可用，所以 flock 不可用时退回 fcntl，语义同样是排他锁。
+	// 只对"不支持"错误退回：真被别的写入者持有时仍按失败处理，不绕过互斥。
+	bool LockConfigFileExclusive(int File)
+	{
+		if(flock(File, LOCK_EX | LOCK_NB) == 0)
+			return true;
+		const int Error = errno;
+		if(Error != ENOSYS && Error != ENOTSUP
+#if defined(EOPNOTSUPP) && EOPNOTSUPP != ENOTSUP
+			&& Error != EOPNOTSUPP
+#endif
+		)
+			return false;
+		struct flock Lock = {};
+		Lock.l_type = F_WRLCK;
+		Lock.l_whence = SEEK_SET;
+		return fcntl(File, F_SETLK, &Lock) == 0;
+	}
+#endif
+
 	// 锁文件长期保留，退出只释放句柄，避免删除并重建锁文件造成两个写入者。
 	class CConfigSaveLock
 	{
@@ -47,26 +72,58 @@ namespace
 		int m_File = -1;
 #endif
 
-	public:
-		explicit CConfigSaveLock(const char *pPath)
+		// 同一线程的重入（保存回调里再保存）不能等自己放锁，必须立即失败。
+		static bool &HeldByCallingThread()
+		{
+			static thread_local bool s_Held = false;
+			return s_Held;
+		}
+
+		bool TryAcquire(const char *pPath)
 		{
 #if defined(CONF_FAMILY_WINDOWS)
 			const std::wstring Path = windows_utf8_to_wide(pPath);
 			m_File = CreateFileW(Path.c_str(), GENERIC_WRITE, 0, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+			return m_File != INVALID_HANDLE_VALUE;
 #else
 			m_File = open(pPath, O_CREAT | O_RDWR, 0600);
-			if(m_File >= 0 && flock(m_File, LOCK_EX | LOCK_NB) != 0)
-			{
-				close(m_File);
-				m_File = -1;
-			}
+			if(m_File < 0)
+				return false;
+			if(LockConfigFileExclusive(m_File))
+				return true;
+			close(m_File);
+			m_File = -1;
+			return false;
 #endif
+		}
+
+	public:
+		explicit CConfigSaveLock(const char *pPath)
+		{
+			if(HeldByCallingThread())
+				return;
+			// 多开时另一个实例的一次保存通常只需几十毫秒：短暂等待让它们依次落盘，
+			// 而不是把正常的并发退出变成一次「保存设置错误」。
+			constexpr int WAIT_STEP_MS = 10;
+			constexpr int WAIT_TIMEOUT_MS = 1000;
+			for(int Waited = 0; Waited <= WAIT_TIMEOUT_MS; Waited += WAIT_STEP_MS)
+			{
+				if(TryAcquire(pPath))
+				{
+					HeldByCallingThread() = true;
+					return;
+				}
+				if(Waited == WAIT_TIMEOUT_MS)
+					break;
+				std::this_thread::sleep_for(std::chrono::milliseconds(WAIT_STEP_MS));
+			}
 		}
 
 		~CConfigSaveLock()
 		{
 			if(!IsLocked())
 				return;
+			HeldByCallingThread() = false;
 #if defined(CONF_FAMILY_WINDOWS)
 			CloseHandle(m_File);
 #else
@@ -561,8 +618,9 @@ void CConfigManager::Init()
 	m_pConsole = Kernel()->RequestInterface<IConsole>();
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
 	// 在加载前记录可读性，避免加载失败后用默认设置覆盖损坏的配置。
+	// 先重试一次瞬时的占用，避免把另一个实例的替换窗口误判成永久不可读。
 	for(ConfigDomain Domain = ConfigDomain::START; Domain < ConfigDomain::NUM; ++Domain)
-		ReadConfigFileState(s_aConfigDomains[Domain].m_aConfigPath, m_aSaveState[Domain]);
+		ReadConfigFileStateWithRetry(s_aConfigDomains[Domain].m_aConfigPath, m_aSaveState[Domain]);
 
 	ConfigDomain ConfigDomain;
 	const auto &&AddVariable = [this, &ConfigDomain](SConfigVariable *pVariable) {
@@ -758,6 +816,22 @@ bool CConfigManager::ReadConfigFileState(const char *pPath, SConfigFileState &St
 	return State.m_Readable;
 }
 
+bool CConfigManager::ReadConfigFileStateWithRetry(const char *pPath, SConfigFileState &State) const
+{
+	// 另一个实例替换配置文件的瞬间会让目标短暂不可读；只对读取失败做短促重试，
+	// 内容和权限问题重试后仍然失败，原有的保护策略不变。
+	constexpr int ATTEMPTS = 5;
+	constexpr int RETRY_STEP_MS = 20;
+	for(int Attempt = 0; Attempt < ATTEMPTS; ++Attempt)
+	{
+		if(ReadConfigFileState(pPath, State))
+			return true;
+		if(Attempt + 1 < ATTEMPTS)
+			std::this_thread::sleep_for(std::chrono::milliseconds(RETRY_STEP_MS));
+	}
+	return false;
+}
+
 bool CConfigManager::CheckConfigFiles(bool RefreshBaseline)
 {
 	SConfigFileState aCurrent[ConfigDomain::NUM];
@@ -765,10 +839,11 @@ bool CConfigManager::CheckConfigFiles(bool RefreshBaseline)
 	{
 		SConfigFileState &Current = aCurrent[Domain];
 		const SConfigFileState &Expected = m_aSaveState[Domain];
-		if(!Expected.m_Readable || !ReadConfigFileState(s_aConfigDomains[Domain].m_aConfigPath, Current) ||
+		if(!Expected.m_Readable || !ReadConfigFileStateWithRetry(s_aConfigDomains[Domain].m_aConfigPath, Current) ||
 			(Expected.m_Exists && !Current.m_Exists) ||
 			(!RefreshBaseline && (Current.m_Exists != Expected.m_Exists || Current.m_Content != Expected.m_Content)))
 		{
+			SetSaveError("read", s_aConfigDomains[Domain].m_aConfigPath);
 			log_error("config", "ERROR: %s is unreadable or changed since loading/last saving; refusing to overwrite it", s_aConfigDomains[Domain].m_aConfigPath);
 			return false;
 		}
@@ -779,16 +854,44 @@ bool CConfigManager::CheckConfigFiles(bool RefreshBaseline)
 	return true;
 }
 
+void CConfigManager::SetSaveError(const char *pStage, const char *pPath)
+{
+	m_LastSaveError = "stage=";
+	m_LastSaveError += pStage;
+	if(pPath != nullptr && pPath[0] != '\0')
+	{
+		m_LastSaveError += " path=";
+		m_LastSaveError += pPath;
+	}
+}
+
+const char *CConfigManager::LastSaveError() const
+{
+	return m_LastSaveError.c_str();
+}
+
 bool CConfigManager::Save(bool Force)
 try
 {
-	if(m_SaveInProgress || !m_pStorage || !m_Initialized || m_UnknownCommandsIncomplete)
+	if(m_SaveInProgress)
 		return false;
+	m_LastSaveError.clear();
+	if(!m_pStorage)
+	{
+		SetSaveError("storage", nullptr);
+		return false;
+	}
+	if(!m_Initialized || m_UnknownCommandsIncomplete)
+	{
+		SetSaveError("incomplete", nullptr);
+		return false;
+	}
 	if(!Force && !g_Config.m_ClSaveSettings)
 		return true;
 	const CConfigSaveFlag SaveFlag(m_SaveInProgress);
 	if(!EnsureConfigPathFolder(m_pStorage, QM_CONFIG_MAIN_PATH))
 	{
+		SetSaveError("create_folder", QM_CONFIG_MAIN_PATH);
 		log_error("config", "ERROR: creating config folder for %s failed", QM_CONFIG_MAIN_PATH);
 		return false;
 	}
@@ -797,6 +900,7 @@ try
 	const CConfigSaveLock SaveLock(aLockPath);
 	if(!SaveLock.IsLocked())
 	{
+		SetSaveError("lock", aLockPath);
 		log_error("config", "ERROR: could not lock client configs for saving");
 		return false;
 	}
@@ -821,6 +925,7 @@ try
 		}
 		if(!EnsureConfigPathFolder(m_pStorage, s_aConfigDomains[ConfigDomain].m_aConfigPath))
 		{
+			SetSaveError("create_folder", s_aConfigDomains[ConfigDomain].m_aConfigPath);
 			log_error("config", "ERROR: creating config folder for %s failed", s_aConfigDomains[ConfigDomain].m_aConfigPath);
 			m_aConfigFile[ConfigDomain] = nullptr;
 			aFailedError[ConfigDomain] = m_aFailed[ConfigDomain] = true;
@@ -832,6 +937,7 @@ try
 
 		if(!m_aConfigFile[ConfigDomain])
 		{
+			SetSaveError("open_tmp", aaConfigFileTmp[ConfigDomain]);
 			log_error("config", "ERROR: opening %s failed", aaConfigFileTmp[ConfigDomain]);
 			aFailedError[ConfigDomain] = m_aFailed[ConfigDomain] = true;
 		}
@@ -878,21 +984,25 @@ try
 			continue;
 		if(m_aFailed[ConfigDomain] && !aFailedError[ConfigDomain])
 		{
+			SetSaveError("write", aaConfigFileTmp[ConfigDomain]);
 			log_error("config", "ERROR: writing to %s failed", aaConfigFileTmp[ConfigDomain]);
 			aFailedError[ConfigDomain] = true;
 		}
 		if(!m_aFailed[ConfigDomain] && io_sync(m_aConfigFile[ConfigDomain]) != 0)
 		{
+			SetSaveError("sync", aaConfigFileTmp[ConfigDomain]);
 			log_error("config", "ERROR: synchronizing %s failed", aaConfigFileTmp[ConfigDomain]);
 			aFailedError[ConfigDomain] = m_aFailed[ConfigDomain] = true;
 		}
 		if(io_close(std::exchange(m_aConfigFile[ConfigDomain], nullptr)) != 0)
 		{
+			SetSaveError("close", aaConfigFileTmp[ConfigDomain]);
 			log_error("config", "ERROR: closing %s failed", aaConfigFileTmp[ConfigDomain]);
 			aFailedError[ConfigDomain] = m_aFailed[ConfigDomain] = true;
 		}
 		if(!m_aFailed[ConfigDomain] && !ReadConfigFileState(aaConfigFileTmp[ConfigDomain], aWrittenState[ConfigDomain]))
 		{
+			SetSaveError("read_tmp", aaConfigFileTmp[ConfigDomain]);
 			log_error("config", "ERROR: reading completed temporary config %s failed", aaConfigFileTmp[ConfigDomain]);
 			aFailedError[ConfigDomain] = m_aFailed[ConfigDomain] = true;
 		}
@@ -917,6 +1027,7 @@ try
 		// 禁止底层删除旧目标再重试。替换失败保留完整临时文件供恢复，下次保存可重试。
 		if(!m_pStorage->RenameFile(aaConfigFileTmp[Domain], s_aConfigDomains[Domain].m_aConfigPath, IStorage::TYPE_SAVE, false))
 		{
+			SetSaveError("replace", s_aConfigDomains[Domain].m_aConfigPath);
 			log_error("config", "ERROR: replacing %s failed; completed config remains at %s", s_aConfigDomains[Domain].m_aConfigPath, aaConfigFileTmp[Domain]);
 			Failed = true;
 			continue;

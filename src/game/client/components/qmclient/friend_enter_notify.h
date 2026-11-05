@@ -3,7 +3,6 @@
 
 #include "friend_enter_tracker.h"
 
-#include <cstddef>
 #include <string>
 
 namespace qm_friend_notify
@@ -16,26 +15,24 @@ namespace qm_friend_notify
 			bool m_GreetEnabled = false;
 			bool m_GreetTextConfigured = false;
 			bool m_BroadcastEnabled = false;
-			bool m_IgnoreClan = false;
 		};
 
 	private:
 		CEnterTracker m_Tracker;
-		float m_NextCheck = 0.0f;
 		CGreetQueue m_Pending;
 
 	public:
 		void Reset() noexcept
 		{
 			m_Tracker.Reset();
-			m_NextCheck = 0.0f;
 			m_Pending.Reset();
 		}
+		void CancelPending() noexcept { m_Pending.Reset(); }
 
-		// 连接、好友身份或开关/分身变化时由调用方先 Reset；文本设置在消费时读取。
-		// 回调同步采集自有名单、准备文本或消费输出；返回值只表示新名单是否提交。
-		template<typename TCollect, typename TPrepareBroadcast, typename TShowBroadcast, typename TSendGreet>
-		bool Update(float Now, const CSettings &Settings, const TCollect &Collect, const TPrepareBroadcast &PrepareBroadcast, const TShowBroadcast &ShowBroadcast, const TSendGreet &SendGreet) noexcept
+		// 只由当前服务端提示推进状态；准备失败保留旧状态，不重新引入名单轮询。
+		// Parse 只操作局部跟踪器，完整准备通知与问候后才发布；返回值表示接纳了一次入服。
+		template<typename TParse, typename TPrepareBroadcast, typename TShowBroadcast>
+		bool OnMessage(const CSettings &Settings, const TParse &Parse, const TPrepareBroadcast &PrepareBroadcast, const TShowBroadcast &ShowBroadcast) noexcept
 		{
 			if(!Settings.m_GreetEnabled && !Settings.m_BroadcastEnabled)
 			{
@@ -43,47 +40,27 @@ namespace qm_friend_notify
 				return false;
 			}
 			if(!Settings.m_GreetEnabled || !Settings.m_GreetTextConfigured)
-				m_Pending.Reset();
-			if(Now < m_NextCheck)
-				return false;
-			m_NextCheck = Now + 0.2f;
+				CancelPending();
 			try
 			{
-				const auto vClients = Collect();
 				CEnterNotifier Candidate = *this;
-				const auto vNewFriends = Candidate.m_Tracker.Update(vClients, Now, Settings.m_IgnoreClan);
-				std::string NewNames;
-				if(!vNewFriends.empty())
+				const auto Message = Parse(Candidate.m_Tracker);
+				if(Message.m_Event == EPresenceEvent::LEAVE)
 				{
-					NewNames.reserve(64);
-					for(std::size_t Index = 0; Index < vNewFriends.size(); ++Index)
-					{
-						if(Index > 0)
-							NewNames.push_back(' ');
-						NewNames.append(vNewFriends[Index]);
-					}
+					Candidate.m_Pending.Remove(Message.m_Name);
+					m_Tracker.Swap(Candidate.m_Tracker);
+					m_Pending.Swap(Candidate.m_Pending);
+					return false;
 				}
+				if(Message.m_Event != EPresenceEvent::ENTER)
+					return false;
 				std::string BroadcastText;
-				if(!NewNames.empty())
-				{
-					if(Settings.m_BroadcastEnabled)
-						BroadcastText = PrepareBroadcast(NewNames);
-				}
-
+				if(Settings.m_BroadcastEnabled)
+					BroadcastText = PrepareBroadcast(Message.m_Name);
 				if(Settings.m_GreetEnabled && Settings.m_GreetTextConfigured)
-					Candidate.m_Pending.Update(vNewFriends, vClients);
+					Candidate.m_Pending.Add(Message.m_Name);
 				m_Tracker.Swap(Candidate.m_Tracker);
 				m_Pending.Swap(Candidate.m_Pending);
-				if(Settings.m_GreetEnabled && Settings.m_GreetTextConfigured)
-				{
-					try
-					{
-						m_Pending.TrySend(SendGreet);
-					}
-					catch(...)
-					{
-					}
-				}
 				if(!BroadcastText.empty())
 				{
 					try
@@ -92,9 +69,29 @@ namespace qm_friend_notify
 					}
 					catch(...)
 					{
+						// 显示失败不回退已接纳的消息，也不阻断已经准备好的待发问候。
 					}
 				}
 				return true;
+			}
+			catch(...)
+			{
+				return false;
+			}
+		}
+
+		// 沿原有聊天额度入口重试；发送前准备或回调失败不清空尚未确认的名字。
+		template<typename TSend>
+		bool TrySend(const CSettings &Settings, const TSend &Send) noexcept
+		{
+			if(!Settings.m_GreetEnabled || !Settings.m_GreetTextConfigured)
+			{
+				CancelPending();
+				return false;
+			}
+			try
+			{
+				return m_Pending.TrySend(Send);
 			}
 			catch(...)
 			{

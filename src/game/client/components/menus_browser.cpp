@@ -20,6 +20,8 @@
 #include <game/client/QmUi/BrowserTableLabel.h>
 #include <game/client/QmUi/QmColorGradient.h>
 #include <game/client/QmUi/QmDropdown.h>
+#include <game/client/QmUi/QmIconSwap.h>
+#include <game/client/QmUi/QmListEntryAnimation.h>
 #include <game/client/QmUi/QmNeonRainbow.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/UiButtons.h>
@@ -47,6 +49,7 @@
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
+#include <game/client/qm_icon_label.h>
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
 #include <game/client/ui_scrollregion.h>
@@ -59,7 +62,16 @@
 #include <cmath>
 #include <ctime>
 #include <limits>
+#include <map>
+#include <set>
 #include <unordered_map>
+
+namespace
+{
+	// 收藏切换时登记一次地址，供服务器列表的星标播一次进场动画。行渲染消费后立即移除，
+	// 因此表大小只与「正在进场的星标数」相关，不随浏览过的服务器数量增长。
+	std::set<std::string> gs_FavoriteStarGrowPending;
+}
 #include <vector>
 
 using namespace FontIcons;
@@ -1679,7 +1691,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.FindForServer(*pServer, MapCategoryHintFromServer(pServer));
 		const int Stars = pDifficulty != nullptr ? pDifficulty->m_Stars : -1;
 		const bool IsFavorite = GameClient()->m_TClient.IsFavoriteMap(pServer->m_aMap);
-		if(QmMapVotes::MatchesFilter(Stars, pServer->m_NumFilteredPlayers, g_Config.m_QmMapBrowserEmptyOnly != 0, g_Config.m_QmMapBrowserStarMask, g_Config.m_QmMapBrowserFavoriteOnly != 0, IsFavorite))
+		// 目录条目给出权威类别；没有目录收录时退回服务器名/社区类型里解析出的类别。
+		const char *pCategory = pDifficulty != nullptr ? pDifficulty->m_Category.c_str() : MapCategoryHintFromServer(pServer);
+		if(QmMapVotes::MatchesFilter(Stars, pCategory, pServer->m_NumFilteredPlayers, g_Config.m_QmMapBrowserEmptyOnly != 0, g_Config.m_QmMapBrowserStarMask, g_Config.m_QmMapBrowserCategoryMask, g_Config.m_QmMapBrowserFavoriteOnly != 0, IsFavorite))
 			vVisibleServerIndices.push_back(SortedIndex);
 	}
 	const int NumServers = (int)vVisibleServerIndices.size();
@@ -1922,9 +1936,70 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_FLAG_FAV)
 			{
+				// 进场表只在「刚点了收藏」时创建条目（由 gs_FavoriteStarGrowPending 登记），
+				// 落位后立即删除；因此表里只有正在进场的星标，不再有墓碑与无界增长。
+				static std::map<std::string, float, std::less<>> s_StarGrow;
 				if(pItem->m_Favorite != TRISTATE::NONE)
 				{
-					RenderBrowserIcons(*pUiElement->Rect(UI_ELEM_FAVORITE_ICON), &Button, ColorRGBA(1.0f, 0.85f, 0.3f, 1.0f), TextRender()->DefaultTextOutlineColor(), EQmIcon::STAR, FONT_ICON_STAR, TEXTALIGN_MC);
+					auto PendingIt = gs_FavoriteStarGrowPending.find(pItem->m_aAddress);
+					if(PendingIt != gs_FavoriteStarGrowPending.end())
+					{
+						s_StarGrow[pItem->m_aAddress] = 0.0f;
+						gs_FavoriteStarGrowPending.erase(PendingIt);
+					}
+					auto StarIt = s_StarGrow.find(pItem->m_aAddress);
+					if(StarIt == s_StarGrow.end())
+					{
+						// 没有进场请求（启动时就已收藏、或刚播完）：按完成态绘制。
+						RenderBrowserIcons(*pUiElement->Rect(UI_ELEM_FAVORITE_ICON), &Button, ColorRGBA(1.0f, 0.85f, 0.3f, 1.0f), TextRender()->DefaultTextOutlineColor(), EQmIcon::STAR, FONT_ICON_STAR, TEXTALIGN_MC);
+					}
+					else
+					{
+						if(StarIt->second < 1.0f && !Ui()->MeasurementOnly())
+						{
+							// 按真实帧间隔推进（每帧只采样一次时钟）；测量通道不推进，
+							// 否则同帧多次遍历会把 0.35s 的进场压缩掉。
+							static int64_t s_StarDtTick = 0;
+							static float s_StarDt = 1.0f / 60.0f;
+							const int64_t StarNowTick = time_get();
+							if(StarNowTick != s_StarDtTick)
+							{
+								s_StarDt = s_StarDtTick == 0 ? 1.0f / 60.0f : std::clamp((float)(StarNowTick - s_StarDtTick) / (float)maximum<int64_t>(1, time_freq()), 1.0f / 1000.0f, 0.1f);
+								s_StarDtTick = StarNowTick;
+							}
+							const float Step = g_Config.m_QmUiMotionLevel > 0 ? s_StarDt / 0.35f : 1.0f;
+							StarIt->second = std::min(1.0f, StarIt->second + Step);
+						}
+						const float StarGrow = std::clamp(StarIt->second, 0.0f, 1.0f);
+						if(StarGrow >= 1.0f)
+						{
+							// 落位后回到共享绘制路径，像素与静态状态完全一致，并清掉条目。
+							RenderBrowserIcons(*pUiElement->Rect(UI_ELEM_FAVORITE_ICON), &Button, ColorRGBA(1.0f, 0.85f, 0.3f, 1.0f), TextRender()->DefaultTextOutlineColor(), EQmIcon::STAR, FONT_ICON_STAR, TEXTALIGN_MC);
+							s_StarGrow.erase(StarIt);
+						}
+						else
+						{
+							// 生长曲线铺满整段时长：三次缓出 + 中段轻微鼓起，落位回到 1.0。
+							const float StarEaseOut = 1.0f - std::pow(1.0f - StarGrow, 3.0f);
+							const float StarBulge = 1.0f + 0.10f * std::sin(3.14159265f * StarGrow);
+							const float StarScale = (0.25f + 0.75f * StarEaseOut) * StarBulge;
+							const float StarAlpha = std::clamp(0.15f + 0.85f * StarGrow, 0.0f, 1.0f);
+							// 字形等比缩放：QmIconLabelRect 的边长由 Size 决定，字体度量跟着盒子走。
+							const float IconSize = std::clamp(14.0f * StarScale, 2.0f, 22.0f);
+							// 只改这一帧的文本色，退出时恢复进入前颜色，避免污染后续列。
+							const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
+							TextRender()->TextColor(ColorRGBA(1.0f, 0.85f, 0.3f, StarAlpha));
+							Ui()->DoLabel_QmIcon(&Button, EQmIcon::STAR, FONT_ICON_STAR, IconSize, TEXTALIGN_MC);
+							TextRender()->TextColor(PreviousTextColor);
+						}
+					}
+				}
+				else
+				{
+					// 取消收藏：丢弃未完成的进场条目。
+					auto StarIt = s_StarGrow.find(pItem->m_aAddress);
+					if(StarIt != s_StarGrow.end())
+						s_StarGrow.erase(StarIt);
 				}
 			}
 			else if(Id == COL_COMMUNITY)
@@ -2207,51 +2282,66 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 	if(Selector.w < 150.0f || Selector.h <= 0.0f)
 		return;
 
-	static ui_widget::SDiscreteSliderState s_MapFilterSliderState;
-	static int s_MapFilterSliderId;
-	static int s_MapFilterFavoriteId;
+	static ui_widget::SDiscreteSliderState s_SliderState;
+	static int s_SliderId;
+	static int s_EmptyToggleId;
+	static int s_FavoriteToggleId;
 	const IUiContext Context = SettingsUiContext("server_browser_map_filter");
 
-	int SliderLevel = QmMapVotes::MapBrowserFilterLevel(g_Config.m_QmMapBrowserEmptyOnly, g_Config.m_QmMapBrowserStarMask);
+	// 滑条档位直接读写类别掩码：0 不筛选，1-6 依次是两种模式通用的六个难度档位。
+	int SliderLevel = QmMapVotes::MapBrowserCategoryLevel(g_Config.m_QmMapBrowserCategoryMask);
 
 	const SQmBrowserMapFilterLayout Layout = QmBrowserMapFilterLayout(Selector, TextRender()->TextWidth(11.0f, Localize("Favorite maps")));
 	SLabelProperties HeadingProps;
 	HeadingProps.m_MaxWidth = Layout.m_Heading.w;
 	HeadingProps.m_EllipsisAtEnd = true;
 	Ui()->DoLabel(&Layout.m_Heading, Localize("Server filter"), 14.0f, TEXTALIGN_MC, HeadingProps);
-	const CUIRect CurrentLabel = Layout.m_CurrentLabel;
+	CUIRect CurrentLabel = Layout.m_CurrentLabel;
 	const CUIRect SliderRect = Layout.m_Slider;
 
-	const bool SliderChanged = ui_widget::DiscreteSlider(Context, &s_MapFilterSliderId, s_MapFilterSliderState, &SliderLevel, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_LAST_STAR, SliderRect);
+	const bool SliderChanged = ui_widget::DiscreteSlider(Context, &s_SliderId, s_SliderState, &SliderLevel, 0, 6, SliderRect);
 	if(SliderChanged)
 	{
-		QmMapVotes::ApplyMapBrowserFilterLevel(SliderLevel, g_Config.m_QmMapBrowserEmptyOnly, g_Config.m_QmMapBrowserStarMask);
+		g_Config.m_QmMapBrowserCategoryMask = QmMapVotes::MapBrowserCategoryMaskForLevel(SliderLevel);
 		Client()->ServerBrowserUpdate();
 	}
 
-	char aCurrentLabel[32];
+	// 左侧文本跟随滑块：显示当前档位名；多选或右侧面板勾了专属类别时显示「自定义」。
+	char aCurrentLabel[48];
 	const int DisplayLevel = SliderLevel;
-	if(DisplayLevel < 0)
-	{
-		// 只有无法用单一档位表达的配置才会走到这里（星级多选，或星级与空服叠加）。
+	if(DisplayLevel < 0 || DisplayLevel > 6)
 		str_copy(aCurrentLabel, Localize("Custom"));
-	}
-	else if(DisplayLevel == QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE)
+	else if(DisplayLevel == 0)
 		str_copy(aCurrentLabel, Localize("No filter"));
-	else if(DisplayLevel == QmMapVotes::MAP_BROWSER_FILTER_LEVEL_EMPTY)
-		str_format(aCurrentLabel, sizeof(aCurrentLabel), "0 %s", Localize("Players"));
 	else
-		str_format(aCurrentLabel, sizeof(aCurrentLabel), "%d★", QmMapVotes::MapBrowserFilterStars(DisplayLevel));
-	if(DisplayLevel >= 0)
-		TextRender()->TextColor(ui_widget::ResolveDiscreteSliderStyle(DisplayLevel, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_LAST_STAR).m_Color);
+		str_copy(aCurrentLabel, Localize(QmMapVotes::s_apMapBrowserCategoryKeys[DisplayLevel - 1]));
+	if(DisplayLevel >= 0 && DisplayLevel <= 6)
+		TextRender()->TextColor(ui_widget::ResolveDiscreteSliderStyle(DisplayLevel, 0, 6).m_Color);
 	SLabelProperties CurrentProps;
 	CurrentProps.m_MaxWidth = CurrentLabel.w;
 	CurrentProps.m_EllipsisAtEnd = true;
 	Ui()->DoLabel(&CurrentLabel, aCurrentLabel, 11.0f, TEXTALIGN_MR, CurrentProps);
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	GameClient()->m_Tooltips.DoToolTip(&s_SliderId, &SliderRect, Localize("Difficulty"));
 
-	// 收藏开关移到滑块下方，与滑块上下并列：左侧「收藏地图」文本说明 + 开关 + 星标，
-	// 整组在滑块列内水平居中；说明文字与上行档位文字同为 11px 右对齐，方向一致。
+	// 只看空服：与难度档位互相独立，两者可叠加。
+	bool EmptyOnly = g_Config.m_QmMapBrowserEmptyOnly != 0;
+	{
+		char aLabel[32];
+		str_format(aLabel, sizeof(aLabel), "0 %s", Localize("Players"));
+		SLabelProperties Props;
+		Props.m_MaxWidth = Layout.m_EmptyLabel.w;
+		Props.m_EllipsisAtEnd = true;
+		Ui()->DoLabel(&Layout.m_EmptyLabel, aLabel, 11.0f, TEXTALIGN_MR, Props);
+	}
+	if(ui_widget::Toggle(Context, &s_EmptyToggleId, &EmptyOnly, Layout.m_EmptyToggle))
+	{
+		g_Config.m_QmMapBrowserEmptyOnly = EmptyOnly ? 1 : 0;
+		Client()->ServerBrowserUpdate();
+	}
+	GameClient()->m_Tooltips.DoToolTip(&s_EmptyToggleId, &Layout.m_EmptyGroup, Localize("Filter empty servers in browser"));
+
+	// 收藏开关与开关左右并列：右侧「收藏地图」文本说明 + 开关 + 星标，整组右对齐。
 	bool FavoriteOnly = g_Config.m_QmMapBrowserFavoriteOnly != 0;
 	const CUIRect FavoriteToggle = Layout.m_FavoriteToggle;
 	CUIRect FavoriteIcon = Layout.m_FavoriteIcon;
@@ -2260,24 +2350,37 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 	FavoriteProps.m_MaxWidth = Layout.m_FavoriteLabel.w;
 	FavoriteProps.m_EllipsisAtEnd = true;
 	Ui()->DoLabel(&Layout.m_FavoriteLabel, Localize("Favorite maps"), 11.0f, TEXTALIGN_MR, FavoriteProps);
-	if(ui_widget::Toggle(Context, &s_MapFilterFavoriteId, &FavoriteOnly, FavoriteToggle))
+	if(ui_widget::Toggle(Context, &s_FavoriteToggleId, &FavoriteOnly, FavoriteToggle))
 	{
 		g_Config.m_QmMapBrowserFavoriteOnly = FavoriteOnly ? 1 : 0;
 		Client()->ServerBrowserUpdate();
 	}
 	FavoriteIcon.VMargin(std::min(1.0f, FavoriteIcon.w * 0.25f), &FavoriteIcon);
-	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-	TextRender()->TextColor(FavoriteOnly ? ColorRGBA(1.0f, 0.85f, 0.2f, 1.0f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.62f));
-	Ui()->DoLabel_QmIcon(&FavoriteIcon, EQmIcon::STAR, FONT_ICON_STAR, 13.0f, TEXTALIGN_MC);
-	TextRender()->TextColor(TextRender()->DefaultTextColor());
-	TextRender()->SetRenderFlags(0);
-	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-
-	char aTooltip[192];
-	str_format(aTooltip, sizeof(aTooltip), "%s → %s → %s", Localize("No filter"), Localize("Filter empty servers in browser"), Localize("Difficulty stars"));
-	GameClient()->m_Tooltips.DoToolTip(&s_MapFilterSliderId, &SliderRect, aTooltip);
-	GameClient()->m_Tooltips.DoToolTip(&s_MapFilterFavoriteId, &FavoriteGroup, Localize("Favorite maps"));
+	if(g_Config.m_QmUiFavoriteIconFilled != 0)
+	{
+		// 收藏点亮：开关拨动时描边 ↔ 实心形变（实心样式关着时两端同形，走下方原绘制）。
+		// 染色与静止态同源：DrawIconSwapBinding 内部走 ConfiguredQmUiIconColor 的收藏语义色。
+		IUiContext FavoriteSwapCtx = ui_widget::ControlContext(Ui());
+		ui_widget::SIconSwapBinding FavoriteSwap = ui_widget::ResolveIconSwapBinding(
+			FavoriteSwapCtx, EQmIconSwapPair::STAR_FAVORITE,
+			EQmIcon::STAR, FontIcons::FONT_ICON_STAR,
+			EQmIcon::STAR, FontIcons::FONT_ICON_STAR,
+			FavoriteOnly ? 1.0f : 0.0f, str_quickhash("map-filter-favorite-star"), &s_FavoriteToggleId, 0.26f, true);
+		ui_widget::DrawIconSwapBinding(FavoriteSwapCtx, FavoriteIcon, TextRender()->GetTextColor(), &FavoriteSwap);
+	}
+	else
+	{
+		// 与投票页的收藏开关同源：开启实心、关闭空心，字形由填充作用域决定。
+		const CQmFavoriteStarFillScope FavoriteStarFillScope(FavoriteOnly);
+		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+		TextRender()->TextColor(FavoriteOnly ? ColorRGBA(1.0f, 0.85f, 0.2f, 1.0f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.62f));
+		Ui()->DoLabel_QmIcon(&FavoriteIcon, EQmIcon::STAR, FONT_ICON_STAR, 13.0f, TEXTALIGN_MC);
+		TextRender()->TextColor(TextRender()->DefaultTextColor());
+		TextRender()->SetRenderFlags(0);
+		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	}
+	GameClient()->m_Tooltips.DoToolTip(&s_FavoriteToggleId, &FavoriteGroup, Localize("Favorite maps"));
 }
 
 static bool BrowserStatusHasNotice(IServerBrowser *pBrowser)
@@ -2524,6 +2627,9 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 	CUIRect Button, ResetButton;
 	View.HSplitBottom(RowHeight, &View, &ResetButton);
 	View.HSplitBottom(3.0f, &View, nullptr);
+	// 右内边距让给滚动条：滚动区域一直画到面板右缘，滚动条位置与好友列表一致。
+	ResetButton.w = std::max(0.0f, ResetButton.w - 5.0f);
+	View.w += 5.0f;
 
 	// 长译文或较矮窗口通过整体滚动保留全部筛选项，重置按钮固定在底部。
 	static CScrollRegion s_FilterScrollRegion;
@@ -2531,6 +2637,10 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 	ScrollRequest.m_Profile = EQmScrollProfile::SETTINGS_GRID;
 	ScrollRequest.m_RowExtent = RowHeight;
 	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(QmResolveScrollPolicy(ScrollRequest));
+	// 工具箱三个页签共用同一档滚动条：宽度按内容宽度取紧凑轨道，与好友列表逐像素对齐。
+	ScrollParams.m_ScrollbarThickness = std::clamp(View.w * 0.05f, 6.0f, 10.0f);
+	ScrollParams.m_ScrollbarMargin = std::min(ScrollParams.m_ScrollbarMargin, ScrollParams.m_ScrollbarThickness * 0.25f);
+	ScrollParams.m_AnimateScrollbarReserve = true;
 	vec2 ScrollOffset(0.0f, 0.0f);
 	s_FilterScrollRegion.Begin(&View, &ScrollOffset, &ScrollParams);
 	View.y += ScrollOffset.y;
@@ -2633,6 +2743,7 @@ void CMenus::ResetServerbrowserFilters()
 	g_Config.m_QmMapBrowserEmptyOnly = 0;
 	g_Config.m_QmMapBrowserFavoriteOnly = 0;
 	g_Config.m_QmMapBrowserStarMask = 0;
+	g_Config.m_QmMapBrowserCategoryMask = 0;
 
 	if(g_Config.m_UiPage != PAGE_LAN)
 	{
@@ -3086,11 +3197,29 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 	const float FontSize = (RowHeight - 4.0f) * CUi::ms_FontmodHeight; // based on DoButton_CheckBox
 
 	CUIRect ServerDetails, Scoreboard;
-	View.HSplitTop(4.0f * 15.0f + RowHeight + 2.0f * 5.0f + 2.0f * 2.0f, &ServerDetails, &Scoreboard);
+	// 暴露 IP 行的高度由动画进度驱动：0 → RowHeight 时信息块整体长高，
+	// 下方的复制按钮与服务器列表随之平滑下移让位（不是把上方内容顶上去）。
+	static float s_ExposeRowAnim = 0.0f;
+	{
+		const bool FavoritedNow = ServerBrowser()->SortedGet(m_SelectedIndex) != nullptr && ServerBrowser()->SortedGet(m_SelectedIndex)->m_Favorite != TRISTATE::NONE;
+		static int64_t s_ExposeLastTick = 0;
+		const int64_t ExposeNow = time_get();
+		const int64_t ExposeFreq = maximum<int64_t>(1, time_freq());
+		const float ExposeDt = s_ExposeLastTick == 0 ? 0.0f : std::clamp((float)(ExposeNow - s_ExposeLastTick) / (float)ExposeFreq, 0.0f, 0.1f);
+		s_ExposeLastTick = ExposeNow;
+		const float Target = FavoritedNow ? 1.0f : 0.0f;
+		const float Step = (g_Config.m_QmUiMotionLevel > 0 ? 1.0f / 0.15f : 1000.0f) * ExposeDt;
+		s_ExposeRowAnim = std::clamp(s_ExposeRowAnim + std::clamp(Target - s_ExposeRowAnim, -Step, Step), 0.0f, 1.0f);
+	}
+	const float InfoBlockHeight = 4.0f * 15.0f + RowHeight * (1.0f + s_ExposeRowAnim) + 2.0f * 5.0f + 2.0f * 2.0f;
+	View.HSplitTop(InfoBlockHeight, &ServerDetails, &Scoreboard);
 
 	if(pSelectedServer)
 	{
 		ServerDetails.Margin(5.0f, &ServerDetails);
+
+		// 三行信息（版本/游戏模式/延迟）的高度：块内剩余空间不足时按均分收缩，避免压行。
+		const float InfoRowHeight = std::max(11.0f, std::min(15.0f, std::max(0.0f, ServerDetails.h - RowHeight * (1.0f + s_ExposeRowAnim) - 19.0f) / 3.0f));
 
 		// copy info button
 		{
@@ -3113,36 +3242,85 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 			}
 		}
 
-		// favorite checkbox
+		// favorite toggle + expose IP toggle
 		{
-			CUIRect ButtonAddFav, ButtonLeakIp;
-			ServerDetails.HSplitBottom(2.0f, &ServerDetails, nullptr);
-			ServerDetails.HSplitBottom(RowHeight, &ServerDetails, &ButtonAddFav);
-			ServerDetails.HSplitBottom(2.0f, &ServerDetails, nullptr);
-			ButtonAddFav.VSplitMid(&ButtonAddFav, &ButtonLeakIp);
-			static int s_AddFavButton = 0;
-			if(DoButton_CheckBox_Tristate(&s_AddFavButton, Localize("Favorite"), pSelectedServer->m_Favorite, &ButtonAddFav))
+			// 暴露 IP 单独一行，仅在已收藏时出现：行高按 0→RowHeight 过渡，
+			// 上方信息行随之平滑上移，而不是瞬间让位。
+			static int s_LeakIpButton = 0;
+			// 收藏行固定在 3 行信息之下，不随暴露 IP 行出现而上移；
+			// 让位方向是向下：复制按钮与服务器列表跟着块高增长一起下移。
+			CUIRect ButtonAddFav = ServerDetails;
+			ButtonAddFav.y += 3.0f * InfoRowHeight + 2.0f;
+			ButtonAddFav.h = RowHeight;
+			CUIRect ButtonExpose{};
+			if(s_ExposeRowAnim > 0.01f)
 			{
-				if(pSelectedServer->m_Favorite != TRISTATE::NONE)
-				{
-					Favorites()->Remove(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses);
-				}
-				else
+				ButtonExpose = ButtonAddFav;
+				ButtonExpose.y += RowHeight + 2.0f;
+				ButtonExpose.h = RowHeight * s_ExposeRowAnim;
+			}
+			CUIRect Row = ButtonAddFav;
+			static int s_AddFavButton = 0;
+			bool Favorite = pSelectedServer->m_Favorite != TRISTATE::NONE;
+			CUIRect Toggle;
+			const float ToggleWidth = std::min(30.0f, Row.w * 0.3f);
+			Row.VSplitRight(ToggleWidth, &Row, &Toggle);
+			Row.VSplitRight(6.0f, &Row, nullptr);
+			CUIRect Label = Row;
+			SLabelProperties FavLabelProps;
+			FavLabelProps.m_MaxWidth = Label.w;
+			FavLabelProps.m_EllipsisAtEnd = true;
+			FavLabelProps.m_MinimumFontSize = 9.0f;
+			char aFavoriteServer[64];
+			str_format(aFavoriteServer, sizeof(aFavoriteServer), "%s%s", Localize("Favorite"), Localize("Server"));
+			Ui()->DoLabel(&Label, aFavoriteServer, FontSize, TEXTALIGN_ML, FavLabelProps);
+			if(ui_widget::Toggle(SettingsUiContext("server_browser_info_favorite"), &s_AddFavButton, &Favorite, Toggle))
+			{
+				if(Favorite)
 				{
 					Favorites()->Add(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses);
+					// 列表星标据此播一次进场；表只活到那一行被渲染为止。
+					if(gs_FavoriteStarGrowPending.size() >= 64)
+						gs_FavoriteStarGrowPending.clear();
+					gs_FavoriteStarGrowPending.insert(pSelectedServer->m_aAddress);
 					if(g_Config.m_UiPage == PAGE_LAN)
 					{
 						Favorites()->AllowPing(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses, true);
 					}
 				}
+				else
+				{
+					Favorites()->Remove(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses);
+				}
 				Client()->ServerBrowserUpdate();
 			}
-			if(pSelectedServer->m_Favorite != TRISTATE::NONE)
+			// 暴露 IP：与收藏同为开关行，贴右缘；只在收藏行出现时才有内容。
+			if(ButtonExpose.h > 2.0f)
 			{
-				static int s_LeakIpButton = 0;
-				if(DoButton_CheckBox_Tristate(&s_LeakIpButton, Localize("Leak IP"), pSelectedServer->m_FavoriteAllowPing, &ButtonLeakIp))
+				// 缩放 0.85→1、下移 4px→0、淡入，配合信息块长高一起出现。
+				const float Eased = s_ExposeRowAnim * s_ExposeRowAnim * (3.0f - 2.0f * s_ExposeRowAnim);
+				const float AppearScale = 0.85f + 0.15f * Eased;
+				const float AppearW = ButtonExpose.w * AppearScale, AppearH = ButtonExpose.h * AppearScale;
+				ButtonExpose = CUIRect{
+					ButtonExpose.x + (ButtonExpose.w - AppearW) * 0.5f,
+					ButtonExpose.y + (ButtonExpose.h - AppearH) * 0.5f + (1.0f - Eased) * 4.0f,
+					AppearW,
+					AppearH};
+				CUiScopedControlAlphaScale ExposeAlpha(Ui(), Eased);
+				CUIRect Label = ButtonExpose, ExposeToggle;
+				const float ToggleWidth = std::min(30.0f, ButtonExpose.w * 0.3f);
+				Label.VSplitRight(ToggleWidth, &Label, &ExposeToggle);
+				Label.VSplitRight(6.0f, &Label, nullptr);
+				SLabelProperties ExposeLabelProps;
+				ExposeLabelProps.m_MaxWidth = Label.w;
+				ExposeLabelProps.m_EllipsisAtEnd = true;
+				ExposeLabelProps.m_MinimumFontSize = 9.0f;
+				Ui()->DoLabel(&Label, Localize("Leak IP"), FontSize, TEXTALIGN_ML, ExposeLabelProps);
+				GameClient()->m_Tooltips.DoToolTip(&s_LeakIpButton, &ButtonExpose, Localize("Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process"));
+				bool ExposeIp = pSelectedServer->m_FavoriteAllowPing != TRISTATE::NONE;
+				if(ui_widget::Toggle(SettingsUiContext("server_browser_info_leak_ip"), &s_LeakIpButton, &ExposeIp, ExposeToggle))
 				{
-					Favorites()->AllowPing(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses, pSelectedServer->m_FavoriteAllowPing == TRISTATE::NONE);
+					Favorites()->AllowPing(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses, ExposeIp);
 					Client()->ServerBrowserUpdate();
 				}
 			}
@@ -3151,13 +3329,13 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 		CUIRect LeftColumn, RightColumn, Row;
 		ServerDetails.VSplitLeft(80.0f, &LeftColumn, &RightColumn);
 
-		LeftColumn.HSplitTop(15.0f, &Row, &LeftColumn);
+		LeftColumn.HSplitTop(InfoRowHeight, &Row, &LeftColumn);
 		Ui()->DoLabel(&Row, Localize("Version"), FontSize, TEXTALIGN_ML);
 
-		RightColumn.HSplitTop(15.0f, &Row, &RightColumn);
+		RightColumn.HSplitTop(InfoRowHeight, &Row, &RightColumn);
 		Ui()->DoLabel(&Row, pSelectedServer->m_aVersion, FontSize, TEXTALIGN_ML);
 
-		LeftColumn.HSplitTop(15.0f, &Row, &LeftColumn);
+		LeftColumn.HSplitTop(InfoRowHeight, &Row, &LeftColumn);
 		Ui()->DoLabel(&Row, Localize("Game type"), FontSize, TEXTALIGN_ML);
 
 		SLabelProperties GameTypeLabelProps;
@@ -3165,10 +3343,10 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 		{
 			GameTypeLabelProps.SetColor(pSelectedServer->m_GametypeColor);
 		}
-		RightColumn.HSplitTop(15.0f, &Row, &RightColumn);
+		RightColumn.HSplitTop(InfoRowHeight, &Row, &RightColumn);
 		Ui()->DoLabel(&Row, pSelectedServer->m_aGameType, FontSize, TEXTALIGN_ML, GameTypeLabelProps);
 
-		LeftColumn.HSplitTop(15.0f, &Row, &LeftColumn);
+		LeftColumn.HSplitTop(InfoRowHeight, &Row, &LeftColumn);
 		Ui()->DoLabel(&Row, Localize("Ping"), FontSize, TEXTALIGN_ML);
 
 		SLabelProperties PingLabelProps;
@@ -3178,7 +3356,7 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 		}
 		char aPingLabel[8];
 		FormatServerbrowserPing(aPingLabel, pSelectedServer);
-		RightColumn.HSplitTop(15.0f, &Row, &RightColumn);
+		RightColumn.HSplitTop(InfoRowHeight, &Row, &RightColumn);
 		Ui()->DoLabel(&Row, aPingLabel, FontSize, TEXTALIGN_ML, PingLabelProps);
 
 		RenderServerbrowserInfoScoreboard(Scoreboard, pSelectedServer);
@@ -3313,6 +3491,15 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 {
 	const bool MenuUiPerfEnabled = QmPerfEnabled();
 	const auto MenuUiStartTime = MenuUiPerfEnabled ? time_get_nanoseconds() : std::chrono::nanoseconds::zero();
+	// 好友卡片进场淡入的状态：记录每张卡片首次出现的时间；面板重新出现时整列重播，
+	// 与列表组件「重新显示即重播进场」保持一致。
+	const int64_t FadeNow = time_get();
+	const int64_t FadeFreq = maximum<int64_t>(1, time_freq());
+	static int64_t s_FriendListLastDraw = 0;
+	static std::unordered_map<uintptr_t, int64_t> s_FriendCardFirstSeen;
+	if(s_FriendListLastDraw == 0 || FadeNow - s_FriendListLastDraw > FadeFreq / 20 || s_FriendCardFirstSeen.size() > 512)
+		s_FriendCardFirstSeen.clear();
+	s_FriendListLastDraw = FadeNow;
 	const float FontSize = 10.0f;
 	const float SpacingH = 2.0f;
 	// 标签按译文实测宽度收窄，不再常驻预留 32 单位；只在真正跟随时占位。
@@ -3501,6 +3688,24 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	vCategoryHeaders.reserve(NumCategories);
 	m_vFriendsCategoryManageButtons.resize(NumCategories);
 
+	// 折叠/展开进度：菜单可能在后台或测量通道渲染，动画运行时不一定逐帧喂值，
+	// 之前依赖 ResolveUiAnimValue 会直接跳变；这里用按帧时间推进的本地状态。
+	struct SFriendCategoryExpandAnim
+	{
+		float m_From = 1.0f;
+		float m_To = 1.0f;
+		int64_t m_StartTick = 0;
+		float Current(int64_t Now, int64_t Freq) const
+		{
+			if(m_From == m_To)
+				return m_To;
+			const float Progress = std::clamp((float)(Now - m_StartTick) / (float)Freq / 0.15f, 0.0f, 1.0f);
+			const float Eased = Progress * Progress * (3.0f - 2.0f * Progress);
+			return m_From + (m_To - m_From) * Eased;
+		}
+	};
+	static std::vector<SFriendCategoryExpandAnim> s_vCategoryExpand;
+
 	char aBuf[256];
 	int FriendTooltipIndex = 0;
 	for(int CategoryIndex = 0; CategoryIndex < NumCategories; ++CategoryIndex)
@@ -3534,7 +3739,29 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		GroupIcon.Margin(2.0f, &GroupIcon);
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->TextColor(HeaderHovered ? TextRender()->DefaultTextColor() : ColorRGBA(0.6f, 0.6f, 0.6f, 1.0f));
-		Ui()->DoLabel_QmIcon(&GroupIcon, m_vFriendsCategoryExpanded[CategoryIndex] && !DraggingAnyHeader && !DraggingFriend ? EQmIcon::SQUARE_MINUS : EQmIcon::SQUARE_PLUS, m_vFriendsCategoryExpanded[CategoryIndex] && !DraggingAnyHeader && !DraggingFriend ? FONT_ICON_SQUARE_MINUS : FONT_ICON_SQUARE_PLUS, GroupIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+		// 分组展开 ⇄ 折叠：加/减方框形变（外框常量、加号竖臂压平），拖拽表头时按折叠显示。
+		// 折叠/展开按高度过渡：进度推动布局高度并裁切内容，不再整块跳变。
+		const bool WantsExpanded = m_vFriendsCategoryExpanded[CategoryIndex] && !DraggingAnyHeader && !DraggingFriend;
+		const bool ExpandMotion = g_Config.m_QmUiMotionLevel > 0 && !Ui()->MeasurementOnly();
+		if(s_vCategoryExpand.size() < (size_t)NumCategories)
+			s_vCategoryExpand.resize(NumCategories, SFriendCategoryExpandAnim());
+		SFriendCategoryExpandAnim &ExpandAnim = s_vCategoryExpand[CategoryIndex];
+		const float ExpandTarget = WantsExpanded ? 1.0f : 0.0f;
+		if(ExpandAnim.m_To != ExpandTarget)
+		{
+			ExpandAnim.m_From = ExpandAnim.Current(FadeNow, FadeFreq);
+			ExpandAnim.m_To = ExpandTarget;
+			ExpandAnim.m_StartTick = FadeNow;
+		}
+		const float ExpandT = ExpandMotion ? ExpandAnim.Current(FadeNow, FadeFreq) : ExpandTarget;
+		const bool GroupExpanded = ExpandT > 0.001f;
+		IUiContext GroupIconCtx = ui_widget::ControlContext(Ui());
+		ui_widget::SIconSwapBinding GroupIconBinding = ui_widget::ResolveIconSwapBinding(
+			GroupIconCtx, EQmIconSwapPair::SQUARE_PLUS_MINUS,
+			EQmIcon::SQUARE_PLUS, FONT_ICON_SQUARE_PLUS,
+			EQmIcon::SQUARE_MINUS, FONT_ICON_SQUARE_MINUS,
+			GroupExpanded ? 1.0f : 0.0f, str_quickhash("friends-category-icon"), pCategoryName);
+		ui_widget::DrawIconSwapBinding(GroupIconCtx, QmIconLabelRect(GroupIcon, GroupIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MC), TextRender()->GetTextColor(), &GroupIconBinding);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		SplitFriendsCategoryHeaderRects(Header, nullptr, &ManageButton);
@@ -3573,15 +3800,32 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		}
 
 		// entries
-		if(m_vFriendsCategoryExpanded[CategoryIndex] && !DraggingAnyHeader && !DraggingFriend)
+		if(GroupExpanded)
 		{
+			// 分组内容用独立游标布局，整体高度固定、按进度只占 VisibleHeight，
+			// 行内容随 GroupClip 裁切：展开时逐行露出，收起时滑回标题下方。
+			auto FriendRowHeight = [&](const auto &Friend) {
+				const bool ShowLastSeen = g_Config.m_QmFriendLastSeen && Friend.FriendState() == IFriends::FRIEND_PLAYER && Friend.ServerInfo() == nullptr;
+				return 11.0f + 10.0f + 2 * 2.0f + 1.0f + (Friend.ServerInfo() != nullptr || ShowLastSeen ? 10.0f : 0.0f);
+			};
+			float GroupHeight = 0.0f;
+			for(const auto &Friend : vvFriends[CategoryIndex])
+				GroupHeight += SpacingH + FriendRowHeight(Friend);
+			CUIRect GroupArea = List;
+			const float VisibleHeight = GroupHeight * ExpandT;
+			CUIRect GroupClip{List.x, List.y, List.w, maximum(0.0f, VisibleHeight)};
+			List.y += VisibleHeight;
+			// 滚动内容高度按动画后的可见高度计入，否则折叠过程中内容仍按整组高度估算，
+			// 越界钳制会在动画中途把视图瞬间拉回。
+			s_ScrollRegion.AddRect(GroupClip);
+			if(GroupClip.h > 0.0f)
+				Ui()->ClipEnable(&GroupClip);
 			for(size_t FriendIndex = 0; FriendIndex < vvFriends[CategoryIndex].size(); ++FriendIndex)
 			{
 				// space
 				{
 					CUIRect Space;
-					List.HSplitTop(SpacingH, &Space, &List);
-					s_ScrollRegion.AddRect(Space);
+					GroupArea.HSplitTop(SpacingH, &Space, &GroupArea);
 				}
 
 				CUIRect Rect;
@@ -3601,14 +3845,13 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				const void *pPinButtonId = reinterpret_cast<const void *>(FriendUiIdBase | 0xd);
 				const void *pCommunityTooltipId = reinterpret_cast<const void *>(FriendUiIdBase | 0x5);
 				const void *pSkinTooltipId = reinterpret_cast<const void *>(FriendUiIdBase | 0x7);
-				List.HSplitTop(11.0f + 10.0f + 2 * 2.0f + 1.0f + (Friend.ServerInfo() != nullptr || ShowLastSeen ? 10.0f : 0.0f), &Rect, &List);
-				s_ScrollRegion.AddRect(Rect);
-				if(s_ScrollRegion.RectClipped(Rect))
+				GroupArea.HSplitTop(FriendRowHeight(Friend), &Rect, &GroupArea);
+				if(s_ScrollRegion.RectClipped(Rect) || Rect.y + Rect.h > GroupClip.y + GroupClip.h + 0.5f)
 					continue;
 				++VisibleFriendItems;
 
 				const SQmFriendLastSeenEntry *pLastSeen = ShowLastSeen ? GameClient()->m_QmFriendLastSeen.Get(Friend.Name()) : nullptr;
-				const CUIRect FriendRow = Rect;
+				CUIRect FriendRow = Rect;
 				const bool Inside = Ui()->MouseHovered(&Rect);
 				int ButtonResult = Ui()->DoButtonLogic(pListItemId, 0, &Rect, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
 
@@ -3646,7 +3889,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 							TooltipText.append("\n");
 						TooltipText.append(Localize("DDStats shows UTC dates, updates daily and matches players by name only."));
 					}
-					GameClient()->m_Tooltips.DoToolTip(pListItemId, &Rect, TooltipText.c_str(), 320.0f);
+					// 好友卡片在右栏，提示贴卡片左侧向左弹出，避免盖住卡片本身与右侧动作区。
+					GameClient()->m_Tooltips.DoToolTipFromSide(pListItemId, &Rect, TooltipText.c_str(), EQmTooltipPlacement::LEFT, 320.0f);
 				}
 				++FriendTooltipIndex;
 				const bool IsOffline = Friend.ServerInfo() == nullptr;
@@ -3654,11 +3898,25 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 								 (m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Friend.Name()) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Friend.Clan()) == 0);
 				const bool InSelectedServer = pSelectedServer != nullptr && Friend.ServerInfo() && Friend.ServerInfo()->m_ServerIndex == pSelectedServer->m_ServerIndex;
 				const ColorRGBA Color = PlayerBackgroundColor(Friend.FriendState() == IFriends::FRIEND_PLAYER, Friend.FriendState() == IFriends::FRIEND_CLAN, IsOffline ? true : Friend.IsAfk(), InSelectedServer, Inside);
-				DrawRoundedSurface(Ui(), Rect, Color, ColorRGBA(), ui_token::radius::SMALL_MENU);
-				Rect.Margin(2.0f, &Rect);
-
-				const bool FeedbackMotion = g_Config.m_QmUiMotionLevel > 0 && !Ui()->AnimationsBlocked();
+				// 只看动效档位：该面板在部分渲染通道里 AnimationsBlocked 为真，
+				// 带上它会让进场动画整个失效（表现为卡片「闪一下」）。
+				const bool FeedbackMotion = g_Config.m_QmUiMotionLevel > 0 && !Ui()->MeasurementOnly();
 				CUiV2AnimationRuntime *pAnimRuntime = Ui()->QmAnimationRuntime();
+				// 卡片进场淡入：底板颜色直接乘 alpha（DrawRoundedSurface 不过 ControlAlphaScale），
+				// 文字与图标走作用域缩放，两者同时从透明过渡到不透明。
+				const int64_t CardFirstSeen = s_FriendCardFirstSeen.try_emplace(FriendUiIdBase, FadeNow).first->second;
+				const float CardElapsed = std::max(0.0f, (float)(FadeNow - CardFirstSeen) / (float)FadeFreq);
+				// 与服务器列表/设置列表同一套入场：淡入 + 临界阻尼上浮，行间错开。
+				const SQmListEntryVisual CardVisual = FeedbackMotion ? QmListEntryVisual(CardElapsed, (int)FriendIndex, g_Config.m_QmUiMotionLevel) : SQmListEntryVisual{1.0f, 0.0f};
+				const float CardAlpha = CardVisual.m_Fade;
+				ColorRGBA CardFill = Color;
+				CardFill.a *= CardAlpha;
+				const CUiScopedControlAlphaScale CardFade(Ui(), CardAlpha);
+				// 上浮归位：绘制矩形整体下移，动画结束后回到布局位置。
+				Rect.y += CardVisual.m_OffsetY;
+				FriendRow.y += CardVisual.m_OffsetY;
+				DrawRoundedSurface(Ui(), Rect, CardFill, ColorRGBA(), ui_token::radius::SMALL_MENU);
+				Rect.Margin(2.0f, &Rect);
 				const uint64_t FollowTagKey = BuildUiAnimNodeKey(MakeUiScopeHash("browser_friend_follow_tag"), FriendUiIdBase);
 				const uint64_t ActionFadeKey = BuildUiAnimNodeKey(MakeUiScopeHash("browser_friend_action_fade"), FriendUiIdBase);
 				const float FollowTagTargetWidth = FollowingThisFriend ? FollowTagSlotWidth : 0.0f;
@@ -3872,7 +4130,15 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					const CUIRect FollowHit = FriendActionHitRect(FollowButton);
 					const CUIRect CopyHit = FriendActionHitRect(CopyButton);
 					const CUIRect RemoveHit = FriendActionHitRect(RemoveButton);
-					const bool FollowPressed = Friend.ServerInfo() && ui_widget::DoIconButton(Context, pFollowButtonId, FollowingThisFriend ? EQmIcon::STOP : EQmIcon::PLAY, FollowingThisFriend ? FONT_ICON_STOP : FONT_ICON_PLAY, FollowingThisFriend ? 1 : 0, FollowButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside, std::nullopt, false, true, &FollowHit) != 0;
+					// 关注 ⇄ 取消关注是同位置双态：play ↔ stop 形变帧条，Fill 字重回交叉淡化。
+					IUiContext FollowCtx = ui_widget::ControlContext(Ui());
+					ui_widget::SIconSwapBinding FollowBinding = ui_widget::ResolveIconSwapBinding(
+						FollowCtx, EQmIconSwapPair::PLAY_STOP,
+						EQmIcon::PLAY, FONT_ICON_PLAY,
+						EQmIcon::STOP, FONT_ICON_STOP,
+						FollowingThisFriend ? 1.0f : 0.0f, str_quickhash("friend-follow-icon"), pFollowButtonId, 0.24f, true);
+					ui_widget::SIconButtonIconDraw FollowDraw{&ui_widget::DrawIconSwapBinding, &FollowBinding};
+					const bool FollowPressed = Friend.ServerInfo() && ui_widget::DoIconButton(Context, pFollowButtonId, EQmIcon::COUNT, nullptr, FollowingThisFriend ? 1 : 0, FollowButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside, std::nullopt, false, true, &FollowHit, &FollowDraw) != 0;
 					const bool CopyPressed = ui_widget::DoIconButton(Context, pCopyButtonId, EQmIcon::COPY, FONT_ICON_COPY, 0, CopyButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside, std::nullopt, false, true, &CopyHit) != 0;
 					const bool RemovePressed = ui_widget::DoIconButton(Context, pRemoveButtonId, EQmIcon::TRASH, FONT_ICON_TRASH, 0, RemoveButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Inside, std::nullopt, false, true, &RemoveHit) != 0;
 					if(Inside)
@@ -3998,6 +4264,9 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				DescriptionProps.m_MaxWidth = EmptyDescription.w;
 				Ui()->DoLabel(&EmptyDescription, pText, FontSize, TEXTALIGN_ML, DescriptionProps);
 			}
+
+			if(GroupClip.h > 0.0f)
+				Ui()->ClipDisable();
 		}
 
 		// space
@@ -4761,7 +5030,11 @@ int CMenus::MapWorkspaceTab()
 void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 {
 	const QmMapHistoryUi::SWorkspaceMetrics Layout = QmMapHistoryUi::WorkspaceMetrics(View.h);
-	View.Margin(Layout.m_OuterMargin, &View);
+	// 手机端左右不留额外外缩：面板直接对齐导航栏，上下留白保持不变。
+	if(QmUiMobilePlatform())
+		View.HMargin(Layout.m_OuterMargin, &View);
+	else
+		View.Margin(Layout.m_OuterMargin, &View);
 
 	char aSavesPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, SAVES_FILE, aSavesPath, sizeof(aSavesPath));

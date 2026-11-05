@@ -1228,6 +1228,7 @@ void CQmClient::EndQmClientLocalModePlaytime()
 
 void CQmClient::OnShutdown()
 {
+	m_MapTags.Clear();
 	m_DeveloperBadge.Shutdown(Graphics());
 	m_TitleBadge.Shutdown(Graphics());
 	if(!m_QmClientShutdownReported)
@@ -1266,6 +1267,10 @@ void CQmClient::OnShutdown()
 
 void CQmClient::OnUpdate()
 {
+	if(!g_Config.m_QmMapTags || Client()->State() != IClient::STATE_ONLINE)
+		m_MapTags.Clear();
+	else
+		m_MapTags.Poll();
 	UpdateQmRealtime();
 	m_QmMarkdownBroadcastReceiver.RetryCache(m_QmMarkdownBroadcast);
 	UpdateQmAnonymousEmotes();

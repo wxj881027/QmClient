@@ -106,7 +106,9 @@ namespace
 		DiscordButton = CUiV2LegacyAdapter::ToCUIRect(s_vExternalButtonChildren[5].m_Box);
 	}
 
-	void ComputeMainButtons(const CUIRect &MenuArea, bool UseV2Layout, CUIRect aMenuButtons[6], CUIRect &NewFeaturesButton)
+	// HideEditor：手机端不显示地图编辑器入口（触屏上没有编辑地图的场景），
+	// 隐藏后其余按钮整体下移补位，不留空槽。
+	void ComputeMainButtons(const CUIRect &MenuArea, bool UseV2Layout, bool HideEditor, CUIRect aMenuButtons[6], CUIRect &NewFeaturesButton)
 	{
 		if(!UseV2Layout)
 		{
@@ -119,7 +121,10 @@ namespace
 			Cursor.HSplitBottom(5.0f, &Cursor, nullptr);
 			Cursor.HSplitBottom(40.0f, &Cursor, &aMenuButtons[2]);
 			Cursor.HSplitBottom(5.0f, &Cursor, nullptr);
-			Cursor.HSplitBottom(40.0f, &Cursor, &aMenuButtons[3]);
+			if(HideEditor)
+				aMenuButtons[3] = {};
+			else
+				Cursor.HSplitBottom(40.0f, &Cursor, &aMenuButtons[3]);
 			Cursor.HSplitBottom(5.0f, &Cursor, nullptr);
 			Cursor.HSplitBottom(40.0f, &Cursor, &aMenuButtons[4]);
 			Cursor.HSplitBottom(5.0f, &Cursor, nullptr);
@@ -140,7 +145,7 @@ namespace
 		ContainerStyle.m_AlignItems = EUiAlign::STRETCH;
 		ContainerStyle.m_JustifyContent = EUiAlign::END;
 
-		static std::vector<SUiLayoutChild> s_vMainButtonChildren(5);
+		static std::vector<SUiLayoutChild> s_vMainButtonChildren(HideEditor ? 4 : 5);
 		for(SUiLayoutChild &Child : s_vMainButtonChildren)
 		{
 			Child.m_Style.m_Height = SUiLength::Px(40.0f);
@@ -149,9 +154,18 @@ namespace
 		LayoutEngine.ComputeChildren(ContainerStyle, CUiV2LegacyAdapter::FromCUIRect(TopArea), s_vMainButtonChildren);
 		aMenuButtons[5] = CUiV2LegacyAdapter::ToCUIRect(s_vMainButtonChildren[0].m_Box);
 		aMenuButtons[4] = CUiV2LegacyAdapter::ToCUIRect(s_vMainButtonChildren[1].m_Box);
-		aMenuButtons[3] = CUiV2LegacyAdapter::ToCUIRect(s_vMainButtonChildren[2].m_Box);
-		aMenuButtons[2] = CUiV2LegacyAdapter::ToCUIRect(s_vMainButtonChildren[3].m_Box);
-		aMenuButtons[1] = CUiV2LegacyAdapter::ToCUIRect(s_vMainButtonChildren[4].m_Box);
+		if(HideEditor)
+		{
+			aMenuButtons[3] = {};
+			aMenuButtons[2] = CUiV2LegacyAdapter::ToCUIRect(s_vMainButtonChildren[2].m_Box);
+			aMenuButtons[1] = CUiV2LegacyAdapter::ToCUIRect(s_vMainButtonChildren[3].m_Box);
+		}
+		else
+		{
+			aMenuButtons[3] = CUiV2LegacyAdapter::ToCUIRect(s_vMainButtonChildren[2].m_Box);
+			aMenuButtons[2] = CUiV2LegacyAdapter::ToCUIRect(s_vMainButtonChildren[3].m_Box);
+			aMenuButtons[1] = CUiV2LegacyAdapter::ToCUIRect(s_vMainButtonChildren[4].m_Box);
+		}
 	}
 
 }
@@ -172,18 +186,6 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 	const bool TrackPerf = QmPerfEnabled();
 	const std::chrono::nanoseconds TotalStart = StartMenuPerfNow(TrackPerf);
 	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_START);
-
-	// render logo
-	{
-		const std::chrono::nanoseconds StageStart = StartMenuPerfNow(TrackPerf);
-		Graphics()->TextureSet(g_pData->m_aImages[IMAGE_BANNER].m_Id);
-		Graphics()->QuadsBegin();
-		Graphics()->SetColor(1, 1, 1, 1);
-		IGraphics::CQuadItem QuadItem(MainView.w / 2 - 170, 60, 360, 103);
-		Graphics()->QuadsDrawTL(&QuadItem, 1);
-		Graphics()->QuadsEnd();
-		LogStartMenuPerfStage(Client(), "start_menu_logo", StageStart, TrackPerf, UseV2Layout);
-	}
 
 	const float Rounding = ResolveUiTextButtonRadius(EUiButtonGeometry::START_MENU);
 	const float VMargin = MainView.w / 2 - 190.0f;
@@ -269,7 +271,42 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 		constexpr int MenuButtonCount = 6;
 		CUIRect aMenuButtons[MenuButtonCount];
 		CUIRect NewFeaturesButton;
-		ComputeMainButtons(Menu, UseV2Layout, aMenuButtons, NewFeaturesButton);
+		ComputeMainButtons(Menu, UseV2Layout, QmUiMobilePlatform(), aMenuButtons, NewFeaturesButton);
+
+		// render logo
+		{
+			const std::chrono::nanoseconds StageStart = StartMenuPerfNow(TrackPerf);
+			// 高 UI 缩放/矮屏时主按钮组会顶到 logo：保持水平居中，必要时等比缩小并
+			// 贴到主按钮上方，避免按钮压住图标。正常高度下仍是原来的 360x103。
+			float LogoW = 360.0f;
+			float LogoH = 103.0f;
+			const float LogoCenterX = MainView.w / 2.0f;
+			float LogoX = LogoCenterX - LogoW / 2.0f;
+			float LogoY = 60.0f;
+			const float PlayTop = aMenuButtons[5].y;
+			if(QmUiMobilePlatform() && aMenuButtons[5].h > 0.0f)
+			{
+				const float AvailableTop = MainView.y + 4.0f;
+				const float AvailableBottom = PlayTop - 4.0f;
+				const float AvailableHeight = AvailableBottom - AvailableTop;
+				if(AvailableHeight > 0.0f && LogoY + LogoH > AvailableBottom)
+				{
+					const float Scale = std::clamp(AvailableHeight / LogoH, 0.72f, 1.0f);
+					LogoW *= Scale;
+					LogoH *= Scale;
+					LogoX = LogoCenterX - LogoW / 2.0f;
+					LogoY = std::max(AvailableTop, AvailableBottom - LogoH);
+				}
+			}
+			Graphics()->TextureSet(g_pData->m_aImages[IMAGE_BANNER].m_Id);
+			Graphics()->QuadsBegin();
+			Graphics()->SetColor(1, 1, 1, 1);
+			IGraphics::CQuadItem QuadItem(LogoX, LogoY, LogoW, LogoH);
+			Graphics()->QuadsDrawTL(&QuadItem, 1);
+			Graphics()->QuadsEnd();
+			LogStartMenuPerfStage(Client(), "start_menu_logo", StageStart, TrackPerf, UseV2Layout);
+		}
+
 		// 更新入口始终允许查看；重开详情保留下载和已准备的安装包。
 		const char *pUpdateLabel = GameClient()->m_TClient.QmClientUpdateStatusText();
 
@@ -325,11 +362,14 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 				}
 			}
 
-			static CButtonContainer s_MapEditorButton;
-			if(ui_widget::SecondaryButton(Ctx, &s_MapEditorButton, Localize("Editor"), aMenuButtons[3]) || CheckHotKey(KEY_E))
+			if(!QmUiMobilePlatform())
 			{
-				g_Config.m_ClEditor = 1;
-				Input()->MouseModeRelative();
+				static CButtonContainer s_MapEditorButton;
+				if(ui_widget::SecondaryButton(Ctx, &s_MapEditorButton, Localize("Editor"), aMenuButtons[3]) || CheckHotKey(KEY_E))
+				{
+					g_Config.m_ClEditor = 1;
+					Input()->MouseModeRelative();
+				}
 			}
 
 			static CButtonContainer s_DemoButton;
@@ -453,12 +493,15 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 				}
 			}
 
-			ScaledButton = ScaleButtonRect(aMenuButtons[3], s_aMenuButtonScale[3]);
-			static CButtonContainer s_MapEditorButton;
-			if(GameClient()->m_Menus.DoButton_Menu(&s_MapEditorButton, Localize("Editor"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "editor" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, EditorDirty ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) || CheckHotKey(KEY_E))
+			if(!QmUiMobilePlatform())
 			{
-				g_Config.m_ClEditor = 1;
-				Input()->MouseModeRelative();
+				ScaledButton = ScaleButtonRect(aMenuButtons[3], s_aMenuButtonScale[3]);
+				static CButtonContainer s_MapEditorButton;
+				if(GameClient()->m_Menus.DoButton_Menu(&s_MapEditorButton, Localize("Editor"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "editor" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, EditorDirty ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) || CheckHotKey(KEY_E))
+				{
+					g_Config.m_ClEditor = 1;
+					Input()->MouseModeRelative();
+				}
 			}
 
 			ScaledButton = ScaleButtonRect(aMenuButtons[4], s_aMenuButtonScale[4]);

@@ -43,6 +43,8 @@
 #include <game/client/QmUi/SettingsGlyphPrewarm.h>
 #include <game/client/QmUi/SettingsLabelMetadata.h>
 #include <game/client/QmUi/SettingsMenuPrewarmScope.h>
+#include <game/client/QmUi/SettingsSearchHighlight.h>
+#include <game/client/QmUi/SettingsSearchReveal.h>
 #include <game/client/QmUi/SettingsTextPlanCommit.h>
 #include <game/client/QmUi/ThemeSelectionLayout.h>
 #include <game/client/QmUi/UiButtons.h>
@@ -99,6 +101,20 @@ namespace
 	// 胶囊行高与内容缩放常量已提升到 menus.h（menus_ingame.cpp 的服务器导航栏也用）。
 	constexpr float MENU_MENUBAR_GAP_NEW = 8.0f; // 导航→内容间隙（统一边距基准）
 	constexpr float MENU_MENUBAR_HEIGHT_NEW = MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW + MENU_MENUBAR_GAP_NEW;
+
+	// 手机端菜单页的左右安全区：取整屏宽度的 4%（2640 宽下约 106px），
+	// 设置页壳层也落在同一个矩形里，因此导航栏和所有页面共用这条竖线。
+	// 只缩页面布局矩形，不动 CUi::Screen()，触摸输入仍按整屏坐标换算。
+	void QmApplyMenuPageSideInset(CUIRect *pRect, float FullWidth)
+	{
+		if(!QmUiMobilePlatform())
+			return;
+		const float Left = std::clamp(FullWidth * 0.04f, 0.0f, FullWidth * 0.5f);
+		const float Right = std::max(Left, FullWidth - Left);
+		const float OldRight = pRect->x + pRect->w;
+		pRect->x = std::max(pRect->x, Left);
+		pRect->w = std::max(0.0f, std::min(OldRight, Right) - pRect->x);
+	}
 
 	void FormatStatsPlaytime(int64_t Seconds, bool TotalHours, char *pBuf, size_t BufSize)
 	{
@@ -801,6 +817,7 @@ qm_card_order::CModel &CMenus::SettingsCardOrderModelForRenderPass()
 	{
 		m_SettingsCardRenderOnlyOrderModel.LoadMerged(g_Config.m_QmGlobalCardOrder, qm_card_registry::BuildDefaultEntries());
 		qm_card_registry::RepairRemovedModernTabs(m_SettingsCardRenderOnlyOrderModel);
+		qm_card_registry::RepairLegacyBindTab(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyCreditsTabs(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyNameplateTitleLayout(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyTeeLayout(m_SettingsCardRenderOnlyOrderModel);
@@ -863,10 +880,11 @@ void CMenus::LoadSettingsCardOrderModel()
 	// 归属修复不依赖布局版本，也不能被较早的可选布局迁移阻断。
 	// 写回失败时仍保留可显示的内存布局，下次加载会再次尝试修复。
 	const bool ModernTabsChanged = qm_card_registry::RepairRemovedModernTabs(m_SettingsCardOrderModel);
+	const bool LegacyBindTabChanged = qm_card_registry::RepairLegacyBindTab(m_SettingsCardOrderModel);
 	const bool CreditsLayoutChanged = qm_card_registry::RepairLegacyCreditsTabs(m_SettingsCardOrderModel);
 	const bool NameplateTitleLayoutChanged = qm_card_registry::RepairLegacyNameplateTitleLayout(m_SettingsCardOrderModel);
 	const bool TeeLayoutChanged = qm_card_registry::RepairLegacyTeeLayout(m_SettingsCardOrderModel);
-	if((ModernTabsChanged || CreditsLayoutChanged || NameplateTitleLayoutChanged || TeeLayoutChanged) && !PersistCurrentLayout())
+	if((ModernTabsChanged || LegacyBindTabChanged || CreditsLayoutChanged || NameplateTitleLayoutChanged || TeeLayoutChanged) && !PersistCurrentLayout())
 	{
 		m_SettingsCardOrderLoaded = true;
 		return;
@@ -1741,6 +1759,12 @@ int CMenus::DoButton_CheckBox_Common_WithLabelElement(const void *pId, const cha
 	return ProcessInput ? Ui()->DoButtonLogic(pId, 0, pRect, Flags) : 0;
 }
 
+static void DrawSettingsSearchHighlight(CUi *pUi, const CUIRect &Rect)
+{
+	const qm_settings_highlight::SStyle Style = qm_settings_highlight::Resolve(pUi->QmControlTheme(), Rect);
+	DrawRoundedSurface(pUi, Rect, Style.m_Fill, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), Style.m_Radius, 0.0f);
+}
+
 int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect)
 {
 	return DoSettingsButton_CheckBox(Page, Tab, -1, pId, pTextId, pText, Checked, pRect);
@@ -1761,6 +1785,10 @@ int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void 
 {
 	Ui()->DoConfigTooltip(pId, pRect, pId);
 	const float BodySize = RequestedFontSize > 0.0f ? RequestedFontSize : CurrentSettingsContentMetrics().m_BodySize;
+	// 搜索结果逐行定位：命中行先铺一层浅色底，再按普通控件绘制，文字与开关保持可读。
+	const bool SearchReveal = !m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(pTextId, pText, *pRect);
+	if(SearchReveal)
+		DrawSettingsSearchHighlight(Ui(), *pRect);
 	if(pTextId == nullptr)
 	{
 		return DoButton_CheckBox_Common_WithLabelElement(pId, pText, Checked ? "X" : "", pRect, BUTTONFLAG_LEFT, nullptr, ProcessInput, BodySize);
@@ -1770,7 +1798,7 @@ int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void 
 	const CUIRect &ToggleRect = Layout.m_ControlRect;
 	SLabelProperties Props = LabelProps;
 	Props.m_MaxWidth = Label.w;
-	DoSettingsMenuLabel(Page, Tab, Subtab, pTextId, &Label, pText, BodySize, TEXTALIGN_ML, Props);
+	DoSettingsMenuLabel(Page, Tab, Subtab, pTextId, &Label, pText, BodySize, TEXTALIGN_ML, Props, -1, false);
 	if(!m_MenuTextPlanCollecting)
 		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pId, pRect, pId, &Label);
 	if(m_MenuTextPlanCollecting)
@@ -1814,7 +1842,7 @@ int CMenus::DoSettingsButton_CheckBoxAutoVMarginAndSet(int Page, int Tab, const 
 	return Logic;
 }
 
-void CMenus::DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, bool Render)
+void CMenus::DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, bool Render, const bool DrawSearchBackground)
 {
 	const auto Presentation = ResolveSettingsLabelPresentation(pTextId, pText, [](const char *pKey) { return Localize(pKey); });
 	pText = Presentation.m_pText;
@@ -1822,6 +1850,11 @@ void CMenus::DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRe
 		GameClient()->m_Tooltips.DoSmallToolTip(Presentation.m_pTipId, pRect, Presentation.m_pTip, CurrentSettingsContentMetrics().m_SmallSize);
 	pText = Ui()->PrepareCardLabel(pRect, pText, Render && !m_MenuTextPlanCollecting);
 	SLabelProperties EffectiveProps = LabelProps;
+	if(Render && !m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(pTextId, pText, *pRect))
+	{
+		if(DrawSearchBackground)
+			DrawSettingsSearchHighlight(Ui(), *pRect);
+	}
 	if(Page == SETTINGS_TCLIENT && Size > 0.0f)
 	{
 		EffectiveProps.m_MaxWidth = EffectiveProps.m_MaxWidth >= 0.0f ? EffectiveProps.m_MaxWidth : pRect->w;
@@ -1844,7 +1877,7 @@ void CMenus::DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRe
 	DoSettingsLabelStreamed(Element, pRect, pText, Size, Align, EffectiveProps, -1, nullptr, Render);
 }
 
-void CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props, int MaxWidth)
+void CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props, int MaxWidth, const bool DrawSearchBackground)
 {
 	const auto Presentation = ResolveSettingsLabelPresentation(pTextId, pText, [](const char *pKey) { return Localize(pKey); });
 	pText = Presentation.m_pText;
@@ -1852,6 +1885,11 @@ void CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTex
 		GameClient()->m_Tooltips.DoSmallToolTip(Presentation.m_pTipId, pRect, Presentation.m_pTip, CurrentSettingsContentMetrics().m_SmallSize);
 	pText = Ui()->PrepareCardLabel(pRect, pText, !m_MenuTextPlanCollecting);
 	SLabelProperties EffectiveProps = Props;
+	if(!m_MenuTextPlanCollecting && qm_settings_reveal::OnRow(pTextId, pText, *pRect))
+	{
+		if(DrawSearchBackground)
+			DrawSettingsSearchHighlight(Ui(), *pRect);
+	}
 	if(Page == SETTINGS_TCLIENT && Size > 0.0f)
 	{
 		EffectiveProps.m_MaxWidth = EffectiveProps.m_MaxWidth >= 0.0f ? EffectiveProps.m_MaxWidth : (MaxWidth >= 0 ? (float)MaxWidth : pRect->w);
@@ -2912,7 +2950,12 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	// 与下方内容的间距都和其它页签页一致，卡片也铺到同一条内容线上。
 	const QmMapHistoryUi::SWorkspaceMetrics StatisticsWorkspace = QmMapHistoryUi::WorkspaceMetrics(MainView.h);
 	CUIRect Window = MainView;
-	Window.Margin(StatisticsWorkspace.m_OuterMargin, &Window);
+	// 手机端工作区不再水平内缩：MainView 已对齐设置页壳层，额外缩进会让统计页
+	// 比导航栏窄一圈。只保留上下留白，左右与其它菜单页同线。
+	if(QmUiMobilePlatform())
+		Window.HMargin(StatisticsWorkspace.m_OuterMargin, &Window);
+	else
+		Window.Margin(StatisticsWorkspace.m_OuterMargin, &Window);
 
 	// 与收藏地图页共用的工作区页签：贴在内容顶端、离顶部导航和其它页面同一条基线，
 	// 且不随统计内容滚动；统计数据是第 4 个页签，点其它页签直接跳回收藏地图。
@@ -4269,8 +4312,10 @@ void CMenus::Render()
 	CUIRect Screen = *Ui()->Screen();
 	if((Client()->State() != IClient::STATE_DEMOPLAYBACK && !(GameClient()->m_RankGhost.IsViewModeActive() && !IsActive())) || m_Popup != POPUP_NONE)
 	{
-		// 全局安全区 = 统一边距基准（8px）：菜单内所有页面到窗口四边的基础距离，
+		// 全局安全区 = 统一边距基准：菜单内所有页面到窗口四边的基础距离，
 		// 内部元素（导航胶囊/内容面板）直接对齐安全区边缘，不再叠加额外内缩。
+		// 手机端的额外左右留白由各页面布局矩形处理（见 QmApplyMenuPageSideInset），
+		// 不要改 Screen()/这里：触摸映射按整屏换算，内缩 Screen 会让点击错位。
 		Screen.Margin(8.0f, &Screen);
 	}
 
@@ -4306,7 +4351,7 @@ void CMenus::Render()
 					if(RequestedPopup == POPUP_QM_UPDATE)
 						GameClient()->m_TClient.m_UpdatePopupRequested = false;
 				};
-				const float Scale = std::clamp(g_Config.m_QmUiScale / 100.0f, 0.5f, 2.0f);
+				const float Scale = std::clamp(QmUiScaleFactor(g_Config.m_QmUiScale), 0.5f, 2.0f);
 				const auto Kind = RequestedPopup == POPUP_QM_NEW_FEATURES ? ESettingsSecondaryPanelKind::NEWS : ESettingsSecondaryPanelKind::UPDATE;
 				const CUIRect Panel = ResolveSettingsSecondaryPanelRect(Screen, Kind, Scale);
 				Ui()->DoPopupMenu(pId, Panel.x, Panel.y, Panel.w, Panel.h, this, RequestedPopup == POPUP_QM_NEW_FEATURES ? +[](void *pContext, CUIRect View, bool Active) {
@@ -4378,6 +4423,10 @@ void CMenus::Render()
 			CPerfTimer ShellTimer;
 			CUIRect TabBar, MainView;
 			Screen.HSplitTop(MENU_MENUBAR_HEIGHT_NEW, &TabBar, &MainView);
+			// 手机端所有菜单页统一对齐设置页壳层：导航栏与内容区一起内缩，
+			// 只动布局矩形，触摸映射仍按整屏换算。
+			QmApplyMenuPageSideInset(&TabBar, Screen.w + 16.0f);
+			QmApplyMenuPageSideInset(&MainView, Screen.w + 16.0f);
 			bool NavigationHandedOff;
 			{
 				CPerfTimer StageTimer;
@@ -4502,6 +4551,10 @@ void CMenus::Render()
 			CPerfTimer ShellTimer;
 			CUIRect TabBar, MainView;
 			Screen.HSplitTop(MENU_MENUBAR_HEIGHT_NEW, &TabBar, &MainView);
+			// 手机端所有菜单页统一对齐设置页壳层：导航栏与内容区一起内缩，
+			// 只动布局矩形，触摸映射仍按整屏换算。
+			QmApplyMenuPageSideInset(&TabBar, Screen.w + 16.0f);
+			QmApplyMenuPageSideInset(&MainView, Screen.w + 16.0f);
 			bool NavigationHandedOff;
 			{
 				CPerfTimer StageTimer;
@@ -6401,8 +6454,8 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 	}
 	else if(str_comp(pTab, "bind") == 0 || str_comp(pTab, "qmclient-bind") == 0)
 	{
-		g_Config.m_UiSettingsPage = SETTINGS_QMCLIENT;
-		m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_BIND;
+		g_Config.m_UiSettingsPage = SETTINGS_CONTROLS;
+		m_MenusSettingsControls.SetTab(CMenusSettingsControls::ETab::BIND_WORKSHOP);
 	}
 	else if(str_comp(pTab, "tclient-bind-wheel") == 0)
 	{
@@ -8442,7 +8495,7 @@ void CMenus::OnRender()
 		CPerfTimer StageTimer;
 		if(IsActive())
 			Ui()->RenderBackButton();
-		if(!GameClient()->m_GameConsole.IsActive() && (IsActive() || GameClient()->m_Spectator.PlaybackControlsActive() || QmPoseMapPopupOpen() || QmPoseHudActive()))
+		if(!QmUiMobilePlatform() && !GameClient()->m_GameConsole.IsActive() && (IsActive() || GameClient()->m_Spectator.PlaybackControlsActive() || QmPoseMapPopupOpen() || QmPoseHudActive()))
 		{
 			if(m_BrowserColumnResizeCursor && !Ui()->IsPopupOpen())
 				RenderTools()->RenderResizeCursor(Ui()->MousePos(), 24.0f);

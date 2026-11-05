@@ -684,8 +684,10 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_ImportantAlert, "important_alert");
 	AddComponent(&m_DebugHud, "debug_hud");
 	AddComponent(&m_TouchControls, "touch_controls");
-	AddComponent(&m_QmMobileSpectator, "mobile_spectator");
 	AddComponent(&m_Scoreboard, "scoreboard");
+	// 手机观战触控层要压在计分板之上：面板打开时只留“关闭计分板”按钮，位置在右上角，
+	// 必须画在面板之上才点得到。菜单/控制台/提示仍在它上面。
+	AddComponent(&m_QmMobileSpectator, "mobile_spectator");
 	AddComponent(&m_Statboard, "statboard");
 	AddComponent(&m_Motd, "motd");
 	AddComponent(&m_Menus, "menus");

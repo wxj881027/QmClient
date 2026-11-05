@@ -285,11 +285,11 @@ namespace
 			Flow.Control("basic", 20, Row);
 			Flow.Space(4);
 			if(SettingsPersonalizationSection(m_State, Rect, m_pStableId, 20, 4, ReadOnly,
-				[&](const void *pId, const CUIRect &, bool) {
-					m_pButtonId = pId;
-					++m_ButtonCalls;
-					return Clicked;
-				}))
+				   [&](const void *pId, const CUIRect &, bool) {
+					   m_pButtonId = pId;
+					   ++m_ButtonCalls;
+					   return Clicked;
+				   }))
 			{
 				if(Flow.Control("detail", 30, Row) && Flow.Input())
 					++m_DetailInputs;
@@ -344,9 +344,7 @@ TEST(SettingsPersonalization, ToggleRebuildsHeightWithoutProcessingHiddenControl
 	CPersonalizationCard Card(State, "card-a");
 	const auto pClosed = Card.Resolve();
 	std::shared_ptr<const CSettingsContentLayout> pOpened;
-	EXPECT_TRUE(ExecuteSettingsContentInputThenResolve(pClosed, {},
-		[&](const auto &Layout, auto) { Card.Replay(Layout, ESettingsContentPass::INPUT, true); },
-		[&](float) { pOpened = Card.Resolve(); return pOpened; }));
+	EXPECT_TRUE(ExecuteSettingsContentInputThenResolve(pClosed, {}, [&](const auto &Layout, auto) { Card.Replay(Layout, ESettingsContentPass::INPUT, true); }, [&](float) { pOpened = Card.Resolve(); return pOpened; }));
 	ASSERT_NE(pOpened, nullptr);
 	EXPECT_TRUE(State.Expanded("card-a"));
 	EXPECT_NE(pOpened->Find("detail"), nullptr);

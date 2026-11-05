@@ -352,7 +352,10 @@ class CConfigManager : public IConfigManager
 		std::string m_Content;
 	};
 	SConfigFileState m_aSaveState[ConfigDomain::NUM];
+	std::string m_LastSaveError;
+	void SetSaveError(const char *pStage, const char *pPath);
 	bool ReadConfigFileState(const char *pPath, SConfigFileState &State) const;
+	bool ReadConfigFileStateWithRetry(const char *pPath, SConfigFileState &State) const;
 	bool CheckConfigFiles(bool RefreshBaseline = false);
 
 	struct SCallback
@@ -393,6 +396,7 @@ public:
 	const char *SaveValueOverrideOwner(const int *pValue) const override;
 	int RealValue(const int *pValue) const override;
 	bool Save(bool Force = false) override;
+	const char *LastSaveError() const override;
 
 	CConfig *Values() override { return &g_Config; }
 

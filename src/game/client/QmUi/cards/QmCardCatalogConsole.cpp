@@ -187,7 +187,7 @@ void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetr
 				CUIRect ItemRect;
 				Content.HSplitTop(QmConsoleSettingsLayout::SchemeRowHeight(Metrics), &ItemRect, &Content);
 				ItemRect.HMargin(Metrics.m_LineSpacing * 0.5f, &ItemRect);
-				if(!SchemeScrollRegion.AddRect(ItemRect, ScrollToSelected && Index == SelectedIndex))
+				if(!SchemeScrollRegion.AddRect(ItemRect, ScrollToSelected && Index == SelectedIndex, Index == SelectedIndex))
 					continue;
 				RenderConsoleSchemeRow(Controls.m_aSchemeRows[Index], qm_console_scheme_list::All()[Index], ItemRect);
 			}

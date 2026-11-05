@@ -13,6 +13,7 @@
 
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmCardRegistry.h>
+#include <game/client/QmUi/QmIconSwap.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/SettingsCard.h>
@@ -39,6 +40,7 @@
 #include <game/client/components/skins.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
+#include <game/client/qm_icon_label.h>
 #include <game/client/skin.h>
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
@@ -1206,18 +1208,25 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 	auto DoButtonSkinQueue = [&](const void *pButtonId, const void *pParentId, bool InQueue, bool Disabled, const CUIRect *pRect) {
 		if(InQueue || (pParentId != nullptr && Ui()->HotItem() == pParentId) || Ui()->HotItem() == pButtonId)
 		{
-			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-			TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 			const float Alpha = Ui()->HotItem() == pButtonId ? 0.2f : 0.0f;
 			ColorRGBA Color = InQueue ? ColorRGBA(0.2f, 0.8f, 0.4f, 0.8f + Alpha) : ColorRGBA(0.5f, 0.5f, 0.5f, 0.8f + Alpha);
 			if(Disabled && !InQueue)
 			{
 				Color = ColorRGBA(0.9f, 0.3f, 0.3f, 0.6f + Alpha);
 			}
+			// 排队 ⇄ 退出排队：加/减方框形变（外框常量、竖臂压平），状态色随点击即时切换。
+			IUiContext QueueIconCtx = ui_widget::ControlContext(Ui());
+			ui_widget::SIconSwapBinding QueueBinding = ui_widget::ResolveIconSwapBinding(
+				QueueIconCtx, EQmIconSwapPair::SQUARE_PLUS_MINUS,
+				EQmIcon::SQUARE_PLUS, FONT_ICON_SQUARE_PLUS,
+				EQmIcon::SQUARE_MINUS, FONT_ICON_SQUARE_MINUS,
+				InQueue ? 1.0f : 0.0f, str_quickhash("skin-queue-icon"), pButtonId, 0.22f);
+			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+			TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 			TextRender()->TextColor(Color);
 			SLabelProperties Props;
 			Props.m_MaxWidth = pRect->w;
-			Ui()->DoLabel_QmIcon(pRect, InQueue ? EQmIcon::SQUARE_MINUS : EQmIcon::SQUARE_PLUS, InQueue ? FONT_ICON_SQUARE_MINUS : FONT_ICON_SQUARE_PLUS, 12.0f, TEXTALIGN_MC, Props);
+			ui_widget::DrawIconSwapBinding(QueueIconCtx, QmIconLabelRect(*pRect, 12.0f, TEXTALIGN_MC), Color, &QueueBinding);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 			TextRender()->SetRenderFlags(0);
 			TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);

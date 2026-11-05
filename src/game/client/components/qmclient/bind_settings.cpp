@@ -88,7 +88,7 @@ void CMenus::RenderSettingsQmClientBindDeck(CUIRect MainView, const bool Prewarm
 	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w);
 	const float UiScale = Metrics.m_UiScale;
 	const SSettingsPageLayoutFrame Page = SettingsPageLayout(MainView, UiScale);
-	IUiContext CardCtx = SettingsUiContext("settings_qmclient_bind", UiScale);
+	IUiContext CardCtx = SettingsUiContext("settings_controls_bind", UiScale);
 	if(ReadOnly)
 	{
 		CardCtx.m_pAnim = nullptr;
@@ -112,7 +112,7 @@ void CMenus::RenderSettingsQmClientBindDeck(CUIRect MainView, const bool Prewarm
 	Context.m_Metrics = Metrics;
 	Context.m_LabelWidth = ResolveSettingsCardLabelWidth(Page.m_TwoColumns ? Page.m_aColumns[0].w : Page.m_ContentViewport.w, Metrics);
 	Context.m_UiContext = CardCtx;
-	const uint64_t CardLayoutRevision = str_quickhash("qmclient-bind") ^ GameClient()->m_Binds.Revision();
+	const uint64_t CardLayoutRevision = str_quickhash("settings-controls-bind") ^ GameClient()->m_Binds.Revision();
 	const uint64_t DefinitionsRevision = ResolveSettingsCardDefinitionsRevision(m_SettingsCardDeckDisplayCycle, m_MenuTextPoolGeneration, MainView.w, CardLayoutRevision);
 	const auto BuildDefinitions = [Context](std::vector<SSettingsCardDefinition> &vCards) {
 		SSettingsCardDefinition Definition;
@@ -136,7 +136,7 @@ void CMenus::RenderSettingsQmClientBindDeck(CUIRect MainView, const bool Prewarm
 	InputState.m_pScrollParams = Ui()->MeasurementOnly() ? nullptr : &ScrollParams;
 	qm_card_order::CModel &OrderModel = Ui()->MeasurementOnly() ? s_PrewarmOrderModel : SettingsCardOrderModel();
 	CSettingsCardDeck &CardDeck = Ui()->MeasurementOnly() ? s_PrewarmDeck : m_SettingsCardDeck;
-	const SSettingsCardDeckResult DeckResult = CardDeck.RenderCached(CardCtx, Page, "bind", DefinitionsRevision, BuildDefinitions, OrderModel, Ui()->MeasurementOnly() ? nullptr : &s_ScrollRegion, InputState, SettingsCardMotionSpec(), SettingsCardDeckVisualOptions());
+	const SSettingsCardDeckResult DeckResult = CardDeck.RenderCached(CardCtx, Page, "controls", DefinitionsRevision, BuildDefinitions, OrderModel, Ui()->MeasurementOnly() ? nullptr : &s_ScrollRegion, InputState, SettingsCardMotionSpec(), SettingsCardDeckVisualOptions());
 	if(!ReadOnly && DeckResult.m_OrderChanged)
 		SaveSettingsCardOrderModel();
 }
@@ -310,7 +310,7 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 		Flow.Space(LineSpacing * 0.65f);
 		CUIRect MouseHeader;
 		if(Flow.Control("bind-mouse-header", LineHeight, MouseHeader))
-			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_BIND, QMCLIENT_SETTINGS_TAB_BIND, "qm-bind-editor-mouse", &MouseHeader, Localize("Mouse"), BodySize, TEXTALIGN_ML, {}, (int)MouseHeader.w);
+			DoSettingsMenuLabel(SETTINGS_CONTROLS, -1, -1, "qm-bind-editor-mouse", &MouseHeader, Localize("Mouse"), BodySize, TEXTALIGN_ML, {}, (int)MouseHeader.w);
 		RenderKeyRow({{KEY_MOUSE_1, "Mouse 1", "mouse_left", 1.4f}, {KEY_MOUSE_2, "Mouse 2", "mouse_right", 1.4f}, {KEY_MOUSE_3, "Mouse 3", "mouse_scroll", 1.4f}, {KEY_MOUSE_4, "Mouse 4", "mouse_side_back", 1.4f}, {KEY_MOUSE_5, "Mouse 5", "mouse_side_forward", 1.4f}, {KEY_MOUSE_WHEEL_UP, "Wheel up", "mouse_scroll_up", 1.4f}, {KEY_MOUSE_WHEEL_DOWN, "Wheel down", "mouse_scroll_down", 1.4f}});
 		RenderKeyRow({{KEY_MOUSE_WHEEL_LEFT, "Wheel left", "mouse_horizontal", 1.4f}, {KEY_MOUSE_WHEEL_RIGHT, "Wheel right", "mouse_horizontal", 1.4f}});
 		if(!ReadOnly)
@@ -329,7 +329,7 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 		Flow.Control("bind-actions-top-gap", LineHeight, HeadingGap);
 		CUIRect SelectedLabel;
 		if(Flow.Control("bind-selected-key", LineHeight, SelectedLabel))
-			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_BIND, QMCLIENT_SETTINGS_TAB_BIND, "qm-bind-editor-selected-key", &SelectedLabel, aActiveKeyName, BodySize, TEXTALIGN_ML, {}, (int)SelectedLabel.w);
+			DoSettingsMenuLabel(SETTINGS_CONTROLS, -1, -1, "qm-bind-editor-selected-key", &SelectedLabel, aActiveKeyName, BodySize, TEXTALIGN_ML, {}, (int)SelectedLabel.w);
 		CUIRect CaptureRow;
 		if(Flow.Control("bind-key-capture", LineHeight, CaptureRow))
 		{
@@ -395,7 +395,7 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 
 		CUIRect BoundHeader;
 		if(Flow.Control("bind-bound-functions", LineHeight, BoundHeader))
-			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_BIND, QMCLIENT_SETTINGS_TAB_BIND, "qm-bind-editor-current", &BoundHeader, Localize("Bound functions"), BodySize, TEXTALIGN_ML, {}, (int)BoundHeader.w);
+			DoSettingsMenuLabel(SETTINGS_CONTROLS, -1, -1, "qm-bind-editor-current", &BoundHeader, Localize("Bound functions"), BodySize, TEXTALIGN_ML, {}, (int)BoundHeader.w);
 		Flow.Space(LineSpacing * 0.4f);
 		if(!ReadOnly)
 			State.m_vActionControls.resize(Parsed.m_vCommands.size());
@@ -408,17 +408,34 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 		}
 		else
 		{
+			// 把一条多命令绑定显示成从上到下的指令节点链：每个节点仍对应
+			// 一个真实控制台命令，删除节点只重组原命令串，不改变执行顺序。
+			const float NodeHeight = std::max(LineHeight * 1.55f, LineHeight + LineSpacing);
 			for(size_t Index = 0; Index < Parsed.m_vCommands.size(); ++Index)
 			{
 				CUIRect Row, Remove;
 				char aId[64];
-				str_format(aId, sizeof(aId), "bind-function-%d", (int)Index);
-				const bool HasRow = Flow.Control(aId, LineHeight, Row);
+				str_format(aId, sizeof(aId), "bind-flow-node-%d", (int)Index);
+				const bool HasRow = Flow.Control(aId, NodeHeight, Row);
 				Flow.Space(LineSpacing * 0.35f);
 				if(!HasRow)
 					continue;
 				Row.VSplitRight(LineHeight, &Row, &Remove);
 				const bool CanRemove = !ReadOnly && Parsed.m_Complete && !Ui()->IsPopupOpen() && !GameClient()->m_KeyBinder.IsActive();
+				if(Index > 0)
+				{
+					CUIRect Connector{Row.x + LineHeight * 0.28f, Row.y - LineSpacing * 0.35f, 2.0f, LineSpacing * 0.7f};
+					DrawRoundedSurface(Ui(), Connector, ui_token::color::ACCENT_PRIMARY_DIM, ui_token::color::COLOR_TRANSPARENT, 1.0f);
+				}
+				CUIRect Node;
+				Row.VMargin(2.0f, &Node);
+				const ColorRGBA NodeSurface = Index % 2 == 0 ? ui_token::color::SURFACE_ELEVATED : ui_token::color::SURFACE_SUBHEADER;
+				DrawRoundedSurface(Ui(), Node, NodeSurface, ui_token::color::ACCENT_PRIMARY_DIM, ui_token::radius::BASE, 1.0f);
+				CUIRect Marker, Label;
+				Node.VSplitLeft(LineHeight * 0.55f, &Marker, &Label);
+				Marker.VMargin(LineHeight * 0.30f, &Marker);
+				DrawRoundedSurface(Ui(), Marker, ui_token::color::ACCENT_PRIMARY, ui_token::color::COLOR_TRANSPARENT, Marker.w * 0.5f);
+				Label.VMargin(LineSpacing * 0.6f, &Label);
 				if(Index < State.m_vActionControls.size() && Ui()->DoButton_QmIcon(&State.m_vActionControls[Index].m_Remove, EQmIcon::TRASH, FontIcons::FONT_ICON_TRASH, CanRemove ? 0 : -1, &Remove, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL) && CanRemove)
 				{
 					Parsed.m_vCommands.erase(Parsed.m_vCommands.begin() + Index);
@@ -427,10 +444,10 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 					break;
 				}
 				SLabelProperties Props;
-				Props.m_MaxWidth = std::max(1.0f, Row.w - LineSpacing);
+				Props.m_MaxWidth = std::max(1.0f, Label.w - LineSpacing);
 				Props.m_EllipsisAtEnd = true;
 				Props.m_MinimumFontSize = std::max(8.0f, BodySize * 0.82f);
-				Ui()->DoLabel(&Row, Parsed.m_vCommands[Index].c_str(), BodySize, TEXTALIGN_ML, Props);
+				Ui()->DoLabel(&Label, Parsed.m_vCommands[Index].c_str(), BodySize, TEXTALIGN_ML, Props);
 				if(!ReadOnly && Index < State.m_vActionControls.size())
 				{
 					GameClient()->m_Tooltips.DoToolTip(&State.m_vActionControls[Index].m_Remove, &Remove, Localize("Delete"));

@@ -2,6 +2,7 @@
 
 #include <base/system.h>
 
+#include <engine/shared/config.h>
 #include <engine/shared/localization.h>
 
 #include <game/client/QmUi/cards/QmCardCatalogSearch.h>
@@ -135,7 +136,7 @@ namespace qm_card_registry
 			{"qm:solo_split", "function", ECardColumn::Left, 17, "Solo split", "单刷 danshua 单刷模式 danshua moshi 分队 fendui 分身 fenshen dummy 队伍 duiwu team 独立 duli 各自进队 gezi jindui 组队 zudui 自动锁队 zidong suodui lock 锁队 一键 yijian 单人 danren 刷图 shuatu solo 同步 tongbu 开局 kaiju function", "Split main and dummy into different teams for solo-run sync"},
 			{"qm:key_binds", "function", ECardColumn::Left, 5, "Key binds", "按键绑定 anjian bangding bind 快捷键 kuaijiejian 常用绑定 changyong bangding 武器辅助线 fuzhuxian 异常断开 yichang duankai timeout disconnect function", "Common key bindings"},
 			{"qm:better_scoreboard", "function", ECardColumn::Left, 6, "Better scoreboard", "更好的计分板 genghao jifenban better scoreboard 计分板查分 chafen 计分板积分检查 jifenban jifen jiancha scoreboard point check 游玩时间 youwan shijian 累计小时 leiji xiaoshi playtime DDStats qm_scoreboard_playtime 显示死亡后计分板 死亡后显示计分板 siwang hou xianshi jifenban show scoreboard after death 滚动计分板 gundong jifenban fixed-size scoreboard rows mouse wheel 计分板筛选 jifenban shaixuan scoreboard filter 计分板Qm标识 qm biaoshi scoreboard badge function", "Scoreboard"},
-			{"qm:mini_features", "function", ECardColumn::Left, 7, "Mini features", "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 聊天框淡出 liaotian danchu 聊天指令补全 zhiling buquan 命令补全 mingling buquan command completion autocomplete qm_chat_command_completion 聊天表情补全 liaotian biaoqing buquan emoji completion qm_chat_emoji_completion 表情选择 biaoqing xuanze 动画优化 donghua youhua 哼歌 hengge humming qm_humming 复读 fudu 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 连击 lianji combo 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 更新 gengxin 版本 banben 过旧 guojiu 提示 tishi outdated version warning 新版UI xinban ui settings page shezhi yemian 候选栏 houxuanlan 进程优先级 jincheng youxianji 协作制图 xiezuo zhitu 多人制图 duoren zhitu tune zone 区域着色 quyu zhaose 地图着色 ditu zhaose function", "Configure Dream-only convenience features"},
+			{"qm:mini_features", "function", ECardColumn::Left, 7, "Mini features", "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 聊天框淡出 liaotian danchu 聊天指令补全 zhiling buquan 命令补全 mingling buquan command completion autocomplete qm_chat_command_completion 聊天表情补全 liaotian biaoqing buquan emoji completion qm_chat_emoji_completion 表情选择 biaoqing xuanze 动画优化 donghua youhua 哼歌 hengge humming qm_humming 复读 fudu 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 连击 lianji combo 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 更新 gengxin 版本 banben 过旧 guojiu 提示 tishi outdated version warning 新版UI xinban ui settings page shezhi yemian 候选栏 houxuanlan 进程优先级 jincheng youxianji 协作制图 xiezuo zhitu 多人制图 duoren zhitu tune zone 区域着色 quyu zhaose 地图着色 ditu zhaose function", "Only what you can't imagine, nothing Dream can't do"},
 			{"qm:self_kill_protection", "function", ECardColumn::Left, 22, "Client-side self-kill protection", "自杀保护 zisha baohu 客户端侧自杀 kehu duan ce 自杀 kehuduan zisha 自杀开关 关闭自杀 kaiguan 开启自杀 自动开启 zidong kaiqi 自动拦截 开局 jukaishi 延迟 yanchi 分钟 fenzhong 自动 跑图 shuatu fangwuchu 防误触 拦截 lanjie K键 K jian kill 命令 mingling selfkill self kill protection client-side bind qm_self_kill_off qm_self_kill_on qm_self_kill_enabled qm_self_kill_auto_delay", "Opt-in protection for client-initiated self-kill, with optional auto-enable after joining a game"},
 			{"qm:ime", "function", ECardColumn::Left, 19, "IME", "输入法 shurufa ime 候选栏 houxuanlan 新版输入法 xinban shurufa 自动管理 zidong guanli 背景 beijing 颜色 yanse 透明度 toumingdu 高斯模糊 gaosi mohu function", "Configure the IME candidate bar"},
 			{"qm:jump_hint", "function", ECardColumn::Left, 7, "Jump hint", "位置跳跃提示 tiaoyue tishi jump hint position edge jump color yanse 颜色 horizontal position shuiping weizhi vertical position chuizhi weizhi font size ziti function", "Customize the position jump hint"},
@@ -167,8 +168,8 @@ namespace qm_card_registry
 			{"qm:gores_drown_board", "hud", ECardColumn::Right, 23, "Gores drown board", "Gores Kog 落水 luoshui 冻结 dongjie 死亡 siwang 排行 paixing 榜单 bangdan 队伍 duiwu Tee 透明度 toumingdu 人数 renshu hud", "Configure the Gores team drown board"},
 			{"qm:nameplate_text", "hud", ECardColumn::Right, 18, "Nameplate text", "nameplate text hud 名字 mingzi 名牌 mingpai 文字 wenzi", "Customize additional nameplate text", "appearance-name-plate", "deck:appearance-name-plate-text"}, // 旧模块入口继续定位到外观页的文字卡片。
 			{"qm:laser", "visual", ECardColumn::Right, 3, "Laser", "激光设置 jiguang laser 增强特效 zengqiang texiao 辉光强度 huiguang qiangdu 激光大小 daxiao 半透明 bantouming 圆角端点 yuanjiao duandian 脉冲速度 maichong sudu 脉冲幅度 maichong fudu visual", "Customize laser shape and effects", "appearance-laser", "deck:appearance-laser-enhanced"}, // 数据债：原无 tab 归属，B1 补 visual；功能由外观页承载
-			{"qm:bind_editor", "bind", ECardColumn::Full, 0, Localizable("Bind"), "绑定 bangding bind keyboard 键盘 anjian 按键 mouse 鼠标 wheel 滚轮 modifier 修饰键 command 命令", Localizable("Configure keyboard, mouse, wheel, and modifier bindings")},
-			{"qm:bind_overview", "bind", ECardColumn::Full, 1, Localizable("Bind overview"), "绑定一览 bangding yilan bind overview 所有按键 suoyou anjian key bindings 键位列表 jianwei liebiao 分组展示 fenzu zhanshi 复制全部 fuzhi quanbu copy all", Localizable("Browse all key bindings grouped by function")},
+			{"qm:bind_editor", "controls", ECardColumn::Full, 0, Localizable("Bind"), "绑定 bangding bind keyboard 键盘 anjian 按键 mouse 鼠标 wheel 滚轮 modifier 修饰键 command 命令", Localizable("Configure keyboard, mouse, wheel, and modifier bindings"), "bind"},
+			{"qm:bind_overview", "controls", ECardColumn::Full, 1, Localizable("Bind overview"), "绑定一览 bangding yilan bind overview 所有按键 suoyou anjian key bindings 键位列表 jianwei liebiao 分组展示 fenzu zhanshi 复制全部 fuzhi quanbu copy all", Localizable("Browse all key bindings grouped by function"), "bind"},
 
 			// === Tclient section（19）· tclient:<name>（id 不变；column/order 按当前 section 顺序显式化）===
 			{"tclient:visual-font-cursor", "tclient", ECardColumn::Left, 0, "Font cursor", "font cursor tclient visual", "Choose the menu font and cursor appearance", "tclient", "tclient:font"},
@@ -267,7 +268,6 @@ namespace qm_card_registry
 			{"deck:controls-custom", "controls", ECardColumn::Right, 4, "Custom", "controls custom binds", "Review and edit custom key bindings"},
 		};
 			// clang-format on
-			qm_card_catalog::FillCardSearchMetadata(Cards);
 			return Cards;
 		}();
 		return s_aDefaults;
@@ -341,9 +341,78 @@ namespace qm_card_registry
 
 	namespace
 	{
-		bool SearchTextMatches(const char *pText, const char *pQuery)
+		constexpr int SEARCH_MAX_MATCHES = 3;
+		// 字段权重只影响排序：标题精确命中 > 关键词 > 设置标签 > 配置名 > 描述 > 别名。
+		constexpr int SEARCH_WEIGHT_TITLE = 20;
+		constexpr int SEARCH_WEIGHT_KEYWORDS = 12;
+		constexpr int SEARCH_WEIGHT_LABEL = 10;
+		constexpr int SEARCH_WEIGHT_CONFIG = 8;
+		constexpr int SEARCH_WEIGHT_DESCRIPTION = 6;
+		constexpr int SEARCH_WEIGHT_ALIAS = 5;
+
+		// 空格、制表符与全角空格分隔查询词；每个词都必须命中同一张卡片的任一字段。
+		std::vector<std::string> SplitSearchQuery(const char *pQuery)
 		{
-			return pText != nullptr && pText[0] != '\0' && str_utf8_find_nocase(pText, pQuery) != nullptr;
+			std::vector<std::string> vTokens;
+			std::string Token;
+			const auto Flush = [&]() {
+				if(!Token.empty())
+				{
+					vTokens.push_back(Token);
+					Token.clear();
+				}
+			};
+			for(const char *p = pQuery; p != nullptr && p[0] != '\0';)
+			{
+				const unsigned char c = (unsigned char)p[0];
+				if(c == ' ' || c == '\t' || c == '\n' || c == '\r')
+				{
+					Flush();
+					++p;
+					continue;
+				}
+				if(c == 0xE3 && (unsigned char)p[1] == 0x80 && (unsigned char)p[2] == 0x80)
+				{
+					Flush();
+					p += 3;
+					continue;
+				}
+				Token.push_back(*p);
+				++p;
+			}
+			Flush();
+			return vTokens;
+		}
+
+		int SearchMatchScore(const char *pText, const std::string &Token, const int Weight)
+		{
+			if(pText == nullptr || pText[0] == '\0')
+				return 0;
+			if(str_utf8_find_nocase(pText, Token.c_str()) == nullptr)
+				return 0;
+			return str_comp_nocase(pText, Token.c_str()) == 0 ? Weight * 2 : Weight;
+		}
+
+		constexpr size_t SEARCH_MAX_MATCH_KEYS = 8;
+		// 长帮助句不是可绘制行：仍参与卡片打分，但不塞进命中列表/定位键。
+		constexpr size_t SEARCH_MAX_MATCH_TEXT = 80;
+
+		void AddSearchKey(std::vector<std::string> &vKeys, const char *pText)
+		{
+			if(pText == nullptr || pText[0] == '\0' || vKeys.size() >= SEARCH_MAX_MATCH_KEYS)
+				return;
+			if(std::any_of(vKeys.begin(), vKeys.end(), [pText](const std::string &Existing) { return Existing == pText; }))
+				return;
+			vKeys.emplace_back(pText);
+		}
+
+		void AddSearchMatch(std::vector<std::string> &vMatches, const char *pText)
+		{
+			if(pText == nullptr || pText[0] == '\0' || vMatches.size() >= SEARCH_MAX_MATCHES)
+				return;
+			if(std::any_of(vMatches.begin(), vMatches.end(), [pText](const std::string &Existing) { return Existing == pText; }))
+				return;
+			vMatches.emplace_back(pText);
 		}
 	}
 
@@ -355,59 +424,224 @@ namespace qm_card_registry
 			pCurrentTab = Default.m_pDefaultTab;
 		// 没有 deck 渲染器的条目把功能放在别处：按声明的目标跳转，
 		// 否则会落在自己那个空 tab 上（搜索可见但点了没反应）。
+		// 指向另一张卡（别名入口）时跟随该卡在用户布局里的保存位置，
+		// 用户把承载卡拖到别的 tab 后仍能定位；只声明子页签目标
+		// （控制页的 Bind 子页签）时保持声明值，否则会被卡片自身归属覆盖。
 		if(Default.m_pNavigationTab != nullptr || Default.m_pNavigationStableId != nullptr)
 		{
 			const char *pStableId = Default.m_pNavigationStableId != nullptr ? Default.m_pNavigationStableId : Default.m_pStableId;
 			const int TargetIndex = pStableId != nullptr ? Model.FindByStableId(pStableId) : -1;
 			const char *pTab = Default.m_pNavigationTab != nullptr ? Default.m_pNavigationTab : pCurrentTab;
-			if(TargetIndex >= 0 && Model.Entry(TargetIndex).m_pDefaultTab != nullptr)
+			if(Default.m_pNavigationStableId != nullptr && TargetIndex >= 0 && Model.Entry(TargetIndex).m_pDefaultTab != nullptr)
 				pTab = Model.Entry(TargetIndex).m_pDefaultTab;
 			return {pTab, pStableId};
 		}
 		return {pCurrentTab, Default.m_pStableId};
 	}
 
+	std::string LowerUtf8(const char *pText)
+	{
+		std::string Lower;
+		if(pText == nullptr)
+			return Lower;
+		while(*pText != '\0')
+		{
+			const int Code = str_utf8_tolower_codepoint(str_utf8_decode(&pText));
+			char aBuffer[8];
+			const int Length = str_utf8_encode(aBuffer, Code);
+			if(Length > 0)
+				Lower.append(aBuffer, Length);
+		}
+		return Lower;
+	}
+
+	void AppendLowerUtf8(std::string &Out, const char *pText)
+	{
+		if(pText == nullptr || pText[0] == '\0')
+			return;
+		Out += LowerUtf8(pText);
+		Out.push_back('\n');
+	}
+
+	// 每张卡的检索文本预折叠为小写：查询词先在大字符串里做一次子串预筛，
+	// 不命中就连 Localize 和逐字段打分都省掉。语言文件变化时整体重建。
+	const std::vector<std::string> &SearchHaystacks()
+	{
+		static std::vector<std::string> s_vHaystacks;
+		static std::string s_Language;
+		static size_t s_LanguageCount = 0;
+		const std::vector<SCardDefault> &vDefaults = DefaultsTable();
+		const char *pLanguage = g_Config.m_ClLanguagefile;
+		const std::string Language = pLanguage != nullptr ? pLanguage : "";
+		const size_t LanguageCount = g_Localization.Languages().size();
+		if(s_Language == Language && s_LanguageCount == LanguageCount && s_vHaystacks.size() == vDefaults.size())
+			return s_vHaystacks;
+
+		s_vHaystacks.clear();
+		s_vHaystacks.resize(vDefaults.size());
+		for(size_t CardIndex = 0; CardIndex < vDefaults.size(); ++CardIndex)
+		{
+			const SCardDefault &Default = vDefaults[CardIndex];
+			const qm_card_registry::SCardSettingSearch *pSettings = nullptr;
+			size_t SettingCount = 0;
+			qm_card_catalog::FindSearchMetadata(Default.m_pStableId, &pSettings, &SettingCount);
+			std::string &Haystack = s_vHaystacks[CardIndex];
+			AppendLowerUtf8(Haystack, Default.m_pTitle);
+			AppendLowerUtf8(Haystack, Default.m_pTitle != nullptr ? Localize(Default.m_pTitle) : nullptr);
+			AppendLowerUtf8(Haystack, Default.m_pSearchKeywords);
+			AppendLowerUtf8(Haystack, Default.m_pDescription);
+			AppendLowerUtf8(Haystack, Default.m_pDescription != nullptr ? Localize(Default.m_pDescription) : nullptr);
+			for(size_t SettingIndex = 0; SettingIndex < SettingCount; ++SettingIndex)
+			{
+				const SCardSettingSearch &Setting = pSettings[SettingIndex];
+				AppendLowerUtf8(Haystack, Setting.m_pLabel);
+				AppendLowerUtf8(Haystack, Setting.m_pLabel != nullptr ? Localize(Setting.m_pLabel, Setting.m_pContext) : nullptr);
+				AppendLowerUtf8(Haystack, Setting.m_pConfigName);
+				AppendLowerUtf8(Haystack, Setting.m_pAliases);
+			}
+		}
+		s_Language = Language;
+		s_LanguageCount = LanguageCount;
+		return s_vHaystacks;
+	}
+
 	std::vector<SCardSearchResult> SearchCards(const char *pQuery, const qm_card_order::CModel &Model)
 	{
 		std::vector<SCardSearchResult> vResults;
-		if(pQuery == nullptr || pQuery[0] == '\0')
+		const std::vector<std::string> vTokens = SplitSearchQuery(pQuery);
+		if(vTokens.empty())
 			return vResults;
 
-		const std::vector<SCardDefault> &vDefaults = DefaultsTable();
-		vResults.reserve(vDefaults.size());
-		for(const SCardDefault &Default : vDefaults)
+		struct SCandidate
 		{
+			SCardSearchResult m_Result;
+			int m_Score = 0;
+		};
+		std::vector<SCandidate> vCandidates;
+		const std::vector<SCardDefault> &vDefaults = DefaultsTable();
+		const std::vector<std::string> &vHaystacks = SearchHaystacks();
+		std::vector<std::string> vLowerTokens;
+		vLowerTokens.reserve(vTokens.size());
+		for(const std::string &Token : vTokens)
+			vLowerTokens.push_back(LowerUtf8(Token.c_str()));
+		vCandidates.reserve(vDefaults.size());
+		for(size_t CardIndex = 0; CardIndex < vDefaults.size(); ++CardIndex)
+		{
+			const SCardDefault &Default = vDefaults[CardIndex];
 			if(Default.m_pStableId == nullptr)
 				continue;
+			// 预筛：任一查询词不在整卡检索文本里，就不必进入逐字段打分。
+			bool HaystackMiss = false;
+			for(const std::string &LowerToken : vLowerTokens)
+			{
+				if(vHaystacks[CardIndex].find(LowerToken) == std::string::npos)
+				{
+					HaystackMiss = true;
+					break;
+				}
+			}
+			if(HaystackMiss)
+				continue;
+			// 搜索时才解析设置表：静态注册器可能晚于 DefaultsTable 的首次构建。
+			const qm_card_registry::SCardSettingSearch *pSettings = nullptr;
+			size_t SettingCount = 0;
+			qm_card_catalog::FindSearchMetadata(Default.m_pStableId, &pSettings, &SettingCount);
 			const char *pLocalizedTitle = Default.m_pTitle != nullptr ? Localize(Default.m_pTitle) : "";
 			const char *pLocalizedDescription = Default.m_pDescription != nullptr ? Localize(Default.m_pDescription) : "";
-			bool Matches = SearchTextMatches(pLocalizedTitle, pQuery) || SearchTextMatches(Default.m_pTitle, pQuery) ||
-				       SearchTextMatches(pLocalizedDescription, pQuery) || SearchTextMatches(Default.m_pDescription, pQuery) ||
-				       SearchTextMatches(Default.m_pSearchKeywords, pQuery);
-			for(size_t Index = 0; !Matches && Index < Default.m_SettingCount; ++Index)
+			SCandidate Candidate;
+			int Score = 0;
+			bool MatchesAllTokens = true;
+			for(const std::string &Token : vTokens)
 			{
-				const SCardSettingSearch &Setting = Default.m_pSettings[Index];
-				Matches = SearchTextMatches(Setting.m_pConfigName, pQuery) || SearchTextMatches(Setting.m_pAliases, pQuery) || SearchTextMatches(Setting.m_pLabel, pQuery) ||
-					  (Setting.m_pLabel != nullptr && SearchTextMatches(Localize(Setting.m_pLabel, Setting.m_pContext), pQuery));
+				int TokenScore = std::max(SearchMatchScore(pLocalizedTitle, Token, SEARCH_WEIGHT_TITLE), SearchMatchScore(Default.m_pTitle, Token, SEARCH_WEIGHT_TITLE));
+				TokenScore = std::max(TokenScore, SearchMatchScore(Default.m_pSearchKeywords, Token, SEARCH_WEIGHT_KEYWORDS));
+				TokenScore = std::max(TokenScore, SearchMatchScore(pLocalizedDescription, Token, SEARCH_WEIGHT_DESCRIPTION));
+				TokenScore = std::max(TokenScore, SearchMatchScore(Default.m_pDescription, Token, SEARCH_WEIGHT_DESCRIPTION));
+				for(size_t Index = 0; Index < SettingCount; ++Index)
+				{
+					const SCardSettingSearch &Setting = pSettings[Index];
+					const char *pLocalizedLabel = Setting.m_pLabel != nullptr ? Localize(Setting.m_pLabel, Setting.m_pContext) : nullptr;
+					const int LabelScore = std::max(SearchMatchScore(Setting.m_pLabel, Token, SEARCH_WEIGHT_LABEL), SearchMatchScore(pLocalizedLabel, Token, SEARCH_WEIGHT_LABEL));
+					const int ConfigScore = SearchMatchScore(Setting.m_pConfigName, Token, SEARCH_WEIGHT_CONFIG);
+					TokenScore = std::max(TokenScore, LabelScore);
+					TokenScore = std::max(TokenScore, ConfigScore);
+					TokenScore = std::max(TokenScore, SearchMatchScore(Setting.m_pAliases, Token, SEARCH_WEIGHT_ALIAS));
+				}
+				if(TokenScore == 0)
+				{
+					MatchesAllTokens = false;
+					break;
+				}
+				Score += TokenScore;
 			}
-			if(!Matches)
+			if(!MatchesAllTokens)
 				continue;
+
+			// 命中项按设置项累计分数：同时命中多个查询词的标签优先展示，最多保留前几条。
+			struct SSettingMatch
+			{
+				int m_Score;
+				const SCardSettingSearch *m_pSetting;
+				const char *m_pDisplay;
+			};
+			std::vector<SSettingMatch> vSettingMatches;
+			for(size_t Index = 0; Index < SettingCount; ++Index)
+			{
+				const SCardSettingSearch &Setting = pSettings[Index];
+				int SettingScore = 0;
+				const char *pDisplay = nullptr;
+				for(const std::string &Token : vTokens)
+				{
+					const char *pLocalizedLabel = Setting.m_pLabel != nullptr ? Localize(Setting.m_pLabel, Setting.m_pContext) : nullptr;
+					const int LabelScore = std::max(SearchMatchScore(Setting.m_pLabel, Token, SEARCH_WEIGHT_LABEL), SearchMatchScore(pLocalizedLabel, Token, SEARCH_WEIGHT_LABEL));
+					const int ConfigScore = SearchMatchScore(Setting.m_pConfigName, Token, SEARCH_WEIGHT_CONFIG);
+					SettingScore += std::max({LabelScore, ConfigScore, SearchMatchScore(Setting.m_pAliases, Token, SEARCH_WEIGHT_ALIAS)});
+					if(LabelScore > 0)
+						pDisplay = pLocalizedLabel != nullptr && pLocalizedLabel[0] != '\0' ? pLocalizedLabel : Setting.m_pLabel;
+					else if(ConfigScore > 0 && pDisplay == nullptr)
+						pDisplay = Setting.m_pConfigName;
+				}
+				if(SettingScore > 0 && pDisplay != nullptr && (Setting.m_pConfigName != nullptr || str_length(pDisplay) <= SEARCH_MAX_MATCH_TEXT))
+				{
+					vSettingMatches.push_back({SettingScore, &Setting, pDisplay});
+				}
+			}
+			std::stable_sort(vSettingMatches.begin(), vSettingMatches.end(), [](const auto &Left, const auto &Right) { return Left.m_Score > Right.m_Score; });
+			// 先按分数排序再填键：展示的前几条命中项一定拥有定位键，不会滚到声明顺序更靠前的其他行。
+			for(const auto &Match : vSettingMatches)
+			{
+				AddSearchMatch(Candidate.m_Result.m_vMatches, Match.m_pDisplay);
+				AddSearchKey(Candidate.m_Result.m_vMatchKeys, Match.m_pDisplay);
+				AddSearchKey(Candidate.m_Result.m_vMatchKeys, Match.m_pSetting->m_pLabel);
+				AddSearchKey(Candidate.m_Result.m_vMatchKeys, Match.m_pSetting->m_pConfigName);
+			}
 
 			// 旧入口只贡献检索词；命中后展示实际承载设置的卡片，并按该 ID 去重。
 			const SCardDefault *pCard = Default.m_pNavigationStableId != nullptr ? FindByStableId(Default.m_pNavigationStableId) : &Default;
 			if(pCard == nullptr)
 				pCard = &Default;
-			if(std::any_of(vResults.begin(), vResults.end(), [pCard](const SCardSearchResult &Result) {
-				   return str_comp(Result.m_pStableId, pCard->m_pStableId) == 0;
-			   }))
+			Candidate.m_Score = Score;
+			Candidate.m_Result.m_pStableId = pCard->m_pStableId;
+			Candidate.m_Result.m_Title = pCard->m_pTitle != nullptr ? Localize(pCard->m_pTitle) : "";
+			Candidate.m_Result.m_Description = ResolveLocalizedDescription(*pCard);
+			Candidate.m_Result.m_Target = ResolveCardNavigationTarget(*pCard, Model);
+			const auto Existing = std::find_if(vCandidates.begin(), vCandidates.end(), [pCard](const SCandidate &Other) {
+				return str_comp(Other.m_Result.m_pStableId, pCard->m_pStableId) == 0;
+			});
+			if(Existing != vCandidates.end())
+			{
+				// 同一张承载卡被多个旧入口命中时，保留分数更高、命中项更贴切的那条。
+				if(Candidate.m_Score > Existing->m_Score)
+					*Existing = std::move(Candidate);
 				continue;
-			SCardSearchResult Result;
-			Result.m_pStableId = pCard->m_pStableId;
-			Result.m_Title = pCard->m_pTitle != nullptr ? Localize(pCard->m_pTitle) : "";
-			Result.m_Description = ResolveLocalizedDescription(*pCard);
-			Result.m_Target = ResolveCardNavigationTarget(*pCard, Model);
-			vResults.push_back(std::move(Result));
+			}
+			vCandidates.push_back(std::move(Candidate));
 		}
+
+		std::stable_sort(vCandidates.begin(), vCandidates.end(), [](const SCandidate &Left, const SCandidate &Right) { return Left.m_Score > Right.m_Score; });
+		vResults.reserve(vCandidates.size());
+		for(SCandidate &Candidate : vCandidates)
+			vResults.push_back(std::move(Candidate.m_Result));
 		return vResults;
 	}
 
@@ -473,6 +707,25 @@ namespace qm_card_registry
 			Model.MoveToTab(Move.m_pStableId, Move.m_pTargetTab, Move.m_Column, Order);
 		}
 		return !vMoves.empty();
+	}
+
+	bool RepairLegacyBindTab(qm_card_order::CModel &Model)
+	{
+		bool Changed = false;
+		for(const char *pStableId : {"qm:bind_editor", "qm:bind_overview"})
+		{
+			const int Index = Model.FindByStableId(pStableId);
+			if(Index < 0 || Model.Entry(Index).m_pDefaultTab == nullptr || str_comp(Model.Entry(Index).m_pDefaultTab, "bind") != 0)
+				continue;
+			const auto *pDefault = FindByStableId(pStableId);
+			if(pDefault == nullptr)
+				continue;
+			Model.MoveToTab(pStableId, pDefault->m_pDefaultTab, pDefault->m_DefaultColumn == ECardColumn::Full ? 0 : pDefault->m_DefaultColumn == ECardColumn::Right ? 2 :
+																						   1,
+				pDefault->m_DefaultOrder);
+			Changed = true;
+		}
+		return Changed;
 	}
 
 	bool RepairLegacyCreditsTabs(qm_card_order::CModel &Model)

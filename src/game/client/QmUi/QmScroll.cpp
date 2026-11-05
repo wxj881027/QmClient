@@ -307,6 +307,25 @@ void CQmScrollState::SetOffset(float Offset, const SQmScrollMetrics &Metrics, co
 	m_AnimTargetOffset = m_Offset;
 }
 
+void CQmScrollState::Fling(float Velocity, const SQmScrollMetrics &Metrics)
+{
+	const float MaxOffset = Metrics.MaxOffset();
+	if(MaxOffset <= 0.0f)
+	{
+		Reset();
+		return;
+	}
+	// 甩动接管后续几帧：清掉滚轮平滑动画，交给 Advance 的摩擦积分。
+	m_HasPendingScrollTarget = false;
+	m_AnimTime = 0.0f;
+	m_AnimTimeMax = 0.0f;
+	m_AnimStartOffset = std::clamp(m_Offset, 0.0f, MaxOffset);
+	m_AnimStartVelocity = 0.0f;
+	m_AnimTargetOffset = m_AnimStartOffset;
+	m_Velocity = std::clamp(Velocity, -QM_SCROLL_MAX_FLING_VELOCITY, QM_SCROLL_MAX_FLING_VELOCITY);
+	m_LastMaxOffset = MaxOffset;
+}
+
 void CQmScrollState::AddWheelImpulse(float WheelDelta, const SQmScrollMetrics &Metrics, const SQmScrollConfig &Config)
 {
 	m_HasPendingScrollTarget = false;

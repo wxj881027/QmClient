@@ -2106,12 +2106,13 @@ void CGameConsole::OnRender()
 		const bool ButtonReleased = WasMousePressed && !pConsole->m_MouseIsPress;
 		const bool MousePressedThisFrame = !WasMousePressed && pConsole->m_MouseIsPress;
 		const vec2 ButtonMousePosition = ButtonReleased ? pConsole->m_MouseRelease : GetMousePosition();
-#if defined(CONF_PLATFORM_IOS)
+#if defined(CONF_PLATFORM_IOS) || defined(CONF_PLATFORM_ANDROID)
+		// 手机没有键盘，必须给控制台一个可见的关闭入口；顶部留出一行画 X。
 		CUIRect CloseButtonBar, CloseButton;
 		Screen.HSplitTop(RowHeight, &CloseButtonBar, nullptr);
 		CloseButtonBar.VSplitRight(10.0f, &CloseButtonBar, nullptr);
 		CloseButtonBar.VSplitRight(RowHeight, &CloseButtonBar, &CloseButton);
-		if(DoButton(CloseButton, FontIcon::XMARK, ButtonMousePosition, ButtonReleased))
+		if(DoButton(CloseButton, FontIcons::FONT_ICON_XMARK, ButtonMousePosition, ButtonReleased))
 			Toggle(m_ConsoleType);
 #endif
 		if(pConsole->m_MouseIsPress)
@@ -2790,7 +2791,8 @@ void CGameConsole::OnRender()
 		if(!ConsoleSettingsOpen() && m_ConsoleState == CONSOLE_OPEN)
 			pConsole->m_Input.Activate(EInputPriority::CONSOLE);
 	}
-	RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
+	if(!QmUiMobilePlatform())
+		RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
 
 	{
 		Ui()->FinishCheck();

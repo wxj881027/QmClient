@@ -1,102 +1,109 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_FRIEND_ENTER_TRACKER_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_FRIEND_ENTER_TRACKER_H
 
+#include <engine/friends.h>
+
 #include <algorithm>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 namespace qm_friend_notify
 {
+	enum class EPresenceEvent
+	{
+		NONE,
+		ENTER,
+		LEAVE,
+	};
+
+	struct CPresenceMessage
+	{
+		EPresenceEvent m_Event = EPresenceEvent::NONE;
+		std::string m_Name;
+	};
+
+	inline CPresenceMessage ParsePresenceMessage(int Sender, int Team, std::string_view Text)
+	{
+		if(Sender != -1 || Team != 0 || Text.empty() || Text.front() != '\'')
+			return {};
+
+		const auto ExtractName = [&](size_t End, EPresenceEvent Event) -> CPresenceMessage {
+			const std::string_view Name = Text.substr(1, End - 1);
+			if(Name.empty() || Name.size() >= MAX_NAME_LENGTH || Name.find_first_of("\r\n") != std::string_view::npos)
+				return {};
+			return {Event, std::string(Name)};
+		};
+		static constexpr std::string_view s_aJoinSuffixes[] = {
+			"' entered and joined the game",
+			"' joined the game",
+			"' entered and joined the red team",
+			"' entered and joined the blue team",
+			"' entered and joined the spectators",
+		};
+		for(const auto Suffix : s_aJoinSuffixes)
+			if(Text.size() > Suffix.size() && Text.ends_with(Suffix))
+				return ExtractName(Text.size() - Suffix.size(), EPresenceEvent::ENTER);
+
+		static constexpr std::string_view s_aLeaveMarkers[] = {"' has left the game", "' 离开了游戏"};
+		for(const auto Marker : s_aLeaveMarkers)
+		{
+			const size_t End = Text.find(Marker, 1);
+			if(End == std::string_view::npos)
+				continue;
+			const std::string_view Reason = Text.substr(End + Marker.size());
+			if(Reason.empty() || (Reason.starts_with(" (") && Reason.ends_with(")")) ||
+				(Reason.starts_with("（") && Reason.ends_with("）")))
+				return ExtractName(End, EPresenceEvent::LEAVE);
+		}
+		// 改名后旧昵称已不在场，新昵称不视作一次入服。
+		static constexpr std::string_view s_aRenameMarkers[] = {"' changed name to '", "' 改名为 '"};
+		for(const auto Marker : s_aRenameMarkers)
+		{
+			const size_t End = Text.find(Marker, 1);
+			if(End != std::string_view::npos && Text.ends_with("'") && Text.size() > End + Marker.size() + 1)
+				return ExtractName(End, EPresenceEvent::LEAVE);
+		}
+		return {};
+	}
+
+	// 只有服务端出入提示改变状态，不再从玩家快照和本地计时推断入服。
 	class CEnterTracker
 	{
-	public:
-		struct CClient
-		{
-			int m_ClientId;
-			std::string m_Name;
-			std::string m_Clan;
-			bool m_IsFriend;
-			bool m_IsLocal;
-		};
-
-	private:
-		struct CTrackedClient
-		{
-			CClient m_Client;
-			bool m_Missing = false;
-			double m_MissingSince = 0.0;
-		};
-
-		std::vector<CTrackedClient> m_vClients;
-		bool m_Initialized = false;
-
-		static bool SameIdentity(const CClient &Left, const CClient &Right, bool IgnoreClan)
-		{
-			return Left.m_Name == Right.m_Name && (IgnoreClan || Left.m_Clan == Right.m_Clan);
-		}
+		std::vector<std::string> m_vPresentNames;
 
 	public:
-		void Reset() noexcept
-		{
-			m_vClients.clear();
-			m_Initialized = false;
-		}
+		void Reset() noexcept { m_vPresentNames.clear(); }
+		void Swap(CEnterTracker &Other) noexcept { m_vPresentNames.swap(Other.m_vPresentNames); }
 
-		void Swap(CEnterTracker &Other) noexcept
+		CPresenceMessage OnMessage(int Sender, int Team, std::string_view Text, const IFriends &Friends,
+			std::string_view MainName, std::string_view DummyName)
 		{
-			m_vClients.swap(Other.m_vClients);
-			std::swap(m_Initialized, Other.m_Initialized);
-		}
-
-		// 调用方只传入完整有效的玩家列表；切换连接或好友配置后先重置基线。
-		std::vector<std::string> Update(const std::vector<CClient> &vClients, double Now, bool IgnoreClan)
-		{
-			static constexpr double AbsenceGraceSeconds = 3.0;
-			for(auto &Tracked : m_vClients)
+			CPresenceMessage Message = ParsePresenceMessage(Sender, Team, Text);
+			if(Message.m_Event == EPresenceEvent::LEAVE)
 			{
-				const bool SlotPresent = std::any_of(vClients.begin(), vClients.end(), [&](const CClient &Client) {
-					return Client.m_ClientId == Tracked.m_Client.m_ClientId;
-				});
-				if(!Tracked.m_Missing && !SlotPresent)
+				m_vPresentNames.erase(std::remove(m_vPresentNames.begin(), m_vPresentNames.end(), Message.m_Name), m_vPresentNames.end());
+				return Message;
+			}
+			if(Message.m_Event != EPresenceEvent::ENTER || Message.m_Name == MainName || Message.m_Name == DummyName ||
+				std::find(m_vPresentNames.begin(), m_vPresentNames.end(), Message.m_Name) != m_vPresentNames.end())
+				return {};
+
+			// 入服提示没有战队信息；本功能按完整昵称匹配个人好友。
+			for(int Index = 0; Index < Friends.NumFriends(); ++Index)
+			{
+				if(Message.m_Name == Friends.GetFriend(Index)->m_aName)
 				{
-					Tracked.m_Missing = true;
-					Tracked.m_MissingSince = Now;
+					m_vPresentNames.push_back(Message.m_Name);
+					return Message;
 				}
 			}
-			m_vClients.erase(std::remove_if(m_vClients.begin(), m_vClients.end(), [&](const CTrackedClient &Tracked) {
-				return Tracked.m_Missing && Now - Tracked.m_MissingSince >= AbsenceGraceSeconds;
-			}),
-				m_vClients.end());
-
-			std::vector<std::string> vNewFriends;
-			std::vector<CTrackedClient> vNextClients;
-			vNextClients.reserve(vClients.size() + m_vClients.size());
-			for(const auto &Client : vClients)
-			{
-				// 在场时的资料变化保持静默；缺席后的槽位复用要核对身份。
-				const bool Known = std::any_of(m_vClients.begin(), m_vClients.end(), [&](const CTrackedClient &Tracked) {
-					return (!Tracked.m_Missing && Tracked.m_Client.m_ClientId == Client.m_ClientId) || SameIdentity(Tracked.m_Client, Client, IgnoreClan);
-				});
-				if(m_Initialized && !Known && Client.m_IsFriend && !Client.m_IsLocal)
-					vNewFriends.push_back(Client.m_Name);
-				vNextClients.push_back({Client});
-			}
-			for(const auto &Tracked : m_vClients)
-			{
-				const bool Present = std::any_of(vClients.begin(), vClients.end(), [&](const CClient &Client) {
-					return Tracked.m_Client.m_ClientId == Client.m_ClientId || SameIdentity(Tracked.m_Client, Client, IgnoreClan);
-				});
-				if(!Present)
-					vNextClients.push_back(Tracked);
-			}
-			m_vClients.swap(vNextClients);
-			m_Initialized = true;
-			return vNewFriends;
+			return {};
 		}
 	};
 
-	// 问候只等待聊天发送额度，名单更新时丢弃已经离服的待发对象。
+	// 问候只等待聊天发送额度，离服提示取消相应的待发对象。
 	class CGreetQueue
 	{
 		std::vector<std::string> m_vNames;
@@ -105,17 +112,15 @@ namespace qm_friend_notify
 		void Reset() noexcept { m_vNames.clear(); }
 		void Swap(CGreetQueue &Other) noexcept { m_vNames.swap(Other.m_vNames); }
 
-		void Update(const std::vector<std::string> &vNewNames, const std::vector<CEnterTracker::CClient> &vClients)
+		void Add(const std::string &Name)
 		{
-			for(const auto &Name : vNewNames)
-				if(std::find(m_vNames.begin(), m_vNames.end(), Name) == m_vNames.end())
-					m_vNames.push_back(Name);
-			m_vNames.erase(std::remove_if(m_vNames.begin(), m_vNames.end(), [&](const std::string &Name) {
-				return std::none_of(vClients.begin(), vClients.end(), [&](const CEnterTracker::CClient &Client) {
-					return Client.m_Name == Name && Client.m_IsFriend && !Client.m_IsLocal;
-				});
-			}),
-				m_vNames.end());
+			if(!Name.empty() && std::find(m_vNames.begin(), m_vNames.end(), Name) == m_vNames.end())
+				m_vNames.push_back(Name);
+		}
+
+		void Remove(const std::string &Name)
+		{
+			m_vNames.erase(std::remove(m_vNames.begin(), m_vNames.end(), Name), m_vNames.end());
 		}
 
 		template<typename F>
@@ -130,17 +135,8 @@ namespace qm_friend_notify
 					Names += ' ';
 				Names += Name;
 			}
-			try
-			{
-				if(!Send(Names))
-					return false;
-			}
-			catch(...)
-			{
-				// 回调可能已有发送副作用，异常时领取本批，避免重发。
-				Reset();
-				throw;
-			}
+			if(!Send(Names))
+				return false;
 			Reset();
 			return true;
 		}

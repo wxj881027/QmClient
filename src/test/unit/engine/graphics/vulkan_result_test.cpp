@@ -116,10 +116,10 @@ TEST_F(VulkanResult, OutOfDateRequestsRecreationWithoutBecomingFatal)
 	EXPECT_EQ(m_FaultProbes, 0);
 }
 
-TEST_F(VulkanResult, SuboptimalRequestsRecreationWithoutBecomingFatal)
+TEST_F(VulkanResult, SuboptimalDoesNotRequestRepeatedSwapChainRecreation)
 {
 	EXPECT_EQ(Describe(VK_SUBOPTIMAL_KHR, true), nullptr);
-	EXPECT_TRUE(m_Recreate);
+	EXPECT_FALSE(m_Recreate);
 	EXPECT_EQ(m_Warnings, 0);
 	EXPECT_EQ(m_FaultProbes, 0);
 }
@@ -127,7 +127,7 @@ TEST_F(VulkanResult, SuboptimalRequestsRecreationWithoutBecomingFatal)
 TEST_F(VulkanResult, OtherNonfatalResultsPreservePendingRecreation)
 {
 	m_Recreate = true;
-	for(const VkResult Result : {VK_SUCCESS, VK_ERROR_SURFACE_LOST_KHR, VK_ERROR_NATIVE_WINDOW_IN_USE_KHR})
+	for(const VkResult Result : {VK_SUCCESS, VK_SUBOPTIMAL_KHR, VK_ERROR_SURFACE_LOST_KHR, VK_ERROR_NATIVE_WINDOW_IN_USE_KHR})
 	{
 		SCOPED_TRACE((int)Result);
 		EXPECT_EQ(Describe(Result), nullptr);

@@ -30,6 +30,7 @@
 #include <game/client/components/qmclient/chat_input_layout.h>
 #include <game/client/components/qmclient/chat_message_filter.h>
 #include <game/client/components/qmclient/chat_scrollbar.h>
+#include <game/client/components/qmclient/chat_whisper_targets.h>
 #include <game/client/components/qmclient/colored_parts.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/friend_heart_icon.h>
@@ -449,6 +450,8 @@ static float ClampPresentationProgress(float Value)
 CChat::CChat()
 {
 	m_Mode = MODE_NONE;
+	m_WhisperClientId = -1;
+	m_aWhisperName[0] = '\0';
 	m_LastPresentationUpdateTime = 0;
 	m_LargeAreaOpenTick = 0;
 	m_LastPresentationShowLargeArea = false;
@@ -714,6 +717,45 @@ int CChat::CountInitializedLines() const
 	return Count;
 }
 
+float CChat::HistoryStartX() const
+{
+	// 手机端左侧有系统手势/边缘误触区，整体右移 10 个聊天单位（约 40px），
+	// 否则输入行最左侧的翻译按钮有一半落在边缘区域，点不到。
+	return QmChatHistoryStartX(g_Config.m_QmChatScrollbarRight != 0) + (QmUiMobilePlatform() ? 10.0f : 0.0f);
+}
+
+void CChat::UpdatePointerState()
+{
+	// 聊天不在 CUi 的菜单树里，游戏内 CUi 的鼠标帧不保证每帧推进；
+	// 直接读原始触摸/鼠标，鼠标和触摸共用同一套聊天指针状态。
+	const auto &vFingers = Input()->TouchFingerStates();
+	if(!vFingers.empty())
+	{
+		const IInput::CTouchFingerState &Finger = vFingers.front();
+		const bool NewFinger = !m_PointerFinger.has_value() || *m_PointerFinger != Finger.m_Finger;
+		m_Pointer.m_LocalPos = vec2(Finger.m_Position.x * m_ChatInputMapRect.w, Finger.m_Position.y * m_ChatInputMapRect.h);
+		m_Pointer.m_Down = true;
+		m_Pointer.m_Pressed = NewFinger;
+		m_Pointer.m_SecondaryPressed = false;
+		m_PointerFinger = Finger.m_Finger;
+		return;
+	}
+
+	const vec2 WindowSize = vec2(maximum(1, Graphics()->WindowWidth()), maximum(1, Graphics()->WindowHeight()));
+	m_Pointer.m_LocalPos = SQmChatViewport{m_ChatInputMapRect, WindowSize}.ToLocal(Ui()->UpdatedMousePos());
+	m_Pointer.m_Down = Input()->KeyIsPressed(KEY_MOUSE_1);
+	m_Pointer.m_Pressed = Input()->KeyPress(KEY_MOUSE_1);
+	m_Pointer.m_SecondaryPressed = Input()->KeyPress(KEY_MOUSE_2);
+	if(m_PointerFinger.has_value())
+	{
+		// 触摸刚结束：这一帧不把残留鼠标状态当成新点击；m_Down=false 负责收尾输入框选择。
+		m_Pointer.m_Down = false;
+		m_Pointer.m_Pressed = false;
+		m_Pointer.m_SecondaryPressed = false;
+		m_PointerFinger.reset();
+	}
+}
+
 int CChat::CountVisibleLinesFrom(int BacklogLine) const
 {
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
@@ -733,6 +775,65 @@ int CChat::CountVisibleLinesFrom(int BacklogLine) const
 			++Count;
 	}
 	return Count;
+}
+
+bool CChat::UpdateHistoryTouchScroll(const CUIRect &ChatRect, float HeightLimit, float HistoryBottom, float LineHeight, int TotalVisibleLines, int VisibleLineCapacity, bool StartAllowed)
+{
+	// 手机端聊天历史：单指在历史区上下拖动按行滚动，最终仍修改 m_BacklogCurLine，
+	// 与滚轮完全共用同一套状态和 ClampBacklogLine/RebuildChat 语义。
+	const auto &vFingers = Input()->TouchFingerStates();
+	if(vFingers.size() != 1 || LineHeight <= 0.0f)
+	{
+		m_HistoryTouchDrag.m_Active = false;
+		return false;
+	}
+	const IInput::CTouchFingerState &Finger = vFingers.front();
+	const vec2 ChatSize = vec2(m_ChatInputMapRect.w, m_ChatInputMapRect.h);
+	if(ChatSize.x <= 0.0f || ChatSize.y <= 0.0f)
+	{
+		m_HistoryTouchDrag.m_Active = false;
+		return false;
+	}
+	const vec2 TouchPos = Finger.m_Position * ChatSize;
+	const bool InsideHistory =
+		TouchPos.x >= ChatRect.x && TouchPos.x <= ChatRect.x + ChatRect.w &&
+		TouchPos.y >= HeightLimit && TouchPos.y <= HistoryBottom;
+	if(!m_HistoryTouchDrag.m_Active)
+	{
+		if(!StartAllowed || !InsideHistory)
+			return false;
+		m_HistoryTouchDrag.m_Active = true;
+		m_HistoryTouchDrag.m_Finger = Finger.m_Finger;
+		m_HistoryTouchDrag.m_AccumY = 0.0f;
+	}
+	else if(m_HistoryTouchDrag.m_Finger != Finger.m_Finger)
+	{
+		// 手指换人（多指操作）：本次拖动作废，等下一帧重新判定。
+		m_HistoryTouchDrag.m_Active = false;
+		return false;
+	}
+
+	// m_Delta 是当前帧的位移，换算到聊天坐标空间后按行高累积。
+	m_HistoryTouchDrag.m_AccumY += Finger.m_Delta.y * ChatSize.y;
+	int Lines = 0;
+	while(m_HistoryTouchDrag.m_AccumY >= LineHeight)
+	{
+		m_HistoryTouchDrag.m_AccumY -= LineHeight;
+		++Lines;
+	}
+	while(m_HistoryTouchDrag.m_AccumY <= -LineHeight)
+	{
+		m_HistoryTouchDrag.m_AccumY += LineHeight;
+		--Lines;
+	}
+	if(Lines == 0)
+		return false;
+	// 手指下拖 = 内容下移 = 看更早的历史行，与滚轮上滚同向。
+	const int NewBacklogLine = ClampBacklogLine(m_BacklogCurLine + Lines, TotalVisibleLines, VisibleLineCapacity);
+	if(NewBacklogLine == m_BacklogCurLine)
+		return false;
+	m_BacklogCurLine = NewBacklogLine;
+	return true;
 }
 
 void CChat::UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ExtraAnimations)
@@ -1103,7 +1204,8 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 
 	const bool LanguageMenuOpen = m_LanguageMenuOpen || Ui()->IsPopupOpen(&m_LanguagePopupContext);
 	const bool ChatLineMenuOpen = Ui()->IsPopupOpen(&m_ChatLinePopupContext);
-	const bool AnyChatPopupOpen = LanguageMenuOpen || ChatLineMenuOpen;
+	const bool TargetMenuOpen = Ui()->IsPopupOpen(&m_TargetPopupContext);
+	const bool AnyChatPopupOpen = LanguageMenuOpen || ChatLineMenuOpen || TargetMenuOpen;
 	const bool CommandHudEnabled = g_Config.m_QmChatCommandCompletion || g_Config.m_QmChatEmojiCompletion;
 	if(AnyChatPopupOpen || Input()->HasComposition() || GameClient()->m_Menus.IsActive() || GameClient()->m_HudEditor.IsActive() || !CommandHudEnabled)
 		m_CommandHud.Hide();
@@ -1128,7 +1230,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 		float HistoryBottom = Height - (20.0f * FontSize() / 6.0f + (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f));
 		HistoryBottom -= FontSize() * (8.0f / 6.0f);
 		const float HeightLimit = GameClient()->m_Scoreboard.IsActive() ? 180.0f : (m_PrevShowChat ? 50.0f : 200.0f);
-		const vec2 MousePos = GetChatLocalMousePos();
+		const vec2 MousePos = PointerLocalPos();
 		const bool InsideHistory = MousePos.x >= ChatRect.x && MousePos.x <= ChatRect.x + ChatRect.w && MousePos.y >= HeightLimit && MousePos.y <= HistoryBottom;
 		const bool InsideTranslateButton =
 			m_TranslateButton.m_RectValid &&
@@ -1177,6 +1279,8 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			CloseLanguageMenu();
 		if(ChatLineMenuOpen)
 			CloseChatLineMenu();
+		if(TargetMenuOpen)
+			CloseChatTargetMenu();
 		return true;
 	}
 
@@ -1191,6 +1295,11 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 		if(Ui()->IsPopupOpen(&m_ChatLinePopupContext))
 		{
 			CloseChatLineMenu();
+			return true;
+		}
+		if(TargetMenuOpen)
+		{
+			CloseChatTargetMenu();
 			return true;
 		}
 
@@ -1540,6 +1649,8 @@ void CChat::EnableMode(int Team)
 		m_EmojiCompletionListLength = 0;
 		m_aEmojiCompletionColon[0] = '\0';
 		m_Input.Activate(EInputPriority::CHAT);
+		// 手机上没有物理键盘：进入聊天必须主动拉起软键盘，不能只等输入框点击。
+		Input()->EnsureScreenKeyboardShown();
 	}
 }
 
@@ -1548,11 +1659,258 @@ void CChat::DisableMode()
 	m_CommandHud.Hide();
 	CloseLanguageMenu();
 	CloseChatLineMenu();
+	CloseChatTargetMenu();
 	if(m_Mode != MODE_NONE)
 	{
 		m_Mode = MODE_NONE;
 		m_Input.Deactivate();
 	}
+}
+
+// ===== 发送对象：全体 / 队伍 / 私聊 =====
+
+const char *CChat::WhisperTargetName() const
+{
+	// 目标仍在服务器上时以服务器里的当前名称为准，改名后私聊不会发到旧名字上。
+	if(m_WhisperClientId >= 0 && m_WhisperClientId < MAX_CLIENTS)
+	{
+		const CGameClient::CClientData &ClientData = GameClient()->m_aClients[m_WhisperClientId];
+		if(ClientData.m_Active && ClientData.m_aName[0] != '\0')
+			return ClientData.m_aName;
+	}
+	return m_aWhisperName;
+}
+
+bool CChat::WhisperTargetValid() const
+{
+	if(WhisperTargetName()[0] == '\0')
+		return false;
+	if(m_WhisperClientId < 0)
+		return true;
+	if(m_WhisperClientId >= MAX_CLIENTS)
+		return false;
+	return GameClient()->m_aClients[m_WhisperClientId].m_Active && !GameClient()->IsLocalClientId(m_WhisperClientId);
+}
+
+void CChat::ClearWhisperTarget()
+{
+	m_WhisperClientId = -1;
+	m_aWhisperName[0] = '\0';
+}
+
+void CChat::SetWhisperTarget(int ClientId, const char *pName)
+{
+	if(pName == nullptr || pName[0] == '\0')
+		return;
+	m_WhisperClientId = ClientId;
+	str_copy(m_aWhisperName, pName);
+	SetChatMode(MODE_WHISPER);
+}
+
+void CChat::SetChatMode(int Mode, bool ShowKeyboard)
+{
+	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
+		return;
+	if(Mode != MODE_ALL && Mode != MODE_TEAM && Mode != MODE_WHISPER)
+		return;
+	// 私聊必须有一个仍在服务器上的目标，否则保持当前模式。
+	if(Mode == MODE_WHISPER && !WhisperTargetValid())
+		return;
+	if(Mode != m_Mode)
+	{
+		// 切回公开/队伍发送时丢弃私聊目标，前缀不会继续显示不再使用的玩家。
+		if(Mode != MODE_WHISPER)
+			ClearWhisperTarget();
+		m_Mode = Mode;
+	}
+	m_Input.Activate(EInputPriority::CHAT);
+	// 只有「确实要开始输入」的调用方才重新拉起软键盘：点前缀按钮切换 全体/队伍 时
+	// 反复开关输入法会闪屏，那种场景传 false。
+	if(ShowKeyboard)
+		Input()->EnsureScreenKeyboardShown();
+}
+
+void CChat::ToggleChannelMode()
+{
+	// 一个按钮在「全体 / 队伍」之间来回切；正处于私聊时回到全体。
+	// 这里不碰软键盘：切发送对象不需要重新输入，反复拉起/收起只会闪。
+	SetChatMode(m_Mode == MODE_ALL ? MODE_TEAM : MODE_ALL, false);
+}
+
+const char *CChat::ChatTargetLabel() const
+{
+	if(m_Mode == MODE_ALL)
+		return Localize("All");
+	if(m_Mode == MODE_TEAM)
+		return Localize("Team");
+	if(m_Mode == MODE_WHISPER && WhisperTargetName()[0] != '\0')
+	{
+		// 前缀与正文共享输入行宽度，名称过长时只保留开头，正文仍有可用空间。
+		char aName[MAX_NAME_LENGTH];
+		str_utf8_truncate(aName, sizeof(aName), WhisperTargetName(), 12);
+		static char s_aLabel[MAX_NAME_LENGTH + 24];
+		str_format(s_aLabel, sizeof(s_aLabel), "%s %s", Localize("Whisper"), aName);
+		return s_aLabel;
+	}
+	return Localize("Chat");
+}
+
+void CChat::OpenChatTargetMenu()
+{
+	if(Ui()->IsPopupOpen(&m_TargetPopupContext))
+	{
+		CloseChatTargetMenu();
+		return;
+	}
+	CloseLanguageMenu();
+	CloseChatLineMenu();
+
+	CChatTargetPopupContext &Context = m_TargetPopupContext;
+	Context.m_pChat = this;
+	// 只列出服务器上的其他玩家：跳过自己的主/副连接，私聊不会发给自己。
+	SQmChatWhisperCandidate aCandidates[MAX_CLIENTS];
+	int NumCandidates = 0;
+	for(auto &pPlayerInfo : GameClient()->m_Snap.m_apInfoByName)
+	{
+		if(pPlayerInfo == nullptr || NumCandidates >= MAX_CLIENTS)
+			continue;
+		const int ClientId = pPlayerInfo->m_ClientId;
+		if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+			continue;
+		const CGameClient::CClientData &ClientData = GameClient()->m_aClients[ClientId];
+		SQmChatWhisperCandidate &Candidate = aCandidates[NumCandidates++];
+		Candidate.m_ClientId = ClientId;
+		Candidate.m_pName = ClientData.m_aName;
+		Candidate.m_Active = ClientData.m_Active;
+		Candidate.m_Local = GameClient()->IsLocalClientId(ClientId);
+	}
+	SQmChatWhisperTarget aTargets[MAX_CLIENTS];
+	Context.m_NumPlayers = QmChatCollectWhisperTargets(aCandidates, NumCandidates, aTargets, MAX_CLIENTS);
+	for(int i = 0; i < Context.m_NumPlayers; ++i)
+	{
+		Context.m_aPlayerIds[i] = aTargets[i].m_ClientId;
+		str_copy(Context.m_aaPlayerNames[i], aTargets[i].m_pName);
+	}
+
+	constexpr float MenuWidth = 190.0f;
+	constexpr float RowHeight = 24.0f;
+	constexpr float RowSpacing = 3.0f;
+	constexpr float HeaderHeight = 20.0f;
+	constexpr float MaxListHeight = 210.0f;
+	const float FixedHeight = HeaderHeight + 12.0f + 2.0f * (RowHeight + RowSpacing) + 10.0f;
+	const float ListHeight = minimum(Context.m_NumPlayers * (RowHeight + RowSpacing), MaxListHeight);
+	const float MenuHeight = FixedHeight + ListHeight + 4.0f;
+
+	// 前缀在聊天自己的 300 高坐标系里，弹层要锚到 UI 屏幕坐标。
+	const SQmChatViewport Viewport{m_ChatInputMapRect, vec2(maximum(1, Graphics()->WindowWidth()), maximum(1, Graphics()->WindowHeight()))};
+	const CUIRect Anchor = Viewport.ToUi(m_InputPrefixRect, *Ui()->Screen());
+	Ui()->DoPopupMenu(&m_TargetPopupContext, Anchor.x, Anchor.y, MenuWidth, MenuHeight, &m_TargetPopupContext, PopupChatTargetMenu);
+}
+
+void CChat::CloseChatTargetMenu()
+{
+	if(Ui()->IsPopupOpen(&m_TargetPopupContext))
+		Ui()->ClosePopupMenu(&m_TargetPopupContext, true);
+	m_TargetMenuOpen = false;
+	// 关掉之后这根手指不能再把列表弹回来。
+	m_TouchTargetPressed = false;
+}
+
+CUi::EPopupMenuFunctionResult CChat::PopupChatTargetMenu(void *pContext, CUIRect View, bool Active)
+{
+	CChatTargetPopupContext *pPopupContext = static_cast<CChatTargetPopupContext *>(pContext);
+	CChat *pChat = pPopupContext->m_pChat;
+	CUi *pUi = pChat->Ui();
+	const SUiTheme Theme = ResolveConfiguredDropdownListTheme();
+
+	constexpr float RowHeight = 24.0f;
+	constexpr float RowSpacing = 3.0f;
+	constexpr float FontSize = 10.5f;
+	constexpr float HeaderHeight = 20.0f;
+
+	View.Margin(5.0f, &View);
+
+	CUIRect Header, Divider;
+	View.HSplitTop(HeaderHeight, &Header, &View);
+	View.HSplitTop(4.0f, &Divider, &View);
+	pUi->DoLabel(&Header, Localize("Send to"), 10.0f, TEXTALIGN_ML);
+	Divider.HMargin(1.5f, &Divider);
+	Divider.Draw(Theme.m_Border, IGraphics::CORNER_NONE, 1.0f);
+	View.HSplitTop(5.0f, nullptr, &View);
+
+	auto DoRow = [&](CButtonContainer *pButton, const CUIRect &Row, const char *pText, bool Selected, ColorRGBA AccentColor) {
+		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
+		const CUIRect ButtonHitRect = Row;
+		const bool Hovered = Active && pUi->MouseHovered(&ButtonHitRect);
+		const ColorRGBA BackgroundColor = Selected ? Theme.m_SurfaceFocused : (Hovered ? Theme.m_SurfaceHovered : ColorRGBA(1.0f, 1.0f, 1.0f, 0.05f));
+		CUIRect RowRect = Row;
+		RowRect.Draw(BackgroundColor, IGraphics::CORNER_ALL, 5.0f);
+		RowRect.VMargin(7.0f, &RowRect);
+		SLabelProperties LabelProps;
+		LabelProps.m_MaxWidth = RowRect.w;
+		LabelProps.m_EllipsisAtEnd = true;
+		LabelProps.SetColor(Selected ? AccentColor : ColorRGBA(1.0f, 1.0f, 1.0f, 0.92f));
+		pUi->DoLabel(&RowRect, pText, FontSize, TEXTALIGN_ML, LabelProps);
+		return Active && pUi->DoButtonLogic(pButton, 0, &ButtonHitRect, BUTTONFLAG_LEFT);
+	};
+
+	CUIRect AllRow, TeamRow;
+	View.HSplitTop(RowHeight, &AllRow, &View);
+	View.HSplitTop(RowSpacing, nullptr, &View);
+	View.HSplitTop(RowHeight, &TeamRow, &View);
+	View.HSplitTop(RowSpacing, nullptr, &View);
+
+	const ColorRGBA Accent = Theme.m_Accent;
+	if(DoRow(&pPopupContext->m_AllButton, AllRow, Localize("All"), pChat->m_Mode == MODE_ALL, Accent))
+	{
+		pChat->SetChatMode(MODE_ALL);
+		return CUi::POPUP_CLOSE_CURRENT;
+	}
+	if(DoRow(&pPopupContext->m_TeamButton, TeamRow, Localize("Team"), pChat->m_Mode == MODE_TEAM, Accent))
+	{
+		pChat->SetChatMode(MODE_TEAM);
+		return CUi::POPUP_CLOSE_CURRENT;
+	}
+
+	if(pPopupContext->m_NumPlayers > 0)
+	{
+		CUIRect DividerView;
+		View.HSplitTop(4.0f, &DividerView, &View);
+		DividerView.HMargin(1.5f, &DividerView);
+		DividerView.Draw(Theme.m_Border, IGraphics::CORNER_NONE, 1.0f);
+		View.HSplitTop(3.0f, nullptr, &View);
+	}
+
+	CUIRect ListRect = View;
+	vec2 ScrollOffset(0.0f, 0.0f);
+	CScrollRegionParams ScrollParams;
+	ScrollParams.m_ScrollUnit = 3.0f * (RowHeight + RowSpacing);
+	ScrollParams.m_Interactive = Active;
+	ScrollParams.m_pWheelOwnerId = &pPopupContext->m_ScrollRegion;
+	pPopupContext->m_ScrollRegion.Begin(&ListRect, &ScrollOffset, &ScrollParams);
+	ListRect.y += ScrollOffset.y;
+
+	int ClickedIndex = -1;
+	for(int i = 0; i < pPopupContext->m_NumPlayers; i++)
+	{
+		CUIRect Row;
+		ListRect.HSplitTop(RowHeight, &Row, &ListRect);
+		ListRect.HSplitTop(RowSpacing, nullptr, &ListRect);
+		// 超出弹层可视范围的行只登记内容高度，不绘制也不参与命中。
+		if(!pPopupContext->m_ScrollRegion.AddRect(Row))
+			continue;
+		const bool Selected = pChat->m_Mode == MODE_WHISPER && pChat->m_WhisperClientId == pPopupContext->m_aPlayerIds[i];
+		if(DoRow(&pPopupContext->m_aPlayerButtons[i], Row, pPopupContext->m_aaPlayerNames[i], Selected, Accent))
+			ClickedIndex = i;
+	}
+	pPopupContext->m_ScrollRegion.End();
+
+	if(ClickedIndex >= 0)
+	{
+		pChat->SetWhisperTarget(pPopupContext->m_aPlayerIds[ClickedIndex], pPopupContext->m_aaPlayerNames[ClickedIndex]);
+		return CUi::POPUP_CLOSE_CURRENT;
+	}
+	return CUi::POPUP_KEEP_OPEN;
 }
 
 void CChat::OnMessage(int MsgType, void *pRawMsg)
@@ -2479,7 +2837,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 bool CChat::OnPrepareLines(float y)
 {
 	bool EmojiLayoutChanged = false;
-	float x = QmChatHistoryStartX(g_Config.m_QmChatScrollbarRight != 0);
+	float x = HistoryStartX();
 	float FontSize = this->FontSize();
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
 	const bool FocusHideChat = Focus.m_HidePlayerMessages;
@@ -3211,8 +3569,9 @@ void CChat::OnRender()
 	float MapX0, MapY0, MapX1, MapY1;
 	Graphics()->GetScreen(&MapX0, &MapY0, &MapX1, &MapY1);
 	m_ChatInputMapRect = {MapX0, MapY0, MapX1 - MapX0, MapY1 - MapY0};
+	UpdatePointerState();
 
-	float x = QmChatHistoryStartX(g_Config.m_QmChatScrollbarRight != 0);
+	float x = HistoryStartX();
 	CQmChatVisibleBounds VisibleBounds(ChatRect);
 	auto ExtendBounds = [&](float X, float Y, float W, float H) {
 		VisibleBounds.Extend({X, Y, W, H});
@@ -3225,8 +3584,13 @@ void CChat::OnRender()
 	float ScaledFontSize = FontSize() * (8.0f / 6.0f);
 	const float CommandPreviewFontSize = ScaledFontSize * 0.5f;
 	const float InputLineWidth = std::max(Width - 190.0f, 190.0f);
-	const char *pInputModeLabel = m_Mode == MODE_ALL ? Localize("All") : (m_Mode == MODE_TEAM ? Localize("Team") : Localize("Chat"));
-	const float InputPrefixWidth = TextRender()->TextWidth(ScaledFontSize, pInputModeLabel) + TextRender()->TextWidth(ScaledFontSize, ": ");
+	const char *pInputModeLabel = ChatTargetLabel();
+	// 手机：前缀拆成两个按钮——模式（全体/队伍）与发送对象列表（▾）。
+	const float InputModeLabelWidth = TextRender()->TextWidth(ScaledFontSize, pInputModeLabel);
+	constexpr float InputChannelChipWidth = 14.0f;
+	// 只有手机拆成两个按钮；桌面保持「全体: 」原样。
+	const bool MobileChannelChips = QmUiMobilePlatform();
+	const float InputPrefixWidth = MobileChannelChips ? InputModeLabelWidth + InputChannelChipWidth + 8.0f : InputModeLabelWidth + TextRender()->TextWidth(ScaledFontSize, ": ");
 	// 翻译按钮在输入行最左侧，行宽先扣除按钮区，再扣除「全体」等前缀。
 	const float CommandPreviewMaxWidth = QmChatInputMessageWidth(InputLineWidth, ScaledFontSize, InputPrefixWidth);
 	char aCommandPreview[MAX_LINE_LENGTH];
@@ -3252,7 +3616,21 @@ void CChat::OnRender()
 
 		TextRender()->TextEx(&InputCursor, pInputModeLabel);
 
-		TextRender()->TextEx(&InputCursor, ": ");
+		if(MobileChannelChips)
+		{
+			// 模式按钮与发送对象按钮底板，画在文字下面。
+			const float ChipHeight = maximum(InputCursor.m_FontSize + 4.0f, 16.0f);
+			const float ChipY = y - (ChipHeight - InputCursor.m_FontSize) * 0.5f;
+			CUIRect ModeChip = {InputLayout.m_TextStartX - 2.0f, ChipY, InputModeLabelWidth + 4.0f, ChipHeight};
+			CUIRect TargetChip = {ModeChip.x + ModeChip.w + 2.0f, ChipY, InputChannelChipWidth, ChipHeight};
+			ModeChip.Draw(ui_token::color::SURFACE_GLASS, IGraphics::CORNER_ALL, 4.0f);
+			TargetChip.Draw(ui_token::color::SURFACE_GLASS, IGraphics::CORNER_ALL, 4.0f);
+			Ui()->DoLabel(&TargetChip, FontIcons::FONT_ICON_CHEVRON_DOWN, minimum(9.0f, InputCursor.m_FontSize), TEXTALIGN_MC);
+			// 两个按钮之间留出间隔，正文从按钮区右端开始。
+			InputCursor.m_X = InputLayout.m_TextStartX + InputPrefixWidth;
+		}
+		else
+			TextRender()->TextEx(&InputCursor, ": ");
 
 		const float MessageMaxWidth = InputLayout.m_MessageMaxWidth;
 		const float InputContentHeight = 2.25f * InputCursor.m_FontSize;
@@ -3264,6 +3642,90 @@ void CChat::OnRender()
 		const CUIRect InputClippingRect = {InputContentRect.x - InputClipPaddingX, InputContentRect.y - InputClipPaddingTop, InputContentRect.w + InputClipPaddingX + InputClipPaddingRight, InputContentRect.h + InputClipPaddingTop + InputClipPaddingBottom};
 		InputBlockRect = {x, InputContentRect.y, InputLineWidth, InputContentRect.h};
 		InputBlockRectValid = true;
+		// 输入行分三段：翻译按钮、发送对象前缀、正文。手机上一个输入行要同时承担
+		// 「切换全体/私聊」和「拉起软键盘」，只有正文区才唤起输入法，点前缀弹出发送对象。
+		// 两个按钮只在手机端存在：桌面保留「全体: 」整块前缀，不能留下隐形热区。
+		if(MobileChannelChips)
+		{
+			m_InputModeRect = {InputLayout.m_TextStartX - 2.0f, InputContentRect.y, maximum(1.0f, InputModeLabelWidth + 4.0f), InputContentRect.h};
+			m_InputTargetRect = {m_InputModeRect.x + m_InputModeRect.w + 2.0f, InputContentRect.y, InputChannelChipWidth, InputContentRect.h};
+		}
+		else
+		{
+			m_InputModeRect = {};
+			m_InputTargetRect = {};
+		}
+		m_InputPrefixRect = {InputLayout.m_TextStartX, InputContentRect.y, maximum(1.0f, InputPrefixWidth), InputContentRect.h};
+		m_InputTextRect = {InputContentRect.x, InputContentRect.y, maximum(1.0f, x + InputLineWidth - InputContentRect.x), InputContentRect.h};
+
+		// 触摸点输入行：正文区移动光标并拉起软键盘；前缀打开发送对象；松手补一次软键盘。
+		// 聊天输入是自绘的，不像 DoEditBox 会自动维护鼠标选择状态，这里补齐同样的流程。
+		const CUIRect InputTranslateButtonRect = {InputLayout.m_ButtonX, InputLayout.m_ButtonY, InputLayout.m_ButtonW, InputLayout.m_ButtonH};
+		const vec2 InputMousePos = PointerLocalPos();
+		const bool AnyChatPopupOpenNow = Ui()->IsPopupOpen(&m_LanguagePopupContext) || Ui()->IsPopupOpen(&m_ChatLinePopupContext) || Ui()->IsPopupOpen(&m_TargetPopupContext);
+		const bool PointerInsideText = m_InputTextRect.Inside(InputMousePos);
+		const bool PointerInsideTranslate = InputTranslateButtonRect.Inside(InputMousePos);
+		CLineInput::SMouseSelection *pMouseSelection = m_Input.GetMouseSelection();
+		// 翻译按钮：按下记一笔，松手打开翻译弹窗。这里必须优先于正文区判断，
+		// 否则同一根手指会被当成“点正文”，结果弹出输入法而不是二级弹窗。
+		if(!AnyChatPopupOpenNow && !HudEditorPreview && !PointerDown() && m_TouchTranslatePressed)
+		{
+			m_TouchTranslatePressed = false;
+			if(PointerInsideTranslate)
+				OpenLanguageMenu();
+		}
+		// ▾ 发送对象列表同样在「抬手」时才打开：按下就开的话，同一次触摸的抬起会被
+		// 弹层当成“点外部”，菜单刚出现就闪掉了。
+		if(!AnyChatPopupOpenNow && !HudEditorPreview && !PointerDown() && m_TouchTargetPressed)
+		{
+			m_TouchTargetPressed = false;
+			if(m_InputTargetRect.Inside(InputMousePos))
+				OpenChatTargetMenu();
+		}
+		if(!AnyChatPopupOpenNow && !HudEditorPreview && PointerPressed() && PointerInsideTranslate)
+		{
+			m_TouchTranslatePressed = true;
+			if(pMouseSelection != nullptr)
+			{
+				pMouseSelection->m_Selecting = false;
+				pMouseSelection->m_PressMouse = vec2(0, 0);
+				pMouseSelection->m_ReleaseMouse = vec2(0, 0);
+			}
+		}
+		else if(MobileChannelChips && !AnyChatPopupOpenNow && !HudEditorPreview && PointerPressed() && m_InputModeRect.Inside(InputMousePos))
+		{
+			// 点模式块：全体 ↔ 队伍。
+			ToggleChannelMode();
+		}
+		else if(MobileChannelChips && !AnyChatPopupOpenNow && !HudEditorPreview && PointerPressed() && m_InputTargetRect.Inside(InputMousePos))
+		{
+			// 点 ▾ 块：只记一笔，抬手再弹列表（见上面的抬起处理）。
+			m_TouchTargetPressed = true;
+			if(pMouseSelection != nullptr)
+			{
+				pMouseSelection->m_Selecting = false;
+				pMouseSelection->m_PressMouse = vec2(0, 0);
+				pMouseSelection->m_ReleaseMouse = vec2(0, 0);
+			}
+		}
+		else if(!AnyChatPopupOpenNow && PointerInsideText && PointerPressed())
+		{
+			pMouseSelection->m_Selecting = true;
+			pMouseSelection->m_PressMouse = InputMousePos;
+			pMouseSelection->m_ReleaseMouse = InputMousePos;
+			pMouseSelection->m_Offset.x = m_Input.GetScrollOffset();
+		}
+		else if(pMouseSelection->m_Selecting)
+		{
+			pMouseSelection->m_ReleaseMouse = InputMousePos;
+			if(!PointerDown())
+			{
+				pMouseSelection->m_Selecting = false;
+				// 系统可能在这一下点击里把软键盘收起，正文区松手后重新拉起。
+				if(PointerInsideText)
+					Input()->EnsureScreenKeyboardShown();
+			}
+		}
 		ExtendBounds(x, InputClippingRect.y, InputClippingRect.x + InputClippingRect.w - x, InputClippingRect.h);
 		const SQmChatInputPixelClip InputPixelClip = QmChatInputPixelClip(InputClippingRect,
 			m_ChatInputMapRect, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
@@ -3369,6 +3831,9 @@ void CChat::OnRender()
 		const CUIRect TranslateButtonRect = {InputLayout.m_ButtonX, InputLayout.m_ButtonY, InputLayout.m_ButtonW, InputLayout.m_ButtonH};
 		ExtendBounds(TranslateButtonRect.x, TranslateButtonRect.y, TranslateButtonRect.w, TranslateButtonRect.h);
 		RenderTranslateButton(TranslateButtonRect);
+
+		// 关闭按钮不画在聊天视口里：这个视口的映射与触摸坐标不一致，
+		// 画出来的按钮点不到（实测）。改为由触控聊天按钮承担关闭职责。
 		if(!Input()->HasComposition() && !HudEditorPreview && !GameClient()->m_Menus.IsActive() && !m_LanguageMenuOpen && !Ui()->IsPopupOpen(&m_LanguagePopupContext) && !Ui()->IsPopupOpen(&m_ChatLinePopupContext))
 		{
 			const vec2 CaretPosition = m_Input.GetCaretPosition();
@@ -3380,6 +3845,10 @@ void CChat::OnRender()
 	else
 	{
 		m_TranslateButton.m_RectValid = false;
+		m_InputPrefixRect = {};
+		m_InputModeRect = {};
+		m_InputTargetRect = {};
+		m_InputTextRect = {};
 		m_CommandHud.Hide();
 	}
 
@@ -3447,7 +3916,7 @@ void CChat::OnRender()
 		ScrollbarHandleH = QmChatScrollbarHandleHeight(ScrollbarRect.h, VisibleLineCapacity, TotalVisibleLines);
 		const float TrackRange = maximum(0.0f, ScrollbarRect.h - ScrollbarHandleH);
 		ScrollbarHandleY = QmChatScrollbarHandle(ScrollbarRect, ScrollbarHandleH, BacklogLineToScrollbarValue(m_BacklogCurLine, MaxScroll)).y;
-		const vec2 MousePos = GetChatLocalMousePos();
+		const vec2 MousePos = PointerLocalPos();
 		const bool InsideRail =
 			MousePos.x >= ScrollbarRect.x &&
 			MousePos.x <= ScrollbarRect.x + ScrollbarRect.w &&
@@ -3459,12 +3928,12 @@ void CChat::OnRender()
 			MousePos.y >= ScrollbarHandleY &&
 			MousePos.y <= ScrollbarHandleY + ScrollbarHandleH;
 
-		if(Input()->KeyPress(KEY_MOUSE_1) && InsideRail && !InsideCommandHud && !m_CommandHud.IsPressed())
+		if(PointerPressed() && InsideRail && !InsideCommandHud && !m_CommandHud.IsPressed())
 		{
 			m_ScrollbarDragging = true;
 			m_ScrollbarDragOffset = InsideHandle ? std::clamp(MousePos.y - ScrollbarHandleY, 0.0f, ScrollbarHandleH) : ScrollbarHandleH * 0.5f;
 		}
-		if(!Input()->KeyIsPressed(KEY_MOUSE_1))
+		if(!PointerDown())
 			m_ScrollbarDragging = false;
 		if(m_ScrollbarDragging)
 		{
@@ -3484,10 +3953,13 @@ void CChat::OnRender()
 		m_ScrollbarDragging = false;
 	}
 
-	const vec2 MousePos = GetChatLocalMousePos();
+	const vec2 MousePos = PointerLocalPos();
 	const bool LanguageMenuOpen = m_LanguageMenuOpen || Ui()->IsPopupOpen(&m_LanguagePopupContext);
 	const bool ChatLineMenuOpen = Ui()->IsPopupOpen(&m_ChatLinePopupContext);
-	const bool MouseDown = Input()->KeyIsPressed(KEY_MOUSE_1);
+	// 发送对象弹层打开时，聊天行不再响应点选/拖动，避免隔着弹层改光标或复制。
+	m_TargetMenuOpen = Ui()->IsPopupOpen(&m_TargetPopupContext);
+	const bool AnyChatPopupOpen = LanguageMenuOpen || ChatLineMenuOpen || m_TargetMenuOpen;
+	const bool MouseDown = PointerDown();
 	const bool InsideInputBlock =
 		InputBlockRectValid &&
 		MousePos.x >= InputBlockRect.x &&
@@ -3506,16 +3978,39 @@ void CChat::OnRender()
 		MousePos.x <= ScrollbarRect.x + ScrollbarRect.w &&
 		MousePos.y >= ScrollbarRect.y &&
 		MousePos.y <= ScrollbarRect.y + ScrollbarRect.h;
-	const bool ChatCopyActive = m_Mode != MODE_NONE && !LanguageMenuOpen && !ChatLineMenuOpen && !InsideInputBlock && !InsideTranslateButton && !InsideScrollbar && !InsideCommandHud && !m_CommandHud.IsPressed() && !m_ScrollbarDragging;
+	// 触摸没有左右键：轻点翻译按钮打开设置，长按（CUi 合成的右键）切换自动翻译。
+	if(!Input()->TouchFingerStates().empty() && InsideTranslateButton && !AnyChatPopupOpen)
+	{
+		if(PointerPressed())
+			OpenLanguageMenu();
+		else if(PointerSecondaryPressed())
+			ToggleAutoTranslate();
+	}
+	const bool ChatCopyActive = m_Mode != MODE_NONE && !AnyChatPopupOpen && !InsideInputBlock && !InsideTranslateButton && !InsideScrollbar && !InsideCommandHud && !m_CommandHud.IsPressed() && !m_ScrollbarDragging;
 	const bool CopyClickReleased = m_MouseIsPress && !MouseDown && IsCopyClickDrag(m_MousePress, MousePos);
 	// 菜单打开时也允许右键：在其它消息行重新定位菜单，在空白处关闭菜单；
 	// 菜单自身区域内的右键不处理，避免与菜单按钮交互冲突。
 	const CUIRect *pChatLineMenuRect = ChatLineMenuOpen ? Ui()->GetPopupMenuRect(&m_ChatLinePopupContext) : nullptr;
 	const bool InsideChatLineMenu = pChatLineMenuRect != nullptr && pChatLineMenuRect->Inside(GetUiMousePos());
-	const bool ChatLineMenuRequested = m_Mode != MODE_NONE && !LanguageMenuOpen && !InsideInputBlock && !InsideTranslateButton && !InsideScrollbar && !InsideCommandHud && !m_ScrollbarDragging && !InsideChatLineMenu && Input()->KeyPress(KEY_MOUSE_2);
+	// 手机端：单指拖动历史区滚动聊天记录（复用 m_BacklogCurLine），
+	// 点输入行（含「全体:」前缀）重新唤起被系统收起的软键盘。
+	if(InputActive)
+	{
+		const bool HistoryDragStartAllowed =
+			!AnyChatPopupOpen && !HudEditorPreview && !InsideInputBlock && !InsideTranslateButton &&
+			!InsideScrollbar && !InsideCommandHud && !m_CommandHud.IsPressed() && !m_ScrollbarDragging;
+		if(UpdateHistoryTouchScroll(ChatRect, HeightLimit, HistoryBottom, RowHeight + ExtraLineSpacing, TotalVisibleLines, VisibleLineCapacity, HistoryDragStartAllowed))
+			RebuildChat();
+	}
+	else
+	{
+		m_HistoryTouchDrag.m_Active = false;
+	}
+
+	const bool ChatLineMenuRequested = m_Mode != MODE_NONE && !AnyChatPopupOpen && !InsideInputBlock && !InsideTranslateButton && !InsideScrollbar && !InsideCommandHud && !m_ScrollbarDragging && !InsideChatLineMenu && PointerSecondaryPressed();
 
 	// 菜单打开时，左键按下非菜单区域立即关闭菜单。
-	if(ChatLineMenuOpen && !InsideChatLineMenu && Input()->KeyPress(KEY_MOUSE_1))
+	if(ChatLineMenuOpen && !InsideChatLineMenu && PointerPressed())
 		CloseChatLineMenu();
 	if(ChatCopyActive)
 	{
@@ -3784,8 +4279,8 @@ void CChat::OnRender()
 	QmRenderChatCommandHud(m_CommandHud, Ui(), TextRender(), GetChatMousePos(), &GameClient()->m_QmChatEmoji);
 	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 
-	// 渲染聊天相关弹窗。
-	if(m_Mode != MODE_NONE && (Ui()->IsPopupOpen(&m_LanguagePopupContext) || Ui()->IsPopupOpen(&m_ChatLinePopupContext)))
+	// 渲染聊天相关弹窗（翻译设置、聊天行菜单、发送对象）。
+	if(m_Mode != MODE_NONE && (Ui()->IsPopupOpen(&m_LanguagePopupContext) || Ui()->IsPopupOpen(&m_ChatLinePopupContext) || Ui()->IsPopupOpen(&m_TargetPopupContext)))
 	{
 		Ui()->StartCheck();
 		Ui()->Update();
@@ -3795,15 +4290,17 @@ void CChat::OnRender()
 		Ui()->FinishCheck();
 		Ui()->ClearHotkeys();
 		m_LanguageMenuOpen = Ui()->IsPopupOpen(&m_LanguagePopupContext);
+		m_TargetMenuOpen = Ui()->IsPopupOpen(&m_TargetPopupContext);
 		Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
 	}
 	else
 	{
 		m_LanguageMenuOpen = false;
+		m_TargetMenuOpen = false;
 	}
 
-	// 渲染鼠标光标（当聊天框激活时）
-	if(m_Mode != MODE_NONE)
+	// 渲染鼠标光标（当聊天框激活时）；手机触控不需要可见光标。
+	if(m_Mode != MODE_NONE && !QmUiMobilePlatform())
 	{
 		const vec2 UiMousePos = Ui()->UpdatedMousePos() * vec2(Ui()->Screen()->w, Ui()->Screen()->h) / vec2(Graphics()->WindowWidth(), Graphics()->WindowHeight());
 		const vec2 UiToChatScale(Width / Ui()->Screen()->w, Height / Ui()->Screen()->h);
@@ -3915,7 +4412,56 @@ bool CChat::SendChatOnConn(int Conn, int Team, const char *pLine, bool AllowWhit
 	return true;
 }
 
-CChat::EChatSendResult CChat::SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation, const char *pLocalOriginal, int Connection)
+// /w 名字 [内容]：名字能对上在场玩家时在本地处理（设置私聊目标 / 直接私聊），
+// 对不上就原样交给服务器，保留原来的 /w id 语法。
+bool CChat::TryHandleWhisperCommand(const char *pLine)
+{
+	if(pLine == nullptr)
+		return false;
+	if(!str_startswith_nocase(pLine, "/w ") && !str_startswith_nocase(pLine, "/whisper "))
+		return false;
+	const char *pRest = str_skip_whitespaces_const(pLine + (str_startswith_nocase(pLine, "/w ") ? 3 : 9));
+	if(*pRest == '\0')
+		return false;
+
+	// 名字可能带空格：优先匹配最长前缀，剩下的当消息内容。
+	int MatchedId = -1;
+	size_t MatchedLength = 0;
+	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
+	{
+		const CGameClient::CClientData &ClientData = GameClient()->m_aClients[ClientId];
+		if(!ClientData.m_Active || ClientData.m_aName[0] == '\0')
+			continue;
+		const size_t NameLength = str_length(ClientData.m_aName);
+		if(NameLength <= MatchedLength)
+			continue;
+		if(str_startswith_nocase(pRest, ClientData.m_aName) && (pRest[NameLength] == '\0' || pRest[NameLength] == ' '))
+		{
+			MatchedId = ClientId;
+			MatchedLength = NameLength;
+		}
+	}
+	if(MatchedId < 0)
+		return false;
+
+	SetWhisperTarget(MatchedId, GameClient()->m_aClients[MatchedId].m_aName);
+	SetChatMode(MODE_WHISPER, false);
+	const char *pMessage = str_skip_whitespaces_const(pRest + MatchedLength);
+	if(*pMessage == '\0')
+	{
+		char aBuf[96];
+		str_format(aBuf, sizeof(aBuf), "%s %s", Localize("Whisper"), GameClient()->m_aClients[MatchedId].m_aName);
+		Echo(aBuf);
+		return true;
+	}
+
+	char aLine[MAX_LINE_LENGTH];
+	if(BuildWhisperCommand(aLine, sizeof(aLine), GameClient()->m_aClients[MatchedId].m_aName, pMessage))
+		SendChat(0, aLine);
+	return true;
+}
+
+CChat::EChatSendResult CChat::SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation, const char *pLocalOriginal, int Connection, bool ManualInput)
 {
 	if(Connection < -1 || Connection > IClient::CONN_DUMMY || (Connection >= 0 && (GameClient()->m_aLocalIds[Connection] < 0 || (Connection == IClient::CONN_DUMMY && !Client()->DummyConnected()))))
 		return EChatSendResult::REJECTED;
@@ -3923,6 +4469,10 @@ CChat::EChatSendResult CChat::SendChatQueued(int Team, const char *pLine, bool A
 		return EChatSendResult::HANDLED;
 	if(pLine == nullptr || *str_utf8_skip_whitespaces(pLine) == '\0')
 		return EChatSendResult::REJECTED;
+	// /w 名字 只在用户手打回车时本地解析：翻译回填、bind、队友频道等自动路径
+	// 直接交给服务器，避免绕过服务端的 whispers 开关与会话记录。
+	if(ManualInput && Team == 0 && TryHandleWhisperCommand(pLine))
+		return EChatSendResult::HANDLED;
 
 	const auto SendSensitive = [&] { return SendChat(Team, pLine, nullptr, Connection); };
 	const auto SendOrdinary = [&] {
@@ -3958,7 +4508,28 @@ CChat::EChatSendResult CChat::SendChatQueued(int Team, const char *pLine, bool A
 
 CChat::EChatSendResult CChat::SendChatQueued(const char *pLine)
 {
-	return SendChatQueued(m_Mode == MODE_ALL ? 0 : 1, pLine, true);
+	if(m_Mode == MODE_WHISPER)
+	{
+		// 自己输入的斜杠指令原样发送，不能再包一层 /w（否则变成 /w "名字" /w ...）。
+		if(pLine != nullptr && pLine[0] == '/')
+			return SendChatQueued(0, pLine, true, nullptr, -1, true);
+		if(!WhisperTargetValid())
+		{
+			// 目标已离开时必须丢弃这一条：退回公开频道会把私聊内容发给所有人。
+			Echo(Localize("Whisper target left the game"));
+			ClearWhisperTarget();
+			m_Mode = MODE_ALL;
+			Input()->EnsureScreenKeyboardShown();
+			return EChatSendResult::REJECTED;
+		}
+		// 私聊模式下空输入直接丢弃：否则会向服务器发一条只有目标的空 /w 命令。
+		if(*str_utf8_skip_whitespaces(pLine) == '\0')
+			return EChatSendResult::REJECTED;
+		char aLine[MAX_LINE_LENGTH];
+		if(BuildWhisperCommand(aLine, sizeof(aLine), WhisperTargetName(), pLine))
+			return SendChatQueued(0, aLine, true);
+	}
+	return SendChatQueued(m_Mode == MODE_ALL ? 0 : 1, pLine, true, nullptr, -1, true);
 }
 
 // ===== 翻译按钮相关方法 =====
@@ -3999,7 +4570,7 @@ void CChat::RenderTranslateButton(const CUIRect &ButtonRect)
 	m_TranslateButton.m_H = ButtonRect.h;
 	m_TranslateButton.m_RectValid = true;
 
-	const vec2 MousePos = GetChatLocalMousePos();
+	const vec2 MousePos = PointerLocalPos();
 	const bool Hovered = !Ui()->IsPopupOpen() && ButtonRect.Inside(MousePos);
 
 	const bool IsOpen = m_LanguageMenuOpen;
@@ -4027,7 +4598,7 @@ void CChat::RenderTranslateButton(const CUIRect &ButtonRect)
 
 	// 自动翻译已启用时也保留悬浮/按下反馈，不被启用颜色分支遮住。
 	const SUiTheme &Theme = Ui()->QmControlTheme();
-	const bool Pressed = Hovered && Input()->KeyIsPressed(KEY_MOUSE_1);
+	const bool Pressed = Hovered && PointerDown();
 	DrawRoundedSurface(Ui(), ButtonRect, ButtonColor, Hovered ? Theme.m_Accent : ColorRGBA(), ButtonRounding, Hovered ? (Pressed ? 1.0f : 0.65f) : 0.0f);
 
 	CUIRect IconRect;
@@ -4112,6 +4683,12 @@ void CChat::OpenLanguageMenu()
 		return;
 	}
 	m_LanguageMenuOpen = true;
+	// 打开/关闭都会走这里：先把「按下翻译按钮」的候选状态清掉，
+	// 否则关掉菜单后同一根手指的抬起会把菜单又弹回来。
+	m_TouchTranslatePressed = false;
+	m_TouchTargetPressed = false;
+	// 翻译二级菜单是纯触控操作：弹出时必须收掉软键盘，否则菜单被键盘顶掉一半。
+	Input()->StopTextInput();
 	const SQmChatViewport Viewport{m_ChatInputMapRect, vec2(maximum(1, Graphics()->WindowWidth()), maximum(1, Graphics()->WindowHeight()))};
 	const CUIRect Button = Viewport.ToUi({m_TranslateButton.m_X, m_TranslateButton.m_Y, m_TranslateButton.m_W, m_TranslateButton.m_H}, *Ui()->Screen());
 	m_LanguagePopupContext.Open(Ui(), vec2(Button.x + Button.w, Button.y), GameClient());
@@ -4123,6 +4700,9 @@ void CChat::CloseLanguageMenu()
 		Ui()->ClosePopupMenu(&m_LanguagePopupContext, true);
 	m_LanguageMenuOpen = false;
 	m_TranslateButton.m_Input.Reset();
+	// 关掉之后这根手指不能再把菜单弹回来。
+	m_TouchTranslatePressed = false;
+	m_TouchTargetPressed = false;
 }
 
 void CChat::OpenChatLineMenu(const CLine &Line, vec2 UiMousePos)

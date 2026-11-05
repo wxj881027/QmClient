@@ -27,6 +27,7 @@
 #include <engine/shared/video.h>
 #endif
 
+#include <SDL3/SDL_timer.h>
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_vulkan.h>
 #include <vulkan/vk_platform.h>
@@ -4349,7 +4350,24 @@ public:
 		}
 
 #ifdef VK_KHR_portability_enumeration
-		vVKExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+		// 这个扩展是 macOS/iOS 上 MoltenVK 需要的，Android 的 Adreno/Mali 驱动并不提供。
+		// 无条件追加会让 vkCreateInstance 返回 VK_ERROR_EXTENSION_NOT_PRESENT，
+		// 整条 Vulkan 路径直接初始化失败（手机上表现为无法初始化 Vulkan）。
+		// 这里只在实际支持时才请求。
+		bool PortabilityEnumerationSupported = false;
+		uint32_t AvailableCount = 0;
+		if(vkEnumerateInstanceExtensionProperties(nullptr, &AvailableCount, nullptr) == VK_SUCCESS && AvailableCount > 0)
+		{
+			std::vector<VkExtensionProperties> vAvailable(AvailableCount);
+			if(vkEnumerateInstanceExtensionProperties(nullptr, &AvailableCount, vAvailable.data()) == VK_SUCCESS)
+			{
+				PortabilityEnumerationSupported = std::any_of(vAvailable.begin(), vAvailable.end(), [](const VkExtensionProperties &Props) {
+					return str_comp(Props.extensionName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) == 0;
+				});
+			}
+		}
+		if(PortabilityEnumerationSupported)
+			vVKExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 #endif
 
 		return true;
@@ -5024,9 +5042,25 @@ public:
 
 	[[nodiscard]] bool CreateSurface(SDL_Window *pWindow)
 	{
-		if(!SDL_Vulkan_CreateSurface(pWindow, m_VKInstance, nullptr, &m_VKPresentSurface))
+		// 安卓的 ANativeWindow 是异步挂到窗口上的：应用刚启动、刚回到前台，或刚
+		// 重建 Activity 时 SDL 还拿不到有效窗口，这里一失败就直接判致命错误会让
+		// 整个客户端弹「Graphics Error」退出。短暂重试几次把这个抖动吃掉。
+		// 冷启动时窗口表面可能要等到应用真正可见才就绪（锁屏、后台启动、动画期间），
+		// 最多等 ~3 秒；这段时间足够覆盖系统把 ANativeWindow 挂上来的抖动。
+		constexpr int MAX_SURFACE_ATTEMPTS = 60;
+		bool Created = false;
+		for(int Attempt = 0; Attempt < MAX_SURFACE_ATTEMPTS && !Created; ++Attempt)
 		{
-			dbg_msg("vulkan", "error from sdl: %s", SDL_GetError());
+			Created = SDL_Vulkan_CreateSurface(pWindow, m_VKInstance, nullptr, &m_VKPresentSurface);
+			if(!Created)
+			{
+				dbg_msg("vulkan", "creating vulkan surface failed (attempt %d): %s", Attempt + 1, SDL_GetError());
+				if(Attempt + 1 < MAX_SURFACE_ATTEMPTS)
+					SDL_Delay(50);
+			}
+		}
+		if(!Created)
+		{
 			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating a vulkan surface for the SDL window failed.");
 			return false;
 		}
@@ -5244,6 +5278,13 @@ public:
 
 	[[nodiscard]] bool CreateSwapChain(VkSwapchainKHR &OldSwapChain)
 	{
+		// 设备或函数指针已失效（窗口销毁后设备被清理、又走到重建 swapchain）时直接失败，
+		// 交给上层报图形错误：继续调用驱动会拿空句柄进 vkGetSwapchainImagesKHR 段错误。
+		if(m_VKDevice == VK_NULL_HANDLE || m_pfnCreateSwapchainKHR == nullptr || m_VKPresentSurface == VK_NULL_HANDLE)
+		{
+			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating the swap chain failed, the Vulkan device or surface is gone.");
+			return false;
+		}
 		VkSurfaceCapabilitiesKHR VKSurfCap;
 		if(!GetSurfaceProperties(VKSurfCap))
 			return false;
@@ -5305,6 +5346,13 @@ public:
 		}
 		else if(SwapchainCreateRes == VK_ERROR_NATIVE_WINDOW_IN_USE_KHR)
 			return false;
+		else if(SwapchainCreateRes != VK_SUCCESS)
+		{
+			// 非致命但也没成功（例如窗口正在重建时的 VK_ERROR_INITIALIZATION_FAILED）：
+			// 句柄仍是空的，继续取图像同样会崩，这里按失败返回。
+			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating the swap chain failed.");
+			return false;
+		}
 
 		return true;
 	}
@@ -5321,6 +5369,11 @@ public:
 
 	[[nodiscard]] bool GetSwapChainImageHandles()
 	{
+		if(m_VKDevice == VK_NULL_HANDLE || m_VKSwapChain == VK_NULL_HANDLE || m_pfnGetSwapchainImagesKHR == nullptr)
+		{
+			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Could not get swap chain images, the swap chain is gone.");
+			return false;
+		}
 		uint32_t ImgCount = 0;
 		if(m_pfnGetSwapchainImagesKHR(m_VKDevice, m_VKSwapChain, &ImgCount, nullptr) != VK_SUCCESS)
 		{
@@ -6855,6 +6908,31 @@ public:
 		if(!m_SwapchainCreated)
 			Ret = InitVulkanSwapChain(OldSwapChain);
 
+		// 安卓切后台回来：ANativeWindow 换了，旧 Surface 已经失效（VK_ERROR_SURFACE_LOST_KHR），
+		// 拿着旧表面怎么重建 swapchain 都不会成功。这里按当前窗口重建 Surface 再试一次，
+		// 否则会一路落到“图形错误”对话框（之前是直接段错误）。
+		if(Ret != 0 && m_pWindow != nullptr && m_VKInstance != VK_NULL_HANDLE && m_VKDevice != VK_NULL_HANDLE)
+		{
+			// 旧 swapchain 可能还挂在失效的 surface 上：先把它真正销毁，再销毁 surface，
+			// 否则既违反 VUID-vkDestroySurfaceKHR-surface-01266，也会让第二次尝试拿到旧句柄。
+			DestroySwapChain(true);
+			DestroySurface();
+			if(CreateSurface(m_pWindow))
+			{
+				if(IsVerbose())
+					dbg_msg("vulkan", "recreating swap chain on a fresh surface.");
+				OldSwapChain = VK_NULL_HANDLE;
+				Ret = InitVulkanSwapChain(OldSwapChain);
+				if(Ret == 0)
+				{
+					// 第一次失败时 InitVulkanSwapChain 已经把 GFX_ERROR_TYPE_INIT 记成致命错误，
+					// 运行期不会再复位；这里重建成功后必须清掉，否则下一条命令直接早退退出进程。
+					ResetInitializationDiagnostics();
+					dbg_msg("vulkan", "swap chain recreated after surface loss, rendering resumed.");
+				}
+			}
+		}
+
 		Ret = ReinitializeQmVulkanFrameResources(Ret, OldSwapChainImageCount != m_SwapChainImageCount, [this] { CleanupVulkan<false>(); }, [this] { return InitVulkan<false>(); });
 		if(Ret != 0)
 		{
@@ -8251,6 +8329,9 @@ public:
 
 	VkResult DeviceWaitIdle()
 	{
+		// 设备已被销毁时不能再进驱动，按设备丢失处理，让上层走重建/报错路径。
+		if(m_VKDevice == VK_NULL_HANDLE)
+			return VK_ERROR_DEVICE_LOST;
 		const auto StartTime = m_FrameProfilingActive ? time_get_nanoseconds() : 0ns;
 		VkResult Result = vkDeviceWaitIdle(m_VKDevice);
 		if(m_FrameProfilingActive)

@@ -48,7 +48,6 @@ namespace
 		case CMenus::QMCLIENT_SETTINGS_TAB_HUD: return "hud";
 		case CMenus::QMCLIENT_SETTINGS_TAB_CONTRIBUTORS: return "contributors";
 		case CMenus::QMCLIENT_SETTINGS_TAB_CONFIG: return "config";
-		case CMenus::QMCLIENT_SETTINGS_TAB_BIND: return "bind";
 		default: return "unknown";
 		}
 	}
@@ -363,7 +362,7 @@ void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)
 		TabBar = QmClientSubTabs.m_TabBarRect;
 		MainView = QmClientSubTabs.m_ContentRect;
 		// 贡献者枚举保留占位以兼容旧配置，可见页签使用独立列表。
-		constexpr int aVisibleQmTabs[] = {QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_CONFIG, QMCLIENT_SETTINGS_TAB_BIND};
+		constexpr int aVisibleQmTabs[] = {QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_CONFIG};
 		constexpr int NumQmTabs = (int)std::size(aVisibleQmTabs);
 		const float TabWidth = TabBar.w / (float)NumQmTabs;
 		static CButtonContainer s_aPageTabs[NUMBER_OF_QMCLIENT_SETTINGS_TABS] = {};
@@ -372,7 +371,6 @@ void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)
 		apQmTabNames[QMCLIENT_SETTINGS_TAB_FUNCTION] = Localize("Functions");
 		apQmTabNames[QMCLIENT_SETTINGS_TAB_HUD] = Localize("HUD");
 		apQmTabNames[QMCLIENT_SETTINGS_TAB_CONFIG] = Localize("Config");
-		apQmTabNames[QMCLIENT_SETTINGS_TAB_BIND] = Localize("Bind");
 
 		{
 			CPerfTimer StageTimer;
@@ -441,13 +439,6 @@ void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)
 			if(TabTransitionActive)
 				Ui()->ClipDisable();
 			LogQmPerfStage(Client(), "render_total", RenderTimer.ElapsedMs(), false, aConfigExtra);
-			return;
-		}
-		if(m_QmClientSettingsTab == QMCLIENT_SETTINGS_TAB_BIND)
-		{
-			RenderSettingsQmClientBindDeck(ContentView, PrewarmOnly);
-			if(TabTransitionActive)
-				Ui()->ClipDisable();
 			return;
 		}
 		if(m_QmClientSettingsTab == QMCLIENT_SETTINGS_TAB_VISUAL)

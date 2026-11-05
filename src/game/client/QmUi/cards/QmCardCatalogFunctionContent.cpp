@@ -146,9 +146,7 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 {
 	CSettingsContentLayoutFlow Flow(Content);
 	static CButtonContainer s_ReaderButtonGoresToggle, s_ClearButtonGoresToggle;
-	static CButtonContainer s_AxiomPasswordToggleButton, s_AxiomDummyPasswordToggleButton;
-	static bool s_ShowAxiomPassword = false;
-	static bool s_ShowAxiomDummyPassword = false;
+	static ui_widget::SPasswordFieldState s_AxiomMainPasswordState, s_AxiomDummyPasswordState;
 	CUIRect Row, LabelColumn, ControlColumn;
 	auto RenderCheckbox = [this, &Flow, &Row, LineHeight, LineSpacing, PrewarmOnly](const void *pId, const char *pTextId, const char *pText, int *pValue) {
 		if(Flow.Control(pTextId, LineHeight, Row))
@@ -166,7 +164,7 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 	if(g_Config.m_QmAxiomAutoLogin)
 	{
 		IUiContext TextInputCtx = SettingsUiContext("settings_qmclient_gores_text_inputs", BodySize / ui_token::font::BODY);
-		auto RenderPassword = [&](const char *pTextId, const char *pText, CLineInput &Input, CButtonContainer &ToggleButton, bool &Visible) {
+		auto RenderPassword = [&](const char *pTextId, const char *pText, CLineInput &Input, ui_widget::SPasswordFieldState &State) {
 			if(!Flow.Control(pTextId, LineHeight, Row))
 			{
 				Flow.Space(LineSpacing);
@@ -175,21 +173,16 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
 			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pTextId, &LabelColumn, Localize(pText), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&Input, &Row, Input.GetString(), &LabelColumn);
-			Input.SetHidden(!Visible);
-			ui_widget::SInputFieldOptions Options;
+			ui_widget::SPasswordFieldOptions Options;
 			Options.m_FontSize = BodySize;
-			Options.m_pTrailingActionId = &ToggleButton;
-			Options.m_pTrailingActionIcon = Visible ? FONT_ICON_EYE_SLASH : FONT_ICON_EYE;
-			Options.m_TrailingActionQmIcon = static_cast<int>(Visible ? EQmIcon::EYE_OFF : EQmIcon::EYE);
 			Options.m_TrailingWidth = ControlColumn.h;
-			if(ui_widget::InputField(TextInputCtx, &Input, ControlColumn, Options).m_TrailingAction)
-				Visible = !Visible;
+			ui_widget::PasswordField(TextInputCtx, &Input, ControlColumn, &State, Options);
 			Flow.Space(LineSpacing);
 		};
 		static CLineInput s_AxiomLoginPassword(g_Config.m_QmAxiomLoginPassword, sizeof(g_Config.m_QmAxiomLoginPassword));
 		static CLineInput s_AxiomDummyLoginPassword(g_Config.m_QmAxiomDummyLoginPassword, sizeof(g_Config.m_QmAxiomDummyLoginPassword));
-		RenderPassword("qmclient-gores-axiom-main-password", "Axiom main account password", s_AxiomLoginPassword, s_AxiomPasswordToggleButton, s_ShowAxiomPassword);
-		RenderPassword("qmclient-gores-axiom-dummy-password", "Axiom dummy password", s_AxiomDummyLoginPassword, s_AxiomDummyPasswordToggleButton, s_ShowAxiomDummyPassword);
+		RenderPassword("qmclient-gores-axiom-main-password", "Axiom main account password", s_AxiomLoginPassword, s_AxiomMainPasswordState);
+		RenderPassword("qmclient-gores-axiom-dummy-password", "Axiom dummy password", s_AxiomDummyLoginPassword, s_AxiomDummyPasswordState);
 	}
 
 	// Axiom 官网入口：注册账号、找回密码都从这里进。

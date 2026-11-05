@@ -296,49 +296,94 @@ TEST(MapVoteDifficulty, PreservesStarParsingAndRejectsMalformedDescriptions)
 	EXPECT_EQ(Cache.Find(5, &Option, "Map"), 2);
 }
 
-TEST(MapVoteDifficulty, BrowserFilterSliderMapsSingleDiscreteLevels)
+TEST(MapVoteDifficulty, BrowserFilterStarChipsToggleIndependentBits)
 {
-	EXPECT_EQ(QmMapVotes::MapBrowserFilterLevel(false, 0), QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE);
-	EXPECT_EQ(QmMapVotes::MapBrowserFilterLevel(true, 0), QmMapVotes::MAP_BROWSER_FILTER_LEVEL_EMPTY);
+	EXPECT_FALSE(QmMapVotes::MapBrowserStarSelected(0, 1));
 	for(int Star = 1; Star <= 5; ++Star)
 	{
-		const int Level = QmMapVotes::MAP_BROWSER_FILTER_LEVEL_FIRST_STAR + Star - 1;
-		EXPECT_EQ(QmMapVotes::MapBrowserFilterLevel(false, 1 << Star), Level);
-		EXPECT_EQ(QmMapVotes::MapBrowserFilterStars(Level), Star);
+		const int Mask = QmMapVotes::ToggleMapBrowserStar(0, Star);
+		EXPECT_EQ(Mask, 1 << Star);
+		EXPECT_TRUE(QmMapVotes::MapBrowserStarSelected(Mask, Star));
+		// 再点一次同一胶囊只取消这一位，配置回到不筛选。
+		EXPECT_EQ(QmMapVotes::ToggleMapBrowserStar(Mask, Star), 0);
 	}
-	EXPECT_EQ(QmMapVotes::MapBrowserFilterLevel(true, 1 << 2), -1);
-	EXPECT_EQ(QmMapVotes::MapBrowserFilterLevel(false, (1 << 1) | (1 << 3)), -1);
-	EXPECT_EQ(QmMapVotes::MapBrowserFilterStars(QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE), 0);
-	EXPECT_EQ(QmMapVotes::MapBrowserFilterStars(QmMapVotes::MAP_BROWSER_FILTER_LEVEL_EMPTY), 0);
 
-	// 每个档位写入配置后都应读回自身，滑条位置与实际筛选条件保持一致。
-	for(int Level = QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE; Level <= QmMapVotes::MAP_BROWSER_FILTER_LEVEL_LAST_STAR; ++Level)
+	// 难度胶囊可任意组合：筛选命中的是掩码里的星级集合，而不是单一档位。
+	const int Combined = QmMapVotes::ToggleMapBrowserStar(QmMapVotes::ToggleMapBrowserStar(0, 2), 5);
+	EXPECT_EQ(Combined, (1 << 2) | (1 << 5));
+	EXPECT_TRUE(QmMapVotes::MapBrowserStarSelected(Combined, 2));
+	EXPECT_TRUE(QmMapVotes::MapBrowserStarSelected(Combined, 5));
+	EXPECT_FALSE(QmMapVotes::MapBrowserStarSelected(Combined, 3));
+	EXPECT_TRUE(QmMapVotes::MatchesFilter(5, nullptr, 7, false, Combined, 0, false, false));
+	EXPECT_FALSE(QmMapVotes::MatchesFilter(4, nullptr, 7, false, Combined, 0, false, false));
+
+	// 越界星级不写进掩码，非法配置不会让界面出现无效胶囊。
+	EXPECT_EQ(QmMapVotes::ToggleMapBrowserStar(1 << 3, 0), 1 << 3);
+	EXPECT_EQ(QmMapVotes::ToggleMapBrowserStar(1 << 3, 6), 1 << 3);
+	EXPECT_FALSE(QmMapVotes::MapBrowserStarSelected(1 << 3, 0));
+	EXPECT_FALSE(QmMapVotes::MapBrowserStarSelected(1 << 3, 7));
+}
+
+TEST(MapVoteDifficulty, BrowserFilterSliderLevelsMapSixSharedTiers)
+{
+	EXPECT_EQ(QmMapVotes::MapBrowserCategoryLevel(0), 0);
+	for(int Level = 1; Level <= 6; ++Level)
 	{
-		int EmptyOnly = -1;
-		int StarMask = -1;
-		QmMapVotes::ApplyMapBrowserFilterLevel(Level, EmptyOnly, StarMask);
-		EXPECT_EQ(QmMapVotes::MapBrowserFilterLevel(EmptyOnly != 0, StarMask), Level) << "level " << Level;
+		const int Mask = QmMapVotes::MapBrowserCategoryMaskForLevel(Level);
+		EXPECT_EQ(Mask, 1 << (Level - 1));
+		EXPECT_EQ(QmMapVotes::MapBrowserCategoryLevel(Mask), Level);
+		// 滑条档位与右侧面板胶囊共用同一份类别键与位序。
+		EXPECT_EQ(QmMapVotes::MapBrowserCategoryBit(QmMapVotes::s_apMapBrowserCategoryKeys[Level - 1]), Level - 1);
 	}
+	// 多选或侧栏专属类别都不对应单一档位，界面显示「自定义」。
+	EXPECT_EQ(QmMapVotes::MapBrowserCategoryLevel((1 << 0) | (1 << 2)), -1);
+	EXPECT_EQ(QmMapVotes::MapBrowserCategoryLevel(1 << 6), -1);
+	EXPECT_EQ(QmMapVotes::MapBrowserCategoryMaskForLevel(-1), 0);
+	EXPECT_EQ(QmMapVotes::MapBrowserCategoryMaskForLevel(7), 0);
 }
 
 TEST(MapVoteDifficulty, BrowserFilterFavoriteSwitchIsIndependent)
 {
-	EXPECT_TRUE(QmMapVotes::MatchesFilter(3, 4, false, 1 << 3, true, true));
-	EXPECT_FALSE(QmMapVotes::MatchesFilter(3, 4, false, 1 << 3, true, false));
-	EXPECT_TRUE(QmMapVotes::MatchesFilter(3, 4, false, 1 << 3, false, false));
-	EXPECT_FALSE(QmMapVotes::MatchesFilter(2, 4, false, 1 << 3, true, true));
+	EXPECT_TRUE(QmMapVotes::MatchesFilter(3, "Brutal", 4, false, 1 << 3, 0, true, true));
+	EXPECT_FALSE(QmMapVotes::MatchesFilter(3, "Brutal", 4, false, 1 << 3, 0, true, false));
+	EXPECT_TRUE(QmMapVotes::MatchesFilter(3, "Brutal", 4, false, 1 << 3, 0, false, false));
+	EXPECT_FALSE(QmMapVotes::MatchesFilter(2, "Brutal", 4, false, 1 << 3, 0, true, true));
 }
 
 TEST(MapVoteDifficulty, BrowserFilterKeepsEmptyServersUnlessEmptyOnlyIsOn)
 {
 	// 「不筛选」档必须保留空服务器：引擎侧只在 empty_only 打开时隐藏有人的服务器，
 	// 客户端列表层的二次过滤不能把默认档的空服一并滤掉。
-	EXPECT_TRUE(QmMapVotes::MatchesFilter(3, 0, false, 0, false, false));
-	EXPECT_TRUE(QmMapVotes::MatchesFilter(-1, 0, false, 0, false, false));
+	EXPECT_TRUE(QmMapVotes::MatchesFilter(3, "Brutal", 0, false, 0, 0, false, false));
+	EXPECT_TRUE(QmMapVotes::MatchesFilter(-1, nullptr, 0, false, 0, 0, false, false));
 	// 打开「只看空服」后：空服保留，有人的服务器隐藏。
-	EXPECT_TRUE(QmMapVotes::MatchesFilter(3, 0, true, 0, false, false));
-	EXPECT_FALSE(QmMapVotes::MatchesFilter(3, 1, true, 0, false, false));
+	EXPECT_TRUE(QmMapVotes::MatchesFilter(3, "Brutal", 0, true, 0, 0, false, false));
+	EXPECT_FALSE(QmMapVotes::MatchesFilter(3, "Brutal", 1, true, 0, 0, false, false));
 	// 星级与空服条件叠加时两条都必须满足。
-	EXPECT_TRUE(QmMapVotes::MatchesFilter(3, 0, true, 1 << 3, false, false));
-	EXPECT_FALSE(QmMapVotes::MatchesFilter(2, 0, true, 1 << 3, false, false));
+	EXPECT_TRUE(QmMapVotes::MatchesFilter(3, "Brutal", 0, true, 1 << 3, 0, false, false));
+	EXPECT_FALSE(QmMapVotes::MatchesFilter(2, "Brutal", 0, true, 1 << 3, 0, false, false));
+}
+
+TEST(MapVoteDifficulty, BrowserFilterCategoryKeepsUnresolvableServersVisible)
+{
+	const int BrutalBit = QmMapVotes::MapBrowserCategoryBit("Brutal");
+	ASSERT_GE(BrutalBit, 0);
+	const int Mask = QmMapVotes::ToggleMapBrowserCategory(0, BrutalBit);
+	// 勾选类别后同类保留、异类筛掉，判不出类别（Gores 的 kog 服、无难度词的名字）保留。
+	EXPECT_TRUE(QmMapVotes::MatchesFilter(-1, "Brutal", 3, false, 0, Mask, false, false));
+	EXPECT_FALSE(QmMapVotes::MatchesFilter(-1, "Novice", 3, false, 0, Mask, false, false));
+	EXPECT_TRUE(QmMapVotes::MatchesFilter(-1, nullptr, 3, false, 0, Mask, false, false));
+	EXPECT_TRUE(QmMapVotes::MatchesFilter(-1, "", 3, false, 0, Mask, false, false));
+	// 目录侧的点号写法与界面键名必须落到同一位。
+	EXPECT_EQ(QmMapVotes::MapBrowserCategoryBit("DDmaX.Next"), QmMapVotes::MapBrowserCategoryBit("DDmaX Next"));
+	EXPECT_GE(QmMapVotes::MapBrowserCategoryBit("DDmaX.Next"), 0);
+	// 未收录类别名与越界位不改变掩码。
+	EXPECT_EQ(QmMapVotes::MapBrowserCategoryBit("Unknown"), -1);
+	EXPECT_EQ(QmMapVotes::ToggleMapBrowserCategory(0, -1), 0);
+	EXPECT_EQ(QmMapVotes::ToggleMapBrowserCategory(0, QmMapVotes::MAP_BROWSER_CATEGORY_COUNT), 0);
+	// 多次勾选累积成集合，再点一次只取消自身。
+	const int Combined = QmMapVotes::ToggleMapBrowserCategory(Mask, QmMapVotes::MapBrowserCategoryBit("Fun"));
+	EXPECT_TRUE(QmMapVotes::MapBrowserCategorySelected(Combined, BrutalBit));
+	EXPECT_TRUE(QmMapVotes::MapBrowserCategorySelected(Combined, QmMapVotes::MapBrowserCategoryBit("Fun")));
+	EXPECT_EQ(QmMapVotes::ToggleMapBrowserCategory(Combined, BrutalBit), 1 << QmMapVotes::MapBrowserCategoryBit("Fun"));
 }

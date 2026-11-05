@@ -19,6 +19,9 @@ constexpr float QmPanelWheelStepMultiplier()
 }
 
 constexpr int QM_POPUP_LIST_MAX_VISIBLE_ITEMS = 8;
+// 松手甩动的速度上限（滚动偏移量/秒）：手指快速甩动时的瞬时速度可能极大，
+// 不设上限会让内容直接跳过整页。
+constexpr float QM_SCROLL_MAX_FLING_VELOCITY = 6000.0f;
 
 struct SQmScrollMetrics
 {
@@ -144,6 +147,8 @@ public:
 	void ScrollTo(float TargetOffset, const SQmScrollMetrics &Metrics, const SQmScrollConfig &Config = SQmScrollConfig());
 	void RequestScrollTo(float TargetOffset);
 	void AddWheelImpulse(float WheelDelta, const SQmScrollMetrics &Metrics, const SQmScrollConfig &Config = SQmScrollConfig());
+	// 触控甩动：把松手瞬间的速度交给同一套摩擦/回弹积分，产生惯性滑动。
+	void Fling(float Velocity, const SQmScrollMetrics &Metrics);
 	void Advance(float Dt, const SQmScrollMetrics &Metrics, const SQmScrollConfig &Config = SQmScrollConfig(), bool PauseNativeWheelAnimation = false);
 	void BeginThumbDrag(float GrabOffset);
 	void EndThumbDrag();

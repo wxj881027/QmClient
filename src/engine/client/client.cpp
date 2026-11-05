@@ -134,6 +134,56 @@ namespace
 using namespace std::chrono_literals;
 
 static constexpr ColorRGBA gs_ClientNetworkPrintColor{0.7f, 1, 0.7f, 1.0f};
+
+#if defined(CONF_FAMILY_WINDOWS)
+static const char *QmIntegrityLevelName(DWORD Rid)
+{
+	switch(Rid)
+	{
+	case SECURITY_MANDATORY_UNTRUSTED_RID: return "untrusted";
+	case SECURITY_MANDATORY_LOW_RID: return "low";
+	case SECURITY_MANDATORY_MEDIUM_RID: return "medium";
+	case SECURITY_MANDATORY_MEDIUM_PLUS_RID: return "medium-plus";
+	case SECURITY_MANDATORY_HIGH_RID: return "high";
+	case SECURITY_MANDATORY_SYSTEM_RID: return "system";
+	case SECURITY_MANDATORY_PROTECTED_PROCESS_RID: return "protected";
+	default: return "unknown";
+	}
+}
+#endif
+
+// 进程令牌的完整性级别与受限令牌标记：Windows 低完整性/受限令牌对用户目录只读，
+// 保存失败时这条信息能直接说明是环境限制而不是配置内容损坏。
+static void QmProcessTokenDescription(char *pBuffer, int BufferSize)
+{
+#if defined(CONF_FAMILY_WINDOWS)
+	HANDLE Token = INVALID_HANDLE_VALUE;
+	if(!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &Token))
+	{
+		str_copy(pBuffer, "integrity=unknown restricted=unknown", BufferSize);
+		return;
+	}
+	DWORD Needed = 0;
+	GetTokenInformation(Token, TokenIntegrityLevel, nullptr, 0, &Needed);
+	const char *pIntegrity = "unknown";
+	if(Needed > 0)
+	{
+		std::vector<unsigned char> Buffer(Needed);
+		if(GetTokenInformation(Token, TokenIntegrityLevel, Buffer.data(), Needed, &Needed))
+		{
+			const auto *pLabel = reinterpret_cast<const TOKEN_MANDATORY_LABEL *>(Buffer.data());
+			const DWORD Count = *GetSidSubAuthorityCount(pLabel->Label.Sid);
+			if(Count > 0)
+				pIntegrity = QmIntegrityLevelName(*GetSidSubAuthority(pLabel->Label.Sid, Count - 1));
+		}
+	}
+	const bool Restricted = IsTokenRestricted(Token) != 0;
+	str_format(pBuffer, BufferSize, "integrity=%s restricted=%s", pIntegrity, Restricted ? "yes" : "no");
+	CloseHandle(Token);
+#else
+	str_copy(pBuffer, "integrity=n/a restricted=n/a", BufferSize);
+#endif
+}
 static constexpr ColorRGBA gs_ClientNetworkErrPrintColor{1.0f, 0.25f, 0.25f, 1.0f};
 // 网络积压分帧处理，避免异常 burst 把整个渲染帧占满。
 static constexpr int gs_NetworkPumpMaxChunksPerFrame = 256;
@@ -346,6 +396,153 @@ static void ShowPendingQmCrashReport(IStorage *pStorage)
 	// 否则用户必须先关闭报告窗口，客户端才会继续启动。
 	if(!crashdump_launch_reporter_if_available(aAbsolutePath))
 		log_warn("crash_reporter", "failed to launch pending report '%s'; client startup will continue", aAbsolutePath);
+}
+#endif
+
+#if defined(CONF_PLATFORM_ANDROID)
+// 应用沙盒（Android/data/<pkg>/files）在 Android 11+ 对文件管理器不可见，
+// 因此把本次崩溃新产生的报告搬到公共「下载/QmClient」。
+// 只处理带 .pending 标记的报告，打开开关后不会把历史报告成批倒出来。
+struct SQmMobileCrashExportSearch
+{
+	char m_aaFound[3][IO_MAX_PATH_LENGTH] = {};
+	int m_NumFound = 0;
+};
+
+static int FindPendingQmMobileCrashReportCallback(const CFsFileInfo *pInfo, int IsDir, int Type, void *pUser)
+{
+	(void)Type;
+	if(IsDir || pInfo == nullptr || pUser == nullptr)
+		return 0;
+	if(str_endswith_nocase(pInfo->m_pName, ".pending") == nullptr)
+		return 0;
+
+	SQmMobileCrashExportSearch *pSearch = static_cast<SQmMobileCrashExportSearch *>(pUser);
+	constexpr int NumSlots = (int)(sizeof(pSearch->m_aaFound) / sizeof(pSearch->m_aaFound[0]));
+	if(pSearch->m_NumFound >= NumSlots)
+		return 0;
+
+	str_format(pSearch->m_aaFound[pSearch->m_NumFound], (int)sizeof(pSearch->m_aaFound[0]), "%s/%s", gs_pQmCrashDumpDir, pInfo->m_pName);
+	pSearch->m_NumFound++;
+	return 0;
+}
+
+static void ExportPendingQmMobileCrashReports(IStorage *pStorage)
+{
+	if(pStorage == nullptr || g_Config.m_QmMobileCrashReportExport == 0)
+		return;
+
+	SQmMobileCrashExportSearch Search;
+	pStorage->ListDirectoryInfo(IStorage::TYPE_SAVE, gs_pQmCrashDumpDir, FindPendingQmMobileCrashReportCallback, &Search);
+	if(Search.m_NumFound == 0)
+		return;
+
+	int Exported = 0;
+	for(int i = 0; i < Search.m_NumFound; i++)
+	{
+		// 标记文件名为 "<report>.pending"，报告本体去掉该后缀。
+		char aReportRelative[IO_MAX_PATH_LENGTH];
+		str_copy(aReportRelative, Search.m_aaFound[i]);
+		aReportRelative[str_length(aReportRelative) - str_length(".pending")] = '\0';
+
+		char aReportAbsolute[IO_MAX_PATH_LENGTH];
+		pStorage->GetCompletePath(IStorage::TYPE_SAVE, aReportRelative, aReportAbsolute, sizeof(aReportAbsolute));
+		// JNI 侧异步复制并提示结果；失败时保留标记，下次启动重试。
+		if(!ExportAndroidMediaFile(aReportAbsolute))
+			continue;
+
+		char aExportedMarker[IO_MAX_PATH_LENGTH + 16];
+		str_format(aExportedMarker, sizeof(aExportedMarker), "%s.exported", aReportRelative);
+		IOHANDLE Marker = pStorage->OpenFile(aExportedMarker, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+		if(Marker != nullptr)
+			io_close(Marker);
+
+		pStorage->RemoveFile(Search.m_aaFound[i], IStorage::TYPE_SAVE);
+		Exported++;
+	}
+
+	if(Exported > 0)
+		log_info("crash_reporter", "exported %d mobile crash report(s) to Downloads/QmClient", Exported);
+}
+
+// 崩溃循环会不断产生新报告，沙盒目录需要自我约束；公共目录由用户自行管理。
+static constexpr int QM_MOBILE_CRASH_REPORT_MAX_KEEP = 10;
+
+struct SQmMobileCrashPruneSearch
+{
+	struct SEntry
+	{
+		char m_aPath[IO_MAX_PATH_LENGTH] = "";
+		time_t m_TimeModified = 0;
+	};
+
+	SEntry m_aEntries[32];
+	int m_NumEntries = 0;
+};
+
+// 崩溃与卡死报告都落在这个目录；长期使用（尤其崩溃循环）会持续累积，
+// 因此按同一份上限统一清理。
+static bool IsQmMobileCrashReportName(const char *pName)
+{
+	if(pName == nullptr)
+		return false;
+	if(str_endswith_nocase(pName, "_fatal_report.txt") != nullptr || str_endswith_nocase(pName, "_exit_report.txt") != nullptr)
+		return true;
+	return str_find_nocase(pName, "_hang_report_") != nullptr && str_endswith_nocase(pName, ".txt") != nullptr;
+}
+
+static int FindQmMobileCrashReportCallback(const CFsFileInfo *pInfo, int IsDir, int Type, void *pUser)
+{
+	(void)Type;
+	if(IsDir || pInfo == nullptr || pUser == nullptr)
+		return 0;
+	if(!IsQmMobileCrashReportName(pInfo->m_pName))
+		return 0;
+
+	SQmMobileCrashPruneSearch *pSearch = static_cast<SQmMobileCrashPruneSearch *>(pUser);
+	constexpr int NumSlots = (int)(sizeof(pSearch->m_aEntries) / sizeof(pSearch->m_aEntries[0]));
+	if(pSearch->m_NumEntries >= NumSlots)
+		return 0;
+
+	SQmMobileCrashPruneSearch::SEntry &Entry = pSearch->m_aEntries[pSearch->m_NumEntries];
+	str_format(Entry.m_aPath, (int)sizeof(Entry.m_aPath), "%s/%s", gs_pQmCrashDumpDir, pInfo->m_pName);
+	Entry.m_TimeModified = pInfo->m_TimeModified;
+	pSearch->m_NumEntries++;
+	return 0;
+}
+
+static void PruneQmMobileCrashReports(IStorage *pStorage)
+{
+	if(pStorage == nullptr)
+		return;
+
+	SQmMobileCrashPruneSearch Search;
+	pStorage->ListDirectoryInfo(IStorage::TYPE_SAVE, gs_pQmCrashDumpDir, FindQmMobileCrashReportCallback, &Search);
+	if(Search.m_NumEntries <= QM_MOBILE_CRASH_REPORT_MAX_KEEP)
+		return;
+
+	time_t aTimes[32];
+	for(int i = 0; i < Search.m_NumEntries; i++)
+		aTimes[i] = Search.m_aEntries[i].m_TimeModified;
+
+	size_t aIndices[32];
+	const size_t StaleCount = crashdump_select_stale_reports(aTimes, (size_t)Search.m_NumEntries, QM_MOBILE_CRASH_REPORT_MAX_KEEP, aIndices, sizeof(aIndices) / sizeof(aIndices[0]));
+	int Removed = 0;
+	for(size_t i = 0; i < StaleCount; i++)
+	{
+		const char *pPath = Search.m_aEntries[aIndices[i]].m_aPath;
+		// 标记一并删除，避免留下指向已删报告的 .pending。
+		char aMarker[IO_MAX_PATH_LENGTH + 16];
+		str_format(aMarker, sizeof(aMarker), "%s.pending", pPath);
+		pStorage->RemoveFile(aMarker, IStorage::TYPE_SAVE);
+		str_format(aMarker, sizeof(aMarker), "%s.exported", pPath);
+		pStorage->RemoveFile(aMarker, IStorage::TYPE_SAVE);
+		if(pStorage->RemoveFile(pPath, IStorage::TYPE_SAVE))
+			Removed++;
+	}
+
+	if(Removed > 0)
+		log_info("crash_reporter", "pruned %d old mobile crash report(s), keeping the newest %d", Removed, QM_MOBILE_CRASH_REPORT_MAX_KEEP);
 }
 #endif
 
@@ -4412,8 +4609,44 @@ void CClient::InitConfigCommands()
 	m_Foes.Init(true);
 }
 
+void CClient::QmProbeSaveDirectory()
+{
+	if(m_pStorage == nullptr)
+	{
+		str_copy(m_aQmSaveDiagnostics, "save_dir=unknown\nprocess=integrity=unknown restricted=unknown\nwrite_probe=unknown");
+		return;
+	}
+	char aSaveDir[IO_MAX_PATH_LENGTH] = "";
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "", aSaveDir, sizeof(aSaveDir));
+	char aProcess[128];
+	QmProcessTokenDescription(aProcess, sizeof(aProcess));
+	if(!m_pStorage->FolderExists("qmclient", IStorage::TYPE_SAVE))
+		m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+	char aProbePath[IO_MAX_PATH_LENGTH];
+	str_format(aProbePath, sizeof(aProbePath), "qmclient/.save_probe_%d", pid());
+	IOHANDLE Probe = m_pStorage->OpenFile(aProbePath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	m_QmSaveDirectoryWritable = Probe != nullptr;
+	if(Probe != nullptr)
+	{
+		io_close(Probe);
+		m_pStorage->RemoveFile(aProbePath, IStorage::TYPE_SAVE);
+	}
+	str_format(m_aQmSaveDiagnostics, sizeof(m_aQmSaveDiagnostics), "save_dir=%s\nprocess=%s\nwrite_probe=%s",
+		aSaveDir, aProcess, m_QmSaveDirectoryWritable ? "ok" : "denied");
+	if(!m_QmSaveDirectoryWritable)
+	{
+		// 诊断只在保存失败弹出系统对话框时展示，不额外增加启动弹窗。
+		log_error("config", "save directory is not writable: %s (%s)", aSaveDir, aProcess);
+	}
+}
+
 void CClient::Run()
 {
+#if defined(CONF_PLATFORM_ANDROID)
+	ExportPendingQmMobileCrashReports(Storage());
+	PruneQmMobileCrashReports(Storage());
+#endif
+	QmProbeSaveDirectory();
 	m_LocalStartTime = m_GlobalStartTime = time_get();
 #if defined(CONF_VIDEORECORDER)
 	IVideo::SetLocalStartTime(m_LocalStartTime);
@@ -5127,8 +5360,13 @@ void CClient::Run()
 			str_append(s_aConfigDomains[ConfigDomain].m_aConfigPath);
 		}
 		*/
-		// TODO
-		m_vQuittingWarnings.emplace_back(Localize("Error saving settings"));
+		const char *pSaveError = m_pConfigManager->LastSaveError();
+		char aMessage[1024];
+		str_format(aMessage, sizeof(aMessage), "%s\n%s\n%s",
+			Localize("Error saving settings"),
+			pSaveError[0] != '\0' ? pSaveError : "stage=unknown",
+			m_aQmSaveDiagnostics[0] != '\0' ? m_aQmSaveDiagnostics : "save_dir=unknown");
+		m_vQuittingWarnings.emplace_back(aMessage);
 	}
 
 	// QmClient: 配置已保存，启动退出兜底看门狗；若退出清理（如驱动销毁渲染上下文、
@@ -5772,6 +6010,7 @@ void CClient::Con_PosesClose(IConsole::IResult *pResult, void *pUserData)
 #if defined(CONF_VIDEORECORDER)
 void CClient::Con_PosesVideo(IConsole::IResult *pResult, void *pUserData)
 {
+#if defined(CONF_VIDEORECORDER)
 	CClient *pSelf = static_cast<CClient *>(pUserData);
 
 	// 用法：poses_video <poses 文件> <视频名> [秒数]
@@ -5816,6 +6055,11 @@ void CClient::Con_PosesVideo(IConsole::IResult *pResult, void *pUserData)
 	str_format(aBuf, sizeof(aBuf), "recording %d poses for %.1f seconds (%d frames) to '%s'", TeeCount, Seconds,
 		qm_pose::VideoFrameCount(Seconds, maximum(g_Config.m_ClVideoRecorderFPS, 1)), pVideoName);
 	pSelf->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", aBuf);
+#else
+	// 未启用视频录制（FFmpeg 不可用或平台关闭）时该命令只做提示，不录制。
+	static_cast<void>(pResult);
+	static_cast<CClient *>(pUserData)->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "poses", "video recording is not available in this build");
+#endif
 }
 #endif
 

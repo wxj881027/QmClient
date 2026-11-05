@@ -31,9 +31,9 @@ namespace vulkan_diagnostics
 				pLog = "queueing swap chain recreation because the current is out of date";
 			break;
 		case VK_SUBOPTIMAL_KHR:
-			RecreateSwapChain = true;
+			// 保留主分支策略：持续返回 SUBOPTIMAL 不触发每帧重建。
 			if(Verbose)
-				pLog = "queueing swap chain recreation because the current is sub optimal";
+				pLog = "swap chain is sub optimal (ignored)";
 			break;
 		case VK_ERROR_SURFACE_LOST_KHR:
 			pLog = "surface lost";

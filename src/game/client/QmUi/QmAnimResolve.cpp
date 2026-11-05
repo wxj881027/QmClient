@@ -96,6 +96,18 @@ uint64_t BuildUiAnimNodeKey(const uint64_t ScopeHash, const uint64_t Id)
 
 float ResolveUiAnimValue(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, EUiAnimProperty Property, float Target, float DurationSec, EEasing Easing)
 {
+	// 关闭动效（qm_ui_motion_level 0）时与弹簧驱动保持同一语义：直接落到目标值并
+	// 停掉旧轨道。这条短路原来只在弹簧路径有，走补间的控件（设置卡片折叠箭头、
+	// 密码图标淡化档）因此会在「关闭动效」下照样播完整段过渡——两条驱动不该有
+	// 行为差异。首次出现也要落值，否则 GetValue 返回默认 0 而目标是 1。
+	if(g_Config.m_QmUiMotionLevel == 0)
+	{
+		const float Current = AnimRuntime.GetValue(NodeKey, Property, std::numeric_limits<float>::quiet_NaN());
+		if(std::isnan(Current) || Current != Target || AnimRuntime.HasActiveAnimation(NodeKey, Property))
+			AnimRuntime.SetValue(NodeKey, Property, Target);
+		return Target;
+	}
+
 	SUiAnimTransition Transition;
 	Transition.m_DurationSec = DurationSec;
 	Transition.m_DelaySec = 0.0f;

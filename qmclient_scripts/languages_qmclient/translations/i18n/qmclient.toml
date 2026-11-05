@@ -39622,6 +39622,182 @@ turkish = "Ortak kelime filtresini kullan"
 polish = "Używaj publicznego filtra słów"
 
 [[message]]
+key = "Password icon animation"
+[message.translations]
+simplified_chinese = "密码图标动画"
+traditional_chinese = "密碼圖示動畫"
+japanese = "パスワードアイコンのアニメーション"
+korean = "비밀번호 아이콘 애니메이션"
+russian = "Анимация значка пароля"
+german = "Animation des Passwort-Symbols"
+spanish = "Animación del icono de contraseña"
+french = "Animation de l'icône de mot de passe"
+brazilian_portuguese = "Animação do ícone de senha"
+portuguese = "Animação do ícone de palavra-passe"
+turkish = "Parola simgesi animasyonu"
+polish = "Animacja ikony hasła"
+
+[[message]]
+key = "Morph"
+[message.translations]
+simplified_chinese = "形变"
+traditional_chinese = "形變"
+japanese = "モーフ"
+korean = "변형"
+russian = "Морфинг"
+german = "Morphing"
+spanish = "Transformación"
+french = "Métamorphose"
+brazilian_portuguese = "Transformação"
+portuguese = "Transformação"
+turkish = "Dönüşüm"
+polish = "Przekształcenie"
+
+[[message]]
+key = "Fade"
+[message.translations]
+simplified_chinese = "渐变"
+traditional_chinese = "漸變"
+japanese = "フェード"
+korean = "페이드"
+russian = "Затухание"
+german = "Überblenden"
+spanish = "Fundido"
+french = "Fondu"
+brazilian_portuguese = "Fusão"
+portuguese = "Fusão"
+turkish = "Solma"
+polish = "Przenikanie"
+
+[[message]]
+key = "Password visibility icon animation: 0=Fade, 1=Morph"
+[message.translations]
+simplified_chinese = "密码显隐图标动画：0=渐变，1=形变"
+traditional_chinese = "密碼顯示圖示動畫：0=漸變，1=形變"
+japanese = "パスワード表示アイコンのアニメーション：0=フェード、1=モーフ"
+korean = "비밀번호 표시 아이콘 애니메이션: 0=페이드, 1=변형"
+russian = "Анимация значка отображения пароля: 0=затухание, 1=морфинг"
+german = "Animation des Passwort-Anzeigesymbols: 0=Überblenden, 1=Morphing"
+spanish = "Animación del icono de visibilidad de la contraseña: 0=Fundido, 1=Transformación"
+french = "Animation de l'icône de visibilité du mot de passe : 0=Fondu, 1=Métamorphose"
+brazilian_portuguese = "Animação do ícone de visibilidade da senha: 0=Fusão, 1=Transformação"
+portuguese = "Animação do ícone de visibilidade da palavra-passe: 0=Fusão, 1=Transformação"
+turkish = "Parola görünürlüğü simgesi animasyonu: 0=Solma, 1=Dönüşüm"
+polish = "Animacja ikony widoczności hasła: 0=Przenikanie, 1=Przekształcenie"
+
+[[message]]
+key = "This text is already in the target language."
+[message.translations]
+simplified_chinese = "这段文本已经是目标语言。"
+traditional_chinese = "這段文字已經是目標語言。"
+japanese = "このテキストは既に目標の言語です。"
+korean = "이 텍스트는 이미 대상 언어입니다."
+russian = "Этот текст уже на целевом языке."
+german = "Dieser Text ist bereits in der Zielsprache."
+spanish = "Este texto ya está en el idioma de destino."
+french = "Ce texte est déjà dans la langue cible."
+brazilian_portuguese = "Este texto já está no idioma de destino."
+portuguese = "Este texto já está no idioma de destino."
+turkish = "Bu metin zaten hedef dilde."
+polish = "Ten tekst jest już w języku docelowym."
+
+[[message]]
+key = "Drag"
+[message.translations]
+simplified_chinese = "拖动"
+traditional_chinese = "拖曳"
+japanese = "ドラッグ"
+korean = "드래그"
+russian = "Перетаскивание"
+german = "Ziehen"
+spanish = "Arrastrar"
+french = "Glisser"
+brazilian_portuguese = "Arrastar"
+portuguese = "Arrastar"
+turkish = "Sürükle"
+polish = "Przeciągnij"
+
+[[message]]
+key = "Entity layer"
+[message.translations]
+simplified_chinese = "实体层"
+traditional_chinese = "實體層"
+japanese = "エンティティ層"
+korean = "엔티티 레이어"
+russian = "Слой сущностей"
+german = "Entitätsebene"
+spanish = "Capa de entidades"
+french = "Couche d'entités"
+brazilian_portuguese = "Camada de entidades"
+portuguese = "Camada de entidades"
+turkish = "Varlık katmanı"
+polish = "Warstwa obiektów"
+
+[[message]]
+key = "Free view"
+[message.translations]
+simplified_chinese = "自由视角"
+traditional_chinese = "自由視角"
+japanese = "フリービュー"
+korean = "자유 시점"
+russian = "Свободный обзор"
+german = "Freie Ansicht"
+spanish = "Vista libre"
+french = "Vue libre"
+brazilian_portuguese = "Visão livre"
+portuguese = "Vista livre"
+turkish = "Serbest görünüm"
+polish = "Swobodny widok"
+
+[[message]]
+key = "Joystick"
+[message.translations]
+simplified_chinese = "摇杆"
+traditional_chinese = "搖桿"
+japanese = "ジョイスティック"
+korean = "조이스틱"
+russian = "Джойстик"
+german = "Joystick"
+spanish = "Joystick"
+french = "Joystick"
+brazilian_portuguese = "Joystick"
+portuguese = "Joystick"
+turkish = "Joystick"
+polish = "Dżojstik"
+
+[[message]]
+key = "Mobile spectator camera: 0=joystick pad, 1=drag the view"
+[message.translations]
+simplified_chinese = "手机观战取景方式：0=摇杆，1=拖动画面"
+traditional_chinese = "手機觀戰取景方式：0=搖桿，1=拖曳畫面"
+japanese = "モバイル観戦のカメラ操作：0=ジョイスティック、1=画面ドラッグ"
+korean = "모바일 관전 카메라: 0=조이스틱, 1=화면 드래그"
+russian = "Камера мобильного наблюдателя: 0=джойстик, 1=перетаскивание"
+german = "Kamera im mobilen Zuschauermodus: 0=Joystick, 1=Bild ziehen"
+spanish = "Cámara de espectador móvil: 0=joystick, 1=arrastrar la vista"
+french = "Caméra spectateur mobile : 0=joystick, 1=glisser la vue"
+brazilian_portuguese = "Câmera de espectador móvel: 0=joystick, 1=arrastar a visão"
+portuguese = "Câmara de espetador móvel: 0=joystick, 1=arrastar a vista"
+turkish = "Mobil izleyici kamerası: 0=joystick, 1=görünümü sürükle"
+polish = "Kamera mobilnego widza: 0=dżojstik, 1=przeciąganie widoku"
+
+[[message]]
+key = "No tee nearby"
+[message.translations]
+simplified_chinese = "附近没有 Tee"
+traditional_chinese = "附近沒有 Tee"
+japanese = "近くに Tee がいません"
+korean = "근처에 Tee 없음"
+russian = "Рядом нет ти"
+german = "Kein Tee in der Nähe"
+spanish = "No hay ningún tee cerca"
+french = "Aucun tee à proximité"
+brazilian_portuguese = "Nenhum tee por perto"
+portuguese = "Nenhum tee por perto"
+turkish = "Yakında tee yok"
+polish = "Brak tee w pobliżu"
+
+[[message]]
 key = "Map progress bar location (0=standalone, 1=player stats, 2=Dynamic Island)"
 [message.translations]
 simplified_chinese = "地图进度条位置（0=独立显示，1=玩家统计，2=灵动岛）"

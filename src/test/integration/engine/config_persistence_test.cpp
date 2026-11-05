@@ -9,12 +9,15 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
+#include <atomic>
+#include <chrono>
 #include <cstdlib>
 #include <iterator>
 #include <memory>
 #include <new>
 #include <string>
 #include <string_view>
+#include <thread>
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <windows.h>
@@ -424,6 +427,75 @@ TEST_F(CConfigPersistence, ReentrantSaveDoesNotDisturbOuterStagedFiles)
 }
 
 #if defined(CONF_FAMILY_WINDOWS)
+TEST_F(CConfigPersistence, SaveWaitsForAnotherInstanceReleasingTheLock)
+{
+	CConfigSession Session(m_pStorage.get());
+	char aLockPath[IO_MAX_PATH_LENGTH];
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "qmclient/config_save.lock", aLockPath, sizeof(aLockPath));
+	const std::wstring Path = windows_utf8_to_wide(aLockPath);
+	std::atomic<bool> Holding{false};
+	std::atomic<bool> Acquired{false};
+	std::atomic<bool> Release{false};
+	std::thread Holder([&]() {
+		const HANDLE File = CreateFileW(Path.c_str(), GENERIC_WRITE, 0, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+		Acquired = File != INVALID_HANDLE_VALUE;
+		Holding = true;
+		while(!Release)
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		if(File != INVALID_HANDLE_VALUE)
+			CloseHandle(File);
+	});
+	while(!Holding)
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	if(!Acquired)
+	{
+		Release = true;
+		Holder.join();
+		FAIL() << "could not hold the config save lock";
+	}
+	std::thread Releaser([&]() {
+		std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		Release = true;
+	});
+	g_Config.m_ClShowhud = 0;
+	// 另一个实例的保存只需几十毫秒；这次保存应等它放锁而不是立即报错。
+	EXPECT_TRUE(Session.Config()->Save(true));
+	Releaser.join();
+	Holder.join();
+	EXPECT_NE(Read().find("cl_showhud 0"), std::string::npos);
+}
+
+TEST_F(CConfigPersistence, SaveRetriesReplacementWhileTargetIsBrieflyOpen)
+{
+	CConfigSession Session(m_pStorage.get());
+	Write(SETTINGS_PATH, "cl_showhud 0\n");
+	char aPath[IO_MAX_PATH_LENGTH];
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, SETTINGS_PATH, aPath, sizeof(aPath));
+	const std::wstring Path = windows_utf8_to_wide(aPath);
+	std::atomic<bool> Holding{false};
+	std::atomic<bool> Acquired{false};
+	// 只允许读、不允许删除：读取与保存前的校验都能通过，替换目标则会被短暂挡住。
+	std::thread Reader([&]() {
+		const HANDLE File = CreateFileW(Path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+		Acquired = File != INVALID_HANDLE_VALUE;
+		Holding = true;
+		std::this_thread::sleep_for(std::chrono::milliseconds(80));
+		if(File != INVALID_HANDLE_VALUE)
+			CloseHandle(File);
+	});
+	while(!Holding)
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	if(!Acquired)
+	{
+		Reader.join();
+		FAIL() << "could not open the settings file for reading";
+	}
+	g_Config.m_ClShowhud = 1;
+	EXPECT_TRUE(Session.Config()->Save(true));
+	Reader.join();
+	EXPECT_EQ(Read().find("cl_showhud 0"), std::string::npos);
+}
+
 TEST_F(CConfigPersistence, ReadOnlyTargetRemainsInPlaceWhenReplacementFails)
 {
 	Write(SETTINGS_PATH, "cl_showhud 0\n");
@@ -439,6 +511,8 @@ TEST_F(CConfigPersistence, ReadOnlyTargetRemainsInPlaceWhenReplacementFails)
 	} Restore{Path};
 	g_Config.m_ClShowhud = 1;
 	EXPECT_FALSE(Session.Config()->Save());
+	EXPECT_NE(std::string(Session.Config()->LastSaveError()).find("stage=replace"), std::string::npos);
+	EXPECT_NE(std::string(Session.Config()->LastSaveError()).find(SETTINGS_PATH), std::string::npos);
 	EXPECT_EQ(Read(), "cl_showhud 0\n");
 	EXPECT_NE(GetFileAttributesW(Path.c_str()) & FILE_ATTRIBUTE_READONLY, 0u);
 	char aTempPath[IO_MAX_PATH_LENGTH];
@@ -446,6 +520,7 @@ TEST_F(CConfigPersistence, ReadOnlyTargetRemainsInPlaceWhenReplacementFails)
 	EXPECT_TRUE(m_pStorage->FileExists(aTempPath, IStorage::TYPE_SAVE));
 	ASSERT_NE(SetFileAttributesW(Path.c_str(), FILE_ATTRIBUTE_NORMAL), FALSE);
 	EXPECT_TRUE(Session.Config()->Save());
+	EXPECT_STREQ(Session.Config()->LastSaveError(), "");
 }
 
 TEST_F(CConfigPersistence, ExclusiveExternalReaderCausesLoadAndSaveFailureWithoutDataLoss)
@@ -468,6 +543,7 @@ TEST_F(CConfigPersistence, ExclusiveExternalReaderCausesLoadAndSaveFailureWithou
 	CConfigSession Session(m_pStorage.get());
 	EXPECT_FALSE(Session.Load());
 	EXPECT_FALSE(Session.Config()->Save(true));
+	EXPECT_NE(std::string(Session.Config()->LastSaveError()).find("stage=read"), std::string::npos);
 	ASSERT_NE(CloseHandle(Close.m_File), FALSE);
 	Close.m_File = INVALID_HANDLE_VALUE;
 	EXPECT_EQ(Read(), "cl_showhud 0\n");

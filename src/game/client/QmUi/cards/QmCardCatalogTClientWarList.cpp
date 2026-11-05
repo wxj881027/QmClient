@@ -23,6 +23,7 @@
 #include <game/client/QmUi/QmCardOrderModel.h>
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmDropdown.h>
+#include <game/client/QmUi/QmIconSwap.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/SettingsCard.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
@@ -169,7 +170,16 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			Button.VSplitRight(25.0f, nullptr, &Button);
 
 			static CButtonContainer s_ReverseEntries;
-			if(Ui()->DoButton_QmIcon(&s_ReverseEntries, s_Reversed ? EQmIcon::CHEVRON_UP : EQmIcon::CHEVRON_DOWN, s_Reversed ? FONT_ICON_CHEVRON_UP : FONT_ICON_CHEVRON_DOWN, 0, &Button, IGraphics::CORNER_ALL) && !ReadOnly && !Ui()->RenderOnly())
+			// 排序箭头与设置卡片折叠箭头同一套过渡（0.26s EASE_IN_OUT 转 180°）：
+			// 正序/倒序是持久状态，箭头必须跟着手指走，而不是下一帧直接翻面。
+			IUiContext SortIconCtx = SettingsUiContext("settings_tclient_warlist_sort_icon", UiScale);
+			ui_widget::SIconSwapBinding SortIcon = ui_widget::ResolveIconSwapBinding(
+				SortIconCtx, EQmIconSwapPair::CHEVRON,
+				EQmIcon::CHEVRON_DOWN, FONT_ICON_CHEVRON_DOWN,
+				EQmIcon::CHEVRON_UP, FONT_ICON_CHEVRON_UP,
+				s_Reversed ? 1.0f : 0.0f, str_quickhash("tclient-warlist-sort-icon"), &s_ReverseEntries);
+			ui_widget::SIconButtonIconDraw SortIconDraw{&ui_widget::DrawIconSwapBinding, &SortIcon};
+			if(Ui()->DoButton_QmIcon(&s_ReverseEntries, EQmIcon::COUNT, nullptr, 0, &Button, IGraphics::CORNER_ALL, IGraphics::CORNER_ALL, true, std::nullopt, false, false, &SortIconDraw) && !ReadOnly && !Ui()->RenderOnly())
 				s_Reversed = !s_Reversed;
 		}
 		if(Flow.Control("tclient-warlist-entries-search", LineSize, EntriesSearch, MarginSmall))

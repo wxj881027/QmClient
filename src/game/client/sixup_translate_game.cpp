@@ -11,6 +11,8 @@
 #include <game/gamecore.h>
 #include <game/localization.h>
 
+#include <string>
+
 enum
 {
 	STR_TEAM_GAME,
@@ -86,6 +88,9 @@ void CGameClient::DoTeamChangeMessage7(const char *pName, int ClientId, int Team
 	case STR_TEAM_BLUE: str_format(aBuf, sizeof(aBuf), "'%s' %sjoined the blue team", pName, pPrefix); break;
 	case STR_TEAM_SPECTATORS: str_format(aBuf, sizeof(aBuf), "'%s' %sjoined the spectators", pName, pPrefix); break;
 	}
+	// 仅入服提示触发好友问候，普通换队保持静默。
+	if(pPrefix[0] != '\0')
+		m_TClient.HandleFriendEnterMessage(-1, 0, aBuf);
 	m_Chat.AddLine(-1, 0, aBuf);
 }
 
@@ -511,19 +516,20 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 			return nullptr;
 		}
 		CTranslationContext::CClientData &Client = m_pClient->m_TranslationContext.m_aClients[pMsg7->m_ClientId];
+		const std::string DepartedName = Client.m_aName;
 		Client.Reset();
-
-		if(pMsg7->m_Silent)
-			return nullptr;
 
 		if(Conn != g_Config.m_ClDummy)
 			return nullptr;
 
 		static char s_aBuf[128];
 		if(pMsg7->m_pReason[0])
-			str_format(s_aBuf, sizeof(s_aBuf), "'%s' has left the game (%s)", m_aClients[pMsg7->m_ClientId].m_aName, pMsg7->m_pReason);
+			str_format(s_aBuf, sizeof(s_aBuf), "'%s' has left the game (%s)", DepartedName.c_str(), pMsg7->m_pReason);
 		else
-			str_format(s_aBuf, sizeof(s_aBuf), "'%s' has left the game", m_aClients[pMsg7->m_ClientId].m_aName);
+			str_format(s_aBuf, sizeof(s_aBuf), "'%s' has left the game", DepartedName.c_str());
+		m_TClient.HandleFriendEnterMessage(-1, 0, s_aBuf);
+		if(pMsg7->m_Silent)
+			return nullptr;
 		m_Chat.AddLine(-1, 0, s_aBuf);
 
 		return nullptr;

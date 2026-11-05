@@ -6,6 +6,7 @@
 #include <engine/shared/localization.h>
 
 #include <game/client/QmUi/QmCardRegistry.h>
+#include <game/client/QmUi/QmIconSwap.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/SettingsContentLayout.h>
 #include <game/client/QmUi/UiButtons.h>
@@ -290,7 +291,15 @@ void CMenus::RenderQmBindCommandEditor(CUIRect &Content, const CBindSlot Slot, c
 		SelectionProps.m_MaxWidth = SelectionText.w;
 		SelectionProps.m_EllipsisAtEnd = true;
 		Ui()->DoLabel(&SelectionText, pSelection, Metrics.m_BodySize, TEXTALIGN_ML, SelectionProps);
-		const bool Drop = Ui()->DoButton_QmIcon(&State.m_DropdownButton, EQmIcon::CHEVRON_DOWN, FontIcons::FONT_ICON_CHEVRON_DOWN, Enabled ? 0 : -1, &Arrow, SelectorFlags, IGraphics::CORNER_ALL);
+		// 弹层展开时箭头翻到朝上：与选择器弹层同一拍（0.22s），点下去不会瞬间翻面。
+		IUiContext PickerIconCtx = SettingsUiContext("settings_bind_command_picker_icon");
+		ui_widget::SIconSwapBinding PickerIcon = ui_widget::ResolveIconSwapBinding(
+			PickerIconCtx, EQmIconSwapPair::CHEVRON,
+			EQmIcon::CHEVRON_DOWN, FontIcons::FONT_ICON_CHEVRON_DOWN,
+			EQmIcon::CHEVRON_UP, FontIcons::FONT_ICON_CHEVRON_UP,
+			Ui()->IsPopupOpen(&State.m_PopupId) ? 1.0f : 0.0f, str_quickhash("bind-command-picker-icon"), &State.m_DropdownButton, 0.22f);
+		ui_widget::SIconButtonIconDraw PickerIconDraw{&ui_widget::DrawIconSwapBinding, &PickerIcon};
+		const bool Drop = Ui()->DoButton_QmIcon(&State.m_DropdownButton, EQmIcon::COUNT, nullptr, Enabled ? 0 : -1, &Arrow, SelectorFlags, IGraphics::CORNER_ALL, true, std::nullopt, false, false, &PickerIconDraw);
 		if(!ReadOnly)
 			GameClient()->m_Tooltips.DoToolTip(&State.m_DropdownButton, &Arrow, Localize("Add function"));
 		OpenPicker = Enabled && (Pick || Drop);
