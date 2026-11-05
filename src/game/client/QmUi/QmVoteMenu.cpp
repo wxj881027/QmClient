@@ -103,7 +103,6 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	else
 	{
 		State.m_Loader.Suspend();
-		State.m_Covers.Release();
 		if(State.m_Page == EQmVoteMenuPage::OPTIONS)
 			RenderServerVoteList(MainView);
 		else
@@ -117,7 +116,6 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	auto &Voting = GameClient()->m_Voting;
 	const CCommunity *pCommunity = ServerBrowser()->Community(IServerBrowser::COMMUNITY_DDNET);
 	State.m_Loader.Update(Http(), Engine(), Client()->LocalTime());
-	State.m_Covers.Update(Http(), Engine(), Graphics(), Storage(), Client()->LocalTime());
 	if((State.m_OptionsRevision != Voting.OptionsRevision() && !Voting.IsReceivingOptions()) || State.m_CatalogRevision != State.m_Loader.Revision())
 	{
 		// 仅清理即将失效的行 ID，后台刷新不能打断搜索框输入。
@@ -340,7 +338,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		for(size_t i = 0; i < std::size(s_apCategories); ++i)
 			if(State.m_Filter.m_Category == s_apCategories[i])
 				SelectedCategory = (int)i + 1;
-		s_Categories.SetActive(!CatalogPending && !Ui()->IsPopupOpen() && Ui()->MouseInside(&Sidebar) && !m_FilterInput.IsActive() && !m_ExcludeInput.IsActive() && !m_CallvoteReasonInput.IsActive());
+		s_Categories.SetActive(!CatalogPending && !Ui()->IsPopupOpen() && Ui()->MouseInside(&Sidebar) && !m_FilterInput.IsActive() && !m_ExcludeInput.IsActive());
 		s_Categories.DoStart(22.0f, (int)std::size(s_apCategories) + 1, 1, 3, SelectedCategory, &Sidebar, false);
 		static int s_AllCategory;
 		for(size_t i = 0; i <= std::size(s_apCategories); ++i)
@@ -421,7 +419,6 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		const int Index = QmVoteMaps::Pick(State.m_vVisible, secure_rand_below((int)State.m_vVisible.size()));
 		if(Index >= 0)
 			State.m_SelectedName = State.m_vMaps[Index].m_Name;
-		State.m_Status.clear();
 		ScrollToSelection = true;
 	}
 	List.HSplitTop(4.0f, nullptr, &List);
@@ -470,7 +467,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 			Selected = (int)i;
 	// 行的选中/悬停底色改由下面自己画：封面背景必须压在底色之上、文字之下。
 	s_Maps.SetItemColors(ui_token::color::COLOR_TRANSPARENT, ui_token::color::COLOR_TRANSPARENT, ui_token::color::COLOR_TRANSPARENT);
-	s_Maps.SetActive(!Ui()->IsPopupOpen() && !m_FilterInput.IsActive() && !m_ExcludeInput.IsActive() && !m_CallvoteReasonInput.IsActive());
+	s_Maps.SetActive(!Ui()->IsPopupOpen() && !m_FilterInput.IsActive() && !m_ExcludeInput.IsActive());
 	if(ScrollToSelection)
 		s_Maps.ScrollToSelected();
 	s_Maps.DoStart(RowHeight, (int)State.m_vVisible.size(), 1, 3, Selected, &List, false);
@@ -556,7 +553,6 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	const char *pNewSelectedName = pSelected != nullptr ? pSelected->m_Name.c_str() : "";
 	if(State.m_SelectedName != pNewSelectedName)
 	{
-		State.m_Status.clear();
 		State.m_SelectedName = pNewSelectedName;
 	}
 	State.m_Loader.Select(pSelected, Client()->LocalTime());
@@ -660,54 +656,21 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		}
 	}
 
-	CUIRect CallButton, Reason;
+	CUIRect CallButton;
 	Bottom.VSplitRight(std::min(112.0f, Bottom.w * 0.3f), &Bottom, &CallButton);
 	Bottom.VSplitRight(8.0f, &Bottom, nullptr);
-	Bottom.VSplitRight(std::min(240.0f, Bottom.w * 0.5f), &Bottom, &Reason);
-	Bottom.VSplitRight(8.0f, &Bottom, nullptr);
-	InputOptions = {};
-	InputOptions.m_pPlaceholder = Localize("Reason (optional)");
-	InputOptions.m_FontSize = 12.0f;
-	Ctx.m_ScopeHash = MakeUiScopeHash("qm_vote_map_library_reason");
-	if(Input()->KeyPress(KEY_R) && Input()->ModifierIsPressed())
-	{
-		Ui()->SetActiveItem(&m_CallvoteReasonInput);
-		m_CallvoteReasonInput.SelectAll();
-	}
-	ui_widget::InputField(Ctx, &m_CallvoteReasonInput, Reason, InputOptions);
-	const bool HasPending = Voting.PendingMapVote()[0] != '\0';
-	const bool CanCall = pSelected != nullptr && !HasPending && !Voting.IsVoting() && !Voting.IsReceivingOptions();
-	if(HasPending)
-	{
-		CUIRect Cancel;
-		Bottom.VSplitRight(std::min(65.0f, Bottom.w * 0.4f), &Bottom, &Cancel);
-		static CButtonContainer s_Cancel;
-		if(CompactButton(s_Cancel, Localize("Cancel"), 0, Cancel))
-			Voting.ClearUnfinishedMapVoteChain();
-		Label(Bottom, Voting.PendingMapVote());
-	}
-	else
-		Label(Bottom, State.m_Status.empty() ? (pSelected != nullptr ? pSelected->m_Name.c_str() : Localize("Select a map")) : Localize(State.m_Status.c_str()), 12.0f, TEXTALIGN_ML, State.m_Status.empty());
+	const bool CanCall = pSelected != nullptr && !Voting.IsVoting();
+	Label(Bottom, pSelected != nullptr ? pSelected->m_Name.c_str() : Localize("Select a map"), 12.0f, TEXTALIGN_ML, true);
 	static CButtonContainer s_Call;
 	if((ui_widget::PrimaryButton(ui_widget::ControlContext(Ui()), &s_Call, Localize("Call vote"), CallButton, !CanCall) || Activated) && CanCall)
 	{
-		// 每次提交重新解析当前服务器列表，不能沿用刷新前的索引。
-		const int Option = QmVoteMaps::FindOption(Voting.FirstOption(), pSelected->m_Name.c_str());
-		if(Option >= 0)
+		// 具体地图直接交给服务器的 /map 命令，不依赖当前分类的投票选项。
+		const std::string Command = QmVoteMaps::MapVoteCommand(pSelected->m_Name);
+		if(!Command.empty())
 		{
 			Voting.ClearUnfinishedMapVoteChain();
-			Voting.CallvoteOption(Option, m_CallvoteReasonInput.GetString());
-			State.m_Status.clear();
-			m_CallvoteReasonInput.Clear();
-			if(g_Config.m_UiCloseWindowAfterChangingSetting)
+			if(GameClient()->m_Chat.SendChat(0, Command.c_str()) && g_Config.m_UiCloseWindowAfterChangingSetting)
 				SetActive(false);
-		}
-		else
-		{
-			const auto Action = Voting.StartUnfinishedMapVoteChain(pSelected->m_Name.c_str(), pSelected->m_Category.c_str(), CategoryLabel(pSelected->m_Category.c_str()), m_CallvoteReasonInput.GetString());
-			State.m_Status = Action == CVoting::EUnfinishedMapVoteAction::NO_OPTION ? Localizable("No corresponding vote option found") : Localizable("Type switch vote started automatically");
-			if(Action != CVoting::EUnfinishedMapVoteAction::NO_OPTION)
-				m_CallvoteReasonInput.Clear();
 		}
 	}
 }
