@@ -4265,6 +4265,9 @@ Server executable not found, can't run server
 Server filter
 Server hostname (0.7 only)
 Server info
+Server information lower left card width (per mille)
+Server information upper left card width (per mille)
+Server information upper row height (per mille)
 Server kick/spec votes are no longer actively moderated.
 Server kick/spec votes will now be actively moderated.
 Server list is more than five minutes old

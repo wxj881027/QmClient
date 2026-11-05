@@ -3347,6 +3347,9 @@ if(CLIENT)
     QmUi/QmWikiStore.h
     QmUi/MapTagsPanel.cpp
     QmUi/MapTagsPanel.h
+    QmUi/QmServerInfoGeometry.h
+    QmUi/QmServerInfoLayout.cpp
+    QmUi/QmServerInfoLayout.h
     QmUi/cards/QmCardCatalog.cpp
     QmUi/cards/QmCardCatalog.h
     QmUi/cards/QmCardCatalogIds.cpp
@@ -4827,6 +4830,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_chat_gradient_test.cpp
     src/test/unit/qmclient/ui/qm_card_order_model_test.cpp
     src/test/unit/qmclient/ui/qm_card_registry_test.cpp
+    src/test/unit/qmclient/ui/qm_server_info_layout_test.cpp
     src/test/unit/qmclient/ui/qm_interaction_source_test.cpp
     src/test/unit/qmclient/ui/qm_console_ui_layout_test.cpp
     src/test/unit/qmclient/ui/qm_console_settings_layout_test.cpp

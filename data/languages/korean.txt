@@ -12770,6 +12770,15 @@ Server hostname (0.7 only)
 Server info
 == 서버 정보
 
+Server information lower left card width (per mille)
+== 서버 정보 왼쪽 아래 카드 너비(천분율)
+
+Server information upper left card width (per mille)
+== 서버 정보 왼쪽 위 카드 너비(천분율)
+
+Server information upper row height (per mille)
+== 서버 정보 위쪽 행 높이(천분율)
+
 Server kick/spec votes are no longer actively moderated.
 == 서버 추방/관전 투표가 더 이상 적극적으로 관리되지 않습니다.
 

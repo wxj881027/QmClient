@@ -12770,6 +12770,15 @@ Server hostname (0.7 only)
 Server info
 == Informações do servidor
 
+Server information lower left card width (per mille)
+== Largura do cartão inferior esquerdo das informações do servidor (por mil)
+
+Server information upper left card width (per mille)
+== Largura do cartão superior esquerdo das informações do servidor (por mil)
+
+Server information upper row height (per mille)
+== Altura da linha superior das informações do servidor (por mil)
+
 Server kick/spec votes are no longer actively moderated.
 == As votações de expulsão/espetador do servidor já não são moderadas ativamente.
 

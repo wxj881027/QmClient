@@ -40030,3 +40030,51 @@ brazilian_portuguese = "Larguras dos cartões de configurações: stableId para 
 portuguese = "Larguras dos cartões de definições: stableId para largura total, !stableId para meia largura, separados por ponto e vírgula"
 turkish = "Ayar kartı genişlikleri: tam genişlik için stableId, yarım genişlik için !stableId; noktalı virgülle ayrılır"
 polish = "Szerokości kart ustawień: stableId oznacza pełną szerokość, !stableId połowę szerokości; wpisy oddzielaj średnikami"
+
+[[message]]
+key = "Server information lower left card width (per mille)"
+[message.translations]
+simplified_chinese = "服务器信息左下卡片宽度（千分比）"
+traditional_chinese = "伺服器資訊左下卡片寬度（千分比）"
+japanese = "サーバー情報の左下カードの幅（千分率）"
+korean = "서버 정보 왼쪽 아래 카드 너비(천분율)"
+russian = "Ширина нижней левой карточки информации о сервере (промилле)"
+german = "Serverinformationen: Breite der Karte unten links (Promille)"
+spanish = "Anchura de la tarjeta inferior izquierda de información del servidor (por mil)"
+french = "Largeur de la carte inférieure gauche des informations du serveur (pour mille)"
+brazilian_portuguese = "Largura do cartão inferior esquerdo das informações do servidor (por mil)"
+portuguese = "Largura do cartão inferior esquerdo das informações do servidor (por mil)"
+turkish = "Sunucu bilgileri sol alt kart genişliği (binde)"
+polish = "Szerokość lewej dolnej karty informacji o serwerze (promile)"
+
+[[message]]
+key = "Server information upper left card width (per mille)"
+[message.translations]
+simplified_chinese = "服务器信息左上卡片宽度（千分比）"
+traditional_chinese = "伺服器資訊左上卡片寬度（千分比）"
+japanese = "サーバー情報の左上カードの幅（千分率）"
+korean = "서버 정보 왼쪽 위 카드 너비(천분율)"
+russian = "Ширина верхней левой карточки информации о сервере (промилле)"
+german = "Serverinformationen: Breite der Karte oben links (Promille)"
+spanish = "Anchura de la tarjeta superior izquierda de información del servidor (por mil)"
+french = "Largeur de la carte supérieure gauche des informations du serveur (pour mille)"
+brazilian_portuguese = "Largura do cartão superior esquerdo das informações do servidor (por mil)"
+portuguese = "Largura do cartão superior esquerdo das informações do servidor (por mil)"
+turkish = "Sunucu bilgileri sol üst kart genişliği (binde)"
+polish = "Szerokość lewej górnej karty informacji o serwerze (promile)"
+
+[[message]]
+key = "Server information upper row height (per mille)"
+[message.translations]
+simplified_chinese = "服务器信息上排高度（千分比）"
+traditional_chinese = "伺服器資訊上排高度（千分比）"
+japanese = "サーバー情報の上段の高さ（千分率）"
+korean = "서버 정보 위쪽 행 높이(천분율)"
+russian = "Высота верхнего ряда информации о сервере (промилле)"
+german = "Serverinformationen: Höhe der oberen Reihe (Promille)"
+spanish = "Altura de la fila superior de información del servidor (por mil)"
+french = "Hauteur de la rangée supérieure des informations du serveur (pour mille)"
+brazilian_portuguese = "Altura da linha superior das informações do servidor (por mil)"
+portuguese = "Altura da linha superior das informações do servidor (por mil)"
+turkish = "Sunucu bilgileri üst satır yüksekliği (binde)"
+polish = "Wysokość górnego rzędu informacji o serwerze (promile)"

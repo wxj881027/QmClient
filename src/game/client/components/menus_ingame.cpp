@@ -1473,14 +1473,17 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	LogSettingsAdaptiveBudget("ingame_server_info_snapshot_text", TextBudgetInput, m_IngameTextFrameBudget);
 	m_IngameTextFrameBudget.m_TextContainerTokens = maximum(1, m_IngameTextFrameBudget.m_TextContainerTokens);
 
-	CUIRect ServerInfo, GameInfo, Motd;
 	MainView.Draw(ms_ColorTabbarActive, MenuShellCorners(), 10.0f);
 	MainView.Margin(10.0f, &MainView);
-	MainView.HSplitMid(&ServerInfo, &Motd, 10.0f);
-	ServerInfo.VSplitMid(&ServerInfo, &GameInfo, 10.0f);
+	const bool ShowTags = g_Config.m_QmMapTags != 0;
+	const auto Layout = m_ServerInfoLayout.Render(Ui(), MainView, ShowTags);
+	CUIRect ServerInfo = Layout.m_Server;
+	CUIRect GameInfo = Layout.m_Game;
+	const CCommunity *pCommunity = ServerBrowser()->Community(CurrentServerInfo.m_aCommunityId);
 
 	ServerInfo.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 10.0f);
 	ServerInfo.Margin(10.0f, &ServerInfo);
+	m_ServerInfoLayout.BeginCard(0, ServerInfo, QmServerInfoGeometry::ServerContentHeight(GameClient()->m_Snap.m_pLocalInfo != nullptr, pCommunity != nullptr), m_MenuTextPlanCollecting);
 
 	CUIRect Label;
 	ServerInfo.HSplitTop(FontSizeTitle, &Label, &ServerInfo);
@@ -1516,7 +1519,6 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
 	DoServerInfoField("ingame-server-info-password-label", "ingame-server-info-password-value", m_IngameServerInfoTextSnapshot.m_PasswordHash, &Label, Localize("Password"), CurrentServerInfo.m_Flags & SERVER_FLAG_PASSWORD ? Localize("Yes") : Localize("No"));
 
-	const CCommunity *pCommunity = ServerBrowser()->Community(CurrentServerInfo.m_aCommunityId);
 	if(pCommunity != nullptr)
 	{
 		ServerInfo.HSplitTop(FontSizeBody, &Label, &ServerInfo);
@@ -1535,11 +1537,14 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 		}
 	}
 
+	// 窄卡片中三个操作各占一行，避免收藏开关与复制按钮互相遮挡。
+	CUIRect Actions;
+	ServerInfo.HSplitBottom(70.0f, nullptr, &Actions);
 	// copy info button
 	{
 		CUIRect Button;
-		ServerInfo.HSplitBottom(20.0f, &ServerInfo, &Button);
-		Button.VSplitRight(200.0f, &ServerInfo, &Button);
+		Actions.HSplitBottom(20.0f, &Actions, &Button);
+		Actions.HSplitBottom(5.0f, &Actions, nullptr);
 		static CButtonContainer s_CopyButton;
 		if(DoIngameMenuButton(PAGE_SERVER_INFO, "ingame-server-info-copy-button", &s_CopyButton, Localize("Copy info"), 0, &Button))
 		{
@@ -1563,7 +1568,8 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	{
 		CUIRect Button;
 		TRISTATE IsFavorite = Favorites()->IsFavorite(CurrentServerInfo.m_aAddresses, CurrentServerInfo.m_NumAddresses);
-		ServerInfo.HSplitBottom(20.0f, &ServerInfo, &Button);
+		Actions.HSplitBottom(20.0f, &Actions, &Button);
+		Actions.HSplitBottom(5.0f, &Actions, nullptr);
 		static int s_AddFavButton = 0;
 		if(DoIngameMenuCheckBox(PAGE_SERVER_INFO, "ingame-server-info-favorite", &s_AddFavButton, Localize("Favorite"), IsFavorite != TRISTATE::NONE, &Button))
 		{
@@ -1578,7 +1584,8 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	{
 		CUIRect Button;
 		bool IsMapFavorite = GameClient()->m_TClient.IsFavoriteMap(CurrentServerInfo.m_aMap);
-		ServerInfo.HSplitBottom(20.0f, &ServerInfo, &Button);
+		Actions.HSplitBottom(20.0f, &Actions, &Button);
+		Actions.HSplitBottom(5.0f, &Actions, nullptr);
 		static int s_AddFavMapButton = 0;
 		if(DoIngameMenuCheckBox(PAGE_SERVER_INFO, "ingame-server-info-favorite-map", &s_AddFavMapButton, Localize("Favorite map"), IsMapFavorite, &Button))
 		{
@@ -1589,8 +1596,12 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 		}
 	}
 
+	m_ServerInfoLayout.EndCard(0, m_MenuTextPlanCollecting);
 	GameInfo.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 10.0f);
 	GameInfo.Margin(10.0f, &GameInfo);
+	const auto *pGameInfoObj = GameClient()->m_Snap.m_pGameInfoObj;
+	const int OptionalFields = pGameInfoObj ? (int)(pGameInfoObj->m_ScoreLimit != 0) + (int)(pGameInfoObj->m_TimeLimit != 0) + (int)(pGameInfoObj->m_RoundCurrent && pGameInfoObj->m_RoundNum) : 0;
+	m_ServerInfoLayout.BeginCard(1, GameInfo, QmServerInfoGeometry::GameContentHeight(OptionalFields, GameClient()->m_GameInfo.m_DDRaceTeam, CurrentServerInfo.m_aMap[0] != '\0'), m_MenuTextPlanCollecting);
 
 	GameInfo.HSplitTop(FontSizeTitle, &Label, &GameInfo);
 	GameInfo.HSplitTop(5.0f, nullptr, &GameInfo);
@@ -1602,7 +1613,6 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	GameInfo.HSplitTop(FontSizeBody, &Label, &GameInfo);
 	DoServerInfoField("ingame-game-info-map-label", "ingame-game-info-map-value", m_IngameServerInfoTextSnapshot.m_MapHash, &Label, Localize("Map"), CurrentServerInfo.m_aMap);
 
-	const auto *pGameInfoObj = GameClient()->m_Snap.m_pGameInfoObj;
 	if(pGameInfoObj)
 	{
 		if(pGameInfoObj->m_ScoreLimit)
@@ -1704,17 +1714,17 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 			GameClient()->m_TClient.SetMapNote(CurrentServerInfo.m_aMap, s_MapNoteInput.GetString());
 	}
 
-	if(g_Config.m_QmMapTags && Motd.w >= 300.0f && Motd.h >= 180.0f)
+	m_ServerInfoLayout.EndCard(1, m_MenuTextPlanCollecting);
+	if(ShowTags)
 	{
-		CUIRect TagPanel;
-		Motd.VSplitLeft(Motd.w * 0.38f, &Motd, &TagPanel);
-		TagPanel.VMargin(5.0f, &TagPanel);
+		CUIRect TagPanel = Layout.m_Tags;
 		TagPanel.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 10.0f);
 		TagPanel.Margin(10.0f, &TagPanel);
 		if(!m_MenuTextPlanCollecting)
 			m_MapTagsPanel.Render(GameClient(), TagPanel);
 	}
-	RenderServerInfoMotd(Motd);
+	RenderServerInfoMotd(Layout.m_Motd);
+	m_ServerInfoLayout.RenderOverlay();
 	m_IngameServerInfoRenderActive = PreviousServerInfoRenderActive;
 }
 

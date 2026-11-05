@@ -12770,6 +12770,15 @@ Server hostname (0.7 only)
 Server info
 == Sunucu bilgisi
 
+Server information lower left card width (per mille)
+== Sunucu bilgileri sol alt kart genişliği (binde)
+
+Server information upper left card width (per mille)
+== Sunucu bilgileri sol üst kart genişliği (binde)
+
+Server information upper row height (per mille)
+== Sunucu bilgileri üst satır yüksekliği (binde)
+
 Server kick/spec votes are no longer actively moderated.
 == Sunucu atma/seyirci oyları artık aktif olarak yönetilmiyor.
 

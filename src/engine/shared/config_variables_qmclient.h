@@ -238,6 +238,10 @@ MACRO_CONFIG_INT(QmScoreboardOnDeath, qm_scoreboard_on_death, 0, 0, 1, CFGFLAG_C
 MACRO_CONFIG_INT(QmScoreboardScroll, qm_scoreboard_scroll, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers")
 MACRO_CONFIG_STR(QmScoreboardFilter, qm_scoreboard_filter, 32, "", CFGFLAG_CLIENT, "Scoreboard filter: only show players whose name or clan contains this text")
 MACRO_CONFIG_INT(QmBetterScoreboard, qm_better_scoreboard, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable enhanced scoreboard presentation")
+// 服务器信息页的分隔比例，按千分比保存。
+MACRO_CONFIG_INT(QmServerInfoRows, qm_server_info_rows, 500, 1, 999, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Server information upper row height (per mille)")
+MACRO_CONFIG_INT(QmServerInfoTopColumns, qm_server_info_top_columns, 500, 1, 999, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Server information upper left card width (per mille)")
+MACRO_CONFIG_INT(QmServerInfoBottomColumns, qm_server_info_bottom_columns, 380, 1, 999, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Server information lower left card width (per mille)")
 MACRO_CONFIG_INT(QmMapTags, qm_map_tags, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show community map tags in server information")
 MACRO_CONFIG_INT(QmHideJoinServerInfo, qm_hide_join_server_info, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Do not auto-show server info on entering map")
 
