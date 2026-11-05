@@ -393,15 +393,28 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				}
 			}
 		}
+		// 「当前组」是分组选择区的标题，不属于上面的条目表单：与表单之间留双倍间距，
+		// 组内各控件仍保持单倍，读起来才是两个不同的块。
+		Flow.Space(MarginSmall);
 		if(Flow.Control("tclient-warlist-selected-group", HeadlineFontSize + MarginSmall, Button, MarginSmall))
 		{
 			if(pSelectedType)
 			{
-				float Shade = 0.0f;
-				Button.Draw(ColorRGBA(Shade, Shade, Shade, 0.25f), 15, 3.0f);
-				TextRender()->TextColor(pSelectedType->m_Color);
-				Ui()->DoLabel(&Button, pSelectedType->m_aWarName, HeadlineFontSize, TEXTALIGN_MC);
-				TextRender()->TextColor(TextRender()->DefaultTextColor());
+				// 色带只承担「这是哪一组」：组色画成左侧色块，组名用正文色。
+				// 直接把组名染成组色时，用户挑深色组色会让组名在色带上读不出来。
+				Button.Draw(ui_token::color::SURFACE_SUBHEADER, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU);
+				const float SwatchInset = ui_token::spacing::XS;
+				const float SwatchSize = std::max(0.0f, Button.h - 2.0f * SwatchInset);
+				CUIRect Swatch, Label;
+				Button.VSplitLeft(SwatchInset, nullptr, &Swatch);
+				Swatch.VSplitLeft(SwatchSize, &Swatch, &Label);
+				if(SwatchSize > 0.0f)
+				{
+					Swatch.HMargin(SwatchInset, &Swatch);
+					Swatch.Draw(pSelectedType->m_Color, IGraphics::CORNER_ALL, ui_token::radius::TIGHT);
+				}
+				Label.VSplitLeft(SwatchInset, nullptr, &Label);
+				Ui()->DoLabel(&Label, pSelectedType->m_aWarName, HeadlineFontSize, TEXTALIGN_ML);
 			}
 		}
 
