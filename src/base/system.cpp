@@ -226,7 +226,7 @@ static IOHANDLE io_open_impl(const char *filename, int flags, bool *pNotFound)
 		if(!str_utf8_check(filename))
 			return nullptr;
 	}
-	dbg_assert(flags == IOFLAG_READ || flags == IOFLAG_WRITE || flags == IOFLAG_APPEND, "flags must be read, write or append");
+	dbg_assert(flags == IOFLAG_READ || flags == IOFLAG_WRITE || flags == IOFLAG_APPEND || flags == (IOFLAG_WRITE | IOFLAG_EXCLUSIVE), "invalid file open flags");
 #if defined(CONF_FAMILY_WINDOWS)
 	const std::wstring wide_filename = windows_utf8_to_wide(filename);
 	DWORD desired_access;
@@ -238,10 +238,10 @@ static IOHANDLE io_open_impl(const char *filename, int flags, bool *pNotFound)
 		creation_disposition = OPEN_EXISTING;
 		open_mode = "rb";
 	}
-	else if(flags == IOFLAG_WRITE)
+	else if((flags & IOFLAG_WRITE) != 0)
 	{
 		desired_access = FILE_WRITE_DATA;
-		creation_disposition = CREATE_ALWAYS;
+		creation_disposition = (flags & IOFLAG_EXCLUSIVE) != 0 ? CREATE_NEW : CREATE_ALWAYS;
 		open_mode = "wb";
 	}
 	else if(flags == IOFLAG_APPEND)
@@ -271,9 +271,9 @@ static IOHANDLE io_open_impl(const char *filename, int flags, bool *pNotFound)
 	{
 		open_mode = "rb";
 	}
-	else if(flags == IOFLAG_WRITE)
+	else if((flags & IOFLAG_WRITE) != 0)
 	{
-		open_mode = "wb";
+		open_mode = (flags & IOFLAG_EXCLUSIVE) != 0 ? "wbx" : "wb";
 	}
 	else if(flags == IOFLAG_APPEND)
 	{

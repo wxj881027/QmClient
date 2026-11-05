@@ -11,6 +11,8 @@
 #include <engine/shared/jobs.h>
 #include <engine/storage.h>
 
+#include <atomic>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -44,9 +46,35 @@ namespace screenshot_save
 		CImageInfo &Image() { return m_Image; }
 	};
 
+	// 所有文件边界只同步借用；任务显式持有共享实例时才可跨线程使用。
+	class CFileOperations : public CImageFileOperations
+	{
+	public:
+		virtual IOHANDLE Open(IStorage &Storage, const char *pName, char *pWholePath, int WholePathSize)
+		{
+			return Storage.OpenFile(pName, IOFLAG_WRITE | IOFLAG_EXCLUSIVE, IStorage::TYPE_SAVE_OR_ABSOLUTE, pWholePath, WholePathSize);
+		}
+		virtual bool Replace(IStorage &Storage, const char *pCandidate, const char *pTarget)
+		{
+			return Storage.RenameFile(pCandidate, pTarget, IStorage::TYPE_ABSOLUTE, false);
+		}
+		virtual void Remove(IStorage &Storage, const char *pCandidate) noexcept
+		{
+			try
+			{
+				if(!Storage.RemoveFile(pCandidate, IStorage::TYPE_ABSOLUTE))
+					log_warn("client", "Could not remove screenshot candidate '%s'", pCandidate);
+			}
+			catch(...)
+			{
+				// 清理失败不能遮蔽原始保存错误，也不能中断像素 owner 的析构。
+			}
+		}
+	};
+
 	inline bool Save(IStorage *pStorage, const char *pName, CImageInfo &Image,
 		const IGraphics::FScreenshotProcessor &pfnProcessor,
-		char *pOutWholePath, size_t OutWholePathSize)
+		char *pOutWholePath, size_t OutWholePathSize, CFileOperations &Operations)
 	{
 		static constexpr LOG_COLOR SCREENSHOT_LOG_COLOR = LOG_COLOR{255, 153, 76};
 		if(pStorage == nullptr || pName == nullptr || pName[0] == '\0')
@@ -57,29 +85,70 @@ namespace screenshot_save
 			log_error_color(SCREENSHOT_LOG_COLOR, "client", "Failed to process screenshot '%s'", pName);
 			return false;
 		}
-		char aWholePath[IO_MAX_PATH_LENGTH] = {};
-		// io_open 不会代建目录：自定义截图目录（qm_screenshot_directory）或第一次
-		// 保存到新位置时，整条保存会直接失败。先按最终路径把上级目录补出来，
-		// 存档相对路径与绝对路径都适用。
+		// 先用更大的缓冲识别超长路径，不能让 Storage 截断候选名后碰到最终目标。
+		char aTargetPath[IO_MAX_PATH_LENGTH * 2] = {};
+		pStorage->GetCompletePath(IStorage::TYPE_SAVE_OR_ABSOLUTE, pName, aTargetPath, sizeof(aTargetPath));
+		static std::atomic<uint64_t> s_NextCandidate{0};
+		for(int Attempt = 0; Attempt < 32; ++Attempt)
 		{
-			char aTargetPath[IO_MAX_PATH_LENGTH];
-			pStorage->GetCompletePath(IStorage::TYPE_SAVE_OR_ABSOLUTE, pName, aTargetPath, sizeof(aTargetPath));
-			fs_makedir_rec_for(aTargetPath);
+			const std::string Suffix = "." + std::to_string(pid()) + "." + std::to_string(s_NextCandidate.fetch_add(1, std::memory_order_relaxed)) + ".tmp";
+			if(str_length(aTargetPath) + Suffix.size() >= IO_MAX_PATH_LENGTH)
+				return false;
+			const std::string CandidateName = std::string(pName) + Suffix;
+			if(fs_makedir_rec_for(aTargetPath) != 0)
+				return false;
+			char aCandidatePath[IO_MAX_PATH_LENGTH] = {};
+			IOHANDLE File = Operations.Open(*pStorage, CandidateName.c_str(), aCandidatePath, sizeof(aCandidatePath));
+			if(File == nullptr)
+			{
+				// 只重试已占用的候选，未取得所有权的路径不属于本次任务，不可删除。
+				if(pStorage->FileExists(CandidateName.c_str(), IStorage::TYPE_SAVE_OR_ABSOLUTE))
+					continue;
+				return false;
+			}
+			struct SCandidateCleanup
+			{
+				IStorage &m_Storage;
+				CFileOperations &m_Operations;
+				const char *m_pPath;
+				bool m_Active = true;
+				~SCandidateCleanup()
+				{
+					if(m_Active)
+						m_Operations.Remove(m_Storage, m_pPath);
+				}
+			} Cleanup{*pStorage, Operations, aCandidatePath};
+			const auto Close = [&Operations](void *pFile) { Operations.Close(pFile); };
+			std::unique_ptr<void, decltype(Close)> OwnedFile(File, Close);
+			const size_t PathLength = str_length(aCandidatePath);
+			if(PathLength < Suffix.size() || str_endswith(aCandidatePath, Suffix.c_str()) == nullptr)
+				return false;
+			char aWholePath[IO_MAX_PATH_LENGTH];
+			str_copy(aWholePath, aCandidatePath);
+			aWholePath[PathLength - Suffix.size()] = '\0';
+			// 扩展名取最终路径：候选的 .tmp 后缀不能改变 PNG/WebP 选择。
+			const bool Saved = str_endswith_nocase(pName, ".webp") != nullptr ?
+						   CImageLoader::SaveWebP(OwnedFile.release(), pName, Image, Operations) :
+						   CImageLoader::SavePng(OwnedFile.release(), pName, Image, Comment.c_str(), Operations);
+			if(!Saved || !Operations.Replace(*pStorage, aCandidatePath, aWholePath))
+			{
+				log_error_color(SCREENSHOT_LOG_COLOR, "client", "Failed to save screenshot to '%s'", aWholePath);
+				return false;
+			}
+			Cleanup.m_Active = false;
+			log_info_color(SCREENSHOT_LOG_COLOR, "client", "Saved screenshot to '%s'", aWholePath);
+			if(pOutWholePath != nullptr && OutWholePathSize > 0)
+				str_copy(pOutWholePath, aWholePath, OutWholePathSize);
+			return true;
 		}
-		// 无扩展名信息时默认 png；WebP 走无损编码，避免合影出现色带。
-		IOHANDLE File = pStorage->OpenFile(pName, IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE, aWholePath, sizeof(aWholePath));
-		const bool Saved = str_endswith_nocase(pName, ".webp") != nullptr ?
-					   CImageLoader::SaveWebP(File, pName, Image) :
-					   CImageLoader::SavePng(File, pName, Image, Comment.c_str());
-		if(!Saved)
-		{
-			log_error_color(SCREENSHOT_LOG_COLOR, "client", "Failed to save screenshot to '%s'", aWholePath);
-			return false;
-		}
-		log_info_color(SCREENSHOT_LOG_COLOR, "client", "Saved screenshot to '%s'", aWholePath);
-		if(pOutWholePath != nullptr && OutWholePathSize > 0)
-			str_copy(pOutWholePath, aWholePath, OutWholePathSize);
-		return true;
+		return false;
+	}
+
+	inline bool Save(IStorage *pStorage, const char *pName, CImageInfo &Image,
+		const IGraphics::FScreenshotProcessor &pfnProcessor, char *pOutWholePath, size_t OutWholePathSize)
+	{
+		CFileOperations Operations;
+		return Save(pStorage, pName, Image, pfnProcessor, pOutWholePath, OutWholePathSize, Operations);
 	}
 
 	class CSaveJob : public IJob
@@ -90,6 +159,7 @@ namespace screenshot_save
 		COwnedImage m_Image;
 		IGraphics::FScreenshotProcessor m_pfnProcessor;
 		IGraphics::FScreenshotCallback m_pfnCompletion;
+		std::shared_ptr<CFileOperations> m_pFileOperations;
 
 		void ReportFailure() noexcept
 		{
@@ -111,7 +181,8 @@ namespace screenshot_save
 			try
 			{
 				char aWholePath[IO_MAX_PATH_LENGTH] = {};
-				if(Save(m_pStorage, m_aName, m_Image.Image(), m_pfnProcessor, aWholePath, sizeof(aWholePath)))
+				CFileOperations NativeOperations;
+				if(Save(m_pStorage, m_aName, m_Image.Image(), m_pfnProcessor, aWholePath, sizeof(aWholePath), m_pFileOperations ? *m_pFileOperations : NativeOperations))
 				{
 					if(m_pfnCompletion)
 						m_pfnCompletion(std::move(m_Image.Image()), aWholePath);
@@ -127,8 +198,8 @@ namespace screenshot_save
 
 	public:
 		// Storage与失败回调的owner须活到任务结束；客户端先关任务池再释放这些接口。
-		CSaveJob(IStorage *pStorage, const char *pName, CImageInfo &&Image, IGraphics::FScreenshotProcessor pfnProcessor, std::function<void()> pfnFailure, IGraphics::FScreenshotCallback pfnCompletion = nullptr) :
-			m_pStorage(pStorage), m_pfnFailure(std::move(pfnFailure)), m_Image(std::move(Image)), m_pfnProcessor(std::move(pfnProcessor)), m_pfnCompletion(std::move(pfnCompletion))
+		CSaveJob(IStorage *pStorage, const char *pName, CImageInfo &&Image, IGraphics::FScreenshotProcessor pfnProcessor, std::function<void()> pfnFailure, IGraphics::FScreenshotCallback pfnCompletion = nullptr, std::shared_ptr<CFileOperations> pFileOperations = nullptr) :
+			m_pStorage(pStorage), m_pfnFailure(std::move(pfnFailure)), m_Image(std::move(Image)), m_pfnProcessor(std::move(pfnProcessor)), m_pfnCompletion(std::move(pfnCompletion)), m_pFileOperations(std::move(pFileOperations))
 		{
 			str_copy(m_aName, pName);
 		}

@@ -63,6 +63,8 @@ enum
 	 * @see io_open
 	 */
 	IOFLAG_APPEND = 4,
+	// 与 IOFLAG_WRITE 组合，只创建新文件，已有路径不得被截断。
+	IOFLAG_EXCLUSIVE = 8,
 };
 
 /**
@@ -98,7 +100,7 @@ enum ESeekOrigin
  * @param filename File to open.
  * @param flags A set of IOFLAG flags.
  *
- * @see IOFLAG_READ, IOFLAG_WRITE, IOFLAG_APPEND.
+ * @see IOFLAG_READ, IOFLAG_WRITE, IOFLAG_APPEND, IOFLAG_EXCLUSIVE.
  *
  * @return A handle to the file on success, or `nullptr` on failure.
  */
