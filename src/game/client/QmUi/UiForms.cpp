@@ -781,16 +781,17 @@ namespace ui_widget
 			Ctx.m_pUi->DoLabel(&Rect, pMark, Rect.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 	}
 
-	bool FilterChip(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, const char *pLabel, bool Selected)
+	bool FilterChip(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, const char *pLabel, bool Selected, bool Enabled)
 	{
 		if(Ctx.m_pUi == nullptr || pId == nullptr)
 			return false;
-		const bool Pressed = !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->DoButtonLogic(pId, 0, &Rect, BUTTONFLAG_LEFT) != 0;
+		// 禁用时不接输入，也不画选中色：让「这组选项现在不起作用」看得出来。
+		const bool Pressed = Enabled && !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->DoButtonLogic(pId, 0, &Rect, BUTTONFLAG_LEFT) != 0;
 		if(Ctx.m_pUi->MeasurementOnly() || Ctx.m_pUi->DrawingSuppressed())
 			return Pressed;
 		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ctx.m_pUi);
 		SButtonSurfaceOptions Options;
-		Options.m_Selected = Selected;
+		Options.m_Selected = Selected && Enabled;
 		Options.m_Radius = ui_token::radius::PILL;
 		// 每个胶囊都带自己的胶囊底（静止态也画），只有选中态换成强调色；
 		// 透明底会让整排退化成纯文字，看不出可点区域。
@@ -800,6 +801,7 @@ namespace ui_widget
 		Props.m_MaxWidth = Rect.w;
 		Props.m_EllipsisAtEnd = true;
 		Props.m_MinimumFontSize = ui_token::server_filter::CHIP_MIN_FONT_SIZE;
+		Props.SetColor(Enabled ? ui_token::color::TEXT_PRIMARY : ui_token::color::TEXT_DISABLED);
 		CUIRect LabelRect = Rect;
 		Ctx.m_pUi->DoLabel(&LabelRect, pLabel, ui_token::server_filter::CHIP_FONT_SIZE, TEXTALIGN_MC, Props);
 		return Pressed;

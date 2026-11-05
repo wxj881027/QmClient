@@ -2639,7 +2639,11 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 	s_FilterScrollRegion.Begin(&View, &ScrollOffset, &ScrollParams);
 	View.y += ScrollOffset.y;
 	const float ContentTop = View.y;
+	// 正文与滚动条之间留出轨道宽度加两侧间隙：滚动条压在内容右缘上，长译文会贴到轨道。
+	const float ContentWidth = View.w;
+	View.w = std::max(0.0f, View.w - (ScrollParams.m_ScrollbarThickness + ScrollParams.m_ScrollbarMargin * 2.0f));
 	RenderServerbrowserFilterForm(View);
+	View.w = ContentWidth;
 
 	// countries and types filters
 	if(ServerBrowser()->CommunityCache().CountriesTypesFilterAvailable())
