@@ -452,7 +452,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 	};
 
 	auto RenderSettings = [&](CUIRect &Column) {
-		CUIRect CheckBoxRect, CaptionRect, ChipRect;
+		CUIRect CheckBoxRect, CaptionRect;
 		CSettingsContentLayoutFlow Flow(Column);
 		// 主开关关掉时其余选项不再接输入、胶囊也不高亮：一眼能看出这功能现在没开。
 		const bool MasterOn = g_Config.m_QmWarList != 0;
@@ -479,21 +479,26 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		DrawCaption("tclient-warlist-colors-caption", Localize("Colors"), MarginSmall);
 		if(Flow.Control("tclient-warlist-colors-divider", ui_token::spacing::SM, CaptionRect))
 			ui_widget::DrawFadeDivider(Ui(), CaptionRect);
-		if(Flow.Control("tclient-warlist-colors-positions", ui_token::server_filter::CHIP_HEIGHT, ChipRect))
+		// 显示位置回归开关行：和卡片里其他开关同一套排布，不再用胶囊。
+		if(Flow.Control("tclient-warlist-colors-chat", LineSize, CheckBoxRect, MarginSmall))
 		{
-			static unsigned char s_aPositionChipIds[4];
-			const float Gap = ui_token::server_filter::CHIP_GAP;
-			const float ChipW = std::max(0.0f, (ChipRect.w - Gap * 3.0f) / 4.0f);
-			const char *apLabels[4] = {Localize("Chat"), Localize("Scoreboard"), Localize("Spectate"), Localize("Clan")};
-			int *apValues[4] = {&g_Config.m_QmWarListChat, &g_Config.m_QmWarListScoreboard, &g_Config.m_QmWarListSpectate, &g_Config.m_QmWarListShowClan};
-			for(int Index = 0; Index < 4; ++Index)
-			{
-				CUIRect Rect = ChipRect;
-				Rect.x = ChipRect.x + Index * (ChipW + Gap);
-				Rect.w = ChipW;
-				if(ui_widget::FilterChip(TClientWarListTextInputCtx, &s_aPositionChipIds[Index], Rect, apLabels[Index], *apValues[Index] != 0, MasterOn) && MasterOn && !ReadOnly && !Ui()->RenderOnly())
-					*apValues[Index] ^= 1;
-			}
+			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListChat, "tclient-warlist-colors-chat", Localize("Show enemy colors in chat"), g_Config.m_QmWarListChat, &CheckBoxRect) && MasterOn && !ReadOnly && !Ui()->RenderOnly())
+				g_Config.m_QmWarListChat ^= 1;
+		}
+		if(Flow.Control("tclient-warlist-colors-scoreboard", LineSize, CheckBoxRect, MarginSmall))
+		{
+			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListScoreboard, "tclient-warlist-colors-scoreboard", Localize("Show enemy colors in scoreboard"), g_Config.m_QmWarListScoreboard, &CheckBoxRect) && MasterOn && !ReadOnly && !Ui()->RenderOnly())
+				g_Config.m_QmWarListScoreboard ^= 1;
+		}
+		if(Flow.Control("tclient-warlist-colors-spectate", LineSize, CheckBoxRect, MarginSmall))
+		{
+			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListSpectate, "tclient-warlist-colors-spectate", Localize("Show enemy color in spectator menu"), g_Config.m_QmWarListSpectate, &CheckBoxRect) && MasterOn && !ReadOnly && !Ui()->RenderOnly())
+				g_Config.m_QmWarListSpectate ^= 1;
+		}
+		if(Flow.Control("tclient-warlist-colors-clan", LineSize, CheckBoxRect, MarginSmall))
+		{
+			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListShowClan, "tclient-warlist-colors-clan", Localize("Show clan for enemies"), g_Config.m_QmWarListShowClan, &CheckBoxRect) && MasterOn && !ReadOnly && !Ui()->RenderOnly())
+				g_Config.m_QmWarListShowClan ^= 1;
 		}
 		// 「其他」：不涉及显示位置的行为开关。
 		DrawCaption("tclient-warlist-other-caption", Localize("Other"), MarginSmall * 2.0f);
@@ -667,8 +672,6 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		{
 			ui_widget::InputField(TClientWarListPlayerSearchCtx, &s_PlayerSearchInput, PlayerSearch, FontSize, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
 		}
-		if(!Flow.Control("tclient-warlist-players-list", WarListViewportRows * ListRowHeight, PlayerList, MarginSmall))
-			return;
 		static CListBox s_PlayerListBox;
 		static CListBox s_PlayerReadOnlyListBox;
 		CListBox &PlayerListBox = ReadOnly ? s_PlayerReadOnlyListBox : s_PlayerListBox;
@@ -687,7 +690,18 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				str_find_nocase(Client.m_aClan, s_PlayerSearchInput.GetString()))
 				s_vFilteredPlayerIds.push_back(ClientId);
 		}
+		// 列表高度跟着实际人数收，空列表只占两行高，不铺满一屏空白。
+		const int PlayerRows = std::clamp((int)s_vFilteredPlayerIds.size(), 2, WarListViewportRows);
+		if(!Flow.Control("tclient-warlist-players-list", PlayerRows * ListRowHeight, PlayerList, MarginSmall))
+			return;
 		PlayerListBox.DoStart(ListRowHeight, s_vFilteredPlayerIds.size(), 1, 2, -1, &PlayerList, true, IGraphics::CORNER_ALL);
+		if(s_vFilteredPlayerIds.empty())
+		{
+			CUIRect Hint = PlayerList;
+			TextRender()->TextColor(ui_token::color::TEXT_SECONDARY);
+			Ui()->DoLabel(&Hint, Localize("No players match"), StandardFontSize, TEXTALIGN_MC);
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+		}
 
 		static std::vector<unsigned char> s_vPlayerItemIds;
 		static std::vector<CButtonContainer> s_vNameButtons;
@@ -751,67 +765,58 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		LogTClientPerfStageEx("tclient_warlist", "players", ETClientSettingsPerfStage::STATIC_LAYER, PlayersTimer.ElapsedMs(), false, aExtra);
 	};
 
-	const float WarListColumnMinimum = ResolveSettingsInlineRowMinimumWidth(WarListMetrics.m_LabelWidth + 2.0f * WarListMetrics.m_ButtonHeight, WarListMetrics.m_SectionGap, 1);
-	const float FourColumnMinWidth = 4.0f * WarListColumnMinimum + 3.0f * WarListMetrics.m_SectionGap;
-	const float TwoColumnMinWidth = 2.0f * WarListColumnMinimum + WarListMetrics.m_SectionGap;
 	const float SectionGap = WarListMetrics.m_SectionGap;
+	const float TwoColumnMinWidth = 2.0f * ResolveSettingsInlineRowMinimumWidth(WarListMetrics.m_LabelWidth + 2.0f * WarListMetrics.m_ButtonHeight, SectionGap, 1) + SectionGap;
 	const char *apSectionIds[] = {"tclient-warlist-section-entries", "tclient-warlist-section-settings", "tclient-warlist-section-editor", "tclient-warlist-section-groups", "tclient-warlist-section-players"};
 	const char *apTitles[] = {Localizable("War Entries"), Localizable("Settings"), Localizable("Edit Entry"), Localizable("War Groups"), Localizable("Online Players")};
 	const std::function<void(CUIRect &)> aContents[] = {RenderEntries, RenderSettings, RenderEditor, RenderGroups, RenderPlayers};
+	// 两列：左列只放设置开关，右列按办事顺序（条目 → 编辑 → 群组 → 在线玩家）往下叠，
+	// 编辑条目紧挨着敌对群组，改归属不用在两个角落之间来回看。
+	const int anColumnOf[] = {1, 0, 1, 1, 1};
 	const auto RenderWarListCard = [&](CUIRect &Content) {
 		CSettingsContentLayoutFlow Flow(Content);
 		const auto *pScope = CSettingsContentLayoutScope::Current();
 		const float Width = pScope && pScope->m_pLayout ? pScope->m_pLayout->Width() : Content.w;
-		const int Columns = Width >= FourColumnMinWidth ? 4 : Width >= TwoColumnMinWidth ? 2 :
-												   1;
+		const int Columns = Width >= TwoColumnMinWidth ? 2 : 1;
 		const float ColumnWidth = std::max(0.0f, (Width - (Columns - 1) * SectionGap) / Columns);
 		std::array<std::function<void(CUIRect &)>, 5> aRenderSections;
 		std::array<float, 5> aHeights{};
 		for(size_t Index = 0; Index < aRenderSections.size(); ++Index)
 		{
-			aRenderSections[Index] = [&, Index](CUIRect &Column) {
-				CSettingsContentLayoutFlow SectionFlow(Column);
+			aRenderSections[Index] = [&, Index](CUIRect &Col) {
+				CSettingsContentLayoutFlow SectionFlow(Col);
+				// 同一列里第二个及之后的分组，前面才画分割线：分组之间是分隔，不是装饰。
+				const bool Divider = Columns == 1 ? Index != 0 : Index >= 2;
+				if(Divider)
+				{
+					char aDividerId[96];
+					str_format(aDividerId, sizeof(aDividerId), "%s-divider", apSectionIds[Index]);
+					CUIRect Line;
+					if(SectionFlow.Control(aDividerId, ui_token::spacing::SM, Line, ui_token::spacing::XS))
+						ui_widget::DrawFadeDivider(Ui(), Line);
+				}
 				CUIRect Header;
 				if(SectionFlow.Control(apSectionIds[Index], LineSize, Header))
 					DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, apSectionIds[Index], &Header, Localize(apTitles[Index]), HeadlineFontSize, TEXTALIGN_ML);
 				SectionFlow.Space(MarginSmall);
-				aContents[Index](Column);
+				aContents[Index](Col);
 			};
 			aHeights[Index] = TClientDeclaredRegion(apSectionIds[Index], ColumnWidth, aRenderSections[Index], nullptr);
 		}
-		float Height;
-		const float FirstHeight = std::max(aHeights[0] + SectionGap + aHeights[1], aHeights[2]);
-		if(Columns == 4)
-			Height = std::max(FirstHeight, std::max(aHeights[3], aHeights[4]));
-		else if(Columns == 2)
-			Height = FirstHeight + SectionGap + std::max(aHeights[3], aHeights[4]);
-		else
-			Height = aHeights[0] + aHeights[1] + aHeights[2] + aHeights[3] + aHeights[4] + SectionGap * 4.0f;
+		std::array<float, 2> aColumnHeights{};
+		for(size_t Index = 0; Index < aHeights.size(); ++Index)
+			aColumnHeights[Columns == 1 ? 0 : anColumnOf[Index]] += aHeights[Index] + SectionGap;
+		const float Height = std::max(0.0f, std::max(aColumnHeights[0], aColumnHeights[1]) - SectionGap);
 		CUIRect Block;
 		if(!Flow.Control("tclient-warlist-columns", Height, Block))
 			return;
-		std::array<CUIRect, 5> aViews;
-		float StackedY = Block.y;
-		for(size_t Index = 0; Index < aViews.size(); ++Index)
+		std::array<float, 2> aColumnY = {Block.y, Block.y};
+		for(size_t Index = 0; Index < aHeights.size(); ++Index)
 		{
-			aViews[Index] = {Block.x, Block.y, ColumnWidth, aHeights[Index]};
-			if(Columns == 1)
-			{
-				aViews[Index].y = StackedY;
-				StackedY += aHeights[Index] + SectionGap;
-			}
-			else if(Index == 1)
-				aViews[Index].y += aHeights[0] + SectionGap;
-			else if(Index >= 2)
-			{
-				const int Column = Columns == 4 ? (int)Index - 1 : Index == 2 ? 1 :
-									   Index == 3         ? 0 :
-												1;
-				aViews[Index].x += Column * (ColumnWidth + SectionGap);
-				if(Columns == 2 && Index >= 3)
-					aViews[Index].y += FirstHeight + SectionGap;
-			}
-			TClientDeclaredRegion(apSectionIds[Index], ColumnWidth, aRenderSections[Index], &aViews[Index]);
+			const int ColumnIndex = Columns == 1 ? 0 : anColumnOf[Index];
+			CUIRect View = {Block.x + ColumnIndex * (ColumnWidth + SectionGap), aColumnY[ColumnIndex], ColumnWidth, aHeights[Index]};
+			aColumnY[ColumnIndex] += aHeights[Index] + SectionGap;
+			TClientDeclaredRegion(apSectionIds[Index], ColumnWidth, aRenderSections[Index], &View);
 		}
 	};
 	const uint64_t CardRevision = GameClient()->m_WarList.Revision();
