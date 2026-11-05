@@ -2691,7 +2691,7 @@ polish = "Włącz broń moda na %d: %s"
 [[message]]
 key = "Enable rainbow rendering for hook"
 [message.translations]
-simplified_chinese = "启用钩索彩虹渲染"
+simplified_chinese = "启用钩子彩虹渲染"
 traditional_chinese = "啟用鉤子彩虹渲染"
 japanese = "フックのレインボーレンダリングを有効化"
 korean = "갈고리 무지개 렌더링 활성화"
@@ -3459,7 +3459,7 @@ polish = "Ukryj zakładki ustawień"
 [[message]]
 key = "Hook collision line length follows cursor distance"
 [message.translations]
-simplified_chinese = "钩索辅助线长度跟随光标距离"
+simplified_chinese = "钩子辅助线长度跟随光标距离"
 traditional_chinese = "鉤子輔助線長度跟隨光標距離"
 japanese = "フック衝突線の長さがカーソル距離に追従"
 korean = "갈고리 충돌선 길이가 커서 거리를 따름"
@@ -5443,7 +5443,7 @@ polish = "Tęcza"
 [[message]]
 key = "Rainbow hook"
 [message.translations]
-simplified_chinese = "彩虹色钩索"
+simplified_chinese = "彩虹色钩子"
 traditional_chinese = "彩虹色鉤索"
 japanese = "レインボーフック"
 korean = "무지개 갈고리"
@@ -6179,7 +6179,7 @@ polish = "Zresetuj pozycję myszy przy otwieraniu koła wiązań"
 [[message]]
 key = "Restore old single-segment hook collision line behavior"
 [message.translations]
-simplified_chinese = "恢复旧版单段钩索辅助线行为"
+simplified_chinese = "恢复旧版单段钩子辅助线行为"
 traditional_chinese = "恢復舊版單段鉤子輔助線行為"
 japanese = "旧式の単一セグメントフック衝突線動作を復元"
 korean = "이전 단일 세그먼트 갈고리 충돌선 동작 복원"
@@ -10684,3 +10684,19 @@ brazilian_portuguese = "Save carregado e marcado como usado."
 portuguese = "Save carregado e marcado como usado."
 turkish = "Kayıt yüklendi ve kullanıldı olarak işaretlendi."
 polish = "Zapis wczytano i oznaczono jako użyty."
+
+[[message]]
+key = "No players match"
+[message.translations]
+simplified_chinese = "没有匹配的玩家"
+traditional_chinese = "沒有符合的玩家"
+japanese = "一致するプレイヤーがいません"
+korean = "일치하는 플레이어가 없습니다"
+russian = "Нет подходящих игроков"
+german = "Keine passenden Spieler"
+spanish = "Ningún jugador coincide"
+french = "Aucun joueur correspondant"
+brazilian_portuguese = "Nenhum jogador correspondente"
+portuguese = "Nenhum jogador correspondente"
+turkish = "Eşleşen oyuncu yok"
+polish = "Brak pasujących graczy"

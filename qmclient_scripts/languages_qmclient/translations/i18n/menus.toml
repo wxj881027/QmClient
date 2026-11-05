@@ -689,7 +689,7 @@ polish = "Zawsze pokazuj tabliczki z nazwą niezależnie od odległości"
 [[message]]
 key = "Always show other players' hook collision lines"
 [message.translations]
-simplified_chinese = "始终显示其他玩家的钩索辅助线"
+simplified_chinese = "始终显示其他玩家的钩子辅助线"
 traditional_chinese = "始終顯示其他玩家的鉤子輔助線"
 japanese = "常に他のプレイヤーのフック補助線を表示"
 korean = "다른 플레이어의 갈고리 보조선 항상 표시"
@@ -705,7 +705,7 @@ polish = "Zawsze pokazuj linie asysty haka innych graczy"
 [[message]]
 key = "Always show own player's hook collision line"
 [message.translations]
-simplified_chinese = "始终显示自己的钩索辅助线"
+simplified_chinese = "始终显示自己的钩子辅助线"
 traditional_chinese = "始終顯示自己的鉤子輔助線"
 japanese = "常に自分のフック補助線を表示"
 korean = "자신의 갈고리 보조선 항상 표시"
@@ -2593,7 +2593,7 @@ polish = "Kolor nazw uwierzytelnionych graczy na tablicy wyników"
 [[message]]
 key = "Color of hook collision line tip segment"
 [message.translations]
-simplified_chinese = "钩索辅助线末端线段的颜色"
+simplified_chinese = "钩子辅助线末端线段的颜色"
 traditional_chinese = "鉤子輔助線末端提示段顏色"
 japanese = "フック補助線の先端セグメントの色"
 korean = "갈고리 보조선 끝 부분 색상"
@@ -2609,7 +2609,7 @@ polish = "Kolor końcowego segmentu linii asysty haka"
 [[message]]
 key = "Color of hook line hitting hookable tile"
 [message.translations]
-simplified_chinese = "击中可钩图块时的钩索线颜色"
+simplified_chinese = "击中可钩图块时的钩子线颜色"
 traditional_chinese = "擊中可掛鈎圖塊的鉤線顏色"
 japanese = "フック可能なタイルに当たったフックラインの色"
 korean = "갈고리 가능 타일에 닿은 갈고리 선 색상"
@@ -2625,7 +2625,7 @@ polish = "Kolor linii haka trafiającej w zaczepialny kafelek"
 [[message]]
 key = "Color of hook line hitting tee"
 [message.translations]
-simplified_chinese = "击中 Tee 时的钩索线颜色"
+simplified_chinese = "击中 Tee 时的钩子线颜色"
 traditional_chinese = "擊中球座的鉤線顏色"
 japanese = "Tee に当たったフックラインの色"
 korean = "티에 맞은 갈고리 선 색상"
@@ -2641,7 +2641,7 @@ polish = "Kolor linii haka trafiającej w tee"
 [[message]]
 key = "Color of hook line not hitting anything"
 [message.translations]
-simplified_chinese = "未击中任何物体时的钩索线颜色"
+simplified_chinese = "未击中任何物体时的钩子线颜色"
 traditional_chinese = "未擊中任何物體的鉤線顏色"
 japanese = "何も当たらなかったフックラインの色"
 korean = "아무것도 맞지 않은 갈고리 선 색상"
@@ -2673,7 +2673,7 @@ polish = "Kolorowanie pingu na tablicy wyników"
 [[message]]
 key = "Colors of the hook collision line, in case of a possible collision with:"
 [message.translations]
-simplified_chinese = "钩索辅助线颜色（瞄准以下目标时）："
+simplified_chinese = "钩子辅助线颜色（瞄准以下目标时）："
 traditional_chinese = "鉤子輔助線顏色（瞄準以下目標時）："
 japanese = "フック補助線の色（以下の対象と衝突する可能性がある場合）："
 korean = "갈고리 보조선 색상 (다음 대상에 충돌 가능할 경우):"
@@ -5665,7 +5665,7 @@ polish = "Włącz obsługę UPnP (wymaga -DCONF_UPNP=ON podczas kompilacji)"
 [[message]]
 key = "Enable/disable infinite hook."
 [message.translations]
-simplified_chinese = "启用/禁用无限钩索"
+simplified_chinese = "启用/禁用无限钩子"
 traditional_chinese = "启用/禁用无限钩索"
 japanese = "無限フックの有効/無効"
 korean = "무한 갈고리 활성화/비활성화"
@@ -7537,7 +7537,7 @@ polish = "Trzymaj broń wyżej jak w TW 0.6.1 i wcześniejszych"
 [[message]]
 key = "Hook"
 [message.translations]
-simplified_chinese = "钩索"
+simplified_chinese = "钩子"
 traditional_chinese = "鉤索"
 japanese = "フック"
 korean = "갈고리"
@@ -7569,7 +7569,7 @@ polish = "Linia kolizji haka"
 [[message]]
 key = "Hook collision line alpha (0 invisible, 100 fully visible)"
 [message.translations]
-simplified_chinese = "钩索辅助线不透明度（0 不可见，100 完全可见）"
+simplified_chinese = "钩子辅助线不透明度（0 不可见，100 完全可见）"
 traditional_chinese = "鉤子輔助線 Alpha（0 不可見，100 完全可見）"
 japanese = "フック衝突線のアルファ（0 不可視、100 完全可視）"
 korean = "갈고리 충돌선 알파 (0 투명, 100 완전 불투명)"
@@ -7585,7 +7585,7 @@ polish = "Alfa linii kolizji haka (0 niewidoczna, 100 w pełni widoczna)"
 [[message]]
 key = "Hook collision line opacity"
 [message.translations]
-simplified_chinese = "钩索辅助线不透明度"
+simplified_chinese = "钩子辅助线不透明度"
 traditional_chinese = "鉤子輔助線不透明度"
 japanese = "フック衝突線の不透明度"
 korean = "갈고리 충돌선 불투명도"
@@ -7745,7 +7745,7 @@ polish = "Po wciśnięciu: Coś do zahaczenia"
 [[message]]
 key = "Hook Strength"
 [message.translations]
-simplified_chinese = "钩索强度"
+simplified_chinese = "钩子强度"
 traditional_chinese = "鉤索強度"
 japanese = "フック強度"
 korean = "갈고리 강도"
@@ -7761,7 +7761,7 @@ polish = "Siła haka"
 [[message]]
 key = "Hook strength scope"
 [message.translations]
-simplified_chinese = "钩索强度范围"
+simplified_chinese = "钩子强度范围"
 traditional_chinese = "鉤索強度範圍"
 japanese = "フック強度範囲"
 korean = "갈고리 강도 범위"
@@ -7777,7 +7777,7 @@ polish = "Zakres siły haka"
 [[message]]
 key = "Hook through teleporters (deprecated, use special entities instead)"
 [message.translations]
-simplified_chinese = "钩索穿过传送器（已弃用，请改用特殊实体）"
+simplified_chinese = "钩子穿过传送器（已弃用，请改用特殊实体）"
 traditional_chinese = "鉤子穿過傳送器（已棄用，請使用特殊實體代替）"
 japanese = "テレポーターを通るフック（非推奨、代わりに特殊エンティティを使用）"
 korean = "텔레포터를 통한 갈고리 (비권장, 대신 특수 엔티티 사용)"
@@ -8225,7 +8225,7 @@ polish = "Czułość kontrolera w grze"
 [[message]]
 key = "Infinite hook for super players on/off."
 [message.translations]
-simplified_chinese = "超级玩家无限钩索开/关"
+simplified_chinese = "超级玩家无限钩子开/关"
 traditional_chinese = "超級玩家開/關的無盡鉤子"
 japanese = "スーパープレイヤーの無限フックのオン/オフ。"
 korean = "슈퍼 플레이어용 무한 갈고리 켜기/끄기"
@@ -8449,7 +8449,7 @@ polish = "Skok"
 [[message]]
 key = "Keep hook when teleporting"
 [message.translations]
-simplified_chinese = "传送时保持钩索"
+simplified_chinese = "传送时保持钩子"
 traditional_chinese = "傳送時保持鉤子"
 japanese = "テレポート時にフックを維持する"
 korean = "순간이동 시 갈고리 유지"
@@ -10001,7 +10001,7 @@ polish = "Wycisz dźwięki flagi"
 [[message]]
 key = "Mute hook sound"
 [message.translations]
-simplified_chinese = "静音钩索音效"
+simplified_chinese = "静音钩子音效"
 traditional_chinese = "靜音掛鉤聲音"
 japanese = "フックサウンドをミュート"
 korean = "갈고리 소리 음소거"
@@ -11057,7 +11057,7 @@ polish = "Inne"
 [[message]]
 key = "Other players' hook line width"
 [message.translations]
-simplified_chinese = "其他玩家的钩索辅助线宽度"
+simplified_chinese = "其他玩家的钩子辅助线宽度"
 traditional_chinese = "其他玩家的鉤子輔助線寬度"
 japanese = "他のプレイヤーのフックラインの幅"
 korean = "다른 플레이어의 갈고리 선 너비"
@@ -11186,7 +11186,7 @@ polish = "Zastąp lokalizację szacowania pingu, opcje: auto, af, as, as:cn, eu,
 [[message]]
 key = "Own hook line width"
 [message.translations]
-simplified_chinese = "自己的钩索辅助线宽度"
+simplified_chinese = "自己的钩子辅助线宽度"
 traditional_chinese = "自己的鉤子輔助線寬度"
 japanese = "自分のフックラインの幅"
 korean = "자신의 갈고리 선 너비"
@@ -12082,7 +12082,7 @@ polish = "Poprzednia broń"
 [[message]]
 key = "Preview 'Hook collisions' being pressed"
 [message.translations]
-simplified_chinese = "预览按下时的钩索辅助线"
+simplified_chinese = "预览按下时的钩子辅助线"
 traditional_chinese = "預覽按下時的鉤子輔助線"
 japanese = "フック衝突線が押された状態をプレビュー"
 korean = "'후크 충돌'이 눌린 상태 미리보기"
@@ -14995,7 +14995,7 @@ polish = "Pokaż zdrowie, tarcze i amunicję"
 [[message]]
 key = "Show hook strength icon indicator"
 [message.translations]
-simplified_chinese = "显示钩索强度图标"
+simplified_chinese = "显示钩子强度图标"
 traditional_chinese = "顯示鉤索強度圖標"
 japanese = "フック強度アイコンインジケーターを表示"
 korean = "갈고리 강도 아이콘 표시"
@@ -15011,7 +15011,7 @@ polish = "Pokaż wskaźnik ikony siły haka"
 [[message]]
 key = "Show hook strength number indicator"
 [message.translations]
-simplified_chinese = "显示钩索强度数值"
+simplified_chinese = "显示钩子强度数值"
 traditional_chinese = "顯示鉤索強度數值"
 japanese = "フック強度数値インジケーターを表示"
 korean = "갈고리 강도 숫자 표시"
@@ -15818,7 +15818,7 @@ polish = "Pokaż tylko wiadomości z czatu drużynowego"
 [[message]]
 key = "Show other players' hook collision lines"
 [message.translations]
-simplified_chinese = "显示其他玩家的钩索辅助线"
+simplified_chinese = "显示其他玩家的钩子辅助线"
 traditional_chinese = "顯示其他玩家的鉤子輔助線"
 japanese = "他のプレイヤーのフック衝突線を表示"
 korean = "다른 플레이어의 갈고리 충돌선 표시"
@@ -15834,7 +15834,7 @@ polish = "Pokaż linie kolizji haka innych graczy"
 [[message]]
 key = "Show other players' hook collision lines (2 always shown)"
 [message.translations]
-simplified_chinese = "显示其他玩家的钩索辅助线（2 始终显示）"
+simplified_chinese = "显示其他玩家的钩子辅助线（2 始终显示）"
 traditional_chinese = "顯示其他玩家的鉤子輔助線（2 條始終顯示）"
 japanese = "他のプレイヤーのフック衝突線を表示（2 本は常に表示）"
 korean = "다른 플레이어의 갈고리 충돌선 표시 (2개는 항상 표시)"
@@ -15850,7 +15850,7 @@ polish = "Pokaż linie kolizji haka innych graczy (2 zawsze widoczne)"
 [[message]]
 key = "Show other players' hook collision lines when rendering video"
 [message.translations]
-simplified_chinese = "渲染视频时显示其他玩家的钩索辅助线"
+simplified_chinese = "渲染视频时显示其他玩家的钩子辅助线"
 traditional_chinese = "渲染視頻時顯示其他玩家的鉤子輔助線"
 japanese = "動画レンダリング時に他のプレイヤーのフック衝突線を表示"
 korean = "비디오 렌더링 시 다른 플레이어의 갈고리 충돌선 표시"
@@ -15930,7 +15930,7 @@ polish = "Pokaż innych (tylko własna drużyna)"
 [[message]]
 key = "Show own hook collision lines (2 always shown)"
 [message.translations]
-simplified_chinese = "显示自己的钩索辅助线（2 始终显示）"
+simplified_chinese = "显示自己的钩子辅助线（2 始终显示）"
 traditional_chinese = "顯示自己玩家的鉤子輔助線（2 始終顯示）"
 japanese = "自分のフック衝突線を表示（2 本は常に表示）"
 korean = "자신의 갈고리 충돌선 표시 (2개는 항상 표시)"
@@ -15962,7 +15962,7 @@ polish = "Pokaż własną etykietę (do nagrywania dema)"
 [[message]]
 key = "Show own player's hook collision line"
 [message.translations]
-simplified_chinese = "显示自己的钩索辅助线"
+simplified_chinese = "显示自己的钩子辅助线"
 traditional_chinese = "顯示自己的鉤子輔助線"
 japanese = "自分のフック衝突線を表示"
 korean = "자신의 갈고리 충돌선 표시"
@@ -16442,7 +16442,7 @@ polish = "Rozmiar danych tekstowych encji (20% do 100%)"
 [[message]]
 key = "Size of hook strength icon and number indicator"
 [message.translations]
-simplified_chinese = "钩索强度图标与数值的大小"
+simplified_chinese = "钩子强度图标与数值的大小"
 traditional_chinese = "鉤索強度圖標與數值的大小"
 japanese = "フック強度アイコンと数値インジケーターのサイズ"
 korean = "갈고리 강도 아이콘 및 숫자 크기"
@@ -18714,7 +18714,7 @@ polish = "URL do pobierania skórek"
 [[message]]
 key = "Use alternative world tick calculation making hooks behave as if all players have Strong."
 [message.translations]
-simplified_chinese = "使用替代的世界 tick 计算，使钩索表现得像所有玩家都拥有强钩。"
+simplified_chinese = "使用替代的世界 tick 计算，使钩子表现得像所有玩家都拥有强钩。"
 traditional_chinese = "是否對世界刻度使用替代計算，這使得鉤子的行為就像所有玩家都具有強項一樣。"
 japanese = "代替ワールドティック計算を使用し、全プレイヤーが Strong を持っているかのようにフックを動作させる。"
 korean = "모든 플레이어가 Strong을 가진 것처럼 갈고리가 작동하도록 대체 월드 틱 계산 사용"
@@ -19642,7 +19642,7 @@ polish = "Szerokość kolumny mapy w przeglądarce serwerów"
 [[message]]
 key = "Width of others' hook collision line"
 [message.translations]
-simplified_chinese = "其他玩家的钩索辅助线宽度"
+simplified_chinese = "其他玩家的钩子辅助线宽度"
 traditional_chinese = "其他玩家的鉤子輔助線線寬度"
 japanese = "他のプレイヤーのフック衝突線の幅"
 korean = "다른 플레이어의 갈고리 충돌선 너비"
@@ -19690,7 +19690,7 @@ polish = "Szerokość kolumny typu w przeglądarce serwerów"
 [[message]]
 key = "Width of your own hook collision line"
 [message.translations]
-simplified_chinese = "自己的钩索辅助线宽度"
+simplified_chinese = "自己的钩子辅助线宽度"
 traditional_chinese = "自己的鉤子輔助線線寬度"
 japanese = "自分のフック衝突線の幅"
 korean = "자신의 갈고리 충돌선 너비"
@@ -20139,7 +20139,7 @@ polish = "solo"
 key = "English translation by the DDNet Team"
 context = "Translation credits: Add your own name here when you update translations"
 [message.translations]
-simplified_chinese = "简体中文翻译由 DDNet 团队和 QmClient 贡献者维护"
+simplified_chinese = "简体中文翻译由 DDNet 队伍和 QmClient 贡献者维护"
 traditional_chinese = "簡體中文翻譯由 DDNet 團隊和 QmClient 貢獻者維護"
 japanese = "日本語翻訳は DDNet チームと QmClient コントリビューターによるものです"
 korean = "한국어 번역은 DDNet 팀과 QmClient 기여자가 유지 관리합니다"

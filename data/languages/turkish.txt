@@ -9356,6 +9356,9 @@ No player nearby
 No player with this name found.
 == Bu isimde bir oyuncu bulunamadı.
 
+No players match
+== Eşleşen oyuncu yok
+
 No players match these filters
 == Bu filtrelere uyan oyuncu yok
 

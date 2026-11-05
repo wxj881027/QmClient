@@ -1329,7 +1329,7 @@ polish = "Wygląd / Czat"
 [[message]]
 key = "Appearance / Hook Collision"
 [message.translations]
-simplified_chinese = "外观/钩索辅助线"
+simplified_chinese = "外观/钩子辅助线"
 traditional_chinese = "外觀 / 鉤子輔助線"
 japanese = "外観/フック補助線"
 korean = "외관 / 갈고리 보조선"
@@ -3073,7 +3073,7 @@ polish = "Bind dummy control and copy actions"
 [[message]]
 key = "Bind movement, jump, hook, and fire actions"
 [message.translations]
-simplified_chinese = "绑定移动、跳跃、钩索和开火操作"
+simplified_chinese = "绑定移动、跳跃、钩子和开火操作"
 traditional_chinese = "Bind movement, jump, hook, and fire actions"
 japanese = "Bind movement, jump, hook, and fire actions"
 korean = "Bind movement, jump, hook, and fire actions"
@@ -5153,7 +5153,7 @@ polish = "Configure HJ unfreeze assistance"
 [[message]]
 key = "Configure hook range and collision guide lines"
 [message.translations]
-simplified_chinese = "配置钩索范围和碰撞引导线"
+simplified_chinese = "配置钩子范围和碰撞引导线"
 traditional_chinese = "Configure hook range and collision guide lines"
 japanese = "Configure hook range and collision guide lines"
 korean = "Configure hook range and collision guide lines"
@@ -6945,7 +6945,7 @@ polish = "Efekty demo"
 [[message]]
 key = "Demo hook strength (0=Off 1=Icon 2=Icon and number)"
 [message.translations]
-simplified_chinese = "回放钩索强弱（0=关闭 1=图标 2=图标与数字）"
+simplified_chinese = "回放钩子强弱（0=关闭 1=图标 2=图标与数字）"
 traditional_chinese = "回放鉤子強弱（0=關閉 1=圖示 2=圖示與數字）"
 japanese = "デモのフック強弱（0=オフ 1=アイコン 2=アイコンと数値）"
 korean = "데모 훅 강도(0=끔 1=아이콘 2=아이콘과 숫자)"
@@ -6961,7 +6961,7 @@ polish = "Siła haka w demie (0=Wył. 1=Ikona 2=Ikona i liczba)"
 [[message]]
 key = "Demo hook strength scope (0=Own 1=Others 2=Strong 3=Weak 4=All)"
 [message.translations]
-simplified_chinese = "回放钩索强弱范围（0=自己 1=他人 2=强钩 3=弱钩 4=全部）"
+simplified_chinese = "回放钩子强弱范围（0=自己 1=他人 2=强钩 3=弱钩 4=全部）"
 traditional_chinese = "回放鉤子強弱範圍（0=自己 1=他人 2=強鉤 3=弱鉤 4=全部）"
 japanese = "デモのフック強弱の範囲（0=自分 1=他人 2=強フック 3=弱フック 4=全員）"
 korean = "데모 훅 강도 범위(0=나 1=다른 사람 2=강한 훅 3=약한 훅 4=전체)"
@@ -8705,7 +8705,7 @@ polish = "Włącz tryb Gores (zestaw narzędzi King of Gores)"
 [[message]]
 key = "Enable hook countdown"
 [message.translations]
-simplified_chinese = "启用钩索倒计时"
+simplified_chinese = "启用钩子倒计时"
 traditional_chinese = "啟用鉤子倒數"
 japanese = "フックのカウントダウンを有効にする"
 korean = "훅 카운트다운 사용"
@@ -11249,7 +11249,7 @@ polish = "Klawisz trybu Gores"
 [[message]]
 key = "Gores team drown board opacity"
 [message.translations]
-simplified_chinese = "Gores 团队落水榜不透明度"
+simplified_chinese = "Gores 队伍落水榜不透明度"
 traditional_chinese = "Gores 團隊落水榜不透明度"
 japanese = "Gores チーム溺死ボードの不透明度"
 korean = "Gores 팀 익사 보드 불투명도"
@@ -12513,7 +12513,7 @@ polish = "Asysta HJ"
 [[message]]
 key = "Hook interaction"
 [message.translations]
-simplified_chinese = "钩索交互"
+simplified_chinese = "钩子交互"
 traditional_chinese = "鉤子互動"
 japanese = "フックの相互作用"
 korean = "후크 상호작용"
@@ -16849,7 +16849,7 @@ polish = "Maksymalna liczba wyświetlanych powiadomień"
 [[message]]
 key = "Maximum players shown in the Gores team drown board"
 [message.translations]
-simplified_chinese = "Gores 团队落水榜显示的最大玩家数"
+simplified_chinese = "Gores 队伍落水榜显示的最大玩家数"
 traditional_chinese = "Gores 團隊落水榜顯示的玩家上限"
 japanese = "Gores チーム溺死ボードに表示するプレイヤー数の上限"
 korean = "Gores 팀 익사 보드에 표시할 최대 플레이어 수"
@@ -17617,7 +17617,7 @@ polish = "Liczba tabliczek z pełną jakością efektów; powyżej warstwy efekt
 [[message]]
 key = "Nameplate hook strength icon scope (0=Own 1=Others 2=Strong hook 3=Weak hook 4=All players)"
 [message.translations]
-simplified_chinese = "铭牌钩索强度图标范围（0=自己，1=他人，2=强钩，3=弱钩，4=所有玩家）"
+simplified_chinese = "铭牌钩子强度图标范围（0=自己，1=他人，2=强钩，3=弱钩，4=所有玩家）"
 traditional_chinese = "名牌鉤子強度圖標範圍（0=自己 1=他人 2=強鉤 3=弱鉤 4=所有玩家）"
 japanese = "ネームプレートフック強度アイコン範囲（0=自分 1=他人 2=強フック 3=弱フック 4=全プレイヤー）"
 korean = "이름표 갈고리 강도 아이콘 범위 (0=자신 1=타인 2=강한 갈고리 3=약한 갈고리 4=모든 플레이어)"
@@ -21057,7 +21057,7 @@ polish = "Sprawdź i zastosuj ustalony zestaw ustawień wyglądu"
 [[message]]
 key = "Preview hook collision colors and line styles"
 [message.translations]
-simplified_chinese = "预览钩索碰撞颜色和线条样式"
+simplified_chinese = "预览钩子碰撞颜色和线条样式"
 traditional_chinese = "Preview hook collision colors and line styles"
 japanese = "Preview hook collision colors and line styles"
 korean = "Preview hook collision colors and line styles"
@@ -26774,7 +26774,7 @@ polish = "Pokaż hitboxy interakcji Tee, mapy i broni"
 [[message]]
 key = "Show Tees in the Gores team drown board"
 [message.translations]
-simplified_chinese = "在 Gores 团队落水榜中显示 Tee"
+simplified_chinese = "在 Gores 队伍落水榜中显示 Tee"
 traditional_chinese = "在 Gores 團隊落水榜顯示 Tee"
 japanese = "Gores チーム溺死ボードにTeeを表示"
 korean = "Gores 팀 익사 보드에 Tee 표시"
@@ -26790,7 +26790,7 @@ polish = "Pokaż Tees na tablicy utonięć drużyny Gores"
 [[message]]
 key = "Show the Gores team drown board"
 [message.translations]
-simplified_chinese = "显示 Gores 团队落水榜"
+simplified_chinese = "显示 Gores 队伍落水榜"
 traditional_chinese = "顯示 Gores 團隊落水榜"
 japanese = "Gores チーム溺死ボードを表示"
 korean = "Gores 팀 익사 보드 표시"
@@ -28598,7 +28598,7 @@ polish = "Zacznij tutaj, aby szybko sprawdzić, czy problem leży po stronie urz
 [[message]]
 key = "Start holding the hook before loading the savegame to keep the hook"
 [message.translations]
-simplified_chinese = "如果想保留钩索状态，请在读档前先按住钩索"
+simplified_chinese = "如果想保留钩子状态，请在读档前先按住钩子"
 traditional_chinese = "如果想保留鉤子狀態，請在讀檔前先按住鉤子"
 japanese = "セーブをロードする前にフックを押し続けると、フック状態を保持できます"
 korean = "세이브를 불러오기 전에 훅을 누르고 있으면 훅 상태를 유지합니다"
@@ -37352,7 +37352,7 @@ polish = "Hak uderza w powierzchnię nie do zaczepienia"
 [[message]]
 key = "Hook loop"
 [message.translations]
-simplified_chinese = "钩索循环音"
+simplified_chinese = "钩子循环音"
 traditional_chinese = "鉤子循環音"
 japanese = "フックのループ音"
 korean = "갈고리 반복음"
@@ -37896,7 +37896,7 @@ polish = "Odtwarzany, gdy młotek trafia innego gracza."
 [[message]]
 key = "Played when the hook attaches to a hookable surface."
 [message.translations]
-simplified_chinese = "钩索抓住可钩表面时播放。"
+simplified_chinese = "钩子抓住可钩表面时播放。"
 traditional_chinese = "鉤子抓住可鉤表面時播放。"
 japanese = "フックがフック可能な表面に刺さったときに再生されます。"
 korean = "갈고리가 걸 수 있는 지형 표면에 꽂힐 때 재생됩니다."
@@ -37912,7 +37912,7 @@ polish = "Odtwarzany, gdy hak zaczepia się o powierzchnię możliwą do złapan
 [[message]]
 key = "Played when the hook attaches to another player."
 [message.translations]
-simplified_chinese = "钩索抓住其他玩家时播放。"
+simplified_chinese = "钩子抓住其他玩家时播放。"
 traditional_chinese = "鉤子抓住其他玩家時播放。"
 japanese = "フックが他のプレイヤーに刺さったときに再生されます。"
 korean = "갈고리가 다른 플레이어에게 걸릴 때 재생됩니다."
@@ -37928,7 +37928,7 @@ polish = "Odtwarzany, gdy hak zaczepia się o innego gracza."
 [[message]]
 key = "Played when the hook hits an unhookable surface."
 [message.translations]
-simplified_chinese = "钩索碰到不可钩表面时播放。"
+simplified_chinese = "钩子碰到不可钩表面时播放。"
 traditional_chinese = "鉤子碰到不可鉤表面時播放。"
 japanese = "フックがフック不可の表面に当たったときに再生されます。"
 korean = "갈고리가 걸 수 없는 표면에 부딪힐 때 재생됩니다."
@@ -38536,7 +38536,7 @@ polish = "Styl wskaźnika nieskończonego haka (0=symbol nieskończoności, 1=t�
 [[message]]
 key = "Hook countdown ring color"
 [message.translations]
-simplified_chinese = "钩索倒计时圆环颜色"
+simplified_chinese = "钩子倒计时圆环颜色"
 traditional_chinese = "鉤子倒數圓環顏色"
 japanese = "フックのカウントダウンリング色"
 korean = "훅 카운트다운 링 색상"
@@ -38552,7 +38552,7 @@ polish = "Kolor pierścienia odliczania haka"
 [[message]]
 key = "Hook countdown size percentage"
 [message.translations]
-simplified_chinese = "钩索倒计时尺寸百分比"
+simplified_chinese = "钩子倒计时尺寸百分比"
 traditional_chinese = "鉤子倒數尺寸百分比"
 japanese = "フックのカウントダウンサイズ（%）"
 korean = "훅 카운트다운 크기 백분율"
@@ -38568,7 +38568,7 @@ polish = "Procent rozmiaru odliczania haka"
 [[message]]
 key = "Hook countdown urgent color"
 [message.translations]
-simplified_chinese = "钩索倒计时紧急颜色"
+simplified_chinese = "钩子倒计时紧急颜色"
 traditional_chinese = "鉤子倒數緊急顏色"
 japanese = "フックのカウントダウン緊急色"
 korean = "훅 카운트다운 긴급 색상"
@@ -38584,7 +38584,7 @@ polish = "Kolor pilny odliczania haka"
 [[message]]
 key = "Hook countdown warning color"
 [message.translations]
-simplified_chinese = "钩索倒计时警告颜色"
+simplified_chinese = "钩子倒计时警告颜色"
 traditional_chinese = "鉤子倒數警告顏色"
 japanese = "フックのカウントダウン警告色"
 korean = "훅 카운트다운 경고 색상"
@@ -39144,7 +39144,7 @@ polish = "Siła maski wyostrzającej renderowania poz (0 = wyłączone)"
 [[message]]
 key = "Pressed hook collision line color when hitting a tee"
 [message.translations]
-simplified_chinese = "按住钩键时命中角色的钩索辅助线颜色"
+simplified_chinese = "按住钩键时命中角色的钩子辅助线颜色"
 traditional_chinese = "按住鉤鍵時命中角色的鉤子輔助線顏色"
 japanese = "フックキー押下時にTeeに当たったときのフック補助線の色"
 korean = "훅 키를 누를 때 Tee에 닿았을 때의 훅 보조선 색상"
@@ -39160,7 +39160,7 @@ polish = "Kolor linii haka przy wciśniętym klawiszu przy trafieniu w tee"
 [[message]]
 key = "Pressed hook collision line color when hitting something hookable"
 [message.translations]
-simplified_chinese = "按住钩键时命中可钩物体的钩索辅助线颜色"
+simplified_chinese = "按住钩键时命中可钩物体的钩子辅助线颜色"
 traditional_chinese = "按住鉤鍵時命中可鉤物體的鉤子輔助線顏色"
 japanese = "フックキー押下時にフック可能な物体に当たったときのフック補助線の色"
 korean = "훅 키를 누를 때 훅 가능한 물체에 닿았을 때의 훅 보조선 색상"
@@ -39176,7 +39176,7 @@ polish = "Kolor linii haka przy wciśniętym klawiszu przy trafieniu w coś zacz
 [[message]]
 key = "Pressed hook collision line color when not aiming at anything hookable"
 [message.translations]
-simplified_chinese = "按住钩键时未瞄准可钩物体的钩索辅助线颜色"
+simplified_chinese = "按住钩键时未瞄准可钩物体的钩子辅助线颜色"
 traditional_chinese = "按住鉤鍵時未瞄準可鉤物體的鉤子輔助線顏色"
 japanese = "フックキー押下時にフック可能な物体を狙っていないときのフック補助線の色"
 korean = "훅 키를 누를 때 훅 가능한 물체를 겨누지 않았을 때의 훅 보조선 색상"
@@ -39192,7 +39192,7 @@ polish = "Kolor linii haka przy wciśniętym klawiszu, gdy nic zaczepialnego nie
 [[message]]
 key = "Pressed hook line tip color"
 [message.translations]
-simplified_chinese = "按下时的钩索辅助线尖端颜色"
+simplified_chinese = "按下时的钩子辅助线尖端颜色"
 traditional_chinese = "按下時的鉤子輔助線尖端顏色"
 japanese = "押下時のフック補助線の先端の色"
 korean = "누를 때 훅 보조선 끝 색상"
@@ -39240,7 +39240,7 @@ polish = "Ujednolicona jakość eksportu (skala CRF/CQ/QP 0-51, -1 = użyj cl_vi
 [[message]]
 key = "Use custom colors for the pressed hook collision line (0 = always invert)"
 [message.translations]
-simplified_chinese = "按下钩键时使用自定义钩索辅助线颜色（0 = 始终反色）"
+simplified_chinese = "按下钩键时使用自定义钩子辅助线颜色（0 = 始终反色）"
 traditional_chinese = "按下鉤鍵時使用自訂鉤子輔助線顏色（0 = 始終反色）"
 japanese = "フックキー押下時にカスタムカラーを使用（0 = 常に反転）"
 korean = "훅 키를 누를 때 사용자 지정 색상 사용 (0 = 항상 반전)"

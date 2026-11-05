@@ -38,10 +38,10 @@
 == 锤子模式即使两个动画都关掉也照样生效；如果锤子一直跟着光标转，先检查这一项。
 
 "Hide player messages" removes the whole line, including team chat that merely mentions a blocked word.
-== 隐藏玩家消息会整行删掉，连只是在团队聊天里提到屏蔽词的整句也一起消失。
+== 隐藏玩家消息会整行删掉，连只是在队伍聊天里提到屏蔽词的整句也一起消失。
 
 "Hook strength scope" limits which players get the marker, so pick "All" if it seems missing.
-== 钩索强度范围决定哪些玩家带标记，看不到标记时选全部。
+== 钩子强度范围决定哪些玩家带标记，看不到标记时选全部。
 
 "Ingame mouse sens." changes your aim, so adjust it in small steps and test it on a warm-up map.
 == 游戏内鼠标灵敏度会直接影响瞄准，一次只改一点，然后去热身图里试。
@@ -450,7 +450,7 @@ Active: Fire
 == 当前：开火
 
 Active: Hook
-== 当前：钩索
+== 当前：钩子
 
 Add
 == 添加
@@ -678,7 +678,7 @@ Adds dummy key, hammer, control and copy status to the HUD, plus your own bind s
 == 在 HUD 上显示分身的按键、锤子、控制与同步状态，并支持自定义 bind 状态列表。
 
 Adds HUD lines for alive time, rescue and freeze counts and hook left/right ratio, plus a map progress bar.
-== 增加 HUD 行，显示存活时间、救援与冻结次数、钩索左右比例，另加地图进度条。
+== 增加 HUD 行，显示存活时间、救援与冻结次数、钩子左右比例，另加地图进度条。
 
 Adds HUD rows for stuck keys, hammer state, dummy control and dummy copy status.
 == 增加 HUD 行，显示卡键、锤子状态、分身控制和分身同步状态。
@@ -897,10 +897,10 @@ Always show nameplates regardless of distance
 == 无论距离如何，始终显示铭牌
 
 Always show other players' hook collision lines
-== 始终显示其他玩家的钩索辅助线
+== 始终显示其他玩家的钩子辅助线
 
 Always show own player's hook collision line
-== 始终显示自己的钩索辅助线
+== 始终显示自己的钩子辅助线
 
 Always show song title and artist
 == 始终显示歌名歌手
@@ -1029,7 +1029,7 @@ Applied to %d same-family part(s).
 == 已应用到 %d 个同族部件。
 
 Applies an animated rainbow color to selected elements such as nameplates or the hook.
-== 为名牌、钩索等选定元素加上流动的彩虹色。
+== 为名牌、钩子等选定元素加上流动的彩虹色。
 
 Apply
 == 应用
@@ -1791,7 +1791,7 @@ Bind key to execute a command or view keybindings
 == 绑定按键以执行命令或查看按键绑定
 
 Bind movement, jump, hook, and fire actions
-== 绑定移动、跳跃、钩索和开火操作
+== 绑定移动、跳跃、钩子和开火操作
 
 Bind only to IPv4, otherwise bind to all interfaces
 == 仅绑定到 IPv4，否则绑定到所有接口
@@ -2592,7 +2592,7 @@ Click the key field next to "Vote yes" and "Vote no" and press the key you want 
 == 点赞成和反对旁边的按键栏，分别为它们按下想用的键。
 
 Click the key field next to an action such as "Jump" or "Hook" and press the key you want; a waiting field takes your next key.
-== 点跳跃或钩索这类动作旁边的按键栏，再按下想用的键；处于等待状态的按键栏会接收你下一个按键。
+== 点跳跃或钩子这类动作旁边的按键栏，再按下想用的键；处于等待状态的按键栏会接收你下一个按键。
 
 Click the key field next to an action such as "Scoreboard", "Spectate mode" or "Pie menu" and press the key you want.
 == 点计分板、观战模式或饼菜单这类动作旁边的按键栏，按下想用的键。
@@ -2709,16 +2709,16 @@ Color of authenticated player names on scoreboard
 == 计分板中已认证玩家的名称颜色
 
 Color of hook collision line tip segment
-== 钩索辅助线末端线段的颜色
+== 钩子辅助线末端线段的颜色
 
 Color of hook line hitting hookable tile
-== 击中可钩图块时的钩索线颜色
+== 击中可钩图块时的钩子线颜色
 
 Color of hook line hitting tee
-== 击中 Tee 时的钩索线颜色
+== 击中 Tee 时的钩子线颜色
 
 Color of hook line not hitting anything
-== 未击中任何物体时的钩索线颜色
+== 未击中任何物体时的钩子线颜色
 
 Color picker saturation/value area shape: 0=square, 1=wheel
 == 取色器饱和度/明度区域形态：0=方图，1=色环
@@ -2748,7 +2748,7 @@ Colors for chat command and emoji completion
 == 聊天指令和表情补全的配色
 
 Colors of the hook collision line, in case of a possible collision with:
-== 钩索辅助线颜色（瞄准以下目标时）：
+== 钩子辅助线颜色（瞄准以下目标时）：
 
 Colors of the translate button in the chat input and of the language menu that button opens.
 == 聊天输入框里翻译按钮的颜色，以及该按钮打开的语言菜单的颜色。
@@ -2937,7 +2937,7 @@ Configure HJ unfreeze assistance
 == 配置 HJ 解冻辅助
 
 Configure hook range and collision guide lines
-== 配置钩索范围和碰撞引导线
+== 配置钩子范围和碰撞引导线
 
 Configure HUD island appearance
 == 配置 HUD 灵动岛外观
@@ -2985,7 +2985,7 @@ Configure the companion appearance and movement
 == 配置伙伴的外观和移动
 
 Configure the Gores team drown board
-== 配置 Gores 团队落水榜
+== 配置 Gores 队伍落水榜
 
 Configure the IME candidate bar
 == 配置 IME 候选栏
@@ -3006,7 +3006,7 @@ Configure UI icon appearance
 == 配置界面图标外观
 
 Configures the hook range and collision guide lines drawn around your Tee.
-== 设置钩索范围，以及围绕你的 Tee 绘制的碰撞辅助线。
+== 设置钩子范围，以及围绕你的 Tee 绘制的碰撞辅助线。
 
 Configures the main HUD: health, ammo, timer, race progress and their positions.
 == 配置主 HUD：生命值、弹药、计时器、竞速进度及其位置。
@@ -3633,7 +3633,7 @@ DDNet Client needs to be restarted to complete update!
 == DDNet 客户端需要重新启动才能完成更新！
 
 DDNet contributors and staff credits
-== DDNet 贡献者与团队名单
+== DDNet 贡献者与队伍名单
 
 DDNet Memory
 == DDNet 内存
@@ -3900,10 +3900,10 @@ Demo export segment length in seconds (0 = single file, 300 = 5 minutes)
 == demo 导出分段时长（秒）（0 = 单文件，300 = 5 分钟）
 
 Demo hook strength (0=Off 1=Icon 2=Icon and number)
-== 回放钩索强弱（0=关闭 1=图标 2=图标与数字）
+== 回放钩子强弱（0=关闭 1=图标 2=图标与数字）
 
 Demo hook strength scope (0=Own 1=Others 2=Strong 3=Weak 4=All)
-== 回放钩索强弱范围（0=自己 1=他人 2=强钩 3=弱钩 4=全部）
+== 回放钩子强弱范围（0=自己 1=他人 2=强钩 3=弱钩 4=全部）
 
 Demo key presses (0=Off 1=Others 2=All 3=Own)
 == 回放按键显示（0=关闭 1=他人 2=全部 3=自己）
@@ -4323,7 +4323,7 @@ Draws a small second view of your other tee in the HUD, so you can watch both te
 == 在 HUD 上画出另一个分身的第二视角小窗，让你能同时盯住两个 Tee。
 
 Draws collision and interaction ranges on the map: tee collision, pickups, hammer, hook, lasers and explosions.
-== 在地图上画出碰撞与交互范围：Tee 碰撞、拾取物、锤子、钩索、激光和爆炸。
+== 在地图上画出碰撞与交互范围：Tee 碰撞、拾取物、锤子、钩子、激光和爆炸。
 
 Draws drifting 3D shapes such as cubes, hearts or rings in the background, with size, speed, color and glow.
 == 在背景中绘制漂浮的 3D 形状，如立方体、爱心或圆环，可调大小、速度、颜色和辉光。
@@ -4857,7 +4857,7 @@ Enable highlighted chat sound
 == 启用聊天被提及消息提示音
 
 Enable hook countdown
-== 启用钩索倒计时
+== 启用钩子倒计时
 
 Enable HUD animations
 == 启用 HUD 动画
@@ -4950,7 +4950,7 @@ Enable QQ Music lyrics
 == 启用 QQ 音乐 歌词
 
 Enable rainbow rendering for hook
-== 启用钩索彩虹渲染
+== 启用钩子彩虹渲染
 
 Enable rainbow rendering for other players' Tees
 == 对其他玩家也启用 Tee 彩虹渲染
@@ -5136,7 +5136,7 @@ Enable Zen mode
 == 启用禅模式
 
 Enable/disable infinite hook.
-== 启用/禁用无限钩索
+== 启用/禁用无限钩子
 
 Enable/disable quad alignment. When enabled, red lines show how moving quads/points align and snap to others
 == 启用/禁用四边形对齐。启用后，红线显示移动四边形/点时如何对齐并捕捉到其他四边形/点
@@ -6225,7 +6225,7 @@ Gives you as many jumps as you specify
 == 给予你指定次数的跳跃
 
 Gives you endless hook
-== 给予你无限钩索
+== 给予你无限钩子
 
 Gives you infinite jump
 == 给你无限跳
@@ -6312,7 +6312,7 @@ Gores mode key
 == Gores 模式按键
 
 Gores team drown board opacity
-== Gores 团队落水榜不透明度
+== Gores 队伍落水榜不透明度
 
 Gores · Axiom
 == Gores · Axiom
@@ -6420,7 +6420,7 @@ Guide line color
 == 辅助线颜色
 
 Guide lines are computed locally and do not guarantee that a hook will connect.
-== 辅助线仅在本地计算，不能保证钩索一定成功。
+== 辅助线仅在本地计算，不能保证钩子一定成功。
 
 Gun fire
 == 手枪射击
@@ -6735,7 +6735,7 @@ Hold the wheel key to see the selection move; release it to run the highlighted 
 == 按住轮盘键可以看到选中项移动，松开即执行高亮的槽位。
 
 Hook
-== 钩索
+== 钩子
 
 Hook attaches to ground
 == 钩中地形
@@ -6747,13 +6747,13 @@ Hook collision line
 == 钩子辅助线
 
 Hook collision line alpha (0 invisible, 100 fully visible)
-== 钩索辅助线不透明度（0 不可见，100 完全可见）
+== 钩子辅助线不透明度（0 不可见，100 完全可见）
 
 Hook collision line length follows cursor distance
-== 钩索辅助线长度跟随光标距离
+== 钩子辅助线长度跟随光标距离
 
 Hook collision line opacity
-== 钩索辅助线不透明度
+== 钩子辅助线不透明度
 
 Hook Collisions
 == 钩子辅助线
@@ -6762,43 +6762,43 @@ Hook collisions
 == 钩子辅助线
 
 Hook countdown colors
-== 钩索倒计时颜色
+== 钩子倒计时颜色
 
 Hook countdown ring color
-== 钩索倒计时圆环颜色
+== 钩子倒计时圆环颜色
 
 Hook countdown size
-== 钩索倒计时尺寸
+== 钩子倒计时尺寸
 
 Hook countdown size percentage
-== 钩索倒计时尺寸百分比
+== 钩子倒计时尺寸百分比
 
 Hook countdown urgent color
-== 钩索倒计时紧急颜色
+== 钩子倒计时紧急颜色
 
 Hook countdown warning color
-== 钩索倒计时警告颜色
+== 钩子倒计时警告颜色
 
 Hook hits unhookable surface
 == 钩到不可钩表面
 
 Hook interaction
-== 钩索交互
+== 钩子交互
 
 Hook line tip
 == 辅助线提示
 
 Hook loop
-== 钩索循环音
+== 钩子循环音
 
 Hook Strength
-== 钩索强度
+== 钩子强度
 
 Hook strength scope
-== 钩索强度范围
+== 钩子强度范围
 
 Hook through teleporters (deprecated, use special entities instead)
-== 钩索穿过传送器（已弃用，请改用特殊实体）
+== 钩子穿过传送器（已弃用，请改用特殊实体）
 
 Hookable/Unhookable tile outline color
 == 可钩/不可钩图块轮廓颜色
@@ -7125,7 +7125,7 @@ Indicators that read game state can lag behind the server; do not rely on them f
 == 读取游戏状态的指示可能比服务器滞后；不要依赖它们做逐帧精确的输入。
 
 Infinite hook for super players on/off.
-== 超级玩家无限钩索开/关
+== 超级玩家无限钩子开/关
 
 Infinity symbol
 == 无限符号
@@ -7473,7 +7473,7 @@ Kawase
 == Kawase
 
 Keep hook when teleporting
-== 传送时保持钩索
+== 传送时保持钩子
 
 Keep it small and in a corner; a large overlay covers the map and hides what matters.
 == 保持较小并放在角落；过大的浮层会遮住地图，把重要的东西挡住。
@@ -7548,10 +7548,10 @@ Keyframe interval (GOP):
 == 关键帧间隔 (GOP):
 
 Keys for moving, jumping, firing and hooking, plus camera zoom and visibility shortcuts.
-== 移动、跳跃、开火和钩索的按键，还有镜头缩放和显示相关的快捷键。
+== 移动、跳跃、开火和钩子的按键，还有镜头缩放和显示相关的快捷键。
 
 Keys for your second tee: switching to it, making it jump, fire or hook, and copying your moves.
-== 第二个 tee 的按键：切换到它、让它跳跃、开火或钩索，以及复制你的操作。
+== 第二个 tee 的按键：切换到它、让它跳跃、开火或钩子，以及复制你的操作。
 
 Keys that open chat, team chat and chat commands, plus voice chat and repeating your last line.
 == 打开聊天、队伍聊天和聊天指令的按键，还有语音聊天和重复上一句话的按键。
@@ -8553,7 +8553,7 @@ Maximum players participating in a vote (0 = unlimited)
 == 最多可有多少玩家参与投票（0 = 无限制）
 
 Maximum players shown in the Gores team drown board
-== Gores 团队落水榜显示的最大玩家数
+== Gores 队伍落水榜显示的最大玩家数
 
 Maximum reduction
 == 最大降低量
@@ -8883,7 +8883,7 @@ Mute hammer sounds
 == 静音锤击
 
 Mute hook sound
-== 静音钩索音效
+== 静音钩子音效
 
 Mute jump sound in Zen Mode
 == 禅模式下静音跳跃音效
@@ -9021,7 +9021,7 @@ Nameplate count that still keeps full text effect quality; beyond it effect laye
 == 仍保持完整文字特效质量的名牌数量上限；超过后特效层数按人数递减（越大保留越多）
 
 Nameplate hook strength icon scope (0=Own 1=Others 2=Strong hook 3=Weak hook 4=All players)
-== 铭牌钩索强度图标范围（0=自己，1=他人，2=强钩，3=弱钩，4=所有玩家）
+== 铭牌钩子强度图标范围（0=自己，1=他人，2=强钩，3=弱钩，4=所有玩家）
 
 Nameplate nickname scope (0=None 1=Current character 2=Own characters 3=Other players 4=Other players and own non-current characters 5=All)
 == 昵称显示范围（0=无 1=当前角色 2=自己的角色 3=其他玩家 4=其他玩家与自己未操控的角色 5=全体）
@@ -9385,6 +9385,9 @@ No player nearby
 
 No player with this name found.
 == 没有找到这个名字的玩家
+
+No players match
+== 没有匹配的玩家
 
 No players match these filters
 == 没有符合筛选条件的玩家
@@ -9897,7 +9900,7 @@ Other modes
 == 其他模式
 
 Other players' hook line width
-== 其他玩家的钩索辅助线宽度
+== 其他玩家的钩子辅助线宽度
 
 Other sounds
 == 其他音效
@@ -9996,7 +9999,7 @@ Overwrite clan even if empty
 == 即使战队为空也覆盖
 
 Own hook line width
-== 自己的钩索辅助线宽度
+== 自己的钩子辅助线宽度
 
 Own team only
 == 仅显示同队伍
@@ -10365,13 +10368,13 @@ Played when the hammer hits another player.
 == 锤子命中其他玩家时播放。
 
 Played when the hook attaches to a hookable surface.
-== 钩索抓住可钩表面时播放。
+== 钩子抓住可钩表面时播放。
 
 Played when the hook attaches to another player.
-== 钩索抓住其他玩家时播放。
+== 钩子抓住其他玩家时播放。
 
 Played when the hook hits an unhookable surface.
-== 钩索碰到不可钩表面时播放。
+== 钩子碰到不可钩表面时播放。
 
 Played when using the second jump in the air.
 == 在空中使用二段跳时播放。
@@ -10542,10 +10545,10 @@ Players can't use the Callvote menu tab to kick offenders
 == 玩家不能通过 Callvote 菜单发起踢人投票
 
 Players hook time is limited
-== 本服务器的钩索时长受限制
+== 本服务器的钩子时长受限制
 
 Players hook time is unlimited
-== 本服务器的钩索时长不受限制
+== 本服务器的钩子时长不受限制
 
 Players shown
 == 显示的玩家数
@@ -10779,19 +10782,19 @@ Press F2, log in, then use: change_map map_name
 == 按 F2 登录管理后，输入：change_map 地图名
 
 Pressed hook collision line color when hitting a tee
-== 按住钩键时命中角色的钩索辅助线颜色
+== 按住钩键时命中角色的钩子辅助线颜色
 
 Pressed hook collision line color when hitting something hookable
-== 按住钩键时命中可钩物体的钩索辅助线颜色
+== 按住钩键时命中可钩物体的钩子辅助线颜色
 
 Pressed hook collision line color when not aiming at anything hookable
-== 按住钩键时未瞄准可钩物体的钩索辅助线颜色
+== 按住钩键时未瞄准可钩物体的钩子辅助线颜色
 
 Pressed hook line color; always used when custom pressed colors are enabled
 == 按下后颜色；开启自定义按下后颜色时始终生效
 
 Pressed hook line tip color
-== 按下时的钩索辅助线尖端颜色
+== 按下时的钩子辅助线尖端颜色
 
 Pressed: A Tee
 == 按下后：其他玩家
@@ -10815,7 +10818,7 @@ Preview
 == 预览
 
 Preview 'Hook collisions' being pressed
-== 预览按下时的钩索辅助线
+== 预览按下时的钩子辅助线
 
 Preview and apply a fixed appearance preset
 == 查看并应用固定的外观预设
@@ -10833,7 +10836,7 @@ Preview dummy nameplate
 == 预览分身名牌
 
 Preview hook collision colors and line styles
-== 预览钩索碰撞颜色和线条样式
+== 预览钩子碰撞颜色和线条样式
 
 Preview import file
 == 试听导入文件
@@ -10881,7 +10884,7 @@ Preview visibilities
 == 预览可见度
 
 Previews hook collision colors and line styles.
-== 预览钩索碰撞的颜色和线条样式。
+== 预览钩子碰撞的颜色和线条样式。
 
 Previews laser bodies, outlines and impacts.
 == 预览激光的主体、外框与命中效果。
@@ -11205,7 +11208,7 @@ Rainbow card titles
 == 卡片标题彩虹流动
 
 Rainbow hook
-== 彩虹色钩索
+== 彩虹色钩子
 
 Rainbow mode (1=Rainbow, 2=Pulse, 3=Dark, 4=Random)
 == 彩虹模式（1=彩虹，2=脉冲，3=暗色，4=随机）
@@ -11676,7 +11679,7 @@ Removes all weapons from you
 == 移除你身上的所有武器
 
 Removes endless hook from you
-== 移除你的无限钩索
+== 移除你的无限钩子
 
 Removes infinite jump from you
 == 消除你的无限跳
@@ -12045,7 +12048,7 @@ Restore Kugou files
 == 恢复酷狗原始文件
 
 Restore old single-segment hook collision line behavior
-== 恢复旧版单段钩索辅助线行为
+== 恢复旧版单段钩子辅助线行为
 
 Restore recommended
 == 恢复推荐
@@ -13389,13 +13392,13 @@ Show hitbox mode
 == 显示碰撞箱模式
 
 Show Hook Collision
-== 显示钩索辅助线
+== 显示钩子辅助线
 
 Show hook strength icon indicator
-== 显示钩索强度图标
+== 显示钩子强度图标
 
 Show hook strength number indicator
-== 显示钩索强度数值
+== 显示钩子强度数值
 
 Show hookable/unhookable tile outlines
 == 显示可钩/不可钩图块轮廓
@@ -13650,13 +13653,13 @@ Show other players' coordinates
 == 显示他人坐标
 
 Show other players' hook collision lines
-== 显示其他玩家的钩索辅助线
+== 显示其他玩家的钩子辅助线
 
 Show other players' hook collision lines (2 always shown)
-== 显示其他玩家的钩索辅助线（2 始终显示）
+== 显示其他玩家的钩子辅助线（2 始终显示）
 
 Show other players' hook collision lines when rendering video
-== 渲染视频时显示其他玩家的钩索辅助线
+== 渲染视频时显示其他玩家的钩子辅助线
 
 Show other players' large emoticons
 == 显示他人的超大表情
@@ -13695,7 +13698,7 @@ Show own coordinates
 == 显示自己坐标
 
 Show own hook collision lines (2 always shown)
-== 显示自己的钩索辅助线（2 始终显示）
+== 显示自己的钩子辅助线（2 始终显示）
 
 Show own nameplate coordinates
 == 显示自己的铭牌坐标
@@ -13704,7 +13707,7 @@ Show own nametag (for demo recording)
 == 显示自己的铭牌（用于回放录制）
 
 Show own player's hook collision line
-== 显示自己的钩索辅助线
+== 显示自己的钩子辅助线
 
 Show path
 == 显示路径
@@ -13914,7 +13917,7 @@ Show Tee trail for others
 == 为其他玩家显示 Tee 轨迹
 
 Show Tees in the Gores team drown board
-== 在 Gores 团队落水榜中显示 Tee
+== 在 Gores 队伍落水榜中显示 Tee
 
 Show teleporter tile outlines
 == 显示传送图块轮廓
@@ -13929,7 +13932,7 @@ Show the cursor while free spectating
 == 自由观战时显示光标
 
 Show the Gores team drown board
-== 显示 Gores 团队落水榜
+== 显示 Gores 队伍落水榜
 
 Show the number of frozen tees
 == 显示冻结 Tee 的数量
@@ -14166,7 +14169,7 @@ Size of entity text data (20% to 100%)
 == 实体文本数据的大小（20% 到 100%）
 
 Size of hook strength icon and number indicator
-== 钩索强度图标与数值的大小
+== 钩子强度图标与数值的大小
 
 Size of key press icons
 == 按键显示图标大小
@@ -14643,7 +14646,7 @@ Start here to quickly diagnose if the issue is with device, server, or room
 == 先看这里，可以快速判断卡在设备、服务器还是房间
 
 Start holding the hook before loading the savegame to keep the hook
-== 如果想保留钩索状态，请在读档前先按住钩索
+== 如果想保留钩子状态，请在读档前先按住钩子
 
 Start marker of replay slice
 == 回放切片的开始标记
@@ -14889,7 +14892,7 @@ Swap option color
 == 交换选项颜色
 
 Swaps the active action (fire and hook) for direct touch input and virtual joysticks.
-== 切换触控输入和虚拟摇杆的当前动作（开火和钩索）。
+== 切换触控输入和虚拟摇杆的当前动作（开火和钩子）。
 
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 == 开关倒计时位置（0 = 跟随 Tee，1 = 灵动岛，2 = 两者）
@@ -15930,7 +15933,7 @@ Toggles hit others
 == 切换打别人
 
 Toggles hook collision
-== 切换钩索辅助线
+== 切换钩子辅助线
 
 Toggles invincible mode
 == 切换无敌模式
@@ -16245,7 +16248,7 @@ Turn on "Show chat bubbles above players", then adjust "Duration", "Bubble opaci
 == 打开在玩家头顶显示聊天气泡，再调显示时长、气泡不透明度和字号，也可以自己选颜色。
 
 Turn on "Show hook strength icon indicator", optionally add "Show hook strength number indicator", then choose a "Hook strength scope".
-== 打开显示钩索强度图标，需要的话再开显示钩索强度数值，然后选择钩索强度范围。
+== 打开显示钩子强度图标，需要的话再开显示钩子强度数值，然后选择钩子强度范围。
 
 Turn on "Show important server prompts as notifications" or "Route Echo messages to notifications", then set "Notification hold time" and "Notification text size".
 == 打开把重要服务器提示显示为通知或把 Echo 消息转发到通知，再设置每条显示多久和通知文字大小。
@@ -16296,7 +16299,7 @@ Tutorial
 == 教学
 
 Tweaks the top HUD pill and its extras: background color, team, song title, hook and switch countdowns.
-== 调整顶部 HUD 胶囊及其附加内容：背景色、队伍、歌曲标题、钩索和切换倒计时。
+== 调整顶部 HUD 胶囊及其附加内容：背景色、队伍、歌曲标题、钩子和切换倒计时。
 
 Twinkle strength
 == 闪烁强度
@@ -16677,7 +16680,7 @@ Use alternative antiping smoothing, incompatible with cl_antiping_smooth
 == 使用另一套 antiping 平滑算法，与 cl_antiping_smooth 不兼容
 
 Use alternative world tick calculation making hooks behave as if all players have Strong.
-== 使用替代的世界 tick 计算，使钩索表现得像所有玩家都拥有强钩。
+== 使用替代的世界 tick 计算，使钩子表现得像所有玩家都拥有强钩。
 
 Use animated title style (overrides qm_title_color_mode)
 == 使用头衔动态风格（覆盖 qm_title_color_mode）
@@ -16704,7 +16707,7 @@ Use custom colors
 == 使用自定义颜色
 
 Use custom colors for the pressed hook collision line (0 = always invert)
-== 按下钩键时使用自定义钩索辅助线颜色（0 = 始终反色）
+== 按下钩键时使用自定义钩子辅助线颜色（0 = 始终反色）
 
 Use custom skins instead of the ninja tee
 == 使用自定义皮肤代替忍者 Tee
@@ -16815,7 +16818,7 @@ Use Tee icons instead of circles
 == 用 Tee 图标代替圆圈
 
 Use the custom colors below while the hook key is held
-== 按住钩索键时使用下方的自定义颜色
+== 按住钩子键时使用下方的自定义颜色
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == 将鼠标悬停在 HUD 模块上并滚动滚轮可按 5% 缩放
@@ -16977,7 +16980,7 @@ Virtual joystick which always uses fire.
 == 始终用于开火的虚拟摇杆。
 
 Virtual joystick which always uses hook.
-== 始终用于钩索的虚拟摇杆。
+== 始终用于钩子的虚拟摇杆。
 
 Virtual joystick which only aims and moves the mouse pointer relatively.
 == 仅用于瞄准并相对移动鼠标指针的虚拟摇杆。
@@ -17442,7 +17445,7 @@ Width of name column in server browser
 == 服务器浏览器中名称列的宽度
 
 Width of others' hook collision line
-== 其他玩家的钩索辅助线宽度
+== 其他玩家的钩子辅助线宽度
 
 Width of players column in server browser
 == 服务器浏览器中玩家列的宽度
@@ -17454,7 +17457,7 @@ Width of type column in server browser
 == 服务器浏览器中类型列的宽度
 
 Width of your own hook collision line
-== 自己的钩索辅助线宽度
+== 自己的钩子辅助线宽度
 
 Wiki storage is not available
 == 无法访问 Wiki 存储
@@ -18060,7 +18063,7 @@ Fire
 
 [Direct touch input]
 Hook
-== 钩索
+== 钩子
 
 [Direct touch input]
 Relative aim
@@ -18532,7 +18535,7 @@ Blue Check-Tele
 
 [Editor]
 BLUE CHECKPOINT TELEPORT: Sends tees to CTO with the same number as the last touched TELEPORT CHECKPOINT. Speed and hook are kept.
-== 蓝色检查点传送: 将tee传送到与最后接触的传送检查点相同编号的CTO.速度和钩索保持不变.
+== 蓝色检查点传送: 将tee传送到与最后接触的传送检查点相同编号的CTO.速度和钩子保持不变.
 
 [Editor]
 BLUE SPIKE: Blue team spikes. Gives negative points when killer is in red team. Amount of points given is set inside the server.
@@ -18540,7 +18543,7 @@ BLUE SPIKE: Blue team spikes. Gives negative points when killer is in red team. 
 
 [Editor]
 BLUE TELEPORT: After falling into this tile, tees appear on TO with the same number. Speed and hook are kept.
-== 蓝色传送: 掉入此图块后,tee会出现在相同编号的TO上.速度和钩索保持不变.
+== 蓝色传送: 掉入此图块后,tee会出现在相同编号的TO上.速度和钩子保持不变.
 
 [Editor]
 Blue value of the envelope.
@@ -19316,11 +19319,11 @@ End%
 
 [Editor]
 ENDLESS HOOK OFF: Deactivates endless hook.
-== 无限钩关闭: 禁用无限钩索.
+== 无限钩关闭: 禁用无限钩子.
 
 [Editor]
 ENDLESS HOOK: Activates endless hook.
-== 无限钩: 激活无限钩索.
+== 无限钩: 激活无限钩子.
 
 [Editor]
 Enter a room code to join a collaboration room.
@@ -19824,7 +19827,7 @@ GLOBAL COLLISION OFF: Nobody can collide with others. Place only one tile somewh
 
 [Editor]
 GLOBAL ENDLESS HOOK ON: Everyone has endless hook. Place only one tile somewhere on the map.
-== 全局开启无限钩: 所有人都有无限钩索.只在地图某处放置一个图块.
+== 全局开启无限钩: 所有人都有无限钩子.只在地图某处放置一个图块.
 
 [Editor]
 GLOBAL HIT OTHERS OFF: Nobody can hit others. Place only one tile somewhere on the map.
@@ -19944,7 +19947,7 @@ HOOK OTHERS: You can hook others.
 
 [Editor]
 HOOK TELEPORT: Teleports hooks entering into it to TELEPORT TO, where it comes out. Direction, angle and length are kept.
-== 钩索传送: 将进入其中的钩索传送到传送目标,从那里伸出.方向、角度和长度保持不变.
+== 钩子传送: 将进入其中的钩子传送到传送目标,从那里伸出.方向、角度和长度保持不变.
 
 [Editor]
 Hookable
@@ -19964,11 +19967,11 @@ HOOKTHROUGH: Combined with (UN)HOOKABLE tiles, allows to hook through the walls.
 
 [Editor]
 HOOKTHROUGH: Combined with a collision tile is new hookthrough, otherwise stops hook, from one direction.
-== 钩穿: 与碰撞图块结合是新钩穿,否则从一个方向阻止钩索.
+== 钩穿: 与碰撞图块结合是新钩穿,否则从一个方向阻止钩子.
 
 [Editor]
 HOOKTHROUGH: Combined with a collision tile is new hookthrough, otherwise stops hooks, from all directions.
-== 钩穿: 与碰撞图块结合是新钩穿,否则从所有方向阻止钩索.
+== 钩穿: 与碰撞图块结合是新钩穿,否则从所有方向阻止钩子.
 
 [Editor]
 HOOKTHROUGH: Shortcut for new hookthrough.
@@ -20212,7 +20215,7 @@ Live Freeze
 
 [Editor]
 LIVE FREEZE: Live frozen tees cannot move or jump, while hook and weapons can still be used.
-== 实时冻结: 实时冻结的tee无法移动或跳跃,但仍可使用钩索和武器.
+== 实时冻结: 实时冻结的tee无法移动或跳跃,但仍可使用钩子和武器.
 
 [Editor]
 Live Gametiles
@@ -20664,7 +20667,7 @@ Red Check-Tele
 
 [Editor]
 RED CHECKPOINT TELEPORT: Send tees to CTO with the same number as the last touched TELEPORT CHECKPOINT. Speed and hook are reset.
-== 红色检查点传送: 将tee传送到与最后接触的传送检查点相同编号的CTO.速度和钩索被重置.
+== 红色检查点传送: 将tee传送到与最后接触的传送检查点相同编号的CTO.速度和钩子被重置.
 
 [Editor]
 RED SPIKE: Red team spikes. Gives negative points when killer is in blue team. Amount of points given is set inside the server.
@@ -20672,7 +20675,7 @@ RED SPIKE: Red team spikes. Gives negative points when killer is in blue team. A
 
 [Editor]
 RED TELEPORT: After falling into this tile, tees appear on TO with the same number. Speed and hooks are reset.
-== 红色传送: 掉入此图块后,tee会出现在相同编号的TO上.速度和钩索被重置.
+== 红色传送: 掉入此图块后,tee会出现在相同编号的TO上.速度和钩子被重置.
 
 [Editor]
 Red value of the envelope.
@@ -21308,11 +21311,11 @@ Stop audio preview.
 
 [Editor]
 STOPPER: You can hook and shoot through it. You can't go through it against the arrow.
-== 阻挡器: 你可以使用钩索和武器穿过它.但逆着箭的方向是无法穿透它的.
+== 阻挡器: 你可以使用钩子和武器穿过它.但逆着箭的方向是无法穿透它的.
 
 [Editor]
 STOPPER: You can hook and shoot through it. You can't go through it.
-== 阻挡器: 你可以使用钩索和武器穿过它.但是你不能通过它.
+== 阻挡器: 你可以使用钩子和武器穿过它.但是你不能通过它.
 
 [Editor]
 SUPER JUMP OFF: You don't have unlimited air jumps.
@@ -21480,7 +21483,7 @@ TELELASER: Turn laser on as telegun weapon.
 
 [Editor]
 TELEPORT TO: Destination tile for FROMs, WEAPON & HOOK TELEPORTs with the same numbers.
-== 传送目标: 相同编号的FROM、武器和钩索传送的目标图块.
+== 传送目标: 相同编号的FROM、武器和钩子传送的目标图块.
 
 [Editor]
 Test map locally
@@ -22328,4 +22331,4 @@ Included
 
 [Translation credits: Add your own name here when you update translations]
 English translation by the DDNet Team
-== 简体中文翻译由 DDNet 团队和 QmClient 贡献者维护
+== 简体中文翻译由 DDNet 队伍和 QmClient 贡献者维护

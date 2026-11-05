@@ -9356,6 +9356,9 @@ No player nearby
 No player with this name found.
 == Kein Spieler mit diesem Namen gefunden.
 
+No players match
+== Keine passenden Spieler
+
 No players match these filters
 == Keine Spieler entsprechen diesen Filtern
 

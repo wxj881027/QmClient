@@ -674,7 +674,7 @@ simplified_chinese = "蓝色检查点传送"
 key = "BLUE CHECKPOINT TELEPORT: Sends tees to CTO with the same number as the last touched TELEPORT CHECKPOINT. Speed and hook are kept."
 context = "Editor"
 [message.translations]
-simplified_chinese = "蓝色检查点传送: 将tee传送到与最后接触的传送检查点相同编号的CTO.速度和钩索保持不变."
+simplified_chinese = "蓝色检查点传送: 将tee传送到与最后接触的传送检查点相同编号的CTO.速度和钩子保持不变."
 
 [[message]]
 key = "BLUE SPIKE: Blue team spikes. Gives negative points when killer is in red team. Amount of points given is set inside the server."
@@ -686,7 +686,7 @@ simplified_chinese = "蓝色尖刺: 蓝队尖刺.当杀手在红队时给予负�
 key = "BLUE TELEPORT: After falling into this tile, tees appear on TO with the same number. Speed and hook are kept."
 context = "Editor"
 [message.translations]
-simplified_chinese = "蓝色传送: 掉入此图块后,tee会出现在相同编号的TO上.速度和钩索保持不变."
+simplified_chinese = "蓝色传送: 掉入此图块后,tee会出现在相同编号的TO上.速度和钩子保持不变."
 
 [[message]]
 key = "Blue value of the envelope."
@@ -1838,13 +1838,13 @@ simplified_chinese = "止%"
 key = "ENDLESS HOOK OFF: Deactivates endless hook."
 context = "Editor"
 [message.translations]
-simplified_chinese = "无限钩关闭: 禁用无限钩索."
+simplified_chinese = "无限钩关闭: 禁用无限钩子."
 
 [[message]]
 key = "ENDLESS HOOK: Activates endless hook."
 context = "Editor"
 [message.translations]
-simplified_chinese = "无限钩: 激活无限钩索."
+simplified_chinese = "无限钩: 激活无限钩子."
 
 [[message]]
 key = "Enter a room code to join a collaboration room."
@@ -2600,7 +2600,7 @@ simplified_chinese = "全局关闭碰撞: 没有人可以与其他人碰撞.只�
 key = "GLOBAL ENDLESS HOOK ON: Everyone has endless hook. Place only one tile somewhere on the map."
 context = "Editor"
 [message.translations]
-simplified_chinese = "全局开启无限钩: 所有人都有无限钩索.只在地图某处放置一个图块."
+simplified_chinese = "全局开启无限钩: 所有人都有无限钩子.只在地图某处放置一个图块."
 
 [[message]]
 key = "GLOBAL HIT OTHERS OFF: Nobody can hit others. Place only one tile somewhere on the map."
@@ -2786,7 +2786,7 @@ simplified_chinese = "可钩其他人: 你可以钩住其他人."
 key = "HOOK TELEPORT: Teleports hooks entering into it to TELEPORT TO, where it comes out. Direction, angle and length are kept."
 context = "Editor"
 [message.translations]
-simplified_chinese = "钩索传送: 将进入其中的钩索传送到传送目标,从那里伸出.方向、角度和长度保持不变."
+simplified_chinese = "钩子传送: 将进入其中的钩子传送到传送目标,从那里伸出.方向、角度和长度保持不变."
 
 [[message]]
 key = "Hookable"
@@ -2816,13 +2816,13 @@ simplified_chinese = "钩穿: 与(不)可钩图块结合,允许钩穿墙壁."
 key = "HOOKTHROUGH: Combined with a collision tile is new hookthrough, otherwise stops hook, from one direction."
 context = "Editor"
 [message.translations]
-simplified_chinese = "钩穿: 与碰撞图块结合是新钩穿,否则从一个方向阻止钩索."
+simplified_chinese = "钩穿: 与碰撞图块结合是新钩穿,否则从一个方向阻止钩子."
 
 [[message]]
 key = "HOOKTHROUGH: Combined with a collision tile is new hookthrough, otherwise stops hooks, from all directions."
 context = "Editor"
 [message.translations]
-simplified_chinese = "钩穿: 与碰撞图块结合是新钩穿,否则从所有方向阻止钩索."
+simplified_chinese = "钩穿: 与碰撞图块结合是新钩穿,否则从所有方向阻止钩子."
 
 [[message]]
 key = "HOOKTHROUGH: Shortcut for new hookthrough."
@@ -3182,7 +3182,7 @@ simplified_chinese = "实时冻结"
 key = "LIVE FREEZE: Live frozen tees cannot move or jump, while hook and weapons can still be used."
 context = "Editor"
 [message.translations]
-simplified_chinese = "实时冻结: 实时冻结的tee无法移动或跳跃,但仍可使用钩索和武器."
+simplified_chinese = "实时冻结: 实时冻结的tee无法移动或跳跃,但仍可使用钩子和武器."
 
 [[message]]
 key = "Live Gametiles"
@@ -3842,7 +3842,7 @@ simplified_chinese = "红色检查点传送"
 key = "RED CHECKPOINT TELEPORT: Send tees to CTO with the same number as the last touched TELEPORT CHECKPOINT. Speed and hook are reset."
 context = "Editor"
 [message.translations]
-simplified_chinese = "红色检查点传送: 将tee传送到与最后接触的传送检查点相同编号的CTO.速度和钩索被重置."
+simplified_chinese = "红色检查点传送: 将tee传送到与最后接触的传送检查点相同编号的CTO.速度和钩子被重置."
 
 [[message]]
 key = "RED SPIKE: Red team spikes. Gives negative points when killer is in blue team. Amount of points given is set inside the server."
@@ -3854,7 +3854,7 @@ simplified_chinese = "红色尖刺: 红队尖刺.当杀手在蓝队时给予负�
 key = "RED TELEPORT: After falling into this tile, tees appear on TO with the same number. Speed and hooks are reset."
 context = "Editor"
 [message.translations]
-simplified_chinese = "红色传送: 掉入此图块后,tee会出现在相同编号的TO上.速度和钩索被重置."
+simplified_chinese = "红色传送: 掉入此图块后,tee会出现在相同编号的TO上.速度和钩子被重置."
 
 [[message]]
 key = "Red value of the envelope."
@@ -4820,13 +4820,13 @@ simplified_chinese = "停止音频预览。"
 key = "STOPPER: You can hook and shoot through it. You can't go through it against the arrow."
 context = "Editor"
 [message.translations]
-simplified_chinese = "阻挡器: 你可以使用钩索和武器穿过它.但逆着箭的方向是无法穿透它的."
+simplified_chinese = "阻挡器: 你可以使用钩子和武器穿过它.但逆着箭的方向是无法穿透它的."
 
 [[message]]
 key = "STOPPER: You can hook and shoot through it. You can't go through it."
 context = "Editor"
 [message.translations]
-simplified_chinese = "阻挡器: 你可以使用钩索和武器穿过它.但是你不能通过它."
+simplified_chinese = "阻挡器: 你可以使用钩子和武器穿过它.但是你不能通过它."
 
 [[message]]
 key = "SUPER JUMP OFF: You don't have unlimited air jumps."
@@ -5102,7 +5102,7 @@ simplified_chinese = "传送激光: 将激光开启为传送枪武器."
 key = "TELEPORT TO: Destination tile for FROMs, WEAPON & HOOK TELEPORTs with the same numbers."
 context = "Editor"
 [message.translations]
-simplified_chinese = "传送目标: 相同编号的FROM、武器和钩索传送的目标图块."
+simplified_chinese = "传送目标: 相同编号的FROM、武器和钩子传送的目标图块."
 
 [[message]]
 key = "Test map locally"
