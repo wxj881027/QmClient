@@ -252,7 +252,7 @@ static void FormatMapDifficultyText(const CQmMapDifficultyCatalog::SEntry *pDiff
 	pOut[0] = '\0';
 	if(pDifficulty == nullptr)
 		return;
-	const char *pStars = MapDifficultyStars(pDifficulty->m_Stars);
+	const char *pStars = pDifficulty->StarLabel();
 	if(pStars[0] == '\0')
 		return;
 	str_format(pOut, OutSize, "%s %s", FavoriteMapCategoryDisplayName(pDifficulty->m_Category.c_str()), pStars);

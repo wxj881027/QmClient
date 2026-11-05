@@ -2599,6 +2599,7 @@ protected:
 
 public:
 	void RenderBackground();
+	CQmMapDifficultyCatalog &MapDifficultyCatalog() { return m_MapDifficultyCatalog; }
 	// 在 HUD/文字之前绘制世界之外的菜单背景，并冻结背景绘制阶段。
 	// 由 CGameClient::OnRender 在背景层目标内调用；直接调用 Render 的测试也可作为回退入口。
 	void RenderBackgroundLayer();
