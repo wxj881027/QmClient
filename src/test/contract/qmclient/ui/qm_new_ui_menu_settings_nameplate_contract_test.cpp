@@ -95,27 +95,3 @@ TEST(QmNewUiMenuSettingsNameplateContract, NameplateGameUsesFullScopeReferenceFr
 	EXPECT_NE(RenderNamePlateGame.find("Data.m_ShowDirection = true;"), std::string::npos);
 	EXPECT_NE(RenderNamePlateGame.find("Data.m_ShowDirection = pPlayerInfo->m_Local;"), std::string::npos);
 }
-
-TEST(QmNewUiMenuBranches, PlayerTitlePrecedesInlineClientIdAndNameWithoutOverridingIdSettings)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/nameplates.cpp");
-	const std::string AddNameRow = FunctionBody(Source, "void AddNameRow(");
-	const std::string RenderNamePlateGame = FunctionBody(Source, "void CNamePlates::RenderNamePlateGame");
-
-	const size_t FriendMark = AddNameRow.find("AddPart<CNamePlatePartFriendMark>(This);");
-	const size_t InlineTitle = AddNameRow.find("AddPart<CNamePlatePartTitle>(This, false);");
-	const size_t InlineClientId = AddNameRow.find("AddPart<CNamePlatePartClientId>(This, false);");
-	const size_t Name = AddNameRow.find("AddPart<CNamePlatePartName>(This);");
-	ASSERT_NE(FriendMark, std::string::npos);
-	ASSERT_NE(InlineTitle, std::string::npos);
-	ASSERT_NE(InlineClientId, std::string::npos);
-	ASSERT_NE(Name, std::string::npos);
-	EXPECT_LT(FriendMark, InlineTitle);
-	EXPECT_LT(InlineTitle, InlineClientId);
-	EXPECT_LT(InlineClientId, Name);
-	// 上方独立行实例挂在名字行之后，由 m_AboveName 与内联实例互斥显示。
-	const size_t AboveTitle = AddNameRow.find("AddPart<CNamePlatePartTitle>(This, true);");
-	ASSERT_NE(AboveTitle, std::string::npos);
-	EXPECT_LT(Name, AboveTitle);
-	EXPECT_NE(RenderNamePlateGame.find("Data.m_ShowClientId = Data.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds);"), std::string::npos);
-}

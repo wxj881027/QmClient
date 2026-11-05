@@ -1019,9 +1019,6 @@ APP ID
 Appearance
 == Внешний вид
 
-Appearance and command highlighting of the local console
-== Оформление локальной консоли и подсветка команд
-
 Appearance of help bubbles
 == Внешний вид всплывающих подсказок
 
@@ -1519,9 +1516,6 @@ Automatically record demos
 
 Automatically record replays
 == Автоматически записывать повторы
-
-Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
-== Автоматически удалять локальную запись сохранения после успешной загрузки (0 = сохранять и помечать как использованную, 1 = удалять)
 
 Automatically reply to muted players
 == Автоматически отвечать заглушённым игрокам
@@ -2207,8 +2201,8 @@ Chat bubble display duration (seconds)
 Chat bubble font size
 == Размер шрифта пузырьков чата
 
-Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
-== Стиль пузыря чата (0=Диалог комикса, 1=Конфетный градиент, 2=Облачный пузырь)
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble, 3=Default)
+== Стиль пузыря чата (0=Диалог комикса, 1=Конфетный градиент, 2=Облачный пузырь, 3=По умолчанию)
 
 Chat bubble text color
 == Цвет текста пузырьков чата
@@ -2483,35 +2477,20 @@ Clan plates size
 Clan: %s
 == Клан: %s
 
-Classic
-== Классический
-
 Classic Easy
 == Классический Easy
-
-Classic easy
-== Классический easy
 
 Classic Next
 == Классический Next
 
-Classic next
-== Классический next
-
 Classic Nut
 == Классический Nut
-
-Classic nut
-== Классический nut
 
 Classic PowerShell
 == Классический PowerShell
 
 Classic Pro
 == Классический Pro
-
-Classic pro
-== Классический pro
 
 Clear
 == Очистить
@@ -2566,9 +2545,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Щёлкните язык в списке, и он применится сразу; флаг слева показывает текущий выбор.
-
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== Щёлкните по названию карты, чтобы скопировать его, а кнопка X справа удалит запись. Добавлять карты можно галочкой «Избранная карта» на странице информации о сервере.
 
 Click a part on the right to edit its color, blend mode and strength.
 == Нажмите на часть справа, чтобы изменить цвет, режим и силу смешивания.
@@ -2932,9 +2908,6 @@ Configure game and client preferences
 
 Configure ghost recording and playback tools
 == Configure ghost recording and playback tools
-
-Configure hammer skin steal and skin transition animations
-== Настройка анимаций кражи скина молотом и смены скина
 
 Configure health, ammo, timer, and race HUD
 == Configure health, ammo, timer, and race HUD
@@ -5627,9 +5600,6 @@ Favorite maps
 Favorites
 == Избранное
 
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== Совпадение идёт по точному названию карты, и эти же записи наполняют вкладку избранных карт в браузере серверов.
-
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood: токены + 12 виджетов
 
@@ -5842,9 +5812,6 @@ Font cursor
 
 Font size
 == Размер шрифта
-
-Font size, background opacity, colors and command highlighting of the local console you open with F1.
-== Размер шрифта, непрозрачность фона, цвета и подсветка команд локальной консоли, открываемой по F1.
 
 Font store
 == Магазин шрифтов
@@ -10253,9 +10220,6 @@ Pistol guide line
 Pixel: Layer Shift
 == Пиксели: сдвиг слоёв
 
-Place title on a separate line above the player name instead of inline
-== Разместить титул отдельной строкой над именем игрока, а не в одной строке
-
 Plasma gun shots per second
 == Выстрелов плазменной пушки в секунду
 
@@ -12278,9 +12242,6 @@ Save ghost
 Save last %d min
 == Сохранить последние %d мин
 
-Save loaded and marked as used.
-== Сохранение загружено и помечено как использованное.
-
 Save loaded; local record removed.
 == Сохранение загружено, локальная запись удалена.
 
@@ -12862,9 +12823,6 @@ Set "Background color" and "Background opacity", then "Text color", "Selected te
 
 Set "Button - Disabled" and "Button - Enabled" for the button, then "Menu background" and the two menu option rows for the popup.
 == Для кнопки задайте пункты кнопка — неактивна и кнопка — активна, а для всплывающего меню — фон меню и две строки пунктов меню.
-
-Set "Console font size" and "Console background opacity", tick "Highlight console commands", then choose a "Console color scheme".
-== Задайте размер шрифта консоли и непрозрачность фона консоли, включите подсветку команд консоли, затем выберите цветовую схему консоли.
 
 Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide line" and "Predict ninja path", plus color, "Line width" and "Opacity".
 == Задайте режим показа: по клавише или всегда, затем включите линию пистолета и предсказание пути ниндзя, а также настройте цвет, толщину и непрозрачность.
@@ -13969,9 +13927,6 @@ Show tiles layers from BG map
 
 Show title setting hints immediately in small text
 == Сразу показывать подсказки настроек титула мелким шрифтом
-
-Show titles above player names
-== Показывать титулы над именами игроков
 
 Show titles on nameplates
 == Показывать титулы на табличках имён
@@ -16847,9 +16802,6 @@ Use warlist colors instead of regular colors
 Use warlist groups for indicator
 == Использовать группы списка врагов для индикатора
 
-Used
-== Использовано
-
 Used by active shared text and numeric input fields
 == Используется активными общими полями ввода текста и чисел
 
@@ -17801,17 +17753,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == Ваша текущая версия устарела. Пожалуйста, обновитесь из группы QQ.
 
-Your favorite map manager
-== Ваш любимый менеджер карт
-
 Your favorite maps appear here
 == Ваши избранные карты появятся здесь
 
 Your friend %s is online and currently on map %s!
 == Ваш друг %s онлайн и сейчас на карте %s!
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== Список избранных карт: у каждой указан тип, а скопировать или удалить её можно в один клик.
 
 Your locked team was killed because '%s' %s
 == Ваша заблокированная команда была убита, потому что '%s' %s
@@ -17821,9 +17767,6 @@ Your movements are not taken into account when calculating the line colors
 
 Your nickname '%s' is already used (%d points). Do you still want to use it?
 == Ваш никнейм «%s» уже используется (%d очков). Вы всё ещё хотите его использовать?
-
-Your own colors appear only under "Custom"; press "Reset console appearance" if the text becomes hard to read.
-== Свои цвета видны только при выборе настраиваемой схемы; если текст стал плохо читаться, нажмите сброс оформления консоли.
 
 Your profile
 == Ваш профиль

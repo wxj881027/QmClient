@@ -318,7 +318,7 @@ void CTooltips::OnRender()
 	CUiScopedGaussianBlur GaussianBlurScope(Ui(), AlphaFactor);
 	CQmTooltipTextScope TextScope(*TextRender());
 
-	const float BaseFontSize = Tooltip.m_FontSize * (Tooltip.m_SmallInstant ? 1.0f : std::clamp(g_Config.m_QmTooltipFontSize, 10, 24) / 14.0f);
+	const float BaseFontSize = Tooltip.m_FontSize * std::clamp(g_Config.m_QmTooltipFontSize, 10, 24) / 14.0f;
 	const float UiScale = Tooltip.m_SmallInstant ? BaseFontSize / 10.0f : 1.0f;
 	const float Margin = (Tooltip.m_SmallInstant ? 4.0f : 5.0f) * UiScale;
 	const float BasePadding = (Tooltip.m_SmallInstant ? 3.0f : 5.0f) * UiScale;

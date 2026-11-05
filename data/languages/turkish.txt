@@ -1019,9 +1019,6 @@ APP ID
 Appearance
 == Görünüm
 
-Appearance and command highlighting of the local console
-== Yerel konsolun görünümü ve komut vurgulama
-
 Appearance of help bubbles
 == Yardım balonlarının görünümü
 
@@ -1519,9 +1516,6 @@ Automatically record demos
 
 Automatically record replays
 == Tekrarları otomatik olarak kaydet
-
-Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
-== Yüklendikten sonra yerel kayıt girişini otomatik sil (0 = tut ve kullanıldı olarak işaretle, 1 = sil)
 
 Automatically reply to muted players
 == Sessize alınmış oyunculara otomatik yanıt ver
@@ -2207,8 +2201,8 @@ Chat bubble display duration (seconds)
 Chat bubble font size
 == Sohbet balonu yazı boyutu
 
-Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
-== Sohbet balonu stili (0=Çizgi roman diyaloğu, 1=Şeker renk geçişi, 2=Bulut balonu)
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble, 3=Default)
+== Sohbet balonu stili (0=Çizgi roman diyaloğu, 1=Şeker renk geçişi, 2=Bulut balonu, 3=Varsayılan)
 
 Chat bubble text color
 == Sohbet balonu metin rengi
@@ -2483,35 +2477,20 @@ Clan plates size
 Clan: %s
 == Klan: %s
 
-Classic
-== Klasik
-
 Classic Easy
 == Klasik Easy
-
-Classic easy
-== Klasik kolay
 
 Classic Next
 == Klasik Next
 
-Classic next
-== Klasik sonraki
-
 Classic Nut
 == Klasik Nut
-
-Classic nut
-== Klasik nut
 
 Classic PowerShell
 == Klasik PowerShell
 
 Classic Pro
 == Klasik Pro
-
-Classic pro
-== Klasik profesyonel
 
 Clear
 == Temizle
@@ -2566,9 +2545,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Listeden bir dile tıklayınca hemen uygulanır; soldaki bayrak seçili olanı gösterir.
-
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== Harita adına tıklayınca kopyalanır, sağdaki X düğmesi kaydı kaldırır. Ekleme için oyun içi sunucu bilgi sayfasındaki favori harita kutusunu işaretle.
 
 Click a part on the right to edit its color, blend mode and strength.
 == Rengini, karıştırma modunu ve gücünü ayarlamak için sağdaki bir parçaya tıklayın.
@@ -2932,9 +2908,6 @@ Configure game and client preferences
 
 Configure ghost recording and playback tools
 == Configure ghost recording and playback tools
-
-Configure hammer skin steal and skin transition animations
-== Çekiç deri çalma ve deri geçiş animasyonlarını yapılandır
 
 Configure health, ammo, timer, and race HUD
 == Configure health, ammo, timer, and race HUD
@@ -5627,9 +5600,6 @@ Favorite maps
 Favorites
 == Favoriler
 
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== Favoriler harita adının tam eşleşmesine göre çalışır ve sunucu tarayıcısındaki favori harita sekmesini de besler.
-
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood: tokenlar + 12 widget
 
@@ -5842,9 +5812,6 @@ Font cursor
 
 Font size
 == Yazı tipi boyutu
-
-Font size, background opacity, colors and command highlighting of the local console you open with F1.
-== F1 ile açtığınız yerel konsolun yazı tipi boyutu, arka plan saydamlığı, renkleri ve komut vurgulaması.
 
 Font store
 == Yazı tipi mağazası
@@ -10253,9 +10220,6 @@ Pistol guide line
 Pixel: Layer Shift
 == Piksel: katman kayması
 
-Place title on a separate line above the player name instead of inline
-== Unvanı satır içinde yerine oyuncu adının üstünde ayrı bir satıra yerleştir
-
 Plasma gun shots per second
 == Plazma tabancasının saniyedeki atış sayısı
 
@@ -12278,9 +12242,6 @@ Save ghost
 Save last %d min
 == Son %d dakikayı kaydet
 
-Save loaded and marked as used.
-== Kayıt yüklendi ve kullanıldı olarak işaretlendi.
-
 Save loaded; local record removed.
 == Kayıt yüklendi; yerel kayıt girdisi silindi.
 
@@ -12862,9 +12823,6 @@ Set "Background color" and "Background opacity", then "Text color", "Selected te
 
 Set "Button - Disabled" and "Button - Enabled" for the button, then "Menu background" and the two menu option rows for the popup.
 == Düğme için düğme - devre dışı ve düğme - etkin değerlerini, açılır pencere için menü arka planı ve iki menü satırını ayarlayın.
-
-Set "Console font size" and "Console background opacity", tick "Highlight console commands", then choose a "Console color scheme".
-== Konsol yazı tipi boyutunu ve konsol arka plan saydamlığını ayarlayın, konsol komutlarını vurgula seçeneğini işaretleyin, sonra bir konsol renk şeması seçin.
 
 Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide line" and "Predict ninja path", plus color, "Line width" and "Opacity".
 == Görüntüleme modunu tuşla göster veya her zaman göster yap, tabanca kılavuz çizgisi ile ninja yol tahminini seç, renk, çizgi kalınlığı ve saydamlığı ayarla.
@@ -13969,9 +13927,6 @@ Show tiles layers from BG map
 
 Show title setting hints immediately in small text
 == Unvan ayarı ipuçlarını küçük yazıyla hemen göster
-
-Show titles above player names
-== Unvanları oyuncu adlarının üstünde göster
 
 Show titles on nameplates
 == İsim etiketlerinde unvanları göster
@@ -16847,9 +16802,6 @@ Use warlist colors instead of regular colors
 Use warlist groups for indicator
 == Gösterge için savaş listesi gruplarını kullan
 
-Used
-== Kullanıldı
-
 Used by active shared text and numeric input fields
 == Etkin ortak metin ve sayısal giriş alanları tarafından kullanılır
 
@@ -17801,17 +17753,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == Mevcut sürümünüz güncel değil. Lütfen QQ grubundan en son sürümü güncelleyin.
 
-Your favorite map manager
-== En sevdiğiniz harita yöneticiniz
-
 Your favorite maps appear here
 == Favori haritalarınız burada görünür
 
 Your friend %s is online and currently on map %s!
 == Arkadaşınız %s çevrimiçi ve şu anda %s haritasında!
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== Favori haritalarının listesi; her biri türüyle gösterilir ve hızlıca kopyalanıp kaldırılabilir.
 
 Your locked team was killed because '%s' %s
 == Kilitli takımınız '%s' %s olduğu için öldürüldü
@@ -17821,9 +17767,6 @@ Your movements are not taken into account when calculating the line colors
 
 Your nickname '%s' is already used (%d points). Do you still want to use it?
 == '%s' takma adınız zaten kullanılıyor (%d puan). Yine de kullanmak istiyor musunuz?
-
-Your own colors appear only under "Custom"; press "Reset console appearance" if the text becomes hard to read.
-== Kendi renkleriniz yalnızca özel seçeneğinde görünür; yazı okunamaz hale gelirse konsol görünümünü sıfırla düğmesine basın.
 
 Your profile
 == Profiliniz

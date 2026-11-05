@@ -1019,9 +1019,6 @@ APP ID
 Appearance
 == 外観
 
-Appearance and command highlighting of the local console
-== ローカルコンソールの外観とコマンドの強調表示
-
 Appearance of help bubbles
 == ヘルプ吹き出しの外観
 
@@ -1519,9 +1516,6 @@ Automatically record demos
 
 Automatically record replays
 == リプレイを自動録画
-
-Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
-== 読み込みに成功したローカルセーブ記録を自動削除（0 = 保持して使用済みとしてマーク、1 = 削除）
 
 Automatically reply to muted players
 == ミュートされたプレイヤーに自動返信
@@ -2207,8 +2201,8 @@ Chat bubble display duration (seconds)
 Chat bubble font size
 == チャットバブルのフォントサイズ
 
-Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
-== チャット吹き出しのスタイル（0=漫画風会話、1=キャンディグラデーション、2=雲の吹き出し）
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble, 3=Default)
+== チャット吹き出しのスタイル（0=漫画風会話、1=キャンディグラデーション、2=雲の吹き出し、3=デフォルト）
 
 Chat bubble text color
 == チャットバブルの文字色
@@ -2483,35 +2477,20 @@ Clan plates size
 Clan: %s
 == クラン：%s
 
-Classic
-== クラシック
-
 Classic Easy
 == クラシック Easy
-
-Classic easy
-== クラシック easy
 
 Classic Next
 == クラシック Next
 
-Classic next
-== クラシック next
-
 Classic Nut
 == クラシック Nut
-
-Classic nut
-== クラシック nut
 
 Classic PowerShell
 == クラシック PowerShell
 
 Classic Pro
 == クラシック Pro
-
-Classic pro
-== クラシック pro
 
 Clear
 == クリア
@@ -2566,9 +2545,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == 一覧で言語をクリックするとすぐに反映されます。左側の国旗が現在の選択を示します。
-
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== マップ名をクリックするとコピーでき、右側のXボタンで削除できます。追加はゲーム内のサーバー情報ページでお気に入りマップにチェックを入れます。
 
 Click a part on the right to edit its color, blend mode and strength.
 == 右側のパーツをクリックして、色、ブレンドモード、強度を調整します。
@@ -2932,9 +2908,6 @@ Configure game and client preferences
 
 Configure ghost recording and playback tools
 == Configure ghost recording and playback tools
-
-Configure hammer skin steal and skin transition animations
-== ハンマースキン盗用とスキン切り替えアニメーションを設定
 
 Configure health, ammo, timer, and race HUD
 == Configure health, ammo, timer, and race HUD
@@ -5627,9 +5600,6 @@ Favorite maps
 Favorites
 == お気に入り
 
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== お気に入りはマップ名の完全一致で判定され、サーバーブラウザのお気に入りマップタブにも反映されます。
-
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood: トークン + 12 ウィジェット
 
@@ -5842,9 +5812,6 @@ Font cursor
 
 Font size
 == フォントサイズ
-
-Font size, background opacity, colors and command highlighting of the local console you open with F1.
-== F1 で開くローカルコンソールのフォントサイズ、背景の不透明度、色、コマンドの強調表示。
 
 Font store
 == フォントストア
@@ -10253,9 +10220,6 @@ Pistol guide line
 Pixel: Layer Shift
 == ピクセル風：レイヤーシフト
 
-Place title on a separate line above the player name instead of inline
-== タイトルを名前と同じ行ではなく、プレイヤー名の上に別の行で表示
-
 Plasma gun shots per second
 == プラズマガンの毎秒発射数
 
@@ -12278,9 +12242,6 @@ Save ghost
 Save last %d min
 == 最後の %d 分を保存
 
-Save loaded and marked as used.
-== セーブを読み込み、使用済みとしてマークしました。
-
 Save loaded; local record removed.
 == セーブを読み込み、ローカルの記録を削除しました。
 
@@ -12862,9 +12823,6 @@ Set "Background color" and "Background opacity", then "Text color", "Selected te
 
 Set "Button - Disabled" and "Button - Enabled" for the button, then "Menu background" and the two menu option rows for the popup.
 == ボタンにはボタン - 無効とボタン - 有効を設定し、ポップアップにはメニュー背景と 2 行のメニュー項目を設定します。
-
-Set "Console font size" and "Console background opacity", tick "Highlight console commands", then choose a "Console color scheme".
-== コンソールのフォントサイズと背景の不透明度を設定し、コンソールのコマンドを強調表示にチェックを入れ、コンソールの配色を選びます。
 
 Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide line" and "Predict ninja path", plus color, "Line width" and "Opacity".
 == 表示モードをキー表示か常に表示にし、ピストルのガイド線や忍者経路の予測を選び、色・線幅・不透明度を調整します。
@@ -13969,9 +13927,6 @@ Show tiles layers from BG map
 
 Show title setting hints immediately in small text
 == 称号設定のヒントを小さな文字ですぐに表示
-
-Show titles above player names
-== プレイヤー名の上に称号を表示
 
 Show titles on nameplates
 == ネームプレートに称号を表示
@@ -16847,9 +16802,6 @@ Use warlist colors instead of regular colors
 Use warlist groups for indicator
 == インジケーターに敵対リストグループを使用
 
-Used
-== 使用済み
-
 Used by active shared text and numeric input fields
 == 有効な共通テキスト・数値入力欄で使用されます
 
@@ -17801,17 +17753,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == 現在のバージョンは古いです。QQ グループから最新版を更新してください。
 
-Your favorite map manager
-== あなたの好きなマップマネージャー
-
 Your favorite maps appear here
 == お気に入りのマップがここに表示されます
 
 Your friend %s is online and currently on map %s!
 == 友達の %s がオンラインで、現在マップ %s にいます！
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== お気に入りマップの一覧です。各マップは種類付きで表示され、コピーと削除をすばやく行えます。
 
 Your locked team was killed because '%s' %s
 == '%s' が %s したため、ロックされたチームが全滅しました
@@ -17821,9 +17767,6 @@ Your movements are not taken into account when calculating the line colors
 
 Your nickname '%s' is already used (%d points). Do you still want to use it?
 == ニックネーム '%s' は既に使用されています（%d ポイント）。それでも使用しますか？
-
-Your own colors appear only under "Custom"; press "Reset console appearance" if the text becomes hard to read.
-== 独自の色はカスタムを選んだときだけ現れます。文字が読みにくくなったらコンソールの外観をリセットのボタンを押します。
 
 Your profile
 == あなたのプロフィール

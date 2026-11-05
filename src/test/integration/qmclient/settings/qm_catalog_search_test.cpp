@@ -99,8 +99,6 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 		{"Enable Netease music Hook", "qm:lyrics"},
 		{"Infinity symbol", "qm:dynamic_island"},
 		{"Hook countdown size", "qm:dynamic_island"},
-		{"Console color scheme", "qm:console"},
-		{"Console font size", "qm:console"},
 		{"Selection background color", "qm:chat_completion"},
 	};
 	for(const auto &Case : aCases)
@@ -251,17 +249,27 @@ TEST(QmCatalogSearch, EveryQueryTokenMustMatchTheSameCard)
 {
 	qm_card_order::CModel Model;
 	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
-	const auto Multi = qm_card_registry::SearchCards("console font", Model);
+	const auto Multi = qm_card_registry::SearchCards("lyrics language", Model);
 	EXPECT_TRUE(std::any_of(Multi.begin(), Multi.end(), [](const auto &Result) {
-		return std::string(Result.m_pStableId) == "qm:console";
+		return std::string(Result.m_pStableId) == "qm:lyrics";
 	}));
 	// 全角空格与半角空格同义。
-	const auto FullWidth = qm_card_registry::SearchCards("console　font", Model);
+	const auto FullWidth = qm_card_registry::SearchCards("lyrics　language", Model);
 	EXPECT_TRUE(std::any_of(FullWidth.begin(), FullWidth.end(), [](const auto &Result) {
-		return std::string(Result.m_pStableId) == "qm:console";
+		return std::string(Result.m_pStableId) == "qm:lyrics";
 	}));
 	// 任一查询词没有命中时整张卡不返回。
-	EXPECT_TRUE(qm_card_registry::SearchCards("console zzzznotfound", Model).empty());
+	EXPECT_TRUE(qm_card_registry::SearchCards("lyrics zzzznotfound", Model).empty());
+}
+
+TEST(QmCatalogSearch, RemovedConsoleCardDoesNotAppearInResults)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	const auto Results = qm_card_registry::SearchCards("console font", Model);
+	EXPECT_FALSE(std::any_of(Results.begin(), Results.end(), [](const auto &Result) {
+		return std::string(Result.m_pStableId) == "qm:console";
+	}));
 }
 
 TEST(QmCatalogSearch, TitleMatchesRankAheadOfSettingText)

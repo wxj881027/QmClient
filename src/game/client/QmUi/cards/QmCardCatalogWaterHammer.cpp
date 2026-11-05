@@ -10,7 +10,7 @@
 
 namespace qm_card_catalog
 {
-	bool BuildWaterHammerCard(const SQmCardBuildContext &Ctx, const qm_module::EQmModuleId Id, SSettingsCardDefinition &Out)
+	bool QmCardRenderHook::BuildWaterHammerCard(const SQmCardBuildContext &Ctx, const qm_module::EQmModuleId Id, SSettingsCardDefinition &Out)
 	{
 		if(Id != qm_module::EQmModuleId::WaterHammerHighlight)
 			return false;

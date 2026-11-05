@@ -17,7 +17,20 @@ namespace
 		void SetSize(vec2 Size) { m_Size = Size; }
 		void SetShiftOnInvis(bool Shift) { m_ShiftOnInvis = Shift; }
 		void SetReserveLineHeight(bool Reserve) { m_ReserveLineHeight = Reserve; }
+		void SetReserveBubbleTop(bool Reserve) { m_ReserveBubbleTop = Reserve; }
 	};
+}
+
+TEST(QmNameplatePartLayout, DirectionBubbleTopStaysStableWhenKeyIsReleased)
+{
+	CPartLayout Part;
+	Part.SetReserveBubbleTop(true);
+	Part.SetShiftOnInvis(true);
+	const float PressedTop = Part.BubbleTop(100.0f, 33.0f);
+	Part.SetEnabled(false);
+	EXPECT_FLOAT_EQ(Part.BubbleTop(100.0f, 33.0f), PressedTop);
+	Part.SetShiftOnInvis(false);
+	EXPECT_EQ(Part.BubbleTop(100.0f, 33.0f), std::numeric_limits<float>::infinity());
 }
 
 TEST(QmNameplatePartLayout, PrivacyHiddenContentKeepsMeasuredSpaceWithoutDrawing)

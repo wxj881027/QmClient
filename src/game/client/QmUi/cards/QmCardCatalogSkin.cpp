@@ -17,7 +17,7 @@
 #include <utility>
 #include <vector>
 
-// 两张皮肤卡共用标准卡片外观，构造、测量和预布局输入均由本模块负责。
+// 皮肤外观卡的构造、测量和预布局输入均由本模块负责。
 namespace qm_card_catalog
 {
 	bool BuildSkinCard(const SQmCardBuildContext &Ctx, const qm_module::EQmModuleId Id, SSettingsCardDefinition &Out)
@@ -41,17 +41,6 @@ namespace qm_card_catalog
 				"Tee appearance",
 				"Configure Tee appearance and skins",
 				[pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { QmCardRenderHook::RenderQmVisualSkinAppearanceContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); },
-				Out);
-			UseDeclaredModuleContent(Ctx, Out);
-			return true;
-		case EQmModuleId::SkinTransition:
-			MakeModuleCard(
-				Ctx,
-				Id,
-				"qm:skin_transition",
-				"Skin transition animation",
-				"Configure hammer skin steal and skin transition animations",
-				[pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { QmCardRenderHook::RenderQmVisualSkinTransitionContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); },
 				Out);
 			UseDeclaredModuleContent(Ctx, Out);
 			return true;
@@ -80,63 +69,52 @@ void CMenus::RenderQmVisualSkinAppearanceContent(CUIRect &Content, float LineHei
 	Flow.Space(LineSpacing);
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmCycleTeeHueDummy, "Also apply to dummy", Localize("Also apply to dummy"), &g_Config.m_QmCycleTeeHueDummy);
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmEmoticonShadow, "Emoticon shadow", Localize("Emoticon shadow"), &g_Config.m_QmEmoticonShadow);
+	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHammerSwapSkin, "Hammer skin steal", Localize("Hammer skin steal"), &g_Config.m_QmHammerSwapSkin);
+	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmSkinChangeTransition, "Skin transition animation", Localize("Skin transition animation"), &g_Config.m_QmSkinChangeTransition);
 	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:skin_appearance", Metrics, PrewarmOnly))
 		return;
 
-	CUIRect Details;
-	if(!Flow.Control("skin-appearance-details", ResolveQmVisualSkinAppearanceHeight(Metrics, Content.w), Details))
-		return;
-	const CSettingsContentLayoutScope InternalGeometry;
-	const SSettingsSkinAppearanceLayout Layout = ResolveSettingsSkinAppearanceLayout(Details, Metrics);
-	CUIRect Outline = Layout.m_Outline;
-	CUIRect Hue = Layout.m_Hue;
-	CUIRect Shadow = Layout.m_Shadow;
-	const auto Slider = [&](CUIRect &Group, const char *pId, const char *pText, const void *pSliderId, int *pValue, int Min, int Max, const char *pSuffix) {
-		CUIRect Row, Label, Control;
-		ConsumeSettingsControlRow(Group, CurrentSettingsContentMetrics(), &Row);
-		Group.HSplitTop(LineSpacing, nullptr, &Group);
-		SplitSettingsControlRow(Row, Metrics, &Label, &Control);
-		SLabelProperties Props;
-		Props.m_DisallowNewline = true;
-		Props.m_StopAtEnd = true;
-		Props.m_MinimumFontSize = 6.0f;
-		Props.m_MaxWidth = Label.w;
-		RenderQmVisualLabel(pId, &Label, pText, BodySize, TEXTALIGN_ML, Props);
-		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pSliderId, &Row, pValue, &Label);
-		RenderQmSettingsSliderWithValueInput(pSliderId, Control, pValue, Min, Max, pSuffix, PrewarmOnly);
-	};
-	static CButtonContainer s_OutlineColor;
-	DoLine_ColorPicker(&s_OutlineColor, Metrics, &Outline, Localize("Skin outline color"), &g_Config.m_QmSkinOutlineColor, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmSkinOutlineColor)), false);
-	static int s_WidthId, s_AlphaId;
-	Slider(Outline, "qmclient-skin-outline-width", Localize("Skin outline width"), &s_WidthId, &g_Config.m_QmSkinOutlineWidth, 1, 6, "");
-	Slider(Outline, "qmclient-skin-outline-opacity", Localize("Skin outline opacity"), &s_AlphaId, &g_Config.m_QmSkinOutlineAlpha, 0, 100, "%");
+	{
+		CUIRect Details;
+		if(!Flow.Control("skin-appearance-details", ResolveQmVisualSkinAppearanceHeight(Metrics, Content.w), Details))
+			return;
+		const CSettingsContentLayoutScope InternalGeometry;
+		const SSettingsSkinAppearanceLayout Layout = ResolveSettingsSkinAppearanceLayout(Details, Metrics);
+		CUIRect Outline = Layout.m_Outline;
+		CUIRect Hue = Layout.m_Hue;
+		CUIRect Shadow = Layout.m_Shadow;
+		const auto Slider = [&](CUIRect &Group, const char *pId, const char *pText, const void *pSliderId, int *pValue, int Min, int Max, const char *pSuffix) {
+			CUIRect Row, Label, Control;
+			ConsumeSettingsControlRow(Group, CurrentSettingsContentMetrics(), &Row);
+			Group.HSplitTop(LineSpacing, nullptr, &Group);
+			SplitSettingsControlRow(Row, Metrics, &Label, &Control);
+			SLabelProperties Props;
+			Props.m_DisallowNewline = true;
+			Props.m_StopAtEnd = true;
+			Props.m_MinimumFontSize = 6.0f;
+			Props.m_MaxWidth = Label.w;
+			RenderQmVisualLabel(pId, &Label, pText, BodySize, TEXTALIGN_ML, Props);
+			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pSliderId, &Row, pValue, &Label);
+			RenderQmSettingsSliderWithValueInput(pSliderId, Control, pValue, Min, Max, pSuffix, PrewarmOnly);
+		};
+		static CButtonContainer s_OutlineColor;
+		DoLine_ColorPicker(&s_OutlineColor, Metrics, &Outline, Localize("Skin outline color"), &g_Config.m_QmSkinOutlineColor, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmSkinOutlineColor)), false);
+		static int s_WidthId, s_AlphaId;
+		Slider(Outline, "qmclient-skin-outline-width", Localize("Skin outline width"), &s_WidthId, &g_Config.m_QmSkinOutlineWidth, 1, 6, "");
+		Slider(Outline, "qmclient-skin-outline-opacity", Localize("Skin outline opacity"), &s_AlphaId, &g_Config.m_QmSkinOutlineAlpha, 0, 100, "%");
 
-	static int s_HueSpeedId;
-	int DisabledSpeed = g_Config.m_QmCycleTeeHueSpeed;
-	if(!g_Config.m_QmCycleTeeHue)
-		TextRender()->TextColor(ColorRGBA(0.8f, 0.8f, 0.8f, 0.55f));
-	Slider(Hue, "qmclient-cycle-tee-hue-speed", Localize("Hue speed"), &s_HueSpeedId, g_Config.m_QmCycleTeeHue ? &g_Config.m_QmCycleTeeHueSpeed : &DisabledSpeed, 0, 360, "°/s");
-	TextRender()->TextColor(TextRender()->DefaultTextColor());
-	static int s_ProjectileDurationId;
-	Slider(Shadow, "qmclient-emoticon-projectile-duration", Localize("Emoticon projectile duration"), &s_ProjectileDurationId, &g_Config.m_QmEmoticonProjectileDuration, 1, 10, " s");
-}
-void CMenus::RenderQmVisualSkinTransitionContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
-{
-	CSettingsContentLayoutFlow Flow(Content);
-	CUIRect Row, LabelColumn, ControlColumn;
-	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHammerSwapSkin, "Hammer skin steal", Localize("Hammer skin steal"), &g_Config.m_QmHammerSwapSkin);
-
-	const bool HasToggle = Flow.Control("skin-transition-enabled", LineHeight, Row);
-	Flow.Space(LineSpacing);
-	if(HasToggle && DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, &g_Config.m_QmSkinChangeTransition, "Skin transition animation", Localize("Skin transition animation"), g_Config.m_QmSkinChangeTransition, &Row))
-		g_Config.m_QmSkinChangeTransition ^= 1;
-
+		static int s_HueSpeedId;
+		int DisabledSpeed = g_Config.m_QmCycleTeeHueSpeed;
+		if(!g_Config.m_QmCycleTeeHue)
+			TextRender()->TextColor(ColorRGBA(0.8f, 0.8f, 0.8f, 0.55f));
+		Slider(Hue, "qmclient-cycle-tee-hue-speed", Localize("Hue speed"), &s_HueSpeedId, g_Config.m_QmCycleTeeHue ? &g_Config.m_QmCycleTeeHueSpeed : &DisabledSpeed, 0, 360, "°/s");
+		TextRender()->TextColor(TextRender()->DefaultTextColor());
+		static int s_ProjectileDurationId;
+		Slider(Shadow, "qmclient-emoticon-projectile-duration", Localize("Emoticon projectile duration"), &s_ProjectileDurationId, &g_Config.m_QmEmoticonProjectileDuration, 1, 10, " s");
+	}
 	if(!g_Config.m_QmSkinChangeTransition)
 		return;
-
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:skin_transition", CurrentSettingsContentMetrics(), PrewarmOnly))
-		return;
-
+	CUIRect Row, LabelColumn, ControlColumn;
 	auto RenderDropDown = [&](const char *pTextId, const char *pText, int *pValue, int MaxValue, const char **ppNames, int NumNames, CUi::SDropDownState &State, CScrollRegion &ScrollRegion) {
 		const bool HasRow = Flow.Control(pTextId, LineHeight, Row);
 		Flow.Space(LineSpacing);

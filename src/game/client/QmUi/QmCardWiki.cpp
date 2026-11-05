@@ -497,12 +497,6 @@ namespace
 			Localizable("It stays on for every match, so switch it off before real races to keep the screen and your aim clean."),
 		},
 		{
-			"qm:console",
-			Localizable("Font size, background opacity, colors and command highlighting of the local console you open with F1."),
-			Localizable("Set \"Console font size\" and \"Console background opacity\", tick \"Highlight console commands\", then choose a \"Console color scheme\"."),
-			Localizable("Your own colors appear only under \"Custom\"; press \"Reset console appearance\" if the text becomes hard to read."),
-		},
-		{
 			"qm:coords",
 			Localizable("Shows X and Y coordinates on players' nameplates, for yourself, for other players, or both."),
 			Localizable("Turn on \"Show own coordinates\" or \"Show other players' coordinates\", then choose \"Show X\" and \"Show Y\"."),

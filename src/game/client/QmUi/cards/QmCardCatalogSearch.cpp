@@ -8,7 +8,6 @@
 #include "QmCardSearch/QmCardCatalogAppearance.inc"
 #include "QmCardSearch/QmCardCatalogAppearancePreset.inc"
 #include "QmCardSearch/QmCardCatalogChatCompletion.inc"
-#include "QmCardSearch/QmCardCatalogConsole.inc"
 #include "QmCardSearch/QmCardCatalogControls.inc"
 #include "QmCardSearch/QmCardCatalogDDNet.inc"
 #include "QmCardSearch/QmCardCatalogFallback.inc"
