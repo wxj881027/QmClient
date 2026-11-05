@@ -453,7 +453,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 	};
 
 	auto RenderSettings = [&](CUIRect &Column) {
-		CUIRect CheckBoxRect;
+		CUIRect CheckBoxRect, CaptionRect;
 		CSettingsContentLayoutFlow Flow(Column);
 		if(Flow.Control("tclient-warlist-enable", LineSize, CheckBoxRect, MarginSmall))
 		{
@@ -474,6 +474,13 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		{
 			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListBlockEnemyChat, "tclient-warlist-block-enemy-chat", Localize("Block enemy chat"), g_Config.m_QmWarListBlockEnemyChat, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
 				g_Config.m_QmWarListBlockEnemyChat ^= 1;
+		}
+		// 下面三行颜色开关是同一件事（敌对颜色显示在哪些地方），给一条小标题收在一起，
+		// 免得和上面的总开关、屏蔽选项混成一片。
+		if(Flow.Control("tclient-warlist-colors-caption", WarListMetrics.m_LineHeight, CaptionRect, MarginSmall * 2.0f))
+		{
+			CaptionRect.Draw(ui_token::color::SURFACE_SUBHEADER, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU);
+			Ui()->DoLabel(&CaptionRect, Localize("Colors"), StandardFontSize, TEXTALIGN_MC);
 		}
 		if(Flow.Control("tclient-warlist-colors-chat", LineSize, CheckBoxRect, MarginSmall))
 		{
