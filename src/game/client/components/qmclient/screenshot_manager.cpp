@@ -786,6 +786,11 @@ bool CQmScreenshotExportControl::Commit(const std::string &TempPath, const std::
 	return true;
 }
 
+bool CQmScreenshotExportControl::TryRemoveCandidate(const std::string &Path) noexcept
+{
+	return TryRemoveCandidate(Path, fs_remove);
+}
+
 bool CQmScreenshotManager::SavePngAtomically(const std::string &TargetPath, const CImageInfo &Image, const char *pComment, CQmScreenshotExportControl *pControl)
 {
 	if(TargetPath.empty() || (pControl != nullptr && pControl->Canceled()))
@@ -820,7 +825,7 @@ bool CQmScreenshotManager::SavePngAtomically(const std::string &TargetPath, cons
 		~STempCleanup()
 		{
 			if(m_Active)
-				fs_remove(m_Path.c_str());
+				CQmScreenshotExportControl::TryRemoveCandidate(m_Path);
 		}
 	} Cleanup{TempPath};
 	std::unique_ptr<FILE, decltype(&std::fclose)> File(pFile, std::fclose);

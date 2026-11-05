@@ -17,6 +17,7 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 class IEngine;
@@ -34,6 +35,21 @@ public:
 	void Cancel();
 	bool Canceled() const;
 	bool Commit(const std::string &TempPath, const std::string &TargetPath);
+	// 删除及其诊断可能分配内存；失败返回 false，不能让异常逃出候选析构。
+	static bool TryRemoveCandidate(const std::string &Path) noexcept;
+	// 回调按 fs_remove 约定返回 0 表示成功，仅在本次调用期间借用，不重试部分删除。
+	template<typename TRemove>
+	static bool TryRemoveCandidate(const std::string &Path, TRemove &&Remove) noexcept
+	{
+		try
+		{
+			return std::forward<TRemove>(Remove)(Path.c_str()) == 0;
+		}
+		catch(...)
+		{
+			return false;
+		}
+	}
 };
 
 // 截图页只负责选择文件，水印处理放在这个独立模块中，便于其它卡片复用。
