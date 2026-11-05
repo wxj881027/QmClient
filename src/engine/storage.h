@@ -101,8 +101,9 @@ public:
 	static void StripPathAndExtension(const char *pFilename, char *pBuffer, int BufferSize);
 	static const char *FormatTmpPath(char *aBuf, unsigned BufSize, const char *pPath);
 
-	// Replaces a save file through a same-directory backup. If the replacement fails, the old file is restored when possible.
-	static bool ReplaceFileSafely(IStorage *pStorage, const char *pTempFilename, const char *pRealFilename, char *pBackupFilename, unsigned BackupFilenameSize);
+	// 同目录备份替换；异常按失败返回并尽力恢复缺失目标，恢复失败时保留备份路径。
+	// 发布成功后的备份清理失败不改变成功；输出缓冲须与输入路径分离。
+	static bool ReplaceFileSafely(IStorage *pStorage, const char *pTempFilename, const char *pRealFilename, char *pBackupFilename, unsigned BackupFilenameSize) noexcept;
 };
 
 extern IStorage *CreateStorage(IStorage::EInitializationType InitializationType, int NumArgs, const char **ppArguments);

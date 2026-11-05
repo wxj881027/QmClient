@@ -5734,6 +5734,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/server/score_test.cpp
     src/test/unit/engine/image_decode_budget_test.cpp
     src/test/unit/engine/storage_replace_test.cpp
+    src/test/integration/engine/storage_replace_transaction_test.cpp
     src/test/unit/engine/legacy_updater_test.cpp
     src/engine/client/updater.cpp
     src/engine/client/updater_data.cpp

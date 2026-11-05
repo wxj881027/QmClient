@@ -1148,30 +1148,71 @@ const char *IStorage::FormatTmpPath(char *aBuf, unsigned BufSize, const char *pP
 	return aBuf;
 }
 
-bool IStorage::ReplaceFileSafely(IStorage *pStorage, const char *pTempFilename, const char *pRealFilename, char *pBackupFilename, unsigned BackupFilenameSize)
+bool IStorage::ReplaceFileSafely(IStorage *pStorage, const char *pTempFilename, const char *pRealFilename, char *pBackupFilename, unsigned BackupFilenameSize) noexcept
 {
-	if(pStorage == nullptr || pTempFilename == nullptr || pRealFilename == nullptr || pBackupFilename == nullptr || BackupFilenameSize == 0)
+	if(pBackupFilename != nullptr && BackupFilenameSize != 0)
+		pBackupFilename[0] = '\0';
+	if(pStorage == nullptr || pTempFilename == nullptr || pTempFilename[0] == '\0' || pRealFilename == nullptr || pRealFilename[0] == '\0' || pBackupFilename == nullptr || BackupFilenameSize == 0 || str_comp(pTempFilename, pRealFilename) == 0)
 		return false;
-	pBackupFilename[0] = '\0';
 
-	const bool HadPreviousFile = pStorage->FileExists(pRealFilename, IStorage::TYPE_SAVE);
-	if(HadPreviousFile)
+	bool MayHaveBackup = false;
+	const auto Restore = [&]() noexcept {
+		if(!MayHaveBackup)
+			return;
+		try
+		{
+			// 检查时已有目标则保留，避免覆盖另一位写入者已提交的文件。
+			if(!pStorage->FileExists(pRealFilename, IStorage::TYPE_SAVE) && pStorage->FileExists(pBackupFilename, IStorage::TYPE_SAVE))
+				(void)pStorage->RenameFile(pBackupFilename, pRealFilename, IStorage::TYPE_SAVE, false);
+		}
+		catch(...)
+		{
+			// 回滚也可能因资源/权限失败，保留备份以供恢复。
+		}
+	};
+
+	try
 	{
-		str_format(pBackupFilename, BackupFilenameSize, "%s.backup", pTempFilename);
-		if(pStorage->FileExists(pBackupFilename, IStorage::TYPE_SAVE) || !pStorage->RenameFile(pRealFilename, pBackupFilename, IStorage::TYPE_SAVE))
+		const bool HadPreviousFile = pStorage->FileExists(pRealFilename, IStorage::TYPE_SAVE);
+		if(HadPreviousFile)
+		{
+			constexpr char SUFFIX[] = ".backup";
+			if(BackupFilenameSize < sizeof(SUFFIX) || std::strlen(pTempFilename) > BackupFilenameSize - sizeof(SUFFIX))
+				return false;
+			str_format(pBackupFilename, BackupFilenameSize, "%s%s", pTempFilename, SUFFIX);
+			if(pStorage->FileExists(pBackupFilename, IStorage::TYPE_SAVE))
+				return false;
+			MayHaveBackup = true;
+			if(!pStorage->RenameFile(pRealFilename, pBackupFilename, IStorage::TYPE_SAVE, false))
+			{
+				Restore();
+				return false;
+			}
+		}
+		if(!pStorage->RenameFile(pTempFilename, pRealFilename, IStorage::TYPE_SAVE, false))
+		{
+			Restore();
 			return false;
-	}
-
-	if(pStorage->RenameFile(pTempFilename, pRealFilename, IStorage::TYPE_SAVE))
-	{
-		if(HadPreviousFile && !pStorage->RemoveFile(pBackupFilename, IStorage::TYPE_SAVE))
-			log_error("storage", "failed to delete replaced-file backup: %s", pBackupFilename);
+		}
+		// 提交已完成；后续清理或诊断异常不能触发回滚或改报失败。
+		if(HadPreviousFile)
+		{
+			try
+			{
+				if(!pStorage->RemoveFile(pBackupFilename, IStorage::TYPE_SAVE))
+					log_error("storage", "failed to delete replaced-file backup: %s", pBackupFilename);
+			}
+			catch(...)
+			{
+			}
+		}
 		return true;
 	}
-
-	if(HadPreviousFile)
-		pStorage->RenameFile(pBackupFilename, pRealFilename, IStorage::TYPE_SAVE);
-	return false;
+	catch(...)
+	{
+		Restore();
+		return false;
+	}
 }
 IStorage *CreateStorage(IStorage::EInitializationType InitializationType, int NumArgs, const char **ppArguments)
 {
