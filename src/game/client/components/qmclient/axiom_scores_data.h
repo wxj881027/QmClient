@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 enum class EQmAxiomMode
@@ -83,9 +84,10 @@ const char *QmAxiomParseResultLabel(EQmAxiomParseResult Result);
 std::string QmBuildAxiomSearchUrl(const char *pPlayerName);
 std::string QmBuildAxiomInfoUrl(int64_t UserId, EQmAxiomMode Mode);
 std::string QmBuildDdStatsPlayerUrl(const char *pPlayerName);
-EQmAxiomParseResult QmParseAxiomSearchResponse(const char *pData, size_t DataSize, const char *pPlayerName, SQmAxiomSearchMatch &OutMatch);
-EQmAxiomParseResult QmParseAxiomInfoResponse(const char *pData, size_t DataSize, SQmAxiomModeScore &OutScore);
-EQmAxiomParseResult QmParseDdStatsPlayerResponse(const char *pData, size_t DataSize, const char *pPlayerName, std::vector<SQmDdStatsGameType> &OutGameTypes);
+// 失败保留调用方输出；分配异常按 INVALID_RESPONSE 交给既有失败回退。
+EQmAxiomParseResult QmParseAxiomSearchResponse(const char *pData, size_t DataSize, const char *pPlayerName, SQmAxiomSearchMatch &OutMatch) noexcept;
+EQmAxiomParseResult QmParseAxiomInfoResponse(const char *pData, size_t DataSize, SQmAxiomModeScore &OutScore) noexcept;
+EQmAxiomParseResult QmParseDdStatsPlayerResponse(const char *pData, size_t DataSize, const char *pPlayerName, std::vector<SQmDdStatsGameType> &OutGameTypes) noexcept;
 bool QmAxiomResponseIsCurrent(uint64_t CurrentGeneration, uint64_t ResponseGeneration, std::string_view CurrentPlayerName, std::string_view ResponsePlayerName);
 bool QmAxiomResponseIsCurrent(uint64_t CurrentGeneration, uint64_t ResponseGeneration, EQmAxiomMode CurrentMode, EQmAxiomMode ResponseMode);
 SQmAxiomPopupSize QmAxiomPopupSize(float ScreenWidth, float ScreenHeight);

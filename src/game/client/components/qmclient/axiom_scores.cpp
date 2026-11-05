@@ -1079,9 +1079,9 @@ SQmAxiomLookupResult CQmAxiomScores::GetLookup(const char *pPlayerName) const
 	return Result;
 }
 
-void CQmAxiomScores::SubmitDdStatsParseJob(const std::shared_ptr<CQmAxiomDdStatsParseJob> &pJob)
+bool CQmAxiomScores::SubmitDdStatsParseJob(const std::shared_ptr<CQmAxiomDdStatsParseJob> &pJob)
 {
-	Engine()->AddJob(pJob);
+	return Engine()->TryAddJob(pJob);
 }
 
 void CQmAxiomScores::ProcessDdStatsRequest()
@@ -1093,10 +1093,18 @@ void CQmAxiomScores::ProcessDdStatsRequest()
 	{
 		if(!m_pDdStatsParseJob)
 		{
-			m_pDdStatsParseJob = std::make_shared<CQmAxiomDdStatsParseJob>(m_DdStatsRequest.m_pRequest, m_DdStatsRequest.m_PlayerName);
-			SubmitDdStatsParseJob(m_pDdStatsParseJob);
+			try
+			{
+				auto pJob = std::make_shared<CQmAxiomDdStatsParseJob>(m_DdStatsRequest.m_pRequest, m_DdStatsRequest.m_PlayerName);
+				if(SubmitDdStatsParseJob(pJob))
+					m_pDdStatsParseJob = std::move(pJob);
+			}
+			catch(...)
+			{
+				// 分配或入队失败沿解析失败路径释放本次请求，保留已有数据。
+			}
 		}
-		if(!m_pDdStatsParseJob->Ready())
+		if(m_pDdStatsParseJob && !m_pDdStatsParseJob->Ready() && !m_pDdStatsParseJob->Done())
 			return;
 	}
 	auto pParseJob = std::move(m_pDdStatsParseJob);
@@ -1118,7 +1126,7 @@ void CQmAxiomScores::ProcessDdStatsRequest()
 		return;
 	}
 
-	const EQmAxiomParseResult ParseResult = pParseJob->Result();
+	const EQmAxiomParseResult ParseResult = pParseJob && pParseJob->Ready() ? pParseJob->Result() : EQmAxiomParseResult::INVALID_RESPONSE;
 	if(ParseResult != EQmAxiomParseResult::SUCCESS)
 	{
 		RecordFailure(Entry.m_DdStatsFailureCount);

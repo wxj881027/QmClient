@@ -5353,6 +5353,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_outline_viewport_test.cpp
     src/test/unit/qmclient/client/qm_mod_weapon_text_test.cpp
     src/test/unit/qmclient/client/qm_axiom_scores_test.cpp
+    src/test/integration/qmclient/client/qm_axiom_parse_dispatch_test.cpp
     src/test/integration/qmclient/client/qm_axiom_quad_collision_test.cpp
     src/test/contract/qmclient/client/qm_axiom_scores_contract_test.cpp
     src/test/unit/qmclient/client/qm_chat_emoji_test.cpp
@@ -6634,6 +6635,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/client/map_difficulty_catalog_failure_test.cpp
     src/test/unit/client/map_difficulty_axiom_failure_test.cpp
       src/game/client/components/qmclient/map_difficulty_catalog.cpp
+      src/test/unit/qmclient/client/qm_axiom_response_failure_test.cpp
+      src/game/client/components/qmclient/axiom_scores_data.cpp
       src/engine/client/sqlite.cpp
       src/test/unit/engine/recent_glyph_cache_test.cpp
       src/test/integration/qmclient/client/qm_warlist_cache_prepare_test.cpp

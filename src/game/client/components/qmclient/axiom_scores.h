@@ -151,7 +151,7 @@ class CQmAxiomScores : public CComponent
 
 protected:
 	virtual int64_t CurrentTick() const;
-	virtual void SubmitDdStatsParseJob(const std::shared_ptr<CQmAxiomDdStatsParseJob> &pJob);
+	virtual bool SubmitDdStatsParseJob(const std::shared_ptr<CQmAxiomDdStatsParseJob> &pJob);
 
 public:
 	CQmAxiomScores() = default;

@@ -121,9 +121,10 @@ namespace
 
 	protected:
 		int64_t CurrentTick() const override { return m_Now; }
-		void SubmitDdStatsParseJob(const std::shared_ptr<CQmAxiomDdStatsParseJob> &pJob) override
+		bool SubmitDdStatsParseJob(const std::shared_ptr<CQmAxiomDdStatsParseJob> &pJob) override
 		{
 			m_vParseJobs.push_back(pJob);
+			return true;
 		}
 
 	public:
