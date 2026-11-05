@@ -23,8 +23,8 @@ class IStorage;
 //
 // 数据流：官方缩略图 URL → 磁盘缓存（qmclient/mapcovers）→ 工作线程解码/缩放/拖尾
 // → 主线程上传纹理。纹理按「地图 + 用途（列表行 / 详情条）」缓存：尺寸是固定值，
-// 不随窗口宽度和滚动条动画变化，所以来回滚动不会反复重合成。页面退出只取消未完成
-// 的请求，已下载的磁盘缓存和已生成的纹理继续复用。
+// 不随窗口宽度和滚动条动画变化，所以来回滚动不会反复重合成。页面退出后继续完成已请求的封面，
+// 已下载的磁盘缓存和已生成的纹理继续复用。
 class CQmMapCovers
 {
 public:
@@ -47,12 +47,10 @@ public:
 	CQmMapCovers(const CQmMapCovers &) = delete;
 	CQmMapCovers &operator=(const CQmMapCovers &) = delete;
 
-	// 每帧调用一次（地图库页面渲染入口）：处理下载完成、上传纹理。
+	// 每帧调用一次（包含菜单关闭期间）；空闲时只更新时间：处理下载完成、上传纹理。
 	void Update(IHttp *pHttp, IEngine *pEngine, IGraphics *pGraphics, IStorage *pStorage, float Now);
 	// 取某张地图在指定用途下的封面图；未就绪时返回 false 并排队生成。
 	bool Get(const char *pUrl, ERole Role, SImage *pOut);
-	// 离开地图库页面：取消排队与进行中的下载/任务；保留磁盘缓存与已生成的纹理。
-	void Release();
 	// 客户端关闭：释放全部 GPU 纹理（图形接口此刻仍存活）。
 	void Shutdown(IGraphics *pGraphics);
 	// 还有封面在排队/下载/合成（供性能日志与调试使用）。
@@ -120,6 +118,7 @@ private:
 	static QmMapCover::SArt StyleForUrl(const char *pUrl, ERole Role);
 	static void ComposeSize(ERole Role, int *pWidth, int *pHeight);
 
+	void CancelPending();
 	void PollJobs();
 	void PollDownloads();
 	void StartQueued();

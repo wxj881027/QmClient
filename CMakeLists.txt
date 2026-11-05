@@ -4899,6 +4899,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/vote_menu_mode_test.cpp
     src/test/unit/qmclient/ui/players_menu_test.cpp
     src/test/unit/qmclient/ui/vote_player_targets_test.cpp
+    src/test/integration/qmclient/ui/map_covers_test.cpp
     src/test/integration/qmclient/ui/vote_map_loader_test.cpp
     src/test/unit/client/map_history_test.cpp
     src/test/unit/client/map_tile_border_test.cpp
@@ -5415,6 +5416,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/hud_notifications/hud_notification_catalog.cpp
     src/game/client/components/qmclient/hud_notifications/hud_notification_rules.cpp
     src/game/client/components/qmclient/map_cover_art.cpp
+    src/game/client/components/qmclient/map_covers.cpp
     src/game/client/components/qmclient/map_difficulty_catalog.cpp
     src/game/client/components/qmclient/vote_map_library.cpp
     src/game/client/components/qmclient/vote_map_loader.cpp
