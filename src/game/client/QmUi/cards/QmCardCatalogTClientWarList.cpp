@@ -316,6 +316,15 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			}
 		}
 
+		// 列表空了只剩一个灰块，玩家不知道下一步做什么，补一句提示。
+		if(s_vFilteredEntries.empty())
+		{
+			CUIRect Hint = EntriesList;
+			TextRender()->TextColor(ui_token::color::TEXT_SECONDARY);
+			Ui()->DoLabel(&Hint, Localize("No entries yet"), StandardFontSize, TEXTALIGN_MC);
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+		}
+
 		char aExtra[96];
 		str_format(aExtra, sizeof(aExtra), "entries=%d filtered=%d", (int)GameClient()->m_WarList.m_vWarEntries.size(), (int)s_vFilteredEntries.size());
 		LogTClientPerfStageEx("tclient_warlist", "list", ETClientSettingsPerfStage::TEXT_CACHE, ListTimer.ElapsedMs(), false, aExtra);
@@ -326,28 +335,15 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		CUIRect Button, ButtonL, ButtonR;
 		static CButtonContainer s_AddButton, s_OverrideButton;
 		CSettingsContentLayoutFlow Flow(Column);
+		// 识别方式和输入框合成一行：左边选「按名字还是按战队」，右边就是被编辑的那个字段。
+		// 原来两个输入框 + 一行胶囊分开画，玩家看不出胶囊到底在选什么。
 		if(Flow.Control("tclient-warlist-entry-identity", LineSize, Button, MarginSmall))
 		{
-			Button.VSplitMid(&ButtonL, &ButtonR, MarginSmall);
-			s_NameInput.SetBuffer(s_aEntryName, sizeof(s_aEntryName));
-			s_NameInput.SetEmptyText(Localize("Name"));
-			if(s_IsName)
-				ui_widget::InputField(TClientWarListTextInputCtx, &s_NameInput, ButtonL, Localize("Name"), EditBoxFontSize);
-			else
-				DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, "tclient-warlist-name", &ButtonL, s_aEntryName, FontSize, TEXTALIGN_ML);
-
-			s_ClanInput.SetBuffer(s_aEntryClan, sizeof(s_aEntryClan));
-			s_ClanInput.SetEmptyText(Localize("Clan"));
-			if(s_IsClan)
-				ui_widget::InputField(TClientWarListTextInputCtx, &s_ClanInput, ButtonR, Localize("Clan"), EditBoxFontSize);
-			else
-				DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, "tclient-warlist-clan", &ButtonR, s_aEntryClan, FontSize, TEXTALIGN_ML);
-		}
-		if(Flow.Control("tclient-warlist-name-clan-choice", LineSize, Button, MarginSmall))
-		{
-			Button.VSplitMid(&ButtonL, &ButtonR, MarginSmall);
+			CUIRect Choice, Field;
+			Button.VSplitLeft(Button.w * 0.42f, &Choice, &Field);
+			Field.VSplitLeft(MarginSmall, nullptr, &Field);
+			Choice.VSplitMid(&ButtonL, &ButtonR, MarginSmall);
 			static unsigned char s_NameRadio, s_ClanRadio;
-			// 二选一是互斥语义：并排两个开关读成「可以都开」，改用带选中态的胶囊，选中项铺底。
 			if(ui_widget::FilterChip(TClientWarListTextInputCtx, &s_NameRadio, ButtonL, Localize("Name"), s_IsName) && !ReadOnly && !Ui()->RenderOnly())
 			{
 				s_IsName = true;
@@ -357,6 +353,18 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			{
 				s_IsName = false;
 				s_IsClan = true;
+			}
+			if(s_IsName)
+			{
+				s_NameInput.SetBuffer(s_aEntryName, sizeof(s_aEntryName));
+				s_NameInput.SetEmptyText(Localize("Name"));
+				ui_widget::InputField(TClientWarListTextInputCtx, &s_NameInput, Field, Localize("Name"), EditBoxFontSize);
+			}
+			else
+			{
+				s_ClanInput.SetBuffer(s_aEntryClan, sizeof(s_aEntryClan));
+				s_ClanInput.SetEmptyText(Localize("Clan"));
+				ui_widget::InputField(TClientWarListTextInputCtx, &s_ClanInput, Field, Localize("Clan"), EditBoxFontSize);
 			}
 			if(Flow.Input() && !ReadOnly && !Ui()->RenderOnly() && !s_IsName)
 				str_copy(s_aEntryName, "");
@@ -434,7 +442,10 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 					Swatch.Draw(pSelectedType->m_Color, IGraphics::CORNER_ALL, ui_token::radius::TIGHT);
 				}
 				Label.VSplitLeft(SwatchInset, nullptr, &Label);
-				Ui()->DoLabel(&Label, pSelectedType->m_aWarName, HeadlineFontSize, TEXTALIGN_ML);
+				// 只是一行组名时玩家看不出这是什么；前面补上「分组」标签。
+				char aBandLabel[128];
+				str_format(aBandLabel, sizeof(aBandLabel), "%s · %s", Localize("Group"), pSelectedType->m_aWarName);
+				Ui()->DoLabel(&Label, aBandLabel, HeadlineFontSize, TEXTALIGN_ML);
 			}
 		}
 
