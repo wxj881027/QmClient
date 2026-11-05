@@ -31,6 +31,7 @@
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiSurfaceText.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
 #include <game/client/components/background.h>
 #include <game/client/components/chat.h>
@@ -2715,8 +2716,12 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 	s_FilterScrollRegion.AddRect({View.x, ContentTop, View.w, std::max(0.0f, View.y - ContentTop)});
 	s_FilterScrollRegion.End();
 
-	static CButtonContainer s_ResetButton;
-	if(DoButton_Menu(&s_ResetButton, Localize("Reset filter"), 0, &ResetButton))
+	// 重置按钮和其他筛选按钮用同一套胶囊：同一个面板里不混两种按钮形态。
+	static unsigned char s_ResetFilterChipId = 0;
+	CUIRect ResetChip = ResetButton;
+	ResetChip.h = ui_token::server_filter::CHIP_HEIGHT;
+	ResetChip.y += std::max(0.0f, (ResetButton.h - ResetChip.h) / 2.0f);
+	if(ui_widget::FilterChip(SettingsUiContext("server_browser_filter_reset"), &s_ResetFilterChipId, ResetChip, Localize("Reset filter"), false))
 	{
 		ResetServerbrowserFilters();
 	}
