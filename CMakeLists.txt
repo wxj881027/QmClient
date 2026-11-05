@@ -3383,7 +3383,6 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogVisualContent.cpp
     QmUi/cards/QmCardCatalogFunctionContent.cpp
     QmUi/cards/QmCardCatalogTranslateContent.cpp
-    QmUi/cards/QmCardCatalogFavoriteMapsContent.cpp
     QmUi/cards/QmCardCatalogHudContent.cpp
     QmUi/cards/QmCardCatalogVoiceContent.cpp
     QmUi/cards/QmCardCatalogBackground3DContent.cpp
@@ -4827,6 +4826,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/qm_console_ui_layout_test.cpp
     src/test/unit/qmclient/ui/qm_console_settings_layout_test.cpp
     src/test/unit/qmclient/client/qm_credits_layout_test.cpp
+    src/test/unit/qmclient/client/qm_favorite_map_vote_test.cpp
     src/test/unit/qmclient/client/qm_module_layout_adapter_test.cpp
     src/test/unit/base/aio_test.cpp
     src/test/unit/client/assets_editor_layout_test.cpp

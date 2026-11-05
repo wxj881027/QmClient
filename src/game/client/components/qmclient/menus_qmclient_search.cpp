@@ -148,7 +148,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	}
 	const std::vector<SQmGlobalSearchCard> &SearchVisibleGlobalCards = s_GlobalSearchCache.m_Results.m_vAllVisibleCards;
 	const int SearchMatchedGlobalCardCount = (int)SearchVisibleGlobalCards.size();
-	s_GlobalSearchFunctionCardLayout = ResolveFunctionCardLayoutState(GameClient()->TClientComponent().GetFavoriteMaps().size());
+	s_GlobalSearchFunctionCardLayout = ResolveFunctionCardLayoutState();
 	qm_card_catalog::SQmCardBuildContext StandardPrepare;
 	StandardPrepare.m_pMenus = this;
 	StandardPrepare.m_ReadOnly = ReadOnly;
@@ -173,7 +173,6 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 		CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ qm_card_catalog::QmCardRenderHook::PrepareControlsCards(this, MainView.w, ReadOnly, Ui()->MeasurementOnly() ? nullptr : &s_GlobalSearchScrollRegion);
 	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ s_GlobalSearchFunctionCardLayout.m_BlockWordsRevision;
 	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ s_GlobalSearchFunctionCardLayout.m_KeywordRulesRevision;
-	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ s_GlobalSearchFunctionCardLayout.m_FavoriteMapsRevision;
 	for(const SQmGlobalSearchCard &Card : SearchVisibleGlobalCards)
 		CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ str_quickhash(Card.m_pStableId);
 	const uint64_t DefinitionsRevision = ResolveSettingsCardDefinitionsRevision(m_SettingsCardDeckDisplayCycle, m_MenuTextPoolGeneration, MainView.w, CardLayoutRevision);

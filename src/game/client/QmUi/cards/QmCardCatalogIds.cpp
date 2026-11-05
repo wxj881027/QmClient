@@ -52,7 +52,6 @@ namespace qm_card_catalog
 			"qm:qiafen",
 			"qm:pie_menu",
 			"qm:map_upload",
-			"qm:favorite_maps",
 			"qm:hj_assist",
 			"qm:solo_split",
 			"qm:steam",

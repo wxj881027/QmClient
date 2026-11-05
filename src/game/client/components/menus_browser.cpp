@@ -39,6 +39,7 @@
 #include <game/client/components/qmclient/browser_map_preview_loader.h>
 #include <game/client/components/qmclient/browser_status_layout.h>
 #include <game/client/components/qmclient/dummy_mini_view_layout.h>
+#include <game/client/components/qmclient/favorite_map_vote.h>
 #include <game/client/components/qmclient/friends_category_drag.h>
 #include <game/client/components/qmclient/local_save_display.h>
 #include <game/client/components/qmclient/map_history_ui.h>
@@ -5210,6 +5211,18 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 
 	if(s_FavoriteMapsWorkspaceTab == 0)
 	{
+		// 按地图名保留控件身份，删除一行不会把双击状态转移到下一张地图。
+		struct SFavoriteMapRow
+		{
+			int m_RowId = 0;
+			int m_NameId = 0;
+			CButtonContainer m_RemoveButton;
+		};
+		static std::map<std::string, SFavoriteMapRow> s_MapRows;
+		static std::string s_LastClickedMap;
+		std::erase_if(s_MapRows, [&](const auto &Entry) { return !FavoriteMaps.contains(Entry.first); });
+		if(!FavoriteMaps.contains(s_LastClickedMap))
+			s_LastClickedMap.clear();
 		if(FavoriteMaps.empty())
 		{
 			Ui()->DoLabel(&FavoritePanel, Localize("No favorite maps yet"), 13.0f, TEXTALIGN_MC);
@@ -5219,6 +5232,7 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 			const int NumFavoriteMaps = (int)FavoriteMaps.size();
 			CUIRect HeaderRow;
 			FavoritePanel.HSplitTop(20.0f, &HeaderRow, &FavoritePanel);
+			HeaderRow.VSplitRight(24.0f, &HeaderRow, nullptr);
 			CUIRect HeaderMap, HeaderCategory, HeaderDifficulty, HeaderNote, HeaderSaved;
 			SplitFavoriteMapColumns(HeaderRow, &HeaderMap, &HeaderCategory, &HeaderDifficulty, &HeaderNote, &HeaderSaved);
 			TextRender()->TextColor(0.75f, 0.75f, 0.75f, 1.0f);
@@ -5230,14 +5244,15 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 
 			static CListBox s_FavoriteMapsListBox;
-			static std::vector<int> s_vFavoriteMapItemIds;
-			s_vFavoriteMapItemIds.resize(NumFavoriteMaps);
+			static std::string s_CopiedMap;
+			static float s_CopiedAt = 0.0f;
+			std::string RemoveMapName;
 			s_FavoriteMapsListBox.DoStart(34.0f, NumFavoriteMaps, 1, 3, -1, &FavoritePanel, false, IGraphics::CORNER_NONE);
 
-			size_t FavoriteMapIndex = 0;
 			for(const std::string &MapName : FavoriteMaps)
 			{
-				const CListboxItem Item = s_FavoriteMapsListBox.DoNextItem(&s_vFavoriteMapItemIds[FavoriteMapIndex], false);
+				SFavoriteMapRow &RowState = s_MapRows[MapName];
+				const CListboxItem Item = s_FavoriteMapsListBox.DoNextItem(&RowState.m_RowId, false);
 				if(Item.m_Visible)
 				{
 					auto GaussianBlurSuppression = Item.SuppressGaussianBlur();
@@ -5245,6 +5260,9 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 					Row.Margin(4.0f, &Row);
 					Row.Draw(BrowserOpacityColor(ui_token::color::FAVORITE.WithAlpha(0.08f)), IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU);
 					Row.Margin(6.0f, &Row);
+					CUIRect RemoveButton;
+					Row.VSplitRight(24.0f, &Row, &RemoveButton);
+					RemoveButton.VMargin(2.0f, &RemoveButton);
 					CUIRect MapColumn, CategoryColumn, DifficultyColumn, NoteColumn, SavedColumn;
 					SplitFavoriteMapColumns(Row, &MapColumn, &CategoryColumn, &DifficultyColumn, &NoteColumn, &SavedColumn);
 
@@ -5253,7 +5271,30 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 					const char *pNote = GameClient()->m_TClient.GetMapNote(MapName.c_str());
 					const char *pSaved = !m_LocalSaveDisplay.Ready() ? Localize("Loading") : (HasLocalSaveForMap(MapName.c_str()) ? Localize("Yes") : Localize("No"));
 
-					TextRender()->TextColor(1.0f, 0.85f, 0.0f, 1.0f);
+					if(Ui()->DoButtonLogic(&RowState.m_NameId, 0, &MapColumn, BUTTONFLAG_LEFT))
+					{
+						Input()->SetClipboardText(MapName.c_str());
+						s_CopiedMap = MapName;
+						s_CopiedAt = Client()->LocalTime();
+						const bool DoubleClicked = Ui()->DoDoubleClickLogic(&RowState.m_NameId) && s_LastClickedMap == MapName;
+						s_LastClickedMap = MapName;
+						const std::string Command = QmFavoriteMapVoteCommand(MapName, Client()->State() == IClient::STATE_ONLINE, DoubleClicked);
+						if(!Command.empty())
+						{
+							GameClient()->m_Voting.ClearUnfinishedMapVoteChain();
+							GameClient()->m_Chat.SendChat(0, Command.c_str());
+						}
+					}
+					const bool Copied = s_CopiedMap == MapName && Client()->LocalTime() - s_CopiedAt < 1.5f;
+					GameClient()->m_Tooltips.DoToolTip(&RowState.m_NameId, &MapColumn, Copied ? Localize("Copied") : Localize("Click to copy the map name"));
+					if(Ui()->DoButton_QmIcon(&RowState.m_RemoveButton, EQmIcon::CLOSE, FONT_ICON_XMARK, 0, &RemoveButton, BUTTONFLAG_LEFT))
+					{
+						RemoveMapName = MapName;
+						s_LastClickedMap.clear();
+					}
+					GameClient()->m_Tooltips.DoToolTip(&RowState.m_RemoveButton, &RemoveButton, Localize("Remove from favorites"));
+
+					TextRender()->TextColor(Copied ? ColorRGBA(0.0f, 1.0f, 0.0f, 1.0f) : ColorRGBA(1.0f, 0.85f, 0.0f, 1.0f));
 					DoFavoriteMapColumnLabel(MapColumn, MapName.c_str(), 12.0f);
 					TextRender()->TextColor(TextRender()->DefaultTextColor());
 					DoFavoriteMapColumnLabel(CategoryColumn, GetFavoriteMapCategory(MapName.c_str()), 11.0f);
@@ -5261,9 +5302,11 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 					DoFavoriteMapColumnLabel(NoteColumn, pNote && pNote[0] != '\0' ? pNote : Localize("None"), 11.0f);
 					DoFavoriteMapColumnLabel(SavedColumn, pSaved, 11.0f, TEXTALIGN_MR);
 				}
-				++FavoriteMapIndex;
 			}
 			s_FavoriteMapsListBox.DoEnd();
+			// 遍历完成后再删除，避免使收藏集合的迭代器失效。
+			if(!RemoveMapName.empty())
+				GameClient()->m_TClient.RemoveFavoriteMap(RemoveMapName.c_str());
 		}
 		return;
 	}

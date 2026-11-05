@@ -220,7 +220,7 @@ TEST_F(SettingsCardMeasureRevision, DynamicListChangesInvalidateSearchMeasuremen
 	EXPECT_NE(Original, MeasureModuleCardsRevision(Layout));
 	--Layout.m_KeywordRulesRevision;
 	EXPECT_EQ(Original, MeasureModuleCardsRevision(Layout));
-	++Layout.m_FavoriteMapsRevision;
+	++Layout.m_BlockWordsRevision;
 	EXPECT_NE(Original, MeasureModuleCardsRevision(Layout));
 }
 
