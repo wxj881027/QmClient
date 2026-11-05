@@ -264,6 +264,7 @@ Alias of poses_close
 Alias of poses_open
 Alias of poses_render
 Alias of poses_video
+Alignment
 Alive notification color
 Alive notification font size
 Alive notification horizontal position (percentage of screen width)
@@ -357,7 +358,6 @@ Apply squishy Tee deformation to other players
 Apply to
 Apply to dummy
 Apply to player
-Apply watermark
 Applying overwrites your font, UI scale, animation and panel colors at once, so note the values you like first.
 Applying this preset changes the appearance settings listed below.
 Arabic
@@ -529,6 +529,7 @@ Axiom main account password
 Axiom score request failed
 Axiom website
 Axis
+Back
 Backdrop blur
 Backdrop blur algorithm: 0=Gaussian, 1=Kawase, 2=Dual Kawase
 Backend to use (e.g. OpenGL or Vulkan)
@@ -796,6 +797,7 @@ Choose colors for weapons and entity lasers
 Choose country flag
 Choose default eyes when joining a server
 Choose export name first.
+Choose Logo (PNG / WebP)
 Choose off, simple or full; the individual switches below only apply to full.
 Choose the language used by the client
 Choose the menu font and cursor appearance
@@ -1421,6 +1423,7 @@ Draft file is empty
 Drag
 Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
 Drag HUD modules with the left mouse button
+Drag the selected watermark to move it. The original image is preserved.
 Drag the three sliders; master scales the other two.
 Drag to another category to move this friend.
 Drag to pan, scroll to zoom
@@ -3112,6 +3115,7 @@ No input device available
 No local saves file found (ddnet-saves.txt)
 No local servers found (ports %d-%d)
 No login required
+No Logo selected
 No map
 No map matches the typed name
 No map named '%s' was found in maps/ or downloadedmaps/
@@ -3614,6 +3618,7 @@ Preview built with %d skipped slot(s).
 Preview button visibility while the editor is active.
 Preview cut (P)
 Preview dummy nameplate
+Preview failed. Check the image and Logo, then retry.
 Preview hook collision colors and line styles
 Preview import file
 Preview laser bodies, outlines, and impacts
@@ -3884,6 +3889,7 @@ Remove from favorites
 Remove from history
 Remove from queue
 Remove Item
+Remove Logo
 Remove right to vote from player with client ID
 Remove right to vote from player with IP address
 Remove shortcuts you no longer use to keep the list readable.
@@ -3994,6 +4000,7 @@ Reset dummy
 Reset filter
 Reset IME appearance
 Reset key press counts
+Reset layer
 Reset layout
 Reset mouse position when opening bind wheel
 Reset pie menu appearance
@@ -4049,6 +4056,7 @@ Room password
 Rotate all server player skins
 Rotate hammer with cursor like other weapons
 Rotates your tee through a saved list of skins, either on a timer or at a random spot when a map starts.
+Rotation
 Round
 Round %d/%d
 Round-trip time
@@ -4097,6 +4105,7 @@ Save loaded and marked as used.
 Save loaded; local record removed.
 Save loaded; the local record could not be removed.
 Save player names in replay
+Save PNG copy
 Save power by lowering update rate
 Save power by lowering update rate (higher input latency)
 Save replay of best time per game
@@ -4123,6 +4132,7 @@ Saved to the bind wheel.
 Saved with your title and shared with other QmClient players.
 Saves and loads complete client profiles, including name, chat settings and bind wheel presets.
 Saves file
+Saving…
 Say in chat
 Say in team chat
 Scale down other Tees as well
@@ -5118,6 +5128,7 @@ Tencent Cloud Translation SecretId
 Tencent Cloud Translation SecretKey
 Test translation
 Testing translation...
+Text
 Text alpha
 Text before each key press count
 Text color
@@ -5229,6 +5240,7 @@ Tick the actions you want, such as "Auto unspec on unfreeze" or "Auto team lock"
 Ticks after freeze before applying max prediction reduction
 tile
 Tile outlines
+Tile watermark
 Time
 Time (ms) player must wait before next overhead emote sent to all clients (must be >= sv_emoticon_ms_delay to take effect).
 Time (ms) player must wait before next overhead emote.
@@ -5472,6 +5484,7 @@ Unable to delete the screenshot '%s'
 Unable to load savegame: data corrupted
 Unable to load savegame: loaded on a different server
 Unable to load savegame: SaveId corrupted
+Unable to open the file picker
 Unable to open the screenshot file
 Unable to record camera keyframe
 Unable to rename the demo
@@ -5544,6 +5557,7 @@ Update or add a specific war group
 Update Rate
 Update ready to install
 Update sources are temporarily unavailable
+Updating preview…
 Updating public word list...
 Upload .map files. Server and admin passwords: s.
 Upload a saved map to the public test server
@@ -5732,6 +5746,7 @@ Warn about team balance
 Warning
 Watches your friend list and reports friends coming online or joining your map, with optional automatic greeting.
 Watermark
+Watermark editor
 Weak hook
 Weak hook color
 Weak network test: server receive extra reorder probability percentage

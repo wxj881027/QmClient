@@ -26,6 +26,7 @@
 #include <game/client/QmUi/QmIslandNotice.h>
 #include <game/client/QmUi/QmLocalizedLabels.h>
 #include <game/client/QmUi/QmPlayersMenu.h>
+#include <game/client/QmUi/QmScreenshotEditor.h>
 #include <game/client/QmUi/QmScroll.h>
 #include <game/client/QmUi/QmSeasonalSidebar.h>
 #include <game/client/QmUi/QmServerInfoLayout.h>
@@ -154,6 +155,7 @@ class CMenus : public CComponent
 {
 	friend void NTranslateUiSettings::RenderTranslateUiModule(CMenus *pMenus, CUIRect &CardContent, float LineHeight, float BodySize, float LineSpacing);
 	friend class CMenusSettingsControls;
+	friend class CQmScreenshotEditor;
 	static ColorRGBA ms_GuiColor;
 	static ColorRGBA ms_ColorTabbarInactiveOutgame;
 	static ColorRGBA ms_ColorTabbarActiveOutgame;
@@ -1873,8 +1875,7 @@ protected:
 	std::vector<SDemoCutSegment> m_vDemoCutSegments;
 	qm_demo_cut::CPreview m_DemoCutPreview;
 	int m_DemoSelectionAnchorIndex = -1;
-	std::shared_ptr<CQmScreenshotWatermarkJob> m_pScreenshotWatermarkJob;
-	std::string m_ScreenshotWatermarkFolder;
+	CQmScreenshotEditor m_ScreenshotEditor;
 	bool m_DemoScreenshotPreviewLoadFailed = false;
 	char m_aDemoScreenshotPreviewFolder[IO_MAX_PATH_LENGTH] = "";
 	SDemoSelectionEntry m_DemoScreenshotPreviewSelection{};

@@ -797,6 +797,9 @@ Alias of poses_render
 Alias of poses_video
 == poses_video のエイリアス
 
+Alignment
+== 配置
+
 Alive notification color
 == 生存通知の色
 
@@ -1075,9 +1078,6 @@ Apply to dummy
 
 Apply to player
 == プレイヤーに適用
-
-Apply watermark
-== ウォーターマークを適用
 
 Applying overwrites your font, UI scale, animation and panel colors at once, so note the values you like first.
 == 適用するとフォント、UI 倍率、アニメーション、パネルの色が一括で上書きされるので、好みの値は先に控えておきましょう。
@@ -1591,6 +1591,9 @@ Axiom website
 
 Axis
 == 軸
+
+Back
+== 戻る
 
 Backdrop blur
 == 背景のぼかし
@@ -2386,6 +2389,9 @@ Choose default eyes when joining a server
 
 Choose export name first.
 == 最初にエクスポート名を入力してください。
+
+Choose Logo (PNG / WebP)
+== ロゴを選択 (PNG / WebP)
 
 Choose off, simple or full; the individual switches below only apply to full.
 == オフ・簡易・フルから選びます。下の個別スイッチはフルのときだけ適用されます。
@@ -4258,6 +4264,9 @@ Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use 
 
 Drag HUD modules with the left mouse button
 == マウスの左ボタンで HUD モジュールをドラッグ
+
+Drag the selected watermark to move it. The original image is preserved.
+== 選択した透かしをドラッグして移動します。元の画像は保持されます。
 
 Drag the three sliders; master scales the other two.
 == 3 つのスライダーをドラッグします。マスターは残り 2 つの音量をまとめて増減させます。
@@ -9311,6 +9320,9 @@ No local servers found (ports %d-%d)
 No login required
 == ログイン不要
 
+No Logo selected
+== ロゴ未選択
+
 No map
 == マップなし
 
@@ -10817,6 +10829,9 @@ Preview cut (P)
 Preview dummy nameplate
 == ダミーのネームプレートをプレビュー
 
+Preview failed. Check the image and Logo, then retry.
+== プレビューに失敗しました。画像とロゴを確認して再試行してください。
+
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
 
@@ -11627,6 +11642,9 @@ Remove from queue
 Remove Item
 == アイテムを削除
 
+Remove Logo
+== ロゴを削除
+
 Remove right to vote from player with client ID
 == クライアント ID を持つプレイヤーから投票権を削除
 
@@ -11957,6 +11975,9 @@ Reset IME appearance
 Reset key press counts
 == キーを押した回数をリセット
 
+Reset layer
+== レイヤーをリセット
+
 Reset layout
 == レイアウトをリセット
 
@@ -12122,6 +12143,9 @@ Rotate hammer with cursor like other weapons
 Rotates your tee through a saved list of skins, either on a timer or at a random spot when a map starts.
 == 保存したスキン一覧で Tee を順に切り替えます。タイマーでも、マップ開始時にランダムな位置からでも動かせます。
 
+Rotation
+== 回転
+
 Round
 == ラウンド
 
@@ -12266,6 +12290,9 @@ Save loaded; the local record could not be removed.
 Save player names in replay
 == リプレイにプレイヤー名を保存
 
+Save PNG copy
+== PNG コピーを保存
+
 Save power by lowering update rate
 == 更新レートを下げて省電力
 
@@ -12343,6 +12370,9 @@ Saves and loads complete client profiles, including name, chat settings and bind
 
 Saves file
 == ファイルを保存
+
+Saving…
+== 保存中…
 
 Say in chat
 == チャットで発言
@@ -15317,6 +15347,9 @@ Test translation
 Testing translation...
 == 翻訳をテスト中…
 
+Text
+== テキスト
+
 Text alpha
 == テキストの透明度
 
@@ -15646,6 +15679,9 @@ tile
 
 Tile outlines
 == タイルのアウトライン
+
+Tile watermark
+== 透かしを敷き詰める
 
 Time
 == タイム
@@ -16376,6 +16412,9 @@ Unable to load savegame: loaded on a different server
 Unable to load savegame: SaveId corrupted
 == セーブをロードできません: SaveId が破損しています
 
+Unable to open the file picker
+== ファイル選択画面を開けません
+
 Unable to open the screenshot file
 == スクリーンショットファイルを開けませんでした
 
@@ -16591,6 +16630,9 @@ Update ready to install
 
 Update sources are temporarily unavailable
 == 更新元は一時的に利用できません
+
+Updating preview…
+== プレビュー更新中…
 
 Updating public word list...
 == 共有NGワードを更新中...
@@ -17155,6 +17197,9 @@ Watches your friend list and reports friends coming online or joining your map, 
 
 Watermark
 == ウォーターマーク
+
+Watermark editor
+== 透かしエディター
 
 Weak hook
 == 弱いフック

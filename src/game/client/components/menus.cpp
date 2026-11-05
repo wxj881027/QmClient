@@ -6206,8 +6206,8 @@ void CMenus::SetActive(bool Active)
 		Ui()->SetActiveItem(nullptr);
 		MarkMenuInteraction();
 	}
-	if(!Active && m_pScreenshotWatermarkJob)
-		m_pScreenshotWatermarkJob->Cancel();
+	if(!Active && m_ScreenshotEditor.IsOpen())
+		m_ScreenshotEditor.Close(this);
 	m_MenuActive = Active;
 	if(!m_MenuActive)
 	{
@@ -6655,8 +6655,7 @@ const char *CMenus::SettingsPerfStableTextScope(int Page) const
 
 void CMenus::OnReset()
 {
-	if(m_pScreenshotWatermarkJob)
-		m_pScreenshotWatermarkJob->Cancel();
+	m_ScreenshotEditor.Close(this);
 	m_TranslateProbe.Cancel();
 	ResetDemoScreenshotPreview();
 	ReleaseQmClientSettingsSearchInput();
@@ -6668,9 +6667,7 @@ void CMenus::OnShutdown()
 	m_QmVoteMenu.m_Loader.Suspend();
 	// 图形接口此刻仍存活，地图库封面的 GPU 纹理必须在这一步释放。
 	m_QmVoteMenu.m_Covers.Shutdown(Graphics());
-	if(m_pScreenshotWatermarkJob)
-		m_pScreenshotWatermarkJob->Cancel();
-	m_pScreenshotWatermarkJob.reset();
+	m_ScreenshotEditor.Close(this);
 	m_TranslateProbe.Cancel();
 	m_LocalSaveDisplay.Reset();
 	m_QmMapUpload.Cancel();
@@ -8729,8 +8726,8 @@ const CMenus::CMenuImage *CMenus::FindMenuImage(const char *pName)
 
 void CMenus::SetMenuPage(int NewPage)
 {
-	if(NewPage != PAGE_DEMOS && m_pScreenshotWatermarkJob)
-		m_pScreenshotWatermarkJob->Cancel();
+	if(NewPage != PAGE_DEMOS && m_ScreenshotEditor.IsOpen())
+		m_ScreenshotEditor.Close(this);
 	const int OldPage = m_MenuPage;
 	if(OldPage != NewPage)
 	{

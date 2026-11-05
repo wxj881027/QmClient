@@ -797,6 +797,9 @@ Alias of poses_render
 Alias of poses_video
 == poses_video의 별칭
 
+Alignment
+== 정렬
+
 Alive notification color
 == 생존 알림 색상
 
@@ -1075,9 +1078,6 @@ Apply to dummy
 
 Apply to player
 == 플레이어에 적용
-
-Apply watermark
-== 워터마크 적용
 
 Applying overwrites your font, UI scale, animation and panel colors at once, so note the values you like first.
 == 적용하면 글꼴, UI 배율, 애니메이션, 패널 색상이 한 번에 덮어써지므로 좋아하는 값은 미리 적어 두세요.
@@ -1591,6 +1591,9 @@ Axiom website
 
 Axis
 == 축
+
+Back
+== 뒤로
 
 Backdrop blur
 == 배경 흐림
@@ -2386,6 +2389,9 @@ Choose default eyes when joining a server
 
 Choose export name first.
 == 내보내기 이름을 먼저 입력하세요.
+
+Choose Logo (PNG / WebP)
+== 로고 선택 (PNG / WebP)
 
 Choose off, simple or full; the individual switches below only apply to full.
 == 끄기, 간단, 전체 중에서 선택하세요. 아래의 개별 스위치는 전체일 때만 적용됩니다.
@@ -4258,6 +4264,9 @@ Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use 
 
 Drag HUD modules with the left mouse button
 == 마우스 왼쪽 버튼으로 HUD 모듈 드래그
+
+Drag the selected watermark to move it. The original image is preserved.
+== 선택한 워터마크를 드래그하여 이동하세요. 원본 이미지는 유지됩니다.
 
 Drag the three sliders; master scales the other two.
 == 슬라이더 세 개를 드래그하세요. 마스터는 나머지 두 볼륨을 비례하여 조절합니다.
@@ -9311,6 +9320,9 @@ No local servers found (ports %d-%d)
 No login required
 == 로그인 불필요
 
+No Logo selected
+== 선택한 로고 없음
+
 No map
 == 맵 없음
 
@@ -10817,6 +10829,9 @@ Preview cut (P)
 Preview dummy nameplate
 == 더미 이름표 미리보기
 
+Preview failed. Check the image and Logo, then retry.
+== 미리보기에 실패했습니다. 이미지와 로고를 확인한 후 다시 시도하세요.
+
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
 
@@ -11627,6 +11642,9 @@ Remove from queue
 Remove Item
 == 항목 제거
 
+Remove Logo
+== 로고 제거
+
 Remove right to vote from player with client ID
 == 클라이언트 ID를 가진 플레이어의 투표권 제거
 
@@ -11957,6 +11975,9 @@ Reset IME appearance
 Reset key press counts
 == 키 입력 횟수 초기화
 
+Reset layer
+== 레이어 초기화
+
 Reset layout
 == 레이아웃 재설정
 
@@ -12122,6 +12143,9 @@ Rotate hammer with cursor like other weapons
 Rotates your tee through a saved list of skins, either on a timer or at a random spot when a map starts.
 == 저장한 스킨 목록으로 Tee를 순환시키며, 타이머로 바꾸거나 맵 시작 시 무작위 위치에서 시작할 수 있습니다.
 
+Rotation
+== 회전
+
 Round
 == 라운드
 
@@ -12266,6 +12290,9 @@ Save loaded; the local record could not be removed.
 Save player names in replay
 == 리플레이에 플레이어 이름 저장
 
+Save PNG copy
+== PNG 사본 저장
+
 Save power by lowering update rate
 == 업데이트 속도를 낮춰 전력 절약
 
@@ -12343,6 +12370,9 @@ Saves and loads complete client profiles, including name, chat settings and bind
 
 Saves file
 == 파일 저장
+
+Saving…
+== 저장 중…
 
 Say in chat
 == 채팅에 말하기
@@ -15317,6 +15347,9 @@ Test translation
 Testing translation...
 == 번역 테스트 중…
 
+Text
+== 텍스트
+
 Text alpha
 == 텍스트 투명도
 
@@ -15646,6 +15679,9 @@ tile
 
 Tile outlines
 == 타일 윤곽선
+
+Tile watermark
+== 워터마크 반복 배치
 
 Time
 == 시간
@@ -16376,6 +16412,9 @@ Unable to load savegame: loaded on a different server
 Unable to load savegame: SaveId corrupted
 == 저장 기록을 불러올 수 없습니다: SaveId 손상
 
+Unable to open the file picker
+== 파일 선택기를 열 수 없습니다
+
 Unable to open the screenshot file
 == 스크린샷 파일을 열 수 없습니다
 
@@ -16591,6 +16630,9 @@ Update ready to install
 
 Update sources are temporarily unavailable
 == 업데이트 서버를 일시적으로 사용할 수 없습니다
+
+Updating preview…
+== 미리보기 업데이트 중…
 
 Updating public word list...
 == 공용 금칙어 목록 업데이트 중...
@@ -17155,6 +17197,9 @@ Watches your friend list and reports friends coming online or joining your map, 
 
 Watermark
 == 워터마크
+
+Watermark editor
+== 워터마크 편집기
 
 Weak hook
 == 약한 갈고리
