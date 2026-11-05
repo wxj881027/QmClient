@@ -12758,6 +12758,15 @@ Server hostname (0.7 only)
 Server info
 == Información del servidor
 
+Server information lower left card width (per mille)
+== Anchura de la tarjeta inferior izquierda de información del servidor (por mil)
+
+Server information upper left card width (per mille)
+== Anchura de la tarjeta superior izquierda de información del servidor (por mil)
+
+Server information upper row height (per mille)
+== Altura de la fila superior de información del servidor (por mil)
+
 Server kick/spec votes are no longer actively moderated.
 == Los votos de expulsión/espectador del servidor ya no son moderados activamente.
 

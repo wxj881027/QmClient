@@ -12758,6 +12758,15 @@ Server hostname (0.7 only)
 Server info
 == 伺服器信息
 
+Server information lower left card width (per mille)
+== 伺服器資訊左下卡片寬度（千分比）
+
+Server information upper left card width (per mille)
+== 伺服器資訊左上卡片寬度（千分比）
+
+Server information upper row height (per mille)
+== 伺服器資訊上排高度（千分比）
+
 Server kick/spec votes are no longer actively moderated.
 == 伺服器的踢人/旁觀投票已不再由主動管理員模式接管
 

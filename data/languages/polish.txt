@@ -12758,6 +12758,15 @@ Server hostname (0.7 only)
 Server info
 == Informacje o serwerze
 
+Server information lower left card width (per mille)
+== Szerokość lewej dolnej karty informacji o serwerze (promile)
+
+Server information upper left card width (per mille)
+== Szerokość lewej górnej karty informacji o serwerze (promile)
+
+Server information upper row height (per mille)
+== Wysokość górnego rzędu informacji o serwerze (promile)
+
 Server kick/spec votes are no longer actively moderated.
 == Głosowania za wyrzuceniem/przeniesieniem do widzów nie są już aktywnie moderowane.
 

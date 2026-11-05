@@ -12758,6 +12758,15 @@ Server hostname (0.7 only)
 Server info
 == サーバー情報
 
+Server information lower left card width (per mille)
+== サーバー情報の左下カードの幅（千分率）
+
+Server information upper left card width (per mille)
+== サーバー情報の左上カードの幅（千分率）
+
+Server information upper row height (per mille)
+== サーバー情報の上段の高さ（千分率）
+
 Server kick/spec votes are no longer actively moderated.
 == サーバーのキック/観戦投票は、アクティブモデレーションの対象ではなくなりました。
 
