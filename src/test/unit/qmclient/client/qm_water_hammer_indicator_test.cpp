@@ -129,3 +129,66 @@ TEST(QmWaterHammerIndicator, AllDeathAndFreezeTilesArePenaltyTiles)
 	EXPECT_TRUE(QmIsWaterHammerPenaltyTile(TILE_LFREEZE));
 	EXPECT_FALSE(QmIsWaterHammerPenaltyTile(TILE_AIR));
 }
+
+TEST(QmWaterHammerIndicator, RemoteHookRequiresActualFreeze)
+{
+	const SQmWaterHammerInputState Input{true, 0, 0, 1};
+	EXPECT_TRUE(QmShouldMarkWaterHook(200, false, Input, nullptr));
+	EXPECT_TRUE(QmShouldMarkWaterHook(-1, false, Input, nullptr));
+	EXPECT_TRUE(QmShouldMarkWaterHook(0, true, Input, nullptr));
+	EXPECT_FALSE(QmShouldMarkWaterHook(0, false, Input, nullptr));
+}
+
+TEST(QmWaterHammerIndicator, RemoteHookReleaseClearsMark)
+{
+	SQmWaterHammerInputState Input{true, 0, 0, 1};
+	ASSERT_TRUE(QmShouldMarkWaterHook(200, false, Input, nullptr));
+	Input.m_Hook = 0;
+	EXPECT_FALSE(QmShouldMarkWaterHook(200, false, Input, nullptr));
+}
+
+TEST(QmWaterHammerIndicator, RemoteHookRequiresReceivedInput)
+{
+	const SQmWaterHammerInputState Input{false, 0, 0, 1};
+	EXPECT_FALSE(QmShouldMarkWaterHook(200, false, Input, nullptr));
+}
+
+TEST(QmWaterHammerIndicator, LocalHookWorksWithoutPreInputAndClearsOnRelease)
+{
+	CNetObj_PlayerInput Input{};
+	Input.m_Hook = 1;
+	ASSERT_TRUE(QmShouldMarkWaterHook(200, false, {}, &Input));
+	Input.m_Hook = 0;
+	EXPECT_FALSE(QmShouldMarkWaterHook(200, false, {}, &Input));
+}
+
+TEST(QmWaterHammerIndicator, LocalHookReleaseOverridesStalePreInput)
+{
+	const SQmWaterHammerInputState PreInput{true, 0, 0, 1};
+	CNetObj_PlayerInput Input{};
+	EXPECT_FALSE(QmShouldMarkWaterHook(200, false, PreInput, &Input));
+}
+
+TEST(QmWaterHammerIndicator, LocalHeldHookOverridesReleasedPreInput)
+{
+	const SQmWaterHammerInputState PreInput{true, 0, 0, 0};
+	CNetObj_PlayerInput Input{};
+	Input.m_Hook = 1;
+	EXPECT_TRUE(QmShouldMarkWaterHook(200, false, PreInput, &Input));
+	EXPECT_FALSE(QmShouldMarkWaterHook(200, false, PreInput, nullptr));
+	EXPECT_FALSE(QmShouldMarkWaterHook(0, false, PreInput, &Input));
+}
+
+TEST(QmWaterHammerIndicator, HammerAndHookCanBeHeldIndependently)
+{
+	SQmWaterHammerInputState Input{true, WEAPON_HAMMER + 1, 1, 1};
+	EXPECT_TRUE(QmShouldMarkWaterHammer(200, false, WEAPON_HAMMER, Input, nullptr));
+	EXPECT_TRUE(QmShouldMarkWaterHook(200, false, Input, nullptr));
+	Input.m_Fire = 2;
+	EXPECT_FALSE(QmShouldMarkWaterHammer(200, false, WEAPON_HAMMER, Input, nullptr));
+	EXPECT_TRUE(QmShouldMarkWaterHook(200, false, Input, nullptr));
+	Input.m_Fire = 3;
+	Input.m_Hook = 0;
+	EXPECT_TRUE(QmShouldMarkWaterHammer(200, false, WEAPON_HAMMER, Input, nullptr));
+	EXPECT_FALSE(QmShouldMarkWaterHook(200, false, Input, nullptr));
+}

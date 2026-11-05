@@ -10,6 +10,7 @@ struct SQmWaterHammerInputState
 	bool m_Received = false;
 	int m_WantedWeapon = 0;
 	int m_Fire = 0;
+	int m_Hook = 0;
 };
 
 // 水域卡锤标记的纯判定逻辑，独立于客户端组件，便于单元测试。
@@ -35,6 +36,16 @@ inline bool QmShouldMarkWaterHammer(const int FreezeEnd, const bool LiveFrozen, 
 	const int Fire = pLocalInput ? pLocalInput->m_Fire : PreInput.m_Fire;
 	const bool HammerRequested = WantedWeapon == WEAPON_HAMMER + 1 || CurrentWeapon == WEAPON_HAMMER;
 	return QmShouldMarkWaterHammer(FreezeEnd, LiveFrozen, HammerRequested, (Fire & 1) != 0);
+}
+
+// 卡钩按持有输入判断，不使用钩索伸出状态，避免收钩后仍按住时漏报。
+inline bool QmShouldMarkWaterHook(const int FreezeEnd, const bool LiveFrozen, const SQmWaterHammerInputState &PreInput, const CNetObj_PlayerInput *pLocalInput)
+{
+	if(!pLocalInput && !PreInput.m_Received)
+		return false;
+
+	const int Hook = pLocalInput ? pLocalInput->m_Hook : PreInput.m_Hook;
+	return (FreezeEnd != 0 || LiveFrozen) && Hook != 0;
 }
 
 #endif // GAME_CLIENT_COMPONENTS_QMCLIENT_WATER_HAMMER_INDICATOR_LOGIC_H

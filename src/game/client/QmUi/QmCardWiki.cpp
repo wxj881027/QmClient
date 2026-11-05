@@ -726,9 +726,9 @@ namespace
 		},
 		{
 			"qm:water_hammer",
-			Localizable("Marks teammates who hold hammer while stuck in death or freeze areas, so you can see who is hammering them."),
-			Localizable("Tick \"Highlight teammates hammering in death or freeze areas\"; it works on your own team only and needs no key bind."),
-			Localizable("Use it to find the teammate who needs a wake-up; enemies are never highlighted, so do not look for them here."),
+			Localizable("Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses."),
+			Localizable("Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size."),
+			Localizable("Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded."),
 		},
 		{
 			"qm:weapon_animation",

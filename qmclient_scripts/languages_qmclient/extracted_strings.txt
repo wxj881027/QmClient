@@ -113,6 +113,7 @@
 4:4:4 (best details)
 === All Local Saves ===
 === Saves for '%s' ===
+?!Stuck keys!?
 [%s] %s (Map: %s, Time: %s)
 _ or ' ' = blank spacer
 a = View angle
@@ -1690,6 +1691,7 @@ Enable the effects you like; turn tiny Tees off if distant players become hard t
 Enable the finished indicator and wait for player data
 Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then set the icon size and the maximum number of rows.
 Enable the guide line, then set its length, style and colors.
+Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size.
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 Enable the indicators you need; each one draws on your own screen only.
 Enable the message types you want and choose their colors.
@@ -2036,7 +2038,6 @@ Game sound volume
 Game time margin
 Game type
 Game type (ddnet, mod)
-Game types:
 Game update rate (Hz)
 Game update rate when window inactive (Hz)
 Game/predicted tick
@@ -2226,14 +2227,14 @@ High quality, slow
 Higher input latency
 Highlight Color
 Highlight console commands
+Highlight frozen teammates' hammer and hook inputs
 Highlight game type
 Highlight message text gradient color
 Highlight ping value
 Highlight selected players in the game world
-Highlight teammates hammering in death or freeze areas
-Highlight teammates holding hammer in death or freeze areas
 Highlighted message
 Highlighted message color
+Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses.
 Hit feedback
 Hitbox Mode Freeze Border Color
 Hitbox Mode Global Opacity
@@ -2307,6 +2308,7 @@ I muted you
 Icon and number
 Icon symbols:
 Icons
+Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
 Identity preset
 If 1, auto record only once on connect; if 0, auto record restarts after game end
 If 1, current driver is in blocking error state.
@@ -2761,6 +2763,7 @@ Manual source file
 Manual Steam path is invalid; using automatic detection
 Manual target
 Map
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
 Map browser difficulty star filter bitmask (bits 1-5)
 Map browser: show empty servers only
 Map browser: show favorite maps only
@@ -2808,7 +2811,6 @@ Mark the end of a cut (right click to reset)
 Mark the end of a demo cut
 Markers
 Markers are drawn on your screen only and never change the game itself.
-Marks teammates who hold hammer while stuck in death or freeze areas, so you can see who is hammering them.
 Master server URL to register
 Match %d of %d
 Match ghost by map version instead of map name
@@ -3468,7 +3470,6 @@ Player clan
 Player count
 Player country (ISO 3166-1 numeric code)
 Player country filter in server browser (ISO 3166-1 numeric)
-Player country:
 Player death
 Player decoration color
 Player eyes color
@@ -3593,9 +3594,11 @@ Press a key…
 Press ESC to close. Watch the scale-in spring on open.
 Press Esc to exit the HUD editor
 Press F2, log in, then use: change_map map_name
+Pressed hammer icon color
 Pressed hook collision line color when hitting a tee
 Pressed hook collision line color when hitting something hookable
 Pressed hook collision line color when not aiming at anything hookable
+Pressed hook icon color
 Pressed hook line color; always used when custom pressed colors are enabled
 Pressed hook line tip color
 Pressed: A Tee
@@ -4932,7 +4935,6 @@ Streamer word list file
 Strength icons assets
 Stress system (debug builds only).
 Strict game type filter
-Strict gametype filter
 Strict mode
 Stroke fade time
 Stroke retention time (0=Never disappear)
@@ -5212,7 +5214,6 @@ Tick "Enable 3D background particles", pick a "Particle type", then set "Particl
 Tick "Enable lyrics" and "Show lyrics inside Dynamic Island", then enable one source such as "Enable Netease music Hook" or "Enable Spotify lyrics".
 Tick "Enable system media control", then "Show song info in top-left corner"; the Previous, Play/Pause and Next buttons drive the track.
 Tick "Enable voice", then open "Advanced options" to pick "Input device" and "Output device"; "Auto unmute when speaking" frees your mute key.
-Tick "Highlight teammates hammering in death or freeze areas"; it works on your own team only and needs no key bind.
 Tick "Launch Steam automatically when starting externally"; if Steam is not found, type its path or press "Detect Steam again".
 Tick "Position jump hint", then move it with "Horizontal position" and "Vertical position" in percent and pick a readable "Font size".
 Tick "Replace non-friend names with ID", "Replace non-friend skins with default" or "Use default flags on scoreboard"; words come from a "Word list file".
@@ -5580,7 +5581,6 @@ Use enemy color instead of frozen color
 Use enemy list to drive player indicators
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 Use installed asset names. Empty fields keep the current asset.
-Use it to find the teammate who needs a wake-up; enemies are never highlighted, so do not look for them here.
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 Use large emote
 Use mouse sensitivity when dynamic camera is on
@@ -5728,7 +5728,6 @@ Warmup time before round (in seconds)
 Warn about team balance
 Warning
 Watches your friend list and reports friends coming online or joining your map, with optional automatic greeting.
-Water hammer highlight
 Watermark
 Weak hook
 Weak hook color
