@@ -242,8 +242,7 @@ static const char *MapDifficultyStars(int Stars)
 	return Stars >= 0 && Stars <= 5 ? s_apStarLabels[Stars] : "";
 }
 
-// 独立难度列的单元格文本：恒定「类别显示名 + 星级」（如「简单 ★★★☆☆」）。
-// 名称列只显示区段短名、不承担类别信息（2026-10-14 校准），去重逻辑随之删除；
+// 独立难度列只显示星级符号；
 // 无目录条目返回空串，由调用方显示占位符。
 static void FormatMapDifficultyText(const CQmMapDifficultyCatalog::SEntry *pDifficulty, char *pOut, size_t OutSize)
 {
@@ -255,7 +254,7 @@ static void FormatMapDifficultyText(const CQmMapDifficultyCatalog::SEntry *pDiff
 	const char *pStars = MapDifficultyStars(pDifficulty->m_Stars);
 	if(pStars[0] == '\0')
 		return;
-	str_format(pOut, OutSize, "%s %s", FavoriteMapCategoryDisplayName(pDifficulty->m_Category.c_str()), pStars);
+	str_copy(pOut, pStars, OutSize);
 }
 
 // 浏览器名称列的区段短名：解析器输出「类别 - 区段」（如「简单 - CHN5 上海」），
@@ -1886,7 +1885,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		if(g_Config.m_QmShortServerNames && ShortNameAllowed)
 		{
 			CMenus::GetServerbrowserDisplayName(pItem, aParsedShortName, sizeof(aParsedShortName));
-			// 名称列只显示区段（「简单 - CHN5 上海」→「CHN5 上海」）；类别由难度列恒定承担。
+			// 名称列只显示区段（「简单 - CHN5 上海」→「CHN5 上海」）。
 			pDisplayServerName = BrowserSegmentDisplayName(aParsedShortName, aDisplayServerName, sizeof(aDisplayServerName));
 			// 解析结果剥前缀后为空白（名称全空白或仅含空白段）时回退原始名称，
 			// 避免名称列渲染出空文本容器。
@@ -2034,7 +2033,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_DIFFICULTY)
 			{
-				// 独立难度列：恒定「类别词 + 星级」；无目录条目显示占位。
+				// 独立难度列只显示星级符号；无目录条目显示占位。
 				const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.FindForServer(*pItem, MapCategoryHintFromServer(pItem));
 				char aDifficulty[64];
 				FormatMapDifficultyText(pDifficulty, aDifficulty, sizeof(aDifficulty));
@@ -2164,12 +2163,14 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_PLAYERS)
 			{
+				// 为字形和描边留出余量，避免右对齐的末位数字贴住列裁剪边界。
+				Button.VMargin(2.0f, &Button);
 				str_format(aTemp, sizeof(aTemp), "%i/%i", pItem->m_NumFilteredPlayers, ServerBrowser()->Max(*pItem));
 				if(g_Config.m_BrFilterString[0] && (pItem->m_QuickSearchHit & IServerBrowser::QUICK_PLAYER))
 				{
 					TextRender()->TextColor(gs_HighlightedTextColor);
 				}
-				MeasureColumn(Id, aTemp, FontSize);
+				MeasureColumn(Id, aTemp, FontSize, 4.0f);
 				Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_PLAYERS), &Button, aTemp, FontSize, TEXTALIGN_MR, QmBrowserTableLabelProperties(Button.w));
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
 			}
