@@ -7,6 +7,12 @@
 #include <array>
 #include <vector>
 
+inline int ResolveSettingsCardLayoutColumn(int Column, bool FullWidth, bool DefaultRightColumn)
+{
+	// 排序中的全宽槽位收窄后按实际左右列排布，不再占用另一列的高度。
+	return Column == 0 && !FullWidth ? (DefaultRightColumn ? 2 : 1) : Column;
+}
+
 inline CUIRect SettingsCardWidthButtonRect(const SSettingsCardFrame &Frame)
 {
 	CUIRect Rect = Frame.m_HandleRect;
