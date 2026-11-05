@@ -170,7 +170,9 @@ float QmMapCover::TailAlpha(const SArt &Art, int X, int Y, int Width, int Height
 	const float Main = 1.0f - SmoothStep(T * 1.05f - 0.02f + WarpMain);
 	const float Second = (1.0f - SmoothStep(T / 0.66f + WarpSecond)) * 0.62f;
 	const float Third = (1.0f - SmoothStep(T / 0.42f + WarpThird)) * 0.30f;
-	return std::clamp(std::max({Main, Second, Third}), 0.0f, 1.0f);
+	// 尾端独立收束到透明，避免噪声把残余覆盖率带到纹理边界。
+	const float EdgeFade = SmoothStep(static_cast<float>(Width - 1 - X) / std::max(1.0f, static_cast<float>(TailWidth) * 0.2f));
+	return std::clamp(std::max({Main, Second, Third}), 0.0f, 1.0f) * EdgeFade;
 }
 
 bool QmMapCover::Compose(const CImageInfo &Source, int OutWidth, int OutHeight, const SArt &Art, CImageInfo &Out)
