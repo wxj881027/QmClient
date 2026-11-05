@@ -2741,12 +2741,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 Colors for chat command and emoji completion
 == Sohbette komut ve emoji tamamlama renkleri
 
-Colors in chat
-== Sohbetteki renkler
-
-Colors in scoreboard
-== Skor tablosundaki renkler
-
 Colors of the hook collision line, in case of a possible collision with:
 == Olası çarpma durumunda kanca yardım çizgisi renkleri:
 
@@ -6098,9 +6092,6 @@ Game type
 Game type (ddnet, mod)
 == Oyun türü (ddnet, mod)
 
-Game types:
-== Oyun türleri:
-
 Game update rate (Hz)
 == Oyun güncelleme hızı (Hz)
 
@@ -8732,6 +8723,9 @@ Mix rate
 Mixed
 == Karışık
 
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == Mobil izleyici kamerası: 0=joystick, 1=görünümü sürükle
 
@@ -9280,6 +9274,9 @@ No downloadable portable package for this version
 
 No empty team left.
 == Boş takım kalmadı.
+
+No entries yet
+== Henüz kayıt yok
 
 No favorite maps yet
 == Henüz favori harita yok
@@ -10375,9 +10372,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == Sunucu tarayıcısında oyuncu ülke filtresi (ISO 3166-1 sayısal)
-
-Player country:
-== Oyuncu ülkesi:
 
 Player death
 == Oyuncu ölümü
@@ -13094,7 +13088,7 @@ Show chat when rendering video
 Show clan above name plates
 == İsim plakalarının üstünde klanı göster
 
-Show clan if war
+Show clan for enemies
 == Savaş varsa klanı göster
 
 Show clan name on nameplate
@@ -13240,6 +13234,12 @@ Show enemy color in scoreboard
 
 Show enemy color in spectator menu
 == Seyirci menüsünde düşman rengini göster
+
+Show enemy colors in chat
+== Sohbetteki renkler
+
+Show enemy colors in scoreboard
+== Skor tablosundaki renkler
 
 Show enemy group players
 == Düşman grubu oyuncularını göster
@@ -14760,9 +14760,6 @@ Stress system (debug builds only).
 == Stres sistemi (yalnızca hata ayıklama yapıları).
 
 Strict game type filter
-== Katı oyun türü filtresi
-
-Strict gametype filter
 == Katı oyun türü filtresi
 
 Strict mode

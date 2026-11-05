@@ -128,7 +128,7 @@ void CMenus::RenderServerbrowserFilterForm(CUIRect &View)
 	{
 		static int s_aStarChipIds[6];
 		const IUiContext ChipContext = SettingsUiContext("server_browser_filter_stars");
-		const SQmBrowserChipGrid Chips = QmBrowserChipGrid(View, 6, ui_token::server_filter::CHIP_MIN_WIDTH, ui_token::server_filter::CHIP_HEIGHT, ui_token::server_filter::CHIP_GAP);
+		const SQmBrowserChipGrid Chips = QmBrowserChipGrid(View, 6, ui_token::server_filter::CHIP_STAR_MIN_WIDTH, ui_token::server_filter::CHIP_HEIGHT, ui_token::server_filter::CHIP_GAP);
 		int StarMask = g_Config.m_QmMapBrowserStarMask;
 		bool StarMaskChanged = false;
 		if(ui_widget::FilterChip(ChipContext, &s_aStarChipIds[0], Chips.m_aRects[0], Localize("All"), StarMask == 0))
@@ -168,7 +168,7 @@ void CMenus::RenderServerbrowserFilterForm(CUIRect &View)
 		int CategoryMask = g_Config.m_QmMapBrowserCategoryMask;
 		bool CategoryMaskChanged = false;
 		const auto DrawChipGroup = [&](const char *const *ppKeys, const char *const *ppLabels, int Count, int IdOffset, bool Translate) {
-			const SQmBrowserChipGrid Chips = QmBrowserChipGrid(View, Count, ui_token::server_filter::CHIP_MIN_WIDTH, ui_token::server_filter::CHIP_HEIGHT, ui_token::server_filter::CHIP_GAP);
+			const SQmBrowserChipGrid Chips = QmBrowserChipGrid(View, Count, ui_token::server_filter::CHIP_LABEL_MIN_WIDTH, ui_token::server_filter::CHIP_HEIGHT, ui_token::server_filter::CHIP_GAP);
 			for(int Index = 0; Index < Chips.m_Count; ++Index)
 			{
 				const int Bit = QmMapVotes::MapBrowserCategoryBit(ppKeys[Index]);

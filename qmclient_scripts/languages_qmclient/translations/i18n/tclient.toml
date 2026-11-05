@@ -1377,9 +1377,9 @@ turkish = "Renkler"
 polish = "Kolory"
 
 [[message]]
-key = "Colors in chat"
+key = "Show enemy colors in chat"
 [message.translations]
-simplified_chinese = "在聊天栏中的颜色"
+simplified_chinese = "聊天框中显示敌对玩家的颜色"
 traditional_chinese = "在聊天欄中的顏色"
 japanese = "チャット内の色"
 korean = "채팅에서의 색상"
@@ -1393,9 +1393,9 @@ turkish = "Sohbetteki renkler"
 polish = "Kolory na czacie"
 
 [[message]]
-key = "Colors in scoreboard"
+key = "Show enemy colors in scoreboard"
 [message.translations]
-simplified_chinese = "计分板中的颜色"
+simplified_chinese = "计分板中显示敌对玩家的颜色"
 traditional_chinese = "計分板中的顏色"
 japanese = "スコアボード内の色"
 korean = "점수판에서의 색상"
@@ -6577,9 +6577,9 @@ turkish = "Etkin göstergeleri göster"
 polish = "Pokaż dowolny włączony wskaźnik"
 
 [[message]]
-key = "Show clan if war"
+key = "Show clan for enemies"
 [message.translations]
-simplified_chinese = "如果有敌对则显示战队"
+simplified_chinese = "敌对玩家显示战队"
 traditional_chinese = "如果有敵對則顯示戰隊"
 japanese = "敵対の場合にクランを表示"
 korean = "전쟁 시 클랜 표시"
@@ -9039,6 +9039,22 @@ brazilian_portuguese = "Entradas de Guerra"
 portuguese = "Entradas de Guerra"
 turkish = "Savaş Girişleri"
 polish = "Wpisy wojenne"
+
+[[message]]
+key = "No entries yet"
+[message.translations]
+simplified_chinese = "暂无条目"
+traditional_chinese = "暫無條目"
+japanese = "エントリがまだありません"
+korean = "아직 항목이 없습니다"
+russian = "Записей пока нет"
+german = "Noch keine Einträge"
+spanish = "Todavía no hay entradas"
+french = "Aucune entrée pour l'instant"
+brazilian_portuguese = "Nenhuma entrada ainda"
+portuguese = "Nenhuma entrada ainda"
+turkish = "Henüz kayıt yok"
+polish = "Brak wpisów"
 
 [[message]]
 key = "War Groups"

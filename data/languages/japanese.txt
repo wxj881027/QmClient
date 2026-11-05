@@ -2741,12 +2741,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 Colors for chat command and emoji completion
 == チャットのコマンド・絵文字補完の配色
 
-Colors in chat
-== チャット内の色
-
-Colors in scoreboard
-== スコアボード内の色
-
 Colors of the hook collision line, in case of a possible collision with:
 == フック補助線の色（以下の対象と衝突する可能性がある場合）：
 
@@ -6098,9 +6092,6 @@ Game type
 Game type (ddnet, mod)
 == ゲームタイプ（ddnet、mod）
 
-Game types:
-== ゲームタイプ：
-
 Game update rate (Hz)
 == ゲーム更新レート（Hz）
 
@@ -8732,6 +8723,9 @@ Mix rate
 Mixed
 == 混合
 
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == モバイル観戦のカメラ操作：0=ジョイスティック、1=画面ドラッグ
 
@@ -9280,6 +9274,9 @@ No downloadable portable package for this version
 
 No empty team left.
 == 空いているチームはもうありません。
+
+No entries yet
+== エントリがまだありません
 
 No favorite maps yet
 == まだお気に入りマップはありません
@@ -10375,9 +10372,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == サーバーブラウザでのプレイヤーの国フィルター（ISO 3166-1 数値）
-
-Player country:
-== プレイヤーの国：
 
 Player death
 == プレイヤー死亡
@@ -13094,7 +13088,7 @@ Show chat when rendering video
 Show clan above name plates
 == ネームプレートの上にクランを表示
 
-Show clan if war
+Show clan for enemies
 == 敵対の場合にクランを表示
 
 Show clan name on nameplate
@@ -13240,6 +13234,12 @@ Show enemy color in scoreboard
 
 Show enemy color in spectator menu
 == スペクテーターメニューで敵の色を表示
+
+Show enemy colors in chat
+== チャット内の色
+
+Show enemy colors in scoreboard
+== スコアボード内の色
 
 Show enemy group players
 == 敵グループのプレイヤーを表示
@@ -14760,9 +14760,6 @@ Stress system (debug builds only).
 == ストレスシステム（デバッグビルドのみ）
 
 Strict game type filter
-== 厳格なゲームタイプフィルター
-
-Strict gametype filter
 == 厳格なゲームタイプフィルター
 
 Strict mode

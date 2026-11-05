@@ -201,12 +201,15 @@ namespace ui_token::secondary_panel
 // 底部快捷条与筛选面板共用同一套密度，避免两处各写 18 / 24 / 26。
 namespace ui_token::server_filter
 {
-	inline constexpr float LINE_HEIGHT = 18.0f;
+	inline constexpr float LINE_HEIGHT = 16.0f;
 	inline constexpr float LINE_SPACING = 3.0f;
-	inline constexpr float BODY_FONT_SIZE = 14.0f;
+	inline constexpr float BODY_FONT_SIZE = 12.0f;
 	inline constexpr float SECTION_GAP = 6.0f;
-	inline constexpr float SECTION_TITLE_SCALE = 1.15f;
-	inline constexpr float CHIP_MIN_WIDTH = 6.0f;
+	inline constexpr float SECTION_TITLE_SCALE = 1.3f;
+	// 胶囊最小宽度按内容分档：星标档位短，模式名长。给错成 6 会让一行塞满 10 个胶囊，
+	// 每个都只剩省略号。
+	inline constexpr float CHIP_STAR_MIN_WIDTH = 40.0f;
+	inline constexpr float CHIP_LABEL_MIN_WIDTH = 68.0f;
 	inline constexpr float CHIP_HEIGHT = 24.0f;
 	inline constexpr float CHIP_GAP = 4.0f;
 	// FilterChip 是筛选胶囊与设置页二选一胶囊的唯一绘制入口，字号随该组统一。

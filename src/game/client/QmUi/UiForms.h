@@ -89,6 +89,9 @@ namespace ui_widget
 
 	void DrawToggle(const IUiContext &Ctx, const void *pId, bool Value, const CUIRect &Rect, bool Enabled = true, bool Animate = true, const CUIRect *pHitRect = nullptr);
 	void DrawMarkedControl(const IUiContext &Ctx, const void *pId, const char *pMark, const CUIRect &Rect, const CUIRect *pHitRect = nullptr);
+
+	// 两端渐隐的细分隔线：面板内分组用，替代背景板。
+	void DrawFadeDivider(CUi *pUi, const CUIRect &Rect);
 	// 多选筛选胶囊：选中态由调用方传入，返回是否被点击。标签按控件宽度省略，不换行。
 	bool FilterChip(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, const char *pLabel, bool Selected);
 	void DrawScrollbarHandle(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, bool Enabled = true, const ColorRGBA *pColorInner = nullptr, const ColorRGBA *pHandleColorOverride = nullptr);

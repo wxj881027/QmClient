@@ -753,6 +753,20 @@ namespace ui_widget
 		DrawControlSurface(Ctx, Layout.m_Knob, Feedback.m_Knob, ColorRGBA(), ui_token::radius::PILL);
 	}
 
+	// 两端渐隐的细分隔线：分组标题下用它，比整块背景板轻，不会把标题读成按钮。
+	void DrawFadeDivider(CUi *pUi, const CUIRect &Rect)
+	{
+		if(pUi == nullptr || pUi->MeasurementOnly())
+			return;
+		const float Inset = std::min(Rect.w * ui_token::server_filter::DIVIDER_INSET_RATIO, ui_token::server_filter::DIVIDER_INSET_MAX);
+		CUIRect Bar{Rect.x + Inset, Rect.y + (Rect.h - ui_token::server_filter::DIVIDER_THICKNESS) * 0.5f, std::max(0.0f, Rect.w - 2.0f * Inset), ui_token::server_filter::DIVIDER_THICKNESS};
+		const ColorRGBA Peak = ui_token::color::TEXT_SECONDARY.WithAlpha(0.18f);
+		const ColorRGBA Edge = Peak.WithAlpha(0.0f);
+		const float Half = Bar.w * 0.5f;
+		pUi->Graphics()->DrawRect4(Bar.x, Bar.y, Half, Bar.h, Edge, Peak, Edge, Peak, IGraphics::CORNER_NONE, 0.0f);
+		pUi->Graphics()->DrawRect4(Bar.x + Half, Bar.y, Bar.w - Half, Bar.h, Peak, Edge, Peak, Edge, IGraphics::CORNER_NONE, 0.0f);
+	}
+
 	void DrawMarkedControl(const IUiContext &Ctx, const void *pId, const char *pMark, const CUIRect &Rect, const CUIRect *pHitRect)
 	{
 		if(Ctx.m_pUi == nullptr)

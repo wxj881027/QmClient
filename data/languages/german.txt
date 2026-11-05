@@ -2741,12 +2741,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 Colors for chat command and emoji completion
 == Farben für die Befehls- und Emoji-Vervollständigung im Chat
 
-Colors in chat
-== Farben im Chat
-
-Colors in scoreboard
-== Farben in der Bestenliste
-
 Colors of the hook collision line, in case of a possible collision with:
 == Farben der Hakenhilfslinie im Falle einer möglichen Kollision mit:
 
@@ -6098,9 +6092,6 @@ Game type
 Game type (ddnet, mod)
 == Spieltyp (ddnet, mod)
 
-Game types:
-== Spieltypen:
-
 Game update rate (Hz)
 == Spielaktualisierungsrate (Hz)
 
@@ -8732,6 +8723,9 @@ Mix rate
 Mixed
 == Gemischt
 
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == Kamera im mobilen Zuschauermodus: 0=Joystick, 1=Bild ziehen
 
@@ -9280,6 +9274,9 @@ No downloadable portable package for this version
 
 No empty team left.
 == Kein leeres Team mehr übrig.
+
+No entries yet
+== Noch keine Einträge
 
 No favorite maps yet
 == Noch keine Lieblingskarten
@@ -10375,9 +10372,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == Spielerland-Filter im Server-Browser (ISO 3166-1 numerisch)
-
-Player country:
-== Spielerland:
 
 Player death
 == Spielertod
@@ -13094,7 +13088,7 @@ Show chat when rendering video
 Show clan above name plates
 == Clan über Namensschildern anzeigen
 
-Show clan if war
+Show clan for enemies
 == Clan anzeigen, wenn Krieg
 
 Show clan name on nameplate
@@ -13240,6 +13234,12 @@ Show enemy color in scoreboard
 
 Show enemy color in spectator menu
 == Feindfarbe im Zuschauermenü anzeigen
+
+Show enemy colors in chat
+== Farben im Chat
+
+Show enemy colors in scoreboard
+== Farben in der Bestenliste
 
 Show enemy group players
 == Spieler der feindlichen Gruppe anzeigen
@@ -14760,9 +14760,6 @@ Stress system (debug builds only).
 == Stresssystem (nur Debug-Builds).
 
 Strict game type filter
-== Strenger Spieltyp-Filter
-
-Strict gametype filter
 == Strenger Spieltyp-Filter
 
 Strict mode

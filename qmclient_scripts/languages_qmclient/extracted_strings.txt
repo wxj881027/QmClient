@@ -914,8 +914,6 @@ Colors
 Colors a halo around each tee by its race team, so teammates and opponents are easy to tell apart.
 Colors and opacity of the popup list that suggests chat commands and emoticons while you type in chat.
 Colors for chat command and emoji completion
-Colors in chat
-Colors in scoreboard
 Colors of the hook collision line, in case of a possible collision with:
 Colors of the translate button in the chat input and of the language menu that button opens.
 Colors too close to the map background are hard to read while moving.
@@ -2036,7 +2034,6 @@ Game sound volume
 Game time margin
 Game type
 Game type (ddnet, mod)
-Game types:
 Game update rate (Hz)
 Game update rate when window inactive (Hz)
 Game/predicted tick
@@ -3103,6 +3100,7 @@ No demo with this filename exists
 No director players available
 No downloadable portable package for this version
 No empty team left.
+No entries yet
 No favorite maps yet
 No filter
 No functions bound
@@ -3468,7 +3466,6 @@ Player clan
 Player count
 Player country (ISO 3166-1 numeric code)
 Player country filter in server browser (ISO 3166-1 numeric)
-Player country:
 Player death
 Player decoration color
 Player eyes color
@@ -4374,7 +4371,7 @@ Show chat in demo preview and video
 Show chat messages above players
 Show chat when rendering video
 Show clan above name plates
-Show clan if war
+Show clan for enemies
 Show clan name on nameplate
 Show clan on nameplates for enemies
 Show client ID
@@ -4425,6 +4422,8 @@ Show emoji completion in chat
 Show enemy color in chat
 Show enemy color in scoreboard
 Show enemy color in spectator menu
+Show enemy colors in chat
+Show enemy colors in scoreboard
 Show enemy group players
 Show enemy reason
 Show entities
@@ -4932,7 +4931,6 @@ Streamer word list file
 Strength icons assets
 Stress system (debug builds only).
 Strict game type filter
-Strict gametype filter
 Strict mode
 Stroke fade time
 Stroke retention time (0=Never disappear)

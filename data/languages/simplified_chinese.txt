@@ -2747,12 +2747,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 Colors for chat command and emoji completion
 == 聊天指令和表情补全的配色
 
-Colors in chat
-== 在聊天栏中的颜色
-
-Colors in scoreboard
-== 计分板中的颜色
-
 Colors of the hook collision line, in case of a possible collision with:
 == 钩子辅助线颜色（瞄准以下目标时）：
 
@@ -6113,9 +6107,6 @@ Game type
 Game type (ddnet, mod)
 == 游戏类型（ddnet、mod）
 
-Game types:
-== 游戏模式：
-
 Game update rate (Hz)
 == 游戏更新率（单位：Hz）
 
@@ -8753,6 +8744,9 @@ Mix rate
 Mixed
 == 混合
 
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == 手机观战取景方式：0=摇杆，1=拖动画面
 
@@ -9310,6 +9304,9 @@ No downloadable portable package for this version
 
 No empty team left.
 == 已经没有空队伍了
+
+No entries yet
+== 暂无条目
 
 No favorite maps yet
 == 暂无收藏地图
@@ -10405,9 +10402,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == 在服务器浏览器中过滤的玩家国家/地区（ISO 3166-1 数字）
-
-Player country:
-== 玩家国家
 
 Player death
 == 玩家死亡
@@ -13124,8 +13118,8 @@ Show chat when rendering video
 Show clan above name plates
 == 显示战队名称
 
-Show clan if war
-== 如果有敌对则显示战队
+Show clan for enemies
+== 敌对玩家显示战队
 
 Show clan name on nameplate
 == 在铭牌上显示战队名称
@@ -13276,6 +13270,12 @@ Show enemy color in scoreboard
 
 Show enemy color in spectator menu
 == 在旁观菜单中显示敌对颜色
+
+Show enemy colors in chat
+== 聊天框中显示敌对玩家的颜色
+
+Show enemy colors in scoreboard
+== 计分板中显示敌对玩家的颜色
 
 Show enemy group players
 == 显示敌对组玩家
@@ -14797,9 +14797,6 @@ Stress system (debug builds only).
 
 Strict game type filter
 == 严格游戏模式筛选
-
-Strict gametype filter
-== 严格匹配
 
 Strict mode
 == 严格模式

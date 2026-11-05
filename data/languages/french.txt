@@ -2741,12 +2741,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 Colors for chat command and emoji completion
 == Couleurs de la complétion des commandes et émojis du chat
 
-Colors in chat
-== Couleurs dans le tchat
-
-Colors in scoreboard
-== Couleurs dans le tableau des scores
-
 Colors of the hook collision line, in case of a possible collision with:
 == Couleurs de la ligne de guidage du crochet, en cas de collision possible avec :
 
@@ -6098,9 +6092,6 @@ Game type
 Game type (ddnet, mod)
 == Type de jeu (ddnet, mod)
 
-Game types:
-== Types de jeu :
-
 Game update rate (Hz)
 == Taux de mise à jour du jeu (Hz)
 
@@ -8732,6 +8723,9 @@ Mix rate
 Mixed
 == Mixte
 
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == Caméra spectateur mobile : 0=joystick, 1=glisser la vue
 
@@ -9280,6 +9274,9 @@ No downloadable portable package for this version
 
 No empty team left.
 == Il ne reste plus d'équipe vide.
+
+No entries yet
+== Aucune entrée pour l'instant
 
 No favorite maps yet
 == Aucune carte favorite pour le moment
@@ -10375,9 +10372,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == Filtre de pays du joueur dans le navigateur de serveurs (ISO 3166-1 numérique)
-
-Player country:
-== Pays du joueur :
 
 Player death
 == Mort du joueur
@@ -13094,7 +13088,7 @@ Show chat when rendering video
 Show clan above name plates
 == Afficher le clan au-dessus des plaques de nom
 
-Show clan if war
+Show clan for enemies
 == Afficher le clan si ennemi
 
 Show clan name on nameplate
@@ -13240,6 +13234,12 @@ Show enemy color in scoreboard
 
 Show enemy color in spectator menu
 == Afficher la couleur ennemie dans le menu spectateur
+
+Show enemy colors in chat
+== Couleurs dans le tchat
+
+Show enemy colors in scoreboard
+== Couleurs dans le tableau des scores
 
 Show enemy group players
 == Afficher les joueurs du groupe ennemi
@@ -14761,9 +14761,6 @@ Stress system (debug builds only).
 
 Strict game type filter
 == Filtre strict du type de jeu
-
-Strict gametype filter
-== Filtre de type de jeu strict
 
 Strict mode
 == Mode strict

@@ -430,7 +430,6 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			{
 				// 色带只承担「这是哪一组」：组色画成左侧色块，组名用正文色。
 				// 直接把组名染成组色时，用户挑深色组色会让组名在色带上读不出来。
-				Button.Draw(ui_token::color::SURFACE_SUBHEADER, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU);
 				const float SwatchInset = ui_token::spacing::XS;
 				const float SwatchSize = std::max(0.0f, Button.h - 2.0f * SwatchInset);
 				CUIRect Swatch, Label;
@@ -444,7 +443,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				Label.VSplitLeft(SwatchInset, nullptr, &Label);
 				// 只是一行组名时玩家看不出这是什么；前面补上「分组」标签。
 				char aBandLabel[128];
-				str_format(aBandLabel, sizeof(aBandLabel), "%s · %s", Localize("Group"), pSelectedType->m_aWarName);
+				str_format(aBandLabel, sizeof(aBandLabel), "%s · %s", Localize("War Groups"), pSelectedType->m_aWarName);
 				Ui()->DoLabel(&Label, aBandLabel, HeadlineFontSize, TEXTALIGN_ML);
 			}
 		}
@@ -455,6 +454,11 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 	auto RenderSettings = [&](CUIRect &Column) {
 		CUIRect CheckBoxRect, CaptionRect;
 		CSettingsContentLayoutFlow Flow(Column);
+		// 「设置」标题下面画一条分割线，分组边界靠线而不是背景板。
+		if(Flow.Control("tclient-warlist-settings-divider", ui_token::spacing::MD, CaptionRect))
+		{
+			ui_widget::DrawFadeDivider(Ui(), CaptionRect);
+		}
 		if(Flow.Control("tclient-warlist-enable", LineSize, CheckBoxRect, MarginSmall))
 		{
 			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarList, "tclient-warlist-enable", Localize("Enable warlist"), g_Config.m_QmWarList, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
@@ -475,21 +479,27 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListBlockEnemyChat, "tclient-warlist-block-enemy-chat", Localize("Block enemy chat"), g_Config.m_QmWarListBlockEnemyChat, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
 				g_Config.m_QmWarListBlockEnemyChat ^= 1;
 		}
-		// 下面三行颜色开关是同一件事（敌对颜色显示在哪些地方），给一条小标题收在一起，
-		// 免得和上面的总开关、屏蔽选项混成一片。
+		// 颜色这一组用「小标题 + 渐隐分割线」，不用整块背景板：背板会把标题读成一个按钮。
 		if(Flow.Control("tclient-warlist-colors-caption", WarListMetrics.m_LineHeight, CaptionRect, MarginSmall * 2.0f))
 		{
-			CaptionRect.Draw(ui_token::color::SURFACE_SUBHEADER, IGraphics::CORNER_ALL, ui_token::radius::SMALL_MENU);
-			Ui()->DoLabel(&CaptionRect, Localize("Colors"), StandardFontSize, TEXTALIGN_MC);
+			SLabelProperties CaptionProps;
+			CaptionProps.m_MaxWidth = CaptionRect.w;
+			CaptionProps.m_EnableWidthCheck = false;
+			CaptionProps.SetColor(ui_token::color::TEXT_SECONDARY);
+			Ui()->DoLabel(&CaptionRect, Localize("Colors"), StandardFontSize, TEXTALIGN_ML, CaptionProps);
+		}
+		if(Flow.Control("tclient-warlist-colors-divider", ui_token::spacing::MD, CaptionRect))
+		{
+			ui_widget::DrawFadeDivider(Ui(), CaptionRect);
 		}
 		if(Flow.Control("tclient-warlist-colors-chat", LineSize, CheckBoxRect, MarginSmall))
 		{
-			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListChat, "tclient-warlist-colors-chat", Localize("Colors in chat"), g_Config.m_QmWarListChat, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
+			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListChat, "tclient-warlist-colors-chat", Localize("Show enemy colors in chat"), g_Config.m_QmWarListChat, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
 				g_Config.m_QmWarListChat ^= 1;
 		}
 		if(Flow.Control("tclient-warlist-colors-scoreboard", LineSize, CheckBoxRect, MarginSmall))
 		{
-			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListScoreboard, "tclient-warlist-colors-scoreboard", Localize("Colors in scoreboard"), g_Config.m_QmWarListScoreboard, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
+			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListScoreboard, "tclient-warlist-colors-scoreboard", Localize("Show enemy colors in scoreboard"), g_Config.m_QmWarListScoreboard, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
 				g_Config.m_QmWarListScoreboard ^= 1;
 		}
 		if(Flow.Control("tclient-warlist-colors-spectate", LineSize, CheckBoxRect, MarginSmall))
@@ -499,7 +509,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		}
 		if(Flow.Control("tclient-warlist-show-clan", LineSize, CheckBoxRect, MarginSmall))
 		{
-			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListShowClan, "tclient-warlist-show-clan", Localize("Show clan if war"), g_Config.m_QmWarListShowClan, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
+			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListShowClan, "tclient-warlist-show-clan", Localize("Show clan for enemies"), g_Config.m_QmWarListShowClan, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
 				g_Config.m_QmWarListShowClan ^= 1;
 		}
 	};

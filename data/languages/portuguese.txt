@@ -2741,12 +2741,6 @@ Colors and opacity of the popup list that suggests chat commands and emoticons w
 Colors for chat command and emoji completion
 == Cores da conclusão de comandos e emojis na conversa
 
-Colors in chat
-== Cores no chat
-
-Colors in scoreboard
-== Cores no placar
-
 Colors of the hook collision line, in case of a possible collision with:
 == Cores da linha de colisão do gancho, em caso de possível colisão com:
 
@@ -6098,9 +6092,6 @@ Game type
 Game type (ddnet, mod)
 == Tipo de jogo (ddnet, mod)
 
-Game types:
-== Tipos de jogo:
-
 Game update rate (Hz)
 == Taxa de atualização do jogo (Hz)
 
@@ -8732,6 +8723,9 @@ Mix rate
 Mixed
 == Misto
 
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == Câmara de espetador móvel: 0=joystick, 1=arrastar a vista
 
@@ -9280,6 +9274,9 @@ No downloadable portable package for this version
 
 No empty team left.
 == Não resta nenhuma equipa vazia.
+
+No entries yet
+== Nenhuma entrada ainda
 
 No favorite maps yet
 == Ainda sem mapas favoritos
@@ -10375,9 +10372,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == Filtro de país do jogador no navegador de servidores (ISO 3166-1 numérico)
-
-Player country:
-== País do jogador:
 
 Player death
 == Morte do jogador
@@ -13094,7 +13088,7 @@ Show chat when rendering video
 Show clan above name plates
 == Mostrar clã acima das placas de nome
 
-Show clan if war
+Show clan for enemies
 == Mostrar clã se for guerra
 
 Show clan name on nameplate
@@ -13240,6 +13234,12 @@ Show enemy color in scoreboard
 
 Show enemy color in spectator menu
 == Mostrar cor inimiga no menu de espectador
+
+Show enemy colors in chat
+== Cores no chat
+
+Show enemy colors in scoreboard
+== Cores no placar
 
 Show enemy group players
 == Mostrar jogadores do grupo inimigo
@@ -14760,9 +14760,6 @@ Stress system (debug builds only).
 == Sistema de stress (apenas builds de depuração)
 
 Strict game type filter
-== Filtro rigoroso de tipo de jogo
-
-Strict gametype filter
 == Filtro rigoroso de tipo de jogo
 
 Strict mode
