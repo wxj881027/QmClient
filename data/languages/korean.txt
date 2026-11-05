@@ -590,9 +590,6 @@ Add friends by entering their name below or by clicking their name in the player
 Add function
 == 기능 추가
 
-Add Group
-== 그룹 추가
-
 Add Item
 == 아이템 추가
 
@@ -9119,6 +9116,9 @@ Network timeout
 Network timeout protection
 == 네트워크 타임아웃 보호
 
+New
+== New
+
 new
 == 새로 만들기
 
@@ -9623,6 +9623,9 @@ On
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == 키 하나에 명령을 여러 개 둘 수 있으니, 키를 통째로 지우지 말고 지정된 기능에서 하나씩 삭제하세요.
 
+Online
+== Online
+
 Online friends
 == 온라인 친구
 
@@ -9952,9 +9955,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == 얼음 타일의 엔티티 알파 덮어쓰기 (0-100)
-
-Override Group
-== 그룹 재정의
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Ping 추정 위치를 재정의합니다. 사용 가능: auto, af, as, as:cn, eu, na, oc, sa(자동, 아프리카, 아시아, 중국, 유럽, 북미, 오세아니아/호주, 남미)

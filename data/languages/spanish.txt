@@ -590,9 +590,6 @@ Add friends by entering their name below or by clicking their name in the player
 Add function
 == Añadir función
 
-Add Group
-== Añadir Grupo
-
 Add Item
 == Añadir Elemento
 
@@ -9119,6 +9116,9 @@ Network timeout
 Network timeout protection
 == Protección de tiempo de espera de red
 
+New
+== New
+
 new
 == nuevo
 
@@ -9623,6 +9623,9 @@ On
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == Una tecla puede tener varios comandos, así que borra entradas sueltas en Funciones asignadas en vez de vaciar la tecla.
 
+Online
+== Online
+
 Online friends
 == Amigos en línea
 
@@ -9952,9 +9955,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == Sobrescribir alpha de entidad para tiles congelados (0-100)
-
-Override Group
-== Sobrescribir Grupo
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Sobrescribir la ubicación para estimar el Ping; opciones: auto, af, as, as:cn, eu, na, oc, sa (Automático, África, Asia, China, Europa, Norteamérica, Oceanía/Australia, Sudamérica)

@@ -590,9 +590,6 @@ Add friends by entering their name below or by clicking their name in the player
 Add function
 == 機能を追加
 
-Add Group
-== グループを追加
-
 Add Item
 == アイテムを追加
 
@@ -9119,6 +9116,9 @@ Network timeout
 Network timeout protection
 == ネットワークタイムアウト保護
 
+New
+== New
+
 new
 == 新規
 
@@ -9623,6 +9623,9 @@ On
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == 1 つのキーに複数のコマンドを割り当てられるので、キーを丸ごと消さず割り当て済みの機能で個別に削除します。
 
+Online
+== Online
+
 Online friends
 == オンラインのフレンド
 
@@ -9952,9 +9955,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == フリーズタイルのエンティティアルファを上書き（0-100）
-
-Override Group
-== 上書きグループ
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Ping 推定地域を上書きします。選択肢：auto、af、as、as:cn、eu、na、oc、sa（自動、アフリカ、アジア、中国、ヨーロッパ、北米、オセアニア/オーストラリア、南米）

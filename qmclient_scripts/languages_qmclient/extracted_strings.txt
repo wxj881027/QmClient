@@ -195,7 +195,6 @@ Add Entry
 Add friend
 Add friends by entering their name below or by clicking their name in the player list.
 Add function
-Add Group
 Add Item
 Add keyframe
 Add latency for antiping (0 to disable)
@@ -3045,6 +3044,7 @@ Netversion
 Network
 Network timeout
 Network timeout protection
+New
 new
 New button
 New category name
@@ -3216,6 +3216,7 @@ Old files are deleted once the save limit is reached, so copy any demo you want 
 Oldschool
 On
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
+Online
 Online friends
 Online Players
 Only .wv files are supported right now.
@@ -3326,7 +3327,6 @@ Override Death Tile Entity Alpha (0-100)
 Override Entity Alpha for Unfreeze Tiles (0-100)
 Override Entry
 Override Freeze Tile Entity Alpha (0-100)
-Override Group
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 Override Selected
 Overview

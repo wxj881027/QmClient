@@ -590,9 +590,6 @@ Add friends by entering their name below or by clicking their name in the player
 Add function
 == Добавить действие
 
-Add Group
-== Добавить группу
-
 Add Item
 == Добавить элемент
 
@@ -9119,6 +9116,9 @@ Network timeout
 Network timeout protection
 == Защита от тайм-аута сети
 
+New
+== New
+
 new
 == новое
 
@@ -9623,6 +9623,9 @@ On
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == На одну клавишу можно повесить несколько команд, поэтому удаляйте отдельные записи в Назначенные действия, а не очищайте клавишу.
 
+Online
+== Online
+
 Online friends
 == Друзья онлайн
 
@@ -9952,9 +9955,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == Переопределить альфа-канал сущностей для замороженных тайлов (0-100)
-
-Override Group
-== Переопределить группу
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Переопределить регион для оценки Ping: auto, af, as, as:cn, eu, na, oc, sa (автоматически, Африка, Азия, Китай, Европа, Северная Америка, Океания/Австралия, Южная Америка)

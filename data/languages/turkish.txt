@@ -590,9 +590,6 @@ Add friends by entering their name below or by clicking their name in the player
 Add function
 == İşlev ekle
 
-Add Group
-== Grup Ekle
-
 Add Item
 == Öğe Ekle
 
@@ -9119,6 +9116,9 @@ Network timeout
 Network timeout protection
 == Ağ zaman aşımı koruması
 
+New
+== New
+
 new
 == yeni
 
@@ -9623,6 +9623,9 @@ On
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == Bir tuş birden çok komut taşıyabilir; tuşu tümden temizlemek yerine Atanmış işlevler altından tek tek sil.
 
+Online
+== Online
+
 Online friends
 == Çevrimiçi arkadaşlar
 
@@ -9952,9 +9955,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == Donma Bloklarının Varlık Alfa Değerini Geçersiz Kıl (0-100)
-
-Override Group
-== Grubu Geçersiz Kıl
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == Ping tahmini konumunu geçersiz kıl; seçenekler: auto, af, as, as:cn, eu, na, oc, sa (Otomatik, Afrika, Asya, Çin, Avrupa, Kuzey Amerika, Okyanusya/Avustralya, Güney Amerika)

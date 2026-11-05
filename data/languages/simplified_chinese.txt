@@ -590,9 +590,6 @@ Add friends by entering their name below or by clicking their name in the player
 Add function
 == 添加功能
 
-Add Group
-== 添加群组
-
 Add Item
 == 添加项
 
@@ -9140,6 +9137,9 @@ Network timeout
 Network timeout protection
 == 网络超时保护
 
+New
+== 新建
+
 new
 == 新
 
@@ -9653,6 +9653,9 @@ On
 One key can hold several commands, so remove single entries under "Bound functions" instead of clearing the key.
 == 一个键能放多条命令，想删掉其中一条就到已绑定功能里单独删除，不必清空整个键。
 
+Online
+== 在线
+
 Online friends
 == 在线好友
 
@@ -9982,9 +9985,6 @@ Override Entry
 
 Override Freeze Tile Entity Alpha (0-100)
 == 覆盖冻结图块的实体不透明度（0-100）
-
-Override Group
-== 覆盖群组
 
 Override location for ping estimation, available: auto, af, as, as:cn, eu, na, oc, sa (Automatic, Africa, Asia, China, Europe, North America, Oceania/Australia, South America
 == 覆盖 Ping 估计位置，可用：auto、af、as、as:cn、eu、na、oc、sa（自动、非洲、亚洲、中国、欧洲、北美、大洋洲/澳大利亚、南美洲）
