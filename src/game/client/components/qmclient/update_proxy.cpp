@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
+#include <memory>
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <base/windows.h>
@@ -125,26 +126,31 @@ namespace qm_update
 	{
 #if defined(CONF_FAMILY_WINDOWS)
 		WINHTTP_CURRENT_USER_IE_PROXY_CONFIG Config{};
-		if(!WinHttpGetIEProxyConfigForCurrentUser(&Config))
+		const bool LoadedConfig = WinHttpGetIEProxyConfigForCurrentUser(&Config) != FALSE;
+		auto Free = [](wchar_t *pValue) noexcept { if(pValue) GlobalFree(pValue); };
+		// SDK 缓冲取得后立即接管，后续转码和字符串分配抛异常也会释放。
+		const std::unique_ptr<wchar_t, decltype(Free)> ConfigProxy(Config.lpszProxy, Free);
+		const std::unique_ptr<wchar_t, decltype(Free)> ConfigBypass(Config.lpszProxyBypass, Free);
+		const std::unique_ptr<wchar_t, decltype(Free)> AutoConfigUrl(Config.lpszAutoConfigUrl, Free);
+		if(!LoadedConfig)
 			return;
-		const auto Free = [](wchar_t *pValue) { if(pValue) GlobalFree(pValue); };
 		const auto Read = [](const wchar_t *pText) { return pText ? windows_wide_to_utf8(pText).value_or("") : std::string(); };
 		const auto HostStart = m_Url.find("://") + 3;
 		const auto Host = m_Url.substr(HostStart, m_Url.find('/', HostStart) - HostStart);
-		m_Proxy = ProxyBypassed(Host, Read(Config.lpszProxyBypass)) ? "" : SelectSystemProxy(Read(Config.lpszProxy));
-		m_HasDecision = Config.lpszProxy != nullptr;
-		if(Config.lpszAutoConfigUrl || Config.fAutoDetect)
+		m_Proxy = ProxyBypassed(Host, Read(ConfigBypass.get())) ? "" : SelectSystemProxy(Read(ConfigProxy.get()));
+		m_HasDecision = ConfigProxy != nullptr;
+		if(AutoConfigUrl || Config.fAutoDetect)
 		{
-			HINTERNET Session = WinHttpOpen(L"QmClient update", WINHTTP_ACCESS_TYPE_NO_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+			const std::unique_ptr<void, decltype(&WinHttpCloseHandle)> Session(WinHttpOpen(L"QmClient update", WINHTTP_ACCESS_TYPE_NO_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0), WinHttpCloseHandle);
 			if(Session)
 			{
-				WinHttpSetTimeouts(Session, 3000, 3000, 3000, 3000);
+				WinHttpSetTimeouts(Session.get(), 3000, 3000, 3000, 3000);
 				WINHTTP_AUTOPROXY_OPTIONS Options{};
 				Options.fAutoLogonIfChallenged = FALSE;
-				if(Config.lpszAutoConfigUrl)
+				if(AutoConfigUrl)
 				{
 					Options.dwFlags |= WINHTTP_AUTOPROXY_CONFIG_URL;
-					Options.lpszAutoConfigUrl = Config.lpszAutoConfigUrl;
+					Options.lpszAutoConfigUrl = AutoConfigUrl.get();
 				}
 				if(Config.fAutoDetect)
 				{
@@ -153,19 +159,16 @@ namespace qm_update
 				}
 				WINHTTP_PROXY_INFO Info{};
 				const auto WideUrl = windows_utf8_to_wide(m_Url.c_str());
-				if(WinHttpGetProxyForUrl(Session, WideUrl.c_str(), &Options, &Info))
+				const bool Resolved = WinHttpGetProxyForUrl(Session.get(), WideUrl.c_str(), &Options, &Info) != FALSE;
+				const std::unique_ptr<wchar_t, decltype(Free)> ResolvedProxy(Info.lpszProxy, Free);
+				const std::unique_ptr<wchar_t, decltype(Free)> ResolvedBypass(Info.lpszProxyBypass, Free);
+				if(Resolved)
 				{
+					m_Proxy = Info.dwAccessType == WINHTTP_ACCESS_TYPE_NO_PROXY || ProxyBypassed(Host, Read(ResolvedBypass.get())) ? "" : SelectSystemProxy(Read(ResolvedProxy.get()));
 					m_HasDecision = true;
-					m_Proxy = Info.dwAccessType == WINHTTP_ACCESS_TYPE_NO_PROXY || ProxyBypassed(Host, Read(Info.lpszProxyBypass)) ? "" : SelectSystemProxy(Read(Info.lpszProxy));
 				}
-				Free(Info.lpszProxy);
-				Free(Info.lpszProxyBypass);
-				WinHttpCloseHandle(Session);
 			}
 		}
-		Free(Config.lpszProxy);
-		Free(Config.lpszProxyBypass);
-		Free(Config.lpszAutoConfigUrl);
 #endif
 	}
 }

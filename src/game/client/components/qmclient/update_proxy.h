@@ -14,7 +14,7 @@ namespace qm_update
 	bool ProxyBypassed(std::string_view Host, std::string_view BypassList);
 	bool HasEnvironmentProxy();
 
-	// 只读取设置与解析 PAC，不持有客户端/HTTP 指针，取消后不发布结果。
+	// 只读取设置与解析 PAC，不持有客户端/HTTP 指针；调用方放弃作业后不接收迟到结果。
 	class CSystemProxyJob : public IJob
 	{
 		std::string m_Url;
