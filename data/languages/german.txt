@@ -343,6 +343,9 @@
 === Saves for '%s' ===
 == === Saves für '%s' ===
 
+?!Stuck keys!?
+== ?!Gehaltene Tasten!?
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s (Map: %s, Zeit: %s)
@@ -5066,6 +5069,9 @@ Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then s
 Enable the guide line, then set its length, style and colors.
 == Aktiviere die Hilfslinie und lege dann Länge, Stil und Farben fest.
 
+Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size.
+== Aktiviere die Hervorhebung und die Tastenanzeige am Namensschild und wähle die Farben für gehaltenen Hammer und Haken. Die Symbolgröße folgt der Tastengröße.
+
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == Aktiviere den Indikator, wähle den Entfernungsmodus und ob Spieler auf der war-list eine andere Farbe bekommen.
 
@@ -6098,9 +6104,6 @@ Game type
 Game type (ddnet, mod)
 == Spieltyp (ddnet, mod)
 
-Game types:
-== Spieltypen:
-
 Game update rate (Hz)
 == Spielaktualisierungsrate (Hz)
 
@@ -6668,6 +6671,9 @@ Highlight Color
 Highlight console commands
 == Konsolenbefehle hervorheben
 
+Highlight frozen teammates' hammer and hook inputs
+== Hammer- und Hakeneingaben eingefrorener Teammitglieder hervorheben
+
 Highlight game type
 == Spieltyp hervorheben
 
@@ -6680,17 +6686,14 @@ Highlight ping value
 Highlight selected players in the game world
 == Highlight selected players in the game world
 
-Highlight teammates hammering in death or freeze areas
-== Teammitglieder hervorheben, die in Todes- oder Frostbereichen hämmern
-
-Highlight teammates holding hammer in death or freeze areas
-== Teammitglieder hervorheben, die in Todes- oder Frostbereichen den Hammer halten
-
 Highlighted message
 == Hervorgehobene Nachricht
 
 Highlighted message color
 == Farbe hervorgehobener Nachrichten
+
+Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses.
+== Hebt eingefrorene Teammitglieder mit gehaltenem Hammer hervor und zeigt Hammer- oder Hakeneingaben neben den Tasten am Namensschild.
 
 Hit feedback
 == Treffer-Feedback
@@ -6910,6 +6913,9 @@ Icon symbols:
 
 Icons
 == Symbole
+
+Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
+== Die Symbole verschwinden beim Loslassen oder Auftauen. Fremde Eingaben erfordern serverseitige Unterstützung für Vorabeingaben; deine aktive Figur ist ausgenommen.
 
 Identity preset
 == Profilvorlage
@@ -8270,6 +8276,9 @@ Manual target
 Map
 == Karte
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == Bitmaske des Schwierigkeits-Sternfilters im Kartenbrowser (Bits 1-5)
 
@@ -8407,9 +8416,6 @@ Markers
 
 Markers are drawn on your screen only and never change the game itself.
 == Markierungen werden nur auf deinem Bildschirm gezeichnet und verändern das Spiel selbst nie.
-
-Marks teammates who hold hammer while stuck in death or freeze areas, so you can see who is hammering them.
-== Markiert Teammitglieder mit Hammer, die in Todes- oder Einfrierbereichen festsitzen, damit Sie sehen, wer sie hämmert.
 
 Master server URL to register
 == Master-Server-URL zur Registrierung
@@ -8731,6 +8737,9 @@ Mix rate
 
 Mixed
 == Gemischt
+
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
 
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == Kamera im mobilen Zuschauermodus: 0=Joystick, 1=Bild ziehen
@@ -10376,9 +10385,6 @@ Player country (ISO 3166-1 numeric code)
 Player country filter in server browser (ISO 3166-1 numeric)
 == Spielerland-Filter im Server-Browser (ISO 3166-1 numerisch)
 
-Player country:
-== Spielerland:
-
 Player death
 == Spielertod
 
@@ -10751,6 +10757,9 @@ Press Esc to exit the HUD editor
 Press F2, log in, then use: change_map map_name
 == F2 drücken, anmelden und ausführen: change_map map_name
 
+Pressed hammer icon color
+== Symbolfarbe bei gehaltenem Hammer
+
 Pressed hook collision line color when hitting a tee
 == Farbe der Haken-Hilfslinie bei gedrückter Taste beim Treffen eines Tees
 
@@ -10759,6 +10768,9 @@ Pressed hook collision line color when hitting something hookable
 
 Pressed hook collision line color when not aiming at anything hookable
 == Farbe der Haken-Hilfslinie bei gedrückter Taste, wenn nichts Hakenbares anvisiert wird
+
+Pressed hook icon color
+== Symbolfarbe bei gehaltenem Haken
 
 Pressed hook line color; always used when custom pressed colors are enabled
 == Farbe der Hakenlinie beim Drücken; wird immer verwendet, wenn eigene Druckfarben aktiviert sind
@@ -14762,9 +14774,6 @@ Stress system (debug builds only).
 Strict game type filter
 == Strenger Spieltyp-Filter
 
-Strict gametype filter
-== Strenger Spieltyp-Filter
-
 Strict mode
 == Strenger Modus
 
@@ -15592,9 +15601,6 @@ Tick "Enable system media control", then "Show song info in top-left corner"; th
 
 Tick "Enable voice", then open "Advanced options" to pick "Input device" and "Output device"; "Auto unmute when speaking" frees your mute key.
 == Aktiviere Sprache aktivieren, dann öffne die erweiterten Optionen und wähle Eingabegerät und Ausgabegerät; Stummschaltung beim Sprechen automatisch aufheben macht deine Mute-Taste frei.
-
-Tick "Highlight teammates hammering in death or freeze areas"; it works on your own team only and needs no key bind.
-== Markierung für Teammitglieder aktivieren, die in Todes- oder Einfrierbereichen hämmern; gilt nur im eigenen Team, ohne Tastenbelegung.
 
 Tick "Launch Steam automatically when starting externally"; if Steam is not found, type its path or press "Detect Steam again".
 == Aktiviere Steam beim externen Start automatisch starten; falls Steam fehlt, Pfad eingeben oder Steam erneut suchen drücken.
@@ -16697,9 +16703,6 @@ Use high bandwidth mode (doubles server bandwidth, LAN only)
 Use installed asset names. Empty fields keep the current asset.
 == Gib installierte Texturnamen ein. Leere Felder behalten die aktuelle Textur bei.
 
-Use it to find the teammate who needs a wake-up; enemies are never highlighted, so do not look for them here.
-== Damit finden Sie den Teamkameraden, der aufgeweckt werden muss; Gegner werden nie markiert, suchen Sie sie also nicht hier.
-
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == Drücke K zum Töten (Neustart), Q zum Pausieren und Zuschauen. Siehe Einstellungen für andere Tastenbelegungen.
 
@@ -17140,9 +17143,6 @@ Warning
 
 Watches your friend list and reports friends coming online or joining your map, with optional automatic greeting.
 == Beobachtet deine Freundesliste und meldet, wenn Freunde online kommen oder auf deine Map joinen; optional mit automatischer Begrüßung.
-
-Water hammer highlight
-== Wasser-Hammer-Hervorhebung
 
 Watermark
 == Wasserzeichen

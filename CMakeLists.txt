@@ -2216,6 +2216,8 @@ set(EXPECTED_DATA
   menuimages/play_game.png
   menuimages/settings.png
   particles.png
+  qmclient/water_hammer.png
+  qmclient/water_hook.png
   qmclient/builtinscripts/sayemoticon.chai
   qmclient/friendlinks/ddnet.webp
   qmclient/friendlinks/ddrace.webp

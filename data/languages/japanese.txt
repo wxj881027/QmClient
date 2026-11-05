@@ -343,6 +343,9 @@
 === Saves for '%s' ===
 == === '%s' のセーブ ===
 
+?!Stuck keys!?
+== ?!押しっぱなし!?
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s（マップ: %s、時間: %s）
@@ -5066,6 +5069,9 @@ Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then s
 Enable the guide line, then set its length, style and colors.
 == ガイド線を有効にしてから、長さ、スタイル、色を設定します。
 
+Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size.
+== 強調とネームプレートのキー表示を有効にして、ハンマーとフックの押下時の色を選びます。アイコンの大きさはキー表示に連動します。
+
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == インジケーターを有効にし、距離モードと、war-list のプレイヤーを別の色で表示するかを選びます。
 
@@ -6098,9 +6104,6 @@ Game type
 Game type (ddnet, mod)
 == ゲームタイプ（ddnet、mod）
 
-Game types:
-== ゲームタイプ：
-
 Game update rate (Hz)
 == ゲーム更新レート（Hz）
 
@@ -6668,6 +6671,9 @@ Highlight Color
 Highlight console commands
 == コンソールのコマンドを強調表示
 
+Highlight frozen teammates' hammer and hook inputs
+== 凍結中の味方のハンマーとフック入力を強調
+
 Highlight game type
 == ゲームタイプをハイライト
 
@@ -6680,17 +6686,14 @@ Highlight ping value
 Highlight selected players in the game world
 == Highlight selected players in the game world
 
-Highlight teammates hammering in death or freeze areas
-== 死亡または凍結エリアでハンマーを振っているチームメイトを強調表示
-
-Highlight teammates holding hammer in death or freeze areas
-== 死亡または凍結エリアでハンマーを押し続けているチームメイトを強調表示
-
 Highlighted message
 == ハイライトメッセージ
 
 Highlighted message color
 == ハイライトされたメッセージの色
+
+Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses.
+== 凍結中にハンマーを押し続ける味方を強調し、ネームプレートのキー表示の両側にハンマーとフックの入力を表示します。
 
 Hit feedback
 == ヒット確認音
@@ -6910,6 +6913,9 @@ Icon symbols:
 
 Icons
 == アイコン
+
+Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
+== キーを離すか凍結が解除されるとアイコンは消えます。他のプレイヤーの入力表示にはサーバーの事前入力対応が必要です。操作中の自キャラクターは対象外です。
 
 Identity preset
 == プロフィールプリセット
@@ -8270,6 +8276,9 @@ Manual target
 Map
 == マップ
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == マップブラウザーの難易度星フィルターのビットマスク（ビット 1-5）
 
@@ -8407,9 +8416,6 @@ Markers
 
 Markers are drawn on your screen only and never change the game itself.
 == マーカーは自分の画面にだけ描かれ、ゲーム自体には影響しません。
-
-Marks teammates who hold hammer while stuck in death or freeze areas, so you can see who is hammering them.
-== デスやフリーズの範囲に挟まれたままハンマーを持つ味方を目立たせ、誰が叩いているか分かるようにします。
 
 Master server URL to register
 == 登録するマスターサーバー URL
@@ -8731,6 +8737,9 @@ Mix rate
 
 Mixed
 == 混合
+
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
 
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == モバイル観戦のカメラ操作：0=ジョイスティック、1=画面ドラッグ
@@ -10376,9 +10385,6 @@ Player country (ISO 3166-1 numeric code)
 Player country filter in server browser (ISO 3166-1 numeric)
 == サーバーブラウザでのプレイヤーの国フィルター（ISO 3166-1 数値）
 
-Player country:
-== プレイヤーの国：
-
 Player death
 == プレイヤー死亡
 
@@ -10751,6 +10757,9 @@ Press Esc to exit the HUD editor
 Press F2, log in, then use: change_map map_name
 == F2 を押してログイン後、change_map map_name を実行します
 
+Pressed hammer icon color
+== ハンマー押下時のアイコン色
+
 Pressed hook collision line color when hitting a tee
 == フックキー押下時にTeeに当たったときのフック補助線の色
 
@@ -10759,6 +10768,9 @@ Pressed hook collision line color when hitting something hookable
 
 Pressed hook collision line color when not aiming at anything hookable
 == フックキー押下時にフック可能な物体を狙っていないときのフック補助線の色
+
+Pressed hook icon color
+== フック押下時のアイコン色
 
 Pressed hook line color; always used when custom pressed colors are enabled
 == 押下時のフックライン色。カスタム押下色が有効なとき常に使用
@@ -14762,9 +14774,6 @@ Stress system (debug builds only).
 Strict game type filter
 == 厳格なゲームタイプフィルター
 
-Strict gametype filter
-== 厳格なゲームタイプフィルター
-
 Strict mode
 == 厳格モード
 
@@ -15592,9 +15601,6 @@ Tick "Enable system media control", then "Show song info in top-left corner"; th
 
 Tick "Enable voice", then open "Advanced options" to pick "Input device" and "Output device"; "Auto unmute when speaking" frees your mute key.
 == 音声を有効にするをオンにし、詳細オプションで入力デバイスと出力デバイスを選びます。話すと自動でミュート解除を使えばミュートキーが空きます。
-
-Tick "Highlight teammates hammering in death or freeze areas"; it works on your own team only and needs no key bind.
-== デスやフリーズ範囲でハンマーを振る味方を強調表示にチェックを入れます。自チームにだけ働き、キー割り当ては不要です。
 
 Tick "Launch Steam automatically when starting externally"; if Steam is not found, type its path or press "Detect Steam again".
 == 外部起動時に Steam を自動で起動を有効にします。Steam が見つからない場合はパスを入力するか、Steam を再検出を押します。
@@ -16697,9 +16703,6 @@ Use high bandwidth mode (doubles server bandwidth, LAN only)
 Use installed asset names. Empty fields keep the current asset.
 == インストール済みの素材名を入力してください。空欄は現在の素材を保持します。
 
-Use it to find the teammate who needs a wake-up; enemies are never highlighted, so do not look for them here.
-== 起こしてほしい味方を見つけるための機能です。敵は強調されないので、ここで探さないでください。
-
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == K キーで自殺（再スタート）、Q キーで一時停止して他のプレイヤーを観戦します。他のキーバインドは設定で確認してください。
 
@@ -17140,9 +17143,6 @@ Warning
 
 Watches your friend list and reports friends coming online or joining your map, with optional automatic greeting.
 == フレンドリストを監視し、フレンドがオンラインになったり同じマップに入ったりしたら知らせます。自動あいさつも可能です。
-
-Water hammer highlight
-== 水中ハンマーのハイライト
 
 Watermark
 == ウォーターマーク

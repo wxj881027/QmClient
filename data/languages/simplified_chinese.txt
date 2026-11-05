@@ -343,6 +343,9 @@
 === Saves for '%s' ===
 == === '%s' 的存档 ===
 
+?!Stuck keys!?
+== ?!卡键!?
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s (地图：%s，时间：%s)
@@ -5075,6 +5078,9 @@ Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then s
 Enable the guide line, then set its length, style and colors.
 == 启用辅助线后，设置它的长度、样式和颜色。
 
+Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size.
+== 开启高亮和昵称按键显示后，可以分别调整卡锤、卡钩的按下颜色。图标大小跟随按键显示。
+
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == 启用指示器，选择距离模式，并决定敌对列表玩家是否使用不同颜色。
 
@@ -6113,9 +6119,6 @@ Game type
 Game type (ddnet, mod)
 == 游戏类型（ddnet、mod）
 
-Game types:
-== 游戏模式：
-
 Game update rate (Hz)
 == 游戏更新率（单位：Hz）
 
@@ -6683,6 +6686,9 @@ Highlight Color
 Highlight console commands
 == 高亮控制台命令
 
+Highlight frozen teammates' hammer and hook inputs
+== 高亮冻结中队友的卡锤和卡钩
+
 Highlight game type
 == 高亮显示游戏类型
 
@@ -6695,17 +6701,14 @@ Highlight ping value
 Highlight selected players in the game world
 == 高亮游戏世界中的选定玩家
 
-Highlight teammates hammering in death or freeze areas
-== 高亮在死亡或冻结区域卡锤的队友
-
-Highlight teammates holding hammer in death or freeze areas
-== 高亮在死亡或冻结区域按住锤子的队友
-
 Highlighted message
 == 被提及消息
 
 Highlighted message color
 == 提及消息颜色
+
+Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses.
+== 高亮冻结中持续按锤的队友，并在昵称按键显示两侧显示卡锤、卡钩图标。
 
 Hit feedback
 == 命中反馈
@@ -6925,6 +6928,9 @@ Icon symbols:
 
 Icons
 == 图标
+
+Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
+== 松开按键或解冻后隐藏图标。他人按键状态需要服务器支持预输入；不显示当前操控角色的卡键状态。
 
 Identity preset
 == 身份预设
@@ -8288,6 +8294,9 @@ Manual target
 Map
 == 地图
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == 地图浏览器难度星级筛选位掩码（位 1-5）
 
@@ -8428,9 +8437,6 @@ Markers
 
 Markers are drawn on your screen only and never change the game itself.
 == 标记只画在你自己的屏幕上，不会改变游戏本身。
-
-Marks teammates who hold hammer while stuck in death or freeze areas, so you can see who is hammering them.
-== 标记卡在死亡或冻结区域里仍握着锤子的队友，方便你看清是谁在锤他们。
 
 Master server URL to register
 == 要注册的主服务器 URL
@@ -8752,6 +8758,9 @@ Mix rate
 
 Mixed
 == 混合
+
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
 
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == 手机观战取景方式：0=摇杆，1=拖动画面
@@ -10406,9 +10415,6 @@ Player country (ISO 3166-1 numeric code)
 Player country filter in server browser (ISO 3166-1 numeric)
 == 在服务器浏览器中过滤的玩家国家/地区（ISO 3166-1 数字）
 
-Player country:
-== 玩家国家
-
 Player death
 == 玩家死亡
 
@@ -10781,6 +10787,9 @@ Press Esc to exit the HUD editor
 Press F2, log in, then use: change_map map_name
 == 按 F2 登录管理后，输入：change_map 地图名
 
+Pressed hammer icon color
+== 卡锤按下颜色
+
 Pressed hook collision line color when hitting a tee
 == 按住钩键时命中角色的钩子辅助线颜色
 
@@ -10789,6 +10798,9 @@ Pressed hook collision line color when hitting something hookable
 
 Pressed hook collision line color when not aiming at anything hookable
 == 按住钩键时未瞄准可钩物体的钩子辅助线颜色
+
+Pressed hook icon color
+== 卡钩按下颜色
 
 Pressed hook line color; always used when custom pressed colors are enabled
 == 按下后颜色；开启自定义按下后颜色时始终生效
@@ -14798,9 +14810,6 @@ Stress system (debug builds only).
 Strict game type filter
 == 严格游戏模式筛选
 
-Strict gametype filter
-== 严格匹配
-
 Strict mode
 == 严格模式
 
@@ -15637,9 +15646,6 @@ Tick "Enable system media control", then "Show song info in top-left corner"; th
 
 Tick "Enable voice", then open "Advanced options" to pick "Input device" and "Output device"; "Auto unmute when speaking" frees your mute key.
 == 勾选启用语音，打开高级选项选择输入设备和输出设备；说话时自动取消静音能让你空出静音键。
-
-Tick "Highlight teammates hammering in death or freeze areas"; it works on your own team only and needs no key bind.
-== 勾选高亮在死亡或冻结区域锤人的队友；只对自己队伍生效，无需绑定按键。
 
 Tick "Launch Steam automatically when starting externally"; if Steam is not found, type its path or press "Detect Steam again".
 == 勾选从外部启动时自动启动 Steam；若找不到 Steam，手动输入其路径或点按重新检测 Steam。
@@ -16742,9 +16748,6 @@ Use high bandwidth mode (doubles server bandwidth, LAN only)
 Use installed asset names. Empty fields keep the current asset.
 == 填写已安装的贴图名称；留空表示保持当前贴图。
 
-Use it to find the teammate who needs a wake-up; enemies are never highlighted, so do not look for them here.
-== 用它找需要唤醒的队友；敌人从不被高亮，别在这里找他们。
-
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == 使用 K 键自杀（重新开始），Q 键暂停并旁观其他玩家。其他按键绑定可在设置中查看。
 
@@ -17185,9 +17188,6 @@ Warning
 
 Watches your friend list and reports friends coming online or joining your map, with optional automatic greeting.
 == 盯着你的好友列表，在好友上线或进入你所在地图时提醒你，还可以自动打招呼。
-
-Water hammer highlight
-== 水域卡锤高亮
 
 Watermark
 == 水印
