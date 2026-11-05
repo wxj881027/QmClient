@@ -60,7 +60,7 @@ CQmMapCovers::CQmMapCovers(TRequestFactory CreateRequest) :
 
 CQmMapCovers::~CQmMapCovers()
 {
-	Release();
+	CancelPending();
 }
 
 std::string CQmMapCovers::MakeKeyString(const SKey &Key)
@@ -109,6 +109,9 @@ void CQmMapCovers::Update(IHttp *pHttp, IEngine *pEngine, IGraphics *pGraphics, 
 	m_pStorage = pStorage;
 	m_Now = Now;
 	++m_Frame;
+	// 空闲时只更新时间，失败冷却仍可到期；不做读盘、下载或纹理操作。
+	if(!Loading())
+		return;
 
 	PollJobs();
 	PollDownloads();
@@ -151,7 +154,7 @@ bool CQmMapCovers::Get(const char *pUrl, ERole Role, SImage *pOut)
 	return false;
 }
 
-void CQmMapCovers::Release()
+void CQmMapCovers::CancelPending()
 {
 	for(auto &Download : m_vDownloads)
 	{
@@ -172,7 +175,7 @@ void CQmMapCovers::Release()
 
 void CQmMapCovers::Shutdown(IGraphics *pGraphics)
 {
-	Release();
+	CancelPending();
 	if(pGraphics != nullptr)
 	{
 		for(auto &Entry : m_vEntries)
@@ -304,12 +307,12 @@ void CQmMapCovers::StartQueued()
 			continue;
 		}
 
+		if(Reads >= MAX_READS_PER_FRAME)
+			return;
 		void *pFileData = nullptr;
 		unsigned FileSize = 0;
 		if(m_pStorage != nullptr && m_pStorage->ReadFile(Task.m_CachePath.c_str(), IStorage::TYPE_SAVE, &pFileData, &FileSize))
 		{
-			if(Reads >= MAX_READS_PER_FRAME)
-				return;
 			++Reads;
 			const bool Valid = pFileData != nullptr && FileSize >= 8 && FileSize <= static_cast<size_t>(MAX_RESPONSE_BYTES) &&
 					   PngHeaderMatches(static_cast<const unsigned char *>(pFileData), FileSize);

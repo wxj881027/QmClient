@@ -15,6 +15,7 @@
 #include <game/client/component.h>
 #include <game/client/components/hud_media_island_logic.h>
 #include <game/client/components/qmclient/hook_countdown.h>
+#include <game/client/components/qmclient/hud_island_soft_body.h>
 #include <game/client/components/qmclient/hud_map_progress.h>
 #include <game/client/components/system_media_controls.h>
 #include <game/client/ui_rect.h>
@@ -148,6 +149,8 @@ class CHud : public CComponent
 		float m_TargetTrackMetaInOffset = 0.0f;
 		float m_TargetTrackMetaOutOffset = 0.0f;
 		SHudMediaIslandWaveformClock m_WaveformClock;
+		CHudIslandSoftBody m_SoftBody;
+		int64_t m_SoftBodyLastTick = 0;
 		bool m_WaveformWasPlaying = false;
 		bool m_WaveformSettling = false;
 		int64_t m_WaveformSettleStartTick = 0;
@@ -253,6 +256,8 @@ class CHud : public CComponent
 			m_TargetTrackMetaInOffset = 0.0f;
 			m_TargetTrackMetaOutOffset = 0.0f;
 			m_WaveformClock.Reset();
+			m_SoftBody.Reset();
+			m_SoftBodyLastTick = 0;
 			m_WaveformWasPlaying = false;
 			m_WaveformSettling = false;
 			m_WaveformSettleStartTick = 0;
@@ -519,6 +524,7 @@ private:
 	int m_AirjumpOffset;
 	int m_AirjumpEmptyOffset;
 	int m_aWeaponOffset[NUM_WEAPONS];
+	vec2 m_aWeaponHudSize[NUM_WEAPONS];
 	int m_EndlessJumpOffset;
 	int m_EndlessHookOffset;
 	int m_JetpackOffset;

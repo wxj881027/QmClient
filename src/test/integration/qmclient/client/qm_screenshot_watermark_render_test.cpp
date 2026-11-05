@@ -257,3 +257,37 @@ TEST_F(CQmScreenshotWatermarkRender, MetadataReaderStopsAtBoundedHeaderForOversi
 	EXPECT_FALSE(CImageLoader::ReadPngComment(m_pStorage->OpenFile("large.png", IOFLAG_READ, IStorage::TYPE_SAVE), "large.png", Comment));
 	EXPECT_TRUE(Comment.empty());
 }
+
+TEST_F(CQmScreenshotWatermarkRender, EditorTextChangesPixelsWithoutReplacingSource)
+{
+	InstallFont("SourceHanSans.ttc");
+	const auto Before = ReadPixels("source.png");
+	CQmScreenshotManager::SWatermarkOptions Options;
+	Options.m_Editor = true;
+	Options.m_ShowTimestamp = Options.m_ShowMapName = false;
+	Options.m_CustomText = "中文水印";
+	Options.m_TextLayer.m_Angle = -30;
+	Options.m_TextLayer.m_Tile = true;
+	ASSERT_TRUE(m_Manager.ApplyWatermark(m_pStorage.get(), "source.png", IStorage::TYPE_SAVE, "editor.png", Options));
+	EXPECT_NE(ReadPixels("editor.png"), Before);
+	EXPECT_EQ(ReadPixels("source.png"), Before);
+}
+
+TEST_F(CQmScreenshotWatermarkRender, EditorEmptyLayersKeepAllPixels)
+{
+	CQmScreenshotManager::SWatermarkOptions Options;
+	Options.m_Editor = true;
+	Options.m_ShowTimestamp = Options.m_ShowMapName = false;
+	ASSERT_TRUE(m_Manager.ApplyWatermark(m_pStorage.get(), "source.png", IStorage::TYPE_SAVE, "empty.png", Options));
+	EXPECT_EQ(ReadPixels("empty.png"), ReadPixels("source.png"));
+}
+
+TEST_F(CQmScreenshotWatermarkRender, EditorMissingLogoFailsInsteadOfSilentlyOmittingIt)
+{
+	CQmScreenshotManager::SWatermarkOptions Options;
+	Options.m_Editor = true;
+	Options.m_ShowTimestamp = Options.m_ShowMapName = false;
+	Options.m_LogoPath = "missing-logo.png";
+	EXPECT_FALSE(m_Manager.ApplyWatermark(m_pStorage.get(), "source.png", IStorage::TYPE_SAVE, "missing-logo-export.png", Options));
+	EXPECT_FALSE(m_pStorage->FileExists("missing-logo-export.png", IStorage::TYPE_SAVE));
+}

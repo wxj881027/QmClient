@@ -50,7 +50,9 @@ namespace
 			return;
 		const ColorRGBA Base = Image.PixelColor((size_t)X, (size_t)Y);
 		const float Alpha = std::clamp(Color.a, 0.0f, 1.0f);
-		Image.SetPixelColor((size_t)X, (size_t)Y, ColorRGBA(Base.r * (1.0f - Alpha) + Color.r * Alpha, Base.g * (1.0f - Alpha) + Color.g * Alpha, Base.b * (1.0f - Alpha) + Color.b * Alpha, Base.a * (1.0f - Alpha) + Color.a * Alpha));
+		const float OutAlpha = Alpha + Base.a * (1.0f - Alpha);
+		if(OutAlpha > 0.0f)
+			Image.SetPixelColor((size_t)X, (size_t)Y, ColorRGBA((Base.r * Base.a * (1.0f - Alpha) + Color.r * Alpha) / OutAlpha, (Base.g * Base.a * (1.0f - Alpha) + Color.g * Alpha) / OutAlpha, (Base.b * Base.a * (1.0f - Alpha) + Color.b * Alpha) / OutAlpha, OutAlpha));
 	}
 
 	// 水印导出需要把用户输入的 UTF-8 文字栅格化到图片中。字体数据只在一次导出期间持有，
@@ -537,7 +539,9 @@ void CQmScreenshotManager::BlendPixel(CImageInfo &Image, int X, int Y, ColorRGBA
 		return;
 	const ColorRGBA Base = Image.PixelColor((size_t)X, (size_t)Y);
 	const float Alpha = std::clamp(Color.a, 0.0f, 1.0f);
-	Image.SetPixelColor((size_t)X, (size_t)Y, ColorRGBA(Base.r * (1.0f - Alpha) + Color.r * Alpha, Base.g * (1.0f - Alpha) + Color.g * Alpha, Base.b * (1.0f - Alpha) + Color.b * Alpha, Base.a * (1.0f - Alpha) + Color.a * Alpha));
+	const float OutAlpha = Alpha + Base.a * (1.0f - Alpha);
+	if(OutAlpha > 0.0f)
+		Image.SetPixelColor((size_t)X, (size_t)Y, ColorRGBA((Base.r * Base.a * (1.0f - Alpha) + Color.r * Alpha) / OutAlpha, (Base.g * Base.a * (1.0f - Alpha) + Color.g * Alpha) / OutAlpha, (Base.b * Base.a * (1.0f - Alpha) + Color.b * Alpha) / OutAlpha, OutAlpha));
 }
 
 int CQmScreenshotManager::TextWidth(const std::string &Text, int Scale)
@@ -672,13 +676,60 @@ bool CQmScreenshotManager::DrawWatermark(IStorage *pStorage, CImageInfo &Image, 
 	return true;
 }
 
+bool CQmScreenshotManager::DrawEditorWatermark(IStorage *pStorage, CImageInfo &Image, const std::string &Text, const SWatermarkOptions &Options, const std::vector<std::string> &vFontPaths, std::array<SQmWatermarkBounds, 2> *pBounds)
+{
+	if(!EnsureRgba(Image) || !Image.m_pData || Image.m_Width == 0 || Image.m_Height == 0)
+		return false;
+	struct SStamp
+	{
+		CImageInfo m_Image;
+		~SStamp() { m_Image.Free(); }
+	} TextStamp, LogoStamp;
+	const auto Composite = [&](const CImageInfo &Stamp, const SQmWatermarkLayer &Layer, int Index) {
+		if(pBounds)
+			(*pBounds)[Index] = QmWatermarkBounds(Image.m_Width, Image.m_Height, Stamp.m_Width, Stamp.m_Height, Layer);
+		return QmCompositeWatermark(Image, Stamp, Layer);
+	};
+	if(!Text.empty())
+	{
+		SWatermarkFont Font;
+		if(!Font.Load(pStorage, vFontPaths) || !Font.SetPixelSize(64))
+			return false;
+		const int ReferenceWidth = std::max(1, Font.TextWidth(Text));
+		const int FontSize = std::clamp((int)(Image.m_Width * std::clamp(Options.m_TextLayer.m_Size, 3, 70) / 100.0f * 64 / ReferenceWidth), 6, 512);
+		if(!Font.SetPixelSize(FontSize))
+			return false;
+		CImageInfo &Stamp = TextStamp.m_Image;
+		const int Pad = std::max(2, FontSize / 4);
+		Stamp.m_Width = std::clamp(Font.TextWidth(Text) + 2 * Pad, 1, 16384);
+		Stamp.m_Height = FontSize * 2 + 2 * Pad;
+		Stamp.m_Format = CImageInfo::FORMAT_RGBA;
+		Stamp.m_pData = static_cast<uint8_t *>(std::calloc(Stamp.DataSize(), 1));
+		if(!Stamp.m_pData)
+			return false;
+		// 阴影随文字图层变换，不绘制原先贯穿图片的黑色条带。
+		Font.Draw(Stamp, Text, Pad + 1, Pad + FontSize + 1, ColorRGBA(0, 0, 0, 0.75f));
+		Font.Draw(Stamp, Text, Pad, Pad + FontSize, ColorRGBA(1, 1, 1, 1));
+		if(!Composite(Stamp, Options.m_TextLayer, 0))
+			return false;
+	}
+	if(!Options.m_LogoPath.empty())
+	{
+		if(!CQmScreenshotImageJob::LoadImageFromDisk(pStorage, Options.m_LogoPath, IStorage::TYPE_ALL_OR_ABSOLUTE, std::min(4096, (int)Image.m_Width), LogoStamp.m_Image) || !EnsureRgba(LogoStamp.m_Image))
+			return false;
+		if(!Composite(LogoStamp.m_Image, Options.m_LogoLayer, 1))
+			return false;
+	}
+	return true;
+}
+
 bool CQmScreenshotManager::ApplyWatermark(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const char *pTargetPath, const SWatermarkOptions &Options) const
 {
 	if(pStorage == nullptr || pSourcePath == nullptr || pTargetPath == nullptr || pTargetPath[0] == '\0')
 		return false;
 	SImageLifetime ImageLifetime;
 	CImageInfo &Image = ImageLifetime.m_Image;
-	if(!LoadScreenshotImage(pStorage, pSourcePath, SourceStorageType, Image) || !DrawWatermark(pStorage, Image, BuildWatermarkText(pStorage, pSourcePath, SourceStorageType, Options), Options.m_Position))
+	if(!LoadScreenshotImage(pStorage, pSourcePath, SourceStorageType, Image) || !(Options.m_Editor ? DrawEditorWatermark(pStorage, Image, BuildWatermarkText(pStorage, pSourcePath, SourceStorageType, Options), Options, {}) : DrawWatermark(pStorage, Image, BuildWatermarkText(pStorage, pSourcePath, SourceStorageType, Options), Options.m_Position)))
 		return false;
 	const SCaptureMetadata &Metadata = CaptureMetadata(pStorage, pSourcePath, SourceStorageType);
 	char aTargetPath[IO_MAX_PATH_LENGTH];
@@ -716,7 +767,8 @@ namespace
 void CQmScreenshotExportControl::Cancel()
 {
 	const std::lock_guard<std::mutex> Lock(m_Mutex);
-	m_Canceled = true;
+	if(!m_Committed)
+		m_Canceled = true;
 }
 
 bool CQmScreenshotExportControl::Canceled() const
@@ -728,7 +780,10 @@ bool CQmScreenshotExportControl::Canceled() const
 bool CQmScreenshotExportControl::Commit(const std::string &TempPath, const std::string &TargetPath)
 {
 	const std::lock_guard<std::mutex> Lock(m_Mutex);
-	return !m_Canceled && ReplaceScreenshotFile(TempPath, TargetPath);
+	if(m_Canceled || m_Committed || !ReplaceScreenshotFile(TempPath, TargetPath))
+		return false;
+	m_Committed = true;
+	return true;
 }
 
 bool CQmScreenshotManager::SavePngAtomically(const std::string &TargetPath, const CImageInfo &Image, const char *pComment, CQmScreenshotExportControl *pControl)
@@ -779,9 +834,9 @@ bool CQmScreenshotManager::SavePngAtomically(const std::string &TargetPath, cons
 	return Saved;
 }
 
-std::shared_ptr<CQmScreenshotWatermarkJob> CQmScreenshotManager::CreateWatermarkJob(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const char *pTargetPath, const SWatermarkOptions &Options) const
+std::shared_ptr<CQmScreenshotWatermarkJob> CQmScreenshotManager::CreateWatermarkJob(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const char *pTargetPath, const SWatermarkOptions &Options, int PreviewMaxEdge) const
 {
-	if(pStorage == nullptr || pSourcePath == nullptr || pTargetPath == nullptr || pTargetPath[0] == '\0')
+	if(pStorage == nullptr || pSourcePath == nullptr || pTargetPath == nullptr || pTargetPath[0] == '\0' || str_length(pTargetPath) >= IO_MAX_PATH_LENGTH)
 		return nullptr;
 	char aSource[IO_MAX_PATH_LENGTH];
 	char aTarget[IO_MAX_PATH_LENGTH];
@@ -804,16 +859,17 @@ std::shared_ptr<CQmScreenshotWatermarkJob> CQmScreenshotManager::CreateWatermark
 			io_close(File);
 		vFontPaths.push_back(Found ? AbsoluteScreenshotPath(aFont) : std::string());
 	}
-	return std::make_shared<CQmScreenshotWatermarkJob>(Source, Target, BuildWatermarkText(pStorage, pSourcePath, SourceStorageType, Options), CaptureMetadata(pStorage, pSourcePath, SourceStorageType).m_Comment, std::move(vFontPaths), Options.m_Position);
+	return std::make_shared<CQmScreenshotWatermarkJob>(Source, Target, BuildWatermarkText(pStorage, pSourcePath, SourceStorageType, Options), CaptureMetadata(pStorage, pSourcePath, SourceStorageType).m_Comment, std::move(vFontPaths), Options, PreviewMaxEdge);
 }
 
-CQmScreenshotWatermarkJob::CQmScreenshotWatermarkJob(std::string SourcePath, std::string TargetPath, std::string Text, std::string Comment, std::vector<std::string> vFontPaths, CQmScreenshotManager::EWatermarkPosition Position) :
+CQmScreenshotWatermarkJob::CQmScreenshotWatermarkJob(std::string SourcePath, std::string TargetPath, std::string Text, std::string Comment, std::vector<std::string> vFontPaths, CQmScreenshotManager::SWatermarkOptions Options, int PreviewMaxEdge) :
 	m_SourcePath(std::move(SourcePath)),
 	m_TargetPath(std::move(TargetPath)),
 	m_Text(std::move(Text)),
 	m_Comment(std::move(Comment)),
 	m_vFontPaths(std::move(vFontPaths)),
-	m_Position(Position)
+	m_Options(std::move(Options)),
+	m_PreviewMaxEdge(std::clamp(PreviewMaxEdge, 0, 1600))
 {
 }
 
@@ -826,10 +882,15 @@ void CQmScreenshotWatermarkJob::Run()
 	try
 	{
 		auto pStorage = CreateLocalStorage();
-		if(!pStorage || !CQmScreenshotImageJob::LoadImageFromDisk(pStorage.get(), m_SourcePath, IStorage::TYPE_ABSOLUTE, 0, Image) || m_Control.Canceled())
+		if(!pStorage || !CQmScreenshotImageJob::LoadImageFromDisk(pStorage.get(), m_SourcePath, IStorage::TYPE_ABSOLUTE, m_PreviewMaxEdge, Image) || m_Control.Canceled())
 			return;
-		if(!CQmScreenshotManager::DrawWatermark(pStorage.get(), Image, m_Text, m_Position, m_vFontPaths) || m_Control.Canceled())
+		if(!(m_Options.m_Editor ? CQmScreenshotManager::DrawEditorWatermark(pStorage.get(), Image, m_Text, m_Options, m_vFontPaths, &m_aBounds) : CQmScreenshotManager::DrawWatermark(pStorage.get(), Image, m_Text, m_Options.m_Position, m_vFontPaths)) || m_Control.Canceled())
 			return;
+		if(m_PreviewMaxEdge > 0)
+		{
+			m_Preview = std::move(Image);
+			return;
+		}
 		m_Saved = CQmScreenshotManager::SavePngAtomically(m_TargetPath, Image, m_Comment.c_str(), &m_Control);
 	}
 	catch(const std::exception &Error)

@@ -343,6 +343,9 @@
 === Saves for '%s' ===
 == === '%s'의 저장 ===
 
+?!Stuck keys!?
+== ?!누른 키!?
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s (맵: %s, 시간: %s)
@@ -794,6 +797,9 @@ Alias of poses_render
 Alias of poses_video
 == poses_video의 별칭
 
+Alignment
+== 정렬
+
 Alive notification color
 == 생존 알림 색상
 
@@ -1072,9 +1078,6 @@ Apply to dummy
 
 Apply to player
 == 플레이어에 적용
-
-Apply watermark
-== 워터마크 적용
 
 Applying overwrites your font, UI scale, animation and panel colors at once, so note the values you like first.
 == 적용하면 글꼴, UI 배율, 애니메이션, 패널 색상이 한 번에 덮어써지므로 좋아하는 값은 미리 적어 두세요.
@@ -1588,6 +1591,9 @@ Axiom website
 
 Axis
 == 축
+
+Back
+== 뒤로
 
 Backdrop blur
 == 배경 흐림
@@ -2383,6 +2389,9 @@ Choose default eyes when joining a server
 
 Choose export name first.
 == 내보내기 이름을 먼저 입력하세요.
+
+Choose Logo (PNG / WebP)
+== 로고 선택 (PNG / WebP)
 
 Choose off, simple or full; the individual switches below only apply to full.
 == 끄기, 간단, 전체 중에서 선택하세요. 아래의 개별 스위치는 전체일 때만 적용됩니다.
@@ -4256,6 +4265,9 @@ Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use 
 Drag HUD modules with the left mouse button
 == 마우스 왼쪽 버튼으로 HUD 모듈 드래그
 
+Drag the selected watermark to move it. The original image is preserved.
+== 선택한 워터마크를 드래그하여 이동하세요. 원본 이미지는 유지됩니다.
+
 Drag the three sliders; master scales the other two.
 == 슬라이더 세 개를 드래그하세요. 마스터는 나머지 두 볼륨을 비례하여 조절합니다.
 
@@ -5065,6 +5077,9 @@ Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then s
 
 Enable the guide line, then set its length, style and colors.
 == 안내선을 켠 다음 길이, 스타일, 색상을 설정하세요.
+
+Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size.
+== 강조와 이름표 키 표시를 켠 뒤 해머와 훅을 누를 때의 색상을 각각 선택하세요. 아이콘 크기는 키 표시 크기를 따릅니다.
 
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == 표시기를 켜고 거리 모드와 war-list 플레이어에게 다른 색을 적용할지 선택하세요.
@@ -6098,9 +6113,6 @@ Game type
 Game type (ddnet, mod)
 == 게임 유형 (ddnet, mod)
 
-Game types:
-== 게임 유형:
-
 Game update rate (Hz)
 == 게임 업데이트율 (Hz)
 
@@ -6668,6 +6680,9 @@ Highlight Color
 Highlight console commands
 == 콘솔 명령어 강조 표시
 
+Highlight frozen teammates' hammer and hook inputs
+== 얼어붙은 팀원의 해머 및 훅 입력 강조
+
 Highlight game type
 == 게임 유형 강조
 
@@ -6680,17 +6695,14 @@ Highlight ping value
 Highlight selected players in the game world
 == Highlight selected players in the game world
 
-Highlight teammates hammering in death or freeze areas
-== 죽음 또는 동결 구역에서 해머를 휘두르는 팀원 강조
-
-Highlight teammates holding hammer in death or freeze areas
-== 죽음 또는 동결 구역에서 해머를 누르고 있는 팀원 강조
-
 Highlighted message
 == 강조된 메시지
 
 Highlighted message color
 == 강조된 메시지 색상
+
+Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses.
+== 얼어붙은 상태에서 해머를 누르고 있는 팀원을 강조하고 이름표 키 표시 양옆에 해머와 훅 입력을 표시합니다.
 
 Hit feedback
 == 타격 피드백
@@ -6910,6 +6922,9 @@ Icon symbols:
 
 Icons
 == 아이콘
+
+Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
+== 키를 놓거나 동결이 풀리면 아이콘이 사라집니다. 다른 플레이어의 입력 표시에는 서버의 사전 입력 지원이 필요하며 현재 조작 중인 캐릭터는 제외됩니다.
 
 Identity preset
 == 프로필 프리셋
@@ -8270,6 +8285,9 @@ Manual target
 Map
 == 맵
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == 맵 브라우저 난이도 별 필터 비트마스크 (비트 1-5)
 
@@ -8407,9 +8425,6 @@ Markers
 
 Markers are drawn on your screen only and never change the game itself.
 == 표시는 내 화면에만 그려지며 게임 자체는 바뀌지 않습니다.
-
-Marks teammates who hold hammer while stuck in death or freeze areas, so you can see who is hammering them.
-== 사망·동결 지역에 갇힌 채 망치를 든 아군을 표시해 누가 때리고 있는지 보이게 합니다.
 
 Master server URL to register
 == 등록할 마스터 서버 URL
@@ -8731,6 +8746,9 @@ Mix rate
 
 Mixed
 == 혼합
+
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
 
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == 모바일 관전 카메라: 0=조이스틱, 1=화면 드래그
@@ -9301,6 +9319,9 @@ No local servers found (ports %d-%d)
 
 No login required
 == 로그인 불필요
+
+No Logo selected
+== 선택한 로고 없음
 
 No map
 == 맵 없음
@@ -10376,9 +10397,6 @@ Player country (ISO 3166-1 numeric code)
 Player country filter in server browser (ISO 3166-1 numeric)
 == 서버 브라우저의 플레이어 국가 필터 (ISO 3166-1 숫자)
 
-Player country:
-== 플레이어 국가:
-
 Player death
 == 플레이어 사망
 
@@ -10751,6 +10769,9 @@ Press Esc to exit the HUD editor
 Press F2, log in, then use: change_map map_name
 == F2를 눌러 로그인한 후 change_map map_name을 입력하세요
 
+Pressed hammer icon color
+== 해머를 누를 때 아이콘 색상
+
 Pressed hook collision line color when hitting a tee
 == 훅 키를 누를 때 Tee에 닿았을 때의 훅 보조선 색상
 
@@ -10759,6 +10780,9 @@ Pressed hook collision line color when hitting something hookable
 
 Pressed hook collision line color when not aiming at anything hookable
 == 훅 키를 누를 때 훅 가능한 물체를 겨누지 않았을 때의 훅 보조선 색상
+
+Pressed hook icon color
+== 훅을 누를 때 아이콘 색상
 
 Pressed hook line color; always used when custom pressed colors are enabled
 == 누른 후 갈고리선 색. 사용자 지정 누른 후 색이 켜져 있을 때 항상 사용
@@ -10804,6 +10828,9 @@ Preview cut (P)
 
 Preview dummy nameplate
 == 더미 이름표 미리보기
+
+Preview failed. Check the image and Logo, then retry.
+== 미리보기에 실패했습니다. 이미지와 로고를 확인한 후 다시 시도하세요.
 
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
@@ -11615,6 +11642,9 @@ Remove from queue
 Remove Item
 == 항목 제거
 
+Remove Logo
+== 로고 제거
+
 Remove right to vote from player with client ID
 == 클라이언트 ID를 가진 플레이어의 투표권 제거
 
@@ -11945,6 +11975,9 @@ Reset IME appearance
 Reset key press counts
 == 키 입력 횟수 초기화
 
+Reset layer
+== 레이어 초기화
+
 Reset layout
 == 레이아웃 재설정
 
@@ -12110,6 +12143,9 @@ Rotate hammer with cursor like other weapons
 Rotates your tee through a saved list of skins, either on a timer or at a random spot when a map starts.
 == 저장한 스킨 목록으로 Tee를 순환시키며, 타이머로 바꾸거나 맵 시작 시 무작위 위치에서 시작할 수 있습니다.
 
+Rotation
+== 회전
+
 Round
 == 라운드
 
@@ -12254,6 +12290,9 @@ Save loaded; the local record could not be removed.
 Save player names in replay
 == 리플레이에 플레이어 이름 저장
 
+Save PNG copy
+== PNG 사본 저장
+
 Save power by lowering update rate
 == 업데이트 속도를 낮춰 전력 절약
 
@@ -12331,6 +12370,9 @@ Saves and loads complete client profiles, including name, chat settings and bind
 
 Saves file
 == 파일 저장
+
+Saving…
+== 저장 중…
 
 Say in chat
 == 채팅에 말하기
@@ -12757,6 +12799,15 @@ Server hostname (0.7 only)
 
 Server info
 == 서버 정보
+
+Server information lower left card width (per mille)
+== 서버 정보 왼쪽 아래 카드 너비(천분율)
+
+Server information upper left card width (per mille)
+== 서버 정보 왼쪽 위 카드 너비(천분율)
+
+Server information upper row height (per mille)
+== 서버 정보 위쪽 행 높이(천분율)
 
 Server kick/spec votes are no longer actively moderated.
 == 서버 추방/관전 투표가 더 이상 적극적으로 관리되지 않습니다.
@@ -14762,9 +14813,6 @@ Stress system (debug builds only).
 Strict game type filter
 == 엄격한 게임 유형 필터
 
-Strict gametype filter
-== 엄격한 게임 모드 필터
-
 Strict mode
 == 엄격 모드
 
@@ -15299,6 +15347,9 @@ Test translation
 Testing translation...
 == 번역 테스트 중…
 
+Text
+== 텍스트
+
 Text alpha
 == 텍스트 투명도
 
@@ -15593,9 +15644,6 @@ Tick "Enable system media control", then "Show song info in top-left corner"; th
 Tick "Enable voice", then open "Advanced options" to pick "Input device" and "Output device"; "Auto unmute when speaking" frees your mute key.
 == 음성 활성화를 선택하고 고급 옵션에서 입력 장치와 출력 장치를 고르세요. 말할 때 자동 음소거 해제를 쓰면 음소거 키를 비울 수 있습니다.
 
-Tick "Highlight teammates hammering in death or freeze areas"; it works on your own team only and needs no key bind.
-== 사망·동결 지역에서 망치를 휘두르는 아군 강조 표시를 체크합니다. 자기 팀에만 적용되며 키 할당이 필요 없습니다.
-
 Tick "Launch Steam automatically when starting externally"; if Steam is not found, type its path or press "Detect Steam again".
 == 외부 실행 시 Steam 자동 시작을 켜세요. Steam을 찾지 못하면 경로를 입력하거나 Steam 다시 감지를 누르세요.
 
@@ -15631,6 +15679,9 @@ tile
 
 Tile outlines
 == 타일 윤곽선
+
+Tile watermark
+== 워터마크 반복 배치
 
 Time
 == 시간
@@ -16361,6 +16412,9 @@ Unable to load savegame: loaded on a different server
 Unable to load savegame: SaveId corrupted
 == 저장 기록을 불러올 수 없습니다: SaveId 손상
 
+Unable to open the file picker
+== 파일 선택기를 열 수 없습니다
+
 Unable to open the screenshot file
 == 스크린샷 파일을 열 수 없습니다
 
@@ -16577,6 +16631,9 @@ Update ready to install
 Update sources are temporarily unavailable
 == 업데이트 서버를 일시적으로 사용할 수 없습니다
 
+Updating preview…
+== 미리보기 업데이트 중…
+
 Updating public word list...
 == 공용 금칙어 목록 업데이트 중...
 
@@ -16696,9 +16753,6 @@ Use high bandwidth mode (doubles server bandwidth, LAN only)
 
 Use installed asset names. Empty fields keep the current asset.
 == 설치된 리소스 이름을 입력하세요. 빈 항목은 현재 리소스를 유지합니다.
-
-Use it to find the teammate who needs a wake-up; enemies are never highlighted, so do not look for them here.
-== 깨워 줘야 할 아군을 찾는 데 쓰세요. 적은 강조되지 않으니 여기서 찾지 마세요.
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == K 키를 사용하여 죽기(재시작), Q 키를 사용하여 일시 중지 및 다른 플레이어 관전. 다른 키 바인딩은 설정에서 확인하세요.
@@ -17141,11 +17195,11 @@ Warning
 Watches your friend list and reports friends coming online or joining your map, with optional automatic greeting.
 == 친구 목록을 지켜보다가 친구가 접속하거나 같은 맵에 들어오면 알려 주고, 자동 인사도 할 수 있습니다.
 
-Water hammer highlight
-== 수중 해머 하이라이트
-
 Watermark
 == 워터마크
+
+Watermark editor
+== 워터마크 편집기
 
 Weak hook
 == 약한 갈고리

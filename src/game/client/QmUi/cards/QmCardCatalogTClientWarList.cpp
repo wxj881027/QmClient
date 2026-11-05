@@ -100,7 +100,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 	const float UiScale = SettingsPageUiScale(MainView.w);
 	const SSettingsPageLayoutFrame Page = Ctx.m_Page;
 	const SSettingsContentMetrics WarListMetrics = ResolveSettingsContentMetrics(MainView.w);
-	const float ListRowHeight = WarListMetrics.m_ListRowHeight;
+	const float ListRowHeight = std::max(WarListMetrics.m_ListRowHeight, LineSize + 2.0f * MarginSmall);
 	constexpr int WarListViewportRows = 8;
 	std::unique_ptr<CUiRenderOnlyGuard> pRenderOnlyGuard;
 	if(ReadOnly && !Ui()->RenderOnly())
@@ -165,9 +165,11 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		CUIRect Button, EntriesSearch, EntriesList;
 		CSettingsContentLayoutFlow Flow(Column);
 		static bool s_Reversed = true;
-		if(Flow.Control("tclient-warlist-reverse-entries", LineSize, Button))
+		if(Flow.Control("tclient-warlist-entries-search", LineSize, EntriesSearch))
 		{
-			Button.VSplitRight(25.0f, nullptr, &Button);
+			EntriesSearch.VSplitRight(LineSize, &EntriesSearch, &Button);
+			EntriesSearch.VSplitRight(MarginSmall, &EntriesSearch, nullptr);
+			ui_widget::InputField(TClientWarListEntriesSearchCtx, &s_EntriesFilterInput, EntriesSearch, FontSize, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
 
 			static CButtonContainer s_ReverseEntries;
 			// 排序箭头与设置卡片折叠箭头同一套过渡（0.26s EASE_IN_OUT 转 180°）：
@@ -182,11 +184,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			if(Ui()->DoButton_QmIcon(&s_ReverseEntries, EQmIcon::COUNT, nullptr, 0, &Button, IGraphics::CORNER_ALL, IGraphics::CORNER_ALL, true, std::nullopt, false, false, &SortIconDraw) && !ReadOnly && !Ui()->RenderOnly())
 				s_Reversed = !s_Reversed;
 		}
-		if(Flow.Control("tclient-warlist-entries-search", LineSize, EntriesSearch, MarginSmall))
-		{
-			ui_widget::InputField(TClientWarListEntriesSearchCtx, &s_EntriesFilterInput, EntriesSearch, FontSize, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
-		}
-		if(!Flow.Control("tclient-warlist-entries-list", WarListViewportRows * ListRowHeight, EntriesList))
+		if(!Flow.Control("tclient-warlist-entries-list", WarListViewportRows * ListRowHeight, EntriesList, MarginSmall))
 			return;
 		static std::vector<CWarEntry *> s_vFilteredEntries;
 		static char s_aCachedEntriesFilter[128] = "";
@@ -240,11 +238,9 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				continue;
 
 			CUIRect EntryRect, DeleteButton, EntryTypeRect, WarType, ToolTip;
-			Item.m_Rect.Margin(0.0f, &EntryRect);
-			EntryRect.VSplitLeft(26.0f, &DeleteButton, &EntryRect);
-			DeleteButton.HMargin(7.5f, &DeleteButton);
-			DeleteButton.VSplitLeft(MarginSmall, nullptr, &DeleteButton);
-			DeleteButton.VSplitRight(MarginExtraSmall, &DeleteButton, nullptr);
+			Item.m_Rect.Margin(MarginSmall, &EntryRect);
+			EntryRect.VSplitRight(LineSize, &EntryRect, &DeleteButton);
+			EntryRect.VSplitRight(MarginSmall, &EntryRect, nullptr);
 			if(Ui()->DoButton_QmIcon(&s_vDeleteButtons[i], EQmIcon::TRASH, FONT_ICON_TRASH, 0, &DeleteButton, IGraphics::CORNER_ALL) && !ReadOnly && !Ui()->RenderOnly())
 			{
 				pEntryToRemove = pEntry;
@@ -261,30 +257,32 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			{
 				str_copy(aBuf, pEntry->m_aName);
 			}
-			EntryRect.VSplitLeft(35.0f, &EntryTypeRect, &EntryRect);
+			EntryRect.VSplitLeft(ListRowHeight, &EntryTypeRect, &EntryRect);
 			if(!ReadOnly || Ui()->BackgroundRender())
 			{
 				if(IsClan)
-					RenderFontIcon_QmIcon(EntryTypeRect, EQmIcon::USERS, FONT_ICON_USERS, 18.0f, TEXTALIGN_MC);
+					RenderFontIcon_QmIcon(EntryTypeRect, EQmIcon::USERS, FONT_ICON_USERS, FontSize, TEXTALIGN_MC);
 				else
-					RenderDevSkin(EntryTypeRect.Center(), ListRowHeight, "default", "default", false, 0, 0, 0, false, false);
+					RenderDevSkin(EntryTypeRect.Center(), LineSize, "default", "default", false, 0, 0, 0, false, false);
 			}
 
+			EntryRect.VSplitRight(LineSize, &EntryRect, &ToolTip);
 			if(str_comp(pEntry->m_aReason, "") != 0)
 			{
-				EntryRect.VSplitRight(20.0f, &EntryRect, &ToolTip);
 				if(!ReadOnly || Ui()->BackgroundRender())
-					RenderFontIcon_QmIcon(ToolTip, EQmIcon::COMMENT, FONT_ICON_COMMENT, 18.0f, TEXTALIGN_MC);
+					RenderFontIcon_QmIcon(ToolTip, EQmIcon::COMMENT, FONT_ICON_COMMENT, FontSize, TEXTALIGN_MC);
 				GameClient()->m_Tooltips.DoToolTip(&s_vItemIds[i], &ToolTip, pEntry->m_aReason);
 				GameClient()->m_Tooltips.SetFadeTime(&s_vItemIds[i], 0.0f);
 			}
 
-			EntryRect.HMargin(MarginExtraSmall, &EntryRect);
-			EntryRect.HSplitMid(&EntryRect, &WarType, MarginSmall);
+			// 名称与分组各占一列，长文本省略，避免两行挤压和删除按钮缩成小点。
+			EntryRect.VSplitRight(EntryRect.w * 0.32f, &EntryRect, &WarType);
+			EntryRect.VSplitRight(MarginSmall, &EntryRect, nullptr);
 			DoTClientLabel(Ui(), &EntryRect, aBuf, StandardFontSize, TEXTALIGN_ML);
-			TextRender()->TextColor(pEntry->m_pWarType->m_Color);
-			DoTClientLabel(Ui(), &WarType, pEntry->m_pWarType->m_aWarName, StandardFontSize, TEXTALIGN_ML);
-			TextRender()->TextColor(TextRender()->DefaultTextColor());
+			if(Flow.Drawing())
+				WarType.Draw(pEntry->m_pWarType->m_Color.WithAlpha(0.16f), IGraphics::CORNER_ALL, ui_token::radius::TIGHT * UiScale);
+			WarType.VMargin(MarginSmall, &WarType);
+			DoTClientLabel(Ui(), &WarType, pEntry->m_pWarType->m_aWarName, StandardFontSize, TEXTALIGN_MC);
 		}
 
 		const int NewSelectedEntry = EntriesListBox.DoEnd();
@@ -326,33 +324,16 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		CUIRect Button, ButtonL, ButtonR;
 		static CButtonContainer s_AddButton, s_OverrideButton;
 		CSettingsContentLayoutFlow Flow(Column);
-		if(Flow.Control("tclient-warlist-entry-identity", LineSize, Button, MarginSmall))
+		if(Flow.Control("tclient-warlist-name-clan-choice", LineSize, Button))
 		{
 			Button.VSplitMid(&ButtonL, &ButtonR, MarginSmall);
-			s_NameInput.SetBuffer(s_aEntryName, sizeof(s_aEntryName));
-			s_NameInput.SetEmptyText(Localize("Name"));
-			if(s_IsName)
-				ui_widget::InputField(TClientWarListTextInputCtx, &s_NameInput, ButtonL, Localize("Name"), EditBoxFontSize);
-			else
-				DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, "tclient-warlist-name", &ButtonL, s_aEntryName, FontSize, TEXTALIGN_ML);
-
-			s_ClanInput.SetBuffer(s_aEntryClan, sizeof(s_aEntryClan));
-			s_ClanInput.SetEmptyText(Localize("Clan"));
-			if(s_IsClan)
-				ui_widget::InputField(TClientWarListTextInputCtx, &s_ClanInput, ButtonR, Localize("Clan"), EditBoxFontSize);
-			else
-				DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, "tclient-warlist-clan", &ButtonR, s_aEntryClan, FontSize, TEXTALIGN_ML);
-		}
-		if(Flow.Control("tclient-warlist-name-clan-choice", LineSize, Button, MarginSmall))
-		{
-			Button.VSplitMid(&ButtonL, &ButtonR, MarginSmall);
-			static unsigned char s_NameRadio, s_ClanRadio;
-			if(DoButton_CheckBox_Common(&s_NameRadio, Localize("Name"), s_IsName ? "X" : "", &ButtonL, BUTTONFLAG_LEFT) && !ReadOnly && !Ui()->RenderOnly())
+			static CButtonContainer s_NameRadio, s_ClanRadio;
+			if(DoButton_MenuTab(&s_NameRadio, Localize("Name"), s_IsName, &ButtonL, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE * UiScale, nullptr, nullptr, FontSize) && !ReadOnly && !Ui()->RenderOnly())
 			{
 				s_IsName = true;
 				s_IsClan = false;
 			}
-			if(DoButton_CheckBox_Common(&s_ClanRadio, Localize("Clan"), s_IsClan ? "X" : "", &ButtonR, BUTTONFLAG_LEFT) && !ReadOnly && !Ui()->RenderOnly())
+			if(DoButton_MenuTab(&s_ClanRadio, Localize("Clan"), s_IsClan, &ButtonR, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE * UiScale, nullptr, nullptr, FontSize) && !ReadOnly && !Ui()->RenderOnly())
 			{
 				s_IsName = false;
 				s_IsClan = true;
@@ -361,6 +342,24 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				str_copy(s_aEntryName, "");
 			if(Flow.Input() && !ReadOnly && !Ui()->RenderOnly() && !s_IsClan)
 				str_copy(s_aEntryClan, "");
+		}
+		if(Flow.Control("tclient-warlist-entry-identity", LineSize, Button, MarginSmall))
+		{
+			s_NameInput.SetBuffer(s_aEntryName, sizeof(s_aEntryName));
+			s_NameInput.SetEmptyText(Localize("Name"));
+			s_ClanInput.SetBuffer(s_aEntryClan, sizeof(s_aEntryClan));
+			s_ClanInput.SetEmptyText(Localize("Clan"));
+			CLineInput *pInput = s_IsClan ? &s_ClanInput : &s_NameInput;
+			ui_widget::InputField(TClientWarListTextInputCtx, pInput, Button, s_IsClan ? Localize("Clan") : Localize("Name"), EditBoxFontSize);
+		}
+		if(Flow.Control("tclient-warlist-selected-group", LineSize, Button, MarginSmall) && pSelectedType)
+		{
+			Button.VSplitMid(&ButtonL, &ButtonR, MarginSmall);
+			DoTClientLabel(Ui(), &ButtonL, Localize("War Groups"), FontSize, TEXTALIGN_ML);
+			if(Flow.Drawing())
+				ButtonR.Draw(pSelectedType->m_Color.WithAlpha(0.16f), IGraphics::CORNER_ALL, ui_token::radius::TIGHT * UiScale);
+			ButtonR.VMargin(MarginSmall, &ButtonR);
+			DoTClientLabel(Ui(), &ButtonR, pSelectedType->m_aWarName, FontSize, TEXTALIGN_MC);
 		}
 		if(Flow.Control("tclient-warlist-reason", LineSize, Button, MarginSmall))
 		{
@@ -392,17 +391,6 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				}
 			}
 		}
-		if(Flow.Control("tclient-warlist-selected-group", HeadlineFontSize + MarginSmall, Button, MarginSmall))
-		{
-			if(pSelectedType)
-			{
-				float Shade = 0.0f;
-				Button.Draw(ColorRGBA(Shade, Shade, Shade, 0.25f), 15, 3.0f);
-				TextRender()->TextColor(pSelectedType->m_Color);
-				Ui()->DoLabel(&Button, pSelectedType->m_aWarName, HeadlineFontSize, TEXTALIGN_MC);
-				TextRender()->TextColor(TextRender()->DefaultTextColor());
-			}
-		}
 
 		LogTClientPerfStageEx("tclient_warlist", "filter", ETClientSettingsPerfStage::INTERACTIVE_LAYER, FilterTimer.ElapsedMs());
 	};
@@ -420,31 +408,21 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarList, "tclient-warlist-enable", Localize("Enable warlist"), g_Config.m_QmWarList, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
 				g_Config.m_QmWarList ^= 1;
 		}
-		if(Flow.Control("tclient-warlist-block-enemies", LineSize, CheckBoxRect, MarginSmall))
-		{
-			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListBlockEnemies, "tclient-warlist-block-enemies", Localize("Fully block enemy players"), g_Config.m_QmWarListBlockEnemies, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
-				g_Config.m_QmWarListBlockEnemies ^= 1;
-		}
-		if(Flow.Control("tclient-warlist-block-enemy-chat", LineSize, CheckBoxRect, MarginSmall))
-		{
-			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListBlockEnemyChat, "tclient-warlist-block-enemy-chat", Localize("Block enemy chat"), g_Config.m_QmWarListBlockEnemyChat, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
-				g_Config.m_QmWarListBlockEnemyChat ^= 1;
-		}
-		if(Flow.Control("tclient-warlist-colors-chat", LineSize, CheckBoxRect, MarginSmall))
-		{
-			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListChat, "tclient-warlist-colors-chat", Localize("Colors in chat"), g_Config.m_QmWarListChat, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
-				g_Config.m_QmWarListChat ^= 1;
-		}
-		if(Flow.Control("tclient-warlist-colors-scoreboard", LineSize, CheckBoxRect, MarginSmall))
-		{
-			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListScoreboard, "tclient-warlist-colors-scoreboard", Localize("Colors in scoreboard"), g_Config.m_QmWarListScoreboard, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
-				g_Config.m_QmWarListScoreboard ^= 1;
-		}
-		if(Flow.Control("tclient-warlist-colors-spectate", LineSize, CheckBoxRect, MarginSmall))
-		{
-			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListSpectate, "tclient-warlist-colors-spectate", Localize("Show colors in spectator selection"), g_Config.m_QmWarListSpectate, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
-				g_Config.m_QmWarListSpectate ^= 1;
-		}
+		Flow.Space(MarginSmall);
+		DoSettingsToggleGroup(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, Column,
+			{
+				{&g_Config.m_QmWarListBlockEnemies, "tclient-warlist-block-enemies", Localize("Fully block enemy players")},
+				{&g_Config.m_QmWarListBlockEnemyChat, "tclient-warlist-block-enemy-chat", Localize("Block enemy chat")},
+			},
+			WarListMetrics, Flow.Input() && !ReadOnly);
+		Flow.Space(MarginSmall);
+		DoSettingsToggleGroup(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, Column,
+			{
+				{&g_Config.m_QmWarListChat, "tclient-warlist-colors-chat", Localize("Colors in chat")},
+				{&g_Config.m_QmWarListScoreboard, "tclient-warlist-colors-scoreboard", Localize("Colors in scoreboard")},
+				{&g_Config.m_QmWarListSpectate, "tclient-warlist-colors-spectate", Localize("Show colors in spectator selection")},
+			},
+			WarListMetrics, Flow.Input() && !ReadOnly);
 		if(Flow.Control("tclient-warlist-show-clan", LineSize, CheckBoxRect, MarginSmall))
 		{
 			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListShowClan, "tclient-warlist-show-clan", Localize("Show clan if war"), g_Config.m_QmWarListShowClan, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
@@ -457,7 +435,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		CUIRect WarTypeList, Button, ButtonL, ButtonR;
 		CSettingsContentLayoutFlow Flow(Column);
 		static CButtonContainer s_AddGroupButton, s_OverrideGroupButton, s_GroupColorPicker;
-		if(Flow.Control("tclient-warlist-groups-list", WarListViewportRows * ListRowHeight, WarTypeList))
+		if(Flow.Control("tclient-warlist-groups-list", 3.0f * ListRowHeight, WarTypeList))
 		{
 			m_pRemoveWarType = nullptr;
 			int SelectedOldType = -1;
@@ -487,19 +465,20 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				if(!Item.m_Visible)
 					continue;
 
-				CUIRect TypeRect, DeleteButton;
-				Item.m_Rect.Margin(0.0f, &TypeRect);
+				CUIRect TypeRect, DeleteButton, Swatch;
+				Item.m_Rect.Margin(MarginSmall, &TypeRect);
+				TypeRect.VSplitLeft(LineSize, &Swatch, &TypeRect);
+				Swatch.Margin(MarginSmall, &Swatch);
+				if(Flow.Drawing())
+					Swatch.Draw(pType->m_Color, IGraphics::CORNER_ALL, ui_token::radius::TIGHT * UiScale);
 				if(pType->m_Removable)
 				{
-					TypeRect.VSplitRight(20.0f, &TypeRect, &DeleteButton);
-					DeleteButton.HSplitTop(20.0f, &DeleteButton, nullptr);
-					DeleteButton.Margin(2.0f, &DeleteButton);
-					if(DoButtonNoRect_QmIcon(&s_vTypeDeleteButtons[i], EQmIcon::TRASH, FONT_ICON_TRASH, 0, &DeleteButton, IGraphics::CORNER_ALL) && !ReadOnly && !Ui()->RenderOnly())
+					TypeRect.VSplitRight(LineSize, &TypeRect, &DeleteButton);
+					TypeRect.VSplitRight(MarginSmall, &TypeRect, nullptr);
+					if(Ui()->DoButton_QmIcon(&s_vTypeDeleteButtons[i], EQmIcon::TRASH, FONT_ICON_TRASH, 0, &DeleteButton, IGraphics::CORNER_ALL) && !ReadOnly && !Ui()->RenderOnly())
 						m_pRemoveWarType = pType;
 				}
-				TextRender()->TextColor(pType->m_Color);
 				DoTClientLabel(Ui(), &TypeRect, pType->m_aWarName, StandardFontSize, TEXTALIGN_ML);
-				TextRender()->TextColor(TextRender()->DefaultTextColor());
 			}
 
 			const int NewSelectedType = WarTypeListBox.DoEnd();
@@ -593,7 +572,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		{
 			ui_widget::InputField(TClientWarListPlayerSearchCtx, &s_PlayerSearchInput, PlayerSearch, FontSize, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
 		}
-		if(!Flow.Control("tclient-warlist-players-list", WarListViewportRows * ListRowHeight, PlayerList, MarginSmall))
+		if(!Flow.Control("tclient-warlist-players-list", 5.0f * ListRowHeight, PlayerList, MarginSmall))
 			return;
 		static CListBox s_PlayerListBox;
 		static CListBox s_PlayerReadOnlyListBox;
@@ -633,7 +612,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			CUIRect PlayerRect, TeeRect, NameRect, ClanRect;
 			CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 			Item.m_Rect.Margin(0.0f, &PlayerRect);
-			PlayerRect.VSplitLeft(25.0f, &TeeRect, &PlayerRect);
+			PlayerRect.VSplitLeft(ListRowHeight, &TeeRect, &PlayerRect);
 			PlayerRect.VSplitMid(&NameRect, &ClanRect);
 			PlayerRect = NameRect;
 			PlayerRect.x = TeeRect.x;
@@ -643,7 +622,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 												       (Ui()->HotItem() == &s_vNameButtons[ClientId] ? ColorRGBA(1.0f, 1.0f, 1.0f, 0.33f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.0f));
 			if(NameButtonColor.a > 0.0f)
 				DrawRoundedSurface(Ui(), PlayerRect, NameButtonColor, ColorRGBA(), 5.0f, 0.0f, IGraphics::CORNER_L);
-			Ui()->DoLabel(&NameRect, Client.m_aName, StandardFontSize, TEXTALIGN_ML);
+			DoTClientLabel(Ui(), &NameRect, Client.m_aName, StandardFontSize, TEXTALIGN_ML);
 			if(Ui()->DoButtonLogic(&s_vNameButtons[ClientId], false, &PlayerRect, BUTTONFLAG_LEFT) && !ReadOnly && !Ui()->RenderOnly())
 			{
 				s_IsName = true;
@@ -656,7 +635,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 												       (Ui()->HotItem() == &s_vClanButtons[ClientId] ? ColorRGBA(1.0f, 1.0f, 1.0f, 0.33f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.0f));
 			if(ClanButtonColor.a > 0.0f)
 				DrawRoundedSurface(Ui(), ClanRect, ClanButtonColor, ColorRGBA(), 5.0f, 0.0f, IGraphics::CORNER_R);
-			Ui()->DoLabel(&ClanRect, Client.m_aClan, StandardFontSize, TEXTALIGN_ML);
+			DoTClientLabel(Ui(), &ClanRect, Client.m_aClan, StandardFontSize, TEXTALIGN_ML);
 			if(Ui()->DoButtonLogic(&s_vClanButtons[ClientId], false, &ClanRect, BUTTONFLAG_LEFT) && !ReadOnly && !Ui()->RenderOnly())
 			{
 				s_IsName = false;
@@ -677,20 +656,19 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		LogTClientPerfStageEx("tclient_warlist", "players", ETClientSettingsPerfStage::STATIC_LAYER, PlayersTimer.ElapsedMs(), false, aExtra);
 	};
 
-	const float WarListColumnMinimum = ResolveSettingsInlineRowMinimumWidth(WarListMetrics.m_LabelWidth + 2.0f * WarListMetrics.m_ButtonHeight, WarListMetrics.m_SectionGap, 1);
-	const float FourColumnMinWidth = 4.0f * WarListColumnMinimum + 3.0f * WarListMetrics.m_SectionGap;
-	const float TwoColumnMinWidth = 2.0f * WarListColumnMinimum + WarListMetrics.m_SectionGap;
 	const float SectionGap = WarListMetrics.m_SectionGap;
-	const char *apSectionIds[] = {"tclient-warlist-section-entries", "tclient-warlist-section-settings", "tclient-warlist-section-editor", "tclient-warlist-section-groups", "tclient-warlist-section-players"};
-	const char *apTitles[] = {Localizable("War Entries"), Localizable("Settings"), Localizable("Edit Entry"), Localizable("War Groups"), Localizable("Online Players")};
-	const std::function<void(CUIRect &)> aContents[] = {RenderEntries, RenderSettings, RenderEditor, RenderGroups, RenderPlayers};
+	const float PanelPadding = WarListMetrics.m_LineSpacing * 2.0f;
+	const float ColumnMinimum = WarListMetrics.m_BodySize * 18.0f + 2.0f * PanelPadding;
+	const char *apSectionIds[] = {"tclient-warlist-section-entries", "tclient-warlist-section-editor", "tclient-warlist-section-groups", "tclient-warlist-section-settings", "tclient-warlist-section-players"};
+	const char *apTitles[] = {Localizable("War Entries"), Localizable("Edit Entry"), Localizable("War Groups"), Localizable("Settings"), Localizable("Online Players")};
+	const std::function<void(CUIRect &)> aContents[] = {RenderEntries, RenderEditor, RenderGroups, RenderSettings, RenderPlayers};
 	const auto RenderWarListCard = [&](CUIRect &Content) {
 		CSettingsContentLayoutFlow Flow(Content);
 		const auto *pScope = CSettingsContentLayoutScope::Current();
 		const float Width = pScope && pScope->m_pLayout ? pScope->m_pLayout->Width() : Content.w;
-		const int Columns = Width >= FourColumnMinWidth ? 4 : Width >= TwoColumnMinWidth ? 2 :
-												   1;
-		const float ColumnWidth = std::max(0.0f, (Width - (Columns - 1) * SectionGap) / Columns);
+		const bool TwoColumns = Width >= 2.0f * ColumnMinimum + SectionGap;
+		const float ColumnWidth = TwoColumns ? (Width - SectionGap) * 0.5f : Width;
+		const float InnerWidth = std::max(0.0f, ColumnWidth - 2.0f * PanelPadding);
 		std::array<std::function<void(CUIRect &)>, 5> aRenderSections;
 		std::array<float, 5> aHeights{};
 		for(size_t Index = 0; Index < aRenderSections.size(); ++Index)
@@ -700,44 +678,46 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				CUIRect Header;
 				if(SectionFlow.Control(apSectionIds[Index], LineSize, Header))
 					DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, apSectionIds[Index], &Header, Localize(apTitles[Index]), HeadlineFontSize, TEXTALIGN_ML);
-				SectionFlow.Space(MarginSmall);
+				SectionFlow.Space(SectionGap);
 				aContents[Index](Column);
 			};
-			aHeights[Index] = TClientDeclaredRegion(apSectionIds[Index], ColumnWidth, aRenderSections[Index], nullptr);
+			aHeights[Index] = TClientDeclaredRegion(apSectionIds[Index], InnerWidth, aRenderSections[Index], nullptr) + 2.0f * PanelPadding;
 		}
-		float Height;
-		const float FirstHeight = std::max(aHeights[0] + SectionGap + aHeights[1], aHeights[2]);
-		if(Columns == 4)
-			Height = std::max(FirstHeight, std::max(aHeights[3], aHeights[4]));
-		else if(Columns == 2)
-			Height = FirstHeight + SectionGap + std::max(aHeights[3], aHeights[4]);
-		else
-			Height = aHeights[0] + aHeights[1] + aHeights[2] + aHeights[3] + aHeights[4] + SectionGap * 4.0f;
+		// 编辑区和分组管理连续排列；下方设置与在线玩家独立成行。
+		const float TopHeight = std::max(aHeights[0], aHeights[1] + SectionGap + aHeights[2]);
+		float Height = TopHeight + SectionGap + std::max(aHeights[3], aHeights[4]);
+		if(!TwoColumns)
+		{
+			Height = SectionGap * (aHeights.size() - 1);
+			for(float SectionHeight : aHeights)
+				Height += SectionHeight;
+		}
 		CUIRect Block;
 		if(!Flow.Control("tclient-warlist-columns", Height, Block))
 			return;
-		std::array<CUIRect, 5> aViews;
 		float StackedY = Block.y;
-		for(size_t Index = 0; Index < aViews.size(); ++Index)
+		for(size_t Index = 0; Index < aHeights.size(); ++Index)
 		{
-			aViews[Index] = {Block.x, Block.y, ColumnWidth, aHeights[Index]};
-			if(Columns == 1)
+			CUIRect Panel{Block.x, Block.y, ColumnWidth, aHeights[Index]};
+			if(!TwoColumns)
 			{
-				aViews[Index].y = StackedY;
+				Panel.y = StackedY;
 				StackedY += aHeights[Index] + SectionGap;
 			}
-			else if(Index == 1)
-				aViews[Index].y += aHeights[0] + SectionGap;
-			else if(Index >= 2)
+			else
 			{
-				const int Column = Columns == 4 ? (int)Index - 1 : Index == 2 ? 1 :
-									   Index == 3         ? 0 :
-												1;
-				aViews[Index].x += Column * (ColumnWidth + SectionGap);
-				if(Columns == 2 && Index >= 3)
-					aViews[Index].y += FirstHeight + SectionGap;
+				if(Index == 1 || Index == 2 || Index == 4)
+					Panel.x += ColumnWidth + SectionGap;
+				if(Index == 2)
+					Panel.y += aHeights[1] + SectionGap;
+				else if(Index >= 3)
+					Panel.y += TopHeight + SectionGap;
 			}
-			TClientDeclaredRegion(apSectionIds[Index], ColumnWidth, aRenderSections[Index], &aViews[Index]);
+			if(Flow.Drawing())
+				DrawRoundedSurface(Ui(), Panel, ui_token::color::PREVIEW_BACKDROP, ui_token::color::CONTAINER_BORDER, ui_token::radius::BASE * UiScale, UiScale, IGraphics::CORNER_ALL);
+			CUIRect Inner;
+			Panel.Margin(PanelPadding, &Inner);
+			TClientDeclaredRegion(apSectionIds[Index], InnerWidth, aRenderSections[Index], &Inner);
 		}
 	};
 	const uint64_t CardRevision = GameClient()->m_WarList.Revision();

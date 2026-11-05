@@ -1111,6 +1111,8 @@ struct SHudMediaIslandSdfRenderState
 	float m_MainRadius = 0.0f;
 	int m_MainCorners = IGraphics::CORNER_NONE;
 	float m_MainDisabledCornerRadius = 0.0f;
+	float m_ShellRippleAmplitude = 0.0f;
+	float m_ShellRipplePhase = 0.0f;
 	std::array<SHudMediaIslandSdfItem, QmHudMediaIslandSdfMaxItems> m_Items{};
 	int m_ItemCount = 0;
 	bool m_HasRightCapsule = false;
@@ -1147,7 +1149,8 @@ inline float QmHudMediaIslandSdfPadding(const SHudMediaIslandSdfRenderState &Sta
 	const float ShadowOverflow = std::max(0.0f, State.m_OuterShadowSize) + Feather;
 	// 轮廓环整条都在主体外侧：外沿 = 中心线外扩距离 + 半个厚度。
 	const float OutlineOverflow = std::max(0.0f, State.m_OutlineRingOffset) + std::max(0.0f, State.m_OutlineRingThickness) * 0.5f + Feather;
-	return std::max(1.5f, std::max(std::max(ShapeOverflow, ShadowOverflow), OutlineOverflow));
+	// 形变后的阴影与融合轮廓也需要保留涟漪的外扩空间。
+	return std::max(1.5f, std::max(std::max(ShapeOverflow, ShadowOverflow), OutlineOverflow)) + std::max(0.0f, State.m_ShellRippleAmplitude);
 }
 
 inline CUIRect QmHudMediaIslandSdfOuterRect(const SHudMediaIslandSdfRenderState &State)
@@ -1210,7 +1213,8 @@ inline bool QmHudMediaIslandBuildGpuSdfParams(const SHudMediaIslandSdfRenderStat
 	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_BACKGROUND] = vec4(State.m_BackgroundColor.r, State.m_BackgroundColor.g, State.m_BackgroundColor.b, State.m_BackgroundColor.a);
 	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_MAIN_PARAMS] = vec4(State.m_MainRadius, State.m_MainDisabledCornerRadius, State.m_RingRadius, State.m_RingThickness);
 	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_METADATA] = vec4((float)State.m_ItemCount, (float)State.m_MainCorners, State.m_HasRightCapsule ? 1.0f : 0.0f, std::max(State.m_ScreenPixelSize, 0.0001f));
-	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_CAPSULE_PARAMS] = vec4(State.m_RightCapsule.m_Radius, State.m_RightCapsule.m_SmoothUnion, 0.0f, 0.0f);
+	// 复用原先空闲的 z/w 分量，保持命令缓冲和两种着色器的布局不变。
+	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_CAPSULE_PARAMS] = vec4(State.m_RightCapsule.m_Radius, State.m_RightCapsule.m_SmoothUnion, std::max(0.0f, State.m_ShellRippleAmplitude), State.m_ShellRipplePhase);
 	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_RESERVED] = vec4(std::max(0.0f, State.m_OuterShadowSize), std::clamp(State.m_OuterShadowOpacity, 0.0f, 1.0f), std::max(0.0f, State.m_OutlineRingThickness), std::max(0.0f, State.m_OutlineRingOffset));
 	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_BACKDROP_UV] = State.m_BackdropUv;
 

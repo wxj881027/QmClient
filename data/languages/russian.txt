@@ -343,6 +343,9 @@
 === Saves for '%s' ===
 == === Сохранения для '%s' ===
 
+?!Stuck keys!?
+== ?!Зажатые клавиши!?
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s (карта: %s, время: %s)
@@ -794,6 +797,9 @@ Alias of poses_render
 Alias of poses_video
 == Псевдоним poses_video
 
+Alignment
+== Выравнивание
+
 Alive notification color
 == Цвет уведомления о жизни
 
@@ -1072,9 +1078,6 @@ Apply to dummy
 
 Apply to player
 == Применить к игроку
-
-Apply watermark
-== Применить водяной знак
 
 Applying overwrites your font, UI scale, animation and panel colors at once, so note the values you like first.
 == Применение сразу перезапишет шрифт, масштаб UI, анимацию и цвета панелей, поэтому сначала запишите понравившиеся значения.
@@ -1588,6 +1591,9 @@ Axiom website
 
 Axis
 == Ось
+
+Back
+== Назад
 
 Backdrop blur
 == Размытие фона
@@ -2383,6 +2389,9 @@ Choose default eyes when joining a server
 
 Choose export name first.
 == Сначала введите имя экспорта.
+
+Choose Logo (PNG / WebP)
+== Выбрать логотип (PNG / WebP)
 
 Choose off, simple or full; the individual switches below only apply to full.
 == Выберите «Выкл», «Простой» или «Полный»; отдельные переключатели ниже действуют только в полном режиме.
@@ -4256,6 +4265,9 @@ Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use 
 Drag HUD modules with the left mouse button
 == Перетаскивайте модули HUD левой кнопкой мыши
 
+Drag the selected watermark to move it. The original image is preserved.
+== Перетащите выбранный водяной знак. Исходное изображение сохраняется.
+
 Drag the three sliders; master scales the other two.
 == Двигайте три ползунка; общая громкость масштабирует две остальные.
 
@@ -5065,6 +5077,9 @@ Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then s
 
 Enable the guide line, then set its length, style and colors.
 == Включите линию столкновения, затем задайте её длину, стиль и цвета.
+
+Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size.
+== Включите подсветку и показ клавиш над именем, затем выберите цвета значков зажатого молота и крюка. Их размер соответствует размеру клавиш.
 
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == Включите индикатор, выберите режим расстояния и то, получат ли игроки из war-list другой цвет.
@@ -6098,9 +6113,6 @@ Game type
 Game type (ddnet, mod)
 == Тип игры (ddnet, mod)
 
-Game types:
-== Типы игр:
-
 Game update rate (Hz)
 == Частота обновления игры (Гц)
 
@@ -6668,6 +6680,9 @@ Highlight Color
 Highlight console commands
 == Подсвечивать команды консоли
 
+Highlight frozen teammates' hammer and hook inputs
+== Подсвечивать ввод молота и крюка замороженных союзников
+
 Highlight game type
 == Выделять тип игры
 
@@ -6680,17 +6695,14 @@ Highlight ping value
 Highlight selected players in the game world
 == Highlight selected players in the game world
 
-Highlight teammates hammering in death or freeze areas
-== Подсвечивать союзников, работающих молотом в зонах смерти или заморозки
-
-Highlight teammates holding hammer in death or freeze areas
-== Подсвечивать союзников, удерживающих молот в зонах смерти или заморозки
-
 Highlighted message
 == Выделенное сообщение
 
 Highlighted message color
 == Цвет выделенного сообщения
+
+Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses.
+== Подсвечивает замороженных союзников, удерживающих молот, и показывает зажатый молот или крюк рядом с клавишами над именем.
 
 Hit feedback
 == Подтверждение попадания
@@ -6910,6 +6922,9 @@ Icon symbols:
 
 Icons
 == Значки
+
+Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
+== Значки исчезают при отпускании клавиши или разморозке. Для отображения чужого ввода сервер должен поддерживать предввод; текущий управляемый персонаж исключён.
 
 Identity preset
 == Набор профиля
@@ -8270,6 +8285,9 @@ Manual target
 Map
 == Карта
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == Битовая маска фильтра сложности по звёздам в браузере карт (биты 1-5)
 
@@ -8407,9 +8425,6 @@ Markers
 
 Markers are drawn on your screen only and never change the game itself.
 == Метки рисуются только на вашем экране и никогда не меняют саму игру.
-
-Marks teammates who hold hammer while stuck in death or freeze areas, so you can see who is hammering them.
-== Отмечает союзников с молотом, застрявших в зонах смерти или заморозки, чтобы видеть, кто их бьёт.
 
 Master server URL to register
 == URL мастер-сервера для регистрации
@@ -8731,6 +8746,9 @@ Mix rate
 
 Mixed
 == Смешанный
+
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
 
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == Камера мобильного наблюдателя: 0=джойстик, 1=перетаскивание
@@ -9301,6 +9319,9 @@ No local servers found (ports %d-%d)
 
 No login required
 == Вход не требуется
+
+No Logo selected
+== Логотип не выбран
 
 No map
 == Нет карты
@@ -10376,9 +10397,6 @@ Player country (ISO 3166-1 numeric code)
 Player country filter in server browser (ISO 3166-1 numeric)
 == Фильтр страны игрока в браузере серверов (числовой код ISO 3166-1)
 
-Player country:
-== Страна игрока:
-
 Player death
 == Смерть игрока
 
@@ -10751,6 +10769,9 @@ Press Esc to exit the HUD editor
 Press F2, log in, then use: change_map map_name
 == Нажмите F2, войдите и выполните: change_map map_name
 
+Pressed hammer icon color
+== Цвет значка зажатого молота
+
 Pressed hook collision line color when hitting a tee
 == Цвет линии зацепа при нажатой клавише при попадании в тии
 
@@ -10759,6 +10780,9 @@ Pressed hook collision line color when hitting something hookable
 
 Pressed hook collision line color when not aiming at anything hookable
 == Цвет линии зацепа при нажатой клавише, когда цель не зацепляема
+
+Pressed hook icon color
+== Цвет значка зажатого крюка
 
 Pressed hook line color; always used when custom pressed colors are enabled
 == Цвет линии при нажатии; всегда применяется при включении своих цветов нажатия
@@ -10804,6 +10828,9 @@ Preview cut (P)
 
 Preview dummy nameplate
 == Предпросмотр таблички дамми
+
+Preview failed. Check the image and Logo, then retry.
+== Ошибка предпросмотра. Проверьте изображение и логотип и повторите попытку.
 
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
@@ -11615,6 +11642,9 @@ Remove from queue
 Remove Item
 == Удалить элемент
 
+Remove Logo
+== Удалить логотип
+
 Remove right to vote from player with client ID
 == Лишить права голоса игрока с ID клиента
 
@@ -11945,6 +11975,9 @@ Reset IME appearance
 Reset key press counts
 == Сбросить счётчики нажатий клавиш
 
+Reset layer
+== Сбросить слой
+
 Reset layout
 == Сбросить расположение
 
@@ -12110,6 +12143,9 @@ Rotate hammer with cursor like other weapons
 Rotates your tee through a saved list of skins, either on a timer or at a random spot when a map starts.
 == Перебирает скины Tee по сохранённому списку: по таймеру или со случайного места при старте карты.
 
+Rotation
+== Поворот
+
 Round
 == Раунд
 
@@ -12254,6 +12290,9 @@ Save loaded; the local record could not be removed.
 Save player names in replay
 == Сохранять имена игроков в записи
 
+Save PNG copy
+== Сохранить копию PNG
+
 Save power by lowering update rate
 == Экономия энергии за счёт снижения частоты обновления
 
@@ -12331,6 +12370,9 @@ Saves and loads complete client profiles, including name, chat settings and bind
 
 Saves file
 == Файл сохранений
+
+Saving…
+== Сохранение…
 
 Say in chat
 == Сказать в чат
@@ -12757,6 +12799,15 @@ Server hostname (0.7 only)
 
 Server info
 == Информация о сервере
+
+Server information lower left card width (per mille)
+== Ширина нижней левой карточки информации о сервере (промилле)
+
+Server information upper left card width (per mille)
+== Ширина верхней левой карточки информации о сервере (промилле)
+
+Server information upper row height (per mille)
+== Высота верхнего ряда информации о сервере (промилле)
 
 Server kick/spec votes are no longer actively moderated.
 == Голосования за кик/спек на сервере больше не контролируются активным модератором.
@@ -14762,9 +14813,6 @@ Stress system (debug builds only).
 Strict game type filter
 == Строгий фильтр типа игры
 
-Strict gametype filter
-== Строгий фильтр типа игры
-
 Strict mode
 == Строгий режим
 
@@ -15299,6 +15347,9 @@ Test translation
 Testing translation...
 == Проверка перевода…
 
+Text
+== Текст
+
 Text alpha
 == Альфа текста
 
@@ -15593,9 +15644,6 @@ Tick "Enable system media control", then "Show song info in top-left corner"; th
 Tick "Enable voice", then open "Advanced options" to pick "Input device" and "Output device"; "Auto unmute when speaking" frees your mute key.
 == Отметьте включить голос, откройте дополнительные параметры и выберите устройство ввода и вывода; автоснятие мьюта при речи освобождает клавишу мьюта.
 
-Tick "Highlight teammates hammering in death or freeze areas"; it works on your own team only and needs no key bind.
-== Включите подсветку союзников, бьющих молотом в зонах смерти или заморозки; работает только для своей команды и не требует привязки клавиш.
-
 Tick "Launch Steam automatically when starting externally"; if Steam is not found, type its path or press "Detect Steam again".
 == Включите автозапуск Steam при внешнем старте; если Steam не найден, укажите путь или нажмите повторно найти Steam.
 
@@ -15631,6 +15679,9 @@ tile
 
 Tile outlines
 == Контуры плиток
+
+Tile watermark
+== Повторять водяной знак
 
 Time
 == Время
@@ -16361,6 +16412,9 @@ Unable to load savegame: loaded on a different server
 Unable to load savegame: SaveId corrupted
 == Не удалось загрузить сохранение: SaveId повреждён
 
+Unable to open the file picker
+== Не удалось открыть окно выбора файла
+
 Unable to open the screenshot file
 == Не удалось открыть файл скриншота
 
@@ -16577,6 +16631,9 @@ Update ready to install
 Update sources are temporarily unavailable
 == Источники обновлений временно недоступны
 
+Updating preview…
+== Обновление предпросмотра…
+
 Updating public word list...
 == Обновление общего списка слов...
 
@@ -16696,9 +16753,6 @@ Use high bandwidth mode (doubles server bandwidth, LAN only)
 
 Use installed asset names. Empty fields keep the current asset.
 == Введите названия установленных текстур. Пустое поле сохраняет текущую текстуру.
-
-Use it to find the teammate who needs a wake-up; enemies are never highlighted, so do not look for them here.
-== Служит, чтобы найти союзника, которого нужно разбудить; враги не подсвечиваются, не ищите их здесь.
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == Используйте клавишу K, чтобы убить (перезапустить), Q, чтобы поставить на паузу и смотреть за другими игроками. Другие привязки клавиш смотрите в настройках.
@@ -17141,11 +17195,11 @@ Warning
 Watches your friend list and reports friends coming online or joining your map, with optional automatic greeting.
 == Следит за списком друзей и сообщает, когда друг заходит в сеть или на вашу карту; есть необязательное авто-приветствие.
 
-Water hammer highlight
-== Подсветка молота в воде
-
 Watermark
 == Водяной знак
+
+Watermark editor
+== Редактор водяных знаков
 
 Weak hook
 == Слабый крюк

@@ -1196,3 +1196,21 @@ TEST(QmCardRegistry, LegacyBindTabMovesCardsIntoControls)
 	EXPECT_STREQ(Model.Entry(Model.FindByStableId("qm:bind_overview")).m_pDefaultTab, "controls");
 	EXPECT_FALSE(qm_card_registry::RepairLegacyBindTab(Model));
 }
+
+TEST(QmCardRegistry, FavoriteMapsCardIsRemovedFromSettingsAndSearch)
+{
+	EXPECT_EQ(qm_card_registry::FindByStableId("qm:favorite_maps"), nullptr);
+	EXPECT_FALSE(qm_card_catalog::HasCardModule("qm:favorite_maps"));
+	const auto &vCards = qm_card_catalog::FunctionCardStableIds();
+	EXPECT_FALSE(std::any_of(vCards.begin(), vCards.end(), [](const char *pId) {
+		return std::string(pId) == "qm:favorite_maps";
+	}));
+	const auto Model = RegistryModelAfterRoundTrip();
+	for(const char *pQuery : {"收藏地图", "favorite maps"})
+	{
+		const auto Results = qm_card_registry::SearchCards(pQuery, Model);
+		EXPECT_FALSE(std::any_of(Results.begin(), Results.end(), [](const auto &Result) {
+			return std::string(Result.m_pStableId) == "qm:favorite_maps";
+		}));
+	}
+}

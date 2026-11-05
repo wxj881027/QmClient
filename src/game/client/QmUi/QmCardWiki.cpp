@@ -545,12 +545,6 @@ namespace
 			Localizable("Fading death and freeze tiles helps you see tees and weapons behind them, but the exact tile edge gets harder to judge."),
 		},
 		{
-			"qm:favorite_maps",
-			Localizable("Your list of favorite maps, each shown with its map type, with quick copy and remove actions."),
-			Localizable("Click a map name to copy it and press the X button to remove it; add maps with the \"Favorite map\" checkbox in the in-game server info page."),
-			Localizable("Favorites match the exact map name and also feed the \"Favorite map\" tab in the server browser."),
-		},
-		{
 			"qm:focus_mode",
 			Localizable("A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, so only the game stays on screen."),
 			Localizable("Turn on \"Enable Zen mode\", pick what to hide under \"Interface\", \"Players\", \"Visuals\", \"Audio\" and \"Chat\", then set the \"Zen mode key\" for quick switching."),
@@ -726,9 +720,9 @@ namespace
 		},
 		{
 			"qm:water_hammer",
-			Localizable("Marks teammates who hold hammer while stuck in death or freeze areas, so you can see who is hammering them."),
-			Localizable("Tick \"Highlight teammates hammering in death or freeze areas\"; it works on your own team only and needs no key bind."),
-			Localizable("Use it to find the teammate who needs a wake-up; enemies are never highlighted, so do not look for them here."),
+			Localizable("Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses."),
+			Localizable("Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size."),
+			Localizable("Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded."),
 		},
 		{
 			"qm:weapon_animation",

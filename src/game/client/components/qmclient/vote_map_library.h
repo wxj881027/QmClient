@@ -63,6 +63,8 @@ namespace QmVoteMaps
 	bool ParseCatalog(const char *pJson, size_t Length, std::vector<SMap> &vMaps);
 	bool ParseDetails(const char *pJson, size_t Length, const SMap &Map, SDetails &Details);
 	bool ParseVoteMap(const char *pDescription, SMap &Map);
+	// 为具体地图构造 /map 命令；完整保留空格和引号，不携带分类或投票理由。
+	std::string MapVoteCommand(const std::string &Name);
 	int FindOption(const CVoteOptionClient *pFirst, const char *pMapName);
 	EVoteResult ServerVoteResult(int ClientId, int Team, const char *pMessage);
 	std::vector<SMap> MergeCatalog(const std::vector<SMap> &vCatalog, const CVoteOptionClient *pFirst);

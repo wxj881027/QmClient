@@ -364,3 +364,11 @@ TEST(QmCatalogSearch, LyricsUseTheirOwnControlsAndNavigationTarget)
 	EXPECT_TRUE(qm_card_catalog::HasCardModule(It->m_pStableId));
 	EXPECT_STREQ(It->m_Target.m_pStableId, "qm:lyrics");
 }
+
+TEST(QmCatalogSearch, RemovedFavoriteMapsCardHasNoSearchMetadata)
+{
+	const qm_card_registry::SCardSettingSearch *pSettings = nullptr;
+	size_t Count = 0;
+	EXPECT_FALSE(qm_card_catalog::FindSearchMetadata("qm:favorite_maps", &pSettings, &Count));
+	EXPECT_EQ(qm_card_search::Find("qm:favorite_maps"), nullptr);
+}

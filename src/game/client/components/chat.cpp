@@ -19,6 +19,7 @@
 #include <generated/protocol.h>
 #include <generated/protocol7.h>
 
+#include <game/client/QmUi/QmChatLineMenuLayout.h>
 #include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
@@ -4727,9 +4728,11 @@ void CChat::OpenChatLineMenu(const CLine &Line, vec2 UiMousePos)
 		str_copy(m_ChatLinePopupContext.m_aName, Line.m_aName);
 	}
 
-	constexpr float MenuWidth = 200.0f;
-	constexpr float MenuHeight = 235.0f;
-	Ui()->DoPopupMenu(&m_ChatLinePopupContext, UiMousePos.x, UiMousePos.y, MenuWidth, MenuHeight, &m_ChatLinePopupContext, PopupChatLineMenu);
+	const CUIRect Menu = qm_chat_line_menu::PopupRect(UiMousePos, *Ui()->Screen());
+	SPopupMenuProperties Props;
+	Props.m_ContentInset = qm_chat_line_menu::CONTENT_INSET;
+	Props.m_AutoReposition = false;
+	Ui()->DoPopupMenu(&m_ChatLinePopupContext, Menu.x, Menu.y, Menu.w, Menu.h, &m_ChatLinePopupContext, PopupChatLineMenu, Props);
 }
 
 void CChat::CloseChatLineMenu()
@@ -4813,11 +4816,9 @@ CUi::EPopupMenuFunctionResult CChat::PopupChatLineMenu(void *pContext, CUIRect V
 	// 表面/悬停/边框色，不再叠加第二套硬编码配色。
 	const SUiTheme Theme = ResolveConfiguredDropdownListTheme();
 
-	View.Margin(5.0f, &View);
-
-	CUIRect Header, Divider;
-	View.HSplitTop(34.0f, &Header, &View);
-	View.HSplitTop(4.0f, &Divider, &View);
+	const auto Layout = qm_chat_line_menu::LayoutContent(View);
+	CUIRect Header = Layout.m_Header;
+	CUIRect Divider = Layout.m_HeaderDivider;
 
 	Header.Draw(Theme.m_SurfaceHovered, IGraphics::CORNER_ALL, 5.0f);
 	Header.Margin(6.0f, &Header);
@@ -4843,19 +4844,15 @@ CUi::EPopupMenuFunctionResult CChat::PopupChatLineMenu(void *pContext, CUIRect V
 
 	Divider.HMargin(1.5f, &Divider);
 	Divider.Draw(Theme.m_Border, IGraphics::CORNER_NONE, 1.0f);
-	View.HSplitTop(4.0f, nullptr, &View);
 
-	constexpr float ButtonHeight = 23.0f;
-	constexpr float ButtonSpacing = 3.0f;
 	constexpr float FontSize = 10.5f;
 	constexpr float IconSize = 10.5f;
 	constexpr float IconWidth = 22.0f;
 
-	auto DoEntry = [&](CButtonContainer *pButton, EQmIcon Icon, const char *pIcon, const char *pText, bool Enabled, ColorRGBA AccentColor) {
+	auto DoEntry = [&](qm_chat_line_menu::EEntry Entry, CButtonContainer *pButton, EQmIcon Icon, const char *pIcon, const char *pText, bool Enabled, ColorRGBA AccentColor) {
 		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
-		CUIRect Button, IconRect, LabelRect;
-		View.HSplitTop(ButtonHeight, &Button, &View);
-		View.HSplitTop(ButtonSpacing, nullptr, &View);
+		CUIRect Button = Layout.m_aButtons[Entry];
+		CUIRect IconRect, LabelRect;
 		const CUIRect ButtonHitRect = Button;
 
 		const bool Hovered = Active && Enabled && pUi->MouseHovered(&Button);
@@ -4876,43 +4873,42 @@ CUi::EPopupMenuFunctionResult CChat::PopupChatLineMenu(void *pContext, CUIRect V
 		return Active && Enabled && pUi->DoButtonLogic(pButton, 0, &ButtonHitRect, BUTTONFLAG_LEFT);
 	};
 
-	if(DoEntry(&pPopupContext->m_CopyButton, EQmIcon::COPY, FontIcons::FONT_ICON_COPY, Localize("Copy"), pPopupContext->m_aText[0] != '\0', ColorRGBA(0.74f, 0.88f, 1.0f, 1.0f)))
+	if(DoEntry(qm_chat_line_menu::COPY, &pPopupContext->m_CopyButton, EQmIcon::COPY, FontIcons::FONT_ICON_COPY, Localize("Copy"), pPopupContext->m_aText[0] != '\0', ColorRGBA(0.74f, 0.88f, 1.0f, 1.0f)))
 	{
 		pChat->Input()->SetClipboardText(pPopupContext->m_aText);
 		return CUi::POPUP_CLOSE_CURRENT;
 	}
-	if(DoEntry(&pPopupContext->m_AddOneButton, EQmIcon::ARROWS_ROTATE, FontIcons::FONT_ICON_ARROWS_ROTATE, Localize("Add one"), pPopupContext->m_aText[0] != '\0', ColorRGBA(0.70f, 0.95f, 0.78f, 1.0f)))
+	if(DoEntry(qm_chat_line_menu::ADD_ONE, &pPopupContext->m_AddOneButton, EQmIcon::ARROWS_ROTATE, FontIcons::FONT_ICON_ARROWS_ROTATE, Localize("Add one"), pPopupContext->m_aText[0] != '\0', ColorRGBA(0.70f, 0.95f, 0.78f, 1.0f)))
 	{
 		pChat->RepeatChatLine(*pPopupContext);
 		return CUi::POPUP_CLOSE_CURRENT;
 	}
-	if(DoEntry(&pPopupContext->m_ReplyButton, EQmIcon::COMMENT, FontIcons::FONT_ICON_COMMENT, Localize("Reply"), pPopupContext->m_PlayerLine && pPopupContext->m_aName[0] != '\0', ColorRGBA(0.88f, 0.78f, 1.0f, 1.0f)))
+	if(DoEntry(qm_chat_line_menu::REPLY, &pPopupContext->m_ReplyButton, EQmIcon::COMMENT, FontIcons::FONT_ICON_COMMENT, Localize("Reply"), pPopupContext->m_PlayerLine && pPopupContext->m_aName[0] != '\0', ColorRGBA(0.88f, 0.78f, 1.0f, 1.0f)))
 	{
 		pChat->ReplyToChatLine(*pPopupContext);
 		return CUi::POPUP_CLOSE_CURRENT;
 	}
-	if(DoEntry(&pPopupContext->m_SpectateButton, EQmIcon::EYE, FontIcons::FONT_ICON_EYE, Localize("Spectate"), pPopupContext->m_PlayerLine && pPopupContext->m_aPlayerName[0] != '\0', ColorRGBA(0.72f, 0.86f, 1.0f, 1.0f)))
+	if(DoEntry(qm_chat_line_menu::SPECTATE, &pPopupContext->m_SpectateButton, EQmIcon::EYE, FontIcons::FONT_ICON_EYE, Localize("Spectate"), pPopupContext->m_PlayerLine && pPopupContext->m_aPlayerName[0] != '\0', ColorRGBA(0.72f, 0.86f, 1.0f, 1.0f)))
 	{
 		pChat->SpectateChatLine(*pPopupContext);
 		return CUi::POPUP_CLOSE_CURRENT;
 	}
 
-	View.HSplitTop(2.0f, &Divider, &View);
+	Divider = Layout.m_GroupDivider;
 	Divider.HMargin(0.75f, &Divider);
 	Divider.Draw(Theme.m_Border, IGraphics::CORNER_NONE, 1.0f);
-	View.HSplitTop(3.0f, nullptr, &View);
 
-	if(DoEntry(&pPopupContext->m_MutePlayerButton, EQmIcon::BAN, FontIcons::FONT_ICON_BAN, Localize("Mute player"), pPopupContext->m_PlayerLine && !pPopupContext->m_LocalPlayer, ColorRGBA(1.0f, 0.50f, 0.52f, 1.0f)))
+	if(DoEntry(qm_chat_line_menu::MUTE_PLAYER, &pPopupContext->m_MutePlayerButton, EQmIcon::BAN, FontIcons::FONT_ICON_BAN, Localize("Mute player"), pPopupContext->m_PlayerLine && !pPopupContext->m_LocalPlayer, ColorRGBA(1.0f, 0.50f, 0.52f, 1.0f)))
 	{
 		pChat->GameClient()->m_aClients[pPopupContext->m_ClientId].m_ChatIgnore = true;
 		return CUi::POPUP_CLOSE_CURRENT;
 	}
-	if(DoEntry(&pPopupContext->m_AddBlockedWordButton, EQmIcon::COMMENT_SLASH, FontIcons::FONT_ICON_COMMENT_SLASH, Localize("Add to blocked words"), pPopupContext->m_aText[0] != '\0', ColorRGBA(1.0f, 0.67f, 0.45f, 1.0f)))
+	if(DoEntry(qm_chat_line_menu::ADD_BLOCKED_WORD, &pPopupContext->m_AddBlockedWordButton, EQmIcon::COMMENT_SLASH, FontIcons::FONT_ICON_COMMENT_SLASH, Localize("Add to blocked words"), pPopupContext->m_aText[0] != '\0', ColorRGBA(1.0f, 0.67f, 0.45f, 1.0f)))
 	{
 		pChat->AddTextToBlockWords(pPopupContext->m_aText);
 		return CUi::POPUP_CLOSE_CURRENT;
 	}
-	if(DoEntry(&pPopupContext->m_CopyNameButton, EQmIcon::USER, FontIcons::FONT_ICON_USER, Localize("Copy name"), pPopupContext->m_PlayerLine && pPopupContext->m_aName[0] != '\0', ColorRGBA(0.78f, 0.88f, 0.95f, 1.0f)))
+	if(DoEntry(qm_chat_line_menu::COPY_NAME, &pPopupContext->m_CopyNameButton, EQmIcon::USER, FontIcons::FONT_ICON_USER, Localize("Copy name"), pPopupContext->m_PlayerLine && pPopupContext->m_aName[0] != '\0', ColorRGBA(0.78f, 0.88f, 0.95f, 1.0f)))
 	{
 		pChat->Input()->SetClipboardText(pPopupContext->m_aName);
 		return CUi::POPUP_CLOSE_CURRENT;

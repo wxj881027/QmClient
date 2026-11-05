@@ -4620,10 +4620,7 @@ void CMenus::Render()
 			if(CanPrewarmSettings && MenuOpenFrame > 0)
 				PrewarmVisibleSettingsResources(MainView);
 			if(m_GamePage != PAGE_CALLVOTE)
-			{
 				m_QmVoteMenu.m_Loader.Suspend();
-				m_QmVoteMenu.m_Covers.Release();
-			}
 			if(m_GamePage == PAGE_GAME)
 			{
 				CPerfTimer StageTimer;
@@ -6173,10 +6170,7 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 void CMenus::SetActive(bool Active)
 {
 	if(!Active)
-	{
 		m_QmVoteMenu.m_Loader.Suspend();
-		m_QmVoteMenu.m_Covers.Release();
-	}
 	if(Active != m_MenuActive)
 	{
 		Ui()->CancelTouchInput();
@@ -6197,8 +6191,8 @@ void CMenus::SetActive(bool Active)
 		Ui()->SetActiveItem(nullptr);
 		MarkMenuInteraction();
 	}
-	if(!Active && m_pScreenshotWatermarkJob)
-		m_pScreenshotWatermarkJob->Cancel();
+	if(!Active && m_ScreenshotEditor.IsOpen())
+		m_ScreenshotEditor.Close(this);
 	m_MenuActive = Active;
 	if(!m_MenuActive)
 	{
@@ -6646,8 +6640,7 @@ const char *CMenus::SettingsPerfStableTextScope(int Page) const
 
 void CMenus::OnReset()
 {
-	if(m_pScreenshotWatermarkJob)
-		m_pScreenshotWatermarkJob->Cancel();
+	m_ScreenshotEditor.Close(this);
 	m_TranslateProbe.Cancel();
 	ResetDemoScreenshotPreview();
 	ReleaseQmClientSettingsSearchInput();
@@ -6659,9 +6652,7 @@ void CMenus::OnShutdown()
 	m_QmVoteMenu.m_Loader.Suspend();
 	// 图形接口此刻仍存活，地图库封面的 GPU 纹理必须在这一步释放。
 	m_QmVoteMenu.m_Covers.Shutdown(Graphics());
-	if(m_pScreenshotWatermarkJob)
-		m_pScreenshotWatermarkJob->Cancel();
-	m_pScreenshotWatermarkJob.reset();
+	m_ScreenshotEditor.Close(this);
 	m_TranslateProbe.Cancel();
 	m_LocalSaveDisplay.Reset();
 	m_QmMapUpload.Cancel();
@@ -8241,9 +8232,7 @@ void CMenus::OnStateChange(int NewState, int OldState)
 	Ui()->CancelTouchInput();
 	m_DemoTouchSeeking = false;
 	m_QmVoteMenu.m_Loader.Suspend();
-	m_QmVoteMenu.m_Covers.Release();
 	m_QmVoteMenu.m_SelectedName.clear();
-	m_QmVoteMenu.m_Status.clear();
 	m_QmVoteMenu.m_Dirty = true;
 	m_QmVoteMenu.m_ServerList.Select(-1);
 	m_QmVoteMenu.m_ServerSearch.Clear();
@@ -8345,6 +8334,8 @@ void CMenus::OnUpdate()
 
 void CMenus::OnRender()
 {
+	// 关菜单和切页后继续完成已请求的封面，重开时直接复用纹理。
+	m_QmVoteMenu.m_Covers.Update(Http(), Engine(), Graphics(), Storage(), Client()->LocalTime());
 	m_BrowserColumnResizeCursor = false;
 	PumpDemoScreenshotWatermark();
 	// 引擎侧（Windows 双击 .poses、poses_open 命令）缺少地图时留下的请求：
@@ -8693,8 +8684,8 @@ const CMenus::CMenuImage *CMenus::FindMenuImage(const char *pName)
 
 void CMenus::SetMenuPage(int NewPage)
 {
-	if(NewPage != PAGE_DEMOS && m_pScreenshotWatermarkJob)
-		m_pScreenshotWatermarkJob->Cancel();
+	if(NewPage != PAGE_DEMOS && m_ScreenshotEditor.IsOpen())
+		m_ScreenshotEditor.Close(this);
 	const int OldPage = m_MenuPage;
 	if(OldPage != NewPage)
 	{

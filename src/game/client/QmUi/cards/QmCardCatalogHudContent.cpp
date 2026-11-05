@@ -223,7 +223,7 @@ void CMenus::RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight,
 		CUIRect ColorRow;
 		if(Flow.Control("hud-QmHudIslandBgColor", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow))
 		{
-			DoLine_AlphaColorPicker(&s_DynamicIslandBgColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Background color"), &g_Config.m_QmHudIslandBgColor, &g_Config.m_QmHudIslandBgOpacity, 0x9C460E, 80);
+			DoLine_AlphaColorPicker(&s_DynamicIslandBgColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Background color"), &g_Config.m_QmHudIslandBgColor, &g_Config.m_QmHudIslandBgOpacity, 0x9C460E, 100);
 		}
 		Flow.Space(CurrentSettingsContentMetrics().m_LineSpacing);
 	}

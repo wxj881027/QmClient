@@ -8,6 +8,7 @@
 
 #include <engine/graphics.h>
 #include <engine/keys.h>
+#include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/textrender.h>
 
@@ -19,6 +20,8 @@
 
 #include <algorithm>
 #include <chrono>
+#include <new>
+#include <stdexcept>
 
 CMotd::CMotd()
 {
@@ -124,6 +127,34 @@ void CMotd::OnMessage(int MsgType, void *pRawMsg)
 			ForEachMotdLine(Message, [&](std::string_view Line) {
 				log_info_color(LogColor, "motd", "%.*s", static_cast<int>(Line.size()), Line.data());
 			});
+		}
+
+		try
+		{
+			// 公告在地图加载期间也可能到达；以当前连接的社区和实际地图核对来源。
+			CServerInfo Server = Client()->ServerInfo();
+			if(const NETADDR *pAddress = Client()->ServerAddress())
+			{
+				if(const auto *pEntry = ServerBrowser()->Find(*pAddress))
+				{
+					str_copy(Server.m_aCommunityId, pEntry->m_Info.m_aCommunityId);
+					str_copy(Server.m_aCommunityType, pEntry->m_Info.m_aCommunityType);
+					if(Server.m_aGameType[0] == '\0')
+						str_copy(Server.m_aGameType, pEntry->m_Info.m_aGameType);
+				}
+			}
+			str_copy(Server.m_aMap, Client()->GetCurrentMap());
+			auto &DifficultyCatalog = GameClient()->m_Menus.MapDifficultyCatalog();
+			if(DifficultyCatalog.RecordAxiomMotd(Server, m_aServerMotd))
+				ServerBrowser()->Update(true);
+			if(DifficultyCatalog.AxiomCacheDirty() && !DifficultyCatalog.SaveAxiomCache(Storage()))
+				log_warn("map_difficulty", "could not save Axiom map stars; current session data remains available");
+		}
+		catch(const std::bad_alloc &)
+		{
+		}
+		catch(const std::length_error &)
+		{
 		}
 
 		if(!IsActive())

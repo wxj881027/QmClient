@@ -343,6 +343,9 @@
 === Saves for '%s' ===
 == === 「%s」的存檔 ===
 
+?!Stuck keys!?
+== ?!卡鍵!?
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s（地圖：%s，時間：%s）
@@ -794,6 +797,9 @@ Alias of poses_render
 Alias of poses_video
 == poses_video 的別名
 
+Alignment
+== 對齊
+
 Alive notification color
 == 存活提醒顏色
 
@@ -1072,9 +1078,6 @@ Apply to dummy
 
 Apply to player
 == 套用至本體
-
-Apply watermark
-== 套用浮水印
 
 Applying overwrites your font, UI scale, animation and panel colors at once, so note the values you like first.
 == 套用會一次覆蓋字型、UI 縮放、動畫與面板顏色，先記下你喜歡的數值。
@@ -1588,6 +1591,9 @@ Axiom website
 
 Axis
 == 軸
+
+Back
+== 返回
 
 Backdrop blur
 == 背景模糊
@@ -2383,6 +2389,9 @@ Choose default eyes when joining a server
 
 Choose export name first.
 == 請先填寫導出名稱。
+
+Choose Logo (PNG / WebP)
+== 選擇 Logo（PNG / WebP）
 
 Choose off, simple or full; the individual switches below only apply to full.
 == 可選擇關閉、精簡或完整；下方各個開關只在「完整」下生效。
@@ -4256,6 +4265,9 @@ Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use 
 Drag HUD modules with the left mouse button
 == 按住鼠標左鍵拖動 HUD 模塊
 
+Drag the selected watermark to move it. The original image is preserved.
+== 拖曳選取的浮水印可調整位置，原圖會保留。
+
 Drag the three sliders; master scales the other two.
 == 拖動三個滑桿；主音量會按比例調整另外兩個音量。
 
@@ -5065,6 +5077,9 @@ Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then s
 
 Enable the guide line, then set its length, style and colors.
 == 啟用輔助線，然後設定長度、樣式與顏色。
+
+Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size.
+== 開啟高亮和暱稱按鍵顯示後，可以分別調整卡錘、卡鉤的按下顏色。圖示大小跟隨按鍵顯示。
 
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == 啟用指示器；選擇它的距離模式，並設定 war-list 玩家是否使用不同顏色。
@@ -6098,9 +6113,6 @@ Game type
 Game type (ddnet, mod)
 == 遊戲類型（ddnet、mod）
 
-Game types:
-== 遊戲模式：
-
 Game update rate (Hz)
 == 遊戲更新率（單位：Hz）
 
@@ -6668,6 +6680,9 @@ Highlight Color
 Highlight console commands
 == 醒目顯示控制台命令
 
+Highlight frozen teammates' hammer and hook inputs
+== 高亮凍結中隊友的卡錘和卡鉤
+
 Highlight game type
 == 高亮顯示遊戲類型
 
@@ -6680,17 +6695,14 @@ Highlight ping value
 Highlight selected players in the game world
 == Highlight selected players in the game world
 
-Highlight teammates hammering in death or freeze areas
-== 高亮在死亡或凍結區域卡錘的隊友
-
-Highlight teammates holding hammer in death or freeze areas
-== 高亮在死亡或凍結區域按住錘子的隊友
-
 Highlighted message
 == 被提及消息
 
 Highlighted message color
 == 提及訊息顏色
+
+Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses.
+== 高亮凍結中持續按錘的隊友，並在暱稱按鍵顯示兩側顯示卡錘、卡鉤圖示。
 
 Hit feedback
 == 命中回饋
@@ -6910,6 +6922,9 @@ Icon symbols:
 
 Icons
 == 圖示
+
+Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
+== 放開按鍵或解凍後隱藏圖示。他人按鍵狀態需要伺服器支援預輸入；不顯示目前操控角色的卡鍵狀態。
 
 Identity preset
 == 身分預設
@@ -8270,6 +8285,9 @@ Manual target
 Map
 == 地圖
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == 地圖瀏覽器難度星級篩選位元遮罩（位元 1-5）
 
@@ -8407,9 +8425,6 @@ Markers
 
 Markers are drawn on your screen only and never change the game itself.
 == 標記只繪製在你的畫面上，永遠不會改變遊戲本身。
-
-Marks teammates who hold hammer while stuck in death or freeze areas, so you can see who is hammering them.
-== 標記卡在死亡或凍結區域裡仍握著槌子的隊友，方便你看清是誰在槌他們。
 
 Master server URL to register
 == 要註冊的主伺服器 URL
@@ -8731,6 +8746,9 @@ Mix rate
 
 Mixed
 == 混合
+
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
 
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == 手機觀戰取景方式：0=搖桿，1=拖曳畫面
@@ -9301,6 +9319,9 @@ No local servers found (ports %d-%d)
 
 No login required
 == 無需登錄
+
+No Logo selected
+== 尚未選擇 Logo
 
 No map
 == 無地圖
@@ -10376,9 +10397,6 @@ Player country (ISO 3166-1 numeric code)
 Player country filter in server browser (ISO 3166-1 numeric)
 == 在伺服器瀏覽器中過濾的玩家國家/地區（ISO 3166-1 數字）
 
-Player country:
-== 玩家國家
-
 Player death
 == 玩家死亡
 
@@ -10751,6 +10769,9 @@ Press Esc to exit the HUD editor
 Press F2, log in, then use: change_map map_name
 == 按 F2 登入管理後，輸入：change_map 地圖名
 
+Pressed hammer icon color
+== 卡錘按下顏色
+
 Pressed hook collision line color when hitting a tee
 == 按住鉤鍵時命中角色的鉤子輔助線顏色
 
@@ -10759,6 +10780,9 @@ Pressed hook collision line color when hitting something hookable
 
 Pressed hook collision line color when not aiming at anything hookable
 == 按住鉤鍵時未瞄準可鉤物體的鉤子輔助線顏色
+
+Pressed hook icon color
+== 卡鉤按下顏色
 
 Pressed hook line color; always used when custom pressed colors are enabled
 == 按下後顏色；開啟自訂按下後顏色時始終生效
@@ -10804,6 +10828,9 @@ Preview cut (P)
 
 Preview dummy nameplate
 == 預覽分身名牌
+
+Preview failed. Check the image and Logo, then retry.
+== 預覽失敗，請檢查圖片和 Logo 後重試。
 
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
@@ -11615,6 +11642,9 @@ Remove from queue
 Remove Item
 == 刪除項
 
+Remove Logo
+== 移除 Logo
+
 Remove right to vote from player with client ID
 == 刪除具有客戶端 ID 的玩家的投票權
 
@@ -11945,6 +11975,9 @@ Reset IME appearance
 Reset key press counts
 == 清零按鍵累計次數
 
+Reset layer
+== 重設目前圖層
+
 Reset layout
 == 重置佈局
 
@@ -12110,6 +12143,9 @@ Rotate hammer with cursor like other weapons
 Rotates your tee through a saved list of skins, either on a timer or at a random spot when a map starts.
 == 按儲存的皮膚列表輪流換膚，可以定時切換，也可以在地圖開始時隨機挑一個。
 
+Rotation
+== 旋轉
+
 Round
 == 回合數
 
@@ -12254,6 +12290,9 @@ Save loaded; the local record could not be removed.
 Save player names in replay
 == 在回放中保存玩家名稱
 
+Save PNG copy
+== 另存 PNG 副本
+
 Save power by lowering update rate
 == 降低更新率以節省電量
 
@@ -12331,6 +12370,9 @@ Saves and loads complete client profiles, including name, chat settings and bind
 
 Saves file
 == 存檔密碼文件
+
+Saving…
+== 正在儲存…
 
 Say in chat
 == 在聊天中說
@@ -12757,6 +12799,15 @@ Server hostname (0.7 only)
 
 Server info
 == 伺服器信息
+
+Server information lower left card width (per mille)
+== 伺服器資訊左下卡片寬度（千分比）
+
+Server information upper left card width (per mille)
+== 伺服器資訊左上卡片寬度（千分比）
+
+Server information upper row height (per mille)
+== 伺服器資訊上排高度（千分比）
 
 Server kick/spec votes are no longer actively moderated.
 == 伺服器的踢人/旁觀投票已不再由主動管理員模式接管
@@ -14762,9 +14813,6 @@ Stress system (debug builds only).
 Strict game type filter
 == 嚴格遊戲模式篩選
 
-Strict gametype filter
-== 嚴格匹配
-
 Strict mode
 == 嚴格模式
 
@@ -15299,6 +15347,9 @@ Test translation
 Testing translation...
 == 正在測試翻譯…
 
+Text
+== 文字
+
 Text alpha
 == 文字透明度
 
@@ -15593,9 +15644,6 @@ Tick "Enable system media control", then "Show song info in top-left corner"; th
 Tick "Enable voice", then open "Advanced options" to pick "Input device" and "Output device"; "Auto unmute when speaking" frees your mute key.
 == 勾選啟用語音，打開進階選項選擇輸入裝置與輸出裝置；說話時自動取消靜音能讓你空出靜音鍵。
 
-Tick "Highlight teammates hammering in death or freeze areas"; it works on your own team only and needs no key bind.
-== 勾選高亮在死亡或凍結區域槌人的隊友；只對自己隊伍生效，不需綁定按鍵。
-
 Tick "Launch Steam automatically when starting externally"; if Steam is not found, type its path or press "Detect Steam again".
 == 勾選從外部啟動時自動啟動 Steam；若找不到 Steam，手動輸入其路徑或按下重新偵測 Steam。
 
@@ -15631,6 +15679,9 @@ tile
 
 Tile outlines
 == 牆體輪廓
+
+Tile watermark
+== 平鋪浮水印
 
 Time
 == 時間
@@ -16361,6 +16412,9 @@ Unable to load savegame: loaded on a different server
 Unable to load savegame: SaveId corrupted
 == 無法載入存檔：存檔編號已損壞
 
+Unable to open the file picker
+== 無法開啟檔案選擇器
+
 Unable to open the screenshot file
 == 無法打開截圖文件
 
@@ -16577,6 +16631,9 @@ Update ready to install
 Update sources are temporarily unavailable
 == 更新來源暫時無法使用
 
+Updating preview…
+== 正在更新預覽…
+
 Updating public word list...
 == 正在更新公共詞庫...
 
@@ -16696,9 +16753,6 @@ Use high bandwidth mode (doubles server bandwidth, LAN only)
 
 Use installed asset names. Empty fields keep the current asset.
 == 填寫已安裝的貼圖名稱；留空表示保留目前貼圖。
-
-Use it to find the teammate who needs a wake-up; enemies are never highlighted, so do not look for them here.
-== 用它找需要喚醒的隊友；敵人從不會被高亮，別在這裡找他們。
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == 使用 K 鍵自殺（重新開始），Q 鍵暫停並旁觀其他玩家。其他按鍵綁定可在設置中查看。
@@ -17141,11 +17195,11 @@ Warning
 Watches your friend list and reports friends coming online or joining your map, with optional automatic greeting.
 == 盯著你的好友清單，在好友上線或進入你所在的地圖時提醒你，還可以自動打招呼。
 
-Water hammer highlight
-== 水域卡錘高亮
-
 Watermark
 == 浮水印
+
+Watermark editor
+== 浮水印編輯器
 
 Weak hook
 == 弱鉤

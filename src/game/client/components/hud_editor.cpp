@@ -145,8 +145,15 @@ void CHudEditor::SetActive(bool Active)
 void CHudEditor::UpdateVisibleRect(EHudEditorElement Element, const CUIRect &RenderedRect)
 {
 	const int VisibleIndex = FindVisibleElementIndex(Element);
-	if(VisibleIndex < 0 || RenderedRect.w <= 0.0f || RenderedRect.h <= 0.0f)
+	if(VisibleIndex < 0)
 		return;
+	if(RenderedRect.w <= 0.0f || RenderedRect.h <= 0.0f)
+	{
+		// 没有内容时撤销本帧的可交互区域，避免留下预估空框。
+		m_vVisibleElements.erase(m_vVisibleElements.begin() + VisibleIndex);
+		m_aVisibleBounds[static_cast<int>(Element)] = {};
+		return;
+	}
 
 	float ScreenX0 = 0.0f;
 	float ScreenY0 = 0.0f;
@@ -194,6 +201,9 @@ void CHudEditor::ParseLayoutConfig(const char *pConfig)
 {
 	for(SElementState &State : m_aElementStates)
 		State = SElementState{};
+
+	// 未保存灵动岛布局时采用默认位置和缩放，后续解析仍允许用户覆盖。
+	m_aElementStates[static_cast<int>(EHudEditorElement::MediaIsland)] = {true, 4879, 100, 115};
 
 	if(pConfig == nullptr || pConfig[0] == '\0')
 		return;
@@ -287,8 +297,7 @@ void CHudEditor::SaveLayoutConfig()
 
 void CHudEditor::ResetLayoutConfig()
 {
-	for(SElementState &State : m_aElementStates)
-		State = SElementState{};
+	ParseLayoutConfig("");
 
 	g_Config.m_QmHudEditorLayout[0] = '\0';
 	m_aLayoutCache[0] = '\0';

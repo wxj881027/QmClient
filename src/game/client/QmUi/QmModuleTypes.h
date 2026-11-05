@@ -36,7 +36,6 @@ namespace qm_module
 		Laser,
 		PlayerStats,
 		CollisionHitbox,
-		FavoriteMaps,
 		HJAssist,
 		DebugGraph,
 		InputOverlay,
@@ -82,7 +81,7 @@ namespace qm_module
 		const char *m_pKey;
 	};
 
-	constexpr size_t QmModuleCount = 51;
+	constexpr size_t QmModuleCount = 50;
 } // namespace qm_module
 
 #endif // GAME_CLIENT_QMUI_QMMODULETYPES_H

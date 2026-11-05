@@ -31,6 +31,7 @@
 #include <game/client/components/qmclient/dummy_miniview_render.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
+#include <game/client/components/qmclient/player_state_hud_bounds.h>
 #include <game/client/components/qmclient/race_timing.h>
 #include <game/client/components/qmclient/rank_ghost.h>
 #include <game/client/components/qmclient/score_hud_layout.h>
@@ -3510,6 +3511,7 @@ void CHud::PreparePlayerStateQuads()
 		float Width = WeaponSpec.m_VisualSize * ScaleX * HudWeaponScale;
 		float Height = WeaponSpec.m_VisualSize * ScaleY * HudWeaponScale;
 		m_aWeaponOffset[Weapon] = Graphics()->QuadContainerAddSprite(m_HudQuadContainerIndex, Width, Height);
+		m_aWeaponHudSize[Weapon] = vec2(Width, Height);
 	}
 
 	// Quads for displaying capabilities
@@ -4578,6 +4580,7 @@ void CHud::RenderMediaIsland()
 	static_assert(SHudMediaIslandAnimState::SATELLITE_MAX_ITEMS == QmHudMediaIslandSdfMaxItems);
 	std::array<SSatelliteRenderItem, SHudMediaIslandAnimState::SATELLITE_MAX_ITEMS> aSatelliteRenderItems{};
 	int SatelliteRenderItemCount = 0;
+	float LeftShellVelocity = 0.0f;
 	const bool CountdownUsesTimer = TimerCapsule.m_Visible && !HasMediaState && !ShowTeam;
 	for(auto &Item : AnimState.m_aSatelliteItems)
 	{
@@ -4596,6 +4599,8 @@ void CHud::RenderMediaIsland()
 		const bool Active = Item.m_Active && ActiveIndex >= 0;
 		QmHudAdvanceMediaIslandLiquidProgress(Item.m_LiquidSpring, Item.m_LiquidLastTick, Now, Active, MotionLevel > 0);
 		const SHudMediaIslandBlobPose BlobPose = QmHudMediaIslandBlobPose(Item.m_LiquidSpring);
+		// 多颗副岛共享一次外壳响应，最终由软体状态限制幅度。
+		LeftShellVelocity += BlobPose.m_Velocity;
 		if(!Active && QmHudMediaIslandBlobProgress(Item.m_LiquidSpring) <= 0.0f)
 		{
 			Item.Reset();
@@ -4724,6 +4729,10 @@ void CHud::RenderMediaIsland()
 	const SHudMediaIslandEntrancePose EntrancePose = QmHudMediaIslandEntrancePose(TargetMainIslandSdfRect, Radius, IslandBackgroundColor, EntranceSprings.m_ExpandProgress, EntranceSprings.m_DropProgress, TransformedScreenY0);
 	const float EntranceContentAlpha = EntrancePose.m_ContentAlpha;
 	const CUIRect MainIslandSdfRect = EntrancePose.m_Rect;
+	const float SoftBodyDelta = AnimState.m_SoftBodyLastTick != 0 ? (Now - AnimState.m_SoftBodyLastTick) / static_cast<float>(time_freq()) : 0.0f;
+	AnimState.m_SoftBodyLastTick = Now;
+	const CHudIslandSoftBody::SPose ShellPose = AnimState.m_SoftBody.Update(
+		SoftBodyDelta, vec2(MainIslandSdfRect.w, MainIslandSdfRect.h), LeftShellVelocity, SpectatorBlobPose.m_Velocity, MotionLevel);
 	m_LyricsIslandAnchor = QmLyricsHudAnchor(MainIslandSdfRect, EditorTransformRect, HudEditorScope.m_TargetRect);
 	m_LyricsIslandAnchorValid = true;
 	TextRender()->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.42f * EntranceContentAlpha);
@@ -4753,7 +4762,9 @@ void CHud::RenderMediaIsland()
 	const float ScreenPixelSize = std::max(
 		(TransformedScreenX1 - TransformedScreenX0) / std::max(1, Graphics()->ScreenWidth()),
 		(TransformedScreenY1 - TransformedScreenY0) / std::max(1, Graphics()->ScreenHeight()));
-	CurrentSdfState.m_MainRect = MainIslandSdfRect;
+	CurrentSdfState.m_MainRect = ShellPose.ShellRect(MainIslandSdfRect);
+	CurrentSdfState.m_ShellRippleAmplitude = ShellPose.RippleAmplitude(MainIslandSdfRect, ScreenPixelSize) * EntranceContentAlpha;
+	CurrentSdfState.m_ShellRipplePhase = ShellPose.m_RipplePhase;
 	CurrentSdfState.m_MainRadius = EntrancePose.m_Radius;
 	CurrentSdfState.m_MainCorners = HudEditorScope.m_Corners;
 	CurrentSdfState.m_MainDisabledCornerRadius = EntrancePose.m_DisabledCornerRadius;
@@ -5177,6 +5188,11 @@ void CHud::RenderMediaIsland()
 
 void CHud::RenderPlayerState(const int ClientId)
 {
+	CQmPlayerStateHudBounds VisibleBounds;
+	const auto RenderStatusIcon = [&](int QuadOffset, float X, float Y) {
+		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, QuadOffset, X, Y);
+		VisibleBounds.AddRect({X, Y, 12.0f, 12.0f});
+	};
 	Graphics()->SetColor(1.f, 1.f, 1.f, 1.f);
 	const bool FastPracticeParticipant = GameClient()->m_FastPractice.IsPracticeParticipant(ClientId);
 
@@ -5228,6 +5244,7 @@ void CHud::RenderPlayerState(const int ClientId)
 		// render available and used jumps
 		int JumpsOffsetY = ((GameClient()->m_GameInfo.m_HudHealthArmor && g_Config.m_ClShowhudHealthAmmo ? 24 : 0) +
 				    (GameClient()->m_GameInfo.m_HudAmmo && g_Config.m_ClShowhudHealthAmmo ? 12 : 0));
+		VisibleBounds.AddRect({5.0f, 29.0f + JumpsOffsetY, TotalJumpsToDisplay * 12.0f, 12.0f});
 		if(JumpsOffsetY > 0)
 		{
 			Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudAirjump);
@@ -5281,6 +5298,7 @@ void CHud::RenderPlayerState(const int ClientId)
 			Graphics()->QuadsSetRotation(pi * 7 / 4);
 			Graphics()->TextureSet(GameClient()->m_GameSkin.m_aSpritePickupWeapons[Weapon]);
 			Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_aWeaponOffset[Weapon], aWeaponTargetX[Weapon], y);
+			VisibleBounds.AddWeapon(aWeaponTargetX[Weapon], y, m_aWeaponHudSize[Weapon]);
 			Graphics()->QuadsSetRotation(0);
 			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 		}
@@ -5293,6 +5311,7 @@ void CHud::RenderPlayerState(const int ClientId)
 			if(NinjaProgress > 0.0f && GameClient()->m_Snap.m_aCharacters[ClientId].m_HasExtendedDisplayInfo)
 			{
 				RenderNinjaBarPos(x, y - 12, 6.f, 24.f, NinjaProgress);
+				VisibleBounds.AddRect({x, y - 12.0f, 6.0f, 24.0f});
 			}
 		}
 	}
@@ -5316,42 +5335,42 @@ void CHud::RenderPlayerState(const int ClientId)
 	{
 		HasCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudEndlessJump);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_EndlessJumpOffset, x, y);
+		RenderStatusIcon(m_EndlessJumpOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_EndlessHook)
 	{
 		HasCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudEndlessHook);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_EndlessHookOffset, x, y);
+		RenderStatusIcon(m_EndlessHookOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_Jetpack)
 	{
 		HasCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudJetpack);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_JetpackOffset, x, y);
+		RenderStatusIcon(m_JetpackOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_HasTelegunGun && pCharacter->m_aWeapons[WEAPON_GUN].m_Got)
 	{
 		HasCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudTeleportGun);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_TeleportGunOffset, x, y);
+		RenderStatusIcon(m_TeleportGunOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_HasTelegunGrenade && pCharacter->m_aWeapons[WEAPON_GRENADE].m_Got)
 	{
 		HasCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudTeleportGrenade);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_TeleportGrenadeOffset, x, y);
+		RenderStatusIcon(m_TeleportGrenadeOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_HasTelegunLaser && pCharacter->m_aWeapons[WEAPON_LASER].m_Got)
 	{
 		HasCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudTeleportLaser);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_TeleportLaserOffset, x, y);
+		RenderStatusIcon(m_TeleportLaserOffset, x, y);
 	}
 
 	// render prohibited capabilities
@@ -5365,56 +5384,56 @@ void CHud::RenderPlayerState(const int ClientId)
 	{
 		HasProhibitedCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudSolo);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_SoloOffset, x, y);
+		RenderStatusIcon(m_SoloOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_CollisionDisabled)
 	{
 		HasProhibitedCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudCollisionDisabled);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_CollisionDisabledOffset, x, y);
+		RenderStatusIcon(m_CollisionDisabledOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_HookHitDisabled)
 	{
 		HasProhibitedCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudHookHitDisabled);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_HookHitDisabledOffset, x, y);
+		RenderStatusIcon(m_HookHitDisabledOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_HammerHitDisabled)
 	{
 		HasProhibitedCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudHammerHitDisabled);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_HammerHitDisabledOffset, x, y);
+		RenderStatusIcon(m_HammerHitDisabledOffset, x, y);
 		x += 12;
 	}
 	if((pCharacter->m_GrenadeHitDisabled && pCharacter->m_HasTelegunGun && pCharacter->m_aWeapons[WEAPON_GUN].m_Got))
 	{
 		HasProhibitedCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudGunHitDisabled);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_LaserHitDisabledOffset, x, y);
+		RenderStatusIcon(m_LaserHitDisabledOffset, x, y);
 		x += 12;
 	}
 	if((pCharacter->m_ShotgunHitDisabled && pCharacter->m_aWeapons[WEAPON_SHOTGUN].m_Got))
 	{
 		HasProhibitedCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudShotgunHitDisabled);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_ShotgunHitDisabledOffset, x, y);
+		RenderStatusIcon(m_ShotgunHitDisabledOffset, x, y);
 		x += 12;
 	}
 	if((pCharacter->m_GrenadeHitDisabled && pCharacter->m_aWeapons[WEAPON_GRENADE].m_Got))
 	{
 		HasProhibitedCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudGrenadeHitDisabled);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_GrenadeHitDisabledOffset, x, y);
+		RenderStatusIcon(m_GrenadeHitDisabledOffset, x, y);
 		x += 12;
 	}
 	if((pCharacter->m_LaserHitDisabled && pCharacter->m_aWeapons[WEAPON_LASER].m_Got))
 	{
 		HasProhibitedCapabilities = true;
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudLaserHitDisabled);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_LaserHitDisabledOffset, x, y);
+		RenderStatusIcon(m_LaserHitDisabledOffset, x, y);
 	}
 
 	// render dummy actions and freeze state
@@ -5426,32 +5445,35 @@ void CHud::RenderPlayerState(const int ClientId)
 	if(GameClient()->m_Snap.m_aCharacters[ClientId].m_HasExtendedDisplayInfo && GameClient()->m_Snap.m_aCharacters[ClientId].m_ExtendedData.m_Flags & CHARACTERFLAG_LOCK_MODE)
 	{
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudLockMode);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_LockModeOffset, x, y);
+		RenderStatusIcon(m_LockModeOffset, x, y);
 		x += 12;
 	}
 	if((GameClient()->m_Snap.m_aCharacters[ClientId].m_HasExtendedDisplayInfo && GameClient()->m_Snap.m_aCharacters[ClientId].m_ExtendedData.m_Flags & CHARACTERFLAG_PRACTICE_MODE) || FastPracticeParticipant)
 	{
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudPracticeMode);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_PracticeModeOffset, x, y);
+		RenderStatusIcon(m_PracticeModeOffset, x, y);
 		x += 12;
 	}
 	if(GameClient()->m_Snap.m_aCharacters[ClientId].m_HasExtendedDisplayInfo && GameClient()->m_Snap.m_aCharacters[ClientId].m_ExtendedData.m_Flags & CHARACTERFLAG_TEAM0_MODE)
 	{
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudTeam0Mode);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_Team0ModeOffset, x, y);
+		RenderStatusIcon(m_Team0ModeOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_DeepFrozen)
 	{
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudDeepFrozen);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_DeepFrozenOffset, x, y);
+		RenderStatusIcon(m_DeepFrozenOffset, x, y);
 		x += 12;
 	}
 	if(pCharacter->m_LiveFrozen)
 	{
 		Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudLiveFrozen);
-		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_LiveFrozenOffset, x, y);
+		RenderStatusIcon(m_LiveFrozenOffset, x, y);
 	}
+
+	// 使用实际绘制范围更新选中、拖动和吸附边界；旧式媒体保留自己的编辑元素。
+	GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::HudPlayerState, VisibleBounds.Rect());
 }
 
 void CHud::RenderNinjaBarPos(const float x, float y, const float Width, const float Height, float Progress, const float Alpha)
