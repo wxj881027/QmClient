@@ -4598,6 +4598,7 @@ void CHud::RenderMediaIsland()
 	static_assert(SHudMediaIslandAnimState::SATELLITE_MAX_ITEMS == QmHudMediaIslandSdfMaxItems);
 	std::array<SSatelliteRenderItem, SHudMediaIslandAnimState::SATELLITE_MAX_ITEMS> aSatelliteRenderItems{};
 	int SatelliteRenderItemCount = 0;
+	float LeftShellVelocity = 0.0f;
 	const bool CountdownUsesTimer = TimerCapsule.m_Visible && !HasMediaState && !ShowTeam;
 	for(auto &Item : AnimState.m_aSatelliteItems)
 	{
@@ -4616,6 +4617,8 @@ void CHud::RenderMediaIsland()
 		const bool Active = Item.m_Active && ActiveIndex >= 0;
 		QmHudAdvanceMediaIslandLiquidProgress(Item.m_LiquidSpring, Item.m_LiquidLastTick, Now, Active, MotionLevel > 0);
 		const SHudMediaIslandBlobPose BlobPose = QmHudMediaIslandBlobPose(Item.m_LiquidSpring);
+		// 多颗副岛共享一次外壳响应，最终由软体状态限制幅度。
+		LeftShellVelocity += BlobPose.m_Velocity;
 		if(!Active && QmHudMediaIslandBlobProgress(Item.m_LiquidSpring) <= 0.0f)
 		{
 			Item.Reset();
@@ -4744,6 +4747,10 @@ void CHud::RenderMediaIsland()
 	const SHudMediaIslandEntrancePose EntrancePose = QmHudMediaIslandEntrancePose(TargetMainIslandSdfRect, Radius, IslandBackgroundColor, EntranceSprings.m_ExpandProgress, EntranceSprings.m_DropProgress, TransformedScreenY0);
 	const float EntranceContentAlpha = EntrancePose.m_ContentAlpha;
 	const CUIRect MainIslandSdfRect = EntrancePose.m_Rect;
+	const float SoftBodyDelta = AnimState.m_SoftBodyLastTick != 0 ? (Now - AnimState.m_SoftBodyLastTick) / static_cast<float>(time_freq()) : 0.0f;
+	AnimState.m_SoftBodyLastTick = Now;
+	const CHudIslandSoftBody::SPose ShellPose = AnimState.m_SoftBody.Update(
+		SoftBodyDelta, vec2(MainIslandSdfRect.w, MainIslandSdfRect.h), LeftShellVelocity, SpectatorBlobPose.m_Velocity, MotionLevel);
 	m_LyricsIslandAnchor = QmLyricsHudAnchor(MainIslandSdfRect, EditorTransformRect, HudEditorScope.m_TargetRect);
 	m_LyricsIslandAnchorValid = true;
 	TextRender()->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.42f * EntranceContentAlpha);
@@ -4773,7 +4780,9 @@ void CHud::RenderMediaIsland()
 	const float ScreenPixelSize = std::max(
 		(TransformedScreenX1 - TransformedScreenX0) / std::max(1, Graphics()->ScreenWidth()),
 		(TransformedScreenY1 - TransformedScreenY0) / std::max(1, Graphics()->ScreenHeight()));
-	CurrentSdfState.m_MainRect = MainIslandSdfRect;
+	CurrentSdfState.m_MainRect = ShellPose.ShellRect(MainIslandSdfRect);
+	CurrentSdfState.m_ShellRippleAmplitude = ShellPose.RippleAmplitude(MainIslandSdfRect, ScreenPixelSize) * EntranceContentAlpha;
+	CurrentSdfState.m_ShellRipplePhase = ShellPose.m_RipplePhase;
 	CurrentSdfState.m_MainRadius = EntrancePose.m_Radius;
 	CurrentSdfState.m_MainCorners = HudEditorScope.m_Corners;
 	CurrentSdfState.m_MainDisabledCornerRadius = EntrancePose.m_DisabledCornerRadius;
