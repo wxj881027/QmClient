@@ -785,9 +785,9 @@ namespace ui_widget
 		SLabelProperties Props;
 		Props.m_MaxWidth = Rect.w;
 		Props.m_EllipsisAtEnd = true;
-		Props.m_MinimumFontSize = 9.0f;
+		Props.m_MinimumFontSize = ui_token::server_filter::CHIP_MIN_FONT_SIZE;
 		CUIRect LabelRect = Rect;
-		Ctx.m_pUi->DoLabel(&LabelRect, pLabel, 11.0f, TEXTALIGN_MC, Props);
+		Ctx.m_pUi->DoLabel(&LabelRect, pLabel, ui_token::server_filter::CHIP_FONT_SIZE, TEXTALIGN_MC, Props);
 		return Pressed;
 	}
 

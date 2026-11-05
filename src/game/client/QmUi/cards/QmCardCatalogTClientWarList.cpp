@@ -347,12 +347,13 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		{
 			Button.VSplitMid(&ButtonL, &ButtonR, MarginSmall);
 			static unsigned char s_NameRadio, s_ClanRadio;
-			if(DoButton_CheckBox_Common(&s_NameRadio, Localize("Name"), s_IsName ? "X" : "", &ButtonL, BUTTONFLAG_LEFT) && !ReadOnly && !Ui()->RenderOnly())
+			// 二选一是互斥语义：并排两个开关读成「可以都开」，改用带选中态的胶囊，选中项铺底。
+			if(ui_widget::FilterChip(TClientWarListTextInputCtx, &s_NameRadio, ButtonL, Localize("Name"), s_IsName) && !ReadOnly && !Ui()->RenderOnly())
 			{
 				s_IsName = true;
 				s_IsClan = false;
 			}
-			if(DoButton_CheckBox_Common(&s_ClanRadio, Localize("Clan"), s_IsClan ? "X" : "", &ButtonR, BUTTONFLAG_LEFT) && !ReadOnly && !Ui()->RenderOnly())
+			if(ui_widget::FilterChip(TClientWarListTextInputCtx, &s_ClanRadio, ButtonR, Localize("Clan"), s_IsClan) && !ReadOnly && !Ui()->RenderOnly())
 			{
 				s_IsName = false;
 				s_IsClan = true;

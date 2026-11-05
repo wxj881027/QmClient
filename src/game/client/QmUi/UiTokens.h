@@ -209,6 +209,9 @@ namespace ui_token::server_filter
 	inline constexpr float CHIP_MIN_WIDTH = 6.0f;
 	inline constexpr float CHIP_HEIGHT = 24.0f;
 	inline constexpr float CHIP_GAP = 4.0f;
+	// FilterChip 是筛选胶囊与设置页二选一胶囊的唯一绘制入口，字号随该组统一。
+	inline constexpr float CHIP_FONT_SIZE = 11.0f;
+	inline constexpr float CHIP_MIN_FONT_SIZE = 9.0f;
 	inline constexpr float DIVIDER_HEIGHT = 2.0f;
 	inline constexpr float DIVIDER_THICKNESS = 1.0f;
 	inline constexpr float DIVIDER_INSET_RATIO = 0.1f;
