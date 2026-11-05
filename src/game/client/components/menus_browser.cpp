@@ -1802,8 +1802,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	if(FirstVisibleItem > 0)
 		s_ListBox.SkipItems(FirstVisibleItem);
 
-	const auto &&RenderBrowserIcons = [this](CUIElement::SUIElementRect &UIRect, CUIRect *pRect, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor, EQmIcon Icon, const char *pText, int TextAlign, bool SmallFont = false) {
-		const float FontSize = SmallFont ? 6.0f : 14.0f;
+	const auto &&RenderBrowserIcons = [this](CUIElement::SUIElementRect &UIRect, CUIRect *pRect, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor, EQmIcon Icon, const char *pText, int TextAlign, float FontSize = 14.0f) {
 		TextRender()->TextColor(TextColor);
 		TextRender()->TextOutlineColor(TextOutlineColor);
 		if(Icon != EQmIcon::COUNT)
@@ -2088,6 +2087,8 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 					{
 						CUIRect PreviewIcon = Icon;
 						PreviewIcon.Margin(2.0f, &PreviewIcon);
+						// 同步放大绘制区域，避免图标被原有边距限制尺寸。
+						PreviewIcon.Margin(-0.1f * std::min(PreviewIcon.w, PreviewIcon.h), &PreviewIcon);
 						const bool SamePreviewTarget = Ui()->IsPopupOpen(&m_MapPreviewPopupContext) &&
 									       str_comp(m_MapPreviewPopupContext.m_aAddress, pItem->m_aAddress) == 0 &&
 									       str_comp(m_MapPreviewPopupContext.m_aMapName, pItem->m_aMap) == 0;
@@ -2099,7 +2100,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 						const bool IconHot = SamePreviewTarget || Ui()->HotItem() == &pItem->m_RequiresLogin;
 						RenderBrowserIcons(*pUiElement->Rect(UI_ELEM_MAP_PREVIEW_ICON), &PreviewIcon,
 							IconHot ? TextRender()->DefaultTextColor() : TextRender()->DefaultTextColor().WithAlpha(0.75f),
-							TextRender()->DefaultTextOutlineColor(), EQmIcon::MAP, FONT_ICON_MAP, TEXTALIGN_MC);
+							TextRender()->DefaultTextOutlineColor(), EQmIcon::SEARCH, FONT_ICON_MAGNIFYING_GLASS, TEXTALIGN_MC, 14.0f * 1.2f);
 						GameClient()->m_Tooltips.DoToolTip(&pItem->m_RequiresLogin, &PreviewIcon, Localize("Toggle map preview"));
 					}
 					// 完赛旗槽位紧随预览图标之后（条件显示，无旗时留白一行宽）。
