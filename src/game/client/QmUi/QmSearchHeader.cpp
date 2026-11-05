@@ -19,14 +19,18 @@ void qm_search_header::Render(CUi *pUi, IGraphics *pGraphics, ITextRender *pText
 	Subtitle.y += OffsetY;
 	if(!pUi->DrawingSuppressed())
 	{
-		const auto Texture = g_pData->m_aImages[IMAGE_QM_SEARCH_LOGO].m_Id;
+		static constexpr int s_aImageIds[] = {IMAGE_QM_SEARCH_LOGO, IMAGE_QM_SEARCH_LOGO_SIGNED, IMAGE_QM_SEARCH_LOGO_SILVER_EAR};
+		static_assert(sizeof(s_aImageIds) / sizeof(s_aImageIds[0]) == NUM_LOGOS);
+		const int LogoIndex = std::clamp(Layout.m_LogoIndex, 0, NUM_LOGOS - 1);
+		const SLogo &Source = s_aLogos[LogoIndex];
+		const auto Texture = g_pData->m_aImages[s_aImageIds[LogoIndex]].m_Id;
 		if(Texture.IsValid())
 		{
 			pGraphics->TextureSet(Texture);
 			pGraphics->QuadsBegin();
 			pGraphics->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 			// 原图不改动，仅取透明留白内的有效区域，避免标题偏离视觉中心。
-			pGraphics->QuadsSetSubset(204.0f / 2048.0f, 161.0f / 800.0f, 1709.0f / 2048.0f, 658.0f / 800.0f);
+			pGraphics->QuadsSetSubset(Source.m_Left / 2048.0f, Source.m_Top / 800.0f, Source.m_Right / 2048.0f, Source.m_Bottom / 800.0f);
 			IGraphics::CQuadItem Quad(Logo.x, Logo.y, Logo.w, Logo.h);
 			pGraphics->QuadsDrawTL(&Quad, 1);
 			pGraphics->QuadsSetSubset(0.0f, 0.0f, 1.0f, 1.0f);

@@ -42,16 +42,34 @@ inline constexpr const char *SPLASHES[] = {
 };
 inline constexpr int NUM_SPLASHES = sizeof(SPLASHES) / sizeof(SPLASHES[0]);
 
+struct SLogo
+{
+	int m_Left;
+	int m_Top;
+	int m_Right;
+	int m_Bottom;
+	float Aspect() const { return (float)(m_Right - m_Left) / (m_Bottom - m_Top); }
+};
+
+// 三张原图均为 2048×800；固定有效区域与渲染侧的资源列表一一对应。
+inline constexpr SLogo s_aLogos[] = {
+	{204, 161, 1709, 658},
+	{204, 84, 1709, 718},
+	{392, 227, 1677, 658},
+};
+inline constexpr int NUM_LOGOS = sizeof(s_aLogos) / sizeof(s_aLogos[0]);
+
 class CSession
 {
 	uint64_t m_DisplayCycle = 0;
 	int m_Index = -1;
+	int m_LogoIndex = 0;
 	bool m_Entered = false;
 
 public:
 	bool NeedsEntry(uint64_t DisplayCycle) const { return !m_Entered || m_DisplayCycle != DisplayCycle; }
 	int ChoiceCount() const { return m_Index < 0 ? NUM_SPLASHES : NUM_SPLASHES - 1; }
-	void Enter(uint64_t DisplayCycle, int Choice)
+	void Enter(uint64_t DisplayCycle, int Choice, int LogoChoice)
 	{
 		if(!NeedsEntry(DisplayCycle))
 			return;
@@ -60,11 +78,13 @@ public:
 		if(m_Index >= 0 && Index >= m_Index)
 			++Index;
 		m_Index = Index;
+		m_LogoIndex = std::clamp(LogoChoice, 0, NUM_LOGOS - 1);
 		m_DisplayCycle = DisplayCycle;
 		m_Entered = true;
 	}
 	void Leave() { m_Entered = false; }
 	const char *Text() const { return SPLASHES[std::max(0, m_Index)]; }
+	int LogoIndex() const { return m_LogoIndex; }
 };
 
 struct SLayout
@@ -72,11 +92,13 @@ struct SLayout
 	CUIRect m_Logo{};
 	CUIRect m_Subtitle{};
 	float m_InputOffsetY = 0.0f;
+	int m_LogoIndex = 0;
 };
 
-inline SLayout Layout(const CUIRect &Viewport, float InputHeight, float UiScale, bool HasQuery)
+inline SLayout Layout(const CUIRect &Viewport, float InputHeight, float UiScale, bool HasQuery, int LogoIndex)
 {
 	SLayout Result;
+	Result.m_LogoIndex = std::clamp(LogoIndex, 0, NUM_LOGOS - 1);
 	if(HasQuery)
 		return Result;
 	const float Available = std::max(0.0f, Viewport.h - InputHeight);
@@ -89,7 +111,7 @@ inline SLayout Layout(const CUIRect &Viewport, float InputHeight, float UiScale,
 		Result.m_InputOffsetY = Available * 0.5f;
 		return Result;
 	}
-	constexpr float LogoAspect = 1505.0f / 497.0f;
+	const float LogoAspect = s_aLogos[Result.m_LogoIndex].Aspect();
 	const float LogoWidth = std::min({340.0f * UiScale, Viewport.w * 0.8f, LogoBudget * LogoAspect});
 	const float LogoHeight = LogoWidth / LogoAspect;
 	const float HeaderHeight = LogoHeight + SubtitleHeight + 2.0f * Gap;

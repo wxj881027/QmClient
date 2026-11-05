@@ -80,7 +80,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	const SSettingsPageLayoutFrame Page = SettingsPageLayout(MainView, UiScale);
 	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();
 	if(!ReadOnly && !Ui()->DrawingSuppressed() && m_GlobalSearchHeaderSession.NeedsEntry(m_SettingsCardDeckDisplayCycle))
-		m_GlobalSearchHeaderSession.Enter(m_SettingsCardDeckDisplayCycle, secure_rand_below(m_GlobalSearchHeaderSession.ChoiceCount()));
+		m_GlobalSearchHeaderSession.Enter(m_SettingsCardDeckDisplayCycle, secure_rand_below(m_GlobalSearchHeaderSession.ChoiceCount()), secure_rand_below(qm_search_header::NUM_LOGOS));
 	IUiContext SearchCtx = SettingsUiContext("settings_global_search", UiScale);
 	if(ReadOnly)
 	{
@@ -330,7 +330,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	const float InputContentHeight = s_GlobalSearchInputCollapsed ? 0.0f : 2.0f * LineHeight + LineSpacing;
 	const SSettingsCardSpec InputSpec{"deck:global-search-input", Localize("Feature Search"), qm_card_registry::ResolveLocalizedDescription("deck:global-search-input")};
 	const float InputChromeHeight = BuildSettingsCardFrame({0.0f, 0.0f, Page.m_ContentViewport.w, 0.0f}, InputSpec, InputContentHeight, UiScale).m_Rect.h;
-	const auto HeaderLayout = qm_search_header::Layout(Page.m_ContentViewport, InputChromeHeight, UiScale, HasSearchQuery);
+	const auto HeaderLayout = qm_search_header::Layout(Page.m_ContentViewport, InputChromeHeight, UiScale, HasSearchQuery, m_GlobalSearchHeaderSession.LogoIndex());
 	const float TargetOffsetY = HeaderLayout.m_InputOffsetY;
 	float InputOffsetY = TargetOffsetY;
 	CUiV2AnimationRuntime *pSearchAnimRuntime = ReadOnly ? nullptr : &GameClient()->UiRuntimeV2()->AnimRuntime();

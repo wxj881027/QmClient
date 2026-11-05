@@ -2242,6 +2242,8 @@ set(EXPECTED_DATA
   qmclient/developer_badge.png
   qmclient/gui_logo.png
   qmclient/search_logo.png
+  qmclient/search_logo_signed.png
+  qmclient/search_logo_silver_ear.png
   qmclient/map_difficulty.sql
   qmclient/title_badges/logo_sdf.png
   qmclient/ui/password_icon_bold.png
