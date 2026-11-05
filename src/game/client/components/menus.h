@@ -26,8 +26,10 @@
 #include <game/client/QmUi/QmIslandNotice.h>
 #include <game/client/QmUi/QmLocalizedLabels.h>
 #include <game/client/QmUi/QmPlayersMenu.h>
+#include <game/client/QmUi/QmScreenshotEditor.h>
 #include <game/client/QmUi/QmScroll.h>
 #include <game/client/QmUi/QmSeasonalSidebar.h>
+#include <game/client/QmUi/QmServerInfoLayout.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/QmVoteMenu.h>
 #include <game/client/QmUi/SettingsCardDeck.h>
@@ -153,6 +155,7 @@ class CMenus : public CComponent
 {
 	friend void NTranslateUiSettings::RenderTranslateUiModule(CMenus *pMenus, CUIRect &CardContent, float LineHeight, float BodySize, float LineSpacing);
 	friend class CMenusSettingsControls;
+	friend class CQmScreenshotEditor;
 	static ColorRGBA ms_GuiColor;
 	static ColorRGBA ms_ColorTabbarInactiveOutgame;
 	static ColorRGBA ms_ColorTabbarActiveOutgame;
@@ -1872,8 +1875,7 @@ protected:
 	std::vector<SDemoCutSegment> m_vDemoCutSegments;
 	qm_demo_cut::CPreview m_DemoCutPreview;
 	int m_DemoSelectionAnchorIndex = -1;
-	std::shared_ptr<CQmScreenshotWatermarkJob> m_pScreenshotWatermarkJob;
-	std::string m_ScreenshotWatermarkFolder;
+	CQmScreenshotEditor m_ScreenshotEditor;
 	bool m_DemoScreenshotPreviewLoadFailed = false;
 	char m_aDemoScreenshotPreviewFolder[IO_MAX_PATH_LENGTH] = "";
 	SDemoSelectionEntry m_DemoScreenshotPreviewSelection{};
@@ -2411,6 +2413,7 @@ protected:
 	void RenderServerInfo(CUIRect MainView);
 	void RenderServerInfoMotd(CUIRect Motd);
 	CQmMapTagsPanel m_MapTagsPanel;
+	CQmServerInfoLayout m_ServerInfoLayout;
 	void PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView = nullptr);
 	void RenderIngameServerInfoValueCached(const char *pTextId, unsigned &TextHash, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {});
 	void RenderSnapshotTextContainer(CUIElement &Element, const CUIRect *pRect);
@@ -2599,6 +2602,7 @@ protected:
 
 public:
 	void RenderBackground();
+	CQmMapDifficultyCatalog &MapDifficultyCatalog() { return m_MapDifficultyCatalog; }
 	// 在 HUD/文字之前绘制世界之外的菜单背景，并冻结背景绘制阶段。
 	// 由 CGameClient::OnRender 在背景层目标内调用；直接调用 Render 的测试也可作为回退入口。
 	void RenderBackgroundLayer();
@@ -3407,7 +3411,6 @@ private:
 	int m_TranslateProbeDiagnostics = 0;
 	void RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, float ButtonHeight, float CardPadding, float CornerRadius, bool PrewarmOnly);
-	void RenderQmFunctionFavoriteMapsContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly);
 	void RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudBindStatusContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudDebugGraphContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);

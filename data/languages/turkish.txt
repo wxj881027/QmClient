@@ -343,6 +343,9 @@
 === Saves for '%s' ===
 == === '%s' için saveler ===
 
+?!Stuck keys!?
+== ?!Basılı tuşlar!?
+
 []
 [%s] %s (Map: %s, Time: %s)
 == [%s] %s (harita: %s, zaman: %s)
@@ -794,6 +797,9 @@ Alias of poses_render
 Alias of poses_video
 == poses_video takma adı
 
+Alignment
+== Hizalama
+
 Alive notification color
 == Canlı bildirimi rengi
 
@@ -1072,9 +1078,6 @@ Apply to dummy
 
 Apply to player
 == Oyuncuya uygula
-
-Apply watermark
-== Filigranı uygula
 
 Applying overwrites your font, UI scale, animation and panel colors at once, so note the values you like first.
 == Uygulamak yazı tipi, UI ölçeği, animasyon ve panel renklerini birden ezer; hoşunuza giden değerleri önceden not edin.
@@ -1588,6 +1591,9 @@ Axiom website
 
 Axis
 == Eksen
+
+Back
+== Geri
 
 Backdrop blur
 == Arka plan bulanıklığı
@@ -2383,6 +2389,9 @@ Choose default eyes when joining a server
 
 Choose export name first.
 == Önce dışa aktarma adını seçin.
+
+Choose Logo (PNG / WebP)
+== Logo seç (PNG / WebP)
 
 Choose off, simple or full; the individual switches below only apply to full.
 == Kapalı, basit veya tam seçin; aşağıdaki ayrı anahtarlar yalnızca tam seçeneğinde geçerlidir.
@@ -4256,6 +4265,9 @@ Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use 
 Drag HUD modules with the left mouse button
 == HUD modüllerini sol fare tuşuyla sürükleyin
 
+Drag the selected watermark to move it. The original image is preserved.
+== Seçili filigranı sürükleyerek taşıyın. Orijinal görüntü korunur.
+
 Drag the three sliders; master scales the other two.
 == Üç kaydırıcıyı sürükleyin; ana ses diğer ikisini ölçekler.
 
@@ -5065,6 +5077,9 @@ Enable the frozen Tee HUD, choose whether to count active or frozen Tees, then s
 
 Enable the guide line, then set its length, style and colors.
 == Kılavuz çizgiyi etkinleştirin, ardından uzunluğunu, stilini ve renklerini ayarlayın.
+
+Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size.
+== Vurgulamayı ve isim etiketi tuşlarını açıp basılı çekiç ve kanca simgelerinin renklerini seçin. Simge boyutu tuş boyutunu izler.
 
 Enable the indicator; choose its distance mode and whether war-list players get a different color.
 == Göstergeyi açın; mesafe modunu ve war-list oyuncularının farklı renk alıp almayacağını seçin.
@@ -6098,9 +6113,6 @@ Game type
 Game type (ddnet, mod)
 == Oyun türü (ddnet, mod)
 
-Game types:
-== Oyun türleri:
-
 Game update rate (Hz)
 == Oyun güncelleme hızı (Hz)
 
@@ -6668,6 +6680,9 @@ Highlight Color
 Highlight console commands
 == Konsol komutlarını vurgula
 
+Highlight frozen teammates' hammer and hook inputs
+== Donmuş takım arkadaşlarının çekiç ve kanca girdilerini vurgula
+
 Highlight game type
 == Oyun türünü vurgula
 
@@ -6680,17 +6695,14 @@ Highlight ping value
 Highlight selected players in the game world
 == Highlight selected players in the game world
 
-Highlight teammates hammering in death or freeze areas
-== Ölüm veya donma alanlarında çekiç sallayan takım arkadaşlarını vurgula
-
-Highlight teammates holding hammer in death or freeze areas
-== Ölüm veya donma alanlarında çekici basılı tutan takım arkadaşlarını vurgula
-
 Highlighted message
 == Vurgulanan mesaj
 
 Highlighted message color
 == Vurgulanan mesaj rengi
+
+Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses.
+== Çekici basılı tutan donmuş takım arkadaşlarını vurgular ve çekiç veya kanca girdilerini isim etiketindeki tuşların yanında gösterir.
 
 Hit feedback
 == İsabet bildirimi
@@ -6910,6 +6922,9 @@ Icon symbols:
 
 Icons
 == Simgeler
+
+Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded.
+== Tuş bırakıldığında veya donma bittiğinde simgeler kaybolur. Diğer oyuncuların girdileri sunucuda ön girdi desteği gerektirir; etkin karakteriniz kapsam dışıdır.
 
 Identity preset
 == Kimlik ön ayarı
@@ -8270,6 +8285,9 @@ Manual target
 Map
 == Harita
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == Harita tarayıcısı zorluk yıldızı filtresi bit maskesi (bitler 1-5)
 
@@ -8407,9 +8425,6 @@ Markers
 
 Markers are drawn on your screen only and never change the game itself.
 == İşaretler yalnızca sizin ekranınızda çizilir ve oyunun kendisini asla değiştirmez.
-
-Marks teammates who hold hammer while stuck in death or freeze areas, so you can see who is hammering them.
-== Ölüm veya dondurma alanlarında sıkışmışken çekiç tutan takım arkadaşlarını işaretler; onlara kimin vurduğunu görürsünüz.
 
 Master server URL to register
 == Kaydedilecek ana sunucu URL'si
@@ -8731,6 +8746,9 @@ Mix rate
 
 Mixed
 == Karışık
+
+Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
 
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == Mobil izleyici kamerası: 0=joystick, 1=görünümü sürükle
@@ -9301,6 +9319,9 @@ No local servers found (ports %d-%d)
 
 No login required
 == Giriş gerekmez
+
+No Logo selected
+== Logo seçilmedi
 
 No map
 == Harita yok
@@ -10376,9 +10397,6 @@ Player country (ISO 3166-1 numeric code)
 Player country filter in server browser (ISO 3166-1 numeric)
 == Sunucu tarayıcısında oyuncu ülke filtresi (ISO 3166-1 sayısal)
 
-Player country:
-== Oyuncu ülkesi:
-
 Player death
 == Oyuncu ölümü
 
@@ -10751,6 +10769,9 @@ Press Esc to exit the HUD editor
 Press F2, log in, then use: change_map map_name
 == F2'ye basın, giriş yapın ve şunu kullanın: change_map map_name
 
+Pressed hammer icon color
+== Çekiç basılıyken simge rengi
+
 Pressed hook collision line color when hitting a tee
 == Tee'ye isabet ettiğinde basılı kanca yardımcı çizgi rengi
 
@@ -10759,6 +10780,9 @@ Pressed hook collision line color when hitting something hookable
 
 Pressed hook collision line color when not aiming at anything hookable
 == Kanca atılabilir bir şeyi nişan almadığında basılı kanca yardımcı çizgi rengi
+
+Pressed hook icon color
+== Kanca basılıyken simge rengi
 
 Pressed hook line color; always used when custom pressed colors are enabled
 == Basınca kanca çizgisi rengi; özel basma renkleri etkin olduğunda her zaman kullanılır
@@ -10804,6 +10828,9 @@ Preview cut (P)
 
 Preview dummy nameplate
 == Dummy isim plakasını önizle
+
+Preview failed. Check the image and Logo, then retry.
+== Önizleme başarısız. Görüntüyü ve logoyu kontrol edip tekrar deneyin.
 
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
@@ -11615,6 +11642,9 @@ Remove from queue
 Remove Item
 == Öğeyi Kaldır
 
+Remove Logo
+== Logoyu kaldır
+
 Remove right to vote from player with client ID
 == İstemci kimliğine sahip oyuncunun oy kullanma hakkını kaldır
 
@@ -11945,6 +11975,9 @@ Reset IME appearance
 Reset key press counts
 == Tuş basma sayılarını sıfırla
 
+Reset layer
+== Katmanı sıfırla
+
 Reset layout
 == Düzeni sıfırla
 
@@ -12110,6 +12143,9 @@ Rotate hammer with cursor like other weapons
 Rotates your tee through a saved list of skins, either on a timer or at a random spot when a map starts.
 == Tee'ni kayıtlı bir skin listesinde döndürür; zamanlayıcıyla ya da harita başlarken rastgele bir noktadan.
 
+Rotation
+== Döndürme
+
 Round
 == Tur
 
@@ -12254,6 +12290,9 @@ Save loaded; the local record could not be removed.
 Save player names in replay
 == Tekrar oynatmada oyuncu adlarını kaydet
 
+Save PNG copy
+== PNG kopyası kaydet
+
 Save power by lowering update rate
 == Güncelleme hızını düşürerek güç tasarrufu sağlar
 
@@ -12331,6 +12370,9 @@ Saves and loads complete client profiles, including name, chat settings and bind
 
 Saves file
 == Kayıtlı oyun dosyası
+
+Saving…
+== Kaydediliyor…
 
 Say in chat
 == Sohbette söyle
@@ -12757,6 +12799,15 @@ Server hostname (0.7 only)
 
 Server info
 == Sunucu bilgisi
+
+Server information lower left card width (per mille)
+== Sunucu bilgileri sol alt kart genişliği (binde)
+
+Server information upper left card width (per mille)
+== Sunucu bilgileri sol üst kart genişliği (binde)
+
+Server information upper row height (per mille)
+== Sunucu bilgileri üst satır yüksekliği (binde)
 
 Server kick/spec votes are no longer actively moderated.
 == Sunucu atma/seyirci oyları artık aktif olarak yönetilmiyor.
@@ -14762,9 +14813,6 @@ Stress system (debug builds only).
 Strict game type filter
 == Katı oyun türü filtresi
 
-Strict gametype filter
-== Katı oyun türü filtresi
-
 Strict mode
 == Katı mod
 
@@ -15299,6 +15347,9 @@ Test translation
 Testing translation...
 == Çeviri test ediliyor…
 
+Text
+== Metin
+
 Text alpha
 == Metin alfası
 
@@ -15593,9 +15644,6 @@ Tick "Enable system media control", then "Show song info in top-left corner"; th
 Tick "Enable voice", then open "Advanced options" to pick "Input device" and "Output device"; "Auto unmute when speaking" frees your mute key.
 == Sesi etkinleştir seçeneğini işaretle, gelişmiş seçeneklerden giriş ve çıkış aygıtını seç; konuşunca sessizliği otomatik kaldır, sessize alma tuşunu boşaltır.
 
-Tick "Highlight teammates hammering in death or freeze areas"; it works on your own team only and needs no key bind.
-== Ölüm veya dondurma alanlarında çekiç sallayan arkadaşlarını vurgula seçeneğini işaretleyin; yalnızca kendi takımınızda çalışır, tuş ataması gerektirmez.
-
 Tick "Launch Steam automatically when starting externally"; if Steam is not found, type its path or press "Detect Steam again".
 == Dışarıdan başlatırken Steam'i otomatik aç seçeneğini işaretle; Steam bulunamazsa yolunu yaz veya Steam'i yeniden bul düğmesine bas.
 
@@ -15631,6 +15679,9 @@ tile
 
 Tile outlines
 == Karo ana hatları
+
+Tile watermark
+== Filigranı döşe
 
 Time
 == Süre
@@ -16361,6 +16412,9 @@ Unable to load savegame: loaded on a different server
 Unable to load savegame: SaveId corrupted
 == Kayıt yüklenemiyor: SaveId bozuk
 
+Unable to open the file picker
+== Dosya seçici açılamadı
+
 Unable to open the screenshot file
 == Ekran görüntüsü dosyası açılamıyor
 
@@ -16577,6 +16631,9 @@ Update ready to install
 Update sources are temporarily unavailable
 == Güncelleme kaynakları geçici olarak kullanılamıyor
 
+Updating preview…
+== Önizleme güncelleniyor…
+
 Updating public word list...
 == Ortak kelime listesi güncelleniyor...
 
@@ -16696,9 +16753,6 @@ Use high bandwidth mode (doubles server bandwidth, LAN only)
 
 Use installed asset names. Empty fields keep the current asset.
 == Yüklü doku adlarını girin. Boş alanlar geçerli dokuyu korur.
-
-Use it to find the teammate who needs a wake-up; enemies are never highlighted, so do not look for them here.
-== Uyandırılması gereken takım arkadaşını bulmak için kullanın; düşmanlar hiç vurgulanmaz, onları burada aramayın.
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == Yeniden başlamak için k tuşunu (öldür), duraklatmak ve diğer oyuncuları izlemek için q tuşunu kullanın. Diğer tuş bağlantıları için ayarlara bakın.
@@ -17141,11 +17195,11 @@ Warning
 Watches your friend list and reports friends coming online or joining your map, with optional automatic greeting.
 == Arkadaş listeni izler, bir arkadaş çevrimiçi olduğunda veya haritana girdiğinde haber verir; isteğe bağlı otomatik selamlama da var.
 
-Water hammer highlight
-== Suda çekiç vurgusu
-
 Watermark
 == Filigran
+
+Watermark editor
+== Filigran düzenleyici
 
 Weak hook
 == Zayıf kanca

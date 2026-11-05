@@ -1,4 +1,116 @@
 [[message]]
+key = "?!Stuck keys!?"
+[message.translations]
+simplified_chinese = "?!卡键!?"
+traditional_chinese = "?!卡鍵!?"
+japanese = "?!押しっぱなし!?"
+korean = "?!누른 키!?"
+russian = "?!Зажатые клавиши!?"
+german = "?!Gehaltene Tasten!?"
+spanish = "?!Teclas mantenidas!?"
+french = "?!Touches maintenues!?"
+brazilian_portuguese = "?!Teclas pressionadas!?"
+portuguese = "?!Teclas premidas!?"
+turkish = "?!Basılı tuşlar!?"
+polish = "?!Przytrzymane klawisze!?"
+
+[[message]]
+key = "Enable the highlight and nameplate key presses, then choose the pressed hammer and hook icon colors. Icon size follows the key press size."
+[message.translations]
+simplified_chinese = "开启高亮和昵称按键显示后，可以分别调整卡锤、卡钩的按下颜色。图标大小跟随按键显示。"
+traditional_chinese = "開啟高亮和暱稱按鍵顯示後，可以分別調整卡錘、卡鉤的按下顏色。圖示大小跟隨按鍵顯示。"
+japanese = "強調とネームプレートのキー表示を有効にして、ハンマーとフックの押下時の色を選びます。アイコンの大きさはキー表示に連動します。"
+korean = "강조와 이름표 키 표시를 켠 뒤 해머와 훅을 누를 때의 색상을 각각 선택하세요. 아이콘 크기는 키 표시 크기를 따릅니다."
+russian = "Включите подсветку и показ клавиш над именем, затем выберите цвета значков зажатого молота и крюка. Их размер соответствует размеру клавиш."
+german = "Aktiviere die Hervorhebung und die Tastenanzeige am Namensschild und wähle die Farben für gehaltenen Hammer und Haken. Die Symbolgröße folgt der Tastengröße."
+spanish = "Activa el resaltado y las teclas del nombre y elige los colores del martillo y el gancho pulsados. Los iconos siguen el tamaño de las teclas."
+french = "Activez le surlignage et les touches du nom, puis choisissez les couleurs du marteau et du grappin maintenus. La taille des icônes suit celle des touches."
+brazilian_portuguese = "Ative o destaque e as teclas do nome e escolha as cores do martelo e do gancho pressionados. O tamanho dos ícones acompanha o das teclas."
+portuguese = "Ativa o destaque e as teclas do nome e escolhe as cores do martelo e do gancho premidos. O tamanho dos ícones acompanha o das teclas."
+turkish = "Vurgulamayı ve isim etiketi tuşlarını açıp basılı çekiç ve kanca simgelerinin renklerini seçin. Simge boyutu tuş boyutunu izler."
+polish = "Włącz wyróżnianie i klawisze przy nazwie, a następnie wybierz kolory przytrzymanego młota i haka. Rozmiar ikon odpowiada rozmiarowi klawiszy."
+
+[[message]]
+key = "Highlight frozen teammates' hammer and hook inputs"
+[message.translations]
+simplified_chinese = "高亮冻结中队友的卡锤和卡钩"
+traditional_chinese = "高亮凍結中隊友的卡錘和卡鉤"
+japanese = "凍結中の味方のハンマーとフック入力を強調"
+korean = "얼어붙은 팀원의 해머 및 훅 입력 강조"
+russian = "Подсвечивать ввод молота и крюка замороженных союзников"
+german = "Hammer- und Hakeneingaben eingefrorener Teammitglieder hervorheben"
+spanish = "Resaltar entradas de martillo y gancho de compañeros congelados"
+french = "Surligner les entrées de marteau et de grappin des coéquipiers gelés"
+brazilian_portuguese = "Destacar entradas de martelo e gancho dos aliados congelados"
+portuguese = "Destacar entradas de martelo e gancho dos aliados congelados"
+turkish = "Donmuş takım arkadaşlarının çekiç ve kanca girdilerini vurgula"
+polish = "Wyróżniaj użycie młota i haka przez zamrożonych członków drużyny"
+
+[[message]]
+key = "Highlights frozen teammates holding hammer and shows their held hammer or hook beside the nameplate key presses."
+[message.translations]
+simplified_chinese = "高亮冻结中持续按锤的队友，并在昵称按键显示两侧显示卡锤、卡钩图标。"
+traditional_chinese = "高亮凍結中持續按錘的隊友，並在暱稱按鍵顯示兩側顯示卡錘、卡鉤圖示。"
+japanese = "凍結中にハンマーを押し続ける味方を強調し、ネームプレートのキー表示の両側にハンマーとフックの入力を表示します。"
+korean = "얼어붙은 상태에서 해머를 누르고 있는 팀원을 강조하고 이름표 키 표시 양옆에 해머와 훅 입력을 표시합니다."
+russian = "Подсвечивает замороженных союзников, удерживающих молот, и показывает зажатый молот или крюк рядом с клавишами над именем."
+german = "Hebt eingefrorene Teammitglieder mit gehaltenem Hammer hervor und zeigt Hammer- oder Hakeneingaben neben den Tasten am Namensschild."
+spanish = "Resalta a los compañeros congelados que mantienen pulsado el martillo y muestra sus entradas de martillo o gancho junto a las teclas del nombre."
+french = "Surligne les coéquipiers gelés qui maintiennent le marteau et affiche leurs entrées de marteau ou de grappin à côté des touches du nom."
+brazilian_portuguese = "Destaca aliados congelados que mantêm o martelo pressionado e mostra suas entradas de martelo ou gancho ao lado das teclas do nome."
+portuguese = "Destaca aliados congelados que mantêm o martelo premido e mostra as suas entradas de martelo ou gancho ao lado das teclas do nome."
+turkish = "Çekici basılı tutan donmuş takım arkadaşlarını vurgular ve çekiç veya kanca girdilerini isim etiketindeki tuşların yanında gösterir."
+polish = "Wyróżnia zamrożonych członków drużyny trzymających młot i pokazuje ich wejścia młota lub haka obok klawiszy przy nazwie."
+
+[[message]]
+key = "Icons disappear on release or unfreeze. Remote held inputs require server preinput support; your active character is excluded."
+[message.translations]
+simplified_chinese = "松开按键或解冻后隐藏图标。他人按键状态需要服务器支持预输入；不显示当前操控角色的卡键状态。"
+traditional_chinese = "放開按鍵或解凍後隱藏圖示。他人按鍵狀態需要伺服器支援預輸入；不顯示目前操控角色的卡鍵狀態。"
+japanese = "キーを離すか凍結が解除されるとアイコンは消えます。他のプレイヤーの入力表示にはサーバーの事前入力対応が必要です。操作中の自キャラクターは対象外です。"
+korean = "키를 놓거나 동결이 풀리면 아이콘이 사라집니다. 다른 플레이어의 입력 표시에는 서버의 사전 입력 지원이 필요하며 현재 조작 중인 캐릭터는 제외됩니다."
+russian = "Значки исчезают при отпускании клавиши или разморозке. Для отображения чужого ввода сервер должен поддерживать предввод; текущий управляемый персонаж исключён."
+german = "Die Symbole verschwinden beim Loslassen oder Auftauen. Fremde Eingaben erfordern serverseitige Unterstützung für Vorabeingaben; deine aktive Figur ist ausgenommen."
+spanish = "Los iconos desaparecen al soltar la tecla o descongelarse. Las entradas ajenas requieren que el servidor admita entradas anticipadas; se excluye tu personaje activo."
+french = "Les icônes disparaissent au relâchement ou au dégel. Les entrées des autres joueurs nécessitent la prise en charge des préentrées par le serveur ; votre personnage actif est exclu."
+brazilian_portuguese = "Os ícones somem ao soltar a tecla ou descongelar. As entradas de outros jogadores exigem suporte a pré-entrada no servidor; seu personagem ativo fica de fora."
+portuguese = "Os ícones desaparecem ao soltar a tecla ou descongelar. As entradas de outros jogadores exigem suporte a pré-entrada no servidor; a tua personagem ativa fica de fora."
+turkish = "Tuş bırakıldığında veya donma bittiğinde simgeler kaybolur. Diğer oyuncuların girdileri sunucuda ön girdi desteği gerektirir; etkin karakteriniz kapsam dışıdır."
+polish = "Ikony znikają po zwolnieniu klawisza lub odmrożeniu. Wejścia innych graczy wymagają obsługi wejścia wyprzedzającego na serwerze; aktywna postać gracza jest pomijana."
+
+[[message]]
+key = "Pressed hammer icon color"
+[message.translations]
+simplified_chinese = "卡锤按下颜色"
+traditional_chinese = "卡錘按下顏色"
+japanese = "ハンマー押下時のアイコン色"
+korean = "해머를 누를 때 아이콘 색상"
+russian = "Цвет значка зажатого молота"
+german = "Symbolfarbe bei gehaltenem Hammer"
+spanish = "Color del icono al mantener el martillo"
+french = "Couleur du marteau maintenu"
+brazilian_portuguese = "Cor do ícone do martelo pressionado"
+portuguese = "Cor do ícone do martelo premido"
+turkish = "Çekiç basılıyken simge rengi"
+polish = "Kolor ikony przytrzymanego młota"
+
+[[message]]
+key = "Pressed hook icon color"
+[message.translations]
+simplified_chinese = "卡钩按下颜色"
+traditional_chinese = "卡鉤按下顏色"
+japanese = "フック押下時のアイコン色"
+korean = "훅을 누를 때 아이콘 색상"
+russian = "Цвет значка зажатого крюка"
+german = "Symbolfarbe bei gehaltenem Haken"
+spanish = "Color del icono al mantener el gancho"
+french = "Couleur du grappin maintenu"
+brazilian_portuguese = "Cor do ícone do gancho pressionado"
+portuguese = "Cor do ícone do gancho premido"
+turkish = "Kanca basılıyken simge rengi"
+polish = "Kolor ikony przytrzymanego haka"
+
+[[message]]
 key = "Moving block and freeze prediction (experimental)"
 [message.translations]
 simplified_chinese = "移动方块与移动水预测（实验性）"
@@ -39918,3 +40030,51 @@ brazilian_portuguese = "Larguras dos cartões de configurações: stableId para 
 portuguese = "Larguras dos cartões de definições: stableId para largura total, !stableId para meia largura, separados por ponto e vírgula"
 turkish = "Ayar kartı genişlikleri: tam genişlik için stableId, yarım genişlik için !stableId; noktalı virgülle ayrılır"
 polish = "Szerokości kart ustawień: stableId oznacza pełną szerokość, !stableId połowę szerokości; wpisy oddzielaj średnikami"
+
+[[message]]
+key = "Server information lower left card width (per mille)"
+[message.translations]
+simplified_chinese = "服务器信息左下卡片宽度（千分比）"
+traditional_chinese = "伺服器資訊左下卡片寬度（千分比）"
+japanese = "サーバー情報の左下カードの幅（千分率）"
+korean = "서버 정보 왼쪽 아래 카드 너비(천분율)"
+russian = "Ширина нижней левой карточки информации о сервере (промилле)"
+german = "Serverinformationen: Breite der Karte unten links (Promille)"
+spanish = "Anchura de la tarjeta inferior izquierda de información del servidor (por mil)"
+french = "Largeur de la carte inférieure gauche des informations du serveur (pour mille)"
+brazilian_portuguese = "Largura do cartão inferior esquerdo das informações do servidor (por mil)"
+portuguese = "Largura do cartão inferior esquerdo das informações do servidor (por mil)"
+turkish = "Sunucu bilgileri sol alt kart genişliği (binde)"
+polish = "Szerokość lewej dolnej karty informacji o serwerze (promile)"
+
+[[message]]
+key = "Server information upper left card width (per mille)"
+[message.translations]
+simplified_chinese = "服务器信息左上卡片宽度（千分比）"
+traditional_chinese = "伺服器資訊左上卡片寬度（千分比）"
+japanese = "サーバー情報の左上カードの幅（千分率）"
+korean = "서버 정보 왼쪽 위 카드 너비(천분율)"
+russian = "Ширина верхней левой карточки информации о сервере (промилле)"
+german = "Serverinformationen: Breite der Karte oben links (Promille)"
+spanish = "Anchura de la tarjeta superior izquierda de información del servidor (por mil)"
+french = "Largeur de la carte supérieure gauche des informations du serveur (pour mille)"
+brazilian_portuguese = "Largura do cartão superior esquerdo das informações do servidor (por mil)"
+portuguese = "Largura do cartão superior esquerdo das informações do servidor (por mil)"
+turkish = "Sunucu bilgileri sol üst kart genişliği (binde)"
+polish = "Szerokość lewej górnej karty informacji o serwerze (promile)"
+
+[[message]]
+key = "Server information upper row height (per mille)"
+[message.translations]
+simplified_chinese = "服务器信息上排高度（千分比）"
+traditional_chinese = "伺服器資訊上排高度（千分比）"
+japanese = "サーバー情報の上段の高さ（千分率）"
+korean = "서버 정보 위쪽 행 높이(천분율)"
+russian = "Высота верхнего ряда информации о сервере (промилле)"
+german = "Serverinformationen: Höhe der oberen Reihe (Promille)"
+spanish = "Altura de la fila superior de información del servidor (por mil)"
+french = "Hauteur de la rangée supérieure des informations du serveur (pour mille)"
+brazilian_portuguese = "Altura da linha superior das informações do servidor (por mil)"
+portuguese = "Altura da linha superior das informações do servidor (por mil)"
+turkish = "Sunucu bilgileri üst satır yüksekliği (binde)"
+polish = "Wysokość górnego rzędu informacji o serwerze (promile)"

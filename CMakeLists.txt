@@ -2216,6 +2216,8 @@ set(EXPECTED_DATA
   menuimages/play_game.png
   menuimages/settings.png
   particles.png
+  qmclient/water_hammer.png
+  qmclient/water_hook.png
   qmclient/builtinscripts/sayemoticon.chai
   qmclient/friendlinks/ddnet.webp
   qmclient/friendlinks/ddrace.webp
@@ -3210,6 +3212,7 @@ if(CLIENT)
     QmUi/QmBadgeGeometry.h
     QmUi/QmChatBubble.cpp
     QmUi/QmChatBubble.h
+    QmUi/QmChatLineMenuLayout.h
     QmUi/QmCloudBubble.cpp
     QmUi/QmCloudBubble.h
     QmUi/QmBadgeGeometryData.h
@@ -3344,6 +3347,9 @@ if(CLIENT)
     QmUi/QmWikiStore.h
     QmUi/MapTagsPanel.cpp
     QmUi/MapTagsPanel.h
+    QmUi/QmServerInfoGeometry.h
+    QmUi/QmServerInfoLayout.cpp
+    QmUi/QmServerInfoLayout.h
     QmUi/cards/QmCardCatalog.cpp
     QmUi/cards/QmCardCatalog.h
     QmUi/cards/QmCardCatalogIds.cpp
@@ -3383,7 +3389,6 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogVisualContent.cpp
     QmUi/cards/QmCardCatalogFunctionContent.cpp
     QmUi/cards/QmCardCatalogTranslateContent.cpp
-    QmUi/cards/QmCardCatalogFavoriteMapsContent.cpp
     QmUi/cards/QmCardCatalogHudContent.cpp
     QmUi/cards/QmCardCatalogVoiceContent.cpp
     QmUi/cards/QmCardCatalogBackground3DContent.cpp
@@ -3629,6 +3634,7 @@ if(CLIENT)
     components/qmclient/menus_qmclient_search.cpp
     components/qmclient/hud_map_progress.cpp
     components/qmclient/hud_map_progress.h
+    components/qmclient/hud_island_soft_body.h
     components/qmclient/player_state_hud_bounds.h
     components/qmclient/modes.cpp
     components/qmclient/modes.h
@@ -3747,6 +3753,10 @@ if(CLIENT)
     components/qmclient/config_package.cpp
     components/qmclient/config_package.h
     components/qmclient/screenshot_manager.h
+    components/qmclient/watermark_compositor.cpp
+    components/qmclient/watermark_compositor.h
+    QmUi/QmScreenshotEditor.cpp
+    QmUi/QmScreenshotEditor.h
     components/qmclient/scripting.cpp
     components/qmclient/scripting.h
     components/qmclient/skin_download_session.h
@@ -4824,10 +4834,12 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_chat_gradient_test.cpp
     src/test/unit/qmclient/ui/qm_card_order_model_test.cpp
     src/test/unit/qmclient/ui/qm_card_registry_test.cpp
+    src/test/unit/qmclient/ui/qm_server_info_layout_test.cpp
     src/test/unit/qmclient/ui/qm_interaction_source_test.cpp
     src/test/unit/qmclient/ui/qm_console_ui_layout_test.cpp
     src/test/unit/qmclient/ui/qm_console_settings_layout_test.cpp
     src/test/unit/qmclient/client/qm_credits_layout_test.cpp
+    src/test/unit/qmclient/client/qm_favorite_map_vote_test.cpp
     src/test/unit/qmclient/client/qm_module_layout_adapter_test.cpp
     src/test/unit/base/aio_test.cpp
     src/test/unit/client/assets_editor_layout_test.cpp
@@ -4900,6 +4912,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/vote_menu_mode_test.cpp
     src/test/unit/qmclient/ui/players_menu_test.cpp
     src/test/unit/qmclient/ui/vote_player_targets_test.cpp
+    src/test/integration/qmclient/ui/map_covers_test.cpp
     src/test/integration/qmclient/ui/vote_map_loader_test.cpp
     src/test/unit/client/map_history_test.cpp
     src/test/unit/client/map_tile_border_test.cpp
@@ -5074,7 +5087,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/client/qm_demo_cut_contract_test.cpp
     src/test/unit/qmclient/client/qm_demo_cut_test.cpp
     src/test/unit/qmclient/client/qm_local_saves_test.cpp
-    src/test/unit/qmclient/client/qm_save_usage_test.cpp
     src/test/contract/qmclient/client/qm_storage_path_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_cards_surface_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_cards_deck_contract_test.cpp
@@ -5220,6 +5232,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/settings/settings_card_width_test.cpp
     src/test/unit/qmclient/client/qm_weapon_trajectory_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_watermark_test.cpp
+    src/test/unit/qmclient/client/qm_watermark_compositor_test.cpp
     src/test/unit/qmclient/client/qm_config_package_test.cpp
     src/test/integration/qmclient/client/qm_config_package_storage_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_clipboard_test.cpp
@@ -5371,6 +5384,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/qm_title_badge.cpp
     src/game/client/components/qmclient/screenshot_clipboard.cpp
     src/game/client/components/qmclient/screenshot_image_job.cpp
+    src/game/client/components/qmclient/watermark_compositor.cpp
     src/game/client/components/qmclient/skin_source_job.cpp
     src/game/client/components/qmclient/config_package.cpp
     src/game/client/components/jump_hint_utils.cpp
@@ -5416,6 +5430,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/hud_notifications/hud_notification_catalog.cpp
     src/game/client/components/qmclient/hud_notifications/hud_notification_rules.cpp
     src/game/client/components/qmclient/map_cover_art.cpp
+    src/game/client/components/qmclient/map_covers.cpp
     src/game/client/components/qmclient/map_difficulty_catalog.cpp
     src/game/client/components/qmclient/vote_map_library.cpp
     src/game/client/components/qmclient/vote_map_loader.cpp

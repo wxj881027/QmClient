@@ -4,6 +4,7 @@
 
 #include <game/client/components/hud_frozen_tee_state.h>
 #include <game/client/components/hud_media_island_logic.h>
+#include <game/client/components/qmclient/hud_island_soft_body.h>
 #include <game/client/components/tclient/pet.h>
 
 #include <gtest/gtest.h>
@@ -448,4 +449,156 @@ TEST(QmHudMediaIslandBlob, RightCapsuleUsesTheSameBoundedVelocityStretch)
 	EXPECT_GT(Capsule.m_Rect.w, Capsule.m_Rect.h);
 	EXPECT_GT(Capsule.m_SmoothUnion, 0.0f);
 	EXPECT_GT(Capsule.m_ContentAlpha, 0.0f);
+}
+
+TEST(QmHudIslandSoftBody, IdleShellDoesNotGenerateRipples)
+{
+	CHudIslandSoftBody Body;
+	for(int i = 0; i < 120; ++i)
+	{
+		const auto Pose = Body.Update(1.0f / 60.0f, vec2(100.0f, 20.0f), 0.0f, 0.0f, 2);
+		EXPECT_FLOAT_EQ(Pose.m_Stretch, 0.0f);
+		EXPECT_FLOAT_EQ(Pose.m_Pull, 0.0f);
+		EXPECT_FLOAT_EQ(Pose.m_RippleStrength, 0.0f);
+	}
+}
+
+TEST(QmHudIslandSoftBody, SatelliteDeparturePullsItsSideAndReturnReversesIt)
+{
+	CHudIslandSoftBody LeftBody;
+	CHudIslandSoftBody RightBody;
+	LeftBody.Update(0.0f, vec2(100.0f, 20.0f), 0.0f, 0.0f, 2);
+	RightBody.Update(0.0f, vec2(100.0f, 20.0f), 0.0f, 0.0f, 2);
+	const auto Left = LeftBody.Update(0.1f, vec2(100.0f, 20.0f), 4.6f, 0.0f, 2);
+	const auto Right = RightBody.Update(0.1f, vec2(100.0f, 20.0f), 0.0f, 4.6f, 2);
+	EXPECT_LT(Left.m_Pull, 0.0f);
+	EXPECT_GT(Right.m_Pull, 0.0f);
+	EXPECT_NEAR(Left.m_Pull, -Right.m_Pull, 0.0001f);
+	EXPECT_GT(Left.m_Stretch, 0.0f);
+	EXPECT_GT(Left.m_RippleStrength, 0.0f);
+
+	const auto AtReversal = LeftBody.Update(0.0f, vec2(100.0f, 20.0f), -4.6f, 0.0f, 2);
+	EXPECT_FLOAT_EQ(AtReversal.m_Pull, Left.m_Pull);
+	EXPECT_FLOAT_EQ(AtReversal.m_Stretch, Left.m_Stretch);
+	for(int i = 0; i < 30; ++i)
+		LeftBody.Update(1.0f / 60.0f, vec2(100.0f, 20.0f), -4.6f, 0.0f, 2);
+	EXPECT_GT(LeftBody.Pose().m_Pull, 0.0f);
+	EXPECT_LT(LeftBody.Pose().m_Stretch, 0.0f);
+}
+
+TEST(QmHudIslandSoftBody, WidthMotionCouplesStretchAndSqueezeWithoutMovingTheTop)
+{
+	CHudIslandSoftBody Growing;
+	CHudIslandSoftBody Shrinking;
+	Growing.Update(0.0f, vec2(100.0f, 20.0f), 0.0f, 0.0f, 2);
+	Shrinking.Update(0.0f, vec2(120.0f, 20.0f), 0.0f, 0.0f, 2);
+	const CUIRect Layout = {50.0f, 0.0f, 120.0f, 20.0f};
+	const auto Expanded = Growing.Update(0.1f, vec2(120.0f, 20.0f), 0.0f, 0.0f, 2).ShellRect(Layout);
+	const auto Contracted = Shrinking.Update(0.1f, vec2(100.0f, 20.0f), 0.0f, 0.0f, 2).ShellRect(Layout);
+	EXPECT_GT(Expanded.w, Layout.w);
+	EXPECT_LT(Expanded.h, Layout.h);
+	EXPECT_LT(Contracted.w, Layout.w);
+	EXPECT_GT(Contracted.h, Layout.h);
+	EXPECT_FLOAT_EQ(Expanded.y, Layout.y);
+	EXPECT_FLOAT_EQ(Contracted.y, Layout.y);
+	EXPECT_NEAR(Expanded.x + Expanded.w * 0.5f, Layout.x + Layout.w * 0.5f, 0.0001f);
+}
+
+TEST(QmHudIslandSoftBody, ReleasedShellReboundsThenSettlesExactly)
+{
+	CHudIslandSoftBody Body;
+	Body.Update(0.0f, vec2(100.0f, 20.0f), 0.0f, 0.0f, 2);
+	Body.Update(0.2f, vec2(100.0f, 20.0f), 4.6f, 0.0f, 2);
+	bool Rebounded = false;
+	for(int i = 0; i < 240; ++i)
+	{
+		const auto Pose = Body.Update(1.0f / 60.0f, vec2(100.0f, 20.0f), 0.0f, 0.0f, 2);
+		Rebounded |= Pose.m_Stretch < 0.0f;
+	}
+	EXPECT_TRUE(Rebounded);
+	EXPECT_FLOAT_EQ(Body.Pose().m_Stretch, 0.0f);
+	EXPECT_FLOAT_EQ(Body.Pose().m_Pull, 0.0f);
+	EXPECT_FLOAT_EQ(Body.Pose().m_RippleStrength, 0.0f);
+}
+
+TEST(QmHudIslandSoftBody, MotionOffClearsFeedbackAndReenableDoesNotReplayIt)
+{
+	CHudIslandSoftBody Body;
+	Body.Update(0.0f, vec2(100.0f, 20.0f), 0.0f, 0.0f, 2);
+	Body.Update(0.1f, vec2(100.0f, 20.0f), 4.6f, 0.0f, 2);
+	const auto Disabled = Body.Update(0.0f, vec2(140.0f, 20.0f), 4.6f, 0.0f, 0);
+	EXPECT_FLOAT_EQ(Disabled.m_Stretch, 0.0f);
+	EXPECT_FLOAT_EQ(Disabled.m_Pull, 0.0f);
+	EXPECT_FLOAT_EQ(Disabled.m_RippleStrength, 0.0f);
+	const auto Enabled = Body.Update(0.1f, vec2(140.0f, 20.0f), 0.0f, 0.0f, 2);
+	EXPECT_FLOAT_EQ(Enabled.m_Stretch, 0.0f);
+	EXPECT_FLOAT_EQ(Enabled.m_RippleStrength, 0.0f);
+}
+
+TEST(QmHudIslandSoftBody, ReducedMotionUsesSmallerDeformationAndClearsRipples)
+{
+	CHudIslandSoftBody Full;
+	CHudIslandSoftBody Reduced;
+	Full.Update(0.0f, vec2(100.0f, 20.0f), 0.0f, 0.0f, 2);
+	Reduced.Update(0.0f, vec2(100.0f, 20.0f), 0.0f, 0.0f, 1);
+	const auto FullPose = Full.Update(0.1f, vec2(100.0f, 20.0f), 4.6f, 0.0f, 2);
+	const auto ReducedPose = Reduced.Update(0.1f, vec2(100.0f, 20.0f), 4.6f, 0.0f, 1);
+	EXPECT_LT(std::abs(ReducedPose.m_Pull), std::abs(FullPose.m_Pull));
+	EXPECT_FLOAT_EQ(ReducedPose.m_RippleStrength, 0.0f);
+	EXPECT_FLOAT_EQ(Full.Update(0.0f, vec2(100.0f, 20.0f), 4.6f, 0.0f, 1).m_RippleStrength, 0.0f);
+}
+
+TEST(QmHudIslandSoftBody, LongGapAndClockRewindDiscardStaleMotion)
+{
+	for(const float Gap : {1.0f, -0.1f})
+	{
+		CHudIslandSoftBody Body;
+		Body.Update(0.0f, vec2(100.0f, 20.0f), 0.0f, 0.0f, 2);
+		Body.Update(0.1f, vec2(120.0f, 20.0f), 4.6f, 0.0f, 2);
+		const auto ResetPose = Body.Update(Gap, vec2(160.0f, 20.0f), 4.6f, 0.0f, 2);
+		EXPECT_FLOAT_EQ(ResetPose.m_Stretch, 0.0f);
+		EXPECT_FLOAT_EQ(ResetPose.m_RippleStrength, 0.0f);
+		EXPECT_FLOAT_EQ(Body.Update(0.1f, vec2(160.0f, 20.0f), 0.0f, 0.0f, 2).m_Stretch, 0.0f);
+	}
+}
+
+TEST(QmHudIslandSoftBody, RepeatedRenderDoesNotConsumeSizeMotion)
+{
+	CHudIslandSoftBody Body;
+	Body.Update(0.0f, vec2(100.0f, 20.0f), 0.0f, 0.0f, 2);
+	const auto Repeated = Body.Update(0.0f, vec2(120.0f, 20.0f), 0.0f, 0.0f, 2);
+	EXPECT_FLOAT_EQ(Repeated.m_Stretch, 0.0f);
+	EXPECT_GT(Body.Update(0.1f, vec2(120.0f, 20.0f), 0.0f, 0.0f, 2).m_Stretch, 0.0f);
+}
+
+TEST(QmHudIslandSoftBody, SameMotionAtDifferentFrameRatesKeepsTheSameResponse)
+{
+	std::array<CHudIslandSoftBody, 2> aBodies;
+	const std::array<int, 2> aRates = {60, 240};
+	for(size_t i = 0; i < aBodies.size(); ++i)
+	{
+		aBodies[i].Update(0.0f, vec2(100.0f, 20.0f), 0.0f, 0.0f, 2);
+		for(int Frame = 0; Frame < aRates[i] / 4; ++Frame)
+			aBodies[i].Update(1.0f / aRates[i], vec2(100.0f, 20.0f), 4.6f, 0.0f, 2);
+	}
+	EXPECT_NEAR(aBodies[0].Pose().m_Pull, aBodies[1].Pose().m_Pull, 0.0001f);
+	EXPECT_NEAR(aBodies[0].Pose().m_Stretch, aBodies[1].Pose().m_Stretch, 0.0001f);
+	EXPECT_NEAR(aBodies[0].Pose().m_RippleStrength, aBodies[1].Pose().m_RippleStrength, 0.0001f);
+	EXPECT_NEAR(aBodies[0].Pose().m_RipplePhase, aBodies[1].Pose().m_RipplePhase, 0.0001f);
+}
+
+TEST(QmHudIslandSoftBody, RepeatedLargeInputsKeepShellAndRippleSmall)
+{
+	CHudIslandSoftBody Body;
+	const CUIRect Layout = {20.0f, 0.0f, 100.0f, 20.0f};
+	for(int i = 0; i < 120; ++i)
+	{
+		const float Direction = (i / 10) % 2 == 0 ? 1.0f : -1.0f;
+		const auto Pose = Body.Update(1.0f / 60.0f, vec2(100.0f, 20.0f), Direction * 100.0f, Direction * 100.0f, 2);
+		const CUIRect Shell = Pose.ShellRect(Layout);
+		EXPECT_NEAR(Shell.w, Layout.w, 1.21f);
+		EXPECT_NEAR(Shell.h, Layout.h, 0.51f);
+		EXPECT_GE(Pose.RippleAmplitude(Layout, 0.25f), 0.0f);
+		EXPECT_LE(Pose.RippleAmplitude(Layout, 0.25f), 0.25f * 0.7f);
+	}
 }
