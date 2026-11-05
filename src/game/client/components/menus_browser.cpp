@@ -3187,178 +3187,149 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 {
 	const CServerInfo *pSelectedServer = ServerBrowser()->SortedGet(m_SelectedIndex);
 
-	const float RowHeight = 18.0f;
-	const float FontSize = (RowHeight - 4.0f) * CUi::ms_FontmodHeight; // based on DoButton_CheckBox
+	// 与筛选页共用胶囊开关的绘制入口、字号、行高和间距。
+	SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(Ui()->Screen()->w);
+	Metrics.m_LineHeight = 18.0f;
+	Metrics.m_BodySize = 14.0f * CUi::ms_FontmodHeight;
+	Metrics.m_LineSpacing = 3.0f;
+	Metrics.m_SectionGap = 6.0f;
+	View.Margin(5.0f, &View);
+	View.VSplitRight(std::min(5.0f, View.w), &View, nullptr);
+	View.HSplitTop(ui_token::spacing::MD, nullptr, &View);
+	if(!pSelectedServer)
+	{
+		View.h = std::min(View.h, 5.0f * Metrics.m_LineHeight);
+		Ui()->DoLabel(&View, Localize("No server selected"), Metrics.m_BodySize, TEXTALIGN_MC);
+		return;
+	}
 
-	CUIRect ServerDetails, Scoreboard;
-	// 暴露 IP 行的高度由动画进度驱动：0 → RowHeight 时信息块整体长高，
-	// 下方的复制按钮与服务器列表随之平滑下移让位（不是把上方内容顶上去）。
+	const bool WasFavorite = pSelectedServer->m_Favorite != TRISTATE::NONE;
 	static float s_ExposeRowAnim = 0.0f;
 	{
-		const bool FavoritedNow = ServerBrowser()->SortedGet(m_SelectedIndex) != nullptr && ServerBrowser()->SortedGet(m_SelectedIndex)->m_Favorite != TRISTATE::NONE;
 		static int64_t s_ExposeLastTick = 0;
 		const int64_t ExposeNow = time_get();
 		const int64_t ExposeFreq = maximum<int64_t>(1, time_freq());
 		const float ExposeDt = s_ExposeLastTick == 0 ? 0.0f : std::clamp((float)(ExposeNow - s_ExposeLastTick) / (float)ExposeFreq, 0.0f, 0.1f);
 		s_ExposeLastTick = ExposeNow;
-		const float Target = FavoritedNow ? 1.0f : 0.0f;
+		const float Target = WasFavorite ? 1.0f : 0.0f;
 		const float Step = (g_Config.m_QmUiMotionLevel > 0 ? 1.0f / 0.15f : 1000.0f) * ExposeDt;
 		s_ExposeRowAnim = std::clamp(s_ExposeRowAnim + std::clamp(Target - s_ExposeRowAnim, -Step, Step), 0.0f, 1.0f);
 	}
-	const float InfoBlockHeight = 4.0f * 15.0f + RowHeight * (1.0f + s_ExposeRowAnim) + 2.0f * 5.0f + 2.0f * 2.0f;
-	View.HSplitTop(InfoBlockHeight, &ServerDetails, &Scoreboard);
 
-	if(pSelectedServer)
+	const char *apLabels[] = {Localize("Version"), Localize("Game type"), Localize("Ping")};
+	float LabelWidth = 0.0f;
+	for(const char *pLabel : apLabels)
+		LabelWidth = std::max(LabelWidth, TextRender()->TextWidth(Metrics.m_BodySize, pLabel));
+	LabelWidth = std::min(LabelWidth + Metrics.m_LineSpacing, View.w * 0.45f);
+	const auto DrawInfoRow = [&](const char *pLabel, const char *pValue, SLabelProperties ValueProps = {}) {
+		CUIRect Row, Label, Value;
+		View.HSplitTop(Metrics.m_LineHeight, &Row, &View);
+		View.HSplitTop(Metrics.m_LineSpacing, nullptr, &View);
+		Row.VSplitLeft(LabelWidth, &Label, &Value);
+		Value.VSplitLeft(std::min(Metrics.m_SectionGap, Value.w), nullptr, &Value);
+		SLabelProperties LabelProps;
+		LabelProps.m_MaxWidth = Label.w;
+		LabelProps.m_EllipsisAtEnd = true;
+		Ui()->DoLabel(&Label, pLabel, Metrics.m_BodySize, TEXTALIGN_ML, LabelProps);
+		ValueProps.m_MaxWidth = Value.w;
+		ValueProps.m_EllipsisAtEnd = true;
+		Ui()->DoLabel(&Value, pValue, Metrics.m_BodySize, TEXTALIGN_MR, ValueProps);
+	};
+	DrawInfoRow(apLabels[0], pSelectedServer->m_aVersion);
+	SLabelProperties GameTypeLabelProps;
+	if(g_Config.m_UiColorizeGametype)
+		GameTypeLabelProps.SetColor(pSelectedServer->m_GametypeColor);
+	DrawInfoRow(apLabels[1], pSelectedServer->m_aGameType, GameTypeLabelProps);
+	SLabelProperties PingLabelProps;
+	if(g_Config.m_UiColorizePing)
+		PingLabelProps.SetColor(GetServerListPingColor(pSelectedServer, ServerBrowser()->GetCurrentClientLocation()));
+	char aPingLabel[8];
+	FormatServerbrowserPing(aPingLabel, pSelectedServer);
+	DrawInfoRow(apLabels[2], aPingLabel, PingLabelProps);
+	View.HSplitTop(Metrics.m_SectionGap, nullptr, &View);
+
+	// 开关占满内容宽度；长译文按同一标签内边距测量，避免挤入下一行控件。
+	const auto ToggleHeight = [&](const char *pLabel) {
+		const float PaddingX = std::max(Metrics.m_LineSpacing, Metrics.m_BodySize * 0.5f);
+		const float PaddingY = Metrics.m_LineSpacing * 0.5f;
+		const float IndicatorWidth = Metrics.m_BodySize + Metrics.m_LineSpacing;
+		const CUIRect Label = ResolveSettingsToggleButtonLabel(View, PaddingX, PaddingY, IndicatorWidth);
+		const float LabelHeight = TextRender()->TextBoundingBox(Metrics.m_BodySize, pLabel, -1, std::max(1.0f, Label.w)).m_H;
+		return ResolveSettingsToggleButtonSize(0.0f, LabelHeight, Metrics.m_LineHeight, PaddingX, PaddingY).m_Height;
+	};
+	CUIRect Button;
+	static int s_AddFavButton = 0;
+	int Favorite = WasFavorite;
+	SSettingsToggleEntry FavoriteEntry{&Favorite, "Favorite", Localize("Favorite"), &s_AddFavButton};
+	FavoriteEntry.m_ShowCheckmark = true;
+	View.HSplitTop(ToggleHeight(FavoriteEntry.m_pLabel), &Button, &View);
+	if(DoSettingsToggleButton(-1, -1, -1, Button, FavoriteEntry, Metrics))
 	{
-		ServerDetails.Margin(5.0f, &ServerDetails);
-
-		// 三行信息（版本/游戏模式/延迟）的高度：块内剩余空间不足时按均分收缩，避免压行。
-		const float InfoRowHeight = std::max(11.0f, std::min(15.0f, std::max(0.0f, ServerDetails.h - RowHeight * (1.0f + s_ExposeRowAnim) - 19.0f) / 3.0f));
-
-		// copy info button
+		if(Favorite)
 		{
-			CUIRect Button;
-			ServerDetails.HSplitBottom(15.0f, &ServerDetails, &Button);
-			static CButtonContainer s_CopyButton;
-			if(DoButton_Menu(&s_CopyButton, Localize("Copy info"), 0, &Button))
-			{
-				char aInfo[512];
-				str_format(
-					aInfo,
-					sizeof(aInfo),
-					"%s\n"
-					"Address: ddnet://%s\n"
-					"Map: %s\n",
-					pSelectedServer->m_aName,
-					pSelectedServer->m_aAddress,
-					pSelectedServer->m_aMap);
-				Input()->SetClipboardText(aInfo);
-			}
+			Favorites()->Add(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses);
+			// 列表星标据此播一次进场；表只活到那一行被渲染为止。
+			if(gs_FavoriteStarGrowPending.size() >= 64)
+				gs_FavoriteStarGrowPending.clear();
+			gs_FavoriteStarGrowPending.insert(pSelectedServer->m_aAddress);
+			if(g_Config.m_UiPage == PAGE_LAN)
+				Favorites()->AllowPing(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses, true);
 		}
-
-		// favorite toggle + expose IP toggle
+		else
 		{
-			// 暴露 IP 单独一行，仅在已收藏时出现：行高按 0→RowHeight 过渡，
-			// 上方信息行随之平滑上移，而不是瞬间让位。
-			static int s_LeakIpButton = 0;
-			// 收藏行固定在 3 行信息之下，不随暴露 IP 行出现而上移；
-			// 让位方向是向下：复制按钮与服务器列表跟着块高增长一起下移。
-			CUIRect ButtonAddFav = ServerDetails;
-			ButtonAddFav.y += 3.0f * InfoRowHeight + 2.0f;
-			ButtonAddFav.h = RowHeight;
-			CUIRect ButtonExpose{};
-			if(s_ExposeRowAnim > 0.01f)
+			Favorites()->Remove(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses);
+		}
+		Client()->ServerBrowserUpdate();
+	}
+
+	// 保留收藏后向下展开的过渡，复制按钮与玩家列表随实际行高让位。
+	if(s_ExposeRowAnim > 0.0f)
+	{
+		static int s_LeakIpButton = 0;
+		int ExposeIp = pSelectedServer->m_FavoriteAllowPing != TRISTATE::NONE;
+		SSettingsToggleEntry ExposeEntry{&ExposeIp, "Leak IP", Localize("Leak IP"), &s_LeakIpButton};
+		ExposeEntry.m_pTooltip = Localize("Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process");
+		ExposeEntry.m_ShowCheckmark = true;
+		const float Height = ToggleHeight(ExposeEntry.m_pLabel);
+		View.HSplitTop(Metrics.m_LineSpacing * s_ExposeRowAnim, nullptr, &View);
+		View.HSplitTop(Height * s_ExposeRowAnim, &Button, &View);
+		if(Button.h > 2.0f)
+		{
+			const float Eased = s_ExposeRowAnim * s_ExposeRowAnim * (3.0f - 2.0f * s_ExposeRowAnim);
+			CUiScopedControlAlphaScale ExposeAlpha(Ui(), Eased);
+			const CUIRect Clip = Button;
+			Ui()->ClipEnable(&Clip);
+			Button.h = Height;
+			if(DoSettingsToggleButton(-1, -1, -1, Button, ExposeEntry, Metrics, Favorite != 0))
 			{
-				ButtonExpose = ButtonAddFav;
-				ButtonExpose.y += RowHeight + 2.0f;
-				ButtonExpose.h = RowHeight * s_ExposeRowAnim;
-			}
-			CUIRect Row = ButtonAddFav;
-			static int s_AddFavButton = 0;
-			bool Favorite = pSelectedServer->m_Favorite != TRISTATE::NONE;
-			CUIRect Toggle;
-			const float ToggleWidth = std::min(30.0f, Row.w * 0.3f);
-			Row.VSplitRight(ToggleWidth, &Row, &Toggle);
-			Row.VSplitRight(6.0f, &Row, nullptr);
-			CUIRect Label = Row;
-			SLabelProperties FavLabelProps;
-			FavLabelProps.m_MaxWidth = Label.w;
-			FavLabelProps.m_EllipsisAtEnd = true;
-			FavLabelProps.m_MinimumFontSize = 9.0f;
-			char aFavoriteServer[64];
-			str_format(aFavoriteServer, sizeof(aFavoriteServer), "%s%s", Localize("Favorite"), Localize("Server"));
-			Ui()->DoLabel(&Label, aFavoriteServer, FontSize, TEXTALIGN_ML, FavLabelProps);
-			if(ui_widget::Toggle(SettingsUiContext("server_browser_info_favorite"), &s_AddFavButton, &Favorite, Toggle))
-			{
-				if(Favorite)
-				{
-					Favorites()->Add(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses);
-					// 列表星标据此播一次进场；表只活到那一行被渲染为止。
-					if(gs_FavoriteStarGrowPending.size() >= 64)
-						gs_FavoriteStarGrowPending.clear();
-					gs_FavoriteStarGrowPending.insert(pSelectedServer->m_aAddress);
-					if(g_Config.m_UiPage == PAGE_LAN)
-					{
-						Favorites()->AllowPing(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses, true);
-					}
-				}
-				else
-				{
-					Favorites()->Remove(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses);
-				}
+				Favorites()->AllowPing(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses, ExposeIp != 0);
 				Client()->ServerBrowserUpdate();
 			}
-			// 暴露 IP：与收藏同为开关行，贴右缘；只在收藏行出现时才有内容。
-			if(ButtonExpose.h > 2.0f)
-			{
-				// 缩放 0.85→1、下移 4px→0、淡入，配合信息块长高一起出现。
-				const float Eased = s_ExposeRowAnim * s_ExposeRowAnim * (3.0f - 2.0f * s_ExposeRowAnim);
-				const float AppearScale = 0.85f + 0.15f * Eased;
-				const float AppearW = ButtonExpose.w * AppearScale, AppearH = ButtonExpose.h * AppearScale;
-				ButtonExpose = CUIRect{
-					ButtonExpose.x + (ButtonExpose.w - AppearW) * 0.5f,
-					ButtonExpose.y + (ButtonExpose.h - AppearH) * 0.5f + (1.0f - Eased) * 4.0f,
-					AppearW,
-					AppearH};
-				CUiScopedControlAlphaScale ExposeAlpha(Ui(), Eased);
-				CUIRect Label = ButtonExpose, ExposeToggle;
-				const float ToggleWidth = std::min(30.0f, ButtonExpose.w * 0.3f);
-				Label.VSplitRight(ToggleWidth, &Label, &ExposeToggle);
-				Label.VSplitRight(6.0f, &Label, nullptr);
-				SLabelProperties ExposeLabelProps;
-				ExposeLabelProps.m_MaxWidth = Label.w;
-				ExposeLabelProps.m_EllipsisAtEnd = true;
-				ExposeLabelProps.m_MinimumFontSize = 9.0f;
-				Ui()->DoLabel(&Label, Localize("Leak IP"), FontSize, TEXTALIGN_ML, ExposeLabelProps);
-				GameClient()->m_Tooltips.DoToolTip(&s_LeakIpButton, &ButtonExpose, Localize("Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process"));
-				bool ExposeIp = pSelectedServer->m_FavoriteAllowPing != TRISTATE::NONE;
-				if(ui_widget::Toggle(SettingsUiContext("server_browser_info_leak_ip"), &s_LeakIpButton, &ExposeIp, ExposeToggle))
-				{
-					Favorites()->AllowPing(pSelectedServer->m_aAddresses, pSelectedServer->m_NumAddresses, ExposeIp);
-					Client()->ServerBrowserUpdate();
-				}
-			}
+			Ui()->ClipDisable();
 		}
-
-		CUIRect LeftColumn, RightColumn, Row;
-		ServerDetails.VSplitLeft(80.0f, &LeftColumn, &RightColumn);
-
-		LeftColumn.HSplitTop(InfoRowHeight, &Row, &LeftColumn);
-		Ui()->DoLabel(&Row, Localize("Version"), FontSize, TEXTALIGN_ML);
-
-		RightColumn.HSplitTop(InfoRowHeight, &Row, &RightColumn);
-		Ui()->DoLabel(&Row, pSelectedServer->m_aVersion, FontSize, TEXTALIGN_ML);
-
-		LeftColumn.HSplitTop(InfoRowHeight, &Row, &LeftColumn);
-		Ui()->DoLabel(&Row, Localize("Game type"), FontSize, TEXTALIGN_ML);
-
-		SLabelProperties GameTypeLabelProps;
-		if(g_Config.m_UiColorizeGametype)
-		{
-			GameTypeLabelProps.SetColor(pSelectedServer->m_GametypeColor);
-		}
-		RightColumn.HSplitTop(InfoRowHeight, &Row, &RightColumn);
-		Ui()->DoLabel(&Row, pSelectedServer->m_aGameType, FontSize, TEXTALIGN_ML, GameTypeLabelProps);
-
-		LeftColumn.HSplitTop(InfoRowHeight, &Row, &LeftColumn);
-		Ui()->DoLabel(&Row, Localize("Ping"), FontSize, TEXTALIGN_ML);
-
-		SLabelProperties PingLabelProps;
-		if(g_Config.m_UiColorizePing)
-		{
-			PingLabelProps.SetColor(GetServerListPingColor(pSelectedServer, ServerBrowser()->GetCurrentClientLocation()));
-		}
-		char aPingLabel[8];
-		FormatServerbrowserPing(aPingLabel, pSelectedServer);
-		RightColumn.HSplitTop(InfoRowHeight, &Row, &RightColumn);
-		Ui()->DoLabel(&Row, aPingLabel, FontSize, TEXTALIGN_ML, PingLabelProps);
-
-		RenderServerbrowserInfoScoreboard(Scoreboard, pSelectedServer);
 	}
-	else
+
+	View.HSplitTop(Metrics.m_SectionGap, nullptr, &View);
+	View.HSplitTop(Metrics.m_LineHeight, &Button, &View);
+	static CButtonContainer s_CopyButton;
+	if(DoButton_Menu(&s_CopyButton, Localize("Copy info"), 0, &Button))
 	{
-		Ui()->DoLabel(&ServerDetails, Localize("No server selected"), FontSize, TEXTALIGN_MC);
+		char aInfo[512];
+		str_format(aInfo, sizeof(aInfo),
+			"%s\n"
+			"Address: ddnet://%s\n"
+			"Map: %s\n",
+			pSelectedServer->m_aName,
+			pSelectedServer->m_aAddress,
+			pSelectedServer->m_aMap);
+		Input()->SetClipboardText(aInfo);
 	}
+	View.HSplitTop(Metrics.m_SectionGap, nullptr, &View);
+	// 玩家列表内部自带左侧间距和滚动条，将外框还原到工具箱边缘。
+	View.x -= 5.0f;
+	View.w += 15.0f;
+	View.h = std::max(0.0f, View.h);
+	RenderServerbrowserInfoScoreboard(View, pSelectedServer);
 }
 
 void CMenus::RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *pSelectedServer)
