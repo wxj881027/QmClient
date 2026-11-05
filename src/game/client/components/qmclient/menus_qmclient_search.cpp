@@ -1,5 +1,6 @@
 #include "menus_qmclient_internal.h"
 
+#include <base/secure.h>
 #include <base/str.h>
 
 #include <engine/graphics.h>
@@ -45,7 +46,7 @@ namespace
 	void CollectGlobalSearchResults(const char *pSearch, bool Sixup, const qm_card_order::CModel &Model, SQmGlobalSearchResults &Out)
 	{
 		Out.m_vAllVisibleCards.clear();
-		// 无搜索内容时结果为空：搜索页默认只显示搜索输入卡片，不展示全量卡片。
+		// 无搜索内容时结果为空：搜索页显示标题与输入卡片，不展示全量卡片。
 		if(pSearch == nullptr || pSearch[0] == '\0')
 			return;
 		std::vector<SQmGlobalSearchCard> vCards = qm_card_registry::SearchCards(pSearch, Model);
@@ -78,6 +79,8 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	const float LineSpacing = Metrics.m_LineSpacing;
 	const SSettingsPageLayoutFrame Page = SettingsPageLayout(MainView, UiScale);
 	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();
+	if(!ReadOnly && !Ui()->DrawingSuppressed() && m_GlobalSearchHeaderSession.NeedsEntry(m_SettingsCardDeckDisplayCycle))
+		m_GlobalSearchHeaderSession.Enter(m_SettingsCardDeckDisplayCycle, secure_rand_below(m_GlobalSearchHeaderSession.ChoiceCount()));
 	IUiContext SearchCtx = SettingsUiContext("settings_global_search", UiScale);
 	if(ReadOnly)
 	{
@@ -327,14 +330,20 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	const float InputContentHeight = s_GlobalSearchInputCollapsed ? 0.0f : 2.0f * LineHeight + LineSpacing;
 	const SSettingsCardSpec InputSpec{"deck:global-search-input", Localize("Feature Search"), qm_card_registry::ResolveLocalizedDescription("deck:global-search-input")};
 	const float InputChromeHeight = BuildSettingsCardFrame({0.0f, 0.0f, Page.m_ContentViewport.w, 0.0f}, InputSpec, InputContentHeight, UiScale).m_Rect.h;
-	const float CenteredOffsetY = std::max(0.0f, (Page.m_ContentViewport.h - InputChromeHeight) * 0.5f);
-	const float TargetOffsetY = HasSearchQuery ? 0.0f : CenteredOffsetY;
+	const auto HeaderLayout = qm_search_header::Layout(Page.m_ContentViewport, InputChromeHeight, UiScale, HasSearchQuery);
+	const float TargetOffsetY = HeaderLayout.m_InputOffsetY;
 	float InputOffsetY = TargetOffsetY;
 	CUiV2AnimationRuntime *pSearchAnimRuntime = ReadOnly ? nullptr : &GameClient()->UiRuntimeV2()->AnimRuntime();
 	if(pSearchAnimRuntime != nullptr)
 	{
 		const uint64_t InputOffsetKey = BuildUiAnimNodeKey(str_quickhash("global-search"), str_quickhash("global-search-input-offset"));
 		InputOffsetY = ResolveUiAnimValue(*pSearchAnimRuntime, InputOffsetKey, EUiAnimProperty::POS_Y, TargetOffsetY, Motion.m_ReflowDuration, EEasing::EASE_OUT);
+	}
+	if(!HasSearchQuery)
+	{
+		Ui()->ClipEnable(&Page.m_ContentViewport);
+		qm_search_header::Render(Ui(), Graphics(), TextRender(), HeaderLayout, m_GlobalSearchHeaderSession.Text(), UiScale, InputOffsetY - TargetOffsetY);
+		Ui()->ClipDisable();
 	}
 	// 进入「搜索」页第一帧自动聚焦输入框：同时建立 ActiveItem 与 CLineInput 激活态，
 	// 之后由 DoEditBox 的激活维持逻辑接管；一次性消费，点击其他控件可正常移走焦点。
@@ -421,6 +430,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 void CMenus::ReleaseQmClientSettingsSearchInput()
 {
 	ReleaseSettingsSearchInput(Ui(), &m_GlobalCardSearchInput);
+	m_GlobalSearchHeaderSession.Leave();
 	// 离页和关闭菜单只释放输入焦点，查询及匹配缓存保留到用户清空或重启。
 	m_FocusSettingsSearchOnEntry = g_Config.m_UiSettingsPage == SETTINGS_SEARCH;
 }

@@ -1,0 +1,72 @@
+#include <game/client/QmUi/QmSearchHeader.h>
+
+#include <gtest/gtest.h>
+
+TEST(QmSearchHeader, RepeatedFramesKeepTheSameSplash)
+{
+	qm_search_header::CSession Session;
+	Session.Enter(1, 3);
+	const char *pFirst = Session.Text();
+	Session.Enter(1, 8);
+	EXPECT_STREQ(Session.Text(), pFirst);
+	EXPECT_FALSE(Session.NeedsEntry(1));
+}
+
+TEST(QmSearchHeader, NewDisplayCycleExcludesPreviousSplash)
+{
+	for(int Choice = 0; Choice < qm_search_header::NUM_SPLASHES; ++Choice)
+	{
+		qm_search_header::CSession Session;
+		Session.Enter(1, Choice);
+		const char *pFirst = Session.Text();
+		Session.Enter(2, Choice);
+		EXPECT_STRNE(Session.Text(), pFirst) << Choice;
+	}
+}
+
+TEST(QmSearchHeader, ClosingAndReopeningChangesSplashEvenInSameCycle)
+{
+	qm_search_header::CSession Session;
+	Session.Enter(1, 0);
+	const char *pFirst = Session.Text();
+	Session.Leave();
+	EXPECT_TRUE(Session.NeedsEntry(1));
+	Session.Enter(1, 0);
+	EXPECT_STRNE(Session.Text(), pFirst);
+}
+
+TEST(QmSearchHeader, QueryRemovesHeaderAndPlacesInputAtTop)
+{
+	const auto Layout = qm_search_header::Layout({20.0f, 30.0f, 600.0f, 400.0f}, 100.0f, 1.0f, true);
+	EXPECT_FLOAT_EQ(Layout.m_Logo.h, 0.0f);
+	EXPECT_FLOAT_EQ(Layout.m_Subtitle.h, 0.0f);
+	EXPECT_FLOAT_EQ(Layout.m_InputOffsetY, 0.0f);
+}
+
+TEST(QmSearchHeader, EmptySearchCentersTheCompleteGroup)
+{
+	const CUIRect Viewport{20.0f, 30.0f, 600.0f, 400.0f};
+	const auto Layout = qm_search_header::Layout(Viewport, 100.0f, 1.0f, false);
+	EXPECT_FLOAT_EQ(Layout.m_Logo.x + Layout.m_Logo.w * 0.5f, Viewport.x + Viewport.w * 0.5f);
+	EXPECT_NEAR(Layout.m_Logo.y - Viewport.y, Viewport.h - Layout.m_InputOffsetY - 100.0f, 0.001f);
+	EXPECT_LT(Layout.m_Logo.y + Layout.m_Logo.h, Layout.m_Subtitle.y);
+	EXPECT_LT(Layout.m_Subtitle.y + Layout.m_Subtitle.h, Viewport.y + Layout.m_InputOffsetY);
+}
+
+TEST(QmSearchHeader, SmallViewportAndLargeScaleKeepHeaderInsideViewport)
+{
+	const CUIRect Viewport{20.0f, 30.0f, 180.0f, 260.0f};
+	const auto Layout = qm_search_header::Layout(Viewport, 120.0f, 2.0f, false);
+	EXPECT_GT(Layout.m_Logo.h, 0.0f);
+	EXPECT_GE(Layout.m_Logo.x, Viewport.x);
+	EXPECT_GE(Layout.m_Logo.y, Viewport.y);
+	EXPECT_LE(Layout.m_Logo.x + Layout.m_Logo.w, Viewport.x + Viewport.w);
+	EXPECT_LE(Layout.m_InputOffsetY + 120.0f, Viewport.h);
+}
+
+TEST(QmSearchHeader, VeryShortViewportReservesSpaceForInput)
+{
+	const auto Layout = qm_search_header::Layout({0.0f, 0.0f, 200.0f, 130.0f}, 100.0f, 1.0f, false);
+	EXPECT_FLOAT_EQ(Layout.m_Logo.h, 0.0f);
+	EXPECT_FLOAT_EQ(Layout.m_InputOffsetY, 15.0f);
+}

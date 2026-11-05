@@ -27,6 +27,7 @@
 #include <game/client/QmUi/QmLocalizedLabels.h>
 #include <game/client/QmUi/QmPlayersMenu.h>
 #include <game/client/QmUi/QmScroll.h>
+#include <game/client/QmUi/QmSearchHeader.h>
 #include <game/client/QmUi/QmSeasonalSidebar.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/QmVoteMenu.h>
@@ -2776,6 +2777,7 @@ public:
 	int m_TClientSettingsTab = 0;
 	int m_AppearanceSettingsTab = APPEARANCE_TAB_HUD;
 	CLineInputBuffered<128> m_GlobalCardSearchInput;
+	qm_search_header::CSession m_GlobalSearchHeaderSession;
 	// 进入「搜索」设置页时自动聚焦输入框的一次性请求标志（渲染侧消费）。
 	bool m_FocusSettingsSearchOnEntry = false;
 	void ReleaseQmClientSettingsSearchInput();

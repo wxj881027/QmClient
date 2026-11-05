@@ -2241,6 +2241,7 @@ set(EXPECTED_DATA
   qmclient/chat_emojis/surrender.webp
   qmclient/developer_badge.png
   qmclient/gui_logo.png
+  qmclient/search_logo.png
   qmclient/map_difficulty.sql
   qmclient/title_badges/logo_sdf.png
   qmclient/ui/password_icon_bold.png
@@ -3326,6 +3327,8 @@ if(CLIENT)
     QmUi/QmCardOrderModel.h
     QmUi/QmCardRegistry.cpp
     QmUi/QmCardRegistry.h
+    QmUi/QmSearchHeader.cpp
+    QmUi/QmSearchHeader.h
     QmUi/QmCardWiki.cpp
     QmUi/QmCardWiki.h
     QmUi/QmCardWikiPanel.cpp
@@ -4823,6 +4826,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_chat_gradient_test.cpp
     src/test/unit/qmclient/ui/qm_card_order_model_test.cpp
     src/test/unit/qmclient/ui/qm_card_registry_test.cpp
+    src/test/unit/qmclient/settings/qm_search_header_test.cpp
     src/test/unit/qmclient/ui/qm_interaction_source_test.cpp
     src/test/unit/qmclient/ui/qm_console_ui_layout_test.cpp
     src/test/unit/qmclient/ui/qm_console_settings_layout_test.cpp
