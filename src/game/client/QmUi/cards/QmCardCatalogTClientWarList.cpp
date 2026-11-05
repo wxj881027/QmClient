@@ -186,7 +186,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		{
 			ui_widget::InputField(TClientWarListEntriesSearchCtx, &s_EntriesFilterInput, EntriesSearch, FontSize, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
 		}
-		if(!Flow.Control("tclient-warlist-entries-list", WarListViewportRows * ListRowHeight, EntriesList))
+		if(!Flow.Control("tclient-warlist-entries-list", std::clamp((int)GameClient()->m_WarList.m_vWarEntries.size(), 2, WarListViewportRows) * ListRowHeight, EntriesList))
 			return;
 		static std::vector<CWarEntry *> s_vFilteredEntries;
 		static char s_aCachedEntriesFilter[128] = "";
@@ -372,24 +372,44 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		if(Flow.Control("tclient-warlist-entry-actions", WarListMetrics.m_ButtonHeight, Button, MarginSmall))
 		{
 			static ui_widget::SSettingsActionGroupState s_EntryActionWidths;
-			const char *apLabels[] = {Localize("Override Entry"), Localize("Add Entry")};
-			const auto Actions = ui_widget::PrepareSettingsActionGroup(*Ui(), s_EntryActionWidths, Button, apLabels, std::size(apLabels), WarListMetrics);
-			ButtonL = Actions.m_aButtons[0];
-			ButtonR = Actions.m_aButtons[1];
-			if(DoButtonLineSize_Menu(&s_OverrideButton, Localize("Override Entry"), 0, &ButtonL, LineSize) && !ReadOnly && !Ui()->RenderOnly() && pSelectedEntry)
+			// 没选中条目时「覆盖」没有作用对象，直接不出现：只有「添加条目」占满整行。
+			// 选中后才拆成两半，主次由「有没有对象」决定，不靠颜色区分。
+			if(pSelectedEntry == nullptr)
 			{
-				if(pSelectedEntry && pSelectedType && (str_comp(s_aEntryName, "") != 0 || str_comp(s_aEntryClan, "") != 0))
+				static ui_widget::SSettingsActionGroupState s_EntryActionWidthsSingle;
+				const char *apSingleLabels[] = {Localize("Add Entry")};
+				const auto SingleActions = ui_widget::PrepareSettingsActionGroup(*Ui(), s_EntryActionWidthsSingle, Button, apSingleLabels, std::size(apSingleLabels), WarListMetrics);
+				if(DoButtonLineSize_Menu(&s_AddButton, Localize("Add Entry"), 0, &SingleActions.m_aButtons[0], LineSize) && !ReadOnly && !Ui()->RenderOnly())
 				{
-					const int Index = static_cast<int>(pSelectedEntry - GameClient()->m_WarList.m_vWarEntries.data());
-					GameClient()->m_WarList.UpdateWarEntry(Index, s_aEntryName, s_aEntryClan, s_aEntryReason, pSelectedType);
+					if(pSelectedType)
+					{
+						GameClient()->m_WarList.AddWarEntry(s_aEntryName, s_aEntryClan, s_aEntryReason, pSelectedType->m_aWarName);
+						pSelectedEntry = nullptr;
+					}
 				}
 			}
-			if(DoButtonLineSize_Menu(&s_AddButton, Localize("Add Entry"), 0, &ButtonR, LineSize) && !ReadOnly && !Ui()->RenderOnly())
+			else
 			{
-				if(pSelectedType)
+				static ui_widget::SSettingsActionGroupState s_EntryActionWidths;
+				const char *apLabels[] = {Localize("Add Entry"), Localize("Override Entry")};
+				const auto Actions = ui_widget::PrepareSettingsActionGroup(*Ui(), s_EntryActionWidths, Button, apLabels, std::size(apLabels), WarListMetrics);
+				ButtonL = Actions.m_aButtons[0];
+				ButtonR = Actions.m_aButtons[1];
+				if(DoButtonLineSize_Menu(&s_AddButton, Localize("Add Entry"), 0, &ButtonL, LineSize) && !ReadOnly && !Ui()->RenderOnly())
 				{
-					GameClient()->m_WarList.AddWarEntry(s_aEntryName, s_aEntryClan, s_aEntryReason, pSelectedType->m_aWarName);
-					pSelectedEntry = nullptr;
+					if(pSelectedType)
+					{
+						GameClient()->m_WarList.AddWarEntry(s_aEntryName, s_aEntryClan, s_aEntryReason, pSelectedType->m_aWarName);
+						pSelectedEntry = nullptr;
+					}
+				}
+				if(DoButtonLineSize_Menu(&s_OverrideButton, Localize("Override Entry"), 0, &ButtonR, LineSize) && !ReadOnly && !Ui()->RenderOnly() && pSelectedEntry)
+				{
+					if(pSelectedEntry && pSelectedType && (str_comp(s_aEntryName, "") != 0 || str_comp(s_aEntryClan, "") != 0))
+					{
+						const int Index = static_cast<int>(pSelectedEntry - GameClient()->m_WarList.m_vWarEntries.data());
+						GameClient()->m_WarList.UpdateWarEntry(Index, s_aEntryName, s_aEntryClan, s_aEntryReason, pSelectedType);
+					}
 				}
 			}
 		}
@@ -424,15 +444,15 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 	auto RenderSettings = [&](CUIRect &Column) {
 		CUIRect CheckBoxRect;
 		CSettingsContentLayoutFlow Flow(Column);
-		if(Flow.Control("tclient-warlist-allow-duplicates", LineSize, CheckBoxRect, MarginSmall))
-		{
-			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListAllowDuplicates, "tclient-warlist-allow-duplicates", Localize("Allow Duplicate Entries"), g_Config.m_QmWarListAllowDuplicates, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
-				g_Config.m_QmWarListAllowDuplicates ^= 1;
-		}
 		if(Flow.Control("tclient-warlist-enable", LineSize, CheckBoxRect, MarginSmall))
 		{
 			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarList, "tclient-warlist-enable", Localize("Enable warlist"), g_Config.m_QmWarList, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
 				g_Config.m_QmWarList ^= 1;
+		}
+		if(Flow.Control("tclient-warlist-allow-duplicates", LineSize, CheckBoxRect, MarginSmall))
+		{
+			if(DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListAllowDuplicates, "tclient-warlist-allow-duplicates", Localize("Allow Duplicate Entries"), g_Config.m_QmWarListAllowDuplicates, &CheckBoxRect) && !ReadOnly && !Ui()->RenderOnly())
+				g_Config.m_QmWarListAllowDuplicates ^= 1;
 		}
 		if(Flow.Control("tclient-warlist-block-enemies", LineSize, CheckBoxRect, MarginSmall))
 		{
@@ -471,7 +491,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		CUIRect WarTypeList, Button, ButtonL, ButtonR;
 		CSettingsContentLayoutFlow Flow(Column);
 		static CButtonContainer s_AddGroupButton, s_OverrideGroupButton, s_GroupColorPicker;
-		if(Flow.Control("tclient-warlist-groups-list", WarListViewportRows * ListRowHeight, WarTypeList))
+		if(Flow.Control("tclient-warlist-groups-list", std::clamp((int)GameClient()->m_WarList.m_WarTypes.size(), 2, WarListViewportRows) * ListRowHeight, WarTypeList))
 		{
 			m_pRemoveWarType = nullptr;
 			int SelectedOldType = -1;
@@ -511,9 +531,20 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 					if(DoButtonNoRect_QmIcon(&s_vTypeDeleteButtons[i], EQmIcon::TRASH, FONT_ICON_TRASH, 0, &DeleteButton, IGraphics::CORNER_ALL) && !ReadOnly && !Ui()->RenderOnly())
 						m_pRemoveWarType = pType;
 				}
-				TextRender()->TextColor(pType->m_Color);
-				DoTClientLabel(Ui(), &TypeRect, pType->m_aWarName, StandardFontSize, TEXTALIGN_ML);
-				TextRender()->TextColor(TextRender()->DefaultTextColor());
+				// 组色画成色块，名字回归正文色：纯色文字在色弱视角下等于没有信息，
+				// 而且组色一旦选了深色，名字自己也读不出来。
+				const float SwatchInset = std::min(ui_token::spacing::XS, TypeRect.h * 0.25f);
+				const float SwatchSize = std::max(0.0f, TypeRect.h - 2.0f * SwatchInset);
+				CUIRect Swatch, Label;
+				TypeRect.VSplitLeft(SwatchInset, nullptr, &Swatch);
+				Swatch.VSplitLeft(SwatchSize, &Swatch, &Label);
+				if(SwatchSize > 0.0f)
+				{
+					Swatch.HMargin(SwatchInset, &Swatch);
+					Swatch.Draw(pType->m_Color, IGraphics::CORNER_ALL, ui_token::radius::TIGHT);
+				}
+				Label.VSplitLeft(SwatchInset, nullptr, &Label);
+				DoTClientLabel(Ui(), &Label, pType->m_aWarName, StandardFontSize, TEXTALIGN_ML);
 			}
 
 			const int NewSelectedType = WarTypeListBox.DoEnd();
