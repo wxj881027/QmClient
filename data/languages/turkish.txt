@@ -794,6 +794,9 @@ Alias of poses_render
 Alias of poses_video
 == poses_video takma adı
 
+Alignment
+== Hizalama
+
 Alive notification color
 == Canlı bildirimi rengi
 
@@ -1072,9 +1075,6 @@ Apply to dummy
 
 Apply to player
 == Oyuncuya uygula
-
-Apply watermark
-== Filigranı uygula
 
 Applying overwrites your font, UI scale, animation and panel colors at once, so note the values you like first.
 == Uygulamak yazı tipi, UI ölçeği, animasyon ve panel renklerini birden ezer; hoşunuza giden değerleri önceden not edin.
@@ -1588,6 +1588,9 @@ Axiom website
 
 Axis
 == Eksen
+
+Back
+== Geri
 
 Backdrop blur
 == Arka plan bulanıklığı
@@ -2383,6 +2386,9 @@ Choose default eyes when joining a server
 
 Choose export name first.
 == Önce dışa aktarma adını seçin.
+
+Choose Logo (PNG / WebP)
+== Logo seç (PNG / WebP)
 
 Choose off, simple or full; the individual switches below only apply to full.
 == Kapalı, basit veya tam seçin; aşağıdaki ayrı anahtarlar yalnızca tam seçeneğinde geçerlidir.
@@ -4255,6 +4261,9 @@ Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use 
 
 Drag HUD modules with the left mouse button
 == HUD modüllerini sol fare tuşuyla sürükleyin
+
+Drag the selected watermark to move it. The original image is preserved.
+== Seçili filigranı sürükleyerek taşıyın. Orijinal görüntü korunur.
 
 Drag the three sliders; master scales the other two.
 == Üç kaydırıcıyı sürükleyin; ana ses diğer ikisini ölçekler.
@@ -9302,6 +9311,9 @@ No local servers found (ports %d-%d)
 No login required
 == Giriş gerekmez
 
+No Logo selected
+== Logo seçilmedi
+
 No map
 == Harita yok
 
@@ -10805,6 +10817,9 @@ Preview cut (P)
 Preview dummy nameplate
 == Dummy isim plakasını önizle
 
+Preview failed. Check the image and Logo, then retry.
+== Önizleme başarısız. Görüntüyü ve logoyu kontrol edip tekrar deneyin.
+
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
 
@@ -11615,6 +11630,9 @@ Remove from queue
 Remove Item
 == Öğeyi Kaldır
 
+Remove Logo
+== Logoyu kaldır
+
 Remove right to vote from player with client ID
 == İstemci kimliğine sahip oyuncunun oy kullanma hakkını kaldır
 
@@ -11945,6 +11963,9 @@ Reset IME appearance
 Reset key press counts
 == Tuş basma sayılarını sıfırla
 
+Reset layer
+== Katmanı sıfırla
+
 Reset layout
 == Düzeni sıfırla
 
@@ -12110,6 +12131,9 @@ Rotate hammer with cursor like other weapons
 Rotates your tee through a saved list of skins, either on a timer or at a random spot when a map starts.
 == Tee'ni kayıtlı bir skin listesinde döndürür; zamanlayıcıyla ya da harita başlarken rastgele bir noktadan.
 
+Rotation
+== Döndürme
+
 Round
 == Tur
 
@@ -12254,6 +12278,9 @@ Save loaded; the local record could not be removed.
 Save player names in replay
 == Tekrar oynatmada oyuncu adlarını kaydet
 
+Save PNG copy
+== PNG kopyası kaydet
+
 Save power by lowering update rate
 == Güncelleme hızını düşürerek güç tasarrufu sağlar
 
@@ -12331,6 +12358,9 @@ Saves and loads complete client profiles, including name, chat settings and bind
 
 Saves file
 == Kayıtlı oyun dosyası
+
+Saving…
+== Kaydediliyor…
 
 Say in chat
 == Sohbette söyle
@@ -15299,6 +15329,9 @@ Test translation
 Testing translation...
 == Çeviri test ediliyor…
 
+Text
+== Metin
+
 Text alpha
 == Metin alfası
 
@@ -15631,6 +15664,9 @@ tile
 
 Tile outlines
 == Karo ana hatları
+
+Tile watermark
+== Filigranı döşe
 
 Time
 == Süre
@@ -16361,6 +16397,9 @@ Unable to load savegame: loaded on a different server
 Unable to load savegame: SaveId corrupted
 == Kayıt yüklenemiyor: SaveId bozuk
 
+Unable to open the file picker
+== Dosya seçici açılamadı
+
 Unable to open the screenshot file
 == Ekran görüntüsü dosyası açılamıyor
 
@@ -16576,6 +16615,9 @@ Update ready to install
 
 Update sources are temporarily unavailable
 == Güncelleme kaynakları geçici olarak kullanılamıyor
+
+Updating preview…
+== Önizleme güncelleniyor…
 
 Updating public word list...
 == Ortak kelime listesi güncelleniyor...
@@ -17146,6 +17188,9 @@ Water hammer highlight
 
 Watermark
 == Filigran
+
+Watermark editor
+== Filigran düzenleyici
 
 Weak hook
 == Zayıf kanca

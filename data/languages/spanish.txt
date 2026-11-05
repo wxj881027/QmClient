@@ -794,6 +794,9 @@ Alias of poses_render
 Alias of poses_video
 == Alias de poses_video
 
+Alignment
+== Alineación
+
 Alive notification color
 == Color de notificación de vivo
 
@@ -1072,9 +1075,6 @@ Apply to dummy
 
 Apply to player
 == Aplicar al jugador
-
-Apply watermark
-== Aplicar marca de agua
 
 Applying overwrites your font, UI scale, animation and panel colors at once, so note the values you like first.
 == Aplicar sobrescribe a la vez fuente, escala de la UI, animación y colores de panel, así que anota antes los valores que te gusten.
@@ -1588,6 +1588,9 @@ Axiom website
 
 Axis
 == Eje
+
+Back
+== Volver
 
 Backdrop blur
 == Desenfoque de fondo
@@ -2383,6 +2386,9 @@ Choose default eyes when joining a server
 
 Choose export name first.
 == Primero elige un nombre de exportación.
+
+Choose Logo (PNG / WebP)
+== Elegir logotipo (PNG / WebP)
 
 Choose off, simple or full; the individual switches below only apply to full.
 == Elige desactivado, simple o completo; los interruptores de abajo solo se aplican a completo.
@@ -4255,6 +4261,9 @@ Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use 
 
 Drag HUD modules with the left mouse button
 == Arrastra los módulos HUD con el botón izquierdo del ratón
+
+Drag the selected watermark to move it. The original image is preserved.
+== Arrastra la marca de agua seleccionada para moverla. Se conserva la imagen original.
 
 Drag the three sliders; master scales the other two.
 == Arrastra los tres deslizadores; el general escala los otros dos.
@@ -9302,6 +9311,9 @@ No local servers found (ports %d-%d)
 No login required
 == No requiere inicio de sesión
 
+No Logo selected
+== Ningún logotipo seleccionado
+
 No map
 == Sin mapa
 
@@ -10805,6 +10817,9 @@ Preview cut (P)
 Preview dummy nameplate
 == Vista previa de la placa de nombre del Dummy
 
+Preview failed. Check the image and Logo, then retry.
+== Error de vista previa. Comprueba la imagen y el logotipo e inténtalo de nuevo.
+
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
 
@@ -11615,6 +11630,9 @@ Remove from queue
 Remove Item
 == Eliminar Elemento
 
+Remove Logo
+== Quitar logotipo
+
 Remove right to vote from player with client ID
 == Eliminar el derecho a voto del jugador con ID de cliente
 
@@ -11945,6 +11963,9 @@ Reset IME appearance
 Reset key press counts
 == Reiniciar el número de pulsaciones
 
+Reset layer
+== Restablecer capa
+
 Reset layout
 == Restablecer diseño
 
@@ -12110,6 +12131,9 @@ Rotate hammer with cursor like other weapons
 Rotates your tee through a saved list of skins, either on a timer or at a random spot when a map starts.
 == Rota tu Tee por una lista guardada de skins, con temporizador o desde un punto aleatorio al empezar el mapa.
 
+Rotation
+== Rotación
+
 Round
 == Ronda
 
@@ -12254,6 +12278,9 @@ Save loaded; the local record could not be removed.
 Save player names in replay
 == Guardar nombres de jugadores en la repetición
 
+Save PNG copy
+== Guardar copia PNG
+
 Save power by lowering update rate
 == Ahorra energía reduciendo la tasa de actualización
 
@@ -12331,6 +12358,9 @@ Saves and loads complete client profiles, including name, chat settings and bind
 
 Saves file
 == Archivo de guardado
+
+Saving…
+== Guardando…
 
 Say in chat
 == Decir en el chat
@@ -15299,6 +15329,9 @@ Test translation
 Testing translation...
 == Probando traducción…
 
+Text
+== Texto
+
 Text alpha
 == Alpha del texto
 
@@ -15631,6 +15664,9 @@ tile
 
 Tile outlines
 == Contornos de casillas
+
+Tile watermark
+== Repetir marca de agua
 
 Time
 == Tiempo
@@ -16361,6 +16397,9 @@ Unable to load savegame: loaded on a different server
 Unable to load savegame: SaveId corrupted
 == No se puede cargar la partida: SaveId dañado
 
+Unable to open the file picker
+== No se puede abrir el selector de archivos
+
 Unable to open the screenshot file
 == No se pudo abrir el archivo de captura de pantalla
 
@@ -16576,6 +16615,9 @@ Update ready to install
 
 Update sources are temporarily unavailable
 == Las fuentes de actualización no están disponibles temporalmente
+
+Updating preview…
+== Actualizando vista previa…
 
 Updating public word list...
 == Actualizando la lista pública de palabras...
@@ -17146,6 +17188,9 @@ Water hammer highlight
 
 Watermark
 == Marca de agua
+
+Watermark editor
+== Editor de marcas de agua
 
 Weak hook
 == Gancho débil

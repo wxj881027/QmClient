@@ -794,6 +794,9 @@ Alias of poses_render
 Alias of poses_video
 == Alias poses_video
 
+Alignment
+== Wyrównanie
+
 Alive notification color
 == Kolor powiadomienia o życiu
 
@@ -1072,9 +1075,6 @@ Apply to dummy
 
 Apply to player
 == Zastosuj do gracza
-
-Apply watermark
-== Zastosuj znak wodny
 
 Applying overwrites your font, UI scale, animation and panel colors at once, so note the values you like first.
 == Zastosowanie nadpisze naraz czcionkę, skalę UI, animacje i kolory paneli, więc najpierw zapisz lubiane wartości.
@@ -1588,6 +1588,9 @@ Axiom website
 
 Axis
 == Oś
+
+Back
+== Wstecz
 
 Backdrop blur
 == Rozmycie tła
@@ -2383,6 +2386,9 @@ Choose default eyes when joining a server
 
 Choose export name first.
 == Najpierw wybierz nazwę eksportu.
+
+Choose Logo (PNG / WebP)
+== Wybierz logo (PNG / WebP)
 
 Choose off, simple or full; the individual switches below only apply to full.
 == Wybierz wyłączony, prosty lub pełny; pojedyncze przełączniki poniżej działają tylko w trybie pełnym.
@@ -4255,6 +4261,9 @@ Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use 
 
 Drag HUD modules with the left mouse button
 == Przeciągaj moduły HUD lewym przyciskiem myszy
+
+Drag the selected watermark to move it. The original image is preserved.
+== Przeciągnij wybrany znak wodny, aby go przesunąć. Oryginalny obraz zostanie zachowany.
 
 Drag the three sliders; master scales the other two.
 == Przeciągnij trzy suwaki; głośność główna skaluje pozostałe dwa.
@@ -9302,6 +9311,9 @@ No local servers found (ports %d-%d)
 No login required
 == Logowanie nie jest wymagane
 
+No Logo selected
+== Nie wybrano logo
+
 No map
 == Brak mapy
 
@@ -10805,6 +10817,9 @@ Preview cut (P)
 Preview dummy nameplate
 == Podgląd tabliczki kukły
 
+Preview failed. Check the image and Logo, then retry.
+== Podgląd nie powiódł się. Sprawdź obraz i logo, a następnie spróbuj ponownie.
+
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
 
@@ -11615,6 +11630,9 @@ Remove from queue
 Remove Item
 == Usuń element
 
+Remove Logo
+== Usuń logo
+
 Remove right to vote from player with client ID
 == Usuń prawo do głosowania graczowi z ID klienta
 
@@ -11945,6 +11963,9 @@ Reset IME appearance
 Reset key press counts
 == Wyzeruj liczniki naciśnięć klawiszy
 
+Reset layer
+== Zresetuj warstwę
+
 Reset layout
 == Resetuj układ
 
@@ -12110,6 +12131,9 @@ Rotate hammer with cursor like other weapons
 Rotates your tee through a saved list of skins, either on a timer or at a random spot when a map starts.
 == Przełącza twojego Tee przez zapisaną listę skórek, albo czasowo, albo od losowego miejsca przy starcie mapy.
 
+Rotation
+== Obrót
+
 Round
 == Runda
 
@@ -12254,6 +12278,9 @@ Save loaded; the local record could not be removed.
 Save player names in replay
 == Zapisz nazwy graczy w powtórce
 
+Save PNG copy
+== Zapisz kopię PNG
+
 Save power by lowering update rate
 == Oszczędzaj energię poprzez obniżenie częstotliwości odświeżania
 
@@ -12331,6 +12358,9 @@ Saves and loads complete client profiles, including name, chat settings and bind
 
 Saves file
 == Plik zapisów
+
+Saving…
+== Zapisywanie…
 
 Say in chat
 == Powiedz na czacie
@@ -15299,6 +15329,9 @@ Test translation
 Testing translation...
 == Testowanie tłumaczenia…
 
+Text
+== Tekst
+
 Text alpha
 == Przezroczystość tekstu
 
@@ -15631,6 +15664,9 @@ tile
 
 Tile outlines
 == Kontury kafelków
+
+Tile watermark
+== Powiel znak wodny
 
 Time
 == Czas
@@ -16361,6 +16397,9 @@ Unable to load savegame: loaded on a different server
 Unable to load savegame: SaveId corrupted
 == Nie można wczytać zapisu: SaveId uszkodzony
 
+Unable to open the file picker
+== Nie można otworzyć okna wyboru pliku
+
 Unable to open the screenshot file
 == Nie można otworzyć pliku zrzutu ekranu
 
@@ -16576,6 +16615,9 @@ Update ready to install
 
 Update sources are temporarily unavailable
 == Źródła aktualizacji są tymczasowo niedostępne
+
+Updating preview…
+== Aktualizowanie podglądu…
 
 Updating public word list...
 == Aktualizowanie publicznej listy słów...
@@ -17146,6 +17188,9 @@ Water hammer highlight
 
 Watermark
 == Znak wodny
+
+Watermark editor
+== Edytor znaków wodnych
 
 Weak hook
 == Słaby hak

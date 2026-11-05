@@ -794,6 +794,9 @@ Alias of poses_render
 Alias of poses_video
 == Псевдоним poses_video
 
+Alignment
+== Выравнивание
+
 Alive notification color
 == Цвет уведомления о жизни
 
@@ -1072,9 +1075,6 @@ Apply to dummy
 
 Apply to player
 == Применить к игроку
-
-Apply watermark
-== Применить водяной знак
 
 Applying overwrites your font, UI scale, animation and panel colors at once, so note the values you like first.
 == Применение сразу перезапишет шрифт, масштаб UI, анимацию и цвета панелей, поэтому сначала запишите понравившиеся значения.
@@ -1588,6 +1588,9 @@ Axiom website
 
 Axis
 == Ось
+
+Back
+== Назад
 
 Backdrop blur
 == Размытие фона
@@ -2383,6 +2386,9 @@ Choose default eyes when joining a server
 
 Choose export name first.
 == Сначала введите имя экспорта.
+
+Choose Logo (PNG / WebP)
+== Выбрать логотип (PNG / WebP)
 
 Choose off, simple or full; the individual switches below only apply to full.
 == Выберите «Выкл», «Простой» или «Полный»; отдельные переключатели ниже действуют только в полном режиме.
@@ -4255,6 +4261,9 @@ Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use 
 
 Drag HUD modules with the left mouse button
 == Перетаскивайте модули HUD левой кнопкой мыши
+
+Drag the selected watermark to move it. The original image is preserved.
+== Перетащите выбранный водяной знак. Исходное изображение сохраняется.
 
 Drag the three sliders; master scales the other two.
 == Двигайте три ползунка; общая громкость масштабирует две остальные.
@@ -9302,6 +9311,9 @@ No local servers found (ports %d-%d)
 No login required
 == Вход не требуется
 
+No Logo selected
+== Логотип не выбран
+
 No map
 == Нет карты
 
@@ -10805,6 +10817,9 @@ Preview cut (P)
 Preview dummy nameplate
 == Предпросмотр таблички дамми
 
+Preview failed. Check the image and Logo, then retry.
+== Ошибка предпросмотра. Проверьте изображение и логотип и повторите попытку.
+
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
 
@@ -11615,6 +11630,9 @@ Remove from queue
 Remove Item
 == Удалить элемент
 
+Remove Logo
+== Удалить логотип
+
 Remove right to vote from player with client ID
 == Лишить права голоса игрока с ID клиента
 
@@ -11945,6 +11963,9 @@ Reset IME appearance
 Reset key press counts
 == Сбросить счётчики нажатий клавиш
 
+Reset layer
+== Сбросить слой
+
 Reset layout
 == Сбросить расположение
 
@@ -12110,6 +12131,9 @@ Rotate hammer with cursor like other weapons
 Rotates your tee through a saved list of skins, either on a timer or at a random spot when a map starts.
 == Перебирает скины Tee по сохранённому списку: по таймеру или со случайного места при старте карты.
 
+Rotation
+== Поворот
+
 Round
 == Раунд
 
@@ -12254,6 +12278,9 @@ Save loaded; the local record could not be removed.
 Save player names in replay
 == Сохранять имена игроков в записи
 
+Save PNG copy
+== Сохранить копию PNG
+
 Save power by lowering update rate
 == Экономия энергии за счёт снижения частоты обновления
 
@@ -12331,6 +12358,9 @@ Saves and loads complete client profiles, including name, chat settings and bind
 
 Saves file
 == Файл сохранений
+
+Saving…
+== Сохранение…
 
 Say in chat
 == Сказать в чат
@@ -15299,6 +15329,9 @@ Test translation
 Testing translation...
 == Проверка перевода…
 
+Text
+== Текст
+
 Text alpha
 == Альфа текста
 
@@ -15631,6 +15664,9 @@ tile
 
 Tile outlines
 == Контуры плиток
+
+Tile watermark
+== Повторять водяной знак
 
 Time
 == Время
@@ -16361,6 +16397,9 @@ Unable to load savegame: loaded on a different server
 Unable to load savegame: SaveId corrupted
 == Не удалось загрузить сохранение: SaveId повреждён
 
+Unable to open the file picker
+== Не удалось открыть окно выбора файла
+
 Unable to open the screenshot file
 == Не удалось открыть файл скриншота
 
@@ -16576,6 +16615,9 @@ Update ready to install
 
 Update sources are temporarily unavailable
 == Источники обновлений временно недоступны
+
+Updating preview…
+== Обновление предпросмотра…
 
 Updating public word list...
 == Обновление общего списка слов...
@@ -17146,6 +17188,9 @@ Water hammer highlight
 
 Watermark
 == Водяной знак
+
+Watermark editor
+== Редактор водяных знаков
 
 Weak hook
 == Слабый крюк

@@ -794,6 +794,9 @@ Alias of poses_render
 Alias of poses_video
 == Alias de poses_video
 
+Alignment
+== Alignement
+
 Alive notification color
 == Couleur de notification de survie
 
@@ -1072,9 +1075,6 @@ Apply to dummy
 
 Apply to player
 == Appliquer au joueur
-
-Apply watermark
-== Appliquer le filigrane
 
 Applying overwrites your font, UI scale, animation and panel colors at once, so note the values you like first.
 == L'application remplace d'un coup police, échelle de l'UI, animation et couleurs des panneaux : notez d'abord les valeurs qui vous plaisent.
@@ -1588,6 +1588,9 @@ Axiom website
 
 Axis
 == Axe
+
+Back
+== Retour
 
 Backdrop blur
 == Flou d’arrière-plan
@@ -2383,6 +2386,9 @@ Choose default eyes when joining a server
 
 Choose export name first.
 == Choisissez d'abord un nom d'exportation.
+
+Choose Logo (PNG / WebP)
+== Choisir un logo (PNG / WebP)
 
 Choose off, simple or full; the individual switches below only apply to full.
 == Choisis entre désactivé, simple et complet ; les interrupteurs ci-dessous ne s'appliquent qu'au mode complet.
@@ -4255,6 +4261,9 @@ Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use 
 
 Drag HUD modules with the left mouse button
 == Faites glisser les modules HUD avec le bouton gauche de la souris
+
+Drag the selected watermark to move it. The original image is preserved.
+== Faites glisser le filigrane sélectionné pour le déplacer. L’image originale est conservée.
 
 Drag the three sliders; master scales the other two.
 == Fais glisser les trois curseurs ; le volume principal module les deux autres.
@@ -9302,6 +9311,9 @@ No local servers found (ports %d-%d)
 No login required
 == Aucune connexion requise
 
+No Logo selected
+== Aucun logo sélectionné
+
 No map
 == Aucune carte
 
@@ -10805,6 +10817,9 @@ Preview cut (P)
 Preview dummy nameplate
 == Aperçu de la plaque de nom du dummy
 
+Preview failed. Check the image and Logo, then retry.
+== Échec de l’aperçu. Vérifiez l’image et le logo, puis réessayez.
+
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
 
@@ -11615,6 +11630,9 @@ Remove from queue
 Remove Item
 == Supprimer l'élément
 
+Remove Logo
+== Supprimer le logo
+
 Remove right to vote from player with client ID
 == Supprimer le droit de vote du joueur avec l'ID client
 
@@ -11945,6 +11963,9 @@ Reset IME appearance
 Reset key press counts
 == Réinitialiser le compteur d'appuis
 
+Reset layer
+== Réinitialiser le calque
+
 Reset layout
 == Réinitialiser la disposition
 
@@ -12110,6 +12131,9 @@ Rotate hammer with cursor like other weapons
 Rotates your tee through a saved list of skins, either on a timer or at a random spot when a map starts.
 == Fait tourner ton Tee dans une liste de skins enregistrée, au minuteur ou depuis un point aléatoire au début d'une map.
 
+Rotation
+== Rotation du calque
+
 Round
 == Tour
 
@@ -12254,6 +12278,9 @@ Save loaded; the local record could not be removed.
 Save player names in replay
 == Sauvegarder les noms des joueurs dans la rediffusion
 
+Save PNG copy
+== Enregistrer une copie PNG
+
 Save power by lowering update rate
 == Économisez l'énergie en réduisant le taux de rafraîchissement
 
@@ -12331,6 +12358,9 @@ Saves and loads complete client profiles, including name, chat settings and bind
 
 Saves file
 == Fichier de sauvegardes
+
+Saving…
+== Enregistrement…
 
 Say in chat
 == Dire dans le chat
@@ -15299,6 +15329,9 @@ Test translation
 Testing translation...
 == Test de traduction en cours…
 
+Text
+== Texte
+
 Text alpha
 == Alpha du texte
 
@@ -15631,6 +15664,9 @@ tile
 
 Tile outlines
 == Contours des tuiles
+
+Tile watermark
+== Répéter le filigrane
 
 Time
 == Temps
@@ -16361,6 +16397,9 @@ Unable to load savegame: loaded on a different server
 Unable to load savegame: SaveId corrupted
 == Impossible de charger la sauvegarde : SaveId corrompu
 
+Unable to open the file picker
+== Impossible d’ouvrir le sélecteur de fichiers
+
 Unable to open the screenshot file
 == Impossible d'ouvrir le fichier de capture d'écran
 
@@ -16576,6 +16615,9 @@ Update ready to install
 
 Update sources are temporarily unavailable
 == Les sources de mise à jour sont temporairement indisponibles
+
+Updating preview…
+== Mise à jour de l’aperçu…
 
 Updating public word list...
 == Mise à jour de la liste de mots publique...
@@ -17146,6 +17188,9 @@ Water hammer highlight
 
 Watermark
 == Filigrane
+
+Watermark editor
+== Éditeur de filigranes
 
 Weak hook
 == Grappin faible

@@ -794,6 +794,9 @@ Alias of poses_render
 Alias of poses_video
 == poses_video 的別名
 
+Alignment
+== 對齊
+
 Alive notification color
 == 存活提醒顏色
 
@@ -1072,9 +1075,6 @@ Apply to dummy
 
 Apply to player
 == 套用至本體
-
-Apply watermark
-== 套用浮水印
 
 Applying overwrites your font, UI scale, animation and panel colors at once, so note the values you like first.
 == 套用會一次覆蓋字型、UI 縮放、動畫與面板顏色，先記下你喜歡的數值。
@@ -1588,6 +1588,9 @@ Axiom website
 
 Axis
 == 軸
+
+Back
+== 返回
 
 Backdrop blur
 == 背景模糊
@@ -2383,6 +2386,9 @@ Choose default eyes when joining a server
 
 Choose export name first.
 == 請先填寫導出名稱。
+
+Choose Logo (PNG / WebP)
+== 選擇 Logo（PNG / WebP）
 
 Choose off, simple or full; the individual switches below only apply to full.
 == 可選擇關閉、精簡或完整；下方各個開關只在「完整」下生效。
@@ -4255,6 +4261,9 @@ Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use 
 
 Drag HUD modules with the left mouse button
 == 按住鼠標左鍵拖動 HUD 模塊
+
+Drag the selected watermark to move it. The original image is preserved.
+== 拖曳選取的浮水印可調整位置，原圖會保留。
 
 Drag the three sliders; master scales the other two.
 == 拖動三個滑桿；主音量會按比例調整另外兩個音量。
@@ -9302,6 +9311,9 @@ No local servers found (ports %d-%d)
 No login required
 == 無需登錄
 
+No Logo selected
+== 尚未選擇 Logo
+
 No map
 == 無地圖
 
@@ -10805,6 +10817,9 @@ Preview cut (P)
 Preview dummy nameplate
 == 預覽分身名牌
 
+Preview failed. Check the image and Logo, then retry.
+== 預覽失敗，請檢查圖片和 Logo 後重試。
+
 Preview hook collision colors and line styles
 == Preview hook collision colors and line styles
 
@@ -11615,6 +11630,9 @@ Remove from queue
 Remove Item
 == 刪除項
 
+Remove Logo
+== 移除 Logo
+
 Remove right to vote from player with client ID
 == 刪除具有客戶端 ID 的玩家的投票權
 
@@ -11945,6 +11963,9 @@ Reset IME appearance
 Reset key press counts
 == 清零按鍵累計次數
 
+Reset layer
+== 重設目前圖層
+
 Reset layout
 == 重置佈局
 
@@ -12110,6 +12131,9 @@ Rotate hammer with cursor like other weapons
 Rotates your tee through a saved list of skins, either on a timer or at a random spot when a map starts.
 == 按儲存的皮膚列表輪流換膚，可以定時切換，也可以在地圖開始時隨機挑一個。
 
+Rotation
+== 旋轉
+
 Round
 == 回合數
 
@@ -12254,6 +12278,9 @@ Save loaded; the local record could not be removed.
 Save player names in replay
 == 在回放中保存玩家名稱
 
+Save PNG copy
+== 另存 PNG 副本
+
 Save power by lowering update rate
 == 降低更新率以節省電量
 
@@ -12331,6 +12358,9 @@ Saves and loads complete client profiles, including name, chat settings and bind
 
 Saves file
 == 存檔密碼文件
+
+Saving…
+== 正在儲存…
 
 Say in chat
 == 在聊天中說
@@ -15299,6 +15329,9 @@ Test translation
 Testing translation...
 == 正在測試翻譯…
 
+Text
+== 文字
+
 Text alpha
 == 文字透明度
 
@@ -15631,6 +15664,9 @@ tile
 
 Tile outlines
 == 牆體輪廓
+
+Tile watermark
+== 平鋪浮水印
 
 Time
 == 時間
@@ -16361,6 +16397,9 @@ Unable to load savegame: loaded on a different server
 Unable to load savegame: SaveId corrupted
 == 無法載入存檔：存檔編號已損壞
 
+Unable to open the file picker
+== 無法開啟檔案選擇器
+
 Unable to open the screenshot file
 == 無法打開截圖文件
 
@@ -16576,6 +16615,9 @@ Update ready to install
 
 Update sources are temporarily unavailable
 == 更新來源暫時無法使用
+
+Updating preview…
+== 正在更新預覽…
 
 Updating public word list...
 == 正在更新公共詞庫...
@@ -17146,6 +17188,9 @@ Water hammer highlight
 
 Watermark
 == 浮水印
+
+Watermark editor
+== 浮水印編輯器
 
 Weak hook
 == 弱鉤

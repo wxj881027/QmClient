@@ -3493,6 +3493,12 @@ void CMenus::UpdateRankDemoDownload()
 
 void CMenus::RenderDemoBrowser(CUIRect MainView)
 {
+	if(m_ScreenshotEditor.IsOpen())
+	{
+		m_ScreenshotEditor.Render(this, MainView);
+		return;
+	}
+
 	SyncDemoBrowserDirectory();
 	UpdateRankDemoDownload();
 	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_DEMOS);
