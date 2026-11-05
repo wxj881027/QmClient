@@ -204,6 +204,8 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		const float Alpha = Ui()->ControlAlphaScale();
 		if(Alpha <= 0.001f)
 			return;
+		// 限制边缘采样，避免右侧透明拖尾混入纹理左端的不透明像素。
+		Graphics()->WrapClamp();
 		Graphics()->TextureSet(Image.m_Texture);
 		Graphics()->QuadsBegin();
 		Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
@@ -211,6 +213,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		const IGraphics::CQuadItem Quad(Rect.x, Rect.y, Rect.w, Rect.h);
 		Graphics()->QuadsDrawTL(&Quad, 1);
 		Graphics()->QuadsEnd();
+		Graphics()->WrapNormal();
 		Graphics()->TextureClear();
 		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	};

@@ -91,7 +91,7 @@ TEST(QmMapCoverArt, TailStartsOpaqueAndFadesToNothing)
 	// 缩略图最右一列仍然完全不透明；拖尾第一列亮度接近，尾巴末端落到 0。
 	EXPECT_FLOAT_EQ(QmMapCover::TailAlpha(Art, ImageWidth, Height / 2, Width, Height, ImageWidth), 1.0f);
 	EXPECT_GT(QmMapCover::TailAlpha(Art, ImageWidth + 1, Height / 2, Width, Height, ImageWidth), 0.5f);
-	EXPECT_LT(QmMapCover::TailAlpha(Art, Width - 1, Height / 2, Width, Height, ImageWidth), 0.05f);
+	EXPECT_FLOAT_EQ(QmMapCover::TailAlpha(Art, Width - 1, Height / 2, Width, Height, ImageWidth), 0.0f);
 	// 拖尾之外的列不参与遮罩。
 	EXPECT_FLOAT_EQ(QmMapCover::TailAlpha(Art, ImageWidth - 1, Height / 2, Width, Height, ImageWidth), 0.0f);
 }
@@ -177,6 +177,31 @@ TEST(QmMapCoverArt, ComposeShowsShadedThumbnailAndTransparentTail)
 	EXPECT_LT(PixelAt(Output, 166, 36)[3], 20);
 	EXPECT_EQ(PixelAt(Output, 0, 0)[3], 0);
 	Output.Free();
+}
+
+TEST(QmMapCoverArt, ComposeTailEndsFullyTransparentForEveryRow)
+{
+	// 列表、详情和最窄拖尾在不同地图种子下都必须完全消失，不能只检查中间一行。
+	const int aaSizes[][2] = {{167, 72}, {278, 120}, {2, 1}};
+	for(const auto &aSize : aaSizes)
+	{
+		SCOPED_TRACE(::testing::Message() << "size=" << aSize[0] << "x" << aSize[1]);
+		for(const uint32_t Seed : {0u, 1234u, 987654u})
+		{
+			SCOPED_TRACE(::testing::Message() << "seed=" << Seed);
+			CImageInfo Source = SolidImage(4, 2, 255, 255, 255);
+			CImageInfo Output;
+			const bool Success = QmMapCover::Compose(Source, aSize[0], aSize[1], DefaultArt(Seed), Output);
+			Source.Free();
+			ASSERT_TRUE(Success);
+			for(int Y = 0; Y < aSize[1]; ++Y)
+			{
+				SCOPED_TRACE(::testing::Message() << "row=" << Y);
+				EXPECT_EQ(PixelAt(Output, aSize[0] - 1, Y)[3], 0);
+			}
+			Output.Free();
+		}
+	}
 }
 
 TEST(QmMapCoverArt, ComposeCropsToFillThumbnailAspect)
