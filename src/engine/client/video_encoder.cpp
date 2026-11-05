@@ -1,10 +1,10 @@
 #include "video_encoder.h"
 
+#include "video_encoder_probe_cache.h"
+
 #include <base/log.h>
 #include <base/str.h>
 #include <base/system.h>
-
-#include <mutex>
 
 namespace video_encoder
 {
@@ -104,15 +104,8 @@ namespace video_encoder
 			return true;
 		}
 
-		std::vector<SProbeResult> &ProbeCache()
+		void ProbeOnce(std::vector<SProbeResult> &vResults)
 		{
-			static std::vector<SProbeResult> s_Cache;
-			return s_Cache;
-		}
-
-		void ProbeOnce()
-		{
-			std::vector<SProbeResult> vResults;
 			vResults.reserve(std::size(s_aCandidates));
 			for(const SCandidate &Candidate : s_aCandidates)
 			{
@@ -142,15 +135,13 @@ namespace video_encoder
 				Result.m_Available = true;
 				vResults.push_back(Result);
 			}
-			ProbeCache() = std::move(vResults);
 		}
 	} // namespace
 
 	const std::vector<SProbeResult> &ProbeEncoders()
 	{
-		static std::once_flag s_Once;
-		std::call_once(s_Once, ProbeOnce);
-		return ProbeCache();
+		static CVideoEncoderProbeCache<> s_Cache;
+		return s_Cache.Get(ProbeOnce);
 	}
 
 	const SProbeResult *FindProbed(const char *pName)

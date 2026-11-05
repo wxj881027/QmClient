@@ -3253,6 +3253,7 @@ if(CLIENT)
       src/engine/client/video_frame_convert.h
       src/engine/client/video_encoder.cpp
       src/engine/client/video_encoder.h
+      src/engine/client/video_encoder_probe_cache.h
       src/engine/client/video_export.cpp
       src/engine/client/video_export.h
     )
@@ -3265,6 +3266,7 @@ if(CLIENT)
   endif()
   set_src(GAME_CLIENT GLOB_RECURSE src/game/client
     QmUi/QmDemoCameraPanel.cpp
+    QmUi/QmDemoEncoderChoices.h
     QmUi/QmAnimationBackend.cpp
     QmUi/QmAnimationBackend.h
     QmUi/QmSeasonalSidebar.cpp
@@ -6112,6 +6114,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/engine/video_audio_test.cpp
       src/test/integration/engine/video_frame_conversion_test.cpp
       src/test/unit/engine/video_encoder_test.cpp
+      src/test/unit/engine/video_encoder_probe_cache_test.cpp
+      src/test/unit/qmclient/ui/qm_demo_encoder_choices_test.cpp
+      src/test/integration/qmclient/ui/qm_demo_encoder_recovery_test.cpp
     )
     list(APPEND TESTS_EXTRA
       src/engine/client/video_encoder.cpp

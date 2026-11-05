@@ -42,7 +42,8 @@ namespace video_encoder
 		char m_aFailReason[128]; // 不可用原因（调试/tooltip）
 	};
 
-	// 候选清单探测（结果缓存；首次调用执行真实 avcodec_open2 硬件探测）。
+	// 候选清单探测（成功结果缓存；首次调用执行真实 avcodec_open2 硬件探测）。
+	// C++ 资源分配失败返回独立空快照，后续调用重试；调用方不可永久缓存该空引用。
 	const std::vector<SProbeResult> &ProbeEncoders();
 
 	// 按名称查探测结果；未知名返回 nullptr。
