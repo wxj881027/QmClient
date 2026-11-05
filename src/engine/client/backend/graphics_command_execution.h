@@ -10,6 +10,11 @@ template<typename TRunPlatformCommand>
 ERunCommandReturnTypes RunGraphicsCommandBuffer(CCommandProcessorFragment_GLBase &Backend, CCommandBuffer &Buffer, TRunPlatformCommand &&RunPlatformCommand) noexcept
 {
 	const CCommandBuffer::SCommand *pExecutingCommand = Buffer.Head();
+	struct SCompleteReadbacks
+	{
+		CCommandBuffer &m_Buffer;
+		~SCompleteReadbacks() { m_Buffer.CompleteReadbacks(); }
+	} CompleteReadbacks{Buffer};
 	try
 	{
 		Backend.StartCommands(Buffer.m_CommandCount, Buffer.m_RenderCallCount);
@@ -26,7 +31,10 @@ ERunCommandReturnTypes RunGraphicsCommandBuffer(CCommandProcessorFragment_GLBase
 		}
 		Backend.EndCommands();
 		// 工作线程可能在最后一次 RunCommand 之后才失败。
-		if(Backend.GetError().m_ErrorType != GFX_ERROR_TYPE_NONE)
+		const bool Failed = Backend.GetError().m_ErrorType != GFX_ERROR_TYPE_NONE;
+		if(Failed || Result == RUN_COMMAND_COMMAND_ERROR || Result == RUN_COMMAND_COMMAND_WARNING)
+			Backend.AbortReadbacks();
+		if(Failed)
 			return RUN_COMMAND_COMMAND_ERROR;
 		return Result == RUN_COMMAND_COMMAND_WARNING || Result == RUN_COMMAND_COMMAND_ERROR ? Result : RUN_COMMAND_COMMAND_HANDLED;
 	}
@@ -34,6 +42,7 @@ ERunCommandReturnTypes RunGraphicsCommandBuffer(CCommandProcessorFragment_GLBase
 	{
 		// Abort 必须先结束所有 CPU 借用；返回后才允许回收上传并复用命令区。
 		const auto Result = Backend.HandleCommandException(pExecutingCommand);
+		Backend.AbortReadbacks();
 		Buffer.DiscardUploads();
 		return Result;
 	}

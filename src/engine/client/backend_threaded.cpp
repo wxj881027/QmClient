@@ -141,7 +141,10 @@ void CGraphicsBackend_Threaded::StopProcessor()
 void CGraphicsBackend_Threaded::RunBuffer(CCommandBuffer *pBuffer)
 {
 	if(m_SubmissionStopped.load(std::memory_order_acquire))
+	{
+		pBuffer->CompleteReadbacks();
 		return;
+	}
 
 	const SGfxErrorContainer *pError = nullptr;
 #if defined(CONF_PLATFORM_EMSCRIPTEN)
@@ -177,6 +180,7 @@ void CGraphicsBackend_Threaded::RunBuffer(CCommandBuffer *pBuffer)
 	// Process error after lock is released to prevent deadlock
 	if(pError)
 	{
+		pBuffer->CompleteReadbacks();
 		// 失败时未提交新缓冲，处理器诊断在主线程消费期间保持稳定。
 		ProcessError(*pError);
 	}

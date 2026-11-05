@@ -1188,7 +1188,13 @@ IGraphics::CRenderTargetReadbackHandle CGraphics_Threaded::BeginRenderTargetRead
 	Cmd.m_TargetId = (int)TargetId;
 	Cmd.m_pImage = Allocation.m_pImage;
 	Cmd.m_pCompletion = Allocation.m_pCompletion;
-	AddCmd(Cmd);
+	if(!m_pCommandBuffer->AddCommandUnsafe(Cmd))
+	{
+		CGraphicsReadbackCompletion Failure(Allocation.m_pImage, Allocation.m_pCompletion);
+		Failure.Abort();
+		m_RenderTargetReadbacks.Cancel(Allocation.m_Index, Allocation.m_Generation);
+		return CRenderTargetReadbackHandle();
+	}
 
 	KickCommandBuffer();
 	return Handle;
@@ -1201,7 +1207,8 @@ bool CGraphics_Threaded::FlushPendingRenderTargetReadback()
 	if(!CommandBufferCanFitCommands(*m_pCommandBuffer, sizeof(CCommandBuffer::SCommand_RenderTarget_ReadbackFlush), 0))
 		KickCommandBuffer();
 	CCommandBuffer::SCommand_RenderTarget_ReadbackFlush Cmd;
-	AddCmd(Cmd);
+	if(!m_pCommandBuffer->AddCommandUnsafe(Cmd))
+		return false;
 	KickCommandBuffer();
 	return true;
 }
@@ -1257,7 +1264,7 @@ bool CGraphics_Threaded::ReadRenderTarget(CRenderTargetHandle Target, CImageInfo
 			CancelRenderTargetReadback(&Readback);
 		return Resolved;
 	}
-	// 后端没有完成信号（Vulkan 命令表无 CMD_SIGNAL）：空闲后按像素归属判定。
+	// 兼容不在读回命令内发信号的同步后端：空闲后按像素归属判定。
 	if(State == ERenderTargetReadbackState::PENDING)
 	{
 		const bool Resolved = m_RenderTargetReadbacks.ResolveAfterIdle(Readback.Id(), Readback.Generation(), Image);
@@ -1321,8 +1328,7 @@ bool CGraphics_Threaded::EndOffscreenFrame(CImageInfo &Image)
 	EndRenderTarget();
 	// 读回分两步：先排队读回命令，再等渲染线程空闲后结算。
 	// PBO 双缓冲下排队命令只启动 DMA，需要补一个 Flush 命令把像素拷出；
-	// Vulkan 的命令表没有 CMD_SIGNAL 回调，完成信号永远不会点亮，此时唯一可靠的
-	// 定序手段是先 WaitForIdle（渲染线程已执行完全部已提交命令），再按像素归属判定。
+	// 同步后端的像素由命令缓冲结束时发布；先确认空闲，再按像素归属判定。
 	bool Read = false;
 	CRenderTargetReadbackHandle Readback = BeginRenderTargetReadback(m_OffscreenFrameTarget);
 	if(!Readback.IsValid())
@@ -1436,8 +1442,9 @@ int CGraphics_Threaded::FlushVideoFrameReadbacks(CImageInfo *pOutImages, int Max
 {
 	return m_VideoFrameReadbacks.Flush(m_RenderTargetReadbacks, m_ReadbackCompletionSignal, pOutImages, MaxImages, [this] {
 		// 最后一笔 DMA 需要显式结算；无信号后端也要先等渲染线程空闲。
-		FlushPendingRenderTargetReadback();
+		const bool Queued = FlushPendingRenderTargetReadback();
 		WaitForIdle();
+		return Queued;
 	});
 }
 
@@ -4245,6 +4252,10 @@ void CGraphics_Threaded::Shutdown()
 
 	// shutdown the backend
 	m_pBackend->Shutdown();
+	// 后端已结束所有借用；命令里的未接管信号必须先于请求存储完成清理。
+	for(auto *pCommandBuffer : m_apCommandBuffers)
+		if(pCommandBuffer != nullptr)
+			pCommandBuffer->CompleteReadbacks();
 
 	m_RenderTargetReadbacks.Clear();
 	delete m_pBackend;

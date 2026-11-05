@@ -3197,6 +3197,7 @@ if(CLIENT)
     graphics_vertex_budget.h
     graphics_threaded_sprites.cpp
     render_target_readback_queue.h
+    graphics_readback_completion.h
     video_frame_readbacks.h
     render_target_pool.h
     input.cpp
@@ -5224,6 +5225,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/graphics_vulkan_scheduler_test.cpp
     src/test/integration/client/graphics_fatal_error_test.cpp
     src/test/integration/client/graphics_command_exception_test.cpp
+    src/test/integration/client/graphics_readback_completion_test.cpp
     src/test/integration/client/graphics_processor_preparation_test.cpp
     src/test/integration/client/metal_gpu_completion_test.cpp
     src/test/integration/client/vulkan_deferred_device_loss_test.cpp
@@ -5858,6 +5860,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/render_target_readback_allocation_test.cpp
     src/test/unit/engine/graphics/render_target_readback_initialization_test.cpp
     src/test/unit/engine/graphics/render_target_readback_queue_test.cpp
+    src/test/unit/engine/graphics/graphics_readback_completion_test.cpp
     src/test/integration/engine/video_frame_readbacks_test.cpp
     src/test/unit/engine/graphics/render_target_pool_test.cpp
     src/test/unit/qmclient/client/dummy_miniview_render_test.cpp

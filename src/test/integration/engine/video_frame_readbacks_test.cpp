@@ -53,7 +53,7 @@ namespace
 		}
 		int Flush(bool Signal = true, int MaxImages = 2)
 		{
-			return m_Frames.Flush(m_Queue, Signal, m_aImages, MaxImages, [this] { ++m_Prepares; });
+			return m_Frames.Flush(m_Queue, Signal, m_aImages, MaxImages, [this] { ++m_Prepares; return true; });
 		}
 		static int Pixel(const CImageInfo &Image)
 		{
@@ -132,6 +132,7 @@ TEST_F(CVideoFrameReadbackFlow, UnsignaledPixelsAreReadOnlyAfterTheBackendIdleBo
 	m_aImages[0].Free();
 	ASSERT_EQ(m_Frames.Flush(m_Queue, false, m_aImages, 2, [&] {
 		Complete(Second, 42, false);
+		return true;
 	}),
 		1);
 	EXPECT_EQ(Pixel(m_aImages[0]), 42);
@@ -236,4 +237,36 @@ TEST_F(CVideoFrameReadbackFlow, DeviceResetAndRepeatedEmptyFlushDoNotReviveOldRe
 	Complete(Current, 77);
 	ASSERT_EQ(Flush(), 1);
 	EXPECT_EQ(Pixel(m_aImages[0]), 77);
+}
+
+TEST_F(CVideoFrameReadbackFlow, RejectedFlushCancelsCompletedRequestsWithoutTransferringPartialOutput)
+{
+	const auto First = Allocate(), Second = Allocate();
+	ASSERT_TRUE(Enqueue(First));
+	ASSERT_TRUE(Enqueue(Second));
+	Complete(First, 61);
+	Complete(Second, 62);
+	EXPECT_EQ(m_Frames.Flush(m_Queue, true, m_aImages, 2, [] { return false; }), -1);
+	EXPECT_EQ(m_aImages[0].m_pData, nullptr);
+	EXPECT_EQ(m_aImages[1].m_pData, nullptr);
+	ExpectReleased(First);
+	ExpectReleased(Second);
+	EXPECT_TRUE(m_Frames.Empty());
+}
+
+TEST_F(CVideoFrameReadbackFlow, RejectedFlushKeepsPendingStorageAliveUntilTheBackendStopsBorrowingIt)
+{
+	const auto Request = Allocate();
+	ASSERT_TRUE(Enqueue(Request, false));
+	EXPECT_EQ(m_Frames.Flush(m_Queue, false, m_aImages, 2, [] { return false; }), -1);
+	EXPECT_TRUE(m_Frames.Empty());
+	const auto Other = Allocate();
+	EXPECT_NE(Other.m_Index, Request.m_Index);
+	// 取消后后端仍可写入先前借用的地址，只有完成信号到达后才能复用该槽位。
+	Complete(Request, 72);
+	const auto Reused = Allocate();
+	EXPECT_EQ(Reused.m_Index, Request.m_Index);
+	EXPECT_NE(Reused.m_Generation, Request.m_Generation);
+	EXPECT_EQ(m_Queue.Poll(Reused.m_Index, Reused.m_Generation), IGraphics::ERenderTargetReadbackState::PENDING);
+	EXPECT_EQ(m_aImages[0].m_pData, nullptr);
 }

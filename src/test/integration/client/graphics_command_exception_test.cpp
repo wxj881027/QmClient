@@ -1,5 +1,6 @@
 #include <engine/client/backend/graphics_command_execution.h>
 #include <engine/client/backend/vulkan/vulkan_render_workers.h>
+#include <engine/client/render_target_readback_queue.h>
 
 #include <gtest/gtest.h>
 #include <test/support/threaded_graphics_backend.h>
@@ -169,6 +170,7 @@ TEST(GraphicsCommandException, CompletionAndUploadReleaseWaitForTheBorrowingWork
 	CBorrowingCommandFragment Fragment;
 	CCommandProcessor Processor(Fragment);
 	CTestGraphicsBackend Backend(Processor);
+	CRenderTargetReadbackQueue Readbacks;
 	CCommandBuffer Buffer(256, 64);
 	auto pData = CGraphicsUploadData<uint8_t>(static_cast<uint8_t *>(std::malloc(16)));
 	ASSERT_NE(pData, nullptr);
@@ -177,6 +179,12 @@ TEST(GraphicsCommandException, CompletionAndUploadReleaseWaitForTheBorrowingWork
 	ASSERT_TRUE(Buffer.AddCommandUnsafe(Upload));
 	pData.release();
 	Fragment.m_pUpload = static_cast<const CCommandBuffer::SCommand_Texture_Create *>(Buffer.Head());
+	const auto Allocation = Readbacks.Allocate();
+	ASSERT_GE(Allocation.m_Index, 0);
+	CCommandBuffer::SCommand_RenderTarget_Readback Readback;
+	Readback.m_pImage = Allocation.m_pImage;
+	Readback.m_pCompletion = Allocation.m_pCompletion;
+	ASSERT_TRUE(Buffer.AddCommandUnsafe(Readback));
 	Backend.RunBuffer(&Buffer);
 	const bool Aborting = Fragment.WaitForAbort();
 	EXPECT_TRUE(Aborting);
@@ -185,6 +193,7 @@ TEST(GraphicsCommandException, CompletionAndUploadReleaseWaitForTheBorrowingWork
 		EXPECT_FALSE(Backend.IsIdle());
 		EXPECT_FALSE(Backend.TakeFatalError());
 		EXPECT_NE(Fragment.m_pUpload->m_pData, nullptr);
+		EXPECT_EQ(Readbacks.Poll(Allocation.m_Index, Allocation.m_Generation), IGraphics::ERenderTargetReadbackState::PENDING);
 	}
 	Fragment.ReleaseWorker();
 	Backend.WaitForIdle();
@@ -193,6 +202,7 @@ TEST(GraphicsCommandException, CompletionAndUploadReleaseWaitForTheBorrowingWork
 	EXPECT_FALSE(Fragment.m_TimedOut);
 	EXPECT_TRUE(Fragment.m_WorkerSawLiveUpload);
 	EXPECT_EQ(Fragment.m_pUpload->m_pData, nullptr);
+	EXPECT_EQ(Readbacks.Poll(Allocation.m_Index, Allocation.m_Generation), IGraphics::ERenderTargetReadbackState::FAILED);
 	EXPECT_TRUE(Backend.TakeFatalError());
 }
 #endif

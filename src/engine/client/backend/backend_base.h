@@ -101,6 +101,8 @@ public:
 
 	virtual void StartCommands(size_t CommandCount, size_t EstimatedRenderCallCount) {}
 	virtual void EndCommands() {}
+	// CPU 消费者结束后取消跨缓冲保留的读回；不能继续等待已跳过的命令。
+	virtual void AbortReadbacks() noexcept {}
 
 	const SGfxErrorContainer &GetError() { return m_Error; }
 	SGfxErrorContainer TakeError() noexcept

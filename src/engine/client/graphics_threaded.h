@@ -7,6 +7,7 @@
 
 #include <engine/client/buffer_container_pool.h>
 #include <engine/client/buffer_object_pool.h>
+#include <engine/client/graphics_readback_completion.h>
 #include <engine/client/graphics_upload_data.h>
 #include <engine/client/graphics_vertex_budget.h>
 #include <engine/client/quad_rotation_cache.h>
@@ -393,7 +394,9 @@ public:
 		CImageInfo *m_pImage = nullptr;
 		// 读回真正结算（像素落地）时点亮的完成信号；空表示调用方不轮询。
 		// PBO 双缓冲下结算发生在后续的读回/Flush 命令里，不能在命令返回时提前点亮。
-		CSemaphore *m_pCompletion = nullptr;
+		// 接纳后由命令缓冲持有；异步后端取走并清空此指针。
+		mutable CSemaphore *m_pCompletion = nullptr;
+		SCommand_RenderTarget_Readback *m_pNextReadback = nullptr;
 	};
 
 	struct SCommand_RenderTarget_ReadbackFlush : public SCommand
@@ -775,7 +778,11 @@ public:
 	{
 	}
 
-	~CCommandBuffer() { DiscardUploads(); }
+	~CCommandBuffer()
+	{
+		DiscardUploads();
+		CompleteReadbacks();
+	}
 
 	void *AllocData(size_t WantedSize)
 	{
@@ -799,6 +806,12 @@ public:
 		{
 			pCmd->m_pNextUpload = m_pUploadHead;
 			m_pUploadHead = pCmd;
+		}
+
+		if constexpr(std::is_base_of_v<SCommand_RenderTarget_Readback, T>)
+		{
+			pCmd->m_pNextReadback = m_pReadbackHead;
+			m_pReadbackHead = pCmd;
 		}
 
 		if(m_pCmdBufferTail)
@@ -920,9 +933,21 @@ public:
 		}
 	}
 
+	// 命令区尚未提交或 CPU 消费者均已结束时调用；异步后端须先取走完成信号。
+	void CompleteReadbacks() noexcept
+	{
+		while(m_pReadbackHead != nullptr)
+		{
+			auto *pCommand = m_pReadbackHead;
+			m_pReadbackHead = pCommand->m_pNextReadback;
+			CGraphicsReadbackCompletion Completion(pCommand->m_pImage, std::exchange(pCommand->m_pCompletion, nullptr));
+		}
+	}
+
 	void Reset()
 	{
 		DiscardUploads();
+		CompleteReadbacks();
 		m_pCmdBufferHead = m_pCmdBufferTail = nullptr;
 		m_CmdBuffer.Reset();
 		m_DataBuffer.Reset();
@@ -940,6 +965,7 @@ private:
 	SCommand *m_pCmdBufferHead;
 	SCommand *m_pCmdBufferTail;
 	SCommand_Upload *m_pUploadHead;
+	SCommand_RenderTarget_Readback *m_pReadbackHead = nullptr;
 };
 
 enum EGraphicsBackendErrorCodes

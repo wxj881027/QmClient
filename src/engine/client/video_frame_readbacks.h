@@ -63,14 +63,21 @@ public:
 		return Success;
 	}
 
-	// Prepare 必须结算后端在途 DMA 并等待渲染线程空闲。
+	// Prepare 成功须结算后端在途 DMA 并等待渲染线程空闲；未提交结算返回 false。
 	// 失败返回 -1；已转移的图像仍归调用方释放，不能把剩余成功帧拼成完整成片。
 	template<typename TPrepare>
 	int Flush(CRenderTargetReadbackQueue &Queue, bool CompletionSignal, CImageInfo *pImages, int MaxImages, TPrepare Prepare)
 	{
 		if(Empty())
 			return 0;
-		Prepare();
+		if(!Prepare())
+		{
+			// 没有结算命令就不能阻塞等待；取消后由队列保留仍在被后端借用的输出。
+			for(int i = 0; i < m_Count; ++i)
+				Queue.Cancel(m_aPending[i].m_Index, m_aPending[i].m_Generation);
+			Reset();
+			return -1;
+		}
 		int Written = 0;
 		bool Success = true;
 		for(int i = 0; i < m_Count; ++i)

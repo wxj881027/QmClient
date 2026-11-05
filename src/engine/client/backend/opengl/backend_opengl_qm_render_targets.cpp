@@ -245,26 +245,23 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Draw(const CCommandBuffe
 #endif
 }
 
+void CCommandProcessorFragment_OpenGL::AbortReadbacks() noexcept
+{
+	m_PendingReadback.Abort();
+	m_ReadbackPboPendingSize = 0;
+}
+
 void CCommandProcessorFragment_OpenGL::FinishPendingReadbackPbo()
 {
-	if(!m_ReadbackPboPending)
+	if(!m_PendingReadback)
 		return;
-	m_ReadbackPboPending = false;
-	// 先取走并复位在途状态：结算路径里不再触碰成员，避免嵌套读回时状态错乱。
+	// 先取走在途所有权；后续失败也必须点亮信号，不能留下悬空等待。
+	auto Completion = std::move(m_PendingReadback);
 	const TWGLuint PendingPbo = m_aReadbackPbos[m_ReadbackPboFlip ^ 1];
-	auto *pImage = m_pPendingReadbackImage;
-	auto *pCompletion = m_pPendingReadbackCompletion;
-	m_pPendingReadbackImage = nullptr;
-	m_pPendingReadbackCompletion = nullptr;
+	auto *pImage = Completion.Image();
+	const size_t PendingSize = std::exchange(m_ReadbackPboPendingSize, 0);
 	if(pImage == nullptr)
-	{
-		if(pCompletion != nullptr)
-			pCompletion->Signal();
 		return;
-	}
-
-	const size_t PendingSize = m_ReadbackPboPendingSize;
-	m_ReadbackPboPendingSize = 0;
 	const size_t Width = pImage->m_Width, Height = pImage->m_Height;
 	const auto CopyMapped = [&](uint8_t *pData, size_t DataSize) {
 		if(DataSize > PendingSize)
@@ -284,21 +281,13 @@ void CCommandProcessorFragment_OpenGL::FinishPendingReadbackPbo()
 	};
 	screenshot_image::CaptureRgba(*pImage, Width, Height, screenshot_image::ERowOrder::BOTTOM_UP,
 		CopyMapped, std::malloc, screenshot_image::EAlphaMode::PRESERVE);
-	if(pCompletion != nullptr)
-		pCompletion->Signal();
 }
 
 void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Readback(const CCommandBuffer::SCommand_RenderTarget_Readback *pCommand)
 {
-	struct SCompletionScope
-	{
-		CSemaphore *m_pCompletion;
-		~SCompletionScope()
-		{
-			if(m_pCompletion)
-				m_pCompletion->Signal();
-		}
-	} Completion{pCommand->m_pCompletion};
+	CGraphicsReadbackCompletion Completion(pCommand->m_pImage, std::exchange(pCommand->m_pCompletion, nullptr));
+	// 新请求即使非法，也要先完成上一笔 PBO，保持在途请求的结算顺序。
+	FinishPendingReadbackPbo();
 	if(pCommand->m_TargetId < 0 || (size_t)pCommand->m_TargetId >= m_vRenderTargets.size() || pCommand->m_pImage == nullptr)
 		return;
 
@@ -344,8 +333,6 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Readback(const CCommandB
 		screenshot_image::CaptureRgba(*pCommand->m_pImage, static_cast<size_t>(w), static_cast<size_t>(h),
 			screenshot_image::ERowOrder::BOTTOM_UP, ReadPixels, std::malloc, screenshot_image::EAlphaMode::PRESERVE);
 	};
-	// 同步回退同样先结算旧请求，不能让较早的等待者悬空。
-	FinishPendingReadbackPbo();
 	if(!PboPath)
 	{
 		CaptureSynchronously();
@@ -400,12 +387,9 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Readback(const CCommandB
 	pCommand->m_pImage->m_Width = w;
 	pCommand->m_pImage->m_Height = h;
 	pCommand->m_pImage->m_Format = CImageInfo::FORMAT_RGBA;
-	m_pPendingReadbackImage = pCommand->m_pImage;
-	m_pPendingReadbackCompletion = pCommand->m_pCompletion;
+	m_PendingReadback = std::move(Completion);
 	m_ReadbackPboPendingSize = DataSize;
 	m_ReadbackPboFlip ^= 1;
-	m_ReadbackPboPending = true;
-	Completion.m_pCompletion = nullptr;
 }
 
 void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_ReadbackFlush(const CCommandBuffer::SCommand_RenderTarget_ReadbackFlush *pCommand)

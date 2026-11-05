@@ -18,6 +18,7 @@
 #include <engine/client/backend/opengl/render_target_create.h>
 #include <engine/client/backend_sdl.h>
 #include <engine/client/graphics_defines.h>
+#include <engine/client/graphics_readback_completion.h>
 #include <engine/client/graphics_upload_data.h>
 #include <engine/graphics.h>
 
@@ -77,11 +78,10 @@ protected:
 	TWGLuint m_aReadbackPbos[2] = {0, 0};
 	size_t m_aReadbackPboSizes[2] = {0, 0};
 	int m_ReadbackPboFlip = 0;
-	bool m_ReadbackPboPending = false;
 	size_t m_ReadbackPboPendingSize = 0;
-	CImageInfo *m_pPendingReadbackImage = nullptr;
-	CSemaphore *m_pPendingReadbackCompletion = nullptr;
+	CGraphicsReadbackCompletion m_PendingReadback;
 	void FinishPendingReadbackPbo();
+	void AbortReadbacks() noexcept override;
 
 	uint32_t m_CanvasWidth = 0;
 	uint32_t m_CanvasHeight = 0;
@@ -191,6 +191,7 @@ protected:
 
 public:
 	CCommandProcessorFragment_OpenGL();
+	~CCommandProcessorFragment_OpenGL() override { AbortReadbacks(); }
 
 	ERunCommandReturnTypes RunCommand(const CCommandBuffer::SCommand *pBaseCommand) override;
 };
