@@ -176,7 +176,7 @@ namespace screenshot_save
 		}
 		return false;
 	}
-	// 任务只排队；图形 owner 的 Swap 在渲染线程领取，释放 owner 后不再调用 UI。
+	// 任务只排队；图形 owner 的 Swap 在主线程领取，释放 owner 后不再调用 UI。
 	class CCompletionQueue
 	{
 		struct SCompletion

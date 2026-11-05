@@ -159,3 +159,46 @@ TEST_F(ScreenshotSubmit, ConsumedPreviewIsNotReplayedOnAnotherCapture)
 	EXPECT_EQ(Previews, 1);
 	EXPECT_EQ(m_Submits, 2);
 }
+
+TEST(ScreenshotCompletion, DestroyingTheQueueDropsUnpublishedCallbacksAndTheirOwners)
+{
+	auto pOwner = std::make_shared<int>(1);
+	std::weak_ptr<int> Owner = pOwner;
+	int Calls = 0;
+	{
+		screenshot_save::CCompletionQueue Queue;
+		screenshot_save::COwnedImage Image(MakeImage());
+		ASSERT_NE(Image.Image().m_pData, nullptr);
+		Queue.Enqueue(std::move(Image.Image()), "shot.png", [pOwner, &Calls](CImageInfo &&, const char *) {
+			EXPECT_NE(pOwner, nullptr);
+			++Calls;
+		});
+		EXPECT_EQ(Image.Image().m_pData, nullptr);
+		pOwner.reset();
+		EXPECT_FALSE(Owner.expired());
+	}
+	EXPECT_EQ(Calls, 0);
+	EXPECT_TRUE(Owner.expired());
+}
+
+TEST(ScreenshotCompletion, CallbackCanKeepTheImageAfterFlushAndItIsNotPublishedAgain)
+{
+	screenshot_save::CCompletionQueue Queue;
+	screenshot_save::COwnedImage Image(MakeImage());
+	screenshot_save::COwnedImage Received(CImageInfo{});
+	ASSERT_NE(Image.Image().m_pData, nullptr);
+	const auto *pOriginal = Image.Image().m_pData;
+	int Calls = 0;
+	Queue.Enqueue(std::move(Image.Image()), "shot.png", [&](CImageInfo &&Taken, const char *pPath) {
+		++Calls;
+		EXPECT_STREQ(pPath, "shot.png");
+		Received = screenshot_save::COwnedImage(std::move(Taken));
+	});
+	Queue.Flush();
+	EXPECT_EQ(Calls, 1);
+	ASSERT_EQ(Received.Image().m_pData, pOriginal);
+	EXPECT_EQ(Received.Image().m_pData[0], 42);
+	Queue.Flush();
+	EXPECT_EQ(Calls, 1);
+	EXPECT_EQ(Received.Image().m_pData[0], 42);
+}

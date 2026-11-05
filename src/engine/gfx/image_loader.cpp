@@ -59,6 +59,29 @@ bool CByteBufferWriter::Write(const void *pData, size_t Size) noexcept
 
 namespace
 {
+	template<typename TEncode>
+	bool SaveImageFile(IOHANDLE File, const char *pFilename, const char *pFormat, CImageFileOperations &Operations, TEncode &&Encode)
+	{
+		if(File == nullptr)
+		{
+			log_error(pFormat, "failed to open file for writing. filename='%s'", pFilename);
+			return false;
+		}
+		// 编码异常也关闭句柄；显式关闭先交出所有权，关闭失败不能再关一次。
+		const auto Close = [&Operations](void *pFile) { Operations.Close(pFile); };
+		std::unique_ptr<void, decltype(Close)> Owned(File, Close);
+		CByteBufferWriter Writer;
+		if(!Encode(Writer))
+			return false;
+		const bool Written = Writer.Size() <= std::numeric_limits<unsigned>::max() &&
+				     Operations.Write(Owned.get(), Writer.Data(), static_cast<unsigned>(Writer.Size())) == Writer.Size();
+		const bool Closed = Operations.Close(Owned.release()) == 0;
+		if(!Written)
+			log_error(pFormat, "failed to write image data to file. filename='%s'", pFilename);
+		if(!Closed)
+			log_error(pFormat, "failed to close image file. filename='%s'", pFilename);
+		return Written && Closed;
+	}
 
 	class CUserErrorStruct
 	{
@@ -69,6 +92,16 @@ namespace
 	};
 
 } // namespace
+
+unsigned CImageFileOperations::Write(IOHANDLE File, const void *pData, unsigned Size) noexcept
+{
+	return io_write(File, pData, Size);
+}
+
+int CImageFileOperations::Close(IOHANDLE File) noexcept
+{
+	return io_close(File);
+}
 
 [[noreturn]] static void PngErrorCallback(png_structp pPngStruct, png_const_charp pErrorMessage)
 {
@@ -509,32 +542,13 @@ bool CImageLoader::SavePng(CByteBufferWriter &Writer, const CImageInfo &Image, c
 
 bool CImageLoader::SavePng(IOHANDLE File, const char *pFilename, const CImageInfo &Image, const char *pComment)
 {
-	if(!File)
-	{
-		log_error("png", "failed to open file for writing. filename='%s'", pFilename);
-		return false;
-	}
+	CImageFileOperations Operations;
+	return SavePng(File, pFilename, Image, pComment, Operations);
+}
 
-	// PNG编码会分配内存；异常退出也必须关闭已经交接的文件。
-	struct SCloseFile
-	{
-		IOHANDLE m_File;
-		~SCloseFile() { io_close(m_File); }
-	} CloseFile{File};
-
-	CByteBufferWriter Writer;
-	if(!CImageLoader::SavePng(Writer, Image, pComment))
-	{
-		// error already logged
-		return false;
-	}
-
-	const bool WriteSuccess = io_write(File, Writer.Data(), Writer.Size()) == Writer.Size();
-	if(!WriteSuccess)
-	{
-		log_error("png", "failed to write PNG data to file. filename='%s'", pFilename);
-	}
-	return WriteSuccess;
+bool CImageLoader::SavePng(IOHANDLE File, const char *pFilename, const CImageInfo &Image, const char *pComment, CImageFileOperations &Operations)
+{
+	return SaveImageFile(File, pFilename, "png", Operations, [&](CByteBufferWriter &Writer) { return SavePng(Writer, Image, pComment); });
 }
 
 bool CImageLoader::SaveWebP(CByteBufferWriter &Writer, const CImageInfo &Image)
@@ -595,27 +609,13 @@ bool CImageLoader::SaveWebP(CByteBufferWriter &Writer, const CImageInfo &Image)
 
 bool CImageLoader::SaveWebP(IOHANDLE File, const char *pFilename, const CImageInfo &Image)
 {
-	if(!File)
-	{
-		log_error("webp", "failed to open file for writing. filename='%s'", pFilename);
-		return false;
-	}
+	CImageFileOperations Operations;
+	return SaveWebP(File, pFilename, Image, Operations);
+}
 
-	struct SCloseFile
-	{
-		IOHANDLE m_File;
-		~SCloseFile() { io_close(m_File); }
-	} CloseFile{File};
-	CByteBufferWriter Writer;
-	if(!CImageLoader::SaveWebP(Writer, Image))
-		return false;
-
-	const bool WriteSuccess = io_write(File, Writer.Data(), Writer.Size()) == Writer.Size();
-	if(!WriteSuccess)
-	{
-		log_error("webp", "failed to write WebP data to file. filename='%s'", pFilename);
-	}
-	return WriteSuccess;
+bool CImageLoader::SaveWebP(IOHANDLE File, const char *pFilename, const CImageInfo &Image, CImageFileOperations &Operations)
+{
+	return SaveImageFile(File, pFilename, "webp", Operations, [&](CByteBufferWriter &Writer) { return SaveWebP(Writer, Image); });
 }
 
 bool CImageLoader::LoadWebP(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image, size_t MaxDecodedBytes)

@@ -159,6 +159,22 @@ TEST(ScreenshotSave, FailureCallbackExceptionDoesNotEscapeOrRepeat)
 	EXPECT_EQ(Failures, 1);
 }
 
+TEST(ScreenshotSave, EncoderFailureReportsFailureWithoutPublishingACompletedImage)
+{
+	CTestInfo Info;
+	auto pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	CImageInfo Image = MakeImage();
+	ASSERT_NE(Image.m_pData, nullptr);
+	Image.m_Width = 0;
+	int Failures = 0;
+	int Completions = 0;
+	CInlineSaveJob Job(pStorage.get(), "shot.png", std::move(Image), nullptr, [&] { ++Failures; }, [&](CImageInfo &&, const char *) { ++Completions; });
+	EXPECT_NO_THROW(Job.Run());
+	EXPECT_EQ(Failures, 1);
+	EXPECT_EQ(Completions, 0);
+}
+
 TEST(ScreenshotSave, UnopenableDestinationReportsFailureAndPreservesParentFile)
 {
 	CTestInfo Info;

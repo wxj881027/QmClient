@@ -115,6 +115,15 @@ public:
 	size_t Size() const { return m_vBuffer.size(); }
 };
 
+// 文件保存接管句柄；可替换 I/O 边界，编码与关闭结果仍由同一生产路径处理。
+class CImageFileOperations
+{
+public:
+	virtual ~CImageFileOperations() = default;
+	virtual unsigned Write(IOHANDLE File, const void *pData, unsigned Size) noexcept;
+	virtual int Close(IOHANDLE File) noexcept;
+};
+
 class CImageLoader
 {
 public:
@@ -140,10 +149,13 @@ public:
 	// Comment 使用 UTF-8 iTXt 写在像素前；读取只扫描 PNG 头，不解码图片。
 	static bool ReadPngComment(IOHANDLE File, const char *pFilename, std::string &Comment);
 	static bool SavePng(CByteBufferWriter &Writer, const CImageInfo &Image, const char *pComment = nullptr);
+	// 文件接口接管非空 File（含失败），Operations 仅在同步保存期间借用。
 	static bool SavePng(IOHANDLE File, const char *pFilename, const CImageInfo &Image, const char *pComment = nullptr);
+	static bool SavePng(IOHANDLE File, const char *pFilename, const CImageInfo &Image, const char *pComment, CImageFileOperations &Operations);
 
 	static bool SaveWebP(CByteBufferWriter &Writer, const CImageInfo &Image);
 	static bool SaveWebP(IOHANDLE File, const char *pFilename, const CImageInfo &Image);
+	static bool SaveWebP(IOHANDLE File, const char *pFilename, const CImageInfo &Image, CImageFileOperations &Operations);
 };
 
 #endif // ENGINE_GFX_IMAGE_LOADER_H
