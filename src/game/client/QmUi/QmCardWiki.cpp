@@ -545,12 +545,6 @@ namespace
 			Localizable("Fading death and freeze tiles helps you see tees and weapons behind them, but the exact tile edge gets harder to judge."),
 		},
 		{
-			"qm:favorite_maps",
-			Localizable("Your list of favorite maps, each shown with its map type, with quick copy and remove actions."),
-			Localizable("Click a map name to copy it and press the X button to remove it; add maps with the \"Favorite map\" checkbox in the in-game server info page."),
-			Localizable("Favorites match the exact map name and also feed the \"Favorite map\" tab in the server browser."),
-		},
-		{
 			"qm:focus_mode",
 			Localizable("A calm-play mode that hides the HUD, names, effects, chat and sounds you pick, so only the game stays on screen."),
 			Localizable("Turn on \"Enable Zen mode\", pick what to hide under \"Interface\", \"Players\", \"Visuals\", \"Audio\" and \"Chat\", then set the \"Zen mode key\" for quick switching."),
