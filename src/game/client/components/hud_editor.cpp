@@ -144,8 +144,15 @@ void CHudEditor::SetActive(bool Active)
 void CHudEditor::UpdateVisibleRect(EHudEditorElement Element, const CUIRect &RenderedRect)
 {
 	const int VisibleIndex = FindVisibleElementIndex(Element);
-	if(VisibleIndex < 0 || RenderedRect.w <= 0.0f || RenderedRect.h <= 0.0f)
+	if(VisibleIndex < 0)
 		return;
+	if(RenderedRect.w <= 0.0f || RenderedRect.h <= 0.0f)
+	{
+		// 没有内容时撤销本帧的可交互区域，避免留下预估空框。
+		m_vVisibleElements.erase(m_vVisibleElements.begin() + VisibleIndex);
+		m_aVisibleBounds[static_cast<int>(Element)] = {};
+		return;
+	}
 
 	float ScreenX0 = 0.0f;
 	float ScreenY0 = 0.0f;

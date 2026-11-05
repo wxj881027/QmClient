@@ -540,6 +540,7 @@ private:
 	int m_AirjumpOffset;
 	int m_AirjumpEmptyOffset;
 	int m_aWeaponOffset[NUM_WEAPONS];
+	vec2 m_aWeaponHudSize[NUM_WEAPONS];
 	int m_EndlessJumpOffset;
 	int m_EndlessHookOffset;
 	int m_JetpackOffset;

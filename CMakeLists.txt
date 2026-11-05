@@ -3629,6 +3629,7 @@ if(CLIENT)
     components/qmclient/menus_qmclient_search.cpp
     components/qmclient/hud_map_progress.cpp
     components/qmclient/hud_map_progress.h
+    components/qmclient/player_state_hud_bounds.h
     components/qmclient/modes.cpp
     components/qmclient/modes.h
     components/qmclient/nameplate_layout.h
