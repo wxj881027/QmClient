@@ -8261,6 +8261,9 @@ Manual target
 Map
 == Harita
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== Harita tarayıcısı zorluk kategori filtresi bit maskesi (bit 0-14, bkz. map_vote_difficulty.h)
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == Harita tarayıcısı zorluk yıldızı filtresi bit maskesi (bitler 1-5)
 
@@ -8724,7 +8727,7 @@ Mixed
 == Karışık
 
 Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
-== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Yalnızca mobil: çökme raporunu bir sonraki açılışta Downloads/QmClient konumuna kopyala (0 = uygulama korumalı alanında bırak)
 
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == Mobil izleyici kamerası: 0=joystick, 1=görünümü sürükle

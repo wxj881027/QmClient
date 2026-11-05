@@ -8261,6 +8261,9 @@ Manual target
 Map
 == Mapa
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== Máscara de bits do filtro de categorias de dificuldade do navegador de mapas (bits 0-14, ver map_vote_difficulty.h)
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == Máscara de bits do filtro de estrelas de dificuldade do navegador de mapas (bits 1-5)
 
@@ -8724,7 +8727,7 @@ Mixed
 == Misto
 
 Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
-== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Somente mobile: copiar o relatório de falha para Downloads/QmClient na próxima inicialização (0 = manter dentro do sandbox do aplicativo)
 
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == Câmera de espectador móvel: 0=joystick, 1=arrastar a visão

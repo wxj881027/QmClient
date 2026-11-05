@@ -3459,7 +3459,7 @@ polish = "Ukryj zakładki ustawień"
 [[message]]
 key = "Hook collision line length follows cursor distance"
 [message.translations]
-simplified_chinese = "钩子辅助线长度跟随光标距离"
+simplified_chinese = "钩索辅助线长度跟随光标距离"
 traditional_chinese = "鉤子輔助線長度跟隨光標距離"
 japanese = "フック衝突線の長さがカーソル距離に追従"
 korean = "갈고리 충돌선 길이가 커서 거리를 따름"
@@ -6179,7 +6179,7 @@ polish = "Zresetuj pozycję myszy przy otwieraniu koła wiązań"
 [[message]]
 key = "Restore old single-segment hook collision line behavior"
 [message.translations]
-simplified_chinese = "恢复旧版单段钩子辅助线行为"
+simplified_chinese = "恢复旧版单段钩索辅助线行为"
 traditional_chinese = "恢復舊版單段鉤子輔助線行為"
 japanese = "旧式の単一セグメントフック衝突線動作を復元"
 korean = "이전 단일 세그먼트 갈고리 충돌선 동작 복원"

@@ -1329,7 +1329,7 @@ polish = "Wygląd / Czat"
 [[message]]
 key = "Appearance / Hook Collision"
 [message.translations]
-simplified_chinese = "外观/钩子辅助线"
+simplified_chinese = "外观/钩索辅助线"
 traditional_chinese = "外觀 / 鉤子輔助線"
 japanese = "外観/フック補助線"
 korean = "외관 / 갈고리 보조선"
@@ -3073,7 +3073,7 @@ polish = "Bind dummy control and copy actions"
 [[message]]
 key = "Bind movement, jump, hook, and fire actions"
 [message.translations]
-simplified_chinese = "绑定移动、跳跃、钩爪和开火操作"
+simplified_chinese = "绑定移动、跳跃、钩索和开火操作"
 traditional_chinese = "Bind movement, jump, hook, and fire actions"
 japanese = "Bind movement, jump, hook, and fire actions"
 korean = "Bind movement, jump, hook, and fire actions"
@@ -5153,7 +5153,7 @@ polish = "Configure HJ unfreeze assistance"
 [[message]]
 key = "Configure hook range and collision guide lines"
 [message.translations]
-simplified_chinese = "配置钩爪范围和碰撞引导线"
+simplified_chinese = "配置钩索范围和碰撞引导线"
 traditional_chinese = "Configure hook range and collision guide lines"
 japanese = "Configure hook range and collision guide lines"
 korean = "Configure hook range and collision guide lines"
@@ -6945,7 +6945,7 @@ polish = "Efekty demo"
 [[message]]
 key = "Demo hook strength (0=Off 1=Icon 2=Icon and number)"
 [message.translations]
-simplified_chinese = "回放钩子强弱（0=关闭 1=图标 2=图标与数字）"
+simplified_chinese = "回放钩索强弱（0=关闭 1=图标 2=图标与数字）"
 traditional_chinese = "回放鉤子強弱（0=關閉 1=圖示 2=圖示與數字）"
 japanese = "デモのフック強弱（0=オフ 1=アイコン 2=アイコンと数値）"
 korean = "데모 훅 강도(0=끔 1=아이콘 2=아이콘과 숫자)"
@@ -6961,7 +6961,7 @@ polish = "Siła haka w demie (0=Wył. 1=Ikona 2=Ikona i liczba)"
 [[message]]
 key = "Demo hook strength scope (0=Own 1=Others 2=Strong 3=Weak 4=All)"
 [message.translations]
-simplified_chinese = "回放钩子强弱范围（0=自己 1=他人 2=强钩 3=弱钩 4=全部）"
+simplified_chinese = "回放钩索强弱范围（0=自己 1=他人 2=强钩 3=弱钩 4=全部）"
 traditional_chinese = "回放鉤子強弱範圍（0=自己 1=他人 2=強鉤 3=弱鉤 4=全部）"
 japanese = "デモのフック強弱の範囲（0=自分 1=他人 2=強フック 3=弱フック 4=全員）"
 korean = "데모 훅 강도 범위(0=나 1=다른 사람 2=강한 훅 3=약한 훅 4=전체)"
@@ -8705,7 +8705,7 @@ polish = "Włącz tryb Gores (zestaw narzędzi King of Gores)"
 [[message]]
 key = "Enable hook countdown"
 [message.translations]
-simplified_chinese = "启用钩子倒计时"
+simplified_chinese = "启用钩索倒计时"
 traditional_chinese = "啟用鉤子倒數"
 japanese = "フックのカウントダウンを有効にする"
 korean = "훅 카운트다운 사용"
@@ -11457,7 +11457,7 @@ polish = "Ukryj podstawowe informacje systemowe (wejście, wersja, zasady) w try
 [[message]]
 key = "Hide chat messages from players marked as enemies"
 [message.translations]
-simplified_chinese = "隐藏被标记为敌人的玩家的聊天消息"
+simplified_chinese = "隐藏标记为敌对玩家的聊天消息"
 traditional_chinese = "隱藏被標記為敵人的玩家聊天訊息"
 japanese = "敵としてマークしたプレイヤーのチャットメッセージを隠す"
 korean = "적으로 표시한 플레이어의 채팅 메시지 숨기기"
@@ -21057,7 +21057,7 @@ polish = "Sprawdź i zastosuj ustalony zestaw ustawień wyglądu"
 [[message]]
 key = "Preview hook collision colors and line styles"
 [message.translations]
-simplified_chinese = "预览钩爪碰撞颜色和线条样式"
+simplified_chinese = "预览钩索碰撞颜色和线条样式"
 traditional_chinese = "Preview hook collision colors and line styles"
 japanese = "Preview hook collision colors and line styles"
 korean = "Preview hook collision colors and line styles"
@@ -24678,7 +24678,7 @@ polish = "Wysyłanie i odbieranie"
 [[message]]
 key = "Sending locally, suggest the other party unmute or confirm they can receive"
 [message.translations]
-simplified_chinese = "本地正在发送，建议让对方开麦或确认对方是否能接收"
+simplified_chinese = "本地正在发送，建议让对方取消静音或确认能否接收"
 traditional_chinese = "本地正在發送，建議讓對方開麥或確認對方是否能接收"
 japanese = "ローカルで送信中です。相手にミュート解除を促すか、受信可能か確認してください"
 korean = "로컬에서 전송 중, 상대방이 마이크를 켜거나 수신 가능한지 확인하세요"
@@ -28598,7 +28598,7 @@ polish = "Zacznij tutaj, aby szybko sprawdzić, czy problem leży po stronie urz
 [[message]]
 key = "Start holding the hook before loading the savegame to keep the hook"
 [message.translations]
-simplified_chinese = "如果想保留钩子状态，请在读档前先按住钩子"
+simplified_chinese = "如果想保留钩索状态，请在读档前先按住钩索"
 traditional_chinese = "如果想保留鉤子狀態，請在讀檔前先按住鉤子"
 japanese = "セーブをロードする前にフックを押し続けると、フック状態を保持できます"
 korean = "세이브를 불러오기 전에 훅을 누르고 있으면 훅 상태를 유지합니다"
@@ -35832,7 +35832,7 @@ polish = "Rozmiar gradientu (czat, %)"
 [[message]]
 key = "Chat gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)"
 [message.translations]
-simplified_chinese = "渐变类型 (聊天; 0=线性渐变，1=径向渐变，2=角度渐变，3=对称渐变，4=菱形渐变)"
+simplified_chinese = "聊天框渐变类型（0=线性渐变，1=径向渐变，2=角度渐变，3=对称渐变，4=菱形渐变）"
 traditional_chinese = "漸層類型 (聊天; 0=線性漸層, 1=放射漸層, 2=角度漸層, 3=對稱漸層, 4=菱形漸層)"
 japanese = "グラデーションの種類 (チャット; 0=線形グラデーション, 1=放射状グラデーション, 2=角度グラデーション, 3=反射グラデーション, 4=菱形グラデーション)"
 korean = "그라데이션 유형 (채팅; 0=선형 그라데이션, 1=방사형 그라데이션, 2=각도 그라데이션, 3=대칭 그라데이션, 4=마름모 그라데이션)"
@@ -37352,7 +37352,7 @@ polish = "Hak uderza w powierzchnię nie do zaczepienia"
 [[message]]
 key = "Hook loop"
 [message.translations]
-simplified_chinese = "钩子循环音"
+simplified_chinese = "钩索循环音"
 traditional_chinese = "鉤子循環音"
 japanese = "フックのループ音"
 korean = "갈고리 반복음"
@@ -37896,7 +37896,7 @@ polish = "Odtwarzany, gdy młotek trafia innego gracza."
 [[message]]
 key = "Played when the hook attaches to a hookable surface."
 [message.translations]
-simplified_chinese = "钩子抓住可钩表面时播放。"
+simplified_chinese = "钩索抓住可钩表面时播放。"
 traditional_chinese = "鉤子抓住可鉤表面時播放。"
 japanese = "フックがフック可能な表面に刺さったときに再生されます。"
 korean = "갈고리가 걸 수 있는 지형 표면에 꽂힐 때 재생됩니다."
@@ -37912,7 +37912,7 @@ polish = "Odtwarzany, gdy hak zaczepia się o powierzchnię możliwą do złapan
 [[message]]
 key = "Played when the hook attaches to another player."
 [message.translations]
-simplified_chinese = "钩子抓住其他玩家时播放。"
+simplified_chinese = "钩索抓住其他玩家时播放。"
 traditional_chinese = "鉤子抓住其他玩家時播放。"
 japanese = "フックが他のプレイヤーに刺さったときに再生されます。"
 korean = "갈고리가 다른 플레이어에게 걸릴 때 재생됩니다."
@@ -37928,7 +37928,7 @@ polish = "Odtwarzany, gdy hak zaczepia się o innego gracza."
 [[message]]
 key = "Played when the hook hits an unhookable surface."
 [message.translations]
-simplified_chinese = "钩子碰到不可钩表面时播放。"
+simplified_chinese = "钩索碰到不可钩表面时播放。"
 traditional_chinese = "鉤子碰到不可鉤表面時播放。"
 japanese = "フックがフック不可の表面に当たったときに再生されます。"
 korean = "갈고리가 걸 수 없는 표면에 부딪힐 때 재생됩니다."
@@ -38536,7 +38536,7 @@ polish = "Styl wskaźnika nieskończonego haka (0=symbol nieskończoności, 1=t�
 [[message]]
 key = "Hook countdown ring color"
 [message.translations]
-simplified_chinese = "钩子倒计时圆环颜色"
+simplified_chinese = "钩索倒计时圆环颜色"
 traditional_chinese = "鉤子倒數圓環顏色"
 japanese = "フックのカウントダウンリング色"
 korean = "훅 카운트다운 링 색상"
@@ -38552,7 +38552,7 @@ polish = "Kolor pierścienia odliczania haka"
 [[message]]
 key = "Hook countdown size percentage"
 [message.translations]
-simplified_chinese = "钩子倒计时尺寸百分比"
+simplified_chinese = "钩索倒计时尺寸百分比"
 traditional_chinese = "鉤子倒數尺寸百分比"
 japanese = "フックのカウントダウンサイズ（%）"
 korean = "훅 카운트다운 크기 백분율"
@@ -38568,7 +38568,7 @@ polish = "Procent rozmiaru odliczania haka"
 [[message]]
 key = "Hook countdown urgent color"
 [message.translations]
-simplified_chinese = "钩子倒计时紧急颜色"
+simplified_chinese = "钩索倒计时紧急颜色"
 traditional_chinese = "鉤子倒數緊急顏色"
 japanese = "フックのカウントダウン緊急色"
 korean = "훅 카운트다운 긴급 색상"
@@ -38584,7 +38584,7 @@ polish = "Kolor pilny odliczania haka"
 [[message]]
 key = "Hook countdown warning color"
 [message.translations]
-simplified_chinese = "钩子倒计时警告颜色"
+simplified_chinese = "钩索倒计时警告颜色"
 traditional_chinese = "鉤子倒數警告顏色"
 japanese = "フックのカウントダウン警告色"
 korean = "훅 카운트다운 경고 색상"
@@ -39000,7 +39000,7 @@ polish = "Szerokość wyjściowa eksportu w pikselach (0 = zgodnie z rozmiarem r
 [[message]]
 key = "Export preset: 0=custom, 1=daily(libx264/mp4), 2=efficient share(hevc/mp4), 3=editing(all-intra H.264/mp4), 4=exchange(ProRes/mov), 5=best quality(all-intra H.264 4:4:4/mp4), 6=fastest(hardware h264/mp4)"
 [message.translations]
-simplified_chinese = "导出预设：0=自定义，1=日常(libx264/mp4)，2=高效分享(hevc/mp4)，3=剪辑(all-intra H.264/mp4)，4=交换(ProRes/mov)，5=最佳质量(all-intra H.264 4:4:4/mp4)，6=最快(硬件 h264/mp4)"
+simplified_chinese = "导出预设：0=自定义，1=日常（libx264/mp4），2=高效分享（hevc/mp4），3=剪辑（all-intra H.264/mp4），4=交换（ProRes/mov），5=最佳质量（all-intra H.264 4:4:4/mp4），6=最快（硬件 h264/mp4）"
 traditional_chinese = "匯出預設：0=自訂，1=日常(libx264/mp4)，2=高效分享(hevc/mp4)，3=剪輯(all-intra H.264/mp4)，4=交換(ProRes/mov)，5=最佳品質(all-intra H.264 4:4:4/mp4)，6=最快(硬體 h264/mp4)"
 japanese = "書き出しプリセット: 0=カスタム、1=日常(libx264/mp4)、2=効率的な共有(hevc/mp4)、3=編集用(all-intra H.264/mp4)、4=交換用(ProRes/mov)、5=最高品質(all-intra H.264 4:4:4/mp4)、6=最速(ハードウェア h264/mp4)"
 korean = "내보내기 프리셋: 0=사용자 지정, 1=일상(libx264/mp4), 2=효율적 공유(hevc/mp4), 3=편집(all-intra H.264/mp4), 4=교환(ProRes/mov), 5=최고 품질(all-intra H.264 4:4:4/mp4), 6=최속(하드웨어 h264/mp4)"
@@ -39144,7 +39144,7 @@ polish = "Siła maski wyostrzającej renderowania poz (0 = wyłączone)"
 [[message]]
 key = "Pressed hook collision line color when hitting a tee"
 [message.translations]
-simplified_chinese = "按住钩键时命中角色的钩子辅助线颜色"
+simplified_chinese = "按住钩键时命中角色的钩索辅助线颜色"
 traditional_chinese = "按住鉤鍵時命中角色的鉤子輔助線顏色"
 japanese = "フックキー押下時にTeeに当たったときのフック補助線の色"
 korean = "훅 키를 누를 때 Tee에 닿았을 때의 훅 보조선 색상"
@@ -39160,7 +39160,7 @@ polish = "Kolor linii haka przy wciśniętym klawiszu przy trafieniu w tee"
 [[message]]
 key = "Pressed hook collision line color when hitting something hookable"
 [message.translations]
-simplified_chinese = "按住钩键时命中可钩物体的钩子辅助线颜色"
+simplified_chinese = "按住钩键时命中可钩物体的钩索辅助线颜色"
 traditional_chinese = "按住鉤鍵時命中可鉤物體的鉤子輔助線顏色"
 japanese = "フックキー押下時にフック可能な物体に当たったときのフック補助線の色"
 korean = "훅 키를 누를 때 훅 가능한 물체에 닿았을 때의 훅 보조선 색상"
@@ -39176,7 +39176,7 @@ polish = "Kolor linii haka przy wciśniętym klawiszu przy trafieniu w coś zacz
 [[message]]
 key = "Pressed hook collision line color when not aiming at anything hookable"
 [message.translations]
-simplified_chinese = "按住钩键时未瞄准可钩物体的钩子辅助线颜色"
+simplified_chinese = "按住钩键时未瞄准可钩物体的钩索辅助线颜色"
 traditional_chinese = "按住鉤鍵時未瞄準可鉤物體的鉤子輔助線顏色"
 japanese = "フックキー押下時にフック可能な物体を狙っていないときのフック補助線の色"
 korean = "훅 키를 누를 때 훅 가능한 물체를 겨누지 않았을 때의 훅 보조선 색상"
@@ -39192,7 +39192,7 @@ polish = "Kolor linii haka przy wciśniętym klawiszu, gdy nic zaczepialnego nie
 [[message]]
 key = "Pressed hook line tip color"
 [message.translations]
-simplified_chinese = "按下时的钩子辅助线尖端颜色"
+simplified_chinese = "按下时的钩索辅助线尖端颜色"
 traditional_chinese = "按下時的鉤子輔助線尖端顏色"
 japanese = "押下時のフック補助線の先端の色"
 korean = "누를 때 훅 보조선 끝 색상"
@@ -39240,7 +39240,7 @@ polish = "Ujednolicona jakość eksportu (skala CRF/CQ/QP 0-51, -1 = użyj cl_vi
 [[message]]
 key = "Use custom colors for the pressed hook collision line (0 = always invert)"
 [message.translations]
-simplified_chinese = "按下钩键时使用自定义钩子辅助线颜色（0 = 始终反色）"
+simplified_chinese = "按下钩键时使用自定义钩索辅助线颜色（0 = 始终反色）"
 traditional_chinese = "按下鉤鍵時使用自訂鉤子輔助線顏色（0 = 始終反色）"
 japanese = "フックキー押下時にカスタムカラーを使用（0 = 常に反転）"
 korean = "훅 키를 누를 때 사용자 지정 색상 사용 (0 = 항상 반전)"
@@ -39918,3 +39918,35 @@ brazilian_portuguese = "Larguras dos cartões de configurações: stableId para 
 portuguese = "Larguras dos cartões de definições: stableId para largura total, !stableId para meia largura, separados por ponto e vírgula"
 turkish = "Ayar kartı genişlikleri: tam genişlik için stableId, yarım genişlik için !stableId; noktalı virgülle ayrılır"
 polish = "Szerokości kart ustawień: stableId oznacza pełną szerokość, !stableId połowę szerokości; wpisy oddzielaj średnikami"
+
+[[message]]
+key = "Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)"
+[message.translations]
+simplified_chinese = "仅移动端：下次启动时把崩溃报告复制到 Downloads/QmClient（0 = 保留在应用沙箱内）"
+traditional_chinese = "僅行動端：下次啟動時把崩潰報告複製到 Downloads/QmClient（0 = 保留在應用沙箱內）"
+japanese = "モバイルのみ：次回起動時にクラッシュレポートを Downloads/QmClient にコピーします（0 = アプリのサンドボックス内に保持）"
+korean = "모바일 전용: 다음 실행 시 충돌 보고서를 Downloads/QmClient로 복사합니다 (0 = 앱 샌드박스 안에 보관)"
+russian = "Только для мобильных: при следующем запуске скопировать отчёт о сбое в Downloads/QmClient (0 = оставить в песочнице приложения)"
+german = "Nur mobil: Absturzbericht beim nächsten Start nach Downloads/QmClient kopieren (0 = in der App-Sandbox belassen)"
+spanish = "Solo móvil: copiar el informe de fallos a Downloads/QmClient en el próximo inicio (0 = mantenerlo dentro del sandbox de la aplicación)"
+french = "Mobile uniquement : copier le rapport de crash dans Downloads/QmClient au prochain lancement (0 = le garder dans le bac à sable de l'application)"
+brazilian_portuguese = "Somente mobile: copiar o relatório de falha para Downloads/QmClient na próxima inicialização (0 = manter dentro do sandbox do aplicativo)"
+portuguese = "Somente mobile: copiar o relatório de falha para Downloads/QmClient na próxima inicialização (0 = manter dentro do sandbox do aplicativo)"
+turkish = "Yalnızca mobil: çökme raporunu bir sonraki açılışta Downloads/QmClient konumuna kopyala (0 = uygulama korumalı alanında bırak)"
+polish = "Tylko mobile: skopiuj raport awarii do Downloads/QmClient przy następnym uruchomieniu (0 = zostaw w piaskownicy aplikacji)"
+
+[[message]]
+key = "Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)"
+[message.translations]
+simplified_chinese = "地图浏览器难度分类过滤位掩码（位 0-14，见 map_vote_difficulty.h）"
+traditional_chinese = "地圖瀏覽器難度分類過濾位元遮罩（位 0-14，見 map_vote_difficulty.h）"
+japanese = "マップブラウザの難易度カテゴリフィルタのビットマスク（ビット 0-14、map_vote_difficulty.h 参照）"
+korean = "맵 브라우저 난이도 카테고리 필터 비트마스크 (비트 0-14, map_vote_difficulty.h 참고)"
+russian = "Битовая маска фильтра категорий сложности в браузере карт (биты 0-14, см. map_vote_difficulty.h)"
+german = "Bitmaske des Schwierigkeitskategoriefilters im Kartenbrowser (Bits 0-14, siehe map_vote_difficulty.h)"
+spanish = "Máscara de bits del filtro de categorías de dificultad del navegador de mapas (bits 0-14, ver map_vote_difficulty.h)"
+french = "Masque de bits du filtre de catégories de difficulté du navigateur de cartes (bits 0-14, voir map_vote_difficulty.h)"
+brazilian_portuguese = "Máscara de bits do filtro de categorias de dificuldade do navegador de mapas (bits 0-14, ver map_vote_difficulty.h)"
+portuguese = "Máscara de bits do filtro de categorias de dificuldade do navegador de mapas (bits 0-14, ver map_vote_difficulty.h)"
+turkish = "Harita tarayıcısı zorluk kategori filtresi bit maskesi (bit 0-14, bkz. map_vote_difficulty.h)"
+polish = "Maska bitowa filtra kategorii trudności przeglądarki map (bity 0-14, patrz map_vote_difficulty.h)"

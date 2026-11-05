@@ -8261,6 +8261,9 @@ Manual target
 Map
 == Карта
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== Битовая маска фильтра категорий сложности в браузере карт (биты 0-14, см. map_vote_difficulty.h)
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == Битовая маска фильтра сложности по звёздам в браузере карт (биты 1-5)
 
@@ -8724,7 +8727,7 @@ Mixed
 == Смешанный
 
 Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
-== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== Только для мобильных: при следующем запуске скопировать отчёт о сбое в Downloads/QmClient (0 = оставить в песочнице приложения)
 
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == Камера мобильного наблюдателя: 0=джойстик, 1=перетаскивание

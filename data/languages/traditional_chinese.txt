@@ -8261,6 +8261,9 @@ Manual target
 Map
 == 地圖
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== 地圖瀏覽器難度分類過濾位元遮罩（位 0-14，見 map_vote_difficulty.h）
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == 地圖瀏覽器難度星級篩選位元遮罩（位元 1-5）
 
@@ -8724,7 +8727,7 @@ Mixed
 == 混合
 
 Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
-== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== 僅行動端：下次啟動時把崩潰報告複製到 Downloads/QmClient（0 = 保留在應用沙箱內）
 
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == 手機觀戰取景方式：0=搖桿，1=拖曳畫面

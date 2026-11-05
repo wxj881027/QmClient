@@ -1446,7 +1446,7 @@ polish = "Zaznacz podświetlaj sojuszników uderzających młotkiem w strefach �
 [[message]]
 key = "Use it to find the teammate who needs a wake-up; enemies are never highlighted, so do not look for them here."
 [message.translations]
-simplified_chinese = "用它找需要唤醒的队友；敌人从不被高亮，别在这里找他们。"
+simplified_chinese = "用它找需要唤醒的队友；敌对玩家从不被高亮，别在这里找他们。"
 traditional_chinese = "用它找需要喚醒的隊友；敵人從不會被高亮，別在這裡找他們。"
 japanese = "起こしてほしい味方を見つけるための機能です。敵は強調されないので、ここで探さないでください。"
 korean = "깨워 줘야 할 아군을 찾는 데 쓰세요. 적은 강조되지 않으니 여기서 찾지 마세요."
@@ -1942,7 +1942,7 @@ polish = "Podpowiedź wyrównania X ze mną koloruje X innego gracza, gdy przez 
 [[message]]
 key = "Adds HUD lines for alive time, rescue and freeze counts and hook left/right ratio, plus a map progress bar."
 [message.translations]
-simplified_chinese = "增加 HUD 行，显示存活时间、救援与冻结次数、钩子左右比例，另加地图进度条。"
+simplified_chinese = "增加 HUD 行，显示存活时间、救援与冻结次数、钩索左右比例，另加地图进度条。"
 traditional_chinese = "增加 HUD 列，顯示存活時間、救援與凍結次數、鉤子左右比例，另加地圖進度條。"
 japanese = "生存時間、救助と凍結の回数、フックの左右比率の HUD 行に加え、マップ進行バーを追加します。"
 korean = "생존 시간, 구조 및 동결 횟수, 훅 좌우 비율의 HUD 줄과 맵 진행 막대를 추가합니다."
@@ -2182,7 +2182,7 @@ polish = "Sprawdź urządzenia, zanim ruszysz progi; w większości przypadków 
 [[message]]
 key = "Tweaks the top HUD pill and its extras: background color, team, song title, hook and switch countdowns."
 [message.translations]
-simplified_chinese = "调整顶部 HUD 胶囊及其附加内容：背景色、队伍、歌曲标题、钩子和切换倒计时。"
+simplified_chinese = "调整顶部 HUD 胶囊及其附加内容：背景色、队伍、歌曲标题、钩索和切换倒计时。"
 traditional_chinese = "調整頂部 HUD 膠囊及其附加內容：背景色、隊伍、歌曲標題、鉤子與切換倒數。"
 japanese = "上部 HUD のピルとその追加要素を調整します。背景色、チーム、曲名、フックと切り替えのカウントダウンです。"
 korean = "상단 HUD 알약과 부가 요소를 조정합니다. 배경색, 팀, 곡 제목, 훅 및 전환 카운트다운입니다."
@@ -6134,7 +6134,7 @@ polish = "Odstępy w podglądzie nie odpowiadają każdej mapie; sprawdź w grze
 [[message]]
 key = "Configures the hook range and collision guide lines drawn around your Tee."
 [message.translations]
-simplified_chinese = "设置钩子范围，以及围绕你的 Tee 绘制的碰撞辅助线。"
+simplified_chinese = "设置钩索范围，以及围绕你的 Tee 绘制的碰撞辅助线。"
 traditional_chinese = "設定鉤索範圍，以及圍繞你 Tee 繪製的碰撞輔助線。"
 japanese = "フックの範囲と、自分の Tee の周囲に描かれる当たり判定ガイド線を設定します。"
 korean = "훅 범위와 내 Tee 주변에 그려지는 충돌 안내선을 설정합니다."
@@ -6166,7 +6166,7 @@ polish = "Włącz linię kolizji, a potem ustaw jej długość, styl i kolory."
 [[message]]
 key = "Guide lines are computed locally and do not guarantee that a hook will connect."
 [message.translations]
-simplified_chinese = "辅助线仅在本地计算，不能保证钩子一定成功。"
+simplified_chinese = "辅助线仅在本地计算，不能保证钩索一定成功。"
 traditional_chinese = "輔助線只在本機計算，並不保證鉤索一定能勾中。"
 japanese = "ガイド線はローカルで計算されるだけで、フックが当たることを保証するものではありません。"
 korean = "안내선은 로컬에서 계산될 뿐, 훅이 붙는다는 것을 보장하지 않습니다."
@@ -6182,7 +6182,7 @@ polish = "Linie kolizji są liczone lokalnie i nie gwarantują, że hak się zac
 [[message]]
 key = "Previews hook collision colors and line styles."
 [message.translations]
-simplified_chinese = "预览钩子碰撞的颜色和线条样式。"
+simplified_chinese = "预览钩索碰撞的颜色和线条样式。"
 traditional_chinese = "預覽鉤索碰撞顏色與線條樣式。"
 japanese = "フックの当たり判定の色と線のスタイルをプレビューします。"
 korean = "훅 충돌 색상과 선 스타일을 미리 보여 줍니다."

@@ -689,7 +689,7 @@ polish = "Zawsze pokazuj tabliczki z nazwą niezależnie od odległości"
 [[message]]
 key = "Always show other players' hook collision lines"
 [message.translations]
-simplified_chinese = "始终显示其他玩家的钩子辅助线"
+simplified_chinese = "始终显示其他玩家的钩索辅助线"
 traditional_chinese = "始終顯示其他玩家的鉤子輔助線"
 japanese = "常に他のプレイヤーのフック補助線を表示"
 korean = "다른 플레이어의 갈고리 보조선 항상 표시"
@@ -705,7 +705,7 @@ polish = "Zawsze pokazuj linie asysty haka innych graczy"
 [[message]]
 key = "Always show own player's hook collision line"
 [message.translations]
-simplified_chinese = "始终显示自己的钩子辅助线"
+simplified_chinese = "始终显示自己的钩索辅助线"
 traditional_chinese = "始終顯示自己的鉤子輔助線"
 japanese = "常に自分のフック補助線を表示"
 korean = "자신의 갈고리 보조선 항상 표시"
@@ -2673,7 +2673,7 @@ polish = "Kolorowanie pingu na tablicy wyników"
 [[message]]
 key = "Colors of the hook collision line, in case of a possible collision with:"
 [message.translations]
-simplified_chinese = "钩子辅助线颜色（瞄准以下目标时）："
+simplified_chinese = "钩索辅助线颜色（瞄准以下目标时）："
 traditional_chinese = "鉤子輔助線顏色（瞄準以下目標時）："
 japanese = "フック補助線の色（以下の対象と衝突する可能性がある場合）："
 korean = "갈고리 보조선 색상 (다음 대상에 충돌 가능할 경우):"
@@ -2689,7 +2689,7 @@ polish = "Kolory linii asysty haka, w przypadku możliwej kolizji z:"
 [[message]]
 key = "Comma-separated list of banned clients to be kicked on join"
 [message.translations]
-simplified_chinese = "加入时将被踢出的以逗号分隔的被禁止客户端列表"
+simplified_chinese = "加入时被踢出的禁用客户端列表，以逗号分隔"
 traditional_chinese = "加入時將被踢出的以逗號分隔的被禁止客戶端列表"
 japanese = "参加時にキックされる禁止クライアントのカンマ区切りリスト"
 korean = "입장 시 추방될 금지 클라이언트의 쉼표로 구분된 목록"
@@ -6577,7 +6577,7 @@ polish = "Kolor konturu zamrożonego lasera"
 [[message]]
 key = "Friend bar category expand state (1=expanded, 0=collapsed)"
 [message.translations]
-simplified_chinese = "好友栏分类展开状态(1=展开，0=收起)"
+simplified_chinese = "好友栏分类展开状态（1=展开，0=收起）"
 traditional_chinese = "好友欄分類展開狀態(1=展開，0=收起)"
 japanese = "フレンドバーカテゴリの展開状態（1=展開、0=折りたたみ）"
 korean = "친구 바 카테고리 확장 상태 (1=확장, 0=축소)"
@@ -7585,7 +7585,7 @@ polish = "Alfa linii kolizji haka (0 niewidoczna, 100 w pełni widoczna)"
 [[message]]
 key = "Hook collision line opacity"
 [message.translations]
-simplified_chinese = "钩子辅助线不透明度"
+simplified_chinese = "钩索辅助线不透明度"
 traditional_chinese = "鉤子輔助線不透明度"
 japanese = "フック衝突線の不透明度"
 korean = "갈고리 충돌선 불투명도"
@@ -12082,7 +12082,7 @@ polish = "Poprzednia broń"
 [[message]]
 key = "Preview 'Hook collisions' being pressed"
 [message.translations]
-simplified_chinese = "预览按下时的钩子辅助线"
+simplified_chinese = "预览按下时的钩索辅助线"
 traditional_chinese = "預覽按下時的鉤子輔助線"
 japanese = "フック衝突線が押された状態をプレビュー"
 korean = "'후크 충돌'이 눌린 상태 미리보기"
@@ -14499,7 +14499,7 @@ polish = "Pokaż tła quadów (tylko dla twórców map lub jeśli system jest ba
 [[message]]
 key = "Show bounds of selected quads. Shows bounding rectangle bounds for multiple quads. Useful when aligning a group"
 [message.translations]
-simplified_chinese = "显示所选四边形的边界。如果有多个四边形，它会显示包围矩形的边界。对齐一组四边形时很有帮助"
+simplified_chinese = "显示所选四边形的边界。选中多个四边形时会显示整体包围矩形，对齐一组四边形时很有用"
 traditional_chinese = "顯示所選四邊形的邊界。如果有多個四邊形，它會顯示包圍矩形的邊界。對齊一組四邊形時很有幫助"
 japanese = "選択したクアッドの境界を表示。複数クアッドの場合はバウンディング矩形の境界を表示。グループの整列に便利です"
 korean = "선택한 쿼드의 경계 표시. 여러 쿼드의 경계 사각형을 표시함. 그룹 정렬 시 유용함"
@@ -14611,7 +14611,7 @@ polish = "Pokaż ID klienta"
 [[message]]
 key = "Show client ID in scoreboard, chat and spectator menu"
 [message.translations]
-simplified_chinese = "是否在记分板、聊天和观众菜单中显示客户端 ID"
+simplified_chinese = "是否在计分板、聊天框和观众菜单中显示客户端 ID"
 traditional_chinese = "是否在記分板、聊天和觀眾菜單中顯示客戶端 ID"
 japanese = "スコアボード、チャット、観戦メニューにクライアント ID を表示"
 korean = "점수판, 채팅 및 관전자 메뉴에 클라이언트 ID 표시"
@@ -15818,7 +15818,7 @@ polish = "Pokaż tylko wiadomości z czatu drużynowego"
 [[message]]
 key = "Show other players' hook collision lines"
 [message.translations]
-simplified_chinese = "显示其他玩家的钩子辅助线"
+simplified_chinese = "显示其他玩家的钩索辅助线"
 traditional_chinese = "顯示其他玩家的鉤子輔助線"
 japanese = "他のプレイヤーのフック衝突線を表示"
 korean = "다른 플레이어의 갈고리 충돌선 표시"
@@ -15962,7 +15962,7 @@ polish = "Pokaż własną etykietę (do nagrywania dema)"
 [[message]]
 key = "Show own player's hook collision line"
 [message.translations]
-simplified_chinese = "显示自己的钩子辅助线"
+simplified_chinese = "显示自己的钩索辅助线"
 traditional_chinese = "顯示自己的鉤子輔助線"
 japanese = "自分のフック衝突線を表示"
 korean = "자신의 갈고리 충돌선 표시"
@@ -19642,7 +19642,7 @@ polish = "Szerokość kolumny mapy w przeglądarce serwerów"
 [[message]]
 key = "Width of others' hook collision line"
 [message.translations]
-simplified_chinese = "其他玩家的钩子辅助线线宽度"
+simplified_chinese = "其他玩家的钩索辅助线宽度"
 traditional_chinese = "其他玩家的鉤子輔助線線寬度"
 japanese = "他のプレイヤーのフック衝突線の幅"
 korean = "다른 플레이어의 갈고리 충돌선 너비"
@@ -19690,7 +19690,7 @@ polish = "Szerokość kolumny typu w przeglądarce serwerów"
 [[message]]
 key = "Width of your own hook collision line"
 [message.translations]
-simplified_chinese = "自己的钩子辅助线线宽度"
+simplified_chinese = "自己的钩索辅助线宽度"
 traditional_chinese = "自己的鉤子輔助線線寬度"
 japanese = "自分のフック衝突線の幅"
 korean = "자신의 갈고리 충돌선 너비"

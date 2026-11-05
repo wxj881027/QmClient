@@ -369,7 +369,7 @@ polish = "Dodaj preset kolejki dummy"
 [[message]]
 key = "Add a foe"
 [message.translations]
-simplified_chinese = "添加一个敌人"
+simplified_chinese = "添加一个敌对玩家"
 traditional_chinese = "添加一個敵人"
 japanese = "敵を追加"
 korean = "적 추가"
@@ -2963,7 +2963,7 @@ polish = "Daje ci tyle skoków, ile określisz"
 [[message]]
 key = "Gives you endless hook"
 [message.translations]
-simplified_chinese = "给予你无限钩子"
+simplified_chinese = "给予你无限钩索"
 traditional_chinese = "給予你無限鉤子"
 japanese = "無限フックをあなたに与える"
 korean = "무한 갈고리를 줍니다"
@@ -3971,7 +3971,7 @@ polish = "Wymień podłączonych graczy z opcjonalnym filtrem podciągów bez ro
 [[message]]
 key = "List foes"
 [message.translations]
-simplified_chinese = "列出敌人"
+simplified_chinese = "列出敌对玩家"
 traditional_chinese = "列出敵人"
 japanese = "敵を一覧表示"
 korean = "적 목록을 표시합니다"
@@ -6051,7 +6051,7 @@ polish = "Usuń kraj z filtra wykluczeń dla konkretnej społeczności (ISO 3166
 [[message]]
 key = "Remove a foe"
 [message.translations]
-simplified_chinese = "移除一个敌人"
+simplified_chinese = "移除一个敌对玩家"
 traditional_chinese = "移除一個敵人"
 japanese = "敵を削除"
 korean = "적 제거"
@@ -6243,7 +6243,7 @@ polish = "Usuwa wszystkie bronie z ciebie"
 [[message]]
 key = "Removes endless hook from you"
 [message.translations]
-simplified_chinese = "移除你的无限钩子"
+simplified_chinese = "移除你的无限钩索"
 traditional_chinese = "移除你的無限鉤子"
 japanese = "あなたからエンドレスフックを削除"
 korean = "당신에게서 무한 갈고리를 제거합니다"
@@ -7571,7 +7571,7 @@ polish = "Pokaż katalog"
 [[message]]
 key = "Show Hook Collision"
 [message.translations]
-simplified_chinese = "显示钩子辅助线"
+simplified_chinese = "显示钩索辅助线"
 traditional_chinese = "顯示鉤子輔助線"
 japanese = "フック衝突を表示"
 korean = "갈고리 충돌 표시"
@@ -9379,7 +9379,7 @@ polish = "Przełącz trafianie innych"
 [[message]]
 key = "Toggles hook collision"
 [message.translations]
-simplified_chinese = "切换钩子辅助线"
+simplified_chinese = "切换钩索辅助线"
 traditional_chinese = "切換鉤子輔助線"
 japanese = "フック衝突を切り替え"
 korean = "갈고리 충돌 전환"
@@ -11975,7 +11975,7 @@ polish = "Gracze nie mogą użyć zakładki menu Callvote, aby wyrzucić łamią
 [[message]]
 key = "Players hook time is limited"
 [message.translations]
-simplified_chinese = "本服务器的钩子时长受限制"
+simplified_chinese = "本服务器的钩索时长受限制"
 traditional_chinese = "本伺服器的鉤索時長受限制"
 japanese = "このサーバーではフックの持続時間が制限されています"
 korean = "이 서버에서는 훅 지속 시간이 제한됩니다"
@@ -11991,7 +11991,7 @@ polish = "Czas haka graczy jest ograniczony"
 [[message]]
 key = "Players hook time is unlimited"
 [message.translations]
-simplified_chinese = "本服务器的钩子时长不受限制"
+simplified_chinese = "本服务器的钩索时长不受限制"
 traditional_chinese = "本伺服器的鉤索時長不受限制"
 japanese = "このサーバーではフックの持続時間が無制限です"
 korean = "이 서버에서는 훅 지속 시간이 무제한입니다"
@@ -14856,7 +14856,7 @@ polish = "Wskaźnik nieskończonego haka"
 [[message]]
 key = "Hook countdown colors"
 [message.translations]
-simplified_chinese = "钩子倒计时颜色"
+simplified_chinese = "钩索倒计时颜色"
 traditional_chinese = "鉤子倒數顏色"
 japanese = "フックのカウントダウン色"
 korean = "훅 카운트다운 색상"
@@ -14872,7 +14872,7 @@ polish = "Kolory odliczania haka"
 [[message]]
 key = "Hook countdown size"
 [message.translations]
-simplified_chinese = "钩子倒计时尺寸"
+simplified_chinese = "钩索倒计时尺寸"
 traditional_chinese = "鉤子倒數尺寸"
 japanese = "フックのカウントダウンサイズ"
 korean = "훅 카운트다운 크기"
@@ -15256,7 +15256,7 @@ polish = "Startuje z losowej pozycji w kolejce przy każdym wejściu na mapę (t
 [[message]]
 key = "Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted"
 [message.translations]
-simplified_chinese = "按住钩键显示钩子辅助线时使用下方自定义颜色；关闭时自动反色使用未按下配色"
+simplified_chinese = "按住钩键显示钩索辅助线时使用下方自定义颜色；关闭时自动反色使用未按下配色"
 traditional_chinese = "按住鉤鍵顯示鉤子輔助線時使用下方自訂顏色；關閉時自動反色使用未按下配色"
 japanese = "フックキー押下中にフック補助線を表示するときは下のカスタムカラーを使用します。無効の場合は非押下時の色を自動反転します。"
 korean = "훅 키를 누르고 있는 동안 훅 보조선이 표시될 때 아래의 사용자 지정 색상을 사용합니다. 비활성화하면 누르지 않은 색상이 자동으로 반전됩니다."

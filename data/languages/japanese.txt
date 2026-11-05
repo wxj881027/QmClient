@@ -8261,6 +8261,9 @@ Manual target
 Map
 == マップ
 
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
+== マップブラウザの難易度カテゴリフィルタのビットマスク（ビット 0-14、map_vote_difficulty.h 参照）
+
 Map browser difficulty star filter bitmask (bits 1-5)
 == マップブラウザーの難易度星フィルターのビットマスク（ビット 1-5）
 
@@ -8724,7 +8727,7 @@ Mixed
 == 混合
 
 Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
-== Mobile only: copy the crash report to Downloads/QmClient on the next launch (0 = keep it inside the app sandbox)
+== モバイルのみ：次回起動時にクラッシュレポートを Downloads/QmClient にコピーします（0 = アプリのサンドボックス内に保持）
 
 Mobile spectator camera: 0=joystick pad, 1=drag the view
 == モバイル観戦のカメラ操作：0=ジョイスティック、1=画面ドラッグ

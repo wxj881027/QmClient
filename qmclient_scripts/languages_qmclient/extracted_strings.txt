@@ -2758,6 +2758,7 @@ Manual source file
 Manual Steam path is invalid; using automatic detection
 Manual target
 Map
+Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)
 Map browser difficulty star filter bitmask (bits 1-5)
 Map browser: show empty servers only
 Map browser: show favorite maps only
