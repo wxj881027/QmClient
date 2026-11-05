@@ -196,7 +196,8 @@ namespace
 	};
 }
 
-void CQmAxiomScores::LoadPersistentCache(const json_value *pRoot)
+void CQmAxiomScores::LoadPersistentCache(const json_value *pRoot) noexcept
+try
 {
 	if(!pRoot || pRoot->type != json_object)
 		return;
@@ -349,6 +350,10 @@ void CQmAxiomScores::LoadPersistentCache(const json_value *pRoot)
 			Entry.m_aLastModeSuccessTick[Index] = 0;
 		m_Cache[json_string_get(pName)] = std::move(Entry);
 	}
+}
+catch(...)
+{
+	// 当前条目在本地准备；失败保留旧记录及此前已完整加载的条目。
 }
 
 void CQmAxiomScores::WritePersistentCache(CJsonWriter &Writer) const

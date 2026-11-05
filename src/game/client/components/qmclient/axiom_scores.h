@@ -189,7 +189,7 @@ public:
 	// 该玩家 Axiom 侧是否处于失败态（搜索或任一模式）。
 	bool IsPlayerFailed(const char *pPlayerName) const;
 	int64_t LastSuccessfulSyncTimestamp() const { return m_LastSuccessfulSyncTimestamp; }
-	void LoadPersistentCache(const json_value *pRoot);
+	void LoadPersistentCache(const json_value *pRoot) noexcept;
 	void WritePersistentCache(CJsonWriter &Writer) const;
 	bool PersistentCacheDirty() const { return m_PersistentCacheDirty; }
 	void ClearPersistentCacheDirty() { m_PersistentCacheDirty = false; }

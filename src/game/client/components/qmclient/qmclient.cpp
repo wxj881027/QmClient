@@ -662,9 +662,7 @@ static bool IsValidQmClientMachineHash(const char *pHash)
 
 static const json_value *JsonObjectField(const json_value *pObject, const char *pName)
 {
-	if(!pObject || pObject->type != json_object)
-		return &json_value_none;
-	return json_object_get(pObject, pName);
+	return qm_json::Field(pObject, pName);
 }
 
 static bool JsonReadNonNegativeInt64(const json_value *pValue, int64_t &OutValue)
@@ -709,24 +707,29 @@ void CQmClient::OnInit()
 	InitTitleAuthentication();
 }
 
-void CQmClient::LoadQmClientLocalModeStats()
+void CQmClient::LoadQmClientLocalModeStats() noexcept
+try
 {
-	m_vQmClientLocalModeStats.clear();
-	m_vQmClientDdnetPlayerStats.clear();
-	m_QmDdnetPrimaryPlayerName.clear();
-	m_aQmDdnetPlayerName[0] = '\0';
-	m_aQmDdnetFavoritePartner[0] = '\0';
-	m_QmDdnetTotalFinishes = -1;
-	m_QmDdnetPoints = -1;
-	m_QmDdnetPointsTotal = -1;
-	m_QmClientServerPlaytimeSeconds = -1;
+	std::vector<SQmClientLocalModeStats> vLocalModes;
+	std::vector<SQmClientDdnetPlayerStats> vPlayers;
+	std::string PrimaryPlayer;
+	int64_t ServerPlaytimeSeconds = -1;
 	m_QmStatisticsFileExists = false;
 	m_QmStatisticsFileInvalid = false;
 	m_QmStatisticsNextSaveRetryTick = 0;
-	json_value *pRoot = nullptr;
-	const EQmStatisticsFileLoadResult LoadResult = QmLoadStatisticsFile(Storage(), QMCLIENT_LOCAL_MODE_STATS_FILE, &pRoot);
+	json_value *pLoaded = nullptr;
+	const auto LoadResult = QmLoadStatisticsFile(Storage(), QMCLIENT_LOCAL_MODE_STATS_FILE, &pLoaded);
+	const std::unique_ptr<json_value, decltype(&json_value_free)> Root(pLoaded, json_value_free);
+	const json_value *pRoot = Root.get();
 	if(LoadResult == EQmStatisticsFileLoadResult::NOT_FOUND)
+	{
+		m_vQmClientLocalModeStats.clear();
+		m_vQmClientDdnetPlayerStats.clear();
+		m_QmDdnetPrimaryPlayerName.clear();
+		m_QmClientServerPlaytimeSeconds = -1;
+		SelectQmDdnetPlayerStats();
 		return;
+	}
 	m_QmStatisticsFileExists = true;
 	if(LoadResult != EQmStatisticsFileLoadResult::VALID)
 	{
@@ -750,7 +753,7 @@ void CQmClient::LoadQmClientLocalModeStats()
 			const json_value *pMaps = JsonObjectField(pMode, "maps");
 			const json_value *pScore = JsonObjectField(pMode, "score");
 			const json_value *pPlaytime = JsonObjectField(pMode, "playtime_seconds");
-			if(!pName || pName->type != json_string || !pMaps || pMaps->type != json_integer || !pScore)
+			if(!qm_json::Text(pName, false) || !pMaps || pMaps->type != json_integer || !pScore)
 				continue;
 			const char *pModeName = json_string_get(pName);
 			int64_t Maps = pMaps->u.integer;
@@ -762,14 +765,14 @@ void CQmClient::LoadQmClientLocalModeStats()
 			else if(pScore->type == json_string)
 			{
 				const char *pScoreText = json_string_get(pScore);
-				if(!ParseStrictInt64(pScoreText, Score))
+				if(!qm_json::Text(pScore, false) || !ParseStrictInt64(pScoreText, Score))
 					continue;
 			}
 			else
 				continue;
 			SQmClientLocalModeStats Stats;
 			Stats.m_GameMode = pModeName;
-			if(pCommunity != &json_value_none && pCommunity->type == json_string && json_string_get(pCommunity) && static_cast<size_t>(str_length(json_string_get(pCommunity))) <= 128 && str_utf8_check(json_string_get(pCommunity)))
+			if(qm_json::Text(pCommunity) && static_cast<size_t>(str_length(json_string_get(pCommunity))) <= 128 && str_utf8_check(json_string_get(pCommunity)))
 				Stats.m_CommunityId = json_string_get(pCommunity);
 			Stats.m_IsAxiom = pAxiom->type == json_boolean && json_boolean_get(pAxiom);
 			Stats.m_Maps = (int)Maps;
@@ -782,19 +785,19 @@ void CQmClient::LoadQmClientLocalModeStats()
 				{
 					const char *pPlaytimeText = json_string_get(pPlaytime);
 					int64_t ParsedPlaytime = 0;
-					if(ParseStrictInt64(pPlaytimeText, ParsedPlaytime) && ParsedPlaytime >= 0)
+					if(qm_json::Text(pPlaytime, false) && ParseStrictInt64(pPlaytimeText, ParsedPlaytime) && ParsedPlaytime >= 0)
 						Stats.m_PlaytimeSeconds = ParsedPlaytime;
 				}
 			}
-			auto Existing = std::find_if(m_vQmClientLocalModeStats.begin(), m_vQmClientLocalModeStats.end(), [&Stats](const SQmClientLocalModeStats &Entry) {
+			auto Existing = std::find_if(vLocalModes.begin(), vLocalModes.end(), [&Stats](const SQmClientLocalModeStats &Entry) {
 				return str_comp_nocase(Entry.m_GameMode.c_str(), Stats.m_GameMode.c_str()) == 0 && Entry.m_CommunityId == Stats.m_CommunityId && Entry.m_IsAxiom == Stats.m_IsAxiom;
 			});
-			if(Existing == m_vQmClientLocalModeStats.end())
+			if(Existing == vLocalModes.end())
 			{
 				// 文件被手工改成超量条目时截断，保证内存与后续保存有界。
-				if((int)m_vQmClientLocalModeStats.size() >= QMCLIENT_MAX_LOCAL_MODE_STATS)
+				if((int)vLocalModes.size() >= QMCLIENT_MAX_LOCAL_MODE_STATS)
 					continue;
-				m_vQmClientLocalModeStats.push_back(std::move(Stats));
+				vLocalModes.push_back(std::move(Stats));
 				continue;
 			}
 			Existing->m_Maps = (int)std::min<int64_t>(std::numeric_limits<int>::max(), SaturatingAddInt64(Existing->m_Maps, Stats.m_Maps));
@@ -804,16 +807,16 @@ void CQmClient::LoadQmClientLocalModeStats()
 	}
 	const json_value *pQmClient = JsonObjectField(pRemote, "qmclient");
 	const json_value *pPrimaryPlayerName = JsonObjectField(pRemote, "primary_player_name");
-	if(pPrimaryPlayerName->type == json_string && json_string_get(pPrimaryPlayerName) && json_string_get(pPrimaryPlayerName)[0] != '\0' && static_cast<size_t>(str_length(json_string_get(pPrimaryPlayerName))) < MAX_NAME_LENGTH && str_utf8_check(json_string_get(pPrimaryPlayerName)))
-		m_QmDdnetPrimaryPlayerName = json_string_get(pPrimaryPlayerName);
+	if(qm_json::Text(pPrimaryPlayerName, false) && static_cast<size_t>(str_length(json_string_get(pPrimaryPlayerName))) < MAX_NAME_LENGTH && str_utf8_check(json_string_get(pPrimaryPlayerName)))
+		PrimaryPlayer = json_string_get(pPrimaryPlayerName);
 	const json_value *pOpenSeconds = JsonObjectField(pQmClient, "open_seconds");
 	if(pOpenSeconds->type == json_integer && pOpenSeconds->u.integer >= 0)
-		m_QmClientServerPlaytimeSeconds = pOpenSeconds->u.integer;
+		ServerPlaytimeSeconds = pOpenSeconds->u.integer;
 	else if(pOpenSeconds->type == json_string)
 	{
 		int64_t OpenSeconds = 0;
-		if(ParseStrictInt64(json_string_get(pOpenSeconds), OpenSeconds) && OpenSeconds >= 0)
-			m_QmClientServerPlaytimeSeconds = OpenSeconds;
+		if(qm_json::Text(pOpenSeconds, false) && ParseStrictInt64(json_string_get(pOpenSeconds), OpenSeconds) && OpenSeconds >= 0)
+			ServerPlaytimeSeconds = OpenSeconds;
 	}
 	const json_value *pDdnet = JsonObjectField(pRemote, "ddnet");
 	const json_value *pPlayers = JsonObjectField(pDdnet, "players");
@@ -823,39 +826,49 @@ void CQmClient::LoadQmClientLocalModeStats()
 		{
 			const json_value *pPlayer = pPlayers->u.array.values[Index];
 			const json_value *pName = JsonObjectField(pPlayer, "name");
-			if(pName->type != json_string || !json_string_get(pName) || json_string_get(pName)[0] == '\0' || static_cast<size_t>(str_length(json_string_get(pName))) >= MAX_NAME_LENGTH || !str_utf8_check(json_string_get(pName)))
+			if(!qm_json::Text(pName, false) || static_cast<size_t>(str_length(json_string_get(pName))) >= MAX_NAME_LENGTH || !str_utf8_check(json_string_get(pName)))
 				continue;
-			if(FindQmDdnetPlayerStats(json_string_get(pName)) != nullptr)
+			if(std::any_of(vPlayers.begin(), vPlayers.end(), [pName](const SQmClientDdnetPlayerStats &Entry) { return str_comp_nocase(Entry.m_PlayerName.c_str(), json_string_get(pName)) == 0; }))
 				continue;
 			SQmClientDdnetPlayerStats Stats;
 			Stats.m_PlayerName = json_string_get(pName);
 			const json_value *pFavoritePartner = JsonObjectField(pPlayer, "favorite_partner");
-			if(pFavoritePartner->type == json_string && json_string_get(pFavoritePartner) && static_cast<size_t>(str_length(json_string_get(pFavoritePartner))) < MAX_NAME_LENGTH && str_utf8_check(json_string_get(pFavoritePartner)))
+			if(qm_json::Text(pFavoritePartner) && static_cast<size_t>(str_length(json_string_get(pFavoritePartner))) < MAX_NAME_LENGTH && str_utf8_check(json_string_get(pFavoritePartner)))
 				Stats.m_FavoritePartner = json_string_get(pFavoritePartner);
 			const json_value *pPoints = JsonObjectField(pPlayer, "points");
 			const json_value *pPointsTotal = JsonObjectField(pPlayer, "points_total");
 			const json_value *pFinishes = JsonObjectField(pPlayer, "finishes");
-			if(!JsonReadNonNegativeInt64(pPoints, Stats.m_Points) || !JsonReadNonNegativeInt64(pPointsTotal, Stats.m_PointsTotal))
+			if(!QmStatisticsNonNegativeInt64(pPoints, Stats.m_Points) || !QmStatisticsNonNegativeInt64(pPointsTotal, Stats.m_PointsTotal))
 				continue;
 			int64_t Finishes = 0;
-			if(!JsonReadNonNegativeInt64(pFinishes, Finishes) || Finishes > std::numeric_limits<int>::max())
+			if(!QmStatisticsNonNegativeInt64(pFinishes, Finishes) || Finishes > std::numeric_limits<int>::max())
 				continue;
 			Stats.m_TotalFinishes = (int)Finishes;
 			const json_value *pPlaytimeHours = JsonObjectField(pPlayer, "playtime_hours");
 			int64_t PlaytimeHours = 0;
-			if(JsonReadNonNegativeInt64(pPlaytimeHours, PlaytimeHours))
+			if(QmStatisticsNonNegativeInt64(pPlaytimeHours, PlaytimeHours))
 				Stats.m_PlaytimeHours = PlaytimeHours;
 			const json_value *pPlaytimeHoursPastYear = JsonObjectField(pPlayer, "playtime_hours_past_year");
 			int64_t PlaytimeHoursPastYear = 0;
-			if(JsonReadNonNegativeInt64(pPlaytimeHoursPastYear, PlaytimeHoursPastYear))
+			if(QmStatisticsNonNegativeInt64(pPlaytimeHoursPastYear, PlaytimeHoursPastYear))
 				Stats.m_PlaytimeHoursPastYear = PlaytimeHoursPastYear;
-			m_vQmClientDdnetPlayerStats.push_back(std::move(Stats));
+			vPlayers.push_back(std::move(Stats));
 		}
 	}
+	// 所有可分配候选均准备完成后，再以不分配的交换发布统计。
+	m_vQmClientLocalModeStats.swap(vLocalModes);
+	m_vQmClientDdnetPlayerStats.swap(vPlayers);
+	m_QmDdnetPrimaryPlayerName.swap(PrimaryPlayer);
+	m_QmClientServerPlaytimeSeconds = ServerPlaytimeSeconds;
 	SelectQmDdnetPlayerStats();
 	if(GameClient() != nullptr)
 		GameClient()->m_QmAxiomScores.LoadPersistentCache(pRoot);
-	json_value_free(pRoot);
+}
+catch(...)
+{
+	// 保留旧显示和文件；不能把资源/读取失败当成缺失文件自动覆盖。
+	m_QmStatisticsFileExists = true;
+	m_QmStatisticsFileInvalid = true;
 }
 
 int64_t CQmClient::QmStatisticsLastSuccessfulSyncTimestamp() const
@@ -976,7 +989,15 @@ std::string CQmClient::SerializeQmClientStatistics() const
 	return Writer.GetOutputString();
 }
 
-bool CQmClient::SaveQmClientStatistics() const
+void CQmClient::RetryQmStatisticsSave(int64_t Now) const noexcept
+{
+	m_QmStatisticsLocalStatsDirty = true;
+	m_QmStatisticsLocalSaveDueTick = Now;
+	m_QmStatisticsNextSaveRetryTick = Now + 5 * time_freq();
+}
+
+bool CQmClient::SaveQmClientStatistics() const noexcept
+try
 {
 	if(m_QmStatisticsFileInvalid)
 	{
@@ -986,7 +1007,8 @@ bool CQmClient::SaveQmClientStatistics() const
 	// 等待或接管旧快照，防止它在本次手动保存之后覆盖新内容。
 	if(m_pQmStatisticsSaveJob)
 	{
-		m_pQmStatisticsSaveJob->Finish();
+		if(!m_pQmStatisticsSaveJob->Finish())
+			RetryQmStatisticsSave(time_get());
 		m_pQmStatisticsSaveJob.reset();
 	}
 	CQmStatisticsSaveJob Save(Storage(), QMCLIENT_LOCAL_MODE_STATS_FILE, SerializeQmClientStatistics());
@@ -995,8 +1017,20 @@ bool CQmClient::SaveQmClientStatistics() const
 	{
 		m_QmStatisticsFileExists = true;
 		m_QmStatisticsNextSaveRetryTick = 0;
+		m_QmStatisticsLocalStatsDirty = false;
+		m_QmStatisticsLocalSaveDueTick = time_get() + 30 * time_freq();
+		if(GameClient() != nullptr)
+			GameClient()->m_QmAxiomScores.ClearPersistentCacheDirty();
 	}
+	else
+		RetryQmStatisticsSave(time_get());
 	return Saved;
+}
+catch(...)
+{
+	if(!m_QmStatisticsFileInvalid)
+		RetryQmStatisticsSave(time_get());
+	return false;
 }
 
 const SQmClientDdnetPlayerStats *CQmClient::FindQmDdnetPlayerStats(const char *pPlayerName) const
@@ -1306,9 +1340,7 @@ void CQmClient::OnUpdate()
 		else
 		{
 			// 失败后重新拍最新快照；任务期间新增的脏数据也必须保留。
-			m_QmStatisticsLocalStatsDirty = true;
-			m_QmStatisticsLocalSaveDueTick = StatisticsNow;
-			m_QmStatisticsNextSaveRetryTick = StatisticsNow + 5 * time_freq();
+			RetryQmStatisticsSave(StatisticsNow);
 		}
 		m_pQmStatisticsSaveJob.reset();
 	}
@@ -1317,12 +1349,25 @@ void CQmClient::OnUpdate()
 			(m_QmStatisticsLocalStatsDirty && StatisticsNow >= m_QmStatisticsLocalSaveDueTick)) &&
 		(m_QmStatisticsNextSaveRetryTick == 0 || StatisticsNow >= m_QmStatisticsNextSaveRetryTick))
 	{
-		m_pQmStatisticsSaveJob = std::make_shared<CQmStatisticsSaveJob>(Storage(), QMCLIENT_LOCAL_MODE_STATS_FILE, SerializeQmClientStatistics());
-		Engine()->AddJob(m_pQmStatisticsSaveJob);
-		GameClient()->m_QmAxiomScores.ClearPersistentCacheDirty();
-		m_QmStatisticsLocalStatsDirty = false;
-		m_QmStatisticsLocalSaveDueTick = StatisticsNow + 30 * time_freq();
-		m_QmStatisticsNextSaveRetryTick = 0;
+		try
+		{
+			auto pCandidate = std::make_shared<CQmStatisticsSaveJob>(Storage(), QMCLIENT_LOCAL_MODE_STATS_FILE, SerializeQmClientStatistics());
+			if(Engine()->TryAddJob(pCandidate))
+			{
+				m_pQmStatisticsSaveJob = std::move(pCandidate);
+				GameClient()->m_QmAxiomScores.ClearPersistentCacheDirty();
+				m_QmStatisticsLocalStatsDirty = false;
+				m_QmStatisticsLocalSaveDueTick = StatisticsNow + 30 * time_freq();
+				m_QmStatisticsNextSaveRetryTick = 0;
+			}
+			else
+				RetryQmStatisticsSave(StatisticsNow);
+		}
+		catch(...)
+		{
+			// 快照/任务尚未接管脏状态，保留最新数据并沿原间隔重试。
+			RetryQmStatisticsSave(StatisticsNow);
+		}
 	}
 
 	// Axiom 分数在后台按缓存 TTL 查询，统计页面只负责展示，不应成为唯一触发点。

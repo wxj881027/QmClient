@@ -5077,6 +5077,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_font_store_catalog_test.cpp
     src/test/integration/qmclient/client/qmclient_users_parse_job_test.cpp
     src/test/integration/qmclient/client/qm_statistics_save_test.cpp
+    src/test/integration/qmclient/client/qm_statistics_save_failure_test.cpp
+    src/test/integration/qmclient/client/qm_statistics_file_test.cpp
     src/test/integration/engine/config_migration_backup_test.cpp
     src/test/integration/qmclient/client/bounded_file_reader_test.cpp
     src/test/integration/qmclient/client/custom_community_info_test.cpp
@@ -5719,7 +5721,6 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/monitoring/qm_menu_ui_perf_logging_test.cpp
     src/test/integration/qmclient/monitoring/qm_perf_diagnostics_logging_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_misc_contract_test.cpp
-    src/test/contract/qmclient/monitoring/qmclient_monitoring_persistence_contract_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_settings_structure_contract_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_settings_plan_contract_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_settings_perf_contract_test.cpp
@@ -6637,6 +6638,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/map_difficulty_axiom_failure_test.cpp
       src/game/client/components/qmclient/map_difficulty_catalog.cpp
       src/test/unit/qmclient/client/qm_axiom_response_failure_test.cpp
+      src/test/unit/qmclient/client/qm_statistics_file_read_test.cpp
       src/game/client/components/qmclient/axiom_scores_data.cpp
       src/engine/client/sqlite.cpp
       src/test/unit/engine/recent_glyph_cache_test.cpp

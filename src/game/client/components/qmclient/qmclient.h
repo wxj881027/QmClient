@@ -174,14 +174,15 @@ class CQmClient : public CComponent
 	int64_t m_QmDdnetPlaytimeHours = -1;
 	int64_t m_QmDdnetPlaytimeHoursPastYear = -1;
 	std::string SerializeQmClientStatistics() const;
+	void RetryQmStatisticsSave(int64_t Now) const noexcept;
 	mutable std::shared_ptr<CQmStatisticsSaveJob> m_pQmStatisticsSaveJob;
 	mutable bool m_QmStatisticsFileExists = false;
 	mutable bool m_QmStatisticsFileInvalid = false;
 	mutable int64_t m_QmStatisticsNextSaveRetryTick = 0;
 	// 本地统计在会话内被修改后置脏；落盘按 m_QmStatisticsLocalSaveDueTick
 	// 节流，避免逐秒游玩时长触发逐秒写文件。崩溃时最多丢一个节流窗口。
-	bool m_QmStatisticsLocalStatsDirty = false;
-	int64_t m_QmStatisticsLocalSaveDueTick = 0;
+	mutable bool m_QmStatisticsLocalStatsDirty = false;
+	mutable int64_t m_QmStatisticsLocalSaveDueTick = 0;
 	// 完成事件有两条通道：0.6 是聊天广播，0.7 是 RaceFinish 事件；官方
 	// 服务端按协议二选一，个别魔改服可能都发，用 1 秒窗口去重兜底。
 	int64_t m_QmLastLocalFinishRecordTime = -1;
@@ -226,7 +227,7 @@ class CQmClient : public CComponent
 	void StoreQmDdnetPlayerStats(const char *pPlayerName, const std::string &FavoritePartner, int TotalFinishes, int64_t Points, int64_t PointsTotal, int64_t PlaytimeHours, int64_t PlaytimeHoursPastYear);
 	void SelectQmDdnetPlayerStats(const char *pFallbackPlayerName = nullptr);
 	const SQmClientDdnetPlayerStats *FindQmDdnetPlayerStats(const char *pPlayerName) const;
-	void LoadQmClientLocalModeStats();
+	void LoadQmClientLocalModeStats() noexcept;
 	void UpdateQmClientLocalModePlaytime();
 	void AccumulateQmClientLocalModePlaytime(int64_t Now);
 	void EndQmClientLocalModePlaytime();
@@ -346,7 +347,7 @@ public:
 	int64_t QmStatisticsLastSuccessfulSyncTimestamp() const;
 	const std::vector<SQmClientLocalModeStats> &QmClientLocalModeStats() const { return m_vQmClientLocalModeStats; }
 	const std::vector<SQmClientDdnetPlayerStats> &QmClientDdnetPlayerStats() const { return m_vQmClientDdnetPlayerStats; }
-	bool SaveQmClientStatistics() const;
+	bool SaveQmClientStatistics() const noexcept;
 	void RecordQmClientLocalMapFinish(const char *pGameMode, int Score);
 	void OnMessage(int MsgType, void *pRawMsg) override;
 	void UseCurrentQmDdnetPlayerName();

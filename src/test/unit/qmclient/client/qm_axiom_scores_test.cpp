@@ -514,53 +514,6 @@ TEST(QmAxiomScoresComponent, NewServerCancelsOldActiveQueryAndRefreshesBothModes
 	EXPECT_EQ(pResult->Mode(EQmAxiomMode::AXRACE).m_Score.m_Points, 20);
 }
 
-TEST(QmStatisticsFile, DistinguishesMissingInvalidAndValidDocuments)
-{
-	CTestInfo Info;
-	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
-	ASSERT_NE(pStorage, nullptr);
-	ASSERT_TRUE(pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
-
-	json_value *pRoot = nullptr;
-	EXPECT_EQ(QmLoadStatisticsFile(pStorage.get(), "qmclient/statistics.json", &pRoot), EQmStatisticsFileLoadResult::NOT_FOUND);
-	EXPECT_EQ(pRoot, nullptr);
-
-	const char *pInvalidJson = "{\"local\":";
-	WriteStorageFile(pStorage.get(), "qmclient/statistics.json", pInvalidJson);
-	EXPECT_EQ(QmLoadStatisticsFile(pStorage.get(), "qmclient/statistics.json", &pRoot), EQmStatisticsFileLoadResult::INVALID);
-	EXPECT_EQ(pRoot, nullptr);
-	EXPECT_EQ(ReadStorageFile(pStorage.get(), "qmclient/statistics.json"), pInvalidJson);
-
-	const char *pInvalidStructure = "{\"local\":{}}";
-	WriteStorageFile(pStorage.get(), "qmclient/statistics.json", pInvalidStructure);
-	EXPECT_EQ(QmLoadStatisticsFile(pStorage.get(), "qmclient/statistics.json", &pRoot), EQmStatisticsFileLoadResult::INVALID);
-	EXPECT_EQ(pRoot, nullptr);
-	EXPECT_EQ(ReadStorageFile(pStorage.get(), "qmclient/statistics.json"), pInvalidStructure);
-
-	WriteStorageFile(pStorage.get(), "qmclient/statistics.json", "{\"local\":{\"modes\":[]},\"remote\":{}}");
-	ASSERT_EQ(QmLoadStatisticsFile(pStorage.get(), "qmclient/statistics.json", &pRoot), EQmStatisticsFileLoadResult::VALID);
-	ASSERT_NE(pRoot, nullptr);
-	EXPECT_EQ(json_object_get(json_object_get(pRoot, "local"), "modes")->type, json_array);
-	json_value_free(pRoot);
-}
-
-TEST(QmStatisticsFile, ClearsOutputForInvalidArguments)
-{
-	json_value DummyRoot;
-	json_value *pRoot = &DummyRoot;
-	EXPECT_EQ(QmLoadStatisticsFile(nullptr, "qmclient/statistics.json", &pRoot), EQmStatisticsFileLoadResult::INVALID);
-	EXPECT_EQ(pRoot, nullptr);
-
-	pRoot = &DummyRoot;
-	EXPECT_EQ(QmLoadStatisticsFile(nullptr, nullptr, &pRoot), EQmStatisticsFileLoadResult::INVALID);
-	EXPECT_EQ(pRoot, nullptr);
-
-	pRoot = &DummyRoot;
-	EXPECT_EQ(QmLoadStatisticsFile(nullptr, "", &pRoot), EQmStatisticsFileLoadResult::INVALID);
-	EXPECT_EQ(pRoot, nullptr);
-	EXPECT_EQ(QmLoadStatisticsFile(nullptr, "qmclient/statistics.json", nullptr), EQmStatisticsFileLoadResult::INVALID);
-}
-
 TEST(QmDdnetPlayerStatsState, PendingRefreshStartsImmediatelyAfterCompletedParse)
 {
 	CQmDdnetPlayerStatsState State;
