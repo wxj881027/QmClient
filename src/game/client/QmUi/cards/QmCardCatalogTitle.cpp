@@ -273,14 +273,18 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 
 			RowAction("title-profile-actions", [&](CUIRect Row) {
 				static ui_widget::SSettingsActionGroupState s_ProfileActionWidths;
-				const char *apActions[] = {Localize("Save"), Localize("Refresh")};
-				const auto Actions = ui_widget::PrepareSettingsActionGroup(*pMenus->Ui(), s_ProfileActionWidths, Row, apActions, 2, Metrics);
-				Row = Actions.m_aButtons[0];
-				Button = Actions.m_aButtons[1];
-				if(pMenus->DoButton_Menu(&s_SaveButton, Localize("Save"), 0, &Row) && Enabled && Auth.TitleAuthenticated() && (!Draft.m_BindName || Draft.m_Name.GetString()[0]))
+				// 保存和刷新都是图标动作，右侧两个方按钮，说明走悬浮提示。
+				const float IconSide = Metrics.m_ButtonHeight;
+				CUIRect SaveButtonRect, RefreshButtonRect;
+				Row.VSplitRight(IconSide, &Row, &RefreshButtonRect);
+				Row.VSplitRight(Metrics.m_LineSpacing, &Row, nullptr);
+				Row.VSplitRight(IconSide, &Row, &SaveButtonRect);
+				if(pMenus->Ui()->DoButton_QmIcon(&s_SaveButton, EQmIcon::CHECK, "\xEE\x86\x82", Enabled ? 0 : -1, &SaveButtonRect, IGraphics::CORNER_ALL) && Enabled && Auth.TitleAuthenticated() && (!Draft.m_BindName || Draft.m_Name.GetString()[0]))
 					Auth.SaveTitleProfile(Draft.m_Title.GetString(), Draft.m_BindName ? Draft.m_Name.GetString() : "", Auth.TitleProfileStyle(), static_cast<EQmSponsorChatStyle>(g_Config.m_QmSponsorChatStyle), QmTitleDraftAppearance());
-				if(pMenus->DoButton_Menu(&s_RefreshButton, Localize("Refresh"), 0, &Button) && Enabled)
+				pMenus->GameClient()->m_Tooltips.DoToolTip(&s_SaveButton, &SaveButtonRect, Localize("Save"));
+				if(pMenus->Ui()->DoButton_QmIcon(&s_RefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, "\xEE\x80\xB6", Enabled ? 0 : -1, &RefreshButtonRect, IGraphics::CORNER_ALL) && Enabled)
 					Auth.RefreshTitleProfile();
+				pMenus->GameClient()->m_Tooltips.DoToolTip(&s_RefreshButton, &RefreshButtonRect, Localize("Refresh"));
 			});
 			RowAction("title-display-navigation", [&](CUIRect Row) {
 				static CButtonContainer s_DisplaySettings;
