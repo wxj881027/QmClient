@@ -160,13 +160,16 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 
 	auto RenderEntries = [&](CUIRect &Column) {
 		CPerfTimer ListTimer;
-		CUIRect Button, EntriesSearch, EntriesList;
+		CUIRect Button, EntriesList;
 		CSettingsContentLayoutFlow Flow(Column);
 		static bool s_Reversed = true;
-		if(Flow.Control("tclient-warlist-reverse-entries", LineSize, Button))
+		// 排序箭头并进搜索行右侧：它只影响列表顺序，不值得单独占一行。
+		if(Flow.Control("tclient-warlist-entries-search", LineSize, Button))
 		{
-			Button.VSplitRight(25.0f, nullptr, &Button);
-
+			CUIRect SearchField, SortButton;
+			Button.VSplitRight(WarListMetrics.m_ButtonHeight, &SearchField, &SortButton);
+			SearchField.VSplitRight(MarginSmall, &SearchField, nullptr);
+			ui_widget::InputField(TClientWarListEntriesSearchCtx, &s_EntriesFilterInput, SearchField, FontSize, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
 			static CButtonContainer s_ReverseEntries;
 			// 排序箭头与设置卡片折叠箭头同一套过渡（0.26s EASE_IN_OUT 转 180°）：
 			// 正序/倒序是持久状态，箭头必须跟着手指走，而不是下一帧直接翻面。
@@ -177,14 +180,12 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				EQmIcon::CHEVRON_UP, FONT_ICON_CHEVRON_UP,
 				s_Reversed ? 1.0f : 0.0f, str_quickhash("tclient-warlist-sort-icon"), &s_ReverseEntries);
 			ui_widget::SIconButtonIconDraw SortIconDraw{&ui_widget::DrawIconSwapBinding, &SortIcon};
-			if(Ui()->DoButton_QmIcon(&s_ReverseEntries, EQmIcon::COUNT, nullptr, 0, &Button, IGraphics::CORNER_ALL, IGraphics::CORNER_ALL, true, std::nullopt, false, false, &SortIconDraw) && !ReadOnly && !Ui()->RenderOnly())
+			if(Ui()->DoButton_QmIcon(&s_ReverseEntries, EQmIcon::COUNT, nullptr, 0, &SortButton, IGraphics::CORNER_ALL, IGraphics::CORNER_ALL, true, std::nullopt, false, false, &SortIconDraw) && !ReadOnly && !Ui()->RenderOnly())
 				s_Reversed = !s_Reversed;
+			GameClient()->m_Tooltips.DoToolTip(&s_ReverseEntries, &SortButton, Localize("Reverse order"));
 		}
-		if(Flow.Control("tclient-warlist-entries-search", LineSize, EntriesSearch, MarginSmall))
-		{
-			ui_widget::InputField(TClientWarListEntriesSearchCtx, &s_EntriesFilterInput, EntriesSearch, FontSize, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
-		}
-		if(!Flow.Control("tclient-warlist-entries-list", std::clamp((int)GameClient()->m_WarList.m_vWarEntries.size(), 2, WarListViewportRows) * ListRowHeight, EntriesList))
+		// 列表与上方控件之间统一留间距，条目列表和在线玩家看起来才是同一套节奏。
+		if(!Flow.Control("tclient-warlist-entries-list", std::clamp((int)GameClient()->m_WarList.m_vWarEntries.size(), 2, WarListViewportRows) * ListRowHeight, EntriesList, MarginSmall))
 			return;
 		static std::vector<CWarEntry *> s_vFilteredEntries;
 		static char s_aCachedEntriesFilter[128] = "";
@@ -514,7 +515,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		CUIRect WarTypeList, Button, ButtonL, ButtonR;
 		CSettingsContentLayoutFlow Flow(Column);
 		static CButtonContainer s_GroupColorPicker;
-		if(Flow.Control("tclient-warlist-groups-list", std::clamp((int)GameClient()->m_WarList.m_WarTypes.size(), 2, WarListViewportRows) * ListRowHeight, WarTypeList))
+		if(Flow.Control("tclient-warlist-groups-list", std::clamp((int)GameClient()->m_WarList.m_WarTypes.size(), 2, WarListViewportRows) * ListRowHeight, WarTypeList, MarginSmall))
 		{
 			m_pRemoveWarType = nullptr;
 			int SelectedOldType = -1;
@@ -703,19 +704,11 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		// 页签式切换统一用胶囊滑块，轨道和滑块自己会画，不给四个独立按钮拼手感。
 		if(Flow.Control("tclient-warlist-player-source", LineSize, PlayerSourceRect, MarginSmall))
 		{
-			CUIRect Tabs, AddEntryRect;
-			// 选好人还要能落地：行尾放一个 + 按钮，把编辑区当前内容直接加成条目。
-			PlayerSourceRect.VSplitRight(WarListMetrics.m_ButtonHeight, &Tabs, &AddEntryRect);
-			Tabs.VSplitRight(MarginSmall, &Tabs, nullptr);
 			static CButtonContainer s_aPlayerSourceButtons[4];
 			const char *apSourceLabels[4] = {Localize("Online"), Localize("Friends"), Localize("Self"), Localize("Dummy")};
-			const int NewSource = DoSegmentedChoice(s_aPlayerSourceButtons, apSourceLabels, 4, s_PlayerSource, Tabs);
+			const int NewSource = DoSegmentedChoice(s_aPlayerSourceButtons, apSourceLabels, 4, s_PlayerSource, PlayerSourceRect);
 			if(NewSource != s_PlayerSource && !ReadOnly && !Ui()->RenderOnly())
 				s_PlayerSource = NewSource;
-			static CButtonContainer s_AddFromSourceButton;
-			if(Ui()->DoButton_QmIcon(&s_AddFromSourceButton, EQmIcon::PLUS, FONT_ICON_PLUS, pSelectedType != nullptr ? 0 : -1, &AddEntryRect, IGraphics::CORNER_ALL) && pSelectedType != nullptr && !ReadOnly && !Ui()->RenderOnly())
-				GameClient()->m_WarList.AddWarEntry(s_aEntryName, s_aEntryClan, s_aEntryReason, pSelectedType->m_aWarName);
-			GameClient()->m_Tooltips.DoToolTip(&s_AddFromSourceButton, &AddEntryRect, Localize("Add Entry"));
 		}
 		// 好友、自身、分身都不依赖当前服务器：好友读好友列表，自身和分身是本地预设。
 		if(s_PlayerSource != 0)
@@ -767,7 +760,9 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 					continue;
 				CUIRect RowRect = Item.m_Rect;
 				RowRect.Margin(MarginSmall, &RowRect);
-				CUIRect NameRect, ClanRect;
+				CUIRect NameRect, ClanRect, AddEntryRect;
+				RowRect.VSplitRight(WarListMetrics.m_ButtonHeight, &RowRect, &AddEntryRect);
+				RowRect.VSplitRight(MarginSmall, &RowRect, nullptr);
 				RowRect.VSplitMid(&NameRect, &ClanRect, MarginSmall);
 				DoTClientLabel(Ui(), &NameRect, s_vPlayerPicks[PickIndex].m_pName, StandardFontSize, TEXTALIGN_ML);
 				DoTClientLabel(Ui(), &ClanRect, s_vPlayerPicks[PickIndex].m_pClan, StandardFontSize, TEXTALIGN_ML);
@@ -776,6 +771,11 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 					str_copy(s_aEntryName, s_vPlayerPicks[PickIndex].m_pName, sizeof(s_aEntryName));
 					str_copy(s_aEntryClan, s_vPlayerPicks[PickIndex].m_pClan, sizeof(s_aEntryClan));
 				}
+				static std::vector<CButtonContainer> s_vPickAddButtons;
+				s_vPickAddButtons.resize(std::max<size_t>(1, s_vPlayerPicks.size()));
+				if(Ui()->DoButton_QmIcon(&s_vPickAddButtons[PickIndex], EQmIcon::PLUS, FONT_ICON_PLUS, pSelectedType != nullptr ? 0 : -1, &AddEntryRect, IGraphics::CORNER_ALL) && pSelectedType != nullptr && !ReadOnly && !Ui()->RenderOnly())
+					GameClient()->m_WarList.AddWarEntry(s_vPlayerPicks[PickIndex].m_pName, s_vPlayerPicks[PickIndex].m_pClan, s_aEntryReason, pSelectedType->m_aWarName);
+				GameClient()->m_Tooltips.DoToolTip(&s_vPickAddButtons[PickIndex], &AddEntryRect, Localize("Add Entry"));
 			}
 			s_PickListBox.DoEnd();
 			if(s_vPlayerPicks.empty())
@@ -838,9 +838,12 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			if(!Item.m_Visible)
 				continue;
 
-			CUIRect PlayerRect, TeeRect, NameRect, ClanRect;
+			CUIRect PlayerRect, TeeRect, NameRect, ClanRect, AddEntryRect;
 			CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 			Item.m_Rect.Margin(0.0f, &PlayerRect);
+			// 每行末尾一个 +：作用对象就是这一行的人，不用先选中再去别处点添加。
+			PlayerRect.VSplitRight(WarListMetrics.m_ButtonHeight, &PlayerRect, &AddEntryRect);
+			AddEntryRect.VSplitRight(MarginSmall, &AddEntryRect, nullptr);
 			PlayerRect.VSplitLeft(25.0f, &TeeRect, &PlayerRect);
 			PlayerRect.VSplitMid(&NameRect, &ClanRect);
 			PlayerRect = NameRect;
@@ -868,6 +871,12 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				str_copy(s_aEntryClan, Client.m_aClan);
 			}
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
+
+			static std::vector<CButtonContainer> s_vPlayerAddButtons;
+			s_vPlayerAddButtons.resize(MAX_CLIENTS);
+			if(Ui()->DoButton_QmIcon(&s_vPlayerAddButtons[ClientId], EQmIcon::PLUS, FONT_ICON_PLUS, pSelectedType != nullptr ? 0 : -1, &AddEntryRect, IGraphics::CORNER_ALL) && pSelectedType != nullptr && !ReadOnly && !Ui()->RenderOnly())
+				GameClient()->m_WarList.AddWarEntry(Client.m_aName, Client.m_aClan, s_aEntryReason, pSelectedType->m_aWarName);
+			GameClient()->m_Tooltips.DoToolTip(&s_vPlayerAddButtons[ClientId], &AddEntryRect, Localize("Add Entry"));
 
 			CTeeRenderInfo TeeInfo = Client.m_RenderInfo;
 			TeeInfo.m_Size = ListRowHeight;
