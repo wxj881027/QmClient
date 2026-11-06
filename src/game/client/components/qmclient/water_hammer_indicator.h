@@ -19,10 +19,12 @@ struct SQmWaterHeldState
 	bool m_Hook = false;
 };
 
-// 结合本地分身输入与 sv_preinput，提供同队可见玩家冻结时的卡锤、卡钩状态。
+// 结合本地分身输入与 sv_preinput，提供同队可见玩家冻结时的卡锤、卡钩和方向键状态。
 class CQmWaterHammerIndicator : public CComponent
 {
 	std::array<SQmWaterHammerInputState, MAX_CLIENTS> m_aInputs;
+
+	bool CanUseRemoteInput(int ClientId) const;
 
 public:
 	int Sizeof() const override { return sizeof(*this); }
@@ -32,6 +34,7 @@ public:
 	void OnPreInput(const CNetMsg_Sv_PreInput &Message);
 	bool IsInPenaltyArea(vec2 Position) const;
 	SQmWaterHeldState MarkedInputs(int ClientId) const;
+	SQmWaterDirectionState DirectionInputs(int ClientId) const;
 	bool IsMarked(int ClientId) const;
 };
 

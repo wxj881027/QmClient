@@ -2130,10 +2130,10 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 		}
 		else
 		{
-			const auto &Character = GameClient()->m_Snap.m_aCharacters[ClientId];
-			Data.m_DirLeft = Character.m_Cur.m_Direction == -1;
-			Data.m_DirJump = Character.m_Cur.m_Jumped & 1;
-			Data.m_DirRight = Character.m_Cur.m_Direction == 1;
+			const auto Direction = GameClient()->QmWaterHammerIndicator().DirectionInputs(ClientId);
+			Data.m_DirLeft = Direction.m_Left;
+			Data.m_DirJump = Direction.m_Jump;
+			Data.m_DirRight = Direction.m_Right;
 		}
 	}
 
