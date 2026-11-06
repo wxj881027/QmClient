@@ -6098,9 +6098,6 @@ Game type
 Game type (ddnet, mod)
 == 게임 유형 (ddnet, mod)
 
-Game types:
-== 게임 유형:
-
 Game update rate (Hz)
 == 게임 업데이트율 (Hz)
 
@@ -10411,9 +10408,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == 서버 브라우저의 플레이어 국가 필터 (ISO 3166-1 숫자)
-
-Player country:
-== 플레이어 국가:
 
 Player death
 == 플레이어 사망
@@ -14827,9 +14821,6 @@ Stress system (debug builds only).
 
 Strict game type filter
 == 엄격한 게임 유형 필터
-
-Strict gametype filter
-== 엄격한 게임 모드 필터
 
 Strict mode
 == 엄격 모드

@@ -6098,9 +6098,6 @@ Game type
 Game type (ddnet, mod)
 == Spieltyp (ddnet, mod)
 
-Game types:
-== Spieltypen:
-
 Game update rate (Hz)
 == Spielaktualisierungsrate (Hz)
 
@@ -10411,9 +10408,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == Spielerland-Filter im Server-Browser (ISO 3166-1 numerisch)
-
-Player country:
-== Spielerland:
 
 Player death
 == Spielertod
@@ -14826,9 +14820,6 @@ Stress system (debug builds only).
 == Stresssystem (nur Debug-Builds).
 
 Strict game type filter
-== Strenger Spieltyp-Filter
-
-Strict gametype filter
 == Strenger Spieltyp-Filter
 
 Strict mode

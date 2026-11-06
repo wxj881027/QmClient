@@ -6098,9 +6098,6 @@ Game type
 Game type (ddnet, mod)
 == 遊戲類型（ddnet、mod）
 
-Game types:
-== 遊戲模式：
-
 Game update rate (Hz)
 == 遊戲更新率（單位：Hz）
 
@@ -10411,9 +10408,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == 在伺服器瀏覽器中過濾的玩家國家/地區（ISO 3166-1 數字）
-
-Player country:
-== 玩家國家
 
 Player death
 == 玩家死亡
@@ -14827,9 +14821,6 @@ Stress system (debug builds only).
 
 Strict game type filter
 == 嚴格遊戲模式篩選
-
-Strict gametype filter
-== 嚴格匹配
 
 Strict mode
 == 嚴格模式
