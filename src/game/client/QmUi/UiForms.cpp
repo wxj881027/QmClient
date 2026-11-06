@@ -212,10 +212,13 @@ namespace ui_widget
 		const bool HasIcon = Options.m_pLeadingIcon != nullptr || Search;
 		const bool HasTrailingAction = Options.m_pTrailingActionId != nullptr && Options.m_pTrailingActionIcon != nullptr;
 		const bool InlineTrailingText = Options.m_InlineTrailingText && Options.m_pTrailingText != nullptr && Options.m_pTrailingText[0] != '\0';
+		// 一个输入框里不放两个尾部图标：有显隐眼睛这类动作时就不再给清空叉号留槽位，
+		// 眼睛因此贴到输入框最右边，也不会和叉号抢点击区域。
+		const bool Clearable = Options.m_Clearable && !HasTrailingAction;
 		const float TrailingWidth = HasTrailingAction ? std::max(Options.m_TrailingWidth, Rect.h) : Options.m_TrailingWidth;
-		const SInputFieldLayout Layout = ResolveInputFieldLayout(Rect, HasIcon, Options.m_Clearable, Ctx.m_UiScale, InlineTrailingText ? 0.0f : TrailingWidth);
-		const bool ShowClear = Options.m_Clearable && QmInputFieldClearVisible(pInput->IsEmpty(), WasActive, WasEmpty);
-		const float ClearAlpha = Options.m_Clearable ? AnimateStateValue(Ctx, pInput->GetClearButtonId(), EUiAnimProperty::ALPHA, ShowClear ? 1.0f : 0.0f, ui_token::motion::HOVER_FADE) : 0.0f;
+		const SInputFieldLayout Layout = ResolveInputFieldLayout(Rect, HasIcon, Clearable, Ctx.m_UiScale, InlineTrailingText ? 0.0f : TrailingWidth);
+		const bool ShowClear = Clearable && QmInputFieldClearVisible(pInput->IsEmpty(), WasActive, WasEmpty);
+		const float ClearAlpha = Clearable ? AnimateStateValue(Ctx, pInput->GetClearButtonId(), EUiAnimProperty::ALPHA, ShowClear ? 1.0f : 0.0f, ui_token::motion::HOVER_FADE) : 0.0f;
 		const float FontSize = std::min(Options.m_FontSize, Layout.m_ContentRect.h * CUi::ms_FontmodHeight * 0.8f);
 		CUIRect TextRect = Layout.m_ContentRect;
 		CUIRect TrailingRect = Layout.m_TrailingRect;
@@ -279,7 +282,7 @@ namespace ui_widget
 		RenderOptions.m_DrawBackground = false;
 		RenderOptions.m_ProcessInput = ProcessInput;
 		CUIRect InputHitRect = Layout.m_ShellRect;
-		if(Options.m_Clearable && ShowClear && Layout.m_ClearRect.w > 0.0f)
+		if(Clearable && ShowClear && Layout.m_ClearRect.w > 0.0f)
 			InputHitRect.VSplitRight(Layout.m_ClearRect.w, &InputHitRect, nullptr);
 		if(HasTrailingAction && TrailingRect.w > 0.0f)
 			InputHitRect.VSplitRight(TrailingRect.w, &InputHitRect, nullptr);
@@ -297,7 +300,7 @@ namespace ui_widget
 		if(RenderOnly)
 			pInput->SetEmptyText(pPreviousPlaceholder);
 
-		if(Options.m_Clearable && !Ctx.m_pUi->MeasurementOnly() && ClearAlpha > 0.01f)
+		if(Clearable && !Ctx.m_pUi->MeasurementOnly() && ClearAlpha > 0.01f)
 		{
 			const CUIRect &ClearRect = Layout.m_ClearRect;
 			// 清除按钮跟随内容出现/消失；槽位始终保留，文字不因 × 出现而重排。
@@ -321,7 +324,7 @@ namespace ui_widget
 			SButtonSurfaceOptions ActionOptions;
 			ActionOptions.m_Role = EUiButtonRole::ICON;
 			ActionOptions.m_TransparentInactive = true;
-			ActionOptions.m_Corners = Options.m_Clearable ? IGraphics::CORNER_NONE : IGraphics::CORNER_R;
+			ActionOptions.m_Corners = Clearable ? IGraphics::CORNER_NONE : IGraphics::CORNER_R;
 			DrawButtonSurface(Ctx, Options.m_pTrailingActionId, TrailingRect, ActionOptions);
 			// 尾部图标必须带上动作 id：它是显隐动画的节点键，缺了就一直走静态字形。
 			DrawInputFieldIcon(Ctx, TrailingRect, Options.m_pTrailingActionIcon, InputIconColor, Options.m_TrailingActionQmIcon, Options.m_pTrailingActionId);

@@ -266,6 +266,9 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 			{
 				ChatPreview.HSplitTop(TipSize, &ChatPreviewLabel, &ChatPreviewArea);
 				pMenus->Ui()->DoLabel(&ChatPreviewLabel, Localize("Chat message preview"), TipSize, TEXTALIGN_ML);
+				// 预览垫一层聊天框底色，跟游戏里实际看到的样子一致，不再只是白字浮在卡片上。
+				DrawRoundedSurface(pMenus->Ui(), ChatPreviewArea, ui_token::color::SURFACE_GLASS, ColorRGBA(), ui_token::radius::BASE);
+				ChatPreviewArea.Margin(TipSize * 0.35f, &ChatPreviewArea);
 				pMenus->Ui()->ClipEnable(&ChatPreviewArea);
 				RenderQmSponsorChatPreview(pMenus->Graphics(), pMenus->TextRender(), ChatPreviewArea, BodySize, static_cast<EQmSponsorChatStyle>(g_Config.m_QmSponsorChatStyle), Auth.TitleAnimationTime());
 				pMenus->Ui()->ClipDisable();
@@ -358,17 +361,21 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 					pMenus->DoSettingsScrollbarOption(Page, Tab, "qm-title-opacity", &g_Config.m_QmTitleOpacity, &g_Config.m_QmTitleOpacity, &Row, Localize("Title opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 				});
 			}
-			RowAction("title-badge-save", [&](CUIRect Row) {
-				static CButtonContainer s_SaveAppearance;
-				if(pMenus->DoButton_Menu(&s_SaveAppearance, Localize("Save"), 0, &Row) && Enabled && Auth.TitleAuthenticated() && (!Draft.m_BindName || Draft.m_Name.GetString()[0]))
-					Auth.SaveTitleProfile(Draft.m_Title.GetString(), Draft.m_BindName ? Draft.m_Name.GetString() : "", Auth.TitleProfileStyle(), static_cast<EQmSponsorChatStyle>(g_Config.m_QmSponsorChatStyle), QmTitleDraftAppearance());
-			});
 
 			CUIRect Preview, PreviewLabel, TitlePreviewArea;
 			if(Flow.Control("title-finished-preview", PreviewHeight, Preview) && Flow.Drawing() && !pMenus->Ui()->DrawingSuppressed())
 			{
+				// 保存放在预览区右上角：位置贴着它作用的这块区域，不用回头找整行大按钮。
+				static CButtonContainer s_SaveAppearance;
+				CUIRect SaveAppearanceRect;
+				Preview.VSplitRight(Metrics.m_ButtonHeight, &Preview, &SaveAppearanceRect);
+				SaveAppearanceRect.h = Metrics.m_ButtonHeight;
+				Preview.VSplitRight(LineSpacing * 0.5f, &Preview, nullptr);
 				Preview.HSplitTop(TipSize, &PreviewLabel, &TitlePreviewArea);
 				pMenus->Ui()->DoLabel(&PreviewLabel, Localize("Title preview"), TipSize, TEXTALIGN_ML);
+				if(pMenus->Ui()->DoButton_QmIcon(&s_SaveAppearance, EQmIcon::CHECK, "\xEE\x86\x82", Enabled ? 0 : -1, &SaveAppearanceRect, IGraphics::CORNER_ALL) && Enabled && Auth.TitleAuthenticated() && (!Draft.m_BindName || Draft.m_Name.GetString()[0]))
+					Auth.SaveTitleProfile(Draft.m_Title.GetString(), Draft.m_BindName ? Draft.m_Name.GetString() : "", Auth.TitleProfileStyle(), static_cast<EQmSponsorChatStyle>(g_Config.m_QmSponsorChatStyle), QmTitleDraftAppearance());
+				pMenus->GameClient()->m_Tooltips.DoToolTip(&s_SaveAppearance, &SaveAppearanceRect, Localize("Save"));
 				pMenus->Ui()->ClipEnable(&TitlePreviewArea);
 				if(Auth.PlayerHasDeveloperBadge(pMenus->GameClient()->m_Snap.m_LocalClientId) && Auth.DeveloperBadge().Available())
 				{
