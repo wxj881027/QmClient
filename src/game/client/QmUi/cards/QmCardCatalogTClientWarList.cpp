@@ -367,75 +367,25 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		}
 		if(Flow.Control("tclient-warlist-entry-actions", WarListMetrics.m_ButtonHeight, Button, MarginSmall))
 		{
-			static ui_widget::SSettingsActionGroupState s_EntryActionWidths;
-			// 没选中条目时「覆盖」没有作用对象，直接不出现：只有「添加条目」占满整行。
-			// 选中后才拆成两半，主次由「有没有对象」决定，不靠颜色区分。
-			if(pSelectedEntry == nullptr)
+			// 两个动作都用图标按钮：加号写入新条目，勾号把改动写回选中条目；说明走悬浮提示。
+			CUIRect AddRect, OverrideRect;
+			Button.VSplitRight(WarListMetrics.m_ButtonHeight, &Button, &OverrideRect);
+			Button.VSplitRight(MarginSmall, &Button, nullptr);
+			Button.VSplitRight(WarListMetrics.m_ButtonHeight, &Button, &AddRect);
+			static CButtonContainer s_AddButton, s_OverrideButton;
+			if(Ui()->DoButton_QmIcon(&s_AddButton, EQmIcon::PLUS, FONT_ICON_PLUS, pSelectedType != nullptr ? 0 : -1, &AddRect, IGraphics::CORNER_ALL) && pSelectedType != nullptr && !ReadOnly && !Ui()->RenderOnly())
 			{
-				static ui_widget::SSettingsActionGroupState s_EntryActionWidthsSingle;
-				const char *apSingleLabels[] = {Localize("Add Entry")};
-				const auto SingleActions = ui_widget::PrepareSettingsActionGroup(*Ui(), s_EntryActionWidthsSingle, Button, apSingleLabels, std::size(apSingleLabels), WarListMetrics);
-				if(DoButtonLineSize_Menu(&s_AddButton, Localize("Add Entry"), 0, &SingleActions.m_aButtons[0], LineSize) && !ReadOnly && !Ui()->RenderOnly())
-				{
-					if(pSelectedType)
-					{
-						GameClient()->m_WarList.AddWarEntry(s_aEntryName, s_aEntryClan, s_aEntryReason, pSelectedType->m_aWarName);
-						pSelectedEntry = nullptr;
-					}
-				}
+				GameClient()->m_WarList.AddWarEntry(s_aEntryName, s_aEntryClan, s_aEntryReason, pSelectedType->m_aWarName);
+				pSelectedEntry = nullptr;
 			}
-			else
+			GameClient()->m_Tooltips.DoToolTip(&s_AddButton, &AddRect, Localize("Add Entry"));
+			if(Ui()->DoButton_QmIcon(&s_OverrideButton, EQmIcon::CHECK, "\xEE\x86\x82", pSelectedEntry != nullptr ? 0 : -1, &OverrideRect, IGraphics::CORNER_ALL) && pSelectedEntry != nullptr && pSelectedType != nullptr && !ReadOnly && !Ui()->RenderOnly() && (str_comp(s_aEntryName, "") != 0 || str_comp(s_aEntryClan, "") != 0))
 			{
-				static ui_widget::SSettingsActionGroupState s_EntryActionWidths;
-				const char *apLabels[] = {Localize("Add Entry"), Localize("Override Entry")};
-				const auto Actions = ui_widget::PrepareSettingsActionGroup(*Ui(), s_EntryActionWidths, Button, apLabels, std::size(apLabels), WarListMetrics);
-				ButtonL = Actions.m_aButtons[0];
-				ButtonR = Actions.m_aButtons[1];
-				if(DoButtonLineSize_Menu(&s_AddButton, Localize("Add Entry"), 0, &ButtonL, LineSize) && !ReadOnly && !Ui()->RenderOnly())
-				{
-					if(pSelectedType)
-					{
-						GameClient()->m_WarList.AddWarEntry(s_aEntryName, s_aEntryClan, s_aEntryReason, pSelectedType->m_aWarName);
-						pSelectedEntry = nullptr;
-					}
-				}
-				if(DoButtonLineSize_Menu(&s_OverrideButton, Localize("Override Entry"), 0, &ButtonR, LineSize) && !ReadOnly && !Ui()->RenderOnly() && pSelectedEntry)
-				{
-					if(pSelectedEntry && pSelectedType && (str_comp(s_aEntryName, "") != 0 || str_comp(s_aEntryClan, "") != 0))
-					{
-						const int Index = static_cast<int>(pSelectedEntry - GameClient()->m_WarList.m_vWarEntries.data());
-						GameClient()->m_WarList.UpdateWarEntry(Index, s_aEntryName, s_aEntryClan, s_aEntryReason, pSelectedType);
-					}
-				}
+				const int Index = static_cast<int>(pSelectedEntry - GameClient()->m_WarList.m_vWarEntries.data());
+				GameClient()->m_WarList.UpdateWarEntry(Index, s_aEntryName, s_aEntryClan, s_aEntryReason, pSelectedType);
 			}
+			GameClient()->m_Tooltips.DoToolTip(&s_OverrideButton, &OverrideRect, Localize("Override Entry"));
 		}
-		// 「当前组」是分组选择区的标题，不属于上面的条目表单：与表单之间留双倍间距，
-		// 组内各控件仍保持单倍，读起来才是两个不同的块。
-		Flow.Space(MarginSmall);
-		if(Flow.Control("tclient-warlist-selected-group", HeadlineFontSize + MarginSmall, Button, MarginSmall))
-		{
-			if(pSelectedType)
-			{
-				// 色带只承担「这是哪一组」：组色画成左侧色块，组名用正文色。
-				// 直接把组名染成组色时，用户挑深色组色会让组名在色带上读不出来。
-				const float SwatchInset = ui_token::spacing::XS;
-				const float SwatchSize = std::max(0.0f, Button.h - 2.0f * SwatchInset);
-				CUIRect Swatch, Label;
-				Button.VSplitLeft(SwatchInset, nullptr, &Swatch);
-				Swatch.VSplitLeft(SwatchSize, &Swatch, &Label);
-				if(SwatchSize > 0.0f)
-				{
-					Swatch.HMargin(SwatchInset, &Swatch);
-					Swatch.Draw(pSelectedType->m_Color, IGraphics::CORNER_ALL, ui_token::radius::TIGHT);
-				}
-				Label.VSplitLeft(SwatchInset, nullptr, &Label);
-				// 只是一行组名时玩家看不出这是什么；前面补上「分组」标签。
-				char aBandLabel[128];
-				str_format(aBandLabel, sizeof(aBandLabel), "%s · %s", Localize("War Groups"), pSelectedType->m_aWarName);
-				Ui()->DoLabel(&Label, aBandLabel, HeadlineFontSize, TEXTALIGN_ML);
-			}
-		}
-
 		LogTClientPerfStageEx("tclient_warlist", "filter", ETClientSettingsPerfStage::INTERACTIVE_LAYER, FilterTimer.ElapsedMs());
 	};
 
@@ -594,6 +544,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				s_RemoveWarTypeConfirm.m_Tone = CUi::SConfirmPopupContext::ETone::DANGER;
 				str_format(s_RemoveWarTypeConfirm.m_aMessage, sizeof(s_RemoveWarTypeConfirm.m_aMessage),
 					Localize("Are you sure that you want to remove '%s' from your war groups?"), s_aRemoveWarTypeName);
+				str_append(s_RemoveWarTypeConfirm.m_aMessage, " ", sizeof(s_RemoveWarTypeConfirm.m_aMessage));
+				str_append(s_RemoveWarTypeConfirm.m_aMessage, Localize("Entries in it will fall back to none."), sizeof(s_RemoveWarTypeConfirm.m_aMessage));
 				Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_RemoveWarTypeConfirm);
 				s_RemoveWarTypePending = true;
 			}
@@ -614,20 +566,34 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		// 头部做成「标题 + 动作」：新增、重命名在头上，颜色跟着选中项走，形态对齐皮肤队列的预设栏。
 		if(Flow.Control("tclient-warlist-groups-header", LineSize, Button, MarginSmall))
 		{
-			CUIRect Label, AddButton, RenameButton;
+			CUIRect Label, MoveUpButton, MoveDownButton, AddButton, RenameButton;
 			char aGroupLabel[96];
 			str_format(aGroupLabel, sizeof(aGroupLabel), "%s (%d)", Localize("War Groups"), (int)GameClient()->m_WarList.m_WarTypes.size());
-			// 圆按钮只放图标，说明交给悬浮提示：图标按钮里塞文字最容易看错。
+			// 图标按钮只放图标，说明交给悬浮提示：图标按钮里塞文字最容易看错。
 			const float IconSide = WarListMetrics.m_ButtonHeight;
-			Button.VSplitRight(IconSide * 2.0f + MarginSmall, &Label, &Button);
+			Button.VSplitRight(IconSide * 4.0f + MarginSmall * 3.0f, &Label, &Button);
 			Button.VSplitRight(IconSide, &Button, &RenameButton);
 			Button.VSplitRight(MarginSmall, &Button, nullptr);
-			AddButton = Button;
+			Button.VSplitRight(IconSide, &Button, &AddButton);
+			Button.VSplitRight(MarginSmall, &Button, nullptr);
+			Button.VSplitRight(IconSide, &Button, &MoveDownButton);
+			Button.VSplitRight(MarginSmall, &Button, nullptr);
+			MoveUpButton = Button;
 			SLabelProperties LabelProps;
 			LabelProps.m_MaxWidth = Label.w;
 			LabelProps.m_EnableWidthCheck = false;
 			Ui()->DoLabel(&Label, aGroupLabel, StandardFontSize, TEXTALIGN_ML, LabelProps);
-			static CButtonContainer s_NewGroupButton, s_RenameGroupButton;
+			const auto &vTypes = GameClient()->m_WarList.m_WarTypes;
+			const int TypeIndex = pSelectedType != nullptr ? static_cast<int>(std::find(vTypes.begin(), vTypes.end(), pSelectedType) - vTypes.begin()) : -1;
+			const bool CanMoveUp = TypeIndex > 1;
+			const bool CanMoveDown = TypeIndex >= 1 && TypeIndex + 1 < (int)vTypes.size();
+			static CButtonContainer s_MoveUpTypeButton, s_MoveDownTypeButton, s_NewGroupButton, s_RenameGroupButton;
+			if(Ui()->DoButton_QmIcon(&s_MoveUpTypeButton, EQmIcon::CHEVRON_UP, FONT_ICON_CHEVRON_UP, CanMoveUp ? 0 : -1, &MoveUpButton, IGraphics::CORNER_ALL) && CanMoveUp && !ReadOnly && !Ui()->RenderOnly())
+				GameClient()->m_WarList.MoveWarType(TypeIndex, TypeIndex - 1);
+			GameClient()->m_Tooltips.DoToolTip(&s_MoveUpTypeButton, &MoveUpButton, Localize("Move up"));
+			if(Ui()->DoButton_QmIcon(&s_MoveDownTypeButton, EQmIcon::CHEVRON_DOWN, FONT_ICON_CHEVRON_DOWN, CanMoveDown ? 0 : -1, &MoveDownButton, IGraphics::CORNER_ALL) && CanMoveDown && !ReadOnly && !Ui()->RenderOnly())
+				GameClient()->m_WarList.MoveWarType(TypeIndex, TypeIndex + 1);
+			GameClient()->m_Tooltips.DoToolTip(&s_MoveDownTypeButton, &MoveDownButton, Localize("Move down"));
 			if(Ui()->DoButton_QmIcon(&s_NewGroupButton, EQmIcon::PLUS, FONT_ICON_PLUS, 0, &AddButton, IGraphics::CORNER_ALL) && !ReadOnly && !Ui()->RenderOnly())
 			{
 				s_GroupEditMode = 1;
@@ -653,6 +619,9 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 			s_TypeNameInput.SetBuffer(s_aTypeName, sizeof(s_aTypeName));
 			s_TypeNameInput.SetEmptyText(Localize("Group name"));
 			ui_widget::InputField(TClientWarListTextInputCtx, &s_TypeNameInput, Field, Localize("Group name"), EditBoxFontSize);
+			// 群组名有硬上限，提前说清楚，免得写完被静默截断。
+			static unsigned char s_GroupNameHintId;
+			GameClient()->m_Tooltips.DoToolTip(&s_GroupNameHintId, &Field, Localize("Group names are limited to 16 characters"));
 			static CButtonContainer s_ConfirmGroupButton, s_CancelGroupButton;
 			// 勾/叉是图标按钮，说明放悬浮提示里。
 			GameClient()->m_Tooltips.DoToolTip(&s_ConfirmGroupButton, &ConfirmButton, Localize("Save"));

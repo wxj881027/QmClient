@@ -117,6 +117,8 @@ public:
 	void RemoveWarEntry(const char *pName, const char *pClan, const char *pType);
 	void RemoveWarEntry(CWarEntry *pEntry);
 	void RemoveWarType(const char *pType);
+	// 调换两个群组的位置；none 固定在第一位不许动。
+	void MoveWarType(int From, int To);
 	void RemoveWarEntryDuplicates(const char *pName, const char *pClan);
 	CWarType *FindWarType(const char *pType);
 	CWarEntry *FindWarEntry(const char *pName, const char *pClan, const char *pType);
