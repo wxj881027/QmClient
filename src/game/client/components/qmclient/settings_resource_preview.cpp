@@ -192,10 +192,11 @@ bool CSettingsResourcePreviewJob::Completed() const
 CSettingsResourcePreviewJob::SResult CSettingsResourcePreviewJob::TakeResult()
 {
 	const CLockScope Lock(m_Lock);
-	if(Finished() && State() != STATE_DONE)
+	if(!m_Completed || m_ResultTaken)
 		return SResult();
 	SResult Result = std::move(m_Result);
 	m_Result = SResult();
+	m_ResultTaken = true;
 	return Result;
 }
 
@@ -211,31 +212,66 @@ void CSettingsResourcePreviewJob::Run()
 	m_Completed = true;
 }
 
-void CSettingsResourcePreviewUploadScheduler::EnqueueUpload(const SResourcePreviewKey &Key, CImageInfo &&Image, const char *pDebugName)
+bool CSettingsResourcePreviewUploadScheduler::EnqueueUpload(const SResourcePreviewKey &Key, CImageInfo &&Image, const char *pDebugName)
 {
 	if(Image.m_pData == nullptr)
-		return;
-	SUploadItem Item;
-	Item.m_Key = Key;
-	Item.m_Image = std::move(Image);
-	Item.m_DebugName = pDebugName != nullptr ? pDebugName : Key.m_Id;
-	m_vUploadQueue.push_back(std::move(Item));
+		return false;
+	return EnqueuePrepared(Key, std::move(Image), {}, pDebugName);
 }
 
-void CSettingsResourcePreviewUploadScheduler::EnqueueUploadToTarget(const SResourcePreviewKey &Key, CImageInfo &&Image, TUploadFinalize &&Finalize, const char *pDebugName)
+bool CSettingsResourcePreviewUploadScheduler::EnqueuePrepared(const SResourcePreviewKey &Key, CImageInfo &&Image, TUploadFinalize &&Finalize, const char *pDebugName)
 {
 	if(Image.m_pData == nullptr)
 	{
 		if(Finalize)
 			Finalize(false, IGraphics::CTextureHandle());
-		return;
+		return true;
 	}
-	SUploadItem Item;
-	Item.m_Key = Key;
-	Item.m_Image = std::move(Image);
-	Item.m_DebugName = pDebugName != nullptr ? pDebugName : Key.m_Id;
-	Item.m_Finalize = std::move(Finalize);
-	m_vUploadQueue.push_back(std::move(Item));
+	try
+	{
+		SUploadItem Item;
+		Item.m_Key = Key;
+		Item.m_DebugName = pDebugName != nullptr ? pDebugName : Key.m_Id;
+		Item.m_Finalize = std::move(Finalize);
+		// 所有字符串、回调和容器节点都准备成功后才转移像素；此前失败保留原图。
+		m_vUploadQueue.push_back(std::move(Item));
+		m_vUploadQueue.back().m_Image = std::move(Image);
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
+}
+
+bool TryPublishSettingsResourcePreviewJob(CSettingsResourcePreviewJob &Job, const SResourcePreviewKey &Key, CSettingsResourcePreviewCache &Cache, CSettingsResourcePreviewUploadScheduler &Uploads, SResourcePreviewTelemetry &Telemetry)
+{
+	try
+	{
+		return Job.TryPublishResult([&](CSettingsResourcePreviewJob::SResult &Result) {
+			// 先保证缓存条目存在；入队之后的状态提交不再分配。
+			Cache.GetOrCreate(Key);
+			const bool Success = Result.m_Artifact.m_Success && Result.m_Artifact.m_Image.m_pData != nullptr;
+			if(Success && !Uploads.EnqueueUpload(Key, std::move(Result.m_Artifact.m_Image), Key.m_Id.c_str()))
+				return false;
+			Cache.MarkPreviewJobDone(Key, Success);
+			Telemetry.m_PreviewArtifactMs += Result.m_Artifact.m_DurationMs;
+			++Telemetry.m_PreviewJobsDone;
+			return true;
+		});
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
 }
 
 bool CSettingsResourcePreviewUploadScheduler::DrainOne(SResourcePreviewUploadBudget &Budget, SResourcePreviewTelemetry &Telemetry, CSettingsResourcePreviewCache &Cache, IGraphics *pGraphics)

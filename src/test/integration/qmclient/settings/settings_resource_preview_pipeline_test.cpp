@@ -135,7 +135,7 @@ TEST(SettingsResourcePreviewPipeline, MissingGraphicsDefersQueuedWorkAndClearDro
 	CPreviewImage Input(1, 1);
 	ASSERT_NE(Input.m_Image.m_pData, nullptr);
 	int Finalizations = 0;
-	Queue.EnqueueUploadToTarget(PreviewKey(), std::move(Input.m_Image), [&](bool, IGraphics::CTextureHandle) { ++Finalizations; }, nullptr);
+	Queue.EnqueueUploadToTarget(PreviewKey(), std::move(Input.m_Image), [&] { return [&](bool, IGraphics::CTextureHandle) { ++Finalizations; }; }, nullptr);
 	EXPECT_EQ(Input.m_Image.m_pData, nullptr);
 	ASSERT_EQ(Queue.QueueDepth(), 1u);
 	EXPECT_EQ(Queue.Drain(Budget, Telemetry, Cache, nullptr), 0);
@@ -160,10 +160,10 @@ TEST(SettingsResourcePreviewPipeline, MissingPixelsFinalizeFailureOnceWithoutEnt
 	CSettingsResourcePreviewUploadScheduler Queue;
 	CImageInfo Image;
 	int Finalizations = 0;
-	Queue.EnqueueUploadToTarget(PreviewKey(), std::move(Image), [&](bool Success, IGraphics::CTextureHandle Texture) {
+	Queue.EnqueueUploadToTarget(PreviewKey(), std::move(Image), [&] { return [&](bool Success, IGraphics::CTextureHandle Texture) {
 		++Finalizations;
 		EXPECT_FALSE(Success);
-		EXPECT_FALSE(Texture.IsValid()); }, nullptr);
+		EXPECT_FALSE(Texture.IsValid()); }; }, nullptr);
 	EXPECT_EQ(Finalizations, 1);
 	EXPECT_EQ(Queue.QueueDepth(), 0u);
 	Queue.Clear();
@@ -280,14 +280,14 @@ TEST(SettingsResourcePreviewPipeline, TargetCallbacksKeepFifoOrderAndRunOnceAcro
 	ASSERT_NE(First.m_Image.m_pData, nullptr);
 	ASSERT_NE(Second.m_Image.m_pData, nullptr);
 	IGraphics::CTextureHandle FirstTexture, SecondTexture;
-	Queue.EnqueueUploadToTarget(PreviewKey("first"), std::move(First.m_Image), [&](bool Success, IGraphics::CTextureHandle Texture) {
+	Queue.EnqueueUploadToTarget(PreviewKey("first"), std::move(First.m_Image), [&] { return [&](bool Success, IGraphics::CTextureHandle Texture) {
 		EXPECT_TRUE(Success);
 		FirstTexture = Texture;
-		Order.push_back(1); }, "first");
-	Queue.EnqueueUploadToTarget(PreviewKey("second"), std::move(Second.m_Image), [&](bool Success, IGraphics::CTextureHandle Texture) {
+		Order.push_back(1); }; }, "first");
+	Queue.EnqueueUploadToTarget(PreviewKey("second"), std::move(Second.m_Image), [&] { return [&](bool Success, IGraphics::CTextureHandle Texture) {
 		EXPECT_TRUE(Success);
 		SecondTexture = Texture;
-		Order.push_back(2); }, "second");
+		Order.push_back(2); }; }, "second");
 	SResourcePreviewUploadBudget Budget;
 	SResourcePreviewTelemetry Telemetry;
 	EXPECT_EQ(Queue.Drain(Budget, Telemetry, Cache, &Graphics), 0);

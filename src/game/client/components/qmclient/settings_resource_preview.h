@@ -2,6 +2,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_SETTINGS_RESOURCE_PREVIEW_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_SETTINGS_RESOURCE_PREVIEW_H
 
+#include <base/borrowed_allocator.h>
 #include <base/lock.h>
 
 #include <engine/client/gpu_upload_limiter.h>
@@ -19,6 +20,7 @@
 #include <functional>
 #include <memory>
 #include <new>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -151,14 +153,35 @@ class CSettingsResourcePreviewUploadScheduler
 public:
 	using TUploadFinalize = std::function<void(bool TextureValid, IGraphics::CTextureHandle Texture)>;
 
-	void EnqueueUpload(const SResourcePreviewKey &Key, CImageInfo &&Image, const char *pDebugName);
-	void EnqueueUploadToTarget(const SResourcePreviewKey &Key, CImageInfo &&Image, TUploadFinalize &&Finalize, const char *pDebugName);
+	explicit CSettingsResourcePreviewUploadScheduler(IAllocationResource *pMemory = nullptr) :
+		m_vUploadQueue(pMemory) {}
+	bool EnqueueUpload(const SResourcePreviewKey &Key, CImageInfo &&Image, const char *pDebugName);
+	// 回调捕获与包装也在准备阶段构造，失败时不接管调用方的图像。
+	template<typename FPrepareFinalize>
+	bool EnqueueUploadToTarget(const SResourcePreviewKey &Key, CImageInfo &&Image, FPrepareFinalize &&PrepareFinalize, const char *pDebugName)
+	{
+		TUploadFinalize Finalize;
+		try
+		{
+			Finalize = PrepareFinalize();
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
+		return EnqueuePrepared(Key, std::move(Image), std::move(Finalize), pDebugName);
+	}
 	bool DrainOne(SResourcePreviewUploadBudget &Budget, SResourcePreviewTelemetry &Telemetry, CSettingsResourcePreviewCache &Cache, IGraphics *pGraphics);
 	int Drain(SResourcePreviewUploadBudget &Budget, SResourcePreviewTelemetry &Telemetry, CSettingsResourcePreviewCache &Cache, IGraphics *pGraphics);
 	size_t QueueDepth() const { return m_vUploadQueue.size(); }
 	void Clear();
 
 private:
+	bool EnqueuePrepared(const SResourcePreviewKey &Key, CImageInfo &&Image, TUploadFinalize &&Finalize, const char *pDebugName);
 	struct SUploadItem
 	{
 		SUploadItem() = default;
@@ -174,7 +197,7 @@ private:
 		TUploadFinalize m_Finalize;
 	};
 
-	std::deque<SUploadItem> m_vUploadQueue;
+	std::deque<SUploadItem, CBorrowedAllocator<SUploadItem>> m_vUploadQueue;
 };
 
 class CSettingsResourcePreviewJob : public IJob
@@ -191,6 +214,22 @@ public:
 
 	bool Completed() const REQUIRES(!m_Lock);
 	SResult TakeResult() REQUIRES(!m_Lock);
+	// 仅供主线程发布结果；消费者准备失败时不取走结果，也不允许重入此 job。
+	template<typename FConsume>
+	bool TryPublishResult(FConsume &&Consume) REQUIRES(!m_Lock)
+	{
+		const CLockScope Lock(m_Lock);
+		if(m_ResultTaken)
+			return true;
+		if(!m_Completed && !Finished())
+			return false;
+		SResult Failure;
+		if(!Consume(m_Completed ? m_Result : Failure))
+			return false;
+		m_Result = SResult();
+		m_ResultTaken = true;
+		return true;
+	}
 
 protected:
 	void Run() override REQUIRES(!m_Lock);
@@ -205,7 +244,10 @@ private:
 	mutable CLock m_Lock;
 	SResult m_Result;
 	bool m_Completed = false;
+	bool m_ResultTaken = false;
 };
+
+bool TryPublishSettingsResourcePreviewJob(CSettingsResourcePreviewJob &Job, const SResourcePreviewKey &Key, CSettingsResourcePreviewCache &Cache, CSettingsResourcePreviewUploadScheduler &Uploads, SResourcePreviewTelemetry &Telemetry);
 
 // 跟踪节点先准备，接收失败撤回；缓存等待标记只在引擎确认后发布。
 template<typename TJobs, typename FCreate>

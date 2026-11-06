@@ -599,15 +599,11 @@ namespace
 				++It;
 				continue;
 			}
-			CSettingsResourcePreviewJob::SResult Result = pJob->TakeResult();
-			ResourcePreviewTelemetry.m_PreviewArtifactMs += Result.m_Artifact.m_DurationMs;
-			if(Result.m_Artifact.m_Success)
-				gs_SettingsAssetsResourcePreviewCache.MarkArtifactReady(It->first);
-			else
-				gs_SettingsAssetsResourcePreviewCache.MarkPreviewJobDone(It->first, false);
-			if(Result.m_Artifact.m_Success)
-				gs_SettingsAssetsResourcePreviewUploadScheduler.EnqueueUpload(It->first, std::move(Result.m_Artifact.m_Image), It->first.m_Id.c_str());
-			++ResourcePreviewTelemetry.m_PreviewJobsDone;
+			if(!TryPublishSettingsResourcePreviewJob(*pJob, It->first, gs_SettingsAssetsResourcePreviewCache, gs_SettingsAssetsResourcePreviewUploadScheduler, ResourcePreviewTelemetry))
+			{
+				++It;
+				continue;
+			}
 			It = m_vEntityBgPreviewJobs.erase(It);
 		}
 		gs_SettingsAssetsResourcePreviewUploadScheduler.Drain(UploadBudget, ResourcePreviewTelemetry, gs_SettingsAssetsResourcePreviewCache, pGraphics);
@@ -5513,91 +5509,104 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		}
 		while(gs_SettingsAssetsResourcePreviewUploadScheduler.QueueDepth() == 0 && !vReadyQueue.empty() && UploadedPreviewsThisFrame < MaxPreviewUploadsPerFrame)
 		{
-			const SSettingsAssetPreviewHandle Handle = vReadyQueue.front();
-			vReadyQueue.pop_front();
-			vReadyQueued.erase(SettingsAssetPreviewHandleKey(Handle));
-			if(Handle.m_Tab != s_CurCustomTab || Handle.m_Epoch != PreviewEpoch)
-				continue;
-			SCustomItem *pItem = FindCustomItemByPreviewHandle(Handle);
-			if(pItem == nullptr)
-				continue;
-			if(pItem->m_PreviewEpoch != Handle.m_Epoch || !SettingsAssetPreviewHandleReferencesAsset(Handle, pItem->m_aName) ||
-				pItem->m_PreviewState != SCustomItem::PREVIEW_STATE_READY || !pItem->m_PreviewImage.m_pData)
+			SCustomItem *pItem = nullptr;
+			size_t ItemBytes = 0;
+			bool PreviewWasResized = false;
+			bool HeavyReserved = false, Admitted = false;
+			ESettingsResourcePriority UploadPriority = ESettingsResourcePriority::BACKGROUND;
+			CPerfTimer UploadBatchTimer(false);
+			const bool Consumed = SettingsAssetQueueTryConsumeFront(vReadyQueue, vReadyQueued, [](const auto &Handle) { return SettingsAssetPreviewHandleKey(Handle); }, [&](const SSettingsAssetPreviewHandle &Handle) {
+					if(Handle.m_Tab != s_CurCustomTab || Handle.m_Epoch != PreviewEpoch)
+						return true;
+					pItem = FindCustomItemByPreviewHandle(Handle);
+					if(pItem == nullptr)
+						return true;
+					if(pItem->m_PreviewEpoch != Handle.m_Epoch || !SettingsAssetPreviewHandleReferencesAsset(Handle, pItem->m_aName) ||
+						pItem->m_PreviewState != SCustomItem::PREVIEW_STATE_READY || !pItem->m_PreviewImage.m_pData)
+					{
+						if(pItem->m_PreviewEpoch == Handle.m_Epoch)
+							ResetCustomItemPreviewState(*pItem);
+						return true;
+					}
+					UploadPriority = pItem->m_PreviewHighPriority ? ESettingsResourcePriority::VISIBLE : ESettingsResourcePriority::BACKGROUND;
+					// 与商店上传同规：滚动期可见优先级保留涓流（调度器积压也能继续排空）。
+					const int MaxUploadsForFrame = SettingsResourceFrameStageBudget(UploadFrameContext, UploadPriority, MaxPreviewUploadsPerFrame, minimum(MaxPreviewUploadsPerFrame, AssetsVisibleTrickleTokens));
+					if(UploadedPreviewsThisFrame >= MaxUploadsForFrame)
+					{
+						UploadBlocked = true;
+						UploadBlockReason = ESettingsWarmupMissReason::GPU_UPLOAD_BUDGET;
+						return false;
+					}
+					ItemBytes = pItem->m_PreviewBytes;
+					if(!SettingsResourceUploadWithinByteBudget(UploadedPreviewsThisFrame, UploadedBytesThisFrame, ItemBytes, MaxPreviewUploadBytesPerFrame))
+					{
+						if(!SettingsResourceOversizedUploadAllowed(UploadFrameContext, m_SettingsPageSwitchActive, UploadPriority, OversizedUploadsThisFrame, ItemBytes, MaxPreviewUploadBytesPerFrame))
+						{
+							UploadBlocked = true;
+							UploadBlockReason = ItemBytes > MaxPreviewUploadBytesPerFrame ?
+										    ESettingsWarmupMissReason::OVERSIZED_UPLOAD_DEFERRED :
+										    ESettingsWarmupMissReason::UPLOAD_BYTES_BUDGET;
+							return false;
+						}
+					}
+					if(!SettingsResourceConsumeSharedHeavyBudget(RemainingHeavyResourceBatches))
+					{
+						UploadBlocked = true;
+						UploadBlockReason = ESettingsWarmupMissReason::SHARED_HEAVY_BUDGET;
+						return false;
+					}
+					PreviewWasResized = pItem->m_PreviewResized;
+					HeavyReserved = true;
+					UploadBatchTimer = CPerfTimer();
+					const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(pItem->m_aName, s_CurCustomTab, false, Graphics()->ScreenHiDPIScale(), TextureWidth);
+					SResourcePreviewState &PreviewCacheState = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
+					// 空白材质的缩略图应当是「什么都没有」，而不是将被屏蔽掉的默认贴图；
+					// 解码仍走内置默认图（只为拿到尺寸与格式），上传前把像素清空即可。
+					if(IsBlankAssetName(pItem->m_aName) && pItem->m_PreviewImage.m_pData != nullptr)
+						ClearImageToTransparent(pItem->m_PreviewImage);
+					if(!gs_SettingsAssetsResourcePreviewUploadScheduler.EnqueueUploadToTarget(
+						PreviewKey,
+						std::move(pItem->m_PreviewImage),
+						// 上传可能延后到下一帧，查找器与句柄都由回调按值持有。
+						[&] { return [this, FindCustomItemByPreviewHandle, UploadHandle = Handle](bool TextureValid, IGraphics::CTextureHandle Texture) {
+							SCustomItem *pUploadItem = FindCustomItemByPreviewHandle(UploadHandle);
+							if(pUploadItem == nullptr || pUploadItem->m_PreviewEpoch != UploadHandle.m_Epoch)
+							{
+								if(Texture.IsValid())
+									Graphics()->UnloadTexture(&Texture);
+								return;
+							}
+							if(TextureValid && Texture.IsValid())
+							{
+								if(pUploadItem->m_RenderTexture.IsValid())
+									Graphics()->UnloadTexture(&pUploadItem->m_RenderTexture);
+								pUploadItem->m_RenderTexture = Texture;
+							}
+							pUploadItem->m_PreviewResidentBytes = TextureValid ? PreviewTextureSizeBytesEstimate(pUploadItem->m_PreviewRequestedTextureSize) : 0;
+							pUploadItem->m_PreviewBytes = 0;
+							pUploadItem->m_PreviewState = TextureValid ? CMenus::SCustomItem::PREVIEW_STATE_LOADED : CMenus::SCustomItem::PREVIEW_STATE_FAILED;
+							pUploadItem->m_PreviewHighPriority = false;
+							pUploadItem->m_PreviewResized = false;
+						}; },
+						pItem->m_aName))
+						return false;
+					PreviewCacheState.m_UploadPending = true;
+					PreviewCacheState.m_AppearStart = 0;
+					Admitted = true;
+					return true; });
+			if(!Consumed)
 			{
-				if(pItem->m_PreviewEpoch == Handle.m_Epoch)
-					ResetCustomItemPreviewState(*pItem);
-				continue;
-			}
-			const ESettingsResourcePriority UploadPriority = pItem->m_PreviewHighPriority ? ESettingsResourcePriority::VISIBLE : ESettingsResourcePriority::BACKGROUND;
-			// 与商店上传同规：滚动期可见优先级保留涓流（调度器积压也能继续排空）。
-			const int MaxUploadsForFrame = SettingsResourceFrameStageBudget(UploadFrameContext, UploadPriority, MaxPreviewUploadsPerFrame, minimum(MaxPreviewUploadsPerFrame, AssetsVisibleTrickleTokens));
-			if(UploadedPreviewsThisFrame >= MaxUploadsForFrame)
-			{
+				if(HeavyReserved)
+					++RemainingHeavyResourceBatches;
 				UploadBlocked = true;
-				UploadBlockReason = ESettingsWarmupMissReason::GPU_UPLOAD_BUDGET;
-				vReadyQueue.push_front(Handle);
-				vReadyQueued.insert(SettingsAssetPreviewHandleKey(Handle));
+				if(UploadBlockReason == ESettingsWarmupMissReason::NONE)
+					UploadBlockReason = ESettingsWarmupMissReason::DEPENDENCY_NOT_READY;
 				break;
 			}
-			const size_t ItemBytes = pItem->m_PreviewBytes;
-			if(!SettingsResourceUploadWithinByteBudget(UploadedPreviewsThisFrame, UploadedBytesThisFrame, ItemBytes, MaxPreviewUploadBytesPerFrame))
-			{
-				if(!SettingsResourceOversizedUploadAllowed(UploadFrameContext, m_SettingsPageSwitchActive, UploadPriority, OversizedUploadsThisFrame, ItemBytes, MaxPreviewUploadBytesPerFrame))
-				{
-					UploadBlocked = true;
-					UploadBlockReason = ItemBytes > MaxPreviewUploadBytesPerFrame ?
-								    ESettingsWarmupMissReason::OVERSIZED_UPLOAD_DEFERRED :
-								    ESettingsWarmupMissReason::UPLOAD_BYTES_BUDGET;
-					vReadyQueue.push_front(Handle);
-					vReadyQueued.insert(SettingsAssetPreviewHandleKey(Handle));
-					break;
-				}
-			}
-			if(!SettingsResourceConsumeSharedHeavyBudget(RemainingHeavyResourceBatches))
-			{
-				UploadBlocked = true;
-				UploadBlockReason = ESettingsWarmupMissReason::SHARED_HEAVY_BUDGET;
-				vReadyQueue.push_front(Handle);
-				vReadyQueued.insert(SettingsAssetPreviewHandleKey(Handle));
-				break;
-			}
-			CPerfTimer UploadBatchTimer;
-			const bool PreviewWasResized = pItem->m_PreviewResized;
-			const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(pItem->m_aName, s_CurCustomTab, false, Graphics()->ScreenHiDPIScale(), TextureWidth);
-			SResourcePreviewState &PreviewCacheState = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
-			PreviewCacheState.m_UploadPending = true;
-			PreviewCacheState.m_AppearStart = 0;
-			// 空白材质的缩略图应当是「什么都没有」，而不是将被屏蔽掉的默认贴图；
-			// 解码仍走内置默认图（只为拿到尺寸与格式），上传前把像素清空即可。
-			if(IsBlankAssetName(pItem->m_aName) && pItem->m_PreviewImage.m_pData != nullptr)
-				ClearImageToTransparent(pItem->m_PreviewImage);
+			if(!Admitted)
+				continue;
 			Graphics()->UnloadTexture(&pItem->m_RenderTexture);
 			pItem->m_PreviewResidentBytes = 0;
-			gs_SettingsAssetsResourcePreviewUploadScheduler.EnqueueUploadToTarget(
-				PreviewKey,
-				std::move(pItem->m_PreviewImage),
-				// 上传可能延后到下一帧，查找器与句柄都由回调按值持有。
-				[this, FindCustomItemByPreviewHandle, UploadHandle = Handle](bool TextureValid, IGraphics::CTextureHandle Texture) {
-					SCustomItem *pUploadItem = FindCustomItemByPreviewHandle(UploadHandle);
-					if(pUploadItem == nullptr || pUploadItem->m_PreviewEpoch != UploadHandle.m_Epoch)
-					{
-						if(Texture.IsValid())
-							Graphics()->UnloadTexture(&Texture);
-						return;
-					}
-					if(TextureValid && Texture.IsValid())
-					{
-						if(pUploadItem->m_RenderTexture.IsValid())
-							Graphics()->UnloadTexture(&pUploadItem->m_RenderTexture);
-						pUploadItem->m_RenderTexture = Texture;
-					}
-					pUploadItem->m_PreviewResidentBytes = TextureValid ? PreviewTextureSizeBytesEstimate(pUploadItem->m_PreviewRequestedTextureSize) : 0;
-					pUploadItem->m_PreviewBytes = 0;
-					pUploadItem->m_PreviewState = TextureValid ? CMenus::SCustomItem::PREVIEW_STATE_LOADED : CMenus::SCustomItem::PREVIEW_STATE_FAILED;
-					pUploadItem->m_PreviewHighPriority = false;
-					pUploadItem->m_PreviewResized = false;
-				},
-				pItem->m_aName);
 			if(!gs_SettingsAssetsResourcePreviewUploadScheduler.DrainOne(PreviewUploadBudget, PreviewUploadTelemetry, gs_SettingsAssetsResourcePreviewCache, Graphics()))
 			{
 				UploadBlocked = true;
@@ -6583,87 +6592,100 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			}
 			while(gs_SettingsAssetsResourcePreviewUploadScheduler.QueueDepth() == 0 && !WorkshopState.m_vReadyThumbQueue.empty() && WorkshopGpuUploadsThisFrame < MaxWorkshopThumbUploadsPerFrame)
 			{
-				const std::string ReadyAssetId = WorkshopState.m_vReadyThumbQueue.front();
-				WorkshopState.m_vReadyThumbQueue.pop_front();
-				WorkshopState.m_vReadyThumbQueued.erase(ReadyAssetId);
+				SWorkshopHudAsset *pAsset = nullptr;
+				size_t AssetBytes = 0;
+				bool ThumbWasResized = false;
+				bool HeavyReserved = false, Admitted = false;
+				ESettingsResourcePriority UploadPriority = ESettingsResourcePriority::BACKGROUND;
+				CPerfTimer UploadBatchTimer(false);
+				const bool Consumed = SettingsAssetQueueTryConsumeFront(WorkshopState.m_vReadyThumbQueue, WorkshopState.m_vReadyThumbQueued, [](const auto &Id) { return Id; }, [&](const std::string &ReadyAssetId) {
 
-				SWorkshopHudAsset *pAsset = FindWorkshopAssetById(WorkshopState, ReadyAssetId);
-				if(pAsset == nullptr)
-					continue;
-				if(pAsset->m_ThumbTexture.IsValid())
-				{
-					ResetWorkshopThumbReadyState(*pAsset);
-					continue;
-				}
-				if(pAsset->m_ThumbImage.m_pData == nullptr)
-					continue;
+						pAsset = FindWorkshopAssetById(WorkshopState, ReadyAssetId);
+						if(pAsset == nullptr)
+							return true;
+						if(pAsset->m_ThumbTexture.IsValid())
+						{
+							ResetWorkshopThumbReadyState(*pAsset);
+							return true;
+						}
+						if(pAsset->m_ThumbImage.m_pData == nullptr)
+							return true;
 
-				CPerfTimer UploadBatchTimer;
-				const size_t AssetBytes = pAsset->m_ThumbBytes;
-				const ESettingsResourcePriority UploadPriority = pAsset->m_ThumbHighPriority ? ESettingsResourcePriority::VISIBLE : ESettingsResourcePriority::BACKGROUND;
-				// 滚动上下文里可见优先级保留涓流预算（ScrollActiveVisibleBudget），
-				// 之前传 0 等于把框架自带的滚动期可见涓流关死了。
-				const int MaxUploadsForFrame = SettingsResourceFrameStageBudget(UploadFrameContext, UploadPriority, MaxWorkshopThumbUploadsPerFrame, minimum(MaxWorkshopThumbUploadsPerFrame, AssetsVisibleTrickleTokens));
-				if(WorkshopGpuUploadsThisFrame >= MaxUploadsForFrame)
+						AssetBytes = pAsset->m_ThumbBytes;
+						UploadPriority = pAsset->m_ThumbHighPriority ? ESettingsResourcePriority::VISIBLE : ESettingsResourcePriority::BACKGROUND;
+						// 滚动上下文里可见优先级保留涓流预算（ScrollActiveVisibleBudget），
+						// 之前传 0 等于把框架自带的滚动期可见涓流关死了。
+						const int MaxUploadsForFrame = SettingsResourceFrameStageBudget(UploadFrameContext, UploadPriority, MaxWorkshopThumbUploadsPerFrame, minimum(MaxWorkshopThumbUploadsPerFrame, AssetsVisibleTrickleTokens));
+						if(WorkshopGpuUploadsThisFrame >= MaxUploadsForFrame)
+						{
+							WorkshopUploadBlocked = true;
+							WorkshopUploadBlockReason = ESettingsWarmupMissReason::GPU_UPLOAD_BUDGET;
+							return false;
+						}
+						if(!SettingsResourceUploadWithinByteBudget(WorkshopGpuUploadsThisFrame, WorkshopThumbUploadedBytesThisFrame, AssetBytes, MaxWorkshopThumbUploadBytesPerFrame))
+						{
+							if(!SettingsResourceOversizedUploadAllowed(UploadFrameContext, m_SettingsPageSwitchActive, UploadPriority, WorkshopOversizedUploadsThisFrame, AssetBytes, MaxWorkshopThumbUploadBytesPerFrame))
+							{
+								WorkshopUploadBlocked = true;
+								WorkshopUploadBlockReason = AssetBytes > MaxWorkshopThumbUploadBytesPerFrame ?
+												    ESettingsWarmupMissReason::OVERSIZED_UPLOAD_DEFERRED :
+												    ESettingsWarmupMissReason::UPLOAD_BYTES_BUDGET;
+								return false;
+							}
+						}
+						if(!SettingsResourceConsumeSharedHeavyBudget(RemainingHeavyResourceBatches))
+						{
+							WorkshopUploadBlocked = true;
+							WorkshopUploadBlockReason = ESettingsWarmupMissReason::SHARED_HEAVY_BUDGET;
+							return false;
+						}
+						HeavyReserved = true;
+					UploadBatchTimer = CPerfTimer();
+						ThumbWasResized = pAsset->m_ThumbResized;
+						const std::string UploadAssetId = pAsset->m_Id;
+						const unsigned UploadEpoch = pAsset->m_ThumbQueuedEpoch;
+						const int UploadTab = pAsset->m_ThumbQueuedTab;
+						const int UploadTextureSize = pAsset->m_ThumbRequestedTextureSize;
+						const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(pAsset->m_Id.empty() ? pAsset->m_Name.c_str() : pAsset->m_Id.c_str(), s_CurCustomTab, true, Graphics()->ScreenHiDPIScale(), TextureWidth);
+						SResourcePreviewState &PreviewCacheState = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
+						if(!gs_SettingsAssetsResourcePreviewUploadScheduler.EnqueueUploadToTarget(
+							PreviewKey,
+							std::move(pAsset->m_ThumbImage),
+							[&] { return [this, UploadAssetId, UploadEpoch, UploadTab, UploadTextureSize](bool TextureValid, IGraphics::CTextureHandle Texture) {
+								SWorkshopHudState *pUploadState = WorkshopStateByTab(UploadTab);
+								SWorkshopHudAsset *pUploadAsset = pUploadState != nullptr ? FindWorkshopAssetById(*pUploadState, UploadAssetId) : nullptr;
+								if(pUploadAsset == nullptr || pUploadAsset->m_ThumbQueuedEpoch != UploadEpoch || pUploadAsset->m_ThumbQueuedTab != UploadTab)
+								{
+									if(Texture.IsValid())
+										Graphics()->UnloadTexture(&Texture);
+									return;
+								}
+								if(TextureValid && Texture.IsValid())
+								{
+									if(pUploadAsset->m_ThumbTexture.IsValid())
+										Graphics()->UnloadTexture(&pUploadAsset->m_ThumbTexture);
+									pUploadAsset->m_ThumbTexture = Texture;
+								}
+								pUploadAsset->m_ThumbResidentBytes = TextureValid ? PreviewTextureSizeBytesEstimate(UploadTextureSize) : 0;
+								ResetWorkshopThumbReadyState(*pUploadAsset);
+							}; },
+							pAsset->m_Name.c_str()))
+							return false;
+						PreviewCacheState.m_UploadPending = true;
+						PreviewCacheState.m_AppearStart = 0;
+						Admitted = true;
+						return true; });
+				if(!Consumed)
 				{
+					if(HeavyReserved)
+						++RemainingHeavyResourceBatches;
 					WorkshopUploadBlocked = true;
-					WorkshopUploadBlockReason = ESettingsWarmupMissReason::GPU_UPLOAD_BUDGET;
-					WorkshopState.m_vReadyThumbQueue.push_front(ReadyAssetId);
-					WorkshopState.m_vReadyThumbQueued.insert(ReadyAssetId);
+					if(WorkshopUploadBlockReason == ESettingsWarmupMissReason::NONE)
+						WorkshopUploadBlockReason = ESettingsWarmupMissReason::DEPENDENCY_NOT_READY;
 					break;
 				}
-				if(!SettingsResourceUploadWithinByteBudget(WorkshopGpuUploadsThisFrame, WorkshopThumbUploadedBytesThisFrame, AssetBytes, MaxWorkshopThumbUploadBytesPerFrame))
-				{
-					if(!SettingsResourceOversizedUploadAllowed(UploadFrameContext, m_SettingsPageSwitchActive, UploadPriority, WorkshopOversizedUploadsThisFrame, AssetBytes, MaxWorkshopThumbUploadBytesPerFrame))
-					{
-						WorkshopUploadBlocked = true;
-						WorkshopUploadBlockReason = AssetBytes > MaxWorkshopThumbUploadBytesPerFrame ?
-										    ESettingsWarmupMissReason::OVERSIZED_UPLOAD_DEFERRED :
-										    ESettingsWarmupMissReason::UPLOAD_BYTES_BUDGET;
-						WorkshopState.m_vReadyThumbQueue.push_front(ReadyAssetId);
-						WorkshopState.m_vReadyThumbQueued.insert(ReadyAssetId);
-						break;
-					}
-				}
-				if(!SettingsResourceConsumeSharedHeavyBudget(RemainingHeavyResourceBatches))
-				{
-					WorkshopUploadBlocked = true;
-					WorkshopUploadBlockReason = ESettingsWarmupMissReason::SHARED_HEAVY_BUDGET;
-					WorkshopState.m_vReadyThumbQueue.push_front(ReadyAssetId);
-					WorkshopState.m_vReadyThumbQueued.insert(ReadyAssetId);
-					break;
-				}
-				const bool ThumbWasResized = pAsset->m_ThumbResized;
-				const std::string UploadAssetId = pAsset->m_Id;
-				const unsigned UploadEpoch = pAsset->m_ThumbQueuedEpoch;
-				const int UploadTab = pAsset->m_ThumbQueuedTab;
-				const int UploadTextureSize = pAsset->m_ThumbRequestedTextureSize;
-				const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(pAsset->m_Id.empty() ? pAsset->m_Name.c_str() : pAsset->m_Id.c_str(), s_CurCustomTab, true, Graphics()->ScreenHiDPIScale(), TextureWidth);
-				SResourcePreviewState &PreviewCacheState = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
-				PreviewCacheState.m_UploadPending = true;
-				PreviewCacheState.m_AppearStart = 0;
-				gs_SettingsAssetsResourcePreviewUploadScheduler.EnqueueUploadToTarget(
-					PreviewKey,
-					std::move(pAsset->m_ThumbImage),
-					[&, UploadAssetId, UploadEpoch, UploadTab, UploadTextureSize](bool TextureValid, IGraphics::CTextureHandle Texture) {
-						SWorkshopHudState *pUploadState = WorkshopStateByTab(UploadTab);
-						SWorkshopHudAsset *pUploadAsset = pUploadState != nullptr ? FindWorkshopAssetById(*pUploadState, UploadAssetId) : nullptr;
-						if(pUploadAsset == nullptr || pUploadAsset->m_ThumbQueuedEpoch != UploadEpoch || pUploadAsset->m_ThumbQueuedTab != UploadTab)
-						{
-							if(Texture.IsValid())
-								Graphics()->UnloadTexture(&Texture);
-							return;
-						}
-						if(TextureValid && Texture.IsValid())
-						{
-							if(pUploadAsset->m_ThumbTexture.IsValid())
-								Graphics()->UnloadTexture(&pUploadAsset->m_ThumbTexture);
-							pUploadAsset->m_ThumbTexture = Texture;
-						}
-						pUploadAsset->m_ThumbResidentBytes = TextureValid ? PreviewTextureSizeBytesEstimate(UploadTextureSize) : 0;
-						ResetWorkshopThumbReadyState(*pUploadAsset);
-					},
-					pAsset->m_Name.c_str());
+				if(!Admitted)
+					continue;
 				if(!gs_SettingsAssetsResourcePreviewUploadScheduler.DrainOne(WorkshopPreviewUploadBudget, WorkshopPreviewUploadTelemetry, gs_SettingsAssetsResourcePreviewCache, Graphics()))
 				{
 					WorkshopUploadBlocked = true;

@@ -299,3 +299,116 @@ TEST(QmSettingsAssetQueue, EmptyAndSingleRecordDeferralsNeedNoAllocation)
 	EXPECT_EQ(Single, (std::deque<std::string>{std::string(256, 's')}));
 	EXPECT_EQ(Attempts, 0u);
 }
+
+TEST(QmSettingsAssetQueue, EmptyFrontDoesNotCallConsumer)
+{
+	std::deque<std::string> Queue;
+	std::unordered_set<std::string> Markers;
+	bool Called = false;
+	EXPECT_FALSE(SettingsAssetQueueTryConsumeFront(Queue, Markers, Key, [&](const auto &) { Called = true; return true; }));
+	EXPECT_FALSE(Called);
+}
+
+TEST(QmSettingsAssetQueue, DeferredFrontKeepsItsNodeAndMarker)
+{
+	std::deque<std::string> Queue{"first", "second"};
+	std::unordered_set<std::string> Markers{"first", "second"};
+	EXPECT_FALSE(SettingsAssetQueueTryConsumeFront(Queue, Markers, Key, [](const auto &) { return false; }));
+	EXPECT_EQ(Queue, (std::deque<std::string>{"first", "second"}));
+	EXPECT_EQ(Markers, (std::unordered_set<std::string>{"first", "second"}));
+}
+
+TEST(QmSettingsAssetQueue, AcceptedFrontRemovesOnlyItsOwnNodeAndMarker)
+{
+	std::deque<std::string> Queue{"first", "second"};
+	std::unordered_set<std::string> Markers{"first", "second"};
+	std::string Accepted;
+	ASSERT_TRUE(SettingsAssetQueueTryConsumeFront(Queue, Markers, Key, [&](const auto &Name) { Accepted = Name; return true; }));
+	EXPECT_EQ(Accepted, "first");
+	EXPECT_EQ(Queue, (std::deque<std::string>{"second"}));
+	EXPECT_EQ(Markers, (std::unordered_set<std::string>{"second"}));
+}
+
+TEST(QmSettingsAssetQueue, FrontKeyAllocationFailureKeepsRecordAndDoesNotCallConsumer)
+{
+	const std::string Name(256, 'n');
+	std::deque<std::string> Queue{Name};
+	std::unordered_set<std::string> Markers{Name};
+	bool Consumed, Failed, Called = false;
+	{
+		CPredictionAllocationFailure Failure;
+		Consumed = SettingsAssetQueueTryConsumeFront(Queue, Markers, Key, [&](const auto &) { Called = true; return true; });
+		Failed = Failure.Triggered();
+	}
+	EXPECT_TRUE(Failed);
+	EXPECT_FALSE(Consumed);
+	EXPECT_FALSE(Called);
+	EXPECT_EQ(Queue, (std::deque<std::string>{Name}));
+	EXPECT_EQ(Markers.count(Name), 1u);
+}
+
+TEST(QmSettingsAssetQueue, FrontPreparationAllocationFailureCanRetrySameRecord)
+{
+	std::deque<std::string> Queue{"first", "second"};
+	std::unordered_set<std::string> Markers{"first", "second"};
+	EXPECT_FALSE(SettingsAssetQueueTryConsumeFront(Queue, Markers, Key, [](const auto &) -> bool { throw std::bad_alloc(); }));
+	EXPECT_EQ(Queue, (std::deque<std::string>{"first", "second"}));
+	ASSERT_TRUE(SettingsAssetQueueTryConsumeFront(Queue, Markers, Key, [](const auto &Name) { return Name == "first"; }));
+	EXPECT_EQ(Queue, (std::deque<std::string>{"second"}));
+	EXPECT_EQ(Markers, (std::unordered_set<std::string>{"second"}));
+}
+
+TEST(QmSettingsAssetQueue, FrontPreparationLengthFailureKeepsRecord)
+{
+	std::deque<std::string> Queue{"first"};
+	std::unordered_set<std::string> Markers{"first"};
+	EXPECT_FALSE(SettingsAssetQueueTryConsumeFront(Queue, Markers, Key, [](const auto &) -> bool { throw std::length_error("full"); }));
+	EXPECT_EQ(Queue, (std::deque<std::string>{"first"}));
+	EXPECT_EQ(Markers.count("first"), 1u);
+}
+
+TEST(QmSettingsAssetQueue, UnknownFrontPreparationExceptionPropagatesWithoutRemovingRecord)
+{
+	std::deque<std::string> Queue{"first"};
+	std::unordered_set<std::string> Markers{"first"};
+	EXPECT_THROW(SettingsAssetQueueTryConsumeFront(Queue, Markers, Key, [](const auto &) -> bool { throw 7; }), int);
+	EXPECT_EQ(Queue, (std::deque<std::string>{"first"}));
+	EXPECT_EQ(Markers.count("first"), 1u);
+}
+
+TEST(QmSettingsAssetQueue, RepeatedDeferralDoesNotDuplicateOrSkipFollowingRecord)
+{
+	std::deque<std::string> Queue{"first", "second"};
+	std::unordered_set<std::string> Markers{"first", "second"};
+	for(int Frame = 0; Frame < 3; ++Frame)
+		EXPECT_FALSE(SettingsAssetQueueTryConsumeFront(Queue, Markers, Key, [](const auto &) { return false; }));
+	ASSERT_TRUE(SettingsAssetQueueTryConsumeFront(Queue, Markers, Key, [](const auto &Name) { return Name == "first"; }));
+	EXPECT_EQ(Queue, (std::deque<std::string>{"second"}));
+	EXPECT_EQ(Markers.size(), 1u);
+}
+
+TEST(QmSettingsAssetQueue, SuccessfulFrontCommitDoesNotAllocateAnotherNodeOrMarker)
+{
+	std::deque<std::string> Queue{"first", "second"};
+	std::unordered_set<std::string> Markers{"first", "second"};
+	bool Consumed;
+	size_t Attempts;
+	{
+		CPredictionAllocationFailure Failure;
+		Consumed = SettingsAssetQueueTryConsumeFront(Queue, Markers, Key, [](const auto &) { return true; });
+		Attempts = Failure.Attempts();
+	}
+	EXPECT_TRUE(Consumed);
+	EXPECT_EQ(Attempts, 0u);
+	EXPECT_EQ(Queue, (std::deque<std::string>{"second"}));
+	EXPECT_EQ(Markers, (std::unordered_set<std::string>{"second"}));
+}
+
+TEST(QmSettingsAssetQueue, FrontWithoutMarkerCanBeDiscardedSafely)
+{
+	std::deque<std::string> Queue{"stale"};
+	std::unordered_set<std::string> Markers;
+	EXPECT_TRUE(SettingsAssetQueueTryConsumeFront(Queue, Markers, Key, [](const auto &) { return true; }));
+	EXPECT_TRUE(Queue.empty());
+	EXPECT_TRUE(Markers.empty());
+}

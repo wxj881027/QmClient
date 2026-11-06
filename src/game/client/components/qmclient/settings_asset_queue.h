@@ -102,6 +102,33 @@ auto SettingsAssetQueueTryStartKeyed(TQueue &Queue, TSet &Queued, bool HighPrior
 	}
 }
 
+// Consume 只能在无异常的交接提交后返回 true，不得重入修改队列或标记。
+// 预算不足、准备失败或拒收时保留原队首，下帧继续；成功后只删除现有节点。
+template<typename TQueue, typename TSet, typename FMakeKey, typename FConsume>
+bool SettingsAssetQueueTryConsumeFront(TQueue &Queue, TSet &Queued, FMakeKey &&MakeKey, FConsume &&Consume)
+{
+	if(Queue.empty())
+		return false;
+	try
+	{
+		auto Marker = Queued.find(MakeKey(Queue.front()));
+		if(!Consume(Queue.front()))
+			return false;
+		if(Marker != Queued.end())
+			Queued.erase(Marker);
+		Queue.pop_front();
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
+}
+
 template<typename TQueue>
 bool SettingsAssetQueueDeferFront(TQueue &Queue)
 {
