@@ -120,7 +120,7 @@ namespace qm_card_catalog
 			return BuildChatCompletionCard(Ctx, Out);
 		if(str_comp(pStableId, "qm:steam") == 0)
 			return BuildSteamCard(Ctx, Id, Out);
-		if(Id == qm_module::EQmModuleId::ChatBubble || ContainsStableId(VisualCardStableIds(), pStableId))
+		if(Id == qm_module::EQmModuleId::ChatBubble || Id == qm_module::EQmModuleId::EntityOverlay || ContainsStableId(VisualCardStableIds(), pStableId))
 			return BuildVisualCard(Ctx, Id, Out);
 		if(ContainsStableId(FunctionCardStableIds(), pStableId))
 			return BuildFunctionCard(Ctx, Id, Out);

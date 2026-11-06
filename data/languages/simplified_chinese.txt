@@ -4241,8 +4241,8 @@ Draft file is empty
 Drag
 == 拖动
 
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
-== 拖动死亡透明度或传送透明度这类滑块，范围 0 到 100%，或用调整图层透明度把整个实体层调淡。
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
+== 拖动死亡透明度或传送透明度这类滑块，范围 0 到 100%，或用“显示实体层”把整个实体层调淡。
 
 Drag HUD modules with the left mouse button
 == 按住鼠标左键拖动 HUD 模块
@@ -5222,8 +5222,8 @@ Entity Background Image
 Entity layer
 == 实体层
 
-Entity overlay
-== 实体层叠加
+Entity layer adjustments
+== 实体层调整
 
 Entity Preview
 == 实体层预览
@@ -16186,9 +16186,6 @@ Tune additional world and player effects
 
 Tune in zone a variable to value
 == 将区域 a 的变量调到指定值
-
-Tune layer opacity
-== 叠层不透明度
 
 Tune variable to value
 == 将变量调到指定值

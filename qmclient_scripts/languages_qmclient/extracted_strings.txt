@@ -1412,7 +1412,7 @@ Downloading…
 Downscaled (0.78)
 Draft file is empty
 Drag
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
 Drag HUD modules with the left mouse button
 Drag the selected watermark to move it. The original image is preserved.
 Drag the three sliders; master scales the other two.
@@ -1739,7 +1739,7 @@ Entities background color
 Entity assets
 Entity Background Image
 Entity layer
-Entity overlay
+Entity layer adjustments
 Entity Preview
 Entity wall outline opacity
 entity_bg (Workshop)
@@ -5394,7 +5394,6 @@ Trying Axiom dummy auto login
 Trying to determine UDP connectivity…
 Tune additional world and player effects
 Tune in zone a variable to value
-Tune layer opacity
 Tune variable to value
 Tune variable to value or show current value
 Turn motion off on weaker machines; cards then open and scroll immediately.

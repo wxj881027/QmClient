@@ -66,7 +66,7 @@ namespace qm_card_catalog
 			return true;
 		}
 		case EQmModuleId::EntityOverlay:
-			Add(Id, "qm:entity_overlay", "Entity Layer Colors", "Adjust opacity of entity layers", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmVisualEntityOverlayContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
+			Add(Id, "qm:entity_overlay", "Entity layer adjustments", "Adjust opacity of entity layers", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmVisualEntityOverlayContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
 			return true;
 		case EQmModuleId::CollisionHitbox:
 			Add(Id, "qm:collision_hitbox", "Hitbox mode", "Show collision and weapon interaction", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmVisualCollisionHitboxContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });

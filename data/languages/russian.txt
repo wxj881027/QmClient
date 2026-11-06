@@ -4232,8 +4232,8 @@ Draft file is empty
 Drag
 == Перетаскивание
 
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
-== Двигайте ползунок вроде непрозрачности смерти или непрозрачности телепорта от 0 до 100% или используйте настройку прозрачности слоя, чтобы приглушить весь слой объектов.
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
+== Двигайте ползунок вроде непрозрачности смерти или непрозрачности телепорта от 0 до 100% или используйте наложение сущностей, чтобы приглушить весь слой объектов.
 
 Drag HUD modules with the left mouse button
 == Перетаскивайте модули HUD левой кнопкой мыши
@@ -5213,8 +5213,8 @@ Entity Background Image
 Entity layer
 == Слой сущностей
 
-Entity overlay
-== Наложение сущностей
+Entity layer adjustments
+== Настройка слоя сущностей
 
 Entity Preview
 == Предпросмотр сущностей
@@ -16141,9 +16141,6 @@ Tune additional world and player effects
 
 Tune in zone a variable to value
 == Настроить переменную в зоне a на значение
-
-Tune layer opacity
-== Непрозрачность слоя настройки
 
 Tune variable to value
 == Настроить переменную на значение

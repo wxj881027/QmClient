@@ -4232,8 +4232,8 @@ Draft file is empty
 Drag
 == Sürükle
 
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
-== Ölüm saydamlığı veya ışınlanma saydamlığı gibi bir kaydırıcıyı %0 ile %100 arasında sürükleyin ya da katman saydamlığını ayarla ile tüm varlık katmanını soluklaştırın.
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
+== Ölüm saydamlığı veya ışınlanma saydamlığı gibi bir kaydırıcıyı %0 ile %100 arasında sürükleyin ya da varlık katmanını göster ile tüm varlık katmanını soluklaştırın.
 
 Drag HUD modules with the left mouse button
 == HUD modüllerini sol fare tuşuyla sürükleyin
@@ -5213,8 +5213,8 @@ Entity Background Image
 Entity layer
 == Varlık katmanı
 
-Entity overlay
-== Varlık kaplaması
+Entity layer adjustments
+== Varlık katmanı ayarları
 
 Entity Preview
 == Varlık Önizlemesi
@@ -16141,9 +16141,6 @@ Tune additional world and player effects
 
 Tune in zone a variable to value
 == Bölge a'daki bir değişkeni değere ayarla
-
-Tune layer opacity
-== Katman opaklığı
 
 Tune variable to value
 == Değişkeni değere ayarla

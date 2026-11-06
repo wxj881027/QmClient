@@ -42,6 +42,36 @@ namespace
 	QM_CARD_SEARCH_REGISTER("deck:ddnet-demo", deck_ddnet_demo);
 }
 
+// 声明式搜索索引：实体层显示与分层透明度由同一张卡片提供。
+namespace
+{
+	constexpr qm_card_registry::SCardSettingSearch s_aQmSearch_qm_entity_overlay[] = {
+		{Localizable("Overlay entities"), nullptr, "显示实体层 叠层不透明度"},
+		{Localizable("Show text entities"), nullptr, "显示文本实体"},
+		{Localizable("Size"), nullptr, "大小"},
+		{Localizable("CP opacity"), nullptr, "CP 点不透明度"},
+		{Localizable("Death opacity"), nullptr, "死亡不透明度"},
+		{Localizable("Deep freeze opacity"), nullptr, "深度冻结不透明度"},
+		{Localizable("Deep unfreeze opacity"), nullptr, "深度解冻不透明度"},
+		{Localizable("Freeze opacity"), nullptr, "冻结不透明度"},
+		{Localizable("Switch opacity"), nullptr, "开关不透明度"},
+		{Localizable("Teleport opacity"), nullptr, "传送不透明度"},
+		{Localizable("Unfreeze opacity"), nullptr, "解冻不透明度"},
+		{nullptr, "cl_overlay_entities", nullptr},
+		{nullptr, "cl_text_entities", nullptr},
+		{nullptr, "cl_text_entities_size", nullptr},
+		{nullptr, "qm_entity_overlay_death_alpha", nullptr},
+		{nullptr, "qm_entity_overlay_deep_freeze_alpha", nullptr},
+		{nullptr, "qm_entity_overlay_deep_unfreeze_alpha", nullptr},
+		{nullptr, "qm_entity_overlay_freeze_alpha", nullptr},
+		{nullptr, "qm_entity_overlay_switch_alpha", nullptr},
+		{nullptr, "qm_entity_overlay_tele_alpha", nullptr},
+		{nullptr, "qm_entity_overlay_tele_checkpoint_alpha", nullptr},
+		{nullptr, "qm_entity_overlay_unfreeze_alpha", nullptr},
+	};
+	QM_CARD_SEARCH_REGISTER("qm:entity_overlay", qm_entity_overlay);
+}
+
 // 声明式搜索索引：文案随所属卡片声明，静态初始化时自动注册。
 namespace
 {
@@ -53,15 +83,12 @@ namespace
 		{Localizable("AntiPing: predict weapons"), nullptr, "延迟补偿：预测武器"},
 		{Localizable("Default zoom"), nullptr, "默认缩放"},
 		{Localizable("Opacity"), nullptr, "不透明度"},
-		{Localizable("Overlay entities"), nullptr, "显示实体层"},
 		{Localizable("Predict events (experimental)"), nullptr, "预测事件（实验性）"},
 		{Localizable("Prediction margin"), nullptr, "预测余量"},
 		{Localizable("Quads are used for background decoration"), nullptr, "显示用作背景装饰的贴图"},
 		{Localizable("Show background quads"), nullptr, "显示背景贴图"},
 		{Localizable("Show others"), nullptr, "显示其他玩家"},
 		{Localizable("Show others (own team only)"), nullptr, "仅显示同队伍"},
-		{Localizable("Show text entities"), nullptr, "显示文本实体"},
-		{Localizable("Size"), nullptr, "大小"},
 		{Localizable("Try to predict other entities to reduce lag feeling at high latency"), nullptr, "尝试预测其他实体来降低高延迟带来的卡顿感"},
 		{Localizable("Experimental: repeats outgoing UDP game packets when round-trip probes go unanswered. Upload traffic may triple; download loss and late duplicate inputs can still cause problems. Disabled with KCP."), nullptr, "上行冗余说明：探测无响应时重发 UDP 包，上传流量可能翻三倍"},
 		{nullptr, "cl_antiping", nullptr},
@@ -69,7 +96,6 @@ namespace
 		{nullptr, "cl_antiping_players", nullptr},
 		{nullptr, "cl_antiping_weapons", nullptr},
 		{nullptr, "cl_default_zoom", nullptr},
-		{nullptr, "cl_overlay_entities", nullptr},
 		{Localizable("Upstream redundancy (experimental)"), nullptr, "上行冗余发送（实验性）"},
 		{Localizable("Maximum packet copies"), nullptr, "最大包份数"},
 		{nullptr, "qm_upstream_redundancy", nullptr},
@@ -80,8 +106,6 @@ namespace
 		{nullptr, "cl_show_others_alpha", nullptr},
 		{nullptr, "cl_showquads", nullptr},
 		{nullptr, "cl_smooth_zoom_time", nullptr},
-		{nullptr, "cl_text_entities", nullptr},
-		{nullptr, "cl_text_entities_size", nullptr},
 	};
 	QM_CARD_SEARCH_REGISTER("deck:ddnet-gameplay", deck_ddnet_gameplay);
 }

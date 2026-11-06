@@ -267,26 +267,6 @@ uint64_t CMenus::BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildCont
 
 			CUIRect GameplayRow;
 
-			if(Flow.Control("overlay-entities", DDNetMetrics.m_LineHeight, Button))
-			{
-				DoDDNetNumericField("ddnet-overlay-entities", &g_Config.m_ClOverlayEntities, &g_Config.m_ClOverlayEntities, Button, Localize("Overlay entities"), 0, 100);
-			}
-			Flow.Space(DDNetMetrics.m_LineSpacing);
-			if(Flow.Control("text-entities", DDNetMetrics.m_LineHeight, GameplayRow))
-			{
-				SplitSettingsControlRow(GameplayRow, DDNetMetrics, &LeftLeft, &Button);
-
-				if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClTextEntities, "Show text entities", Localize("Show text entities"), g_Config.m_ClTextEntities, &LeftLeft) && CanCommit)
-					g_Config.m_ClTextEntities ^= 1;
-
-				if(g_Config.m_ClTextEntities)
-				{
-					if(DoDDNetNumericField("ddnet-text-entities-size", &g_Config.m_ClTextEntitiesSize, &g_Config.m_ClTextEntitiesSize, Button, Localize("Size"), 20, 100, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_DELAYUPDATE) && CanCommit)
-						GameClient()->m_MapImages.SetTextureScale(g_Config.m_ClTextEntitiesSize);
-				}
-			}
-			Flow.Space(DDNetMetrics.m_LineSpacing);
-
 			if(Flow.Control("show-others", DDNetMetrics.m_LineHeight, GameplayRow))
 			{
 				SplitSettingsControlRow(GameplayRow, DDNetMetrics, &LeftLeft, &Button);

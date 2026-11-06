@@ -4232,8 +4232,8 @@ Draft file is empty
 Drag
 == ドラッグ
 
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
-== 死亡の不透明度やテレポートの不透明度などのスライダーを 0〜100% で動かすか、レイヤーの不透明度を調整でエンティティ層全体を薄くします。
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
+== 死亡の不透明度やテレポートの不透明度などのスライダーを 0〜100% で動かすか、「エンティティを重ねる」でエンティティ層全体を薄くします。
 
 Drag HUD modules with the left mouse button
 == マウスの左ボタンで HUD モジュールをドラッグ
@@ -5213,8 +5213,8 @@ Entity Background Image
 Entity layer
 == エンティティ層
 
-Entity overlay
-== エンティティオーバーレイ
+Entity layer adjustments
+== エンティティレイヤーの調整
 
 Entity Preview
 == エンティティプレビュー
@@ -16141,9 +16141,6 @@ Tune additional world and player effects
 
 Tune in zone a variable to value
 == ゾーン a の変数を値にチューニング
-
-Tune layer opacity
-== チューンレイヤーの不透明度
 
 Tune variable to value
 == 変数を値にチューニング
