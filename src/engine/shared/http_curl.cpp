@@ -76,12 +76,23 @@ CHttpRequestCurl::~CHttpRequestCurl()
 
 void CHttpRequestCurl::Header(const char *pNameColonValue)
 {
-	m_pRequestHeaders = curl_slist_append(m_pRequestHeaders, pNameColonValue);
+	if(m_RequestHeadersFailed)
+		return;
+	auto *pHeaders = AppendRequestHeader(m_pRequestHeaders, pNameColonValue);
+	if(pHeaders)
+		m_pRequestHeaders = pHeaders;
+	else
+		m_RequestHeadersFailed = true;
+}
+
+curl_slist *CHttpRequestCurl::AppendRequestHeader(curl_slist *pHeaders, const char *pHeader) noexcept
+{
+	return curl_slist_append(pHeaders, pHeader);
 }
 
 bool CHttpRequestCurl::ConfigureHandle(CURL *pHandle)
 {
-	if(!BeforeInit())
+	if(m_RequestHeadersFailed || !BeforeInit())
 	{
 		return false;
 	}
@@ -237,6 +248,9 @@ bool CHttpRequestCurl::ConfigureHandle(CURL *pHandle)
 		break;
 	}
 
+	// Content-Type 也可能在准备期间追加失败，不能发送缺少请求头的候选。
+	if(m_RequestHeadersFailed)
+		return false;
 	curl_easy_setopt(pHandle, CURLOPT_HTTPHEADER, m_pRequestHeaders);
 
 	return true;
@@ -384,7 +398,8 @@ bool CHttpRequestCurl::ProxyFallbackBypassed(int StatusCode, std::optional<bool>
 	return BypassEvidence && (!FinalResponse || !UsedProxy.has_value() || !*UsedProxy);
 }
 
-size_t CHttpRequestCurl::OnHeader(char *pHeader, size_t HeaderSize)
+size_t CHttpRequestCurl::OnHeader(char *pHeader, size_t HeaderSize) noexcept
+try
 {
 	// `pHeader` is NOT null-terminated.
 	// `pHeader` has a trailing newline.
@@ -463,6 +478,12 @@ size_t CHttpRequestCurl::OnHeader(char *pHeader, size_t HeaderSize)
 		m_ResultRetryAfterSeconds = ParseRetryAfter(aValue, time_timestamp());
 	}
 	return HeaderSize;
+}
+catch(...)
+{
+	// 日期形式的 Retry-After 需要准备字符串，异常不能离开原生回调。
+	m_ResponseFailed = true;
+	return 0;
 }
 
 void CHttpRequestCurl::OnCompletionInternal(CURL *pHandle, CURLcode Code)

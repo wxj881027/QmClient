@@ -5281,6 +5281,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/engine/http_file_result_test.cpp
     src/test/integration/engine/http_scheduler_test.cpp
     src/test/integration/engine/http_request_body_test.cpp
+    src/test/integration/engine/http_request_headers_test.cpp
     src/test/unit/engine/json_test.cpp
     src/test/unit/engine/jsonwriter_test.cpp
     src/test/unit/engine/link_probe_test.cpp

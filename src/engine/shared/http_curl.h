@@ -38,9 +38,12 @@ public:
 
 protected:
 	virtual bool ConfigureHandle(CURL *pHandle);
+	// 失败保留传入链表；仅替换原生分配边界，不更改请求头准备流程。
+	virtual curl_slist *AppendRequestHeader(curl_slist *pHeaders, const char *pHeader) noexcept;
 
 private:
 	curl_slist *m_pRequestHeaders = nullptr;
+	bool m_RequestHeadersFailed = false;
 	curl_slist *m_pDnsBootstrap = nullptr;
 	CURLSH *m_pDnsShare = nullptr;
 
@@ -52,7 +55,7 @@ private:
 
 	// Abort the request if `OnHeader()` returns something other than
 	// `DataSize`. `pHeader` is NOT null-terminated.
-	size_t OnHeader(char *pHeader, size_t HeaderSize);
+	size_t OnHeader(char *pHeader, size_t HeaderSize) noexcept;
 
 	// `pHandle` can be nullptr if no handle was ever created for this request.
 	void OnCompletionInternal(CURL *pHandle, CURLcode Code);
