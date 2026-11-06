@@ -794,6 +794,23 @@ namespace qm_card_registry
 		return true;
 	}
 
+	bool RepairLegacyChatBubbleTab(qm_card_order::CModel &Model)
+	{
+		const char *pStableId = "qm:chat_bubble";
+		const int Index = Model.FindByStableId(pStableId);
+		if(Index < 0 || Model.Entry(Index).m_pDefaultTab == nullptr || str_comp(Model.Entry(Index).m_pDefaultTab, "visual") != 0)
+			return false;
+		const auto *pDefault = FindByStableId(pStableId);
+		int Column = 1;
+		if(pDefault->m_DefaultColumn == ECardColumn::Full)
+			Column = 0;
+		else if(pDefault->m_DefaultColumn == ECardColumn::Right)
+			Column = 2;
+		// 追加到目标列，保留聊天页现有卡片顺序；已经移入聊天页的自定位置不再改动。
+		Model.MoveToTab(pStableId, pDefault->m_pDefaultTab, Column, static_cast<int>(Model.ColumnIndices(pDefault->m_pDefaultTab, Column).size()));
+		return true;
+	}
+
 	bool RepairLegacyTeeLayout(qm_card_order::CModel &Model)
 	{
 		const std::vector<qm_card_order::SEntry> vLegacy = {
