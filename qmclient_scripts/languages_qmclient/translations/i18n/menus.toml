@@ -2161,7 +2161,7 @@ polish = "Komenda czatu"
 [[message]]
 key = "Chat command (e.g. showall 1)"
 [message.translations]
-simplified_chinese = "聊天指令（例如：showall 1）"
+simplified_chinese = "聊天框指令（例如：showall 1）"
 traditional_chinese = "聊天指令（例如：showall 1）"
 japanese = "チャットコマンド（例：showall 1）"
 korean = "채팅 명령어 (예: showall 1)"
@@ -6257,7 +6257,7 @@ polish = "Filtruj łączących się graczy"
 [[message]]
 key = "Filter empty servers in browser"
 [message.translations]
-simplified_chinese = "过滤服务器浏览器中的空服务器"
+simplified_chinese = "筛选服务器浏览器中的空服务器"
 traditional_chinese = "過濾掉瀏覽器中的空伺服器"
 japanese = "ブラウザで空のサーバーをフィルターする"
 korean = "브라우저에서 빈 서버 필터링"
@@ -6273,7 +6273,7 @@ polish = "Filtruj puste serwery w przeglądarce"
 [[message]]
 key = "Filter full servers in browser"
 [message.translations]
-simplified_chinese = "过滤服务器浏览器中的满人服务器"
+simplified_chinese = "筛选服务器浏览器中的满人服务器"
 traditional_chinese = "在瀏覽器中過濾掉完整的伺服器"
 japanese = "ブラウザで満員のサーバーをフィルターする"
 korean = "브라우저에서 꽉 찬 서버 필터링"
@@ -6289,7 +6289,7 @@ polish = "Filtruj pełne serwery w przeglądarce"
 [[message]]
 key = "Filter game type"
 [message.translations]
-simplified_chinese = "要过滤的游戏类型"
+simplified_chinese = "要筛选的游戏类型"
 traditional_chinese = "要過濾的遊戲類型"
 japanese = "フィルターするゲームタイプ"
 korean = "게임 유형 필터"
@@ -6305,7 +6305,7 @@ polish = "Filtruj typ gry"
 [[message]]
 key = "Filter out password protected servers in browser"
 [message.translations]
-simplified_chinese = "在浏览器中过滤掉受密码保护的服务器"
+simplified_chinese = "在浏览器中筛选掉受密码保护的服务器"
 traditional_chinese = "在瀏覽器中過濾掉受密碼保護的伺服器"
 japanese = "ブラウザでパスワード保護されたサーバーをフィルターする"
 korean = "브라우저에서 비밀번호로 보호된 서버 필터링"
@@ -6321,7 +6321,7 @@ polish = "Filtruj serwery chronione hasłem w przeglądarce"
 [[message]]
 key = "Filter out servers that require login"
 [message.translations]
-simplified_chinese = "过滤掉需要登录的服务器"
+simplified_chinese = "筛选掉需要登录的服务器"
 traditional_chinese = "過濾掉需要登錄的伺服器"
 japanese = "ログインが必要なサーバーをフィルターする"
 korean = "로그인이 필요한 서버 필터링"
@@ -6337,7 +6337,7 @@ polish = "Filtruj serwery wymagające logowania"
 [[message]]
 key = "Filter out servers with player country mismatch (ISO 3166-1 numeric)"
 [message.translations]
-simplified_chinese = "过滤掉玩家所在国家/地区不匹配的服务器（ISO 3166-1 数字）"
+simplified_chinese = "筛选掉玩家所在国家/地区不匹配的服务器（ISO 3166-1 数字）"
 traditional_chinese = "過濾掉玩家所在國家/地區不匹配的伺服器（ISO 3166-1 數字）"
 japanese = "プレイヤーの国不一致のサーバーをフィルタリング（ISO 3166-1 数値）"
 korean = "플레이어 국가 불일치 서버 필터링 (ISO 3166-1 숫자)"
@@ -6353,7 +6353,7 @@ polish = "Odfiltruj serwery z niedopasowaniem kraju gracza (ISO 3166-1 numeryczn
 [[message]]
 key = "Filter out servers without friends"
 [message.translations]
-simplified_chinese = "过滤掉没有好友的服务器"
+simplified_chinese = "筛选掉没有好友的服务器"
 traditional_chinese = "過濾掉沒有好友的伺服器"
 japanese = "フレンドのいないサーバーをフィルター"
 korean = "친구가 없는 서버 필터링"
@@ -11490,7 +11490,7 @@ polish = "Kraj gracza (kod numeryczny ISO 3166-1)"
 [[message]]
 key = "Player country filter in server browser (ISO 3166-1 numeric)"
 [message.translations]
-simplified_chinese = "在服务器浏览器中过滤的玩家国家/地区（ISO 3166-1 数字）"
+simplified_chinese = "在服务器浏览器中筛选的玩家国家/地区（ISO 3166-1 数字）"
 traditional_chinese = "在伺服器瀏覽器中過濾的玩家國家/地區（ISO 3166-1 數字）"
 japanese = "サーバーブラウザでのプレイヤーの国フィルター（ISO 3166-1 数値）"
 korean = "서버 브라우저의 플레이어 국가 필터 (ISO 3166-1 숫자)"
@@ -12882,7 +12882,7 @@ polish = "Resetuj wszystko"
 [[message]]
 key = "Reset chat on escape"
 [message.translations]
-simplified_chinese = "按退出键时重置聊天"
+simplified_chinese = "按退出键时重置聊天框"
 traditional_chinese = "按退出鍵時重置聊天"
 japanese = "Escape キーでチャットをリセット"
 korean = "Escape 키로 채팅 초기화"
@@ -14051,7 +14051,7 @@ polish = "Wysyłaj dane wejściowe klienta do innych przed poprawnym wejściem (
 [[message]]
 key = "Server address to filter"
 [message.translations]
-simplified_chinese = "要过滤的服务器地址"
+simplified_chinese = "要筛选的服务器地址"
 traditional_chinese = "要過濾的伺服器地址"
 japanese = "フィルタリングするサーバーアドレス"
 korean = "필터링할 서버 주소"
@@ -14083,7 +14083,7 @@ polish = "Ciąg wykluczający w przeglądarce serwerów"
 [[message]]
 key = "Server browser filter string"
 [message.translations]
-simplified_chinese = "服务器浏览器过滤字符串"
+simplified_chinese = "服务器浏览器筛选字符串"
 traditional_chinese = "伺服器瀏覽器過濾字符串"
 japanese = "サーバーブラウザフィルター文字列"
 korean = "서버 브라우저 필터 문자열"
@@ -14531,7 +14531,7 @@ polish = "Pokaż komunikaty rozgłoszeniowe w grze"
 [[message]]
 key = "Show chat (2 always show large chat area)"
 [message.translations]
-simplified_chinese = "显示聊天（2 始终显示大聊天区域）"
+simplified_chinese = "显示聊天框（2 始终显示大聊天区域）"
 traditional_chinese = "顯示聊天（2 始終顯示大聊天區域）"
 japanese = "チャットを表示（2 で常に大きなチャットエリアを表示）"
 korean = "채팅 표시 (2는 항상 큰 채팅 영역 표시)"
@@ -14547,7 +14547,7 @@ polish = "Pokaż czat (2 zawsze pokazuje duży obszar czatu)"
 [[message]]
 key = "Show chat when rendering video"
 [message.translations]
-simplified_chinese = "渲染视频时显示聊天"
+simplified_chinese = "渲染视频时显示聊天框"
 traditional_chinese = "渲染視頻時顯示聊天"
 japanese = "動画レンダリング時にチャットを表示"
 korean = "비디오 렌더링 시 채팅 표시"

@@ -5231,6 +5231,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg (Workshop)
 
+Entries in it will fall back to none.
+== 포함된 항목은 none으로 돌아갑니다.
+
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 == NVENC, AMF, Quick Sync, VideoToolbox가 붙은 항목은 GPU 인코딩 회로를 써서 몇 배 빠릅니다. 이 컴퓨터에서 실제로 동작하는 인코더만 목록에 나옵니다.
 
@@ -6391,6 +6394,9 @@ Ground jump
 
 Group name
 == 그룹 이름
+
+Group names are limited to 16 characters
+== 그룹 이름은 최대 16자입니다
 
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == 입력 보조 기능을 묶은 항목입니다. 빠른 입력, 자동 여백, 서브 틱 조준, 커서 동작을 포함합니다.
@@ -8792,6 +8798,9 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == 친구 분류를 지정 위치로 이동
 
+Move down
+== 아래로 이동
+
 Move left
 == 왼쪽으로 이동
 
@@ -8806,6 +8815,9 @@ Move the free camera, then add a keyframe at the current demo time.
 
 Move to category
 == 카테고리로 이동
+
+Move up
+== 위로 이동
 
 Movement
 == 이동
@@ -12061,6 +12073,9 @@ Reverse gradient colors
 
 Reverse IME gradient colors
 == 그라데이션 색상 반전 (IME)
+
+Reverse order
+== 역순 정렬
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == 반대 줌 키를 누르면 즉시 방향 전환 (0=기존 부드러운 줌 유지)

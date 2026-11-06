@@ -2129,7 +2129,7 @@ polish = "Automatycznie akceptuj zaproszenia do drużyny, wysyłając /team <n>"
 [[message]]
 key = "Auto-close chat after unfreeze"
 [message.translations]
-simplified_chinese = "解冻后自动关闭聊天"
+simplified_chinese = "解冻后自动关闭聊天框"
 traditional_chinese = "解凍後自動關閉聊天"
 japanese = "凍結解除後にチャットを自動で閉じる"
 korean = "얼음 해제 후 자동 채팅 닫기"
@@ -5041,7 +5041,7 @@ polish = "Configure camera, weapon, and gameplay defaults"
 [[message]]
 key = "Configure chat position, size, and visibility"
 [message.translations]
-simplified_chinese = "配置聊天位置、大小和可见性"
+simplified_chinese = "配置聊天框位置、大小和可见性"
 traditional_chinese = "Configure chat position, size, and visibility"
 japanese = "Configure chat position, size, and visibility"
 korean = "Configure chat position, size, and visibility"
@@ -10065,7 +10065,7 @@ polish = "Wyszukiwanie funkcji"
 [[message]]
 key = "Filter off"
 [message.translations]
-simplified_chinese = "关闭过滤"
+simplified_chinese = "不筛选"
 traditional_chinese = "關閉過濾"
 japanese = "フィルターオフ"
 korean = "필터 끄기"
@@ -10081,7 +10081,7 @@ polish = "Filtr wyłączony"
 [[message]]
 key = "Filter Team %d"
 [message.translations]
-simplified_chinese = "过滤队伍 %d"
+simplified_chinese = "筛选队伍 %d"
 traditional_chinese = "過濾隊伍 %d"
 japanese = "チーム %d をフィルター"
 korean = "팀 %d 필터"
@@ -10097,7 +10097,7 @@ polish = "Filtruj drużynę %d"
 [[message]]
 key = "Filter: Team %d"
 [message.translations]
-simplified_chinese = "过滤：队伍 %d"
+simplified_chinese = "筛选：队伍 %d"
 traditional_chinese = "過濾：隊伍 %d"
 japanese = "フィルター: チーム %d"
 korean = "필터: 팀 %d"
@@ -13825,7 +13825,7 @@ polish = "Szerokość miękkiej krawędzi podświetlenia karaoke w px"
 [[message]]
 key = "Keep unsent message on chat close"
 [message.translations]
-simplified_chinese = "关闭聊天时保留未发送内容"
+simplified_chinese = "关闭聊天框时保留未发送内容"
 traditional_chinese = "關閉聊天時保留未發送內容"
 japanese = "チャットを閉じる時に未送信内容を保持"
 korean = "채팅 닫을 때 전송되지 않은 내용 유지"
@@ -21057,7 +21057,7 @@ polish = "Sprawdź i zastosuj ustalony zestaw ustawień wyglądu"
 [[message]]
 key = "Preview hook collision colors and line styles"
 [message.translations]
-simplified_chinese = "预览钩子碰撞颜色和线条样式"
+simplified_chinese = "预览钩子辅助线颜色和线条样式"
 traditional_chinese = "Preview hook collision colors and line styles"
 japanese = "Preview hook collision colors and line styles"
 korean = "Preview hook collision colors and line styles"
@@ -21153,7 +21153,7 @@ polish = "Preview the composed status bar output"
 [[message]]
 key = "Preview the current chat appearance"
 [message.translations]
-simplified_chinese = "预览当前聊天外观"
+simplified_chinese = "预览当前聊天框外观"
 traditional_chinese = "Preview the current chat appearance"
 japanese = "Preview the current chat appearance"
 korean = "Preview the current chat appearance"
@@ -25302,7 +25302,7 @@ polish = "Pokaż dymki czatu nad Tee"
 [[message]]
 key = "Show chat in demo preview and video"
 [message.translations]
-simplified_chinese = "在回放预览与视频中显示聊天"
+simplified_chinese = "在回放预览与视频中显示聊天框"
 traditional_chinese = "在回放預覽與影片中顯示聊天"
 japanese = "デモプレビューと動画でチャットを表示"
 korean = "데모 미리보기와 영상에서 채팅 표시"
@@ -36088,7 +36088,7 @@ polish = "Podświetlaj polecenia konsoli"
 [[message]]
 key = "Show the chat scrollbar on the right"
 [message.translations]
-simplified_chinese = "在右侧显示聊天滚动条"
+simplified_chinese = "在右侧显示聊天框滚动条"
 traditional_chinese = "在右側顯示聊天捲軸"
 japanese = "チャットのスクロールバーを右側に表示"
 korean = "채팅 스크롤바를 오른쪽에 표시"
@@ -38504,7 +38504,7 @@ polish = "Ochrona przed samobójstwem po stronie klienta jest domyślnie wyłąc
 [[message]]
 key = "Render demo content only during video export (hide HUD, chat and spectator overlays)"
 [message.translations]
-simplified_chinese = "仅渲染 demo：导出时隐藏 HUD、聊天和旁观信息"
+simplified_chinese = "仅渲染 demo：导出时隐藏 HUD、聊天框和旁观信息"
 traditional_chinese = "僅渲染 demo：匯出時隱藏 HUD、聊天與旁觀資訊"
 japanese = "デモのみを書き出す：書き出し中は HUD、チャット、観戦情報を非表示にします"
 korean = "데모만 렌더링: 내보내는 동안 HUD, 채팅, 관전 정보를 숨깁니다"
@@ -39938,7 +39938,7 @@ polish = "Tylko mobile: skopiuj raport awarii do Downloads/QmClient przy następ
 [[message]]
 key = "Map browser difficulty category filter bitmask (bits 0-14, see map_vote_difficulty.h)"
 [message.translations]
-simplified_chinese = "地图浏览器难度分类过滤位掩码（位 0-14，见 map_vote_difficulty.h）"
+simplified_chinese = "地图浏览器难度分类筛选位掩码（位 0-14，见 map_vote_difficulty.h）"
 traditional_chinese = "地圖瀏覽器難度分類過濾位元遮罩（位 0-14，見 map_vote_difficulty.h）"
 japanese = "マップブラウザの難易度カテゴリフィルタのビットマスク（ビット 0-14、map_vote_difficulty.h 参照）"
 korean = "맵 브라우저 난이도 카테고리 필터 비트마스크 (비트 0-14, map_vote_difficulty.h 참고)"

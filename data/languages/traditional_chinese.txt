@@ -5231,6 +5231,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg（Workshop）
 
+Entries in it will fall back to none.
+== 裡面的條目會回到 none。
+
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 == 帶 NVENC、AMF、Quick Sync 或 VideoToolbox 字樣的項目用顯示卡的編碼單元，速度快好幾倍。清單裡只出現這台機器真正可用的編碼器。
 
@@ -6391,6 +6394,9 @@ Ground jump
 
 Group name
 == 分組名稱
+
+Group names are limited to 16 characters
+== 群組名稱最多 16 個字元
 
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == 將輸入輔助集中分組：快速輸入、自動邊距、子 tick 瞄準與游標行為。
@@ -8792,6 +8798,9 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == 將好友分組移動到指定位置
 
+Move down
+== 下移
+
 Move left
 == 向左移動
 
@@ -8806,6 +8815,9 @@ Move the free camera, then add a keyframe at the current demo time.
 
 Move to category
 == 移動到分類
+
+Move up
+== 上移
 
 Movement
 == 移動
@@ -12061,6 +12073,9 @@ Reverse gradient colors
 
 Reverse IME gradient colors
 == 反轉漸層顏色 (IME)
+
+Reverse order
+== 倒序排列
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == 反向按鍵時立即反向縮放（0=保留原有平滑縮放）

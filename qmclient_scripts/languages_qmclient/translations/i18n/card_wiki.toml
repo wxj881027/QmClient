@@ -6182,7 +6182,7 @@ polish = "Linie kolizji są liczone lokalnie i nie gwarantują, że hak się zac
 [[message]]
 key = "Previews hook collision colors and line styles."
 [message.translations]
-simplified_chinese = "预览钩子碰撞的颜色和线条样式。"
+simplified_chinese = "预览钩子辅助线的颜色和线条样式。"
 traditional_chinese = "預覽鉤索碰撞顏色與線條樣式。"
 japanese = "フックの当たり判定の色と線のスタイルをプレビューします。"
 korean = "훅 충돌 색상과 선 스타일을 미리 보여 줍니다."

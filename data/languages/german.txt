@@ -5231,6 +5231,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg (Workshop)
 
+Entries in it will fall back to none.
+== Darin enthaltene Einträge fallen auf none zurück.
+
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 == Einträge mit NVENC, AMF, Quick Sync oder VideoToolbox nutzen den Encoder-Chip der Grafikkarte und sind mehrere Male schneller. Gelistet wird nur, was auf dieser Maschine wirklich läuft.
 
@@ -6391,6 +6394,9 @@ Ground jump
 
 Group name
 == Gruppenname
+
+Group names are limited to 16 characters
+== Gruppennamen sind auf 16 Zeichen begrenzt
 
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == Bündelt Eingabehilfen: schnelle Eingabe, automatischer Rand, Unter-Tick-Zielen und Cursorverhalten.
@@ -8792,6 +8798,9 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == Freundeskategorie an eine Position verschieben
 
+Move down
+== Nach unten
+
 Move left
 == Nach links bewegen
 
@@ -8806,6 +8815,9 @@ Move the free camera, then add a keyframe at the current demo time.
 
 Move to category
 == In Kategorie verschieben
+
+Move up
+== Nach oben
 
 Movement
 == Bewegung
@@ -12061,6 +12073,9 @@ Reverse gradient colors
 
 Reverse IME gradient colors
 == Verlaufsfarben umkehren (IME)
+
+Reverse order
+== Umgekehrte Reihenfolge
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == Zoomrichtung beim Drücken der Gegentaste sofort umkehren (0=ursprüngliches weiches Zoomen beibehalten)

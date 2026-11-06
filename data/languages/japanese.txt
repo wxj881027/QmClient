@@ -5231,6 +5231,9 @@ Entity wall outline opacity
 entity_bg (Workshop)
 == entity_bg（Workshop）
 
+Entries in it will fall back to none.
+== 中の項目は none に戻ります。
+
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 == NVENC、AMF、Quick Sync、VideoToolbox を含む項目は GPU のエンコード回路を使い、数倍速くなります。このマシンで実際に動くエンコーダーだけが一覧に出ます。
 
@@ -6391,6 +6394,9 @@ Ground jump
 
 Group name
 == グループ名
+
+Group names are limited to 16 characters
+== グループ名は最大16文字です
 
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 == 入力支援をまとめた項目です。高速入力、自動マージン、サブティック照準、カーソルの挙動を含みます。
@@ -8792,6 +8798,9 @@ Mouse speed for aiming and for menus, and how far your cursor may travel from th
 Move a friend category to a position
 == フレンドカテゴリを指定位置へ移動
 
+Move down
+== 下へ移動
+
 Move left
 == 左に移動
 
@@ -8806,6 +8815,9 @@ Move the free camera, then add a keyframe at the current demo time.
 
 Move to category
 == カテゴリに移動
+
+Move up
+== 上へ移動
 
 Movement
 == 移動
@@ -12061,6 +12073,9 @@ Reverse gradient colors
 
 Reverse IME gradient colors
 == グラデーションの色を反転 (IME)
+
+Reverse order
+== 逆順に並べる
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == 逆方向キーでズームを即座に反転（0=元の滑らかなズームを維持）

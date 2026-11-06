@@ -1745,6 +1745,7 @@ Entity overlay
 Entity Preview
 Entity wall outline opacity
 entity_bg (Workshop)
+Entries in it will fall back to none.
 Entries with NVENC, AMF, Quick Sync or VideoToolbox use the GPU encoding chip and are several times faster. Only encoders that really work on this machine are listed.
 Entry: %s
 Erase items on the in game background
@@ -2134,6 +2135,7 @@ Grenade launch
 Grenade pickup
 Ground jump
 Group name
+Group names are limited to 16 characters
 Groups input helpers: fast input, automatic margin, sub-tick aiming and cursor behavior.
 GUI cursor
 GUI cursor assets
@@ -2936,11 +2938,13 @@ Mouse sensitivity in menu/editor
 Mouse size
 Mouse speed for aiming and for menus, and how far your cursor may travel from the tee.
 Move a friend category to a position
+Move down
 Move left
 Move player to spectators
 Move right
 Move the free camera, then add a keyframe at the current demo time.
 Move to category
+Move up
 Movement
 Moves to the point with x/y-coordinates ii
 Moves to the tile with x/y-number ii
@@ -4029,6 +4033,7 @@ Retrying…
 Reverse chat gradient colors
 Reverse gradient colors
 Reverse IME gradient colors
+Reverse order
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 Review and edit custom key bindings
 Review and reset changed configuration values
