@@ -4598,6 +4598,9 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == 이 사용자 지정 명령은 바인드 휠 페이지에서 편집하세요.
 
+Edit title style
+== 칭호 스타일 편집
+
 Edit touch controls
 == 터치 컨트롤 편집
 

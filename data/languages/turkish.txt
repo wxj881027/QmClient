@@ -4598,6 +4598,9 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == Bu özel komutu Komut Çarkı sayfasında düzenleyin.
 
+Edit title style
+== Başlık stilini düzenle
+
 Edit touch controls
 == Dokunmatik kontrolleri düzenle
 

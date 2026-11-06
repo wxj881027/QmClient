@@ -4598,6 +4598,9 @@ Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
 == Edite este comando personalizado na página Roda de comandos.
 
+Edit title style
+== Editar estilo do título
+
 Edit touch controls
 == Editar controles de toque
 

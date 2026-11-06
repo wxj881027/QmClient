@@ -1534,6 +1534,7 @@ Edit player and dummy identity information
 Edit skin texture
 Edit the name and clan fields; the dummy keeps its own values.
 Edit this custom command on the Bind Wheel page.
+Edit title style
 Edit touch controls
 Editing (all-intra H.264 / MP4)
 Editor

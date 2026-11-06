@@ -39950,3 +39950,19 @@ brazilian_portuguese = "Máscara de bits do filtro de categorias de dificuldade 
 portuguese = "Máscara de bits do filtro de categorias de dificuldade do navegador de mapas (bits 0-14, ver map_vote_difficulty.h)"
 turkish = "Harita tarayıcısı zorluk kategori filtresi bit maskesi (bit 0-14, bkz. map_vote_difficulty.h)"
 polish = "Maska bitowa filtra kategorii trudności przeglądarki map (bity 0-14, patrz map_vote_difficulty.h)"
+
+[[message]]
+key = "Edit title style"
+[message.translations]
+simplified_chinese = "编辑头衔样式"
+traditional_chinese = "編輯頭銜樣式"
+japanese = "タイトルスタイルを編集"
+korean = "칭호 스타일 편집"
+russian = "Изменить стиль титула"
+spanish = "Editar estilo del título"
+french = "Modifier le style du titre"
+german = "Titelstil bearbeiten"
+brazilian_portuguese = "Editar estilo do título"
+portuguese = "Editar estilo do título"
+turkish = "Başlık stilini düzenle"
+polish = "Edytuj styl tytułu"
