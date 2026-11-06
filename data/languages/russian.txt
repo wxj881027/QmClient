@@ -2477,6 +2477,9 @@ Clan plates size
 Clan: %s
 == Клан: %s
 
+Classic
+== Классический
+
 Classic Easy
 == Классический Easy
 
@@ -4657,9 +4660,6 @@ Empty slots still take space, so clear the ones you no longer use.
 
 enable
 == включить
-
-Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
-== Включайте кражу скина молотом только если хотите менять скин при каждом ударе: другие игроки это видят.
 
 Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 == Включите полосу прогресса карты и выберите расположение: отдельно, в статистике игрока или в Динамическом острове. Для размещения в статистике включите показ HUD статистики игрока.
@@ -8951,6 +8951,18 @@ Name plate elements allow free Y movement
 Name plate elements freely movable within bounds
 == Элемент таблички с именем: разрешить свободное перемещение в рамке
 
+Name plate hammer icon X offset
+== Смещение значка молота у имени по X
+
+Name plate hammer icon Y offset
+== Смещение значка молота у имени по Y
+
+Name plate hook icon X offset
+== Смещение значка крюка у имени по X
+
+Name plate hook icon Y offset
+== Смещение значка крюка у имени по Y
+
 Name plate key line X offset
 == Смещение строки кнопок таблички с именем по оси X
 
@@ -10513,9 +10525,6 @@ Players weapons has no affect on others
 
 Playing effects
 == Эффекты воспроизведения
-
-Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
-== Проигрывает короткий эффект при смене скина и может скопировать скин того, кого вы только что ударили молотом.
 
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == Проигрывает анимацию при смене скина, в том числе скина, украденного молотом.
@@ -16219,9 +16228,6 @@ Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title mo
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == Включите Контур скина для себя и dummy или Контур скина других игроков и настройте толщину с прозрачностью; Циклическая смена оттенка Tee оживляет пользовательские цвета.
-
-Turn on "Skin transition animation", choose a "Skin transition type" and "Animation range", then set "Skin transition duration" and "Skin transition intensity".
-== Включите анимацию смены скина, выберите тип и диапазон анимации, затем задайте длительность и интенсивность.
 
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
 == Включите сглаживание свободной камеры и задайте кинематографичную плавность: меньше — резче, больше — медленнее.

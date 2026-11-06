@@ -2477,6 +2477,9 @@ Clan plates size
 Clan: %s
 == Clan: %s
 
+Classic
+== Klassisch
+
 Classic Easy
 == Classic Easy
 
@@ -4657,9 +4660,6 @@ Empty slots still take space, so clear the ones you no longer use.
 
 enable
 == aktivieren
-
-Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
-== Aktiviere das Skin-Stehlen per Hammer nur, wenn dein Skin bei jedem Treffer wechseln soll – andere Spieler sehen das mit.
 
 Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 == Aktiviere den Kartenfortschrittsbalken und wähle seine Position: separat, in der Spielerstatistik oder in der Dynamischen Insel. Aktiviere für die Spielerstatistik auch das Spielerstatistik-HUD.
@@ -8951,6 +8951,18 @@ Name plate elements allow free Y movement
 Name plate elements freely movable within bounds
 == Namensschild-Element erlaubt freie Bewegung im Rahmen
 
+Name plate hammer icon X offset
+== X-Versatz des Hammersymbols am Namensschild
+
+Name plate hammer icon Y offset
+== Y-Versatz des Hammersymbols am Namensschild
+
+Name plate hook icon X offset
+== X-Versatz des Hakensymbols am Namensschild
+
+Name plate hook icon Y offset
+== Y-Versatz des Hakensymbols am Namensschild
+
 Name plate key line X offset
 == Namensschild-Tastenzeile X-Versatz
 
@@ -10513,9 +10525,6 @@ Players weapons has no affect on others
 
 Playing effects
 == Spieleffekte
-
-Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
-== Spielt einen kurzen Effekt ab, wenn sich der Skin eines Tees ändert, und kann den Skin des gerade gehämmerten Tees übernehmen.
 
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == Spielt eine Animation ab, wenn sich dein Skin ändert, auch bei mit dem Hammer gestohlenen Skins.
@@ -16219,9 +16228,6 @@ Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title mo
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == Schalte Skin-Umriss für dich und Dummy oder Skin-Umriss für andere Spieler ein und justiere Breite und Deckkraft; der Wechsel des eigenen Tee-Farbtons animiert eigene Farben.
-
-Turn on "Skin transition animation", choose a "Skin transition type" and "Animation range", then set "Skin transition duration" and "Skin transition intensity".
-== Aktiviere die Skin-Wechsel-Animation, wähle Typ und Animationsbereich und stelle dann Dauer und Stärke des Wechsels ein.
 
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
 == Aktiviere die geglättete freie Zuschauerkamera und stelle die filmische Glättung ein: niedrig reagiert schnell, hoch schwebt langsam.

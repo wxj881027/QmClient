@@ -2477,6 +2477,9 @@ Clan plates size
 Clan: %s
 == クラン：%s
 
+Classic
+== クラシック
+
 Classic Easy
 == クラシック Easy
 
@@ -4657,9 +4660,6 @@ Empty slots still take space, so clear the ones you no longer use.
 
 enable
 == 有効
-
-Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
-== ハンマーで叩くたびにスキンを変えたいときだけ、ハンマースキン強奪をオンにしてください。相手にも見えます。
 
 Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 == 「マップ進行バー」を有効にし、表示位置を単独表示、プレイヤー統計、ダイナミックアイランドから選びます。プレイヤー統計を選ぶ場合は「プレイヤー統計 HUD を表示」も有効にしてください。
@@ -8951,6 +8951,18 @@ Name plate elements allow free Y movement
 Name plate elements freely movable within bounds
 == ネームプレート要素の枠内自由移動を許可
 
+Name plate hammer icon X offset
+== ネームプレートのハンマーアイコンの X オフセット
+
+Name plate hammer icon Y offset
+== ネームプレートのハンマーアイコンの Y オフセット
+
+Name plate hook icon X offset
+== ネームプレートのフックアイコンの X オフセット
+
+Name plate hook icon Y offset
+== ネームプレートのフックアイコンの Y オフセット
+
 Name plate key line X offset
 == ネームプレートキー行 X オフセット
 
@@ -10513,9 +10525,6 @@ Players weapons has no affect on others
 
 Playing effects
 == エフェクトの再生
-
-Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
-== Tee のスキンが変わったときに短いエフェクトを出します。たった今ハンマーで叩いた相手のスキンをコピーすることもできます。
 
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == ハンマーで奪ったスキンも含め、スキンが変わるときにアニメーションを再生します。
@@ -16219,9 +16228,6 @@ Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title mo
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == 自分と dummy のスキンの輪郭か他のプレイヤーのスキンの輪郭をオンにして、太さと不透明度を調整します。カスタム Tee の色相切り替えがカスタムカラーを動かします。
-
-Turn on "Skin transition animation", choose a "Skin transition type" and "Animation range", then set "Skin transition duration" and "Skin transition intensity".
-== スキン切り替えアニメーションをオンにし、切り替えタイプとアニメーション範囲を選んで、切り替えの長さと強さを設定します。
 
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
 == 自由観戦カメラの平滑化をオンにして映画的平滑度を設定します。低いほど機敏、高いほどゆっくり流れます。
