@@ -550,7 +550,7 @@ void CMenus::RenderQmVisualSpectatorModeContent(CUIRect &Content, float LineHeig
 {
 	CSettingsContentLayoutFlow Flow(Content);
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmCinematicCamera, "qmclient-spectator-smoothing", Localize("Smooth free spectator camera"), &g_Config.m_QmCinematicCamera);
-	if(g_Config.m_QmCinematicCamera && qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:spectator_mode", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
+	if(g_Config.m_QmCinematicCamera)
 	{
 		static int s_SmoothnessInputId;
 		CUIRect Row, LabelColumn, ControlColumn;
@@ -582,9 +582,6 @@ void CMenus::RenderQmVisualCameraViewContent(CUIRect &Content, float LineHeight,
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmCameraDrift, "Enable camera drift", Localize("Enable camera drift"), &g_Config.m_QmCameraDrift);
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmDynamicFov, "Enable dynamic FOV", Localize("Enable dynamic FOV"), &g_Config.m_QmDynamicFov);
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmZoomInstantReverse, "Instant zoom reverse", Localize("Instant zoom reverse"), &g_Config.m_QmZoomInstantReverse);
-
-	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:camera_view", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
-		return;
 
 	if(g_Config.m_QmCameraDrift)
 	{
