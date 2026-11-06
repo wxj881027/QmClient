@@ -24,6 +24,18 @@ namespace
 		return R"({"remote":{"axiom":{"players":[)" + Players + "]}}}";
 	}
 
+	std::string StoredTypes(unsigned Count, bool Unique = true)
+	{
+		std::string Text = "[";
+		for(unsigned Index = 0; Index < Count; ++Index)
+		{
+			if(Index)
+				Text += ',';
+			Text += "{\"name\":\"Type_" + std::to_string(Unique ? Index : 0) + "\",\"play_time_seconds\":" + std::to_string(Index) + '}';
+		}
+		return Text + ']';
+	}
+
 	// 只修改输入文档；加载、筛选、缓存发布及序列化均调用生产接口。
 	void ReplaceFirst(std::string &Text, const std::string &From, const std::string &To)
 	{
@@ -306,4 +318,60 @@ TEST_F(CAxiomPersistence, FullLengthUtf8AndExactIntegersRoundTrip)
 	ASSERT_EQ(pGameTypes->size(), 1u);
 	EXPECT_EQ(pGameTypes->front().m_Name, Name);
 	EXPECT_EQ(pGameTypes->front().m_PlayTimeSeconds, INT64_C(9007199254740993));
+}
+
+TEST_F(CAxiomPersistence, StoredTypesAtOnlineLimitRoundTripWithoutDiscardingList)
+{
+	std::string Types = StoredTypes(1024);
+	Types.insert(Types.size() - 1, R"(,{"name":"type_512","play_time_seconds":9999})");
+	std::string Text = Document(Player());
+	ReplaceFirst(Text, "\"modes\":", "\"ddstats_gametypes\":" + Types + ",\"modes\":");
+	Load(Text);
+	const auto *pLoaded = m_Scores.GetDdStatsGameTypes("wolf");
+	ASSERT_NE(pLoaded, nullptr);
+	ASSERT_EQ(pLoaded->size(), 1024u);
+	EXPECT_EQ((*pLoaded)[512].m_Name, "Type_512");
+	EXPECT_EQ((*pLoaded)[512].m_PlayTimeSeconds, 9999);
+
+	CJsonStringWriter Writer;
+	Writer.BeginObject();
+	Writer.WriteAttribute("remote");
+	Writer.BeginObject();
+	m_Scores.WritePersistentCache(Writer);
+	Writer.EndObject();
+	Writer.EndObject();
+	const std::string Saved = Writer.GetOutputString();
+	std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(JsonParse(Saved.data(), Saved.size()), json_value_free);
+	ASSERT_NE(pRoot, nullptr);
+	CQmAxiomScores Restored;
+	Restored.LoadPersistentCache(pRoot.get());
+	const auto *pRestored = Restored.GetDdStatsGameTypes("wolf");
+	ASSERT_NE(pRestored, nullptr);
+	ASSERT_EQ(pRestored->size(), 1024u);
+	EXPECT_EQ(pRestored->front().m_Name, "Type_0");
+	EXPECT_EQ((*pRestored)[512].m_PlayTimeSeconds, 9999);
+	EXPECT_EQ(pRestored->back().m_Name, "Type_1023");
+}
+
+TEST_F(CAxiomPersistence, TooManyStoredTypesKeepAxiomAggregateWithoutPartialTypeAuthority)
+{
+	std::string Text = Document(Player());
+	ReplaceFirst(Text, "\"modes\":", "\"ddstats_gametypes\":" + StoredTypes(1025) + ",\"modes\":");
+	Load(Text);
+	EXPECT_EQ(m_Scores.GetDdStatsGameTypes("wolf"), nullptr);
+	const auto *pResult = m_Scores.GetResult("wolf");
+	ASSERT_NE(pResult, nullptr);
+	EXPECT_TRUE(pResult->Mode(EQmAxiomMode::GORES).m_HasData);
+	EXPECT_EQ(pResult->Mode(EQmAxiomMode::GORES).m_Score.m_Points, 9);
+}
+
+TEST_F(CAxiomPersistence, RawStoredRecordOverflowIgnoresTypeArrayAndKeepsAggregate)
+{
+	std::string Text = Document(Player());
+	ReplaceFirst(Text, "\"modes\":", "\"ddstats_gametypes\":" + StoredTypes(4097, false) + ",\"modes\":");
+	Load(Text);
+	EXPECT_EQ(m_Scores.GetDdStatsGameTypes("wolf"), nullptr);
+	const auto *pResult = m_Scores.GetResult("wolf");
+	ASSERT_NE(pResult, nullptr);
+	EXPECT_EQ(pResult->Mode(EQmAxiomMode::GORES).m_Score.m_TotalPlayTime, 2);
 }

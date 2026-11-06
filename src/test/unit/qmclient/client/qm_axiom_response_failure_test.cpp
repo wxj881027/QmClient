@@ -4,6 +4,7 @@
 #include <test/support/prediction_allocation_failure.h>
 
 #include <cstring>
+#include <string>
 
 namespace
 {
@@ -240,3 +241,113 @@ TEST(QmAxiomResponseFailure, InfoRejectsTruncatedDifficultyKeyWithoutReplacingSc
 	EXPECT_EQ(QmParseAxiomInfoResponse(JSON, sizeof(JSON) - 1, Score), EQmAxiomParseResult::INVALID_RESPONSE);
 	EXPECT_EQ(Score.m_Points, 99);
 }
+
+namespace
+{
+	std::string DdStatsTypes(unsigned Count, bool Unique)
+	{
+		std::string Text = std::string("{\"profile\":{\"name\":\"") + PLAYER + "\"},\"most_played_gametypes\":[";
+		for(unsigned Index = 0; Index < Count; ++Index)
+		{
+			if(Index)
+				Text += ',';
+			Text += "{\"key\":\"Type_" + std::to_string(Unique ? Index : 0) + "\",\"seconds_played\":" + std::to_string(Index) + '}';
+		}
+		return Text + "]}";
+	}
+
+	enum class EBudgetResponse
+	{
+		SEARCH,
+		INFO,
+		DDSTATS,
+	};
+
+	class QmAxiomParseBudget : public testing::TestWithParam<EBudgetResponse>
+	{
+	};
+}
+
+TEST(QmAxiomResponseBudget, UniqueTypeLimitKeepsOrderAndDuplicateReplacement)
+{
+	std::string Text = DdStatsTypes(1024, true);
+	Text.insert(Text.size() - 2, R"(,{"key":"type_512","seconds_played":9999})");
+	std::vector<SQmDdStatsGameType> Types;
+	ASSERT_EQ(QmParseDdStatsPlayerResponse(Text.data(), Text.size(), PLAYER, Types), EQmAxiomParseResult::SUCCESS);
+	ASSERT_EQ(Types.size(), 1024u);
+	EXPECT_EQ(Types.front().m_Name, "Type_0");
+	EXPECT_EQ(Types[512].m_Name, "Type_512");
+	EXPECT_EQ(Types[512].m_PlayTimeSeconds, 9999);
+	EXPECT_EQ(Types.back().m_Name, "Type_1023");
+}
+
+TEST(QmAxiomResponseBudget, UniqueTypeOverflowKeepsOldOutputAndAllowsRetry)
+{
+	const std::string Text = DdStatsTypes(1025, true);
+	std::vector<SQmDdStatsGameType> Types{{"old", 99}};
+	EXPECT_EQ(QmParseDdStatsPlayerResponse(Text.data(), Text.size(), PLAYER, Types), EQmAxiomParseResult::INVALID_RESPONSE);
+	ASSERT_EQ(Types.size(), 1u);
+	EXPECT_EQ(Types.front().m_Name, "old");
+	ASSERT_EQ(QmParseDdStatsPlayerResponse(DDSTATS, sizeof(DDSTATS) - 1, PLAYER, Types), EQmAxiomParseResult::SUCCESS);
+	EXPECT_EQ(Types.size(), 2u);
+}
+
+TEST(QmAxiomResponseBudget, RawRecordLimitAllowsDuplicateTypes)
+{
+	const std::string Text = DdStatsTypes(4096, false);
+	std::vector<SQmDdStatsGameType> Types;
+	ASSERT_EQ(QmParseDdStatsPlayerResponse(Text.data(), Text.size(), PLAYER, Types), EQmAxiomParseResult::SUCCESS);
+	ASSERT_EQ(Types.size(), 1u);
+	EXPECT_EQ(Types.front().m_PlayTimeSeconds, 4095);
+}
+
+TEST(QmAxiomResponseBudget, RawRecordOverflowKeepsOldOutput)
+{
+	const std::string Text = DdStatsTypes(4097, false);
+	std::vector<SQmDdStatsGameType> Types{{"old", 99}};
+	EXPECT_EQ(QmParseDdStatsPlayerResponse(Text.data(), Text.size(), PLAYER, Types), EQmAxiomParseResult::INVALID_RESPONSE);
+	ASSERT_EQ(Types.size(), 1u);
+	EXPECT_EQ(Types.front().m_Name, "old");
+	EXPECT_EQ(Types.front().m_PlayTimeSeconds, 99);
+}
+
+TEST_P(QmAxiomParseBudget, DenseIgnoredArrayExhaustsTreeBudgetWithoutReplacingOutput)
+{
+	const char *pValid = GetParam() == EBudgetResponse::SEARCH ? SEARCH : GetParam() == EBudgetResponse::INFO ? INFO :
+														    DDSTATS;
+	std::string Dense = pValid;
+	Dense.pop_back();
+	Dense += ",\"unused\":[";
+	// 正文约4 MiB，小节点的解析树超出32 MiB；该字段不参与业务筛选。
+	for(unsigned Index = 0; Index < 2 * 1024 * 1024; ++Index)
+		Dense += "0,";
+	Dense += "0]}";
+	ASSERT_LT(Dense.size(), 8u * 1024 * 1024);
+	if(GetParam() == EBudgetResponse::SEARCH)
+	{
+		SQmAxiomSearchMatch Match;
+		Match.m_UserId = 99;
+		EXPECT_EQ(QmParseAxiomSearchResponse(Dense.data(), Dense.size(), PLAYER, Match), EQmAxiomParseResult::INVALID_RESPONSE);
+		EXPECT_EQ(Match.m_UserId, 99);
+		EXPECT_EQ(QmParseAxiomSearchResponse(SEARCH, sizeof(SEARCH) - 1, PLAYER, Match), EQmAxiomParseResult::SUCCESS);
+	}
+	else if(GetParam() == EBudgetResponse::INFO)
+	{
+		SQmAxiomModeScore Score;
+		Score.m_Points = 99;
+		EXPECT_EQ(QmParseAxiomInfoResponse(Dense.data(), Dense.size(), Score), EQmAxiomParseResult::INVALID_RESPONSE);
+		EXPECT_EQ(Score.m_Points, 99);
+		EXPECT_EQ(QmParseAxiomInfoResponse(INFO, sizeof(INFO) - 1, Score), EQmAxiomParseResult::SUCCESS);
+	}
+	else
+	{
+		std::vector<SQmDdStatsGameType> Types{{"old", 99}};
+		EXPECT_EQ(QmParseDdStatsPlayerResponse(Dense.data(), Dense.size(), PLAYER, Types), EQmAxiomParseResult::INVALID_RESPONSE);
+		ASSERT_EQ(Types.size(), 1u);
+		EXPECT_EQ(Types.front().m_Name, "old");
+		EXPECT_EQ(QmParseDdStatsPlayerResponse(DDSTATS, sizeof(DDSTATS) - 1, PLAYER, Types), EQmAxiomParseResult::SUCCESS);
+	}
+}
+
+INSTANTIATE_TEST_SUITE_P(ResponseKinds, QmAxiomParseBudget,
+	testing::Values(EBudgetResponse::SEARCH, EBudgetResponse::INFO, EBudgetResponse::DDSTATS));

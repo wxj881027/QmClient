@@ -223,6 +223,9 @@ try
 		int64_t UserId = 0;
 		if(!ReadText(pName, AXIOM_MAX_QUERY_NAME_BYTES, false) || !ReadInt64(pPlayer, "user_id", UserId) || UserId <= 0)
 			continue;
+		// 恢复只补空余位置；满额后仍允许更新已有名字，不淘汰当前可用记录。
+		if(m_Cache.size() >= AXIOM_MAX_CACHE_ENTRIES && !m_Cache.contains(json_string_get(pName)))
+			continue;
 		SCacheEntry Entry;
 		Entry.m_Result.m_SearchStatus = EQmAxiomScoreStatus::READY;
 		Entry.m_Result.m_Match.m_UserId = UserId;
@@ -236,8 +239,13 @@ try
 		if(pModes->type != json_array)
 			continue;
 		const json_value *pDdStatsGameTypes = JsonField(pPlayer, "ddstats_gametypes");
-		if(pDdStatsGameTypes->type == json_array && pDdStatsGameTypes->u.array.length <= 64)
+		if(pDdStatsGameTypes->type == json_array && pDdStatsGameTypes->u.array.length <= QM_DDSTATS_MAX_GAME_TYPE_RECORDS)
 		{
+			Entry.m_vDdStatsGameTypes.reserve(std::min(pDdStatsGameTypes->u.array.length, QM_DDSTATS_MAX_GAME_TYPES));
+			const auto Less = [](std::string_view Left, std::string_view Right) {
+				return str_comp_nocase(Left.data(), Right.data()) < 0;
+			};
+			std::map<std::string_view, size_t, decltype(Less)> Indices(Less);
 			for(unsigned GameTypeIndex = 0; GameTypeIndex < pDdStatsGameTypes->u.array.length; ++GameTypeIndex)
 			{
 				const json_value *pGameType = pDdStatsGameTypes->u.array.values[GameTypeIndex];
@@ -248,13 +256,21 @@ try
 				SQmDdStatsGameType GameType;
 				GameType.m_Name = json_string_get(pGameTypeName);
 				GameType.m_PlayTimeSeconds = PlayTimeSeconds;
-				const auto Existing = std::find_if(Entry.m_vDdStatsGameTypes.begin(), Entry.m_vDdStatsGameTypes.end(), [&GameType](const SQmDdStatsGameType &Candidate) {
-					return str_comp_nocase(Candidate.m_Name.c_str(), GameType.m_Name.c_str()) == 0;
-				});
-				if(Existing == Entry.m_vDdStatsGameTypes.end())
+				const auto Existing = Indices.find(GameType.m_Name);
+				if(Existing == Indices.end())
+				{
+					if(Entry.m_vDdStatsGameTypes.size() >= QM_DDSTATS_MAX_GAME_TYPES)
+					{
+						// 超限不能把前半份类型列表当成完整权威时长。
+						Indices.clear();
+						Entry.m_vDdStatsGameTypes.clear();
+						break;
+					}
 					Entry.m_vDdStatsGameTypes.push_back(std::move(GameType));
+					Indices.emplace(Entry.m_vDdStatsGameTypes.back().m_Name, Entry.m_vDdStatsGameTypes.size() - 1);
+				}
 				else
-					Existing->m_PlayTimeSeconds = PlayTimeSeconds;
+					Entry.m_vDdStatsGameTypes[Existing->second].m_PlayTimeSeconds = PlayTimeSeconds;
 			}
 		}
 		for(const SQmDdStatsGameType &GameType : Entry.m_vDdStatsGameTypes)
@@ -712,20 +728,40 @@ void CQmAxiomScores::AbortScoreboardRequests() noexcept
 	m_ModeRequests.clear();
 }
 
-void CQmAxiomScores::EvictCacheEntryIfNeeded()
+const char *CQmAxiomScores::StatisticsPlayerName() const
 {
-	if(m_Cache.size() < AXIOM_MAX_CACHE_ENTRIES)
-		return;
+#if defined(CONF_HEADLESS_CLIENT)
+	return g_Config.m_PlayerName;
+#else
+	const char *pName = GameClient() ? GameClient()->m_QmClient.QmDdnetPlayerName() : nullptr;
+	return GameClient() && (!pName || pName[0] == '\0') ? g_Config.m_PlayerName : pName;
+#endif
+}
+
+CQmAxiomScores::TCache::iterator CQmAxiomScores::FindOrCreateCacheEntry(const char *pPlayerName)
+{
+	const auto Existing = m_Cache.find(pPlayerName);
+	if(Existing != m_Cache.end())
+		return Existing;
 	auto Oldest = m_Cache.end();
-	for(auto It = m_Cache.begin(); It != m_Cache.end(); ++It)
+	if(m_Cache.size() >= AXIOM_MAX_CACHE_ENTRIES)
 	{
-		if(It->first == m_ActivePlayerName || m_SearchRequests.contains(It->first) || m_ModeRequests.contains(It->first))
-			continue;
-		if(Oldest == m_Cache.end() || It->second.m_LastAccessOrder < Oldest->second.m_LastAccessOrder)
-			Oldest = It;
+		const char *pSelected = StatisticsPlayerName();
+		for(auto It = m_Cache.begin(); It != m_Cache.end(); ++It)
+		{
+			if((pSelected && It->first == pSelected) || It->first == m_ActivePlayerName || m_SearchRequests.contains(It->first) || m_ModeRequests.contains(It->first))
+				continue;
+			if(Oldest == m_Cache.end() || It->second.m_LastAccessOrder < Oldest->second.m_LastAccessOrder)
+				Oldest = It;
+		}
+		if(Oldest == m_Cache.end())
+			return m_Cache.end();
 	}
+	// 先取得新节点；分配失败不能先丢掉旧记录。map 插入不使其余节点失效。
+	const auto Added = m_Cache.try_emplace(pPlayerName).first;
 	if(Oldest != m_Cache.end())
 		m_Cache.erase(Oldest);
+	return Added;
 }
 
 void CQmAxiomScores::EnsureScoreboardQueried(const char *pPlayerName)
@@ -735,16 +771,11 @@ void CQmAxiomScores::EnsureScoreboardQueried(const char *pPlayerName)
 	if(m_Mode == EQmAxiomMode::NONE)
 		return;
 	const int64_t Now = CurrentTick();
-	const std::string Name(pPlayerName);
-	auto It = m_Cache.find(Name);
-	if(It == m_Cache.end())
-	{
-		EvictCacheEntryIfNeeded();
-		if(m_Cache.size() >= AXIOM_MAX_CACHE_ENTRIES)
-			return;
-		It = m_Cache.emplace(Name, SCacheEntry{}).first;
-	}
-	SCacheEntry &Entry = It->second;
+	const auto CacheIt = FindOrCreateCacheEntry(pPlayerName);
+	if(CacheIt == m_Cache.end())
+		return;
+	const std::string &Name = CacheIt->first;
+	SCacheEntry &Entry = CacheIt->second;
 	Entry.m_LastAccessTick = Now;
 	Entry.m_LastAccessOrder = ++m_AccessOrderClock;
 	if(m_ActivePlayerName == Name)
@@ -766,7 +797,7 @@ void CQmAxiomScores::EnsureScoreboardQueried(const char *pPlayerName)
 			Slot.m_PlayerName = Name;
 			Slot.m_Generation = m_Generation;
 			Slot.m_Mode = m_Mode;
-			const std::string Url = QmBuildAxiomSearchUrl(pPlayerName);
+			const std::string Url = QmBuildAxiomSearchUrl(Name.c_str());
 			if(!Url.empty())
 				Slot.m_pRequest = StartRequest(Url.c_str(), AXIOM_SEARCH_TIMEOUT_MS);
 			if(Slot.m_pRequest)
@@ -1292,15 +1323,7 @@ try
 	if(!pPlayerName || pPlayerName[0] == '\0' || static_cast<size_t>(str_length(pPlayerName)) > AXIOM_MAX_QUERY_NAME_BYTES || !str_utf8_check(pPlayerName))
 		return;
 	// 统计页与记分板调用同一接口；选中的统计玩家继续获取双模式及 DDStats。
-	const char *pStatisticsPlayer = nullptr;
-#if defined(CONF_HEADLESS_CLIENT)
-	// 无头测试不链接完整 CGameClient 对象图，此处只能使用保存的玩家名。
-	pStatisticsPlayer = g_Config.m_PlayerName;
-#else
-	pStatisticsPlayer = GameClient() ? GameClient()->m_QmClient.QmDdnetPlayerName() : nullptr;
-	if(GameClient() && (!pStatisticsPlayer || pStatisticsPlayer[0] == '\0'))
-		pStatisticsPlayer = g_Config.m_PlayerName;
-#endif
+	const char *pStatisticsPlayer = StatisticsPlayerName();
 	if(m_Mode != EQmAxiomMode::NONE && (!pStatisticsPlayer || pStatisticsPlayer[0] == '\0' || str_comp(pPlayerName, pStatisticsPlayer) != 0))
 	{
 		EnsureScoreboardQueried(pPlayerName);
@@ -1311,9 +1334,11 @@ try
 		return;
 
 	const int64_t Now = CurrentTick();
-	auto CacheIt = m_Cache.find(pPlayerName);
+	const auto CacheIt = FindOrCreateCacheEntry(pPlayerName);
 	if(CacheIt == m_Cache.end())
-		CacheIt = m_Cache.emplace(pPlayerName, SCacheEntry{}).first;
+		return;
+	// 新节点先拥有名字再淘汰旧节点；后续只借用本次命中的稳定键，不逐帧复制。
+	const std::string &Name = CacheIt->first;
 	SCacheEntry &Entry = CacheIt->second;
 	Entry.m_LastAccessTick = Now;
 	Entry.m_LastAccessOrder = ++m_AccessOrderClock;
@@ -1322,14 +1347,14 @@ try
 	{
 		// 持久化缓存刷新期间仍保持 READY，以便 UI 继续显示旧数据；请求本身
 		// 仍然是唯一的 in-flight 标记，不能因为 READY 状态而每帧取消重发。
-		if(m_SearchRequest.m_pRequest && m_SearchRequest.m_PlayerName == pPlayerName)
+		if(m_SearchRequest.m_pRequest && m_SearchRequest.m_PlayerName == Name)
 			return;
 		if(IsWithinWindow(Entry.m_LastSearchFailureTick, Now, FailureRetryWindowMs(Entry.m_SearchFailureCount)))
 			return;
 
-		BeginActiveQuery(pPlayerName);
-		StartSearchRequest(pPlayerName, Entry);
-		StartDdStatsRequest(pPlayerName, Entry);
+		BeginActiveQuery(Name.c_str());
+		StartSearchRequest(Name.c_str(), Entry);
+		StartDdStatsRequest(Name.c_str(), Entry);
 		FinishActiveQueryIfIdle();
 		return;
 	}
@@ -1341,7 +1366,7 @@ try
 		const EQmAxiomScoreStatus Status = Entry.m_Result.m_aModes[Index].m_Status;
 		if(Status == EQmAxiomScoreStatus::READY && IsWithinWindow(Entry.m_aLastModeSuccessTick[Index], Now, AXIOM_SCORE_CACHE_TTL_MS))
 			continue;
-		if(m_aModeRequests[Index].m_pRequest && m_aModeRequests[Index].m_PlayerName == pPlayerName)
+		if(m_aModeRequests[Index].m_pRequest && m_aModeRequests[Index].m_PlayerName == Name)
 			continue;
 		if(IsWithinWindow(Entry.m_aLastModeFailureTick[Index], Now, FailureRetryWindowMs(Entry.m_aModeFailureCount[Index])))
 			continue;
@@ -1349,21 +1374,21 @@ try
 		AnyRequestNeeded = true;
 	}
 	const bool DdStatsFresh = !m_DdStatsEnabled || IsWithinWindow(Entry.m_LastDdStatsSuccessTick, Now, AXIOM_SCORE_CACHE_TTL_MS);
-	const bool DdStatsFetching = m_DdStatsRequest.m_pRequest && m_ActivePlayerName == pPlayerName;
+	const bool DdStatsFetching = m_DdStatsRequest.m_pRequest && m_ActivePlayerName == Name;
 	const bool DdStatsRetryBlocked = IsWithinWindow(Entry.m_LastDdStatsFailureTick, Now, FailureRetryWindowMs(Entry.m_DdStatsFailureCount));
 	const bool NeedDdStats = m_DdStatsEnabled && !DdStatsFresh && !DdStatsFetching && !DdStatsRetryBlocked;
 	AnyRequestNeeded |= NeedDdStats;
 	if(!AnyRequestNeeded)
 		return;
 
-	BeginActiveQuery(pPlayerName);
+	BeginActiveQuery(Name.c_str());
 	for(int Index = 0; Index < (int)aNeedsRequest.size(); ++Index)
 	{
 		if(aNeedsRequest[Index])
-			StartModeRequest(pPlayerName, Entry, ModeFromIndex(Index));
+			StartModeRequest(Name.c_str(), Entry, ModeFromIndex(Index));
 	}
 	if(NeedDdStats)
-		StartDdStatsRequest(pPlayerName, Entry);
+		StartDdStatsRequest(Name.c_str(), Entry);
 	FinishActiveQueryIfIdle();
 }
 catch(...)

@@ -109,7 +109,8 @@ class CQmAxiomScores : public CComponent
 		EQmAxiomMode m_Mode = EQmAxiomMode::NONE;
 	};
 
-	std::map<std::string, SCacheEntry, std::less<>> m_Cache;
+	using TCache = std::map<std::string, SCacheEntry, std::less<>>;
+	TCache m_Cache;
 	uint64_t m_AccessOrderClock = 0;
 	SRequestSlot m_SearchRequest;
 	std::array<SRequestSlot, 2> m_aModeRequests;
@@ -144,7 +145,7 @@ class CQmAxiomScores : public CComponent
 	void ProcessModeRequests();
 	void ProcessDdStatsRequest();
 	void FinishActiveQueryIfIdle();
-	void EvictCacheEntryIfNeeded();
+	TCache::iterator FindOrCreateCacheEntry(const char *pPlayerName);
 	void EnsureScoreboardQueried(const char *pPlayerName);
 	void ProcessScoreboardRequests();
 	void AbortScoreboardRequests() noexcept;
@@ -155,6 +156,7 @@ class CQmAxiomScores : public CComponent
 
 protected:
 	virtual int64_t CurrentTick() const noexcept;
+	virtual const char *StatisticsPlayerName() const;
 	virtual std::shared_ptr<IHttpRequest> CreateNativeRequest(const char *pUrl);
 	virtual void SubmitNativeRequest(const std::shared_ptr<IHttpRequest> &pRequest);
 	virtual bool SubmitDdStatsParseJob(const std::shared_ptr<CQmAxiomDdStatsParseJob> &pJob);

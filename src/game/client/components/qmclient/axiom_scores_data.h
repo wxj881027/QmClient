@@ -72,6 +72,10 @@ struct SQmDdStatsGameType
 	int64_t m_PlayTimeSeconds = 0;
 };
 
+// 在线与持久化共用类型预算；重复记录另设扫描上限，避免按原始数量扩容。
+constexpr unsigned QM_DDSTATS_MAX_GAME_TYPES = 1024;
+constexpr unsigned QM_DDSTATS_MAX_GAME_TYPE_RECORDS = 4096;
+
 struct SQmAxiomPopupSize
 {
 	float m_Width = 0.0f;
