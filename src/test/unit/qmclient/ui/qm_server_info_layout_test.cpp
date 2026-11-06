@@ -6,20 +6,25 @@ using namespace QmServerInfoGeometry;
 
 TEST(QmServerInfoLayout, DefaultsKeepTwoRowsAndSeparateColumnSplits)
 {
-	const auto Result = Layout({10, 20, 1010, 510}, 500, 500, 380, true);
+	const auto Result = Layout({10, 20, 1004, 504}, 500, 500, 380, true);
 	EXPECT_FLOAT_EQ(Result.m_Server.w, 500);
 	EXPECT_FLOAT_EQ(Result.m_Server.h, 250);
-	EXPECT_FLOAT_EQ(Result.m_Game.x, 520);
+	EXPECT_FLOAT_EQ(Result.m_Game.x, 514);
 	EXPECT_FLOAT_EQ(Result.m_Game.w, 500);
-	EXPECT_FLOAT_EQ(Result.m_Motd.y, 280);
+	EXPECT_FLOAT_EQ(Result.m_Motd.y, 274);
 	EXPECT_FLOAT_EQ(Result.m_Motd.w, 380);
-	EXPECT_FLOAT_EQ(Result.m_Tags.x, 400);
+	EXPECT_FLOAT_EQ(Result.m_Tags.x, 394);
 	EXPECT_FLOAT_EQ(Result.m_Tags.w, 620);
+	EXPECT_FLOAT_EQ(Result.m_Server.x, 10);
+	EXPECT_FLOAT_EQ(Result.m_Server.y, 20);
+	EXPECT_FLOAT_EQ(Result.m_Game.x - (Result.m_Server.x + Result.m_Server.w), 4);
+	EXPECT_FLOAT_EQ(Result.m_Tags.x - (Result.m_Motd.x + Result.m_Motd.w), 4);
+	EXPECT_FLOAT_EQ(Result.m_Motd.y - (Result.m_Server.y + Result.m_Server.h), 4);
 }
 
 TEST(QmServerInfoLayout, RowDividerResizesBothRowsWithoutChangingColumns)
 {
-	const auto Result = Layout({0, 0, 1010, 510}, 600, 500, 380, true);
+	const auto Result = Layout({0, 0, 1004, 504}, 600, 500, 380, true);
 	EXPECT_FLOAT_EQ(Result.m_Server.h, 300);
 	EXPECT_FLOAT_EQ(Result.m_Game.h, 300);
 	EXPECT_FLOAT_EQ(Result.m_Motd.h, 200);
@@ -31,7 +36,7 @@ TEST(QmServerInfoLayout, RowDividerResizesBothRowsWithoutChangingColumns)
 
 TEST(QmServerInfoLayout, TopDividerLeavesBottomRowUnchanged)
 {
-	const auto Result = Layout({0, 0, 1010, 510}, 500, 650, 380, true);
+	const auto Result = Layout({0, 0, 1004, 504}, 500, 650, 380, true);
 	EXPECT_FLOAT_EQ(Result.m_Server.w, 650);
 	EXPECT_FLOAT_EQ(Result.m_Game.w, 350);
 	EXPECT_FLOAT_EQ(Result.m_Motd.w, 380);
@@ -40,7 +45,7 @@ TEST(QmServerInfoLayout, TopDividerLeavesBottomRowUnchanged)
 
 TEST(QmServerInfoLayout, BottomDividerLeavesTopRowUnchanged)
 {
-	const auto Result = Layout({0, 0, 1010, 510}, 500, 500, 600, true);
+	const auto Result = Layout({0, 0, 1004, 504}, 500, 500, 600, true);
 	EXPECT_FLOAT_EQ(Result.m_Server.w, 500);
 	EXPECT_FLOAT_EQ(Result.m_Game.w, 500);
 	EXPECT_FLOAT_EQ(Result.m_Motd.w, 600);
@@ -63,7 +68,7 @@ TEST(QmServerInfoLayout, DragBeyondPageKeepsBothCardsUsable)
 
 TEST(QmServerInfoLayout, NarrowViewportKeepsCardsDisjointAndNonnegative)
 {
-	for(const float Width : {0.0f, 5.0f, 120.0f, 400.0f})
+	for(const float Width : {0.0f, 2.0f, 120.0f, 400.0f})
 	{
 		SCOPED_TRACE(Width);
 		const auto Result = Layout({10, 20, Width, 100}, 999, 999, 1, true);
@@ -82,19 +87,19 @@ TEST(QmServerInfoLayout, NarrowViewportKeepsCardsDisjointAndNonnegative)
 
 TEST(QmServerInfoLayout, HiddenTagsGiveMotdFullWidthAndReopenWithSavedSplit)
 {
-	const auto Hidden = Layout({0, 0, 1010, 510}, 500, 500, 650, false);
-	EXPECT_FLOAT_EQ(Hidden.m_Motd.w, 1010);
+	const auto Hidden = Layout({0, 0, 1004, 504}, 500, 500, 650, false);
+	EXPECT_FLOAT_EQ(Hidden.m_Motd.w, 1004);
 	EXPECT_FLOAT_EQ(Hidden.m_Tags.w, 0);
 	EXPECT_FLOAT_EQ(Hidden.m_aDividers[2].w, 0);
-	const auto Reopened = Layout({0, 0, 1010, 510}, 500, 500, 650, true);
+	const auto Reopened = Layout({0, 0, 1004, 504}, 500, 500, 650, true);
 	EXPECT_FLOAT_EQ(Reopened.m_Motd.w, 650);
 	EXPECT_FLOAT_EQ(Reopened.m_Tags.w, 350);
 }
 
 TEST(QmServerInfoLayout, SavedRatiosFollowViewportSize)
 {
-	const auto Small = Layout({0, 0, 1010, 610}, 600, 600, 400, true);
-	const auto Large = Layout({0, 0, 2010, 1210}, 600, 600, 400, true);
+	const auto Small = Layout({0, 0, 1004, 604}, 600, 600, 400, true);
+	const auto Large = Layout({0, 0, 2004, 1204}, 600, 600, 400, true);
 	EXPECT_FLOAT_EQ(Large.m_Server.w, Small.m_Server.w * 2);
 	EXPECT_FLOAT_EQ(Large.m_Server.h, Small.m_Server.h * 2);
 	EXPECT_FLOAT_EQ(Large.m_Tags.w, Small.m_Tags.w * 2);
@@ -102,7 +107,7 @@ TEST(QmServerInfoLayout, SavedRatiosFollowViewportSize)
 
 TEST(QmServerInfoLayout, InvalidConfigValuesStillRespectMinimumSizes)
 {
-	const auto Result = Layout({0, 0, 1010, 510}, -100, 2000, -100, true);
+	const auto Result = Layout({0, 0, 1004, 504}, -100, 2000, -100, true);
 	EXPECT_FLOAT_EQ(Result.m_Server.h, 110);
 	EXPECT_FLOAT_EQ(Result.m_Game.w, 280);
 	EXPECT_FLOAT_EQ(Result.m_Motd.w, 180);
