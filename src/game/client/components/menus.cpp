@@ -49,6 +49,7 @@
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiMotion.h>
 #include <game/client/QmUi/UiNavigation.h>
+#include <game/client/QmUi/UiScaledLabel.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiSurfaceText.h>
 #include <game/client/QmUi/UiTheme.h>
@@ -1276,9 +1277,9 @@ int CMenus::DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, 
 	return Active ? Ui()->DoButtonLogic(pId, Checked, pRect, Flags) : 0;
 }
 
-int CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize)
+int CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const CUIRect *pUnscaledRect)
 {
-	return DoButton_MenuInternal(pButtonContainer, pText, EQmIcon::COUNT, nullptr, Checked, pRect, Flags, pImageName, Corners, Rounding, FontFactor, Color, pTextUiElement, TextFontSize);
+	return DoButton_MenuInternal(pButtonContainer, pText, EQmIcon::COUNT, nullptr, Checked, pRect, Flags, pImageName, Corners, Rounding, FontFactor, Color, pTextUiElement, TextFontSize, nullptr, pUnscaledRect);
 }
 
 int CMenus::DoButton_Menu_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize)
@@ -1287,7 +1288,7 @@ int CMenus::DoButton_Menu_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Ico
 	return DoButton_MenuInternal(pButtonContainer, nullptr, Icon, pFallbackIcon, Checked, &ButtonRect, Flags, pImageName, Corners, Rounding, FontFactor, Color, pTextUiElement, TextFontSize);
 }
 
-int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture)
+int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture, const CUIRect *pUnscaledRect)
 {
 	if(Icon != EQmIcon::COUNT && (pText == nullptr || pText[0] == '\0') && pImageName == nullptr && pIconTexture == nullptr)
 		return ui_widget::DoIconButton(ui_widget::ControlContext(Ui()), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners);
@@ -1299,6 +1300,7 @@ int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char
 	Options.m_Selected = Checked > 0;
 	Options.m_Corners = Corners;
 	Options.m_Radius = Rounding;
+	Options.m_AlignToPixel = pUnscaledRect == nullptr;
 	Color = ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ui()), pButtonContainer, *pRect, Options);
 	CUiScopedSurfaceText SurfaceText(TextRender(), Color);
 
@@ -1361,7 +1363,16 @@ int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char
 	else if(pText != nullptr && pText[0] != '\0')
 	{
 		const float ResolvedTextFontSize = TextFontSize > 0.0f ? std::min(TextFontSize, Text.h * CUi::ms_FontmodHeight) : Text.h * CUi::ms_FontmodHeight;
-		if(pTextUiElement != nullptr)
+		if(pUnscaledRect != nullptr && pTextUiElement != nullptr)
+		{
+			CUIRect BaseText = *pUnscaledRect;
+			if(pImageName != nullptr)
+				BaseText.VSplitRight(BaseText.h * 4.0f, &BaseText, nullptr);
+			BaseText = MenuButtonTextRect(&BaseText, FontFactor, 0.0f);
+			const float BaseFontSize = TextFontSize > 0.0f ? std::min(TextFontSize, BaseText.h * CUi::ms_FontmodHeight) : BaseText.h * CUi::ms_FontmodHeight;
+			DrawUiScaledLabel(*Ui(), *pTextUiElement->Rect(0), BaseText, Text, pText, BaseFontSize, pRect->h / pUnscaledRect->h);
+		}
+		else if(pTextUiElement != nullptr)
 			DoSettingsLabelStreamed(*pTextUiElement, &Text, pText, ResolvedTextFontSize, TEXTALIGN_MC);
 		else
 			Ui()->DoLabel(&Text, pText, ResolvedTextFontSize, TEXTALIGN_MC);

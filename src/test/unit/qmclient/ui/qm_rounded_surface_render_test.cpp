@@ -364,3 +364,41 @@ TEST(QmScreenshotViewerRoundedCorners, ZeroRadiusNeverCutsAnything)
 	EXPECT_FLOAT_EQ(qm_screenshot_viewer::RoundedCornerInset(0.0f, 0.0f), 0.0f);
 	EXPECT_FLOAT_EQ(qm_screenshot_viewer::RoundedCornerInset(-5.0f, 0.0f), 0.0f);
 }
+
+TEST(QmRoundedSurfaceRender, AnimatedSurfaceKeepsSubpixelMotionInBothBackends)
+{
+	for(const bool Sdf : {false, true})
+	{
+		SCOPED_TRACE(Sdf);
+		CSurfaceGraphics Graphics;
+		Graphics.m_HasSdf = Sdf;
+		SRoundedSurfaceParams Params;
+		Params.m_Radius = 4.0f;
+		Params.m_PixelSize = 1.0f;
+		Params.m_AlignToPixel = false;
+		const ColorRGBA Fill(1, 1, 1, 1);
+		DrawRoundedSurface(&Graphics, {0.1f, 0.1f, 30.2f, 20.2f}, Fill, ColorRGBA(), Params);
+		if(Sdf)
+		{
+			ASSERT_EQ(Graphics.m_vSdf.size(), 1u);
+			EXPECT_FLOAT_EQ(Graphics.m_vSdf[0].m_Rect.x, 0.1f);
+			EXPECT_FLOAT_EQ(Graphics.m_vSdf[0].m_Rect.z, 30.2f);
+		}
+		else
+		{
+			// 右直边处于两个物理像素之间，羽化覆盖率随距离连续变化。
+			EXPECT_NEAR(Graphics.Sample(vec2(30.55f, 10)).a, 0.75f, 0.001f);
+			EXPECT_EQ(Graphics.m_AntialiasDraws, 0);
+		}
+	}
+}
+
+TEST_F(CQmRoundedSurfaceRender, SubpixelFallbackKeepsTranslucentFillSeparateFromBorder)
+{
+	m_Params.m_AlignToPixel = false;
+	const ColorRGBA Fill(0.2f, 0.4f, 0.6f, 0.3f);
+	const ColorRGBA Border(0.9f, 0.1f, 0.2f, 0.6f);
+	DrawRoundedSurface(&m_Graphics, {0.1f, 0.1f, 30.2f, 20.2f}, Fill, Border, m_Params);
+	ExpectColor(m_Graphics.Sample(vec2(8, 9)), Fill);
+	ExpectColor(m_Graphics.Sample(vec2(30, 9)), Border);
+}

@@ -12,6 +12,40 @@
 
 namespace
 {
+	// 无 SDF 时直接提交小数坐标网格，避免 DrawRect 再次吸附到物理像素。
+	void DrawSubpixelRoundedSurface(IGraphics *pGraphics, SRoundedSurfacePlan Plan, const ColorRGBA &Fill, const ColorRGBA &Border, int Corners)
+	{
+		const auto aBorder = ResolveRoundedSurfaceBorderMesh(Plan, Corners);
+		const vec2 Center(Plan.m_Rect.x + Plan.m_Rect.w * 0.5f, Plan.m_Rect.y + Plan.m_Rect.h * 0.5f);
+		std::array<IGraphics::CFreeformItem, 36> aFill;
+		for(size_t i = 0; i < aFill.size(); ++i)
+			aFill[i] = IGraphics::CFreeformItem(Center, vec2(aBorder[i].m_X2, aBorder[i].m_Y2), Center, vec2(aBorder[i].m_X3, aBorder[i].m_Y3));
+		pGraphics->TextureClear();
+		pGraphics->QuadsBegin();
+		pGraphics->SetColor(Fill);
+		pGraphics->QuadsDrawFreeform(aFill.data(), aFill.size());
+		if(Plan.m_BorderWidth > 0.0f)
+		{
+			pGraphics->SetColor(Border);
+			pGraphics->QuadsDrawFreeform(aBorder.data(), aBorder.size());
+		}
+
+		// 外缘一物理像素羽化；填充和边框各占自己的区域，不叠加半透明底色。
+		const ColorRGBA Edge = Plan.m_BorderWidth > 0.0f ? Border : Fill;
+		Plan.m_Rect.x -= Plan.m_PixelSize;
+		Plan.m_Rect.y -= Plan.m_PixelSize;
+		Plan.m_Rect.w += 2.0f * Plan.m_PixelSize;
+		Plan.m_Rect.h += 2.0f * Plan.m_PixelSize;
+		Plan.m_Radius += Plan.m_PixelSize;
+		Plan.m_BorderWidth = Plan.m_PixelSize;
+		const auto aFringe = ResolveRoundedSurfaceBorderMesh(Plan, Corners);
+		const IGraphics::CColorVertex aColors[] = {
+			{0, Edge.WithAlpha(0.0f)}, {1, Edge.WithAlpha(0.0f)}, {2, Edge}, {3, Edge}};
+		pGraphics->SetColorVertex(aColors, std::size(aColors));
+		pGraphics->QuadsDrawFreeform(aFringe.data(), aFringe.size());
+		pGraphics->QuadsEnd();
+	}
+
 	void DrawRoundedSurfaceBorder(IGraphics *pGraphics, const SRoundedSurfacePlan &Plan, const ColorRGBA &Border, int Corners)
 	{
 		if(Border.a <= 0.0f || Plan.m_BorderWidth <= 0.0f)
@@ -54,6 +88,12 @@ bool DrawRoundedSurface(IGraphics *pGraphics, const CUIRect &Rect, const ColorRG
 		SdfParams.m_CornerRadii = Plan.m_CornerRadii;
 		SdfParams.m_Params = vec4(Plan.m_BorderWidth, Plan.m_PixelSize, Plan.m_PixelSize * 2.0f, 0.0f);
 		pGraphics->RenderRoundedRectSdf(SdfParams);
+		return true;
+	}
+
+	if(!Params.m_AlignToPixel)
+	{
+		DrawSubpixelRoundedSurface(pGraphics, Plan, Fill, Border, Params.m_Corners);
 		return true;
 	}
 
@@ -117,7 +157,7 @@ bool DrawRoundedImage(CUi *pUi, const CUIRect &Rect, const SRoundedImageParams &
 	return DrawRoundedImage(pUi->Graphics(), Rect, Image, Border, Params);
 }
 
-bool DrawRoundedSurface(CUi *pUi, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, const float Radius, const float BorderWidth, const int Corners)
+bool DrawRoundedSurface(CUi *pUi, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, const float Radius, const float BorderWidth, const int Corners, const bool AlignToPixel)
 {
 	if(pUi == nullptr || pUi->DrawingSuppressed())
 		return false;
@@ -126,12 +166,13 @@ bool DrawRoundedSurface(CUi *pUi, const CUIRect &Rect, const ColorRGBA &Fill, co
 	Params.m_BorderWidth = BorderWidth;
 	Params.m_PixelSize = pUi->PixelSize();
 	Params.m_Corners = Corners;
+	Params.m_AlignToPixel = AlignToPixel;
 	return DrawRoundedSurface(pUi->Graphics(), Rect, Fill, Border, Params);
 }
 
-bool DrawRoundedSurface(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, const float Radius, const float BorderWidth, const int Corners)
+bool DrawRoundedSurface(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, const float Radius, const float BorderWidth, const int Corners, const bool AlignToPixel)
 {
-	return DrawRoundedSurface(Ctx.m_pUi, Rect, Fill, Border, Radius, BorderWidth, Corners);
+	return DrawRoundedSurface(Ctx.m_pUi, Rect, Fill, Border, Radius, BorderWidth, Corners, AlignToPixel);
 }
 
 // 固定网格一次提交顶点；预览和候选栏共享五种渐变，不生成每帧纹理。

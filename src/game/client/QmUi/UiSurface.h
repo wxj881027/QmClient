@@ -35,6 +35,8 @@ struct SRoundedSurfaceParams
 	// 边框沿带宽的羽化指数：0 为实心边框，越大越向外淡出。
 	// 辉光类描边（彩虹光环）靠它把多层叠成渐变，而不是三道硬边。
 	float m_BorderFalloff = 0.0f;
+	// 连续缩放的表面保留小数几何；抗锯齿仍使用真实物理像素大小。
+	bool m_AlignToPixel = true;
 };
 
 struct SRoundedSurfacePlan
@@ -60,7 +62,7 @@ inline SRoundedSurfacePlan ResolveRoundedSurfacePlan(const CUIRect &Rect, const 
 {
 	SRoundedSurfacePlan Plan;
 	Plan.m_PixelSize = std::max(Params.m_PixelSize, 0.0001f);
-	const SRoundedRectGeometry Geometry = ResolveRoundedRectGeometry(Rect.x, Rect.y, Rect.w, Rect.h, Params.m_Radius, Plan.m_PixelSize);
+	const SRoundedRectGeometry Geometry = ResolveRoundedRectGeometry(Rect.x, Rect.y, Rect.w, Rect.h, Params.m_Radius, Params.m_AlignToPixel ? Plan.m_PixelSize : 0.0f);
 	Plan.m_Rect = {Geometry.m_X, Geometry.m_Y, Geometry.m_W, Geometry.m_H};
 	Plan.m_Radius = Geometry.m_Rounding;
 	const auto AlignToPixel = [](const float Value, const float Size) {
@@ -144,8 +146,8 @@ inline void ResolveRoundedImageUV(const float RectWidth, const float RectHeight,
 
 bool DrawRoundedImage(IGraphics *pGraphics, const CUIRect &Rect, const SRoundedImageParams &Image, const ColorRGBA &Border, const SRoundedSurfaceParams &Params);
 bool DrawRoundedSurface(IGraphics *pGraphics, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, const SRoundedSurfaceParams &Params);
-bool DrawRoundedSurface(CUi *pUi, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, float Radius, float BorderWidth = 0.0f, int Corners = IGraphics::CORNER_ALL);
+bool DrawRoundedSurface(CUi *pUi, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, float Radius, float BorderWidth = 0.0f, int Corners = IGraphics::CORNER_ALL, bool AlignToPixel = true);
 bool DrawRoundedImage(CUi *pUi, const CUIRect &Rect, const SRoundedImageParams &Image, const ColorRGBA &Border, float Radius, float BorderWidth = 0.0f);
-bool DrawRoundedSurface(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, float Radius, float BorderWidth = 0.0f, int Corners = IGraphics::CORNER_ALL);
+bool DrawRoundedSurface(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, float Radius, float BorderWidth = 0.0f, int Corners = IGraphics::CORNER_ALL, bool AlignToPixel = true);
 
 #endif
