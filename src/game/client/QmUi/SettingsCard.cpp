@@ -237,51 +237,33 @@ bool CMenus::DoSettingsToggleGroup(int Page, int Tab, int Subtab, CUIRect &Conte
 {
 	if(Entries.size() == 0)
 		return false;
-	const float Gap = Metrics.m_LineSpacing;
-	const float PaddingX = std::max(Metrics.m_LineSpacing, Metrics.m_BodySize * 0.5f);
-	const float PaddingY = Metrics.m_LineSpacing * 0.5f;
-	m_vSettingsToggleGroupSizes.resize(Entries.size());
+	// 组内每一项都按设置页的常规开关排：一行一个标签 + 右侧开关。
+	// 原来把短开关挤成一排胶囊，扫读困难，也和本页其它开关不是同一套外观。
+	CSettingsContentLayoutFlow Flow(Content);
+	bool Changed = false;
 	size_t Index = 0;
 	for(const auto &Entry : Entries)
 	{
-		auto &Size = m_vSettingsToggleGroupSizes[Index++];
-		const float IndicatorWidth = Entry.m_ShowCheckmark ? Metrics.m_BodySize + Gap : 0.0f;
-		Size = ResolveSettingsToggleButtonSize(TextRender()->TextWidth(Metrics.m_BodySize, Entry.m_pLabel), Metrics.m_BodySize, Metrics.m_LineHeight, PaddingX, PaddingY, IndicatorWidth);
-	}
-	auto &Grid = m_SettingsToggleGroupGrid;
-	ResolveSettingsToggleGrid(Content.w, m_vSettingsToggleGroupSizes, Gap, Grid);
-	Index = 0;
-	for(const auto &Entry : Entries)
-	{
-		const CUIRect Button{0, 0, Grid.m_aColumnWidths[Index % Grid.m_Columns], Metrics.m_LineHeight};
-		const float IndicatorWidth = Entry.m_ShowCheckmark ? Metrics.m_BodySize + Gap : 0.0f;
-		const CUIRect Label = ResolveSettingsToggleButtonLabel(Button, PaddingX, PaddingY, IndicatorWidth);
-		const float LabelHeight = TextRender()->TextBoundingBox(Metrics.m_BodySize, Entry.m_pLabel, -1, std::max(1.0f, Label.w)).m_H;
-		m_vSettingsToggleGroupSizes[Index++].m_Height = ResolveSettingsToggleButtonSize(0, LabelHeight, Metrics.m_LineHeight, PaddingX, PaddingY).m_Height;
-	}
-	Grid.SetItemHeights(m_vSettingsToggleGroupSizes);
-	CUIRect Area;
-	CSettingsContentLayoutFlow Flow(Content);
-	// 分组作为一个稳定布局块发布；输入和绘制消费同一份卡片坐标。
-	const char *pGroupId = Entries.begin()->m_pTextId;
-	const bool HasArea = Flow.Control(pGroupId, Grid.Height(), Area);
-	Flow.Space(Metrics.m_LineSpacing);
-	if(!HasArea)
-		return false;
-	ProcessInput = ProcessInput && Flow.Input();
-	if(Pass == ESettingsToggleGroupPass::LAYOUT)
-		return false;
-
-	bool Changed = false;
-	Index = 0;
-	for(const auto &Entry : Entries)
-	{
-		const CUIRect Cell = Grid.Cell(Area, static_cast<int>(Index++));
-		Changed = DoSettingsToggleButton(Page, Tab, Subtab, Cell, Entry, Metrics, ProcessInput, Pass) || Changed;
+		CUIRect Row;
+		const float SpacingBefore = Index == 0 ? 0.0f : Metrics.m_LineSpacing;
+		const char *pRowId = Entry.m_pTextId != nullptr ? Entry.m_pTextId : Entry.m_pLabel;
+		const bool HasRow = Flow.Control(pRowId, Metrics.m_LineHeight, Row, SpacingBefore);
+		if(HasRow && Pass == ESettingsToggleGroupPass::RENDER && Entry.m_pValue != nullptr)
+		{
+			ProcessInput = ProcessInput && Flow.Input();
+			const int Checked = Entry.m_Mask != 0 ? (*Entry.m_pValue & Entry.m_Mask) != 0 : *Entry.m_pValue != 0;
+			const void *pId = Entry.m_pId != nullptr ? Entry.m_pId : Entry.m_pValue;
+			const char *pOverrideTooltip = TemporaryOverrideTooltip(Entry.m_pValue);
+			const int Clicked = DoSettingsButton_CheckBox(Page, Tab, Subtab, pId, pRowId, Entry.m_pLabel, Checked, &Row);
+			if(ApplySettingsToggleEntry(Entry, Clicked != 0, ProcessInput && !m_MenuTextPlanCollecting && !Ui()->RenderOnly(), pOverrideTooltip != nullptr))
+				Changed = true;
+			if(Entry.m_pTooltip != nullptr && !m_MenuTextPlanCollecting)
+				Ui()->DoConfigTooltip(pId, &Row, Entry.m_pValue);
+		}
+		Index++;
 	}
 	return Changed;
 }
-
 bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect &Button, const SSettingsToggleEntry &Entry, const SSettingsContentMetrics &Metrics, bool ProcessInput, ESettingsToggleGroupPass Pass)
 {
 	if(Pass == ESettingsToggleGroupPass::LAYOUT)

@@ -305,11 +305,12 @@ void CMenus::RenderQmFunctionMapUploadContent(CUIRect &Content, float LineHeight
 				Wrapped.m_EnableWidthCheck = false;
 				DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pId, &TextRect, pText, BodySize, TEXTALIGN_TL, Wrapped); }, MinimumHeight);
 	};
-	TextRow("qmclient-map-upload-status", pStatus, LineHeight * 2.0f);
+	TextRow("qmclient-map-upload-status", pStatus, LineHeight);
 	// 服务端详情保留旧两行最小区域，超出时按真实正文换行测高，不能永久裁剪掉错误原因。
 	char aDetail[768];
 	str_copy(aDetail, m_QmMapUpload.Detail().c_str());
-	TextRow("qmclient-map-upload-detail", aDetail, LineHeight * 2.0f);
+	if(aDetail[0] != '\0')
+		TextRow("qmclient-map-upload-detail", aDetail, LineHeight * 2.0f);
 	const auto Instructions = qm_card_catalog::QmMapUploadInstructions();
 	for(size_t Index = 0; Index < Instructions.size(); ++Index)
 	{
