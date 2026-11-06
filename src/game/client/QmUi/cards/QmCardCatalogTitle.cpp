@@ -292,8 +292,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 				pMenus->GameClient()->m_Tooltips.DoToolTip(&s_RefreshButton, &PreviewRefreshRect, Localize("Refresh"));
 				// 标题和预览块之间留一个行距，别贴在一起。
 				ChatPreviewArea.HSplitTop(LineSpacing * 0.6f, nullptr, &ChatPreviewArea);
-				// 预览垫聊天框那种浅底色，和聊天框外观预览保持同一种观感。
-				DrawRoundedSurface(pMenus->Ui(), ChatPreviewArea, ui_token::color::SURFACE_HIGHLIGHT, ui_token::color::BORDER_SUBTLE, ui_token::radius::BASE);
+				ChatPreviewArea.Draw(ui_token::color::PREVIEW_SURFACE, IGraphics::CORNER_ALL, ui_token::radius::BASE);
 				ChatPreviewArea.Margin(TipSize * 0.45f, &ChatPreviewArea);
 				pMenus->Ui()->ClipEnable(&ChatPreviewArea);
 				RenderQmSponsorChatPreview(pMenus->Graphics(), pMenus->TextRender(), ChatPreviewArea, BodySize, static_cast<EQmSponsorChatStyle>(g_Config.m_QmSponsorChatStyle), Auth.TitleAnimationTime());
@@ -390,6 +389,9 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 					pMenus->Ui()->DoLabel(&PreviewLabel, Localize("Title preview"), TipSize, TEXTALIGN_ML);
 					pMenus->TextRender()->TextColor(PreviousTextColor);
 				}
+				TitlePreviewArea.HSplitTop(LineSpacing * 0.6f, nullptr, &TitlePreviewArea);
+				TitlePreviewArea.Draw(ui_token::color::PREVIEW_SURFACE, IGraphics::CORNER_ALL, ui_token::radius::BASE);
+				TitlePreviewArea.Margin(TipSize * 0.45f, &TitlePreviewArea);
 				if(pMenus->Ui()->DoButton_QmIcon(&s_SaveAppearance, EQmIcon::CHECK, "\xEE\x86\x82", Enabled ? 0 : -1, &SaveAppearanceRect, IGraphics::CORNER_ALL) && Enabled && Auth.TitleAuthenticated() && (!Draft.m_BindName || Draft.m_Name.GetString()[0]))
 					Auth.SaveTitleProfile(Draft.m_Title.GetString(), Draft.m_BindName ? Draft.m_Name.GetString() : "", Auth.TitleProfileStyle(), static_cast<EQmSponsorChatStyle>(g_Config.m_QmSponsorChatStyle), QmTitleDraftAppearance());
 				pMenus->GameClient()->m_Tooltips.DoToolTip(&s_SaveAppearance, &SaveAppearanceRect, Localize("Save"));

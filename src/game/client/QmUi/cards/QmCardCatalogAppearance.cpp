@@ -553,7 +553,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 			char aBuf[128];
 			CUIRect PreviewView = ContentRect;
 			// ***** Chat Preview ***** //
-			PreviewView.Draw(ColorRGBA(1, 1, 1, 0.1f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
+			PreviewView.Draw(ui_token::color::PREVIEW_SURFACE, IGraphics::CORNER_ALL, ui_token::radius::BASE);
 			PreviewView.Margin(MarginSmall, &PreviewView);
 			const CUIRect PreviewRailBounds = PreviewView;
 			const float ScrollbarReserve = std::min(PreviewView.w, QM_CHAT_SCROLLBAR_RESERVE * 2.0f);
