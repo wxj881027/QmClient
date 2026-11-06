@@ -18,6 +18,7 @@ protected:
 	bool m_HiddenForPrivacy = false;
 	bool m_ShiftOnInvis = false;
 	bool m_ReserveLineHeight = false;
+	bool m_ReserveBubbleTop = false;
 
 public:
 	explicit CQmNameplatePartLayout(vec2 Padding = vec2(0.0f, 0.0f)) :
@@ -29,6 +30,12 @@ public:
 	{
 		// 与 RenderLine 的居中位置一致；隐藏的占位只参与排版，不抬高气泡。
 		return Visible() ? LineBottomY - (std::max(LineHeight, m_Padding.y + m_Size.y) + m_Size.y) * 0.5f : std::numeric_limits<float>::infinity();
+	}
+	float BubbleTop(float LineBottomY, float LineHeight) const
+	{
+		if(m_ReserveBubbleTop && m_ShiftOnInvis && !m_HiddenForPrivacy)
+			return LineBottomY - (std::max(LineHeight, m_Padding.y + m_Size.y) + m_Size.y) * 0.5f;
+		return VisibleTop(LineBottomY, LineHeight);
 	}
 	bool ShiftOnInvis() const { return m_ShiftOnInvis || (m_Visible && m_HiddenForPrivacy); }
 	bool HasLayout() const { return m_Visible || m_ShiftOnInvis || m_ReserveLineHeight; }

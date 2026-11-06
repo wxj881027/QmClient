@@ -689,6 +689,7 @@ public:
 	CNamePlatePartDirection(CGameClient &This, Direction Dir) :
 		CNamePlatePartIcon(This)
 	{
+		m_ReserveBubbleTop = true;
 		m_Texture = g_pData->m_aImages[IMAGE_ARROW].m_Id;
 		m_Direction = Dir;
 		switch(m_Direction)
@@ -827,17 +828,15 @@ public:
 
 class CNamePlatePartDeveloperBadge : public CNamePlatePart
 {
-	bool m_AboveName;
 	float m_Alpha = 1.0f;
 
 public:
-	CNamePlatePartDeveloperBadge(CGameClient &This, bool AboveName) :
-		CNamePlatePart(This), m_AboveName(AboveName) {}
+	explicit CNamePlatePartDeveloperBadge(CGameClient &This) :
+		CNamePlatePart(This) {}
 
 	void Update(CGameClient &This, const CNamePlateData &Data) override
 	{
-		m_Visible = Data.m_DeveloperBadge && g_Config.m_QmShowNameplateTitle != 0 &&
-			    m_AboveName == (g_Config.m_QmNameplateTitleAboveName != 0);
+		m_Visible = Data.m_DeveloperBadge && g_Config.m_QmShowNameplateTitle != 0;
 		m_HiddenForPrivacy = Data.m_HideIdentity;
 		m_Size = QmDeveloperBadgeSize(QmNameplateTitleHeight(Data.m_FontSize, g_Config.m_QmNameplateTitleScale));
 		m_Alpha = Data.m_Color.a;
@@ -856,14 +855,13 @@ class CNamePlatePartTitle : public CNamePlatePartText
 	CUIRect m_TextVisualBounds{};
 	float m_FontSize = -INFINITY;
 	float m_Alpha = 1.0f;
-	bool m_AboveName;
 	SQmTitleAppearance m_Appearance;
 
 protected:
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
 	{
 		m_Visible = !Data.m_DeveloperBadge && g_Config.m_QmShowNameplateTitle != 0 &&
-			    Data.m_aQmTitle[0] != '\0' && m_AboveName == (g_Config.m_QmNameplateTitleAboveName != 0);
+			    Data.m_aQmTitle[0] != '\0';
 		m_HiddenForPrivacy = Data.m_HideIdentity;
 		m_Alpha = Data.m_Color.a;
 		m_Appearance = Data.m_TitleAppearance;
@@ -884,8 +882,8 @@ protected:
 	}
 
 public:
-	explicit CNamePlatePartTitle(CGameClient &This, bool AboveName = false) :
-		CNamePlatePartText(This), m_AboveName(AboveName) {}
+	explicit CNamePlatePartTitle(CGameClient &This) :
+		CNamePlatePartText(This) {}
 
 	void Update(CGameClient &This, const CNamePlateData &Data) override
 	{
@@ -1476,7 +1474,7 @@ private:
 		size_t LineStart = StartIndex;
 		auto IncludeLine = [&](size_t End) {
 			for(size_t i = LineStart; i < End; ++i)
-				Top = std::min(Top, m_vpParts[i]->VisibleTop(Position.y, LineSize.y));
+				Top = std::min(Top, m_vpParts[i]->BubbleTop(Position.y, LineSize.y));
 		};
 		for(size_t PartIndex = StartIndex; PartIndex < EndIndex; ++PartIndex)
 		{
@@ -1599,15 +1597,11 @@ private:
 		AddPart<CNamePlatePartPing>(This); // TClient
 		AddPart<CNamePlatePartIgnoreMark>(This); // TClient
 		AddPart<CNamePlatePartFriendMark>(This);
-		AddPart<CNamePlatePartDeveloperBadge>(This, false);
-		AddPart<CNamePlatePartTitle>(This, false); // 内联：名字左侧
 		AddPart<CNamePlatePartClientId>(This, false);
 		AddPart<CNamePlatePartName>(This);
 		AddPart<CNamePlatePartNewLine>(This);
-		// 上方独立行：仅在 QmNameplateTitleAboveName 开启时可见，
-		// 插在名字行之后（渲染时名字行先渲染，上方行在其上方）。
-		AddPart<CNamePlatePartDeveloperBadge>(This, true);
-		AddPart<CNamePlatePartTitle>(This, true); // 上方行
+		AddPart<CNamePlatePartDeveloperBadge>(This);
+		AddPart<CNamePlatePartTitle>(This);
 		AddPart<CNamePlatePartNewLine>(This);
 	}
 
@@ -2881,7 +2875,7 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 
 		ColorRGBA OutlineColor = TextRender()->DefaultTextOutlineColor();
 		// 预设浅色底上的深色字无需黑色外描边，自定义模式保留原来的文字效果。
-		OutlineColor.a *= g_Config.m_QmChatBubbleCustomColors ? TextColor.a : 0.0f;
+		OutlineColor.a *= (g_Config.m_QmChatBubbleCustomColors || BubbleStyle == qm_chat_bubble::EStyle::DEFAULT) ? TextColor.a : 0.0f;
 
 		TextRender()->TextColor(TextColor);
 		TextRender()->TextOutlineColor(OutlineColor);

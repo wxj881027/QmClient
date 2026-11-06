@@ -122,7 +122,7 @@ TEST(QmChatBubble, PresetsSupplyTheirOwnReadableTextAndGradientColors)
 TEST(QmChatBubble, InvalidStyleValuesStayWithinAvailablePresets)
 {
 	EXPECT_EQ(qm_chat_bubble::StyleFromConfig(-1), qm_chat_bubble::EStyle::COMIC);
-	EXPECT_EQ(qm_chat_bubble::StyleFromConfig(999), qm_chat_bubble::EStyle::CLOUD);
+	EXPECT_EQ(qm_chat_bubble::StyleFromConfig(999), qm_chat_bubble::EStyle::DEFAULT);
 }
 
 TEST(QmChatBubble, ProceduralCloudHasDenseCenterSoftEdgesAndTransparentTileBoundary)
@@ -197,4 +197,16 @@ TEST(QmChatBubble, MultilineTextCornersStayInsideOutlinedStyles)
 				EXPECT_TRUE(Inside);
 			}
 		}
+}
+
+TEST(QmChatBubble, DefaultStyleUsesOriginalRectangleAndConfiguredColors)
+{
+	const auto Bubble = qm_chat_bubble::Layout(vec2(100, 200), vec2(80, 20), 20, 1, qm_chat_bubble::EStyle::DEFAULT);
+	EXPECT_FLOAT_EQ(Bubble.m_Size.x, 104);
+	EXPECT_FLOAT_EQ(Bubble.m_Size.y, 44);
+	EXPECT_FLOAT_EQ(Bubble.m_Radius, 10);
+	EXPECT_FLOAT_EQ(Bubble.m_TailHeight, 0);
+	const auto Colors = qm_chat_bubble::Palette(qm_chat_bubble::EStyle::DEFAULT, false, ColorRGBA(0, 0, 0, 0.8f), ColorRGBA(1, 1, 1), 1);
+	EXPECT_FLOAT_EQ(Colors.m_Fill.a, 0.8f);
+	EXPECT_FLOAT_EQ(Colors.m_Text.r, 1);
 }

@@ -1019,9 +1019,6 @@ APP ID
 Appearance
 == 遊戲界面
 
-Appearance and command highlighting of the local console
-== 本機控制台的外觀和命令醒目顯示
-
 Appearance of help bubbles
 == 提示氣泡外觀
 
@@ -1519,9 +1516,6 @@ Automatically record demos
 
 Automatically record replays
 == 自動錄製回放
-
-Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
-== 存檔載入成功後自動刪除本地記錄（0 = 保留並標記為已使用，1 = 刪除）
 
 Automatically reply to muted players
 == 對已屏蔽發言的玩家自動回覆
@@ -2207,8 +2201,8 @@ Chat bubble display duration (seconds)
 Chat bubble font size
 == 聊天氣泡字體大小
 
-Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
-== 訊息氣泡樣式（0=漫畫對白，1=糖果漸層，2=雲朵氣泡）
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble, 3=Default)
+== 訊息氣泡樣式（0=漫畫對白，1=糖果漸層，2=雲朵氣泡，3=預設）
 
 Chat bubble text color
 == 聊天氣泡文字顏色
@@ -2483,35 +2477,20 @@ Clan plates size
 Clan: %s
 == 戰隊：%s
 
-Classic
-== 古典
-
 Classic Easy
 == 古典 Easy
-
-Classic easy
-== 古典 easy
 
 Classic Next
 == 古典 Next
 
-Classic next
-== 古典 next
-
 Classic Nut
 == 古典 Nut
-
-Classic nut
-== 古典 nut
 
 Classic PowerShell
 == 經典 PowerShell
 
 Classic Pro
 == 古典 Pro
-
-Classic pro
-== 古典 pro
 
 Clear
 == 清空
@@ -2566,9 +2545,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == 在清單裡點一種語言就會立即生效，左側的國旗標出目前選擇。
-
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== 點地圖名可以複製，點右側的 X 按鈕可以移除；在遊戲內伺服器資訊頁勾選收藏地圖即可加入。
 
 Click a part on the right to edit its color, blend mode and strength.
 == 點擊右側部件，調整顏色、混合模式和強度。
@@ -2932,9 +2908,6 @@ Configure game and client preferences
 
 Configure ghost recording and playback tools
 == Configure ghost recording and playback tools
-
-Configure hammer skin steal and skin transition animations
-== 調整錘中偷皮和換皮動畫
 
 Configure health, ammo, timer, and race HUD
 == Configure health, ammo, timer, and race HUD
@@ -5627,9 +5600,6 @@ Favorite maps
 Favorites
 == 收藏夾
 
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== 收藏依地圖名精確匹配，同時會作為伺服器瀏覽器裡收藏地圖分頁的來源。
-
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood：tokens + 12 widgets
 
@@ -5842,9 +5812,6 @@ Font cursor
 
 Font size
 == 字體大小
-
-Font size, background opacity, colors and command highlighting of the local console you open with F1.
-== 用 F1 開啟的本機主控台的字型大小、背景不透明度、顏色與指令高亮。
 
 Font store
 == 字型商店
@@ -10253,9 +10220,6 @@ Pistol guide line
 Pixel: Layer Shift
 == 像素風：層移
 
-Place title on a separate line above the player name instead of inline
-== 將頭銜獨立顯示在玩家名稱上方，而不是與名稱同列
-
 Plasma gun shots per second
 == 等離子槍每秒發射多少發子彈
 
@@ -12278,9 +12242,6 @@ Save ghost
 Save last %d min
 == 保存前 %d 分鐘
 
-Save loaded and marked as used.
-== 存檔已載入並標記為已使用。
-
 Save loaded; local record removed.
 == 存檔讀取成功，已刪除本機紀錄。
 
@@ -12862,9 +12823,6 @@ Set "Background color" and "Background opacity", then "Text color", "Selected te
 
 Set "Button - Disabled" and "Button - Enabled" for the button, then "Menu background" and the two menu option rows for the popup.
 == 按鈕用按鈕 - 停用與按鈕 - 啟用來設定，彈出選單則設選單背景與兩行選單選項。
-
-Set "Console font size" and "Console background opacity", tick "Highlight console commands", then choose a "Console color scheme".
-== 設定主控台字型大小與主控台背景不透明度，勾選高亮主控台指令，再選擇主控台配色方案。
 
 Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide line" and "Predict ninja path", plus color, "Line width" and "Opacity".
 == 把顯示方式設為按鍵顯示或一直顯示，再依需要開啟手槍輔助線和預測忍者路徑，並調整顏色、線寬和透明度。
@@ -13969,9 +13927,6 @@ Show tiles layers from BG map
 
 Show title setting hints immediately in small text
 == 立即以小字顯示頭銜設定提示
-
-Show titles above player names
-== 頭銜顯示在名字上方
 
 Show titles on nameplates
 == 顯示名牌頭銜
@@ -16847,9 +16802,6 @@ Use warlist colors instead of regular colors
 Use warlist groups for indicator
 == 使用敵對列表作為指示器
 
-Used
-== 已使用
-
 Used by active shared text and numeric input fields
 == 用於已啟用的共用文字與數值輸入框
 
@@ -17801,17 +17753,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == 當前版本不是最新版，請前往 QQ 群更新最新版
 
-Your favorite map manager
-== 你最愛的地圖管家
-
 Your favorite maps appear here
 == 你收藏的地圖會顯示在這裡
 
 Your friend %s is online and currently on map %s!
 == 你的好友 %s 在線，當前在地圖 %s！
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== 你的收藏地圖清單，每張都標出地圖類型，並提供快速複製和移除操作。
 
 Your locked team was killed because '%s' %s
 == 你的鎖隊因 '%s' %s 而被全員處死
@@ -17821,9 +17767,6 @@ Your movements are not taken into account when calculating the line colors
 
 Your nickname '%s' is already used (%d points). Do you still want to use it?
 == 你使用的暱稱 "%s" 已被使用（%d 分）。確認要使用這個名字嗎？
-
-Your own colors appear only under "Custom"; press "Reset console appearance" if the text becomes hard to read.
-== 自選顏色只在選自訂時出現；文字難以辨讀時按重設主控台外觀。
 
 Your profile
 == 您的個人資料

@@ -1019,9 +1019,6 @@ APP ID
 Appearance
 == Apparence
 
-Appearance and command highlighting of the local console
-== Apparence de la console locale et coloration des commandes
-
 Appearance of help bubbles
 == Apparence des bulles d’aide
 
@@ -1519,9 +1516,6 @@ Automatically record demos
 
 Automatically record replays
 == Enregistrer automatiquement les replays
-
-Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
-== Supprime automatiquement un enregistrement local après l'avoir chargé avec succès (0 = conserver et marquer comme utilisé, 1 = supprimer)
 
 Automatically reply to muted players
 == Répondre automatiquement aux joueurs masqués
@@ -2207,8 +2201,8 @@ Chat bubble display duration (seconds)
 Chat bubble font size
 == Taille de police des bulles de chat
 
-Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
-== Style des bulles de discussion (0=Dialogue de BD, 1=Dégradé de bonbons, 2=Bulle nuage)
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble, 3=Default)
+== Style des bulles de discussion (0=Dialogue de BD, 1=Dégradé de bonbons, 2=Bulle nuage, 3=Par défaut)
 
 Chat bubble text color
 == Couleur du texte des bulles de chat
@@ -2483,35 +2477,20 @@ Clan plates size
 Clan: %s
 == Clan : %s
 
-Classic
-== Classique
-
 Classic Easy
 == Classic Easy
-
-Classic easy
-== Classique facile
 
 Classic Next
 == Classic Next
 
-Classic next
-== Classique suivant
-
 Classic Nut
 == Classic Nut
-
-Classic nut
-== Classique nut
 
 Classic PowerShell
 == PowerShell classique
 
 Classic Pro
 == Classic Pro
-
-Classic pro
-== Classique pro
 
 Clear
 == Effacer
@@ -2566,9 +2545,6 @@ Click a key on the keyboard picture or under "Mouse", then add a command with "A
 
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
 == Clique sur une langue de la liste pour l'appliquer immédiatement ; le drapeau à gauche indique le choix actuel.
-
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
-== Clique sur le nom d'une map pour le copier, et sur le X pour la retirer ; ajoute des maps avec la case « Map favorite » dans la page d'infos du serveur en jeu.
 
 Click a part on the right to edit its color, blend mode and strength.
 == Cliquez sur une partie à droite pour régler sa couleur, son mode de fusion et son intensité.
@@ -2932,9 +2908,6 @@ Configure game and client preferences
 
 Configure ghost recording and playback tools
 == Configure ghost recording and playback tools
-
-Configure hammer skin steal and skin transition animations
-== Configurer le vol de skin au marteau et les animations de transition de skin
 
 Configure health, ammo, timer, and race HUD
 == Configure health, ammo, timer, and race HUD
@@ -5627,9 +5600,6 @@ Favorite maps
 Favorites
 == Favoris
 
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
-== Les favoris correspondent au nom exact de la map et alimentent aussi l'onglet « Map favorite » du navigateur de serveurs.
-
 feat-003 dogfood: tokens + 12 widgets
 == feat-003 dogfood : tokens + 12 widgets
 
@@ -5842,9 +5812,6 @@ Font cursor
 
 Font size
 == Taille de police
-
-Font size, background opacity, colors and command highlighting of the local console you open with F1.
-== Taille de police, opacité du fond, couleurs et surlignage des commandes de la console locale ouverte avec F1.
 
 Font store
 == Boutique de polices
@@ -10253,9 +10220,6 @@ Pistol guide line
 Pixel: Layer Shift
 == Pixels : décalage des plans
 
-Place title on a separate line above the player name instead of inline
-== Placer le titre sur une ligne séparée au-dessus du nom du joueur plutôt que sur la même ligne
-
 Plasma gun shots per second
 == Tirs par seconde du pistolet à plasma
 
@@ -12278,9 +12242,6 @@ Save ghost
 Save last %d min
 == Sauvegarder les %d dernières min
 
-Save loaded and marked as used.
-== sauvegarde chargée et marquée comme utilisée.
-
 Save loaded; local record removed.
 == Sauvegarde chargée ; entrée locale supprimée.
 
@@ -12862,9 +12823,6 @@ Set "Background color" and "Background opacity", then "Text color", "Selected te
 
 Set "Button - Disabled" and "Button - Enabled" for the button, then "Menu background" and the two menu option rows for the popup.
 == Réglez bouton - désactivé et bouton - activé pour le bouton, puis fond du menu et les deux lignes d'options pour le menu.
-
-Set "Console font size" and "Console background opacity", tick "Highlight console commands", then choose a "Console color scheme".
-== Réglez la taille de police de la console et l'opacité du fond de la console, cochez surligner les commandes de la console, puis choisissez un jeu de couleurs de la console.
 
 Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide line" and "Predict ninja path", plus color, "Line width" and "Opacity".
 == Règle le mode d'affichage sur touche ou toujours, choisis la ligne guide du pistolet et la prédiction du ninja, puis règle couleur, épaisseur et opacité.
@@ -13969,9 +13927,6 @@ Show tiles layers from BG map
 
 Show title setting hints immediately in small text
 == Afficher immédiatement les conseils de titre en petits caractères
-
-Show titles above player names
-== Afficher les titres au-dessus des noms
 
 Show titles on nameplates
 == Afficher les titres sur les plaques de nom
@@ -16847,9 +16802,6 @@ Use warlist colors instead of regular colors
 Use warlist groups for indicator
 == Utiliser les groupes de la liste de guerre pour l'indicateur
 
-Used
-== Utilisé
-
 Used by active shared text and numeric input fields
 == Utilisé par les champs actifs partagés de saisie de texte et de nombres
 
@@ -17801,17 +17753,11 @@ Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 == Votre version actuelle est obsolète. Veuillez mettre à jour depuis le groupe QQ.
 
-Your favorite map manager
-== Votre gestionnaire de cartes préféré
-
 Your favorite maps appear here
 == Vos cartes favorites apparaissent ici
 
 Your friend %s is online and currently on map %s!
 == Votre ami %s est en ligne et actuellement sur la carte %s !
-
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
-== Ta liste de maps favorites, chacune affichée avec son type et des actions rapides de copie et de suppression.
 
 Your locked team was killed because '%s' %s
 == Votre équipe verrouillée a été tuée parce que '%s' %s
@@ -17821,9 +17767,6 @@ Your movements are not taken into account when calculating the line colors
 
 Your nickname '%s' is already used (%d points). Do you still want to use it?
 == Votre pseudo '%s' est déjà utilisé (%d points). Voulez-vous quand même l'utiliser ?
-
-Your own colors appear only under "Custom"; press "Reset console appearance" if the text becomes hard to read.
-== Vos couleurs n'apparaissent qu'en personnalisé ; si le texte devient illisible, appuyez sur réinitialiser l'apparence de la console.
 
 Your profile
 == Votre profil

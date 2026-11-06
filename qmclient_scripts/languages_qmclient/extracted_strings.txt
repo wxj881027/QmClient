@@ -338,7 +338,6 @@ Anything smaller than the window supersamples: the frame is drawn at window size
 API key
 APP ID
 Appearance
-Appearance and command highlighting of the local console
 Appearance of help bubbles
 Append saved word list chunk
 Append to log file instead of overwriting
@@ -505,7 +504,6 @@ Automatically launch Steam when the client is started externally, so Steam can t
 Automatically re-join team 0 after finish (only if unlocked).
 Automatically record demos
 Automatically record replays
-Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)
 Automatically reply to muted players
 Automatically reply while the window is unfocused
 Automatically switch hammer/gun in Gores mode
@@ -736,7 +734,7 @@ Chat bubble background color
 Chat bubble disappear animation (0=Fade, 1=Shrink, 2=Slide up)
 Chat bubble display duration (seconds)
 Chat bubble font size
-Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)
+Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble, 3=Default)
 Chat bubble text color
 Chat bubble transparency (0-100)
 Chat command
@@ -828,16 +826,11 @@ Clan name size on nameplate
 Clan of the player followed from the pie menu
 Clan plates size
 Clan: %s
-Classic
 Classic Easy
-Classic easy
 Classic Next
-Classic next
 Classic Nut
-Classic nut
 Classic PowerShell
 Classic Pro
-Classic pro
 Clear
 Clear all favorite maps
 Clear all history
@@ -856,7 +849,6 @@ Clears the voting options
 Click "QmClient Settings", "Profiles", "War List" or "Chat Binds" to open that file, then use "Configuration packages" to export or import a whole set.
 Click a key on the keyboard picture or under "Mouse", then add a command with "Add function" or use the capture button to move an existing bind.
 Click a language in the list to apply it right away; the flag on the left shows which one is selected.
-Click a map name to copy it and press the X button to remove it; add maps with the "Favorite map" checkbox in the in-game server info page.
 Click a part on the right to edit its color, blend mode and strength.
 Click a row such as "HDF" or "Left jump", press the key you want, and use the trash icon to remove a bind.
 Click again to find the next location.
@@ -979,7 +971,6 @@ Configure DDNet gameplay preferences
 Configure display and rendering
 Configure game and client preferences
 Configure ghost recording and playback tools
-Configure hammer skin steal and skin transition animations
 Configure health, ammo, timer, and race HUD
 Configure HJ unfreeze assistance
 Configure hook range and collision guide lines
@@ -1877,7 +1868,6 @@ Favorite icon color
 Favorite map
 Favorite maps
 Favorites
-Favorites match the exact map name and also feed the "Favorite map" tab in the server browser.
 feat-003 dogfood: tokens + 12 widgets
 Feature guide and announcements
 Feature Search
@@ -1951,7 +1941,6 @@ Following: %s
 Font
 Font cursor
 Font size
-Font size, background opacity, colors and command highlighting of the local console you open with F1.
 Font store
 Font store:
 Font weight:
@@ -3426,7 +3415,6 @@ Ping the current server
 Pistol
 Pistol guide line
 Pixel: Layer Shift
-Place title on a separate line above the player name instead of inline
 Plasma gun shots per second
 Platinum highlight
 Play a flip animation while reloading weapons
@@ -4101,7 +4089,6 @@ Save drawings to a given csv file (defaults to map name)
 Save failed!
 Save ghost
 Save last %d min
-Save loaded and marked as used.
 Save loaded; local record removed.
 Save loaded; the local record could not be removed.
 Save player names in replay
@@ -4296,7 +4283,6 @@ Server votes
 Server-dependent
 Set "Background color" and "Background opacity", then "Text color", "Selected text color" and "Selection background color"; a preview follows.
 Set "Button - Disabled" and "Button - Enabled" for the button, then "Menu background" and the two menu option rows for the popup.
-Set "Console font size" and "Console background opacity", tick "Highlight console commands", then choose a "Console color scheme".
 Set "Display mode" to "Show on key" or "Always show", then pick "Pistol guide line" and "Predict ninja path", plus color, "Line width" and "Opacity".
 Set "Ingame mouse sens." for aiming and "UI mouse sens." for menus, then limit the cursor with "Minimum cursor distance" and "Maximum cursor distance".
 Set "Switch interval" to 0 to stop timed switching and keep the queue for manual or map-join changes.
@@ -4667,7 +4653,6 @@ Show the screen center line
 Show the server rules
 Show tiles layers from BG map
 Show title setting hints immediately in small text
-Show titles above player names
 Show titles on nameplates
 Show toast
 Show total playtime from DDStats instead of points in scoreboard
@@ -5629,7 +5614,6 @@ Use this after `add_favorite` to group favorites. Start with `begin_favorite_gro
 Use this before `add_favorite` to group favorites. End with `end_favorite_group`
 Use warlist colors instead of regular colors
 Use warlist groups for indicator
-Used
 Used by active shared text and numeric input fields
 Uses the active action with the current aiming position.
 UTF-8 text, one word per line (max 2 MiB).
@@ -5947,14 +5931,11 @@ You're the last one!
 Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.
 Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
-Your favorite map manager
 Your favorite maps appear here
 Your friend %s is online and currently on map %s!
-Your list of favorite maps, each shown with its map type, with quick copy and remove actions.
 Your locked team was killed because '%s' %s
 Your movements are not taken into account when calculating the line colors
 Your nickname '%s' is already used (%d points). Do you still want to use it?
-Your own colors appear only under "Custom"; press "Reset console appearance" if the text becomes hard to read.
 Your profile
 Your skin
 Your support has been recorded.

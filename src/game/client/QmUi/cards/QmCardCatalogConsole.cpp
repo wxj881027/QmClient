@@ -16,7 +16,7 @@
 void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly)
 {
 	CSettingsContentLayoutFlow Flow(Content);
-	// F1 面板、分类页和搜索页共用配置与控件；后台帧保留真实控件绘制，只有纯测量帧才进入 RenderOnly。
+	// 后台帧保留真实控件绘制，只有纯测量帧才进入 RenderOnly。
 	const bool MeasureOnly = PrewarmOnly && !Ui()->BackgroundRender();
 	if(MeasureOnly)
 		Ui()->BeginRenderOnly();
@@ -29,9 +29,7 @@ void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetr
 		CButtonContainer m_aColorReset[QmConsoleAppearance::COLOR_COUNT];
 		CButtonContainer m_Reset;
 	};
-	// 菜单背后仍可能绘制同一卡片；弹窗使用自己的输入状态、ID 和滚动状态。
-	// 滚动区与「上次滚到的选中项」也按上下文分开，否则同帧两处渲染会共用
-	// 一个偏移：一处滚动会带着另一处跳，选中项也只会在先渲染的那处滚进视野。
+	// 按渲染上下文保存控件状态，避免弹层输入状态与其他上下文冲突。
 	const int RenderContext = Ui()->RenderingPopupMenus() ? 1 : 0;
 	static SControls s_aControls[2];
 	SControls &Controls = s_aControls[RenderContext];
@@ -126,15 +124,11 @@ void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetr
 		if(TakeRow("console-highlight", Metrics.m_LineHeight) && DoButton_CheckBox(&Controls.m_Highlight, Localize("Highlight console commands"), g_Config.m_QmConsoleHighlightCommands, &Row, Metrics.m_BodySize))
 			g_Config.m_QmConsoleHighlightCommands ^= 1;
 	};
-	if(RenderContext == 0)
-		RenderHighlight();
-	// F1 弹层保持原有完整内容与高度；卡片和搜索页共用个性调整状态。
-	if(RenderContext != 0 || qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:console", Metrics, PrewarmOnly || Ui()->RenderOnly()))
+	// 控制台面板始终显示完整设置。
 	{
 		Numeric(Controls.m_FontSize, &g_Config.m_QmConsoleFontSize, "console-font-size", Localize("Console font size"), 1, 24, "");
 		Numeric(Controls.m_Opacity, &g_Config.m_QmConsoleOpacity, "console-opacity", Localize("Console background opacity"), 20, 100, "%");
-		if(RenderContext != 0)
-			RenderHighlight();
+		RenderHighlight();
 		// 配色方案只有一个选择集合：历史三项（现代终端 / 经典 PowerShell / 自定义）
 		// 与 Windows Terminal 内置配色同属一个列表，选中任意一行都能再切回其它行。
 		// 原先拆成"分段选择器 + 独立列表"，选中内置配色后上半部分就再也点不动了。
@@ -254,23 +248,6 @@ void CMenus::RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetr
 	}
 	if(MeasureOnly)
 		Ui()->EndRenderOnly();
-}
-
-namespace qm_card_catalog
-{
-	bool BuildConsoleCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out)
-	{
-		MakeModuleCard(
-			Ctx,
-			qm_module::EQmModuleId::Console,
-			"qm:console",
-			"Console settings",
-			"Appearance and command highlighting of the local console",
-			[Ctx](CUIRect &Content) { QmCardRenderHook::RenderQmConsoleContent(Ctx.m_pMenus, Content, Ctx.m_Metrics, Ctx.m_ReadOnly); },
-			Out);
-		UseDeclaredModuleContent(Ctx, Out);
-		return true;
-	}
 }
 
 void CGameConsole::OpenSettings()

@@ -9,6 +9,12 @@ namespace qm_chat_bubble
 {
 	void Render(IGraphics *pGraphics, const SLayout &Layout, const SPalette &Colors)
 	{
+		if(Layout.m_Style == EStyle::DEFAULT)
+		{
+			pGraphics->TextureClear();
+			pGraphics->DrawRect(Layout.m_Position.x, Layout.m_Position.y, Layout.m_Size.x, Layout.m_Size.y, Colors.m_Fill, IGraphics::CORNER_ALL, Layout.m_Radius);
+			return;
+		}
 		if(Layout.m_Scale <= 0.0f || Colors.m_Outline.a <= 0.0f)
 			return;
 		const SContour Outer = Contour(Layout);

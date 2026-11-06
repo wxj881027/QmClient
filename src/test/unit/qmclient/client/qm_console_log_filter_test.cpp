@@ -98,13 +98,6 @@ TEST(QmConsoleLogFilter, FilterMaskSelectsCategories)
 	EXPECT_FALSE(QmConsoleLogCategoryPassesFilter(QM_CONSOLE_LOG_CATEGORY_COMMAND, QM_CONSOLE_LOG_CATEGORY_BINDS));
 	EXPECT_FALSE(QmConsoleLogCategoryPassesFilter(QM_CONSOLE_LOG_CATEGORY_SYSTEM, QM_CONSOLE_LOG_CATEGORY_BINDS));
 
-	// 玩家 + 系统：聊天与引擎日志显示，指令与 binds 隐藏
-	const int PlayerAndSystem = QM_CONSOLE_LOG_CATEGORY_PLAYER | QM_CONSOLE_LOG_CATEGORY_SYSTEM;
-	EXPECT_TRUE(QmConsoleLogCategoryPassesFilter(QM_CONSOLE_LOG_CATEGORY_PLAYER, PlayerAndSystem));
-	EXPECT_TRUE(QmConsoleLogCategoryPassesFilter(QM_CONSOLE_LOG_CATEGORY_SYSTEM, PlayerAndSystem));
-	EXPECT_FALSE(QmConsoleLogCategoryPassesFilter(QM_CONSOLE_LOG_CATEGORY_COMMAND, PlayerAndSystem));
-	EXPECT_FALSE(QmConsoleLogCategoryPassesFilter(QM_CONSOLE_LOG_CATEGORY_BINDS, PlayerAndSystem));
-
 	// 全亮：全部通过
 	for(const int Category : {QM_CONSOLE_LOG_CATEGORY_SYSTEM, QM_CONSOLE_LOG_CATEGORY_PLAYER, QM_CONSOLE_LOG_CATEGORY_COMMAND, QM_CONSOLE_LOG_CATEGORY_BINDS})
 	{
@@ -114,8 +107,9 @@ TEST(QmConsoleLogFilter, FilterMaskSelectsCategories)
 
 TEST(QmConsoleLogFilter, EmptyMaskFallsBackToAllCategories)
 {
-	// 全部熄灭会让控制台一行不剩且无按钮可点回来，因此归一化为全亮
+	// 空值和旧的多选状态都回到全部分类
 	EXPECT_EQ(QmNormalizeConsoleLogFilterMask(0), QM_CONSOLE_LOG_CATEGORY_ALL);
+	EXPECT_EQ(QmNormalizeConsoleLogFilterMask(QM_CONSOLE_LOG_CATEGORY_PLAYER | QM_CONSOLE_LOG_CATEGORY_SYSTEM), QM_CONSOLE_LOG_CATEGORY_ALL);
 	EXPECT_TRUE(QmConsoleLogCategoryPassesFilter(QM_CONSOLE_LOG_CATEGORY_BINDS, 0));
 
 	// 非法位被清掉
@@ -131,22 +125,26 @@ TEST(QmConsoleLogFilter, AllButtonIsSelectedOnlyWhenEveryCategoryIsEnabled)
 	EXPECT_TRUE(QmConsoleLogFilterButtonActive(QM_CONSOLE_LOG_CATEGORY_PLAYER, QM_CONSOLE_LOG_CATEGORY_PLAYER));
 }
 
-TEST(QmConsoleLogFilter, CategoryTogglePreservesOtherSelections)
+TEST(QmConsoleLogFilter, SelectingCategoryShowsOnlyThatCategory)
 {
-	const int Initial = QM_CONSOLE_LOG_CATEGORY_PLAYER | QM_CONSOLE_LOG_CATEGORY_SYSTEM;
-	const int Toggled = QmToggleConsoleLogFilterCategory(Initial, QM_CONSOLE_LOG_CATEGORY_PLAYER);
-	EXPECT_EQ(Toggled, QM_CONSOLE_LOG_CATEGORY_SYSTEM);
-	EXPECT_EQ(QmToggleConsoleLogFilterCategory(Toggled, QM_CONSOLE_LOG_CATEGORY_PLAYER), Initial);
+	for(const int Category : {QM_CONSOLE_LOG_CATEGORY_PLAYER, QM_CONSOLE_LOG_CATEGORY_SYSTEM, QM_CONSOLE_LOG_CATEGORY_COMMAND, QM_CONSOLE_LOG_CATEGORY_BINDS})
+	{
+		const int Mask = QmSelectConsoleLogFilterCategory(Category);
+		EXPECT_TRUE(QmConsoleLogFilterButtonActive(Mask, Category));
+		EXPECT_FALSE(QmConsoleLogFilterButtonActive(Mask, QM_CONSOLE_LOG_CATEGORY_ALL));
+		for(const int Other : {QM_CONSOLE_LOG_CATEGORY_PLAYER, QM_CONSOLE_LOG_CATEGORY_SYSTEM, QM_CONSOLE_LOG_CATEGORY_COMMAND, QM_CONSOLE_LOG_CATEGORY_BINDS})
+			EXPECT_EQ(QmConsoleLogCategoryPassesFilter(Other, Mask), Other == Category);
+		EXPECT_EQ(QmSelectConsoleLogFilterCategory(Category), Mask);
+	}
 }
 
-TEST(QmConsoleLogFilter, AllButtonRestoresAllAndRepeatedClicksKeepAll)
+TEST(QmConsoleLogFilter, SelectingAllShowsEveryCategory)
 {
-	const int Restored = QmToggleConsoleLogFilterCategory(QM_CONSOLE_LOG_CATEGORY_PLAYER, QM_CONSOLE_LOG_CATEGORY_ALL);
-	EXPECT_EQ(Restored, QM_CONSOLE_LOG_CATEGORY_ALL);
-	EXPECT_EQ(QmToggleConsoleLogFilterCategory(Restored, QM_CONSOLE_LOG_CATEGORY_ALL), QM_CONSOLE_LOG_CATEGORY_ALL);
-}
-
-TEST(QmConsoleLogFilter, TurningOffLastCategoryFallsBackToAll)
-{
-	EXPECT_EQ(QmToggleConsoleLogFilterCategory(QM_CONSOLE_LOG_CATEGORY_PLAYER, QM_CONSOLE_LOG_CATEGORY_PLAYER), QM_CONSOLE_LOG_CATEGORY_ALL);
+	const int Mask = QmSelectConsoleLogFilterCategory(QM_CONSOLE_LOG_CATEGORY_ALL);
+	EXPECT_TRUE(QmConsoleLogFilterButtonActive(Mask, QM_CONSOLE_LOG_CATEGORY_ALL));
+	for(const int Category : {QM_CONSOLE_LOG_CATEGORY_PLAYER, QM_CONSOLE_LOG_CATEGORY_SYSTEM, QM_CONSOLE_LOG_CATEGORY_COMMAND, QM_CONSOLE_LOG_CATEGORY_BINDS})
+	{
+		EXPECT_TRUE(QmConsoleLogCategoryPassesFilter(Category, Mask));
+		EXPECT_FALSE(QmConsoleLogFilterButtonActive(Mask, Category));
+	}
 }

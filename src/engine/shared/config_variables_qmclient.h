@@ -433,7 +433,6 @@ MACRO_CONFIG_INT(QmShowNameplateTitle, qm_show_nameplate_title, 1, 0, 1, CFGFLAG
 MACRO_CONFIG_INT(QmNameplateTitleScale, qm_nameplate_title_scale, 100, 50, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Nameplate title size")
 MACRO_CONFIG_INT(QmShowMainTitle, qm_show_main_title, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show main tee title locally")
 MACRO_CONFIG_INT(QmShowDummyTitle, qm_show_dummy_title, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show dummy title locally")
-MACRO_CONFIG_INT(QmNameplateTitleAboveName, qm_nameplate_title_above_name, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Place title on a separate line above the player name instead of inline")
 MACRO_CONFIG_INT(QmWeaponTrajectory, qm_weapon_trajectory, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Weapon trajectory helper mode (0=Off, 1=On key, 2=Always)")
 MACRO_CONFIG_INT(QmWeaponTrajectoryGun, qm_weapon_trajectory_gun, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pistol guide line")
 MACRO_CONFIG_INT(QmWeaponTrajectoryNinja, qm_weapon_trajectory_ninja, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Predict ninja path")
@@ -467,15 +466,15 @@ MACRO_CONFIG_INT(QmPausedSpectatorFade, qm_paused_spectator_fade, 0, 0, 1, CFGFL
 MACRO_CONFIG_INT(QmPausedSpectatorAlpha, qm_paused_spectator_alpha, 40, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spectator opacity (percent)")
 
 // Input Overlay / 输入叠加
-MACRO_CONFIG_INT(QmInputOverlay, qm_input_overlay, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show input overlay")
-MACRO_CONFIG_INT(QmInputOverlayKeyCounts, qm_input_overlay_key_counts, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show key press counts")
+MACRO_CONFIG_INT(QmInputOverlay, qm_input_overlay, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show input overlay")
+MACRO_CONFIG_INT(QmInputOverlayKeyCounts, qm_input_overlay_key_counts, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show key press counts")
 MACRO_CONFIG_COL(QmInputOverlayCountColor, qm_input_overlay_count_color, 0xFF0000FF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Key press count color")
 MACRO_CONFIG_INT(QmInputOverlayCountSize, qm_input_overlay_count_size, 100, 50, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Key press count font size percentage")
 MACRO_CONFIG_STR(QmInputOverlayCountLabel, qm_input_overlay_count_label, 32, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Text before each key press count")
-MACRO_CONFIG_INT(QmInputOverlayScale, qm_input_overlay_scale, 20, 1, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Input overlay keyboard scale (percent)")
-MACRO_CONFIG_INT(QmInputOverlayMouseScale, qm_input_overlay_mouse_scale, 20, 1, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Input overlay mouse scale (percent)")
-MACRO_CONFIG_INT(QmInputOverlayOpacity, qm_input_overlay_opacity, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Input overlay opacity (percent)")
-MACRO_CONFIG_INT(QmInputOverlayPosX, qm_input_overlay_pos_x, 71, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Input overlay X position (percent)")
+MACRO_CONFIG_INT(QmInputOverlayScale, qm_input_overlay_scale, 50, 1, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Input overlay keyboard scale (percent)")
+MACRO_CONFIG_INT(QmInputOverlayMouseScale, qm_input_overlay_mouse_scale, 28, 1, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Input overlay mouse scale (percent)")
+MACRO_CONFIG_INT(QmInputOverlayOpacity, qm_input_overlay_opacity, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Input overlay opacity (percent)")
+MACRO_CONFIG_INT(QmInputOverlayPosX, qm_input_overlay_pos_x, 27, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Input overlay X position (percent)")
 MACRO_CONFIG_INT(QmInputOverlayPosY, qm_input_overlay_pos_y, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Input overlay Y position (percent)")
 
 // Notification Bar / 通知栏
@@ -821,7 +820,7 @@ MACRO_CONFIG_INT(QmChatAnimSlideOut, qm_chat_anim_slide_out, 0, 0, 1, CFGFLAG_CL
 MACRO_CONFIG_INT(QmChatAnimFadeDurationMs, qm_chat_anim_fade_duration_ms, 300, 0, 2000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat fade smooth time (milliseconds)")
 MACRO_CONFIG_INT(QmHideChatBubbles, qm_hide_chat_bubbles, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hide own chat bubble (only when authenticated in remote console)")
 MACRO_CONFIG_INT(QmChatBubble, qm_chat_bubble, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show chat bubbles above players")
-MACRO_CONFIG_INT(QmChatBubbleStyle, qm_chat_bubble_style, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble)")
+MACRO_CONFIG_INT(QmChatBubbleStyle, qm_chat_bubble_style, 3, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat bubble style (0=Comic dialogue, 1=Candy gradient, 2=Cloud bubble, 3=Default)")
 MACRO_CONFIG_INT(QmChatBubbleCustomColors, qm_chat_bubble_custom_colors, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use custom chat bubble colors")
 MACRO_CONFIG_INT(QmChatBubbleDuration, qm_chat_bubble_duration, 10, 1, 30, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat bubble display duration (seconds)")
 MACRO_CONFIG_INT(QmChatBubbleAlpha, qm_chat_bubble_alpha, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat bubble transparency (0-100)")

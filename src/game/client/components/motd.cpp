@@ -4,6 +4,7 @@
 
 #include <base/log_color.h>
 
+#include <engine/client/serverbrowser.h>
 #include <engine/graphics.h>
 #include <engine/keys.h>
 #include <engine/serverbrowser.h>
@@ -159,7 +160,10 @@ void CMotd::OnMessage(int MsgType, void *pRawMsg)
 		str_copy(Server.m_aMap, Client()->GetCurrentMap());
 		auto &DifficultyCatalog = GameClient()->m_Menus.MapDifficultyCatalog();
 		if(DifficultyCatalog.RecordAxiomMotd(Server, m_aServerMotd))
-			ServerBrowser()->Update(true);
+		{
+			if(auto *pServerBrowserImpl = dynamic_cast<CServerBrowser *>(ServerBrowser()))
+				pServerBrowserImpl->RequestResort();
+		}
 		if(DifficultyCatalog.AxiomCacheDirty() && !DifficultyCatalog.SaveAxiomCache(Storage()))
 			log_warn("map_difficulty", "could not save Axiom map stars; current session data remains available");
 		if(g_Config.m_ClPrintMotd && *pLast != '\0')
