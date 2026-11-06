@@ -134,30 +134,50 @@ void qm_card_catalog::QmCardRenderHook::RenderQmSponsorChatMessagePreview(CMenus
 	const float CenterY = Rect.y + Rect.h / 2.0f;
 	float X = Rect.x + PaddingX * 0.5f;
 
-	// 头像：聊天框每条玩家消息前面那块，缩放跟着字号走。
+	// 本体是谁就用谁的皮肤、名字和 client id，和聊天框里看到的一致。
+	const int LocalId = pMenus->GameClient()->m_Snap.m_LocalClientId;
+	const bool HaveLocal = LocalId >= 0 && LocalId < MAX_CLIENTS;
+	const char *pName = HaveLocal && pMenus->GameClient()->m_aClients[LocalId].m_aName[0] != '\0' ? pMenus->GameClient()->m_aClients[LocalId].m_aName : pMenus->Client()->PlayerName();
+
 	if(TeeSize > 1.0f && !g_Config.m_ClChatOld)
 	{
-		const CSkin *pSkin = pMenus->GameClient()->m_Skins.Find("default");
-		if(pSkin != nullptr)
+		CTeeRenderInfo Info;
+		if(HaveLocal)
 		{
-			CTeeRenderInfo Info;
-			Info.m_Size = TeeSize;
-			Info.Apply(pSkin);
-			pMenus->RenderTools()->RenderTee(CAnimState::GetIdle(), &Info, EMOTE_NORMAL, vec2(1, 0.1f), vec2(X + TeeSize * 0.5f, CenterY));
+			// 直接用本体在游戏里的那一份渲染信息：皮肤、颜色都是他自己设置的。
+			Info = pMenus->GameClient()->m_aClients[LocalId].m_RenderInfo;
 		}
+		else
+		{
+			const CSkin *pSkin = pMenus->GameClient()->m_Skins.Find(g_Config.m_ClPlayerSkin);
+			if(pSkin == nullptr)
+				pSkin = pMenus->GameClient()->m_Skins.Find("default");
+			if(pSkin != nullptr)
+				Info.Apply(pSkin);
+		}
+		Info.m_Size = TeeSize;
+		pMenus->RenderTools()->RenderTee(CAnimState::GetIdle(), &Info, EMOTE_NORMAL, vec2(1, 0.1f), vec2(X + TeeSize * 0.5f, CenterY));
 		X += TeeSize + CChat::MESSAGE_TEE_PADDING_RIGHT * 2.0f;
 	}
 
-	// 发言人名字，用聊天框里玩家名的颜色，后面跟冒号。
+	// 名字前先放 client id（本体 ID），格式和聊天框一样；再画名字和冒号。
 	CTextCursor NameCursor;
 	NameCursor.SetPosition(vec2(X, CenterY - FontSize / 2.0f));
 	NameCursor.m_FontSize = FontSize;
 	pTextRender->TextColor(ColorRGBA(0.8f, 0.8f, 0.8f, 1.0f));
-	pTextRender->TextEx(&NameCursor, pMenus->Client()->PlayerName(), -1);
+	if(g_Config.m_ClShowIds && HaveLocal)
+	{
+		char aClientId[16] = "";
+		pMenus->GameClient()->FormatClientId(LocalId, aClientId, EClientIdFormat::INDENT_FORCE);
+		pTextRender->TextEx(&NameCursor, aClientId, -1);
+	}
+	pTextRender->TextEx(&NameCursor, pName, -1);
 	pTextRender->TextEx(&NameCursor, ": ", -1);
 	pTextRender->TextColor(pTextRender->DefaultTextColor());
+	// 内容接在名字后面：游标推进到哪就从哪开始，不然会压在名字上。
+	X = NameCursor.m_X;
 
-	// 内容仍走赞助者发言样式渲染，位置接在名字后面。
+	// 内容仍走赞助者发言样式渲染。
 	CUIRect TextRect{X, Rect.y, std::max(1.0f, Rect.x + Rect.w - X), Rect.h};
 	RenderQmSponsorChatPreview(pMenus->Graphics(), pTextRender, TextRect, FontSize, Style, TimeSeconds);
 }
@@ -352,7 +372,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 
 			RowAction("title-display-navigation", [&](CUIRect Row) {
 				static CButtonContainer s_DisplaySettings;
-				if(ui_widget::SecondaryButton(TitleCtx, &s_DisplaySettings, Localize("Title display"), Row) && Enabled)
+				if(ui_widget::SecondaryButton(TitleCtx, &s_DisplaySettings, Localize("Edit title style"), Row) && Enabled)
 				{
 					const auto *pDisplayCard = qm_card_registry::FindByStableId("deck:qmclient-contributors-title-display");
 					if(pDisplayCard)
