@@ -3353,8 +3353,6 @@ if(CLIENT)
     QmUi/MapTagsPanel.cpp
     QmUi/MapTagsPanel.h
     QmUi/QmServerInfoGeometry.h
-    QmUi/QmServerInfoLayout.cpp
-    QmUi/QmServerInfoLayout.h
     QmUi/cards/QmCardCatalog.cpp
     QmUi/cards/QmCardCatalog.h
     QmUi/cards/QmCardCatalogIds.cpp

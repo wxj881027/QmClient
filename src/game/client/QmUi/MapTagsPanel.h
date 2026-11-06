@@ -3,7 +3,6 @@
 
 #include <game/client/lineinput.h>
 #include <game/client/ui.h>
-#include <game/client/ui_scrollregion.h>
 
 #include <array>
 #include <map>
@@ -18,7 +17,6 @@ class CQmMapTagsPanel
 	CButtonContainer m_RefreshButton;
 	std::array<CButtonContainer, 4> m_aPresetButtons;
 	std::map<std::string, CButtonContainer> m_TagButtons;
-	CScrollRegion m_Scroll;
 	std::string m_Context;
 
 public:
