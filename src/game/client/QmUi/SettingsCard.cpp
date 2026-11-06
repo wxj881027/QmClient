@@ -273,6 +273,8 @@ bool CMenus::DoSettingsToggleButtonGroup(int Page, int Tab, int Subtab, CUIRect 
 {
 	if(Entries.size() == 0)
 		return false;
+	// 每个按钮按文字内容取宽、左对齐排布，一行放不下才换行：
+	// 原来把整行剩余宽度平摊给每列，窗口一宽按钮就被拉成长条，四个短筛选也占两行。
 	const float Gap = Metrics.m_LineSpacing;
 	const float PaddingX = std::max(Metrics.m_LineSpacing, Metrics.m_BodySize * 0.5f);
 	const float PaddingY = Metrics.m_LineSpacing * 0.5f;
@@ -284,24 +286,29 @@ bool CMenus::DoSettingsToggleButtonGroup(int Page, int Tab, int Subtab, CUIRect 
 		const float IndicatorWidth = Entry.m_ShowCheckmark ? Metrics.m_BodySize + Gap : 0.0f;
 		Size = ResolveSettingsToggleButtonSize(TextRender()->TextWidth(Metrics.m_BodySize, Entry.m_pLabel), Metrics.m_BodySize, Metrics.m_LineHeight, PaddingX, PaddingY, IndicatorWidth);
 	}
-	auto &Grid = m_SettingsToggleGroupGrid;
-	ResolveSettingsToggleGrid(Content.w, m_vSettingsToggleGroupSizes, Gap, Grid);
-	Index = 0;
-	for(const auto &Entry : Entries)
+	// 组高按同一套换行规则累计，测量趟和绘制趟看到的是同一份行数。
+	float GroupHeight = 0.0f;
 	{
-		// 先按按钮宽度重算一次文本高度，窄按钮里的换行会抬高整行，不能只信任单行测量。
-		const CUIRect Button{0, 0, Grid.m_aColumnWidths[Index % Grid.m_Columns], Metrics.m_LineHeight};
-		const float IndicatorWidth = Entry.m_ShowCheckmark ? Metrics.m_BodySize + Gap : 0.0f;
-		const CUIRect Label = ResolveSettingsToggleButtonLabel(Button, PaddingX, PaddingY, IndicatorWidth);
-		const float LabelHeight = TextRender()->TextBoundingBox(Metrics.m_BodySize, Entry.m_pLabel, -1, std::max(1.0f, Label.w)).m_H;
-		m_vSettingsToggleGroupSizes[Index++].m_Height = ResolveSettingsToggleButtonSize(0, LabelHeight, Metrics.m_LineHeight, PaddingX, PaddingY).m_Height;
+		float RowWidth = 0.0f;
+		float RowHeight = 0.0f;
+		for(const auto &Size : m_vSettingsToggleGroupSizes)
+		{
+			if(RowWidth > 0.0f && RowWidth + Size.m_Width > Content.w)
+			{
+				GroupHeight += RowHeight + Gap;
+				RowWidth = 0.0f;
+				RowHeight = 0.0f;
+			}
+			RowWidth += Size.m_Width + Gap;
+			RowHeight = std::max(RowHeight, Size.m_Height);
+		}
+		GroupHeight += RowHeight;
 	}
-	Grid.SetItemHeights(m_vSettingsToggleGroupSizes);
 	CUIRect Area;
 	CSettingsContentLayoutFlow Flow(Content);
 	// 整组作为一个稳定布局块发布：输入和绘制消费同一份坐标，按钮和命中区域不会错位。
 	const char *pGroupId = Entries.begin()->m_pTextId;
-	const bool HasArea = Flow.Control(pGroupId, Grid.Height(), Area);
+	const bool HasArea = Flow.Control(pGroupId, GroupHeight, Area);
 	Flow.Space(Metrics.m_LineSpacing);
 	if(!HasArea)
 		return false;
@@ -311,14 +318,26 @@ bool CMenus::DoSettingsToggleButtonGroup(int Page, int Tab, int Subtab, CUIRect 
 
 	bool Changed = false;
 	Index = 0;
+	float CursorX = Area.x;
+	float CursorY = Area.y;
+	float RowHeight = 0.0f;
 	for(const auto &Entry : Entries)
 	{
-		const CUIRect Cell = Grid.Cell(Area, static_cast<int>(Index++));
+		const auto &Size = m_vSettingsToggleGroupSizes[Index];
+		if(CursorX > Area.x && CursorX + Size.m_Width > Area.x + Area.w)
+		{
+			CursorX = Area.x;
+			CursorY += RowHeight + Gap;
+			RowHeight = 0.0f;
+		}
+		const CUIRect Cell{CursorX, CursorY, Size.m_Width, Size.m_Height};
+		CursorX += Size.m_Width + Gap;
+		RowHeight = std::max(RowHeight, Size.m_Height);
 		Changed = DoSettingsToggleButton(Page, Tab, Subtab, Cell, Entry, Metrics, ProcessInput, Pass) || Changed;
+		Index++;
 	}
 	return Changed;
 }
-
 bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect &Button, const SSettingsToggleEntry &Entry, const SSettingsContentMetrics &Metrics, bool ProcessInput, ESettingsToggleGroupPass Pass, bool HoverEmphasis)
 {
 	if(Pass == ESettingsToggleGroupPass::LAYOUT)
@@ -351,12 +370,19 @@ bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect
 	Options.m_Color = Options.m_Selected ? color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(1.0f) : ResolveConfiguredControlSurface();
 	// 需要突出悬浮位置的场景（成对出现的色块 + 按钮）再加一层明暗差：
 	// 不悬浮时底色压暗，悬浮时回到原亮度并把描边提亮。
-	const bool Hovered = HoverEmphasis && !m_MenuTextPlanCollecting && Ui()->VisualMouseHovered(&Button);
+	// 指针位置直接按几何判断：声明式卡片的 DRAW 回放趟会把 VisualMouseHovered 关掉，
+	// 那样按钮停在指针下也不会有任何反应。
+	const float MouseX = Ui()->MouseX();
+	const float MouseY = Ui()->MouseY();
+	const bool Hovered = HoverEmphasis && !m_MenuTextPlanCollecting && MouseX >= Button.x && MouseY >= Button.y && MouseX < Button.x + Button.w && MouseY < Button.y + Button.h;
 	if(HoverEmphasis)
-		Options.m_Color = ui_token::color::UiColorSurface(*Options.m_Color, 1.0f, Hovered ? 1.12f : 0.84f);
+		Options.m_Color = ui_token::color::UiColorSurface(*Options.m_Color, 1.0f, Hovered ? 1.28f : 0.82f);
 	// 开关选中后保留浅色描边，不随浅色底翻成深色；文字也维持原前景色。
 	if(Options.m_Selected)
 		Options.m_BorderOverride = ui_token::color::TEXT_PRIMARY.WithAlpha(HoverEmphasis ? (Hovered ? 0.95f : 0.55f) : 0.72f);
+	else if(HoverEmphasis && Hovered)
+		// 未选中的暗底按钮悬浮时补一圈描边，光靠明暗差在深色背景上几乎看不出来。
+		Options.m_BorderOverride = ui_token::color::TEXT_PRIMARY.WithAlpha(0.45f);
 	else
 		Options.m_BorderOverride.reset();
 	ColorRGBA Fill = *Options.m_Color;

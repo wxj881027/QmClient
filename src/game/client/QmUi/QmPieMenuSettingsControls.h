@@ -25,9 +25,11 @@ inline bool QmDrawPieOptionColorControl(const IUiContext &Ctx, const void *pColo
 {
 	if(Ctx.m_pUi == nullptr || (Ctx.m_pUi->DrawingSuppressed() && !Ctx.m_pUi->PreLayoutInput()))
 		return false;
-	const bool Hovered = Ctx.m_pUi->VisualMouseHovered(&Swatch);
+	const float MouseX = Ctx.m_pUi->MouseX();
+	const float MouseY = Ctx.m_pUi->MouseY();
+	const bool Hovered = MouseX >= Swatch.x && MouseY >= Swatch.y && MouseX < Swatch.x + Swatch.w && MouseY < Swatch.y + Swatch.h;
 	// 只改明暗不改色相：色块仍然代表玩家挑的那个颜色。
-	const ColorRGBA Fill = ui_token::color::UiColorSurface(Color, 1.0f, Hovered ? 1.12f : 0.84f);
+	const ColorRGBA Fill = ui_token::color::UiColorSurface(Color, 1.0f, Hovered ? 1.28f : 0.82f);
 	const ColorRGBA Border = ui_token::color::TEXT_PRIMARY.WithAlpha(Hovered ? 0.95f : 0.55f);
 	DrawRoundedSurface(Ctx, Swatch, Fill, Border, CornerRadius, ui_token::feedback::ICON_BORDER_WIDTH);
 	return ProcessInput && !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->DoButtonLogic(pColorId, 0, &Swatch, BUTTONFLAG_LEFT) != 0;
