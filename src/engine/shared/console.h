@@ -175,7 +175,7 @@ class CConsole : public IConsole
 	bool m_Cheated;
 
 public:
-	CConsole(int FlagMask);
+	CConsole(int FlagMask, CHeap::FAllocate TempAllocate = std::malloc);
 	~CConsole() override;
 
 	void Init() override;

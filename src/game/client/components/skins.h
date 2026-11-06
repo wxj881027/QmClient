@@ -512,9 +512,9 @@ public:
 
 	CSkins();
 
-	static bool BuildSkinDataPlan(CImageInfo &Image, const SSkinSpriteSpec &Body, const SSkinSpriteSpec &BodyOutline, const SSkinSpriteSpec &Feet, const SSkinSpriteSpec &FeetOutline, SSkinDataPlan &Plan)
+	static bool BuildSkinDataPlan(CImageInfo &Image, const SSkinSpriteSpec &Body, const SSkinSpriteSpec &BodyOutline, const SSkinSpriteSpec &Feet, const SSkinSpriteSpec &FeetOutline, SSkinDataPlan &Plan, void (*pfnResize)(CImageInfo &, int, int) = ResizeImage)
 	{
-		if(!PrepareSkinImage(Image, Body.m_GridX, Body.m_GridY))
+		if(!PrepareSkinImage(Image, Body.m_GridX, Body.m_GridY, pfnResize))
 		{
 			return false;
 		}
@@ -780,7 +780,7 @@ public:
 
 private:
 	static bool IsVanillaSkin(const char *pName);
-	static bool PrepareSkinImage(CImageInfo &Image, int DivX, int DivY)
+	static bool PrepareSkinImage(CImageInfo &Image, int DivX, int DivY, void (*pfnResize)(CImageInfo &, int, int))
 	{
 		dbg_assert(DivX != 0 && DivY != 0, "Passing 0 to this function is not allowed.");
 		const bool WidthBroken = Image.m_Width == 0 || (Image.m_Width % DivX) != 0;
@@ -806,8 +806,9 @@ private:
 			NewHeight = maximum<int>(HighestBit(Image.m_Height), DivY);
 			NewWidth = (NewHeight / DivY) * DivX;
 		}
-		ResizeImage(Image, NewWidth, NewHeight);
-		return true;
+		pfnResize(Image, NewWidth, NewHeight);
+		// 缩放分配失败会保留原图，只有目标尺寸实际生效才允许继续生成度量。
+		return Image.m_Width == (size_t)NewWidth && Image.m_Height == (size_t)NewHeight;
 	}
 	static bool MeasureSkinSprite(SSkinMetricPlan &Plan, const CImageInfo &Image, const SSkinSpriteSpec &Sprite)
 	{
@@ -981,7 +982,7 @@ private:
 	bool ReclaimBackgroundSkinForPriorityRequest(const char *pRequesterName, int CountFuseLimit);
 	void UpdateStartLoading(CSkinLoadingStats &Stats);
 	void UpdateSkinDownloads(CSkinLoadingStats &Stats);
-	std::unique_ptr<CQmSkinDownloadSession> CreateSkinDownloadSession(const char *pName);
+	std::unique_ptr<CQmSkinDownloadSession> TryCreateTrackedSkinDownloadSession(const char *pName);
 	std::vector<std::string> m_vSkinDownloadNames;
 	void UpdateFinishLoading(CSkinLoadingStats &Stats, std::chrono::nanoseconds StartTime, std::chrono::nanoseconds MaxTime);
 	void CollectUnresolvedSkins();

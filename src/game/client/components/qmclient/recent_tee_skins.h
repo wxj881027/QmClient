@@ -10,6 +10,8 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -55,6 +57,8 @@ class CQmRecentTeeSkins
 {
 public:
 	static constexpr size_t LIMIT = 20;
+	static_assert(std::is_nothrow_move_constructible<SQmRecentTeeSkin>::value && std::is_nothrow_move_assignable<SQmRecentTeeSkin>::value,
+		"Recent appearance moves must preserve Record exception safety");
 	const std::vector<SQmRecentTeeSkin> &Entries() const { return m_vEntries; }
 	uint64_t Revision() const { return m_Revision; }
 
@@ -63,9 +67,9 @@ public:
 	{
 		if(!m_Pending.has_value())
 			return;
-		SQmRecentTeeSkin Entry = std::move(*m_Pending);
+		// 参数复制或 Record 扩容失败时，仍保留待提交的原值供后续重试。
+		Record(*m_Pending);
 		m_Pending.reset();
-		Record(std::move(Entry));
 	}
 
 	bool Record(SQmRecentTeeSkin Entry)
@@ -105,6 +109,120 @@ private:
 	std::vector<SQmRecentTeeSkin> m_vEntries;
 	std::optional<SQmRecentTeeSkin> m_Pending;
 	uint64_t m_Revision = 0;
+};
+
+enum class EQmTeeSkinCollection
+{
+	ALL,
+	FAVORITES,
+	RECENT,
+};
+
+struct SQmTeeSkinCollectionRequest
+{
+	uint64_t m_SourceRevision;
+	uint64_t m_HistoryRevision;
+	EQmTeeSkinCollection m_Collection;
+	std::string_view m_Filter;
+	const SQmRecentTeeSkin &m_Main;
+	const SQmRecentTeeSkin &m_Dummy;
+};
+
+// 设置页只提供源列表和皮肤条目转换；顺序、筛选和失败发布由同一模型维护。
+template<typename TEntry>
+class CQmTeeSkinCollectionCache
+{
+	struct SKey
+	{
+		uint64_t m_SourceRevision = 0;
+		uint64_t m_HistoryRevision = 0;
+		EQmTeeSkinCollection m_Collection = EQmTeeSkinCollection::ALL;
+		std::string m_Filter;
+		SQmRecentTeeSkin m_Main;
+		SQmRecentTeeSkin m_Dummy;
+
+		SKey() = default;
+		explicit SKey(const SQmTeeSkinCollectionRequest &Request) :
+			m_SourceRevision(Request.m_SourceRevision), m_HistoryRevision(Request.m_HistoryRevision), m_Collection(Request.m_Collection), m_Filter(Request.m_Filter), m_Main(Request.m_Main), m_Dummy(Request.m_Dummy) {}
+
+		bool Matches(const SQmTeeSkinCollectionRequest &Request) const
+		{
+			return m_SourceRevision == Request.m_SourceRevision && m_HistoryRevision == Request.m_HistoryRevision &&
+			       m_Collection == Request.m_Collection && std::string_view(m_Filter) == Request.m_Filter &&
+			       m_Main == Request.m_Main && m_Dummy == Request.m_Dummy;
+		}
+	};
+
+	struct SState
+	{
+		SKey m_Key;
+		std::vector<SQmRecentTeeSkin> m_vRecentOrder;
+		std::vector<TEntry> m_vEntries;
+		uint64_t m_Revision = 0;
+		bool m_Initialized = false;
+	};
+	static_assert(std::is_nothrow_move_assignable<SKey>::value && std::is_nothrow_move_constructible<TEntry>::value && std::is_nothrow_destructible<TEntry>::value,
+		"Skin collection publication must not allocate or throw");
+
+	SState m_State;
+	bool m_Invalidated = false;
+	bool m_ResetRecentOrder = false;
+
+public:
+	uint64_t Revision() const { return m_State.m_Revision; }
+	void Invalidate(bool ResetRecentOrder = false) noexcept
+	{
+		m_Invalidated = true;
+		m_ResetRecentOrder = m_ResetRecentOrder || ResetRecentOrder;
+	}
+
+	template<typename FResolveRecent>
+	std::vector<TEntry> &Resolve(const SQmTeeSkinCollectionRequest &Request, const std::vector<SQmRecentTeeSkin> &History, std::vector<TEntry> &Source, FResolveRecent &&ResolveRecent)
+	{
+		if(m_Invalidated || !m_State.m_Initialized || !m_State.m_Key.Matches(Request))
+		{
+			SState Candidate;
+			Candidate.m_Key = SKey(Request);
+			if(Request.m_Collection == EQmTeeSkinCollection::FAVORITES)
+			{
+				for(const auto &Entry : Source)
+					if(Entry.IsFavorite())
+						Candidate.m_vEntries.push_back(Entry);
+			}
+			else if(Request.m_Collection == EQmTeeSkinCollection::RECENT)
+			{
+				Candidate.m_vRecentOrder = !m_ResetRecentOrder && m_State.m_Key.m_Collection == EQmTeeSkinCollection::RECENT ?
+								   QmStableRecentTeeSkinOrder(History, m_State.m_vRecentOrder) :
+								   History;
+				for(const SQmRecentTeeSkin &Entry : Candidate.m_vRecentOrder)
+				{
+					if(!Candidate.m_Key.m_Filter.empty() && str_utf8_find_nocase(Entry.m_Name.c_str(), Candidate.m_Key.m_Filter.c_str()) == nullptr)
+						continue;
+					auto ListEntry = ResolveRecent(Entry);
+					if(ListEntry.has_value())
+						Candidate.m_vEntries.push_back(std::move(*ListEntry));
+				}
+			}
+			Candidate.m_Revision = m_State.m_Revision + 1;
+			// 复用已有容量时保留条目地址，避免更新历史后打断双击和活动控件身份。
+			// 其余分支只交换已准备的缓冲；此后没有可能失败的分配或元素移动。
+			if(Candidate.m_vEntries.size() <= m_State.m_vEntries.capacity())
+			{
+				m_State.m_vEntries.clear();
+				for(auto &Entry : Candidate.m_vEntries)
+					m_State.m_vEntries.emplace_back(std::move(Entry));
+			}
+			else
+				m_State.m_vEntries.swap(Candidate.m_vEntries);
+			m_State.m_vRecentOrder.swap(Candidate.m_vRecentOrder);
+			m_State.m_Key = std::move(Candidate.m_Key);
+			m_State.m_Revision = Candidate.m_Revision;
+			m_State.m_Initialized = true;
+			m_Invalidated = false;
+			m_ResetRecentOrder = false;
+		}
+		return Request.m_Collection == EQmTeeSkinCollection::ALL ? Source : m_State.m_vEntries;
+	}
 };
 
 #endif

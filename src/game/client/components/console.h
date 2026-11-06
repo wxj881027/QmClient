@@ -12,6 +12,7 @@
 #include <game/client/component.h>
 #include <game/client/components/qm_console_log_filter.h>
 #include <game/client/components/qmclient/console_search_input.h>
+#include <game/client/components/qmclient/console_search_results.h>
 #include <game/client/components/qmclient/console_selection.h>
 #include <game/client/components/qmclient/qm_chat_export_metadata.h>
 #include <game/client/lineinput.h>
@@ -66,6 +67,7 @@ private:
 			int m_ExportId;
 			bool m_ExportSelected;
 			bool m_CommandEcho;
+			bool m_ColorPreparationPending;
 			uint64_t m_StreamerWordsRevision;
 			char m_aText[1];
 		};
@@ -106,7 +108,7 @@ private:
 		bool m_ScrollbarDragging = false;
 		float m_ScrollbarDragOffset = 0.0f;
 		int m_TotalBacklogLines = 0;
-		bool m_TotalBacklogLinesValid = false;
+		mutable bool m_TotalBacklogLinesValid = false;
 
 		CGameConsole *m_pGameConsole;
 
@@ -136,20 +138,7 @@ private:
 		std::vector<const char *> m_vpArgumentSuggestions;
 
 		CQmConsoleSearchInput m_SearchInput;
-		struct SSearchMatch
-		{
-			int m_Pos;
-			int m_Length;
-			int m_StartLine;
-			int m_EndLine;
-			int m_EntryLine;
-
-			SSearchMatch(int Pos, int Length, int StartLine, int EndLine, int EntryLine) :
-				m_Pos(Pos), m_Length(Length), m_StartLine(StartLine), m_EndLine(EndLine), m_EntryLine(EntryLine) {}
-		};
-		int m_CurrentMatchIndex;
-		char m_aCurrentSearchString[IConsole::CMDLINE_LENGTH];
-		std::vector<SSearchMatch> m_vSearchMatches;
+		mutable QmConsoleSearch::CResults<IConsole::CMDLINE_LENGTH> m_SearchResults;
 
 		CInstance(int t);
 		void Init(CGameConsole *pGameConsole);
@@ -199,7 +188,7 @@ private:
 		float FontSize() const;
 		bool ParseEntryColors(const CBacklogEntry *pEntry) const;
 		CQmConsoleSelection::CPosition SelectionPositionAt(vec2 Position, float LogBottom, float LineHeight);
-		std::string SelectionText();
+		bool BuildSelectionText(std::string &Result);
 
 		bool IsInputHidden() const;
 		void UpdateCompletionSuggestions();

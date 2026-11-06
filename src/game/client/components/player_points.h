@@ -80,12 +80,12 @@ private:
 
 	struct SRequestSlot
 	{
-		CQmPlayerPointsRequest m_Request;
+		CQmPlayerPointsRequest m_Request{nullptr, 0.0};
 		CQmPlayerPointsCache::SRequestToken m_Token;
 		std::shared_ptr<qm_update::CSystemProxyJob> m_pProxyJob;
 		std::shared_ptr<IJob> m_pParseJob;
 	};
-	using TRequests = std::map<std::string, SRequestSlot>;
+	using TRequests = std::map<std::string, SRequestSlot, std::less<>>;
 	TRequests m_ActiveRequests;
 	TRequests m_PlaytimeRequests;
 
@@ -100,8 +100,16 @@ private:
 	void EnsureRequest(const char *pPlayerName, bool Playtime);
 	void StartRequest(const char *pPlayerName, bool Playtime);
 	void ProcessCompletedRequests(TRequests &Requests, CQmPlayerPointsCache &Cache, bool Playtime);
-	void StoreToDb(const char *pPlayerName, int Points);
-	void CancelRequests(bool NewServer = false);
+	void CancelRequests(bool NewServer = false) noexcept;
+
+protected:
+	// 外部 HTTP、代理作业、时钟和持久化边界；请求状态与所有权仍归组件。
+	virtual std::shared_ptr<IHttpRequest> CreateRequest(const char *pPlayerName, bool Playtime);
+	virtual std::shared_ptr<qm_update::CSystemProxyJob> CreateProxyJob(const std::shared_ptr<IHttpRequest> &pRequest);
+	virtual void SubmitRequest(const std::shared_ptr<IHttpRequest> &pRequest);
+	virtual bool SubmitParseJob(const std::shared_ptr<IJob> &pJob);
+	virtual int64_t Now() const noexcept;
+	virtual void StoreToDb(const char *pPlayerName, int Points);
 
 public:
 	int Sizeof() const override { return sizeof(*this); }

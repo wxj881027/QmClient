@@ -23,8 +23,8 @@ inline void DrawSettingsParagraph(CUi *pUi, SSettingsParagraphState &State, cons
 {
 	if(!pUi || Rect.w <= 0.0f || Rect.h <= 0.0f || FontSize <= 0.0f || pUi->DrawingSuppressed())
 		return;
-	if(!State.m_Element.IsRegistered())
-		State.m_Element.Init(pUi, 1);
+	if(!State.m_Element.IsRegistered() && !State.m_Element.TryInit(pUi, 1))
+		return;
 	auto *pElement = State.m_Element.Rect(0);
 	if(State.m_LineSpacing != LineSpacing)
 	{

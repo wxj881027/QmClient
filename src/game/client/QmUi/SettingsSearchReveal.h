@@ -146,6 +146,19 @@ namespace qm_settings_reveal
 		S.m_Interactive = false;
 	}
 
+	// 绘制异常也清除当前卡片的借用指针和滚动归属。
+	class CCardScope
+	{
+	public:
+		CCardScope(const char *pCardStableId, CScrollRegion *pScrollRegion, bool Interactive)
+		{
+			BeginCard(pCardStableId, pScrollRegion, Interactive);
+		}
+		~CCardScope() { EndCard(); }
+		CCardScope(const CCardScope &) = delete;
+		CCardScope &operator=(const CCardScope &) = delete;
+	};
+
 	// 纯匹配规则：当前卡片是否有命中行（预览卡不滚动）。
 	inline bool ShouldReveal(const char *pTextId, const char *pText)
 	{

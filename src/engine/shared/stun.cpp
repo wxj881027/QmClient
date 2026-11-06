@@ -20,6 +20,12 @@ size_t StunMessagePrepare(unsigned char *pBuffer, size_t BufferSize, CStunData *
 {
 	dbg_assert(BufferSize >= 20, "stun message buffer too small");
 	secure_random_fill(pData->m_aSecret, sizeof(pData->m_aSecret));
+	return StunMessagePrepare(pBuffer, BufferSize, *pData);
+}
+
+size_t StunMessagePrepare(unsigned char *pBuffer, size_t BufferSize, const CStunData &Data)
+{
+	dbg_assert(BufferSize >= 20, "stun message buffer too small");
 	pBuffer[0] = 0x00; // STUN Request Message Type 1: Binding
 	pBuffer[1] = 0x01;
 	pBuffer[2] = 0x00; // Message Length: 0 (extra bytes after the header)
@@ -28,7 +34,7 @@ size_t StunMessagePrepare(unsigned char *pBuffer, size_t BufferSize, CStunData *
 	pBuffer[5] = 0x12;
 	pBuffer[6] = 0xA4;
 	pBuffer[7] = 0x42;
-	mem_copy(pBuffer + 8, pData->m_aSecret, sizeof(pData->m_aSecret)); // Transaction ID
+	mem_copy(pBuffer + 8, Data.m_aSecret, sizeof(Data.m_aSecret)); // Transaction ID
 	return 20;
 }
 
@@ -55,11 +61,13 @@ bool StunMessageParse(const unsigned char *pMessage, size_t MessageSize, const C
 		return true;
 	}
 
-	*pSuccess = pMessage[1] == 0x01;
+	const bool Success = pMessage[1] == 0x01;
+	NETADDR Addr{};
 
 	MessageSize = 20 + MessageLength;
 	size_t Offset = 20;
 	bool FoundAddr = false;
+	bool FoundError = false;
 	while(true)
 	{
 		// STUN attribute format (from RFC 5389, section 15, figure 4):
@@ -81,11 +89,12 @@ bool StunMessageParse(const unsigned char *pMessage, size_t MessageSize, const C
 		}
 		uint16_t Type = (pMessage[Offset] << 8) | pMessage[Offset + 1];
 		uint16_t Length = (pMessage[Offset + 2] << 8) | pMessage[Offset + 3];
-		if(MessageSize < Offset + 4 + Length)
+		const size_t PaddedLength = (static_cast<size_t>(Length) + 3) & ~size_t(3);
+		if(MessageSize - Offset < 4 + PaddedLength)
 		{
 			return true;
 		}
-		if(*pSuccess && Type == 0x0020) // XOR-MAPPED-ADDRESS
+		if(Success && Type == 0x0020) // XOR-MAPPED-ADDRESS
 		{
 			// STUN XOR-MAPPED-ADDRESS attribute format (from RFC 5389, section 15,
 			// figure 6):
@@ -114,13 +123,13 @@ bool StunMessageParse(const unsigned char *pMessage, size_t MessageSize, const C
 				}
 				if(!FoundAddr)
 				{
-					pAddr->type = NETTYPE_IPV4;
-					mem_copy(pAddr->ip, pMessage + Offset + 4 + 4, 4);
-					pAddr->ip[0] ^= 0x21;
-					pAddr->ip[1] ^= 0x12;
-					pAddr->ip[2] ^= 0xA4;
-					pAddr->ip[3] ^= 0x42;
-					pAddr->port = Port;
+					Addr.type = NETTYPE_IPV4;
+					mem_copy(Addr.ip, pMessage + Offset + 4 + 4, 4);
+					Addr.ip[0] ^= 0x21;
+					Addr.ip[1] ^= 0x12;
+					Addr.ip[2] ^= 0xA4;
+					Addr.ip[3] ^= 0x42;
+					Addr.port = Port;
 					FoundAddr = true;
 				}
 			}
@@ -132,27 +141,43 @@ bool StunMessageParse(const unsigned char *pMessage, size_t MessageSize, const C
 				}
 				if(!FoundAddr)
 				{
-					pAddr->type = NETTYPE_IPV6;
-					mem_copy(pAddr->ip, pMessage + Offset + 4 + 4, 16);
-					pAddr->ip[0] ^= 0x21;
-					pAddr->ip[1] ^= 0x12;
-					pAddr->ip[2] ^= 0xA4;
-					pAddr->ip[3] ^= 0x42;
+					Addr.type = NETTYPE_IPV6;
+					mem_copy(Addr.ip, pMessage + Offset + 4 + 4, 16);
+					Addr.ip[0] ^= 0x21;
+					Addr.ip[1] ^= 0x12;
+					Addr.ip[2] ^= 0xA4;
+					Addr.ip[3] ^= 0x42;
 					for(size_t i = 0; i < sizeof(pData->m_aSecret); i++)
 					{
-						pAddr->ip[4 + i] ^= pData->m_aSecret[i];
+						Addr.ip[4 + i] ^= pData->m_aSecret[i];
 					}
-					pAddr->port = Port;
+					Addr.port = Port;
 					FoundAddr = true;
 				}
 			}
+		}
+		else if(!Success && Type == 0x0009) // ERROR-CODE
+		{
+			if(Length < 4)
+				return true;
+			// 保留位忽略；这里只识别错误响应，不实现认证或服务器跳转。
+			const unsigned Class = pMessage[Offset + 6] & 7;
+			const unsigned Number = pMessage[Offset + 7];
+			if(Class < 3 || Class > 6 || Number > 99)
+				return true;
+			FoundError = true;
 		}
 		// comprehension-required
 		else if(Type <= 0x7fff)
 		{
 			return true;
 		}
-		Offset += 4 + Length;
+		Offset += 4 + PaddedLength;
 	}
-	return *pSuccess && !FoundAddr;
+	if(Success ? !FoundAddr : !FoundError)
+		return true;
+	// 完整报文验证后再发布，后续属性损坏时不暴露部分地址。
+	*pSuccess = Success;
+	*pAddr = Addr;
+	return false;
 }

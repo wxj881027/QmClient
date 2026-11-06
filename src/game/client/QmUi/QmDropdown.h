@@ -7,6 +7,8 @@
 #include "UiTheme.h"
 #include "UiTokens.h"
 
+#include <base/borrowed_allocator.h>
+
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
@@ -112,13 +114,25 @@ int QmResolveDropdownSelection(int CurrentSelection, int PopupSelection, const s
 class CQmDropdownSearch
 {
 public:
+	enum class EUpdateResult
+	{
+		UNCHANGED,
+		UPDATED,
+		FAILED,
+	};
+	CQmDropdownSearch() = default;
+	// 只影响源快照容器；内存域须存活到容器存储销毁，Reset 不结束借用。
+	explicit CQmDropdownSearch(IAllocationResource *pSourceMemory) :
+		m_vSource(CBorrowedAllocator<std::string>{pSourceMemory}) {}
 	bool Update(const std::vector<std::string> &vEntries, const char *pQuery);
+	// 失败保留完整旧缓存，调用者不能把旧匹配套用到新来源。
+	[[nodiscard]] EUpdateResult TryUpdate(const std::vector<std::string> &vEntries, const char *pQuery) noexcept;
 	int SourceIndex(int VisibleIndex) const;
 	const std::vector<int> &Indices() const { return m_vIndices; }
 	void Reset();
 
 private:
-	std::vector<std::string> m_vSource;
+	std::vector<std::string, CBorrowedAllocator<std::string>> m_vSource;
 	std::string m_Query;
 	std::vector<int> m_vIndices;
 	bool m_Initialized = false;

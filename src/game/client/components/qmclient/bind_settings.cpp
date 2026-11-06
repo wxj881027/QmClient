@@ -25,6 +25,8 @@
 #include <deque>
 #include <initializer_list>
 #include <iterator>
+#include <new>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -332,7 +334,6 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 		if(Flow.Control("bind-key-capture", LineHeight, CaptureRow))
 		{
 			const CBindSlot PreviousSlot = ActiveSlot;
-			const std::string PreviousBinding = GameClient()->m_Binds.Get(PreviousSlot.m_Key, PreviousSlot.m_ModifierMask);
 			const CKeyBinder::CKeyReaderResult CaptureResult = GameClient()->m_KeyBinder.DoKeyReader(&State.m_CaptureButton, &State.m_ClearCaptureButton, &CaptureRow, PreviousSlot, false, BodySize);
 			const bool CaptureStarted = !KeyCaptureActive && GameClient()->m_KeyBinder.IsActive();
 			if(!ReadOnly && CaptureStarted)
@@ -349,25 +350,37 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 			{
 				if(CaptureResult.m_Bind.m_Key == KEY_UNKNOWN)
 				{
-					GameClient()->m_Binds.Bind(PreviousSlot.m_Key, "", false, PreviousSlot.m_ModifierMask);
-					State.m_Error.clear();
+					if(GameClient()->m_Binds.Rebind(PreviousSlot, CaptureResult.m_Bind, ""))
+						State.m_Error.clear();
 				}
 				else
 				{
 					char aNewKeyName[128];
 					GameClient()->m_Binds.GetKeyBindName(CaptureResult.m_Bind.m_Key, CaptureResult.m_Bind.m_ModifierMask, aNewKeyName, sizeof(aNewKeyName));
-					if(qm_bind_editor::FitsConfigLine(aNewKeyName, PreviousBinding))
+					const char *pPreviousBinding = GameClient()->m_Binds.Get(PreviousSlot.m_Key, PreviousSlot.m_ModifierMask);
+					// 行限制校验也会构造序列化字符串，失败时保留原绑定和选中位置。
+					try
 					{
-						GameClient()->m_Binds.Bind(PreviousSlot.m_Key, "", false, PreviousSlot.m_ModifierMask);
-						GameClient()->m_Binds.Bind(CaptureResult.m_Bind.m_Key, PreviousBinding.c_str(), false, CaptureResult.m_Bind.m_ModifierMask);
-						State.m_Selected = CaptureResult.m_Bind;
-						State.m_ModifierMask = CaptureResult.m_Bind.m_ModifierMask;
-						State.m_HasSelected = true;
-						State.m_KeySelectionHeld = true;
-						State.m_Error.clear();
+						if(qm_bind_editor::FitsConfigLine(aNewKeyName, pPreviousBinding))
+						{
+							if(GameClient()->m_Binds.Rebind(PreviousSlot, CaptureResult.m_Bind, pPreviousBinding))
+							{
+								State.m_Selected = CaptureResult.m_Bind;
+								State.m_ModifierMask = CaptureResult.m_Bind.m_ModifierMask;
+								State.m_HasSelected = true;
+								State.m_KeySelectionHeld = true;
+								State.m_Error.clear();
+							}
+						}
+						else
+							SetBindEditorError(State, Localize("This bind is already over the local config line limit."));
 					}
-					else
-						SetBindEditorError(State, Localize("This bind is already over the local config line limit."));
+					catch(const std::bad_alloc &)
+					{
+					}
+					catch(const std::length_error &)
+					{
+					}
 				}
 				ActiveSlot = State.m_Selected;
 				GameClient()->m_Binds.GetKeyBindName(ActiveSlot.m_Key, ActiveSlot.m_ModifierMask, aActiveKeyName, sizeof(aActiveKeyName));

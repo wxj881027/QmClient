@@ -612,6 +612,7 @@ namespace
 			++m_Deletes;
 			Container.Reset();
 		}
+		void ReleaseTemporaryTextContainer(STextContainerIndex &Container) noexcept { Container.Reset(); }
 	};
 }
 

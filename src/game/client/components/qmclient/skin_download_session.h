@@ -6,8 +6,10 @@
 #include <engine/http.h>
 #include <engine/shared/jobs.h>
 
+#include <algorithm>
 #include <functional>
 #include <memory>
+#include <new>
 #include <string>
 #include <utility>
 
@@ -37,11 +39,51 @@ public:
 		std::shared_ptr<IQmSkinDataJob> pCacheJob, FRequest Request, FDecode Decode, FSubmit Submit) :
 		m_Http(Http), m_OfficialUrl(std::move(OfficialUrl)), m_CommunityUrl(std::move(CommunityUrl)), m_pJob(std::move(pCacheJob)), m_Request(std::move(Request)), m_Decode(std::move(Decode)), m_Submit(std::move(Submit))
 	{
-		m_Submit(m_pJob);
+		try
+		{
+			m_Submit(m_pJob);
+		}
+		catch(const std::bad_alloc &)
+		{
+			FailAllocation();
+		}
 	}
 	~CQmSkinDownloadSession() { Cancel(); }
 
 	EResult Poll()
+	{
+		try
+		{
+			return Advance();
+		}
+		catch(const std::bad_alloc &)
+		{
+			return FailAllocation();
+		}
+	}
+
+	std::shared_ptr<IQmSkinDataJob> TakeReadyJob() { return std::exchange(m_pReadyJob, nullptr); }
+	void Cancel()
+	{
+		if(m_pJob)
+			m_pJob->Abort();
+		if(m_pReadyJob)
+			m_pReadyJob->Abort();
+		if(m_pRequest)
+		{
+			if(m_pRequest->Done())
+				ValidateRequest(false);
+			else
+				m_pRequest->Abort();
+		}
+		m_pJob.reset();
+		m_pReadyJob.reset();
+		m_pRequest.reset();
+		m_Result = EResult::DONE;
+	}
+
+private:
+	EResult Advance()
 	{
 		if(m_pReadyJob)
 			return EResult::READY;
@@ -114,27 +156,6 @@ public:
 		return EResult::WAITING;
 	}
 
-	std::shared_ptr<IQmSkinDataJob> TakeReadyJob() { return std::exchange(m_pReadyJob, nullptr); }
-	void Cancel()
-	{
-		if(m_pJob)
-			m_pJob->Abort();
-		if(m_pReadyJob)
-			m_pReadyJob->Abort();
-		if(m_pRequest)
-		{
-			if(m_pRequest->Done())
-				ValidateRequest(false);
-			else
-				m_pRequest->Abort();
-		}
-		m_pJob.reset();
-		m_pReadyJob.reset();
-		m_pRequest.reset();
-		m_Result = EResult::DONE;
-	}
-
-private:
 	void StartRequest(bool Unconditional)
 	{
 		m_pRequest = m_Request((m_Community ? m_CommunityUrl : m_OfficialUrl).c_str(), Unconditional);
@@ -151,6 +172,16 @@ private:
 		if(m_NeedsValidation && m_pRequest && m_pRequest->State() == EHttpState::DONE)
 			m_pRequest->OnValidation(Valid);
 		m_NeedsValidation = false;
+	}
+	EResult FailAllocation()
+	{
+		// 结束本次远端更新；已备好的缓存仍可交付，未提交作业不能继续等待。
+		if(m_pJob)
+			m_pJob->Abort();
+		if(m_pRequest && !m_pRequest->Done())
+			m_pRequest->Abort();
+		Finish(EResult::ERROR);
+		return m_pReadyJob ? EResult::READY : m_Result;
 	}
 	EResult Finish(EResult Result)
 	{
@@ -177,5 +208,24 @@ private:
 	bool m_RetriedUnconditional = false;
 	bool m_NeedsValidation = false;
 };
+
+// 候选会话与轮询登记同时准备成功才交接；工厂内的字符串/包装分配也在边界内。
+template<typename TNames, typename FCreate>
+std::unique_ptr<CQmSkinDownloadSession> QmCreateTrackedSkinDownloadSession(TNames &Names, const char *pName, FCreate &&Create)
+{
+	try
+	{
+		auto pSession = std::forward<FCreate>(Create)();
+		if(!pSession)
+			return nullptr;
+		if(std::find(Names.begin(), Names.end(), pName) == Names.end())
+			Names.emplace_back(pName);
+		return pSession;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return nullptr;
+	}
+}
 
 #endif

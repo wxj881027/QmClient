@@ -18,16 +18,16 @@ class CRingBufferBase
 		int m_Size;
 	};
 
-	CItem *m_pBuffer;
+	CItem *m_pBuffer = nullptr;
 
-	CItem *m_pProduce;
-	CItem *m_pConsume;
+	CItem *m_pProduce = nullptr;
+	CItem *m_pConsume = nullptr;
 
-	CItem *m_pFirst;
-	CItem *m_pLast;
+	CItem *m_pFirst = nullptr;
+	CItem *m_pLast = nullptr;
 
-	int m_Size;
-	int m_Flags;
+	int m_Size = 0;
+	int m_Flags = 0;
 
 	std::function<void(void *pCurrent)> m_PopCallback = nullptr;
 
@@ -99,18 +99,29 @@ class CDynamicRingBuffer : public CTypedRingBuffer<T>
 	unsigned char *m_pBuffer = nullptr;
 
 public:
-	CDynamicRingBuffer(int Size, int Flags = 0) { Init(Size, Flags); }
+	using FAllocate = void *(*)(size_t);
+
+	CDynamicRingBuffer(int Size, int Flags = 0, FAllocate pAllocate = malloc) { Init(Size, Flags, pAllocate); }
 
 	~CDynamicRingBuffer()
 	{
 		free(m_pBuffer);
 	}
 
-	void Init(int Size, int Flags)
+	bool IsInitialized() const { return m_pBuffer != nullptr; }
+
+	// 分配器须返回可由 free 释放的内存，失败返回空指针；失败不改动原记录。
+	bool Init(int Size, int Flags, FAllocate pAllocate = malloc)
 	{
+		if(Size < CRingBufferBase::ITEM_SIZE || pAllocate == nullptr)
+			return false;
+		auto *pNewBuffer = static_cast<unsigned char *>(pAllocate(static_cast<size_t>(Size)));
+		if(pNewBuffer == nullptr)
+			return false;
 		free(m_pBuffer);
-		m_pBuffer = static_cast<unsigned char *>(malloc(Size));
+		m_pBuffer = pNewBuffer;
 		CRingBufferBase::Init(m_pBuffer, Size, Flags);
+		return true;
 	}
 };
 

@@ -5,11 +5,17 @@
 #include <base/sphore.h>
 #include <base/system.h>
 
+#include <engine/client/buffer_container_pool.h>
+#include <engine/client/buffer_object_pool.h>
+#include <engine/client/graphics_readback_completion.h>
+#include <engine/client/graphics_upload_data.h>
+#include <engine/client/graphics_vertex_budget.h>
 #include <engine/client/quad_rotation_cache.h>
 #include <engine/client/render_target_pool.h>
 #include <engine/client/render_target_readback_queue.h>
 #include <engine/client/rounded_rect_directions.h>
 #include <engine/client/texture_slot_pool.h>
+#include <engine/client/video_frame_readbacks.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 
@@ -23,6 +29,10 @@
 #include <vector>
 
 struct SDL_Window;
+namespace screenshot_save
+{
+	class CCompletionQueue;
+}
 
 constexpr int CMD_BUFFER_DATA_BUFFER_SIZE = 1024 * 1024 * 2;
 constexpr int CMD_BUFFER_CMD_BUFFER_SIZE = 1024 * 256;
@@ -116,7 +126,7 @@ public:
 	enum
 	{
 		MAX_TEXTURES = 1024 * 8,
-		MAX_VERTICES = 32 * 1024,
+		MAX_VERTICES = GRAPHICS_VERTEX_CAPACITY,
 	};
 
 	enum
@@ -214,6 +224,13 @@ public:
 			m_Cmd(Cmd), m_pNext(nullptr) {}
 		unsigned m_Cmd;
 		SCommand *m_pNext;
+	};
+
+	struct SCommand_Upload : public SCommand
+	{
+		SCommand_Upload(unsigned Cmd) :
+			SCommand(Cmd) {}
+		SCommand_Upload *m_pNextUpload = nullptr;
 	};
 
 	struct SState
@@ -377,7 +394,9 @@ public:
 		CImageInfo *m_pImage = nullptr;
 		// 读回真正结算（像素落地）时点亮的完成信号；空表示调用方不轮询。
 		// PBO 双缓冲下结算发生在后续的读回/Flush 命令里，不能在命令返回时提前点亮。
-		CSemaphore *m_pCompletion = nullptr;
+		// 接纳后由命令缓冲持有；异步后端取走并清空此指针。
+		mutable CSemaphore *m_pCompletion = nullptr;
+		SCommand_RenderTarget_Readback *m_pNextReadback = nullptr;
 	};
 
 	struct SCommand_RenderTarget_ReadbackFlush : public SCommand
@@ -386,44 +405,44 @@ public:
 			SCommand(CMD_RENDER_TARGET_READBACK_FLUSH) {}
 	};
 
-	struct SCommand_CreateBufferObject : public SCommand
+	struct SCommand_CreateBufferObject : public SCommand_Upload
 	{
 		SCommand_CreateBufferObject() :
-			SCommand(CMD_CREATE_BUFFER_OBJECT) {}
+			SCommand_Upload(CMD_CREATE_BUFFER_OBJECT) {}
 
 		int m_BufferIndex;
 
-		bool m_DeletePointer;
-		void *m_pUploadData;
+		bool m_DeletePointer = false;
+		mutable void *m_pUploadData = nullptr;
 		size_t m_DataSize;
 
 		int m_Flags; // @see EBufferObjectCreateFlags
 	};
 
-	struct SCommand_RecreateBufferObject : public SCommand
+	struct SCommand_RecreateBufferObject : public SCommand_Upload
 	{
 		SCommand_RecreateBufferObject() :
-			SCommand(CMD_RECREATE_BUFFER_OBJECT) {}
+			SCommand_Upload(CMD_RECREATE_BUFFER_OBJECT) {}
 
 		int m_BufferIndex;
 
-		bool m_DeletePointer;
-		void *m_pUploadData;
+		bool m_DeletePointer = false;
+		mutable void *m_pUploadData = nullptr;
 		size_t m_DataSize;
 
 		int m_Flags; // @see EBufferObjectCreateFlags
 	};
 
-	struct SCommand_UpdateBufferObject : public SCommand
+	struct SCommand_UpdateBufferObject : public SCommand_Upload
 	{
 		SCommand_UpdateBufferObject() :
-			SCommand(CMD_UPDATE_BUFFER_OBJECT) {}
+			SCommand_Upload(CMD_UPDATE_BUFFER_OBJECT) {}
 
 		int m_BufferIndex;
 
-		bool m_DeletePointer;
+		bool m_DeletePointer = false;
 		void *m_pOffset;
-		void *m_pUploadData;
+		mutable void *m_pUploadData = nullptr;
 		size_t m_DataSize;
 	};
 
@@ -656,10 +675,10 @@ public:
 		bool m_ByResize = false; // resized by an resize event.. a hint to make clear that the viewport update can be deferred if wanted
 	};
 
-	struct SCommand_Texture_Create : public SCommand
+	struct SCommand_Texture_Create : public SCommand_Upload
 	{
 		SCommand_Texture_Create() :
-			SCommand(CMD_TEXTURE_CREATE) {}
+			SCommand_Upload(CMD_TEXTURE_CREATE) {}
 
 		// texture information
 		int m_Slot;
@@ -668,7 +687,8 @@ public:
 		size_t m_Height;
 		int m_Flags;
 		// data must be in RGBA format
-		uint8_t *m_pData; // will be freed by the command processor
+		mutable uint8_t *m_pData = nullptr;
+		mutable SGraphicsUploadRelease m_Release;
 	};
 
 	struct SCommand_Texture_Destroy : public SCommand
@@ -680,10 +700,10 @@ public:
 		int m_Slot;
 	};
 
-	struct SCommand_Texture_Update : public SCommand
+	struct SCommand_Texture_Update : public SCommand_Upload
 	{
 		SCommand_Texture_Update() :
-			SCommand(CMD_TEXTURE_UPDATE) {}
+			SCommand_Upload(CMD_TEXTURE_UPDATE) {}
 
 		// texture information
 		int m_Slot;
@@ -692,13 +712,13 @@ public:
 		int m_Y;
 		size_t m_Width;
 		size_t m_Height;
-		uint8_t *m_pData; // will be freed by the command processor
+		mutable uint8_t *m_pData = nullptr;
 	};
 
-	struct SCommand_TextTextures_Create : public SCommand
+	struct SCommand_TextTextures_Create : public SCommand_Upload
 	{
 		SCommand_TextTextures_Create() :
-			SCommand(CMD_TEXT_TEXTURES_CREATE) {}
+			SCommand_Upload(CMD_TEXT_TEXTURES_CREATE) {}
 
 		// texture information
 		int m_Slot;
@@ -707,8 +727,8 @@ public:
 		size_t m_Width;
 		size_t m_Height;
 
-		uint8_t *m_pTextData; // will be freed by the command processor
-		uint8_t *m_pTextOutlineData; // will be freed by the command processor
+		mutable uint8_t *m_pTextData = nullptr;
+		mutable uint8_t *m_pTextOutlineData = nullptr;
 	};
 
 	struct SCommand_TextTextures_Destroy : public SCommand
@@ -721,10 +741,10 @@ public:
 		int m_SlotOutline;
 	};
 
-	struct SCommand_TextTexture_Update : public SCommand
+	struct SCommand_TextTexture_Update : public SCommand_Upload
 	{
 		SCommand_TextTexture_Update() :
-			SCommand(CMD_TEXT_TEXTURE_UPDATE) {}
+			SCommand_Upload(CMD_TEXT_TEXTURE_UPDATE) {}
 
 		// texture information
 		int m_Slot;
@@ -733,7 +753,7 @@ public:
 		int m_Y;
 		size_t m_Width;
 		size_t m_Height;
-		uint8_t *m_pData; // will be freed by the command processor
+		mutable uint8_t *m_pData = nullptr;
 	};
 
 	struct SCommand_WindowCreateNtf : public CCommandBuffer::SCommand
@@ -755,8 +775,14 @@ public:
 
 	//
 	CCommandBuffer(unsigned CmdBufferSize, unsigned DataBufferSize) :
-		m_CmdBuffer(CmdBufferSize), m_DataBuffer(DataBufferSize), m_pCmdBufferHead(nullptr), m_pCmdBufferTail(nullptr)
+		m_CmdBuffer(CmdBufferSize), m_DataBuffer(DataBufferSize), m_pCmdBufferHead(nullptr), m_pCmdBufferTail(nullptr), m_pUploadHead(nullptr)
 	{
+	}
+
+	~CCommandBuffer()
+	{
+		DiscardUploads();
+		CompleteReadbacks();
 	}
 
 	void *AllocData(size_t WantedSize)
@@ -776,6 +802,18 @@ public:
 			return false;
 		*pCmd = Command;
 		pCmd->m_pNext = nullptr;
+
+		if constexpr(std::is_base_of_v<SCommand_Upload, T>)
+		{
+			pCmd->m_pNextUpload = m_pUploadHead;
+			m_pUploadHead = pCmd;
+		}
+
+		if constexpr(std::is_base_of_v<SCommand_RenderTarget_Readback, T>)
+		{
+			pCmd->m_pNextReadback = m_pReadbackHead;
+			m_pReadbackHead = pCmd;
+		}
 
 		if(m_pCmdBufferTail)
 			m_pCmdBufferTail->m_pNext = pCmd;
@@ -830,8 +868,88 @@ public:
 		return true;
 	}
 
+	// 仅在该缓冲已经完成执行或尚未提交时回收；链表只包含上传命令，不遍历绘制命令。
+	template<typename TRelease = CGraphicsUploadDeleter>
+	void DiscardUploads(TRelease &&Release = TRelease{}) noexcept
+	{
+		static_assert(std::is_nothrow_invocable_v<TRelease &, void *>);
+		auto ReleaseData = [&](auto *&pData) noexcept {
+			if(pData != nullptr)
+				Release(std::exchange(pData, nullptr));
+		};
+		while(m_pUploadHead != nullptr)
+		{
+			const SCommand_Upload *pCommand = m_pUploadHead;
+			m_pUploadHead = m_pUploadHead->m_pNextUpload;
+			switch(pCommand->m_Cmd)
+			{
+			case CMD_TEXTURE_CREATE:
+			{
+				const auto *pUpload = static_cast<const SCommand_Texture_Create *>(pCommand);
+				ReleaseData(pUpload->m_pData);
+				ReleaseGraphicsUpload(pUpload->m_Release);
+				break;
+			}
+			case CMD_TEXTURE_UPDATE:
+			{
+				const auto *pUpload = static_cast<const SCommand_Texture_Update *>(pCommand);
+				ReleaseData(pUpload->m_pData);
+				break;
+			}
+			case CMD_TEXT_TEXTURES_CREATE:
+			{
+				const auto *pUpload = static_cast<const SCommand_TextTextures_Create *>(pCommand);
+				ReleaseData(pUpload->m_pTextData);
+				ReleaseData(pUpload->m_pTextOutlineData);
+				break;
+			}
+			case CMD_TEXT_TEXTURE_UPDATE:
+			{
+				const auto *pUpload = static_cast<const SCommand_TextTexture_Update *>(pCommand);
+				ReleaseData(pUpload->m_pData);
+				break;
+			}
+			case CMD_CREATE_BUFFER_OBJECT:
+			{
+				const auto *pUpload = static_cast<const SCommand_CreateBufferObject *>(pCommand);
+				if(pUpload->m_DeletePointer)
+					ReleaseData(pUpload->m_pUploadData);
+				break;
+			}
+			case CMD_RECREATE_BUFFER_OBJECT:
+			{
+				const auto *pUpload = static_cast<const SCommand_RecreateBufferObject *>(pCommand);
+				if(pUpload->m_DeletePointer)
+					ReleaseData(pUpload->m_pUploadData);
+				break;
+			}
+			case CMD_UPDATE_BUFFER_OBJECT:
+			{
+				const auto *pUpload = static_cast<const SCommand_UpdateBufferObject *>(pCommand);
+				if(pUpload->m_DeletePointer)
+					ReleaseData(pUpload->m_pUploadData);
+				break;
+			}
+			default: break;
+			}
+		}
+	}
+
+	// 命令区尚未提交或 CPU 消费者均已结束时调用；异步后端须先取走完成信号。
+	void CompleteReadbacks() noexcept
+	{
+		while(m_pReadbackHead != nullptr)
+		{
+			auto *pCommand = m_pReadbackHead;
+			m_pReadbackHead = pCommand->m_pNextReadback;
+			CGraphicsReadbackCompletion Completion(pCommand->m_pImage, std::exchange(pCommand->m_pCompletion, nullptr));
+		}
+	}
+
 	void Reset()
 	{
+		DiscardUploads();
+		CompleteReadbacks();
 		m_pCmdBufferHead = m_pCmdBufferTail = nullptr;
 		m_CmdBuffer.Reset();
 		m_DataBuffer.Reset();
@@ -848,6 +966,8 @@ public:
 private:
 	SCommand *m_pCmdBufferHead;
 	SCommand *m_pCmdBufferTail;
+	SCommand_Upload *m_pUploadHead;
+	SCommand_RenderTarget_Readback *m_pReadbackHead = nullptr;
 };
 
 enum EGraphicsBackendErrorCodes
@@ -862,6 +982,8 @@ enum EGraphicsBackendErrorCodes
 	GRAPHICS_BACKEND_ERROR_CODE_SDL_SCREEN_RESOLUTION_REQUEST_FAILED,
 	GRAPHICS_BACKEND_ERROR_CODE_SDL_WINDOW_CREATE_FAILED,
 	GRAPHICS_BACKEND_ERROR_CODE_METAL_INIT_FAILED,
+	GRAPHICS_BACKEND_ERROR_CODE_THREAD_CREATE_FAILED,
+	GRAPHICS_BACKEND_ERROR_CODE_RESOURCE_INIT_FAILED,
 };
 
 constexpr bool IsGraphicsBackendOpenGLRetryableError(int ErrorCode)
@@ -1054,6 +1176,7 @@ class CGraphics_Threaded : public IEngineGraphics
 	// 等待窗口获得输入焦点的帧数。超时后放弃并报错，避免请求永远挂着。
 	int m_ScreenshotWaitFrames = 0;
 	char m_aScreenshotName[IO_MAX_PATH_LENGTH];
+	std::shared_ptr<screenshot_save::CCompletionQueue> m_pScreenshotCompletions;
 	FScreenshotCallback m_pfnScreenshotCallback;
 	FScreenshotProcessor m_pfnScreenshotProcessor;
 	// 合影超采样静帧的离屏帧状态：目标失效表示当前没有离屏帧在渲染。
@@ -1069,8 +1192,7 @@ class CGraphics_Threaded : public IEngineGraphics
 	// 稳态一笔，逐帧整体等待后结算。录制收尾由 FlushVideoFrameReadbacks 排空全部在途。
 	CRenderTargetHandle m_VideoFrameTarget;
 	bool m_VideoFrameActive = false;
-	CRenderTargetReadbackHandle m_aVideoFramePendingReadbacks[2];
-	int m_VideoFramePendingReadbackCount = 0;
+	CVideoFrameReadbacks m_VideoFrameReadbacks;
 	bool m_ReadbackCompletionSignal = false;
 	int m_VideoFrameWidth = 0;
 	int m_VideoFrameHeight = 0;
@@ -1080,7 +1202,7 @@ class CGraphics_Threaded : public IEngineGraphics
 	// 供 TakeScreenshot 与「从内存图像落盘」共用，保证两条路径落盘规则一致。
 	bool PrepareScreenshotPath(const char *pFilename);
 	// 回调在编码真正写完之后由渲染线程触发：照片卡拿到的路径一定已经落盘。
-	void QueueScreenshotSave(CImageInfo &&Image, FScreenshotProcessor pfnProcessor, FScreenshotCallback pfnCallback = nullptr);
+	bool QueueScreenshotSave(CImageInfo &&Image, FScreenshotProcessor pfnProcessor, FScreenshotCallback pfnCallback = nullptr);
 #if defined(CONF_PLATFORM_MACOS)
 	bool m_MacosGraphicsDiagnosticsEnabled = false;
 	uint32_t m_MacosGraphicsDiagnosticFrameCount = 0;
@@ -1116,20 +1238,9 @@ class CGraphics_Threaded : public IEngineGraphics
 	// forced viewport, so that it justifies our UI ratio needs
 	bool m_IsForcedViewport = false;
 
-	struct SVertexArrayInfo
-	{
-		SVertexArrayInfo() :
-			m_FreeIndex(-1) {}
-		// keep a reference to it, so we can free the ID
-		int m_AssociatedBufferObjectIndex;
+	CBufferContainerPool<> m_BufferContainers;
 
-		int m_FreeIndex;
-	};
-	std::vector<SVertexArrayInfo> m_vVertexArrayInfo;
-	int m_FirstFreeVertexArrayInfo;
-
-	std::vector<int> m_vBufferObjectIndices;
-	int m_FirstFreeBufferObjectIndex;
+	CBufferObjectPool<> m_BufferObjects;
 
 	struct SQuadContainer
 	{
@@ -1205,6 +1316,7 @@ class CGraphics_Threaded : public IEngineGraphics
 	}
 
 	void KickCommandBuffer();
+	void FlushPendingBufferObjectDeletes();
 
 	void AddBackEndWarningIfExists();
 
@@ -1219,7 +1331,7 @@ class CGraphics_Threaded : public IEngineGraphics
 	bool BeginOffscreenTileFrame(int TileWidth, int TileHeight, int LogicalWidth, int LogicalHeight, int TileOriginX, int TileOriginY) override;
 	bool EndOffscreenFrame(CImageInfo &Image) override;
 	bool BeginVideoFrame(int Width, int Height, int SampleCount) override;
-	void EndVideoFrame(CImageInfo &Image) override;
+	bool EndVideoFrame(CImageInfo &Image) override;
 	int FlushVideoFrameReadbacks(CImageInfo *pOutImages, int MaxImages) override;
 	void StopVideoFrame() override;
 	bool FlushPendingRenderTargetReadback();
@@ -1261,13 +1373,13 @@ public:
 	bool BumpTextureHandleEpochAndResetSlots();
 	bool IsTextureHandleAllocated(IGraphics::CTextureHandle TextureId) const override;
 	void FreeTextureIndex(CTextureHandle *pIndex);
-	// 显卡设备重建会清空 m_vQuadContainers，旧索引随之失效；
-	// 所有按索引取用容器的入口都必须先过这一层校验。
+	// 检查范围与当前领取状态；整数编号复用后不区分旧别名。
 	bool IsQuadContainerIndexValid(int ContainerIndex) const;
 	void UnloadTexture(IGraphics::CTextureHandle *pIndex) override;
 	void LoadTextureAddWarning(size_t Width, size_t Height, int Flags, const char *pTexName);
 	IGraphics::CTextureHandle LoadTextureRaw(const CImageInfo &Image, int Flags, const char *pTexName = nullptr) override;
 	IGraphics::CTextureHandle LoadTextureRawMove(CImageInfo &Image, int Flags, const char *pTexName = nullptr) override;
+	bool TryLoadTextureRawMoveOwned(CImageInfo &Image, int Flags, const char *pTexName, SGraphicsUploadRelease &Release, IGraphics::CTextureHandle &Texture) override;
 
 	bool IsRenderTargetSupported() const override;
 	bool IsRenderTargetGaussianBlurSupported() const override;
@@ -1340,12 +1452,21 @@ public:
 
 	void QuadsDraw(CQuadItem *pArray, int Num) override;
 
+private:
 	template<typename TName>
-	void QuadsDrawTLImpl(TName *pVertices, const CQuadItem *pArray, int Num)
+	void QuadsDrawTLBatch(TName *pVertices, const CQuadItem *pArray, int Num)
 	{
 		CCommandBuffer::SPoint Center;
 
 		dbg_assert(m_Drawing == EDrawing::QUADS, "called Graphics()->QuadsDrawTL without begin");
+
+		if constexpr(std::is_same_v<TName, CCommandBuffer::SVertexTex3DStream>)
+		{
+			const int VerticesPerItem = g_Config.m_GfxQuadAsTriangle && !m_GLUseTrianglesAsQuad ? 6 : 4;
+			const float CurIndex = Uses2DTextureArrays() ? m_CurIndex : (m_CurIndex + 0.5f) / 256.0f;
+			for(int i = 0; i < Num * VerticesPerItem; ++i)
+				pVertices[m_NumVertices + i].m_Tex.w = CurIndex;
+		}
 
 		if(g_Config.m_GfxQuadAsTriangle && !m_GLUseTrianglesAsQuad)
 		{
@@ -1429,6 +1550,25 @@ public:
 
 			AddVertices(4 * Num, pVertices);
 		}
+	}
+
+public:
+	template<typename TName>
+	void QuadsDrawTLImpl(TName *pVertices, const CQuadItem *pArray, int Num)
+	{
+		if(Num <= 0 || pArray == nullptr)
+			return;
+		const int VerticesPerItem = g_Config.m_GfxQuadAsTriangle && !m_GLUseTrianglesAsQuad ? 6 : 4;
+		const auto Write = [&](size_t Offset, int Batch) {
+			QuadsDrawTLBatch(pVertices, pArray + Offset, Batch);
+		};
+		const auto Flush = [&] {
+			if constexpr(std::is_same_v<TName, CCommandBuffer::SVertexTex3DStream>)
+				FlushVerticesTex3D();
+			else
+				FlushVertices();
+		};
+		WriteGraphicsVertexBatches(static_cast<size_t>(Num), VerticesPerItem, m_NumVertices, Write, Flush);
 	}
 
 	void QuadsDrawTL(const CQuadItem *pArray, int Num) override;

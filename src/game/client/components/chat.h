@@ -14,6 +14,7 @@
 #include <game/client/component.h>
 #include <game/client/components/qmclient/chat_command_hud.h>
 #include <game/client/components/qmclient/chat_emoji.h>
+#include <game/client/components/qmclient/chat_history.h>
 #include <game/client/components/qmclient/chat_translate_button.h>
 #include <game/client/components/qmclient/chat_translation_notes.h>
 #include <game/client/components/qmclient/hud_notifications/hud_notifications.h>
@@ -202,6 +203,7 @@ private:
 		std::optional<ColorRGBA> m_CustomColor;
 		EQmSponsorChatStyle m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
 		EQmSponsorChatStyle m_RenderSponsorChatStyle = EQmSponsorChatStyle::NONE;
+		bool m_ColorPreparationPending = false;
 
 		STextContainerIndex m_TextContainerIndex;
 		STextContainerIndex m_BodyTextContainerIndex;
@@ -373,13 +375,7 @@ private:
 	uint64_t m_ServerCommandsRevision = 0;
 	CQmChatCommandHud m_CommandHud;
 
-	struct CHistoryEntry
-	{
-		int m_Team;
-		int m_OriginalOffset;
-		char m_aText[1];
-		const char *InputText() const { return m_aText + (m_OriginalOffset > 0 ? m_OriginalOffset : 0); }
-	};
+	using CHistoryEntry = SQmChatHistoryEntry;
 	CHistoryEntry *m_pHistoryEntry;
 	CStaticRingBuffer<CHistoryEntry, 64 * 1024, CRingBufferBase::FLAG_RECYCLE> m_History;
 	COutgoingChatAnnotations m_OutgoingAnnotations;

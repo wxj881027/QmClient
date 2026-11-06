@@ -49,8 +49,6 @@
 
 using namespace FontIcons;
 
-extern std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
-
 namespace
 {
 	CUi::SDropDownState s_VoiceInputDeviceDropDownState;

@@ -6,10 +6,28 @@
 #include <base/vmath.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/collision_position.h>
+
+#include <cmath>
 
 // particles
 struct CParticle
 {
+	static bool CanCollideAt(vec2 Pos)
+	{
+		return QmCollision::CanRoundPosition(Pos);
+	}
+
+	bool CanMove(vec2 Displacement) const
+	{
+		const vec2 NextPos = m_Pos + Displacement;
+		if(!std::isfinite(m_Pos.x) || !std::isfinite(m_Pos.y) ||
+			!std::isfinite(Displacement.x) || !std::isfinite(Displacement.y) ||
+			!std::isfinite(NextPos.x) || !std::isfinite(NextPos.y))
+			return false;
+		return !m_Collides || (CanCollideAt(m_Pos) && CanCollideAt(NextPos));
+	}
+
 	void SetDefault()
 	{
 		m_Pos = vec2(0, 0);

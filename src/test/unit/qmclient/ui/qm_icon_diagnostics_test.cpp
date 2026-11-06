@@ -78,3 +78,25 @@ TEST(QmIconPrewarm, FractionalButtonAndFormSizesUseTextEngineTruncation)
 	EXPECT_EQ(QmIconRasterPixelSize((20 * 0.58f) * 0.8f, 1.5f), 13);
 	EXPECT_NE(Sizes.find(13), Sizes.end());
 }
+
+TEST(QmIconRasterPixelSize, IndeterminateProductsUseMinimumPixelSize)
+{
+	const float NaN = std::numeric_limits<float>::quiet_NaN();
+	const float Infinity = std::numeric_limits<float>::infinity();
+	for(const auto &[Size, Scale] : {std::pair{NaN, 1.0f}, std::pair{12.0f, NaN}, std::pair{0.0f, Infinity}, std::pair{Infinity, 0.0f}})
+	{
+		SCOPED_TRACE(::testing::Message() << Size << " * " << Scale);
+		EXPECT_EQ(QmIconRasterPixelSize(Size, Scale), 6);
+	}
+}
+
+TEST(QmIconRasterPixelSize, SignedOverflowKeepsExistingPixelBounds)
+{
+	const float Max = std::numeric_limits<float>::max();
+	const float Infinity = std::numeric_limits<float>::infinity();
+	for(const auto &[Size, Expected] : {std::pair{Max, 128}, std::pair{-Max, 6}, std::pair{Infinity, 128}, std::pair{-Infinity, 6}})
+	{
+		SCOPED_TRACE(Size);
+		EXPECT_EQ(QmIconRasterPixelSize(Size, 2.0f), Expected);
+	}
+}

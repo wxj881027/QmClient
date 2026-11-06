@@ -14,7 +14,7 @@ inline bool CCommandProcessorFragment_Vulkan::QmEnhancedShouldLoad() const
 	return qm_vulkan_ext::ShouldLoadEnhancedPipelines(QmEnhancedMode(), m_QmEnhancedSessionDisabled);
 }
 
-inline void CCommandProcessorFragment_Vulkan::QmEnhancedMarkDisabled(const qm_vulkan_ext::EDisableReason Reason)
+inline void CCommandProcessorFragment_Vulkan::QmEnhancedMarkDisabled(const qm_vulkan_ext::EDisableReason Reason) noexcept
 {
 	m_QmEnhancedSessionDisabled = true;
 	m_QmEnhancedDisableReason = Reason;
@@ -22,8 +22,22 @@ inline void CCommandProcessorFragment_Vulkan::QmEnhancedMarkDisabled(const qm_vu
 	m_ProceduralRingPipelineValid = false;
 	SyncProceduralRingCapability();
 	if(m_pBackendCapabilities != nullptr)
-		m_pBackendCapabilities->m_MediaIslandSdf = false;
-	log_info("vulkan", "Qm optional enhanced pipelines disabled: %s", qm_vulkan_ext::DisableReasonLabel(Reason));
+	{
+		m_pBackendCapabilities->m_MediaIslandSdf.store(false, std::memory_order_release);
+	}
+	try
+	{
+		log_info("vulkan", "Qm optional enhanced pipelines disabled: %s", qm_vulkan_ext::DisableReasonLabel(Reason));
+	}
+	catch(...)
+	{
+		// 诊断失败不能打断已经发布的禁用状态或异常收尾。
+	}
+}
+
+inline void CCommandProcessorFragment_Vulkan::ApplyDeferredQmDeviceLoss() noexcept
+{
+	m_QmDeferredDeviceLoss.ConsumeAfterRecording(m_QmEnhancedSessionDisabled, [this]() noexcept { return QmEnhancedMode(); }, [this](qm_vulkan_ext::EDisableReason Reason) noexcept { QmEnhancedMarkDisabled(Reason); });
 }
 
 inline void CCommandProcessorFragment_Vulkan::SyncProceduralRingCapability()
@@ -393,6 +407,8 @@ inline void CCommandProcessorFragment_Vulkan::CleanupQmPipelines()
 {
 	m_MediaIslandSdfPipeline.Destroy(m_VKDevice);
 	m_RoundedRectSdfPipeline.Destroy(m_VKDevice);
+	m_QmMediaIslandSdfPipelineValid = false;
+	m_QmRoundedRectSdfPipelineValid = false;
 	m_RoundedRectSdfTexturePipeline.Destroy(m_VKDevice);
 	m_QmRoundedRectSdfTexturePipelineValid = false;
 	m_ProceduralRingPipeline.Destroy(m_VKDevice);

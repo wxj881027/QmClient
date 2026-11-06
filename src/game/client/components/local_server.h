@@ -1,13 +1,14 @@
 #ifndef GAME_CLIENT_COMPONENTS_LOCAL_SERVER_H
 #define GAME_CLIENT_COMPONENTS_LOCAL_SERVER_H
 
+#include "local_server_launch.h"
+
 #include <base/types.h>
 
 #include <engine/shared/config.h>
 
 #include <game/client/component.h>
 
-#include <string>
 #include <vector>
 
 class CLocalServer : public CComponentInterfaces
@@ -22,11 +23,10 @@ public:
 
 private:
 	char m_aRconPassword[sizeof(g_Config.m_SvRconPassword)] = "";
+	void ReportStartFailure(bool ExecutableMissing = false) noexcept;
 
 #if defined(CONF_PLATFORM_ANDROID)
-	std::vector<std::string> m_vPendingArguments;
-	bool m_StartPending = false;
-	bool m_ConnectWhenReady = false;
+	CLocalServerLaunch m_Launch;
 #else
 	PROCESS m_Process = INVALID_PROCESS;
 #endif

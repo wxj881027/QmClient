@@ -2,14 +2,19 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_SETTINGS_RESOURCE_PREVIEW_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_SETTINGS_RESOURCE_PREVIEW_H
 
+#include "settings_asset_memory.h"
+
+#include <base/borrowed_allocator.h>
 #include <base/lock.h>
 
 #include <engine/client/gpu_upload_limiter.h>
+#include <engine/engine.h>
 #include <engine/graphics.h>
 #include <engine/image.h>
 #include <engine/shared/jobs.h>
 #include <engine/storage.h>
 
+#include <game/client/components/assets_preview_scale.h>
 #include <game/client/components/settings_resource_jobs.h>
 
 #include <cstddef>
@@ -17,8 +22,12 @@
 #include <deque>
 #include <functional>
 #include <memory>
+#include <new>
+#include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 enum class ESettingsResourcePreviewPriority
@@ -43,6 +52,7 @@ struct SResourcePreviewKey
 	uint64_t m_LocaleHash = 0;
 	int m_UiScale = 0;
 	int m_CardWidth = 0;
+	uint64_t m_ResourceGeneration = 0;
 
 	bool operator==(const SResourcePreviewKey &Other) const;
 };
@@ -50,6 +60,16 @@ struct SResourcePreviewKey
 struct SResourcePreviewKeyHash
 {
 	size_t operator()(const SResourcePreviewKey &Key) const;
+};
+
+// 只在主线程同步清理期间借用，字符串不能来自即将删除的 key。
+struct SResourcePreviewInvalidationScope
+{
+	const char *m_pType = nullptr;
+	const char *m_pId = nullptr;
+	std::optional<bool> m_Workshop;
+
+	bool Matches(const SResourcePreviewKey &Key) const;
 };
 
 struct SResourcePreviewState
@@ -95,8 +115,15 @@ struct SResourcePreviewTelemetry
 
 struct SResourcePreviewArtifact
 {
+	SResourcePreviewArtifact() = default;
+	SResourcePreviewArtifact(SResourcePreviewArtifact &&) = default;
+	SResourcePreviewArtifact &operator=(SResourcePreviewArtifact &&) = default;
+	// 结果未进入上传队列或被调用方丢弃时，也回收仍持有的CPU像素。
+	~SResourcePreviewArtifact() { m_Image.Free(); }
 	CImageInfo m_Image;
+	CSettingsAssetMemoryLease m_MemoryLease;
 	bool m_Success = false;
+	bool m_Deferred = false;
 	double m_DurationMs = 0.0;
 };
 
@@ -112,6 +139,8 @@ public:
 	void MarkTextureReady(const SResourcePreviewKey &Key, IGraphics::CTextureHandle Texture = IGraphics::CTextureHandle(), IGraphics *pGraphics = nullptr);
 	void MarkUploadFailed(const SResourcePreviewKey &Key);
 	void Clear(IGraphics *pGraphics = nullptr);
+	void Invalidate(const SResourcePreviewInvalidationScope &Scope, IGraphics *pGraphics);
+	void DiscardInputs(const SResourcePreviewInvalidationScope &Scope);
 	size_t Size() const { return m_vStates.size(); }
 
 private:
@@ -143,14 +172,36 @@ class CSettingsResourcePreviewUploadScheduler
 public:
 	using TUploadFinalize = std::function<void(bool TextureValid, IGraphics::CTextureHandle Texture)>;
 
-	void EnqueueUpload(const SResourcePreviewKey &Key, CImageInfo &&Image, const char *pDebugName);
-	void EnqueueUploadToTarget(const SResourcePreviewKey &Key, CImageInfo &&Image, TUploadFinalize &&Finalize, const char *pDebugName);
+	explicit CSettingsResourcePreviewUploadScheduler(IAllocationResource *pMemory = nullptr) :
+		m_vUploadQueue(pMemory) {}
+	bool EnqueueUpload(const SResourcePreviewKey &Key, CImageInfo &&Image, const char *pDebugName, CSettingsAssetMemoryLease *pMemoryLease = nullptr);
+	// 回调捕获与包装也在准备阶段构造，失败时不接管调用方的图像。
+	template<typename FPrepareFinalize>
+	bool EnqueueUploadToTarget(const SResourcePreviewKey &Key, CImageInfo &&Image, FPrepareFinalize &&PrepareFinalize, const char *pDebugName, CSettingsAssetMemoryLease *pMemoryLease = nullptr)
+	{
+		TUploadFinalize Finalize;
+		try
+		{
+			Finalize = PrepareFinalize();
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
+		return EnqueuePrepared(Key, std::move(Image), std::move(Finalize), pDebugName, pMemoryLease);
+	}
 	bool DrainOne(SResourcePreviewUploadBudget &Budget, SResourcePreviewTelemetry &Telemetry, CSettingsResourcePreviewCache &Cache, IGraphics *pGraphics);
 	int Drain(SResourcePreviewUploadBudget &Budget, SResourcePreviewTelemetry &Telemetry, CSettingsResourcePreviewCache &Cache, IGraphics *pGraphics);
 	size_t QueueDepth() const { return m_vUploadQueue.size(); }
 	void Clear();
+	void Invalidate(const SResourcePreviewInvalidationScope &Scope);
 
 private:
+	bool EnqueuePrepared(const SResourcePreviewKey &Key, CImageInfo &&Image, TUploadFinalize &&Finalize, const char *pDebugName, CSettingsAssetMemoryLease *pMemoryLease);
 	struct SUploadItem
 	{
 		SUploadItem() = default;
@@ -162,11 +213,12 @@ private:
 		~SUploadItem() { m_Image.Free(); }
 		SResourcePreviewKey m_Key;
 		CImageInfo m_Image;
+		CSettingsAssetMemoryLease m_MemoryLease;
 		std::string m_DebugName;
 		TUploadFinalize m_Finalize;
 	};
 
-	std::deque<SUploadItem> m_vUploadQueue;
+	std::deque<SUploadItem, CBorrowedAllocator<SUploadItem>> m_vUploadQueue;
 };
 
 class CSettingsResourcePreviewJob : public IJob
@@ -177,11 +229,31 @@ public:
 		SResourcePreviewArtifact m_Artifact;
 	};
 
-	CSettingsResourcePreviewJob(std::string Name, CImageInfo &&Image, int TargetSize);
-	static std::shared_ptr<CSettingsResourcePreviewJob> FromPath(std::string Name, std::string Path, IStorage *pStorage, int StorageType, int TargetSize);
+	CSettingsResourcePreviewJob(std::string Name, CImageInfo &&Image, int TargetSize, CSettingsAssetMemoryBudget *pBudget = nullptr);
+	~CSettingsResourcePreviewJob() override { m_InputImage.Free(); }
+	static std::shared_ptr<CSettingsResourcePreviewJob> FromPath(std::string Name, std::string Path, IStorage *pStorage, int StorageType, int TargetSize,
+		size_t MaxFileBytes = LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE, size_t MaxDecodedBytes = ASSET_PREVIEW_MAX_DECODED_BYTES,
+		CSettingsAssetMemoryBudget *pBudget = nullptr, ESettingsAssetImageAdmission *pAdmission = nullptr);
 
 	bool Completed() const REQUIRES(!m_Lock);
 	SResult TakeResult() REQUIRES(!m_Lock);
+	void CancelPublication() REQUIRES(!m_Lock);
+	// 仅供主线程发布结果；消费者准备失败时不取走结果，也不允许重入此 job。
+	template<typename FConsume>
+	bool TryPublishResult(FConsume &&Consume) REQUIRES(!m_Lock)
+	{
+		const CLockScope Lock(m_Lock);
+		if(m_PublicationCancelled || m_ResultTaken)
+			return true;
+		if(!m_Completed && !Finished())
+			return false;
+		SResult Failure;
+		if(!Consume(m_Completed ? m_Result : Failure))
+			return false;
+		m_Result = SResult();
+		m_ResultTaken = true;
+		return true;
+	}
 
 protected:
 	void Run() override REQUIRES(!m_Lock);
@@ -192,14 +264,106 @@ private:
 	IStorage *m_pStorage = nullptr;
 	int m_StorageType = IStorage::TYPE_ALL;
 	CImageInfo m_InputImage;
+	CSettingsAssetMemoryLease m_InputMemoryLease;
 	int m_TargetSize = 0;
+	size_t m_MaxFileBytes = LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE;
+	size_t m_MaxDecodedBytes = ASSET_PREVIEW_MAX_DECODED_BYTES;
 	mutable CLock m_Lock;
 	SResult m_Result;
 	bool m_Completed = false;
+	bool m_ResultTaken = false;
+	bool m_PublicationCancelled = false;
 };
 
-SResourcePreviewArtifact BuildPreviewArtifact(CImageInfo &&Image, int TargetSize);
-SResourcePreviewArtifact BuildPreviewArtifactFromPath(const char *pPath, IStorage *pStorage, int StorageType, const char *pContextName, int TargetSize);
+bool TryPublishSettingsResourcePreviewJob(CSettingsResourcePreviewJob &Job, const SResourcePreviewKey &Key, CSettingsResourcePreviewCache &Cache, CSettingsResourcePreviewUploadScheduler &Uploads, SResourcePreviewTelemetry &Telemetry, uint64_t CurrentGeneration = 0);
+
+// 压力回收仅撤回 CPU 输入，已有贴图及元数据继续显示；运行中的输入由 worker 保活。
+template<typename TJobs>
+void DiscardSettingsResourcePreviewInputs(CSettingsResourcePreviewCache &Cache, CSettingsResourcePreviewUploadScheduler &Uploads, TJobs &Jobs, const SResourcePreviewInvalidationScope &Scope = {})
+{
+	for(auto It = Jobs.begin(); It != Jobs.end();)
+	{
+		if(!Scope.Matches(It->first))
+		{
+			++It;
+			continue;
+		}
+		if(It->second)
+			It->second->CancelPublication();
+		It = Jobs.erase(It);
+	}
+	Uploads.Invalidate(Scope);
+	Cache.DiscardInputs(Scope);
+}
+
+// 代际先推进，再关闭发布并清理跟踪；worker 输入仍由 pool owner 保活，不阻塞等待。
+// 代际区间及匹配字符串由调用方保证在同步调用期间有效，空区间用于单个身份移除。
+template<typename TJobs>
+void InvalidateSettingsResourcePreviews(CSettingsResourcePreviewCache &Cache, CSettingsResourcePreviewUploadScheduler &Uploads, TJobs &Jobs, IGraphics *pGraphics, const SResourcePreviewInvalidationScope &Scope = {}, uint64_t *pGenerations = nullptr, size_t GenerationCount = 0)
+{
+	for(size_t Index = 0; Index < GenerationCount; ++Index)
+		++pGenerations[Index];
+	for(auto It = Jobs.begin(); It != Jobs.end();)
+	{
+		if(!Scope.Matches(It->first))
+		{
+			++It;
+			continue;
+		}
+		if(It->second)
+			It->second->CancelPublication();
+		It = Jobs.erase(It);
+	}
+	Uploads.Invalidate(Scope);
+	Cache.Invalidate(Scope, pGraphics);
+}
+
+// 跟踪节点先准备，接收失败撤回；缓存等待标记只在引擎确认后发布。
+template<typename TJobs, typename FCreate>
+bool TryStartSettingsResourcePreviewJob(CSettingsResourcePreviewCache &Cache, TJobs &Jobs, const SResourcePreviewKey &Key, IEngine &Engine, FCreate CreateJob)
+{
+	auto Tracked = Jobs.end();
+	bool Linked = false;
+	try
+	{
+		auto &State = Cache.GetOrCreate(Key);
+		if(State.m_TextureReady || State.m_PreviewJobPending || State.m_UploadPending || Jobs.find(Key) != Jobs.end())
+			return false;
+		auto pCandidate = CreateJob();
+		if(!pCandidate)
+			return false;
+		auto Inserted = Jobs.emplace(Key, pCandidate);
+		if(!Inserted.second)
+			return false;
+		Tracked = Inserted.first;
+		Linked = true;
+		if(!Engine.TryAddJob(pCandidate))
+		{
+			Jobs.erase(Tracked);
+			return false;
+		}
+		State.m_PreviewJobPending = true;
+		State.m_Failed = false;
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		if(Linked)
+			Jobs.erase(Tracked);
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		if(Linked)
+			Jobs.erase(Tracked);
+		return false;
+	}
+}
+
+SResourcePreviewArtifact BuildPreviewArtifact(CImageInfo &&Image, int TargetSize, CSettingsAssetMemoryLease *pMemoryLease = nullptr, CSettingsAssetMemoryBudget *pBudget = nullptr);
+SResourcePreviewArtifact BuildPreviewArtifactFromPath(const char *pPath, IStorage *pStorage, int StorageType, const char *pContextName, int TargetSize,
+	size_t MaxFileBytes = LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE, size_t MaxDecodedBytes = ASSET_PREVIEW_MAX_DECODED_BYTES,
+	CSettingsAssetMemoryBudget *pBudget = nullptr, CSettingsAssetMemoryLease *pMemoryLease = nullptr);
 bool SettingsResourcePreviewImageValidForUpload(const CImageInfo &Image);
 bool SettingsResourcePreviewConsumeUploadBudget(SResourcePreviewUploadBudget &Budget, int Count = 1);
 void SettingsResourcePreviewCommitUploadBudget(SResourcePreviewUploadBudget &Budget, int Count = 1);

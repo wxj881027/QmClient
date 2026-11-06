@@ -7,7 +7,6 @@
 #include <base/system.h>
 
 #include <engine/engine.h>
-#include <engine/gfx/image_loader.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <engine/shared/linereader.h>
@@ -37,18 +36,6 @@ namespace
 		LogSettingsResourcePerf(CMenus::SETTINGS_LANGUAGE, pJob, Count, Budget, Remaining, Reason, DurationMs);
 		LogSettingsResourcePerf(CMenus::SETTINGS_PLAYER, pJob, Count, Budget, Remaining, Reason, DurationMs);
 	}
-}
-
-CCountryFlags::CCountryFlagLoadJob::CCountryFlagLoadJob(const char *pPath, int CountryCode, IStorage *pStorage) :
-	m_Path(pPath),
-	m_pStorage(pStorage)
-{
-	m_Result.m_CountryCode = CountryCode;
-}
-
-CCountryFlags::CCountryFlagLoadJob::~CCountryFlagLoadJob()
-{
-	m_Result.m_Image.Free();
 }
 
 bool CCountryFlags::ValidateCountryCodeString(const char *pString)
@@ -91,37 +78,6 @@ bool CCountryFlags::ValidateCountryCodeIntegerString(const char *pString)
 	}
 
 	return true;
-}
-
-void CCountryFlags::CCountryFlagLoadJob::Run()
-{
-	void *pFileData = nullptr;
-	unsigned FileSize = 0;
-	if(!m_pStorage->ReadFile(m_Path.c_str(), IStorage::TYPE_ALL, &pFileData, &FileSize))
-	{
-		log_error("countryflags", "Failed to read flag file '%s'", m_Path.c_str());
-		CLockScope Lock(m_Mutex);
-		m_Completed = true;
-		return;
-	}
-
-	CImageInfo Image;
-	if(!CImageLoader::LoadPng(static_cast<uint8_t *>(pFileData), FileSize, m_Path.c_str(), Image))
-	{
-		free(pFileData);
-		log_error("countryflags", "Failed to decode flag PNG '%s'", m_Path.c_str());
-		CLockScope Lock(m_Mutex);
-		m_Completed = true;
-		return;
-	}
-	free(pFileData);
-
-	{
-		CLockScope Lock(m_Mutex);
-		m_Result.m_Image = std::move(Image);
-		m_Result.m_Success = true;
-		m_Completed = true;
-	}
 }
 
 void CCountryFlags::LoadCountryflagsIndexfile()
@@ -215,22 +171,19 @@ void CCountryFlags::LoadCountryflagsIndexfile()
 	log_debug("countryflags", "Loaded %" PRIzu " country flags", m_vCountryFlags.size());
 }
 
-void CCountryFlags::StartFlagLoadJob(int Index)
+void CCountryFlags::StartFlagLoadJob(size_t Index)
 {
-	if(Index < 0 || Index >= (int)m_vCountryFlags.size())
+	if(Index >= m_vCountryFlags.size() || Index >= m_vLoadTriggered.size())
 		return;
 
 	if(m_vLoadTriggered[Index])
 		return;
 
-	m_vLoadTriggered[Index] = true;
-
 	char aPath[128];
 	str_format(aPath, sizeof(aPath), "countryflags/%s.png", m_vCountryFlags[Index].m_aCountryCodeString);
 
-	auto pJob = std::make_shared<CCountryFlagLoadJob>(aPath, m_vCountryFlags[Index].m_CountryCode, Storage());
-	Engine()->AddJob(pJob);
-	m_PendingJobs.push_back(pJob);
+	if(!TryStartFlagLoad(m_PendingJobs, m_vLoadTriggered, Index, [&]() { return std::make_shared<CCountryFlagLoadJob>(aPath, m_vCountryFlags[Index].m_CountryCode, Storage(), Index); }, [&](const std::shared_ptr<CCountryFlagLoadJob> &pJob) { return Engine()->TryAddJob(pJob); }))
+		return;
 	LogCountryFlagSettingsResourcePerf("queued", 1, 1, (int)m_PendingJobs.size(), ESettingsWarmupMissReason::RESOURCE_PLAN_PENDING, 0.0);
 }
 
@@ -257,21 +210,17 @@ void CCountryFlags::ProcessCompletedJobs()
 		LogCountryFlagSettingsResourcePerf("complete", Result.m_Success ? 1 : 0, 1, (int)m_PendingJobs.size() - 1, Result.m_Success ? ESettingsWarmupMissReason::NONE : ESettingsWarmupMissReason::JOB_RESULT_PENDING, 0.0);
 		if(Result.m_Success)
 		{
-			for(auto &Flag : m_vCountryFlags)
+			if(auto *pFlag = FindFlagLoadTarget(m_vCountryFlags, Result))
 			{
-				if(Flag.m_CountryCode == Result.m_CountryCode)
-				{
-					Flag.m_Texture = Graphics()->LoadTextureRawMove(Result.m_Image, 0, Flag.m_aCountryCodeString);
-					Flag.m_Loaded = true;
-					Flag.m_LoadedTimestamp = time_get();
-					GameClient()->GpuUploadLimiter()->OnUploaded();
-					LogCountryFlagSettingsResourcePerf("upload", 1, 1, (int)m_PendingJobs.size() - 1, ESettingsWarmupMissReason::NONE, 0.0);
+				pFlag->m_Texture = Graphics()->LoadTextureRawMove(Result.m_Image, 0, pFlag->m_aCountryCodeString);
+				pFlag->m_Loaded = true;
+				pFlag->m_LoadedTimestamp = time_get();
+				GameClient()->GpuUploadLimiter()->OnUploaded();
+				LogCountryFlagSettingsResourcePerf("upload", 1, 1, (int)m_PendingJobs.size() - 1, ESettingsWarmupMissReason::NONE, 0.0);
 
-					if(g_Config.m_Debug)
-					{
-						log_debug("countryflags", "loaded country flag '%s'", Flag.m_aCountryCodeString);
-					}
-					break;
+				if(g_Config.m_Debug)
+				{
+					log_debug("countryflags", "loaded country flag '%s'", pFlag->m_aCountryCodeString);
 				}
 			}
 		}
@@ -322,7 +271,7 @@ void CCountryFlags::PrewarmByCountryCodes(const std::vector<int> &vCountryCodes)
 	{
 		CountryCode = QmNormalizeCountryCode(CountryCode);
 		size_t Index = m_aCodeIndexLUT[maximum(0, (CountryCode - CODE_LB) % CODE_RANGE)];
-		StartFlagLoadJob((int)Index);
+		StartFlagLoadJob(Index);
 	}
 }
 
@@ -342,7 +291,7 @@ bool CCountryFlags::PrewarmByCountryCodesReady(const std::vector<int> &vCountryC
 		size_t Index = m_aCodeIndexLUT[maximum(0, (CountryCode - CODE_LB) % CODE_RANGE)];
 		if(Index >= m_vCountryFlags.size() || m_vLoadTriggered[Index])
 			continue;
-		StartFlagLoadJob((int)Index);
+		StartFlagLoadJob(Index);
 		if(++StartsThisCall >= MaxStartsPerCall)
 			break;
 	}

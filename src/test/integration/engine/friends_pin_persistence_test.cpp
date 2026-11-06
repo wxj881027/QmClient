@@ -6,43 +6,13 @@
 #include <engine/storage.h>
 
 #include <gtest/gtest.h>
+#include <test/support/friends_config_session.h>
 #include <test/test.h>
 
 #include <memory>
 
 namespace
 {
-	class CFriendsConfigSession
-	{
-		std::unique_ptr<IKernel> m_pKernel{IKernel::Create()};
-		std::unique_ptr<IConsole> m_pConsole{CreateConsole(CFGFLAG_CLIENT)};
-		std::unique_ptr<IConfigManager> m_pConfig{CreateConfigManager()};
-		std::unique_ptr<CFriends> m_pFriends = std::make_unique<CFriends>();
-
-	public:
-		explicit CFriendsConfigSession(IStorage *pStorage)
-		{
-			m_pKernel->RegisterInterface(pStorage, false);
-			m_pKernel->RegisterInterface(m_pConsole.get(), false);
-			m_pKernel->RegisterInterface(m_pConfig.get(), false);
-			m_pKernel->RegisterInterface(m_pFriends.get(), false);
-			m_pConsole->Init();
-			m_pConfig->Init();
-			m_pFriends->Init();
-			m_pConsole->StoreCommands(false);
-			g_Config.m_ClSaveSettings = 1;
-			g_Config.m_ClFriendsIgnoreClan = 0;
-		}
-
-		CFriends *Friends() { return m_pFriends.get(); }
-		IConsole *Console() { return m_pConsole.get(); }
-		IConfigManager *Config() { return m_pConfig.get(); }
-		bool Load()
-		{
-			return m_pConsole->ExecuteFile(s_aConfigDomains[ConfigDomain::QMCLIENT].m_aConfigPath, IConsole::CLIENT_ID_UNSPECIFIED, false, IStorage::TYPE_SAVE, true);
-		}
-	};
-
 	class CFriendsPinPersistence : public testing::Test
 	{
 	protected:

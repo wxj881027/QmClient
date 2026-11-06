@@ -59,6 +59,9 @@ void RestartAndroidApp();
  */
 bool StartAndroidServer(const char **ppArguments, size_t NumArguments);
 
+// 取消待绑定启动，或停止已启动的本地服务；无需等待Messenger可用。
+void StopAndroidServer();
+
 /**
  * Adds a command to the execution queue of the local server.
  *

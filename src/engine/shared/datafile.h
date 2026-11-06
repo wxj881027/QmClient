@@ -11,8 +11,10 @@
 #include <engine/storage.h>
 
 #include <cstdint>
+#include <cstdlib>
 #include <functional>
 #include <map>
+#include <memory>
 #include <vector>
 
 enum
@@ -25,12 +27,28 @@ enum
  * 函数可以校验数据，出错时返回 `std::make_pair(nullptr, 0)`，成功时返回原始数据。
  * 函数也可以替换数据并返回新的数据指针与大小；新数据必须用 `malloc` 分配。
  * 返回不同数据或出错时，函数必须用 `free` 释放原始数据。
+ * 返回长度须能由读取器的 `int` 长度接口表示，超范围结果由读取器释放并拒绝。
  */
 typedef std::function<std::pair<void *, size_t>(void *pData, size_t Size)> FDataProcessor;
 
 // raw datafile access
+class IAllocationResource;
+
 class CDataFileReader
 {
+public:
+	class IOperations
+	{
+	public:
+		virtual ~IOperations() = default;
+		// 与 io_length 一致，查询后将文件位置恢复到起点。
+		virtual int64_t Length(IOHANDLE File) noexcept;
+		virtual unsigned Read(IOHANDLE File, void *pData, unsigned Size) noexcept;
+		// 返回的缓冲必须可由 free 回收，包括交给数据处理器的输入。
+		virtual void *Allocate(size_t Size) noexcept;
+	};
+
+private:
 	class CDatafile *m_pDataFile = nullptr;
 
 	int GetExternalItemType(int InternalType, CUuid *pUuid);
@@ -41,6 +59,10 @@ public:
 	CDataFileReader &operator=(CDataFileReader &&Other);
 
 	[[nodiscard]] bool Open(class IStorage *pStorage, const char *pFilename, int StorageType);
+	// 校验分配器只在 Open 期间借用；空指针沿用普通 new/delete 分配。
+	[[nodiscard]] bool Open(class IStorage *pStorage, const char *pFilename, int StorageType, IAllocationResource *pValidationMemory);
+	// 文件操作只借用，须存活到 Close 或移动后的持有者关闭；默认操作不保留临时对象。
+	[[nodiscard]] bool Open(class IStorage *pStorage, const char *pFilename, int StorageType, IAllocationResource *pValidationMemory, IOperations *pOperations);
 	void Close();
 	bool IsOpen() const;
 	IOHANDLE File() const;
@@ -50,6 +72,8 @@ public:
 	void *GetDataSwapped(int Index); // makes sure that the data is 32bit LE ints when saved
 	const char *GetDataString(int Index);
 	void AddDataProcessor(int Index, FDataProcessor DataProcessor);
+	// 输入预算在读取/解压分配前检查，不改变处理结果长度的独立检查。
+	void AddDataProcessor(int Index, size_t MaxInputSize, FDataProcessor DataProcessor);
 	void UnloadData(int Index);
 	int NumData() const;
 
@@ -76,13 +100,32 @@ public:
 		COMPRESSION_BEST,
 	};
 
+	class IOperations
+	{
+	public:
+		virtual ~IOperations() = default;
+		// 返回的内存由 free 释放；注入对象须比写入器及其移动后的实例存活更久。
+		virtual void *Allocate(size_t Size) noexcept;
+		virtual bool Compress(void *pOutput, unsigned long &OutputSize, const void *pInput, unsigned long InputSize, int Level);
+		virtual unsigned Write(IOHANDLE File, const void *pData, unsigned Size);
+		virtual int Error(IOHANDLE File);
+		// 即使返回失败也已消费句柄，不能重试关闭。
+		virtual int Close(IOHANDLE File) noexcept;
+	};
+
 private:
+	struct CFreeDeleter
+	{
+		void operator()(void *pData) const noexcept { std::free(pData); }
+	};
+	using CBuffer = std::unique_ptr<void, CFreeDeleter>;
+
 	class CDataInfo
 	{
 	public:
-		void *m_pUncompressedData;
+		CBuffer m_pUncompressedData;
 		int m_UncompressedSize;
-		void *m_pCompressedData;
+		CBuffer m_pCompressedData;
 		int m_CompressedSize;
 		ECompressionLevel m_CompressionLevel;
 	};
@@ -95,7 +138,7 @@ private:
 		int m_Size;
 		int m_Next;
 		int m_Prev;
-		void *m_pData;
+		CBuffer m_pData;
 	};
 
 	class CItemTypeInfo
@@ -113,7 +156,11 @@ private:
 		CUuid m_Uuid;
 	};
 
-	IOHANDLE m_File;
+	IOperations m_DefaultOperations;
+	IOperations *m_pOperations;
+	IOHANDLE m_File = nullptr;
+	bool m_Error = false;
+	bool m_Finished = false;
 	std::map<uint16_t, CItemTypeInfo, std::less<>> m_ItemTypes; // item types must be sorted in ascending order
 	std::vector<CItemInfo> m_vItems;
 	std::vector<CDataInfo> m_vDatas;
@@ -121,18 +168,25 @@ private:
 
 	int GetTypeFromIndex(int Index) const;
 	int GetExtendedItemTypeIndex(int Type, const CUuid *pUuid);
+	bool WriteFile();
+	bool Write(const void *pData, unsigned Size);
 
 public:
-	CDataFileWriter();
+	explicit CDataFileWriter(IOperations *pOperations = nullptr);
 	// NOLINTNEXTLINE(bugprone-exception-escape)
 	CDataFileWriter(CDataFileWriter &&Other) :
+		m_pOperations(Other.m_pOperations == &Other.m_DefaultOperations ? &m_DefaultOperations : Other.m_pOperations),
 		m_File(Other.m_File),
+		m_Error(Other.m_Error),
+		m_Finished(Other.m_Finished),
 		m_ItemTypes(std::move(Other.m_ItemTypes)),
 		m_vItems(std::move(Other.m_vItems)),
 		m_vDatas(std::move(Other.m_vDatas)),
 		m_vExtendedItemTypes(std::move(Other.m_vExtendedItemTypes))
 	{
 		Other.m_File = nullptr;
+		Other.m_Error = true;
+		Other.m_Finished = true;
 	}
 	~CDataFileWriter();
 
@@ -141,7 +195,8 @@ public:
 	int AddData(size_t Size, const void *pData, ECompressionLevel CompressionLevel = COMPRESSION_DEFAULT);
 	int AddDataSwapped(size_t Size, const void *pData);
 	int AddDataString(const char *pStr);
-	void Finish();
+	// 只完成一次；任何准备、压缩、写入或关闭失败都禁止发布候选文件。
+	bool Finish() noexcept;
 };
 
 #endif

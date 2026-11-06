@@ -2,6 +2,7 @@
 #include <game/client/components/qmclient/friend_online_tracker.h>
 
 #include <gtest/gtest.h>
+#include <test/support/friend_online_tracker_test_support.h>
 
 #include <vector>
 

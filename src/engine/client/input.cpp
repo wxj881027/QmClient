@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "input.h"
 
+#include "input_ime.h"
 #include "input_sdl3.h"
 #include "keynames.h"
 
@@ -22,7 +23,10 @@
 #include <SDL3/SDL.h>
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
+#include <cstdlib>
+#include <memory>
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <windows.h>
@@ -40,26 +44,8 @@ namespace
 
 void CInput::AddKeyEvent(int Key, int Flags)
 {
-	dbg_assert(Key >= KEY_FIRST && Key < KEY_LAST, "Key invalid: %d", Key);
-	dbg_assert((Flags & (FLAG_PRESS | FLAG_RELEASE)) != 0 && (Flags & ~(FLAG_PRESS | FLAG_RELEASE | FLAG_REPEAT)) == 0, "Flags invalid (unknown flag): %d", Flags);
-	dbg_assert((Flags & FLAG_REPEAT) == 0 || (Flags & FLAG_PRESS) != 0, "Flags invalid (key repeat implies key press): %d", Flags);
-
-	CEvent Event;
-	Event.m_Key = Key;
-	Event.m_Flags = Flags;
-	Event.m_aText[0] = '\0';
-	Event.m_InputCount = m_InputCounter;
-	m_vInputEvents.emplace_back(Event);
-
-	if(Flags & IInput::FLAG_PRESS)
-	{
-		m_aCurrentKeyStates[Key] = true;
-		m_aFrameKeyStates[Key] = true;
-	}
-	if(Flags & IInput::FLAG_RELEASE)
-	{
-		m_aCurrentKeyStates[Key] = false;
-	}
+	const SSdlKeyEvent Request{Key, Flags};
+	AppendSdlKeyEvents(m_vInputEvents, &Request, 1, m_InputCounter, m_aCurrentKeyStates, m_aFrameKeyStates);
 }
 
 void CInput::AddTextEvent(const char *pText)
@@ -131,11 +117,10 @@ void CInput::InitJoysticks()
 	}
 	m_JoystickInitialized = true;
 	int NumJoysticks = 0;
-	SDL_JoystickID *pIds = SDL_GetJoysticks(&NumJoysticks);
+	std::unique_ptr<SDL_JoystickID, decltype(&SDL_free)> pIds(SDL_GetJoysticks(&NumJoysticks), SDL_free);
 	dbg_msg("joystick", "%d joystick(s) found", NumJoysticks);
 	for(int i = 0; pIds != nullptr && i < NumJoysticks; ++i)
-		OpenJoystick(pIds[i]);
-	SDL_free(pIds);
+		OpenJoystick(pIds.get()[i]);
 	UpdateActiveJoystick();
 
 	Console()->Chain("inp_controller_guid", ConchainJoystickGuidChanged, this);
@@ -149,13 +134,16 @@ bool CInput::OpenJoystick(int JoystickIndex)
 		dbg_msg("joystick", "Could not open joystick %d: '%s'", JoystickIndex, SDL_GetError());
 		return false;
 	}
-	if(std::find_if(m_vJoysticks.begin(), m_vJoysticks.end(), [pJoystick](const CJoystick &Joystick) -> bool { return Joystick.m_pDelegate == pJoystick; }) != m_vJoysticks.end())
-	{
-		// 重复打开也取得一个引用，需要立即归还。
-		SDL_CloseJoystick(pJoystick);
+	const bool Added = AttachSdlJoystick(pJoystick, SDL_CloseJoystick, [&](SDL_Joystick *pOpened) {
+		if(std::find_if(m_vJoysticks.begin(), m_vJoysticks.end(), [pOpened](const CJoystick &Joystick) { return Joystick.m_pDelegate == pOpened; }) != m_vJoysticks.end())
+			return false;
+		m_vJoysticks.emplace_back(this, m_vJoysticks.size(), pOpened);
+		return true;
+	});
+	if(!Added)
 		return false;
-	}
-	m_vJoysticks.emplace_back(this, m_vJoysticks.size(), pJoystick);
+	// vector扩容后先恢复借用指针，再执行可能失败的诊断。
+	UpdateActiveJoystick();
 	const CJoystick &Joystick = m_vJoysticks[m_vJoysticks.size() - 1];
 	dbg_msg("joystick", "Opened joystick %d '%s' (%d axes, %d buttons, %d balls, %d hats)", JoystickIndex, Joystick.GetName(),
 		Joystick.GetNumAxes(), Joystick.GetNumButtons(), Joystick.GetNumBalls(), Joystick.GetNumHats());
@@ -203,7 +191,8 @@ CInput::CJoystick::CJoystick(CInput *pInput, int Index, SDL_Joystick *pDelegate)
 	m_NumButtons = SDL_GetNumJoystickButtons(pDelegate);
 	m_NumBalls = SDL_GetNumJoystickBalls(pDelegate);
 	m_NumHats = SDL_GetNumJoystickHats(pDelegate);
-	str_copy(m_aName, SDL_GetJoystickName(pDelegate));
+	const char *pName = SDL_GetJoystickName(pDelegate);
+	str_copy(m_aName, pName != nullptr ? pName : "");
 	SDL_GUIDToString(SDL_GetJoystickGUID(pDelegate), m_aGUID, sizeof(m_aGUID));
 	m_InstanceId = SDL_GetJoystickID(pDelegate);
 }
@@ -326,8 +315,8 @@ vec2 CInput::NativeMousePos() const
 
 bool CInput::NativeMousePressed(int Index) const
 {
-	int i = SDL_GetMouseState(nullptr, nullptr);
-	return (i & SDL_BUTTON_MASK(Index)) != 0;
+	const uint32_t Buttons = SDL_GetMouseState(nullptr, nullptr);
+	return SdlMouseButtonPressed(Buttons, Index);
 }
 
 bool CInput::GamepadButtonIsPressed(int Button) const
@@ -358,7 +347,7 @@ bool CInput::GlobalMousePressed(int Index) const
 {
 #if SDL_VERSION_ATLEAST(2, 0, 4)
 	const Uint32 Buttons = SDL_GetGlobalMouseState(nullptr, nullptr);
-	return Index > 0 && (Buttons & SDL_BUTTON_MASK(Index)) != 0;
+	return SdlMouseButtonPressed(Buttons, Index);
 #else
 	return NativeMousePressed(Index);
 #endif
@@ -384,10 +373,8 @@ void CInput::ClearTouchDeltas()
 
 std::string CInput::GetClipboardText()
 {
-	char *pClipboardText = SDL_GetClipboardText();
-	std::string ClipboardText = pClipboardText;
-	SDL_free(pClipboardText);
-	return ClipboardText;
+	return TakeSdlClipboardText(SDL_GetClipboardText(), SDL_free,
+		[](const char *pText) { return std::string(pText); });
 }
 
 void CInput::SetClipboardText(const char *pText)
@@ -445,14 +432,7 @@ void CInput::EnsureScreenKeyboardShown()
 
 void CInput::ConsumeEvents(std::function<void(const CEvent &Event)> Consumer) const
 {
-	for(const CEvent &Event : m_vInputEvents)
-	{
-		// Only propagate valid input events
-		if(Event.m_InputCount == m_InputCounter)
-		{
-			Consumer(Event);
-		}
-	}
+	ConsumeSdlInputEvents(m_vInputEvents, m_InputCounter, Consumer);
 }
 
 void CInput::Clear()
@@ -525,24 +505,27 @@ void CInput::HandleJoystickAxisMotionEvent(const SDL_JoyAxisEvent &Event)
 	const int LeftKey = KEY_JOY_AXIS_0_LEFT + 2 * Event.axis;
 	const int RightKey = LeftKey + 1;
 	const float DeadZone = GetJoystickDeadzone();
+	std::array<SSdlKeyEvent, 2> aKeys;
+	size_t NumKeys = 0;
 
 	if(Event.value <= SDL_JOYSTICK_AXIS_MIN * DeadZone && !m_aCurrentKeyStates[LeftKey])
 	{
-		AddKeyEvent(LeftKey, IInput::FLAG_PRESS);
+		aKeys[NumKeys++] = {LeftKey, IInput::FLAG_PRESS};
 	}
 	else if(Event.value > SDL_JOYSTICK_AXIS_MIN * DeadZone && m_aCurrentKeyStates[LeftKey])
 	{
-		AddKeyEvent(LeftKey, IInput::FLAG_RELEASE);
+		aKeys[NumKeys++] = {LeftKey, IInput::FLAG_RELEASE};
 	}
 
 	if(Event.value >= SDL_JOYSTICK_AXIS_MAX * DeadZone && !m_aCurrentKeyStates[RightKey])
 	{
-		AddKeyEvent(RightKey, IInput::FLAG_PRESS);
+		aKeys[NumKeys++] = {RightKey, IInput::FLAG_PRESS};
 	}
 	else if(Event.value < SDL_JOYSTICK_AXIS_MAX * DeadZone && m_aCurrentKeyStates[RightKey])
 	{
-		AddKeyEvent(RightKey, IInput::FLAG_RELEASE);
+		aKeys[NumKeys++] = {RightKey, IInput::FLAG_RELEASE};
 	}
+	AppendSdlKeyEvents(m_vInputEvents, aKeys.data(), NumKeys, m_InputCounter, m_aCurrentKeyStates, m_aFrameKeyStates);
 }
 
 void CInput::HandleJoystickButtonEvent(const SDL_JoyButtonEvent &Event)
@@ -578,13 +561,15 @@ void CInput::HandleJoystickHatMotionEvent(const SDL_JoyHatEvent &Event)
 		return;
 
 	int aHatKeys[2];
+	std::array<SSdlKeyEvent, NUM_JOYSTICK_BUTTONS_PER_HAT> aKeys;
+	size_t NumKeys = 0;
 	CJoystick::GetJoystickHatKeys(Event.hat, Event.value, aHatKeys);
 
 	for(int Key = KEY_JOY_HAT0_UP + Event.hat * NUM_JOYSTICK_BUTTONS_PER_HAT; Key <= KEY_JOY_HAT0_RIGHT + Event.hat * NUM_JOYSTICK_BUTTONS_PER_HAT; Key++)
 	{
 		if(Key != aHatKeys[0] && Key != aHatKeys[1] && m_aCurrentKeyStates[Key])
 		{
-			AddKeyEvent(Key, IInput::FLAG_RELEASE);
+			aKeys[NumKeys++] = {Key, IInput::FLAG_RELEASE};
 		}
 	}
 
@@ -592,17 +577,15 @@ void CInput::HandleJoystickHatMotionEvent(const SDL_JoyHatEvent &Event)
 	{
 		if(CurrentKey != KEY_UNKNOWN && !m_aCurrentKeyStates[CurrentKey])
 		{
-			AddKeyEvent(CurrentKey, IInput::FLAG_PRESS);
+			aKeys[NumKeys++] = {CurrentKey, IInput::FLAG_PRESS};
 		}
 	}
+	AppendSdlKeyEvents(m_vInputEvents, aKeys.data(), NumKeys, m_InputCounter, m_aCurrentKeyStates, m_aFrameKeyStates);
 }
 
 void CInput::HandleJoystickAddedEvent(const SDL_JoyDeviceEvent &Event)
 {
-	if(OpenJoystick(Event.which))
-	{
-		UpdateActiveJoystick();
-	}
+	OpenJoystick(Event.which);
 }
 
 void CInput::HandleJoystickRemovedEvent(const SDL_JoyDeviceEvent &Event)
@@ -671,12 +654,9 @@ void CInput::HandleTextEditingEvent(const char *pText, int Start, int Length)
 {
 	if(pText[0] != '\0')
 	{
+		ReserveSdlInputEvents(m_vInputEvents, 1);
 		m_CompositionString = pText;
-		m_CompositionCursor = 0;
-		for(int i = 0; i < Start; i++)
-		{
-			m_CompositionCursor = str_utf8_forward(m_CompositionString.c_str(), m_CompositionCursor);
-		}
+		m_CompositionCursor = SdlCompositionCursor(m_CompositionString.c_str(), Start);
 		// Length is currently unused on Windows and will always be 0, so we don't support selecting composition text
 		m_ImeCandidates.ResumeComposition();
 		AddTextEvent("");
@@ -827,10 +807,9 @@ int CInput::Update()
 	const auto &&AddKeyEventChecked = [&](int Key, int Flags) {
 		if(Key != KEY_UNKNOWN && !IgnoreKeys && (!(Flags & IInput::FLAG_PRESS) || !QmImeShouldSuppressPress(Key, HasComposition())))
 		{
-			AddKeyEvent(Key, Flags);
-			// SDL3 合并了两个静音扫描码，继续接受旧配置中的两种键名。
-			if(Key == KEY_MUTE)
-				AddKeyEvent(KEY_AUDIOMUTE, Flags);
+			// SDL3 合并了两个静音扫描码，两个旧键名必须成组提交。
+			const SSdlKeyEvent aKeys[] = {{Key, Flags}, {KEY_AUDIOMUTE, Flags}};
+			AppendSdlKeyEvents(m_vInputEvents, aKeys, Key == KEY_MUTE ? 2 : 1, m_InputCounter, m_aCurrentKeyStates, m_aFrameKeyStates);
 		}
 	};
 
@@ -910,10 +889,10 @@ int CInput::Update()
 		}
 
 		case SDL_EVENT_TEXT_INPUT:
+			AddTextEvent(Event.text.text);
 			ClearImeState();
 			// 提交后抑制迟到候选，新的组合串或打开通知恢复接收。
 			m_ImeCandidates.EndComposition();
-			AddTextEvent(Event.text.text);
 			break;
 
 		// handle keys
@@ -1106,12 +1085,12 @@ bool SDLCALL CInput::WindowsMessageHook(void *pUser, MSG *pMsg)
 	SDL_Window *pWindow = pInput->Window();
 	if(pWindow == nullptr || pMsg->hwnd != SDL_GetPointerProperty(SDL_GetWindowProperties(pWindow), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr))
 		return true;
-	pInput->m_QueuedWindowsMessages.push_back({pMsg->hwnd, pMsg->message, pMsg->wParam, pMsg->lParam});
-	SDL_Event Event{};
-	Event.type = pInput->m_WindowsMessageEvent;
-	Event.user.data1 = pInput;
-	if(!SDL_PushEvent(&Event))
-		pInput->m_QueuedWindowsMessages.pop_back();
+	QueueNativeImeMessage(pInput->m_QueuedWindowsMessages, {pMsg->hwnd, pMsg->message, pMsg->wParam, pMsg->lParam}, [&] {
+		SDL_Event Event{};
+		Event.type = pInput->m_WindowsMessageEvent;
+		Event.user.data1 = pInput;
+		return SDL_PushEvent(&Event);
+	});
 	return true;
 }
 
@@ -1124,127 +1103,133 @@ std::optional<SQmImeCandidateList> CInput::ReadWindowsImeCandidates(void *pWindo
 	HWND WindowHandle = static_cast<HWND>(pWindow);
 	const bool TrackPerf = QmPerfEnabled();
 	const int64_t GetContextStartNs = TrackPerf ? time_get_nanoseconds().count() : 0;
-	HIMC ImeContext = ImmGetContext(WindowHandle);
-	if(TrackPerf)
-	{
-		const double GetContextDurationMs = (time_get_nanoseconds().count() - GetContextStartNs) / 1000000.0;
-		if(QmPerfShouldLogDuration(GetContextDurationMs))
+	const auto ReleaseContext = [&](HIMC ImeContext) noexcept {
+		const int64_t ReleaseContextStartNs = TrackPerf ? time_get_nanoseconds().count() : 0;
+		const BOOL ReleaseContextResult = ImmReleaseContext(WindowHandle, ImeContext);
+		try
 		{
-			char aExtra[192];
-			str_format(aExtra, sizeof(aExtra), "has_context=%d", ImeContext != nullptr ? 1 : 0);
-			LogPerfStage(m_pClient, "ime_get_context", GetContextDurationMs, false, aExtra);
-		}
-	}
-	if(ImeContext == nullptr)
-		return std::nullopt;
-	// 只在提交后的恢复判断中查询；没有组合串或 IMM 返回错误时继续拦截迟到候选。
-	if(pHasActiveComposition != nullptr)
-		*pHasActiveComposition = ImmGetCompositionStringW(ImeContext, GCS_COMPSTR, nullptr, 0) > 0;
-
-	LPCANDIDATELIST pCandidateList = nullptr;
-	DWORD Size = 0;
-	const auto LoadCandidateList = [&](DWORD CandidateListIndex) {
-		const int64_t SizeQueryStartNs = TrackPerf ? time_get_nanoseconds().count() : 0;
-		DWORD CandidateListSize = ImmGetCandidateListW(ImeContext, CandidateListIndex, nullptr, 0);
-		if(TrackPerf)
-		{
-			const double SizeQueryDurationMs = (time_get_nanoseconds().count() - SizeQueryStartNs) / 1000000.0;
-			if(QmPerfShouldLogDuration(SizeQueryDurationMs))
+			if(TrackPerf)
 			{
-				char aExtra[256];
-				str_format(aExtra, sizeof(aExtra), "candidate_flags=%u candidate_index=%u returned_size=%u", (unsigned)CandidateListFlags, (unsigned)CandidateListIndex, (unsigned)CandidateListSize);
-				LogPerfStage(m_pClient, "ime_candidate_size_query", SizeQueryDurationMs, false, aExtra);
+				const double ReleaseContextDurationMs = (time_get_nanoseconds().count() - ReleaseContextStartNs) / 1000000.0;
+				if(QmPerfShouldLogDuration(ReleaseContextDurationMs))
+				{
+					char aExtra[192];
+					str_format(aExtra, sizeof(aExtra), "result=%d", ReleaseContextResult != FALSE ? 1 : 0);
+					LogPerfStage(m_pClient, "ime_release_context", ReleaseContextDurationMs, false, aExtra);
+				}
 			}
 		}
-		if(CandidateListSize == 0)
-			return false;
-
-		LPCANDIDATELIST pLoadedCandidateList = (LPCANDIDATELIST)malloc(CandidateListSize);
-		if(pLoadedCandidateList == nullptr)
-			return false;
-
-		const DWORD RequestedSize = CandidateListSize;
-		const int64_t DataQueryStartNs = TrackPerf ? time_get_nanoseconds().count() : 0;
-		CandidateListSize = ImmGetCandidateListW(ImeContext, CandidateListIndex, pLoadedCandidateList, RequestedSize);
-		if(TrackPerf)
+		catch(...)
 		{
-			const double DataQueryDurationMs = (time_get_nanoseconds().count() - DataQueryStartNs) / 1000000.0;
-			if(QmPerfShouldLogDuration(DataQueryDurationMs))
-			{
-				char aExtra[256];
-				str_format(aExtra, sizeof(aExtra), "candidate_flags=%u candidate_index=%u requested_size=%u returned_size=%u", (unsigned)CandidateListFlags, (unsigned)CandidateListIndex, (unsigned)RequestedSize, (unsigned)CandidateListSize);
-				LogPerfStage(m_pClient, "ime_candidate_data_query", DataQueryDurationMs, false, aExtra);
-			}
+			// 诊断失败不能中断上下文释放或覆盖读取结果。
 		}
-		if(CandidateListSize == 0 || CandidateListSize > RequestedSize)
-		{
-			free(pLoadedCandidateList);
-			return false;
-		}
-
-		free(pCandidateList);
-		pCandidateList = pLoadedCandidateList;
-		Size = CandidateListSize;
-		return true;
 	};
-	for(DWORD CandidateListIndex = 0; CandidateListIndex < 32; ++CandidateListIndex)
-	{
-		if(!QmImeNotifyFlagsIncludeCandidateList(CandidateListFlags, CandidateListIndex))
-			continue;
-		if(LoadCandidateList(CandidateListIndex))
-			break;
-	}
-	if(pCandidateList == nullptr && CandidateListFlags != 0 && !QmImeNotifyFlagsIncludeCandidateList(CandidateListFlags, 0))
-		LoadCandidateList(0);
-
-	SQmImeCandidateList LoadedCandidates;
-	bool LoadSucceeded = false;
-	if(pCandidateList && Size >= offsetof(CANDIDATELIST, dwOffset))
-	{
-		const size_t BufferSize = Size;
-		const size_t HeaderSize = offsetof(CANDIDATELIST, dwOffset);
-		const size_t AvailableOffsets = QmImeCandidateOffsetCapacity(BufferSize, HeaderSize);
-		const DWORD CandidateCount = std::min<DWORD>(pCandidateList->dwCount, (DWORD)AvailableOffsets);
-		const DWORD PageStart = std::min(pCandidateList->dwPageStart, CandidateCount);
-		const DWORD PageSize = (DWORD)QmImeCandidatePageSizeOrCount(pCandidateList->dwPageSize, CandidateCount);
-		const DWORD PageEnd = PageStart + std::min(PageSize, CandidateCount - PageStart);
-		const auto *pBufferBegin = reinterpret_cast<const unsigned char *>(pCandidateList);
-		LoadedCandidates.m_PageStart = (int)PageStart;
-		LoadedCandidates.m_PageSize = (int)PageSize;
-		LoadedCandidates.m_TotalCount = (int)CandidateCount;
-		LoadedCandidates.m_vCandidates.reserve(PageEnd - PageStart);
-		for(DWORD i = PageStart; i < PageEnd; i++)
+	return ReadNativeImeCandidates(ImmGetContext(WindowHandle), ReleaseContext, [&](HIMC ImeContext) -> std::optional<SQmImeCandidateList> {
+		if(TrackPerf)
 		{
-			const size_t Offset = pCandidateList->dwOffset[i];
-			const std::optional<size_t> CandidateLength = QmImeBoundedUtf16Length(pBufferBegin, BufferSize, Offset);
-			if(!CandidateLength.has_value())
+			const double GetContextDurationMs = (time_get_nanoseconds().count() - GetContextStartNs) / 1000000.0;
+			if(QmPerfShouldLogDuration(GetContextDurationMs))
+			{
+				char aExtra[192];
+				str_format(aExtra, sizeof(aExtra), "has_context=%d", ImeContext != nullptr ? 1 : 0);
+				LogPerfStage(m_pClient, "ime_get_context", GetContextDurationMs, false, aExtra);
+			}
+		}
+		if(ImeContext == nullptr)
+			return std::nullopt;
+		// 仅在提交后恢复判断时查询，且上下文由外层持有并统一释放。
+		if(pHasActiveComposition != nullptr)
+			*pHasActiveComposition = ImmGetCompositionStringW(ImeContext, GCS_COMPSTR, nullptr, 0) > 0;
+
+		using TCandidateList = std::unique_ptr<CANDIDATELIST, decltype(&std::free)>;
+		TCandidateList pCandidateList(nullptr, std::free);
+		DWORD Size = 0;
+		const auto LoadCandidateList = [&](DWORD CandidateListIndex) {
+			const int64_t SizeQueryStartNs = TrackPerf ? time_get_nanoseconds().count() : 0;
+			DWORD CandidateListSize = ImmGetCandidateListW(ImeContext, CandidateListIndex, nullptr, 0);
+			if(TrackPerf)
+			{
+				const double SizeQueryDurationMs = (time_get_nanoseconds().count() - SizeQueryStartNs) / 1000000.0;
+				if(QmPerfShouldLogDuration(SizeQueryDurationMs))
+				{
+					char aExtra[256];
+					str_format(aExtra, sizeof(aExtra), "candidate_flags=%u candidate_index=%u returned_size=%u", (unsigned)CandidateListFlags, (unsigned)CandidateListIndex, (unsigned)CandidateListSize);
+					LogPerfStage(m_pClient, "ime_candidate_size_query", SizeQueryDurationMs, false, aExtra);
+				}
+			}
+			if(CandidateListSize == 0)
+				return false;
+
+			TCandidateList pLoadedCandidateList(static_cast<LPCANDIDATELIST>(std::malloc(CandidateListSize)), std::free);
+			if(pLoadedCandidateList == nullptr)
+				return false;
+
+			const DWORD RequestedSize = CandidateListSize;
+			const int64_t DataQueryStartNs = TrackPerf ? time_get_nanoseconds().count() : 0;
+			CandidateListSize = ImmGetCandidateListW(ImeContext, CandidateListIndex, pLoadedCandidateList.get(), RequestedSize);
+			if(TrackPerf)
+			{
+				const double DataQueryDurationMs = (time_get_nanoseconds().count() - DataQueryStartNs) / 1000000.0;
+				if(QmPerfShouldLogDuration(DataQueryDurationMs))
+				{
+					char aExtra[256];
+					str_format(aExtra, sizeof(aExtra), "candidate_flags=%u candidate_index=%u requested_size=%u returned_size=%u", (unsigned)CandidateListFlags, (unsigned)CandidateListIndex, (unsigned)RequestedSize, (unsigned)CandidateListSize);
+					LogPerfStage(m_pClient, "ime_candidate_data_query", DataQueryDurationMs, false, aExtra);
+				}
+			}
+			if(CandidateListSize == 0 || CandidateListSize > RequestedSize)
+				return false;
+
+			pCandidateList = std::move(pLoadedCandidateList);
+			Size = CandidateListSize;
+			return true;
+		};
+		for(DWORD CandidateListIndex = 0; CandidateListIndex < 32; ++CandidateListIndex)
+		{
+			if(!QmImeNotifyFlagsIncludeCandidateList(CandidateListFlags, CandidateListIndex))
 				continue;
-			const auto *pCandidate = reinterpret_cast<const wchar_t *>(pBufferBegin + Offset);
-			const auto Candidate = windows_wide_to_utf8_bounded(pCandidate, pCandidate + *CandidateLength + 1);
-			if(Candidate.has_value())
-				LoadedCandidates.m_vCandidates.push_back(*Candidate);
+			if(LoadCandidateList(CandidateListIndex))
+				break;
 		}
-		if(pCandidateList->dwSelection >= PageStart && pCandidateList->dwSelection < PageEnd)
-			LoadedCandidates.m_SelectedIndex = (int)pCandidateList->dwSelection - (int)PageStart;
-		LoadSucceeded = true;
-	}
+		if(pCandidateList == nullptr && CandidateListFlags != 0 && !QmImeNotifyFlagsIncludeCandidateList(CandidateListFlags, 0))
+			LoadCandidateList(0);
 
-	free(pCandidateList);
-	const int64_t ReleaseContextStartNs = TrackPerf ? time_get_nanoseconds().count() : 0;
-	const BOOL ReleaseContextResult = ImmReleaseContext(WindowHandle, ImeContext);
-	if(TrackPerf)
-	{
-		const double ReleaseContextDurationMs = (time_get_nanoseconds().count() - ReleaseContextStartNs) / 1000000.0;
-		if(QmPerfShouldLogDuration(ReleaseContextDurationMs))
+		SQmImeCandidateList LoadedCandidates;
+		bool LoadSucceeded = false;
+		if(pCandidateList && Size >= offsetof(CANDIDATELIST, dwOffset))
 		{
-			char aExtra[192];
-			str_format(aExtra, sizeof(aExtra), "result=%d", ReleaseContextResult != FALSE ? 1 : 0);
-			LogPerfStage(m_pClient, "ime_release_context", ReleaseContextDurationMs, false, aExtra);
+			const size_t BufferSize = Size;
+			const size_t HeaderSize = offsetof(CANDIDATELIST, dwOffset);
+			const size_t AvailableOffsets = QmImeCandidateOffsetCapacity(BufferSize, HeaderSize);
+			const DWORD CandidateCount = std::min<DWORD>(pCandidateList->dwCount, (DWORD)AvailableOffsets);
+			const DWORD PageStart = std::min(pCandidateList->dwPageStart, CandidateCount);
+			const DWORD PageSize = (DWORD)QmImeCandidatePageSizeOrCount(pCandidateList->dwPageSize, CandidateCount);
+			const DWORD PageEnd = PageStart + std::min(PageSize, CandidateCount - PageStart);
+			const auto *pBufferBegin = reinterpret_cast<const unsigned char *>(pCandidateList.get());
+			LoadedCandidates.m_PageStart = (int)PageStart;
+			LoadedCandidates.m_PageSize = (int)PageSize;
+			LoadedCandidates.m_TotalCount = (int)CandidateCount;
+			LoadedCandidates.m_vCandidates.reserve(PageEnd - PageStart);
+			for(DWORD i = PageStart; i < PageEnd; i++)
+			{
+				const size_t Offset = pCandidateList->dwOffset[i];
+				const std::optional<size_t> CandidateLength = QmImeBoundedUtf16Length(pBufferBegin, BufferSize, Offset);
+				if(!CandidateLength.has_value())
+					continue;
+				const auto *pCandidate = reinterpret_cast<const wchar_t *>(pBufferBegin + Offset);
+				const auto Candidate = windows_wide_to_utf8_bounded(pCandidate, pCandidate + *CandidateLength + 1);
+				if(Candidate.has_value())
+					LoadedCandidates.m_vCandidates.push_back(*Candidate);
+			}
+			if(pCandidateList->dwSelection >= PageStart && pCandidateList->dwSelection < PageEnd)
+				LoadedCandidates.m_SelectedIndex = (int)pCandidateList->dwSelection - (int)PageStart;
+			LoadSucceeded = true;
 		}
-	}
-	if(LoadSucceeded)
-		return LoadedCandidates;
-	return std::nullopt;
+
+		if(LoadSucceeded)
+			return LoadedCandidates;
+		return std::nullopt;
+	});
 }
 
 void CInput::ProcessSystemMessage(MSG *pMsg)

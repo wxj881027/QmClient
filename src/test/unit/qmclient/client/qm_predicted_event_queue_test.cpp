@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <limits>
 #include <vector>
 
 namespace
@@ -190,4 +191,33 @@ TEST(QmPredictedEventQueue, EmptyAndExpiredQueuesAcceptNewEvents)
 	EXPECT_EQ(Played, 1);
 	ASSERT_EQ(vEvents.size(), 1u);
 	EXPECT_TRUE(vEvents.front().m_Handled);
+}
+
+TEST(QmPredictedEventQueue, SnapshotPruningDiscardsInvalidFutureEventsWithoutTouchingValidFutureEvent)
+{
+	auto Invalid = MakeEvent(1, 1001);
+	Invalid.m_Pos.x = std::numeric_limits<float>::infinity();
+	auto HandledInvalid = Invalid;
+	HandledInvalid.m_Handled = true;
+	std::vector<CGameWorld::CPredictedEvent> Events{Invalid, MakeEvent(2, 1001), HandledInvalid};
+	QmPruneHandledPredictedEvents(Events, 1000, SERVER_TICK_SPEED);
+	ASSERT_EQ(Events.size(), 1u);
+	EXPECT_EQ(Events[0].m_Id, 2);
+	EXPECT_FALSE(Events[0].m_Handled);
+	EXPECT_EQ(Events[0].m_Tick, 1001);
+}
+
+TEST(QmPredictedEventQueue, InvalidDueEventsDoNotReachCallbackOrDisturbValidPlaybackOrder)
+{
+	auto Invalid = MakeEvent(2, 100);
+	Invalid.m_Pos.y = std::numeric_limits<float>::quiet_NaN();
+	std::vector<CGameWorld::CPredictedEvent> Events{MakeEvent(1, 100), Invalid, MakeEvent(3, 100)};
+	std::vector<int> Played;
+	auto Play = [&Played](const CGameWorld::CPredictedEvent &Event) { Played.push_back(Event.m_Id); return true; };
+	QmProcessPredictedEvents(Events, 100, SERVER_TICK_SPEED, Play);
+	EXPECT_EQ(Played, (std::vector<int>{1, 3}));
+	ASSERT_EQ(Events.size(), 2u);
+	Events.push_back(MakeEvent(4, 101));
+	QmProcessPredictedEvents(Events, 101, SERVER_TICK_SPEED, Play);
+	EXPECT_EQ(Played, (std::vector<int>{1, 3, 4}));
 }

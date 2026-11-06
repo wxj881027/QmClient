@@ -5,14 +5,18 @@
 #include <memory>
 #include <vector>
 
-static bool JsonValidateUtf8(const json_value *pRoot)
+bool JsonValidateUtf8(const json_value *pRoot, const json_value *pIgnoredValue)
 {
+	if(pRoot == nullptr)
+		return false;
 	std::vector<const json_value *> vpValues;
 	vpValues.push_back(pRoot);
 	while(!vpValues.empty())
 	{
 		const json_value *pValue = vpValues.back();
 		vpValues.pop_back();
+		if(pValue == pIgnoredValue)
+			continue;
 		switch(pValue->type)
 		{
 		case json_string:

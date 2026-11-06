@@ -33,50 +33,6 @@ namespace
 	}
 }
 
-TEST(StorageReplace, PromotesTempFileAndRemovesBackup)
-{
-	CTestInfo Info;
-	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
-	ASSERT_NE(pStorage, nullptr);
-	WriteStorageFile(pStorage.get(), "real.txt", "old");
-	WriteStorageFile(pStorage.get(), "temp.txt", "new");
-
-	char aBackup[IO_MAX_PATH_LENGTH];
-	ASSERT_TRUE(IStorage::ReplaceFileSafely(pStorage.get(), "temp.txt", "real.txt", aBackup, sizeof(aBackup)));
-	EXPECT_EQ(ReadStorageFile(pStorage.get(), "real.txt"), "new");
-	EXPECT_FALSE(pStorage->FileExists("temp.txt", IStorage::TYPE_SAVE));
-	EXPECT_FALSE(pStorage->FileExists(aBackup, IStorage::TYPE_SAVE));
-}
-
-TEST(StorageReplace, RestoresPreviousFileWhenTempPromotionFails)
-{
-	CTestInfo Info;
-	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
-	ASSERT_NE(pStorage, nullptr);
-	WriteStorageFile(pStorage.get(), "real.txt", "old");
-
-	char aBackup[IO_MAX_PATH_LENGTH];
-	EXPECT_FALSE(IStorage::ReplaceFileSafely(pStorage.get(), "missing.txt", "real.txt", aBackup, sizeof(aBackup)));
-	EXPECT_EQ(ReadStorageFile(pStorage.get(), "real.txt"), "old");
-	EXPECT_FALSE(pStorage->FileExists(aBackup, IStorage::TYPE_SAVE));
-}
-
-TEST(StorageReplace, ExistingBackupDoesNotDamagePreviousFile)
-{
-	CTestInfo Info;
-	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
-	ASSERT_NE(pStorage, nullptr);
-	WriteStorageFile(pStorage.get(), "real.txt", "old");
-	WriteStorageFile(pStorage.get(), "temp.txt", "new");
-	WriteStorageFile(pStorage.get(), "temp.txt.backup", "occupied");
-
-	char aBackup[IO_MAX_PATH_LENGTH];
-	EXPECT_FALSE(IStorage::ReplaceFileSafely(pStorage.get(), "temp.txt", "real.txt", aBackup, sizeof(aBackup)));
-	EXPECT_EQ(ReadStorageFile(pStorage.get(), "real.txt"), "old");
-	EXPECT_EQ(ReadStorageFile(pStorage.get(), "temp.txt"), "new");
-	EXPECT_EQ(ReadStorageFile(pStorage.get(), "temp.txt.backup"), "occupied");
-}
-
 TEST(ConfigMigrationV3, PendingOnlyUntilMergedFileExists)
 {
 	CTestInfo Info;

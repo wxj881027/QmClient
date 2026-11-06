@@ -375,6 +375,9 @@ class CConfigManager : public IConfigManager
 	std::vector<SConfigVariable *> m_vpGameVariables;
 	std::vector<const char *> m_avpUnknownCommands[ConfigDomain::NUM];
 	CHeap m_ConfigHeap;
+	bool m_Initialized = false;
+	bool m_SaveInProgress = false;
+	bool m_UnknownCommandsIncomplete = false;
 
 	static void Con_Reset(IConsole::IResult *pResult, void *pUserData);
 	static void Con_Toggle(IConsole::IResult *pResult, void *pUserData);
@@ -382,7 +385,7 @@ class CConfigManager : public IConfigManager
 	static void Con_ToggleRestore(IConsole::IResult *pResult, void *pUserData);
 
 public:
-	CConfigManager();
+	explicit CConfigManager(CHeap::FAllocate Allocate = std::malloc);
 
 	void Init() override;
 	void Reset(const char *pScriptName) override;
@@ -400,6 +403,7 @@ public:
 	void RegisterCallback(SAVECALLBACKFUNC pfnFunc, void *pUserData, ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) override;
 
 	void WriteLine(const char *pLine, ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) override;
+	void MarkSaveFailed(ConfigDomain Domain = ConfigDomain::QMCLIENT) override { m_aFailed[Domain] = true; }
 
 	void StoreUnknownCommand(const char *pCommand, ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) override;
 

@@ -838,17 +838,8 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			{
 				const bool RevealInteractive = Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly() && !Ctx.m_pUi->MeasurementOnly();
 				ContentRender = [pLayout = Card.m_pContentLayout, Draw = Card.m_pDefinition->m_ContentLayoutDraw, pUi = Ctx.m_pUi, pScrollRegion, RevealInteractive, pRevealStableId = Card.m_pDefinition->m_Spec.m_pStableId](CUIRect &Content) {
-					qm_settings_reveal::BeginCard(pRevealStableId, pScrollRegion, RevealInteractive);
-					const CUIRect Origin = Content;
-					// 只读绘制仍提交外观，但不再次处理已经完成的输入。
-					if(pUi != nullptr)
-						pUi->BeginBackgroundRender(true);
-					Draw(*pLayout, Content);
-					if(pUi != nullptr)
-						pUi->EndBackgroundRender(true);
-					Content.y = Origin.y + pLayout->Height();
-					Content.h = Origin.h - pLayout->Height();
-					qm_settings_reveal::EndCard();
+					const qm_settings_reveal::CCardScope Reveal(pRevealStableId, pScrollRegion, RevealInteractive);
+					qm_settings_content::RenderLayoutContent(*pLayout, Content, pUi, Draw);
 				};
 			}
 			SettingsCard(InputCtx, Frame, Card.m_pDefinition->m_Spec, State, VisualOptions,

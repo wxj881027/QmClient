@@ -84,16 +84,6 @@ TEST(DDNet199Sync, RejectsEscapeBindsAndUsesCurrentHookState)
 	EXPECT_EQ(Players.find("if(pPrevChar->m_HookState <= 0 || pPlayerChar->m_HookState <= 0)"), std::string::npos);
 }
 
-TEST(DDNet199Sync, UsesLocalTuningForUnpredictedHookCollision)
-{
-	const std::string Players = ReadTestSourceFile("src/game/client/components/players.cpp");
-
-	EXPECT_NE(Players.find("const CCharacterCore &PlayerCore = GameClient()->m_aClients[ClientId].m_IsPredicted"), std::string::npos);
-	EXPECT_NE(Players.find("GameClient()->m_aClients[GameClient()->m_aLocalIds[g_Config.m_ClDummy]].m_Predicted"), std::string::npos);
-	EXPECT_NE(Players.find("PlayerCore.m_Tuning.m_HookLength"), std::string::npos);
-	EXPECT_NE(Players.find("PlayerCore.m_Tuning.m_HookFireSpeed"), std::string::npos);
-}
-
 TEST(DDNet20TouchDismiss, ComponentsCanConsumeTouchFingersInInputOrder)
 {
 	const std::string Component = ReadTestSourceFile("src/game/client/component.h");

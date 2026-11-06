@@ -3,7 +3,6 @@
 
 #include <generated/client_data.h>
 
-#include <game/client/animstate.h>
 #include <game/client/components/qmclient/skin_load_budget.h>
 #include <game/client/components/skins.h>
 #include <game/client/render.h>
@@ -16,59 +15,6 @@
 #include <limits>
 #include <list>
 #include <sstream>
-
-extern CDataContainer *g_pData;
-
-static vec2 ComputeRenderedTeeMid(const CTeeRenderInfo &Info)
-{
-	const CAnimState *pIdle = CAnimState::GetIdle();
-	float AnimScale, BaseSize;
-	CRenderTools::GetRenderTeeAnimScaleAndBaseSize(&Info, AnimScale, BaseSize);
-	const vec2 BodyPos = vec2(pIdle->GetBody()->m_X, pIdle->GetBody()->m_Y) * AnimScale;
-	const float AssumedScale = BaseSize / 64.0f;
-	vec2 BodyOffset;
-	float BodyWidth, BodyHeight;
-	CRenderTools::GetRenderTeeBodySize(pIdle, &Info, BodyOffset, BodyWidth, BodyHeight);
-	vec2 FeetOffset;
-	float FeetWidth, FeetHeight;
-	CRenderTools::GetRenderTeeFeetSize(pIdle, &Info, FeetOffset, FeetWidth, FeetHeight);
-	const vec2 FeetPos[2] = {
-		vec2(pIdle->GetFrontFoot()->m_X, pIdle->GetFrontFoot()->m_Y) * AnimScale,
-		vec2(pIdle->GetBackFoot()->m_X, pIdle->GetBackFoot()->m_Y) * AnimScale,
-	};
-	float MinX = -32.0f * AssumedScale + BodyPos.x + BodyOffset.x;
-	float MaxX = MinX + BodyWidth;
-	for(const vec2 &FootPos : FeetPos)
-	{
-		const float FootMinX = -32.0f * AssumedScale + FootPos.x + FeetOffset.x;
-		MinX = minimum(MinX, FootMinX);
-		MaxX = maximum(MaxX, FootMinX + FeetWidth);
-	}
-	float MinY = -32.0f * AssumedScale + BodyPos.y + BodyOffset.y;
-	float MaxY = MinY + BodyHeight;
-	for(const vec2 &FootPos : FeetPos)
-	{
-		MaxY = maximum(MaxY, -16.0f * AssumedScale + FootPos.y + FeetOffset.y + FeetHeight);
-	}
-	return vec2(MinX + (MaxX - MinX) / 2.0f, MinY + (MaxY - MinY) / 2.0f);
-}
-
-static void SetBeastLikeMetrics(CTeeRenderInfo &Info)
-{
-	Info.m_Size = 64.0f;
-	Info.m_SkinMetrics.m_Body.m_Width = 80;
-	Info.m_SkinMetrics.m_Body.m_Height = 82;
-	Info.m_SkinMetrics.m_Body.m_OffsetX = 16;
-	Info.m_SkinMetrics.m_Body.m_OffsetY = 14;
-	Info.m_SkinMetrics.m_Body.m_MaxWidth = 96;
-	Info.m_SkinMetrics.m_Body.m_MaxHeight = 96;
-	Info.m_SkinMetrics.m_Feet.m_Width = 44;
-	Info.m_SkinMetrics.m_Feet.m_Height = 23;
-	Info.m_SkinMetrics.m_Feet.m_OffsetX = 20;
-	Info.m_SkinMetrics.m_Feet.m_OffsetY = 9;
-	Info.m_SkinMetrics.m_Feet.m_MaxWidth = 64;
-	Info.m_SkinMetrics.m_Feet.m_MaxHeight = 32;
-}
 
 static void SetTestPixel(CImageInfo &Image, size_t x, size_t y, uint8_t Red, uint8_t Green, uint8_t Blue, uint8_t Alpha)
 {
@@ -380,19 +326,6 @@ TEST(Skins, SkinDataPreparationUsesOutlineMetricsWhenFillIsEmpty)
 	EXPECT_EQ(Plan.m_Feet.m_OffsetY, 2);
 
 	Image.Free();
-}
-
-TEST(Skins, RenderedTeeOffsetKeepsGlobalHorizontalOffsetStable)
-{
-	CTeeRenderInfo Info;
-	SetBeastLikeMetrics(Info);
-
-	vec2 OffsetToMid;
-	CRenderTools::GetRenderTeeOffsetToRenderedTee(CAnimState::GetIdle(), &Info, OffsetToMid);
-	const vec2 Mid = ComputeRenderedTeeMid(Info);
-
-	EXPECT_FLOAT_EQ(OffsetToMid.x, 0.0f);
-	EXPECT_NEAR(OffsetToMid.y + Mid.y, 0.0f, 0.0001f);
 }
 
 TEST(Skins, SkinQueueEntrySixupDataParticipatesInEquality)

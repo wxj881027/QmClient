@@ -12,6 +12,22 @@
 #include <cstdint>
 #include <limits>
 
+std::optional<uint32_t> qm_tee_trail::StyleCellId(double Distance)
+{
+	if(!std::isfinite(Distance))
+		return std::nullopt;
+	const double Cell = std::floor(Distance);
+	const double SignedUpper = -static_cast<double>(std::numeric_limits<int64_t>::min());
+	if(Cell >= -SignedUpper && Cell < SignedUpper)
+		return static_cast<uint32_t>(static_cast<int64_t>(Cell));
+	// 普通距离保留原转换；超出int64时先取模，避免浮点到整数的越界转换。
+	constexpr double Period = 4294967296.0;
+	double Wrapped = std::fmod(Cell, Period);
+	if(Wrapped < 0)
+		Wrapped += Period;
+	return static_cast<uint32_t>(Wrapped);
+}
+
 namespace
 {
 	using namespace qm_tee_trail;

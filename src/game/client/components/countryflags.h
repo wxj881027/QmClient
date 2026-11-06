@@ -12,7 +12,14 @@
 #include <game/client/component.h>
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdlib>
 #include <deque>
+#include <memory>
+#include <new>
+#include <stdexcept>
+#include <string>
+#include <utility>
 #include <vector>
 
 constexpr int QmNormalizeCountryCode(int CountryCodeValue)
@@ -161,12 +168,33 @@ public:
 		struct SResult
 		{
 			CImageInfo m_Image;
-			int m_CountryCode;
+			int m_CountryCode = CountryCode::DEFAULT;
+			size_t m_FlagIndex = 0;
 			bool m_Success = false;
+
+			SResult() = default;
+			SResult(const SResult &) = delete;
+			SResult &operator=(const SResult &) = delete;
+			SResult(SResult &&Other) :
+				m_Image(std::move(Other.m_Image)), m_CountryCode(Other.m_CountryCode), m_FlagIndex(Other.m_FlagIndex), m_Success(std::exchange(Other.m_Success, false)) {}
+			SResult &operator=(SResult &&Other)
+			{
+				if(this != &Other)
+				{
+					m_Image = std::move(Other.m_Image);
+					m_CountryCode = Other.m_CountryCode;
+					m_FlagIndex = Other.m_FlagIndex;
+					m_Success = std::exchange(Other.m_Success, false);
+				}
+				return *this;
+			}
+			~SResult() { m_Image.Free(); }
 		};
 
 	private:
 		std::string m_Path;
+		const int m_CountryCode;
+		const size_t m_FlagIndex;
 		IStorage *m_pStorage;
 		mutable CLock m_Mutex;
 		SResult m_Result;
@@ -176,8 +204,57 @@ public:
 		void Run() override REQUIRES(!m_Mutex);
 
 	public:
-		CCountryFlagLoadJob(const char *pPath, int CountryCode, IStorage *pStorage);
-		~CCountryFlagLoadJob() override;
+		enum class ELoadStatus
+		{
+			SUCCESS,
+			READ_FAILED,
+			DECODE_FAILED,
+			EXCEPTION,
+		};
+
+		CCountryFlagLoadJob(const char *pPath, int CountryCode, IStorage *pStorage, size_t FlagIndex = 0);
+		~CCountryFlagLoadJob() override = default;
+
+		// 读取和解码是外部边界；失败也必须发布终态，不能只依赖线程池捕获异常。
+		// Read 输出须能由 free 释放；Decode 输出的独立图像缓冲由结果接管。
+		template<typename FRead, typename FDecode>
+		ELoadStatus Load(FRead &&Read, FDecode &&Decode) REQUIRES(!m_Mutex)
+		{
+			struct SFileData
+			{
+				void *m_pData = nullptr;
+				~SFileData() { free(m_pData); }
+			} File;
+			SResult Candidate;
+			Candidate.m_CountryCode = m_CountryCode;
+			Candidate.m_FlagIndex = m_FlagIndex;
+			ELoadStatus Status = ELoadStatus::READ_FAILED;
+			try
+			{
+				unsigned FileSize = 0;
+				if(Read(&File.m_pData, &FileSize))
+				{
+					Status = ELoadStatus::DECODE_FAILED;
+					if(Decode(File.m_pData, FileSize, Candidate.m_Image))
+					{
+						Candidate.m_Success = true;
+						Status = ELoadStatus::SUCCESS;
+					}
+				}
+			}
+			catch(...)
+			{
+				Status = ELoadStatus::EXCEPTION;
+			}
+			if(!Candidate.m_Success)
+				Candidate.m_Image.Free();
+			{
+				CLockScope Lock(m_Mutex);
+				m_Result = std::move(Candidate);
+				m_Completed = true;
+			}
+			return Status;
+		}
 
 		bool IsCompleted() const REQUIRES(!m_Mutex)
 		{
@@ -188,11 +265,58 @@ public:
 		SResult GetResult() REQUIRES(!m_Mutex)
 		{
 			CLockScope Lock(m_Mutex);
+			if(!m_Completed)
+				return SResult();
 			SResult Result = std::move(m_Result);
 			m_Result = SResult();
 			return Result;
 		}
 	};
+
+	static CCountryFlag *FindFlagLoadTarget(std::vector<CCountryFlag> &Flags, const CCountryFlagLoadJob::SResult &Result)
+	{
+		if(Result.m_FlagIndex >= Flags.size() || Flags[Result.m_FlagIndex].m_CountryCode != Result.m_CountryCode)
+			return nullptr;
+		return &Flags[Result.m_FlagIndex];
+	}
+
+	// 提交返回 false 或抛异常时必须尚未接管作业；真实引擎使用 TryAddJob。
+	template<typename TQueue, typename FCreate, typename FSubmit>
+	static bool TryStartFlagLoad(TQueue &Pending, std::vector<bool> &Triggered, size_t Index, FCreate &&Create, FSubmit &&Submit)
+	{
+		if(Index >= Triggered.size() || Triggered[Index])
+			return false;
+		try
+		{
+			auto pJob = Create();
+			if(!pJob)
+				return false;
+			Pending.push_back(pJob);
+			try
+			{
+				if(!Submit(pJob))
+				{
+					Pending.pop_back();
+					return false;
+				}
+			}
+			catch(...)
+			{
+				Pending.pop_back();
+				throw;
+			}
+			Triggered[Index] = true;
+			return true;
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
+	}
 
 	int Sizeof() const override { return sizeof(*this); }
 	void OnInit() override;
@@ -227,7 +351,7 @@ private:
 	static bool ValidateCountryCodeString(const char *pString);
 	static bool ValidateCountryCodeIntegerString(const char *pString);
 	void LoadCountryflagsIndexfile();
-	void StartFlagLoadJob(int Index);
+	void StartFlagLoadJob(size_t Index);
 	void ProcessCompletedJobs();
 	mutable std::vector<bool> m_vLoadTriggered;
 };

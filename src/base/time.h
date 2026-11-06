@@ -164,6 +164,9 @@ void str_timestamp(char *buffer, int buffer_size);
  */
 [[gnu::format(strftime, 4, 0)]] void str_timestamp_ex(time_t time, char *buffer, int buffer_size, const char *format);
 
+// 格式化文件等外部来源的时间戳；无法表示或转换失败时返回false并清空有效缓冲。
+[[gnu::format(strftime, 4, 0)]] bool str_timestamp_ex_try(int64_t timestamp, char *buffer, int buffer_size, const char *format);
+
 /**
  * Parses a string into a timestamp following a specified format.
  *

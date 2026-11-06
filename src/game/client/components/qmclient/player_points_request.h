@@ -25,8 +25,11 @@ public:
 	CQmPlayerPointsRequest &operator=(CQmPlayerPointsRequest &&) = default;
 
 	// nullptr 表示没有代理决定；空字符串表示系统明确选择直连。
-	bool Poll(IHttp &Http, double Now, bool ProxyReady, const char *pProxy)
+	template<typename TSubmit>
+	bool PollWithSubmit(TSubmit &&Submit, double Now, bool ProxyReady, const char *pProxy)
 	{
+		if(!m_pRequest)
+			return true;
 		if(m_Submitted)
 			return true;
 		if(!m_pRequest->IsAbortRequested() && !ProxyReady && Now < m_ProxyDeadline)
@@ -34,16 +37,28 @@ public:
 		if(!m_pRequest->IsAbortRequested() && ProxyReady && pProxy != nullptr)
 			m_pRequest->Proxy(pProxy);
 		m_Submitted = true;
-		Http.Run(m_pRequest);
+		Submit(m_pRequest);
 		return true;
 	}
 
-	void Cancel(IHttp &Http)
+	template<typename TSubmit>
+	void CancelWithSubmit(TSubmit &&Submit)
 	{
+		if(!m_pRequest)
+			return;
 		if(!m_pRequest->Done())
 			m_pRequest->Abort();
 		// 尚未发出的请求也交给 HTTP 完成取消，不能留在 QUEUED。
-		Poll(Http, m_ProxyDeadline, false, nullptr);
+		PollWithSubmit(std::forward<TSubmit>(Submit), m_ProxyDeadline, false, nullptr);
+	}
+
+	bool Poll(IHttp &Http, double Now, bool ProxyReady, const char *pProxy)
+	{
+		return PollWithSubmit([&](const auto &pRequest) { Http.Run(pRequest); }, Now, ProxyReady, pProxy);
+	}
+	void Cancel(IHttp &Http)
+	{
+		CancelWithSubmit([&](const auto &pRequest) { Http.Run(pRequest); });
 	}
 
 	const std::shared_ptr<IHttpRequest> &Request() const { return m_pRequest; }

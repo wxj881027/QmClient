@@ -489,3 +489,28 @@ TEST_F(CTranslateBackendTest, DeeplRejectsEmptyAndOversizedTranslationWithoutPub
 		EXPECT_NE(str_find(Response.m_Text, "empty or exceeds buffer capacity"), nullptr);
 	}
 }
+
+TEST_F(CTranslateBackendTest, MymemoryCompleteStringSuccessStatusKeepsValidTranslation)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "mymemory");
+	auto pBackend = Create("hello", "zh", "en");
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"responseData":{"translatedText":"translated"},"responseStatus":"200"})");
+	CTranslateResponse Response;
+	EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(true));
+	EXPECT_STREQ(Response.m_Text, "translated");
+}
+
+TEST_F(CTranslateBackendTest, MymemoryMalformedStringStatusCannotBecomeSuccess)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "mymemory");
+	for(const char *pStatus : {"4294967496", "200junk", R"(200\u0000junk)"})
+	{
+		SCOPED_TRACE(pStatus);
+		auto pBackend = Create("hello", "zh", "en");
+		const std::string Body = std::string(R"({"responseData":{"translatedText":"translated"},"responseStatus":")") + pStatus + R"("})";
+		m_Http.m_vSubmissions.back().m_pRequest->Finish(Body.c_str());
+		CTranslateResponse Response;
+		EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(false));
+		EXPECT_STREQ(Response.m_Text, "Invalid MyMemory response status");
+	}
+}

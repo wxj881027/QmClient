@@ -8,7 +8,9 @@
 
 #include <cstring>
 #include <memory>
+#include <new>
 #include <string>
+#include <utility>
 
 namespace
 {
@@ -20,6 +22,13 @@ namespace
 	{
 		std::unique_ptr<json_value, decltype(&json_value_free)> Root(json_parse(pJson, std::strlen(pJson)), json_value_free);
 		return State.Apply(Root.get(), pAddress);
+	}
+
+	template<typename TPublish>
+	EResult ApplyAndPublish(CQmRealtimeUsersState &State, const char *pJson, TPublish &&Publish, const char *pAddress = "one:8303")
+	{
+		std::unique_ptr<json_value, decltype(&json_value_free)> Root(json_parse(pJson, std::strlen(pJson)), json_value_free);
+		return State.ApplyAndPublish(Root.get(), pAddress, std::forward<TPublish>(Publish));
 	}
 
 	std::string Frame(const std::string &Json)
@@ -711,4 +720,175 @@ TEST(QmRealtimeUsers, NodeEncodedFullAndDeltaMatchClientState)
 	EXPECT_FALSE(Result.m_vLocalServerMarks[0].m_VoiceSupported);
 	EXPECT_EQ(Result.m_vLocalServerMarks[1].m_Name, "分身");
 	EXPECT_EQ(Result.m_vLocalServerMarks[1].m_Qid, "qid-a");
+}
+
+TEST(QmRealtimeUsers, InvalidCompressedFrameClearsOutputWithoutInvalidatingRetainedPayload)
+{
+	const auto Encoded = Frame(std::string(R"({"type":"users_sync","v":2,"data":)") + FULL + "}");
+	SQmRealtimeMessage Message;
+	ASSERT_TRUE(ParseQmCompressedUsersMessage(Encoded.data(), Encoded.size(), Message));
+	ASSERT_NE(Message.m_pPayload, nullptr);
+	auto pRetained = Message.m_pPayload;
+	EXPECT_FALSE(ParseQmCompressedUsersMessage("QMU1", 4, Message));
+	EXPECT_EQ(Message.m_Event, EQmRealtimeEvent::INVALID);
+	EXPECT_EQ(Message.m_pPayload, nullptr);
+	EXPECT_EQ(json_object_get(pRetained.get(), "revision")->u.integer, 1);
+	ASSERT_TRUE(ParseQmCompressedUsersMessage(Encoded.data(), Encoded.size(), Message));
+	EXPECT_EQ(Message.m_Event, EQmRealtimeEvent::USERS_SYNC);
+	EXPECT_NE(Message.m_pPayload, nullptr);
+}
+
+TEST(QmRealtimeUsers, SameRevisionFullRecoversAfterInvalidDeltaWithoutDiscardingOldState)
+{
+	CQmRealtimeUsersState State;
+	ASSERT_EQ(Apply(State, FULL), EResult::APPLIED);
+	const char *pInvalid = R"({"server_address":"one:8303","revision":2,"base_revision":1,"full":false,"lease_seconds":10,"servers":[["one:8303",99,0],["bad:8303",-1,0]],"players":[],"removed_servers":["two:8303"],"removed_players":["p1"]})";
+	ASSERT_EQ(Apply(State, pInvalid), EResult::RESYNC);
+	EXPECT_TRUE(State.NeedsFull());
+	EXPECT_EQ(State.Revision(), 1);
+	EXPECT_EQ(State.LeaseSeconds(), 20);
+	EXPECT_EQ(State.Result().m_OnlineUserCount, 4);
+	ASSERT_EQ(State.Result().m_vLocalServerMarks.size(), 1u);
+	EXPECT_EQ(State.Result().m_vLocalServerMarks[0].m_Name, "本服玩家");
+	ASSERT_EQ(Apply(State, FULL), EResult::APPLIED);
+	EXPECT_FALSE(State.NeedsFull());
+	EXPECT_EQ(State.Revision(), 1);
+	ASSERT_EQ(Apply(State, LEASE), EResult::APPLIED);
+	EXPECT_EQ(State.LeaseSeconds(), 15);
+}
+
+TEST(QmRealtimeUsers, OlderFullCannotClearResyncRequirement)
+{
+	CQmRealtimeUsersState State;
+	ASSERT_EQ(Apply(State, FULL), EResult::APPLIED);
+	const char *pNext = R"({"server_address":"one:8303","revision":2,"base_revision":1,"full":false,"lease_seconds":10,"servers":[["one:8303",2,0]],"players":[],"removed_servers":[],"removed_players":[]})";
+	ASSERT_EQ(Apply(State, pNext), EResult::APPLIED);
+	ASSERT_EQ(Apply(State, "{}"), EResult::RESYNC);
+	ASSERT_TRUE(State.NeedsFull());
+	EXPECT_EQ(Apply(State, FULL), EResult::IGNORED);
+	EXPECT_TRUE(State.NeedsFull());
+	EXPECT_EQ(State.Revision(), 2);
+	EXPECT_EQ(State.LeaseSeconds(), 10);
+	EXPECT_EQ(State.Result().m_OnlineUserCount, 5);
+}
+
+TEST(QmRealtimeUsers, HealthySameRevisionFullDoesNotRenewLease)
+{
+	CQmRealtimeUsersState State;
+	ASSERT_EQ(Apply(State, FULL), EResult::APPLIED);
+	ASSERT_EQ(Apply(State, LEASE), EResult::APPLIED);
+	EXPECT_EQ(Apply(State, FULL), EResult::IGNORED);
+	EXPECT_FALSE(State.NeedsFull());
+	EXPECT_EQ(State.Revision(), 1);
+	EXPECT_EQ(State.LeaseSeconds(), 15);
+	EXPECT_EQ(State.Result().m_OnlineUserCount, 4);
+}
+
+TEST(QmRealtimeUsersPublication, SuccessfulPublisherReceivesCompleteResultBeforeStateCommit)
+{
+	CQmRealtimeUsersState State;
+	SQmClientUsersParseResult Published;
+	int Calls = 0;
+	ASSERT_EQ(ApplyAndPublish(State, FULL, [&](SQmClientUsersParseResult Result, int Lease) {
+		++Calls;
+		EXPECT_EQ(State.Revision(), 0);
+		EXPECT_FALSE(State.Result().m_Parsed);
+		EXPECT_EQ(Lease, 20);
+		Published = std::move(Result);
+		return true;
+	}),
+		EResult::APPLIED);
+	EXPECT_EQ(Calls, 1);
+	EXPECT_TRUE(Published.m_Parsed);
+	EXPECT_EQ(Published.m_OnlineUserCount, 4);
+	EXPECT_EQ(Published.m_OnlineDummyCount, 1);
+	ASSERT_EQ(Published.m_vServerDistribution.size(), 2u);
+	EXPECT_EQ(Published.m_vServerDistribution[0].m_ServerAddress, "two:8303");
+	ASSERT_EQ(Published.m_vLocalServerMarks.size(), 1u);
+	EXPECT_EQ(Published.m_vLocalServerMarks[0].m_Name, "本服玩家");
+	EXPECT_EQ(State.Revision(), 1);
+	EXPECT_FALSE(State.NeedsFull());
+}
+
+TEST(QmRealtimeUsersPublication, RejectedDeltaPreservesPreviousRevisionLeaseAndMembers)
+{
+	CQmRealtimeUsersState State;
+	ASSERT_EQ(Apply(State, FULL), EResult::APPLIED);
+	const char *pDelta = R"({"server_address":"one:8303","revision":2,"base_revision":1,"full":false,"lease_seconds":10,"servers":[["one:8303",9,0]],"players":[],"removed_servers":["two:8303"],"removed_players":["p1"]})";
+	ASSERT_EQ(ApplyAndPublish(State, pDelta, [](SQmClientUsersParseResult Result, int Lease) {
+		EXPECT_EQ(Lease, 10);
+		EXPECT_EQ(Result.m_OnlineUserCount, 9);
+		EXPECT_TRUE(Result.m_vLocalServerMarks.empty());
+		return false;
+	}),
+		EResult::RESYNC);
+	EXPECT_TRUE(State.NeedsFull());
+	EXPECT_EQ(State.Revision(), 1);
+	EXPECT_EQ(State.LeaseSeconds(), 20);
+	EXPECT_EQ(State.Result().m_OnlineUserCount, 4);
+	ASSERT_EQ(State.Result().m_vLocalServerMarks.size(), 1u);
+	EXPECT_EQ(State.Result().m_vLocalServerMarks[0].m_Name, "本服玩家");
+}
+
+TEST(QmRealtimeUsersPublication, PublisherBadAllocPreservesStateAndFullCanRecover)
+{
+	CQmRealtimeUsersState State;
+	ASSERT_EQ(Apply(State, FULL), EResult::APPLIED);
+	ASSERT_EQ(ApplyAndPublish(State, LEASE, [](SQmClientUsersParseResult, int) -> bool {
+		throw std::bad_alloc();
+	}),
+		EResult::RESYNC);
+	EXPECT_TRUE(State.NeedsFull());
+	EXPECT_EQ(State.Revision(), 1);
+	EXPECT_EQ(State.LeaseSeconds(), 20);
+	EXPECT_EQ(State.Result().m_OnlineUserCount, 4);
+	ASSERT_EQ(ApplyAndPublish(State, FULL, [](SQmClientUsersParseResult Result, int) {
+		EXPECT_EQ(Result.m_OnlineUserCount, 4);
+		return true;
+	}),
+		EResult::APPLIED);
+	EXPECT_FALSE(State.NeedsFull());
+}
+
+TEST(QmRealtimeUsersPublication, RejectedLeaseDoesNotRenewOldDisplayLease)
+{
+	CQmRealtimeUsersState State;
+	ASSERT_EQ(Apply(State, FULL), EResult::APPLIED);
+	EXPECT_EQ(ApplyAndPublish(State, LEASE, [](SQmClientUsersParseResult, int Lease) {
+		EXPECT_EQ(Lease, 15);
+		return false;
+	}),
+		EResult::RESYNC);
+	EXPECT_TRUE(State.NeedsFull());
+	EXPECT_EQ(State.LeaseSeconds(), 20);
+	EXPECT_EQ(State.Result().m_OnlineUserCount, 4);
+}
+
+TEST(QmRealtimeUsersPublication, IgnoredSnapshotsDoNotInvokePublisher)
+{
+	CQmRealtimeUsersState State;
+	ASSERT_EQ(Apply(State, FULL), EResult::APPLIED);
+	int Calls = 0;
+	const auto Publish = [&](SQmClientUsersParseResult, int) {
+		++Calls;
+		return true;
+	};
+	EXPECT_EQ(ApplyAndPublish(State, FULL, Publish), EResult::IGNORED);
+	EXPECT_EQ(ApplyAndPublish(State, FULL, Publish, "two:8303"), EResult::IGNORED);
+	EXPECT_EQ(Calls, 0);
+	EXPECT_FALSE(State.NeedsFull());
+}
+
+TEST(QmRealtimeUsersPublication, InitialPublicationRejectionLeavesStateEmptyUntilRecovery)
+{
+	CQmRealtimeUsersState State;
+	EXPECT_EQ(ApplyAndPublish(State, FULL, [](SQmClientUsersParseResult, int) { return false; }), EResult::RESYNC);
+	EXPECT_EQ(State.Revision(), 0);
+	EXPECT_EQ(State.LeaseSeconds(), 0);
+	EXPECT_FALSE(State.Result().m_Parsed);
+	EXPECT_TRUE(State.Result().m_vServerDistribution.empty());
+	EXPECT_TRUE(State.NeedsFull());
+	EXPECT_EQ(ApplyAndPublish(State, FULL, [](SQmClientUsersParseResult, int) { return true; }), EResult::APPLIED);
+	EXPECT_EQ(State.Revision(), 1);
+	EXPECT_FALSE(State.NeedsFull());
 }

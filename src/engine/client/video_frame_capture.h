@@ -37,8 +37,16 @@ public:
 
 		uint32_t Width = 0, Height = 0;
 		CImageInfo::EImageFormat Format = CImageInfo::FORMAT_RGB;
-		if(!Reader(Width, Height, Format, vBuffer))
+		try
+		{
+			if(!Reader(Width, Height, Format, vBuffer))
+				return Fail(EError::READ_FAILED);
+		}
+		catch(...)
+		{
+			// 后端扩容像素或临时行失败时沿正常录制失败路径退出图形回调。
 			return Fail(EError::READ_FAILED);
+		}
 		if(m_Width <= 0 || m_Height <= 0 || Width != static_cast<uint32_t>(m_Width) || Height != static_cast<uint32_t>(m_Height))
 			return Fail(EError::SIZE_MISMATCH);
 		if(Format != CImageInfo::FORMAT_RGBA)

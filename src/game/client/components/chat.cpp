@@ -50,6 +50,7 @@
 #include <cmath>
 #include <iterator>
 #include <limits>
+#include <new>
 #include <string>
 #include <unordered_set>
 
@@ -413,6 +414,7 @@ void CChat::CLine::Reset(CChat &This)
 	m_ChatEmojiRect = {};
 	m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
 	m_RenderSponsorChatStyle = EQmSponsorChatStyle::NONE;
+	m_ColorPreparationPending = false;
 	m_QmTitleBobPadding = 0.0f;
 	m_aYOffset[0] = -1.0f;
 	m_aYOffset[1] = -1.0f;
@@ -1127,7 +1129,13 @@ void CChat::Echo(const char *pString, bool ForceVisible)
 void CChat::SaveBlockWords(IConfigManager *pConfig, void *)
 {
 	static_assert(sizeof(g_Config.m_QmBlockWordsList) == QmWordFilterList::INLINE_CAPACITY);
-	for(const std::string &Line : QmWordFilterList::SerializeInline(g_Config.m_QmBlockWordsList))
+	std::vector<std::string> vLines;
+	if(!QmWordFilterList::SerializeInline(g_Config.m_QmBlockWordsList, vLines))
+	{
+		pConfig->MarkSaveFailed();
+		return;
+	}
+	for(const std::string &Line : vLines)
 		pConfig->WriteLine(Line.c_str());
 }
 
@@ -1147,10 +1155,9 @@ void CChat::ConReloadWordFiles(IConsole::IResult *, void *pUserData)
 void CChat::ReloadWordFilterFile(bool Streamer, bool Force)
 {
 	auto &File = Streamer ? m_StreamerWordsFile : m_BlockWordsFile;
-	const uint64_t PreviousRevision = File.Revision();
 	File.Refresh(Storage(), Streamer ? g_Config.m_QmStreamerWordsFile : g_Config.m_QmBlockWordsFile, Force);
-	if(Streamer && (Force || File.Revision() != PreviousRevision))
-		QmStreamerWordFilter::SetAdditionalWords(File.Words());
+	if(Streamer)
+		File.PublishStreamerWords(Force);
 }
 
 void CChat::OnConsoleInit()
@@ -2113,6 +2120,7 @@ static void CleanupOldChatLogs(IStorage *pStorage, const char *pToday, int KeepD
 }
 
 void CChat::SaveChatLogLine(int ClientId, int Team, const char *pLine)
+try
 {
 	if(!g_Config.m_QmChatLogAutoSave || Client()->State() == IClient::STATE_DEMOPLAYBACK || pLine == nullptr || pLine[0] == '\0')
 		return;
@@ -2156,8 +2164,8 @@ void CChat::SaveChatLogLine(int ClientId, int Team, const char *pLine)
 		str_format(aLine, sizeof(aLine), "[%s] [%s] %s: %s", aTimestamp, ChatLogKind(ClientId, Team), aName, aText);
 
 	// 收消息时快照所有输入，worker 不访问组件、配置或玩家状态。
-	auto pJob = m_ChatLogWrites.Enqueue([pStorage = Storage(), pLastCleanupDate = m_pChatLogLastCleanupDate,
-						    Date = std::string(aDate), Filename = std::string(aFilename), Line = std::string(aLine), KeepDays = g_Config.m_QmChatLogKeepDays] {
+	m_ChatLogWrites.Enqueue([pStorage = Storage(), pLastCleanupDate = m_pChatLogLastCleanupDate,
+					Date = std::string(aDate), Filename = std::string(aFilename), Line = std::string(aLine), KeepDays = g_Config.m_QmChatLogKeepDays] {
 		if(!EnsureChatLogFolder(pStorage))
 			return;
 		CleanupOldChatLogs(pStorage, Date.c_str(), KeepDays, *pLastCleanupDate);
@@ -2171,8 +2179,11 @@ void CChat::SaveChatLogLine(int ClientId, int Team, const char *pLine)
 		io_write_newline(File);
 		io_close(File);
 	});
-	if(pJob)
-		Engine()->AddJob(pJob);
+	m_ChatLogWrites.TrySubmit([this](std::shared_ptr<IJob> pJob) { return Engine()->TryAddJob(std::move(pJob)); });
+}
+catch(const std::bad_alloc &)
+{
+	// 快照或入队分配失败不阻断消息接收，已有队列仍可由后续帧提交。
 }
 
 static std::shared_ptr<const QmChatExport::SMetadata> CaptureChatExportMetadata(CGameClient *pGameClient, int ClientId, int Team, const char *pName, const char *pMessage, int SourceConnection);
@@ -2964,7 +2975,12 @@ bool CChat::OnPrepareLines(float y)
 			Line.m_aYOffset[1] = -1.0f;
 			Line.m_QmTitleBobPadding = TitleBobPadding;
 		}
-		const bool LinePrepared = (RenderChatEmoji ? Line.m_ChatEmojiRect.w > 0.0f : Line.m_TextContainerIndex.Valid() && Line.m_ChatEmojiRect.w <= 0.0f);
+		if(Line.m_ColorPreparationPending)
+		{
+			Line.m_aYOffset[0] = -1.0f;
+			Line.m_aYOffset[1] = -1.0f;
+		}
+		const bool LinePrepared = !Line.m_ColorPreparationPending && (RenderChatEmoji ? Line.m_ChatEmojiRect.w > 0.0f : Line.m_TextContainerIndex.Valid() && Line.m_ChatEmojiRect.w <= 0.0f);
 		if(LinePrepared && !ForceRecreate)
 		{
 			// 已有容器也必须消耗相同的垂直预算，
@@ -3027,7 +3043,8 @@ bool CChat::OnPrepareLines(float y)
 			}
 		}
 
-		const CColoredParts ColoredParts(pText, Line.m_ClientId == CLIENT_MSG);
+		const CColoredParts ColoredParts = CColoredParts::ParseOrBorrow(pText, Line.m_ClientId == CLIENT_MSG);
+		Line.m_ColorPreparationPending = ColoredParts.ParseFailed();
 		if(!ColoredParts.Colors().empty() && ColoredParts.Colors()[0].m_Index == 0)
 			Line.m_CustomColor = ColoredParts.Colors()[0].m_Color;
 		pText = ColoredParts.Text();
@@ -3368,8 +3385,8 @@ bool CChat::OnPrepareLines(float y)
 			const bool Platinum = Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM;
 			if(UseGradient && Platinum)
 				QmSponsorChatAddPlatinumSplits(Cursor, pMessage, Color.a);
-			if(UseColoredParts && !FilteredAfterColors)
-				ColoredParts.AddSplitsToCursor(Cursor);
+			if(UseColoredParts && !FilteredAfterColors && !ColoredParts.TryAddSplitsToCursor(Cursor))
+				Line.m_ColorPreparationPending = true;
 			const bool SpatialGradient = UseGradient && Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::NONE && Line.m_CustomColor == std::nullopt && ColoredParts.Colors().empty();
 			const auto Gradient = QmChatGradientStyle(g_Config, GradientRole, Color);
 			const CQmChatGradientPaint Paint(TextRender(), Cursor, pMessage, SpatialGradient ? &Gradient : nullptr);
@@ -3472,6 +3489,7 @@ bool CChat::OnPrepareLines(float y)
 
 void CChat::OnRender()
 {
+	m_ChatLogWrites.TrySubmit([this](std::shared_ptr<IJob> pJob) { return Engine()->TryAddJob(std::move(pJob)); });
 	m_PublicWords.Update(Http(), Storage(), g_Config.m_QmPublicBlockWords != 0, time_get() / time_freq());
 	m_TranslateButton.m_RectValid = false;
 	ReloadWordFilterFile(false, false);
@@ -4475,21 +4493,20 @@ CChat::EChatSendResult CChat::SendChatQueued(int Team, const char *pLine, bool A
 			return EChatSendResult::HANDLED;
 		}
 
-		CPendingChatMessages::SMessage Message{Team, Connection, Connection >= 0 ? GameClient()->m_aLocalIds[Connection] : -1, pLine, pLocalOriginal != nullptr ? pLocalOriginal : ""};
-		const EChatSendResult Result = static_cast<EChatSendResult>(m_PendingChatMessages.Admit(m_LastChatSend, time(), time_freq(), std::move(Message), [&](const CPendingChatMessages::SMessage &Pending) {
+		const auto PrepareMessage = [&] {
+			return CPendingChatMessages::SMessage{Team, Connection, Connection >= 0 ? GameClient()->m_aLocalIds[Connection] : -1, pLine, pLocalOriginal != nullptr ? pLocalOriginal : ""};
+		};
+		auto Message = CPendingChatMessages::TryPrepare(PrepareMessage);
+		if(!Message)
+			return EChatSendResult::REJECTED;
+		const auto SendMessage = [&](const CPendingChatMessages::SMessage &Pending) {
 			return SendChat(Pending.m_Team, Pending.m_Text.c_str(), Pending.m_Original.empty() ? nullptr : Pending.m_Original.c_str(), Pending.m_Connection);
-		}));
+		};
+		const EChatSendResult Result = static_cast<EChatSendResult>(m_PendingChatMessages.Admit(m_LastChatSend, time(), time_freq(), std::move(*Message), SendMessage));
 
 		if(Result != EChatSendResult::REJECTED)
 		{
-			const int Length = str_length(pLine);
-			const int OriginalLength = pLocalOriginal != nullptr ? str_length(pLocalOriginal) : 0;
-			CHistoryEntry *pEntry = m_History.Allocate(sizeof(CHistoryEntry) + Length + (OriginalLength > 0 ? OriginalLength + 1 : 0));
-			pEntry->m_Team = Team;
-			pEntry->m_OriginalOffset = OriginalLength > 0 ? Length + 1 : 0;
-			str_copy(pEntry->m_aText, pLine, Length + 1);
-			if(OriginalLength > 0)
-				str_copy(pEntry->m_aText + pEntry->m_OriginalOffset, pLocalOriginal, OriginalLength + 1);
+			QmAppendChatHistory(m_History, Team, pLine, pLocalOriginal != nullptr ? std::string_view(pLocalOriginal) : std::string_view{});
 		}
 		return Result;
 	};

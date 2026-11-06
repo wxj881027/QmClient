@@ -36,7 +36,9 @@ namespace
 		SInlineList List;
 		pConsole->Register("qm_block_words_list", "?r", CFGFLAG_CLIENT, SetList, &List, "");
 		pConsole->Register("qm_block_words_list_append", "s", CFGFLAG_CLIENT, AppendList, &List, "");
-		for(const std::string &Line : QmWordFilterList::SerializeInline(Original.c_str()))
+		std::vector<std::string> vLines;
+		ASSERT_TRUE(QmWordFilterList::SerializeInline(Original.c_str(), vLines));
+		for(const std::string &Line : vLines)
 		{
 			EXPECT_LT(Line.size(), 16384u);
 			pConsole->ExecuteLine(Line.c_str());

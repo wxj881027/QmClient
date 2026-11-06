@@ -12,10 +12,13 @@
 
 #include <algorithm>
 #include <cstring>
+#include <new>
 #include <set>
+#include <stdexcept>
 #include <utility>
 
 bool IFriends::ValidateList(const CFriendList &List)
+try
 {
 	if(List.m_vCategories.size() < 3 || List.m_vCategories.size() > MAX_FRIEND_CATEGORIES || List.m_vFriends.size() > MAX_FRIENDS)
 		return false;
@@ -54,6 +57,15 @@ bool IFriends::ValidateList(const CFriendList &List)
 			return false;
 	}
 	return true;
+}
+catch(const std::bad_alloc &)
+{
+	// 校验候选的去重索引申请失败时拒绝整份候选，保留已有好友列表。
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
 }
 
 bool CFriends::ReplaceAll(const CFriendList &List)
@@ -502,7 +514,17 @@ bool CFriends::SetFriendCategory(const char *pName, const char *pClan, const cha
 
 void CFriends::AddFriend(const char *pName, const char *pClan, const char *pCategory)
 {
-	if(m_NumFriends == MAX_FRIENDS || (pName[0] == 0 && pClan[0] == 0))
+	if(m_NumFriends == MAX_FRIENDS)
+		return;
+
+	// 查重和哈希使用最终保存的字节，避免固定字段截断后身份不一致。
+	char aName[MAX_NAME_LENGTH];
+	char aClan[MAX_CLAN_LENGTH];
+	str_copy(aName, pName);
+	str_copy(aClan, pClan);
+	pName = aName;
+	pClan = aClan;
+	if(pName[0] == 0 && pClan[0] == 0)
 		return;
 
 	const bool IsClanFriend = pName[0] == '\0';
@@ -585,7 +607,9 @@ void CFriends::Friends()
 void CFriends::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData)
 {
 	CFriends *pSelf = (CFriends *)pUserData;
-	char aBuf[512];
+	// 字段转义最多翻倍，另为命令、引号、分隔符和分组序号预留空间。
+	constexpr int MaxFieldLength = MAX_NAME_LENGTH + MAX_CLAN_LENGTH + std::max(MAX_FRIEND_CATEGORY_LENGTH, MAX_FRIEND_NOTE_LENGTH);
+	char aBuf[2 * MaxFieldLength + 64];
 	const char *pEnd = aBuf + sizeof(aBuf) - 4;
 
 	if(!pSelf->m_Foes)

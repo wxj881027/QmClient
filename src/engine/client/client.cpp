@@ -5,10 +5,19 @@
 
 #include "demoedit.h"
 #include "friends.h"
+#include "map_download_request.h"
+#include "message_repack.h"
 #include "perf_file_logger.h"
+#include "qm_crash_report_file.h"
+#include "qm_crash_report_marker.h"
+#include "qm_forced_exit_watchdog.h"
 #include "qm_graphics_diagnostics.h"
 #include "qm_storage_mode.h"
+#include "replay_save.h"
+#include "server_info_client.h"
+#include "server_info_update.h"
 #include "serverbrowser.h"
+#include "snapshot_ticks.h"
 #include "video_export.h"
 
 #include <base/crashdump.h>
@@ -35,6 +44,7 @@
 #include <engine/favorites.h>
 #include <engine/graphics.h>
 #include <engine/http.h>
+#include <engine/http_response_validation.h>
 #include <engine/input.h>
 #include <engine/keys.h>
 #include <engine/map.h>
@@ -45,6 +55,7 @@
 #include <engine/shared/compression.h>
 #include <engine/shared/config.h>
 #include <engine/shared/demo.h>
+#include <engine/shared/demo_output.h>
 #include <engine/shared/fifo.h>
 #include <engine/shared/filecollection.h>
 #include <engine/shared/masterserver.h>
@@ -181,8 +192,7 @@ static constexpr std::chrono::nanoseconds gs_NetworkPumpLoadingBudget = 6ms;
 static constexpr int64_t gs_HangTimeoutSeconds = 10;
 // QmClient: 退出兜底超时（秒）。正常退出通常 1-2 秒，超过该时间视为退出清理挂起。
 static constexpr int64_t gs_ForcedExitTimeoutSeconds = 10;
-static std::atomic<uint64_t> gs_ForcedExitWatchdogGeneration{0};
-static std::atomic<bool> gs_ForcedExitWatchdogArmed{false};
+static QmForcedExit::CWatchdog gs_ForcedExitWatchdog;
 // QmClient: 测试专用注入开关（--qm-test-main-thread-assert），供进程级回归测试
 // 在真实客户端里触发一次主线程断言，验证弹窗期间看门狗的行为。
 static bool gs_QmTestMainThreadAssert = false;
@@ -207,23 +217,17 @@ static bool gs_aLoadedPreviousConfigPath[ConfigDomain::NUM] = {};
 // 配置保存完成后启动本看门狗线程：清理若未在超时前解除看门狗，直接强制退出。
 static void StartForcedExitWatchdog()
 {
-	gs_ForcedExitWatchdogArmed.store(true, std::memory_order_release);
-	const uint64_t Generation = gs_ForcedExitWatchdogGeneration.fetch_add(1, std::memory_order_relaxed) + 1;
-	log_info("client", "shutdown watchdog armed: forcing exit if shutdown does not finish within %lld seconds", (long long)gs_ForcedExitTimeoutSeconds);
-	std::thread([Generation]() {
-		std::this_thread::sleep_for(std::chrono::seconds(gs_ForcedExitTimeoutSeconds));
-		if(gs_ForcedExitWatchdogGeneration.load(std::memory_order_acquire) != Generation)
-			return;
-		// 使用 std::_Exit 跳过 atexit/静态析构，确保清理阶段卡死时也能结束进程。
-		std::_Exit(0);
-	}).detach();
+	const bool Started = gs_ForcedExitWatchdog.Start(std::chrono::seconds(gs_ForcedExitTimeoutSeconds), []() { std::_Exit(0); });
+	if(Started)
+		log_info("client", "shutdown watchdog armed: forcing exit if shutdown does not finish within %lld seconds", (long long)gs_ForcedExitTimeoutSeconds);
+	else
+		log_warn("client", "failed to start a new shutdown watchdog; normal cleanup will continue");
 }
 
 static void StopForcedExitWatchdog()
 {
 	// 弹窗路径也会调用本函数（此时看门狗可能并未武装），因此只在真正解除时记录日志。
-	const bool WasArmed = gs_ForcedExitWatchdogArmed.exchange(false, std::memory_order_acq_rel);
-	gs_ForcedExitWatchdogGeneration.fetch_add(1, std::memory_order_release);
+	const bool WasArmed = gs_ForcedExitWatchdog.Stop();
 	if(WasArmed)
 		log_info("client", "shutdown watchdog disarmed after cleanup completed");
 }
@@ -252,61 +256,50 @@ static bool IsQmCrashReporterPath(const char *pPath)
 static bool MarkQmCrashReportShown(const char *pReportPath)
 {
 	char aMarkerPath[IO_MAX_PATH_LENGTH + 16];
-	str_format(aMarkerPath, sizeof(aMarkerPath), "%s.shown", pReportPath);
-	IOHANDLE File = io_open(aMarkerPath, IOFLAG_WRITE);
-	if(!File)
-		return false;
-
-	char aTimestamp[64];
-	str_format(aTimestamp, sizeof(aTimestamp), "%lld\n", (long long)time_timestamp());
-	const bool Success = io_write(File, aTimestamp, str_length(aTimestamp)) == str_length(aTimestamp);
-	io_close(File);
-	return Success;
+	return crash_output::AppendPathSuffix(pReportPath, ".shown", aMarkerPath, sizeof(aMarkerPath)) &&
+	       QmCrashReportMarker::Save(aMarkerPath, time_timestamp());
 }
 
 static bool ShowQmCrashReporterDialog(const char *pReportPath)
 {
-	if(!IsQmCrashReporterPath(pReportPath))
-		return false;
-
-	IOHANDLE File = io_open(pReportPath, IOFLAG_READ);
-	if(!File)
-		return false;
-	const int64_t ReportLength = io_length(File);
-	if(ReportLength < 0 || ReportLength > 2 * 1024 * 1024)
+	try
 	{
-		io_close(File);
+		if(!IsQmCrashReporterPath(pReportPath))
+			return false;
+
+		auto Report = QmCrashReportFile::ReadFile(pReportPath);
+		if(!Report)
+			return false;
+
+		const std::vector<IGraphics::CMessageBoxButton> vButtons = {
+			{.m_pLabel = "Show crash reports"},
+			{.m_pLabel = "Close report", .m_Confirm = true, .m_Cancel = true},
+		};
+		const std::optional<int> Result = ShowMessageBoxWithoutGraphics({
+			.m_pTitle = "QmClient Crash Report",
+			.m_pMessage = Report->c_str(),
+			.m_Style = IGraphics::EMessageBoxStyle::QM_FESTIVE,
+			.m_vButtons = vButtons,
+		});
+		if(!Result.has_value())
+			return false;
+
+		if(!MarkQmCrashReportShown(pReportPath))
+			log_warn("crash_reporter", "failed to mark report as shown: %s", pReportPath);
+		if(*Result == 0)
+		{
+			char aReportDirectory[IO_MAX_PATH_LENGTH];
+			str_copy(aReportDirectory, pReportPath);
+			if(fs_parent_dir(aReportDirectory) == 0)
+				open_file(aReportDirectory);
+		}
+		return true;
+	}
+	catch(...)
+	{
+		// 报告准备的C++异常按失败返回，原报告仍保留在磁盘。
 		return false;
 	}
-	char *pReport = io_read_all_str(File);
-	io_close(File);
-	if(pReport == nullptr)
-		return false;
-
-	const std::vector<IGraphics::CMessageBoxButton> vButtons = {
-		{.m_pLabel = "Show crash reports"},
-		{.m_pLabel = "Close report", .m_Confirm = true, .m_Cancel = true},
-	};
-	const std::optional<int> Result = ShowMessageBoxWithoutGraphics({
-		.m_pTitle = "QmClient Crash Report",
-		.m_pMessage = pReport,
-		.m_Style = IGraphics::EMessageBoxStyle::QM_FESTIVE,
-		.m_vButtons = vButtons,
-	});
-	free(pReport);
-	if(!Result.has_value())
-		return false;
-
-	if(!MarkQmCrashReportShown(pReportPath))
-		log_warn("crash_reporter", "failed to mark report as shown: %s", pReportPath);
-	if(*Result == 0)
-	{
-		char aReportDirectory[IO_MAX_PATH_LENGTH];
-		str_copy(aReportDirectory, pReportPath);
-		if(fs_parent_dir(aReportDirectory) == 0)
-			open_file(aReportDirectory);
-	}
-	return true;
 }
 
 struct SQmPendingCrashReportSearch
@@ -341,29 +334,36 @@ static int FindPendingQmCrashReportCallback(const CFsFileInfo *pInfo, int IsDir,
 	return 0;
 }
 
-static bool ReadQmCrashReporterStartedAt(IStorage *pStorage, int64_t &StartedAt)
+static bool ReadQmCrashReporterStartedAt(IStorage *pStorage, int64_t &StartedAt) noexcept
 {
 	StartedAt = 0;
-	char *pState = pStorage->ReadFileStr(gs_pQmCrashReporterBaselineFile, IStorage::TYPE_SAVE);
-	if(pState == nullptr)
+	try
+	{
+		char aPath[IO_MAX_PATH_LENGTH + 64];
+		pStorage->GetCompletePath(IStorage::TYPE_SAVE, gs_pQmCrashReporterBaselineFile, aPath, sizeof(aPath));
+		const auto Timestamp = QmCrashReportMarker::ReadStartedAt(aPath);
+		StartedAt = Timestamp.value_or(0);
+		return Timestamp.has_value();
+	}
+	catch(...)
+	{
 		return false;
-	StartedAt = str_toint64_base(pState);
-	free(pState);
-	return StartedAt > 0;
+	}
 }
 
 static bool WriteQmCrashReporterStartedAt(IStorage *pStorage, int64_t StartedAt)
 {
-	pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-	IOHANDLE File = pStorage->OpenFile(gs_pQmCrashReporterBaselineFile, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
+	try
+	{
+		pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+		char aPath[IO_MAX_PATH_LENGTH + 64];
+		pStorage->GetCompletePath(IStorage::TYPE_SAVE, gs_pQmCrashReporterBaselineFile, aPath, sizeof(aPath));
+		return QmCrashReportMarker::Save(aPath, StartedAt);
+	}
+	catch(...)
+	{
 		return false;
-
-	char aTimestamp[64];
-	str_format(aTimestamp, sizeof(aTimestamp), "%lld\n", (long long)StartedAt);
-	const bool Success = io_write(File, aTimestamp, str_length(aTimestamp)) == str_length(aTimestamp);
-	io_close(File);
-	return Success;
+	}
 }
 
 static void ShowPendingQmCrashReport(IStorage *pStorage)
@@ -658,77 +658,6 @@ CClient::~CClient()
 #endif
 
 // ----- send functions -----
-static inline bool RepackMsg(const CMsgPacker *pMsg, CPacker &Packer, bool Sixup)
-{
-	int MsgId = pMsg->m_MsgId;
-	Packer.Reset();
-
-	if(Sixup && !pMsg->m_NoTranslate)
-	{
-		if(pMsg->m_System)
-		{
-			if(MsgId >= OFFSET_UUID)
-			{
-				;
-			}
-			else if(MsgId == NETMSG_INFO || MsgId == NETMSG_REQUEST_MAP_DATA)
-			{
-				;
-			}
-			else if(MsgId == NETMSG_READY)
-			{
-				MsgId = protocol7::NETMSG_READY;
-			}
-			else if(MsgId == NETMSG_RCON_CMD)
-			{
-				MsgId = protocol7::NETMSG_RCON_CMD;
-			}
-			else if(MsgId == NETMSG_ENTERGAME)
-			{
-				MsgId = protocol7::NETMSG_ENTERGAME;
-			}
-			else if(MsgId == NETMSG_INPUT)
-			{
-				MsgId = protocol7::NETMSG_INPUT;
-			}
-			else if(MsgId == NETMSG_RCON_AUTH)
-			{
-				MsgId = protocol7::NETMSG_RCON_AUTH;
-			}
-			else if(MsgId == NETMSG_PING)
-			{
-				MsgId = protocol7::NETMSG_PING;
-			}
-			else
-			{
-				log_error("net", "0.7 DROP send sys %d", MsgId);
-				return false;
-			}
-		}
-		else
-		{
-			if(MsgId >= 0 && MsgId < OFFSET_UUID)
-				MsgId = Msg_SixToSeven(MsgId);
-
-			if(MsgId < 0)
-				return false;
-		}
-	}
-
-	if(pMsg->m_MsgId < OFFSET_UUID)
-	{
-		Packer.AddInt((MsgId << 1) | (pMsg->m_System ? 1 : 0));
-	}
-	else
-	{
-		Packer.AddInt(pMsg->m_System ? 1 : 0); // NETMSG_EX, NETMSGTYPE_EX
-		g_UuidManager.PackUuid(pMsg->m_MsgId, &Packer);
-	}
-	Packer.AddRaw(pMsg->Data(), pMsg->Size());
-
-	return true;
-}
-
 int CClient::SendMsg(int Conn, CMsgPacker *pMsg, int Flags)
 {
 	CNetChunk Packet;
@@ -738,7 +667,7 @@ int CClient::SendMsg(int Conn, CMsgPacker *pMsg, int Flags)
 
 	// repack message (inefficient)
 	CPacker Pack;
-	if(!RepackMsg(pMsg, Pack, IsSixup()))
+	if(!client_message::Repack(*pMsg, Pack, IsSixup(), g_UuidManager, Flags))
 		return -1;
 
 	mem_zero(&Packet, sizeof(CNetChunk));
@@ -860,18 +789,14 @@ void CClient::SendReady(int Conn)
 void CClient::SendMapRequest()
 {
 	dbg_assert(!m_MapdownloadFileTemp, "Map download already in progress");
-	m_MapdownloadFileTemp = Storage()->OpenFile(m_aMapdownloadFilenameTemp, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(IsSixup())
+	if(!m_MapdownloadFileTemp.Open(*Storage(), m_aMapdownloadFilenameTemp))
 	{
-		CMsgPacker MsgP(protocol7::NETMSG_REQUEST_MAP_DATA, true, true);
-		SendMsg(CONN_MAIN, &MsgP, MSGFLAG_VITAL | MSGFLAG_FLUSH);
+		ReportMapDownloadSaveFailure(m_aMapdownloadFilenameTemp);
+		return;
 	}
-	else
-	{
-		CMsgPacker Msg(NETMSG_REQUEST_MAP_DATA, true);
-		Msg.AddInt(m_MapdownloadChunk);
+	map_download::SendRequest(IsSixup(), m_MapdownloadChunk, [this](CMsgPacker &Msg) {
 		SendMsg(CONN_MAIN, &Msg, MSGFLAG_VITAL | MSGFLAG_FLUSH);
-	}
+	});
 }
 
 void CClient::RconAuth(const char *pName, const char *pPassword, bool Dummy)
@@ -1704,11 +1629,12 @@ void CClient::GetServerInfo(CServerInfo *pServerInfo) const
 
 void CClient::SetCurrentServerInfo(const CServerInfo &ServerInfo)
 {
-	m_CurrentServerInfo = ServerInfo;
+	server_info::Update(m_CurrentServerInfo, ServerInfo, [this](CServerInfo &Candidate) {
+		str_copy(Candidate.m_aMap, GetCurrentMap());
+		Candidate.m_MapCrc = m_pMap->Crc();
+		Candidate.m_MapSize = m_pMap->Size();
+	});
 	m_CurrentServerInfoRequestTime = -1;
-	str_copy(m_CurrentServerInfo.m_aMap, GetCurrentMap());
-	m_CurrentServerInfo.m_MapCrc = m_pMap->Crc();
-	m_CurrentServerInfo.m_MapSize = m_pMap->Size();
 }
 
 void CClient::ServerInfoRequest()
@@ -2261,6 +2187,7 @@ static int SavedServerInfoType(int Type)
 }
 
 void CClient::ProcessServerInfo(int RawType, NETADDR *pFrom, const void *pData, int DataSize)
+try
 {
 	CServerBrowser::CServerEntry *pEntry = m_ServerBrowser.Find(*pFrom);
 
@@ -2365,30 +2292,15 @@ void CClient::ProcessServerInfo(int RawType, NETADDR *pFrom, const void *pData, 
 		Info.m_ReceivedPackets |= Flag;
 	}
 
-	bool IgnoreError = false;
-	for(int i = 0; i < MAX_CLIENTS && (int)Info.m_vClients.size() < MAX_CLIENTS && !Up.Error(); i++)
+	const int ClientLimit = SavedType == SERVERINFO_64_LEGACY ? LEGACY_MAX_CLIENTS : MAX_CLIENTS;
+	for(int i = 0; i < ClientLimit && (int)Info.m_vClients.size() < MAX_CLIENTS && !Up.Error(); i++)
 	{
 		CServerInfo::CClient Client = {};
-		GET_STRING(Client.m_aName);
-		if(Up.Error())
-		{
-			// Packet end, no problem unless it happens during one
-			// player info, so ignore the error.
-			IgnoreError = true;
+		const auto ReadResult = server_info::ReadClient(Up, SavedType == SERVERINFO_EXTENDED, Client);
+		if(ReadResult == server_info::EClientReadResult::INVALID)
+			return;
+		if(ReadResult == server_info::EClientReadResult::END)
 			break;
-		}
-		GET_STRING(Client.m_aClan);
-		GET_INT(Client.m_Country);
-		if(!in_range(Client.m_Country, CountryCode::MINIMUM, CountryCode::MAXIMUM))
-		{
-			Client.m_Country = CountryCode::DEFAULT;
-		}
-		GET_INT(Client.m_Score);
-		GET_INT(Client.m_Player);
-		if(SavedType == SERVERINFO_EXTENDED)
-		{
-			Up.GetString(); // extra info, reserved
-		}
 		if(!Up.Error())
 		{
 			if(SavedType == SERVERINFO_64_LEGACY)
@@ -2409,7 +2321,7 @@ void CClient::ProcessServerInfo(int RawType, NETADDR *pFrom, const void *pData, 
 
 	str_clean_whitespaces(Info.m_aName);
 
-	if(!Up.Error() || IgnoreError)
+	if(!Up.Error())
 	{
 		if(!DuplicatedPacket && (!pEntry || !pEntry->m_GotInfo || SavedType >= pEntry->m_Info.m_Type))
 		{
@@ -2466,6 +2378,11 @@ void CClient::ProcessServerInfo(int RawType, NETADDR *pFrom, const void *pData, 
 
 #undef GET_STRING
 #undef GET_INT
+}
+catch(...)
+{
+	// 候选/列表准备或通知异常不逸出收包循环；已完成发布不自动回滚或重放。
+	log_warn("client", "Failed to process server info packet");
 }
 
 static CServerCapabilities GetServerCapabilities(int Version, int Flags, bool Sixup)
@@ -2765,13 +2682,24 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 				Size = Unpacker.GetInt();
 			}
 
-			const unsigned char *pData = Unpacker.GetRaw(Size);
 			if(Unpacker.Error() || Size <= 0 || MapCRC != m_MapdownloadCrc || Chunk != m_MapdownloadChunk)
 			{
 				return;
 			}
+			if(!map_download::CanAppend(m_MapdownloadAmount, Size, m_MapdownloadTotalsize))
+			{
+				DisconnectWithReason("invalid map size");
+				return;
+			}
+			const unsigned char *pData = Unpacker.GetRaw(Size);
+			if(Unpacker.Error())
+				return;
 
-			io_write(m_MapdownloadFileTemp, pData, Size);
+			if(!m_MapdownloadFileTemp.Write(pData, static_cast<unsigned>(Size)))
+			{
+				ReportMapDownloadSaveFailure(m_aMapdownloadFilenameTemp);
+				return;
+			}
 
 			m_MapdownloadAmount += Size;
 
@@ -2780,10 +2708,10 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 
 			if(Last)
 			{
-				if(m_MapdownloadFileTemp)
+				if(!m_MapdownloadFileTemp.Close())
 				{
-					io_close(m_MapdownloadFileTemp);
-					m_MapdownloadFileTemp = nullptr;
+					ReportMapDownloadSaveFailure(m_aMapdownloadFilenameTemp);
+					return;
 				}
 				FinishMapDownload();
 			}
@@ -2792,19 +2720,12 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 				// request new chunk
 				m_MapdownloadChunk++;
 
-				if(IsSixup() && (m_MapdownloadChunk % m_TranslationContext.m_MapDownloadChunksPerRequest == 0))
-				{
-					CMsgPacker MsgP(protocol7::NETMSG_REQUEST_MAP_DATA, true, true);
-					SendMsg(CONN_MAIN, &MsgP, MSGFLAG_VITAL | MSGFLAG_FLUSH);
-				}
-				else
-				{
-					CMsgPacker MsgP(NETMSG_REQUEST_MAP_DATA, true);
-					MsgP.AddInt(m_MapdownloadChunk);
-					SendMsg(CONN_MAIN, &MsgP, MSGFLAG_VITAL | MSGFLAG_FLUSH);
-				}
+				const bool Requested = map_download::ContinueRequest(IsSixup(), m_MapdownloadChunk,
+					m_TranslationContext.m_MapDownloadChunksPerRequest, [this](CMsgPacker &MsgP) {
+						SendMsg(CONN_MAIN, &MsgP, MSGFLAG_VITAL | MSGFLAG_FLUSH);
+					});
 
-				if(g_Config.m_Debug)
+				if(Requested && g_Config.m_Debug)
 				{
 					char aBuf[256];
 					str_format(aBuf, sizeof(aBuf), "requested chunk %d", m_MapdownloadChunk);
@@ -3111,8 +3032,11 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 				return;
 			}
 
-			int GameTick = Unpacker.GetInt();
-			int DeltaTick = GameTick - Unpacker.GetInt();
+			client_snapshot::STicks Ticks;
+			if(!client_snapshot::UnpackTicks(Unpacker, Ticks))
+				return;
+			const int GameTick = Ticks.m_GameTick;
+			const int DeltaTick = Ticks.m_DeltaTick;
 
 			int NumParts = 1;
 			int Part = 0;
@@ -3508,11 +3432,7 @@ void CClient::ResetMapDownload(bool ResetActive)
 		m_pMapdownloadTask = nullptr;
 	}
 
-	if(m_MapdownloadFileTemp)
-	{
-		io_close(m_MapdownloadFileTemp);
-		m_MapdownloadFileTemp = nullptr;
-	}
+	m_MapdownloadFileTemp.Close();
 
 	if(Storage()->FileExists(m_aMapdownloadFilenameTemp, IStorage::TYPE_SAVE))
 	{
@@ -3532,20 +3452,21 @@ void CClient::ResetMapDownload(bool ResetActive)
 	}
 }
 
+void CClient::ReportMapDownloadSaveFailure(const char *pFilename)
+{
+	char aError[128 + IO_MAX_PATH_LENGTH];
+	str_format(aError, sizeof(aError), Localize("Could not save downloaded map. Try manually deleting this file: %s"), pFilename);
+	DisconnectWithReason(aError);
+}
+
 void CClient::FinishMapDownload()
 {
-	m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", "download complete, loading map");
-
-	bool FileSuccess = true;
-	FileSuccess &= Storage()->RemoveFile(m_aMapdownloadFilename, IStorage::TYPE_SAVE);
-	FileSuccess &= Storage()->RenameFile(m_aMapdownloadFilenameTemp, m_aMapdownloadFilename, IStorage::TYPE_SAVE);
-	if(!FileSuccess)
+	if(!map_download::Publish(*Storage(), m_aMapdownloadFilenameTemp, m_aMapdownloadFilename))
 	{
-		char aError[128 + IO_MAX_PATH_LENGTH];
-		str_format(aError, sizeof(aError), Localize("Could not save downloaded map. Try manually deleting this file: %s"), m_aMapdownloadFilename);
-		DisconnectWithReason(aError);
+		ReportMapDownloadSaveFailure(m_aMapdownloadFilename);
 		return;
 	}
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client/network", "download complete, loading map");
 
 	const char *pError = LoadMap(m_aMapdownloadName, m_aMapdownloadFilename, m_MapdownloadSha256, m_MapdownloadCrc);
 	if(!pError)
@@ -3597,9 +3518,9 @@ static TVersion ToVersion(char *pStr)
 	return std::make_tuple(aVersion[0], aVersion[1], aVersion[2]);
 }
 
-void CClient::LoadDDNetInfo()
+void CClient::LoadDDNetInfo(IHttpRequest *pResponse)
 {
-	const json_value *pDDNetInfo = m_ServerBrowser.LoadDDNetInfo();
+	const json_value *pDDNetInfo = m_ServerBrowser.LoadDDNetInfo(pResponse);
 
 	if(!pDDNetInfo)
 	{
@@ -4552,12 +4473,13 @@ void CClient::Update()
 			if(m_ServerBrowser.DDNetInfoSha256() == m_pDDNetInfoTask->ResultSha256())
 			{
 				log_debug("client/info", "DDNet info already up-to-date");
-				m_InfoState = EInfoState::SUCCESS;
+				CHttpResponseValidation Validation(*m_pDDNetInfoTask);
+				m_InfoState = Validation.Commit() ? EInfoState::SUCCESS : EInfoState::ERROR;
 			}
 			else
 			{
 				log_debug("client/info", "Loading new DDNet info");
-				LoadDDNetInfo();
+				LoadDDNetInfo(m_pDDNetInfoTask.get());
 			}
 
 			ResetDDNetInfoTask();
@@ -4571,29 +4493,23 @@ void CClient::Update()
 
 	if(State() == IClient::STATE_ONLINE)
 	{
-		if(!m_EditJobs.empty())
-		{
-			std::shared_ptr<CDemoEdit> pJob = m_EditJobs.front();
-			if(pJob->State() == IJob::STATE_DONE)
+		replay_save::ConsumeCompleted(m_EditJobs, [this](const std::shared_ptr<CDemoEdit> &pJob) {
+			char aBuf[IO_MAX_PATH_LENGTH + 64];
+			if(pJob->State() == IJob::STATE_DONE && pJob->Success())
 			{
-				char aBuf[IO_MAX_PATH_LENGTH + 64];
-				if(pJob->Success())
-				{
-					str_format(aBuf, sizeof(aBuf), "Successfully saved the replay to '%s'!", pJob->Destination());
-					m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", aBuf);
+				str_format(aBuf, sizeof(aBuf), "Successfully saved the replay to '%s'!", pJob->Destination());
+				m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", aBuf);
 
-					GameClient()->Echo(Localize("Successfully saved the replay!"));
-				}
-				else
-				{
-					str_format(aBuf, sizeof(aBuf), "Failed saving the replay to '%s'...", pJob->Destination());
-					m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", aBuf);
-
-					GameClient()->Echo(Localize("Failed saving the replay!"));
-				}
-				m_EditJobs.pop_front();
+				GameClient()->Echo(Localize("Successfully saved the replay!"));
 			}
-		}
+			else
+			{
+				str_format(aBuf, sizeof(aBuf), "Failed saving the replay to '%s'...", pJob->Destination());
+				m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", aBuf);
+
+				GameClient()->Echo(Localize("Failed saving the replay!"));
+			}
+		});
 	}
 
 	// update the server browser
@@ -5267,7 +5183,8 @@ void CClient::Run()
 				if(VideoOffscreenThisFrame && IVideo::Current() != nullptr)
 				{
 					CImageInfo FrameImage;
-					Graphics()->EndVideoFrame(FrameImage);
+					if(!Graphics()->EndVideoFrame(FrameImage))
+						IVideo::Current()->FailCapture();
 					if(FrameImage.m_pData != nullptr)
 						IVideo::Current()->SubmitOffscreenFrame(std::move(FrameImage));
 					else
@@ -5368,8 +5285,7 @@ void CClient::Run()
 					const int64_t FrameEnd = time_get();
 					const double FrameMs = m_QmPerfLastFrameEnd != 0 ? (FrameEnd - m_QmPerfLastFrameEnd) * 1000.0 / time_freq() : 0.0;
 					m_QmPerfLastFrameEnd = FrameEnd;
-					if(m_QmPerfFrameBatch.Record(PerfFrame(), FrameMs))
-						QmPerfLogFields("perf/frame", m_QmPerfFrameBatch.TakeFields(), this);
+					m_QmPerfFrameBatch.RecordAndLog(PerfFrame(), FrameMs, this);
 				}
 				// 只在连接/加载阶段记录，避免菜单和游戏内每帧刷屏
 				if(g_Config.m_QmGraphicsTrace >= 3 &&
@@ -6598,28 +6514,24 @@ void CClient::StartVideo(const char *pFilename, bool WithTimestamp)
 
 	// wait for idle, so there is no data race
 	Graphics()->WaitForIdle();
-	// pause the sound device while creating the video instance
-	Sound()->PauseAudioDevice();
-	// 输出分辨率（M7 超采样）：qm_video_width/height 为 0 时跟随渲染分辨率；
-	// 分段导出使用任务启动时冻结的显示配置；整段直录在开始时捕获一份。
-	const SVideoDisplaySnapshot DisplaySnapshot = m_pVideoExportTask ? m_pVideoExportTask->DisplaySnapshot() : qm_demo_display::Capture(g_Config);
-	// 离屏导出计划（导出 FSAA / 输出大于窗口）：离屏时 CVideo 的读回尺寸按目标尺寸
-	// 建立（输出可大于窗口，M7 的"防上采样回退"由目标尺寸天然满足）；
-	// 降级回窗口路径时按窗口读回，行为与旧实现一致。
-	m_VideoOffscreenPlan = PlanVideoOffscreenFrame(
-		Graphics()->ScreenWidth(), Graphics()->ScreenHeight(),
-		g_Config.m_QmVideoWidth, g_Config.m_QmVideoHeight,
-		g_Config.m_QmVideoFsaa, g_Config.m_GfxFsaaSamples,
-		Graphics()->MaxMultisampleRenderTargetSamples());
-	m_VideoOffscreenFailed = false;
-	const int RenderWidth = m_VideoOffscreenPlan.m_Offscreen ? m_VideoOffscreenPlan.m_RenderWidth : Graphics()->ScreenWidth();
-	const int RenderHeight = m_VideoOffscreenPlan.m_Offscreen ? m_VideoOffscreenPlan.m_RenderHeight : Graphics()->ScreenHeight();
-	new CVideo(Graphics(), Sound(), Storage(), RenderWidth, RenderHeight, aFilename, g_Config.m_QmVideoWidth, g_Config.m_QmVideoHeight, &DisplaySnapshot);
-	Sound()->UnpauseAudioDevice();
-	if(!IVideo::Current()->Start())
+	if(!StartVideoRecorder(*Sound(), [&] {
+		   // 输出分辨率（M7 超采样）：qm_video_width/height 为 0 时跟随渲染分辨率；
+		   // 分段导出使用任务启动时冻结的显示配置；整段直录在开始时捕获一份。
+		   const SVideoDisplaySnapshot DisplaySnapshot = m_pVideoExportTask ? m_pVideoExportTask->DisplaySnapshot() : qm_demo_display::Capture(g_Config);
+		   // 离屏导出计划（导出 FSAA / 输出大于窗口）：离屏时 CVideo 的读回尺寸按目标尺寸
+		   // 建立（输出可大于窗口，M7 的"防上采样回退"由目标尺寸天然满足）；
+		   // 降级回窗口路径时按窗口读回，行为与旧实现一致。
+		   m_VideoOffscreenPlan = PlanVideoOffscreenFrame(
+			   Graphics()->ScreenWidth(), Graphics()->ScreenHeight(),
+			   g_Config.m_QmVideoWidth, g_Config.m_QmVideoHeight,
+			   g_Config.m_QmVideoFsaa, g_Config.m_GfxFsaaSamples,
+			   Graphics()->MaxMultisampleRenderTargetSamples());
+		   m_VideoOffscreenFailed = false;
+		   const int RenderWidth = m_VideoOffscreenPlan.m_Offscreen ? m_VideoOffscreenPlan.m_RenderWidth : Graphics()->ScreenWidth();
+		   const int RenderHeight = m_VideoOffscreenPlan.m_Offscreen ? m_VideoOffscreenPlan.m_RenderHeight : Graphics()->ScreenHeight();
+		   return new CVideo(Graphics(), Sound(), Storage(), RenderWidth, RenderHeight, aFilename, g_Config.m_QmVideoWidth, g_Config.m_QmVideoHeight, &DisplaySnapshot);
+	   }))
 	{
-		// Release partially initialized recorder state (threads/ffmpeg resources).
-		IVideo::Current()->Stop();
 		log_error("videorecorder", "Failed to start recording to '%s'", aFilename);
 		m_DemoPlayer.Stop("Failed to start video recording. See local console for details.");
 		return;
@@ -6810,71 +6722,69 @@ void CClient::Con_SaveReplay(IConsole::IResult *pResult, void *pUserData)
 
 void CClient::SaveReplay(const int Length, const char *pFilename)
 {
-	if(!g_Config.m_ClReplays)
-	{
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "Feature is disabled. Please enable it via configuration.");
-		GameClient()->Echo(Localize("Replay feature is disabled!"));
-		return;
-	}
-
-	if(!DemoRecorder(RECORDER_REPLAYS)->IsRecording())
-	{
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "ERROR: demorecorder isn't recording. Try to rejoin to fix that.");
-	}
-	else if(DemoRecorder(RECORDER_REPLAYS)->Length() < 1)
-	{
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "ERROR: demorecorder isn't recording for at least 1 second.");
-	}
-	else
-	{
-		char aFilename[IO_MAX_PATH_LENGTH];
-		if(pFilename[0] == '\0')
+	const auto ReportFailure = [this]() noexcept {
+		try
 		{
-			char aTimestamp[20];
-			str_timestamp(aTimestamp, sizeof(aTimestamp));
-			str_format(aFilename, sizeof(aFilename), "demos/highlight/高光-%s.demo", aTimestamp);
+			GameClient()->Echo(Localize("Failed to save demo"));
+		}
+		catch(...)
+		{
+		}
+	};
+	try
+	{
+		if(!g_Config.m_ClReplays)
+		{
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "Feature is disabled. Please enable it via configuration.");
+			GameClient()->Echo(Localize("Replay feature is disabled!"));
+			return;
+		}
+
+		IDemoRecorder *pRecorder = DemoRecorder(RECORDER_REPLAYS);
+		if(!pRecorder->IsRecording())
+		{
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "ERROR: demorecorder isn't recording. Try to rejoin to fix that.");
+		}
+		else if(pRecorder->Length() < 1)
+		{
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "ERROR: demorecorder isn't recording for at least 1 second.");
 		}
 		else
 		{
-			str_format(aFilename, sizeof(aFilename), "demos/replays/%s.demo", pFilename);
-		}
-		const std::string Path = qmclient::media_paths::Resolve(Storage(), g_Config, aFilename);
-		if(!qmclient::media_paths::PrepareWrite(Storage(), Path))
-		{
-			GameClient()->Echo(Localize("Failed to save demo"));
-			return;
-		}
-		str_copy(aFilename, Path.c_str());
-		if(pFilename[0] != '\0')
-		{
-			IOHANDLE Handle = m_pStorage->OpenFile(aFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE);
-			if(!Handle)
+			char aFilename[IO_MAX_PATH_LENGTH];
+			if(pFilename[0] == '\0')
 			{
-				m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "ERROR: invalid filename. Try a different one!");
-				GameClient()->Echo(Localize("Failed to save demo"));
+				char aTimestamp[20];
+				str_timestamp(aTimestamp, sizeof(aTimestamp));
+				str_format(aFilename, sizeof(aFilename), "demos/highlight/高光-%s.demo", aTimestamp);
+			}
+			else
+			{
+				str_format(aFilename, sizeof(aFilename), "demos/replays/%s.demo", pFilename);
+			}
+			const std::string Path = qmclient::media_paths::Resolve(Storage(), g_Config, aFilename);
+			if(!demo_output::ValidDestination(*Storage(), Path.c_str()) || !qmclient::media_paths::PrepareWrite(Storage(), Path))
+			{
+				ReportFailure();
 				return;
 			}
-			io_close(Handle);
-			m_pStorage->RemoveFile(aFilename, qmclient::media_paths::StorageType(aFilename));
+			str_copy(aFilename, Path.c_str());
+			const int EndTick = GameTick(g_Config.m_ClDummy);
+			const int StartTick = replay_save::StartTick(EndTick, Length, GameTickSpeed());
+			const auto Result = replay_save::Submit(*pRecorder, m_EditJobs, [&]() { return std::make_shared<CDemoEdit>(GameClient()->NetVersion(), &*m_pSnapshotDelta, &*m_pSnapshotDeltaSixup, m_pStorage, pRecorder->CurrentFilename(), aFilename, StartTick, EndTick); }, [this](const std::shared_ptr<CDemoEdit> &pJob) { return Engine()->TryAddJob(pJob); }, [this]() {
+				DemoRecorder_UpdateReplayRecorder();
+				return !g_Config.m_ClReplays || DemoRecorder(RECORDER_REPLAYS)->IsRecording(); });
+			if(Result.m_Outcome == replay_save::EOutcome::SUBMITTED)
+				m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "Saving replay...");
+			else
+				ReportFailure();
+			if(Result.m_RestartFailed)
+				log_warn("replay", "Replay recording could not be restarted");
 		}
-
-		// Stop the recorder to correctly slice the demo after
-		DemoRecorder(RECORDER_REPLAYS)->Stop(IDemoRecorder::EStopMode::KEEP_FILE);
-
-		// Slice the demo to get only the last cl_replay_length seconds
-		const char *pSrc = DemoRecorder(RECORDER_REPLAYS)->CurrentFilename();
-		const int EndTick = GameTick(g_Config.m_ClDummy);
-		const int StartTick = EndTick - Length * GameTickSpeed();
-
-		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "Saving replay...");
-
-		// Create a job to do this slicing in background because it can be a bit long depending on the file size
-		std::shared_ptr<CDemoEdit> pDemoEditTask = std::make_shared<CDemoEdit>(GameClient()->NetVersion(), &*m_pSnapshotDelta, &*m_pSnapshotDeltaSixup, m_pStorage, pSrc, aFilename, StartTick, EndTick);
-		Engine()->AddJob(pDemoEditTask);
-		m_EditJobs.push_back(pDemoEditTask);
-
-		// And we restart the recorder
-		DemoRecorder_UpdateReplayRecorder();
+	}
+	catch(...)
+	{
+		ReportFailure();
 	}
 }
 
@@ -6963,7 +6873,12 @@ const char *CClient::DemoPlayer_Play(const char *pFilename, int StorageType)
 		m_aapSnapshots[0][SnapshotType]->m_Tick = -1;
 	}
 
-	m_DemoPlayer.Play();
+	if(!m_DemoPlayer.Play())
+	{
+		const char *pError = m_DemoPlayer.ErrorMessage()[0] != '\0' ? m_DemoPlayer.ErrorMessage() : Localize("Error playing demo");
+		DisconnectWithReason(pError);
+		return pError;
+	}
 	GameClient()->OnEnterGame();
 
 	return nullptr;
@@ -7197,46 +7112,27 @@ void CClient::BenchmarkQuit(int Seconds, const char *pFilename)
 
 void CClient::StartHangWatchdog()
 {
-	if(m_HangWatchdogThread.joinable())
+	if(m_HangWatchdog.Started())
 		return;
-
-	m_HangWatchdogStop.store(false, std::memory_order_release);
-	m_HangInfo.StartWatchdog();
-	if(m_aHangDumpDir[0] == '\0' && Storage() != nullptr)
-		Storage()->GetCompletePath(IStorage::TYPE_SAVE, gs_pQmCrashDumpDir, m_aHangDumpDir, sizeof(m_aHangDumpDir));
-	UpdateHangHeartbeat();
-
-	m_HangWatchdogThread = std::thread([this]() {
-		// 必须使用单调时钟（time_get_nanoseconds）而不是 time_get()：后者只在主循环
-		// set_new_tick() 后刷新一次，主线程卡住时全进程时钟冻结，看门狗将永远无法
-		// 感知心跳停滞。看门狗线程恰恰需要在主线程阻塞时继续计时。
+	try
+	{
+		if(m_aHangDumpDir[0] == '\0' && Storage() != nullptr)
+			Storage()->GetCompletePath(IStorage::TYPE_SAVE, gs_pQmCrashDumpDir, m_aHangDumpDir, sizeof(m_aHangDumpDir));
+		UpdateHangHeartbeat();
 		const int64_t TimeoutNanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(gs_HangTimeoutSeconds)).count();
-		while(!m_HangWatchdogStop.load(std::memory_order_acquire))
-		{
-			std::this_thread::sleep_for(1s);
-			if(m_HangWatchdogStop.load(std::memory_order_acquire))
-				break;
-			const int64_t LastHeartbeat = m_HangInfo.LastHeartbeat();
-			if(LastHeartbeat == 0)
-				continue;
-			const int64_t Now = time_get_nanoseconds().count();
-			if(Now - LastHeartbeat >= TimeoutNanoseconds)
-			{
-				const auto Snapshot = m_HangInfo.TryClaimReport(Now, TimeoutNanoseconds);
-				if(Snapshot.has_value())
-					WriteHangReportAndDump(Now, *Snapshot);
-			}
-		}
-	});
+		if(!m_HangWatchdog.Start(m_HangInfo.Read(), TimeoutNanoseconds, [](void *pUser, int64_t Now, const QmHangDiagnostics::SSnapshot &Snapshot) { static_cast<CClient *>(pUser)->WriteHangReportAndDump(Now, Snapshot); }, this))
+			log_warn("hang", "failed to start hang watchdog");
+	}
+	catch(...)
+	{
+		// 路径或心跳准备失败不影响客户端运行，活动状态仍须回收。
+		m_HangWatchdog.Stop();
+	}
 }
 
 void CClient::StopHangWatchdog()
 {
-	// 停止状态和报告领取同步，防止休眠中的看门狗醒来后领取新报告。
-	m_HangInfo.StopWatchdog();
-	m_HangWatchdogStop.store(true, std::memory_order_release);
-	if(m_HangWatchdogThread.joinable())
-		m_HangWatchdogThread.join();
+	m_HangWatchdog.Stop();
 }
 
 void CClient::UpdateHangHeartbeat()
@@ -7279,6 +7175,7 @@ void CClient::WriteHangReportAndDump(int64_t Now, const QmHangDiagnostics::SSnap
 	IOHANDLE File = io_open(aReportPath, IOFLAG_WRITE);
 	if(File)
 	{
+		std::unique_ptr<void, decltype(&io_close)> FileOwner(File, &io_close);
 		const int64_t LastHeartbeat = Snapshot.m_LastHeartbeat;
 		const float SecondsSinceHeartbeat = (Now - LastHeartbeat) / 1e9f;
 		char aOsVersion[128];
@@ -7326,7 +7223,6 @@ void CClient::WriteHangReportAndDump(int64_t Now, const QmHangDiagnostics::SSnap
 		io_write(File, aBuf, str_length(aBuf));
 
 		io_sync(File);
-		io_close(File);
 	}
 
 #if defined(CONF_FAMILY_WINDOWS)
@@ -7339,8 +7235,17 @@ void CClient::WriteHangReportAndDump(int64_t Now, const QmHangDiagnostics::SSnap
 	fs_makedir_rec_for(aDumpPath);
 	const auto DumpResult = QmHangDiagnostics::WriteDump(aDumpPath);
 	if(!DumpResult.Written())
-		log_warn("hang", "failed to write minidump '%s': stage=%s error=%lu (%s)", aDumpPath,
-			QmHangDiagnostics::DumpStageName(DumpResult.m_Stage), DumpResult.m_Error, windows_format_system_message(DumpResult.m_Error).c_str());
+	{
+		try
+		{
+			log_warn("hang", "failed to write minidump '%s': stage=%s error=%lu (%s)", aDumpPath,
+				QmHangDiagnostics::DumpStageName(DumpResult.m_Stage), DumpResult.m_Error, windows_format_system_message(DumpResult.m_Error).c_str());
+		}
+		catch(...)
+		{
+			// 附加错误说明分配失败后，仍继续追加原始结果和尝试报告器。
+		}
+	}
 	if(!QmHangDiagnostics::AppendDumpResult(aReportPath, aDumpPath, DumpResult))
 		log_warn("hang", "failed to append minidump result to '%s': status=%s stage=%s error=%lu dump='%s'", aReportPath,
 			DumpResult.Written() ? "written" : "failed", QmHangDiagnostics::DumpStageName(DumpResult.m_Stage), DumpResult.m_Error, aDumpPath);
@@ -7988,7 +7893,19 @@ int main(int argc, const char **argv)
 	}
 	gs_AndroidStarted = true;
 #elif defined(CONF_FAMILY_WINDOWS)
-	CWindowsComLifecycle WindowsComLifecycle(true);
+	CWindowsComLifecycle WindowsComLifecycle(true, CWindowsComLifecycle::EInitMode::CHECKED);
+	if(!WindowsComLifecycle.IsInitialized())
+	{
+		try
+		{
+			log_error("client", "Failed to initialize Windows COM.");
+		}
+		catch(...)
+		{
+			// 诊断失败不影响失败退出。
+		}
+		return -1;
+	}
 #endif
 	CCmdlineFix CmdlineFix(&argc, &argv);
 
@@ -8339,6 +8256,13 @@ int main(int argc, const char **argv)
 
 	// create the components
 	IEngine *pEngine = CreateEngine(GAME_NAME, pFutureConsoleLogger);
+	if(!pEngine)
+	{
+		log_error("client", "Failed to initialize worker threads");
+		pClient->ShowMessageBox({.m_pTitle = "Initialization Error", .m_pMessage = "Failed to initialize worker threads. Close other applications and try again."});
+		PerformAllCleanup();
+		return -1;
+	}
 	pKernel->RegisterInterface(pEngine, false);
 	CleanerFunctions.emplace([pEngine]() {
 		// Engine has to be destroyed before the graphics so that skin download thread can finish
@@ -8422,7 +8346,16 @@ int main(int argc, const char **argv)
 
 	pEngine->Init();
 	pConsole->Init();
-	pConfigManager->Init();
+	try
+	{
+		pConfigManager->Init();
+	}
+	catch(...)
+	{
+		log_error("client", "Failed to initialize configuration");
+		PerformAllCleanup();
+		return -1;
+	}
 	pNotifications->Init(GAME_NAME " Client");
 
 	// register all console commands
@@ -8560,26 +8493,22 @@ int main(int argc, const char **argv)
 		pSteam->ClearConnectAddress();
 	}
 
+	std::shared_ptr<ILogger> pConfiguredFileLogger(log_logger_noop());
 	if(g_Config.m_Logfile[0])
 	{
-		const int Mode = g_Config.m_Logappend ? IOFLAG_APPEND : IOFLAG_WRITE;
-		IOHANDLE Logfile = pStorage->OpenFile(g_Config.m_Logfile, Mode, IStorage::TYPE_SAVE_OR_ABSOLUTE);
-		if(Logfile)
-		{
+		const bool Prepared = log_prepare_backend(pConfiguredFileLogger, [&]() -> std::unique_ptr<ILogger> {
+			const int Mode = g_Config.m_Logappend ? IOFLAG_APPEND : IOFLAG_WRITE;
+			const IOHANDLE Logfile = pStorage->OpenFile(g_Config.m_Logfile, Mode, IStorage::TYPE_SAVE_OR_ABSOLUTE);
+			if(!Logfile)
+				return nullptr;
 			auto pFileLogger = log_logger_file(Logfile);
 			pFileLogger->SetFilter(CLogFilter{IConsole::ToLogLevelFilter(g_Config.m_Loglevel)});
-			pFutureFileLogger->Set(std::move(pFileLogger));
-		}
-		else
-		{
+			return pFileLogger;
+		});
+		if(!Prepared)
 			log_error("client", "failed to open '%s' for logging", g_Config.m_Logfile);
-			pFutureFileLogger->Set(log_logger_noop());
-		}
 	}
-	else
-	{
-		pFutureFileLogger->Set(log_logger_noop());
-	}
+	pFutureFileLogger->Set(std::move(pConfiguredFileLogger));
 
 	// 性能日志文件：CFutureLogger 只能 Set 一次，启动时固定到可切换包装；
 	// 游戏内 qm_perf_debug / qm_perf_logfile / qm_perf_stutter_diagnostics 任一
@@ -8755,7 +8684,8 @@ void CClient::RequestDDNetInfo()
 		str_append(aUrl, aEscaped);
 	}
 
-	m_pDDNetInfoTask = HttpGetFile(aUrl, Storage(), DDNET_INFO_FILE, IStorage::TYPE_SAVE);
+	m_pDDNetInfoTask = HttpGetBoth(aUrl, Storage(), DDNET_INFO_FILE, IStorage::TYPE_SAVE);
+	m_pDDNetInfoTask->ValidateBeforeOverwrite(true);
 	m_pDDNetInfoTask->Timeout(CTimeout{10000, 0, 500, 10});
 	m_pDDNetInfoTask->SkipByFileTime(false); // Always re-download.
 	// Use ipv4 so we can know the ingame ip addresses of players before they join game servers
@@ -9164,56 +9094,74 @@ void CClient::UpdateQmPerfFileLogger()
 
 	if(Wanted)
 	{
-		m_pStorage->CreateFolder("dumps", IStorage::TYPE_SAVE);
-		m_pStorage->CreateFolder("dumps/QmClient_Perf", IStorage::TYPE_SAVE);
-		char aDate[64];
-		str_timestamp(aDate, sizeof(aDate));
-		char aPerfLogPath[128];
-		// 每次开启都新建文件、绝不覆盖旧日志：首次用干净时间戳名，
-		// 之后（同一进程内）追加递增序号。
-		++m_QmPerfLogReopenCounter;
-		if(m_QmPerfLogReopenCounter == 1)
-			str_format(aPerfLogPath, sizeof(aPerfLogPath), "dumps/QmClient_Perf/qm_perf_%s.log", aDate);
-		else
-			str_format(aPerfLogPath, sizeof(aPerfLogPath), "dumps/QmClient_Perf/qm_perf_%s_%d.log", aDate, m_QmPerfLogReopenCounter);
+		char aPerfLogCompletePath[IO_MAX_PATH_LENGTH] = {};
+		std::shared_ptr<ILogger> pPrepared;
+		const bool Prepared = log_prepare_backend(pPrepared, [&]() -> std::unique_ptr<ILogger> {
+			m_pStorage->CreateFolder("dumps", IStorage::TYPE_SAVE);
+			m_pStorage->CreateFolder("dumps/QmClient_Perf", IStorage::TYPE_SAVE);
+			char aDate[64];
+			str_timestamp(aDate, sizeof(aDate));
+			char aPerfLogPath[128];
+			// 每次开启都新建文件、绝不覆盖旧日志：首次用干净时间戳名，
+			// 之后（同一进程内）追加递增序号。
+			++m_QmPerfLogReopenCounter;
+			if(m_QmPerfLogReopenCounter == 1)
+				str_format(aPerfLogPath, sizeof(aPerfLogPath), "dumps/QmClient_Perf/qm_perf_%s.log", aDate);
+			else
+				str_format(aPerfLogPath, sizeof(aPerfLogPath), "dumps/QmClient_Perf/qm_perf_%s_%d.log", aDate, m_QmPerfLogReopenCounter);
 
-		char aPerfLogCompletePath[IO_MAX_PATH_LENGTH];
-		m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, aPerfLogPath, aPerfLogCompletePath, sizeof(aPerfLogCompletePath));
-		IOHANDLE PerfLogfile = m_pStorage->OpenFile(aPerfLogPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-		if(!PerfLogfile)
-		{
-			fs_makedir_rec_for(aPerfLogCompletePath);
-			PerfLogfile = io_open(aPerfLogCompletePath, IOFLAG_WRITE);
-		}
-		if(!PerfLogfile)
-		{
-			char aWorkingDir[IO_MAX_PATH_LENGTH];
-			if(fs_getcwd(aWorkingDir, sizeof(aWorkingDir)))
+			m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, aPerfLogPath, aPerfLogCompletePath, sizeof(aPerfLogCompletePath));
+			IOHANDLE PerfLogfile = m_pStorage->OpenFile(aPerfLogPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+			if(!PerfLogfile)
 			{
-				str_format(aPerfLogCompletePath, sizeof(aPerfLogCompletePath), "%s/%s", aWorkingDir, aPerfLogPath);
 				fs_makedir_rec_for(aPerfLogCompletePath);
 				PerfLogfile = io_open(aPerfLogCompletePath, IOFLAG_WRITE);
 			}
-		}
-		if(PerfLogfile)
+			if(!PerfLogfile)
+			{
+				char aWorkingDir[IO_MAX_PATH_LENGTH];
+				if(fs_getcwd(aWorkingDir, sizeof(aWorkingDir)))
+				{
+					str_format(aPerfLogCompletePath, sizeof(aPerfLogCompletePath), "%s/%s", aWorkingDir, aPerfLogPath);
+					fs_makedir_rec_for(aPerfLogCompletePath);
+					PerfLogfile = io_open(aPerfLogCompletePath, IOFLAG_WRITE);
+				}
+			}
+			if(!PerfLogfile)
+				return nullptr;
+			return log_logger_prefix_file(PerfLogfile, "perf/");
+		});
+		bool Published = false;
+		if(Prepared)
 		{
-			m_QmPerfFileLoggerActive = true;
-			QmPerfBeginSession();
-			m_QmPerfLastFrameEnd = 0;
-			m_QmPerfFrameBatch = CQmPerfFrameBatch();
-			m_pQmPerfFileSwitch->Set(log_logger_prefix_file(PerfLogfile, "perf/"));
-			QmPerfLogFields("perf/session", "\"event\":\"session_start\",\"schema\":2,\"sampling\":\"automatic\",\"frame_samples\":\"all\",\"target_fps\":300,\"version\":" + QmPerfJsonString(CLIENT_RELEASE_VERSION) + ",\"revision\":" + QmPerfJsonString(GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "unknown"), this);
-			// QmClient：日志文件就绪后先写一次完整配置快照（敏感项脱敏），
-			// 之后由主循环按秒写增量；见 perf_diagnostics.h。
-			m_QmPerfConfigSnapshot.Start(ConfigManager(), this);
-			m_QmPerfLastConfigCheck = time_get();
-			log_info("client", "writing performance log to '%s'", aPerfLogCompletePath);
+			try
+			{
+				m_pQmPerfFileSwitch->Set(std::move(pPrepared));
+				Published = true;
+			}
+			catch(...)
+			{
+			}
 		}
-		else
+		if(!Published)
 		{
-			// 打开失败不重试（避免每帧刷屏），等下次配置变化再尝试。
 			log_error("client", "failed to open '%s' for performance logging", aPerfLogCompletePath);
+			return;
 		}
+		m_QmPerfFileLoggerActive = true;
+		QmPerfBeginSession();
+		m_QmPerfLastFrameEnd = 0;
+		m_QmPerfFrameBatch = CQmPerfFrameBatch();
+		try
+		{
+			QmPerfLogFields("perf/session", "\"event\":\"session_start\",\"schema\":2,\"sampling\":\"automatic\",\"frame_samples\":\"all\",\"target_fps\":300,\"version\":" + QmPerfJsonString(CLIENT_RELEASE_VERSION) + ",\"revision\":" + QmPerfJsonString(GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "unknown"), this);
+		}
+		catch(...)
+		{
+		}
+		m_QmPerfConfigSnapshot.Start(ConfigManager(), this);
+		m_QmPerfLastConfigCheck = time_get();
+		log_info("client", "writing performance log to '%s'", aPerfLogCompletePath);
 	}
 	else
 	{
@@ -9224,18 +9172,37 @@ void CClient::UpdateQmPerfFileLogger()
 }
 
 // 关闭采集前的收尾：补齐帧批次、配置增量、被限流丢弃的明细与会话结束标记，
-// 再把文件 logger 换回 noop（退出用同步，运行中切走用作业线程）。
+// 再断开文件后端（退出用同步，运行中切走用预先准备的关闭任务）。
 void CClient::FinishQmPerfSession(bool Shutdown)
 {
-	if(m_QmPerfFrameBatch.Count() != 0)
-		QmPerfLogFields("perf/frame", m_QmPerfFrameBatch.TakeFields(), this);
-	m_QmPerfConfigSnapshot.Update(this);
-	QmPerfFlushDropped(this);
-	QmPerfLogFields("perf/session", std::string("\"event\":\"session_end\",\"reason\":") + QmPerfJsonString(Shutdown ? "shutdown" : "disabled"), this);
+	try
+	{
+		m_QmPerfFrameBatch.Flush(this);
+		m_QmPerfConfigSnapshot.Update(this);
+		QmPerfFlushDropped(this);
+		QmPerfLogFields("perf/session", std::string("\"event\":\"session_end\",\"reason\":") + QmPerfJsonString(Shutdown ? "shutdown" : "disabled"), this);
+	}
+	catch(...)
+	{
+		// 诊断文本失败仍须关闭文件并停止采集。
+	}
 	if(Shutdown)
-		m_pQmPerfFileSwitch->Set(log_logger_noop());
+		m_pQmPerfFileSwitch->Set(nullptr);
 	else
-		Engine()->AddJob(m_pQmPerfFileSwitch->SetAsync(log_logger_noop()));
+	{
+		auto pClose = m_pQmPerfFileSwitch->SetAsync(nullptr);
+		if(pClose)
+		{
+			try
+			{
+				// 拒绝或异常时 Switch 仍持有关闭任务，退出收尾可继续接管。
+				Engine()->TryAddJob(std::move(pClose));
+			}
+			catch(...)
+			{
+			}
+		}
+	}
 	m_QmPerfFileLoggerActive = false;
 	m_QmPerfLastFrameEnd = 0;
 }

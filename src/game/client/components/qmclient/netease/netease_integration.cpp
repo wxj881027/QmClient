@@ -84,9 +84,12 @@ void CNeteaseIntegration::UpdateLyricsData(const QmNeteaseHook::SSnapshotV5 &Sna
 		m_DataGeneration = Snapshot.m_Generation;
 		m_DataPid = Snapshot.m_CloudMusicPid;
 	}
-	if(m_pLyricsParseJob && m_pLyricsParseJob->State() == IJob::STATE_DONE)
+	if(m_pLyricsParseJob && m_pLyricsParseJob->Finished())
 	{
-		m_LyricsData = std::move(m_pLyricsParseJob->m_Result);
+		if(m_pLyricsParseJob->State() == IJob::STATE_DONE)
+			m_LyricsData = std::move(m_pLyricsParseJob->m_Result);
+		else
+			m_DataRevision = 0;
 		m_pLyricsParseJob.reset();
 	}
 	const uint64_t Now = MonotonicTickMs();

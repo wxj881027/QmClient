@@ -1,5 +1,7 @@
 #include "friend_last_seen_data.h"
 
+#include "qm_json_fields.h"
+
 #include <base/system.h>
 
 #include <engine/friends.h>
@@ -9,6 +11,8 @@
 #include <algorithm>
 #include <charconv>
 #include <memory>
+#include <new>
+#include <stdexcept>
 #include <utility>
 
 namespace
@@ -36,16 +40,23 @@ namespace
 	}
 
 	using TJson = std::unique_ptr<json_value, decltype(&json_value_free)>;
+
+	json_value *ParseJson(std::string_view Body)
+	{
+		json_settings Settings{};
+		Settings.max_memory = 32 * 1024 * 1024;
+		return JsonParseEx(&Settings, Body.data(), Body.size(), nullptr);
+	}
 }
 
 std::optional<std::string> QmParseDdStatsLastSeen(std::string_view Body, const char *pPlayerName)
 {
 	if(!ValidName(pPlayerName) || Body.empty() || Body.size() > 8 * 1024 * 1024)
 		return std::nullopt;
-	const TJson pRoot(JsonParse(Body.data(), Body.size()), json_value_free);
+	const TJson pRoot(ParseJson(Body), json_value_free);
 	if(!pRoot || pRoot->type != json_object)
 		return std::nullopt;
-	const json_value *pInfo = json_object_get(pRoot.get(), "recent_player_info");
+	const json_value *pInfo = qm_json::Field(pRoot.get(), "recent_player_info");
 	if(pInfo->type != json_array)
 		return std::nullopt;
 	std::string LatestDate;
@@ -54,8 +65,8 @@ std::optional<std::string> QmParseDdStatsLastSeen(std::string_view Body, const c
 		const json_value *pEntry = pInfo->u.array.values[i];
 		if(pEntry->type != json_object)
 			return std::nullopt;
-		const json_value *pName = json_object_get(pEntry, "name");
-		const json_value *pDate = json_object_get(pEntry, "last_seen");
+		const json_value *pName = qm_json::Field(pEntry, "name");
+		const json_value *pDate = qm_json::Field(pEntry, "last_seen");
 		if(pName->type != json_string || pName->u.string.length != static_cast<unsigned>(str_length(pPlayerName)) || str_comp(json_string_get(pName), pPlayerName) != 0 || pDate->type != json_string || !ValidDate(std::string_view(json_string_get(pDate), pDate->u.string.length)))
 			return std::nullopt;
 		// 同一名字可能有多套皮肤或战队记录，不能依赖返回顺序。
@@ -76,42 +87,82 @@ const SQmFriendLastSeenEntry *CQmFriendLastSeenCache::Get(const char *pName, int
 	if(!ValidName(pName))
 		return nullptr;
 	auto It = m_Entries.find(pName);
-	if(It == m_Entries.end())
-	{
-		if(m_Entries.size() >= IFriends::MAX_FRIENDS)
+	bool Inserted = false;
+	const auto Failed = [&]() noexcept -> const SQmFriendLastSeenEntry * {
+		if(Inserted)
+		{
+			m_Entries.erase(It);
 			return nullptr;
-		It = m_Entries.emplace(pName, SQmFriendLastSeenEntry{}).first;
-	}
-	auto &Entry = It->second;
-	Entry.m_VisibleAt = Now;
-	const bool Fresh = Entry.m_CheckedAt > 0 && Now >= Entry.m_CheckedAt && Now - Entry.m_CheckedAt < CACHE_SECONDS;
-	if(!Fresh && Now >= Entry.m_RetryAt && !Entry.m_Queued && (!m_ActiveRequest || m_ActiveRequest->m_Name != pName))
+		}
+		return It == m_Entries.end() ? nullptr : &It->second;
+	};
+	try
 	{
-		m_Queue.emplace_back(pName);
-		Entry.m_Queued = true;
+		if(It == m_Entries.end())
+		{
+			if(m_Entries.size() >= IFriends::MAX_FRIENDS)
+				return nullptr;
+			It = m_Entries.emplace(pName, SQmFriendLastSeenEntry{}).first;
+			Inserted = true;
+		}
+		auto &Entry = It->second;
+		const bool Fresh = Entry.m_CheckedAt > 0 && Now >= Entry.m_CheckedAt && Now - Entry.m_CheckedAt < CACHE_SECONDS;
+		if(!Fresh && Now >= Entry.m_RetryAt && !Entry.m_Queued && (!m_ActiveRequest || m_ActiveRequest->m_Name != pName))
+		{
+			m_Queue.emplace_back(pName);
+			Entry.m_Queued = true;
+		}
+		Entry.m_VisibleAt = Now;
+		return &Entry;
 	}
-	return &Entry;
+	catch(const std::bad_alloc &)
+	{
+		return Failed();
+	}
+	catch(const std::length_error &)
+	{
+		return Failed();
+	}
 }
 
 std::optional<SQmFriendLastSeenRequest> CQmFriendLastSeenCache::NextRequest(int64_t Now)
+try
 {
 	if(m_ActiveRequest || Now < m_NextRequestAt)
 		return std::nullopt;
 	while(!m_Queue.empty())
 	{
-		std::string Name = std::move(m_Queue.front());
-		m_Queue.pop_front();
+		const std::string &Name = m_Queue.front();
 		const auto It = m_Entries.find(Name);
 		if(It == m_Entries.end())
+		{
+			m_Queue.pop_front();
 			continue;
-		It->second.m_Queued = false;
+		}
 		// 离开好友页或滚出视口后，不继续下载先前排队的玩家档案。
 		if(Now - It->second.m_VisibleAt > 2)
+		{
+			It->second.m_Queued = false;
+			m_Queue.pop_front();
 			continue;
+		}
+		SQmFriendLastSeenRequest Candidate{m_RequestId + 1, Name};
+		std::optional<SQmFriendLastSeenRequest> Result{Candidate};
+		m_ActiveRequest = std::move(Candidate);
+		m_RequestId = m_ActiveRequest->m_Id;
 		m_NextRequestAt = Now + 2;
-		m_ActiveRequest = SQmFriendLastSeenRequest{++m_RequestId, std::move(Name)};
-		return m_ActiveRequest;
+		It->second.m_Queued = false;
+		m_Queue.pop_front();
+		return Result;
 	}
+	return std::nullopt;
+}
+catch(const std::bad_alloc &)
+{
+	return std::nullopt;
+}
+catch(const std::length_error &)
+{
 	return std::nullopt;
 }
 
@@ -198,17 +249,34 @@ std::string CQmFriendLastSeenCache::Serialize() const
 	return Writer.GetOutputString();
 }
 
+bool CQmFriendLastSeenCache::TrySerialize(std::string &Body) const
+try
+{
+	std::string Candidate = Serialize();
+	Body.swap(Candidate);
+	return true;
+}
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
+}
+
 bool CQmFriendLastSeenCache::Load(std::string_view Body, int64_t Now)
+try
 {
 	if(Body.empty() || Body.size() > 1024 * 1024)
 		return false;
-	const TJson pRoot(JsonParse(Body.data(), Body.size()), json_value_free);
+	const TJson pRoot(ParseJson(Body), json_value_free);
 	if(!pRoot || pRoot->type != json_object)
 		return false;
-	const json_value *pVersion = json_object_get(pRoot.get(), "version");
+	const json_value *pVersion = qm_json::Field(pRoot.get(), "version");
 	if(pVersion->type != json_integer || pVersion->u.integer != 1)
 		return false;
-	const json_value *pPlayers = json_object_get(pRoot.get(), "players");
+	const json_value *pPlayers = qm_json::Field(pRoot.get(), "players");
 	if(pPlayers->type != json_array || pPlayers->u.array.length > IFriends::MAX_FRIENDS)
 		return false;
 	decltype(m_Entries) Entries;
@@ -217,15 +285,16 @@ bool CQmFriendLastSeenCache::Load(std::string_view Body, int64_t Now)
 		const json_value *pPlayer = pPlayers->u.array.values[i];
 		if(pPlayer->type != json_object)
 			return false;
-		const json_value *pName = json_object_get(pPlayer, "name");
-		const json_value *pDate = json_object_get(pPlayer, "date");
-		const json_value *pChecked = json_object_get(pPlayer, "checked_at");
+		const json_value *pName = qm_json::Field(pPlayer, "name");
+		const json_value *pDate = qm_json::Field(pPlayer, "date");
+		const json_value *pChecked = qm_json::Field(pPlayer, "checked_at");
 		if(pName->type != json_string || !ValidName(json_string_get(pName)) || pName->u.string.length != static_cast<unsigned>(str_length(json_string_get(pName))) || pDate->type != json_string || pChecked->type != json_string)
 			return false;
-		SQmFriendLastSeenEntry Entry;
-		Entry.m_Date = json_string_get(pDate);
-		if(pDate->u.string.length != Entry.m_Date.size() || (!Entry.m_Date.empty() && !ValidDate(Entry.m_Date)))
+		const std::string_view Date(json_string_get(pDate), pDate->u.string.length);
+		if(!Date.empty() && !ValidDate(Date))
 			return false;
+		SQmFriendLastSeenEntry Entry;
+		Entry.m_Date.assign(Date);
 		const char *pCheckedAt = json_string_get(pChecked);
 		const auto Parsed = std::from_chars(pCheckedAt, pCheckedAt + pChecked->u.string.length, Entry.m_CheckedAt);
 		if(Parsed.ec != std::errc{} || Parsed.ptr != pCheckedAt + pChecked->u.string.length || Entry.m_CheckedAt <= 0 || Entry.m_CheckedAt > Now)
@@ -235,7 +304,15 @@ bool CQmFriendLastSeenCache::Load(std::string_view Body, int64_t Now)
 			return false;
 	}
 	CancelRequests();
-	m_Entries = std::move(Entries);
+	m_Entries.swap(Entries);
 	m_Dirty = false;
 	return true;
+}
+catch(const std::bad_alloc &)
+{
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
 }

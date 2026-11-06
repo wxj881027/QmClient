@@ -24,13 +24,23 @@ public final class QmMediaFiles {
 	}
 
 	public static void copy(InputStream input, OutputStream output) throws IOException {
+		checkCancelled();
 		byte[] buffer = new byte[64 * 1024];
-		int count;
-		while((count = input.read(buffer)) != -1) {
-			if(Thread.currentThread().isInterrupted())
-				throw new InterruptedIOException();
+		while(true) {
+			checkCancelled();
+			int count = input.read(buffer);
+			checkCancelled();
+			if(count == -1)
+				break;
 			output.write(buffer, 0, count);
 		}
+		checkCancelled();
 		output.flush();
+		checkCancelled();
+	}
+
+	private static void checkCancelled() throws InterruptedIOException {
+		if(Thread.currentThread().isInterrupted())
+			throw new InterruptedIOException();
 	}
 }

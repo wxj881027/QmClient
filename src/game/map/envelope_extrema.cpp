@@ -1,5 +1,10 @@
 #include "envelope_extrema.h"
 
+#include <game/map/map_render_items.h>
+
+#include <cstdint>
+#include <limits>
+
 CEnvelopeExtrema::CEnvelopeExtrema(IMap *pMap) :
 	m_EnvelopePoints(pMap)
 {
@@ -34,6 +39,25 @@ void CEnvelopeExtrema::CalculateEnvelope(const CMapItemEnvelope *pEnvelopeItem, 
 	// check if the envelope is a valid position envelope
 	if(!pEnvelopeItem || pEnvelopeItem->m_Channels != 3)
 		return;
+	const int Start = pEnvelopeItem->m_StartPoint;
+	const int Count = pEnvelopeItem->m_NumPoints;
+	if(Count == 0)
+	{
+		EnvExt.m_Minima = EnvExt.m_Maxima = ivec2(0, 0);
+		EnvExt.m_Available = true;
+		return;
+	}
+	if(Start < 0 || Count < 0 || Start > m_EnvelopePoints.NumPointsMax() || Count > m_EnvelopePoints.NumPointsMax() - Start)
+		return;
+	const auto ExpandByTangent = [&EnvExt](int Channel, int Value, int Tangent) {
+		const int64_t Position = static_cast<int64_t>(Value) + Tangent;
+		// 范围无法表示时禁用提前裁剪，实际包络求值仍走原路径。
+		if(Position < std::numeric_limits<int>::min() || Position > std::numeric_limits<int>::max())
+			return false;
+		EnvExt.m_Minima[Channel] = std::min(static_cast<int>(Position), EnvExt.m_Minima[Channel]);
+		EnvExt.m_Maxima[Channel] = std::max(static_cast<int>(Position), EnvExt.m_Maxima[Channel]);
+		return true;
+	};
 
 	for(int PointId = pEnvelopeItem->m_StartPoint; PointId < pEnvelopeItem->m_StartPoint + pEnvelopeItem->m_NumPoints; ++PointId)
 	{
@@ -59,8 +83,8 @@ void CEnvelopeExtrema::CalculateEnvelope(const CMapItemEnvelope *pEnvelopeItem, 
 					return;
 
 				// we are only interested in the height not in the time, meaning we only need delta Y
-				EnvExt.m_Minima[Channel] = std::min(pEnvPoint->m_aValues[Channel] + pEnvPointBezier->m_aOutTangentDeltaY[Channel], EnvExt.m_Minima[Channel]);
-				EnvExt.m_Maxima[Channel] = std::max(pEnvPoint->m_aValues[Channel] + pEnvPointBezier->m_aOutTangentDeltaY[Channel], EnvExt.m_Maxima[Channel]);
+				if(!ExpandByTangent(Channel, pEnvPoint->m_aValues[Channel], pEnvPointBezier->m_aOutTangentDeltaY[Channel]))
+					return;
 			}
 
 			if(PointId > 0 && m_EnvelopePoints.GetPoint(PointId - 1)->m_Curvetype == CURVETYPE_BEZIER)
@@ -70,8 +94,8 @@ void CEnvelopeExtrema::CalculateEnvelope(const CMapItemEnvelope *pEnvelopeItem, 
 					return;
 
 				// we are only interested in the height not in the time, meaning we only need delta Y
-				EnvExt.m_Minima[Channel] = std::min(pEnvPoint->m_aValues[Channel] + pEnvPointBezier->m_aInTangentDeltaY[Channel], EnvExt.m_Minima[Channel]);
-				EnvExt.m_Maxima[Channel] = std::max(pEnvPoint->m_aValues[Channel] + pEnvPointBezier->m_aInTangentDeltaY[Channel], EnvExt.m_Maxima[Channel]);
+				if(!ExpandByTangent(Channel, pEnvPoint->m_aValues[Channel], pEnvPointBezier->m_aInTangentDeltaY[Channel]))
+					return;
 			}
 		}
 	}
@@ -86,8 +110,8 @@ void CEnvelopeExtrema::CalculateExtrema()
 	m_vEnvelopeExtrema.resize(EnvelopeNum);
 	for(int EnvelopeIndex = 0; EnvelopeIndex < EnvelopeNum; ++EnvelopeIndex)
 	{
-		const CMapItemEnvelope *pItem = static_cast<const CMapItemEnvelope *>(m_pMap->GetItem(EnvelopeStart + EnvelopeIndex));
-		CalculateEnvelope(pItem, EnvelopeIndex);
+		const auto Item = MapRenderItems::ReadEnvelope(*m_pMap, EnvelopeStart + EnvelopeIndex);
+		CalculateEnvelope(Item ? &*Item : nullptr, EnvelopeIndex);
 	}
 }
 

@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -15,6 +16,30 @@ public final class QmMediaFilesTest {
 	private static void check(boolean condition, String message) {
 		if(!condition)
 			throw new AssertionError(message);
+	}
+
+	private interface CheckedCase {
+		void run() throws Exception;
+	}
+
+	private static void withInterruptRestored(CheckedCase test) throws Exception {
+		boolean previous = Thread.interrupted();
+		try {
+			test.run();
+		} finally {
+			Thread.interrupted();
+			if(previous)
+				Thread.currentThread().interrupt();
+		}
+	}
+
+	private static void expectCancelled(InputStream input, OutputStream output) throws Exception {
+		try {
+			QmMediaFiles.copy(input, output);
+			throw new AssertionError("Cancelled copy must not report completion");
+		} catch(InterruptedIOException expected) {
+			check(Thread.currentThread().isInterrupted(), "Copy preserves interrupted status");
+		}
 	}
 
 	private static void directoryBoundary(Path temp) throws Exception {
@@ -53,14 +78,104 @@ public final class QmMediaFilesTest {
 	}
 
 	private static void cancellationPropagates() throws Exception {
-		Thread.currentThread().interrupt();
+		withInterruptRestored(() -> {
+			Thread.currentThread().interrupt();
+			expectCancelled(new ByteArrayInputStream(new byte[] {1}), new ByteArrayOutputStream());
+		});
+	}
+
+	private static void cancelledEmptyCopyDoesNotReadOrFlush() throws Exception {
+		withInterruptRestored(() -> {
+			InputStream input = new InputStream() {
+				@Override public int read() { throw new AssertionError("No read after cancellation"); }
+			};
+			OutputStream output = new ByteArrayOutputStream() {
+				@Override public void flush() { throw new AssertionError("No flush after cancellation"); }
+			};
+			Thread.currentThread().interrupt();
+			expectCancelled(input, output);
+		});
+	}
+
+	private static void eofThatObservesCancellationCannotComplete() throws Exception {
+		withInterruptRestored(() -> {
+			InputStream input = new InputStream() {
+				@Override public int read() {
+					Thread.currentThread().interrupt();
+					return -1;
+				}
+			};
+			OutputStream output = new ByteArrayOutputStream() {
+				@Override public void flush() { throw new AssertionError("Cancelled EOF must not flush"); }
+			};
+			expectCancelled(input, output);
+		});
+	}
+
+	private static void cancellationAfterWriteStopsBeforeNextRead() throws Exception {
+		withInterruptRestored(() -> {
+			ByteArrayInputStream input = new ByteArrayInputStream(new byte[] {1}) {
+				int reads;
+				@Override public synchronized int read(byte[] data, int offset, int count) {
+					check(++reads == 1, "Cancellation stops before another source read");
+					return super.read(data, offset, count);
+				}
+			};
+			ByteArrayOutputStream output = new ByteArrayOutputStream() {
+				@Override public synchronized void write(byte[] data, int offset, int count) {
+					super.write(data, offset, count);
+					Thread.currentThread().interrupt();
+				}
+			};
+			expectCancelled(input, output);
+			check(Arrays.equals(output.toByteArray(), new byte[] {1}), "Keep already written bytes");
+		});
+	}
+
+	private static void cancellationDuringFlushIsNotReportedAsSuccess() throws Exception {
+		withInterruptRestored(() -> {
+			ByteArrayOutputStream output = new ByteArrayOutputStream() {
+				@Override public void flush() { Thread.currentThread().interrupt(); }
+			};
+			expectCancelled(new ByteArrayInputStream(new byte[] {1}), output);
+			check(output.size() == 1, "Flush reached after complete data copy");
+		});
+	}
+
+	private static void inputFailureIsNotConvertedToCompletion() throws Exception {
+		IOException error = new IOException("Source read failed");
+		InputStream input = new InputStream() {
+			@Override public int read() throws IOException { throw error; }
+		};
 		try {
-			QmMediaFiles.copy(new ByteArrayInputStream(new byte[] {1}), new ByteArrayOutputStream());
-			throw new AssertionError("Cancelled copy must not finish successfully");
-		} catch(InterruptedIOException expected) {
-		} finally {
-			Thread.interrupted();
+			QmMediaFiles.copy(input, new ByteArrayOutputStream());
+			throw new AssertionError("Read failure must propagate");
+		} catch(IOException caught) {
+			check(caught == error, "Preserve original I/O error");
 		}
+	}
+
+	private static void flushFailureIsNotConvertedToCompletion() throws Exception {
+		IOException error = new IOException("Flush failed");
+		OutputStream output = new ByteArrayOutputStream() {
+			@Override public void flush() throws IOException { throw error; }
+		};
+		try {
+			QmMediaFiles.copy(new ByteArrayInputStream(new byte[] {1}), output);
+			throw new AssertionError("Flush failure must propagate");
+		} catch(IOException caught) {
+			check(caught == error, "Preserve flush failure");
+		}
+	}
+
+	private static void borrowedStreamsAreNotClosedByCopy() throws Exception {
+		InputStream input = new ByteArrayInputStream(new byte[] {1}) {
+			@Override public void close() { throw new AssertionError("Caller owns input"); }
+		};
+		OutputStream output = new ByteArrayOutputStream() {
+			@Override public void close() { throw new AssertionError("Caller owns output"); }
+		};
+		QmMediaFiles.copy(input, output);
 	}
 
 	public static void main(String[] arguments) throws Exception {
@@ -71,6 +186,13 @@ public final class QmMediaFilesTest {
 		largeCopyKeepsBytes();
 		writeFailurePropagates();
 		cancellationPropagates();
-		System.out.println("QmMediaFiles: 5 scenarios passed");
+		cancelledEmptyCopyDoesNotReadOrFlush();
+		eofThatObservesCancellationCannotComplete();
+		cancellationAfterWriteStopsBeforeNextRead();
+		cancellationDuringFlushIsNotReportedAsSuccess();
+		inputFailureIsNotConvertedToCompletion();
+		flushFailureIsNotConvertedToCompletion();
+		borrowedStreamsAreNotClosedByCopy();
+		System.out.println("QmMediaFiles: 12 scenarios passed");
 	}
 }

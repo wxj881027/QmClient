@@ -13,13 +13,151 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
+#include <optional>
 
 namespace QmCameraEffects
 {
+	inline float ClampViewAxis(float Position, int MapTiles)
+	{
+		const float Extent = static_cast<float>(MapTiles) * 32.0f;
+		const float Margin = std::min(200.0f, Extent * 0.5f);
+		return std::clamp(Position, Margin, Extent - Margin);
+	}
+
+	inline vec2 ViewTarget(ivec2 TilePosition, vec2 Current, bool Relative, int MapWidth, int MapHeight)
+	{
+		const vec2 Offset(TilePosition.x * 32.0, TilePosition.y * 32.0);
+		const vec2 Desired = Relative ? Current + Offset : Offset;
+		return vec2(ClampViewAxis(Desired.x, MapWidth), ClampViewAxis(Desired.y, MapHeight));
+	}
+
+	inline int EncodeNonNegativeInt(float Value)
+	{
+		if(!(Value > 0.0f))
+			return 0;
+		constexpr int Max = std::numeric_limits<int>::max();
+		return static_cast<double>(Value) >= Max ? Max : static_cast<int>(Value);
+	}
+
+	inline int EncodeZoom(float Zoom)
+	{
+		// 仅限制在线/录像整数参数；游戏内仍允许无限缩放。
+		if(!(Zoom > 0.0f))
+			return 0;
+		constexpr int Max = std::numeric_limits<int>::max();
+		if(static_cast<double>(Zoom) >= static_cast<double>(Max) / 1000.0)
+			return Max;
+		// 正常范围保持原float乘法及向零截断，避免量化精度变化。
+		return EncodeNonNegativeInt(Zoom * 1000.0f);
+	}
+
+	inline bool IsValidZoom(float Value, float MinZoom, float MaxZoom)
+	{
+		return std::isfinite(Value) && Value >= MinZoom && Value <= MaxZoom;
+	}
+
+	inline float TransitionProgress(float Now, float Start, float End)
+	{
+		// 零时长或浮点时间戳重合表示过渡已经结束，不再用零作分母。
+		return End > Start ? (Now - Start) / (End - Start) : 1.0f;
+	}
+
 	inline float ZoomWithoutDynamicFov(float EffectiveZoom, float AppliedFactor)
 	{
 		return AppliedFactor > 0.0f ? EffectiveZoom / AppliedFactor : EffectiveZoom;
 	}
+
+	// 输入为已移除上一帧效果的 base；普通范围保持原 float 乘除。
+	class CDynamicFovZoom
+	{
+		float m_AppliedFactor = 1.0f;
+		std::optional<float> m_ClippedBaseZoom;
+
+	public:
+		void Reset()
+		{
+			m_AppliedFactor = 1.0f;
+			m_ClippedBaseZoom.reset();
+		}
+		bool Active() const { return m_AppliedFactor != 1.0f || m_ClippedBaseZoom.has_value(); }
+		float Apply(float Base, float Factor)
+		{
+			Reset();
+			if(!std::isfinite(Base) || !(Base > 0.0f) || !std::isfinite(Factor) || !(Factor > 1.0f))
+				return Base;
+			constexpr float Max = std::numeric_limits<float>::max();
+			if(static_cast<double>(Base) * Factor > Max)
+			{
+				// 有效镜头值已无法表示完整乘积，单独保留可精确还原的原始 base。
+				m_ClippedBaseZoom = Base;
+				return Max;
+			}
+			m_AppliedFactor = Factor;
+			return Base * Factor;
+		}
+		float BaseZoom(float EffectiveZoom) const
+		{
+			if(m_ClippedBaseZoom)
+				return *m_ClippedBaseZoom;
+			return ZoomWithoutDynamicFov(EffectiveZoom, m_AppliedFactor);
+		}
+		float Remove(float EffectiveZoom)
+		{
+			if(!Active())
+				return EffectiveZoom;
+			const float Base = BaseZoom(EffectiveZoom);
+			Reset();
+			return Base;
+		}
+	};
+
+	// 只用于镜头缩放；普通 float 结果保持原值，非有限结果再用宽精度重算。
+	class CZoomSmoothingCurve
+	{
+		CCubicBezier m_Curve = CCubicBezier::With(1.0f, 0.0f, 0.0f, 1.0f);
+		float m_Start = 1.0f;
+		float m_StartDerivative = 0.0f;
+		float m_End = 1.0f;
+
+		static float Representable(double Value)
+		{
+			constexpr double Max = std::numeric_limits<float>::max();
+			return static_cast<float>(std::clamp(Value, -Max, Max));
+		}
+
+	public:
+		// 调用方提供有限端点、导数与进度；不改变其它路径已有的无效输入语义。
+		static CZoomSmoothingCurve With(float Start, float StartDerivative, float End)
+		{
+			CZoomSmoothingCurve Result;
+			Result.m_Start = Start;
+			Result.m_StartDerivative = StartDerivative;
+			Result.m_End = End;
+			Result.m_Curve = CCubicBezier::With(Start, StartDerivative, 0.0f, End);
+			return Result;
+		}
+		float Evaluate(float Progress) const
+		{
+			const float Value = m_Curve.Evaluate(Progress);
+			if(std::isfinite(Value))
+				return Value;
+			const double T = Progress;
+			const double U = 1.0 - T;
+			const double Control = static_cast<double>(m_Start) + static_cast<double>(m_StartDerivative) / 3.0;
+			return Representable(U * U * U * m_Start + 3.0 * U * U * T * Control + 3.0 * U * T * T * m_End + T * T * T * m_End);
+		}
+		float Derivative(float Progress) const
+		{
+			const float Value = m_Curve.Derivative(Progress);
+			if(std::isfinite(Value))
+				return Value;
+			const double T = Progress;
+			const double U = 1.0 - T;
+			const double Control = static_cast<double>(m_Start) + static_cast<double>(m_StartDerivative) / 3.0;
+			return Representable(3.0 * U * U * (Control - m_Start) + 6.0 * U * T * (m_End - Control));
+		}
+	};
 
 	// 帧率无关指数阻尼：FrameTime 为本帧时长（秒），HalfLife 为逼近目标剩余一半所需的秒数。
 	inline vec2 SmoothPosition(vec2 Current, vec2 Target, float FrameTime, float HalfLife)
@@ -161,7 +299,7 @@ private:
 
 	float CameraSmoothingProgress(float CurrentTime) const;
 
-	CCubicBezier m_ZoomSmoothing;
+	QmCameraEffects::CZoomSmoothingCurve m_ZoomSmoothing;
 	float m_ZoomSmoothingStart;
 	float m_ZoomSmoothingEnd;
 	bool m_ZoomSmoothingIsReset;
@@ -188,7 +326,7 @@ private:
 	vec2 m_DriftCurrentOffset;
 	float m_DynamicFovTarget;
 	float m_DynamicFovCurrent;
-	float m_DynamicFovAppliedFactor;
+	QmCameraEffects::CDynamicFovZoom m_DynamicFovZoom;
 	QmCameraEffects::CFreeviewCameraSmoothing m_FreeviewCameraSmoothing;
 
 	void RemoveDynamicFovZoom();
@@ -235,7 +373,7 @@ public:
 	void SpectatorTeleportToHoveredTele();
 
 	void SetZoom(float Target, int Smoothness, bool IsUser);
-	float BaseZoom() const { return QmCameraEffects::ZoomWithoutDynamicFov(m_Zoom, m_DynamicFovAppliedFactor); }
+	float BaseZoom() const { return m_DynamicFovZoom.BaseZoom(m_Zoom); }
 	bool ZoomAllowed() const;
 
 	int Deadzone() const;

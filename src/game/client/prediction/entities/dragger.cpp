@@ -7,16 +7,28 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/components/qmclient/collision_position.h>
 #include <game/client/laser_data.h>
 #include <game/collision.h>
 #include <game/mapitems.h>
 
 void CDragger::Tick()
 {
+	if(!QmCollision::CanRoundPosition(m_Pos))
+	{
+		DraggerBeamReset();
+		return;
+	}
 	if(GameWorld()->GameTick() % (int)(GameWorld()->GameTickSpeed() * 0.15f) == 0)
 	{
 		Collision()->MoverSpeed(m_Pos.x, m_Pos.y, &m_Core);
-		m_Pos += m_Core;
+		const vec2 NextPos = m_Pos + m_Core;
+		if(!QmCollision::CanRoundPosition(NextPos))
+		{
+			DraggerBeamReset();
+			return;
+		}
+		m_Pos = NextPos;
 
 		LookForPlayersToDrag();
 	}
@@ -59,6 +71,8 @@ void CDragger::LookForPlayersToDrag()
 		}
 
 		// Dragger beams can be created only for reachable, alive players
+		if(!QmCollision::CanQueryLine(m_Pos, pTarget->m_Pos))
+			continue;
 		int IsReachable =
 			m_IgnoreWalls ?
 				!Collision()->IntersectNoLaserNoWalls(m_Pos, pTarget->m_Pos, nullptr, nullptr) :
@@ -114,6 +128,7 @@ void CDragger::DraggerBeamTick()
 
 	// When the dragger can no longer reach the target player, the dragger beam dissolves
 	if(distance(pTarget->m_Pos, m_Pos) >= g_Config.m_SvDraggerRange ||
+		!QmCollision::CanQueryLine(m_Pos, pTarget->m_Pos) ||
 		(m_IgnoreWalls ?
 				Collision()->IntersectNoLaserNoWalls(m_Pos, pTarget->m_Pos, nullptr, nullptr) :
 				Collision()->IntersectNoLaser(m_Pos, pTarget->m_Pos, nullptr, nullptr)))

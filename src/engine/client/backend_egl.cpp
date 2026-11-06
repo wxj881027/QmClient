@@ -2,6 +2,7 @@
 
 #include "backend_egl.h"
 
+#include "backend/graphics_command_execution.h"
 #include "backend/opengl/backend_opengl3.h"
 #include "graphics_threaded.h"
 
@@ -98,38 +99,15 @@ CCommandProcessor_EGL_GL::~CCommandProcessor_EGL_GL()
 	delete m_pGLBackend;
 }
 
-void CCommandProcessor_EGL_GL::RunBuffer(CCommandBuffer *pBuffer)
+void CCommandProcessor_EGL_GL::RunBuffer(CCommandBuffer *pBuffer) noexcept
 {
-	m_pGLBackend->StartCommands(pBuffer->m_CommandCount, pBuffer->m_RenderCallCount);
-
-	for(const CCommandBuffer::SCommand *pCommand = pBuffer->Head(); pCommand; pCommand = pCommand->m_pNext)
-	{
-		auto Res = m_pGLBackend->RunCommand(pCommand);
-		if(Res == ERunCommandReturnTypes::RUN_COMMAND_COMMAND_HANDLED)
-			continue;
-		else if(Res == ERunCommandReturnTypes::RUN_COMMAND_COMMAND_ERROR)
-		{
-			m_Error = m_pGLBackend->GetError();
-			HandleError();
-			return;
-		}
-		else if(Res == ERunCommandReturnTypes::RUN_COMMAND_COMMAND_WARNING)
-		{
-			m_Warning = m_pGLBackend->GetWarning();
-			HandleWarning();
-			return;
-		}
-
-		if(m_EGL.RunCommand(pCommand))
-			continue;
-
-		if(m_General.RunCommand(pCommand))
-			continue;
-
-		dbg_assert_failed("Unknown graphics command %d", pCommand->m_Cmd);
-	}
-
-	m_pGLBackend->EndCommands();
+	const auto Result = RunGraphicsCommandBuffer(*m_pGLBackend, *pBuffer, [this](const CCommandBuffer::SCommand *pCommand) {
+		return m_EGL.RunCommand(pCommand) || m_General.RunCommand(pCommand);
+	});
+	if(Result == RUN_COMMAND_COMMAND_ERROR)
+		HandleError();
+	else if(Result == RUN_COMMAND_COMMAND_WARNING)
+		HandleWarning();
 }
 
 const SGfxErrorContainer &CCommandProcessor_EGL_GL::GetError() const
@@ -147,14 +125,14 @@ const SGfxWarningContainer &CCommandProcessor_EGL_GL::GetWarning() const
 	return m_Warning;
 }
 
-void CCommandProcessor_EGL_GL::HandleError()
+void CCommandProcessor_EGL_GL::HandleError() noexcept
 {
-	m_Error = m_pGLBackend->GetError();
+	m_Error = m_pGLBackend->TakeError();
 }
 
-void CCommandProcessor_EGL_GL::HandleWarning()
+void CCommandProcessor_EGL_GL::HandleWarning() noexcept
 {
-	m_Warning = m_pGLBackend->GetWarning();
+	m_Warning = m_pGLBackend->TakeWarning();
 }
 
 // ------------ CGraphicsBackend_EGL
@@ -430,25 +408,51 @@ int CGraphicsBackend_EGL::InitOpenGL(int Width, int Height, int Flags, IStorage 
 	eglMakeCurrent(m_Display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 
 	// Create command processor
-	m_pProcessor = new CCommandProcessor_EGL_GL(BACKEND_TYPE_OPENGL, GlewMajor, GlewMinor, GlewPatch);
-	StartProcessor(m_pProcessor);
+	m_pProcessor = PrepareProcessor([&] { return new CCommandProcessor_EGL_GL(BACKEND_TYPE_OPENGL, GlewMajor, GlewMinor, GlewPatch); });
+	if(m_pProcessor == nullptr)
+	{
+		eglDestroyContext(m_Display, m_Context);
+		eglDestroySurface(m_Display, m_Surface);
+		eglTerminate(m_Display);
+		m_Display = nullptr;
+		m_Context = nullptr;
+		m_Surface = nullptr;
+		log_error("gfx", "Failed to prepare graphics processor resources");
+		return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_RESOURCE_INIT_FAILED;
+	}
+	if(!StartProcessor(m_pProcessor))
+	{
+		delete m_pProcessor;
+		m_pProcessor = nullptr;
+		ReleaseLifecycleCommands();
+		eglDestroyContext(m_Display, m_Context);
+		eglDestroySurface(m_Display, m_Surface);
+		eglTerminate(m_Display);
+		m_Display = nullptr;
+		m_Context = nullptr;
+		m_Surface = nullptr;
+		log_error("gfx", "Failed to create graphics thread");
+		return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_THREAD_CREATE_FAILED;
+	}
 
 	// EGL Init (makes context current in render thread)
+	CCommandBuffer &CmdBuffer = *LifecycleCommands();
 	{
 		CCommandProcessorFragment_EGL::SCommand_Init CmdEGL;
 		CmdEGL.m_Display = m_Display;
 		CmdEGL.m_Context = m_Context;
 		CmdEGL.m_Surface = m_Surface;
-		CCommandBuffer CmdBuffer(1024, 512);
 		CmdBuffer.AddCommandUnsafe(CmdEGL);
 		RunBuffer(&CmdBuffer);
 		WaitForIdle();
 		CmdBuffer.Reset();
 	}
 
+	const char *pErrorStr = nullptr;
+	int InitError = HasFatalError() ? -1 : 0;
 	// Pre-Init
+	if(InitError == 0)
 	{
-		CCommandBuffer CmdBuffer(1024, 512);
 		CCommandProcessorFragment_GLBase::SCommand_PreInit CmdPre;
 		CmdPre.m_pWindow = nullptr;
 		CmdPre.m_Width = Width;
@@ -457,13 +461,14 @@ int CGraphicsBackend_EGL::InitOpenGL(int Width, int Height, int Flags, IStorage 
 		CmdPre.m_pVersionString = m_aVersionString;
 		CmdPre.m_pRendererString = m_aRendererString;
 		CmdPre.m_pGpuList = &m_GpuList;
+		CmdPre.m_pInitError = &InitError;
+		CmdPre.m_pErrStringPtr = &pErrorStr;
 		CmdBuffer.AddCommandUnsafe(CmdPre);
 		RunBufferSingleThreadedUnsafe(&CmdBuffer);
 		CmdBuffer.Reset();
 	}
 
-	const char *pErrorStr = nullptr;
-	int InitError = 0;
+	if(InitError == 0)
 	{
 		CCommandProcessorFragment_GLBase::SCommand_Init CmdGL;
 		CmdGL.m_pWindow = nullptr;
@@ -490,7 +495,6 @@ int CGraphicsBackend_EGL::InitOpenGL(int Width, int Height, int Flags, IStorage 
 		CmdGL.m_pRendererString = m_aRendererString;
 		CmdGL.m_RequestedBackend = BACKEND_TYPE_OPENGL;
 
-		CCommandBuffer CmdBuffer(1024, 512);
 		CmdBuffer.AddCommandUnsafe(CmdGL);
 		RunBuffer(&CmdBuffer);
 		WaitForIdle();
@@ -499,7 +503,6 @@ int CGraphicsBackend_EGL::InitOpenGL(int Width, int Height, int Flags, IStorage 
 
 	if(InitError != 0)
 	{
-		CCommandBuffer CmdBuffer(1024, 512);
 		if(InitError != -2)
 		{
 			// shutdown the context, as it might have been initialized
@@ -512,6 +515,7 @@ int CGraphicsBackend_EGL::InitOpenGL(int Width, int Height, int Flags, IStorage 
 		StopProcessor();
 		delete m_pProcessor;
 		m_pProcessor = nullptr;
+		ReleaseLifecycleCommands();
 		return -1;
 	}
 
@@ -525,7 +529,6 @@ int CGraphicsBackend_EGL::InitOpenGL(int Width, int Height, int Flags, IStorage 
 		CmdViewport.m_DrawableWidth = Width;
 		CmdViewport.m_DrawableHeight = Height;
 		CmdViewport.m_ByResize = true;
-		CCommandBuffer CmdBuffer(1024, 512);
 		CmdBuffer.AddCommandUnsafe(CmdViewport);
 		RunBuffer(&CmdBuffer);
 		WaitForIdle();
@@ -565,7 +568,7 @@ int CGraphicsBackend_EGL::Shutdown()
 {
 	if(m_pProcessor != nullptr)
 	{
-		CCommandBuffer CmdBuffer(1024, 512);
+		CCommandBuffer &CmdBuffer = *LifecycleCommands();
 
 		CCommandProcessorFragment_GLBase::SCommand_Shutdown CmdGL;
 		CmdBuffer.AddCommandUnsafe(CmdGL);
@@ -588,6 +591,7 @@ int CGraphicsBackend_EGL::Shutdown()
 		delete m_pProcessor;
 		m_pProcessor = nullptr;
 	}
+	ReleaseLifecycleCommands();
 
 	if(m_Context != nullptr)
 	{

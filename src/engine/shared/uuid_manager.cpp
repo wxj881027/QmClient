@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <cstdio>
 #include <memory>
+#include <type_traits>
+#include <utility>
 
 static const CUuid TEEWORLDS_NAMESPACE = {{// "e05ddaaa-c4e6-4cfb-b642-5d48e80c0029"
 	0xe0, 0x5d, 0xda, 0xaa, 0xc4, 0xe6, 0x4c, 0xfb,
@@ -110,7 +112,7 @@ bool CUuid::operator<(const CUuid &Other) const
 
 static int GetIndex(int Id)
 {
-	return Id - OFFSET_UUID;
+	return Id < OFFSET_UUID ? UUID_INVALID : Id - OFFSET_UUID;
 }
 
 static int GetId(int Index)
@@ -120,28 +122,42 @@ static int GetId(int Index)
 
 void CUuidManager::RegisterName(int Id, const char *pName)
 {
-	dbg_assert(GetIndex(Id) == (int)m_vNames.size(), "names must be registered with increasing ID (got=%d want=%d)", GetIndex(Id), (int)m_vNames.size());
+	dbg_assert(GetIndex(Id) == (int)m_Names.size(), "names must be registered with increasing ID (got=%d want=%d)", GetIndex(Id), (int)m_Names.size());
 	CName Name;
-	Name.m_pName = pName;
-	Name.m_Uuid = CalculateUuid(pName);
-	dbg_assert(LookupUuid(Name.m_Uuid) == UUID_UNKNOWN, "duplicate uuid %s", Name.m_pName);
-
-	m_vNames.push_back(Name);
+	Name.m_Name = pName;
+	Name.m_Uuid = CalculateUuid(Name.m_Name.c_str());
+	dbg_assert(LookupUuid(Name.m_Uuid) == UUID_UNKNOWN, "duplicate uuid %s", Name.m_Name.c_str());
 
 	CNameIndexed NameIndexed;
 	NameIndexed.m_Uuid = Name.m_Uuid;
 	NameIndexed.m_Id = GetIndex(Id);
-	m_vNamesSorted.insert(std::lower_bound(m_vNamesSorted.begin(), m_vNamesSorted.end(), NameIndexed), NameIndexed);
+	// 先准备索引容量，名称入队成功后只做不分配的平凡索引搬移。
+	static_assert(std::is_trivially_copyable_v<CNameIndexed>);
+	if(m_vNamesSorted.size() == m_vNamesSorted.capacity())
+		m_vNamesSorted.reserve(std::max<size_t>(1, m_vNamesSorted.capacity() * 2));
+	const auto Position = std::lower_bound(m_vNamesSorted.begin(), m_vNamesSorted.end(), NameIndexed);
+	m_Names.push_back(std::move(Name));
+	m_vNamesSorted.insert(Position, NameIndexed);
+}
+
+bool CUuidManager::IsValidId(int Id) const
+{
+	const int Index = GetIndex(Id);
+	return Index >= 0 && static_cast<size_t>(Index) < m_Names.size();
 }
 
 CUuid CUuidManager::GetUuid(int Id) const
 {
-	return m_vNames[GetIndex(Id)].m_Uuid;
+	if(!IsValidId(Id))
+		return UUID_ZEROED;
+	return m_Names[GetIndex(Id)].m_Uuid;
 }
 
 const char *CUuidManager::GetName(int Id) const
 {
-	return m_vNames[GetIndex(Id)].m_pName;
+	if(!IsValidId(Id))
+		return "";
+	return m_Names[GetIndex(Id)].m_Name.c_str();
 }
 
 int CUuidManager::LookupUuid(CUuid Uuid) const
@@ -159,7 +175,7 @@ int CUuidManager::LookupUuid(CUuid Uuid) const
 
 int CUuidManager::NumUuids() const
 {
-	return m_vNames.size();
+	return m_Names.size();
 }
 
 int CUuidManager::UnpackUuid(CUnpacker *pUnpacker) const
@@ -179,19 +195,22 @@ int CUuidManager::UnpackUuid(CUnpacker *pUnpacker, CUuid *pOut) const
 	return LookupUuid(*pUuid);
 }
 
-void CUuidManager::PackUuid(int Id, CPacker *pPacker) const
+bool CUuidManager::PackUuid(int Id, CPacker *pPacker) const
 {
+	if(!IsValidId(Id))
+		return false;
 	CUuid Uuid = GetUuid(Id);
 	pPacker->AddRaw(&Uuid, sizeof(Uuid));
+	return !pPacker->Error();
 }
 
 void CUuidManager::DebugDump() const
 {
-	for(const auto &Name : m_vNames)
+	for(const auto &Name : m_Names)
 	{
 		char aBuf[UUID_MAXSTRSIZE];
 		FormatUuid(Name.m_Uuid, aBuf, sizeof(aBuf));
-		dbg_msg("uuid", "%s %s", aBuf, Name.m_pName);
+		dbg_msg("uuid", "%s %s", aBuf, Name.m_Name.c_str());
 	}
 }
 

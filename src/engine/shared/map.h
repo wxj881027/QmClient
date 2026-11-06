@@ -5,10 +5,12 @@
 
 #include "datafile.h"
 
+#include <base/borrowed_allocator.h>
 #include <base/types.h>
 
 #include <engine/map.h>
 
+#include <functional>
 #include <set>
 
 class CMapItemLayerTilemap;
@@ -16,6 +18,7 @@ class CMapItemLayerTilemap_v2;
 
 class CMap : public IEngineMap
 {
+	using CPreparationIndices = std::set<int, std::less<int>, CBorrowedAllocator<int>>;
 	CDataFileReader m_DataFile;
 	IStorage *m_pStorage;
 
@@ -39,6 +42,10 @@ public:
 	int NumItems() const override;
 
 	[[nodiscard]] bool Load(const char *pMapName, int StorageType) override;
+	// 内存域只借用到加载准备结束，不交给已发布地图或惰性处理器。
+	[[nodiscard]] bool Load(const char *pMapName, int StorageType, IAllocationResource *pPreparationMemory);
+	// 文件操作与 reader 同寿命，须存活到 Unload 或接收地图的对象卸载。
+	[[nodiscard]] bool Load(const char *pMapName, int StorageType, IAllocationResource *pPreparationMemory, CDataFileReader::IOperations *pOperations);
 	void Adopt(CMap &&Other);
 	void Unload() override;
 	bool IsLoaded() const override;
@@ -50,13 +57,19 @@ public:
 
 	// map_generator 等本地工具需要直接解包 tileskip 数据
 	static bool ExtractTiles(class CTile *pDest, size_t DestSize, const class CTile *pSrc, size_t SrcSize);
+	// 完整校验压缩流后才分配；分配器返回可交由 free 回收的缓冲，成功时由调用方接管。
+	static class CTile *DecodeTileskip(size_t DestSize, const class CTile *pSrc, size_t SrcSize, const std::function<void *(size_t)> &Allocate = {});
+	// 接收方可在校验与分配前限制展开字节数，避免分配其长度接口无法表示的缓冲。
+	static class CTile *DecodeTileskip(size_t DestSize, const class CTile *pSrc, size_t SrcSize, const std::function<void *(size_t)> &Allocate, size_t MaxBytes);
 
 private:
+	static bool ValidateTileskip(size_t DestSize, const class CTile *pSrc, size_t SrcSize);
+	static void ExtractValidatedTiles(class CTile *pDest, size_t DestSize, const class CTile *pSrc, size_t SrcSize);
 	static bool ValidateMapVersion(CDataFileReader &NewDataFile);
 	bool UpgradeAndValidateTilesLayerItem(CDataFileReader &NewDataFile, int GroupIndex, int LayerIndex,
 		CMapItemLayerTilemap_v2 *pLayerTilemapBase, int LayerItemIndex, size_t LayerItemSize);
 	bool ValidateAndUnpackTilesLayerData(CDataFileReader &NewDataFile, int GroupIndex, int LayerIndex, const CMapItemLayerTilemap *pLayerTilemap,
-		const CMapItemLayerTilemap &GameLayer, std::set<int> &UsedDataIndices);
+		const CMapItemLayerTilemap &GameLayer, CPreparationIndices &UsedDataIndices);
 };
 
 #endif

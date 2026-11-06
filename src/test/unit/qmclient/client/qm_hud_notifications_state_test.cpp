@@ -108,3 +108,70 @@ TEST(QmHudNotifications, HandleServerChatClearsPendingCompatAfterQueuedSoloPromp
 	EXPECT_EQ(Notifications.NotificationCountForTests(), 2);
 	EXPECT_STREQ(Notifications.LastNotificationTextForTests(), "You are now out of the solo part");
 }
+
+TEST(QmHudNotifications, ServerMessagesRetainOnlyTheLatestEightNotifications)
+{
+	const CScopedNotificationConfig ConfigScope;
+	g_Config.m_QmHudNotificationsMaxVisible = 8;
+	g_Config.m_QmStreamerFilterWords = 0;
+	CTestHudNotifications Notifications;
+	for(int i = 0; i < 10; ++i)
+	{
+		char aText[32];
+		str_format(aText, sizeof(aText), "regular server message %d", i);
+		ASSERT_TRUE(Notifications.HandleServerChat(aText, true));
+	}
+	EXPECT_EQ(Notifications.NotificationCountForTests(), 8);
+	EXPECT_STREQ(Notifications.LastNotificationTextForTests(), "regular server message 9");
+}
+
+TEST(QmHudNotifications, RepeatingTheNewestServerMessageAtCapacityStillCollapses)
+{
+	const CScopedNotificationConfig ConfigScope;
+	g_Config.m_QmHudNotificationsMaxVisible = 1;
+	g_Config.m_QmStreamerFilterWords = 0;
+	CTestHudNotifications Notifications;
+	ASSERT_TRUE(Notifications.HandleServerChat("first server message", true));
+	ASSERT_TRUE(Notifications.HandleServerChat("second server message", true));
+	ASSERT_TRUE(Notifications.HandleServerChat("second server message", true));
+	EXPECT_EQ(Notifications.NotificationCountForTests(), 1);
+	EXPECT_EQ(Notifications.LastNotificationRepeatCountForTests(), 2);
+}
+
+TEST(QmHudNotifications, HiddenServerCategoryReturnsNotHandledWithoutAddingANotification)
+{
+	const CScopedNotificationConfig ConfigScope;
+	g_Config.m_QmStreamerFilterWords = 0;
+	CTestHudNotifications Notifications;
+	QmHudNotifications::SServerMessageRouteConfig Route;
+	Route.m_RouteSystemMessages = true;
+	Route.m_ShowUnknown = false;
+	QmHudNotifications::SServerMessageAnalysis Analysis;
+	EXPECT_FALSE(Notifications.HandleServerChat("ordinary unknown server message", Route, &Analysis));
+	EXPECT_EQ(Notifications.NotificationCountForTests(), 0);
+	EXPECT_EQ(Analysis.m_Domain, QmHudNotifications::EServerMessageDomain::Unknown);
+}
+
+TEST(QmHudNotifications, NonQueuedAnalysisStillExpiresThePendingCompatibilityPrompt)
+{
+	const CScopedNotificationConfig ConfigScope;
+	g_Config.m_QmHudNotificationsCompatSolo = 1;
+	CTestHudNotifications Notifications;
+	Notifications.SetPendingCompatPromptForTests(QmHudNotifications::ESoloPrompt::Enter, 0);
+	EXPECT_FALSE(Notifications.HandleServerChat("ordinary server message", false));
+	EXPECT_EQ(Notifications.PendingCompatPromptForTests(), QmHudNotifications::ESoloPrompt::None);
+	EXPECT_EQ(Notifications.NotificationCountForTests(), 0);
+}
+
+TEST(QmHudNotifications, EmptyMessageDoesNotReuseThePreviousAnalysis)
+{
+	const CScopedNotificationConfig ConfigScope;
+	g_Config.m_QmStreamerFilterWords = 0;
+	CTestHudNotifications Notifications;
+	QmHudNotifications::SServerMessageAnalysis Analysis;
+	ASSERT_TRUE(Notifications.HandleServerChat("ordinary server message", true, &Analysis));
+	EXPECT_FALSE(Notifications.HandleServerChat("", true, &Analysis));
+	EXPECT_EQ(Analysis.m_Route, QmHudNotifications::EServerMessageRoute::None);
+	EXPECT_EQ(Analysis.m_Class, QmHudNotifications::EServerMessageClass::None);
+	EXPECT_EQ(Notifications.NotificationCountForTests(), 1);
+}

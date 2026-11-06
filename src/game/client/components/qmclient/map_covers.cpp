@@ -243,7 +243,7 @@ void CQmMapCovers::PollJobs()
 			m_vJobs.erase(m_vJobs.begin() + Index);
 			continue;
 		}
-		if(State == IJob::STATE_DONE || State == IJob::STATE_ABORTED)
+		if(State == IJob::STATE_DONE || State == IJob::STATE_ABORTED || State == IJob::STATE_FAILED)
 		{
 			// 解码/合成失败：缓存文件可能损坏，删除后冷却重试。
 			if(State == IJob::STATE_DONE && m_pStorage != nullptr && !Job.m_CachePath.empty())

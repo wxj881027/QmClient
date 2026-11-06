@@ -6,11 +6,15 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <string_view>
+#include <type_traits>
 
 inline constexpr size_t ASSET_PREVIEW_UPLOAD_MAX_BYTES_PER_FRAME = 1 * 1024 * 1024;
 inline constexpr int ASSET_PREVIEW_MIN_TEXTURE_SIZE = 512;
 inline constexpr int LOCAL_ASSET_PREVIEW_MAX_TEXTURE_SIZE = 4096;
+// 解码前按 RGBA 最坏情况限制源图，允许完整 4K，避免先分配大图再缩小。
+inline constexpr size_t ASSET_PREVIEW_MAX_DECODED_BYTES = size_t(LOCAL_ASSET_PREVIEW_MAX_TEXTURE_SIZE) * LOCAL_ASSET_PREVIEW_MAX_TEXTURE_SIZE * 4u;
 inline constexpr int WORKSHOP_ASSET_PREVIEW_MAX_TEXTURE_SIZE = 2048;
 inline constexpr int LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE = 64 * 1024 * 1024;
 
@@ -86,17 +90,29 @@ inline int PreviewUploadBudgetTextureSize(int MaxTextureSize, int MinTextureSize
 	return std::clamp(TextureSize, MinTextureSize, MaxTextureSize);
 }
 
-inline size_t PreviewBudgetBytes(size_t OverrideMb, int Percent, float GpuBudgetMb)
+template<typename TByteCount = size_t>
+inline TByteCount PreviewBudgetBytes(size_t OverrideMb, int Percent, float GpuBudgetMb)
 {
+	static_assert(std::is_integral_v<TByteCount> && std::is_unsigned_v<TByteCount> && !std::is_same_v<TByteCount, bool>);
+	constexpr uint64_t BytesPerMb = 1024ull * 1024ull;
+	constexpr TByteCount MaxBytes = std::numeric_limits<TByteCount>::max();
+	constexpr uint64_t MaxWholeMb = MaxBytes / BytesPerMb;
 	if(OverrideMb > 0)
-		return OverrideMb * 1024ull * 1024ull;
-	if(Percent <= 0 || GpuBudgetMb <= 0.0f)
+	{
+		if(OverrideMb > MaxWholeMb)
+			return MaxBytes;
+		return static_cast<TByteCount>(OverrideMb * BytesPerMb);
+	}
+	if(Percent <= 0 || !(GpuBudgetMb > 0.0f))
 		return 0;
 	const float BudgetMb = GpuBudgetMb * std::clamp(Percent, 0, 100) / 100.0f;
-	return (size_t)std::max(BudgetMb, 0.0f) * 1024ull * 1024ull;
+	// 先限制可表示的整MB，再转整数；超限不能绕回表示不限制预算的0。
+	if(BudgetMb >= static_cast<float>(MaxWholeMb) + 1.0f)
+		return MaxBytes;
+	return static_cast<TByteCount>(static_cast<TByteCount>(BudgetMb) * BytesPerMb);
 }
 
-inline int ComputePreviewBudgetedTextureSize(int MaxTextureSize, int MinTextureSize, size_t TextureBudgetBytes, size_t CurrentTextureMemoryBytes, size_t ReplacedResidentPreviewBytes)
+inline int ComputePreviewBudgetedTextureSize(int MaxTextureSize, int MinTextureSize, uint64_t TextureBudgetBytes, uint64_t CurrentTextureMemoryBytes, uint64_t ReplacedResidentPreviewBytes)
 {
 	if(MaxTextureSize <= 0)
 		return std::max(MinTextureSize, 0);
@@ -107,11 +123,12 @@ inline int ComputePreviewBudgetedTextureSize(int MaxTextureSize, int MinTextureS
 	if(TextureBudgetBytes == 0)
 		return TextureSize;
 
+	const uint64_t BaseTextureBytes = CurrentTextureMemoryBytes > ReplacedResidentPreviewBytes ? CurrentTextureMemoryBytes - ReplacedResidentPreviewBytes : 0;
 	while(TextureSize > MinTextureSize)
 	{
-		const size_t BaseTextureBytes = CurrentTextureMemoryBytes > ReplacedResidentPreviewBytes ? CurrentTextureMemoryBytes - ReplacedResidentPreviewBytes : 0;
-		const size_t EstimatedBytes = BaseTextureBytes + PreviewTextureSizeBytesEstimate(TextureSize);
-		if(EstimatedBytes <= TextureBudgetBytes)
+		const uint64_t EstimatedBytes = PreviewTextureSizeBytesEstimate(TextureSize);
+		// 用剩余额度比较，避免已有纹理与候选估算相加后绕回较小值。
+		if(BaseTextureBytes <= TextureBudgetBytes && EstimatedBytes <= TextureBudgetBytes - BaseTextureBytes)
 			break;
 		const int NextTextureSize = PreviewBudgetNextTier(TextureSize, MinTextureSize);
 		if(NextTextureSize == TextureSize)

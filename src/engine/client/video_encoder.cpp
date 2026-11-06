@@ -1,10 +1,10 @@
 #include "video_encoder.h"
 
+#include "video_encoder_probe_cache.h"
+
 #include <base/log.h>
 #include <base/str.h>
 #include <base/system.h>
-
-#include <mutex>
 
 namespace video_encoder
 {
@@ -104,15 +104,8 @@ namespace video_encoder
 			return true;
 		}
 
-		std::vector<SProbeResult> &ProbeCache()
+		void ProbeOnce(std::vector<SProbeResult> &vResults)
 		{
-			static std::vector<SProbeResult> s_Cache;
-			return s_Cache;
-		}
-
-		void ProbeOnce()
-		{
-			std::vector<SProbeResult> vResults;
 			vResults.reserve(std::size(s_aCandidates));
 			for(const SCandidate &Candidate : s_aCandidates)
 			{
@@ -142,15 +135,13 @@ namespace video_encoder
 				Result.m_Available = true;
 				vResults.push_back(Result);
 			}
-			ProbeCache() = std::move(vResults);
 		}
 	} // namespace
 
 	const std::vector<SProbeResult> &ProbeEncoders()
 	{
-		static std::once_flag s_Once;
-		std::call_once(s_Once, ProbeOnce);
-		return ProbeCache();
+		static CVideoEncoderProbeCache<> s_Cache;
+		return s_Cache.Get(ProbeOnce);
 	}
 
 	const SProbeResult *FindProbed(const char *pName)
@@ -176,7 +167,7 @@ namespace video_encoder
 		const SEncoderFamily s_aEncoderFamilies[] = {
 			{"h264", {"h264_nvenc", "h264_qsv", "h264_amf", "h264_videotoolbox", "libx264"}},
 			{"hevc", {"hevc_nvenc", "hevc_qsv", "hevc_amf", "hevc_videotoolbox", nullptr}},
-			{"av1", {"av1_nvenc", "av1_qsv", "av1_amf", nullptr, "libsvtav1"}},
+			{"av1", {"av1_nvenc", "av1_qsv", "av1_amf", "libsvtav1", nullptr}},
 		};
 
 		const SEncoderFamily *FindFamily(const char *pName)
@@ -199,6 +190,13 @@ namespace video_encoder
 
 	const char *PreferredEncoderForFamily(const char *pFamily)
 	{
+		if(!FindFamily(pFamily))
+			return "";
+		return PreferredEncoderForFamily(pFamily, ProbeEncoders());
+	}
+
+	const char *PreferredEncoderForFamily(const char *pFamily, const std::vector<SProbeResult> &vProbes)
+	{
 		const SEncoderFamily *pFound = FindFamily(pFamily);
 		if(!pFound)
 			return "";
@@ -206,9 +204,9 @@ namespace video_encoder
 		{
 			if(!pCandidate)
 				break;
-			const SProbeResult *pProbe = FindProbed(pCandidate);
-			if(pProbe && pProbe->m_Available)
-				return pProbe->m_aName;
+			for(const SProbeResult &Probe : vProbes)
+				if(Probe.m_Available && str_comp(Probe.m_aName, pCandidate) == 0)
+					return Probe.m_aName;
 		}
 		return "";
 	}

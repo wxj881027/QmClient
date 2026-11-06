@@ -122,3 +122,15 @@ TEST(QmShortcutHeldBind, FocusLossWithoutPanelDoesNotKeepAnyInput)
 	EXPECT_FALSE(State.ReleaseOnFocusReturn(true));
 	EXPECT_STREQ(State.Command(nullptr), "");
 }
+
+TEST(QmShortcutHeldBind, MultiplePanelsAreRetainedOnceAcrossRepeatedRestriction)
+{
+	CQmShortcutHeldBind State;
+	int Releases = 0;
+	const char *pCommand = "+scoreboard;+fire;+spectate;+statboard";
+	ASSERT_TRUE(State.Restrict(pCommand, [&](const char *) { ++Releases; }));
+	EXPECT_STREQ(State.Command(nullptr), "+scoreboard;+spectate;+statboard");
+	ASSERT_TRUE(State.Restrict(pCommand, [&](const char *) { ++Releases; }));
+	EXPECT_STREQ(State.Command(nullptr), "+scoreboard;+spectate;+statboard");
+	EXPECT_EQ(Releases, 1);
+}

@@ -190,3 +190,39 @@ TEST(QmChatMentions, EmptyLocalNameNeverMatches)
 	EXPECT_FALSE(QmChatMessageFilter::MentionsName("hello", ""));
 	EXPECT_FALSE(QmChatMessageFilter::MentionsName("@ hello", "", true));
 }
+
+TEST(QmChatMentions, CaseMappingToShorterUtf8TextUsesTheActualEnd)
+{
+	EXPECT_TRUE(QmChatMessageFilter::MentionsName("K:", "K"));
+	EXPECT_TRUE(QmChatMessageFilter::MentionsName("@k!", "K", true));
+}
+
+TEST(QmChatMentions, CaseMappingToLongerUtf8TextUsesTheActualEnd)
+{
+	EXPECT_TRUE(QmChatMessageFilter::MentionsName("K:", "K"));
+	EXPECT_TRUE(QmChatMessageFilter::MentionsName("@K!", "k", true));
+}
+
+TEST(QmChatMentions, ShorterEncodedMatchCannotSkipAWordContinuation)
+{
+	EXPECT_FALSE(QmChatMessageFilter::MentionsName("Kxx", "K"));
+	EXPECT_FALSE(QmChatMessageFilter::MentionsName("@Kxx", "K", true));
+}
+
+TEST(QmChatMentions, LongerEncodedMatchStillRequiresAFollowingBoundary)
+{
+	EXPECT_FALSE(QmChatMessageFilter::MentionsName("Kword", "K"));
+	EXPECT_TRUE(QmChatMessageFilter::MentionsName("K, hello", "K"));
+}
+
+TEST(QmChatMentions, BytesAfterTheStringTerminatorCannotAffectMentionDetection)
+{
+	const char aLine[] = {'K', '\0', 'x', 'x'};
+	EXPECT_TRUE(QmChatMessageFilter::MentionsName(aLine, "K"));
+}
+
+TEST(QmChatMentions, LaterOccurrenceUpdatesTheCaseFoldedEnd)
+{
+	EXPECT_TRUE(QmChatMessageFilter::MentionsName("Kword @K!", "k", true));
+	EXPECT_TRUE(QmChatMessageFilter::MentionsName("Kword @K!", "K", true));
+}

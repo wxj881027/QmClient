@@ -100,7 +100,7 @@ public:
 	virtual void SetTuning(const STuning &Tuning) { (void)Tuning; }
 
 	// 启动/停止连接意图。Connect 只置位，实际连接在 worker 线程进行。
-	// 返回 false 表示配置不可用，此时 Error 为原因。
+	// 配置或线程创建失败返回 false；Error 尽力填充，LastError 始终保留原因。
 	virtual bool Connect(const SQmWebSocketConnectConfig &Config, std::string &Error) = 0;
 	// 主动断开并停止重连。
 	virtual void Disconnect() = 0;

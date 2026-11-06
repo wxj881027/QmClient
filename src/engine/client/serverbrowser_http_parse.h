@@ -1,6 +1,8 @@
 #ifndef ENGINE_CLIENT_SERVERBROWSER_HTTP_PARSE_H
 #define ENGINE_CLIENT_SERVERBROWSER_HTTP_PARSE_H
 
+#include "serverbrowser_addresses.h"
+
 #include <base/system.h>
 
 #include <engine/shared/json.h>
@@ -54,7 +56,10 @@ inline bool ServerBrowserParseHttpList(json_value *pJson, std::vector<CServerInf
 				Parsed.m_aAddresses[Parsed.m_NumAddresses++] = ParsedAddress;
 		}
 		if(Parsed.m_NumAddresses > 0)
+		{
+			ServerBrowserFormatAddresses(Parsed.m_aAddress, sizeof(Parsed.m_aAddress), Parsed.m_aAddresses, Parsed.m_NumAddresses);
 			vServers.push_back(Parsed);
+		}
 	}
 	*pvServers = std::move(vServers);
 	return false;

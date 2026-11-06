@@ -50,12 +50,11 @@ class CHttpCurlTestPeer
 	CHttpCurl m_Http;
 
 public:
-	std::unordered_map<std::string, size_t> m_HostCounts;
 	CHttpCurlTestPeer() { m_Http.m_pMultiH = curl_multi_init(); }
 	~CHttpCurlTestPeer()
 	{
 		while(!m_Http.m_RunningRequests.empty())
-			m_Http.CompleteRunningRequest(m_Http.m_RunningRequests.begin()->first, CURLE_ABORTED_BY_CALLBACK, m_HostCounts);
+			m_Http.CompleteRunningRequest(m_Http.m_RunningRequests.begin()->first, CURLE_ABORTED_BY_CALLBACK);
 		curl_multi_cleanup(m_Http.m_pMultiH);
 		m_Http.m_pMultiH = nullptr;
 	}
@@ -72,11 +71,12 @@ public:
 			return false;
 		}
 		m_Http.m_RunningRequests.emplace(pHandle, pRequest);
-		++m_HostCounts[pHost];
+		pRequest->m_HostKey = pHost;
 		return true;
 	}
-	void Cancel() { m_Http.CancelAbortedRequests(m_HostCounts); }
+	void Cancel() { m_Http.CancelAbortedRequests(); }
 	size_t Size() const { return m_Http.m_RunningRequests.size(); }
+	size_t HostCount(const char *pHost) const { return m_Http.RunningForHost(pHost); }
 };
 
 TEST(QmUpdateHttp, CancellationWithoutProgressReleasesOnlyCancelledHostCapacity)
@@ -94,14 +94,14 @@ TEST(QmUpdateHttp, CancellationWithoutProgressReleasesOnlyCancelledHostCapacity)
 	EXPECT_FALSE(pSibling->Done());
 	EXPECT_FALSE(pOther->Done());
 	EXPECT_EQ(Http.Size(), 2u);
-	EXPECT_EQ(Http.m_HostCounts.at("same.test"), 1u);
-	EXPECT_EQ(Http.m_HostCounts.at("other.test"), 1u);
+	EXPECT_EQ(Http.HostCount("same.test"), 1u);
+	EXPECT_EQ(Http.HostCount("other.test"), 1u);
 	Http.Cancel();
 	EXPECT_EQ(Http.Size(), 2u);
 	pSibling->Abort();
 	Http.Cancel();
-	EXPECT_EQ(Http.m_HostCounts.count("same.test"), 0u);
-	EXPECT_EQ(Http.m_HostCounts.at("other.test"), 1u);
+	EXPECT_EQ(Http.HostCount("same.test"), 0u);
+	EXPECT_EQ(Http.HostCount("other.test"), 1u);
 	EXPECT_EQ(Http.Size(), 1u);
 }
 

@@ -1,7 +1,9 @@
 #ifndef ENGINE_CLIENT_BACKEND_SDL_H
 #define ENGINE_CLIENT_BACKEND_SDL_H
 
+#include <base/dbg.h>
 #include <base/detect.h>
+#include <base/thread.h>
 
 #include <engine/client/backend/backend_base.h>
 #include <engine/client/graphics_threaded.h>
@@ -20,7 +22,9 @@ typedef uint32_t SDL_DisplayID;
 #include <cstddef>
 #include <cstdint>
 #include <mutex>
+#include <optional>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #if defined(CONF_PLATFORM_MACOS) || defined(CONF_PLATFORM_IOS)
@@ -55,8 +59,10 @@ class CGraphicsBackend_Threaded : public IGraphicsBackend
 private:
 	TTranslateFunc m_TranslateFunc;
 	std::string m_FatalError;
+	bool m_FatalErrorTextUnavailable = false;
 	SGfxWarningContainer m_Warning;
 	std::atomic_bool m_SubmissionStopped = false;
+	std::optional<CCommandBuffer> m_LifecycleCommands;
 
 public:
 	// constructed on the main thread, the rest of the functions is run on the render thread
@@ -83,10 +89,39 @@ public:
 	bool IsIdle() const override;
 	void WaitForIdle() override;
 
-	void ProcessError(const SGfxErrorContainer &Error);
+	void ProcessError(const SGfxErrorContainer &Error) noexcept;
 
 protected:
-	void StartProcessor(ICommandProcessor *pProcessor);
+	// 主线程先准备初始化和关闭共用的缓冲，再创建处理器；返回指针由派生后端持有。
+	template<typename TCreate>
+	auto PrepareProcessor(TCreate &&Create) noexcept -> std::invoke_result_t<TCreate &>
+	{
+		using TResult = std::invoke_result_t<TCreate &>;
+		static_assert(std::is_pointer_v<TResult> && std::is_base_of_v<ICommandProcessor, std::remove_pointer_t<TResult>>);
+		if(m_LifecycleCommands || !m_Shutdown)
+			return nullptr;
+		try
+		{
+			m_LifecycleCommands.emplace(1024, 512);
+			auto *pProcessor = Create();
+			if(pProcessor != nullptr)
+				return pProcessor;
+		}
+		catch(...)
+		{
+		}
+		m_LifecycleCommands.reset();
+		return nullptr;
+	}
+
+	CCommandBuffer *LifecycleCommands() noexcept { return m_LifecycleCommands ? &*m_LifecycleCommands : nullptr; }
+	void ReleaseLifecycleCommands() noexcept
+	{
+		dbg_assert(m_Shutdown, "Lifecycle commands are still borrowed by the processor.");
+		m_LifecycleCommands.reset();
+	}
+
+	bool StartProcessor(ICommandProcessor *pProcessor, THREAD_CREATE pfnCreate = thread_try_init);
 	void StopProcessor();
 	void ResetSubmissionStopForCleanup()
 	{
@@ -107,7 +142,7 @@ private:
 	CCommandBuffer *m_pBuffer;
 	bool m_Started = false;
 	std::atomic_bool m_BufferInProcess;
-	void *m_pThread;
+	void *m_pThread = nullptr;
 	static void ThreadFunc(void *pUser);
 #endif
 
@@ -116,6 +151,7 @@ public:
 	// 非破坏性查询：图形后端是否已记录致命错误。运行时错误会停止后续提交，
 	// 由主循环消费并进入恢复流程；初始化错误仍由 ProcessError 直接报告。
 	bool HasFatalError() const override;
+	// 主线程非阻塞轮询；命令仍在执行时返回 false，完成后再消费故障。
 	// 保存诊断并停止提交后清除待消费标记；GetFatalError 保留第一份故障。
 	// 返回 true 表示刚刚消费掉一个致命错误。
 	// 收尾流程仍可能向后端提交清理命令，停止标志保证这些提交不会再次执行。
@@ -145,10 +181,9 @@ struct SBackendCapabilities
 	bool m_2DArrayTextures = false;
 	bool m_2DArrayTexturesAsExtension = false;
 	bool m_ShaderSupport = false;
-	bool m_MediaIslandSdf = false;
-	bool m_RoundedRectSdf = false;
-	// 圆角容器放图（圆角 SDF 采样纹理）是否可用。老驱动或 Metal 上为 false，
-	// 调用方回退到 CPU 预烘焙的圆角 alpha。
+	std::atomic<bool> m_MediaIslandSdf{false};
+	std::atomic<bool> m_RoundedRectSdf{false};
+	// 圆角容器采样纹理的能力由后端发布。
 	std::atomic<bool> m_RoundedRectSdfTexture{false};
 	std::atomic<bool> m_ProceduralRing{false};
 	bool m_RenderTargets = false;
@@ -189,9 +224,9 @@ struct SBackendCapabilities
 		m_2DArrayTextures = false;
 		m_2DArrayTexturesAsExtension = false;
 		m_ShaderSupport = false;
-		m_MediaIslandSdf = false;
-		m_RoundedRectSdf = false;
-		m_RoundedRectSdfTexture.store(false, std::memory_order_relaxed);
+		m_MediaIslandSdf.store(false, std::memory_order_release);
+		m_RoundedRectSdf.store(false, std::memory_order_release);
+		m_RoundedRectSdfTexture.store(false, std::memory_order_release);
 		m_ProceduralRing.store(false, std::memory_order_relaxed);
 		m_RenderTargets = false;
 		m_RenderTargetGaussianBlur = false;
@@ -268,7 +303,7 @@ class CCommandProcessor_SDL_GL : public CGraphicsBackend_Threaded::ICommandProce
 public:
 	CCommandProcessor_SDL_GL(EBackendType BackendType, int GLMajor, int GLMinor, int GLPatch);
 	~CCommandProcessor_SDL_GL() override;
-	void RunBuffer(CCommandBuffer *pBuffer) override;
+	void RunBuffer(CCommandBuffer *pBuffer) noexcept override;
 
 	const SGfxErrorContainer &GetError() const override;
 	void ClearError() override { m_Error = {}; }
@@ -279,8 +314,8 @@ public:
 
 	const SGfxWarningContainer &GetWarning() const override;
 
-	void HandleError();
-	void HandleWarning();
+	void HandleError() noexcept;
+	void HandleWarning() noexcept;
 };
 
 static constexpr size_t gs_GpuInfoStringSize = 256;
@@ -370,8 +405,8 @@ public:
 		}
 		return IsModernAPI(m_BackendType);
 	}
-	bool HasMediaIslandSdf() override { return m_Capabilities.m_MediaIslandSdf; }
-	bool HasRoundedRectSdf() override { return m_Capabilities.m_RoundedRectSdf; }
+	bool HasMediaIslandSdf() override { return m_Capabilities.m_MediaIslandSdf.load(std::memory_order_acquire); }
+	bool HasRoundedRectSdf() override { return m_Capabilities.m_RoundedRectSdf.load(std::memory_order_acquire); }
 	bool HasRoundedRectSdfTexture() override { return m_Capabilities.m_RoundedRectSdfTexture.load(std::memory_order_acquire); }
 	bool HasProceduralRing() override { return m_Capabilities.m_ProceduralRing.load(std::memory_order_acquire); }
 	bool UseTrianglesAsQuad() override { return m_Capabilities.m_TrianglesAsQuads; }

@@ -14,6 +14,8 @@
 #include "lineinput.h"
 #include "ui_rect.h"
 
+#include <base/borrowed_allocator.h>
+
 #include <engine/input.h>
 #include <engine/textrender.h>
 
@@ -21,6 +23,7 @@
 #include <array>
 #include <chrono>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -379,6 +382,8 @@ public:
 	~CUIElement();
 
 	void Init(CUi *pUI, int RequestedRectCount);
+	// 仅将资源分配失败转换为 false；其它异常与 Init 的前置条件保持。
+	bool TryInit(CUi *pUI, int RequestedRectCount);
 
 	SUIElementRect *Rect(size_t Index)
 	{
@@ -908,7 +913,7 @@ private:
 	CUIRect m_Screen;
 	int m_LastUiScale = -1;
 
-	std::vector<CUIRect> m_vClips;
+	std::vector<CUIRect, CBorrowedAllocator<CUIRect>> m_vClips;
 	void UpdateClipping();
 
 	struct SPopupMenu
@@ -918,6 +923,7 @@ private:
 
 		const SPopupMenuId *m_pId;
 		SPopupMenuProperties m_Props;
+		std::shared_ptr<FPopupMenuClosedCallback> m_pOnClosed;
 		CQmUiInteractionSource m_Source;
 		SPopupFocus m_ReturnFocus;
 		uint64_t m_OpenedFrame = 0;
@@ -931,10 +937,15 @@ private:
 		bool m_Closing = false;
 	};
 	std::vector<SPopupMenu> m_vPopupMenus;
+	// 打开时为活动弹层和正在通知的批次预留空间，关闭只移动回调句柄。
+	std::vector<std::shared_ptr<FPopupMenuClosedCallback>, CBorrowedAllocator<std::shared_ptr<FPopupMenuClosedCallback>>> m_vPopupCloseCallbacks;
+	void ReservePopupCloseCallbacks(size_t PopupCount);
+	size_t QueuePopupCloseCallbacks(size_t FirstPopup) noexcept;
+	void InvokePopupCloseCallbacks(size_t FirstCallback) noexcept;
 	std::vector<std::weak_ptr<SQmUiSelectionCommit>> m_vPendingSelections;
-	void RegisterSelectionCommit(std::shared_ptr<SQmUiSelectionCommit> &pCommit);
+	bool RegisterSelectionCommit(std::shared_ptr<SQmUiSelectionCommit> &pCommit);
 	CQmPopupSourceClock m_PopupSourceClock;
-	FPopupMenuClosedCallback m_pfnPopupMenuClosedCallback = nullptr;
+	std::shared_ptr<FPopupMenuClosedCallback> m_pPopupMenuClosedCallback;
 	int m_PopupInputDepth = 0;
 	bool UnderlyingPointerInputBlocked() const;
 	bool WheelInputBlocked(const void *pOwnerId) const;
@@ -1025,6 +1036,10 @@ public:
 	}
 
 	CUi();
+	// 内存域仅借用，须存活到CUi及关闭回调存储销毁。
+	explicit CUi(IAllocationResource *pPopupCallbackMemory);
+	// 两个内存域分别管理关闭回调与裁剪栈，均须覆盖CUi的完整寿命。
+	CUi(IAllocationResource *pPopupCallbackMemory, IAllocationResource *pClipMemory);
 	~CUi();
 
 	enum EHotkey : unsigned
@@ -1565,6 +1580,8 @@ public:
 		CQmDropdownSearch m_Search;
 
 		SSelectionPopupContext();
+		// 源快照内存域由调用者持有，须存活到本上下文及存储销毁。
+		explicit SSelectionPopupContext(IAllocationResource *pSourceMemory);
 		void Reset();
 	};
 	void ShowPopupSelection(float X, float Y, SSelectionPopupContext *pContext);

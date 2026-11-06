@@ -1,9 +1,11 @@
 #include <base/detect.h>
 #if !defined(CONF_PLATFORM_EMSCRIPTEN)
 #include <base/hash.h>
+#include <base/logger.h>
 #include <base/time.h>
 
 #include <engine/client/serverbrowser_http.h>
+#include <engine/client/serverbrowser_http_parse.h>
 #include <engine/engine.h>
 #include <engine/http.h>
 #include <engine/shared/serverinfo.h>
@@ -11,15 +13,37 @@
 
 #include <gtest/gtest.h>
 #include <test/support/http_curl_test_peer.h>
+#include <test/support/job_wait.h>
 #include <test/test.h>
 
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
+#include <new>
+#include <stdexcept>
 #include <thread>
 
 namespace
 {
+	class CThrowingServerListLogger : public ILogger
+	{
+		const char *m_pPrefix;
+
+	public:
+		int m_Failures = 0;
+		explicit CThrowingServerListLogger(const char *pPrefix) :
+			m_pPrefix(pPrefix) {}
+		void Log(const CLogMessage *pMessage) override
+		{
+			if(str_comp(pMessage->m_aSystem, "serverbrowser_http") == 0 && str_startswith(pMessage->Message(), m_pPrefix))
+			{
+				++m_Failures;
+				throw std::bad_alloc();
+			}
+		}
+	};
+
 	class CResponse : public CHttpRequestCurl
 	{
 	public:
@@ -34,11 +58,11 @@ namespace
 			CHttpRequestCurlTestPeer::Body(*this, Body);
 			CHttpRequestCurlTestPeer::Complete(*this);
 		}
-		void Fail(int Status = 0, int RetryAfter = 0)
+		void Fail(int Status = 0, int64_t RetryAfter = 0)
 		{
 			m_StatusCode = Status;
 			if(RetryAfter)
-				m_ResultRetryAfterSeconds = RetryAfter;
+				CHttpRequestCurlTestPeer::Header(*this, "Retry-After: " + std::to_string(RetryAfter) + "\r\n");
 			IHttpRequest::OnCompletionInternal(EHttpState::ERROR);
 		}
 		void Abort() override
@@ -51,8 +75,73 @@ namespace
 	{
 	public:
 		std::vector<std::shared_ptr<IHttpRequest>> m_vStarted;
-		void Run(std::shared_ptr<IHttpRequest> pRequest) override { m_vStarted.push_back(std::move(pRequest)); }
+		int m_Submissions = 0;
+		int m_RejectSubmission = 0;
+		bool m_ThrowUnknown = false;
+		void Run(std::shared_ptr<IHttpRequest> pRequest) override
+		{
+			// 模拟生产 HTTP 队列在接受请求前分配失败。
+			if(++m_Submissions == m_RejectSubmission)
+			{
+				if(m_ThrowUnknown)
+					throw 1;
+				throw std::bad_alloc();
+			}
+			m_vStarted.push_back(std::move(pRequest));
+		}
 		bool HasIpresolveBug() const override { return false; }
+	};
+	class CJobSubmissionBoundary : public IEngine
+	{
+	public:
+		IEngine *m_pTarget = nullptr;
+		int m_Submissions = 0;
+		int m_RejectSubmission = 0;
+		bool m_ThrowUnknown = false;
+		std::shared_ptr<IJob> m_pLastAccepted;
+		void Init() override { m_pTarget->Init(); }
+		void ShutdownJobs() override { m_pTarget->ShutdownJobs(); }
+		void SetAdditionalLogger(std::shared_ptr<ILogger> &&pLogger) override { m_pTarget->SetAdditionalLogger(std::move(pLogger)); }
+		void AddJob(std::shared_ptr<IJob> pJob) override
+		{
+			// 仅在入队前注入失败；已接受的任务仍交给真实线程池运行。
+			if(++m_Submissions == m_RejectSubmission)
+			{
+				if(m_ThrowUnknown)
+					throw 1;
+				throw std::bad_alloc();
+			}
+			m_pTarget->AddJob(pJob);
+			m_pLastAccepted = std::move(pJob);
+		}
+	};
+	class CFailureBarrier
+	{
+		std::mutex m_Lock;
+		std::condition_variable m_Changed;
+		bool m_Entered = false;
+		bool m_Released = false;
+
+	public:
+		void Pause()
+		{
+			std::unique_lock Lock(m_Lock);
+			m_Entered = true;
+			m_Changed.notify_all();
+			if(!m_Changed.wait_for(Lock, std::chrono::seconds(5), [this] { return m_Released; }))
+				throw std::runtime_error("failure barrier timed out");
+		}
+		bool WaitUntilEntered()
+		{
+			std::unique_lock Lock(m_Lock);
+			return m_Changed.wait_for(Lock, std::chrono::seconds(2), [this] { return m_Entered; });
+		}
+		void Release()
+		{
+			std::lock_guard Lock(m_Lock);
+			m_Released = true;
+			m_Changed.notify_all();
+		}
 	};
 	std::string List(const char *pName = "Valid")
 	{
@@ -65,13 +154,24 @@ namespace
 		CTestInfo m_Info;
 		std::unique_ptr<IStorage> m_pStorage = m_Info.CreateTestStorage();
 		std::unique_ptr<IEngine> m_pEngine{CreateTestEngine("serverlist-test")};
+		CJobSubmissionBoundary m_Jobs;
 		CHttpBoundary m_Http;
 		std::vector<std::shared_ptr<CResponse>> m_vRequests;
 		std::unique_ptr<IServerBrowserHttp> m_pBrowser;
 		int64_t m_Now = 100;
-		void Begin(std::vector<std::string> vUrls = {"https://one.test/list", "https://two.test/list", "https://three.test/list"}, const char *pPrevious = "", bool Tiers = false, std::function<bool(const std::string &, const std::string &)> SaveWriter = {})
+		std::function<void()> m_BeforeRequestCreation;
+		std::function<int64_t()> m_Clock;
+		void Begin(std::vector<std::string> vUrls = {"https://one.test/list", "https://two.test/list", "https://three.test/list"}, const char *pPrevious = "", bool Tiers = false, std::function<bool(const std::string &, const std::string &)> SaveWriter = {}, FServerListParser ParseList = {})
 		{
-			m_pBrowser.reset(CreateServerBrowserHttpWithSources(m_pEngine.get(), m_pStorage.get(), &m_Http, std::move(vUrls), pPrevious, [this](const char *pUrl) { auto pResult = std::make_shared<CResponse>(pUrl); m_vRequests.push_back(pResult); return pResult; }, [this] { return m_Now; }, Tiers, {}, std::move(SaveWriter)));
+			m_Jobs.m_pTarget = m_pEngine.get();
+			auto Factory = [this](const char *pUrl) {
+				if(m_BeforeRequestCreation)
+					m_BeforeRequestCreation();
+				auto pResult = std::make_shared<CResponse>(pUrl);
+				m_vRequests.push_back(pResult);
+				return pResult;
+			};
+			m_pBrowser.reset(CreateServerBrowserHttpWithSources(&m_Jobs, m_pStorage.get(), &m_Http, std::move(vUrls), pPrevious, std::move(Factory), [this] { return m_Clock ? m_Clock() : m_Now; }, Tiers, {}, std::move(SaveWriter), std::move(ParseList)));
 		}
 		bool Until(const std::function<bool()> &Condition)
 		{
@@ -184,6 +284,137 @@ TEST_F(QmServerListRecovery, HttpRejectionDoesNotTriggerDnsRetryOrBypassRetryAft
 	m_Now = 220;
 	m_pBrowser->Update();
 	EXPECT_EQ(m_vRequests.size(), 2U);
+}
+
+TEST_F(QmServerListRecovery, MaximumRetryAfterRemainsBlockedWhenClockAdvancesDuringFailure)
+{
+	Begin({OFFICIAL});
+	m_vRequests[0]->Fail(429, INT64_MAX);
+	ASSERT_EQ(m_vRequests[0]->ResultRetryAfterSeconds(), INT64_MAX);
+	// 每次取时推进一秒，覆盖截止时间计算期间跨秒的情况。
+	m_Clock = [this] { return m_Now++; };
+	m_pBrowser->Update();
+	m_Clock = {};
+	EXPECT_TRUE(m_pBrowser->IsError());
+	m_Now = INT64_MAX - 1;
+	m_pBrowser->Update();
+	EXPECT_EQ(m_vRequests.size(), 1U);
+	m_Now = INT64_MAX;
+	m_pBrowser->Update();
+	EXPECT_EQ(m_vRequests.size(), 2U);
+}
+
+TEST_F(QmServerListRecovery, RequestFactoryAllocationFailureRetriesAfterBackoff)
+{
+	m_BeforeRequestCreation = [] { throw std::bad_alloc(); };
+	EXPECT_NO_THROW(Begin({"https://one.test/list"}));
+	ASSERT_NE(m_pBrowser, nullptr);
+	m_pBrowser->Update();
+	EXPECT_TRUE(m_pBrowser->IsError());
+	EXPECT_FALSE(m_pBrowser->IsRefreshing());
+	EXPECT_TRUE(m_vRequests.empty());
+	m_BeforeRequestCreation = {};
+	m_Now = 104;
+	m_pBrowser->Update();
+	EXPECT_TRUE(m_vRequests.empty());
+	m_Now = 105;
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 1U);
+	m_vRequests[0]->Reply(List("Recovered"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_FALSE(m_pBrowser->IsError());
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Recovered");
+}
+
+TEST_F(QmServerListRecovery, UnknownFactoryExceptionDoesNotCancelActiveSource)
+{
+	m_BeforeRequestCreation = [Calls = 0]() mutable {
+		if(++Calls == 2)
+			throw 1;
+	};
+	EXPECT_NO_THROW(Begin({"https://one.test/list", "https://two.test/list"}));
+	ASSERT_NE(m_pBrowser, nullptr);
+	ASSERT_EQ(m_vRequests.size(), 1U);
+	EXPECT_FALSE(m_vRequests[0]->IsAbortRequested());
+	m_vRequests[0]->Reply(List("Active source"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Active source");
+}
+
+TEST_F(QmServerListRecovery, RequestSubmissionFailureAbortsRejectedRequestAndUsesNextSource)
+{
+	m_Http.m_RejectSubmission = 1;
+	EXPECT_NO_THROW(Begin());
+	ASSERT_NE(m_pBrowser, nullptr);
+	ASSERT_EQ(m_vRequests.size(), 3U);
+	ASSERT_EQ(m_Http.m_vStarted.size(), 2U);
+	EXPECT_TRUE(m_vRequests[0]->IsAbortRequested());
+	EXPECT_FALSE(m_vRequests[1]->IsAbortRequested());
+	EXPECT_FALSE(m_vRequests[2]->IsAbortRequested());
+	m_vRequests[1]->Reply(List("Second source"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Second source");
+	EXPECT_TRUE(m_vRequests[2]->IsAbortRequested());
+}
+
+TEST_F(QmServerListRecovery, UnknownSubmissionFailurePreservesCacheUntilManualRecovery)
+{
+	Begin({"https://one.test/list"});
+	m_vRequests[0]->Reply(List("Previous"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	m_Http.m_RejectSubmission = 2;
+	m_Http.m_ThrowUnknown = true;
+	EXPECT_NO_THROW(m_pBrowser->Refresh());
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	EXPECT_TRUE(m_vRequests[1]->IsAbortRequested());
+	m_pBrowser->Update();
+	EXPECT_TRUE(m_pBrowser->IsError());
+	EXPECT_EQ(m_pBrowser->Revision(), 1U);
+	ASSERT_EQ(m_pBrowser->NumServers(), 1);
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Previous");
+	m_pBrowser->Refresh();
+	m_pBrowser->Refresh();
+	ASSERT_EQ(m_vRequests.size(), 3U);
+	m_vRequests[2]->Reply(List("Recovered"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 2; }));
+	EXPECT_FALSE(m_pBrowser->IsError());
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Recovered");
+}
+
+TEST_F(QmServerListRecovery, FactoryFailureAdvancesToMirrorTier)
+{
+	m_BeforeRequestCreation = [Calls = 0]() mutable {
+		if(++Calls == 1)
+			throw std::bad_alloc();
+	};
+	EXPECT_NO_THROW(Begin({OFFICIAL, "https://ddrace.cn/ddnet/15/servers.json"}, "", true));
+	ASSERT_NE(m_pBrowser, nullptr);
+	EXPECT_TRUE(m_vRequests.empty());
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 1U);
+	EXPECT_STREQ(m_vRequests[0]->Url(), "https://ddrace.cn/ddnet/15/servers.json");
+	m_vRequests[0]->Reply(List("Mirror"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Mirror");
+}
+
+TEST_F(QmServerListRecovery, EncryptedDnsSubmissionFailureAllowsLaterRefreshAndShutdown)
+{
+	Begin({OFFICIAL});
+	m_Http.m_RejectSubmission = 2;
+	m_vRequests[0]->Fail();
+	EXPECT_NO_THROW(m_pBrowser->Update());
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	EXPECT_TRUE(m_vRequests[1]->ServerListDnsFallbackEnabled());
+	EXPECT_TRUE(m_vRequests[1]->IsAbortRequested());
+	EXPECT_TRUE(m_pBrowser->IsError());
+	EXPECT_FALSE(m_pBrowser->IsRefreshing());
+	m_Now += 5;
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 3U);
+	EXPECT_FALSE(m_vRequests[2]->ServerListDnsFallbackEnabled());
+	m_pBrowser->Shutdown();
+	EXPECT_TRUE(m_vRequests[2]->IsAbortRequested());
 }
 
 TEST_F(QmServerListRecovery, CustomSourceNeverUsesOfficialDnsFallback)
@@ -541,6 +772,370 @@ TEST_F(QmServerListRecovery, SavedCacheKeepsRealAgeForComparisonWhileAwaitingLiv
 	ASSERT_TRUE(Until([this] { return !m_pBrowser->IsRefreshing(); }));
 	EXPECT_EQ(m_pBrowser->Revision(), Revision);
 	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Recent persisted");
+}
+
+TEST_F(QmServerListRecovery, ParserAllocationExceptionRetainsCacheAndRecoversAfterBackoff)
+{
+	auto pFail = std::make_shared<std::atomic<bool>>(false);
+	Begin({"https://one.test/list"}, "", false, {}, [pFail](json_value *pJson, std::vector<CServerInfo> *pvServers) {
+		const bool Failed = ServerBrowserParseHttpList(pJson, pvServers);
+		if(pFail->load())
+			throw std::bad_alloc();
+		return Failed;
+	});
+	m_vRequests[0]->Reply(List("Previous"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	pFail->store(true);
+	m_pBrowser->Refresh();
+	m_vRequests[1]->Reply(List("Unpublished"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->IsError(); }));
+	EXPECT_EQ(m_pBrowser->Revision(), 1U);
+	EXPECT_EQ(m_pBrowser->NumServers(), 1);
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Previous");
+	m_Now += 4;
+	m_pBrowser->Update();
+	EXPECT_EQ(m_vRequests.size(), 2U);
+	pFail->store(false);
+	++m_Now;
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 3U);
+	m_vRequests[2]->Reply(List("Recovered"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 2; }));
+	EXPECT_FALSE(m_pBrowser->IsError());
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Recovered");
+}
+
+TEST_F(QmServerListRecovery, UnknownParserExceptionAllowsRemainingSourceToPublish)
+{
+	auto pCalls = std::make_shared<std::atomic<int>>(0);
+	Begin({"https://one.test/list", "https://two.test/list"}, "", false, {}, [pCalls](json_value *pJson, std::vector<CServerInfo> *pvServers) {
+		const bool Failed = ServerBrowserParseHttpList(pJson, pvServers);
+		if(pCalls->fetch_add(1) == 0)
+			throw 1;
+		return Failed;
+	});
+	m_vRequests[0]->Reply(List("Unpublished"));
+	m_pBrowser->Update();
+	ASSERT_NE(m_Jobs.m_pLastAccepted, nullptr);
+	ASSERT_TRUE(WaitForJobDone(*m_Jobs.m_pLastAccepted));
+	m_pBrowser->Update();
+	EXPECT_EQ(m_pBrowser->Revision(), 0U);
+	EXPECT_TRUE(m_pBrowser->IsRefreshing());
+	m_vRequests[1]->Reply(List("Second source"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Second source");
+}
+
+TEST_F(QmServerListRecovery, ParserExceptionAfterBrowserDestructionDoesNotPoisonWorkerPool)
+{
+	auto pBarrier = std::make_shared<CFailureBarrier>();
+	Begin({"https://one.test/list"}, "", false, {}, [pBarrier](json_value *pJson, std::vector<CServerInfo> *pvServers) -> bool {
+		ServerBrowserParseHttpList(pJson, pvServers);
+		pBarrier->Pause();
+		throw std::bad_alloc();
+	});
+	m_vRequests[0]->Reply(List("Cancelled"));
+	m_pBrowser->Update();
+	ASSERT_TRUE(pBarrier->WaitUntilEntered());
+	const auto pCancelledJob = m_Jobs.m_pLastAccepted;
+	m_pBrowser->Shutdown();
+	m_pBrowser.reset();
+	pBarrier->Release();
+	ASSERT_TRUE(WaitForJobDone(*pCancelledJob));
+	Begin({"https://one.test/list"});
+	EXPECT_EQ(m_pBrowser->Revision(), 0U);
+	m_vRequests.back()->Reply(List("New browser"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "New browser");
+}
+
+TEST_F(QmServerListRecovery, ThrowingWriterPreservesPublishedListAndLaterSaveSucceeds)
+{
+	struct CWrites
+	{
+		int m_Calls = 0;
+		std::string m_Body;
+	};
+	auto pWrites = std::make_shared<CWrites>();
+	Begin({"https://one.test/list"}, "", false, [pWrites](const std::string &, const std::string &Body) {
+		if(++pWrites->m_Calls == 1)
+			throw std::bad_alloc();
+		pWrites->m_Body = Body;
+		return true;
+	});
+	m_vRequests[0]->Reply(List("First"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	ASSERT_TRUE(WaitForJobDone(*m_Jobs.m_pLastAccepted));
+	EXPECT_EQ(pWrites->m_Calls, 1);
+	EXPECT_FALSE(m_pBrowser->IsError());
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "First");
+	m_pBrowser->Refresh();
+	m_vRequests[1]->Reply(List("Latest"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 2; }));
+	ASSERT_TRUE(WaitForJobDone(*m_Jobs.m_pLastAccepted));
+	EXPECT_EQ(pWrites->m_Calls, 2);
+	EXPECT_NE(pWrites->m_Body.find("Latest"), std::string::npos);
+}
+
+TEST_F(QmServerListRecovery, UnknownWriterExceptionStillDrainsNewestSaveAfterDestruction)
+{
+	struct CWrites
+	{
+		CFailureBarrier m_Barrier;
+		int m_Calls = 0;
+		std::string m_Body;
+		std::string m_Path;
+	};
+	auto pWrites = std::make_shared<CWrites>();
+	Begin({"https://one.test/list"}, "", false, [pWrites](const std::string &Path, const std::string &Body) {
+		if(++pWrites->m_Calls == 1)
+		{
+			pWrites->m_Barrier.Pause();
+			throw 1;
+		}
+		pWrites->m_Body = Body;
+		pWrites->m_Path = Path;
+		return true;
+	});
+	m_vRequests[0]->Reply(List("First"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	ASSERT_TRUE(pWrites->m_Barrier.WaitUntilEntered());
+	const auto pSaveJob = m_Jobs.m_pLastAccepted;
+	m_pBrowser->Refresh();
+	m_vRequests[1]->Reply(List("Intermediate"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 2; }));
+	m_pBrowser->Refresh();
+	m_vRequests[2]->Reply(List("Latest"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 3; }));
+	m_pBrowser.reset();
+	pWrites->m_Barrier.Release();
+	ASSERT_TRUE(WaitForJobDone(*pSaveJob));
+	EXPECT_EQ(pWrites->m_Calls, 2);
+	EXPECT_FALSE(pWrites->m_Path.empty());
+	EXPECT_NE(pWrites->m_Body.find("Latest"), std::string::npos);
+	EXPECT_EQ(pWrites->m_Body.find("Intermediate"), std::string::npos);
+	EXPECT_EQ(pWrites->m_Body.find("First"), std::string::npos);
+}
+
+TEST_F(QmServerListRecovery, ParseSubmissionFailureIsRetriedWithoutLosingRefreshState)
+{
+	m_Jobs.m_RejectSubmission = 1;
+	Begin({"https://one.test/list"});
+	m_vRequests[0]->Reply(List("Unpublished"));
+	EXPECT_NO_THROW(m_pBrowser->Update());
+	EXPECT_EQ(m_pBrowser->Revision(), 0U);
+	EXPECT_TRUE(m_pBrowser->IsError());
+	EXPECT_FALSE(m_pBrowser->IsRefreshing());
+	m_Now += 5;
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	m_vRequests[1]->Reply(List("Recovered"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_FALSE(m_pBrowser->IsError());
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Recovered");
+}
+
+TEST_F(QmServerListRecovery, UnknownParseSubmissionFailureAllowsOtherSourceToFinish)
+{
+	m_Jobs.m_RejectSubmission = 1;
+	m_Jobs.m_ThrowUnknown = true;
+	Begin({"https://one.test/list", "https://two.test/list"});
+	m_vRequests[0]->Reply(List("Unpublished"));
+	EXPECT_NO_THROW(m_pBrowser->Update());
+	EXPECT_TRUE(m_pBrowser->IsRefreshing());
+	m_vRequests[1]->Reply(List("Second source"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Second source");
+}
+
+TEST_F(QmServerListRecovery, SaveSubmissionFailureDoesNotLatchWorkerActive)
+{
+	auto pWrites = std::make_shared<std::atomic<int>>(0);
+	m_Jobs.m_RejectSubmission = 2;
+	Begin({"https://one.test/list"}, "", false, [pWrites](const std::string &, const std::string &) {
+		pWrites->fetch_add(1);
+		return true;
+	});
+	m_vRequests[0]->Reply(List("First"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_EQ(m_Jobs.m_Submissions, 2);
+	EXPECT_EQ(pWrites->load(), 0);
+	EXPECT_FALSE(m_pBrowser->IsError());
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "First");
+	m_pBrowser->Refresh();
+	m_vRequests[1]->Reply(List("Latest"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 2; }));
+	ASSERT_TRUE(WaitForJobDone(*m_Jobs.m_pLastAccepted));
+	EXPECT_EQ(m_Jobs.m_Submissions, 4);
+	EXPECT_EQ(pWrites->load(), 1);
+}
+
+TEST_F(QmServerListRecovery, CacheParserExceptionStillStartsLiveRefresh)
+{
+	Begin({"https://one.test/list"});
+	m_vRequests[0]->Reply(List("Saved"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	ASSERT_TRUE(WaitForJobDone(*m_Jobs.m_pLastAccepted));
+	m_pBrowser.reset();
+	auto pCalls = std::make_shared<std::atomic<int>>(0);
+	Begin({"https://one.test/list"}, "", false, {}, [pCalls](json_value *pJson, std::vector<CServerInfo> *pvServers) {
+		const bool Failed = ServerBrowserParseHttpList(pJson, pvServers);
+		if(pCalls->fetch_add(1) == 0)
+			throw std::bad_alloc();
+		return Failed;
+	});
+	EXPECT_EQ(pCalls->load(), 1);
+	EXPECT_EQ(m_pBrowser->NumServers(), 0);
+	EXPECT_EQ(m_pBrowser->Revision(), 0U);
+	EXPECT_TRUE(m_pBrowser->IsRefreshing());
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	m_vRequests[1]->Reply(List("Live"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Live");
+}
+
+TEST_F(QmServerListRecovery, MaximumSourcesDrainInOrderAndManualRefreshResetsQueue)
+{
+	std::vector<std::string> vUrls;
+	for(int Index = 0; Index < 20; ++Index)
+		vUrls.emplace_back("https://source" + std::to_string(Index) + ".test/list");
+	Begin(vUrls);
+	for(size_t Index = 0; Index < 16; ++Index)
+	{
+		ASSERT_GT(m_vRequests.size(), Index);
+		EXPECT_STREQ(m_vRequests[Index]->Url(), vUrls[Index].c_str());
+		m_vRequests[Index]->Fail(500);
+		m_pBrowser->Update();
+	}
+	EXPECT_EQ(m_vRequests.size(), 16U);
+	EXPECT_TRUE(m_pBrowser->IsError());
+	m_pBrowser->Refresh();
+	m_pBrowser->Refresh();
+	ASSERT_EQ(m_vRequests.size(), 18U);
+	EXPECT_STREQ(m_vRequests[16]->Url(), vUrls[0].c_str());
+	EXPECT_STREQ(m_vRequests[17]->Url(), vUrls[1].c_str());
+	m_pBrowser->Shutdown();
+	EXPECT_TRUE(m_vRequests[16]->IsAbortRequested());
+	EXPECT_TRUE(m_vRequests[17]->IsAbortRequested());
+}
+
+TEST_F(QmServerListRecovery, MaximumSourcesAllowOneDnsRetryEachThenRecoverNextRound)
+{
+	// 注入入口保留重复源，覆盖每个来源各有一次 DNS 恢复的最大队列。
+	Begin(std::vector<std::string>(16, OFFICIAL));
+	for(size_t Index = 0; Index < 32; ++Index)
+	{
+		ASSERT_GT(m_vRequests.size(), Index);
+		EXPECT_EQ(m_vRequests[Index]->ServerListDnsFallbackEnabled(), Index >= 16);
+		m_vRequests[Index]->Fail();
+		m_pBrowser->Update();
+	}
+	EXPECT_EQ(m_vRequests.size(), 32U);
+	EXPECT_TRUE(m_pBrowser->IsError());
+	m_Now += 5;
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 34U);
+	EXPECT_FALSE(m_vRequests[32]->ServerListDnsFallbackEnabled());
+	m_vRequests[32]->Reply(List("Recovered after full queue"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_FALSE(m_pBrowser->IsError());
+	EXPECT_TRUE(m_vRequests[33]->IsAbortRequested());
+}
+
+TEST_F(QmServerListRecovery, BestSourceTracksFreshWinnerAndSurvivesFailedRefresh)
+{
+	const char *pFirst = "https://first-source-with-long-address.test/list";
+	const char *pSecond = "https://second-source-with-long-address.test/list";
+	Begin({pFirst, pSecond});
+	const char *pBest = nullptr;
+	EXPECT_TRUE(m_pBrowser->GetBestUrl(&pBest));
+	EXPECT_EQ(pBest, nullptr);
+	m_vRequests[0]->Reply(List("Stale"), 600);
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_FALSE(m_pBrowser->GetBestUrl(&pBest));
+	EXPECT_STREQ(pBest, pFirst);
+	m_vRequests[1]->Reply(List("Fresh"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 2; }));
+	EXPECT_FALSE(m_pBrowser->GetBestUrl(&pBest));
+	EXPECT_STREQ(pBest, pSecond);
+	m_pBrowser->Refresh();
+	ASSERT_EQ(m_vRequests.size(), 4U);
+	m_vRequests[2]->Fail(500);
+	m_vRequests[3]->Fail(500);
+	m_pBrowser->Update();
+	EXPECT_TRUE(m_pBrowser->IsError());
+	EXPECT_FALSE(m_pBrowser->GetBestUrl(&pBest));
+	EXPECT_STREQ(pBest, pSecond);
+	EXPECT_EQ(m_pBrowser->Revision(), 2U);
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Fresh");
+}
+
+TEST_F(QmServerListRecovery, PreviousSourceReorderKeepsPublishedSourceIdentity)
+{
+	const char *pPrevious = "https://previous.test/list";
+	Begin({"https://first.test/list", pPrevious}, pPrevious);
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	EXPECT_STREQ(m_vRequests[0]->Url(), pPrevious);
+	m_vRequests[0]->Reply(List("Previous source"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	const char *pBest = nullptr;
+	EXPECT_FALSE(m_pBrowser->GetBestUrl(&pBest));
+	EXPECT_STREQ(pBest, pPrevious);
+}
+
+TEST_F(QmServerListRecovery, LoggingFailureDoesNotDropRequestSubmission)
+{
+	CThrowingServerListLogger Logger("fetching serverlist");
+	{
+		CLogScope Scope(&Logger);
+		EXPECT_NO_THROW(Begin({"https://one.test/list", "https://two.test/list"}));
+	}
+	EXPECT_EQ(Logger.m_Failures, 2);
+	ASSERT_NE(m_pBrowser, nullptr);
+	ASSERT_EQ(m_Http.m_vStarted.size(), 2U);
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	m_vRequests[1]->Reply(List("Fetched despite log failure"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_TRUE(m_vRequests[0]->IsAbortRequested());
+}
+
+TEST_F(QmServerListRecovery, LoggingFailureAfterPublicationStillCancelsAndDoesNotRepublish)
+{
+	Begin();
+	m_vRequests[1]->Reply(List("Published"));
+	CThrowingServerListLogger Logger("published serverlist");
+	CLogScope Scope(&Logger);
+	bool Published = false;
+	EXPECT_NO_THROW(Published = Until([this] { return m_pBrowser->Revision() == 1; }));
+	ASSERT_TRUE(Published);
+	EXPECT_EQ(Logger.m_Failures, 1);
+	EXPECT_FALSE(m_pBrowser->IsRefreshing());
+	EXPECT_TRUE(m_vRequests[0]->IsAbortRequested());
+	EXPECT_NO_THROW(m_pBrowser->Update());
+	EXPECT_NO_THROW(m_pBrowser->Update());
+	EXPECT_EQ(m_pBrowser->Revision(), 1U);
+	EXPECT_EQ(m_pBrowser->NumServers(), 1);
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Published");
+}
+
+TEST_F(QmServerListRecovery, LoggingFailureDuringRetrySchedulePreservesBackoff)
+{
+	Begin({"https://one.test/list"});
+	m_vRequests[0]->Fail(500);
+	CThrowingServerListLogger Logger("serverlist refresh");
+	CLogScope Scope(&Logger);
+	EXPECT_NO_THROW(m_pBrowser->Update());
+	EXPECT_EQ(Logger.m_Failures, 1);
+	EXPECT_TRUE(m_pBrowser->IsError());
+	m_Now += 4;
+	m_pBrowser->Update();
+	EXPECT_EQ(m_vRequests.size(), 1U);
+	++m_Now;
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	m_vRequests[1]->Reply(List("Recovered"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_FALSE(m_pBrowser->IsError());
 }
 
 #endif

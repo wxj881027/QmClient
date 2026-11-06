@@ -48,6 +48,7 @@
 #include <game/client/components/menus_ingame_touch_controls.h>
 #include <game/client/components/menus_settings_controls.h>
 #include <game/client/components/menus_start.h>
+#include <game/client/components/qmclient/audio_pack_candidates.h>
 #include <game/client/components/qmclient/audio_pack_catalog.h>
 #include <game/client/components/qmclient/browser_friend_list.h>
 #include <game/client/components/qmclient/browser_map_preview.h>
@@ -59,6 +60,7 @@
 #include <game/client/components/qmclient/pose_map.h>
 #include <game/client/components/qmclient/qm_map_upload.h>
 #include <game/client/components/qmclient/screenshot_manager.h>
+#include <game/client/components/qmclient/settings_asset_memory.h>
 #include <game/client/components/qmclient/settings_perf_windows.h>
 #include <game/client/components/qmclient/translate/translate_probe.h>
 #include <game/client/components/section_loader.h>
@@ -77,6 +79,7 @@
 #include <deque>
 #include <initializer_list>
 #include <memory>
+#include <new>
 #include <optional>
 #include <set>
 #include <string>
@@ -90,6 +93,7 @@ class IHttpRequest;
 class CChat;
 class CProfile;
 struct SQmProfileWheelEditorState;
+struct SSettingsTextPlanProgressView;
 struct SQmFriendCodeUiState;
 namespace qm_card_registry
 {
@@ -314,10 +318,14 @@ private:
 		ASSET_LOAD_STATE_UNLOADED,
 	};
 	std::shared_ptr<IJob> m_apAssetLoadJobs[NUMBER_OF_ASSETS_TABS];
+	std::chrono::nanoseconds m_aAssetLoadRetryAt[NUMBER_OF_ASSETS_TABS]{};
 	SSettingsAssetPendingMerge m_aAssetPendingMerges[NUMBER_OF_ASSETS_TABS];
 	int m_aAssetLoadGenerations[NUMBER_OF_ASSETS_TABS] = {};
-	void PublishSettingsAssetMergeEntries(int Tab, const std::vector<SSettingsAssetMergeEntry> &vEntries);
+	bool PublishSettingsAssetMergeEntries(int Tab, const std::vector<SSettingsAssetMergeEntry> &vEntries);
 	void InvalidateSettingsAssetResourcePlan();
+	void CancelLocalAssetPreview(int Tab, const char *pName);
+	bool TryStartSettingsAssetListJob(int Tab);
+	bool RecoverFailedSettingsAssetListJob(int Tab);
 	int CurrentSettingsAssetsTab() const;
 
 public:
@@ -340,6 +348,7 @@ public:
 		std::shared_ptr<IJob> m_pDecodeJob;
 		EPreviewState m_PreviewState = PREVIEW_STATE_UNLOADED;
 		CImageInfo m_PreviewImage;
+		CSettingsAssetMemoryLease m_MemoryLease;
 		unsigned m_PreviewEpoch = 0;
 		size_t m_PreviewListIndex = 0;
 		size_t m_PreviewBytes = 0;
@@ -366,7 +375,15 @@ public:
 			str_copy(m_aDisplayName, Other.m_aDisplayName);
 			str_copy(m_aAuthor, Other.m_aAuthor);
 			if(Other.m_PreviewImage.m_pData != nullptr)
+			{
+				// 副本须先独立取得峰值额度，不能与原图共用一次像素记账。
+				if(!(Other.m_MemoryLease.HasReservation() ? Other.m_MemoryLease.TryClone(m_MemoryLease) :
+									    SettingsAssetMemoryTryAcquireImage(Other.m_PreviewImage, m_MemoryLease)))
+					throw std::bad_alloc();
 				m_PreviewImage = Other.m_PreviewImage.DeepCopy();
+				if(m_PreviewImage.m_pData == nullptr)
+					throw std::bad_alloc();
+			}
 		}
 
 		SCustomItem &operator=(const SCustomItem &Other)
@@ -374,31 +391,36 @@ public:
 			if(this == &Other)
 				return *this;
 
-			m_RenderTexture = Other.m_RenderTexture;
-			str_copy(m_aName, Other.m_aName);
-			str_copy(m_aDisplayName, Other.m_aDisplayName);
-			str_copy(m_aAuthor, Other.m_aAuthor);
-			m_pDecodeJob = Other.m_pDecodeJob;
-			m_PreviewState = Other.m_PreviewState;
-			m_PreviewImage.Free();
-			if(Other.m_PreviewImage.m_pData != nullptr)
-				m_PreviewImage = Other.m_PreviewImage.DeepCopy();
-			m_PreviewEpoch = Other.m_PreviewEpoch;
-			m_PreviewListIndex = Other.m_PreviewListIndex;
-			m_PreviewBytes = Other.m_PreviewBytes;
-			m_PreviewRequestedTextureSize = Other.m_PreviewRequestedTextureSize;
-			m_PreviewResidentBytes = Other.m_PreviewResidentBytes;
-			m_PreviewResized = Other.m_PreviewResized;
-			m_PreviewHighPriority = Other.m_PreviewHighPriority;
+			SCustomItem Candidate(Other);
+			*this = std::move(Candidate);
 			return *this;
 		}
 
-		SCustomItem(SCustomItem &&Other) = default;
-		SCustomItem &operator=(SCustomItem &&Other) = default;
+		SCustomItem(SCustomItem &&Other) noexcept = default;
+		SCustomItem &operator=(SCustomItem &&Other) noexcept = default;
 
 		~SCustomItem()
 		{
+			FreePreviewCpuImage();
+		}
+
+		void FreePreviewCpuImage() noexcept
+		{
 			m_PreviewImage.Free();
+			m_MemoryLease.Reset();
+		}
+
+		// 压力回收只撤回 CPU 输入；已显示的纹理和驻留字节不参与退役。
+		void DiscardPreviewCpuInput() noexcept
+		{
+			FreePreviewCpuImage();
+			m_pDecodeJob.reset();
+			m_PreviewState = m_RenderTexture.IsValid() ? PREVIEW_STATE_LOADED : PREVIEW_STATE_UNLOADED;
+			m_PreviewEpoch = 0;
+			m_PreviewListIndex = 0;
+			m_PreviewBytes = 0;
+			m_PreviewResized = false;
+			m_PreviewHighPriority = false;
 		}
 
 		bool operator<(const SCustomItem &Other) const { return str_comp(m_aName, Other.m_aName) < 0; }
@@ -411,6 +433,31 @@ public:
 			IGraphics::CTextureHandle m_Texture;
 		};
 		SEntitiesImage m_aImages[MAP_IMAGE_MOD_TYPE_COUNT];
+
+		void UnloadTextures(IGraphics *pGraphics)
+		{
+			auto SameTexture = [](const auto &Left, const auto &Right) {
+				return Left.IsValid() && Right.IsValid() && Left.Id() == Right.Id() && Left.Generation() == Right.Generation();
+			};
+			for(auto &Image : m_aImages)
+			{
+				if(!Image.m_Texture.IsValid())
+					continue;
+				if(SameTexture(m_RenderTexture, Image.m_Texture))
+					m_RenderTexture.Invalidate();
+				for(auto &Other : m_aImages)
+				{
+					if(&Other != &Image && SameTexture(Other.m_Texture, Image.m_Texture))
+						Other.m_Texture.Invalidate();
+				}
+				pGraphics->UnloadTexture(&Image.m_Texture);
+				Image.m_Texture.Invalidate();
+			}
+			// 异步缩略图可能独立于旧实体图数组，不能在清表时丢掉其 owner。
+			if(m_RenderTexture.IsValid())
+				pGraphics->UnloadTexture(&m_RenderTexture);
+			m_RenderTexture.Invalidate();
+		}
 	};
 
 	struct SCustomGame : public SCustomItem
@@ -519,13 +566,7 @@ public:
 
 	using SAudioPackSlot = qm_audio_pack::SSlot;
 
-	struct SAudioPackCandidateEntry
-	{
-		std::string m_Path;
-		std::string m_DisplayName;
-		bool m_IsCurrentFile = false;
-		bool m_IsCurrentPackFile = false;
-	};
+	using SAudioPackCandidateEntry = qm_audio_pack::SCandidateEntry;
 
 	static void GetStrongWeakEditorGridSize(int &OutGridX, int &OutGridY)
 	{
@@ -668,91 +709,26 @@ public:
 		return std::string("audio/") + pResolvedRelativePath;
 	}
 
-	struct SAudioPackCandidateScanRoot
-	{
-		const char *m_pScanRoot;
-		const char *m_pOutputPrefix;
-	};
+	using SAudioPackCandidateScanRoot = qm_audio_pack::SScanRoot;
 
 	static constexpr std::array<SAudioPackCandidateScanRoot, 2> BuildAudioPackCandidateScanRoots()
 	{
-		return {{
-			{"audio", "audio"},
-			{"data/audio", "audio"},
-		}};
+		return qm_audio_pack::CandidateScanRoots();
 	}
 
 	static bool TryBuildAudioPackCandidatePathFromScan(const char *pOutputPrefix, const char *pRelativePath, std::string &OutPath)
 	{
-		OutPath.clear();
-
-		const char *pResolvedRelativePath = pRelativePath != nullptr ? pRelativePath : "";
-		while(*pResolvedRelativePath == '/')
-			++pResolvedRelativePath;
-
-		if(pResolvedRelativePath[0] == '\0' || !str_endswith(pResolvedRelativePath, ".wv"))
-			return false;
-
-		const char *pResolvedOutputPrefix = pOutputPrefix != nullptr && pOutputPrefix[0] != '\0' ? pOutputPrefix : "audio";
-		OutPath = pResolvedOutputPrefix;
-		OutPath += "/";
-		OutPath += pResolvedRelativePath;
-		return true;
+		return qm_audio_pack::TryBuildCandidatePath(pOutputPrefix, pRelativePath, OutPath);
 	}
 
 	static std::vector<SAudioPackCandidateEntry> BuildAudioPackCandidateEntries(const std::vector<std::string> &vPaths, const char *pPackName, const char *pCurrentPath)
 	{
-		std::vector<SAudioPackCandidateEntry> vEntries;
-		vEntries.reserve(vPaths.size());
-
-		std::unordered_set<std::string> vSeenPaths;
-		const char *pResolvedPackName = pPackName != nullptr && pPackName[0] != '\0' ? pPackName : "default";
-		const char *pResolvedCurrentPath = pCurrentPath != nullptr ? pCurrentPath : "";
-
-		char aCurrentPackPrefix[IO_MAX_PATH_LENGTH];
-		str_format(aCurrentPackPrefix, sizeof(aCurrentPackPrefix), "audio/%s/", pResolvedPackName);
-
-		for(const std::string &Path : vPaths)
-		{
-			if(!str_endswith(Path.c_str(), ".wv"))
-				continue;
-			if(!vSeenPaths.insert(Path).second)
-				continue;
-
-			SAudioPackCandidateEntry Entry;
-			Entry.m_Path = Path;
-
-			const char *pDisplayName = Path.c_str();
-			if(str_startswith(pDisplayName, "audio/"))
-				pDisplayName += str_length("audio/");
-			Entry.m_DisplayName = pDisplayName;
-			Entry.m_IsCurrentFile = pResolvedCurrentPath[0] != '\0' && str_comp(Path.c_str(), pResolvedCurrentPath) == 0;
-			Entry.m_IsCurrentPackFile = str_startswith(Path.c_str(), aCurrentPackPrefix) != nullptr;
-			vEntries.push_back(std::move(Entry));
-		}
-
-		std::sort(vEntries.begin(), vEntries.end(), [](const SAudioPackCandidateEntry &Left, const SAudioPackCandidateEntry &Right) {
-			if(Left.m_IsCurrentFile != Right.m_IsCurrentFile)
-				return Left.m_IsCurrentFile > Right.m_IsCurrentFile;
-			if(Left.m_IsCurrentPackFile != Right.m_IsCurrentPackFile)
-				return Left.m_IsCurrentPackFile > Right.m_IsCurrentPackFile;
-			return str_comp_nocase(Left.m_DisplayName.c_str(), Right.m_DisplayName.c_str()) < 0;
-		});
-
-		return vEntries;
+		return qm_audio_pack::BuildCandidateEntries(vPaths, pPackName, pCurrentPath);
 	}
 
 	static int FindAudioPackCandidateEntryIndex(const std::vector<SAudioPackCandidateEntry> &vEntries, const char *pPath)
 	{
-		if(pPath == nullptr || pPath[0] == '\0')
-			return -1;
-
-		for(int Index = 0; Index < (int)vEntries.size(); ++Index)
-		{
-			if(str_comp(vEntries[Index].m_Path.c_str(), pPath) == 0)
-				return Index;
-		}
-		return -1;
+		return qm_audio_pack::FindCandidateEntryIndex(vEntries, pPath);
 	}
 
 	static std::string ResolveAudioPackPreviewPath(const char *pSelectedCandidatePath, const char *pManualSourcePath)
@@ -1436,12 +1412,40 @@ protected:
 	std::vector<std::string> m_vEntityBgSourceNames;
 	std::unordered_map<std::string, EEntityBgHierarchyEntrySource> m_vEntityBgSourceKinds;
 	char m_aEntityBgCurrentFolder[IO_MAX_PATH_LENGTH] = "";
+	bool m_EntityBgHierarchyRefreshPending = false;
+	std::chrono::nanoseconds m_EntityBgHierarchyRefreshRetryAt{};
 	bool m_ShowWorkshopAssets = false;
 	std::vector<SCustomExtras> m_vExtrasList;
 	std::deque<SSettingsAssetPreviewHandle> m_aaCustomPreviewDecodeQueue[NUMBER_OF_ASSETS_TABS];
 	std::deque<SSettingsAssetPreviewHandle> m_aaCustomPreviewReadyQueue[NUMBER_OF_ASSETS_TABS];
 	std::unordered_set<std::string> m_aaCustomPreviewReadyQueued[NUMBER_OF_ASSETS_TABS];
 	unsigned m_aCustomPreviewEpoch[NUMBER_OF_ASSETS_TABS] = {0};
+
+	// 后台结果与资源维护访问持有条目的列表，不依赖筛选后的借用视图。
+	template<typename FVisit>
+	void VisitOwnedSettingsAssetList(int Tab, FVisit &&Visit)
+	{
+		switch(Tab)
+		{
+		case ASSETS_TAB_ENTITIES: Visit(m_vEntitiesList); break;
+		case ASSETS_TAB_GAME: Visit(m_vGameList); break;
+		case ASSETS_TAB_EMOTICONS: Visit(m_vEmoticonList); break;
+		case ASSETS_TAB_PARTICLES: Visit(m_vParticlesList); break;
+		case ASSETS_TAB_HUD: Visit(m_vHudList); break;
+		case ASSETS_TAB_GUI_CURSOR: Visit(m_vGuiCursorList); break;
+		case ASSETS_TAB_ARROW: Visit(m_vArrowList); break;
+		case ASSETS_TAB_STRONG_WEAK: Visit(m_vStrongWeakList); break;
+		case ASSETS_TAB_ENTITY_BG: Visit(m_vEntityBgList); break;
+		case ASSETS_TAB_EXTRAS: Visit(m_vExtrasList); break;
+		default: break;
+		}
+	}
+	void RefreshPublishedLocalAssetAuthorsForTab(int Tab);
+	void RestartOrphanedCustomPreviewDecodes(int Tab);
+	void RecoverSettingsAssetCpuPressure(int CurrentTab, bool Deferred = false);
+	uint64_t m_LastAssetCpuRecoveryFrame = ~uint64_t{0};
+	uint64_t m_LastAssetCpuDeferredSequence = 0;
+	bool m_AssetCpuPressurePending = false;
 
 	bool m_IsInit = false;
 
@@ -1462,8 +1466,8 @@ protected:
 	static void ConchainAssetExtras(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
 	void ClearCustomItems(int CurTab);
-	void RefreshEntityBgHierarchyView();
-	void SyncEntityBgInstalledWorkshopSources();
+	bool RefreshEntityBgHierarchyView();
+	void SyncEntityBgInstalledWorkshopSources(std::vector<std::string> &vNames, std::unordered_map<std::string, EEntityBgHierarchyEntrySource> &Kinds);
 	void AssetsEditorOpen(int Type);
 
 private:
@@ -1535,12 +1539,11 @@ private:
 	void AudioPackEditorClose();
 	void AudioPackEditorSetStatus(const char *pMessage, bool IsError);
 	void AudioPackEditorRefreshCandidates();
+	void AudioPackEditorUpdateCandidates(bool Rescan);
 	void AudioPackEditorRebuildCandidates();
 	void AudioPackEditorStopPreview();
 	bool AudioPackEditorPlayPreview(const char *pFilename, int StorageType);
-	bool AudioPackEditorEnsureStorageDirectories(const char *pStoragePath);
 	bool AudioPackEditorCopyFileToStorage(const char *pSourcePath, int SourceStorageType, const char *pStoragePath);
-	bool AudioPackEditorCopyAbsoluteFileToStorage(const char *pSourcePath, const char *pStoragePath);
 	void RenderAudioPackEditorScreen(CUIRect MainView);
 	void RenderAssetsEditorScreen(CUIRect MainView);
 	void AssetsEditorClearAssets();
@@ -2433,6 +2436,7 @@ protected:
 
 	// found in menus_browser.cpp
 	int m_SelectedIndex;
+	int m_SelectedServerIndex = -1;
 	bool m_ServerBrowserShouldRevealSelection;
 	std::vector<CUIElement *> m_avpServerBrowserUiElements[IServerBrowser::NUM_TYPES];
 	void RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemActivated);
@@ -2970,8 +2974,8 @@ public:
 	void BuildSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems);
 	void BuildSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);
 	void BuildVisibleSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);
-	void PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOverride);
-	void CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollectionUnit &Unit, CUIRect Screen, CUIRect SettingsMainView);
+	bool PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOverride);
+	void CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollectionUnit &Unit, CUIRect Screen, CUIRect SettingsMainView, std::vector<SMenuTextPlanItem> &vItems);
 	bool AdvanceSettingsMenuTextPlanCollection(int Budget, const char *pOperationOverride, int64_t Deadline);
 	bool PrebuildSettingsTextPlanItem(const SMenuTextPlanItem &Item, int &RemainingBudget);
 	int CountMissingSettingsMenuTextPlanItems() const;
@@ -3159,6 +3163,7 @@ private:
 	void DrainMenuTextContainerBuild(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor, bool Render, bool *pTextContainerRecreated);
 	void CountMenuTextImmediateFallback();
 	void ClearSettingsAssetsCardMetadataCache();
+	void ClearSettingsAssetPreviewResources();
 	void ClearSettingsTeePreviewCache();
 	void ClearSettingsLanguageRowCache();
 	void LogSettingsUiBudget(const char *pPage, const SSettingsUiBudgetFrame &Frame) const;
@@ -3217,6 +3222,8 @@ private:
 	int m_MenuTextStableUnplannedThisFrame = 0;
 	SSettingsTextPerfStats *m_pActiveSettingsTextPerfStats = nullptr;
 	std::vector<SMenuTextPlanItem> m_vSettingsMenuTextPrebuildPlan;
+	SSettingsTextPlanProgressView SettingsTextPlanProgress();
+	std::array<int, 3> SettingsTextPlanVisibleContext(bool Ingame);
 	std::vector<SSettingsMenuTextPlanCollectionUnit> m_vSettingsMenuTextPlanCollectionUnits;
 	std::unordered_set<std::string> m_SettingsMenuTextPlannedDescriptors;
 	std::unordered_set<std::string> m_SettingsMenuTextPlannedKeys;
@@ -3230,6 +3237,8 @@ private:
 	bool m_SettingsMenuTextPlanMetadataDirty = true;
 	bool m_SettingsMenuTextPlanCollectionDirty = true;
 	bool m_SettingsMenuTextPlanCollectionComplete = false;
+	bool m_SettingsMenuTextVisiblePlanReady = false;
+	std::array<int, 3> m_SettingsMenuTextVisiblePlanContext{{-1, -1, -1}};
 	SSettingsMenuTextPrebuildStats m_SettingsMenuTextLastPrebuildStats;
 	SSettingsMenuTextPlanCollectionStats m_SettingsMenuTextLastCollectionStats;
 	std::string m_SettingsCardFocusStableId;

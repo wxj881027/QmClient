@@ -12,6 +12,8 @@
 #include <zlib.h>
 
 #include <cstdlib>
+#include <cstring>
+#include <optional>
 #include <unordered_set>
 
 bool StoragePathFromExecutable(const char *pExecutablePath, const char *pRelativePath, char *pBuffer, unsigned BufferSize)
@@ -600,6 +602,39 @@ namespace
 			}
 		}
 
+		EFsListDirectoryResult ListDirectoryChecked(int Type, const char *pPath, FS_LISTDIR_CALLBACK pfnCallback, void *pUser) override
+		{
+			const auto ScanAt = [&](int Index, FS_LISTDIR_CALLBACK Callback, void *pCallbackUser) {
+				char aBuffer[IO_MAX_PATH_LENGTH];
+				const size_t NameLength = std::strlen(pPath);
+				const size_t PrefixLength = Index == TYPE_ABSOLUTE ? 0 : std::strlen(m_aaStoragePaths[Index]);
+				const size_t Separator = PrefixLength != 0 ? 1 : 0;
+				if(NameLength >= sizeof(aBuffer) || PrefixLength + Separator > sizeof(aBuffer) - NameLength - 1)
+					return EFsListDirectoryResult::IO_FAILURE;
+				return fs_listdir_checked(GetPath(Index, pPath, aBuffer, sizeof(aBuffer)), Callback, Index, pCallbackUser);
+			};
+			if(Type == TYPE_ALL)
+			{
+				SListDirectoryUniqueCallbackData Data;
+				Data.m_pfnDelegate = pfnCallback;
+				Data.m_pDelegateUser = pUser;
+				auto Result = EFsListDirectoryResult::NOT_FOUND;
+				for(int i = TYPE_SAVE; i < m_NumPaths; ++i)
+				{
+					const auto Current = ScanAt(i, ListDirectoryUniqueCallback, &Data);
+					if(Current != EFsListDirectoryResult::SUCCESS && Current != EFsListDirectoryResult::NOT_FOUND)
+						return Current;
+					if(Current == EFsListDirectoryResult::SUCCESS)
+						Result = Current;
+				}
+				return Result;
+			}
+			if(Type == TYPE_ABSOLUTE || (Type >= TYPE_SAVE && Type < m_NumPaths))
+				return ScanAt(Type, pfnCallback, pUser);
+			dbg_assert_failed("Type invalid");
+			return EFsListDirectoryResult::IO_FAILURE;
+		}
+
 		const char *GetPath(int Type, const char *pDir, char *pBuffer, unsigned BufferSize) const
 		{
 			if(Type == TYPE_ABSOLUTE)
@@ -732,6 +767,95 @@ namespace
 				return false;
 			}
 			return true;
+		}
+
+		EReadFileResult ReadFileChecked(const char *pFilename, int Type, void **ppResult, unsigned *pResultLen) override
+		{
+			return ReadFileCheckedInternal(pFilename, Type, ppResult, pResultLen, std::nullopt);
+		}
+
+		EReadFileResult ReadFileCheckedBounded(const char *pFilename, int Type, void **ppResult, unsigned *pResultLen, unsigned MaxBytes) override
+		{
+			return ReadFileCheckedInternal(pFilename, Type, ppResult, pResultLen, MaxBytes);
+		}
+
+		EReadFileResult ReadFileCheckedInternal(const char *pFilename, int Type, void **ppResult, unsigned *pResultLen, std::optional<unsigned> MaxBytes)
+		{
+			if(ppResult)
+				*ppResult = nullptr;
+			if(pResultLen)
+				*pResultLen = 0;
+			if(!ppResult || !pResultLen || !pFilename || pFilename[0] == '\0')
+				return EReadFileResult::IO_FAILURE;
+			TranslateType(Type, pFilename);
+			if(Type != TYPE_ABSOLUTE)
+			{
+				if(str_startswith(pFilename, "mapres/../skins/"))
+					pFilename += str_length("mapres/../");
+				if(pFilename[0] == '/' || pFilename[0] == '\\' || str_find(pFilename, "../") || str_find(pFilename, "..\\")
+#ifdef CONF_FAMILY_WINDOWS
+					|| (pFilename[0] && pFilename[1] == ':')
+#endif
+				)
+					return EReadFileResult::IO_FAILURE;
+			}
+			const auto ReadAt = [&](int Index) {
+				char aPath[IO_MAX_PATH_LENGTH];
+				const size_t NameLength = std::strlen(pFilename);
+				const size_t PrefixLength = Index == TYPE_ABSOLUTE ? 0 : std::strlen(m_aaStoragePaths[Index]);
+				const size_t Separator = PrefixLength != 0 ? 1 : 0;
+				if(NameLength >= sizeof(aPath) || PrefixLength + Separator > sizeof(aPath) - NameLength - 1)
+					return EReadFileResult::IO_FAILURE;
+				bool NotFound = false;
+				const char *pPath = GetPath(Index, pFilename, aPath, sizeof(aPath));
+				std::unique_ptr<void, decltype(&io_close)> File(MaxBytes ? io_open_read_regular_checked(pPath, &NotFound) : io_open_read_checked(pPath, &NotFound), io_close);
+				if(!File)
+					return NotFound ? EReadFileResult::NOT_FOUND : EReadFileResult::IO_FAILURE;
+				std::unique_ptr<void, decltype(&free)> Data(nullptr, free);
+				unsigned Size = 0;
+				bool Read = false;
+				if(MaxBytes)
+				{
+					const int64_t Expected = io_length(File.get());
+					// 额外一字节用于探测增长；保持通用读取原有的1GiB上限。
+					const unsigned Limit = minimum(*MaxBytes, 1024u * 1024 * 1024);
+					if(Expected < 0 || Expected > Limit)
+						return EReadFileResult::IO_FAILURE;
+					Data.reset(malloc(static_cast<size_t>(Expected) + 1));
+					if(!Data)
+						return EReadFileResult::IO_FAILURE;
+					Size = static_cast<unsigned>(Expected);
+					Read = io_read(File.get(), Data.get(), Size + 1) == Size && io_error(File.get()) == 0;
+					static_cast<char *>(Data.get())[Size] = '\0';
+				}
+				else
+				{
+					void *pData = nullptr;
+					Read = io_read_all(File.get(), &pData, &Size);
+					Data.reset(pData);
+				}
+				const bool Closed = io_close(File.release()) == 0;
+				if(!Read || !Closed)
+					return EReadFileResult::IO_FAILURE;
+				*ppResult = Data.release();
+				*pResultLen = Size;
+				return EReadFileResult::SUCCESS;
+			};
+			if(Type == TYPE_ALL)
+			{
+				// 只有缺失才继续搜索后根，实际失败不得被后根成功掩盖。
+				for(int Index = TYPE_SAVE; Index < m_NumPaths; ++Index)
+				{
+					const auto Result = ReadAt(Index);
+					if(Result != EReadFileResult::NOT_FOUND)
+						return Result;
+				}
+				return EReadFileResult::NOT_FOUND;
+			}
+			if(Type == TYPE_ABSOLUTE || (Type >= TYPE_SAVE && Type < m_NumPaths))
+				return ReadAt(Type);
+			dbg_assert_failed("Type invalid");
+			return EReadFileResult::IO_FAILURE;
 		}
 
 		char *ReadFileStr(const char *pFilename, int Type) override
@@ -1059,30 +1183,71 @@ const char *IStorage::FormatTmpPath(char *aBuf, unsigned BufSize, const char *pP
 	return aBuf;
 }
 
-bool IStorage::ReplaceFileSafely(IStorage *pStorage, const char *pTempFilename, const char *pRealFilename, char *pBackupFilename, unsigned BackupFilenameSize)
+bool IStorage::ReplaceFileSafely(IStorage *pStorage, const char *pTempFilename, const char *pRealFilename, char *pBackupFilename, unsigned BackupFilenameSize) noexcept
 {
-	if(pStorage == nullptr || pTempFilename == nullptr || pRealFilename == nullptr || pBackupFilename == nullptr || BackupFilenameSize == 0)
+	if(pBackupFilename != nullptr && BackupFilenameSize != 0)
+		pBackupFilename[0] = '\0';
+	if(pStorage == nullptr || pTempFilename == nullptr || pTempFilename[0] == '\0' || pRealFilename == nullptr || pRealFilename[0] == '\0' || pBackupFilename == nullptr || BackupFilenameSize == 0 || str_comp(pTempFilename, pRealFilename) == 0)
 		return false;
-	pBackupFilename[0] = '\0';
 
-	const bool HadPreviousFile = pStorage->FileExists(pRealFilename, IStorage::TYPE_SAVE);
-	if(HadPreviousFile)
+	bool MayHaveBackup = false;
+	const auto Restore = [&]() noexcept {
+		if(!MayHaveBackup)
+			return;
+		try
+		{
+			// 检查时已有目标则保留，避免覆盖另一位写入者已提交的文件。
+			if(!pStorage->FileExists(pRealFilename, IStorage::TYPE_SAVE) && pStorage->FileExists(pBackupFilename, IStorage::TYPE_SAVE))
+				(void)pStorage->RenameFile(pBackupFilename, pRealFilename, IStorage::TYPE_SAVE, false);
+		}
+		catch(...)
+		{
+			// 回滚也可能因资源/权限失败，保留备份以供恢复。
+		}
+	};
+
+	try
 	{
-		str_format(pBackupFilename, BackupFilenameSize, "%s.backup", pTempFilename);
-		if(pStorage->FileExists(pBackupFilename, IStorage::TYPE_SAVE) || !pStorage->RenameFile(pRealFilename, pBackupFilename, IStorage::TYPE_SAVE))
+		const bool HadPreviousFile = pStorage->FileExists(pRealFilename, IStorage::TYPE_SAVE);
+		if(HadPreviousFile)
+		{
+			constexpr char SUFFIX[] = ".backup";
+			if(BackupFilenameSize < sizeof(SUFFIX) || std::strlen(pTempFilename) > BackupFilenameSize - sizeof(SUFFIX))
+				return false;
+			str_format(pBackupFilename, BackupFilenameSize, "%s%s", pTempFilename, SUFFIX);
+			if(pStorage->FileExists(pBackupFilename, IStorage::TYPE_SAVE))
+				return false;
+			MayHaveBackup = true;
+			if(!pStorage->RenameFile(pRealFilename, pBackupFilename, IStorage::TYPE_SAVE, false))
+			{
+				Restore();
+				return false;
+			}
+		}
+		if(!pStorage->RenameFile(pTempFilename, pRealFilename, IStorage::TYPE_SAVE, false))
+		{
+			Restore();
 			return false;
-	}
-
-	if(pStorage->RenameFile(pTempFilename, pRealFilename, IStorage::TYPE_SAVE))
-	{
-		if(HadPreviousFile && !pStorage->RemoveFile(pBackupFilename, IStorage::TYPE_SAVE))
-			log_error("storage", "failed to delete replaced-file backup: %s", pBackupFilename);
+		}
+		// 提交已完成；后续清理或诊断异常不能触发回滚或改报失败。
+		if(HadPreviousFile)
+		{
+			try
+			{
+				if(!pStorage->RemoveFile(pBackupFilename, IStorage::TYPE_SAVE))
+					log_error("storage", "failed to delete replaced-file backup: %s", pBackupFilename);
+			}
+			catch(...)
+			{
+			}
+		}
 		return true;
 	}
-
-	if(HadPreviousFile)
-		pStorage->RenameFile(pBackupFilename, pRealFilename, IStorage::TYPE_SAVE);
-	return false;
+	catch(...)
+	{
+		Restore();
+		return false;
+	}
 }
 IStorage *CreateStorage(IStorage::EInitializationType InitializationType, int NumArgs, const char **ppArguments)
 {

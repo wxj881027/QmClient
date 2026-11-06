@@ -143,6 +143,31 @@ namespace
 #endif
 		}
 	};
+	// 此守卫在磁盘锁之后创建，异常退出先关闭候选，再释放锁。
+	class CConfigSaveFiles
+	{
+		IOHANDLE *m_pFiles;
+
+	public:
+		explicit CConfigSaveFiles(IOHANDLE *pFiles) :
+			m_pFiles(pFiles) {}
+		~CConfigSaveFiles()
+		{
+			for(ConfigDomain Domain = ConfigDomain::START; Domain < ConfigDomain::NUM; ++Domain)
+				if(m_pFiles[Domain])
+					io_close(std::exchange(m_pFiles[Domain], nullptr));
+		}
+	};
+
+	class CConfigSaveFlag
+	{
+		bool &m_InProgress;
+
+	public:
+		explicit CConfigSaveFlag(bool &InProgress) :
+			m_InProgress(InProgress) { m_InProgress = true; }
+		~CConfigSaveFlag() { m_InProgress = false; }
+	};
 	// v3 迁移需要删除的历史残留：
 	// - v2 时代 qmclient/ 下的两个旧变量文件（已合并进 settings.cfg）
 	// - v1 时代的大写 QmClient/ 目录（含 4 个旧文件）
@@ -575,7 +600,8 @@ void SStringConfigVariable::ResetToOld()
 }
 
 // ----------------------- Config Manager
-CConfigManager::CConfigManager()
+CConfigManager::CConfigManager(CHeap::FAllocate Allocate) :
+	m_ConfigHeap(Allocate)
 {
 	m_pConsole = nullptr;
 	m_pStorage = nullptr;
@@ -588,6 +614,7 @@ CConfigManager::CConfigManager()
 
 void CConfigManager::Init()
 {
+	m_Initialized = false;
 	m_pConsole = Kernel()->RequestInterface<IConsole>();
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
 	// 在加载前记录可读性，避免加载失败后用默认设置覆盖损坏的配置。
@@ -644,6 +671,8 @@ void CConfigManager::Init()
 		const size_t HelpSize = str_format(aHelp, sizeof(aHelp), "%s (default: \"%s\", max length: %d)", Desc, Def, Len - 1); \
 		dbg_assert(HelpSize < sizeof(aHelp) - UTF8_BYTE_LENGTH - 1, "MACRO_CONFIG_STR(%s): help text possibly truncated. Increase size of aHelp.", pScriptName); \
 		char *pOldValue = static_cast<char *>(m_ConfigHeap.Allocate(Len)); \
+		if(!pOldValue) \
+			throw std::bad_alloc(); \
 		AddVariable(m_ConfigHeap.Allocate<SStringConfigVariable>( \
 			m_pConsole, pScriptName, SConfigVariable::VAR_STRING, Flags, m_ConfigHeap.StoreString(aHelp), Desc, g_Config.m_##Name, Def, Len, pOldValue)); \
 	}
@@ -657,6 +686,7 @@ void CConfigManager::Init()
 	m_pConsole->Register("toggle", "s[config-option] s[value 1] s[value 2]", CFGFLAG_SERVER | CFGFLAG_CLIENT, Con_Toggle, this, "Toggle config value");
 	m_pConsole->Register("+toggle", "s[config-option] s[value 1] s[value 2]", CFGFLAG_CLIENT, Con_ToggleStroke, this, "Toggle config value via keypress");
 	m_pConsole->Register("+toggle_restore", "s[config-option] s[value]", CFGFLAG_CLIENT, Con_ToggleRestore, this, "Temporarily set a config value while pressed");
+	m_Initialized = true;
 }
 
 void CConfigManager::Reset(const char *pScriptName)
@@ -841,15 +871,24 @@ const char *CConfigManager::LastSaveError() const
 }
 
 bool CConfigManager::Save(bool Force)
+try
 {
+	if(m_SaveInProgress)
+		return false;
 	m_LastSaveError.clear();
 	if(!m_pStorage)
 	{
 		SetSaveError("storage", nullptr);
 		return false;
 	}
+	if(!m_Initialized || m_UnknownCommandsIncomplete)
+	{
+		SetSaveError("incomplete", nullptr);
+		return false;
+	}
 	if(!Force && !g_Config.m_ClSaveSettings)
 		return true;
+	const CConfigSaveFlag SaveFlag(m_SaveInProgress);
 	if(!EnsureConfigPathFolder(m_pStorage, QM_CONFIG_MAIN_PATH))
 	{
 		SetSaveError("create_folder", QM_CONFIG_MAIN_PATH);
@@ -865,6 +904,7 @@ bool CConfigManager::Save(bool Force)
 		log_error("config", "ERROR: could not lock client configs for saving");
 		return false;
 	}
+	const CConfigSaveFiles SaveFiles(m_aConfigFile);
 	// 锁内以最新磁盘内容为本次保存基线，允许多个实例依次保存，最后成功保存者生效。
 	// 序列化期间仍检查外部修改；不可读文件和实际写盘错误继续返回失败。
 	if(!CheckConfigFiles(true))
@@ -954,13 +994,12 @@ bool CConfigManager::Save(bool Force)
 			log_error("config", "ERROR: synchronizing %s failed", aaConfigFileTmp[ConfigDomain]);
 			aFailedError[ConfigDomain] = m_aFailed[ConfigDomain] = true;
 		}
-		if(io_close(m_aConfigFile[ConfigDomain]) != 0)
+		if(io_close(std::exchange(m_aConfigFile[ConfigDomain], nullptr)) != 0)
 		{
 			SetSaveError("close", aaConfigFileTmp[ConfigDomain]);
 			log_error("config", "ERROR: closing %s failed", aaConfigFileTmp[ConfigDomain]);
 			aFailedError[ConfigDomain] = m_aFailed[ConfigDomain] = true;
 		}
-		m_aConfigFile[ConfigDomain] = nullptr;
 		if(!m_aFailed[ConfigDomain] && !ReadConfigFileState(aaConfigFileTmp[ConfigDomain], aWrittenState[ConfigDomain]))
 		{
 			SetSaveError("read_tmp", aaConfigFileTmp[ConfigDomain]);
@@ -998,6 +1037,11 @@ bool CConfigManager::Save(bool Force)
 
 	return !Failed;
 }
+catch(...)
+{
+	// 候选句柄已在锁内关闭；不在资源不足的异常出口继续分配诊断文本。
+	return false;
+}
 
 void CConfigManager::RegisterCallback(SAVECALLBACKFUNC pfnFunc, void *pUserData, ConfigDomain ConfigDomain)
 {
@@ -1015,6 +1059,7 @@ void CConfigManager::WriteLine(const char *pLine, ConfigDomain ConfigDomain)
 }
 
 void CConfigManager::StoreUnknownCommand(const char *pCommand, ConfigDomain ConfigDomain)
+try
 {
 	// 已移除的界面开关不再作为未知命令写回旧配置。
 	std::string_view Command(pCommand);
@@ -1033,6 +1078,11 @@ void CConfigManager::StoreUnknownCommand(const char *pCommand, ConfigDomain Conf
 		str_comp_nocase(Token.c_str(), "qm_title_bloom") == 0)
 		return;
 	m_avpUnknownCommands[ConfigDomain].push_back(m_ConfigHeap.StoreString(pCommand));
+}
+catch(...)
+{
+	// 当前输入无法保留，禁止用缺少未知命令的候选覆盖原配置。
+	m_UnknownCommandsIncomplete = true;
 }
 
 void CConfigManager::PossibleConfigVariables(const char *pStr, int FlagMask, POSSIBLECFGFUNC pfnCallback, void *pUserData)

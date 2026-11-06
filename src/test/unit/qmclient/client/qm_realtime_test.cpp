@@ -1,3 +1,5 @@
+#include <base/borrowed_allocator.h>
+
 #include <engine/shared/json.h>
 
 #include <game/client/components/qmclient/qm_realtime.h>
@@ -8,7 +10,9 @@
 #include <array>
 #include <cstring>
 #include <memory>
+#include <new>
 #include <string>
+#include <utility>
 
 TEST(QmRealtime, ParsesStateAndBroadcast)
 {
@@ -467,4 +471,154 @@ TEST(QmRealtime, NewDistributionReplacesOldSnapshotAndValidEmptyListClearsIt)
 	EXPECT_EQ(Snapshot.m_OnlineUserCount, 0);
 	EXPECT_EQ(Snapshot.m_OnlineDummyCount, 0);
 	EXPECT_FALSE(Snapshot.IsStale(180));
+}
+
+TEST(QmRealtime, TitleAliasesRetainRootAndNestedPayloadAfterMessageReuse)
+{
+	const char *apFrames[] = {
+		R"({"type":"titles","server_time":123,"presences":[]})",
+		R"({"type":"titles","data":{"server_time":123,"presences":[]}})",
+	};
+	for(const char *pFrame : apFrames)
+	{
+		SCOPED_TRACE(pFrame);
+		SQmRealtimeMessage Message;
+		ASSERT_TRUE(ParseQmRealtimeMessage(pFrame, std::strlen(pFrame), Message));
+		ASSERT_TRUE(Message.m_HasTitles);
+		auto pTitle = Message.m_pTitlePayload;
+		auto pPayload = Message.m_pPayload;
+		const char *pPing = R"({"type":"ping"})";
+		ASSERT_TRUE(ParseQmRealtimeMessage(pPing, std::strlen(pPing), Message));
+		EXPECT_EQ(Message.m_Event, EQmRealtimeEvent::PING);
+		EXPECT_EQ(Message.m_pPayload, nullptr);
+		ASSERT_NE(pTitle, nullptr);
+		EXPECT_EQ(json_object_get(pTitle.get(), "server_time")->u.integer, 123);
+		EXPECT_EQ(json_object_get(pPayload.get(), "presences")->type, json_array);
+	}
+}
+
+TEST(QmRealtime, ServicePayloadOutlivesInputAndOriginalMessage)
+{
+	std::shared_ptr<const json_value> pPayload;
+	{
+		std::string Input = R"({"type":"users","data":{"server_address":"one:8303","users":[]}})";
+		SQmRealtimeMessage Message;
+		ASSERT_TRUE(ParseQmRealtimeMessage(Input.data(), Input.size(), Message));
+		ASSERT_EQ(Message.m_Event, EQmRealtimeEvent::USERS);
+		pPayload = Message.m_pPayload;
+	}
+	ASSERT_NE(pPayload, nullptr);
+	EXPECT_EQ(json_object_get(pPayload.get(), "users")->type, json_array);
+	EXPECT_STREQ(json_object_get(pPayload.get(), "server_address")->u.string.ptr, "one:8303");
+}
+
+TEST(QmRealtime, InvalidInputClearsPreviouslyOwnedPayloadAndNextMessageCanPublish)
+{
+	SQmRealtimeMessage Message;
+	const char *pUsers = R"({"type":"users","data":{"users":[]}})";
+	ASSERT_TRUE(ParseQmRealtimeMessage(pUsers, std::strlen(pUsers), Message));
+	ASSERT_NE(Message.m_pPayload, nullptr);
+	auto pRetained = Message.m_pPayload;
+	EXPECT_FALSE(ParseQmRealtimeMessage("[]", 2, Message));
+	EXPECT_EQ(Message.m_Event, EQmRealtimeEvent::INVALID);
+	EXPECT_TRUE(Message.m_Type.empty());
+	EXPECT_EQ(Message.m_pPayload, nullptr);
+	EXPECT_FALSE(Message.m_HasRealtimeData);
+	EXPECT_EQ(json_object_get(pRetained.get(), "users")->type, json_array);
+	const char *pState = R"({"type":"state","data":{"online_users":7}})";
+	ASSERT_TRUE(ParseQmRealtimeMessage(pState, std::strlen(pState), Message));
+	EXPECT_EQ(Message.m_Event, EQmRealtimeEvent::STATE);
+	EXPECT_EQ(Message.m_OnlineUsers, 7);
+	EXPECT_EQ(Message.m_pPayload, nullptr);
+}
+
+namespace
+{
+	class CRealtimeQueueMemory : public IAllocationResource
+	{
+		void *Allocate(size_t Bytes, size_t Alignment) override
+		{
+			if(m_RejectAllocation)
+				throw std::bad_alloc();
+			return IAllocationResource::AllocateDefault(Bytes, Alignment);
+		}
+		void Deallocate(void *pData, size_t Bytes, size_t Alignment) noexcept override
+		{
+			IAllocationResource::DeallocateDefault(pData, Bytes, Alignment);
+		}
+
+	public:
+		bool m_RejectAllocation = false;
+	};
+}
+
+TEST(QmRealtimeQueue, AdmissionOwnsParsedPayloadUntilConsumed)
+{
+	std::deque<SQmRealtimeMessage> Events;
+	std::weak_ptr<const json_value> Payload;
+	{
+		const std::string Input = R"({"type":"users","data":{"users":[]}})";
+		SQmRealtimeMessage Message;
+		ASSERT_TRUE(ParseQmRealtimeMessage(Input.data(), Input.size(), Message));
+		Payload = Message.m_pPayload;
+		ASSERT_TRUE(TryQueueQmRealtimeMessage(Events, std::move(Message)));
+	}
+	ASSERT_EQ(Events.size(), 1u);
+	EXPECT_FALSE(Payload.expired());
+	EXPECT_EQ(Events.front().m_Event, EQmRealtimeEvent::USERS);
+	ASSERT_NE(Events.front().m_pPayload, nullptr);
+	EXPECT_EQ(json_object_get(Events.front().m_pPayload.get(), "users")->type, json_array);
+	Events.pop_front();
+	EXPECT_TRUE(Payload.expired());
+}
+
+TEST(QmRealtimeQueue, OverflowRetainsMostRecent128InArrivalOrder)
+{
+	std::deque<SQmRealtimeMessage> Events;
+	for(int Id = 0; Id < 260; ++Id)
+	{
+		SQmRealtimeMessage Message;
+		Message.m_TitleStatusCode = Id;
+		ASSERT_TRUE(TryQueueQmRealtimeMessage(Events, std::move(Message)));
+		ASSERT_LE(Events.size(), 128u);
+	}
+	ASSERT_EQ(Events.size(), 128u);
+	for(size_t i = 0; i < Events.size(); ++i)
+		EXPECT_EQ(Events[i].m_TitleStatusCode, 132 + static_cast<int>(i));
+}
+
+TEST(QmRealtimeQueue, NodeAllocationFailureKeepsQueuedAndIncomingMessagesAndCanRetry)
+{
+	CRealtimeQueueMemory Memory;
+	std::deque<SQmRealtimeMessage, CBorrowedAllocator<SQmRealtimeMessage>> Events(&Memory);
+	SQmRealtimeMessage First;
+	ASSERT_TRUE(TryQueueQmRealtimeMessage(Events, std::move(First)));
+	SQmRealtimeMessage Parsed;
+	const char *pUsers = R"({"type":"users","data":{"users":[]}})";
+	ASSERT_TRUE(ParseQmRealtimeMessage(pUsers, std::strlen(pUsers), Parsed));
+	ASSERT_NE(Parsed.m_pPayload, nullptr);
+	Memory.m_RejectAllocation = true;
+	bool Failed = false;
+	// 不依赖各STL每块容纳几条消息，只在实际请求新节点/索引时拒绝分配。
+	for(int Id = 1; Id < 128; ++Id)
+	{
+		SQmRealtimeMessage Incoming;
+		Incoming.m_TitleStatusCode = Id;
+		Incoming.m_pPayload = Parsed.m_pPayload;
+		if(TryQueueQmRealtimeMessage(Events, std::move(Incoming)))
+			continue;
+		Failed = true;
+		ASSERT_EQ(Events.size(), static_cast<size_t>(Id));
+		for(int i = 0; i < Id; ++i)
+			EXPECT_EQ(Events[i].m_TitleStatusCode, i);
+		EXPECT_EQ(Incoming.m_TitleStatusCode, Id);
+		EXPECT_EQ(Incoming.m_pPayload, Parsed.m_pPayload);
+		Memory.m_RejectAllocation = false;
+		ASSERT_TRUE(TryQueueQmRealtimeMessage(Events, std::move(Incoming)));
+		ASSERT_EQ(Events.size(), static_cast<size_t>(Id + 1));
+		EXPECT_EQ(Events.back().m_TitleStatusCode, Id);
+		EXPECT_EQ(Events.back().m_pPayload, Parsed.m_pPayload);
+		break;
+	}
+	EXPECT_TRUE(Failed);
 }

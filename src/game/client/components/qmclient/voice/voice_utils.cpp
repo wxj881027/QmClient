@@ -36,6 +36,11 @@ namespace VoiceUtils
 
 	bool CVoiceWebSocketTransport::Update(const char *pUrl, bool Enabled, uint32_t ContextHash, uint32_t TokenHash, uint8_t ProtocolVersion)
 	{
+		return UpdateAt(pUrl, Enabled, ContextHash, TokenHash, ProtocolVersion, time_get());
+	}
+
+	bool CVoiceWebSocketTransport::UpdateAt(const char *pUrl, bool Enabled, uint32_t ContextHash, uint32_t TokenHash, uint8_t ProtocolVersion, int64_t Now)
+	{
 		const std::string Url = EffectiveVoiceWebSocketUrl(pUrl);
 		const bool ConfigChanged = m_Url != Url || m_ContextHash != ContextHash || m_TokenHash != TokenHash || m_ProtocolVersion != ProtocolVersion;
 		bool ResetRuntime = ConfigChanged || m_Enabled != Enabled;
@@ -48,12 +53,18 @@ namespace VoiceUtils
 			m_ProtocolVersion = ProtocolVersion;
 			m_Enabled = Enabled;
 			m_Error.clear();
+		}
+		// 正在重连的通道保留自身退避；只有未能启动或已退出的线程才重新 Connect。
+		const bool Retry = m_Enabled && m_UrlValid && m_pClient->Available() && !m_pClient->Desired() && Now >= m_NextConnectAttempt;
+		if(ResetRuntime || Retry)
+		{
 			SQmWebSocketConnectConfig Config;
 			m_Error = ParseQmWebSocketUrl(m_Url.c_str(), Config);
 			m_UrlValid = m_Error.empty();
 			if(m_Enabled && m_UrlValid)
 			{
 				Config.m_MaxMessageSize = 128 * 1024;
+				m_NextConnectAttempt = Now + time_freq();
 				if(!m_pClient->Available())
 					m_Error = m_pClient->UnavailableReason();
 				else if(!m_pClient->Connect(Config, m_Error) && m_Error.empty())
@@ -76,6 +87,7 @@ namespace VoiceUtils
 		m_Enabled = false;
 		m_Connected = false;
 		m_LastConnectedTick = 0;
+		m_NextConnectAttempt = 0;
 	}
 
 	bool CVoiceWebSocketTransport::Connected() const
@@ -102,10 +114,10 @@ namespace VoiceUtils
 		return m_pClient->SendBinary(reinterpret_cast<const char *>(pData), Size);
 	}
 
-	bool CVoiceWebSocketTransport::PollPacket(SQmWebSocketMessage &Out)
+	bool CVoiceWebSocketTransport::PollPacket(SQmWebSocketMessage &Out, bool (*pCanceled)(const void *), const void *pCancelUser)
 	{
 		SQmWebSocketMessage Message;
-		while(Connected() && m_pClient->PollMessage(Message))
+		while((!pCanceled || !pCanceled(pCancelUser)) && Connected() && m_pClient->PollMessage(Message))
 		{
 			if(Message.m_Type != EQmWebSocketMessageType::BINARY || Message.m_Data.size() < VOICE_PACKET_HEADER_SIZE || Message.m_Data.size() > VOICE_MAX_PACKET)
 				continue;
@@ -591,6 +603,9 @@ namespace VoiceUtils
 	{
 		if(State.m_BackendChanged || State.m_InputDeviceChanged || State.m_OutputDeviceChanged || State.m_StereoChanged)
 			return true;
+		// 初始化中的未就绪状态由 worker 继续处理，避免主线程反复 join。
+		if(State.m_WorkerRunning)
+			return false;
 		if(State.m_CurrentOutputChannels > 0 && State.m_DesiredOutputChannels > 0 && State.m_CurrentOutputChannels != State.m_DesiredOutputChannels)
 			return true;
 		if(!State.m_EncoderReady)

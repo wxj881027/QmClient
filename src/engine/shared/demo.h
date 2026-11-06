@@ -6,11 +6,17 @@
 #include "snapshot.h"
 
 #include <base/hash.h>
+#include <base/system.h>
 
 #include <engine/demo.h>
 #include <engine/shared/protocol.h>
 
+#include <cstddef>
 #include <functional>
+#include <limits>
+#include <memory>
+#include <new>
+#include <type_traits>
 #include <vector>
 
 typedef std::function<void()> TUpdateIntraTimesFunc;
@@ -18,34 +24,61 @@ typedef std::function<void()> TUpdateIntraTimesFunc;
 struct CSnapshotDelta;
 class IConsole;
 class IStorage;
+namespace demo_output
+{
+	class COperations;
+}
 
 class CDemoRecorder : public IDemoRecorder
 {
-	class IConsole *m_pConsole;
-	class IStorage *m_pStorage;
+public:
+	// 文件句柄由调用方管理；可替换的操作边界用于观察真实文件的读写失败。
+	class CFileOperations
+	{
+	public:
+		virtual ~CFileOperations() = default;
+		virtual unsigned Read(IOHANDLE File, void *pData, unsigned Size) noexcept;
+		virtual unsigned Write(IOHANDLE File, const void *pData, unsigned Size) noexcept;
+		virtual int Seek(IOHANDLE File, int64_t Offset, ESeekOrigin Origin) noexcept;
+		virtual int64_t Length(IOHANDLE File) noexcept;
+		virtual int Flush(IOHANDLE File) noexcept;
+		virtual int Error(IOHANDLE File) noexcept;
+		virtual int Close(IOHANDLE File) noexcept;
+	};
 
-	IOHANDLE m_File;
-	char m_aCurrentFilename[IO_MAX_PATH_LENGTH];
-	int m_LastTickMarker;
-	int m_LastKeyFrame;
-	int m_FirstTick;
+private:
+	class IConsole *m_pConsole = nullptr;
+	class IStorage *m_pStorage = nullptr;
+	// 借用操作对象，须覆盖记录器的使用期；nullptr 使用进程内默认操作。
+	CFileOperations *m_pFileOperations = nullptr;
+	bool m_WriteError = false;
+
+	IOHANDLE m_File = nullptr;
+	char m_aCurrentFilename[IO_MAX_PATH_LENGTH] = "";
+	int m_LastTickMarker = -1;
+	int m_LastKeyFrame = -1;
+	int m_FirstTick = -1;
 
 	CSnapshotBuffer m_LastSnapshotData;
-	CSnapshotDelta *m_pSnapshotDelta;
+	CSnapshotDelta *m_pSnapshotDelta = nullptr;
 
-	int m_NumTimelineMarkers;
+	int m_NumTimelineMarkers = 0;
 	int m_aTimelineMarkers[MAX_TIMELINE_MARKERS];
 
-	bool m_NoMapData;
+	bool m_NoMapData = false;
 
-	DEMOFUNC_FILTER m_pfnFilter;
-	void *m_pUser;
+	DEMOFUNC_FILTER m_pfnFilter = nullptr;
+	void *m_pUser = nullptr;
 
-	void WriteTickMarker(int Tick, bool Keyframe);
+	CFileOperations &FileOperations();
+	void MarkWriteError() noexcept;
+	bool WriteRaw(IOHANDLE File, const void *pData, unsigned Size);
+	bool SeekRaw(IOHANDLE File, int64_t Offset);
+	bool WriteTickMarker(int Tick, bool Keyframe);
 	bool Write(int Type, const void *pData, int Size);
 
 public:
-	CDemoRecorder(CSnapshotDelta *pSnapshotDelta, bool NoMapData = false);
+	CDemoRecorder(CSnapshotDelta *pSnapshotDelta, bool NoMapData = false, CFileOperations *pFileOperations = nullptr);
 	CDemoRecorder() = default;
 	~CDemoRecorder() override;
 
@@ -61,6 +94,7 @@ public:
 	void RecordMessage(const void *pData, int Size);
 
 	bool IsRecording() const override { return m_File != nullptr; }
+	bool HasWriteError() const override { return m_WriteError; }
 	const char *CurrentFilename() const override { return m_aCurrentFilename; }
 
 	int Length() const override { return (m_LastTickMarker - m_FirstTick) / SERVER_TICK_SPEED; }
@@ -69,6 +103,35 @@ public:
 class CDemoPlayer : public IDemoPlayer
 {
 public:
+	// 内部文件处理不读写主线程的帧时间缓存。
+	enum class ETimeMode
+	{
+		CACHED_FRAME,
+		UNCACHED,
+	};
+	// 借用操作对象；成功返回的地图缓冲须与 free 兼容，所有权交给调用方。
+	class CMapDataOperations
+	{
+	public:
+		virtual ~CMapDataOperations() = default;
+		virtual unsigned char *Allocate(unsigned Size) noexcept;
+		virtual void Free(unsigned char *pData) noexcept;
+		virtual int64_t Tell(IOHANDLE File) noexcept;
+		virtual int Seek(IOHANDLE File, int64_t Offset) noexcept;
+		virtual unsigned Read(IOHANDLE File, void *pData, unsigned Size) noexcept;
+		virtual int Error(IOHANDLE File) noexcept;
+	};
+
+	// 分配策略为借用，须覆盖播放器生命周期；返回缓冲由索引容器拥有并由同一策略 Free。
+	// 分配结果须满足普通 new 的对齐要求。
+	class CKeyFrameMemory
+	{
+	public:
+		virtual ~CKeyFrameMemory() = default;
+		virtual void *Allocate(size_t Bytes);
+		virtual void Free(void *pMemory, size_t Bytes) noexcept;
+	};
+
 	class IListener
 	{
 	public:
@@ -103,6 +166,11 @@ public:
 
 private:
 	IListener *m_pListener;
+	// 操作对象须覆盖播放器或同步裁剪的使用期；nullptr 使用默认实现。
+	CMapDataOperations *m_pMapDataOperations = nullptr;
+	CMapDataOperations &MapDataOperations();
+	ETimeMode m_TimeMode = ETimeMode::CACHED_FRAME;
+	int64_t SystemTime() const;
 
 	TUpdateIntraTimesFunc m_UpdateIntraTimesFunc;
 
@@ -119,12 +187,67 @@ private:
 		}
 	};
 
+	template<typename T>
+	class CKeyFrameAllocator
+	{
+	public:
+		using value_type = T;
+		CKeyFrameMemory *m_pMemory;
+		explicit CKeyFrameAllocator(CKeyFrameMemory *pMemory) noexcept :
+			m_pMemory(pMemory) {}
+		template<typename U>
+		CKeyFrameAllocator(const CKeyFrameAllocator<U> &Other) noexcept :
+			m_pMemory(Other.m_pMemory)
+		{
+		}
+		T *allocate(size_t Count)
+		{
+			// 只替换索引条目缓冲，标准库调试代理等辅助对象保留原分配器。
+			if constexpr(std::is_same_v<T, CKeyFrame>)
+			{
+				static_assert(alignof(T) <= alignof(std::max_align_t));
+				if(m_pMemory)
+				{
+					if(Count > std::numeric_limits<size_t>::max() / sizeof(T))
+						throw std::bad_array_new_length();
+					void *pMemory = m_pMemory->Allocate(Count * sizeof(T));
+					if(!pMemory)
+						throw std::bad_alloc();
+					return static_cast<T *>(pMemory);
+				}
+			}
+			return std::allocator<T>{}.allocate(Count);
+		}
+		void deallocate(T *pMemory, size_t Count) noexcept
+		{
+			if constexpr(std::is_same_v<T, CKeyFrame>)
+			{
+				if(m_pMemory)
+				{
+					m_pMemory->Free(pMemory, Count * sizeof(T));
+					return;
+				}
+			}
+			std::allocator<T>{}.deallocate(pMemory, Count);
+		}
+		template<typename U>
+		bool operator==(const CKeyFrameAllocator<U> &Other) const noexcept
+		{
+			return m_pMemory == Other.m_pMemory;
+		}
+		template<typename U>
+		bool operator!=(const CKeyFrameAllocator<U> &Other) const noexcept
+		{
+			return !(*this == Other);
+		}
+	};
+
 	class IConsole *m_pConsole;
 	IOHANDLE m_File;
 	int64_t m_MapOffset;
 	char m_aFilename[IO_MAX_PATH_LENGTH];
 	char m_aErrorMessage[256];
-	std::vector<CKeyFrame> m_vKeyFrames;
+	std::vector<CKeyFrame, CKeyFrameAllocator<CKeyFrame>> m_vKeyFrames;
 	CMapInfo m_MapInfo;
 	int m_SpeedIndex;
 
@@ -163,6 +286,7 @@ private:
 		ERROR_UNRECOVERABLE,
 	};
 	EScanFileResult ScanFile();
+	void FailLoad(const char *pErrorMessage) noexcept;
 	void UpdateTimes();
 
 	int64_t Time();
@@ -172,16 +296,18 @@ private:
 	void Construct(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo);
 
 public:
-	CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo);
+	CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, CMapDataOperations *pMapDataOperations = nullptr, ETimeMode TimeMode = ETimeMode::CACHED_FRAME, CKeyFrameMemory *pKeyFrameMemory = nullptr);
 	CDemoPlayer(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, bool UseVideo, TUpdateIntraTimesFunc &&UpdateIntraTimesFunc);
 	~CDemoPlayer() override;
 
 	void SetListener(IListener *pListener);
 
-	int Load(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, int StorageType);
+	int Load(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, int StorageType, bool ResetSliceMarkers = true) noexcept;
 	unsigned char *GetMapData(class IStorage *pStorage);
-	bool ExtractMap(class IStorage *pStorage);
-	void Play();
+	// 操作对象为本次提取借用；默认使用原文件 I/O 和同目录提交。
+	bool ExtractMap(class IStorage *pStorage, demo_output::COperations *pOutputOperations = nullptr, CDemoRecorder::CFileOperations *pFileOperations = nullptr) noexcept;
+	// 返回预热是否完成；失败后可读取 ErrorMessage。
+	bool Play();
 	void Pause() override;
 	void Unpause() override;
 	void Stop(const char *pErrorMessage = "");
@@ -212,11 +338,15 @@ class CDemoEditor : public IDemoEditor
 	IStorage *m_pStorage;
 	CSnapshotDelta *m_pSnapshotDelta;
 	CSnapshotDelta *m_pSnapshotDeltaSixup;
+	CDemoPlayer::CMapDataOperations *m_pMapDataOperations = nullptr;
+	demo_output::COperations *m_pOutputOperations = nullptr;
+	CDemoRecorder::CFileOperations *m_pRecordOperations = nullptr;
+	bool SliceImpl(const char *pDemo, const char *pDst, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pfnFilter, void *pUser);
 
 public:
-	virtual void Init(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, class IConsole *pConsole, class IStorage *pStorage);
-	bool Slice(const char *pDemo, const char *pDst, int StartTick, int EndTick, DEMOFUNC_FILTER pfnFilter, void *pUser) override;
-	bool Slice(const char *pDemo, const char *pDst, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pfnFilter, void *pUser) override;
+	virtual void Init(CSnapshotDelta *pSnapshotDelta, CSnapshotDelta *pSnapshotDeltaSixup, class IConsole *pConsole, class IStorage *pStorage, CDemoPlayer::CMapDataOperations *pMapDataOperations = nullptr, demo_output::COperations *pOutputOperations = nullptr, CDemoRecorder::CFileOperations *pRecordOperations = nullptr);
+	bool Slice(const char *pDemo, const char *pDst, int StartTick, int EndTick, DEMOFUNC_FILTER pfnFilter, void *pUser) noexcept override;
+	bool Slice(const char *pDemo, const char *pDst, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pfnFilter, void *pUser) noexcept override;
 };
 
 #endif

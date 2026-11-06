@@ -4,12 +4,12 @@
 
 #include <limits>
 
-CImageInfo::CImageInfo(CImageInfo &&Other)
+CImageInfo::CImageInfo(CImageInfo &&Other) noexcept
 {
 	*this = std::move(Other);
 }
 
-CImageInfo &CImageInfo::operator=(CImageInfo &&Other)
+CImageInfo &CImageInfo::operator=(CImageInfo &&Other) noexcept
 {
 	if(this == &Other)
 		return *this;
@@ -26,7 +26,7 @@ CImageInfo &CImageInfo::operator=(CImageInfo &&Other)
 	return *this;
 }
 
-void CImageInfo::Free()
+void CImageInfo::Free() noexcept
 {
 	m_Width = 0;
 	m_Height = 0;

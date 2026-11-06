@@ -15,6 +15,8 @@
 #include <game/client/components/menus.h>
 #include <game/client/components/players.h>
 #include <game/client/components/qmclient/demo_display.h>
+#include <game/client/components/qmclient/ghost_timeline.h>
+#include <game/client/components/qmclient/race_timing.h>
 #include <game/client/components/skins.h>
 #include <game/client/gameclient.h>
 #include <game/client/race.h>
@@ -72,63 +74,6 @@ void CGhost::GetNetObjCharacter(CNetObj_Character *pChar, const CGhostCharacter 
 	pChar->m_Tick = pGhostChar->m_Tick;
 }
 
-CGhost::CGhostPath::CGhostPath(CGhostPath &&Other) noexcept :
-	m_ChunkSize(Other.m_ChunkSize), m_NumItems(Other.m_NumItems), m_vpChunks(std::move(Other.m_vpChunks))
-{
-	Other.m_NumItems = 0;
-	Other.m_vpChunks.clear();
-}
-
-CGhost::CGhostPath &CGhost::CGhostPath::operator=(CGhostPath &&Other) noexcept
-{
-	Reset(Other.m_ChunkSize);
-	m_NumItems = Other.m_NumItems;
-	m_vpChunks = std::move(Other.m_vpChunks);
-	Other.m_NumItems = 0;
-	Other.m_vpChunks.clear();
-	return *this;
-}
-
-void CGhost::CGhostPath::Reset(int ChunkSize)
-{
-	for(auto &pChunk : m_vpChunks)
-		free(pChunk);
-	m_vpChunks.clear();
-	m_ChunkSize = ChunkSize;
-	m_NumItems = 0;
-}
-
-void CGhost::CGhostPath::SetSize(int Items)
-{
-	int Chunks = m_vpChunks.size();
-	int NeededChunks = (Items + m_ChunkSize - 1) / m_ChunkSize;
-
-	if(NeededChunks > Chunks)
-	{
-		m_vpChunks.resize(NeededChunks);
-		for(int i = Chunks; i < NeededChunks; i++)
-			m_vpChunks[i] = (CGhostCharacter *)calloc(m_ChunkSize, sizeof(CGhostCharacter));
-	}
-
-	m_NumItems = Items;
-}
-
-void CGhost::CGhostPath::Add(const CGhostCharacter &Char)
-{
-	SetSize(m_NumItems + 1);
-	*Get(m_NumItems - 1) = Char;
-}
-
-CGhostCharacter *CGhost::CGhostPath::Get(int Index)
-{
-	if(Index < 0 || Index >= m_NumItems)
-		return nullptr;
-
-	int Chunk = Index / m_ChunkSize;
-	int Pos = Index % m_ChunkSize;
-	return &m_vpChunks[Chunk][Pos];
-}
-
 void CGhost::GetPath(char *pBuf, int Size, const char *pPlayerName, int Time) const
 {
 	const char *pMap = Client()->GetCurrentMap();
@@ -157,17 +102,22 @@ void CGhost::AddInfos(const CNetObj_Character *pChar, const CNetObj_DDNetCharact
 	if(g_Config.m_ClRaceSaveGhost && !GhostRecorder()->IsRecording() && NumTicks > 0)
 	{
 		GetPath(m_aTmpFilename, sizeof(m_aTmpFilename), m_CurGhost.m_aPlayer);
-		GhostRecorder()->Start(m_aTmpFilename, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), m_CurGhost.m_aPlayer);
-
-		GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &m_CurGhost.m_StartTick, sizeof(int));
-		GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &m_CurGhost.m_Skin, sizeof(CGhostSkin));
-		for(int i = 0; i < NumTicks; i++)
-			GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, m_CurGhost.m_Path.Get(i), sizeof(CGhostCharacter));
+		if(GhostRecorder()->Start(m_aTmpFilename, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), m_CurGhost.m_aPlayer) == 0)
+		{
+			if(GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &m_CurGhost.m_StartTick, sizeof(int)) &&
+				GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &m_CurGhost.m_Skin, sizeof(CGhostSkin)))
+			{
+				for(int i = 0; i < NumTicks; i++)
+					if(!GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, m_CurGhost.m_Path.Get(i), sizeof(CGhostCharacter)))
+						break;
+			}
+		}
 	}
 
 	CGhostCharacter GhostChar;
 	GetGhostCharacter(&GhostChar, pChar, pDDnetChar);
-	m_CurGhost.m_Path.Add(GhostChar);
+	if(!m_CurGhost.m_Path.Add(GhostChar))
+		return;
 	if(GhostRecorder()->IsRecording())
 		GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, &GhostChar, sizeof(CGhostCharacter));
 }
@@ -191,10 +141,10 @@ int CGhost::FreeSlots() const
 
 void CGhost::CheckStart()
 {
-	int RaceTick = -GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer;
+	const auto RaceTick = qm_race_timing::DecodeStartTick(GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer);
 	int RenderTick = m_NewRenderTick;
 
-	if(GameClient()->LastRaceTick() != RaceTick && Client()->GameTick(g_Config.m_ClDummy) - RaceTick < Client()->GameTickSpeed())
+	if(qm_race_timing::IsNewServerStart(GameClient()->LastRaceTick(), RaceTick, Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed()))
 	{
 		if(m_Rendering && m_RenderingStartedByServer) // race restarted: stop rendering
 			StopRender();
@@ -204,7 +154,7 @@ void CGhost::CheckStart()
 			m_NewRenderTick = -1;
 		if(GhostRecorder()->IsRecording()) // race restarted: stop recording
 			GhostRecorder()->Stop(0, -1);
-		int StartTick = RaceTick;
+		int StartTick = *RaceTick;
 
 		if(GameClient()->m_GameInfo.m_BugDDRaceGhost) // the client recognizes the start one tick earlier than ddrace servers
 			StartTick--;
@@ -324,18 +274,22 @@ void CGhost::OnRender()
 		return;
 
 	int PlaybackTick;
+	int PlaybackOrigin = 0;
 	if(m_ManualMode)
 	{
 		// 查看模式：独立时间线，播到尽头自动停在最后一帧
 		PlaybackTick = ManualPlaybackTick();
-		if(m_ManualClock.Playing() && m_ManualEndTick > 0 && PlaybackTick >= m_ManualEndTick)
+		if(m_ManualClock.Playing() && ManualEndTick() > 0 && PlaybackTick >= ManualEndTick())
 		{
-			ManualSeek(m_ManualEndTick);
+			ManualSeek(ManualEndTick());
 			PlaybackTick = ManualPlaybackTick();
 		}
 	}
 	else
-		PlaybackTick = Client()->PredGameTick(g_Config.m_ClDummy) - m_StartRenderTick;
+	{
+		PlaybackTick = Client()->PredGameTick(g_Config.m_ClDummy);
+		PlaybackOrigin = m_StartRenderTick;
+	}
 
 	CScreenRect ScreenRect = Graphics()->GetScreen();
 
@@ -347,18 +301,20 @@ void CGhost::OnRender()
 	// 顺序（CPlayers::OnRender：先全部 hook，再全部 Tee）一致；否则多轨回放里
 	// 靠后虚影的 hook 会压在前一个虚影的 Tee 上，出现“hook 盖住 Tee”。
 	// 跑图模式仍按上游的逐槽位顺序绘制。
-	m_vGhostDraws.clear();
+	m_GhostDraws.Clear();
+	if(m_ManualMode)
+		std::fill(std::begin(m_aManualRenderPosValid), std::end(m_aManualRenderPosValid), false);
 	for(int Slot = 0; Slot < MAX_ACTIVE_GHOSTS; ++Slot)
 	{
 		CGhostItem &Ghost = m_aActiveGhosts[Slot];
-		if(Ghost.Empty() || (m_ManualMode && !m_aManualSlots[Slot]))
+		if(Ghost.Empty() || (m_ManualMode && !m_ManualPlan.m_aSlots[Slot]))
 			continue;
 
-		int GhostTick = Ghost.m_StartTick + PlaybackTick;
+		int64_t GhostTick = qm_ghost_timeline::OffsetTick(Ghost.m_StartTick, PlaybackTick, PlaybackOrigin);
 		// QmClient：查看模式把播放头钳在轨迹首尾采样内——播到尽头时虚影停在最后一帧，
 		// 而不是让只前进的快照游标越界置 -1 后整只虚影消失（跑图模式保持原语义）
 		if(m_ManualMode)
-			GhostTick = std::clamp(GhostTick, Ghost.m_Path.Get(0)->m_Tick, Ghost.m_Path.Get(Ghost.m_Path.Size() - 1)->m_Tick);
+			GhostTick = std::clamp<int64_t>(GhostTick, Ghost.m_Path.Get(0)->m_Tick, Ghost.m_Path.Get(Ghost.m_Path.Size() - 1)->m_Tick);
 		while(Ghost.m_PlaybackPos >= 0 && Ghost.m_Path.Get(Ghost.m_PlaybackPos)->m_Tick < GhostTick)
 		{
 			if(Ghost.m_PlaybackPos < Ghost.m_Path.Size() - 1)
@@ -380,7 +336,7 @@ void CGhost::OnRender()
 		GetNetObjCharacter(&Draw.m_Player, Ghost.m_Path.Get(CurPos));
 		GetNetObjCharacter(&Draw.m_Prev, Ghost.m_Path.Get(PrevPos));
 
-		int TickDiff = Draw.m_Player.m_Tick - Draw.m_Prev.m_Tick;
+		const int64_t TickDiff = static_cast<int64_t>(Draw.m_Player.m_Tick) - Draw.m_Prev.m_Tick;
 		if(TickDiff > 0)
 		{
 			// QmClient：查看模式使用手动时间线的插值相位；本地预测相位会持续波动，
@@ -389,7 +345,13 @@ void CGhost::OnRender()
 			Draw.m_IntraTick = (GhostTick - Draw.m_Prev.m_Tick - 1 + IntraPhase) / TickDiff;
 		}
 
-		Draw.m_Player.m_AttackTick += Client()->GameTick(g_Config.m_ClDummy) - GhostTick;
+		int AttackTick;
+		if(!qm_ghost_timeline::MapAttack(Draw.m_Player.m_AttackTick, GhostTick,
+			   Client()->GameTick(g_Config.m_ClDummy), Client()->PrevGameTick(g_Config.m_ClDummy), AttackTick))
+			continue;
+		Draw.m_Player.m_AttackTick = AttackTick;
+		if(!qm_ghost_render::Position(Draw.m_Prev, Draw.m_Player, Draw.m_IntraTick, Draw.m_Pos))
+			continue;
 
 		// QmClient：转换侧以 WEAPON_NINJA 标记冻结段（幽灵格式无独立冻结字段）。
 		// 冻结表现完全复刻 demo 播放的玩家渲染（players.cpp）：冰冻着色 + 隐藏武器、
@@ -443,14 +405,14 @@ void CGhost::OnRender()
 		}
 
 		// QmClient: 查看模式记录每个槽位虚影的插值位置（镜头跟随用）
-		Draw.m_Pos = mix(vec2(Draw.m_Prev.m_X, Draw.m_Prev.m_Y), vec2(Draw.m_Player.m_X, Draw.m_Player.m_Y), Draw.m_IntraTick);
 		if(m_ManualMode)
 		{
 			m_aManualRenderPos[Slot] = Draw.m_Pos;
 			m_aManualRenderPosValid[Slot] = true;
 		}
 
-		m_vGhostDraws.push_back(Draw);
+		if(!m_GhostDraws.Add(std::move(Draw)))
+			break;
 	}
 
 	// 每帧解析该虚影实际使用的渲染信息（冻结换肤时用本帧副本，否则用共享信息）
@@ -461,8 +423,9 @@ void CGhost::OnRender()
 	if(!m_ManualMode)
 	{
 		// 跑图模式：保持上游逐槽位顺序（每个虚影的 hook 紧跟自己的 Tee）
-		for(const SGhostDrawData &Draw : m_vGhostDraws)
+		for(size_t i = 0; i < m_GhostDraws.Size(); ++i)
 		{
+			const SGhostDrawData &Draw = *m_GhostDraws.Get(i);
 			GameClient()->m_Players.RenderHook(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
 			GameClient()->m_Players.RenderPlayer(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
 		}
@@ -470,15 +433,22 @@ void CGhost::OnRender()
 	}
 
 	// 查看模式：全部 hook -> 全部 Tee -> 名字与方向指示叠加
-	for(const SGhostDrawData &Draw : m_vGhostDraws)
+	for(size_t i = 0; i < m_GhostDraws.Size(); ++i)
+	{
+		const SGhostDrawData &Draw = *m_GhostDraws.Get(i);
 		GameClient()->m_Players.RenderHook(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
-	for(const SGhostDrawData &Draw : m_vGhostDraws)
+	}
+	for(size_t i = 0; i < m_GhostDraws.Size(); ++i)
+	{
+		const SGhostDrawData &Draw = *m_GhostDraws.Get(i);
 		GameClient()->m_Players.RenderPlayer(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
+	}
 
 	// QmClient: 查看模式下为每个虚影标注名字（多轨回放的信息可读性，对齐 demo 播放器）
 	// 名字尺寸跟随客户端名字牌大小设置；方向键指示与名字牌共用 cl_show_direction 数据
-	for(const SGhostDrawData &Draw : m_vGhostDraws)
+	for(size_t i = 0; i < m_GhostDraws.Size(); ++i)
 	{
+		const SGhostDrawData &Draw = *m_GhostDraws.Get(i);
 		const CGhostItem &Ghost = m_aActiveGhosts[Draw.m_Slot];
 		const vec2 TeePos = Draw.m_Pos;
 		if(g_Config.m_ClNamePlates && Ghost.m_aPlayer[0] != '\0')
@@ -492,7 +462,7 @@ void CGhost::OnRender()
 
 		// 查看模式使用共用 demo 的方向显示配置，主选手作为回放的自身成员。
 		const int Direction = qm_demo_display::Resolve(g_Config, true, false).m_Direction;
-		const bool Own = Draw.m_Slot == m_ManualPrimarySlot;
+		const bool Own = Draw.m_Slot == m_ManualPlan.m_PrimarySlot;
 		if(!g_Config.m_QmRankGhostShowDirection || Direction == 0 || (Direction == 1 && Own) || (Direction == 3 && !Own))
 			continue;
 		const float DirSize = 18.0f + 20.0f * g_Config.m_ClNamePlatesSize / 100.0f;
@@ -572,10 +542,12 @@ void CGhost::StopRecord(int Time)
 	CMenus::CGhostItem *pOwnGhost = nullptr;
 	if(Time > 0)
 		pOwnGhost = GameClient()->m_Menus.GetOwnGhost();
-	const bool StoreGhost = Time > 0 && (!pOwnGhost || Time < pOwnGhost->m_Time || !g_Config.m_ClRaceGhostSaveBest);
+	const bool StoreGhost = Time > 0 && !m_CurGhost.Empty() && (!pOwnGhost || Time < pOwnGhost->m_Time || !g_Config.m_ClRaceGhostSaveBest);
 
-	if(RecordingToFile)
-		GhostRecorder()->Stop(m_CurGhost.m_Path.Size(), StoreGhost ? Time : -1);
+	char aFilename[IO_MAX_PATH_LENGTH] = "";
+	if(RecordingToFile && StoreGhost)
+		GetPath(aFilename, sizeof(aFilename), m_CurGhost.m_aPlayer, Time);
+	const bool SavedToFile = RecordingToFile && GhostRecorder()->Stop(m_CurGhost.m_Path.Size(), StoreGhost ? Time : -1, aFilename[0] ? aFilename : nullptr);
 
 	if(StoreGhost)
 	{
@@ -589,15 +561,11 @@ void CGhost::StopRecord(int Time)
 
 		// create ghost item
 		CMenus::CGhostItem Item;
-		if(RecordingToFile)
-			GetPath(Item.m_aFilename, sizeof(Item.m_aFilename), m_CurGhost.m_aPlayer, Time);
+		if(SavedToFile)
+			str_copy(Item.m_aFilename, aFilename);
 		str_copy(Item.m_aPlayer, m_CurGhost.m_aPlayer);
 		Item.m_Time = Time;
 		Item.m_Slot = Slot;
-
-		// save new ghost file
-		if(Item.HasFile())
-			Storage()->RenameFile(m_aTmpFilename, Item.m_aFilename, IStorage::TYPE_SAVE);
 
 		// add item to menu list
 		GameClient()->m_Menus.UpdateOwnGhost(Item);
@@ -631,46 +599,24 @@ void CGhost::ManualSetSpeed(float Speed)
 		m_ManualClock.SetSpeed(Speed, Client()->LocalTime());
 }
 
-void CGhost::StartRenderManual(const std::vector<int> &vSlots)
+bool CGhost::StartRenderManual(const std::vector<int> &vSlots, int FirstTick)
 {
+	qm_ghost_manual::CPlan<MAX_ACTIVE_GHOSTS> Candidate;
+	if(!Candidate.Prepare(vSlots, [this](int Slot) { return &m_aActiveGhosts[Slot]; }, FirstTick))
+		return false;
+	// 所有分配和时间映射检查完成后，才替换播放状态。
+	static_assert(std::is_nothrow_move_assignable_v<decltype(m_ManualPlan)>);
 	StopRender();
-	m_ManualPrimarySlot = vSlots.empty() ? -1 : vSlots.front();
-	m_vManualSampleTicks.clear();
-	std::fill(std::begin(m_aManualSlots), std::end(m_aManualSlots), false);
-	for(int Slot : vSlots)
-		if(Slot >= 0 && Slot < MAX_ACTIVE_GHOSTS)
-			m_aManualSlots[Slot] = true;
-	bool HaveGhost = false;
-	m_ManualEndTick = 0;
-	for(int Slot : vSlots)
-	{
-		if(Slot < 0 || Slot >= MAX_ACTIVE_GHOSTS)
-			continue;
-		CGhostItem &Ghost = m_aActiveGhosts[Slot];
-		if(Ghost.Empty())
-			continue;
-		HaveGhost = true;
-		if(Slot == m_ManualPrimarySlot)
-		{
-			m_vManualSampleTicks.reserve(Ghost.m_Path.Size());
-			for(int Index = 0; Index < Ghost.m_Path.Size(); ++Index)
-				m_vManualSampleTicks.push_back(Ghost.m_Path.Get(Index)->m_Tick - Ghost.m_StartTick);
-		}
-		// 总时长取所有激活影子中最长的一条轨迹（相对 tick）：团队/接力回放里先
-		// 完成、中途加入或提前离开的玩家轨迹更短，取最短会把整组截断在最早那下；
-		// 短轨迹播到自己的末帧后停在原处（查看模式按各自轨迹范围钳制）
-		const int EndTick = Ghost.m_Path.Get(Ghost.m_Path.Size() - 1)->m_Tick - Ghost.m_StartTick;
-		if(EndTick > m_ManualEndTick)
-			m_ManualEndTick = EndTick;
-		Ghost.m_PlaybackPos = 0;
-	}
-	if(!HaveGhost || m_ManualEndTick <= 0)
-		return;
+	m_ManualPlan = std::move(Candidate);
+	for(size_t Slot = 0; Slot < m_ManualPlan.m_aSlots.size(); ++Slot)
+		if(m_ManualPlan.m_aSlots[Slot] && !m_aActiveGhosts[Slot].Empty())
+			m_aActiveGhosts[Slot].m_PlaybackPos = 0;
 	m_ManualMode = true;
 	m_Rendering = true;
 	m_RenderingStartedByServer = false;
-	m_ManualClock.Start(Client()->LocalTime(), m_ManualEndTick, Client()->GameTickSpeed());
+	m_ManualClock.Start(Client()->LocalTime(), ManualEndTick(), Client()->GameTickSpeed());
 	std::fill(std::begin(m_aManualRenderPosValid), std::end(m_aManualRenderPosValid), false);
+	return true;
 }
 
 int CGhost::ManualPlaybackTick() const
@@ -701,7 +647,7 @@ void CGhost::ManualSeek(int RelativeTick)
 	{
 		if(Ghost.Empty())
 			continue;
-		const int TargetTick = Ghost.m_StartTick + PlaybackTick;
+		const int64_t TargetTick = qm_ghost_timeline::OffsetTick(Ghost.m_StartTick, PlaybackTick, 0);
 		const int Size = Ghost.m_Path.Size();
 		int Pos = 0;
 		int Last = 0;
@@ -728,7 +674,6 @@ int CGhost::Load(const char *pFilename)
 	// select ghost
 	CGhostItem *pGhost = &m_aActiveGhosts[Slot];
 	pGhost->Reset();
-	pGhost->m_Path.SetSize(pInfo->m_NumTicks);
 
 	str_copy(pGhost->m_aPlayer, pInfo->m_aOwner);
 
@@ -766,12 +711,13 @@ int CGhost::Load(const char *pFilename)
 				Error = true;
 				break;
 			}
-			else if(!GhostLoader()->ReadData(Type, pGhost->m_Path.Get(Index++), sizeof(CGhostCharacter_NoTick)))
+			else if(!pGhost->m_Path.ReadAndAdd([&](CGhostCharacter &Value) { return GhostLoader()->ReadData(Type, &Value, sizeof(CGhostCharacter_NoTick)); }))
 			{
 				log_error_color(LOG_COLOR_GHOST, "ghost", "Failed to read ghost data: failed to read ghost character (without tick)");
 				Error = true;
 				break;
 			}
+			++Index;
 			FoundCharacterNoTick = true;
 		}
 		else if(Type == GHOSTDATA_TYPE_CHARACTER)
@@ -782,12 +728,13 @@ int CGhost::Load(const char *pFilename)
 				Error = true;
 				break;
 			}
-			else if(!GhostLoader()->ReadData(Type, pGhost->m_Path.Get(Index++), sizeof(CGhostCharacter)))
+			else if(!pGhost->m_Path.ReadAndAdd([&](CGhostCharacter &Value) { return GhostLoader()->ReadData(Type, &Value, sizeof(CGhostCharacter)); }))
 			{
 				log_error_color(LOG_COLOR_GHOST, "ghost", "Failed to read ghost data: failed to read ghost character (with tick)");
 				Error = true;
 				break;
 			}
+			++Index;
 			FoundCharacterTick = true;
 		}
 		else if(Type == GHOSTDATA_TYPE_START_TICK)
@@ -815,18 +762,12 @@ int CGhost::Load(const char *pFilename)
 		return -1;
 	}
 
-	if(FoundCharacterNoTick)
+	if(!qm_ghost_timeline::Prepare(pGhost->m_Path, FoundCharacterTick, pGhost->m_StartTick))
 	{
-		int StartTick = 0;
-		for(int i = 1; i < pInfo->m_NumTicks; i++) // estimate start tick
-			if(pGhost->m_Path.Get(i)->m_AttackTick != pGhost->m_Path.Get(i - 1)->m_AttackTick)
-				StartTick = pGhost->m_Path.Get(i)->m_AttackTick - i;
-		for(int i = 0; i < pInfo->m_NumTicks; i++)
-			pGhost->m_Path.Get(i)->m_Tick = StartTick + i;
+		pGhost->Reset();
+		log_error_color(LOG_COLOR_GHOST, "ghost", "Failed to read ghost data: invalid timeline");
+		return -1;
 	}
-
-	if(pGhost->m_StartTick == -1)
-		pGhost->m_StartTick = pGhost->m_Path.Get(0)->m_Tick;
 
 	if(!FoundSkin)
 	{
@@ -839,7 +780,7 @@ int CGhost::Load(const char *pFilename)
 
 void CGhost::Unload(int Slot)
 {
-	m_aManualSlots[Slot] = false;
+	m_ManualPlan.m_aSlots[Slot] = false;
 	m_aManualRenderPosValid[Slot] = false;
 	m_aActiveGhosts[Slot].Reset();
 }
@@ -859,15 +800,18 @@ void CGhost::SaveGhost(CMenus::CGhostItem *pItem)
 	CGhostItem *pGhost = &m_aActiveGhosts[Slot];
 
 	int NumTicks = pGhost->m_Path.Size();
-	GetPath(pItem->m_aFilename, sizeof(pItem->m_aFilename), pItem->m_aPlayer, pItem->m_Time);
-	GhostRecorder()->Start(pItem->m_aFilename, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), pItem->m_aPlayer);
+	char aFilename[IO_MAX_PATH_LENGTH];
+	GetPath(aFilename, sizeof(aFilename), pItem->m_aPlayer, pItem->m_Time);
+	if(GhostRecorder()->Start(aFilename, Client()->GetCurrentMap(), GameClient()->Map()->Sha256(), pItem->m_aPlayer) != 0)
+		return;
 
-	GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &pGhost->m_StartTick, sizeof(int));
-	GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &pGhost->m_Skin, sizeof(CGhostSkin));
-	for(int i = 0; i < NumTicks; i++)
-		GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, pGhost->m_Path.Get(i), sizeof(CGhostCharacter));
+	bool Writing = GhostRecorder()->WriteData(GHOSTDATA_TYPE_START_TICK, &pGhost->m_StartTick, sizeof(int)) &&
+		       GhostRecorder()->WriteData(GHOSTDATA_TYPE_SKIN, &pGhost->m_Skin, sizeof(CGhostSkin));
+	for(int i = 0; Writing && i < NumTicks; i++)
+		Writing = GhostRecorder()->WriteData(GHOSTDATA_TYPE_CHARACTER, pGhost->m_Path.Get(i), sizeof(CGhostCharacter));
 
-	GhostRecorder()->Stop(NumTicks, pItem->m_Time);
+	if(GhostRecorder()->Stop(NumTicks, pItem->m_Time))
+		str_copy(pItem->m_aFilename, aFilename);
 }
 
 void CGhost::ConGPlay(IConsole::IResult *pResult, void *pUserData)

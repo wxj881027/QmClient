@@ -4,6 +4,7 @@
 #include <base/log.h>
 
 #include <engine/http.h>
+#include <engine/http_response_validation.h>
 #include <engine/shared/jobs.h>
 #include <engine/shared/json.h>
 #include <engine/storage.h>
@@ -53,6 +54,7 @@ class CQmCustomCommunityCacheJob final : public IJob
 {
 	IStorage *m_pStorage;
 	std::shared_ptr<IHttpRequest> m_pResponse;
+	bool m_ValidateResponse;
 	TQmCommunityInfo m_pInfo{nullptr, json_value_free};
 
 protected:
@@ -64,8 +66,30 @@ protected:
 	}
 
 public:
-	explicit CQmCustomCommunityCacheJob(IStorage *pStorage, std::shared_ptr<IHttpRequest> pResponse = nullptr) : m_pStorage(pStorage), m_pResponse(std::move(pResponse)) { Abortable(true); }
-	TQmCommunityInfo TakeInfo() { return std::move(m_pInfo); }
+	explicit CQmCustomCommunityCacheJob(IStorage *pStorage, std::shared_ptr<IHttpRequest> pResponse = nullptr, bool ValidateResponse = false) :
+		m_pStorage(pStorage), m_pResponse(std::move(pResponse)), m_ValidateResponse(ValidateResponse) { Abortable(true); }
+	TQmCommunityInfo TakeInfo()
+	{
+		// 取消时 worker 仍可能写入结果；只有完成状态才能接收或落盘。
+		if(State() != STATE_DONE)
+			return {nullptr, json_value_free};
+		if(m_ValidateResponse)
+		{
+			m_ValidateResponse = false;
+			if(!m_pResponse || m_pResponse->State() != EHttpState::DONE)
+			{
+				m_pInfo.reset();
+				return {nullptr, json_value_free};
+			}
+			CHttpResponseValidation Validation(*m_pResponse);
+			if(!m_pInfo || !Validation.Commit())
+			{
+				m_pInfo.reset();
+				return {nullptr, json_value_free};
+			}
+		}
+		return std::move(m_pInfo);
+	}
 };
 
 #endif

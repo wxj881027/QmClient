@@ -208,3 +208,91 @@ TEST(TextureSlotPool, CapacityLimitRejectsGrowthWithoutCallingAllocator)
 	EXPECT_FALSE(Pool.Reset(std::numeric_limits<size_t>::max()));
 	EXPECT_EQ(State.m_Calls, Calls);
 }
+
+TEST(TextureSlotPool, ReusingOneSlotThroughTheOldSixteenBitCycleDoesNotReviveSavedIdentity)
+{
+	CTextureSlotPool<> Pool;
+	ASSERT_TRUE(Pool.Reset(1));
+	const int Id = Pool.Allocate();
+	ASSERT_GE(Id, 0);
+	const uint32_t Saved = Pool.Generation(Id);
+	for(int i = 0; i < 65536; ++i)
+	{
+		Pool.Release(Id, Pool.Generation(Id));
+		ASSERT_EQ(Pool.Allocate(), Id);
+	}
+	EXPECT_FALSE(Pool.IsAllocated(Id, Saved));
+	EXPECT_TRUE(Pool.IsAllocated(Id, Pool.Generation(Id)));
+}
+
+TEST(TextureSlotPool, StaleReleaseAfterOldSixteenBitCycleCannotFreeTheCurrentTexture)
+{
+	CTextureSlotPool<> Pool;
+	ASSERT_TRUE(Pool.Reset(1));
+	const int Id = Pool.Allocate();
+	ASSERT_GE(Id, 0);
+	const uint32_t Saved = Pool.Generation(Id);
+	for(int i = 0; i < 65536; ++i)
+	{
+		Pool.Release(Id, Pool.Generation(Id));
+		ASSERT_EQ(Pool.Allocate(), Id);
+	}
+	const uint32_t Current = Pool.Generation(Id);
+	Pool.Release(Id, Saved);
+	EXPECT_TRUE(Pool.IsAllocated(Id, Current));
+	EXPECT_NE(Pool.Allocate(), Id);
+}
+
+TEST(TextureSlotPool, RepeatedDeviceResetDoesNotWrapBackToAnOldTextureIdentity)
+{
+	CTextureSlotPool<> Pool;
+	ASSERT_TRUE(Pool.Reset(1));
+	const int Id = Pool.Allocate();
+	ASSERT_GE(Id, 0);
+	const uint32_t Saved = Pool.Generation(Id);
+	for(int i = 0; i < 65536; ++i)
+		ASSERT_TRUE(Pool.Reset(1));
+	ASSERT_EQ(Pool.Allocate(), Id);
+	EXPECT_FALSE(Pool.IsAllocated(Id, Saved));
+}
+
+TEST(TextureSlotPool, ResetToEmptyDoesNotRestartGenerationIssuance)
+{
+	CTextureSlotPool<> Pool;
+	ASSERT_TRUE(Pool.Reset(1));
+	const int Id = Pool.Allocate();
+	ASSERT_GE(Id, 0);
+	const uint32_t Saved = Pool.Generation(Id);
+	ASSERT_TRUE(Pool.Reset(0));
+	ASSERT_EQ(Pool.Allocate(), Id);
+	EXPECT_FALSE(Pool.IsAllocated(Id, Saved));
+}
+
+TEST(TextureSlotGeneration, LastRepresentableTagIsIssuedOnceAndExhaustionDoesNotWrap)
+{
+	constexpr uint64_t Last = std::numeric_limits<uint32_t>::max();
+	uint64_t Next = Last;
+	const auto Tag = TextureSlotGeneration::Take(Next);
+	ASSERT_TRUE(Tag);
+	EXPECT_EQ(*Tag, Last);
+	EXPECT_EQ(Next, Last + 1);
+	EXPECT_FALSE(TextureSlotGeneration::Take(Next));
+	EXPECT_FALSE(TextureSlotGeneration::Take(Next));
+	EXPECT_EQ(Next, Last + 1);
+}
+
+TEST(TextureSlotGeneration, UnissuedZeroStateDoesNotCreateAValidTag)
+{
+	uint64_t Next = 0;
+	EXPECT_FALSE(TextureSlotGeneration::Take(Next));
+	EXPECT_EQ(Next, 0U);
+}
+
+TEST(TextureSlotPool, DefaultZeroTagDoesNotValidateAnAllocatedSlot)
+{
+	CTextureSlotPool<> Pool;
+	ASSERT_TRUE(Pool.Reset(1));
+	const int Id = Pool.Allocate();
+	ASSERT_GE(Id, 0);
+	EXPECT_FALSE(Pool.IsAllocated(Id, 0));
+}

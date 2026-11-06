@@ -218,7 +218,7 @@ namespace
 	}
 
 #if defined(CONF_FAMILY_WINDOWS)
-	class CWindowsDevicePerfSource
+	class CWindowsDevicePerfSource : public CQmAsyncDevicePerfSampler::ISampleSource
 	{
 		bool m_GpuCountersAttemptedInit = false;
 		bool m_GpuCountersAvailable = false;
@@ -279,7 +279,7 @@ namespace
 		}
 
 	public:
-		~CWindowsDevicePerfSource()
+		~CWindowsDevicePerfSource() override
 		{
 			for(PDH_HCOUNTER Counter : m_vCounters)
 			{
@@ -340,7 +340,7 @@ namespace
 				Sample.m_GpuSharedVramMb = (float)NonLocalInfo.CurrentUsage / (1024.0f * 1024.0f);
 		}
 
-		SQmDevicePerfSample Sample()
+		SQmDevicePerfSample Sample() override
 		{
 			SQmDevicePerfSample Sample;
 			const uint64_t NowNs = (uint64_t)time_get_nanoseconds().count();
@@ -399,9 +399,24 @@ void CQmDevicePerfSnapshotCache::Reset()
 	m_Snapshot = {};
 }
 
-CQmAsyncDevicePerfSampler::CQmAsyncDevicePerfSampler(FSampleOverride SampleOverride, std::chrono::milliseconds PollInterval) :
+std::thread CQmAsyncDevicePerfSampler::COperations::CreateThread(std::function<void()> Entry)
+{
+	return std::thread(std::move(Entry));
+}
+
+std::unique_ptr<CQmAsyncDevicePerfSampler::ISampleSource> CQmAsyncDevicePerfSampler::COperations::CreateSource()
+{
+#if defined(CONF_FAMILY_WINDOWS)
+	return std::make_unique<CWindowsDevicePerfSource>();
+#else
+	return nullptr;
+#endif
+}
+
+CQmAsyncDevicePerfSampler::CQmAsyncDevicePerfSampler(FSampleOverride SampleOverride, std::chrono::milliseconds PollInterval, COperations *pOperations) :
 	m_SampleOverride(std::move(SampleOverride)),
-	m_PollInterval(PollInterval.count() > 0 ? PollInterval : std::chrono::milliseconds(1))
+	m_PollInterval(PollInterval.count() > 0 ? PollInterval : std::chrono::milliseconds(1)),
+	m_pOperations(pOperations)
 {
 }
 
@@ -410,13 +425,27 @@ CQmAsyncDevicePerfSampler::~CQmAsyncDevicePerfSampler()
 	Stop();
 }
 
-void CQmAsyncDevicePerfSampler::EnsureStarted()
+bool CQmAsyncDevicePerfSampler::EnsureStarted() noexcept
 {
-	std::lock_guard<std::mutex> Lock(m_StateMutex);
-	if(m_Started || m_StopRequested)
-		return;
-	m_Started = true;
-	m_Thread = std::thread(&CQmAsyncDevicePerfSampler::Run, this);
+	try
+	{
+		const std::lock_guard<std::mutex> Lock(m_StateMutex);
+		if(m_Started || m_StopRequested)
+			return m_Started && !m_StopRequested;
+		COperations DefaultOperations;
+		auto &Operations = m_pOperations ? *m_pOperations : DefaultOperations;
+		auto Thread = Operations.CreateThread([this] { Run(); });
+		if(!Thread.joinable())
+			return false;
+		m_Thread = std::move(Thread);
+		m_Started = true;
+		return true;
+	}
+	catch(...)
+	{
+		// 申请失败不留下已启动标记，下次监控刷新仍可重试。
+		return false;
+	}
 }
 
 void CQmAsyncDevicePerfSampler::SetEnabled(bool Enabled)
@@ -464,22 +493,20 @@ SQmDevicePerfSnapshot CQmAsyncDevicePerfSampler::Snapshot() const
 
 void CQmAsyncDevicePerfSampler::Run()
 {
-#if defined(CONF_FAMILY_WINDOWS)
-	std::unique_ptr<CWindowsDevicePerfSource> pWindowsSource;
+	COperations DefaultOperations;
+	auto &Operations = m_pOperations ? *m_pOperations : DefaultOperations;
+	std::unique_ptr<ISampleSource> pSource;
 	uint64_t SourceGeneration = 0;
-#endif
 
 	std::unique_lock<std::mutex> Lock(m_StateMutex);
 	while(!m_StopRequested)
 	{
 		if(!m_Enabled)
 		{
-#if defined(CONF_FAMILY_WINDOWS)
-			// 系统计数器的关闭也可能等待驱动，只能在状态锁外由工作线程回收。
+			// 设备关闭可能等待驱动，始终在状态锁外由工作线程回收。
 			Lock.unlock();
-			pWindowsSource.reset();
+			pSource.reset();
 			Lock.lock();
-#endif
 			m_StateCv.wait(Lock, [&]() { return m_StopRequested || m_Enabled; });
 			continue;
 		}
@@ -488,20 +515,29 @@ void CQmAsyncDevicePerfSampler::Run()
 		const std::chrono::milliseconds PollInterval = m_PollInterval;
 		Lock.unlock();
 		SQmDevicePerfSample Sample;
-		if(m_SampleOverride)
-			Sample = m_SampleOverride();
-#if defined(CONF_FAMILY_WINDOWS)
-		else
+		try
 		{
-			if(!pWindowsSource || SourceGeneration != Generation)
+			if(m_SampleOverride)
+				Sample = m_SampleOverride();
+			else
 			{
-				pWindowsSource.reset();
-				pWindowsSource = std::make_unique<CWindowsDevicePerfSource>();
-				SourceGeneration = Generation;
+				if(!pSource || SourceGeneration != Generation)
+				{
+					pSource.reset();
+					pSource = Operations.CreateSource();
+					SourceGeneration = Generation;
+				}
+				if(pSource)
+					Sample = pSource->Sample();
 			}
-			Sample = pWindowsSource->Sample();
 		}
-#endif
+		catch(...)
+		{
+			// 丢弃半初始化资源；本次只交付完整的不可用结果，按原周期重试。
+			pSource.reset();
+			SourceGeneration = 0;
+			Sample = {};
+		}
 		Lock.lock();
 		if(m_StopRequested)
 			break;
@@ -522,6 +558,6 @@ void QmUpdateDevicePerfSamplerState(CQmAsyncDevicePerfSampler &Sampler, bool Ena
 		return;
 	}
 
-	Sampler.EnsureStarted();
-	Sampler.SetEnabled(true);
+	if(Sampler.EnsureStarted())
+		Sampler.SetEnabled(true);
 }

@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
+#include <memory>
 #include <mutex>
 #include <thread>
 
@@ -156,10 +157,27 @@ class CQmAsyncDevicePerfSampler
 public:
 	using FSampleOverride = std::function<SQmDevicePerfSample()>;
 
-	explicit CQmAsyncDevicePerfSampler(FSampleOverride SampleOverride = {}, std::chrono::milliseconds PollInterval = std::chrono::milliseconds(100));
+	class ISampleSource
+	{
+	public:
+		virtual ~ISampleSource() = default;
+		virtual SQmDevicePerfSample Sample() = 0;
+	};
+
+	// 实际线程/设备源创建边界；借用的操作对象须覆盖采样器及工作线程的使用期。
+	class COperations
+	{
+	public:
+		virtual ~COperations() = default;
+		virtual std::thread CreateThread(std::function<void()> Entry);
+		virtual std::unique_ptr<ISampleSource> CreateSource();
+	};
+
+	explicit CQmAsyncDevicePerfSampler(FSampleOverride SampleOverride = {}, std::chrono::milliseconds PollInterval = std::chrono::milliseconds(100), COperations *pOperations = nullptr);
 	~CQmAsyncDevicePerfSampler();
 
-	void EnsureStarted();
+	// 启动/停止由调用方串行管理；暂停与快照可和工作线程并行。
+	bool EnsureStarted() noexcept;
 	void SetEnabled(bool Enabled);
 	void Stop();
 	SQmDevicePerfSnapshot Snapshot() const;
@@ -169,6 +187,7 @@ private:
 
 	FSampleOverride m_SampleOverride;
 	std::chrono::milliseconds m_PollInterval;
+	COperations *m_pOperations;
 	CQmDevicePerfSnapshotCache m_Cache;
 	std::thread m_Thread;
 	mutable std::mutex m_StateMutex;

@@ -3,7 +3,14 @@
 #include "assets_resource_registry.h"
 #include "background.h"
 #include "menus.h"
+#include "qmclient/bounded_file_reader.h"
 #include "qmclient/perf_logging.h"
+#include "qmclient/settings_asset_hierarchy.h"
+#include "qmclient/settings_asset_image_job.h"
+#include "qmclient/settings_asset_list_job.h"
+#include "qmclient/settings_asset_list_merge.h"
+#include "qmclient/settings_asset_queue.h"
+#include "qmclient/settings_asset_search_view.h"
 #include "settings_resource_jobs.h"
 
 #include <base/lock.h>
@@ -43,7 +50,11 @@
 #include <chrono>
 #include <cmath>
 #include <functional>
+#include <new>
+#include <optional>
+#include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -323,6 +334,8 @@ namespace
 	static CSettingsResourcePreviewCache gs_SettingsAssetsResourcePreviewCache;
 	static CSettingsResourcePreviewUploadScheduler gs_SettingsAssetsResourcePreviewUploadScheduler;
 	static std::unordered_map<SResourcePreviewKey, std::shared_ptr<CSettingsResourcePreviewJob>, SResourcePreviewKeyHash> m_vEntityBgPreviewJobs;
+	// 内容硬失效独立于层级/筛选的本地 epoch；每个类别分别跟踪本地和商店。
+	static uint64_t gs_aAssetsPreviewGenerations[CMenus::NUMBER_OF_ASSETS_TABS * 2] = {};
 
 	static uint64_t AssetsCardLocaleHash()
 	{
@@ -536,6 +549,19 @@ namespace
 		return ListArea;
 	}
 
+	static void InvalidateAssetsResourcePreviewScope(int Tab, IGraphics *pGraphics, std::optional<bool> Workshop = std::nullopt, const char *pId = nullptr)
+	{
+		if(Tab < CMenus::ASSETS_TAB_ENTITIES || Tab >= CMenus::NUMBER_OF_ASSETS_TABS)
+			return;
+		char aType[64];
+		str_format(aType, sizeof(aType), "assets:%s", AssetsSettingsTabName(Tab));
+		uint64_t *pGenerations = &gs_aAssetsPreviewGenerations[Tab * 2 + (Workshop.value_or(false) ? 1 : 0)];
+		const size_t GenerationCount = pId != nullptr ? 0 : Workshop.has_value() ? 1 :
+											   2;
+		InvalidateSettingsResourcePreviews(gs_SettingsAssetsResourcePreviewCache, gs_SettingsAssetsResourcePreviewUploadScheduler,
+			m_vEntityBgPreviewJobs, pGraphics, {aType, pId, Workshop}, pGenerations, GenerationCount);
+	}
+
 	static SResourcePreviewKey BuildAssetsResourcePreviewKey(const char *pAssetId, int Tab, bool Workshop, float UiScale, float CardWidth)
 	{
 		SResourcePreviewKey Key;
@@ -545,6 +571,8 @@ namespace
 		Key.m_LocaleHash = AssetsCardLocaleHash();
 		Key.m_UiScale = AssetsUiScaleBucket(UiScale);
 		Key.m_CardWidth = AssetsCardWidthBucket(CardWidth);
+		if(Tab >= CMenus::ASSETS_TAB_ENTITIES && Tab < CMenus::NUMBER_OF_ASSETS_TABS)
+			Key.m_ResourceGeneration = gs_aAssetsPreviewGenerations[Tab * 2 + (Workshop ? 1 : 0)];
 		Key.m_Type += ":";
 		Key.m_Type += AssetsSettingsTabName(Tab);
 		return Key;
@@ -573,21 +601,16 @@ namespace
 	{
 		if(pAssetName == nullptr || pAssetName[0] == '\0' || pEngine == nullptr)
 			return false;
-		SResourcePreviewState &State = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
-		if(State.m_TextureReady || State.m_PreviewJobPending || State.m_UploadPending)
-			return false;
-		if(m_vEntityBgPreviewJobs.find(PreviewKey) != m_vEntityBgPreviewJobs.end())
-			return false;
-
-		std::string SourcePath;
-		if(!ResolveEntityBgPreviewArtifactSource(pStorage, pAssetName, SourcePath))
-			return false;
-		auto pJob = CSettingsResourcePreviewJob::FromPath(PreviewKey.m_Id, std::move(SourcePath), pStorage, IStorage::TYPE_ALL, TargetTextureSize);
-		m_vEntityBgPreviewJobs.emplace(PreviewKey, pJob);
-		gs_SettingsAssetsResourcePreviewCache.MarkPreviewJobStarted(PreviewKey);
-		pEngine->AddJob(pJob);
-		++ResourcePreviewTelemetry.m_PreviewJobsStarted;
-		return true;
+		const bool Started = TryStartSettingsResourcePreviewJob(gs_SettingsAssetsResourcePreviewCache, m_vEntityBgPreviewJobs, PreviewKey, *pEngine,
+			[&]() -> std::shared_ptr<CSettingsResourcePreviewJob> {
+				std::string SourcePath;
+				if(!ResolveEntityBgPreviewArtifactSource(pStorage, pAssetName, SourcePath))
+					return nullptr;
+				return CSettingsResourcePreviewJob::FromPath(PreviewKey.m_Id, std::move(SourcePath), pStorage, IStorage::TYPE_ALL, TargetTextureSize);
+			});
+		if(Started)
+			++ResourcePreviewTelemetry.m_PreviewJobsStarted;
+		return Started;
 	}
 
 	static void ProcessAssetsResourcePreviewJobs(IGraphics *pGraphics, SResourcePreviewTelemetry &ResourcePreviewTelemetry, SResourcePreviewUploadBudget &UploadBudget)
@@ -595,20 +618,24 @@ namespace
 		for(auto It = m_vEntityBgPreviewJobs.begin(); It != m_vEntityBgPreviewJobs.end();)
 		{
 			const std::shared_ptr<CSettingsResourcePreviewJob> &pJob = It->second;
+			const uint64_t CurrentGeneration = gs_aAssetsPreviewGenerations[CMenus::ASSETS_TAB_ENTITY_BG * 2 + (It->first.m_Workshop ? 1 : 0)];
+			if(It->first.m_ResourceGeneration != CurrentGeneration)
+			{
+				if(pJob)
+					pJob->CancelPublication();
+				It = m_vEntityBgPreviewJobs.erase(It);
+				continue;
+			}
 			if(!pJob || !pJob->Completed())
 			{
 				++It;
 				continue;
 			}
-			CSettingsResourcePreviewJob::SResult Result = pJob->TakeResult();
-			ResourcePreviewTelemetry.m_PreviewArtifactMs += Result.m_Artifact.m_DurationMs;
-			if(Result.m_Artifact.m_Success)
-				gs_SettingsAssetsResourcePreviewCache.MarkArtifactReady(It->first);
-			else
-				gs_SettingsAssetsResourcePreviewCache.MarkPreviewJobDone(It->first, false);
-			if(Result.m_Artifact.m_Success)
-				gs_SettingsAssetsResourcePreviewUploadScheduler.EnqueueUpload(It->first, std::move(Result.m_Artifact.m_Image), It->first.m_Id.c_str());
-			++ResourcePreviewTelemetry.m_PreviewJobsDone;
+			if(!TryPublishSettingsResourcePreviewJob(*pJob, It->first, gs_SettingsAssetsResourcePreviewCache, gs_SettingsAssetsResourcePreviewUploadScheduler, ResourcePreviewTelemetry, CurrentGeneration))
+			{
+				++It;
+				continue;
+			}
 			It = m_vEntityBgPreviewJobs.erase(It);
 		}
 		gs_SettingsAssetsResourcePreviewUploadScheduler.Drain(UploadBudget, ResourcePreviewTelemetry, gs_SettingsAssetsResourcePreviewCache, pGraphics);
@@ -627,242 +654,6 @@ void CMenus::ClearSettingsAssetsCardMetadataCache()
 }
 
 typedef std::function<void()> TMenuAssetScanLoadedFunc;
-
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-class CImageDecodeJob : public IJob
-{
-public:
-	struct SResult
-	{
-		CImageInfo m_Image;
-		bool m_Success = false;
-	};
-
-private:
-	std::vector<uint8_t> m_vFileData;
-	std::string m_Name;
-	mutable CLock m_Lock;
-	SResult m_Result;
-	mutable bool m_Completed = false;
-
-protected:
-	void Run() override REQUIRES(!m_Lock)
-	{
-		if(m_vFileData.empty())
-		{
-			const CLockScope Lock(m_Lock);
-			m_Completed = true;
-			return;
-		}
-
-		CImageInfo Image;
-		bool Success = false;
-
-		constexpr uint8_t PngSignature[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
-		constexpr uint8_t WebpRiff[] = {0x52, 0x49, 0x46, 0x46};
-		constexpr uint8_t WebpWebp[] = {0x57, 0x45, 0x42, 0x50};
-
-		const bool IsPng = m_vFileData.size() >= 8 &&
-				   memcmp(m_vFileData.data(), PngSignature, 8) == 0;
-		const bool IsWebp = m_vFileData.size() >= 12 &&
-				    memcmp(m_vFileData.data(), WebpRiff, 4) == 0 &&
-				    memcmp(m_vFileData.data() + 8, WebpWebp, 4) == 0;
-
-		if(IsWebp)
-		{
-			Success = CImageLoader::LoadWebP(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image);
-		}
-		else if(IsPng)
-		{
-			Success = CImageLoader::LoadPng(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image);
-		}
-		else
-		{
-			if(CImageLoader::LoadWebP(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image))
-				Success = true;
-			else if(CImageLoader::LoadPng(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image))
-				Success = true;
-		}
-
-		{
-			const CLockScope Lock(m_Lock);
-			m_Result.m_Image = std::move(Image);
-			m_Result.m_Success = Success;
-			m_Completed = true;
-		}
-
-		m_vFileData.clear();
-		m_vFileData.shrink_to_fit();
-	}
-
-public:
-	CImageDecodeJob(std::vector<uint8_t> &&vFileData, const char *pName) :
-		m_vFileData(std::move(vFileData)),
-		m_Name(pName)
-	{
-	}
-
-	bool IsCompleted() const REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		return m_Completed;
-	}
-
-	SResult GetResult() REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		SResult Result = std::move(m_Result);
-		m_Result = SResult();
-		return Result;
-	}
-};
-
-// 全异步图片加载 Job：在后台线程完成文件读取和解码
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-class CFullAsyncImageLoadJob : public IJob
-{
-public:
-	struct SResult
-	{
-		CImageInfo m_Image;
-		bool m_Success = false;
-		bool m_Resized = false;
-		int m_SourceWidth = 0;
-		int m_SourceHeight = 0;
-	};
-
-private:
-	std::vector<std::string> m_vPossiblePaths; // 可能的文件路径列表，按优先级排序
-	IStorage *m_pStorage;
-	int m_StorageType; // 存储类型
-	int m_MaxTextureSize;
-	std::string m_Name;
-	mutable CLock m_Lock;
-	SResult m_Result;
-	mutable bool m_Completed = false;
-
-	// 在后台线程读取文件
-	bool TryLoadFile(const char *pFilename, std::vector<uint8_t> &vBuffer)
-	{
-		IOHANDLE File = m_pStorage->OpenFile(pFilename, IOFLAG_READ, m_StorageType);
-		if(!File)
-			return false;
-
-		io_seek(File, 0, IOSEEK_END);
-		const int64_t Size = io_tell(File);
-		io_seek(File, 0, IOSEEK_START);
-
-		if(Size <= 0 || Size > LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE)
-		{
-			io_close(File);
-			return false;
-		}
-
-		vBuffer.resize(Size);
-		const size_t Read = io_read(File, vBuffer.data(), Size);
-		io_close(File);
-
-		return Read == (size_t)Size;
-	}
-
-protected:
-	void Run() override REQUIRES(!m_Lock)
-	{
-		// 1. 尝试按优先级读取文件
-		std::vector<uint8_t> vFileData;
-		for(const std::string &Path : m_vPossiblePaths)
-		{
-			if(TryLoadFile(Path.c_str(), vFileData))
-				break;
-		}
-
-		if(vFileData.empty())
-		{
-			const CLockScope Lock(m_Lock);
-			m_Completed = true;
-			return;
-		}
-
-		// 2. 解码图片
-		CImageInfo Image;
-		bool Success = false;
-
-		constexpr uint8_t PngSignature[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
-		constexpr uint8_t WebpRiff[] = {0x52, 0x49, 0x46, 0x46};
-		constexpr uint8_t WebpWebp[] = {0x57, 0x45, 0x42, 0x50};
-
-		const bool IsPng = vFileData.size() >= 8 &&
-				   memcmp(vFileData.data(), PngSignature, 8) == 0;
-		const bool IsWebp = vFileData.size() >= 12 &&
-				    memcmp(vFileData.data(), WebpRiff, 4) == 0 &&
-				    memcmp(vFileData.data() + 8, WebpWebp, 4) == 0;
-
-		if(IsWebp)
-		{
-			Success = CImageLoader::LoadWebP(vFileData.data(), vFileData.size(), m_Name.c_str(), Image);
-		}
-		else if(IsPng)
-		{
-			Success = CImageLoader::LoadPng(vFileData.data(), vFileData.size(), m_Name.c_str(), Image);
-		}
-		else
-		{
-			if(CImageLoader::LoadWebP(vFileData.data(), vFileData.size(), m_Name.c_str(), Image))
-				Success = true;
-			else if(CImageLoader::LoadPng(vFileData.data(), vFileData.size(), m_Name.c_str(), Image))
-				Success = true;
-		}
-
-		bool Resized = false;
-		int SourceWidth = 0;
-		int SourceHeight = 0;
-		if(Success && Image.m_pData != nullptr && m_MaxTextureSize > 0)
-		{
-			SourceWidth = Image.m_Width;
-			SourceHeight = Image.m_Height;
-			const SPreviewTargetSize TargetSize = ComputePreviewTargetSize(Image.m_Width, Image.m_Height, m_MaxTextureSize);
-			if(TargetSize.m_Resized)
-			{
-				ResizeImage(Image, TargetSize.m_Width, TargetSize.m_Height);
-				Resized = true;
-			}
-		}
-
-		{
-			const CLockScope Lock(m_Lock);
-			m_Result.m_Image = std::move(Image);
-			m_Result.m_Success = Success;
-			m_Result.m_Resized = Resized;
-			m_Result.m_SourceWidth = SourceWidth;
-			m_Result.m_SourceHeight = SourceHeight;
-			m_Completed = true;
-		}
-	}
-
-public:
-	CFullAsyncImageLoadJob(std::vector<std::string> &&vPossiblePaths, IStorage *pStorage, const char *pName, int StorageType = IStorage::TYPE_ALL, int MaxTextureSize = 0) :
-		m_vPossiblePaths(std::move(vPossiblePaths)),
-		m_pStorage(pStorage),
-		m_StorageType(StorageType),
-		m_MaxTextureSize(MaxTextureSize),
-		m_Name(pName)
-	{
-	}
-
-	bool IsCompleted() const REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		return m_Completed;
-	}
-
-	SResult GetResult() REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		SResult Result = std::move(m_Result);
-		m_Result = SResult();
-		return Result;
-	}
-};
 
 static std::string JsonEscape(const std::string &Str)
 {
@@ -890,328 +681,9 @@ struct SMenuAssetScanUser
 	TMenuAssetScanLoadedFunc m_LoadedFunc;
 };
 
-// ============================================================================
-// ASYNC ASSET LIST LOADING
-// ============================================================================
-//
-// Problem: Synchronous Storage()->ListDirectory() calls block the render thread
-// causing UI stutters when switching asset tabs.
-//
-// Solution: Use background jobs to scan directories and populate asset lists.
-// The render thread polls for completion and displays loading indicators.
-
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-class CAssetListLoadJob : public IJob
-{
-public:
-	enum EAssetType
-	{
-		ASSET_TYPE_ENTITIES = 0,
-		ASSET_TYPE_GAME,
-		ASSET_TYPE_EMOTICONS,
-		ASSET_TYPE_PARTICLES,
-		ASSET_TYPE_HUD,
-		ASSET_TYPE_GUI_CURSOR,
-		ASSET_TYPE_ARROW,
-		ASSET_TYPE_STRONG_WEAK,
-		ASSET_TYPE_ENTITY_BG,
-		ASSET_TYPE_EXTRAS,
-	};
-
-	using SAssetEntry = CMenus::SSettingsAssetMergeEntry;
-
-	struct SScanContext
-	{
-		IStorage *m_pStorage;
-		std::vector<SAssetEntry> *m_pEntries;
-		EAssetResourceKind m_Kind;
-		bool m_SkipReservedDefault;
-		EEntityBgHierarchyEntrySource m_Source = EEntityBgHierarchyEntrySource::LOCAL;
-	};
-
-private:
-	EAssetType m_Type;
-	IStorage *m_pStorage;
-	mutable CLock m_Lock;
-	std::vector<SAssetEntry> m_vEntries;
-	mutable bool m_Completed = false;
-	int m_Generation = 0;
-
-	static int ScanCallback(const char *pName, int IsDir, int DirType, void *pUser)
-	{
-		(void)DirType;
-		const auto *pContext = static_cast<const SScanContext *>(pUser);
-		auto *pEntries = pContext->m_pEntries;
-
-		if(IsDir)
-		{
-			if(pContext->m_Kind != EAssetResourceKind::DIRECTORY)
-				return 0;
-			if(pName[0] == '.')
-				return 0;
-			if(pContext->m_SkipReservedDefault && str_comp(pName, "default") == 0)
-				return 0;
-
-			SAssetEntry Entry;
-			str_copy(Entry.m_aName, pName);
-			Entry.m_IsDir = true;
-			Entry.m_Source = pContext->m_Source;
-			pEntries->push_back(Entry);
-		}
-		else
-		{
-			const char *pExt = nullptr;
-			if(pContext->m_Kind == EAssetResourceKind::MAP_FILE)
-				pExt = ".map";
-			else
-				pExt = ".png";
-
-			if(str_endswith(pName, pExt))
-			{
-				char aName[IO_MAX_PATH_LENGTH];
-				str_truncate(aName, sizeof(aName), pName, str_length(pName) - str_length(pExt));
-				if(pContext->m_SkipReservedDefault && str_comp(aName, "default") == 0)
-					return 0;
-
-				SAssetEntry Entry;
-				str_copy(Entry.m_aName, aName);
-				Entry.m_IsDir = false;
-				Entry.m_Source = pContext->m_Source;
-				pEntries->push_back(Entry);
-			}
-		}
-		return 0;
-	}
-
-	struct SRecursiveMapScanContext
-	{
-		SScanContext *m_pScanContext;
-		char m_aBasePath[IO_MAX_PATH_LENGTH];
-		char m_aRelativePath[IO_MAX_PATH_LENGTH];
-		char m_aNamePrefix[IO_MAX_PATH_LENGTH];
-		EEntityBgHierarchyEntrySource m_Source = EEntityBgHierarchyEntrySource::LOCAL;
-	};
-
-	static int RecursiveMapScanCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser)
-	{
-		(void)StorageType;
-		auto *pContext = static_cast<SRecursiveMapScanContext *>(pUser);
-		if(!str_comp(pInfo->m_pName, ".") || !str_comp(pInfo->m_pName, ".."))
-			return 0;
-
-		char aRelativePath[IO_MAX_PATH_LENGTH];
-		if(pContext->m_aRelativePath[0] != '\0')
-			str_format(aRelativePath, sizeof(aRelativePath), "%s/%s", pContext->m_aRelativePath, pInfo->m_pName);
-		else
-			str_copy(aRelativePath, pInfo->m_pName);
-
-		if(IsDir)
-		{
-			if(pInfo->m_pName[0] == '.')
-				return 0;
-
-			SRecursiveMapScanContext NextContext = *pContext;
-			str_copy(NextContext.m_aRelativePath, aRelativePath, sizeof(NextContext.m_aRelativePath));
-
-			char aFullPath[IO_MAX_PATH_LENGTH];
-			str_format(aFullPath, sizeof(aFullPath), "%s/%s", pContext->m_aBasePath, aRelativePath);
-			pContext->m_pScanContext->m_pStorage->ListDirectoryInfo(IStorage::TYPE_ALL, aFullPath, RecursiveMapScanCallback, &NextContext);
-			return 0;
-		}
-
-		const char *pExtension = str_endswith_nocase(pInfo->m_pName, ".map") ? ".map" : FindBackgroundFileExtension(pInfo->m_pName);
-		if(pExtension == nullptr)
-			return 0;
-
-		char aName[IO_MAX_PATH_LENGTH];
-		if(pContext->m_aNamePrefix[0] != '\0')
-		{
-			if(str_comp_nocase(pExtension, ".map") == 0)
-			{
-				char aWithoutExt[IO_MAX_PATH_LENGTH];
-				str_truncate(aWithoutExt, sizeof(aWithoutExt), aRelativePath, str_length(aRelativePath) - str_length(pExtension));
-				str_format(aName, sizeof(aName), "%s/%s", pContext->m_aNamePrefix, aWithoutExt);
-			}
-			else
-			{
-				str_format(aName, sizeof(aName), "%s/%s", pContext->m_aNamePrefix, aRelativePath);
-			}
-		}
-		else
-		{
-			if(str_comp_nocase(pExtension, ".map") == 0)
-				str_truncate(aName, sizeof(aName), aRelativePath, str_length(aRelativePath) - str_length(pExtension));
-			else
-				str_copy(aName, aRelativePath);
-		}
-		if(pContext->m_pScanContext->m_SkipReservedDefault && str_comp(aName, "default") == 0)
-			return 0;
-
-		SAssetEntry Entry;
-		str_copy(Entry.m_aName, aName);
-		Entry.m_IsDir = false;
-		Entry.m_Source = pContext->m_Source;
-		pContext->m_pScanContext->m_pEntries->push_back(Entry);
-		return 0;
-	}
-
-protected:
-	void Run() override REQUIRES(!m_Lock)
-	{
-		std::vector<SAssetEntry> vEntries;
-		SScanContext ScanContext{m_pStorage, &vEntries, EAssetResourceKind::DIRECTORY, true, EEntityBgHierarchyEntrySource::LOCAL};
-
-		if(m_Type == ASSET_TYPE_EXTRAS)
-		{
-			m_pStorage->ListDirectory(IStorage::TYPE_ALL, "assets/extras", ScanCallback, &ScanContext);
-		}
-		else
-		{
-			const SAssetResourceCategory *pCategory = nullptr;
-			switch(m_Type)
-			{
-			case ASSET_TYPE_ENTITIES:
-				pCategory = FindAssetResourceCategory("entities");
-				break;
-			case ASSET_TYPE_GAME:
-				pCategory = FindAssetResourceCategory("game");
-				break;
-			case ASSET_TYPE_EMOTICONS:
-				pCategory = FindAssetResourceCategory("emoticons");
-				break;
-			case ASSET_TYPE_PARTICLES:
-				pCategory = FindAssetResourceCategory("particles");
-				break;
-			case ASSET_TYPE_HUD:
-				pCategory = FindAssetResourceCategory("hud");
-				break;
-			case ASSET_TYPE_GUI_CURSOR:
-				pCategory = FindAssetResourceCategory("gui_cursor");
-				break;
-			case ASSET_TYPE_ARROW:
-				pCategory = FindAssetResourceCategory("arrow");
-				break;
-			case ASSET_TYPE_STRONG_WEAK:
-				pCategory = FindAssetResourceCategory("strong_weak");
-				break;
-			case ASSET_TYPE_ENTITY_BG:
-				pCategory = FindAssetResourceCategory("entity_bg");
-				break;
-			case ASSET_TYPE_EXTRAS:
-				break;
-			}
-
-			dbg_assert(pCategory != nullptr, "asset list category must exist");
-			ScanContext.m_Kind = pCategory->m_Kind;
-			ScanContext.m_SkipReservedDefault = pCategory->m_Kind != EAssetResourceKind::MAP_FILE;
-			if(m_Type == ASSET_TYPE_ENTITY_BG)
-			{
-				ScanContext.m_Kind = EAssetResourceKind::MAP_FILE;
-				ScanContext.m_SkipReservedDefault = false;
-
-				SRecursiveMapScanContext AssetsContext;
-				AssetsContext.m_pScanContext = &ScanContext;
-				str_copy(AssetsContext.m_aBasePath, pCategory->m_pInstallFolder, sizeof(AssetsContext.m_aBasePath));
-				AssetsContext.m_aRelativePath[0] = '\0';
-				str_copy(AssetsContext.m_aNamePrefix, "entity_bg", sizeof(AssetsContext.m_aNamePrefix));
-				AssetsContext.m_Source = EEntityBgHierarchyEntrySource::LOCAL;
-				m_pStorage->ListDirectoryInfo(IStorage::TYPE_ALL, pCategory->m_pInstallFolder, RecursiveMapScanCallback, &AssetsContext);
-
-				SRecursiveMapScanContext MapsContext;
-				MapsContext.m_pScanContext = &ScanContext;
-				str_copy(MapsContext.m_aBasePath, "maps", sizeof(MapsContext.m_aBasePath));
-				MapsContext.m_aRelativePath[0] = '\0';
-				MapsContext.m_aNamePrefix[0] = '\0';
-				MapsContext.m_Source = EEntityBgHierarchyEntrySource::LOCAL;
-				m_pStorage->ListDirectoryInfo(IStorage::TYPE_ALL, "maps", RecursiveMapScanCallback, &MapsContext);
-			}
-			else if(pCategory->m_Kind == EAssetResourceKind::MAP_FILE)
-			{
-				SRecursiveMapScanContext RecursiveContext;
-				RecursiveContext.m_pScanContext = &ScanContext;
-				str_copy(RecursiveContext.m_aBasePath, pCategory->m_pInstallFolder, sizeof(RecursiveContext.m_aBasePath));
-				RecursiveContext.m_aRelativePath[0] = '\0';
-				RecursiveContext.m_aNamePrefix[0] = '\0';
-				RecursiveContext.m_Source = EEntityBgHierarchyEntrySource::LOCAL;
-				m_pStorage->ListDirectoryInfo(IStorage::TYPE_ALL, pCategory->m_pInstallFolder, RecursiveMapScanCallback, &RecursiveContext);
-			}
-			else
-			{
-				m_pStorage->ListDirectory(IStorage::TYPE_ALL, pCategory->m_pInstallFolder, ScanCallback, &ScanContext);
-			}
-		}
-
-		if(m_Type == ASSET_TYPE_ENTITY_BG)
-		{
-			std::unordered_set<std::string> vSeenNames;
-			const auto DuplicateIt = std::remove_if(vEntries.begin(), vEntries.end(), [&](const SAssetEntry &Entry) {
-				return !vSeenNames.insert(Entry.m_aName).second;
-			});
-			vEntries.erase(DuplicateIt, vEntries.end());
-		}
-
-		// Sort entries by name
-		std::sort(vEntries.begin(), vEntries.end(),
-			[](const SAssetEntry &Left, const SAssetEntry &Right) {
-				return str_comp(Left.m_aName, Right.m_aName) < 0;
-			});
-
-		{
-			const CLockScope Lock(m_Lock);
-			m_vEntries = std::move(vEntries);
-			m_Completed = true;
-		}
-	}
-
-public:
-	CAssetListLoadJob(EAssetType Type, IStorage *pStorage) :
-		m_Type(Type),
-		m_pStorage(pStorage)
-	{
-	}
-
-	void SetGeneration(int Generation)
-	{
-		m_Generation = Generation;
-	}
-
-	bool IsCompleted() const REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		return m_Completed;
-	}
-
-	std::vector<SAssetEntry> TakeEntries() REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		return std::move(m_vEntries);
-	}
-
-	EAssetType GetType() const { return m_Type; }
-	int Generation() const { return m_Generation; }
-};
-
 static bool LoadFileToBuffer(IStorage *pStorage, const char *pFilename, int StorageType, std::vector<uint8_t> &vBuffer)
 {
-	IOHANDLE File = pStorage->OpenFile(pFilename, IOFLAG_READ, StorageType);
-	if(!File)
-		return false;
-
-	io_seek(File, 0, IOSEEK_END);
-	const int64_t Size = io_tell(File);
-	io_seek(File, 0, IOSEEK_START);
-
-	if(Size <= 0 || Size > LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE)
-	{
-		io_close(File);
-		return false;
-	}
-
-	vBuffer.resize(Size);
-	const size_t Read = io_read(File, vBuffer.data(), Size);
-	io_close(File);
-
-	return Read == (size_t)Size;
+	return QmReadFileBounded(pStorage->OpenFile(pFilename, IOFLAG_READ, StorageType), LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE, vBuffer);
 }
 
 void CMenus::LoadEntities(SCustomEntities *pEntitiesItem, void *pUser)
@@ -1247,16 +719,11 @@ void CMenus::LoadEntities(SCustomEntities *pEntitiesItem, void *pUser)
 	}
 }
 
-static void StartEntitiesDecode(CMenus::SCustomEntities *pEntitiesItem, IStorage *pStorage, IEngine *pEngine, int MaxTextureSize)
+static std::shared_ptr<IJob> StartEntitiesDecode(CMenus::SCustomEntities *pEntitiesItem, IStorage *pStorage, IEngine *pEngine, int MaxTextureSize, ESettingsAssetImageAdmission *pAdmission = nullptr)
+try
 {
-	if(!SettingsAssetPreviewDecodeStartNeeded(
-		   pEntitiesItem->m_pDecodeJob != nullptr,
-		   pEntitiesItem->m_RenderTexture.IsValid(),
-		   pEntitiesItem->m_PreviewResidentBytes,
-		   MaxTextureSize,
-		   pEntitiesItem->m_PreviewImage.m_pData != nullptr))
-		return;
-
+	if(pAdmission)
+		*pAdmission = ESettingsAssetImageAdmission::DEFERRED;
 	// 构建可能的文件路径列表（按优先级排序）
 	std::vector<std::string> vPossiblePaths;
 	char aPath[IO_MAX_PATH_LENGTH];
@@ -1282,8 +749,16 @@ static void StartEntitiesDecode(CMenus::SCustomEntities *pEntitiesItem, IStorage
 	}
 
 	// 创建全异步 Job，在后台线程完成文件读取和解码
-	pEntitiesItem->m_pDecodeJob = std::make_shared<CFullAsyncImageLoadJob>(std::move(vPossiblePaths), pStorage, pEntitiesItem->m_aName, IStorage::TYPE_ALL, MaxTextureSize);
-	pEngine->AddJob(pEntitiesItem->m_pDecodeJob);
+	return QmTryQueueSettingsAssetImage(std::move(vPossiblePaths), pStorage, *pEngine, pEntitiesItem->m_aName, IStorage::TYPE_ALL, MaxTextureSize, ASSET_PREVIEW_MAX_DECODED_BYTES, nullptr, pAdmission);
+}
+catch(const std::bad_alloc &)
+{
+	// 路径候选准备失败时保留原有预览状态。
+	return nullptr;
+}
+catch(const std::length_error &)
+{
+	return nullptr;
 }
 
 int CMenus::EntitiesScan(const char *pName, int IsDir, int DirType, void *pUser)
@@ -1325,16 +800,11 @@ int CMenus::EntitiesScan(const char *pName, int IsDir, int DirType, void *pUser)
 }
 
 template<typename TName>
-static void StartAssetDecode(TName *pAssetItem, const char *pAssetName, IStorage *pStorage, IEngine *pEngine, int MaxTextureSize)
+static std::shared_ptr<IJob> StartAssetDecode(TName *pAssetItem, const char *pAssetName, IStorage *pStorage, IEngine *pEngine, int MaxTextureSize, ESettingsAssetImageAdmission *pAdmission = nullptr)
+try
 {
-	if(!SettingsAssetPreviewDecodeStartNeeded(
-		   pAssetItem->m_pDecodeJob != nullptr,
-		   pAssetItem->m_RenderTexture.IsValid(),
-		   pAssetItem->m_PreviewResidentBytes,
-		   MaxTextureSize,
-		   pAssetItem->m_PreviewImage.m_pData != nullptr))
-		return;
-
+	if(pAdmission)
+		*pAdmission = ESettingsAssetImageAdmission::DEFERRED;
 	// 构建可能的文件路径列表（按优先级排序）
 	std::vector<std::string> vPossiblePaths;
 	char aPath[IO_MAX_PATH_LENGTH];
@@ -1366,8 +836,16 @@ static void StartAssetDecode(TName *pAssetItem, const char *pAssetName, IStorage
 	}
 
 	// 创建全异步 Job，在后台线程完成文件读取和解码
-	pAssetItem->m_pDecodeJob = std::make_shared<CFullAsyncImageLoadJob>(std::move(vPossiblePaths), pStorage, pAssetItem->m_aName, IStorage::TYPE_ALL, MaxTextureSize);
-	pEngine->AddJob(pAssetItem->m_pDecodeJob);
+	return QmTryQueueSettingsAssetImage(std::move(vPossiblePaths), pStorage, *pEngine, pAssetItem->m_aName, IStorage::TYPE_ALL, MaxTextureSize, ASSET_PREVIEW_MAX_DECODED_BYTES, nullptr, pAdmission);
+}
+catch(const std::bad_alloc &)
+{
+	// 路径候选准备失败时保留原有预览状态。
+	return nullptr;
+}
+catch(const std::length_error &)
+{
+	return nullptr;
 }
 
 static bool IsEntityBgSelectionMatched(const char *pItemName)
@@ -1492,25 +970,35 @@ static void ResolveEntityBgLocalMapPath(IStorage *pStorage, const char *pAssetNa
 	}
 }
 
-static void StartEntityBgDecode(CMenus::SCustomEntityBg *pAssetItem, IStorage *pStorage, IEngine *pEngine, int MaxTextureSize)
+static std::shared_ptr<IJob> StartEntityBgDecode(CMenus::SCustomEntityBg *pAssetItem, IStorage *pStorage, IEngine *pEngine, int MaxTextureSize, ESettingsAssetImageAdmission *pAdmission = nullptr)
+try
 {
-	if(!SettingsAssetPreviewDecodeStartNeeded(
-		   pAssetItem->m_pDecodeJob != nullptr,
-		   pAssetItem->m_RenderTexture.IsValid(),
-		   pAssetItem->m_PreviewResidentBytes,
-		   MaxTextureSize,
-		   pAssetItem->m_PreviewImage.m_pData != nullptr))
-		return;
+	if(pAdmission)
+		*pAdmission = ESettingsAssetImageAdmission::FAILED;
 	if(IsBackgroundVideoExtension(pAssetItem->m_aName))
-		return;
+		return nullptr;
 
+	if(pAdmission)
+		*pAdmission = ESettingsAssetImageAdmission::DEFERRED;
 	std::vector<std::string> vPossiblePaths;
 	CollectEntityBgPreviewPaths(pStorage, pAssetItem->m_aName, vPossiblePaths);
 	if(vPossiblePaths.empty())
-		return;
+	{
+		if(pAdmission)
+			*pAdmission = ESettingsAssetImageAdmission::FAILED;
+		return nullptr;
+	}
 
-	pAssetItem->m_pDecodeJob = std::make_shared<CFullAsyncImageLoadJob>(std::move(vPossiblePaths), pStorage, pAssetItem->m_aName, IStorage::TYPE_ALL, MaxTextureSize);
-	pEngine->AddJob(pAssetItem->m_pDecodeJob);
+	return QmTryQueueSettingsAssetImage(std::move(vPossiblePaths), pStorage, *pEngine, pAssetItem->m_aName, IStorage::TYPE_ALL, MaxTextureSize, ASSET_PREVIEW_MAX_DECODED_BYTES, nullptr, pAdmission);
+}
+catch(const std::bad_alloc &)
+{
+	// 路径候选准备失败时保留原有预览状态。
+	return nullptr;
+}
+catch(const std::length_error &)
+{
+	return nullptr;
 }
 
 static bool IsEntityBgConfigSelected(const char *pAssetName)
@@ -1645,6 +1133,27 @@ static bool gs_aInitCustomList[NUMBER_OF_ASSETS_TABS] = {
 	true, // ASSETS_TAB_EXTRAS
 };
 
+static void InvalidateSettingsAssetSearchView(int Tab) noexcept
+{
+	if(Tab < ASSETS_TAB_ENTITIES || Tab >= NUMBER_OF_ASSETS_TABS)
+		return;
+	switch(Tab)
+	{
+	case ASSETS_TAB_ENTITIES: gs_vpSearchEntitiesList.clear(); break;
+	case ASSETS_TAB_GAME: gs_vpSearchGamesList.clear(); break;
+	case ASSETS_TAB_EMOTICONS: gs_vpSearchEmoticonsList.clear(); break;
+	case ASSETS_TAB_PARTICLES: gs_vpSearchParticlesList.clear(); break;
+	case ASSETS_TAB_HUD: gs_vpSearchHudList.clear(); break;
+	case ASSETS_TAB_GUI_CURSOR: gs_vpSearchGuiCursorList.clear(); break;
+	case ASSETS_TAB_ARROW: gs_vpSearchArrowList.clear(); break;
+	case ASSETS_TAB_STRONG_WEAK: gs_vpSearchStrongWeakList.clear(); break;
+	case ASSETS_TAB_ENTITY_BG: gs_vpSearchEntityBgList.clear(); break;
+	case ASSETS_TAB_EXTRAS: gs_vpSearchExtrasList.clear(); break;
+	default: break;
+	}
+	gs_aInitCustomList[Tab] = true;
+}
+
 static size_t gs_aCustomListSize[NUMBER_OF_ASSETS_TABS] = {
 	0,
 };
@@ -1713,6 +1222,7 @@ namespace
 		bool m_DownloadFailed = false;
 		bool m_Installed = false;
 		CImageInfo m_ThumbImage;
+		CSettingsAssetMemoryLease m_MemoryLease;
 		size_t m_ThumbBytes = 0;
 		bool m_ThumbResized = false;
 		bool m_ThumbHighPriority = false;
@@ -1757,7 +1267,14 @@ namespace
 			m_ThumbQueuedTab(Other.m_ThumbQueuedTab)
 		{
 			if(Other.m_ThumbImage.m_pData != nullptr)
+			{
+				if(!(Other.m_MemoryLease.HasReservation() ? Other.m_MemoryLease.TryClone(m_MemoryLease) :
+									    SettingsAssetMemoryTryAcquireImage(Other.m_ThumbImage, m_MemoryLease)))
+					throw std::bad_alloc();
 				m_ThumbImage = Other.m_ThumbImage.DeepCopy();
+				if(m_ThumbImage.m_pData == nullptr)
+					throw std::bad_alloc();
+			}
 		}
 
 		SWorkshopHudAsset &operator=(const SWorkshopHudAsset &Other)
@@ -1765,35 +1282,8 @@ namespace
 			if(this == &Other)
 				return *this;
 
-			m_Id = Other.m_Id;
-			m_Name = Other.m_Name;
-			m_Author = Other.m_Author;
-			m_LocalName = Other.m_LocalName;
-			m_ImageUrl = Other.m_ImageUrl;
-			m_DownloadUrl = Other.m_DownloadUrl;
-			m_ThumbUrl = Other.m_ThumbUrl;
-			m_ThumbCachePath = Other.m_ThumbCachePath;
-			m_InstallPath = Other.m_InstallPath;
-			m_ThumbTexture = Other.m_ThumbTexture;
-			m_pThumbTask = Other.m_pThumbTask;
-			m_pDownloadTask = Other.m_pDownloadTask;
-			m_DownloadFailed = Other.m_DownloadFailed;
-			m_Installed = Other.m_Installed;
-			m_ThumbImage.Free();
-			if(Other.m_ThumbImage.m_pData != nullptr)
-				m_ThumbImage = Other.m_ThumbImage.DeepCopy();
-			m_ThumbBytes = Other.m_ThumbBytes;
-			m_ThumbResized = Other.m_ThumbResized;
-			m_ThumbHighPriority = Other.m_ThumbHighPriority;
-			m_ThumbCacheFailed = Other.m_ThumbCacheFailed;
-			m_ThumbRemoteFailed = Other.m_ThumbRemoteFailed;
-			m_ThumbDecodeFromRemote = Other.m_ThumbDecodeFromRemote;
-			m_pDecodeJob = Other.m_pDecodeJob;
-			m_ThumbRequestedTextureSize = Other.m_ThumbRequestedTextureSize;
-			m_ThumbResidentBytes = Other.m_ThumbResidentBytes;
-			m_ThumbQueuedTier = Other.m_ThumbQueuedTier;
-			m_ThumbQueuedEpoch = Other.m_ThumbQueuedEpoch;
-			m_ThumbQueuedTab = Other.m_ThumbQueuedTab;
+			SWorkshopHudAsset Candidate(Other);
+			*this = std::move(Candidate);
 			return *this;
 		}
 
@@ -1803,8 +1293,13 @@ namespace
 		~SWorkshopHudAsset()
 		{
 			m_ThumbImage.Free();
+			m_MemoryLease.Reset();
 		}
 	};
+
+	// 扩容必须移动预览 owner，避免复制已经就绪的像素。
+	static_assert(std::is_nothrow_move_constructible_v<SWorkshopHudAsset>);
+	static_assert(std::is_nothrow_move_assignable_v<SWorkshopHudAsset>);
 
 	struct SWorkshopHudState
 	{
@@ -1872,13 +1367,7 @@ namespace
 
 	static bool SearchFilterMatches(const char *pFilter, const char *pName, const char *pAuthor = nullptr)
 	{
-		if(pFilter == nullptr || pFilter[0] == '\0')
-			return true;
-		if(pName != nullptr && str_utf8_find_nocase(pName, pFilter))
-			return true;
-		if(pAuthor != nullptr && pAuthor[0] != '\0' && str_utf8_find_nocase(pAuthor, pFilter))
-			return true;
-		return false;
+		return SettingsAssetSearchFilterMatches(pFilter, pName, pAuthor);
 	}
 
 	static const char *NormalizeWorkshopAuthorName(const char *pAuthor)
@@ -2179,25 +1668,27 @@ namespace
 	}
 
 	static void NormalizeEntityBgWorkshopAsset(SWorkshopHudAsset &Asset, IStorage *pStorage)
+	try
 	{
 		if(Asset.m_InstallPath.empty())
 			return;
 
-		const std::string NormalizedInstallPath = NormalizeEntityBgWorkshopInstallPath(Asset.m_InstallPath);
-		if(!NormalizedInstallPath.empty() && NormalizedInstallPath != Asset.m_InstallPath)
+		auto Prepared = PrepareEntityBgWorkshopInstallPath(pStorage, Asset.m_InstallPath, IStorage::TYPE_SAVE);
+		if(Prepared.m_RenameFailed)
 		{
-			if(pStorage != nullptr &&
-				pStorage->FileExists(Asset.m_InstallPath.c_str(), IStorage::TYPE_SAVE) &&
-				!pStorage->FileExists(NormalizedInstallPath.c_str(), IStorage::TYPE_SAVE))
-			{
-				pStorage->RenameFile(Asset.m_InstallPath.c_str(), NormalizedInstallPath.c_str(), IStorage::TYPE_SAVE);
-			}
-			Asset.m_InstallPath = NormalizedInstallPath;
+			log_warn("assets", "Could not rename workshop asset '%s'; keeping previous install path", Asset.m_InstallPath.c_str());
+			return;
 		}
-
-		const std::string LocalName = RebuildEntityBgWorkshopLocalName(Asset.m_InstallPath);
-		if(!LocalName.empty())
-			Asset.m_LocalName = LocalName;
+		Asset.m_InstallPath = std::move(Prepared.m_Path);
+		if(!Prepared.m_LocalName.empty())
+			Asset.m_LocalName = std::move(Prepared.m_LocalName);
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 改名前的准备失败保留原文件与元数据，不从页面入口抛出。
+	}
+	catch(const std::length_error &)
+	{
 	}
 
 	static bool EntityBgWorkshopInstallLooksCorrupt(IStorage *pStorage, const SWorkshopHudAsset &Asset)
@@ -2277,7 +1768,7 @@ namespace
 
 	static bool IsEntityBgWorkshopFolderOrChild(const char *pPath)
 	{
-		return pPath != nullptr && (IsEntityBgWorkshopFolderPath(pPath) || str_startswith(pPath, "entity_bg/"));
+		return IsEntityBgWorkshopFolderOrChildPath(pPath);
 	}
 
 	static bool UsesCombinedAssetList(const SAssetResourceCategory *pCategory)
@@ -2285,16 +1776,21 @@ namespace
 		return pCategory != nullptr && pCategory->m_WorkshopEnabled;
 	}
 
-	static void StartBackgroundDecode(SWorkshopHudAsset &Asset, IStorage *pStorage, IEngine *pEngine, int MaxTextureSize)
+	static std::shared_ptr<CFullAsyncImageLoadJob> MakeBackgroundDecode(SWorkshopHudAsset &Asset, IStorage *pStorage, IEngine *pEngine, int MaxTextureSize, ESettingsAssetImageAdmission *pAdmission)
+	try
 	{
+		if(pAdmission)
+			*pAdmission = ESettingsAssetImageAdmission::FAILED;
 		if(!SettingsAssetPreviewDecodeStartNeeded(
 			   Asset.m_pDecodeJob != nullptr,
 			   Asset.m_ThumbTexture.IsValid(),
 			   Asset.m_ThumbResidentBytes,
 			   MaxTextureSize,
 			   Asset.m_ThumbImage.m_pData != nullptr))
-			return;
+			return nullptr;
 
+		if(pAdmission)
+			*pAdmission = ESettingsAssetImageAdmission::DEFERRED;
 		// 构建可能的文件路径列表（按优先级排序）
 		std::vector<std::string> vPossiblePaths;
 
@@ -2313,24 +1809,57 @@ namespace
 		if(!vPossiblePaths.empty())
 		{
 			// 创建全异步 Job，在后台线程完成文件读取和解码
-			Asset.m_ThumbRequestedTextureSize = MaxTextureSize;
-			Asset.m_pDecodeJob = std::make_shared<CFullAsyncImageLoadJob>(std::move(vPossiblePaths), pStorage, Asset.m_Name.c_str(), IStorage::TYPE_SAVE, MaxTextureSize);
-			pEngine->AddJob(Asset.m_pDecodeJob);
+			return QmTryQueueSettingsAssetImage(std::move(vPossiblePaths), pStorage, *pEngine, Asset.m_Name.c_str(), IStorage::TYPE_SAVE, MaxTextureSize, ASSET_PREVIEW_MAX_DECODED_BYTES, nullptr, pAdmission);
 		}
+		if(pAdmission)
+			*pAdmission = ESettingsAssetImageAdmission::FAILED;
+		return nullptr;
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 路径候选准备失败时保留原有预览状态。
+		return nullptr;
+	}
+	catch(const std::length_error &)
+	{
+		return nullptr;
 	}
 
-	static void ResetWorkshopThumbReadyState(SWorkshopHudAsset &Asset)
+	static void ClearWorkshopThumbRequestMarker(SWorkshopHudAsset &Asset) noexcept
+	{
+		Asset.m_ThumbQueuedTier = 0;
+		Asset.m_ThumbQueuedEpoch = 0;
+		Asset.m_ThumbQueuedTab = -1;
+	}
+
+	static void ResetWorkshopThumbReadyState(SWorkshopHudAsset &Asset, bool PreserveQueuedRequest = false)
 	{
 		Asset.m_ThumbImage.Free();
+		Asset.m_MemoryLease.Reset();
 		Asset.m_ThumbBytes = 0;
 		Asset.m_ThumbResized = false;
 		Asset.m_ThumbHighPriority = false;
 		Asset.m_ThumbCacheFailed = false;
 		Asset.m_ThumbRemoteFailed = false;
 		Asset.m_ThumbDecodeFromRemote = false;
-		Asset.m_ThumbQueuedTier = 0;
-		Asset.m_ThumbQueuedEpoch = 0;
-		Asset.m_ThumbQueuedTab = -1;
+		if(!PreserveQueuedRequest)
+			ClearWorkshopThumbRequestMarker(Asset);
+	}
+
+	static void DiscardWorkshopThumbCpuInput(SWorkshopHudAsset &Asset) noexcept
+	{
+		Asset.m_ThumbImage.Free();
+		Asset.m_MemoryLease.Reset();
+		// 已接收任务的输入额度仍由原生池持有，不能随页面撤回提前归还。
+		Asset.m_pDecodeJob.reset();
+		Asset.m_ThumbBytes = 0;
+		Asset.m_ThumbResized = false;
+		Asset.m_ThumbDecodeFromRemote = false;
+		if(!Asset.m_pThumbTask)
+		{
+			ClearWorkshopThumbRequestMarker(Asset);
+			Asset.m_ThumbHighPriority = false;
+		}
 	}
 
 	static SWorkshopHudAsset *FindWorkshopAssetById(SWorkshopHudState &State, const std::string &Id)
@@ -2349,28 +1878,57 @@ namespace
 		State.m_vDecodeThumbQueued.clear();
 	}
 
-	static void QueueWorkshopDecodeThumb(SWorkshopHudState &State, SWorkshopHudAsset &Asset, int CurTab, const IClient *pClient)
+	static bool QueueWorkshopDecodeThumb(SWorkshopHudState &State, SWorkshopHudAsset &Asset, int CurTab, const IClient *pClient)
 	{
-		if(State.m_vDecodeThumbQueued.insert(Asset.m_Id).second)
+		const size_t Before = State.m_vDecodeThumbQueue.size();
+		const bool Tracked = SettingsAssetQueueTryStartKeyed(
+			State.m_vDecodeThumbQueue, State.m_vDecodeThumbQueued, Asset.m_ThumbHighPriority,
+			[&] { return Asset.m_Id; }, [](const auto &Id) { return Id; },
+			[](const auto &Left, const auto &Right) { return Left == Right; }, [] { return true; });
+		if(Tracked && State.m_vDecodeThumbQueue.size() > Before)
 		{
-			if(Asset.m_ThumbHighPriority)
-				State.m_vDecodeThumbQueue.push_front(Asset.m_Id);
-			else
-				State.m_vDecodeThumbQueue.push_back(Asset.m_Id);
 			char aExtra[160];
 			str_format(aExtra, sizeof(aExtra), "tab=%d asset=%s queue_size=%d",
 				CurTab, Asset.m_Name.c_str(), (int)State.m_vDecodeThumbQueue.size());
 			LogAssetsPerfStage(pClient, "assets_workshop_thumb_decode_queue_push", 0.0, true, aExtra);
 		}
-		else if(Asset.m_ThumbHighPriority)
+		return Tracked;
+	}
+
+	static bool StartBackgroundDecode(SWorkshopHudState &State, SWorkshopHudAsset &Asset, IStorage *pStorage, IEngine *pEngine, int MaxTextureSize, int CurTab, const IClient *pClient, ESettingsAssetImageAdmission *pAdmission = nullptr)
+	{
+		if(pAdmission)
+			*pAdmission = ESettingsAssetImageAdmission::DEFERRED;
+		const size_t Before = State.m_vDecodeThumbQueue.size();
+		auto pJob = SettingsAssetQueueTryStartKeyed(
+			State.m_vDecodeThumbQueue, State.m_vDecodeThumbQueued, Asset.m_ThumbHighPriority,
+			[&] { return Asset.m_Id; }, [](const auto &Id) { return Id; },
+			[](const auto &Left, const auto &Right) { return Left == Right; },
+			[&] { return Asset.m_pDecodeJob ? Asset.m_pDecodeJob : MakeBackgroundDecode(Asset, pStorage, pEngine, MaxTextureSize, pAdmission); });
+		if(!pJob)
+			return false;
+		if(pAdmission)
+			*pAdmission = ESettingsAssetImageAdmission::ACCEPTED;
+		if(!Asset.m_pDecodeJob)
+			Asset.m_ThumbRequestedTextureSize = MaxTextureSize;
+		Asset.m_pDecodeJob = std::move(pJob);
+		if(State.m_vDecodeThumbQueue.size() > Before)
 		{
-			auto It = std::find(State.m_vDecodeThumbQueue.begin(), State.m_vDecodeThumbQueue.end(), Asset.m_Id);
-			if(It != State.m_vDecodeThumbQueue.end())
+			char aExtra[160];
+			str_format(aExtra, sizeof(aExtra), "tab=%d asset=%s queue_size=%d", CurTab, Asset.m_Name.c_str(), (int)State.m_vDecodeThumbQueue.size());
+			try
 			{
-				State.m_vDecodeThumbQueue.erase(It);
-				State.m_vDecodeThumbQueue.push_front(Asset.m_Id);
+				LogAssetsPerfStage(pClient, "assets_workshop_thumb_decode_queue_push", 0.0, true, aExtra);
+			}
+			catch(const std::bad_alloc &)
+			{
+				// 任务已接收；诊断失败不能中断请求元数据的后续提交。
+			}
+			catch(const std::length_error &)
+			{
 			}
 		}
+		return true;
 	}
 
 	static void PruneWorkshopDecodeThumbQueue(SWorkshopHudState &State)
@@ -2426,32 +1984,44 @@ namespace
 		pGraphics->UnloadTexture(&Asset.m_ThumbTexture);
 	}
 
-	static void QueueWorkshopReadyThumb(SWorkshopHudState &State, SWorkshopHudAsset &Asset, int CurTab, const IClient *pClient)
+	static void InvalidateWorkshopPreviewInputs(SWorkshopHudState &State, IGraphics *pGraphics)
 	{
-		if(State.m_vReadyThumbQueued.insert(Asset.m_Id).second)
+		ClearWorkshopDecodeThumbQueue(State);
+		ClearWorkshopReadyThumbQueue(State);
+		for(SWorkshopHudAsset &Asset : State.m_vAssets)
 		{
-			if(Asset.m_ThumbHighPriority)
-				State.m_vReadyThumbQueue.push_front(Asset.m_Id);
-			else
-				State.m_vReadyThumbQueue.push_back(Asset.m_Id);
+			if(Asset.m_pThumbTask)
+				Asset.m_pThumbTask->Abort();
+			Asset.m_pThumbTask.reset();
+			Asset.m_pDecodeJob.reset();
+			ResetWorkshopThumbReadyState(Asset);
+			Asset.m_ThumbRequestedTextureSize = 0;
+			Asset.m_ThumbResidentBytes = 0;
+			pGraphics->UnloadTexture(&Asset.m_ThumbTexture);
+		}
+	}
+
+	static bool QueueWorkshopReadyThumb(SWorkshopHudState &State, SWorkshopHudAsset &Asset, int CurTab, const IClient *pClient)
+	{
+		const size_t Before = State.m_vReadyThumbQueue.size();
+		const bool Tracked = SettingsAssetQueueTryStartKeyed(
+			State.m_vReadyThumbQueue, State.m_vReadyThumbQueued, Asset.m_ThumbHighPriority,
+			[&] { return Asset.m_Id; }, [](const auto &Id) { return Id; },
+			[](const auto &Left, const auto &Right) { return Left == Right; }, [] { return true; });
+		if(Tracked && State.m_vReadyThumbQueue.size() > Before)
+		{
 			char aExtra[160];
 			str_format(aExtra, sizeof(aExtra), "tab=%d asset=%s queue_size=%d bytes=%u",
 				CurTab, Asset.m_Name.c_str(), (int)State.m_vReadyThumbQueue.size(), (unsigned)Asset.m_ThumbBytes);
 			LogAssetsPerfStage(pClient, "assets_workshop_thumb_upload_queue_push", 0.0, true, aExtra);
 		}
-		else if(Asset.m_ThumbHighPriority)
-		{
-			auto It = std::find(State.m_vReadyThumbQueue.begin(), State.m_vReadyThumbQueue.end(), Asset.m_Id);
-			if(It != State.m_vReadyThumbQueue.end())
-			{
-				State.m_vReadyThumbQueue.erase(It);
-				State.m_vReadyThumbQueue.push_front(Asset.m_Id);
-			}
-		}
+		return Tracked;
 	}
 
-	static bool EnsureInstalledWorkshopEntityBgThumbReady(SWorkshopHudState &State, const char *pLocalName, bool WindowActive, bool HighPriority, int CurTab, int PreviewEpoch, size_t PreviewBudgetBytes, size_t TextureMemoryUsageBytes, int &ThumbStartsThisFrame, int MaxThumbStartsPerFrame, int MaxHighPriorityThumbStartsPerFrame, int &VisibleStartsThisFrame, int MaxVisibleStartsPerFrame, IStorage *pStorage, IEngine *pEngine, IHttp *pHttp, const IClient *pClient)
+	static bool EnsureInstalledWorkshopEntityBgThumbReady(SWorkshopHudState &State, const char *pLocalName, bool WindowActive, bool HighPriority, int CurTab, int PreviewEpoch, uint64_t PreviewBudgetBytes, uint64_t TextureMemoryUsageBytes, int &ThumbStartsThisFrame, int MaxThumbStartsPerFrame, int MaxHighPriorityThumbStartsPerFrame, int &VisibleStartsThisFrame, int MaxVisibleStartsPerFrame, IStorage *pStorage, IEngine *pEngine, IHttp *pHttp, const IClient *pClient, ESettingsAssetImageAdmission *pAdmission = nullptr)
 	{
+		if(pAdmission)
+			*pAdmission = ESettingsAssetImageAdmission::FAILED;
 		SWorkshopHudAsset *pAsset = FindWorkshopAssetByLocalName(&State, pLocalName);
 		if(pAsset == nullptr || !pAsset->m_Installed)
 			return false;
@@ -2508,13 +2078,12 @@ namespace
 		if(!HasUsableInstalledThumb && !HasUsableThumbCache)
 			return StartWorkshopRemoteThumbRequest(*pAsset, CurTab, PreviewEpoch, TargetTextureSize, ThumbStartsThisFrame, pStorage, pHttp);
 
+		if(!StartBackgroundDecode(State, *pAsset, pStorage, pEngine, TargetTextureSize, CurTab, pClient, pAdmission))
+			return false;
 		pAsset->m_ThumbDecodeFromRemote = false;
 		pAsset->m_ThumbQueuedTier = TargetTextureSize;
 		pAsset->m_ThumbQueuedEpoch = PreviewEpoch;
 		pAsset->m_ThumbQueuedTab = CurTab;
-		StartBackgroundDecode(*pAsset, pStorage, pEngine, TargetTextureSize);
-		if(!pAsset->m_pDecodeJob)
-			return false;
 		/*
 		++ThumbStartsThisFrame;
 		QueueWorkshopDecodeThumb(State, *pAsset, CurTab);
@@ -2523,7 +2092,6 @@ namespace
 		++ThumbStartsThisFrame;
 		if(HighPriority)
 			++VisibleStartsThisFrame;
-		QueueWorkshopDecodeThumb(State, *pAsset, CurTab, pClient);
 		return true;
 	}
 
@@ -2659,35 +2227,38 @@ namespace
 	}
 
 	template<typename TName>
-	void EnsureDefaultAssetVisible(const SAssetResourceCategory &Category, std::vector<TName> &vAssetList)
+	bool EnsureDefaultAssetVisible(const SAssetResourceCategory &Category, std::vector<TName> &vAssetList, int Tab)
 	{
-		const auto HasDefault = std::any_of(vAssetList.begin(), vAssetList.end(), [](const TName &AssetItem) {
-			return IsProtectedDefaultAsset(AssetItem.m_aName);
-		});
-		if(!HasDefault)
+		const bool HasDefault = std::any_of(vAssetList.begin(), vAssetList.end(), [](const TName &Item) { return IsProtectedDefaultAsset(Item.m_aName); });
+		const bool NeedsBlank = AssetResourceSupportsBlank(Category) && std::none_of(vAssetList.begin(), vAssetList.end(), [](const TName &Item) { return IsBlankAssetName(Item.m_aName); });
+		if(HasDefault && !NeedsBlank)
+			return true;
+		try
 		{
-			TName DefaultItem;
-			str_copy(DefaultItem.m_aName, "default");
-			vAssetList.push_back(DefaultItem);
-		}
-
-		// 客户端自带空白材质：图片素材都提供该虚拟条目，用户不必自己造透明图。
-		if(AssetResourceSupportsBlank(Category))
-		{
-			const auto HasBlank = std::any_of(vAssetList.begin(), vAssetList.end(), [](const TName &AssetItem) {
-				return IsBlankAssetName(AssetItem.m_aName);
-			});
-			if(!HasBlank)
+			std::vector<CMenus::SSettingsAssetMergeEntry> vEntries;
+			vEntries.reserve(2);
+			if(!HasDefault)
 			{
-				TName BlankItem;
-				str_copy(BlankItem.m_aName, QM_BLANK_ASSET_NAME);
-				vAssetList.push_back(BlankItem);
+				CMenus::SSettingsAssetMergeEntry Entry;
+				str_copy(Entry.m_aName, "default");
+				vEntries.push_back(Entry);
 			}
+			if(NeedsBlank)
+			{
+				CMenus::SSettingsAssetMergeEntry Entry;
+				str_copy(Entry.m_aName, QM_BLANK_ASSET_NAME);
+				vEntries.push_back(Entry);
+			}
+			return TryMergeSettingsAssetEntries(vAssetList, vEntries, [](auto &, const auto &) {}, [Tab]() noexcept { InvalidateSettingsAssetSearchView(Tab); });
 		}
-
-		std::sort(vAssetList.begin(), vAssetList.end(), [](const TName &LeftItem, const TName &RightItem) {
-			return AssetResourceNameLess(LeftItem.m_aName, RightItem.m_aName);
-		});
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
 	}
 
 	static const char *AssetCardDisplayName(const CMenus::SCustomItem *pItem)
@@ -2906,28 +2477,6 @@ namespace
 		Asset.m_InstallPath = CanonicalInstallPath;
 	}
 
-	std::string NextReservedNamedSingleFileMigrationName(const SAssetResourceCategory &Category, std::string_view OldName, const std::vector<std::string> &vExistingNames)
-	{
-		const auto NameExists = [&Category, &vExistingNames](std::string_view Candidate) {
-			if(IsReservedNamedSingleFileAssetName(Category, Candidate))
-				return true;
-			return std::any_of(vExistingNames.begin(), vExistingNames.end(), [Candidate](const std::string &Name) {
-				return Name == Candidate;
-			});
-		};
-
-		std::string Candidate = std::string(OldName) + "_local";
-		if(!NameExists(Candidate))
-			return Candidate;
-
-		for(int Suffix = 2;; ++Suffix)
-		{
-			Candidate = std::string(OldName) + "_local_" + std::to_string(Suffix);
-			if(!NameExists(Candidate))
-				return Candidate;
-		}
-	}
-
 	void UpdateNamedSingleFileConfigSelectionAfterMigration(const SAssetResourceCategory &Category, const char *pOldName, const char *pNewName)
 	{
 		if(str_comp(Category.m_pId, "gui_cursor") == 0)
@@ -2947,36 +2496,40 @@ namespace
 		}
 	}
 
-	void MigrateReservedNamedSingleFileAssets(IStorage *pStorage, const SAssetResourceCategory &Category)
+	bool MigrateReservedNamedSingleFileAssets(IStorage *pStorage, const SAssetResourceCategory &Category)
 	{
 		if(Category.m_Kind != EAssetResourceKind::NAMED_SINGLE_FILE)
-			return;
+			return true;
 
 		std::vector<std::string> vExistingNames;
-		CollectNamedSingleFileAssetNames(pStorage, Category, vExistingNames);
-
 		std::vector<std::string> vSaveNames;
-		SNamedSingleFileNameScanUser ScanUser{&vSaveNames};
-		pStorage->ListDirectory(IStorage::TYPE_SAVE, Category.m_pInstallFolder, CollectNamedSingleFileAssetNamesCallback, &ScanUser);
+		try
+		{
+			CollectNamedSingleFileAssetNames(pStorage, Category, vExistingNames);
+			SNamedSingleFileNameScanUser ScanUser{&vSaveNames};
+			pStorage->ListDirectory(IStorage::TYPE_SAVE, Category.m_pInstallFolder, CollectNamedSingleFileAssetNamesCallback, &ScanUser);
+		}
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
 
 		for(const std::string &Name : vSaveNames)
 		{
 			if(IsProtectedDefaultAsset(Name) || !IsReservedNamedSingleFileAssetName(Category, Name))
 				continue;
 
-			const std::string NewName = NextReservedNamedSingleFileMigrationName(Category, Name, vExistingNames);
-			char aOldPath[IO_MAX_PATH_LENGTH];
-			char aNewPath[IO_MAX_PATH_LENGTH];
-			str_format(aOldPath, sizeof(aOldPath), "%s/%s.png", Category.m_pInstallFolder, Name.c_str());
-			str_format(aNewPath, sizeof(aNewPath), "%s/%s.png", Category.m_pInstallFolder, NewName.c_str());
-			if(pStorage->FileExists(aOldPath, IStorage::TYPE_SAVE) &&
-				!pStorage->FileExists(aNewPath, IStorage::TYPE_SAVE) &&
-				pStorage->RenameFile(aOldPath, aNewPath, IStorage::TYPE_SAVE))
-			{
-				vExistingNames.emplace_back(NewName);
-				UpdateNamedSingleFileConfigSelectionAfterMigration(Category, Name.c_str(), NewName.c_str());
-			}
+			const auto Migration = TryMigrateReservedNamedSingleFileAsset(pStorage, Category, Name.c_str(), vExistingNames, IStorage::TYPE_SAVE);
+			if(Migration.m_PreparationFailed)
+				return false;
+			if(Migration.m_Renamed)
+				UpdateNamedSingleFileConfigSelectionAfterMigration(Category, Name.c_str(), Migration.m_Name.c_str());
 		}
+		return true;
 	}
 
 	void TryImportLegacySingleFileAsset(IStorage *pStorage, const SAssetResourceCategory &Category)
@@ -3548,48 +3101,99 @@ static void PopulateLocalAssetAuthor(CMenus::SCustomItem &Item, int Tab, IStorag
 		str_copy(Item.m_aAuthor, pPersistedAuthor, sizeof(Item.m_aAuthor));
 }
 
-static void RefreshPublishedLocalAssetAuthorsForTab(int Tab, IStorage *pStorage)
+void CMenus::RefreshPublishedLocalAssetAuthorsForTab(int Tab)
 {
-	const size_t Count = GetCustomItemCount(Tab);
-	for(size_t i = 0; i < Count; ++i)
-	{
-		if(CMenus::SCustomItem *pItem = GetCustomItemMutable(Tab, i))
-			PopulateLocalAssetAuthor(*pItem, Tab, pStorage);
-	}
+	VisitOwnedSettingsAssetList(Tab, [&](auto &Items) {
+		for(auto &Item : Items)
+			PopulateLocalAssetAuthor(Item, Tab, Storage());
+	});
 }
 
 static void ResetCustomItemPreviewState(CMenus::SCustomItem &Item)
 {
-	Item.m_pDecodeJob.reset();
-	Item.m_PreviewImage.Free();
+	Item.DiscardPreviewCpuInput();
 	Item.m_PreviewState = CMenus::SCustomItem::PREVIEW_STATE_UNLOADED;
-	Item.m_PreviewEpoch = 0;
-	Item.m_PreviewListIndex = 0;
-	Item.m_PreviewBytes = 0;
 	Item.m_PreviewRequestedTextureSize = 0;
 	Item.m_PreviewResidentBytes = 0;
 	Item.m_PreviewResized = false;
 	Item.m_PreviewHighPriority = false;
 }
 
+void CMenus::RecoverSettingsAssetCpuPressure(int CurrentTab, bool Deferred)
+{
+	m_AssetCpuPressurePending = m_AssetCpuPressurePending || Deferred;
+	const uint64_t DeferredSequence = SettingsAssetMemoryDefaultBudget().DeferredSequence();
+	if(!m_AssetCpuPressurePending && DeferredSequence == m_LastAssetCpuDeferredSequence)
+		return;
+	if(CurrentTab < ASSETS_TAB_ENTITIES || CurrentTab >= NUMBER_OF_ASSETS_TABS)
+		return;
+	const uint64_t Frame = Client()->PerfFrame();
+	if(m_LastAssetCpuRecoveryFrame == Frame)
+		return;
+	m_LastAssetCpuRecoveryFrame = Frame;
+	m_LastAssetCpuDeferredSequence = DeferredSequence;
+	m_AssetCpuPressurePending = false;
+	for(int Tab = ASSETS_TAB_ENTITIES; Tab < NUMBER_OF_ASSETS_TABS; ++Tab)
+	{
+		if(Tab == CurrentTab)
+			continue;
+		char aType[64];
+		str_format(aType, sizeof(aType), "assets:%s", AssetsSettingsTabName(Tab));
+		DiscardSettingsResourcePreviewInputs(gs_SettingsAssetsResourcePreviewCache, gs_SettingsAssetsResourcePreviewUploadScheduler,
+			m_vEntityBgPreviewJobs, {aType, nullptr, std::nullopt});
+		++m_aCustomPreviewEpoch[Tab];
+		m_aaCustomPreviewDecodeQueue[Tab].clear();
+		m_aaCustomPreviewReadyQueue[Tab].clear();
+		m_aaCustomPreviewReadyQueued[Tab].clear();
+		VisitOwnedSettingsAssetList(Tab, [](auto &Items) {
+			for(auto &Item : Items)
+			{
+				if(Item.m_pDecodeJob || Item.m_PreviewImage.m_pData || Item.m_MemoryLease.HasReservation() ||
+					Item.m_PreviewState == SCustomItem::PREVIEW_STATE_LOADING || Item.m_PreviewState == SCustomItem::PREVIEW_STATE_READY)
+					Item.DiscardPreviewCpuInput();
+			}
+		});
+		if(SWorkshopHudState *pState = WorkshopStateByTab(Tab))
+		{
+			ClearWorkshopDecodeThumbQueue(*pState);
+			ClearWorkshopReadyThumbQueue(*pState);
+			for(auto &Asset : pState->m_vAssets)
+			{
+				if(Asset.m_pDecodeJob || Asset.m_ThumbImage.m_pData || Asset.m_MemoryLease.HasReservation() ||
+					(Asset.m_ThumbQueuedTier != 0 && !Asset.m_pThumbTask))
+					DiscardWorkshopThumbCpuInput(Asset);
+			}
+		}
+	}
+}
+
+static void CancelLocalAssetPreviewInput(CMenus::SCustomItem &Item, IGraphics *pGraphics)
+{
+	ResetCustomItemPreviewState(Item);
+	if(Item.m_RenderTexture.IsValid())
+		pGraphics->UnloadTexture(&Item.m_RenderTexture);
+	Item.m_RenderTexture.Invalidate();
+}
+
+static void CancelLocalAssetPreviewInput(CMenus::SCustomEntities &Item, IGraphics *pGraphics)
+{
+	ResetCustomItemPreviewState(Item);
+	Item.UnloadTextures(pGraphics);
+}
+
 // 列表重建/合并会把预览队列整个清空、epoch 前进，正在解码的句柄随之作废。
 // 但条目本身还在：它们的 m_PreviewState 停在 LOADING，解码任务却已经没有队列
 // 认领，于是再也不会被重新调度——卡片永远停在灰占位上（实测的「贴图缺失」）。
 // 这里把没有贴图、还挂着 LOADING 的条目退回 UNLOADED，下一帧按正常流程重来。
-static void RestartOrphanedCustomPreviewDecodes(int Tab)
+void CMenus::RestartOrphanedCustomPreviewDecodes(int Tab)
 {
-	const size_t Count = GetCustomItemCount(Tab);
-	for(size_t Index = 0; Index < Count; ++Index)
-	{
-		CMenus::SCustomItem *pItem = GetCustomItemMutable(Tab, Index);
-		if(pItem == nullptr || pItem->m_PreviewState != CMenus::SCustomItem::PREVIEW_STATE_LOADING)
-			continue;
-		// 已经有贴图的条目保持原样：它宁可留在 LOADING 也不该退回重解码。
-		if(pItem->m_RenderTexture.IsValid())
-			continue;
-		// 贴图还没上传，只清预览状态；纹理句柄本来就不是有效的，不额外卸载。
-		ResetCustomItemPreviewState(*pItem);
-	}
+	VisitOwnedSettingsAssetList(Tab, [&](auto &Items) {
+		for(auto &Item : Items)
+		{
+			if(Item.m_PreviewState == SCustomItem::PREVIEW_STATE_LOADING && !Item.m_RenderTexture.IsValid())
+				ResetCustomItemPreviewState(Item);
+		}
+	});
 }
 
 template<typename TName>
@@ -3603,23 +3207,23 @@ static void ClearAssetList(std::vector<TName> &vList, IGraphics *pGraphics)
 	vList.clear();
 }
 
-void CMenus::SyncEntityBgInstalledWorkshopSources()
+void CMenus::SyncEntityBgInstalledWorkshopSources(std::vector<std::string> &vNames, std::unordered_map<std::string, EEntityBgHierarchyEntrySource> &Kinds)
 {
 	SWorkshopHudState *pWorkshopState = WorkshopStateByTab(ASSETS_TAB_ENTITY_BG);
 	if(pWorkshopState == nullptr)
 		return;
 
-	for(auto NameIt = m_vEntityBgSourceNames.begin(); NameIt != m_vEntityBgSourceNames.end();)
+	for(auto NameIt = vNames.begin(); NameIt != vNames.end();)
 	{
-		const auto SourceIt = m_vEntityBgSourceKinds.find(*NameIt);
-		if(SourceIt != m_vEntityBgSourceKinds.end() && SourceIt->second == EEntityBgHierarchyEntrySource::WORKSHOP)
+		const auto SourceIt = Kinds.find(*NameIt);
+		if(SourceIt != Kinds.end() && SourceIt->second == EEntityBgHierarchyEntrySource::WORKSHOP)
 		{
 			char aMapPath[IO_MAX_PATH_LENGTH];
 			ResolveEntityBgLocalMapPath(Storage(), NameIt->c_str(), IStorage::TYPE_SAVE, aMapPath, sizeof(aMapPath));
 			if(aMapPath[0] == '\0' || !Storage()->FileExists(aMapPath, IStorage::TYPE_SAVE))
 			{
-				m_vEntityBgSourceKinds.erase(SourceIt);
-				NameIt = m_vEntityBgSourceNames.erase(NameIt);
+				Kinds.erase(SourceIt);
+				NameIt = vNames.erase(NameIt);
 				continue;
 			}
 		}
@@ -3631,122 +3235,127 @@ void CMenus::SyncEntityBgInstalledWorkshopSources()
 		if(!Asset.m_Installed || Asset.m_LocalName.empty())
 			continue;
 
-		if(std::none_of(m_vEntityBgSourceNames.begin(), m_vEntityBgSourceNames.end(), [&Asset](const std::string &Name) { return Name == Asset.m_LocalName; }))
-			m_vEntityBgSourceNames.push_back(Asset.m_LocalName);
-		const auto ExistingIt = m_vEntityBgSourceKinds.find(Asset.m_LocalName);
-		if(ExistingIt == m_vEntityBgSourceKinds.end())
-			m_vEntityBgSourceKinds.emplace(Asset.m_LocalName, EEntityBgHierarchyEntrySource::WORKSHOP);
+		if(std::none_of(vNames.begin(), vNames.end(), [&Asset](const std::string &Name) { return Name == Asset.m_LocalName; }))
+			vNames.push_back(Asset.m_LocalName);
+		const auto ExistingIt = Kinds.find(Asset.m_LocalName);
+		if(ExistingIt == Kinds.end())
+			Kinds.emplace(Asset.m_LocalName, EEntityBgHierarchyEntrySource::WORKSHOP);
 		else
 			ExistingIt->second = MergeEntityBgHierarchyEntrySource(ExistingIt->second, EEntityBgHierarchyEntrySource::WORKSHOP);
 	}
 }
 
-void CMenus::RefreshEntityBgHierarchyView()
+bool CMenus::RefreshEntityBgHierarchyView()
 {
-	++m_aCustomPreviewEpoch[ASSETS_TAB_ENTITY_BG];
-	m_aaCustomPreviewDecodeQueue[ASSETS_TAB_ENTITY_BG].clear();
-	m_aaCustomPreviewReadyQueue[ASSETS_TAB_ENTITY_BG].clear();
-	m_aaCustomPreviewReadyQueued[ASSETS_TAB_ENTITY_BG].clear();
+	auto Defer = [&] {
+		m_EntityBgHierarchyRefreshPending = true;
+		m_EntityBgHierarchyRefreshRetryAt = time_get_nanoseconds() + std::chrono::seconds(1);
+		return false;
+	};
+	const SWorkshopHudState *pWorkshopState = WorkshopStateByTab(ASSETS_TAB_ENTITY_BG);
+	auto Candidate = TryPrepareSettingsAssetHierarchy<SCustomEntityBg>(
+		m_vEntityBgSourceNames, m_vEntityBgSourceKinds, m_aEntityBgCurrentFolder, m_ShowWorkshopAssets,
+		pWorkshopState != nullptr && !pWorkshopState->m_vAssets.empty(), s_aFilterInputs[ASSETS_TAB_ENTITY_BG].GetString(),
+		[this](auto &vNames, auto &Kinds) { SyncEntityBgInstalledWorkshopSources(vNames, Kinds); },
+		[this](auto &Item) { PopulateLocalAssetAuthor(Item, ASSETS_TAB_ENTITY_BG, Storage()); });
+	if(!Candidate)
+		return Defer();
 
-	// 重建只应更新「有哪些条目、什么顺序」，不该让用户看见贴图消失再淡入。
-	// 旧实现是 ClearAssetList + 全新建对象：所有卡片的贴图会被卸载、预览状态
-	// 清零，重建后的那几帧就整片闪。这里改为把旧对象先摘出来，重建时按名字
-	// 搬回贴图与预览状态，只有真正消失的条目才卸载。
-	std::vector<SCustomEntityBg> vPreviousItems;
-	vPreviousItems.swap(m_vEntityBgList);
-	m_vEntityBgList.clear();
-	gs_vpSearchEntityBgList.clear();
-
-	::EnsureDefaultAssetVisible(m_vEntityBgSourceNames);
-	m_vEntityBgSourceKinds["default"] = EEntityBgHierarchyEntrySource::LOCAL;
-	SyncEntityBgInstalledWorkshopSources();
-
-	if(!m_ShowWorkshopAssets && IsEntityBgWorkshopFolderOrChild(m_aEntityBgCurrentFolder))
-		m_aEntityBgCurrentFolder[0] = '\0';
-
-	std::vector<SEntityBgHierarchyEntry> vEntries;
-	const SWorkshopHudState *pEntityBgWorkshopState = WorkshopStateByTab(ASSETS_TAB_ENTITY_BG);
-	if(s_aFilterInputs[ASSETS_TAB_ENTITY_BG].IsEmpty())
+	try
 	{
-		const bool ForceShowWorkshopFolder = pEntityBgWorkshopState != nullptr && !pEntityBgWorkshopState->m_vAssets.empty();
-		vEntries = BuildEntityBgHierarchyEntries(m_vEntityBgSourceNames, m_aEntityBgCurrentFolder, m_ShowWorkshopAssets, &m_vEntityBgSourceKinds, ForceShowWorkshopFolder);
-	}
-	else
-	{
-		const char *pFilter = s_aFilterInputs[ASSETS_TAB_ENTITY_BG].GetString();
-		for(const std::string &AssetName : m_vEntityBgSourceNames)
+		const unsigned NextEpoch = m_aCustomPreviewEpoch[ASSETS_TAB_ENTITY_BG] + 1;
+		std::deque<SSettingsAssetPreviewHandle> Decode;
+		std::deque<SSettingsAssetPreviewHandle> Ready;
+		std::unordered_set<std::string> ReadyQueued;
+		// 句柄和标记也先准备，不能在交换显示后再因分配失败丢掉在途结果。
+		for(size_t Index = 0; Index < Candidate->m_vItems.size(); ++Index)
 		{
-			const auto SourceIt = m_vEntityBgSourceKinds.find(AssetName);
-			const EEntityBgHierarchyEntrySource Source = SourceIt != m_vEntityBgSourceKinds.end() ? SourceIt->second : EEntityBgHierarchyEntrySource::LOCAL;
-			if(!m_ShowWorkshopAssets && Source == EEntityBgHierarchyEntrySource::WORKSHOP)
+			const auto &Next = Candidate->m_vItems[Index];
+			const auto Previous = std::find_if(m_vEntityBgList.begin(), m_vEntityBgList.end(), [&](const auto &Item) { return Item.m_IsDirectory == Next.m_IsDirectory && str_comp(Item.m_aName, Next.m_aName) == 0; });
+			if(Previous == m_vEntityBgList.end())
 				continue;
-
-			SEntityBgHierarchyEntry Entry;
-			str_copy(Entry.m_aName, AssetName.c_str(), sizeof(Entry.m_aName));
-			const char *pDisplayName = AssetName.c_str();
-			if(const char *pSlash = str_rchr(pDisplayName, '/'))
-				pDisplayName = pSlash + 1;
-			str_copy(Entry.m_aDisplayName, pDisplayName, sizeof(Entry.m_aDisplayName));
-			Entry.m_IsDirectory = false;
-			Entry.m_Source = Source;
-			SCustomEntityBg PreviewItem;
-			str_copy(PreviewItem.m_aName, Entry.m_aName, sizeof(PreviewItem.m_aName));
-			PopulateLocalAssetAuthor(PreviewItem, ASSETS_TAB_ENTITY_BG, Storage());
-			const char *pAuthor = PreviewItem.m_aAuthor;
-			if(!SearchFilterMatches(pFilter, Entry.m_aDisplayName, pAuthor) &&
-				!SearchFilterMatches(pFilter, Entry.m_aName, pAuthor))
-				continue;
-
-			vEntries.push_back(Entry);
+			if(Previous->m_pDecodeJob)
+				Decode.push_back({ASSETS_TAB_ENTITY_BG, NextEpoch, Index, Next.m_aName});
+			else if(Previous->m_PreviewState == SCustomItem::PREVIEW_STATE_READY && Previous->m_PreviewImage.m_pData)
+			{
+				SSettingsAssetPreviewHandle Handle{ASSETS_TAB_ENTITY_BG, NextEpoch, Index, Next.m_aName};
+				ReadyQueued.insert(SettingsAssetPreviewHandleKey(Handle));
+				Ready.push_back(std::move(Handle));
+			}
 		}
 
-		std::stable_sort(vEntries.begin(), vEntries.end(), [](const SEntityBgHierarchyEntry &Left, const SEntityBgHierarchyEntry &Right) {
-			return AssetResourceNameLess(Left.m_aDisplayName, Right.m_aDisplayName);
-		});
-	}
-
-	m_vEntityBgList.reserve(vEntries.size());
-	for(const SEntityBgHierarchyEntry &Entry : vEntries)
-	{
-		SCustomEntityBg Item;
-		str_copy(Item.m_aName, Entry.m_aName, sizeof(Item.m_aName));
-		str_copy(Item.m_aDisplayName, Entry.m_aDisplayName, sizeof(Item.m_aDisplayName));
-		Item.m_IsDirectory = Entry.m_IsDirectory;
-		if(!Item.m_IsDirectory)
-			PopulateLocalAssetAuthor(Item, ASSETS_TAB_ENTITY_BG, Storage());
-		for(SCustomEntityBg &Previous : vPreviousItems)
+		InvalidateSettingsAssetSearchView(ASSETS_TAB_ENTITY_BG);
+		CommitSettingsAssetHierarchy(*Candidate, m_vEntityBgSourceNames, m_vEntityBgSourceKinds, m_vEntityBgList);
+		str_copy(m_aEntityBgCurrentFolder, Candidate->m_aCurrentFolder);
+		m_aCustomPreviewEpoch[ASSETS_TAB_ENTITY_BG] = NextEpoch;
+		m_aaCustomPreviewDecodeQueue[ASSETS_TAB_ENTITY_BG].swap(Decode);
+		m_aaCustomPreviewReadyQueue[ASSETS_TAB_ENTITY_BG].swap(Ready);
+		m_aaCustomPreviewReadyQueued[ASSETS_TAB_ENTITY_BG].swap(ReadyQueued);
+		for(size_t Index = 0; Index < m_vEntityBgList.size(); ++Index)
 		{
-			if(str_comp(Previous.m_aName, Item.m_aName) != 0)
-				continue;
-			// 同名条目：搬走贴图与预览状态，并把旧句柄作废（所有权移交）。
-			Item.m_RenderTexture = Previous.m_RenderTexture;
-			Item.m_PreviewState = Previous.m_PreviewState;
-			Item.m_PreviewBytes = Previous.m_PreviewBytes;
-			Item.m_PreviewRequestedTextureSize = Previous.m_PreviewRequestedTextureSize;
-			Item.m_PreviewResidentBytes = Previous.m_PreviewResidentBytes;
-			Item.m_PreviewResized = Previous.m_PreviewResized;
-			Item.m_PreviewHighPriority = Previous.m_PreviewHighPriority;
-			Previous.m_RenderTexture = IGraphics::CTextureHandle();
-			break;
+			auto &Item = m_vEntityBgList[Index];
+			Item.m_PreviewEpoch = NextEpoch;
+			Item.m_PreviewListIndex = Index;
+			if(!Item.m_pDecodeJob && !Item.m_PreviewImage.m_pData &&
+				(Item.m_PreviewState == SCustomItem::PREVIEW_STATE_LOADING || Item.m_PreviewState == SCustomItem::PREVIEW_STATE_READY))
+				Item.m_PreviewState = Item.m_RenderTexture.IsValid() ? SCustomItem::PREVIEW_STATE_LOADED : SCustomItem::PREVIEW_STATE_UNLOADED;
 		}
-		m_vEntityBgList.push_back(Item);
+		m_EntityBgHierarchyRefreshPending = false;
+		m_EntityBgHierarchyRefreshRetryAt = std::chrono::nanoseconds(0);
+		// 同名资源已转移，候选只持有消失条目的旧纹理。
+		for(auto &Previous : Candidate->m_vItems)
+		{
+			if(Previous.m_RenderTexture.IsValid())
+				Graphics()->UnloadTexture(&Previous.m_RenderTexture);
+		}
+		return true;
 	}
-
-	dbg_assert(s_CurCustomTab == ASSETS_TAB_ENTITY_BG, "entity bg hierarchy refresh is only valid for entity bg tab");
-	gs_aInitCustomList[s_CurCustomTab] = true;
-
-	// 已经不在列表里的条目（被删除 / 被筛掉）才卸载贴图。
-	for(SCustomEntityBg &Previous : vPreviousItems)
+	catch(const std::bad_alloc &)
 	{
-		if(Previous.m_RenderTexture.IsValid())
-			Graphics()->UnloadTexture(&Previous.m_RenderTexture);
+		return Defer();
 	}
+	catch(const std::length_error &)
+	{
+		return Defer();
+	}
+}
+
+void CMenus::CancelLocalAssetPreview(int Tab, const char *pName)
+{
+	if(Tab < ASSETS_TAB_ENTITIES || Tab >= NUMBER_OF_ASSETS_TABS)
+		return;
+	auto Cancel = [&](auto &Items) {
+		for(auto &Item : Items)
+		{
+			if(str_comp(Item.m_aName, pName) == 0)
+				CancelLocalAssetPreviewInput(Item, Graphics());
+		}
+	};
+	switch(Tab)
+	{
+	case ASSETS_TAB_ENTITIES: Cancel(m_vEntitiesList); break;
+	case ASSETS_TAB_GAME: Cancel(m_vGameList); break;
+	case ASSETS_TAB_EMOTICONS: Cancel(m_vEmoticonList); break;
+	case ASSETS_TAB_PARTICLES: Cancel(m_vParticlesList); break;
+	case ASSETS_TAB_HUD: Cancel(m_vHudList); break;
+	case ASSETS_TAB_GUI_CURSOR: Cancel(m_vGuiCursorList); break;
+	case ASSETS_TAB_ARROW: Cancel(m_vArrowList); break;
+	case ASSETS_TAB_STRONG_WEAK: Cancel(m_vStrongWeakList); break;
+	case ASSETS_TAB_ENTITY_BG: Cancel(m_vEntityBgList); break;
+	case ASSETS_TAB_EXTRAS: Cancel(m_vExtrasList); break;
+	default: break;
+	}
+	SettingsAssetQueueDiscardAsset(m_aaCustomPreviewDecodeQueue[Tab], m_aaCustomPreviewReadyQueue[Tab], m_aaCustomPreviewReadyQueued[Tab], Tab, pName);
 }
 
 void CMenus::ClearCustomItems(int CurTab)
 {
+	InvalidateSettingsAssetSearchView(CurTab);
+	// 这里刷新本地条目，商店目录与下载保持；两种内容代际分开。
+	InvalidateAssetsResourcePreviewScope(CurTab, Graphics(), false);
 	// Reset async loading state first
 	m_aAssetLoadStates[CurTab] = ASSET_LOAD_STATE_UNLOADED;
+	m_aAssetLoadRetryAt[CurTab] = std::chrono::nanoseconds(0);
 	if(CurTab >= ASSETS_TAB_ENTITIES && CurTab < NUMBER_OF_ASSETS_TABS)
 	{
 		gs_aAssetWarmupReady[CurTab] = false;
@@ -3770,10 +3379,7 @@ void CMenus::ClearCustomItems(int CurTab)
 		for(auto &Entity : m_vEntitiesList)
 		{
 			ResetCustomItemPreviewState(Entity);
-			for(auto &Image : Entity.m_aImages)
-			{
-				Graphics()->UnloadTexture(&Image.m_Texture);
-			}
+			Entity.UnloadTextures(Graphics());
 		}
 		m_vEntitiesList.clear();
 		gs_vpSearchEntitiesList.clear();
@@ -3840,6 +3446,8 @@ void CMenus::ClearCustomItems(int CurTab)
 		m_vEntityBgSourceNames.clear();
 		m_vEntityBgSourceKinds.clear();
 		m_aEntityBgCurrentFolder[0] = '\0';
+		m_EntityBgHierarchyRefreshPending = false;
+		m_EntityBgHierarchyRefreshRetryAt = std::chrono::nanoseconds(0);
 		gs_vpSearchEntityBgList.clear();
 
 		GameClient()->m_Background.LoadBackground();
@@ -3861,16 +3469,22 @@ void CMenus::ClearCustomItems(int CurTab)
 
 void CMenus::InvalidateSettingsAssetResourcePlan()
 {
+	m_EntityBgHierarchyRefreshPending = false;
+	m_EntityBgHierarchyRefreshRetryAt = std::chrono::nanoseconds(0);
+	InvalidateSettingsResourcePreviews(gs_SettingsAssetsResourcePreviewCache, gs_SettingsAssetsResourcePreviewUploadScheduler,
+		m_vEntityBgPreviewJobs, Graphics(), {}, gs_aAssetsPreviewGenerations, NUMBER_OF_ASSETS_TABS * 2);
 	for(int Tab = ASSETS_TAB_ENTITIES; Tab < NUMBER_OF_ASSETS_TABS; ++Tab)
 	{
+		InvalidateSettingsAssetSearchView(Tab);
+		if(SWorkshopHudState *pWorkshopState = WorkshopStateByTab(Tab))
+			InvalidateWorkshopPreviewInputs(*pWorkshopState, Graphics());
 		switch(Tab)
 		{
 		case ASSETS_TAB_ENTITIES:
 			for(auto &Entity : m_vEntitiesList)
 			{
 				ResetCustomItemPreviewState(Entity);
-				for(auto &Image : Entity.m_aImages)
-					Graphics()->UnloadTexture(&Image.m_Texture);
+				Entity.UnloadTextures(Graphics());
 			}
 			m_vEntitiesList.clear();
 			gs_vpSearchEntitiesList.clear();
@@ -3926,92 +3540,33 @@ void CMenus::InvalidateSettingsAssetResourcePlan()
 		m_apAssetLoadJobs[Tab].reset();
 		gs_aAssetWarmupReady[Tab] = false;
 		m_aAssetLoadStates[Tab] = ASSET_LOAD_STATE_UNLOADED;
+		m_aAssetLoadRetryAt[Tab] = std::chrono::nanoseconds(0);
 		gs_aInitCustomList[Tab] = true;
 	}
 	gs_NextAssetWarmupTab = ASSETS_TAB_ENTITIES;
 }
 
-template<typename TItem>
-static void PublishSettingsAssetMergeEntriesTyped(std::vector<TItem> &vList, int Tab, const std::vector<CMenus::SSettingsAssetMergeEntry> &vEntries, IStorage *pStorage)
+void CMenus::ClearSettingsAssetPreviewResources()
 {
-	const size_t InsertStart = vList.size();
-	std::vector<TItem> vNewItems;
-	vNewItems.reserve(vEntries.size());
-	for(const CMenus::SSettingsAssetMergeEntry &Entry : vEntries)
+	// 复用硬失效释放本地及共享资源；此时图形接口仍存活，不做等待。
+	InvalidateSettingsAssetResourcePlan();
+	for(int Tab = ASSETS_TAB_ENTITIES; Tab < NUMBER_OF_ASSETS_TABS; ++Tab)
 	{
-		// 软重扫（下载/删除后的刷新）不清空列表，靠这里按名字去重：
-		// 已存在的条目原样保留（贴图、预览状态都不动），只追加新出现的。
-		bool Exists = false;
-		for(const TItem &Item : vList)
-		{
-			if(str_comp(Item.m_aName, Entry.m_aName) == 0)
-			{
-				Exists = true;
-				break;
-			}
-		}
-		if(!Exists)
-		{
-			for(const TItem &Item : vNewItems)
-			{
-				if(str_comp(Item.m_aName, Entry.m_aName) == 0)
-				{
-					Exists = true;
-					break;
-				}
-			}
-		}
-		if(Exists)
-			continue;
-		TItem Item;
-		str_copy(Item.m_aName, Entry.m_aName);
-		PopulateLocalAssetAuthor(Item, Tab, pStorage);
-		vNewItems.push_back(std::move(Item));
+		if(SWorkshopHudState *pWorkshopState = WorkshopStateByTab(Tab))
+			ResetWorkshopState(*pWorkshopState, Graphics(), true);
 	}
+}
 
-	if(vNewItems.empty())
-		return;
-	vList.reserve(vList.size() + vNewItems.size());
-	for(TItem &Item : vNewItems)
-		vList.push_back(std::move(Item));
-
-	// 新条目要落在它自己的位置上，不能一律追加到末尾：追加的话，收尾时
-	// EnsureDefaultAssetVisible 的整表排序会把所有卡片重新编号，用户看到的是
-	// 「新卡先铺到最底部、下一帧再集体跳回正确位置」，换位动画还会按巨大的
-	// 槽位差再走一遍。
-	// 既有前缀已经有序（上次收尾排过）。新追加的这批来自扫描结果、按 str_comp
-	// 有序，但这里的规范顺序是 AssetResourceNameLess（default / blank 置顶），
-	// 两者对 protected 名字的排序不同，所以先按规范顺序把这批排一次。
-	// 只排新条目：它们刚建出来、还没有贴图，排序代价可以忽略。
-	std::stable_sort(vList.begin() + InsertStart, vList.end(), [](const TItem &Left, const TItem &Right) {
-		return AssetResourceNameLess(Left.m_aName, Right.m_aName);
-	});
-
-	// 归并而不是就地插入：这些条目只带拷贝赋值（预览图是深拷贝），逐条移位
-	// 会把图像反复深拷贝一遍。
-	std::vector<TItem> vMerged;
-	vMerged.reserve(vList.size());
-	size_t OldIndex = 0;
-	size_t NewIndex = InsertStart;
-	while(OldIndex < InsertStart && NewIndex < vList.size())
-	{
-		// 同名时保留既有条目在前：它身上带着已经加载好的贴图。
-		if(AssetResourceNameLess(vList[NewIndex].m_aName, vList[OldIndex].m_aName))
-			vMerged.push_back(std::move(vList[NewIndex++]));
-		else
-			vMerged.push_back(std::move(vList[OldIndex++]));
-	}
-	while(OldIndex < InsertStart)
-		vMerged.push_back(std::move(vList[OldIndex++]));
-	while(NewIndex < vList.size())
-		vMerged.push_back(std::move(vList[NewIndex++]));
-	vList.swap(vMerged);
+template<typename TItem>
+static bool PublishSettingsAssetMergeEntriesTyped(std::vector<TItem> &vList, int Tab, const std::vector<CMenus::SSettingsAssetMergeEntry> &vEntries, IStorage *pStorage)
+{
+	return TryMergeSettingsAssetEntries(vList, vEntries, [&](TItem &Item, const auto &) { PopulateLocalAssetAuthor(Item, Tab, pStorage); }, [Tab]() noexcept { InvalidateSettingsAssetSearchView(Tab); });
 }
 
 // 软重扫收尾：扫描结果里已经不存在的条目（被删除的）从这里摘掉，
 // 顺带卸载它们的贴图。其余条目原样保留。
 template<typename TItem, typename TUnloadExtra>
-static void DropMissingLocalAssetEntriesTyped(std::vector<TItem> &vList, IGraphics *pGraphics, const std::vector<CMenus::SSettingsAssetMergeEntry> &vEntries, TUnloadExtra &&UnloadExtra)
+static void DropMissingLocalAssetEntriesTyped(std::vector<TItem> &vList, int Tab, IGraphics *pGraphics, const std::vector<CMenus::SSettingsAssetMergeEntry> &vEntries, TUnloadExtra &&UnloadExtra)
 {
 	auto Keep = [&vEntries](const char *pName) {
 		for(const CMenus::SSettingsAssetMergeEntry &Entry : vEntries)
@@ -4021,6 +3576,7 @@ static void DropMissingLocalAssetEntriesTyped(std::vector<TItem> &vList, IGraphi
 		}
 		return false;
 	};
+	bool Invalidated = false;
 	for(auto It = vList.begin(); It != vList.end();)
 	{
 		if(Keep(It->m_aName) || IsProtectedAssetName(It->m_aName))
@@ -4030,66 +3586,114 @@ static void DropMissingLocalAssetEntriesTyped(std::vector<TItem> &vList, IGraphi
 			++It;
 			continue;
 		}
+		if(!Invalidated)
+		{
+			InvalidateSettingsAssetSearchView(Tab);
+			Invalidated = true;
+		}
 		UnloadExtra(*It);
 		pGraphics->UnloadTexture(&It->m_RenderTexture);
 		It = vList.erase(It);
 	}
 }
 
-void CMenus::PublishSettingsAssetMergeEntries(int Tab, const std::vector<SSettingsAssetMergeEntry> &vEntries)
+bool CMenus::PublishSettingsAssetMergeEntries(int Tab, const std::vector<SSettingsAssetMergeEntry> &vEntries)
 {
 	switch(Tab)
 	{
 	case ASSETS_TAB_ENTITIES:
-		PublishSettingsAssetMergeEntriesTyped<SCustomEntities>(m_vEntitiesList, Tab, vEntries, Storage());
-		break;
+		return PublishSettingsAssetMergeEntriesTyped<SCustomEntities>(m_vEntitiesList, Tab, vEntries, Storage());
 	case ASSETS_TAB_GAME:
-		PublishSettingsAssetMergeEntriesTyped<SCustomGame>(m_vGameList, Tab, vEntries, Storage());
-		break;
+		return PublishSettingsAssetMergeEntriesTyped<SCustomGame>(m_vGameList, Tab, vEntries, Storage());
 	case ASSETS_TAB_EMOTICONS:
-		PublishSettingsAssetMergeEntriesTyped<SCustomEmoticon>(m_vEmoticonList, Tab, vEntries, Storage());
-		break;
+		return PublishSettingsAssetMergeEntriesTyped<SCustomEmoticon>(m_vEmoticonList, Tab, vEntries, Storage());
 	case ASSETS_TAB_PARTICLES:
-		PublishSettingsAssetMergeEntriesTyped<SCustomParticle>(m_vParticlesList, Tab, vEntries, Storage());
-		break;
+		return PublishSettingsAssetMergeEntriesTyped<SCustomParticle>(m_vParticlesList, Tab, vEntries, Storage());
 	case ASSETS_TAB_HUD:
-		PublishSettingsAssetMergeEntriesTyped<SCustomHud>(m_vHudList, Tab, vEntries, Storage());
-		break;
+		return PublishSettingsAssetMergeEntriesTyped<SCustomHud>(m_vHudList, Tab, vEntries, Storage());
 	case ASSETS_TAB_GUI_CURSOR:
-		PublishSettingsAssetMergeEntriesTyped<SCustomGuiCursor>(m_vGuiCursorList, Tab, vEntries, Storage());
-		break;
+		return PublishSettingsAssetMergeEntriesTyped<SCustomGuiCursor>(m_vGuiCursorList, Tab, vEntries, Storage());
 	case ASSETS_TAB_ARROW:
-		PublishSettingsAssetMergeEntriesTyped<SCustomArrow>(m_vArrowList, Tab, vEntries, Storage());
-		break;
+		return PublishSettingsAssetMergeEntriesTyped<SCustomArrow>(m_vArrowList, Tab, vEntries, Storage());
 	case ASSETS_TAB_STRONG_WEAK:
-		PublishSettingsAssetMergeEntriesTyped<SCustomStrongWeak>(m_vStrongWeakList, Tab, vEntries, Storage());
-		break;
+		return PublishSettingsAssetMergeEntriesTyped<SCustomStrongWeak>(m_vStrongWeakList, Tab, vEntries, Storage());
 	case ASSETS_TAB_ENTITY_BG:
-		// ENTITY_BG maintains a source-name/source-kind index instead of an item list,
-		// so it cannot share the typed merge path used by the other tabs.
-		m_vEntityBgSourceNames.reserve(m_vEntityBgSourceNames.size() + vEntries.size());
-		for(const SSettingsAssetMergeEntry &Entry : vEntries)
+		try
 		{
-			if(std::find(m_vEntityBgSourceNames.begin(), m_vEntityBgSourceNames.end(), std::string(Entry.m_aName)) != m_vEntityBgSourceNames.end())
-				continue;
-			m_vEntityBgSourceNames.emplace_back(Entry.m_aName);
-			const auto ExistingIt = m_vEntityBgSourceKinds.find(Entry.m_aName);
-			if(ExistingIt == m_vEntityBgSourceKinds.end())
-				m_vEntityBgSourceKinds.emplace(Entry.m_aName, Entry.m_Source);
-			else
-				ExistingIt->second = MergeEntityBgHierarchyEntrySource(ExistingIt->second, Entry.m_Source);
+			auto vNames = m_vEntityBgSourceNames;
+			auto Kinds = m_vEntityBgSourceKinds;
+			vNames.reserve(vNames.size() + vEntries.size());
+			for(const SSettingsAssetMergeEntry &Entry : vEntries)
+			{
+				if(std::find_if(vNames.begin(), vNames.end(), [&](const auto &Name) { return Name == Entry.m_aName; }) != vNames.end())
+					continue;
+				vNames.emplace_back(Entry.m_aName);
+				const auto Existing = Kinds.find(Entry.m_aName);
+				if(Existing == Kinds.end())
+					Kinds.emplace(Entry.m_aName, Entry.m_Source);
+				else
+					Existing->second = MergeEntityBgHierarchyEntrySource(Existing->second, Entry.m_Source);
+			}
+			m_vEntityBgSourceNames.swap(vNames);
+			m_vEntityBgSourceKinds.swap(Kinds);
+			return true;
 		}
-		break;
+		catch(const std::bad_alloc &)
+		{
+			return false;
+		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
 	case ASSETS_TAB_EXTRAS:
-		PublishSettingsAssetMergeEntriesTyped<SCustomExtras>(m_vExtrasList, Tab, vEntries, Storage());
-		break;
+		return PublishSettingsAssetMergeEntriesTyped<SCustomExtras>(m_vExtrasList, Tab, vEntries, Storage());
 	default:
-		break;
+		return true;
 	}
+}
+
+bool CMenus::TryStartSettingsAssetListJob(int Tab)
+{
+	try
+	{
+		auto pJob = std::make_shared<CAssetListLoadJob>(static_cast<CAssetListLoadJob::EAssetType>(Tab), Storage());
+		pJob->SetGeneration(m_aAssetLoadGenerations[Tab]);
+		if(Engine()->TryAddJob(pJob))
+		{
+			m_apAssetLoadJobs[Tab] = std::move(pJob);
+			m_aAssetLoadStates[Tab] = ASSET_LOAD_STATE_LOADING;
+			return true;
+		}
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 未接收时不发布等待状态，保留旧列表和当前代际。
+	}
+	m_aAssetLoadRetryAt[Tab] = time_get_nanoseconds() + std::chrono::seconds(1);
+	return false;
+}
+
+bool CMenus::RecoverFailedSettingsAssetListJob(int Tab)
+{
+	auto pJob = std::static_pointer_cast<CAssetListLoadJob>(m_apAssetLoadJobs[Tab]);
+	if(!pJob || !pJob->IsCompleted() || pJob->Succeeded())
+		return false;
+	m_apAssetLoadJobs[Tab].reset();
+	m_aAssetLoadStates[Tab] = ASSET_LOAD_STATE_UNLOADED;
+	m_aAssetLoadRetryAt[Tab] = time_get_nanoseconds() + std::chrono::seconds(1);
+	gs_aAssetWarmupReady[Tab] = false;
+	gs_NextAssetWarmupTab = Tab;
+	return true;
 }
 
 bool CMenus::PrewarmSettingsAssetResources()
 {
+	if(m_EntityBgHierarchyRefreshPending)
+	{
+		if(time_get_nanoseconds() < m_EntityBgHierarchyRefreshRetryAt || !RefreshEntityBgHierarchyView())
+			return false;
+	}
 	if(SettingsAssetWarmupAllTabsReady(gs_aAssetWarmupReady, NUMBER_OF_ASSETS_TABS))
 		return true;
 
@@ -4100,65 +3704,64 @@ bool CMenus::PrewarmSettingsAssetResources()
 		if(Tab < ASSETS_TAB_ENTITIES || Tab >= NUMBER_OF_ASSETS_TABS || gs_aAssetWarmupReady[Tab])
 			continue;
 
-		if(m_aAssetLoadStates[Tab] == ASSET_LOAD_STATE_UNLOADED)
+		if(m_aAssetLoadStates[Tab] == ASSET_LOAD_STATE_UNLOADED && time_get_nanoseconds() >= m_aAssetLoadRetryAt[Tab])
 		{
+			bool PreparedList = true;
 			const SAssetResourceCategory *pCurrentCategory = AssetResourceCategoryByTab(Tab);
 			switch(Tab)
 			{
 			case ASSETS_TAB_ENTITIES:
 				dbg_assert(pCurrentCategory != nullptr, "entities category must exist");
-				EnsureDefaultAssetVisible(*pCurrentCategory, m_vEntitiesList);
+				PreparedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vEntitiesList, Tab);
 				break;
 			case ASSETS_TAB_GAME:
 				dbg_assert(pCurrentCategory != nullptr, "game category must exist");
-				EnsureDefaultAssetVisible(*pCurrentCategory, m_vGameList);
+				PreparedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vGameList, Tab);
 				break;
 			case ASSETS_TAB_EMOTICONS:
 				dbg_assert(pCurrentCategory != nullptr, "emoticons category must exist");
-				EnsureDefaultAssetVisible(*pCurrentCategory, m_vEmoticonList);
+				PreparedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vEmoticonList, Tab);
 				break;
 			case ASSETS_TAB_PARTICLES:
 				dbg_assert(pCurrentCategory != nullptr, "particles category must exist");
-				EnsureDefaultAssetVisible(*pCurrentCategory, m_vParticlesList);
+				PreparedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vParticlesList, Tab);
 				break;
 			case ASSETS_TAB_HUD:
 				dbg_assert(pCurrentCategory != nullptr, "hud category must exist");
-				EnsureDefaultAssetVisible(*pCurrentCategory, m_vHudList);
+				PreparedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vHudList, Tab);
 				break;
 			case ASSETS_TAB_GUI_CURSOR:
 				dbg_assert(pCurrentCategory != nullptr, "gui cursor category must exist");
-				EnsureDefaultAssetVisible(*pCurrentCategory, m_vGuiCursorList);
+				PreparedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vGuiCursorList, Tab);
 				break;
 			case ASSETS_TAB_ARROW:
 				dbg_assert(pCurrentCategory != nullptr, "arrow category must exist");
-				EnsureDefaultAssetVisible(*pCurrentCategory, m_vArrowList);
+				PreparedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vArrowList, Tab);
 				break;
 			case ASSETS_TAB_STRONG_WEAK:
 				dbg_assert(pCurrentCategory != nullptr, "strong weak category must exist");
-				EnsureDefaultAssetVisible(*pCurrentCategory, m_vStrongWeakList);
+				PreparedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vStrongWeakList, Tab);
 				break;
 			case ASSETS_TAB_ENTITY_BG:
 			{
 				const int SavedTab = s_CurCustomTab;
 				s_CurCustomTab = Tab;
-				RefreshEntityBgHierarchyView();
+				PreparedList = RefreshEntityBgHierarchyView();
 				s_CurCustomTab = SavedTab;
 				break;
 			}
 			case ASSETS_TAB_EXTRAS:
 				dbg_assert(pCurrentCategory != nullptr, "extras category must exist");
-				EnsureDefaultAssetVisible(*pCurrentCategory, m_vExtrasList);
+				PreparedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vExtrasList, Tab);
 				break;
 			default:
 				break;
 			}
 
-			auto pJob = std::make_shared<CAssetListLoadJob>(
-				static_cast<CAssetListLoadJob::EAssetType>(Tab), Storage());
-			pJob->SetGeneration(m_aAssetLoadGenerations[Tab]);
-			m_apAssetLoadJobs[Tab] = pJob;
-			Engine()->AddJob(m_apAssetLoadJobs[Tab]);
-			m_aAssetLoadStates[Tab] = ASSET_LOAD_STATE_LOADING;
+			if(!PreparedList)
+				return false;
+			if(!TryStartSettingsAssetListJob(Tab))
+				return false;
 		}
 
 		if(m_aAssetLoadStates[Tab] == ASSET_LOAD_STATE_LOADING &&
@@ -4170,15 +3773,16 @@ bool CMenus::PrewarmSettingsAssetResources()
 			{
 				m_apAssetLoadJobs[Tab].reset();
 				m_aAssetLoadStates[Tab] = ASSET_LOAD_STATE_UNLOADED;
+				m_aAssetLoadRetryAt[Tab] = std::chrono::nanoseconds(0);
 				gs_aAssetWarmupReady[Tab] = false;
 				gs_NextAssetWarmupTab = Tab;
 				return false;
 			}
+			if(RecoverFailedSettingsAssetListJob(Tab))
+				return false;
 			std::vector<CAssetListLoadJob::SAssetEntry> vEntries = pJob->TakeEntries();
-			// 只有当前 tab 在绘制时才会真正发起解码，别的 tab 队列本来就是空的；
-			// 而且 gs_vpSearch* 只对当前 tab 重建，拿别的 tab 去遍历会读到过期指针。
-			if(Tab == s_CurCustomTab)
-				RestartOrphanedCustomPreviewDecodes(Tab);
+			// 直接重置持有条目的列表，非当前页无需借用过期搜索指针。
+			RestartOrphanedCustomPreviewDecodes(Tab);
 			++m_aCustomPreviewEpoch[Tab];
 			m_aaCustomPreviewDecodeQueue[Tab].clear();
 			m_aaCustomPreviewReadyQueue[Tab].clear();
@@ -4199,75 +3803,76 @@ bool CMenus::PrewarmSettingsAssetResources()
 			{
 				PendingMerge = {};
 				m_aAssetLoadStates[Tab] = ASSET_LOAD_STATE_UNLOADED;
+				m_aAssetLoadRetryAt[Tab] = std::chrono::nanoseconds(0);
 				gs_aAssetWarmupReady[Tab] = false;
 				gs_NextAssetWarmupTab = Tab;
 				return false;
 			}
 			SSettingsResourceMergeBudget MergeBudget;
 			MergeBudget.m_MaxListEntries = 64;
-			std::vector<SSettingsAssetMergeEntry> vMergeBatch;
-			vMergeBatch.reserve(MergeBudget.m_MaxListEntries);
 			const size_t MergeStartCursor = PendingMerge.m_Cursor;
-			while(PendingMerge.m_Cursor < PendingMerge.m_vEntries.size() && SettingsResourceConsumeMergeEntry(MergeBudget, SettingsFrameBudget()))
-				vMergeBatch.push_back(PendingMerge.m_vEntries[PendingMerge.m_Cursor++]);
-			if(!vMergeBatch.empty())
-				PublishSettingsAssetMergeEntries(Tab, vMergeBatch);
+			if(!TryPublishSettingsAssetMergeBatch(PendingMerge.m_vEntries, PendingMerge.m_Cursor, MergeBudget, SettingsFrameBudget(),
+				   [this, Tab](const auto &vBatch) { return PublishSettingsAssetMergeEntries(Tab, vBatch); }))
+				return false;
 			const int MergedEntries = (int)(PendingMerge.m_Cursor - MergeStartCursor);
 			const int RemainingEntries = (int)(PendingMerge.m_vEntries.size() - PendingMerge.m_Cursor);
 			const ESettingsWarmupMissReason MergeReason = PendingMerge.m_Cursor < PendingMerge.m_vEntries.size() ? ESettingsWarmupMissReason::JOB_RESULT_PENDING : ESettingsWarmupMissReason::NONE;
 
 			if(PendingMerge.m_Cursor >= PendingMerge.m_vEntries.size())
 			{
+				bool FinalizedList = true;
 				const SAssetResourceCategory *pCurrentCategory = AssetResourceCategoryByTab(Tab);
 				switch(Tab)
 				{
 				case ASSETS_TAB_ENTITIES:
 					dbg_assert(pCurrentCategory != nullptr, "entities category must exist");
-					EnsureDefaultAssetVisible(*pCurrentCategory, m_vEntitiesList);
+					FinalizedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vEntitiesList, Tab);
 					break;
 				case ASSETS_TAB_GAME:
 					dbg_assert(pCurrentCategory != nullptr, "game category must exist");
-					EnsureDefaultAssetVisible(*pCurrentCategory, m_vGameList);
+					FinalizedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vGameList, Tab);
 					break;
 				case ASSETS_TAB_EMOTICONS:
 					dbg_assert(pCurrentCategory != nullptr, "emoticons category must exist");
-					EnsureDefaultAssetVisible(*pCurrentCategory, m_vEmoticonList);
+					FinalizedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vEmoticonList, Tab);
 					break;
 				case ASSETS_TAB_PARTICLES:
 					dbg_assert(pCurrentCategory != nullptr, "particles category must exist");
-					EnsureDefaultAssetVisible(*pCurrentCategory, m_vParticlesList);
+					FinalizedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vParticlesList, Tab);
 					break;
 				case ASSETS_TAB_HUD:
 					dbg_assert(pCurrentCategory != nullptr, "hud category must exist");
-					EnsureDefaultAssetVisible(*pCurrentCategory, m_vHudList);
+					FinalizedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vHudList, Tab);
 					break;
 				case ASSETS_TAB_GUI_CURSOR:
 					dbg_assert(pCurrentCategory != nullptr, "gui cursor category must exist");
-					EnsureDefaultAssetVisible(*pCurrentCategory, m_vGuiCursorList);
+					FinalizedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vGuiCursorList, Tab);
 					break;
 				case ASSETS_TAB_ARROW:
 					dbg_assert(pCurrentCategory != nullptr, "arrow category must exist");
-					EnsureDefaultAssetVisible(*pCurrentCategory, m_vArrowList);
+					FinalizedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vArrowList, Tab);
 					break;
 				case ASSETS_TAB_STRONG_WEAK:
 					dbg_assert(pCurrentCategory != nullptr, "strong weak category must exist");
-					EnsureDefaultAssetVisible(*pCurrentCategory, m_vStrongWeakList);
+					FinalizedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vStrongWeakList, Tab);
 					break;
 				case ASSETS_TAB_ENTITY_BG:
 				{
 					const int SavedTab = s_CurCustomTab;
 					s_CurCustomTab = Tab;
-					RefreshEntityBgHierarchyView();
+					FinalizedList = RefreshEntityBgHierarchyView();
 					s_CurCustomTab = SavedTab;
 					break;
 				}
 				case ASSETS_TAB_EXTRAS:
 					dbg_assert(pCurrentCategory != nullptr, "extras category must exist");
-					EnsureDefaultAssetVisible(*pCurrentCategory, m_vExtrasList);
+					FinalizedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vExtrasList, Tab);
 					break;
 				default:
 					break;
 				}
+				if(!FinalizedList)
+					return false;
 				PendingMerge = {};
 				m_aAssetLoadStates[Tab] = ASSET_LOAD_STATE_LOADED;
 				gs_aInitCustomList[Tab] = true;
@@ -4300,40 +3905,18 @@ static void InitAssetList(std::vector<TName> &vAssetList, const char *pAssetPath
 }
 
 template<typename TName>
-static int InitSearchList(std::vector<TName *> &vpSearchList, std::vector<TName> &vAssetList)
+static bool InitSearchList(std::vector<TName *> &vpSearchList, std::vector<TName> &vAssetList)
 {
-	vpSearchList.clear();
-	int ListSize = vAssetList.size();
 	const char *pFilter = s_aFilterInputs[s_CurCustomTab].GetString();
-	const SWorkshopHudState *pWorkshopState = WorkshopStateByTab(s_CurCustomTab);
-	for(int i = 0; i < ListSize; ++i)
-	{
-		TName *pAsset = &vAssetList[i];
-
+	return TryBuildSettingsAssetSearchView(vpSearchList, vAssetList, [pFilter](const TName &Asset) {
 		if constexpr(std::is_same_v<TName, CMenus::SCustomEntityBg>)
 		{
-			if(pAsset->m_IsDirectory)
-			{
-				if(!s_aFilterInputs[s_CurCustomTab].IsEmpty() && !str_utf8_find_nocase(pAsset->m_aDisplayName, pFilter))
-					continue;
-				vpSearchList.push_back(pAsset);
-				continue;
-			}
+			if(Asset.m_IsDirectory)
+				return pFilter[0] == '\0' || str_utf8_find_nocase(Asset.m_aDisplayName, pFilter) != nullptr;
 		}
-
-		// filter quick search
-		if(!s_aFilterInputs[s_CurCustomTab].IsEmpty())
-		{
-			(void)pWorkshopState;
-			const char *pAuthor = pAsset->m_aAuthor;
-			const char *pDisplayName = pAsset->m_aDisplayName[0] != '\0' ? pAsset->m_aDisplayName : pAsset->m_aName;
-			if(!SearchFilterMatches(pFilter, pDisplayName, pAuthor) && !SearchFilterMatches(pFilter, pAsset->m_aName, pAuthor))
-				continue;
-		}
-
-		vpSearchList.push_back(pAsset);
-	}
-	return vAssetList.size();
+		const char *pDisplayName = Asset.m_aDisplayName[0] != '\0' ? Asset.m_aDisplayName : Asset.m_aName;
+		return SearchFilterMatches(pFilter, pDisplayName, Asset.m_aAuthor) || SearchFilterMatches(pFilter, Asset.m_aName, Asset.m_aAuthor);
+	});
 }
 
 void CMenus::RenderSettingsCustom(CUIRect MainView)
@@ -4434,19 +4017,23 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	}
 
 	ReadUiSwitchAnimation(AssetsTabSwitchNode);
+	RecoverSettingsAssetCpuPressure(s_CurCustomTab);
 
 	// ============================================================================
 	// ASYNC ASSET LIST LOADING
 	// ============================================================================
+	if(m_EntityBgHierarchyRefreshPending && time_get_nanoseconds() >= m_EntityBgHierarchyRefreshRetryAt)
+		RefreshEntityBgHierarchyView();
 	// Start async loading if list is empty and not already loading
-	if(m_aAssetLoadStates[s_CurCustomTab] == ASSET_LOAD_STATE_UNLOADED)
+	if(m_aAssetLoadStates[s_CurCustomTab] == ASSET_LOAD_STATE_UNLOADED && time_get_nanoseconds() >= m_aAssetLoadRetryAt[s_CurCustomTab])
 	{
 		for(const SAssetResourceCategory &Category : GetAssetResourceCategories())
 		{
 			if(Category.m_Kind == EAssetResourceKind::NAMED_SINGLE_FILE)
 			{
 				TryImportLegacySingleFileAsset(Storage(), Category);
-				MigrateReservedNamedSingleFileAssets(Storage(), Category);
+				if(!MigrateReservedNamedSingleFileAssets(Storage(), Category))
+					return;
 			}
 		}
 
@@ -4454,58 +4041,57 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_ARROW, "arrow", g_Config.m_ClAssetArrow);
 		GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_STRONGWEAK, "strong_weak", g_Config.m_ClAssetStrongWeak);
 
+		bool PreparedList = true;
 		const SAssetResourceCategory *pCurrentCategory = AssetResourceCategoryByTab(s_CurCustomTab);
 		switch(s_CurCustomTab)
 		{
 		case ASSETS_TAB_ENTITIES:
 			dbg_assert(pCurrentCategory != nullptr, "entities category must exist");
-			EnsureDefaultAssetVisible(*pCurrentCategory, m_vEntitiesList);
+			PreparedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vEntitiesList, s_CurCustomTab);
 			break;
 		case ASSETS_TAB_GAME:
 			dbg_assert(pCurrentCategory != nullptr, "game category must exist");
-			EnsureDefaultAssetVisible(*pCurrentCategory, m_vGameList);
+			PreparedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vGameList, s_CurCustomTab);
 			break;
 		case ASSETS_TAB_EMOTICONS:
 			dbg_assert(pCurrentCategory != nullptr, "emoticons category must exist");
-			EnsureDefaultAssetVisible(*pCurrentCategory, m_vEmoticonList);
+			PreparedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vEmoticonList, s_CurCustomTab);
 			break;
 		case ASSETS_TAB_PARTICLES:
 			dbg_assert(pCurrentCategory != nullptr, "particles category must exist");
-			EnsureDefaultAssetVisible(*pCurrentCategory, m_vParticlesList);
+			PreparedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vParticlesList, s_CurCustomTab);
 			break;
 		case ASSETS_TAB_HUD:
 			dbg_assert(pCurrentCategory != nullptr, "hud category must exist");
-			EnsureDefaultAssetVisible(*pCurrentCategory, m_vHudList);
+			PreparedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vHudList, s_CurCustomTab);
 			break;
 		case ASSETS_TAB_GUI_CURSOR:
 			dbg_assert(pCurrentCategory != nullptr, "gui cursor category must exist");
-			EnsureDefaultAssetVisible(*pCurrentCategory, m_vGuiCursorList);
+			PreparedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vGuiCursorList, s_CurCustomTab);
 			break;
 		case ASSETS_TAB_ARROW:
 			dbg_assert(pCurrentCategory != nullptr, "arrow category must exist");
-			EnsureDefaultAssetVisible(*pCurrentCategory, m_vArrowList);
+			PreparedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vArrowList, s_CurCustomTab);
 			break;
 		case ASSETS_TAB_STRONG_WEAK:
 			dbg_assert(pCurrentCategory != nullptr, "strong weak category must exist");
-			EnsureDefaultAssetVisible(*pCurrentCategory, m_vStrongWeakList);
+			PreparedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vStrongWeakList, s_CurCustomTab);
 			break;
 		case ASSETS_TAB_ENTITY_BG:
 			dbg_assert(pCurrentCategory != nullptr, "entity bg category must exist");
-			RefreshEntityBgHierarchyView();
+			PreparedList = RefreshEntityBgHierarchyView();
 			break;
 		case ASSETS_TAB_EXTRAS:
 			dbg_assert(pCurrentCategory != nullptr, "extras category must exist");
-			EnsureDefaultAssetVisible(*pCurrentCategory, m_vExtrasList);
+			PreparedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vExtrasList, s_CurCustomTab);
 			break;
 		}
 
+		if(!PreparedList)
+			return;
 		// Start async loading job
-		auto pJob = std::make_shared<CAssetListLoadJob>(
-			static_cast<CAssetListLoadJob::EAssetType>(s_CurCustomTab), Storage());
-		pJob->SetGeneration(m_aAssetLoadGenerations[s_CurCustomTab]);
-		m_apAssetLoadJobs[s_CurCustomTab] = pJob;
-		Engine()->AddJob(m_apAssetLoadJobs[s_CurCustomTab]);
-		m_aAssetLoadStates[s_CurCustomTab] = ASSET_LOAD_STATE_LOADING;
+		if(!TryStartSettingsAssetListJob(s_CurCustomTab))
+			return;
 		LogSettingsResourcePerf(SETTINGS_ASSETS, "queued", 1, 1, 0, ESettingsWarmupMissReason::RESOURCE_PLAN_PENDING, 0.0);
 	}
 
@@ -4520,10 +4106,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		{
 			m_apAssetLoadJobs[s_CurCustomTab].reset();
 			m_aAssetLoadStates[s_CurCustomTab] = ASSET_LOAD_STATE_UNLOADED;
+			m_aAssetLoadRetryAt[s_CurCustomTab] = std::chrono::nanoseconds(0);
 			gs_aAssetWarmupReady[s_CurCustomTab] = false;
 			gs_NextAssetWarmupTab = s_CurCustomTab;
 			return;
 		}
+		if(RecoverFailedSettingsAssetListJob(s_CurCustomTab))
+			return;
 		std::vector<CAssetListLoadJob::SAssetEntry> vEntries = pJob->TakeEntries();
 		{
 			char aExtra[128];
@@ -4557,6 +4146,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		{
 			PendingMerge = {};
 			m_aAssetLoadStates[s_CurCustomTab] = ASSET_LOAD_STATE_UNLOADED;
+			m_aAssetLoadRetryAt[s_CurCustomTab] = std::chrono::nanoseconds(0);
 			gs_aAssetWarmupReady[s_CurCustomTab] = false;
 			gs_NextAssetWarmupTab = s_CurCustomTab;
 			return;
@@ -4564,13 +4154,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		CPerfTimer MergeTimer;
 		SSettingsResourceMergeBudget MergeBudget;
 		MergeBudget.m_MaxListEntries = 64;
-		std::vector<SSettingsAssetMergeEntry> vMergeBatch;
-		vMergeBatch.reserve(MergeBudget.m_MaxListEntries);
 		const size_t MergeStartCursor = PendingMerge.m_Cursor;
-		while(PendingMerge.m_Cursor < PendingMerge.m_vEntries.size() && SettingsResourceConsumeMergeEntry(MergeBudget, SettingsFrameBudget()))
-			vMergeBatch.push_back(PendingMerge.m_vEntries[PendingMerge.m_Cursor++]);
-		if(!vMergeBatch.empty())
-			PublishSettingsAssetMergeEntries(s_CurCustomTab, vMergeBatch);
+		if(!TryPublishSettingsAssetMergeBatch(PendingMerge.m_vEntries, PendingMerge.m_Cursor, MergeBudget, SettingsFrameBudget(),
+			   [this](const auto &vBatch) { return PublishSettingsAssetMergeEntries(s_CurCustomTab, vBatch); }))
+			return;
 
 		if(PendingMerge.m_Cursor < PendingMerge.m_vEntries.size())
 		{
@@ -4590,85 +4177,87 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				switch(s_CurCustomTab)
 				{
 				case ASSETS_TAB_ENTITIES:
-					DropMissingLocalAssetEntriesTyped(m_vEntitiesList, Graphics(), PendingMerge.m_vEntries, [this](SCustomEntities &Item) {
-						for(auto &Image : Item.m_aImages)
-							Graphics()->UnloadTexture(&Image.m_Texture);
+					DropMissingLocalAssetEntriesTyped(m_vEntitiesList, s_CurCustomTab, Graphics(), PendingMerge.m_vEntries, [this](SCustomEntities &Item) {
+						Item.UnloadTextures(Graphics());
 					});
 					break;
 				case ASSETS_TAB_GAME:
-					DropMissingLocalAssetEntriesTyped(m_vGameList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					DropMissingLocalAssetEntriesTyped(m_vGameList, s_CurCustomTab, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
 					break;
 				case ASSETS_TAB_EMOTICONS:
-					DropMissingLocalAssetEntriesTyped(m_vEmoticonList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					DropMissingLocalAssetEntriesTyped(m_vEmoticonList, s_CurCustomTab, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
 					break;
 				case ASSETS_TAB_PARTICLES:
-					DropMissingLocalAssetEntriesTyped(m_vParticlesList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					DropMissingLocalAssetEntriesTyped(m_vParticlesList, s_CurCustomTab, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
 					break;
 				case ASSETS_TAB_HUD:
-					DropMissingLocalAssetEntriesTyped(m_vHudList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					DropMissingLocalAssetEntriesTyped(m_vHudList, s_CurCustomTab, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
 					break;
 				case ASSETS_TAB_GUI_CURSOR:
-					DropMissingLocalAssetEntriesTyped(m_vGuiCursorList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					DropMissingLocalAssetEntriesTyped(m_vGuiCursorList, s_CurCustomTab, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
 					break;
 				case ASSETS_TAB_ARROW:
-					DropMissingLocalAssetEntriesTyped(m_vArrowList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					DropMissingLocalAssetEntriesTyped(m_vArrowList, s_CurCustomTab, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
 					break;
 				case ASSETS_TAB_STRONG_WEAK:
-					DropMissingLocalAssetEntriesTyped(m_vStrongWeakList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					DropMissingLocalAssetEntriesTyped(m_vStrongWeakList, s_CurCustomTab, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
 					break;
 				case ASSETS_TAB_EXTRAS:
-					DropMissingLocalAssetEntriesTyped(m_vExtrasList, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
+					DropMissingLocalAssetEntriesTyped(m_vExtrasList, s_CurCustomTab, Graphics(), PendingMerge.m_vEntries, [](auto &) {});
 					break;
 				default:
 					break;
 				}
 			}
+			bool FinalizedList = true;
 			const SAssetResourceCategory *pCurrentCategory = AssetResourceCategoryByTab(s_CurCustomTab);
 			switch(s_CurCustomTab)
 			{
 			case ASSETS_TAB_ENTITIES:
 				dbg_assert(pCurrentCategory != nullptr, "entities category must exist");
-				EnsureDefaultAssetVisible(*pCurrentCategory, m_vEntitiesList);
+				FinalizedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vEntitiesList, s_CurCustomTab);
 				break;
 			case ASSETS_TAB_GAME:
 				dbg_assert(pCurrentCategory != nullptr, "game category must exist");
-				EnsureDefaultAssetVisible(*pCurrentCategory, m_vGameList);
+				FinalizedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vGameList, s_CurCustomTab);
 				break;
 			case ASSETS_TAB_EMOTICONS:
 				dbg_assert(pCurrentCategory != nullptr, "emoticons category must exist");
-				EnsureDefaultAssetVisible(*pCurrentCategory, m_vEmoticonList);
+				FinalizedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vEmoticonList, s_CurCustomTab);
 				break;
 			case ASSETS_TAB_PARTICLES:
 				dbg_assert(pCurrentCategory != nullptr, "particles category must exist");
-				EnsureDefaultAssetVisible(*pCurrentCategory, m_vParticlesList);
+				FinalizedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vParticlesList, s_CurCustomTab);
 				break;
 			case ASSETS_TAB_HUD:
 				dbg_assert(pCurrentCategory != nullptr, "hud category must exist");
-				EnsureDefaultAssetVisible(*pCurrentCategory, m_vHudList);
+				FinalizedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vHudList, s_CurCustomTab);
 				break;
 			case ASSETS_TAB_GUI_CURSOR:
 				dbg_assert(pCurrentCategory != nullptr, "gui cursor category must exist");
-				EnsureDefaultAssetVisible(*pCurrentCategory, m_vGuiCursorList);
+				FinalizedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vGuiCursorList, s_CurCustomTab);
 				break;
 			case ASSETS_TAB_ARROW:
 				dbg_assert(pCurrentCategory != nullptr, "arrow category must exist");
-				EnsureDefaultAssetVisible(*pCurrentCategory, m_vArrowList);
+				FinalizedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vArrowList, s_CurCustomTab);
 				break;
 			case ASSETS_TAB_STRONG_WEAK:
 				dbg_assert(pCurrentCategory != nullptr, "strong weak category must exist");
-				EnsureDefaultAssetVisible(*pCurrentCategory, m_vStrongWeakList);
+				FinalizedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vStrongWeakList, s_CurCustomTab);
 				break;
 			case ASSETS_TAB_ENTITY_BG:
-				RefreshEntityBgHierarchyView();
+				FinalizedList = RefreshEntityBgHierarchyView();
 				break;
 			case ASSETS_TAB_EXTRAS:
 				dbg_assert(pCurrentCategory != nullptr, "extras category must exist");
-				EnsureDefaultAssetVisible(*pCurrentCategory, m_vExtrasList);
+				FinalizedList = EnsureDefaultAssetVisible(*pCurrentCategory, m_vExtrasList, s_CurCustomTab);
 				break;
 			default:
 				break;
 			}
 
+			if(!FinalizedList)
+				return;
 			char aExtra[128];
 			str_format(aExtra, sizeof(aExtra), "tab=%d merged=%d", s_CurCustomTab, (int)(PendingMerge.m_Cursor - MergeStartCursor));
 			LogAssetsFramePerfStage("assets_merge_results", MergeTimer.ElapsedMs(), true, aExtra);
@@ -4888,25 +4477,16 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		s_aPendingLocalListRefresh[Tab] = 0;
 		if(Kind == 2 && Tab == ASSETS_TAB_ENTITY_BG)
 		{
-			if(const SWorkshopHudState *pWorkshopState = WorkshopStateByTab(Tab))
-			{
-				for(const SWorkshopHudAsset &Asset : pWorkshopState->m_vAssets)
-				{
-					if(!Asset.m_Installed || Asset.m_LocalName.empty())
-						continue;
-					if(std::none_of(m_vEntityBgSourceNames.begin(), m_vEntityBgSourceNames.end(), [&Asset](const std::string &Name) { return Name == Asset.m_LocalName; }))
-						m_vEntityBgSourceNames.push_back(Asset.m_LocalName);
-					if(!m_vEntityBgSourceKinds.contains(Asset.m_LocalName))
-						m_vEntityBgSourceKinds.emplace(Asset.m_LocalName, EEntityBgHierarchyEntrySource::WORKSHOP);
-				}
-			}
+			// 安装来源由层级候选统一同步，不在准备成功前改动已发布索引。
 			RefreshEntityBgHierarchyView();
 			return;
 		}
+
 		// 软重扫：不清列表、不卸贴图，只把加载状态复位，让后台重扫一遍目录。
 		// 合并时按名字去重（已有的条目原样保留），扫完再摘掉已经不存在的条目。
 		// 用户只会看到「多一张 / 少一张」，不会看到整页闪。
 		m_aAssetLoadStates[Tab] = ASSET_LOAD_STATE_UNLOADED;
+		m_aAssetLoadRetryAt[Tab] = std::chrono::nanoseconds(0);
 		gs_aAssetWarmupReady[Tab] = false;
 		gs_NextAssetWarmupTab = Tab;
 	};
@@ -4915,64 +4495,71 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	if(gs_aInitCustomList[s_CurCustomTab])
 	{
 		CPerfTimer SearchTimer;
-		int ListSize = 0;
+		size_t ListSize = 0;
+		bool Rebuilt = false;
 		if(s_CurCustomTab == ASSETS_TAB_ENTITIES)
 		{
-			gs_vpSearchEntitiesList.clear();
 			ListSize = m_vEntitiesList.size();
-			for(int i = 0; i < ListSize; ++i)
-			{
-				SCustomEntities *pEntity = &m_vEntitiesList[i];
-
-				// filter quick search
-				if(!s_aFilterInputs[s_CurCustomTab].IsEmpty() && !str_utf8_find_nocase(pEntity->m_aName, s_aFilterInputs[s_CurCustomTab].GetString()))
-					continue;
-
-				gs_vpSearchEntitiesList.push_back(pEntity);
-			}
+			const char *pFilter = s_aFilterInputs[s_CurCustomTab].GetString();
+			Rebuilt = TryBuildSettingsAssetSearchView(gs_vpSearchEntitiesList, m_vEntitiesList, [pFilter](const SCustomEntities &Item) {
+				return pFilter[0] == '\0' || str_utf8_find_nocase(Item.m_aName, pFilter) != nullptr;
+			});
 		}
 		else if(s_CurCustomTab == ASSETS_TAB_GAME)
 		{
-			ListSize = InitSearchList(gs_vpSearchGamesList, m_vGameList);
+			ListSize = m_vGameList.size();
+			Rebuilt = InitSearchList(gs_vpSearchGamesList, m_vGameList);
 		}
 		else if(s_CurCustomTab == ASSETS_TAB_EMOTICONS)
 		{
-			ListSize = InitSearchList(gs_vpSearchEmoticonsList, m_vEmoticonList);
+			ListSize = m_vEmoticonList.size();
+			Rebuilt = InitSearchList(gs_vpSearchEmoticonsList, m_vEmoticonList);
 		}
 		else if(s_CurCustomTab == ASSETS_TAB_PARTICLES)
 		{
-			ListSize = InitSearchList(gs_vpSearchParticlesList, m_vParticlesList);
+			ListSize = m_vParticlesList.size();
+			Rebuilt = InitSearchList(gs_vpSearchParticlesList, m_vParticlesList);
 		}
 		else if(s_CurCustomTab == ASSETS_TAB_HUD)
 		{
-			ListSize = InitSearchList(gs_vpSearchHudList, m_vHudList);
+			ListSize = m_vHudList.size();
+			Rebuilt = InitSearchList(gs_vpSearchHudList, m_vHudList);
 		}
 		else if(s_CurCustomTab == ASSETS_TAB_GUI_CURSOR)
 		{
-			ListSize = InitSearchList(gs_vpSearchGuiCursorList, m_vGuiCursorList);
+			ListSize = m_vGuiCursorList.size();
+			Rebuilt = InitSearchList(gs_vpSearchGuiCursorList, m_vGuiCursorList);
 		}
 		else if(s_CurCustomTab == ASSETS_TAB_ARROW)
 		{
-			ListSize = InitSearchList(gs_vpSearchArrowList, m_vArrowList);
+			ListSize = m_vArrowList.size();
+			Rebuilt = InitSearchList(gs_vpSearchArrowList, m_vArrowList);
 		}
 		else if(s_CurCustomTab == ASSETS_TAB_STRONG_WEAK)
 		{
-			ListSize = InitSearchList(gs_vpSearchStrongWeakList, m_vStrongWeakList);
+			ListSize = m_vStrongWeakList.size();
+			Rebuilt = InitSearchList(gs_vpSearchStrongWeakList, m_vStrongWeakList);
 		}
 		else if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
 		{
-			ListSize = InitSearchList(gs_vpSearchEntityBgList, m_vEntityBgList);
+			ListSize = m_vEntityBgList.size();
+			Rebuilt = InitSearchList(gs_vpSearchEntityBgList, m_vEntityBgList);
 		}
 		else if(s_CurCustomTab == ASSETS_TAB_EXTRAS)
 		{
-			ListSize = InitSearchList(gs_vpSearchExtrasList, m_vExtrasList);
+			ListSize = m_vExtrasList.size();
+			Rebuilt = InitSearchList(gs_vpSearchExtrasList, m_vExtrasList);
 		}
-		gs_aInitCustomList[s_CurCustomTab] = false;
-		gs_aCustomListSize[s_CurCustomTab] = ListSize;
-		char aExtra[160];
-		str_format(aExtra, sizeof(aExtra), "tab=%d list_size=%d filter_len=%d",
-			s_CurCustomTab, ListSize, (int)str_length(s_aFilterInputs[s_CurCustomTab].GetString()));
-		LogAssetsFramePerfStage("assets_search_rebuild", SearchTimer.ElapsedMs(), true, aExtra);
+		if(Rebuilt)
+		{
+			gs_aInitCustomList[s_CurCustomTab] = false;
+			gs_aCustomListSize[s_CurCustomTab] = ListSize;
+			char aExtra[160];
+			str_format(aExtra, sizeof(aExtra), "tab=%d list_size=%zu filter_len=%d",
+				s_CurCustomTab, ListSize, (int)str_length(s_aFilterInputs[s_CurCustomTab].GetString()));
+			LogAssetsFramePerfStage("assets_search_rebuild", SearchTimer.ElapsedMs(), true, aExtra);
+		}
+		// 同owner的旧视图仍可画；换表已撤回借用，失败保留dirty，下帧重试。
 	}
 
 	int OldSelected = -1;
@@ -5115,23 +4702,23 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	};
 	RemainingHeavyResourceBatches = SettingsResourceClampSharedHeavyBudget(MaxPreviewUploadsPerFrame, ResourceFrameContext, 4, 1);
 	m_SettingsFrameBudget.m_MaxGpuUploads = maximum(m_SettingsFrameBudget.m_MaxGpuUploads, MaxPreviewUploadsPerFrame);
-	const size_t TextureMemoryUsageBytes = Graphics()->TextureMemoryUsage();
+	const uint64_t TextureMemoryUsageBytes = Graphics()->TextureMemoryUsage();
 	auto CountResidentPreviewBytes = [&]() {
-		size_t ResidentBytes = 0;
-		for(int Tab = ASSETS_TAB_ENTITIES; Tab < NUMBER_OF_ASSETS_TABS; ++Tab)
-		{
-			const size_t ItemCount = GetCustomItemCount(Tab);
-			for(size_t Index = 0; Index < ItemCount; ++Index)
-			{
-				const SCustomItem *pItem = GetCustomItem(Tab, Index);
-				if(pItem != nullptr && pItem->m_RenderTexture.IsValid())
-					ResidentBytes += pItem->m_PreviewResidentBytes;
-			}
-		}
-		return ResidentBytes;
+		// 其它页的搜索指针可能尚未重建；统计只读取当前拥有条目的列表。
+		return SettingsAssetPreviewResidentBytes(m_vEntitiesList) +
+		       SettingsAssetPreviewResidentBytes(m_vGameList) +
+		       SettingsAssetPreviewResidentBytes(m_vEmoticonList) +
+		       SettingsAssetPreviewResidentBytes(m_vParticlesList) +
+		       SettingsAssetPreviewResidentBytes(m_vHudList) +
+		       SettingsAssetPreviewResidentBytes(m_vGuiCursorList) +
+		       SettingsAssetPreviewResidentBytes(m_vArrowList) +
+		       SettingsAssetPreviewResidentBytes(m_vStrongWeakList) +
+		       SettingsAssetPreviewResidentBytes(m_vEntityBgList) +
+		       SettingsAssetPreviewResidentBytes(m_vExtrasList);
 	};
+
 	auto CountWorkshopResidentPreviewBytes = [&]() {
-		size_t ResidentBytes = 0;
+		uint64_t ResidentBytes = 0;
 		for(int Tab = ASSETS_TAB_ENTITIES; Tab < NUMBER_OF_ASSETS_TABS; ++Tab)
 		{
 			const SWorkshopHudState *pWorkshopState = WorkshopStateByTab(Tab);
@@ -5146,9 +4733,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		return ResidentBytes;
 	};
 	const bool ShouldCollectFocusResidentStats = AssetsPerfDebugEnabled() && (WindowActive != s_AssetsWindowActive || s_AssetsFocusPerfFrames > 0);
-	const size_t ResidentPreviewBytes = ShouldCollectFocusResidentStats ? CountResidentPreviewBytes() : 0;
-	const size_t WorkshopResidentPreviewBytes = ShouldCollectFocusResidentStats ? CountWorkshopResidentPreviewBytes() : 0;
-	const size_t PreviewBudgetBytes = SettingsAssetPreviewResidentBudgetBytes(
+	const uint64_t ResidentPreviewBytes = ShouldCollectFocusResidentStats ? CountResidentPreviewBytes() : 0;
+	const uint64_t WorkshopResidentPreviewBytes = ShouldCollectFocusResidentStats ? CountWorkshopResidentPreviewBytes() : 0;
+	const uint64_t PreviewBudgetBytes = SettingsAssetPreviewResidentBudgetBytes(
 		(size_t)g_Config.m_QmAssetsPreviewBudgetMbOverride,
 		g_Config.m_QmAssetsPreviewBudgetPercent,
 		PerfSnapshot.m_GpuDedicatedVramBudgetMb);
@@ -5161,13 +4748,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			WorkshopDecodePending = (int)pWorkshopState->m_vDecodeThumbQueue.size();
 			WorkshopReadyPending = (int)pWorkshopState->m_vReadyThumbQueue.size();
 		}
-		char aExtra[512];
+		char aExtra[768];
 		str_format(aExtra, sizeof(aExtra),
-			"event=%s window_active=%d gfx_backgroundrender=%d cl_refresh_rate_inactive=%d page=%s tab=%s local_decode_queue=%d local_ready_queue=%d workshop_decode_queue=%d workshop_ready_queue=%d texture_memory_usage=%u resident_preview_bytes=%u workshop_resident_preview_bytes=%u preview_budget_bytes=%u",
+			"event=%s window_active=%d gfx_backgroundrender=%d cl_refresh_rate_inactive=%d page=%s tab=%s local_decode_queue=%d local_ready_queue=%d workshop_decode_queue=%d workshop_ready_queue=%d texture_memory_usage=%llu resident_preview_bytes=%llu workshop_resident_preview_bytes=%llu preview_budget_bytes=%llu",
 			pEvent, WindowActive ? 1 : 0, g_Config.m_GfxBackgroundRender, g_Config.m_ClRefreshRateInactive,
 			"assets", AssetsSettingsTabName(s_CurCustomTab), (int)m_aaCustomPreviewDecodeQueue[s_CurCustomTab].size(),
 			(int)m_aaCustomPreviewReadyQueue[s_CurCustomTab].size(), WorkshopDecodePending, WorkshopReadyPending,
-			(unsigned)TextureMemoryUsageBytes, (unsigned)ResidentPreviewBytes, (unsigned)WorkshopResidentPreviewBytes, (unsigned)PreviewBudgetBytes);
+			static_cast<unsigned long long>(TextureMemoryUsageBytes), static_cast<unsigned long long>(ResidentPreviewBytes), static_cast<unsigned long long>(WorkshopResidentPreviewBytes), static_cast<unsigned long long>(PreviewBudgetBytes));
 		LogAssetsPerfStageForClient(Client(), "assets_window_focus", 0.0, true, aExtra);
 	};
 	if(WindowActive != s_AssetsWindowActive)
@@ -5177,64 +4764,26 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		s_AssetsFocusPerfFrames = WindowActive ? 10 : 0;
 	}
 
-	auto MakePreviewHandle = [&](const SCustomItem &Item) {
-		SSettingsAssetPreviewHandle Handle;
-		Handle.m_Tab = s_CurCustomTab;
-		Handle.m_Epoch = PreviewEpoch;
-		Handle.m_Index = Item.m_PreviewListIndex;
-		Handle.m_Name = Item.m_aName;
-		return Handle;
+	auto FindCustomItemByPreviewHandle = [this](const SSettingsAssetPreviewHandle &Handle) -> SCustomItem * {
+		SCustomItem *pFound = nullptr;
+		VisitOwnedSettingsAssetList(Handle.m_Tab, [&](auto &Items) { pFound = FindSettingsAssetPreviewOwner(Items, Handle.m_Tab, Handle); });
+		return pFound;
 	};
 
-	auto FindCustomItemByPreviewHandle = [](const SSettingsAssetPreviewHandle &Handle) -> SCustomItem * {
-		if(Handle.m_Tab < ASSETS_TAB_ENTITIES || Handle.m_Tab >= NUMBER_OF_ASSETS_TABS)
-			return nullptr;
-		// 先按句柄里的下标取，对不上再按名字扫一遍：软重扫合并会重排列表，
-		// 句柄里的下标可能已经指向别的卡。只认下标等于把这张卡正在解码的预览
-		// 整个丢掉——用户看到「加载完又变回灰块」，或者干脆一直停在占位上。
-		const size_t Items = GetCustomItemCount(Handle.m_Tab);
-		if(Handle.m_Index < Items)
+	auto QueueReadyPreview = [&](SCustomItem *pItem, std::optional<size_t> ViewIndex = std::nullopt, bool HighPriority = false) {
+		const SCustomItem *pFrontItem = !vReadyQueue.empty() ? FindCustomItemByPreviewHandle(vReadyQueue.front()) : nullptr;
+		const bool Promote = SettingsAssetPreviewShouldUploadHighPriorityFirst(pFrontItem != nullptr && pFrontItem->m_PreviewHighPriority, pItem->m_PreviewHighPriority || HighPriority);
+		const size_t Before = vReadyQueue.size();
+		const bool Tracked = TryQueueSettingsAssetReadyPreview(*pItem, s_CurCustomTab, PreviewEpoch,
+			ViewIndex.value_or(pItem->m_PreviewListIndex), pItem->m_PreviewHighPriority || HighPriority, vReadyQueue, vReadyQueued, Promote);
+		if(Tracked && vReadyQueue.size() > Before)
 		{
-			SCustomItem *pItem = GetCustomItemMutable(Handle.m_Tab, Handle.m_Index);
-			if(pItem != nullptr && pItem->m_PreviewEpoch == Handle.m_Epoch && SettingsAssetPreviewHandleReferencesAsset(Handle, pItem->m_aName))
-				return pItem;
-		}
-		for(size_t Index = 0; Index < Items; ++Index)
-		{
-			SCustomItem *pItem = GetCustomItemMutable(Handle.m_Tab, Index);
-			if(pItem != nullptr && pItem->m_PreviewEpoch == Handle.m_Epoch && SettingsAssetPreviewHandleReferencesAsset(Handle, pItem->m_aName))
-				return pItem;
-		}
-		return nullptr;
-	};
-
-	auto QueueReadyPreview = [&](SCustomItem *pItem) {
-		const SSettingsAssetPreviewHandle Handle = MakePreviewHandle(*pItem);
-		const std::string Key = SettingsAssetPreviewHandleKey(Handle);
-		if(vReadyQueued.insert(Key).second)
-		{
-			if(pItem->m_PreviewHighPriority)
-				vReadyQueue.push_front(Handle);
-			else
-				vReadyQueue.push_back(Handle);
 			char aExtra[160];
 			str_format(aExtra, sizeof(aExtra), "tab=%d asset=%s queue_size=%d bytes=%u",
 				s_CurCustomTab, pItem->m_aName, (int)vReadyQueue.size(), (unsigned)pItem->m_PreviewBytes);
 			LogAssetsPerfStageForClient(Client(), "assets_preview_upload_queue_push", 0.0, true, aExtra);
 		}
-		else if(pItem->m_PreviewHighPriority)
-		{
-			auto It = std::find_if(vReadyQueue.begin(), vReadyQueue.end(), [&](const SSettingsAssetPreviewHandle &QueuedHandle) {
-				return SettingsAssetPreviewHandleMatches(QueuedHandle, s_CurCustomTab, PreviewEpoch, pItem->m_PreviewListIndex, pItem->m_aName);
-			});
-			const SCustomItem *pFrontItem = !vReadyQueue.empty() ? FindCustomItemByPreviewHandle(vReadyQueue.front()) : nullptr;
-			if(It != vReadyQueue.end() && !vReadyQueue.empty() &&
-				SettingsAssetPreviewShouldUploadHighPriorityFirst(pFrontItem != nullptr && pFrontItem->m_PreviewHighPriority, pItem->m_PreviewHighPriority))
-			{
-				vReadyQueue.erase(It);
-				vReadyQueue.push_front(Handle);
-			}
-		}
+		return Tracked;
 	};
 
 	auto StartPreviewDecode = [&](size_t Index, bool HighPriority) {
@@ -5249,14 +4798,23 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		if(!SettingsAssetWorkAllowedWhileWindowInactive(WindowActive, HighPriority))
 			return false;
 		SCustomItem *pItem = GetCustomItemMutable(CurTab, Index);
-		if(pItem == nullptr || !SettingsResourceCanUseHighPriorityBudget(PreviewDecodeStartsThisFrame, MaxPreviewDecodeStartsPerFrame, MaxPreviewHighPriorityDecodeStartsPerFrame, HighPriority))
+		if(pItem == nullptr)
 			return false;
 		if(CurTab == ASSETS_TAB_ENTITY_BG && static_cast<SCustomEntityBg *>(pItem)->m_IsDirectory)
+			return false;
+		if(pItem->m_PreviewState == SCustomItem::PREVIEW_STATE_READY)
+		{
+			// 视图/列表重建可以清队列；已完成像素重新登记，不重复解码或扣启动预算。
+			QueueReadyPreview(pItem, Index, HighPriority);
+			return false;
+		}
+		if(!SettingsResourceCanUseHighPriorityBudget(PreviewDecodeStartsThisFrame, MaxPreviewDecodeStartsPerFrame, MaxPreviewHighPriorityDecodeStartsPerFrame, HighPriority))
 			return false;
 		if(CurTab == ASSETS_TAB_ENTITY_BG)
 		{
 			if(SWorkshopHudState *pWorkshopState = WorkshopStateByTab(CurTab))
 			{
+				ESettingsAssetImageAdmission InstalledAdmission = ESettingsAssetImageAdmission::FAILED;
 				if(EnsureInstalledWorkshopEntityBgThumbReady(
 					   *pWorkshopState,
 					   pItem->m_aName,
@@ -5274,8 +4832,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					   Storage(),
 					   Engine(),
 					   Http(),
-					   Client()))
+					   Client(), &InstalledAdmission))
 					return false;
+				if(InstalledAdmission == ESettingsAssetImageAdmission::DEFERRED)
+				{
+					RecoverSettingsAssetCpuPressure(CurTab, true);
+					return false;
+				}
 			}
 		}
 		if(pItem->m_PreviewState == SCustomItem::PREVIEW_STATE_LOADING)
@@ -5288,101 +4851,97 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				});
 				if(It != vDecodeQueue.end())
 				{
-					// 删除队列项前转移句柄，不能保留随后失效的迭代器引用。
-					SSettingsAssetPreviewHandle Handle = std::move(*It);
-					vDecodeQueue.erase(It);
-					vDecodeQueue.push_front(std::move(Handle));
+					SettingsAssetQueuePromote(vDecodeQueue, It);
 				}
 			}
 			return false;
 		}
 		if(pItem->m_RenderTexture.IsValid() && pItem->m_PreviewResidentBytes >= PreviewTextureSizeBytesEstimate(pItem->m_PreviewRequestedTextureSize))
 			return false;
-		if(pItem->m_PreviewState == SCustomItem::PREVIEW_STATE_READY || pItem->m_PreviewState == SCustomItem::PREVIEW_STATE_LOADED)
+		if(pItem->m_PreviewState == SCustomItem::PREVIEW_STATE_LOADED)
 			return false;
-		pItem->m_PreviewImage.Free();
+		const bool HadJob = pItem->m_pDecodeJob != nullptr;
+		const int TargetTextureSize = HadJob ? pItem->m_PreviewRequestedTextureSize : SettingsAssetPreviewBudgetedTextureSize(LOCAL_ASSET_PREVIEW_MAX_TEXTURE_SIZE, ASSET_PREVIEW_MIN_TEXTURE_SIZE, PreviewBudgetBytes, TextureMemoryUsageBytes, pItem->m_PreviewResidentBytes);
+		if(!HadJob && !SettingsAssetPreviewDecodeStartNeeded(false, pItem->m_RenderTexture.IsValid(), pItem->m_PreviewResidentBytes, TargetTextureSize, false))
+			return false;
+		ESettingsAssetImageAdmission Admission = ESettingsAssetImageAdmission::DEFERRED;
+		auto pJob = SettingsAssetQueueTryStart(vDecodeQueue, HighPriority, [&] { return SSettingsAssetPreviewHandle{CurTab, PreviewEpoch, Index, pItem->m_aName}; }, [](const auto &Left, const auto &Right) { return SettingsAssetPreviewHandleMatches(Left, Right.m_Tab, Right.m_Epoch, Right.m_Index, Right.m_Name.c_str()); }, [&]() -> std::shared_ptr<IJob> {
+				if(pItem->m_pDecodeJob)
+					return pItem->m_pDecodeJob;
+				if(CurTab == ASSETS_TAB_ENTITIES)
+				{
+					SCustomEntities *pEntity = gs_vpSearchEntitiesList[Index];
+					return StartEntitiesDecode(pEntity, Storage(), Engine(), TargetTextureSize, &Admission);
+				}
+				else if(CurTab == ASSETS_TAB_GAME)
+				{
+					SCustomGame *pGame = gs_vpSearchGamesList[Index];
+					return StartAssetDecode(pGame, "game", Storage(), Engine(), TargetTextureSize, &Admission);
+				}
+				else if(CurTab == ASSETS_TAB_EMOTICONS)
+				{
+					SCustomEmoticon *pEmoticon = gs_vpSearchEmoticonsList[Index];
+					return StartAssetDecode(pEmoticon, "emoticons", Storage(), Engine(), TargetTextureSize, &Admission);
+				}
+				else if(CurTab == ASSETS_TAB_PARTICLES)
+				{
+					SCustomParticle *pParticle = gs_vpSearchParticlesList[Index];
+					return StartAssetDecode(pParticle, "particles", Storage(), Engine(), TargetTextureSize, &Admission);
+				}
+				else if(CurTab == ASSETS_TAB_HUD)
+				{
+					SCustomHud *pHud = gs_vpSearchHudList[Index];
+					return StartAssetDecode(pHud, "hud", Storage(), Engine(), TargetTextureSize, &Admission);
+				}
+				else if(CurTab == ASSETS_TAB_GUI_CURSOR)
+				{
+					SCustomGuiCursor *pGuiCursor = gs_vpSearchGuiCursorList[Index];
+					return StartAssetDecode(pGuiCursor, "gui_cursor", Storage(), Engine(), TargetTextureSize, &Admission);
+				}
+				else if(CurTab == ASSETS_TAB_ARROW)
+				{
+					SCustomArrow *pArrow = gs_vpSearchArrowList[Index];
+					return StartAssetDecode(pArrow, "arrow", Storage(), Engine(), TargetTextureSize, &Admission);
+				}
+				else if(CurTab == ASSETS_TAB_STRONG_WEAK)
+				{
+					SCustomStrongWeak *pStrongWeak = gs_vpSearchStrongWeakList[Index];
+					return StartAssetDecode(pStrongWeak, "strong_weak", Storage(), Engine(), TargetTextureSize, &Admission);
+				}
+				else if(CurTab == ASSETS_TAB_ENTITY_BG)
+				{
+					SCustomEntityBg *pEntityBg = gs_vpSearchEntityBgList[Index];
+					return StartEntityBgDecode(pEntityBg, Storage(), Engine(), TargetTextureSize, &Admission);
+				}
+				else if(CurTab == ASSETS_TAB_EXTRAS)
+				{
+					SCustomExtras *pExtras = gs_vpSearchExtrasList[Index];
+					return StartAssetDecode(pExtras, "extras", Storage(), Engine(), TargetTextureSize, &Admission);
+				}
+				return nullptr; });
+		if(!pJob)
+		{
+			if(Admission == ESettingsAssetImageAdmission::DEFERRED)
+				RecoverSettingsAssetCpuPressure(CurTab, true);
+			return false;
+		}
+		pItem->FreePreviewCpuImage();
+		pItem->m_pDecodeJob = std::move(pJob);
 		pItem->m_PreviewEpoch = PreviewEpoch;
 		pItem->m_PreviewListIndex = Index;
 		pItem->m_PreviewState = SCustomItem::PREVIEW_STATE_LOADING;
 		pItem->m_PreviewBytes = 0;
-		pItem->m_PreviewRequestedTextureSize = SettingsAssetPreviewBudgetedTextureSize(
-			LOCAL_ASSET_PREVIEW_MAX_TEXTURE_SIZE,
-			ASSET_PREVIEW_MIN_TEXTURE_SIZE,
-			PreviewBudgetBytes,
-			TextureMemoryUsageBytes,
-			pItem->m_PreviewResidentBytes);
+		pItem->m_PreviewRequestedTextureSize = TargetTextureSize;
 		pItem->m_PreviewResized = false;
 		pItem->m_PreviewHighPriority = HighPriority;
-		if(CurTab == ASSETS_TAB_ENTITIES)
-		{
-			SCustomEntities *pEntity = gs_vpSearchEntitiesList[Index];
-			StartEntitiesDecode(pEntity, Storage(), Engine(), pItem->m_PreviewRequestedTextureSize);
-		}
-		else if(CurTab == ASSETS_TAB_GAME)
-		{
-			SCustomGame *pGame = gs_vpSearchGamesList[Index];
-			StartAssetDecode(pGame, "game", Storage(), Engine(), pItem->m_PreviewRequestedTextureSize);
-		}
-		else if(CurTab == ASSETS_TAB_EMOTICONS)
-		{
-			SCustomEmoticon *pEmoticon = gs_vpSearchEmoticonsList[Index];
-			StartAssetDecode(pEmoticon, "emoticons", Storage(), Engine(), pItem->m_PreviewRequestedTextureSize);
-		}
-		else if(CurTab == ASSETS_TAB_PARTICLES)
-		{
-			SCustomParticle *pParticle = gs_vpSearchParticlesList[Index];
-			StartAssetDecode(pParticle, "particles", Storage(), Engine(), pItem->m_PreviewRequestedTextureSize);
-		}
-		else if(CurTab == ASSETS_TAB_HUD)
-		{
-			SCustomHud *pHud = gs_vpSearchHudList[Index];
-			StartAssetDecode(pHud, "hud", Storage(), Engine(), pItem->m_PreviewRequestedTextureSize);
-		}
-		else if(CurTab == ASSETS_TAB_GUI_CURSOR)
-		{
-			SCustomGuiCursor *pGuiCursor = gs_vpSearchGuiCursorList[Index];
-			StartAssetDecode(pGuiCursor, "gui_cursor", Storage(), Engine(), pItem->m_PreviewRequestedTextureSize);
-		}
-		else if(CurTab == ASSETS_TAB_ARROW)
-		{
-			SCustomArrow *pArrow = gs_vpSearchArrowList[Index];
-			StartAssetDecode(pArrow, "arrow", Storage(), Engine(), pItem->m_PreviewRequestedTextureSize);
-		}
-		else if(CurTab == ASSETS_TAB_STRONG_WEAK)
-		{
-			SCustomStrongWeak *pStrongWeak = gs_vpSearchStrongWeakList[Index];
-			StartAssetDecode(pStrongWeak, "strong_weak", Storage(), Engine(), pItem->m_PreviewRequestedTextureSize);
-		}
-		else if(CurTab == ASSETS_TAB_ENTITY_BG)
-		{
-			SCustomEntityBg *pEntityBg = gs_vpSearchEntityBgList[Index];
-			StartEntityBgDecode(pEntityBg, Storage(), Engine(), pItem->m_PreviewRequestedTextureSize);
-		}
-		else if(CurTab == ASSETS_TAB_EXTRAS)
-		{
-			SCustomExtras *pExtras = gs_vpSearchExtrasList[Index];
-			StartAssetDecode(pExtras, "extras", Storage(), Engine(), pItem->m_PreviewRequestedTextureSize);
-		}
-		if(pItem->m_pDecodeJob)
-		{
-			const SSettingsAssetPreviewHandle Handle = MakePreviewHandle(*pItem);
-			if(HighPriority)
-				vDecodeQueue.push_front(Handle);
-			else
-				vDecodeQueue.push_back(Handle);
-			++PreviewDecodeStartsThisFrame;
-			if(HighPriority && pActiveVisiblePreflight != nullptr)
-				++pActiveVisiblePreflight->m_ThumbStartsBeforeVisible;
-			else if(HighPriority && pActiveVisiblePreflight == nullptr)
-				++VisiblePreviewStartsDuringDraw;
-			return true;
-		}
-		else
-		{
-			pItem->m_PreviewHighPriority = false;
-			pItem->m_PreviewState = SCustomItem::PREVIEW_STATE_FAILED;
-		}
-		return false;
+		if(HadJob)
+			return false;
+		++PreviewDecodeStartsThisFrame;
+		if(HighPriority && pActiveVisiblePreflight != nullptr)
+			++pActiveVisiblePreflight->m_ThumbStartsBeforeVisible;
+		else if(HighPriority && pActiveVisiblePreflight == nullptr)
+			++VisiblePreviewStartsDuringDraw;
+		return true;
 	};
 
 	auto SchedulePreviewRange = [&](int FirstIndex, int LastIndex, int ItemsPerRow) {
@@ -5883,8 +5442,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		const size_t DecodePolls = minimum(PendingCount, MaxPreviewDecodePollsPerFrame);
 		for(size_t i = 0; i < DecodePolls; ++i)
 		{
-			const SSettingsAssetPreviewHandle Handle = vDecodeQueue.front();
-			vDecodeQueue.pop_front();
+			const SSettingsAssetPreviewHandle &Handle = vDecodeQueue.front();
 			if(Handle.m_Tab != s_CurCustomTab || Handle.m_Epoch != PreviewEpoch)
 			{
 				++DroppedStale;
@@ -5892,11 +5450,15 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				str_format(aDropExtra, sizeof(aDropExtra), "tab=%d asset=%s epoch=%u current_epoch=%u",
 					Handle.m_Tab, Handle.m_Name.c_str(), Handle.m_Epoch, PreviewEpoch);
 				LogAssetsPerfStageForClient(Client(), "assets_preview_decode_drop_stale", 0.0, true, aDropExtra);
+				vDecodeQueue.pop_front();
 				continue;
 			}
 			SCustomItem *pItem = FindCustomItemByPreviewHandle(Handle);
 			if(pItem == nullptr)
+			{
+				vDecodeQueue.pop_front();
 				continue;
+			}
 			// 按名字认领：软重扫合并会重排列表，句柄里的下标可能已经过期，
 			// 但那不代表这张卡的解码结果作废——按旧下标比对会把刚解码好的
 			// 贴图整个丢掉，用户看到的就是「加载完又变回灰块」。
@@ -5906,19 +5468,28 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				char aDropExtra[128];
 				str_format(aDropExtra, sizeof(aDropExtra), "tab=%d asset=%s", s_CurCustomTab, Handle.m_Name.c_str());
 				LogAssetsPerfStageForClient(Client(), "assets_preview_decode_drop_stale", 0.0, true, aDropExtra);
+				vDecodeQueue.pop_front();
 				continue;
 			}
 			if(!pItem->m_pDecodeJob)
 			{
+				if(pItem->m_PreviewState == SCustomItem::PREVIEW_STATE_READY && pItem->m_PreviewImage.m_pData && !QueueReadyPreview(pItem))
+				{
+					if(!SettingsAssetQueueDeferFront(vDecodeQueue))
+						break;
+					continue;
+				}
 				if(pItem->m_PreviewState == SCustomItem::PREVIEW_STATE_LOADING)
 					pItem->m_PreviewState = SCustomItem::PREVIEW_STATE_UNLOADED;
+				vDecodeQueue.pop_front();
 				continue;
 			}
 
 			auto pDecodeJob = std::static_pointer_cast<CFullAsyncImageLoadJob>(pItem->m_pDecodeJob);
 			if(!pDecodeJob->IsCompleted())
 			{
-				vDecodeQueue.push_back(Handle);
+				if(!SettingsAssetQueueDeferFront(vDecodeQueue))
+					break;
 				continue;
 			}
 
@@ -5927,13 +5498,15 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			const int MaxFinalizesForFrame = SettingsResourceFrameStageBudget(FinalizeFrameContext, FinalizePriority, MaxPreviewDecodeFinalizesPerFrame, minimum(MaxPreviewDecodeFinalizesPerFrame, AssetsVisibleTrickleTokens));
 			if(SettingsAssetPreviewShouldDeferFinalize(PreviewDecodeFinalizesThisFrame, DecodeFinalizeTimer.ElapsedMs(), MaxFinalizesForFrame, MaxPreviewDecodeFinalizeMsPerFrame))
 			{
-				vDecodeQueue.push_back(Handle);
+				if(!SettingsAssetQueueDeferFront(vDecodeQueue))
+					break;
 				++DeferredCompleted;
 				continue;
 			}
 			if(!SettingsResourceConsumeSharedHeavyBudget(RemainingHeavyResourceBatches))
 			{
-				vDecodeQueue.push_back(Handle);
+				if(!SettingsAssetQueueDeferFront(vDecodeQueue))
+					break;
 				++DeferredCompleted;
 				continue;
 			}
@@ -5950,7 +5523,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			if(!Result.m_Success || !Result.m_Image.m_pData)
 			{
 				Result.m_Image.Free();
+				Result.m_MemoryLease.Reset();
 				pItem->m_PreviewState = SCustomItem::PREVIEW_STATE_FAILED;
+				vDecodeQueue.pop_front();
 				continue;
 			}
 
@@ -5968,6 +5543,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			{
 				CPerfTimer PostProcessTimer;
 				pItem->m_PreviewImage = std::move(Result.m_Image);
+				pItem->m_MemoryLease = std::move(Result.m_MemoryLease);
 				pItem->m_PreviewBytes = pItem->m_PreviewImage.DataSize();
 				if(pItem->m_PreviewRequestedTextureSize <= 0)
 					pItem->m_PreviewRequestedTextureSize = LOCAL_ASSET_PREVIEW_MAX_TEXTURE_SIZE;
@@ -5978,7 +5554,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				LogAssetsPerfStageForClient(Client(), "assets_finalize_postprocess_pixels", PostProcessTimer.ElapsedMs(), false, aPostProcessExtra);
 			}
 			pItem->m_PreviewState = SCustomItem::PREVIEW_STATE_READY;
-			QueueReadyPreview(pItem);
+			if(QueueReadyPreview(pItem))
+				vDecodeQueue.pop_front();
+			else if(!SettingsAssetQueueDeferFront(vDecodeQueue))
+				break;
 			++ReadyCount;
 			++PreviewDecodeFinalizesThisFrame;
 			char aFinalizeTotalExtra[192];
@@ -6047,91 +5626,102 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		}
 		while(gs_SettingsAssetsResourcePreviewUploadScheduler.QueueDepth() == 0 && !vReadyQueue.empty() && UploadedPreviewsThisFrame < MaxPreviewUploadsPerFrame)
 		{
-			const SSettingsAssetPreviewHandle Handle = vReadyQueue.front();
-			vReadyQueue.pop_front();
-			vReadyQueued.erase(SettingsAssetPreviewHandleKey(Handle));
-			if(Handle.m_Tab != s_CurCustomTab || Handle.m_Epoch != PreviewEpoch)
-				continue;
-			SCustomItem *pItem = FindCustomItemByPreviewHandle(Handle);
-			if(pItem == nullptr)
-				continue;
-			if(pItem->m_PreviewEpoch != Handle.m_Epoch || !SettingsAssetPreviewHandleReferencesAsset(Handle, pItem->m_aName) ||
-				pItem->m_PreviewState != SCustomItem::PREVIEW_STATE_READY || !pItem->m_PreviewImage.m_pData)
+			SCustomItem *pItem = nullptr;
+			size_t ItemBytes = 0;
+			bool PreviewWasResized = false;
+			bool HeavyReserved = false, Admitted = false;
+			ESettingsResourcePriority UploadPriority = ESettingsResourcePriority::BACKGROUND;
+			CPerfTimer UploadBatchTimer(false);
+			const bool Consumed = SettingsAssetQueueTryConsumeFront(vReadyQueue, vReadyQueued, [](const auto &Handle) { return SettingsAssetPreviewHandleKey(Handle); }, [&](const SSettingsAssetPreviewHandle &Handle) {
+					if(Handle.m_Tab != s_CurCustomTab || Handle.m_Epoch != PreviewEpoch)
+						return true;
+					pItem = FindCustomItemByPreviewHandle(Handle);
+					if(pItem == nullptr)
+						return true;
+					if(pItem->m_PreviewEpoch != Handle.m_Epoch || !SettingsAssetPreviewHandleReferencesAsset(Handle, pItem->m_aName) ||
+						pItem->m_PreviewState != SCustomItem::PREVIEW_STATE_READY || !pItem->m_PreviewImage.m_pData)
+					{
+						if(pItem->m_PreviewEpoch == Handle.m_Epoch)
+							ResetCustomItemPreviewState(*pItem);
+						return true;
+					}
+					UploadPriority = pItem->m_PreviewHighPriority ? ESettingsResourcePriority::VISIBLE : ESettingsResourcePriority::BACKGROUND;
+					// 与商店上传同规：滚动期可见优先级保留涓流（调度器积压也能继续排空）。
+					const int MaxUploadsForFrame = SettingsResourceFrameStageBudget(UploadFrameContext, UploadPriority, MaxPreviewUploadsPerFrame, minimum(MaxPreviewUploadsPerFrame, AssetsVisibleTrickleTokens));
+					if(UploadedPreviewsThisFrame >= MaxUploadsForFrame)
+					{
+						UploadBlocked = true;
+						UploadBlockReason = ESettingsWarmupMissReason::GPU_UPLOAD_BUDGET;
+						return false;
+					}
+					ItemBytes = pItem->m_PreviewBytes;
+					if(!SettingsResourceUploadWithinByteBudget(UploadedPreviewsThisFrame, UploadedBytesThisFrame, ItemBytes, MaxPreviewUploadBytesPerFrame))
+					{
+						if(!SettingsResourceOversizedUploadAllowed(UploadFrameContext, m_SettingsPageSwitchActive, UploadPriority, OversizedUploadsThisFrame, ItemBytes, MaxPreviewUploadBytesPerFrame))
+						{
+							UploadBlocked = true;
+							UploadBlockReason = ItemBytes > MaxPreviewUploadBytesPerFrame ?
+										    ESettingsWarmupMissReason::OVERSIZED_UPLOAD_DEFERRED :
+										    ESettingsWarmupMissReason::UPLOAD_BYTES_BUDGET;
+							return false;
+						}
+					}
+					if(!SettingsResourceConsumeSharedHeavyBudget(RemainingHeavyResourceBatches))
+					{
+						UploadBlocked = true;
+						UploadBlockReason = ESettingsWarmupMissReason::SHARED_HEAVY_BUDGET;
+						return false;
+					}
+					PreviewWasResized = pItem->m_PreviewResized;
+					HeavyReserved = true;
+					UploadBatchTimer = CPerfTimer();
+					const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(pItem->m_aName, s_CurCustomTab, false, Graphics()->ScreenHiDPIScale(), TextureWidth);
+					SResourcePreviewState &PreviewCacheState = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
+					// 空白材质的缩略图应当是「什么都没有」，而不是将被屏蔽掉的默认贴图；
+					// 解码仍走内置默认图（只为拿到尺寸与格式），上传前把像素清空即可。
+					if(IsBlankAssetName(pItem->m_aName) && pItem->m_PreviewImage.m_pData != nullptr)
+						ClearImageToTransparent(pItem->m_PreviewImage);
+					if(!gs_SettingsAssetsResourcePreviewUploadScheduler.EnqueueUploadToTarget(
+						   PreviewKey,
+						   std::move(pItem->m_PreviewImage),
+						   // 上传可能延后到下一帧，查找器与句柄都由回调按值持有。
+						   [&] { return [this, FindCustomItemByPreviewHandle, UploadHandle = Handle](bool TextureValid, IGraphics::CTextureHandle Texture) {
+								 SCustomItem *pUploadItem = FindCustomItemByPreviewHandle(UploadHandle);
+								 if(pUploadItem == nullptr || pUploadItem->m_PreviewEpoch != UploadHandle.m_Epoch)
+								 {
+									 if(Texture.IsValid())
+										 Graphics()->UnloadTexture(&Texture);
+									 return;
+								 }
+								 if(TextureValid && Texture.IsValid())
+								 {
+									 if(pUploadItem->m_RenderTexture.IsValid())
+										 Graphics()->UnloadTexture(&pUploadItem->m_RenderTexture);
+									 pUploadItem->m_RenderTexture = Texture;
+									 pUploadItem->m_PreviewResidentBytes = PreviewTextureSizeBytesEstimate(pUploadItem->m_PreviewRequestedTextureSize);
+								 }
+								 pUploadItem->m_PreviewBytes = 0;
+								 pUploadItem->m_PreviewState = pUploadItem->m_RenderTexture.IsValid() ? CMenus::SCustomItem::PREVIEW_STATE_LOADED : CMenus::SCustomItem::PREVIEW_STATE_FAILED;
+								 pUploadItem->m_PreviewHighPriority = false;
+								 pUploadItem->m_PreviewResized = false;
+							 }; },
+						   pItem->m_aName, &pItem->m_MemoryLease))
+						return false;
+					PreviewCacheState.m_UploadPending = true;
+					PreviewCacheState.m_AppearStart = 0;
+					Admitted = true;
+					return true; });
+			if(!Consumed)
 			{
-				if(pItem->m_PreviewEpoch == Handle.m_Epoch)
-					ResetCustomItemPreviewState(*pItem);
-				continue;
-			}
-			const ESettingsResourcePriority UploadPriority = pItem->m_PreviewHighPriority ? ESettingsResourcePriority::VISIBLE : ESettingsResourcePriority::BACKGROUND;
-			// 与商店上传同规：滚动期可见优先级保留涓流（调度器积压也能继续排空）。
-			const int MaxUploadsForFrame = SettingsResourceFrameStageBudget(UploadFrameContext, UploadPriority, MaxPreviewUploadsPerFrame, minimum(MaxPreviewUploadsPerFrame, AssetsVisibleTrickleTokens));
-			if(UploadedPreviewsThisFrame >= MaxUploadsForFrame)
-			{
+				if(HeavyReserved)
+					++RemainingHeavyResourceBatches;
 				UploadBlocked = true;
-				UploadBlockReason = ESettingsWarmupMissReason::GPU_UPLOAD_BUDGET;
-				vReadyQueue.push_front(Handle);
-				vReadyQueued.insert(SettingsAssetPreviewHandleKey(Handle));
+				if(UploadBlockReason == ESettingsWarmupMissReason::NONE)
+					UploadBlockReason = ESettingsWarmupMissReason::DEPENDENCY_NOT_READY;
 				break;
 			}
-			const size_t ItemBytes = pItem->m_PreviewBytes;
-			if(!SettingsResourceUploadWithinByteBudget(UploadedPreviewsThisFrame, UploadedBytesThisFrame, ItemBytes, MaxPreviewUploadBytesPerFrame))
-			{
-				if(!SettingsResourceOversizedUploadAllowed(UploadFrameContext, m_SettingsPageSwitchActive, UploadPriority, OversizedUploadsThisFrame, ItemBytes, MaxPreviewUploadBytesPerFrame))
-				{
-					UploadBlocked = true;
-					UploadBlockReason = ItemBytes > MaxPreviewUploadBytesPerFrame ?
-								    ESettingsWarmupMissReason::OVERSIZED_UPLOAD_DEFERRED :
-								    ESettingsWarmupMissReason::UPLOAD_BYTES_BUDGET;
-					vReadyQueue.push_front(Handle);
-					vReadyQueued.insert(SettingsAssetPreviewHandleKey(Handle));
-					break;
-				}
-			}
-			if(!SettingsResourceConsumeSharedHeavyBudget(RemainingHeavyResourceBatches))
-			{
-				UploadBlocked = true;
-				UploadBlockReason = ESettingsWarmupMissReason::SHARED_HEAVY_BUDGET;
-				vReadyQueue.push_front(Handle);
-				vReadyQueued.insert(SettingsAssetPreviewHandleKey(Handle));
-				break;
-			}
-			CPerfTimer UploadBatchTimer;
-			const bool PreviewWasResized = pItem->m_PreviewResized;
-			const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(pItem->m_aName, s_CurCustomTab, false, Graphics()->ScreenHiDPIScale(), TextureWidth);
-			SResourcePreviewState &PreviewCacheState = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
-			PreviewCacheState.m_UploadPending = true;
-			PreviewCacheState.m_AppearStart = 0;
-			// 空白材质的缩略图应当是「什么都没有」，而不是将被屏蔽掉的默认贴图；
-			// 解码仍走内置默认图（只为拿到尺寸与格式），上传前把像素清空即可。
-			if(IsBlankAssetName(pItem->m_aName) && pItem->m_PreviewImage.m_pData != nullptr)
-				ClearImageToTransparent(pItem->m_PreviewImage);
-			Graphics()->UnloadTexture(&pItem->m_RenderTexture);
-			pItem->m_PreviewResidentBytes = 0;
-			gs_SettingsAssetsResourcePreviewUploadScheduler.EnqueueUploadToTarget(
-				PreviewKey,
-				std::move(pItem->m_PreviewImage),
-				// 上传可能延后到下一帧，查找器与句柄都由回调按值持有。
-				[this, FindCustomItemByPreviewHandle, UploadHandle = Handle](bool TextureValid, IGraphics::CTextureHandle Texture) {
-					SCustomItem *pUploadItem = FindCustomItemByPreviewHandle(UploadHandle);
-					if(pUploadItem == nullptr || pUploadItem->m_PreviewEpoch != UploadHandle.m_Epoch)
-					{
-						if(Texture.IsValid())
-							Graphics()->UnloadTexture(&Texture);
-						return;
-					}
-					if(TextureValid && Texture.IsValid())
-					{
-						if(pUploadItem->m_RenderTexture.IsValid())
-							Graphics()->UnloadTexture(&pUploadItem->m_RenderTexture);
-						pUploadItem->m_RenderTexture = Texture;
-					}
-					pUploadItem->m_PreviewResidentBytes = TextureValid ? PreviewTextureSizeBytesEstimate(pUploadItem->m_PreviewRequestedTextureSize) : 0;
-					pUploadItem->m_PreviewBytes = 0;
-					pUploadItem->m_PreviewState = TextureValid ? CMenus::SCustomItem::PREVIEW_STATE_LOADED : CMenus::SCustomItem::PREVIEW_STATE_FAILED;
-					pUploadItem->m_PreviewHighPriority = false;
-					pUploadItem->m_PreviewResized = false;
-				},
-				pItem->m_aName);
+			if(!Admitted)
+				continue;
 			if(!gs_SettingsAssetsResourcePreviewUploadScheduler.DrainOne(PreviewUploadBudget, PreviewUploadTelemetry, gs_SettingsAssetsResourcePreviewCache, Graphics()))
 			{
 				UploadBlocked = true;
@@ -6504,6 +6094,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			const SWorkshopHudAsset *pWorkshopAsset = FindWorkshopAssetByLocalName(WorkshopStateByTab(s_CurCustomTab), s_aPendingDeleteName);
 			if(DeleteLocalAssetByTab(Storage(), s_CurCustomTab, s_aPendingDeleteName, pWorkshopAsset != nullptr ? pWorkshopAsset->m_InstallPath.c_str() : nullptr))
 			{
+				InvalidateAssetsResourcePreviewScope(s_CurCustomTab, Graphics(), false, s_aPendingDeleteName);
+				CancelLocalAssetPreview(s_CurCustomTab, s_aPendingDeleteName);
 				char aToastText[IO_MAX_PATH_LENGTH + 64];
 				str_format(aToastText, sizeof(aToastText), Localize("Deleted \"%s\""), s_aPendingDeleteName);
 				qm_ui::Toast(EQmToastKind::SUCCESS, aToastText);
@@ -6578,7 +6170,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					const auto *pEntityBgItem = static_cast<const SCustomEntityBg *>(pSelectedItem);
 					if(pEntityBgItem->m_IsDirectory)
 					{
-						if(str_comp(pSelectedItem->m_aName, "..") == 0)
+						if(IsEntityBgParentFolderPath(pSelectedItem->m_aName))
 						{
 							char aParentFolder[IO_MAX_PATH_LENGTH];
 							BuildEntityBgParentFolder(m_aEntityBgCurrentFolder, aParentFolder, sizeof(aParentFolder));
@@ -6588,7 +6180,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						{
 							str_copy(m_aEntityBgCurrentFolder, pSelectedItem->m_aName, sizeof(m_aEntityBgCurrentFolder));
 						}
-						RefreshEntityBgHierarchyView();
+						QueueLocalListRefresh(ASSETS_TAB_ENTITY_BG, 2);
 						return;
 					}
 				}
@@ -6748,7 +6340,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				WorkshopState.m_Requested = true; // Mark as loaded from cache
 				gs_aInitCustomList[s_CurCustomTab] = true;
 				if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
-					RefreshEntityBgHierarchyView();
+					QueueLocalListRefresh(ASSETS_TAB_ENTITY_BG, 2);
 				// Don't set m_LastRefreshTime here, so we won't auto-refresh
 			}
 		}
@@ -6840,6 +6432,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						NewAsset.m_ThumbTexture = ExistingAsset.m_ThumbTexture;
 						ExistingAsset.m_ThumbTexture = IGraphics::CTextureHandle();
 						NewAsset.m_ThumbImage = std::move(ExistingAsset.m_ThumbImage);
+						NewAsset.m_MemoryLease = std::move(ExistingAsset.m_MemoryLease);
 						NewAsset.m_ThumbBytes = ExistingAsset.m_ThumbBytes;
 						NewAsset.m_ThumbResized = ExistingAsset.m_ThumbResized;
 						NewAsset.m_ThumbRequestedTextureSize = ExistingAsset.m_ThumbRequestedTextureSize;
@@ -6873,7 +6466,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				for(SWorkshopHudAsset &Asset : WorkshopState.m_vAssets)
 				{
 					if(!NewAssetIds.contains(Asset.m_Id))
+					{
+						InvalidateAssetsResourcePreviewScope(s_CurCustomTab, Graphics(), true, Asset.m_Id.empty() ? Asset.m_Name.c_str() : Asset.m_Id.c_str());
 						ResetWorkshopAssetRuntimeState(Asset, Graphics(), true);
+					}
 				}
 				WorkshopState.m_vAssets.erase(
 					std::remove_if(WorkshopState.m_vAssets.begin(), WorkshopState.m_vAssets.end(),
@@ -6891,14 +6487,14 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				WorkshopState.m_LastRefreshTime = Client()->LocalTime();
 				gs_aInitCustomList[s_CurCustomTab] = true;
 				if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
-					RefreshEntityBgHierarchyView();
+					QueueLocalListRefresh(ASSETS_TAB_ENTITY_BG, 2);
 
 				// Save to local cache
 				const char *pCacheFile = GetWorkshopCacheFilename(s_CurCustomTab);
 				if(pCacheFile)
 					SaveWorkshopCache(WorkshopState, Storage(), pCacheFile);
 				FlushPersistedLocalAssetAuthorsIfDirty(Storage(), s_CurCustomTab);
-				RefreshPublishedLocalAssetAuthorsForTab(s_CurCustomTab, Storage());
+				RefreshPublishedLocalAssetAuthorsForTab(s_CurCustomTab);
 			}
 			else
 			{
@@ -6939,19 +6535,35 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				Asset.m_pThumbTask.reset();
 				if(ThumbOk && !Asset.m_ThumbTexture.IsValid() && !Asset.m_pDecodeJob)
 				{
-					if(!SettingsAssetWorkAllowedWhileWindowInactive(WindowActive, Asset.m_ThumbHighPriority))
-						continue;
 					Asset.m_ThumbRemoteFailed = false;
 					Asset.m_ThumbCacheFailed = false;
+					if(!SettingsAssetWorkAllowedWhileWindowInactive(WindowActive, Asset.m_ThumbHighPriority))
+					{
+						// HTTP 已完成；解除旧认领，激活后沿本地缓存入口继续准备。
+						ClearWorkshopThumbRequestMarker(Asset);
+						continue;
+					}
 					Asset.m_ThumbDecodeFromRemote = true;
-					StartBackgroundDecode(Asset, Storage(), Engine(), Asset.m_ThumbRequestedTextureSize > 0 ? Asset.m_ThumbRequestedTextureSize : WORKSHOP_ASSET_PREVIEW_MAX_TEXTURE_SIZE);
-					if(!Asset.m_pDecodeJob)
+					ESettingsAssetImageAdmission Admission = ESettingsAssetImageAdmission::DEFERRED;
+					if(!StartBackgroundDecode(WorkshopState, Asset, Storage(), Engine(), Asset.m_ThumbRequestedTextureSize > 0 ? Asset.m_ThumbRequestedTextureSize : WORKSHOP_ASSET_PREVIEW_MAX_TEXTURE_SIZE, s_CurCustomTab, Client(), &Admission))
 					{
 						Asset.m_ThumbDecodeFromRemote = false;
-						Asset.m_ThumbRemoteFailed = true;
+						if(Admission == ESettingsAssetImageAdmission::DEFERRED)
+						{
+							// 下载已成功；清认领标记后重试本地缓存，不重发 HTTP 或丢旧图。
+							ClearWorkshopThumbRequestMarker(Asset);
+							RecoverSettingsAssetCpuPressure(s_CurCustomTab, true);
+						}
+						else
+							Asset.m_ThumbRemoteFailed = true;
 					}
-					else
-						QueueWorkshopDecodeThumb(WorkshopState, Asset, s_CurCustomTab, Client());
+				}
+				else if(ThumbOk && !Asset.m_pDecodeJob)
+				{
+					// 旧低档贴图仍可显示，解除已完成下载的认领后再由缓存入口安排升档。
+					Asset.m_ThumbRemoteFailed = false;
+					Asset.m_ThumbCacheFailed = false;
+					ClearWorkshopThumbRequestMarker(Asset);
 				}
 				else if(!ThumbOk)
 				{
@@ -6992,16 +6604,36 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			const size_t WorkshopDecodePolls = minimum(PendingWorkshopDecodes, MaxWorkshopThumbDecodePollsPerFrame);
 			for(size_t Poll = 0; Poll < WorkshopDecodePolls; ++Poll)
 			{
-				const std::string AssetId = WorkshopState.m_vDecodeThumbQueue.front();
-				WorkshopState.m_vDecodeThumbQueue.pop_front();
-				WorkshopState.m_vDecodeThumbQueued.erase(AssetId);
+				const std::string &AssetId = WorkshopState.m_vDecodeThumbQueue.front();
+				auto Consume = [&] {
+					WorkshopState.m_vDecodeThumbQueued.erase(WorkshopState.m_vDecodeThumbQueue.front());
+					WorkshopState.m_vDecodeThumbQueue.pop_front();
+				};
+				auto Defer = [&](bool HighPriority) {
+					return HighPriority || SettingsAssetQueueDeferFront(WorkshopState.m_vDecodeThumbQueue);
+				};
 
 				SWorkshopHudAsset *pAsset = FindWorkshopAssetById(WorkshopState, AssetId);
-				if(pAsset == nullptr || !pAsset->m_pDecodeJob)
+				if(pAsset == nullptr)
+				{
+					Consume();
 					continue;
+				}
+				if(!pAsset->m_pDecodeJob)
+				{
+					if(pAsset->m_ThumbImage.m_pData && !QueueWorkshopReadyThumb(WorkshopState, *pAsset, s_CurCustomTab, Client()))
+					{
+						if(!Defer(pAsset->m_ThumbHighPriority))
+							break;
+						continue;
+					}
+					Consume();
+					continue;
+				}
 				if(!pAsset->m_pDecodeJob->IsCompleted())
 				{
-					QueueWorkshopDecodeThumb(WorkshopState, *pAsset, s_CurCustomTab, Client());
+					if(!Defer(pAsset->m_ThumbHighPriority))
+						break;
 					continue;
 				}
 				if(pAsset->m_ThumbTexture.IsValid() &&
@@ -7011,6 +6643,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						pAsset->m_ThumbRequestedTextureSize))
 				{
 					pAsset->m_pDecodeJob.reset();
+					Consume();
 					continue;
 				}
 
@@ -7020,13 +6653,15 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				const int MaxFinalizesForFrame = SettingsResourceFrameStageBudget(FinalizeFrameContext, FinalizePriority, MaxWorkshopThumbDecodeFinalizesThisFrame, minimum(MaxWorkshopThumbDecodeFinalizesThisFrame, AssetsVisibleTrickleTokens));
 				if(SettingsAssetPreviewShouldDeferFinalize(WorkshopThumbFinalizesThisFrame, WorkshopDecodeFinalizeTimer.ElapsedMs(), MaxFinalizesForFrame, MaxWorkshopThumbDecodeFinalizeMsPerFrame))
 				{
-					QueueWorkshopDecodeThumb(WorkshopState, *pAsset, s_CurCustomTab, Client());
+					if(!Defer(pAsset->m_ThumbHighPriority))
+						break;
 					++DeferredWorkshopThumbs;
 					continue;
 				}
 				if(!SettingsResourceConsumeSharedHeavyBudget(RemainingHeavyResourceBatches))
 				{
-					QueueWorkshopDecodeThumb(WorkshopState, *pAsset, s_CurCustomTab, Client());
+					if(!Defer(pAsset->m_ThumbHighPriority))
+						break;
 					++DeferredWorkshopThumbs;
 					continue;
 				}
@@ -7038,14 +6673,19 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				{
 					const bool WasHighPriority = pAsset->m_ThumbHighPriority;
 					const bool ResizedPreview = Result.m_Resized;
-					ResetWorkshopThumbReadyState(*pAsset);
+					// 解码交接保留最新请求代际与页签，上传回调仍需按它们认领结果。
+					ResetWorkshopThumbReadyState(*pAsset, true);
 					pAsset->m_ThumbHighPriority = WasHighPriority;
 					pAsset->m_ThumbImage = std::move(Result.m_Image);
+					pAsset->m_MemoryLease = std::move(Result.m_MemoryLease);
 					pAsset->m_ThumbBytes = pAsset->m_ThumbImage.DataSize();
 					if(pAsset->m_ThumbRequestedTextureSize <= 0)
 						pAsset->m_ThumbRequestedTextureSize = WORKSHOP_ASSET_PREVIEW_MAX_TEXTURE_SIZE;
 					pAsset->m_ThumbResized = ResizedPreview;
-					QueueWorkshopReadyThumb(WorkshopState, *pAsset, s_CurCustomTab, Client());
+					if(QueueWorkshopReadyThumb(WorkshopState, *pAsset, s_CurCustomTab, Client()))
+						Consume();
+					else if(!Defer(pAsset->m_ThumbHighPriority))
+						break;
 					++WorkshopThumbFinalizesThisFrame;
 					char aDecodeExtra[160];
 					str_format(aDecodeExtra, sizeof(aDecodeExtra), "tab=%d asset=%s resized=%d finalized=%d w=%u h=%u",
@@ -7056,6 +6696,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				else
 				{
 					Result.m_Image.Free();
+					Result.m_MemoryLease.Reset();
 					const bool DecodeFromRemote = pAsset->m_ThumbDecodeFromRemote;
 					pAsset->m_ThumbDecodeFromRemote = false;
 					pAsset->m_ThumbCacheFailed = true;
@@ -7065,6 +6706,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					}
 					if(DecodeFromRemote)
 						pAsset->m_ThumbRemoteFailed = true;
+					Consume();
 				}
 			}
 		};
@@ -7092,87 +6734,100 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			}
 			while(gs_SettingsAssetsResourcePreviewUploadScheduler.QueueDepth() == 0 && !WorkshopState.m_vReadyThumbQueue.empty() && WorkshopGpuUploadsThisFrame < MaxWorkshopThumbUploadsPerFrame)
 			{
-				const std::string ReadyAssetId = WorkshopState.m_vReadyThumbQueue.front();
-				WorkshopState.m_vReadyThumbQueue.pop_front();
-				WorkshopState.m_vReadyThumbQueued.erase(ReadyAssetId);
+				SWorkshopHudAsset *pAsset = nullptr;
+				size_t AssetBytes = 0;
+				bool ThumbWasResized = false;
+				bool HeavyReserved = false, Admitted = false;
+				ESettingsResourcePriority UploadPriority = ESettingsResourcePriority::BACKGROUND;
+				CPerfTimer UploadBatchTimer(false);
+				const bool Consumed = SettingsAssetQueueTryConsumeFront(WorkshopState.m_vReadyThumbQueue, WorkshopState.m_vReadyThumbQueued, [](const auto &Id) { return Id; }, [&](const std::string &ReadyAssetId) {
 
-				SWorkshopHudAsset *pAsset = FindWorkshopAssetById(WorkshopState, ReadyAssetId);
-				if(pAsset == nullptr)
-					continue;
-				if(pAsset->m_ThumbTexture.IsValid())
-				{
-					ResetWorkshopThumbReadyState(*pAsset);
-					continue;
-				}
-				if(pAsset->m_ThumbImage.m_pData == nullptr)
-					continue;
+						pAsset = FindWorkshopAssetById(WorkshopState, ReadyAssetId);
+						if(pAsset == nullptr)
+							return true;
+						if(pAsset->m_ThumbTexture.IsValid())
+						{
+							ResetWorkshopThumbReadyState(*pAsset);
+							return true;
+						}
+						if(pAsset->m_ThumbImage.m_pData == nullptr)
+							return true;
 
-				CPerfTimer UploadBatchTimer;
-				const size_t AssetBytes = pAsset->m_ThumbBytes;
-				const ESettingsResourcePriority UploadPriority = pAsset->m_ThumbHighPriority ? ESettingsResourcePriority::VISIBLE : ESettingsResourcePriority::BACKGROUND;
-				// 滚动上下文里可见优先级保留涓流预算（ScrollActiveVisibleBudget），
-				// 之前传 0 等于把框架自带的滚动期可见涓流关死了。
-				const int MaxUploadsForFrame = SettingsResourceFrameStageBudget(UploadFrameContext, UploadPriority, MaxWorkshopThumbUploadsPerFrame, minimum(MaxWorkshopThumbUploadsPerFrame, AssetsVisibleTrickleTokens));
-				if(WorkshopGpuUploadsThisFrame >= MaxUploadsForFrame)
+						AssetBytes = pAsset->m_ThumbBytes;
+						UploadPriority = pAsset->m_ThumbHighPriority ? ESettingsResourcePriority::VISIBLE : ESettingsResourcePriority::BACKGROUND;
+						// 滚动上下文里可见优先级保留涓流预算（ScrollActiveVisibleBudget），
+						// 之前传 0 等于把框架自带的滚动期可见涓流关死了。
+						const int MaxUploadsForFrame = SettingsResourceFrameStageBudget(UploadFrameContext, UploadPriority, MaxWorkshopThumbUploadsPerFrame, minimum(MaxWorkshopThumbUploadsPerFrame, AssetsVisibleTrickleTokens));
+						if(WorkshopGpuUploadsThisFrame >= MaxUploadsForFrame)
+						{
+							WorkshopUploadBlocked = true;
+							WorkshopUploadBlockReason = ESettingsWarmupMissReason::GPU_UPLOAD_BUDGET;
+							return false;
+						}
+						if(!SettingsResourceUploadWithinByteBudget(WorkshopGpuUploadsThisFrame, WorkshopThumbUploadedBytesThisFrame, AssetBytes, MaxWorkshopThumbUploadBytesPerFrame))
+						{
+							if(!SettingsResourceOversizedUploadAllowed(UploadFrameContext, m_SettingsPageSwitchActive, UploadPriority, WorkshopOversizedUploadsThisFrame, AssetBytes, MaxWorkshopThumbUploadBytesPerFrame))
+							{
+								WorkshopUploadBlocked = true;
+								WorkshopUploadBlockReason = AssetBytes > MaxWorkshopThumbUploadBytesPerFrame ?
+												    ESettingsWarmupMissReason::OVERSIZED_UPLOAD_DEFERRED :
+												    ESettingsWarmupMissReason::UPLOAD_BYTES_BUDGET;
+								return false;
+							}
+						}
+						if(!SettingsResourceConsumeSharedHeavyBudget(RemainingHeavyResourceBatches))
+						{
+							WorkshopUploadBlocked = true;
+							WorkshopUploadBlockReason = ESettingsWarmupMissReason::SHARED_HEAVY_BUDGET;
+							return false;
+						}
+						HeavyReserved = true;
+					UploadBatchTimer = CPerfTimer();
+						ThumbWasResized = pAsset->m_ThumbResized;
+						const std::string UploadAssetId = pAsset->m_Id;
+						const unsigned UploadEpoch = pAsset->m_ThumbQueuedEpoch;
+						const int UploadTab = pAsset->m_ThumbQueuedTab;
+						const int UploadTextureSize = pAsset->m_ThumbRequestedTextureSize;
+						const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(pAsset->m_Id.empty() ? pAsset->m_Name.c_str() : pAsset->m_Id.c_str(), s_CurCustomTab, true, Graphics()->ScreenHiDPIScale(), TextureWidth);
+						SResourcePreviewState &PreviewCacheState = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
+						if(!gs_SettingsAssetsResourcePreviewUploadScheduler.EnqueueUploadToTarget(
+							   PreviewKey,
+							   std::move(pAsset->m_ThumbImage),
+							   [&] { return [this, UploadAssetId, UploadEpoch, UploadTab, UploadTextureSize](bool TextureValid, IGraphics::CTextureHandle Texture) {
+									 SWorkshopHudState *pUploadState = WorkshopStateByTab(UploadTab);
+									 SWorkshopHudAsset *pUploadAsset = pUploadState != nullptr ? FindWorkshopAssetById(*pUploadState, UploadAssetId) : nullptr;
+									 if(pUploadAsset == nullptr || pUploadAsset->m_ThumbQueuedEpoch != UploadEpoch || pUploadAsset->m_ThumbQueuedTab != UploadTab)
+									 {
+										 if(Texture.IsValid())
+											 Graphics()->UnloadTexture(&Texture);
+										 return;
+									 }
+									 if(TextureValid && Texture.IsValid())
+									 {
+										 if(pUploadAsset->m_ThumbTexture.IsValid())
+											 Graphics()->UnloadTexture(&pUploadAsset->m_ThumbTexture);
+										 pUploadAsset->m_ThumbTexture = Texture;
+										 pUploadAsset->m_ThumbResidentBytes = PreviewTextureSizeBytesEstimate(UploadTextureSize);
+									 }
+									 ResetWorkshopThumbReadyState(*pUploadAsset);
+								 }; },
+							   pAsset->m_Name.c_str(), &pAsset->m_MemoryLease))
+							return false;
+						PreviewCacheState.m_UploadPending = true;
+						PreviewCacheState.m_AppearStart = 0;
+						Admitted = true;
+						return true; });
+				if(!Consumed)
 				{
+					if(HeavyReserved)
+						++RemainingHeavyResourceBatches;
 					WorkshopUploadBlocked = true;
-					WorkshopUploadBlockReason = ESettingsWarmupMissReason::GPU_UPLOAD_BUDGET;
-					WorkshopState.m_vReadyThumbQueue.push_front(ReadyAssetId);
-					WorkshopState.m_vReadyThumbQueued.insert(ReadyAssetId);
+					if(WorkshopUploadBlockReason == ESettingsWarmupMissReason::NONE)
+						WorkshopUploadBlockReason = ESettingsWarmupMissReason::DEPENDENCY_NOT_READY;
 					break;
 				}
-				if(!SettingsResourceUploadWithinByteBudget(WorkshopGpuUploadsThisFrame, WorkshopThumbUploadedBytesThisFrame, AssetBytes, MaxWorkshopThumbUploadBytesPerFrame))
-				{
-					if(!SettingsResourceOversizedUploadAllowed(UploadFrameContext, m_SettingsPageSwitchActive, UploadPriority, WorkshopOversizedUploadsThisFrame, AssetBytes, MaxWorkshopThumbUploadBytesPerFrame))
-					{
-						WorkshopUploadBlocked = true;
-						WorkshopUploadBlockReason = AssetBytes > MaxWorkshopThumbUploadBytesPerFrame ?
-										    ESettingsWarmupMissReason::OVERSIZED_UPLOAD_DEFERRED :
-										    ESettingsWarmupMissReason::UPLOAD_BYTES_BUDGET;
-						WorkshopState.m_vReadyThumbQueue.push_front(ReadyAssetId);
-						WorkshopState.m_vReadyThumbQueued.insert(ReadyAssetId);
-						break;
-					}
-				}
-				if(!SettingsResourceConsumeSharedHeavyBudget(RemainingHeavyResourceBatches))
-				{
-					WorkshopUploadBlocked = true;
-					WorkshopUploadBlockReason = ESettingsWarmupMissReason::SHARED_HEAVY_BUDGET;
-					WorkshopState.m_vReadyThumbQueue.push_front(ReadyAssetId);
-					WorkshopState.m_vReadyThumbQueued.insert(ReadyAssetId);
-					break;
-				}
-				const bool ThumbWasResized = pAsset->m_ThumbResized;
-				const std::string UploadAssetId = pAsset->m_Id;
-				const unsigned UploadEpoch = pAsset->m_ThumbQueuedEpoch;
-				const int UploadTab = pAsset->m_ThumbQueuedTab;
-				const int UploadTextureSize = pAsset->m_ThumbRequestedTextureSize;
-				const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(pAsset->m_Id.empty() ? pAsset->m_Name.c_str() : pAsset->m_Id.c_str(), s_CurCustomTab, true, Graphics()->ScreenHiDPIScale(), TextureWidth);
-				SResourcePreviewState &PreviewCacheState = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
-				PreviewCacheState.m_UploadPending = true;
-				PreviewCacheState.m_AppearStart = 0;
-				gs_SettingsAssetsResourcePreviewUploadScheduler.EnqueueUploadToTarget(
-					PreviewKey,
-					std::move(pAsset->m_ThumbImage),
-					[&, UploadAssetId, UploadEpoch, UploadTab, UploadTextureSize](bool TextureValid, IGraphics::CTextureHandle Texture) {
-						SWorkshopHudState *pUploadState = WorkshopStateByTab(UploadTab);
-						SWorkshopHudAsset *pUploadAsset = pUploadState != nullptr ? FindWorkshopAssetById(*pUploadState, UploadAssetId) : nullptr;
-						if(pUploadAsset == nullptr || pUploadAsset->m_ThumbQueuedEpoch != UploadEpoch || pUploadAsset->m_ThumbQueuedTab != UploadTab)
-						{
-							if(Texture.IsValid())
-								Graphics()->UnloadTexture(&Texture);
-							return;
-						}
-						if(TextureValid && Texture.IsValid())
-						{
-							if(pUploadAsset->m_ThumbTexture.IsValid())
-								Graphics()->UnloadTexture(&pUploadAsset->m_ThumbTexture);
-							pUploadAsset->m_ThumbTexture = Texture;
-						}
-						pUploadAsset->m_ThumbResidentBytes = TextureValid ? PreviewTextureSizeBytesEstimate(UploadTextureSize) : 0;
-						ResetWorkshopThumbReadyState(*pUploadAsset);
-					},
-					pAsset->m_Name.c_str());
+				if(!Admitted)
+					continue;
 				if(!gs_SettingsAssetsResourcePreviewUploadScheduler.DrainOne(WorkshopPreviewUploadBudget, WorkshopPreviewUploadTelemetry, gs_SettingsAssetsResourcePreviewCache, Graphics()))
 				{
 					WorkshopUploadBlocked = true;
@@ -7215,14 +6870,14 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		if(s_AssetsFocusPerfFrames > 0)
 		{
 			const char *pFocusFrameContext = AssetsResourceFrameContextName(ResourceFrameContext);
-			char aFocusExtra[512];
+			char aFocusExtra[768];
 			str_format(aFocusExtra, sizeof(aFocusExtra),
-				"window_active=%d page=%s tab=%s frame_context=%s focus_resume=%d focus_frames_left=%d local_decode_queue=%d local_ready_queue=%d workshop_decode_queue=%d workshop_ready_queue=%d preview_finalize=%d preview_upload=%d workshop_finalize=%d workshop_upload=%d texture_memory_usage=%u resident_preview_bytes=%u workshop_resident_preview_bytes=%u graphics_swap=see_perf_main_thread",
+				"window_active=%d page=%s tab=%s frame_context=%s focus_resume=%d focus_frames_left=%d local_decode_queue=%d local_ready_queue=%d workshop_decode_queue=%d workshop_ready_queue=%d preview_finalize=%d preview_upload=%d workshop_finalize=%d workshop_upload=%d texture_memory_usage=%llu resident_preview_bytes=%llu workshop_resident_preview_bytes=%llu graphics_swap=see_perf_main_thread",
 				WindowActive ? 1 : 0, "assets", AssetsSettingsTabName(s_CurCustomTab), pFocusFrameContext,
 				1, s_AssetsFocusPerfFrames, (int)m_aaCustomPreviewDecodeQueue[s_CurCustomTab].size(), (int)m_aaCustomPreviewReadyQueue[s_CurCustomTab].size(),
 				(int)WorkshopState.m_vDecodeThumbQueue.size(), (int)WorkshopState.m_vReadyThumbQueue.size(),
 				PreviewDecodeFinalizesThisFrame, UploadedPreviewsThisFrame, WorkshopThumbFinalizesThisFrame, WorkshopGpuUploadsThisFrame,
-				(unsigned)TextureMemoryUsageBytes, (unsigned)ResidentPreviewBytes, (unsigned)WorkshopResidentPreviewBytes);
+				static_cast<unsigned long long>(TextureMemoryUsageBytes), static_cast<unsigned long long>(ResidentPreviewBytes), static_cast<unsigned long long>(WorkshopResidentPreviewBytes));
 			LogAssetsPerfStageForClient(Client(), "assets_focus_observation", 0.0, true, aFocusExtra);
 			--s_AssetsFocusPerfFrames;
 		}
@@ -7261,10 +6916,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		auto WorkshopAssetMatchesCurrentEntityBgFolder = [&](const SWorkshopHudAsset &Asset) {
 			if(!ShouldShowEntityBgWorkshopAssetsInCurrentFolder())
 				return false;
-			if(IsEntityBgWorkshopFolderPath(m_aEntityBgCurrentFolder))
-				return true;
-			const int CurrentFolderLength = str_length(m_aEntityBgCurrentFolder);
-			return str_startswith(Asset.m_LocalName.c_str(), m_aEntityBgCurrentFolder) && Asset.m_LocalName[CurrentFolderLength] == '/';
+			return EntityBgWorkshopAssetMatchesFolder(Asset.m_LocalName, m_aEntityBgCurrentFolder);
 		};
 		for(size_t AssetIndex = 0; AssetIndex < AssetCount; ++AssetIndex)
 		{
@@ -7422,14 +7074,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				if(HasUsableInstalledThumb || HasUsableThumbCache)
 				{
 					CPerfTimer ThumbStartTimer;
-					Asset.m_ThumbDecodeFromRemote = false;
-					Asset.m_ThumbQueuedTier = TargetTextureSize;
-					Asset.m_ThumbQueuedEpoch = PreviewEpoch;
-					Asset.m_ThumbQueuedTab = s_CurCustomTab;
-					StartBackgroundDecode(Asset, Storage(), Engine(), TargetTextureSize);
-					if(Asset.m_pDecodeJob)
+					ESettingsAssetImageAdmission Admission = ESettingsAssetImageAdmission::DEFERRED;
+					if(StartBackgroundDecode(WorkshopState, Asset, Storage(), Engine(), TargetTextureSize, s_CurCustomTab, Client(), &Admission))
 					{
-						QueueWorkshopDecodeThumb(WorkshopState, Asset, s_CurCustomTab, Client());
+						Asset.m_ThumbDecodeFromRemote = false;
+						Asset.m_ThumbQueuedTier = TargetTextureSize;
+						Asset.m_ThumbQueuedEpoch = PreviewEpoch;
+						Asset.m_ThumbQueuedTab = s_CurCustomTab;
 						++WorkshopThumbStartsThisFrame;
 						const ESettingsWorkshopBytesSource BytesSource = HasUsableInstalledThumb ? ESettingsWorkshopBytesSource::LOCAL_INSTALL : ESettingsWorkshopBytesSource::LOCAL_THUMB_CACHE;
 						char aExtra[240];
@@ -7439,6 +7090,11 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 							SettingsWorkshopBytesSourceName(BytesSource));
 						LogAssetsPerfStageForClient(Client(), "assets_workshop_thumb_start_local", ThumbStartTimer.ElapsedMs(), false, aExtra);
 						return true;
+					}
+					if(Admission == ESettingsAssetImageAdmission::DEFERRED)
+					{
+						RecoverSettingsAssetCpuPressure(s_CurCustomTab, true);
+						return false;
 					}
 				}
 
@@ -7656,7 +7312,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						const bool IsWorkshopRootFolder = IsEntityBgDirectory &&
 										  IsEntityBgWorkshopFolderPath(pItem->m_aName);
 						PreviewState.m_DrawFolderIcon = true;
-						PreviewState.m_FolderIsParent = str_comp(pItem->m_aName, "..") == 0;
+						PreviewState.m_FolderIsParent = IsEntityBgParentFolderPath(pItem->m_aName);
 						PreviewState.m_FolderIsWorkshopRoot = IsWorkshopRootFolder;
 					}
 					else if(s_CurCustomTab == ASSETS_TAB_ENTITIES && gs_SettingsAssetsEntityGamePreview)
@@ -7946,6 +7602,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				const SWorkshopHudAsset *pWorkshopAsset = FindWorkshopAssetByLocalName(&WorkshopState, s_aWorkshopPendingDeleteName);
 				if(DeleteLocalAssetByTab(Storage(), s_CurCustomTab, s_aWorkshopPendingDeleteName, pWorkshopAsset != nullptr ? pWorkshopAsset->m_InstallPath.c_str() : nullptr))
 				{
+					InvalidateAssetsResourcePreviewScope(s_CurCustomTab, Graphics(), false, s_aWorkshopPendingDeleteName);
+					CancelLocalAssetPreview(s_CurCustomTab, s_aWorkshopPendingDeleteName);
 					char aToastText[IO_MAX_PATH_LENGTH + 64];
 					str_format(aToastText, sizeof(aToastText), Localize("Deleted \"%s\""), s_aWorkshopPendingDeleteName);
 					qm_ui::Toast(EQmToastKind::SUCCESS, aToastText);
@@ -7969,7 +7627,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						const auto SourceIt = m_vEntityBgSourceKinds.find(s_aWorkshopPendingDeleteName);
 						if(SourceIt != m_vEntityBgSourceKinds.end() && SourceIt->second == EEntityBgHierarchyEntrySource::WORKSHOP)
 							m_vEntityBgSourceKinds.erase(SourceIt);
-						RefreshEntityBgHierarchyView();
+						QueueLocalListRefresh(ASSETS_TAB_ENTITY_BG, 2);
 					}
 					else
 					{
@@ -8024,7 +7682,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				{
 					if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG && static_cast<const SCustomEntityBg *>(pNewItem)->m_IsDirectory)
 					{
-						if(str_comp(pNewItem->m_aName, "..") == 0)
+						if(IsEntityBgParentFolderPath(pNewItem->m_aName))
 						{
 							char aParentFolder[IO_MAX_PATH_LENGTH];
 							BuildEntityBgParentFolder(m_aEntityBgCurrentFolder, aParentFolder, sizeof(aParentFolder));
@@ -8034,7 +7692,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						{
 							str_copy(m_aEntityBgCurrentFolder, pNewItem->m_aName, sizeof(m_aEntityBgCurrentFolder));
 						}
-						RefreshEntityBgHierarchyView();
+						QueueLocalListRefresh(ASSETS_TAB_ENTITY_BG, 2);
 					}
 					else
 					{
@@ -8173,7 +7831,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		m_ShowWorkshopAssets = !m_ShowWorkshopAssets;
 		gs_aInitCustomList[s_CurCustomTab] = true;
 		if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
-			RefreshEntityBgHierarchyView();
+			QueueLocalListRefresh(ASSETS_TAB_ENTITY_BG, 2);
 	}
 	if(SupportsWorkshopSync)
 		GameClient()->m_Tooltips.DoToolTip(&s_ShowWorkshopAssetsId, &ShowWorkshopAssetsButton, Localize("Show Workshop Assets"));
@@ -8181,7 +7839,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	if(SupportsWorkshopSync && DoSettingsButton_Menu(SETTINGS_ASSETS, s_CurCustomTab, s_CurCustomTab, &s_WorkshopSyncId, "assets-toolbar-sync-workshop-assets", Localize("Sync Workshop Assets"), 0, &WorkshopSyncButton))
 	{
 		if(SWorkshopHudState *pWorkshopState = WorkshopStateByTab(s_CurCustomTab))
+		{
+			InvalidateAssetsResourcePreviewScope(s_CurCustomTab, Graphics(), true);
 			ResetWorkshopState(*pWorkshopState, Graphics(), true);
+		}
 	}
 	if(SupportsWorkshopSync)
 		GameClient()->m_Tooltips.DoToolTip(&s_WorkshopSyncId, &WorkshopSyncButton, Localize("Sync Workshop Assets"));

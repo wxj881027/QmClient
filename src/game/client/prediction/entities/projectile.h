@@ -4,6 +4,9 @@
 #define GAME_CLIENT_PREDICTION_ENTITIES_PROJECTILE_H
 
 #include <game/client/prediction/entity.h>
+#include <game/client/prediction/tick_shift.h>
+
+#include <cstdint>
 
 class CProjectileData;
 
@@ -37,12 +40,16 @@ public:
 	const vec2 &GetDirection() const { return m_Direction; }
 	const int &GetOwner() const { return m_Owner; }
 	const int &GetStartTick() const { return m_StartTick; }
-	void ShiftStartTick(int TickDelta) { m_StartTick += TickDelta; }
+	int64_t GetLifeSpan() const { return m_LifeSpan; }
+	[[nodiscard]] bool ShiftStartTick(int64_t TickDelta, QmTickShift::EMode Mode = QmTickShift::EMode::COMMIT)
+	{
+		return QmTickShift::TryShiftFields(TickDelta, Mode, {&m_StartTick});
+	}
 	CProjectile(CGameWorld *pGameWorld, int Id, const CProjectileData *pProj);
 
 private:
 	vec2 m_Direction;
-	int m_LifeSpan;
+	int64_t m_LifeSpan;
 	int m_Owner;
 	int m_Type;
 	int m_SoundImpact;

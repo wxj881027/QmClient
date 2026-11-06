@@ -1,20 +1,20 @@
 #include "updater.h"
 
+#include "updater_data.h"
+#include "updater_file.h"
+
 #include <base/fs.h>
 #include <base/log.h>
 #include <base/str.h>
 #include <base/system.h>
 
 #include <engine/client.h>
-#include <engine/engine.h>
-#include <engine/external/json-parser/json.h>
 #include <engine/http.h>
-#include <engine/shared/json.h>
 #include <engine/storage.h>
 
 #include <game/version.h>
 
-#include <unordered_set>
+#include <utility>
 
 #if !defined(CONF_FAMILY_WINDOWS)
 #include <fcntl.h>
@@ -22,115 +22,21 @@
 #include <unistd.h>
 #endif
 
-class CUpdaterFetchTask : public IHttpRequest::IProgressCallback
-{
-	char m_aBuf[256];
-	CUpdater *m_pUpdater;
-	std::shared_ptr<IHttpRequest> m_pHttpRequest;
-
-public:
-	void OnProgress() override;
-
-	void OnCompletion(EHttpState State) override;
-
-public:
-	CUpdaterFetchTask(CUpdater *pUpdater, const char *pFile, const char *pDestPath);
-	std::shared_ptr<IHttpRequest> HttpRequest() { return m_pHttpRequest; }
-};
-
-// addition of '/' to keep paths intact, because EscapeUrl() (using curl_easy_escape) doesn't do this
-static inline bool IsUnreserved(unsigned char c)
-{
-	return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
-	       (c >= '0' && c <= '9') || c == '-' || c == '_' ||
-	       c == '.' || c == '~' || c == '/';
-}
-
-static bool IsAllowedUpdaterPath(const char *pPath)
-{
-	if(!fs_is_relative_path(pPath) || str_find(pPath, "..") != nullptr)
-		return false;
-
-	char aSegment[IO_MAX_PATH_LENGTH];
-	size_t SegmentLength = 0;
-	for(const char *pIter = pPath;; ++pIter)
-	{
-		if(*pIter == '/' || *pIter == '\0')
-		{
-			if(SegmentLength == 0 || SegmentLength >= sizeof(aSegment))
-				return false;
-			aSegment[SegmentLength] = '\0';
-			if(str_comp(aSegment, ".") == 0 || !str_valid_filename(aSegment))
-				return false;
-			SegmentLength = 0;
-			if(*pIter == '\0')
-				return true;
-			continue;
-		}
-		if(SegmentLength + 1 >= sizeof(aSegment))
-			return false;
-		aSegment[SegmentLength++] = *pIter;
-	}
-}
-
-static void UrlEncodePath(const char *pIn, char *pOut, size_t OutSize)
-{
-	if(!pIn || !pOut || OutSize == 0)
-		return;
-	static const char HEX[] = "0123456789ABCDEF";
-	size_t WriteIndex = 0;
-	for(size_t i = 0; pIn[i] != '\0'; ++i)
-	{
-		unsigned char c = static_cast<unsigned char>(pIn[i]);
-		if(IsUnreserved(c))
-		{
-			if(OutSize - WriteIndex < 2) // require 1 byte + NUL
-				break;
-			pOut[WriteIndex++] = static_cast<char>(c);
-		}
-		else
-		{
-			if(OutSize - WriteIndex < 4) // require 3 bytes + NUL
-				break;
-			pOut[WriteIndex++] = '%';
-			pOut[WriteIndex++] = HEX[c >> 4]; // upper 4 bits of c
-			pOut[WriteIndex++] = HEX[c & 0x0F]; // lower 4 bits of c
-		}
-	}
-	pOut[WriteIndex] = '\0';
-}
-
 static constexpr const char *UPDATE_CLIENT_FILE = "DDNet.exe";
-static constexpr const char *UPDATE_CLIENT_URL = "https://github.com/wxj881027/Q1menG_Client/releases/latest/download/DDNet.exe";
-static constexpr const char *UPDATE_FALLBACK_BASE_URL = "https://raw.githubusercontent.com/wxj881027/Q1menG_Client/master/";
-
-static const char *GetUpdaterUrl(char *pBuf, int BufSize, const char *pFile)
-{
-	if(str_comp(pFile, UPDATE_CLIENT_FILE) == 0)
-	{
-		str_copy(pBuf, UPDATE_CLIENT_URL, BufSize);
-		return pBuf;
-	}
-
-	char aBuf[1024];
-	UrlEncodePath(pFile, aBuf, sizeof(aBuf));
-	str_format(pBuf, BufSize, "%s%s", UPDATE_FALLBACK_BASE_URL, aBuf);
-	return pBuf;
-}
-
-static void FormatUpdaterDestPath(char *pBuf, int BufSize, const char *pFile, const char *pDestPath)
-{
-	if(!pDestPath)
-	{
-		pDestPath = pFile;
-	}
-	str_format(pBuf, BufSize, "update/%s", pDestPath);
-}
 
 #if !defined(CONF_FAMILY_WINDOWS)
 static bool SetExecutableBit(const char *pPath)
 {
 	const int FileDescriptor = open(pPath, O_RDWR);
+	struct SCloseFile
+	{
+		int m_File;
+		~SCloseFile()
+		{
+			if(m_File >= 0)
+				close(m_File);
+		}
+	} CloseFile{FileDescriptor};
 	if(FileDescriptor < 0)
 	{
 		log_error("updater", "Failed to open file descriptor to set executable bit of '%s'", pPath);
@@ -148,7 +54,7 @@ static bool SetExecutableBit(const char *pPath)
 		log_error("updater", "Failed to set executable bit of '%s'", pPath);
 		Success = false;
 	}
-	if(close(FileDescriptor) != 0)
+	if(close(std::exchange(CloseFile.m_File, -1)) != 0)
 	{
 		log_error("updater", "Failed to close file descriptor after setting executable bit of '%s'", pPath);
 		Success = false;
@@ -157,44 +63,14 @@ static bool SetExecutableBit(const char *pPath)
 }
 #endif
 
-CUpdaterFetchTask::CUpdaterFetchTask(CUpdater *pUpdater, const char *pFile, const char *pDestPath) :
-	m_pUpdater(pUpdater)
-{
-	char aDestination[IO_MAX_PATH_LENGTH];
-	FormatUpdaterDestPath(aDestination, sizeof(aDestination), pFile, pDestPath);
-	m_pHttpRequest = std::shared_ptr<IHttpRequest>(CreateHttpRequest(GetUpdaterUrl(m_aBuf, sizeof(m_aBuf), pFile)));
-	m_pHttpRequest->WriteToFile(pUpdater->m_pStorage, aDestination, -2);
-	m_pHttpRequest->SetProgressCallback(this);
-	// Large binary downloads should fail fast enough on broken links, while
-	// still allowing slower connections to complete.
-	m_pHttpRequest->Timeout(CTimeout{10000, 10 * 60 * 1000, 8192, 20});
-}
-
-void CUpdaterFetchTask::OnProgress()
-{
-	const CLockScope LockScope(m_pUpdater->m_Lock);
-	m_pUpdater->m_Percent = m_pHttpRequest->Progress();
-}
-
-void CUpdaterFetchTask::OnCompletion(EHttpState State)
-{
-	if(!str_comp(fs_filename(m_pHttpRequest->Dest()), "update.json"))
-	{
-		if(State == EHttpState::DONE)
-			m_pUpdater->SetCurrentState(IUpdater::GOT_MANIFEST);
-		else if(State == EHttpState::ERROR)
-			m_pUpdater->SetCurrentState(IUpdater::FAIL);
-	}
-}
-
 CUpdater::CUpdater()
 {
 	m_pClient = nullptr;
 	m_pStorage = nullptr;
-	m_pEngine = nullptr;
 	m_pHttp = nullptr;
 	m_State = CLEAN;
-	m_Percent = 0;
+	m_aStatus[0] = '\0';
+	m_CurrentJob = m_FileJobs.end();
 	m_pCurrentTask = nullptr;
 
 	m_ClientUpdate = m_ServerUpdate = m_ClientFetched = m_ServerFetched = false;
@@ -207,7 +83,6 @@ void CUpdater::Init(IHttp *pHttp)
 {
 	m_pClient = Kernel()->RequestInterface<IClient>();
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
-	m_pEngine = Kernel()->RequestInterface<IEngine>();
 	m_pHttp = pHttp;
 }
 
@@ -232,52 +107,89 @@ void CUpdater::GetCurrentFile(char *pBuf, int BufSize)
 int CUpdater::GetCurrentPercent()
 {
 	const CLockScope LockScope(m_Lock);
-	return m_Percent;
+	return m_pCurrentTask ? m_pCurrentTask->Progress() : 0;
 }
 
-void CUpdater::FetchFile(const char *pFile, const char *pDestPath)
+bool CUpdater::FetchFile(const char *pFile, const char *pDestPath) noexcept
+try
 {
+	char aRoot[IO_MAX_PATH_LENGTH];
+	char aSuffix[32];
+	m_pStorage->GetBinaryPath("", aRoot, sizeof(aRoot));
+	IStorage::FormatTmpPath(aSuffix, sizeof(aSuffix), "");
+	QmLegacyUpdater::SRequestPaths Paths;
+	if(!QmLegacyUpdater::PrepareRequestPaths(pFile, pDestPath ? pDestPath : pFile, aRoot, str_length(aSuffix), Paths))
+	{
+		SetCurrentState(IUpdater::FAIL);
+		return false;
+	}
+	auto pRequest = std::shared_ptr<IHttpRequest>(CreateHttpRequest(Paths.m_aUrl));
+	pRequest->WriteToFile(m_pStorage, Paths.m_aDestination, -2);
+	if(str_comp(Paths.m_aDestination, "update/update.json") == 0)
+		pRequest->MaxResponseSize(QmLegacyUpdater::MAX_MANIFEST_BYTES);
+	pRequest->Timeout(CTimeout{10000, 10 * 60 * 1000, 8192, 20});
 	const CLockScope LockScope(m_Lock);
-	m_pCurrentTask = std::make_shared<CUpdaterFetchTask>(this, pFile, pDestPath);
-	str_copy(m_aStatus, m_pCurrentTask->HttpRequest()->Dest());
-	m_pHttp->Run(m_pCurrentTask->HttpRequest());
+	m_pCurrentTask = std::move(pRequest);
+	str_copy(m_aStatus, m_pCurrentTask->Dest());
+	m_pHttp->Run(m_pCurrentTask);
+	return true;
+}
+catch(...)
+{
+	SetCurrentState(IUpdater::FAIL);
+	return false;
+}
+
+bool CUpdater::ReplaceBinaryFile(const char *pCandidate, const char *pDestination, const char *pBackup, bool Executable)
+{
+	char aCandidate[IO_MAX_PATH_LENGTH];
+	char aDestination[IO_MAX_PATH_LENGTH];
+	char aBackup[IO_MAX_PATH_LENGTH];
+	char aRoot[IO_MAX_PATH_LENGTH];
+	m_pStorage->GetBinaryPath("", aRoot, sizeof(aRoot));
+	if(!QmLegacyUpdater::ResolveBinaryPath(aRoot, pCandidate, aCandidate, sizeof(aCandidate)) ||
+		!QmLegacyUpdater::ResolveBinaryPath(aRoot, pDestination, aDestination, sizeof(aDestination)) ||
+		!QmLegacyUpdater::ResolveBinaryPath(aRoot, pBackup, aBackup, sizeof(aBackup)))
+		return false;
+#if !defined(CONF_FAMILY_WINDOWS)
+	if(Executable && !SetExecutableBit(aCandidate))
+		return false;
+#else
+	(void)Executable;
+#endif
+	QmLegacyUpdater::CStorageFiles Files(*m_pStorage);
+	return QmLegacyUpdater::ReplaceFile(Files, aCandidate, aDestination, aBackup);
 }
 
 bool CUpdater::MoveFile(const char *pFile)
 {
-	char aBuf[IO_MAX_PATH_LENGTH];
-	bool Success = true;
-
 #if !defined(CONF_FAMILY_WINDOWS)
 	if(str_endswith_nocase(pFile, ".dll"))
-		return Success;
+		return true;
 #endif
-
 #if !defined(CONF_PLATFORM_LINUX)
 	if(str_endswith_nocase(pFile, ".so"))
-		return Success;
+		return true;
 #endif
-
-	if(str_endswith_nocase(pFile, ".dll") || str_endswith_nocase(pFile, ".so"))
-	{
-		str_format(aBuf, sizeof(aBuf), "%s.old", pFile);
-		m_pStorage->RenameBinaryFile(pFile, aBuf);
-		str_format(aBuf, sizeof(aBuf), "update/%s", pFile);
-		Success &= m_pStorage->RenameBinaryFile(aBuf, pFile);
-	}
-	else
-	{
-		str_format(aBuf, sizeof(aBuf), "update/%s", pFile);
-		Success &= m_pStorage->RenameBinaryFile(aBuf, pFile);
-	}
-
-	return Success;
+	char aCandidate[IO_MAX_PATH_LENGTH];
+	char aBackup[IO_MAX_PATH_LENGTH];
+	if(static_cast<size_t>(str_length(pFile)) + sizeof("update/") > sizeof(aCandidate) ||
+		static_cast<size_t>(str_length(pFile)) + sizeof(".old") > sizeof(aBackup))
+		return false;
+	str_format(aCandidate, sizeof(aCandidate), "update/%s", pFile);
+	str_format(aBackup, sizeof(aBackup), "%s.old", pFile);
+	return ReplaceBinaryFile(aCandidate, pFile, aBackup, false);
 }
 
 void CUpdater::Update()
+try
 {
 	switch(GetCurrentState())
 	{
+	case IUpdater::GETTING_MANIFEST:
+		if(m_pCurrentTask && m_pCurrentTask->Done())
+			SetCurrentState(m_pCurrentTask->State() == EHttpState::DONE ? IUpdater::GOT_MANIFEST : IUpdater::FAIL);
+		break;
 	case IUpdater::GOT_MANIFEST:
 		PerformUpdate();
 		break;
@@ -291,141 +203,58 @@ void CUpdater::Update()
 		return;
 	}
 }
-
-void CUpdater::AddFileJob(const char *pFile, bool Job)
+catch(...)
 {
-	m_FileJobs.emplace_front(pFile, Job);
+	SetCurrentState(IUpdater::FAIL);
 }
 
 bool CUpdater::ReplaceClient()
 {
 	log_debug("updater", "Replacing " PLAT_CLIENT_EXEC);
-	bool Success = true;
 	char aPath[IO_MAX_PATH_LENGTH];
-
-	// Replace running executable by renaming twice...
-	m_pStorage->RemoveBinaryFile(CLIENT_EXEC ".old");
-	Success &= m_pStorage->RenameBinaryFile(PLAT_CLIENT_EXEC, CLIENT_EXEC ".old");
 	str_format(aPath, sizeof(aPath), "update/%s", m_aClientExecTmp);
-	Success &= m_pStorage->RenameBinaryFile(aPath, PLAT_CLIENT_EXEC);
-	m_pStorage->RemoveBinaryFile(CLIENT_EXEC ".old");
-#if !defined(CONF_FAMILY_WINDOWS)
-	m_pStorage->GetBinaryPath(PLAT_CLIENT_EXEC, aPath, sizeof(aPath));
-	Success &= SetExecutableBit(aPath);
-#endif
-	return Success;
+	return ReplaceBinaryFile(aPath, PLAT_CLIENT_EXEC, CLIENT_EXEC ".old", true);
 }
 
 bool CUpdater::ReplaceServer()
 {
 	log_debug("updater", "Replacing " PLAT_SERVER_EXEC);
-	bool Success = true;
 	char aPath[IO_MAX_PATH_LENGTH];
-
-	// Replace running executable by renaming twice...
-	m_pStorage->RemoveBinaryFile(SERVER_EXEC ".old");
-	Success &= m_pStorage->RenameBinaryFile(PLAT_SERVER_EXEC, SERVER_EXEC ".old");
 	str_format(aPath, sizeof(aPath), "update/%s", m_aServerExecTmp);
-	Success &= m_pStorage->RenameBinaryFile(aPath, PLAT_SERVER_EXEC);
-	m_pStorage->RemoveBinaryFile(SERVER_EXEC ".old");
-#if !defined(CONF_FAMILY_WINDOWS)
-	m_pStorage->GetBinaryPath(PLAT_SERVER_EXEC, aPath, sizeof(aPath));
-	Success &= SetExecutableBit(aPath);
-#endif
-	return Success;
+	return ReplaceBinaryFile(aPath, PLAT_SERVER_EXEC, SERVER_EXEC ".old", true);
 }
 
-void CUpdater::ParseUpdate()
+bool CUpdater::ParseUpdate()
 {
+	char aRoot[IO_MAX_PATH_LENGTH];
 	char aPath[IO_MAX_PATH_LENGTH];
-	void *pBuf;
-	unsigned Length;
-	if(!m_pStorage->ReadFile(m_pStorage->GetBinaryPath("update/update.json", aPath, sizeof(aPath)), IStorage::TYPE_ABSOLUTE, &pBuf, &Length))
-		return;
-
-	json_value *pVersions = JsonParse((json_char *)pBuf, Length);
-	free(pBuf);
-
-	if(!pVersions || pVersions->type != json_array)
-	{
-		json_value_free(pVersions);
-		return;
-	}
-
-	// if we're already downloading a file, or it's been deleted in the latest version, we skip it if it comes up again
-	std::unordered_set<std::string> SkipSet;
-
-	for(int i = 0; i < json_array_length(pVersions); i++)
-	{
-		const json_value *pCurrent = json_array_get(pVersions, i);
-		if(!pCurrent || pCurrent->type != json_object)
-			continue;
-
-		const char *pVersion = json_string_get(json_object_get(pCurrent, "version"));
-		if(!pVersion)
-			continue;
-
-		if(str_comp(pVersion, QMCLIENT_VERSION) == 0)
-			break;
-
-		if(json_boolean_get(json_object_get(pCurrent, "client")))
-			m_ClientUpdate = true;
-		if(json_boolean_get(json_object_get(pCurrent, "server")))
-			m_ServerUpdate = true;
-
-		const json_value *pDownload = json_object_get(pCurrent, "download");
-		if(pDownload && pDownload->type == json_array)
-		{
-			for(int j = 0; j < json_array_length(pDownload); j++)
-			{
-				const char *pName = json_string_get(json_array_get(pDownload, j));
-				if(!pName || !IsAllowedUpdaterPath(pName))
-				{
-					log_error("updater", "Update manifest contains invalid path to download: '%s'", pName == nullptr ? "(not a string)" : pName);
-					continue;
-				}
-
-				if(SkipSet.insert(pName).second)
-				{
-					AddFileJob(pName, true);
-				}
-			}
-		}
-
-		const json_value *pRemove = json_object_get(pCurrent, "remove");
-		if(pRemove && pRemove->type == json_array)
-		{
-			for(int j = 0; j < json_array_length(pRemove); j++)
-			{
-				const char *pName = json_string_get(json_array_get(pRemove, j));
-				if(!pName || !IsAllowedUpdaterPath(pName))
-				{
-					log_error("updater", "Update manifest contains invalid path to remove: '%s'", pName == nullptr ? "(not a string)" : pName);
-					continue;
-				}
-
-				if(SkipSet.insert(pName).second)
-				{
-					AddFileJob(pName, false);
-				}
-			}
-		}
-	}
-	json_value_free(pVersions);
+	m_pStorage->GetBinaryPath("", aRoot, sizeof(aRoot));
+	QmLegacyUpdater::SUpdatePlan Plan;
+	if(!QmLegacyUpdater::ResolveBinaryPath(aRoot, "update/update.json", aPath, sizeof(aPath)) ||
+		!QmLegacyUpdater::LoadManifest(m_pStorage, aPath, QMCLIENT_VERSION, Plan))
+		return false;
+	m_FileJobs.swap(Plan.m_FileJobs);
+	m_ClientUpdate = Plan.m_ClientUpdate;
+	m_ServerUpdate = Plan.m_ServerUpdate;
+	m_ClientFetched = m_ServerFetched = false;
+	return true;
 }
 
 void CUpdater::InitiateUpdate()
 {
+	if(!m_pStorage || !m_pHttp || !m_pClient)
+	{
+		SetCurrentState(IUpdater::FAIL);
+		return;
+	}
+	if(!QmLegacyUpdater::CanInitiate(GetCurrentState(), m_pCurrentTask && !m_pCurrentTask->Done()))
+		return;
 	m_FileJobs.clear();
 	m_CurrentJob = m_FileJobs.end();
 	m_ClientUpdate = true;
 	m_ServerUpdate = false;
 	m_ClientFetched = true;
 	m_ServerFetched = false;
-	{
-		CLockScope Lock(m_Lock);
-		m_Percent = 0;
-	}
 	SetCurrentState(IUpdater::DOWNLOADING);
 	FetchFile(UPDATE_CLIENT_FILE, m_aClientExecTmp);
 }
@@ -434,7 +263,11 @@ void CUpdater::PerformUpdate()
 {
 	SetCurrentState(IUpdater::PARSING_UPDATE);
 	log_debug("updater", "Parsing update.json");
-	ParseUpdate();
+	if(!ParseUpdate())
+	{
+		SetCurrentState(IUpdater::FAIL);
+		return;
+	}
 	m_CurrentJob = m_FileJobs.begin();
 	SetCurrentState(IUpdater::DOWNLOADING);
 }
@@ -443,13 +276,12 @@ void CUpdater::RunningUpdate()
 {
 	if(m_pCurrentTask)
 	{
-		if(!m_pCurrentTask->HttpRequest()->Done())
+		const auto State = QmLegacyUpdater::DownloadState(m_pCurrentTask->State());
+		if(State != IUpdater::MOVE_FILES)
 		{
+			if(State == IUpdater::FAIL)
+				SetCurrentState(IUpdater::FAIL);
 			return;
-		}
-		else if(m_pCurrentTask->HttpRequest()->State() == EHttpState::ERROR || m_pCurrentTask->HttpRequest()->State() == EHttpState::ABORTED)
-		{
-			SetCurrentState(IUpdater::FAIL);
 		}
 	}
 
@@ -462,11 +294,12 @@ void CUpdater::RunningUpdate()
 			if(str_endswith_nocase(pFile, ".dll"))
 			{
 #if defined(CONF_FAMILY_WINDOWS)
-				const size_t Length = str_length(pFile);
 				char aBuf[IO_MAX_PATH_LENGTH];
-				str_copy(aBuf, pFile, sizeof(aBuf)); // SDL
-				str_copy(aBuf + Length - 4, "-" PLAT_NAME, sizeof(aBuf) - Length + 4); // -win32
-				str_append(aBuf, pFile + Length - 4); // .dll
+				if(!QmLegacyUpdater::FormatPlatformLibraryName(pFile, 4, PLAT_NAME, aBuf, sizeof(aBuf)))
+				{
+					SetCurrentState(IUpdater::FAIL);
+					return;
+				}
 				FetchFile(aBuf, pFile);
 #endif
 				// Ignore DLL downloads on other platforms
@@ -474,11 +307,12 @@ void CUpdater::RunningUpdate()
 			else if(str_endswith_nocase(pFile, ".so"))
 			{
 #if defined(CONF_PLATFORM_LINUX)
-				const size_t Length = str_length(pFile);
 				char aBuf[IO_MAX_PATH_LENGTH];
-				str_copy(aBuf, pFile, sizeof(aBuf)); // libsteam_api
-				str_copy(aBuf + Length - 3, "-" PLAT_NAME, sizeof(aBuf) - Length + 3); // -linux-x86_64
-				str_append(aBuf, pFile + Length - 3); // .so
+				if(!QmLegacyUpdater::FormatPlatformLibraryName(pFile, 3, PLAT_NAME, aBuf, sizeof(aBuf)))
+				{
+					SetCurrentState(IUpdater::FAIL);
+					return;
+				}
 				FetchFile(aBuf, pFile);
 #endif
 				// Ignore DLL downloads on other platforms, on Linux we statically link anyway
@@ -512,35 +346,15 @@ void CUpdater::RunningUpdate()
 
 void CUpdater::CommitUpdate()
 {
-	bool Success = true;
-
-	for(auto &FileJob : m_FileJobs)
-	{
-		if(FileJob.second)
-		{
-			Success &= MoveFile(FileJob.first.c_str());
-		}
-	}
-
-	if(m_ClientUpdate)
-	{
-		Success &= ReplaceClient();
-	}
-	if(m_ServerUpdate)
-	{
-		Success &= ReplaceServer();
-	}
-
-	if(Success)
-	{
-		for(const auto &[Filename, JobSuccess] : m_FileJobs)
-		{
-			if(!JobSuccess)
-			{
-				m_pStorage->RemoveBinaryFile(Filename.c_str());
-			}
-		}
-	}
+	char aRoot[IO_MAX_PATH_LENGTH];
+	m_pStorage->GetBinaryPath("", aRoot, sizeof(aRoot));
+	const bool Success = QmLegacyUpdater::CommitFiles(m_FileJobs, m_ClientUpdate, m_ServerUpdate, [this](const char *pFile) { return MoveFile(pFile); }, [this]() { return ReplaceClient(); }, [this]() { return ReplaceServer(); }, [this, &aRoot](const char *pFile) {
+			char aPath[IO_MAX_PATH_LENGTH];
+			if(!QmLegacyUpdater::ResolveBinaryPath(aRoot, pFile, aPath, sizeof(aPath)))
+				return false;
+			if(!m_pStorage->FileExists(aPath, IStorage::TYPE_ABSOLUTE))
+				return !m_pStorage->FolderExists(aPath, IStorage::TYPE_ABSOLUTE);
+			return m_pStorage->RemoveFile(aPath, IStorage::TYPE_ABSOLUTE); });
 
 	if(!Success)
 	{

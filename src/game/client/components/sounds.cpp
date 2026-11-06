@@ -21,7 +21,8 @@
 
 CSoundLoading::CSoundLoading(CGameClient *pGameClient, bool Render) :
 	m_pGameClient(pGameClient),
-	m_Render(Render)
+	m_Render(Render),
+	m_SoundPack(g_Config.m_SndPack)
 {
 	Abortable(true);
 }
@@ -88,36 +89,12 @@ static bool IsSoundMuted(int SoundId)
 	}
 }
 
-static const char *GetSoundFilename(const char *pFilename, IStorage *pStorage, char *pBuffer, size_t BufferSize)
-{
-	if(!pStorage || pFilename == nullptr || pFilename[0] == '\0')
-		return pFilename;
-
-	const char *pPack = g_Config.m_SndPack;
-	if(pPack[0] == '\0')
-		return pFilename;
-
-	const char *pRelative = pFilename;
-	if(str_startswith(pFilename, "audio/"))
-		pRelative = pFilename + str_length("audio/");
-
-	str_format(pBuffer, BufferSize, "audio/%s/%s", pPack, pRelative);
-	if(pStorage->FileExists(pBuffer, IStorage::TYPE_ALL))
-		return pBuffer;
-
-	str_format(pBuffer, BufferSize, "audio/%s/%s", pPack, pFilename);
-	if(pStorage->FileExists(pBuffer, IStorage::TYPE_ALL))
-		return pBuffer;
-
-	return pFilename;
-}
-
 void CSoundLoading::Run()
 {
 	for(int s = 0; s < g_pData->m_NumSounds; s++)
 	{
-		const char *pLoadingCaption = Localize("Loading DDNet Client");
-		const char *pLoadingContent = Localize("Loading sound files");
+		const char *pLoadingCaption = m_Render ? Localize("Loading DDNet Client") : nullptr;
+		const char *pLoadingContent = m_Render ? Localize("Loading sound files") : nullptr;
 
 		for(int i = 0; i < g_pData->m_aSounds[s].m_NumSounds; i++)
 		{
@@ -126,7 +103,7 @@ void CSoundLoading::Run()
 
 			char aPath[IO_MAX_PATH_LENGTH];
 			const char *pFilename = g_pData->m_aSounds[s].m_aSounds[i].m_pFilename;
-			const char *pLoadFilename = GetSoundFilename(pFilename, m_pGameClient->Storage(), aPath, sizeof(aPath));
+			const char *pLoadFilename = m_SoundPack.Resolve(pFilename, m_pGameClient->Storage(), aPath, sizeof(aPath));
 			int Id = m_pGameClient->Sound()->LoadWV(pLoadFilename);
 			g_pData->m_aSounds[s].m_aSounds[i].m_Id = Id;
 			// try to render a frame
@@ -217,7 +194,7 @@ bool CSounds::Reload()
 {
 	if(m_WaitForSoundJob)
 	{
-		if(m_pSoundJob && (m_pSoundJob->State() == IJob::STATE_DONE || m_pSoundJob->State() == IJob::STATE_ABORTED))
+		if(m_pSoundJob && m_pSoundJob->Finished())
 		{
 			m_WaitForSoundJob = false;
 		}
@@ -227,7 +204,9 @@ bool CSounds::Reload()
 		}
 	}
 
+	const CSoundPack SoundPack(g_Config.m_SndPack);
 	Sound()->StopAll();
+	GameClient()->m_MapSounds.StopAll();
 	ClearQueue();
 
 	for(int s = 0; s < g_pData->m_NumSounds; s++)
@@ -249,7 +228,7 @@ bool CSounds::Reload()
 		{
 			char aPath[IO_MAX_PATH_LENGTH];
 			const char *pFilename = g_pData->m_aSounds[s].m_aSounds[i].m_pFilename;
-			const char *pLoadFilename = GetSoundFilename(pFilename, Storage(), aPath, sizeof(aPath));
+			const char *pLoadFilename = SoundPack.Resolve(pFilename, Storage(), aPath, sizeof(aPath));
 			int Id = Sound()->LoadWV(pLoadFilename);
 			g_pData->m_aSounds[s].m_aSounds[i].m_Id = Id;
 		}
@@ -264,6 +243,7 @@ void CSounds::OnReset()
 	if(GameClient()->ClientStateAtLeastOnline())
 	{
 		Sound()->StopAll();
+		GameClient()->m_MapSounds.StopAll();
 		ClearQueue();
 	}
 }
@@ -279,7 +259,7 @@ void CSounds::OnRender()
 	// check for sound initialisation
 	if(m_WaitForSoundJob)
 	{
-		if(m_pSoundJob->State() == IJob::STATE_DONE)
+		if(m_pSoundJob->Finished())
 			m_WaitForSoundJob = false;
 		else
 			return;

@@ -63,6 +63,8 @@ enum
 	 * @see io_open
 	 */
 	IOFLAG_APPEND = 4,
+	// 与 IOFLAG_WRITE 组合，只创建新文件，已有路径不得被截断。
+	IOFLAG_EXCLUSIVE = 8,
 };
 
 /**
@@ -98,11 +100,19 @@ enum ESeekOrigin
  * @param filename File to open.
  * @param flags A set of IOFLAG flags.
  *
- * @see IOFLAG_READ, IOFLAG_WRITE, IOFLAG_APPEND.
+ * @see IOFLAG_READ, IOFLAG_WRITE, IOFLAG_APPEND, IOFLAG_EXCLUSIVE.
  *
  * @return A handle to the file on success, or `nullptr` on failure.
  */
 IOHANDLE io_open(const char *filename, int flags);
+
+// 只读打开，只有原生路径不存在才设置NotFound；其他错误不能冒充缺失。
+// 严格校验UTF-8，返回句柄由调用方关闭；旧io_open保持原有语义。
+IOHANDLE io_open_read_checked(const char *pFilename, bool *pNotFound);
+
+// 只接受打开后确认的普通文件，符号链接按其目标判断；Unix打开FIFO时不等待写端。
+// 非普通类型和校验失败不冒充缺失，返回流仍由调用方关闭。
+IOHANDLE io_open_read_regular_checked(const char *pFilename, bool *pNotFound);
 
 /**
  * Reads data into a buffer from a file.
@@ -326,6 +336,7 @@ typedef struct ASYNCIO ASYNCIO;
  * @param io Handle to the file.
  *
  * @return The handle for asynchronous writing.
+ * @remark AIO 对象或初始缓冲区分配失败时返回空指针，文件仍由调用方持有。
  */
 ASYNCIO *aio_new(IOHANDLE io);
 
@@ -351,6 +362,8 @@ void aio_unlock(ASYNCIO *aio);
 
 /**
  * Queues a chunk of data for writing.
+ * 长度无法表示或缓冲分配失败时保留原队列，并由 aio_error 报告错误。
+ * 调用 aio_close 或 aio_wait 开始收尾后不再接受新数据。
  *
  * @ingroup File-IO
  *
@@ -372,6 +385,7 @@ void aio_write_newline(ASYNCIO *aio);
 /**
  * Queues a chunk of data for writing. The `ASYNCIO` struct must be
  * locked using @link aio_lock @endlink first.
+ * 失败与收尾行为同 aio_write。
  *
  * @ingroup File-IO
  *
@@ -403,6 +417,7 @@ void aio_write_newline_unlocked(ASYNCIO *aio);
  * @param aio Handle to the file.
  *
  * @return `0` on success, or non-`0` on error.
+ * @remark 已发生的排队或文件写入错误不会被后续成功写入清除。
  */
 int aio_error(ASYNCIO *aio);
 
@@ -649,6 +664,8 @@ int net_socket_read_wait(NETSOCKET sock, std::chrono::nanoseconds nanoseconds);
  *         and `NETTYPE_WEBSOCKET_IPV6`, or `NETTYPE_INVALID` if the socket is invalid.
  */
 int net_socket_type(NETSOCKET sock);
+// Unix的select集合按描述符索引；Windows集合不受相同数值上界限制。
+bool net_socket_is_selectable(int socket);
 
 /**
  * Creates a UDP socket and binds it to a port.
@@ -660,6 +677,8 @@ int net_socket_type(NETSOCKET sock);
  * @return On success it returns an handle to the socket. On failure it returns `nullptr`.
  */
 NETSOCKET net_udp_create(NETADDR bindaddr);
+// 分配边界须返回可由free释放的内存；失败在创建原生socket之前返回空。
+NETSOCKET net_udp_create_with_allocator(NETADDR bindaddr, void *(*pfnAllocate)(size_t));
 
 // 尽力为指定 UDP 目标创建客户端 QoS flow，失败时返回 nullptr。
 NETQOS net_qos_add_socket(NETSOCKET sock, const NETADDR *addr, ENetQosStatus *pStatus);
@@ -1062,7 +1081,8 @@ bool os_version_str(char *version, size_t length);
  *
  * @remark The strings are treated as null-terminated strings.
  */
-void os_locale_str(char *locale, size_t length);
+// 读取或转换失败不抛C++异常；length为0或locale为空时不访问输出。
+void os_locale_str(char *locale, size_t length) noexcept;
 
 /**
  * Fixes the command line arguments to be encoded in UTF-8 on all systems.

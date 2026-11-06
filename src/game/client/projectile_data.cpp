@@ -7,8 +7,28 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/components/qmclient/collision_position.h>
 #include <game/client/prediction/gameworld.h>
 #include <game/collision.h>
+#include <game/gamecore.h>
+
+bool CProjectileData::HasValidStart() const
+{
+	return QmCollision::CanRoundPosition(m_StartPos) && std::isfinite(m_StartVel.x) && std::isfinite(m_StartVel.y);
+}
+
+bool CProjectileData::TryCalcPositions(float Curvature, float Speed, float FromTime, float ToTime, vec2 &From, vec2 &To) const
+{
+	if(!HasValidStart() || !std::isfinite(Curvature) || !std::isfinite(Speed) || !std::isfinite(FromTime) || !std::isfinite(ToTime))
+		return false;
+	const vec2 CandidateFrom = CalcPos(m_StartPos, m_StartVel, Curvature, Speed, FromTime);
+	const vec2 CandidateTo = CalcPos(m_StartPos, m_StartVel, Curvature, Speed, ToTime);
+	if(!QmCollision::CanRoundPosition(CandidateFrom) || !QmCollision::CanRoundPosition(CandidateTo))
+		return false;
+	From = CandidateFrom;
+	To = CandidateTo;
+	return true;
+}
 
 static bool UseProjectileExtraInfo(const CNetObj_Projectile *pProj)
 {
@@ -37,7 +57,7 @@ CProjectileData ExtractProjectileInfo(int NetObjType, const void *pData, CGameWo
 	Result.m_StartTick = pProj->m_StartTick;
 	Result.m_ExtraInfo = false;
 	Result.m_Owner = -1;
-	Result.m_TuneZone = pGameWorld && pGameWorld->m_WorldConfig.m_UseTuneZones ? pGameWorld->Collision()->IsTune(pGameWorld->Collision()->GetMapIndex(Result.m_StartPos)) : 0;
+	Result.m_TuneZone = pGameWorld && pGameWorld->m_WorldConfig.m_UseTuneZones && Result.HasValidStart() ? pGameWorld->Collision()->IsTune(pGameWorld->Collision()->GetMapIndex(Result.m_StartPos)) : 0;
 	Result.m_SwitchNumber = pEntEx ? pEntEx->m_SwitchNumber : 0;
 	return Result;
 }
@@ -64,7 +84,7 @@ CProjectileData ExtractProjectileInfoDDRace(const CNetObj_DDRaceProjectile *pPro
 	Result.m_Bouncing = (pProj->m_Data >> 10) & 3;
 	Result.m_Explosive = pProj->m_Data & LEGACYPROJECTILEFLAG_EXPLOSIVE;
 	Result.m_Freeze = pProj->m_Data & LEGACYPROJECTILEFLAG_FREEZE;
-	Result.m_TuneZone = pGameWorld && pGameWorld->m_WorldConfig.m_UseTuneZones ? pGameWorld->Collision()->IsTune(pGameWorld->Collision()->GetMapIndex(Result.m_StartPos)) : 0;
+	Result.m_TuneZone = pGameWorld && pGameWorld->m_WorldConfig.m_UseTuneZones && Result.HasValidStart() ? pGameWorld->Collision()->IsTune(pGameWorld->Collision()->GetMapIndex(Result.m_StartPos)) : 0;
 	Result.m_SwitchNumber = pEntEx ? pEntEx->m_SwitchNumber : 0;
 	return Result;
 }

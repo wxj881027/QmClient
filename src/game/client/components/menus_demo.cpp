@@ -27,6 +27,8 @@
 #include <engine/textrender.h>
 #if defined(CONF_VIDEORECORDER)
 #include <engine/client/video_encoder.h>
+
+#include <game/client/QmUi/QmDemoEncoderChoices.h>
 #endif
 
 #include <generated/client_data.h>
@@ -485,43 +487,19 @@ void CMenus::RenderDemoExportSettings(CUIRect View)
 	GameClient()->m_Tooltips.DoToolTipForRect(&s_aRowTipIds[0], &ResolutionRow, Localize("Choose a preset, or Custom to enter width and height. Follow window uses the current render size."), TipWidth);
 	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
 
-	// 编码器：只列出运行时探测可用的硬件编码器；默认软件编码器固定在首项。
-	static const std::vector<video_encoder::SProbeResult> &s_vProbed = video_encoder::ProbeEncoders();
+	// 编码器探测和选项准备失败不发布半列表，后续帧沿原入口重试。
+	const std::vector<video_encoder::SProbeResult> &vProbed = video_encoder::ProbeEncoders();
 	static CUi::SDropDownState s_EncoderDropDownState;
-	static std::vector<std::string> s_vEncoderNames;
-	static std::vector<const char *> s_vpEncoderNames;
-	static std::vector<int> s_vProbeIndex;
-	static bool s_EncoderListBuilt = false;
-	if(!s_EncoderListBuilt)
-	{
-		s_vEncoderNames.emplace_back(Localize("Default (software)"));
-		s_vProbeIndex.push_back(-1);
-		for(size_t i = 0; i < s_vProbed.size(); ++i)
-		{
-			if(!s_vProbed[i].m_Available || str_comp(s_vProbed[i].m_aName, "libx264") == 0)
-				continue;
-			s_vEncoderNames.push_back(s_vProbed[i].m_aDescription);
-			s_vProbeIndex.push_back((int)i);
-		}
-		s_vpEncoderNames.reserve(s_vEncoderNames.size());
-		for(const std::string &Name : s_vEncoderNames)
-			s_vpEncoderNames.push_back(Name.c_str());
-		s_EncoderListBuilt = true;
-	}
-
+	static CQmDemoEncoderChoices s_EncoderChoices;
+	const char *pDefaultEncoderLabel = Localize("Default (software)");
+	const bool EncoderChoicesReady = s_EncoderChoices.TryBuild(vProbed, pDefaultEncoderLabel);
 	// 下拉显示的是具体编码器；配置里可能是家族别名（h264/hevc/av1），先解析再匹配，
 	// 否则选了「高效高画质」预设后下拉会错误地停在「Default (software)」上。
 	char aResolvedEncoder[48];
 	const char *pEncoderForMatch = m_DemoRenderEncoder.GetString();
-	if(video_encoder::ResolveEncoderAlias(pEncoderForMatch, aResolvedEncoder, sizeof(aResolvedEncoder)))
+	if(!vProbed.empty() && video_encoder::ResolveEncoderAlias(pEncoderForMatch, aResolvedEncoder, sizeof(aResolvedEncoder)))
 		pEncoderForMatch = aResolvedEncoder;
-	int CurrentEncoder = 0;
-	for(size_t i = 0; i < s_vProbeIndex.size(); ++i)
-	{
-		const char *pEntryName = s_vProbeIndex[i] < 0 ? "" : s_vProbed[s_vProbeIndex[i]].m_aName;
-		if(str_comp(pEntryName, pEncoderForMatch) == 0)
-			CurrentEncoder = (int)i;
-	}
+	const int CurrentEncoder = s_EncoderChoices.FindSelection(pEncoderForMatch);
 
 	View.HSplitTop(qm_demo_ui::RENDER_ROW_HEIGHT, &Row, &View);
 	const CUIRect EncoderRow = Row;
@@ -529,11 +507,15 @@ void CMenus::RenderDemoExportSettings(CUIRect View)
 	Ui()->DoLabel(&Label, Localize("Encoder:"), FontSize, TEXTALIGN_ML, {.m_MaxWidth = Label.w - 4.0f});
 	CUi::SDropDownProperties EncoderDropDownProps;
 	EncoderDropDownProps.m_FontSize = FontSize;
-	const int NewEncoder = Ui()->DoDropDown(&Control, CurrentEncoder, s_vpEncoderNames.data(), (int)s_vpEncoderNames.size(), s_EncoderDropDownState, EncoderDropDownProps);
-	if(NewEncoder != CurrentEncoder)
+	EncoderDropDownProps.m_Enabled = EncoderChoicesReady;
+	const char *apEncoderFallback[] = {pEncoderForMatch[0] ? pEncoderForMatch : pDefaultEncoderLabel};
+	const int NewEncoder = Ui()->DoDropDown(&Control, CurrentEncoder,
+		EncoderChoicesReady ? s_EncoderChoices.Names() : apEncoderFallback,
+		EncoderChoicesReady ? s_EncoderChoices.Num() : 1, s_EncoderDropDownState, EncoderDropDownProps);
+	const char *pNewEncoder = s_EncoderChoices.Encoder(NewEncoder);
+	if(EncoderChoicesReady && pNewEncoder && NewEncoder != CurrentEncoder)
 	{
-		const int ProbeIndex = s_vProbeIndex[NewEncoder];
-		m_DemoRenderEncoder.Set(ProbeIndex < 0 ? "" : s_vProbed[ProbeIndex].m_aName);
+		m_DemoRenderEncoder.Set(pNewEncoder);
 		// 手动改编码器 → 导出预设回到自定义，Ok 时兜底不再覆盖用户选择。
 		m_DemoRenderPresetSel = 0;
 	}
@@ -541,7 +523,7 @@ void CMenus::RenderDemoExportSettings(CUIRect View)
 	View.HSplitTop(qm_demo_ui::RENDER_ROW_GAP, nullptr, &View);
 
 	// 画质：0-51，留空沿用下方视频编码 CRF；ProRes 的质量由 profile 固定。
-	const video_encoder::SProbeResult *pSelected = video_encoder::FindProbed(pEncoderForMatch);
+	const video_encoder::SProbeResult *pSelected = vProbed.empty() ? nullptr : video_encoder::FindProbed(pEncoderForMatch);
 	const bool FixedQuality = pSelected && pSelected->m_Available && pSelected->m_QualityKind == video_encoder::EQualityKind::NONE;
 	const char *pQualityLabel = Localize("Quality (CRF):");
 	if(pSelected && pSelected->m_Available)

@@ -150,23 +150,34 @@ namespace
 
 	void CFavorites::Add(const NETADDR *pAddrs, int NumAddrs)
 	{
-		if(NumAddrs == 0)
+		if(NumAddrs <= 0)
 		{
 			log_error("client", "discarding empty favorite group");
 			return;
 		}
+		// 先保存并去重地址，避免压缩旧分组后再次访问同一条目或借用的地址数组。
+		CEntry NewEntry;
+		mem_zero(&NewEntry, sizeof(NewEntry));
+		const int InputCount = std::min(NumAddrs, (int)std::size(NewEntry.m_aAddrs));
+		for(int i = 0; i < InputCount; i++)
+		{
+			const auto pEnd = NewEntry.m_aAddrs + NewEntry.m_NumAddrs;
+			if(std::find(NewEntry.m_aAddrs, pEnd, pAddrs[i]) == pEnd)
+				NewEntry.m_aAddrs[NewEntry.m_NumAddrs++] = pAddrs[i];
+		}
 		// First make sure that all the addresses are not registered for some
 		// other favorite.
-		for(int i = 0; i < NumAddrs; i++)
+		for(int i = 0; i < NewEntry.m_NumAddrs; i++)
 		{
-			CEntry *pEntry = Entry(pAddrs[i]);
+			const NETADDR &Addr = NewEntry.m_aAddrs[i];
+			CEntry *pEntry = Entry(Addr);
 			if(pEntry == nullptr)
 			{
 				continue;
 			}
 			for(int j = 0; j < pEntry->m_NumAddrs; j++)
 			{
-				if(pEntry->m_aAddrs[j] == pAddrs[i])
+				if(pEntry->m_aAddrs[j] == Addr)
 				{
 					pEntry->m_aAddrs[j] = pEntry->m_aAddrs[pEntry->m_NumAddrs - 1];
 					pEntry->m_NumAddrs -= 1;
@@ -181,13 +192,9 @@ namespace
 			}
 		}
 		// Add the new entry.
-		CEntry NewEntry;
-		mem_zero(&NewEntry, sizeof(NewEntry));
-		NewEntry.m_NumAddrs = std::min(NumAddrs, (int)std::size(NewEntry.m_aAddrs));
 		for(int i = 0; i < NewEntry.m_NumAddrs; i++)
 		{
-			NewEntry.m_aAddrs[i] = pAddrs[i];
-			m_ByAddr[pAddrs[i]] = m_vEntries.size();
+			m_ByAddr[NewEntry.m_aAddrs[i]] = m_vEntries.size();
 		}
 		NewEntry.m_AllowPing = false;
 		m_vEntries.push_back(NewEntry);

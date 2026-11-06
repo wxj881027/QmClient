@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 enum class EQmAxiomMode
@@ -71,6 +72,10 @@ struct SQmDdStatsGameType
 	int64_t m_PlayTimeSeconds = 0;
 };
 
+// 在线与持久化共用类型预算；重复记录另设扫描上限，避免按原始数量扩容。
+constexpr unsigned QM_DDSTATS_MAX_GAME_TYPES = 1024;
+constexpr unsigned QM_DDSTATS_MAX_GAME_TYPE_RECORDS = 4096;
+
 struct SQmAxiomPopupSize
 {
 	float m_Width = 0.0f;
@@ -83,9 +88,10 @@ const char *QmAxiomParseResultLabel(EQmAxiomParseResult Result);
 std::string QmBuildAxiomSearchUrl(const char *pPlayerName);
 std::string QmBuildAxiomInfoUrl(int64_t UserId, EQmAxiomMode Mode);
 std::string QmBuildDdStatsPlayerUrl(const char *pPlayerName);
-EQmAxiomParseResult QmParseAxiomSearchResponse(const char *pData, size_t DataSize, const char *pPlayerName, SQmAxiomSearchMatch &OutMatch);
-EQmAxiomParseResult QmParseAxiomInfoResponse(const char *pData, size_t DataSize, SQmAxiomModeScore &OutScore);
-EQmAxiomParseResult QmParseDdStatsPlayerResponse(const char *pData, size_t DataSize, const char *pPlayerName, std::vector<SQmDdStatsGameType> &OutGameTypes);
+// 失败保留调用方输出；分配异常按 INVALID_RESPONSE 交给既有失败回退。
+EQmAxiomParseResult QmParseAxiomSearchResponse(const char *pData, size_t DataSize, const char *pPlayerName, SQmAxiomSearchMatch &OutMatch) noexcept;
+EQmAxiomParseResult QmParseAxiomInfoResponse(const char *pData, size_t DataSize, SQmAxiomModeScore &OutScore) noexcept;
+EQmAxiomParseResult QmParseDdStatsPlayerResponse(const char *pData, size_t DataSize, const char *pPlayerName, std::vector<SQmDdStatsGameType> &OutGameTypes) noexcept;
 bool QmAxiomResponseIsCurrent(uint64_t CurrentGeneration, uint64_t ResponseGeneration, std::string_view CurrentPlayerName, std::string_view ResponsePlayerName);
 bool QmAxiomResponseIsCurrent(uint64_t CurrentGeneration, uint64_t ResponseGeneration, EQmAxiomMode CurrentMode, EQmAxiomMode ResponseMode);
 SQmAxiomPopupSize QmAxiomPopupSize(float ScreenWidth, float ScreenHeight);

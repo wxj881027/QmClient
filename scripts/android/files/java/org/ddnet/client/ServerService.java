@@ -55,11 +55,19 @@ public class ServerService extends Service {
 	private Messenger messenger;
 	private NotificationManager notificationManager;
 	private NativeServerThread thread;
-	private boolean stopping = false;
+	private QmServerCommands nativeCommands;
+	private boolean startFailed;
 
 	@Override
 	public void onCreate() {
 		super.onCreate();
+		try {
+			nativeCommands = new QmServerCommands(NativeServer::executeCommand);
+		} catch(RuntimeException | OutOfMemoryError error) {
+			startFailed = true;
+			NativeServerThread.failStart(this);
+			return;
+		}
 
 		notificationManager = getSystemService(NotificationManager.class);
 
@@ -79,9 +87,16 @@ public class ServerService extends Service {
 			String action = intent.getAction();
 			if(INTENT_ACTION_START.equals(action)) {
 				String[] commands = intent.getStringArrayExtra(INTENT_EXTRA_COMMANDS);
-				if(commands != null) {
-					thread = new NativeServerThread(this, commands);
-					thread.start();
+				if(commands != null && thread == null && !startFailed && !nativeCommands.isStopping()) {
+					// 重复start intent不能并行进入共享同一组全局状态的native main。
+					try {
+						NativeServerThread candidate = new NativeServerThread(this, commands);
+						candidate.start();
+						thread = candidate;
+					} catch(RuntimeException | OutOfMemoryError error) {
+						startFailed = true;
+						NativeServerThread.failStart(this);
+					}
 				}
 			} else if(INTENT_ACTION_EXECUTE.equals(action)) {
 				Bundle remoteInput = RemoteInput.getResultsFromIntent(intent);
@@ -90,10 +105,10 @@ public class ServerService extends Service {
 					if(remoteCommand != null) {
 						executeCommand(remoteCommand.toString());
 					}
-					if(!stopping) {
+					if(!nativeCommands.isStopping()) {
 						// Need to send the notification again to acknowledge that we got the remote input,
 						// otherwise the remote input will not be completed.
-						notificationManager.notify(NOTIFICATION_ID, createRunningNotification());
+						updateNotification(false);
 					}
 				} else {
 					String[] commands = intent.getStringArrayExtra(INTENT_EXTRA_COMMANDS);
@@ -113,18 +128,22 @@ public class ServerService extends Service {
 
 	public void onDestroy() {
 		super.onDestroy();
-		executeCommand("shutdown");
-		stopForeground(0);
-		if(thread != null) {
+		try {
+			executeCommand("shutdown");
+		} finally {
 			try {
-				thread.join(2500);
-				if(thread.isAlive()) {
-					// Native server is not reacting to the shutdown command, force stop.
-					System.exit(0);
+				stopForeground(0);
+			} finally {
+				NativeServerThread current = thread;
+				thread = null;
+				if(current != null) {
+					try {
+						QmServerCompletion.awaitStop(current, NativeServerThread::terminateProcess);
+					} catch(RuntimeException | OutOfMemoryError error) {
+						NativeServerThread.terminateProcess();
+					}
 				}
-			} catch (InterruptedException e) {
 			}
-			thread = null;
 		}
 	}
 
@@ -236,19 +255,23 @@ public class ServerService extends Service {
 			.build();
 	}
 
-	private void executeCommand(String command) {
+	private void updateNotification(boolean stoppingNotification) {
+		try {
+			notificationManager.notify(NOTIFICATION_ID, stoppingNotification ? createStoppingNotification() : createRunningNotification());
+		} catch(RuntimeException | OutOfMemoryError ignored) {
+			// 非必需的通知更新失败不能阻断命令或停服；首次前台通知仍按系统要求创建。
+		}
+	}
+
+	private boolean executeCommand(String command) {
 		if(thread == null) {
-			return;
+			return false;
 		}
-		// Detect simple case where the server is being stopped to update the notification
-		if("shutdown".equalsIgnoreCase(command)) {
-			if(stopping) {
-				return;
-			}
-			stopping = true;
-			notificationManager.notify(NOTIFICATION_ID, createStoppingNotification());
-		}
-		NativeServer.executeCommand(command);
+		boolean wasStopping = nativeCommands.isStopping();
+		boolean accepted = nativeCommands.execute(command);
+		if(accepted && !wasStopping && nativeCommands.isStopping())
+			updateNotification(true);
+		return accepted;
 	}
 
 	public static Intent createStartIntent(Context context, String[] arguments) {
@@ -270,10 +293,11 @@ public class ServerService extends Service {
  * we don't block the service's main thread which is responsible for handling the
  * service's lifecycle.
  */
-class NativeServerThread extends Thread {
+class NativeServerThread extends Thread implements QmServerCompletion.Worker {
 
 	private final Context applicationContext;
 	private final String[] arguments;
+	private final QmServerCompletion completion = new QmServerCompletion();
 
 	public NativeServerThread(Context context, String[] arguments) {
 		this.applicationContext = context.getApplicationContext();
@@ -282,25 +306,56 @@ class NativeServerThread extends Thread {
 
 	@Override
 	public void run() {
-		File workingDirectory = applicationContext.getExternalFilesDir(null);
-		if(workingDirectory == null) {
-			new Handler(applicationContext.getMainLooper()).post(() -> {
-				Toast.makeText(applicationContext, R.string.server_error_external_files_inaccessible, Toast.LENGTH_LONG).show();
+		int result = -1002;
+		boolean directoryMissing = false;
+		try {
+			File workingDirectory = applicationContext.getExternalFilesDir(null);
+			if(workingDirectory == null)
+				directoryMissing = true;
+			else
+				result = NativeServer.runServer(workingDirectory.getAbsolutePath(), arguments);
+		} catch(RuntimeException | OutOfMemoryError error) {
+			// 准备失败沿既有退出码提示，仍结束此服务进程以重置native全局状态。
+		} finally {
+			final int exitCode = result;
+			final boolean missing = directoryMissing;
+			try {
+				completion.finish(
+					action -> new Handler(applicationContext.getMainLooper()).post(action),
+					() -> {
+						if(missing)
+							Toast.makeText(applicationContext, R.string.server_error_external_files_inaccessible, Toast.LENGTH_LONG).show();
+						else if(exitCode != 0)
+							Toast.makeText(applicationContext, applicationContext.getString(R.string.server_error_exit_code, exitCode), Toast.LENGTH_LONG).show();
+					},
+					NativeServerThread::terminateProcess);
+			} catch(RuntimeException | OutOfMemoryError error) {
+				// 连回调参数都无法构造时，不依赖Handler继续退出。
 				terminateProcess();
-			});
-			return;
-		}
-
-		int Result = NativeServer.runServer(workingDirectory.getAbsolutePath(), arguments);
-		new Handler(applicationContext.getMainLooper()).post(() -> {
-			if(Result != 0) {
-				Toast.makeText(applicationContext, applicationContext.getString(R.string.server_error_exit_code, Result), Toast.LENGTH_LONG).show();
 			}
-			terminateProcess();
-		});
+		}
 	}
 
-	private static void terminateProcess() {
+	@Override
+	public void await(long millis) throws InterruptedException {
+		join(millis);
+	}
+
+	@Override
+	public boolean alive() {
+		return isAlive();
+	}
+
+	static void failStart(Context context) {
+		try {
+			Toast.makeText(context, context.getString(R.string.server_error_exit_code, -1002), Toast.LENGTH_LONG).show();
+		} catch(RuntimeException | OutOfMemoryError ignored) {
+		} finally {
+			terminateProcess();
+		}
+	}
+
+	static void terminateProcess() {
 		// Forcefully terminate the entire process, to ensure that static variables will
 		// be initialized correctly when the server is started again after being stopped.
 		System.exit(0);
@@ -331,5 +386,6 @@ class NativeServer {
 	 *
 	 * @param command The command to add to the queue.
 	 */
-	public static native void executeCommand(String command);
+	// 返回值只确认已进入native队列，不代表服务器已经执行该命令。
+	public static native boolean executeCommand(String command);
 }

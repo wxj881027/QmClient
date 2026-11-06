@@ -55,8 +55,11 @@ class CLocalizationDatabase
 	std::vector<CLanguage> m_vLanguages;
 	std::vector<CString> m_vStrings;
 	CHeap m_StringsHeap;
+	CHeap::FAllocate m_pfnStringsAllocate;
 
 public:
+	explicit CLocalizationDatabase(CHeap::FAllocate Allocate = std::malloc) :
+		m_StringsHeap(Allocate), m_pfnStringsAllocate(Allocate) {}
 	void LoadIndexfile(class IStorage *pStorage, class IConsole *pConsole);
 	const std::vector<CLanguage> &Languages() const { return m_vLanguages; }
 	void SelectDefaultLanguage(class IConsole *pConsole, char *pFilename, size_t Length) const;

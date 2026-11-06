@@ -2,6 +2,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_SETTINGS_WARMUP_H
 #define GAME_CLIENT_COMPONENTS_SETTINGS_WARMUP_H
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <functional>
@@ -43,7 +44,7 @@ inline int SettingsRuntimeCachePositiveRoundedKey(float Value)
 
 inline int SettingsRuntimeCacheDimensionKey(float Value)
 {
-	if(!std::isfinite(Value))
+	if(!std::isfinite(Value) || Value <= 1.0f)
 		return 1;
 	if(Value >= static_cast<float>(std::numeric_limits<int>::max()))
 		return std::numeric_limits<int>::max();

@@ -5,6 +5,7 @@
 
 #include <base/color.h>
 #include <base/lock.h>
+#include <base/str.h>
 #include <base/vmath.h>
 
 #include <engine/client/enums.h>
@@ -17,6 +18,11 @@
 
 #include <game/client/component.h>
 #include <game/client/components/qmclient/qm_chat_avatar.h>
+#include <game/client/components/qmclient/skin7_load_completion.h>
+#include <game/client/components/qmclient/skin7_part_load_job.h>
+#include <game/client/components/qmclient/skin7_part_publisher.h>
+#include <game/client/components/qmclient/skin7_refresh_request.h>
+#include <game/client/components/qmclient/skin7_refresh_retirement.h>
 #include <game/client/components/qmclient/skin7_resource_lifecycle.h>
 #include <game/client/render.h>
 
@@ -71,63 +77,15 @@ public:
 		int m_aUseCustomColors[protocol7::NUM_SKINPARTS];
 		unsigned m_aPartColors[protocol7::NUM_SKINPARTS];
 
-		bool operator<(const CSkin &Other) const;
+		bool operator<(const CSkin &Other) const { return str_comp_nocase(m_aName, Other.m_aName) < 0; }
 		bool operator==(const CSkin &Other) const;
 	};
 
-	class CSkinPartLoadJob : public IJob
-	{
-	public:
-		struct SResult
-		{
-			CImageInfo m_OriginalImage;
-			CImageInfo m_GrayscaleImage;
-			ColorRGBA m_BloodColor;
-			std::shared_ptr<CQmSkinOutline> m_QmSkinOutline;
-			std::shared_ptr<const QmChatAvatar::SSource> m_pChatAvatarOriginal;
-			std::shared_ptr<const QmChatAvatar::SSource> m_pChatAvatarColorable;
-			int m_PartType;
-			int m_Flags;
-			char m_aName[24];
-			bool m_Success = false;
-		};
+	using CSkinPartLoadJob = CQmSkin7PartLoadJob;
 
-	private:
-		std::string m_Path;
-		std::string m_PartName;
-		IStorage *m_pStorage;
-		int m_StorageType;
-		[[maybe_unused]] int m_PartType;
-		[[maybe_unused]] int m_Flags;
-		mutable CLock m_Mutex;
-		SResult m_Result;
-		bool m_Completed = false;
-
-	protected:
-		void Run() override REQUIRES(!m_Mutex);
-
-	public:
-		CSkinPartLoadJob(const char *pPath, const char *pPartName, IStorage *pStorage, int StorageType, int PartType, int Flags);
-		~CSkinPartLoadJob() override;
-
-		bool IsCompleted() const REQUIRES(!m_Mutex)
-		{
-			CLockScope Lock(m_Mutex);
-			return m_Completed;
-		}
-
-		SResult GetResult() REQUIRES(!m_Mutex)
-		{
-			CLockScope Lock(m_Mutex);
-			SResult Result = std::move(m_Result);
-			m_Result = SResult();
-			return Result;
-		}
-	};
-
-	static const char *const ms_apSkinPartNames[protocol7::NUM_SKINPARTS];
+	inline static const char *const ms_apSkinPartNames[protocol7::NUM_SKINPARTS] = {"body", "marking", "decoration", "hands", "feet", "eyes"};
 	static const char *const ms_apSkinPartNamesLocalized[protocol7::NUM_SKINPARTS];
-	static const char *const ms_apColorComponents[NUM_COLOR_COMPONENTS];
+	inline static const char *const ms_apColorComponents[NUM_COLOR_COMPONENTS] = {"hue", "sat", "lgt", "alp"};
 
 	static char *ms_apSkinNameVariables[NUM_DUMMIES];
 	static char *ms_apSkinVariables[NUM_DUMMIES][protocol7::NUM_SKINPARTS];
@@ -181,20 +139,25 @@ private:
 	size_t m_NextSkin = 0;
 	int m_NextAccessory = 0;
 	CQmSkin7ResourceLifecycle m_ResourceLifecycle;
-	TSkinLoadedCallback m_SkinLoadedCallback;
+	CQmSkin7PartPublisher m_PartPublisher;
+	CQmSkin7RefreshRequest<CSkinPart> m_RefreshRequest;
+	std::optional<CQmSkin7RefreshRequest<CSkinPart>::SPlan> m_StartingRefresh;
+	CQmSkin7RefreshRetirement<CSkinPart> m_RefreshRetirement;
+	CQmSkin7LoadCompletion m_LoadCompletion;
 
 	IGraphics::CTextureHandle m_XmasHatTexture;
 	IGraphics::CTextureHandle m_BotTexture;
 
-	void StartSkinPartLoadJob(int PartType, const char *pName, int DirType);
+	std::shared_ptr<CSkinPartLoadJob> CreateSkinPartLoadJob(int PartType, const char *pName, int DirType);
 	void ProcessCompletedJobs();
 	void CancelPendingLoads();
+	void TryStartRefresh();
 	bool RebuildSkins();
 	bool LoadSkin(const char *pName, int DirType, const json_value &Info);
 
 	void InitPlaceholderSkinParts();
 
-	void AddSkinFromConfigVariables(const char *pName, int Dummy);
+	void PrepareSkinFromConfigVariables(std::vector<CSkin> &Skins, const char *pName, int Dummy) const;
 };
 
 #endif

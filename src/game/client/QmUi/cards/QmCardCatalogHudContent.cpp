@@ -49,8 +49,6 @@
 
 using namespace FontIcons;
 
-extern std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
-
 void CMenus::RenderQmHudBindStatusContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	CSettingsContentLayoutFlow Flow(Content);

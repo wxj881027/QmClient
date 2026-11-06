@@ -20,7 +20,7 @@ public:
 private:
 	std::shared_ptr<CMapBasedEnvelopePointAccess> m_pEnvelopePoints;
 	IMap *m_pMap;
-	bool m_OnlineOnly;
+	bool m_OnlineOnly = false;
 };
 
 #endif

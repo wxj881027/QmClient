@@ -45,6 +45,46 @@ class TestInventoryTest(unittest.TestCase):
 		self.assertEqual(inventory["cpp_files"][0]["type"], "unit_or_behavior")
 		self.assertEqual(inventory["structural_violations"], [])
 
+	def test_resolving_resource_paths_for_a_production_parser_is_not_a_source_read(self):
+		text = '''
+const std::vector<std::string> Paths{
+    TestSourcePath("data/fonts/sample.ttf"),
+    TestSourcePath("data/fonts/collection.ttc"),
+    TestSourcePath("data/fonts/index.json"),
+    TestSourcePath("data/fonts/missing.ttf")};
+auto Result = ProbeFonts(Paths);
+'''
+		self.assertEqual(count_source_reads(text), 0)
+
+	def test_copying_a_resource_fixture_is_not_a_source_read(self):
+		text = 'std::filesystem::copy_file(std::filesystem::u8path(TestSourcePath("data/fonts/中文.otf")), Destination);'
+		self.assertEqual(count_source_reads(text), 0)
+
+	def test_resource_layout_queries_remain_contract_reads(self):
+		for query in ('fs_is_dir', 'fs_exists', 'std::filesystem::exists', 'std::filesystem::is_directory'):
+			with self.subTest(query=query):
+				self.assertEqual(count_source_reads(f'{query}(TestSourcePath("data/retired"));'), 1)
+
+	def test_fixture_paths_do_not_hide_neighboring_source_or_text_manifest_reads(self):
+		text = '''
+auto Font = TestSourcePath("data/fonts/sample.ttf");
+std::ifstream Manifest(TestSourcePath("data/fonts/index.json"), std::ios::binary);
+auto Source = ReadTestSourceFile("src/engine/client/text.cpp");
+'''
+		self.assertEqual(count_source_reads(text), 2)
+		self.assertEqual(classify_cpp(Path("integration/font_test.cpp"), 1, count_source_reads(text)), "mixed")
+
+	def test_inventory_classifies_parser_resource_paths_as_integration(self):
+		with tempfile.TemporaryDirectory() as directory:
+			root = Path(directory)
+			(root / "src/test/integration").mkdir(parents=True)
+			(root / "src/test/integration/font_test.cpp").write_text(
+				'TEST(FontProbe, ReadsFixture) { const auto Path = TestSourcePath("data/fonts/sample.ttf"); EXPECT_TRUE(Probe.Matches(Path.c_str())); }', encoding="utf-8")
+			inventory = build_inventory(root)
+		self.assertEqual(inventory["cpp_files"][0]["type"], "integration")
+		self.assertEqual(inventory["cpp_files"][0]["source_contract_references"], 0)
+		self.assertEqual(inventory["structural_violations"], [])
+
 	def test_temp_file_reader_is_not_a_source_contract(self):
 		text = 'std::ifstream File(Info.Filename());'
 		self.assertEqual(count_source_reads(text), 0)

@@ -29,6 +29,8 @@ public:
 
 	// 识别 UTF-8 与 UTF-16（BOM 或 NUL 分布）并统一转成 UTF-8 后按行读取。
 	bool OpenFile(IOHANDLE File, bool RejectInvalidLines = false);
+	// 限制原始读取缓冲（含NUL），0沿用既有限制；解码另有最多1.5倍缓冲。
+	bool OpenFileWithBudget(IOHANDLE File, unsigned MaxBufferBytes, bool RejectInvalidLines = false);
 	// 最近一次 OpenFile 的结果，失败原因据此区分，不改变 OpenFile 的布尔语义。
 	EOpenResult LastOpenResult() const { return m_LastOpenResult; }
 	// 配置加载先校验整份文本，不能执行一部分后才发现被跳过的坏行。

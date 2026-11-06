@@ -6,7 +6,10 @@
 #include <zlib.h>
 
 #include <algorithm>
+#include <array>
 #include <cstring>
+#include <string>
+#include <string_view>
 
 namespace
 {
@@ -28,15 +31,61 @@ namespace
 		return List;
 	}
 
-	std::string WrapRaw(std::string_view Raw)
+	std::string WrapRaw(std::string_view Raw, std::string_view CompressedTail = {})
 	{
 		uLongf Size = compressBound(static_cast<uLong>(Raw.size()));
 		std::vector<unsigned char> vCompressed(Size);
 		if(compress2(vCompressed.data(), &Size, reinterpret_cast<const Bytef *>(Raw.data()), static_cast<uLong>(Raw.size()), Z_BEST_COMPRESSION) != Z_OK)
 			return {};
-		std::vector<char> vEncoded((Size + 2) / 3 * 4 + 1);
-		str_base64(vEncoded.data(), static_cast<int>(vEncoded.size()), vCompressed.data(), static_cast<int>(Size));
+		vCompressed.resize(Size);
+		if(!CompressedTail.empty())
+			vCompressed.insert(vCompressed.end(), CompressedTail.begin(), CompressedTail.end());
+		std::vector<char> vEncoded((vCompressed.size() + 2) / 3 * 4 + 1);
+		str_base64(vEncoded.data(), static_cast<int>(vEncoded.size()), vCompressed.data(), static_cast<int>(vCompressed.size()));
 		return std::string("QMF1:") + vEncoded.data();
+	}
+
+	// 固定一名好友的原始格式 fixture，用来构造生产 Encode 不会生成的非法字段。
+	std::string SingleFriendRaw(std::string_view Name = "A", std::string_view Clan = "B", std::string_view Note = "safe", unsigned Category = 0, unsigned Pinned = 1)
+	{
+		constexpr char HEADER[] = "\x03\x00"
+					  "\x07"
+					  "Friends"
+					  "\x0c"
+					  "Clan Members"
+					  "\x07"
+					  "Offline"
+					  "\x01\x00";
+		std::string Raw(HEADER, sizeof(HEADER) - 1);
+		const auto AppendText = [&](std::string_view Text) {
+			Raw.push_back(static_cast<char>(Text.size()));
+			Raw.append(Text);
+		};
+		AppendText(Name);
+		AppendText(Clan);
+		Raw.push_back(static_cast<char>(Category));
+		AppendText(Note);
+		Raw.push_back(static_cast<char>(Pinned));
+		return Raw;
+	}
+
+	void ExpectRejectedWithoutPublishing(const std::string &Code)
+	{
+		ASSERT_FALSE(Code.empty());
+		CFriendList Previous = Sample();
+		const CFriendList Expected = Previous;
+		ASSERT_FALSE(qm_friend_code::Decode(Code, Previous));
+		EXPECT_EQ(Previous.m_vCategories, Expected.m_vCategories);
+		ASSERT_EQ(Previous.m_vFriends.size(), Expected.m_vFriends.size());
+		for(size_t Index = 0; Index < Expected.m_vFriends.size(); ++Index)
+		{
+			SCOPED_TRACE(Index);
+			EXPECT_STREQ(Previous.m_vFriends[Index].m_aName, Expected.m_vFriends[Index].m_aName);
+			EXPECT_STREQ(Previous.m_vFriends[Index].m_aClan, Expected.m_vFriends[Index].m_aClan);
+			EXPECT_STREQ(Previous.m_vFriends[Index].m_aCategory, Expected.m_vFriends[Index].m_aCategory);
+			EXPECT_STREQ(Previous.m_vFriends[Index].m_aNote, Expected.m_vFriends[Index].m_aNote);
+			EXPECT_EQ(Previous.m_vFriends[Index].m_Pinned, Expected.m_vFriends[Index].m_Pinned);
+		}
 	}
 }
 
@@ -183,4 +232,82 @@ TEST(QmFriendCode, EmbeddedLineBreaksCannotBecomeConfigurationCommands)
 		List.m_vCategories.push_back(pText);
 		EXPECT_FALSE(qm_friend_code::Encode(List, Code));
 	}
+}
+
+TEST(QmFriendCode, RawFixtureRetainsMaximumLegalFieldPayloads)
+{
+	const std::string Name(MAX_NAME_LENGTH - 1, 'n');
+	const std::string Clan(MAX_CLAN_LENGTH - 1, 'c');
+	const std::string Note(IFriends::MAX_FRIEND_NOTE_LENGTH - 1, 't');
+	CFriendList Restored;
+	ASSERT_TRUE(qm_friend_code::Decode(WrapRaw(SingleFriendRaw(Name, Clan, Note)), Restored));
+	EXPECT_EQ(Restored.m_vCategories, (std::vector<std::string>{IFriends::DEFAULT_CATEGORY, IFriends::CLAN_MEMBERS_CATEGORY, IFriends::OFFLINE_CATEGORY}));
+	ASSERT_EQ(Restored.m_vFriends.size(), 1u);
+	EXPECT_STREQ(Restored.m_vFriends[0].m_aName, Name.c_str());
+	EXPECT_STREQ(Restored.m_vFriends[0].m_aClan, Clan.c_str());
+	EXPECT_STREQ(Restored.m_vFriends[0].m_aNote, Note.c_str());
+	EXPECT_STREQ(Restored.m_vFriends[0].m_aCategory, IFriends::DEFAULT_CATEGORY);
+	EXPECT_TRUE(Restored.m_vFriends[0].m_Pinned);
+}
+
+TEST(QmFriendCode, InvalidUtf8InDecodedFieldsDoesNotReplacePreviousData)
+{
+	for(size_t Field = 0; Field < 3; ++Field)
+	{
+		SCOPED_TRACE(Field);
+		std::array<std::string, 3> aFields = {"A", "B", "safe"};
+		aFields[Field] = std::string("\xc3(", 2);
+		ExpectRejectedWithoutPublishing(WrapRaw(SingleFriendRaw(aFields[0], aFields[1], aFields[2])));
+	}
+}
+
+TEST(QmFriendCode, EmbeddedNulInDecodedFieldsDoesNotReplacePreviousData)
+{
+	for(size_t Field = 0; Field < 3; ++Field)
+	{
+		SCOPED_TRACE(Field);
+		std::array<std::string, 3> aFields = {"A", "B", "safe"};
+		aFields[Field] = std::string("a\0b", 3);
+		ExpectRejectedWithoutPublishing(WrapRaw(SingleFriendRaw(aFields[0], aFields[1], aFields[2])));
+	}
+}
+
+TEST(QmFriendCode, OversizedDecodedFieldsDoNotReplacePreviousData)
+{
+	const std::array<size_t, 3> aCapacities = {MAX_NAME_LENGTH, MAX_CLAN_LENGTH, IFriends::MAX_FRIEND_NOTE_LENGTH};
+	for(size_t Field = 0; Field < aCapacities.size(); ++Field)
+	{
+		SCOPED_TRACE(Field);
+		std::array<std::string, 3> aFields = {"A", "B", "safe"};
+		aFields[Field].assign(aCapacities[Field], 'x');
+		ExpectRejectedWithoutPublishing(WrapRaw(SingleFriendRaw(aFields[0], aFields[1], aFields[2])));
+	}
+}
+
+TEST(QmFriendCode, InvalidPinnedByteDoesNotReplacePreviousData)
+{
+	for(const unsigned Pinned : {2u, 255u})
+	{
+		SCOPED_TRACE(Pinned);
+		ExpectRejectedWithoutPublishing(WrapRaw(SingleFriendRaw("A", "B", "safe", 0, Pinned)));
+	}
+}
+
+TEST(QmFriendCode, OutOfRangeCategoryIndexDoesNotReplacePreviousData)
+{
+	for(const unsigned Category : {3u, 255u})
+	{
+		SCOPED_TRACE(Category);
+		ExpectRejectedWithoutPublishing(WrapRaw(SingleFriendRaw("A", "B", "safe", Category)));
+	}
+}
+
+TEST(QmFriendCode, TrailingRawBytesDoNotReplacePreviousData)
+{
+	ExpectRejectedWithoutPublishing(WrapRaw(SingleFriendRaw() + "tail"));
+}
+
+TEST(QmFriendCode, TrailingCompressedBytesDoNotReplacePreviousData)
+{
+	ExpectRejectedWithoutPublishing(WrapRaw(SingleFriendRaw(), "tail"));
 }

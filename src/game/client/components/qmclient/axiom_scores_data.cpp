@@ -6,8 +6,9 @@
 #include <engine/http.h>
 #include <engine/shared/json.h>
 
-#include <algorithm>
 #include <limits>
+#include <map>
+#include <memory>
 
 namespace
 {
@@ -15,6 +16,7 @@ namespace
 	constexpr float AXIOM_POPUP_WIDTH = 360.0f;
 	constexpr float AXIOM_POPUP_SCREEN_MARGIN = 5.0f;
 	constexpr size_t MAX_AXIOM_JSON_BYTES = 8 * 1024 * 1024;
+	constexpr unsigned long MAX_AXIOM_JSON_MEMORY = 32 * 1024 * 1024;
 	constexpr unsigned MAX_AXIOM_SEARCH_RESULTS = 64;
 	constexpr unsigned MAX_AXIOM_DIFFICULTIES = 128;
 	constexpr size_t MAX_AXIOM_PLAYER_NAME_BYTES = 256;
@@ -27,11 +29,25 @@ namespace
 	// 分类缺失时的兜底：AXRace 服务器的名字里带 AXRace，Gores 服务器不带。
 	constexpr const char *AXIOM_SERVER_NAME_MARKER = "AXRace";
 
+	json_value *ParseResponse(const char *pData, size_t DataSize)
+	{
+		json_settings Settings{};
+		Settings.max_memory = MAX_AXIOM_JSON_MEMORY;
+		return JsonParseEx(&Settings, pData, DataSize, nullptr);
+	}
+
 	const json_value *JsonField(const json_value *pObject, const char *pName)
 	{
 		if(!pObject || pObject->type != json_object)
 			return &json_value_none;
-		return json_object_get(pObject, pName);
+		const size_t NameLength = str_length(pName);
+		for(unsigned Index = 0; Index < pObject->u.object.length; ++Index)
+		{
+			const auto &Entry = pObject->u.object.values[Index];
+			if(Entry.name_length == NameLength && str_comp(Entry.name, pName) == 0)
+				return Entry.value;
+		}
+		return &json_value_none;
 	}
 
 	bool ReadNonNegativeInteger(const json_value *pObject, const char *pName, int64_t &Out)
@@ -78,7 +94,7 @@ namespace
 		if(pValue->type != json_string)
 			return false;
 		const char *pText = json_string_get(pValue);
-		if(!pText || (!AllowEmpty && pText[0] == '\0') || (size_t)str_length(pText) > MaxBytes || !str_utf8_check(pText))
+		if(!pText || (!AllowEmpty && pValue->u.string.length == 0) || pValue->u.string.length > MaxBytes || (size_t)str_length(pText) != pValue->u.string.length || !str_utf8_check(pText))
 			return false;
 		Out = pText;
 		return true;
@@ -179,9 +195,10 @@ namespace
 		Score.m_vDifficulties.reserve(pDifficultyData->u.object.length);
 		for(unsigned i = 0; i < pDifficultyData->u.object.length; ++i)
 		{
-			const char *pName = pDifficultyData->u.object.values[i].name;
-			const json_value *pDifficulty = pDifficultyData->u.object.values[i].value;
-			if(!pName || pName[0] == '\0' || (size_t)str_length(pName) > MAX_AXIOM_DIFFICULTY_NAME_BYTES || !str_utf8_check(pName) || !pDifficulty || pDifficulty->type != json_object)
+			const auto &Entry = pDifficultyData->u.object.values[i];
+			const char *pName = Entry.name;
+			const json_value *pDifficulty = Entry.value;
+			if(!pName || Entry.name_length == 0 || Entry.name_length > MAX_AXIOM_DIFFICULTY_NAME_BYTES || (size_t)str_length(pName) != Entry.name_length || !str_utf8_check(pName) || !pDifficulty || pDifficulty->type != json_object)
 				return EQmAxiomParseResult::INVALID_RESPONSE;
 
 			const json_value *pStats = JsonField(pDifficulty, "stats");
@@ -216,11 +233,16 @@ namespace
 			return EQmAxiomParseResult::INVALID_RESPONSE;
 
 		const json_value *pGameTypes = JsonField(pRoot, "most_played_gametypes");
-		if(pGameTypes->type != json_array)
+		if(pGameTypes->type != json_array || pGameTypes->u.array.length > QM_DDSTATS_MAX_GAME_TYPE_RECORDS)
 			return EQmAxiomParseResult::INVALID_RESPONSE;
 
 		OutGameTypes.clear();
-		OutGameTypes.reserve(pGameTypes->u.array.length);
+		OutGameTypes.reserve(minimum(pGameTypes->u.array.length, QM_DDSTATS_MAX_GAME_TYPES));
+		const auto Less = [](std::string_view Left, std::string_view Right) {
+			return str_comp_nocase(Left.data(), Right.data()) < 0;
+		};
+		// 完整预留保证名字地址稳定；索引只在候选构建期间借用它们。
+		std::map<std::string_view, size_t, decltype(Less)> Indices(Less);
 		for(unsigned Index = 0; Index < pGameTypes->u.array.length; ++Index)
 		{
 			const json_value *pGameType = pGameTypes->u.array.values[Index];
@@ -231,13 +253,16 @@ namespace
 			SQmDdStatsGameType GameType;
 			GameType.m_Name = std::move(Name);
 			GameType.m_PlayTimeSeconds = Seconds;
-			const auto Existing = std::find_if(OutGameTypes.begin(), OutGameTypes.end(), [&GameType](const SQmDdStatsGameType &Candidate) {
-				return str_comp_nocase(Candidate.m_Name.c_str(), GameType.m_Name.c_str()) == 0;
-			});
-			if(Existing == OutGameTypes.end())
+			const auto Existing = Indices.find(GameType.m_Name);
+			if(Existing == Indices.end())
+			{
+				if(OutGameTypes.size() >= QM_DDSTATS_MAX_GAME_TYPES)
+					return EQmAxiomParseResult::INVALID_RESPONSE;
 				OutGameTypes.push_back(std::move(GameType));
+				Indices.emplace(OutGameTypes.back().m_Name, OutGameTypes.size() - 1);
+			}
 			else
-				Existing->m_PlayTimeSeconds = Seconds;
+				OutGameTypes[Existing->second].m_PlayTimeSeconds = Seconds;
 		}
 
 		return EQmAxiomParseResult::SUCCESS;
@@ -319,40 +344,54 @@ std::string QmBuildDdStatsPlayerUrl(const char *pPlayerName)
 	return aUrl;
 }
 
-EQmAxiomParseResult QmParseAxiomSearchResponse(const char *pData, size_t DataSize, const char *pPlayerName, SQmAxiomSearchMatch &OutMatch)
+EQmAxiomParseResult QmParseAxiomSearchResponse(const char *pData, size_t DataSize, const char *pPlayerName, SQmAxiomSearchMatch &OutMatch) noexcept
+try
 {
 	if(!pData || DataSize == 0 || DataSize > MAX_AXIOM_JSON_BYTES)
 		return EQmAxiomParseResult::INVALID_RESPONSE;
-	json_value *pRoot = JsonParse(pData, DataSize);
+	const std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(ParseResponse(pData, DataSize), json_value_free);
 	if(!pRoot)
 		return EQmAxiomParseResult::INVALID_RESPONSE;
-	const EQmAxiomParseResult Result = ParseSearchRoot(pRoot, pPlayerName, OutMatch);
-	json_value_free(pRoot);
-	return Result;
+	return ParseSearchRoot(pRoot.get(), pPlayerName, OutMatch);
+}
+catch(...)
+{
+	return EQmAxiomParseResult::INVALID_RESPONSE;
 }
 
-EQmAxiomParseResult QmParseAxiomInfoResponse(const char *pData, size_t DataSize, SQmAxiomModeScore &OutScore)
+EQmAxiomParseResult QmParseAxiomInfoResponse(const char *pData, size_t DataSize, SQmAxiomModeScore &OutScore) noexcept
+try
 {
 	if(!pData || DataSize == 0 || DataSize > MAX_AXIOM_JSON_BYTES)
 		return EQmAxiomParseResult::INVALID_RESPONSE;
-	json_value *pRoot = JsonParse(pData, DataSize);
+	const std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(ParseResponse(pData, DataSize), json_value_free);
 	if(!pRoot)
 		return EQmAxiomParseResult::INVALID_RESPONSE;
-	const EQmAxiomParseResult Result = ParseInfoRoot(pRoot, OutScore);
-	json_value_free(pRoot);
-	return Result;
+	return ParseInfoRoot(pRoot.get(), OutScore);
+}
+catch(...)
+{
+	return EQmAxiomParseResult::INVALID_RESPONSE;
 }
 
-EQmAxiomParseResult QmParseDdStatsPlayerResponse(const char *pData, size_t DataSize, const char *pPlayerName, std::vector<SQmDdStatsGameType> &OutGameTypes)
+EQmAxiomParseResult QmParseDdStatsPlayerResponse(const char *pData, size_t DataSize, const char *pPlayerName, std::vector<SQmDdStatsGameType> &OutGameTypes) noexcept
+try
 {
 	if(!pData || DataSize == 0 || DataSize > MAX_AXIOM_JSON_BYTES)
 		return EQmAxiomParseResult::INVALID_RESPONSE;
-	json_value *pRoot = JsonParse(pData, DataSize);
+	const std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(ParseResponse(pData, DataSize), json_value_free);
 	if(!pRoot)
 		return EQmAxiomParseResult::INVALID_RESPONSE;
-	const EQmAxiomParseResult Result = ParseDdStatsRoot(pRoot, pPlayerName, OutGameTypes);
-	json_value_free(pRoot);
+	// 先准备完整候选；后续条目非法或分配失败时不发布半份列表。
+	std::vector<SQmDdStatsGameType> vGameTypes;
+	const EQmAxiomParseResult Result = ParseDdStatsRoot(pRoot.get(), pPlayerName, vGameTypes);
+	if(Result == EQmAxiomParseResult::SUCCESS)
+		OutGameTypes.swap(vGameTypes);
 	return Result;
+}
+catch(...)
+{
+	return EQmAxiomParseResult::INVALID_RESPONSE;
 }
 
 bool QmAxiomResponseIsCurrent(uint64_t CurrentGeneration, uint64_t ResponseGeneration, std::string_view CurrentPlayerName, std::string_view ResponsePlayerName)

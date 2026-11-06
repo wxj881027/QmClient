@@ -4,11 +4,17 @@
 #define ENGINE_SHARED_MEMHEAP_H
 
 #include <cstddef>
+#include <cstdlib>
 #include <new>
 #include <utility>
 
 class CHeap
 {
+public:
+	// 分配器返回的内存必须可由free释放；借用函数，不接管外部状态。
+	using FAllocate = void *(*)(size_t);
+
+private:
 	struct CChunk
 	{
 		char *m_pMemory;
@@ -23,22 +29,31 @@ class CHeap
 	static constexpr size_t CHUNK_SIZE = 1025 * 64;
 
 	CChunk *m_pCurrent;
+	FAllocate m_pfnAllocate;
 
 	void Clear();
-	void NewChunk(size_t ChunkSize);
+	bool NewChunk(size_t ChunkSize) noexcept;
 	void *AllocateFromChunk(size_t Size, size_t Alignment);
 
 public:
-	CHeap() noexcept;
+	explicit CHeap(FAllocate Allocate = std::malloc) noexcept;
+	CHeap(const CHeap &) = delete;
+	CHeap &operator=(const CHeap &) = delete;
 	~CHeap();
 	void Reset();
+	// 转移块所有权，分配器仍归各自实例；既有指针保持有效。
+	void Absorb(CHeap &Other) noexcept;
+	void SwapStorage(CHeap &Other) noexcept;
 	void *Allocate(size_t Size, size_t Alignment = alignof(std::max_align_t));
 	const char *StoreString(const char *pSrc);
 
 	template<typename T, typename... TArgs>
 	T *Allocate(TArgs &&...Args)
 	{
-		return new(Allocate(sizeof(T), alignof(T))) T(std::forward<TArgs>(Args)...);
+		void *pMemory = Allocate(sizeof(T), alignof(T));
+		if(!pMemory)
+			throw std::bad_alloc();
+		return new(pMemory) T(std::forward<TArgs>(Args)...);
 	}
 };
 

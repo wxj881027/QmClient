@@ -1,8 +1,8 @@
 #include "QmCardCatalogInternal.h"
+#include "QmSteamProbeState.h"
 
 #include <engine/engine.h>
 #include <engine/shared/config.h>
-#include <engine/shared/jobs.h>
 #include <engine/steam.h>
 #include <engine/textrender.h>
 
@@ -18,45 +18,18 @@
 
 #include <algorithm>
 #include <memory>
-#include <string>
-
-namespace
-{
-	class CSteamProbeJob : public IJob
-	{
-		void Run() override { m_Info = SteamInspectClient(m_ManualPath.c_str()); }
-
-	public:
-		const std::string m_ManualPath;
-		SSteamClientInfo m_Info;
-		explicit CSteamProbeJob(const char *pManualPath) : m_ManualPath(pManualPath) {}
-	};
-}
 
 void CMenus::RenderQmSteamContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly)
 {
 	CSettingsContentLayoutFlow Flow(Content);
 	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly() || Flow.Declaring();
-	static std::shared_ptr<CSteamProbeJob> s_pProbe;
-	static SSteamClientInfo s_Info;
-	static bool s_HasResult = false;
-	static bool s_RefreshRequested = false;
-	static std::string s_CheckedManualPath;
+	static CSteamProbeState s_Probe;
 	static CLineInputBuffered<1024> s_ManualPathInput;
 	static CButtonContainer s_DetectButton;
 	if(Flow.Input() && !s_ManualPathInput.IsActive() && str_comp(s_ManualPathInput.GetString(), g_Config.m_QmSteamClientPath) != 0)
 		s_ManualPathInput.Set(g_Config.m_QmSteamClientPath);
-	if(!ReadOnly && s_pProbe != nullptr && s_pProbe->Done())
-	{
-		// 只读取已完成任务；编辑路径期间返回的旧结果不覆盖新选择。
-		if(s_pProbe->State() == IJob::STATE_DONE && s_pProbe->m_ManualPath == g_Config.m_QmSteamClientPath)
-		{
-			s_Info = s_pProbe->m_Info;
-			s_CheckedManualPath = s_pProbe->m_ManualPath;
-			s_HasResult = true;
-		}
-		s_pProbe.reset();
-	}
+	if(!ReadOnly)
+		s_Probe.Finish(g_Config.m_QmSteamClientPath);
 	IUiContext Ctx = SettingsUiContext("settings_steam", Metrics.m_UiScale);
 	CUIRect Row;
 	if(Flow.Control("qm-steam-auto-launch", Metrics.m_LineHeight, Row))
@@ -76,23 +49,20 @@ void CMenus::RenderQmSteamContent(CUIRect &Content, const SSettingsContentMetric
 			str_copy(g_Config.m_QmSteamClientPath, s_ManualPathInput.GetString());
 	Flow.Space(Metrics.m_LineSpacing);
 	if(Flow.Control("qm-steam-detect", Metrics.m_LineHeight, Row))
-		if(ui_widget::SecondaryButton(Ctx, &s_DetectButton, Localize("Detect Steam again"), Row, PrewarmOnly || s_pProbe != nullptr) && Flow.Input() && !ReadOnly)
-			s_RefreshRequested = true;
+		if(ui_widget::SecondaryButton(Ctx, &s_DetectButton, Localize("Detect Steam again"), Row, PrewarmOnly || s_Probe.Pending()) && Flow.Input() && !ReadOnly)
+			s_Probe.RequestRefresh();
 	Flow.Space(Metrics.m_LineSpacing);
-	if(!ReadOnly && s_pProbe == nullptr && (s_RefreshRequested || (!s_ManualPathInput.IsActive() && (!s_HasResult || s_CheckedManualPath != g_Config.m_QmSteamClientPath))))
-	{
-		s_pProbe = std::make_shared<CSteamProbeJob>(g_Config.m_QmSteamClientPath);
-		Engine()->AddJob(s_pProbe);
-		s_RefreshRequested = false;
-	}
+	if(!ReadOnly)
+		s_Probe.TryStart(g_Config.m_QmSteamClientPath, !s_ManualPathInput.IsActive(), [](const char *pPath) { return std::make_shared<CSteamProbeJob>(pPath, SteamInspectClient); }, [this](const auto &pJob) { return Engine()->TryAddJob(pJob); });
+	const SSteamClientInfo &Info = s_Probe.Info();
 	const char *pStatus;
-	if(s_pProbe != nullptr || !s_HasResult)
+	if(s_Probe.Pending() || !s_Probe.HasResult())
 		pStatus = Localize("Checking Steam...");
-	else if(s_Info.m_aPath[0] == '\0')
+	else if(Info.m_aPath[0] == '\0')
 		pStatus = Localize("Steam not found");
-	else if(s_Info.m_Running)
+	else if(Info.m_Running)
 		pStatus = Localize("Steam is running");
-	else if(s_Info.m_RunningKnown)
+	else if(Info.m_RunningKnown)
 		pStatus = Localize("Steam is installed but not running");
 	else
 		pStatus = Localize("Steam is installed");
@@ -102,14 +72,14 @@ void CMenus::RenderQmSteamContent(CUIRect &Content, const SSettingsContentMetric
 		SLabelProperties Props;
 		Props.m_MaxWidth = Row.w;
 		Props.m_EllipsisAtEnd = true;
-		Ui()->DoLabel(&Row, s_HasResult ? s_Info.m_aPath : "", Metrics.m_SmallSize, TEXTALIGN_ML, Props);
-		if(s_HasResult && s_Info.m_aPath[0] != '\0')
-			GameClient()->m_Tooltips.DoToolTipForRect(&s_Info, &Row, s_Info.m_aPath);
+		Ui()->DoLabel(&Row, s_Probe.HasResult() ? Info.m_aPath : "", Metrics.m_SmallSize, TEXTALIGN_ML, Props);
+		if(s_Probe.HasResult() && Info.m_aPath[0] != '\0')
+			GameClient()->m_Tooltips.DoToolTipForRect(&Info, &Row, Info.m_aPath);
 	}
 	Flow.Space(Metrics.m_LineSpacing);
 	const char *pInvalidPath = Localize("Manual Steam path is invalid; using automatic detection");
 	const char *pSelectHelp = Localize("Enter the Steam client program path, without command arguments");
-	TextRow("qm-steam-help", s_HasResult && s_Info.m_ManualPathRejected ? pInvalidPath : pSelectHelp, Metrics.m_SmallSize);
+	TextRow("qm-steam-help", s_Probe.HasResult() && Info.m_ManualPathRejected ? pInvalidPath : pSelectHelp, Metrics.m_SmallSize);
 }
 
 namespace qm_card_catalog

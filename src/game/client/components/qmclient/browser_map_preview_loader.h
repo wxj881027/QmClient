@@ -10,10 +10,12 @@
 #include <engine/storage.h>
 
 #include <game/layers.h>
+#include <game/map/map_render_items.h>
 #include <game/mapitems.h>
 
 #include <algorithm>
 #include <atomic>
+#include <cstddef>
 #include <cstdlib>
 #include <memory>
 #include <optional>
@@ -58,7 +60,7 @@ inline int ProbeDownloadedMap(const CFsFileInfo *pInfo, int IsDir, int DirType, 
 	// 严格 <前缀>_<哈希>.map：前缀后必须紧跟 '_'，防止 "Sunny" 误配 "SunnyLand_…"。
 	if(NameLen < PrefixLen + 2 || str_startswith(pInfo->m_pName, pProbe->m_pPrefix) == nullptr || pInfo->m_pName[PrefixLen] != '_')
 		return 0;
-	if(str_comp(pInfo->m_pName + NameLen - 4, ".map") != 0)
+	if(str_endswith(pInfo->m_pName, ".map") == nullptr)
 		return 0;
 	pProbe->m_BestTime = pInfo->m_TimeModified;
 	str_format(pProbe->m_aBest, sizeof(pProbe->m_aBest), "downloadedmaps/%s", pInfo->m_pName);
@@ -138,6 +140,8 @@ public:
 		Count = std::clamp<int>(Count, 0, MAX_MAPIMAGES);
 		m_vImages.resize(Count);
 		m_vUsage.resize(Count);
+		int LayersStart, LayersCount;
+		m_pMap->GetType(MAPITEMTYPE_LAYER, &LayersStart, &LayersCount);
 		for(int Group = 0; Group < m_pLayers->NumGroups(); ++Group)
 		{
 			const auto *pGroup = m_pLayers->GetGroup(Group);
@@ -152,7 +156,9 @@ public:
 				}
 				else if(pLayer->m_Type == LAYERTYPE_QUADS)
 				{
-					const auto *pQuads = reinterpret_cast<const CMapItemLayerQuads *>(pLayer);
+					const auto *pQuads = MapRenderItems::QuadLayer(*m_pMap, LayersStart + pGroup->m_StartLayer + Layer);
+					if(pQuads == nullptr)
+						return;
 					Image = pQuads->m_Image;
 					Usage = 2;
 					// 四边形压缩数据也在 worker 预解压，GPU 初始化只读取准备好的数据。
@@ -166,11 +172,13 @@ public:
 		{
 			if(m_vUsage[Index] == 0)
 				continue;
-			const auto *pImage = static_cast<const CMapItemImage_v2 *>(m_pMap->GetItem(Start + Index));
-			if(pImage->m_Version > 1 && pImage->m_MustBe1 != 1)
+			const auto ImageItem = MapRenderItems::ReadImage(*m_pMap, Start + Index);
+			if(!ImageItem)
+				return;
+			if(ImageItem->m_Version > 1 && ImageItem->m_MustBe1 != 1)
 				continue;
-			const char *pName = m_pMap->GetDataString(pImage->m_ImageName);
-			if(pImage->m_External)
+			const char *pName = m_pMap->GetDataString(ImageItem->m_ImageName);
+			if(ImageItem->m_External)
 			{
 				if(pName == nullptr || pName[0] == '\0')
 					continue;
@@ -184,21 +192,21 @@ public:
 					free(pData);
 				}
 			}
-			else if(pImage->m_Width > 0 && pImage->m_Height > 0)
+			else if(ImageItem->m_Width > 0 && ImageItem->m_Height > 0)
 			{
 				CImageInfo &Image = m_vImages[Index];
-				Image.m_Width = pImage->m_Width;
-				Image.m_Height = pImage->m_Height;
+				Image.m_Width = ImageItem->m_Width;
+				Image.m_Height = ImageItem->m_Height;
 				Image.m_Format = CImageInfo::FORMAT_RGBA;
-				const void *pData = m_pMap->GetData(pImage->m_ImageData);
+				const void *pData = m_pMap->GetData(ImageItem->m_ImageData);
 				size_t Size;
-				if(pData && Image.DataSize(Size) && m_pMap->GetDataSize(pImage->m_ImageData) >= 0 && Size <= static_cast<size_t>(m_pMap->GetDataSize(pImage->m_ImageData)))
+				if(pData && Image.DataSize(Size) && m_pMap->GetDataSize(ImageItem->m_ImageData) >= 0 && Size <= static_cast<size_t>(m_pMap->GetDataSize(ImageItem->m_ImageData)))
 				{
 					Image.m_pData = static_cast<uint8_t *>(malloc(Size));
 					if(Image.m_pData)
 						mem_copy(Image.m_pData, pData, Size);
 				}
-				m_pMap->UnloadData(pImage->m_ImageData);
+				m_pMap->UnloadData(ImageItem->m_ImageData);
 			}
 		}
 		m_Success = !m_Cancelled.load();

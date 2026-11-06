@@ -22,8 +22,10 @@
 #include <game/client/components/effects.h>
 #include <game/client/components/flow.h>
 #include <game/client/components/qmclient/afk_presentation.h>
+#include <game/client/components/qmclient/collision_position.h>
 #include <game/client/components/qmclient/jelly_tee.h>
 #include <game/client/components/qmclient/modes.h>
+#include <game/client/components/qmclient/qm_hook_coll_tuning.h>
 #include <game/client/components/qmclient/qm_skin_outline.h>
 #include <game/client/components/qmclient/team_tee_glow.h>
 #include <game/client/components/qmclient/tee_hue_cycle.h>
@@ -87,18 +89,23 @@ static bool HasQmJellyHammerImpact(const CGameClient *pGameClient, int ClientId)
 
 static int QmWeaponAnimationTuneZone(const CGameClient *pGameClient, const CCollision *pCollision, int ClientId, const CNetObj_Character &Player)
 {
+	bool HasExtendedData = false;
+	int TuneZoneOverride = -1;
 	if(ClientId >= 0 && ClientId < MAX_CLIENTS)
 	{
-		const CGameClient::CSnapState::CCharacterInfo &Character = pGameClient->m_Snap.m_aCharacters[ClientId];
-		if(Character.m_HasExtendedData && Character.m_ExtendedData.m_TuneZoneOverride >= 0)
-			return std::clamp(Character.m_ExtendedData.m_TuneZoneOverride, 0, NUM_TUNEZONES - 1);
+		const auto &Character = pGameClient->m_Snap.m_aCharacters[ClientId];
+		HasExtendedData = Character.m_HasExtendedData;
+		if(HasExtendedData)
+			TuneZoneOverride = Character.m_ExtendedData.m_TuneZoneOverride;
 	}
-	return std::clamp(pCollision->IsTune(pCollision->GetMapIndex(vec2(Player.m_X, Player.m_Y))), 0, NUM_TUNEZONES - 1);
+	return QmResolveWeaponAnimationTuneZone(HasExtendedData, TuneZoneOverride, vec2(Player.m_X, Player.m_Y), [pCollision](vec2 Position) {
+		return pCollision->IsTune(pCollision->GetMapIndex(Position));
+	});
 }
 
 static bool IsSolidAt(const CCollision *pCollision, vec2 Pos)
 {
-	if(pCollision == nullptr)
+	if(pCollision == nullptr || !QmCollision::CanRoundPosition(Pos))
 		return false;
 	return pCollision->CheckPoint(Pos.x, Pos.y);
 }
@@ -422,9 +429,10 @@ void CPlayers::RenderHookCollLine(
 
 	// When the other player isn't predicted, we don't know their tunes.
 	// Use our own tunes instead. This is wrong, but a good heuristic.
-	const CCharacterCore &PlayerCore = GameClient()->m_aClients[ClientId].m_IsPredicted ? GameClient()->m_aClients[ClientId].m_Predicted : GameClient()->m_aClients[GameClient()->m_aLocalIds[g_Config.m_ClDummy]].m_Predicted;
-	float HookLength = PlayerCore.m_Tuning.m_HookLength;
-	float HookFireSpeed = PlayerCore.m_Tuning.m_HookFireSpeed;
+	const auto TuningClient = QmHookCollTuningClient(GameClient()->m_aClients[ClientId].m_IsPredicted, ClientId, GameClient()->m_aLocalIds[g_Config.m_ClDummy]);
+	const CTuningParams &Tuning = TuningClient ? GameClient()->m_aClients[*TuningClient].m_Predicted.m_Tuning : GameClient()->m_aTuning[g_Config.m_ClDummy];
+	float HookLength = Tuning.m_HookLength;
+	float HookFireSpeed = Tuning.m_HookFireSpeed;
 
 	// TClient: Hook collision line length follows cursor distance
 	// 有问题,暂定改回原版
@@ -458,7 +466,6 @@ void CPlayers::RenderHookCollLine(
 	// "结果不确定"分支（多 tele 出口/计算超时直线）与"碰到其他玩家"分支同源（同样反制 TeeColl 原色），
 	// 因此套用其他玩家的按下色。开关关闭时整条自动反色，不使用按下色。
 	unsigned HookCollPressedColor = g_Config.m_QmHookCollPressedNoColl;
-	m_HookCollLineScratch.Reset();
 	auto &vLineSegments = m_HookCollLineScratch.m_vLineSegments;
 
 	const int MaxHookTicks = 5 * Client()->GameTickSpeed(); // calculating above 5 seconds is very expensive and unlikely to happen
@@ -487,185 +494,187 @@ void CPlayers::RenderHookCollLine(
 		}
 	};
 
-	// simulate the hook into the future
-	int HookTick;
-	bool HookEnteredTelehook = false;
-	std::optional<IGraphics::CLineItem> HookTipLineSegment;
-	for(HookTick = 0; HookTick < MaxHookTicks; ++HookTick)
-	{
-		int Tele;
-		vec2 HitPos, IntersectedPlayerPosition;
-		vec2 SegmentEndPos = SegmentStartPos + QuantizedDirection * HookFireSpeed;
+	const ColorRGBA HookCollTipColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollTipColor, true));
+	auto &HookTipLineSegment = m_HookCollLineScratch.m_TipLine;
+	if(!m_HookCollLineScratch.TryPrepare([&] {
+		   // simulate the hook into the future
+		   int HookTick;
+		   bool HookEnteredTelehook = false;
+		   for(HookTick = 0; HookTick < MaxHookTicks; ++HookTick)
+		   {
+			   int Tele;
+			   vec2 HitPos, IntersectedPlayerPosition;
+			   vec2 SegmentEndPos = SegmentStartPos + QuantizedDirection * HookFireSpeed;
 
-		// check if a hook would enter retracting state in this tick
-		if(distance(BasePos, SegmentEndPos) > HookLength)
-		{
-			// check if the retracting hook hits a player
-			if(!HookEnteredTelehook)
-			{
-				vec2 RetractingHookEndPos = BasePos + normalize(SegmentEndPos - BasePos) * HookLength;
-				// you can't hook a player, if the hook is behind solids, however you miss the solids as well
-				int Hit = Collision()->IntersectLineTeleHook(SegmentStartPos, RetractingHookEndPos, &HitPos, nullptr, &Tele);
+			   // check if a hook would enter retracting state in this tick
+			   if(distance(BasePos, SegmentEndPos) > HookLength)
+			   {
+				   // check if the retracting hook hits a player
+				   if(!HookEnteredTelehook)
+				   {
+					   vec2 RetractingHookEndPos = BasePos + normalize(SegmentEndPos - BasePos) * HookLength;
+					   // you can't hook a player, if the hook is behind solids, however you miss the solids as well
+					   if(!QmCollision::CanQueryHookLine(SegmentStartPos, RetractingHookEndPos))
+						   return false;
+					   int Hit = Collision()->IntersectLineTeleHook(SegmentStartPos, RetractingHookEndPos, &HitPos, nullptr, &Tele);
 
-				if(GameClient()->IntersectCharacter(SegmentStartPos, HitPos, RetractingHookEndPos, ClientId, &IntersectedPlayerPosition) != -1)
-				{
-					AddHookPlayerSegment(LineStartPos, SegmentEndPos, IntersectedPlayerPosition, RetractingHookEndPos);
-					break;
-				}
+					   if(GameClient()->IntersectCharacter(SegmentStartPos, HitPos, RetractingHookEndPos, ClientId, &IntersectedPlayerPosition) != -1)
+					   {
+						   AddHookPlayerSegment(LineStartPos, SegmentEndPos, IntersectedPlayerPosition, RetractingHookEndPos);
+						   break;
+					   }
 
-				// Retracting hooks don't go through hook teleporters
-				if(Hit && Hit != TILE_TELEINHOOK)
-				{
-					// The hook misses the player, but also misses the solid
-					vLineSegments.emplace_back(LineStartPos, SegmentStartPos);
+					   // Retracting hooks don't go through hook teleporters
+					   if(Hit && Hit != TILE_TELEINHOOK)
+					   {
+						   // The hook misses the player, but also misses the solid
+						   vLineSegments.emplace_back(LineStartPos, SegmentStartPos);
 
-					// The player hook misses due to a solid
-					HookTipLineSegment = IGraphics::CLineItem(SegmentStartPos, HitPos);
-					break;
-				}
+						   // The player hook misses due to a solid
+						   HookTipLineSegment = IGraphics::CLineItem(SegmentStartPos, HitPos);
+						   break;
+					   }
 
-				// we are missing the player, the solid hookline stopped already, but we want this extra line segment
-				// the player-hooking-hook is only longer, if we didn't go through a tele hook
-				HookTipLineSegment = IGraphics::CLineItem(SegmentStartPos, RetractingHookEndPos);
-			}
+					   // we are missing the player, the solid hookline stopped already, but we want this extra line segment
+					   // the player-hooking-hook is only longer, if we didn't go through a tele hook
+					   HookTipLineSegment = IGraphics::CLineItem(SegmentStartPos, RetractingHookEndPos);
+				   }
 
-			// the line is too long here, and the hook retracts, use old position
-			vLineSegments.emplace_back(LineStartPos, SegmentStartPos);
-			break;
-		}
+				   // the line is too long here, and the hook retracts, use old position
+				   vLineSegments.emplace_back(LineStartPos, SegmentStartPos);
+				   break;
+			   }
 
-		// check for map collisions
-		int Hit = Collision()->IntersectLineTeleHook(SegmentStartPos, SegmentEndPos, &HitPos, nullptr, &Tele);
+			   // check for map collisions
+			   if(!QmCollision::CanQueryHookLine(SegmentStartPos, SegmentEndPos))
+				   return false;
+			   int Hit = Collision()->IntersectLineTeleHook(SegmentStartPos, SegmentEndPos, &HitPos, nullptr, &Tele);
 
-		// check if we intersect a player
-		if(GameClient()->IntersectCharacter(SegmentStartPos, HitPos, SegmentEndPos, ClientId, &IntersectedPlayerPosition) != -1)
-		{
-			AddHookPlayerSegment(LineStartPos, HitPos, IntersectedPlayerPosition, SegmentEndPos);
-			break;
-		}
+			   // check if we intersect a player
+			   if(GameClient()->IntersectCharacter(SegmentStartPos, HitPos, SegmentEndPos, ClientId, &IntersectedPlayerPosition) != -1)
+			   {
+				   AddHookPlayerSegment(LineStartPos, HitPos, IntersectedPlayerPosition, SegmentEndPos);
+				   break;
+			   }
 
-		// we hit nothing, continue calculating segments
-		if(!Hit)
-		{
-			SegmentStartPos = SegmentEndPos;
-			SegmentStartPos.x = round_to_int(SegmentStartPos.x);
-			SegmentStartPos.y = round_to_int(SegmentStartPos.y);
+			   // we hit nothing, continue calculating segments
+			   if(!Hit)
+			   {
+				   SegmentStartPos = SegmentEndPos;
+				   SegmentStartPos.x = round_to_int(SegmentStartPos.x);
+				   SegmentStartPos.y = round_to_int(SegmentStartPos.y);
 
-			// direction is always the same after the first tick quantization
-			if(HookTick == 0)
-			{
-				QuantizedDirection.x = round_to_int(QuantizedDirection.x * 256.0f) / 256.0f;
-				QuantizedDirection.y = round_to_int(QuantizedDirection.y * 256.0f) / 256.0f;
-			}
-			continue;
-		}
+				   // direction is always the same after the first tick quantization
+				   if(HookTick == 0)
+				   {
+					   QuantizedDirection.x = round_to_int(QuantizedDirection.x * 256.0f) / 256.0f;
+					   QuantizedDirection.y = round_to_int(QuantizedDirection.y * 256.0f) / 256.0f;
+				   }
+				   continue;
+			   }
 
-		// we hit a solid / hook stopper
-		if(Hit != TILE_TELEINHOOK)
-		{
-			if(Hit != TILE_NOHOOK)
-			{
-				HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl));
-				HookCollPressedColor = g_Config.m_QmHookCollPressedHookable;
-			}
-			vLineSegments.emplace_back(LineStartPos, HitPos);
-			break;
-		}
+			   // we hit a solid / hook stopper
+			   if(Hit != TILE_TELEINHOOK)
+			   {
+				   if(Hit != TILE_NOHOOK)
+				   {
+					   HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl));
+					   HookCollPressedColor = g_Config.m_QmHookCollPressedHookable;
+				   }
+				   vLineSegments.emplace_back(LineStartPos, HitPos);
+				   break;
+			   }
 
-		// we are hitting TILE_TELEINHOOK
-		vLineSegments.emplace_back(LineStartPos, HitPos);
-		HookEnteredTelehook = true;
+			   // we are hitting TILE_TELEINHOOK
+			   vLineSegments.emplace_back(LineStartPos, HitPos);
+			   HookEnteredTelehook = true;
 
-		// check tele outs
-		const std::vector<vec2> &vTeleOuts = Collision()->TeleOuts(Tele - 1);
-		if(vTeleOuts.empty())
-		{
-			// the hook gets stuck, this is a feature or a bug
-			HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl));
-			HookCollPressedColor = g_Config.m_QmHookCollPressedHookable;
-			break;
-		}
-		else if(vTeleOuts.size() > 1)
-		{
-			// we don't know which teleout the hook takes, just invert the color
-			HookCollColor = color_invert(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)));
-			HookCollPressedColor = g_Config.m_QmHookCollPressedTee; // "结果不确定"：与"碰到其他玩家"同源，套用其按下色
-			break;
-		}
+			   // check tele outs
+			   const std::vector<vec2> &vTeleOuts = Collision()->TeleOuts(Tele - 1);
+			   if(vTeleOuts.empty())
+			   {
+				   // the hook gets stuck, this is a feature or a bug
+				   HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl));
+				   HookCollPressedColor = g_Config.m_QmHookCollPressedHookable;
+				   break;
+			   }
+			   else if(vTeleOuts.size() > 1)
+			   {
+				   // we don't know which teleout the hook takes, just invert the color
+				   HookCollColor = color_invert(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)));
+				   HookCollPressedColor = g_Config.m_QmHookCollPressedTee; // "结果不确定"：与"碰到其他玩家"同源，套用其按下色
+				   break;
+			   }
 
-		// go through one teleout, update positions and continue
-		BasePos = vTeleOuts[0];
-		LineStartPos = BasePos; // make the line start in the teleporter to prevent a gap
-		SegmentStartPos = BasePos + Direction * HOOK_START_DISTANCE;
-		SegmentStartPos.x = round_to_int(SegmentStartPos.x);
-		SegmentStartPos.y = round_to_int(SegmentStartPos.y);
+			   // go through one teleout, update positions and continue
+			   BasePos = vTeleOuts[0];
+			   LineStartPos = BasePos; // make the line start in the teleporter to prevent a gap
+			   SegmentStartPos = BasePos + Direction * HOOK_START_DISTANCE;
+			   if(!QmCollision::CanRoundPosition(SegmentStartPos))
+				   return false;
+			   SegmentStartPos.x = round_to_int(SegmentStartPos.x);
+			   SegmentStartPos.y = round_to_int(SegmentStartPos.y);
 
-		// direction is always the same after the first tick quantization
-		if(HookTick == 0)
-		{
-			QuantizedDirection.x = round_to_int(QuantizedDirection.x * 256.0f) / 256.0f;
-			QuantizedDirection.y = round_to_int(QuantizedDirection.y * 256.0f) / 256.0f;
-		}
-	}
+			   // direction is always the same after the first tick quantization
+			   if(HookTick == 0)
+			   {
+				   QuantizedDirection.x = round_to_int(QuantizedDirection.x * 256.0f) / 256.0f;
+				   QuantizedDirection.y = round_to_int(QuantizedDirection.y * 256.0f) / 256.0f;
+			   }
+		   }
 
-	// The hook line is too expensive to calculate and didn't hit anything before, just set a straight line
-	if(HookTick >= MaxHookTicks && vLineSegments.empty())
-	{
-		// we simply don't know if we hit anything or not
-		HookCollColor = color_invert(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)));
-		HookCollPressedColor = g_Config.m_QmHookCollPressedTee; // "结果不确定"：与"碰到其他玩家"同源，套用其按下色
-		vLineSegments.emplace_back(LineStartPos, BasePos + QuantizedDirection * HookLength);
-	}
+		   // The hook line is too expensive to calculate and didn't hit anything before, just set a straight line
+		   if(HookTick >= MaxHookTicks && vLineSegments.empty())
+		   {
+			   // we simply don't know if we hit anything or not
+			   HookCollColor = color_invert(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)));
+			   HookCollPressedColor = g_Config.m_QmHookCollPressedTee; // "结果不确定"：与"碰到其他玩家"同源，套用其按下色
+			   vLineSegments.emplace_back(LineStartPos, BasePos + QuantizedDirection * HookLength);
+		   }
 
-	// add a line from the player to the start position to prevent a visual gap
-	vLineSegments.emplace_back(Position, Position + StartOffset);
+		   // add a line from the player to the start position to prevent a visual gap
+		   vLineSegments.emplace_back(Position, Position + StartOffset);
 
-	const bool PressedHookColl = AlwaysRenderHookColl && RenderHookCollPlayer;
-	if(PressedHookColl)
-	{
-		// 按下 +showhookcoll 时的辅助线颜色：
-		// - 开关关闭：整条自动反色（与旧行为一致）；
-		// - 开关开启：按上方分支记录的线类型取对应"按下后"颜色，始终生效（默认值即高亮变体，无回退）。
-		if(g_Config.m_QmHookCollPressedCustom)
-			HookCollColor = color_cast<ColorRGBA>(ColorHSLA(HookCollPressedColor, true));
-		else
-			HookCollColor = color_invert(HookCollColor);
-	}
+		   const bool PressedHookColl = AlwaysRenderHookColl && RenderHookCollPlayer;
+		   if(PressedHookColl)
+		   {
+			   // 按下 +showhookcoll 时的辅助线颜色：
+			   // - 开关关闭：整条自动反色（与旧行为一致）；
+			   // - 开关开启：按上方分支记录的线类型取对应"按下后"颜色，始终生效（默认值即高亮变体，无回退）。
+			   if(g_Config.m_QmHookCollPressedCustom)
+				   HookCollColor = color_cast<ColorRGBA>(ColorHSLA(HookCollPressedColor, true));
+			   else
+				   HookCollColor = color_invert(HookCollColor);
+		   }
 
-	// Render hook coll line
-	ColorRGBA HookCollTipColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollTipColor, true));
-	// 按下态辅助线提示段：开关开启时取"按下后"颜色（始终生效）；开关关闭保持原色。
-	// 原提示段为全透明（不会渲染）时不套用按下态颜色，避免用户未开启提示段时意外画出来。
-	if(PressedHookColl && g_Config.m_QmHookCollPressedCustom && HookCollTipColor.a > 0.0f)
-	{
-		HookCollTipColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmHookCollPressedTip, true));
-	}
+		   // 按下态辅助线提示段：开关开启时取"按下后"颜色（始终生效）；开关关闭保持原色。
+		   // 原提示段为全透明（不会渲染）时不套用按下态颜色，避免用户未开启提示段时意外画出来。
+		   if(PressedHookColl && g_Config.m_QmHookCollPressedCustom && HookCollTipColor.a > 0.0f)
+		   {
+			   HookCollTipColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmHookCollPressedTip, true));
+		   }
+		   if(HookCollSize > 0)
+		   {
+			   const float LineWidth = 0.5f + (float)(HookCollSize - 1) * 0.25f;
+			   const vec2 PerpToAngle = normalize(vec2(Direction.y, -Direction.x)) * GameClient()->m_Camera.m_Zoom;
+			   m_HookCollLineScratch.PrepareQuads(PerpToAngle, LineWidth, HookCollTipColor.a > 0.0f && !g_Config.m_QmRevertHookLine);
+		   }
+		   return true;
+	   }))
+		return;
 
 	Graphics()->TextureClear();
 	if(HookCollSize > 0)
 	{
 		auto &vLineQuadSegments = m_HookCollLineScratch.m_vLineQuadSegments;
-		vLineQuadSegments.reserve(vLineSegments.size());
-
-		float LineWidth = 0.5f + (float)(HookCollSize - 1) * 0.25f;
-		const vec2 PerpToAngle = normalize(vec2(Direction.y, -Direction.x)) * GameClient()->m_Camera.m_Zoom;
-
-		for(const auto &LineSegment : vLineSegments)
-		{
-			m_HookCollLineScratch.AppendQuad(LineSegment, PerpToAngle, LineWidth);
-		}
-
-		vLineSegments.clear();
 
 		Graphics()->QuadsBegin();
 		Graphics()->SetColor(HookCollColor.WithAlpha(Alpha));
 		Graphics()->QuadsDrawFreeform(vLineQuadSegments.data(), vLineQuadSegments.size());
-		if(HookTipLineSegment.has_value() && HookCollTipColor.a > 0.0f && !g_Config.m_QmRevertHookLine)
+		if(m_HookCollLineScratch.m_TipQuad)
 		{
-			vLineQuadSegments.clear();
-			m_HookCollLineScratch.AppendQuad(HookTipLineSegment.value(), PerpToAngle, LineWidth);
 			Graphics()->SetColor(HookCollTipColor.WithMultipliedAlpha(Alpha));
-			Graphics()->QuadsDrawFreeform(vLineQuadSegments.data(), vLineQuadSegments.size());
+			Graphics()->QuadsDrawFreeform(&*m_HookCollLineScratch.m_TipQuad, 1);
 		}
 		Graphics()->QuadsEnd();
 	}
@@ -954,9 +963,10 @@ void CPlayers::RenderPlayer(
 	RenderInfo.m_FeetFlipped = false;
 
 	bool Stationary = Player.m_VelX <= 1 && Player.m_VelX >= -1;
-	bool InAir = !Collision()->CheckPoint(Player.m_X, Player.m_Y + 16);
+	const auto GroundSample = QmCollision::OffsetSnapshotPosition(ivec2(Player.m_X, Player.m_Y), ivec2(0, 16));
+	bool InAir = !GroundSample || !IsSolidAt(Collision(), *GroundSample);
 	if(g_Config.m_QmAntiPingImproved && !Local)
-		InAir = !Collision()->CheckPoint(Position.x, Position.y + 16);
+		InAir = !IsSolidAt(Collision(), Position + vec2(0, 16));
 	bool Running = Player.m_VelX >= 5000 || Player.m_VelX <= -5000;
 	bool WantOtherDir = (Player.m_Direction == -1 && Vel.x > 0) || (Player.m_Direction == 1 && Vel.x < 0);
 	bool Inactive = ClientId >= 0 && (Afk || GameClient()->m_aClients[ClientId].m_Paused);
@@ -1605,7 +1615,8 @@ void CPlayers::RenderPlayerGhost(
 	RenderInfo.m_FeetFlipped = false;
 
 	bool Stationary = Player.m_VelX <= 1 && Player.m_VelX >= -1;
-	bool InAir = !Collision()->CheckPoint(Player.m_X, Player.m_Y + 16);
+	const auto GroundSample = QmCollision::OffsetSnapshotPosition(ivec2(Player.m_X, Player.m_Y), ivec2(0, 16));
+	bool InAir = !GroundSample || !IsSolidAt(Collision(), *GroundSample);
 	bool Running = Player.m_VelX >= 5000 || Player.m_VelX <= -5000;
 	bool WantOtherDir = (Player.m_Direction == -1 && Vel.x > 0) || (Player.m_Direction == 1 && Vel.x < 0);
 	bool Inactive = Afk || GameClient()->m_aClients[ClientId].m_Paused;

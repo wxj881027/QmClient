@@ -84,6 +84,7 @@ namespace
 		void Pause(bool) override {}
 		bool IsRecording() const override { return true; }
 		bool HasError() const override { return false; }
+		bool HasAudio() const override { return false; }
 		void NextVideoFrame() override {}
 		void NextVideoFrameThread() override {}
 		void NextAudioFrame(ISoundMixFunc) override {}

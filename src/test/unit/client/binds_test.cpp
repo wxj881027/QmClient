@@ -4,6 +4,9 @@
 
 #include <gtest/gtest.h>
 
+#include <new>
+#include <stdexcept>
+
 TEST(Binds, AllowsUnmodifiedFallbackForSingleModifierKey)
 {
 	EXPECT_TRUE(CBinds::AllowsUnmodifiedFallback(KEY_LSHIFT, KeyModifier::NONE));
@@ -137,4 +140,97 @@ TEST(Binds, StorageFreeOnlyAndAliasedReplacementPreserveCommands)
 	Binds.UnbindAll();
 	Binds.UnbindAll();
 	EXPECT_STREQ(Binds.Get(KEY_RIGHT, KeyModifier::NONE), "");
+}
+
+TEST(Binds, RejectedAllocationPreservesOldCommandRevisionAndOtherModifier)
+{
+	CBindStorage Binds;
+	ASSERT_TRUE(Binds.Bind(KEY_X, "+fire"));
+	ASSERT_TRUE(Binds.Bind(KEY_X, "+hook", false, 1 << KeyModifier::CTRL));
+	const char *pOld = Binds.Get(KEY_X, KeyModifier::NONE);
+	const uint64_t Revision = Binds.Revision();
+
+	EXPECT_FALSE(Binds.Bind(KEY_X, "+left", false, KeyModifier::NONE, [](size_t) -> void * { return nullptr; }));
+	EXPECT_EQ(Binds.Get(KEY_X, KeyModifier::NONE), pOld);
+	EXPECT_STREQ(pOld, "+fire");
+	EXPECT_STREQ(Binds.Get(KEY_X, 1 << KeyModifier::CTRL), "+hook");
+	EXPECT_EQ(Binds.Revision(), Revision);
+}
+
+TEST(Binds, RejectedNewBindingLeavesSlotEmptyAndRevisionUnchanged)
+{
+	CBindStorage Binds;
+	const uint64_t Revision = Binds.Revision();
+	EXPECT_FALSE(Binds.Bind(KEY_X, "+fire", false, KeyModifier::NONE, [](size_t) -> void * { return nullptr; }));
+	EXPECT_STREQ(Binds.Get(KEY_X, KeyModifier::NONE), "");
+	EXPECT_EQ(Binds.Revision(), Revision);
+}
+
+TEST(Binds, RejectedAliasedReplacementKeepsBorrowedCommandAlive)
+{
+	CBindStorage Binds;
+	ASSERT_TRUE(Binds.Bind(KEY_X, "+fire;+hook"));
+	const char *pCommand = Binds.Get(KEY_X, KeyModifier::NONE);
+	const uint64_t Revision = Binds.Revision();
+	EXPECT_FALSE(Binds.Bind(KEY_X, pCommand, false, KeyModifier::NONE, [](size_t) -> void * { return nullptr; }));
+	EXPECT_EQ(Binds.Get(KEY_X, KeyModifier::NONE), pCommand);
+	EXPECT_STREQ(pCommand, "+fire;+hook");
+	EXPECT_EQ(Binds.Revision(), Revision);
+}
+
+TEST(Binds, FreeOnlyOccupiedSlotDoesNotRequestAllocation)
+{
+	CBindStorage Binds;
+	ASSERT_TRUE(Binds.Bind(KEY_X, "+fire"));
+	const uint64_t Revision = Binds.Revision();
+	EXPECT_FALSE(Binds.Bind(KEY_X, "+hook", true, KeyModifier::NONE, [](size_t) -> void * {
+		ADD_FAILURE() << "occupied free-only binding requested allocation";
+		return nullptr;
+	}));
+	EXPECT_STREQ(Binds.Get(KEY_X, KeyModifier::NONE), "+fire");
+	EXPECT_EQ(Binds.Revision(), Revision);
+}
+
+TEST(Binds, UnbindingSucceedsWithoutAllocating)
+{
+	CBindStorage Binds;
+	ASSERT_TRUE(Binds.Bind(KEY_X, "+fire"));
+	const uint64_t Revision = Binds.Revision();
+	EXPECT_TRUE(Binds.Bind(KEY_X, "", false, KeyModifier::NONE, [](size_t) -> void * {
+		ADD_FAILURE() << "empty binding requested allocation";
+		return nullptr;
+	}));
+	EXPECT_STREQ(Binds.Get(KEY_X, KeyModifier::NONE), "");
+	EXPECT_EQ(Binds.Revision(), Revision + 1);
+}
+
+TEST(Binds, RetryAfterAllocationFailurePublishesMigratedBindingOnce)
+{
+	CBindStorage Binds;
+	ASSERT_TRUE(Binds.Bind(KEY_X, "+fire"));
+	const uint64_t Revision = Binds.Revision();
+	EXPECT_FALSE(Binds.Bind(KEY_X, "tc_jump_hint 1", false, KeyModifier::NONE, [](size_t) -> void * { return nullptr; }));
+	ASSERT_TRUE(Binds.Bind(KEY_X, "tc_jump_hint 1"));
+	EXPECT_STREQ(Binds.Get(KEY_X, KeyModifier::NONE), "qm_jump_hint 1");
+	EXPECT_EQ(Binds.Revision(), Revision + 1);
+}
+
+TEST(Binds, AllocationExceptionPreservesBindingAndRevision)
+{
+	CBindStorage Binds;
+	ASSERT_TRUE(Binds.Bind(KEY_X, "+fire"));
+	const uint64_t Revision = Binds.Revision();
+	EXPECT_FALSE(Binds.Bind(KEY_X, "+hook", false, KeyModifier::NONE, [](size_t) -> void * { throw std::bad_alloc(); }));
+	EXPECT_STREQ(Binds.Get(KEY_X, KeyModifier::NONE), "+fire");
+	EXPECT_EQ(Binds.Revision(), Revision);
+}
+
+TEST(Binds, AllocationLengthErrorPreservesBindingAndRevision)
+{
+	CBindStorage Binds;
+	ASSERT_TRUE(Binds.Bind(KEY_X, "+fire"));
+	const uint64_t Revision = Binds.Revision();
+	EXPECT_FALSE(Binds.Bind(KEY_X, "+hook", false, KeyModifier::NONE, [](size_t) -> void * { throw std::length_error("binding allocation rejected"); }));
+	EXPECT_STREQ(Binds.Get(KEY_X, KeyModifier::NONE), "+fire");
+	EXPECT_EQ(Binds.Revision(), Revision);
 }

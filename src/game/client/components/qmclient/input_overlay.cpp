@@ -177,6 +177,8 @@ void CInputOverlay::OnRender()
 		LoadConfiguration(IStorage::TYPE_ALL);
 
 	std::optional<time_t> Modified;
+	if(m_pFileTimeJob && m_pFileTimeJob->State() == IJob::STATE_FAILED)
+		m_pFileTimeJob.reset();
 	if(m_pFileTimeJob && m_pFileTimeJob->TryGetResult(Modified))
 	{
 		m_pFileTimeJob.reset();

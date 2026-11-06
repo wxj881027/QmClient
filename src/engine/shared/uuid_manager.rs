@@ -74,6 +74,19 @@ mod ffi {
         /// Register a UUID by name with the specified ID.
         ///
         /// The IDs must be registered in order starting from [`OFFSET_UUID`].
+        /// 名称由注册表复制，调用后原字符串可以释放。
+        ///
+        /// ```
+        /// # extern crate ddnet_test;
+        /// # use ddnet_engine_shared::{CUuidManager, OFFSET_UUID};
+        /// # use std::ffi::CString;
+        /// let mut manager = CUuidManager::New();
+        /// {
+        ///     let name = CString::new("temporary@uuid-test").unwrap();
+        ///     manager.pin_mut().RegisterName(OFFSET_UUID, name.as_c_str().into());
+        /// }
+        /// assert_eq!(manager.GetName(OFFSET_UUID), "temporary@uuid-test");
+        /// ```
         ///
         /// ```
         /// # extern crate ddnet_test;
@@ -94,12 +107,24 @@ mod ffi {
         pub fn RegisterName(self: Pin<&mut CUuidManager>, id: i32, name: StrRef<'_>);
 
         /// Get a UUID from an ID.
+        /// 未注册编号返回空UUID。
+        ///
+        /// ```
+        /// # extern crate ddnet_test;
+        /// # use ddnet_engine_shared::{CUuid, CUuidManager, OFFSET_UUID};
+        /// let manager = CUuidManager::New();
+        /// for id in [i32::MIN, -1, 0, OFFSET_UUID, i32::MAX] {
+        ///     assert_eq!(manager.GetUuid(id), CUuid::default());
+        ///     assert_eq!(manager.GetName(id), "");
+        /// }
+        /// ```
         ///
         /// See [`CUuidManager::LookupUuid`] or [`CUuidManager::RegisterName`]
         /// for an example.
         pub fn GetUuid(self: &CUuidManager, id: i32) -> CUuid;
 
         /// Get a name from an ID.
+        /// 未注册编号返回空字符串。
         ///
         /// See [`CUuidManager::LookupUuid`] or [`CUuidManager::RegisterName`]
         /// for an example.

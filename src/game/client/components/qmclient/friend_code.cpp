@@ -5,7 +5,9 @@
 #include <zlib.h>
 
 #include <algorithm>
+#include <new>
 #include <set>
+#include <stdexcept>
 #include <utility>
 
 namespace qm_friend_code
@@ -82,7 +84,24 @@ namespace qm_friend_code
 		return Result;
 	}
 
+	bool TryCapture(const IFriends &Friends, CFriendList &List)
+	try
+	{
+		CFriendList Candidate = Capture(Friends);
+		List = std::move(Candidate);
+		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
+
 	bool Encode(const CFriendList &List, std::string &Code)
+	try
 	{
 		if(!IFriends::ValidateList(List))
 			return false;
@@ -106,11 +125,21 @@ namespace qm_friend_code
 			return false;
 		std::vector<char> vBase64((Size + 2) / 3 * 4 + 1);
 		str_base64(vBase64.data(), static_cast<int>(vBase64.size()), vCompressed.data(), static_cast<int>(Size));
-		Code = std::string(PREFIX) + vBase64.data();
+		std::string Candidate = std::string(PREFIX) + vBase64.data();
+		Code.swap(Candidate);
 		return true;
+	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
 	}
 
 	bool Decode(std::string_view Code, CFriendList &List)
+	try
 	{
 		if(Code.size() > MAX_CODE_BYTES)
 			return false;
@@ -169,6 +198,14 @@ namespace qm_friend_code
 		List = std::move(Parsed);
 		return true;
 	}
+	catch(const std::bad_alloc &)
+	{
+		return false;
+	}
+	catch(const std::length_error &)
+	{
+		return false;
+	}
 
 	bool Import(IFriends &Friends, const CFriendList &Incoming, EImportMode Mode)
 	{
@@ -178,30 +215,43 @@ namespace qm_friend_code
 			return Friends.ReplaceAll(Incoming);
 		if(Mode != EImportMode::MERGE)
 			return false;
-		CFriendList Merged = Capture(Friends);
-		std::vector<std::string> vCategoryNames;
-		for(const auto &Category : Incoming.m_vCategories)
+		CFriendList Merged;
+		try
 		{
-			const auto Existing = std::find_if(Merged.m_vCategories.begin(), Merged.m_vCategories.end(), [&](const auto &Name) { return str_comp_nocase(Name.c_str(), Category.c_str()) == 0; });
-			if(Existing == Merged.m_vCategories.end())
+			Merged = Capture(Friends);
+			std::vector<std::string> vCategoryNames;
+			for(const auto &Category : Incoming.m_vCategories)
 			{
-				Merged.m_vCategories.push_back(Category);
-				vCategoryNames.push_back(Category);
+				const auto Existing = std::find_if(Merged.m_vCategories.begin(), Merged.m_vCategories.end(), [&](const auto &Name) { return str_comp_nocase(Name.c_str(), Category.c_str()) == 0; });
+				if(Existing == Merged.m_vCategories.end())
+				{
+					Merged.m_vCategories.push_back(Category);
+					vCategoryNames.push_back(Category);
+				}
+				else
+					vCategoryNames.push_back(*Existing);
 			}
-			else
-				vCategoryNames.push_back(*Existing);
+			std::set<std::pair<std::string, std::string>> Identities;
+			for(const auto &Friend : Merged.m_vFriends)
+				Identities.emplace(Friend.m_aName, Friend.m_aClan);
+			for(auto Friend : Incoming.m_vFriends)
+			{
+				if(!Identities.emplace(Friend.m_aName, Friend.m_aClan).second)
+					continue;
+				const auto Category = std::find(Incoming.m_vCategories.begin(), Incoming.m_vCategories.end(), Friend.m_aCategory);
+				str_copy(Friend.m_aCategory, vCategoryNames[Category - Incoming.m_vCategories.begin()].c_str());
+				Merged.m_vFriends.push_back(Friend);
+			}
 		}
-		std::set<std::pair<std::string, std::string>> Identities;
-		for(const auto &Friend : Merged.m_vFriends)
-			Identities.emplace(Friend.m_aName, Friend.m_aClan);
-		for(auto Friend : Incoming.m_vFriends)
+		catch(const std::bad_alloc &)
 		{
-			if(!Identities.emplace(Friend.m_aName, Friend.m_aClan).second)
-				continue;
-			const auto Category = std::find(Incoming.m_vCategories.begin(), Incoming.m_vCategories.end(), Friend.m_aCategory);
-			str_copy(Friend.m_aCategory, vCategoryNames[Category - Incoming.m_vCategories.begin()].c_str());
-			Merged.m_vFriends.push_back(Friend);
+			return false;
 		}
+		catch(const std::length_error &)
+		{
+			return false;
+		}
+		// 提交放在准备回退之外，不能把其它实现提交后抛出的异常误报为未导入。
 		return Friends.ReplaceAll(Merged);
 	}
 }

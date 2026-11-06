@@ -97,26 +97,13 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientChatBindsCard(const qm_car
 		if(!Flow.Control(BindDefault.m_Bind.m_aCommand, LineSize, Button, MarginSmall))
 			return;
 		CBindChat::CBind *pOldBind = GameClient()->m_BindChat.GetBind(BindDefault.m_Bind.m_aCommand);
-		static char s_aTempName[BINDCHAT_MAX_NAME] = "";
-		char *pName = pOldBind == nullptr ? s_aTempName : pOldBind->m_aName;
+		BindDefault.PrepareNameInput(pOldBind == nullptr ? "" : pOldBind->m_aName);
 		SplitSettingsControlRow(Button, CurrentSettingsContentMetrics(), &Title, &Input);
 		CUIElement &TitleElement = SettingsTextElement(SETTINGS_TCLIENT, TCLIENT_TAB_BINDCHAT, BindDefault.m_pTitle);
 		DoSettingsLabelStreamed(TitleElement, &Title, Localize(BindDefault.m_pTitle), FontSize, TEXTALIGN_ML, TClientFixedLabelProperties(FontSize, Title.w));
-		BindDefault.m_LineInput.SetBuffer(pName, BINDCHAT_MAX_NAME);
 		BindDefault.m_LineInput.SetEmptyText(BindDefault.m_Bind.m_aName);
-		if(ui_widget::InputField(TClientChatBindsTextInputCtx, &BindDefault.m_LineInput, Input, BindDefault.m_Bind.m_aName, EditBoxFontSize) && !ReadOnly && !Ui()->RenderOnly() && BindDefault.m_LineInput.IsActive())
-		{
-			if(!pOldBind && pName[0] != '\0')
-			{
-				auto BindNew = BindDefault.m_Bind;
-				str_copy(BindNew.m_aName, pName);
-				GameClient()->m_BindChat.RemoveBind(pName);
-				GameClient()->m_BindChat.AddBind(BindNew);
-				s_aTempName[0] = '\0';
-			}
-			if(pOldBind && pName[0] == '\0')
-				GameClient()->m_BindChat.RemoveBind(pName);
-		}
+		if((ui_widget::InputField(TClientChatBindsTextInputCtx, &BindDefault.m_LineInput, Input, BindDefault.m_Bind.m_aName, EditBoxFontSize) || BindDefault.m_NameCommitPending) && !ReadOnly && !Ui()->RenderOnly())
+			BindDefault.CommitName(GameClient()->m_BindChat.m_vBinds);
 	};
 
 	constexpr const char *apStableIds[] = {

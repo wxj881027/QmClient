@@ -13,6 +13,7 @@
 #include <limits>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace QmLocalSaves
@@ -152,20 +153,33 @@ namespace QmLocalSaves
 		return Result;
 	}
 
-	inline bool RemoveEntries(std::string_view Text, const std::string &Map, const std::string &Code, std::string &Output)
+	template<typename TAllocator>
+	bool RemoveEntries(std::string_view Text, std::string_view Map, std::string_view Code, std::basic_string<char, std::char_traits<char>, TAllocator> &Output) noexcept
 	{
-		Output.clear();
-		bool Removed = false;
-		for(const std::string_view Line : Lines(Text))
+		try
 		{
-			std::array<std::string, 4> Fields;
-			if(!Map.empty() && !Code.empty() && ParseRow(Line, Fields) && Fields[0] != "Time" &&
-				str_comp_nocase(Fields[2].c_str(), Map.c_str()) == 0 && Fields[3] == Code)
-				Removed = true;
-			else
-				Output.append(Line);
+			// 地图仍沿用原C字符串比较，代码仍按完整字节匹配；分配也在失败边界内。
+			const std::string MapText(Map);
+			const std::string CodeText(Code);
+			std::basic_string<char, std::char_traits<char>, TAllocator> Candidate(Output.get_allocator());
+			bool Removed = false;
+			for(const std::string_view Line : Lines(Text))
+			{
+				std::array<std::string, 4> Fields;
+				if(!MapText.empty() && !CodeText.empty() && ParseRow(Line, Fields) && Fields[0] != "Time" &&
+					str_comp_nocase(Fields[2].c_str(), MapText.c_str()) == 0 && Fields[3] == CodeText)
+					Removed = true;
+				else
+					Candidate.append(Line);
+			}
+			Output.swap(Candidate);
+			return Removed;
 		}
-		return Removed;
+		catch(...)
+		{
+			// 候选未完整准备时保留调用方原输出，不能发布部分剩余记录。
+			return false;
+		}
 	}
 
 	inline bool ParseNames(const std::string &Players, std::array<std::string, 2> &Names)
@@ -270,7 +284,13 @@ namespace QmLocalSaves
 	public:
 		bool Active() const { return !m_Request.m_Code.empty(); }
 		const SRequest &Request() const { return m_Request; }
-		void Reset() { *this = {}; }
+		void Reset() noexcept { *this = {}; }
+		SRequest TakeRequest() noexcept
+		{
+			SRequest Request = std::move(m_Request);
+			Reset();
+			return Request;
+		}
 		void Track(const SRequest &Request)
 		{
 			if(!Active())
@@ -300,11 +320,16 @@ namespace QmLocalSaves
 			return EResult::NONE;
 		}
 
-		bool RestoredRace(const char *pMap, int Team, int Tick, int StartTick, int TickSpeed, int64_t Now) const
+		bool RestoredRace(const char *pMap, int Team, int Tick, int64_t StartTick, int TickSpeed, int64_t Now) const
 		{
 			// 新版服务器不发送成功聊天消息。只有原本未计时、回传的起跑时间早于请求，才认为恢复了旧计时。
 			return Matches(pMap, Team, Now) && !m_Ambiguous && !m_Request.m_WasRacing && Tick >= m_Request.m_SentTick &&
-			       (int64_t)StartTick < (int64_t)m_Request.m_SentTick - 2 * TickSpeed;
+			       StartTick < static_cast<int64_t>(m_Request.m_SentTick) - 2LL * TickSpeed;
+		}
+		bool RestoredRaceFromWarmupTimer(const char *pMap, int Team, int Tick, int WarmupTimer, int TickSpeed, int64_t Now) const
+		{
+			// 快照允许任意int；先扩宽再取负，INT_MIN不能变成错误的旧起跑时间。
+			return RestoredRace(pMap, Team, Tick, -static_cast<int64_t>(WarmupTimer), TickSpeed, Now);
 		}
 	};
 
@@ -355,7 +380,7 @@ namespace QmLocalSaves
 		const SEntry &Entry() const { return m_Entry; }
 		const std::array<std::string, 2> &Names() const { return m_aNames; }
 		int Team() const { return m_Team; }
-		void Reset() { *this = {}; }
+		void Reset() noexcept { *this = {}; }
 		void Begin(const SEntry &Entry, const std::array<std::string, 2> &Names, int64_t Now, int64_t Frequency)
 		{
 			Reset();
@@ -416,6 +441,23 @@ namespace QmLocalSaves
 			return World.m_aTeamSizes[m_Team] == 2 ? Send(m_LoadSent, EAction::LOAD) : EAction::WAIT;
 		}
 	};
+
+	// 网络已接收 /load 后只维护本地观察；失败不能重发或沿用旧确认/恢复状态。
+	template<typename TTrack>
+	bool TrackAfterSend(CConfirmation &Confirmation, CRestore &Restore, TTrack &&Track) noexcept
+	{
+		try
+		{
+			std::forward<TTrack>(Track)();
+			return true;
+		}
+		catch(...)
+		{
+			Confirmation.Reset();
+			Restore.Reset();
+			return false;
+		}
+	}
 }
 
 #endif

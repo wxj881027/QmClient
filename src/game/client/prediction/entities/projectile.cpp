@@ -8,6 +8,7 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/components/qmclient/collision_position.h>
 #include <game/client/projectile_data.h>
 #include <game/collision.h>
 #include <game/mapitems.h>
@@ -74,10 +75,15 @@ vec2 CProjectile::GetPos(float Time)
 
 void CProjectile::Tick()
 {
-	float Pt = (GameWorld()->GameTick() - m_StartTick - 1) / (float)GameWorld()->GameTickSpeed();
-	float Ct = (GameWorld()->GameTick() - m_StartTick) / (float)GameWorld()->GameTickSpeed();
+	float Pt = (static_cast<int64_t>(GameWorld()->GameTick()) - m_StartTick - 1) / (float)GameWorld()->GameTickSpeed();
+	float Ct = (static_cast<int64_t>(GameWorld()->GameTick()) - m_StartTick) / (float)GameWorld()->GameTickSpeed();
 	vec2 PrevPos = GetPos(Pt);
 	vec2 CurPos = GetPos(Ct);
+	if(!QmCollision::CanQueryLine(PrevPos, CurPos))
+	{
+		m_MarkedForDestroy = true;
+		return;
+	}
 	vec2 ColPos;
 	vec2 NewPos;
 	int Collide = Collision()->IntersectLine(PrevPos, CurPos, &ColPos, &NewPos);
@@ -206,7 +212,7 @@ CProjectile::CProjectile(CGameWorld *pGameWorld, int Id, const CProjectileData *
 	{
 		Lifetime = GetTuning(m_TuneZone)->m_ShotgunLifetime * GameWorld()->GameTickSpeed();
 	}
-	m_LifeSpan = Lifetime - (pGameWorld->GameTick() - m_StartTick);
+	m_LifeSpan = static_cast<int64_t>(Lifetime) - (static_cast<int64_t>(pGameWorld->GameTick()) - m_StartTick);
 	m_Id = Id;
 	m_Number = pProj->m_SwitchNumber;
 	m_Layer = m_Number > 0 ? LAYER_SWITCH : LAYER_GAME;
