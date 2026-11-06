@@ -50,6 +50,7 @@
 #include <cmath>
 #include <iterator>
 #include <limits>
+#include <new>
 #include <string>
 #include <unordered_set>
 
@@ -2119,6 +2120,7 @@ static void CleanupOldChatLogs(IStorage *pStorage, const char *pToday, int KeepD
 }
 
 void CChat::SaveChatLogLine(int ClientId, int Team, const char *pLine)
+try
 {
 	if(!g_Config.m_QmChatLogAutoSave || Client()->State() == IClient::STATE_DEMOPLAYBACK || pLine == nullptr || pLine[0] == '\0')
 		return;
@@ -2162,8 +2164,8 @@ void CChat::SaveChatLogLine(int ClientId, int Team, const char *pLine)
 		str_format(aLine, sizeof(aLine), "[%s] [%s] %s: %s", aTimestamp, ChatLogKind(ClientId, Team), aName, aText);
 
 	// 收消息时快照所有输入，worker 不访问组件、配置或玩家状态。
-	auto pJob = m_ChatLogWrites.Enqueue([pStorage = Storage(), pLastCleanupDate = m_pChatLogLastCleanupDate,
-						    Date = std::string(aDate), Filename = std::string(aFilename), Line = std::string(aLine), KeepDays = g_Config.m_QmChatLogKeepDays] {
+	m_ChatLogWrites.Enqueue([pStorage = Storage(), pLastCleanupDate = m_pChatLogLastCleanupDate,
+					Date = std::string(aDate), Filename = std::string(aFilename), Line = std::string(aLine), KeepDays = g_Config.m_QmChatLogKeepDays] {
 		if(!EnsureChatLogFolder(pStorage))
 			return;
 		CleanupOldChatLogs(pStorage, Date.c_str(), KeepDays, *pLastCleanupDate);
@@ -2177,8 +2179,11 @@ void CChat::SaveChatLogLine(int ClientId, int Team, const char *pLine)
 		io_write_newline(File);
 		io_close(File);
 	});
-	if(pJob)
-		Engine()->AddJob(pJob);
+	m_ChatLogWrites.TrySubmit([this](std::shared_ptr<IJob> pJob) { return Engine()->TryAddJob(std::move(pJob)); });
+}
+catch(const std::bad_alloc &)
+{
+	// 快照或入队分配失败不阻断消息接收，已有队列仍可由后续帧提交。
 }
 
 static std::shared_ptr<const QmChatExport::SMetadata> CaptureChatExportMetadata(CGameClient *pGameClient, int ClientId, int Team, const char *pName, const char *pMessage, int SourceConnection);
@@ -3484,6 +3489,7 @@ bool CChat::OnPrepareLines(float y)
 
 void CChat::OnRender()
 {
+	m_ChatLogWrites.TrySubmit([this](std::shared_ptr<IJob> pJob) { return Engine()->TryAddJob(std::move(pJob)); });
 	m_PublicWords.Update(Http(), Storage(), g_Config.m_QmPublicBlockWords != 0, time_get() / time_freq());
 	m_TranslateButton.m_RectValid = false;
 	ReloadWordFilterFile(false, false);

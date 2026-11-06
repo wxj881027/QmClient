@@ -5919,7 +5919,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_hook_coll_tuning_test.cpp
     src/test/unit/qmclient/client/qm_chat_avatar_test.cpp
     src/test/unit/qmclient/client/qm_chat_export_test.cpp
-    src/test/unit/qmclient/client/qm_chat_log_jobs_test.cpp
+    src/test/integration/qmclient/client/qm_chat_log_jobs_test.cpp
     src/test/test.cpp
     src/test/support/qm_test_terminate_diagnostics.cpp
     src/test/test.h
@@ -6573,6 +6573,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_chatbind_config_test.cpp
       src/test/unit/qmclient/client/qm_markdown_allocation_test.cpp
       src/test/unit/qmclient/client/qm_markdown_cache_allocation_test.cpp
+      src/test/integration/qmclient/client/qm_chat_log_allocation_test.cpp
       src/test/unit/qmclient/client/qm_markdown_broadcast_allocation_test.cpp
       src/test/unit/qmclient/client/qm_console_search_input_allocation_test.cpp
       src/test/unit/qmclient/client/qm_console_input_colors_test.cpp
