@@ -45,6 +45,13 @@ namespace
 			m_Size = 999;
 			return (pStorage ? pStorage : m_pStorage.get())->ReadFileChecked(pName, Type, &m_pData, &m_Size);
 		}
+		EResult ReadBounded(const char *pName, unsigned MaxBytes, int Type = IStorage::TYPE_SAVE, IStorage *pStorage = nullptr)
+		{
+			free(m_pData);
+			m_pData = nullptr;
+			m_Size = 999;
+			return (pStorage ? pStorage : m_pStorage.get())->ReadFileCheckedBounded(pName, Type, &m_pData, &m_Size, MaxBytes);
+		}
 		void ExpectFailure(EResult Result, EResult Expected)
 		{
 			EXPECT_EQ(Result, Expected);
@@ -217,4 +224,87 @@ TEST_F(CCheckedStorageReadTest, DefaultBackendReportsUnsupportedAndClearsOutputs
 {
 	m_Size = 123;
 	ExpectFailure(m_pStorage->IStorage::ReadFileChecked("unused", IStorage::TYPE_SAVE, &m_pData, &m_Size), EResult::UNSUPPORTED);
+}
+
+TEST_F(CCheckedStorageReadTest, BoundedReadAcceptsExactLimitWithBinaryAndTerminator)
+{
+	const std::string Data("a\0bc", 4);
+	ASSERT_NO_FATAL_FAILURE(Write("bounded.bin", Data));
+	ASSERT_EQ(ReadBounded("bounded.bin", 4), EResult::SUCCESS);
+	EXPECT_EQ(Contents(), Data);
+	EXPECT_EQ(static_cast<const char *>(m_pData)[m_Size], '\0');
+}
+
+TEST_F(CCheckedStorageReadTest, BoundedOverflowKeepsFileAndLegacyReadStillSucceeds)
+{
+	ASSERT_NO_FATAL_FAILURE(Write("bounded.bin", "12345"));
+	ExpectFailure(ReadBounded("bounded.bin", 4), EResult::IO_FAILURE);
+	ASSERT_EQ(Read("bounded.bin"), EResult::SUCCESS);
+	EXPECT_EQ(Contents(), "12345");
+	ASSERT_EQ(ReadBounded("bounded.bin", 5), EResult::SUCCESS);
+	EXPECT_EQ(Contents(), "12345");
+}
+
+TEST_F(CCheckedStorageReadTest, ZeroBudgetAcceptsOnlyEmptyFile)
+{
+	ASSERT_NO_FATAL_FAILURE(Write("bounded.bin", ""));
+	ASSERT_EQ(ReadBounded("bounded.bin", 0), EResult::SUCCESS);
+	ASSERT_NE(m_pData, nullptr);
+	EXPECT_EQ(m_Size, 0u);
+	EXPECT_EQ(*static_cast<const char *>(m_pData), '\0');
+	ASSERT_NO_FATAL_FAILURE(Write("bounded.bin", "a"));
+	ExpectFailure(ReadBounded("bounded.bin", 0), EResult::IO_FAILURE);
+}
+
+TEST_F(CCheckedStorageReadTest, MissingBoundedFileKeepsMissingStatus)
+{
+	ExpectFailure(ReadBounded("missing.bin", 4), EResult::NOT_FOUND);
+}
+
+TEST_F(CCheckedStorageReadTest, DirectoryIsBoundedReadFailure)
+{
+	ASSERT_TRUE(m_pStorage->CreateFolder("bounded.bin", IStorage::TYPE_SAVE));
+	ExpectFailure(ReadBounded("bounded.bin", 4), EResult::IO_FAILURE);
+	EXPECT_TRUE(m_pStorage->FolderExists("bounded.bin", IStorage::TYPE_SAVE));
+}
+
+TEST_F(CCheckedStorageReadTest, BoundedReadRejectsInvalidArgumentsWithoutPublishing)
+{
+	for(const char *pName : {static_cast<const char *>(nullptr), ""})
+		ExpectFailure(ReadBounded(pName, 4), EResult::IO_FAILURE);
+	m_Size = 99;
+	EXPECT_EQ(m_pStorage->ReadFileCheckedBounded("file", IStorage::TYPE_SAVE, nullptr, &m_Size, 4), EResult::IO_FAILURE);
+	EXPECT_EQ(m_Size, 0u);
+	EXPECT_EQ(m_pStorage->ReadFileCheckedBounded("file", IStorage::TYPE_SAVE, &m_pData, nullptr, 4), EResult::IO_FAILURE);
+	EXPECT_EQ(m_pData, nullptr);
+}
+
+TEST_F(CCheckedStorageReadTest, DefaultBoundedBackendCannotFallBackToUnlimitedRead)
+{
+	m_Size = 99;
+	ExpectFailure(m_pStorage->IStorage::ReadFileCheckedBounded("unused", IStorage::TYPE_SAVE, &m_pData, &m_Size, 4), EResult::UNSUPPORTED);
+}
+
+TEST_F(CLayeredCheckedStorageReadTest, EarlierOversizedRootCannotBeHiddenByLaterSmallFile)
+{
+	ASSERT_NO_FATAL_FAILURE(WriteLayer("read_save", "large"));
+	ASSERT_NO_FATAL_FAILURE(WriteLayer("read_app/data", "ok"));
+	ExpectFailure(ReadBounded((m_Relative + "/skin.json").c_str(), 2, IStorage::TYPE_ALL, m_pLayered.get()), EResult::IO_FAILURE);
+}
+
+TEST_F(CCheckedStorageReadTest, BoundedReadKeepsAbsoluteTypeTranslation)
+{
+	ASSERT_NO_FATAL_FAILURE(Write("bounded.bin", "ok"));
+	std::string Absolute = Path("bounded.bin");
+	if(fs_is_relative_path(Absolute.c_str()))
+	{
+		char aCwd[IO_MAX_PATH_LENGTH];
+		ASSERT_NE(fs_getcwd(aCwd, sizeof(aCwd)), nullptr);
+		Absolute = std::string(aCwd) + "/" + Absolute;
+	}
+	for(int Type : {IStorage::TYPE_ABSOLUTE, IStorage::TYPE_SAVE_OR_ABSOLUTE, IStorage::TYPE_ALL_OR_ABSOLUTE})
+	{
+		ASSERT_EQ(ReadBounded(Absolute.c_str(), 2, Type), EResult::SUCCESS);
+		EXPECT_EQ(Contents(), "ok");
+	}
 }

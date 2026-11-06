@@ -13,6 +13,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <optional>
 #include <unordered_set>
 
 bool StoragePathFromExecutable(const char *pExecutablePath, const char *pRelativePath, char *pBuffer, unsigned BufferSize)
@@ -770,8 +771,22 @@ namespace
 
 		EReadFileResult ReadFileChecked(const char *pFilename, int Type, void **ppResult, unsigned *pResultLen) override
 		{
-			*ppResult = nullptr;
-			*pResultLen = 0;
+			return ReadFileCheckedInternal(pFilename, Type, ppResult, pResultLen, std::nullopt);
+		}
+
+		EReadFileResult ReadFileCheckedBounded(const char *pFilename, int Type, void **ppResult, unsigned *pResultLen, unsigned MaxBytes) override
+		{
+			return ReadFileCheckedInternal(pFilename, Type, ppResult, pResultLen, MaxBytes);
+		}
+
+		EReadFileResult ReadFileCheckedInternal(const char *pFilename, int Type, void **ppResult, unsigned *pResultLen, std::optional<unsigned> MaxBytes)
+		{
+			if(ppResult)
+				*ppResult = nullptr;
+			if(pResultLen)
+				*pResultLen = 0;
+			if(!ppResult || !pResultLen || !pFilename || pFilename[0] == '\0')
+				return EReadFileResult::IO_FAILURE;
 			TranslateType(Type, pFilename);
 			if(Type != TYPE_ABSOLUTE)
 			{
@@ -795,10 +810,29 @@ namespace
 				std::unique_ptr<void, decltype(&io_close)> File(io_open_read_checked(GetPath(Index, pFilename, aPath, sizeof(aPath)), &NotFound), io_close);
 				if(!File)
 					return NotFound ? EReadFileResult::NOT_FOUND : EReadFileResult::IO_FAILURE;
-				void *pData = nullptr;
+				std::unique_ptr<void, decltype(&free)> Data(nullptr, free);
 				unsigned Size = 0;
-				const bool Read = io_read_all(File.get(), &pData, &Size);
-				std::unique_ptr<void, decltype(&free)> Data(pData, free);
+				bool Read = false;
+				if(MaxBytes)
+				{
+					const int64_t Expected = io_length(File.get());
+					// 额外一字节用于探测增长；保持通用读取原有的1GiB上限。
+					const unsigned Limit = minimum(*MaxBytes, 1024u * 1024 * 1024);
+					if(Expected < 0 || Expected > Limit)
+						return EReadFileResult::IO_FAILURE;
+					Data.reset(malloc(static_cast<size_t>(Expected) + 1));
+					if(!Data)
+						return EReadFileResult::IO_FAILURE;
+					Size = static_cast<unsigned>(Expected);
+					Read = io_read(File.get(), Data.get(), Size + 1) == Size && io_error(File.get()) == 0;
+					static_cast<char *>(Data.get())[Size] = '\0';
+				}
+				else
+				{
+					void *pData = nullptr;
+					Read = io_read_all(File.get(), &pData, &Size);
+					Data.reset(pData);
+				}
 				const bool Closed = io_close(File.release()) == 0;
 				if(!Read || !Closed)
 					return EReadFileResult::IO_FAILURE;

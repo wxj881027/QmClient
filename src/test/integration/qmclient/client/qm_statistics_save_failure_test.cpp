@@ -170,3 +170,39 @@ TEST_F(QmStatisticsSaveFailure, CleanupExceptionDoesNotEscapeAndNextSnapshotCanC
 	ASSERT_TRUE(Retry.Finish());
 	EXPECT_EQ(Read(), NEW);
 }
+
+TEST_F(QmStatisticsSaveFailure, InvalidEnvelopeDoesNotOpenCandidateAndFreshJobCanRetry)
+{
+	auto pOperations = std::make_shared<COperations>();
+	CQmStatisticsSaveJob Job(m_pStorage.get(), FILE_PATH, "{}", pOperations);
+	EXPECT_FALSE(Job.Finish());
+	EXPECT_EQ(pOperations->m_OpenCalls, 0);
+	EXPECT_EQ(pOperations->m_PublishCalls, 0);
+	EXPECT_EQ(Read(), OLD);
+	EXPECT_FALSE(Job.Finish());
+	EXPECT_EQ(pOperations->m_OpenCalls, 0);
+	CQmStatisticsSaveJob Retry(m_pStorage.get(), FILE_PATH, NEW);
+	ASSERT_TRUE(Retry.Finish());
+	EXPECT_EQ(Read(), NEW);
+}
+
+TEST_F(QmStatisticsSaveFailure, EmbeddedZeroSnapshotCannotReplaceOldFile)
+{
+	auto pOperations = std::make_shared<COperations>();
+	CQmStatisticsSaveJob Job(m_pStorage.get(), FILE_PATH, std::string(NEW) + '\0' + "tail", pOperations);
+	EXPECT_FALSE(Job.Finish());
+	EXPECT_EQ(pOperations->m_OpenCalls, 0);
+	EXPECT_EQ(Read(), OLD);
+}
+
+TEST_F(QmStatisticsSaveFailure, OversizedSnapshotIsRejectedBeforeAnyCandidateIo)
+{
+	auto pOperations = std::make_shared<COperations>();
+	std::string Text(QM_STATISTICS_MAX_FILE_BYTES + 1, ' ');
+	CQmStatisticsSaveJob Job(m_pStorage.get(), FILE_PATH, std::move(Text), pOperations);
+	EXPECT_FALSE(Job.Finish());
+	EXPECT_EQ(pOperations->m_OpenCalls, 0);
+	EXPECT_EQ(pOperations->m_PublishCalls, 0);
+	EXPECT_EQ(pOperations->m_RemoveCalls, 0);
+	EXPECT_EQ(Read(), OLD);
+}

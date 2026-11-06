@@ -1,12 +1,13 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_STATISTICS_SAVE_JOB_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_STATISTICS_SAVE_JOB_H
 
+#include "statistics_file.h"
+
 #include <base/system.h>
 
 #include <engine/shared/jobs.h>
 #include <engine/storage.h>
 
-#include <limits>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -62,8 +63,13 @@ public:
 		if(m_Attempted)
 			return m_Success;
 		m_Attempted = true;
-		if(!m_pStorage || m_Content.size() > std::numeric_limits<unsigned>::max())
+		if(!m_pStorage)
 			return false;
+		{
+			const std::unique_ptr<json_value, decltype(&json_value_free)> Root(QmParseStatisticsDocument(m_Content.data(), m_Content.size()), json_value_free);
+			if(!Root)
+				return false;
+		}
 		auto &Operations = m_pOperations ? *m_pOperations : m_DefaultOperations;
 		Operations.CreateFolder(*m_pStorage);
 		char aTempFilename[IO_MAX_PATH_LENGTH];

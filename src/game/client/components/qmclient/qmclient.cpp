@@ -880,7 +880,7 @@ int64_t CQmClient::QmStatisticsLastSuccessfulSyncTimestamp() const
 
 std::string CQmClient::SerializeQmClientStatistics() const
 {
-	CJsonStringWriter Writer;
+	CQmStatisticsStringWriter Writer;
 	Writer.BeginObject();
 	Writer.WriteAttribute("local");
 	Writer.BeginObject();

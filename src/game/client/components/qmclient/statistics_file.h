@@ -7,10 +7,14 @@
 #include <base/system.h>
 
 #include <engine/shared/json.h>
+#include <engine/shared/jsonwriter.h>
 #include <engine/storage.h>
 
 #include <cstdlib>
+#include <cstring>
 #include <memory>
+#include <stdexcept>
+#include <string>
 #include <utility>
 
 enum class EQmStatisticsFileLoadResult
@@ -19,6 +23,54 @@ enum class EQmStatisticsFileLoadResult
 	VALID,
 	INVALID,
 };
+
+constexpr unsigned QM_STATISTICS_MAX_FILE_BYTES = 64u * 1024 * 1024;
+constexpr unsigned long QM_STATISTICS_MAX_JSON_MEMORY = 256ul * 1024 * 1024;
+
+// 保持现有JSON输出，达到正文预算前停止扩展；调用方沿保存失败路径保留dirty。
+class CQmStatisticsStringWriter final : public CJsonWriter
+{
+	std::string m_Output;
+	size_t m_MaxBytes;
+	bool m_RetrievedOutput = false;
+
+	void WriteInternal(const char *pText, int Length = -1) override
+	{
+		dbg_assert(!m_RetrievedOutput, "Writer output has already been retrieved");
+		const size_t Size = Length < 0 ? std::strlen(pText) : static_cast<size_t>(Length);
+		if(Size > m_MaxBytes - m_Output.size())
+			throw std::length_error("statistics snapshot exceeds size budget");
+		m_Output.append(pText, Size);
+	}
+
+public:
+	explicit CQmStatisticsStringWriter(size_t MaxBytes = QM_STATISTICS_MAX_FILE_BYTES) :
+		m_MaxBytes(MaxBytes < QM_STATISTICS_MAX_FILE_BYTES ? MaxBytes : QM_STATISTICS_MAX_FILE_BYTES) {}
+	std::string GetOutputString()
+	{
+		WriteInternal("\n");
+		m_RetrievedOutput = true;
+		return std::move(m_Output);
+	}
+};
+
+// 读写共用预算和文档入口校验，失败不移交解析树。
+inline json_value *QmParseStatisticsDocument(const char *pData, size_t Size) noexcept
+try
+{
+	if(!pData || Size == 0 || Size > QM_STATISTICS_MAX_FILE_BYTES || mem_has_null(pData, Size))
+		return nullptr;
+	json_settings Settings{};
+	Settings.max_memory = QM_STATISTICS_MAX_JSON_MEMORY;
+	std::unique_ptr<json_value, decltype(&json_value_free)> Root(JsonParseEx(&Settings, pData, Size, nullptr), json_value_free);
+	if(!Root || Root->type != json_object || qm_json::Field(Root.get(), "local")->type != json_object || qm_json::Field(Root.get(), "remote")->type != json_object)
+		return nullptr;
+	return Root.release();
+}
+catch(...)
+{
+	return nullptr;
+}
 
 // 保存使用十进制字符串，读取也接受原有非负JSON数值；异常输入不改输出。
 inline bool QmStatisticsNonNegativeInt64(const json_value *pValue, int64_t &Out) noexcept
@@ -57,12 +109,12 @@ EQmStatisticsFileLoadResult QmLoadStatisticsFile(json_value **ppRoot, TRead &&Re
 		const auto Result = std::forward<TRead>(Read)(&Buffer.m_pData, &Size);
 		if(Result == IStorage::EReadFileResult::NOT_FOUND)
 			return EQmStatisticsFileLoadResult::NOT_FOUND;
-		if(Result != IStorage::EReadFileResult::SUCCESS || !Buffer.m_pData || mem_has_null(Buffer.m_pData, Size))
+		if(Result != IStorage::EReadFileResult::SUCCESS)
 			return EQmStatisticsFileLoadResult::INVALID;
-		std::unique_ptr<json_value, decltype(&json_value_free)> pRoot(JsonParse(static_cast<const char *>(Buffer.m_pData), Size), json_value_free);
-		if(!pRoot || pRoot->type != json_object || qm_json::Field(pRoot.get(), "local")->type != json_object || qm_json::Field(pRoot.get(), "remote")->type != json_object)
+		json_value *pRoot = QmParseStatisticsDocument(static_cast<const char *>(Buffer.m_pData), Size);
+		if(!pRoot)
 			return EQmStatisticsFileLoadResult::INVALID;
-		*ppRoot = pRoot.release();
+		*ppRoot = pRoot;
 		return EQmStatisticsFileLoadResult::VALID;
 	}
 	catch(...)
@@ -80,7 +132,7 @@ inline EQmStatisticsFileLoadResult QmLoadStatisticsFile(IStorage *pStorage, cons
 		return EQmStatisticsFileLoadResult::INVALID;
 	}
 	return QmLoadStatisticsFile(ppRoot, [pStorage, pFilename](void **ppData, unsigned *pSize) {
-		return pStorage->ReadFileChecked(pFilename, IStorage::TYPE_SAVE, ppData, pSize);
+		return pStorage->ReadFileCheckedBounded(pFilename, IStorage::TYPE_SAVE, ppData, pSize, QM_STATISTICS_MAX_FILE_BYTES);
 	});
 }
 

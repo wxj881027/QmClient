@@ -180,3 +180,74 @@ TEST(QmStatisticsStoredInteger, InvalidNumericTypesLeaveOutputUnchanged)
 		EXPECT_EQ(Value, 99);
 	}
 }
+
+TEST(QmStatisticsSnapshotWriter, MatchesExistingJsonFormattingAndCanBeParsed)
+{
+	const auto Write = [](CJsonWriter &Writer) {
+		Writer.BeginObject();
+		Writer.WriteAttribute("local");
+		Writer.BeginObject();
+		Writer.WriteAttribute("mode");
+		Writer.WriteStrValue("中文\n\"quote\"");
+		Writer.EndObject();
+		Writer.WriteAttribute("remote");
+		Writer.BeginObject();
+		Writer.EndObject();
+		Writer.EndObject();
+	};
+	CJsonStringWriter Existing;
+	CQmStatisticsStringWriter Bounded;
+	Write(Existing);
+	Write(Bounded);
+	const std::string Expected = Existing.GetOutputString();
+	const std::string Output = Bounded.GetOutputString();
+	EXPECT_EQ(Output, Expected);
+	CRoot Root(QmParseStatisticsDocument(Output.data(), Output.size()), json_value_free);
+	ASSERT_NE(Root, nullptr);
+}
+
+TEST(QmStatisticsSnapshotWriter, ExactBudgetIncludesEscapingAndFinalNewline)
+{
+	CQmStatisticsStringWriter Writer(7);
+	Writer.WriteStrValue("a\nb");
+	EXPECT_EQ(Writer.GetOutputString(), "\"a\\nb\"\n");
+}
+
+TEST(QmStatisticsSnapshotWriter, MissingNewlineBudgetRejectsOutput)
+{
+	CQmStatisticsStringWriter Writer(6);
+	Writer.WriteStrValue("a\nb");
+	EXPECT_THROW(Writer.GetOutputString(), std::length_error);
+}
+
+TEST(QmStatisticsSnapshotWriter, EscapeGrowthStopsAndFreshWriterCanRetry)
+{
+	CQmStatisticsStringWriter Small(8);
+	EXPECT_THROW(Small.WriteStrValue("many\nlines\n"), std::length_error);
+	CQmStatisticsStringWriter Retry(32);
+	Retry.BeginObject();
+	Retry.EndObject();
+	EXPECT_EQ(Retry.GetOutputString(), "{\n}\n");
+}
+
+TEST(QmStatisticsSnapshotWriter, ZeroBudgetCannotBeginDocument)
+{
+	CQmStatisticsStringWriter Writer(0);
+	EXPECT_THROW(Writer.BeginObject(), std::length_error);
+}
+
+TEST(QmStatisticsDocumentRead, DenseUnknownArrayExceedsParserBudgetAndNextReadRecovers)
+{
+	std::string Text = R"({"local":{},"remote":{},"unused":[)";
+	// 正文约32MiB，小节点解析树超过256MiB；未知字段也必须受解析预算约束。
+	for(unsigned Index = 0; Index < 16 * 1024 * 1024; ++Index)
+		Text += "0,";
+	Text += "0]}";
+	ASSERT_LT(Text.size(), QM_STATISTICS_MAX_FILE_BYTES);
+	json_value *pRoot = nullptr;
+	EXPECT_EQ(QmLoadStatisticsFile(&pRoot, Reader(Text)), EQmStatisticsFileLoadResult::INVALID);
+	EXPECT_EQ(pRoot, nullptr);
+	ASSERT_EQ(QmLoadStatisticsFile(&pRoot, Reader(DOCUMENT)), EQmStatisticsFileLoadResult::VALID);
+	CRoot Root(pRoot, json_value_free);
+	ASSERT_NE(Root, nullptr);
+}

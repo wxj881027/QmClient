@@ -81,6 +81,15 @@ public:
 		*pResultLen = 0;
 		return EReadFileResult::UNSUPPORTED;
 	}
+	// 分配前限制可定位文件的完整大小；读出长度与测得长度不符时失败，不降级成无限读取。
+	virtual EReadFileResult ReadFileCheckedBounded(const char *, int, void **ppResult, unsigned *pResultLen, unsigned)
+	{
+		if(ppResult)
+			*ppResult = nullptr;
+		if(pResultLen)
+			*pResultLen = 0;
+		return EReadFileResult::UNSUPPORTED;
+	}
 	virtual char *ReadFileStr(const char *pFilename, int Type) = 0;
 	virtual bool RetrieveTimes(const char *pFilename, int Type, time_t *pCreated, time_t *pModified) = 0;
 	virtual bool CalculateHashes(const char *pFilename, int Type, SHA256_DIGEST *pSha256, unsigned *pCrc = nullptr) = 0;

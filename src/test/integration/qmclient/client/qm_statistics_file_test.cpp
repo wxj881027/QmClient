@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <memory>
 #include <string>
@@ -134,4 +135,34 @@ TEST(QmStatisticsFile, StoredDdnetDecimalStringKeepsPrecisionThroughFileReader)
 	EXPECT_EQ(Value, INT64_C(9007199254740993));
 	ASSERT_TRUE(QmStatisticsNonNegativeInt64(qm_json::Field(pPlayer, "points_total"), Value));
 	EXPECT_EQ(Value, INT64_C(9223372036854775807));
+}
+
+TEST(QmStatisticsFile, OversizedOtherwiseValidDocumentRemainsOnDiskWithoutPublishingRoot)
+{
+	CTestInfo Info;
+	auto pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	ASSERT_TRUE(pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
+	constexpr char PATH[] = "qmclient/statistics.json";
+	constexpr char DOCUMENT[] = R"({"local":{},"remote":{}})";
+	{
+		std::unique_ptr<void, decltype(&io_close)> File(pStorage->OpenFile(PATH, IOFLAG_WRITE, IStorage::TYPE_SAVE), io_close);
+		ASSERT_NE(File, nullptr);
+		ASSERT_EQ(io_write(File.get(), DOCUMENT, sizeof(DOCUMENT) - 1), sizeof(DOCUMENT) - 1);
+		const std::string Padding(1024 * 1024, ' ');
+		unsigned Remaining = QM_STATISTICS_MAX_FILE_BYTES + 1 - (sizeof(DOCUMENT) - 1);
+		while(Remaining)
+		{
+			const unsigned Size = std::min(Remaining, static_cast<unsigned>(Padding.size()));
+			ASSERT_EQ(io_write(File.get(), Padding.data(), Size), Size);
+			Remaining -= Size;
+		}
+		ASSERT_EQ(io_close(File.release()), 0);
+	}
+	json_value *pRoot = nullptr;
+	EXPECT_EQ(QmLoadStatisticsFile(pStorage.get(), PATH, &pRoot), EQmStatisticsFileLoadResult::INVALID);
+	EXPECT_EQ(pRoot, nullptr);
+	std::unique_ptr<void, decltype(&io_close)> File(pStorage->OpenFile(PATH, IOFLAG_READ, IStorage::TYPE_SAVE), io_close);
+	ASSERT_NE(File, nullptr);
+	EXPECT_EQ(io_length(File.get()), static_cast<int64_t>(QM_STATISTICS_MAX_FILE_BYTES) + 1);
 }
