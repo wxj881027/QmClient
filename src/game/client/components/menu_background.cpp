@@ -4,7 +4,6 @@
 #include "qmclient/theme_icon_load_job.h"
 #include "theme_scan.h"
 
-#include <base/lock.h>
 #include <base/log.h>
 #include <base/math.h>
 #include <base/system.h>
@@ -28,58 +27,6 @@
 #include <chrono>
 
 using namespace std::chrono_literals;
-
-class CMenuBackground::CThemeListLoadJob : public IJob
-{
-public:
-	using SThemeEntry = SThemeFileEntry;
-
-private:
-	IStorage *m_pStorage;
-	mutable CLock m_Lock;
-	std::vector<SThemeEntry> m_vEntries;
-	bool m_Completed = false;
-
-protected:
-	static int ScanCallback(const char *pName, int IsDir, int DirType, void *pUser)
-	{
-		(void)DirType;
-		auto *pEntries = static_cast<std::vector<SThemeEntry> *>(pUser);
-		AppendThemeFileEntry(*pEntries, pName, IsDir != 0);
-		return 0;
-	}
-
-	void Run() override REQUIRES(!m_Lock)
-	{
-		std::vector<SThemeEntry> vEntries;
-		m_pStorage->ListDirectory(IStorage::TYPE_ALL, "themes", ScanCallback, &vEntries);
-		std::sort(vEntries.begin(), vEntries.end(), [](const SThemeEntry &Left, const SThemeEntry &Right) {
-			return Left.m_Name < Right.m_Name;
-		});
-
-		const CLockScope Lock(m_Lock);
-		m_vEntries = std::move(vEntries);
-		m_Completed = true;
-	}
-
-public:
-	explicit CThemeListLoadJob(IStorage *pStorage) :
-		m_pStorage(pStorage)
-	{
-	}
-
-	bool IsCompleted() const REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		return m_Completed;
-	}
-
-	std::vector<SThemeEntry> Entries() const REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		return m_vEntries;
-	}
-};
 
 std::array<vec2, CMenuBackground::NUM_POS> GenerateMenuBackgroundPositions()
 {
@@ -288,32 +235,13 @@ bool CMenuBackground::EnsureThemeEntries()
 
 void CMenuBackground::EnsureThemeListJob()
 {
-	if(m_pThemeListLoadJob)
-		return;
-	try
-	{
-		auto pJob = std::make_shared<CThemeListLoadJob>(Storage());
-		if(!Engine()->TryAddJob(pJob))
-			return;
-		m_pThemeListLoadJob = std::move(pJob);
-		m_ThemeScanStartTime = time_get_nanoseconds();
-	}
-	catch(const std::bad_alloc &)
-	{
-		// 未接收时不发布等待记录，之后的帧可以重新尝试。
-	}
+	m_ThemeListRequest.TryStart(*Storage(), *Engine(), time_get_nanoseconds());
 }
 
 void CMenuBackground::ProcessThemeListJob()
 {
-	if(!m_pThemeListLoadJob || !m_pThemeListLoadJob->IsCompleted())
-		return;
-
-	if(!PublishThemeEntries(m_vThemes, PREDEFINED_THEMES_COUNT, [this] { return m_pThemeListLoadJob->Entries(); }))
-		return;
-
-	m_ThemeListLoaded = true;
-	m_pThemeListLoadJob.reset();
+	if(m_ThemeListRequest.Poll(m_vThemes, PREDEFINED_THEMES_COUNT, time_get_nanoseconds()))
+		m_ThemeListLoaded = true;
 }
 
 void CMenuBackground::QueueNextThemeIconLoad()
@@ -778,7 +706,7 @@ void CMenuBackground::InvalidateCurrentPosition()
 void CMenuBackground::RefreshThemes()
 {
 	m_ThemeRefreshPending = true;
-	m_pThemeListLoadJob.reset();
+	m_ThemeListRequest.Reset();
 	m_vThemeIconLoadJobs.clear();
 	m_ThemeListLoaded = false;
 	m_ThemeRefreshPending = !ClearThemeCatalog(m_vThemes, InterfacesInitialized() ? Graphics() : nullptr);

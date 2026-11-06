@@ -4,6 +4,7 @@
 #include <game/client/components/background.h>
 #include <game/client/components/camera.h>
 #include <game/client/components/qmclient/theme_catalog.h>
+#include <game/client/components/qmclient/theme_list_load_request.h>
 
 #include <array>
 #include <chrono>
@@ -24,9 +25,6 @@ public:
 
 class CMenuBackground : public CBackground
 {
-	std::chrono::nanoseconds m_ThemeScanStartTime{0};
-	class CThemeListLoadJob;
-
 public:
 	enum
 	{
@@ -115,7 +113,7 @@ private:
 	void InitializeLoadedMap();
 
 	std::vector<CTheme> m_vThemes;
-	std::shared_ptr<CThemeListLoadJob> m_pThemeListLoadJob;
+	CQmThemeListLoadRequest m_ThemeListRequest;
 	std::vector<std::shared_ptr<CQmThemeIconLoadJob>> m_vThemeIconLoadJobs;
 	bool m_ThemeListLoaded = false;
 	bool m_ThemeRefreshPending = false;

@@ -3,6 +3,7 @@
 #include "assets_resource_registry.h"
 #include "background.h"
 #include "menus.h"
+#include "qmclient/bounded_file_reader.h"
 #include "qmclient/perf_logging.h"
 #include "settings_resource_jobs.h"
 
@@ -739,25 +740,7 @@ private:
 	// 在后台线程读取文件
 	bool TryLoadFile(const char *pFilename, std::vector<uint8_t> &vBuffer)
 	{
-		IOHANDLE File = m_pStorage->OpenFile(pFilename, IOFLAG_READ, m_StorageType);
-		if(!File)
-			return false;
-
-		io_seek(File, 0, IOSEEK_END);
-		const int64_t Size = io_tell(File);
-		io_seek(File, 0, IOSEEK_START);
-
-		if(Size <= 0 || Size > LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE)
-		{
-			io_close(File);
-			return false;
-		}
-
-		vBuffer.resize(Size);
-		const size_t Read = io_read(File, vBuffer.data(), Size);
-		io_close(File);
-
-		return Read == (size_t)Size;
+		return QmReadFileBounded(m_pStorage->OpenFile(pFilename, IOFLAG_READ, m_StorageType), LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE, vBuffer);
 	}
 
 protected:
@@ -1188,25 +1171,7 @@ public:
 
 static bool LoadFileToBuffer(IStorage *pStorage, const char *pFilename, int StorageType, std::vector<uint8_t> &vBuffer)
 {
-	IOHANDLE File = pStorage->OpenFile(pFilename, IOFLAG_READ, StorageType);
-	if(!File)
-		return false;
-
-	io_seek(File, 0, IOSEEK_END);
-	const int64_t Size = io_tell(File);
-	io_seek(File, 0, IOSEEK_START);
-
-	if(Size <= 0 || Size > LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE)
-	{
-		io_close(File);
-		return false;
-	}
-
-	vBuffer.resize(Size);
-	const size_t Read = io_read(File, vBuffer.data(), Size);
-	io_close(File);
-
-	return Read == (size_t)Size;
+	return QmReadFileBounded(pStorage->OpenFile(pFilename, IOFLAG_READ, StorageType), LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE, vBuffer);
 }
 
 void CMenus::LoadEntities(SCustomEntities *pEntitiesItem, void *pUser)
