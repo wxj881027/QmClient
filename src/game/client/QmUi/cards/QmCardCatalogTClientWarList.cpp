@@ -648,7 +648,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 		{
 			static unsigned int s_ColorValue = 0;
 			s_ColorValue = color_cast<ColorHSLA>(pSelectedType->m_Color).Pack(false);
-			const ColorRGBA Color = color_cast<ColorRGBA>(DoLine_ColorPicker(&s_GroupColorPicker, CurrentSettingsContentMetrics(), &Button, Localize("Color"), &s_ColorValue, ColorRGBA(1.0f, 1.0f, 1.0f), true));
+			const ColorRGBA Color = color_cast<ColorRGBA>(DoLine_ColorPicker(&s_GroupColorPicker, CurrentSettingsContentMetrics(), &Button, Localize("Color"), &s_ColorValue, ColorRGBA(1.0f, 1.0f, 1.0f), false));
 			if(Flow.Input() && !ReadOnly && !Ui()->RenderOnly() && Color != pSelectedType->m_Color)
 			{
 				s_GroupColor = Color;
@@ -657,7 +657,6 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 				GameClient()->m_WarList.UpsertWarType(Index, pSelectedType->m_aWarName, Color);
 			}
 		}
-		Flow.Space(ColorPickerLineSpacing);
 		char aExtra[96];
 		str_format(aExtra, sizeof(aExtra), "groups=%d", (int)GameClient()->m_WarList.m_WarTypes.size());
 		LogTClientPerfStageEx("tclient_warlist", "actions", ETClientSettingsPerfStage::RESOURCE_PRETRIGGER, ActionsTimer.ElapsedMs(), false, aExtra);

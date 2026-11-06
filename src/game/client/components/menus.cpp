@@ -6108,15 +6108,18 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 	const float HeaderSpacing = Metrics.m_LineSpacing;
 	CUIRect HeaderView = MainView;
 	CUIRect Header, HeaderRow;
-	HeaderView.HSplitTop(HeaderHeight + HeaderSpacing, &Header, nullptr);
+	HeaderView.HSplitTop(HeaderHeight + HeaderSpacing * 2.0f, &Header, nullptr);
 	Header.HSplitTop(HeaderHeight, &HeaderRow, nullptr);
 
-	s_ListBox.DoHeader(&MainView, Localize("Theme"), HeaderHeight, HeaderSpacing);
+	s_ListBox.DoHeader(&MainView, Localize("Theme"), HeaderHeight, HeaderSpacing * 2.0f);
 
 	static CButtonContainer s_RefreshButton;
 	CUIRect RefreshButton;
-	HeaderRow.VSplitRight(80.0f * Metrics.m_UiScale, nullptr, &RefreshButton);
-	RefreshButton.VMargin(Metrics.m_LineSpacing * 0.5f, &RefreshButton);
+	const float RefreshSide = std::min(HeaderHeight, 80.0f * Metrics.m_UiScale);
+	HeaderRow.VSplitRight(RefreshSide, nullptr, &RefreshButton);
+	RefreshButton.h = RefreshSide;
+	RefreshButton.y += (HeaderRow.h - RefreshSide) * 0.5f;
+	RefreshButton.Margin(Metrics.m_LineSpacing * 0.5f, &RefreshButton);
 	if(Ui()->DoButton_QmIcon(&s_RefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &RefreshButton, IGraphics::CORNER_ALL))
 	{
 		MenuBackground.RefreshThemes();

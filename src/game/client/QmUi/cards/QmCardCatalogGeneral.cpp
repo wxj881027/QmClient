@@ -173,7 +173,7 @@ namespace qm_card_catalog
 					if(pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, &g_Config.m_ClSkipStartMenu, "general-skip-main-menu", Localize("Skip the main menu"), g_Config.m_ClSkipStartMenu, &Button))
 						g_Config.m_ClSkipStartMenu ^= 1;
 				}
-				Flow.Space(GeneralMetrics.m_SectionGap);
+				Flow.Space(GeneralMetrics.m_LineSpacing);
 				if(Flow.Control("general-refresh-rate", GeneralMetrics.m_LineHeight, Button))
 				{
 					str_copy(aBuf, " ");
