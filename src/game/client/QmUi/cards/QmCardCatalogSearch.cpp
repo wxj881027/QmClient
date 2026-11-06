@@ -3,6 +3,8 @@
 #include <base/detect.h>
 
 #include <game/client/QmUi/QmCardSearchRegistry.h>
+#include <game/client/components/qmclient/search_answers.h>
+#include <game/localization.h>
 
 // 各卡片源文件旁的声明式搜索表，由本聚合器统一编译与注册。
 #include "QmCardSearch/QmCardCatalogAppearance.inc"
@@ -36,6 +38,7 @@
 
 #include <engine/shared/localization.h>
 
+#include <algorithm>
 #include <iterator>
 
 namespace qm_card_search
@@ -69,6 +72,35 @@ namespace qm_card_search
 
 namespace qm_card_catalog
 {
+	void AddAnswerCards(const qm_search_answers::SResult &Answers, const qm_card_order::CModel &Model, std::vector<qm_card_registry::SCardSearchResult> &vCards)
+	{
+		if(Answers.m_pAnswer == nullptr)
+			return;
+		std::vector<qm_card_registry::SCardSearchResult> vRelated;
+		for(const char *pId : Answers.m_pAnswer->m_vRelatedCards)
+		{
+			const auto *pDefault = qm_card_registry::FindByStableId(pId);
+			if(pDefault == nullptr)
+				continue;
+			const auto Target = qm_card_registry::ResolveCardNavigationTarget(*pDefault, Model);
+			const auto Existing = std::find_if(vCards.begin(), vCards.end(), [&](const auto &Card) { return str_comp(Card.m_pStableId, Target.m_pStableId) == 0; });
+			if(Existing != vCards.end())
+			{
+				vRelated.push_back(std::move(*Existing));
+				vCards.erase(Existing);
+			}
+			else
+			{
+				qm_card_registry::SCardSearchResult Card;
+				Card.m_pStableId = Target.m_pStableId;
+				Card.m_Target = Target;
+				Card.m_Title = Localize(pDefault->m_pTitle);
+				Card.m_Description = qm_card_registry::ResolveLocalizedDescription(pId);
+				vRelated.push_back(std::move(Card));
+			}
+		}
+		vCards.insert(vCards.begin(), std::make_move_iterator(vRelated.begin()), std::make_move_iterator(vRelated.end()));
+	}
 
 	bool FindSearchMetadata(const char *pStableId, const qm_card_registry::SCardSettingSearch **ppSettings, size_t *pCount)
 	{
