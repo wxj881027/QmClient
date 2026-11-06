@@ -3349,6 +3349,10 @@ private:
 	void RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly);
 	void RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOnly);
 	void RenderSettingsQmClientBindDeck(CUIRect MainView, bool PrewarmOnly);
+	void RenderSettingsBindWorkshop(CUIRect MainView, bool PrewarmOnly = false);
+	void RenderSettingsBindBlueprint(CUIRect MainView, bool PrewarmOnly = false);
+	// 绑定一览点一行时，把焦点交给键盘卡片的这个键（Key+Modifier）。
+	void FocusBindKey(int Key, int Modifier);
 	void RenderSettingsQmClientBindCard(CUIRect &Content, bool ReadOnly);
 	void RenderQmBindOverviewContent(CUIRect &Content, bool ReadOnly);
 	void RenderQmBindCommandEditor(CUIRect &Content, CBindSlot Slot, bool ReadOnly);

@@ -3546,6 +3546,10 @@ if(CLIENT)
     components/qmclient/bind_editor.h
     components/qmclient/bind_overview.h
     components/qmclient/bind_settings.cpp
+    components/qmclient/bind_workshop.cpp
+    components/qmclient/bind_workshop.h
+    components/qmclient/bind_workshop_ui.cpp
+    components/qmclient/bind_workshop_layout.cpp
     components/qmclient/browser_status_layout.h
     components/qmclient/browser_map_preview.h
     components/qmclient/browser_map_preview_loader.h
@@ -4923,6 +4927,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_bind_editor_console_test.cpp
     src/test/unit/qmclient/client/qm_bind_editor_test.cpp
     src/test/unit/qmclient/client/qm_bind_overview_test.cpp
+    src/test/unit/qmclient/client/qm_bind_workshop_catalog_test.cpp
+    src/test/unit/qmclient/client/qm_bind_workshop_plan_test.cpp
     src/test/unit/qmclient/client/qm_background_particles_test.cpp
     src/test/unit/qmclient/client/qm_axiom_scores_test.cpp
     src/test/integration/qmclient/client/qm_axiom_quad_collision_test.cpp
@@ -5443,6 +5449,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/qm/music/qm_qqmusic_protocol.h
     src/game/client/components/qmclient/modes.cpp
     src/game/client/components/qmclient/bind_editor.cpp
+    src/game/client/components/qmclient/bind_workshop.cpp
+    src/game/client/components/qmclient/bind_workshop_layout.cpp
     src/game/client/components/qmclient/wheel_presets.cpp
     src/game/client/components/qmclient/settings_resource_preview.cpp
     src/game/client/components/qmclient/tee_hue_cycle.cpp
@@ -5828,6 +5836,9 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/test/benchmark/qm_benchmark_main.cpp
     src/test/benchmark/qm_online_replay_benchmark.cpp
     src/test/benchmark/qm_route_render_cache_benchmark.cpp
+    src/test/benchmark/qm_bind_blueprint_benchmark.cpp
+    src/game/client/components/qmclient/bind_workshop.cpp
+    src/game/client/components/qmclient/bind_editor.cpp
     src/test/benchmark/qm_str_benchmark.cpp
     src/test/benchmark/qm_update_benchmark.cpp
     src/game/client/components/qmclient/update_manifest.cpp
