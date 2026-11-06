@@ -3870,6 +3870,8 @@ if(CLIENT)
     components/qmclient/route_visited.h
     components/qmclient/settings_resource_preview.cpp
     components/qmclient/settings_resource_preview.h
+    components/qmclient/settings_asset_image_job.h
+    components/qmclient/settings_asset_list_job.h
     components/qmclient/screenshot_clipboard.cpp
     components/qmclient/screenshot_clipboard.h
     components/qmclient/screenshot_image_job.cpp
@@ -5928,6 +5930,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/client/qm_theme_icon_job_test.cpp
     src/test/integration/qmclient/client/qm_theme_icon_admission_test.cpp
     src/test/integration/qmclient/client/qm_theme_list_request_test.cpp
+    src/test/integration/qmclient/client/qm_settings_asset_image_job_test.cpp
+    src/test/integration/qmclient/client/qm_settings_asset_list_job_test.cpp
     src/test/integration/qmclient/client/qm_theme_catalog_release_test.cpp
     src/test/unit/client/theme_catalog_test.cpp
     src/test/unit/client/menu_background_prepare_test.cpp

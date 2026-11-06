@@ -5,6 +5,8 @@
 #include "menus.h"
 #include "qmclient/bounded_file_reader.h"
 #include "qmclient/perf_logging.h"
+#include "qmclient/settings_asset_image_job.h"
+#include "qmclient/settings_asset_list_job.h"
 #include "settings_resource_jobs.h"
 
 #include <base/lock.h>
@@ -624,224 +626,6 @@ void CMenus::ClearSettingsAssetsCardMetadataCache()
 
 typedef std::function<void()> TMenuAssetScanLoadedFunc;
 
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-class CImageDecodeJob : public IJob
-{
-public:
-	struct SResult
-	{
-		CImageInfo m_Image;
-		bool m_Success = false;
-	};
-
-private:
-	std::vector<uint8_t> m_vFileData;
-	std::string m_Name;
-	mutable CLock m_Lock;
-	SResult m_Result;
-	mutable bool m_Completed = false;
-
-protected:
-	void Run() override REQUIRES(!m_Lock)
-	{
-		if(m_vFileData.empty())
-		{
-			const CLockScope Lock(m_Lock);
-			m_Completed = true;
-			return;
-		}
-
-		CImageInfo Image;
-		bool Success = false;
-
-		constexpr uint8_t PngSignature[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
-		constexpr uint8_t WebpRiff[] = {0x52, 0x49, 0x46, 0x46};
-		constexpr uint8_t WebpWebp[] = {0x57, 0x45, 0x42, 0x50};
-
-		const bool IsPng = m_vFileData.size() >= 8 &&
-				   memcmp(m_vFileData.data(), PngSignature, 8) == 0;
-		const bool IsWebp = m_vFileData.size() >= 12 &&
-				    memcmp(m_vFileData.data(), WebpRiff, 4) == 0 &&
-				    memcmp(m_vFileData.data() + 8, WebpWebp, 4) == 0;
-
-		if(IsWebp)
-		{
-			Success = CImageLoader::LoadWebP(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image);
-		}
-		else if(IsPng)
-		{
-			Success = CImageLoader::LoadPng(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image);
-		}
-		else
-		{
-			if(CImageLoader::LoadWebP(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image))
-				Success = true;
-			else if(CImageLoader::LoadPng(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image))
-				Success = true;
-		}
-
-		{
-			const CLockScope Lock(m_Lock);
-			m_Result.m_Image = std::move(Image);
-			m_Result.m_Success = Success;
-			m_Completed = true;
-		}
-
-		m_vFileData.clear();
-		m_vFileData.shrink_to_fit();
-	}
-
-public:
-	CImageDecodeJob(std::vector<uint8_t> &&vFileData, const char *pName) :
-		m_vFileData(std::move(vFileData)),
-		m_Name(pName)
-	{
-	}
-
-	bool IsCompleted() const REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		return m_Completed;
-	}
-
-	SResult GetResult() REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		SResult Result = std::move(m_Result);
-		m_Result = SResult();
-		return Result;
-	}
-};
-
-// 全异步图片加载 Job：在后台线程完成文件读取和解码
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-class CFullAsyncImageLoadJob : public IJob
-{
-public:
-	struct SResult
-	{
-		CImageInfo m_Image;
-		bool m_Success = false;
-		bool m_Resized = false;
-		int m_SourceWidth = 0;
-		int m_SourceHeight = 0;
-	};
-
-private:
-	std::vector<std::string> m_vPossiblePaths; // 可能的文件路径列表，按优先级排序
-	IStorage *m_pStorage;
-	int m_StorageType; // 存储类型
-	int m_MaxTextureSize;
-	std::string m_Name;
-	mutable CLock m_Lock;
-	SResult m_Result;
-	mutable bool m_Completed = false;
-
-	// 在后台线程读取文件
-	bool TryLoadFile(const char *pFilename, std::vector<uint8_t> &vBuffer)
-	{
-		return QmReadFileBounded(m_pStorage->OpenFile(pFilename, IOFLAG_READ, m_StorageType), LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE, vBuffer);
-	}
-
-protected:
-	void Run() override REQUIRES(!m_Lock)
-	{
-		// 1. 尝试按优先级读取文件
-		std::vector<uint8_t> vFileData;
-		for(const std::string &Path : m_vPossiblePaths)
-		{
-			if(TryLoadFile(Path.c_str(), vFileData))
-				break;
-		}
-
-		if(vFileData.empty())
-		{
-			const CLockScope Lock(m_Lock);
-			m_Completed = true;
-			return;
-		}
-
-		// 2. 解码图片
-		CImageInfo Image;
-		bool Success = false;
-
-		constexpr uint8_t PngSignature[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
-		constexpr uint8_t WebpRiff[] = {0x52, 0x49, 0x46, 0x46};
-		constexpr uint8_t WebpWebp[] = {0x57, 0x45, 0x42, 0x50};
-
-		const bool IsPng = vFileData.size() >= 8 &&
-				   memcmp(vFileData.data(), PngSignature, 8) == 0;
-		const bool IsWebp = vFileData.size() >= 12 &&
-				    memcmp(vFileData.data(), WebpRiff, 4) == 0 &&
-				    memcmp(vFileData.data() + 8, WebpWebp, 4) == 0;
-
-		if(IsWebp)
-		{
-			Success = CImageLoader::LoadWebP(vFileData.data(), vFileData.size(), m_Name.c_str(), Image);
-		}
-		else if(IsPng)
-		{
-			Success = CImageLoader::LoadPng(vFileData.data(), vFileData.size(), m_Name.c_str(), Image);
-		}
-		else
-		{
-			if(CImageLoader::LoadWebP(vFileData.data(), vFileData.size(), m_Name.c_str(), Image))
-				Success = true;
-			else if(CImageLoader::LoadPng(vFileData.data(), vFileData.size(), m_Name.c_str(), Image))
-				Success = true;
-		}
-
-		bool Resized = false;
-		int SourceWidth = 0;
-		int SourceHeight = 0;
-		if(Success && Image.m_pData != nullptr && m_MaxTextureSize > 0)
-		{
-			SourceWidth = Image.m_Width;
-			SourceHeight = Image.m_Height;
-			const SPreviewTargetSize TargetSize = ComputePreviewTargetSize(Image.m_Width, Image.m_Height, m_MaxTextureSize);
-			if(TargetSize.m_Resized)
-			{
-				ResizeImage(Image, TargetSize.m_Width, TargetSize.m_Height);
-				Resized = true;
-			}
-		}
-
-		{
-			const CLockScope Lock(m_Lock);
-			m_Result.m_Image = std::move(Image);
-			m_Result.m_Success = Success;
-			m_Result.m_Resized = Resized;
-			m_Result.m_SourceWidth = SourceWidth;
-			m_Result.m_SourceHeight = SourceHeight;
-			m_Completed = true;
-		}
-	}
-
-public:
-	CFullAsyncImageLoadJob(std::vector<std::string> &&vPossiblePaths, IStorage *pStorage, const char *pName, int StorageType = IStorage::TYPE_ALL, int MaxTextureSize = 0) :
-		m_vPossiblePaths(std::move(vPossiblePaths)),
-		m_pStorage(pStorage),
-		m_StorageType(StorageType),
-		m_MaxTextureSize(MaxTextureSize),
-		m_Name(pName)
-	{
-	}
-
-	bool IsCompleted() const REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		return m_Completed;
-	}
-
-	SResult GetResult() REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		SResult Result = std::move(m_Result);
-		m_Result = SResult();
-		return Result;
-	}
-};
-
 static std::string JsonEscape(const std::string &Str)
 {
 	std::string Result;
@@ -866,307 +650,6 @@ struct SMenuAssetScanUser
 {
 	void *m_pUser;
 	TMenuAssetScanLoadedFunc m_LoadedFunc;
-};
-
-// ============================================================================
-// ASYNC ASSET LIST LOADING
-// ============================================================================
-//
-// Problem: Synchronous Storage()->ListDirectory() calls block the render thread
-// causing UI stutters when switching asset tabs.
-//
-// Solution: Use background jobs to scan directories and populate asset lists.
-// The render thread polls for completion and displays loading indicators.
-
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-class CAssetListLoadJob : public IJob
-{
-public:
-	enum EAssetType
-	{
-		ASSET_TYPE_ENTITIES = 0,
-		ASSET_TYPE_GAME,
-		ASSET_TYPE_EMOTICONS,
-		ASSET_TYPE_PARTICLES,
-		ASSET_TYPE_HUD,
-		ASSET_TYPE_GUI_CURSOR,
-		ASSET_TYPE_ARROW,
-		ASSET_TYPE_STRONG_WEAK,
-		ASSET_TYPE_ENTITY_BG,
-		ASSET_TYPE_EXTRAS,
-	};
-
-	using SAssetEntry = CMenus::SSettingsAssetMergeEntry;
-
-	struct SScanContext
-	{
-		IStorage *m_pStorage;
-		std::vector<SAssetEntry> *m_pEntries;
-		EAssetResourceKind m_Kind;
-		bool m_SkipReservedDefault;
-		EEntityBgHierarchyEntrySource m_Source = EEntityBgHierarchyEntrySource::LOCAL;
-	};
-
-private:
-	EAssetType m_Type;
-	IStorage *m_pStorage;
-	mutable CLock m_Lock;
-	std::vector<SAssetEntry> m_vEntries;
-	mutable bool m_Completed = false;
-	int m_Generation = 0;
-
-	static int ScanCallback(const char *pName, int IsDir, int DirType, void *pUser)
-	{
-		(void)DirType;
-		const auto *pContext = static_cast<const SScanContext *>(pUser);
-		auto *pEntries = pContext->m_pEntries;
-
-		if(IsDir)
-		{
-			if(pContext->m_Kind != EAssetResourceKind::DIRECTORY)
-				return 0;
-			if(pName[0] == '.')
-				return 0;
-			if(pContext->m_SkipReservedDefault && str_comp(pName, "default") == 0)
-				return 0;
-
-			SAssetEntry Entry;
-			str_copy(Entry.m_aName, pName);
-			Entry.m_IsDir = true;
-			Entry.m_Source = pContext->m_Source;
-			pEntries->push_back(Entry);
-		}
-		else
-		{
-			const char *pExt = nullptr;
-			if(pContext->m_Kind == EAssetResourceKind::MAP_FILE)
-				pExt = ".map";
-			else
-				pExt = ".png";
-
-			if(str_endswith(pName, pExt))
-			{
-				char aName[IO_MAX_PATH_LENGTH];
-				str_truncate(aName, sizeof(aName), pName, str_length(pName) - str_length(pExt));
-				if(pContext->m_SkipReservedDefault && str_comp(aName, "default") == 0)
-					return 0;
-
-				SAssetEntry Entry;
-				str_copy(Entry.m_aName, aName);
-				Entry.m_IsDir = false;
-				Entry.m_Source = pContext->m_Source;
-				pEntries->push_back(Entry);
-			}
-		}
-		return 0;
-	}
-
-	struct SRecursiveMapScanContext
-	{
-		SScanContext *m_pScanContext;
-		char m_aBasePath[IO_MAX_PATH_LENGTH];
-		char m_aRelativePath[IO_MAX_PATH_LENGTH];
-		char m_aNamePrefix[IO_MAX_PATH_LENGTH];
-		EEntityBgHierarchyEntrySource m_Source = EEntityBgHierarchyEntrySource::LOCAL;
-	};
-
-	static int RecursiveMapScanCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser)
-	{
-		(void)StorageType;
-		auto *pContext = static_cast<SRecursiveMapScanContext *>(pUser);
-		if(!str_comp(pInfo->m_pName, ".") || !str_comp(pInfo->m_pName, ".."))
-			return 0;
-
-		char aRelativePath[IO_MAX_PATH_LENGTH];
-		if(pContext->m_aRelativePath[0] != '\0')
-			str_format(aRelativePath, sizeof(aRelativePath), "%s/%s", pContext->m_aRelativePath, pInfo->m_pName);
-		else
-			str_copy(aRelativePath, pInfo->m_pName);
-
-		if(IsDir)
-		{
-			if(pInfo->m_pName[0] == '.')
-				return 0;
-
-			SRecursiveMapScanContext NextContext = *pContext;
-			str_copy(NextContext.m_aRelativePath, aRelativePath, sizeof(NextContext.m_aRelativePath));
-
-			char aFullPath[IO_MAX_PATH_LENGTH];
-			str_format(aFullPath, sizeof(aFullPath), "%s/%s", pContext->m_aBasePath, aRelativePath);
-			pContext->m_pScanContext->m_pStorage->ListDirectoryInfo(IStorage::TYPE_ALL, aFullPath, RecursiveMapScanCallback, &NextContext);
-			return 0;
-		}
-
-		const char *pExtension = str_endswith_nocase(pInfo->m_pName, ".map") ? ".map" : FindBackgroundFileExtension(pInfo->m_pName);
-		if(pExtension == nullptr)
-			return 0;
-
-		char aName[IO_MAX_PATH_LENGTH];
-		if(pContext->m_aNamePrefix[0] != '\0')
-		{
-			if(str_comp_nocase(pExtension, ".map") == 0)
-			{
-				char aWithoutExt[IO_MAX_PATH_LENGTH];
-				str_truncate(aWithoutExt, sizeof(aWithoutExt), aRelativePath, str_length(aRelativePath) - str_length(pExtension));
-				str_format(aName, sizeof(aName), "%s/%s", pContext->m_aNamePrefix, aWithoutExt);
-			}
-			else
-			{
-				str_format(aName, sizeof(aName), "%s/%s", pContext->m_aNamePrefix, aRelativePath);
-			}
-		}
-		else
-		{
-			if(str_comp_nocase(pExtension, ".map") == 0)
-				str_truncate(aName, sizeof(aName), aRelativePath, str_length(aRelativePath) - str_length(pExtension));
-			else
-				str_copy(aName, aRelativePath);
-		}
-		if(pContext->m_pScanContext->m_SkipReservedDefault && str_comp(aName, "default") == 0)
-			return 0;
-
-		SAssetEntry Entry;
-		str_copy(Entry.m_aName, aName);
-		Entry.m_IsDir = false;
-		Entry.m_Source = pContext->m_Source;
-		pContext->m_pScanContext->m_pEntries->push_back(Entry);
-		return 0;
-	}
-
-protected:
-	void Run() override REQUIRES(!m_Lock)
-	{
-		std::vector<SAssetEntry> vEntries;
-		SScanContext ScanContext{m_pStorage, &vEntries, EAssetResourceKind::DIRECTORY, true, EEntityBgHierarchyEntrySource::LOCAL};
-
-		if(m_Type == ASSET_TYPE_EXTRAS)
-		{
-			m_pStorage->ListDirectory(IStorage::TYPE_ALL, "assets/extras", ScanCallback, &ScanContext);
-		}
-		else
-		{
-			const SAssetResourceCategory *pCategory = nullptr;
-			switch(m_Type)
-			{
-			case ASSET_TYPE_ENTITIES:
-				pCategory = FindAssetResourceCategory("entities");
-				break;
-			case ASSET_TYPE_GAME:
-				pCategory = FindAssetResourceCategory("game");
-				break;
-			case ASSET_TYPE_EMOTICONS:
-				pCategory = FindAssetResourceCategory("emoticons");
-				break;
-			case ASSET_TYPE_PARTICLES:
-				pCategory = FindAssetResourceCategory("particles");
-				break;
-			case ASSET_TYPE_HUD:
-				pCategory = FindAssetResourceCategory("hud");
-				break;
-			case ASSET_TYPE_GUI_CURSOR:
-				pCategory = FindAssetResourceCategory("gui_cursor");
-				break;
-			case ASSET_TYPE_ARROW:
-				pCategory = FindAssetResourceCategory("arrow");
-				break;
-			case ASSET_TYPE_STRONG_WEAK:
-				pCategory = FindAssetResourceCategory("strong_weak");
-				break;
-			case ASSET_TYPE_ENTITY_BG:
-				pCategory = FindAssetResourceCategory("entity_bg");
-				break;
-			case ASSET_TYPE_EXTRAS:
-				break;
-			}
-
-			dbg_assert(pCategory != nullptr, "asset list category must exist");
-			ScanContext.m_Kind = pCategory->m_Kind;
-			ScanContext.m_SkipReservedDefault = pCategory->m_Kind != EAssetResourceKind::MAP_FILE;
-			if(m_Type == ASSET_TYPE_ENTITY_BG)
-			{
-				ScanContext.m_Kind = EAssetResourceKind::MAP_FILE;
-				ScanContext.m_SkipReservedDefault = false;
-
-				SRecursiveMapScanContext AssetsContext;
-				AssetsContext.m_pScanContext = &ScanContext;
-				str_copy(AssetsContext.m_aBasePath, pCategory->m_pInstallFolder, sizeof(AssetsContext.m_aBasePath));
-				AssetsContext.m_aRelativePath[0] = '\0';
-				str_copy(AssetsContext.m_aNamePrefix, "entity_bg", sizeof(AssetsContext.m_aNamePrefix));
-				AssetsContext.m_Source = EEntityBgHierarchyEntrySource::LOCAL;
-				m_pStorage->ListDirectoryInfo(IStorage::TYPE_ALL, pCategory->m_pInstallFolder, RecursiveMapScanCallback, &AssetsContext);
-
-				SRecursiveMapScanContext MapsContext;
-				MapsContext.m_pScanContext = &ScanContext;
-				str_copy(MapsContext.m_aBasePath, "maps", sizeof(MapsContext.m_aBasePath));
-				MapsContext.m_aRelativePath[0] = '\0';
-				MapsContext.m_aNamePrefix[0] = '\0';
-				MapsContext.m_Source = EEntityBgHierarchyEntrySource::LOCAL;
-				m_pStorage->ListDirectoryInfo(IStorage::TYPE_ALL, "maps", RecursiveMapScanCallback, &MapsContext);
-			}
-			else if(pCategory->m_Kind == EAssetResourceKind::MAP_FILE)
-			{
-				SRecursiveMapScanContext RecursiveContext;
-				RecursiveContext.m_pScanContext = &ScanContext;
-				str_copy(RecursiveContext.m_aBasePath, pCategory->m_pInstallFolder, sizeof(RecursiveContext.m_aBasePath));
-				RecursiveContext.m_aRelativePath[0] = '\0';
-				RecursiveContext.m_aNamePrefix[0] = '\0';
-				RecursiveContext.m_Source = EEntityBgHierarchyEntrySource::LOCAL;
-				m_pStorage->ListDirectoryInfo(IStorage::TYPE_ALL, pCategory->m_pInstallFolder, RecursiveMapScanCallback, &RecursiveContext);
-			}
-			else
-			{
-				m_pStorage->ListDirectory(IStorage::TYPE_ALL, pCategory->m_pInstallFolder, ScanCallback, &ScanContext);
-			}
-		}
-
-		if(m_Type == ASSET_TYPE_ENTITY_BG)
-		{
-			std::unordered_set<std::string> vSeenNames;
-			const auto DuplicateIt = std::remove_if(vEntries.begin(), vEntries.end(), [&](const SAssetEntry &Entry) {
-				return !vSeenNames.insert(Entry.m_aName).second;
-			});
-			vEntries.erase(DuplicateIt, vEntries.end());
-		}
-
-		// Sort entries by name
-		std::sort(vEntries.begin(), vEntries.end(),
-			[](const SAssetEntry &Left, const SAssetEntry &Right) {
-				return str_comp(Left.m_aName, Right.m_aName) < 0;
-			});
-
-		{
-			const CLockScope Lock(m_Lock);
-			m_vEntries = std::move(vEntries);
-			m_Completed = true;
-		}
-	}
-
-public:
-	CAssetListLoadJob(EAssetType Type, IStorage *pStorage) :
-		m_Type(Type),
-		m_pStorage(pStorage)
-	{
-	}
-
-	void SetGeneration(int Generation)
-	{
-		m_Generation = Generation;
-	}
-
-	bool IsCompleted() const REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		return m_Completed;
-	}
-
-	std::vector<SAssetEntry> TakeEntries() REQUIRES(!m_Lock)
-	{
-		const CLockScope Lock(m_Lock);
-		return std::move(m_vEntries);
-	}
-
-	EAssetType GetType() const { return m_Type; }
-	int Generation() const { return m_Generation; }
 };
 
 static bool LoadFileToBuffer(IStorage *pStorage, const char *pFilename, int StorageType, std::vector<uint8_t> &vBuffer)
@@ -1208,6 +691,7 @@ void CMenus::LoadEntities(SCustomEntities *pEntitiesItem, void *pUser)
 }
 
 static void StartEntitiesDecode(CMenus::SCustomEntities *pEntitiesItem, IStorage *pStorage, IEngine *pEngine, int MaxTextureSize)
+try
 {
 	if(!SettingsAssetPreviewDecodeStartNeeded(
 		   pEntitiesItem->m_pDecodeJob != nullptr,
@@ -1242,8 +726,11 @@ static void StartEntitiesDecode(CMenus::SCustomEntities *pEntitiesItem, IStorage
 	}
 
 	// 创建全异步 Job，在后台线程完成文件读取和解码
-	pEntitiesItem->m_pDecodeJob = std::make_shared<CFullAsyncImageLoadJob>(std::move(vPossiblePaths), pStorage, pEntitiesItem->m_aName, IStorage::TYPE_ALL, MaxTextureSize);
-	pEngine->AddJob(pEntitiesItem->m_pDecodeJob);
+	pEntitiesItem->m_pDecodeJob = QmTryQueueSettingsAssetImage(std::move(vPossiblePaths), pStorage, *pEngine, pEntitiesItem->m_aName, IStorage::TYPE_ALL, MaxTextureSize);
+}
+catch(const std::bad_alloc &)
+{
+	// 路径候选准备失败时沿原无任务回退，不让异常离开主线程入口。
 }
 
 int CMenus::EntitiesScan(const char *pName, int IsDir, int DirType, void *pUser)
@@ -1286,6 +773,7 @@ int CMenus::EntitiesScan(const char *pName, int IsDir, int DirType, void *pUser)
 
 template<typename TName>
 static void StartAssetDecode(TName *pAssetItem, const char *pAssetName, IStorage *pStorage, IEngine *pEngine, int MaxTextureSize)
+try
 {
 	if(!SettingsAssetPreviewDecodeStartNeeded(
 		   pAssetItem->m_pDecodeJob != nullptr,
@@ -1326,8 +814,11 @@ static void StartAssetDecode(TName *pAssetItem, const char *pAssetName, IStorage
 	}
 
 	// 创建全异步 Job，在后台线程完成文件读取和解码
-	pAssetItem->m_pDecodeJob = std::make_shared<CFullAsyncImageLoadJob>(std::move(vPossiblePaths), pStorage, pAssetItem->m_aName, IStorage::TYPE_ALL, MaxTextureSize);
-	pEngine->AddJob(pAssetItem->m_pDecodeJob);
+	pAssetItem->m_pDecodeJob = QmTryQueueSettingsAssetImage(std::move(vPossiblePaths), pStorage, *pEngine, pAssetItem->m_aName, IStorage::TYPE_ALL, MaxTextureSize);
+}
+catch(const std::bad_alloc &)
+{
+	// 路径候选准备失败时沿原无任务回退，不让异常离开主线程入口。
 }
 
 static bool IsEntityBgSelectionMatched(const char *pItemName)
@@ -1453,6 +944,7 @@ static void ResolveEntityBgLocalMapPath(IStorage *pStorage, const char *pAssetNa
 }
 
 static void StartEntityBgDecode(CMenus::SCustomEntityBg *pAssetItem, IStorage *pStorage, IEngine *pEngine, int MaxTextureSize)
+try
 {
 	if(!SettingsAssetPreviewDecodeStartNeeded(
 		   pAssetItem->m_pDecodeJob != nullptr,
@@ -1469,8 +961,11 @@ static void StartEntityBgDecode(CMenus::SCustomEntityBg *pAssetItem, IStorage *p
 	if(vPossiblePaths.empty())
 		return;
 
-	pAssetItem->m_pDecodeJob = std::make_shared<CFullAsyncImageLoadJob>(std::move(vPossiblePaths), pStorage, pAssetItem->m_aName, IStorage::TYPE_ALL, MaxTextureSize);
-	pEngine->AddJob(pAssetItem->m_pDecodeJob);
+	pAssetItem->m_pDecodeJob = QmTryQueueSettingsAssetImage(std::move(vPossiblePaths), pStorage, *pEngine, pAssetItem->m_aName, IStorage::TYPE_ALL, MaxTextureSize);
+}
+catch(const std::bad_alloc &)
+{
+	// 路径候选准备失败时沿原无任务回退，不让异常离开主线程入口。
 }
 
 static bool IsEntityBgConfigSelected(const char *pAssetName)
@@ -2242,6 +1737,7 @@ namespace
 	}
 
 	static void StartBackgroundDecode(SWorkshopHudAsset &Asset, IStorage *pStorage, IEngine *pEngine, int MaxTextureSize)
+	try
 	{
 		if(!SettingsAssetPreviewDecodeStartNeeded(
 			   Asset.m_pDecodeJob != nullptr,
@@ -2269,10 +1765,14 @@ namespace
 		if(!vPossiblePaths.empty())
 		{
 			// 创建全异步 Job，在后台线程完成文件读取和解码
-			Asset.m_ThumbRequestedTextureSize = MaxTextureSize;
-			Asset.m_pDecodeJob = std::make_shared<CFullAsyncImageLoadJob>(std::move(vPossiblePaths), pStorage, Asset.m_Name.c_str(), IStorage::TYPE_SAVE, MaxTextureSize);
-			pEngine->AddJob(Asset.m_pDecodeJob);
+			Asset.m_pDecodeJob = QmTryQueueSettingsAssetImage(std::move(vPossiblePaths), pStorage, *pEngine, Asset.m_Name.c_str(), IStorage::TYPE_SAVE, MaxTextureSize);
+			if(Asset.m_pDecodeJob)
+				Asset.m_ThumbRequestedTextureSize = MaxTextureSize;
 		}
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 路径候选准备失败时沿原无任务回退，不让异常离开主线程入口。
 	}
 
 	static void ResetWorkshopThumbReadyState(SWorkshopHudAsset &Asset)
@@ -3681,6 +3181,7 @@ void CMenus::ClearCustomItems(int CurTab)
 {
 	// Reset async loading state first
 	m_aAssetLoadStates[CurTab] = ASSET_LOAD_STATE_UNLOADED;
+	m_aAssetLoadRetryAt[CurTab] = std::chrono::nanoseconds(0);
 	if(CurTab >= ASSETS_TAB_ENTITIES && CurTab < NUMBER_OF_ASSETS_TABS)
 	{
 		gs_aAssetWarmupReady[CurTab] = false;
@@ -3860,6 +3361,7 @@ void CMenus::InvalidateSettingsAssetResourcePlan()
 		m_apAssetLoadJobs[Tab].reset();
 		gs_aAssetWarmupReady[Tab] = false;
 		m_aAssetLoadStates[Tab] = ASSET_LOAD_STATE_UNLOADED;
+		m_aAssetLoadRetryAt[Tab] = std::chrono::nanoseconds(0);
 		gs_aInitCustomList[Tab] = true;
 	}
 	gs_NextAssetWarmupTab = ASSETS_TAB_ENTITIES;
@@ -4022,6 +3524,40 @@ void CMenus::PublishSettingsAssetMergeEntries(int Tab, const std::vector<SSettin
 	}
 }
 
+bool CMenus::TryStartSettingsAssetListJob(int Tab)
+{
+	try
+	{
+		auto pJob = std::make_shared<CAssetListLoadJob>(static_cast<CAssetListLoadJob::EAssetType>(Tab), Storage());
+		pJob->SetGeneration(m_aAssetLoadGenerations[Tab]);
+		if(Engine()->TryAddJob(pJob))
+		{
+			m_apAssetLoadJobs[Tab] = std::move(pJob);
+			m_aAssetLoadStates[Tab] = ASSET_LOAD_STATE_LOADING;
+			return true;
+		}
+	}
+	catch(const std::bad_alloc &)
+	{
+		// 未接收时不发布等待状态，保留旧列表和当前代际。
+	}
+	m_aAssetLoadRetryAt[Tab] = time_get_nanoseconds() + std::chrono::seconds(1);
+	return false;
+}
+
+bool CMenus::RecoverFailedSettingsAssetListJob(int Tab)
+{
+	auto pJob = std::static_pointer_cast<CAssetListLoadJob>(m_apAssetLoadJobs[Tab]);
+	if(!pJob || !pJob->IsCompleted() || pJob->Succeeded())
+		return false;
+	m_apAssetLoadJobs[Tab].reset();
+	m_aAssetLoadStates[Tab] = ASSET_LOAD_STATE_UNLOADED;
+	m_aAssetLoadRetryAt[Tab] = time_get_nanoseconds() + std::chrono::seconds(1);
+	gs_aAssetWarmupReady[Tab] = false;
+	gs_NextAssetWarmupTab = Tab;
+	return true;
+}
+
 bool CMenus::PrewarmSettingsAssetResources()
 {
 	if(SettingsAssetWarmupAllTabsReady(gs_aAssetWarmupReady, NUMBER_OF_ASSETS_TABS))
@@ -4034,7 +3570,7 @@ bool CMenus::PrewarmSettingsAssetResources()
 		if(Tab < ASSETS_TAB_ENTITIES || Tab >= NUMBER_OF_ASSETS_TABS || gs_aAssetWarmupReady[Tab])
 			continue;
 
-		if(m_aAssetLoadStates[Tab] == ASSET_LOAD_STATE_UNLOADED)
+		if(m_aAssetLoadStates[Tab] == ASSET_LOAD_STATE_UNLOADED && time_get_nanoseconds() >= m_aAssetLoadRetryAt[Tab])
 		{
 			const SAssetResourceCategory *pCurrentCategory = AssetResourceCategoryByTab(Tab);
 			switch(Tab)
@@ -4087,12 +3623,8 @@ bool CMenus::PrewarmSettingsAssetResources()
 				break;
 			}
 
-			auto pJob = std::make_shared<CAssetListLoadJob>(
-				static_cast<CAssetListLoadJob::EAssetType>(Tab), Storage());
-			pJob->SetGeneration(m_aAssetLoadGenerations[Tab]);
-			m_apAssetLoadJobs[Tab] = pJob;
-			Engine()->AddJob(m_apAssetLoadJobs[Tab]);
-			m_aAssetLoadStates[Tab] = ASSET_LOAD_STATE_LOADING;
+			if(!TryStartSettingsAssetListJob(Tab))
+				return false;
 		}
 
 		if(m_aAssetLoadStates[Tab] == ASSET_LOAD_STATE_LOADING &&
@@ -4104,10 +3636,13 @@ bool CMenus::PrewarmSettingsAssetResources()
 			{
 				m_apAssetLoadJobs[Tab].reset();
 				m_aAssetLoadStates[Tab] = ASSET_LOAD_STATE_UNLOADED;
+				m_aAssetLoadRetryAt[Tab] = std::chrono::nanoseconds(0);
 				gs_aAssetWarmupReady[Tab] = false;
 				gs_NextAssetWarmupTab = Tab;
 				return false;
 			}
+			if(RecoverFailedSettingsAssetListJob(Tab))
+				return false;
 			std::vector<CAssetListLoadJob::SAssetEntry> vEntries = pJob->TakeEntries();
 			// 只有当前 tab 在绘制时才会真正发起解码，别的 tab 队列本来就是空的；
 			// 而且 gs_vpSearch* 只对当前 tab 重建，拿别的 tab 去遍历会读到过期指针。
@@ -4133,6 +3668,7 @@ bool CMenus::PrewarmSettingsAssetResources()
 			{
 				PendingMerge = {};
 				m_aAssetLoadStates[Tab] = ASSET_LOAD_STATE_UNLOADED;
+				m_aAssetLoadRetryAt[Tab] = std::chrono::nanoseconds(0);
 				gs_aAssetWarmupReady[Tab] = false;
 				gs_NextAssetWarmupTab = Tab;
 				return false;
@@ -4373,7 +3909,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	// ASYNC ASSET LIST LOADING
 	// ============================================================================
 	// Start async loading if list is empty and not already loading
-	if(m_aAssetLoadStates[s_CurCustomTab] == ASSET_LOAD_STATE_UNLOADED)
+	if(m_aAssetLoadStates[s_CurCustomTab] == ASSET_LOAD_STATE_UNLOADED && time_get_nanoseconds() >= m_aAssetLoadRetryAt[s_CurCustomTab])
 	{
 		for(const SAssetResourceCategory &Category : GetAssetResourceCategories())
 		{
@@ -4434,12 +3970,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		}
 
 		// Start async loading job
-		auto pJob = std::make_shared<CAssetListLoadJob>(
-			static_cast<CAssetListLoadJob::EAssetType>(s_CurCustomTab), Storage());
-		pJob->SetGeneration(m_aAssetLoadGenerations[s_CurCustomTab]);
-		m_apAssetLoadJobs[s_CurCustomTab] = pJob;
-		Engine()->AddJob(m_apAssetLoadJobs[s_CurCustomTab]);
-		m_aAssetLoadStates[s_CurCustomTab] = ASSET_LOAD_STATE_LOADING;
+		if(!TryStartSettingsAssetListJob(s_CurCustomTab))
+			return;
 		LogSettingsResourcePerf(SETTINGS_ASSETS, "queued", 1, 1, 0, ESettingsWarmupMissReason::RESOURCE_PLAN_PENDING, 0.0);
 	}
 
@@ -4454,10 +3986,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		{
 			m_apAssetLoadJobs[s_CurCustomTab].reset();
 			m_aAssetLoadStates[s_CurCustomTab] = ASSET_LOAD_STATE_UNLOADED;
+			m_aAssetLoadRetryAt[s_CurCustomTab] = std::chrono::nanoseconds(0);
 			gs_aAssetWarmupReady[s_CurCustomTab] = false;
 			gs_NextAssetWarmupTab = s_CurCustomTab;
 			return;
 		}
+		if(RecoverFailedSettingsAssetListJob(s_CurCustomTab))
+			return;
 		std::vector<CAssetListLoadJob::SAssetEntry> vEntries = pJob->TakeEntries();
 		{
 			char aExtra[128];
@@ -4491,6 +4026,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		{
 			PendingMerge = {};
 			m_aAssetLoadStates[s_CurCustomTab] = ASSET_LOAD_STATE_UNLOADED;
+			m_aAssetLoadRetryAt[s_CurCustomTab] = std::chrono::nanoseconds(0);
 			gs_aAssetWarmupReady[s_CurCustomTab] = false;
 			gs_NextAssetWarmupTab = s_CurCustomTab;
 			return;
@@ -4841,6 +4377,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		// 合并时按名字去重（已有的条目原样保留），扫完再摘掉已经不存在的条目。
 		// 用户只会看到「多一张 / 少一张」，不会看到整页闪。
 		m_aAssetLoadStates[Tab] = ASSET_LOAD_STATE_UNLOADED;
+		m_aAssetLoadRetryAt[Tab] = std::chrono::nanoseconds(0);
 		gs_aAssetWarmupReady[Tab] = false;
 		gs_NextAssetWarmupTab = Tab;
 	};

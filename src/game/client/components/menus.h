@@ -316,10 +316,13 @@ private:
 		ASSET_LOAD_STATE_UNLOADED,
 	};
 	std::shared_ptr<IJob> m_apAssetLoadJobs[NUMBER_OF_ASSETS_TABS];
+	std::chrono::nanoseconds m_aAssetLoadRetryAt[NUMBER_OF_ASSETS_TABS]{};
 	SSettingsAssetPendingMerge m_aAssetPendingMerges[NUMBER_OF_ASSETS_TABS];
 	int m_aAssetLoadGenerations[NUMBER_OF_ASSETS_TABS] = {};
 	void PublishSettingsAssetMergeEntries(int Tab, const std::vector<SSettingsAssetMergeEntry> &vEntries);
 	void InvalidateSettingsAssetResourcePlan();
+	bool TryStartSettingsAssetListJob(int Tab);
+	bool RecoverFailedSettingsAssetListJob(int Tab);
 	int CurrentSettingsAssetsTab() const;
 
 public:
