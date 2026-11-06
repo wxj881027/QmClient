@@ -6558,6 +6558,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 							Asset.m_ThumbRemoteFailed = true;
 					}
 				}
+				else if(ThumbOk && !Asset.m_pDecodeJob)
+				{
+					// 旧低档贴图仍可显示，解除已完成下载的认领后再由缓存入口安排升档。
+					Asset.m_ThumbRemoteFailed = false;
+					Asset.m_ThumbCacheFailed = false;
+					ClearWorkshopThumbRequestMarker(Asset);
+				}
 				else if(!ThumbOk)
 				{
 					Asset.m_ThumbRemoteFailed = true;
