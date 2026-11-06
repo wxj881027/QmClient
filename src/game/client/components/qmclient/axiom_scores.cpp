@@ -1,6 +1,7 @@
 #include "axiom_scores.h"
 
 #include "axiom_scores_parse_job.h"
+#include "qm_json_fields.h"
 
 #include <base/str.h>
 #include <base/system.h>
@@ -76,9 +77,12 @@ namespace
 
 	const json_value *JsonField(const json_value *pObject, const char *pName)
 	{
-		if(!pObject || pObject->type != json_object)
-			return &json_value_none;
-		return json_object_get(pObject, pName);
+		return qm_json::Field(pObject, pName);
+	}
+
+	bool ReadText(const json_value *pValue, size_t MaxBytes, bool AllowEmpty = true)
+	{
+		return pValue && pValue->type == json_string && pValue->u.string.length <= MaxBytes && qm_json::Text(pValue, AllowEmpty);
 	}
 
 	bool ReadInt64(const json_value *pObject, const char *pName, int64_t &Out)
@@ -89,20 +93,26 @@ namespace
 			Out = pValue->u.integer;
 			return true;
 		}
-		if(pValue->type != json_string)
+		// 持久化数值使用规范十进制字符串；先检查完整长度，不能接受 NUL 前缀。
+		if(!ReadText(pValue, 20, false))
 			return false;
 		const char *pText = json_string_get(pValue);
-		if(!pText || pText[0] == '\0')
-			return false;
-		Out = str_toint64_base(pText);
+		const int64_t Value = str_toint64_base(pText);
 		char aCanonical[64];
-		str_format(aCanonical, sizeof(aCanonical), "%lld", (long long)Out);
-		return str_comp(aCanonical, pText) == 0;
+		str_format(aCanonical, sizeof(aCanonical), "%lld", (long long)Value);
+		if(str_comp(aCanonical, pText) != 0)
+			return false;
+		Out = Value;
+		return true;
 	}
 
 	bool ReadNonNegativeInt64(const json_value *pObject, const char *pName, int64_t &Out)
 	{
-		return ReadInt64(pObject, pName, Out) && Out >= 0;
+		int64_t Value;
+		if(!ReadInt64(pObject, pName, Value) || Value < 0)
+			return false;
+		Out = Value;
+		return true;
 	}
 
 	void WriteInt64(CJsonWriter &Writer, const char *pName, int64_t Value)
@@ -211,16 +221,16 @@ try
 		const json_value *pPlayer = pPlayers->u.array.values[PlayerIndex];
 		const json_value *pName = JsonField(pPlayer, "name");
 		int64_t UserId = 0;
-		if(pName->type != json_string || !json_string_get(pName) || json_string_get(pName)[0] == '\0' || static_cast<size_t>(str_length(json_string_get(pName))) > AXIOM_MAX_QUERY_NAME_BYTES || !str_utf8_check(json_string_get(pName)) || !ReadInt64(pPlayer, "user_id", UserId) || UserId <= 0)
+		if(!ReadText(pName, AXIOM_MAX_QUERY_NAME_BYTES, false) || !ReadInt64(pPlayer, "user_id", UserId) || UserId <= 0)
 			continue;
 		SCacheEntry Entry;
 		Entry.m_Result.m_SearchStatus = EQmAxiomScoreStatus::READY;
 		Entry.m_Result.m_Match.m_UserId = UserId;
 		const json_value *pPlayerName = JsonField(pPlayer, "player_name");
 		const json_value *pDummyName = JsonField(pPlayer, "dummy_name");
-		if(pPlayerName->type == json_string && json_string_get(pPlayerName) && static_cast<size_t>(str_length(json_string_get(pPlayerName))) <= AXIOM_MAX_QUERY_NAME_BYTES && str_utf8_check(json_string_get(pPlayerName)))
+		if(ReadText(pPlayerName, AXIOM_MAX_QUERY_NAME_BYTES))
 			Entry.m_Result.m_Match.m_PlayerName = json_string_get(pPlayerName);
-		if(pDummyName->type == json_string && json_string_get(pDummyName) && static_cast<size_t>(str_length(json_string_get(pDummyName))) <= AXIOM_MAX_QUERY_NAME_BYTES && str_utf8_check(json_string_get(pDummyName)))
+		if(ReadText(pDummyName, AXIOM_MAX_QUERY_NAME_BYTES))
 			Entry.m_Result.m_Match.m_DummyName = json_string_get(pDummyName);
 		const json_value *pModes = JsonField(pPlayer, "modes");
 		if(pModes->type != json_array)
@@ -233,7 +243,7 @@ try
 				const json_value *pGameType = pDdStatsGameTypes->u.array.values[GameTypeIndex];
 				const json_value *pGameTypeName = JsonField(pGameType, "name");
 				int64_t PlayTimeSeconds = 0;
-				if(pGameTypeName->type != json_string || !json_string_get(pGameTypeName) || json_string_get(pGameTypeName)[0] == '\0' || static_cast<size_t>(str_length(json_string_get(pGameTypeName))) > DDSTATS_MAX_GAMETYPE_NAME_BYTES || !str_utf8_check(json_string_get(pGameTypeName)) || !ReadNonNegativeInt64(pGameType, "play_time_seconds", PlayTimeSeconds))
+				if(!ReadText(pGameTypeName, DDSTATS_MAX_GAMETYPE_NAME_BYTES, false) || !ReadNonNegativeInt64(pGameType, "play_time_seconds", PlayTimeSeconds))
 					continue;
 				SQmDdStatsGameType GameType;
 				GameType.m_Name = json_string_get(pGameTypeName);
@@ -266,7 +276,7 @@ try
 		{
 			const json_value *pMode = pModes->u.array.values[ModeIndex];
 			const json_value *pModeName = JsonField(pMode, "mode");
-			if(pModeName->type != json_string || !json_string_get(pModeName))
+			if(!ReadText(pModeName, 6, false))
 				continue;
 			EQmAxiomMode Mode;
 			if(str_comp_nocase(json_string_get(pModeName), "AXRace") == 0)
@@ -315,7 +325,7 @@ try
 					const json_value *pDifficultyName = JsonField(pDifficulty, "name");
 					SQmAxiomDifficultyStats Difficulty;
 					int64_t DifficultyValue = 0;
-					if(pDifficultyName->type != json_string || !json_string_get(pDifficultyName) || json_string_get(pDifficultyName)[0] == '\0' || static_cast<size_t>(str_length(json_string_get(pDifficultyName))) > AXIOM_MAX_DIFFICULTY_NAME_BYTES || !str_utf8_check(json_string_get(pDifficultyName)) || !ReadNonNegativeInt64(pDifficulty, "points", Difficulty.m_Points) || !ReadNonNegativeInt64(pDifficulty, "completed_maps", Difficulty.m_CompletedMaps) || !ReadNonNegativeInt64(pDifficulty, "remaining_maps", Difficulty.m_RemainingMaps))
+					if(!ReadText(pDifficultyName, AXIOM_MAX_DIFFICULTY_NAME_BYTES, false) || !ReadNonNegativeInt64(pDifficulty, "points", Difficulty.m_Points) || !ReadNonNegativeInt64(pDifficulty, "completed_maps", Difficulty.m_CompletedMaps) || !ReadNonNegativeInt64(pDifficulty, "remaining_maps", Difficulty.m_RemainingMaps))
 					{
 						ValidDifficulties = false;
 						break;
