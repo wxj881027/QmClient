@@ -232,8 +232,6 @@ void CMenus::RenderQmHudPlayerStatsContent(CUIRect &Content, float LineHeight, f
 				g_Config.m_QmPlayerStatsMapProgressStyle = Selection;
 		}
 		Flow.Space(LineSpacing);
-		if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:player_stats", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
-			return;
 
 		{
 			static CButtonContainer s_MapProgressColorId;
