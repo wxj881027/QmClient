@@ -551,7 +551,328 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 			if(Ui()->DrawingSuppressed())
 				return;
 			// 和头衔卡的「发言预览」共用同一份聊天框预览实现。
-			qm_card_catalog::QmCardRenderHook::RenderQmChatBoxPreview(this, ContentRect, MarginSmall); });
+				CMenus *pMenus = this;
+			CChat *pChat = &pMenus->GameClient()->m_Chat;
+			const auto ShowChatPreview = [](bool Friend, bool OtherTeam, bool Mentioned = false) {
+				const QmChatMessageFilter::SSettings Settings{g_Config.m_QmChatRelatedOnly != 0, g_Config.m_ClShowChatFriends != 0, g_Config.m_ClShowChatTeamMembersOnly != 0};
+				QmChatMessageFilter::SMessage Message;
+				Message.m_ClientId = 0;
+				Message.m_Friend = Friend;
+				Message.m_OtherTeam = OtherTeam;
+				Message.m_Mentioned = Mentioned;
+				return QmChatMessageFilter::ShouldShow(Settings, Message);
+			};
+			char aBuf[128];
+			CUIRect PreviewView = ContentRect;
+			// ***** Chat Preview ***** //
+			PreviewView.Draw(ui_token::color::PREVIEW_SURFACE, IGraphics::CORNER_ALL, ui_token::radius::BASE);
+			// 底部预留出来的高度不排消息行，调用方在那里画自己的那一行。
+			PreviewView.Margin(MarginSmall, &PreviewView);
+			const CUIRect PreviewRailBounds = PreviewView;
+			const float ScrollbarReserve = std::min(PreviewView.w, QM_CHAT_SCROLLBAR_RESERVE * 2.0f);
+			if(g_Config.m_QmChatScrollbarRight)
+				PreviewView.VSplitRight(ScrollbarReserve, &PreviewView, nullptr);
+			else
+				PreviewView.VSplitLeft(ScrollbarReserve, nullptr, &PreviewView);
+
+			ColorRGBA SystemColor = color_cast<ColorRGBA, ColorHSLA>(ColorHSLA(g_Config.m_ClMessageSystemColor));
+			ColorRGBA HighlightedColor = color_cast<ColorRGBA, ColorHSLA>(ColorHSLA(g_Config.m_ClMessageHighlightColor));
+			ColorRGBA TeamColor = color_cast<ColorRGBA, ColorHSLA>(ColorHSLA(g_Config.m_ClMessageTeamColor));
+			ColorRGBA FriendColor = color_cast<ColorRGBA, ColorHSLA>(ColorHSLA(g_Config.m_ClMessageFriendColor));
+			ColorRGBA FriendHeartColor = color_cast<ColorRGBA, ColorHSLA>(ColorHSLA(g_Config.m_ClMessageFriendHeartColor));
+			ColorRGBA NormalColor = color_cast<ColorRGBA, ColorHSLA>(ColorHSLA(g_Config.m_ClMessageColor));
+			ColorRGBA ClientColor = color_cast<ColorRGBA, ColorHSLA>(ColorHSLA(g_Config.m_ClMessageClientColor));
+			ColorRGBA DefaultNameColor(0.8f, 0.8f, 0.8f, 1.0f);
+
+			const float RealFontSize = pChat->FontSize() * 2;
+			const float RealMsgPaddingX = (!g_Config.m_ClChatOld ? pChat->MessagePaddingX() : 0) * 2;
+			const float RealMsgPaddingY = (!g_Config.m_ClChatOld ? pChat->MessagePaddingY() : 0) * 2;
+			const float RealMsgPaddingTee = (!g_Config.m_ClChatOld ? pChat->MessageTeeSize() + CChat::MESSAGE_TEE_PADDING_RIGHT : 0) * 2;
+			const float RealOffsetY = RealFontSize + RealMsgPaddingY;
+			// 行间隔与游戏内 AdvanceChatLineStack 对齐：按 2 倍缩放换算，堆叠推进时消耗，底色矩形不包含。
+			const float RealLineSpacing = g_Config.m_QmChatLineSpacing * 2.0f;
+
+			const float X = RealMsgPaddingX / 2.0f + PreviewView.x;
+			float Y = PreviewView.y;
+			const float ConfiguredLineWidth = g_Config.m_ClChatWidth * 2.0f - RealMsgPaddingX * 1.5f - RealMsgPaddingTee;
+			const float CardLineWidth = maximum(RealFontSize, PreviewView.w - RealMsgPaddingX * 1.5f - RealMsgPaddingTee);
+			float LineWidth = maximum(RealFontSize, minimum(ConfiguredLineWidth, CardLineWidth));
+
+			str_copy(aBuf, pMenus->Client()->PlayerName());
+
+			const CAnimState *pIdleState = CAnimState::GetIdle();
+			const float RealTeeSize = pChat->MessageTeeSize() * 2;
+			const float RealTeeSizeHalved = pChat->MessageTeeSize();
+			constexpr float TWSkinUnreliableOffset = -0.25f;
+			const float OffsetTeeY = RealTeeSizeHalved;
+			const float FullHeightMinusTee = RealOffsetY - RealTeeSize;
+
+			struct SPreviewLine
+			{
+				int m_ClientId;
+				bool m_Team;
+				char m_aName[64];
+				char m_aText[256];
+				bool m_Friend;
+				bool m_Player;
+				bool m_Client;
+				bool m_Highlighted;
+				int m_TimesRepeated;
+
+				CTeeRenderInfo m_RenderInfo;
+			};
+
+			static std::vector<SPreviewLine> s_vLines;
+
+			enum ELineFlag
+			{
+				FLAG_TEAM = 1 << 0,
+				FLAG_FRIEND = 1 << 1,
+				FLAG_HIGHLIGHT = 1 << 2,
+				FLAG_CLIENT = 1 << 3
+			};
+			enum
+			{
+				PREVIEW_SYS,
+				PREVIEW_HIGHLIGHT,
+				PREVIEW_TEAM,
+				PREVIEW_FRIEND,
+				PREVIEW_SPAMMER,
+				PREVIEW_CLIENT
+			};
+			auto &&SetPreviewLine = [](int Index, int ClientId, const char *pName, const char *pText, int Flag, int Repeats) {
+				SPreviewLine *pLine;
+				if((int)s_vLines.size() <= Index)
+				{
+					s_vLines.emplace_back();
+					pLine = &s_vLines.back();
+				}
+				else
+				{
+					pLine = &s_vLines[Index];
+				}
+				pLine->m_ClientId = ClientId;
+				pLine->m_Team = Flag & FLAG_TEAM;
+				pLine->m_Friend = Flag & FLAG_FRIEND;
+				pLine->m_Player = ClientId >= 0;
+				pLine->m_Highlighted = Flag & FLAG_HIGHLIGHT;
+				pLine->m_Client = Flag & FLAG_CLIENT;
+				pLine->m_TimesRepeated = Repeats;
+				str_copy(pLine->m_aName, pName);
+				str_copy(pLine->m_aText, pText);
+			};
+			auto &&SetLineSkin = [RealTeeSize](int Index, const CSkin *pSkin) {
+				if(Index >= (int)s_vLines.size())
+					return;
+				s_vLines[Index].m_RenderInfo.m_Size = RealTeeSize;
+				s_vLines[Index].m_RenderInfo.Apply(pSkin);
+			};
+
+			auto &&RenderPreview = [&](int LineIndex, int x, int y, bool Render = true) {
+				if(LineIndex >= (int)s_vLines.size())
+					return vec2(0, 0);
+				CTextCursor LocalCursor;
+				LocalCursor.SetPosition(vec2(x, y));
+				LocalCursor.m_FontSize = RealFontSize;
+				LocalCursor.m_Flags = Render ? TEXTFLAG_RENDER : 0;
+				LocalCursor.m_LineWidth = LineWidth;
+				const auto &Line = s_vLines[LineIndex];
+
+				char aClientId[16] = "";
+				if(g_Config.m_ClShowIds && Line.m_ClientId >= 0 && Line.m_aName[0] != '\0')
+				{
+					pMenus->GameClient()->FormatClientId(Line.m_ClientId, aClientId, EClientIdFormat::INDENT_FORCE);
+				}
+
+				char aCount[12];
+				if(Line.m_ClientId < 0)
+					str_format(aCount, sizeof(aCount), "[%d] ", Line.m_TimesRepeated + 1);
+				else
+					str_format(aCount, sizeof(aCount), " [%d]", Line.m_TimesRepeated + 1);
+
+				if(Line.m_Player)
+				{
+					LocalCursor.m_X += RealMsgPaddingTee;
+
+					if(Line.m_Friend && g_Config.m_ClMessageFriend)
+					{
+						if(Render)
+							pMenus->TextRender()->TextColor(FriendHeartColor);
+						pMenus->TextRender()->TextEx(&LocalCursor, "♥ ", -1);
+					}
+				}
+
+				ColorRGBA NameColor;
+				if(Line.m_Team)
+					NameColor = CalculateNameColor(color_cast<ColorHSLA>(TeamColor));
+				else if(Line.m_Player)
+					NameColor = DefaultNameColor;
+				else if(Line.m_Client)
+					NameColor = ClientColor;
+				else
+					NameColor = SystemColor;
+
+				if(Render)
+					pMenus->TextRender()->TextColor(NameColor);
+
+				pMenus->TextRender()->TextEx(&LocalCursor, aClientId);
+				pMenus->TextRender()->TextEx(&LocalCursor, Line.m_aName);
+
+				if(Line.m_TimesRepeated > 0)
+				{
+					if(Render)
+						pMenus->TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.3f);
+					pMenus->TextRender()->TextEx(&LocalCursor, aCount, -1);
+				}
+
+				if(Line.m_ClientId >= 0 && Line.m_aName[0] != '\0')
+				{
+					if(Render)
+						pMenus->TextRender()->TextColor(NameColor);
+					pMenus->TextRender()->TextEx(&LocalCursor, ": ", -1);
+				}
+
+				CTextCursor AppendCursor = LocalCursor;
+				AppendCursor.m_LongestLineWidth = 0.0f;
+				if(!g_Config.m_ClChatOld)
+				{
+					AppendCursor.m_StartX = LocalCursor.m_X;
+					AppendCursor.m_LineWidth -= LocalCursor.m_LongestLineWidth;
+				}
+
+				if(Render)
+				{
+					if(Line.m_Highlighted)
+						pMenus->TextRender()->TextColor(HighlightedColor);
+					else if(Line.m_Friend && g_Config.m_ClMessageFriend)
+						pMenus->TextRender()->TextColor(FriendColor);
+					else if(Line.m_Team)
+						pMenus->TextRender()->TextColor(TeamColor);
+					else if(Line.m_Player)
+						pMenus->TextRender()->TextColor(NormalColor);
+				}
+
+				const EQmChatGradientRole Role = Line.m_Highlighted                          ? EQmChatGradientRole::HIGHLIGHT :
+								 Line.m_Friend && g_Config.m_ClMessageFriend ? EQmChatGradientRole::FRIEND :
+								 Line.m_Team                                 ? EQmChatGradientRole::TEAM :
+								 Line.m_Player                               ? EQmChatGradientRole::NORMAL :
+								 Line.m_Client                               ? EQmChatGradientRole::CLIENT :
+													       EQmChatGradientRole::SYSTEM;
+				const auto Gradient = QmChatGradientStyle(g_Config, Role, pMenus->TextRender()->GetTextColor());
+				const CQmChatGradientPaint Paint(pMenus->TextRender(), AppendCursor, Line.m_aText, &Gradient);
+				pMenus->TextRender()->TextEx(&AppendCursor, Line.m_aText, -1);
+				if(Render)
+					pMenus->TextRender()->TextColor(pMenus->TextRender()->DefaultTextColor());
+
+				return vec2{LocalCursor.m_LongestLineWidth + AppendCursor.m_LongestLineWidth, AppendCursor.Height() + RealMsgPaddingY + RealLineSpacing};
+			};
+
+			// Set preview lines
+			{
+				char aLineBuilder[128];
+
+				str_format(aLineBuilder, sizeof(aLineBuilder), "'%s' entered and joined the game", aBuf);
+				SetPreviewLine(PREVIEW_SYS, -1, CChat::SystemMessageNamePrefix(g_Config.m_QmChatHideSystemPrefix != 0), aLineBuilder, 0, 0);
+
+				str_format(aLineBuilder, sizeof(aLineBuilder), "Hey, how are you %s?", aBuf);
+				SetPreviewLine(PREVIEW_HIGHLIGHT, 7, "Random Tee", aLineBuilder, FLAG_HIGHLIGHT, 0);
+
+				SetPreviewLine(PREVIEW_TEAM, 11, "Your Teammate", "Let's speedrun this!", FLAG_TEAM, 0);
+				SetPreviewLine(PREVIEW_FRIEND, 8, "Friend", "Hello there", FLAG_FRIEND, 0);
+				SetPreviewLine(PREVIEW_SPAMMER, 9, "Spammer", "Hey fools, I'm spamming here!", 0, 5);
+				SetPreviewLine(PREVIEW_CLIENT, -1, CChat::ClientMessageNamePrefix(g_Config.m_QmChatHideSystemPrefix != 0), "Echo command executed", FLAG_CLIENT, 0);
+			}
+
+			SetLineSkin(1, pMenus->GameClient()->m_Skins.Find("pinky"));
+			SetLineSkin(2, pMenus->GameClient()->m_Skins.Find("default"));
+			SetLineSkin(3, pMenus->GameClient()->m_Skins.Find("cammostripes"));
+			SetLineSkin(4, pMenus->GameClient()->m_Skins.Find("beast"));
+
+			// Backgrounds first
+			if(!g_Config.m_ClChatOld)
+			{
+				const ColorRGBA BackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClChatBackgroundColor, true));
+
+				float TempY = Y;
+				const float RealBackgroundRounding = pChat->MessageRounding() * 2.0f;
+
+				auto &&RenderMessageBackground = [&](int LineIndex) {
+					const auto Size = RenderPreview(LineIndex, 0, 0, false);
+					const CUIRect MessageBackground{PreviewView.x, TempY - RealMsgPaddingY / 2.0f, PreviewView.w, Size.y - RealLineSpacing};
+					DrawRoundedSurface(pMenus->Ui(), MessageBackground, BackgroundColor, ColorRGBA(), RealBackgroundRounding);
+					return Size.y;
+				};
+
+				if(g_Config.m_ClShowChatSystem)
+				{
+					TempY += RenderMessageBackground(PREVIEW_SYS);
+				}
+
+				if(ShowChatPreview(false, true, true))
+					TempY += RenderMessageBackground(PREVIEW_HIGHLIGHT);
+				if(ShowChatPreview(false, false))
+					TempY += RenderMessageBackground(PREVIEW_TEAM);
+
+				if(ShowChatPreview(true, true))
+					TempY += RenderMessageBackground(PREVIEW_FRIEND);
+
+				if(ShowChatPreview(false, true))
+				{
+					TempY += RenderMessageBackground(PREVIEW_SPAMMER);
+				}
+
+				if(g_Config.m_QmShowChatClient)
+				{
+					TempY += RenderMessageBackground(PREVIEW_CLIENT);
+				}
+			}
+
+			// System
+			if(g_Config.m_ClShowChatSystem)
+			{
+				Y += RenderPreview(PREVIEW_SYS, X, Y).y;
+			}
+
+			if(ShowChatPreview(false, true, true))
+			{
+				// Highlighted
+				if(!g_Config.m_ClChatOld)
+					pMenus->RenderTools()->RenderTee(pIdleState, &s_vLines[PREVIEW_HIGHLIGHT].m_RenderInfo, EMOTE_NORMAL, vec2(1, 0.1f), vec2(X + RealTeeSizeHalved, Y + OffsetTeeY + FullHeightMinusTee / 2.0f + TWSkinUnreliableOffset));
+				Y += RenderPreview(PREVIEW_HIGHLIGHT, X, Y).y;
+			}
+
+			if(ShowChatPreview(false, false))
+			{
+				// Team
+				if(!g_Config.m_ClChatOld)
+					pMenus->RenderTools()->RenderTee(pIdleState, &s_vLines[PREVIEW_TEAM].m_RenderInfo, EMOTE_NORMAL, vec2(1, 0.1f), vec2(X + RealTeeSizeHalved, Y + OffsetTeeY + FullHeightMinusTee / 2.0f + TWSkinUnreliableOffset));
+				Y += RenderPreview(PREVIEW_TEAM, X, Y).y;
+			}
+
+			// Friend
+			if(!g_Config.m_ClChatOld && ShowChatPreview(true, true))
+				pMenus->RenderTools()->RenderTee(pIdleState, &s_vLines[PREVIEW_FRIEND].m_RenderInfo, EMOTE_NORMAL, vec2(1, 0.1f), vec2(X + RealTeeSizeHalved, Y + OffsetTeeY + FullHeightMinusTee / 2.0f + TWSkinUnreliableOffset));
+			if(ShowChatPreview(true, true))
+				Y += RenderPreview(PREVIEW_FRIEND, X, Y).y;
+
+			// Normal
+			if(ShowChatPreview(false, true))
+			{
+				if(!g_Config.m_ClChatOld)
+					pMenus->RenderTools()->RenderTee(pIdleState, &s_vLines[PREVIEW_SPAMMER].m_RenderInfo, EMOTE_NORMAL, vec2(1, 0.1f), vec2(X + RealTeeSizeHalved, Y + OffsetTeeY + FullHeightMinusTee / 2.0f + TWSkinUnreliableOffset));
+				Y += RenderPreview(PREVIEW_SPAMMER, X, Y).y;
+			}
+			// Client
+			if(g_Config.m_QmShowChatClient)
+			{
+				Y += RenderPreview(PREVIEW_CLIENT, X, Y).y;
+
+				// 滚动条照旧画在预览边缘，和聊天页的观感保持一致。
+				const CUIRect Rail = QmChatScrollbarRail(PreviewRailBounds, PreviewRailBounds.y, std::min(PreviewRailBounds.h, std::max(RealFontSize, Y - PreviewRailBounds.y)), g_Config.m_QmChatScrollbarRight != 0, 2.0f);
+				const float HandleHeight = QmChatScrollbarHandleHeight(Rail.h, 3, 6, 2.0f);
+				const CUIRect Handle = QmChatScrollbarHandle(Rail, HandleHeight, 1.0f);
+				QmDrawChatScrollbar(pMenus->Ui(), Rail, Handle.y, Handle.h, false);
+			} });
 		}
 		else if(AppearanceTab == APPEARANCE_TAB_NAME_PLATE)
 		{
@@ -1074,7 +1395,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				}
 
 				// ***** Entities ***** //
-				Flow.Space(10.0f);
+				Flow.Space(AppearanceMetrics.m_SectionGap);
 				DoAppearanceHeading(ColorCardContent, "appearance-entities-title", Localize("Entities"), HeadlineFontSize, HeadlineHeight);
 				Flow.Space(MarginSmall);
 
@@ -1225,331 +1546,4 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 		BuildDefinitions(*pCards);
 	}
 	return AppearanceLayoutRevision;
-}
-
-void qm_card_catalog::QmCardRenderHook::RenderQmChatBoxPreview(CMenus *pMenus, const CUIRect &ContentRect, float MarginPx, float BottomReserve)
-{
-	CChat *pChat = &pMenus->GameClient()->m_Chat;
-	const float MarginSmall = MarginPx;
-	const auto ShowChatPreview = [](bool Friend, bool OtherTeam, bool Mentioned = false) {
-		const QmChatMessageFilter::SSettings Settings{g_Config.m_QmChatRelatedOnly != 0, g_Config.m_ClShowChatFriends != 0, g_Config.m_ClShowChatTeamMembersOnly != 0};
-		QmChatMessageFilter::SMessage Message;
-		Message.m_ClientId = 0;
-		Message.m_Friend = Friend;
-		Message.m_OtherTeam = OtherTeam;
-		Message.m_Mentioned = Mentioned;
-		return QmChatMessageFilter::ShouldShow(Settings, Message);
-	};
-	char aBuf[128];
-	CUIRect PreviewView = ContentRect;
-	// ***** Chat Preview ***** //
-	PreviewView.Draw(ui_token::color::PREVIEW_SURFACE, IGraphics::CORNER_ALL, ui_token::radius::BASE);
-	// 底部预留出来的高度不排消息行，调用方在那里画自己的那一行。
-	PreviewView.h = std::max(0.0f, PreviewView.h - std::max(0.0f, BottomReserve));
-	PreviewView.Margin(MarginSmall, &PreviewView);
-	const CUIRect PreviewRailBounds = PreviewView;
-	const float ScrollbarReserve = std::min(PreviewView.w, QM_CHAT_SCROLLBAR_RESERVE * 2.0f);
-	if(g_Config.m_QmChatScrollbarRight)
-		PreviewView.VSplitRight(ScrollbarReserve, &PreviewView, nullptr);
-	else
-		PreviewView.VSplitLeft(ScrollbarReserve, nullptr, &PreviewView);
-
-	ColorRGBA SystemColor = color_cast<ColorRGBA, ColorHSLA>(ColorHSLA(g_Config.m_ClMessageSystemColor));
-	ColorRGBA HighlightedColor = color_cast<ColorRGBA, ColorHSLA>(ColorHSLA(g_Config.m_ClMessageHighlightColor));
-	ColorRGBA TeamColor = color_cast<ColorRGBA, ColorHSLA>(ColorHSLA(g_Config.m_ClMessageTeamColor));
-	ColorRGBA FriendColor = color_cast<ColorRGBA, ColorHSLA>(ColorHSLA(g_Config.m_ClMessageFriendColor));
-	ColorRGBA FriendHeartColor = color_cast<ColorRGBA, ColorHSLA>(ColorHSLA(g_Config.m_ClMessageFriendHeartColor));
-	ColorRGBA NormalColor = color_cast<ColorRGBA, ColorHSLA>(ColorHSLA(g_Config.m_ClMessageColor));
-	ColorRGBA ClientColor = color_cast<ColorRGBA, ColorHSLA>(ColorHSLA(g_Config.m_ClMessageClientColor));
-	ColorRGBA DefaultNameColor(0.8f, 0.8f, 0.8f, 1.0f);
-
-	const float RealFontSize = pChat->FontSize() * 2;
-	const float RealMsgPaddingX = (!g_Config.m_ClChatOld ? pChat->MessagePaddingX() : 0) * 2;
-	const float RealMsgPaddingY = (!g_Config.m_ClChatOld ? pChat->MessagePaddingY() : 0) * 2;
-	const float RealMsgPaddingTee = (!g_Config.m_ClChatOld ? pChat->MessageTeeSize() + CChat::MESSAGE_TEE_PADDING_RIGHT : 0) * 2;
-	const float RealOffsetY = RealFontSize + RealMsgPaddingY;
-	// 行间隔与游戏内 AdvanceChatLineStack 对齐：按 2 倍缩放换算，堆叠推进时消耗，底色矩形不包含。
-	const float RealLineSpacing = g_Config.m_QmChatLineSpacing * 2.0f;
-
-	const float X = RealMsgPaddingX / 2.0f + PreviewView.x;
-	float Y = PreviewView.y;
-	const float ConfiguredLineWidth = g_Config.m_ClChatWidth * 2.0f - RealMsgPaddingX * 1.5f - RealMsgPaddingTee;
-	const float CardLineWidth = maximum(RealFontSize, PreviewView.w - RealMsgPaddingX * 1.5f - RealMsgPaddingTee);
-	float LineWidth = maximum(RealFontSize, minimum(ConfiguredLineWidth, CardLineWidth));
-
-	str_copy(aBuf, pMenus->Client()->PlayerName());
-
-	const CAnimState *pIdleState = CAnimState::GetIdle();
-	const float RealTeeSize = pChat->MessageTeeSize() * 2;
-	const float RealTeeSizeHalved = pChat->MessageTeeSize();
-	constexpr float TWSkinUnreliableOffset = -0.25f;
-	const float OffsetTeeY = RealTeeSizeHalved;
-	const float FullHeightMinusTee = RealOffsetY - RealTeeSize;
-
-	struct SPreviewLine
-	{
-		int m_ClientId;
-		bool m_Team;
-		char m_aName[64];
-		char m_aText[256];
-		bool m_Friend;
-		bool m_Player;
-		bool m_Client;
-		bool m_Highlighted;
-		int m_TimesRepeated;
-
-		CTeeRenderInfo m_RenderInfo;
-	};
-
-	static std::vector<SPreviewLine> s_vLines;
-
-	enum ELineFlag
-	{
-		FLAG_TEAM = 1 << 0,
-		FLAG_FRIEND = 1 << 1,
-		FLAG_HIGHLIGHT = 1 << 2,
-		FLAG_CLIENT = 1 << 3
-	};
-	enum
-	{
-		PREVIEW_SYS,
-		PREVIEW_HIGHLIGHT,
-		PREVIEW_TEAM,
-		PREVIEW_FRIEND,
-		PREVIEW_SPAMMER,
-		PREVIEW_CLIENT
-	};
-	auto &&SetPreviewLine = [](int Index, int ClientId, const char *pName, const char *pText, int Flag, int Repeats) {
-		SPreviewLine *pLine;
-		if((int)s_vLines.size() <= Index)
-		{
-			s_vLines.emplace_back();
-			pLine = &s_vLines.back();
-		}
-		else
-		{
-			pLine = &s_vLines[Index];
-		}
-		pLine->m_ClientId = ClientId;
-		pLine->m_Team = Flag & FLAG_TEAM;
-		pLine->m_Friend = Flag & FLAG_FRIEND;
-		pLine->m_Player = ClientId >= 0;
-		pLine->m_Highlighted = Flag & FLAG_HIGHLIGHT;
-		pLine->m_Client = Flag & FLAG_CLIENT;
-		pLine->m_TimesRepeated = Repeats;
-		str_copy(pLine->m_aName, pName);
-		str_copy(pLine->m_aText, pText);
-	};
-	auto &&SetLineSkin = [RealTeeSize](int Index, const CSkin *pSkin) {
-		if(Index >= (int)s_vLines.size())
-			return;
-		s_vLines[Index].m_RenderInfo.m_Size = RealTeeSize;
-		s_vLines[Index].m_RenderInfo.Apply(pSkin);
-	};
-
-	auto &&RenderPreview = [&](int LineIndex, int x, int y, bool Render = true) {
-		if(LineIndex >= (int)s_vLines.size())
-			return vec2(0, 0);
-		CTextCursor LocalCursor;
-		LocalCursor.SetPosition(vec2(x, y));
-		LocalCursor.m_FontSize = RealFontSize;
-		LocalCursor.m_Flags = Render ? TEXTFLAG_RENDER : 0;
-		LocalCursor.m_LineWidth = LineWidth;
-		const auto &Line = s_vLines[LineIndex];
-
-		char aClientId[16] = "";
-		if(g_Config.m_ClShowIds && Line.m_ClientId >= 0 && Line.m_aName[0] != '\0')
-		{
-			pMenus->GameClient()->FormatClientId(Line.m_ClientId, aClientId, EClientIdFormat::INDENT_FORCE);
-		}
-
-		char aCount[12];
-		if(Line.m_ClientId < 0)
-			str_format(aCount, sizeof(aCount), "[%d] ", Line.m_TimesRepeated + 1);
-		else
-			str_format(aCount, sizeof(aCount), " [%d]", Line.m_TimesRepeated + 1);
-
-		if(Line.m_Player)
-		{
-			LocalCursor.m_X += RealMsgPaddingTee;
-
-			if(Line.m_Friend && g_Config.m_ClMessageFriend)
-			{
-				if(Render)
-					pMenus->TextRender()->TextColor(FriendHeartColor);
-				pMenus->TextRender()->TextEx(&LocalCursor, "♥ ", -1);
-			}
-		}
-
-		ColorRGBA NameColor;
-		if(Line.m_Team)
-			NameColor = CalculateNameColor(color_cast<ColorHSLA>(TeamColor));
-		else if(Line.m_Player)
-			NameColor = DefaultNameColor;
-		else if(Line.m_Client)
-			NameColor = ClientColor;
-		else
-			NameColor = SystemColor;
-
-		if(Render)
-			pMenus->TextRender()->TextColor(NameColor);
-
-		pMenus->TextRender()->TextEx(&LocalCursor, aClientId);
-		pMenus->TextRender()->TextEx(&LocalCursor, Line.m_aName);
-
-		if(Line.m_TimesRepeated > 0)
-		{
-			if(Render)
-				pMenus->TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.3f);
-			pMenus->TextRender()->TextEx(&LocalCursor, aCount, -1);
-		}
-
-		if(Line.m_ClientId >= 0 && Line.m_aName[0] != '\0')
-		{
-			if(Render)
-				pMenus->TextRender()->TextColor(NameColor);
-			pMenus->TextRender()->TextEx(&LocalCursor, ": ", -1);
-		}
-
-		CTextCursor AppendCursor = LocalCursor;
-		AppendCursor.m_LongestLineWidth = 0.0f;
-		if(!g_Config.m_ClChatOld)
-		{
-			AppendCursor.m_StartX = LocalCursor.m_X;
-			AppendCursor.m_LineWidth -= LocalCursor.m_LongestLineWidth;
-		}
-
-		if(Render)
-		{
-			if(Line.m_Highlighted)
-				pMenus->TextRender()->TextColor(HighlightedColor);
-			else if(Line.m_Friend && g_Config.m_ClMessageFriend)
-				pMenus->TextRender()->TextColor(FriendColor);
-			else if(Line.m_Team)
-				pMenus->TextRender()->TextColor(TeamColor);
-			else if(Line.m_Player)
-				pMenus->TextRender()->TextColor(NormalColor);
-		}
-
-		const EQmChatGradientRole Role = Line.m_Highlighted                          ? EQmChatGradientRole::HIGHLIGHT :
-						 Line.m_Friend && g_Config.m_ClMessageFriend ? EQmChatGradientRole::FRIEND :
-						 Line.m_Team                                 ? EQmChatGradientRole::TEAM :
-						 Line.m_Player                               ? EQmChatGradientRole::NORMAL :
-						 Line.m_Client                               ? EQmChatGradientRole::CLIENT :
-											       EQmChatGradientRole::SYSTEM;
-		const auto Gradient = QmChatGradientStyle(g_Config, Role, pMenus->TextRender()->GetTextColor());
-		const CQmChatGradientPaint Paint(pMenus->TextRender(), AppendCursor, Line.m_aText, &Gradient);
-		pMenus->TextRender()->TextEx(&AppendCursor, Line.m_aText, -1);
-		if(Render)
-			pMenus->TextRender()->TextColor(pMenus->TextRender()->DefaultTextColor());
-
-		return vec2{LocalCursor.m_LongestLineWidth + AppendCursor.m_LongestLineWidth, AppendCursor.Height() + RealMsgPaddingY + RealLineSpacing};
-	};
-
-	// Set preview lines
-	{
-		char aLineBuilder[128];
-
-		str_format(aLineBuilder, sizeof(aLineBuilder), "'%s' entered and joined the game", aBuf);
-		SetPreviewLine(PREVIEW_SYS, -1, CChat::SystemMessageNamePrefix(g_Config.m_QmChatHideSystemPrefix != 0), aLineBuilder, 0, 0);
-
-		str_format(aLineBuilder, sizeof(aLineBuilder), "Hey, how are you %s?", aBuf);
-		SetPreviewLine(PREVIEW_HIGHLIGHT, 7, "Random Tee", aLineBuilder, FLAG_HIGHLIGHT, 0);
-
-		SetPreviewLine(PREVIEW_TEAM, 11, "Your Teammate", "Let's speedrun this!", FLAG_TEAM, 0);
-		SetPreviewLine(PREVIEW_FRIEND, 8, "Friend", "Hello there", FLAG_FRIEND, 0);
-		SetPreviewLine(PREVIEW_SPAMMER, 9, "Spammer", "Hey fools, I'm spamming here!", 0, 5);
-		SetPreviewLine(PREVIEW_CLIENT, -1, CChat::ClientMessageNamePrefix(g_Config.m_QmChatHideSystemPrefix != 0), "Echo command executed", FLAG_CLIENT, 0);
-	}
-
-	SetLineSkin(1, pMenus->GameClient()->m_Skins.Find("pinky"));
-	SetLineSkin(2, pMenus->GameClient()->m_Skins.Find("default"));
-	SetLineSkin(3, pMenus->GameClient()->m_Skins.Find("cammostripes"));
-	SetLineSkin(4, pMenus->GameClient()->m_Skins.Find("beast"));
-
-	// Backgrounds first
-	if(!g_Config.m_ClChatOld)
-	{
-		const ColorRGBA BackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClChatBackgroundColor, true));
-
-		float TempY = Y;
-		const float RealBackgroundRounding = pChat->MessageRounding() * 2.0f;
-
-		auto &&RenderMessageBackground = [&](int LineIndex) {
-			const auto Size = RenderPreview(LineIndex, 0, 0, false);
-			const CUIRect MessageBackground{PreviewView.x, TempY - RealMsgPaddingY / 2.0f, PreviewView.w, Size.y - RealLineSpacing};
-			DrawRoundedSurface(pMenus->Ui(), MessageBackground, BackgroundColor, ColorRGBA(), RealBackgroundRounding);
-			return Size.y;
-		};
-
-		if(g_Config.m_ClShowChatSystem)
-		{
-			TempY += RenderMessageBackground(PREVIEW_SYS);
-		}
-
-		if(ShowChatPreview(false, true, true))
-			TempY += RenderMessageBackground(PREVIEW_HIGHLIGHT);
-		if(ShowChatPreview(false, false))
-			TempY += RenderMessageBackground(PREVIEW_TEAM);
-
-		if(ShowChatPreview(true, true))
-			TempY += RenderMessageBackground(PREVIEW_FRIEND);
-
-		if(ShowChatPreview(false, true))
-		{
-			TempY += RenderMessageBackground(PREVIEW_SPAMMER);
-		}
-
-		if(g_Config.m_QmShowChatClient)
-		{
-			TempY += RenderMessageBackground(PREVIEW_CLIENT);
-		}
-	}
-
-	// System
-	if(g_Config.m_ClShowChatSystem)
-	{
-		Y += RenderPreview(PREVIEW_SYS, X, Y).y;
-	}
-
-	if(ShowChatPreview(false, true, true))
-	{
-		// Highlighted
-		if(!g_Config.m_ClChatOld)
-			pMenus->RenderTools()->RenderTee(pIdleState, &s_vLines[PREVIEW_HIGHLIGHT].m_RenderInfo, EMOTE_NORMAL, vec2(1, 0.1f), vec2(X + RealTeeSizeHalved, Y + OffsetTeeY + FullHeightMinusTee / 2.0f + TWSkinUnreliableOffset));
-		Y += RenderPreview(PREVIEW_HIGHLIGHT, X, Y).y;
-	}
-
-	if(ShowChatPreview(false, false))
-	{
-		// Team
-		if(!g_Config.m_ClChatOld)
-			pMenus->RenderTools()->RenderTee(pIdleState, &s_vLines[PREVIEW_TEAM].m_RenderInfo, EMOTE_NORMAL, vec2(1, 0.1f), vec2(X + RealTeeSizeHalved, Y + OffsetTeeY + FullHeightMinusTee / 2.0f + TWSkinUnreliableOffset));
-		Y += RenderPreview(PREVIEW_TEAM, X, Y).y;
-	}
-
-	// Friend
-	if(!g_Config.m_ClChatOld && ShowChatPreview(true, true))
-		pMenus->RenderTools()->RenderTee(pIdleState, &s_vLines[PREVIEW_FRIEND].m_RenderInfo, EMOTE_NORMAL, vec2(1, 0.1f), vec2(X + RealTeeSizeHalved, Y + OffsetTeeY + FullHeightMinusTee / 2.0f + TWSkinUnreliableOffset));
-	if(ShowChatPreview(true, true))
-		Y += RenderPreview(PREVIEW_FRIEND, X, Y).y;
-
-	// Normal
-	if(ShowChatPreview(false, true))
-	{
-		if(!g_Config.m_ClChatOld)
-			pMenus->RenderTools()->RenderTee(pIdleState, &s_vLines[PREVIEW_SPAMMER].m_RenderInfo, EMOTE_NORMAL, vec2(1, 0.1f), vec2(X + RealTeeSizeHalved, Y + OffsetTeeY + FullHeightMinusTee / 2.0f + TWSkinUnreliableOffset));
-		Y += RenderPreview(PREVIEW_SPAMMER, X, Y).y;
-	}
-	// Client
-	if(g_Config.m_QmShowChatClient)
-	{
-		Y += RenderPreview(PREVIEW_CLIENT, X, Y).y;
-
-		// 滚动条照旧画在预览边缘，和聊天页的观感保持一致。
-		const CUIRect Rail = QmChatScrollbarRail(PreviewRailBounds, PreviewRailBounds.y, std::min(PreviewRailBounds.h, std::max(RealFontSize, Y - PreviewRailBounds.y)), g_Config.m_QmChatScrollbarRight != 0, 2.0f);
-		const float HandleHeight = QmChatScrollbarHandleHeight(Rail.h, 3, 6, 2.0f);
-		const CUIRect Handle = QmChatScrollbarHandle(Rail, HandleHeight, 1.0f);
-		QmDrawChatScrollbar(pMenus->Ui(), Rail, Handle.y, Handle.h, false);
-	}
 }
