@@ -519,7 +519,11 @@ namespace ui_widget
 			InputField = Controls;
 		if(InputField.w <= 0.0f)
 			InputField = ValueRect;
-		InputField.VMargin(std::min(5.0f, ValueWidth * 0.1f), &InputField);
+		// 内缩只留在左侧：外框右边缘必须落在控件列右边界上，数值框才能和同行开关、
+		// 下拉右对齐。此前两侧各缩 5px，是单位还占独立尾槽时给「外框—单位」留的间距；
+		// 单位已改成框内内联显示，右侧再缩就只剩一条比开关短的错位空隙。
+		// 左侧内缩保留，继续用作滑条轨道与输入框之间的间距。
+		InputField.VSplitLeft(std::min(5.0f, ValueWidth * 0.1f), nullptr, &InputField);
 
 		if(HasLabel)
 		{

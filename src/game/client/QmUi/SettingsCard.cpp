@@ -262,8 +262,63 @@ bool CMenus::DoSettingsToggleGroup(int Page, int Tab, int Subtab, CUIRect &Conte
 		}
 		Index++;
 	}
+	// 组尾补一个行距：跨组时下一组首行不带间距，整卡任意相邻两行才都是同一个节奏。
+	Flow.Space(Metrics.m_LineSpacing);
 	return Changed;
 }
+
+// 一排小按钮的筛选组：每项左侧带圆形勾选指示，用于「配置过滤器」这类需要一眼横看完的筛选。
+// 与逐行开关的 DoSettingsToggleGroup 分开：普通设置项仍走逐行 toggle，不能因为这里回退成按钮。
+bool CMenus::DoSettingsToggleButtonGroup(int Page, int Tab, int Subtab, CUIRect &Content, std::initializer_list<SSettingsToggleEntry> Entries, const SSettingsContentMetrics &Metrics, bool ProcessInput, ESettingsToggleGroupPass Pass)
+{
+	if(Entries.size() == 0)
+		return false;
+	const float Gap = Metrics.m_LineSpacing;
+	const float PaddingX = std::max(Metrics.m_LineSpacing, Metrics.m_BodySize * 0.5f);
+	const float PaddingY = Metrics.m_LineSpacing * 0.5f;
+	m_vSettingsToggleGroupSizes.resize(Entries.size());
+	size_t Index = 0;
+	for(const auto &Entry : Entries)
+	{
+		auto &Size = m_vSettingsToggleGroupSizes[Index++];
+		const float IndicatorWidth = Entry.m_ShowCheckmark ? Metrics.m_BodySize + Gap : 0.0f;
+		Size = ResolveSettingsToggleButtonSize(TextRender()->TextWidth(Metrics.m_BodySize, Entry.m_pLabel), Metrics.m_BodySize, Metrics.m_LineHeight, PaddingX, PaddingY, IndicatorWidth);
+	}
+	auto &Grid = m_SettingsToggleGroupGrid;
+	ResolveSettingsToggleGrid(Content.w, m_vSettingsToggleGroupSizes, Gap, Grid);
+	Index = 0;
+	for(const auto &Entry : Entries)
+	{
+		// 先按按钮宽度重算一次文本高度，窄按钮里的换行会抬高整行，不能只信任单行测量。
+		const CUIRect Button{0, 0, Grid.m_aColumnWidths[Index % Grid.m_Columns], Metrics.m_LineHeight};
+		const float IndicatorWidth = Entry.m_ShowCheckmark ? Metrics.m_BodySize + Gap : 0.0f;
+		const CUIRect Label = ResolveSettingsToggleButtonLabel(Button, PaddingX, PaddingY, IndicatorWidth);
+		const float LabelHeight = TextRender()->TextBoundingBox(Metrics.m_BodySize, Entry.m_pLabel, -1, std::max(1.0f, Label.w)).m_H;
+		m_vSettingsToggleGroupSizes[Index++].m_Height = ResolveSettingsToggleButtonSize(0, LabelHeight, Metrics.m_LineHeight, PaddingX, PaddingY).m_Height;
+	}
+	Grid.SetItemHeights(m_vSettingsToggleGroupSizes);
+	CUIRect Area;
+	CSettingsContentLayoutFlow Flow(Content);
+	// 整组作为一个稳定布局块发布：输入和绘制消费同一份坐标，按钮和命中区域不会错位。
+	const char *pGroupId = Entries.begin()->m_pTextId;
+	const bool HasArea = Flow.Control(pGroupId, Grid.Height(), Area);
+	Flow.Space(Metrics.m_LineSpacing);
+	if(!HasArea)
+		return false;
+	ProcessInput = ProcessInput && Flow.Input();
+	if(Pass == ESettingsToggleGroupPass::LAYOUT)
+		return false;
+
+	bool Changed = false;
+	Index = 0;
+	for(const auto &Entry : Entries)
+	{
+		const CUIRect Cell = Grid.Cell(Area, static_cast<int>(Index++));
+		Changed = DoSettingsToggleButton(Page, Tab, Subtab, Cell, Entry, Metrics, ProcessInput, Pass) || Changed;
+	}
+	return Changed;
+}
+
 bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect &Button, const SSettingsToggleEntry &Entry, const SSettingsContentMetrics &Metrics, bool ProcessInput, ESettingsToggleGroupPass Pass)
 {
 	if(Pass == ESettingsToggleGroupPass::LAYOUT)
@@ -309,24 +364,22 @@ bool CMenus::DoSettingsToggleButton(int Page, int Tab, int Subtab, const CUIRect
 	{
 		CUIRect Indicator = ResolveSettingsToggleButtonLabel(Button, PaddingX, PaddingY);
 		Indicator.w = std::min(Metrics.m_BodySize, Indicator.w);
+		// 圆形复选框：开关两种状态都画同一个圆环，只让打开态在环内多一个勾，
+		// 这样一排小按钮里能直接看出哪些筛选是开着的。
+		const float Diameter = std::min(Metrics.m_BodySize * 0.78f, std::min(Indicator.w, Indicator.h));
+		CUIRect Ring;
+		Ring.w = Ring.h = Diameter;
+		Ring.x = Indicator.x + (Indicator.w - Diameter) * 0.5f;
+		Ring.y = Indicator.y + (Indicator.h - Diameter) * 0.5f;
+		DrawRoundedSurface(Ui(), Ring, ColorRGBA(), ui_token::color::TEXT_PRIMARY.WithAlpha(Options.m_Selected ? 0.92f : 0.52f), Diameter * 0.5f, 1.0f);
 		if(Options.m_Selected)
 		{
 			const EFontPreset PreviousFont = TextRender()->GetFontPreset();
 			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 			char aCheck[8] = {};
 			str_utf8_encode(aCheck, CQmIconRegistry::Codepoint(EQmIcon::CHECK));
-			Ui()->DoLabel(&Indicator, aCheck, Metrics.m_BodySize, TEXTALIGN_MC);
+			Ui()->DoLabel(&Ring, aCheck, Diameter, TEXTALIGN_MC);
 			TextRender()->SetFontPreset(PreviousFont);
-		}
-		else
-		{
-			// 关闭态也给出空心圆提示，和选中态的勾选图标共用同一槽位。
-			const float Diameter = std::min(Metrics.m_BodySize * 0.72f, std::min(Indicator.w, Indicator.h));
-			CUIRect Ring;
-			Ring.w = Ring.h = Diameter;
-			Ring.x = Indicator.x + (Indicator.w - Diameter) * 0.5f;
-			Ring.y = Indicator.y + (Indicator.h - Diameter) * 0.5f;
-			DrawRoundedSurface(Ui(), Ring, ColorRGBA(), ui_token::color::TEXT_PRIMARY.WithAlpha(0.52f), Diameter * 0.5f, 1.0f);
 		}
 	}
 	SLabelProperties Props;

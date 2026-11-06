@@ -260,31 +260,37 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 		CUIRect SearchRow;
 		if(Flow.Control("tclient-config-search", LineSize, SearchRow, MarginSmall))
 			RenderSearch(SearchRow);
-		DoSettingsToggleGroup(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, Content,
+		// 复用服务器筛选面板的写法：短筛选按钮左侧带圆形勾选指示，一排横看完。
+		const auto FilterEntry = [](int *pValue, const char *pTextId) {
+			SSettingsToggleEntry Result{pValue, pTextId, Localize(pTextId)};
+			Result.m_ShowCheckmark = true;
+			return Result;
+		};
+		DoSettingsToggleButtonGroup(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, Content,
 			{
-				{&g_Config.m_QmUiShowDDNet, "DDNet", Localize("DDNet")},
-				{&g_Config.m_QmUiShowTClient, "TClient", Localize("TClient")},
-				{&g_Config.m_QmUiShowQm, "QmClient", Localize("QmClient")},
+				FilterEntry(&g_Config.m_QmUiShowDDNet, "DDNet"),
+				FilterEntry(&g_Config.m_QmUiShowTClient, "TClient"),
+				FilterEntry(&g_Config.m_QmUiShowQm, "QmClient"),
 			},
 			ConfigMetrics, Flow.Input() && !ReadOnly);
-		DoSettingsToggleGroup(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, Content,
+		DoSettingsToggleButtonGroup(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, Content,
 			{
-				{&g_Config.m_QmUiCompactList, "Compact", Localize("Compact")},
-				{&g_Config.m_QmUiOnlyModified, "Modified", Localize("Modified")},
+				FilterEntry(&g_Config.m_QmUiCompactList, "Compact"),
+				FilterEntry(&g_Config.m_QmUiOnlyModified, "Modified"),
 			},
 			ConfigMetrics, Flow.Input() && !ReadOnly);
-		DoSettingsToggleGroup(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, Content,
+		DoSettingsToggleButtonGroup(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, Content,
 			{
-				{&s_TcUiTagVisual, "Visual", Localize("Visual")},
-				{&s_TcUiTagHud, "HUD", Localize("HUD")},
-				{&s_TcUiTagInput, "Input", Localize("Input")},
-				{&s_TcUiTagChat, "Chat", Localize("Chat")},
-				{&s_TcUiTagAudio, "Audio", Localize("Audio")},
-				{&s_TcUiTagAutomation, "Auto", Localize("Auto")},
-				{&s_TcUiTagSocial, "Social", Localize("Social")},
-				{&s_TcUiTagCamera, "Camera", Localize("Camera")},
-				{&s_TcUiTagGameplay, "Gameplay", Localize("Gameplay")},
-				{&s_TcUiTagMisc, "Misc", Localize("Misc")},
+				FilterEntry(&s_TcUiTagVisual, "Visual"),
+				FilterEntry(&s_TcUiTagHud, "HUD"),
+				FilterEntry(&s_TcUiTagInput, "Input"),
+				FilterEntry(&s_TcUiTagChat, "Chat"),
+				FilterEntry(&s_TcUiTagAudio, "Audio"),
+				FilterEntry(&s_TcUiTagAutomation, "Auto"),
+				FilterEntry(&s_TcUiTagSocial, "Social"),
+				FilterEntry(&s_TcUiTagCamera, "Camera"),
+				FilterEntry(&s_TcUiTagGameplay, "Gameplay"),
+				FilterEntry(&s_TcUiTagMisc, "Misc"),
 			},
 			ConfigMetrics, Flow.Input() && !ReadOnly);
 	};

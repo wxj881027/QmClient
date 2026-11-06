@@ -77,13 +77,13 @@ void CMenus::RenderServerbrowserFilterForm(CUIRect &View)
 	};
 
 	DrawSection(Localize("Common filters"));
-	DoSettingsToggleGroup(-1, -1, -1, View, {
-							Entry(&g_Config.m_BrFilterEmpty, Localizable("Has people playing")),
-							Entry(&g_Config.m_BrFilterFull, Localizable("Server not full")),
-							Entry(&g_Config.m_BrFilterFriends, Localizable("Show friends only")),
-							Entry(&g_Config.m_BrFilterPw, Localizable("No password")),
-							Entry(&g_Config.m_BrFilterLogin, Localizable("No login required")),
-						},
+	DoSettingsToggleButtonGroup(-1, -1, -1, View, {
+							      Entry(&g_Config.m_BrFilterEmpty, Localizable("Has people playing")),
+							      Entry(&g_Config.m_BrFilterFull, Localizable("Server not full")),
+							      Entry(&g_Config.m_BrFilterFriends, Localizable("Show friends only")),
+							      Entry(&g_Config.m_BrFilterPw, Localizable("No password")),
+							      Entry(&g_Config.m_BrFilterLogin, Localizable("No login required")),
+						      },
 		Metrics);
 
 	// 按地址筛选列表。注意与底部「服务器地址」输入框区分：那个是要连接的地址，这个只过滤列表，
@@ -102,10 +102,10 @@ void CMenus::RenderServerbrowserFilterForm(CUIRect &View)
 	}
 
 	DrawSection(Localize("Player count"));
-	DoSettingsToggleGroup(-1, -1, -1, View, {
-							Entry(&g_Config.m_BrFilterSpectators, Localizable("Count players only")),
-							Entry(&g_Config.m_BrFilterConnectingPlayers, Localizable("Filter connecting players")),
-						},
+	DoSettingsToggleButtonGroup(-1, -1, -1, View, {
+							      Entry(&g_Config.m_BrFilterSpectators, Localizable("Count players only")),
+							      Entry(&g_Config.m_BrFilterConnectingPlayers, Localizable("Filter connecting players")),
+						      },
 		Metrics);
 
 	if(ServerBrowser()->CommunityCache().AnyRanksAvailable())
@@ -114,9 +114,9 @@ void CMenus::RenderServerbrowserFilterForm(CUIRect &View)
 		const bool WasIndicatingFinished = g_Config.m_BrIndicateFinished != 0;
 		const SSettingsToggleEntry Finished = Entry(&g_Config.m_BrIndicateFinished, Localizable("Indicate map finish"));
 		if(WasIndicatingFinished)
-			DoSettingsToggleGroup(-1, -1, -1, View, {Finished, Entry(&g_Config.m_BrFilterUnfinishedMap, Localizable("Unfinished map"))}, Metrics);
+			DoSettingsToggleButtonGroup(-1, -1, -1, View, {Finished, Entry(&g_Config.m_BrFilterUnfinishedMap, Localizable("Unfinished map"))}, Metrics);
 		else
-			DoSettingsToggleGroup(-1, -1, -1, View, {Finished}, Metrics);
+			DoSettingsToggleButtonGroup(-1, -1, -1, View, {Finished}, Metrics);
 		if(!g_Config.m_BrIndicateFinished)
 			g_Config.m_BrFilterUnfinishedMap = 0;
 		else if(!WasIndicatingFinished)

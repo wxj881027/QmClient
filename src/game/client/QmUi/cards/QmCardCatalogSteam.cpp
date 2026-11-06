@@ -33,6 +33,14 @@ namespace
 	};
 }
 
+// Windows 探测结果经常是 d:\... 这种小写盘符，直接回填会和用户手写的 D:\ 看起来像两条路径。
+void NormalizeSteamDriveLetter(char *pPath)
+{
+	if(pPath == nullptr || pPath[0] == '\0' || pPath[1] != ':')
+		return;
+	if(pPath[0] >= 'a' && pPath[0] <= 'z')
+		pPath[0] = (char)(pPath[0] - 'a' + 'A');
+}
 void CMenus::RenderQmSteamContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly)
 {
 	CSettingsContentLayoutFlow Flow(Content);
@@ -61,6 +69,7 @@ void CMenus::RenderQmSteamContent(CUIRect &Content, const SSettingsContentMetric
 			// 用户手动清空输入框是想回到自动检测，都不该被再写回去。
 			if(!s_AutoPathFilled && g_Config.m_QmSteamClientPath[0] == '\0' && s_Info.m_aPath[0] != '\0' && !s_ManualPathInput.IsActive())
 			{
+				NormalizeSteamDriveLetter(s_Info.m_aPath);
 				str_copy(g_Config.m_QmSteamClientPath, s_Info.m_aPath);
 				s_ManualPathInput.Set(s_Info.m_aPath);
 				// 回填的这条路径就是本次检测的输入，记下来免得为它再跑一轮检测。
@@ -93,7 +102,7 @@ void CMenus::RenderQmSteamContent(CUIRect &Content, const SSettingsContentMetric
 		PathDetectButton = InputActions.m_Actions.m_aButtons[0];
 		SLabelProperties Props;
 		Props.m_MaxWidth = PathLabel.w;
-		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qm-steam-client-path", &PathLabel, PathPresentation.m_pText, Metrics.m_SmallSize, TEXTALIGN_ML, Props);
+		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qm-steam-client-path", &PathLabel, PathPresentation.m_pText, Metrics.m_BodySize, TEXTALIGN_ML, Props);
 		if(ui_widget::InputField(Ctx, &s_ManualPathInput, PathInput, "", Metrics.m_BodySize) && !ReadOnly)
 			str_copy(g_Config.m_QmSteamClientPath, s_ManualPathInput.GetString());
 		// 重新检测只留图标，说明走悬浮提示，和卡片里其它刷新图标保持一致。
@@ -120,15 +129,6 @@ void CMenus::RenderQmSteamContent(CUIRect &Content, const SSettingsContentMetric
 	else
 		pStatus = Localize("Steam is installed");
 	TextRow("qm-steam-status", pStatus, Metrics.m_BodySize);
-	if(Flow.Control("qm-steam-resolved-path", Metrics.m_LineHeight, Row))
-	{
-		SLabelProperties Props;
-		Props.m_MaxWidth = Row.w;
-		Props.m_EllipsisAtEnd = true;
-		Ui()->DoLabel(&Row, s_HasResult ? s_Info.m_aPath : "", Metrics.m_SmallSize, TEXTALIGN_ML, Props);
-		if(s_HasResult && s_Info.m_aPath[0] != '\0')
-			GameClient()->m_Tooltips.DoToolTipForRect(&s_Info, &Row, s_Info.m_aPath);
-	}
 	Flow.Space(Metrics.m_LineSpacing);
 	const char *pInvalidPath = Localize("Manual Steam path is invalid; using automatic detection");
 	const char *pSelectHelp = Localize("Enter the Steam client program path, without command arguments");
