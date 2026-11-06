@@ -3872,6 +3872,7 @@ if(CLIENT)
     components/qmclient/settings_resource_preview.h
     components/qmclient/settings_asset_image_job.h
     components/qmclient/settings_asset_list_job.h
+    components/qmclient/settings_asset_queue.h
     components/qmclient/screenshot_clipboard.cpp
     components/qmclient/screenshot_clipboard.h
     components/qmclient/screenshot_image_job.cpp
@@ -6583,6 +6584,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/qmclient/client/qm_markdown_broadcast_allocation_test.cpp
       src/test/unit/qmclient/client/qm_console_search_input_allocation_test.cpp
       src/test/unit/qmclient/client/qm_console_input_colors_test.cpp
+      src/test/unit/qmclient/client/qm_settings_asset_queue_test.cpp
       src/test/unit/qmclient/client/qm_console_selection_copy_test.cpp
       src/test/unit/qmclient/ui/qm_line_input_motion_allocation_test.cpp
       src/test/unit/qmclient/ui/qm_selection_commit_allocation_test.cpp

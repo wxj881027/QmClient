@@ -1,14 +1,19 @@
 #include <game/client/components/qmclient/settings_asset_image_job.h>
+#include <game/client/components/qmclient/settings_asset_queue.h>
+#include <game/client/components/settings_resource_jobs.h>
 
 #include <gtest/gtest.h>
 #include <test/support/job_wait.h>
+#include <test/support/rejectable_allocation_resource.h>
 #include <test/test.h>
 
 #include <array>
 #include <cstdlib>
+#include <deque>
 #include <memory>
 #include <new>
 #include <stdexcept>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -288,4 +293,99 @@ TEST_F(QmSettingsAssetImageJob, AcceptedNativeJobReturnsTrackedOwnerAndCompleteR
 	auto Result = pJob->GetResult();
 	EXPECT_TRUE(Result.m_Success);
 	EXPECT_EQ(Result.m_Image.m_Width, 2u);
+}
+
+TEST_F(QmSettingsAssetImageJob, LocalHandleExistsBeforeNativeAdmissionAndKeepsCompletedPixelsReachable)
+{
+	ASSERT_NO_FATAL_FAILURE(StorePng());
+	CImageAdmissionEngine Engine(m_Pool);
+	std::deque<SSettingsAssetPreviewHandle> Queue;
+	bool Observed = false;
+	auto pJob = SettingsAssetQueueTryStart(Queue, true, [] { return SSettingsAssetPreviewHandle{2, 7, 3, "image.png"}; }, [](const auto &Left, const auto &Right) { return SettingsAssetPreviewHandleMatches(Left, Right.m_Tab, Right.m_Epoch, Right.m_Index, Right.m_Name.c_str()); }, [&] {
+			Observed = Queue.size() == 1 && SettingsAssetPreviewHandleMatches(Queue.front(), 2, 7, 3, "image.png");
+			return QmTryQueueSettingsAssetImage({"image.png"}, m_pStorage.get(), Engine, "image", IStorage::TYPE_SAVE, 0); });
+	ASSERT_NE(pJob, nullptr);
+	EXPECT_TRUE(Observed);
+	ASSERT_TRUE(WaitForJobFinished(*pJob));
+	ASSERT_EQ(Queue.size(), 1u);
+	EXPECT_EQ(Queue.front().m_Name, "image.png");
+	auto Result = pJob->GetResult();
+	ASSERT_TRUE(Result.m_Success);
+	ASSERT_NE(Result.m_Image.m_pData, nullptr);
+	EXPECT_EQ(Result.m_Image.m_pData[0], 11);
+	EXPECT_FALSE(pJob->GetResult().m_Success);
+}
+
+TEST_F(QmSettingsAssetImageJob, KeyedEngineRejectionRestoresTrackingAndSameIdentityCanRetry)
+{
+	ASSERT_NO_FATAL_FAILURE(StorePng());
+	CImageAdmissionEngine Engine(m_Pool);
+	std::deque<std::string> Queue{"old"};
+	std::unordered_set<std::string> Markers{"old"};
+	auto Track = [&] {
+		return SettingsAssetQueueTryStartKeyed(Queue, Markers, true, [] { return std::string("image.png"); }, [](const auto &Id) { return Id; }, [](const auto &Left, const auto &Right) { return Left == Right; }, [&] { return QmTryQueueSettingsAssetImage({"image.png"}, m_pStorage.get(), Engine, "image", IStorage::TYPE_SAVE, 0); });
+	};
+	Engine.m_Accept = false;
+	EXPECT_EQ(Track(), nullptr);
+	EXPECT_TRUE(Engine.m_Attempt.expired());
+	EXPECT_EQ(Queue, (std::deque<std::string>{"old"}));
+	EXPECT_EQ(Markers, (std::unordered_set<std::string>{"old"}));
+	Engine.m_Accept = true;
+	auto pJob = Track();
+	ASSERT_NE(pJob, nullptr);
+	ASSERT_TRUE(WaitForJobFinished(*pJob));
+	EXPECT_EQ(Queue, (std::deque<std::string>{"image.png", "old"}));
+	EXPECT_EQ(Markers.count("image.png"), 1u);
+	auto Result = pJob->GetResult();
+	EXPECT_TRUE(Result.m_Success);
+}
+
+TEST_F(QmSettingsAssetImageJob, ExistingAcceptedImageJobSurvivesFailedRetrackingAndIsReused)
+{
+	ASSERT_NO_FATAL_FAILURE(StorePng());
+	CImageAdmissionEngine Engine(m_Pool);
+	auto pOwner = QmTryQueueSettingsAssetImage({"image.png"}, m_pStorage.get(), Engine, "image", IStorage::TYPE_SAVE, 0);
+	ASSERT_NE(pOwner, nullptr);
+	std::deque<std::string> Queue;
+	const auto Equal = [](const auto &Left, const auto &Right) { return Left == Right; };
+	EXPECT_EQ(SettingsAssetQueueTryStart(Queue, false, []() -> std::string { throw std::bad_alloc(); }, Equal, [&] { return pOwner; }), nullptr);
+	EXPECT_TRUE(Queue.empty());
+	ASSERT_TRUE(WaitForJobFinished(*pOwner));
+	auto pTracked = SettingsAssetQueueTryStart(Queue, false, [] { return std::string("image.png"); }, Equal, [&] { return pOwner; });
+	ASSERT_EQ(pTracked, pOwner);
+	EXPECT_EQ(Queue, (std::deque<std::string>{"image.png"}));
+	EXPECT_EQ(Engine.m_Attempt.lock(), pOwner);
+	auto Result = pTracked->GetResult();
+	ASSERT_TRUE(Result.m_Success);
+	ASSERT_NE(Result.m_Image.m_pData, nullptr);
+	EXPECT_EQ(Result.m_Image.m_pData[4], 44);
+}
+
+TEST_F(QmSettingsAssetImageJob, FailedReadyRegistrationKeepsNativePixelsForRetry)
+{
+	ASSERT_NO_FATAL_FAILURE(StorePng());
+	auto pJob = NewJob();
+	ASSERT_NO_FATAL_FAILURE(Execute(pJob));
+	auto Result = pJob->GetResult();
+	ASSERT_TRUE(Result.m_Success);
+	auto *pPixels = Result.m_Image.m_pData;
+	CRejectableAllocationResource Memory;
+	using TMarkers = std::unordered_set<std::string, std::hash<std::string>, std::equal_to<std::string>, CBorrowedAllocator<std::string>>;
+	TMarkers Markers(0, std::hash<std::string>(), std::equal_to<std::string>(), &Memory);
+	std::deque<std::string> Queue;
+	auto Track = [&] {
+		return SettingsAssetQueueTryStartKeyed(Queue, Markers, false, [] { return std::string("image.png"); }, [](const auto &Id) { return Id; }, [](const auto &Left, const auto &Right) { return Left == Right; }, [] { return true; });
+	};
+	Memory.m_Reject = true;
+	EXPECT_FALSE(Track());
+	EXPECT_TRUE(Queue.empty());
+	EXPECT_TRUE(Markers.empty());
+	EXPECT_EQ(Result.m_Image.m_pData, pPixels);
+	Memory.m_Reject = false;
+	ASSERT_TRUE(Track());
+	ASSERT_TRUE(Track());
+	ASSERT_EQ(Queue.size(), 1u);
+	EXPECT_EQ(Markers.size(), 1u);
+	EXPECT_EQ(Result.m_Image.m_pData, pPixels);
+	EXPECT_EQ(pPixels[0], 11);
 }
