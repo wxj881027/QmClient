@@ -147,7 +147,7 @@ namespace qm_card_catalog
 		static bool BuildNameplateCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool BuildTitleCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		// 聊天框外观预览：外观页那张预览卡和头衔卡的「发言预览」共用同一份渲染。
-		static void RenderQmChatBoxPreview(CMenus *pMenus, const CUIRect &Rect);
+		static void RenderQmChatBoxPreview(CMenus *pMenus, const CUIRect &Rect, float MarginPx, float BottomReserve = 0.0f);
 		static bool BuildTeeCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool RenderQmFunctionCheckbox(CMenus *pMenus, const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, bool PrewarmOnly);
 		static bool RenderQmFunctionCheckboxRow(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue, bool PrewarmOnly, const char *pTooltip = nullptr);

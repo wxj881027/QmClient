@@ -551,7 +551,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 			if(Ui()->DrawingSuppressed())
 				return;
 			// 和头衔卡的「发言预览」共用同一份聊天框预览实现。
-			qm_card_catalog::QmCardRenderHook::RenderQmChatBoxPreview(this, ContentRect); });
+			qm_card_catalog::QmCardRenderHook::RenderQmChatBoxPreview(this, ContentRect, MarginSmall); });
 		}
 		else if(AppearanceTab == APPEARANCE_TAB_NAME_PLATE)
 		{
@@ -1227,10 +1227,10 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 	return AppearanceLayoutRevision;
 }
 
-void qm_card_catalog::QmCardRenderHook::RenderQmChatBoxPreview(CMenus *pMenus, const CUIRect &ContentRect)
+void qm_card_catalog::QmCardRenderHook::RenderQmChatBoxPreview(CMenus *pMenus, const CUIRect &ContentRect, float MarginPx, float BottomReserve)
 {
 	CChat *pChat = &pMenus->GameClient()->m_Chat;
-	const float MarginSmall = ContentRect.h * 0.06f;
+	const float MarginSmall = MarginPx;
 	const auto ShowChatPreview = [](bool Friend, bool OtherTeam, bool Mentioned = false) {
 		const QmChatMessageFilter::SSettings Settings{g_Config.m_QmChatRelatedOnly != 0, g_Config.m_ClShowChatFriends != 0, g_Config.m_ClShowChatTeamMembersOnly != 0};
 		QmChatMessageFilter::SMessage Message;
@@ -1244,6 +1244,8 @@ void qm_card_catalog::QmCardRenderHook::RenderQmChatBoxPreview(CMenus *pMenus, c
 	CUIRect PreviewView = ContentRect;
 	// ***** Chat Preview ***** //
 	PreviewView.Draw(ui_token::color::PREVIEW_SURFACE, IGraphics::CORNER_ALL, ui_token::radius::BASE);
+	// 底部预留出来的高度不排消息行，调用方在那里画自己的那一行。
+	PreviewView.h = std::max(0.0f, PreviewView.h - std::max(0.0f, BottomReserve));
 	PreviewView.Margin(MarginSmall, &PreviewView);
 	const CUIRect PreviewRailBounds = PreviewView;
 	const float ScrollbarReserve = std::min(PreviewView.w, QM_CHAT_SCROLLBAR_RESERVE * 2.0f);
