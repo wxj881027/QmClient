@@ -535,7 +535,7 @@ namespace
 		{
 			"qm:entity_overlay",
 			Localizable("Opacity of entity layers on the map such as death, freeze, unfreeze, teleport, checkpoint and switch tiles."),
-			Localizable("Drag a slider like \"Death opacity\" or \"Teleport opacity\" from 0 to 100%, or use \"Tune layer opacity\" to fade the whole entity layer."),
+			Localizable("Drag a slider like \"Death opacity\" or \"Teleport opacity\" from 0 to 100%, or use \"Overlay entities\" to fade the whole entity layer."),
 			Localizable("Fading death and freeze tiles helps you see tees and weapons behind them, but the exact tile edge gets harder to judge."),
 		},
 		{

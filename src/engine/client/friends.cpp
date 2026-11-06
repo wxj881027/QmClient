@@ -11,6 +11,81 @@
 #include <engine/shared/config.h>
 
 #include <algorithm>
+#include <cstring>
+#include <new>
+#include <set>
+#include <stdexcept>
+#include <utility>
+
+bool IFriends::ValidateList(const CFriendList &List)
+try
+{
+	if(List.m_vCategories.size() < 3 || List.m_vCategories.size() > MAX_FRIEND_CATEGORIES || List.m_vFriends.size() > MAX_FRIENDS)
+		return false;
+	for(size_t Index = 0; Index < List.m_vCategories.size(); ++Index)
+	{
+		const auto &Category = List.m_vCategories[Index];
+		if(Category.empty() || Category.size() >= MAX_FRIEND_CATEGORY_LENGTH || Category.find('\0') != std::string::npos || Category.find_first_of("\r\n") != std::string::npos || !str_utf8_check(Category.c_str()))
+			return false;
+		char aNormalized[MAX_FRIEND_CATEGORY_LENGTH];
+		str_copy(aNormalized, str_utf8_skip_whitespaces(Category.c_str()));
+		str_utf8_trim_right(aNormalized);
+		if(Category != aNormalized)
+			return false;
+		for(size_t Previous = 0; Previous < Index; ++Previous)
+			if(str_comp_nocase(Category.c_str(), List.m_vCategories[Previous].c_str()) == 0)
+				return false;
+	}
+	for(const char *pRequired : {DEFAULT_CATEGORY, CLAN_MEMBERS_CATEGORY, OFFLINE_CATEGORY})
+		if(std::find(List.m_vCategories.begin(), List.m_vCategories.end(), pRequired) == List.m_vCategories.end())
+			return false;
+
+	const auto ValidText = [](const auto &aText) {
+		return std::memchr(aText, '\0', sizeof(aText)) != nullptr && str_utf8_check(aText) && std::strpbrk(aText, "\r\n") == nullptr;
+	};
+	std::set<std::pair<std::string, std::string>> Identities;
+	for(const auto &Friend : List.m_vFriends)
+	{
+		if(!ValidText(Friend.m_aName) || !ValidText(Friend.m_aClan) || !ValidText(Friend.m_aNote) || !ValidText(Friend.m_aCategory))
+			return false;
+		if((Friend.m_aName[0] == '\0' && Friend.m_aClan[0] == '\0') || !Identities.emplace(Friend.m_aName, Friend.m_aClan).second)
+			return false;
+		if(std::find(List.m_vCategories.begin(), List.m_vCategories.end(), Friend.m_aCategory) == List.m_vCategories.end())
+			return false;
+		const bool ClanCategory = str_comp(Friend.m_aCategory, CLAN_MEMBERS_CATEGORY) == 0;
+		if(ClanCategory != (Friend.m_aName[0] == '\0') || (ClanCategory && (Friend.m_Pinned || Friend.m_aNote[0] != '\0')))
+			return false;
+	}
+	return true;
+}
+catch(const std::bad_alloc &)
+{
+	// 校验候选的去重索引申请失败时拒绝整份候选，保留已有好友列表。
+	return false;
+}
+catch(const std::length_error &)
+{
+	return false;
+}
+
+bool CFriends::ReplaceAll(const CFriendList &List)
+{
+	if(m_Foes || !ValidateList(List))
+		return false;
+	// 所有检查在写入之前完成，失败时不改变列表、分组和版本号。
+	m_NumCategories = static_cast<int>(List.m_vCategories.size());
+	for(int Index = 0; Index < m_NumCategories; ++Index)
+		str_copy(m_aaCategories[Index], List.m_vCategories[Index].c_str());
+	m_NumFriends = static_cast<int>(List.m_vFriends.size());
+	for(int Index = 0; Index < m_NumFriends; ++Index)
+	{
+		m_aFriends[Index] = List.m_vFriends[Index];
+		m_aFriends[Index].m_NameHash = str_quickhash(m_aFriends[Index].m_aName);
+		m_aFriends[Index].m_ClanHash = str_quickhash(m_aFriends[Index].m_aClan);
+	}
+	++m_Revision;
+	return true;
+}
 
 CFriends::CFriends()
 {
@@ -564,6 +639,9 @@ void CFriends::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserDat
 		}
 	}
 
+	// 恢复时按完整身份添加，避免忽略战队选项吞掉同名记录或改错备注与置顶。
+	if(!pSelf->m_Foes && g_Config.m_ClFriendsIgnoreClan)
+		pConfigManager->WriteLine("cl_friends_ignore_clan 0");
 	for(int i = 0; i < pSelf->m_NumFriends; ++i)
 	{
 		str_copy(aBuf, pSelf->m_Foes ? "add_foe " : "add_friend ");
@@ -614,4 +692,6 @@ void CFriends::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserDat
 			pConfigManager->WriteLine(aBuf);
 		}
 	}
+	if(!pSelf->m_Foes && g_Config.m_ClFriendsIgnoreClan)
+		pConfigManager->WriteLine("cl_friends_ignore_clan 1");
 }

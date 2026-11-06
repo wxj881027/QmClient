@@ -40,6 +40,7 @@ public:
 	CFriends();
 
 	void Init(bool Foes = false) override;
+	bool ReplaceAll(const CFriendList &List) override;
 
 	int NumFriends() const override { return m_NumFriends; }
 	uint64_t Revision() const override { return m_Revision; }

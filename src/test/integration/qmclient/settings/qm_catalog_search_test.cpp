@@ -114,6 +114,26 @@ TEST(QmCatalogSearch, InternalLabelsAliasesAndConfigsResolveWithoutOpeningTheirP
 	}
 }
 
+TEST(QmCatalogSearch, EntityLayerOptionsResolveToTheirDDNetCard)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	for(const char *pQuery : {"实体层调整", "Overlay entities", "Show text entities", "cl_overlay_entities", "cl_text_entities", "cl_text_entities_size", "qm_entity_overlay_freeze_alpha"})
+	{
+		SCOPED_TRACE(pQuery);
+		const auto Results = qm_card_catalog::SearchResultEntries(pQuery, Model);
+		const auto It = std::find_if(Results.begin(), Results.end(), [](const auto &Result) {
+			return std::string(Result.m_pStableId) == "qm:entity_overlay";
+		});
+		ASSERT_NE(It, Results.end());
+		EXPECT_STREQ(It->m_pTab, "ddnet");
+		EXPECT_TRUE(qm_card_catalog::HasCardModule(It->m_pStableId));
+		EXPECT_TRUE(std::none_of(Results.begin(), Results.end(), [](const auto &Result) {
+			return std::string(Result.m_pStableId) == "deck:ddnet-gameplay";
+		}));
+	}
+}
+
 TEST(QmCatalogSearch, ActionButtonTextDoesNotMatchCards)
 {
 	qm_card_order::CModel Model;

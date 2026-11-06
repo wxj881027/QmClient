@@ -74,6 +74,7 @@ void CMenus::RenderQmVisualTranslateUiContent(CUIRect &Content, float LineHeight
 void CMenus::RenderQmVisualEntityOverlayContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	CSettingsContentLayoutFlow Flow(Content);
+	const bool CanCommit = Flow.Input() && !PrewarmOnly && !Ui()->RenderOnly();
 	auto RenderSlider = [&](const void *pInputId, int *pValue, const char *pTextId, const char *pTitle) {
 		CUIRect Row, LabelColumn, ControlColumn;
 		const bool HasRow = Flow.Control(pTextId, LineHeight, Row);
@@ -95,7 +96,30 @@ void CMenus::RenderQmVisualEntityOverlayContent(CUIRect &Content, float LineHeig
 	static int s_QmEntityOverlayTeleCheckpointAlphaInputId;
 	static int s_QmEntityOverlaySwitchAlphaInputId;
 	static int s_ClOverlayEntitiesInputId;
-	RenderSlider(&s_ClOverlayEntitiesInputId, &g_Config.m_ClOverlayEntities, "m_ClOverlayEntities", Localize("Tune layer opacity"));
+	// 显示实体层和原来的叠层不透明度共用配置，合并后只保留一个控件。
+	RenderSlider(&s_ClOverlayEntitiesInputId, &g_Config.m_ClOverlayEntities, "m_ClOverlayEntities", Localize("Overlay entities"));
+	CUIRect Row;
+	if(Flow.Control("text-entities", LineHeight, Row))
+	{
+		if(DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClTextEntities, "Show text entities", Localize("Show text entities"), g_Config.m_ClTextEntities, &Row) && CanCommit)
+			g_Config.m_ClTextEntities ^= 1;
+	}
+	Flow.Space(LineSpacing);
+	if(g_Config.m_ClTextEntities)
+	{
+		if(Flow.Control("text-entities-size", LineHeight, Row))
+		{
+			CUIRect LabelColumn, ControlColumn;
+			SplitSettingsControlRow(Row, CurrentSettingsContentMetrics(), &LabelColumn, &ControlColumn);
+			RenderQmVisualLabel("ddnet-text-entities-size", &LabelColumn, Localize("Size"), BodySize);
+			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&g_Config.m_ClTextEntitiesSize, &Row, &g_Config.m_ClTextEntitiesSize, &LabelColumn);
+			const int PreviousSize = g_Config.m_ClTextEntitiesSize;
+			RenderQmSettingsSliderWithValueInput(&g_Config.m_ClTextEntitiesSize, ControlColumn, &g_Config.m_ClTextEntitiesSize, 20, 100, "", PrewarmOnly, CUi::SCROLLBAR_OPTION_DELAYUPDATE);
+			if(CanCommit && PreviousSize != g_Config.m_ClTextEntitiesSize)
+				GameClient()->m_MapImages.SetTextureScale(g_Config.m_ClTextEntitiesSize);
+		}
+		Flow.Space(LineSpacing);
+	}
 	if(!qm_card_catalog::QmCardRenderHook::Personalization(this, Content, "qm:entity_overlay", CurrentSettingsContentMetrics(), PrewarmOnly || Ui()->RenderOnly()))
 		return;
 

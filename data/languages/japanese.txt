@@ -2066,6 +2066,9 @@ Candidate files
 Candy gradient
 == キャンディグラデーション
 
+Cannot import: invalid data or too many friends or categories.
+== インポートできません。データが無効か、フレンドまたはグループが多すぎます。
+
 Cannot join the target player's team
 == 対象プレイヤーのチームには参加できません
 
@@ -2476,6 +2479,9 @@ Clan plates size
 
 Clan: %s
 == クラン：%s
+
+Classic
+== クラシック
 
 Classic Easy
 == クラシック Easy
@@ -3218,6 +3224,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == すべてコピー
 
+Copy friend code
+== フレンドコードをコピー
+
 Copy info
 == 情報をコピー
 
@@ -3262,6 +3271,9 @@ Could not delete "%s"
 
 Could not download "%s"
 == 「%s」をダウンロードできませんでした
+
+Could not encode friend data.
+== フレンドデータをコードに変換できませんでした。
 
 Could not find a Tutorial server. Check your internet connection.
 == チュートリアルサーバーが見つかりませんでした。インターネット接続を確認してください。
@@ -4232,8 +4244,8 @@ Draft file is empty
 Drag
 == ドラッグ
 
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
-== 死亡の不透明度やテレポートの不透明度などのスライダーを 0〜100% で動かすか、レイヤーの不透明度を調整でエンティティ層全体を薄くします。
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
+== 死亡の不透明度やテレポートの不透明度などのスライダーを 0〜100% で動かすか、「エンティティを重ねる」でエンティティ層全体を薄くします。
 
 Drag HUD modules with the left mouse button
 == マウスの左ボタンで HUD モジュールをドラッグ
@@ -4657,9 +4669,6 @@ Empty slots still take space, so clear the ones you no longer use.
 
 enable
 == 有効
-
-Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
-== ハンマーで叩くたびにスキンを変えたいときだけ、ハンマースキン強奪をオンにしてください。相手にも見えます。
 
 Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 == 「マップ進行バー」を有効にし、表示位置を単独表示、プレイヤー統計、ダイナミックアイランドから選びます。プレイヤー統計を選ぶ場合は「プレイヤー統計 HUD を表示」も有効にしてください。
@@ -5213,8 +5222,8 @@ Entity Background Image
 Entity layer
 == エンティティ層
 
-Entity overlay
-== エンティティオーバーレイ
+Entity layer adjustments
+== エンティティレイヤーの調整
 
 Entity Preview
 == エンティティプレビュー
@@ -5954,6 +5963,9 @@ Friend
 Friend bar category expand state (1=expanded, 0=collapsed)
 == フレンドバーカテゴリの展開状態（1=展開、0=折りたたみ）
 
+Friend code copied, including categories, notes and pins.
+== グループ、メモ、ピン留めを含むフレンドコードをコピーしました。
+
 Friend color in friends list
 == フレンドリスト内のフレンド色
 
@@ -6001,6 +6013,12 @@ Friend option color
 
 Friends
 == フレンド
+
+Friends imported and saved.
+== フレンドをインポートして保存しました。
+
+Friends imported for this session, but saving settings failed.
+== 今回のセッションにフレンドをインポートしましたが、設定の保存に失敗しました。
 
 Friends only
 == フレンドのみ
@@ -6986,8 +7004,14 @@ Import and restart
 Import configuration package
 == 設定パッケージをインポート
 
+Import friend code
+== フレンドコードをインポート
+
 Import from clipboard
 == クリップボードからインポート
+
+Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
+== 標準ではフレンドを統合し、重複する相手のローカル情報を保持します。コードには個人の名前とメモが含まれます。
 
 Improved anti ping
 == 改善されたアンチピング
@@ -7300,6 +7324,9 @@ Invalid X coordinate.
 
 Invalid Y coordinate.
 == Y座標が無効です
+
+Invalid, damaged or unsupported friend code.
+== フレンドコードが無効、破損、または未対応です。
 
 Invert camera drift direction
 == カメラドリフト方向を反転
@@ -7735,6 +7762,9 @@ Leak IP
 
 Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process
 == 各サーバーに ping を送信することで IP アドレスをすべてのサーバーに漏洩し、同時にレイテンシも取得します
+
+Leaks your IP address to this server by pinging it, also acquiring the latency in the process
+== このサーバーに ping を送信して遅延を測定する際に、このサーバーにあなたの IP アドレスが公開されます
 
 Learn
 == チュートリアル Wiki
@@ -8951,6 +8981,18 @@ Name plate elements allow free Y movement
 Name plate elements freely movable within bounds
 == ネームプレート要素の枠内自由移動を許可
 
+Name plate hammer icon X offset
+== ネームプレートのハンマーアイコンの X オフセット
+
+Name plate hammer icon Y offset
+== ネームプレートのハンマーアイコンの Y オフセット
+
+Name plate hook icon X offset
+== ネームプレートのフックアイコンの X オフセット
+
+Name plate hook icon Y offset
+== ネームプレートのフックアイコンの Y オフセット
+
 Name plate key line X offset
 == ネームプレートキー行 X オフセット
 
@@ -10052,6 +10094,12 @@ Password visibility icon animation: 0=Fade, 1=Morph
 Past year
 == 過去1年間
 
+Paste a friend code first.
+== 先にフレンドコードを貼り付けてください。
+
+Paste friend code
+== フレンドコードを貼り付け
+
 Paste sp_dc from Spotify web cookies
 == ブラウザの sp_dc クッキーを貼り付け
 
@@ -10513,9 +10561,6 @@ Players weapons has no affect on others
 
 Playing effects
 == エフェクトの再生
-
-Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
-== Tee のスキンが変わったときに短いエフェクトを出します。たった今ハンマーで叩いた相手のスキンをコピーすることもできます。
 
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == ハンマーで奪ったスキンも含め、スキンが変わるときにアニメーションを再生します。
@@ -11330,6 +11375,9 @@ Read the listed rows, then press "Apply Qm recommended appearance"; if the font 
 Ready
 == 準備完了
 
+Ready to import: %d friends, %d categories.
+== インポート待ち：フレンド %d 人、グループ %d 個。
+
 Really? Not even a little?
 == 本当に？少しも考えてくれないんですか？
 
@@ -11777,6 +11825,9 @@ Repeat message
 Repeat the latest chat message
 == 最新のチャットメッセージを繰り返す
 
+Replace all friends
+== フレンドをすべて置き換える
+
 Replace censored words with length-based chars
 == ブロックワードの長さに応じて複数文字で置換
 
@@ -11800,6 +11851,9 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == このプレフィックスを持つスキンに置き換え（例：cats、santa）
+
+Replace your entire friend list, categories, notes and pins with the pasted code?
+== フレンド一覧、グループ、メモ、ピン留めをすべて貼り付けたコードの内容に置き換えますか？
 
 Replacement chars
 == 置換文字
@@ -16142,9 +16196,6 @@ Tune additional world and player effects
 Tune in zone a variable to value
 == ゾーン a の変数を値にチューニング
 
-Tune layer opacity
-== チューンレイヤーの不透明度
-
 Tune variable to value
 == 変数を値にチューニング
 
@@ -16219,9 +16270,6 @@ Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title mo
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == 自分と dummy のスキンの輪郭か他のプレイヤーのスキンの輪郭をオンにして、太さと不透明度を調整します。カスタム Tee の色相切り替えがカスタムカラーを動かします。
-
-Turn on "Skin transition animation", choose a "Skin transition type" and "Animation range", then set "Skin transition duration" and "Skin transition intensity".
-== スキン切り替えアニメーションをオンにし、切り替えタイプとアニメーション範囲を選んで、切り替えの長さと強さを設定します。
 
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
 == 自由観戦カメラの平滑化をオンにして映画的平滑度を設定します。低いほど機敏、高いほどゆっくり流れます。

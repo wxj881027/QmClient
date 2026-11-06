@@ -2066,6 +2066,9 @@ Candidate files
 Candy gradient
 == Şeker renk geçişi
 
+Cannot import: invalid data or too many friends or categories.
+== İçe aktarılamıyor: veriler geçersiz veya arkadaş ya da grup sayısı çok fazla.
+
 Cannot join the target player's team
 == Bu oyuncunun takımına katılınamıyor
 
@@ -2476,6 +2479,9 @@ Clan plates size
 
 Clan: %s
 == Klan: %s
+
+Classic
+== Klasik
 
 Classic Easy
 == Klasik Easy
@@ -3218,6 +3224,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == Tümünü kopyala
 
+Copy friend code
+== Arkadaş kodunu kopyala
+
 Copy info
 == Bilgiyi kopyala
 
@@ -3262,6 +3271,9 @@ Could not delete "%s"
 
 Could not download "%s"
 == "%s" indirilemedi
+
+Could not encode friend data.
+== Arkadaş verileri kodlanamadı.
 
 Could not find a Tutorial server. Check your internet connection.
 == Bir Eğitim sunucusu bulunamadı. İnternet bağlantınızı kontrol edin.
@@ -4232,8 +4244,8 @@ Draft file is empty
 Drag
 == Sürükle
 
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
-== Ölüm saydamlığı veya ışınlanma saydamlığı gibi bir kaydırıcıyı %0 ile %100 arasında sürükleyin ya da katman saydamlığını ayarla ile tüm varlık katmanını soluklaştırın.
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
+== Ölüm saydamlığı veya ışınlanma saydamlığı gibi bir kaydırıcıyı %0 ile %100 arasında sürükleyin ya da varlık katmanını göster ile tüm varlık katmanını soluklaştırın.
 
 Drag HUD modules with the left mouse button
 == HUD modüllerini sol fare tuşuyla sürükleyin
@@ -4657,9 +4669,6 @@ Empty slots still take space, so clear the ones you no longer use.
 
 enable
 == etkinleştir
-
-Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
-== Çekiçle skin çalmayı yalnızca her vuruşta skinin değişmesini istiyorsan aç; diğer oyuncular da görür.
 
 Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 == Harita ilerleme çubuğunu açın ve konumunu seçin: ayrı göster, oyuncu istatistikleri veya Dinamik Ada. Oyuncu istatistiklerini seçerseniz oyuncu istatistikleri HUD’unu da açın.
@@ -5213,8 +5222,8 @@ Entity Background Image
 Entity layer
 == Varlık katmanı
 
-Entity overlay
-== Varlık kaplaması
+Entity layer adjustments
+== Varlık katmanı ayarları
 
 Entity Preview
 == Varlık Önizlemesi
@@ -5954,6 +5963,9 @@ Friend
 Friend bar category expand state (1=expanded, 0=collapsed)
 == Arkadaş çubuğu kategori genişletme durumu (1=genişletilmiş, 0=daraltılmış)
 
+Friend code copied, including categories, notes and pins.
+== Arkadaş kodu gruplar, notlar ve sabitlemelerle birlikte kopyalandı.
+
 Friend color in friends list
 == Arkadaş listesindeki arkadaş rengi
 
@@ -6001,6 +6013,12 @@ Friend option color
 
 Friends
 == Arkadaşlar
+
+Friends imported and saved.
+== Arkadaşlar içe aktarıldı ve kaydedildi.
+
+Friends imported for this session, but saving settings failed.
+== Arkadaşlar bu oturum için içe aktarıldı ancak ayarlar kaydedilemedi.
 
 Friends only
 == Yalnızca arkadaşlar
@@ -6986,8 +7004,14 @@ Import and restart
 Import configuration package
 == Yapılandırma paketini içe aktar
 
+Import friend code
+== Arkadaş kodunu içe aktar
+
 Import from clipboard
 == Panodan içe aktar
+
+Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
+== İçe aktarma varsayılan olarak arkadaşları birleştirir ve yinelenenlerin yerel bilgilerini korur. Kodlar özel adlar ve notlar içerir.
 
 Improved anti ping
 == Geliştirilmiş anti ping
@@ -7300,6 +7324,9 @@ Invalid X coordinate.
 
 Invalid Y coordinate.
 == Geçersiz Y koordinatı.
+
+Invalid, damaged or unsupported friend code.
+== Arkadaş kodu geçersiz, bozuk veya desteklenmiyor.
 
 Invert camera drift direction
 == Kamera Sürüklenme Yönünü Ters Çevir
@@ -7735,6 +7762,9 @@ Leak IP
 
 Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process
 == Her bir sunucuya ping atarak IP adresini tüm sunuculara sızdırır, ayrıca bu işlem sırasında gecikmeyi de alır
+
+Leaks your IP address to this server by pinging it, also acquiring the latency in the process
+== Gecikmeyi ölçmek için bu sunucuya ping göndererek IP adresini bu sunucuya açıklar
 
 Learn
 == Öğren
@@ -8951,6 +8981,18 @@ Name plate elements allow free Y movement
 Name plate elements freely movable within bounds
 == İsim Plakası Öğesinin Kutu İçinde Serbestçe Hareket Etmesine İzin Ver
 
+Name plate hammer icon X offset
+== İsim etiketi çekiç simgesi X kaydırması
+
+Name plate hammer icon Y offset
+== İsim etiketi çekiç simgesi Y kaydırması
+
+Name plate hook icon X offset
+== İsim etiketi kanca simgesi X kaydırması
+
+Name plate hook icon Y offset
+== İsim etiketi kanca simgesi Y kaydırması
+
 Name plate key line X offset
 == İsim Plakası Tuş Satırı X Kayması
 
@@ -10052,6 +10094,12 @@ Password visibility icon animation: 0=Fade, 1=Morph
 Past year
 == Geçen yıl
 
+Paste a friend code first.
+== Önce bir arkadaş kodu yapıştırın.
+
+Paste friend code
+== Arkadaş kodunu yapıştır
+
 Paste sp_dc from Spotify web cookies
 == Tarayıcıdan sp_dc çerezini yapıştırın
 
@@ -10513,9 +10561,6 @@ Players weapons has no affect on others
 
 Playing effects
 == Oynatma efektleri
-
-Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
-== Bir tee'nin skini değiştiğinde kısa bir efekt oynatır ve az önce çekiçle vurduğun tee'nin skinini kopyalayabilir.
 
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == Çekiçle çalınanlar dahil, skinin değiştiğinde bir animasyon oynatır.
@@ -11330,6 +11375,9 @@ Read the listed rows, then press "Apply Qm recommended appearance"; if the font 
 Ready
 == Hazır
 
+Ready to import: %d friends, %d categories.
+== İçe aktarmaya hazır: %d arkadaş, %d grup.
+
 Really? Not even a little?
 == Gerçekten mi? Hiç mi düşünmezsin?
 
@@ -11777,6 +11825,9 @@ Repeat message
 Repeat the latest chat message
 == En son sohbet mesajını tekrarla
 
+Replace all friends
+== Tüm arkadaşları değiştir
+
 Replace censored words with length-based chars
 == Engellenen kelime uzunluğuna göre çok karakterli değiştirme
 
@@ -11800,6 +11851,9 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == Bu öneke sahip bir skin ile değiştir (ör. kediler, noel baba)
+
+Replace your entire friend list, categories, notes and pins with the pasted code?
+== Tüm arkadaş listesi, gruplar, notlar ve sabitlemeler yapıştırılan kodla değiştirilsin mi?
 
 Replacement chars
 == Değiştirme karakterleri
@@ -16142,9 +16196,6 @@ Tune additional world and player effects
 Tune in zone a variable to value
 == Bölge a'daki bir değişkeni değere ayarla
 
-Tune layer opacity
-== Katman opaklığı
-
 Tune variable to value
 == Değişkeni değere ayarla
 
@@ -16219,9 +16270,6 @@ Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title mo
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == Kendin ve dummy için skin dış çizgisini ya da diğer oyuncuların skin dış çizgisini aç, kalınlık ve saydamlığı ayarla; özel Tee tonu döngüsü özel renkleri canlandırır.
-
-Turn on "Skin transition animation", choose a "Skin transition type" and "Animation range", then set "Skin transition duration" and "Skin transition intensity".
-== Skin geçiş animasyonunu aç, geçiş türünü ve animasyon aralığını seç, ardından geçiş süresi ile yoğunluğunu ayarla.
 
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
 == Yumuşak serbest izleme kamerasını aç ve sinematik yumuşatmayı ayarla: düşük değer çevik, yüksek değer ağır kayar.

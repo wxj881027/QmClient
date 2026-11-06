@@ -3459,6 +3459,7 @@ if(CLIENT)
     QmUi/cards/QmWordFilterFileCard.cpp
     QmUi/cards/QmCardCatalogGeneral.cpp
     QmUi/cards/QmConfigPackageCard.cpp
+    QmUi/cards/QmFriendCodeCard.cpp
     QmUi/cards/QmCardCatalogPlayer.cpp
     QmUi/cards/QmCardCatalogGraphics.cpp
     QmUi/AudioPackEditor.cpp
@@ -3806,6 +3807,7 @@ if(CLIENT)
     components/qmclient/pie_menu_settings.cpp
     components/qmclient/pending_hammer_hits.h
     components/qmclient/predicted_event_queue.h
+    components/qmclient/practice_cursor.h
     components/qmclient/netease/netease_integration.cpp
     components/qmclient/netease/netease_integration.h
     components/qmclient/netease/netease_lyric_parser.cpp
@@ -3897,6 +3899,8 @@ if(CLIENT)
     components/qmclient/ime_gradient_probe.h
     components/qmclient/config_package.cpp
     components/qmclient/config_package.h
+    components/qmclient/friend_code.cpp
+    components/qmclient/friend_code.h
     components/qmclient/screenshot_manager.h
     components/qmclient/watermark_compositor.cpp
     components/qmclient/watermark_compositor.h
@@ -5450,6 +5454,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/music/music_humming_state_test.cpp
     src/test/unit/qmclient/client/qm_lyrics_hud_layout_test.cpp
     src/test/unit/qmclient/client/qm_fast_practice_hook_input_test.cpp
+    src/test/unit/qmclient/client/qm_fast_practice_cursor_test.cpp
     src/test/unit/qmclient/client/qm_media_island_content_test.cpp
     src/test/unit/qmclient/client/qm_media_island_satellite_test.cpp
     src/test/unit/qmclient/client/qm_switch_countdown_timing_test.cpp
@@ -5804,6 +5809,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_screenshot_export_cleanup_test.cpp
     src/test/unit/qmclient/client/qm_watermark_compositor_test.cpp
     src/test/unit/qmclient/client/qm_config_package_test.cpp
+    src/test/unit/qmclient/client/qm_friend_code_test.cpp
+    src/test/integration/qmclient/client/qm_friend_code_import_test.cpp
     src/test/integration/qmclient/client/qm_config_package_storage_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_clipboard_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_image_policy_test.cpp
@@ -6033,6 +6040,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/game/client/components/qmclient/skin_source_job.cpp
     src/game/client/components/qmclient/scripting/impl.cpp
     src/game/client/components/qmclient/config_package.cpp
+    src/game/client/components/qmclient/friend_code.cpp
     src/game/client/components/jump_hint_utils.cpp
     src/game/client/render_tee_geometry.cpp
     src/game/client/components/section_loader.cpp

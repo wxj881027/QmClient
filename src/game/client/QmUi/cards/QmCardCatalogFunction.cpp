@@ -291,6 +291,7 @@ namespace qm_card_catalog
 					QmCardRenderHook::RenderQmFunctionCheckboxRow(pMenus, Row, LineHeight, 0, &g_Config.m_QmSpectatorFriendsFirst, "List friends first in the spectator menu", Localize("List friends first in the spectator menu"), &g_Config.m_QmSpectatorFriendsFirst, PrewarmOnly);
 				Flow.Space(LineSpacing);
 				QmCardRenderHook::RenderQmFunctionFriendNotifyContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
+				QmCardRenderHook::RenderFriendCodeControls(pMenus, Content, PrewarmOnly);
 			};
 			Add(Id, "qm:friend_notify", "Friend Notifications", "Friend online and join notifications",
 				[RenderFriendNotify, ReadOnly](CUIRect &Content) { RenderFriendNotify(Content, ReadOnly); });

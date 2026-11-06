@@ -2066,6 +2066,9 @@ Candidate files
 Candy gradient
 == Gradiente de rebuçados
 
+Cannot import: invalid data or too many friends or categories.
+== Não foi possível importar: dados inválidos ou demasiados amigos ou grupos.
+
 Cannot join the target player's team
 == Não é possível entrar na equipa deste jogador
 
@@ -2476,6 +2479,9 @@ Clan plates size
 
 Clan: %s
 == Clã: %s
+
+Classic
+== Clássico
 
 Classic Easy
 == Classic Easy
@@ -3218,6 +3224,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == Copiar tudo
 
+Copy friend code
+== Copiar código de amigos
+
 Copy info
 == Copiar informação
 
@@ -3262,6 +3271,9 @@ Could not delete "%s"
 
 Could not download "%s"
 == Não foi possível transferir "%s"
+
+Could not encode friend data.
+== Não foi possível codificar os dados dos amigos.
 
 Could not find a Tutorial server. Check your internet connection.
 == Não foi possível encontrar um servidor de Tutorial. Verifique sua conexão com a internet.
@@ -4232,8 +4244,8 @@ Draft file is empty
 Drag
 == Arrastar
 
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
-== Arraste um controlo como opacidade de morte ou opacidade de teleporte de 0 a 100%, ou use ajustar a opacidade da camada para esbater toda a camada de entidades.
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
+== Arraste um controlo como opacidade de morte ou opacidade de teleporte de 0 a 100%, ou use sobrepor entidades para esbater toda a camada de entidades.
 
 Drag HUD modules with the left mouse button
 == Arrasta os módulos HUD com o botão esquerdo do rato
@@ -4657,9 +4669,6 @@ Empty slots still take space, so clear the ones you no longer use.
 
 enable
 == ativar
-
-Enable "Hammer skin steal" only if you want your skin to change on every hammer hit, since other players see it too.
-== Ativa o roubo de skin com martelo só se quiseres trocar de skin a cada acerto, porque os outros também veem.
 
 Enable "Map progress bar" and choose its location: Standalone, Player stats or Dynamic Island. Enable "Show player stats HUD" for the Player stats location.
 == Ativa a barra de progresso do mapa e escolhe onde a mostrar: separada, nas estatísticas do jogador ou na Ilha Dinâmica. Para a mostrar nas estatísticas, ativa também o HUD de estatísticas do jogador.
@@ -5213,8 +5222,8 @@ Entity Background Image
 Entity layer
 == Camada de entidades
 
-Entity overlay
-== Sobreposição de entidades
+Entity layer adjustments
+== Ajustes da camada de entidades
 
 Entity Preview
 == Pré-visualização de entidades
@@ -5954,6 +5963,9 @@ Friend
 Friend bar category expand state (1=expanded, 0=collapsed)
 == Estado de expansão da categoria da barra de amigos (1=expandido, 0=recolhido)
 
+Friend code copied, including categories, notes and pins.
+== Código de amigos copiado com grupos, notas e amigos afixados.
+
 Friend color in friends list
 == Cor do amigo na lista de amigos
 
@@ -6001,6 +6013,12 @@ Friend option color
 
 Friends
 == Amigos
+
+Friends imported and saved.
+== Amigos importados e guardados.
+
+Friends imported for this session, but saving settings failed.
+== Amigos importados para esta sessão, mas não foi possível guardar as definições.
 
 Friends only
 == Apenas amigos
@@ -6986,8 +7004,14 @@ Import and restart
 Import configuration package
 == Importar pacote de configurações
 
+Import friend code
+== Importar código de amigos
+
 Import from clipboard
 == Importar da área de transferência
+
+Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
+== Por predefinição, a importação combina amigos e mantém os dados locais dos duplicados. Os códigos contêm nomes e notas privados.
 
 Improved anti ping
 == Anti-ping melhorado
@@ -7300,6 +7324,9 @@ Invalid X coordinate.
 
 Invalid Y coordinate.
 == Coordenada Y inválida.
+
+Invalid, damaged or unsupported friend code.
+== Código de amigos inválido, danificado ou incompatível.
 
 Invert camera drift direction
 == Inverter direção da deriva da câmara
@@ -7735,6 +7762,9 @@ Leak IP
 
 Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process
 == Expõe o teu endereço IP a todos os servidores ao fazer ping a cada um, adquirindo também a latência no processo
+
+Leaks your IP address to this server by pinging it, also acquiring the latency in the process
+== Expõe o teu endereço IP a este servidor ao enviar um ping para medir a latência
 
 Learn
 == Aprender
@@ -8951,6 +8981,18 @@ Name plate elements allow free Y movement
 Name plate elements freely movable within bounds
 == Elemento da placa de nome permite movimento livre dentro da caixa
 
+Name plate hammer icon X offset
+== Deslocamento X do ícone de martelo do nome
+
+Name plate hammer icon Y offset
+== Deslocamento Y do ícone de martelo do nome
+
+Name plate hook icon X offset
+== Deslocamento X do ícone de gancho do nome
+
+Name plate hook icon Y offset
+== Deslocamento Y do ícone de gancho do nome
+
 Name plate key line X offset
 == Desvio X da linha de teclas da placa de nome
 
@@ -10052,6 +10094,12 @@ Password visibility icon animation: 0=Fade, 1=Morph
 Past year
 == Último ano
 
+Paste a friend code first.
+== Cola primeiro um código de amigos.
+
+Paste friend code
+== Colar código de amigos
+
 Paste sp_dc from Spotify web cookies
 == Cole o cookie sp_dc do navegador
 
@@ -10513,9 +10561,6 @@ Players weapons has no affect on others
 
 Playing effects
 == Efeitos de reprodução
-
-Plays a short effect when a tee's skin changes, and can copy the skin of the tee you just hammered.
-== Reproduz um efeito curto quando a skin de um tee muda e pode copiar a skin do tee que acabaste de acertar com o martelo.
 
 Plays an animation whenever your skin changes, including skins stolen with the hammer.
 == Reproduz uma animação sempre que o skin muda, incluindo os roubados com o martelo.
@@ -11330,6 +11375,9 @@ Read the listed rows, then press "Apply Qm recommended appearance"; if the font 
 Ready
 == Pronto
 
+Ready to import: %d friends, %d categories.
+== Pronto para importar: %d amigos, %d grupos.
+
 Really? Not even a little?
 == A sério? Nem um pouquinho?
 
@@ -11777,6 +11825,9 @@ Repeat message
 Repeat the latest chat message
 == Repetir a última mensagem de chat
 
+Replace all friends
+== Substituir todos os amigos
+
 Replace censored words with length-based chars
 == Substituição por múltiplos caracteres com base no comprimento da palavra bloqueada
 
@@ -11800,6 +11851,9 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == Substituir skin por uma com este prefixo (ex.: gatos, santa)
+
+Replace your entire friend list, categories, notes and pins with the pasted code?
+== Substituir toda a lista de amigos, grupos, notas e amigos afixados pelo código colado?
 
 Replacement chars
 == Caracteres de substituição
@@ -16142,9 +16196,6 @@ Tune additional world and player effects
 Tune in zone a variable to value
 == Sintonizar na zona a uma variável para o valor
 
-Tune layer opacity
-== Opacidade da camada de ajuste
-
 Tune variable to value
 == Sintonizar variável para o valor
 
@@ -16219,9 +16270,6 @@ Turn on "Show titles on nameplates", pick a "Title style", then adjust "Title mo
 
 Turn on "Skin outline for self and dummy" or "Skin outline for other players", then tune width and opacity; "Cycle custom Tee hue" animates custom colors.
 == Ativa o contorno da skin própria e do dummy ou para os outros jogadores e ajusta espessura e opacidade; a alternância de matiz do Tee anima as cores personalizadas.
-
-Turn on "Skin transition animation", choose a "Skin transition type" and "Animation range", then set "Skin transition duration" and "Skin transition intensity".
-== Ativa a animação de transição de skin, escolhe o tipo e o alcance da animação e ajusta duração e intensidade.
 
 Turn on "Smooth free spectator camera" and set "Cinematic smoothness": low values stay snappy, high values drift slowly.
 == Ativa a câmara livre suavizada e ajusta a suavidade cinematográfica: baixo responde rápido, alto desliza devagar.

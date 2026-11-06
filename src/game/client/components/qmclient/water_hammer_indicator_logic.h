@@ -15,7 +15,39 @@ struct SQmWaterHammerInputState
 	int m_WantedWeapon = 0;
 	int m_Fire = 0;
 	int m_Hook = 0;
+	int m_Direction = 0;
+	int m_Jump = 0;
+	int m_IntendedTick = -1;
+
+	void Update(const CNetMsg_Sv_PreInput &Message)
+	{
+		// 预输入不定期广播；保持按住状态，并忽略迟到的旧输入。
+		if(Message.m_IntendedTick < 0 || (m_Received && Message.m_IntendedTick < m_IntendedTick))
+			return;
+		m_Received = true;
+		m_WantedWeapon = Message.m_WantedWeapon;
+		m_Fire = Message.m_Fire;
+		m_Hook = Message.m_Hook;
+		m_Direction = Message.m_Direction;
+		m_Jump = Message.m_Jump;
+		m_IntendedTick = Message.m_IntendedTick;
+	}
 };
+
+struct SQmWaterDirectionState
+{
+	bool m_Left = false;
+	bool m_Jump = false;
+	bool m_Right = false;
+};
+
+// 冻结会清零角色快照中的移动输入，仅此时用收到的原始按键补全箭头。
+inline SQmWaterDirectionState QmResolveWaterDirection(const int FreezeEnd, const bool LiveFrozen, const int SnapshotDirection, const int SnapshotJumped, const SQmWaterHammerInputState &PreInput)
+{
+	if((FreezeEnd != 0 || LiveFrozen) && PreInput.m_Received)
+		return {PreInput.m_Direction == -1, PreInput.m_Jump != 0, PreInput.m_Direction == 1};
+	return {SnapshotDirection == -1, (SnapshotJumped & 1) != 0, SnapshotDirection == 1};
+}
 
 // 水域卡锤标记的纯判定逻辑，独立于客户端组件，便于单元测试。
 inline bool QmIsWaterHammerPenaltyTile(const int Tile)

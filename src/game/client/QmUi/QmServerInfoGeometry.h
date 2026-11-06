@@ -8,7 +8,7 @@
 
 namespace QmServerInfoGeometry
 {
-	constexpr float GAP = 10.0f;
+	constexpr float GAP = 4.0f;
 
 	struct SLayout
 	{
