@@ -27,6 +27,7 @@ CScrollRegion::CScrollRegion()
 void CScrollRegion::Reset()
 {
 	m_ScrollState.Reset();
+	m_DisplayOffset = 0.0f;
 	m_ContentSize = 0.0f;
 	m_ScrollDirection = SCROLLRELATIVE_NONE;
 	m_ScrollSpeedMultiplier = 1.0f;
@@ -99,29 +100,28 @@ void CScrollRegion::Begin(CUIRect *pClipRect, vec2 *pOutOffset, const CScrollReg
 	// 偏移还在滑回顶部时不要硬重置，否则折叠后的过渡会被打断成瞬移。
 	if(!ContentOverflows() && !Ui()->RenderOnly() && m_ScrollState.Offset() <= 0.5f)
 		m_ScrollState.ResetForNonScrollableContent(Ui()->IsActiveItem(&m_SliderId) && Ui()->MouseButton(0));
-	m_ContentSize = 0.0f;
-
 	Ui()->ClipEnable(&m_ClipRect);
 
 	*pClipRect = m_ClipRect;
-	// 显示偏移缓动：内容高度骤减导致状态偏移被夹回去时，平滑滑过去而不是瞬移。
+	// 滚轮已经由滚动状态完成缓动，显示层直接使用该位置，避免再次追赶和顿跳。
+	// 只有内容缩短后，旧画面超出新的可滚动范围时才保留回位过渡。
 	{
 		const float TargetOffset = m_ScrollState.Offset();
-		const int64_t Now = time_get();
-		const int64_t Freq = maximum<int64_t>(1, time_freq());
-		const float Dt = m_DisplayOffsetTick == 0 ? 0.0f : std::clamp((float)(Now - m_DisplayOffsetTick) / (float)Freq, 0.0f, 0.1f);
-		m_DisplayOffsetTick = Now;
-		if(!m_DisplayOffsetInit)
+		const float MaxOffset = ContentOverflows() ? MaxScroll() : 0.0f;
+		const bool AnimateContentShrink = m_DisplayOffset > MaxOffset && TargetOffset == MaxOffset &&
+			!m_ScrollState.Animating() && !m_ScrollState.ThumbDragActive() && !m_ScrollState.ContentDragState().m_Active &&
+			TouchAxis == 0.0f && g_Config.m_QmUiMotionLevel > 0 && g_Config.m_UiSmoothScrollTime > 0;
+		if(!AnimateContentShrink)
+			m_DisplayOffset = TargetOffset;
+		else if(!Ui()->RenderOnly())
 		{
-			m_DisplayOffset = TargetOffset;
-			m_DisplayOffsetInit = true;
+			const float Dt = maximum(0.0f, Client()->RenderFrameTime());
+			m_DisplayOffset += (TargetOffset - m_DisplayOffset) * (1.0f - std::exp(-Dt * 16.0f));
+			if(std::abs(TargetOffset - m_DisplayOffset) <= Ui()->PixelSize() * 0.25f)
+				m_DisplayOffset = TargetOffset;
 		}
-		const float Delta = TargetOffset - m_DisplayOffset;
-		if(std::abs(Delta) > 24.0f && g_Config.m_QmUiMotionLevel > 0)
-			m_DisplayOffset += Delta * (1.0f - std::exp(-Dt * 16.0f));
-		else
-			m_DisplayOffset = TargetOffset;
 	}
+	m_ContentSize = 0.0f;
 	*pOutOffset = ContentScrollOffset();
 }
 

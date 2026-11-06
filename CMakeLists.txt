@@ -3417,6 +3417,7 @@ if(CLIENT)
     QmUi/UiNavigation.cpp
     QmUi/UiNavigation.h
     QmUi/UiOverlays.h
+    QmUi/UiScaledLabel.h
     QmUi/UiSurface.cpp
     QmUi/UiSurface.h
     QmUi/UiTextRenderState.h
@@ -3446,13 +3447,13 @@ if(CLIENT)
     QmUi/MapTagsPanel.cpp
     QmUi/MapTagsPanel.h
     QmUi/QmServerInfoGeometry.h
-    QmUi/QmServerInfoLayout.cpp
-    QmUi/QmServerInfoLayout.h
     QmUi/cards/QmCardCatalog.cpp
     QmUi/cards/QmCardCatalog.h
     QmUi/cards/QmCardCatalogIds.cpp
     QmUi/cards/QmCardCatalogSearch.cpp
     QmUi/cards/QmCardCatalogSearch.h
+    QmUi/cards/QmSearchAnswerCard.cpp
+    QmUi/cards/QmSearchAnswerCard.h
     QmUi/cards/QmCardCatalogBind.cpp
     QmUi/cards/QmCardCatalogSelfKillProtection.cpp
     QmUi/cards/QmCardCatalogFunction.cpp
@@ -3880,6 +3881,8 @@ if(CLIENT)
     components/qmclient/settings_asset_list_merge.h
     components/qmclient/settings_asset_queue.h
     components/qmclient/settings_asset_search_view.h
+    components/qmclient/search_answers.cpp
+    components/qmclient/search_answers.h
     components/qmclient/screenshot_clipboard.cpp
     components/qmclient/screenshot_clipboard.h
     components/qmclient/screenshot_image_job.cpp
@@ -5131,6 +5134,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/ui/qm_card_registry_test.cpp
     src/test/unit/qmclient/ui/qm_server_info_layout_test.cpp
     src/test/unit/qmclient/settings/qm_search_header_test.cpp
+    src/test/unit/qmclient/settings/qm_search_answers_test.cpp
     src/test/unit/qmclient/ui/qm_interaction_source_test.cpp
     src/test/unit/qmclient/ui/qm_console_ui_layout_test.cpp
     src/test/unit/qmclient/ui/qm_console_settings_layout_test.cpp
@@ -5738,6 +5742,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/integration/qmclient/settings/qm_nameplate_cards_test.cpp
     src/test/integration/qmclient/settings/qm_general_cards_test.cpp
     src/test/integration/qmclient/settings/qm_catalog_search_test.cpp
+    src/test/integration/qmclient/settings/qm_search_answer_cards_test.cpp
     src/test/integration/qmclient/settings/qm_title_cards_test.cpp
     src/test/integration/qmclient/settings/qm_spectator_cards_test.cpp
     src/test/integration/qmclient/settings/qm_tee_cards_test.cpp
@@ -6052,6 +6057,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/game/client/components/qmclient/scripting/impl.cpp
     src/game/client/components/qmclient/config_package.cpp
     src/game/client/components/qmclient/friend_code.cpp
+    src/game/client/components/qmclient/search_answers.cpp
     src/game/client/components/jump_hint_utils.cpp
     src/game/client/render_tee_geometry.cpp
     src/game/client/components/section_loader.cpp
@@ -6476,6 +6482,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_console_settings_scroll_test.cpp
       src/test/integration/qmclient/ui/qm_scrollbar_color_submission_test.cpp
       src/test/integration/qmclient/ui/qm_scrollbar_reserve_transition_test.cpp
+      src/test/integration/qmclient/ui/qm_scroll_display_test.cpp
       src/test/integration/qmclient/ui/qm_direct_touch_test.cpp
       src/test/integration/qmclient/ui/qm_background_controls_test.cpp
       src/test/integration/qmclient/ui/qm_navigation_selection_test.cpp
@@ -6502,6 +6509,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/qmclient/ui/qm_server_browser_filter_layout_test.cpp
       src/test/integration/qmclient/ui/qm_spectator_hud_text_test.cpp
       src/test/integration/qmclient/ui/qm_icon_text_test.cpp
+      src/test/integration/qmclient/ui/qm_scaled_label_test.cpp
       src/test/integration/qmclient/ui/qm_surface_text_test.cpp
       src/test/integration/qmclient/ui/qm_theme_selection_test.cpp
       src/test/integration/qmclient/ui/qm_ui_element_lifetime_test.cpp

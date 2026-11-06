@@ -90,7 +90,7 @@ SQmWaterHeldState CQmWaterHammerIndicator::MarkedInputs(const int ClientId) cons
 	};
 }
 
-bool CQmWaterHammerIndicator::IsMarked(const int ClientId) const
+std::optional<ColorRGBA> CQmWaterHammerIndicator::HighlightColor(const int ClientId) const
 {
-	return MarkedInputs(ClientId).m_Hammer;
+	return MarkedInputs(ClientId).HighlightColor(g_Config.m_QmWaterHammerColor, g_Config.m_QmWaterHookColor);
 }

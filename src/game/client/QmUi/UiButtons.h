@@ -32,6 +32,7 @@ namespace ui_widget
 		bool m_Enabled = true;
 		bool m_Selected = false;
 		bool m_TransparentInactive = false;
+		bool m_AlignToPixel = true;
 		int m_Corners = IGraphics::CORNER_ALL;
 		float m_Radius = ui_token::radius::BASE;
 		float m_BorderWidth = ui_token::feedback::ICON_BORDER_WIDTH;

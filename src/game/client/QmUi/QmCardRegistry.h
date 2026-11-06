@@ -155,6 +155,8 @@ namespace qm_card_registry
 	bool RepairLegacyTeeLayout(qm_card_order::CModel &Model);
 	// 聊天气泡已移入游戏界面的聊天页，恢复仍保存为视觉页的卡片。
 	bool RepairLegacyChatBubbleTab(qm_card_order::CModel &Model);
+	// DDRace HUD Pro 已移入游戏界面的 HUD 页，恢复仍保存在栖梦 HUD 页的卡片。
+	bool RepairLegacyBindStatusHudTab(qm_card_order::CModel &Model);
 	bool IsTClientMainCardsLegacyLeft(const qm_card_order::CModel &Model);
 	bool MoveTClientMainCardsToAlternatingColumns(qm_card_order::CModel &Model);
 	ETClientMainCardsMigrationResult MigrateTClientMainCardsToAlternatingColumns(qm_card_order::CModel &Model, char *pSerialized, int SerializedSize);

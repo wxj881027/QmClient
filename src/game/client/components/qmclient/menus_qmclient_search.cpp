@@ -1,4 +1,5 @@
 #include "menus_qmclient_internal.h"
+#include "search_answers.h"
 
 #include <base/secure.h>
 #include <base/str.h>
@@ -19,7 +20,9 @@
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
+#include <game/client/QmUi/cards/QmCardCatalogSearch.h>
 #include <game/client/QmUi/cards/QmCardMeasureRevision.h>
+#include <game/client/QmUi/cards/QmSearchAnswerCard.h>
 #include <game/client/components/menus.h>
 #include <game/client/gameclient.h>
 #include <game/client/ui_scrollregion.h>
@@ -41,15 +44,18 @@ namespace
 	struct SQmGlobalSearchResults
 	{
 		std::vector<SQmGlobalSearchCard> m_vAllVisibleCards;
+		qm_search_answers::SResult m_Answers;
 	};
 
 	void CollectGlobalSearchResults(const char *pSearch, bool Sixup, const qm_card_order::CModel &Model, SQmGlobalSearchResults &Out)
 	{
 		Out.m_vAllVisibleCards.clear();
+		Out.m_Answers = qm_search_answers::Search(pSearch);
 		// 无搜索内容时结果为空：搜索页显示标题与输入卡片，不展示全量卡片。
 		if(pSearch == nullptr || pSearch[0] == '\0')
 			return;
 		std::vector<SQmGlobalSearchCard> vCards = qm_card_registry::SearchCards(pSearch, Model);
+		qm_card_catalog::AddAnswerCards(Out.m_Answers, Model, vCards);
 		Out.m_vAllVisibleCards.reserve(vCards.size());
 		for(SQmGlobalSearchCard &Card : vCards)
 		{
@@ -136,8 +142,10 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 		CollectGlobalSearchResults(pModuleSearch, s_GlobalSearchCache.m_Sixup, CardOrderModel, s_GlobalSearchCache.m_Results);
 		auto &vResults = s_GlobalSearchCache.m_Results.m_vAllVisibleCards;
 		std::vector<qm_card_order::SEntry> vEntries;
-		vEntries.reserve(vResults.size() + 1);
+		vEntries.reserve(vResults.size() + 2);
 		// 搜索输入卡片不再进入卡组：它脱离滚动流手动绘制（默认居中，搜索后置顶）。
+		if(!s_GlobalSearchCache.m_Results.m_Answers.m_vCandidates.empty())
+			vEntries.push_back({qm_card_catalog::SEARCH_ANSWER_CARD_ID, "global-search", 0, -2});
 		vEntries.push_back({"deck:global-search-empty", "global-search", 0, -1});
 		for(size_t Index = 0; Index < vResults.size(); ++Index)
 		{
@@ -151,6 +159,8 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	}
 	const std::vector<SQmGlobalSearchCard> &SearchVisibleGlobalCards = s_GlobalSearchCache.m_Results.m_vAllVisibleCards;
 	const int SearchMatchedGlobalCardCount = (int)SearchVisibleGlobalCards.size();
+	const auto &SearchAnswers = s_GlobalSearchCache.m_Results.m_Answers;
+	const int SearchAnswerCount = SearchAnswers.m_pAnswer != nullptr ? 1 : (int)SearchAnswers.m_vCandidates.size();
 	s_GlobalSearchFunctionCardLayout = ResolveFunctionCardLayoutState();
 	qm_card_catalog::SQmCardBuildContext StandardPrepare;
 	StandardPrepare.m_pMenus = this;
@@ -217,9 +227,15 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 		}
 	}
 	// s_GlobalSearchCardBuild 是函数内静态对象，直接引用即可，无需附加捕获。
-	const auto BuildDefinitions = [this, UiScale, BodySize, SmallSize, LineHeight, LineSpacing, Metrics, SearchMatchedGlobalCardCount, HasSearchQuery, ReadOnly, SearchCtx, &SearchVisibleGlobalCards](std::vector<SSettingsCardDefinition> &vCards) {
-		vCards.reserve(SearchMatchedGlobalCardCount + 1);
+	const auto BuildDefinitions = [this, UiScale, BodySize, SmallSize, LineHeight, LineSpacing, Metrics, SearchMatchedGlobalCardCount, HasSearchQuery, ReadOnly, SearchCtx, &SearchVisibleGlobalCards, &SearchAnswers, SearchAnswerCount](std::vector<SSettingsCardDefinition> &vCards) {
+		vCards.reserve(SearchMatchedGlobalCardCount + 2);
 		// 搜索输入卡片已脱离卡组，在 RenderCached 之前手动绘制并定位。
+		if(SearchAnswerCount > 0)
+		{
+			SSettingsCardDefinition AnswerCard;
+			qm_card_catalog::BuildSearchAnswerCard({Ui(), TextRender(), Input(), Storage(), Client()}, SearchAnswers, ReadOnly, Metrics, [this](const char *pQuestion) { m_GlobalCardSearchInput.Set(pQuestion); }, AnswerCard);
+			vCards.push_back(std::move(AnswerCard));
+		}
 
 		SSettingsCardDefinition EmptyCard;
 		EmptyCard.m_Spec = {"deck:global-search-empty", Localize("Search"), qm_card_registry::ResolveLocalizedDescription("deck:global-search-results")};
@@ -232,7 +248,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 				Ui()->DoLabel(&Row, pText, SmallSize, TEXTALIGN_ML, Props); }, LineHeight);
 		};
 		qm_settings_content::UseDeclaredContent(EmptyCard, Ui(), TextRender());
-		EmptyCard.m_IsVisible = [HasSearchQuery, SearchMatchedGlobalCardCount] { return HasSearchQuery && SearchMatchedGlobalCardCount == 0; };
+		EmptyCard.m_IsVisible = [HasSearchQuery, SearchMatchedGlobalCardCount, SearchAnswerCount] { return HasSearchQuery && SearchMatchedGlobalCardCount == 0 && SearchAnswerCount == 0; };
 		vCards.push_back(std::move(EmptyCard));
 
 		for(const SQmGlobalSearchCard &Card : SearchVisibleGlobalCards)
@@ -363,7 +379,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 		SSettingsCardVisualState InputVisualState;
 		InputVisualState.m_Collapsed = s_GlobalSearchInputCollapsed;
 		InputVisualState.m_ClipContent = true;
-		const auto RenderInputContent = [this, UiScale, SearchInputHeight, SearchInputFontSize, SmallSize, LineHeight, LineSpacing, SearchMatchedGlobalCardCount, ReadOnly](CUIRect Content) {
+		const auto RenderInputContent = [this, UiScale, SearchInputHeight, SearchInputFontSize, SmallSize, LineHeight, LineSpacing, SearchMatchedGlobalCardCount, SearchAnswerCount, HasSearchQuery, ReadOnly](CUIRect Content) {
 			if(Content.h <= 0.0f || Content.w <= 0.0f)
 				return;
 			CUIRect Row;
@@ -377,8 +393,11 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 			ui_widget::InputField(InputCtx, &m_GlobalCardSearchInput, Row, SearchInputFontSize, !ReadOnly && !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
 			Content.HSplitTop(LineSpacing * 0.65f, nullptr, &Content);
 			Content.HSplitTop(LineHeight, &Row, &Content);
-			char aSearchHint[64];
-			str_format(aSearchHint, sizeof(aSearchHint), Localize("Found %d global cards"), SearchMatchedGlobalCardCount);
+			char aSearchHint[192];
+			if(!HasSearchQuery)
+				str_copy(aSearchHint, "搜索功能或提问，例如：截图在哪里");
+			else
+				str_format(aSearchHint, sizeof(aSearchHint), "%d 个设置卡片 · %d 个常见问题", SearchMatchedGlobalCardCount, SearchAnswerCount);
 			TextRender()->TextColor(ui_token::color::TEXT_SECONDARY);
 			Ui()->DoLabel(&Row, aSearchHint, SmallSize, TEXTALIGN_ML);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
@@ -425,7 +444,10 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	InputState.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
 	InputState.m_pScrollParams = Ui()->MeasurementOnly() ? nullptr : &ScrollParams;
 	const uint64_t MeasurementEnvironmentRevision = ResolveSettingsCardDefinitionsRevision(m_SettingsCardDeckDisplayCycle, m_MenuTextPoolGeneration, MainView.w, 0);
-	CardDeck.RenderCached(SearchCtx, DeckPage, "global-search", DefinitionsRevision, BuildDefinitions, DeckOrderModel, Ui()->MeasurementOnly() ? nullptr : &s_GlobalSearchScrollRegion, InputState, Motion, SettingsCardDeckVisualOptions(), MeasurementEnvironmentRevision);
+	auto VisualOptions = SettingsCardDeckVisualOptions();
+	// 答案默认占据整行，先于左右两列设置卡片。
+	VisualOptions.m_LeadingFullWidthCards = 2;
+	CardDeck.RenderCached(SearchCtx, DeckPage, "global-search", DefinitionsRevision, BuildDefinitions, DeckOrderModel, Ui()->MeasurementOnly() ? nullptr : &s_GlobalSearchScrollRegion, InputState, Motion, VisualOptions, MeasurementEnvironmentRevision);
 }
 
 void CMenus::ReleaseQmClientSettingsSearchInput()
