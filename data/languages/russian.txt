@@ -2066,6 +2066,9 @@ Candidate files
 Candy gradient
 == Конфетный градиент
 
+Cannot import: invalid data or too many friends or categories.
+== Импорт невозможен: неверные данные или слишком много друзей либо групп.
+
 Cannot join the target player's team
 == Нельзя вступить в команду выбранного игрока
 
@@ -3221,6 +3224,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == Копировать все
 
+Copy friend code
+== Копировать код друзей
+
 Copy info
 == Копировать информацию
 
@@ -3265,6 +3271,9 @@ Could not delete "%s"
 
 Could not download "%s"
 == Не удалось скачать "%s"
+
+Could not encode friend data.
+== Не удалось закодировать данные друзей.
 
 Could not find a Tutorial server. Check your internet connection.
 == Не удалось найти учебный сервер. Проверьте ваше интернет-соединение.
@@ -5954,6 +5963,9 @@ Friend
 Friend bar category expand state (1=expanded, 0=collapsed)
 == Состояние раскрытия категории панели друзей (1=раскрыто, 0=свёрнуто)
 
+Friend code copied, including categories, notes and pins.
+== Код друзей скопирован вместе с группами, заметками и закреплениями.
+
 Friend color in friends list
 == Цвет друга в списке друзей
 
@@ -6001,6 +6013,12 @@ Friend option color
 
 Friends
 == Друзья
+
+Friends imported and saved.
+== Друзья импортированы и сохранены.
+
+Friends imported for this session, but saving settings failed.
+== Друзья импортированы для текущего сеанса, но сохранить настройки не удалось.
 
 Friends only
 == Только друзья
@@ -6079,9 +6097,6 @@ Game type
 
 Game type (ddnet, mod)
 == Тип игры (ddnet, mod)
-
-Game types:
-== Типы игр:
 
 Game update rate (Hz)
 == Частота обновления игры (Гц)
@@ -6989,8 +7004,14 @@ Import and restart
 Import configuration package
 == Импортировать пакет настроек
 
+Import friend code
+== Импортировать код друзей
+
 Import from clipboard
 == Импорт из буфера обмена
+
+Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
+== По умолчанию друзья объединяются, а данные совпавших друзей остаются локальными. Код содержит личные имена и заметки.
 
 Improved anti ping
 == Улучшенный антипинг
@@ -7303,6 +7324,9 @@ Invalid X coordinate.
 
 Invalid Y coordinate.
 == Неверная координата Y.
+
+Invalid, damaged or unsupported friend code.
+== Код друзей неверен, повреждён или не поддерживается.
 
 Invert camera drift direction
 == Инвертировать направление дрейфа камеры
@@ -10070,6 +10094,12 @@ Password visibility icon animation: 0=Fade, 1=Morph
 Past year
 == За последний год
 
+Paste a friend code first.
+== Сначала вставьте код друзей.
+
+Paste friend code
+== Вставить код друзей
+
 Paste sp_dc from Spotify web cookies
 == Вставьте sp_dc cookie из браузера
 
@@ -10378,9 +10408,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == Фильтр страны игрока в браузере серверов (числовой код ISO 3166-1)
-
-Player country:
-== Страна игрока:
 
 Player death
 == Смерть игрока
@@ -11348,6 +11375,9 @@ Read the listed rows, then press "Apply Qm recommended appearance"; if the font 
 Ready
 == Готово
 
+Ready to import: %d friends, %d categories.
+== Готово к импорту: друзей — %d, групп — %d.
+
 Really? Not even a little?
 == Серьёзно? Даже чуть-чуть?
 
@@ -11795,6 +11825,9 @@ Repeat message
 Repeat the latest chat message
 == Повторить последнее сообщение чата
 
+Replace all friends
+== Заменить всех друзей
+
 Replace censored words with length-based chars
 == Замена нескольких символов по длине заблокированного слова
 
@@ -11818,6 +11851,9 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == Заменить скин на скин с этим префиксом (например, cats, santa)
+
+Replace your entire friend list, categories, notes and pins with the pasted code?
+== Заменить весь список друзей, группы, заметки и закрепления данными из вставленного кода?
 
 Replacement chars
 == Ответить дамми
@@ -14784,9 +14820,6 @@ Stress system (debug builds only).
 == Система стресса (только для отладочных сборок).
 
 Strict game type filter
-== Строгий фильтр типа игры
-
-Strict gametype filter
 == Строгий фильтр типа игры
 
 Strict mode

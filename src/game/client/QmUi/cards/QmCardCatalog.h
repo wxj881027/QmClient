@@ -141,6 +141,7 @@ namespace qm_card_catalog
 		static void RenderScreenshotWatermarkSettings(const SQmCardBuildContext &Ctx, CUIRect Content, bool ShowEnable = true);
 		static bool BuildGeneralCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool BuildConfigFilesCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
+		static void RenderFriendCodeControls(CMenus *pMenus, CUIRect &Content, bool ReadOnly);
 		static bool BuildNameplateCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool BuildWaterHammerCard(const SQmCardBuildContext &Ctx, qm_module::EQmModuleId Id, SSettingsCardDefinition &Out);
 		static bool BuildTitleCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);

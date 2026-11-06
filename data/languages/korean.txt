@@ -2066,6 +2066,9 @@ Candidate files
 Candy gradient
 == 캔디 그라데이션
 
+Cannot import: invalid data or too many friends or categories.
+== 가져올 수 없습니다. 데이터가 잘못되었거나 친구 또는 그룹 수가 한도를 초과했습니다.
+
 Cannot join the target player's team
 == 대상 플레이어의 팀에 참가할 수 없습니다
 
@@ -3221,6 +3224,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == 모두 복사
 
+Copy friend code
+== 친구 코드 복사
+
 Copy info
 == 정보 복사
 
@@ -3265,6 +3271,9 @@ Could not delete "%s"
 
 Could not download "%s"
 == "%s"을(를) 다운로드할 수 없습니다
+
+Could not encode friend data.
+== 친구 데이터를 코드로 변환하지 못했습니다.
 
 Could not find a Tutorial server. Check your internet connection.
 == 튜토리얼 서버를 찾을 수 없습니다. 인터넷 연결을 확인하세요.
@@ -5954,6 +5963,9 @@ Friend
 Friend bar category expand state (1=expanded, 0=collapsed)
 == 친구 바 카테고리 확장 상태 (1=확장, 0=축소)
 
+Friend code copied, including categories, notes and pins.
+== 그룹, 메모, 고정 상태가 포함된 친구 코드를 복사했습니다.
+
 Friend color in friends list
 == 친구 목록의 친구 색상
 
@@ -6001,6 +6013,12 @@ Friend option color
 
 Friends
 == 친구
+
+Friends imported and saved.
+== 친구를 가져와 저장했습니다.
+
+Friends imported for this session, but saving settings failed.
+== 현재 세션에 친구를 가져왔지만 설정을 저장하지 못했습니다.
 
 Friends only
 == 친구만
@@ -6079,9 +6097,6 @@ Game type
 
 Game type (ddnet, mod)
 == 게임 유형 (ddnet, mod)
-
-Game types:
-== 게임 유형:
 
 Game update rate (Hz)
 == 게임 업데이트율 (Hz)
@@ -6989,8 +7004,14 @@ Import and restart
 Import configuration package
 == 설정 패키지 가져오기
 
+Import friend code
+== 친구 코드 가져오기
+
 Import from clipboard
 == 클립보드에서 가져오기
+
+Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
+== 기본적으로 친구를 병합하고 중복 친구의 로컬 정보를 유지합니다. 코드에는 비공개 이름과 메모가 포함됩니다.
 
 Improved anti ping
 == 개선된 안티 핑
@@ -7303,6 +7324,9 @@ Invalid X coordinate.
 
 Invalid Y coordinate.
 == 잘못된 Y 좌표입니다.
+
+Invalid, damaged or unsupported friend code.
+== 친구 코드가 잘못되었거나 손상되었거나 지원되지 않는 버전입니다.
 
 Invert camera drift direction
 == 카메라 드리프트 방향 반전
@@ -10070,6 +10094,12 @@ Password visibility icon animation: 0=Fade, 1=Morph
 Past year
 == 지난 1년
 
+Paste a friend code first.
+== 먼저 친구 코드를 붙여넣으세요.
+
+Paste friend code
+== 친구 코드 붙여넣기
+
 Paste sp_dc from Spotify web cookies
 == 브라우저의 sp_dc 쿠키 붙여넣기
 
@@ -10378,9 +10408,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == 서버 브라우저의 플레이어 국가 필터 (ISO 3166-1 숫자)
-
-Player country:
-== 플레이어 국가:
 
 Player death
 == 플레이어 사망
@@ -11348,6 +11375,9 @@ Read the listed rows, then press "Apply Qm recommended appearance"; if the font 
 Ready
 == 준비됨
 
+Ready to import: %d friends, %d categories.
+== 가져오기 준비됨: 친구 %d명, 그룹 %d개.
+
 Really? Not even a little?
 == 정말요? 조금도 생각해 보실 생각이 없나요?
 
@@ -11795,6 +11825,9 @@ Repeat message
 Repeat the latest chat message
 == 최신 채팅 메시지 반복
 
+Replace all friends
+== 모든 친구 교체
+
 Replace censored words with length-based chars
 == 차단어 길이에 따른 다중 문자 대체
 
@@ -11818,6 +11851,9 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == 이 접두사가 있는 스킨으로 교체 (예: cats, santa)
+
+Replace your entire friend list, categories, notes and pins with the pasted code?
+== 전체 친구 목록, 그룹, 메모, 고정 상태를 붙여넣은 코드로 교체할까요?
 
 Replacement chars
 == 교체 문자
@@ -14785,9 +14821,6 @@ Stress system (debug builds only).
 
 Strict game type filter
 == 엄격한 게임 유형 필터
-
-Strict gametype filter
-== 엄격한 게임 모드 필터
 
 Strict mode
 == 엄격 모드

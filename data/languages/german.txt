@@ -2066,6 +2066,9 @@ Candidate files
 Candy gradient
 == Bonbon-Farbverlauf
 
+Cannot import: invalid data or too many friends or categories.
+== Import nicht möglich: ungültige Daten oder zu viele Freunde oder Gruppen.
+
 Cannot join the target player's team
 == Dem Team dieses Spielers kann nicht beigetreten werden
 
@@ -3221,6 +3224,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == Alle kopieren
 
+Copy friend code
+== Freundescode kopieren
+
 Copy info
 == Info kopieren
 
@@ -3265,6 +3271,9 @@ Could not delete "%s"
 
 Could not download "%s"
 == "%s" konnte nicht heruntergeladen werden
+
+Could not encode friend data.
+== Freundesdaten konnten nicht kodiert werden.
 
 Could not find a Tutorial server. Check your internet connection.
 == Es konnte kein Tutorial-Server gefunden werden. Überprüfe deine Internetverbindung.
@@ -5954,6 +5963,9 @@ Friend
 Friend bar category expand state (1=expanded, 0=collapsed)
 == Erweiterungszustand der Freundesleisten-Kategorie (1=erweitert, 0=eingeklappt)
 
+Friend code copied, including categories, notes and pins.
+== Freundescode mit Gruppen, Notizen und angehefteten Freunden kopiert.
+
 Friend color in friends list
 == Freundesfarbe in der Freundesliste
 
@@ -6001,6 +6013,12 @@ Friend option color
 
 Friends
 == Freunde
+
+Friends imported and saved.
+== Freunde importiert und gespeichert.
+
+Friends imported for this session, but saving settings failed.
+== Freunde für diese Sitzung importiert, aber die Einstellungen konnten nicht gespeichert werden.
 
 Friends only
 == Nur Freunde
@@ -6079,9 +6097,6 @@ Game type
 
 Game type (ddnet, mod)
 == Spieltyp (ddnet, mod)
-
-Game types:
-== Spieltypen:
 
 Game update rate (Hz)
 == Spielaktualisierungsrate (Hz)
@@ -6989,8 +7004,14 @@ Import and restart
 Import configuration package
 == Konfigurationspaket importieren
 
+Import friend code
+== Freundescode importieren
+
 Import from clipboard
 == Aus Zwischenablage importieren
+
+Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
+== Standardmäßig werden Freunde zusammengeführt und lokale Einträge bei Duplikaten beibehalten. Codes enthalten private Namen und Notizen.
 
 Improved anti ping
 == Verbessertes Anti-Ping
@@ -7303,6 +7324,9 @@ Invalid X coordinate.
 
 Invalid Y coordinate.
 == Ungültige Y-Koordinate.
+
+Invalid, damaged or unsupported friend code.
+== Ungültiger, beschädigter oder nicht unterstützter Freundescode.
 
 Invert camera drift direction
 == Kamera-Driftrichtung umkehren
@@ -10070,6 +10094,12 @@ Password visibility icon animation: 0=Fade, 1=Morph
 Past year
 == Letztes Jahr
 
+Paste a friend code first.
+== Füge zuerst einen Freundescode ein.
+
+Paste friend code
+== Freundescode einfügen
+
 Paste sp_dc from Spotify web cookies
 == sp_dc-Cookie aus dem Browser einfügen
 
@@ -10378,9 +10408,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == Spielerland-Filter im Server-Browser (ISO 3166-1 numerisch)
-
-Player country:
-== Spielerland:
 
 Player death
 == Spielertod
@@ -11348,6 +11375,9 @@ Read the listed rows, then press "Apply Qm recommended appearance"; if the font 
 Ready
 == Bereit
 
+Ready to import: %d friends, %d categories.
+== Bereit zum Import: %d Freunde, %d Gruppen.
+
 Really? Not even a little?
 == Wirklich? Nicht mal ein bisschen?
 
@@ -11795,6 +11825,9 @@ Repeat message
 Repeat the latest chat message
 == Die letzte Chat-Nachricht wiederholen
 
+Replace all friends
+== Alle Freunde ersetzen
+
 Replace censored words with length-based chars
 == Mehrfachzeichenersetzung nach Länge des blockierten Wortes
 
@@ -11818,6 +11851,9 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == Skin durch eine mit diesem Präfix ersetzen (z.B. cats, santa)
+
+Replace your entire friend list, categories, notes and pins with the pasted code?
+== Die gesamte Freundesliste mit Gruppen, Notizen und angehefteten Freunden durch den eingefügten Code ersetzen?
 
 Replacement chars
 == Ersetzungszeichen
@@ -14784,9 +14820,6 @@ Stress system (debug builds only).
 == Stresssystem (nur Debug-Builds).
 
 Strict game type filter
-== Strenger Spieltyp-Filter
-
-Strict gametype filter
 == Strenger Spieltyp-Filter
 
 Strict mode

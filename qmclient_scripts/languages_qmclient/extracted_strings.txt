@@ -687,6 +687,7 @@ Cancel translation test
 Cancel your swap request
 Candidate files
 Candy gradient
+Cannot import: invalid data or too many friends or categories.
 Cannot join the target player's team
 Cannot load map tags. Please retry.
 Cannot open word list file. Previous words remain active.
@@ -1075,6 +1076,7 @@ Copied
 Copy
 Copy a .qmconfig file into the package folder, then refresh.
 Copy all
+Copy friend code
 Copy info
 Copy name
 Copy name option color
@@ -1090,6 +1092,7 @@ Could not connect dummy
 Could not connect to the translation service. Please try again later.
 Could not delete "%s"
 Could not download "%s"
+Could not encode friend data.
 Could not find a Tutorial server. Check your internet connection.
 Could not find online Tutorial server.\nStarting and connecting to local server…
 Could not find your Team
@@ -1988,6 +1991,7 @@ Freeze/Deep freeze tile outline width
 Frequently asked questions
 Friend
 Friend bar category expand state (1=expanded, 0=collapsed)
+Friend code copied, including categories, notes and pins.
 Friend color in friends list
 Friend entry color in friend list
 Friend heart
@@ -2004,6 +2008,8 @@ Friend online and join notifications
 Friend online notification
 Friend option color
 Friends
+Friends imported and saved.
+Friends imported for this session, but saving settings failed.
 Friends only
 Frozen fire attempt
 Frozen prediction margin
@@ -2030,7 +2036,6 @@ Game sound volume
 Game time margin
 Game type
 Game type (ddnet, mod)
-Game types:
 Game update rate (Hz)
 Game update rate when window inactive (Hz)
 Game/predicted tick
@@ -2333,7 +2338,9 @@ IME selection background color
 IME text color
 Import and restart
 Import configuration package
+Import friend code
 Import from clipboard
+Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
 Improved anti ping
 In DDNet, played when a freeze heart freezes the player. Other modes may use it for health pickups.
 In DDNet, played when weapons are removed. Other modes may use it for armor pickups.
@@ -2438,6 +2445,7 @@ Invalid title appearance
 Invalid translation backend
 Invalid X coordinate.
 Invalid Y coordinate.
+Invalid, damaged or unsupported friend code.
 Invert camera drift direction
 Invite %s to the locked team
 Invite a person to a locked team
@@ -3365,6 +3373,8 @@ Password incorrect
 Password required to use reserved slots.
 Password visibility icon animation: 0=Fade, 1=Morph
 Past year
+Paste a friend code first.
+Paste friend code
 Paste sp_dc from Spotify web cookies
 Path to CA certificate for verifying the MySQL/MariaDB server certificate
 Path to client certificate for the MySQL/MariaDB SSL connection
@@ -3468,7 +3478,6 @@ Player clan
 Player count
 Player country (ISO 3166-1 numeric code)
 Player country filter in server browser (ISO 3166-1 numeric)
-Player country:
 Player death
 Player decoration color
 Player eyes color
@@ -3791,6 +3800,7 @@ Ratio
 Ratio threshold for local target language detection
 Read the listed rows, then press "Apply Qm recommended appearance"; if the font is missing, the panel says so and your current fonts stay.
 Ready
+Ready to import: %d friends, %d categories.
 Really? Not even a little?
 Realtime channel heartbeat interval (seconds, 0 uses default)
 Realtime channel reconnect backoff base (ms)
@@ -3940,6 +3950,7 @@ Renders the demo that is currently playing into a video file. It runs as fast as
 Renders your frame rate in the top right
 Repeat message
 Repeat the latest chat message
+Replace all friends
 Replace censored words with length-based chars
 Replace mode
 Replace mode 0=Regex 1=Full 2=Both
@@ -3948,6 +3959,7 @@ Replace non-friend skins with default
 Replace selected variant
 Replace settings, binds and the listed cfg files, then restart? The current configuration will be backed up first.
 Replace skin with one having this prefix (e.g. cats, santa)
+Replace your entire friend list, categories, notes and pins with the pasted code?
 Replacement chars
 Replaces or hides chat lines that match words on your own list before they are shown to you.
 Replay
@@ -4939,7 +4951,6 @@ Streamer word list file
 Strength icons assets
 Stress system (debug builds only).
 Strict game type filter
-Strict gametype filter
 Strict mode
 Stroke fade time
 Stroke retention time (0=Never disappear)

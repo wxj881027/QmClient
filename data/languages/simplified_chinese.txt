@@ -2066,6 +2066,9 @@ Candidate files
 Candy gradient
 == 糖果渐变
 
+Cannot import: invalid data or too many friends or categories.
+== 无法导入：数据无效，或好友、分组数量超出上限。
+
 Cannot join the target player's team
 == 无法加入目标玩家的队伍
 
@@ -3230,6 +3233,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == 复制全部
 
+Copy friend code
+== 复制好友码
+
 Copy info
 == 复制服务器信息
 
@@ -3274,6 +3280,9 @@ Could not delete "%s"
 
 Could not download "%s"
 == 无法下载"%s"
+
+Could not encode friend data.
+== 无法生成好友码。
 
 Could not find a Tutorial server. Check your internet connection.
 == 未找到教程服务器。请检查你的网络连接。
@@ -5969,6 +5978,9 @@ Friend
 Friend bar category expand state (1=expanded, 0=collapsed)
 == 好友栏分类展开状态(1=展开，0=收起)
 
+Friend code copied, including categories, notes and pins.
+== 好友码已复制，包含分组、备注和置顶状态。
+
 Friend color in friends list
 == 好友列表中好友条目颜色
 
@@ -6016,6 +6028,12 @@ Friend option color
 
 Friends
 == 好友
+
+Friends imported and saved.
+== 好友已导入并保存。
+
+Friends imported for this session, but saving settings failed.
+== 好友已在本次运行中导入，但设置保存失败。
 
 Friends only
 == 仅限好友
@@ -6094,9 +6112,6 @@ Game type
 
 Game type (ddnet, mod)
 == 游戏类型（ddnet、mod）
-
-Game types:
-== 游戏模式：
 
 Game update rate (Hz)
 == 游戏更新率（单位：Hz）
@@ -7004,8 +7019,14 @@ Import and restart
 Import configuration package
 == 导入配置包
 
+Import friend code
+== 导入好友码
+
 Import from clipboard
 == 从剪贴板导入
+
+Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
+== 默认合并好友，重复好友保留本地资料。好友码包含私人名单和备注。
 
 Improved anti ping
 == 改进版延迟补偿
@@ -7318,6 +7339,9 @@ Invalid X coordinate.
 
 Invalid Y coordinate.
 == 无效的 Y 坐标
+
+Invalid, damaged or unsupported friend code.
+== 好友码无效、已损坏或版本不受支持。
 
 Invert camera drift direction
 == 反转相机漂移方向
@@ -10100,6 +10124,12 @@ Password visibility icon animation: 0=Fade, 1=Morph
 Past year
 == 最近一年
 
+Paste a friend code first.
+== 请先粘贴好友码。
+
+Paste friend code
+== 粘贴好友码
+
 Paste sp_dc from Spotify web cookies
 == 粘贴浏览器中的 sp_dc cookie
 
@@ -10408,9 +10438,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == 在服务器浏览器中过滤的玩家国家/地区（ISO 3166-1 数字）
-
-Player country:
-== 玩家国家
 
 Player death
 == 玩家死亡
@@ -11378,6 +11405,9 @@ Read the listed rows, then press "Apply Qm recommended appearance"; if the font 
 Ready
 == 已就绪
 
+Ready to import: %d friends, %d categories.
+== 待导入：%d 位好友，%d 个分组。
+
 Really? Not even a little?
 == 真的？一点都不考虑一下吗？
 
@@ -11825,6 +11855,9 @@ Repeat message
 Repeat the latest chat message
 == 复读最新聊天消息
 
+Replace all friends
+== 替换全部好友
+
 Replace censored words with length-based chars
 == 按屏蔽词长度多字符替换
 
@@ -11848,6 +11881,9 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == 将皮肤替换为带有此前缀的皮肤（例如小猫、圣诞老人）
+
+Replace your entire friend list, categories, notes and pins with the pasted code?
+== 确定用粘贴的好友码替换全部好友、分组、备注和置顶状态吗？
 
 Replacement chars
 == 替换字符
@@ -14821,9 +14857,6 @@ Stress system (debug builds only).
 
 Strict game type filter
 == 严格游戏模式筛选
-
-Strict gametype filter
-== 严格匹配
 
 Strict mode
 == 严格模式

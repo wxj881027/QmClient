@@ -2066,6 +2066,9 @@ Candidate files
 Candy gradient
 == Şeker renk geçişi
 
+Cannot import: invalid data or too many friends or categories.
+== İçe aktarılamıyor: veriler geçersiz veya arkadaş ya da grup sayısı çok fazla.
+
 Cannot join the target player's team
 == Bu oyuncunun takımına katılınamıyor
 
@@ -3221,6 +3224,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == Tümünü kopyala
 
+Copy friend code
+== Arkadaş kodunu kopyala
+
 Copy info
 == Bilgiyi kopyala
 
@@ -3265,6 +3271,9 @@ Could not delete "%s"
 
 Could not download "%s"
 == "%s" indirilemedi
+
+Could not encode friend data.
+== Arkadaş verileri kodlanamadı.
 
 Could not find a Tutorial server. Check your internet connection.
 == Bir Eğitim sunucusu bulunamadı. İnternet bağlantınızı kontrol edin.
@@ -5954,6 +5963,9 @@ Friend
 Friend bar category expand state (1=expanded, 0=collapsed)
 == Arkadaş çubuğu kategori genişletme durumu (1=genişletilmiş, 0=daraltılmış)
 
+Friend code copied, including categories, notes and pins.
+== Arkadaş kodu gruplar, notlar ve sabitlemelerle birlikte kopyalandı.
+
 Friend color in friends list
 == Arkadaş listesindeki arkadaş rengi
 
@@ -6001,6 +6013,12 @@ Friend option color
 
 Friends
 == Arkadaşlar
+
+Friends imported and saved.
+== Arkadaşlar içe aktarıldı ve kaydedildi.
+
+Friends imported for this session, but saving settings failed.
+== Arkadaşlar bu oturum için içe aktarıldı ancak ayarlar kaydedilemedi.
 
 Friends only
 == Yalnızca arkadaşlar
@@ -6079,9 +6097,6 @@ Game type
 
 Game type (ddnet, mod)
 == Oyun türü (ddnet, mod)
-
-Game types:
-== Oyun türleri:
 
 Game update rate (Hz)
 == Oyun güncelleme hızı (Hz)
@@ -6989,8 +7004,14 @@ Import and restart
 Import configuration package
 == Yapılandırma paketini içe aktar
 
+Import friend code
+== Arkadaş kodunu içe aktar
+
 Import from clipboard
 == Panodan içe aktar
+
+Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
+== İçe aktarma varsayılan olarak arkadaşları birleştirir ve yinelenenlerin yerel bilgilerini korur. Kodlar özel adlar ve notlar içerir.
 
 Improved anti ping
 == Geliştirilmiş anti ping
@@ -7303,6 +7324,9 @@ Invalid X coordinate.
 
 Invalid Y coordinate.
 == Geçersiz Y koordinatı.
+
+Invalid, damaged or unsupported friend code.
+== Arkadaş kodu geçersiz, bozuk veya desteklenmiyor.
 
 Invert camera drift direction
 == Kamera Sürüklenme Yönünü Ters Çevir
@@ -10070,6 +10094,12 @@ Password visibility icon animation: 0=Fade, 1=Morph
 Past year
 == Geçen yıl
 
+Paste a friend code first.
+== Önce bir arkadaş kodu yapıştırın.
+
+Paste friend code
+== Arkadaş kodunu yapıştır
+
 Paste sp_dc from Spotify web cookies
 == Tarayıcıdan sp_dc çerezini yapıştırın
 
@@ -10378,9 +10408,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == Sunucu tarayıcısında oyuncu ülke filtresi (ISO 3166-1 sayısal)
-
-Player country:
-== Oyuncu ülkesi:
 
 Player death
 == Oyuncu ölümü
@@ -11348,6 +11375,9 @@ Read the listed rows, then press "Apply Qm recommended appearance"; if the font 
 Ready
 == Hazır
 
+Ready to import: %d friends, %d categories.
+== İçe aktarmaya hazır: %d arkadaş, %d grup.
+
 Really? Not even a little?
 == Gerçekten mi? Hiç mi düşünmezsin?
 
@@ -11795,6 +11825,9 @@ Repeat message
 Repeat the latest chat message
 == En son sohbet mesajını tekrarla
 
+Replace all friends
+== Tüm arkadaşları değiştir
+
 Replace censored words with length-based chars
 == Engellenen kelime uzunluğuna göre çok karakterli değiştirme
 
@@ -11818,6 +11851,9 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == Bu öneke sahip bir skin ile değiştir (ör. kediler, noel baba)
+
+Replace your entire friend list, categories, notes and pins with the pasted code?
+== Tüm arkadaş listesi, gruplar, notlar ve sabitlemeler yapıştırılan kodla değiştirilsin mi?
 
 Replacement chars
 == Değiştirme karakterleri
@@ -14784,9 +14820,6 @@ Stress system (debug builds only).
 == Stres sistemi (yalnızca hata ayıklama yapıları).
 
 Strict game type filter
-== Katı oyun türü filtresi
-
-Strict gametype filter
 == Katı oyun türü filtresi
 
 Strict mode

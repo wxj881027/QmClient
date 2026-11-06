@@ -2066,6 +2066,9 @@ Candidate files
 Candy gradient
 == キャンディグラデーション
 
+Cannot import: invalid data or too many friends or categories.
+== インポートできません。データが無効か、フレンドまたはグループが多すぎます。
+
 Cannot join the target player's team
 == 対象プレイヤーのチームには参加できません
 
@@ -3221,6 +3224,9 @@ Copy a .qmconfig file into the package folder, then refresh.
 Copy all
 == すべてコピー
 
+Copy friend code
+== フレンドコードをコピー
+
 Copy info
 == 情報をコピー
 
@@ -3265,6 +3271,9 @@ Could not delete "%s"
 
 Could not download "%s"
 == 「%s」をダウンロードできませんでした
+
+Could not encode friend data.
+== フレンドデータをコードに変換できませんでした。
 
 Could not find a Tutorial server. Check your internet connection.
 == チュートリアルサーバーが見つかりませんでした。インターネット接続を確認してください。
@@ -5954,6 +5963,9 @@ Friend
 Friend bar category expand state (1=expanded, 0=collapsed)
 == フレンドバーカテゴリの展開状態（1=展開、0=折りたたみ）
 
+Friend code copied, including categories, notes and pins.
+== グループ、メモ、ピン留めを含むフレンドコードをコピーしました。
+
 Friend color in friends list
 == フレンドリスト内のフレンド色
 
@@ -6001,6 +6013,12 @@ Friend option color
 
 Friends
 == フレンド
+
+Friends imported and saved.
+== フレンドをインポートして保存しました。
+
+Friends imported for this session, but saving settings failed.
+== 今回のセッションにフレンドをインポートしましたが、設定の保存に失敗しました。
 
 Friends only
 == フレンドのみ
@@ -6079,9 +6097,6 @@ Game type
 
 Game type (ddnet, mod)
 == ゲームタイプ（ddnet、mod）
-
-Game types:
-== ゲームタイプ：
 
 Game update rate (Hz)
 == ゲーム更新レート（Hz）
@@ -6989,8 +7004,14 @@ Import and restart
 Import configuration package
 == 設定パッケージをインポート
 
+Import friend code
+== フレンドコードをインポート
+
 Import from clipboard
 == クリップボードからインポート
+
+Import merges friends and keeps local duplicates by default. Codes contain private names and notes.
+== 標準ではフレンドを統合し、重複する相手のローカル情報を保持します。コードには個人の名前とメモが含まれます。
 
 Improved anti ping
 == 改善されたアンチピング
@@ -7303,6 +7324,9 @@ Invalid X coordinate.
 
 Invalid Y coordinate.
 == Y座標が無効です
+
+Invalid, damaged or unsupported friend code.
+== フレンドコードが無効、破損、または未対応です。
 
 Invert camera drift direction
 == カメラドリフト方向を反転
@@ -10070,6 +10094,12 @@ Password visibility icon animation: 0=Fade, 1=Morph
 Past year
 == 過去1年間
 
+Paste a friend code first.
+== 先にフレンドコードを貼り付けてください。
+
+Paste friend code
+== フレンドコードを貼り付け
+
 Paste sp_dc from Spotify web cookies
 == ブラウザの sp_dc クッキーを貼り付け
 
@@ -10378,9 +10408,6 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == サーバーブラウザでのプレイヤーの国フィルター（ISO 3166-1 数値）
-
-Player country:
-== プレイヤーの国：
 
 Player death
 == プレイヤー死亡
@@ -11348,6 +11375,9 @@ Read the listed rows, then press "Apply Qm recommended appearance"; if the font 
 Ready
 == 準備完了
 
+Ready to import: %d friends, %d categories.
+== インポート待ち：フレンド %d 人、グループ %d 個。
+
 Really? Not even a little?
 == 本当に？少しも考えてくれないんですか？
 
@@ -11795,6 +11825,9 @@ Repeat message
 Repeat the latest chat message
 == 最新のチャットメッセージを繰り返す
 
+Replace all friends
+== フレンドをすべて置き換える
+
 Replace censored words with length-based chars
 == ブロックワードの長さに応じて複数文字で置換
 
@@ -11818,6 +11851,9 @@ Replace settings, binds and the listed cfg files, then restart? The current conf
 
 Replace skin with one having this prefix (e.g. cats, santa)
 == このプレフィックスを持つスキンに置き換え（例：cats、santa）
+
+Replace your entire friend list, categories, notes and pins with the pasted code?
+== フレンド一覧、グループ、メモ、ピン留めをすべて貼り付けたコードの内容に置き換えますか？
 
 Replacement chars
 == 置換文字
@@ -14784,9 +14820,6 @@ Stress system (debug builds only).
 == ストレスシステム（デバッグビルドのみ）
 
 Strict game type filter
-== 厳格なゲームタイプフィルター
-
-Strict gametype filter
 == 厳格なゲームタイプフィルター
 
 Strict mode
