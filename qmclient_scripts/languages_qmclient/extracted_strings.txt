@@ -1416,7 +1416,7 @@ Downloading…
 Downscaled (0.78)
 Draft file is empty
 Drag
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
 Drag HUD modules with the left mouse button
 Drag the selected watermark to move it. The original image is preserved.
 Drag the three sliders; master scales the other two.
@@ -1742,7 +1742,7 @@ Entities background color
 Entity assets
 Entity Background Image
 Entity layer
-Entity overlay
+Entity layer adjustments
 Entity Preview
 Entity wall outline opacity
 entity_bg (Workshop)
@@ -2591,6 +2591,7 @@ Launch Steam automatically when starting externally
 Layout
 Leak IP
 Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process
+Leaks your IP address to this server by pinging it, also acquiring the latency in the process
 Learn
 Learn "Toggle dummy" first; the other dummy keys only help once you already play with a second tee.
 Leave "Automatic updates" off if you update by hand: it can restart the client to install a build.
@@ -2998,6 +2999,10 @@ Name plate coord line Y offset
 Name plate elements allow free X movement
 Name plate elements allow free Y movement
 Name plate elements freely movable within bounds
+Name plate hammer icon X offset
+Name plate hammer icon Y offset
+Name plate hook icon X offset
+Name plate hook icon Y offset
 Name plate key line X offset
 Name plate key line Y offset
 Name plate name line X offset
@@ -5407,7 +5412,6 @@ Trying Axiom dummy auto login
 Trying to determine UDP connectivity…
 Tune additional world and player effects
 Tune in zone a variable to value
-Tune layer opacity
 Tune variable to value
 Tune variable to value or show current value
 Turn motion off on weaker machines; cards then open and scroll immediately.

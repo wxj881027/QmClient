@@ -2305,20 +2305,20 @@ turkish = "Kullanıcı Adı Gir"
 polish = "Wprowadź nazwę użytkownika"
 
 [[message]]
-key = "Entity overlay"
+key = "Entity layer adjustments"
 [message.translations]
-simplified_chinese = "实体层叠加"
-traditional_chinese = "實體疊加"
-japanese = "エンティティオーバーレイ"
-korean = "엔티티 오버레이"
-russian = "Наложение сущностей"
-german = "Entity-Overlay"
-spanish = "Superposición de entidades"
-french = "Superposition d’entités"
-brazilian_portuguese = "Sobreposição de entidades"
-portuguese = "Sobreposição de entidades"
-turkish = "Varlık kaplaması"
-polish = "Nakładka encji"
+simplified_chinese = "实体层调整"
+traditional_chinese = "實體層調整"
+japanese = "エンティティレイヤーの調整"
+korean = "엔티티 레이어 조정"
+russian = "Настройка слоя сущностей"
+german = "Anpassung der Entitätsebene"
+spanish = "Ajustes de la capa de entidades"
+french = "Réglages de la couche d’entités"
+brazilian_portuguese = "Ajustes da camada de entidades"
+portuguese = "Ajustes da camada de entidades"
+turkish = "Varlık katmanı ayarları"
+polish = "Ustawienia warstwy encji"
 
 [[message]]
 key = "Error playing demo"
@@ -3807,6 +3807,22 @@ brazilian_portuguese = "Vaza seu endereço IP para todos os servidores ao pingar
 portuguese = "Expõe o teu endereço IP a todos os servidores ao fazer ping a cada um, adquirindo também a latência no processo"
 turkish = "Her bir sunucuya ping atarak IP adresini tüm sunuculara sızdırır, ayrıca bu işlem sırasında gecikmeyi de alır"
 polish = "Ujawnia twój adres IP wszystkim serwerom poprzez pingowanie każdego z nich, jednocześnie uzyskując opóźnienie"
+
+[[message]]
+key = "Leaks your IP address to this server by pinging it, also acquiring the latency in the process"
+[message.translations]
+simplified_chinese = "通过 ping 当前服务器获取延迟，同时会向该服务器暴露你的 IP 地址"
+traditional_chinese = "透過 ping 目前的伺服器取得延遲，同時會向該伺服器暴露你的 IP 位址"
+japanese = "このサーバーに ping を送信して遅延を測定する際に、このサーバーにあなたの IP アドレスが公開されます"
+korean = "이 서버에 ping을 보내 지연 시간을 측정하며, 이 과정에서 이 서버에 내 IP 주소가 노출됩니다"
+russian = "Раскрывает ваш IP-адрес этому серверу при отправке ему ping-запроса для измерения задержки"
+german = "Gibt deine IP-Adresse an diesen Server weiter, indem er zur Messung der Latenz angepingt wird"
+spanish = "Revela tu dirección IP a este servidor al hacerle ping para medir la latencia"
+french = "Révèle votre adresse IP à ce serveur en lui envoyant un ping pour mesurer la latence"
+brazilian_portuguese = "Expõe seu endereço IP a este servidor ao enviar um ping para medir a latência"
+portuguese = "Expõe o teu endereço IP a este servidor ao enviar um ping para medir a latência"
+turkish = "Gecikmeyi ölçmek için bu sunucuya ping göndererek IP adresini bu sunucuya açıklar"
+polish = "Ujawnia twój adres IP temu serwerowi, wysyłając do niego ping w celu zmierzenia opóźnienia"
 
 [[message]]
 key = "Lets you join team i (shows your team if left blank)"

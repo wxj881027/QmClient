@@ -172,6 +172,10 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 			g_Config.m_QmNameplateCoordsOffsetY,
 			g_Config.m_QmNameplateKeysOffsetX,
 			g_Config.m_QmNameplateKeysOffsetY,
+			g_Config.m_QmNameplateWaterHammerOffsetX,
+			g_Config.m_QmNameplateWaterHammerOffsetY,
+			g_Config.m_QmNameplateWaterHookOffsetX,
+			g_Config.m_QmNameplateWaterHookOffsetY,
 			g_Config.m_ClNamePlatesTeamcolors,
 			g_Config.m_QmNameplateTextEffects,
 			g_Config.m_QmNameplateTextBorderRange,
@@ -912,6 +916,10 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				{
 					g_Config.m_QmNameplateKeysOffsetX = 0;
 					g_Config.m_QmNameplateKeysOffsetY = 0;
+					g_Config.m_QmNameplateWaterHammerOffsetX = 0;
+					g_Config.m_QmNameplateWaterHammerOffsetY = 0;
+					g_Config.m_QmNameplateWaterHookOffsetX = 0;
+					g_Config.m_QmNameplateWaterHookOffsetY = 0;
 					g_Config.m_QmNameplateCoordsOffsetX = 0;
 					g_Config.m_QmNameplateCoordsOffsetY = 0;
 					g_Config.m_QmNameplateHookOffsetX = 0;

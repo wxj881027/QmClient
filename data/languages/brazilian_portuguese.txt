@@ -4244,8 +4244,8 @@ Draft file is empty
 Drag
 == Arrastar
 
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
-== Arraste um controle como opacidade de morte ou opacidade de teletransporte de 0 a 100%, ou use ajustar a opacidade da camada para esmaecer toda a camada de entidades.
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
+== Arraste um controle como opacidade de morte ou opacidade de teletransporte de 0 a 100%, ou use sobrepor entidades para esmaecer toda a camada de entidades.
 
 Drag HUD modules with the left mouse button
 == Arraste os módulos da HUD com o botão esquerdo do mouse
@@ -5222,8 +5222,8 @@ Entity Background Image
 Entity layer
 == Camada de entidades
 
-Entity overlay
-== Sobreposição de entidades
+Entity layer adjustments
+== Ajustes da camada de entidades
 
 Entity Preview
 == Pré-visualização de entidades
@@ -6097,6 +6097,9 @@ Game type
 
 Game type (ddnet, mod)
 == Tipo de jogo (ddnet, mod)
+
+Game types:
+== Tipos de jogo:
 
 Game update rate (Hz)
 == Taxa de atualização do jogo (Hz)
@@ -7763,6 +7766,9 @@ Leak IP
 Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process
 == Vaza seu endereço IP para todos os servidores ao pingar cada um deles, também adquirindo a latência no processo
 
+Leaks your IP address to this server by pinging it, also acquiring the latency in the process
+== Expõe seu endereço IP a este servidor ao enviar um ping para medir a latência
+
 Learn
 == Aprender
 
@@ -8977,6 +8983,18 @@ Name plate elements allow free Y movement
 
 Name plate elements freely movable within bounds
 == Elemento da placa de nome permite movimento livre dentro da caixa
+
+Name plate hammer icon X offset
+== Deslocamento X do ícone de martelo do nome
+
+Name plate hammer icon Y offset
+== Deslocamento Y do ícone de martelo do nome
+
+Name plate hook icon X offset
+== Deslocamento X do ícone de gancho do nome
+
+Name plate hook icon Y offset
+== Deslocamento Y do ícone de gancho do nome
 
 Name plate key line X offset
 == Deslocamento X da linha de teclas da placa de nome
@@ -10393,6 +10411,9 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == Filtro de país do jogador no navegador de servidores (ISO 3166-1 numérico)
+
+Player country:
+== País do jogador:
 
 Player death
 == Morte do jogador
@@ -14807,6 +14828,9 @@ Stress system (debug builds only).
 Strict game type filter
 == Filtro de tipo de jogo estrito
 
+Strict gametype filter
+== Filtro estrito de tipo de jogo
+
 Strict mode
 == Modo estrito
 
@@ -16180,9 +16204,6 @@ Tune additional world and player effects
 
 Tune in zone a variable to value
 == Ajustar variável na zona a para o valor
-
-Tune layer opacity
-== Opacidade da camada de ajuste
 
 Tune variable to value
 == Ajustar variável para o valor

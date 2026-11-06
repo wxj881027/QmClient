@@ -4244,8 +4244,8 @@ Draft file is empty
 Drag
 == Sürükle
 
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
-== Ölüm saydamlığı veya ışınlanma saydamlığı gibi bir kaydırıcıyı %0 ile %100 arasında sürükleyin ya da katman saydamlığını ayarla ile tüm varlık katmanını soluklaştırın.
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
+== Ölüm saydamlığı veya ışınlanma saydamlığı gibi bir kaydırıcıyı %0 ile %100 arasında sürükleyin ya da varlık katmanını göster ile tüm varlık katmanını soluklaştırın.
 
 Drag HUD modules with the left mouse button
 == HUD modüllerini sol fare tuşuyla sürükleyin
@@ -5222,8 +5222,8 @@ Entity Background Image
 Entity layer
 == Varlık katmanı
 
-Entity overlay
-== Varlık kaplaması
+Entity layer adjustments
+== Varlık katmanı ayarları
 
 Entity Preview
 == Varlık Önizlemesi
@@ -6097,6 +6097,9 @@ Game type
 
 Game type (ddnet, mod)
 == Oyun türü (ddnet, mod)
+
+Game types:
+== Oyun türleri:
 
 Game update rate (Hz)
 == Oyun güncelleme hızı (Hz)
@@ -7763,6 +7766,9 @@ Leak IP
 Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process
 == Her bir sunucuya ping atarak IP adresini tüm sunuculara sızdırır, ayrıca bu işlem sırasında gecikmeyi de alır
 
+Leaks your IP address to this server by pinging it, also acquiring the latency in the process
+== Gecikmeyi ölçmek için bu sunucuya ping göndererek IP adresini bu sunucuya açıklar
+
 Learn
 == Öğren
 
@@ -8977,6 +8983,18 @@ Name plate elements allow free Y movement
 
 Name plate elements freely movable within bounds
 == İsim Plakası Öğesinin Kutu İçinde Serbestçe Hareket Etmesine İzin Ver
+
+Name plate hammer icon X offset
+== İsim etiketi çekiç simgesi X kaydırması
+
+Name plate hammer icon Y offset
+== İsim etiketi çekiç simgesi Y kaydırması
+
+Name plate hook icon X offset
+== İsim etiketi kanca simgesi X kaydırması
+
+Name plate hook icon Y offset
+== İsim etiketi kanca simgesi Y kaydırması
 
 Name plate key line X offset
 == İsim Plakası Tuş Satırı X Kayması
@@ -10393,6 +10411,9 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == Sunucu tarayıcısında oyuncu ülke filtresi (ISO 3166-1 sayısal)
+
+Player country:
+== Oyuncu ülkesi:
 
 Player death
 == Oyuncu ölümü
@@ -14807,6 +14828,9 @@ Stress system (debug builds only).
 Strict game type filter
 == Katı oyun türü filtresi
 
+Strict gametype filter
+== Katı oyun türü filtresi
+
 Strict mode
 == Katı mod
 
@@ -16180,9 +16204,6 @@ Tune additional world and player effects
 
 Tune in zone a variable to value
 == Bölge a'daki bir değişkeni değere ayarla
-
-Tune layer opacity
-== Katman opaklığı
 
 Tune variable to value
 == Değişkeni değere ayarla

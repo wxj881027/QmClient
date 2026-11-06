@@ -4244,8 +4244,8 @@ Draft file is empty
 Drag
 == Перетаскивание
 
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
-== Двигайте ползунок вроде непрозрачности смерти или непрозрачности телепорта от 0 до 100% или используйте настройку прозрачности слоя, чтобы приглушить весь слой объектов.
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
+== Двигайте ползунок вроде непрозрачности смерти или непрозрачности телепорта от 0 до 100% или используйте наложение сущностей, чтобы приглушить весь слой объектов.
 
 Drag HUD modules with the left mouse button
 == Перетаскивайте модули HUD левой кнопкой мыши
@@ -5222,8 +5222,8 @@ Entity Background Image
 Entity layer
 == Слой сущностей
 
-Entity overlay
-== Наложение сущностей
+Entity layer adjustments
+== Настройка слоя сущностей
 
 Entity Preview
 == Предпросмотр сущностей
@@ -6097,6 +6097,9 @@ Game type
 
 Game type (ddnet, mod)
 == Тип игры (ddnet, mod)
+
+Game types:
+== Типы игр:
 
 Game update rate (Hz)
 == Частота обновления игры (Гц)
@@ -7763,6 +7766,9 @@ Leak IP
 Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process
 == Раскрывает ваш IP-адрес всем серверам, пингуя каждый из них, также получая задержку в процессе
 
+Leaks your IP address to this server by pinging it, also acquiring the latency in the process
+== Раскрывает ваш IP-адрес этому серверу при отправке ему ping-запроса для измерения задержки
+
 Learn
 == Обучение
 
@@ -8977,6 +8983,18 @@ Name plate elements allow free Y movement
 
 Name plate elements freely movable within bounds
 == Элемент таблички с именем: разрешить свободное перемещение в рамке
+
+Name plate hammer icon X offset
+== Смещение значка молота у имени по X
+
+Name plate hammer icon Y offset
+== Смещение значка молота у имени по Y
+
+Name plate hook icon X offset
+== Смещение значка крюка у имени по X
+
+Name plate hook icon Y offset
+== Смещение значка крюка у имени по Y
 
 Name plate key line X offset
 == Смещение строки кнопок таблички с именем по оси X
@@ -10393,6 +10411,9 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == Фильтр страны игрока в браузере серверов (числовой код ISO 3166-1)
+
+Player country:
+== Страна игрока:
 
 Player death
 == Смерть игрока
@@ -14807,6 +14828,9 @@ Stress system (debug builds only).
 Strict game type filter
 == Строгий фильтр типа игры
 
+Strict gametype filter
+== Строгий фильтр типа игры
+
 Strict mode
 == Строгий режим
 
@@ -16180,9 +16204,6 @@ Tune additional world and player effects
 
 Tune in zone a variable to value
 == Настроить переменную в зоне a на значение
-
-Tune layer opacity
-== Непрозрачность слоя настройки
 
 Tune variable to value
 == Настроить переменную на значение

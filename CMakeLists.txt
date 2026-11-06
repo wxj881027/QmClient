@@ -3683,6 +3683,7 @@ if(CLIENT)
     components/qmclient/pie_menu_points.h
     components/qmclient/pie_menu_settings.cpp
     components/qmclient/predicted_event_queue.h
+    components/qmclient/practice_cursor.h
     components/qmclient/netease/netease_integration.cpp
     components/qmclient/netease/netease_integration.h
     components/qmclient/netease/netease_lyric_parser.cpp
@@ -5018,6 +5019,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/music/music_humming_state_test.cpp
     src/test/unit/qmclient/client/qm_lyrics_hud_layout_test.cpp
     src/test/unit/qmclient/client/qm_fast_practice_hook_input_test.cpp
+    src/test/unit/qmclient/client/qm_fast_practice_cursor_test.cpp
     src/test/unit/qmclient/client/qm_media_island_content_test.cpp
     src/test/unit/qmclient/client/qm_media_island_satellite_test.cpp
     src/test/unit/qmclient/client/qm_media_island_motion_test.cpp

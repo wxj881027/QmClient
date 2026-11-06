@@ -12,7 +12,6 @@ class CQmServerInfoLayout
 	float m_GrabOffset = 0.0f;
 	int m_PendingRatio = 500;
 	CUIRect m_PreviewLine{};
-	CButtonContainer m_ResetButton;
 	CScrollRegion m_aScrollRegions[2];
 
 public:

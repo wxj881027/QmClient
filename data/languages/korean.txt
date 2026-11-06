@@ -4244,8 +4244,8 @@ Draft file is empty
 Drag
 == 드래그
 
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
-== 사망 불투명도나 텔레포트 불투명도 같은 슬라이더를 0~100%에서 움직이거나, 레이어 불투명도 조정으로 엔티티 레이어 전체를 흐리게 합니다.
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
+== 사망 불투명도나 텔레포트 불투명도 같은 슬라이더를 0~100%에서 움직이거나, '엔티티 표시'로 엔티티 레이어 전체를 흐리게 합니다.
 
 Drag HUD modules with the left mouse button
 == 마우스 왼쪽 버튼으로 HUD 모듈 드래그
@@ -5222,8 +5222,8 @@ Entity Background Image
 Entity layer
 == 엔티티 레이어
 
-Entity overlay
-== 엔티티 오버레이
+Entity layer adjustments
+== 엔티티 레이어 조정
 
 Entity Preview
 == 엔티티 미리보기
@@ -6097,6 +6097,9 @@ Game type
 
 Game type (ddnet, mod)
 == 게임 유형 (ddnet, mod)
+
+Game types:
+== 게임 유형:
 
 Game update rate (Hz)
 == 게임 업데이트율 (Hz)
@@ -7763,6 +7766,9 @@ Leak IP
 Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process
 == 각 서버에 ping을 보내 IP 주소를 유출하고, 그 과정에서 지연 시간도 측정합니다
 
+Leaks your IP address to this server by pinging it, also acquiring the latency in the process
+== 이 서버에 ping을 보내 지연 시간을 측정하며, 이 과정에서 이 서버에 내 IP 주소가 노출됩니다
+
 Learn
 == 튜토리얼 Wiki
 
@@ -8977,6 +8983,18 @@ Name plate elements allow free Y movement
 
 Name plate elements freely movable within bounds
 == 네임플레이트 요소 상자 내 자유 이동 허용
+
+Name plate hammer icon X offset
+== 이름표 해머 아이콘 X 오프셋
+
+Name plate hammer icon Y offset
+== 이름표 해머 아이콘 Y 오프셋
+
+Name plate hook icon X offset
+== 이름표 훅 아이콘 X 오프셋
+
+Name plate hook icon Y offset
+== 이름표 훅 아이콘 Y 오프셋
 
 Name plate key line X offset
 == 네임플레이트 키 행 X 오프셋
@@ -10393,6 +10411,9 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == 서버 브라우저의 플레이어 국가 필터 (ISO 3166-1 숫자)
+
+Player country:
+== 플레이어 국가:
 
 Player death
 == 플레이어 사망
@@ -14807,6 +14828,9 @@ Stress system (debug builds only).
 Strict game type filter
 == 엄격한 게임 유형 필터
 
+Strict gametype filter
+== 엄격한 게임 모드 필터
+
 Strict mode
 == 엄격 모드
 
@@ -16180,9 +16204,6 @@ Tune additional world and player effects
 
 Tune in zone a variable to value
 == 영역 a의 변수를 값으로 조정
-
-Tune layer opacity
-== 튠 레이어 불투명도
 
 Tune variable to value
 == 변수를 값으로 조정

@@ -4244,8 +4244,8 @@ Draft file is empty
 Drag
 == 拖曳
 
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
-== 拖曳死亡透明度或傳送透明度這類滑桿，範圍 0 到 100%，或用調整圖層透明度把整個實體層調淡。
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
+== 拖曳死亡透明度或傳送透明度這類滑桿，範圍 0 到 100%，或用「顯示實體層」把整個實體層調淡。
 
 Drag HUD modules with the left mouse button
 == 按住鼠標左鍵拖動 HUD 模塊
@@ -5222,8 +5222,8 @@ Entity Background Image
 Entity layer
 == 實體層
 
-Entity overlay
-== 實體疊加
+Entity layer adjustments
+== 實體層調整
 
 Entity Preview
 == 實體層預覽
@@ -6097,6 +6097,9 @@ Game type
 
 Game type (ddnet, mod)
 == 遊戲類型（ddnet、mod）
+
+Game types:
+== 遊戲模式：
 
 Game update rate (Hz)
 == 遊戲更新率（單位：Hz）
@@ -7763,6 +7766,9 @@ Leak IP
 Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process
 == 通過逐個 ping 伺服器洩露你的 IP，同時會獲取延遲
 
+Leaks your IP address to this server by pinging it, also acquiring the latency in the process
+== 透過 ping 目前的伺服器取得延遲，同時會向該伺服器暴露你的 IP 位址
+
 Learn
 == 教程 Wiki
 
@@ -8977,6 +8983,18 @@ Name plate elements allow free Y movement
 
 Name plate elements freely movable within bounds
 == 名字板元素允許在框內自由移動
+
+Name plate hammer icon X offset
+== 暱稱卡錘圖示 X 偏移
+
+Name plate hammer icon Y offset
+== 暱稱卡錘圖示 Y 偏移
+
+Name plate hook icon X offset
+== 暱稱卡鉤圖示 X 偏移
+
+Name plate hook icon Y offset
+== 暱稱卡鉤圖示 Y 偏移
 
 Name plate key line X offset
 == 名字板按鍵行 X 偏移
@@ -10393,6 +10411,9 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == 在伺服器瀏覽器中過濾的玩家國家/地區（ISO 3166-1 數字）
+
+Player country:
+== 玩家國家
 
 Player death
 == 玩家死亡
@@ -14807,6 +14828,9 @@ Stress system (debug builds only).
 Strict game type filter
 == 嚴格遊戲模式篩選
 
+Strict gametype filter
+== 嚴格匹配
+
 Strict mode
 == 嚴格模式
 
@@ -16180,9 +16204,6 @@ Tune additional world and player effects
 
 Tune in zone a variable to value
 == 將區域 a 的變量調到指定值
-
-Tune layer opacity
-== 疊層不透明度
 
 Tune variable to value
 == 將變量調到指定值

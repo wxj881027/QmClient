@@ -603,14 +603,23 @@ TEST(QmCardRegistry, SoundStandardPageCardsPersistInVisualOrder)
 		(std::vector<std::string>{"deck:sound-audio-pack"}));
 }
 
-// 意图：DDNet 标准页的四张卡片按默认视觉顺序分布在左右列，重启后不能改变阅读顺序。
+// 意图：实体层调整位于 DDNet 右列首位，序列化后仍保持该归属和阅读顺序。
 TEST(QmCardRegistry, DDNetStandardPageCardsPersistInVisualOrder)
 {
 	const qm_card_order::CModel Model = RegistryModelAfterRoundTrip();
-	EXPECT_EQ(Model.StableIdOrder("deck:", "ddnet", 1),
+	EXPECT_EQ(Model.StableIdOrder("", "ddnet", 1),
 		(std::vector<std::string>{"deck:ddnet-demo", "deck:ddnet-gameplay"}));
-	EXPECT_EQ(Model.StableIdOrder("deck:", "ddnet", 2),
-		(std::vector<std::string>{"deck:ddnet-background", "deck:ddnet-miscellaneous"}));
+	EXPECT_EQ(Model.StableIdOrder("", "ddnet", 2),
+		(std::vector<std::string>{"qm:entity_overlay", "deck:ddnet-background", "deck:ddnet-miscellaneous", "qm:system_media_controls"}));
+
+	const auto *pCard = qm_card_registry::FindByStableId("qm:entity_overlay");
+	ASSERT_NE(pCard, nullptr);
+	EXPECT_STREQ(pCard->m_pTitle, "Entity layer adjustments");
+	const auto &vDDNetCards = qm_card_catalog::CatalogPageStableIds("ddnet");
+	EXPECT_NE(std::find_if(vDDNetCards.begin(), vDDNetCards.end(), [](const char *pStableId) { return std::string(pStableId) == "qm:entity_overlay"; }), vDDNetCards.end());
+	const auto &vVisualCards = qm_card_catalog::VisualCardStableIds();
+	EXPECT_EQ(std::find_if(vVisualCards.begin(), vVisualCards.end(), [](const char *pStableId) { return std::string(pStableId) == "qm:entity_overlay"; }), vVisualCards.end());
+	EXPECT_TRUE(qm_card_catalog::HasCardModule("qm:entity_overlay"));
 }
 
 // 意图：敌对列表是一个完整编辑器，registry 只能暴露一张全宽卡片，避免卡片化破坏功能布局。

@@ -4253,8 +4253,8 @@ Draft file is empty
 Drag
 == 拖动
 
-Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Tune layer opacity" to fade the whole entity layer.
-== 拖动死亡透明度或传送透明度这类滑块，范围 0 到 100%，或用调整图层透明度把整个实体层调淡。
+Drag a slider like "Death opacity" or "Teleport opacity" from 0 to 100%, or use "Overlay entities" to fade the whole entity layer.
+== 拖动死亡透明度或传送透明度这类滑块，范围 0 到 100%，或用“显示实体层”把整个实体层调淡。
 
 Drag HUD modules with the left mouse button
 == 按住鼠标左键拖动 HUD 模块
@@ -5231,8 +5231,8 @@ Entity Background Image
 Entity layer
 == 实体层
 
-Entity overlay
-== 实体层叠加
+Entity layer adjustments
+== 实体层调整
 
 Entity Preview
 == 实体层预览
@@ -6112,6 +6112,9 @@ Game type
 
 Game type (ddnet, mod)
 == 游戏类型（ddnet、mod）
+
+Game types:
+== 游戏模式：
 
 Game update rate (Hz)
 == 游戏更新率（单位：Hz）
@@ -7778,6 +7781,9 @@ Leak IP
 Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process
 == 通过逐个 ping 服务器泄露你的 IP，同时会获取延迟
 
+Leaks your IP address to this server by pinging it, also acquiring the latency in the process
+== 通过 ping 当前服务器获取延迟，同时会向该服务器暴露你的 IP 地址
+
 Learn
 == 教程 Wiki
 
@@ -8998,6 +9004,18 @@ Name plate elements allow free Y movement
 
 Name plate elements freely movable within bounds
 == 铭牌元素可在边界内自由移动
+
+Name plate hammer icon X offset
+== 昵称卡锤图标 X 偏移
+
+Name plate hammer icon Y offset
+== 昵称卡锤图标 Y 偏移
+
+Name plate hook icon X offset
+== 昵称卡钩图标 X 偏移
+
+Name plate hook icon Y offset
+== 昵称卡钩图标 Y 偏移
 
 Name plate key line X offset
 == 铭牌按键行 X 偏移
@@ -10423,6 +10441,9 @@ Player country (ISO 3166-1 numeric code)
 
 Player country filter in server browser (ISO 3166-1 numeric)
 == 在服务器浏览器中过滤的玩家国家/地区（ISO 3166-1 数字）
+
+Player country:
+== 玩家国家
 
 Player death
 == 玩家死亡
@@ -14843,6 +14864,9 @@ Stress system (debug builds only).
 Strict game type filter
 == 严格游戏模式筛选
 
+Strict gametype filter
+== 严格匹配
+
 Strict mode
 == 严格模式
 
@@ -16225,9 +16249,6 @@ Tune additional world and player effects
 
 Tune in zone a variable to value
 == 将区域 a 的变量调到指定值
-
-Tune layer opacity
-== 叠层不透明度
 
 Tune variable to value
 == 将变量调到指定值

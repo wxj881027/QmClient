@@ -1,26 +1,12 @@
 #include "QmServerInfoLayout.h"
 
-#include "UiButtons.h"
-
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
-
-#include <game/localization.h>
 
 QmServerInfoGeometry::SLayout CQmServerInfoLayout::Render(CUi *pUi, CUIRect View, bool ShowTags)
 {
 	using namespace QmServerInfoGeometry;
 	m_PreviewLine = {};
-	CUIRect Toolbar, Reset;
-	View.HSplitTop(22.0f, &Toolbar, &View);
-	Toolbar.VSplitRight(std::min(110.0f, Toolbar.w), nullptr, &Reset);
-	View.HSplitTop(5.0f, nullptr, &View);
-	if(ui_widget::SecondaryButton(ui_widget::ControlContext(pUi), &m_ResetButton, Localize("Reset layout"), Reset))
-	{
-		g_Config.m_QmServerInfoRows = 500;
-		g_Config.m_QmServerInfoTopColumns = 500;
-		g_Config.m_QmServerInfoBottomColumns = 380;
-	}
 
 	auto BuildLayout = [&] { return Layout(View, g_Config.m_QmServerInfoRows, g_Config.m_QmServerInfoTopColumns, g_Config.m_QmServerInfoBottomColumns, ShowTags); };
 	SLayout Result = BuildLayout();
@@ -55,8 +41,6 @@ QmServerInfoGeometry::SLayout CQmServerInfoLayout::Render(CUi *pUi, CUIRect View
 			}
 		}
 
-		const bool Highlight = !pUi->RenderOnly() && !pUi->IsPopupOpen() && (pUi->IsActiveItem(&m_aDividerIds[Index]) || pUi->MouseHovered(&Result.m_aDividers[Index]));
-		CUIRect Grip = Result.m_aDividers[Index];
 		if(!pUi->RenderOnly() && !pUi->IsPopupOpen() && pUi->IsActiveItem(&m_aDividerIds[Index]))
 		{
 			int aPreviewRatios[] = {*apRatios[0], *apRatios[1], *apRatios[2]};
@@ -64,25 +48,11 @@ QmServerInfoGeometry::SLayout CQmServerInfoLayout::Render(CUi *pUi, CUIRect View
 			const auto Preview = Layout(View, aPreviewRatios[0], aPreviewRatios[1], aPreviewRatios[2], ShowTags);
 			CUIRect Line = Preview.m_aDividers[Index];
 			if(Horizontal)
-				Line.HMargin(4.0f, &Line);
+				Line.HMargin(std::max(0.0f, (Line.h - 2.0f) * 0.5f), &Line);
 			else
-				Line.VMargin(4.0f, &Line);
+				Line.VMargin(std::max(0.0f, (Line.w - 2.0f) * 0.5f), &Line);
 			m_PreviewLine = Line;
 		}
-		if(Horizontal)
-		{
-			Grip.x += std::max(0.0f, (Grip.w - 44.0f) * 0.5f);
-			Grip.w = std::min(Grip.w, 44.0f);
-			Grip.HMargin(3.0f, &Grip);
-		}
-		else
-		{
-			Grip.y += std::max(0.0f, (Grip.h - 44.0f) * 0.5f);
-			Grip.h = std::min(Grip.h, 44.0f);
-			Grip.VMargin(3.0f, &Grip);
-		}
-		if(Grip.w > 0.0f && Grip.h > 0.0f)
-			Grip.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, Highlight ? 0.8f : 0.25f), IGraphics::CORNER_ALL, 2.0f);
 	}
 	return Result;
 }
