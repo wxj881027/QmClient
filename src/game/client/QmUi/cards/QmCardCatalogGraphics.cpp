@@ -734,6 +734,25 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 					g_Config.m_QmUiCardBorders ^= 1;
 			});
 
+			// 圆角曲线：胶囊滑块切换算法；强度为 0 时两种算法都精确等于原来的圆弧。
+			RowAction("graphics-corner-curve", GraphicsMetrics.m_LineHeight, [&](CUIRect CornerCurveRow) {
+				static CButtonContainer s_aCornerCurveButtons[2];
+				const char *apCornerCurveLabels[] = {Localize("Superellipse"), Localize("Bezier")};
+				CUIRect CornerCurveLabel, CornerCurveSegments;
+				SplitSettingsControlRow(CornerCurveRow, GraphicsMetrics, &CornerCurveLabel, &CornerCurveSegments, ESettingsControlWidth::LONG_CHOICE);
+				Ui()->DoLabel(&CornerCurveLabel, Localize("Corner curve"), BodySize, TEXTALIGN_ML);
+				const int CurrentCurve = g_Config.m_QmUiCornerCurve != 0 ? 1 : 0;
+				const int PickedCurve = DoSegmentedChoice(s_aCornerCurveButtons, apCornerCurveLabels, 2, CurrentCurve, CornerCurveSegments);
+				if(PickedCurve != CurrentCurve)
+					g_Config.m_QmUiCornerCurve = PickedCurve;
+			});
+
+			// 圆角强度：连续数值，0 = 以前的圆弧渲染。
+			RowAction("graphics-corner-curvature", GraphicsMetrics.m_LineHeight, [&](CUIRect CornerCurvatureRow) {
+				DoGraphicsNumericField("graphics-corner-curvature", &g_Config.m_QmUiCornerSmoothing, &g_Config.m_QmUiCornerSmoothing, CornerCurvatureRow, Localize("Corner curvature"), 0, 100, &CUi::ms_LinearScrollbarScale, "%", CUi::SCROLLBAR_OPTION_DELAYUPDATE);
+			});
+
+
 			if(!qm_card_catalog::QmCardRenderHook::Personalization(this, ContentRect, "deck:graphics-visual", GraphicsMetrics))
 				return;
 

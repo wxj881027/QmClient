@@ -912,6 +912,10 @@ void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRen
 	};
 
 	const float Rounding = std::clamp(Params.m_Rounding, 0.0f, minimum(Params.m_W, Params.m_H) * 0.5f);
+	// 连续曲率：圆角沿边铺开的长度随强度变长，掩码用同一个系数、同一套曲线采样，
+	// 否则面板换了形状、底下的模糊掩码还是圆弧，角上会露出没被模糊的硬边。
+	const float CornerAmount = std::clamp(Params.m_CornerSmoothing, 0.0f, 1.0f);
+	const float Inset = std::clamp(RoundedCornerCurveInset(Rounding, CornerAmount), 0.0f, minimum(Params.m_W, Params.m_H) * 0.5f);
 	if(Params.m_Corners == CORNER_NONE || Rounding <= 0.0f)
 	{
 		AddQuad(
@@ -922,75 +926,71 @@ void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRen
 	}
 	else
 	{
+		// 角区采样点的归一化坐标（0..1），语义和原来的方向表一致：
+		// 第 0 项落在竖直边上，最后一项落在水平边上。
+		vec2 aCorner[RECT_CORNER_SEGMENTS + 3];
+		for(int i = 0; i < RECT_CORNER_SEGMENTS + 3; i++)
+		{
+			float DirectionX, DirectionY;
+			RoundedCornerCurveDirection((int)Params.m_CornerCurve, CornerAmount, i, RECT_CORNER_SEGMENTS, DirectionX, DirectionY);
+			aCorner[i] = vec2(DirectionX, DirectionY);
+		}
 		constexpr int NumSegments = RECT_CORNER_SEGMENTS;
-		const vec2 *pDirections = m_RoundedRectDirections.Get(NumSegments);
 		for(int i = 0; i < NumSegments; i += 2)
 		{
-			const float Ca1 = pDirections[i].x;
-			const float Ca2 = pDirections[i + 1].x;
-			const float Ca3 = pDirections[i + 2].x;
-			const float Sa1 = pDirections[i].y;
-			const float Sa2 = pDirections[i + 1].y;
-			const float Sa3 = pDirections[i + 2].y;
+			const float Ca1 = aCorner[i].x;
+			const float Ca2 = aCorner[i + 1].x;
+			const float Ca3 = aCorner[i + 2].x;
+			const float Sa1 = aCorner[i].y;
+			const float Sa2 = aCorner[i + 1].y;
+			const float Sa3 = aCorner[i + 2].y;
 			if(Params.m_Corners & CORNER_TL)
 				AddQuad(
-					vec2(Params.m_X + Rounding, Params.m_Y + Rounding),
-					vec2(Params.m_X + (1.0f - Ca1) * Rounding, Params.m_Y + (1.0f - Sa1) * Rounding),
-					vec2(Params.m_X + (1.0f - Ca2) * Rounding, Params.m_Y + (1.0f - Sa2) * Rounding),
-					vec2(Params.m_X + (1.0f - Ca3) * Rounding, Params.m_Y + (1.0f - Sa3) * Rounding));
+					vec2(Params.m_X + Inset, Params.m_Y + Inset),
+					vec2(Params.m_X + (1.0f - Ca1) * Inset, Params.m_Y + (1.0f - Sa1) * Inset),
+					vec2(Params.m_X + (1.0f - Ca2) * Inset, Params.m_Y + (1.0f - Sa2) * Inset),
+					vec2(Params.m_X + (1.0f - Ca3) * Inset, Params.m_Y + (1.0f - Sa3) * Inset));
 			if(Params.m_Corners & CORNER_TR)
 				AddQuad(
-					vec2(Params.m_X + Params.m_W - Rounding, Params.m_Y + Rounding),
-					vec2(Params.m_X + Params.m_W - Rounding + Ca1 * Rounding, Params.m_Y + (1.0f - Sa1) * Rounding),
-					vec2(Params.m_X + Params.m_W - Rounding + Ca2 * Rounding, Params.m_Y + (1.0f - Sa2) * Rounding),
-					vec2(Params.m_X + Params.m_W - Rounding + Ca3 * Rounding, Params.m_Y + (1.0f - Sa3) * Rounding));
+					vec2(Params.m_X + Params.m_W - Inset, Params.m_Y + Inset),
+					vec2(Params.m_X + Params.m_W - Inset + Ca1 * Inset, Params.m_Y + (1.0f - Sa1) * Inset),
+					vec2(Params.m_X + Params.m_W - Inset + Ca2 * Inset, Params.m_Y + (1.0f - Sa2) * Inset),
+					vec2(Params.m_X + Params.m_W - Inset + Ca3 * Inset, Params.m_Y + (1.0f - Sa3) * Inset));
 			if(Params.m_Corners & CORNER_BL)
 				AddQuad(
-					vec2(Params.m_X + Rounding, Params.m_Y + Params.m_H - Rounding),
-					vec2(Params.m_X + (1.0f - Ca1) * Rounding, Params.m_Y + Params.m_H - Rounding + Sa1 * Rounding),
-					vec2(Params.m_X + (1.0f - Ca2) * Rounding, Params.m_Y + Params.m_H - Rounding + Sa2 * Rounding),
-					vec2(Params.m_X + (1.0f - Ca3) * Rounding, Params.m_Y + Params.m_H - Rounding + Sa3 * Rounding));
+					vec2(Params.m_X + Inset, Params.m_Y + Params.m_H - Inset),
+					vec2(Params.m_X + (1.0f - Ca1) * Inset, Params.m_Y + Params.m_H - Inset + Sa1 * Inset),
+					vec2(Params.m_X + (1.0f - Ca2) * Inset, Params.m_Y + Params.m_H - Inset + Sa2 * Inset),
+					vec2(Params.m_X + (1.0f - Ca3) * Inset, Params.m_Y + Params.m_H - Inset + Sa3 * Inset));
 			if(Params.m_Corners & CORNER_BR)
 				AddQuad(
-					vec2(Params.m_X + Params.m_W - Rounding, Params.m_Y + Params.m_H - Rounding),
-					vec2(Params.m_X + Params.m_W - Rounding + Ca1 * Rounding, Params.m_Y + Params.m_H - Rounding + Sa1 * Rounding),
-					vec2(Params.m_X + Params.m_W - Rounding + Ca2 * Rounding, Params.m_Y + Params.m_H - Rounding + Sa2 * Rounding),
-					vec2(Params.m_X + Params.m_W - Rounding + Ca3 * Rounding, Params.m_Y + Params.m_H - Rounding + Sa3 * Rounding));
+					vec2(Params.m_X + Params.m_W - Inset, Params.m_Y + Params.m_H - Inset),
+					vec2(Params.m_X + Params.m_W - Inset + Ca1 * Inset, Params.m_Y + Params.m_H - Inset + Sa1 * Inset),
+					vec2(Params.m_X + Params.m_W - Inset + Ca2 * Inset, Params.m_Y + Params.m_H - Inset + Sa2 * Inset),
+					vec2(Params.m_X + Params.m_W - Inset + Ca3 * Inset, Params.m_Y + Params.m_H - Inset + Sa3 * Inset));
 		}
 
+		// 掩码是硬边几何：内部用两条互相重叠 1 像素的带状四边形，
+		// 四条边和角区的扇形就不会因为亚像素位置差出 1 像素缝（面板圆角上那圈点状边就是这么来的）。
+		constexpr float MaskOverlap = 1.0f;
 		AddQuad(
-			vec2(Params.m_X + Rounding, Params.m_Y + Rounding),
-			vec2(Params.m_X + Params.m_W - Rounding, Params.m_Y + Rounding),
-			vec2(Params.m_X + Params.m_W - Rounding, Params.m_Y + Params.m_H - Rounding),
-			vec2(Params.m_X + Rounding, Params.m_Y + Params.m_H - Rounding));
+			vec2(Params.m_X + Inset - MaskOverlap, Params.m_Y),
+			vec2(Params.m_X + Params.m_W - Inset + MaskOverlap, Params.m_Y),
+			vec2(Params.m_X + Params.m_W - Inset + MaskOverlap, Params.m_Y + Params.m_H),
+			vec2(Params.m_X + Inset - MaskOverlap, Params.m_Y + Params.m_H));
 		AddQuad(
-			vec2(Params.m_X + Rounding, Params.m_Y),
-			vec2(Params.m_X + Params.m_W - Rounding, Params.m_Y),
-			vec2(Params.m_X + Params.m_W - Rounding, Params.m_Y + Rounding),
-			vec2(Params.m_X + Rounding, Params.m_Y + Rounding));
-		AddQuad(
-			vec2(Params.m_X + Rounding, Params.m_Y + Params.m_H - Rounding),
-			vec2(Params.m_X + Params.m_W - Rounding, Params.m_Y + Params.m_H - Rounding),
-			vec2(Params.m_X + Params.m_W - Rounding, Params.m_Y + Params.m_H),
-			vec2(Params.m_X + Rounding, Params.m_Y + Params.m_H));
-		AddQuad(
-			vec2(Params.m_X, Params.m_Y + Rounding),
-			vec2(Params.m_X + Rounding, Params.m_Y + Rounding),
-			vec2(Params.m_X + Rounding, Params.m_Y + Params.m_H - Rounding),
-			vec2(Params.m_X, Params.m_Y + Params.m_H - Rounding));
-		AddQuad(
-			vec2(Params.m_X + Params.m_W - Rounding, Params.m_Y + Rounding),
-			vec2(Params.m_X + Params.m_W, Params.m_Y + Rounding),
-			vec2(Params.m_X + Params.m_W, Params.m_Y + Params.m_H - Rounding),
-			vec2(Params.m_X + Params.m_W - Rounding, Params.m_Y + Params.m_H - Rounding));
+			vec2(Params.m_X, Params.m_Y + Inset - MaskOverlap),
+			vec2(Params.m_X + Params.m_W, Params.m_Y + Inset - MaskOverlap),
+			vec2(Params.m_X + Params.m_W, Params.m_Y + Params.m_H - Inset + MaskOverlap),
+			vec2(Params.m_X, Params.m_Y + Params.m_H - Inset + MaskOverlap));
 		if(!(Params.m_Corners & CORNER_TL))
-			AddQuad(vec2(Params.m_X, Params.m_Y), vec2(Params.m_X + Rounding, Params.m_Y), vec2(Params.m_X + Rounding, Params.m_Y + Rounding), vec2(Params.m_X, Params.m_Y + Rounding));
+			AddQuad(vec2(Params.m_X, Params.m_Y), vec2(Params.m_X + Inset, Params.m_Y), vec2(Params.m_X + Inset, Params.m_Y + Inset), vec2(Params.m_X, Params.m_Y + Inset));
 		if(!(Params.m_Corners & CORNER_TR))
-			AddQuad(vec2(Params.m_X + Params.m_W - Rounding, Params.m_Y), vec2(Params.m_X + Params.m_W, Params.m_Y), vec2(Params.m_X + Params.m_W, Params.m_Y + Rounding), vec2(Params.m_X + Params.m_W - Rounding, Params.m_Y + Rounding));
+			AddQuad(vec2(Params.m_X + Params.m_W - Inset, Params.m_Y), vec2(Params.m_X + Params.m_W, Params.m_Y), vec2(Params.m_X + Params.m_W, Params.m_Y + Inset), vec2(Params.m_X + Params.m_W - Inset, Params.m_Y + Inset));
 		if(!(Params.m_Corners & CORNER_BL))
-			AddQuad(vec2(Params.m_X, Params.m_Y + Params.m_H - Rounding), vec2(Params.m_X + Rounding, Params.m_Y + Params.m_H - Rounding), vec2(Params.m_X + Rounding, Params.m_Y + Params.m_H), vec2(Params.m_X, Params.m_Y + Params.m_H));
+			AddQuad(vec2(Params.m_X, Params.m_Y + Params.m_H - Inset), vec2(Params.m_X + Inset, Params.m_Y + Params.m_H - Inset), vec2(Params.m_X + Inset, Params.m_Y + Params.m_H), vec2(Params.m_X, Params.m_Y + Params.m_H));
 		if(!(Params.m_Corners & CORNER_BR))
-			AddQuad(vec2(Params.m_X + Params.m_W - Rounding, Params.m_Y + Params.m_H - Rounding), vec2(Params.m_X + Params.m_W, Params.m_Y + Params.m_H - Rounding), vec2(Params.m_X + Params.m_W, Params.m_Y + Params.m_H), vec2(Params.m_X + Params.m_W - Rounding, Params.m_Y + Params.m_H));
+			AddQuad(vec2(Params.m_X + Params.m_W - Inset, Params.m_Y + Params.m_H - Inset), vec2(Params.m_X + Params.m_W, Params.m_Y + Params.m_H - Inset), vec2(Params.m_X + Params.m_W, Params.m_Y + Params.m_H), vec2(Params.m_X + Params.m_W - Inset, Params.m_Y + Params.m_H));
 	}
 
 	Cmd.m_PrimCount = NumVertices / 4;
@@ -2133,6 +2133,7 @@ void CGraphics_Threaded::QuadsDraw(CQuadItem *pArray, int Num)
 
 void CGraphics_Threaded::QuadsDrawTL(const CQuadItem *pArray, int Num)
 {
+
 	QuadsDrawTLImpl(m_aVertices, pArray, Num);
 }
 
@@ -2274,7 +2275,12 @@ void CGraphics_Threaded::DrawRectExtAntialias(float x, float y, float w, float h
 	if(Corners == 0 || r <= 0.0f || Color.a <= 0.0f)
 		return;
 
-	const float AntialiasSize = minimum(RoundedRectAntialiasSize(), r);
+	// 连续曲率：圆角沿边铺得更长，几何兜底必须和着色器用同一条曲线、同一个内缩长度，
+	// 否则没有 SDF 的机器上圆角会明显小一圈。
+	const float CornerAmount = std::clamp(g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
+	const int CornerCurve = g_Config.m_QmUiCornerCurve;
+	const float Inset = std::clamp(RoundedCornerCurveInset(r, CornerAmount), 0.0f, minimum(w, h) * 0.5f);
+	const float AntialiasSize = minimum(RoundedRectAntialiasSize(), Inset);
 	if(AntialiasSize <= 0.0f)
 		return;
 
@@ -2282,8 +2288,8 @@ void CGraphics_Threaded::DrawRectExtAntialias(float x, float y, float w, float h
 	std::copy(std::begin(m_aColor), std::end(m_aColor), std::begin(aOldColor));
 
 	const ColorRGBA TransparentColor = ColorWithAlpha(Color, 0.0f);
-	const float TopX = (Corners & CORNER_TL) ? x + r : x;
-	const float TopWidth = ((Corners & CORNER_TR) ? x + w - r : x + w) - TopX;
+	const float TopX = (Corners & CORNER_TL) ? x + Inset : x;
+	const float TopWidth = ((Corners & CORNER_TR) ? x + w - Inset : x + w) - TopX;
 	if(TopWidth > 0.0f && (Corners & CORNER_T))
 	{
 		SetColor4(TransparentColor, TransparentColor, Color, Color);
@@ -2291,8 +2297,8 @@ void CGraphics_Threaded::DrawRectExtAntialias(float x, float y, float w, float h
 		QuadsDrawTL(&Quad, 1);
 	}
 
-	const float BottomX = (Corners & CORNER_BL) ? x + r : x;
-	const float BottomWidth = ((Corners & CORNER_BR) ? x + w - r : x + w) - BottomX;
+	const float BottomX = (Corners & CORNER_BL) ? x + Inset : x;
+	const float BottomWidth = ((Corners & CORNER_BR) ? x + w - Inset : x + w) - BottomX;
 	if(BottomWidth > 0.0f && (Corners & CORNER_B))
 	{
 		SetColor4(Color, Color, TransparentColor, TransparentColor);
@@ -2300,8 +2306,8 @@ void CGraphics_Threaded::DrawRectExtAntialias(float x, float y, float w, float h
 		QuadsDrawTL(&Quad, 1);
 	}
 
-	const float LeftY = (Corners & CORNER_TL) ? y + r : y;
-	const float LeftHeight = ((Corners & CORNER_BL) ? y + h - r : y + h) - LeftY;
+	const float LeftY = (Corners & CORNER_TL) ? y + Inset : y;
+	const float LeftHeight = ((Corners & CORNER_BL) ? y + h - Inset : y + h) - LeftY;
 	if(LeftHeight > 0.0f && (Corners & CORNER_L))
 	{
 		SetColor4(TransparentColor, Color, TransparentColor, Color);
@@ -2309,8 +2315,8 @@ void CGraphics_Threaded::DrawRectExtAntialias(float x, float y, float w, float h
 		QuadsDrawTL(&Quad, 1);
 	}
 
-	const float RightY = (Corners & CORNER_TR) ? y + r : y;
-	const float RightHeight = ((Corners & CORNER_BR) ? y + h - r : y + h) - RightY;
+	const float RightY = (Corners & CORNER_TR) ? y + Inset : y;
+	const float RightHeight = ((Corners & CORNER_BR) ? y + h - Inset : y + h) - RightY;
 	if(RightHeight > 0.0f && (Corners & CORNER_R))
 	{
 		SetColor4(Color, TransparentColor, Color, TransparentColor);
@@ -2318,25 +2324,28 @@ void CGraphics_Threaded::DrawRectExtAntialias(float x, float y, float w, float h
 		QuadsDrawTL(&Quad, 1);
 	}
 
-	const float OuterRadius = r + AntialiasSize;
+	const float OuterRadius = Inset + AntialiasSize;
 	const int NumSegments = RoundedRectSegmentCount();
-	const vec2 *pDirections = m_RoundedRectDirections.Get(NumSegments);
 	IGraphics::CFreeformItem aFreeform[RECT_CORNER_SEGMENTS * 4];
 	size_t NumItems = 0;
 
 	for(int Segment = 0; Segment < NumSegments; ++Segment)
 	{
-		const vec2 &DirectionStart = pDirections[Segment];
-		const vec2 &DirectionEnd = pDirections[Segment + 1];
+		// 采样点来自和着色器同一条曲线；强度为 0 时就是原来的圆弧方向表。
+		float StartX, StartY, EndX, EndY;
+		RoundedCornerCurveDirection(CornerCurve, CornerAmount, Segment, NumSegments, StartX, StartY);
+		RoundedCornerCurveDirection(CornerCurve, CornerAmount, Segment + 1, NumSegments, EndX, EndY);
+		const vec2 DirectionStart(StartX, StartY);
+		const vec2 DirectionEnd(EndX, EndY);
 
 		if(Corners & CORNER_TL)
-			aFreeform[NumItems++] = RoundedRectAntialiasSegment(x + r, y + r, r, OuterRadius, DirectionStart, DirectionEnd, -1.0f, -1.0f);
+			aFreeform[NumItems++] = RoundedRectAntialiasSegment(x + Inset, y + Inset, Inset, OuterRadius, DirectionStart, DirectionEnd, -1.0f, -1.0f);
 		if(Corners & CORNER_TR)
-			aFreeform[NumItems++] = RoundedRectAntialiasSegment(x + w - r, y + r, r, OuterRadius, DirectionStart, DirectionEnd, 1.0f, -1.0f);
+			aFreeform[NumItems++] = RoundedRectAntialiasSegment(x + w - Inset, y + Inset, Inset, OuterRadius, DirectionStart, DirectionEnd, 1.0f, -1.0f);
 		if(Corners & CORNER_BL)
-			aFreeform[NumItems++] = RoundedRectAntialiasSegment(x + r, y + h - r, r, OuterRadius, DirectionStart, DirectionEnd, -1.0f, 1.0f);
+			aFreeform[NumItems++] = RoundedRectAntialiasSegment(x + Inset, y + h - Inset, Inset, OuterRadius, DirectionStart, DirectionEnd, -1.0f, 1.0f);
 		if(Corners & CORNER_BR)
-			aFreeform[NumItems++] = RoundedRectAntialiasSegment(x + w - r, y + h - r, r, OuterRadius, DirectionStart, DirectionEnd, 1.0f, 1.0f);
+			aFreeform[NumItems++] = RoundedRectAntialiasSegment(x + w - Inset, y + h - Inset, Inset, OuterRadius, DirectionStart, DirectionEnd, 1.0f, 1.0f);
 	}
 
 	if(NumItems > 0)
@@ -2817,6 +2826,7 @@ int CGraphics_Threaded::CreateRectQuadContainer(float x, float y, float w, float
 
 void CGraphics_Threaded::DrawRect(float x, float y, float w, float h, ColorRGBA Color, int Corners, float Rounding)
 {
+
 	TextureClear();
 	QuadsBegin();
 	SetColor(Color);

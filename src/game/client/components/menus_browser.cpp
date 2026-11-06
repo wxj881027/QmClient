@@ -1036,6 +1036,8 @@ CUi::EPopupMenuFunctionResult CMenus::PopupMapPreview(void *pContext, CUIRect Vi
 	DrawParams.m_Alpha = pUi->ControlAlphaScale();
 	DrawParams.m_Corners = IGraphics::CORNER_ALL;
 	DrawParams.m_Rounding = ui_token::radius::BASE;
+	DrawParams.m_CornerSmoothing = std::clamp(g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
+	DrawParams.m_CornerCurve = g_Config.m_QmUiCornerCurve != 0 ? 1.0f : 0.0f;
 	if(Backend == QmDummyMiniViewLayout::EBackend::VULKAN)
 	{
 		DrawParams.m_V0 = 0.0f;

@@ -982,3 +982,8 @@ MACRO_CONFIG_INT(QmSelfKillEnabled, qm_self_kill_enabled, 0, 0, 1, CFGFLAG_CLIEN
 // 进图后自动开启保护的延迟（分钟）。0 = 不自动开启，保持配置里的默认状态。
 // 自动开启只改本局运行时状态，不写回 qm_self_kill_enabled。
 MACRO_CONFIG_INT(QmSelfKillAutoDelay, qm_self_kill_auto_delay, 0, 0, 60, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-enable self-kill protection this many minutes after joining a game (0 = never)")
+
+// 圆角形状：0 保留原来的圆弧圆角，>0 让直线与圆角之间曲率渐变（连续曲率）。
+// UI 是分层叠出来的，开启前必须先保证各层都由同一形状按距离偏移得到，否则角上会对不齐。
+MACRO_CONFIG_INT(QmUiCornerCurve, qm_ui_corner_curve, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Continuous-curvature corner curve: 0 = superellipse, 1 = conic Bezier")
+MACRO_CONFIG_INT(QmUiCornerSmoothing, qm_ui_corner_smoothing, 40, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Continuous-curvature UI corners (0 = classic arc, 100 = strongest)")

@@ -93,12 +93,89 @@ fragment float4 qmclient_procedural_ring_fragment(SMetalVertexOut Input [[stage_
 	return float4(Input.m_Color.rgb, Input.m_Color.a * RadialCoverage * AngularCoverage);
 }
 
-float RoundedRectDistance(float2 Point, float2 HalfSize, float Radius)
+// 圆角形状由两个参数描述：连续曲率强度 Smoothing（0 = 圆弧），
+// 以及外扩 Expand（整块形状按距离场向外偏移，等价于同一条曲线的等距外扩）。
+// 圆锥曲线角（有理二次 Bézier）：P0=(E,0)、P1=(E,E)、P2=(0,E)，权重 W。
+// W = 0.7071 时正好是圆弧；W 越大角越平。零等值线就是这条曲线本身。
+float2 ConicCornerPoint(float T, float E, float W)
 {
-	const float2 DistanceToInner = abs(Point) - HalfSize + Radius;
-	return length(max(DistanceToInner, float2(0.0))) + min(max(DistanceToInner.x, DistanceToInner.y), 0.0) - Radius;
+	const float B0 = (1.0 - T) * (1.0 - T);
+	const float B1 = 2.0 * W * T * (1.0 - T);
+	const float B2 = T * T;
+	const float Den = B0 + B1 + B2;
+	return float2((B0 + B1) * E, (B1 + B2) * E) / Den;
 }
 
+float2 ConicCornerDerivative(float T, float E, float W)
+{
+	const float B0 = (1.0 - T) * (1.0 - T);
+	const float B1 = 2.0 * W * T * (1.0 - T);
+	const float B2 = T * T;
+	const float D0 = -2.0 * (1.0 - T);
+	const float D1 = 2.0 * W * (1.0 - 2.0 * T);
+	const float D2 = 2.0 * T;
+	const float Den = B0 + B1 + B2;
+	const float DDen = D0 + D1 + D2;
+	const float2 Num = float2((B0 + B1) * E, (B1 + B2) * E);
+	const float2 DNum = float2((D0 + D1) * E, (D1 + D2) * E);
+	return (DNum * Den - Num * DDen) / (Den * Den);
+}
+
+float ConicCornerDistance(float2 P, float E, float W)
+{
+	float Best = 1e9;
+	float BestT = 0.5;
+	for(int i = 0; i <= 4; i++)
+	{
+		const float T = float(i) / 4.0;
+		const float Dist = length(ConicCornerPoint(T, E, W) - P);
+		if(Dist < Best)
+		{
+			Best = Dist;
+			BestT = T;
+		}
+	}
+	float T = BestT;
+	for(int i = 0; i < 4; i++)
+	{
+		const float2 Q = ConicCornerPoint(T, E, W);
+		const float2 D = ConicCornerDerivative(T, E, W);
+		T = clamp(T - dot(Q - P, D) / max(dot(D, D), 0.000001), 0.0, 1.0);
+	}
+	const float2 Q = ConicCornerPoint(T, E, W);
+	const float Dist = length(Q - P);
+	// Corner 坐标离角点越近越靠内：比曲线更近角点 = 形状内部 = 负值。
+	return dot(P - Q, P) > 0.0 ? Dist : -Dist;
+}
+
+float RoundedRectDistance(float2 Point, float2 HalfSize, float Radius, float Smoothing, float CurveType)
+
+{
+	// 连续曲率：圆角沿边铺得更长（最多 1.4 倍），曲率从直边处的 0 开始爬升。
+	const float Amount = clamp(Smoothing, 0.0, 1.0);
+	const float EffectiveRadius = min(Radius * (1.0 + 1.3 * Amount), min(HalfSize.x, HalfSize.y));
+	const float2 DistanceToInner = abs(Point) - HalfSize + EffectiveRadius;
+	const float2 Corner = max(DistanceToInner, float2(0.0));
+	const float Flat = min(max(DistanceToInner.x, DistanceToInner.y), 0.0);
+	// 只有两个分量都为正才是圆角区；边上和内部直接用圆的距离。
+	if(Amount <= 0.001 || Corner.x <= 0.0 || Corner.y <= 0.0)
+		return length(Corner) + Flat - EffectiveRadius;
+	if(CurveType > 0.5)
+		return ConicCornerDistance(Corner, EffectiveRadius, mix(0.70710678, 1.2, Amount));
+	const float Exponent = mix(2.0, 4.0, Amount);
+	const float PowX = pow(Corner.x, Exponent);
+	const float PowY = pow(Corner.y, Exponent);
+	const float Sum = max(PowX + PowY, 0.0000001);
+	// 角区里 Flat 恒为 0，形状值就是 p 范数减半径。
+	const float Norm = pow(Sum, 1.0 / Exponent);
+	const float ShapeValue = Norm - EffectiveRadius;
+	// p 范数的梯度不是单位长度，要把「整份形状值」除以梯度模长才换成近似距离。
+	const float Scale = pow(Sum, 1.0 / Exponent - 1.0);
+	const float GradientX = PowX / max(Corner.x, 0.0000001) * Scale;
+	const float GradientY = PowY / max(Corner.y, 0.0000001) * Scale;
+	const float GradientLength = max(length(float2(GradientX, GradientY)), 0.0001);
+	return ShapeValue / GradientLength;
+}
 float RoundedRectCornerRadius(float2 Point, float4 CornerRadii)
 {
 	if(Point.y < 0.0)
@@ -164,6 +241,11 @@ fragment float4 qmclient_rounded_rect_sdf_fragment(SMetalVertexOut Input [[stage
 	const float4 BorderColor = Params[2];
 	const float4 CornerRadii = Params[3];
 	const float4 RenderParams = Params[4];
+	const float CornerSmoothing = clamp(Params[14].w, 0.0, 1.0);
+	// 圆角曲线类型：0 = 超椭圆，1 = 圆锥曲线角（有理二次 Bézier）
+	const float CurveType = Params[4].w;
+	// 形状外扩：四角形状按基础矩形算完再整体外扩，叠层之间因此保持等距。
+	const float ShapeExpand = clamp(Params[16].w, 0.0, 64.0);
 	const float2 HalfSize = Rect.zw * 0.5;
 	const float2 Point = (Input.m_TexCoord - float2(0.5)) * (Rect.zw + float2(RenderParams.z * 2.0));
 	const float BorderWidth = clamp(RenderParams.x, 0.0, min(HalfSize.x, HalfSize.y));
@@ -172,12 +254,12 @@ fragment float4 qmclient_rounded_rect_sdf_fragment(SMetalVertexOut Input [[stage
 	const float2 GradientExtent = max(InnerHalfSize, float2(0.0));
 	const float2 GradientUV = clamp((Point + GradientExtent) / max(GradientExtent * 2.0, float2(0.0001)), float2(0.0), float2(1.0));
 	FillColor = RoundedRectGradientColor(GradientUV, FillColor, Params);
-	const float Radius = clamp(RoundedRectCornerRadius(Point, CornerRadii), 0.0, min(HalfSize.x, HalfSize.y));
-	const float OuterDistance = RoundedRectDistance(Point, HalfSize, Radius);
+	const float2 BaseHalfSize = max(HalfSize - float2(ShapeExpand), float2(0.5));
+	const float Radius = clamp(RoundedRectCornerRadius(Point, CornerRadii), 0.0, min(BaseHalfSize.x, BaseHalfSize.y));
+	const float OuterDistance = RoundedRectDistance(Point, BaseHalfSize, Radius, CornerSmoothing, CurveType) - ShapeExpand;
 	const float OuterCoverage = RoundedRectCoverage(OuterDistance, RenderParams.y);
-	const float4 InnerCornerRadii = max(CornerRadii - float4(BorderWidth), float4(0.0));
-	const float InnerRadius = clamp(RoundedRectCornerRadius(Point, InnerCornerRadii), 0.0, min(InnerHalfSize.x, InnerHalfSize.y));
-	const float InnerDistance = RoundedRectDistance(Point, InnerHalfSize, InnerRadius);
+	// 内缘是同一形状向内偏移一个边框宽度：连续曲率下「半径减边框」不是等距内缩。
+	const float InnerDistance = OuterDistance + BorderWidth;
 	// 与 rounded_rect_sdf.frag 保持一致：只描边时这里要被清零，不能是 const。
 	float InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? RoundedRectCoverage(InnerDistance, RenderParams.y) : 0.0;
 	if(BorderWidth <= 0.0)

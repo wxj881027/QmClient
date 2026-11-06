@@ -1,6 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "ui.h"
+#include <game/client/QmUi/UiSurface.h>
 
 #include "QmUi/QmDropdown.h"
 #include "QmUi/QmUiPerf.h"
@@ -180,6 +181,17 @@ void CUIElement::SUIElementRect::Draw(const CUIRect *pRect, ColorRGBA Color, int
 
 	if(Color.a > 0.0f && Color.a < 1.0f && m_pParent->Ui()->GaussianBlurScopeActive())
 		m_pParent->Ui()->RenderGaussianBlur(*pRect, m_pParent->Ui()->GaussianBlurScopeAlpha(), Corners, Rounding);
+	// 有 SDF 时所有圆角矩形都走同一条形状：边缘抗锯齿一致、连续曲率生效，
+	// 也不再依赖缓存四边形网格（那条网格的圆角环带会出现断续的点状边）。
+	if(Rounding > 0.0f && Corners != 0 && m_pParent->Ui()->Graphics()->HasRoundedRectSdf())
+	{
+		SRoundedSurfaceParams Params;
+		Params.m_Radius = Rounding;
+		Params.m_Corners = Corners;
+		Params.m_PixelSize = 0.0001f;
+		DrawRoundedSurface(m_pParent->Ui(), *pRect, Color, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), Params);
+		return;
+	}
 	m_pParent->Ui()->Graphics()->TextureClear();
 	m_pParent->Ui()->Graphics()->RenderQuadContainerEx(m_UIRectQuadContainer,
 		0, -1, m_X, m_Y, 1, 1);
@@ -649,6 +661,9 @@ void CUi::RenderGaussianBlur(const CUIRect &Rect, float Alpha, int Corners, floa
 	DrawParams.m_Alpha = std::clamp(Alpha, 0.0f, 1.0f);
 	DrawParams.m_Corners = Corners;
 	DrawParams.m_Rounding = Rounding;
+	// 模糊掩码跟着面板用的是同一条圆角曲线，否则角上会漏出没模糊的边。
+	DrawParams.m_CornerSmoothing = std::clamp(g_Config.m_QmUiCornerSmoothing / 100.0f, 0.0f, 1.0f);
+	DrawParams.m_CornerCurve = g_Config.m_QmUiCornerCurve != 0 ? 1.0f : 0.0f;
 	DrawParams.m_U0 = (Rect.x - ScreenX0) / MappedWidth;
 	DrawParams.m_U1 = (Rect.x + Rect.w - ScreenX0) / MappedWidth;
 	DrawParams.m_V0 = 1.0f - (Rect.y - ScreenY0) / MappedHeight;

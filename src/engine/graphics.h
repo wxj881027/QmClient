@@ -447,7 +447,7 @@ public:
 		vec4 m_BorderColor{};
 		// 左上、右上、右下、左下圆角半径
 		vec4 m_CornerRadii{};
-		// 边框宽度、逻辑像素大小、外部 quad padding、保留字段
+		// 边框宽度、逻辑像素大小、外部 quad padding、圆角曲线类型（0 = 超椭圆，1 = 圆锥曲线/贝塞尔角）
 		vec4 m_Params{};
 		// 可选渐变填充：最多七色，和 CPU 端 SQmColorGradient 使用同一套语义。
 		vec4 m_aGradientColors[ROUNDED_RECT_SDF_GRADIENT_MAX_COLORS]{};
@@ -455,13 +455,14 @@ public:
 		vec4 m_GradientParams0{};
 		// x=方向 x, y=方向 y, z=反向, w=颜色数
 		vec4 m_GradientParams1{};
-		// x=是否启用渐变, y=只描边, z=边框羽化指数
+		// x=是否启用渐变, y=只描边, z=边框羽化指数, w=圆角连续曲率强度（0 = 圆弧圆角）
 		vec4 m_GradientParams2{};
 		// 可选纹理采样：为圆角容器放图时，片元按圆角覆盖度裁剪纹理，四角不再露出方角。
 		// x=采样模式：0 关闭，1 RGBA 图片，2 单通道距离场（内侧大于 0.5），
 		// y/z=UV 相对矩形本地坐标的缩放, w=UV 偏移 x
 		vec4 m_TextureParams0{};
-		// x=UV 偏移 y，y=纹理透明度，z=距离场完整编码范围（UV 单位），w 保留
+		// x=UV 偏移 y，y=纹理透明度，z=距离场完整编码范围（UV 单位），
+		// w=形状外扩像素：整块形状按距离场向外偏移，叠层时才是同一条曲线的等距外扩
 		vec4 m_TextureParams1{};
 		// 纹理由 SState 携带（调用方先 TextureSet），不进入 uniform 块，保证结构体是纯 vec4 数组。
 	};
@@ -701,6 +702,9 @@ public:
 		bool m_Opaque = false;
 		int m_Corners = 0;
 		float m_Rounding = 0.0f;
+		// 圆角曲线：和 RenderRoundedRectSdf 用同一套形状参数，离屏掩码才不会和面板差一个角。
+		float m_CornerSmoothing = 0.0f;
+		float m_CornerCurve = 0.0f;
 		float m_U0 = 0.0f;
 		float m_V0 = 1.0f;
 		float m_U1 = 1.0f;
